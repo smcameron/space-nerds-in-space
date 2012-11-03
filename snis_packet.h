@@ -60,13 +60,10 @@ struct update_planet_packet {
 	uint32_t x, y;
 };
 
-struct add_starbase_packet {
+struct update_starbase_packet {
 	uint16_t opcode;
 	uint32_t id;
-	uint32_t shields;
-	struct packed_double x, y;
-	struct packed_double vx, vy;
-	struct packed_double heading;
+	uint32_t x, y;
 };
 
 struct add_laser_packet {

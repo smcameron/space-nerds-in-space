@@ -121,6 +121,11 @@ static void ship_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
+static void starbase_move(struct snis_entity *o)
+{
+	/* FIXME, fill this in. */
+}
+
 static int add_generic_object(double x, double y, double vx, double vy, double heading, int type)
 {
 	int i;
@@ -167,7 +172,13 @@ static int add_planet(double x, double y, double vx, double vy, double heading)
 
 static int add_starbase(double x, double y, double vx, double vy, double heading)
 {
-	return add_generic_object(x, y, vx, vy, heading, OBJTYPE_STARBASE);
+	int i;
+
+	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_STARBASE);
+	if (i < 0)
+		return i;
+	go[i].move = starbase_move;
+	return i;
 }
 
 static int __attribute__((unused)) add_laser(double x, double y, double vx, double vy, double heading)
@@ -223,7 +234,7 @@ static void make_universe(void)
 	pthread_mutex_lock(&universe_mutex);
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 
-	// add_starbases();
+	add_starbases();
 	add_planets();
 	add_eships();
 	pthread_mutex_unlock(&universe_mutex);
@@ -576,6 +587,18 @@ static void send_update_planet_packet(struct game_client *c,
 static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o)
 {
+	struct packed_buffer *pb;
+	uint32_t x, y;
+
+	printf("Sending starbase %u\n", o->id);
+	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
+	packed_buffer_append_u16(pb, OPCODE_UPDATE_STARBASE);
+	packed_buffer_append_u32(pb, o->id);
+	packed_buffer_append_u32(pb, x);
+	packed_buffer_append_u32(pb, y);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
 static void send_update_torpedo_packet(struct game_client *c,

@@ -335,6 +335,20 @@ static int update_planet(uint32_t id, double x, double y)
 	return 0;
 }
 
+static int update_starbase(uint32_t id, double x, double y)
+{
+	int i;
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_STARBASE, 1);
+		if (i < 0)
+			return i;
+	} else {
+		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+	}
+	return 0;
+}
+
 static int __attribute__((unused)) add_planet(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
 {
 	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_PLANET, alive);
@@ -997,6 +1011,37 @@ static int process_update_planet_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_starbase_packet(void)
+{
+	unsigned char buffer[100];
+	struct packed_buffer pb;
+	uint32_t id;
+	uint32_t x, y;
+	double dx, dy;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_starbase_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_starbase_packet) - sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+
+	pb.buffer_size = sizeof(buffer);;
+	pb.buffer = buffer;
+	pb.buffer_cursor = 0;
+
+	id = packed_buffer_extract_u32(&pb);
+	x = packed_buffer_extract_u32(&pb);
+	y = packed_buffer_extract_u32(&pb);
+
+	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_starbase(id, dx, dy);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+} 
+
 static int process_client_id_packet(void)
 {
 	unsigned char buffer[100];
@@ -1051,6 +1096,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_STARBASE:
+			rc = process_update_starbase_packet();
+			if (rc)
+				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_LASER:
 			break;
@@ -1309,6 +1357,9 @@ static void show_debug(GtkWidget *w)
 			switch (go[i].type) {
 			case OBJTYPE_PLANET:
 				gdk_gc_set_foreground(gc, &huex[BLUE]);
+				break;
+			case OBJTYPE_STARBASE:
+				gdk_gc_set_foreground(gc, &huex[MAGENTA]);
 				break;
 			default:
 				gdk_gc_set_foreground(gc, &huex[WHITE]);
