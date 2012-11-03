@@ -133,8 +133,9 @@ int displaymode = DISPLAYMODE_LOBBYSCREEN;
 #define CYAN 7
 #define MAGENTA 8
 #define DARKGREEN 9
+#define DARKRED 10
 
-#define NCOLORS 10              /* number of "cardinal" colors */
+#define NCOLORS 11              /* number of "cardinal" colors */
 #define NSPARKCOLORS 25         /* 25 shades from yellow to red for the sparks */
 #define NRAINBOWSTEPS (16)
 #define NRAINBOWCOLORS (NRAINBOWSTEPS*3)
@@ -1265,9 +1266,11 @@ static void snis_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, g
 	snis_draw_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
 }
 
-static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
+static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
+		double heading)
 {
 	int i;
+	int nx, ny, tx1, ty1, tx2, ty2;
 
 	for (i = r; i > r / 4; i -= r / 5)
 		snis_draw_circle(drawable, gc, x, y, i);
@@ -1283,6 +1286,28 @@ static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y,
 		y2 += y;
 		snis_draw_line(drawable, gc, x1, y1, x2, y2);
 	}
+
+	/* Draw ship... */
+#define SHIP_SCALE_DOWN 15.0
+	nx = sin(heading) * r / SHIP_SCALE_DOWN;
+	ny = -cos(heading) * r / SHIP_SCALE_DOWN;
+	snis_draw_line(drawable, gc, x, y, x + nx, y + ny);
+	tx1 = sin(heading + PI / 2.0) * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
+	ty1 = -cos(heading + PI / 2.0) * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
+	snis_draw_line(drawable, gc, x, y, x + tx1, y + ty1);
+	tx2 = sin(heading - PI / 2.0) * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
+	ty2 = -cos(heading - PI / 2.0) * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
+	snis_draw_line(drawable, gc, x, y, x + tx2, y + ty2);
+	snis_draw_line(drawable, gc, x + nx, y + ny, x + tx1, y + ty1);
+	snis_draw_line(drawable, gc, x + tx1, y + ty1, x + tx2, y + ty2);
+	snis_draw_line(drawable, gc, x + tx2, y + ty2, x + nx, y + ny);
+	
+	tx1 = x + sin(heading) * r * 0.95;
+	ty1 = y - cos(heading) * r * 0.95;
+	tx2 = x + sin(heading) * r;
+	ty2 = y - cos(heading) * r;
+	gdk_gc_set_foreground(gc, &huex[RED]);
+	snis_draw_line(drawable, gc, tx1, ty1, tx2, ty2);
 }
 
 static void show_navigation(GtkWidget *w)
@@ -1313,8 +1338,8 @@ static void show_navigation(GtkWidget *w)
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
-	gdk_gc_set_foreground(gc, &huex[RED]);
-	snis_draw_reticule(w->window, gc, cx, cy, r);
+	gdk_gc_set_foreground(gc, &huex[DARKRED]);
+	snis_draw_reticule(w->window, gc, cx, cy, r, o->heading);
 }
 
 static void show_weapons(GtkWidget *w)
@@ -1608,6 +1633,7 @@ int main(int argc, char *argv[])
 	gdk_color_parse("orange", &huex[ORANGE]);
 	gdk_color_parse("cyan", &huex[CYAN]);
 	gdk_color_parse("MAGENTA", &huex[MAGENTA]);
+	gdk_color_parse("darkred", &huex[DARKRED]);
 
 	gtk_container_add (GTK_CONTAINER (window), vbox);
 	gtk_box_pack_start(GTK_BOX (vbox), main_da, TRUE /* expand */, TRUE /* fill */, 0);
