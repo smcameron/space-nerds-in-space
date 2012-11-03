@@ -69,6 +69,7 @@ union type_specific_data {
 	struct starbase_data starbase;
 };
 
+struct snis_entity;
 typedef void (*move_function)(struct snis_entity *o);
 	
 struct snis_entity {

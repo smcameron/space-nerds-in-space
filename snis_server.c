@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <time.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "ssgl/ssgl.h"
 #include "snis.h"
@@ -153,7 +154,10 @@ static int add_ship1(double x, double y, double vx, double vy, double heading)
 	int i;
 
 	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_SHIP1);
+	if (i < 0)
+		return i;
 	go[i].move = ship_move;
+	return i;
 }
 
 static int add_planet(double x, double y, double vx, double vy, double heading)
@@ -166,17 +170,17 @@ static int add_starbase(double x, double y, double vx, double vy, double heading
 	return add_generic_object(x, y, vx, vy, heading, OBJTYPE_STARBASE);
 }
 
-static int add_laser(double x, double y, double vx, double vy, double heading)
+static int __attribute__((unused)) add_laser(double x, double y, double vx, double vy, double heading)
 {
 	return add_generic_object(x, y, vx, vy, heading, OBJTYPE_LASER);
 }
 
-static int add_torpedo(double x, double y, double vx, double vy, double heading)
+static int __attribute__((unused)) add_torpedo(double x, double y, double vx, double vy, double heading)
 {
 	return add_generic_object(x, y, vx, vy, heading, OBJTYPE_TORPEDO);
 }
 
-static void add_starbases(void)
+static void __attribute__((unused)) add_starbases(void)
 {
 	int i;
 	double x, y;
@@ -188,7 +192,7 @@ static void add_starbases(void)
 	}
 }
 
-static void add_planets(void)
+static void __attribute__((unused)) add_planets(void)
 {
 	int i;
 	double x, y;
@@ -225,7 +229,7 @@ static void make_universe(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void timespec_subtract(struct timespec *have, struct timespec *takeaway, struct timespec *leaves)
+static void __attribute__((unused)) timespec_subtract(struct timespec *have, struct timespec *takeaway, struct timespec *leaves)
 {
 	leaves->tv_nsec = have->tv_nsec - takeaway->tv_nsec;
 	if (have->tv_nsec < takeaway->tv_nsec) {
@@ -247,7 +251,8 @@ static void sleep_tenth_second(void)
 	x.tv_nsec = 0;
 
 	do {
-		rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &t, &x);
+		rc = clock_nanosleep(CLOCK_MONOTONIC, 0,
+				(const struct timespec *) &t, &x);
 	} while (rc == EINTR);
 }
 
@@ -288,7 +293,8 @@ static void snis_sleep(struct timespec *begin, struct timespec *end, struct time
 	int rc;
 
 	do {
-		rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &total, &begin);
+		rc = clock_nanosleep(CLOCK_MONOTONIC, 0,
+			(const struct timespec *) total, begin);
 	} while (rc == EINTR);
 #endif
 }
@@ -319,10 +325,13 @@ static void *per_client_read_thread(__attribute__((unused)) void /* struct game_
 		read_instructions_from_client(c);
 		if (c->socket < 0)
 			break;
+		/* rc = clock_gettime(CLOCK_MONOTONIC, &time2); */
 		rc = clock_gettime(CLOCK_MONOTONIC, &time2);
 		snis_sleep(&time1, &time2, &tenth_second); /* sleep for 1/10th sec - (time2 - time1) */
 	}
 	printf("client reader thread exiting\n");
+	if (rc)
+		return NULL;
 	return NULL;
 }
 
@@ -403,7 +412,7 @@ static void queue_up_client_updates(struct game_client *c)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		printf("go[%d].alive = %d\n", i, go[i].alive);
 		printf("go[%d].timestamp = %u\n", i, go[i].timestamp);
-		printf("universe timestamp = %u\n", i, universe_timestamp);
+		printf("universe timestamp = %u\n", universe_timestamp);
 		if (go[i].alive && go[i].timestamp > c->timestamp) {
 			queue_up_client_object_update(c, &go[i]);
 			count++;
@@ -457,6 +466,8 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 		printf("server: awakened.\n");
 	}
 	printf("client writer thread exiting.\n");
+	if (rc) /* satisfy the whining compiler */
+		return NULL;
 	return NULL;
 }
 
@@ -540,6 +551,8 @@ static int add_new_player(struct game_client *c)
 	struct add_player_packet app;
 
 	rc = snis_readsocket(c->socket, &app, sizeof(app));
+	if (rc)
+		return rc;
 	app.opcode = ntohs(app.opcode);
 	if (app.opcode != OPCODE_UPDATE_PLAYER) {
 		printf("bad opcode %d\n", app.opcode);
@@ -826,5 +839,7 @@ int main(int argc, char *argv[])
 		sleep_thirtieth_second();
 	}
 
+	if (rc) /* satisfy compiler */
+		return 0; 
 	return 0;
 }

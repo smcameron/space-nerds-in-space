@@ -239,11 +239,9 @@ handle_error:
 
 static void connect_to_lobby()
 {
-	int rc;
-
         pthread_attr_init(&lobby_attr);
         pthread_attr_setdetachstate(&lobby_attr, PTHREAD_CREATE_JOINABLE);
-	rc = pthread_create(&lobby_thread, &lobby_attr, connect_to_lobby_thread, NULL);
+	(void) pthread_create(&lobby_thread, &lobby_attr, connect_to_lobby_thread, NULL);
 	return;
 }
 
@@ -283,7 +281,7 @@ static void update_generic_object(int index, double x, double y, double vx, doub
 	go[index].alive = alive;
 }
 
-static int add_player(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
+static int __attribute__((unused)) add_player(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
 {
 	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP1, alive);
 }
@@ -315,24 +313,25 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.torpedoes = torpedoes;
 	go[i].tsd.ship.energy = energy;
 	go[i].tsd.ship.shields = shields;
+	return 0;
 }
 
-static int add_planet(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
+static int __attribute__((unused)) add_planet(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
 {
 	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_PLANET, alive);
 }
 
-static int add_starbase(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
+static int __attribute__((unused)) add_starbase(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
 {
 	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_STARBASE, alive);
 }
 
-static int add_laser(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
+static int __attribute__((unused)) add_laser(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
 {
 	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_LASER, alive);
 }
 
-static int add_torpedo(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
+static int __attribute__((unused)) add_torpedo(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
 {
 	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_TORPEDO, alive);
 }
@@ -1031,8 +1030,10 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	int rc;
 	struct addrinfo *gameserverinfo, *i;
 	struct addrinfo hints;
+#if 0
 	void *addr;
-	char *ipver;
+	char *ipver; 
+#endif
 	char portstr[50];
 	char hoststr[50];
 	unsigned char *x = (unsigned char *) &lobby_game_server[lobby_selected_server].ipaddr;
@@ -1052,9 +1053,11 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 
 	for (i = gameserverinfo; i != NULL; i = i->ai_next) {
 		if (i->ai_family == AF_INET) {
+#if 0
 			struct sockaddr_in *ipv4 = (struct sockaddr_in *)i->ai_addr;
 			addr = &(ipv4->sin_addr);
 			ipver = "IPv4";
+#endif
 			break;
 		}
 	}
@@ -1078,8 +1081,8 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	memset(&app, 0, sizeof(app));
 	app.opcode = htons(OPCODE_UPDATE_PLAYER);
 	app.role = role;
-	strncpy(app.shipname, shipname, 19);
-	strncpy(app.password, password, 19);
+	strncpy((char *) app.shipname, shipname, 19);
+	strncpy((char *) app.password, password, 19);
 
 	printf("Notifying server, opcode update player\n");
 	snis_writesocket(gameserver_sock, &app, sizeof(app));
@@ -1104,11 +1107,9 @@ error:
 
 void connect_to_gameserver(int selected_server)
 {
-	int rc;
-
         pthread_attr_init(&gameserver_connect_attr);
         pthread_attr_setdetachstate(&gameserver_connect_attr, PTHREAD_CREATE_JOINABLE);
-	rc = pthread_create(&gameserver_connect_thread, &gameserver_connect_attr, connect_to_gameserver_thread, NULL);
+	(void) pthread_create(&gameserver_connect_thread, &gameserver_connect_attr, connect_to_gameserver_thread, NULL);
 	return;
 }
 
@@ -1160,10 +1161,10 @@ static void show_navigation(GtkWidget *w)
 	if (my_ship_oid == 0xffffffff)
 		return;
 	o = &go[my_ship_oid];
-	// sprintf(buf, "Location: [%5.2lf, %5.2lf]", o->x, o->y);
-	// abs_xy_draw_string(w, buf, SMALL_FONT, 250, 10 + LINEHEIGHT);
-	// sprintf(buf, "Heading: %3.1lf", 360.0 * o->heading / (2.0 * 3.1415927));
-	// abs_xy_draw_string(w, buf, SMALL_FONT, 25, 10 + 2 * LINEHEIGHT);
+	sprintf(buf, "Location: [%5.2lf, %5.2lf]", o->x, o->y);
+	abs_xy_draw_string(w, buf, SMALL_FONT, 250, 10 + LINEHEIGHT);
+	sprintf(buf, "Heading: %3.1lf", 360.0 * o->heading / (2.0 * 3.1415927));
+	abs_xy_draw_string(w, buf, SMALL_FONT, 25, 10 + 2 * LINEHEIGHT);
 	// printf("Location: [%5.2lf, %5.2lf]", o->x, o->y);
 	// printf("Heading: %lf", (double) 360.0 * o->heading / (2.0 * 3.1415927));
 }

@@ -25,9 +25,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <string.h>
 
 #define DEFINE_SNIS_SOCKET_IO_GLOBALS
 #include "snis_socket_io.h"
