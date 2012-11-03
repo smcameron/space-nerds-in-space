@@ -36,7 +36,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 /* Functions to read/write from a socket, restarting if EINTR... */
 GLOBAL int snis_readsocket(int fd, void *buffer, int buflen);
 GLOBAL int snis_writesocket(int fd, void *buffer, int buflen);
-
+GLOBAL void ignore_sigpipe(void);
 #undef GLOBAL
 #endif
 

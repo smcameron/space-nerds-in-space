@@ -30,6 +30,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <sys/socket.h>
 #include <errno.h>
 #include <string.h>
+#include <signal.h>
 
 #define DEFINE_SNIS_SOCKET_IO_GLOBALS
 #include "snis_socket_io.h"
@@ -84,4 +85,9 @@ int snis_writesocket(int fd, void *buffer, int buflen)
 	} while (1);
 }
 
+void ignore_sigpipe(void)
+{
+	(void) signal(SIGPIPE, SIG_IGN);
+}
+	
  

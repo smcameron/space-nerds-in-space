@@ -434,8 +434,8 @@ static void queue_up_client_updates(struct game_client *c)
 	printf("server: queue_up_client_updates\n");
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
-			i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type);
+		/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
+			i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type); */
 		if (go[i].alive && go[i].timestamp > c->timestamp) {
 			queue_up_client_object_update(c, &go[i]);
 			count++;
@@ -551,7 +551,6 @@ static void send_update_ship_packet(struct game_client *c,
 	vy = (int32_t) ((o->vy / YUNIVERSE_DIMENSION) * (double) INT32_MAX);
 	heading = (uint32_t) (o->heading / 360.0 * (double) UINT32_MAX);
 
-	printf("Dropping 'update ship' packet into outgoing queue\n");
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_SHIP);
 	packed_buffer_append_u32(pb, o->id);
@@ -896,7 +895,8 @@ int main(int argc, char *argv[])
 
 	make_universe();
 	port = start_listener_thread();
-	
+
+	ignore_sigpipe();	
 	register_with_game_lobby(port, argv[2], argv[1], argv[3]);
 
 	i = 0;
