@@ -1266,11 +1266,33 @@ static void snis_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, g
 	snis_draw_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
 }
 
+static void snis_draw_arrow(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
+		double heading, double scale)
+{
+	int nx, ny, tx1, ty1, tx2, ty2;
+
+	/* Draw ship... */
+#define SHIP_SCALE_DOWN 15.0
+	nx = sin(heading) * scale * r / SHIP_SCALE_DOWN;
+	ny = -cos(heading) * scale * r / SHIP_SCALE_DOWN;
+	snis_draw_line(drawable, gc, x, y, x + nx, y + ny);
+	tx1 = sin(heading + PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
+	ty1 = -cos(heading + PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
+	snis_draw_line(drawable, gc, x, y, x + tx1, y + ty1);
+	tx2 = sin(heading - PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
+	ty2 = -cos(heading - PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
+	snis_draw_line(drawable, gc, x, y, x + tx2, y + ty2);
+	snis_draw_line(drawable, gc, x + nx, y + ny, x + tx1, y + ty1);
+	snis_draw_line(drawable, gc, x + tx1, y + ty1, x + tx2, y + ty2);
+	snis_draw_line(drawable, gc, x + tx2, y + ty2, x + nx, y + ny);
+}
+
 static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
 		double heading)
 {
 	int i;
-	int nx, ny, tx1, ty1, tx2, ty2;
+	// int nx, ny, 
+	int tx1, ty1, tx2, ty2;
 
 	for (i = r; i > r / 4; i -= r / 5)
 		snis_draw_circle(drawable, gc, x, y, i);
@@ -1287,20 +1309,8 @@ static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y,
 		snis_draw_line(drawable, gc, x1, y1, x2, y2);
 	}
 
-	/* Draw ship... */
-#define SHIP_SCALE_DOWN 15.0
-	nx = sin(heading) * r / SHIP_SCALE_DOWN;
-	ny = -cos(heading) * r / SHIP_SCALE_DOWN;
-	snis_draw_line(drawable, gc, x, y, x + nx, y + ny);
-	tx1 = sin(heading + PI / 2.0) * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
-	ty1 = -cos(heading + PI / 2.0) * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
-	snis_draw_line(drawable, gc, x, y, x + tx1, y + ty1);
-	tx2 = sin(heading - PI / 2.0) * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
-	ty2 = -cos(heading - PI / 2.0) * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
-	snis_draw_line(drawable, gc, x, y, x + tx2, y + ty2);
-	snis_draw_line(drawable, gc, x + nx, y + ny, x + tx1, y + ty1);
-	snis_draw_line(drawable, gc, x + tx1, y + ty1, x + tx2, y + ty2);
-	snis_draw_line(drawable, gc, x + tx2, y + ty2, x + nx, y + ny);
+	/* draw the ship */
+	snis_draw_arrow(drawable, gc, x, y, r, heading, 1.0);
 	
 	tx1 = x + sin(heading) * r * 0.95;
 	ty1 = y - cos(heading) * r * 0.95;
@@ -1315,7 +1325,7 @@ static void show_navigation(GtkWidget *w)
 	char buf[100];
 	struct snis_entity *o;
 	int rx, ry, rw, rh, cx, cy;
-	int r;
+	int r, i;
 
 	show_common_screen(w, "Navigation");
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
@@ -1340,6 +1350,57 @@ static void show_navigation(GtkWidget *w)
 	r = rh / 2;
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
 	snis_draw_reticule(w->window, gc, cx, cy, r, o->heading);
+
+
+	/* Draw all the stuff */
+#define NAVSCREEN_RADIUS (XUNIVERSE_DIMENSION / 20.0)
+#define NR2 (NAVSCREEN_RADIUS * NAVSCREEN_RADIUS)
+	pthread_mutex_lock(&universe_mutex);
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		int x, y;
+		// , x1, y1, x2, y2;
+		double tx, ty;
+		double dist2;
+
+		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
+			((go[i].y - o->y) * (go[i].y - o->y));
+		if (dist2 > NR2)
+			continue; /* not close enough */
+	
+
+		tx = (go[i].x - o->x) * (double) r / NAVSCREEN_RADIUS;
+		ty = (go[i].y - o->y) * (double) r / NAVSCREEN_RADIUS;
+		x = (int) (tx + (double) cx);
+		y = (int) (ty + (double) cy);
+#if 0
+		x1 = x - 1;
+		y2 = y + 1;
+		y1 = y - 1;
+		x2 = x + 1;
+#endif
+
+		if (go[i].id == my_ship_id)
+			continue; /* skip drawing yourself. */
+		else {
+			switch (go[i].type) {
+			case OBJTYPE_PLANET:
+				gdk_gc_set_foreground(gc, &huex[BLUE]);
+				break;
+			case OBJTYPE_STARBASE:
+				gdk_gc_set_foreground(gc, &huex[MAGENTA]);
+				break;
+			default:
+				gdk_gc_set_foreground(gc, &huex[WHITE]);
+			}
+		}
+		snis_draw_arrow(w->window, gc, x, y, r, go[i].heading, 0.5);
+#if 0
+		snis_draw_line(w->window, gc, x1, y1, x2, y2);
+		snis_draw_line(w->window, gc, x1, y2, x2, y1);
+#endif
+	}
+	pthread_mutex_unlock(&universe_mutex);
 }
 
 static void show_weapons(GtkWidget *w)
