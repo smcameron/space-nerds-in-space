@@ -64,20 +64,26 @@ typedef void rectangle_drawing_function(GdkDrawable *drawable,
 
 typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nsparks, int time);
 
+typedef void arc_drawing_function(GdkDrawable *drawable, GdkGC *gc,
+	gboolean filled, gint x, gint y, gint width, gint height, gint angle1, gint angle2);
+
 line_drawing_function *current_draw_line = gdk_draw_line;
 rectangle_drawing_function *current_draw_rectangle = gdk_draw_rectangle;
 bright_line_drawing_function *current_bright_line = NULL;
 explosion_function *explosion = NULL;
+arc_drawing_function *current_draw_arc = gdk_draw_arc;
 
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
 #define DEFAULT_LINE_STYLE current_draw_line
 #define DEFAULT_RECTANGLE_STYLE current_draw_rectangle
 #define DEFAULT_BRIGHT_LINE_STYLE current_bright_line
+#define DEFAULT_DRAW_ARC current_draw_arc
 
 #define snis_draw_line DEFAULT_LINE_STYLE
 #define snis_draw_rectangle DEFAULT_RECTANGLE_STYLE
 #define snis_bright_line DEFAULT_BRIGHT_LINE_STYLE
+#define snis_draw_arc DEFAULT_DRAW_ARC
 int thicklines = 0;
 int frame_rate_hz = 30;
 
@@ -91,8 +97,9 @@ int in_the_process_of_quitting = 0;
 uint8_t role = 255;
 char *password;
 char *shipname;
-uint32_t my_ship_id = 0xffffffff;
-uint32_t my_ship_oid = 0xfffffff;
+#define UNKNOWN_ID 0xffffffff
+uint32_t my_ship_id = UNKNOWN_ID;
+uint32_t my_ship_oid = UNKNOWN_ID;
 
 float xscale_screen;
 float yscale_screen;
@@ -384,6 +391,13 @@ void scaled_line(GdkDrawable *drawable,
 {
 	gdk_draw_line(drawable, gc, x1*xscale_screen, y1*yscale_screen,
 		x2*xscale_screen, y2*yscale_screen);
+}
+
+void scaled_arc(GdkDrawable *drawable, GdkGC *gc,
+	gboolean filled, gint x, gint y, gint width, gint height, gint angle1, gint angle2)
+{
+	gdk_draw_arc(drawable, gc, filled, x * xscale_screen, y * yscale_screen,
+			width * xscale_screen, height * yscale_screen, angle1, angle2);
 }
 
 void thick_scaled_line(GdkDrawable *drawable,
@@ -908,11 +922,11 @@ static int process_update_ship_packet(void)
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint16_t));
-	printf("process_update_ship_packet, snis_readsocket returned %d\n", rc);
+	/* printf("process_update_ship_packet, snis_readsocket returned %d\n", rc); */
 	if (rc != 0)
 		return rc;
 
-	pb.buffer_size = 100;
+	pb.buffer_size = sizeof(buffer);;
 	pb.buffer = buffer;
 	pb.buffer_cursor = 0;
 
@@ -949,7 +963,7 @@ static int process_client_id_packet(void)
 	assert(sizeof(buffer) > sizeof(struct client_ship_id_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct client_ship_id_packet) - sizeof(uint16_t));
 
-	pb.buffer_size = 100;
+	pb.buffer_size = sizeof(buffer);
 	pb.buffer = buffer;
 	pb.buffer_cursor = 0;
 
@@ -957,6 +971,7 @@ static int process_client_id_packet(void)
 	if (rc)
 		return rc;
 	my_ship_id = id;
+	printf("SET MY SHIP ID to %u\n", my_ship_id);
 	return 0;
 }
 
@@ -967,16 +982,16 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 
 	printf("gameserver reader thread\n");
 	while (1) {
-		printf("Client reading from game server %d bytes...\n", sizeof(opcode));
+		/* printf("Client reading from game server %d bytes...\n", sizeof(opcode)); */
 		rc = snis_readsocket(gameserver_sock, &opcode, sizeof(opcode));
-		printf("rc = %d, errno  %s\n", rc, strerror(errno));
+		/* printf("rc = %d, errno  %s\n", rc, strerror(errno)); */
 		if (rc != 0)
 			goto protocol_error;
 		opcode = ntohs(opcode);
-		printf("got opcode %hd\n", opcode);
+		/* printf("got opcode %hd\n", opcode); */
 		switch (opcode)	{
 		case OPCODE_UPDATE_SHIP:
-			printf("processing update ship...\n");
+			/* printf("processing update ship...\n"); */
 			rc = process_update_ship_packet();
 			if (rc != 0)
 				goto protocol_error;
@@ -1147,26 +1162,57 @@ static void show_mainscreen(GtkWidget *w)
 	show_common_screen(w, "Main Screen");	
 }
 
+static void snis_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
+{
+	snis_draw_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
+}
+
 static void show_navigation(GtkWidget *w)
 {
 	char buf[100];
 	struct snis_entity *o;
+	int rx, ry, rw, rh, cx, cy;
+	int i, r;
 
 	show_common_screen(w, "Navigation");
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
 
-	if (my_ship_id == 0xffffffff)
+	if (my_ship_id == UNKNOWN_ID)
 		return;
-	if (my_ship_oid == 0xffffffff)
+	if (my_ship_oid == UNKNOWN_ID)
 		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == 0xffffffff)
+	if (my_ship_oid == UNKNOWN_ID)
 		return;
 	o = &go[my_ship_oid];
-	sprintf(buf, "Location: [%5.2lf, %5.2lf]", o->x, o->y);
-	abs_xy_draw_string(w, buf, SMALL_FONT, 250, 10 + LINEHEIGHT);
-	sprintf(buf, "Heading: %3.1lf", 360.0 * o->heading / (2.0 * 3.1415927));
-	abs_xy_draw_string(w, buf, SMALL_FONT, 25, 10 + 2 * LINEHEIGHT);
-	// printf("Location: [%5.2lf, %5.2lf]", o->x, o->y);
-	// printf("Heading: %lf", (double) 360.0 * o->heading / (2.0 * 3.1415927));
+	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
+			360.0 * o->heading / (2.0 * 3.1415927));
+	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
+
+	/* Draw... */
+	gdk_gc_set_foreground(gc, &huex[RED]);
+	rx = 20;
+	ry = 70;
+	rw = 500;
+	rh = 500;
+	cx = rx + (rw / 2);
+	cy = ry + (rh / 2);
+
+	for (r = 250; r > 0; r -= 250 / 5)
+		snis_draw_circle(w->window, gc, cx, cy, r);
+	// snis_draw_arc(w->window, gc, 0, rx, ry, rw, rh, 0, 360*64);
+
+	r = rh / 2;
+	for (i = 0; i < 36 / 2; i++) { /* 10 degree increments */
+		int x1 = (int) (cos((10.0 * i) * 3.1415927 / 180.0) * r);
+		int y1 = (int) (sin((10.0 * i) * 3.1415927 / 180.0) * r);
+		int x2 = -x1;
+		int y2 = -y1;
+		x1 += cx;
+		x2 += cx;
+		y1 += cy;
+		y2 += cy;
+		snis_draw_line(w->window, gc, x1, y1, x2, y2);
+	}
 }
 
 static void show_weapons(GtkWidget *w)
@@ -1325,10 +1371,12 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 		current_draw_line = gdk_draw_line;
 		current_draw_rectangle = gdk_draw_rectangle;
 		current_bright_line = unscaled_bright_line;
+		current_draw_arc = gdk_draw_arc;
 	} else {
 		current_draw_line = scaled_line;
 		current_draw_rectangle = scaled_rectangle;
 		current_bright_line = scaled_bright_line;
+		current_draw_arc = scaled_arc;
 		if (thicklines)
 			current_draw_line = thick_scaled_line;
 	}
