@@ -1265,12 +1265,32 @@ static void snis_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, g
 	snis_draw_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
 }
 
+static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
+{
+	int i;
+
+	for (i = r; i > r / 4; i -= r / 5)
+		snis_draw_circle(drawable, gc, x, y, i);
+
+	for (i = 0; i < 36; i++) { /* 10 degree increments */
+		int x1 = (int) (cos((10.0 * i) * 3.1415927 / 180.0) * r);
+		int y1 = (int) (sin((10.0 * i) * 3.1415927 / 180.0) * r);
+		int x2 = x1 * 0.25;
+		int y2 = y1 * 0.25;
+		x1 += x;
+		x2 += x;
+		y1 += y;
+		y2 += y;
+		snis_draw_line(drawable, gc, x1, y1, x2, y2);
+	}
+}
+
 static void show_navigation(GtkWidget *w)
 {
 	char buf[100];
 	struct snis_entity *o;
 	int rx, ry, rw, rh, cx, cy;
-	int i, r;
+	int r;
 
 	show_common_screen(w, "Navigation");
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
@@ -1286,31 +1306,15 @@ static void show_navigation(GtkWidget *w)
 			360.0 * o->heading / (2.0 * 3.1415927));
 	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
 
-	/* Draw... */
-	gdk_gc_set_foreground(gc, &huex[RED]);
 	rx = 20;
 	ry = 70;
 	rw = 500;
 	rh = 500;
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
-
-	for (r = 250; r > 250 / 4; r -= 250 / 5)
-		snis_draw_circle(w->window, gc, cx, cy, r);
-	// snis_draw_arc(w->window, gc, 0, rx, ry, rw, rh, 0, 360*64);
-
 	r = rh / 2;
-	for (i = 0; i < 36; i++) { /* 10 degree increments */
-		int x1 = (int) (cos((10.0 * i) * 3.1415927 / 180.0) * r);
-		int y1 = (int) (sin((10.0 * i) * 3.1415927 / 180.0) * r);
-		int x2 = x1 * 0.25;
-		int y2 = y1 * 0.25;
-		x1 += cx;
-		x2 += cx;
-		y1 += cy;
-		y2 += cy;
-		snis_draw_line(w->window, gc, x1, y1, x2, y2);
-	}
+	gdk_gc_set_foreground(gc, &huex[RED]);
+	snis_draw_reticule(w->window, gc, cx, cy, r);
 }
 
 static void show_weapons(GtkWidget *w)
