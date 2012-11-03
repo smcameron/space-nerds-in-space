@@ -28,7 +28,7 @@
 #define MAXGAMEOBJS 5000
 
 #define NBASES 5
-#define NPLANETS 100
+#define NPLANETS 10
 #define NESHIPS 50
 
 #define MAXPLAYERS 10

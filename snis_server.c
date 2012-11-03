@@ -139,7 +139,7 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	go[i].vy = vy;
 	go[i].heading = heading;
 	go[i].type = type;
-	go[i].timestamp = universe_timestamp;
+	go[i].timestamp = universe_timestamp + 1;
 	go[i].move = generic_move;
 	return i;
 }
@@ -192,7 +192,7 @@ static void __attribute__((unused)) add_starbases(void)
 	}
 }
 
-static void __attribute__((unused)) add_planets(void)
+static void add_planets(void)
 {
 	int i;
 	double x, y;
@@ -224,7 +224,7 @@ static void make_universe(void)
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 
 	// add_starbases();
-	// add_planets();
+	add_planets();
 	add_eships();
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -373,7 +373,15 @@ badclient:
 	c->socket = -1;
 }
 
-static void send_update_ship_packet(struct game_client *c, 
+static void send_update_ship_packet(struct game_client *c,
+	struct snis_entity *o);
+static void send_update_planet_packet(struct game_client *c,
+	struct snis_entity *o);
+static void send_update_starbase_packet(struct game_client *c,
+	struct snis_entity *o);
+static void send_update_torpedo_packet(struct game_client *c,
+	struct snis_entity *o);
+static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o);
 
 static void queue_up_client_object_update(struct game_client *c, struct snis_entity *o)
@@ -385,16 +393,20 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	case OBJTYPE_SHIP2:
 		break;
 	case OBJTYPE_PLANET:
+		send_update_planet_packet(c, o);
 		break;
 	case OBJTYPE_STARBASE:
+		send_update_starbase_packet(c, o);
 		break;
 	case OBJTYPE_DEBRIS:
 		break;
 	case OBJTYPE_SPARK:
 		break;
 	case OBJTYPE_TORPEDO:
+		send_update_torpedo_packet(c, o);
 		break;
 	case OBJTYPE_LASER:
+		send_update_laser_packet(c, o);
 		break;
 	default:
 		break;
@@ -410,9 +422,8 @@ static void queue_up_client_updates(struct game_client *c)
 	printf("server: queue_up_client_updates\n");
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		printf("go[%d].alive = %d\n", i, go[i].alive);
-		printf("go[%d].timestamp = %u\n", i, go[i].timestamp);
-		printf("universe timestamp = %u\n", universe_timestamp);
+		printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
+			i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type);
 		if (go[i].alive && go[i].timestamp > c->timestamp) {
 			queue_up_client_object_update(c, &go[i]);
 			count++;
@@ -514,11 +525,11 @@ static int insane(unsigned char *word, int len)
 	return 0;
 }
 
-static void send_update_ship_packet(struct game_client *c, 
+static void send_update_ship_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	struct packed_buffer *pb;
-	uint32_t x, y; 
+	uint32_t x, y;
 	int32_t vx, vy;
 	uint32_t heading;
 
@@ -543,6 +554,38 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u32(pb, o->tsd.ship.shields);
 
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
+static void send_update_planet_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	struct packed_buffer *pb;
+	uint32_t x, y;
+
+	printf("Sending planet %u\n", o->id);
+	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	pb = packed_buffer_allocate(sizeof(struct update_planet_packet));
+	packed_buffer_append_u16(pb, OPCODE_UPDATE_PLANET);
+	packed_buffer_append_u32(pb, o->id);
+	packed_buffer_append_u32(pb, x);
+	packed_buffer_append_u32(pb, y);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
+static void send_update_starbase_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+}
+
+static void send_update_torpedo_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+}
+
+static void send_update_laser_packet(struct game_client *c,
+	struct snis_entity *o)
+{
 }
 
 static int add_new_player(struct game_client *c)

@@ -309,17 +309,29 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	int i;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		printf("Creating ship %u\n", id);
 		i = add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP1, alive);
 		if (i < 0)
 			return i;
 	} else {
-		printf("Updating ship %u\n", id);
 		update_generic_object(i, x, y, vx, vy, heading, alive); 
 	}
 	go[i].tsd.ship.torpedoes = torpedoes;
 	go[i].tsd.ship.energy = energy;
 	go[i].tsd.ship.shields = shields;
+	return 0;
+}
+
+static int update_planet(uint32_t id, double x, double y)
+{
+	int i;
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_PLANET, 1);
+		if (i < 0)
+			return i;
+	} else {
+		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+	}
 	return 0;
 }
 
@@ -950,7 +962,39 @@ static int process_update_ship_packet(void)
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, energy, shields);
 	pthread_mutex_unlock(&universe_mutex);
-	return rc;
+	return (rc < 0);
+
+} 
+
+static int process_update_planet_packet(void)
+{
+	unsigned char buffer[100];
+	struct packed_buffer pb;
+	uint32_t id;
+	uint32_t x, y;
+	double dx, dy;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_planet_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_planet_packet) - sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+
+	pb.buffer_size = sizeof(buffer);;
+	pb.buffer = buffer;
+	pb.buffer_cursor = 0;
+
+	id = packed_buffer_extract_u32(&pb);
+	x = packed_buffer_extract_u32(&pb);
+	y = packed_buffer_extract_u32(&pb);
+
+	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_planet(id, dx, dy);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
 } 
 
 static int process_client_id_packet(void)
@@ -1001,6 +1045,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_UPDATE_PLANET:
+			rc = process_update_planet_packet();
+			if (rc)
+				goto protocol_error;
+			break;
 		case OPCODE_UPDATE_STARBASE:
 			break;
 		case OPCODE_UPDATE_LASER:
@@ -1027,6 +1076,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 	}
 
 protocol_error:
+	printf("Protocol error in gameserver reader\n");
 	close(gameserver_sock);
 	gameserver_sock = -1;
 	return NULL;
@@ -1255,8 +1305,15 @@ static void show_debug(GtkWidget *w)
 
 		if (go[i].id == my_ship_id)
 			gdk_gc_set_foreground(gc, &huex[GREEN]);
-		else
-			gdk_gc_set_foreground(gc, &huex[WHITE]);
+		else {
+			switch (go[i].type) {
+			case OBJTYPE_PLANET:
+				gdk_gc_set_foreground(gc, &huex[BLUE]);
+				break;
+			default:
+				gdk_gc_set_foreground(gc, &huex[WHITE]);
+			}
+		}
 		snis_draw_line(w->window, gc, x1, y1, x2, y2);
 		snis_draw_line(w->window, gc, x1, y2, x2, y1);
 	}
