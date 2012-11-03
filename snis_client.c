@@ -92,6 +92,7 @@ uint8_t role = 255;
 char *password;
 char *shipname;
 uint32_t my_ship_id = 0xffffffff;
+uint32_t my_ship_oid = 0xfffffff;
 
 float xscale_screen;
 float yscale_screen;
@@ -772,7 +773,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		displaymode = DISPLAYMODE_MAINSCREEN;
 		break;
 	case keyf2:
-		printf("helm!\n");
+		printf("navigation!\n");
 		displaymode = DISPLAYMODE_HELM;
 		break;
 	case keyf3:
@@ -1145,9 +1146,26 @@ static void show_mainscreen(GtkWidget *w)
 	show_common_screen(w, "Main Screen");	
 }
 
-static void show_helm(GtkWidget *w)
+static void show_navigation(GtkWidget *w)
 {
-	show_common_screen(w, "Helm");
+	char buf[100];
+	struct snis_entity *o;
+
+	show_common_screen(w, "Navigation");
+
+	if (my_ship_id == 0xffffffff)
+		return;
+	if (my_ship_oid == 0xffffffff)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == 0xffffffff)
+		return;
+	o = &go[my_ship_oid];
+	// sprintf(buf, "Location: [%5.2lf, %5.2lf]", o->x, o->y);
+	// abs_xy_draw_string(w, buf, SMALL_FONT, 250, 10 + LINEHEIGHT);
+	// sprintf(buf, "Heading: %3.1lf", 360.0 * o->heading / (2.0 * 3.1415927));
+	// abs_xy_draw_string(w, buf, SMALL_FONT, 25, 10 + 2 * LINEHEIGHT);
+	// printf("Location: [%5.2lf, %5.2lf]", o->x, o->y);
+	// printf("Heading: %lf", (double) 360.0 * o->heading / (2.0 * 3.1415927));
 }
 
 static void show_weapons(GtkWidget *w)
@@ -1237,7 +1255,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_mainscreen(w);
 		break;
 	case DISPLAYMODE_HELM:
-		show_helm(w);
+		show_navigation(w);
 		break;
 	case DISPLAYMODE_WEAPONS:
 		show_weapons(w);
