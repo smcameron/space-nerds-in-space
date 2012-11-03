@@ -47,7 +47,7 @@ int snis_readsocket(int fd, void *buffer, int buflen)
 
 	do {
 		rc = recv(fd, c, len, 0);
-		printf("recv returned %d, errno = %s\n", rc, strerror(errno));
+		/*printf("recv returned %d, errno = %s\n", rc, strerror(errno)); */
 		if (rc == 0) /* other side closed conn */
 			return -1;
 		if (rc == len)
