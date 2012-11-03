@@ -1,0 +1,56 @@
+Last updated: Wed Nov  3 19:48:13 CST 2010
+
+SSGL - Super Simple Game Lobby
+
+This code is extremely preliminary, undoubtedly buggy,
+and implements a made-up and still very fluid and fluctuating
+protocol and probably should not be used for any purpose at
+this time.
+
+SSGL - Super Simple Game Lobby
+
+How do people who are scattered around the world and who want to play
+some multiplayer internet game with other such people find each other?
+
+Well, lots of times there's some "game lobby" software embedded into the
+game which connects to some game lobby software running on some well known
+place where people can find it, and this software allows the gamers to find
+the game servers that are actually running their game.
+
+Now, it would be nice if there could be one generic kind of game lobby that
+worked for lots of different games and some libraries and what not so that
+game programmers could easily hook into this game lobby system without each
+one having to write their own custom network code for the game lobby.
+
+So, that's the niche that SSGL is trying to fill.  It's a super simple
+game lobby system.
+
+There are three parts to it.  The first is the generic game lobby software.
+This sits out on the internet somewhere, maybe run by you, maybe run by 
+somebody else.  Your game -- both any server part of your game, and any 
+client parts, can connect (using the library SSGL provides) to these generic
+game lobby server(s).  The servers announce their existence and contact
+info (IP addr/port) to the game lobby server.  The clients request lists of
+game servers for particular types of games (or for all games)  Thus the
+game players, using their clients are able to use the well known game
+lobby servers to locate game-specific servers so they can connect to their
+friends and play their games.
+
+That's ALL it does.  This is a *Super Simple* game lobby system, after all.
+It does not have (nor need) fancy bells and whistles like built in chat
+programs, registered users, etc.
+
+To build:
+
+Type "make"
+
+"ssgl_server" is the lobby server program.  It listens on tcp port 2419 for
+connections from gameserver and gameclients.
+
+"ssgl_gameserver_example" is a trivial example of a gameserver interacting
+with the ssgl_server.  It registers itself and periodically re-registers
+itself so as to not be dropped from the list.
+
+"ssgl_gameclient_example" is a trivial example of a gameclient.  It queries
+the lobbyserver for a list of gameservers, and and prints out what it 
+receives.
