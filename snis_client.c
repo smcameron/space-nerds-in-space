@@ -1397,8 +1397,6 @@ int main(int argc, char *argv[])
 
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 
-	snis_object_pool_setup(&pool, MAXGAMEOBJS);
-
 	connect_to_lobby();
 	real_screen_width = SCREEN_WIDTH;
 	real_screen_height = SCREEN_HEIGHT;
