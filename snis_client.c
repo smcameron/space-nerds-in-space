@@ -1293,6 +1293,9 @@ static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y,
 	int i;
 	// int nx, ny, 
 	int tx1, ty1, tx2, ty2;
+	static double beam = 0.0;
+
+	beam += 2.0 * PI / 180.0;
 
 	for (i = r; i > r / 4; i -= r / 5)
 		snis_draw_circle(drawable, gc, x, y, i);
@@ -1317,6 +1320,11 @@ static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y,
 	tx2 = x + sin(heading) * r;
 	ty2 = y - cos(heading) * r;
 	gdk_gc_set_foreground(gc, &huex[RED]);
+	snis_draw_line(drawable, gc, tx1, ty1, tx2, ty2);
+	tx1 = x + sin(beam) * r * 0.15;
+	ty1 = y - cos(beam) * r * 0.15;
+	tx2 = x + sin(beam) * r;
+	ty2 = y - cos(beam) * r;
 	snis_draw_line(drawable, gc, tx1, ty1, tx2, ty2);
 }
 
