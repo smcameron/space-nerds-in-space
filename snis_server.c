@@ -413,6 +413,17 @@ static void queue_up_client_updates(struct game_client *c)
 	printf("queued up %d updates for client\n", count);
 }
 
+static void queue_up_client_id(struct game_client *c)
+{
+	/* tell the client what his ship id is. */
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
+	packed_buffer_append_u16(pb, OPCODE_ID_CLIENT_SHIP);
+	packed_buffer_append_u32(pb, c->shipid);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
 static void *per_client_write_thread(__attribute__((unused)) void /* struct game_client */ *client)
 {
 	struct timespec time1;
@@ -563,8 +574,7 @@ static int add_new_player(struct game_client *c)
 		
 		pthread_mutex_unlock(&universe_mutex);
 	}
-	return 0;
-
+	queue_up_client_id(c);
 	return 0;
 
 protocol_error:
@@ -617,6 +627,8 @@ static void service_connection(int connection)
 		&client[i].write_attr, per_client_write_thread, (void *) &client[i]);
 	nclients++;
 	client_unlock();
+
+
 	printf("bottom of 'service connection'\n");
 }
 

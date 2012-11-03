@@ -29,6 +29,7 @@
 #define OPCODE_UPDATE_TORPEDO	103
 #define OPCODE_UPDATE_PLAYER	104
 #define OPCODE_ACK_PLAYER	105	
+#define OPCODE_ID_CLIENT_SHIP	106
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -45,6 +46,11 @@ struct update_ship_packet {
         uint32_t ntorpedoes;
         uint32_t energy;
         uint32_t sheilds;
+};
+
+struct client_ship_id_packet {
+	uint16_t opcode;
+	uint32_t shipid;
 };
 
 struct add_starbase_packet {

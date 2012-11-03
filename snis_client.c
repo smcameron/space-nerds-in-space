@@ -91,6 +91,7 @@ int in_the_process_of_quitting = 0;
 uint8_t role = 255;
 char *password;
 char *shipname;
+uint32_t my_ship_id = 0xffffffff;
 
 float xscale_screen;
 float yscale_screen;
@@ -938,6 +939,27 @@ static int process_update_ship_packet(void)
 	return rc;
 } 
 
+static int process_client_id_packet(void)
+{
+	unsigned char buffer[100];
+	struct packed_buffer pb;
+	uint32_t id;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct client_ship_id_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct client_ship_id_packet) - sizeof(uint16_t));
+
+	pb.buffer_size = 100;
+	pb.buffer = buffer;
+	pb.buffer_cursor = 0;
+
+	id = packed_buffer_extract_u32(&pb);
+	if (rc)
+		return rc;
+	my_ship_id = id;
+	return 0;
+}
+
 static void *gameserver_reader(__attribute__((unused)) void *arg)
 {
 	uint16_t opcode;
@@ -957,6 +979,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			printf("processing update ship...\n");
 			rc = process_update_ship_packet();
 			if (rc != 0)
+				goto protocol_error;
+			break;
+		case OPCODE_ID_CLIENT_SHIP:
+			rc = process_client_id_packet();
+			if (rc)
 				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_STARBASE:
@@ -1161,6 +1188,10 @@ static void show_debug(GtkWidget *w)
 		y1 = y - 1;
 		x2 = x + 1;
 
+		if (go[i].id == my_ship_id)
+			gdk_gc_set_foreground(gc, &huex[GREEN]);
+		else
+			gdk_gc_set_foreground(gc, &huex[WHITE]);
 		snis_draw_line(w->window, gc, x1, y1, x2, y2);
 		snis_draw_line(w->window, gc, x1, y2, x2, y1);
 	}
