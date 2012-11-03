@@ -1197,16 +1197,16 @@ static void show_navigation(GtkWidget *w)
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 
-	for (r = 250; r > 0; r -= 250 / 5)
+	for (r = 250; r > 250 / 4; r -= 250 / 5)
 		snis_draw_circle(w->window, gc, cx, cy, r);
 	// snis_draw_arc(w->window, gc, 0, rx, ry, rw, rh, 0, 360*64);
 
 	r = rh / 2;
-	for (i = 0; i < 36 / 2; i++) { /* 10 degree increments */
+	for (i = 0; i < 36; i++) { /* 10 degree increments */
 		int x1 = (int) (cos((10.0 * i) * 3.1415927 / 180.0) * r);
 		int y1 = (int) (sin((10.0 * i) * 3.1415927 / 180.0) * r);
-		int x2 = -x1;
-		int y2 = -y1;
+		int x2 = x1 * 0.25;
+		int y2 = y1 * 0.25;
 		x1 += cx;
 		x2 += cx;
 		y1 += cy;
