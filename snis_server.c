@@ -113,8 +113,8 @@ static void ship_move(struct snis_entity *o)
 	if (snis_randn(100) < 5) {
 		o->heading = degrees_to_radians(0.0 + snis_randn(360)); 
 		v = snis_randn(50);
-		o->vx = v * cos(o->heading);
-		o->vy = v * sin(o->heading);
+		o->vx = v * sin(o->heading);
+		o->vy = v * -cos(o->heading);
 	}
 	o->x += o->vx;
 	o->y += o->vy;
