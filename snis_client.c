@@ -1359,7 +1359,6 @@ static void show_navigation(GtkWidget *w)
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		int x, y;
-		// , x1, y1, x2, y2;
 		double tx, ty;
 		double dist2;
 
@@ -1373,12 +1372,6 @@ static void show_navigation(GtkWidget *w)
 		ty = (go[i].y - o->y) * (double) r / NAVSCREEN_RADIUS;
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
-#if 0
-		x1 = x - 1;
-		y2 = y + 1;
-		y1 = y - 1;
-		x2 = x + 1;
-#endif
 
 		if (go[i].id == my_ship_id)
 			continue; /* skip drawing yourself. */
@@ -1386,19 +1379,17 @@ static void show_navigation(GtkWidget *w)
 			switch (go[i].type) {
 			case OBJTYPE_PLANET:
 				gdk_gc_set_foreground(gc, &huex[BLUE]);
+				snis_draw_circle(w->window, gc, x, y, r / 10);
 				break;
 			case OBJTYPE_STARBASE:
 				gdk_gc_set_foreground(gc, &huex[MAGENTA]);
+				snis_draw_circle(w->window, gc, x, y, r / 20);
 				break;
 			default:
 				gdk_gc_set_foreground(gc, &huex[WHITE]);
+				snis_draw_arrow(w->window, gc, x, y, r, go[i].heading, 0.5);
 			}
 		}
-		snis_draw_arrow(w->window, gc, x, y, r, go[i].heading, 0.5);
-#if 0
-		snis_draw_line(w->window, gc, x1, y1, x2, y2);
-		snis_draw_line(w->window, gc, x1, y2, x2, y1);
-#endif
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
