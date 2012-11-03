@@ -32,6 +32,7 @@
 #include <time.h>
 #include <ctype.h>
 #include <math.h>
+#include <linux/tcp.h>
 
 #include "ssgl/ssgl.h"
 #include "snis.h"
@@ -665,12 +666,16 @@ protocol_error:
 /* Creates a thread for each incoming connection... */
 static void service_connection(int connection)
 {
-	int i;
+	int i, flag = 1;
 
 	printf("snis_server: servicing snis_client connection %d\n", connection);
         /* get connection moved off the stack so that when the thread needs it,
 	 * it's actually still around. 
 	 */
+
+	i = setsockopt(connection, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+	if (i < 0)
+		printf("setsockopt failed.\n");
 
 	client_lock();
 	if (nclients >= MAXCLIENTS) {
