@@ -1,0 +1,7 @@
+*.o
+ssgl/libssglclient.a
+ssgl/ssgl_gameclient_example
+ssgl/ssgl_gameserver_example
+ssgl/ssgl_server
+snis_client
+snis_server
