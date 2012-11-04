@@ -1536,8 +1536,8 @@ static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y,
 	/* draw the ship */
 	snis_draw_arrow(drawable, gc, x, y, r, heading, 1.0);
 	
-	tx1 = x + sin(heading) * r * 0.95;
-	ty1 = y - cos(heading) * r * 0.95;
+	tx1 = x + sin(heading) * r * 0.85;
+	ty1 = y - cos(heading) * r * 0.85;
 	tx2 = x + sin(heading) * r;
 	ty2 = y - cos(heading) * r;
 	gdk_gc_set_foreground(gc, &huex[RED]);
