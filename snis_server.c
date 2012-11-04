@@ -108,6 +108,33 @@ static void generic_move(__attribute__((unused)) struct snis_entity *o)
 	return;
 }
 
+static void torpedo_move(struct snis_entity *o)
+{
+	int i;
+
+	o->x += o->vx;
+	o->y += o->vy;
+	o->timestamp = universe_timestamp;
+	/* o->alive--; */
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
+		if (go[i].alive && i != o->index && o->alive < TORPEDO_LIFETIME - 3) {
+			printf("Hit!\n");
+			o->alive = 0;
+		}
+
+#if 0
+	/* FIXME: need to figure out how to delete object on all clients.
+	 * For now, torpedoes are immortal, like everything else in my
+	 * universe.  I'm such a nice god, aren't I?
+	 */
+	if (o->alive <= 0) {
+		snis_queue_delete_object(o->id);
+		snis_object_pool_free_object(pool, o->index);
+	}
+#endif
+}
+
 static void ship_move(struct snis_entity *o)
 {
 	int v;
@@ -198,7 +225,7 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 	if (i < 0)
 		return i;
 	go[i].move = player_move;
-	go[i].tsd.ship.torpedoes = 5;
+	go[i].tsd.ship.torpedoes = 1000;
 	go[i].tsd.ship.shields = 0;
 	go[i].tsd.ship.energy = 0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
@@ -245,9 +272,15 @@ static int __attribute__((unused)) add_laser(double x, double y, double vx, doub
 	return add_generic_object(x, y, vx, vy, heading, OBJTYPE_LASER);
 }
 
-static int __attribute__((unused)) add_torpedo(double x, double y, double vx, double vy, double heading)
+static int add_torpedo(double x, double y, double vx, double vy, double heading)
 {
-	return add_generic_object(x, y, vx, vy, heading, OBJTYPE_TORPEDO);
+	int i;
+	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_TORPEDO);
+	if (i < 0)
+		return i;
+	go[i].move = torpedo_move;
+	go[i].alive = TORPEDO_LIFETIME;
+	return i;
 }
 
 static void __attribute__((unused)) add_starbases(void)
@@ -469,6 +502,23 @@ static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 	return 0;
 }
 
+static int process_request_torpedo(struct game_client *c)
+{
+	struct snis_entity *ship = &go[c->shipid];
+	double vx, vy;
+
+	if (ship->tsd.ship.torpedoes <= 0)
+		return 0;
+
+	vx = TORPEDO_VELOCITY * sin(ship->tsd.ship.gun_heading);
+	vy = TORPEDO_VELOCITY * -cos(ship->tsd.ship.gun_heading);
+	pthread_mutex_lock(&universe_mutex);
+	add_torpedo(ship->x, ship->y, vx, vy, ship->tsd.ship.gun_heading); 
+	ship->tsd.ship.torpedoes--;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static void process_instructions_from_client(struct game_client *c)
 {
 	int rc;
@@ -480,6 +530,9 @@ static void process_instructions_from_client(struct game_client *c)
 	opcode = ntohs(opcode);
 
 	switch (opcode) {
+		case OPCODE_REQUEST_TORPEDO:
+			process_request_torpedo(c);
+			break;
 		case OPCODE_REQUEST_YAW:
 			rc = process_request_yaw(c, do_yaw);
 			if (rc)
@@ -785,6 +838,21 @@ static void send_update_starbase_packet(struct game_client *c,
 static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o)
 {
+	struct packed_buffer *pb;
+	uint32_t x, y, vx, vy;
+
+	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	vx = (uint32_t) ((o->vx / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	vy = (uint32_t) ((o->vy / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	pb = packed_buffer_allocate(sizeof(struct update_torpedo_packet));
+	packed_buffer_append_u16(pb, OPCODE_UPDATE_TORPEDO);
+	packed_buffer_append_u32(pb, o->id);
+	packed_buffer_append_u32(pb, x);
+	packed_buffer_append_u32(pb, y);
+	packed_buffer_append_u32(pb, vx);
+	packed_buffer_append_u32(pb, vy);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
 static void send_update_laser_packet(struct game_client *c,
@@ -1028,7 +1096,8 @@ static void move_objects(void)
 	pthread_mutex_lock(&universe_mutex);
 	universe_timestamp++;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
-		go[i].move(&go[i]);
+		if (go[i].alive)
+			go[i].move(&go[i]);
 	pthread_mutex_unlock(&universe_mutex);
 
 }

@@ -331,6 +331,20 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	return 0;
 }
 
+static int update_torpedo(uint32_t id, double x, double y, double vx, double vy)
+{
+	int i;
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_TORPEDO, 1);
+		if (i < 0)
+			return i;
+	} else {
+		update_generic_object(i, x, y, vx, vy, 0.0, 1); 
+	}
+	return 0;
+}
+
 static int update_planet(uint32_t id, double x, double y)
 {
 	int i;
@@ -705,7 +719,7 @@ struct keyname_value_entry {
 };
 
 enum keyaction { keynone, keydown, keyup, keyleft, keyright, 
-		keylaser, keytransform, 
+		keytorpedo, keytransform, 
 		keyquarter, keypause, key2, key3, key4, key5, key6,
 		key7, key8, keysuicide, keyfullscreen, keythrust, 
 		keysoundeffects, keymusic, keyquit, keytogglemissilealarm,
@@ -746,8 +760,8 @@ void init_keymap()
 	keymap[GDK_comma] = keyleft;
 	keymap[GDK_less] = keyleft;
 
-	keymap[GDK_space] = keylaser;
-	keymap[GDK_z] = keylaser;
+	keymap[GDK_space] = keytorpedo;
+	keymap[GDK_z] = keytorpedo;
 
 	keymap[GDK_b] = keytransform;
 	keymap[GDK_x] = keythrust;
@@ -839,6 +853,22 @@ static void do_dirkey(int h, int v)
 	return;
 }
 
+static void do_torpedo(void)
+{
+	struct packed_buffer *pb;
+
+	switch (displaymode) {
+	case DISPLAYMODE_WEAPONS:
+		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
+		packed_buffer_append_u16(pb, OPCODE_REQUEST_TORPEDO);
+		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+		wakeup_gameserver_writer();
+		break;
+	default:
+		break;
+	}
+}
+
 static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 {
 	enum keyaction ka;
@@ -873,6 +903,9 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		break;
 	case keydown:
 		do_dirkey(0, 1);
+		break;
+	case keytorpedo:
+		do_torpedo();
 		break;
 	case keyf1:
 		printf("mainscreen!\n");
@@ -1049,6 +1082,44 @@ static int process_update_ship_packet(void)
 
 } 
 
+static int process_update_torpedo_packet(void)
+{
+	unsigned char buffer[100];
+	struct packed_buffer pb;
+	uint32_t id;
+	uint32_t x, y;
+	int32_t vx, vy;
+	double dx, dy, dvx, dvy;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_torpedo_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_torpedo_packet) -
+					sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+
+	pb.buffer_size = sizeof(buffer);;
+	pb.buffer = buffer;
+	pb.buffer_cursor = 0;
+
+	id = packed_buffer_extract_u32(&pb);
+	x = packed_buffer_extract_u32(&pb);
+	y = packed_buffer_extract_u32(&pb);
+	vx = (int32_t) packed_buffer_extract_u32(&pb);
+	vy = (int32_t) packed_buffer_extract_u32(&pb);
+
+	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+	dvx = ((double) vx * (double) XUNIVERSE_DIMENSION) / (double) INT32_MAX;
+	dvy = ((double) vy * (double) YUNIVERSE_DIMENSION) / (double) INT32_MAX;
+
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_torpedo(id, dx, dy, dvx, dvy);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+} 
+
+
 static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
@@ -1172,6 +1243,10 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_UPDATE_LASER:
 			break;
 		case OPCODE_UPDATE_TORPEDO:
+			/* printf("processing update ship...\n"); */
+			rc = process_update_torpedo_packet();
+			if (rc != 0)
+				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_PLAYER:
 			break;
@@ -1182,8 +1257,6 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_POS_STARBASE:
 			break;
 		case OPCODE_POS_LASER:
-			break;
-		case OPCODE_POS_TORPEDO:
 			break;
 		case OPCODE_NOOP:
 			break;
@@ -1402,6 +1475,18 @@ static void snis_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, g
 	snis_draw_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
 }
 
+static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
+{
+	int i, dx, dy;
+
+	gdk_gc_set_foreground(gc, &huex[WHITE]);
+	for (i = 0; i < 10; i++) {
+		dx = x + snis_randn(r * 2) - r; 
+		dy = y + snis_randn(r * 2) - r; 
+		snis_draw_line(drawable, gc, x, y, dx, dy);
+	}
+}
+
 static void snis_draw_arrow(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
 		double heading, double scale)
 {
@@ -1508,6 +1593,9 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 			case OBJTYPE_STARBASE:
 				gdk_gc_set_foreground(gc, &huex[MAGENTA]);
 				snis_draw_circle(w->window, gc, x, y, r / 20);
+				break;
+			case OBJTYPE_TORPEDO:
+				snis_draw_torpedo(w->window, gc, x, y, r / 20);
 				break;
 			default:
 				gdk_gc_set_foreground(gc, &huex[WHITE]);

@@ -34,11 +34,12 @@
 #define OPCODE_REQUEST_YAW	108
 #define OPCODE_REQUEST_THRUST	109
 #define OPCODE_REQUEST_GUNYAW	110
+#define OPCODE_REQUEST_TORPEDO	111
+#define OPCODE_DELETE_OBJECT    112
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
 #define OPCODE_POS_LASER	202
-#define OPCODE_POS_TORPEDO	203
 #define OPCODE_NOOP		0xffff
 
 #pragma pack(1)
@@ -79,13 +80,21 @@ struct add_laser_packet {
 	struct packed_double vx, vy;
 };
 
-struct add_torpedo_packet {
+struct delete_object_packet {
 	uint16_t opcode;
 	uint32_t id;
-	uint32_t power;
-	struct packed_double x, y;
-	struct packed_double vx, vy;
+};
+
+struct update_torpedo_packet {
+	uint16_t opcode;
+	uint32_t id;
+	uint32_t x, y;
+	uint32_t vx, vy;
 }; 
+
+struct request_torpedo_packet {
+	uint16_t opcode;
+};
 
 struct request_yaw_packet {
 	uint16_t opcode;

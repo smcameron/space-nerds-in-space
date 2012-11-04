@@ -44,6 +44,8 @@
 
 struct ship_data {
 	uint32_t torpedoes;
+#define TORPEDO_LIFETIME 104000
+#define TORPEDO_VELOCITY (45.0)
 	uint32_t energy;
 	uint32_t shields;
 	char shipname[100];
