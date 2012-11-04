@@ -791,6 +791,7 @@ static int add_new_player(struct game_client *c)
 		memset(&bridgelist[nbridges], 0, sizeof(bridgelist[nbridges]));
 		strcpy((char *) bridgelist[nbridges].shipname, (const char *) app.shipname);
 		strcpy((char *) bridgelist[nbridges].password, (const char *) app.password);
+		bridgelist[nbridges].shipid = c->shipid;
 	
 		nbridges++;
 		
