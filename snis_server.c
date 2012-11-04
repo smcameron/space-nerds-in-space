@@ -1001,7 +1001,6 @@ static void register_with_game_lobby(int port,
 	struct ssgl_game_server gs;
 
 	memset(&gs, 0, sizeof(gs));
-	gs.ipaddr = 0; /* lobby server will figure this out. */
 	printf("port = %hu\n", port);
 	gs.port = htons(port);
 	printf("gs.port = %hu\n", gs.port);
@@ -1010,6 +1009,10 @@ static void register_with_game_lobby(int port,
 	strncpy(gs.game_instance, gameinstance, 19);
 	strncpy(gs.location, location, 19);
 	strcpy(gs.game_type, "SNIS");
+
+	if (ssgl_get_primary_host_ip_addr(&gs.ipaddr) != 0)
+		fprintf(stderr, "Failed to get local ip address.\n");
+
 	printf("Registering game server\n");
 #define LOBBYHOST "localhost"
 	(void) ssgl_register_gameserver(LOBBYHOST, &gs, &lobbythread);

@@ -130,11 +130,13 @@ static void service_game_server(int connection)
 {
 	int rc;
 	int i;
+	struct ssgl_game_server gs;
+#if 0
 	struct sockaddr peer;
 	struct sockaddr_in *ip4addr;
 	unsigned int addrlen;
-	struct ssgl_game_server gs;
 	unsigned char *x;
+#endif
 
 	/* Get game server information */
 	rc = ssgl_readsocket(connection, &gs, sizeof(gs));
@@ -145,6 +147,12 @@ static void service_game_server(int connection)
 	if (sanitize_game_server_entry(&gs))
 		return;
 	printf("2 gs.game_type = '%s'\n",gs.game_type);
+
+#if 0
+
+	/* This doesn't work... will return 127.0.0.1 if gameserver is on
+	 * the same host as lobby server.
+	 */
 
 	/* Get the game server's ip addr (don't trust what we were told.) */
 	memset(&gs.ipaddr, 0, sizeof(gs.ipaddr));
@@ -160,6 +168,7 @@ static void service_game_server(int connection)
 	printf("\n");
 	ip4addr = (struct sockaddr_in *) &peer;
 	memcpy(&gs.ipaddr, &ip4addr->sin_addr, sizeof(gs.ipaddr));
+#endif
 
 	printf("3 gs.game_type = '%s'\n",gs.game_type);
 	/* Update directory with new info. */
