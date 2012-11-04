@@ -1580,8 +1580,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
         gdk_gc_set_foreground(gc, &huex[WHITE]);
 	
 	role = ROLE_MAIN;
-	shipname = "Enterprise";
-	password = "tribbles";
 
 #if 0	
 	for (i = 0; i <= highest_object_number;i++) {
@@ -1749,11 +1747,23 @@ void really_quit(void)
 	exit(1); /* probably bad form... oh well. */
 }
 
+static void usage(void)
+{
+	fprintf(stderr, "usage: snis_client starship password\n");
+	fprintf(stderr, "       Example: ./snis_client Enterprise tribbles\n");
+	exit(1);
+}
 
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
 	int i;
+
+	if (argc < 3)
+		usage();
+
+	shipname = argv[1];
+	password = argv[2];
 
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 
