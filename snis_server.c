@@ -587,12 +587,9 @@ static void write_queued_updates_to_client(struct game_client *c)
 
 	struct packed_buffer *buffer;
 
-	printf("writing queued updates to client, c=%p, c->client_write_queue = %p\n", (void *) c,
-			(void *) &c->client_write_queue);
 	/*  packed_buffer_queue_print(&c->client_write_queue); */
 	buffer = packed_buffer_queue_combine(&c->client_write_queue, &c->client_write_queue_mutex);
 	if (buffer->buffer_size > 0) {
-		printf("Writing data to client\n");
 		rc = snis_writesocket(c->socket, buffer->buffer, buffer->buffer_size);
 		if (rc != 0) {
 			printf("writesocket failed, rc= %d, errno = %d(%s)\n", 
@@ -663,7 +660,6 @@ static void queue_up_client_updates(struct game_client *c)
 	int count;
 
 	count = 0;
-	printf("server: queue_up_client_updates\n");
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
@@ -674,7 +670,7 @@ static void queue_up_client_updates(struct game_client *c)
 		}
 	}
 	pthread_mutex_unlock(&universe_mutex);
-	printf("queued up %d updates for client\n", count);
+	/* printf("queued up %d updates for client\n", count); */
 }
 
 static void queue_up_client_id(struct game_client *c)
@@ -705,20 +701,15 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 	client_lock();
 	client_unlock();
 	while (1) {
-		printf("server: top of loop in per_client_write_thread\n");
 		rc = clock_gettime(CLOCK_MONOTONIC, &time1);
-		printf("server: queuing up client updates\n");
 		queue_up_client_updates(c);
-		printf("server: queued up client updates, writing updates to client\n");
 		write_queued_updates_to_client(c);
 		if (c->socket < 0)
 			break;
 		c->timestamp = universe_timestamp;
-		printf("server: wrote updates to client, sleeping.\n");
 		rc = clock_gettime(CLOCK_MONOTONIC, &time2);
 		/* snis_sleep(&time1, &time2, &tenth_second); */ /* sleep for 1/10th sec - (time2 - time1) */
 		sleep_tenth_second();
-		printf("server: awakened.\n");
 	}
 	printf("client writer thread exiting.\n");
 	if (rc) /* satisfy the whining compiler */

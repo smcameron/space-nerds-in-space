@@ -69,7 +69,7 @@ static void *update_lobby_thread(void *arg)
 			pthread_exit(NULL);
 		}
 
-		printf("writing, gs.game_type = '%s'\n", gameserver.game_type);
+		/* printf("writing, gs.game_type = '%s'\n", gameserver.game_type); */
 		rc =  ssgl_writesocket(lobbysock, &gameserver, sizeof(gameserver)); 
 		if (rc) {
 			fprintf(stderr, "ssgl_register_gameserver failed: %s\n", strerror(errno));

@@ -143,10 +143,10 @@ static void service_game_server(int connection)
 	if (rc < 0)
 		return;
 
-	printf("1 gs.game_type = '%s', gs.port = %hu\n",gs.game_type, gs.port);
+	/* printf("1 gs.game_type = '%s', gs.port = %hu\n",gs.game_type, gs.port); */
 	if (sanitize_game_server_entry(&gs))
 		return;
-	printf("2 gs.game_type = '%s'\n",gs.game_type);
+	/* printf("2 gs.game_type = '%s'\n",gs.game_type); */
 
 #if 0
 
@@ -170,7 +170,7 @@ static void service_game_server(int connection)
 	memcpy(&gs.ipaddr, &ip4addr->sin_addr, sizeof(gs.ipaddr));
 #endif
 
-	printf("3 gs.game_type = '%s'\n",gs.game_type);
+	/* printf("3 gs.game_type = '%s'\n",gs.game_type); */
 	/* Update directory with new info. */
 
 	ssgl_lock();
@@ -183,16 +183,16 @@ static void service_game_server(int connection)
 			goto out;
 		}
 	}
-	printf("4 gs.game_type = '%s'\n",gs.game_type);
+	/* printf("4 gs.game_type = '%s'\n",gs.game_type); */
 
 	if (ngame_servers >= MAX_GAME_SERVERS)
 		goto out; /* no room at the inn. */
 
-	printf("5 gs.game_type = '%s'\n",gs.game_type);
+	/* printf("5 gs.game_type = '%s'\n",gs.game_type); */
 	/* add the new game server info into the directory... */
 	game_server[ngame_servers] = gs;
 	update_expiration(ngame_servers);
-	printf("6 gs.game_type = '%s'\n",gs.game_type);
+	/* printf("6 gs.game_type = '%s'\n",gs.game_type); */
 	ngame_servers++;
 out:
 	ssgl_unlock();
@@ -237,13 +237,13 @@ static void service_game_client(int connection)
 
 
 	while (1) {
-		printf("ssgl_server: reading filter data.\n");	
+		/* printf("ssgl_server: reading filter data.\n"); */
 		rc = ssgl_readsocket(connection, &filter, sizeof(filter));
 		if (rc)
 			goto badclient;
 
 		fill_trailing_zeroes(filter.game_type, sizeof(filter.game_type));
-		printf("ssgl_server: client requested filter '%s'\n", filter.game_type);
+		/* printf("ssgl_server: client requested filter '%s'\n", filter.game_type); */
 
 		nentries = 0;
 		ssgl_lock();
@@ -260,7 +260,7 @@ static void service_game_client(int connection)
 			directory = malloc(sizeof(*directory) * ngame_servers);
 			memset(directory, 0, sizeof(*directory) * ngame_servers);
 			for (i = 0; i < ngame_servers; i++) {
-				printf("%d '%s' vs. '%s'\n", i, game_server[i].game_type, filter.game_type);
+				/* printf("%d '%s' vs. '%s'\n", i, game_server[i].game_type, filter.game_type); */
 				if (strcmp(game_server[i].game_type, filter.game_type) == 0) {
 					directory[nentries] = game_server[i];
 					nentries++;
@@ -270,12 +270,12 @@ static void service_game_client(int connection)
 send_the_data:
 		ssgl_unlock();
 
-		printf("ssgl_server: sending client count: %d/%d\n", nentries, ngame_servers);
+		/* printf("ssgl_server: sending client count: %d/%d\n", nentries, ngame_servers); */
 		be_nentries = htonl(nentries);
 		rc = ssgl_writesocket(connection, &be_nentries, sizeof(be_nentries));
 		if (rc)
 			goto badclient;
-		printf("ssgl_server: sending client %d entries\n", nentries);
+		/* printf("ssgl_server: sending client %d entries\n", nentries); */
 
 		if (nentries > 0) { 
 			/* TODO insert zlib compression here, if need be. */
@@ -284,7 +284,7 @@ send_the_data:
 				goto badclient;
 		}
 
-		printf("ssgl_server: sent entries.\n");
+		/* printf("ssgl_server: sent entries.\n"); */
 		/* sleep at least 5 secs before updating client again.
 		 * client can increase this by sleeping more before
 		 * writing a new filter back to complete the readsocket
@@ -418,9 +418,9 @@ int main(int argc, char *argv[])
 
 	while (1) {
 		remote_addr_len = sizeof(remote_addr);
-		printf("Accepting connection...\n");
+		/* printf("Accepting connection...\n"); */
 		connection = accept(rendezvous, (struct sockaddr *) &remote_addr, &remote_addr_len);
-		printf("accept returned %d\n", connection);
+		/* printf("accept returned %d\n", connection); */
 		if (connection < 0) {
 			/* handle failed connection... */
 			fprintf(stderr, "accept() failed: %s\n", strerror(errno));
