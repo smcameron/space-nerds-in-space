@@ -113,6 +113,14 @@ int packed_buffer_append_u16(struct packed_buffer *pb, uint16_t value)
 	return 0;
 }
 
+int packed_buffer_append_u8(struct packed_buffer *pb, uint8_t value)
+{
+	uint8_t *c = (uint8_t *) &pb->buffer[pb->buffer_cursor];
+	*c = value;
+	pb->buffer_cursor += 1;
+	return 0;
+}
+
 int packed_buffer_append_u32(struct packed_buffer *pb, uint32_t value)
 {
 	value = htonl(value);
@@ -129,6 +137,13 @@ uint16_t packed_buffer_extract_u16(struct packed_buffer *pb)
 	pb->buffer_cursor += sizeof(value);
 	value = ntohs(value);
 	return value;
+}
+
+uint8_t packed_buffer_extract_u8(struct packed_buffer *pb)
+{
+	uint8_t *c = (uint8_t *) &pb->buffer[pb->buffer_cursor];
+	pb->buffer_cursor += 1;
+	return *c;
 }
 
 uint32_t packed_buffer_extract_u32(struct packed_buffer *pb)
