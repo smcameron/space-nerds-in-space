@@ -31,6 +31,8 @@
 #define OPCODE_ACK_PLAYER	105	
 #define OPCODE_ID_CLIENT_SHIP	106
 #define OPCODE_UPDATE_PLANET	107
+#define OPCODE_REQUEST_YAW	108
+#define OPCODE_REQUEST_THRUST	109
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -82,6 +84,20 @@ struct add_torpedo_packet {
 	struct packed_double x, y;
 	struct packed_double vx, vy;
 }; 
+
+struct request_yaw_packet {
+	uint16_t opcode;
+	uint8_t direction;
+#define YAW_LEFT 1
+#define YAW_RIGHT 2
+};
+
+struct request_thrust_packet {
+	uint16_t opcode;
+	uint8_t direction;
+#define THRUST_FORWARDS 1
+#define THRUST_BACKWARDS 2
+};
 
 #define ROLE_MAIN 0
 #define ROLE_HELM 1

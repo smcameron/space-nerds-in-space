@@ -777,9 +777,31 @@ void init_keymap()
 	ffkeymap[GDK_F11 & 0x00ff] = keyfullscreen;
 }
 
+static void wakeup_gameserver_writer(void);
+
 static void helm_dirkey(int h, int v)
 {
-	
+	struct packed_buffer *pb;
+	uint8_t yaw, thrust;
+
+	if (!h && !v)
+		return;
+
+	if (h) {
+		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
+		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
+		packed_buffer_append_u16(pb, OPCODE_REQUEST_YAW);
+		packed_buffer_append_u8(pb, yaw);
+		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	}
+	if (v) {
+		thrust = v < 0 ? THRUST_BACKWARDS : THRUST_FORWARDS;
+		pb = packed_buffer_allocate(sizeof(struct request_thrust_packet));
+		packed_buffer_append_u16(pb, OPCODE_REQUEST_THRUST);
+		packed_buffer_append_u8(pb, thrust);
+		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	}
+	wakeup_gameserver_writer();
 }
 
 static void do_dirkey(int h, int v)
@@ -1164,6 +1186,7 @@ static void wait_for_serverbound_packets(void)
 		if (rc != 0)
 			printf("gameserver_writer: pthread_cond_wait failed.\n");
 		if (have_packets_for_server) {
+			have_packets_for_server = 0;
 			pthread_mutex_unlock(&to_server_queue_event_mutex);
 			break;
 		}
@@ -1197,6 +1220,18 @@ badserver:
 	shutdown(gameserver_sock, SHUT_RDWR);
 	close(gameserver_sock);
 	gameserver_sock = -1;
+}
+
+static void wakeup_gameserver_writer(void)
+{
+	int rc;
+
+        pthread_mutex_lock(&to_server_queue_event_mutex);
+	have_packets_for_server = 1;
+	rc = pthread_cond_broadcast(&server_write_cond);
+	if (rc)
+		printf("huh... pthread_cond_broadcast failed.\n");
+	pthread_mutex_unlock(&to_server_queue_event_mutex);
 }
 
 static void *gameserver_writer(__attribute__((unused)) void *arg)
@@ -1266,6 +1301,9 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 
 	displaymode = DISPLAYMODE_CONNECTED;
 
+	/* Should probably submit this through the packed buffer queue...
+	 * but, this works.
+	 */
 	memset(&app, 0, sizeof(app));
 	app.opcode = htons(OPCODE_UPDATE_PLAYER);
 	app.role = role;

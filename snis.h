@@ -47,6 +47,9 @@ struct ship_data {
 	uint32_t energy;
 	uint32_t shields;
 	char shipname[100];
+	double yaw_velocity;
+#define MAX_YAW_VELOCITY (5 * PI / 180.0)
+#define YAW_INCREMENT (1 * PI / 180.0)
 };
 
 struct starbase_data {

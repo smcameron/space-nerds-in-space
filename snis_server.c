@@ -126,7 +126,14 @@ static void player_move(struct snis_entity *o)
 {
 	o->x += o->vx;
 	o->y += o->vy;
+	o->heading += o->tsd.ship.yaw_velocity;
 	o->timestamp = universe_timestamp;
+
+	/* Damp yaw velocity. */
+	if (fabs(o->tsd.ship.yaw_velocity) < (0.3 * PI / 180.0))
+		o->tsd.ship.yaw_velocity = 0.0;
+	else
+		o->tsd.ship.yaw_velocity *= 0.85;
 }
 
 static void starbase_move(struct snis_entity *o)
@@ -165,6 +172,10 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 	if (i < 0)
 		return i;
 	go[i].move = player_move;
+	go[i].tsd.ship.torpedoes = 5;
+	go[i].tsd.ship.shields = 0;
+	go[i].tsd.ship.energy = 0;
+	go[i].tsd.ship.yaw_velocity = 0.0;
 	return i;
 }
 
@@ -176,6 +187,11 @@ static int add_ship1(double x, double y, double vx, double vy, double heading)
 	if (i < 0)
 		return i;
 	go[i].move = ship_move;
+	go[i].tsd.ship.torpedoes = 0;
+	go[i].tsd.ship.shields = 0;
+	go[i].tsd.ship.energy = 0;
+	go[i].tsd.ship.yaw_velocity = 0.0;
+	return i;
 	return i;
 }
 
@@ -296,6 +312,7 @@ static void sleep_thirtieth_second(void)
 	} while (rc == EINTR);
 }
 
+#if 0
 /* Sleep for enough time, x, such that (end - begin + x) == total*/
 static void snis_sleep(struct timespec *begin, struct timespec *end, struct timespec *total)
 {
@@ -323,40 +340,130 @@ static void snis_sleep(struct timespec *begin, struct timespec *end, struct time
 	} while (rc == EINTR);
 #endif
 }
+#endif
 
-static void read_instructions_from_client(__attribute__((unused)) struct game_client *c)
+static void do_thrust(struct game_client *c, int thrust)
 {
-	printf("reading from client...\n");
-	ssgl_sleep(20);
-	/* readd an apply instructions from client. */
+}
+
+static void do_yaw(struct game_client *c, int thrust)
+{
+	struct snis_entity *ship = &go[c->shipid];
+
+	if (thrust > 0) {
+		if (ship->tsd.ship.yaw_velocity < MAX_YAW_VELOCITY)
+			ship->tsd.ship.yaw_velocity += YAW_INCREMENT;
+	} else {
+		if (ship->tsd.ship.yaw_velocity > -MAX_YAW_VELOCITY)
+			ship->tsd.ship.yaw_velocity -= YAW_INCREMENT;
+	}
+}
+
+static int process_request_thrust(struct game_client *c)
+{
+	unsigned char buffer[10];
+	struct packed_buffer pb;
+	uint8_t thrust;
+	int rc;
+
+	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_thrust_packet) - sizeof(uint16_t));
+	if (rc)
+		return rc;
+	pb.buffer_size = sizeof(buffer);
+	pb.buffer = buffer;
+	pb.buffer_cursor = 0;
+
+	thrust = packed_buffer_extract_u8(&pb);
+	switch (thrust) {
+	case THRUST_FORWARDS:
+		do_thrust(c, 1);
+		break;
+	case THRUST_BACKWARDS:
+		do_thrust(c, -1);
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+
+static int process_request_yaw(struct game_client *c)
+{
+	unsigned char buffer[10];
+	struct packed_buffer pb;
+	uint8_t yaw;
+	int rc;
+
+	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_yaw_packet) - sizeof(uint16_t));
+	if (rc)
+		return rc;
+	pb.buffer_size = sizeof(buffer);
+	pb.buffer = buffer;
+	pb.buffer_cursor = 0;
+
+	yaw = packed_buffer_extract_u8(&pb);
+	switch (yaw) {
+	case YAW_LEFT:
+		do_yaw(c, -1);
+		break;
+	case YAW_RIGHT:
+		do_yaw(c, 1);
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+
+static void process_instructions_from_client(struct game_client *c)
+{
+	int rc;
+	uint16_t opcode;
+
+	rc = snis_readsocket(c->socket, &opcode, sizeof(opcode));
+	if (rc != 0)
+		goto protocol_error;
+	opcode = ntohs(opcode);
+
+	switch (opcode) {
+		case OPCODE_REQUEST_YAW:
+			rc = process_request_yaw(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_THRUST:
+			rc = process_request_thrust(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_NOOP:
+			break;
+		default:
+			goto protocol_error;
+	}
+	return;
+
+protocol_error:
+	printf("Protocol error in process_instructions_from_client\n");
+	shutdown(c->socket, SHUT_RDWR);
+	close(c->socket);
+	c->socket = -1;
+	return;
 }
 
 static void *per_client_read_thread(__attribute__((unused)) void /* struct game_client */ *client)
 {
-	struct timespec time1;
-	struct timespec time2;
-	struct timespec tenth_second;
-	int rc;
 	struct game_client *c = (struct game_client *) client;
-
-	memset(&tenth_second, 0, sizeof(tenth_second));
-	tenth_second.tv_nsec = CLIENT_UPDATE_PERIOD_NSECS;
 
 	/* Wait for client[] array to get fully updated before proceeding. */
 	client_lock();
 	client_unlock();
 	while (1) {
-		rc = clock_gettime(CLOCK_MONOTONIC, &time1);
-		read_instructions_from_client(c);
+		process_instructions_from_client(c);
 		if (c->socket < 0)
 			break;
-		/* rc = clock_gettime(CLOCK_MONOTONIC, &time2); */
-		rc = clock_gettime(CLOCK_MONOTONIC, &time2);
-		snis_sleep(&time1, &time2, &tenth_second); /* sleep for 1/10th sec - (time2 - time1) */
 	}
 	printf("client reader thread exiting\n");
-	if (rc)
-		return NULL;
 	return NULL;
 }
 
