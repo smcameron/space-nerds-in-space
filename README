@@ -20,15 +20,12 @@ a) start ssgl_server
 b) start snis_server
 c) start snis_client (several instances, one per bridge station)
 
-(The only critical point is ssgl_server should be started first, otherwise,
-snis_server and snis_client(s) can be started in any order, and clients can
-join at any time.
+(The only critical point is ssgl_server should be started first, otherwise, snis_server and snis_client(s) can be started in any order, and clients can join at any time.
 
 for each snis_client: 
 
 1) connect to the snis_server process.
-2) press function keys f1,f2,f3,f4,f5,f6, etc. to select which function
-   this instance of snis_client is to fulfill.
+2) press function keys f1,f2,f3,f4,f5,f6, etc. to select which function this instance of snis_client is to fulfill.
 
 
 That's about all the instructions I have for now.
