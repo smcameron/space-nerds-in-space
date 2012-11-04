@@ -232,8 +232,6 @@ struct packed_buffer *packed_buffer_queue_combine(struct packed_buffer_queue *pb
 	for (i = pbq->head; i; i = i->next)
 		totalbytes += i->buffer->buffer_cursor;
 
-	printf("totalbytes = %d\n", totalbytes);
-
 	if (totalbytes == 0) {
 		unlockmutex(mutex);
 		answer->buffer = NULL;

@@ -823,7 +823,6 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
                 ka = keymap[event->keyval];
         else
                 ka = ffkeymap[event->keyval & 0x00ff];
-	printf("ka = %hhu\n", (unsigned char) ka);
 
         switch (ka) {
         case keyfullscreen: {
