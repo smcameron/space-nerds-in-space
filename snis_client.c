@@ -186,6 +186,7 @@ int lobby_socket = -1;
 int gameserver_sock = -1;
 int lobby_count = 0;
 char lobbyerror[200];
+char *lobbyhost = "localhost";
 struct ssgl_game_server lobby_game_server[100];
 int ngameservers = 0;
 
@@ -200,7 +201,7 @@ try_again:
 	/* Loop, trying to connect to the lobby server... */
 	strcpy(lobbyerror, "");
 	while (1) {
-		sock = ssgl_gameclient_connect_to_lobby("localhost");
+		sock = ssgl_gameclient_connect_to_lobby(lobbyhost);
 		lobby_count++;
 		if (sock >= 0) {
 			lobby_socket = sock;
@@ -1749,8 +1750,8 @@ void really_quit(void)
 
 static void usage(void)
 {
-	fprintf(stderr, "usage: snis_client starship password\n");
-	fprintf(stderr, "       Example: ./snis_client Enterprise tribbles\n");
+	fprintf(stderr, "usage: snis_client lobbyhost starship password\n");
+	fprintf(stderr, "       Example: ./snis_client localhost Enterprise tribbles\n");
 	exit(1);
 }
 
@@ -1762,8 +1763,9 @@ int main(int argc, char *argv[])
 	if (argc < 3)
 		usage();
 
-	shipname = argv[1];
-	password = argv[2];
+	lobbyhost = argv[1];
+	shipname = argv[2];
+	password = argv[3];
 
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 
