@@ -33,6 +33,7 @@
 #define OPCODE_UPDATE_PLANET	107
 #define OPCODE_REQUEST_YAW	108
 #define OPCODE_REQUEST_THRUST	109
+#define OPCODE_REQUEST_GUNYAW	110
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -49,6 +50,7 @@ struct update_ship_packet {
         uint32_t ntorpedoes;
         uint32_t energy;
         uint32_t sheilds;
+	uint32_t gun_heading;
 };
 
 struct client_ship_id_packet {

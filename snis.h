@@ -55,6 +55,8 @@ struct ship_data {
 	double yaw_velocity;
 #define MAX_YAW_VELOCITY (5 * PI / 180.0)
 #define YAW_INCREMENT (1 * PI / 180.0)
+	double gun_heading;
+	double gun_yaw_velocity;
 };
 
 struct starbase_data {

@@ -122,6 +122,23 @@ static void ship_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
+static void normalize_heading(double *heading)
+{
+	/* FIXME, there's undoubtedly a better way to normalize radians */
+	while (*heading > (360.0 * PI / 180.0))
+		*heading -= (360.0 * PI / 180.0);
+	while (*heading < 0)
+		*heading += (360.0 * PI / 180.0); 
+}
+
+static void damp_yaw_velocity(double *yv)
+{
+	if (fabs(*yv) < (0.3 * PI / 180.0))
+		*yv = 0.0;
+	else
+		*yv *= 0.85;
+}
+
 static void player_move(struct snis_entity *o)
 {
 	o->vy = o->tsd.ship.velocity * cos(o->heading);
@@ -129,18 +146,14 @@ static void player_move(struct snis_entity *o)
 	o->x += o->vx;
 	o->y += o->vy;
 	o->heading += o->tsd.ship.yaw_velocity;
-	/* FIXME, there's undoubtedly a better way to normalize radians */
-	while (o->heading > (360.0 * PI / 180.0))
-		o->heading -= (360.0 * PI / 180.0);
-	while (o->heading < 0)
-		o->heading += (360.0 * PI / 180.0); 
+	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
+
+	normalize_heading(&o->heading);
+	normalize_heading(&o->tsd.ship.gun_heading);
 	o->timestamp = universe_timestamp;
 
-	/* Damp yaw velocity. */
-	if (fabs(o->tsd.ship.yaw_velocity) < (0.3 * PI / 180.0))
-		o->tsd.ship.yaw_velocity = 0.0;
-	else
-		o->tsd.ship.yaw_velocity *= 0.85;
+	damp_yaw_velocity(&o->tsd.ship.yaw_velocity);
+	damp_yaw_velocity(&o->tsd.ship.gun_yaw_velocity);
 
 	/* Damp velocity */
 	if (fabs(o->tsd.ship.velocity) < MIN_PLAYER_VELOCITY)
@@ -189,6 +202,8 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 	go[i].tsd.ship.shields = 0;
 	go[i].tsd.ship.energy = 0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
+	go[i].tsd.ship.gun_yaw_velocity = 0.0;
+	go[i].tsd.ship.gun_heading = 0.0;
 	go[i].tsd.ship.velocity = 0.0;
 	return i;
 }
@@ -369,16 +384,32 @@ static void do_thrust(struct game_client *c, int thrust)
 	}
 }
 
-static void do_yaw(struct game_client *c, int thrust)
+typedef void (*do_yaw_function)(struct game_client *c, int yaw);
+
+static void do_yaw(struct game_client *c, int yaw)
 {
 	struct snis_entity *ship = &go[c->shipid];
 
-	if (thrust > 0) {
+	if (yaw > 0) {
 		if (ship->tsd.ship.yaw_velocity < MAX_YAW_VELOCITY)
 			ship->tsd.ship.yaw_velocity += YAW_INCREMENT;
 	} else {
 		if (ship->tsd.ship.yaw_velocity > -MAX_YAW_VELOCITY)
 			ship->tsd.ship.yaw_velocity -= YAW_INCREMENT;
+	}
+}
+
+static void do_gun_yaw(struct game_client *c, int yaw)
+{
+	/* FIXME combine this with do_yaw somehow */
+	struct snis_entity *ship = &go[c->shipid];
+
+	if (yaw > 0) {
+		if (ship->tsd.ship.gun_yaw_velocity < MAX_YAW_VELOCITY)
+			ship->tsd.ship.gun_yaw_velocity += YAW_INCREMENT;
+	} else {
+		if (ship->tsd.ship.gun_yaw_velocity > -MAX_YAW_VELOCITY)
+			ship->tsd.ship.gun_yaw_velocity -= YAW_INCREMENT;
 	}
 }
 
@@ -410,7 +441,7 @@ static int process_request_thrust(struct game_client *c)
 	return 0;
 }
 
-static int process_request_yaw(struct game_client *c)
+static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 {
 	unsigned char buffer[10];
 	struct packed_buffer pb;
@@ -427,10 +458,10 @@ static int process_request_yaw(struct game_client *c)
 	yaw = packed_buffer_extract_u8(&pb);
 	switch (yaw) {
 	case YAW_LEFT:
-		do_yaw(c, -1);
+		yaw_func(c, -1);
 		break;
 	case YAW_RIGHT:
-		do_yaw(c, 1);
+		yaw_func(c, 1);
 		break;
 	default:
 		break;
@@ -450,7 +481,12 @@ static void process_instructions_from_client(struct game_client *c)
 
 	switch (opcode) {
 		case OPCODE_REQUEST_YAW:
-			rc = process_request_yaw(c);
+			rc = process_request_yaw(c, do_yaw);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_GUNYAW:
+			rc = process_request_yaw(c, do_gun_yaw);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -686,13 +722,14 @@ static void send_update_ship_packet(struct game_client *c,
 	struct packed_buffer *pb;
 	uint32_t x, y;
 	int32_t vx, vy;
-	uint32_t heading;
+	uint32_t heading, gun_heading;
 
 	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	vx = (int32_t) ((o->vx / XUNIVERSE_DIMENSION) * (double) INT32_MAX);
 	vy = (int32_t) ((o->vy / YUNIVERSE_DIMENSION) * (double) INT32_MAX);
 	heading = (uint32_t) (o->heading / 360.0 * (double) UINT32_MAX);
+	gun_heading = (uint32_t) (o->tsd.ship.gun_heading / 360.0 * (double) UINT32_MAX);
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_SHIP);
@@ -706,6 +743,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u32(pb, o->tsd.ship.torpedoes);
 	packed_buffer_append_u32(pb, o->tsd.ship.energy);
 	packed_buffer_append_u32(pb, o->tsd.ship.shields);
+	packed_buffer_append_u32(pb, gun_heading);
 
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }

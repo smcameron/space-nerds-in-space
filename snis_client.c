@@ -313,7 +313,7 @@ static int lookup_object_by_id(uint32_t id)
 }
 
 static int update_ship(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive,
-			uint32_t torpedoes, uint32_t energy, uint32_t shields)
+			uint32_t torpedoes, uint32_t energy, uint32_t shields, double gun_heading)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -327,6 +327,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.torpedoes = torpedoes;
 	go[i].tsd.ship.energy = energy;
 	go[i].tsd.ship.shields = shields;
+	go[i].tsd.ship.gun_heading = gun_heading;
 	return 0;
 }
 
@@ -805,11 +806,32 @@ static void helm_dirkey(int h, int v)
 	wakeup_gameserver_writer();
 }
 
+static void weapons_dirkey(int h, int v)
+{
+	struct packed_buffer *pb;
+	uint8_t yaw;
+
+	if (!h && !v)
+		return;
+
+	if (h) {
+		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
+		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
+		packed_buffer_append_u16(pb, OPCODE_REQUEST_GUNYAW);
+		packed_buffer_append_u8(pb, yaw);
+		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	}
+	wakeup_gameserver_writer();
+}
+
 static void do_dirkey(int h, int v)
 {
 	switch (displaymode) {
 		case DISPLAYMODE_HELM:
 			helm_dirkey(h, v); 
+			break;
+		case DISPLAYMODE_WEAPONS:
+			weapons_dirkey(h, v); 
 			break;
 		default:
 			break;
@@ -986,9 +1008,9 @@ static int process_update_ship_packet(void)
 	unsigned char buffer[100];
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, shields, energy;
-	uint32_t x, y, heading;
+	uint32_t x, y, heading, gun_heading;
 	int32_t vx, vy;
-	double dx, dy, dheading, dvx, dvy;
+	double dx, dy, dheading, dgheading, dvx, dvy;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1011,15 +1033,17 @@ static int process_update_ship_packet(void)
 	torpedoes = packed_buffer_extract_u32(&pb);
 	energy = packed_buffer_extract_u32(&pb);
 	shields = packed_buffer_extract_u32(&pb);
+	gun_heading = packed_buffer_extract_u32(&pb);
 
 	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
 	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
 	dvx = ((double) vx * (double) XUNIVERSE_DIMENSION) / (double) INT32_MAX;
 	dvy = ((double) vy * (double) YUNIVERSE_DIMENSION) / (double) INT32_MAX;
 	dheading = (double) heading * 360.0 / (double) UINT32_MAX;
+	dgheading = (double) gun_heading * 360.0 / (double) UINT32_MAX;
 
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, energy, shields);
+	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, energy, shields, dgheading);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 
@@ -1534,7 +1558,41 @@ static void show_navigation(GtkWidget *w)
 
 static void show_weapons(GtkWidget *w)
 {
+	// char buf[100];
+	struct snis_entity *o;
+	int rx, ry, rw, rh, cx, cy;
+	int r;
+
 	show_common_screen(w, "Weapons");
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
+
+	if (my_ship_id == UNKNOWN_ID)
+		return;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return;
+	o = &go[my_ship_oid];
+/*
+	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
+			360.0 * o->heading / (2.0 * 3.1415927));
+	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
+	sprintf(buf, "vx: %5.2lf", o->vx);
+	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
+	sprintf(buf, "vy: %5.2lf", o->vy);
+	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 4);
+*/
+
+	rx = 20;
+	ry = 70;
+	rw = 500;
+	rh = 500;
+	cx = rx + (rw / 2);
+	cy = ry + (rh / 2);
+	r = rh / 2;
+	gdk_gc_set_foreground(gc, &huex[BLUE]);
+	snis_draw_reticule(w->window, gc, cx, cy, r, o->tsd.ship.gun_heading);
+	draw_all_the_guys(w, o);
 }
 
 static void show_engineering(GtkWidget *w)
