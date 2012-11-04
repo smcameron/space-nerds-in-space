@@ -174,7 +174,14 @@ int letter_spacing[] = { BIG_LETTER_SPACING, SMALL_LETTER_SPACING, TINY_LETTER_S
 pthread_t lobby_thread; pthread_attr_t lobby_attr;
 pthread_t gameserver_connect_thread; pthread_attr_t gameserver_connect_attr;
 pthread_t read_from_gameserver_thread; pthread_attr_t gameserver_reader_attr;
+
 pthread_t write_to_gameserver_thread; pthread_attr_t gameserver_writer_attr;
+struct packed_buffer_queue to_server_queue;
+pthread_mutex_t to_server_queue_mutex;
+pthread_mutex_t to_server_queue_event_mutex;
+pthread_cond_t server_write_cond = PTHREAD_COND_INITIALIZER;
+int have_packets_for_server = 0;
+
 int lobby_socket = -1;
 int gameserver_sock = -1;
 int lobby_count = 0;
@@ -1146,10 +1153,62 @@ protocol_error:
 	return NULL;
 }
 
+static void wait_for_serverbound_packets(void)
+{
+	int rc;
+
+	pthread_mutex_lock(&to_server_queue_event_mutex);
+	while (!have_packets_for_server) {
+		rc = pthread_cond_wait(&server_write_cond,
+			&to_server_queue_event_mutex);
+		if (rc != 0)
+			printf("gameserver_writer: pthread_cond_wait failed.\n");
+		if (have_packets_for_server) {
+			pthread_mutex_unlock(&to_server_queue_event_mutex);
+			break;
+		}
+	}
+}
+
+static void write_queued_packets_to_server(void)
+{
+	struct packed_buffer *buffer;
+	int rc;
+
+	buffer = packed_buffer_queue_combine(&to_server_queue, &to_server_queue_mutex);
+	if (buffer->buffer_size > 0) {
+		rc = snis_writesocket(gameserver_sock, buffer->buffer, buffer->buffer_size);
+		if (rc) {
+			printf("Failed to write to gameserver\n");
+			goto badserver;
+		}
+	} else {
+		printf("Hmm, gameserver_writer awakened, but nothing to write.\n");
+	}
+	packed_buffer_free(buffer);
+	return;
+
+badserver:
+	/* Hmm, we are pretty hosed here... we have a combined packed buffer
+	 * to write, but server is disconnected... no place to put our buffer.
+	 * What happens next is probably "nothing good."
+	 */
+	packed_buffer_free(buffer);
+	shutdown(gameserver_sock, SHUT_RDWR);
+	close(gameserver_sock);
+	gameserver_sock = -1;
+}
+
 static void *gameserver_writer(__attribute__((unused)) void *arg)
 {
+
+        pthread_mutex_init(&to_server_queue_mutex, NULL);
+        pthread_mutex_init(&to_server_queue_event_mutex, NULL);
+        packed_buffer_queue_init(&to_server_queue);
+
 	while (1) {
-		ssgl_sleep(5);
+		wait_for_serverbound_packets();
+		write_queued_packets_to_server();
 	}
 	return NULL;
 }
