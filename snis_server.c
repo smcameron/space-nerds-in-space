@@ -122,6 +122,13 @@ static void ship_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
+static void player_move(struct snis_entity *o)
+{
+	o->x += o->vx;
+	o->y += o->vy;
+	o->timestamp = universe_timestamp;
+}
+
 static void starbase_move(struct snis_entity *o)
 {
 	/* FIXME, fill this in. */
@@ -152,7 +159,13 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 
 static int add_player(double x, double y, double vx, double vy, double heading)
 {
-	return add_generic_object(x, y, vx, vy, heading, OBJTYPE_SHIP1);
+	int i;
+
+	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_SHIP1);
+	if (i < 0)
+		return i;
+	go[i].move = player_move;
+	return i;
 }
 
 static int add_ship1(double x, double y, double vx, double vy, double heading)
