@@ -124,9 +124,16 @@ static void ship_move(struct snis_entity *o)
 
 static void player_move(struct snis_entity *o)
 {
+	o->vy = o->tsd.ship.velocity * cos(o->heading);
+	o->vx = o->tsd.ship.velocity * -sin(o->heading);
 	o->x += o->vx;
 	o->y += o->vy;
 	o->heading += o->tsd.ship.yaw_velocity;
+	/* FIXME, there's undoubtedly a better way to normalize radians */
+	while (o->heading > (360.0 * PI / 180.0))
+		o->heading -= (360.0 * PI / 180.0);
+	while (o->heading < 0)
+		o->heading += (360.0 * PI / 180.0); 
 	o->timestamp = universe_timestamp;
 
 	/* Damp yaw velocity. */
@@ -134,6 +141,12 @@ static void player_move(struct snis_entity *o)
 		o->tsd.ship.yaw_velocity = 0.0;
 	else
 		o->tsd.ship.yaw_velocity *= 0.85;
+
+	/* Damp velocity */
+	if (fabs(o->tsd.ship.velocity) < MIN_PLAYER_VELOCITY)
+		o->tsd.ship.velocity = 0.0;
+	else
+		o->tsd.ship.velocity *= PLAYER_VELOCITY_DAMPING;
 }
 
 static void starbase_move(struct snis_entity *o)
@@ -176,6 +189,7 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 	go[i].tsd.ship.shields = 0;
 	go[i].tsd.ship.energy = 0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
+	go[i].tsd.ship.velocity = 0.0;
 	return i;
 }
 
@@ -287,7 +301,7 @@ static void sleep_tenth_second(void)
 	int rc;
 
 	t.tv_sec = 0;
-	t.tv_nsec = 999999999; 
+	t.tv_nsec = 99999999; 
 	x.tv_sec = 0;
 	x.tv_nsec = 0;
 
@@ -303,7 +317,7 @@ static void sleep_thirtieth_second(void)
 	int rc;
 
 	t.tv_sec = 0;
-	t.tv_nsec = 999999999; 
+	t.tv_nsec = 99999999; 
 	x.tv_sec = 0;
 	x.tv_nsec = 0;
 
@@ -344,6 +358,15 @@ static void snis_sleep(struct timespec *begin, struct timespec *end, struct time
 
 static void do_thrust(struct game_client *c, int thrust)
 {
+	struct snis_entity *ship = &go[c->shipid];
+
+	if (thrust > 0) {
+		if (ship->tsd.ship.velocity < MAX_PLAYER_VELOCITY)
+			ship->tsd.ship.velocity += PLAYER_VELOCITY_INCREMENT;
+	} else {
+		if (ship->tsd.ship.velocity > -MAX_PLAYER_VELOCITY)
+			ship->tsd.ship.velocity -= PLAYER_VELOCITY_INCREMENT;
+	}
 }
 
 static void do_yaw(struct game_client *c, int thrust)

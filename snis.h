@@ -47,6 +47,11 @@ struct ship_data {
 	uint32_t energy;
 	uint32_t shields;
 	char shipname[100];
+	double velocity;
+#define MIN_PLAYER_VELOCITY (0.1)
+#define MAX_PLAYER_VELOCITY (30.0)
+#define PLAYER_VELOCITY_DAMPING (0.8)
+#define PLAYER_VELOCITY_INCREMENT (4.0)
 	double yaw_velocity;
 #define MAX_YAW_VELOCITY (5 * PI / 180.0)
 #define YAW_INCREMENT (1 * PI / 180.0)

@@ -1460,6 +1460,10 @@ static void show_navigation(GtkWidget *w)
 	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
 			360.0 * o->heading / (2.0 * 3.1415927));
 	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
+	sprintf(buf, "vx: %5.2lf", o->vx);
+	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
+	sprintf(buf, "vy: %5.2lf", o->vy);
+	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 4);
 
 	rx = 20;
 	ry = 70;
