@@ -770,6 +770,23 @@ void init_keymap()
 	ffkeymap[GDK_F11 & 0x00ff] = keyfullscreen;
 }
 
+static void helm_dirkey(int h, int v)
+{
+	
+}
+
+static void do_dirkey(int h, int v)
+{
+	switch (displaymode) {
+		case DISPLAYMODE_HELM:
+			helm_dirkey(h, v); 
+			break;
+		default:
+			break;
+	}
+	return;
+}
+
 static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 {
 	enum keyaction ka;
@@ -794,20 +811,18 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		}
 	case keyquit:	in_the_process_of_quitting = !in_the_process_of_quitting;
 			break;
-#if 0
-	case keyleft:	if (the_player->vx > -MAX_PLAYER_VX)
-				the_player->vx--;
-			break;
-	case keyright:	if (the_player->vx < MAX_PLAYER_VX)
-				the_player->vx++;
-			break;
-	case keyup:	if (the_player->vy > -MAX_PLAYER_VY)
-				the_player->vy--;
-			break;
-	case keydown:	if (the_player->vy < MAX_PLAYER_VY)
-				the_player->vy++;
-			break;
-#endif
+	case keyleft:
+		do_dirkey(-1, 0);
+		break;
+	case keyright:
+		do_dirkey(1, 0);
+		break;
+	case keyup:
+		do_dirkey(0, -1);
+		break;
+	case keydown:
+		do_dirkey(0, 1);
+		break;
 	case keyf1:
 		printf("mainscreen!\n");
 		displaymode = DISPLAYMODE_MAINSCREEN;
