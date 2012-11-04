@@ -2,4 +2,45 @@
 This is some very preliminary code for a multiplayer networked spaceship
 bridge simulator game inspired by "Artemis Spaceship Bridge Simulator"
 
+There are three parts.
+
+1. ssgl/ssgl_server is the game lobby.  "ssgl" stands for "super simple game lobby".
+(There is a github project, "ssgl", but the code in here is more up to date than
+that.)  This does matchmaking between snis_client and snis_server processes.  It
+does not do NAT punchthrough, so it's a LAN only thing.  It needs the following lines
+in /etc/services:
+
+gamelobby	2419/tcp
+gamelobby	2419/udp
+
+2.  snis_server:  This is the Space Nerds In Space game server.  This runs the
+simulation of the space-nerds-in-space universe.  There are two threads per
+client, one to read, and one to write.  The simulation, runs, and periodically
+changed state is dumped out to all the client writer threads, and by this means
+the clients are updated.   The reader threads gather inputs from the clients and
+these inputs are fed into the simulation.
+
+3. snis_client:  There can be many instances of this.  The plan is there should be
+one instance per "station" on each "starship".  These process receive input from the
+snis_server process and display this data in whatever form is suitable for whichever
+starship station is being provided (e.g. navigation, weapons, communication, engineering,
+science, etc.)  (Currently any instance of snis_client can do any of the available functions
+to whatever degree they are implemented (As of Nov 2012, mostly not implemented.))
+
+The sequence to run this thing is:
+
+a) start ssgl_server
+b) start snis_server
+c) start snis_client (several instances, one per bridge station)
+
+for each snis_client: 
+
+1) connect to the snis_server process.
+2) press function keys f1,f2,f3,f4,f5,f6, etc. to select which function
+   this instance of snis_client is to fulfill.
+
+
+That's about all the instructions I have for now.
+
+-- steve
 
