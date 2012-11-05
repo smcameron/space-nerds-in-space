@@ -1,6 +1,40 @@
+Too much to list, but here's a list anyway:
 
-Lots.
+* Sound
+    Make sound work at all
+    Sound effects
+    Designated sound server for ship-wide sounds
+    and also have per-station sounds
+    Music
 
-Steve, don't forget to write man pages, if you forget, you're an asshole.
+* Engineering screen
+    Damage reporting
+    Damage repairing
+    Energy distribution
+    Coolant distribution(?)
 
+* Communications screen
+    Starbase comm stuff
+    Enemy ship comm monitoring
+    Friendly ship stuff
+    bridge-to-bridge comm
+
+* Finish Navigation screen
+  (make warp work... various improvments.)
+* Finish weapons screen
+  beam weapon
+
+* Science station
+* Setup screen
+
+* Some kind of session persistence so that if a network
+  problem occurs, client can re-connect and pick up where
+  it left off.
+
+* Make objects non-immortal (server directs clients to delete objects.)
+
+* write some kind of guide to hacking, to make it easier for others to
+  contribute to this codebase.
+
+* Steve, don't forget to write man pages, if you forget, you're an asshole.
 
