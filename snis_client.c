@@ -908,30 +908,38 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		do_torpedo();
 		break;
 	case keyf1:
-		printf("mainscreen!\n");
+		if (displaymode < DISPLAYMODE_CONNECTED)
+			break;
 		displaymode = DISPLAYMODE_MAINSCREEN;
 		break;
 	case keyf2:
-		printf("navigation!\n");
+		if (displaymode < DISPLAYMODE_CONNECTED)
+			break;
 		displaymode = DISPLAYMODE_HELM;
 		break;
 	case keyf3:
-		printf("weapons!\n");
+		if (displaymode < DISPLAYMODE_CONNECTED)
+			break;
 		displaymode = DISPLAYMODE_WEAPONS;
 		break;
 	case keyf4:
-		printf("engineering!\n");
+		if (displaymode < DISPLAYMODE_CONNECTED)
+			break;
 		displaymode = DISPLAYMODE_ENGINEERING;
 		break;
 	case keyf5:
-		printf("science!\n");
+		if (displaymode < DISPLAYMODE_CONNECTED)
+			break;
 		displaymode = DISPLAYMODE_SCIENCE;
 		break;
 	case keyf6:
-		printf("comms!\n");
+		if (displaymode < DISPLAYMODE_CONNECTED)
+			break;
 		displaymode = DISPLAYMODE_COMMS;
 		break;
 	case keyf7:
+		if (displaymode < DISPLAYMODE_CONNECTED)
+			break;
 		displaymode = DISPLAYMODE_DEBUG;
 		break;
 	default:
