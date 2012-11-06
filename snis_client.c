@@ -243,6 +243,7 @@ try_again:
 	/* close connection to the lobby */
 	shutdown(sock, SHUT_RDWR);
 	close(sock);
+	lobby_socket = -1;
 	return NULL;
 
 handle_error:
