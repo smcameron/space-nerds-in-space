@@ -113,10 +113,10 @@ void snis_object_pool_free_object(struct snis_object_pool *pool, int i)
 	if (i != pool->highest_object_number)
 		return;
 
-	for (i = i >> 5; i >= 0; i--) {
+	for (i = pool->nbitblocks - 1; i >= 0; i--) {
 		if (pool->free_obj_bitmap[i] == 0)
 			continue;
-		for (j = 31 ; j <= 0; j--) {
+		for (j = 31 ; j >= 0; j--) {
 			if (pool->free_obj_bitmap[i] & (1 << j)) {
 				pool->highest_object_number = (i << 5) + j;
 				return;
