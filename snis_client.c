@@ -840,8 +840,8 @@ static void weapons_dirkey(int h, int v)
 		packed_buffer_append_u16(pb, OPCODE_REQUEST_GUNYAW);
 		packed_buffer_append_u8(pb, yaw);
 		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+		wakeup_gameserver_writer();
 	}
-	wakeup_gameserver_writer();
 }
 
 static void do_dirkey(int h, int v)
