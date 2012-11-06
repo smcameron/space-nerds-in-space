@@ -171,6 +171,7 @@ struct my_vect_obj **gamefont[4];
 int font_scale[] = { BIG_FONT_SCALE, SMALL_FONT_SCALE, TINY_FONT_SCALE, NANO_FONT_SCALE };
 int letter_spacing[] = { BIG_LETTER_SPACING, SMALL_LETTER_SPACING, TINY_LETTER_SPACING, NANO_LETTER_SPACING };
 
+volatile int done_with_lobby = 0;
 pthread_t lobby_thread; pthread_attr_t lobby_attr;
 pthread_t gameserver_connect_thread; pthread_attr_t gameserver_connect_attr;
 pthread_t read_from_gameserver_thread; pthread_attr_t gameserver_reader_attr;
@@ -237,7 +238,11 @@ try_again:
 			game_server_count = 0;
 		}
 		ssgl_sleep(5);  /* just a thread safe sleep. */
-	} while (1);
+	} while (!done_with_lobby);
+
+	/* close connection to the lobby */
+	shutdown(sock, SHUT_RDWR);
+	close(sock);
 	return NULL;
 
 handle_error:
@@ -1405,6 +1410,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		goto error;;
 
 	displaymode = DISPLAYMODE_CONNECTED;
+	done_with_lobby = 1;
 	displaymode = DISPLAYMODE_MAINSCREEN;
 
 	/* Should probably submit this through the packed buffer queue...
