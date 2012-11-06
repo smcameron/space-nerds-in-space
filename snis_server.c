@@ -140,20 +140,32 @@ static void snis_queue_delete_object(uint32_t oid)
 
 static void torpedo_move(struct snis_entity *o)
 {
-	/* int i; */
+	int i;
 
 	o->x += o->vx;
 	o->y += o->vy;
 	o->timestamp = universe_timestamp;
 	o->alive--;
-
-#if 0
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
+	for (i = 0; i <= snis_object_pool_highest_object(pool);) {
 		if (go[i].alive && i != o->index && o->alive < TORPEDO_LIFETIME - 3) {
-			printf("Hit!\n");
+			double dist2;
+
+			dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
+				((go[i].y - o->y) * (go[i].y - o->y));
+
+			if (dist2 > TORPEDO_DETONATE_DIST2) {
+				i++;
+				continue; /* not close enough */
+			}
+			/* hit!!!! */
 			o->alive = 0;
+			go[i].alive = 0;
+			snis_queue_delete_object(go[i].id);
+			snis_object_pool_free_object(pool, i);
+			continue;
 		}
-#endif
+		i++;
+	}
 
 	if (o->alive <= 0) {
 		snis_queue_delete_object(o->id);
