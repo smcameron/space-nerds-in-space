@@ -1405,6 +1405,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		goto error;;
 
 	displaymode = DISPLAYMODE_CONNECTED;
+	displaymode = DISPLAYMODE_MAINSCREEN;
 
 	/* Should probably submit this through the packed buffer queue...
 	 * but, this works.
