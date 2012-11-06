@@ -108,31 +108,58 @@ static void generic_move(__attribute__((unused)) struct snis_entity *o)
 	return;
 }
 
+static void queue_delete_oid(struct game_client *c, uint32_t oid)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct delete_object_packet));
+	packed_buffer_append_u16(pb, OPCODE_DELETE_OBJECT);
+	packed_buffer_append_u32(pb, oid);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
+static void snis_queue_delete_object(uint32_t oid)
+{
+	/* Iterate over all clients and inform them that
+	 * an object is gone.
+	 * Careful with the locking, we have 3 layers of locks
+	 * here (couldn't figure out a simpler way.
+	 * 
+	 * We should already hold the universe_mutex, we 
+	 * need the client lock to iterate over the clients,
+	 * and when we build the packet, we'll need the
+	 * client_write_queue_mutexes.  Hope there's no deadlocks.
+	 */
+	int i;
+
+	client_lock();
+	for (i = 0; i < nclients; i++)
+		queue_delete_oid(&client[i], oid);
+	client_unlock();
+}
+
 static void torpedo_move(struct snis_entity *o)
 {
-	int i;
+	/* int i; */
 
 	o->x += o->vx;
 	o->y += o->vy;
 	o->timestamp = universe_timestamp;
-	/* o->alive--; */
+	o->alive--;
 
+#if 0
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
 		if (go[i].alive && i != o->index && o->alive < TORPEDO_LIFETIME - 3) {
 			printf("Hit!\n");
 			o->alive = 0;
 		}
+#endif
 
-#if 0
-	/* FIXME: need to figure out how to delete object on all clients.
-	 * For now, torpedoes are immortal, like everything else in my
-	 * universe.  I'm such a nice god, aren't I?
-	 */
 	if (o->alive <= 0) {
 		snis_queue_delete_object(o->id);
+		o->alive = 0;
 		snis_object_pool_free_object(pool, o->index);
 	}
-#endif
 }
 
 static void ship_move(struct snis_entity *o)
@@ -199,7 +226,6 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	int i;
 
 	i = snis_object_pool_alloc_obj(pool); 	 
-	printf("allocated object %d\n", i);
 	if (i < 0)
 		return -1;
 	memset(&go[i], 0, sizeof(go[i]));

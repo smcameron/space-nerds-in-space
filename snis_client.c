@@ -840,8 +840,8 @@ static void weapons_dirkey(int h, int v)
 		packed_buffer_append_u16(pb, OPCODE_REQUEST_GUNYAW);
 		packed_buffer_append_u8(pb, yaw);
 		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+		wakeup_gameserver_writer();
 	}
-	wakeup_gameserver_writer();
 }
 
 static void do_dirkey(int h, int v)
@@ -1133,6 +1133,41 @@ static int process_update_torpedo_packet(void)
 	return (rc < 0);
 } 
 
+static void delete_object(uint32_t id)
+{
+	int i;
+
+	i = lookup_object_by_id(id);
+	/* perhaps we just joined and so don't know about this object. */
+	if (i < 0)
+		return;
+	go[i].alive = 0;
+	snis_object_pool_free_object(pool, i);
+}
+
+static int process_delete_object_packet(void)
+{
+	unsigned char buffer[10];
+	struct packed_buffer pb;
+	uint32_t id;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct delete_object_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct delete_object_packet) -
+					sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+
+	pb.buffer_size = sizeof(buffer);;
+	pb.buffer = buffer;
+	pb.buffer_cursor = 0;
+	id = packed_buffer_extract_u32(&pb);
+
+	pthread_mutex_lock(&universe_mutex);
+	delete_object(id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
 
 static int process_update_planet_packet(void)
 {
@@ -1259,6 +1294,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_UPDATE_TORPEDO:
 			/* printf("processing update ship...\n"); */
 			rc = process_update_torpedo_packet();
+			if (rc != 0)
+				goto protocol_error;
+			break;
+		case OPCODE_DELETE_OBJECT:
+			rc = process_delete_object_packet();
 			if (rc != 0)
 				goto protocol_error;
 			break;
@@ -1587,6 +1627,9 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 		double tx, ty;
 		double dist2;
 
+		if (!go[i].alive)
+			continue;
+
 		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
 			((go[i].y - o->y) * (go[i].y - o->y));
 		if (dist2 > NR2)
@@ -1724,6 +1767,9 @@ static void show_debug(GtkWidget *w)
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		int x, y, x1, y1, x2, y2;
+
+		if (!go[i].alive)
+			continue;
 
 		x = (int) ((double) SCREEN_WIDTH * go[i].x / XUNIVERSE_DIMENSION);
 		y = (int) ((double) SCREEN_HEIGHT * go[i].y / YUNIVERSE_DIMENSION);
