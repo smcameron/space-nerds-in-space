@@ -34,7 +34,7 @@
 
 #define MAXPLAYERS 10
 
-#define OBJTYPE_SHIP1 0
+#define OBJTYPE_SHIP1 9
 #define OBJTYPE_SHIP2 1
 #define OBJTYPE_PLANET 2 
 #define OBJTYPE_STARBASE 3
