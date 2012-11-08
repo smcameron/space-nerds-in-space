@@ -427,7 +427,6 @@ void add_spark(double x, double y, double vx, double vy, int time)
 	spark[i].vx = vx;
 	spark[i].vy = vy;
 	spark[i].type = OBJTYPE_SPARK;
-	printf("adding spark, time = %d\n", time);
 	spark[i].alive = time;
 	spark[i].move = spark_move;
 	return;
@@ -1811,6 +1810,8 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 				break;
 			case OBJTYPE_TORPEDO:
 				snis_draw_torpedo(w->window, gc, x, y, r / 20);
+				break;
+			case OBJTYPE_EXPLOSION:
 				break;
 			default:
 				gdk_gc_set_foreground(gc, &huex[WHITE]);
