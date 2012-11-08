@@ -1773,7 +1773,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 	r = rh / 2;
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
 	/* Draw all the stuff */
-#define NAVSCREEN_RADIUS (XUNIVERSE_DIMENSION / 20.0)
+#define NAVSCREEN_RADIUS (XUNIVERSE_DIMENSION / 10.0)
 #define NR2 (NAVSCREEN_RADIUS * NAVSCREEN_RADIUS)
 	pthread_mutex_lock(&universe_mutex);
 
@@ -1835,8 +1835,6 @@ static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o)
 	r = rh / 2;
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
 	/* Draw all the stuff */
-#define NAVSCREEN_RADIUS (XUNIVERSE_DIMENSION / 20.0)
-#define NR2 (NAVSCREEN_RADIUS * NAVSCREEN_RADIUS)
 	pthread_mutex_lock(&universe_mutex);
 
 	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++) {
