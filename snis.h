@@ -26,6 +26,7 @@
 #define XUNIVERSE_DIMENSION 10000.0
 #define YUNIVERSE_DIMENSION 10000.0
 #define MAXGAMEOBJS 5000
+#define MAXSPARKS 1000
 
 #define NBASES 5
 #define NPLANETS 10
@@ -41,6 +42,7 @@
 #define OBJTYPE_SPARK 5
 #define OBJTYPE_TORPEDO 6
 #define OBJTYPE_LASER 7
+#define OBJTYPE_EXPLOSION 8
 
 struct ship_data {
 	uint32_t torpedoes;
@@ -75,11 +77,18 @@ struct torpedo_data {
 	uint32_t power;
 };
 
+struct explosion_data {
+	uint16_t nsparks;
+	uint16_t velocity;
+	uint16_t time;
+};
+
 union type_specific_data {
 	struct ship_data ship;
 	struct laser_data laser;
 	struct torpedo_data torpedo;
 	struct starbase_data starbase;
+	struct explosion_data explosion;
 };
 
 struct snis_entity;

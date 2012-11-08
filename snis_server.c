@@ -138,6 +138,8 @@ static void snis_queue_delete_object(uint32_t oid)
 	client_unlock();
 }
 
+static int add_explosion(double x, double y, uint16_t velocity, uint16_t nsparks, uint16_t time);
+
 static void torpedo_move(struct snis_entity *o)
 {
 	int i;
@@ -160,6 +162,7 @@ static void torpedo_move(struct snis_entity *o)
 			/* hit!!!! */
 			o->alive = 0;
 			go[i].alive = 0;
+			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
 			snis_queue_delete_object(go[i].id);
 			snis_object_pool_free_object(pool, i);
 			continue;
@@ -233,6 +236,18 @@ static void starbase_move(struct snis_entity *o)
 	/* FIXME, fill this in. */
 }
 
+static void explosion_move(struct snis_entity *o)
+{
+	if (o->alive > 0)
+		o->alive--;
+
+	if (o->alive <= 0) {
+		snis_queue_delete_object(o->id);
+		o->alive = 0;
+		snis_object_pool_free_object(pool, o->index);
+	}
+}
+
 static int add_generic_object(double x, double y, double vx, double vy, double heading, int type)
 {
 	int i;
@@ -302,6 +317,21 @@ static int add_starbase(double x, double y, double vx, double vy, double heading
 	if (i < 0)
 		return i;
 	go[i].move = starbase_move;
+	return i;
+}
+
+static int add_explosion(double x, double y, uint16_t velocity, uint16_t nsparks, uint16_t time)
+{
+	int i;
+
+	i = add_generic_object(x, y, 0, 0, 0, OBJTYPE_EXPLOSION);
+	if (i < 0)
+		return i;
+	go[i].move = explosion_move;
+	go[i].alive = 30; /* long enough to get propagaed out to all clients */
+	go[i].tsd.explosion.velocity = velocity;
+	go[i].tsd.explosion.nsparks = nsparks;
+	go[i].tsd.explosion.time = time;
 	return i;
 }
 
@@ -658,6 +688,8 @@ static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_explosion_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_laser_packet(struct game_client *c,
@@ -676,6 +708,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_STARBASE:
 		send_update_starbase_packet(c, o);
+		break;
+	case OBJTYPE_EXPLOSION:
+		send_update_explosion_packet(c, o);
 		break;
 	case OBJTYPE_DEBRIS:
 		break;
@@ -861,6 +896,25 @@ static void send_update_starbase_packet(struct game_client *c,
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, x);
 	packed_buffer_append_u32(pb, y);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
+static void send_update_explosion_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	struct packed_buffer *pb;
+	uint32_t x, y;
+
+	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
+	packed_buffer_append_u16(pb, OPCODE_UPDATE_EXPLOSION);
+	packed_buffer_append_u32(pb, o->id);
+	packed_buffer_append_u32(pb, x);
+	packed_buffer_append_u32(pb, y);
+	packed_buffer_append_u16(pb, o->tsd.explosion.nsparks);
+	packed_buffer_append_u16(pb, o->tsd.explosion.velocity);
+	packed_buffer_append_u16(pb, o->tsd.explosion.time);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

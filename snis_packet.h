@@ -36,6 +36,7 @@
 #define OPCODE_REQUEST_GUNYAW	110
 #define OPCODE_REQUEST_TORPEDO	111
 #define OPCODE_DELETE_OBJECT    112
+#define OPCODE_UPDATE_EXPLOSION 113
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -69,6 +70,15 @@ struct update_starbase_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint32_t x, y;
+};
+
+struct update_explosion_packet {
+	uint16_t opcode;
+	uint32_t id;
+	uint32_t x, y;
+	uint16_t nsparks;
+	uint16_t velocity;
+	uint16_t time;
 };
 
 struct add_laser_packet {

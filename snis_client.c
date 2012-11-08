@@ -1,6 +1,6 @@
 /*
         Copyright (C) 2010 Stephen M. Cameron
-        Author: Stephen M. Cameron
+       Author: Stephen M. Cameron
 
         This file is part of Spacenerds In Space.
 
@@ -191,6 +191,19 @@ char *lobbyhost = "localhost";
 struct ssgl_game_server lobby_game_server[100];
 int ngameservers = 0;
 
+double sine[361];
+double cosine[361];
+
+void init_trig_arrays(void)
+{
+	int i;
+
+	for (i = 0; i <= 360; i++) {
+		sine[i] = sin((double)i * M_PI * 2.0 / 360.0);
+		cosine[i] = cos((double)i * M_PI * 2.0 / 360.0);
+	}
+}
+
 static void *connect_to_lobby_thread(__attribute__((unused)) void *arg)
 {
 	int i, sock, rc, game_server_count;
@@ -269,6 +282,8 @@ static void connect_to_lobby()
 
 static struct snis_object_pool *pool;
 static struct snis_entity go[MAXGAMEOBJS];
+static struct snis_object_pool *sparkpool;
+static struct snis_entity spark[MAXSPARKS];
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int add_generic_object(uint32_t id, double x, double y, double vx, double vy, double heading, int type, uint32_t alive)
@@ -375,6 +390,107 @@ static int update_starbase(uint32_t id, double x, double y)
 			return i;
 	} else {
 		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+	}
+	return 0;
+}
+
+
+static void spark_move(struct snis_entity *o)
+{
+	o->x += o->vx;
+	o->y += o->vy;
+	o->alive--;
+	if (o->alive <= 0)
+		snis_object_pool_free_object(sparkpool, o->index);
+}
+
+static void move_sparks(void)
+{
+	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++)
+		if (spark[i].alive)
+			spark[i].move(&spark[i]);
+}
+
+void add_spark(double x, double y, double vx, double vy, int time)
+{
+	int i;
+
+	i = snis_object_pool_alloc_obj(sparkpool);
+	if (i < 0)
+		return;
+	memset(&spark[i], 0, sizeof(spark[i]));
+	spark[i].index = i;
+	spark[i].x = x;
+	spark[i].y = y;
+	spark[i].vx = vx;
+	spark[i].vy = vy;
+	spark[i].type = OBJTYPE_SPARK;
+	printf("adding spark, time = %d\n", time);
+	spark[i].alive = time;
+	spark[i].move = spark_move;
+	return;
+}
+
+#if 0
+void sphere_explode(int x, int y, int ivx, int ivy, int v,
+	int nsparks, int time)
+{
+	int vx, vy;
+	int angle;
+	int shell;
+	int velocity;
+	int delta_angle;
+	float point_dist;
+	int angle_offset;
+
+	angle_offset = snis_randn(360);
+
+	if (nsparks < 30)
+		nsparks = 40;
+	point_dist = v * 2 * M_PI / (nsparks / 4);
+	delta_angle = (int) ((point_dist / (2.0 * M_PI * v)) * 360.0);
+
+	v = v / (1.0 + snis_randn(100) / 100.0);
+	for (shell = 0; shell < 90; shell += 7) {
+		for (angle = 0; angle < 360; angle += delta_angle) {
+			velocity = (int) (cosine[shell] * (double) v);
+			vx = cosine[(angle + angle_offset) % 360] * velocity + ivx;
+			vy = sine[(angle + angle_offset) % 360] * velocity + ivy;
+			add_spark(x, y, vx, vy, time);
+		}
+		delta_angle = (int) ((point_dist / (2.0 * velocity * M_PI)) * 360.0);
+	}
+}
+#endif
+
+static void do_explosion(double x, double y, uint16_t nsparks, uint16_t velocity, int time)
+{
+	double angle, v, vx, vy;
+	int i;
+
+	for (i = 0; i < nsparks; i++) {
+		angle = ((double) snis_randn(360) * M_PI / 180.0);
+		v = snis_randn(velocity * 2) - velocity;
+		vx = v * cos(angle);
+		vy = v * sin(angle);
+		add_spark(x, y, vx, vy, time);
+	}
+}
+
+static int update_explosion(uint32_t id, double x, double y,
+		uint16_t nsparks, uint16_t velocity, uint16_t time)
+{
+	int i;
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_EXPLOSION, 1);
+		if (i < 0)
+			return i;
+		go[i].tsd.explosion.nsparks = nsparks;
+		go[i].tsd.explosion.velocity = velocity;
+		do_explosion(x, y, nsparks, velocity, (int) time);
 	}
 	return 0;
 }
@@ -1231,6 +1347,41 @@ static int process_update_starbase_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_explosion_packet(void)
+{
+	unsigned char buffer[sizeof(struct update_explosion_packet)];
+	struct packed_buffer pb;
+	uint32_t id;
+	uint32_t x, y;
+	double dx, dy;
+	uint16_t nsparks, velocity, time;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_explosion_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_explosion_packet)
+				- sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+
+	pb.buffer_size = sizeof(buffer);;
+	pb.buffer = buffer;
+	pb.buffer_cursor = 0;
+
+	id = packed_buffer_extract_u32(&pb);
+	x = packed_buffer_extract_u32(&pb);
+	y = packed_buffer_extract_u32(&pb);
+	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+	nsparks = packed_buffer_extract_u16(&pb);
+	velocity = packed_buffer_extract_u16(&pb);
+	time = packed_buffer_extract_u16(&pb);
+
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_explosion(id, dx, dy, nsparks, velocity, time);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+}
+
 static int process_client_id_packet(void)
 {
 	unsigned char buffer[100];
@@ -1286,6 +1437,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_STARBASE:
 			rc = process_update_starbase_packet();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_EXPLOSION:
+			rc = process_update_explosion_packet();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -1665,6 +1821,49 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o)
+{
+	int i, cx, cy, r, rx, ry, rw, rh;
+
+	rx = 20;
+	ry = 70;
+	rw = 500;
+	rh = 500;
+	cx = rx + (rw / 2);
+	cy = ry + (rh / 2);
+	r = rh / 2;
+	gdk_gc_set_foreground(gc, &huex[DARKRED]);
+	/* Draw all the stuff */
+#define NAVSCREEN_RADIUS (XUNIVERSE_DIMENSION / 20.0)
+#define NR2 (NAVSCREEN_RADIUS * NAVSCREEN_RADIUS)
+	pthread_mutex_lock(&universe_mutex);
+
+	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++) {
+		int x, y;
+		double tx, ty;
+		double dist2;
+
+		if (!spark[i].alive)
+			continue;
+
+		dist2 = ((spark[i].x - o->x) * (spark[i].x - o->x)) +
+			((spark[i].y - o->y) * (spark[i].y - o->y));
+		if (dist2 > NR2)
+			continue; /* not close enough */
+
+		tx = (spark[i].x - o->x) * (double) r / NAVSCREEN_RADIUS;
+		ty = (spark[i].y - o->y) * (double) r / NAVSCREEN_RADIUS;
+		x = (int) (tx + (double) cx);
+		y = (int) (ty + (double) cy);
+
+		gdk_gc_set_foreground(gc, &huex[WHITE]);
+		snis_draw_line(w->window, gc, x - 1, y - 1, x + 1, y + 1);
+		snis_draw_line(w->window, gc, x - 1, y + 1, x + 1, y - 1);
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
+
 static void show_navigation(GtkWidget *w)
 {
 	char buf[100];
@@ -1701,6 +1900,7 @@ static void show_navigation(GtkWidget *w)
 	snis_draw_reticule(w->window, gc, cx, cy, r, o->heading);
 
 	draw_all_the_guys(w, o);
+	draw_all_the_sparks(w, o);
 }
 
 static void show_weapons(GtkWidget *w)
@@ -1740,6 +1940,7 @@ static void show_weapons(GtkWidget *w)
 	gdk_gc_set_foreground(gc, &huex[BLUE]);
 	snis_draw_reticule(w->window, gc, cx, cy, r, o->tsd.ship.gun_heading);
 	draw_all_the_guys(w, o);
+	draw_all_the_sparks(w, o);
 }
 
 static void show_engineering(GtkWidget *w)
@@ -1757,6 +1958,40 @@ static void show_comms(GtkWidget *w)
 	show_common_screen(w, "Comms");
 }
 
+static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
+{
+	int x, y, x1, y1, x2, y2;
+
+	if (!o->alive)
+		return;
+
+	x = (int) ((double) SCREEN_WIDTH * o->x / XUNIVERSE_DIMENSION);
+	y = (int) ((double) SCREEN_HEIGHT * o->y / YUNIVERSE_DIMENSION);
+	x1 = x - 1;
+	y2 = y + 1;
+	y1 = y - 1;
+	x2 = x + 1;
+
+	switch (o->type) {
+	case OBJTYPE_SHIP1:
+		if (o->id == my_ship_id)
+			gdk_gc_set_foreground(gc, &huex[GREEN]);
+		else
+			gdk_gc_set_foreground(gc, &huex[WHITE]);
+		break;
+	case OBJTYPE_PLANET:
+		gdk_gc_set_foreground(gc, &huex[BLUE]);
+		break;
+	case OBJTYPE_STARBASE:
+		gdk_gc_set_foreground(gc, &huex[MAGENTA]);
+		break;
+	default:
+		gdk_gc_set_foreground(gc, &huex[WHITE]);
+	}
+	snis_draw_line(w->window, gc, x1, y1, x2, y2);
+	snis_draw_line(w->window, gc, x1, y2, x2, y1);
+}
+
 static void show_debug(GtkWidget *w)
 {
 	int i;
@@ -1765,6 +2000,11 @@ static void show_debug(GtkWidget *w)
 
 	pthread_mutex_lock(&universe_mutex);
 
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
+		debug_draw_object(w, &go[i]);
+	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++)
+		debug_draw_object(w, &spark[i]);
+#if 0
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		int x, y, x1, y1, x2, y2;
 
@@ -1795,6 +2035,7 @@ static void show_debug(GtkWidget *w)
 		snis_draw_line(w->window, gc, x1, y1, x2, y2);
 		snis_draw_line(w->window, gc, x1, y2, x2, y1);
 	}
+#endif
 	pthread_mutex_unlock(&universe_mutex);
 }
 
@@ -1875,6 +2116,7 @@ gint advance_game(gpointer data)
 #endif	
 	gdk_threads_enter();
 	gtk_widget_queue_draw(main_da);
+	move_sparks();
 	nframes++;
 	gdk_threads_leave();
 	if (in_the_process_of_quitting)
@@ -1990,6 +2232,7 @@ int main(int argc, char *argv[])
 	password = argv[3];
 
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
+	snis_object_pool_setup(&sparkpool, MAXSPARKS);
 
 	ignore_sigpipe();
 
