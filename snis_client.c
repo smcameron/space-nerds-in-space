@@ -1809,7 +1809,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 				snis_draw_circle(w->window, gc, x, y, r / 20);
 				break;
 			case OBJTYPE_TORPEDO:
-				snis_draw_torpedo(w->window, gc, x, y, r / 20);
+				snis_draw_torpedo(w->window, gc, x, y, r / 25);
 				break;
 			case OBJTYPE_EXPLOSION:
 				break;
