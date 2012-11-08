@@ -148,15 +148,15 @@ static void torpedo_move(struct snis_entity *o)
 	o->y += o->vy;
 	o->timestamp = universe_timestamp;
 	o->alive--;
-	for (i = 0; i <= snis_object_pool_highest_object(pool);) {
-		if (go[i].alive && i != o->index && o->alive < TORPEDO_LIFETIME - 3) {
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].alive && i != o->index && o->alive < TORPEDO_LIFETIME - 3 &&
+			go[i].type == OBJTYPE_SHIP1) {
 			double dist2;
 
 			dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
 				((go[i].y - o->y) * (go[i].y - o->y));
 
 			if (dist2 > TORPEDO_DETONATE_DIST2) {
-				i++;
 				continue; /* not close enough */
 			}
 			/* hit!!!! */
@@ -167,7 +167,6 @@ static void torpedo_move(struct snis_entity *o)
 			snis_object_pool_free_object(pool, i);
 			continue;
 		}
-		i++;
 	}
 
 	if (o->alive <= 0) {
