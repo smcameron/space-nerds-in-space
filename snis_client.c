@@ -1036,7 +1036,7 @@ static void show_lobbyscreen(GtkWidget *w)
 			sprintf(msg, "%hu.%hu.%hu.%hu/%hu", x[0], x[1], x[2], x[3], lobby_game_server[i].port);
 			abs_xy_draw_string(w, msg, TINY_FONT, 30, 100 + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].game_instance);
-			abs_xy_draw_string(w, msg, TINY_FONT, 250, 100 + i * LINEHEIGHT);
+			abs_xy_draw_string(w, msg, TINY_FONT, 350, 100 + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].server_nickname);
 			abs_xy_draw_string(w, msg, TINY_FONT, 450, 100 + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].location);
