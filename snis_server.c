@@ -199,12 +199,12 @@ static void normalize_heading(double *heading)
 		*heading += (360.0 * PI / 180.0); 
 }
 
-static void damp_yaw_velocity(double *yv)
+static void damp_yaw_velocity(double *yv, double damp_factor)
 {
 	if (fabs(*yv) < (0.3 * PI / 180.0))
 		*yv = 0.0;
 	else
-		*yv *= 0.85;
+		*yv *= damp_factor;
 }
 
 static void player_move(struct snis_entity *o)
@@ -220,8 +220,8 @@ static void player_move(struct snis_entity *o)
 	normalize_heading(&o->tsd.ship.gun_heading);
 	o->timestamp = universe_timestamp;
 
-	damp_yaw_velocity(&o->tsd.ship.yaw_velocity);
-	damp_yaw_velocity(&o->tsd.ship.gun_yaw_velocity);
+	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, YAW_DAMPING);
+	damp_yaw_velocity(&o->tsd.ship.gun_yaw_velocity, GUN_YAW_DAMPING);
 
 	/* Damp velocity */
 	if (fabs(o->tsd.ship.velocity) < MIN_PLAYER_VELOCITY)
@@ -505,11 +505,11 @@ static void do_gun_yaw(struct game_client *c, int yaw)
 	struct snis_entity *ship = &go[c->shipid];
 
 	if (yaw > 0) {
-		if (ship->tsd.ship.gun_yaw_velocity < MAX_YAW_VELOCITY)
-			ship->tsd.ship.gun_yaw_velocity += YAW_INCREMENT;
+		if (ship->tsd.ship.gun_yaw_velocity < MAX_GUN_YAW_VELOCITY)
+			ship->tsd.ship.gun_yaw_velocity += GUN_YAW_INCREMENT;
 	} else {
-		if (ship->tsd.ship.gun_yaw_velocity > -MAX_YAW_VELOCITY)
-			ship->tsd.ship.gun_yaw_velocity -= YAW_INCREMENT;
+		if (ship->tsd.ship.gun_yaw_velocity > -MAX_GUN_YAW_VELOCITY)
+			ship->tsd.ship.gun_yaw_velocity -= GUN_YAW_INCREMENT;
 	}
 }
 

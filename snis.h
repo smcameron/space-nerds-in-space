@@ -60,6 +60,10 @@ struct ship_data {
 	double yaw_velocity;
 #define MAX_YAW_VELOCITY (5 * PI / 180.0)
 #define YAW_INCREMENT (1 * PI / 180.0)
+#define YAW_DAMPING 0.85
+#define MAX_GUN_YAW_VELOCITY (15 * PI / 180.0)
+#define GUN_YAW_INCREMENT (3.5 * PI / 180.0)
+#define GUN_YAW_DAMPING 0.45
 	double gun_heading;
 	double gun_yaw_velocity;
 };
