@@ -1727,6 +1727,7 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 		dy = y + snis_randn(r * 2) - r; 
 		snis_draw_line(drawable, gc, x, y, dx, dy);
 	}
+	/* snis_draw_circle(drawable, gc, x, y, (int) (SCREEN_WIDTH * 150.0 / XUNIVERSE_DIMENSION)); */
 }
 
 static void snis_draw_arrow(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
