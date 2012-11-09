@@ -44,10 +44,10 @@ wwviaudio.o:    wwviaudio.c wwviaudio.h ogg_to_pcm.h my_point.h Makefile
 		-pthread `pkg-config --cflags vorbisfile` \
 		-c wwviaudio.c
 
-snis_server.o:	snis.h snis_server.c snis_packet.h snis_marshal.h
+snis_server.o:	snis.h snis_server.c snis_packet.h snis_marshal.h sounds.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_server.c
 
-snis_client.o:	snis.h snis_client.c snis_font.h my_point.h snis_packet.h snis_marshal.h
+snis_client.o:	snis.h snis_client.c snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_client.c
 
 snis_socket_io.o:	snis_socket_io.h

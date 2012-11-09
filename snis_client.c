@@ -1286,6 +1286,28 @@ static int process_delete_object_packet(void)
 	return 0;
 }
 
+static int process_play_sound_packet(void)
+{
+	unsigned char buffer[10];
+	struct packed_buffer pb;
+	uint16_t sound_number;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct play_sound_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct play_sound_packet) -
+					sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+
+	pb.buffer_size = sizeof(buffer);;
+	pb.buffer = buffer;
+	pb.buffer_cursor = 0;
+	sound_number = packed_buffer_extract_u16(&pb);
+	wwviaudio_add_sound(sound_number);
+	return 0;
+}
+
+
 static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
@@ -1459,6 +1481,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			if (rc != 0)
 				goto protocol_error;
 			break;
+		case OPCODE_PLAY_SOUND:
+			rc = process_play_sound_packet();
+			if (rc != 0)
+				goto protocol_error;
+			break;
 		case OPCODE_UPDATE_PLAYER:
 			break;
 		case OPCODE_ACK_PLAYER:
@@ -1477,7 +1504,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 	}
 
 protocol_error:
-	printf("Protocol error in gameserver reader\n");
+	printf("Protocol error in gameserver reader, opcode = %hu\n", opcode);
 	close(gameserver_sock);
 	gameserver_sock = -1;
 	return NULL;
@@ -2222,10 +2249,21 @@ static void usage(void)
 	exit(1);
 }
 
+static void read_sound_clips(void)
+{
+	printf("Decoding audio data..."); fflush(stdout);
+	wwviaudio_read_ogg_clip(EXPLOSION_SOUND, "share/big_explosion.ogg");
+	wwviaudio_read_ogg_clip(TORPEDO_LAUNCH_SOUND, "share/flak_gun_sound.ogg");
+	printf("Done.\n");
+}
+
 static void setup_sound(void)
 {
-	if (wwviaudio_initialize_portaudio(MAX_CONCURRENT_SOUNDS, NSOUND_CLIPS) != 0)
+	if (wwviaudio_initialize_portaudio(MAX_CONCURRENT_SOUNDS, NSOUND_CLIPS) != 0) {
 		printf("Failed to initialize sound system\n");
+		return;
+	}
+	read_sound_clips();
 }
 
 int main(int argc, char *argv[])

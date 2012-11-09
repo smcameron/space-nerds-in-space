@@ -37,6 +37,7 @@
 #define OPCODE_REQUEST_TORPEDO	111
 #define OPCODE_DELETE_OBJECT    112
 #define OPCODE_UPDATE_EXPLOSION 113
+#define OPCODE_PLAY_SOUND	114
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -176,4 +177,10 @@ struct pos_torpedo_packet {
 	struct packed_double x, y;
 }; 
 
+struct play_sound_packet {
+	uint16_t opcode;
+	uint16_t sound_number;
+};
+
+#pragma pack()
 #endif	

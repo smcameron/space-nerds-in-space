@@ -41,6 +41,7 @@
 #include "snis_marshal.h"
 #include "snis_socket_io.h"
 #include "snis_packet.h"
+#include "sounds.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -138,6 +139,28 @@ static void snis_queue_delete_object(uint32_t oid)
 	client_unlock();
 }
 
+static void queue_add_sound(struct game_client *c, uint16_t sound_number)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct play_sound_packet));
+	packed_buffer_append_u16(pb, OPCODE_PLAY_SOUND);
+	packed_buffer_append_u16(pb, sound_number);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+	printf("sent opcode %hu to client %lu\n", OPCODE_PLAY_SOUND,
+			((unsigned long) c - (unsigned long) &client[0]) / sizeof(client[0]));
+}
+
+static void snis_queue_add_sound(uint16_t sound_number, __attribute__((unused)) uint32_t roles)
+{
+	int i;
+	client_lock();
+	for (i = 0; i < nclients; i++)
+		/* later, change code to check if client has the right role first... */
+		queue_add_sound(&client[i], sound_number);
+	client_unlock();
+}
+
 static int add_explosion(double x, double y, uint16_t velocity, uint16_t nsparks, uint16_t time);
 
 static void torpedo_move(struct snis_entity *o)
@@ -164,6 +187,7 @@ static void torpedo_move(struct snis_entity *o)
 			go[i].alive = 0;
 			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
 			snis_queue_delete_object(go[i].id);
+			snis_queue_add_sound(EXPLOSION_SOUND, 0xffff);
 			snis_object_pool_free_object(pool, i);
 			continue;
 		}
@@ -582,6 +606,7 @@ static int process_request_torpedo(struct game_client *c)
 	pthread_mutex_lock(&universe_mutex);
 	add_torpedo(ship->x, ship->y, vx, vy, ship->tsd.ship.gun_heading); 
 	ship->tsd.ship.torpedoes--;
+	snis_queue_add_sound(TORPEDO_LAUNCH_SOUND, 0xffff);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
