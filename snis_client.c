@@ -354,7 +354,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	return 0;
 }
 
-static int update_torpedo(uint32_t id, double x, double y, double vx, double vy)
+static int update_torpedo(uint32_t id, double x, double y, double vx, double vy, uint32_t ship_id)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -362,6 +362,7 @@ static int update_torpedo(uint32_t id, double x, double y, double vx, double vy)
 		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_TORPEDO, 1);
 		if (i < 0)
 			return i;
+		go[i].tsd.torpedo.ship_id = ship_id;
 	} else {
 		update_generic_object(i, x, y, vx, vy, 0.0, 1); 
 	}
@@ -1217,7 +1218,7 @@ static int process_update_torpedo_packet(void)
 {
 	unsigned char buffer[100];
 	struct packed_buffer pb;
-	uint32_t id;
+	uint32_t id, ship_id;
 	uint32_t x, y;
 	int32_t vx, vy;
 	double dx, dy, dvx, dvy;
@@ -1234,6 +1235,7 @@ static int process_update_torpedo_packet(void)
 	pb.buffer_cursor = 0;
 
 	id = packed_buffer_extract_u32(&pb);
+	ship_id = packed_buffer_extract_u32(&pb);
 	x = packed_buffer_extract_u32(&pb);
 	y = packed_buffer_extract_u32(&pb);
 	vx = (int32_t) packed_buffer_extract_u32(&pb);
@@ -1245,7 +1247,7 @@ static int process_update_torpedo_packet(void)
 	dvy = ((double) vy * (double) YUNIVERSE_DIMENSION) / (double) INT32_MAX;
 
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_torpedo(id, dx, dy, dvx, dvy);
+	rc = update_torpedo(id, dx, dy, dvx, dvy, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

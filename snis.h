@@ -79,6 +79,7 @@ struct laser_data {
 
 struct torpedo_data {
 	uint32_t power;
+	uint32_t ship_id;
 };
 
 struct explosion_data {

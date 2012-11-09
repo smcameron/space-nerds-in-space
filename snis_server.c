@@ -176,6 +176,9 @@ static void torpedo_move(struct snis_entity *o)
 			go[i].type == OBJTYPE_SHIP1) {
 			double dist2;
 
+			if (go[i].id == o->tsd.torpedo.ship_id)
+				continue; /* can't torpedo yourself. */
+
 			dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
 				((go[i].y - o->y) * (go[i].y - o->y));
 
@@ -363,7 +366,7 @@ static int __attribute__((unused)) add_laser(double x, double y, double vx, doub
 	return add_generic_object(x, y, vx, vy, heading, OBJTYPE_LASER);
 }
 
-static int add_torpedo(double x, double y, double vx, double vy, double heading)
+static int add_torpedo(double x, double y, double vx, double vy, double heading, uint32_t ship_id)
 {
 	int i;
 	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_TORPEDO);
@@ -371,6 +374,7 @@ static int add_torpedo(double x, double y, double vx, double vy, double heading)
 		return i;
 	go[i].move = torpedo_move;
 	go[i].alive = TORPEDO_LIFETIME;
+	go[i].tsd.torpedo.ship_id = ship_id;
 	return i;
 }
 
@@ -604,7 +608,7 @@ static int process_request_torpedo(struct game_client *c)
 	vx = TORPEDO_VELOCITY * sin(ship->tsd.ship.gun_heading);
 	vy = TORPEDO_VELOCITY * -cos(ship->tsd.ship.gun_heading);
 	pthread_mutex_lock(&universe_mutex);
-	add_torpedo(ship->x, ship->y, vx, vy, ship->tsd.ship.gun_heading); 
+	add_torpedo(ship->x, ship->y, vx, vy, ship->tsd.ship.gun_heading, ship->id); 
 	ship->tsd.ship.torpedoes--;
 	snis_queue_add_sound(TORPEDO_LAUNCH_SOUND, 0xffff);
 	pthread_mutex_unlock(&universe_mutex);
@@ -955,6 +959,7 @@ static void send_update_torpedo_packet(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(struct update_torpedo_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_TORPEDO);
 	packed_buffer_append_u32(pb, o->id);
+	packed_buffer_append_u32(pb, o->tsd.torpedo.ship_id);
 	packed_buffer_append_u32(pb, x);
 	packed_buffer_append_u32(pb, y);
 	packed_buffer_append_u32(pb, vx);
