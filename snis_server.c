@@ -163,6 +163,20 @@ static void snis_queue_add_sound(uint16_t sound_number, __attribute__((unused)) 
 
 static int add_explosion(double x, double y, uint16_t velocity, uint16_t nsparks, uint16_t time);
 
+static void normalize_coords(struct snis_entity *o)
+{
+	if (o->x < 0)
+		o->x += XUNIVERSE_DIMENSION;
+	else
+		if (o->x > XUNIVERSE_DIMENSION)
+			o->x -= XUNIVERSE_DIMENSION;
+	if (o->y < 0)
+		o->y += YUNIVERSE_DIMENSION;
+	else
+		if (o->y > YUNIVERSE_DIMENSION)
+			o->y -= YUNIVERSE_DIMENSION;
+}
+
 static void torpedo_move(struct snis_entity *o)
 {
 	int i;
@@ -202,20 +216,6 @@ static void torpedo_move(struct snis_entity *o)
 		o->alive = 0;
 		snis_object_pool_free_object(pool, o->index);
 	}
-}
-
-static void normalize_coords(struct snis_entity *o)
-{
-	if (o->x < 0)
-		o->x += XUNIVERSE_DIMENSION;
-	else
-		if (o->x > XUNIVERSE_DIMENSION)
-			o->x -= XUNIVERSE_DIMENSION;
-	if (o->y < 0)
-		o->y += YUNIVERSE_DIMENSION;
-	else
-		if (o->y > YUNIVERSE_DIMENSION)
-			o->y -= YUNIVERSE_DIMENSION;
 }
 
 static void ship_move(struct snis_entity *o)
