@@ -208,12 +208,23 @@ static void ship_move(struct snis_entity *o)
 	int v;
 	if (snis_randn(100) < 5) {
 		o->heading = degrees_to_radians(0.0 + snis_randn(360)); 
-		v = snis_randn(50);
+		v = snis_randn(20);
 		o->vx = v * sin(o->heading);
 		o->vy = v * -cos(o->heading);
 	}
 	o->x += o->vx;
 	o->y += o->vy;
+	if (o->x < 0)
+		o->x += XUNIVERSE_DIMENSION;
+	else
+		if (o->x > XUNIVERSE_DIMENSION)
+			o->x -= XUNIVERSE_DIMENSION;
+	if (o->y < 0)
+		o->y += YUNIVERSE_DIMENSION;
+	else
+		if (o->y > YUNIVERSE_DIMENSION)
+			o->y -= YUNIVERSE_DIMENSION;
+
 	o->timestamp = universe_timestamp;
 }
 
