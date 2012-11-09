@@ -203,6 +203,20 @@ static void torpedo_move(struct snis_entity *o)
 	}
 }
 
+static void normalize_coords(struct snis_entity *o)
+{
+	if (o->x < 0)
+		o->x += XUNIVERSE_DIMENSION;
+	else
+		if (o->x > XUNIVERSE_DIMENSION)
+			o->x -= XUNIVERSE_DIMENSION;
+	if (o->y < 0)
+		o->y += YUNIVERSE_DIMENSION;
+	else
+		if (o->y > YUNIVERSE_DIMENSION)
+			o->y -= YUNIVERSE_DIMENSION;
+}
+
 static void ship_move(struct snis_entity *o)
 {
 	int v;
@@ -214,17 +228,7 @@ static void ship_move(struct snis_entity *o)
 	}
 	o->x += o->vx;
 	o->y += o->vy;
-	if (o->x < 0)
-		o->x += XUNIVERSE_DIMENSION;
-	else
-		if (o->x > XUNIVERSE_DIMENSION)
-			o->x -= XUNIVERSE_DIMENSION;
-	if (o->y < 0)
-		o->y += YUNIVERSE_DIMENSION;
-	else
-		if (o->y > YUNIVERSE_DIMENSION)
-			o->y -= YUNIVERSE_DIMENSION;
-
+	normalize_coords(o);
 	o->timestamp = universe_timestamp;
 }
 
