@@ -169,6 +169,7 @@ static void torpedo_move(struct snis_entity *o)
 
 	o->x += o->vx;
 	o->y += o->vy;
+	normalize_coords(o);
 	o->timestamp = universe_timestamp;
 	o->alive--;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
@@ -255,6 +256,7 @@ static void player_move(struct snis_entity *o)
 	o->vx = o->tsd.ship.velocity * -sin(o->heading);
 	o->x += o->vx;
 	o->y += o->vy;
+	normalize_coords(o);
 	o->heading += o->tsd.ship.yaw_velocity;
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
 
