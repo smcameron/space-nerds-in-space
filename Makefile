@@ -1,6 +1,27 @@
+# To compile withaudio, WITHAUDIO=yes, 
+# for no audio support, change to WITHAUDIO=no, 
+WITHAUDIO=yes
+# WITHAUDIO=no
+
+PREFIX=/usr
+DATADIR=${PREFIX}/share/space-nerds-in-space
+
+ifeq (${WITHAUDIO},yes)
+SNDLIBS=`pkg-config --libs portaudio-2.0 vorbisfile`
+SNDFLAGS=-DWITHAUDIOSUPPORT `pkg-config --cflags portaudio-2.0` -DDATADIR=\"${DATADIR}\"
+OGGOBJ=ogg_to_pcm.o
+SNDOBJS=wwviaudio.o
+else
+SNDLIBS=
+SNDFLAGS=-DWWVIAUDIO_STUBS_ONLY
+OGGOBJ=
+SNDOBJS=wwviaudio.o
+endif
+
+
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o
 SERVEROBJS=${COMMONOBJS} snis_server.o
-CLIENTOBJS=${COMMONOBJS} snis_client.o snis_font.o
+CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_client.o snis_font.o
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm
 
@@ -12,6 +33,16 @@ GTKLDFLAGS=`pkg-config --libs gtk+-2.0` \
         `pkg-config --libs gthread-2.0` \
 
 all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${PROGS}
+
+ogg_to_pcm.o:   ogg_to_pcm.c ogg_to_pcm.h Makefile
+	$(CC) ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} `pkg-config --cflags vorbisfile` \
+		-pthread ${WARNFLAG} -c ogg_to_pcm.c
+
+wwviaudio.o:    wwviaudio.c wwviaudio.h ogg_to_pcm.h my_point.h Makefile
+	$(CC) ${WARNFLAG} ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} \
+		${SNDFLAGS} \
+		-pthread `pkg-config --cflags vorbisfile` \
+		-c wwviaudio.c
 
 snis_server.o:	snis.h snis_server.c snis_packet.h snis_marshal.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_server.c
@@ -38,7 +69,7 @@ snis_server:	${SERVEROBJS} ${SSGL}
 	gcc ${MYCFLAGS} -o snis_server ${GTKCFLAGS} ${SERVEROBJS} ${GTKLDFLAGS} ${LIBS}
 
 snis_client:	${CLIENTOBJS} ${SSGL}
-	gcc ${MYCFLAGS} -o snis_client ${GTKCFLAGS}  ${CLIENTOBJS} ${GTKLDFLAGS} ${LIBS}
+	gcc ${MYCFLAGS} ${SNDFLAGS} -o snis_client ${GTKCFLAGS}  ${CLIENTOBJS} ${GTKLDFLAGS} ${LIBS} ${SNDLIBS}
 
 ${SSGL}:
 	(cd ssgl ; make )

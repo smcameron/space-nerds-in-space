@@ -48,6 +48,8 @@
 #include "ssgl/ssgl.h"
 #include "snis_marshal.h"
 #include "snis_packet.h"
+#include "wwviaudio.h"
+#include "sounds.h"
 
 #define SCREEN_WIDTH 800        /* window width, in pixels */
 #define SCREEN_HEIGHT 600       /* window height, in pixels */
@@ -2208,6 +2210,8 @@ void really_quit(void)
 	printf("%d frames / %d seconds, %g frames/sec\n",
 		nframes, (int) (end_time.tv_sec - start_time.tv_sec),
 		(0.0 + nframes) / (0.0 + end_time.tv_sec - start_time.tv_sec));
+        wwviaudio_cancel_all_sounds();
+        wwviaudio_stop_portaudio();
 	exit(1); /* probably bad form... oh well. */
 }
 
@@ -2216,6 +2220,12 @@ static void usage(void)
 	fprintf(stderr, "usage: snis_client lobbyhost starship password\n");
 	fprintf(stderr, "       Example: ./snis_client localhost Enterprise tribbles\n");
 	exit(1);
+}
+
+static void setup_sound(void)
+{
+	if (wwviaudio_initialize_portaudio(MAX_CONCURRENT_SOUNDS, NSOUND_CLIPS) != 0)
+		printf("Failed to initialize sound system\n");
 }
 
 int main(int argc, char *argv[])
@@ -2234,6 +2244,8 @@ int main(int argc, char *argv[])
 	snis_object_pool_setup(&sparkpool, MAXSPARKS);
 
 	ignore_sigpipe();
+
+	setup_sound();
 
 	connect_to_lobby();
 	real_screen_width = SCREEN_WIDTH;
@@ -2317,5 +2329,7 @@ int main(int argc, char *argv[])
 	gettimeofday(&start_time, NULL);
 
 	gtk_main ();
+        wwviaudio_cancel_all_sounds();
+        wwviaudio_stop_portaudio();
 	return 0;
 }
