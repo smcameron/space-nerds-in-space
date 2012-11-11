@@ -2163,19 +2163,32 @@ static double sample_shields(void)
 	return (double) go[my_ship_oid].tsd.ship.shields;
 }
 
+static double sample_energy(void)
+{
+	int my_ship_oid;
+
+	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	return (double) go[my_ship_oid].tsd.ship.energy;
+}
+
 static void show_engineering(GtkWidget *w)
 {
 	static int initialized = 0;
 	show_common_screen(w, "Engineering");
 	static struct gauge shield_gauge;
+	static struct gauge energy_gauge;
 
 	if (!initialized) {
 		initialized = 1;
 		gauge_init(&shield_gauge, 100, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 				10, "Shields", sample_shields);
+		gauge_init(&energy_gauge, 250, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+				10, "Energy", sample_energy);
 	}
 	gauge_draw(w, &shield_gauge);
+	gauge_draw(w, &energy_gauge);
 }
 
 static void show_science(GtkWidget *w)

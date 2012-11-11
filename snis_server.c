@@ -342,8 +342,8 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 		return i;
 	go[i].move = player_move;
 	go[i].tsd.ship.torpedoes = 1000;
-	go[i].tsd.ship.shields = 0;
-	go[i].tsd.ship.energy = 0;
+	go[i].tsd.ship.shields = 100.0;
+	go[i].tsd.ship.energy = 100.0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
 	go[i].tsd.ship.gun_yaw_velocity = 0.0;
 	go[i].tsd.ship.gun_heading = 0.0;
@@ -362,8 +362,8 @@ static int add_ship1(double x, double y, double vx, double vy, double heading)
 		return i;
 	go[i].move = ship_move;
 	go[i].tsd.ship.torpedoes = 0;
-	go[i].tsd.ship.shields = 0;
-	go[i].tsd.ship.energy = 0;
+	go[i].tsd.ship.shields = 100.0;
+	go[i].tsd.ship.energy = 100.0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
 	go[i].tsd.ship.desired_velocity = 0;
 	go[i].tsd.ship.desired_heading = 0;
@@ -453,7 +453,6 @@ static void add_eships(void)
 		y = ((double) snis_randn(1000)) * YUNIVERSE_DIMENSION / 1000.0;
 		heading = degrees_to_radians(0.0 + snis_randn(360)); 
 		add_ship1(x, y, 0.0, 0.0, heading);
-		
 	}
 }
 
