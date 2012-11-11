@@ -216,21 +216,6 @@ static void torpedo_move(struct snis_entity *o)
 	}
 }
 
-static void ship_move(struct snis_entity *o)
-{
-	int v;
-	if (snis_randn(100) < 5) {
-		o->heading = degrees_to_radians(0.0 + snis_randn(360)); 
-		v = snis_randn(20);
-		o->vx = v * sin(o->heading);
-		o->vy = v * -cos(o->heading);
-	}
-	o->x += o->vx;
-	o->y += o->vy;
-	normalize_coords(o);
-	o->timestamp = universe_timestamp;
-}
-
 static void normalize_heading(double *heading)
 {
 	/* FIXME, there's undoubtedly a better way to normalize radians */
@@ -238,6 +223,51 @@ static void normalize_heading(double *heading)
 		*heading -= (360.0 * PI / 180.0);
 	while (*heading < 0)
 		*heading += (360.0 * PI / 180.0); 
+}
+
+static void ship_move(struct snis_entity *o)
+{
+	double heading_diff, yaw_vel;
+
+	/* Decide where to go... */
+	if (snis_randn(100) < 5) {
+		o->tsd.ship.desired_heading = degrees_to_radians(0.0 + snis_randn(360)); 
+		o->tsd.ship.desired_velocity = snis_randn(20);
+	}
+
+	/* Adjust heading towards desired heading */
+	heading_diff = o->tsd.ship.desired_heading - o->heading;
+	if (heading_diff < -M_PI)
+		heading_diff += 2.0 * M_PI;
+	if (heading_diff > M_PI)
+		heading_diff -= 2.0 * M_PI;
+	if (heading_diff > MAX_YAW_VELOCITY) {
+		yaw_vel = MAX_YAW_VELOCITY;
+	} else {
+		if (heading_diff < -MAX_YAW_VELOCITY) {
+			yaw_vel = -MAX_YAW_VELOCITY;
+		} else {
+			yaw_vel = heading_diff * 0.8;
+		}
+	}
+	if (fabs(heading_diff) < (M_PI / 180.0))
+		yaw_vel = heading_diff;
+	o->heading += yaw_vel;
+	normalize_heading(&o->heading);
+
+	/* Adjust velocity towards desired velocity */
+	o->tsd.ship.velocity = o->tsd.ship.velocity +
+			(o->tsd.ship.desired_velocity - o->tsd.ship.velocity) * 0.3;
+	if (fabs(o->tsd.ship.velocity - o->tsd.ship.desired_velocity) < 2.0)
+		o->tsd.ship.velocity = o->tsd.ship.desired_velocity;
+
+	/* set vx, vy, move x, y */
+	o->vx = o->tsd.ship.velocity * sin(o->heading);
+	o->vy = o->tsd.ship.velocity * -cos(o->heading);
+	o->x += o->vx;
+	o->y += o->vy;
+	normalize_coords(o);
+	o->timestamp = universe_timestamp;
 }
 
 static void damp_yaw_velocity(double *yv, double damp_factor)
@@ -326,6 +356,8 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 	go[i].tsd.ship.gun_yaw_velocity = 0.0;
 	go[i].tsd.ship.gun_heading = 0.0;
 	go[i].tsd.ship.velocity = 0.0;
+	go[i].tsd.ship.desired_velocity = 0.0;
+	go[i].tsd.ship.desired_heading = 0.0;
 	return i;
 }
 
@@ -341,7 +373,9 @@ static int add_ship1(double x, double y, double vx, double vy, double heading)
 	go[i].tsd.ship.shields = 0;
 	go[i].tsd.ship.energy = 0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
-	return i;
+	go[i].tsd.ship.desired_velocity = 0;
+	go[i].tsd.ship.desired_heading = 0;
+	go[i].tsd.ship.velocity = 0;
 	return i;
 }
 

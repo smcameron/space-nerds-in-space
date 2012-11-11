@@ -58,6 +58,8 @@ struct ship_data {
 #define PLAYER_VELOCITY_DAMPING (0.8)
 #define PLAYER_VELOCITY_INCREMENT (4.0)
 	double yaw_velocity;
+	double desired_heading;
+	double desired_velocity;
 #define MAX_YAW_VELOCITY (5 * PI / 180.0)
 #define YAW_INCREMENT (1 * PI / 180.0)
 #define YAW_DAMPING 0.85
