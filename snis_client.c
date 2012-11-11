@@ -1886,6 +1886,24 @@ static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static void snis_draw_dotted_hline(GdkDrawable *drawable,
+         GdkGC *gc, int x1, int y1, int x2)
+{
+	int i;
+
+	for (i = x1; i <= x2; i += 5)
+		gdk_draw_point(drawable, gc, i, y1);
+}
+
+static void snis_draw_dotted_vline(GdkDrawable *drawable,
+         GdkGC *gc, int x1, int y1, int y2)
+{
+	int i;
+
+	for (i = y1; i <= y2; i += 5)
+		gdk_draw_point(drawable, gc, x1, i);
+}
+
 static void snis_draw_radar_grid(GdkDrawable *drawable,
          GdkGC *gc, struct snis_entity *o, int cx, int cy, int r)
 {
@@ -1909,7 +1927,7 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 		x1 = (int) (((double) r) / NAVSCREEN_RADIUS * lx1) + cx;
 		y1 = (int) (((double) r) / NAVSCREEN_RADIUS * ly1) + cy;
 		y2 = (int) (((double) r) / NAVSCREEN_RADIUS * ly2) + cy;
-		snis_draw_line(drawable, gc, x1, y1, x1, y2);
+		snis_draw_dotted_vline(drawable, gc, x1, y2, y1);
 	}
 	/* horizontal lines */
 	for (y = 0; y <= 10; y++) {
@@ -1924,7 +1942,7 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 		y1 = (int) (((double) r) / NAVSCREEN_RADIUS * ly1) + cy;
 		x1 = (int) (((double) r) / NAVSCREEN_RADIUS * lx1) + cx;
 		x2 = (int) (((double) r) / NAVSCREEN_RADIUS * lx2) + cx;
-		snis_draw_line(drawable, gc, x1, y1, x2, y1);
+		snis_draw_dotted_hline(drawable, gc, x2, y1, x1);
 	}
 }
 
@@ -1960,7 +1978,7 @@ static void show_navigation(GtkWidget *w)
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
-	gdk_gc_set_foreground(gc, &huex[DARKGREEN]);
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r);
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
 	snis_draw_reticule(w->window, gc, cx, cy, r, o->heading);
@@ -2003,7 +2021,7 @@ static void show_weapons(GtkWidget *w)
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
-	gdk_gc_set_foreground(gc, &huex[DARKGREEN]);
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r);
 	gdk_gc_set_foreground(gc, &huex[BLUE]);
 	snis_draw_reticule(w->window, gc, cx, cy, r, o->tsd.ship.gun_heading);
