@@ -19,7 +19,7 @@ SNDOBJS=wwviaudio.o
 endif
 
 
-COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o
+COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o bline.o
 SERVEROBJS=${COMMONOBJS} snis_server.o
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_client.o snis_font.o
 SSGL=ssgl/libssglclient.a
@@ -37,6 +37,9 @@ all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${PROGS}
 ogg_to_pcm.o:   ogg_to_pcm.c ogg_to_pcm.h Makefile
 	$(CC) ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} `pkg-config --cflags vorbisfile` \
 		-pthread ${WARNFLAG} -c ogg_to_pcm.c
+
+bline.o:	bline.c bline.h
+	$(CC) ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} -pthread -c bline.c
 
 wwviaudio.o:    wwviaudio.c wwviaudio.h ogg_to_pcm.h my_point.h Makefile
 	$(CC) ${WARNFLAG} ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} \
