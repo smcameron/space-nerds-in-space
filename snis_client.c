@@ -2112,48 +2112,34 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 
 static void show_debug(GtkWidget *w)
 {
-	int i;
+	int x, y, i, ix, iy;
+	const char *letters = "ABCDEFGHIJK";
+	char label[10];
+	int xoffset = 7;
+	int yoffset = 10;
 
 	show_common_screen(w, "Debug");
 
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	ix = SCREEN_WIDTH / 10.0;
+	for (x = 0; x <= 10; x++)
+		snis_draw_dotted_vline(w->window, gc, x * ix, 0, SCREEN_HEIGHT);
+
+	iy = SCREEN_HEIGHT / 10.0;
+	for (y = 0; y <= 10; y++)
+		snis_draw_dotted_hline(w->window, gc, 0, y * iy, SCREEN_WIDTH);
+
+	for (x = 0; x < 10; x++)
+		for (y = 0; y < 10; y++) {
+			snprintf(label, sizeof(label), "%c%d", letters[y], x);
+			abs_xy_draw_string(w, label, NANO_FONT, x * ix + xoffset, y * iy + yoffset); 
+		}
 	pthread_mutex_lock(&universe_mutex);
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
 		debug_draw_object(w, &go[i]);
 	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++)
 		debug_draw_object(w, &spark[i]);
-#if 0
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		int x, y, x1, y1, x2, y2;
-
-		if (!go[i].alive)
-			continue;
-
-		x = (int) ((double) SCREEN_WIDTH * go[i].x / XUNIVERSE_DIMENSION);
-		y = (int) ((double) SCREEN_HEIGHT * go[i].y / YUNIVERSE_DIMENSION);
-		x1 = x - 1;
-		y2 = y + 1;
-		y1 = y - 1;
-		x2 = x + 1;
-
-		if (go[i].id == my_ship_id)
-			gdk_gc_set_foreground(gc, &huex[GREEN]);
-		else {
-			switch (go[i].type) {
-			case OBJTYPE_PLANET:
-				gdk_gc_set_foreground(gc, &huex[BLUE]);
-				break;
-			case OBJTYPE_STARBASE:
-				gdk_gc_set_foreground(gc, &huex[MAGENTA]);
-				break;
-			default:
-				gdk_gc_set_foreground(gc, &huex[WHITE]);
-			}
-		}
-		snis_draw_line(w->window, gc, x1, y1, x2, y2);
-		snis_draw_line(w->window, gc, x1, y2, x2, y1);
-	}
-#endif
 	pthread_mutex_unlock(&universe_mutex);
 }
 
