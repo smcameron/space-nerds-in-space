@@ -1886,6 +1886,47 @@ static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static void snis_draw_radar_grid(GdkDrawable *drawable,
+         GdkGC *gc, struct snis_entity *o, int cx, int cy, int r)
+{
+	/* FIXME, this algorithm is really fricken dumb. */
+	int x, y;
+	double increment = (XUNIVERSE_DIMENSION / 10.0);
+	double lx1, ly1, lx2, ly2;
+	int x1, y1, x2, y2;
+
+	/* vertical lines */
+	for (x = 0; x <= 10; x++) {
+		if ((x * increment) <= (o->x - NAVSCREEN_RADIUS))
+			continue;
+		if ((x * increment) >= (o->x + NAVSCREEN_RADIUS))
+			continue;
+		/* find y intersections with radar circle by pyth. theorem. */
+		lx1 = x * increment - o->x;
+		ly1 = sqrt((NR2 - (lx1 * lx1)));
+		ly2 = -ly1;
+
+		x1 = (int) (((double) r) / NAVSCREEN_RADIUS * lx1) + cx;
+		y1 = (int) (((double) r) / NAVSCREEN_RADIUS * ly1) + cy;
+		y2 = (int) (((double) r) / NAVSCREEN_RADIUS * ly2) + cy;
+		snis_draw_line(drawable, gc, x1, y1, x1, y2);
+	}
+	/* horizontal lines */
+	for (y = 0; y <= 10; y++) {
+		if ((y * increment) <= (o->y - NAVSCREEN_RADIUS))
+			continue;
+		if ((y * increment) >= (o->y + NAVSCREEN_RADIUS))
+			continue;
+		/* find x intersections with radar circle by pyth. theorem. */
+		ly1 = y * increment - o->y;
+		lx1 = sqrt((NR2 - (ly1 * ly1)));
+		lx2 = -lx1;
+		y1 = (int) (((double) r) / NAVSCREEN_RADIUS * ly1) + cy;
+		x1 = (int) (((double) r) / NAVSCREEN_RADIUS * lx1) + cx;
+		x2 = (int) (((double) r) / NAVSCREEN_RADIUS * lx2) + cx;
+		snis_draw_line(drawable, gc, x1, y1, x2, y1);
+	}
+}
 
 static void show_navigation(GtkWidget *w)
 {
@@ -1919,6 +1960,8 @@ static void show_navigation(GtkWidget *w)
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
+	gdk_gc_set_foreground(gc, &huex[DARKGREEN]);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r);
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
 	snis_draw_reticule(w->window, gc, cx, cy, r, o->heading);
 
@@ -1960,6 +2003,8 @@ static void show_weapons(GtkWidget *w)
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
+	gdk_gc_set_foreground(gc, &huex[DARKGREEN]);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r);
 	gdk_gc_set_foreground(gc, &huex[BLUE]);
 	snis_draw_reticule(w->window, gc, cx, cy, r, o->tsd.ship.gun_heading);
 	draw_all_the_guys(w, o);
