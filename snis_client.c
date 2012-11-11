@@ -1904,6 +1904,36 @@ static void snis_draw_dotted_vline(GdkDrawable *drawable,
 		gdk_draw_point(drawable, gc, x1, i);
 }
 
+static void snis_draw_radar_sector_labels(GtkWidget *w,
+         GdkGC *gc, struct snis_entity *o, int cx, int cy, int r)
+{
+	/* FIXME, this algorithm is really fricken dumb. */
+	int x, y;
+	double increment = (XUNIVERSE_DIMENSION / 10.0);
+	int x1, y1;
+	const char *letters = "ABCDEFGHIJK";
+	char label[10];
+	int xoffset = 10;
+	int yoffset = 10;
+
+	for (x = 0; x <= 10; x++) {
+		if ((x * increment) <= (o->x - NAVSCREEN_RADIUS * 0.9))
+			continue;
+		if ((x * increment) >= (o->x + NAVSCREEN_RADIUS * 0.9))
+			continue;
+		for (y = 0; y <= 10; y++) {
+			if ((y * increment) <= (o->y - NAVSCREEN_RADIUS * 0.9))
+				continue;
+			if ((y * increment) >= (o->y + NAVSCREEN_RADIUS * 0.9))
+				continue;
+			x1 = (int) (((double) r) / NAVSCREEN_RADIUS * (x * increment - o->x)) + cx + xoffset;
+			y1 = (int) (((double) r) / NAVSCREEN_RADIUS * (y * increment - o->y)) + cy + yoffset;
+			snprintf(label, sizeof(label), "%c%d", letters[y], x);
+			abs_xy_draw_string(w, label, NANO_FONT, x1, y1);
+		}
+	}
+}
+
 static void snis_draw_radar_grid(GdkDrawable *drawable,
          GdkGC *gc, struct snis_entity *o, int cx, int cy, int r)
 {
@@ -1979,6 +2009,7 @@ static void show_navigation(GtkWidget *w)
 	cy = ry + (rh / 2);
 	r = rh / 2;
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r);
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
 	snis_draw_reticule(w->window, gc, cx, cy, r, o->heading);
@@ -2022,6 +2053,7 @@ static void show_weapons(GtkWidget *w)
 	cy = ry + (rh / 2);
 	r = rh / 2;
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r);
 	gdk_gc_set_foreground(gc, &huex[BLUE]);
 	snis_draw_reticule(w->window, gc, cx, cy, r, o->tsd.ship.gun_heading);
