@@ -147,8 +147,6 @@ static void queue_add_sound(struct game_client *c, uint16_t sound_number)
 	packed_buffer_append_u16(pb, OPCODE_PLAY_SOUND);
 	packed_buffer_append_u16(pb, sound_number);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
-	printf("sent opcode %hu to client %lu\n", OPCODE_PLAY_SOUND,
-			((unsigned long) c - (unsigned long) &client[0]) / sizeof(client[0]));
 }
 
 static void snis_queue_add_sound(uint16_t sound_number, __attribute__((unused)) uint32_t roles)
@@ -916,7 +914,6 @@ static void send_update_planet_packet(struct game_client *c,
 	struct packed_buffer *pb;
 	uint32_t x, y;
 
-	printf("Sending planet %u\n", o->id);
 	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	pb = packed_buffer_allocate(sizeof(struct update_planet_packet));
@@ -933,7 +930,6 @@ static void send_update_starbase_packet(struct game_client *c,
 	struct packed_buffer *pb;
 	uint32_t x, y;
 
-	printf("Sending starbase %u\n", o->id);
 	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
