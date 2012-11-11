@@ -1787,6 +1787,7 @@ static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y,
 static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 {
 	int i, cx, cy, r, rx, ry, rw, rh;
+	char buffer[200];
 
 	rx = 20;
 	ry = 70;
@@ -1836,6 +1837,14 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 				snis_draw_torpedo(w->window, gc, x, y, r / 25);
 				break;
 			case OBJTYPE_EXPLOSION:
+				break;
+			case OBJTYPE_SHIP1:
+				gdk_gc_set_foreground(gc, &huex[WHITE]);
+				snis_draw_arrow(w->window, gc, x, y, r, go[i].heading, 0.5);
+				gdk_gc_set_foreground(gc, &huex[GREEN]);
+				sprintf(buffer, "h:%03d",
+					(int) (go[i].heading * 180.0 / M_PI));
+				abs_xy_draw_string(w, buffer, NANO_FONT, x + 10, y - 10);
 				break;
 			default:
 				gdk_gc_set_foreground(gc, &huex[WHITE]);
