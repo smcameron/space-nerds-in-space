@@ -103,8 +103,8 @@ char *shipname;
 uint32_t my_ship_id = UNKNOWN_ID;
 uint32_t my_ship_oid = UNKNOWN_ID;
 
-float xscale_screen;
-float yscale_screen;
+float xscale_screen = 1.0;
+float yscale_screen= 1.0;
 int real_screen_width;
 int real_screen_height;
 
@@ -1892,7 +1892,7 @@ static void snis_draw_dotted_hline(GdkDrawable *drawable,
 	int i;
 
 	for (i = x1; i <= x2; i += 5)
-		gdk_draw_point(drawable, gc, i, y1);
+		gdk_draw_point(drawable, gc, i * xscale_screen, y1 * yscale_screen);
 }
 
 static void snis_draw_dotted_vline(GdkDrawable *drawable,
@@ -1901,7 +1901,7 @@ static void snis_draw_dotted_vline(GdkDrawable *drawable,
 	int i;
 
 	for (i = y1; i <= y2; i += 5)
-		gdk_draw_point(drawable, gc, x1, i);
+		gdk_draw_point(drawable, gc, x1 * xscale_screen, i * yscale_screen);
 }
 
 static void snis_draw_radar_sector_labels(GtkWidget *w,
