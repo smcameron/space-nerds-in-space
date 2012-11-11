@@ -1913,7 +1913,7 @@ static void snis_draw_radar_sector_labels(GtkWidget *w,
 	int x1, y1;
 	const char *letters = "ABCDEFGHIJK";
 	char label[10];
-	int xoffset = 10;
+	int xoffset = 7;
 	int yoffset = 10;
 
 	for (x = 0; x <= 10; x++) {
