@@ -2070,9 +2070,112 @@ static void show_weapons(GtkWidget *w)
 	draw_all_the_sparks(w, o);
 }
 
+/*
+ * begin gauge related functions/types
+ */
+typedef double (*gauge_monitor_function)(void);
+
+struct gauge {
+	int x, y, r;
+	gauge_monitor_function sample;
+	double r1,r2;
+	double start_angle, angular_range;
+	GdkColor needle_color, dial_color;
+	int ndivs;
+	char title[16]; 
+};
+
+static void gauge_init(struct gauge *g, 
+			int x, int y, int r, double r1, double r2,
+			double start_angle, double angular_range,
+			GdkColor *needle_color, GdkColor *dial_color, int ndivs, char *title,
+			gauge_monitor_function gmf)
+{
+	g->x = x;
+	g->y = y;
+	g->r = r;
+	g->r1 = r1;
+	g->r2 = r2;
+	g->start_angle = start_angle;
+	g->angular_range = angular_range;
+	g->needle_color = *needle_color;
+	g->dial_color = *dial_color;
+	g->ndivs = ndivs;
+	g->sample = gmf;
+	strncpy(g->title, title, sizeof(g->title) - 1);
+}
+
+static void gauge_draw(GtkWidget *w, struct gauge *g)
+{
+	int i;
+	double a, ai;
+	int x1, y1, x2, y2;
+	double value;
+
+	gdk_gc_set_foreground(gc, &g->dial_color);
+	snis_draw_circle(w->window, gc, g->x, g->y, g->r); 
+
+	ai = g->angular_range / g->ndivs;
+	normalize_angle(&ai);
+
+	for (i = 0; i <= g->ndivs; i++) {
+		a = (ai * (double) i) + g->start_angle;
+		normalize_angle(&a);
+		x1 = g->r * sin(a);
+		x2 = 0.9 * x1;
+		y1 = g->r * -cos(a);
+		y2 = 0.9 * y1;
+
+		x1 = (x1 + g->x) * xscale_screen;
+		x2 = (x2 + g->x) * xscale_screen;
+		y1 = (y1 + g->y) * yscale_screen;
+		y2 = (y2 + g->y) * yscale_screen;
+		snis_draw_line(w->window, gc, x1, y1, x2, y2);
+	}
+	abs_xy_draw_string(w, g->title, TINY_FONT,
+			(g->x - (g->r * 0.5)) * xscale_screen,
+			(g->y + (g->r * 0.5)) * yscale_screen);
+	value = g->sample();
+
+	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
+	x1 = g->r * sin(a);
+	y1 = g->r * -cos(a);
+	x2 = 0;
+	y2 = 0;
+
+	x1 = (x1 + g->x) * xscale_screen;
+	x2 = (x2 + g->x) * xscale_screen;
+	y1 = (y1 + g->y) * yscale_screen;
+	y2 = (y2 + g->y) * yscale_screen;
+	gdk_gc_set_foreground(gc, &g->needle_color);
+	snis_draw_line(w->window, gc, x1, y1, x2, y2);
+}
+
+/*
+ * end gauge related functions/types
+ */
+
+static double sample_shields(void)
+{
+	int my_ship_oid;
+
+	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	return (double) go[my_ship_oid].tsd.ship.shields;
+}
+
 static void show_engineering(GtkWidget *w)
 {
+	static int initialized = 0;
 	show_common_screen(w, "Engineering");
+	static struct gauge shield_gauge;
+
+	if (!initialized) {
+		initialized = 1;
+		gauge_init(&shield_gauge, 100, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+				10, "Shields", sample_shields);
+	}
+	gauge_draw(w, &shield_gauge);
 }
 
 static void show_science(GtkWidget *w)

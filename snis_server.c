@@ -278,6 +278,7 @@ static void player_move(struct snis_entity *o)
 	normalize_coords(o);
 	o->heading += o->tsd.ship.yaw_velocity;
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
+	o->tsd.ship.shields = universe_timestamp % 100;
 
 	normalize_angle(&o->heading);
 	normalize_angle(&o->tsd.ship.gun_heading);
