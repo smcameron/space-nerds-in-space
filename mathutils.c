@@ -51,3 +51,13 @@ int snis_randn(int n)
 	return n * snis_rand() / SNIS_RAND_MAX;
 }
 
+void normalize_angle(double *angle)
+{
+	/* FIXME, there's undoubtedly a better way to normalize radians */
+	while (*angle > (360.0 * PI / 180.0))
+		*angle -= (360.0 * PI / 180.0);
+	while (*angle < 0)
+		*angle += (360.0 * PI / 180.0);
+}
+
+

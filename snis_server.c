@@ -216,15 +216,6 @@ static void torpedo_move(struct snis_entity *o)
 	}
 }
 
-static void normalize_heading(double *heading)
-{
-	/* FIXME, there's undoubtedly a better way to normalize radians */
-	while (*heading > (360.0 * PI / 180.0))
-		*heading -= (360.0 * PI / 180.0);
-	while (*heading < 0)
-		*heading += (360.0 * PI / 180.0); 
-}
-
 static void ship_move(struct snis_entity *o)
 {
 	double heading_diff, yaw_vel;
@@ -253,7 +244,7 @@ static void ship_move(struct snis_entity *o)
 	if (fabs(heading_diff) < (M_PI / 180.0))
 		yaw_vel = heading_diff;
 	o->heading += yaw_vel;
-	normalize_heading(&o->heading);
+	normalize_angle(&o->heading);
 
 	/* Adjust velocity towards desired velocity */
 	o->tsd.ship.velocity = o->tsd.ship.velocity +
@@ -288,8 +279,8 @@ static void player_move(struct snis_entity *o)
 	o->heading += o->tsd.ship.yaw_velocity;
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
 
-	normalize_heading(&o->heading);
-	normalize_heading(&o->tsd.ship.gun_heading);
+	normalize_angle(&o->heading);
+	normalize_angle(&o->tsd.ship.gun_heading);
 	o->timestamp = universe_timestamp;
 
 	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, YAW_DAMPING);

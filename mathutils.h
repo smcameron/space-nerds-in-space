@@ -38,5 +38,6 @@ GLOBAL double radians_to_degrees(double radians);
 GLOBAL int snis_rand(void); /* like rand() */
 GLOBAL void snis_srand(unsigned seed); /* like srand() */
 GLOBAL int snis_randn(int n); /* returns n * snis_rand() / SNIS_RAND_MAX */
+GLOBAL void normalize_angle(double *angle);
 
 #endif
