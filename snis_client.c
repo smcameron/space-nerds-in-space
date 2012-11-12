@@ -2126,15 +2126,14 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 		y1 = g->r * -cos(a);
 		y2 = 0.9 * y1;
 
-		x1 = (x1 + g->x) * xscale_screen;
-		x2 = (x2 + g->x) * xscale_screen;
-		y1 = (y1 + g->y) * yscale_screen;
-		y2 = (y2 + g->y) * yscale_screen;
+		x1 = (x1 + g->x);
+		x2 = (x2 + g->x);
+		y1 = (y1 + g->y);
+		y2 = (y2 + g->y);
 		snis_draw_line(w->window, gc, x1, y1, x2, y2);
 	}
 	abs_xy_draw_string(w, g->title, TINY_FONT,
-			(g->x - (g->r * 0.5)) * xscale_screen,
-			(g->y + (g->r * 0.5)) * yscale_screen);
+			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)));
 	value = g->sample();
 
 	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
@@ -2143,10 +2142,10 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 	x2 = 0;
 	y2 = 0;
 
-	x1 = (x1 + g->x) * xscale_screen;
-	x2 = (x2 + g->x) * xscale_screen;
-	y1 = (y1 + g->y) * yscale_screen;
-	y2 = (y2 + g->y) * yscale_screen;
+	x1 = (x1 + g->x);
+	x2 = (x2 + g->x);
+	y1 = (y1 + g->y);
+	y2 = (y2 + g->y);
 	gdk_gc_set_foreground(gc, &g->needle_color);
 	snis_draw_line(w->window, gc, x1, y1, x2, y2);
 }
