@@ -2254,6 +2254,88 @@ static void sliders_button_press(int x, int y)
 /*
  * end slider related functions/types
  */
+
+/*
+ * begin button related functions/types
+ */
+
+typedef void (*button_function)(void *cookie);
+
+struct button {
+	int x, y, width, height, displaymode;
+	char label[20];
+	GdkColor color;
+	int font;
+	button_function bf;
+	void *cookie;
+};
+
+static void button_init(struct button *b, int x, int y, int width, int height, char *label,
+			GdkColor *color, int font, button_function bf, void *cookie)
+{
+	b->x = x;
+	b->y = y;
+	b->width = width;
+	b->height = height;
+	strncpy(b->label, label, sizeof(b->label) - 1);
+	b->displaymode = displaymode;
+	b->color = *color;
+	b->font = font;
+	b->bf = bf;
+	b->cookie = cookie;
+}
+
+static void button_draw(GtkWidget *w, struct button *b)
+{
+	gdk_gc_set_foreground(gc, &b->color);
+	current_draw_rectangle(w->window, gc, 0, b->x, b->y, b->width, b->height);
+	abs_xy_draw_string(w, b->label, b->font, b->x + 10, b->y + b->height / 2); 
+}
+
+#define MAXBUTTONS 50
+static struct button *buttonlist[MAXBUTTONS];
+static int nbuttons = 0;
+
+static void add_button(struct button *b)
+{
+	if (nbuttons >= MAXBUTTONS)
+		return;
+	buttonlist[nbuttons] = b;
+	nbuttons++;
+}
+
+static void draw_buttons(GtkWidget *w)
+{
+	int i;
+
+	for (i = 0; i < nbuttons; i++) {
+		struct button *b = buttonlist[i];
+
+		if (b->displaymode == displaymode)
+			button_draw(w, buttonlist[i]);
+	}
+}
+
+static void buttons_button_press(int x, int y)
+{
+	int i;
+	struct button *b;
+
+	for (i = 0; i < nbuttons; i++) {
+		b = buttonlist[i];
+		if (b->displaymode == displaymode) {
+			if (x < b->x || x > b->x + b->width || 
+				y < b->y || y > b->y + b->height)
+				continue;
+			b->bf(b->cookie);
+		}
+	}
+}
+
+/*
+ * end button related functions/types
+ */
+
 static double sample_shields(void)
 {
 	int my_ship_oid;
@@ -2270,6 +2352,11 @@ static double sample_energy(void)
 	return (double) go[my_ship_oid].tsd.ship.energy;
 }
 
+static void abutton_pressed(__attribute__((unused)) void *notused)
+{
+	printf("abutton pressed\n");
+}
+
 static void show_engineering(GtkWidget *w)
 {
 	static int initialized = 0;
@@ -2278,6 +2365,7 @@ static void show_engineering(GtkWidget *w)
 	static struct gauge energy_gauge;
 	static struct slider shield_slider;
 	static struct slider energy_slider;
+	static struct button abutton;
 
 	if (!initialized) {
 		initialized = 1;
@@ -2292,8 +2380,11 @@ static void show_engineering(GtkWidget *w)
 					0.0, 100.0, sample_shields, DISPLAYMODE_ENGINEERING);
 		slider_init(&energy_slider, 20, 340, 150, &huex[WHITE], "Energy", "0", "100",
 					0.0, 100.0, sample_energy, DISPLAYMODE_ENGINEERING);
+		button_init(&abutton, 20, 400, 300, 50, "A Button", &huex[RED],
+					TINY_FONT, abutton_pressed, NULL);
 		add_slider(&shield_slider);
 		add_slider(&energy_slider);
+		add_button(&abutton);
 	}
 	gauge_draw(w, &shield_gauge);
 	gauge_draw(w, &energy_gauge);
@@ -2435,6 +2526,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		break;
 	}
 	draw_sliders(w);
+	draw_buttons(w);
 	return 0;
 }
 
@@ -2517,6 +2609,8 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 		break;
 	}
 	sliders_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
+			(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
+	buttons_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
 			(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
 	return TRUE;
 }
