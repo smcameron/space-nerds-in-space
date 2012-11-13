@@ -2029,7 +2029,7 @@ static void show_navigation(GtkWidget *w)
 
 static void show_weapons(GtkWidget *w)
 {
-	// char buf[100];
+	char buf[100];
 	struct snis_entity *o;
 	int rx, ry, rw, rh, cx, cy;
 	int r;
@@ -2044,10 +2044,9 @@ static void show_weapons(GtkWidget *w)
 	if (my_ship_oid == UNKNOWN_ID)
 		return;
 	o = &go[my_ship_oid];
-/*
-	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
-			360.0 * o->heading / (2.0 * 3.1415927));
+	sprintf(buf, "Photon Torpedoes: %03d", o->tsd.ship.torpedoes);
 	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
+/*
 	sprintf(buf, "vx: %5.2lf", o->vx);
 	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
 	sprintf(buf, "vy: %5.2lf", o->vy);
