@@ -1700,7 +1700,7 @@ static void show_common_screen(GtkWidget *w, char *title)
 {
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
 	abs_xy_draw_string(w, title, SMALL_FONT, 25, 10 + LINEHEIGHT);
-	gdk_gc_set_foreground(gc, &huex[WHITE]);
+	gdk_gc_set_foreground(gc, &huex[BLUE]);
 	snis_draw_line(w->window, gc, 0, 0, SCREEN_WIDTH, 0);
 	snis_draw_line(w->window, gc, SCREEN_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 	snis_draw_line(w->window, gc, SCREEN_WIDTH, SCREEN_HEIGHT, 0, SCREEN_HEIGHT);
