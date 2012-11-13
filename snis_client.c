@@ -2235,6 +2235,22 @@ static void draw_sliders(GtkWidget *w)
 			slider_draw(w, sliderlist[i]);
 }
 
+static void sliders_button_press(int x, int y)
+{
+	int i;
+	struct slider *s;
+
+	for (i = 0; i < nsliders; i++) {
+		s = sliderlist[i];
+		if (s->displaymode == displaymode) {
+			if (x < s->x || x > s->x + s->length || 
+				y < s->y || y > s->y + SLIDER_HEIGHT)
+				continue;
+			s->value = ((double) x - (double) s->x) / (double) s->length;
+		}
+	}
+}
+
 /*
  * end slider related functions/types
  */
@@ -2498,8 +2514,11 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 		return TRUE;
 		break;
 	default:
-		return FALSE;
+		break;
 	}
+	sliders_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
+			(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
+	return TRUE;
 }
 
 static gboolean delete_event(GtkWidget *widget, 
