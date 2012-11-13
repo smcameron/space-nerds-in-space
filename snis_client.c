@@ -2211,7 +2211,7 @@ static void slider_draw(GtkWidget *w, struct slider *s)
 			tx1 + SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
 	snis_draw_line(w->window, gc, tx1 - SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT,
 			tx1 + SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
-	abs_xy_draw_string(w, s->label, TINY_FONT, s->x + s->length + 5, s->y + SLIDER_HEIGHT / 2); 
+	abs_xy_draw_string(w, s->label, TINY_FONT, s->x + s->length + 5, s->y + 2 * SLIDER_HEIGHT / 3); 
 }
 
 #define MAXSLIDERS 20
