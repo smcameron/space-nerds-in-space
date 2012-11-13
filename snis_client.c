@@ -2153,6 +2153,90 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
  * end gauge related functions/types
  */
 
+/*
+ * begin slider related functions/types
+ */
+
+struct slider {
+	int x, y, length;
+	GdkColor color;
+	double value;
+	char label[20], label1[5], label2[5];
+	double r1, r2;
+	gauge_monitor_function sample;
+	int displaymode;
+};
+
+static void slider_init(struct slider *s, int x, int y, int length, GdkColor *color,
+		char *label, char *l1, char *l2, double r1, double r2,
+		gauge_monitor_function gmf, int displaymode)
+{
+	s->x = x;
+	s->y = y;
+	s->length = length;
+	s->color = *color;
+	strncpy(s->label, label, sizeof(s->label) - 1);
+	strncpy(s->label1, l1, sizeof(s->label1) - 1);
+	strncpy(s->label2, l2, sizeof(s->label2) - 1);
+	s->r1 = r1;
+	s->r2 = r2;
+	s->sample = gmf;
+	s->value = s->sample() / (s->r2 - s->r1);
+	s->displaymode = displaymode;
+}
+
+static void slider_draw(GtkWidget *w, struct slider *s)
+{
+	double v;
+	int width, tx1;
+
+#define SLIDER_HEIGHT 15
+#define SLIDER_POINTER_HEIGHT 8
+#define SLIDER_POINTER_WIDTH 5
+
+	v = s->sample();
+	gdk_gc_set_foreground(gc, &s->color);
+	current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->length, SLIDER_HEIGHT);
+	width = (int) ((v / (s->r2 - s->r1)) * s->length);
+	current_draw_rectangle(w->window, gc, 1, s->x, s->y, width, SLIDER_HEIGHT);
+
+	tx1 = (int) (s->value * s->length);
+	snis_draw_line(w->window, gc, tx1, s->y, tx1 - SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT); 
+	snis_draw_line(w->window, gc, tx1, s->y, tx1 + SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT); 
+	snis_draw_line(w->window, gc, tx1 - SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT,
+					tx1 + SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT); 
+	snis_draw_line(w->window, gc, tx1, s->y + SLIDER_HEIGHT,
+			tx1 - SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
+	snis_draw_line(w->window, gc, tx1, s->y + SLIDER_HEIGHT,
+			tx1 + SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
+	snis_draw_line(w->window, gc, tx1 - SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT,
+			tx1 + SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
+}
+
+#define MAXSLIDERS 20
+static int nsliders = 0;
+static struct slider *sliderlist[MAXSLIDERS];
+
+static void add_slider(struct slider *s)
+{
+	if (nsliders >= MAXSLIDERS)
+		return;
+	sliderlist[nsliders] = s;
+	nsliders++;
+}
+
+static void draw_sliders(GtkWidget *w)
+{
+	int i;
+
+	for (i = 0; i < nsliders; i++)
+		if (sliderlist[i]->displaymode == displaymode)
+			slider_draw(w, sliderlist[i]);
+}
+
+/*
+ * end slider related functions/types
+ */
 static double sample_shields(void)
 {
 	int my_ship_oid;
@@ -2175,6 +2259,7 @@ static void show_engineering(GtkWidget *w)
 	show_common_screen(w, "Engineering");
 	static struct gauge shield_gauge;
 	static struct gauge energy_gauge;
+	static struct slider shield_slider;
 
 	if (!initialized) {
 		initialized = 1;
@@ -2184,6 +2269,10 @@ static void show_engineering(GtkWidget *w)
 		gauge_init(&energy_gauge, 250, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 				10, "Energy", sample_energy);
+
+		slider_init(&shield_slider, 20, 300, 150, &huex[WHITE], "Shields", "0", "100",
+					0.0, 100.0, sample_shields, DISPLAYMODE_ENGINEERING);
+		add_slider(&shield_slider);
 	}
 	gauge_draw(w, &shield_gauge);
 	gauge_draw(w, &energy_gauge);
@@ -2324,6 +2413,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_fonttest(w);
 		break;
 	}
+	draw_sliders(w);
 	return 0;
 }
 
