@@ -2211,6 +2211,7 @@ static void slider_draw(GtkWidget *w, struct slider *s)
 			tx1 + SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
 	snis_draw_line(w->window, gc, tx1 - SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT,
 			tx1 + SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
+	abs_xy_draw_string(w, s->label, TINY_FONT, s->x + s->length + 5, s->y + SLIDER_HEIGHT / 2); 
 }
 
 #define MAXSLIDERS 20
@@ -2260,6 +2261,7 @@ static void show_engineering(GtkWidget *w)
 	static struct gauge shield_gauge;
 	static struct gauge energy_gauge;
 	static struct slider shield_slider;
+	static struct slider energy_slider;
 
 	if (!initialized) {
 		initialized = 1;
@@ -2272,7 +2274,10 @@ static void show_engineering(GtkWidget *w)
 
 		slider_init(&shield_slider, 20, 300, 150, &huex[WHITE], "Shields", "0", "100",
 					0.0, 100.0, sample_shields, DISPLAYMODE_ENGINEERING);
+		slider_init(&energy_slider, 20, 340, 150, &huex[WHITE], "Energy", "0", "100",
+					0.0, 100.0, sample_energy, DISPLAYMODE_ENGINEERING);
 		add_slider(&shield_slider);
+		add_slider(&energy_slider);
 	}
 	gauge_draw(w, &shield_gauge);
 	gauge_draw(w, &energy_gauge);
