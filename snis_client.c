@@ -2027,12 +2027,48 @@ static void show_navigation(GtkWidget *w)
 	draw_all_the_sparks(w, o);
 }
 
+static void load_torpedo_button_pressed(__attribute__((unused)) void *notused)
+{
+	printf("LOAD TORPEDO\n");
+}
+
+static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
+{
+	do_torpedo();
+}
+
+typedef void (*button_function)(void *cookie);
+
+struct button {
+	int x, y, width, height, displaymode;
+	char label[20];
+	GdkColor color;
+	int font;
+	button_function bf;
+	void *cookie;
+};
+static void button_init(struct button *b, int x, int y, int width, int height, char *label,
+			GdkColor *color, int font, button_function bf, void *cookie);
+static void add_button(struct button *b);
+
 static void show_weapons(GtkWidget *w)
 {
 	char buf[100];
 	struct snis_entity *o;
 	int rx, ry, rw, rh, cx, cy;
 	int r;
+	static int initialized = 0;
+	static struct button fire_torpedo, load_torpedo;
+
+	if (!initialized) {
+		button_init(&load_torpedo, 550, 200, 200, 30, "LOAD TORPEDO", &huex[BLUE],
+				TINY_FONT, load_torpedo_button_pressed, NULL);
+		button_init(&fire_torpedo, 550, 250, 200, 30, "FIRE TORPEDO", &huex[BLUE],
+				TINY_FONT, fire_torpedo_button_pressed, NULL);
+		add_button(&load_torpedo);
+		add_button(&fire_torpedo);
+		initialized = 1;
+	}
 
 	show_common_screen(w, "Weapons");
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
@@ -2259,16 +2295,7 @@ static void sliders_button_press(int x, int y)
  * begin button related functions/types
  */
 
-typedef void (*button_function)(void *cookie);
 
-struct button {
-	int x, y, width, height, displaymode;
-	char label[20];
-	GdkColor color;
-	int font;
-	button_function bf;
-	void *cookie;
-};
 
 static void button_init(struct button *b, int x, int y, int width, int height, char *label,
 			GdkColor *color, int font, button_function bf, void *cookie)
