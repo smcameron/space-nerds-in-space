@@ -430,7 +430,7 @@ void add_spark(double x, double y, double vx, double vy, int time)
 	spark[i].vx = vx;
 	spark[i].vy = vy;
 	spark[i].type = OBJTYPE_SPARK;
-	spark[i].alive = time;
+	spark[i].alive = time + snis_randn(time);
 	spark[i].move = spark_move;
 	return;
 }
