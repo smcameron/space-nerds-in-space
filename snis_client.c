@@ -2200,7 +2200,7 @@ static void slider_draw(GtkWidget *w, struct slider *s)
 	width = (int) ((v / (s->r2 - s->r1)) * s->length);
 	current_draw_rectangle(w->window, gc, 1, s->x, s->y, width, SLIDER_HEIGHT);
 
-	tx1 = (int) (s->value * s->length);
+	tx1 = (int) (s->value * s->length) + s->x;
 	snis_draw_line(w->window, gc, tx1, s->y, tx1 - SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT); 
 	snis_draw_line(w->window, gc, tx1, s->y, tx1 + SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT); 
 	snis_draw_line(w->window, gc, tx1 - SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT,
