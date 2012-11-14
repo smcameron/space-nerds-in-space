@@ -1523,12 +1523,10 @@ static void wait_for_serverbound_packets(void)
 			&to_server_queue_event_mutex);
 		if (rc != 0)
 			printf("gameserver_writer: pthread_cond_wait failed.\n");
-		if (have_packets_for_server) {
-			have_packets_for_server = 0;
-			pthread_mutex_unlock(&to_server_queue_event_mutex);
+		if (have_packets_for_server)
 			break;
-		}
 	}
+	pthread_mutex_unlock(&to_server_queue_event_mutex);
 }
 
 static void write_queued_packets_to_server(void)
@@ -1536,6 +1534,7 @@ static void write_queued_packets_to_server(void)
 	struct packed_buffer *buffer;
 	int rc;
 
+	pthread_mutex_lock(&to_server_queue_event_mutex);
 	buffer = packed_buffer_queue_combine(&to_server_queue, &to_server_queue_mutex);
 	if (buffer->buffer_size > 0) {
 		rc = snis_writesocket(gameserver_sock, buffer->buffer, buffer->buffer_size);
@@ -1547,6 +1546,9 @@ static void write_queued_packets_to_server(void)
 		printf("Hmm, gameserver_writer awakened, but nothing to write.\n");
 	}
 	packed_buffer_free(buffer);
+	if (have_packets_for_server)
+		have_packets_for_server = 0;
+	pthread_mutex_unlock(&to_server_queue_event_mutex);
 	return;
 
 badserver:
