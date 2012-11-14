@@ -38,6 +38,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <assert.h>
+#include <linux/tcp.h>
 
 #include "snis.h"
 #include "mathutils.h"
@@ -1598,6 +1599,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	char hoststr[50];
 	unsigned char *x = (unsigned char *) &lobby_game_server[lobby_selected_server].ipaddr;
 	struct add_player_packet app;
+	int flag = 1;
 
 	sprintf(portstr, "%d", ntohs(lobby_game_server[lobby_selected_server].port));
 	sprintf(hoststr, "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
@@ -1631,6 +1633,10 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	rc = connect(gameserver_sock, i->ai_addr, i->ai_addrlen);
 	if (rc < 0)
 		goto error;
+
+	rc = setsockopt(gameserver_sock, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+	if (rc)
+		fprintf(stderr, "setsockopt(TCP_NODELAY) failed.\n");
 
 	rc = snis_writesocket(gameserver_sock, SNIS_PROTOCOL_VERSION, strlen(SNIS_PROTOCOL_VERSION));
 	if (rc < 0)
