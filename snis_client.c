@@ -1768,6 +1768,50 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 	/* snis_draw_circle(drawable, gc, x, y, (int) (SCREEN_WIDTH * 150.0 / XUNIVERSE_DIMENSION)); */
 }
 
+static void snis_draw_science_guy(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, double dist)
+{
+	int i;
+
+	double da;
+	int dr;
+	double tx, ty;
+
+	dr = (int) dist / (XUNIVERSE_DIMENSION / 48.0);
+	for (i = 0; i < 10; i++) {
+		da = snis_randn(360) * M_PI / 180.0;
+#if 1
+		tx = (int) ((double) x + sin(da) * (double) snis_randn(dr));
+		ty = (int) ((double) y + cos(da) * (double) snis_randn(dr)); 
+#else
+		tx = x;
+		ty = y;
+#endif
+		gdk_draw_point(drawable, gc, tx * xscale_screen, ty * yscale_screen);
+	}
+}
+
+static void snis_draw_science_spark(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, double dist)
+{
+	int i;
+
+	double da;
+	int dr;
+	double tx, ty;
+
+	dr = (int) dist / (XUNIVERSE_DIMENSION / 100.0);
+	for (i = 0; i < 20; i++) {
+		da = snis_randn(360) * M_PI / 180.0;
+#if 1
+		tx = (int) ((double) x + sin(da) * (double) snis_randn(dr));
+		ty = (int) ((double) y + cos(da) * (double) snis_randn(dr)); 
+#else
+		tx = x;
+		ty = y;
+#endif
+		gdk_draw_point(drawable, gc, tx * xscale_screen, ty * yscale_screen);
+	}
+}
+
 static void snis_draw_arrow(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
 		double heading, double scale)
 {
@@ -1924,6 +1968,91 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
+
+static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, double range)
+{
+	int i, cx, cy, r, rx, ry, rw, rh;
+
+	rx = 20;
+	ry = 70;
+	rw = 500;
+	rh = 500;
+	cx = rx + (rw / 2);
+	cy = ry + (rh / 2);
+	r = rh / 2;
+	gdk_gc_set_foreground(gc, &huex[DARKRED]);
+	/* Draw all the stuff */
+	pthread_mutex_lock(&universe_mutex);
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		int x, y;
+		double tx, ty;
+		double dist2, dist;
+
+		if (!go[i].alive)
+			continue;
+
+		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
+			((go[i].y - o->y) * (go[i].y - o->y));
+		if (dist2 > range * range)
+			continue; /* not close enough */
+		dist = sqrt(dist2);
+	
+
+		tx = (go[i].x - o->x) * (double) r / range;
+		ty = (go[i].y - o->y) * (double) r / range;
+		x = (int) (tx + (double) cx);
+		y = (int) (ty + (double) cy);
+
+		gdk_gc_set_foreground(gc, &huex[GREEN]);
+		if (go[i].id == my_ship_id)
+			continue; /* skip drawing yourself. */
+		snis_draw_science_guy(w->window, gc, x, y, dist);
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
+static void draw_all_the_science_sparks(GtkWidget *w, struct snis_entity *o, double range)
+{
+	int i, cx, cy, r, rx, ry, rw, rh;
+
+	rx = 20;
+	ry = 70;
+	rw = 500;
+	rh = 500;
+	cx = rx + (rw / 2);
+	cy = ry + (rh / 2);
+	r = rh / 2;
+	gdk_gc_set_foreground(gc, &huex[DARKRED]);
+	/* Draw all the stuff */
+	pthread_mutex_lock(&universe_mutex);
+
+	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++) {
+		int x, y;
+		double tx, ty;
+		double dist2, dist;
+
+		if (!spark[i].alive)
+			continue;
+
+		dist2 = ((spark[i].x - o->x) * (spark[i].x - o->x)) +
+			((spark[i].y - o->y) * (spark[i].y - o->y));
+		if (dist2 > range * range)
+			continue; /* not close enough */
+		dist = sqrt(dist2);
+	
+
+		tx = (spark[i].x - o->x) * (double) r / range;
+		ty = (spark[i].y - o->y) * (double) r / range;
+		x = (int) (tx + (double) cx);
+		y = (int) (ty + (double) cy);
+
+		gdk_gc_set_foreground(gc, &huex[GREEN]);
+		snis_draw_science_spark(w->window, gc, x, y, dist);
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 
 static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o)
 {
@@ -2587,11 +2716,13 @@ static void show_science(GtkWidget *w)
 	cy = ry + (rh / 2);
 	r = rh / 2;
 #define SCIENCE_SCREEN_RADIUS (XUNIVERSE_DIMENSION / 3.0)
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	gdk_gc_set_foreground(gc, &huex[DARKGREEN]);
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, SCIENCE_SCREEN_RADIUS);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, SCIENCE_SCREEN_RADIUS);
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
 	snis_draw_science_reticule(w->window, gc, cx, cy, r, o->heading);
+	draw_all_the_science_guys(w, o, SCIENCE_SCREEN_RADIUS);
+	draw_all_the_science_sparks(w, o, SCIENCE_SCREEN_RADIUS);
 }
 
 static void show_comms(GtkWidget *w)
