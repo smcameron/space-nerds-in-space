@@ -39,6 +39,7 @@
 #define OPCODE_UPDATE_EXPLOSION 113
 #define OPCODE_PLAY_SOUND	114
 #define OPCODE_REQUEST_SCIYAW	115
+#define OPCODE_REQUEST_SCIBEAMWIDTH	116
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -56,6 +57,7 @@ struct update_ship_packet {
         uint32_t sheilds;
 	uint32_t gun_heading;
 	uint32_t sci_heading;
+	uint32_t sci_beam_width;
 };
 
 struct client_ship_id_packet {

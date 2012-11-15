@@ -338,7 +338,8 @@ static int lookup_object_by_id(uint32_t id)
 }
 
 static int update_ship(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive,
-			uint32_t torpedoes, uint32_t energy, uint32_t shields, double gun_heading, double sci_heading)
+			uint32_t torpedoes, uint32_t energy, uint32_t shields,
+			double gun_heading, double sci_heading, double sci_beam_width)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -354,6 +355,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.shields = shields;
 	go[i].tsd.ship.gun_heading = gun_heading;
 	go[i].tsd.ship.sci_heading = sci_heading;
+	go[i].tsd.ship.sci_beam_width = sci_beam_width;
 	return 0;
 }
 
@@ -1001,7 +1003,14 @@ static void science_dirkey(int h, int v)
 
 	if (!h && !v)
 		return;
-
+	if (v) {
+		yaw = v < 0 ? YAW_LEFT : YAW_RIGHT;
+		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
+		packed_buffer_append_u16(pb, OPCODE_REQUEST_SCIBEAMWIDTH);
+		packed_buffer_append_u8(pb, yaw);
+		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+		wakeup_gameserver_writer();
+	}
 	if (h) {
 		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
 		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
@@ -1226,9 +1235,9 @@ static int process_update_ship_packet(void)
 	unsigned char buffer[100];
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, shields, energy;
-	uint32_t x, y, heading, gun_heading, sci_heading;
+	uint32_t x, y, heading, gun_heading, sci_heading, sci_beam_width;
 	int32_t vx, vy;
-	double dx, dy, dheading, dgheading, dsheading, dvx, dvy;
+	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1253,6 +1262,7 @@ static int process_update_ship_packet(void)
 	shields = packed_buffer_extract_u32(&pb);
 	gun_heading = packed_buffer_extract_u32(&pb);
 	sci_heading = packed_buffer_extract_u32(&pb);
+	sci_beam_width = packed_buffer_extract_u32(&pb);
 
 	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
 	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
@@ -1261,10 +1271,11 @@ static int process_update_ship_packet(void)
 	dheading = (double) heading * 360.0 / (double) UINT32_MAX;
 	dgheading = (double) gun_heading * 360.0 / (double) UINT32_MAX;
 	dsheading = (double) sci_heading * 360.0 / (double) UINT32_MAX;
+	dbeamwidth = (double) sci_beam_width * 360.0 / (double) UINT32_MAX;
 
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, energy, shields,
-				dgheading, dsheading);
+				dgheading, dsheading, dbeamwidth);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -1858,7 +1869,7 @@ static void snis_draw_arrow(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gi
 }
 
 static void snis_draw_science_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
-		double heading)
+		double heading, double beam_width)
 {
 	int i;
 	// int nx, ny, 
@@ -1881,12 +1892,17 @@ static void snis_draw_science_reticule(GdkDrawable *drawable, GdkGC *gc, gint x,
 	/* draw the ship */
 	snis_draw_arrow(drawable, gc, x, y, r, heading, 1.0);
 	
-	tx1 = x + sin(heading) * r * 0.85;
-	ty1 = y - cos(heading) * r * 0.85;
-	tx2 = x + sin(heading) * r;
-	ty2 = y - cos(heading) * r;
-	gdk_gc_set_foreground(gc, &huex[RED]);
-	snis_draw_line(drawable, gc, tx1, ty1, tx2, ty2);
+	tx1 = x + sin(heading - beam_width / 2) * r * 0.05;
+	ty1 = y - cos(heading - beam_width / 2) * r * 0.05;
+	tx2 = x + sin(heading - beam_width / 2) * r;
+	ty2 = y - cos(heading - beam_width / 2) * r;
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	snis_draw_dotted_line(drawable, gc, tx1, ty1, tx2, ty2);
+	tx1 = x + sin(heading + beam_width / 2) * r * 0.05;
+	ty1 = y - cos(heading + beam_width / 2) * r * 0.05;
+	tx2 = x + sin(heading + beam_width / 2) * r;
+	ty2 = y - cos(heading + beam_width / 2) * r;
+	snis_draw_dotted_line(drawable, gc, tx1, ty1, tx2, ty2);
 }
 
 static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
@@ -2744,7 +2760,8 @@ static void show_science(GtkWidget *w)
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, SCIENCE_SCREEN_RADIUS);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, SCIENCE_SCREEN_RADIUS);
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
-	snis_draw_science_reticule(w->window, gc, cx, cy, r, o->tsd.ship.sci_heading);
+	snis_draw_science_reticule(w->window, gc, cx, cy, r,
+			o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width));
 	draw_all_the_science_guys(w, o, SCIENCE_SCREEN_RADIUS);
 	draw_all_the_science_sparks(w, o, SCIENCE_SCREEN_RADIUS);
 }

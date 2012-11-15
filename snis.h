@@ -72,6 +72,11 @@ struct ship_data {
 #define SCI_YAW_INCREMENT (3.5 * PI / 180.0)
 #define SCI_YAW_DAMPING 0.45
 	double sci_heading;
+#define MAX_SCI_BW_YAW_VELOCITY (55 * PI / 180.0)
+#define SCI_BW_YAW_INCREMENT (1 * PI / 180.0)
+#define SCI_BW_YAW_DAMPING 0.45
+#define MIN_SCI_BEAM_WIDTH (5 * PI / 180.0)
+	double sci_beam_width;
 	double sci_yaw_velocity;
 };
 

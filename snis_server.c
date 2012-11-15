@@ -592,6 +592,17 @@ static void do_sci_yaw(struct game_client *c, int yaw)
 				MAX_SCI_YAW_VELOCITY, SCI_YAW_INCREMENT);
 }
 
+static void do_sci_bw_yaw(struct game_client *c, int yaw)
+{
+	struct snis_entity *ship = &go[c->shipid];
+
+	do_generic_yaw(&ship->tsd.ship.sci_beam_width, yaw,
+			MAX_SCI_BW_YAW_VELOCITY, SCI_BW_YAW_INCREMENT);
+	ship->tsd.ship.sci_beam_width = fabs(ship->tsd.ship.sci_beam_width);
+	if (ship->tsd.ship.sci_beam_width < MIN_SCI_BEAM_WIDTH)
+		ship->tsd.ship.sci_beam_width = MIN_SCI_BEAM_WIDTH;
+}
+
 static int process_request_thrust(struct game_client *c)
 {
 	unsigned char buffer[10];
@@ -692,6 +703,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_SCIYAW:
 			rc = process_request_yaw(c, do_sci_yaw);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_SCIBEAMWIDTH:
+			rc = process_request_yaw(c, do_sci_bw_yaw);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -923,7 +939,7 @@ static void send_update_ship_packet(struct game_client *c,
 	struct packed_buffer *pb;
 	uint32_t x, y;
 	int32_t vx, vy;
-	uint32_t heading, gun_heading, sci_heading;
+	uint32_t heading, gun_heading, sci_heading, sci_beam_width;
 
 	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
@@ -932,6 +948,7 @@ static void send_update_ship_packet(struct game_client *c,
 	heading = (uint32_t) (o->heading / 360.0 * (double) UINT32_MAX);
 	gun_heading = (uint32_t) (o->tsd.ship.gun_heading / 360.0 * (double) UINT32_MAX);
 	sci_heading = (uint32_t) (o->tsd.ship.sci_heading / 360.0 * (double) UINT32_MAX);
+	sci_beam_width = (uint32_t) (o->tsd.ship.sci_beam_width / 360.0 * (double) UINT32_MAX);
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_SHIP);
@@ -947,6 +964,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u32(pb, o->tsd.ship.shields);
 	packed_buffer_append_u32(pb, gun_heading);
 	packed_buffer_append_u32(pb, sci_heading);
+	packed_buffer_append_u32(pb, sci_beam_width);
 
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
