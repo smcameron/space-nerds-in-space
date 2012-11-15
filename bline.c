@@ -23,7 +23,7 @@
 /*
  * Bresenham's line drawing algorithm.
  */
-void bline(int x1, int y1, int x2, int y2, plotting_function plot_func)
+void bline(int x1, int y1, int x2, int y2, plotting_function plot_func, void *context)
 {
 	int dx, dy, i, e;
 	int incx, incy, inc1, inc2;
@@ -40,7 +40,7 @@ void bline(int x1, int y1, int x2, int y2, plotting_function plot_func)
 	incy = (y2 < y1) ? -1 : 1;
 
 	if (dx > dy) {
-		plot_func(x1, y1);
+		plot_func(x1, y1, context);
 		e = 2 * dy - dx;
 		inc1 = 2 * (dy - dx);
 		inc2 = 2 * dy;
@@ -52,10 +52,10 @@ void bline(int x1, int y1, int x2, int y2, plotting_function plot_func)
 				e += inc2;
 			}
 			x1 += incx;
-			plot_func(x1, y1);
+			plot_func(x1, y1, context);
 		}
 	} else {
-		plot_func(x1, y1);
+		plot_func(x1, y1, context);
 		e = 2 * dx - dy;
 		inc1 = 2 * (dx - dy);
 		inc2 = 2 * dx;
@@ -67,7 +67,7 @@ void bline(int x1, int y1, int x2, int y2, plotting_function plot_func)
 				e += inc2;
 			}
 			y1 += incy;
-			plot_func(x1, y1);
+			plot_func(x1, y1, context);
 		}
 	}
 }

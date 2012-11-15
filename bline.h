@@ -20,8 +20,8 @@
         along with Spacenerds in Space; if not, write to the Free Software
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-typedef (*plotting_function)(int x, int y);
+typedef (*plotting_function)(int x, int y, void *context);
 
-extern void bline(int x1, int y1, int x2, int y2, plotting_function plot_func);
+extern void bline(int x1, int y1, int x2, int y2, plotting_function plot_func, void *context);
 
 #endif
