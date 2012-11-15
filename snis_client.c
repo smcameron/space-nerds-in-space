@@ -1824,7 +1824,7 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 	/* snis_draw_circle(drawable, gc, x, y, (int) (SCREEN_WIDTH * 150.0 / XUNIVERSE_DIMENSION)); */
 }
 
-static void snis_draw_science_guy(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, double dist)
+static void snis_draw_science_guy(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, double dist, int bw)
 {
 	int i;
 
@@ -1832,7 +1832,7 @@ static void snis_draw_science_guy(GdkDrawable *drawable, GdkGC *gc, gint x, gint
 	int dr;
 	double tx, ty;
 
-	dr = (int) dist / (XUNIVERSE_DIMENSION / 48.0);
+	dr = (int) dist / (XUNIVERSE_DIMENSION / bw);
 	for (i = 0; i < 10; i++) {
 		da = snis_randn(360) * M_PI / 180.0;
 #if 1
@@ -2032,7 +2032,9 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 
 static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, double range)
 {
-	int i, cx, cy, r, rx, ry, rw, rh;
+	int i, cx, cy, r, rx, ry, rw, rh, bw;
+	double angle, angle2, A1, A2;
+	double tx, ty;
 
 	rx = 20;
 	ry = 70;
@@ -2045,9 +2047,20 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	/* Draw all the stuff */
 	pthread_mutex_lock(&universe_mutex);
 
+        tx = sin(o->tsd.ship.sci_heading) * range;
+        ty = -cos(o->tsd.ship.sci_heading) * range;
+
+	gdk_gc_set_foreground(gc, &huex[YELLOW]);
+	angle2 = atan2(ty, tx);
+	A1 = angle2 - o->tsd.ship.sci_beam_width / 2.0;
+	A2 = angle2 + o->tsd.ship.sci_beam_width / 2.0;
+	if (A1 < -M_PI)
+		A1 += 2.0 * M_PI;
+	if (A2 > M_PI)
+		A2 -= 2.0 * M_PI;
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		int x, y;
-		double tx, ty;
 		double dist2, dist;
 
 		if (!go[i].alive)
@@ -2062,13 +2075,26 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 
 		tx = (go[i].x - o->x) * (double) r / range;
 		ty = (go[i].y - o->y) * (double) r / range;
+		angle = atan2(ty, tx);
+
+		if (!(A2 < 0 && A1 > 0 && fabs(A1) > M_PI / 2.0)) {
+			if (angle < A1)
+				continue;
+			if (angle > A2)
+				continue;
+		} else {
+			if (angle < 0 && angle > A2)
+				continue;
+			if (angle > 0 && angle < A1)
+				continue;
+		}
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
 
-		gdk_gc_set_foreground(gc, &huex[GREEN]);
 		if (go[i].id == my_ship_id)
 			continue; /* skip drawing yourself. */
-		snis_draw_science_guy(w->window, gc, x, y, dist);
+		bw = o->tsd.ship.sci_beam_width * 180.0 / M_PI;
+		snis_draw_science_guy(w->window, gc, x, y, dist, bw);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -2759,6 +2785,7 @@ static void show_science(GtkWidget *w)
 {
 	int rx, ry, rw, rh, cx, cy, r;
 	struct snis_entity *o;
+	char buf[80];
 
 	if (my_ship_id == UNKNOWN_ID)
 		return;
@@ -2769,6 +2796,10 @@ static void show_science(GtkWidget *w)
 	o = &go[my_ship_oid];
 
 	show_common_screen(w, "Science");
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
+			360.0 * o->tsd.ship.sci_heading / (2.0 * 3.1415927));
+	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
 	rx = 20;
 	ry = 70;
 	rw = 500;
