@@ -333,7 +333,7 @@ static void service(int connection)
 	pthread_t thread;
 	int *conn;
 
-	printf("ssgl_server: servicing connection %d\n", connection);
+	/* printf("ssgl_server: servicing connection %d\n", connection); */
 	/* get connection moved off the stack so that when the thread needs it,
 	 * it's actually still around. 
 	 */
