@@ -338,7 +338,7 @@ static int lookup_object_by_id(uint32_t id)
 }
 
 static int update_ship(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive,
-			uint32_t torpedoes, uint32_t energy, uint32_t shields, double gun_heading)
+			uint32_t torpedoes, uint32_t energy, uint32_t shields, double gun_heading, double sci_heading)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -353,6 +353,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.energy = energy;
 	go[i].tsd.ship.shields = shields;
 	go[i].tsd.ship.gun_heading = gun_heading;
+	go[i].tsd.ship.sci_heading = sci_heading;
 	return 0;
 }
 
@@ -993,6 +994,24 @@ static void weapons_dirkey(int h, int v)
 	}
 }
 
+static void science_dirkey(int h, int v)
+{
+	struct packed_buffer *pb;
+	uint8_t yaw;
+
+	if (!h && !v)
+		return;
+
+	if (h) {
+		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
+		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
+		packed_buffer_append_u16(pb, OPCODE_REQUEST_SCIYAW);
+		packed_buffer_append_u8(pb, yaw);
+		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+		wakeup_gameserver_writer();
+	}
+}
+
 static void do_dirkey(int h, int v)
 {
 	switch (displaymode) {
@@ -1001,6 +1020,9 @@ static void do_dirkey(int h, int v)
 			break;
 		case DISPLAYMODE_WEAPONS:
 			weapons_dirkey(h, v); 
+			break;
+		case DISPLAYMODE_SCIENCE:
+			science_dirkey(h, v); 
 			break;
 		default:
 			break;
@@ -1204,9 +1226,9 @@ static int process_update_ship_packet(void)
 	unsigned char buffer[100];
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, shields, energy;
-	uint32_t x, y, heading, gun_heading;
+	uint32_t x, y, heading, gun_heading, sci_heading;
 	int32_t vx, vy;
-	double dx, dy, dheading, dgheading, dvx, dvy;
+	double dx, dy, dheading, dgheading, dsheading, dvx, dvy;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1230,6 +1252,7 @@ static int process_update_ship_packet(void)
 	energy = packed_buffer_extract_u32(&pb);
 	shields = packed_buffer_extract_u32(&pb);
 	gun_heading = packed_buffer_extract_u32(&pb);
+	sci_heading = packed_buffer_extract_u32(&pb);
 
 	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
 	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
@@ -1237,12 +1260,13 @@ static int process_update_ship_packet(void)
 	dvy = ((double) vy * (double) YUNIVERSE_DIMENSION) / (double) INT32_MAX;
 	dheading = (double) heading * 360.0 / (double) UINT32_MAX;
 	dgheading = (double) gun_heading * 360.0 / (double) UINT32_MAX;
+	dsheading = (double) sci_heading * 360.0 / (double) UINT32_MAX;
 
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, energy, shields, dgheading);
+	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, energy, shields,
+				dgheading, dsheading);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-
 } 
 
 static int process_update_torpedo_packet(void)
@@ -2720,7 +2744,7 @@ static void show_science(GtkWidget *w)
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, SCIENCE_SCREEN_RADIUS);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, SCIENCE_SCREEN_RADIUS);
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
-	snis_draw_science_reticule(w->window, gc, cx, cy, r, o->heading);
+	snis_draw_science_reticule(w->window, gc, cx, cy, r, o->tsd.ship.sci_heading);
 	draw_all_the_science_guys(w, o, SCIENCE_SCREEN_RADIUS);
 	draw_all_the_science_sparks(w, o, SCIENCE_SCREEN_RADIUS);
 }
