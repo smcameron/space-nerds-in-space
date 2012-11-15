@@ -353,6 +353,7 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 	go[i].tsd.ship.velocity = 0.0;
 	go[i].tsd.ship.desired_velocity = 0.0;
 	go[i].tsd.ship.desired_heading = 0.0;
+	go[i].tsd.ship.sci_beam_width = MAX_SCI_BW_YAW_VELOCITY;
 	return i;
 }
 
