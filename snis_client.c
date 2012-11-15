@@ -1789,6 +1789,38 @@ static void snis_draw_arrow(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gi
 	snis_draw_line(drawable, gc, x + tx2, y + ty2, x + nx, y + ny);
 }
 
+static void snis_draw_science_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
+		double heading)
+{
+	int i;
+	// int nx, ny, 
+	int tx1, ty1, tx2, ty2;
+
+	snis_draw_circle(drawable, gc, x, y, r);
+
+	for (i = 0; i < 36; i++) { /* 10 degree increments */
+		int x1 = (int) (cos((10.0 * i) * 3.1415927 / 180.0) * r);
+		int y1 = (int) (sin((10.0 * i) * 3.1415927 / 180.0) * r);
+		int x2 = x1 * 0.25;
+		int y2 = y1 * 0.25;
+		x1 += x;
+		x2 += x;
+		y1 += y;
+		y2 += y;
+		snis_draw_dotted_line(drawable, gc, x1, y1, x2, y2);
+	}
+
+	/* draw the ship */
+	snis_draw_arrow(drawable, gc, x, y, r, heading, 1.0);
+	
+	tx1 = x + sin(heading) * r * 0.85;
+	ty1 = y - cos(heading) * r * 0.85;
+	tx2 = x + sin(heading) * r;
+	ty2 = y - cos(heading) * r;
+	gdk_gc_set_foreground(gc, &huex[RED]);
+	snis_draw_line(drawable, gc, tx1, ty1, tx2, ty2);
+}
+
 static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
 		double heading)
 {
@@ -1952,7 +1984,7 @@ static void snis_draw_dotted_vline(GdkDrawable *drawable,
 }
 
 static void snis_draw_radar_sector_labels(GtkWidget *w,
-         GdkGC *gc, struct snis_entity *o, int cx, int cy, int r)
+         GdkGC *gc, struct snis_entity *o, int cx, int cy, int r, double range)
 {
 	/* FIXME, this algorithm is really fricken dumb. */
 	int x, y;
@@ -1964,17 +1996,17 @@ static void snis_draw_radar_sector_labels(GtkWidget *w,
 	int yoffset = 10;
 
 	for (x = 0; x <= 10; x++) {
-		if ((x * increment) <= (o->x - NAVSCREEN_RADIUS * 0.9))
+		if ((x * increment) <= (o->x - range * 0.9))
 			continue;
-		if ((x * increment) >= (o->x + NAVSCREEN_RADIUS * 0.9))
+		if ((x * increment) >= (o->x + range * 0.9))
 			continue;
 		for (y = 0; y <= 10; y++) {
-			if ((y * increment) <= (o->y - NAVSCREEN_RADIUS * 0.9))
+			if ((y * increment) <= (o->y - range * 0.9))
 				continue;
-			if ((y * increment) >= (o->y + NAVSCREEN_RADIUS * 0.9))
+			if ((y * increment) >= (o->y + range * 0.9))
 				continue;
-			x1 = (int) (((double) r) / NAVSCREEN_RADIUS * (x * increment - o->x)) + cx + xoffset;
-			y1 = (int) (((double) r) / NAVSCREEN_RADIUS * (y * increment - o->y)) + cy + yoffset;
+			x1 = (int) (((double) r) / range * (x * increment - o->x)) + cx + xoffset;
+			y1 = (int) (((double) r) / range * (y * increment - o->y)) + cy + yoffset;
 			snprintf(label, sizeof(label), "%c%d", letters[y], x);
 			abs_xy_draw_string(w, label, NANO_FONT, x1, y1);
 		}
@@ -1982,43 +2014,44 @@ static void snis_draw_radar_sector_labels(GtkWidget *w,
 }
 
 static void snis_draw_radar_grid(GdkDrawable *drawable,
-         GdkGC *gc, struct snis_entity *o, int cx, int cy, int r)
+         GdkGC *gc, struct snis_entity *o, int cx, int cy, int r, double range)
 {
 	/* FIXME, this algorithm is really fricken dumb. */
 	int x, y;
 	double increment = (XUNIVERSE_DIMENSION / 10.0);
 	double lx1, ly1, lx2, ly2;
 	int x1, y1, x2, y2;
+	double range2 = (range * range);
 
 	/* vertical lines */
 	for (x = 0; x <= 10; x++) {
-		if ((x * increment) <= (o->x - NAVSCREEN_RADIUS))
+		if ((x * increment) <= (o->x - range))
 			continue;
-		if ((x * increment) >= (o->x + NAVSCREEN_RADIUS))
+		if ((x * increment) >= (o->x + range))
 			continue;
 		/* find y intersections with radar circle by pyth. theorem. */
 		lx1 = x * increment - o->x;
-		ly1 = sqrt((NR2 - (lx1 * lx1)));
+		ly1 = sqrt((range2 - (lx1 * lx1)));
 		ly2 = -ly1;
 
-		x1 = (int) (((double) r) / NAVSCREEN_RADIUS * lx1) + cx;
-		y1 = (int) (((double) r) / NAVSCREEN_RADIUS * ly1) + cy;
-		y2 = (int) (((double) r) / NAVSCREEN_RADIUS * ly2) + cy;
+		x1 = (int) (((double) r) / range * lx1) + cx;
+		y1 = (int) (((double) r) / range * ly1) + cy;
+		y2 = (int) (((double) r) / range * ly2) + cy;
 		snis_draw_dotted_vline(drawable, gc, x1, y2, y1);
 	}
 	/* horizontal lines */
 	for (y = 0; y <= 10; y++) {
-		if ((y * increment) <= (o->y - NAVSCREEN_RADIUS))
+		if ((y * increment) <= (o->y - range))
 			continue;
-		if ((y * increment) >= (o->y + NAVSCREEN_RADIUS))
+		if ((y * increment) >= (o->y + range))
 			continue;
 		/* find x intersections with radar circle by pyth. theorem. */
 		ly1 = y * increment - o->y;
-		lx1 = sqrt((NR2 - (ly1 * ly1)));
+		lx1 = sqrt((range2 - (ly1 * ly1)));
 		lx2 = -lx1;
-		y1 = (int) (((double) r) / NAVSCREEN_RADIUS * ly1) + cy;
-		x1 = (int) (((double) r) / NAVSCREEN_RADIUS * lx1) + cx;
-		x2 = (int) (((double) r) / NAVSCREEN_RADIUS * lx2) + cx;
+		y1 = (int) (((double) r) / range * ly1) + cy;
+		x1 = (int) (((double) r) / range * lx1) + cx;
+		x2 = (int) (((double) r) / range * lx2) + cx;
 		snis_draw_dotted_hline(drawable, gc, x2, y1, x1);
 	}
 }
@@ -2056,8 +2089,8 @@ static void show_navigation(GtkWidget *w)
 	cy = ry + (rh / 2);
 	r = rh / 2;
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
-	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r);
+	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
 	snis_draw_reticule(w->window, gc, cx, cy, r, o->heading);
 
@@ -2135,8 +2168,8 @@ static void show_weapons(GtkWidget *w)
 	cy = ry + (rh / 2);
 	r = rh / 2;
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
-	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r);
+	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
 	gdk_gc_set_foreground(gc, &huex[BLUE]);
 	snis_draw_reticule(w->window, gc, cx, cy, r, o->tsd.ship.gun_heading);
 	draw_all_the_guys(w, o);
@@ -2534,7 +2567,31 @@ static void show_engineering(GtkWidget *w)
 
 static void show_science(GtkWidget *w)
 {
+	int rx, ry, rw, rh, cx, cy, r;
+	struct snis_entity *o;
+
+	if (my_ship_id == UNKNOWN_ID)
+		return;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return;
+	o = &go[my_ship_oid];
+
 	show_common_screen(w, "Science");
+	rx = 20;
+	ry = 70;
+	rw = 500;
+	rh = 500;
+	cx = rx + (rw / 2);
+	cy = ry + (rh / 2);
+	r = rh / 2;
+#define SCIENCE_SCREEN_RADIUS (XUNIVERSE_DIMENSION / 3.0)
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, SCIENCE_SCREEN_RADIUS);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, SCIENCE_SCREEN_RADIUS);
+	gdk_gc_set_foreground(gc, &huex[DARKRED]);
+	snis_draw_science_reticule(w->window, gc, cx, cy, r, o->heading);
 }
 
 static void show_comms(GtkWidget *w)
