@@ -2379,7 +2379,27 @@ static double sample_shields(void)
 	return (double) go[my_ship_oid].tsd.ship.shields;
 }
 
+static double sample_rpm(void)
+{
+	return 50.0;
+}
+
 static double sample_energy(void)
+{
+	return 70.0;
+}
+
+static double sample_temp(void)
+{
+	return 88.0;
+}
+
+static double sample_throttle(void)
+{
+	return 68.0;
+}
+
+static double sample_fuel(void)
 {
 	int my_ship_oid;
 
@@ -2387,42 +2407,99 @@ static double sample_energy(void)
 	return (double) go[my_ship_oid].tsd.ship.energy;
 }
 
-static void abutton_pressed(__attribute__((unused)) void *notused)
+static double sample_phaserbanks(void)
 {
-	printf("abutton pressed\n");
+	return 30.0;
+}
+
+static double sample_warp(void)
+{
+	return 30.0;
+}
+
+static double sample_maneuvering(void)
+{
+	return 30.0;
+}
+
+static double sample_impulse(void)
+{
+	return 30.0;
+}
+
+static double sample_comms(void)
+{
+	return 30.0;
+}
+
+static double sample_sensors(void)
+{
+	return 30.0;
 }
 
 static void show_engineering(GtkWidget *w)
 {
 	static int initialized = 0;
 	show_common_screen(w, "Engineering");
-	static struct gauge shield_gauge;
+	static struct gauge fuel_gauge;
 	static struct gauge energy_gauge;
+	static struct gauge rpm_gauge;
+	static struct gauge temp_gauge;
 	static struct slider shield_slider;
-	static struct slider energy_slider;
-	static struct button abutton;
+	static struct slider maneuvering_slider;
+	static struct slider warp_slider;
+	static struct slider impulse_slider;
+	static struct slider sensors_slider;
+	static struct slider comm_slider;
+	static struct slider phaserbanks_slider;
+	static struct slider throttle_slider;
 
 	if (!initialized) {
 		initialized = 1;
-		gauge_init(&shield_gauge, 100, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+		int y = 220;
+		int yinc = 40; 
+		gauge_init(&rpm_gauge, 100, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
-				10, "Shields", sample_shields);
-		gauge_init(&energy_gauge, 250, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+				10, "RPM", sample_rpm);
+		gauge_init(&fuel_gauge, 250, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+				10, "Fuel", sample_fuel);
+		gauge_init(&energy_gauge, 400, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 				10, "Energy", sample_energy);
+		gauge_init(&temp_gauge, 550, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+				10, "Temp", sample_temp);
+		slider_init(&throttle_slider, 350, y + yinc, 200, &huex[YELLOW], "Throttle", "0", "100",
+					0.0, 100.0, sample_throttle, DISPLAYMODE_ENGINEERING);
 
-		slider_init(&shield_slider, 20, 300, 150, &huex[WHITE], "Shields", "0", "100",
+		slider_init(&shield_slider, 20, y += yinc, 150, &huex[WHITE], "Shields", "0", "100",
 					0.0, 100.0, sample_shields, DISPLAYMODE_ENGINEERING);
-		slider_init(&energy_slider, 20, 340, 150, &huex[WHITE], "Energy", "0", "100",
-					0.0, 100.0, sample_energy, DISPLAYMODE_ENGINEERING);
-		button_init(&abutton, 20, 400, 300, 50, "A Button", &huex[RED],
-					TINY_FONT, abutton_pressed, NULL);
+		slider_init(&phaserbanks_slider, 20, y += yinc, 150, &huex[WHITE], "Phaser Banks", "0", "100",
+					0.0, 100.0, sample_phaserbanks, DISPLAYMODE_ENGINEERING);
+		slider_init(&comm_slider, 20, y += yinc, 150, &huex[WHITE], "Communications", "0", "100",
+					0.0, 100.0, sample_comms, DISPLAYMODE_ENGINEERING);
+		slider_init(&sensors_slider, 20, y += yinc, 150, &huex[WHITE], "Sensors", "0", "100",
+					0.0, 100.0, sample_sensors, DISPLAYMODE_ENGINEERING);
+		slider_init(&impulse_slider, 20, y += yinc, 150, &huex[WHITE], "Impulse Drive", "0", "100",
+					0.0, 100.0, sample_impulse, DISPLAYMODE_ENGINEERING);
+		slider_init(&warp_slider, 20, y += yinc, 150, &huex[WHITE], "Warp Drive", "0", "100",
+					0.0, 100.0, sample_warp, DISPLAYMODE_ENGINEERING);
+		slider_init(&maneuvering_slider, 20, y += yinc, 150, &huex[WHITE], "Maneuvering", "0", "100",
+					0.0, 100.0, sample_maneuvering, DISPLAYMODE_ENGINEERING);
 		add_slider(&shield_slider);
-		add_slider(&energy_slider);
-		add_button(&abutton);
+		add_slider(&phaserbanks_slider);
+		add_slider(&comm_slider);
+		add_slider(&sensors_slider);
+		add_slider(&impulse_slider);
+		add_slider(&warp_slider);
+		add_slider(&maneuvering_slider);
+		add_slider(&throttle_slider);
 	}
-	gauge_draw(w, &shield_gauge);
+	gauge_draw(w, &fuel_gauge);
+	gauge_draw(w, &rpm_gauge);
 	gauge_draw(w, &energy_gauge);
+	gauge_draw(w, &temp_gauge);
 }
 
 static void show_science(GtkWidget *w)
