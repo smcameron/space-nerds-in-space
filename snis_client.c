@@ -51,6 +51,7 @@
 #include "snis_packet.h"
 #include "wwviaudio.h"
 #include "sounds.h"
+#include "bline.h"
 
 #define SCREEN_WIDTH 800        /* window width, in pixels */
 #define SCREEN_HEIGHT 600       /* window height, in pixels */
@@ -566,6 +567,35 @@ void scaled_line(GdkDrawable *drawable,
 {
 	gdk_draw_line(drawable, gc, x1*xscale_screen, y1*yscale_screen,
 		x2*xscale_screen, y2*yscale_screen);
+}
+
+struct dotted_plot_func_context {
+	GdkDrawable *drawable;
+	GdkGC *gc;
+	int i;
+};
+
+void dotted_line_plot_func(int x, int y, void *context)
+{
+	struct dotted_plot_func_context *c = context;
+
+	c->i = (c->i + 1) % 10;
+	if (c->i != 0)
+		return;
+	gdk_draw_point(c->drawable, c->gc, x, y);
+}
+
+void snis_draw_dotted_line(GdkDrawable *drawable,
+	GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
+{
+	struct dotted_plot_func_context context;
+
+	context.drawable = drawable;
+	context.gc = gc;
+	context.i = 0;
+
+	bline(x1 * xscale_screen, y1 * yscale_screen, x2 * xscale_screen, y2 * yscale_screen,
+			dotted_line_plot_func, &context);
 }
 
 void scaled_arc(GdkDrawable *drawable, GdkGC *gc,
