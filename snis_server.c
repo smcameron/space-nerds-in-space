@@ -835,6 +835,20 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	}
 }
 
+static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
+{
+	struct snis_entity *ship = &go[c->shipid];
+	double dx, dy, dist;
+	const double threshold = (XUNIVERSE_DIMENSION / 2) * (XUNIVERSE_DIMENSION / 2);
+
+	dx = (ship->x - o->x);
+	dy = (ship->y - o->y);
+	dist = (dx * dx) + (dy * dy);
+	if (dist > threshold && snis_randn(100) < 70)
+	 	return 1;	
+	return 0;
+}
+
 static void queue_up_client_updates(struct game_client *c)
 {
 	int i;
@@ -846,6 +860,8 @@ static void queue_up_client_updates(struct game_client *c)
 		/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
 			i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type); */
 		if (go[i].alive && go[i].timestamp > c->timestamp) {
+			if (too_far_away_to_care(c, &go[i]))
+				continue;
 			queue_up_client_object_update(c, &go[i]);
 			count++;
 		}
