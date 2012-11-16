@@ -122,6 +122,7 @@ struct snis_entity {
 	uint32_t timestamp;
 	union type_specific_data tsd;
 	move_function move;
+	char name[20];
 };
 
 #endif

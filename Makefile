@@ -20,7 +20,7 @@ endif
 
 
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o bline.o
-SERVEROBJS=${COMMONOBJS} snis_server.o
+SERVEROBJS=${COMMONOBJS} snis_server.o names.o
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_client.o snis_font.o
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm

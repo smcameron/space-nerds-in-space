@@ -42,6 +42,7 @@
 #include "snis_socket_io.h"
 #include "snis_packet.h"
 #include "sounds.h"
+#include "names.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -321,10 +322,12 @@ static void explosion_move(struct snis_entity *o)
 static int add_generic_object(double x, double y, double vx, double vy, double heading, int type)
 {
 	int i;
+	char *n;
 
 	i = snis_object_pool_alloc_obj(pool); 	 
 	if (i < 0)
 		return -1;
+	n = random_name();
 	memset(&go[i], 0, sizeof(go[i]));
 	go[i].id = get_new_object_id();
 	go[i].index = i;
@@ -337,6 +340,8 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	go[i].type = type;
 	go[i].timestamp = universe_timestamp + 1;
 	go[i].move = generic_move;
+	strncpy(go[i].name, n, sizeof(go[i].name) - 1);
+	free(n);
 	return i;
 }
 
@@ -1129,6 +1134,7 @@ static int add_new_player(struct game_client *c)
 		y = YUNIVERSE_DIMENSION * (double) rand() / (double) RAND_MAX;
 		pthread_mutex_lock(&universe_mutex);
 		c->shipid = add_player(x, y, 0.0, 0.0, 0.0);
+		strcpy(go[c->shipid].name, (const char * restrict) app.shipname);
 		memset(&bridgelist[nbridges], 0, sizeof(bridgelist[nbridges]));
 		strcpy((char *) bridgelist[nbridges].shipname, (const char *) app.shipname);
 		strcpy((char *) bridgelist[nbridges].password, (const char *) app.password);
