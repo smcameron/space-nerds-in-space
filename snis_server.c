@@ -789,6 +789,8 @@ badclient:
 
 static void send_update_ship_packet(struct game_client *c,
 	struct snis_entity *o, uint16_t opcode);
+static void send_econ_update_ship_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_starbase_packet(struct game_client *c,
@@ -807,7 +809,7 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		send_update_ship_packet(c, o, OPCODE_UPDATE_SHIP);
 		break;
 	case OBJTYPE_SHIP2:
-		send_update_ship_packet(c, o, OPCODE_UPDATE_SHIP2);
+		send_econ_update_ship_packet(c, o);
 		break;
 	case OBJTYPE_PLANET:
 		send_update_planet_packet(c, o);
@@ -937,6 +939,31 @@ static int insane(unsigned char *word, int len)
 		if (!isalnum(word[i]))
 			return 1;
 	return 0;
+}
+
+static void send_econ_update_ship_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	struct packed_buffer *pb;
+	double dv;
+	uint32_t x, y, v, heading;
+
+	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	dv = sqrt((o->vx * o->vx) + (o->vy * o->vy));
+	v = (int32_t) ((dv / XUNIVERSE_DIMENSION) * (double) INT32_MAX);
+	heading = (uint32_t) (o->heading / 360.0 * (double) UINT32_MAX);
+
+	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
+	packed_buffer_append_u16(pb, OPCODE_ECON_UPDATE_SHIP);
+	packed_buffer_append_u32(pb, o->id);
+	packed_buffer_append_u32(pb, o->alive);
+	packed_buffer_append_u32(pb, x);
+	packed_buffer_append_u32(pb, y);
+	packed_buffer_append_u32(pb, v);
+	packed_buffer_append_u32(pb, heading);
+
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
 static void send_update_ship_packet(struct game_client *c,

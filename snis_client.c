@@ -332,6 +332,21 @@ static int lookup_object_by_id(uint32_t id)
 	return -1;
 }
 
+static int update_econ_ship(uint32_t id, double x, double y, double vx,
+			double vy, double heading, uint32_t alive)
+{
+	int i;
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP2, alive);
+		if (i < 0)
+			return i;
+	} else {
+		update_generic_object(i, x, y, vx, vy, heading, alive); 
+	}
+	return 0;
+}
+
 static int update_ship(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive,
 			uint32_t torpedoes, uint32_t energy, uint32_t shields,
 			double gun_heading, double sci_heading, double sci_beam_width, int shiptype)
@@ -1297,6 +1312,45 @@ static int process_update_ship_packet(uint16_t opcode)
 	return (rc < 0);
 } 
 
+static int process_update_econ_ship_packet(uint16_t opcode)
+{
+	unsigned char buffer[100];
+	struct packed_buffer pb;
+	uint32_t id, alive;
+	uint32_t x, y, v, heading;
+	double dx, dy, dheading, dv, dvx, dvy;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
+	/* printf("process_update_econ_ship_packet, snis_readsocket returned %d\n", rc); */
+	if (rc != 0)
+		return rc;
+
+	pb.buffer_size = sizeof(buffer);;
+	pb.buffer = buffer;
+	pb.buffer_cursor = 0;
+
+	id = packed_buffer_extract_u32(&pb);
+	alive = packed_buffer_extract_u32(&pb);
+	x = packed_buffer_extract_u32(&pb);
+	y = packed_buffer_extract_u32(&pb);
+	v = packed_buffer_extract_u32(&pb);
+	heading = packed_buffer_extract_u32(&pb);
+
+	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+	dv = ((double) v * (double) XUNIVERSE_DIMENSION) / (double) UINT32_MAX;
+	dheading = (double) heading * 360.0 / (double) UINT32_MAX;
+	dvx = sin(dheading) * dv;
+	dvy = -cos(dheading) * dv;
+
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_econ_ship(id, dx, dy, dvx, dvy, dheading, alive);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+} 
+
 static int process_update_torpedo_packet(void)
 {
 	unsigned char buffer[100];
@@ -1531,6 +1585,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_UPDATE_SHIP2:
 			/* printf("processing update ship...\n"); */
 			rc = process_update_ship_packet(opcode);
+			if (rc != 0)
+				goto protocol_error;
+			break;
+		case OPCODE_ECON_UPDATE_SHIP:
+			rc = process_update_econ_ship_packet(opcode);
 			if (rc != 0)
 				goto protocol_error;
 			break;
