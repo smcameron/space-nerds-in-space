@@ -322,11 +322,6 @@ static void update_generic_object(int index, double x, double y, double vx, doub
 	go[index].alive = alive;
 }
 
-static int __attribute__((unused)) add_player(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
-{
-	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP1, alive);
-}
-
 static int lookup_object_by_id(uint32_t id)
 {
 	int i;
@@ -339,12 +334,12 @@ static int lookup_object_by_id(uint32_t id)
 
 static int update_ship(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive,
 			uint32_t torpedoes, uint32_t energy, uint32_t shields,
-			double gun_heading, double sci_heading, double sci_beam_width)
+			double gun_heading, double sci_heading, double sci_beam_width, int shiptype)
 {
 	int i;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP1, alive);
+		i = add_generic_object(id, x, y, vx, vy, heading, shiptype, alive);
 		if (i < 0)
 			return i;
 	} else {
@@ -1251,7 +1246,7 @@ static void show_lobbyscreen(GtkWidget *w)
 	}
 }
 
-static int process_update_ship_packet(void)
+static int process_update_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
 	struct packed_buffer pb;
@@ -1260,6 +1255,7 @@ static int process_update_ship_packet(void)
 	int32_t vx, vy;
 	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
+	int shiptype = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1296,7 +1292,7 @@ static int process_update_ship_packet(void)
 
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, energy, shields,
-				dgheading, dsheading, dbeamwidth);
+				dgheading, dsheading, dbeamwidth, shiptype);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -1532,8 +1528,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		/* printf("got opcode %hd\n", opcode); */
 		switch (opcode)	{
 		case OPCODE_UPDATE_SHIP:
+		case OPCODE_UPDATE_SHIP2:
 			/* printf("processing update ship...\n"); */
-			rc = process_update_ship_packet();
+			rc = process_update_ship_packet(opcode);
 			if (rc != 0)
 				goto protocol_error;
 			break;
@@ -2014,6 +2011,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 			case OBJTYPE_EXPLOSION:
 				break;
 			case OBJTYPE_SHIP1:
+			case OBJTYPE_SHIP2:
 				gdk_gc_set_foreground(gc, &huex[WHITE]);
 				snis_draw_arrow(w->window, gc, x, y, r, go[i].heading, 0.5);
 				gdk_gc_set_foreground(gc, &huex[GREEN]);
@@ -2807,7 +2805,7 @@ static void show_science(GtkWidget *w)
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
-#define SCIENCE_SCREEN_RADIUS (XUNIVERSE_DIMENSION / 3.0)
+#define SCIENCE_SCREEN_RADIUS (XUNIVERSE_DIMENSION / 2.0)
 	gdk_gc_set_foreground(gc, &huex[DARKGREEN]);
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, SCIENCE_SCREEN_RADIUS);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, SCIENCE_SCREEN_RADIUS);
@@ -2839,6 +2837,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
+	case OBJTYPE_SHIP2:
 		if (o->id == my_ship_id)
 			gdk_gc_set_foreground(gc, &huex[GREEN]);
 		else

@@ -185,28 +185,32 @@ static void torpedo_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 	o->alive--;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (go[i].alive && i != o->index && o->alive < TORPEDO_LIFETIME - 3 &&
-			go[i].type == OBJTYPE_SHIP1) {
-			double dist2;
+		double dist2;
 
-			if (go[i].id == o->tsd.torpedo.ship_id)
-				continue; /* can't torpedo yourself. */
-
-			dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
-				((go[i].y - o->y) * (go[i].y - o->y));
-
-			if (dist2 > TORPEDO_DETONATE_DIST2) {
-				continue; /* not close enough */
-			}
-			/* hit!!!! */
-			o->alive = 0;
-			go[i].alive = 0;
-			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
-			snis_queue_delete_object(go[i].id);
-			snis_queue_add_sound(EXPLOSION_SOUND, 0xffff);
-			snis_object_pool_free_object(pool, i);
+		if (!go[i].alive)
 			continue;
-		}
+		if (i == o->index)
+			continue;
+		if (o->alive >= TORPEDO_LIFETIME - 3)
+			continue;
+		if (go[i].type != OBJTYPE_SHIP1 && go[i].type != OBJTYPE_SHIP2)
+			continue;
+		if (go[i].id == o->tsd.torpedo.ship_id)
+			continue; /* can't torpedo yourself. */
+		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
+			((go[i].y - o->y) * (go[i].y - o->y));
+
+		if (dist2 > TORPEDO_DETONATE_DIST2)
+			continue; /* not close enough */
+
+		/* hit!!!! */
+		o->alive = 0;
+		go[i].alive = 0;
+		(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
+		snis_queue_delete_object(go[i].id);
+		snis_queue_add_sound(EXPLOSION_SOUND, 0xffff);
+		snis_object_pool_free_object(pool, i);
+		continue;
 	}
 
 	if (o->alive <= 0) {
@@ -357,11 +361,11 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 	return i;
 }
 
-static int add_ship1(double x, double y, double vx, double vy, double heading)
+static int add_ship(double x, double y, double vx, double vy, double heading)
 {
 	int i;
 
-	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_SHIP1);
+	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_SHIP2);
 	if (i < 0)
 		return i;
 	go[i].move = ship_move;
@@ -456,7 +460,7 @@ static void add_eships(void)
 		x = ((double) snis_randn(1000)) * XUNIVERSE_DIMENSION / 1000.0;
 		y = ((double) snis_randn(1000)) * YUNIVERSE_DIMENSION / 1000.0;
 		heading = degrees_to_radians(0.0 + snis_randn(360)); 
-		add_ship1(x, y, 0.0, 0.0, heading);
+		add_ship(x, y, 0.0, 0.0, heading);
 	}
 }
 
@@ -784,7 +788,7 @@ badclient:
 }
 
 static void send_update_ship_packet(struct game_client *c,
-	struct snis_entity *o);
+	struct snis_entity *o, uint16_t opcode);
 static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_starbase_packet(struct game_client *c,
@@ -800,9 +804,10 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 {
 	switch(o->type) {
 	case OBJTYPE_SHIP1:
-		send_update_ship_packet(c, o);
+		send_update_ship_packet(c, o, OPCODE_UPDATE_SHIP);
 		break;
 	case OBJTYPE_SHIP2:
+		send_update_ship_packet(c, o, OPCODE_UPDATE_SHIP2);
 		break;
 	case OBJTYPE_PLANET:
 		send_update_planet_packet(c, o);
@@ -935,7 +940,7 @@ static int insane(unsigned char *word, int len)
 }
 
 static void send_update_ship_packet(struct game_client *c,
-	struct snis_entity *o)
+	struct snis_entity *o, uint16_t opcode)
 {
 	struct packed_buffer *pb;
 	uint32_t x, y;
@@ -952,7 +957,7 @@ static void send_update_ship_packet(struct game_client *c,
 	sci_beam_width = (uint32_t) (o->tsd.ship.sci_beam_width / 360.0 * (double) UINT32_MAX);
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
-	packed_buffer_append_u16(pb, OPCODE_UPDATE_SHIP);
+	packed_buffer_append_u16(pb, opcode);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->alive);
 	packed_buffer_append_u32(pb, x);

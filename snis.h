@@ -34,8 +34,8 @@
 
 #define MAXPLAYERS 10
 
-#define OBJTYPE_SHIP1 9
-#define OBJTYPE_SHIP2 1
+#define OBJTYPE_SHIP1 9 /* players */
+#define OBJTYPE_SHIP2 1 /* computer controlled ships */
 #define OBJTYPE_PLANET 2 
 #define OBJTYPE_STARBASE 3
 #define OBJTYPE_DEBRIS 4
