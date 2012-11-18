@@ -47,6 +47,13 @@
 #define OPCODE_LOAD_TORPEDO	121
 #define OPCODE_REQUEST_PHASER	122
 #define OPCODE_REQUEST_THROTTLE	123
+#define OPCODE_REQUEST_MANEUVERING_PWR	124
+#define OPCODE_REQUEST_WARP_PWR	125
+#define OPCODE_REQUEST_IMPULSE_PWR	126
+#define OPCODE_REQUEST_SHIELDS_PWR	127
+#define OPCODE_REQUEST_COMMS_PWR	128
+#define OPCODE_REQUEST_SENSORS_PWR	129
+#define OPCODE_REQUEST_PHASERBANKS_PWR	130
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -63,7 +70,6 @@ struct update_ship_packet {
 	uint32_t x, y, vx, vy, heading;
         uint32_t ntorpedoes;
         uint32_t power;
-        uint32_t sheilds;
 	uint32_t gun_heading;
 	uint32_t sci_heading;
 	uint32_t sci_beam_width;
@@ -72,6 +78,14 @@ struct update_ship_packet {
 	uint8_t rpm;
 	uint32_t fuel;
 	uint8_t temp;
+/* next fields must match struct power_dist from snis.h */
+        uint8_t maneuvering_slider;
+        uint8_t warp_slider;
+        uint8_t impulse_slider;
+        uint8_t sensors_slider;
+        uint8_t comm_slider;
+        uint8_t phaserbanks_slider;
+	uint8_t shields_slider;
 };
 
 struct ship_sdata_packet {

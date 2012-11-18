@@ -348,10 +348,10 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 }
 
 static int update_ship(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive,
-			uint32_t torpedoes, uint32_t power, uint32_t shields,
+			uint32_t torpedoes, uint32_t power, 
 			double gun_heading, double sci_heading, double sci_beam_width, int shiptype,
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
-			fuel, uint8_t temp)
+			fuel, uint8_t temp, struct power_dist *pd)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -364,7 +364,6 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	}
 	go[i].tsd.ship.torpedoes = torpedoes;
 	go[i].tsd.ship.power = power;
-	go[i].tsd.ship.shields = shields;
 	go[i].tsd.ship.gun_heading = gun_heading;
 	go[i].tsd.ship.sci_heading = sci_heading;
 	go[i].tsd.ship.sci_beam_width = sci_beam_width;
@@ -374,6 +373,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.rpm = rpm;
 	go[i].tsd.ship.fuel = fuel;
 	go[i].tsd.ship.temp = temp;
+	go[i].tsd.ship.pwrdist = *pd;
 	return 0;
 }
 
@@ -1305,13 +1305,14 @@ static int process_update_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
 	struct packed_buffer pb;
-	uint32_t id, alive, torpedoes, shields, power;
+	uint32_t id, alive, torpedoes, power;
 	uint32_t x, y, heading, gun_heading, sci_heading, sci_beam_width, fuel;
 	int32_t vx, vy;
 	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int shiptype = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp;
+	struct power_dist pd;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1328,7 +1329,6 @@ static int process_update_ship_packet(uint16_t opcode)
 	heading = packed_buffer_extract_u32(&pb);
 	torpedoes = packed_buffer_extract_u32(&pb);
 	power = packed_buffer_extract_u32(&pb);
-	shields = packed_buffer_extract_u32(&pb);
 	gun_heading = packed_buffer_extract_u32(&pb);
 	sci_heading = packed_buffer_extract_u32(&pb);
 	sci_beam_width = packed_buffer_extract_u32(&pb);
@@ -1339,6 +1339,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	rpm = packed_buffer_extract_u8(&pb);
 	fuel = packed_buffer_extract_u32(&pb);
 	temp = packed_buffer_extract_u8(&pb);
+	packed_buffer_extract_raw(&pb, (char *) &pd, sizeof(pd));
 
 	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
 	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
@@ -1350,9 +1351,9 @@ static int process_update_ship_packet(uint16_t opcode)
 	dbeamwidth = (double) sci_beam_width * 360.0 / (double) UINT32_MAX;
 
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power, shields,
+	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power,
 				dgheading, dsheading, dbeamwidth, shiptype,
-				tloading, tloaded, throttle, rpm, fuel, temp);
+				tloading, tloaded, throttle, rpm, fuel, temp, &pd);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -2578,6 +2579,7 @@ static void button_init(struct button *b, int x, int y, int width, int height, c
 			GdkColor *color, int font, button_function bf, void *cookie);
 static void add_button(struct button *b);
 
+#if 0
 static double sample_phaser_charge(void)
 {
 	static uint8_t *x = NULL;
@@ -2590,9 +2592,10 @@ static double sample_phaser_charge(void)
 			return 0.0;
 	}
 	o = &go[my_ship_oid];
-	return 100.0 * o->tsd.ship.phaser_bank_charge / 255.0;
+	return 100.0 * o->tsd.ship.pwrdist.phaserbanks / 255.0;
 }
-
+#endif
+static double sample_phaserbanks(void);
 static void show_weapons(GtkWidget *w)
 {
 	char buf[100];
@@ -2611,7 +2614,7 @@ static void show_weapons(GtkWidget *w)
 				TINY_FONT, fire_torpedo_button_pressed, NULL);
 		gauge_init(&weapons.phaser_bank_gauge, 650, 80, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
-				10, "PHASER", sample_phaser_charge);
+				10, "PHASER", sample_phaserbanks);
 		add_button(&weapons.fire_phaser);
 		add_button(&weapons.load_torpedo);
 		add_button(&weapons.fire_torpedo);
@@ -2715,6 +2718,7 @@ static void slider_draw(GtkWidget *w, struct slider *s)
 #define SLIDER_POINTER_WIDTH 5
 
 	v = s->sample();
+	s->value = v / (s->r2 - s->r1);
 	tx1 = (int) (s->value * s->length) + s->x;
 	gdk_gc_set_foreground(gc, &s->color);
 	current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->length, SLIDER_HEIGHT);
@@ -2855,8 +2859,7 @@ static void buttons_button_press(int x, int y)
 /*
  * end button related functions/types
  */
-
-static void do_throttle(struct slider *s)
+static void do_adjust_byte_value(struct slider *s,  uint16_t opcode)
 {
 	struct packed_buffer *pb;
 	struct snis_entity *o;
@@ -2866,24 +2869,63 @@ static void do_throttle(struct slider *s)
 		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
 	if (my_ship_oid == UNKNOWN_ID)
 		return;
-
 	o = &go[my_ship_oid];
 
 	value = (uint8_t) (255.0 * slider_get_value(s));
 	pb = packed_buffer_allocate(sizeof(struct request_throttle_packet));
-	packed_buffer_append_u16(pb, OPCODE_REQUEST_THROTTLE);
+	packed_buffer_append_u16(pb, opcode);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u8(pb, value);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
 
+static void do_throttle(struct slider *s)
+{
+	do_adjust_byte_value(s, OPCODE_REQUEST_THROTTLE);
+}
+	
+static void do_maneuvering_pwr(struct slider *s)
+{
+	do_adjust_byte_value(s, OPCODE_REQUEST_MANEUVERING_PWR);
+}
+	
+static void do_shields_pwr(struct slider *s)
+{
+	do_adjust_byte_value(s, OPCODE_REQUEST_SHIELDS_PWR);
+}
+	
+static void do_impulse_pwr(struct slider *s)
+{
+	do_adjust_byte_value(s, OPCODE_REQUEST_IMPULSE_PWR);
+}
+
+static void do_warp_pwr(struct slider *s)
+{
+	do_adjust_byte_value(s, OPCODE_REQUEST_WARP_PWR);
+}
+
+static void do_sensors_pwr(struct slider *s)
+{
+	do_adjust_byte_value(s, OPCODE_REQUEST_SENSORS_PWR);
+}
+	
+static void do_phaserbanks_pwr(struct slider *s)
+{
+	do_adjust_byte_value(s, OPCODE_REQUEST_PHASERBANKS_PWR);
+}
+	
+static void do_comms_pwr(struct slider *s)
+{
+	do_adjust_byte_value(s, OPCODE_REQUEST_COMMS_PWR);
+}
+	
 static double sample_shields(void)
 {
 	int my_ship_oid;
 
 	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (double) go[my_ship_oid].tsd.ship.shields;
+	return (double) 100.0 * go[my_ship_oid].tsd.ship.pwrdist.shields / 255.0;
 }
 
 static double sample_rpm(void)
@@ -2915,7 +2957,7 @@ static double sample_throttle(void)
 	int my_ship_oid;
 
 	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (double) go[my_ship_oid].tsd.ship.throttle;
+	return (double) 100.0 * go[my_ship_oid].tsd.ship.throttle / 250.0;
 }
 
 static double sample_fuel(void)
@@ -2928,32 +2970,68 @@ static double sample_fuel(void)
 
 static double sample_phaserbanks(void)
 {
-	return 30.0;
+	struct snis_entity *o;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return 0.0;
+	o = &go[my_ship_oid];
+	return 100.0 * o->tsd.ship.pwrdist.phaserbanks / 255.0;
 }
 
 static double sample_warp(void)
 {
-	return 30.0;
+	struct snis_entity *o;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return 0.0;
+	o = &go[my_ship_oid];
+	return 100.0 * o->tsd.ship.pwrdist.warp / 255.0;
 }
 
 static double sample_maneuvering(void)
 {
-	return 30.0;
+	struct snis_entity *o;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return 0.0;
+	o = &go[my_ship_oid];
+	return 100.0 * o->tsd.ship.pwrdist.maneuvering / 255.0;
 }
 
 static double sample_impulse(void)
 {
-	return 30.0;
+	struct snis_entity *o;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return 0.0;
+	o = &go[my_ship_oid];
+	return 100.0 * o->tsd.ship.pwrdist.impulse / 255.0;
 }
 
 static double sample_comms(void)
 {
-	return 30.0;
+	struct snis_entity *o;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return 0.0;
+	o = &go[my_ship_oid];
+	return 100.0 * o->tsd.ship.pwrdist.comms / 255.0;
 }
 
 static double sample_sensors(void)
 {
-	return 30.0;
+	struct snis_entity *o;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return 0.0;
+	o = &go[my_ship_oid];
+	return 100.0 * o->tsd.ship.pwrdist.sensors / 255.0;
 }
 
 struct enginerring_ui {
@@ -2996,19 +3074,19 @@ static void show_engineering(GtkWidget *w)
 					0.0, 100.0, sample_throttle, do_throttle, DISPLAYMODE_ENGINEERING);
 
 		slider_init(&eng_ui.shield_slider, 20, y += yinc, 150, &huex[WHITE], "Shields", "0", "100",
-					0.0, 100.0, sample_shields, NULL, DISPLAYMODE_ENGINEERING);
+					0.0, 100.0, sample_shields, do_shields_pwr, DISPLAYMODE_ENGINEERING);
 		slider_init(&eng_ui.phaserbanks_slider, 20, y += yinc, 150, &huex[WHITE], "Phaser Banks", "0", "100",
-					0.0, 100.0, sample_phaserbanks, NULL, DISPLAYMODE_ENGINEERING);
+					0.0, 100.0, sample_phaserbanks, do_phaserbanks_pwr, DISPLAYMODE_ENGINEERING);
 		slider_init(&eng_ui.comm_slider, 20, y += yinc, 150, &huex[WHITE], "Communications", "0", "100",
-					0.0, 100.0, sample_comms, NULL, DISPLAYMODE_ENGINEERING);
+					0.0, 100.0, sample_comms, do_comms_pwr, DISPLAYMODE_ENGINEERING);
 		slider_init(&eng_ui.sensors_slider, 20, y += yinc, 150, &huex[WHITE], "Sensors", "0", "100",
-					0.0, 100.0, sample_sensors, NULL, DISPLAYMODE_ENGINEERING);
+					0.0, 100.0, sample_sensors, do_sensors_pwr, DISPLAYMODE_ENGINEERING);
 		slider_init(&eng_ui.impulse_slider, 20, y += yinc, 150, &huex[WHITE], "Impulse Drive", "0", "100",
-					0.0, 100.0, sample_impulse, NULL, DISPLAYMODE_ENGINEERING);
+					0.0, 100.0, sample_impulse, do_impulse_pwr, DISPLAYMODE_ENGINEERING);
 		slider_init(&eng_ui.warp_slider, 20, y += yinc, 150, &huex[WHITE], "Warp Drive", "0", "100",
-					0.0, 100.0, sample_warp, NULL, DISPLAYMODE_ENGINEERING);
+					0.0, 100.0, sample_warp, do_warp_pwr, DISPLAYMODE_ENGINEERING);
 		slider_init(&eng_ui.maneuvering_slider, 20, y += yinc, 150, &huex[WHITE], "Maneuvering", "0", "100",
-					0.0, 100.0, sample_maneuvering, NULL, DISPLAYMODE_ENGINEERING);
+					0.0, 100.0, sample_maneuvering, do_maneuvering_pwr, DISPLAYMODE_ENGINEERING);
 		add_slider(&eng_ui.shield_slider);
 		add_slider(&eng_ui.phaserbanks_slider);
 		add_slider(&eng_ui.comm_slider);

@@ -33,6 +33,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <linux/tcp.h>
+#include <stddef.h>
 
 #include "ssgl/ssgl.h"
 #include "snis.h"
@@ -781,6 +782,78 @@ static int process_request_ship_sdata(struct game_client *c)
 	return 0;
 }
 
+static int process_request_bytevalue_pwr(struct game_client *c, int offset)
+{
+	unsigned char buffer[10];
+	struct packed_buffer pb;
+	int i, rc;
+	uint32_t id;
+	uint8_t *bytevalue;
+	uint8_t v;
+
+	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_throttle_packet) - sizeof(uint16_t));
+	if (rc)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	id = packed_buffer_extract_u32(&pb);
+	v = packed_buffer_extract_u8(&pb);
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->shipid)
+		printf("i != ship id\n");
+	bytevalue = (uint8_t *) &go[i];
+	bytevalue += offset;
+	*bytevalue = v;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+
+static int process_request_throttle(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.throttle)); 
+}
+
+static int process_request_maneuvering_pwr(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.maneuvering)); 
+}
+
+static int process_request_warp_pwr(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.warp)); 
+}
+
+static int process_request_impulse_pwr(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.impulse)); 
+}
+
+static int process_request_sensors_pwr(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.sensors)); 
+}
+
+static int process_request_comms_pwr(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.comms)); 
+}
+
+static int process_request_shields_pwr(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.shields)); 
+}
+
+static int process_request_phaserbanks_pwr(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.phaserbanks)); 
+}
+
+#if 0
 static int process_request_throttle(struct game_client *c)
 {
 	unsigned char buffer[10];
@@ -807,6 +880,34 @@ static int process_request_throttle(struct game_client *c)
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
+
+static int process_request_maneuvering_pwr(struct game_client *c)
+{
+	unsigned char buffer[10];
+	struct packed_buffer pb;
+	int i, rc;
+	uint32_t id;
+	uint8_t maneuvering;
+
+	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_throttle_packet) - sizeof(uint16_t));
+	if (rc)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	id = packed_buffer_extract_u32(&pb);
+	maneuvering = packed_buffer_extract_u8(&pb);
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->shipid)
+		printf("i != ship id\n");
+	go[i].tsd.ship.pwrdist.maneuvering = maneuvering;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+#endif
 
 static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 {
@@ -900,6 +1001,41 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_THROTTLE:
 			rc = process_request_throttle(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_MANEUVERING_PWR:
+			rc = process_request_maneuvering_pwr(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_WARP_PWR:
+			rc = process_request_warp_pwr(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_IMPULSE_PWR:
+			rc = process_request_impulse_pwr(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_SHIELDS_PWR:
+			rc = process_request_shields_pwr(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_SENSORS_PWR:
+			rc = process_request_sensors_pwr(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_COMMS_PWR:
+			rc = process_request_comms_pwr(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_PHASERBANKS_PWR:
+			rc = process_request_phaserbanks_pwr(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -1237,7 +1373,6 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u32(pb, heading);
 	packed_buffer_append_u32(pb, o->tsd.ship.torpedoes);
 	packed_buffer_append_u32(pb, o->tsd.ship.power);
-	packed_buffer_append_u32(pb, o->tsd.ship.shields);
 	packed_buffer_append_u32(pb, gun_heading);
 	packed_buffer_append_u32(pb, sci_heading);
 	packed_buffer_append_u32(pb, sci_beam_width);
@@ -1246,6 +1381,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u8(pb, rpm);
 	packed_buffer_append_u32(pb, fuel);
 	packed_buffer_append_u8(pb, o->tsd.ship.temp);
+	packed_buffer_append_raw(pb, (char *) &o->tsd.ship.pwrdist, sizeof(o->tsd.ship.pwrdist));
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

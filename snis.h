@@ -44,6 +44,17 @@
 #define OBJTYPE_LASER 7
 #define OBJTYPE_EXPLOSION 8
 
+struct power_dist {
+	/* Note: do not add any members to this which are not endian clean. */
+	uint8_t maneuvering;
+	uint8_t warp;
+	uint8_t impulse;
+	uint8_t sensors;
+	uint8_t comms;
+	uint8_t phaserbanks;
+	uint8_t shields;
+};
+
 struct ship_data {
 	uint32_t torpedoes;
 #define TORPEDO_LIFETIME 20
@@ -87,6 +98,7 @@ struct ship_data {
 	uint8_t rpm;
 	uint8_t throttle;
 	uint8_t temp;
+	struct power_dist pwrdist;
 };
 
 struct starbase_data {
