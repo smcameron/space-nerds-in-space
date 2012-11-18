@@ -60,7 +60,8 @@ char *random_name(void)
 		else
 			append_stuff(result, consonant, ARRAYSIZE(consonant));
 	}
-	result[0] = toupper(result[0]);
+	for (i = result; *i; i++)
+		*i = toupper(*i);
 	return result;
 }
 
