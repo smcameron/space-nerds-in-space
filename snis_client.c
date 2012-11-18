@@ -377,7 +377,8 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name)
 		return i;
 	go[i].sdata.subclass = subclass;
 	strcpy(go[i].sdata.name, name);
-	go[i].sdata.science_data_known = 1;
+	go[i].sdata.science_data_known = 30 * 10; /* only remember for ten secs. */
+	go[i].sdata.science_data_requested = 0; /* request is fullfilled */
 	return 0;
 }
 
@@ -3013,6 +3014,23 @@ static void show_debug(GtkWidget *w)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static void make_science_forget_stuff(void)
+{
+	int i;
+
+	/* After awhile, science forgets... this is so the scientist
+	 * can't just scan everything then sit back and relax for the
+	 * rest of the game.
+	 */
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		if (o->sdata.science_data_known) /* forget after awhile */
+			o->sdata.science_data_known--;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
         gdk_gc_set_foreground(gc, &huex[WHITE]);
@@ -3027,6 +3045,9 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 			game_state.go[i].draw(&game_state.go[i], main_da); 
 	}
 #endif
+
+	make_science_forget_stuff();
+
 	switch (displaymode) {
 	case DISPLAYMODE_FONTTEST:
 		show_fonttest(w);
