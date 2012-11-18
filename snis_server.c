@@ -319,6 +319,15 @@ static void player_move(struct snis_entity *o)
 		o->tsd.ship.velocity = 0.0;
 	else
 		o->tsd.ship.velocity *= PLAYER_VELOCITY_DAMPING;
+
+	/* check to see if any torpedoes have finished loading */
+	if (o->tsd.ship.torpedo_load_time > 0) {
+		o->tsd.ship.torpedo_load_time--;
+		if (o->tsd.ship.torpedo_load_time == 0) {
+			o->tsd.ship.torpedoes_loaded++;
+			o->tsd.ship.torpedoes_loading = 0;
+		}
+	}
 }
 
 static void starbase_move(struct snis_entity *o)
@@ -723,19 +732,36 @@ static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 	return 0;
 }
 
+static int process_load_torpedo(struct game_client *c)
+{
+	struct snis_entity *ship = &go[c->shipid];
+	// struct packed_buffer *pb;
+
+	if (ship->tsd.ship.torpedoes < 0)
+		return -1;
+	if (ship->tsd.ship.torpedoes_loading != 0)
+		return -1;
+	if (ship->tsd.ship.torpedoes_loaded + ship->tsd.ship.torpedoes_loading >= 2)
+		return -1;
+	ship->tsd.ship.torpedoes--;
+	ship->tsd.ship.torpedoes_loading++;
+	ship->tsd.ship.torpedo_load_time = 4 * 10; /* 4 secs */ 
+	return 0;
+}
+
 static int process_request_torpedo(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->shipid];
 	double vx, vy;
 
-	if (ship->tsd.ship.torpedoes <= 0)
+	if (ship->tsd.ship.torpedoes_loaded <= 0)
 		return 0;
 
 	vx = TORPEDO_VELOCITY * sin(ship->tsd.ship.gun_heading);
 	vy = TORPEDO_VELOCITY * -cos(ship->tsd.ship.gun_heading);
 	pthread_mutex_lock(&universe_mutex);
 	add_torpedo(ship->x, ship->y, vx, vy, ship->tsd.ship.gun_heading, ship->id); 
-	ship->tsd.ship.torpedoes--;
+	ship->tsd.ship.torpedoes_loaded--;
 	snis_queue_add_sound(TORPEDO_LAUNCH_SOUND, 0xffff);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
@@ -754,6 +780,9 @@ static void process_instructions_from_client(struct game_client *c)
 	switch (opcode) {
 		case OPCODE_REQUEST_TORPEDO:
 			process_request_torpedo(c);
+			break;
+		case OPCODE_LOAD_TORPEDO:
+			process_load_torpedo(c);
 			break;
 		case OPCODE_REQUEST_YAW:
 			rc = process_request_yaw(c, do_yaw);
@@ -1065,6 +1094,7 @@ static void send_update_ship_packet(struct game_client *c,
 	uint32_t x, y;
 	int32_t vx, vy;
 	uint32_t heading, gun_heading, sci_heading, sci_beam_width;
+	uint8_t tloading, tloaded;
 
 	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
@@ -1074,6 +1104,10 @@ static void send_update_ship_packet(struct game_client *c,
 	gun_heading = (uint32_t) (o->tsd.ship.gun_heading / 360.0 * (double) UINT32_MAX);
 	sci_heading = (uint32_t) (o->tsd.ship.sci_heading / 360.0 * (double) UINT32_MAX);
 	sci_beam_width = (uint32_t) (o->tsd.ship.sci_beam_width / 360.0 * (double) UINT32_MAX);
+
+	tloading = (uint8_t) (o->tsd.ship.torpedoes_loading & 0x0f);
+	tloaded = (uint8_t) (o->tsd.ship.torpedoes_loaded & 0x0f);
+	tloading = tloading | (tloaded << 4);
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
 	packed_buffer_append_u16(pb, opcode);
@@ -1090,7 +1124,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u32(pb, gun_heading);
 	packed_buffer_append_u32(pb, sci_heading);
 	packed_buffer_append_u32(pb, sci_beam_width);
-
+	packed_buffer_append_u8(pb, tloading);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

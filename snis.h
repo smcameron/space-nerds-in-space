@@ -78,6 +78,9 @@ struct ship_data {
 #define MIN_SCI_BEAM_WIDTH (5 * PI / 180.0)
 	double sci_beam_width;
 	double sci_yaw_velocity;
+	uint8_t torpedoes_loaded;
+	uint8_t torpedoes_loading;
+	uint16_t torpedo_load_time;
 };
 
 struct starbase_data {

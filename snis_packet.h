@@ -44,6 +44,7 @@
 #define OPCODE_ECON_UPDATE_SHIP	118
 #define OPCODE_REQUEST_SHIP_SDATA 119
 #define OPCODE_SHIP_SDATA	120
+#define OPCODE_LOAD_TORPEDO	121
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -64,6 +65,7 @@ struct update_ship_packet {
 	uint32_t gun_heading;
 	uint32_t sci_heading;
 	uint32_t sci_beam_width;
+	uint8_t torpedoes_loaded; /* lower nybble == no. loading, upper == no. loaded. */
 };
 
 struct ship_sdata_packet {

@@ -349,7 +349,8 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 
 static int update_ship(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive,
 			uint32_t torpedoes, uint32_t energy, uint32_t shields,
-			double gun_heading, double sci_heading, double sci_beam_width, int shiptype)
+			double gun_heading, double sci_heading, double sci_beam_width, int shiptype,
+			uint8_t tloading, uint8_t tloaded)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -366,6 +367,8 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.gun_heading = gun_heading;
 	go[i].tsd.ship.sci_heading = sci_heading;
 	go[i].tsd.ship.sci_beam_width = sci_beam_width;
+	go[i].tsd.ship.torpedoes_loaded = tloaded;
+	go[i].tsd.ship.torpedoes_loading = tloading;
 	return 0;
 }
 
@@ -1098,17 +1101,24 @@ static void do_dirkey(int h, int v)
 static void do_torpedo(void)
 {
 	struct packed_buffer *pb;
+	struct snis_entity *o;
 
-	switch (displaymode) {
-	case DISPLAYMODE_WEAPONS:
-		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-		packed_buffer_append_u16(pb, OPCODE_REQUEST_TORPEDO);
-		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-		wakeup_gameserver_writer();
-		break;
-	default:
-		break;
-	}
+	if (displaymode != DISPLAYMODE_WEAPONS)
+		return;
+
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return;
+
+	o = &go[my_ship_oid];
+
+	if (o->tsd.ship.torpedoes_loaded <= 0)
+		return;
+	pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
+	packed_buffer_append_u16(pb, OPCODE_REQUEST_TORPEDO);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
 }
 
 static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
@@ -1296,6 +1306,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int shiptype = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
+	uint8_t tloading, tloaded;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1316,6 +1327,9 @@ static int process_update_ship_packet(uint16_t opcode)
 	gun_heading = packed_buffer_extract_u32(&pb);
 	sci_heading = packed_buffer_extract_u32(&pb);
 	sci_beam_width = packed_buffer_extract_u32(&pb);
+	tloading = packed_buffer_extract_u8(&pb);
+	tloaded = (tloading >> 4) & 0x0f;
+	tloading = tloading & 0x0f;
 
 	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
 	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
@@ -1328,7 +1342,7 @@ static int process_update_ship_packet(uint16_t opcode)
 
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, energy, shields,
-				dgheading, dsheading, dbeamwidth, shiptype);
+				dgheading, dsheading, dbeamwidth, shiptype, tloading, tloaded);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -1367,6 +1381,21 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
+
+typedef void (*button_function)(void *cookie);
+
+struct button {
+	int x, y, width, height, displaymode;
+	char label[20];
+	GdkColor color;
+	int font;
+	button_function bf;
+	void *cookie;
+};
+
+struct weapons_ui {
+	struct button fire_torpedo, load_torpedo;
+} weapons;
 
 static int process_update_torpedo_packet(void)
 {
@@ -2400,25 +2429,28 @@ static void show_navigation(GtkWidget *w)
 	draw_all_the_sparks(w, o);
 }
 
-
-typedef void (*button_function)(void *cookie);
-
-struct button {
-	int x, y, width, height, displaymode;
-	char label[20];
-	GdkColor color;
-	int font;
-	button_function bf;
-	void *cookie;
-};
-
-struct weapons_ui {
-	struct button fire_torpedo, load_torpedo;
-} weapons;
-
-static void load_torpedo_button_pressed(__attribute__((unused)) void *notused)
+static void load_torpedo_button_pressed()
 {
-	printf("LOAD TORPEDO\n");
+	struct snis_entity *o;
+	struct packed_buffer *pb;
+
+	if (my_ship_oid == UNKNOWN_ID) {
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+		if (my_ship_oid == UNKNOWN_ID)
+			return;
+	}
+	o = &go[my_ship_oid];
+
+	if (o->tsd.ship.torpedoes <= 0)
+		return;
+	if (o->tsd.ship.torpedoes_loaded >= 2)
+		return;
+	if (o->tsd.ship.torpedoes_loading != 0)
+		return;
+	pb = packed_buffer_allocate(sizeof(uint16_t));
+	packed_buffer_append_u16(pb, OPCODE_LOAD_TORPEDO);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
 }
 
 static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
@@ -2436,12 +2468,13 @@ static void show_weapons(GtkWidget *w)
 	struct snis_entity *o;
 	int rx, ry, rw, rh, cx, cy;
 	int r;
+	int buttoncolor;
 	static int initialized = 0;
 
 	if (!initialized) {
-		button_init(&weapons.load_torpedo, 550, 200, 200, 30, "LOAD TORPEDO", &huex[BLUE],
+		button_init(&weapons.load_torpedo, 550, 200, 200, 30, "LOAD TORPEDO", &huex[GREEN],
 				TINY_FONT, load_torpedo_button_pressed, NULL);
-		button_init(&weapons.fire_torpedo, 550, 250, 200, 30, "FIRE TORPEDO", &huex[BLUE],
+		button_init(&weapons.fire_torpedo, 550, 250, 200, 30, "FIRE TORPEDO", &huex[RED],
 				TINY_FONT, fire_torpedo_button_pressed, NULL);
 		add_button(&weapons.load_torpedo);
 		add_button(&weapons.fire_torpedo);
@@ -2451,8 +2484,6 @@ static void show_weapons(GtkWidget *w)
 	show_common_screen(w, "Weapons");
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
 
-	if (my_ship_id == UNKNOWN_ID)
-		return;
 	if (my_ship_oid == UNKNOWN_ID)
 		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
 	if (my_ship_oid == UNKNOWN_ID)
@@ -2460,12 +2491,26 @@ static void show_weapons(GtkWidget *w)
 	o = &go[my_ship_oid];
 	sprintf(buf, "Photon Torpedoes: %03d", o->tsd.ship.torpedoes);
 	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
+	sprintf(buf, "Torpedoes Loaded: %03d", o->tsd.ship.torpedoes_loaded);
+	abs_xy_draw_string(w, buf, TINY_FONT, 250, 30 + LINEHEIGHT);
+	sprintf(buf, "Torpedoes Loading: %03d", o->tsd.ship.torpedoes_loading);
+	abs_xy_draw_string(w, buf, TINY_FONT, 250, 50 + LINEHEIGHT);
 /*
 	sprintf(buf, "vx: %5.2lf", o->vx);
 	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
 	sprintf(buf, "vy: %5.2lf", o->vy);
 	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 4);
 */
+
+	buttoncolor = RED;
+	if (o->tsd.ship.torpedoes > 0 && o->tsd.ship.torpedoes_loading == 0 &&
+		o->tsd.ship.torpedoes_loaded < 2)
+		buttoncolor = GREEN;
+	weapons.load_torpedo.color = huex[buttoncolor];
+	buttoncolor = RED;
+	if (o->tsd.ship.torpedoes_loaded)
+		buttoncolor = GREEN;
+	weapons.fire_torpedo.color = huex[buttoncolor];
 
 	rx = 20;
 	ry = 70;
