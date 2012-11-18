@@ -2142,9 +2142,10 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 				gdk_gc_set_foreground(gc, &huex[WHITE]);
 				snis_draw_arrow(w->window, gc, x, y, r, go[i].heading, 0.5);
 				gdk_gc_set_foreground(gc, &huex[GREEN]);
-				sprintf(buffer, "h:%03d",
-					(int) (go[i].heading * 180.0 / M_PI));
-				abs_xy_draw_string(w, buffer, NANO_FONT, x + 10, y - 10);
+				if (go[i].sdata.science_data_known) {
+					sprintf(buffer, "%s", go[i].sdata.name);
+					abs_xy_draw_string(w, buffer, NANO_FONT, x + 10, y - 10);
+				}
 				break;
 			default:
 				gdk_gc_set_foreground(gc, &huex[WHITE]);
