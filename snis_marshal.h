@@ -43,6 +43,8 @@ GLOBAL uint32_t packed_buffer_extract_u32(struct packed_buffer *pb);
 GLOBAL double packed_buffer_extract_double(struct packed_buffer *pb);
 GLOBAL int packed_buffer_append_string(struct packed_buffer *pb, unsigned char *str, unsigned short len);
 GLOBAL int packed_buffer_extract_string(struct packed_buffer *pb, char *buffer, int buflen);
+GLOBAL int packed_buffer_append_raw(struct packed_buffer *pb, char *buffer, unsigned short len);
+GLOBAL int packed_buffer_extract_raw(struct packed_buffer *pb, char *buffer, unsigned short len);
 GLOBAL struct packed_buffer *packed_buffer_queue_combine(struct packed_buffer_queue *pbqh, pthread_mutex_t *mutex);
 GLOBAL void packed_buffer_queue_add(struct packed_buffer_queue *pbqh, struct packed_buffer *pb,
                 pthread_mutex_t *mutex);

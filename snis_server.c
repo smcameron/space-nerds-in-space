@@ -340,7 +340,7 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	go[i].type = type;
 	go[i].timestamp = universe_timestamp + 1;
 	go[i].move = generic_move;
-	strncpy(go[i].name, n, sizeof(go[i].name) - 1);
+	strncpy(go[i].sdata.name, n, sizeof(go[i].sdata.name) - 1);
 	free(n);
 	return i;
 }
@@ -641,6 +641,50 @@ static int process_request_thrust(struct game_client *c)
 	return 0;
 }
 
+/* must hold universe mutex */
+static int lookup_by_id(uint32_t id)
+{
+	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
+		if (go[i].id == id)
+			return i;
+	return -1;
+}
+
+static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip);
+static int process_request_ship_sdata(struct game_client *c)
+{
+	unsigned char buffer[10];
+	struct packed_buffer pb;
+	uint16_t id;
+	int i;
+	int rc;
+	struct ship_sdata_packet p; 
+
+	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_ship_sdata_packet) - sizeof(uint16_t));
+	if (rc)
+		return rc;
+	pb.buffer_size = sizeof(buffer);
+	pb.buffer = buffer;
+	pb.buffer_cursor = 0;
+
+	id = packed_buffer_extract_u32(&pb);
+	memset(p.name, 0, sizeof(p.name));
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	strcpy(p.name, go[i].sdata.name);
+	p.id = id;
+	p.subclass = 0;
+	pthread_mutex_unlock(&universe_mutex);
+	send_ship_sdata_packet(c, &p);
+	return 0;
+}
+
 static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 {
 	unsigned char buffer[10];
@@ -727,6 +771,11 @@ static void process_instructions_from_client(struct game_client *c)
 				goto protocol_error;
 			break;
 		case OPCODE_NOOP:
+			break;
+		case OPCODE_REQUEST_SHIP_SDATA:
+			rc = process_request_ship_sdata(c);
+			if (rc)
+				goto protocol_error;
 			break;
 		default:
 			goto protocol_error;
@@ -987,6 +1036,18 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
+static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct ship_sdata_packet));
+	packed_buffer_append_u16(pb, OPCODE_SHIP_SDATA);
+	packed_buffer_append_u32(pb, sip->id); 
+	packed_buffer_append_u8(pb, sip->subclass); 
+	packed_buffer_append_raw(pb, sip->name, sizeof(sip->name));
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+	
 static void send_update_ship_packet(struct game_client *c,
 	struct snis_entity *o, uint16_t opcode)
 {
@@ -1134,7 +1195,7 @@ static int add_new_player(struct game_client *c)
 		y = YUNIVERSE_DIMENSION * (double) rand() / (double) RAND_MAX;
 		pthread_mutex_lock(&universe_mutex);
 		c->shipid = add_player(x, y, 0.0, 0.0, 0.0);
-		strcpy(go[c->shipid].name, (const char * restrict) app.shipname);
+		strcpy(go[c->shipid].sdata.name, (const char * restrict) app.shipname);
 		memset(&bridgelist[nbridges], 0, sizeof(bridgelist[nbridges]));
 		strcpy((char *) bridgelist[nbridges].shipname, (const char *) app.shipname);
 		strcpy((char *) bridgelist[nbridges].password, (const char *) app.password);

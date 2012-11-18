@@ -369,6 +369,18 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	return 0;
 }
 
+static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name)
+{
+	int i;
+	i = lookup_object_by_id(id);
+	if (i < 0)
+		return i;
+	go[i].sdata.subclass = subclass;
+	strcpy(go[i].sdata.name, name);
+	go[i].sdata.science_data_known = 1;
+	return 0;
+}
+
 static int update_torpedo(uint32_t id, double x, double y, double vx, double vy, uint32_t ship_id)
 {
 	int i;
@@ -984,6 +996,18 @@ void init_keymap()
 
 static void wakeup_gameserver_writer(void);
 
+static void request_ship_sdata(struct snis_entity *o)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct request_ship_sdata_packet));
+	packed_buffer_append_u16(pb, OPCODE_REQUEST_SHIP_SDATA);
+	packed_buffer_append_u32(pb, o->id);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	o->sdata.science_data_requested = 1;
+	wakeup_gameserver_writer();
+}
+
 static void helm_dirkey(int h, int v)
 {
 	struct packed_buffer *pb;
@@ -1446,6 +1470,33 @@ static int process_play_sound_packet(void)
 	return 0;
 }
 
+static int process_ship_sdata_packet(void)
+{
+	unsigned char buffer[50];
+	struct packed_buffer pb;
+	uint32_t id;
+	uint8_t subclass;
+	int rc;
+	char name[NAMESIZE];
+
+	assert(sizeof(buffer) > sizeof(struct ship_sdata_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct ship_sdata_packet) - sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+
+	pb.buffer_size = sizeof(buffer);;
+	pb.buffer = buffer;
+	pb.buffer_cursor = 0;
+
+	id = packed_buffer_extract_u32(&pb);
+	subclass = packed_buffer_extract_u8(&pb);
+	rc = packed_buffer_extract_raw(&pb, name, sizeof(name));
+
+	pthread_mutex_lock(&universe_mutex);
+	update_ship_sdata(id, subclass, name);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
 
 static int process_update_planet_packet(void)
 {
@@ -1631,6 +1682,10 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			if (rc != 0)
 				goto protocol_error;
 			break;
+		case OPCODE_SHIP_SDATA:
+			rc = process_ship_sdata_packet();
+			if (rc != 0)
+				goto protocol_error; 
 		case OPCODE_UPDATE_PLAYER:
 			break;
 		case OPCODE_ACK_PLAYER:
@@ -1880,7 +1935,8 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 	/* snis_draw_circle(drawable, gc, x, y, (int) (SCREEN_WIDTH * 150.0 / XUNIVERSE_DIMENSION)); */
 }
 
-static void snis_draw_science_guy(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, double dist, int bw)
+static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
+					gint x, gint y, double dist, int bw)
 {
 	int i;
 
@@ -1888,7 +1944,15 @@ static void snis_draw_science_guy(GdkDrawable *drawable, GdkGC *gc, gint x, gint
 	int dr;
 	double tx, ty;
 
+	/* Compute radius of ship blip */
 	dr = (int) dist / (XUNIVERSE_DIMENSION / bw);
+
+	/* if dr is small enough, and ship info is not known, nor recently requested,
+	 * then issue OPCODE REQUEST_SHIP_SDATA to server somehow.
+	 */
+	if (dr < 5 && !o->sdata.science_data_known && !o->sdata.science_data_requested)
+		request_ship_sdata(o);
+
 	for (i = 0; i < 10; i++) {
 		da = snis_randn(360) * M_PI / 180.0;
 #if 1
@@ -1898,8 +1962,11 @@ static void snis_draw_science_guy(GdkDrawable *drawable, GdkGC *gc, gint x, gint
 		tx = x;
 		ty = y;
 #endif
-		gdk_draw_point(drawable, gc, tx * xscale_screen, ty * yscale_screen);
+		gdk_draw_point(w->window, gc, tx * xscale_screen, ty * yscale_screen);
 	}
+	if (o->sdata.science_data_known)
+		abs_xy_draw_string(w, o->sdata.name, NANO_FONT, x + 8, y - 8);
+	
 }
 
 static void snis_draw_science_spark(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, double dist)
@@ -2151,7 +2218,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		if (go[i].id == my_ship_id)
 			continue; /* skip drawing yourself. */
 		bw = o->tsd.ship.sci_beam_width * 180.0 / M_PI;
-		snis_draw_science_guy(w->window, gc, x, y, dist, bw);
+		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }

@@ -110,6 +110,13 @@ union type_specific_data {
 
 struct snis_entity;
 typedef void (*move_function)(struct snis_entity *o);
+
+struct snis_entity_science_data {
+	char name[20];
+	uint8_t science_data_known;
+	uint8_t science_data_requested;
+	uint8_t subclass;
+};
 	
 struct snis_entity {
 	uint32_t index;
@@ -122,7 +129,7 @@ struct snis_entity {
 	uint32_t timestamp;
 	union type_specific_data tsd;
 	move_function move;
-	char name[20];
+	struct snis_entity_science_data sdata;
 };
 
 #endif

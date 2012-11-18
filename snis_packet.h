@@ -42,11 +42,15 @@
 #define OPCODE_REQUEST_SCIBEAMWIDTH	116
 #define OPCODE_UPDATE_SHIP2		117
 #define OPCODE_ECON_UPDATE_SHIP	118
+#define OPCODE_REQUEST_SHIP_SDATA 119
+#define OPCODE_SHIP_SDATA	120
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
 #define OPCODE_POS_LASER	202
 #define OPCODE_NOOP		0xffff
+
+#define NAMESIZE 20
 
 #pragma pack(1)
 struct update_ship_packet {
@@ -60,6 +64,18 @@ struct update_ship_packet {
 	uint32_t gun_heading;
 	uint32_t sci_heading;
 	uint32_t sci_beam_width;
+};
+
+struct ship_sdata_packet {
+	uint16_t opcode;
+	uint32_t id;
+	uint8_t subclass;
+	char name[NAMESIZE];
+};
+
+struct request_ship_sdata_packet {
+	uint16_t opcode;
+	uint32_t id;
 };
 
 struct update_econ_ship_packet {
