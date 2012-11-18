@@ -853,62 +853,6 @@ static int process_request_phaserbanks_pwr(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.phaserbanks)); 
 }
 
-#if 0
-static int process_request_throttle(struct game_client *c)
-{
-	unsigned char buffer[10];
-	struct packed_buffer pb;
-	int i, rc;
-	uint32_t id;
-	uint8_t throttle;
-
-	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_throttle_packet) - sizeof(uint16_t));
-	if (rc)
-		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
-	throttle = packed_buffer_extract_u8(&pb);
-	pthread_mutex_lock(&universe_mutex);
-	i = lookup_by_id(id);
-	if (i < 0) {
-		pthread_mutex_unlock(&universe_mutex);
-		return -1;
-	}
-	if (i != c->shipid)
-		printf("i != ship id\n");
-	go[i].tsd.ship.throttle = throttle;
-	pthread_mutex_unlock(&universe_mutex);
-	return 0;
-}
-
-static int process_request_maneuvering_pwr(struct game_client *c)
-{
-	unsigned char buffer[10];
-	struct packed_buffer pb;
-	int i, rc;
-	uint32_t id;
-	uint8_t maneuvering;
-
-	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_throttle_packet) - sizeof(uint16_t));
-	if (rc)
-		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
-	maneuvering = packed_buffer_extract_u8(&pb);
-	pthread_mutex_lock(&universe_mutex);
-	i = lookup_by_id(id);
-	if (i < 0) {
-		pthread_mutex_unlock(&universe_mutex);
-		return -1;
-	}
-	if (i != c->shipid)
-		printf("i != ship id\n");
-	go[i].tsd.ship.pwrdist.maneuvering = maneuvering;
-	pthread_mutex_unlock(&universe_mutex);
-	return 0;
-}
-#endif
-
 static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 {
 	unsigned char buffer[10];

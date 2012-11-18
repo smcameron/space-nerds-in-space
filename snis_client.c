@@ -2579,22 +2579,6 @@ static void button_init(struct button *b, int x, int y, int width, int height, c
 			GdkColor *color, int font, button_function bf, void *cookie);
 static void add_button(struct button *b);
 
-#if 0
-static double sample_phaser_charge(void)
-{
-	static uint8_t *x = NULL;
-	struct snis_entity *o;
-
-	if (!x) {
-		if (my_ship_oid == UNKNOWN_ID)
-			my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-		if (my_ship_oid == UNKNOWN_ID)
-			return 0.0;
-	}
-	o = &go[my_ship_oid];
-	return 100.0 * o->tsd.ship.pwrdist.phaserbanks / 255.0;
-}
-#endif
 static double sample_phaserbanks(void);
 static void show_weapons(GtkWidget *w)
 {
