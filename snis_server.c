@@ -767,6 +767,11 @@ static int process_request_torpedo(struct game_client *c)
 	return 0;
 }
 
+static int process_request_phaser(__attribute__((unused)) struct game_client *c)
+{
+	return 0;
+}
+
 static void process_instructions_from_client(struct game_client *c)
 {
 	int rc;
@@ -780,6 +785,9 @@ static void process_instructions_from_client(struct game_client *c)
 	switch (opcode) {
 		case OPCODE_REQUEST_TORPEDO:
 			process_request_torpedo(c);
+			break;
+		case OPCODE_REQUEST_PHASER:
+			process_request_phaser(c);
 			break;
 		case OPCODE_LOAD_TORPEDO:
 			process_load_torpedo(c);

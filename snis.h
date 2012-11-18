@@ -81,6 +81,7 @@ struct ship_data {
 	uint8_t torpedoes_loaded;
 	uint8_t torpedoes_loading;
 	uint16_t torpedo_load_time;
+	uint8_t phaser_bank_charge;
 };
 
 struct starbase_data {
