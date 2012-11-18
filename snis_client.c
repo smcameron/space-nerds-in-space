@@ -350,7 +350,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 static int update_ship(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive,
 			uint32_t torpedoes, uint32_t energy, uint32_t shields,
 			double gun_heading, double sci_heading, double sci_beam_width, int shiptype,
-			uint8_t tloading, uint8_t tloaded)
+			uint8_t tloading, uint8_t tloaded, uint8_t throttle)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -369,6 +369,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.sci_beam_width = sci_beam_width;
 	go[i].tsd.ship.torpedoes_loaded = tloaded;
 	go[i].tsd.ship.torpedoes_loading = tloading;
+	go[i].tsd.ship.throttle = throttle;
 	return 0;
 }
 
@@ -1306,7 +1307,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int shiptype = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
-	uint8_t tloading, tloaded;
+	uint8_t tloading, tloaded, throttle;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1330,6 +1331,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	tloading = packed_buffer_extract_u8(&pb);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
+	throttle = packed_buffer_extract_u8(&pb);
 
 	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
 	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
@@ -1342,7 +1344,8 @@ static int process_update_ship_packet(uint16_t opcode)
 
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, energy, shields,
-				dgheading, dsheading, dbeamwidth, shiptype, tloading, tloaded);
+				dgheading, dsheading, dbeamwidth, shiptype,
+				tloading, tloaded, throttle);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -2660,6 +2663,10 @@ static void show_weapons(GtkWidget *w)
  * begin slider related functions/types
  */
 
+struct slider;
+
+typedef void (*slider_clicked_function)(struct slider *s);
+
 struct slider {
 	int x, y, length;
 	GdkColor color;
@@ -2667,12 +2674,14 @@ struct slider {
 	char label[20], label1[5], label2[5];
 	double r1, r2;
 	gauge_monitor_function sample;
+	slider_clicked_function clicked;
 	int displaymode;
 };
 
 static void slider_init(struct slider *s, int x, int y, int length, GdkColor *color,
 		char *label, char *l1, char *l2, double r1, double r2,
-		gauge_monitor_function gmf, int displaymode)
+		gauge_monitor_function gmf, slider_clicked_function clicked, 
+		int displaymode)
 {
 	s->x = x;
 	s->y = y;
@@ -2684,6 +2693,7 @@ static void slider_init(struct slider *s, int x, int y, int length, GdkColor *co
 	s->r1 = r1;
 	s->r2 = r2;
 	s->sample = gmf;
+	s->clicked = clicked;
 	s->value = s->sample() / (s->r2 - s->r1);
 	s->displaymode = displaymode;
 }
@@ -2729,6 +2739,11 @@ static void add_slider(struct slider *s)
 	nsliders++;
 }
 
+static double slider_get_value(struct slider *s)
+{	
+	return s->value;
+}
+
 static void draw_sliders(GtkWidget *w)
 {
 	int i;
@@ -2750,6 +2765,8 @@ static void sliders_button_press(int x, int y)
 				y < s->y || y > s->y + SLIDER_HEIGHT)
 				continue;
 			s->value = ((double) x - (double) s->x) / (double) s->length;
+			if (s->clicked)
+				s->clicked(s);
 		}
 	}
 }
@@ -2830,6 +2847,28 @@ static void buttons_button_press(int x, int y)
  * end button related functions/types
  */
 
+static void do_throttle(struct slider *s)
+{
+	struct packed_buffer *pb;
+	struct snis_entity *o;
+	uint8_t value;
+
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return;
+
+	o = &go[my_ship_oid];
+
+	value = (uint8_t) (100.0 * slider_get_value(s));
+	pb = packed_buffer_allocate(sizeof(struct request_throttle_packet));
+	packed_buffer_append_u16(pb, OPCODE_REQUEST_THROTTLE);
+	packed_buffer_append_u32(pb, o->id);
+	packed_buffer_append_u8(pb, value);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
 static double sample_shields(void)
 {
 	int my_ship_oid;
@@ -2855,7 +2894,10 @@ static double sample_temp(void)
 
 static double sample_throttle(void)
 {
-	return 68.0;
+	int my_ship_oid;
+
+	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	return (double) go[my_ship_oid].tsd.ship.throttle;
 }
 
 static double sample_fuel(void)
@@ -2863,7 +2905,7 @@ static double sample_fuel(void)
 	int my_ship_oid;
 
 	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (double) go[my_ship_oid].tsd.ship.energy;
+	return (double) go[my_ship_oid].tsd.ship.fuel;
 }
 
 static double sample_phaserbanks(void)
@@ -2896,69 +2938,72 @@ static double sample_sensors(void)
 	return 30.0;
 }
 
+struct enginerring_ui {
+	struct gauge fuel_gauge;
+	struct gauge energy_gauge;
+	struct gauge rpm_gauge;
+	struct gauge temp_gauge;
+	struct slider shield_slider;
+	struct slider maneuvering_slider;
+	struct slider warp_slider;
+	struct slider impulse_slider;
+	struct slider sensors_slider;
+	struct slider comm_slider;
+	struct slider phaserbanks_slider;
+	struct slider throttle_slider;
+} eng_ui;
+
 static void show_engineering(GtkWidget *w)
 {
 	static int initialized = 0;
 	show_common_screen(w, "Engineering");
-	static struct gauge fuel_gauge;
-	static struct gauge energy_gauge;
-	static struct gauge rpm_gauge;
-	static struct gauge temp_gauge;
-	static struct slider shield_slider;
-	static struct slider maneuvering_slider;
-	static struct slider warp_slider;
-	static struct slider impulse_slider;
-	static struct slider sensors_slider;
-	static struct slider comm_slider;
-	static struct slider phaserbanks_slider;
-	static struct slider throttle_slider;
 
 	if (!initialized) {
 		initialized = 1;
 		int y = 220;
 		int yinc = 40; 
-		gauge_init(&rpm_gauge, 100, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+		gauge_init(&eng_ui.rpm_gauge, 100, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 				10, "RPM", sample_rpm);
-		gauge_init(&fuel_gauge, 250, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+		gauge_init(&eng_ui.fuel_gauge, 250, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 				10, "Fuel", sample_fuel);
-		gauge_init(&energy_gauge, 400, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+		gauge_init(&eng_ui.energy_gauge, 400, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 				10, "Energy", sample_energy);
-		gauge_init(&temp_gauge, 550, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+		gauge_init(&eng_ui.temp_gauge, 550, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 				10, "Temp", sample_temp);
-		slider_init(&throttle_slider, 350, y + yinc, 200, &huex[YELLOW], "Throttle", "0", "100",
-					0.0, 100.0, sample_throttle, DISPLAYMODE_ENGINEERING);
+		slider_init(&eng_ui.throttle_slider, 350, y + yinc, 200, &huex[YELLOW], "Throttle", "0", "100",
+					0.0, 100.0, sample_throttle, do_throttle, DISPLAYMODE_ENGINEERING);
 
-		slider_init(&shield_slider, 20, y += yinc, 150, &huex[WHITE], "Shields", "0", "100",
-					0.0, 100.0, sample_shields, DISPLAYMODE_ENGINEERING);
-		slider_init(&phaserbanks_slider, 20, y += yinc, 150, &huex[WHITE], "Phaser Banks", "0", "100",
-					0.0, 100.0, sample_phaserbanks, DISPLAYMODE_ENGINEERING);
-		slider_init(&comm_slider, 20, y += yinc, 150, &huex[WHITE], "Communications", "0", "100",
-					0.0, 100.0, sample_comms, DISPLAYMODE_ENGINEERING);
-		slider_init(&sensors_slider, 20, y += yinc, 150, &huex[WHITE], "Sensors", "0", "100",
-					0.0, 100.0, sample_sensors, DISPLAYMODE_ENGINEERING);
-		slider_init(&impulse_slider, 20, y += yinc, 150, &huex[WHITE], "Impulse Drive", "0", "100",
-					0.0, 100.0, sample_impulse, DISPLAYMODE_ENGINEERING);
-		slider_init(&warp_slider, 20, y += yinc, 150, &huex[WHITE], "Warp Drive", "0", "100",
-					0.0, 100.0, sample_warp, DISPLAYMODE_ENGINEERING);
-		slider_init(&maneuvering_slider, 20, y += yinc, 150, &huex[WHITE], "Maneuvering", "0", "100",
-					0.0, 100.0, sample_maneuvering, DISPLAYMODE_ENGINEERING);
-		add_slider(&shield_slider);
-		add_slider(&phaserbanks_slider);
-		add_slider(&comm_slider);
-		add_slider(&sensors_slider);
-		add_slider(&impulse_slider);
-		add_slider(&warp_slider);
-		add_slider(&maneuvering_slider);
-		add_slider(&throttle_slider);
+		slider_init(&eng_ui.shield_slider, 20, y += yinc, 150, &huex[WHITE], "Shields", "0", "100",
+					0.0, 100.0, sample_shields, NULL, DISPLAYMODE_ENGINEERING);
+		slider_init(&eng_ui.phaserbanks_slider, 20, y += yinc, 150, &huex[WHITE], "Phaser Banks", "0", "100",
+					0.0, 100.0, sample_phaserbanks, NULL, DISPLAYMODE_ENGINEERING);
+		slider_init(&eng_ui.comm_slider, 20, y += yinc, 150, &huex[WHITE], "Communications", "0", "100",
+					0.0, 100.0, sample_comms, NULL, DISPLAYMODE_ENGINEERING);
+		slider_init(&eng_ui.sensors_slider, 20, y += yinc, 150, &huex[WHITE], "Sensors", "0", "100",
+					0.0, 100.0, sample_sensors, NULL, DISPLAYMODE_ENGINEERING);
+		slider_init(&eng_ui.impulse_slider, 20, y += yinc, 150, &huex[WHITE], "Impulse Drive", "0", "100",
+					0.0, 100.0, sample_impulse, NULL, DISPLAYMODE_ENGINEERING);
+		slider_init(&eng_ui.warp_slider, 20, y += yinc, 150, &huex[WHITE], "Warp Drive", "0", "100",
+					0.0, 100.0, sample_warp, NULL, DISPLAYMODE_ENGINEERING);
+		slider_init(&eng_ui.maneuvering_slider, 20, y += yinc, 150, &huex[WHITE], "Maneuvering", "0", "100",
+					0.0, 100.0, sample_maneuvering, NULL, DISPLAYMODE_ENGINEERING);
+		add_slider(&eng_ui.shield_slider);
+		add_slider(&eng_ui.phaserbanks_slider);
+		add_slider(&eng_ui.comm_slider);
+		add_slider(&eng_ui.sensors_slider);
+		add_slider(&eng_ui.impulse_slider);
+		add_slider(&eng_ui.warp_slider);
+		add_slider(&eng_ui.maneuvering_slider);
+		add_slider(&eng_ui.throttle_slider);
 	}
-	gauge_draw(w, &fuel_gauge);
-	gauge_draw(w, &rpm_gauge);
-	gauge_draw(w, &energy_gauge);
-	gauge_draw(w, &temp_gauge);
+	gauge_draw(w, &eng_ui.fuel_gauge);
+	gauge_draw(w, &eng_ui.rpm_gauge);
+	gauge_draw(w, &eng_ui.energy_gauge);
+	gauge_draw(w, &eng_ui.temp_gauge);
 }
 
 static void show_science(GtkWidget *w)

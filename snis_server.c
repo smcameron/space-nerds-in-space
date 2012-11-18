@@ -707,6 +707,33 @@ static int process_request_ship_sdata(struct game_client *c)
 	return 0;
 }
 
+static int process_request_throttle(struct game_client *c)
+{
+	unsigned char buffer[10];
+	struct packed_buffer pb;
+	int i, rc;
+	uint32_t id;
+	uint8_t throttle;
+
+	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_throttle_packet) - sizeof(uint16_t));
+	if (rc)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	id = packed_buffer_extract_u32(&pb);
+	throttle = packed_buffer_extract_u8(&pb);
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->shipid)
+		printf("i != ship id\n");
+	go[i].tsd.ship.throttle = throttle;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 {
 	unsigned char buffer[10];
@@ -794,6 +821,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_YAW:
 			rc = process_request_yaw(c, do_yaw);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_THROTTLE:
+			rc = process_request_throttle(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -1102,7 +1134,7 @@ static void send_update_ship_packet(struct game_client *c,
 	uint32_t x, y;
 	int32_t vx, vy;
 	uint32_t heading, gun_heading, sci_heading, sci_beam_width;
-	uint8_t tloading, tloaded;
+	uint8_t tloading, tloaded, throttle;
 
 	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
@@ -1112,6 +1144,7 @@ static void send_update_ship_packet(struct game_client *c,
 	gun_heading = (uint32_t) (o->tsd.ship.gun_heading / 360.0 * (double) UINT32_MAX);
 	sci_heading = (uint32_t) (o->tsd.ship.sci_heading / 360.0 * (double) UINT32_MAX);
 	sci_beam_width = (uint32_t) (o->tsd.ship.sci_beam_width / 360.0 * (double) UINT32_MAX);
+	throttle = o->tsd.ship.throttle;
 
 	tloading = (uint8_t) (o->tsd.ship.torpedoes_loading & 0x0f);
 	tloaded = (uint8_t) (o->tsd.ship.torpedoes_loaded & 0x0f);
@@ -1133,6 +1166,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u32(pb, sci_heading);
 	packed_buffer_append_u32(pb, sci_beam_width);
 	packed_buffer_append_u8(pb, tloading);
+	packed_buffer_append_u8(pb, throttle);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

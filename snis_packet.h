@@ -46,6 +46,7 @@
 #define OPCODE_SHIP_SDATA	120
 #define OPCODE_LOAD_TORPEDO	121
 #define OPCODE_REQUEST_PHASER	122
+#define OPCODE_REQUEST_THROTTLE	123
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -67,6 +68,7 @@ struct update_ship_packet {
 	uint32_t sci_heading;
 	uint32_t sci_beam_width;
 	uint8_t torpedoes_loaded; /* lower nybble == no. loading, upper == no. loaded. */
+	uint8_t throttle;
 };
 
 struct ship_sdata_packet {
@@ -138,6 +140,12 @@ struct update_torpedo_packet {
 
 struct request_torpedo_packet {
 	uint16_t opcode;
+};
+
+struct request_throttle_packet {
+	uint16_t opcode;
+	uint32_t id;
+	uint8_t throttle;
 };
 
 struct request_yaw_packet {
