@@ -330,3 +330,11 @@ struct packed_buffer *packed_buffer_copy(struct packed_buffer *pb)
 	pbc->buffer_cursor = pb->buffer_cursor;
 	return pbc;
 }
+
+void packed_buffer_init(struct packed_buffer * pb, void *buffer, int size)
+{
+	pb->buffer = buffer;
+	pb->buffer_size = size;
+	pb->buffer_cursor = 0;
+}
+

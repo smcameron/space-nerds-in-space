@@ -51,6 +51,7 @@ GLOBAL void packed_buffer_queue_add(struct packed_buffer_queue *pbqh, struct pac
 GLOBAL void packed_buffer_queue_init(struct packed_buffer_queue *pbq);
 GLOBAL void packed_buffer_queue_print(struct packed_buffer_queue *pbg);
 GLOBAL struct packed_buffer *packed_buffer_copy(struct packed_buffer *pb);
+GLOBAL void packed_buffer_init(struct packed_buffer * pb, void *buffer, int size);
 
 #undef GLOBAL
 #endif

@@ -1302,11 +1302,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	/* printf("process_update_ship_packet, snis_readsocket returned %d\n", rc); */
 	if (rc != 0)
 		return rc;
-
-	pb.buffer_size = sizeof(buffer);;
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
-
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	alive = packed_buffer_extract_u32(&pb);
 	x = packed_buffer_extract_u32(&pb);
@@ -1351,11 +1347,7 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	/* printf("process_update_econ_ship_packet, snis_readsocket returned %d\n", rc); */
 	if (rc != 0)
 		return rc;
-
-	pb.buffer_size = sizeof(buffer);;
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
-
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	alive = packed_buffer_extract_u32(&pb);
 	x = packed_buffer_extract_u32(&pb);
@@ -1391,11 +1383,7 @@ static int process_update_torpedo_packet(void)
 					sizeof(uint16_t));
 	if (rc != 0)
 		return rc;
-
-	pb.buffer_size = sizeof(buffer);;
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
-
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	ship_id = packed_buffer_extract_u32(&pb);
 	x = packed_buffer_extract_u32(&pb);
@@ -1438,10 +1426,7 @@ static int process_delete_object_packet(void)
 					sizeof(uint16_t));
 	if (rc != 0)
 		return rc;
-
-	pb.buffer_size = sizeof(buffer);;
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 
 	pthread_mutex_lock(&universe_mutex);
@@ -1462,10 +1447,7 @@ static int process_play_sound_packet(void)
 					sizeof(uint16_t));
 	if (rc != 0)
 		return rc;
-
-	pb.buffer_size = sizeof(buffer);;
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	sound_number = packed_buffer_extract_u16(&pb);
 	wwviaudio_add_sound(sound_number);
 	return 0;
@@ -1484,11 +1466,7 @@ static int process_ship_sdata_packet(void)
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct ship_sdata_packet) - sizeof(uint16_t));
 	if (rc != 0)
 		return rc;
-
-	pb.buffer_size = sizeof(buffer);;
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
-
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	subclass = packed_buffer_extract_u8(&pb);
 	rc = packed_buffer_extract_raw(&pb, name, sizeof(name));
@@ -1512,11 +1490,7 @@ static int process_update_planet_packet(void)
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_planet_packet) - sizeof(uint16_t));
 	if (rc != 0)
 		return rc;
-
-	pb.buffer_size = sizeof(buffer);;
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
-
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	x = packed_buffer_extract_u32(&pb);
 	y = packed_buffer_extract_u32(&pb);
@@ -1543,11 +1517,7 @@ static int process_update_starbase_packet(void)
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_starbase_packet) - sizeof(uint16_t));
 	if (rc != 0)
 		return rc;
-
-	pb.buffer_size = sizeof(buffer);;
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
-
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	x = packed_buffer_extract_u32(&pb);
 	y = packed_buffer_extract_u32(&pb);
@@ -1576,11 +1546,7 @@ static int process_update_explosion_packet(void)
 				- sizeof(uint16_t));
 	if (rc != 0)
 		return rc;
-
-	pb.buffer_size = sizeof(buffer);;
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
-
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	x = packed_buffer_extract_u32(&pb);
 	y = packed_buffer_extract_u32(&pb);
@@ -1605,11 +1571,7 @@ static int process_client_id_packet(void)
 
 	assert(sizeof(buffer) > sizeof(struct client_ship_id_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct client_ship_id_packet) - sizeof(uint16_t));
-
-	pb.buffer_size = sizeof(buffer);
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
-
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	if (rc)
 		return rc;

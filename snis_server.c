@@ -642,10 +642,7 @@ static int process_request_thrust(struct game_client *c)
 	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_thrust_packet) - sizeof(uint16_t));
 	if (rc)
 		return rc;
-	pb.buffer_size = sizeof(buffer);
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
-
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	thrust = packed_buffer_extract_u8(&pb);
 	switch (thrust) {
 	case THRUST_FORWARDS:
@@ -684,10 +681,7 @@ static int process_request_ship_sdata(struct game_client *c)
 	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_ship_sdata_packet) - sizeof(uint16_t));
 	if (rc)
 		return rc;
-	pb.buffer_size = sizeof(buffer);
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
-
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	memset(p.name, 0, sizeof(p.name));
 	pthread_mutex_lock(&universe_mutex);
@@ -714,10 +708,7 @@ static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_yaw_packet) - sizeof(uint16_t));
 	if (rc)
 		return rc;
-	pb.buffer_size = sizeof(buffer);
-	pb.buffer = buffer;
-	pb.buffer_cursor = 0;
-
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	yaw = packed_buffer_extract_u8(&pb);
 	switch (yaw) {
 	case YAW_LEFT:
