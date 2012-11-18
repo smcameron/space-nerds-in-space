@@ -18,6 +18,7 @@
         along with Spacenerds in Space; if not, write to the Free Software
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#include <stdio.h>
 #include <stdlib.h>
 
 #define DEFINE_MATHUTILS_GLOBALS 1
@@ -60,4 +61,32 @@ void normalize_angle(double *angle)
 		*angle += (360.0 * PI / 180.0);
 }
 
+double interpolate(double x, double x1, double y1, double x2, double y2)
+{
+	/* return corresponding y on line x1,y1,x2,y2 for value x
+	 *
+	 *      (y2 -y1)/(x2 - x1) = (y - y1) / (x - x1)     by similar triangles.
+	 *      (x -x1) * (y2 -y1)/(x2 -x1) = y - y1         a little algebra...
+	 *      y = (x - x1) * (y2 - y1) / (x2 -x1) + y1;    I think there's one more step
+	 *                                                   which would optimize this a bit more.
+	 *                                                   but I forget how it goes. 
+	 *
+	 * Calling this with x2 == x1 is your own damn fault.
+	 *
+	 */
+	return (x - x1) * (y2 - y1) / (x2 -x1) + y1;
+}
+
+double table_interp(double x, double xv[], double yv[], int nv)
+{
+	int i;
+
+	for (i = 0; i < nv - 1; i++) {
+		if (xv[i] <= x && xv[i + 1] > x)
+			return interpolate(x, xv[i], yv[i], xv[i + 1], yv[i + 1]);
+	}
+	/* if you get here, it's your own damn fault. */
+	printf("tabe_interp: x value %g is not in table, your program is buggy.\n", x);
+	return 0.0;
+}
 

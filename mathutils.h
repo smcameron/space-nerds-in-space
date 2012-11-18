@@ -39,5 +39,7 @@ GLOBAL int snis_rand(void); /* like rand() */
 GLOBAL void snis_srand(unsigned seed); /* like srand() */
 GLOBAL int snis_randn(int n); /* returns n * snis_rand() / SNIS_RAND_MAX */
 GLOBAL void normalize_angle(double *angle);
+GLOBAL double interpolate(double x, double x1, double y1, double x2, double y2);
+GLOBAL double table_interp(double x, double xv[], double yv[], int nv);
 
 #endif
