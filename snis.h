@@ -49,7 +49,7 @@ struct ship_data {
 #define TORPEDO_LIFETIME 20
 #define TORPEDO_VELOCITY (45.0)
 #define TORPEDO_DETONATE_DIST2 (150 * 150)
-	uint32_t energy;
+	uint32_t power;
 	uint32_t shields;
 	char shipname[100];
 	double velocity;
@@ -82,8 +82,11 @@ struct ship_data {
 	uint8_t torpedoes_loading;
 	uint16_t torpedo_load_time;
 	uint8_t phaser_bank_charge;
+#define FUEL_USE_FACTOR (1)
 	uint32_t fuel;
+	uint8_t rpm;
 	uint8_t throttle;
+	uint8_t temp;
 };
 
 struct starbase_data {

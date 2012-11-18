@@ -348,9 +348,10 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 }
 
 static int update_ship(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive,
-			uint32_t torpedoes, uint32_t energy, uint32_t shields,
+			uint32_t torpedoes, uint32_t power, uint32_t shields,
 			double gun_heading, double sci_heading, double sci_beam_width, int shiptype,
-			uint8_t tloading, uint8_t tloaded, uint8_t throttle)
+			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
+			fuel, uint8_t temp)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -362,7 +363,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 		update_generic_object(i, x, y, vx, vy, heading, alive); 
 	}
 	go[i].tsd.ship.torpedoes = torpedoes;
-	go[i].tsd.ship.energy = energy;
+	go[i].tsd.ship.power = power;
 	go[i].tsd.ship.shields = shields;
 	go[i].tsd.ship.gun_heading = gun_heading;
 	go[i].tsd.ship.sci_heading = sci_heading;
@@ -370,6 +371,9 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.torpedoes_loaded = tloaded;
 	go[i].tsd.ship.torpedoes_loading = tloading;
 	go[i].tsd.ship.throttle = throttle;
+	go[i].tsd.ship.rpm = rpm;
+	go[i].tsd.ship.fuel = fuel;
+	go[i].tsd.ship.temp = temp;
 	return 0;
 }
 
@@ -1301,13 +1305,13 @@ static int process_update_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
 	struct packed_buffer pb;
-	uint32_t id, alive, torpedoes, shields, energy;
-	uint32_t x, y, heading, gun_heading, sci_heading, sci_beam_width;
+	uint32_t id, alive, torpedoes, shields, power;
+	uint32_t x, y, heading, gun_heading, sci_heading, sci_beam_width, fuel;
 	int32_t vx, vy;
 	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int shiptype = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
-	uint8_t tloading, tloaded, throttle;
+	uint8_t tloading, tloaded, throttle, rpm, temp;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1323,7 +1327,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	vy = (int32_t) packed_buffer_extract_u32(&pb);
 	heading = packed_buffer_extract_u32(&pb);
 	torpedoes = packed_buffer_extract_u32(&pb);
-	energy = packed_buffer_extract_u32(&pb);
+	power = packed_buffer_extract_u32(&pb);
 	shields = packed_buffer_extract_u32(&pb);
 	gun_heading = packed_buffer_extract_u32(&pb);
 	sci_heading = packed_buffer_extract_u32(&pb);
@@ -1332,6 +1336,9 @@ static int process_update_ship_packet(uint16_t opcode)
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	throttle = packed_buffer_extract_u8(&pb);
+	rpm = packed_buffer_extract_u8(&pb);
+	fuel = packed_buffer_extract_u32(&pb);
+	temp = packed_buffer_extract_u8(&pb);
 
 	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
 	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
@@ -1343,9 +1350,9 @@ static int process_update_ship_packet(uint16_t opcode)
 	dbeamwidth = (double) sci_beam_width * 360.0 / (double) UINT32_MAX;
 
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, energy, shields,
+	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power, shields,
 				dgheading, dsheading, dbeamwidth, shiptype,
-				tloading, tloaded, throttle);
+				tloading, tloaded, throttle, rpm, fuel, temp);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -2708,9 +2715,11 @@ static void slider_draw(GtkWidget *w, struct slider *s)
 #define SLIDER_POINTER_WIDTH 5
 
 	v = s->sample();
+	tx1 = (int) (s->value * s->length) + s->x;
 	gdk_gc_set_foreground(gc, &s->color);
 	current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->length, SLIDER_HEIGHT);
 	width = (int) ((v / (s->r2 - s->r1)) * s->length);
+	width = s->value * s->length;
 	current_draw_rectangle(w->window, gc, 1, s->x, s->y, width, SLIDER_HEIGHT);
 
 	tx1 = (int) (s->value * s->length) + s->x;
@@ -2860,7 +2869,7 @@ static void do_throttle(struct slider *s)
 
 	o = &go[my_ship_oid];
 
-	value = (uint8_t) (100.0 * slider_get_value(s));
+	value = (uint8_t) (255.0 * slider_get_value(s));
 	pb = packed_buffer_allocate(sizeof(struct request_throttle_packet));
 	packed_buffer_append_u16(pb, OPCODE_REQUEST_THROTTLE);
 	packed_buffer_append_u32(pb, o->id);
@@ -2879,17 +2888,26 @@ static double sample_shields(void)
 
 static double sample_rpm(void)
 {
-	return 50.0;
+	int my_ship_oid;
+
+	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	return (100 * go[my_ship_oid].tsd.ship.rpm) / UINT8_MAX;
 }
 
-static double sample_energy(void)
+static double sample_power(void)
 {
-	return 70.0;
+	int my_ship_oid;
+
+	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	return (100.0 * go[my_ship_oid].tsd.ship.power) / UINT32_MAX;
 }
 
 static double sample_temp(void)
 {
-	return 88.0;
+	int my_ship_oid;
+
+	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	return (100 * go[my_ship_oid].tsd.ship.temp) / UINT8_MAX;
 }
 
 static double sample_throttle(void)
@@ -2905,7 +2923,7 @@ static double sample_fuel(void)
 	int my_ship_oid;
 
 	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (double) go[my_ship_oid].tsd.ship.fuel;
+	return (100.0 * go[my_ship_oid].tsd.ship.fuel) / UINT32_MAX;
 }
 
 static double sample_phaserbanks(void)
@@ -2940,7 +2958,7 @@ static double sample_sensors(void)
 
 struct enginerring_ui {
 	struct gauge fuel_gauge;
-	struct gauge energy_gauge;
+	struct gauge power_gauge;
 	struct gauge rpm_gauge;
 	struct gauge temp_gauge;
 	struct slider shield_slider;
@@ -2968,9 +2986,9 @@ static void show_engineering(GtkWidget *w)
 		gauge_init(&eng_ui.fuel_gauge, 250, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 				10, "Fuel", sample_fuel);
-		gauge_init(&eng_ui.energy_gauge, 400, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+		gauge_init(&eng_ui.power_gauge, 400, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
-				10, "Energy", sample_energy);
+				10, "Power", sample_power);
 		gauge_init(&eng_ui.temp_gauge, 550, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 				10, "Temp", sample_temp);
@@ -3002,7 +3020,7 @@ static void show_engineering(GtkWidget *w)
 	}
 	gauge_draw(w, &eng_ui.fuel_gauge);
 	gauge_draw(w, &eng_ui.rpm_gauge);
-	gauge_draw(w, &eng_ui.energy_gauge);
+	gauge_draw(w, &eng_ui.power_gauge);
 	gauge_draw(w, &eng_ui.temp_gauge);
 }
 

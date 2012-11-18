@@ -62,13 +62,16 @@ struct update_ship_packet {
 	uint32_t alive;
 	uint32_t x, y, vx, vy, heading;
         uint32_t ntorpedoes;
-        uint32_t energy;
+        uint32_t power;
         uint32_t sheilds;
 	uint32_t gun_heading;
 	uint32_t sci_heading;
 	uint32_t sci_beam_width;
 	uint8_t torpedoes_loaded; /* lower nybble == no. loading, upper == no. loaded. */
 	uint8_t throttle;
+	uint8_t rpm;
+	uint32_t fuel;
+	uint8_t temp;
 };
 
 struct ship_sdata_packet {

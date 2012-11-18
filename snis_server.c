@@ -44,6 +44,7 @@
 #include "sounds.h"
 #include "names.h"
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
 struct game_client {
@@ -293,8 +294,35 @@ static void damp_yaw_velocity(double *yv, double damp_factor)
 		*yv *= damp_factor;
 }
 
+static double rpmx[] = {
+	 -1.0, 0.0,
+		255.0 / 5.0,
+		2.0 * 255.0 / 5.0,
+		3.0 * 255.0 / 5.0,
+		4.0 * 255.0 / 5.0,
+		256.0 };
+
+static double powery[] =  {
+	0.0, 0.0, 
+		0.33 * (double) UINT32_MAX, 
+		0.6 * (double) UINT32_MAX, 
+		0.8 * (double) UINT32_MAX,  
+		0.95 * (double) UINT32_MAX,  
+		0.8 * (double) UINT32_MAX,  } ;
+
+static double tempy[] = {
+	0.0, 0.0,
+		0.3 * (double) UINT8_MAX,
+		0.5 * (double) UINT8_MAX,
+		0.55 * (double) UINT8_MAX,
+		0.65 * (double) UINT8_MAX,
+		1.0 * (double) UINT8_MAX,
+	};
+
 static void player_move(struct snis_entity *o)
 {
+	int desired_rpm, desired_temp, diff;
+
 	o->vy = o->tsd.ship.velocity * cos(o->heading);
 	o->vx = o->tsd.ship.velocity * -sin(o->heading);
 	o->x += o->vx;
@@ -327,6 +355,48 @@ static void player_move(struct snis_entity *o)
 			o->tsd.ship.torpedoes_loaded++;
 			o->tsd.ship.torpedoes_loading = 0;
 		}
+	}
+	/* calculate fuel/power/rpm, etc. */
+	desired_rpm = o->tsd.ship.throttle;
+	if (o->tsd.ship.rpm < desired_rpm) {
+		diff = desired_rpm - o->tsd.ship.rpm;
+		if (diff > 10) {
+			diff = 10;
+		} else {
+			diff = diff / 2;
+			if (diff <= 0)
+				diff = 1;
+		}
+		o->tsd.ship.rpm += diff;
+	} else {
+		if (o->tsd.ship.rpm > desired_rpm) {
+			diff = o->tsd.ship.rpm - desired_rpm;
+			if (diff > 10) {
+				diff = 10;
+			} else {
+				diff = diff / 2;
+				if (diff <= 0)
+					diff = 1;
+			}
+			o->tsd.ship.rpm -= diff;
+		}
+	}
+	o->tsd.ship.fuel -= (int) (o->tsd.ship.rpm * FUEL_USE_FACTOR);
+	o->tsd.ship.power = table_interp((double) o->tsd.ship.rpm,
+			rpmx, powery, ARRAY_SIZE(rpmx));
+	desired_temp = (uint8_t) table_interp((double) o->tsd.ship.rpm,
+			rpmx, tempy, ARRAY_SIZE(rpmx));
+	desired_rpm = o->tsd.ship.throttle;
+	if (snis_randn(100) < 50) { /* adjust temp slowly, stochastically */
+		diff = 0;
+		if (o->tsd.ship.temp < desired_temp) {
+			diff = 1;
+		} else {
+			if (o->tsd.ship.temp > desired_temp) {
+				diff = -1;
+			}
+		}
+		o->tsd.ship.temp += diff;
 	}
 }
 
@@ -383,7 +453,7 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 	go[i].move = player_move;
 	go[i].tsd.ship.torpedoes = 1000;
 	go[i].tsd.ship.shields = 100.0;
-	go[i].tsd.ship.energy = 100.0;
+	go[i].tsd.ship.power = 100.0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
 	go[i].tsd.ship.gun_yaw_velocity = 0.0;
 	go[i].tsd.ship.gun_heading = 0.0;
@@ -391,6 +461,10 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 	go[i].tsd.ship.desired_velocity = 0.0;
 	go[i].tsd.ship.desired_heading = 0.0;
 	go[i].tsd.ship.sci_beam_width = MAX_SCI_BW_YAW_VELOCITY;
+	go[i].tsd.ship.fuel = UINT32_MAX;
+	go[i].tsd.ship.rpm = 0;
+	go[i].tsd.ship.temp = 0;
+	go[i].tsd.ship.power = 0;
 	return i;
 }
 
@@ -404,7 +478,7 @@ static int add_ship(double x, double y, double vx, double vy, double heading)
 	go[i].move = ship_move;
 	go[i].tsd.ship.torpedoes = 0;
 	go[i].tsd.ship.shields = 100.0;
-	go[i].tsd.ship.energy = 100.0;
+	go[i].tsd.ship.power = 100.0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
 	go[i].tsd.ship.desired_velocity = 0;
 	go[i].tsd.ship.desired_heading = 0;
@@ -1133,8 +1207,8 @@ static void send_update_ship_packet(struct game_client *c,
 	struct packed_buffer *pb;
 	uint32_t x, y;
 	int32_t vx, vy;
-	uint32_t heading, gun_heading, sci_heading, sci_beam_width;
-	uint8_t tloading, tloaded, throttle;
+	uint32_t heading, gun_heading, sci_heading, sci_beam_width, fuel;
+	uint8_t tloading, tloaded, throttle, rpm;
 
 	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
@@ -1145,6 +1219,8 @@ static void send_update_ship_packet(struct game_client *c,
 	sci_heading = (uint32_t) (o->tsd.ship.sci_heading / 360.0 * (double) UINT32_MAX);
 	sci_beam_width = (uint32_t) (o->tsd.ship.sci_beam_width / 360.0 * (double) UINT32_MAX);
 	throttle = o->tsd.ship.throttle;
+	rpm = o->tsd.ship.rpm;
+	fuel = o->tsd.ship.fuel;
 
 	tloading = (uint8_t) (o->tsd.ship.torpedoes_loading & 0x0f);
 	tloaded = (uint8_t) (o->tsd.ship.torpedoes_loaded & 0x0f);
@@ -1160,13 +1236,16 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u32(pb, (uint32_t) vy);
 	packed_buffer_append_u32(pb, heading);
 	packed_buffer_append_u32(pb, o->tsd.ship.torpedoes);
-	packed_buffer_append_u32(pb, o->tsd.ship.energy);
+	packed_buffer_append_u32(pb, o->tsd.ship.power);
 	packed_buffer_append_u32(pb, o->tsd.ship.shields);
 	packed_buffer_append_u32(pb, gun_heading);
 	packed_buffer_append_u32(pb, sci_heading);
 	packed_buffer_append_u32(pb, sci_beam_width);
 	packed_buffer_append_u8(pb, tloading);
 	packed_buffer_append_u8(pb, throttle);
+	packed_buffer_append_u8(pb, rpm);
+	packed_buffer_append_u32(pb, fuel);
+	packed_buffer_append_u8(pb, o->tsd.ship.temp);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
