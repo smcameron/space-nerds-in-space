@@ -2167,14 +2167,11 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
-	gdk_gc_set_foreground(gc, &huex[DARKRED]);
 	/* Draw all the stuff */
-	pthread_mutex_lock(&universe_mutex);
 
         tx = sin(o->tsd.ship.sci_heading) * range;
         ty = -cos(o->tsd.ship.sci_heading) * range;
 
-	gdk_gc_set_foreground(gc, &huex[YELLOW]);
 	angle2 = atan2(ty, tx);
 	A1 = angle2 - o->tsd.ship.sci_beam_width / 2.0;
 	A2 = angle2 + o->tsd.ship.sci_beam_width / 2.0;
@@ -2183,6 +2180,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	if (A2 > M_PI)
 		A2 -= 2.0 * M_PI;
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		int x, y;
 		double dist2, dist;

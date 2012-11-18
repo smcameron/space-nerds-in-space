@@ -320,3 +320,13 @@ void packed_buffer_queue_print(struct packed_buffer_queue *pbq)
 	}
 	printf("count = %d\n", count);
 }
+
+struct packed_buffer *packed_buffer_copy(struct packed_buffer *pb)
+{
+	struct packed_buffer *pbc;
+
+	pbc = packed_buffer_allocate(pb->buffer_size);
+	memcpy(pbc->buffer, pb->buffer, pb->buffer_size);
+	pbc->buffer_cursor = pb->buffer_cursor;
+	return pbc;
+}

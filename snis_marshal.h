@@ -50,6 +50,7 @@ GLOBAL void packed_buffer_queue_add(struct packed_buffer_queue *pbqh, struct pac
                 pthread_mutex_t *mutex);
 GLOBAL void packed_buffer_queue_init(struct packed_buffer_queue *pbq);
 GLOBAL void packed_buffer_queue_print(struct packed_buffer_queue *pbg);
+GLOBAL struct packed_buffer *packed_buffer_copy(struct packed_buffer *pb);
 
 #undef GLOBAL
 #endif

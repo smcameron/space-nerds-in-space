@@ -140,6 +140,25 @@ static void snis_queue_delete_object(uint32_t oid)
 	client_unlock();
 }
 
+static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packed_buffer *pb)
+{
+	int i;
+
+	client_lock();
+	for (i = 0; i < nclients; i++) {
+		struct packed_buffer *pbc;
+		struct game_client *c = &client[i];
+
+		if (c->shipid != shipid)
+			continue;
+
+		pbc = packed_buffer_copy(pb);
+		packed_buffer_queue_add(&c->client_write_queue, pbc, &c->client_write_queue_mutex);
+	}
+	packed_buffer_free(pb);
+	client_unlock();
+}
+
 static void queue_add_sound(struct game_client *c, uint16_t sound_number)
 {
 	struct packed_buffer *pb;
@@ -1045,7 +1064,7 @@ static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_pack
 	packed_buffer_append_u32(pb, sip->id); 
 	packed_buffer_append_u8(pb, sip->subclass); 
 	packed_buffer_append_raw(pb, sip->name, sizeof(sip->name));
-	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+	send_packet_to_all_clients_on_a_bridge(c->shipid, pb);
 }
 	
 static void send_update_ship_packet(struct game_client *c,
