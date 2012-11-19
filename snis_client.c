@@ -138,8 +138,9 @@ int displaymode = DISPLAYMODE_LOBBYSCREEN;
 #define MAGENTA 8
 #define DARKGREEN 9
 #define DARKRED 10
+#define AMBER 11 
 
-#define NCOLORS 11              /* number of "cardinal" colors */
+#define NCOLORS 12              /* number of "cardinal" colors */
 #define NSPARKCOLORS 25         /* 25 shades from yellow to red for the sparks */
 #define NRAINBOWSTEPS (16)
 #define NRAINBOWCOLORS (NRAINBOWSTEPS*3)
@@ -3043,33 +3044,33 @@ static void show_engineering(GtkWidget *w)
 		int y = 220;
 		int yinc = 40; 
 		gauge_init(&eng_ui.rpm_gauge, 100, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
-				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 				10, "RPM", sample_rpm);
 		gauge_init(&eng_ui.fuel_gauge, 250, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
-				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 				10, "Fuel", sample_fuel);
 		gauge_init(&eng_ui.power_gauge, 400, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
-				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 				10, "Power", sample_power);
 		gauge_init(&eng_ui.temp_gauge, 550, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
-				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 				10, "Temp", sample_temp);
-		slider_init(&eng_ui.throttle_slider, 350, y + yinc, 200, &huex[YELLOW], "Throttle", "0", "100",
+		slider_init(&eng_ui.throttle_slider, 350, y + yinc, 200, &huex[AMBER], "Throttle", "0", "100",
 					0.0, 100.0, sample_throttle, do_throttle, DISPLAYMODE_ENGINEERING);
 
-		slider_init(&eng_ui.shield_slider, 20, y += yinc, 150, &huex[WHITE], "Shields", "0", "100",
+		slider_init(&eng_ui.shield_slider, 20, y += yinc, 150, &huex[AMBER], "Shields", "0", "100",
 					0.0, 100.0, sample_shields, do_shields_pwr, DISPLAYMODE_ENGINEERING);
-		slider_init(&eng_ui.phaserbanks_slider, 20, y += yinc, 150, &huex[WHITE], "Phaser Banks", "0", "100",
+		slider_init(&eng_ui.phaserbanks_slider, 20, y += yinc, 150, &huex[AMBER], "Phaser Banks", "0", "100",
 					0.0, 100.0, sample_phaserbanks, do_phaserbanks_pwr, DISPLAYMODE_ENGINEERING);
-		slider_init(&eng_ui.comm_slider, 20, y += yinc, 150, &huex[WHITE], "Communications", "0", "100",
+		slider_init(&eng_ui.comm_slider, 20, y += yinc, 150, &huex[AMBER], "Communications", "0", "100",
 					0.0, 100.0, sample_comms, do_comms_pwr, DISPLAYMODE_ENGINEERING);
-		slider_init(&eng_ui.sensors_slider, 20, y += yinc, 150, &huex[WHITE], "Sensors", "0", "100",
+		slider_init(&eng_ui.sensors_slider, 20, y += yinc, 150, &huex[AMBER], "Sensors", "0", "100",
 					0.0, 100.0, sample_sensors, do_sensors_pwr, DISPLAYMODE_ENGINEERING);
-		slider_init(&eng_ui.impulse_slider, 20, y += yinc, 150, &huex[WHITE], "Impulse Drive", "0", "100",
+		slider_init(&eng_ui.impulse_slider, 20, y += yinc, 150, &huex[AMBER], "Impulse Drive", "0", "100",
 					0.0, 100.0, sample_impulse, do_impulse_pwr, DISPLAYMODE_ENGINEERING);
-		slider_init(&eng_ui.warp_slider, 20, y += yinc, 150, &huex[WHITE], "Warp Drive", "0", "100",
+		slider_init(&eng_ui.warp_slider, 20, y += yinc, 150, &huex[AMBER], "Warp Drive", "0", "100",
 					0.0, 100.0, sample_warp, do_warp_pwr, DISPLAYMODE_ENGINEERING);
-		slider_init(&eng_ui.maneuvering_slider, 20, y += yinc, 150, &huex[WHITE], "Maneuvering", "0", "100",
+		slider_init(&eng_ui.maneuvering_slider, 20, y += yinc, 150, &huex[AMBER], "Maneuvering", "0", "100",
 					0.0, 100.0, sample_maneuvering, do_maneuvering_pwr, DISPLAYMODE_ENGINEERING);
 		add_slider(&eng_ui.shield_slider);
 		add_slider(&eng_ui.phaserbanks_slider);
@@ -3493,6 +3494,7 @@ int main(int argc, char *argv[])
 	gdk_color_parse("cyan", &huex[CYAN]);
 	gdk_color_parse("MAGENTA", &huex[MAGENTA]);
 	gdk_color_parse("darkred", &huex[DARKRED]);
+	gdk_color_parse("orange", &huex[AMBER]);
 
 	gtk_container_add (GTK_CONTAINER (window), vbox);
 	gtk_box_pack_start(GTK_BOX (vbox), main_da, TRUE /* expand */, TRUE /* fill */, 0);
