@@ -2034,6 +2034,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	double da;
 	int dr;
 	double tx, ty;
+	char buffer[50];
 
 	/* Compute radius of ship blip */
 	dr = (int) dist / (XUNIVERSE_DIMENSION / bw);
@@ -2044,6 +2045,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	if (dr < 5 && !o->sdata.science_data_known && !o->sdata.science_data_requested)
 		request_ship_sdata(o);
 
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
 	for (i = 0; i < 10; i++) {
 		da = snis_randn(360) * M_PI / 180.0;
 #if 1
@@ -2055,9 +2057,27 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 #endif
 		gdk_draw_point(w->window, gc, tx * xscale_screen, ty * yscale_screen);
 	}
-	if (o->sdata.science_data_known)
-		abs_xy_draw_string(w, o->sdata.name, NANO_FONT, x + 8, y - 8);
-	
+	if (o->sdata.science_data_known) {
+		switch (o->type) {
+		case OBJTYPE_SHIP2:
+			gdk_gc_set_foreground(gc, &huex[GREEN]);
+			sprintf(buffer, "%s %s\n", o->sdata.name, shipclass[o->sdata.subclass]); 
+			break;
+		case OBJTYPE_STARBASE:
+			gdk_gc_set_foreground(gc, &huex[WHITE]);
+			sprintf(buffer, "%s %s\n", "Starbase",  o->sdata.name); 
+			break;
+		case OBJTYPE_PLANET:
+			gdk_gc_set_foreground(gc, &huex[BLUE]);
+			sprintf(buffer, "%s %s\n", "Asteroid",  o->sdata.name); 
+			break;
+		default:
+			gdk_gc_set_foreground(gc, &huex[GREEN]);
+			sprintf(buffer, "%s %s\n", "Unknown", o->sdata.name); 
+			break;
+		}
+		abs_xy_draw_string(w, buffer, NANO_FONT, x + 8, y - 8);
+	}
 }
 
 static void snis_draw_science_spark(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, double dist)

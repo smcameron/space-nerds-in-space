@@ -55,6 +55,16 @@ struct power_dist {
 	uint8_t shields;
 };
 
+static char *shipclass[] = {
+	"Cruiser",
+	"Destroyer",
+	"Freighter",
+	"Tanker",
+	"Transport",
+	"Battlestar",
+	"Starship",
+};
+
 struct ship_data {
 	uint32_t torpedoes;
 #define TORPEDO_LIFETIME 20
@@ -99,6 +109,7 @@ struct ship_data {
 	uint8_t throttle;
 	uint8_t temp;
 	struct power_dist pwrdist;
+	uint8_t shiptype;
 };
 
 struct starbase_data {

@@ -496,6 +496,7 @@ static int add_ship(double x, double y, double vx, double vy, double heading)
 	go[i].tsd.ship.desired_velocity = 0;
 	go[i].tsd.ship.desired_heading = 0;
 	go[i].tsd.ship.velocity = 0;
+	go[i].tsd.ship.shiptype = snis_randn(ARRAY_SIZE(shipclass));
 	return i;
 }
 
@@ -512,6 +513,7 @@ static int add_starbase(double x, double y, double vx, double vy, double heading
 	if (i < 0)
 		return i;
 	go[i].move = starbase_move;
+	go[i].type = OBJTYPE_STARBASE;
 	return i;
 }
 
@@ -788,7 +790,10 @@ static int process_request_ship_sdata(struct game_client *c)
 	}
 	strcpy(p.name, go[i].sdata.name);
 	p.id = id;
-	p.subclass = 0;
+	if (go[i].type == OBJTYPE_SHIP2)
+		p.subclass = go[i].tsd.ship.shiptype;
+	else
+		p.subclass = 0;
 	pthread_mutex_unlock(&universe_mutex);
 	send_ship_sdata_packet(c, &p);
 	return 0;
