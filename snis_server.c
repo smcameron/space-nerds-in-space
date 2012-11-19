@@ -320,6 +320,16 @@ static double tempy[] = {
 		1.0 * (double) UINT8_MAX,
 	};
 
+static double powertempy[] = {
+	0.0, 0.0, 
+		0.4,
+		0.5,
+		0.7,
+		0.8,
+		1.0,
+};
+		
+
 static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
@@ -399,6 +409,8 @@ static void player_move(struct snis_entity *o)
 		}
 		o->tsd.ship.temp += diff;
 	}
+	o->tsd.ship.power *= table_interp((double) o->tsd.ship.temp,
+			rpmx, powertempy, ARRAY_SIZE(powertempy));
 }
 
 static void starbase_move(struct snis_entity *o)
