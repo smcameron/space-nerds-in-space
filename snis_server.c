@@ -478,6 +478,7 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 	go[i].tsd.ship.rpm = 0;
 	go[i].tsd.ship.temp = 0;
 	go[i].tsd.ship.power = 0;
+	go[i].tsd.ship.scizoom = 128;
 	return i;
 }
 
@@ -829,6 +830,10 @@ static int process_request_bytevalue_pwr(struct game_client *c, int offset)
 	return 0;
 }
 
+static int process_request_scizoom(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.scizoom)); 
+}
 
 static int process_request_throttle(struct game_client *c)
 {
@@ -1007,6 +1012,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_SCIYAW:
 			rc = process_request_yaw(c, do_sci_yaw);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_SCIZOOM:
+			rc = process_request_scizoom(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -1343,6 +1353,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u32(pb, fuel);
 	packed_buffer_append_u8(pb, o->tsd.ship.temp);
 	packed_buffer_append_raw(pb, (char *) &o->tsd.ship.pwrdist, sizeof(o->tsd.ship.pwrdist));
+	packed_buffer_append_u8(pb, o->tsd.ship.scizoom);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

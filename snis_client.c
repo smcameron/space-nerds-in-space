@@ -352,7 +352,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 			uint32_t torpedoes, uint32_t power, 
 			double gun_heading, double sci_heading, double sci_beam_width, int shiptype,
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
-			fuel, uint8_t temp, struct power_dist *pd)
+			fuel, uint8_t temp, struct power_dist *pd, uint8_t scizoom)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -375,6 +375,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.fuel = fuel;
 	go[i].tsd.ship.temp = temp;
 	go[i].tsd.ship.pwrdist = *pd;
+	go[i].tsd.ship.scizoom = scizoom;
 	return 0;
 }
 
@@ -1312,7 +1313,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int shiptype = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
-	uint8_t tloading, tloaded, throttle, rpm, temp;
+	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom;
 	struct power_dist pd;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1341,6 +1342,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	fuel = packed_buffer_extract_u32(&pb);
 	temp = packed_buffer_extract_u8(&pb);
 	packed_buffer_extract_raw(&pb, (char *) &pd, sizeof(pd));
+	scizoom = packed_buffer_extract_u8(&pb);
 
 	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
 	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
@@ -1354,7 +1356,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power,
 				dgheading, dsheading, dbeamwidth, shiptype,
-				tloading, tloaded, throttle, rpm, fuel, temp, &pd);
+				tloading, tloaded, throttle, rpm, fuel, temp, &pd, scizoom);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -2027,7 +2029,7 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 }
 
 static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
-					gint x, gint y, double dist, int bw)
+					gint x, gint y, double dist, int bw, double range)
 {
 	int i;
 
@@ -2038,6 +2040,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 
 	/* Compute radius of ship blip */
 	dr = (int) dist / (XUNIVERSE_DIMENSION / bw);
+	dr = dr * MAX_SCIENCE_SCREEN_RADIUS / range;
 
 	/* if dr is small enough, and ship info is not known, nor recently requested,
 	 * then issue OPCODE REQUEST_SHIP_SDATA to server somehow.
@@ -2328,7 +2331,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		if (go[i].id == my_ship_id)
 			continue; /* skip drawing yourself. */
 		bw = o->tsd.ship.sci_beam_width * 180.0 / M_PI;
-		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw);
+		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, range);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -2921,6 +2924,11 @@ static void do_adjust_byte_value(struct slider *s,  uint16_t opcode)
 	wakeup_gameserver_writer();
 }
 
+static void do_scizoom(struct slider *s)
+{
+	do_adjust_byte_value(s, OPCODE_REQUEST_SCIZOOM);
+}
+	
 static void do_throttle(struct slider *s)
 {
 	do_adjust_byte_value(s, OPCODE_REQUEST_THROTTLE);
@@ -2998,7 +3006,15 @@ static double sample_throttle(void)
 	int my_ship_oid;
 
 	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (double) 100.0 * go[my_ship_oid].tsd.ship.throttle / 250.0;
+	return (double) 100.0 * go[my_ship_oid].tsd.ship.throttle / 255.0;
+}
+
+static double sample_scizoom(void)
+{
+	int my_ship_oid;
+
+	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	return (double) 100.0 * go[my_ship_oid].tsd.ship.scizoom / 255.0;
 }
 
 static double sample_fuel(void)
@@ -3143,11 +3159,17 @@ static void show_engineering(GtkWidget *w)
 	gauge_draw(w, &eng_ui.temp_gauge);
 }
 
+struct science_ui {
+	struct slider scizoom;
+} sci_ui;
+ 
 static void show_science(GtkWidget *w)
 {
 	int rx, ry, rw, rh, cx, cy, r;
 	struct snis_entity *o;
 	char buf[80];
+	double zoom;
+	static int initialized = 0;
 
 	if (my_ship_id == UNKNOWN_ID)
 		return;
@@ -3156,6 +3178,12 @@ static void show_science(GtkWidget *w)
 	if (my_ship_oid == UNKNOWN_ID)
 		return;
 	o = &go[my_ship_oid];
+
+	if (!initialized) {
+		slider_init(&sci_ui.scizoom, 350, 50, 300, &huex[DARKGREEN], "Range", "0", "100",
+					0.0, 100.0, sample_scizoom, do_scizoom, DISPLAYMODE_SCIENCE);
+		add_slider(&sci_ui.scizoom);
+	}
 
 	show_common_screen(w, "Science");
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
@@ -3169,15 +3197,18 @@ static void show_science(GtkWidget *w)
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
-#define SCIENCE_SCREEN_RADIUS (XUNIVERSE_DIMENSION / 2.0)
+	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
+			(o->tsd.ship.scizoom / 255.0) +
+			MIN_SCIENCE_SCREEN_RADIUS;
 	gdk_gc_set_foreground(gc, &huex[DARKGREEN]);
-	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, SCIENCE_SCREEN_RADIUS);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, SCIENCE_SCREEN_RADIUS, 0);
+	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, zoom);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, zoom, o->tsd.ship.scizoom < 20);
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
 	snis_draw_science_reticule(w->window, gc, cx, cy, r,
 			o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width));
-	draw_all_the_science_guys(w, o, SCIENCE_SCREEN_RADIUS);
-	draw_all_the_science_sparks(w, o, SCIENCE_SCREEN_RADIUS);
+	draw_all_the_science_guys(w, o, zoom);
+	draw_all_the_science_sparks(w, o, zoom);
+	draw_sliders(w);
 }
 
 static void show_comms(GtkWidget *w)

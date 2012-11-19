@@ -54,6 +54,7 @@
 #define OPCODE_REQUEST_COMMS_PWR	128
 #define OPCODE_REQUEST_SENSORS_PWR	129
 #define OPCODE_REQUEST_PHASERBANKS_PWR	130
+#define OPCODE_REQUEST_SCIZOOM	131
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -86,6 +87,8 @@ struct update_ship_packet {
         uint8_t comm_slider;
         uint8_t phaserbanks_slider;
 	uint8_t shields_slider;
+/* end of struct power_dist */
+	uint8_t scizoom;
 };
 
 struct ship_sdata_packet {
