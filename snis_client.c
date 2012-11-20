@@ -31,6 +31,7 @@
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <gdk/gdkevents.h>
 #include <gdk/gdkkeysyms.h>
 #include <math.h>
 #include <errno.h>
@@ -2903,11 +2904,10 @@ static void buttons_button_press(int x, int y)
 /*
  * end button related functions/types
  */
-static void do_adjust_byte_value(struct slider *s,  uint16_t opcode)
+static void do_adjust_byte_value(uint8_t value,  uint16_t opcode)
 {
 	struct packed_buffer *pb;
 	struct snis_entity *o;
-	uint8_t value;
 
 	if (my_ship_oid == UNKNOWN_ID)
 		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
@@ -2915,7 +2915,6 @@ static void do_adjust_byte_value(struct slider *s,  uint16_t opcode)
 		return;
 	o = &go[my_ship_oid];
 
-	value = (uint8_t) (255.0 * slider_get_value(s));
 	pb = packed_buffer_allocate(sizeof(struct request_throttle_packet));
 	packed_buffer_append_u16(pb, opcode);
 	packed_buffer_append_u32(pb, o->id);
@@ -2924,49 +2923,55 @@ static void do_adjust_byte_value(struct slider *s,  uint16_t opcode)
 	wakeup_gameserver_writer();
 }
 
+static void do_adjust_slider_value(struct slider *s,  uint16_t opcode)
+{
+	uint8_t value = (uint8_t) (255.0 * slider_get_value(s));
+	do_adjust_byte_value(value, opcode);
+}
+
 static void do_scizoom(struct slider *s)
 {
-	do_adjust_byte_value(s, OPCODE_REQUEST_SCIZOOM);
+	do_adjust_slider_value(s, OPCODE_REQUEST_SCIZOOM);
 }
 	
 static void do_throttle(struct slider *s)
 {
-	do_adjust_byte_value(s, OPCODE_REQUEST_THROTTLE);
+	do_adjust_slider_value(s, OPCODE_REQUEST_THROTTLE);
 }
 	
 static void do_maneuvering_pwr(struct slider *s)
 {
-	do_adjust_byte_value(s, OPCODE_REQUEST_MANEUVERING_PWR);
+	do_adjust_slider_value(s, OPCODE_REQUEST_MANEUVERING_PWR);
 }
 	
 static void do_shields_pwr(struct slider *s)
 {
-	do_adjust_byte_value(s, OPCODE_REQUEST_SHIELDS_PWR);
+	do_adjust_slider_value(s, OPCODE_REQUEST_SHIELDS_PWR);
 }
 	
 static void do_impulse_pwr(struct slider *s)
 {
-	do_adjust_byte_value(s, OPCODE_REQUEST_IMPULSE_PWR);
+	do_adjust_slider_value(s, OPCODE_REQUEST_IMPULSE_PWR);
 }
 
 static void do_warp_pwr(struct slider *s)
 {
-	do_adjust_byte_value(s, OPCODE_REQUEST_WARP_PWR);
+	do_adjust_slider_value(s, OPCODE_REQUEST_WARP_PWR);
 }
 
 static void do_sensors_pwr(struct slider *s)
 {
-	do_adjust_byte_value(s, OPCODE_REQUEST_SENSORS_PWR);
+	do_adjust_slider_value(s, OPCODE_REQUEST_SENSORS_PWR);
 }
 	
 static void do_phaserbanks_pwr(struct slider *s)
 {
-	do_adjust_byte_value(s, OPCODE_REQUEST_PHASERBANKS_PWR);
+	do_adjust_slider_value(s, OPCODE_REQUEST_PHASERBANKS_PWR);
 }
 	
 static void do_comms_pwr(struct slider *s)
 {
-	do_adjust_byte_value(s, OPCODE_REQUEST_COMMS_PWR);
+	do_adjust_slider_value(s, OPCODE_REQUEST_COMMS_PWR);
 }
 	
 static double sample_shields(void)
@@ -3301,6 +3306,37 @@ static void make_science_forget_stuff(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
+{
+	struct _GdkEventScroll *e = (struct _GdkEventScroll *) event;
+	struct snis_entity *o;
+	int16_t newval;
+
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return 0;
+
+	o = &go[my_ship_oid];
+
+	switch (displaymode) {
+	case DISPLAYMODE_SCIENCE:
+		if (e->direction == GDK_SCROLL_DOWN)
+			newval = o->tsd.ship.scizoom - 30;
+		if (e->direction == GDK_SCROLL_UP)
+			newval = o->tsd.ship.scizoom + 30;
+		if (newval < 0)
+			newval = 0;
+		if (newval > 255)
+			newval = 255;
+		do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_SCIZOOM);
+		return 0;
+	default:
+		return 0;
+	}
+	return 0;
+}
+
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
         gdk_gc_set_foreground(gc, &huex[WHITE]);
@@ -3566,6 +3602,8 @@ int main(int argc, char *argv[])
 		G_CALLBACK (main_da_expose), NULL);
         g_signal_connect(G_OBJECT (main_da), "configure_event",
 		G_CALLBACK (main_da_configure), NULL);
+        g_signal_connect(G_OBJECT (main_da), "scroll_event",
+		G_CALLBACK (main_da_scroll), NULL);
 	gtk_widget_add_events(main_da, GDK_BUTTON_PRESS_MASK);
 	g_signal_connect(G_OBJECT (main_da), "button_press_event",
                       G_CALLBACK (main_da_button_press), NULL);
