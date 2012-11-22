@@ -1132,6 +1132,8 @@ static void do_torpedo(void)
 	wakeup_gameserver_writer();
 }
 
+static int control_key_pressed = 0;
+
 static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 {
 	enum keyaction ka;
@@ -1139,6 +1141,16 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
                 ka = keymap[event->keyval];
         else
                 ka = ffkeymap[event->keyval & 0x00ff];
+
+	if (event->keyval == GDK_Control_R ||
+		event->keyval == GDK_Control_L) {
+		control_key_pressed = 1;
+		return TRUE;
+	}
+
+#if 0
+	printf("event->keyval = 0x%08x\n", event->keyval);
+#endif
 
         switch (ka) {
         case keyfullscreen: {
@@ -1220,6 +1232,11 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 
 static gint key_release_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 {
+	if (event->keyval == GDK_Control_R ||
+		event->keyval == GDK_Control_L) {
+		control_key_pressed = 0;
+		return TRUE;
+	}
 	return FALSE;
 }
 
