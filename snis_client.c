@@ -2649,7 +2649,7 @@ static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
 }
 
 static void button_init(struct button *b, int x, int y, int width, int height, char *label,
-			GdkColor *color, int font, button_function bf, void *cookie);
+			GdkColor *color, int font, button_function bf, void *cookie, int displaymode);
 static void add_button(struct button *b);
 
 static double sample_phaserbanks(void);
@@ -2664,11 +2664,11 @@ static void show_weapons(GtkWidget *w)
 
 	if (!initialized) {
 		button_init(&weapons.fire_phaser, 550, 200, 200, 30, "FIRE PHASER", &huex[RED],
-				TINY_FONT, fire_phaser_button_pressed, NULL);
+				TINY_FONT, fire_phaser_button_pressed, NULL, DISPLAYMODE_WEAPONS);
 		button_init(&weapons.load_torpedo, 550, 250, 200, 30, "LOAD TORPEDO", &huex[GREEN],
-				TINY_FONT, load_torpedo_button_pressed, NULL);
+				TINY_FONT, load_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
 		button_init(&weapons.fire_torpedo, 550, 300, 200, 30, "FIRE TORPEDO", &huex[RED],
-				TINY_FONT, fire_torpedo_button_pressed, NULL);
+				TINY_FONT, fire_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
 		gauge_init(&weapons.phaser_bank_gauge, 650, 80, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 				10, "PHASER", sample_phaserbanks);
@@ -2852,7 +2852,7 @@ static void sliders_button_press(int x, int y)
 
 
 static void button_init(struct button *b, int x, int y, int width, int height, char *label,
-			GdkColor *color, int font, button_function bf, void *cookie)
+			GdkColor *color, int font, button_function bf, void *cookie, int displaymode)
 {
 	b->x = x;
 	b->y = y;
@@ -3151,7 +3151,7 @@ static void init_nav_ui(void)
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 				10, "WARP", sample_warpdrive);
 	button_init(&nav_ui.engage_warp_button, 550, 200, 200, 30, "ENGAGE WARP", &huex[AMBER],
-				TINY_FONT, engage_warp_button_pressed, NULL);
+				TINY_FONT, engage_warp_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
 	add_slider(&nav_ui.warp_slider);
 	add_button(&nav_ui.engage_warp_button);
 }
