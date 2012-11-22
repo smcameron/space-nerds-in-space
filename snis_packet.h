@@ -183,7 +183,7 @@ struct request_thrust_packet {
 };
 
 #define ROLE_MAIN 0
-#define ROLE_HELM 1
+#define ROLE_NAVIGATION 1
 #define ROLE_WEAPONS 2
 #define ROLE_ENGINEERING 3
 #define ROLE_SCIENCE 4

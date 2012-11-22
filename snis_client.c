@@ -118,7 +118,7 @@ int real_screen_height;
 #define DISPLAYMODE_CONNECTED 4
 #define DISPLAYMODE_FINDSERVER 5
 #define DISPLAYMODE_MAINSCREEN 6
-#define DISPLAYMODE_HELM 7
+#define DISPLAYMODE_NAVIGATION 7
 #define DISPLAYMODE_WEAPONS 8
 #define DISPLAYMODE_ENGINEERING 9
 #define DISPLAYMODE_SCIENCE 10
@@ -1020,7 +1020,7 @@ static void request_ship_sdata(struct snis_entity *o)
 	wakeup_gameserver_writer();
 }
 
-static void helm_dirkey(int h, int v)
+static void navigation_dirkey(int h, int v)
 {
 	struct packed_buffer *pb;
 	uint8_t yaw, thrust;
@@ -1091,8 +1091,8 @@ static void science_dirkey(int h, int v)
 static void do_dirkey(int h, int v)
 {
 	switch (displaymode) {
-		case DISPLAYMODE_HELM:
-			helm_dirkey(h, v); 
+		case DISPLAYMODE_NAVIGATION:
+			navigation_dirkey(h, v); 
 			break;
 		case DISPLAYMODE_WEAPONS:
 			weapons_dirkey(h, v); 
@@ -1175,7 +1175,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	case keyf2:
 		if (displaymode < DISPLAYMODE_CONNECTED)
 			break;
-		displaymode = DISPLAYMODE_HELM;
+		displaymode = DISPLAYMODE_NAVIGATION;
 		break;
 	case keyf3:
 		if (displaymode < DISPLAYMODE_CONNECTED)
@@ -3376,7 +3376,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	case DISPLAYMODE_MAINSCREEN:
 		show_mainscreen(w);
 		break;
-	case DISPLAYMODE_HELM:
+	case DISPLAYMODE_NAVIGATION:
 		show_navigation(w);
 		break;
 	case DISPLAYMODE_WEAPONS:
