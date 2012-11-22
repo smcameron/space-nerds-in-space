@@ -1,10 +1,7 @@
 Too much to list, but here's a list anyway:
 
 * Sound
-    Make sound work at all
-    Sound effects
-    Designated sound server for ship-wide sounds
-    and also have per-station sounds
+    More and better sound effects
     Music
 
 * Engineering screen
@@ -33,6 +30,4 @@ Too much to list, but here's a list anyway:
 
 * write some kind of guide to hacking, to make it easier for others to
   contribute to this codebase.
-
-* Steve, don't forget to write man pages, if you forget, you're an asshole.
 
