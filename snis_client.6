@@ -1,0 +1,54 @@
+.TH SPACE-NERDS-IN-SPACE "6" "Nov 2012" "snis_client" "Games"
+.SH NAME
+snis_client \- Multi player cooperative star ship bridge simulator (client) 
+.SH SYNOPSIS
+.B snis_client serverhost shipname password [ OPTIONS ]
+.SH DESCRIPTION
+.\" Add any additional description here
+.warn 511
+.PP
+snis_client is the client process for the game Space Nerds In Space, which is
+a multiplayer starship bridge simulator.  The server process simulates the 
+game universe and processes input data from client processes and sends outputs
+to client processes.  The serverhost parameter is the hostname of the host
+running the ssgl_server game lobby process.  The shipname parameter is the name
+of the ship in the game universe to which the client should connect (if the ship
+does not exist, one is created).  The password is the password for the ship in the
+game (this is a insecure "password", transmitted in plaintext).  The first client
+on a ship establishes a ship name and password, subsequent clients join the ship.
+(Mistyping either the shipname or the password will result in a new ship being
+created with the wrong name/password.)
+.SH Options:
+.TP
+\fB\--main\fR
+Request this client process support the MAIN SCREEN role.
+\fB\--navigation\fR
+Request this client process support the NAVIGATION role.
+\fB\--science\fR
+Request this client process support the SCIENCE role.
+\fB\--weapons\fR
+Request this client process support the WEAPONS role.
+\fB\--debug\fR
+Request this client process support the DEBUG role.
+\fB\--soundserver\fR
+Request this client process support the SOUNDSERVER role.
+\fB\--comms\fR
+Request this client process support the COMMS (communication) role.
+\fB\--version\fR
+Print the program's version number and exit.
+.SH FILES
+.PP
+/dev/input/js0, the joystick device node.
+.PP
+/dev/input/event5, the rumble effect device. 
+.PP
+/usr/share/snis/sounds/*.ogg contain the audio data used by the game.
+.PP
+.SH SEE ALSO
+snis_server(6), ssgl_server(6)
+.SH GOOD LUCK
+.PP
+You'll need it.
+.SH AUTHOR
+Written by Stephen M. Cameron 
+.br
