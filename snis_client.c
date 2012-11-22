@@ -3044,7 +3044,7 @@ static double sample_warpdrive(void)
 	int my_ship_oid;
 
 	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (double) 100.0 * go[my_ship_oid].tsd.ship.warpdrive / 255.0;
+	return (double) 10.0 * go[my_ship_oid].tsd.ship.warpdrive / 255.0;
 }
 
 static double sample_scizoom(void)
@@ -3147,7 +3147,7 @@ static void init_nav_ui(void)
 	slider_init(&nav_ui.warp_slider, 520, SCREEN_HEIGHT - 40, 200, &huex[AMBER], "Warp Drive",
 				"0", "100", 0.0, 100.0, sample_reqwarpdrive,
 				do_warpdrive, DISPLAYMODE_NAVIGATION);
-	gauge_init(&nav_ui.warp_gauge, 650, 440, 100, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	gauge_init(&nav_ui.warp_gauge, 650, 440, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 				10, "WARP", sample_warpdrive);
 	button_init(&nav_ui.engage_warp_button, 550, 200, 200, 30, "ENGAGE WARP", &huex[AMBER],

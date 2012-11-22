@@ -881,10 +881,22 @@ static int process_engage_warp(struct game_client *c)
 		printf("i != ship id\n");
 	o = &go[i];
 	wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XUNIVERSE_DIMENSION / 2.0);
-	nx = o->x + wfactor * cos(o->heading);
-	ny = o->x + wfactor * -sin(o->heading);
+	printf("o->heading = %g\n", 180.0 * o->heading / M_PI);
+	nx = o->x + wfactor * sin(o->heading);
+	ny = o->y + wfactor * -cos(o->heading);
+
+	if (nx < 0)
+		nx += XUNIVERSE_DIMENSION;
+	if (nx > XUNIVERSE_DIMENSION)
+		nx -= XUNIVERSE_DIMENSION;
+	if (ny < 0)
+		ny += YUNIVERSE_DIMENSION;
+	if (ny > YUNIVERSE_DIMENSION)
+		ny -= YUNIVERSE_DIMENSION;
 	o->x = nx;
 	o->y = ny;
+	pthread_mutex_unlock(&universe_mutex);
+	printf("engage warp, nx = %g, ny = %g\n", nx, ny);
 	return 0;
 }
 
