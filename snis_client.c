@@ -940,7 +940,7 @@ enum keyaction { keynone, keydown, keyup, keyleft, keyright,
 		key7, key8, keysuicide, keyfullscreen, keythrust, 
 		keysoundeffects, keymusic, keyquit, keytogglemissilealarm,
 		keypausehelp, keyreverse, keyf1, keyf2, keyf3, keyf4, keyf5,
-		keyf6, keyf7
+		keyf6, keyf7, keyonscreen
 };
 
 enum keyaction keymap[256];
@@ -997,6 +997,8 @@ void init_keymap()
 	keymap[GDK_7] = key7;
 	keymap[GDK_8] = key8;
 	keymap[GDK_9] = keysuicide;
+	keymap[GDK_O] = keyonscreen;
+	keymap[GDK_o] = keyonscreen;
 
 	ffkeymap[GDK_F1 & 0x00ff] = keyf1;
 	ffkeymap[GDK_F2 & 0x00ff] = keyf2;
@@ -1089,6 +1091,17 @@ static void science_dirkey(int h, int v)
 		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 		wakeup_gameserver_writer();
 	}
+}
+
+static void do_onscreen(void)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct role_onscreen_packet));
+	packed_buffer_append_u16(pb, OPCODE_ROLE_ONSCREEN);
+	packed_buffer_append_u8(pb, (uint8_t) displaymode & 0xff);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
 }
 
 static void do_dirkey(int h, int v)
@@ -1223,6 +1236,10 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			break;
 		if (role & ROLE_DEBUG)
 			displaymode = DISPLAYMODE_DEBUG;
+		break;
+	case keyonscreen:
+		if (control_key_pressed)
+			do_onscreen();
 		break;
 	default:
 		break;
@@ -1642,6 +1659,39 @@ static int process_ship_sdata_packet(void)
 	return 0;
 }
 
+static int process_role_onscreen_packet(void)
+{
+	char buffer[sizeof(struct role_onscreen_packet)];
+	struct packed_buffer pb;
+	uint8_t new_displaymode;
+	int rc;
+
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct role_onscreen_packet) - sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	new_displaymode = packed_buffer_extract_u8(&pb);
+
+	if (displaymode == new_displaymode) {
+		displaymode = DISPLAYMODE_MAINSCREEN;
+		return 0;
+	}
+	switch (new_displaymode) {
+	case DISPLAYMODE_MAINSCREEN:
+	case DISPLAYMODE_NAVIGATION:
+	case DISPLAYMODE_WEAPONS:
+	case DISPLAYMODE_ENGINEERING:
+	case DISPLAYMODE_SCIENCE:
+	case DISPLAYMODE_COMMS:
+	case DISPLAYMODE_DEBUG:
+		displaymode = new_displaymode;
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+
 static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
@@ -1814,6 +1864,12 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			rc = process_ship_sdata_packet();
 			if (rc != 0)
 				goto protocol_error; 
+			break;
+		case OPCODE_ROLE_ONSCREEN:
+			rc = process_role_onscreen_packet();
+			if (rc)
+				goto protocol_error;
+			break;
 		case OPCODE_UPDATE_PLAYER:
 			break;
 		case OPCODE_ACK_PLAYER:

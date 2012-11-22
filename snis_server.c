@@ -142,7 +142,7 @@ static void snis_queue_delete_object(uint32_t oid)
 	client_unlock();
 }
 
-static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packed_buffer *pb)
+static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packed_buffer *pb, uint32_t roles)
 {
 	int i;
 
@@ -152,6 +152,9 @@ static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packe
 		struct game_client *c = &client[i];
 
 		if (c->shipid != shipid)
+			continue;
+
+		if (!(c->role & roles))
 			continue;
 
 		pbc = packed_buffer_copy(pb);
@@ -805,6 +808,26 @@ static int process_request_ship_sdata(struct game_client *c)
 	return 0;
 }
 
+static int process_role_onscreen(struct game_client *c)
+{
+	unsigned char buffer[10];
+	struct packed_buffer pb, *pb2;
+	uint8_t new_displaymode;
+	int rc;
+
+	rc = snis_readsocket(c->socket, buffer, sizeof(struct role_onscreen_packet) - sizeof(uint16_t));
+	if (rc)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	new_displaymode = packed_buffer_extract_u8(&pb);
+
+	pb2 = packed_buffer_allocate(sizeof(struct role_onscreen_packet));
+	packed_buffer_append_u16(pb2, OPCODE_ROLE_ONSCREEN);
+	packed_buffer_append_u8(pb2, new_displaymode);
+	send_packet_to_all_clients_on_a_bridge(c->shipid, pb2, ROLE_MAIN);
+	return 0;
+}
+
 static int process_request_bytevalue_pwr(struct game_client *c, int offset)
 {
 	unsigned char buffer[10];
@@ -1102,6 +1125,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_ROLE_ONSCREEN:
+			rc = process_role_onscreen(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -1370,7 +1398,7 @@ static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_pack
 	packed_buffer_append_u32(pb, sip->id); 
 	packed_buffer_append_u8(pb, sip->subclass); 
 	packed_buffer_append_raw(pb, sip->name, sizeof(sip->name));
-	send_packet_to_all_clients_on_a_bridge(c->shipid, pb);
+	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_ALL);
 }
 	
 static void send_update_ship_packet(struct game_client *c,

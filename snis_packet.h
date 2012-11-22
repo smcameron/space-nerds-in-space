@@ -57,6 +57,7 @@
 #define OPCODE_REQUEST_SCIZOOM	131
 #define OPCODE_REQUEST_WARPDRIVE 132
 #define OPCODE_ENGAGE_WARP 133
+#define OPCODE_ROLE_ONSCREEN 134
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -238,6 +239,11 @@ struct pos_torpedo_packet {
 struct play_sound_packet {
 	uint16_t opcode;
 	uint16_t sound_number;
+};
+
+struct role_onscreen_packet {
+	uint16_t opcode;
+	uint8_t role;
 };
 
 #pragma pack()
