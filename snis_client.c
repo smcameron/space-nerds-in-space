@@ -353,7 +353,8 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 			uint32_t torpedoes, uint32_t power, 
 			double gun_heading, double sci_heading, double sci_beam_width, int shiptype,
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
-			fuel, uint8_t temp, struct power_dist *pd, uint8_t scizoom)
+			fuel, uint8_t temp, struct power_dist *pd, uint8_t scizoom, uint8_t warpdrive,
+			uint8_t requested_warpdrive)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -377,6 +378,8 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.temp = temp;
 	go[i].tsd.ship.pwrdist = *pd;
 	go[i].tsd.ship.scizoom = scizoom;
+	go[i].tsd.ship.requested_warpdrive = requested_warpdrive;
+	go[i].tsd.ship.warpdrive = warpdrive;
 	return 0;
 }
 
@@ -1314,7 +1317,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int shiptype = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
-	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom;
+	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, warpdrive, requested_warpdrive;
 	struct power_dist pd;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1344,6 +1347,8 @@ static int process_update_ship_packet(uint16_t opcode)
 	temp = packed_buffer_extract_u8(&pb);
 	packed_buffer_extract_raw(&pb, (char *) &pd, sizeof(pd));
 	scizoom = packed_buffer_extract_u8(&pb);
+	warpdrive = packed_buffer_extract_u8(&pb);
+	requested_warpdrive = packed_buffer_extract_u8(&pb);
 
 	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
 	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
@@ -1357,7 +1362,8 @@ static int process_update_ship_packet(uint16_t opcode)
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power,
 				dgheading, dsheading, dbeamwidth, shiptype,
-				tloading, tloaded, throttle, rpm, fuel, temp, &pd, scizoom);
+				tloading, tloaded, throttle, rpm, fuel, temp, &pd, scizoom,
+				warpdrive, requested_warpdrive);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -1451,6 +1457,7 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 	double a, ai;
 	int x1, y1, x2, y2;
 	double value;
+	char buffer[10];
 
 	gdk_gc_set_foreground(gc, &g->dial_color);
 	snis_draw_circle(w->window, gc, g->x, g->y, g->r); 
@@ -1475,6 +1482,9 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 	abs_xy_draw_string(w, g->title, TINY_FONT,
 			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)));
 	value = g->sample();
+	sprintf(buffer, "%4.2g", value);
+	abs_xy_draw_string(w, buffer, TINY_FONT,
+			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)) + 15);
 
 	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
 	x1 = g->r * sin(a);
@@ -2546,6 +2556,7 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 	}
 }
 
+#if 0
 static void show_navigation(GtkWidget *w)
 {
 	char buf[100];
@@ -2586,8 +2597,9 @@ static void show_navigation(GtkWidget *w)
 
 	draw_all_the_guys(w, o);
 	draw_all_the_sparks(w, o);
+	gauge_draw(w, &nav_ui.warp_gauge);
 }
-
+#endif
 static void load_torpedo_button_pressed()
 {
 	struct snis_entity *o;
@@ -2939,6 +2951,11 @@ static void do_throttle(struct slider *s)
 	do_adjust_slider_value(s, OPCODE_REQUEST_THROTTLE);
 }
 	
+static void do_warpdrive(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_WARPDRIVE);
+}
+
 static void do_maneuvering_pwr(struct slider *s)
 {
 	do_adjust_slider_value(s, OPCODE_REQUEST_MANEUVERING_PWR);
@@ -3012,6 +3029,22 @@ static double sample_throttle(void)
 
 	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
 	return (double) 100.0 * go[my_ship_oid].tsd.ship.throttle / 255.0;
+}
+
+static double sample_reqwarpdrive(void)
+{
+	int my_ship_oid;
+
+	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	return (double) 100.0 * go[my_ship_oid].tsd.ship.requested_warpdrive / 255.0;
+}
+
+static double sample_warpdrive(void)
+{
+	int my_ship_oid;
+
+	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	return (double) 100.0 * go[my_ship_oid].tsd.ship.warpdrive / 255.0;
 }
 
 static double sample_scizoom(void)
@@ -3096,6 +3129,75 @@ static double sample_sensors(void)
 	return 100.0 * o->tsd.ship.pwrdist.sensors / 255.0;
 }
 
+static struct navigation_ui {
+	struct slider warp_slider;
+	struct gauge warp_gauge;
+	struct button engage_warp_button;
+} nav_ui;
+
+static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
+{
+	do_adjust_byte_value(0,  OPCODE_ENGAGE_WARP);
+}
+
+static double sample_reqwarpdrive(void);
+static double sample_warpdrive(void);
+static void init_nav_ui(void)
+{
+	slider_init(&nav_ui.warp_slider, 520, SCREEN_HEIGHT - 40, 200, &huex[AMBER], "Warp Drive",
+				"0", "100", 0.0, 100.0, sample_reqwarpdrive,
+				do_warpdrive, DISPLAYMODE_NAVIGATION);
+	gauge_init(&nav_ui.warp_gauge, 650, 440, 100, 0.0, 100.0, -120.0 * M_PI / 180.0,
+				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
+				10, "WARP", sample_warpdrive);
+	button_init(&nav_ui.engage_warp_button, 550, 200, 200, 30, "ENGAGE WARP", &huex[AMBER],
+				TINY_FONT, engage_warp_button_pressed, NULL);
+	add_slider(&nav_ui.warp_slider);
+	add_button(&nav_ui.engage_warp_button);
+}
+
+static void show_navigation(GtkWidget *w)
+{
+	char buf[100];
+	struct snis_entity *o;
+	int rx, ry, rw, rh, cx, cy;
+	int r;
+
+	show_common_screen(w, "Navigation");
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
+
+	if (my_ship_id == UNKNOWN_ID)
+		return;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return;
+	o = &go[my_ship_oid];
+	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
+			360.0 * o->heading / (2.0 * 3.1415927));
+	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
+	sprintf(buf, "vx: %5.2lf", o->vx);
+	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
+	sprintf(buf, "vy: %5.2lf", o->vy);
+	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 4);
+
+	rx = 20;
+	ry = 70;
+	rw = 500;
+	rh = 500;
+	cx = rx + (rw / 2);
+	cy = ry + (rh / 2);
+	r = rh / 2;
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, NAVSCREEN_RADIUS, 1);
+	gdk_gc_set_foreground(gc, &huex[DARKRED]);
+	snis_draw_reticule(w->window, gc, cx, cy, r, o->heading);
+
+	draw_all_the_guys(w, o);
+	draw_all_the_sparks(w, o);
+	gauge_draw(w, &nav_ui.warp_gauge);
+}
 struct enginerring_ui {
 	struct gauge fuel_gauge;
 	struct gauge power_gauge;
@@ -3648,6 +3750,8 @@ int main(int argc, char *argv[])
 	gdk_threads_init();
 
 	gettimeofday(&start_time, NULL);
+
+	init_nav_ui();
 
 	gtk_main ();
         wwviaudio_cancel_all_sounds();

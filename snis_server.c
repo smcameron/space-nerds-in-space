@@ -411,6 +411,11 @@ static void player_move(struct snis_entity *o)
 	}
 	o->tsd.ship.power *= table_interp((double) o->tsd.ship.temp,
 			rpmx, powertempy, ARRAY_SIZE(powertempy));
+
+	if (o->tsd.ship.warpdrive < o->tsd.ship.requested_warpdrive)
+		o->tsd.ship.warpdrive++;
+	if (o->tsd.ship.warpdrive > o->tsd.ship.requested_warpdrive)
+		o->tsd.ship.warpdrive--;
 }
 
 static void starbase_move(struct snis_entity *o)
@@ -840,9 +845,47 @@ static int process_request_throttle(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.throttle)); 
 }
 
+static int process_request_warpdrive(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.requested_warpdrive)); 
+}
+
 static int process_request_maneuvering_pwr(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.maneuvering)); 
+}
+
+static int process_engage_warp(struct game_client *c)
+{
+	unsigned char buffer[10];
+	struct packed_buffer pb;
+	int i, rc;
+	uint32_t id;
+	uint8_t __attribute__((unused)) v;
+	double nx, ny, wfactor;
+	struct snis_entity *o;
+
+	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_throttle_packet) - sizeof(uint16_t));
+	if (rc)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	id = packed_buffer_extract_u32(&pb);
+	v = packed_buffer_extract_u8(&pb);
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->shipid)
+		printf("i != ship id\n");
+	o = &go[i];
+	wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XUNIVERSE_DIMENSION / 2.0);
+	nx = o->x + wfactor * cos(o->heading);
+	ny = o->x + wfactor * -sin(o->heading);
+	o->x = nx;
+	o->y = ny;
+	return 0;
 }
 
 static int process_request_warp_pwr(struct game_client *c)
@@ -967,6 +1010,16 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_THROTTLE:
 			rc = process_request_throttle(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_WARPDRIVE:
+			rc = process_request_warpdrive(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_ENGAGE_WARP:
+			rc = process_engage_warp(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -1354,6 +1407,8 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u8(pb, o->tsd.ship.temp);
 	packed_buffer_append_raw(pb, (char *) &o->tsd.ship.pwrdist, sizeof(o->tsd.ship.pwrdist));
 	packed_buffer_append_u8(pb, o->tsd.ship.scizoom);
+	packed_buffer_append_u8(pb, o->tsd.ship.warpdrive);
+	packed_buffer_append_u8(pb, o->tsd.ship.requested_warpdrive);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

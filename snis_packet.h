@@ -55,6 +55,8 @@
 #define OPCODE_REQUEST_SENSORS_PWR	129
 #define OPCODE_REQUEST_PHASERBANKS_PWR	130
 #define OPCODE_REQUEST_SCIZOOM	131
+#define OPCODE_REQUEST_WARPDRIVE 132
+#define OPCODE_ENGAGE_WARP 133
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -89,6 +91,8 @@ struct update_ship_packet {
 	uint8_t shields_slider;
 /* end of struct power_dist */
 	uint8_t scizoom;
+	uint8_t warpdrive;
+	uint8_t requested_warpdrive;
 };
 
 struct ship_sdata_packet {

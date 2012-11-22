@@ -113,6 +113,8 @@ struct ship_data {
 	struct power_dist pwrdist;
 	uint8_t shiptype;
 	uint8_t scizoom;
+	uint8_t warpdrive;
+	uint8_t requested_warpdrive;
 };
 
 struct starbase_data {
