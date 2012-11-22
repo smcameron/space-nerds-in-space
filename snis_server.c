@@ -174,13 +174,17 @@ static void queue_add_sound(struct game_client *c, uint16_t sound_number)
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
-static void snis_queue_add_sound(uint16_t sound_number, __attribute__((unused)) uint32_t roles)
+static void snis_queue_add_sound(uint16_t sound_number, uint32_t roles, uint32_t shipid)
 {
 	int i;
+	struct game_client *c;
+
 	client_lock();
-	for (i = 0; i < nclients; i++)
-		/* later, change code to check if client has the right role first... */
-		queue_add_sound(&client[i], sound_number);
+	for (i = 0; i < nclients; i++) {
+		c = &client[i];
+		if ((c->role & roles) && c->shipid == shipid)
+			queue_add_sound(c, sound_number);
+	}
 	client_unlock();
 }
 
@@ -233,7 +237,11 @@ static void torpedo_move(struct snis_entity *o)
 		go[i].alive = 0;
 		(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
 		snis_queue_delete_object(go[i].id);
-		snis_queue_add_sound(EXPLOSION_SOUND, 0xffff);
+		/* TODO -- these should be different sounds */
+		/* make sound for players that got hit */
+		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
+		/* make sound for players that did the hitting */
+		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 		snis_object_pool_free_object(pool, i);
 		continue;
 	}
@@ -1008,7 +1016,7 @@ static int process_request_torpedo(struct game_client *c)
 	pthread_mutex_lock(&universe_mutex);
 	add_torpedo(ship->x, ship->y, vx, vy, ship->tsd.ship.gun_heading, ship->id); 
 	ship->tsd.ship.torpedoes_loaded--;
-	snis_queue_add_sound(TORPEDO_LAUNCH_SOUND, 0xffff);
+	snis_queue_add_sound(TORPEDO_LAUNCH_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }

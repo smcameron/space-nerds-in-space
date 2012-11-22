@@ -194,6 +194,7 @@ struct request_thrust_packet {
 #define ROLE_SCIENCE		(1 << 4)
 #define ROLE_COMMS		(1 << 5)
 #define ROLE_DEBUG		(1 << 6)
+#define ROLE_SOUNDSERVER	(1 << 7)
 #define ROLE_ALL		(0xffffffff)
 
 struct add_player_packet {

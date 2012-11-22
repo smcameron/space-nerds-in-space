@@ -3785,6 +3785,8 @@ int main(int argc, char *argv[])
 			role |= ROLE_COMMS;
 		if (strcmp(argv[i], "--debug") == 0)
 			role |= ROLE_DEBUG;
+		if (strcmp(argv[i], "--soundserver") == 0)
+			role |= ROLE_SOUNDSERVER;
 	}
 	if (role == 0)
 		role = ROLE_ALL;
