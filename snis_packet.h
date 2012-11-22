@@ -186,25 +186,18 @@ struct request_thrust_packet {
 #define THRUST_BACKWARDS 2
 };
 
-#define ROLE_MAIN 0
-#define ROLE_NAVIGATION 1
-#define ROLE_WEAPONS 2
-#define ROLE_ENGINEERING 3
-#define ROLE_SCIENCE 4
-#define ROLE_COMMS 5
-
-
-#define SNIS_ALLOW_DEBUG_CONSOLE 1
-#ifdef SNIS_ALLOW_DEBUG_CONSOLE
-#define ROLE_DEBUG 6
-#define ROLE_MAXROLE 6
-#else
-#define ROLE_MAXROLE 5
-#endif
+#define ROLE_MAIN		(1 << 0)
+#define ROLE_NAVIGATION		(1 << 1)
+#define ROLE_WEAPONS		(1 << 2)
+#define ROLE_ENGINEERING	(1 << 3)
+#define ROLE_SCIENCE		(1 << 4)
+#define ROLE_COMMS		(1 << 5)
+#define ROLE_DEBUG		(1 << 6)
+#define ROLE_ALL		(0xffffffff)
 
 struct add_player_packet {
 	uint16_t opcode;
-	uint8_t role;
+	uint32_t role;
 	unsigned char shipname[20];
 	unsigned char password[20];
 };

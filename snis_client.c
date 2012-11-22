@@ -99,7 +99,7 @@ gint timer_tag;
 int fullscreen = 0;
 int in_the_process_of_quitting = 0;
 
-uint8_t role = 255;
+uint32_t role = ROLE_ALL;
 char *password;
 char *shipname;
 #define UNKNOWN_ID 0xffffffff
@@ -1173,37 +1173,44 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	case keyf1:
 		if (displaymode < DISPLAYMODE_CONNECTED)
 			break;
-		displaymode = DISPLAYMODE_MAINSCREEN;
+		if (role & ROLE_MAIN)
+			displaymode = DISPLAYMODE_MAINSCREEN;
 		break;
 	case keyf2:
 		if (displaymode < DISPLAYMODE_CONNECTED)
 			break;
-		displaymode = DISPLAYMODE_NAVIGATION;
+		if (role & ROLE_NAVIGATION)
+			displaymode = DISPLAYMODE_NAVIGATION;
 		break;
 	case keyf3:
 		if (displaymode < DISPLAYMODE_CONNECTED)
 			break;
-		displaymode = DISPLAYMODE_WEAPONS;
+		if (role & ROLE_WEAPONS)
+			displaymode = DISPLAYMODE_WEAPONS;
 		break;
 	case keyf4:
 		if (displaymode < DISPLAYMODE_CONNECTED)
 			break;
-		displaymode = DISPLAYMODE_ENGINEERING;
+		if (role & ROLE_ENGINEERING)
+			displaymode = DISPLAYMODE_ENGINEERING;
 		break;
 	case keyf5:
 		if (displaymode < DISPLAYMODE_CONNECTED)
 			break;
-		displaymode = DISPLAYMODE_SCIENCE;
+		if (role & ROLE_SCIENCE)
+			displaymode = DISPLAYMODE_SCIENCE;
 		break;
 	case keyf6:
 		if (displaymode < DISPLAYMODE_CONNECTED)
 			break;
-		displaymode = DISPLAYMODE_COMMS;
+		if (role & ROLE_COMMS)
+			displaymode = DISPLAYMODE_COMMS;
 		break;
 	case keyf7:
 		if (displaymode < DISPLAYMODE_CONNECTED)
 			break;
-		displaymode = DISPLAYMODE_DEBUG;
+		if (role & ROLE_DEBUG)
+			displaymode = DISPLAYMODE_DEBUG;
 		break;
 	default:
 		break;
@@ -1889,6 +1896,36 @@ static void *gameserver_writer(__attribute__((unused)) void *arg)
 	return NULL;
 }
 
+int role_to_displaymode(uint32_t role)
+{
+	int displaymode, j;
+
+	displaymode = DISPLAYMODE_MAINSCREEN;
+	for (j = 0; j < 32; j++) {
+		if ((1 << j) & role) {
+			switch ((1 << j)) {
+			case ROLE_MAIN:
+				return DISPLAYMODE_MAINSCREEN;
+			case ROLE_NAVIGATION:
+				return DISPLAYMODE_NAVIGATION;
+			case ROLE_WEAPONS:
+				return DISPLAYMODE_WEAPONS;
+			case ROLE_ENGINEERING:
+				return DISPLAYMODE_ENGINEERING;
+			case ROLE_SCIENCE:
+				return DISPLAYMODE_SCIENCE;
+			case ROLE_COMMS:
+				return DISPLAYMODE_COMMS;
+			case ROLE_DEBUG:
+				return DISPLAYMODE_DEBUG;
+			default:
+				break;
+			}
+		}
+	}
+	return displaymode;
+}
+
 static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 {
 	int rc;
@@ -1947,14 +1984,14 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 
 	displaymode = DISPLAYMODE_CONNECTED;
 	done_with_lobby = 1;
-	displaymode = DISPLAYMODE_MAINSCREEN;
+	displaymode = role_to_displaymode(role);
 
 	/* Should probably submit this through the packed buffer queue...
 	 * but, this works.
 	 */
 	memset(&app, 0, sizeof(app));
 	app.opcode = htons(OPCODE_UPDATE_PLAYER);
-	app.role = role;
+	app.role = htonl(role);
 	strncpy((char *) app.shipname, shipname, 19);
 	strncpy((char *) app.password, password, 19);
 
@@ -3443,8 +3480,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
         gdk_gc_set_foreground(gc, &huex[WHITE]);
 	
-	role = ROLE_MAIN;
-
 #if 0	
 	for (i = 0; i <= highest_object_number;i++) {
 		if (!game_state.go[i].alive)
@@ -3659,6 +3694,28 @@ int main(int argc, char *argv[])
 	lobbyhost = argv[1];
 	shipname = argv[2];
 	password = argv[3];
+
+	role = 0;
+	for (i = 4; i < argc; i++) {
+		if (strcmp(argv[i], "--allroles") == 0)
+			role |= ROLE_ALL;
+		if (strcmp(argv[i], "--main") == 0)
+			role |= ROLE_MAIN;
+		if (strcmp(argv[i], "--navigation") == 0)
+			role |= ROLE_NAVIGATION;
+		if (strcmp(argv[i], "--weapons") == 0)
+			role |= ROLE_WEAPONS;
+		if (strcmp(argv[i], "--engineering") == 0)
+			role |= ROLE_ENGINEERING;
+		if (strcmp(argv[i], "--science") == 0)
+			role |= ROLE_SCIENCE;
+		if (strcmp(argv[i], "--comms") == 0)
+			role |= ROLE_COMMS;
+		if (strcmp(argv[i], "--debug") == 0)
+			role |= ROLE_DEBUG;
+	}
+	if (role == 0)
+		role = ROLE_ALL;
 
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 	snis_object_pool_setup(&sparkpool, MAXSPARKS);

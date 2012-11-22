@@ -57,7 +57,7 @@ struct game_client {
 	struct packed_buffer_queue client_write_queue;
 	pthread_mutex_t client_write_queue_mutex;
 	uint32_t shipid;
-	uint8_t role;
+	uint32_t role;
 	uint32_t timestamp;
 } client[MAXCLIENTS];
 int nclients = 0;
@@ -896,7 +896,7 @@ static int process_engage_warp(struct game_client *c)
 	o->x = nx;
 	o->y = ny;
 	pthread_mutex_unlock(&universe_mutex);
-	printf("engage warp, nx = %g, ny = %g\n", nx, ny);
+	printf("engage warp, wfactor = %g, nx = %g, ny = %g\n", wfactor, nx, ny);
 	return 0;
 }
 
@@ -1510,16 +1510,13 @@ static int add_new_player(struct game_client *c)
 	if (rc)
 		return rc;
 	app.opcode = ntohs(app.opcode);
+	app.role = ntohl(app.role);
 	if (app.opcode != OPCODE_UPDATE_PLAYER) {
 		printf("bad opcode %d\n", app.opcode);
 		goto protocol_error;
 	}
 	app.shipname[19] = '\0';
 	app.password[19] = '\0';
-	if (app.role > ROLE_MAXROLE) {
-		printf("server: role out of range: %d\n", app.role);
-		goto protocol_error;
-	}
 
 	if (insane(app.shipname, 20) || insane(app.password, 20)) {
 		printf("Bad ship name or password\n");
