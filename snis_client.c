@@ -2762,7 +2762,24 @@ static void button_init(struct button *b, int x, int y, int width, int height, c
 			GdkColor *color, int font, button_function bf, void *cookie, int displaymode);
 static void add_button(struct button *b);
 
+
 static double sample_phaserbanks(void);
+static void init_weapons_ui(void)
+{
+	button_init(&weapons.fire_phaser, 550, 200, 200, 30, "FIRE PHASER", &huex[RED],
+			TINY_FONT, fire_phaser_button_pressed, NULL, DISPLAYMODE_WEAPONS);
+	button_init(&weapons.load_torpedo, 550, 250, 200, 30, "LOAD TORPEDO", &huex[GREEN],
+			TINY_FONT, load_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
+	button_init(&weapons.fire_torpedo, 550, 300, 200, 30, "FIRE TORPEDO", &huex[RED],
+			TINY_FONT, fire_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
+	gauge_init(&weapons.phaser_bank_gauge, 650, 80, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+			10, "PHASER", sample_phaserbanks);
+	add_button(&weapons.fire_phaser);
+	add_button(&weapons.load_torpedo);
+	add_button(&weapons.fire_torpedo);
+}
+
 static void show_weapons(GtkWidget *w)
 {
 	char buf[100];
@@ -2770,23 +2787,6 @@ static void show_weapons(GtkWidget *w)
 	int rx, ry, rw, rh, cx, cy;
 	int r;
 	int buttoncolor;
-	static int initialized = 0;
-
-	if (!initialized) {
-		button_init(&weapons.fire_phaser, 550, 200, 200, 30, "FIRE PHASER", &huex[RED],
-				TINY_FONT, fire_phaser_button_pressed, NULL, DISPLAYMODE_WEAPONS);
-		button_init(&weapons.load_torpedo, 550, 250, 200, 30, "LOAD TORPEDO", &huex[GREEN],
-				TINY_FONT, load_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
-		button_init(&weapons.fire_torpedo, 550, 300, 200, 30, "FIRE TORPEDO", &huex[RED],
-				TINY_FONT, fire_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
-		gauge_init(&weapons.phaser_bank_gauge, 650, 80, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
-				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
-				10, "PHASER", sample_phaserbanks);
-		add_button(&weapons.fire_phaser);
-		add_button(&weapons.load_torpedo);
-		add_button(&weapons.fire_torpedo);
-		initialized = 1;
-	}
 
 	show_common_screen(w, "Weapons");
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
@@ -3378,6 +3378,13 @@ static void show_engineering(GtkWidget *w)
 struct science_ui {
 	struct slider scizoom;
 } sci_ui;
+
+static void init_science_ui(void)
+{
+	slider_init(&sci_ui.scizoom, 350, 50, 300, &huex[DARKGREEN], "Range", "0", "100",
+				0.0, 100.0, sample_scizoom, do_scizoom, DISPLAYMODE_SCIENCE);
+	add_slider(&sci_ui.scizoom);
+}
  
 static void show_science(GtkWidget *w)
 {
@@ -3385,7 +3392,6 @@ static void show_science(GtkWidget *w)
 	struct snis_entity *o;
 	char buf[80];
 	double zoom;
-	static int initialized = 0;
 
 	if (my_ship_id == UNKNOWN_ID)
 		return;
@@ -3394,12 +3400,6 @@ static void show_science(GtkWidget *w)
 	if (my_ship_oid == UNKNOWN_ID)
 		return;
 	o = &go[my_ship_oid];
-
-	if (!initialized) {
-		slider_init(&sci_ui.scizoom, 350, 50, 300, &huex[DARKGREEN], "Range", "0", "100",
-					0.0, 100.0, sample_scizoom, do_scizoom, DISPLAYMODE_SCIENCE);
-		add_slider(&sci_ui.scizoom);
-	}
 
 	show_common_screen(w, "Science");
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
@@ -3882,6 +3882,8 @@ int main(int argc, char *argv[])
 
 	init_nav_ui();
 	init_engineering_ui();
+	init_weapons_ui();
+	init_science_ui();
 
 	gtk_main ();
         wwviaudio_cancel_all_sounds();
