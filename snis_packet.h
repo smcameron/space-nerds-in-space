@@ -100,6 +100,9 @@ struct ship_sdata_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint8_t subclass;
+	uint8_t shield_strength;
+	uint8_t shield_wavelength;
+	uint8_t shield_width;
 	char name[NAMESIZE];
 };
 

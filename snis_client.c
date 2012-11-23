@@ -383,13 +383,17 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	return 0;
 }
 
-static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name)
+static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
+				uint8_t shield_strength, uint8_t shield_wavelength, uint8_t shield_width)
 {
 	int i;
 	i = lookup_object_by_id(id);
 	if (i < 0)
 		return i;
 	go[i].sdata.subclass = subclass;
+	go[i].sdata.shield_strength = shield_strength;
+	go[i].sdata.shield_wavelength = shield_wavelength;
+	go[i].sdata.shield_width = shield_width;
 	strcpy(go[i].sdata.name, name);
 	go[i].sdata.science_data_known = 30 * 10; /* only remember for ten secs. */
 	go[i].sdata.science_data_requested = 0; /* request is fullfilled */
@@ -1640,7 +1644,7 @@ static int process_ship_sdata_packet(void)
 	unsigned char buffer[50];
 	struct packed_buffer pb;
 	uint32_t id;
-	uint8_t subclass;
+	uint8_t subclass, shstrength, shwavelength, shwidth;
 	int rc;
 	char name[NAMESIZE];
 
@@ -1651,10 +1655,13 @@ static int process_ship_sdata_packet(void)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	subclass = packed_buffer_extract_u8(&pb);
+	shstrength = packed_buffer_extract_u8(&pb);
+	shwavelength = packed_buffer_extract_u8(&pb);
+	shwidth = packed_buffer_extract_u8(&pb);
 	rc = packed_buffer_extract_raw(&pb, name, sizeof(name));
 
 	pthread_mutex_lock(&universe_mutex);
-	update_ship_sdata(id, subclass, name);
+	update_ship_sdata(id, subclass, name, shstrength, shwavelength, shwidth);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -3443,7 +3450,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *o)
 {
 	char buffer[40];
 	int x, y;
-	double bearing, dx, dy;
+	double bearing, dx, dy, range;
 
 	if (!o)
 		return;
@@ -3494,7 +3501,26 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *o)
 	else
 		bearing = 360.0 - bearing;
 
-	sprintf(buffer, "Bearing: %3.2lf\n", bearing);
+	sprintf(buffer, "BEARING: %3.2lf\n", bearing);
+	y += 25;
+	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+
+	range = sqrt(dx * dx + dy * dy);
+	sprintf(buffer, "RANGE: %8.2lf", range);
+	y += 25;
+	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+
+	sprintf(buffer, "HEADING: %3.2lf", o->heading);
+	y += 25;
+	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+
+	sprintf(buffer, "STRENGTH: %hhu", o->sdata.shield_strength);
+	y += 25;
+	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+	sprintf(buffer, "WAVELENGTH: %hhu", o->sdata.shield_wavelength);
+	y += 25;
+	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+	sprintf(buffer, "WIDTH: %hhu", o->sdata.shield_width);
 	y += 25;
 	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
 }

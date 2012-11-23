@@ -468,6 +468,9 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	go[i].timestamp = universe_timestamp + 1;
 	go[i].move = generic_move;
 	strncpy(go[i].sdata.name, n, sizeof(go[i].sdata.name) - 1);
+	go[i].sdata.shield_strength = snis_randn(256);
+	go[i].sdata.shield_wavelength = snis_randn(256);
+	go[i].sdata.shield_width = snis_randn(256);
 	free(n);
 	return i;
 }
@@ -811,6 +814,9 @@ static int process_request_ship_sdata(struct game_client *c)
 		p.subclass = go[i].tsd.ship.shiptype;
 	else
 		p.subclass = 0;
+	p.shield_strength = go[i].sdata.shield_strength;
+	p.shield_wavelength = go[i].sdata.shield_wavelength;
+	p.shield_width = go[i].sdata.shield_width;
 	pthread_mutex_unlock(&universe_mutex);
 	send_ship_sdata_packet(c, &p);
 	return 0;
@@ -1405,6 +1411,9 @@ static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_pack
 	packed_buffer_append_u16(pb, OPCODE_SHIP_SDATA);
 	packed_buffer_append_u32(pb, sip->id); 
 	packed_buffer_append_u8(pb, sip->subclass); 
+	packed_buffer_append_u8(pb, sip->shield_strength); 
+	packed_buffer_append_u8(pb, sip->shield_wavelength); 
+	packed_buffer_append_u8(pb, sip->shield_width); 
 	packed_buffer_append_raw(pb, sip->name, sizeof(sip->name));
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_ALL);
 }

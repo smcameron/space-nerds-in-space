@@ -153,6 +153,9 @@ struct snis_entity_science_data {
 	uint16_t science_data_known;
 	uint8_t science_data_requested;
 	uint8_t subclass;
+	uint8_t shield_strength;
+	uint8_t shield_wavelength;
+	uint8_t shield_width;
 };
 	
 struct snis_entity {
