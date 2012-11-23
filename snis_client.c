@@ -1029,6 +1029,17 @@ static void request_ship_sdata(struct snis_entity *o)
 	wakeup_gameserver_writer();
 }
 
+static void request_sci_select_target(uint32_t id)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct snis_sci_select_target_packet));
+	packed_buffer_append_u16(pb, OPCODE_SCI_SELECT_TARGET);
+	packed_buffer_append_u32(pb, id);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
 static void navigation_dirkey(int h, int v)
 {
 	struct packed_buffer *pb;
@@ -1699,6 +1710,26 @@ static int process_role_onscreen_packet(void)
 	return 0;
 }
 
+static struct snis_entity *curr_science_guy = NULL;
+static int process_sci_select_target_packet(void)
+{
+	char buffer[sizeof(struct snis_sci_select_target_packet)];
+	struct packed_buffer pb;
+	uint32_t id;
+	int rc, i;
+
+	rc = snis_readsocket(gameserver_sock, buffer,
+			sizeof(struct snis_sci_select_target_packet) - sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	id = packed_buffer_extract_u32(&pb);
+	i = lookup_object_by_id(id);
+	if (i >= 0)
+		curr_science_guy = &go[i];
+	return 0;
+}
+
 static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
@@ -1874,6 +1905,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_ROLE_ONSCREEN:
 			rc = process_role_onscreen_packet();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_SCI_SELECT_TARGET:
+			rc = process_sci_select_target_packet();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -2417,7 +2453,6 @@ struct science_data {
 };
 static struct science_data science_guy[MAXGAMEOBJS] = { {0}, };
 static int nscience_guys = 0;
-static struct snis_entity *curr_science_guy = NULL;
 
 static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, double range)
 {
@@ -3421,23 +3456,25 @@ static void init_science_ui(void)
 #define SCIDIST2 100
 static int science_button_press(int x, int y)
 {
-	int i, found;
+	int i;
 	int xdist, ydist, dist2;
+	struct snis_entity *selected;
 
-	found = 0;
+	selected = NULL;
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < nscience_guys; i++) {
 		xdist = (x - science_guy[i].sx);
 		ydist = (y - science_guy[i].sy);
 		dist2 = xdist * xdist + ydist * ydist; 
 		if (dist2 < SCIDIST2 && science_guy[i].o->sdata.science_data_known) {
-			curr_science_guy = science_guy[i].o;
-			found = 1;
+			// curr_science_guy = science_guy[i].o;
+			selected = science_guy[i].o;
 		}
 	}
-	if (!found)
-		curr_science_guy = NULL;
+	if (selected)
+		request_sci_select_target(selected->id);
 	pthread_mutex_unlock(&universe_mutex);
+
 	return 0;
 }
 
