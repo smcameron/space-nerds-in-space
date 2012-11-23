@@ -2150,7 +2150,7 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 }
 
 static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
-					gint x, gint y, double dist, int bw, double range)
+					gint x, gint y, double dist, int bw, double range, int selected)
 {
 	int i;
 
@@ -2181,6 +2181,10 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 #endif
 		gdk_draw_point(w->window, gc, tx * xscale_screen, ty * yscale_screen);
 	}
+
+	if (selected)
+		snis_draw_circle(w->window, gc, x, y, 10);
+	
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
 		case OBJTYPE_SHIP2:
@@ -2399,6 +2403,15 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 #define SCIENCE_SCOPE_CX (SCIENCE_SCOPE_X + SCIENCE_SCOPE_R)
 #define SCIENCE_SCOPE_CY (SCIENCE_SCOPE_Y + SCIENCE_SCOPE_R)
 
+/* this science_guy[] array is used for mouse clicking. */
+struct science_data {
+	int sx, sy; /* screen coords on scope */
+	struct snis_entity *o;
+};
+static struct science_data science_guy[MAXGAMEOBJS] = { {0}, };
+static int nscience_guys = 0;
+static struct snis_entity *curr_science_guy = NULL;
+
 static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, double range)
 {
 	int i, cx, cy, r, bw;
@@ -2422,6 +2435,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		A2 -= 2.0 * M_PI;
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
 	pthread_mutex_lock(&universe_mutex);
+	nscience_guys = 0;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		int x, y;
 		double dist2, dist;
@@ -2457,7 +2471,13 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		if (go[i].id == my_ship_id)
 			continue; /* skip drawing yourself. */
 		bw = o->tsd.ship.sci_beam_width * 180.0 / M_PI;
-		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, range);
+		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, range, &go[i] == curr_science_guy);
+
+		/* cache screen coords for mouse picking */
+		science_guy[nscience_guys].o = &go[i];
+		science_guy[nscience_guys].sx = x;
+		science_guy[nscience_guys].sy = y;
+		nscience_guys++;
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -3391,6 +3411,29 @@ static void init_science_ui(void)
 	add_slider(&sci_ui.scizoom);
 }
 
+#define SCIDIST2 100
+static int science_button_press(int x, int y)
+{
+	int i, found;
+	int xdist, ydist, dist2;
+
+	found = 0;
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i < nscience_guys; i++) {
+		xdist = (x - science_guy[i].sx);
+		ydist = (y - science_guy[i].sy);
+		dist2 = xdist * xdist + ydist * ydist; 
+		if (dist2 < SCIDIST2 && science_guy[i].o->sdata.science_data_known) {
+			curr_science_guy = science_guy[i].o;
+			found = 1;
+		}
+	}
+	if (!found)
+		curr_science_guy = NULL;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+ 
 static void show_science(GtkWidget *w)
 {
 	int /* rx, ry, rw, rh, */ cx, cy, r;
@@ -3693,6 +3736,9 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 		lobbylast1clicky = (int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT);
 		
 		return TRUE;
+	case DISPLAYMODE_SCIENCE:
+		science_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
+				(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
 		break;
 	default:
 		break;
