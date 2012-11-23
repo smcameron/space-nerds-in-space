@@ -3763,9 +3763,9 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 
 	switch (displaymode) {
 	case DISPLAYMODE_SCIENCE:
-		if (e->direction == GDK_SCROLL_DOWN)
-			newval = o->tsd.ship.scizoom - 30;
 		if (e->direction == GDK_SCROLL_UP)
+			newval = o->tsd.ship.scizoom - 30;
+		if (e->direction == GDK_SCROLL_DOWN)
 			newval = o->tsd.ship.scizoom + 30;
 		if (newval < 0)
 			newval = 0;
