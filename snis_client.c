@@ -3450,18 +3450,31 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 		int x1, int y1, int x2, int y2)
 {
 	int i, x, zx;
-	double sx, sy;
+	double sx, sy, a;
 	double y;
+	int dy1, dy2;
 
 	current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
+	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 2, x2, 5);
 	for (i = 0; i < 20; i++) {
 		x = snis_randn(256) - 128;
-		y = cos((double) x / 256.0 * 2 * M_PI - M_PI) * ((double) o->sdata.shield_strength / 255.0);
+		dy1 = snis_randn(20)-10;
+		dy2 = snis_randn(20)-10;
+		if (dy1 > dy2) {
+			int z;
+			z = dy1;
+			dy1 = dy2;
+			dy2 = z;
+		}
+		a = ((double) x / 256.0 * 2 * M_PI - M_PI);
+		a = a * (1.0 + 2 * (double) o->sdata.shield_width / 256.0);
+		y = cos(a) * ((double) o->sdata.shield_strength / 255.0);
 		y = -y / 2.0 + 0.5;
 		zx = (x + 128 + o->sdata.shield_wavelength) % 256;
 		sx = (int) (((float) zx / 256.0) * (float) (x2 - x1)) + x1;
 		sy = (int) (y2 - (y * (float) (y2 - y1)));
-		gdk_draw_point(w->window, gc, sx * xscale_screen, sy * yscale_screen);
+		snis_draw_dotted_vline(w->window, gc, sx, sy + dy1, sy + dy2, 4);
+		/* gdk_draw_point(w->window, gc, sx * xscale_screen, sy * yscale_screen); */
 	}
 }
  
