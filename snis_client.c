@@ -3455,7 +3455,15 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 	int dy1, dy2;
 
 	current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
-	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 2, x2, 5);
+	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 2, x2, 10);
+
+	x = x1 + (x2 - x1) / 4; 
+	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
+	x += (x2 - x1) / 4; 
+	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
+	x += (x2 - x1) / 4; 
+	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
+
 	for (i = 0; i < 20; i++) {
 		x = snis_randn(256) - 128;
 		dy1 = snis_randn(20)-10;
@@ -3470,12 +3478,18 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 		a = a * (1.0 + 2 * (double) o->sdata.shield_width / 256.0);
 		y = cos(a) * ((double) o->sdata.shield_strength / 255.0);
 		y = -y / 2.0 + 0.5;
-		zx = (x + 128 + o->sdata.shield_wavelength) % 256;
+		zx = (x + 128 + o->sdata.shield_wavelength + snis_randn(16) - 8) % 256;
 		sx = (int) (((float) zx / 256.0) * (float) (x2 - x1)) + x1;
 		sy = (int) (y2 - (y * (float) (y2 - y1)));
 		snis_draw_dotted_vline(w->window, gc, sx, sy + dy1, sy + dy2, 4);
 		/* gdk_draw_point(w->window, gc, sx * xscale_screen, sy * yscale_screen); */
 	}
+	abs_xy_draw_string(w, "10", NANO_FONT, x1, y2 + 10);
+	abs_xy_draw_string(w, "20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 10);
+	abs_xy_draw_string(w, "30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + 10);
+	abs_xy_draw_string(w, "40", NANO_FONT, x1 + 3 * (x2 - x1) / 4 - 10, y2 + 10);
+	abs_xy_draw_string(w, "50", NANO_FONT, x1 + 4 * (x2 - x1) / 4 - 20, y2 + 10);
+	abs_xy_draw_string(w, "nm", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + 30);
 }
  
 static void draw_science_data(GtkWidget *w, struct snis_entity *o)
@@ -3559,7 +3573,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *o)
 	gx1 = x;
 	gy1 = y + 25;
 	gx2 = SCIENCE_DATA_X + SCIENCE_DATA_W - 10;
-	gy2 = SCIENCE_DATA_Y + SCIENCE_DATA_H - 10;
+	gy2 = SCIENCE_DATA_Y + SCIENCE_DATA_H - 40;
 	draw_science_graph(w, o, gx1, gy1, gx2, gy2);
 }
  
