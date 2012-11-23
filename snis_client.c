@@ -3445,11 +3445,30 @@ static int science_button_press(int x, int y)
 #define SCIENCE_DATA_Y (SCIENCE_SCOPE_Y + 20)
 #define SCIENCE_DATA_W (SCREEN_WIDTH - 20 - SCIENCE_DATA_X)
 #define SCIENCE_DATA_H (SCREEN_HEIGHT - 20 - SCIENCE_DATA_Y)
+
+static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
+		int x1, int y1, int x2, int y2)
+{
+	int i, x, zx;
+	double sx, sy;
+	double y;
+
+	current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
+	for (i = 0; i < 20; i++) {
+		x = snis_randn(256) - 128;
+		y = cos((double) x / 256.0 * 2 * M_PI - M_PI) * ((double) o->sdata.shield_strength / 255.0);
+		y = -y / 2.0 + 0.5;
+		zx = (x + 128 + o->sdata.shield_wavelength) % 256;
+		sx = (int) (((float) zx / 256.0) * (float) (x2 - x1)) + x1;
+		sy = (int) (y2 - (y * (float) (y2 - y1)));
+		gdk_draw_point(w->window, gc, sx * xscale_screen, sy * yscale_screen);
+	}
+}
  
 static void draw_science_data(GtkWidget *w, struct snis_entity *o)
 {
 	char buffer[40];
-	int x, y;
+	int x, y, gx1, gy1, gx2, gy2;
 	double bearing, dx, dy, range;
 
 	if (!o)
@@ -3523,6 +3542,12 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *o)
 	sprintf(buffer, "WIDTH: %hhu", o->sdata.shield_width);
 	y += 25;
 	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+
+	gx1 = x;
+	gy1 = y + 25;
+	gx2 = SCIENCE_DATA_X + SCIENCE_DATA_W - 10;
+	gy2 = SCIENCE_DATA_Y + SCIENCE_DATA_H - 10;
+	draw_science_graph(w, o, gx1, gy1, gx2, gy2);
 }
  
 static void show_science(GtkWidget *w)
@@ -4027,6 +4052,7 @@ int main(int argc, char *argv[])
 
 	gettimeofday(&start_time, NULL);
 
+	init_trig_arrays();
 	init_nav_ui();
 	init_engineering_ui();
 	init_weapons_ui();
