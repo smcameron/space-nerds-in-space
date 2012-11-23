@@ -2390,19 +2390,24 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+/* position and dimensions of science scope */
+#define SCIENCE_SCOPE_X 20
+#define SCIENCE_SCOPE_Y 70 
+#define SCIENCE_SCOPE_W 500
+#define SCIENCE_SCOPE_H SCIENCE_SCOPE_W
+#define SCIENCE_SCOPE_R (SCIENCE_SCOPE_H / 2)
+#define SCIENCE_SCOPE_CX (SCIENCE_SCOPE_X + SCIENCE_SCOPE_R)
+#define SCIENCE_SCOPE_CY (SCIENCE_SCOPE_Y + SCIENCE_SCOPE_R)
+
 static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, double range)
 {
-	int i, cx, cy, r, rx, ry, rw, rh, bw;
+	int i, cx, cy, r, bw;
 	double angle, angle2, A1, A2;
 	double tx, ty;
 
-	rx = 20;
-	ry = 70;
-	rw = 500;
-	rh = 500;
-	cx = rx + (rw / 2);
-	cy = ry + (rh / 2);
-	r = rh / 2;
+	cx = SCIENCE_SCOPE_CX;
+	cy = SCIENCE_SCOPE_CY;
+	r = SCIENCE_SCOPE_R;
 	/* Draw all the stuff */
 
         tx = sin(o->tsd.ship.sci_heading) * range;
@@ -3385,10 +3390,10 @@ static void init_science_ui(void)
 				0.0, 100.0, sample_scizoom, do_scizoom, DISPLAYMODE_SCIENCE);
 	add_slider(&sci_ui.scizoom);
 }
- 
+
 static void show_science(GtkWidget *w)
 {
-	int rx, ry, rw, rh, cx, cy, r;
+	int /* rx, ry, rw, rh, */ cx, cy, r;
 	struct snis_entity *o;
 	char buf[80];
 	double zoom;
@@ -3406,13 +3411,15 @@ static void show_science(GtkWidget *w)
 	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
 			360.0 * o->tsd.ship.sci_heading / (2.0 * 3.1415927));
 	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
-	rx = 20;
-	ry = 70;
-	rw = 500;
-	rh = 500;
-	cx = rx + (rw / 2);
-	cy = ry + (rh / 2);
-	r = rh / 2;
+#if 0
+	rx = SCIENCE_SCOPE_X;
+	ry = SCIENCE_SCOPE_Y;
+	rw = SCIENCE_SCOPE_W;
+	rh = SCIENCE_SCOPE_H;
+#endif
+	cx = SCIENCE_SCOPE_CX;
+	cy = SCIENCE_SCOPE_CY;
+	r = SCIENCE_SCOPE_R;
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(o->tsd.ship.scizoom / 255.0) +
 			MIN_SCIENCE_SCREEN_RADIUS;
