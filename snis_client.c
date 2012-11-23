@@ -3433,6 +3433,71 @@ static int science_button_press(int x, int y)
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
+
+#define SCIENCE_DATA_X (SCIENCE_SCOPE_X + SCIENCE_SCOPE_W + 20)
+#define SCIENCE_DATA_Y (SCIENCE_SCOPE_Y + 20)
+#define SCIENCE_DATA_W (SCREEN_WIDTH - 20 - SCIENCE_DATA_X)
+#define SCIENCE_DATA_H (SCREEN_HEIGHT - 20 - SCIENCE_DATA_Y)
+ 
+static void draw_science_data(GtkWidget *w, struct snis_entity *o)
+{
+	char buffer[40];
+	int x, y;
+	double bearing, dx, dy;
+
+	if (!o)
+		return;
+
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return;
+
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	x = SCIENCE_DATA_X + 10;
+	y = SCIENCE_DATA_Y + 15;
+	current_draw_rectangle(w->window, gc, 0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
+					SCIENCE_DATA_W, SCIENCE_DATA_H);
+	sprintf(buffer, "NAME: %s\n", o->sdata.name);
+	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+
+	switch (o->type) {
+	case OBJTYPE_SHIP2:
+		sprintf(buffer, "TYPE: %s", shipclass[o->sdata.subclass]); 
+		break;
+	case OBJTYPE_STARBASE:
+		sprintf(buffer, "TYPE: %s\n", "Starbase"); 
+		break;
+	case OBJTYPE_PLANET:
+		sprintf(buffer, "TYPE: %s\n", "Asteroid"); 
+		break;
+	default:
+		sprintf(buffer, "TYPE: %s\n", "Unknown"); 
+		break;
+	}
+	y += 25;
+	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+
+	sprintf(buffer, "X: %8.2lf", o->x);
+	y += 25;
+	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+
+	sprintf(buffer, "Y: %8.2lf", o->y);
+	y += 25;
+	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+
+	dx = go[my_ship_oid].x - o->x;
+	dy = go[my_ship_oid].y - o->y;
+	bearing = atan2(dx, dy) * 180 / M_PI;
+	if (bearing < 0)
+		bearing = -bearing;
+	else
+		bearing = 360.0 - bearing;
+
+	sprintf(buffer, "Bearing: %3.2lf\n", bearing);
+	y += 25;
+	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+}
  
 static void show_science(GtkWidget *w)
 {
@@ -3475,6 +3540,7 @@ static void show_science(GtkWidget *w)
 	draw_all_the_science_guys(w, o, zoom);
 	draw_all_the_science_sparks(w, o, zoom);
 	draw_sliders(w);
+	draw_science_data(w, curr_science_guy);
 }
 
 static void show_comms(GtkWidget *w)
