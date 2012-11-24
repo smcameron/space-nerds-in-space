@@ -2341,37 +2341,43 @@ static void snis_draw_science_reticule(GdkDrawable *drawable, GdkGC *gc, gint x,
 	snis_draw_electric_line(drawable, gc, tx1, ty1, tx2, ty2);
 }
 
-static void snis_draw_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
+static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		double heading)
 {
 	int i;
 	// int nx, ny, 
 	int tx1, ty1, tx2, ty2;
+	char buf[10];
 
 	for (i = r; i > r / 4; i -= r / 5)
-		snis_draw_circle(drawable, gc, x, y, i);
+		snis_draw_circle(w->window, gc, x, y, i);
 
 	for (i = 0; i < 36; i++) { /* 10 degree increments */
-		int x1 = (int) (cos((10.0 * i) * 3.1415927 / 180.0) * r);
-		int y1 = (int) (sin((10.0 * i) * 3.1415927 / 180.0) * r);
+		int x3, y3;
+		int x1 = (int) (cos((10.0 * i) * M_PI / 180.0) * r);
+		int y1 = (int) (sin((10.0 * i) * M_PI / 180.0) * r);
 		int x2 = x1 * 0.25;
 		int y2 = y1 * 0.25;
+		x3 = x1 * 1.08 + x - 15;
+		y3 = y1 * 1.08 + y;
 		x1 += x;
 		x2 += x;
 		y1 += y;
 		y2 += y;
-		snis_draw_line(drawable, gc, x1, y1, x2, y2);
+		snis_draw_line(w->window, gc, x1, y1, x2, y2);
+		sprintf(buf, "%3d", (90 + i * 10) % 360);
+		abs_xy_draw_string(w, buf, NANO_FONT, x3, y3);
 	}
 
 	/* draw the ship */
-	snis_draw_arrow(drawable, gc, x, y, r, heading, 1.0);
+	snis_draw_arrow(w->window, gc, x, y, r, heading, 1.0);
 	
 	tx1 = x + sin(heading) * r * 0.85;
 	ty1 = y - cos(heading) * r * 0.85;
 	tx2 = x + sin(heading) * r;
 	ty2 = y - cos(heading) * r;
 	gdk_gc_set_foreground(gc, &huex[RED]);
-	snis_draw_line(drawable, gc, tx1, ty1, tx2, ty2);
+	snis_draw_line(w->window, gc, tx1, ty1, tx2, ty2);
 }
 
 static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
@@ -2852,10 +2858,10 @@ static void show_weapons(GtkWidget *w)
 		buttoncolor = GREEN;
 	weapons.fire_torpedo.color = huex[buttoncolor];
 
-	rx = 20;
-	ry = 70;
-	rw = 500;
-	rh = 500;
+	rx = 40;
+	ry = 90;
+	rw = 470;
+	rh = 470;
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
@@ -2863,7 +2869,7 @@ static void show_weapons(GtkWidget *w)
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, NAVSCREEN_RADIUS, 1);
 	gdk_gc_set_foreground(gc, &huex[BLUE]);
-	snis_draw_reticule(w->window, gc, cx, cy, r, o->tsd.ship.gun_heading);
+	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
 	draw_all_the_guys(w, o);
 	draw_all_the_sparks(w, o);
 	gauge_draw(w, &weapons.phaser_bank_gauge);
@@ -3324,10 +3330,10 @@ static void show_navigation(GtkWidget *w)
 	sprintf(buf, "vy: %5.2lf", o->vy);
 	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 4);
 
-	rx = 20;
-	ry = 70;
-	rw = 500;
-	rh = 500;
+	rx = 40;
+	ry = 90;
+	rw = 470;
+	rh = 470;
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
@@ -3335,7 +3341,7 @@ static void show_navigation(GtkWidget *w)
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, NAVSCREEN_RADIUS, 1);
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
-	snis_draw_reticule(w->window, gc, cx, cy, r, o->heading);
+	snis_draw_reticule(w, gc, cx, cy, r, o->heading);
 
 	draw_all_the_guys(w, o);
 	draw_all_the_sparks(w, o);
