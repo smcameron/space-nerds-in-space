@@ -2743,50 +2743,6 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 	}
 }
 
-#if 0
-static void show_navigation(GtkWidget *w)
-{
-	char buf[100];
-	struct snis_entity *o;
-	int rx, ry, rw, rh, cx, cy;
-	int r;
-
-	show_common_screen(w, "Navigation");
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
-
-	if (my_ship_id == UNKNOWN_ID)
-		return;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
-		return;
-	o = &go[my_ship_oid];
-	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
-			360.0 * o->heading / (2.0 * 3.1415927));
-	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
-	sprintf(buf, "vx: %5.2lf", o->vx);
-	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
-	sprintf(buf, "vy: %5.2lf", o->vy);
-	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 4);
-
-	rx = 20;
-	ry = 70;
-	rw = 500;
-	rh = 500;
-	cx = rx + (rw / 2);
-	cy = ry + (rh / 2);
-	r = rh / 2;
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
-	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, NAVSCREEN_RADIUS, 1);
-	gdk_gc_set_foreground(gc, &huex[DARKRED]);
-	snis_draw_reticule(w->window, gc, cx, cy, r, o->heading);
-
-	draw_all_the_guys(w, o);
-	draw_all_the_sparks(w, o);
-	gauge_draw(w, &nav_ui.warp_gauge);
-}
-#endif
 static void load_torpedo_button_pressed()
 {
 	struct snis_entity *o;
