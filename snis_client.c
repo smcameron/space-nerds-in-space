@@ -1511,9 +1511,10 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 {
 	int i;
 	double a, ai;
-	int x1, y1, x2, y2;
+	int x1, y1, x2, y2, x3, y3;
 	double value;
-	char buffer[10];
+	double inc, v;
+	char buffer[10], buf2[10];
 
 	gdk_gc_set_foreground(gc, &g->dial_color);
 	snis_draw_circle(w->window, gc, g->x, g->y, g->r); 
@@ -1521,6 +1522,8 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 	ai = g->angular_range / g->ndivs;
 	normalize_angle(&ai);
 
+	v = g->r1;
+	inc = (double) (g->r2 - g->r1) / (double) g->ndivs;
 	for (i = 0; i <= g->ndivs; i++) {
 		a = (ai * (double) i) + g->start_angle;
 		normalize_angle(&a);
@@ -1528,12 +1531,19 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 		x2 = 0.9 * x1;
 		y1 = g->r * -cos(a);
 		y2 = 0.9 * y1;
+		x3 = 0.7 * x1 - 20;
+		y3 = 0.7 * y1;
 
 		x1 = (x1 + g->x);
 		x2 = (x2 + g->x);
+		x3 = (x3 + g->x);
 		y1 = (y1 + g->y);
 		y2 = (y2 + g->y);
+		y3 = (y3 + g->y);
 		snis_draw_line(w->window, gc, x1, y1, x2, y2);
+		sprintf(buf2, "%3.0lf", v);
+		v += inc;
+		abs_xy_draw_string(w, buf2, NANO_FONT, x3, y3);
 	}
 	abs_xy_draw_string(w, g->title, TINY_FONT,
 			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)));
@@ -2839,7 +2849,7 @@ static void init_weapons_ui(void)
 			TINY_FONT, load_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
 	button_init(&weapons.fire_torpedo, 550, 300, 200, 30, "FIRE TORPEDO", &huex[RED],
 			TINY_FONT, fire_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
-	gauge_init(&weapons.phaser_bank_gauge, 650, 80, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	gauge_init(&weapons.phaser_bank_gauge, 650, 100, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 			10, "PHASER", sample_phaserbanks);
 	add_button(&weapons.fire_phaser);
@@ -3393,19 +3403,25 @@ struct enginerring_ui {
 static void init_engineering_ui(void)
 {
 	int y = 220;
+	int x = 100;
+	int xinc = 190;
 	int yinc = 40; 
-	gauge_init(&eng_ui.rpm_gauge, 100, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	gauge_init(&eng_ui.rpm_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 			10, "RPM", sample_rpm);
-	gauge_init(&eng_ui.fuel_gauge, 250, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	x += xinc;
+	gauge_init(&eng_ui.fuel_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 			10, "Fuel", sample_fuel);
-	gauge_init(&eng_ui.power_gauge, 400, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	x += xinc;
+	gauge_init(&eng_ui.power_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 			10, "Power", sample_power);
-	gauge_init(&eng_ui.temp_gauge, 550, 140, 70, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	x += xinc;
+	gauge_init(&eng_ui.temp_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 			10, "Temp", sample_temp);
+	x += xinc;
 	slider_init(&eng_ui.throttle_slider, 350, y + yinc, 200, &huex[AMBER], "Throttle", "0", "100",
 				0.0, 100.0, sample_throttle, do_throttle, DISPLAYMODE_ENGINEERING);
 
