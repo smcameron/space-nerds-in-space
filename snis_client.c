@@ -2437,7 +2437,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 			case OBJTYPE_SHIP1:
 			case OBJTYPE_SHIP2:
 				gdk_gc_set_foreground(gc, &huex[WHITE]);
-				snis_draw_arrow(w->window, gc, x, y, r, go[i].heading, 0.5);
+				snis_draw_arrow(w->window, gc, x, y, r, go[i].heading + M_PI / 2.0, 0.5);
 				gdk_gc_set_foreground(gc, &huex[GREEN]);
 				if (go[i].sdata.science_data_known) {
 					sprintf(buffer, "%s", go[i].sdata.name);
@@ -2446,7 +2446,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 				break;
 			default:
 				gdk_gc_set_foreground(gc, &huex[WHITE]);
-				snis_draw_arrow(w->window, gc, x, y, r, go[i].heading, 0.5);
+				snis_draw_arrow(w->window, gc, x, y, r, go[i].heading + M_PI / 2.0, 0.5);
 			}
 		}
 	}

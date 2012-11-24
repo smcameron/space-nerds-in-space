@@ -115,6 +115,8 @@ struct ship_data {
 	uint8_t scizoom;
 	uint8_t warpdrive;
 	uint8_t requested_warpdrive;
+	int32_t victim;
+	double dox, doy; /* destination offsets */
 };
 
 struct starbase_data {

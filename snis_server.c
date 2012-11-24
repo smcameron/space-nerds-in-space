@@ -253,15 +253,75 @@ static void torpedo_move(struct snis_entity *o)
 	}
 }
 
+static int find_nearest_victim(struct snis_entity *o)
+{
+	int i, victim;
+	double dist2, dx, dy, lowestdist;
+
+	/* assume universe mutex is held */
+	victim = -1;
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+
+		if (i == o->index) /* don't victimize self */
+			continue;
+
+		/* only victimize players and starbases */
+		if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_SHIP1)
+			continue;
+
+		if (!go[i].alive) /* skip the dead guys */
+			continue;
+
+		dx = go[i].x - o->x;
+		dy = go[i].y - o->y;
+		dist2 = dx * dx + dy * dy;
+		if (victim == -1 || dist2 < lowestdist) {
+			victim = i;
+			lowestdist = dist2;
+		}
+	}
+	return victim;
+}
+
 static void ship_move(struct snis_entity *o)
 {
 	double heading_diff, yaw_vel;
+	struct snis_entity *v;
+	double destx, desty, dx, dy, d;
 
+	if (o->tsd.ship.victim == (uint32_t) -1) {
+		o->tsd.ship.victim = find_nearest_victim(o);
+		o->tsd.ship.dox = snis_randn(2000) - 1000;
+		o->tsd.ship.doy = snis_randn(2000) - 1000;
+	}
+
+#define MAX_SPEED 25
+	if (o->tsd.ship.victim != (uint32_t) -1) {
+		v = &go[o->tsd.ship.victim];
+		destx = v->x + o->tsd.ship.dox;
+		desty = v->y + o->tsd.ship.doy;
+		dx = destx - o->x;
+		dy = desty - o->y;
+		d = sqrt(dx * dx + dy * dy);
+		o->tsd.ship.desired_heading = atan2(dy, dx);
+		o->tsd.ship.desired_velocity = (d / MAX_SPEED) * MAX_SPEED + snis_randn(5);
+		if (o->tsd.ship.desired_velocity > MAX_SPEED)
+			o->tsd.ship.desired_velocity = MAX_SPEED;
+		if (fabs(dx) < 100 && fabs(dy) < 100) {
+			o->tsd.ship.desired_velocity = 0;
+			dx = v->x - o->x;
+			dy = v->y - o->y;
+			o->tsd.ship.desired_heading = atan2(dy, dx);
+		}
+	}
+#if 0
 	/* Decide where to go... */
 	if (snis_randn(100) < 5) {
+		dx = v
 		o->tsd.ship.desired_heading = degrees_to_radians(0.0 + snis_randn(360)); 
 		o->tsd.ship.desired_velocity = snis_randn(20);
 	}
+#endif
 
 	/* Adjust heading towards desired heading */
 	heading_diff = o->tsd.ship.desired_heading - o->heading;
@@ -290,8 +350,8 @@ static void ship_move(struct snis_entity *o)
 		o->tsd.ship.velocity = o->tsd.ship.desired_velocity;
 
 	/* set vx, vy, move x, y */
-	o->vx = o->tsd.ship.velocity * sin(o->heading);
-	o->vy = o->tsd.ship.velocity * -cos(o->heading);
+	o->vy = o->tsd.ship.velocity * sin(o->heading);
+	o->vx = o->tsd.ship.velocity * cos(o->heading);
 	o->x += o->vx;
 	o->y += o->vy;
 	normalize_coords(o);
@@ -517,6 +577,7 @@ static int add_ship(double x, double y, double vx, double vy, double heading)
 	go[i].tsd.ship.desired_heading = 0;
 	go[i].tsd.ship.velocity = 0;
 	go[i].tsd.ship.shiptype = snis_randn(ARRAY_SIZE(shipclass));
+	go[i].tsd.ship.victim = (uint32_t) -1;
 	return i;
 }
 
