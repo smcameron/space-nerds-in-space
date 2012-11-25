@@ -3626,7 +3626,7 @@ static void show_science(GtkWidget *w)
 			MIN_SCIENCE_SCREEN_RADIUS;
 	gdk_gc_set_foreground(gc, &huex[DARKGREEN]);
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, zoom);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, zoom, o->tsd.ship.scizoom < 20);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, zoom, o->tsd.ship.scizoom < 50);
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
 	snis_draw_science_reticule(w->window, gc, cx, cy, r,
 			o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width));

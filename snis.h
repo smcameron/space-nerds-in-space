@@ -98,7 +98,7 @@ struct ship_data {
 #define SCI_BW_YAW_DAMPING 0.45
 #define MIN_SCI_BEAM_WIDTH (5 * PI / 180.0)
 #define MAX_SCIENCE_SCREEN_RADIUS (XUNIVERSE_DIMENSION / 3.0)
-#define MIN_SCIENCE_SCREEN_RADIUS (XUNIVERSE_DIMENSION / 15.0)
+#define MIN_SCIENCE_SCREEN_RADIUS (XUNIVERSE_DIMENSION / 45.0)
 	double sci_beam_width;
 	double sci_yaw_velocity;
 	uint8_t torpedoes_loaded;
