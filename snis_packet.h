@@ -59,6 +59,7 @@
 #define OPCODE_ENGAGE_WARP 133
 #define OPCODE_ROLE_ONSCREEN 134
 #define OPCODE_SCI_SELECT_TARGET 135
+#define OPCODE_UPDATE_DAMAGE 136
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -254,6 +255,19 @@ struct role_onscreen_packet {
 struct snis_sci_select_target_packet {
 	uint16_t opcode;
 	uint32_t target_id;
+};
+
+struct ship_damage_packet {
+	uint16_t opcode;
+	uint32_t id;
+/* this must match struct ship_damage_data exactly, and be endian neutral */
+	uint8_t shields;
+	uint8_t impulse;
+	uint8_t warp;
+	uint8_t torpedo_tubes;
+	uint8_t phaser_banks;
+	uint8_t sensors;
+	uint8_t comms;
 };
 
 #pragma pack()

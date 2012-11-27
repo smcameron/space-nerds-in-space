@@ -142,6 +142,7 @@ static void snis_queue_delete_object(uint32_t oid)
 	client_unlock();
 }
 
+#define ANY_SHIP_ID (0xffffffff)
 static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packed_buffer *pb, uint32_t roles)
 {
 	int i;
@@ -151,7 +152,7 @@ static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packe
 		struct packed_buffer *pbc;
 		struct game_client *c = &client[i];
 
-		if (c->shipid != shipid)
+		if (c->shipid != shipid && shipid != ANY_SHIP_ID)
 			continue;
 
 		if (!(c->role & roles))
@@ -162,6 +163,11 @@ static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packe
 	}
 	packed_buffer_free(pb);
 	client_unlock();
+}
+
+static void send_packet_to_all_clients(struct packed_buffer *pb, uint32_t roles)
+{
+	send_packet_to_all_clients_on_a_bridge(ANY_SHIP_ID, pb, roles);
 }
 
 static void queue_add_sound(struct game_client *c, uint16_t sound_number)
@@ -204,6 +210,22 @@ static void normalize_coords(struct snis_entity *o)
 			o->y -= YUNIVERSE_DIMENSION;
 }
 
+static void calculate_torpedo_damage(struct snis_entity *o)
+{
+	int damage, i;
+	unsigned char *x = (unsigned char *) &o->tsd.ship.damage;
+
+	for (i = 0; i < sizeof(o->tsd.ship.damage); i++) {
+		damage = (int) x[i] + snis_randn(40);
+		if (damage > 255)
+			damage = 255;
+		x[i] = damage;
+	}
+	if (o->tsd.ship.damage.shield_damage == 255)
+		o->alive = 0;
+}
+
+static void send_ship_damage_packet(uint32_t id);
 static void torpedo_move(struct snis_entity *o)
 {
 	int i;
@@ -232,17 +254,23 @@ static void torpedo_move(struct snis_entity *o)
 		if (dist2 > TORPEDO_DETONATE_DIST2)
 			continue; /* not close enough */
 
+		
 		/* hit!!!! */
 		o->alive = 0;
-		go[i].alive = 0;
+
+		calculate_torpedo_damage(&go[i]);
+		send_ship_damage_packet(go[i].id);
+
 		(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
-		snis_queue_delete_object(go[i].id);
-		/* TODO -- these should be different sounds */
-		/* make sound for players that got hit */
 		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
-		/* make sound for players that did the hitting */
 		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
-		snis_object_pool_free_object(pool, i);
+		if (!go[i].alive) {
+			snis_queue_delete_object(go[i].id);
+			/* TODO -- these should be different sounds */
+			/* make sound for players that got hit */
+			/* make sound for players that did the hitting */
+			snis_object_pool_free_object(pool, i);
+		}
 		continue;
 	}
 
@@ -558,6 +586,7 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 	go[i].tsd.ship.temp = 0;
 	go[i].tsd.ship.power = 0;
 	go[i].tsd.ship.scizoom = 128;
+	memset(&go[i].tsd.ship.damage, 0, sizeof(go[i].tsd.ship.damage));
 	return i;
 }
 
@@ -578,6 +607,7 @@ static int add_ship(double x, double y, double vx, double vy, double heading)
 	go[i].tsd.ship.velocity = 0;
 	go[i].tsd.ship.shiptype = snis_randn(ARRAY_SIZE(shipclass));
 	go[i].tsd.ship.victim = (uint32_t) -1;
+	memset(&go[i].tsd.ship.damage, 0, sizeof(go[i].tsd.ship.damage));
 	return i;
 }
 
@@ -1504,6 +1534,17 @@ static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_pack
 	packed_buffer_append_u8(pb, sip->shield_width); 
 	packed_buffer_append_raw(pb, sip->name, sizeof(sip->name));
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_ALL);
+}
+
+static void send_ship_damage_packet(uint32_t id)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct ship_damage_packet));
+	packed_buffer_append_u16(pb, OPCODE_UPDATE_DAMAGE);
+	packed_buffer_append_u32(pb, id); 
+	packed_buffer_append_raw(pb, (char *) &go[id].tsd.ship.damage, sizeof(go[id].tsd.ship.damage));
+	send_packet_to_all_clients(pb, ROLE_ALL);
 }
 	
 static void send_update_ship_packet(struct game_client *c,

@@ -1740,6 +1740,31 @@ static int process_sci_select_target_packet(void)
 	return 0;
 }
 
+static int process_ship_damage_packet(void)
+{
+	char buffer[sizeof(struct ship_damage_packet)];
+	struct packed_buffer pb;
+	uint32_t id;
+	int rc, i;
+	struct ship_damage_data damage;
+
+	rc = snis_readsocket(gameserver_sock, buffer,
+			sizeof(struct ship_damage_packet) - sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	id = packed_buffer_extract_u32(&pb);
+	i = lookup_object_by_id(id);
+	
+	if (i < 0)
+		return -1;
+	packed_buffer_extract_raw(&pb, (char *) &damage, sizeof(damage));
+	pthread_mutex_lock(&universe_mutex);
+	go[i].tsd.ship.damage = damage;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
@@ -1920,6 +1945,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_SCI_SELECT_TARGET:
 			rc = process_sci_select_target_packet();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_DAMAGE:
+			rc = process_ship_damage_packet();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -2926,6 +2956,7 @@ static void slider_draw(GtkWidget *w, struct slider *s)
 {
 	double v;
 	int width, tx1;
+	GdkColor bar_color;
 
 #define SLIDER_HEIGHT 15
 #define SLIDER_POINTER_HEIGHT 8
@@ -2934,23 +2965,42 @@ static void slider_draw(GtkWidget *w, struct slider *s)
 	v = s->sample();
 	s->value = v / (s->r2 - s->r1);
 	tx1 = (int) (s->value * s->length) + s->x;
+	if (!s->clicked) {
+		if (v < 25.0) {
+			bar_color = huex[RED];
+		} else {
+			if (v < 50.0)  {
+				bar_color = huex[AMBER];
+			} else {
+				bar_color = huex[DARKGREEN];
+			}
+		}
+	}
 	gdk_gc_set_foreground(gc, &s->color);
 	current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->length, SLIDER_HEIGHT);
-	width = (int) ((v / (s->r2 - s->r1)) * s->length);
-	width = s->value * s->length;
-	current_draw_rectangle(w->window, gc, 1, s->x, s->y, width, SLIDER_HEIGHT);
+	width = s->value * s->length - 1;
+	if (width < 0)
+		width = 0;
+	if (!s->clicked)
+		gdk_gc_set_foreground(gc, &bar_color);
+	current_draw_rectangle(w->window, gc, 1, s->x + 1, s->y + 1, width, SLIDER_HEIGHT - 2);
+	if (!s->clicked)
+		gdk_gc_set_foreground(gc, &s->color);
 
 	tx1 = (int) (s->value * s->length) + s->x;
-	snis_draw_line(w->window, gc, tx1, s->y, tx1 - SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT); 
-	snis_draw_line(w->window, gc, tx1, s->y, tx1 + SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT); 
-	snis_draw_line(w->window, gc, tx1 - SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT,
-					tx1 + SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT); 
-	snis_draw_line(w->window, gc, tx1, s->y + SLIDER_HEIGHT,
-			tx1 - SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
-	snis_draw_line(w->window, gc, tx1, s->y + SLIDER_HEIGHT,
-			tx1 + SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
-	snis_draw_line(w->window, gc, tx1 - SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT,
-			tx1 + SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
+
+	if (s->clicked) {
+		snis_draw_line(w->window, gc, tx1, s->y, tx1 - SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT); 
+		snis_draw_line(w->window, gc, tx1, s->y, tx1 + SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT); 
+		snis_draw_line(w->window, gc, tx1 - SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT,
+						tx1 + SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT); 
+		snis_draw_line(w->window, gc, tx1, s->y + SLIDER_HEIGHT,
+				tx1 - SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
+		snis_draw_line(w->window, gc, tx1, s->y + SLIDER_HEIGHT,
+				tx1 + SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
+		snis_draw_line(w->window, gc, tx1 - SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT,
+				tx1 + SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
+	}
 	abs_xy_draw_string(w, s->label, TINY_FONT, s->x + s->length + 5, s->y + 2 * SLIDER_HEIGHT / 3); 
 }
 
@@ -3286,6 +3336,35 @@ static double sample_sensors(void)
 	return 100.0 * o->tsd.ship.pwrdist.sensors / 255.0;
 }
 
+static double sample_generic_damage_data(int field_offset)
+{
+	uint8_t *field;
+
+	struct snis_entity *o;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return 0.0;
+	o = &go[my_ship_oid];
+	field = (uint8_t *) &o->tsd.ship.damage + field_offset; 
+
+	return 100.0 * (255 - *field) / 255.0;
+}
+
+#define CREATE_DAMAGE_SAMPLER_FUNC(fieldname) \
+	static double sample_##fieldname(void) \
+	{ \
+		return sample_generic_damage_data(offsetof(struct ship_damage_data, fieldname)); \
+	}
+
+CREATE_DAMAGE_SAMPLER_FUNC(shield_damage) /* sample_shield_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(impulse_damage) /* sample_impulse_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(warp_damage) /* sample_warp_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(torpedo_tubes_damage) /* sample_torpedo_tubes_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(phaser_banks_damage) /* sample_phaser_banks_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(sensors_damage) /* sample_sensors_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(comms_damage) /* sample_comms__damage defined here */
+
 static struct navigation_ui {
 	struct slider warp_slider;
 	struct gauge warp_gauge;
@@ -3368,6 +3447,15 @@ struct enginerring_ui {
 	struct slider comm_slider;
 	struct slider phaserbanks_slider;
 	struct slider throttle_slider;
+
+	struct slider shield_damage;
+	struct slider impulse_damage;
+	struct slider warp_damage;
+	struct slider torpedo_tubes_damage;
+	struct slider phaser_banks_damage;
+	struct slider sensors_damage;
+	struct slider comms_damage;
+
 } eng_ui;
 
 static void init_engineering_ui(void)
@@ -3395,6 +3483,7 @@ static void init_engineering_ui(void)
 	slider_init(&eng_ui.throttle_slider, 350, y + yinc, 200, &huex[AMBER], "Throttle", "0", "100",
 				0.0, 100.0, sample_throttle, do_throttle, DISPLAYMODE_ENGINEERING);
 
+	y += yinc;
 	slider_init(&eng_ui.shield_slider, 20, y += yinc, 150, &huex[AMBER], "Shields", "0", "100",
 				0.0, 100.0, sample_shields, do_shields_pwr, DISPLAYMODE_ENGINEERING);
 	slider_init(&eng_ui.phaserbanks_slider, 20, y += yinc, 150, &huex[AMBER], "Phaser Banks", "0", "100",
@@ -3417,6 +3506,29 @@ static void init_engineering_ui(void)
 	add_slider(&eng_ui.warp_slider);
 	add_slider(&eng_ui.maneuvering_slider);
 	add_slider(&eng_ui.throttle_slider);
+
+	y = 220 + yinc;
+	slider_init(&eng_ui.shield_damage, 350, y += yinc, 150, &huex[AMBER], "SHIELD STATUS", "0", "100",
+				0.0, 100.0, sample_shield_damage, NULL, DISPLAYMODE_ENGINEERING);
+	slider_init(&eng_ui.impulse_damage, 350, y += yinc, 150, &huex[AMBER], "IMPULSE STATUS", "0", "100",
+				0.0, 100.0, sample_impulse_damage, NULL, DISPLAYMODE_ENGINEERING);
+	slider_init(&eng_ui.warp_damage, 350, y += yinc, 150, &huex[AMBER], "WARP STATUS", "0", "100",
+				0.0, 100.0, sample_warp_damage, NULL, DISPLAYMODE_ENGINEERING);
+	slider_init(&eng_ui.torpedo_tubes_damage, 350, y += yinc, 150, &huex[AMBER], "TORPEDO STATUS", "0", "100",
+				0.0, 100.0, sample_torpedo_tubes_damage, NULL, DISPLAYMODE_ENGINEERING);
+	slider_init(&eng_ui.phaser_banks_damage, 350, y += yinc, 150, &huex[AMBER], "PHASER STATUS", "0", "100",
+				0.0, 100.0, sample_phaser_banks_damage, NULL, DISPLAYMODE_ENGINEERING);
+	slider_init(&eng_ui.sensors_damage, 350, y += yinc, 150, &huex[AMBER], "SENSORS STATUS", "0", "100",
+				0.0, 100.0, sample_sensors_damage, NULL, DISPLAYMODE_ENGINEERING);
+	slider_init(&eng_ui.comms_damage, 350, y += yinc, 150, &huex[AMBER], "COMMS STATUS", "0", "100",
+				0.0, 100.0, sample_comms_damage, NULL, DISPLAYMODE_ENGINEERING);
+	add_slider(&eng_ui.shield_damage);
+	add_slider(&eng_ui.impulse_damage);
+	add_slider(&eng_ui.warp_damage);
+	add_slider(&eng_ui.torpedo_tubes_damage);
+	add_slider(&eng_ui.phaser_banks_damage);
+	add_slider(&eng_ui.sensors_damage);
+	add_slider(&eng_ui.comms_damage);
 }
 
 static void show_engineering(GtkWidget *w)

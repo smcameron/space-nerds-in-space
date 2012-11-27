@@ -65,6 +65,16 @@ static char *shipclass[] = {
 	"Starship",
 };
 
+struct ship_damage_data {
+	uint8_t shield_damage;
+	uint8_t impulse_damage;
+	uint8_t warp_damage;
+	uint8_t torpedo_tubes_damage;
+	uint8_t phaser_banks_damage;
+	uint8_t sensors_damage;
+	uint8_t comms_damage;
+};
+
 struct ship_data {
 	uint32_t torpedoes;
 #define TORPEDO_LIFETIME 20
@@ -117,6 +127,7 @@ struct ship_data {
 	uint8_t requested_warpdrive;
 	int32_t victim;
 	double dox, doy; /* destination offsets */
+	struct ship_damage_data damage;
 };
 
 struct starbase_data {
