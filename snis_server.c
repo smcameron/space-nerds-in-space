@@ -296,6 +296,25 @@ static void torpedo_move(struct snis_entity *o)
 	}
 }
 
+static double point_to_line_dist(double lx1, double ly1, double lx2, double ly2, double px, double py)
+{
+	double normal_length = hypot(lx1 - lx2, ly1 - ly2);
+	return fabs((px - lx1) * (ly2 - ly1) - (py - ly1) * (lx2 - lx1)) / normal_length;
+}
+
+static int laser_point_collides(double lx1, double ly1, double lx2, double ly2, double px, double py)
+{
+	if (px < lx1 && px < lx2)
+		return 0;
+	if (px > lx1 && px > lx2)
+		return 0;
+	if (py < ly1 && py < ly2)
+		return 0;
+	if (py > ly1 && py > ly2)
+		return 0;
+	return (point_to_line_dist(lx1, ly1, lx2, ly2, px, py) < 350.0);
+}
+
 static void laser_move(struct snis_entity *o)
 {
 	int i;
@@ -306,22 +325,23 @@ static void laser_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 	o->alive--;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		double dist2;
+		/* double dist2; */
 
 		if (!go[i].alive)
 			continue;
 		if (i == o->index)
 			continue;
-		if (o->alive >= LASER_LIFETIME - 3)
+		if (o->alive >= LASER_LIFETIME - 1)
 			continue;
 		if (go[i].type != OBJTYPE_SHIP1 && go[i].type != OBJTYPE_SHIP2)
 			continue;
 		if (go[i].id == o->tsd.laser.ship_id)
 			continue; /* can't laser yourself. */
-		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
-			((go[i].y - o->y) * (go[i].y - o->y));
+		/* dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
+			((go[i].y - o->y) * (go[i].y - o->y)); */
 
-		if (dist2 > LASER_DETONATE_DIST2)
+		if (!laser_point_collides(o->x, o->y, o->x - o->vx, o->y - o->vy, go[i].x, go[i].y))
+		/* if (dist2 > LASER_DETONATE_DIST2) */
 			continue; /* not close enough */
 
 		
