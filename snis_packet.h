@@ -60,6 +60,7 @@
 #define OPCODE_ROLE_ONSCREEN 134
 #define OPCODE_SCI_SELECT_TARGET 135
 #define OPCODE_UPDATE_DAMAGE 136
+#define OPCODE_REQUEST_LASER 137
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -164,6 +165,14 @@ struct update_torpedo_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint32_t ship_oid; /* ship torpedo came from */
+	uint32_t x, y;
+	uint32_t vx, vy;
+}; 
+
+struct update_laser_packet {
+	uint16_t opcode;
+	uint32_t id;
+	uint32_t ship_oid; /* ship laser came from */
 	uint32_t x, y;
 	uint32_t vx, vy;
 }; 

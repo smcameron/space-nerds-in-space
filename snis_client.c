@@ -74,7 +74,9 @@ typedef void arc_drawing_function(GdkDrawable *drawable, GdkGC *gc,
 
 line_drawing_function *current_draw_line = gdk_draw_line;
 rectangle_drawing_function *current_draw_rectangle = gdk_draw_rectangle;
-bright_line_drawing_function *current_bright_line = NULL;
+void unscaled_bright_line(GdkDrawable *drawable,
+	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color);
+bright_line_drawing_function *current_bright_line = unscaled_bright_line;
 explosion_function *explosion = NULL;
 arc_drawing_function *current_draw_arc = gdk_draw_arc;
 
@@ -415,6 +417,21 @@ static int update_torpedo(uint32_t id, double x, double y, double vx, double vy,
 	return 0;
 }
 
+static int update_laser(uint32_t id, double x, double y, double vx, double vy, uint32_t ship_id)
+{
+	int i;
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_LASER, 1);
+		if (i < 0)
+			return i;
+		go[i].tsd.laser.ship_id = ship_id;
+	} else {
+		update_generic_object(i, x, y, vx, vy, 0.0, 1); 
+	}
+	return 0;
+}
+
 static int update_planet(uint32_t id, double x, double y)
 {
 	int i;
@@ -551,11 +568,6 @@ static int __attribute__((unused)) add_planet(uint32_t id, double x, double y, d
 static int __attribute__((unused)) add_starbase(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
 {
 	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_STARBASE, alive);
-}
-
-static int __attribute__((unused)) add_laser(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
-{
-	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_LASER, alive);
 }
 
 static int __attribute__((unused)) add_torpedo(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
@@ -1160,6 +1172,31 @@ static void do_torpedo(void)
 	wakeup_gameserver_writer();
 }
 
+static void do_laser(void)
+{
+	struct packed_buffer *pb;
+#if 0
+	struct snis_entity *o;
+#endif
+	if (displaymode != DISPLAYMODE_WEAPONS)
+		return;
+#if 0
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return;
+
+	o = &go[my_ship_oid];
+
+	if (o->tsd.ship.phaser_bank_charge < 128.0)
+		return;
+#endif
+	pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
+	packed_buffer_append_u16(pb, OPCODE_REQUEST_LASER);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
 static int control_key_pressed = 0;
 
 static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
@@ -1609,6 +1646,40 @@ static int process_update_torpedo_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_laser_packet(void)
+{
+	unsigned char buffer[100];
+	struct packed_buffer pb;
+	uint32_t id, ship_id;
+	uint32_t x, y;
+	int32_t vx, vy;
+	double dx, dy, dvx, dvy;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_laser_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_laser_packet) -
+					sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	id = packed_buffer_extract_u32(&pb);
+	ship_id = packed_buffer_extract_u32(&pb);
+	x = packed_buffer_extract_u32(&pb);
+	y = packed_buffer_extract_u32(&pb);
+	vx = (int32_t) packed_buffer_extract_u32(&pb);
+	vy = (int32_t) packed_buffer_extract_u32(&pb);
+
+	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+	dvx = ((double) vx * (double) XUNIVERSE_DIMENSION) / (double) INT32_MAX;
+	dvy = ((double) vy * (double) YUNIVERSE_DIMENSION) / (double) INT32_MAX;
+
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_laser(id, dx, dy, dvx, dvy, ship_id);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+} 
+
 static void delete_object(uint32_t id)
 {
 	int i;
@@ -1916,6 +1987,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_LASER:
+			rc = process_update_laser_packet();
+			if (rc != 0)
+				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_TORPEDO:
 			/* printf("processing update ship...\n"); */
@@ -2020,6 +2094,7 @@ badserver:
 	 * to write, but server is disconnected... no place to put our buffer.
 	 * What happens next is probably "nothing good."
 	 */
+	printf("client baling on server...\n");
 	packed_buffer_free(buffer);
 	shutdown(gameserver_sock, SHUT_RDWR);
 	close(gameserver_sock);
@@ -2230,6 +2305,11 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 		snis_draw_line(drawable, gc, x, y, dx, dy);
 	}
 	/* snis_draw_circle(drawable, gc, x, y, (int) (SCREEN_WIDTH * 150.0 / XUNIVERSE_DIMENSION)); */
+}
+
+static void snis_draw_laser(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
+{
+	current_bright_line(drawable, gc, x1, y1, x2, y2, RED);
 }
 
 static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
@@ -2466,6 +2546,11 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 			case OBJTYPE_STARBASE:
 				gdk_gc_set_foreground(gc, &huex[MAGENTA]);
 				snis_draw_circle(w->window, gc, x, y, r / 20);
+				break;
+			case OBJTYPE_LASER:
+				snis_draw_laser(w->window, gc, x, y,
+					x - go[i].vx * (double) r / (2 * NAVSCREEN_RADIUS),
+					y - go[i].vy * (double) r / (2 * NAVSCREEN_RADIUS));
 				break;
 			case OBJTYPE_TORPEDO:
 				snis_draw_torpedo(w->window, gc, x, y, r / 25);
@@ -2813,6 +2898,7 @@ static void load_torpedo_button_pressed()
 
 static void fire_phaser_button_pressed(__attribute__((unused)) void *notused)
 {
+#if 0
 	struct snis_entity *o;
 	struct packed_buffer *pb;
 
@@ -2828,6 +2914,8 @@ static void fire_phaser_button_pressed(__attribute__((unused)) void *notused)
 	packed_buffer_append_u16(pb, OPCODE_REQUEST_PHASER);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
+#endif
+	do_laser();
 }
 
 static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)

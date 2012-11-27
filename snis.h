@@ -80,6 +80,9 @@ struct ship_data {
 #define TORPEDO_LIFETIME 20
 #define TORPEDO_VELOCITY (45.0)
 #define TORPEDO_DETONATE_DIST2 (150 * 150)
+#define LASER_LIFETIME 30
+#define LASER_VELOCITY (200.0)
+#define LASER_DETONATE_DIST2 (100 * 100)
 	uint32_t power;
 	uint32_t shields;
 	char shipname[100];
@@ -136,7 +139,7 @@ struct starbase_data {
 
 struct laser_data {
 	uint32_t power;
-	uint32_t color;
+	uint32_t ship_id;
 };
 
 struct torpedo_data {

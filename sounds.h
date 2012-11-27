@@ -6,5 +6,6 @@
 
 #define EXPLOSION_SOUND 1
 #define TORPEDO_LAUNCH_SOUND 2
+#define LASER_FIRE_SOUND 2
 
 #endif

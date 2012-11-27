@@ -225,6 +225,21 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 		o->alive = 0;
 }
 
+static void calculate_laser_damage(struct snis_entity *o)
+{
+	int damage, i;
+	unsigned char *x = (unsigned char *) &o->tsd.ship.damage;
+
+	for (i = 0; i < sizeof(o->tsd.ship.damage); i++) {
+		damage = (int) x[i] + snis_randn(40);
+		if (damage > 255)
+			damage = 255;
+		x[i] = damage;
+	}
+	if (o->tsd.ship.damage.shield_damage == 255)
+		o->alive = 0;
+}
+
 static void send_ship_damage_packet(uint32_t id);
 static void torpedo_move(struct snis_entity *o)
 {
@@ -264,6 +279,61 @@ static void torpedo_move(struct snis_entity *o)
 		(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
 		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
 		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
+		if (!go[i].alive) {
+			snis_queue_delete_object(go[i].id);
+			/* TODO -- these should be different sounds */
+			/* make sound for players that got hit */
+			/* make sound for players that did the hitting */
+			snis_object_pool_free_object(pool, i);
+		}
+		continue;
+	}
+
+	if (o->alive <= 0) {
+		snis_queue_delete_object(o->id);
+		o->alive = 0;
+		snis_object_pool_free_object(pool, o->index);
+	}
+}
+
+static void laser_move(struct snis_entity *o)
+{
+	int i;
+
+	o->x += o->vx;
+	o->y += o->vy;
+	normalize_coords(o);
+	o->timestamp = universe_timestamp;
+	o->alive--;
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		double dist2;
+
+		if (!go[i].alive)
+			continue;
+		if (i == o->index)
+			continue;
+		if (o->alive >= LASER_LIFETIME - 3)
+			continue;
+		if (go[i].type != OBJTYPE_SHIP1 && go[i].type != OBJTYPE_SHIP2)
+			continue;
+		if (go[i].id == o->tsd.laser.ship_id)
+			continue; /* can't laser yourself. */
+		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
+			((go[i].y - o->y) * (go[i].y - o->y));
+
+		if (dist2 > LASER_DETONATE_DIST2)
+			continue; /* not close enough */
+
+		
+		/* hit!!!! */
+		o->alive = 0;
+
+		calculate_laser_damage(&go[i]);
+		send_ship_damage_packet(go[i].id);
+
+		(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
+		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
+		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
 		if (!go[i].alive) {
 			snis_queue_delete_object(go[i].id);
 			/* TODO -- these should be different sounds */
@@ -643,9 +713,17 @@ static int add_explosion(double x, double y, uint16_t velocity, uint16_t nsparks
 	return i;
 }
 
-static int __attribute__((unused)) add_laser(double x, double y, double vx, double vy, double heading)
+static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id)
 {
-	return add_generic_object(x, y, vx, vy, heading, OBJTYPE_LASER);
+	int i;
+
+	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_LASER);
+	if (i < 0)
+		return i;
+	go[i].move = laser_move;
+	go[i].alive = LASER_LIFETIME;
+	go[i].tsd.laser.ship_id = ship_id;
+	return i;
 }
 
 static int add_torpedo(double x, double y, double vx, double vy, double heading, uint32_t ship_id)
@@ -1140,8 +1218,17 @@ static int process_request_torpedo(struct game_client *c)
 	return 0;
 }
 
-static int process_request_phaser(__attribute__((unused)) struct game_client *c)
+static int process_request_laser(struct game_client *c)
 {
+	struct snis_entity *ship = &go[c->shipid];
+	double vx, vy;
+
+	vx = LASER_VELOCITY * sin(ship->tsd.ship.gun_heading);
+	vy = LASER_VELOCITY * -cos(ship->tsd.ship.gun_heading);
+	pthread_mutex_lock(&universe_mutex);
+	add_laser(ship->x + vx, ship->y + vy, vx, vy, ship->tsd.ship.gun_heading, ship->id); 
+	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
+	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
 
@@ -1150,6 +1237,7 @@ static void process_instructions_from_client(struct game_client *c)
 	int rc;
 	uint16_t opcode;
 
+	opcode = 0xffff;
 	rc = snis_readsocket(c->socket, &opcode, sizeof(opcode));
 	if (rc != 0)
 		goto protocol_error;
@@ -1159,8 +1247,8 @@ static void process_instructions_from_client(struct game_client *c)
 		case OPCODE_REQUEST_TORPEDO:
 			process_request_torpedo(c);
 			break;
-		case OPCODE_REQUEST_PHASER:
-			process_request_phaser(c);
+		case OPCODE_REQUEST_LASER:
+			process_request_laser(c);
 			break;
 		case OPCODE_LOAD_TORPEDO:
 			process_load_torpedo(c);
@@ -1268,7 +1356,7 @@ static void process_instructions_from_client(struct game_client *c)
 	return;
 
 protocol_error:
-	printf("Protocol error in process_instructions_from_client\n");
+	printf("Protocol error in process_instructions_from_client, opcode = %hu\n", opcode);
 	shutdown(c->socket, SHUT_RDWR);
 	close(c->socket);
 	c->socket = -1;
@@ -1673,6 +1761,22 @@ static void send_update_torpedo_packet(struct game_client *c,
 static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o)
 {
+	struct packed_buffer *pb;
+	uint32_t x, y, vx, vy;
+
+	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	vx = (uint32_t) ((o->vx / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	vy = (uint32_t) ((o->vy / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+	pb = packed_buffer_allocate(sizeof(struct update_laser_packet));
+	packed_buffer_append_u16(pb, OPCODE_UPDATE_LASER);
+	packed_buffer_append_u32(pb, o->id);
+	packed_buffer_append_u32(pb, o->tsd.laser.ship_id);
+	packed_buffer_append_u32(pb, x);
+	packed_buffer_append_u32(pb, y);
+	packed_buffer_append_u32(pb, vx);
+	packed_buffer_append_u32(pb, vy);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
 static int add_new_player(struct game_client *c)

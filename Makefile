@@ -27,7 +27,8 @@ LIBS=-Lssgl -lssglclient -lrt -lm
 
 PROGS=snis_server snis_client
 
-MYCFLAGS=-g --pedantic -Wall -Werror -pthread -std=gnu99
+#MYCFLAGS=-g --pedantic -Wall -Werror -pthread -std=gnu99
+MYCFLAGS=-g --pedantic -Wall -pthread -std=gnu99
 GTKCFLAGS=`pkg-config --cflags gtk+-2.0`
 GTKLDFLAGS=`pkg-config --libs gtk+-2.0` \
         `pkg-config --libs gthread-2.0` \
