@@ -15,13 +15,17 @@ Too much to list, but here's a list anyway:
     Enemy ship comm monitoring
     Friendly ship stuff
     bridge-to-bridge comm
+    take damage into account
 
 * Finish Navigation screen
   (make warp work... various improvments.)
+  take damage into account
 * Finish weapons screen
   beam weapon
+  take damage into account
 
 * Science station
+  take damage into account
 * Setup screen
 
 * Some kind of session persistence so that if a network
@@ -30,4 +34,26 @@ Too much to list, but here's a list anyway:
 
 * write some kind of guide to hacking, to make it easier for others to
   contribute to this codebase.
+
+* computer-controlled-ships
+  loads of AI improvements and basic functionality 
+  remains to be done.
+
+* starbase behavior
+
+* asteroids/anomalies/nebulae, etc. need to be implemented
+
+* I don't like the wrapping universe.  INstead, I think it should
+  be the "known" universe with a vast empty "unknown" out there with
+  some hard limits on coords at, say, +/- a half-billion units out or
+  something.
+
+* 3D out the window view remains to be done.
+
+* comms screen:
+  enemies need to send insults to the crew
+  need to be able to communicate with starbases -- request
+  various things of the starbase. 
+  intercept chatter between enemy ships
+  ??? need to figure out what the hell the comms screen is good for.
 
