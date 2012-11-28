@@ -605,6 +605,16 @@ static void player_move(struct snis_entity *o)
 		o->tsd.ship.warpdrive++;
 	if (o->tsd.ship.warpdrive > o->tsd.ship.requested_warpdrive)
 		o->tsd.ship.warpdrive--;
+
+	/* Update phaser charge */
+	if (o->tsd.ship.phaser_charge < o->tsd.ship.pwrdist.phaserbanks) {
+		int delta;
+
+		delta = (o->tsd.ship.pwrdist.phaserbanks - o->tsd.ship.phaser_charge) / 10.0;
+		if (delta < 1)
+			delta = 1;
+		o->tsd.ship.phaser_charge += delta;
+	}
 }
 
 static void starbase_move(struct snis_entity *o)
@@ -733,9 +743,20 @@ static int add_explosion(double x, double y, uint16_t velocity, uint16_t nsparks
 	return i;
 }
 
-static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id)
+/* must hold universe mutex */
+static int lookup_by_id(uint32_t id)
 {
 	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
+		if (go[i].id == id)
+			return i;
+	return -1;
+}
+
+static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id)
+{
+	int i, s;
 
 	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_LASER);
 	if (i < 0)
@@ -743,6 +764,10 @@ static int add_laser(double x, double y, double vx, double vy, double heading, u
 	go[i].move = laser_move;
 	go[i].alive = LASER_LIFETIME;
 	go[i].tsd.laser.ship_id = ship_id;
+	s = lookup_by_id(ship_id);
+	go[i].tsd.laser.power = go[s].tsd.ship.phaser_charge;
+	go[s].tsd.ship.phaser_charge = 0;
+	go[i].tsd.laser.wavelength = go[s].tsd.ship.phaser_wavelength;
 	return i;
 }
 
@@ -964,17 +989,6 @@ static int process_request_thrust(struct game_client *c)
 	return 0;
 }
 
-/* must hold universe mutex */
-static int lookup_by_id(uint32_t id)
-{
-	int i;
-
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
-		if (go[i].id == id)
-			return i;
-	return -1;
-}
-
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip);
 static int process_request_ship_sdata(struct game_client *c)
 {
@@ -1101,6 +1115,11 @@ static int process_request_warpdrive(struct game_client *c)
 static int process_request_maneuvering_pwr(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.maneuvering)); 
+}
+
+static int process_request_laser_wavelength(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.phaser_wavelength)); 
 }
 
 static int process_engage_warp(struct game_client *c)
@@ -1290,6 +1309,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_ENGAGE_WARP:
 			rc = process_engage_warp(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_LASER_WAVELENGTH:
+			rc = process_request_laser_wavelength(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -1703,6 +1727,8 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u8(pb, o->tsd.ship.scizoom);
 	packed_buffer_append_u8(pb, o->tsd.ship.warpdrive);
 	packed_buffer_append_u8(pb, o->tsd.ship.requested_warpdrive);
+	packed_buffer_append_u8(pb, o->tsd.ship.phaser_charge);
+	packed_buffer_append_u8(pb, o->tsd.ship.phaser_wavelength);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

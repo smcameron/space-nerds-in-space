@@ -61,6 +61,7 @@
 #define OPCODE_SCI_SELECT_TARGET 135
 #define OPCODE_UPDATE_DAMAGE 136
 #define OPCODE_REQUEST_LASER 137
+#define OPCODE_REQUEST_LASER_WAVELENGTH 138
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -97,6 +98,8 @@ struct update_ship_packet {
 	uint8_t scizoom;
 	uint8_t warpdrive;
 	uint8_t requested_warpdrive;
+	uint8_t phaser_charge;
+	uint8_t phaser_wavelength;
 };
 
 struct ship_sdata_packet {
@@ -150,8 +153,8 @@ struct update_explosion_packet {
 struct add_laser_packet {
 	uint16_t opcode;
 	uint32_t id;
-	uint32_t power;
-	uint32_t color;
+	uint8_t power;
+	uint8_t wavelength;
 	struct packed_double x, y;
 	struct packed_double vx, vy;
 };

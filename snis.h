@@ -128,6 +128,8 @@ struct ship_data {
 	uint8_t scizoom;
 	uint8_t warpdrive;
 	uint8_t requested_warpdrive;
+	uint8_t phaser_wavelength;
+	uint8_t phaser_charge;
 	int32_t victim;
 	double dox, doy; /* destination offsets */
 	struct ship_damage_data damage;
@@ -138,7 +140,8 @@ struct starbase_data {
 };
 
 struct laser_data {
-	uint32_t power;
+	uint8_t power;
+	uint8_t wavelength;
 	uint32_t ship_id;
 };
 

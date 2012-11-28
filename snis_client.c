@@ -356,7 +356,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 			double gun_heading, double sci_heading, double sci_beam_width, int shiptype,
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
 			fuel, uint8_t temp, struct power_dist *pd, uint8_t scizoom, uint8_t warpdrive,
-			uint8_t requested_warpdrive)
+			uint8_t requested_warpdrive, uint8_t phaser_charge, uint8_t phaser_wavelength)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -382,6 +382,8 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.scizoom = scizoom;
 	go[i].tsd.ship.requested_warpdrive = requested_warpdrive;
 	go[i].tsd.ship.warpdrive = warpdrive;
+	go[i].tsd.ship.phaser_charge = phaser_charge;
+	go[i].tsd.ship.phaser_wavelength = phaser_wavelength;
 	return 0;
 }
 
@@ -1410,7 +1412,8 @@ static int process_update_ship_packet(uint16_t opcode)
 	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int shiptype = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
-	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, warpdrive, requested_warpdrive;
+	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, warpdrive, requested_warpdrive,
+		phaser_charge, phaser_wavelength;
 	struct power_dist pd;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1442,6 +1445,8 @@ static int process_update_ship_packet(uint16_t opcode)
 	scizoom = packed_buffer_extract_u8(&pb);
 	warpdrive = packed_buffer_extract_u8(&pb);
 	requested_warpdrive = packed_buffer_extract_u8(&pb);
+	phaser_charge = packed_buffer_extract_u8(&pb);
+	phaser_wavelength = packed_buffer_extract_u8(&pb);
 
 	dx = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
 	dy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
@@ -1456,7 +1461,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power,
 				dgheading, dsheading, dbeamwidth, shiptype,
 				tloading, tloaded, throttle, rpm, fuel, temp, &pd, scizoom,
-				warpdrive, requested_warpdrive);
+				warpdrive, requested_warpdrive, phaser_charge, phaser_wavelength);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -1617,11 +1622,6 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 /*
  * end gauge related functions/types
  */
-
-struct weapons_ui {
-	struct button fire_torpedo, load_torpedo, fire_phaser;
-	struct gauge phaser_bank_gauge;
-} weapons;
 
 static int process_update_torpedo_packet(void)
 {
@@ -2938,80 +2938,6 @@ static void button_init(struct button *b, int x, int y, int width, int height, c
 			GdkColor *color, int font, button_function bf, void *cookie, int displaymode);
 static void add_button(struct button *b);
 
-
-static double sample_phaserbanks(void);
-static void init_weapons_ui(void)
-{
-	button_init(&weapons.fire_phaser, 550, 200, 200, 30, "FIRE PHASER", &huex[RED],
-			TINY_FONT, fire_phaser_button_pressed, NULL, DISPLAYMODE_WEAPONS);
-	button_init(&weapons.load_torpedo, 550, 250, 200, 30, "LOAD TORPEDO", &huex[GREEN],
-			TINY_FONT, load_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
-	button_init(&weapons.fire_torpedo, 550, 300, 200, 30, "FIRE TORPEDO", &huex[RED],
-			TINY_FONT, fire_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
-	gauge_init(&weapons.phaser_bank_gauge, 650, 100, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
-			10, "PHASER", sample_phaserbanks);
-	add_button(&weapons.fire_phaser);
-	add_button(&weapons.load_torpedo);
-	add_button(&weapons.fire_torpedo);
-}
-
-static void show_weapons(GtkWidget *w)
-{
-	char buf[100];
-	struct snis_entity *o;
-	int rx, ry, rw, rh, cx, cy;
-	int r;
-	int buttoncolor;
-
-	show_common_screen(w, "Weapons");
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
-
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
-		return;
-	o = &go[my_ship_oid];
-	sprintf(buf, "Photon Torpedoes: %03d", o->tsd.ship.torpedoes);
-	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
-	sprintf(buf, "Torpedoes Loaded: %03d", o->tsd.ship.torpedoes_loaded);
-	abs_xy_draw_string(w, buf, TINY_FONT, 250, 30 + LINEHEIGHT);
-	sprintf(buf, "Torpedoes Loading: %03d", o->tsd.ship.torpedoes_loading);
-	abs_xy_draw_string(w, buf, TINY_FONT, 250, 50 + LINEHEIGHT);
-/*
-	sprintf(buf, "vx: %5.2lf", o->vx);
-	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
-	sprintf(buf, "vy: %5.2lf", o->vy);
-	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 4);
-*/
-
-	buttoncolor = RED;
-	if (o->tsd.ship.torpedoes > 0 && o->tsd.ship.torpedoes_loading == 0 &&
-		o->tsd.ship.torpedoes_loaded < 2)
-		buttoncolor = GREEN;
-	weapons.load_torpedo.color = huex[buttoncolor];
-	buttoncolor = RED;
-	if (o->tsd.ship.torpedoes_loaded)
-		buttoncolor = GREEN;
-	weapons.fire_torpedo.color = huex[buttoncolor];
-
-	rx = 40;
-	ry = 90;
-	rw = 470;
-	rh = 470;
-	cx = rx + (rw / 2);
-	cy = ry + (rh / 2);
-	r = rh / 2;
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
-	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, NAVSCREEN_RADIUS, 1);
-	gdk_gc_set_foreground(gc, &huex[BLUE]);
-	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
-	draw_all_the_guys(w, o);
-	draw_all_the_sparks(w, o);
-	gauge_draw(w, &weapons.phaser_bank_gauge);
-}
-
 /*
  * begin slider related functions/types
  */
@@ -3377,7 +3303,34 @@ static double sample_phaserbanks(void)
 	if (my_ship_oid == UNKNOWN_ID)
 		return 0.0;
 	o = &go[my_ship_oid];
-	return 100.0 * o->tsd.ship.pwrdist.phaserbanks / 255.0;
+	return (o->tsd.ship.pwrdist.phaserbanks / 255.0) * 100.0;
+}
+
+static double sample_phasercharge(void)
+{
+	struct snis_entity *o;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return 0.0;
+	o = &go[my_ship_oid];
+	return (o->tsd.ship.phaser_charge / 255.0) * 100.0;
+}
+
+static double sample_phaser_wavelength(void)
+{
+	struct snis_entity *o;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return 0.0;
+	o = &go[my_ship_oid];
+	return 40.0 * o->tsd.ship.phaser_wavelength / 255.0 + 10.0;
+}
+
+static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_LASER_WAVELENGTH);
 }
 
 static double sample_warp(void)
@@ -3473,6 +3426,99 @@ static struct navigation_ui {
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
 {
 	do_adjust_byte_value(0,  OPCODE_ENGAGE_WARP);
+}
+
+struct weapons_ui {
+	struct button fire_torpedo, load_torpedo, fire_phaser;
+	struct gauge phaser_bank_gauge;
+	struct gauge phaser_wavelength;
+	struct slider wavelen_slider;
+} weapons;
+
+static double sample_phaserbanks(void);
+static double sample_phaser_wavelength(void);
+static void init_weapons_ui(void)
+{
+	int y = 450;
+
+	button_init(&weapons.fire_phaser, 550, y, 200, 30, "FIRE PHASER", &huex[RED],
+			TINY_FONT, fire_phaser_button_pressed, NULL, DISPLAYMODE_WEAPONS);
+	y += 50;
+	button_init(&weapons.load_torpedo, 550, y, 200, 30, "LOAD TORPEDO", &huex[GREEN],
+			TINY_FONT, load_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
+	y += 50;
+	button_init(&weapons.fire_torpedo, 550, y, 200, 30, "FIRE TORPEDO", &huex[RED],
+			TINY_FONT, fire_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
+	gauge_init(&weapons.phaser_bank_gauge, 650, 100, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+			10, "CHARGE", sample_phasercharge);
+	gauge_init(&weapons.phaser_wavelength, 650, 300, 90, 10.0, 60.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+			10, "WAVE LEN", sample_phaser_wavelength);
+	slider_init(&weapons.wavelen_slider, 200, 30, 200, &huex[AMBER], "WAVE LEN",
+				"10", "60", 10.0, 60.0, sample_phaser_wavelength,
+				do_phaser_wavelength, DISPLAYMODE_WEAPONS);
+	add_button(&weapons.fire_phaser);
+	add_button(&weapons.load_torpedo);
+	add_button(&weapons.fire_torpedo);
+	add_slider(&weapons.wavelen_slider);
+}
+
+static void show_weapons(GtkWidget *w)
+{
+	char buf[100];
+	struct snis_entity *o;
+	int rx, ry, rw, rh, cx, cy;
+	int r;
+	int buttoncolor;
+
+	show_common_screen(w, "Weapons");
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
+
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return;
+	o = &go[my_ship_oid];
+	sprintf(buf, "Photon Torpedoes: %03d", o->tsd.ship.torpedoes);
+	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
+	sprintf(buf, "Torpedoes Loaded: %03d", o->tsd.ship.torpedoes_loaded);
+	abs_xy_draw_string(w, buf, TINY_FONT, 250, 30 + LINEHEIGHT);
+	sprintf(buf, "Torpedoes Loading: %03d", o->tsd.ship.torpedoes_loading);
+	abs_xy_draw_string(w, buf, TINY_FONT, 250, 50 + LINEHEIGHT);
+/*
+	sprintf(buf, "vx: %5.2lf", o->vx);
+	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
+	sprintf(buf, "vy: %5.2lf", o->vy);
+	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 4);
+*/
+
+	buttoncolor = RED;
+	if (o->tsd.ship.torpedoes > 0 && o->tsd.ship.torpedoes_loading == 0 &&
+		o->tsd.ship.torpedoes_loaded < 2)
+		buttoncolor = GREEN;
+	weapons.load_torpedo.color = huex[buttoncolor];
+	buttoncolor = RED;
+	if (o->tsd.ship.torpedoes_loaded)
+		buttoncolor = GREEN;
+	weapons.fire_torpedo.color = huex[buttoncolor];
+
+	rx = 40;
+	ry = 90;
+	rw = 470;
+	rh = 470;
+	cx = rx + (rw / 2);
+	cy = ry + (rh / 2);
+	r = rh / 2;
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, NAVSCREEN_RADIUS, 1);
+	gdk_gc_set_foreground(gc, &huex[BLUE]);
+	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
+	draw_all_the_guys(w, o);
+	draw_all_the_sparks(w, o);
+	gauge_draw(w, &weapons.phaser_bank_gauge);
+	gauge_draw(w, &weapons.phaser_wavelength);
 }
 
 static double sample_reqwarpdrive(void);
