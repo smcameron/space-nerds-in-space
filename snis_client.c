@@ -1548,7 +1548,7 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 {
 	int i;
 	double a, ai;
-	int x1, y1, x2, y2, x3, y3;
+	int x1, y1, x2, y2, x3, y3, x4, y4;
 	double value;
 	double inc, v;
 	char buffer[10], buf2[10];
@@ -1590,17 +1590,20 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)) + 15);
 
 	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
-	x1 = g->r * sin(a);
-	y1 = g->r * -cos(a);
-	x2 = 0;
-	y2 = 0;
+	x1 = g->r *  sin(a) * 0.9 + g->x;
+	y1 = g->r * -cos(a) * 0.9 + g->y;
+	x2 = g->r * -sin(a) * 0.2 + g->x;
+	y2 = g->r *  cos(a) * 0.2 + g->y;
+	x3 = g->r *  sin(a + M_PI / 2.0) * 0.05 + g->x;
+	y3 = g->r * -cos(a + M_PI / 2.0) * 0.05 + g->y;
+	x4 = g->r *  sin(a - M_PI / 2.0) * 0.05 + g->x;
+	y4 = g->r * -cos(a - M_PI / 2.0) * 0.05 + g->y;
 
-	x1 = (x1 + g->x);
-	x2 = (x2 + g->x);
-	y1 = (y1 + g->y);
-	y2 = (y2 + g->y);
 	gdk_gc_set_foreground(gc, &g->needle_color);
-	snis_draw_line(w->window, gc, x1, y1, x2, y2);
+	snis_draw_line(w->window, gc, x1, y1, x3, y3);
+	snis_draw_line(w->window, gc, x3, y3, x2, y2);
+	snis_draw_line(w->window, gc, x2, y2, x4, y4);
+	snis_draw_line(w->window, gc, x4, y4, x1, y1);
 }
 
 /*
