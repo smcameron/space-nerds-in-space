@@ -276,15 +276,19 @@ static void torpedo_move(struct snis_entity *o)
 		calculate_torpedo_damage(&go[i]);
 		send_ship_damage_packet(go[i].id);
 
-		(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
-		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
-		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 		if (!go[i].alive) {
+			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
+			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
+			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 			snis_queue_delete_object(go[i].id);
 			/* TODO -- these should be different sounds */
 			/* make sound for players that got hit */
 			/* make sound for players that did the hitting */
 			snis_object_pool_free_object(pool, i);
+		} else {
+			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5);
+			snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, go[i].id);
+			snis_queue_add_sound(TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 		}
 		continue;
 	}
@@ -351,15 +355,19 @@ static void laser_move(struct snis_entity *o)
 		calculate_laser_damage(&go[i]);
 		send_ship_damage_packet(go[i].id);
 
-		(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
-		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
-		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
 		if (!go[i].alive) {
+			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
+			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
+			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
 			snis_queue_delete_object(go[i].id);
 			/* TODO -- these should be different sounds */
 			/* make sound for players that got hit */
 			/* make sound for players that did the hitting */
 			snis_object_pool_free_object(pool, i);
+		} else {
+			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5);
+			snis_queue_add_sound(DISTANT_PHASER_HIT_SOUND, ROLE_SOUNDSERVER, go[i].id);
+			snis_queue_add_sound(PHASER_HIT_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 		}
 		continue;
 	}
