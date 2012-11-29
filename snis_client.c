@@ -3349,6 +3349,39 @@ static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
 	do_adjust_slider_value(s, OPCODE_REQUEST_LASER_WAVELENGTH);
 }
 
+static void wavelen_updown_button_pressed(int direction)
+{
+	uint8_t value = (uint8_t) (255.0 * sample_phaser_wavelength());
+	struct snis_entity *o;
+	int inc;
+
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return;
+
+	inc = (int) (256.0 / 50.0);
+
+	o = &go[my_ship_oid];
+	value = o->tsd.ship.phaser_wavelength;
+	if (direction > 0 && value + inc > 255)
+		return;
+	if (direction < 0 && value - inc < 0)
+		return;
+	value += direction < 0 ? -inc : direction > 0 ? inc : 0;
+	do_adjust_byte_value(value, OPCODE_REQUEST_LASER_WAVELENGTH);
+}
+
+static void wavelen_up_button_pressed(__attribute__((unused)) void *s)
+{
+	wavelen_updown_button_pressed(1);
+}
+
+static void wavelen_down_button_pressed(__attribute__((unused)) void *s)
+{
+	wavelen_updown_button_pressed(-1);
+}
+
 static double sample_warp(void)
 {
 	struct snis_entity *o;
@@ -3449,6 +3482,8 @@ struct weapons_ui {
 	struct gauge phaser_bank_gauge;
 	struct gauge phaser_wavelength;
 	struct slider wavelen_slider;
+	struct button wavelen_up_button;
+	struct button wavelen_down_button;
 } weapons;
 
 static double sample_phaserbanks(void);
@@ -3471,12 +3506,18 @@ static void init_weapons_ui(void)
 	gauge_init(&weapons.phaser_wavelength, 650, 300, 90, 10.0, 60.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 			10, "WAVE LEN", sample_phaser_wavelength);
-	slider_init(&weapons.wavelen_slider, 200, 30, 200, &huex[AMBER], "WAVE LEN",
-				"10", "60", 10.0, 60.0, sample_phaser_wavelength,
+	button_init(&weapons.wavelen_down_button, 550, 400, 60, 30, "DOWN", &huex[WHITE],
+			NANO_FONT, wavelen_down_button_pressed, NULL, DISPLAYMODE_WEAPONS);
+	button_init(&weapons.wavelen_up_button, 700, 400, 30, 30, "UP", &huex[WHITE],
+			NANO_FONT, wavelen_up_button_pressed, NULL, DISPLAYMODE_WEAPONS);
+	slider_init(&weapons.wavelen_slider, 620, 400, 70, &huex[AMBER], "",
+				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength, DISPLAYMODE_WEAPONS);
 	add_button(&weapons.fire_phaser);
 	add_button(&weapons.load_torpedo);
 	add_button(&weapons.fire_torpedo);
+	add_button(&weapons.wavelen_up_button);
+	add_button(&weapons.wavelen_down_button);
 	add_slider(&weapons.wavelen_slider);
 }
 
