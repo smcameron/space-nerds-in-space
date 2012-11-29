@@ -721,7 +721,15 @@ static int add_ship(double x, double y, double vx, double vy, double heading)
 
 static int add_planet(double x, double y, double vx, double vy, double heading)
 {
-	return add_generic_object(x, y, vx, vy, heading, OBJTYPE_PLANET);
+	int i;
+
+	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_PLANET);
+	if (i < 0)
+		return i;
+	go[i].sdata.shield_strength = 0;
+	go[i].sdata.shield_wavelength = 0;
+	go[i].sdata.shield_width = 0;
+	return i;
 }
 
 static int add_starbase(double x, double y, double vx, double vy, double heading)
