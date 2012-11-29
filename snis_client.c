@@ -53,6 +53,7 @@
 #include "wwviaudio.h"
 #include "sounds.h"
 #include "bline.h"
+#include "shield_strength.h"
 
 #define SCREEN_WIDTH 800        /* window width, in pixels */
 #define SCREEN_HEIGHT 600       /* window height, in pixels */
@@ -2770,8 +2771,13 @@ static void snis_draw_dotted_vline(GdkDrawable *drawable,
 {
 	int i;
 
-	for (i = y1; i <= y2; i += dots)
-		gdk_draw_point(drawable, gc, x1 * xscale_screen, i * yscale_screen);
+	if (y2 > y1) {
+		for (i = y1; i <= y2; i += dots)
+			gdk_draw_point(drawable, gc, x1 * xscale_screen, i * yscale_screen);
+	} else { 
+		for (i = y2; i <= y1; i += dots)
+			gdk_draw_point(drawable, gc, x1 * xscale_screen, i * yscale_screen);
+	}
 }
 
 static void snis_draw_radar_sector_labels(GtkWidget *w,
@@ -3729,9 +3735,8 @@ static int science_button_press(int x, int y)
 static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 		int x1, int y1, int x2, int y2)
 {
-	int i, x, zx;
-	double sx, sy, a;
-	double y;
+	int i, x;
+	double sx, sy;
 	int dy1, dy2;
 
 	current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
@@ -3744,25 +3749,19 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 	x += (x2 - x1) / 4; 
 	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
 
+	/* TODO, make sample count vary based on sensor power,damage */
 	for (i = 0; i < 20; i++) {
-		x = snis_randn(256) - 128;
-		dy1 = snis_randn(20)-10;
-		dy2 = snis_randn(20)-10;
-		if (dy1 > dy2) {
-			int z;
-			z = dy1;
-			dy1 = dy2;
-			dy2 = z;
-		}
-		a = ((double) x / 256.0 * 2 * M_PI - M_PI);
-		a = a * (1.0 + 2 * (double) o->sdata.shield_width / 256.0);
-		y = cos(a) * ((double) o->sdata.shield_strength / 255.0);
-		y = -y / 2.0 + 0.5;
-		zx = (x + 128 + o->sdata.shield_wavelength + snis_randn(16) - 8) % 256;
-		sx = (int) (((float) zx / 256.0) * (float) (x2 - x1)) + x1;
-		sy = (int) (y2 - (y * (float) (y2 - y1)));
+		double ss;
+
+		dy1 = snis_randn(40)-20; /* TODO: make this vary based on sensor power, damage */
+		dy2 = snis_randn(40)-20;
+
+		x = snis_randn(256);
+		ss = shield_strength((uint8_t) x, o->sdata.shield_strength,
+					o->sdata.shield_width, o->sdata.shield_wavelength);
+		sx = (int) (((double) x / 255.0) * (double) (x2 - x1)) + x1;
+		sy = (int) (((1.0 - ss) * (double) (y2 - y1)) + y1);
 		snis_draw_dotted_vline(w->window, gc, sx, sy + dy1, sy + dy2, 4);
-		/* gdk_draw_point(w->window, gc, sx * xscale_screen, sy * yscale_screen); */
 	}
 	abs_xy_draw_string(w, "10", NANO_FONT, x1, y2 + 10);
 	abs_xy_draw_string(w, "20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 10);

@@ -19,7 +19,8 @@ SNDOBJS=wwviaudio.o
 endif
 
 
-COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o bline.o
+COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
+		bline.o shield_strength.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_client.o snis_font.o
 SSGL=ssgl/libssglclient.a
@@ -47,6 +48,9 @@ wwviaudio.o:    wwviaudio.c wwviaudio.h ogg_to_pcm.h my_point.h Makefile
 		${SNDFLAGS} \
 		-pthread `pkg-config --cflags vorbisfile` \
 		-c wwviaudio.c
+
+shield_strength.o:	shield_strength.c shield_strength.h
+	gcc ${MYCFLAGS} -c shield_strength.c
 
 snis_server.o:	snis.h snis_server.c snis_packet.h snis_marshal.h sounds.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_server.c

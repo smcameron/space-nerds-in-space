@@ -666,7 +666,7 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	strncpy(go[i].sdata.name, n, sizeof(go[i].sdata.name) - 1);
 	go[i].sdata.shield_strength = snis_randn(256);
 	go[i].sdata.shield_wavelength = snis_randn(256);
-	go[i].sdata.shield_width = snis_randn(256);
+	go[i].sdata.shield_width = snis_randn(128);
 	free(n);
 	return i;
 }
