@@ -143,8 +143,9 @@ int displaymode = DISPLAYMODE_LOBBYSCREEN;
 #define DARKGREEN 9
 #define DARKRED 10
 #define AMBER 11 
+#define LIMEGREEN 12 
 
-#define NCOLORS 12              /* number of "cardinal" colors */
+#define NCOLORS 13              /* number of "cardinal" colors */
 #define NSPARKCOLORS 25         /* 25 shades from yellow to red for the sparks */
 #define NRAINBOWSTEPS (16)
 #define NRAINBOWCOLORS (NRAINBOWSTEPS*3)
@@ -3739,8 +3740,11 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 		int x1, int y1, int x2, int y2)
 {
 	int i, x;
-	double sx, sy, sy1, sy2;
-	int dy1, dy2;
+	double sx, sy, sy1, sy2, dist;
+	int dy1, dy2, bw, probes, dx;
+
+	dist = sqrt(hypot(o->x - go[my_ship_oid].x, o->y - go[my_ship_oid].y));
+	bw = (int) (go[my_ship_oid].tsd.ship.sci_beam_width * 180.0 / M_PI);
 
 	current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 4, x2, 10);
@@ -3754,12 +3758,22 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 	x += (x2 - x1) / 4; 
 	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
 
+	gdk_gc_set_foreground(gc, &huex[LIMEGREEN]);
 	/* TODO, make sample count vary based on sensor power,damage */
-	for (i = 0; i < 20; i++) {
+	probes = (30 * 10) / (bw / 2 + ((dist * 2.0) / XUNIVERSE_DIMENSION));
+	for (i = 0; i < probes; i++) {
 		double ss;
+		int nx, ny;
 
-		dy1 = snis_randn(40)-20; /* TODO: make this vary based on sensor power, damage */
-		dy2 = snis_randn(40)-20;
+		ny = bw;
+		nx = bw;
+		if (nx <= 0)
+			nx = 1;
+		if (ny <= 0)
+			ny = 1;
+		dy1 = snis_randn(ny) - ny / 2; /* TODO: make this vary based on sensor power, damage */
+		dy2 = snis_randn(ny) - ny / 2;
+		dx = snis_randn(nx) - nx / 2;
 
 		x = snis_randn(256);
 		ss = shield_strength((uint8_t) x, o->sdata.shield_strength,
@@ -3779,6 +3793,11 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 			sy2 = y1;
 		if (sy2 > y2)
 			sy2 = y2;
+		sx += dx;
+		if (sx < x1)
+			sx = x1;
+		if (x > x2)
+			sx = x2;
 
 		snis_draw_dotted_vline(w->window, gc, sx, sy1, sy2, 4);
 	}
@@ -4341,6 +4360,7 @@ int main(int argc, char *argv[])
 	gdk_color_parse("blue", &huex[BLUE]);
 	gdk_color_parse("black", &huex[BLACK]);
 	gdk_color_parse("green", &huex[GREEN]);
+	gdk_color_parse("lime green", &huex[LIMEGREEN]);
 	gdk_color_parse("darkgreen", &huex[DARKGREEN]);
 	gdk_color_parse("yellow", &huex[YELLOW]);
 	gdk_color_parse("red", &huex[RED]);
