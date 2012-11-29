@@ -60,7 +60,7 @@ double shield_strength(uint8_t probe, uint8_t sh_strength, uint8_t sh_width,
 
 	depth = (double) sh_depth / 255.0;
 	angle = (double) (probe - dip1) / (double) (dip2 - dip1);
-	angle = angle * 2 * M_PI;
+	angle = angle * 2 * M_PI * ((sh_depth & 0x03) + 1);
 	c = (cos(angle) * 0.5 + 0.5) * (depth * sh_strength / 255.0) + (1.0 - depth) * ((double) sh_strength / 255.0);
 
 	return c; 
