@@ -2959,7 +2959,7 @@ typedef void (*slider_clicked_function)(struct slider *s);
 struct slider {
 	int x, y, length;
 	GdkColor color;
-	double value;
+	double value, input;
 	char label[20], label1[5], label2[5];
 	double r1, r2;
 	gauge_monitor_function sample;
@@ -2998,7 +2998,8 @@ static void slider_draw(GtkWidget *w, struct slider *s)
 #define SLIDER_POINTER_WIDTH 5
 
 	v = s->sample();
-	s->value = v / (s->r2 - s->r1);
+	s->value = (v - s->r1) / (s->r2 - s->r1);
+	v = s->sample();
 	tx1 = (int) (s->value * s->length) + s->x;
 	if (!s->clicked) {
 		if (v < 25.0) {
@@ -3056,6 +3057,11 @@ static double slider_get_value(struct slider *s)
 	return s->value;
 }
 
+static double slider_get_input(struct slider *s)
+{	
+	return s->input;
+}
+
 static void draw_sliders(GtkWidget *w)
 {
 	int i;
@@ -3076,7 +3082,7 @@ static void sliders_button_press(int x, int y)
 			if (x < s->x || x > s->x + s->length || 
 				y < s->y || y > s->y + SLIDER_HEIGHT)
 				continue;
-			s->value = ((double) x - (double) s->x) / (double) s->length;
+			s->input = ((double) x - (double) s->x) / (double) s->length;
 			if (s->clicked)
 				s->clicked(s);
 		}
@@ -3179,7 +3185,7 @@ static void do_adjust_byte_value(uint8_t value,  uint16_t opcode)
 
 static void do_adjust_slider_value(struct slider *s,  uint16_t opcode)
 {
-	uint8_t value = (uint8_t) (255.0 * slider_get_value(s));
+	uint8_t value = (uint8_t) (255.0 * slider_get_input(s));
 	do_adjust_byte_value(value, opcode);
 }
 
@@ -3335,7 +3341,7 @@ static double sample_phaser_wavelength(void)
 	if (my_ship_oid == UNKNOWN_ID)
 		return 0.0;
 	o = &go[my_ship_oid];
-	return 40.0 * o->tsd.ship.phaser_wavelength / 255.0 + 10.0;
+	return 50.0 * o->tsd.ship.phaser_wavelength / 255.0 + 10.0;
 }
 
 static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
