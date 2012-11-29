@@ -3736,11 +3736,13 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 		int x1, int y1, int x2, int y2)
 {
 	int i, x;
-	double sx, sy;
+	double sx, sy, sy1, sy2;
 	int dy1, dy2;
 
 	current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
+	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 4, x2, 10);
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 2, x2, 10);
+	snis_draw_dotted_hline(w->window, gc, x1, y1 + 3 * (y2 - y1) / 4, x2, 10);
 
 	x = x1 + (x2 - x1) / 4; 
 	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
@@ -3761,14 +3763,26 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 					o->sdata.shield_width, o->sdata.shield_wavelength);
 		sx = (int) (((double) x / 255.0) * (double) (x2 - x1)) + x1;
 		sy = (int) (((1.0 - ss) * (double) (y2 - y1)) + y1);
-		snis_draw_dotted_vline(w->window, gc, sx, sy + dy1, sy + dy2, 4);
+
+		sy1 = sy + dy1;
+		if (sy1 < y1)
+			sy1 = y1;
+		if (sy1 > y2)
+			sy1 = y2;
+		sy2 = sy + dy2;
+		if (sy2 < y1)
+			sy2 = y1;
+		if (sy2 > y2)
+			sy2 = y2;
+
+		snis_draw_dotted_vline(w->window, gc, sx, sy1, sy2, 4);
 	}
 	abs_xy_draw_string(w, "10", NANO_FONT, x1, y2 + 10);
 	abs_xy_draw_string(w, "20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 10);
 	abs_xy_draw_string(w, "30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + 10);
 	abs_xy_draw_string(w, "40", NANO_FONT, x1 + 3 * (x2 - x1) / 4 - 10, y2 + 10);
 	abs_xy_draw_string(w, "50", NANO_FONT, x1 + 4 * (x2 - x1) / 4 - 20, y2 + 10);
-	abs_xy_draw_string(w, "nm", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + 30);
+	abs_xy_draw_string(w, "Shield Profile (nm)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 30);
 }
  
 static void draw_science_data(GtkWidget *w, struct snis_entity *o)
@@ -3838,7 +3852,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *o)
 	sprintf(buffer, "HEADING: %3.2lf", o->heading);
 	y += 25;
 	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
-
+#if 0
 	sprintf(buffer, "STRENGTH: %hhu", o->sdata.shield_strength);
 	y += 25;
 	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
@@ -3848,6 +3862,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *o)
 	sprintf(buffer, "WIDTH: %hhu", o->sdata.shield_width);
 	y += 25;
 	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+#endif
 
 	gx1 = x;
 	gy1 = y + 25;
