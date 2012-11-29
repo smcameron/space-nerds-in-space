@@ -109,6 +109,7 @@ struct ship_sdata_packet {
 	uint8_t shield_strength;
 	uint8_t shield_wavelength;
 	uint8_t shield_width;
+	uint8_t shield_depth;
 	char name[NAMESIZE];
 };
 

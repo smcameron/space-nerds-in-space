@@ -7,17 +7,19 @@
  * This function, given a shield profile (strength, width, wavelength) and a probe value
  * returns the shield strength between 0 and 1 at that probe value.  A picture will help.
  * 
- * 1.0  |
- *      | ******          ************************
- *      |       *        * 
- *      |       *        *
- *      |        *      *
- *      |         *    *
- *      |         *    *
- *      |          *  *
- *      |           **
+ *            shield wavelength
+ *                   |
+ * 1.0  |            |
+ *      | ******     |    ************************ <--- shield strength
+ *      |       *    |   * 
+ *      |       *    |   *
+ *      |        *   |  *
+ *      |         *  | *
+ *      |         *  | *
+ *      |          * |*
+ *      |           ** <---------- shield depth
  *      |
- *      |
+ *      |       |<-------->| shield width
  * 0.0  +-----------------------------------------|
  *      10nm     wavelength (nm)                  50nm
  *
@@ -44,10 +46,11 @@
  * 
  */
 
-double shield_strength(uint8_t probe, uint8_t sh_strength, uint8_t sh_width, uint8_t sh_wavelength)
+double shield_strength(uint8_t probe, uint8_t sh_strength, uint8_t sh_width,
+				uint8_t sh_depth, uint8_t sh_wavelength)
 {
 	int dip1, dip2;
-	double angle, c;
+	double angle, c, depth;
 
 	/* check if probe is outside the dip region.  If so, return baseline level */
 	dip1 = sh_wavelength - sh_width / 2.0;
@@ -55,9 +58,10 @@ double shield_strength(uint8_t probe, uint8_t sh_strength, uint8_t sh_width, uin
 	if (probe < dip1 || probe > dip2)
 		return (double) sh_strength / 255.0;
 
+	depth = (double) sh_depth / 255.0;
 	angle = (double) (probe - dip1) / (double) (dip2 - dip1);
 	angle = angle * 2 * M_PI;
-	c = (cos(angle) * 0.5 + 0.5) * ((double) 0.8 * sh_strength / 255.0) + 0.2 * ((double) sh_strength / 255.0);
+	c = (cos(angle) * 0.5 + 0.5) * (depth * sh_strength / 255.0) + (1.0 - depth) * ((double) sh_strength / 255.0);
 
 	return c; 
 }

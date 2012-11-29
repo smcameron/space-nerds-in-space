@@ -667,6 +667,7 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	go[i].sdata.shield_strength = snis_randn(256);
 	go[i].sdata.shield_wavelength = snis_randn(256);
 	go[i].sdata.shield_width = snis_randn(128);
+	go[i].sdata.shield_depth = snis_randn(255);
 	free(n);
 	return i;
 }
@@ -729,6 +730,7 @@ static int add_planet(double x, double y, double vx, double vy, double heading)
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
+	go[i].sdata.shield_depth = 0;
 	return i;
 }
 
@@ -1036,6 +1038,7 @@ static int process_request_ship_sdata(struct game_client *c)
 	p.shield_strength = go[i].sdata.shield_strength;
 	p.shield_wavelength = go[i].sdata.shield_wavelength;
 	p.shield_width = go[i].sdata.shield_width;
+	p.shield_depth = go[i].sdata.shield_depth;
 	pthread_mutex_unlock(&universe_mutex);
 	send_ship_sdata_packet(c, &p);
 	return 0;
@@ -1680,6 +1683,7 @@ static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_pack
 	packed_buffer_append_u8(pb, sip->shield_strength); 
 	packed_buffer_append_u8(pb, sip->shield_wavelength); 
 	packed_buffer_append_u8(pb, sip->shield_width); 
+	packed_buffer_append_u8(pb, sip->shield_depth); 
 	packed_buffer_append_raw(pb, sip->name, sizeof(sip->name));
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_ALL);
 }

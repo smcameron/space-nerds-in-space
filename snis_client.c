@@ -389,7 +389,8 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 }
 
 static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
-				uint8_t shield_strength, uint8_t shield_wavelength, uint8_t shield_width)
+				uint8_t shield_strength, uint8_t shield_wavelength,
+				uint8_t shield_width, uint8_t shield_depth)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -399,6 +400,7 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	go[i].sdata.shield_strength = shield_strength;
 	go[i].sdata.shield_wavelength = shield_wavelength;
 	go[i].sdata.shield_width = shield_width;
+	go[i].sdata.shield_depth = shield_depth;
 	strcpy(go[i].sdata.name, name);
 	go[i].sdata.science_data_known = 30 * 10; /* only remember for ten secs. */
 	go[i].sdata.science_data_requested = 0; /* request is fullfilled */
@@ -1748,7 +1750,7 @@ static int process_ship_sdata_packet(void)
 	unsigned char buffer[50];
 	struct packed_buffer pb;
 	uint32_t id;
-	uint8_t subclass, shstrength, shwavelength, shwidth;
+	uint8_t subclass, shstrength, shwavelength, shwidth, shdepth;
 	int rc;
 	char name[NAMESIZE];
 
@@ -1762,10 +1764,11 @@ static int process_ship_sdata_packet(void)
 	shstrength = packed_buffer_extract_u8(&pb);
 	shwavelength = packed_buffer_extract_u8(&pb);
 	shwidth = packed_buffer_extract_u8(&pb);
+	shdepth = packed_buffer_extract_u8(&pb);
 	rc = packed_buffer_extract_raw(&pb, name, sizeof(name));
 
 	pthread_mutex_lock(&universe_mutex);
-	update_ship_sdata(id, subclass, name, shstrength, shwavelength, shwidth);
+	update_ship_sdata(id, subclass, name, shstrength, shwavelength, shwidth, shdepth);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -3760,7 +3763,9 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 
 		x = snis_randn(256);
 		ss = shield_strength((uint8_t) x, o->sdata.shield_strength,
-					o->sdata.shield_width, o->sdata.shield_wavelength);
+					o->sdata.shield_width,
+					o->sdata.shield_depth,
+					o->sdata.shield_wavelength);
 		sx = (int) (((double) x / 255.0) * (double) (x2 - x1)) + x1;
 		sy = (int) (((1.0 - ss) * (double) (y2 - y1)) + y1);
 

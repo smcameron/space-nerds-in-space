@@ -175,6 +175,7 @@ struct snis_entity_science_data {
 	uint8_t shield_strength;
 	uint8_t shield_wavelength;
 	uint8_t shield_width;
+	uint8_t shield_depth;
 };
 	
 struct snis_entity {
