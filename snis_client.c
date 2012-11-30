@@ -1058,6 +1058,22 @@ static void request_sci_select_target(uint32_t id)
 	wakeup_gameserver_writer();
 }
 
+static void request_sci_select_coords(double ux, double uy)
+{
+	struct packed_buffer *pb;
+	uint32_t x, y;
+
+        x = (uint32_t) ((ux / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+        y = (uint32_t) ((uy / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
+
+	pb = packed_buffer_allocate(sizeof(struct snis_sci_select_coords_packet));
+	packed_buffer_append_u16(pb, OPCODE_SCI_SELECT_COORDS);
+	packed_buffer_append_u32(pb, x);
+	packed_buffer_append_u32(pb, y);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
 static void navigation_dirkey(int h, int v)
 {
 	struct packed_buffer *pb;
@@ -1828,6 +1844,30 @@ static int process_sci_select_target_packet(void)
 	return 0;
 }
 
+static int process_sci_select_coords_packet(void)
+{
+	char buffer[sizeof(struct snis_sci_select_coords_packet)];
+	struct packed_buffer pb;
+	uint32_t x, y;
+	double ux, uy;
+	int rc;
+
+	rc = snis_readsocket(gameserver_sock, buffer,
+			sizeof(struct snis_sci_select_coords_packet) - sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	x = packed_buffer_extract_u32(&pb);
+	y = packed_buffer_extract_u32(&pb);
+	if (my_ship_oid == UNKNOWN_ID)
+		return 0;
+	ux = ((double) x * (double) XUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+	uy = ((double) y * (double) YUNIVERSE_DIMENSION) / (double ) UINT32_MAX;
+	go[my_ship_oid].sci_coordx = ux;	
+	go[my_ship_oid].sci_coordy = uy;	
+	return 0;
+}
+
 static int process_ship_damage_packet(void)
 {
 	char buffer[sizeof(struct ship_damage_packet)];
@@ -2036,6 +2076,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_SCI_SELECT_TARGET:
 			rc = process_sci_select_target_packet();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_SCI_SELECT_COORDS:
+			rc = process_sci_select_coords_packet();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -2612,15 +2657,26 @@ static int nscience_guys = 0;
 
 static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, double range)
 {
-	int i, cx, cy, r, bw;
+	int i, x, y, cx, cy, r, bw;
 	double angle, angle2, A1, A2;
-	double tx, ty;
+	double tx, ty, dist2, dist;
 	int selected_guy_still_visible = 0;
 
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
 	r = SCIENCE_SCOPE_R;
 	/* Draw all the stuff */
+
+	/* Draw selected coordinate */
+	dist2 = hypot(o->x - o->sci_coordx, o->y - o->sci_coordy);
+	if (dist2 < range * range) {
+		tx = (o->sci_coordx - o->x) * (double) r / range;
+		ty = (o->sci_coordy - o->y) * (double) r / range;
+		x = (int) (tx + (double) cx);
+		y = (int) (ty + (double) cy);
+		snis_draw_line(w->window, gc, x - 5, y, x + 5, y);
+		snis_draw_line(w->window, gc, x, y - 5, x, y + 5);
+	}
 
         tx = sin(o->tsd.ship.sci_heading) * range;
         ty = -cos(o->tsd.ship.sci_heading) * range;
@@ -2636,9 +2692,6 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	pthread_mutex_lock(&universe_mutex);
 	nscience_guys = 0;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		int x, y;
-		double dist2, dist;
-
 		if (!go[i].alive)
 			continue;
 
@@ -3772,6 +3825,10 @@ static int science_button_press(int x, int y)
 	int i;
 	int xdist, ydist, dist2;
 	struct snis_entity *selected;
+	struct snis_entity *o;
+	double ur, ux, uy;
+	int cx, cy, r;
+	double dx, dy;
 
 	selected = NULL;
 	pthread_mutex_lock(&universe_mutex);
@@ -3786,6 +3843,20 @@ static int science_button_press(int x, int y)
 	}
 	if (selected)
 		request_sci_select_target(selected->id);
+	else {
+		o = &go[my_ship_oid];
+		cx = SCIENCE_SCOPE_CX;
+		cy = SCIENCE_SCOPE_CY;
+		r = SCIENCE_SCOPE_R;
+		ur = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
+				(o->tsd.ship.scizoom / 255.0) +
+				MIN_SCIENCE_SCREEN_RADIUS;
+		dx = x - cx;
+		dy = y - cy;
+		ux = o->x + dx * ur / r;
+		uy = o->y + dy * ur / r;
+		request_sci_select_coords(ux, uy);
+	}
 	pthread_mutex_unlock(&universe_mutex);
 
 	return 0;
@@ -3869,21 +3940,33 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 	abs_xy_draw_string(w, "Shield Profile (nm)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 30);
 }
  
-static void draw_science_data(GtkWidget *w, struct snis_entity *o)
+static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o)
 {
 	char buffer[40];
 	int x, y, gx1, gy1, gx2, gy2;
 	double bearing, dx, dy, range;
 
+	if (!ship)
+		return;
+
+	/* Draw warp data */
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	dx = ship->x - ship->sci_coordx;
+	dy = ship->y - ship->sci_coordy;
+	bearing = atan2(dx, dy) * 180 / M_PI;
+	if (bearing < 0)
+		bearing = -bearing;
+	else
+		bearing = 360.0 - bearing;
+	abs_xy_draw_string(w, "WARP DATA:", NANO_FONT, 10, SCREEN_HEIGHT - 40);
+	sprintf(buffer, "BEARING: %3.2lf", bearing);
+	abs_xy_draw_string(w, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 25);
+	sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * hypot(dy, dx) / (XUNIVERSE_DIMENSION / 2.0));
+	abs_xy_draw_string(w, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
+
 	if (!o)
 		return;
 
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
-		return;
-
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
 	x = SCIENCE_DATA_X + 10;
 	y = SCIENCE_DATA_Y + 15;
 	current_draw_rectangle(w->window, gc, 0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
@@ -3996,7 +4079,7 @@ static void show_science(GtkWidget *w)
 	draw_all_the_science_guys(w, o, zoom);
 	draw_all_the_science_sparks(w, o, zoom);
 	draw_sliders(w);
-	draw_science_data(w, curr_science_guy);
+	draw_science_data(w, o, curr_science_guy);
 }
 
 static void show_comms(GtkWidget *w)

@@ -1086,6 +1086,30 @@ static int process_sci_select_target(struct game_client *c)
 	return 0;
 }
 
+static int process_sci_select_coords(struct game_client *c)
+{
+	unsigned char buffer[sizeof(struct snis_sci_select_coords_packet)];
+	struct packed_buffer pb, *pb2;
+	uint32_t x, y;
+	int rc;
+
+	rc = snis_readsocket(c->socket, buffer,
+		sizeof(struct snis_sci_select_coords_packet) - sizeof(uint16_t));
+	if (rc)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	x = packed_buffer_extract_u32(&pb);
+	y = packed_buffer_extract_u32(&pb);
+
+	/* just turn it around and fan it out to all the right places */
+	pb2 = packed_buffer_allocate(sizeof(struct snis_sci_select_coords_packet));
+	packed_buffer_append_u16(pb2, OPCODE_SCI_SELECT_COORDS);
+	packed_buffer_append_u32(pb2, x);
+	packed_buffer_append_u32(pb2, y);
+	send_packet_to_all_clients_on_a_bridge(c->shipid, pb2, ROLE_SCIENCE);
+	return 0;
+}
+
 static int process_request_bytevalue_pwr(struct game_client *c, int offset)
 {
 	unsigned char buffer[10];
@@ -1410,6 +1434,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_SCI_SELECT_TARGET:
 			rc = process_sci_select_target(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_SCI_SELECT_COORDS:
+			rc = process_sci_select_coords(c);
 			if (rc)
 				goto protocol_error;
 			break;

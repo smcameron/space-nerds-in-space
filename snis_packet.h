@@ -62,6 +62,7 @@
 #define OPCODE_UPDATE_DAMAGE 136
 #define OPCODE_REQUEST_LASER 137
 #define OPCODE_REQUEST_LASER_WAVELENGTH 138
+#define OPCODE_SCI_SELECT_COORDS 139
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -268,6 +269,12 @@ struct role_onscreen_packet {
 struct snis_sci_select_target_packet {
 	uint16_t opcode;
 	uint32_t target_id;
+};
+
+struct snis_sci_select_coords_packet {
+	uint16_t opcode;
+	uint32_t x;
+	uint32_t y;
 };
 
 struct ship_damage_packet {
