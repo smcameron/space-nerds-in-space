@@ -3874,9 +3874,6 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 	double sx, sy, sy1, sy2, dist;
 	int dy1, dy2, bw, probes, dx;
 
-	dist = hypot(o->x - go[my_ship_oid].x, o->y - go[my_ship_oid].y);
-	bw = (int) (go[my_ship_oid].tsd.ship.sci_beam_width * 180.0 / M_PI);
-
 	current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 4, x2, 10);
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 2, x2, 10);
@@ -3888,50 +3885,56 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
 	x += (x2 - x1) / 4; 
 	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
+	
+	if (o) {
+		dist = hypot(o->x - go[my_ship_oid].x, o->y - go[my_ship_oid].y);
+		bw = (int) (go[my_ship_oid].tsd.ship.sci_beam_width * 180.0 / M_PI);
 
-	gdk_gc_set_foreground(gc, &huex[LIMEGREEN]);
-	/* TODO, make sample count vary based on sensor power,damage */
-	probes = (30 * 10) / (bw / 2 + ((dist * 2.0) / XUNIVERSE_DIMENSION));
-	for (i = 0; i < probes; i++) {
-		double ss;
-		int nx, ny;
+		gdk_gc_set_foreground(gc, &huex[LIMEGREEN]);
+		/* TODO, make sample count vary based on sensor power,damage */
+		probes = (30 * 10) / (bw / 2 + ((dist * 2.0) / XUNIVERSE_DIMENSION));
+		for (i = 0; i < probes; i++) {
+			double ss;
+			int nx, ny;
 
-		ny = bw;
-		nx = bw;
-		if (nx <= 0)
-			nx = 1;
-		if (ny <= 0)
-			ny = 1;
-		dy1 = snis_randn(ny) - ny / 2; /* TODO: make this vary based on sensor power, damage */
-		dy2 = snis_randn(ny) - ny / 2;
-		dx = snis_randn(nx) - nx / 2;
+			ny = bw;
+			nx = bw;
+			if (nx <= 0)
+				nx = 1;
+			if (ny <= 0)
+				ny = 1;
+			dy1 = snis_randn(ny) - ny / 2; /* TODO: make this vary based on sensor power, damage */
+			dy2 = snis_randn(ny) - ny / 2;
+			dx = snis_randn(nx) - nx / 2;
 
-		x = snis_randn(256);
-		ss = shield_strength((uint8_t) x, o->sdata.shield_strength,
-					o->sdata.shield_width,
-					o->sdata.shield_depth,
-					o->sdata.shield_wavelength);
-		sx = (int) (((double) x / 255.0) * (double) (x2 - x1)) + x1;
-		sy = (int) (((1.0 - ss) * (double) (y2 - y1)) + y1);
+			x = snis_randn(256);
+			ss = shield_strength((uint8_t) x, o->sdata.shield_strength,
+						o->sdata.shield_width,
+						o->sdata.shield_depth,
+						o->sdata.shield_wavelength);
+			sx = (int) (((double) x / 255.0) * (double) (x2 - x1)) + x1;
+			sy = (int) (((1.0 - ss) * (double) (y2 - y1)) + y1);
 
-		sy1 = sy + dy1;
-		if (sy1 < y1)
-			sy1 = y1;
-		if (sy1 > y2)
-			sy1 = y2;
-		sy2 = sy + dy2;
-		if (sy2 < y1)
-			sy2 = y1;
-		if (sy2 > y2)
-			sy2 = y2;
-		sx += dx;
-		if (sx < x1)
-			sx = x1;
-		if (x > x2)
-			sx = x2;
+			sy1 = sy + dy1;
+			if (sy1 < y1)
+				sy1 = y1;
+			if (sy1 > y2)
+				sy1 = y2;
+			sy2 = sy + dy2;
+			if (sy2 < y1)
+				sy2 = y1;
+			if (sy2 > y2)
+				sy2 = y2;
+			sx += dx;
+			if (sx < x1)
+				sx = x1;
+			if (x > x2)
+				sx = x2;
 
-		snis_draw_dotted_vline(w->window, gc, sx, sy1, sy2, 4);
+			snis_draw_dotted_vline(w->window, gc, sx, sy1, sy2, 4);
+		}
 	}
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
 	abs_xy_draw_string(w, "10", NANO_FONT, x1, y2 + 10);
 	abs_xy_draw_string(w, "20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 10);
 	abs_xy_draw_string(w, "30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + 10);
@@ -3963,60 +3966,80 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	abs_xy_draw_string(w, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 25);
 	sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * hypot(dy, dx) / (XUNIVERSE_DIMENSION / 2.0));
 	abs_xy_draw_string(w, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
-
+#if 0
 	if (!o)
 		return;
-
+#endif
 	x = SCIENCE_DATA_X + 10;
 	y = SCIENCE_DATA_Y + 15;
 	current_draw_rectangle(w->window, gc, 0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
-	sprintf(buffer, "NAME: %s\n", o->sdata.name);
+	sprintf(buffer, "NAME: %s", o ? o->sdata.name : "");
 	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
 
-	switch (o->type) {
-	case OBJTYPE_SHIP2:
-		sprintf(buffer, "TYPE: %s", shipclass[o->sdata.subclass]); 
-		break;
-	case OBJTYPE_STARBASE:
-		sprintf(buffer, "TYPE: %s\n", "Starbase"); 
-		break;
-	case OBJTYPE_PLANET:
-		sprintf(buffer, "TYPE: %s\n", "Asteroid"); 
-		break;
-	default:
-		sprintf(buffer, "TYPE: %s\n", "Unknown"); 
-		break;
+	if (o) {
+		switch (o->type) {
+		case OBJTYPE_SHIP2:
+			sprintf(buffer, "TYPE: %s", shipclass[o->sdata.subclass]); 
+			break;
+		case OBJTYPE_STARBASE:
+			sprintf(buffer, "TYPE: %s", "Starbase"); 
+			break;
+		case OBJTYPE_PLANET:
+			sprintf(buffer, "TYPE: %s", "Asteroid"); 
+			break;
+		default:
+			sprintf(buffer, "TYPE: %s", "Unknown"); 
+			break;
+		}
+	} else  {
+		sprintf(buffer, "TYPE:"); 
 	}
 	y += 25;
 	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
 
-	sprintf(buffer, "X: %8.2lf", o->x);
-	y += 25;
-	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
-
-	sprintf(buffer, "Y: %8.2lf", o->y);
-	y += 25;
-	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
-
-	dx = go[my_ship_oid].x - o->x;
-	dy = go[my_ship_oid].y - o->y;
-	bearing = atan2(dx, dy) * 180 / M_PI;
-	if (bearing < 0)
-		bearing = -bearing;
+	if (o)
+		sprintf(buffer, "X: %8.2lf", o->x);
 	else
-		bearing = 360.0 - bearing;
-
-	sprintf(buffer, "BEARING: %3.2lf\n", bearing);
+		sprintf(buffer, "X:");
 	y += 25;
 	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
 
-	range = sqrt(dx * dx + dy * dy);
-	sprintf(buffer, "RANGE: %8.2lf", range);
+	if (o)
+		sprintf(buffer, "Y: %8.2lf", o->y);
+	else
+		sprintf(buffer, "Y:");
 	y += 25;
 	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
 
-	sprintf(buffer, "HEADING: %3.2lf", o->heading);
+	if (o) { 
+		dx = go[my_ship_oid].x - o->x;
+		dy = go[my_ship_oid].y - o->y;
+		bearing = atan2(dx, dy) * 180 / M_PI;
+		if (bearing < 0)
+			bearing = -bearing;
+		else
+			bearing = 360.0 - bearing;
+		sprintf(buffer, "BEARING: %3.2lf", bearing);
+	} else {
+		sprintf(buffer, "BEARING");
+	}
+	y += 25;
+	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+
+	if (o) {
+		range = sqrt(dx * dx + dy * dy);
+		sprintf(buffer, "RANGE: %8.2lf", range);
+	} else {
+		sprintf(buffer, "RANGE:");
+	}
+	y += 25;
+	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+
+	if (o)
+		sprintf(buffer, "HEADING: %3.2lf", o->heading);
+	else
+		sprintf(buffer, "HEADING:");
 	y += 25;
 	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
 #if 0
