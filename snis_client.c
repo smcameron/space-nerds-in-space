@@ -2668,8 +2668,8 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	/* Draw all the stuff */
 
 	/* Draw selected coordinate */
-	dist2 = hypot(o->x - o->sci_coordx, o->y - o->sci_coordy);
-	if (dist2 < range * range) {
+	dist = hypot(o->x - o->sci_coordx, o->y - o->sci_coordy);
+	if (dist < range) {
 		tx = (o->sci_coordx - o->x) * (double) r / range;
 		ty = (o->sci_coordy - o->y) * (double) r / range;
 		x = (int) (tx + (double) cx);
@@ -3874,7 +3874,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 	double sx, sy, sy1, sy2, dist;
 	int dy1, dy2, bw, probes, dx;
 
-	dist = sqrt(hypot(o->x - go[my_ship_oid].x, o->y - go[my_ship_oid].y));
+	dist = hypot(o->x - go[my_ship_oid].x, o->y - go[my_ship_oid].y);
 	bw = (int) (go[my_ship_oid].tsd.ship.sci_beam_width * 180.0 / M_PI);
 
 	current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
