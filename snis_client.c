@@ -1808,6 +1808,7 @@ static int process_role_onscreen_packet(void)
 }
 
 static struct snis_entity *curr_science_guy = NULL;
+static struct snis_entity *prev_science_guy = NULL;
 static int process_sci_select_target_packet(void)
 {
 	char buffer[sizeof(struct snis_sci_select_target_packet)];
@@ -2614,6 +2615,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	int i, cx, cy, r, bw;
 	double angle, angle2, A1, A2;
 	double tx, ty;
+	int selected_guy_still_visible = 0;
 
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
@@ -2668,13 +2670,24 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		if (go[i].id == my_ship_id)
 			continue; /* skip drawing yourself. */
 		bw = o->tsd.ship.sci_beam_width * 180.0 / M_PI;
+
+		/* If we moved the beam off our guy, and back on, select him again. */
+		if (!curr_science_guy && prev_science_guy == &go[i])
+			curr_science_guy = prev_science_guy;
+
 		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, range, &go[i] == curr_science_guy);
 
 		/* cache screen coords for mouse picking */
 		science_guy[nscience_guys].o = &go[i];
 		science_guy[nscience_guys].sx = x;
 		science_guy[nscience_guys].sy = y;
+		if (&go[i] == curr_science_guy)
+			selected_guy_still_visible = 1;
 		nscience_guys++;
+	}
+	if (!selected_guy_still_visible && curr_science_guy) {
+		prev_science_guy = curr_science_guy;
+		curr_science_guy = NULL;
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
