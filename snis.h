@@ -23,8 +23,9 @@
 
 #define SNIS_PROTOCOL_VERSION "SNIS001"
 
-#define XUNIVERSE_DIMENSION 100000.0
-#define YUNIVERSE_DIMENSION (XUNIVERSE_DIMENSION * (600.0/800.0))  /* assumes 800x600 screen aspect ratio */
+/* dimensions of the "known" universe */
+#define XKNOWN_DIM 100000.0
+#define YKNOWN_DIM (XKNOWN_DIM * (600.0/800.0))  /* assumes 800x600 screen aspect ratio */
 #define MAXGAMEOBJS 5000
 #define MAXSPARKS 1000
 
@@ -110,8 +111,8 @@ struct ship_data {
 #define SCI_BW_YAW_INCREMENT (1 * PI / 180.0)
 #define SCI_BW_YAW_DAMPING 0.45
 #define MIN_SCI_BEAM_WIDTH (5 * PI / 180.0)
-#define MAX_SCIENCE_SCREEN_RADIUS (XUNIVERSE_DIMENSION / 3.0)
-#define MIN_SCIENCE_SCREEN_RADIUS (XUNIVERSE_DIMENSION / 45.0)
+#define MAX_SCIENCE_SCREEN_RADIUS (XKNOWN_DIM / 3.0)
+#define MIN_SCIENCE_SCREEN_RADIUS (XKNOWN_DIM / 45.0)
 	double sci_beam_width;
 	double sci_yaw_velocity;
 	uint8_t torpedoes_loaded;

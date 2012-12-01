@@ -199,15 +199,15 @@ static int add_explosion(double x, double y, uint16_t velocity, uint16_t nsparks
 static void normalize_coords(struct snis_entity *o)
 {
 	if (o->x < 0)
-		o->x += XUNIVERSE_DIMENSION;
+		o->x += XKNOWN_DIM;
 	else
-		if (o->x > XUNIVERSE_DIMENSION)
-			o->x -= XUNIVERSE_DIMENSION;
+		if (o->x > XKNOWN_DIM)
+			o->x -= XKNOWN_DIM;
 	if (o->y < 0)
-		o->y += YUNIVERSE_DIMENSION;
+		o->y += YKNOWN_DIM;
 	else
-		if (o->y > YUNIVERSE_DIMENSION)
-			o->y -= YUNIVERSE_DIMENSION;
+		if (o->y > YKNOWN_DIM)
+			o->y -= YKNOWN_DIM;
 }
 
 static void calculate_torpedo_damage(struct snis_entity *o)
@@ -807,8 +807,8 @@ static void __attribute__((unused)) add_starbases(void)
 	double x, y;
 
 	for (i = 0; i < NBASES; i++) {
-		x = ((double) snis_randn(1000)) * XUNIVERSE_DIMENSION / 1000.0;
-		y = ((double) snis_randn(1000)) * YUNIVERSE_DIMENSION / 1000.0;
+		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
 		add_starbase(x, y, 0.0, 0.0, 0.0);
 	}
 }
@@ -819,8 +819,8 @@ static void add_planets(void)
 	double x, y;
 
 	for (i = 0; i < NPLANETS; i++) {
-		x = ((double) snis_randn(1000)) * XUNIVERSE_DIMENSION / 1000.0;
-		y = ((double) snis_randn(1000)) * YUNIVERSE_DIMENSION / 1000.0;
+		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
 		add_planet(x, y, 0.0, 0.0, 0.0);
 	}
 }
@@ -831,8 +831,8 @@ static void add_eships(void)
 	double x, y, heading;
 
 	for (i = 0; i < NESHIPS; i++) {
-		x = ((double) snis_randn(1000)) * XUNIVERSE_DIMENSION / 1000.0;
-		y = ((double) snis_randn(1000)) * YUNIVERSE_DIMENSION / 1000.0;
+		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
 		heading = degrees_to_radians(0.0 + snis_randn(360)); 
 		add_ship(x, y, 0.0, 0.0, heading);
 	}
@@ -1190,19 +1190,19 @@ static int process_engage_warp(struct game_client *c)
 	if (i != c->shipid)
 		printf("i != ship id\n");
 	o = &go[i];
-	wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XUNIVERSE_DIMENSION / 2.0);
+	wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
 	printf("o->heading = %g\n", 180.0 * o->heading / M_PI);
 	nx = o->x + wfactor * sin(o->heading);
 	ny = o->y + wfactor * -cos(o->heading);
 
 	if (nx < 0)
-		nx += XUNIVERSE_DIMENSION;
-	if (nx > XUNIVERSE_DIMENSION)
-		nx -= XUNIVERSE_DIMENSION;
+		nx += XKNOWN_DIM;
+	if (nx > XKNOWN_DIM)
+		nx -= XKNOWN_DIM;
 	if (ny < 0)
-		ny += YUNIVERSE_DIMENSION;
-	if (ny > YUNIVERSE_DIMENSION)
-		ny -= YUNIVERSE_DIMENSION;
+		ny += YKNOWN_DIM;
+	if (ny > YKNOWN_DIM)
+		ny -= YKNOWN_DIM;
 	o->x = nx;
 	o->y = ny;
 	pthread_mutex_unlock(&universe_mutex);
@@ -1558,7 +1558,7 @@ static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
 {
 	struct snis_entity *ship = &go[c->shipid];
 	double dx, dy, dist;
-	const double threshold = (XUNIVERSE_DIMENSION / 2) * (XUNIVERSE_DIMENSION / 2);
+	const double threshold = (XKNOWN_DIM / 2) * (XKNOWN_DIM / 2);
 
 	dx = (ship->x - o->x);
 	dy = (ship->y - o->y);
@@ -1688,9 +1688,9 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, OPCODE_ECON_UPDATE_SHIP);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->alive);
-	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
-	packed_buffer_append_du32(pb, dv, XUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
+	packed_buffer_append_du32(pb, dv, XKNOWN_DIM);
 	packed_buffer_append_du32(pb, o->heading, 360.0);
 
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
@@ -1742,10 +1742,10 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, opcode);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->alive);
-	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->vx, XUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->vy, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->vx, XKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->vy, YKNOWN_DIM);
 	packed_buffer_append_du32(pb, o->heading, 360.0);
 	packed_buffer_append_u32(pb, o->tsd.ship.torpedoes);
 	packed_buffer_append_u32(pb, o->tsd.ship.power);
@@ -1774,8 +1774,8 @@ static void send_update_planet_packet(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(struct update_planet_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_PLANET);
 	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -1787,8 +1787,8 @@ static void send_update_starbase_packet(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_STARBASE);
 	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -1800,8 +1800,8 @@ static void send_update_explosion_packet(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_EXPLOSION);
 	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
 	packed_buffer_append_u16(pb, o->tsd.explosion.nsparks);
 	packed_buffer_append_u16(pb, o->tsd.explosion.velocity);
 	packed_buffer_append_u16(pb, o->tsd.explosion.time);
@@ -1817,10 +1817,10 @@ static void send_update_torpedo_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_TORPEDO);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->tsd.torpedo.ship_id);
-	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->vx, XUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->vy, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->vx, XKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->vy, YKNOWN_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -1833,10 +1833,10 @@ static void send_update_laser_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_LASER);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->tsd.laser.ship_id);
-	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->vx, XUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, o->vy, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->vx, XKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->vy, YKNOWN_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -1867,8 +1867,8 @@ static int add_new_player(struct game_client *c)
 	if (c->shipid == -1) { /* did not find our bridge, have to make a new one. */
 		double x, y;
 
-		x = XUNIVERSE_DIMENSION * (double) rand() / (double) RAND_MAX;
-		y = YUNIVERSE_DIMENSION * (double) rand() / (double) RAND_MAX;
+		x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
+		y = YKNOWN_DIM * (double) rand() / (double) RAND_MAX;
 		pthread_mutex_lock(&universe_mutex);
 		c->shipid = add_player(x, y, 0.0, 0.0, 0.0);
 		strcpy(go[c->shipid].sdata.name, (const char * restrict) app.shipname);

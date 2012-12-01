@@ -1064,8 +1064,8 @@ static void request_sci_select_coords(double ux, double uy)
 
 	pb = packed_buffer_allocate(sizeof(struct snis_sci_select_coords_packet));
 	packed_buffer_append_u16(pb, OPCODE_SCI_SELECT_COORDS);
-	packed_buffer_append_ds32(pb, ux, XUNIVERSE_DIMENSION);
-	packed_buffer_append_ds32(pb, uy, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, ux, XKNOWN_DIM);
+	packed_buffer_append_ds32(pb, uy, YKNOWN_DIM);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
@@ -1439,10 +1439,10 @@ static int process_update_ship_packet(uint16_t opcode)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	alive = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
-	dvx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
-	dvy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XKNOWN_DIM);
+	dy = packed_buffer_extract_ds32(&pb, YKNOWN_DIM);
+	dvx = packed_buffer_extract_ds32(&pb, XKNOWN_DIM);
+	dvy = packed_buffer_extract_ds32(&pb, YKNOWN_DIM);
 	dheading = packed_buffer_extract_du32(&pb, 360.0);
 	torpedoes = packed_buffer_extract_u32(&pb);
 	power = packed_buffer_extract_u32(&pb);
@@ -1488,9 +1488,9 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	alive = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
-	dv = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XKNOWN_DIM);
+	dy = packed_buffer_extract_ds32(&pb, YKNOWN_DIM);
+	dv = packed_buffer_extract_du32(&pb, XKNOWN_DIM);
 	dheading = packed_buffer_extract_du32(&pb, 360.0);
 	dvx = sin(dheading) * dv;
 	dvy = -cos(dheading) * dv;
@@ -1639,10 +1639,10 @@ static int process_update_torpedo_packet(void)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	ship_id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
-	dvx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
-	dvy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XKNOWN_DIM);
+	dy = packed_buffer_extract_ds32(&pb, YKNOWN_DIM);
+	dvx = packed_buffer_extract_ds32(&pb, XKNOWN_DIM);
+	dvy = packed_buffer_extract_ds32(&pb, YKNOWN_DIM);
 
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_torpedo(id, dx, dy, dvx, dvy, ship_id);
@@ -1666,10 +1666,10 @@ static int process_update_laser_packet(void)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	ship_id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
-	dvx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
-	dvy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XKNOWN_DIM);
+	dy = packed_buffer_extract_ds32(&pb, YKNOWN_DIM);
+	dvx = packed_buffer_extract_ds32(&pb, XKNOWN_DIM);
+	dvy = packed_buffer_extract_ds32(&pb, YKNOWN_DIM);
 
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_laser(id, dx, dy, dvx, dvy, ship_id);
@@ -1822,8 +1822,8 @@ static int process_sci_select_coords_packet(void)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	ux = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
-	uy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
+	ux = packed_buffer_extract_ds32(&pb, XKNOWN_DIM);
+	uy = packed_buffer_extract_ds32(&pb, YKNOWN_DIM);
 	if (my_ship_oid == UNKNOWN_ID)
 		return 0;
 	go[my_ship_oid].sci_coordx = ux;	
@@ -1870,8 +1870,8 @@ static int process_update_planet_packet(void)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XKNOWN_DIM);
+	dy = packed_buffer_extract_ds32(&pb, YKNOWN_DIM);
 
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_planet(id, dx, dy);
@@ -1893,8 +1893,8 @@ static int process_update_starbase_packet(void)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XKNOWN_DIM);
+	dy = packed_buffer_extract_ds32(&pb, YKNOWN_DIM);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_starbase(id, dx, dy);
 	pthread_mutex_unlock(&universe_mutex);
@@ -1917,8 +1917,8 @@ static int process_update_explosion_packet(void)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XKNOWN_DIM);
+	dy = packed_buffer_extract_ds32(&pb, YKNOWN_DIM);
 	nsparks = packed_buffer_extract_u16(&pb);
 	velocity = packed_buffer_extract_u16(&pb);
 	time = packed_buffer_extract_u16(&pb);
@@ -2317,7 +2317,7 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 		dy = y + snis_randn(r * 2) - r; 
 		snis_draw_line(drawable, gc, x, y, dx, dy);
 	}
-	/* snis_draw_circle(drawable, gc, x, y, (int) (SCREEN_WIDTH * 150.0 / XUNIVERSE_DIMENSION)); */
+	/* snis_draw_circle(drawable, gc, x, y, (int) (SCREEN_WIDTH * 150.0 / XKNOWN_DIM)); */
 }
 
 static void snis_draw_laser(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
@@ -2336,7 +2336,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	char buffer[50];
 
 	/* Compute radius of ship blip */
-	dr = (int) dist / (XUNIVERSE_DIMENSION / bw);
+	dr = (int) dist / (XKNOWN_DIM / bw);
 	dr = dr * MAX_SCIENCE_SCREEN_RADIUS / range;
 
 	/* if dr is small enough, and ship info is not known, nor recently requested,
@@ -2400,7 +2400,7 @@ static void snis_draw_science_spark(GdkDrawable *drawable, GdkGC *gc, gint x, gi
 	int dr;
 	double tx, ty;
 
-	dr = (int) dist / (XUNIVERSE_DIMENSION / 100.0);
+	dr = (int) dist / (XKNOWN_DIM / 100.0);
 	for (i = 0; i < 20; i++) {
 		da = snis_randn(360) * M_PI / 180.0;
 #if 1
@@ -2525,7 +2525,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 	r = rh / 2;
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
 	/* Draw all the stuff */
-#define NAVSCREEN_RADIUS (XUNIVERSE_DIMENSION / 100.0)
+#define NAVSCREEN_RADIUS (XKNOWN_DIM / 100.0)
 #define NR2 (NAVSCREEN_RADIUS * NAVSCREEN_RADIUS)
 	pthread_mutex_lock(&universe_mutex);
 
@@ -2806,7 +2806,7 @@ static void snis_draw_radar_sector_labels(GtkWidget *w,
 {
 	/* FIXME, this algorithm is really fricken dumb. */
 	int x, y;
-	double increment = (XUNIVERSE_DIMENSION / 10.0);
+	double increment = (XKNOWN_DIM / 10.0);
 	int x1, y1;
 	const char *letters = "ABCDEFGHIJK";
 	char label[10];
@@ -2836,7 +2836,7 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 {
 	/* FIXME, this algorithm is really fricken dumb. */
 	int x, y;
-	double increment = (XUNIVERSE_DIMENSION / 10.0);
+	double increment = (XKNOWN_DIM / 10.0);
 	double lx1, ly1, lx2, ly2;
 	int x1, y1, x2, y2; 
 	double range2 = (range * range);
@@ -2876,7 +2876,7 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 	if (!small_grids)
 		return;
 
-	increment = (XUNIVERSE_DIMENSION / 100.0);
+	increment = (XKNOWN_DIM / 100.0);
 	/* vertical lines */
 	for (x = 0; x <= 100; x++) {
 		if ((x * increment) <= (o->x - range))
@@ -3843,7 +3843,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 
 		gdk_gc_set_foreground(gc, &huex[LIMEGREEN]);
 		/* TODO, make sample count vary based on sensor power,damage */
-		probes = (30 * 10) / (bw / 2 + ((dist * 2.0) / XUNIVERSE_DIMENSION));
+		probes = (30 * 10) / (bw / 2 + ((dist * 2.0) / XKNOWN_DIM));
 		for (i = 0; i < probes; i++) {
 			double ss;
 			int nx, ny;
@@ -3915,7 +3915,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	abs_xy_draw_string(w, "WARP DATA:", NANO_FONT, 10, SCREEN_HEIGHT - 40);
 	sprintf(buffer, "BEARING: %3.2lf", bearing);
 	abs_xy_draw_string(w, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 25);
-	sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * hypot(dy, dx) / (XUNIVERSE_DIMENSION / 2.0));
+	sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * hypot(dy, dx) / (XKNOWN_DIM / 2.0));
 	abs_xy_draw_string(w, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
 #if 0
 	if (!o)
@@ -4068,8 +4068,8 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	if (!o->alive)
 		return;
 
-	x = (int) ((double) SCREEN_WIDTH * o->x / XUNIVERSE_DIMENSION);
-	y = (int) ((double) SCREEN_HEIGHT * o->y / YUNIVERSE_DIMENSION);
+	x = (int) ((double) SCREEN_WIDTH * o->x / XKNOWN_DIM);
+	y = (int) ((double) SCREEN_HEIGHT * o->y / YKNOWN_DIM);
 	x1 = x - 1;
 	y2 = y + 1;
 	y1 = y - 1;
