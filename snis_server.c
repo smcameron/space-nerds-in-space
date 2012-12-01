@@ -1681,22 +1681,17 @@ static void send_econ_update_ship_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 	double dv;
-	uint32_t x, y, v, heading;
 
-	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
-	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	dv = sqrt((o->vx * o->vx) + (o->vy * o->vy));
-	v = (int32_t) ((dv / XUNIVERSE_DIMENSION) * (double) INT32_MAX);
-	heading = (uint32_t) (o->heading / 360.0 * (double) UINT32_MAX);
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
 	packed_buffer_append_u16(pb, OPCODE_ECON_UPDATE_SHIP);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->alive);
-	packed_buffer_append_u32(pb, x);
-	packed_buffer_append_u32(pb, y);
-	packed_buffer_append_u32(pb, v);
-	packed_buffer_append_u32(pb, heading);
+	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_du32(pb, dv, XUNIVERSE_DIMENSION);
+	packed_buffer_append_du32(pb, o->heading, 360.0);
 
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
@@ -1732,19 +1727,9 @@ static void send_update_ship_packet(struct game_client *c,
 	struct snis_entity *o, uint16_t opcode)
 {
 	struct packed_buffer *pb;
-	uint32_t x, y;
-	int32_t vx, vy;
-	uint32_t heading, gun_heading, sci_heading, sci_beam_width, fuel;
+	uint32_t fuel;
 	uint8_t tloading, tloaded, throttle, rpm;
 
-	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
-	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
-	vx = (int32_t) ((o->vx / XUNIVERSE_DIMENSION) * (double) INT32_MAX);
-	vy = (int32_t) ((o->vy / YUNIVERSE_DIMENSION) * (double) INT32_MAX);
-	heading = (uint32_t) (o->heading / 360.0 * (double) UINT32_MAX);
-	gun_heading = (uint32_t) (o->tsd.ship.gun_heading / 360.0 * (double) UINT32_MAX);
-	sci_heading = (uint32_t) (o->tsd.ship.sci_heading / 360.0 * (double) UINT32_MAX);
-	sci_beam_width = (uint32_t) (o->tsd.ship.sci_beam_width / 360.0 * (double) UINT32_MAX);
 	throttle = o->tsd.ship.throttle;
 	rpm = o->tsd.ship.rpm;
 	fuel = o->tsd.ship.fuel;
@@ -1757,16 +1742,16 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, opcode);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->alive);
-	packed_buffer_append_u32(pb, x);
-	packed_buffer_append_u32(pb, y);
-	packed_buffer_append_u32(pb, (uint32_t) vx);
-	packed_buffer_append_u32(pb, (uint32_t) vy);
-	packed_buffer_append_u32(pb, heading);
+	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->vx, XUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->vy, YUNIVERSE_DIMENSION);
+	packed_buffer_append_du32(pb, o->heading, 360.0);
 	packed_buffer_append_u32(pb, o->tsd.ship.torpedoes);
 	packed_buffer_append_u32(pb, o->tsd.ship.power);
-	packed_buffer_append_u32(pb, gun_heading);
-	packed_buffer_append_u32(pb, sci_heading);
-	packed_buffer_append_u32(pb, sci_beam_width);
+	packed_buffer_append_du32(pb, o->tsd.ship.gun_heading, 360.0);
+	packed_buffer_append_du32(pb, o->tsd.ship.sci_heading, 360.0);
+	packed_buffer_append_du32(pb, o->tsd.ship.sci_beam_width, 360.0);
 	packed_buffer_append_u8(pb, tloading);
 	packed_buffer_append_u8(pb, throttle);
 	packed_buffer_append_u8(pb, rpm);
@@ -1785,15 +1770,12 @@ static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	struct packed_buffer *pb;
-	uint32_t x, y;
 
-	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
-	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	pb = packed_buffer_allocate(sizeof(struct update_planet_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_PLANET);
 	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_u32(pb, x);
-	packed_buffer_append_u32(pb, y);
+	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -1801,15 +1783,12 @@ static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	struct packed_buffer *pb;
-	uint32_t x, y;
 
-	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
-	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_STARBASE);
 	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_u32(pb, x);
-	packed_buffer_append_u32(pb, y);
+	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -1817,15 +1796,12 @@ static void send_update_explosion_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	struct packed_buffer *pb;
-	uint32_t x, y;
 
-	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
-	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_EXPLOSION);
 	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_u32(pb, x);
-	packed_buffer_append_u32(pb, y);
+	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
 	packed_buffer_append_u16(pb, o->tsd.explosion.nsparks);
 	packed_buffer_append_u16(pb, o->tsd.explosion.velocity);
 	packed_buffer_append_u16(pb, o->tsd.explosion.time);
@@ -1836,20 +1812,15 @@ static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	struct packed_buffer *pb;
-	uint32_t x, y, vx, vy;
 
-	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
-	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
-	vx = (uint32_t) ((o->vx / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
-	vy = (uint32_t) ((o->vy / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	pb = packed_buffer_allocate(sizeof(struct update_torpedo_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_TORPEDO);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->tsd.torpedo.ship_id);
-	packed_buffer_append_u32(pb, x);
-	packed_buffer_append_u32(pb, y);
-	packed_buffer_append_u32(pb, vx);
-	packed_buffer_append_u32(pb, vy);
+	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->vx, XUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->vy, YUNIVERSE_DIMENSION);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -1857,20 +1828,15 @@ static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	struct packed_buffer *pb;
-	uint32_t x, y, vx, vy;
 
-	x = (uint32_t) ((o->x / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
-	y = (uint32_t) ((o->y / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
-	vx = (uint32_t) ((o->vx / XUNIVERSE_DIMENSION) * (double) UINT32_MAX);
-	vy = (uint32_t) ((o->vy / YUNIVERSE_DIMENSION) * (double) UINT32_MAX);
 	pb = packed_buffer_allocate(sizeof(struct update_laser_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_LASER);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->tsd.laser.ship_id);
-	packed_buffer_append_u32(pb, x);
-	packed_buffer_append_u32(pb, y);
-	packed_buffer_append_u32(pb, vx);
-	packed_buffer_append_u32(pb, vy);
+	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->vx, XUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->vy, YUNIVERSE_DIMENSION);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

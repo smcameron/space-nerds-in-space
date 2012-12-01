@@ -1061,15 +1061,11 @@ static void request_sci_select_target(uint32_t id)
 static void request_sci_select_coords(double ux, double uy)
 {
 	struct packed_buffer *pb;
-	uint32_t x, y;
-
-	x = dtou32(ux, XUNIVERSE_DIMENSION);
-	y = dtou32(uy, YUNIVERSE_DIMENSION);
 
 	pb = packed_buffer_allocate(sizeof(struct snis_sci_select_coords_packet));
 	packed_buffer_append_u16(pb, OPCODE_SCI_SELECT_COORDS);
-	packed_buffer_append_u32(pb, x);
-	packed_buffer_append_u32(pb, y);
+	packed_buffer_append_du32(pb, ux, XUNIVERSE_DIMENSION);
+	packed_buffer_append_du32(pb, uy, YUNIVERSE_DIMENSION);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
@@ -1427,8 +1423,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	unsigned char buffer[100];
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, power;
-	uint32_t x, y, heading, gun_heading, sci_heading, sci_beam_width, fuel;
-	int32_t vx, vy;
+	uint32_t fuel;
 	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int shiptype = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
@@ -1444,16 +1439,16 @@ static int process_update_ship_packet(uint16_t opcode)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	alive = packed_buffer_extract_u32(&pb);
-	x = packed_buffer_extract_u32(&pb);
-	y = packed_buffer_extract_u32(&pb);
-	vx = (int32_t) packed_buffer_extract_u32(&pb);
-	vy = (int32_t) packed_buffer_extract_u32(&pb);
-	heading = packed_buffer_extract_u32(&pb);
+	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
+	dvx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
+	dvy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
+	dheading = packed_buffer_extract_du32(&pb, 360.0);
 	torpedoes = packed_buffer_extract_u32(&pb);
 	power = packed_buffer_extract_u32(&pb);
-	gun_heading = packed_buffer_extract_u32(&pb);
-	sci_heading = packed_buffer_extract_u32(&pb);
-	sci_beam_width = packed_buffer_extract_u32(&pb);
+	dgheading = packed_buffer_extract_du32(&pb, 360.0);
+	dsheading = packed_buffer_extract_du32(&pb, 360.0);
+	dbeamwidth = packed_buffer_extract_du32(&pb, 360.0);
 	tloading = packed_buffer_extract_u8(&pb);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
@@ -1467,15 +1462,6 @@ static int process_update_ship_packet(uint16_t opcode)
 	requested_warpdrive = packed_buffer_extract_u8(&pb);
 	phaser_charge = packed_buffer_extract_u8(&pb);
 	phaser_wavelength = packed_buffer_extract_u8(&pb);
-
-	dx = u32tod(x, XUNIVERSE_DIMENSION);
-	dy = u32tod(y, YUNIVERSE_DIMENSION);
-	dvx = s32tod(vx, XUNIVERSE_DIMENSION);
-	dvy = s32tod(vy, YUNIVERSE_DIMENSION);
-	dheading = u32tod(heading, 360.0);
-	dgheading = u32tod(gun_heading, 360.0);
-	dsheading = u32tod(sci_heading, 360.0);
-	dbeamwidth = u32tod(sci_beam_width, 360.0);
 
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power,
@@ -1491,7 +1477,6 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	unsigned char buffer[100];
 	struct packed_buffer pb;
 	uint32_t id, alive;
-	uint32_t x, y, v, heading;
 	double dx, dy, dheading, dv, dvx, dvy;
 	int rc;
 
@@ -1503,15 +1488,10 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	alive = packed_buffer_extract_u32(&pb);
-	x = packed_buffer_extract_u32(&pb);
-	y = packed_buffer_extract_u32(&pb);
-	v = packed_buffer_extract_u32(&pb);
-	heading = packed_buffer_extract_u32(&pb);
-
-	dx = u32tod(x, XUNIVERSE_DIMENSION);
-	dy = u32tod(y, YUNIVERSE_DIMENSION);
-	dv = u32tod(v, XUNIVERSE_DIMENSION);
-	dheading = u32tod(heading, 360.0);
+	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
+	dv = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
+	dheading = packed_buffer_extract_du32(&pb, 360.0);
 	dvx = sin(dheading) * dv;
 	dvy = -cos(dheading) * dv;
 
@@ -1648,8 +1628,6 @@ static int process_update_torpedo_packet(void)
 	unsigned char buffer[100];
 	struct packed_buffer pb;
 	uint32_t id, ship_id;
-	uint32_t x, y;
-	int32_t vx, vy;
 	double dx, dy, dvx, dvy;
 	int rc;
 
@@ -1661,15 +1639,10 @@ static int process_update_torpedo_packet(void)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	ship_id = packed_buffer_extract_u32(&pb);
-	x = packed_buffer_extract_u32(&pb);
-	y = packed_buffer_extract_u32(&pb);
-	vx = (int32_t) packed_buffer_extract_u32(&pb);
-	vy = (int32_t) packed_buffer_extract_u32(&pb);
-
-	dx = u32tod(x, XUNIVERSE_DIMENSION);
-	dy = u32tod(y, YUNIVERSE_DIMENSION);
-	dvx = s32tod(vx, XUNIVERSE_DIMENSION);
-	dvy = s32tod(vy, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
+	dvx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
+	dvy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_torpedo(id, dx, dy, dvx, dvy, ship_id);
@@ -1682,8 +1655,6 @@ static int process_update_laser_packet(void)
 	unsigned char buffer[100];
 	struct packed_buffer pb;
 	uint32_t id, ship_id;
-	uint32_t x, y;
-	int32_t vx, vy;
 	double dx, dy, dvx, dvy;
 	int rc;
 
@@ -1695,15 +1666,10 @@ static int process_update_laser_packet(void)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	ship_id = packed_buffer_extract_u32(&pb);
-	x = packed_buffer_extract_u32(&pb);
-	y = packed_buffer_extract_u32(&pb);
-	vx = (int32_t) packed_buffer_extract_u32(&pb);
-	vy = (int32_t) packed_buffer_extract_u32(&pb);
-
-	dx = u32tod(x, XUNIVERSE_DIMENSION);
-	dy = u32tod(y, YUNIVERSE_DIMENSION);
-	dvx = s32tod(vx, XUNIVERSE_DIMENSION);
-	dvy = s32tod(vy, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
+	dvx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
+	dvy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_laser(id, dx, dy, dvx, dvy, ship_id);
@@ -1848,7 +1814,6 @@ static int process_sci_select_coords_packet(void)
 {
 	char buffer[sizeof(struct snis_sci_select_coords_packet)];
 	struct packed_buffer pb;
-	uint32_t x, y;
 	double ux, uy;
 	int rc;
 
@@ -1857,12 +1822,10 @@ static int process_sci_select_coords_packet(void)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	x = packed_buffer_extract_u32(&pb);
-	y = packed_buffer_extract_u32(&pb);
+	ux = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
+	uy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
 	if (my_ship_oid == UNKNOWN_ID)
 		return 0;
-	ux = u32tod(x, XUNIVERSE_DIMENSION);
-	uy = u32tod(y, YUNIVERSE_DIMENSION);
 	go[my_ship_oid].sci_coordx = ux;	
 	go[my_ship_oid].sci_coordy = uy;	
 	return 0;
@@ -1898,7 +1861,6 @@ static int process_update_planet_packet(void)
 	unsigned char buffer[100];
 	struct packed_buffer pb;
 	uint32_t id;
-	uint32_t x, y;
 	double dx, dy;
 	int rc;
 
@@ -1908,11 +1870,8 @@ static int process_update_planet_packet(void)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
-	x = packed_buffer_extract_u32(&pb);
-	y = packed_buffer_extract_u32(&pb);
-
-	dx = u32tod(x, XUNIVERSE_DIMENSION);
-	dy = u32tod(y, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
 
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_planet(id, dx, dy);
@@ -1925,7 +1884,6 @@ static int process_update_starbase_packet(void)
 	unsigned char buffer[100];
 	struct packed_buffer pb;
 	uint32_t id;
-	uint32_t x, y;
 	double dx, dy;
 	int rc;
 
@@ -1935,12 +1893,8 @@ static int process_update_starbase_packet(void)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
-	x = packed_buffer_extract_u32(&pb);
-	y = packed_buffer_extract_u32(&pb);
-
-	dx = u32tod(x, XUNIVERSE_DIMENSION);
-	dy = u32tod(y, YUNIVERSE_DIMENSION);
-
+	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_starbase(id, dx, dy);
 	pthread_mutex_unlock(&universe_mutex);
@@ -1952,7 +1906,6 @@ static int process_update_explosion_packet(void)
 	unsigned char buffer[sizeof(struct update_explosion_packet)];
 	struct packed_buffer pb;
 	uint32_t id;
-	uint32_t x, y;
 	double dx, dy;
 	uint16_t nsparks, velocity, time;
 	int rc;
@@ -1964,10 +1917,8 @@ static int process_update_explosion_packet(void)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
-	x = packed_buffer_extract_u32(&pb);
-	y = packed_buffer_extract_u32(&pb);
-	dx = u32tod(x, XUNIVERSE_DIMENSION);
-	dy = u32tod(y, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
 	nsparks = packed_buffer_extract_u16(&pb);
 	velocity = packed_buffer_extract_u16(&pb);
 	time = packed_buffer_extract_u16(&pb);

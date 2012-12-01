@@ -58,6 +58,11 @@ GLOBAL double u32tod(uint32_t u, uint32_t scale);
 GLOBAL int32_t dtos32(double d, int32_t scale);
 GLOBAL double s32tod(int32_t u, int32_t scale);
 
+GLOBAL int packed_buffer_append_du32(struct packed_buffer *pb, double d, uint32_t scale);
+GLOBAL int packed_buffer_append_ds32(struct packed_buffer *pb, double d, int32_t scale);
+GLOBAL double packed_buffer_extract_du32(struct packed_buffer *pb, uint32_t scale);
+GLOBAL double packed_buffer_extract_ds32(struct packed_buffer *pb, int32_t scale);
+
 #undef GLOBAL
 #endif
 
