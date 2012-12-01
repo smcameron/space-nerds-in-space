@@ -26,6 +26,10 @@
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 100000.0
 #define YKNOWN_DIM (XKNOWN_DIM * (600.0/800.0))  /* assumes 800x600 screen aspect ratio */
+
+#define UNIVERSE_DIM ((XKNOWN_DIM) * 20.0)
+#define UNIVERSE_LIMIT (UNIVERSE_DIM / 2.0) /* plus or minus, x, or y, this is as far as you can go. */
+
 #define MAXGAMEOBJS 5000
 #define MAXSPARKS 1000
 

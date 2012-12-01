@@ -198,16 +198,20 @@ static int add_explosion(double x, double y, uint16_t velocity, uint16_t nsparks
 
 static void normalize_coords(struct snis_entity *o)
 {
-	if (o->x < 0)
-		o->x += XKNOWN_DIM;
-	else
-		if (o->x > XKNOWN_DIM)
-			o->x -= XKNOWN_DIM;
-	if (o->y < 0)
-		o->y += YKNOWN_DIM;
-	else
-		if (o->y > YKNOWN_DIM)
-			o->y -= YKNOWN_DIM;
+	/* This algorihm is like that big ball in "The Prisoner". */
+
+	if (o->x < -UNIVERSE_LIMIT)
+		goto fixit;
+	if (o->x > UNIVERSE_LIMIT)
+		goto fixit;
+	if (o->y < -UNIVERSE_LIMIT)
+		goto fixit;
+	if (o->y > UNIVERSE_LIMIT)
+		goto fixit;
+	return;
+fixit:
+	o->x = snis_randn(XKNOWN_DIM);
+	o->y = snis_randn(YKNOWN_DIM);
 }
 
 static void calculate_torpedo_damage(struct snis_entity *o)
@@ -1172,7 +1176,7 @@ static int process_engage_warp(struct game_client *c)
 	int i, rc;
 	uint32_t id;
 	uint8_t __attribute__((unused)) v;
-	double nx, ny, wfactor;
+	double wfactor;
 	struct snis_entity *o;
 
 	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_throttle_packet) - sizeof(uint16_t));
@@ -1191,22 +1195,10 @@ static int process_engage_warp(struct game_client *c)
 		printf("i != ship id\n");
 	o = &go[i];
 	wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
-	printf("o->heading = %g\n", 180.0 * o->heading / M_PI);
-	nx = o->x + wfactor * sin(o->heading);
-	ny = o->y + wfactor * -cos(o->heading);
-
-	if (nx < 0)
-		nx += XKNOWN_DIM;
-	if (nx > XKNOWN_DIM)
-		nx -= XKNOWN_DIM;
-	if (ny < 0)
-		ny += YKNOWN_DIM;
-	if (ny > YKNOWN_DIM)
-		ny -= YKNOWN_DIM;
-	o->x = nx;
-	o->y = ny;
+	o->x = o->x + wfactor * sin(o->heading);
+	o->y = o->y + wfactor * -cos(o->heading);
+	normalize_coords(o);
 	pthread_mutex_unlock(&universe_mutex);
-	printf("engage warp, wfactor = %g, nx = %g, ny = %g\n", wfactor, nx, ny);
 	return 0;
 }
 
@@ -1688,9 +1680,9 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, OPCODE_ECON_UPDATE_SHIP);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->alive);
-	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
-	packed_buffer_append_du32(pb, dv, XKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->x, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->y, UNIVERSE_DIM);
+	packed_buffer_append_du32(pb, dv, UNIVERSE_DIM);
 	packed_buffer_append_du32(pb, o->heading, 360.0);
 
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
@@ -1742,10 +1734,10 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, opcode);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->alive);
-	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->vx, XKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->vy, YKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->x, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->y, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->vx, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->vy, UNIVERSE_DIM);
 	packed_buffer_append_du32(pb, o->heading, 360.0);
 	packed_buffer_append_u32(pb, o->tsd.ship.torpedoes);
 	packed_buffer_append_u32(pb, o->tsd.ship.power);
@@ -1774,8 +1766,8 @@ static void send_update_planet_packet(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(struct update_planet_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_PLANET);
 	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->x, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->y, UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -1787,8 +1779,8 @@ static void send_update_starbase_packet(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_STARBASE);
 	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->x, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->y, UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -1800,8 +1792,8 @@ static void send_update_explosion_packet(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_EXPLOSION);
 	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->x, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->y, UNIVERSE_DIM);
 	packed_buffer_append_u16(pb, o->tsd.explosion.nsparks);
 	packed_buffer_append_u16(pb, o->tsd.explosion.velocity);
 	packed_buffer_append_u16(pb, o->tsd.explosion.time);
@@ -1817,10 +1809,10 @@ static void send_update_torpedo_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_TORPEDO);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->tsd.torpedo.ship_id);
-	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->vx, XKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->vy, YKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->x, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->y, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->vx, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->vy, UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -1833,10 +1825,10 @@ static void send_update_laser_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_LASER);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->tsd.laser.ship_id);
-	packed_buffer_append_ds32(pb, o->x, XKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->y, YKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->vx, XKNOWN_DIM);
-	packed_buffer_append_ds32(pb, o->vy, YKNOWN_DIM);
+	packed_buffer_append_ds32(pb, o->x, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->y, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->vx, UNIVERSE_DIM);
+	packed_buffer_append_ds32(pb, o->vy, UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
