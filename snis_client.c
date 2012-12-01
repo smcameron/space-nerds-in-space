@@ -2839,8 +2839,13 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 	double increment = (XKNOWN_DIM / 10.0);
 	double lx1, ly1, lx2, ly2;
 	int x1, y1, x2, y2; 
+	int xlow, xhigh, ylow, yhigh;
 	double range2 = (range * range);
 
+	xlow = (int) ((double) r / range * (0 -o->x)) + cx;
+	xhigh = (int) ((double) r / range * (XKNOWN_DIM - o->x)) + cx;
+	ylow = (int) (((double) r) / range * (0.0 - o->y)) + cy;
+	yhigh = (int) (((double) r) / range * (YKNOWN_DIM - o->y)) + cy;
 	/* vertical lines */
 	for (x = 0; x <= 10; x++) {
 		if ((x * increment) <= (o->x - range))
@@ -2855,6 +2860,15 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 		x1 = (int) (((double) r) / range * lx1) + cx;
 		y1 = (int) (((double) r) / range * ly1) + cy;
 		y2 = (int) (((double) r) / range * ly2) + cy;
+
+		if (y1 < ylow)
+			y1 = ylow;
+		if (y1 > yhigh)
+			y1 = yhigh;
+		if (y2 < ylow)
+			y2 = ylow;
+		if (y2 > yhigh)
+			y2 = yhigh;
 		snis_draw_dotted_vline(drawable, gc, x1, y2, y1, 5);
 	}
 	/* horizontal lines */
@@ -2870,6 +2884,14 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 		y1 = (int) (((double) r) / range * ly1) + cy;
 		x1 = (int) (((double) r) / range * lx1) + cx;
 		x2 = (int) (((double) r) / range * lx2) + cx;
+		if (x1 < xlow)
+			x1 = xlow;
+		if (x1 > xhigh)
+			x1 = yhigh;
+		if (x2 < xlow)
+			x2 = xlow;
+		if (x2 > xhigh)
+			x2 = xhigh;
 		snis_draw_dotted_hline(drawable, gc, x2, y1, x1, 5);
 	}
 
@@ -2891,6 +2913,14 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 		x1 = (int) (((double) r) / range * lx1) + cx;
 		y1 = (int) (((double) r) / range * ly1) + cy;
 		y2 = (int) (((double) r) / range * ly2) + cy;
+		if (y1 < ylow)
+			y1 = ylow;
+		if (y1 > yhigh)
+			y1 = yhigh;
+		if (y2 < ylow)
+			y2 = ylow;
+		if (y2 > yhigh)
+			y2 = yhigh;
 		snis_draw_dotted_vline(drawable, gc, x1, y2, y1, 10);
 	}
 	/* horizontal lines */
@@ -2906,6 +2936,14 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 		y1 = (int) (((double) r) / range * ly1) + cy;
 		x1 = (int) (((double) r) / range * lx1) + cx;
 		x2 = (int) (((double) r) / range * lx2) + cx;
+		if (x1 < xlow)
+			x1 = xlow;
+		if (x1 > xhigh)
+			x1 = yhigh;
+		if (x2 < xlow)
+			x2 = xlow;
+		if (x2 > xhigh)
+			x2 = xhigh;
 		snis_draw_dotted_hline(drawable, gc, x2, y1, x1, 10);
 	}
 }
