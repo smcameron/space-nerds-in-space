@@ -338,3 +338,23 @@ void packed_buffer_init(struct packed_buffer * pb, void *buffer, int size)
 	pb->buffer_cursor = 0;
 }
 
+uint32_t dtou32(double d, uint32_t scale)
+{
+	return (uint32_t) ((d / scale) * (double) UINT32_MAX);
+}
+
+double u32tod(uint32_t u, uint32_t scale)
+{
+	return ((double) u * (double) scale) / (double) UINT32_MAX;
+}
+
+int32_t dtos32(double d, int32_t scale)
+{
+	return (int32_t) ((d / scale) * (double) INT32_MAX);
+}
+
+double s32tod(int32_t u, int32_t scale)
+{
+	return ((double) u * (double) scale) / (double) INT32_MAX;
+}
+

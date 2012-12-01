@@ -53,6 +53,11 @@ GLOBAL void packed_buffer_queue_print(struct packed_buffer_queue *pbg);
 GLOBAL struct packed_buffer *packed_buffer_copy(struct packed_buffer *pb);
 GLOBAL void packed_buffer_init(struct packed_buffer * pb, void *buffer, int size);
 
+GLOBAL uint32_t dtou32(double d, uint32_t scale);
+GLOBAL double u32tod(uint32_t u, uint32_t scale);
+GLOBAL int32_t dtos32(double d, int32_t scale);
+GLOBAL double s32tod(int32_t u, int32_t scale);
+
 #undef GLOBAL
 #endif
 
