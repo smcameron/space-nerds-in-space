@@ -1064,8 +1064,8 @@ static void request_sci_select_coords(double ux, double uy)
 
 	pb = packed_buffer_allocate(sizeof(struct snis_sci_select_coords_packet));
 	packed_buffer_append_u16(pb, OPCODE_SCI_SELECT_COORDS);
-	packed_buffer_append_du32(pb, ux, XUNIVERSE_DIMENSION);
-	packed_buffer_append_du32(pb, uy, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, ux, XUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, uy, YUNIVERSE_DIMENSION);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
@@ -1439,8 +1439,8 @@ static int process_update_ship_packet(uint16_t opcode)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	alive = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 	dvx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
 	dvy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 	dheading = packed_buffer_extract_du32(&pb, 360.0);
@@ -1488,8 +1488,8 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	alive = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 	dv = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
 	dheading = packed_buffer_extract_du32(&pb, 360.0);
 	dvx = sin(dheading) * dv;
@@ -1639,8 +1639,8 @@ static int process_update_torpedo_packet(void)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	ship_id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 	dvx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
 	dvy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 
@@ -1666,8 +1666,8 @@ static int process_update_laser_packet(void)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	ship_id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 	dvx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
 	dvy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 
@@ -1822,8 +1822,8 @@ static int process_sci_select_coords_packet(void)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	ux = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
-	uy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
+	ux = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
+	uy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 	if (my_ship_oid == UNKNOWN_ID)
 		return 0;
 	go[my_ship_oid].sci_coordx = ux;	
@@ -1870,8 +1870,8 @@ static int process_update_planet_packet(void)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_planet(id, dx, dy);
@@ -1893,8 +1893,8 @@ static int process_update_starbase_packet(void)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_starbase(id, dx, dy);
 	pthread_mutex_unlock(&universe_mutex);
@@ -1917,8 +1917,8 @@ static int process_update_explosion_packet(void)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_du32(&pb, XUNIVERSE_DIMENSION);
-	dy = packed_buffer_extract_du32(&pb, YUNIVERSE_DIMENSION);
+	dx = packed_buffer_extract_ds32(&pb, XUNIVERSE_DIMENSION);
+	dy = packed_buffer_extract_ds32(&pb, YUNIVERSE_DIMENSION);
 	nsparks = packed_buffer_extract_u16(&pb);
 	velocity = packed_buffer_extract_u16(&pb);
 	time = packed_buffer_extract_u16(&pb);

@@ -1688,8 +1688,8 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, OPCODE_ECON_UPDATE_SHIP);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->alive);
-	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
 	packed_buffer_append_du32(pb, dv, XUNIVERSE_DIMENSION);
 	packed_buffer_append_du32(pb, o->heading, 360.0);
 
@@ -1742,8 +1742,8 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, opcode);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->alive);
-	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
 	packed_buffer_append_ds32(pb, o->vx, XUNIVERSE_DIMENSION);
 	packed_buffer_append_ds32(pb, o->vy, YUNIVERSE_DIMENSION);
 	packed_buffer_append_du32(pb, o->heading, 360.0);
@@ -1774,8 +1774,8 @@ static void send_update_planet_packet(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(struct update_planet_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_PLANET);
 	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -1787,8 +1787,8 @@ static void send_update_starbase_packet(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_STARBASE);
 	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -1800,8 +1800,8 @@ static void send_update_explosion_packet(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_EXPLOSION);
 	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
 	packed_buffer_append_u16(pb, o->tsd.explosion.nsparks);
 	packed_buffer_append_u16(pb, o->tsd.explosion.velocity);
 	packed_buffer_append_u16(pb, o->tsd.explosion.time);
@@ -1817,8 +1817,8 @@ static void send_update_torpedo_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_TORPEDO);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->tsd.torpedo.ship_id);
-	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
 	packed_buffer_append_ds32(pb, o->vx, XUNIVERSE_DIMENSION);
 	packed_buffer_append_ds32(pb, o->vy, YUNIVERSE_DIMENSION);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
@@ -1833,8 +1833,8 @@ static void send_update_laser_packet(struct game_client *c,
 	packed_buffer_append_u16(pb, OPCODE_UPDATE_LASER);
 	packed_buffer_append_u32(pb, o->id);
 	packed_buffer_append_u32(pb, o->tsd.laser.ship_id);
-	packed_buffer_append_du32(pb, o->x, XUNIVERSE_DIMENSION);
-	packed_buffer_append_du32(pb, o->y, YUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->x, XUNIVERSE_DIMENSION);
+	packed_buffer_append_ds32(pb, o->y, YUNIVERSE_DIMENSION);
 	packed_buffer_append_ds32(pb, o->vx, XUNIVERSE_DIMENSION);
 	packed_buffer_append_ds32(pb, o->vy, YUNIVERSE_DIMENSION);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
