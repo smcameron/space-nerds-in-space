@@ -3525,11 +3525,47 @@ static struct navigation_ui {
 	struct slider warp_slider;
 	struct gauge warp_gauge;
 	struct button engage_warp_button;
+	struct button warp_up_button;
+	struct button warp_down_button;
 } nav_ui;
 
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
 {
 	do_adjust_byte_value(0,  OPCODE_ENGAGE_WARP);
+}
+
+static void warp_updown_button_pressed(int direction)
+{
+	int value;
+	struct snis_entity *o;
+	double inc;
+
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return;
+
+	inc = 2.5;
+
+	o = &go[my_ship_oid];
+	value = o->tsd.ship.requested_warpdrive;
+	if (direction > 0 && value + inc > 255)
+		return;
+	if (direction < 0 && value - inc < 0)
+		return;
+	value += direction < 0 ? -inc : direction > 0 ? inc : 0;
+	nav_ui.warp_slider.input = (double) value / 255.0;
+	do_adjust_slider_value(&nav_ui.warp_slider, OPCODE_REQUEST_WARPDRIVE);
+}
+
+static void warp_up_button_pressed(__attribute__((unused)) void *s)
+{
+	warp_updown_button_pressed(1);
+}
+
+static void warp_down_button_pressed(__attribute__((unused)) void *s)
+{
+	warp_updown_button_pressed(-1);
 }
 
 struct weapons_ui {
@@ -3637,16 +3673,22 @@ static double sample_reqwarpdrive(void);
 static double sample_warpdrive(void);
 static void init_nav_ui(void)
 {
-	slider_init(&nav_ui.warp_slider, 520, SCREEN_HEIGHT - 40, 200, &huex[AMBER], "Warp Drive",
+	slider_init(&nav_ui.warp_slider, 500, SCREEN_HEIGHT - 40, 200, &huex[AMBER], "Warp",
 				"0", "100", 0.0, 100.0, sample_reqwarpdrive,
 				do_warpdrive, DISPLAYMODE_NAVIGATION);
-	gauge_init(&nav_ui.warp_gauge, 650, 440, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	gauge_init(&nav_ui.warp_gauge, 650, 400, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 				10, "WARP", sample_warpdrive);
 	button_init(&nav_ui.engage_warp_button, 550, 200, 200, 30, "ENGAGE WARP", &huex[AMBER],
 				TINY_FONT, engage_warp_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
+	button_init(&nav_ui.warp_up_button, 700, 500, 40, 30, "UP", &huex[AMBER],
+			NANO_FONT, warp_up_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
+	button_init(&nav_ui.warp_down_button, 550, 500, 60, 30, "DOWN", &huex[AMBER],
+			NANO_FONT, warp_down_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
 	add_slider(&nav_ui.warp_slider);
 	add_button(&nav_ui.engage_warp_button);
+	add_button(&nav_ui.warp_up_button);
+	add_button(&nav_ui.warp_down_button);
 }
 
 static void show_navigation(GtkWidget *w)
