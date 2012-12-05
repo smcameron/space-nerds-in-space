@@ -4002,17 +4002,14 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 	abs_xy_draw_string(w, "50", NANO_FONT, x1 + 4 * (x2 - x1) / 4 - 20, y2 + 10);
 	abs_xy_draw_string(w, "Shield Profile (nm)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 30);
 }
- 
-static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o)
+
+static void draw_science_warp_data(GtkWidget *w, struct snis_entity *ship)
 {
+	double bearing, dx, dy;
 	char buffer[40];
-	int x, y, gx1, gy1, gx2, gy2;
-	double bearing, dx, dy, range;
 
 	if (!ship)
 		return;
-
-	/* Draw warp data */
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
 	dx = ship->x - ship->sci_coordx;
 	dy = ship->y - ship->sci_coordy;
@@ -4026,10 +4023,16 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	abs_xy_draw_string(w, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 25);
 	sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * hypot(dy, dx) / (XKNOWN_DIM / 2.0));
 	abs_xy_draw_string(w, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
-#if 0
-	if (!o)
+}
+ 
+static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o)
+{
+	char buffer[40];
+	int x, y, gx1, gy1, gx2, gy2;
+	double bearing, dx, dy, range;
+
+	if (!ship)
 		return;
-#endif
 	x = SCIENCE_DATA_X + 10;
 	y = SCIENCE_DATA_Y + 15;
 	current_draw_rectangle(w->window, gc, 0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
@@ -4162,6 +4165,7 @@ static void show_science(GtkWidget *w)
 	draw_all_the_science_guys(w, o, zoom);
 	draw_all_the_science_sparks(w, o, zoom);
 	draw_sliders(w);
+	draw_science_warp_data(w, o);
 	draw_science_data(w, o, curr_science_guy);
 }
 
