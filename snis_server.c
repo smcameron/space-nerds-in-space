@@ -546,6 +546,7 @@ static uint8_t warp_limit_function(uint8_t value, uint32_t total_power, uint8_t 
 static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
+	int max_phaserbank, desired_phaserbank, current_phaserbank;
 
 	o->vy = o->tsd.ship.velocity * cos(o->heading);
 	o->vx = o->tsd.ship.velocity * -sin(o->heading);
@@ -639,13 +640,20 @@ static void player_move(struct snis_entity *o)
 		o->tsd.ship.warpdrive--;
 
 	/* Update phaser charge */
-	if (o->tsd.ship.phaser_charge < o->tsd.ship.pwrdist.phaserbanks) {
-		int delta;
+	current_phaserbank = o->tsd.ship.phaser_charge;
+	max_phaserbank = (int) (((double) o->tsd.ship.power / (double) UINT32_MAX) *
+		(double) o->tsd.ship.pwrdist.phaserbanks / PHASER_POWER_FACTOR);
+	if (max_phaserbank > 255)
+		max_phaserbank = 255;
+	if (current_phaserbank != max_phaserbank) {
+		double delta;
 
-		delta = (o->tsd.ship.pwrdist.phaserbanks - o->tsd.ship.phaser_charge) / 10.0;
-		if (delta < 1)
-			delta = 1;
-		o->tsd.ship.phaser_charge += delta;
+		delta = (max_phaserbank - current_phaserbank) / 10.0;
+		if (delta < 0 && delta > -1.0)
+			delta = -1.0;
+		if (delta > 0 && delta < 1.0)
+			delta = 1.0;
+		o->tsd.ship.phaser_charge += (int) delta;
 	}
 }
 
