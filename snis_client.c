@@ -1521,12 +1521,19 @@ typedef double (*gauge_monitor_function)(void);
 struct gauge {
 	int x, y, r;
 	gauge_monitor_function sample;
+	gauge_monitor_function sample2;
 	double r1,r2;
 	double start_angle, angular_range;
-	GdkColor needle_color, dial_color;
+	GdkColor needle_color, dial_color, needle_color2;
 	int ndivs;
 	char title[16]; 
 };
+
+static void gauge_add_needle(struct gauge *g, gauge_monitor_function sample, GdkColor *color)
+{
+	g->needle_color2 = *color;
+	g->sample2 = sample;
+}
 
 static void gauge_init(struct gauge *g, 
 			int x, int y, int r, double r1, double r2,
@@ -1546,6 +1553,7 @@ static void gauge_init(struct gauge *g,
 	g->ndivs = ndivs;
 	g->sample = gmf;
 	strncpy(g->title, title, sizeof(g->title) - 1);
+	g->sample2 = NULL;
 }
 
 static void draw_gauge_needle(GdkDrawable *drawable, GdkGC *gc,
@@ -1617,6 +1625,12 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
 	gdk_gc_set_foreground(gc, &g->needle_color);
 	draw_gauge_needle(w->window, gc, g->x, g->y, g->r, a); 
+
+	if (g->sample2) {
+		a = ((g->sample2() - g->r1) / (g->r2 - g->r1)) * g->angular_range + g->start_angle;
+		gdk_gc_set_foreground(gc, &g->needle_color2);
+		draw_gauge_needle(w->window, gc, g->x, g->y, g->r * 0.8, a); 
+	}
 }
 
 /*
