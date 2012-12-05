@@ -3703,15 +3703,15 @@ static void init_nav_ui(void)
 	slider_init(&nav_ui.warp_slider, 500, SCREEN_HEIGHT - 40, 200, &huex[AMBER], "Warp",
 				"0", "100", 0.0, 100.0, sample_reqwarpdrive,
 				do_warpdrive, DISPLAYMODE_NAVIGATION);
-	gauge_init(&nav_ui.warp_gauge, 650, 400, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	gauge_init(&nav_ui.warp_gauge, 650, 410, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 				10, "WARP", sample_warpdrive);
 	gauge_add_needle(&nav_ui.warp_gauge, sample_warpdrive_power_avail, &huex[RED]);
-	button_init(&nav_ui.engage_warp_button, 550, 200, 200, 25, "ENGAGE WARP", &huex[AMBER],
-				TINY_FONT, engage_warp_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
-	button_init(&nav_ui.warp_up_button, 700, 500, 40, 25, "UP", &huex[AMBER],
+	button_init(&nav_ui.engage_warp_button, 570, 520, 150, 25, "ENGAGE WARP", &huex[AMBER],
+				NANO_FONT, engage_warp_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
+	button_init(&nav_ui.warp_up_button, 500, 490, 40, 25, "UP", &huex[AMBER],
 			NANO_FONT, warp_up_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
-	button_init(&nav_ui.warp_down_button, 550, 500, 60, 25, "DOWN", &huex[AMBER],
+	button_init(&nav_ui.warp_down_button, 500, 520, 60, 25, "DOWN", &huex[AMBER],
 			NANO_FONT, warp_down_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
 	add_slider(&nav_ui.warp_slider);
 	add_button(&nav_ui.engage_warp_button);
@@ -3738,12 +3738,13 @@ static void show_navigation(GtkWidget *w)
 	o = &go[my_ship_oid];
 	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
 			360.0 * o->heading / (2.0 * 3.1415927));
+#if 0
 	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
 	sprintf(buf, "vx: %5.2lf", o->vx);
 	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
 	sprintf(buf, "vy: %5.2lf", o->vy);
 	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 4);
-
+#endif
 	rx = 40;
 	ry = 90;
 	rw = 470;
