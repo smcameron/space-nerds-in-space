@@ -3719,11 +3719,28 @@ static void init_nav_ui(void)
 	add_button(&nav_ui.warp_down_button);
 }
 
+#if 0
+#define NAV_SCOPE_X 20
+#define NAV_SCOPE_Y 70 
+#define NAV_SCOPE_W 500
+#define NAV_SCOPE_H NAV_SCOPE_W
+#define NAV_SCOPE_R (NAV_SCOPE_H / 2)
+#define NAV_SCOPE_CX (NAV_SCOPE_X + NAV_SCOPE_R)
+#define NAV_SCOPE_CY (NAV_SCOPE_Y + NAV_SCOPE_R)
+#endif
+#define NAV_DATA_X 530 
+#define NAV_DATA_Y 40 
+#define NAV_DATA_W ((SCREEN_WIDTH - 5) - NAV_DATA_X)
+#define NAV_DATA_H 270 
+
+static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
+		int x1, int y1, int x2, int y2);
+
 static void show_navigation(GtkWidget *w)
 {
 	char buf[100];
 	struct snis_entity *o;
-	int rx, ry, rw, rh, cx, cy;
+	int rx, ry, rw, rh, cx, cy, gx1, gy1, gx2, gy2;
 	int r;
 
 	show_common_screen(w, "Navigation");
@@ -3761,6 +3778,13 @@ static void show_navigation(GtkWidget *w)
 	draw_all_the_guys(w, o);
 	draw_all_the_sparks(w, o);
 	gauge_draw(w, &nav_ui.warp_gauge);
+
+	gx1 = NAV_DATA_X + 10;
+	gy1 = NAV_DATA_Y + 15;
+	gx2 = NAV_DATA_X + NAV_DATA_W - 10;
+	gy2 = NAV_DATA_Y + NAV_DATA_H - 40;
+	gdk_gc_set_foreground(gc, &huex[AMBER]);
+	draw_science_graph(w, o, gx1, gy1, gx2, gy2);
 }
 struct enginerring_ui {
 	struct gauge fuel_gauge;
