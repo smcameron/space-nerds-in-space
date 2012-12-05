@@ -1114,7 +1114,15 @@ static int process_sci_select_coords(struct game_client *c)
 	return 0;
 }
 
-static int process_request_bytevalue_pwr(struct game_client *c, int offset)
+typedef uint8_t (*bytevalue_limit_function)(struct game_client *c, uint8_t value);
+
+static uint8_t no_limit(__attribute__((unused)) struct game_client *c, uint8_t value)
+{
+	return value;
+}
+
+static int process_request_bytevalue_pwr(struct game_client *c, int offset,
+		bytevalue_limit_function limit)
 {
 	unsigned char buffer[10];
 	struct packed_buffer pb;
@@ -1139,6 +1147,7 @@ static int process_request_bytevalue_pwr(struct game_client *c, int offset)
 		printf("i != ship id\n");
 	bytevalue = (uint8_t *) &go[i];
 	bytevalue += offset;
+	v = limit(c, v);
 	*bytevalue = v;
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
@@ -1146,27 +1155,27 @@ static int process_request_bytevalue_pwr(struct game_client *c, int offset)
 
 static int process_request_scizoom(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.scizoom)); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.scizoom), no_limit); 
 }
 
 static int process_request_throttle(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.throttle)); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.throttle), no_limit); 
 }
 
 static int process_request_warpdrive(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.requested_warpdrive)); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.requested_warpdrive), no_limit); 
 }
 
 static int process_request_maneuvering_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.maneuvering)); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.maneuvering), no_limit); 
 }
 
 static int process_request_laser_wavelength(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.phaser_wavelength)); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.phaser_wavelength), no_limit); 
 }
 
 static int process_engage_warp(struct game_client *c)
@@ -1204,32 +1213,32 @@ static int process_engage_warp(struct game_client *c)
 
 static int process_request_warp_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.warp)); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.warp), no_limit); 
 }
 
 static int process_request_impulse_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.impulse)); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.impulse), no_limit); 
 }
 
 static int process_request_sensors_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.sensors)); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.sensors), no_limit); 
 }
 
 static int process_request_comms_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.comms)); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.comms), no_limit); 
 }
 
 static int process_request_shields_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.shields)); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.shields), no_limit); 
 }
 
 static int process_request_phaserbanks_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.phaserbanks)); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.phaserbanks), no_limit); 
 }
 
 static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
