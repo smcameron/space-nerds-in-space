@@ -3356,6 +3356,19 @@ static double sample_reqwarpdrive(void)
 	return (double) 100.0 * go[my_ship_oid].tsd.ship.requested_warpdrive / 255.0;
 }
 
+static double sample_warpdrive_power_avail(void)
+{
+	int my_ship_oid;
+	double answer;
+
+	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	answer = (double) 10.0 * (double) go[my_ship_oid].tsd.ship.pwrdist.warp / 255.0 *
+			(sample_power() / 100.0) / WARP_POWER_FACTOR;
+	if (answer > 10.0)
+		answer = 10.0;
+	return answer;
+}
+
 static double sample_warpdrive(void)
 {
 	int my_ship_oid;
@@ -3693,6 +3706,7 @@ static void init_nav_ui(void)
 	gauge_init(&nav_ui.warp_gauge, 650, 400, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 				10, "WARP", sample_warpdrive);
+	gauge_add_needle(&nav_ui.warp_gauge, sample_warpdrive_power_avail, &huex[RED]);
 	button_init(&nav_ui.engage_warp_button, 550, 200, 200, 30, "ENGAGE WARP", &huex[AMBER],
 				TINY_FONT, engage_warp_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
 	button_init(&nav_ui.warp_up_button, 700, 500, 40, 30, "UP", &huex[AMBER],
