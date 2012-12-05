@@ -3733,7 +3733,7 @@ static void init_nav_ui(void)
 #define NAV_DATA_W ((SCREEN_WIDTH - 5) - NAV_DATA_X)
 #define NAV_DATA_H 270 
 
-static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
+static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o,
 		int x1, int y1, int x2, int y2);
 
 static void show_navigation(GtkWidget *w)
@@ -3780,12 +3780,13 @@ static void show_navigation(GtkWidget *w)
 	gauge_draw(w, &nav_ui.warp_gauge);
 
 	gx1 = NAV_DATA_X + 10;
-	gy1 = NAV_DATA_Y + 15;
+	gy1 = 15;
 	gx2 = NAV_DATA_X + NAV_DATA_W - 10;
-	gy2 = NAV_DATA_Y + NAV_DATA_H - 40;
+	gy2 = NAV_DATA_Y + NAV_DATA_H - 80;
 	gdk_gc_set_foreground(gc, &huex[AMBER]);
-	draw_science_graph(w, o, gx1, gy1, gx2, gy2);
+	draw_science_graph(w, o, o, gx1, gy1, gx2, gy2);
 }
+
 struct enginerring_ui {
 	struct gauge fuel_gauge;
 	struct gauge power_gauge;
@@ -3951,7 +3952,7 @@ static int science_button_press(int x, int y)
 #define SCIENCE_DATA_W (SCREEN_WIDTH - 20 - SCIENCE_DATA_X)
 #define SCIENCE_DATA_H (SCREEN_HEIGHT - 20 - SCIENCE_DATA_Y)
 
-static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
+static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o,
 		int x1, int y1, int x2, int y2)
 {
 	int i, x;
@@ -3971,8 +3972,13 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *o,
 	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
 	
 	if (o) {
-		dist = hypot(o->x - go[my_ship_oid].x, o->y - go[my_ship_oid].y);
-		bw = (int) (go[my_ship_oid].tsd.ship.sci_beam_width * 180.0 / M_PI);
+		if (o != ship) {
+			dist = hypot(o->x - go[my_ship_oid].x, o->y - go[my_ship_oid].y);
+			bw = (int) (go[my_ship_oid].tsd.ship.sci_beam_width * 180.0 / M_PI);
+		} else {
+			dist = 0.1;
+			bw = 5.0;
+		}
 
 		gdk_gc_set_foreground(gc, &huex[LIMEGREEN]);
 		/* TODO, make sample count vary based on sensor power,damage */
@@ -4145,7 +4151,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	gy1 = y + 25;
 	gx2 = SCIENCE_DATA_X + SCIENCE_DATA_W - 10;
 	gy2 = SCIENCE_DATA_Y + SCIENCE_DATA_H - 40;
-	draw_science_graph(w, o, gx1, gy1, gx2, gy2);
+	draw_science_graph(w, ship, o, gx1, gy1, gx2, gy2);
 }
  
 static void show_science(GtkWidget *w)
