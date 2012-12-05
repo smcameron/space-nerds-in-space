@@ -1618,7 +1618,7 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 	abs_xy_draw_string(w, g->title, TINY_FONT,
 			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)));
 	value = g->sample();
-	sprintf(buffer, "%4.2g", value);
+	sprintf(buffer, "%4.2lf", value);
 	abs_xy_draw_string(w, buffer, TINY_FONT,
 			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)) + 15);
 
@@ -3797,33 +3797,33 @@ static void init_engineering_ui(void)
 	x += xinc;
 	gauge_init(&eng_ui.fuel_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
-			10, "Fuel", sample_fuel);
+			10, "FUEL", sample_fuel);
 	x += xinc;
 	gauge_init(&eng_ui.power_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
-			10, "Power", sample_power);
+			10, "POWER", sample_power);
 	x += xinc;
 	gauge_init(&eng_ui.temp_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
-			10, "Temp", sample_temp);
+			10, "TEMP", sample_temp);
 	x += xinc;
-	slider_init(&eng_ui.throttle_slider, 350, y + yinc, 200, &huex[AMBER], "Throttle", "0", "100",
+	slider_init(&eng_ui.throttle_slider, 350, y + yinc, 200, &huex[AMBER], "THROTTLE", "0", "100",
 				0.0, 100.0, sample_throttle, do_throttle, DISPLAYMODE_ENGINEERING);
 
 	y += yinc;
-	slider_init(&eng_ui.shield_slider, 20, y += yinc, 150, &huex[AMBER], "Shields", "0", "100",
+	slider_init(&eng_ui.shield_slider, 20, y += yinc, 150, &huex[AMBER], "SHIELDS", "0", "100",
 				0.0, 100.0, sample_shields, do_shields_pwr, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.phaserbanks_slider, 20, y += yinc, 150, &huex[AMBER], "Phaser Banks", "0", "100",
+	slider_init(&eng_ui.phaserbanks_slider, 20, y += yinc, 150, &huex[AMBER], "PHASERS", "0", "100",
 				0.0, 100.0, sample_phaserbanks, do_phaserbanks_pwr, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.comm_slider, 20, y += yinc, 150, &huex[AMBER], "Communications", "0", "100",
+	slider_init(&eng_ui.comm_slider, 20, y += yinc, 150, &huex[AMBER], "COMMS", "0", "100",
 				0.0, 100.0, sample_comms, do_comms_pwr, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.sensors_slider, 20, y += yinc, 150, &huex[AMBER], "Sensors", "0", "100",
+	slider_init(&eng_ui.sensors_slider, 20, y += yinc, 150, &huex[AMBER], "SENSORS", "0", "100",
 				0.0, 100.0, sample_sensors, do_sensors_pwr, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.impulse_slider, 20, y += yinc, 150, &huex[AMBER], "Impulse Drive", "0", "100",
+	slider_init(&eng_ui.impulse_slider, 20, y += yinc, 150, &huex[AMBER], "IMPULSE DR", "0", "100",
 				0.0, 100.0, sample_impulse, do_impulse_pwr, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.warp_slider, 20, y += yinc, 150, &huex[AMBER], "Warp Drive", "0", "100",
+	slider_init(&eng_ui.warp_slider, 20, y += yinc, 150, &huex[AMBER], "WARP DR", "0", "100",
 				0.0, 100.0, sample_warp, do_warp_pwr, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.maneuvering_slider, 20, y += yinc, 150, &huex[AMBER], "Maneuvering", "0", "100",
+	slider_init(&eng_ui.maneuvering_slider, 20, y += yinc, 150, &huex[AMBER], "MANEUVERING", "0", "100",
 				0.0, 100.0, sample_maneuvering, do_maneuvering_pwr, DISPLAYMODE_ENGINEERING);
 	add_slider(&eng_ui.shield_slider);
 	add_slider(&eng_ui.phaserbanks_slider);
