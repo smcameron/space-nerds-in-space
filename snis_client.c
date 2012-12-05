@@ -2820,25 +2820,26 @@ static void snis_draw_radar_sector_labels(GtkWidget *w,
 {
 	/* FIXME, this algorithm is really fricken dumb. */
 	int x, y;
-	double increment = (XKNOWN_DIM / 10.0);
+	double xincrement = (XKNOWN_DIM / 10.0);
+	double yincrement = (YKNOWN_DIM / 10.0);
 	int x1, y1;
 	const char *letters = "ABCDEFGHIJK";
 	char label[10];
 	int xoffset = 7;
 	int yoffset = 10;
 
-	for (x = 0; x <= 10; x++) {
-		if ((x * increment) <= (o->x - range * 0.9))
+	for (x = 0; x < 10; x++) {
+		if ((x * xincrement) <= (o->x - range * 0.9))
 			continue;
-		if ((x * increment) >= (o->x + range * 0.9))
+		if ((x * xincrement) >= (o->x + range * 0.9))
 			continue;
-		for (y = 0; y <= 10; y++) {
-			if ((y * increment) <= (o->y - range * 0.9))
+		for (y = 0; y < 10; y++) {
+			if ((y * yincrement) <= (o->y - range * 0.9))
 				continue;
-			if ((y * increment) >= (o->y + range * 0.9))
+			if ((y * yincrement) >= (o->y + range * 0.9))
 				continue;
-			x1 = (int) (((double) r) / range * (x * increment - o->x)) + cx + xoffset;
-			y1 = (int) (((double) r) / range * (y * increment - o->y)) + cy + yoffset;
+			x1 = (int) (((double) r) / range * (x * xincrement - o->x)) + cx + xoffset;
+			y1 = (int) (((double) r) / range * (y * yincrement - o->y)) + cy + yoffset;
 			snprintf(label, sizeof(label), "%c%d", letters[y], x);
 			abs_xy_draw_string(w, label, NANO_FONT, x1, y1);
 		}
@@ -2861,6 +2862,7 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 	ylow = (int) (((double) r) / range * (0.0 - o->y)) + cy;
 	yhigh = (int) (((double) r) / range * (YKNOWN_DIM - o->y)) + cy;
 	/* vertical lines */
+	increment = (XKNOWN_DIM / 10.0);
 	for (x = 0; x <= 10; x++) {
 		if ((x * increment) <= (o->x - range))
 			continue;
@@ -2886,6 +2888,7 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 		snis_draw_dotted_vline(drawable, gc, x1, y2, y1, 5);
 	}
 	/* horizontal lines */
+	increment = (YKNOWN_DIM / 10.0);
 	for (y = 0; y <= 10; y++) {
 		if ((y * increment) <= (o->y - range))
 			continue;
@@ -2901,7 +2904,7 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 		if (x1 < xlow)
 			x1 = xlow;
 		if (x1 > xhigh)
-			x1 = yhigh;
+			x1 = xhigh;
 		if (x2 < xlow)
 			x2 = xlow;
 		if (x2 > xhigh)
@@ -2938,6 +2941,7 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 		snis_draw_dotted_vline(drawable, gc, x1, y2, y1, 10);
 	}
 	/* horizontal lines */
+	increment = (YKNOWN_DIM / 100.0);
 	for (y = 0; y <= 100; y++) {
 		if ((y * increment) <= (o->y - range))
 			continue;
@@ -2953,7 +2957,7 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 		if (x1 < xlow)
 			x1 = xlow;
 		if (x1 > xhigh)
-			x1 = yhigh;
+			x1 = xhigh;
 		if (x2 < xlow)
 			x2 = xlow;
 		if (x2 > xhigh)
