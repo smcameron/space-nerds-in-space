@@ -3187,7 +3187,7 @@ static void button_draw(GtkWidget *w, struct button *b)
 {
 	gdk_gc_set_foreground(gc, &b->color);
 	current_draw_rectangle(w->window, gc, 0, b->x, b->y, b->width, b->height);
-	abs_xy_draw_string(w, b->label, b->font, b->x + 10, b->y + b->height / 2); 
+	abs_xy_draw_string(w, b->label, b->font, b->x + 10, b->y + b->height / 1.7); 
 }
 
 #define MAXBUTTONS 50
@@ -3610,13 +3610,13 @@ static void init_weapons_ui(void)
 {
 	int y = 450;
 
-	button_init(&weapons.fire_phaser, 550, y, 200, 30, "FIRE PHASER", &huex[RED],
+	button_init(&weapons.fire_phaser, 550, y, 200, 25, "FIRE PHASER", &huex[RED],
 			TINY_FONT, fire_phaser_button_pressed, NULL, DISPLAYMODE_WEAPONS);
 	y += 50;
-	button_init(&weapons.load_torpedo, 550, y, 200, 30, "LOAD TORPEDO", &huex[GREEN],
+	button_init(&weapons.load_torpedo, 550, y, 200, 25, "LOAD TORPEDO", &huex[GREEN],
 			TINY_FONT, load_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
 	y += 50;
-	button_init(&weapons.fire_torpedo, 550, y, 200, 30, "FIRE TORPEDO", &huex[RED],
+	button_init(&weapons.fire_torpedo, 550, y, 200, 25, "FIRE TORPEDO", &huex[RED],
 			TINY_FONT, fire_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
 	gauge_init(&weapons.phaser_bank_gauge, 650, 100, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
@@ -3624,9 +3624,9 @@ static void init_weapons_ui(void)
 	gauge_init(&weapons.phaser_wavelength, 650, 300, 90, 10.0, 60.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
 			10, "WAVE LEN", sample_phaser_wavelength);
-	button_init(&weapons.wavelen_down_button, 550, 400, 60, 30, "DOWN", &huex[WHITE],
+	button_init(&weapons.wavelen_down_button, 550, 400, 60, 25, "DOWN", &huex[WHITE],
 			NANO_FONT, wavelen_down_button_pressed, NULL, DISPLAYMODE_WEAPONS);
-	button_init(&weapons.wavelen_up_button, 700, 400, 30, 30, "UP", &huex[WHITE],
+	button_init(&weapons.wavelen_up_button, 700, 400, 30, 25, "UP", &huex[WHITE],
 			NANO_FONT, wavelen_up_button_pressed, NULL, DISPLAYMODE_WEAPONS);
 	slider_init(&weapons.wavelen_slider, 620, 400, 70, &huex[AMBER], "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
@@ -3707,11 +3707,11 @@ static void init_nav_ui(void)
 				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
 				10, "WARP", sample_warpdrive);
 	gauge_add_needle(&nav_ui.warp_gauge, sample_warpdrive_power_avail, &huex[RED]);
-	button_init(&nav_ui.engage_warp_button, 550, 200, 200, 30, "ENGAGE WARP", &huex[AMBER],
+	button_init(&nav_ui.engage_warp_button, 550, 200, 200, 25, "ENGAGE WARP", &huex[AMBER],
 				TINY_FONT, engage_warp_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
-	button_init(&nav_ui.warp_up_button, 700, 500, 40, 30, "UP", &huex[AMBER],
+	button_init(&nav_ui.warp_up_button, 700, 500, 40, 25, "UP", &huex[AMBER],
 			NANO_FONT, warp_up_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
-	button_init(&nav_ui.warp_down_button, 550, 500, 60, 30, "DOWN", &huex[AMBER],
+	button_init(&nav_ui.warp_down_button, 550, 500, 60, 25, "DOWN", &huex[AMBER],
 			NANO_FONT, warp_down_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
 	add_slider(&nav_ui.warp_slider);
 	add_button(&nav_ui.engage_warp_button);
