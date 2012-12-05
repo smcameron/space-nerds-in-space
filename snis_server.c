@@ -530,6 +530,18 @@ static double powertempy[] = {
 		1.0,
 };
 		
+static uint8_t warp_limit_function(uint8_t value, uint32_t total_power, uint8_t warp_power_dist)
+{
+	double max_value;
+
+	max_value = 255.0 * (double) total_power / UINT32_MAX *
+			((double) warp_power_dist / 255.0) / WARP_POWER_FACTOR;
+	if (max_value > 255.0)
+		max_value = 255.0;
+	if (value > max_value)
+		return (uint8_t) max_value;
+	return value;
+}
 
 static void player_move(struct snis_entity *o)
 {
@@ -613,6 +625,14 @@ static void player_move(struct snis_entity *o)
 	o->tsd.ship.power *= table_interp((double) o->tsd.ship.temp,
 			rpmx, powertempy, ARRAY_SIZE(powertempy));
 
+	/* Check that requested warp drive is not out of line with power distribution */
+	if (o->tsd.ship.requested_warpdrive > 
+		warp_limit_function(o->tsd.ship.requested_warpdrive, o->tsd.ship.power,
+						o->tsd.ship.pwrdist.warp))
+		o->tsd.ship.requested_warpdrive = 
+			warp_limit_function(o->tsd.ship.requested_warpdrive,
+					o->tsd.ship.power, o->tsd.ship.pwrdist.warp);
+	/* Update warp drive */
 	if (o->tsd.ship.warpdrive < o->tsd.ship.requested_warpdrive)
 		o->tsd.ship.warpdrive++;
 	if (o->tsd.ship.warpdrive > o->tsd.ship.requested_warpdrive)
@@ -1123,17 +1143,11 @@ static uint8_t no_limit(__attribute__((unused)) struct game_client *c, uint8_t v
 
 static uint8_t warp_request_limit(struct game_client *c, uint8_t value)
 {
-	uint8_t max_value;
 	struct snis_entity *ship;
 
 	ship = &go[c->shipid];
 
-	max_value = 255.0 * (double) ship->tsd.ship.power / UINT32_MAX *
-			WARP_POWER_FACTOR * ((double) ship->tsd.ship.pwrdist.warp / 255.0);
-
-	if (value > max_value)
-		return max_value;
-	return value;
+	return warp_limit_function(value, ship->tsd.ship.power, ship->tsd.ship.pwrdist.warp);
 }
 
 static int process_request_bytevalue_pwr(struct game_client *c, int offset,
