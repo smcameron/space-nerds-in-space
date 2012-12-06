@@ -2342,6 +2342,15 @@ static void snis_draw_laser(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, 
 	current_bright_line(drawable, gc, x1, y1, x2, y2, RED);
 }
 
+/* position and dimensions of science scope */
+#define SCIENCE_SCOPE_X 20
+#define SCIENCE_SCOPE_Y 70 
+#define SCIENCE_SCOPE_W 500
+#define SCIENCE_SCOPE_H SCIENCE_SCOPE_W
+#define SCIENCE_SCOPE_R (SCIENCE_SCOPE_H / 2)
+#define SCIENCE_SCOPE_CX (SCIENCE_SCOPE_X + SCIENCE_SCOPE_R)
+#define SCIENCE_SCOPE_CY (SCIENCE_SCOPE_Y + SCIENCE_SCOPE_R)
+
 static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
 					gint x, gint y, double dist, int bw, int pwr,
 					double range, int selected)
@@ -2368,10 +2377,15 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
 	for (i = 0; i < 10; i++) {
+		float r;
 		da = snis_randn(360) * M_PI / 180.0;
 #if 1
 		tx = (int) ((double) x + sin(da) * (double) snis_randn(dr));
 		ty = (int) ((double) y + cos(da) * (double) snis_randn(dr)); 
+
+		r = hypot(tx - SCIENCE_SCOPE_CX, ty - SCIENCE_SCOPE_CY);
+		if (r >= SCIENCE_SCOPE_R)
+			continue;
 #else
 		tx = x;
 		ty = y;
