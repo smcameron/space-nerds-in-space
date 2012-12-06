@@ -63,6 +63,7 @@
 #define OPCODE_REQUEST_LASER 137
 #define OPCODE_REQUEST_LASER_WAVELENGTH 138
 #define OPCODE_SCI_SELECT_COORDS 139
+#define OPCODE_REQUEST_SHIELD 140
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -99,6 +100,7 @@ struct update_ship_packet {
 	uint8_t scizoom;
 	uint8_t warpdrive;
 	uint8_t requested_warpdrive;
+	uint8_t requested_shield;
 	uint8_t phaser_charge;
 	uint8_t phaser_wavelength;
 };

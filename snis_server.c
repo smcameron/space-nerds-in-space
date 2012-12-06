@@ -529,7 +529,7 @@ static double powertempy[] = {
 		0.8,
 		1.0,
 };
-		
+
 static uint8_t warp_limit_function(uint8_t value, uint32_t total_power, uint8_t warp_power_dist)
 {
 	double max_value;
@@ -542,6 +542,20 @@ static uint8_t warp_limit_function(uint8_t value, uint32_t total_power, uint8_t 
 		return (uint8_t) max_value;
 	return value;
 }
+
+static uint8_t shield_limit_function(uint8_t value, uint32_t total_power, uint8_t shield_power_dist)
+{
+	double max_value;
+
+	max_value = 255.0 * (double) total_power / UINT32_MAX *
+			((double) shield_power_dist / 255.0) / SHIELD_POWER_FACTOR;
+	if (max_value > 255.0)
+		max_value = 255.0;
+	if (value > max_value)
+		return (uint8_t) max_value;
+	return value;
+}
+
 
 static void player_move(struct snis_entity *o)
 {
@@ -625,6 +639,19 @@ static void player_move(struct snis_entity *o)
 	}
 	o->tsd.ship.power *= table_interp((double) o->tsd.ship.temp,
 			rpmx, powertempy, ARRAY_SIZE(powertempy));
+
+	/* Check that requested shield is not out of line with power distribution */
+	if (o->tsd.ship.requested_shield > 
+		shield_limit_function(o->tsd.ship.requested_shield, o->tsd.ship.power,
+						o->tsd.ship.pwrdist.shields))
+		o->tsd.ship.requested_shield = 
+			shield_limit_function(o->tsd.ship.requested_shield,
+					o->tsd.ship.power, o->tsd.ship.pwrdist.shields);
+	/* Update shield str */
+	if (o->sdata.shield_strength < o->tsd.ship.requested_shield)
+		o->sdata.shield_strength++;
+	if (o->sdata.shield_strength > o->tsd.ship.requested_shield)
+		o->sdata.shield_strength--;
 
 	/* Check that requested warp drive is not out of line with power distribution */
 	if (o->tsd.ship.requested_warpdrive > 
@@ -1158,6 +1185,15 @@ static uint8_t warp_request_limit(struct game_client *c, uint8_t value)
 	return warp_limit_function(value, ship->tsd.ship.power, ship->tsd.ship.pwrdist.warp);
 }
 
+static uint8_t shield_request_limit(struct game_client *c, uint8_t value)
+{
+	struct snis_entity *ship;
+
+	ship = &go[c->shipid];
+
+	return shield_limit_function(value, ship->tsd.ship.power, ship->tsd.ship.pwrdist.shields);
+}
+
 static int process_request_bytevalue_pwr(struct game_client *c, int offset,
 		bytevalue_limit_function limit)
 {
@@ -1204,6 +1240,12 @@ static int process_request_warpdrive(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity,
 			tsd.ship.requested_warpdrive), warp_request_limit); 
+}
+
+static int process_request_shield(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity,
+			tsd.ship.requested_shield), shield_request_limit); 
 }
 
 static int process_request_maneuvering_pwr(struct game_client *c)
@@ -1387,6 +1429,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_WARPDRIVE:
 			rc = process_request_warpdrive(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_SHIELD:
+			rc = process_request_shield(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -1804,6 +1851,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append_u8(pb, o->tsd.ship.scizoom);
 	packed_buffer_append_u8(pb, o->tsd.ship.warpdrive);
 	packed_buffer_append_u8(pb, o->tsd.ship.requested_warpdrive);
+	packed_buffer_append_u8(pb, o->tsd.ship.requested_shield);
 	packed_buffer_append_u8(pb, o->tsd.ship.phaser_charge);
 	packed_buffer_append_u8(pb, o->tsd.ship.phaser_wavelength);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);

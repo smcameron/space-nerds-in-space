@@ -358,7 +358,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 			double gun_heading, double sci_heading, double sci_beam_width, int shiptype,
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
 			fuel, uint8_t temp, struct power_dist *pd, uint8_t scizoom, uint8_t warpdrive,
-			uint8_t requested_warpdrive, uint8_t phaser_charge, uint8_t phaser_wavelength)
+			uint8_t requested_warpdrive, uint8_t requested_shield, uint8_t phaser_charge, uint8_t phaser_wavelength)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -383,6 +383,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.pwrdist = *pd;
 	go[i].tsd.ship.scizoom = scizoom;
 	go[i].tsd.ship.requested_warpdrive = requested_warpdrive;
+	go[i].tsd.ship.requested_shield = requested_shield;
 	go[i].tsd.ship.warpdrive = warpdrive;
 	go[i].tsd.ship.phaser_charge = phaser_charge;
 	go[i].tsd.ship.phaser_wavelength = phaser_wavelength;
@@ -1428,7 +1429,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	int rc;
 	int shiptype = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, warpdrive, requested_warpdrive,
-		phaser_charge, phaser_wavelength;
+		requested_shield, phaser_charge, phaser_wavelength;
 	struct power_dist pd;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1460,6 +1461,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	scizoom = packed_buffer_extract_u8(&pb);
 	warpdrive = packed_buffer_extract_u8(&pb);
 	requested_warpdrive = packed_buffer_extract_u8(&pb);
+	requested_shield = packed_buffer_extract_u8(&pb);
 	phaser_charge = packed_buffer_extract_u8(&pb);
 	phaser_wavelength = packed_buffer_extract_u8(&pb);
 
@@ -1467,7 +1469,8 @@ static int process_update_ship_packet(uint16_t opcode)
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power,
 				dgheading, dsheading, dbeamwidth, shiptype,
 				tloading, tloaded, throttle, rpm, fuel, temp, &pd, scizoom,
-				warpdrive, requested_warpdrive, phaser_charge, phaser_wavelength);
+				warpdrive, requested_warpdrive, requested_shield,
+				phaser_charge, phaser_wavelength);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -3277,6 +3280,11 @@ static void do_warpdrive(struct slider *s)
 	do_adjust_slider_value(s, OPCODE_REQUEST_WARPDRIVE);
 }
 
+static void do_shieldadj(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_SHIELD);
+}
+
 static void do_maneuvering_pwr(struct slider *s)
 {
 	do_adjust_slider_value(s, OPCODE_REQUEST_MANEUVERING_PWR);
@@ -3350,6 +3358,14 @@ static double sample_throttle(void)
 
 	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
 	return (double) 100.0 * go[my_ship_oid].tsd.ship.throttle / 255.0;
+}
+
+static double sample_reqshield(void)
+{
+	int my_ship_oid;
+
+	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	return (double) 100.0 * go[my_ship_oid].tsd.ship.requested_shield / 255.0;
 }
 
 static double sample_reqwarpdrive(void)
@@ -3554,6 +3570,7 @@ CREATE_DAMAGE_SAMPLER_FUNC(comms_damage) /* sample_comms__damage defined here */
 
 static struct navigation_ui {
 	struct slider warp_slider;
+	struct slider shield_slider;
 	struct gauge warp_gauge;
 	struct button engage_warp_button;
 	struct button warp_up_button;
@@ -3704,6 +3721,9 @@ static double sample_reqwarpdrive(void);
 static double sample_warpdrive(void);
 static void init_nav_ui(void)
 {
+	slider_init(&nav_ui.shield_slider, 540, 270, 160, &huex[AMBER], "SHIELDS",
+				"0", "100", 0.0, 100.0, sample_reqshield,
+				do_shieldadj, DISPLAYMODE_NAVIGATION);
 	slider_init(&nav_ui.warp_slider, 500, SCREEN_HEIGHT - 40, 200, &huex[AMBER], "Warp",
 				"0", "100", 0.0, 100.0, sample_reqwarpdrive,
 				do_warpdrive, DISPLAYMODE_NAVIGATION);
@@ -3718,6 +3738,7 @@ static void init_nav_ui(void)
 	button_init(&nav_ui.warp_down_button, 500, 520, 60, 25, "DOWN", &huex[AMBER],
 			NANO_FONT, warp_down_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
 	add_slider(&nav_ui.warp_slider);
+	add_slider(&nav_ui.shield_slider);
 	add_button(&nav_ui.engage_warp_button);
 	add_button(&nav_ui.warp_up_button);
 	add_button(&nav_ui.warp_down_button);
