@@ -52,6 +52,7 @@
 #define WARP_POWER_FACTOR (1.0 / 5.0) /* 1/5th of total power can be alloc'ed to warp */
 #define PHASER_POWER_FACTOR (1.0 / 5.0) /* 1/5th of total power can be alloc'ed to phasers */
 #define SHIELD_POWER_FACTOR (1.0 / 5.0) /* 1/5th of total power can be alloc'ed to shield */
+#define SENSORS_POWER_FACTOR (1.0 / 5.0) /* 1/5th of total power can be alloc'ed to sensors */
 struct power_dist {
 	/* Note: do not add any members to this which are not endian clean. */
 	uint8_t maneuvering;

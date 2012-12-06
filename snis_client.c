@@ -2343,7 +2343,8 @@ static void snis_draw_laser(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, 
 }
 
 static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
-					gint x, gint y, double dist, int bw, double range, int selected)
+					gint x, gint y, double dist, int bw, int pwr,
+					double range, int selected)
 {
 	int i;
 
@@ -2351,9 +2352,12 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	int dr;
 	double tx, ty;
 	char buffer[50];
+	int divisor;
+
 
 	/* Compute radius of ship blip */
-	dr = (int) dist / (XKNOWN_DIM / bw);
+	divisor = hypot((float) bw + 1, 256.0 - pwr);
+	dr = (int) dist / (XKNOWN_DIM / divisor);
 	dr = dr * MAX_SCIENCE_SCREEN_RADIUS / range;
 
 	/* if dr is small enough, and ship info is not known, nor recently requested,
@@ -2625,7 +2629,7 @@ static int nscience_guys = 0;
 
 static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, double range)
 {
-	int i, x, y, cx, cy, r, bw;
+	int i, x, y, cx, cy, r, bw, pwr;
 	double angle, angle2, A1, A2;
 	double tx, ty, dist2, dist;
 	int selected_guy_still_visible = 0;
@@ -2633,6 +2637,10 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
 	r = SCIENCE_SCOPE_R;
+	pwr = 255.0 * ((float) o->tsd.ship.pwrdist.sensors / 255.0) / SENSORS_POWER_FACTOR *
+				(float) o->tsd.ship.power / (float) UINT32_MAX;
+	if (pwr > 255)
+		pwr = 255;
 	/* Draw all the stuff */
 
 	/* Draw selected coordinate */
@@ -2696,7 +2704,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		if (!curr_science_guy && prev_science_guy == &go[i])
 			curr_science_guy = prev_science_guy;
 
-		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, range, &go[i] == curr_science_guy);
+		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, pwr, range, &go[i] == curr_science_guy);
 
 		/* cache screen coords for mouse picking */
 		science_guy[nscience_guys].o = &go[i];
@@ -3982,7 +3990,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 {
 	int i, x;
 	double sx, sy, sy1, sy2, dist;
-	int dy1, dy2, bw, probes, dx;
+	int dy1, dy2, bw, probes, dx, pwr;
 
 	current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 4, x2, 10);
@@ -4000,9 +4008,12 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 		if (o != ship) {
 			dist = hypot(o->x - go[my_ship_oid].x, o->y - go[my_ship_oid].y);
 			bw = (int) (go[my_ship_oid].tsd.ship.sci_beam_width * 180.0 / M_PI);
+			pwr = (( (float) go[my_ship_oid].tsd.ship.pwrdist.sensors / 255.0) /
+					SENSORS_POWER_FACTOR) * go[my_ship_oid].tsd.ship.power;
 		} else {
 			dist = 0.1;
 			bw = 5.0;
+			pwr = 255;
 		}
 
 		gdk_gc_set_foreground(gc, &huex[LIMEGREEN]);
@@ -4012,13 +4023,13 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 			double ss;
 			int nx, ny;
 
-			ny = bw;
-			nx = bw;
+			ny = ((float) bw / pwr) * 255;
+			nx = ((float) bw / pwr) * 255;
 			if (nx <= 0)
 				nx = 1;
 			if (ny <= 0)
 				ny = 1;
-			dy1 = snis_randn(ny) - ny / 2; /* TODO: make this vary based on sensor power, damage */
+			dy1 = snis_randn(ny) - ny / 2; /* TODO: make this vary based on damage */
 			dy2 = snis_randn(ny) - ny / 2;
 			dx = snis_randn(nx) - nx / 2;
 
