@@ -3991,6 +3991,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 	int i, x;
 	double sx, sy, sy1, sy2, dist;
 	int dy1, dy2, bw, probes, dx, pwr;
+	int initial_noise;
 
 	current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 4, x2, 10);
@@ -4010,6 +4011,10 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 			bw = (int) (go[my_ship_oid].tsd.ship.sci_beam_width * 180.0 / M_PI);
 			pwr = (( (float) go[my_ship_oid].tsd.ship.pwrdist.sensors / 255.0) /
 					SENSORS_POWER_FACTOR) * go[my_ship_oid].tsd.ship.power;
+			pwr = 255.0 * ((float) o->tsd.ship.pwrdist.sensors / 255.0) / SENSORS_POWER_FACTOR *
+						(float) o->tsd.ship.power / (float) UINT32_MAX;
+			if (pwr > 255)
+				pwr = 255;
 		} else {
 			dist = 0.1;
 			bw = 5.0;
@@ -4019,12 +4024,12 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 		gdk_gc_set_foreground(gc, &huex[LIMEGREEN]);
 		/* TODO, make sample count vary based on sensor power,damage */
 		probes = (30 * 10) / (bw / 2 + ((dist * 2.0) / XKNOWN_DIM));
+		initial_noise = (int) ((hypot((float) bw, 256.0 - pwr) / 256.0) * 20.0);
 		for (i = 0; i < probes; i++) {
 			double ss;
 			int nx, ny;
 
-			ny = ((float) bw / pwr) * 255;
-			nx = ((float) bw / pwr) * 255;
+			nx = ny = initial_noise;
 			if (nx <= 0)
 				nx = 1;
 			if (ny <= 0)
