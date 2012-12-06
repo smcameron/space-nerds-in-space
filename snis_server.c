@@ -1357,6 +1357,7 @@ static void process_instructions_from_client(struct game_client *c)
 {
 	int rc;
 	uint16_t opcode;
+	static uint16_t last_successful_opcode = 0xffff;
 
 	opcode = 0xffff;
 	rc = snis_readsocket(c->socket, &opcode, sizeof(opcode));
@@ -1484,10 +1485,13 @@ static void process_instructions_from_client(struct game_client *c)
 		default:
 			goto protocol_error;
 	}
+	last_successful_opcode = opcode;
 	return;
 
 protocol_error:
 	printf("Protocol error in process_instructions_from_client, opcode = %hu\n", opcode);
+	printf("Last successful opcode was %d (0x%hx)\n", last_successful_opcode,
+			last_successful_opcode);
 	shutdown(c->socket, SHUT_RDWR);
 	close(c->socket);
 	c->socket = -1;
