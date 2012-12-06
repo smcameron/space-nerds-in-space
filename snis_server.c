@@ -1067,6 +1067,25 @@ static int process_request_thrust(struct game_client *c)
 }
 
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip);
+static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_entity *o)
+{
+	struct ship_sdata_packet p; 
+
+	memset(p.name, 0, sizeof(p.name));
+	strcpy(p.name, o->sdata.name);
+	p.id = o->id;
+	if (o->type == OBJTYPE_SHIP2)
+		p.subclass = o->tsd.ship.shiptype;
+	else
+		p.subclass = 0;
+	p.shield_strength = o->sdata.shield_strength;
+	p.shield_wavelength = o->sdata.shield_wavelength;
+	p.shield_width = o->sdata.shield_width;
+	p.shield_depth = o->sdata.shield_depth;
+	pthread_mutex_unlock(&universe_mutex);
+	send_ship_sdata_packet(c, &p);
+}
+
 static int process_request_ship_sdata(struct game_client *c)
 {
 	unsigned char buffer[10];
@@ -1074,32 +1093,19 @@ static int process_request_ship_sdata(struct game_client *c)
 	uint16_t id;
 	int i;
 	int rc;
-	struct ship_sdata_packet p; 
 
 	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_ship_sdata_packet) - sizeof(uint16_t));
 	if (rc)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
-	memset(p.name, 0, sizeof(p.name));
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(id);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	strcpy(p.name, go[i].sdata.name);
-	p.id = id;
-	if (go[i].type == OBJTYPE_SHIP2)
-		p.subclass = go[i].tsd.ship.shiptype;
-	else
-		p.subclass = 0;
-	p.shield_strength = go[i].sdata.shield_strength;
-	p.shield_wavelength = go[i].sdata.shield_wavelength;
-	p.shield_width = go[i].sdata.shield_width;
-	p.shield_depth = go[i].sdata.shield_depth;
-	pthread_mutex_unlock(&universe_mutex);
-	send_ship_sdata_packet(c, &p);
+	pack_and_send_ship_sdata_packet(c, &go[i]);
 	return 0;
 }
 
@@ -1616,6 +1622,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	switch(o->type) {
 	case OBJTYPE_SHIP1:
 		send_update_ship_packet(c, o, OPCODE_UPDATE_SHIP);
+		/* send science data about player's own ship to player */
+		if (o == &go[c->shipid])
+			pack_and_send_ship_sdata_packet(c, o);
 		break;
 	case OBJTYPE_SHIP2:
 		send_econ_update_ship_packet(c, o);
