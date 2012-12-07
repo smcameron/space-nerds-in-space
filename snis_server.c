@@ -1800,14 +1800,9 @@ static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_pack
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct ship_sdata_packet));
-	packed_buffer_append_u16(pb, OPCODE_SHIP_SDATA);
-	packed_buffer_append_u32(pb, sip->id); 
-	packed_buffer_append_u8(pb, sip->subclass); 
-	packed_buffer_append_u8(pb, sip->shield_strength); 
-	packed_buffer_append_u8(pb, sip->shield_wavelength); 
-	packed_buffer_append_u8(pb, sip->shield_width); 
-	packed_buffer_append_u8(pb, sip->shield_depth); 
-	packed_buffer_append_raw(pb, sip->name, sizeof(sip->name));
+	packed_buffer_append(pb, "hwbbbbbr", OPCODE_SHIP_SDATA, sip->id, sip->subclass,
+		sip->shield_strength, sip->shield_wavelength, sip->shield_width, sip->shield_depth,
+		sip->name, (unsigned short) sizeof(sip->name));
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_ALL);
 }
 

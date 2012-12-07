@@ -1041,8 +1041,7 @@ static void request_ship_sdata(struct snis_entity *o)
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct request_ship_sdata_packet));
-	packed_buffer_append_u16(pb, OPCODE_REQUEST_SHIP_SDATA);
-	packed_buffer_append_u32(pb, o->id);
+	packed_buffer_append(pb, "hw", OPCODE_REQUEST_SHIP_SDATA, o->id);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	o->sdata.science_data_requested = 1;
 	wakeup_gameserver_writer();
@@ -1755,14 +1754,8 @@ static int process_ship_sdata_packet(void)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
-	subclass = packed_buffer_extract_u8(&pb);
-	shstrength = packed_buffer_extract_u8(&pb);
-	shwavelength = packed_buffer_extract_u8(&pb);
-	shwidth = packed_buffer_extract_u8(&pb);
-	shdepth = packed_buffer_extract_u8(&pb);
-	rc = packed_buffer_extract_raw(&pb, name, sizeof(name));
-
+	packed_buffer_extract(&pb, "wbbbbbr",&id, &subclass, &shstrength, &shwavelength,
+			&shwidth, &shdepth, name, (unsigned short) sizeof(name));
 	pthread_mutex_lock(&universe_mutex);
 	update_ship_sdata(id, subclass, name, shstrength, shwavelength, shwidth, shdepth);
 	pthread_mutex_unlock(&universe_mutex);
