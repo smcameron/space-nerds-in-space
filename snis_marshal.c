@@ -5,6 +5,8 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <stdarg.h>
+#include <errno.h>
 
 #define DEFINE_SNIS_MARSHAL_GLOBALS
 #include "snis_marshal.h"
@@ -377,3 +379,141 @@ double packed_buffer_extract_ds32(struct packed_buffer *pb, int32_t scale)
 {
 	return s32tod(packed_buffer_extract_u32(pb), scale);
 }
+
+/* For packed_buffer_append/extract, format is like:
+ * "b" = u8 (byte)
+ * "h" = u16 (half-word) ( ugh, I hate propagating the notion that "word == 16 bits")
+ * "w" = u32 (word)
+ * "s" = string
+ * "r" = raw
+ * "d" = double
+ * "S" = 32-bit signed integer encoded double (takes 2 params, double + scale )
+ * "U" = 32-bit unsigned integer encoded double (takes 2 params, double + scale )
+ */
+
+int packed_buffer_append(struct packed_buffer *pb, const char *format, ...)
+{
+	va_list ap;
+	uint8_t b;
+	uint16_t h;
+	uint32_t w;
+	int32_t uscale;
+	uint32_t sscale;
+	char *r;
+	unsigned char *s;
+	unsigned short len;
+	int rc = 0;
+	double d;
+
+	va_start(ap, format);
+
+	while (*format) {	
+		switch(*format++) {
+		case 'b':
+			b = (uint8_t) va_arg(ap, int);
+			packed_buffer_append_u8(pb, b);
+			break;
+		case 'h':
+			h = (uint16_t) va_arg(ap, int);
+			packed_buffer_append_u16(pb, h);
+			break;
+		case 'w':
+			w = va_arg(ap, uint32_t);
+			packed_buffer_append_u32(pb, w);
+			break;
+		case 's':
+			s = va_arg(ap, unsigned char *);
+			packed_buffer_append_string(pb, s, (unsigned short) strlen((char *) s));
+			break;
+		case 'r':
+			r = va_arg(ap, char *);
+			len = (unsigned short) va_arg(ap, int);
+			packed_buffer_append_raw(pb, r, len);
+			break;
+		case 'd':
+			d = va_arg(ap, double);
+			packed_buffer_append_double(pb, d);
+			break;
+		case 'S':
+			d = va_arg(ap, double);
+			sscale = va_arg(ap, int32_t); 
+			packed_buffer_append_ds32(pb, d, sscale);
+			break;
+		case 'U':
+			d = va_arg(ap, double);
+			uscale = va_arg(ap, uint32_t); 
+			packed_buffer_append_du32(pb, d, uscale);
+			break;
+		default:
+			rc = -EINVAL;
+			break;
+		}
+	}
+	va_end(ap);
+	return rc;
+}
+
+int packed_buffer_extract(struct packed_buffer *pb, const char *format, ...)
+{
+	va_list ap;
+	uint8_t *b;
+	uint16_t *h;
+	uint32_t *w;
+	int32_t uscale;
+	uint32_t sscale;
+	char *r;
+	unsigned char *s;
+	unsigned short len;
+	int ilen;
+	int rc = 0;
+	double *d;
+
+	va_start(ap, format);
+
+	while (*format) {	
+		switch(*format++) {
+		case 'b':
+			b = va_arg(ap, uint8_t *);
+			*b = packed_buffer_extract_u8(pb);
+			break;
+		case 'h':
+			h = va_arg(ap, uint16_t *);
+			*h = packed_buffer_extract_u16(pb);
+			break;
+		case 'w':
+			w = va_arg(ap, uint32_t *);
+			*w = packed_buffer_extract_u32(pb);
+			break;
+		case 's':
+			s = va_arg(ap, unsigned char *);
+			ilen = va_arg(ap, int);
+			packed_buffer_extract_string(pb, (char *) s, ilen);
+			break;
+		case 'r':
+			r = va_arg(ap, char *);
+			len = va_arg(ap, int);
+			packed_buffer_extract_raw(pb, r, len);
+			break;
+		case 'd':
+			d = va_arg(ap, double *);
+			*d = packed_buffer_extract_double(pb);
+			break;
+		case 'S':
+			d = va_arg(ap, double *);
+			sscale = va_arg(ap, int32_t); 
+			*d = packed_buffer_extract_ds32(pb, sscale);
+			break;
+		case 'U':
+			d = va_arg(ap, double *);
+			uscale = va_arg(ap, uint32_t); 
+			*d = packed_buffer_extract_du32(pb, uscale);
+			break;
+		default:
+			rc = -EINVAL;
+			break;
+		}
+	}
+	va_end(ap);
+	return rc;
+}
+

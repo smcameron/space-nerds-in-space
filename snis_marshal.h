@@ -33,6 +33,20 @@ struct packed_buffer_queue {
 
 GLOBAL struct packed_buffer * packed_buffer_allocate(int size); 
 GLOBAL void packed_buffer_free(struct packed_buffer *pb);
+
+/* For packed_buffer_append/extract, format is like:
+ * "b" = u8 (byte)
+ * "h" = u16 (half-word) ( ugh, I hate propagating the notion that "word == 16 bits")
+ * "w" = u32 (word)
+ * "s" = string (char *)
+ * "r" = raw (char *) (unsigned short len)
+ * "d" = double
+ * "DS" = 32-bit signed integer encoded double (takes 2 params, double + scale )
+ * "DU" = 32-bit unsigned integer encoded double (takes 2 params, double + scale )
+ */
+
+GLOBAL int packed_buffer_append(struct packed_buffer *pb, const char *format, ...);
+GLOBAL int packed_buffer_extract(struct packed_buffer *pb, const char *format, ...);
 GLOBAL int packed_buffer_append_double(struct packed_buffer *pb, double value);
 GLOBAL int packed_buffer_append_u16(struct packed_buffer *pb, uint16_t value);
 GLOBAL int packed_buffer_append_u8(struct packed_buffer *pb, uint8_t value);
