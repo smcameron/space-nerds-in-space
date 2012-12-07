@@ -1464,15 +1464,11 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
-	alive = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dy = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dv = packed_buffer_extract_du32(&pb, UNIVERSE_DIM);
-	dheading = packed_buffer_extract_du32(&pb, 360.0);
+	packed_buffer_extract(&pb, "wwSSUU", &id, &alive,
+				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
+				&dv, (uint32_t) UNIVERSE_DIM, &dheading, (uint32_t) 360);
 	dvx = sin(dheading) * dv;
 	dvy = -cos(dheading) * dv;
-
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_econ_ship(id, dx, dy, dvx, dvy, dheading, alive);
 	pthread_mutex_unlock(&universe_mutex);
@@ -1629,13 +1625,9 @@ static int process_update_torpedo_packet(void)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
-	ship_id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dy = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dvx = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dvy = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-
+	packed_buffer_extract(&pb, "wwSSSS", &id, &ship_id,
+				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
+				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_torpedo(id, dx, dy, dvx, dvy, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
@@ -1691,7 +1683,6 @@ static int process_delete_object_packet(void)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
-
 	pthread_mutex_lock(&universe_mutex);
 	delete_object(id);
 	pthread_mutex_unlock(&universe_mutex);
@@ -1851,10 +1842,8 @@ static int process_update_planet_packet(void)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dy = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-
+	packed_buffer_extract(&pb, "wSS", &id,
+			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_planet(id, dx, dy);
 	pthread_mutex_unlock(&universe_mutex);
@@ -1874,9 +1863,8 @@ static int process_update_starbase_packet(void)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dy = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
+	packed_buffer_extract(&pb, "wSS", &id,
+			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_starbase(id, dx, dy);
 	pthread_mutex_unlock(&universe_mutex);
@@ -1898,13 +1886,9 @@ static int process_update_explosion_packet(void)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dy = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	nsparks = packed_buffer_extract_u16(&pb);
-	velocity = packed_buffer_extract_u16(&pb);
-	time = packed_buffer_extract_u16(&pb);
-
+	packed_buffer_extract(&pb, "wSShhh", &id,
+		&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
+		nsparks, &velocity, &time);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_explosion(id, dx, dy, nsparks, velocity, time);
 	pthread_mutex_unlock(&universe_mutex);
