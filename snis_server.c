@@ -1930,13 +1930,10 @@ static void send_update_laser_packet(struct game_client *c,
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct update_laser_packet));
-	packed_buffer_append_u16(pb, OPCODE_UPDATE_LASER);
-	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_u32(pb, o->tsd.laser.ship_id);
-	packed_buffer_append_ds32(pb, o->x, UNIVERSE_DIM);
-	packed_buffer_append_ds32(pb, o->y, UNIVERSE_DIM);
-	packed_buffer_append_ds32(pb, o->vx, UNIVERSE_DIM);
-	packed_buffer_append_ds32(pb, o->vy, UNIVERSE_DIM);
+	packed_buffer_append(pb, "hwwSSSS", OPCODE_UPDATE_LASER,
+			o->id, o->tsd.laser.ship_id,
+			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
+			o->vx, (int32_t) UNIVERSE_DIM, o->vy, (int32_t) UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

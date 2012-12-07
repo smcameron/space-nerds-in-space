@@ -1681,13 +1681,9 @@ static int process_update_laser_packet(void)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
-	ship_id = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dy = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dvx = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dvy = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-
+	packed_buffer_extract(&pb, "wwSSSS", &id, &ship_id,
+				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
+				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_laser(id, dx, dy, dvx, dvy, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
