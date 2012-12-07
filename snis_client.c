@@ -1888,7 +1888,7 @@ static int process_update_explosion_packet(void)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	packed_buffer_extract(&pb, "wSShhh", &id,
 		&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
-		nsparks, &velocity, &time);
+		&nsparks, &velocity, &time);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_explosion(id, dx, dy, nsparks, velocity, time);
 	pthread_mutex_unlock(&universe_mutex);
