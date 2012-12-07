@@ -1437,33 +1437,17 @@ static int process_update_ship_packet(uint16_t opcode)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
-	alive = packed_buffer_extract_u32(&pb);
-	dx = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dy = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dvx = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dvy = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	dheading = packed_buffer_extract_du32(&pb, 360.0);
-	torpedoes = packed_buffer_extract_u32(&pb);
-	power = packed_buffer_extract_u32(&pb);
-	dgheading = packed_buffer_extract_du32(&pb, 360.0);
-	dsheading = packed_buffer_extract_du32(&pb, 360.0);
-	dbeamwidth = packed_buffer_extract_du32(&pb, 360.0);
-	tloading = packed_buffer_extract_u8(&pb);
+	packed_buffer_extract(&pb, "wwSSSS", &id, &alive,
+				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
+				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
+	packed_buffer_extract(&pb, "UwwUUU", &dheading, (uint32_t) 360,
+				&torpedoes, &power, &dgheading, (uint32_t) 360,
+				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
+	packed_buffer_extract(&pb, "bbbwbrbbbbbb", &tloading, &throttle, &rpm, &fuel, &temp,
+			&pd, (unsigned short) sizeof(pd), &scizoom, &warpdrive, &requested_warpdrive,
+			&requested_shield, &phaser_charge, &phaser_wavelength);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
-	throttle = packed_buffer_extract_u8(&pb);
-	rpm = packed_buffer_extract_u8(&pb);
-	fuel = packed_buffer_extract_u32(&pb);
-	temp = packed_buffer_extract_u8(&pb);
-	packed_buffer_extract_raw(&pb, (char *) &pd, sizeof(pd));
-	scizoom = packed_buffer_extract_u8(&pb);
-	warpdrive = packed_buffer_extract_u8(&pb);
-	requested_warpdrive = packed_buffer_extract_u8(&pb);
-	requested_shield = packed_buffer_extract_u8(&pb);
-	phaser_charge = packed_buffer_extract_u8(&pb);
-	phaser_wavelength = packed_buffer_extract_u8(&pb);
-
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power,
 				dgheading, dsheading, dbeamwidth, shiptype,

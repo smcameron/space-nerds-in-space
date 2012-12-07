@@ -1833,31 +1833,19 @@ static void send_update_ship_packet(struct game_client *c,
 	tloading = tloading | (tloaded << 4);
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
-	packed_buffer_append_u16(pb, opcode);
-	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_u32(pb, o->alive);
-	packed_buffer_append_ds32(pb, o->x, UNIVERSE_DIM);
-	packed_buffer_append_ds32(pb, o->y, UNIVERSE_DIM);
-	packed_buffer_append_ds32(pb, o->vx, UNIVERSE_DIM);
-	packed_buffer_append_ds32(pb, o->vy, UNIVERSE_DIM);
-	packed_buffer_append_du32(pb, o->heading, 360.0);
-	packed_buffer_append_u32(pb, o->tsd.ship.torpedoes);
-	packed_buffer_append_u32(pb, o->tsd.ship.power);
-	packed_buffer_append_du32(pb, o->tsd.ship.gun_heading, 360.0);
-	packed_buffer_append_du32(pb, o->tsd.ship.sci_heading, 360.0);
-	packed_buffer_append_du32(pb, o->tsd.ship.sci_beam_width, 360.0);
-	packed_buffer_append_u8(pb, tloading);
-	packed_buffer_append_u8(pb, throttle);
-	packed_buffer_append_u8(pb, rpm);
-	packed_buffer_append_u32(pb, fuel);
-	packed_buffer_append_u8(pb, o->tsd.ship.temp);
-	packed_buffer_append_raw(pb, (char *) &o->tsd.ship.pwrdist, sizeof(o->tsd.ship.pwrdist));
-	packed_buffer_append_u8(pb, o->tsd.ship.scizoom);
-	packed_buffer_append_u8(pb, o->tsd.ship.warpdrive);
-	packed_buffer_append_u8(pb, o->tsd.ship.requested_warpdrive);
-	packed_buffer_append_u8(pb, o->tsd.ship.requested_shield);
-	packed_buffer_append_u8(pb, o->tsd.ship.phaser_charge);
-	packed_buffer_append_u8(pb, o->tsd.ship.phaser_wavelength);
+	packed_buffer_append(pb, "hwwSSSS", opcode, o->id, o->alive,
+			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
+			o->vx, (int32_t) UNIVERSE_DIM, o->vy, (int32_t) UNIVERSE_DIM);
+	packed_buffer_append(pb, "UwwUUUbbbwbrbbbbbb", o->heading, (uint32_t) 360,
+			o->tsd.ship.torpedoes, o->tsd.ship.power,
+			o->tsd.ship.gun_heading, (uint32_t) 360,
+			o->tsd.ship.sci_heading, (uint32_t) 360,
+			o->tsd.ship.sci_beam_width, (uint32_t) 360,
+			tloading, throttle, rpm, fuel, o->tsd.ship.temp,
+			(char *) &o->tsd.ship.pwrdist, (unsigned short) sizeof(o->tsd.ship.pwrdist),
+			o->tsd.ship.scizoom, o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
+			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
+			o->tsd.ship.phaser_wavelength);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
