@@ -1052,8 +1052,7 @@ static void request_sci_select_target(uint32_t id)
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct snis_sci_select_target_packet));
-	packed_buffer_append_u16(pb, OPCODE_SCI_SELECT_TARGET);
-	packed_buffer_append_u32(pb, id);
+	packed_buffer_append(pb, "hw", OPCODE_SCI_SELECT_TARGET, id);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
@@ -1063,9 +1062,8 @@ static void request_sci_select_coords(double ux, double uy)
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct snis_sci_select_coords_packet));
-	packed_buffer_append_u16(pb, OPCODE_SCI_SELECT_COORDS);
-	packed_buffer_append_ds32(pb, ux, UNIVERSE_DIM);
-	packed_buffer_append_ds32(pb, uy, UNIVERSE_DIM);
+	packed_buffer_append(pb, "hSS", OPCODE_SCI_SELECT_COORDS,
+		ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
@@ -1081,15 +1079,13 @@ static void navigation_dirkey(int h, int v)
 	if (h) {
 		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
 		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-		packed_buffer_append_u16(pb, OPCODE_REQUEST_YAW);
-		packed_buffer_append_u8(pb, yaw);
+		packed_buffer_append(pb, "hb", OPCODE_REQUEST_YAW, yaw);
 		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	}
 	if (v) {
 		thrust = v < 0 ? THRUST_BACKWARDS : THRUST_FORWARDS;
 		pb = packed_buffer_allocate(sizeof(struct request_thrust_packet));
-		packed_buffer_append_u16(pb, OPCODE_REQUEST_THRUST);
-		packed_buffer_append_u8(pb, thrust);
+		packed_buffer_append(pb, "hb", OPCODE_REQUEST_THRUST, thrust);
 		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	}
 	wakeup_gameserver_writer();
@@ -1106,8 +1102,7 @@ static void weapons_dirkey(int h, int v)
 	if (h) {
 		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
 		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-		packed_buffer_append_u16(pb, OPCODE_REQUEST_GUNYAW);
-		packed_buffer_append_u8(pb, yaw);
+		packed_buffer_append(pb, "hb", OPCODE_REQUEST_GUNYAW, yaw);
 		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 		wakeup_gameserver_writer();
 	}
@@ -1123,16 +1118,14 @@ static void science_dirkey(int h, int v)
 	if (v) {
 		yaw = v < 0 ? YAW_LEFT : YAW_RIGHT;
 		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-		packed_buffer_append_u16(pb, OPCODE_REQUEST_SCIBEAMWIDTH);
-		packed_buffer_append_u8(pb, yaw);
+		packed_buffer_append(pb, "hb", OPCODE_REQUEST_SCIBEAMWIDTH, yaw);
 		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 		wakeup_gameserver_writer();
 	}
 	if (h) {
 		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
 		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-		packed_buffer_append_u16(pb, OPCODE_REQUEST_SCIYAW);
-		packed_buffer_append_u8(pb, yaw);
+		packed_buffer_append(pb, "hb", OPCODE_REQUEST_SCIYAW, yaw);
 		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 		wakeup_gameserver_writer();
 	}
@@ -1143,8 +1136,7 @@ static void do_onscreen(void)
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct role_onscreen_packet));
-	packed_buffer_append_u16(pb, OPCODE_ROLE_ONSCREEN);
-	packed_buffer_append_u8(pb, (uint8_t) displaymode & 0xff);
+	packed_buffer_append(pb, "hb", OPCODE_ROLE_ONSCREEN, (uint8_t) displaymode & 0xff);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
@@ -3247,9 +3239,7 @@ static void do_adjust_byte_value(uint8_t value,  uint16_t opcode)
 	o = &go[my_ship_oid];
 
 	pb = packed_buffer_allocate(sizeof(struct request_throttle_packet));
-	packed_buffer_append_u16(pb, opcode);
-	packed_buffer_append_u32(pb, o->id);
-	packed_buffer_append_u8(pb, value);
+	packed_buffer_append(pb, "hwb", opcode, o->id, value);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
