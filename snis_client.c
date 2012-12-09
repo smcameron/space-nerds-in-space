@@ -4520,6 +4520,7 @@ static void read_sound_clips(void)
 	printf("Decoding audio data..."); fflush(stdout);
 	wwviaudio_read_ogg_clip(EXPLOSION_SOUND, "share/big_explosion.ogg");
 	wwviaudio_read_ogg_clip(TORPEDO_LAUNCH_SOUND, "share/flak_gun_sound.ogg");
+	wwviaudio_read_ogg_clip(LASER_FIRE_SOUND, "share/bigshotlaser.ogg");
 	printf("Done.\n");
 }
 
