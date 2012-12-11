@@ -441,6 +441,10 @@ static void ship_move(struct snis_entity *o)
 			dy = v->y - o->y;
 			o->tsd.ship.desired_heading = atan2(dy, dx);
 		}
+		if (snis_randn(1000) < 20) {
+			o->tsd.ship.dox = snis_randn(2000) - 1000;
+			o->tsd.ship.doy = snis_randn(2000) - 1000;
+		}
 	}
 #if 0
 	/* Decide where to go... */
