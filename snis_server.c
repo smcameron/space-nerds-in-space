@@ -213,10 +213,16 @@ fixit:
 	o->y = snis_randn(YKNOWN_DIM);
 }
 
+static int roll_damage(double shield_strength, uint8_t system)
+{
+	int damage = system + (uint8_t) ((double) snis_randn(40) * (1.0 - shield_strength));
+	if (damage > 255)
+		damage = 255;
+	return damage;
+}
+
 static void calculate_torpedo_damage(struct snis_entity *o)
 {
-	int damage, i;
-	unsigned char *x = (unsigned char *) &o->tsd.ship.damage;
 	double ss;
 
 	ss = shield_strength(snis_randn(255), o->sdata.shield_strength,
@@ -224,12 +230,14 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 				o->sdata.shield_depth,
 				o->sdata.shield_wavelength);
 
-	for (i = 0; i < sizeof(o->tsd.ship.damage); i++) {
-		damage = (int) x[i] + ((double) snis_randn(40) * (1.0 - ss));
-		if (damage > 255)
-			damage = 255;
-		x[i] = damage;
-	}
+	o->tsd.ship.damage.shield_damage = roll_damage(ss, o->tsd.ship.damage.shield_damage);
+	o->tsd.ship.damage.impulse_damage = roll_damage(ss, o->tsd.ship.damage.impulse_damage);
+	o->tsd.ship.damage.warp_damage = roll_damage(ss, o->tsd.ship.damage.warp_damage);
+	o->tsd.ship.damage.torpedo_tubes_damage = roll_damage(ss, o->tsd.ship.damage.torpedo_tubes_damage);
+	o->tsd.ship.damage.phaser_banks_damage = roll_damage(ss, o->tsd.ship.damage.phaser_banks_damage);
+	o->tsd.ship.damage.sensors_damage = roll_damage(ss, o->tsd.ship.damage.sensors_damage);
+	o->tsd.ship.damage.comms_damage = roll_damage(ss, o->tsd.ship.damage.comms_damage);
+
 	if (o->tsd.ship.damage.shield_damage == 255) { 
 		o->respawn_time = universe_timestamp + 30 * 10;
 		o->alive = 0;
@@ -808,6 +816,7 @@ static void respawn_player(struct snis_entity *o)
 	o->heading = 0;
 	init_player(o);
 	o->alive = 1;
+	send_ship_damage_packet(o->id);
 }
 
 static int add_ship(double x, double y, double vx, double vy, double heading)
