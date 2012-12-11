@@ -58,6 +58,7 @@
 #define SCREEN_WIDTH 800        /* window width, in pixels */
 #define SCREEN_HEIGHT 600       /* window height, in pixels */
 
+__attribute__((unused)) static double max_speed[];
 
 typedef void line_drawing_function(GdkDrawable *drawable,
          GdkGC *gc, gint x1, gint y1, gint x2, gint y2);

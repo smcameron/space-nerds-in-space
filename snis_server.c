@@ -411,11 +411,15 @@ static int find_nearest_victim(struct snis_entity *o)
 	return victim;
 }
 
+static int add_torpedo(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
+
 static void ship_move(struct snis_entity *o)
 {
 	double heading_diff, yaw_vel;
 	struct snis_entity *v;
 	double destx, desty, dx, dy, d;
+	int close_enough = 0;
+	double maxv;
 
 	if (o->tsd.ship.victim == (uint32_t) -1) {
 		o->tsd.ship.victim = find_nearest_victim(o);
@@ -423,7 +427,7 @@ static void ship_move(struct snis_entity *o)
 		o->tsd.ship.doy = snis_randn(2000) - 1000;
 	}
 
-#define MAX_SPEED 25
+	maxv = max_speed[o->tsd.ship.shiptype];
 	if (o->tsd.ship.victim != (uint32_t) -1) {
 		v = &go[o->tsd.ship.victim];
 		destx = v->x + o->tsd.ship.dox;
@@ -432,14 +436,15 @@ static void ship_move(struct snis_entity *o)
 		dy = desty - o->y;
 		d = sqrt(dx * dx + dy * dy);
 		o->tsd.ship.desired_heading = atan2(dy, dx);
-		o->tsd.ship.desired_velocity = (d / MAX_SPEED) * MAX_SPEED + snis_randn(5);
-		if (o->tsd.ship.desired_velocity > MAX_SPEED)
-			o->tsd.ship.desired_velocity = MAX_SPEED;
+		o->tsd.ship.desired_velocity = (d / maxv) * maxv + snis_randn(5);
+		if (o->tsd.ship.desired_velocity > maxv)
+			o->tsd.ship.desired_velocity = maxv;
 		if (fabs(dx) < 100 && fabs(dy) < 100) {
 			o->tsd.ship.desired_velocity = 0;
 			dx = v->x - o->x;
 			dy = v->y - o->y;
 			o->tsd.ship.desired_heading = atan2(dy, dx);
+			close_enough = 1;
 		}
 		if (snis_randn(1000) < 20) {
 			o->tsd.ship.dox = snis_randn(2000) - 1000;
@@ -488,6 +493,16 @@ static void ship_move(struct snis_entity *o)
 	o->y += o->vy;
 	normalize_coords(o);
 	o->timestamp = universe_timestamp;
+
+	if (close_enough && snis_randn(1000) < 25 && o->tsd.ship.victim != (uint32_t) -1) {
+		double vx, vy, angle;
+
+		v = &go[o->tsd.ship.victim];
+		angle = atan2(v->x - o->x, v->y - o->y);
+		vx = TORPEDO_VELOCITY * sin(angle);
+		vy = TORPEDO_VELOCITY * cos(angle);
+		add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
+	}
 }
 
 static void damp_yaw_velocity(double *yv, double damp_factor)

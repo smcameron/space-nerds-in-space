@@ -74,6 +74,16 @@ static char *shipclass[] = {
 	"Starship",
 };
 
+static double max_speed[] = {
+	10.0,
+	15.0,
+	8.0,
+	7.5,
+	9.0,
+	11.0,
+	1.0,
+};
+
 struct ship_damage_data {
 	uint8_t shield_damage;
 	uint8_t impulse_damage;
