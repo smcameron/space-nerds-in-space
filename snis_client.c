@@ -3099,7 +3099,7 @@ static void add_slider(struct slider *s)
 	nsliders++;
 }
 
-static double slider_get_value(struct slider *s)
+__attribute__((unused)) static double slider_get_value(struct slider *s)
 {	
 	return s->value;
 }

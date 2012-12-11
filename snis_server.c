@@ -558,7 +558,7 @@ static uint8_t shield_limit_function(uint8_t value, uint32_t total_power, uint8_
 static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
-	int max_phaserbank, desired_phaserbank, current_phaserbank;
+	int max_phaserbank, current_phaserbank;
 
 	o->vy = o->tsd.ship.velocity * cos(o->heading);
 	o->vx = o->tsd.ship.velocity * -sin(o->heading);
