@@ -1782,7 +1782,7 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
 	packed_buffer_append(pb, "hwwSSUU", OPCODE_ECON_UPDATE_SHIP, o->id, o->alive,
 		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
-		dv, (uint32_t) UNIVERSE_DIM, o->heading, (uint32_t) UNIVERSE_DIM);
+		dv, (uint32_t) UNIVERSE_DIM, o->heading, (uint32_t) 360);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
