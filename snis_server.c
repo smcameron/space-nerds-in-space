@@ -44,6 +44,7 @@
 #include "snis_packet.h"
 #include "sounds.h"
 #include "names.h"
+#include "shield_strength.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
@@ -216,9 +217,15 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 {
 	int damage, i;
 	unsigned char *x = (unsigned char *) &o->tsd.ship.damage;
+	double ss;
+
+	ss = shield_strength(snis_randn(255), o->sdata.shield_strength,
+				o->sdata.shield_width,
+				o->sdata.shield_depth,
+				o->sdata.shield_wavelength);
 
 	for (i = 0; i < sizeof(o->tsd.ship.damage); i++) {
-		damage = (int) x[i] + snis_randn(40);
+		damage = (int) x[i] + ((double) snis_randn(40) * (1.0 - ss));
 		if (damage > 255)
 			damage = 255;
 		x[i] = damage;
@@ -233,9 +240,15 @@ static void calculate_laser_damage(struct snis_entity *o)
 {
 	int damage, i;
 	unsigned char *x = (unsigned char *) &o->tsd.ship.damage;
+	double ss;
+
+	ss = shield_strength(snis_randn(255), o->sdata.shield_strength,
+				o->sdata.shield_width,
+				o->sdata.shield_depth,
+				o->sdata.shield_wavelength);
 
 	for (i = 0; i < sizeof(o->tsd.ship.damage); i++) {
-		damage = (int) x[i] + snis_randn(40);
+		damage = (int) x[i] + ((double) snis_randn(40) * (1 - ss));
 		if (damage > 255)
 			damage = 255;
 		x[i] = damage;
