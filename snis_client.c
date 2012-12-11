@@ -114,20 +114,6 @@ float yscale_screen= 1.0;
 int real_screen_width;
 int real_screen_height;
 
-#define DISPLAYMODE_FONTTEST 0
-#define DISPLAYMODE_INTROSCREEN 1
-#define DISPLAYMODE_LOBBYSCREEN 2
-#define DISPLAYMODE_CONNECTING 3
-#define DISPLAYMODE_CONNECTED 4
-#define DISPLAYMODE_FINDSERVER 5
-#define DISPLAYMODE_MAINSCREEN 6
-#define DISPLAYMODE_NAVIGATION 7
-#define DISPLAYMODE_WEAPONS 8
-#define DISPLAYMODE_ENGINEERING 9
-#define DISPLAYMODE_SCIENCE 10
-#define DISPLAYMODE_COMMS 11
-#define DISPLAYMODE_DEBUG 12
-
 int displaymode = DISPLAYMODE_LOBBYSCREEN;
 
 /* cardinal color indexes into huex array */
@@ -1258,43 +1244,43 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		do_torpedo();
 		break;
 	case keyf1:
-		if (displaymode < DISPLAYMODE_CONNECTED)
+		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_MAIN)
 			displaymode = DISPLAYMODE_MAINSCREEN;
 		break;
 	case keyf2:
-		if (displaymode < DISPLAYMODE_CONNECTED)
+		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_NAVIGATION)
 			displaymode = DISPLAYMODE_NAVIGATION;
 		break;
 	case keyf3:
-		if (displaymode < DISPLAYMODE_CONNECTED)
+		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_WEAPONS)
 			displaymode = DISPLAYMODE_WEAPONS;
 		break;
 	case keyf4:
-		if (displaymode < DISPLAYMODE_CONNECTED)
+		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_ENGINEERING)
 			displaymode = DISPLAYMODE_ENGINEERING;
 		break;
 	case keyf5:
-		if (displaymode < DISPLAYMODE_CONNECTED)
+		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_SCIENCE)
 			displaymode = DISPLAYMODE_SCIENCE;
 		break;
 	case keyf6:
-		if (displaymode < DISPLAYMODE_CONNECTED)
+		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_COMMS)
 			displaymode = DISPLAYMODE_COMMS;
 		break;
 	case keyf7:
-		if (displaymode < DISPLAYMODE_CONNECTED)
+		if (displaymode < DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_DEBUG)
 			displaymode = DISPLAYMODE_DEBUG;
