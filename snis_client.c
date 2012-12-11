@@ -1728,6 +1728,16 @@ static int process_role_onscreen_packet(void)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	new_displaymode = packed_buffer_extract_u8(&pb);
 
+	if (!(role & ROLE_MAIN)) {
+		/*
+		 * Should "never" happen, server should only send display mode
+		 * switching packets to clients that have role MAINSCREEN.
+		 */
+		printf("Unexpectedly got displaymode packet on "
+			"client without mainscreen role.\n");
+		return 0;
+	}
+
 	if (displaymode == new_displaymode) {
 		displaymode = DISPLAYMODE_MAINSCREEN;
 		return 0;
@@ -1743,6 +1753,8 @@ static int process_role_onscreen_packet(void)
 		displaymode = new_displaymode;
 		break;
 	default:
+		printf("Got unexpected displaymode 0x%08x from server\n",
+				new_displaymode);
 		break;
 	}
 	return 0;
