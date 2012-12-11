@@ -2396,7 +2396,7 @@ static void snis_draw_science_spark(GdkDrawable *drawable, GdkGC *gc, gint x, gi
 	}
 }
 
-static void snis_draw_arrow(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
+static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		double heading, double scale)
 {
 	int nx, ny, tx1, ty1, tx2, ty2;
@@ -2405,26 +2405,26 @@ static void snis_draw_arrow(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gi
 #define SHIP_SCALE_DOWN 15.0
 	nx = sin(heading) * scale * r / SHIP_SCALE_DOWN;
 	ny = -cos(heading) * scale * r / SHIP_SCALE_DOWN;
-	snis_draw_line(drawable, gc, x, y, x + nx, y + ny);
+	snis_draw_line(w->window, gc, x, y, x + nx, y + ny);
 	tx1 = sin(heading + PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
 	ty1 = -cos(heading + PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
-	snis_draw_line(drawable, gc, x, y, x + tx1, y + ty1);
+	snis_draw_line(w->window, gc, x, y, x + tx1, y + ty1);
 	tx2 = sin(heading - PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
 	ty2 = -cos(heading - PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
-	snis_draw_line(drawable, gc, x, y, x + tx2, y + ty2);
-	snis_draw_line(drawable, gc, x + nx, y + ny, x + tx1, y + ty1);
-	snis_draw_line(drawable, gc, x + tx1, y + ty1, x + tx2, y + ty2);
-	snis_draw_line(drawable, gc, x + tx2, y + ty2, x + nx, y + ny);
+	snis_draw_line(w->window, gc, x, y, x + tx2, y + ty2);
+	snis_draw_line(w->window, gc, x + nx, y + ny, x + tx1, y + ty1);
+	snis_draw_line(w->window, gc, x + tx1, y + ty1, x + tx2, y + ty2);
+	snis_draw_line(w->window, gc, x + tx2, y + ty2, x + nx, y + ny);
 }
 
-static void snis_draw_science_reticule(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r,
+static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		double heading, double beam_width)
 {
 	int i;
 	// int nx, ny, 
 	int tx1, ty1, tx2, ty2;
 
-	snis_draw_circle(drawable, gc, x, y, r);
+	snis_draw_circle(w->window, gc, x, y, r);
 
 	for (i = 0; i < 36; i++) { /* 10 degree increments */
 		int x1 = (int) (cos((10.0 * i) * 3.1415927 / 180.0) * r);
@@ -2435,23 +2435,23 @@ static void snis_draw_science_reticule(GdkDrawable *drawable, GdkGC *gc, gint x,
 		x2 += x;
 		y1 += y;
 		y2 += y;
-		snis_draw_dotted_line(drawable, gc, x1, y1, x2, y2);
+		snis_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
 	}
 
 	/* draw the ship */
-	snis_draw_arrow(drawable, gc, x, y, r, heading, 1.0);
+	snis_draw_arrow(w, gc, x, y, r, heading, 1.0);
 	
 	tx1 = x + sin(heading - beam_width / 2) * r * 0.05;
 	ty1 = y - cos(heading - beam_width / 2) * r * 0.05;
 	tx2 = x + sin(heading - beam_width / 2) * r;
 	ty2 = y - cos(heading - beam_width / 2) * r;
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
-	snis_draw_electric_line(drawable, gc, tx1, ty1, tx2, ty2);
+	snis_draw_electric_line(w->window, gc, tx1, ty1, tx2, ty2);
 	tx1 = x + sin(heading + beam_width / 2) * r * 0.05;
 	ty1 = y - cos(heading + beam_width / 2) * r * 0.05;
 	tx2 = x + sin(heading + beam_width / 2) * r;
 	ty2 = y - cos(heading + beam_width / 2) * r;
-	snis_draw_electric_line(drawable, gc, tx1, ty1, tx2, ty2);
+	snis_draw_electric_line(w->window, gc, tx1, ty1, tx2, ty2);
 }
 
 static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
@@ -2483,7 +2483,7 @@ static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 	}
 
 	/* draw the ship */
-	snis_draw_arrow(w->window, gc, x, y, r, heading, 1.0);
+	snis_draw_arrow(w, gc, x, y, r, heading, 1.0);
 	
 	tx1 = x + sin(heading) * r * 0.85;
 	ty1 = y - cos(heading) * r * 0.85;
@@ -2555,7 +2555,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 			case OBJTYPE_SHIP1:
 			case OBJTYPE_SHIP2:
 				gdk_gc_set_foreground(gc, &huex[WHITE]);
-				snis_draw_arrow(w->window, gc, x, y, r, go[i].heading + M_PI / 2.0, 0.5);
+				snis_draw_arrow(w, gc, x, y, r, go[i].heading + M_PI / 2.0, 0.5);
 				gdk_gc_set_foreground(gc, &huex[GREEN]);
 				if (go[i].sdata.science_data_known) {
 					sprintf(buffer, "%s", go[i].sdata.name);
@@ -2564,7 +2564,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 				break;
 			default:
 				gdk_gc_set_foreground(gc, &huex[WHITE]);
-				snis_draw_arrow(w->window, gc, x, y, r, go[i].heading + M_PI / 2.0, 0.5);
+				snis_draw_arrow(w, gc, x, y, r, go[i].heading + M_PI / 2.0, 0.5);
 			}
 		}
 	}
@@ -4190,7 +4190,7 @@ static void show_science(GtkWidget *w)
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, zoom);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, zoom, o->tsd.ship.scizoom < 50);
 	gdk_gc_set_foreground(gc, &huex[DARKRED]);
-	snis_draw_science_reticule(w->window, gc, cx, cy, r,
+	snis_draw_science_reticule(w, gc, cx, cy, r,
 			o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width));
 	draw_all_the_science_guys(w, o, zoom);
 	draw_all_the_science_sparks(w, o, zoom);
