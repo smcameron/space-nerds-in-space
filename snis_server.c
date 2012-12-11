@@ -1120,6 +1120,9 @@ static int process_role_onscreen(struct game_client *c)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	new_displaymode = packed_buffer_extract_u8(&pb);
 
+	if (new_displaymode >= DISPLAYMODE_FONTTEST)
+		new_displaymode = DISPLAYMODE_MAINSCREEN;
+
 	pb2 = packed_buffer_allocate(sizeof(struct role_onscreen_packet));
 	packed_buffer_append(pb2, "hb", OPCODE_ROLE_ONSCREEN, new_displaymode);
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb2, ROLE_MAIN);
