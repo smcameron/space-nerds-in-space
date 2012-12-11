@@ -223,8 +223,10 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 			damage = 255;
 		x[i] = damage;
 	}
-	if (o->tsd.ship.damage.shield_damage == 255)
+	if (o->tsd.ship.damage.shield_damage == 255) { 
+		o->respawn_time = universe_timestamp + 30 * 30;
 		o->alive = 0;
+	}
 }
 
 static void calculate_laser_damage(struct snis_entity *o)
@@ -238,8 +240,10 @@ static void calculate_laser_damage(struct snis_entity *o)
 			damage = 255;
 		x[i] = damage;
 	}
-	if (o->tsd.ship.damage.shield_damage == 255)
+	if (o->tsd.ship.damage.shield_damage == 255) {
+		o->respawn_time = universe_timestamp + 30 * 30;
 		o->alive = 0;
+	}
 }
 
 static void send_ship_damage_packet(uint32_t id);
@@ -280,13 +284,15 @@ static void torpedo_move(struct snis_entity *o)
 
 		if (!go[i].alive) {
 			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
-			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
-			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
-			snis_queue_delete_object(go[i].id);
 			/* TODO -- these should be different sounds */
 			/* make sound for players that got hit */
 			/* make sound for players that did the hitting */
-			snis_object_pool_free_object(pool, i);
+			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
+			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
+			if (go[i].type != OBJTYPE_SHIP1) {
+				snis_queue_delete_object(go[i].id);
+				snis_object_pool_free_object(pool, i);
+			}
 		} else {
 			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5);
 			snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, go[i].id);
@@ -748,6 +754,27 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	return i;
 }
 
+static void init_player(struct snis_entity *o)
+{
+	o->move = player_move;
+	o->tsd.ship.torpedoes = 1000;
+	o->tsd.ship.shields = 100.0;
+	o->tsd.ship.power = 100.0;
+	o->tsd.ship.yaw_velocity = 0.0;
+	o->tsd.ship.gun_yaw_velocity = 0.0;
+	o->tsd.ship.gun_heading = 0.0;
+	o->tsd.ship.velocity = 0.0;
+	o->tsd.ship.desired_velocity = 0.0;
+	o->tsd.ship.desired_heading = 0.0;
+	o->tsd.ship.sci_beam_width = MAX_SCI_BW_YAW_VELOCITY;
+	o->tsd.ship.fuel = UINT32_MAX;
+	o->tsd.ship.rpm = 0;
+	o->tsd.ship.temp = 0;
+	o->tsd.ship.power = 0;
+	o->tsd.ship.scizoom = 128;
+	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
+}
+
 static int add_player(double x, double y, double vx, double vy, double heading)
 {
 	int i;
@@ -755,24 +782,19 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_SHIP1);
 	if (i < 0)
 		return i;
-	go[i].move = player_move;
-	go[i].tsd.ship.torpedoes = 1000;
-	go[i].tsd.ship.shields = 100.0;
-	go[i].tsd.ship.power = 100.0;
-	go[i].tsd.ship.yaw_velocity = 0.0;
-	go[i].tsd.ship.gun_yaw_velocity = 0.0;
-	go[i].tsd.ship.gun_heading = 0.0;
-	go[i].tsd.ship.velocity = 0.0;
-	go[i].tsd.ship.desired_velocity = 0.0;
-	go[i].tsd.ship.desired_heading = 0.0;
-	go[i].tsd.ship.sci_beam_width = MAX_SCI_BW_YAW_VELOCITY;
-	go[i].tsd.ship.fuel = UINT32_MAX;
-	go[i].tsd.ship.rpm = 0;
-	go[i].tsd.ship.temp = 0;
-	go[i].tsd.ship.power = 0;
-	go[i].tsd.ship.scizoom = 128;
-	memset(&go[i].tsd.ship.damage, 0, sizeof(go[i].tsd.ship.damage));
+	init_player(&go[i]);
 	return i;
+}
+
+static void respawn_player(struct snis_entity *o)
+{
+	o->x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
+	o->y = YKNOWN_DIM * (double) rand() / (double) RAND_MAX;
+	o->vx = 0;
+	o->vy = 0;
+	o->heading = 0;
+	init_player(o);
+	o->alive = 1;
 }
 
 static int add_ship(double x, double y, double vx, double vy, double heading)
@@ -1689,7 +1711,7 @@ static void queue_up_client_updates(struct game_client *c)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
 			i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type); */
-		if (go[i].alive && go[i].timestamp > c->timestamp) {
+		if ((go[i].alive && go[i].timestamp > c->timestamp) || i == c->shipid) {
 			if (too_far_away_to_care(c, &go[i]))
 				continue;
 			queue_up_client_object_update(c, &go[i]);
@@ -2146,9 +2168,16 @@ static void move_objects(void)
 
 	pthread_mutex_lock(&universe_mutex);
 	universe_timestamp++;
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
-		if (go[i].alive)
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].alive) {
 			go[i].move(&go[i]);
+		} else {
+			if (go[i].type == OBJTYPE_SHIP1 &&
+				universe_timestamp >= go[i].respawn_time) {
+				respawn_player(&go[i]);
+			}
+		}
+	}
 	pthread_mutex_unlock(&universe_mutex);
 
 }

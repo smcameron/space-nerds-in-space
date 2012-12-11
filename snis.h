@@ -207,6 +207,7 @@ struct snis_entity {
 	uint32_t alive;
 	uint32_t type;
 	uint32_t timestamp;
+	uint32_t respawn_time;
 	union type_specific_data tsd;
 	move_function move;
 	struct snis_entity_science_data sdata;

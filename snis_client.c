@@ -3628,6 +3628,20 @@ static void init_weapons_ui(void)
 	add_slider(&weapons.wavelen_slider);
 }
 
+static void show_death_screen(GtkWidget *w)
+{
+	char buf[100];
+
+	sprintf(buf, "YOUR SHIP");
+	abs_xy_draw_string(w, buf, BIG_FONT, 20, 150);
+	sprintf(buf, "HAS BEEN");
+	abs_xy_draw_string(w, buf, BIG_FONT, 20, 250);
+	sprintf(buf, "BLOWN TO");
+	abs_xy_draw_string(w, buf, BIG_FONT, 20, 350);
+	sprintf(buf, "SMITHEREENS");
+	abs_xy_draw_string(w, buf, BIG_FONT, 20, 450);
+}
+
 static void show_weapons(GtkWidget *w)
 {
 	char buf[100];
@@ -4336,6 +4350,18 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 	make_science_forget_stuff();
 
+	if (displaymode < DISPLAYMODE_FONTTEST) {
+		if (my_ship_id == UNKNOWN_ID)
+			return 0;
+		if (my_ship_oid == UNKNOWN_ID)
+			my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+		if (my_ship_oid == UNKNOWN_ID)
+			return 0;
+		if (go[my_ship_oid].alive <= 0) {
+			show_death_screen(w);
+			return 0;
+		}
+	}
 	switch (displaymode) {
 	case DISPLAYMODE_FONTTEST:
 		show_fonttest(w);
