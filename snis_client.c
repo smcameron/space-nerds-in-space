@@ -1803,6 +1803,28 @@ static int process_sci_select_coords_packet(void)
 	return 0;
 }
 
+static int process_update_respawn_time(void)
+{
+	char buffer[sizeof(struct respawn_time_packet)];
+	struct packed_buffer pb;
+	int rc;
+	uint8_t seconds;
+
+	rc = snis_readsocket(gameserver_sock, buffer,
+			sizeof(struct respawn_time_packet) - sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	seconds = packed_buffer_extract_u8(&pb);
+	if (my_ship_oid == UNKNOWN_ID) {
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+		if (my_ship_oid == UNKNOWN_ID)
+			return 0;
+	}
+	go[my_ship_oid].respawn_time = (uint32_t) seconds;
+	return 0;
+}
+
 static int process_ship_damage_packet(void)
 {
 	char buffer[sizeof(struct ship_damage_packet)];
@@ -2002,6 +2024,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_DAMAGE:
 			rc = process_ship_damage_packet();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_RESPAWN_TIME:
+			rc = process_update_respawn_time();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -3640,6 +3667,8 @@ static void show_death_screen(GtkWidget *w)
 	abs_xy_draw_string(w, buf, BIG_FONT, 20, 350);
 	sprintf(buf, "SMITHEREENS");
 	abs_xy_draw_string(w, buf, BIG_FONT, 20, 450);
+	sprintf(buf, "RESPAWNING IN %d SECONDS", go[my_ship_oid].respawn_time);
+	abs_xy_draw_string(w, buf, TINY_FONT, 20, 500);
 }
 
 static void show_weapons(GtkWidget *w)

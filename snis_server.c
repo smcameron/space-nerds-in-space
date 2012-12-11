@@ -224,7 +224,7 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 		x[i] = damage;
 	}
 	if (o->tsd.ship.damage.shield_damage == 255) { 
-		o->respawn_time = universe_timestamp + 30 * 30;
+		o->respawn_time = universe_timestamp + 30 * 10;
 		o->alive = 0;
 	}
 }
@@ -241,7 +241,7 @@ static void calculate_laser_damage(struct snis_entity *o)
 		x[i] = damage;
 	}
 	if (o->tsd.ship.damage.shield_damage == 255) {
-		o->respawn_time = universe_timestamp + 30 * 30;
+		o->respawn_time = universe_timestamp + 30 * 10;
 		o->alive = 0;
 	}
 }
@@ -1651,6 +1651,8 @@ static void send_update_torpedo_packet(struct game_client *c,
 static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o);
 
+static void send_respawn_time(struct game_client *c, struct snis_entity *o);
+
 static void queue_up_client_object_update(struct game_client *c, struct snis_entity *o)
 {
 	switch(o->type) {
@@ -1659,6 +1661,10 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		/* send science data about player's own ship to player */
 		if (o == &go[c->shipid])
 			pack_and_send_ship_sdata_packet(c, o);
+		if (!o->alive) {
+			send_respawn_time(c, o);
+			o->timestamp = universe_timestamp + 1;
+		}
 		break;
 	case OBJTYPE_SHIP2:
 		send_econ_update_ship_packet(c, o);
@@ -1842,6 +1848,17 @@ static void send_ship_damage_packet(uint32_t id)
 	packed_buffer_append(pb, "hwr", OPCODE_UPDATE_DAMAGE, id,
 		(char *) &go[id].tsd.ship.damage, (unsigned short) sizeof(go[id].tsd.ship.damage));
 	send_packet_to_all_clients(pb, ROLE_ALL);
+}
+
+static void send_respawn_time(struct game_client *c,
+	struct snis_entity *o)
+{
+	struct packed_buffer *pb;
+	uint8_t seconds = (o->respawn_time - universe_timestamp) / 10;
+
+	pb = packed_buffer_allocate(sizeof(struct respawn_time_packet));
+	packed_buffer_append(pb, "hb", OPCODE_UPDATE_RESPAWN_TIME, seconds);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 	
 static void send_update_ship_packet(struct game_client *c,

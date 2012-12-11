@@ -64,6 +64,7 @@
 #define OPCODE_REQUEST_LASER_WAVELENGTH 138
 #define OPCODE_SCI_SELECT_COORDS 139
 #define OPCODE_REQUEST_SHIELD 140
+#define OPCODE_UPDATE_RESPAWN_TIME 141
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -304,6 +305,11 @@ struct ship_damage_packet {
 	uint8_t phaser_banks;
 	uint8_t sensors;
 	uint8_t comms;
+};
+
+struct respawn_time_packet {
+	uint16_t opcode;
+	uint8_t seconds;
 };
 
 #pragma pack()
