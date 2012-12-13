@@ -386,13 +386,15 @@ static void laser_move(struct snis_entity *o)
 
 		if (!go[i].alive) {
 			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
-			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
-			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
-			snis_queue_delete_object(go[i].id);
 			/* TODO -- these should be different sounds */
 			/* make sound for players that got hit */
 			/* make sound for players that did the hitting */
-			snis_object_pool_free_object(pool, i);
+			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
+			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
+			if (go[i].type != OBJTYPE_SHIP1) {
+				snis_queue_delete_object(go[i].id);
+				snis_object_pool_free_object(pool, i);
+			}
 		} else {
 			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5);
 			snis_queue_add_sound(DISTANT_PHASER_HIT_SOUND, ROLE_SOUNDSERVER, go[i].id);
@@ -439,6 +441,7 @@ static int find_nearest_victim(struct snis_entity *o)
 }
 
 static int add_torpedo(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
+static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
 
 static void ship_move(struct snis_entity *o)
 {
@@ -521,14 +524,26 @@ static void ship_move(struct snis_entity *o)
 	normalize_coords(o);
 	o->timestamp = universe_timestamp;
 
-	if (close_enough && snis_randn(1000) < 25 && o->tsd.ship.victim != (uint32_t) -1) {
-		double vx, vy, angle;
+	if (close_enough && o->tsd.ship.victim != (uint32_t) -1) {
+		if (snis_randn(1000) < 25) {
+			double vx, vy, angle;
 
-		v = &go[o->tsd.ship.victim];
-		angle = atan2(v->x - o->x, v->y - o->y);
-		vx = TORPEDO_VELOCITY * sin(angle);
-		vy = TORPEDO_VELOCITY * cos(angle);
-		add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
+			v = &go[o->tsd.ship.victim];
+			angle = atan2(v->x - o->x, v->y - o->y);
+			vx = TORPEDO_VELOCITY * sin(angle);
+			vy = TORPEDO_VELOCITY * cos(angle);
+			add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
+		} else { 
+			if (snis_randn(1000) < 25) {
+				double vx, vy, angle;
+
+				v = &go[o->tsd.ship.victim];
+				angle = atan2(v->x - o->x, v->y - o->y);
+				vx = LASER_VELOCITY * sin(angle);
+				vy = LASER_VELOCITY * cos(angle);
+				add_laser(o->x, o->y, vx, vy, o->heading, o->id);
+			}
+		}
 	}
 }
 
