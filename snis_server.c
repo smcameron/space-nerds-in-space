@@ -244,13 +244,13 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 	}
 }
 
-static void calculate_laser_damage(struct snis_entity *o)
+static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength)
 {
 	int damage, i;
 	unsigned char *x = (unsigned char *) &o->tsd.ship.damage;
 	double ss;
 
-	ss = shield_strength(snis_randn(255), o->sdata.shield_strength,
+	ss = shield_strength(wavelength, o->sdata.shield_strength,
 				o->sdata.shield_width,
 				o->sdata.shield_depth,
 				o->sdata.shield_wavelength);
@@ -381,7 +381,7 @@ static void laser_move(struct snis_entity *o)
 		/* hit!!!! */
 		o->alive = 0;
 
-		calculate_laser_damage(&go[i]);
+		calculate_laser_damage(&go[i], o->tsd.laser.wavelength);
 		send_ship_damage_packet(go[i].id);
 
 		if (!go[i].alive) {
