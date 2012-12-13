@@ -442,6 +442,7 @@ static int find_nearest_victim(struct snis_entity *o)
 
 static int add_torpedo(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
 static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
+static uint8_t update_phaser_banks(int current, int max);
 
 static void ship_move(struct snis_entity *o)
 {
@@ -559,6 +560,7 @@ static void ship_move(struct snis_entity *o)
 			}
 		}
 	}
+	o->tsd.ship.phaser_charge = update_phaser_banks(o->tsd.ship.phaser_charge, 255);
 }
 
 static void damp_yaw_velocity(double *yv, double damp_factor)
@@ -629,6 +631,19 @@ static uint8_t shield_limit_function(uint8_t value, uint32_t total_power, uint8_
 	return value;
 }
 
+static uint8_t update_phaser_banks(int current, int max)
+{
+	double delta;
+	if (current == max)
+		return (uint8_t) current;
+
+	delta = (max - current) / 10.0;
+	if (delta < 0 && delta > -1.0)
+		delta = -1.0;
+	if (delta > 0 && delta < 1.0)
+		delta = 1.0;
+	return (uint8_t) (current + (int) delta);
+}
 
 static void player_move(struct snis_entity *o)
 {
@@ -745,16 +760,7 @@ static void player_move(struct snis_entity *o)
 		(double) o->tsd.ship.pwrdist.phaserbanks / PHASER_POWER_FACTOR);
 	if (max_phaserbank > 255)
 		max_phaserbank = 255;
-	if (current_phaserbank != max_phaserbank) {
-		double delta;
-
-		delta = (max_phaserbank - current_phaserbank) / 10.0;
-		if (delta < 0 && delta > -1.0)
-			delta = -1.0;
-		if (delta > 0 && delta < 1.0)
-			delta = 1.0;
-		o->tsd.ship.phaser_charge += (int) delta;
-	}
+	o->tsd.ship.phaser_charge = update_phaser_banks(current_phaserbank, max_phaserbank);
 }
 
 static void starbase_move(struct snis_entity *o)
