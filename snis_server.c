@@ -561,6 +561,8 @@ static void ship_move(struct snis_entity *o)
 		}
 	}
 	o->tsd.ship.phaser_charge = update_phaser_banks(o->tsd.ship.phaser_charge, 255);
+	if (o->sdata.shield_strength > (255 - o->tsd.ship.damage.shield_damage))
+		o->sdata.shield_strength = 255 - o->tsd.ship.damage.shield_damage;
 }
 
 static void damp_yaw_velocity(double *yv, double damp_factor)
@@ -740,6 +742,8 @@ static void player_move(struct snis_entity *o)
 		o->sdata.shield_strength++;
 	if (o->sdata.shield_strength > o->tsd.ship.requested_shield)
 		o->sdata.shield_strength--;
+	if (o->sdata.shield_strength > (255 - o->tsd.ship.damage.shield_damage))
+		o->sdata.shield_strength = 255 - o->tsd.ship.damage.shield_damage;
 
 	/* Check that requested warp drive is not out of line with power distribution */
 	if (o->tsd.ship.requested_warpdrive > 
