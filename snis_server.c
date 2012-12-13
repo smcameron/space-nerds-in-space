@@ -215,7 +215,7 @@ fixit:
 
 static int roll_damage(double shield_strength, uint8_t system)
 {
-	int damage = system + (uint8_t) ((double) snis_randn(40) * (1.0 - shield_strength));
+	int damage = system + (uint8_t) ((double) (20 + snis_randn(40)) * (1.2 - shield_strength));
 	if (damage > 255)
 		damage = 255;
 	return damage;
