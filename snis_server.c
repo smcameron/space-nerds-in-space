@@ -451,6 +451,13 @@ static void ship_move(struct snis_entity *o)
 	int close_enough = 0;
 	double maxv;
 
+
+	if (o->tsd.ship.victim != (uint32_t) -1)  {
+		v = &go[o->tsd.ship.victim];
+		if (!v->alive || snis_randn(1000) < 50)
+			o->tsd.ship.victim = (uint32_t) -1;
+	}
+
 	if (o->tsd.ship.victim == (uint32_t) -1) {
 		o->tsd.ship.victim = find_nearest_victim(o);
 		o->tsd.ship.dox = snis_randn(2000) - 1000;
@@ -469,7 +476,7 @@ static void ship_move(struct snis_entity *o)
 		o->tsd.ship.desired_velocity = (d / maxv) * maxv + snis_randn(5);
 		if (o->tsd.ship.desired_velocity > maxv)
 			o->tsd.ship.desired_velocity = maxv;
-		if (fabs(dx) < 100 && fabs(dy) < 100) {
+		if (fabs(dx) < 400 && fabs(dy) < 400) {
 			o->tsd.ship.desired_velocity = 0;
 			dx = v->x - o->x;
 			dy = v->y - o->y;
@@ -477,8 +484,15 @@ static void ship_move(struct snis_entity *o)
 			close_enough = 1;
 		}
 		if (snis_randn(1000) < 20) {
-			o->tsd.ship.dox = snis_randn(2000) - 1000;
-			o->tsd.ship.doy = snis_randn(2000) - 1000;
+			if (snis_randn(1000) < 500) {
+				int dist;
+				double angle;
+
+				angle = snis_randn(360) * M_PI / 180.0;
+				dist = snis_randn(700) + 300;
+				o->tsd.ship.dox = cos(angle) * dist; 
+				o->tsd.ship.doy = sin(angle) * dist; 
+			}
 		}
 	}
 #if 0
