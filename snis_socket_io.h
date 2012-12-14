@@ -33,10 +33,17 @@ OTHER DEALINGS IN THE SOFTWARE.
 #define GLOBAL extern
 #endif
 
+struct network_stats {
+	uint64_t bytes_sent;
+	uint64_t bytes_recd;
+	struct timeval start;
+};
+
 /* Functions to read/write from a socket, restarting if EINTR... */
 GLOBAL int snis_readsocket(int fd, void *buffer, int buflen);
 GLOBAL int snis_writesocket(int fd, void *buffer, int buflen);
 GLOBAL void ignore_sigpipe(void);
+GLOBAL void snis_collect_netstats(struct network_stats *ns);
 #undef GLOBAL
 #endif
 

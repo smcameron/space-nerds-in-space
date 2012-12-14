@@ -31,9 +31,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
+#include <stdint.h>
+#include <sys/time.h>
 
 #define DEFINE_SNIS_SOCKET_IO_GLOBALS
 #include "snis_socket_io.h"
+
+static struct network_stats *netstats = NULL;
 
 /* TODO: use select() and by this method allow timeouts so dead clients/servers
  * don't hang the other end.
@@ -51,8 +55,11 @@ int snis_readsocket(int fd, void *buffer, int buflen)
 		/*printf("recv returned %d, errno = %s\n", rc, strerror(errno)); */
 		if (rc == 0) /* other side closed conn */
 			return -1;
-		if (rc == len)
+		if (rc == len) {
+			if (netstats)
+				netstats->bytes_recd += rc;
 			return 0;
+		}
 		if (rc < 0) {
 			if (errno == -EINTR)
 				continue;
@@ -61,6 +68,8 @@ int snis_readsocket(int fd, void *buffer, int buflen)
 		}
 		len -= rc;
 		c += rc;
+		if (netstats)
+			netstats->bytes_recd += rc;
 	} while (1);
 }
 
@@ -72,8 +81,11 @@ int snis_writesocket(int fd, void *buffer, int buflen)
 
 	do {
 		rc = send(fd, c, len, 0);
-		if (rc == len)
+		if (rc == len) {
+			if (netstats)
+				netstats->bytes_sent += rc;
 			return 0;
+		}
 		if (rc < 0) {
 			if (errno == -EINTR)
 				continue;
@@ -82,6 +94,8 @@ int snis_writesocket(int fd, void *buffer, int buflen)
 		}
 		len -= rc;
 		c += rc;
+		if (netstats)
+			netstats->bytes_sent += rc;
 	} while (1);
 }
 
@@ -90,4 +104,10 @@ void ignore_sigpipe(void)
 	(void) signal(SIGPIPE, SIG_IGN);
 }
 	
- 
+void snis_collect_netstats(struct network_stats *ns)
+{
+	netstats = ns;
+	netstats->bytes_sent = 0;
+	netstats->bytes_recd = 0;
+	gettimeofday(&netstats->start, NULL);
+}
