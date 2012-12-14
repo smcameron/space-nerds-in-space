@@ -12,6 +12,7 @@
 #include "snis_marshal.h"
 #undef DEFINE_SNIS_MARSHAL_GLOBALS
 
+
 #define MAX_FRACTIONAL 0x7FFFFFFFFFFFFFFFLL /* 2^63 - 1 */
 
 static void pack_double(double value, struct packed_double *pd)
@@ -53,6 +54,33 @@ static int host_is_little_endian()
 
 	answer = (c[0] == 0x04);
 	return answer;
+}
+
+/* change a u64 to network byte order */
+static uint64_t cpu_to_be64(uint64_t v)
+{
+	unsigned char *x, *y;
+	uint64_t answer;
+
+	if (!host_is_little_endian())
+		return v;
+		
+	x = (unsigned char *) &v;
+	y = (unsigned char *) &answer;
+	y[0] = x[7];
+	y[1] = x[6];
+	y[2] = x[5];
+	y[3] = x[4];
+	y[4] = x[3];
+	y[5] = x[2];
+	y[6] = x[1];
+	y[7] = x[0];
+	return answer;
+}
+
+static uint64_t be64_to_cpu(uint64_t v)
+{
+	return cpu_to_be64(v);
 }
 
 /* change a packed double to network byte order. */
@@ -131,6 +159,14 @@ int packed_buffer_append_u32(struct packed_buffer *pb, uint32_t value)
 	return 0;
 }
 
+int packed_buffer_append_u64(struct packed_buffer *pb, uint64_t value)
+{
+	value = cpu_to_be64(value);
+	memcpy(&pb->buffer[pb->buffer_cursor], &value, sizeof(value));
+	pb->buffer_cursor += sizeof(value);
+	return 0;
+}
+
 uint16_t packed_buffer_extract_u16(struct packed_buffer *pb)
 {
 	uint16_t value;
@@ -155,6 +191,16 @@ uint32_t packed_buffer_extract_u32(struct packed_buffer *pb)
 	memcpy(&value, &pb->buffer[pb->buffer_cursor], sizeof(value));
 	pb->buffer_cursor += sizeof(value);
 	value = ntohl(value);
+	return value;
+}
+
+uint64_t packed_buffer_extract_u64(struct packed_buffer *pb)
+{
+	uint64_t value;
+
+	memcpy(&value, &pb->buffer[pb->buffer_cursor], sizeof(value));
+	pb->buffer_cursor += sizeof(value);
+	value = be64_to_cpu(value);
 	return value;
 }
 
@@ -397,6 +443,7 @@ int packed_buffer_append(struct packed_buffer *pb, const char *format, ...)
 	uint8_t b;
 	uint16_t h;
 	uint32_t w;
+	uint64_t q;
 	int32_t uscale;
 	uint32_t sscale;
 	char *r;
@@ -420,6 +467,10 @@ int packed_buffer_append(struct packed_buffer *pb, const char *format, ...)
 		case 'w':
 			w = va_arg(ap, uint32_t);
 			packed_buffer_append_u32(pb, w);
+			break;
+		case 'q':
+			q = va_arg(ap, uint64_t);
+			packed_buffer_append_u64(pb, q);
 			break;
 		case 's':
 			s = va_arg(ap, unsigned char *);
@@ -459,6 +510,7 @@ int packed_buffer_extract(struct packed_buffer *pb, const char *format, ...)
 	uint8_t *b;
 	uint16_t *h;
 	uint32_t *w;
+	uint64_t *q;
 	int32_t uscale;
 	uint32_t sscale;
 	char *r;
@@ -483,6 +535,10 @@ int packed_buffer_extract(struct packed_buffer *pb, const char *format, ...)
 		case 'w':
 			w = va_arg(ap, uint32_t *);
 			*w = packed_buffer_extract_u32(pb);
+			break;
+		case 'q':
+			q = va_arg(ap, uint64_t *);
+			*q = packed_buffer_extract_u64(pb);
 			break;
 		case 's':
 			s = va_arg(ap, unsigned char *);

@@ -38,6 +38,7 @@ GLOBAL void packed_buffer_free(struct packed_buffer *pb);
  * "b" = u8 (byte)
  * "h" = u16 (half-word) ( ugh, I hate propagating the notion that "word == 16 bits")
  * "w" = u32 (word)
+ * "q" = u64 (quad word)
  * "s" = string (char *)
  * "r" = raw (char *) (unsigned short len)
  * "d" = double
@@ -51,9 +52,11 @@ GLOBAL int packed_buffer_append_double(struct packed_buffer *pb, double value);
 GLOBAL int packed_buffer_append_u16(struct packed_buffer *pb, uint16_t value);
 GLOBAL int packed_buffer_append_u8(struct packed_buffer *pb, uint8_t value);
 GLOBAL int packed_buffer_append_u32(struct packed_buffer *pb, uint32_t value);
+GLOBAL int packed_buffer_append_u64(struct packed_buffer *pb, uint64_t value);
 GLOBAL uint16_t packed_buffer_extract_u16(struct packed_buffer *pb);
 GLOBAL uint8_t packed_buffer_extract_u8(struct packed_buffer *pb);
 GLOBAL uint32_t packed_buffer_extract_u32(struct packed_buffer *pb);
+GLOBAL uint64_t packed_buffer_extract_u64(struct packed_buffer *pb);
 GLOBAL double packed_buffer_extract_double(struct packed_buffer *pb);
 GLOBAL int packed_buffer_append_string(struct packed_buffer *pb, unsigned char *str, unsigned short len);
 GLOBAL int packed_buffer_extract_string(struct packed_buffer *pb, char *buffer, int buflen);
