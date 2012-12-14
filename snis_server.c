@@ -49,6 +49,9 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
+
+struct network_stats netstats;
+
 struct game_client {
 	int socket;
 	pthread_t read_thread;
@@ -1768,12 +1771,29 @@ static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
 	return 0;
 }
 
+static void queue_netstats(struct game_client *c)
+{
+	struct timeval now;
+	uint32_t elapsed_seconds;
+	struct packed_buffer *pb;
+
+	if ((universe_timestamp & 0x0f) != 0x0f)
+		return;
+	gettimeofday(&now, NULL);
+	elapsed_seconds = now.tv_sec - netstats.start.tv_sec;
+	pb = packed_buffer_allocate(sizeof(struct netstats_packet));
+	packed_buffer_append(pb, "hqqw", OPCODE_UPDATE_NETSTATS,
+		netstats.bytes_sent, netstats.bytes_recd, elapsed_seconds);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
 static void queue_up_client_updates(struct game_client *c)
 {
 	int i;
 	int count;
 
 	count = 0;
+	queue_netstats(c);
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
@@ -2309,6 +2329,7 @@ int main(int argc, char *argv[])
 	port = start_listener_thread();
 
 	ignore_sigpipe();	
+	snis_collect_netstats(&netstats);
 	register_with_game_lobby(port, argv[2], argv[1], argv[3]);
 
 	i = 0;

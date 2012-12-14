@@ -65,6 +65,7 @@
 #define OPCODE_SCI_SELECT_COORDS 139
 #define OPCODE_REQUEST_SHIELD 140
 #define OPCODE_UPDATE_RESPAWN_TIME 141
+#define OPCODE_UPDATE_NETSTATS 142
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -310,6 +311,13 @@ struct ship_damage_packet {
 struct respawn_time_packet {
 	uint16_t opcode;
 	uint8_t seconds;
+};
+
+struct netstats_packet {
+	uint16_t opcode;
+	uint64_t bytes_sent;
+	uint64_t bytes_recd;
+	uint32_t elapsed_seconds;
 };
 
 #pragma pack()

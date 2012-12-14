@@ -117,6 +117,12 @@ int real_screen_height;
 
 int displaymode = DISPLAYMODE_LOBBYSCREEN;
 
+struct client_network_stats {
+	uint64_t bytes_sent;
+	uint64_t bytes_recd;
+	uint32_t elapsed_seconds;
+} netstats;
+
 /* cardinal color indexes into huex array */
 #define WHITE 0
 #define BLUE 1
@@ -1825,6 +1831,22 @@ static int process_update_respawn_time(void)
 	return 0;
 }
 
+static int process_update_netstats(void)
+{
+	char buffer[sizeof(struct netstats_packet)];
+	struct packed_buffer pb;
+	int rc;
+
+	rc = snis_readsocket(gameserver_sock, buffer,
+			sizeof(struct netstats_packet) - sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "qqw", &netstats.bytes_sent,
+				&netstats.bytes_recd, &netstats.elapsed_seconds);
+	return 0;
+}
+
 static int process_ship_damage_packet(void)
 {
 	char buffer[sizeof(struct ship_damage_packet)];
@@ -2043,6 +2065,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_POS_LASER:
 			break;
 		case OPCODE_NOOP:
+			break;
+		case OPCODE_UPDATE_NETSTATS:
+			rc = process_update_netstats();
+			if (rc)
+				goto protocol_error;
 			break;
 		default:
 			goto protocol_error;
@@ -4557,6 +4584,9 @@ void really_quit(void)
 	printf("%d frames / %d seconds, %g frames/sec\n",
 		nframes, (int) (end_time.tv_sec - start_time.tv_sec),
 		(0.0 + nframes) / (0.0 + end_time.tv_sec - start_time.tv_sec));
+	printf("server netstats: %llu bytes sent, %llu bytes recd, secs = %llu, bw = %llu bytes/sec\n",
+			netstats.bytes_sent, netstats.bytes_recd, (unsigned long long) netstats.elapsed_seconds,
+			(netstats.bytes_sent + netstats.bytes_recd) / netstats.elapsed_seconds);
         wwviaudio_cancel_all_sounds();
         wwviaudio_stop_portaudio();
 	exit(1); /* probably bad form... oh well. */
