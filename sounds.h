@@ -2,7 +2,7 @@
 #define SOUNDS_H
 
 #define MAX_CONCURRENT_SOUNDS 20
-#define NSOUND_CLIPS 7
+#define NSOUND_CLIPS 8
 
 #define EXPLOSION_SOUND 1
 #define TORPEDO_LAUNCH_SOUND 2
@@ -14,5 +14,6 @@
 #define ONSCREEN_SOUND 4
 #define OFFSCREEN_SOUND 5
 #define CHANGESCREEN_SOUND 6
+#define SLIDER_SOUND 7
 
 #endif

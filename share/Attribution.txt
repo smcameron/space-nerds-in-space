@@ -25,3 +25,7 @@ changescreen.ogg:
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
 COPYRIGHT=2008 by Stephen M. Cameron
 
+slider-noise.ogg:
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
+COPYRIGHT=2008 by Stephen M. Cameron
+

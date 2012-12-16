@@ -3199,8 +3199,10 @@ static void sliders_button_press(int x, int y)
 				y < s->y || y > s->y + SLIDER_HEIGHT)
 				continue;
 			s->input = ((double) x - (double) s->x) / (double) s->length;
-			if (s->clicked)
+			if (s->clicked) {
 				s->clicked(s);
+				wwviaudio_add_sound(SLIDER_SOUND);
+			}
 		}
 	}
 }
@@ -4639,6 +4641,7 @@ static void read_sound_clips(void)
 	wwviaudio_read_ogg_clip(ONSCREEN_SOUND, "share/onscreen.ogg");
 	wwviaudio_read_ogg_clip(OFFSCREEN_SOUND, "share/offscreen.ogg");
 	wwviaudio_read_ogg_clip(CHANGESCREEN_SOUND, "share/changescreen.ogg");
+	wwviaudio_read_ogg_clip(SLIDER_SOUND, "share/slider-noise.ogg");
 	printf("Done.\n");
 }
 
