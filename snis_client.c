@@ -4317,6 +4317,7 @@ static void show_debug(GtkWidget *w)
 	char label[10];
 	int xoffset = 7;
 	int yoffset = 10;
+	char buffer[100];
 
 	show_common_screen(w, "Debug");
 
@@ -4341,6 +4342,15 @@ static void show_debug(GtkWidget *w)
 	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++)
 		debug_draw_object(w, &spark[i]);
 	pthread_mutex_unlock(&universe_mutex);
+
+	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	abs_xy_draw_string(w, "SERVER NET STATS:", TINY_FONT, 10, SCREEN_HEIGHT - 40); 
+	sprintf(buffer, "TX:%llu RX:%llu T=%lu SECS. BW=%llu BYTES/SEC",
+		(unsigned long long) netstats.bytes_sent,
+		(unsigned long long) netstats.bytes_recd, 
+		(unsigned long) netstats.elapsed_seconds,
+		(unsigned long long) (netstats.bytes_recd + netstats.bytes_sent) / netstats.elapsed_seconds);
+	abs_xy_draw_string(w, buffer, TINY_FONT, 10, SCREEN_HEIGHT - 10); 
 }
 
 static void make_science_forget_stuff(void)
