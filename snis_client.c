@@ -1746,6 +1746,7 @@ static int process_role_onscreen_packet(void)
 	}
 
 	if (displaymode == new_displaymode) {
+		wwviaudio_add_sound(OFFSCREEN_SOUND);
 		displaymode = DISPLAYMODE_MAINSCREEN;
 		return 0;
 	}
@@ -1757,6 +1758,7 @@ static int process_role_onscreen_packet(void)
 	case DISPLAYMODE_SCIENCE:
 	case DISPLAYMODE_COMMS:
 	case DISPLAYMODE_DEBUG:
+		wwviaudio_add_sound(ONSCREEN_SOUND);
 		displaymode = new_displaymode;
 		break;
 	default:
@@ -4620,6 +4622,8 @@ static void read_sound_clips(void)
 	wwviaudio_read_ogg_clip(EXPLOSION_SOUND, "share/big_explosion.ogg");
 	wwviaudio_read_ogg_clip(TORPEDO_LAUNCH_SOUND, "share/flak_gun_sound.ogg");
 	wwviaudio_read_ogg_clip(LASER_FIRE_SOUND, "share/bigshotlaser.ogg");
+	wwviaudio_read_ogg_clip(ONSCREEN_SOUND, "share/onscreen.ogg");
+	wwviaudio_read_ogg_clip(OFFSCREEN_SOUND, "share/offscreen.ogg");
 	printf("Done.\n");
 }
 
