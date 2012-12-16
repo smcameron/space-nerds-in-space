@@ -1287,7 +1287,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			displaymode = DISPLAYMODE_COMMS;
 		break;
 	case keyf7:
-		if (displaymode < DISPLAYMODE_FONTTEST)
+		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_DEBUG)
 			displaymode = DISPLAYMODE_DEBUG;
