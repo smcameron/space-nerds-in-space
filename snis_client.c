@@ -1253,44 +1253,58 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	case keyf1:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
-		if (role & ROLE_MAIN)
+		if (role & ROLE_MAIN) {
 			displaymode = DISPLAYMODE_MAINSCREEN;
+			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		}
 		break;
 	case keyf2:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
-		if (role & ROLE_NAVIGATION)
+		if (role & ROLE_NAVIGATION) {
 			displaymode = DISPLAYMODE_NAVIGATION;
+			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		}
 		break;
 	case keyf3:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
-		if (role & ROLE_WEAPONS)
+		if (role & ROLE_WEAPONS) {
 			displaymode = DISPLAYMODE_WEAPONS;
+			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		}
 		break;
 	case keyf4:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
-		if (role & ROLE_ENGINEERING)
+		if (role & ROLE_ENGINEERING) {
 			displaymode = DISPLAYMODE_ENGINEERING;
+			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		}
 		break;
 	case keyf5:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
-		if (role & ROLE_SCIENCE)
+		if (role & ROLE_SCIENCE) {
 			displaymode = DISPLAYMODE_SCIENCE;
+			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		}
 		break;
 	case keyf6:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
-		if (role & ROLE_COMMS)
+		if (role & ROLE_COMMS) {
 			displaymode = DISPLAYMODE_COMMS;
+			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		}
 		break;
 	case keyf7:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
-		if (role & ROLE_DEBUG)
+		if (role & ROLE_DEBUG) {
 			displaymode = DISPLAYMODE_DEBUG;
+			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		}
 		break;
 	case keyonscreen:
 		if (control_key_pressed)
@@ -4624,6 +4638,7 @@ static void read_sound_clips(void)
 	wwviaudio_read_ogg_clip(LASER_FIRE_SOUND, "share/bigshotlaser.ogg");
 	wwviaudio_read_ogg_clip(ONSCREEN_SOUND, "share/onscreen.ogg");
 	wwviaudio_read_ogg_clip(OFFSCREEN_SOUND, "share/offscreen.ogg");
+	wwviaudio_read_ogg_clip(CHANGESCREEN_SOUND, "share/changescreen.ogg");
 	printf("Done.\n");
 }
 
