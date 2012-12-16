@@ -3686,6 +3686,7 @@ static void show_death_screen(GtkWidget *w)
 {
 	char buf[100];
 
+	gdk_gc_set_foreground(gc, &huex[RED]);
 	sprintf(buf, "YOUR SHIP");
 	abs_xy_draw_string(w, buf, BIG_FONT, 20, 150);
 	sprintf(buf, "HAS BEEN");
