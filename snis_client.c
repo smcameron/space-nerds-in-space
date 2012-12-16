@@ -4322,7 +4322,11 @@ static void show_debug(GtkWidget *w)
 
 	show_common_screen(w, "Debug");
 
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	if (go[my_ship_oid].alive > 0)
+		gdk_gc_set_foreground(gc, &huex[GREEN]);
+	else
+		gdk_gc_set_foreground(gc, &huex[RED]);
+
 	ix = SCREEN_WIDTH / 10.0;
 	for (x = 0; x <= 10; x++)
 		snis_draw_dotted_vline(w->window, gc, x * ix, 0, SCREEN_HEIGHT, 5);
@@ -4424,7 +4428,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 			my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
 		if (my_ship_oid == UNKNOWN_ID)
 			return 0;
-		if (go[my_ship_oid].alive <= 0) {
+		if (go[my_ship_oid].alive <= 0 && displaymode != DISPLAYMODE_DEBUG) {
 			show_death_screen(w);
 			return 0;
 		}
