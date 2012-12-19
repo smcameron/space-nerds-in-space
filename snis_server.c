@@ -289,7 +289,8 @@ static void torpedo_move(struct snis_entity *o)
 			continue;
 		if (o->alive >= TORPEDO_LIFETIME - 3)
 			continue;
-		if (go[i].type != OBJTYPE_SHIP1 && go[i].type != OBJTYPE_SHIP2)
+		if (go[i].type != OBJTYPE_SHIP1 && go[i].type != OBJTYPE_SHIP2 &&
+				go[i].type != OBJTYPE_STARBASE)
 			continue;
 		if (go[i].id == o->tsd.torpedo.ship_id)
 			continue; /* can't torpedo yourself. */
@@ -303,6 +304,12 @@ static void torpedo_move(struct snis_entity *o)
 		/* hit!!!! */
 		o->alive = 0;
 
+		if (go[i].type == OBJTYPE_STARBASE) {
+			go[i].tsd.starbase.under_attack = 1;
+			continue;
+		}
+
+		/* must be ship type */
 		calculate_torpedo_damage(&go[i]);
 		send_ship_damage_packet(go[i].id);
 
@@ -369,7 +376,8 @@ static void laser_move(struct snis_entity *o)
 			continue;
 		if (o->alive >= LASER_LIFETIME - 1)
 			continue;
-		if (go[i].type != OBJTYPE_SHIP1 && go[i].type != OBJTYPE_SHIP2)
+		if (go[i].type != OBJTYPE_SHIP1 && go[i].type != OBJTYPE_SHIP2 &&
+			go[i].type != OBJTYPE_STARBASE)
 			continue;
 		if (go[i].id == o->tsd.laser.ship_id)
 			continue; /* can't laser yourself. */
@@ -384,6 +392,12 @@ static void laser_move(struct snis_entity *o)
 		/* hit!!!! */
 		o->alive = 0;
 
+		if (go[i].type == OBJTYPE_STARBASE) {
+			go[i].tsd.starbase.under_attack = 1;
+			continue;
+		}
+
+		/* must be ship type */
 		calculate_laser_damage(&go[i], o->tsd.laser.wavelength);
 		send_ship_damage_packet(go[i].id);
 
@@ -396,7 +410,7 @@ static void laser_move(struct snis_entity *o)
 			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
 			if (go[i].type != OBJTYPE_SHIP1) {
 				snis_queue_delete_object(go[i].id);
-				snis_object_pool_free_object(pool, i);
+					snis_object_pool_free_object(pool, i);
 			}
 		} else {
 			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5);
@@ -774,12 +788,17 @@ static void send_comms_packet(char *str);
 static void starbase_move(struct snis_entity *o)
 {
 	char buf[100];
-	static int x;
+	int64_t then, now;
 	/* FIXME, fill this in. */
 
-	if (snis_randn(1000) < 200) {
-		x++;
-		sprintf(buf, "message from starbase %d", x);
+	then = o->tsd.starbase.last_time_called_for_help;
+	now = universe_timestamp;
+	if (o->tsd.starbase.under_attack &&
+		(then < now - 2000 || 
+		o->tsd.starbase.last_time_called_for_help == 0)) {
+		o->tsd.starbase.last_time_called_for_help = universe_timestamp;
+		sprintf(buf, "WE ARE UNDER ATTACK. LOCATION (%8.2lf %8.2lf), ltcfh=%u",
+			o->x, o->y, o->tsd.starbase.last_time_called_for_help);
 		send_comms_packet(buf);
 	}
 }
@@ -914,6 +933,8 @@ static int add_starbase(double x, double y, double vx, double vy, double heading
 		return i;
 	go[i].move = starbase_move;
 	go[i].type = OBJTYPE_STARBASE;
+	go[i].tsd.starbase.last_time_called_for_help = 0;
+	go[i].tsd.starbase.under_attack = 0;
 	return i;
 }
 
