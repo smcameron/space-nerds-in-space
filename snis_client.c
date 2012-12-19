@@ -1863,6 +1863,47 @@ static int process_update_netstats(void)
 	return 0;
 }
 
+struct text_window {
+	int x, y, w, h;
+	int font;
+	int total_lines;
+	int first_entry, last_entry;
+	int entry_count;
+	int top_line;
+	int visible_lines;
+	int current_line;
+	int displaymode;
+	int lineheight;
+	char **text;
+	GdkColor color;
+};
+
+struct comms_ui {
+	struct text_window tw;
+} comms_ui;
+
+static void add_text(struct text_window *tw, char *text);
+static int process_comm_transmission(void)
+{
+	char buffer[sizeof(struct comms_transmission_packet) + 100];
+	struct packed_buffer pb;
+	char string[256];
+	uint8_t length;
+	int rc;
+
+	rc = snis_readsocket(gameserver_sock, buffer,
+			sizeof(struct comms_transmission_packet) - sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "b", &length);
+	rc = snis_readsocket(gameserver_sock, string, length);
+	string[79] = '\0';
+	string[length] = '\0';
+	add_text(&comms_ui.tw, string);
+	return 0;
+}
+
 static int process_ship_damage_packet(void)
 {
 	char buffer[sizeof(struct ship_damage_packet)];
@@ -2081,6 +2122,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_POS_LASER:
 			break;
 		case OPCODE_NOOP:
+			break;
+		case OPCODE_COMMS_TRANSMISSION:
+			rc = process_comm_transmission();
+			if (rc)
+				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_NETSTATS:
 			rc = process_update_netstats();
@@ -3067,21 +3113,6 @@ static void add_button(struct button *b);
 /*
  * begin text box related functions/types
  */
-
-struct text_window {
-	int x, y, w, h;
-	int font;
-	int total_lines;
-	int first_entry, last_entry;
-	int entry_count;
-	int top_line;
-	int visible_lines;
-	int current_line;
-	int displaymode;
-	int lineheight;
-	char **text;
-	GdkColor color;
-};
 
 #define MAXTEXTWINDOWS 20
 static int ntextwindows = 0;
@@ -4095,10 +4126,6 @@ static void init_science_ui(void)
 				0.0, 100.0, sample_scizoom, do_scizoom, DISPLAYMODE_SCIENCE);
 	add_slider(&sci_ui.scizoom);
 }
-
-struct comms_ui {
-	struct text_window tw;
-} comms_ui;
 
 static void init_comms_ui(void)
 {

@@ -770,9 +770,18 @@ static void player_move(struct snis_entity *o)
 	o->tsd.ship.phaser_charge = update_phaser_banks(current_phaserbank, max_phaserbank);
 }
 
+static void send_comms_packet(char *str);
 static void starbase_move(struct snis_entity *o)
 {
+	char buf[100];
+	static int x;
 	/* FIXME, fill this in. */
+
+	if (snis_randn(1000) < 200) {
+		x++;
+		sprintf(buf, "message from starbase %d", x);
+		send_comms_packet(buf);
+	}
 }
 
 static void explosion_move(struct snis_entity *o)
@@ -1928,6 +1937,16 @@ static void send_ship_damage_packet(uint32_t id)
 	pb = packed_buffer_allocate(sizeof(struct ship_damage_packet));
 	packed_buffer_append(pb, "hwr", OPCODE_UPDATE_DAMAGE, id,
 		(char *) &go[id].tsd.ship.damage, (unsigned short) sizeof(go[id].tsd.ship.damage));
+	send_packet_to_all_clients(pb, ROLE_ALL);
+}
+
+static void send_comms_packet(char *str)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + 100);
+	packed_buffer_append(pb, "hb", OPCODE_COMMS_TRANSMISSION, (uint8_t) strlen(str) + 1);
+	packed_buffer_append_raw(pb, str, strlen(str) + 1);
 	send_packet_to_all_clients(pb, ROLE_ALL);
 }
 

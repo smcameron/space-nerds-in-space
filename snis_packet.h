@@ -66,6 +66,7 @@
 #define OPCODE_REQUEST_SHIELD 140
 #define OPCODE_UPDATE_RESPAWN_TIME 141
 #define OPCODE_UPDATE_NETSTATS 142
+#define OPCODE_COMMS_TRANSMISSION 143
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -318,6 +319,11 @@ struct netstats_packet {
 	uint64_t bytes_sent;
 	uint64_t bytes_recd;
 	uint32_t elapsed_seconds;
+};
+
+struct comms_transmission_packet {
+	uint16_t opcode;
+	uint8_t length;
 };
 
 #pragma pack()
