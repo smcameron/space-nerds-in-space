@@ -3229,6 +3229,7 @@ static void text_window_draw(GtkWidget *w, struct text_window *tw)
 	for (i = tw->top_line;
 		j < tw->visible_lines && j < text_window_entry_count(tw);
 		i = (i + 1) % tw->total_lines) {
+			int len = strlen(tw->text[i]);
 
 			if (!tw->print_slowly || i != tw->last_entry -1) {
 				abs_xy_draw_string(w, tw->text[i], tw->font, tw->x + 10,
@@ -3236,9 +3237,17 @@ static void text_window_draw(GtkWidget *w, struct text_window *tw)
 			} else {
 				char tmpbuf[100];	
 				strncpy(tmpbuf, tw->text[i], 99);
-				if (tw->printing_pos < 99) {
-					tmpbuf[tw->printing_pos] = '\0';
+				if (tw->printing_pos < len - 1) {
+					if (((timer >> 2) & 1) == 0) {
+						tmpbuf[tw->printing_pos] = '_';
+						tmpbuf[tw->printing_pos + 1] = '\0';
+					} else {
+						tmpbuf[tw->printing_pos] = '\0';
+					}
 					tw->printing_pos++;
+				} else {
+					if (((timer >> 2) & 0x01) == 0) 
+						strcat(tmpbuf, "_");
 				}
 				abs_xy_draw_string(w, tmpbuf, tw->font, tw->x + 10,
 						tw->y + j * tw->lineheight + tw->lineheight);
