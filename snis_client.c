@@ -1868,12 +1868,11 @@ struct text_window {
 	int font;
 	int total_lines;
 	int first_entry, last_entry;
-	int entry_count;
 	int top_line;
 	int visible_lines;
-	int current_line;
 	int displaymode;
 	int lineheight;
+	int thumb_pos;
 	char **text;
 	GdkColor color;
 };
@@ -3126,23 +3125,32 @@ static void add_textwindow(struct text_window *tw)
 	ntextwindows++;
 }
 
+static int text_window_entry_count(struct text_window *tw)
+{
+	int rc;
+
+	rc = tw->last_entry - tw->first_entry + 1;
+	if (rc <= 0)
+		rc += tw->total_lines;
+	return rc;
+}
+
 static void add_text(struct text_window *tw, char *text)
 {
-	strncpy(tw->text[tw->current_line], text, 79);
-	tw->current_line = (tw->current_line + 1) % tw->total_lines;
-	if (tw->entry_count == tw->total_lines) {
-		tw->first_entry = (tw->first_entry + 1) % tw->total_lines;
-	} else {
-		tw->entry_count++;
-	}
+	strncpy(tw->text[tw->last_entry], text, 79);
 	tw->last_entry = (tw->last_entry + 1) % tw->total_lines;
-	tw->current_line = tw->last_entry;
-	if (tw->visible_lines > tw->entry_count)
-		tw->top_line = tw->current_line - tw->entry_count; 
+	if (tw->last_entry == tw->first_entry)
+		tw->first_entry = (tw->first_entry + 1) % tw->total_lines;
+	if (tw->visible_lines > text_window_entry_count(tw))
+		tw->top_line = tw->last_entry - text_window_entry_count(tw); 
 	else
-		tw->top_line = tw->current_line - tw->visible_lines; 
+		tw->top_line = tw->last_entry - tw->visible_lines; 
 	if (tw->top_line < 0)
 		tw->top_line += tw->total_lines;
+#if 0
+	printf("top = %d, f=%d l=%d, c=%d\n", tw->top_line, tw->first_entry, tw->last_entry,
+			text_window_entry_count(tw));
+#endif
 }
 
 static void text_window_init(struct text_window *tw, int x, int y, int w,
@@ -3154,7 +3162,6 @@ static void text_window_init(struct text_window *tw, int x, int y, int w,
 	tw->x = x;
 	tw->y = y;
 	tw->w = w;
-	tw->entry_count = 0;
 	tw->total_lines = total_lines;
 	tw->visible_lines = visible_lines;
 	tw->displaymode = displaymode;
@@ -3165,7 +3172,6 @@ static void text_window_init(struct text_window *tw, int x, int y, int w,
 		memset(tw->text[i], 0, 80);
 	}
 	tw->lineheight = 20;
-	tw->current_line = 0;
 	tw->last_entry = 0;
 	tw->top_line = 0;
 	tw->h = tw->lineheight * tw->visible_lines + 10;
@@ -3174,20 +3180,53 @@ static void text_window_init(struct text_window *tw, int x, int y, int w,
 
 static void text_window_draw(GtkWidget *w, struct text_window *tw)
 {
-	int i, j, last_line;
+	int i, j;
+	int thumb_pos, thumb_top, thumb_bottom, twec;
 
 	gdk_gc_set_foreground(gc, &tw->color);
+	/* draw outer rectangle */
 	current_draw_rectangle(w->window, gc, 0, tw->x, tw->y, tw->w, tw->h);
+	/* draw scroll bar */
+	current_draw_rectangle(w->window, gc, 0, tw->x + tw->w - 15, tw->y + 5, 10, tw->h - 10);
 
-	if (tw->entry_count < tw->visible_lines)
-		last_line = (tw->top_line + tw->entry_count) % tw->total_lines;
-	else
-		last_line = (tw->top_line + tw->visible_lines) % tw->total_lines;
+	twec = text_window_entry_count(tw);
+	if (twec == 0) {
+		thumb_pos = 0;
+		thumb_top = tw->y + 5;
+		thumb_bottom = tw->y + tw->h - 10;
+	} else {
+		float f;
+		/* figure which line the thumb pos is on. */
+		thumb_pos = (tw->top_line + (tw->visible_lines / 2) - tw->first_entry) % tw->total_lines;
+		if (thumb_pos < 0)
+			thumb_pos += tw->total_lines;
+		/* figure where that is on the screen */
+		f = (float) thumb_pos / (float) text_window_entry_count(tw);
+		thumb_pos = (int) (f * tw->h) + tw->y;
+		thumb_top = (int) (((float) (tw->visible_lines / 2.0) / (float) twec) * 
+				-tw->lineheight * tw->visible_lines + thumb_pos);
+		if (thumb_top < tw->y + 5)
+			thumb_top = tw->y + 5;
+		thumb_bottom = (int) (((float) (tw->visible_lines / 2.0) / (float) twec) * 
+				tw->lineheight * tw->visible_lines + thumb_pos);
+		if (thumb_bottom > tw->y + tw->h - 10)
+			thumb_bottom = tw->y + tw->h - 10;
+			
+	}
+	current_draw_rectangle(w->window, gc, 0,
+			tw->x + tw->w - 13, thumb_pos - tw->lineheight / 2,
+			6, tw->lineheight);
+	current_draw_rectangle(w->window, gc, 0,
+			tw->x + tw->w - 11, thumb_top,
+			2, thumb_bottom - thumb_top);
+
 	j = 0;
-	for (i = tw->top_line; i != last_line; i = (i + 1) % tw->total_lines) {
-		abs_xy_draw_string(w, tw->text[i], tw->font, tw->x + 10,
+	for (i = tw->top_line;
+		j < tw->visible_lines && j < text_window_entry_count(tw);
+		i = (i + 1) % tw->total_lines) {
+			abs_xy_draw_string(w, tw->text[i], tw->font, tw->x + 10,
 					tw->y + j * tw->lineheight + tw->lineheight);
-		j++;
+			j++;
 	}
 }
 
