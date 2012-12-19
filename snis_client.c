@@ -4171,9 +4171,6 @@ static void init_comms_ui(void)
 	text_window_init(&comms_ui.tw, 5, 5, SCREEN_WIDTH - 10,
 			40, 20, DISPLAYMODE_COMMS, &huex[GREEN]);
 	add_textwindow(&comms_ui.tw);
-	add_text(&comms_ui.tw, "SOME TEST TEXT");
-	add_text(&comms_ui.tw, "SOME MORE TEST TEXT");
-	add_text(&comms_ui.tw, "EVEN MORE TEST TEXT");
 }
 
 #define SCIDIST2 100
