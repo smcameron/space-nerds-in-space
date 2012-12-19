@@ -1873,6 +1873,8 @@ struct text_window {
 	int displaymode;
 	int lineheight;
 	int thumb_pos;
+	int print_slowly;
+	int printing_pos;
 	char **text;
 	GdkColor color;
 };
@@ -3151,6 +3153,7 @@ static void add_text(struct text_window *tw, char *text)
 	printf("top = %d, f=%d l=%d, c=%d\n", tw->top_line, tw->first_entry, tw->last_entry,
 			text_window_entry_count(tw));
 #endif
+	tw->printing_pos = 0;
 }
 
 static void text_window_init(struct text_window *tw, int x, int y, int w,
@@ -3176,6 +3179,8 @@ static void text_window_init(struct text_window *tw, int x, int y, int w,
 	tw->top_line = 0;
 	tw->h = tw->lineheight * tw->visible_lines + 10;
 	tw->font = TINY_FONT;
+	tw->print_slowly = 1;
+	tw->printing_pos = 0;
 }
 
 static void text_window_draw(GtkWidget *w, struct text_window *tw)
@@ -3224,8 +3229,20 @@ static void text_window_draw(GtkWidget *w, struct text_window *tw)
 	for (i = tw->top_line;
 		j < tw->visible_lines && j < text_window_entry_count(tw);
 		i = (i + 1) % tw->total_lines) {
-			abs_xy_draw_string(w, tw->text[i], tw->font, tw->x + 10,
-					tw->y + j * tw->lineheight + tw->lineheight);
+
+			if (!tw->print_slowly || i != tw->last_entry -1) {
+				abs_xy_draw_string(w, tw->text[i], tw->font, tw->x + 10,
+						tw->y + j * tw->lineheight + tw->lineheight);
+			} else {
+				char tmpbuf[100];	
+				strncpy(tmpbuf, tw->text[i], 99);
+				if (tw->printing_pos < 99) {
+					tmpbuf[tw->printing_pos] = '\0';
+					tw->printing_pos++;
+				}
+				abs_xy_draw_string(w, tmpbuf, tw->font, tw->x + 10,
+						tw->y + j * tw->lineheight + tw->lineheight);
+			}
 			j++;
 	}
 }
