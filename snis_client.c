@@ -3065,6 +3065,116 @@ static void button_init(struct button *b, int x, int y, int width, int height, c
 static void add_button(struct button *b);
 
 /*
+ * begin text box related functions/types
+ */
+
+struct text_window {
+	int x, y, w, h;
+	int font;
+	int total_lines;
+	int first_entry, last_entry;
+	int entry_count;
+	int top_line;
+	int visible_lines;
+	int current_line;
+	int displaymode;
+	int lineheight;
+	char **text;
+	GdkColor color;
+};
+
+#define MAXTEXTWINDOWS 20
+static int ntextwindows = 0;
+static struct text_window *textwindowlist[MAXTEXTWINDOWS];
+
+static void add_textwindow(struct text_window *tw)
+{
+	if (ntextwindows >= MAXTEXTWINDOWS)
+		return;
+	textwindowlist[ntextwindows] = tw;
+	ntextwindows++;
+}
+
+static void add_text(struct text_window *tw, char *text)
+{
+	strncpy(tw->text[tw->current_line], text, 79);
+	tw->current_line = (tw->current_line + 1) % tw->total_lines;
+	if (tw->entry_count == tw->total_lines) {
+		tw->first_entry = (tw->first_entry + 1) % tw->total_lines;
+	} else {
+		tw->entry_count++;
+	}
+	tw->last_entry = (tw->last_entry + 1) % tw->total_lines;
+	tw->current_line = tw->last_entry;
+	if (tw->visible_lines > tw->entry_count)
+		tw->top_line = tw->current_line - tw->entry_count; 
+	else
+		tw->top_line = tw->current_line - tw->visible_lines; 
+	if (tw->top_line < 0)
+		tw->top_line += tw->total_lines;
+}
+
+static void text_window_init(struct text_window *tw, int x, int y, int w,
+			int total_lines, int visible_lines, int displaymode,
+			GdkColor *color)
+{
+	int i;
+
+	tw->x = x;
+	tw->y = y;
+	tw->w = w;
+	tw->entry_count = 0;
+	tw->total_lines = total_lines;
+	tw->visible_lines = visible_lines;
+	tw->displaymode = displaymode;
+	tw->color = *color;
+	tw->text = malloc(sizeof(*tw) * total_lines);
+	for (i = 0; i < total_lines; i++) {
+		tw->text[i] = malloc(80);
+		memset(tw->text[i], 0, 80);
+	}
+	tw->lineheight = 20;
+	tw->current_line = 0;
+	tw->last_entry = 0;
+	tw->top_line = 0;
+	tw->h = tw->lineheight * tw->visible_lines + 10;
+	tw->font = TINY_FONT;
+}
+
+static void text_window_draw(GtkWidget *w, struct text_window *tw)
+{
+	int i, j, last_line;
+
+	gdk_gc_set_foreground(gc, &tw->color);
+	current_draw_rectangle(w->window, gc, 0, tw->x, tw->y, tw->w, tw->h);
+
+	if (tw->entry_count < tw->visible_lines)
+		last_line = (tw->top_line + tw->entry_count) % tw->total_lines;
+	else
+		last_line = (tw->top_line + tw->visible_lines) % tw->total_lines;
+	j = 0;
+	for (i = tw->top_line; i != last_line; i = (i + 1) % tw->total_lines) {
+		abs_xy_draw_string(w, tw->text[i], tw->font, tw->x + 10,
+					tw->y + j * tw->lineheight + tw->lineheight);
+		j++;
+	}
+}
+
+static void draw_textwindows(GtkWidget *w)
+{
+	int i;
+
+	for (i = 0; i < ntextwindows; i++)
+		if (textwindowlist[i]->displaymode == displaymode)
+			text_window_draw(w, textwindowlist[i]);
+}
+
+/*
+ * end text box related functions/types
+ */
+
+
+/*
  * begin slider related functions/types
  */
 
@@ -3986,6 +4096,20 @@ static void init_science_ui(void)
 	add_slider(&sci_ui.scizoom);
 }
 
+struct comms_ui {
+	struct text_window tw;
+} comms_ui;
+
+static void init_comms_ui(void)
+{
+	text_window_init(&comms_ui.tw, 5, 5, SCREEN_WIDTH - 10,
+			40, 20, DISPLAYMODE_COMMS, &huex[GREEN]);
+	add_textwindow(&comms_ui.tw);
+	add_text(&comms_ui.tw, "SOME TEST TEXT");
+	add_text(&comms_ui.tw, "SOME MORE TEST TEXT");
+	add_text(&comms_ui.tw, "EVEN MORE TEST TEXT");
+}
+
 #define SCIDIST2 100
 static int science_button_press(int x, int y)
 {
@@ -4291,7 +4415,7 @@ static void show_science(GtkWidget *w)
 
 static void show_comms(GtkWidget *w)
 {
-	show_common_screen(w, "Comms");
+	/* show_common_screen(w, "Comms"); */
 }
 
 static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
@@ -4497,6 +4621,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	}
 	draw_sliders(w);
 	draw_buttons(w);
+	draw_textwindows(w);
 	return 0;
 }
 
@@ -4787,6 +4912,7 @@ int main(int argc, char *argv[])
 	init_engineering_ui();
 	init_weapons_ui();
 	init_science_ui();
+	init_comms_ui();
 
 	gtk_main ();
         wwviaudio_cancel_all_sounds();
