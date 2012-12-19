@@ -159,6 +159,7 @@ struct starbase_data {
 	uint32_t sheilds;
 	uint8_t under_attack;
 	uint32_t last_time_called_for_help;
+	char name[16];
 };
 
 struct laser_data {

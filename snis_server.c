@@ -784,7 +784,7 @@ static void player_move(struct snis_entity *o)
 	o->tsd.ship.phaser_charge = update_phaser_banks(current_phaserbank, max_phaserbank);
 }
 
-static void send_comms_packet(char *str);
+static void send_comms_packet(char *sender, char *str);
 static void starbase_move(struct snis_entity *o)
 {
 	char buf[100];
@@ -797,9 +797,10 @@ static void starbase_move(struct snis_entity *o)
 		(then < now - 2000 || 
 		o->tsd.starbase.last_time_called_for_help == 0)) {
 		o->tsd.starbase.last_time_called_for_help = universe_timestamp;
-		sprintf(buf, "WE ARE UNDER ATTACK. LOCATION (%8.2lf %8.2lf), ltcfh=%u",
-			o->x, o->y, o->tsd.starbase.last_time_called_for_help);
-		send_comms_packet(buf);
+		// printf("starbase name = '%s'\n", o->tsd.starbase.name);
+		send_comms_packet(o->tsd.starbase.name, "WE ARE UNDER ATTACK");
+		sprintf(buf, "    LOCATION (%8.2lf %8.2lf)", o->x, o->y);
+		send_comms_packet(o->tsd.starbase.name, buf);
 	}
 }
 
@@ -924,7 +925,7 @@ static int add_planet(double x, double y, double vx, double vy, double heading)
 	return i;
 }
 
-static int add_starbase(double x, double y, double vx, double vy, double heading)
+static int add_starbase(double x, double y, double vx, double vy, double heading, int n)
 {
 	int i;
 
@@ -935,6 +936,7 @@ static int add_starbase(double x, double y, double vx, double vy, double heading
 	go[i].type = OBJTYPE_STARBASE;
 	go[i].tsd.starbase.last_time_called_for_help = 0;
 	go[i].tsd.starbase.under_attack = 0;
+	sprintf(go[i].tsd.starbase.name, "SB-%02d", n);
 	return i;
 }
 
@@ -1001,7 +1003,7 @@ static void __attribute__((unused)) add_starbases(void)
 	for (i = 0; i < NBASES; i++) {
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
 		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
-		add_starbase(x, y, 0.0, 0.0, 0.0);
+		add_starbase(x, y, 0.0, 0.0, 0.0, i);
 	}
 }
 
@@ -1961,13 +1963,15 @@ static void send_ship_damage_packet(uint32_t id)
 	send_packet_to_all_clients(pb, ROLE_ALL);
 }
 
-static void send_comms_packet(char *str)
+static void send_comms_packet(char *sender, char *str)
 {
 	struct packed_buffer *pb;
+	char tmpbuf[100];
 
+	snprintf(tmpbuf, 99, "%s: %s", sender, str);
 	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + 100);
-	packed_buffer_append(pb, "hb", OPCODE_COMMS_TRANSMISSION, (uint8_t) strlen(str) + 1);
-	packed_buffer_append_raw(pb, str, strlen(str) + 1);
+	packed_buffer_append(pb, "hb", OPCODE_COMMS_TRANSMISSION, (uint8_t) strlen(tmpbuf) + 1);
+	packed_buffer_append_raw(pb, tmpbuf, strlen(tmpbuf) + 1);
 	send_packet_to_all_clients(pb, ROLE_ALL);
 }
 
