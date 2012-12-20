@@ -45,6 +45,7 @@
 #include "sounds.h"
 #include "names.h"
 #include "shield_strength.h"
+#include "starbase-comms.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
@@ -798,7 +799,7 @@ static void starbase_move(struct snis_entity *o)
 		o->tsd.starbase.last_time_called_for_help == 0)) {
 		o->tsd.starbase.last_time_called_for_help = universe_timestamp;
 		// printf("starbase name = '%s'\n", o->tsd.starbase.name);
-		send_comms_packet(o->tsd.starbase.name, "WE ARE UNDER ATTACK");
+		send_comms_packet(o->tsd.starbase.name, starbase_comm_under_attack());
 		sprintf(buf, "    LOCATION (%8.2lf %8.2lf)", o->x, o->y);
 		send_comms_packet(o->tsd.starbase.name, buf);
 	}

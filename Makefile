@@ -21,7 +21,7 @@ endif
 
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o
-SERVEROBJS=${COMMONOBJS} snis_server.o names.o
+SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_client.o snis_font.o
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm
@@ -52,7 +52,7 @@ wwviaudio.o:    wwviaudio.c wwviaudio.h ogg_to_pcm.h my_point.h Makefile
 shield_strength.o:	shield_strength.c shield_strength.h
 	gcc ${MYCFLAGS} -c shield_strength.c
 
-snis_server.o:	snis.h snis_server.c snis_packet.h snis_marshal.h sounds.h
+snis_server.o:	snis.h snis_server.c snis_packet.h snis_marshal.h sounds.h starbase-comms.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_server.c
 
 snis_client.o:	snis.h snis_client.c snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h
@@ -78,6 +78,9 @@ snis_server:	${SERVEROBJS} ${SSGL}
 
 snis_client:	${CLIENTOBJS} ${SSGL}
 	gcc ${MYCFLAGS} ${SNDFLAGS} -o snis_client ${GTKCFLAGS}  ${CLIENTOBJS} ${GTKLDFLAGS} ${LIBS} ${SNDLIBS}
+
+starbase-comms.o:	starbase-comms.h starbase-comms.c
+	gcc ${MYCFLAGS} ${GTKCFLAGS} -c starbase-comms.c
 
 ${SSGL}:
 	(cd ssgl ; make )
