@@ -375,8 +375,6 @@ static void laser_move(struct snis_entity *o)
 			continue;
 		if (i == o->index)
 			continue;
-		if (o->alive >= LASER_LIFETIME - 1)
-			continue;
 		if (go[i].type != OBJTYPE_SHIP1 && go[i].type != OBJTYPE_SHIP2 &&
 			go[i].type != OBJTYPE_STARBASE)
 			continue;
@@ -385,7 +383,8 @@ static void laser_move(struct snis_entity *o)
 		/* dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
 			((go[i].y - o->y) * (go[i].y - o->y)); */
 
-		if (!laser_point_collides(o->x, o->y, o->x - o->vx, o->y - o->vy, go[i].x, go[i].y))
+		if (!laser_point_collides(o->x + o->vx, o->y + o->vy, o->x - o->vx, o->y - o->vy,
+						go[i].x, go[i].y))
 		/* if (dist2 > LASER_DETONATE_DIST2) */
 			continue; /* not close enough */
 
