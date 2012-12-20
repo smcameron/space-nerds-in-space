@@ -1799,8 +1799,10 @@ static int process_sci_select_target_packet(void)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	i = lookup_object_by_id(id);
-	if (i >= 0)
+	if (i >= 0) {
 		curr_science_guy = &go[i];
+		wwviaudio_add_sound(SCIENCE_DATA_ACQUIRED_SOUND);
+	}
 	return 0;
 }
 
@@ -4856,6 +4858,7 @@ static void read_sound_clips(void)
 	wwviaudio_read_ogg_clip(OFFSCREEN_SOUND, "share/offscreen.ogg");
 	wwviaudio_read_ogg_clip(CHANGESCREEN_SOUND, "share/changescreen.ogg");
 	wwviaudio_read_ogg_clip(SLIDER_SOUND, "share/slider-noise.ogg");
+	wwviaudio_read_ogg_clip(SCIENCE_DATA_ACQUIRED_SOUND, "share/science-data-acquired.ogg");
 	printf("Done.\n");
 }
 
