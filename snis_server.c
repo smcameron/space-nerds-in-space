@@ -46,6 +46,7 @@
 #include "names.h"
 #include "shield_strength.h"
 #include "starbase-comms.h"
+#include "infinite-taunt.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
@@ -457,6 +458,37 @@ static int find_nearest_victim(struct snis_entity *o)
 	return victim;
 }
 
+static void send_comms_packet(char *sender, char *str);
+static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
+{
+	char buffer[1000];
+	char tmpbuf[50];
+	int last_space = 0;
+	int i, bytes_so_far = 0;
+	char *start = buffer;
+	
+	infinite_taunt(buffer, sizeof(buffer) - 1);
+
+	for (i = 0; buffer[i]; i++) {
+		buffer[i] = toupper(buffer[i]);
+		if (buffer[i] == ' ')
+			last_space = bytes_so_far;
+		bytes_so_far++;
+		if (last_space > 28) {
+			strncpy(tmpbuf, start, bytes_so_far);
+			tmpbuf[bytes_so_far] = '\0';
+			send_comms_packet(alien->sdata.name, tmpbuf);
+			start = &buffer[i];
+			bytes_so_far = 0;
+			last_space = 0;
+		}
+	}
+	if (bytes_so_far > 0) {
+		strcpy(tmpbuf, start);
+		send_comms_packet(alien->sdata.name, tmpbuf);
+	}
+}
+
 static int add_torpedo(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
 static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
 static uint8_t update_phaser_banks(int current, int max);
@@ -557,10 +589,10 @@ static void ship_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 
 	if (close_enough && o->tsd.ship.victim != (uint32_t) -1) {
+		v = &go[o->tsd.ship.victim];
 		if (snis_randn(1000) < 25) {
 			double vx, vy, angle;
 
-			v = &go[o->tsd.ship.victim];
 			angle = atan2(v->x - o->x, v->y - o->y);
 			vx = TORPEDO_VELOCITY * sin(angle);
 			vy = TORPEDO_VELOCITY * cos(angle);
@@ -569,13 +601,14 @@ static void ship_move(struct snis_entity *o)
 			if (snis_randn(1000) < 25) {
 				double vx, vy, angle;
 
-				v = &go[o->tsd.ship.victim];
 				angle = atan2(v->x - o->x, v->y - o->y);
 				vx = LASER_VELOCITY * sin(angle);
 				vy = LASER_VELOCITY * cos(angle);
 				add_laser(o->x, o->y, vx, vy, o->heading, o->id);
 			}
 		}
+		if (v->type == OBJTYPE_SHIP1 && snis_randn(1000) < 25)
+			taunt_player(o, v);
 	}
 	o->tsd.ship.phaser_charge = update_phaser_banks(o->tsd.ship.phaser_charge, 255);
 	if (o->sdata.shield_strength > (255 - o->tsd.ship.damage.shield_damage))
@@ -784,7 +817,6 @@ static void player_move(struct snis_entity *o)
 	o->tsd.ship.phaser_charge = update_phaser_banks(current_phaserbank, max_phaserbank);
 }
 
-static void send_comms_packet(char *sender, char *str);
 static void starbase_move(struct snis_entity *o)
 {
 	char buf[100];

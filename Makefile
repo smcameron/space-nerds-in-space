@@ -21,7 +21,7 @@ endif
 
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o
-SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o
+SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_client.o snis_font.o
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm
@@ -81,6 +81,12 @@ snis_client:	${CLIENTOBJS} ${SSGL}
 
 starbase-comms.o:	starbase-comms.h starbase-comms.c
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c starbase-comms.c
+
+infinite-taunt.o:	infinite-taunt.h infinite-taunt.c
+	gcc ${MYCFLAGS} ${GTKCFLAGS} -c infinite-taunt.c
+
+infinite-taunt:	infinite-taunt.c infinite-taunt.h
+	gcc -DTEST_TAUNT -o infinite-taunt ${MYCFLAGS} ${GTKCFLAGS} infinite-taunt.c
 
 ${SSGL}:
 	(cd ssgl ; make )
