@@ -9,9 +9,9 @@ static char *You[] = {
 	"your technology",
 	"your mother",
 	"your father",
-	"your engineers",
-	"your weapons officers",
-	"your scientists",
+	"your engineer",
+	"your weapons officer",
+	"your scientist",
 	"you humans",
 	"your sister",
 	"your captain",
@@ -35,6 +35,15 @@ static char *You[] = {
 	"your spacefaring scrap heap",
 	"your spacegoing garbage heap",
 	"your spacefaring contraption",
+};
+
+static char *Are[] = {
+	"are",
+	"is",
+	"be",
+	"are being",
+	"was",
+	"are one of those",
 };
 
 static char *Action[] = {
@@ -74,6 +83,9 @@ static char *Action[] = {
 	"thinks",
 	"cogitates",
 	"snorks",
+	"swoggs",
+	"kniddles",
+	"kones",
 	"drools",
 	"twitches",
 	"will burn",
@@ -208,9 +220,14 @@ static char *Adjective[] = {
 	"timid",
 	"terrified",
 	"startled",
-	"bullet riddled",
-	"laser sliced",
+	"rotten",
 	"crying",
+	"decayed",
+	"old",
+	"slime covered",
+	"slime encrusted",
+	"slimy",
+	"bug infested",
 	};
 
 static char *Nationality[] = {
@@ -290,6 +307,7 @@ static char *Beast[] = {
 	"space hobo",
 	"space vagrant",
 	"space bum",
+	"space butt",
 	"space slug",
 	"space beetle",
 	"beetle",
@@ -310,6 +328,40 @@ static char *Beast[] = {
 	"asteroid miner",
 	"outer planet dweller",
 	"garbage dweller",
+	"buttless normal"
+};
+
+static char *Bad_thing[] = {
+	"moron",
+	"butthead",
+	"buttface",
+	"butt crack",
+	"idiot",
+	"fool",
+	"joke",
+	"space garbage",
+	"rocks for brains",
+	"Borgon",
+	"simpleton",	
+	"outer rim planet dweller",
+	"Terran",
+	"Earthling",
+	"crazy Kroznor",
+	"dogulent dog",
+	"horkbeast",
+	"wormatozoa",
+	"skuggulorp",
+	"forpulous driggotron",
+	"space refuse",
+	"ejected garbage capsule",
+	"dung beast",
+	"source of stink",
+	"stinkbeast larvae",
+	"vornalox eggs",
+	"olfactory offender",
+	"nobbett seed",
+	"horkbeast seed",
+	"artist",
 };
 
 #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -352,11 +404,59 @@ static char *nationality()
 	return random_word(Nationality, ARRAYSIZE(Nationality));
 }
 
-void infinite_taunt(char *buffer, int buflen)
+static char *are()
 {
+	return random_word(Are, ARRAYSIZE(Are));
+}
 
+static char *bad_thing()
+{
+	return random_word(Bad_thing, ARRAYSIZE(Bad_thing));
+}
+
+void infinite_taunt0(char *buffer, int buflen)
+{
+	snprintf(buffer, buflen, "%s %s %s %s %s",
+			you(), action(), like(), adjective(), beast());
+}
+
+void infinite_taunt1(char *buffer, int buflen)
+{
 	snprintf(buffer, buflen, "%s %s %s %s %s %s",
 			you(), action(), like(), adjective(), nationality(), beast());
+}
+
+void infinite_taunt2(char *buffer, int buflen)
+{
+	snprintf(buffer, buflen, "%s %s %s %s",
+			you(), are(), adjective(), bad_thing());
+}
+
+void infinite_taunt3(char *buffer, int buflen)
+{
+	snprintf(buffer, buflen, "%s %s %s %s %s",
+			you(), are(), adjective(), nationality(), bad_thing());
+}
+
+void infinite_taunt(char *buffer, int buflen)
+{
+	switch(rand() % 4) {
+	case 0:
+		infinite_taunt0(buffer, buflen);
+		break;
+	case 1:
+		infinite_taunt1(buffer, buflen);
+		break;
+	case 2:
+		infinite_taunt2(buffer, buflen);
+		break;
+	case 3:
+		infinite_taunt3(buffer, buflen);
+		break;
+	default:
+		infinite_taunt1(buffer, buflen);
+		break;
+	}
 }
 
 #ifdef TEST_TAUNT
@@ -376,8 +476,8 @@ int main(int argc, char *argv[])
 
 	set_random_seed();
 
-	for (i = 0; i < 10; i++) {
-		taunt(buffer, sizeof(buffer) - 1);
+	for (i = 0; i < 1000; i++) {
+		infinite_taunt(buffer, sizeof(buffer) - 1);
 		printf("%s\n", buffer);
 	}
 	return 0;
