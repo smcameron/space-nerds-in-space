@@ -88,6 +88,9 @@ infinite-taunt.o:	infinite-taunt.h infinite-taunt.c
 infinite-taunt:	infinite-taunt.c infinite-taunt.h
 	gcc -DTEST_TAUNT -o infinite-taunt ${MYCFLAGS} ${GTKCFLAGS} infinite-taunt.c
 
+names:	names.h names.c
+	gcc -DTEST_NAMES -o names ${MYCFLAGS} ${GTKCFLAGS} names.c
+
 ${SSGL}:
 	(cd ssgl ; make )
 

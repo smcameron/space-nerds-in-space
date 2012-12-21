@@ -2,6 +2,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "names.h"
+#include <stdio.h>
 
 static char *vowel[] = {
 	"a",
@@ -12,26 +13,18 @@ static char *vowel[] = {
 };
 
 static char *consonant[] = {
-	"b", "c", "ch", "d", "f", "g", "h", "i", "j", "k", "l", "m", "n", "p", "qu", "r", "s",
-	"t", "v", "w", "x", "y", "z", "gh", "kh", "ph", "rh", "sh", "th", "sp", "wh", "zh", "st",
-	"en", "in", "er", "ss", "bb", "mm", "nn", "kn", "ts", "xx", "ll", "ff", "pp", 
+	"b", "ch", "d", "f", "g", "j", "k", "l", "m", "n", "p", "r", "s",
+	"t", "v", "x", "z", "ph", "sh", "th", "sp", "st",
 };
 
 static char *pattern[] = {
-	"vcvce",
+	"vcvc",
 	"cvcvc",
-	"cvcv"
+	"cvcv",
 	"vcv",
-	"vcvvc"
-	"cvvcv",
-	"cvcvcvc",
-	"cvcvvc",
-	"vvcv",
-	"cvcvv",
-	"vcvvcvc",
-	"vcvcvcvc",
-	"cvvcvc",
 	"cvc",
+	"cvv",
+	"cvcvv",
 };
 
 #define ARRAYSIZE(x) (sizeof(x) / (sizeof(x[0])))
@@ -47,7 +40,7 @@ static void append_stuff(char *s, char *a[], int asize)
 char *random_name(void)
 {
 	char *i;
-	int  p, v, c;
+	int  p;
 	char *result;
 
 	result = malloc(100);
@@ -59,13 +52,14 @@ char *random_name(void)
 			append_stuff(result, vowel, ARRAYSIZE(vowel));
 		else
 			append_stuff(result, consonant, ARRAYSIZE(consonant));
+		/* printf("zzz result = %s, pattern = %s, *i = %c\n", result, pattern[p], *i); */
 	}
 	for (i = result; *i; i++)
 		*i = toupper(*i);
 	return result;
 }
 
-#if 0
+#ifdef TEST_NAMES 
 #include <stdio.h>
 int main(int argc, char *argv[])
 {
