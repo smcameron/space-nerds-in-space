@@ -3948,12 +3948,12 @@ static void show_weapons(GtkWidget *w)
 	if (my_ship_oid == UNKNOWN_ID)
 		return;
 	o = &go[my_ship_oid];
-	sprintf(buf, "Photon Torpedoes: %03d", o->tsd.ship.torpedoes);
-	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
-	sprintf(buf, "Torpedoes Loaded: %03d", o->tsd.ship.torpedoes_loaded);
-	abs_xy_draw_string(w, buf, TINY_FONT, 250, 30 + LINEHEIGHT);
-	sprintf(buf, "Torpedoes Loading: %03d", o->tsd.ship.torpedoes_loading);
-	abs_xy_draw_string(w, buf, TINY_FONT, 250, 50 + LINEHEIGHT);
+	sprintf(buf, "PHOTON TORPEDOES: %03d", o->tsd.ship.torpedoes);
+	abs_xy_draw_string(w, buf, NANO_FONT, 250, 15);
+	sprintf(buf, "TORPEDOES LOADED: %03d", o->tsd.ship.torpedoes_loaded);
+	abs_xy_draw_string(w, buf, NANO_FONT, 250, 15 + 0.5 * LINEHEIGHT);
+	sprintf(buf, "TORPEDOES LOADING: %03d", o->tsd.ship.torpedoes_loading);
+	abs_xy_draw_string(w, buf, NANO_FONT, 250, 15 + LINEHEIGHT);
 /*
 	sprintf(buf, "vx: %5.2lf", o->vx);
 	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
