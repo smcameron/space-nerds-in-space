@@ -3247,6 +3247,7 @@ static void text_window_draw(GtkWidget *w, struct text_window *tw)
 						tmpbuf[tw->printing_pos] = '\0';
 					}
 					tw->printing_pos++;
+					wwviaudio_add_sound(TTY_CHATTER_SOUND);
 				} else {
 					if (((timer >> 2) & 0x01) == 0) 
 						strcat(tmpbuf, "_");
@@ -4862,6 +4863,7 @@ static void read_sound_clips(void)
 	wwviaudio_read_ogg_clip(SLIDER_SOUND, "share/slider-noise.ogg");
 	wwviaudio_read_ogg_clip(SCIENCE_DATA_ACQUIRED_SOUND, "share/science-data-acquired.ogg");
 	wwviaudio_read_ogg_clip(SCIENCE_PROBE_SOUND, "share/science-probe.ogg");
+	wwviaudio_read_ogg_clip(TTY_CHATTER_SOUND, "share/tty-chatter.ogg");
 	printf("Done.\n");
 }
 
