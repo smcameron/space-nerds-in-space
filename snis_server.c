@@ -820,9 +820,31 @@ static void player_move(struct snis_entity *o)
 	o->tsd.ship.phaser_charge = update_phaser_banks(current_phaserbank, max_phaserbank);
 }
 
+static void coords_to_location_string(double x, double y, char *buffer, int buflen)
+{
+	int sectorx, sectory;
+	static char *military_alphabet[] = {
+		"ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO",
+		"FOXTROT", "GOLF", "HOTEL", "INDIA", "JULIETT",
+	};
+	static char *military_numerals[] = {
+		"ZERO ZERO", "ZERO ONE", "ZERO TWO", "ZERO THREE",
+		"ZERO FOUR", "ZERO FIVE",
+		"ZERO SIX", "ZERO SEVEN", "ZERO EIGHT", "ZERO NINER", "ONE ZERO", };
+
+	sectorx = floor((x / (double) XKNOWN_DIM) * 10.0);
+	sectory = floor((y / (double) YKNOWN_DIM) * 10.0);
+
+	if (sectorx >= 0 && sectorx <= 9 && sectory >= 0 && sectory <= 10)
+		snprintf(buffer, buflen, "SECTOR %s %s",
+			military_alphabet[sectory], military_numerals[sectorx]);
+	else
+		snprintf(buffer, buflen, "(%8.2lf, %8.2lf)", x, y);
+}
+
 static void starbase_move(struct snis_entity *o)
 {
-	char buf[100];
+	char buf[100], location[50];
 	int64_t then, now;
 	/* FIXME, fill this in. */
 
@@ -836,7 +858,8 @@ static void starbase_move(struct snis_entity *o)
 		sprintf(buf, "STARBASE %s:", o->sdata.name);
 		send_comms_packet("", buf);
 		send_comms_packet("-  ", starbase_comm_under_attack());
-		sprintf(buf, "LOCATION (%8.2lf %8.2lf)", o->x, o->y);
+		coords_to_location_string(o->x, o->y, location, sizeof(location) - 1);
+		sprintf(buf, "LOCATION %s", location);
 		send_comms_packet("-  ", buf);
 	}
 }
