@@ -462,6 +462,7 @@ static void send_comms_packet(char *sender, char *str);
 static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 {
 	char buffer[1000];
+	char name[100];
 	char tmpbuf[50];
 	int last_space = 0;
 	int i, bytes_so_far = 0;
@@ -469,6 +470,7 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 	
 	infinite_taunt(buffer, sizeof(buffer) - 1);
 
+	sprintf(name, "%s: ", alien->sdata.name);
 	for (i = 0; buffer[i]; i++) {
 		buffer[i] = toupper(buffer[i]);
 		if (buffer[i] == ' ')
@@ -477,7 +479,8 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 		if (last_space > 28) {
 			strncpy(tmpbuf, start, bytes_so_far);
 			tmpbuf[bytes_so_far] = '\0';
-			send_comms_packet(alien->sdata.name, tmpbuf);
+			send_comms_packet(name, tmpbuf);
+			strcpy(name, "-  ");
 			start = &buffer[i];
 			bytes_so_far = 0;
 			last_space = 0;
@@ -485,7 +488,7 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 	}
 	if (bytes_so_far > 0) {
 		strcpy(tmpbuf, start);
-		send_comms_packet(alien->sdata.name, tmpbuf);
+		send_comms_packet(name, tmpbuf);
 	}
 }
 
@@ -830,8 +833,9 @@ static void starbase_move(struct snis_entity *o)
 		o->tsd.starbase.last_time_called_for_help == 0)) {
 		o->tsd.starbase.last_time_called_for_help = universe_timestamp;
 		// printf("starbase name = '%s'\n", o->tsd.starbase.name);
-		sprintf(buf, "STARBASE %s", o->sdata.name);
-		send_comms_packet(buf, starbase_comm_under_attack());
+		sprintf(buf, "STARBASE %s:", o->sdata.name);
+		send_comms_packet("", buf);
+		send_comms_packet("-  ", starbase_comm_under_attack());
 		sprintf(buf, "LOCATION (%8.2lf %8.2lf)", o->x, o->y);
 		send_comms_packet("-  ", buf);
 	}
@@ -2001,7 +2005,7 @@ static void send_comms_packet(char *sender, char *str)
 	struct packed_buffer *pb;
 	char tmpbuf[100];
 
-	snprintf(tmpbuf, 99, "%s: %s", sender, str);
+	snprintf(tmpbuf, 99, "%s%s", sender, str);
 	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + 100);
 	packed_buffer_append(pb, "hb", OPCODE_COMMS_TRANSMISSION, (uint8_t) strlen(tmpbuf) + 1);
 	packed_buffer_append_raw(pb, tmpbuf, strlen(tmpbuf) + 1);
