@@ -4475,6 +4475,8 @@ static void show_science(GtkWidget *w)
 	o = &go[my_ship_oid];
 
 	show_common_screen(w, "Science");
+	if ((timer & 0x3f) == 0)
+		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
 	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
 			360.0 * o->tsd.ship.sci_heading / (2.0 * 3.1415927));
@@ -4859,6 +4861,7 @@ static void read_sound_clips(void)
 	wwviaudio_read_ogg_clip(CHANGESCREEN_SOUND, "share/changescreen.ogg");
 	wwviaudio_read_ogg_clip(SLIDER_SOUND, "share/slider-noise.ogg");
 	wwviaudio_read_ogg_clip(SCIENCE_DATA_ACQUIRED_SOUND, "share/science-data-acquired.ogg");
+	wwviaudio_read_ogg_clip(SCIENCE_PROBE_SOUND, "share/science-probe.ogg");
 	printf("Done.\n");
 }
 
