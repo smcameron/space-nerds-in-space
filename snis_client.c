@@ -1124,12 +1124,12 @@ static void science_dirkey(int h, int v)
 	}
 }
 
-static void do_onscreen(void)
+static void do_onscreen(uint8_t mode)
 {
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct role_onscreen_packet));
-	packed_buffer_append(pb, "hb", OPCODE_ROLE_ONSCREEN, (uint8_t) displaymode & 0xff);
+	packed_buffer_append(pb, "hb", OPCODE_ROLE_ONSCREEN, mode);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
@@ -1308,7 +1308,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		break;
 	case keyonscreen:
 		if (control_key_pressed)
-			do_onscreen();
+			do_onscreen((uint8_t) displaymode & 0xff);
 		break;
 	default:
 		break;
@@ -1883,6 +1883,12 @@ struct text_window {
 
 struct comms_ui {
 	struct text_window tw;
+	struct button comms_onscreen_button;
+	struct button nav_onscreen_button;
+	struct button weap_onscreen_button;
+	struct button eng_onscreen_button;
+	struct button sci_onscreen_button;
+	struct button main_onscreen_button;
 } comms_ui;
 
 static void add_text(struct text_window *tw, char *text);
@@ -4195,11 +4201,59 @@ static void init_science_ui(void)
 	add_slider(&sci_ui.scizoom);
 }
 
+static void comms_screen_button_pressed(void *x)
+{
+	unsigned long screen = (unsigned long) x;
+
+	switch (screen) {
+	case 0: do_onscreen((uint8_t) DISPLAYMODE_COMMS);
+		break;
+	case 1: do_onscreen((uint8_t) DISPLAYMODE_NAVIGATION);
+		break;
+	case 2: do_onscreen((uint8_t) DISPLAYMODE_WEAPONS);
+		break;
+	case 3: do_onscreen((uint8_t) DISPLAYMODE_ENGINEERING);
+		break;
+	case 4: do_onscreen((uint8_t) DISPLAYMODE_SCIENCE);
+		break;
+	case 5: do_onscreen((uint8_t) DISPLAYMODE_MAINSCREEN);
+		break;
+	default:
+		break;
+	}
+	return;
+}
 static void init_comms_ui(void)
 {
-	text_window_init(&comms_ui.tw, 5, 5, SCREEN_WIDTH - 10,
+	int x = 200;
+	int y = 20;
+
+	button_init(&comms_ui.comms_onscreen_button, x, y, 75, 25, "COMMS", &huex[GREEN],
+			NANO_FONT, comms_screen_button_pressed, (void *) 0, DISPLAYMODE_COMMS);
+	x += 75;
+	button_init(&comms_ui.nav_onscreen_button, x, y, 75, 25, "NAV", &huex[GREEN],
+			NANO_FONT, comms_screen_button_pressed, (void *) 1, DISPLAYMODE_COMMS);
+	x += 75;
+	button_init(&comms_ui.weap_onscreen_button, x, y, 75, 25, "WEAP", &huex[GREEN],
+			NANO_FONT, comms_screen_button_pressed, (void *) 2, DISPLAYMODE_COMMS);
+	x += 75;
+	button_init(&comms_ui.eng_onscreen_button, x, y, 75, 25, "ENG", &huex[GREEN],
+			NANO_FONT, comms_screen_button_pressed, (void *) 3, DISPLAYMODE_COMMS);
+	x += 75;
+	button_init(&comms_ui.sci_onscreen_button, x, y, 75, 25, "SCI", &huex[GREEN],
+			NANO_FONT, comms_screen_button_pressed, (void *) 4, DISPLAYMODE_COMMS);
+	x += 75;
+	button_init(&comms_ui.main_onscreen_button, x, y, 75, 25, "MAIN", &huex[GREEN],
+			NANO_FONT, comms_screen_button_pressed, (void *) 5, DISPLAYMODE_COMMS);
+	text_window_init(&comms_ui.tw, 10, 70, SCREEN_WIDTH - 20,
 			40, 20, DISPLAYMODE_COMMS, &huex[GREEN]);
 	add_textwindow(&comms_ui.tw);
+	add_button(&comms_ui.comms_onscreen_button);
+	add_button(&comms_ui.nav_onscreen_button);
+	add_button(&comms_ui.weap_onscreen_button);
+	add_button(&comms_ui.eng_onscreen_button);
+	add_button(&comms_ui.sci_onscreen_button);
+	add_button(&comms_ui.main_onscreen_button);
 }
 
 #define SCIDIST2 100
@@ -4509,7 +4563,7 @@ static void show_science(GtkWidget *w)
 
 static void show_comms(GtkWidget *w)
 {
-	/* show_common_screen(w, "Comms"); */
+	show_common_screen(w, "Comms");
 }
 
 static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
