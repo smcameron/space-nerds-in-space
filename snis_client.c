@@ -4038,7 +4038,7 @@ static void show_navigation(GtkWidget *w)
 	char buf[100];
 	struct snis_entity *o;
 	int rx, ry, rw, rh, cx, cy, gx1, gy1, gx2, gy2;
-	int r;
+	int r, sectorx, sectory;
 
 	show_common_screen(w, "Navigation");
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
@@ -4050,10 +4050,13 @@ static void show_navigation(GtkWidget *w)
 	if (my_ship_oid == UNKNOWN_ID)
 		return;
 	o = &go[my_ship_oid];
-	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
-			360.0 * o->heading / (2.0 * 3.1415927));
+	sectorx = floor(10.0 * o->x / (double) XKNOWN_DIM);
+	sectory = floor(10.0 * o->y / (double) YKNOWN_DIM);
+	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf)", sectory + 'A', sectorx, o->x, o->y);
+	abs_xy_draw_string(w, buf, NANO_FONT, 200, LINEHEIGHT);
+	sprintf(buf, "HEADING: %3.1lf", 360.0 * o->heading / (2.0 * M_PI));
+	abs_xy_draw_string(w, buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
 #if 0
-	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
 	sprintf(buf, "vx: %5.2lf", o->vx);
 	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
 	sprintf(buf, "vy: %5.2lf", o->vy);
