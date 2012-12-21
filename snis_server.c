@@ -830,9 +830,10 @@ static void starbase_move(struct snis_entity *o)
 		o->tsd.starbase.last_time_called_for_help == 0)) {
 		o->tsd.starbase.last_time_called_for_help = universe_timestamp;
 		// printf("starbase name = '%s'\n", o->tsd.starbase.name);
-		send_comms_packet(o->tsd.starbase.name, starbase_comm_under_attack());
-		sprintf(buf, "    LOCATION (%8.2lf %8.2lf)", o->x, o->y);
-		send_comms_packet(o->tsd.starbase.name, buf);
+		sprintf(buf, "STARBASE %s", o->sdata.name);
+		send_comms_packet(buf, starbase_comm_under_attack());
+		sprintf(buf, "LOCATION (%8.2lf %8.2lf)", o->x, o->y);
+		send_comms_packet("-  ", buf);
 	}
 }
 
