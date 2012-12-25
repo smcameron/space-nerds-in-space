@@ -63,18 +63,14 @@ __attribute__((unused)) static double max_speed[];
 
 typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nsparks, int time);
 
-typedef void arc_drawing_function(GdkDrawable *drawable, GdkGC *gc,
-	gboolean filled, gint x, gint y, gint width, gint height, gint angle1, gint angle2);
-
 explosion_function *explosion = NULL;
-arc_drawing_function *current_draw_arc = gdk_draw_arc;
 
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
 #define DEFAULT_LINE_STYLE sng_current_draw_line
 #define DEFAULT_RECTANGLE_STYLE sng_current_draw_rectangle
 #define DEFAULT_BRIGHT_LINE_STYLE sng_current_bright_line
-#define DEFAULT_DRAW_ARC current_draw_arc
+#define DEFAULT_DRAW_ARC sng_current_draw_arc
 
 #define snis_draw_line DEFAULT_LINE_STYLE
 #define snis_draw_rectangle DEFAULT_RECTANGLE_STYLE
@@ -4723,12 +4719,12 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 		sng_current_draw_line = gdk_draw_line;
 		sng_current_draw_rectangle = gdk_draw_rectangle;
 		sng_current_bright_line = sng_unscaled_bright_line;
-		current_draw_arc = gdk_draw_arc;
+		sng_current_draw_arc = gdk_draw_arc;
 	} else {
 		sng_current_draw_line = sng_scaled_line;
 		sng_current_draw_rectangle = sng_scaled_rectangle;
 		sng_current_bright_line = sng_scaled_bright_line;
-		current_draw_arc = sng_scaled_arc;
+		sng_current_draw_arc = sng_scaled_arc;
 		if (thicklines)
 			sng_current_draw_line = sng_thick_scaled_line;
 	}
