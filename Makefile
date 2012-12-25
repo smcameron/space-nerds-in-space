@@ -94,6 +94,9 @@ names:	names.h names.c
 snis_graph.o:	snis_graph.h snis_graph.c
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_graph.c
 
+snis_typeface.o:	snis_typeface.h snis_typeface.c
+	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_typeface.c
+
 ${SSGL}:
 	(cd ssgl ; make )
 
