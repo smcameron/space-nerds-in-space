@@ -91,6 +91,9 @@ infinite-taunt:	infinite-taunt.c infinite-taunt.h
 names:	names.h names.c
 	gcc -DTEST_NAMES -o names ${MYCFLAGS} ${GTKCFLAGS} names.c
 
+snis_graph.o:	snis_graph.h snis_graph.c
+	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_graph.c
+
 ${SSGL}:
 	(cd ssgl ; make )
 
