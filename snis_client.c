@@ -601,61 +601,6 @@ void spin_points(struct my_point_t *points, int npoints,
 	} 
 }
 
-/* Draws a letter in the given font at an absolute x,y coords on the screen. */
-static int abs_xy_draw_letter(GtkWidget *w, struct my_vect_obj **font, 
-		unsigned char letter, int x, int y)
-{
-	int i, x1, y1, x2, y2;
-	int minx, maxx, diff;
-
-	if (letter == ' ' || letter == '\n' || letter == '\t' || font[letter] == NULL)
-		return abs(font['Z']->p[0].x - font['Z']->p[1].x);
-
-	for (i = 0; i < font[letter]->npoints-1; i++) {
-		if (font[letter]->p[i+1].x == LINE_BREAK)
-			i += 2;
-		x1 = x + font[letter]->p[i].x;
-		y1 = y + font[letter]->p[i].y;
-		x2 = x + font[letter]->p[i + 1].x;
-		y2 = y + font[letter]->p[i + 1].y;
-
-		if (i == 0) {
-			minx = x1;
-			maxx = x1;
-		}
-
-		if (x1 < minx)
-			minx = x1;
-		if (x2 < minx)
-			minx = x2;
-		if (x1 > maxx)
-			maxx = x1;
-		if (x2 > maxx)
-			maxx = x2;
-		
-		if (x1 > 0 && x2 > 0)
-			snis_draw_line(w->window, gc, x1, y1, x2, y2); 
-	}
-	diff = abs(maxx - minx);
-	/* if (diff == 0)
-		return (abs(font['Z']->p[0].x - font['Z']->p[1].x) / 4); */
-	return diff; 
-}
-
-/* Used for floating labels in the game. */
-/* Draws a string at an absolute x,y position on the screen. */ 
-static void abs_xy_draw_string(GtkWidget *w, char *s, int font, int x, int y) 
-{
-
-	int i, dx;	
-	int deltax = 0;
-
-	for (i=0;s[i];i++) {
-		dx = (font_scale[font]) + abs_xy_draw_letter(w, gamefont[font], s[i], x + deltax, y);  
-		deltax += dx;
-	}
-}
-
 /**********************************/
 /* keyboard handling stuff begins */
 
@@ -1178,28 +1123,28 @@ static gint key_release_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 
 static void show_fonttest(GtkWidget *w)
 {
-	abs_xy_draw_string(w, "A B C D E F G H I J K L M", SMALL_FONT, 30, 30); 
-	abs_xy_draw_string(w, "N O P Q R S T U V W X Y Z", SMALL_FONT, 30, 60); 
-	abs_xy_draw_string(w, "a b c d e f g h i j k l m", SMALL_FONT, 30, 90); 
-	abs_xy_draw_string(w, "n o p q r s t u v w x y z", SMALL_FONT, 30, 120); 
-	abs_xy_draw_string(w, "0 1 2 3 4 5 6 7 8 9 ! , .", SMALL_FONT, 30, 150); 
-	abs_xy_draw_string(w, "? | - = * / \\ + ( ) \" ' _", SMALL_FONT, 30, 180); 
+	sng_abs_xy_draw_string(w, gc, "A B C D E F G H I J K L M", SMALL_FONT, 30, 30); 
+	sng_abs_xy_draw_string(w, gc, "N O P Q R S T U V W X Y Z", SMALL_FONT, 30, 60); 
+	sng_abs_xy_draw_string(w, gc, "a b c d e f g h i j k l m", SMALL_FONT, 30, 90); 
+	sng_abs_xy_draw_string(w, gc, "n o p q r s t u v w x y z", SMALL_FONT, 30, 120); 
+	sng_abs_xy_draw_string(w, gc, "0 1 2 3 4 5 6 7 8 9 ! , .", SMALL_FONT, 30, 150); 
+	sng_abs_xy_draw_string(w, gc, "? | - = * / \\ + ( ) \" ' _", SMALL_FONT, 30, 180); 
 
-	abs_xy_draw_string(w, "The Quick Fox Jumps Over The Lazy Brown Dog.", SMALL_FONT, 30, 210); 
-	abs_xy_draw_string(w, "The Quick Fox Jumps Over The Lazy Brown Dog.", BIG_FONT, 30, 280); 
-	abs_xy_draw_string(w, "The Quick Fox Jumps Over The Lazy Brown Dog.", TINY_FONT, 30, 350); 
-	abs_xy_draw_string(w, "The quick fox jumps over the lazy brown dog.", NANO_FONT, 30, 380); 
-	abs_xy_draw_string(w, "THE QUICK FOX JUMPS OVER THE LAZY BROWN DOG.", TINY_FONT, 30, 410); 
-	abs_xy_draw_string(w, "Well now, what have we here?  James Bond!", NANO_FONT, 30, 425); 
-	abs_xy_draw_string(w, "The quick fox jumps over the lazy brown dog.", SMALL_FONT, 30, 450); 
-	abs_xy_draw_string(w, "Copyright (C) 2010 Stephen M. Cameron 0123456789", TINY_FONT, 30, 480); 
+	sng_abs_xy_draw_string(w, gc, "The Quick Fox Jumps Over The Lazy Brown Dog.", SMALL_FONT, 30, 210); 
+	sng_abs_xy_draw_string(w, gc, "The Quick Fox Jumps Over The Lazy Brown Dog.", BIG_FONT, 30, 280); 
+	sng_abs_xy_draw_string(w, gc, "The Quick Fox Jumps Over The Lazy Brown Dog.", TINY_FONT, 30, 350); 
+	sng_abs_xy_draw_string(w, gc, "The quick fox jumps over the lazy brown dog.", NANO_FONT, 30, 380); 
+	sng_abs_xy_draw_string(w, gc, "THE QUICK FOX JUMPS OVER THE LAZY BROWN DOG.", TINY_FONT, 30, 410); 
+	sng_abs_xy_draw_string(w, gc, "Well now, what have we here?  James Bond!", NANO_FONT, 30, 425); 
+	sng_abs_xy_draw_string(w, gc, "The quick fox jumps over the lazy brown dog.", SMALL_FONT, 30, 450); 
+	sng_abs_xy_draw_string(w, gc, "Copyright (C) 2010 Stephen M. Cameron 0123456789", TINY_FONT, 30, 480); 
 }
 
 static void show_introscreen(GtkWidget *w)
 {
-	abs_xy_draw_string(w, "Space Nerds", BIG_FONT, 80, 200); 
-	abs_xy_draw_string(w, "In Space", BIG_FONT, 180, 320); 
-	abs_xy_draw_string(w, "Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, 255, 550); 
+	sng_abs_xy_draw_string(w, gc, "Space Nerds", BIG_FONT, 80, 200); 
+	sng_abs_xy_draw_string(w, gc, "In Space", BIG_FONT, 180, 320); 
+	sng_abs_xy_draw_string(w, gc, "Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, 255, 550); 
 }
 
 int lobbylast1clickx = -1;
@@ -1214,13 +1159,13 @@ static void show_lobbyscreen(GtkWidget *w)
 
 	gdk_gc_set_foreground(gc, &huex[WHITE]);
 	if (lobby_socket == -1) {
-		abs_xy_draw_string(w, "Space Nerds", BIG_FONT, 80, 200); 
-		abs_xy_draw_string(w, "In Space", BIG_FONT, 180, 320); 
-		abs_xy_draw_string(w, "Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, 255, 550); 
+		sng_abs_xy_draw_string(w, gc, "Space Nerds", BIG_FONT, 80, 200); 
+		sng_abs_xy_draw_string(w, gc, "In Space", BIG_FONT, 180, 320); 
+		sng_abs_xy_draw_string(w, gc, "Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, 255, 550); 
 		sprintf(msg, "Connecting to lobby... tried %d times.",
 			lobby_count);
-		abs_xy_draw_string(w, msg, SMALL_FONT, 100, 400);
-		abs_xy_draw_string(w, lobbyerror, NANO_FONT, 100, 430);
+		sng_abs_xy_draw_string(w, gc, msg, SMALL_FONT, 100, 400);
+		sng_abs_xy_draw_string(w, gc, lobbyerror, NANO_FONT, 100, 430);
 	} else {
 		if (lobby_selected_server != -1 &&
 			lobbylast1clickx > 200 && lobbylast1clickx < 620 &&
@@ -1230,9 +1175,9 @@ static void show_lobbyscreen(GtkWidget *w)
 		}
 		lobby_selected_server = -1;
 		sprintf(msg, "Connected to lobby on socket %d\n", lobby_socket);
-		abs_xy_draw_string(w, msg, TINY_FONT, 30, LINEHEIGHT);
+		sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 30, LINEHEIGHT);
 		sprintf(msg, "Total game servers: %d\n", ngameservers);
-		abs_xy_draw_string(w, msg, TINY_FONT, 30, LINEHEIGHT + 20);
+		sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 30, LINEHEIGHT + 20);
 		for (i = 0; i < ngameservers; i++) {
 			unsigned char *x = (unsigned char *) 
 				&lobby_game_server[i].ipaddr;
@@ -1247,18 +1192,18 @@ static void show_lobbyscreen(GtkWidget *w)
 				gdk_gc_set_foreground(gc, &huex[WHITE]);
 			 
 			sprintf(msg, "%hu.%hu.%hu.%hu/%hu", x[0], x[1], x[2], x[3], lobby_game_server[i].port);
-			abs_xy_draw_string(w, msg, TINY_FONT, 30, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 30, 100 + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].game_instance);
-			abs_xy_draw_string(w, msg, TINY_FONT, 350, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 350, 100 + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].server_nickname);
-			abs_xy_draw_string(w, msg, TINY_FONT, 450, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 450, 100 + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].location);
-			abs_xy_draw_string(w, msg, TINY_FONT, 650, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 650, 100 + i * LINEHEIGHT);
 		}
 		if (lobby_selected_server != -1) {
 			gdk_gc_set_foreground(gc, &huex[WHITE]);
 			snis_draw_rectangle(w->window, gc, 0, 200, 520, 400, LINEHEIGHT * 2);
-			abs_xy_draw_string(w, "CONNECT TO SERVER", TINY_FONT, 280, 520 + LINEHEIGHT);
+			sng_abs_xy_draw_string(w, gc, "CONNECT TO SERVER", TINY_FONT, 280, 520 + LINEHEIGHT);
 		}
 	}
 }
@@ -1440,13 +1385,13 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 		snis_draw_line(w->window, gc, x1, y1, x2, y2);
 		sprintf(buf2, "%3.0lf", v);
 		v += inc;
-		abs_xy_draw_string(w, buf2, NANO_FONT, x3, y3);
+		sng_abs_xy_draw_string(w, gc, buf2, NANO_FONT, x3, y3);
 	}
-	abs_xy_draw_string(w, g->title, TINY_FONT,
+	sng_abs_xy_draw_string(w, gc, g->title, TINY_FONT,
 			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)));
 	value = g->sample();
 	sprintf(buffer, "%4.2lf", value);
-	abs_xy_draw_string(w, buffer, TINY_FONT,
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT,
 			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)) + 15);
 
 	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
@@ -2208,7 +2153,7 @@ static void show_connecting_screen(GtkWidget *w)
 {
 	static int connected_to_gameserver = 0;
 	gdk_gc_set_foreground(gc, &huex[WHITE]);
-	abs_xy_draw_string(w, "CONNECTING TO SERVER...", SMALL_FONT, 100, 300 + LINEHEIGHT);
+	sng_abs_xy_draw_string(w, gc, "CONNECTING TO SERVER...", SMALL_FONT, 100, 300 + LINEHEIGHT);
 	if (!connected_to_gameserver) {
 		connected_to_gameserver = 1;
 		connect_to_gameserver(lobby_selected_server);
@@ -2218,14 +2163,14 @@ static void show_connecting_screen(GtkWidget *w)
 static void show_connected_screen(GtkWidget *w)
 {
 	gdk_gc_set_foreground(gc, &huex[WHITE]);
-	abs_xy_draw_string(w, "CONNECTED TO SERVER", SMALL_FONT, 100, 300 + LINEHEIGHT);
-	abs_xy_draw_string(w, "DOWNLOADING GAME DATA", SMALL_FONT, 100, 300 + LINEHEIGHT * 3);
+	sng_abs_xy_draw_string(w, gc, "CONNECTED TO SERVER", SMALL_FONT, 100, 300 + LINEHEIGHT);
+	sng_abs_xy_draw_string(w, gc, "DOWNLOADING GAME DATA", SMALL_FONT, 100, 300 + LINEHEIGHT * 3);
 }
 
 static void show_common_screen(GtkWidget *w, char *title)
 {
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
-	abs_xy_draw_string(w, title, SMALL_FONT, 25, 10 + LINEHEIGHT);
+	sng_abs_xy_draw_string(w, gc, title, SMALL_FONT, 25, 10 + LINEHEIGHT);
 	gdk_gc_set_foreground(gc, &huex[BLUE]);
 	snis_draw_line(w->window, gc, 0, 0, SCREEN_WIDTH, 0);
 	snis_draw_line(w->window, gc, SCREEN_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -2342,7 +2287,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			sprintf(buffer, "%s %s\n", "Unknown", o->sdata.name); 
 			break;
 		}
-		abs_xy_draw_string(w, buffer, NANO_FONT, x + 8, y - 8);
+		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, x + 8, y - 8);
 	}
 }
 
@@ -2451,7 +2396,7 @@ static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		y2 += y;
 		snis_draw_line(w->window, gc, x1, y1, x2, y2);
 		sprintf(buf, "%3d", (90 + i * 10) % 360);
-		abs_xy_draw_string(w, buf, NANO_FONT, x3, y3);
+		sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, x3, y3);
 	}
 
 	/* draw the ship */
@@ -2531,7 +2476,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 				gdk_gc_set_foreground(gc, &huex[GREEN]);
 				if (go[i].sdata.science_data_known) {
 					sprintf(buffer, "%s", go[i].sdata.name);
-					abs_xy_draw_string(w, buffer, NANO_FONT, x + 10, y - 10);
+					sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, x + 10, y - 10);
 				}
 				break;
 			default:
@@ -2785,7 +2730,7 @@ static void snis_draw_radar_sector_labels(GtkWidget *w,
 			x1 = (int) (((double) r) / range * (x * xincrement - o->x)) + cx + xoffset;
 			y1 = (int) (((double) r) / range * (y * yincrement - o->y)) + cy + yoffset;
 			snprintf(label, sizeof(label), "%c%d", letters[y], x);
-			abs_xy_draw_string(w, label, NANO_FONT, x1, y1);
+			sng_abs_xy_draw_string(w, gc, label, NANO_FONT, x1, y1);
 		}
 	}
 }
@@ -3086,7 +3031,7 @@ static void text_window_draw(GtkWidget *w, struct text_window *tw)
 			int len = strlen(tw->text[i]);
 
 			if (!tw->print_slowly || i != tw->last_entry -1) {
-				abs_xy_draw_string(w, tw->text[i], tw->font, tw->x + 10,
+				sng_abs_xy_draw_string(w, gc, tw->text[i], tw->font, tw->x + 10,
 						tw->y + j * tw->lineheight + tw->lineheight);
 			} else {
 				char tmpbuf[100];	
@@ -3104,7 +3049,7 @@ static void text_window_draw(GtkWidget *w, struct text_window *tw)
 					if (((timer >> 2) & 0x01) == 0) 
 						strcat(tmpbuf, "_");
 				}
-				abs_xy_draw_string(w, tmpbuf, tw->font, tw->x + 10,
+				sng_abs_xy_draw_string(w, gc, tmpbuf, tw->font, tw->x + 10,
 						tw->y + j * tw->lineheight + tw->lineheight);
 			}
 			j++;
@@ -3214,7 +3159,7 @@ static void slider_draw(GtkWidget *w, struct slider *s)
 		snis_draw_line(w->window, gc, tx1 - SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT,
 				tx1 + SLIDER_POINTER_WIDTH, s->y + SLIDER_HEIGHT + SLIDER_POINTER_HEIGHT); 
 	}
-	abs_xy_draw_string(w, s->label, TINY_FONT, s->x + s->length + 5, s->y + 2 * SLIDER_HEIGHT / 3); 
+	sng_abs_xy_draw_string(w, gc, s->label, TINY_FONT, s->x + s->length + 5, s->y + 2 * SLIDER_HEIGHT / 3); 
 }
 
 #define MAXSLIDERS 20
@@ -3297,7 +3242,7 @@ static void button_draw(GtkWidget *w, struct button *b)
 {
 	gdk_gc_set_foreground(gc, &b->color);
 	sng_current_draw_rectangle(w->window, gc, 0, b->x, b->y, b->width, b->height);
-	abs_xy_draw_string(w, b->label, b->font, b->x + 10, b->y + b->height / 1.7); 
+	sng_abs_xy_draw_string(w, gc, b->label, b->font, b->x + 10, b->y + b->height / 1.7); 
 }
 
 #define MAXBUTTONS 50
@@ -3767,15 +3712,15 @@ static void show_death_screen(GtkWidget *w)
 
 	gdk_gc_set_foreground(gc, &huex[RED]);
 	sprintf(buf, "YOUR SHIP");
-	abs_xy_draw_string(w, buf, BIG_FONT, 20, 150);
+	sng_abs_xy_draw_string(w, gc, buf, BIG_FONT, 20, 150);
 	sprintf(buf, "HAS BEEN");
-	abs_xy_draw_string(w, buf, BIG_FONT, 20, 250);
+	sng_abs_xy_draw_string(w, gc, buf, BIG_FONT, 20, 250);
 	sprintf(buf, "BLOWN TO");
-	abs_xy_draw_string(w, buf, BIG_FONT, 20, 350);
+	sng_abs_xy_draw_string(w, gc, buf, BIG_FONT, 20, 350);
 	sprintf(buf, "SMITHEREENS");
-	abs_xy_draw_string(w, buf, BIG_FONT, 20, 450);
+	sng_abs_xy_draw_string(w, gc, buf, BIG_FONT, 20, 450);
 	sprintf(buf, "RESPAWNING IN %d SECONDS", go[my_ship_oid].respawn_time);
-	abs_xy_draw_string(w, buf, TINY_FONT, 20, 500);
+	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, 500);
 }
 
 static void show_weapons(GtkWidget *w)
@@ -3795,16 +3740,16 @@ static void show_weapons(GtkWidget *w)
 		return;
 	o = &go[my_ship_oid];
 	sprintf(buf, "PHOTON TORPEDOES: %03d", o->tsd.ship.torpedoes);
-	abs_xy_draw_string(w, buf, NANO_FONT, 250, 15);
+	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 250, 15);
 	sprintf(buf, "TORPEDOES LOADED: %03d", o->tsd.ship.torpedoes_loaded);
-	abs_xy_draw_string(w, buf, NANO_FONT, 250, 15 + 0.5 * LINEHEIGHT);
+	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 250, 15 + 0.5 * LINEHEIGHT);
 	sprintf(buf, "TORPEDOES LOADING: %03d", o->tsd.ship.torpedoes_loading);
-	abs_xy_draw_string(w, buf, NANO_FONT, 250, 15 + LINEHEIGHT);
+	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 250, 15 + LINEHEIGHT);
 /*
 	sprintf(buf, "vx: %5.2lf", o->vx);
-	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
+	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 600, LINEHEIGHT * 3);
 	sprintf(buf, "vy: %5.2lf", o->vy);
-	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 4);
+	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 600, LINEHEIGHT * 4);
 */
 
 	buttoncolor = RED;
@@ -3899,14 +3844,14 @@ static void show_navigation(GtkWidget *w)
 	sectorx = floor(10.0 * o->x / (double) XKNOWN_DIM);
 	sectory = floor(10.0 * o->y / (double) YKNOWN_DIM);
 	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf)", sectory + 'A', sectorx, o->x, o->y);
-	abs_xy_draw_string(w, buf, NANO_FONT, 200, LINEHEIGHT);
+	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, LINEHEIGHT);
 	sprintf(buf, "HEADING: %3.1lf", 360.0 * o->heading / (2.0 * M_PI));
-	abs_xy_draw_string(w, buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
+	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
 #if 0
 	sprintf(buf, "vx: %5.2lf", o->vx);
-	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 3);
+	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 600, LINEHEIGHT * 3);
 	sprintf(buf, "vy: %5.2lf", o->vy);
-	abs_xy_draw_string(w, buf, TINY_FONT, 600, LINEHEIGHT * 4);
+	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 600, LINEHEIGHT * 4);
 #endif
 	rx = 40;
 	ry = 90;
@@ -4234,12 +4179,12 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 		}
 	}
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
-	abs_xy_draw_string(w, "10", NANO_FONT, x1, y2 + 10);
-	abs_xy_draw_string(w, "20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 10);
-	abs_xy_draw_string(w, "30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + 10);
-	abs_xy_draw_string(w, "40", NANO_FONT, x1 + 3 * (x2 - x1) / 4 - 10, y2 + 10);
-	abs_xy_draw_string(w, "50", NANO_FONT, x1 + 4 * (x2 - x1) / 4 - 20, y2 + 10);
-	abs_xy_draw_string(w, "Shield Profile (nm)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 30);
+	sng_abs_xy_draw_string(w, gc, "10", NANO_FONT, x1, y2 + 10);
+	sng_abs_xy_draw_string(w, gc, "20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 10);
+	sng_abs_xy_draw_string(w, gc, "30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + 10);
+	sng_abs_xy_draw_string(w, gc, "40", NANO_FONT, x1 + 3 * (x2 - x1) / 4 - 10, y2 + 10);
+	sng_abs_xy_draw_string(w, gc, "50", NANO_FONT, x1 + 4 * (x2 - x1) / 4 - 20, y2 + 10);
+	sng_abs_xy_draw_string(w, gc, "Shield Profile (nm)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 30);
 }
 
 static void draw_science_warp_data(GtkWidget *w, struct snis_entity *ship)
@@ -4257,11 +4202,11 @@ static void draw_science_warp_data(GtkWidget *w, struct snis_entity *ship)
 		bearing = -bearing;
 	else
 		bearing = 360.0 - bearing;
-	abs_xy_draw_string(w, "WARP DATA:", NANO_FONT, 10, SCREEN_HEIGHT - 40);
+	sng_abs_xy_draw_string(w, gc, "WARP DATA:", NANO_FONT, 10, SCREEN_HEIGHT - 40);
 	sprintf(buffer, "BEARING: %3.2lf", bearing);
-	abs_xy_draw_string(w, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 25);
+	sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 25);
 	sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * hypot(dy, dx) / (XKNOWN_DIM / 2.0));
-	abs_xy_draw_string(w, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
+	sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
 }
  
 static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o)
@@ -4277,7 +4222,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_current_draw_rectangle(w->window, gc, 0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
 	sprintf(buffer, "NAME: %s", o ? o->sdata.name : "");
-	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o) {
 		switch (o->type) {
@@ -4298,21 +4243,21 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		sprintf(buffer, "TYPE:"); 
 	}
 	y += 25;
-	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o)
 		sprintf(buffer, "X: %8.2lf", o->x);
 	else
 		sprintf(buffer, "X:");
 	y += 25;
-	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o)
 		sprintf(buffer, "Y: %8.2lf", o->y);
 	else
 		sprintf(buffer, "Y:");
 	y += 25;
-	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o) { 
 		dx = go[my_ship_oid].x - o->x;
@@ -4327,7 +4272,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		sprintf(buffer, "BEARING");
 	}
 	y += 25;
-	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o) {
 		range = sqrt(dx * dx + dy * dy);
@@ -4336,24 +4281,24 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		sprintf(buffer, "RANGE:");
 	}
 	y += 25;
-	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o)
 		sprintf(buffer, "HEADING: %3.2lf", o->heading);
 	else
 		sprintf(buffer, "HEADING:");
 	y += 25;
-	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 #if 0
 	sprintf(buffer, "STRENGTH: %hhu", o->sdata.shield_strength);
 	y += 25;
-	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(w, gd, buffer, TINY_FONT, x, y);
 	sprintf(buffer, "WAVELENGTH: %hhu", o->sdata.shield_wavelength);
 	y += 25;
-	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 	sprintf(buffer, "WIDTH: %hhu", o->sdata.shield_width);
 	y += 25;
-	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 #endif
 
 	gx1 = x;
@@ -4384,7 +4329,7 @@ static void show_science(GtkWidget *w)
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
 	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
 			360.0 * o->tsd.ship.sci_heading / (2.0 * 3.1415927));
-	abs_xy_draw_string(w, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
+	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
 #if 0
 	rx = SCIENCE_SCOPE_X;
 	ry = SCIENCE_SCOPE_Y;
@@ -4477,7 +4422,7 @@ static void show_debug(GtkWidget *w)
 	for (x = 0; x < 10; x++)
 		for (y = 0; y < 10; y++) {
 			snprintf(label, sizeof(label), "%c%d", letters[y], x);
-			abs_xy_draw_string(w, label, NANO_FONT, x * ix + xoffset, y * iy + yoffset); 
+			sng_abs_xy_draw_string(w, gc, label, NANO_FONT, x * ix + xoffset, y * iy + yoffset); 
 		}
 	pthread_mutex_lock(&universe_mutex);
 
@@ -4488,13 +4433,13 @@ static void show_debug(GtkWidget *w)
 	pthread_mutex_unlock(&universe_mutex);
 
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
-	abs_xy_draw_string(w, "SERVER NET STATS:", TINY_FONT, 10, SCREEN_HEIGHT - 40); 
+	sng_abs_xy_draw_string(w, gc, "SERVER NET STATS:", TINY_FONT, 10, SCREEN_HEIGHT - 40); 
 	sprintf(buffer, "TX:%llu RX:%llu T=%lu SECS. BW=%llu BYTES/SEC",
 		(unsigned long long) netstats.bytes_sent,
 		(unsigned long long) netstats.bytes_recd, 
 		(unsigned long) netstats.elapsed_seconds,
 		(unsigned long long) (netstats.bytes_recd + netstats.bytes_sent) / netstats.elapsed_seconds);
-	abs_xy_draw_string(w, buffer, TINY_FONT, 10, SCREEN_HEIGHT - 10); 
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 10, SCREEN_HEIGHT - 10); 
 }
 
 static void make_science_forget_stuff(void)
