@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <gtk/gtk.h>
 
+#define SNIS_GRAPH_DECLARE_GLOBALS
 #include "snis_graph.h"
+#undef SNIS_GRAPH_DECLARE_GLOBALS
 
 /* cardinal color indexes into huex array */
 #define WHITE 0
