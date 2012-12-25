@@ -8,33 +8,14 @@
 
 #include "bline.h"
 
-/* cardinal color indexes into huex array */
-#define WHITE 0
-#define BLUE 1
-#define BLACK 2
-#define GREEN 3
-#define YELLOW 4
-#define RED 5
-#define ORANGE 6
-#define CYAN 7
-#define MAGENTA 8
-#define DARKGREEN 9
-#define DARKRED 10
-#define AMBER 11
-#define LIMEGREEN 12
-
-#define NCOLORS 13              /* number of "cardinal" colors */
-#define NSPARKCOLORS 25         /* 25 shades from yellow to red for the sparks */
-#define NRAINBOWSTEPS (16)
-#define NRAINBOWCOLORS (NRAINBOWSTEPS*3)
-
-extern GdkColor huex[];
+GdkColor huex[NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS]; 
 
 extern struct my_vect_obj **gamefont[];
 extern int font_scale[];
 
 static struct snis_graph_context {
 	float xscale, yscale;
+	GdkGC *gc;
 } sgc;
 
 static int sng_rand(int n)
@@ -257,5 +238,38 @@ void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, int x, i
 void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y)
 {
 	gdk_draw_point(drawable, gc, x * sgc.xscale, y * sgc.yscale);
+}
+
+void sng_setup_colors(GtkWidget *w)
+{
+	int i;
+
+	gdk_color_parse("white", &huex[WHITE]);
+	gdk_color_parse("blue", &huex[BLUE]);
+	gdk_color_parse("black", &huex[BLACK]);
+	gdk_color_parse("green", &huex[GREEN]);
+	gdk_color_parse("lime green", &huex[LIMEGREEN]);
+	gdk_color_parse("darkgreen", &huex[DARKGREEN]);
+	gdk_color_parse("yellow", &huex[YELLOW]);
+	gdk_color_parse("red", &huex[RED]);
+	gdk_color_parse("orange", &huex[ORANGE]);
+	gdk_color_parse("cyan", &huex[CYAN]);
+	gdk_color_parse("MAGENTA", &huex[MAGENTA]);
+	gdk_color_parse("darkred", &huex[DARKRED]);
+	gdk_color_parse("orange", &huex[AMBER]);
+	for (i = 0; i < NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS; i++)
+                gdk_colormap_alloc_color(gtk_widget_get_colormap(w),
+				&huex[i], FALSE, FALSE);
+	gtk_widget_modify_bg(w, GTK_STATE_NORMAL, &huex[BLACK]);
+}
+
+void sng_set_foreground(int c)
+{
+	gdk_gc_set_foreground(sgc.gc, &huex[c]);
+}
+
+void sng_set_gc(GdkGC *gc)
+{
+	sgc.gc = gc;
 }
 

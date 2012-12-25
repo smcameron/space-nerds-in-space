@@ -106,28 +106,6 @@ struct client_network_stats {
 	uint32_t elapsed_seconds;
 } netstats;
 
-/* cardinal color indexes into huex array */
-#define WHITE 0
-#define BLUE 1
-#define BLACK 2
-#define GREEN 3
-#define YELLOW 4
-#define RED 5
-#define ORANGE 6
-#define CYAN 7
-#define MAGENTA 8
-#define DARKGREEN 9
-#define DARKRED 10
-#define AMBER 11 
-#define LIMEGREEN 12 
-
-#define NCOLORS 13              /* number of "cardinal" colors */
-#define NSPARKCOLORS 25         /* 25 shades from yellow to red for the sparks */
-#define NRAINBOWSTEPS (16)
-#define NRAINBOWCOLORS (NRAINBOWSTEPS*3)
-
-GdkColor huex[NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS]; /* all the colors we have to work with are in here */
-
 int nframes = 0;
 int timer = 0;
 struct timeval start_time, end_time;
@@ -1157,7 +1135,7 @@ static void show_lobbyscreen(GtkWidget *w)
 #define STARTLINE 100
 #define LINEHEIGHT 30
 
-	gdk_gc_set_foreground(gc, &huex[WHITE]);
+	sng_set_foreground(WHITE);
 	if (lobby_socket == -1) {
 		sng_abs_xy_draw_string(w, gc, "Space Nerds", BIG_FONT, 80, 200); 
 		sng_abs_xy_draw_string(w, gc, "In Space", BIG_FONT, 180, 320); 
@@ -1185,11 +1163,11 @@ static void show_lobbyscreen(GtkWidget *w)
 				lobbylast1clicky > 100 + (-0.5 + i) * LINEHEIGHT &&
 				lobbylast1clicky < 100 + (0.5 + i) * LINEHEIGHT) {
 				lobby_selected_server = i;
-				gdk_gc_set_foreground(gc, &huex[GREEN]);
+				sng_set_foreground(GREEN);
 				snis_draw_rectangle(w->window, gc, 0, 25, 100 + (-0.5 + i) * LINEHEIGHT,
 					725, LINEHEIGHT);
 			} else
-				gdk_gc_set_foreground(gc, &huex[WHITE]);
+				sng_set_foreground(WHITE);
 			 
 			sprintf(msg, "%hu.%hu.%hu.%hu/%hu", x[0], x[1], x[2], x[3], lobby_game_server[i].port);
 			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 30, 100 + i * LINEHEIGHT);
@@ -1201,7 +1179,7 @@ static void show_lobbyscreen(GtkWidget *w)
 			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 650, 100 + i * LINEHEIGHT);
 		}
 		if (lobby_selected_server != -1) {
-			gdk_gc_set_foreground(gc, &huex[WHITE]);
+			sng_set_foreground(WHITE);
 			snis_draw_rectangle(w->window, gc, 0, 200, 520, 400, LINEHEIGHT * 2);
 			sng_abs_xy_draw_string(w, gc, "CONNECT TO SERVER", TINY_FONT, 280, 520 + LINEHEIGHT);
 		}
@@ -1278,7 +1256,7 @@ typedef void (*button_function)(void *cookie);
 struct button {
 	int x, y, width, height, displaymode;
 	char label[20];
-	GdkColor color;
+	int color;
 	int font;
 	button_function bf;
 	void *cookie;
@@ -1296,21 +1274,21 @@ struct gauge {
 	gauge_monitor_function sample2;
 	double r1,r2;
 	double start_angle, angular_range;
-	GdkColor needle_color, dial_color, needle_color2;
+	int needle_color, dial_color, needle_color2;
 	int ndivs;
 	char title[16]; 
 };
 
-static void gauge_add_needle(struct gauge *g, gauge_monitor_function sample, GdkColor *color)
+static void gauge_add_needle(struct gauge *g, gauge_monitor_function sample, int color)
 {
-	g->needle_color2 = *color;
+	g->needle_color2 = color;
 	g->sample2 = sample;
 }
 
 static void gauge_init(struct gauge *g, 
 			int x, int y, int r, double r1, double r2,
 			double start_angle, double angular_range,
-			GdkColor *needle_color, GdkColor *dial_color, int ndivs, char *title,
+			int needle_color, int dial_color, int ndivs, char *title,
 			gauge_monitor_function gmf)
 {
 	g->x = x;
@@ -1320,8 +1298,8 @@ static void gauge_init(struct gauge *g,
 	g->r2 = r2;
 	g->start_angle = start_angle;
 	g->angular_range = angular_range;
-	g->needle_color = *needle_color;
-	g->dial_color = *dial_color;
+	g->needle_color = needle_color;
+	g->dial_color = dial_color;
 	g->ndivs = ndivs;
 	g->sample = gmf;
 	strncpy(g->title, title, sizeof(g->title) - 1);
@@ -1358,7 +1336,7 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 	double inc, v;
 	char buffer[10], buf2[10];
 
-	gdk_gc_set_foreground(gc, &g->dial_color);
+	sng_set_foreground(g->dial_color);
 	snis_draw_circle(w->window, gc, g->x, g->y, g->r); 
 
 	ai = g->angular_range / g->ndivs;
@@ -1395,12 +1373,12 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)) + 15);
 
 	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
-	gdk_gc_set_foreground(gc, &g->needle_color);
+	sng_set_foreground(g->needle_color);
 	draw_gauge_needle(w->window, gc, g->x, g->y, g->r, a); 
 
 	if (g->sample2) {
 		a = ((g->sample2() - g->r1) / (g->r2 - g->r1)) * g->angular_range + g->start_angle;
-		gdk_gc_set_foreground(gc, &g->needle_color2);
+		sng_set_foreground(g->needle_color2);
 		draw_gauge_needle(w->window, gc, g->x, g->y, g->r * 0.8, a); 
 	}
 }
@@ -1669,7 +1647,7 @@ struct text_window {
 	int print_slowly;
 	int printing_pos;
 	char **text;
-	GdkColor color;
+	int color;
 };
 
 struct comms_ui {
@@ -2152,7 +2130,7 @@ void connect_to_gameserver(int selected_server)
 static void show_connecting_screen(GtkWidget *w)
 {
 	static int connected_to_gameserver = 0;
-	gdk_gc_set_foreground(gc, &huex[WHITE]);
+	sng_set_foreground(WHITE);
 	sng_abs_xy_draw_string(w, gc, "CONNECTING TO SERVER...", SMALL_FONT, 100, 300 + LINEHEIGHT);
 	if (!connected_to_gameserver) {
 		connected_to_gameserver = 1;
@@ -2162,16 +2140,16 @@ static void show_connecting_screen(GtkWidget *w)
 
 static void show_connected_screen(GtkWidget *w)
 {
-	gdk_gc_set_foreground(gc, &huex[WHITE]);
+	sng_set_foreground(WHITE);
 	sng_abs_xy_draw_string(w, gc, "CONNECTED TO SERVER", SMALL_FONT, 100, 300 + LINEHEIGHT);
 	sng_abs_xy_draw_string(w, gc, "DOWNLOADING GAME DATA", SMALL_FONT, 100, 300 + LINEHEIGHT * 3);
 }
 
 static void show_common_screen(GtkWidget *w, char *title)
 {
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sng_set_foreground(GREEN);
 	sng_abs_xy_draw_string(w, gc, title, SMALL_FONT, 25, 10 + LINEHEIGHT);
-	gdk_gc_set_foreground(gc, &huex[BLUE]);
+	sng_set_foreground(BLUE);
 	snis_draw_line(w->window, gc, 0, 0, SCREEN_WIDTH, 0);
 	snis_draw_line(w->window, gc, SCREEN_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 	snis_draw_line(w->window, gc, SCREEN_WIDTH, SCREEN_HEIGHT, 0, SCREEN_HEIGHT);
@@ -2192,7 +2170,7 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 {
 	int i, dx, dy;
 
-	gdk_gc_set_foreground(gc, &huex[WHITE]);
+	sng_set_foreground(WHITE);
 	for (i = 0; i < 10; i++) {
 		dx = x + snis_randn(r * 2) - r; 
 		dy = y + snis_randn(r * 2) - r; 
@@ -2239,7 +2217,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	if (dr < 5 && !o->sdata.science_data_known && !o->sdata.science_data_requested)
 		request_ship_sdata(o);
 
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sng_set_foreground(GREEN);
 	for (i = 0; i < 10; i++) {
 		float r;
 		da = snis_randn(360) * M_PI / 180.0;
@@ -2263,27 +2241,27 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
 		case OBJTYPE_SHIP2:
-			gdk_gc_set_foreground(gc, &huex[GREEN]);
+			sng_set_foreground(GREEN);
 			sprintf(buffer, "%s %s\n", o->sdata.name, shipclass[o->sdata.subclass]); 
 			break;
 		case OBJTYPE_STARBASE:
-			gdk_gc_set_foreground(gc, &huex[WHITE]);
+			sng_set_foreground(WHITE);
 			sprintf(buffer, "%s %s\n", "Starbase",  o->sdata.name); 
 			break;
 		case OBJTYPE_PLANET:
-			gdk_gc_set_foreground(gc, &huex[BLUE]);
+			sng_set_foreground(BLUE);
 			sprintf(buffer, "%s %s\n", "Asteroid",  o->sdata.name); 
 			break;
 		case OBJTYPE_TORPEDO:
-			gdk_gc_set_foreground(gc, &huex[GREEN]);
+			sng_set_foreground(GREEN);
 			strcpy(buffer, "TORPEDO");
 			break;
 		case OBJTYPE_LASER:
-			gdk_gc_set_foreground(gc, &huex[GREEN]);
+			sng_set_foreground(GREEN);
 			strcpy(buffer, "ENERGY");
 			break;
 		default:
-			gdk_gc_set_foreground(gc, &huex[GREEN]);
+			sng_set_foreground(GREEN);
 			sprintf(buffer, "%s %s\n", "Unknown", o->sdata.name); 
 			break;
 		}
@@ -2362,7 +2340,7 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 	ty1 = y - cos(heading - beam_width / 2) * r * 0.05;
 	tx2 = x + sin(heading - beam_width / 2) * r;
 	ty2 = y - cos(heading - beam_width / 2) * r;
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sng_set_foreground(GREEN);
 	sng_draw_electric_line(w->window, gc, tx1, ty1, tx2, ty2);
 	tx1 = x + sin(heading + beam_width / 2) * r * 0.05;
 	ty1 = y - cos(heading + beam_width / 2) * r * 0.05;
@@ -2406,7 +2384,7 @@ static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 	ty1 = y - cos(heading) * r * 0.85;
 	tx2 = x + sin(heading) * r;
 	ty2 = y - cos(heading) * r;
-	gdk_gc_set_foreground(gc, &huex[RED]);
+	sng_set_foreground(RED);
 	snis_draw_line(w->window, gc, tx1, ty1, tx2, ty2);
 }
 
@@ -2422,7 +2400,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
-	gdk_gc_set_foreground(gc, &huex[DARKRED]);
+	sng_set_foreground(DARKRED);
 	/* Draw all the stuff */
 #define NAVSCREEN_RADIUS (XKNOWN_DIM / 100.0)
 #define NR2 (NAVSCREEN_RADIUS * NAVSCREEN_RADIUS)
@@ -2452,11 +2430,11 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 		else {
 			switch (go[i].type) {
 			case OBJTYPE_PLANET:
-				gdk_gc_set_foreground(gc, &huex[BLUE]);
+				sng_set_foreground(BLUE);
 				snis_draw_circle(w->window, gc, x, y, r / 10);
 				break;
 			case OBJTYPE_STARBASE:
-				gdk_gc_set_foreground(gc, &huex[MAGENTA]);
+				sng_set_foreground(MAGENTA);
 				snis_draw_circle(w->window, gc, x, y, r / 20);
 				break;
 			case OBJTYPE_LASER:
@@ -2471,16 +2449,16 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 				break;
 			case OBJTYPE_SHIP1:
 			case OBJTYPE_SHIP2:
-				gdk_gc_set_foreground(gc, &huex[WHITE]);
+				sng_set_foreground(WHITE);
 				snis_draw_arrow(w, gc, x, y, r, go[i].heading + M_PI / 2.0, 0.5);
-				gdk_gc_set_foreground(gc, &huex[GREEN]);
+				sng_set_foreground(GREEN);
 				if (go[i].sdata.science_data_known) {
 					sprintf(buffer, "%s", go[i].sdata.name);
 					sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, x + 10, y - 10);
 				}
 				break;
 			default:
-				gdk_gc_set_foreground(gc, &huex[WHITE]);
+				sng_set_foreground(WHITE);
 				snis_draw_arrow(w, gc, x, y, r, go[i].heading + M_PI / 2.0, 0.5);
 			}
 		}
@@ -2542,7 +2520,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		A1 += 2.0 * M_PI;
 	if (A2 > M_PI)
 		A2 -= 2.0 * M_PI;
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sng_set_foreground(GREEN);
 	pthread_mutex_lock(&universe_mutex);
 	nscience_guys = 0;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
@@ -2610,7 +2588,7 @@ static void draw_all_the_science_sparks(GtkWidget *w, struct snis_entity *o, dou
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
-	gdk_gc_set_foreground(gc, &huex[DARKRED]);
+	sng_set_foreground(DARKRED);
 	/* Draw all the stuff */
 	pthread_mutex_lock(&universe_mutex);
 
@@ -2634,7 +2612,7 @@ static void draw_all_the_science_sparks(GtkWidget *w, struct snis_entity *o, dou
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
 
-		gdk_gc_set_foreground(gc, &huex[GREEN]);
+		sng_set_foreground(GREEN);
 		snis_draw_science_spark(w->window, gc, x, y, dist);
 	}
 	pthread_mutex_unlock(&universe_mutex);
@@ -2652,7 +2630,7 @@ static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o)
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
-	gdk_gc_set_foreground(gc, &huex[DARKRED]);
+	sng_set_foreground(DARKRED);
 	/* Draw all the stuff */
 	pthread_mutex_lock(&universe_mutex);
 
@@ -2674,7 +2652,7 @@ static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o)
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
 
-		gdk_gc_set_foreground(gc, &huex[WHITE]);
+		sng_set_foreground(WHITE);
 		snis_draw_line(w->window, gc, x - 1, y - 1, x + 1, y + 1);
 		snis_draw_line(w->window, gc, x - 1, y + 1, x + 1, y - 1);
 	}
@@ -2907,7 +2885,7 @@ static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
 }
 
 static void button_init(struct button *b, int x, int y, int width, int height, char *label,
-			GdkColor *color, int font, button_function bf, void *cookie, int displaymode);
+			int color, int font, button_function bf, void *cookie, int displaymode);
 static void add_button(struct button *b);
 
 /*
@@ -2957,7 +2935,7 @@ static void add_text(struct text_window *tw, char *text)
 
 static void text_window_init(struct text_window *tw, int x, int y, int w,
 			int total_lines, int visible_lines, int displaymode,
-			GdkColor *color)
+			int color)
 {
 	int i;
 
@@ -2967,7 +2945,7 @@ static void text_window_init(struct text_window *tw, int x, int y, int w,
 	tw->total_lines = total_lines;
 	tw->visible_lines = visible_lines;
 	tw->displaymode = displaymode;
-	tw->color = *color;
+	tw->color = color;
 	tw->text = malloc(sizeof(*tw) * total_lines);
 	for (i = 0; i < total_lines; i++) {
 		tw->text[i] = malloc(80);
@@ -2987,7 +2965,7 @@ static void text_window_draw(GtkWidget *w, struct text_window *tw)
 	int i, j;
 	int thumb_pos, thumb_top, thumb_bottom, twec;
 
-	gdk_gc_set_foreground(gc, &tw->color);
+	sng_set_foreground(tw->color);
 	/* draw outer rectangle */
 	sng_current_draw_rectangle(w->window, gc, 0, tw->x, tw->y, tw->w, tw->h);
 	/* draw scroll bar */
@@ -3080,7 +3058,7 @@ typedef void (*slider_clicked_function)(struct slider *s);
 
 struct slider {
 	int x, y, length;
-	GdkColor color;
+	int color;
 	double value, input;
 	char label[20], label1[5], label2[5];
 	double r1, r2;
@@ -3089,7 +3067,7 @@ struct slider {
 	int displaymode;
 };
 
-static void slider_init(struct slider *s, int x, int y, int length, GdkColor *color,
+static void slider_init(struct slider *s, int x, int y, int length, int color,
 		char *label, char *l1, char *l2, double r1, double r2,
 		gauge_monitor_function gmf, slider_clicked_function clicked, 
 		int displaymode)
@@ -3097,7 +3075,7 @@ static void slider_init(struct slider *s, int x, int y, int length, GdkColor *co
 	s->x = x;
 	s->y = y;
 	s->length = length;
-	s->color = *color;
+	s->color = color;
 	strncpy(s->label, label, sizeof(s->label) - 1);
 	strncpy(s->label1, l1, sizeof(s->label1) - 1);
 	strncpy(s->label2, l2, sizeof(s->label2) - 1);
@@ -3113,7 +3091,7 @@ static void slider_draw(GtkWidget *w, struct slider *s)
 {
 	double v;
 	int width, tx1;
-	GdkColor bar_color;
+	int bar_color;
 
 #define SLIDER_HEIGHT 15
 #define SLIDER_POINTER_HEIGHT 8
@@ -3125,25 +3103,25 @@ static void slider_draw(GtkWidget *w, struct slider *s)
 	tx1 = (int) (s->value * s->length) + s->x;
 	if (!s->clicked) {
 		if (v < 25.0) {
-			bar_color = huex[RED];
+			bar_color = RED;
 		} else {
 			if (v < 50.0)  {
-				bar_color = huex[AMBER];
+				bar_color = AMBER;
 			} else {
-				bar_color = huex[DARKGREEN];
+				bar_color = DARKGREEN;
 			}
 		}
 	}
-	gdk_gc_set_foreground(gc, &s->color);
+	sng_set_foreground(s->color);
 	sng_current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->length, SLIDER_HEIGHT);
 	width = s->value * s->length - 1;
 	if (width < 0)
 		width = 0;
 	if (!s->clicked)
-		gdk_gc_set_foreground(gc, &bar_color);
+		sng_set_foreground(bar_color);
 	sng_current_draw_rectangle(w->window, gc, 1, s->x + 1, s->y + 1, width, SLIDER_HEIGHT - 2);
 	if (!s->clicked)
-		gdk_gc_set_foreground(gc, &s->color);
+		sng_set_foreground(s->color);
 
 	tx1 = (int) (s->value * s->length) + s->x;
 
@@ -3224,7 +3202,7 @@ static void sliders_button_press(int x, int y)
 
 
 static void button_init(struct button *b, int x, int y, int width, int height, char *label,
-			GdkColor *color, int font, button_function bf, void *cookie, int displaymode)
+			int color, int font, button_function bf, void *cookie, int displaymode)
 {
 	b->x = x;
 	b->y = y;
@@ -3232,7 +3210,7 @@ static void button_init(struct button *b, int x, int y, int width, int height, c
 	b->height = height;
 	strncpy(b->label, label, sizeof(b->label) - 1);
 	b->displaymode = displaymode;
-	b->color = *color;
+	b->color = color;
 	b->font = font;
 	b->bf = bf;
 	b->cookie = cookie;
@@ -3240,7 +3218,7 @@ static void button_init(struct button *b, int x, int y, int width, int height, c
 
 static void button_draw(GtkWidget *w, struct button *b)
 {
-	gdk_gc_set_foreground(gc, &b->color);
+	sng_set_foreground(b->color);
 	sng_current_draw_rectangle(w->window, gc, 0, b->x, b->y, b->width, b->height);
 	sng_abs_xy_draw_string(w, gc, b->label, b->font, b->x + 10, b->y + b->height / 1.7); 
 }
@@ -3677,25 +3655,25 @@ static void init_weapons_ui(void)
 {
 	int y = 450;
 
-	button_init(&weapons.fire_phaser, 550, y, 200, 25, "FIRE PHASER", &huex[RED],
+	button_init(&weapons.fire_phaser, 550, y, 200, 25, "FIRE PHASER", RED,
 			TINY_FONT, fire_phaser_button_pressed, NULL, DISPLAYMODE_WEAPONS);
 	y += 50;
-	button_init(&weapons.load_torpedo, 550, y, 200, 25, "LOAD TORPEDO", &huex[GREEN],
+	button_init(&weapons.load_torpedo, 550, y, 200, 25, "LOAD TORPEDO", GREEN,
 			TINY_FONT, load_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
 	y += 50;
-	button_init(&weapons.fire_torpedo, 550, y, 200, 25, "FIRE TORPEDO", &huex[RED],
+	button_init(&weapons.fire_torpedo, 550, y, 200, 25, "FIRE TORPEDO", RED,
 			TINY_FONT, fire_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
 	gauge_init(&weapons.phaser_bank_gauge, 650, 100, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+			120.0 * 2.0 * M_PI / 180.0, RED, WHITE,
 			10, "CHARGE", sample_phasercharge);
 	gauge_init(&weapons.phaser_wavelength, 650, 300, 90, 10.0, 60.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[WHITE],
+			120.0 * 2.0 * M_PI / 180.0, RED, WHITE,
 			10, "WAVE LEN", sample_phaser_wavelength);
-	button_init(&weapons.wavelen_down_button, 550, 400, 60, 25, "DOWN", &huex[WHITE],
+	button_init(&weapons.wavelen_down_button, 550, 400, 60, 25, "DOWN", WHITE,
 			NANO_FONT, wavelen_down_button_pressed, NULL, DISPLAYMODE_WEAPONS);
-	button_init(&weapons.wavelen_up_button, 700, 400, 30, 25, "UP", &huex[WHITE],
+	button_init(&weapons.wavelen_up_button, 700, 400, 30, 25, "UP", WHITE,
 			NANO_FONT, wavelen_up_button_pressed, NULL, DISPLAYMODE_WEAPONS);
-	slider_init(&weapons.wavelen_slider, 620, 400, 70, &huex[AMBER], "",
+	slider_init(&weapons.wavelen_slider, 620, 400, 70, AMBER, "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength, DISPLAYMODE_WEAPONS);
 	add_button(&weapons.fire_phaser);
@@ -3710,7 +3688,7 @@ static void show_death_screen(GtkWidget *w)
 {
 	char buf[100];
 
-	gdk_gc_set_foreground(gc, &huex[RED]);
+	sng_set_foreground(RED);
 	sprintf(buf, "YOUR SHIP");
 	sng_abs_xy_draw_string(w, gc, buf, BIG_FONT, 20, 150);
 	sprintf(buf, "HAS BEEN");
@@ -3732,7 +3710,7 @@ static void show_weapons(GtkWidget *w)
 	int buttoncolor;
 
 	show_common_screen(w, "Weapons");
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sng_set_foreground(GREEN);
 
 	if (my_ship_oid == UNKNOWN_ID)
 		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
@@ -3756,11 +3734,11 @@ static void show_weapons(GtkWidget *w)
 	if (o->tsd.ship.torpedoes > 0 && o->tsd.ship.torpedoes_loading == 0 &&
 		o->tsd.ship.torpedoes_loaded < 2)
 		buttoncolor = GREEN;
-	weapons.load_torpedo.color = huex[buttoncolor];
+	weapons.load_torpedo.color = buttoncolor;
 	buttoncolor = RED;
 	if (o->tsd.ship.torpedoes_loaded)
 		buttoncolor = GREEN;
-	weapons.fire_torpedo.color = huex[buttoncolor];
+	weapons.fire_torpedo.color = buttoncolor;
 
 	rx = 40;
 	ry = 90;
@@ -3769,10 +3747,10 @@ static void show_weapons(GtkWidget *w)
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sng_set_foreground(GREEN);
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, NAVSCREEN_RADIUS, 1);
-	gdk_gc_set_foreground(gc, &huex[BLUE]);
+	sng_set_foreground(BLUE);
 	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
 	draw_all_the_guys(w, o);
 	draw_all_the_sparks(w, o);
@@ -3784,21 +3762,21 @@ static double sample_reqwarpdrive(void);
 static double sample_warpdrive(void);
 static void init_nav_ui(void)
 {
-	slider_init(&nav_ui.shield_slider, 540, 270, 160, &huex[AMBER], "SHIELDS",
+	slider_init(&nav_ui.shield_slider, 540, 270, 160, AMBER, "SHIELDS",
 				"0", "100", 0.0, 100.0, sample_reqshield,
 				do_shieldadj, DISPLAYMODE_NAVIGATION);
-	slider_init(&nav_ui.warp_slider, 500, SCREEN_HEIGHT - 40, 200, &huex[AMBER], "Warp",
+	slider_init(&nav_ui.warp_slider, 500, SCREEN_HEIGHT - 40, 200, AMBER, "Warp",
 				"0", "100", 0.0, 100.0, sample_reqwarpdrive,
 				do_warpdrive, DISPLAYMODE_NAVIGATION);
 	gauge_init(&nav_ui.warp_gauge, 650, 410, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
-				120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
+				120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 				10, "WARP", sample_warpdrive);
-	gauge_add_needle(&nav_ui.warp_gauge, sample_warpdrive_power_avail, &huex[RED]);
-	button_init(&nav_ui.engage_warp_button, 570, 520, 150, 25, "ENGAGE WARP", &huex[AMBER],
+	gauge_add_needle(&nav_ui.warp_gauge, sample_warpdrive_power_avail, RED);
+	button_init(&nav_ui.engage_warp_button, 570, 520, 150, 25, "ENGAGE WARP", AMBER,
 				NANO_FONT, engage_warp_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
-	button_init(&nav_ui.warp_up_button, 500, 490, 40, 25, "UP", &huex[AMBER],
+	button_init(&nav_ui.warp_up_button, 500, 490, 40, 25, "UP", AMBER,
 			NANO_FONT, warp_up_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
-	button_init(&nav_ui.warp_down_button, 500, 520, 60, 25, "DOWN", &huex[AMBER],
+	button_init(&nav_ui.warp_down_button, 500, 520, 60, 25, "DOWN", AMBER,
 			NANO_FONT, warp_down_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
 	add_slider(&nav_ui.warp_slider);
 	add_slider(&nav_ui.shield_slider);
@@ -3832,7 +3810,7 @@ static void show_navigation(GtkWidget *w)
 	int r, sectorx, sectory;
 
 	show_common_screen(w, "Navigation");
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sng_set_foreground(GREEN);
 
 	if (my_ship_id == UNKNOWN_ID)
 		return;
@@ -3860,10 +3838,10 @@ static void show_navigation(GtkWidget *w)
 	cx = rx + (rw / 2);
 	cy = ry + (rh / 2);
 	r = rh / 2;
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sng_set_foreground(GREEN);
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, NAVSCREEN_RADIUS, 1);
-	gdk_gc_set_foreground(gc, &huex[DARKRED]);
+	sng_set_foreground(DARKRED);
 	snis_draw_reticule(w, gc, cx, cy, r, o->heading);
 
 	draw_all_the_guys(w, o);
@@ -3874,7 +3852,7 @@ static void show_navigation(GtkWidget *w)
 	gy1 = 15;
 	gx2 = NAV_DATA_X + NAV_DATA_W - 10;
 	gy2 = NAV_DATA_Y + NAV_DATA_H - 80;
-	gdk_gc_set_foreground(gc, &huex[AMBER]);
+	sng_set_foreground(AMBER);
 	draw_science_graph(w, o, o, gx1, gy1, gx2, gy2);
 }
 
@@ -3909,38 +3887,38 @@ static void init_engineering_ui(void)
 	int xinc = 190;
 	int yinc = 40; 
 	gauge_init(&eng_ui.rpm_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
+			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "RPM", sample_rpm);
 	x += xinc;
 	gauge_init(&eng_ui.fuel_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
+			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "FUEL", sample_fuel);
 	x += xinc;
 	gauge_init(&eng_ui.power_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
+			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "POWER", sample_power);
 	x += xinc;
 	gauge_init(&eng_ui.temp_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, &huex[RED], &huex[AMBER],
+			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "TEMP", sample_temp);
 	x += xinc;
-	slider_init(&eng_ui.throttle_slider, 350, y + yinc, 200, &huex[AMBER], "THROTTLE", "0", "100",
+	slider_init(&eng_ui.throttle_slider, 350, y + yinc, 200, AMBER, "THROTTLE", "0", "100",
 				0.0, 100.0, sample_throttle, do_throttle, DISPLAYMODE_ENGINEERING);
 
 	y += yinc;
-	slider_init(&eng_ui.shield_slider, 20, y += yinc, 150, &huex[AMBER], "SHIELDS", "0", "100",
+	slider_init(&eng_ui.shield_slider, 20, y += yinc, 150, AMBER, "SHIELDS", "0", "100",
 				0.0, 100.0, sample_shields, do_shields_pwr, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.phaserbanks_slider, 20, y += yinc, 150, &huex[AMBER], "PHASERS", "0", "100",
+	slider_init(&eng_ui.phaserbanks_slider, 20, y += yinc, 150, AMBER, "PHASERS", "0", "100",
 				0.0, 100.0, sample_phaserbanks, do_phaserbanks_pwr, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.comm_slider, 20, y += yinc, 150, &huex[AMBER], "COMMS", "0", "100",
+	slider_init(&eng_ui.comm_slider, 20, y += yinc, 150, AMBER, "COMMS", "0", "100",
 				0.0, 100.0, sample_comms, do_comms_pwr, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.sensors_slider, 20, y += yinc, 150, &huex[AMBER], "SENSORS", "0", "100",
+	slider_init(&eng_ui.sensors_slider, 20, y += yinc, 150, AMBER, "SENSORS", "0", "100",
 				0.0, 100.0, sample_sensors, do_sensors_pwr, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.impulse_slider, 20, y += yinc, 150, &huex[AMBER], "IMPULSE DR", "0", "100",
+	slider_init(&eng_ui.impulse_slider, 20, y += yinc, 150, AMBER, "IMPULSE DR", "0", "100",
 				0.0, 100.0, sample_impulse, do_impulse_pwr, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.warp_slider, 20, y += yinc, 150, &huex[AMBER], "WARP DR", "0", "100",
+	slider_init(&eng_ui.warp_slider, 20, y += yinc, 150, AMBER, "WARP DR", "0", "100",
 				0.0, 100.0, sample_warp, do_warp_pwr, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.maneuvering_slider, 20, y += yinc, 150, &huex[AMBER], "MANEUVERING", "0", "100",
+	slider_init(&eng_ui.maneuvering_slider, 20, y += yinc, 150, AMBER, "MANEUVERING", "0", "100",
 				0.0, 100.0, sample_maneuvering, do_maneuvering_pwr, DISPLAYMODE_ENGINEERING);
 	add_slider(&eng_ui.shield_slider);
 	add_slider(&eng_ui.phaserbanks_slider);
@@ -3952,19 +3930,19 @@ static void init_engineering_ui(void)
 	add_slider(&eng_ui.throttle_slider);
 
 	y = 220 + yinc;
-	slider_init(&eng_ui.shield_damage, 350, y += yinc, 150, &huex[AMBER], "SHIELD STATUS", "0", "100",
+	slider_init(&eng_ui.shield_damage, 350, y += yinc, 150, AMBER, "SHIELD STATUS", "0", "100",
 				0.0, 100.0, sample_shield_damage, NULL, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.impulse_damage, 350, y += yinc, 150, &huex[AMBER], "IMPULSE STATUS", "0", "100",
+	slider_init(&eng_ui.impulse_damage, 350, y += yinc, 150, AMBER, "IMPULSE STATUS", "0", "100",
 				0.0, 100.0, sample_impulse_damage, NULL, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.warp_damage, 350, y += yinc, 150, &huex[AMBER], "WARP STATUS", "0", "100",
+	slider_init(&eng_ui.warp_damage, 350, y += yinc, 150, AMBER, "WARP STATUS", "0", "100",
 				0.0, 100.0, sample_warp_damage, NULL, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.torpedo_tubes_damage, 350, y += yinc, 150, &huex[AMBER], "TORPEDO STATUS", "0", "100",
+	slider_init(&eng_ui.torpedo_tubes_damage, 350, y += yinc, 150, AMBER, "TORPEDO STATUS", "0", "100",
 				0.0, 100.0, sample_torpedo_tubes_damage, NULL, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.phaser_banks_damage, 350, y += yinc, 150, &huex[AMBER], "PHASER STATUS", "0", "100",
+	slider_init(&eng_ui.phaser_banks_damage, 350, y += yinc, 150, AMBER, "PHASER STATUS", "0", "100",
 				0.0, 100.0, sample_phaser_banks_damage, NULL, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.sensors_damage, 350, y += yinc, 150, &huex[AMBER], "SENSORS STATUS", "0", "100",
+	slider_init(&eng_ui.sensors_damage, 350, y += yinc, 150, AMBER, "SENSORS STATUS", "0", "100",
 				0.0, 100.0, sample_sensors_damage, NULL, DISPLAYMODE_ENGINEERING);
-	slider_init(&eng_ui.comms_damage, 350, y += yinc, 150, &huex[AMBER], "COMMS STATUS", "0", "100",
+	slider_init(&eng_ui.comms_damage, 350, y += yinc, 150, AMBER, "COMMS STATUS", "0", "100",
 				0.0, 100.0, sample_comms_damage, NULL, DISPLAYMODE_ENGINEERING);
 	add_slider(&eng_ui.shield_damage);
 	add_slider(&eng_ui.impulse_damage);
@@ -3990,7 +3968,7 @@ struct science_ui {
 
 static void init_science_ui(void)
 {
-	slider_init(&sci_ui.scizoom, 350, 50, 300, &huex[DARKGREEN], "Range", "0", "100",
+	slider_init(&sci_ui.scizoom, 350, 50, 300, DARKGREEN, "Range", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom, DISPLAYMODE_SCIENCE);
 	add_slider(&sci_ui.scizoom);
 }
@@ -4022,25 +4000,25 @@ static void init_comms_ui(void)
 	int x = 200;
 	int y = 20;
 
-	button_init(&comms_ui.comms_onscreen_button, x, y, 75, 25, "COMMS", &huex[GREEN],
+	button_init(&comms_ui.comms_onscreen_button, x, y, 75, 25, "COMMS", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 0, DISPLAYMODE_COMMS);
 	x += 75;
-	button_init(&comms_ui.nav_onscreen_button, x, y, 75, 25, "NAV", &huex[GREEN],
+	button_init(&comms_ui.nav_onscreen_button, x, y, 75, 25, "NAV", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 1, DISPLAYMODE_COMMS);
 	x += 75;
-	button_init(&comms_ui.weap_onscreen_button, x, y, 75, 25, "WEAP", &huex[GREEN],
+	button_init(&comms_ui.weap_onscreen_button, x, y, 75, 25, "WEAP", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 2, DISPLAYMODE_COMMS);
 	x += 75;
-	button_init(&comms_ui.eng_onscreen_button, x, y, 75, 25, "ENG", &huex[GREEN],
+	button_init(&comms_ui.eng_onscreen_button, x, y, 75, 25, "ENG", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 3, DISPLAYMODE_COMMS);
 	x += 75;
-	button_init(&comms_ui.sci_onscreen_button, x, y, 75, 25, "SCI", &huex[GREEN],
+	button_init(&comms_ui.sci_onscreen_button, x, y, 75, 25, "SCI", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 4, DISPLAYMODE_COMMS);
 	x += 75;
-	button_init(&comms_ui.main_onscreen_button, x, y, 75, 25, "MAIN", &huex[GREEN],
+	button_init(&comms_ui.main_onscreen_button, x, y, 75, 25, "MAIN", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 5, DISPLAYMODE_COMMS);
 	text_window_init(&comms_ui.tw, 10, 70, SCREEN_WIDTH - 20,
-			40, 20, DISPLAYMODE_COMMS, &huex[GREEN]);
+			40, 20, DISPLAYMODE_COMMS, GREEN);
 	add_textwindow(&comms_ui.tw);
 	add_button(&comms_ui.comms_onscreen_button);
 	add_button(&comms_ui.nav_onscreen_button);
@@ -4134,7 +4112,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 			pwr = 255;
 		}
 
-		gdk_gc_set_foreground(gc, &huex[LIMEGREEN]);
+		sng_set_foreground(LIMEGREEN);
 		/* TODO, make sample count vary based on sensor power,damage */
 		probes = (30 * 10) / (bw / 2 + ((dist * 2.0) / XKNOWN_DIM));
 		initial_noise = (int) ((hypot((float) bw, 256.0 - pwr) / 256.0) * 20.0);
@@ -4178,7 +4156,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 			snis_draw_dotted_vline(w->window, gc, sx, sy1, sy2, 4);
 		}
 	}
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sng_set_foreground(GREEN);
 	sng_abs_xy_draw_string(w, gc, "10", NANO_FONT, x1, y2 + 10);
 	sng_abs_xy_draw_string(w, gc, "20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 10);
 	sng_abs_xy_draw_string(w, gc, "30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + 10);
@@ -4194,7 +4172,7 @@ static void draw_science_warp_data(GtkWidget *w, struct snis_entity *ship)
 
 	if (!ship)
 		return;
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sng_set_foreground(GREEN);
 	dx = ship->x - ship->sci_coordx;
 	dy = ship->y - ship->sci_coordy;
 	bearing = atan2(dx, dy) * 180 / M_PI;
@@ -4326,7 +4304,7 @@ static void show_science(GtkWidget *w)
 	show_common_screen(w, "Science");
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sng_set_foreground(GREEN);
 	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
 			360.0 * o->tsd.ship.sci_heading / (2.0 * 3.1415927));
 	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
@@ -4342,10 +4320,10 @@ static void show_science(GtkWidget *w)
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(o->tsd.ship.scizoom / 255.0) +
 			MIN_SCIENCE_SCREEN_RADIUS;
-	gdk_gc_set_foreground(gc, &huex[DARKGREEN]);
+	sng_set_foreground(DARKGREEN);
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, zoom);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, zoom, o->tsd.ship.scizoom < 50);
-	gdk_gc_set_foreground(gc, &huex[DARKRED]);
+	sng_set_foreground(DARKRED);
 	snis_draw_science_reticule(w, gc, cx, cy, r,
 			o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width));
 	draw_all_the_science_guys(w, o, zoom);
@@ -4378,18 +4356,18 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	case OBJTYPE_SHIP1:
 	case OBJTYPE_SHIP2:
 		if (o->id == my_ship_id)
-			gdk_gc_set_foreground(gc, &huex[GREEN]);
+			sng_set_foreground(GREEN);
 		else
-			gdk_gc_set_foreground(gc, &huex[WHITE]);
+			sng_set_foreground(WHITE);
 		break;
 	case OBJTYPE_PLANET:
-		gdk_gc_set_foreground(gc, &huex[BLUE]);
+		sng_set_foreground(BLUE);
 		break;
 	case OBJTYPE_STARBASE:
-		gdk_gc_set_foreground(gc, &huex[MAGENTA]);
+		sng_set_foreground(MAGENTA);
 		break;
 	default:
-		gdk_gc_set_foreground(gc, &huex[WHITE]);
+		sng_set_foreground(WHITE);
 	}
 	snis_draw_line(w->window, gc, x1, y1, x2, y2);
 	snis_draw_line(w->window, gc, x1, y2, x2, y1);
@@ -4407,9 +4385,9 @@ static void show_debug(GtkWidget *w)
 	show_common_screen(w, "Debug");
 
 	if (go[my_ship_oid].alive > 0)
-		gdk_gc_set_foreground(gc, &huex[GREEN]);
+		sng_set_foreground(GREEN);
 	else
-		gdk_gc_set_foreground(gc, &huex[RED]);
+		sng_set_foreground(RED);
 
 	ix = SCREEN_WIDTH / 10.0;
 	for (x = 0; x <= 10; x++)
@@ -4432,7 +4410,7 @@ static void show_debug(GtkWidget *w)
 		debug_draw_object(w, &spark[i]);
 	pthread_mutex_unlock(&universe_mutex);
 
-	gdk_gc_set_foreground(gc, &huex[GREEN]);
+	sng_set_foreground(GREEN);
 	sng_abs_xy_draw_string(w, gc, "SERVER NET STATS:", TINY_FONT, 10, SCREEN_HEIGHT - 40); 
 	sprintf(buffer, "TX:%llu RX:%llu T=%lu SECS. BW=%llu BYTES/SEC",
 		(unsigned long long) netstats.bytes_sent,
@@ -4492,7 +4470,7 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
-        gdk_gc_set_foreground(gc, &huex[WHITE]);
+	sng_set_foreground(WHITE);
 	
 #if 0	
 	for (i = 0; i <= highest_object_number;i++) {
@@ -4806,24 +4784,8 @@ int main(int argc, char *argv[])
 	g_signal_connect(G_OBJECT (main_da), "button_press_event",
                       G_CALLBACK (main_da_button_press), NULL);
 
-	gdk_color_parse("white", &huex[WHITE]);
-	gdk_color_parse("blue", &huex[BLUE]);
-	gdk_color_parse("black", &huex[BLACK]);
-	gdk_color_parse("green", &huex[GREEN]);
-	gdk_color_parse("lime green", &huex[LIMEGREEN]);
-	gdk_color_parse("darkgreen", &huex[DARKGREEN]);
-	gdk_color_parse("yellow", &huex[YELLOW]);
-	gdk_color_parse("red", &huex[RED]);
-	gdk_color_parse("orange", &huex[ORANGE]);
-	gdk_color_parse("cyan", &huex[CYAN]);
-	gdk_color_parse("MAGENTA", &huex[MAGENTA]);
-	gdk_color_parse("darkred", &huex[DARKRED]);
-	gdk_color_parse("orange", &huex[AMBER]);
-
 	gtk_container_add (GTK_CONTAINER (window), vbox);
 	gtk_box_pack_start(GTK_BOX (vbox), main_da, TRUE /* expand */, TRUE /* fill */, 0);
-
-	gtk_widget_modify_bg(main_da, GTK_STATE_NORMAL, &huex[BLACK]);
 
         gtk_window_set_default_size(GTK_WINDOW(window), real_screen_width, real_screen_height);
 
@@ -4831,11 +4793,11 @@ int main(int argc, char *argv[])
         gtk_widget_show (main_da);
         gtk_widget_show (window);
 
-	for (i=0;i<NCOLORS+NSPARKCOLORS + NRAINBOWCOLORS;i++)
-		gdk_colormap_alloc_color(gtk_widget_get_colormap(main_da), &huex[i], FALSE, FALSE);
+	sng_setup_colors(main_da);
+
         gc = gdk_gc_new(GTK_WIDGET(main_da)->window);
-        gdk_gc_set_foreground(gc, &huex[BLUE]);
-        gdk_gc_set_foreground(gc, &huex[WHITE]);
+	sng_set_gc(gc);
+	sng_set_foreground(WHITE);
 
 	timer_tag = g_timeout_add(1000 / frame_rate_hz, advance_game, NULL);
 

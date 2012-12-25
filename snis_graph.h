@@ -9,6 +9,26 @@
 #define INIT(y)
 #endif
 
+/* cardinal color indexes into huex array */
+#define WHITE 0
+#define BLUE 1
+#define BLACK 2
+#define GREEN 3
+#define YELLOW 4
+#define RED 5
+#define ORANGE 6
+#define CYAN 7
+#define MAGENTA 8
+#define DARKGREEN 9
+#define DARKRED 10
+#define AMBER 11
+#define LIMEGREEN 12
+
+#define NCOLORS 13              /* number of "cardinal" colors */
+#define NSPARKCOLORS 25         /* 25 shades from yellow to red for the sparks */
+#define NRAINBOWSTEPS (16)
+#define NRAINBOWCOLORS (NRAINBOWSTEPS*3)
+
 typedef void line_drawing_function(GdkDrawable *drawable,
 	GdkGC *gc, gint x1, gint y1, gint x2, gint y2);
 
@@ -60,6 +80,9 @@ SNG_GLOBAL int sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_ob
 		unsigned char letter, int x, int y);
 SNG_GLOBAL void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, int x, int y) ;
 SNG_GLOBAL void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y);
+SNG_GLOBAL void sng_setup_colors(GtkWidget *w);
+SNG_GLOBAL void sng_set_foreground(int c);
+SNG_GLOBAL void sng_set_gc(GdkGC *gc);
 
 #undef SNG_GLOBAL
 #endif
