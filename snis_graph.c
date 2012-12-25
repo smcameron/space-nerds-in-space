@@ -5,6 +5,8 @@
 #include "snis_graph.h"
 #undef SNIS_GRAPH_DECLARE_GLOBALS
 
+#include "bline.h"
+
 /* cardinal color indexes into huex array */
 #define WHITE 0
 #define BLUE 1
@@ -30,6 +32,11 @@ extern GdkColor huex[];
 static struct snis_graph_context {
 	float xscale, yscale;
 } sgc;
+
+static int sng_rand(int n)
+{
+	return rand() % n;
+}
 
 void sng_set_scale(float xscale, float yscale)
 {
@@ -142,5 +149,49 @@ void sng_use_scaled_drawing_functions(void)
 void sng_use_thick_lines(void)
 {
 	sng_current_draw_line = sng_thick_scaled_line;
+}
+
+void sng_dotted_line_plot_func(int x, int y, void *context)
+{
+	struct sng_dotted_plot_func_context *c = context;
+
+	c->i = (c->i + 1) % 10;
+	if (c->i != 0)
+		return;
+	gdk_draw_point(c->drawable, c->gc, x, y);
+}
+
+void sng_electric_line_plot_func(int x, int y, void *context)
+{
+	struct sng_dotted_plot_func_context *c = context;
+
+	if (sng_rand(100) < 10)
+		gdk_draw_point(c->drawable, c->gc, x, y);
+}
+
+void sng_draw_dotted_line(GdkDrawable *drawable,
+	GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
+{
+	struct sng_dotted_plot_func_context context;
+
+	context.drawable = drawable;
+	context.gc = gc;
+	context.i = 0;
+
+	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
+			sng_dotted_line_plot_func, &context);
+}
+
+void sng_draw_electric_line(GdkDrawable *drawable,
+	GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
+{
+	struct sng_dotted_plot_func_context context;
+
+	context.drawable = drawable;
+	context.gc = gc;
+	context.i = 0;
+
+	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
+			sng_electric_line_plot_func, &context);
 }
 

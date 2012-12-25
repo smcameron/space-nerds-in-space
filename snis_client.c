@@ -601,56 +601,6 @@ void spin_points(struct my_point_t *points, int npoints,
 	} 
 }
 
-struct dotted_plot_func_context {
-	GdkDrawable *drawable;
-	GdkGC *gc;
-	int i;
-};
-
-void dotted_line_plot_func(int x, int y, void *context)
-{
-	struct dotted_plot_func_context *c = context;
-
-	c->i = (c->i + 1) % 10;
-	if (c->i != 0)
-		return;
-	gdk_draw_point(c->drawable, c->gc, x, y);
-}
-
-void electric_line_plot_func(int x, int y, void *context)
-{
-	struct dotted_plot_func_context *c = context;
-
-	if (snis_randn(100) < 10)
-		gdk_draw_point(c->drawable, c->gc, x, y);
-}
-
-void snis_draw_dotted_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
-{
-	struct dotted_plot_func_context context;
-
-	context.drawable = drawable;
-	context.gc = gc;
-	context.i = 0;
-
-	bline(x1 * xscale_screen, y1 * yscale_screen, x2 * xscale_screen, y2 * yscale_screen,
-			dotted_line_plot_func, &context);
-}
-
-void snis_draw_electric_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
-{
-	struct dotted_plot_func_context context;
-
-	context.drawable = drawable;
-	context.gc = gc;
-	context.i = 0;
-
-	bline(x1 * xscale_screen, y1 * yscale_screen, x2 * xscale_screen, y2 * yscale_screen,
-			electric_line_plot_func, &context);
-}
-
 /* Draws a letter in the given font at an absolute x,y coords on the screen. */
 static int abs_xy_draw_letter(GtkWidget *w, struct my_vect_obj **font, 
 		unsigned char letter, int x, int y)
@@ -2457,7 +2407,7 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 		x2 += x;
 		y1 += y;
 		y2 += y;
-		snis_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
+		sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
 	}
 
 	/* draw the ship */
@@ -2468,12 +2418,12 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 	tx2 = x + sin(heading - beam_width / 2) * r;
 	ty2 = y - cos(heading - beam_width / 2) * r;
 	gdk_gc_set_foreground(gc, &huex[GREEN]);
-	snis_draw_electric_line(w->window, gc, tx1, ty1, tx2, ty2);
+	sng_draw_electric_line(w->window, gc, tx1, ty1, tx2, ty2);
 	tx1 = x + sin(heading + beam_width / 2) * r * 0.05;
 	ty1 = y - cos(heading + beam_width / 2) * r * 0.05;
 	tx2 = x + sin(heading + beam_width / 2) * r;
 	ty2 = y - cos(heading + beam_width / 2) * r;
-	snis_draw_electric_line(w->window, gc, tx1, ty1, tx2, ty2);
+	sng_draw_electric_line(w->window, gc, tx1, ty1, tx2, ty2);
 }
 
 static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
