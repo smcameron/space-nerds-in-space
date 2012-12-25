@@ -1055,7 +1055,7 @@ static int add_torpedo(double x, double y, double vx, double vy, double heading,
 	return i;
 }
 
-static void __attribute__((unused)) add_starbases(void)
+static void add_starbases(void)
 {
 	int i;
 	double x, y;
@@ -1741,7 +1741,7 @@ protocol_error:
 	return;
 }
 
-static void *per_client_read_thread(__attribute__((unused)) void /* struct game_client */ *client)
+static void *per_client_read_thread(void /* struct game_client */ *client)
 {
 	struct game_client *c = (struct game_client *) client;
 
