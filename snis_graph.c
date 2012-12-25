@@ -123,3 +123,24 @@ void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 			width * sgc.xscale, height * sgc.yscale, angle1, angle2);
 }
 
+void sng_use_unscaled_drawing_functions(void)
+{
+	sng_current_draw_line = gdk_draw_line;
+	sng_current_draw_rectangle = gdk_draw_rectangle;
+	sng_current_bright_line = sng_unscaled_bright_line;
+	sng_current_draw_arc = gdk_draw_arc;
+}
+
+void sng_use_scaled_drawing_functions(void)
+{
+	sng_current_draw_line = sng_scaled_line;
+	sng_current_draw_rectangle = sng_scaled_rectangle;
+	sng_current_bright_line = sng_scaled_bright_line;
+	sng_current_draw_arc = sng_scaled_arc;
+}
+
+void sng_use_thick_lines(void)
+{
+	sng_current_draw_line = sng_thick_scaled_line;
+}
+

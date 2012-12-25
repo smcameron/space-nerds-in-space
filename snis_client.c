@@ -4716,17 +4716,11 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	yscale_screen = (float) real_screen_height / (float) SCREEN_HEIGHT;
 	sng_set_scale(xscale_screen, yscale_screen);
 	if (real_screen_width == 800 && real_screen_height == 600) {
-		sng_current_draw_line = gdk_draw_line;
-		sng_current_draw_rectangle = gdk_draw_rectangle;
-		sng_current_bright_line = sng_unscaled_bright_line;
-		sng_current_draw_arc = gdk_draw_arc;
+		sng_use_unscaled_drawing_functions();
 	} else {
-		sng_current_draw_line = sng_scaled_line;
-		sng_current_draw_rectangle = sng_scaled_rectangle;
-		sng_current_bright_line = sng_scaled_bright_line;
-		sng_current_draw_arc = sng_scaled_arc;
+		sng_use_scaled_drawing_functions();
 		if (thicklines)
-			sng_current_draw_line = sng_thick_scaled_line;
+			sng_use_thick_lines();
 	}
 	gdk_gc_set_clip_origin(gc, 0, 0);
 	cliprect.x = 0;	

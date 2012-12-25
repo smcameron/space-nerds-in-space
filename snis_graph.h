@@ -35,7 +35,9 @@ extern void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 
 extern void sng_scaled_rectangle(GdkDrawable *drawable,
 	GdkGC *gc, gboolean filled, gint x, gint y, gint width, gint height);
-
+extern void sng_use_scaled_drawing_functions(void);
+extern void sng_use_unscaled_drawing_functions(void);
+extern void sng_use_thick_lines(void);
 
 GLOBAL line_drawing_function *sng_current_draw_line INIT(gdk_draw_line);
 GLOBAL rectangle_drawing_function *sng_current_draw_rectangle INIT(gdk_draw_rectangle);
