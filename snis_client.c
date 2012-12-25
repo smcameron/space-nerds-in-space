@@ -673,28 +673,6 @@ void scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 			width * xscale_screen, height * yscale_screen, angle1, angle2);
 }
 
-void thick_scaled_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
-{
-	int sx1,sy1,sx2,sy2,dx,dy;
-
-	if (abs(x1-x2) > abs(y1-y2)) {
-		dx = 0;
-		dy = 1;
-	} else {
-		dx = 1;
-		dy = 0;
-	}
-	sx1 = x1*xscale_screen;
-	sx2 = x2*xscale_screen;
-	sy1 = y1*yscale_screen;	
-	sy2 = y2*yscale_screen;	
-	
-	gdk_draw_line(drawable, gc, sx1,sy1,sx2,sy2);
-	gdk_draw_line(drawable, gc, sx1-dx,sy1-dy,sx2-dx,sy2-dy);
-	gdk_draw_line(drawable, gc, sx1+dx,sy1+dy,sx2+dx,sy2+dy);
-}
-
 void scaled_rectangle(GdkDrawable *drawable,
 	GdkGC *gc, gboolean filled, gint x, gint y, gint width, gint height)
 {
@@ -4821,7 +4799,7 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 		current_bright_line = scaled_bright_line;
 		current_draw_arc = scaled_arc;
 		if (thicklines)
-			current_draw_line = thick_scaled_line;
+			current_draw_line = sng_thick_scaled_line;
 	}
 	gdk_gc_set_clip_origin(gc, 0, 0);
 	cliprect.x = 0;	
