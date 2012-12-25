@@ -12,7 +12,11 @@
 typedef void line_drawing_function(GdkDrawable *drawable,
 	GdkGC *gc, gint x1, gint y1, gint x2, gint y2);
 
+typedef void rectangle_drawing_function(GdkDrawable *drawable,
+        GdkGC *gc, gboolean filled, gint x, gint y, gint width, gint height);
+
 GLOBAL line_drawing_function *sng_current_draw_line INIT(gdk_draw_line);
+GLOBAL rectangle_drawing_function *sng_current_draw_rectangle INIT(gdk_draw_rectangle);
 
 extern void sng_set_scale(float xscale, float yscale);
 extern void sng_scaled_line(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, gint x2, gint y2);

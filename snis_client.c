@@ -64,15 +64,11 @@ __attribute__((unused)) static double max_speed[];
 typedef void bright_line_drawing_function(GdkDrawable *drawable,
          GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color);
 
-typedef void rectangle_drawing_function(GdkDrawable *drawable,
-        GdkGC *gc, gboolean filled, gint x, gint y, gint width, gint height);
-
 typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nsparks, int time);
 
 typedef void arc_drawing_function(GdkDrawable *drawable, GdkGC *gc,
 	gboolean filled, gint x, gint y, gint width, gint height, gint angle1, gint angle2);
 
-rectangle_drawing_function *current_draw_rectangle = gdk_draw_rectangle;
 bright_line_drawing_function *current_bright_line = sng_unscaled_bright_line;
 explosion_function *explosion = NULL;
 arc_drawing_function *current_draw_arc = gdk_draw_arc;
@@ -80,7 +76,7 @@ arc_drawing_function *current_draw_arc = gdk_draw_arc;
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
 #define DEFAULT_LINE_STYLE sng_current_draw_line
-#define DEFAULT_RECTANGLE_STYLE current_draw_rectangle
+#define DEFAULT_RECTANGLE_STYLE sng_current_draw_rectangle
 #define DEFAULT_BRIGHT_LINE_STYLE current_bright_line
 #define DEFAULT_DRAW_ARC current_draw_arc
 
@@ -3106,9 +3102,9 @@ static void text_window_draw(GtkWidget *w, struct text_window *tw)
 
 	gdk_gc_set_foreground(gc, &tw->color);
 	/* draw outer rectangle */
-	current_draw_rectangle(w->window, gc, 0, tw->x, tw->y, tw->w, tw->h);
+	sng_current_draw_rectangle(w->window, gc, 0, tw->x, tw->y, tw->w, tw->h);
 	/* draw scroll bar */
-	current_draw_rectangle(w->window, gc, 0, tw->x + tw->w - 15, tw->y + 5, 10, tw->h - 10);
+	sng_current_draw_rectangle(w->window, gc, 0, tw->x + tw->w - 15, tw->y + 5, 10, tw->h - 10);
 
 	twec = text_window_entry_count(tw);
 	if (twec == 0) {
@@ -3134,10 +3130,10 @@ static void text_window_draw(GtkWidget *w, struct text_window *tw)
 			thumb_bottom = tw->y + tw->h - 10;
 			
 	}
-	current_draw_rectangle(w->window, gc, 0,
+	sng_current_draw_rectangle(w->window, gc, 0,
 			tw->x + tw->w - 13, thumb_pos - tw->lineheight / 2,
 			6, tw->lineheight);
-	current_draw_rectangle(w->window, gc, 0,
+	sng_current_draw_rectangle(w->window, gc, 0,
 			tw->x + tw->w - 11, thumb_top,
 			2, thumb_bottom - thumb_top);
 
@@ -3252,13 +3248,13 @@ static void slider_draw(GtkWidget *w, struct slider *s)
 		}
 	}
 	gdk_gc_set_foreground(gc, &s->color);
-	current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->length, SLIDER_HEIGHT);
+	sng_current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->length, SLIDER_HEIGHT);
 	width = s->value * s->length - 1;
 	if (width < 0)
 		width = 0;
 	if (!s->clicked)
 		gdk_gc_set_foreground(gc, &bar_color);
-	current_draw_rectangle(w->window, gc, 1, s->x + 1, s->y + 1, width, SLIDER_HEIGHT - 2);
+	sng_current_draw_rectangle(w->window, gc, 1, s->x + 1, s->y + 1, width, SLIDER_HEIGHT - 2);
 	if (!s->clicked)
 		gdk_gc_set_foreground(gc, &s->color);
 
@@ -3358,7 +3354,7 @@ static void button_init(struct button *b, int x, int y, int width, int height, c
 static void button_draw(GtkWidget *w, struct button *b)
 {
 	gdk_gc_set_foreground(gc, &b->color);
-	current_draw_rectangle(w->window, gc, 0, b->x, b->y, b->width, b->height);
+	sng_current_draw_rectangle(w->window, gc, 0, b->x, b->y, b->width, b->height);
 	abs_xy_draw_string(w, b->label, b->font, b->x + 10, b->y + b->height / 1.7); 
 }
 
@@ -4223,7 +4219,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 	int dy1, dy2, bw, probes, dx, pwr;
 	int initial_noise;
 
-	current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
+	sng_current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 4, x2, 10);
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 2, x2, 10);
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + 3 * (y2 - y1) / 4, x2, 10);
@@ -4336,7 +4332,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		return;
 	x = SCIENCE_DATA_X + 10;
 	y = SCIENCE_DATA_Y + 15;
-	current_draw_rectangle(w->window, gc, 0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
+	sng_current_draw_rectangle(w->window, gc, 0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
 	sprintf(buffer, "NAME: %s", o ? o->sdata.name : "");
 	abs_xy_draw_string(w, buffer, TINY_FONT, x, y);
@@ -4729,12 +4725,12 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	sng_set_scale(xscale_screen, yscale_screen);
 	if (real_screen_width == 800 && real_screen_height == 600) {
 		sng_current_draw_line = gdk_draw_line;
-		current_draw_rectangle = gdk_draw_rectangle;
+		sng_current_draw_rectangle = gdk_draw_rectangle;
 		current_bright_line = sng_unscaled_bright_line;
 		current_draw_arc = gdk_draw_arc;
 	} else {
 		sng_current_draw_line = sng_scaled_line;
-		current_draw_rectangle = sng_scaled_rectangle;
+		sng_current_draw_rectangle = sng_scaled_rectangle;
 		current_bright_line = sng_scaled_bright_line;
 		current_draw_arc = sng_scaled_arc;
 		if (thicklines)
