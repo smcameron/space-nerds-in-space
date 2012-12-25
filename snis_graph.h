@@ -12,5 +12,13 @@ extern void sng_thick_scaled_line(GdkDrawable *drawable,
 	GdkGC *gc, gint x1, gint y1, gint x2, gint y2);
 extern void sng_scaled_bright_line(GdkDrawable *drawable,
 	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color);
+extern void sng_unscaled_bright_line(GdkDrawable *drawable,
+	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color);
+extern void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
+	gboolean filled, gint x, gint y, gint width, gint height, gint angle1, gint angle2);
+
+extern void sng_scaled_rectangle(GdkDrawable *drawable,
+	GdkGC *gc, gboolean filled, gint x, gint y, gint width, gint height);
+
 
 #endif

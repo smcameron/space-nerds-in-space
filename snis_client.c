@@ -72,11 +72,9 @@ typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nspar
 typedef void arc_drawing_function(GdkDrawable *drawable, GdkGC *gc,
 	gboolean filled, gint x, gint y, gint width, gint height, gint angle1, gint angle2);
 
-void unscaled_bright_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color);
 line_drawing_function *current_draw_line = gdk_draw_line;
 rectangle_drawing_function *current_draw_rectangle = gdk_draw_rectangle;
-bright_line_drawing_function *current_bright_line = unscaled_bright_line;
+bright_line_drawing_function *current_bright_line = sng_unscaled_bright_line;
 explosion_function *explosion = NULL;
 arc_drawing_function *current_draw_arc = gdk_draw_arc;
 
@@ -664,40 +662,6 @@ void snis_draw_electric_line(GdkDrawable *drawable,
 
 	bline(x1 * xscale_screen, y1 * yscale_screen, x2 * xscale_screen, y2 * yscale_screen,
 			electric_line_plot_func, &context);
-}
-
-void scaled_arc(GdkDrawable *drawable, GdkGC *gc,
-	gboolean filled, gint x, gint y, gint width, gint height, gint angle1, gint angle2)
-{
-	gdk_draw_arc(drawable, gc, filled, x * xscale_screen, y * yscale_screen,
-			width * xscale_screen, height * yscale_screen, angle1, angle2);
-}
-
-void scaled_rectangle(GdkDrawable *drawable,
-	GdkGC *gc, gboolean filled, gint x, gint y, gint width, gint height)
-{
-	gdk_draw_rectangle(drawable, gc, filled, x*xscale_screen, y*yscale_screen,
-		width*xscale_screen, height*yscale_screen);
-}
-
-void unscaled_bright_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color)
-{
-	int dx,dy;
-
-	if (abs(x1-x2) > abs(y1-y2)) {
-		dx = 0;
-		dy = 1;
-	} else {
-		dx = 1;
-		dy = 0;
-	}
-	
-	gdk_gc_set_foreground(gc, &huex[WHITE]);
-	gdk_draw_line(drawable, gc, x1,y1,x2,y2);
-	gdk_gc_set_foreground(gc, &huex[color]);
-	gdk_draw_line(drawable, gc, x1-dx,y1-dy,x2-dx,y2-dy);
-	gdk_draw_line(drawable, gc, x1+dx,y1+dy,x2+dx,y2+dy);
 }
 
 /* Draws a letter in the given font at an absolute x,y coords on the screen. */
@@ -4767,13 +4731,13 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	if (real_screen_width == 800 && real_screen_height == 600) {
 		current_draw_line = gdk_draw_line;
 		current_draw_rectangle = gdk_draw_rectangle;
-		current_bright_line = unscaled_bright_line;
+		current_bright_line = sng_unscaled_bright_line;
 		current_draw_arc = gdk_draw_arc;
 	} else {
 		current_draw_line = sng_scaled_line;
-		current_draw_rectangle = scaled_rectangle;
+		current_draw_rectangle = sng_scaled_rectangle;
 		current_bright_line = sng_scaled_bright_line;
-		current_draw_arc = scaled_arc;
+		current_draw_arc = sng_scaled_arc;
 		if (thicklines)
 			current_draw_line = sng_thick_scaled_line;
 	}

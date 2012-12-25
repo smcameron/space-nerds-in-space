@@ -94,4 +94,30 @@ void sng_scaled_bright_line(GdkDrawable *drawable,
 	gdk_draw_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
+void sng_unscaled_bright_line(GdkDrawable *drawable,
+	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color)
+{
+	int dx,dy;
+
+	if (abs(x1-x2) > abs(y1-y2)) {
+		dx = 0;
+		dy = 1;
+	} else {
+		dx = 1;
+		dy = 0;
+	}
+	
+	gdk_gc_set_foreground(gc, &huex[WHITE]);
+	gdk_draw_line(drawable, gc, x1,y1,x2,y2);
+	gdk_gc_set_foreground(gc, &huex[color]);
+	gdk_draw_line(drawable, gc, x1-dx,y1-dy,x2-dx,y2-dy);
+	gdk_draw_line(drawable, gc, x1+dx,y1+dy,x2+dx,y2+dy);
+}
+
+void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
+	gboolean filled, gint x, gint y, gint width, gint height, gint angle1, gint angle2)
+{
+	gdk_draw_arc(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
+			width * sgc.xscale, height * sgc.yscale, angle1, angle2);
+}
 
