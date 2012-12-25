@@ -273,3 +273,7 @@ void sng_set_gc(GdkGC *gc)
 	sgc.gc = gc;
 }
 
+void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
+{
+	sng_current_draw_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
+}

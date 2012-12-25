@@ -83,6 +83,7 @@ SNG_GLOBAL void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y);
 SNG_GLOBAL void sng_setup_colors(GtkWidget *w);
 SNG_GLOBAL void sng_set_foreground(int c);
 SNG_GLOBAL void sng_set_gc(GdkGC *gc);
+SNG_GLOBAL void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r);
 
 #undef SNG_GLOBAL
 #endif

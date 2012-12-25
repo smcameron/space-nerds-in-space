@@ -1326,7 +1326,6 @@ static void draw_gauge_needle(GdkDrawable *drawable, GdkGC *gc,
 	snis_draw_line(drawable, gc, x4, y4, x1, y1);
 }
 
-static void snis_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r);
 static void gauge_draw(GtkWidget *w, struct gauge *g)
 {
 	int i;
@@ -1337,7 +1336,7 @@ static void gauge_draw(GtkWidget *w, struct gauge *g)
 	char buffer[10], buf2[10];
 
 	sng_set_foreground(g->dial_color);
-	snis_draw_circle(w->window, gc, g->x, g->y, g->r); 
+	sng_draw_circle(w->window, gc, g->x, g->y, g->r);
 
 	ai = g->angular_range / g->ndivs;
 	normalize_angle(&ai);
@@ -2161,11 +2160,6 @@ static void show_mainscreen(GtkWidget *w)
 	show_common_screen(w, "Main Screen");	
 }
 
-static void snis_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
-{
-	snis_draw_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
-}
-
 static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
 {
 	int i, dx, dy;
@@ -2176,7 +2170,7 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 		dy = y + snis_randn(r * 2) - r; 
 		snis_draw_line(drawable, gc, x, y, dx, dy);
 	}
-	/* snis_draw_circle(drawable, gc, x, y, (int) (SCREEN_WIDTH * 150.0 / XKNOWN_DIM)); */
+	/* sng_draw_circle(drawable, gc, x, y, (int) (SCREEN_WIDTH * 150.0 / XKNOWN_DIM)); */
 }
 
 static void snis_draw_laser(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
@@ -2236,7 +2230,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	}
 
 	if (selected)
-		snis_draw_circle(w->window, gc, x, y, 10);
+		sng_draw_circle(w->window, gc, x, y, 10);
 	
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
@@ -2319,7 +2313,7 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 	// int nx, ny, 
 	int tx1, ty1, tx2, ty2;
 
-	snis_draw_circle(w->window, gc, x, y, r);
+	sng_draw_circle(w->window, gc, x, y, r);
 
 	for (i = 0; i < 36; i++) { /* 10 degree increments */
 		int x1 = (int) (cos((10.0 * i) * 3.1415927 / 180.0) * r);
@@ -2358,7 +2352,7 @@ static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 	char buf[10];
 
 	for (i = r; i > r / 4; i -= r / 5)
-		snis_draw_circle(w->window, gc, x, y, i);
+		sng_draw_circle(w->window, gc, x, y, i);
 
 	for (i = 0; i < 36; i++) { /* 10 degree increments */
 		int x3, y3;
@@ -2431,11 +2425,11 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 			switch (go[i].type) {
 			case OBJTYPE_PLANET:
 				sng_set_foreground(BLUE);
-				snis_draw_circle(w->window, gc, x, y, r / 10);
+				sng_draw_circle(w->window, gc, x, y, r / 10);
 				break;
 			case OBJTYPE_STARBASE:
 				sng_set_foreground(MAGENTA);
-				snis_draw_circle(w->window, gc, x, y, r / 20);
+				sng_draw_circle(w->window, gc, x, y, r / 20);
 				break;
 			case OBJTYPE_LASER:
 				snis_draw_laser(w->window, gc, x, y,
