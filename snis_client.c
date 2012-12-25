@@ -61,15 +61,11 @@
 
 __attribute__((unused)) static double max_speed[];
 
-typedef void bright_line_drawing_function(GdkDrawable *drawable,
-         GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color);
-
 typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nsparks, int time);
 
 typedef void arc_drawing_function(GdkDrawable *drawable, GdkGC *gc,
 	gboolean filled, gint x, gint y, gint width, gint height, gint angle1, gint angle2);
 
-bright_line_drawing_function *current_bright_line = sng_unscaled_bright_line;
 explosion_function *explosion = NULL;
 arc_drawing_function *current_draw_arc = gdk_draw_arc;
 
@@ -77,7 +73,7 @@ arc_drawing_function *current_draw_arc = gdk_draw_arc;
 /* in case I come across something faster than gdk_draw_line */
 #define DEFAULT_LINE_STYLE sng_current_draw_line
 #define DEFAULT_RECTANGLE_STYLE sng_current_draw_rectangle
-#define DEFAULT_BRIGHT_LINE_STYLE current_bright_line
+#define DEFAULT_BRIGHT_LINE_STYLE sng_current_bright_line
 #define DEFAULT_DRAW_ARC current_draw_arc
 
 #define snis_draw_line DEFAULT_LINE_STYLE
@@ -2316,7 +2312,7 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 
 static void snis_draw_laser(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
 {
-	current_bright_line(drawable, gc, x1, y1, x2, y2, RED);
+	sng_current_bright_line(drawable, gc, x1, y1, x2, y2, RED);
 }
 
 /* position and dimensions of science scope */
@@ -4726,12 +4722,12 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	if (real_screen_width == 800 && real_screen_height == 600) {
 		sng_current_draw_line = gdk_draw_line;
 		sng_current_draw_rectangle = gdk_draw_rectangle;
-		current_bright_line = sng_unscaled_bright_line;
+		sng_current_bright_line = sng_unscaled_bright_line;
 		current_draw_arc = gdk_draw_arc;
 	} else {
 		sng_current_draw_line = sng_scaled_line;
 		sng_current_draw_rectangle = sng_scaled_rectangle;
-		current_bright_line = sng_scaled_bright_line;
+		sng_current_bright_line = sng_scaled_bright_line;
 		current_draw_arc = sng_scaled_arc;
 		if (thicklines)
 			sng_current_draw_line = sng_thick_scaled_line;

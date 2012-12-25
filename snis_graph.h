@@ -15,8 +15,8 @@ typedef void line_drawing_function(GdkDrawable *drawable,
 typedef void rectangle_drawing_function(GdkDrawable *drawable,
         GdkGC *gc, gboolean filled, gint x, gint y, gint width, gint height);
 
-GLOBAL line_drawing_function *sng_current_draw_line INIT(gdk_draw_line);
-GLOBAL rectangle_drawing_function *sng_current_draw_rectangle INIT(gdk_draw_rectangle);
+typedef void bright_line_drawing_function(GdkDrawable *drawable,
+	 GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color);
 
 extern void sng_set_scale(float xscale, float yscale);
 extern void sng_scaled_line(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, gint x2, gint y2);
@@ -34,5 +34,8 @@ extern void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 extern void sng_scaled_rectangle(GdkDrawable *drawable,
 	GdkGC *gc, gboolean filled, gint x, gint y, gint width, gint height);
 
+GLOBAL line_drawing_function *sng_current_draw_line INIT(gdk_draw_line);
+GLOBAL rectangle_drawing_function *sng_current_draw_rectangle INIT(gdk_draw_rectangle);
+GLOBAL bright_line_drawing_function *sng_current_bright_line INIT(sng_unscaled_bright_line);
 
 #endif
