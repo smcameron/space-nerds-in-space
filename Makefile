@@ -23,7 +23,7 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_graph.o snis_client.o snis_font.o \
-	snis_typeface.o
+	snis_typeface.o snis_gauge.o
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm
 
@@ -97,6 +97,9 @@ snis_graph.o:	snis_graph.h snis_graph.c
 
 snis_typeface.o:	snis_typeface.h snis_typeface.c
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_typeface.c
+
+snis_gauge.o:	snis_gauge.h snis_gauge.c snis_graph.h
+	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_gauge.c
 
 ${SSGL}:
 	(cd ssgl ; make )

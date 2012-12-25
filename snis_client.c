@@ -48,6 +48,7 @@
 #include "snis_font.h"
 #include "snis_typeface.h"
 #include "snis_graph.h"
+#include "snis_gauge.h"
 #include "snis_socket_io.h"
 #include "ssgl/ssgl.h"
 #include "snis_marshal.h"
@@ -1237,130 +1238,6 @@ struct button {
 	button_function bf;
 	void *cookie;
 };
-
-
-/*
- * begin gauge related functions/types
- */
-typedef double (*gauge_monitor_function)(void);
-
-struct gauge {
-	int x, y, r;
-	gauge_monitor_function sample;
-	gauge_monitor_function sample2;
-	double r1,r2;
-	double start_angle, angular_range;
-	int needle_color, dial_color, needle_color2;
-	int ndivs;
-	char title[16]; 
-};
-
-static void gauge_add_needle(struct gauge *g, gauge_monitor_function sample, int color)
-{
-	g->needle_color2 = color;
-	g->sample2 = sample;
-}
-
-static void gauge_init(struct gauge *g, 
-			int x, int y, int r, double r1, double r2,
-			double start_angle, double angular_range,
-			int needle_color, int dial_color, int ndivs, char *title,
-			gauge_monitor_function gmf)
-{
-	g->x = x;
-	g->y = y;
-	g->r = r;
-	g->r1 = r1;
-	g->r2 = r2;
-	g->start_angle = start_angle;
-	g->angular_range = angular_range;
-	g->needle_color = needle_color;
-	g->dial_color = dial_color;
-	g->ndivs = ndivs;
-	g->sample = gmf;
-	strncpy(g->title, title, sizeof(g->title) - 1);
-	g->sample2 = NULL;
-}
-
-static void draw_gauge_needle(GdkDrawable *drawable, GdkGC *gc,
-		gint x, gint y, gint r, double a)
-{
-	int x1, y1, x2, y2, x3, y3, x4, y4;
-
-	x1 = r *  sin(a) * 0.9 + x;
-	y1 = r * -cos(a) * 0.9 + y;
-	x2 = r * -sin(a) * 0.2 + x;
-	y2 = r *  cos(a) * 0.2 + y;
-	x3 = r *  sin(a + M_PI / 2.0) * 0.05 + x;
-	y3 = r * -cos(a + M_PI / 2.0) * 0.05 + y;
-	x4 = r *  sin(a - M_PI / 2.0) * 0.05 + x;
-	y4 = r * -cos(a - M_PI / 2.0) * 0.05 + y;
-
-	snis_draw_line(drawable, gc, x1, y1, x3, y3);
-	snis_draw_line(drawable, gc, x3, y3, x2, y2);
-	snis_draw_line(drawable, gc, x2, y2, x4, y4);
-	snis_draw_line(drawable, gc, x4, y4, x1, y1);
-}
-
-static void gauge_draw(GtkWidget *w, struct gauge *g)
-{
-	int i;
-	double a, ai;
-	int x1, y1, x2, y2, x3, y3;
-	double value;
-	double inc, v;
-	char buffer[10], buf2[10];
-
-	sng_set_foreground(g->dial_color);
-	sng_draw_circle(w->window, gc, g->x, g->y, g->r);
-
-	ai = g->angular_range / g->ndivs;
-	normalize_angle(&ai);
-
-	v = g->r1;
-	inc = (double) (g->r2 - g->r1) / (double) g->ndivs;
-	for (i = 0; i <= g->ndivs; i++) {
-		a = (ai * (double) i) + g->start_angle;
-		normalize_angle(&a);
-		x1 = g->r * sin(a);
-		x2 = 0.9 * x1;
-		y1 = g->r * -cos(a);
-		y2 = 0.9 * y1;
-		x3 = 0.7 * x1 - 20;
-		y3 = 0.7 * y1;
-
-		x1 = (x1 + g->x);
-		x2 = (x2 + g->x);
-		x3 = (x3 + g->x);
-		y1 = (y1 + g->y);
-		y2 = (y2 + g->y);
-		y3 = (y3 + g->y);
-		snis_draw_line(w->window, gc, x1, y1, x2, y2);
-		sprintf(buf2, "%3.0lf", v);
-		v += inc;
-		sng_abs_xy_draw_string(w, gc, buf2, NANO_FONT, x3, y3);
-	}
-	sng_abs_xy_draw_string(w, gc, g->title, TINY_FONT,
-			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)));
-	value = g->sample();
-	sprintf(buffer, "%4.2lf", value);
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT,
-			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)) + 15);
-
-	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
-	sng_set_foreground(g->needle_color);
-	draw_gauge_needle(w->window, gc, g->x, g->y, g->r, a); 
-
-	if (g->sample2) {
-		a = ((g->sample2() - g->r1) / (g->r2 - g->r1)) * g->angular_range + g->start_angle;
-		sng_set_foreground(g->needle_color2);
-		draw_gauge_needle(w->window, gc, g->x, g->y, g->r * 0.8, a); 
-	}
-}
-
-/*
- * end gauge related functions/types
- */
 
 static int process_update_torpedo_packet(void)
 {
@@ -3565,7 +3442,7 @@ CREATE_DAMAGE_SAMPLER_FUNC(comms_damage) /* sample_comms__damage defined here */
 static struct navigation_ui {
 	struct slider warp_slider;
 	struct slider shield_slider;
-	struct gauge warp_gauge;
+	struct gauge *warp_gauge;
 	struct button engage_warp_button;
 	struct button warp_up_button;
 	struct button warp_down_button;
@@ -3612,8 +3489,8 @@ static void warp_down_button_pressed(__attribute__((unused)) void *s)
 
 struct weapons_ui {
 	struct button fire_torpedo, load_torpedo, fire_phaser;
-	struct gauge phaser_bank_gauge;
-	struct gauge phaser_wavelength;
+	struct gauge *phaser_bank_gauge;
+	struct gauge *phaser_wavelength;
 	struct slider wavelen_slider;
 	struct button wavelen_up_button;
 	struct button wavelen_down_button;
@@ -3633,10 +3510,10 @@ static void init_weapons_ui(void)
 	y += 50;
 	button_init(&weapons.fire_torpedo, 550, y, 200, 25, "FIRE TORPEDO", RED,
 			TINY_FONT, fire_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
-	gauge_init(&weapons.phaser_bank_gauge, 650, 100, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	weapons.phaser_bank_gauge = gauge_init(650, 100, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, WHITE,
 			10, "CHARGE", sample_phasercharge);
-	gauge_init(&weapons.phaser_wavelength, 650, 300, 90, 10.0, 60.0, -120.0 * M_PI / 180.0,
+	weapons.phaser_wavelength = gauge_init(650, 300, 90, 10.0, 60.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, WHITE,
 			10, "WAVE LEN", sample_phaser_wavelength);
 	button_init(&weapons.wavelen_down_button, 550, 400, 60, 25, "DOWN", WHITE,
@@ -3724,8 +3601,8 @@ static void show_weapons(GtkWidget *w)
 	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
 	draw_all_the_guys(w, o);
 	draw_all_the_sparks(w, o);
-	gauge_draw(w, &weapons.phaser_bank_gauge);
-	gauge_draw(w, &weapons.phaser_wavelength);
+	gauge_draw(w, gc, weapons.phaser_bank_gauge);
+	gauge_draw(w, gc, weapons.phaser_wavelength);
 }
 
 static double sample_reqwarpdrive(void);
@@ -3738,10 +3615,10 @@ static void init_nav_ui(void)
 	slider_init(&nav_ui.warp_slider, 500, SCREEN_HEIGHT - 40, 200, AMBER, "Warp",
 				"0", "100", 0.0, 100.0, sample_reqwarpdrive,
 				do_warpdrive, DISPLAYMODE_NAVIGATION);
-	gauge_init(&nav_ui.warp_gauge, 650, 410, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	nav_ui.warp_gauge = gauge_init(650, 410, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 				10, "WARP", sample_warpdrive);
-	gauge_add_needle(&nav_ui.warp_gauge, sample_warpdrive_power_avail, RED);
+	gauge_add_needle(nav_ui.warp_gauge, sample_warpdrive_power_avail, RED);
 	button_init(&nav_ui.engage_warp_button, 570, 520, 150, 25, "ENGAGE WARP", AMBER,
 				NANO_FONT, engage_warp_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
 	button_init(&nav_ui.warp_up_button, 500, 490, 40, 25, "UP", AMBER,
@@ -3816,7 +3693,7 @@ static void show_navigation(GtkWidget *w)
 
 	draw_all_the_guys(w, o);
 	draw_all_the_sparks(w, o);
-	gauge_draw(w, &nav_ui.warp_gauge);
+	gauge_draw(w, gc, nav_ui.warp_gauge);
 
 	gx1 = NAV_DATA_X + 10;
 	gy1 = 15;
@@ -3827,10 +3704,10 @@ static void show_navigation(GtkWidget *w)
 }
 
 struct enginerring_ui {
-	struct gauge fuel_gauge;
-	struct gauge power_gauge;
-	struct gauge rpm_gauge;
-	struct gauge temp_gauge;
+	struct gauge *fuel_gauge;
+	struct gauge *power_gauge;
+	struct gauge *rpm_gauge;
+	struct gauge *temp_gauge;
 	struct slider shield_slider;
 	struct slider maneuvering_slider;
 	struct slider warp_slider;
@@ -3856,19 +3733,19 @@ static void init_engineering_ui(void)
 	int x = 100;
 	int xinc = 190;
 	int yinc = 40; 
-	gauge_init(&eng_ui.rpm_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	eng_ui.rpm_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "RPM", sample_rpm);
 	x += xinc;
-	gauge_init(&eng_ui.fuel_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	eng_ui.fuel_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "FUEL", sample_fuel);
 	x += xinc;
-	gauge_init(&eng_ui.power_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	eng_ui.power_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "POWER", sample_power);
 	x += xinc;
-	gauge_init(&eng_ui.temp_gauge, x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	eng_ui.temp_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "TEMP", sample_temp);
 	x += xinc;
@@ -3926,10 +3803,10 @@ static void init_engineering_ui(void)
 static void show_engineering(GtkWidget *w)
 {
 	show_common_screen(w, "Engineering");
-	gauge_draw(w, &eng_ui.fuel_gauge);
-	gauge_draw(w, &eng_ui.rpm_gauge);
-	gauge_draw(w, &eng_ui.power_gauge);
-	gauge_draw(w, &eng_ui.temp_gauge);
+	gauge_draw(w, gc, eng_ui.fuel_gauge);
+	gauge_draw(w, gc, eng_ui.rpm_gauge);
+	gauge_draw(w, gc, eng_ui.power_gauge);
+	gauge_draw(w, gc, eng_ui.temp_gauge);
 }
 
 struct science_ui {

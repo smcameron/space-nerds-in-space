@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 #include "math.h"
 #include <gtk/gtk.h>
@@ -26,12 +27,14 @@ void gauge_add_needle(struct gauge *g, gauge_monitor_function sample, int color)
 	g->sample2 = sample;
 }
 
-void gauge_init(struct gauge *g, 
-			int x, int y, int r, double r1, double r2,
+struct gauge *gauge_init(int x, int y, int r, double r1, double r2,
 			double start_angle, double angular_range,
 			int needle_color, int dial_color, int ndivs, char *title,
 			gauge_monitor_function gmf)
 {
+	struct gauge *g;
+
+	g = malloc(sizeof(*g));
 	g->x = x;
 	g->y = y;
 	g->r = r;
@@ -45,6 +48,8 @@ void gauge_init(struct gauge *g,
 	g->sample = gmf;
 	strncpy(g->title, title, sizeof(g->title) - 1);
 	g->sample2 = NULL;
+
+	return g;
 }
 
 void draw_gauge_needle(GdkDrawable *drawable, GdkGC *gc,
@@ -123,6 +128,11 @@ void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g)
 	}
 }
 
+void gauge_free(struct gauge *g)
+{
+	memset(g, 0, sizeof(*g));
+	free(g);
+}
 /*
  * end gauge related functions/types
  */
