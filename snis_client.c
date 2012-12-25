@@ -44,6 +44,7 @@
 #include "snis.h"
 #include "mathutils.h"
 #include "snis_alloc.h"
+#include "snis_graph.h"
 #include "my_point.h"
 #include "snis_font.h"
 #include "snis_socket_io.h"
@@ -59,9 +60,6 @@
 #define SCREEN_HEIGHT 600       /* window height, in pixels */
 
 __attribute__((unused)) static double max_speed[];
-
-typedef void line_drawing_function(GdkDrawable *drawable,
-         GdkGC *gc, gint x1, gint y1, gint x2, gint y2);
 
 typedef void bright_line_drawing_function(GdkDrawable *drawable,
          GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color);
@@ -616,13 +614,6 @@ void spin_points(struct my_point_t *points, int npoints,
 				start_angle * 180/3.1415927, new_angle * 360.0 / (2.0*3.1415927)); 
 		}
 	} 
-}
-
-void scaled_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
-{
-	gdk_draw_line(drawable, gc, x1*xscale_screen, y1*yscale_screen,
-		x2*xscale_screen, y2*yscale_screen);
 }
 
 struct dotted_plot_func_context {
@@ -4818,13 +4809,14 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	real_screen_height =  w->allocation.height;
 	xscale_screen = (float) real_screen_width / (float) SCREEN_WIDTH;
 	yscale_screen = (float) real_screen_height / (float) SCREEN_HEIGHT;
+	sng_set_scale(xscale_screen, yscale_screen);
 	if (real_screen_width == 800 && real_screen_height == 600) {
 		current_draw_line = gdk_draw_line;
 		current_draw_rectangle = gdk_draw_rectangle;
 		current_bright_line = unscaled_bright_line;
 		current_draw_arc = gdk_draw_arc;
 	} else {
-		current_draw_line = scaled_line;
+		current_draw_line = sng_scaled_line;
 		current_draw_rectangle = scaled_rectangle;
 		current_bright_line = scaled_bright_line;
 		current_draw_arc = scaled_arc;
@@ -4979,6 +4971,7 @@ int main(int argc, char *argv[])
 	connect_to_lobby();
 	real_screen_width = SCREEN_WIDTH;
 	real_screen_height = SCREEN_HEIGHT;
+	sng_set_scale(xscale_screen, yscale_screen);
 
 	gtk_set_locale();
 	gtk_init (&argc, &argv);

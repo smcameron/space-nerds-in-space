@@ -22,7 +22,7 @@ endif
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o
-CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_client.o snis_font.o
+CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_graph.o snis_client.o snis_font.o
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm
 
