@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <gtk/gtk.h>
 
+#include "snis_font.h"
 #define SNIS_GRAPH_DECLARE_GLOBALS
 #include "snis_graph.h"
 #undef SNIS_GRAPH_DECLARE_GLOBALS
@@ -28,6 +29,9 @@
 #define NRAINBOWCOLORS (NRAINBOWSTEPS*3)
 
 extern GdkColor huex[];
+
+extern struct my_vect_obj **gamefont[];
+extern int font_scale[];
 
 static struct snis_graph_context {
 	float xscale, yscale;
@@ -193,5 +197,60 @@ void sng_draw_electric_line(GdkDrawable *drawable,
 
 	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
 			sng_electric_line_plot_func, &context);
+}
+
+/* Draws a letter in the given font at an absolute x,y coords on the screen. */
+int sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font, 
+		unsigned char letter, int x, int y)
+{
+	int i, x1, y1, x2, y2;
+	int minx, maxx, diff;
+
+	if (letter == ' ' || letter == '\n' || letter == '\t' || font[letter] == NULL)
+		return abs(font['Z']->p[0].x - font['Z']->p[1].x);
+
+	for (i = 0; i < font[letter]->npoints-1; i++) {
+		if (font[letter]->p[i+1].x == LINE_BREAK)
+			i += 2;
+		x1 = x + font[letter]->p[i].x;
+		y1 = y + font[letter]->p[i].y;
+		x2 = x + font[letter]->p[i + 1].x;
+		y2 = y + font[letter]->p[i + 1].y;
+
+		if (i == 0) {
+			minx = x1;
+			maxx = x1;
+		}
+
+		if (x1 < minx)
+			minx = x1;
+		if (x2 < minx)
+			minx = x2;
+		if (x1 > maxx)
+			maxx = x1;
+		if (x2 > maxx)
+			maxx = x2;
+		
+		if (x1 > 0 && x2 > 0)
+			sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
+	}
+	diff = abs(maxx - minx);
+	/* if (diff == 0)
+		return (abs(font['Z']->p[0].x - font['Z']->p[1].x) / 4); */
+	return diff; 
+}
+
+/* Used for floating labels in the game. */
+/* Draws a string at an absolute x,y position on the screen. */ 
+void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, int x, int y) 
+{
+
+	int i, dx;	
+	int deltax = 0;
+
+	for (i=0;s[i];i++) {
+		dx = (font_scale[font]) + sng_abs_xy_draw_letter(w, gc, gamefont[font], s[i], x + deltax, y);  
+		deltax += dx;
+	}
 }
 

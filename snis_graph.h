@@ -2,10 +2,10 @@
 #define SNIS_GRAPH_H__
 
 #ifdef SNIS_GRAPH_DECLARE_GLOBALS
-#define GLOBAL
+#define SNG_GLOBAL
 #define INIT(y) = y
 #else
-#define GLOBAL extern
+#define SNG_GLOBAL extern
 #define INIT(y)
 #endif
 
@@ -45,15 +45,20 @@ extern void sng_use_scaled_drawing_functions(void);
 extern void sng_use_unscaled_drawing_functions(void);
 extern void sng_use_thick_lines(void);
 
-GLOBAL line_drawing_function *sng_current_draw_line INIT(gdk_draw_line);
-GLOBAL rectangle_drawing_function *sng_current_draw_rectangle INIT(gdk_draw_rectangle);
-GLOBAL bright_line_drawing_function *sng_current_bright_line INIT(sng_unscaled_bright_line);
-GLOBAL arc_drawing_function *sng_current_draw_arc INIT(gdk_draw_arc);
-GLOBAL void sng_dotted_line_plot_func(int x, int y, void *context);
-GLOBAL void sng_electric_line_plot_func(int x, int y, void *context);
-GLOBAL void sng_draw_dotted_line(GdkDrawable *drawable,
+SNG_GLOBAL line_drawing_function *sng_current_draw_line INIT(gdk_draw_line);
+SNG_GLOBAL rectangle_drawing_function *sng_current_draw_rectangle INIT(gdk_draw_rectangle);
+SNG_GLOBAL bright_line_drawing_function *sng_current_bright_line INIT(sng_unscaled_bright_line);
+SNG_GLOBAL arc_drawing_function *sng_current_draw_arc INIT(gdk_draw_arc);
+SNG_GLOBAL void sng_dotted_line_plot_func(int x, int y, void *context);
+SNG_GLOBAL void sng_electric_line_plot_func(int x, int y, void *context);
+SNG_GLOBAL void sng_draw_dotted_line(GdkDrawable *drawable,
 	GdkGC *gc, gint x1, gint y1, gint x2, gint y2);
-GLOBAL void sng_draw_electric_line(GdkDrawable *drawable,
+SNG_GLOBAL void sng_draw_electric_line(GdkDrawable *drawable,
 	GdkGC *gc, gint x1, gint y1, gint x2, gint y2);
 
+SNG_GLOBAL int sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font, 
+		unsigned char letter, int x, int y);
+SNG_GLOBAL void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, int x, int y) ;
+
+#undef SNG_GLOBAL
 #endif
