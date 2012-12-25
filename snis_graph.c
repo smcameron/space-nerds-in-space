@@ -254,3 +254,8 @@ void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, int x, i
 	}
 }
 
+void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y)
+{
+	gdk_draw_point(drawable, gc, x * sgc.xscale, y * sgc.yscale);
+}
+

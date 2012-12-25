@@ -2254,7 +2254,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		tx = x;
 		ty = y;
 #endif
-		gdk_draw_point(w->window, gc, tx * xscale_screen, ty * yscale_screen);
+		sng_draw_point(w->window, gc, tx, ty);
 	}
 
 	if (selected)
@@ -2309,7 +2309,7 @@ static void snis_draw_science_spark(GdkDrawable *drawable, GdkGC *gc, gint x, gi
 		tx = x;
 		ty = y;
 #endif
-		gdk_draw_point(drawable, gc, tx * xscale_screen, ty * yscale_screen);
+		sng_draw_point(drawable, gc, tx, ty);
 	}
 }
 
@@ -2687,7 +2687,7 @@ static void snis_draw_dotted_hline(GdkDrawable *drawable,
 	int i;
 
 	for (i = x1; i <= x2; i += dots)
-		gdk_draw_point(drawable, gc, i * xscale_screen, y1 * yscale_screen);
+		sng_draw_point(drawable, gc, i, y1);
 }
 
 static void snis_draw_dotted_vline(GdkDrawable *drawable,
@@ -2697,10 +2697,10 @@ static void snis_draw_dotted_vline(GdkDrawable *drawable,
 
 	if (y2 > y1) {
 		for (i = y1; i <= y2; i += dots)
-			gdk_draw_point(drawable, gc, x1 * xscale_screen, i * yscale_screen);
+			sng_draw_point(drawable, gc, x1, i);
 	} else { 
 		for (i = y2; i <= y1; i += dots)
-			gdk_draw_point(drawable, gc, x1 * xscale_screen, i * yscale_screen);
+			sng_draw_point(drawable, gc, x1, i);
 	}
 }
 
