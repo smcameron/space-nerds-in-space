@@ -46,6 +46,7 @@
 #include "snis_alloc.h"
 #include "my_point.h"
 #include "snis_font.h"
+#include "snis_typeface.h"
 #include "snis_graph.h"
 #include "snis_socket_io.h"
 #include "ssgl/ssgl.h"
@@ -109,31 +110,6 @@ struct client_network_stats {
 int nframes = 0;
 int timer = 0;
 struct timeval start_time, end_time;
-
-/* There are 4 home-made "fonts" in the game, all the same "typeface", but 
- * different sizes */
-struct my_vect_obj **gamefont[4];
-/* indexes into the gamefont array */
-#define BIG_FONT 0
-#define SMALL_FONT 1
-#define TINY_FONT 2
-#define NANO_FONT 3
-
-/* sizes of the fonts... in arbitrary units */
-#define BIG_FONT_SCALE 14 
-#define SMALL_FONT_SCALE 5 
-#define TINY_FONT_SCALE 3 
-#define NANO_FONT_SCALE 2 
-
-/* spacing of letters between the fonts, pixels */
-#define BIG_LETTER_SPACING (10)
-#define SMALL_LETTER_SPACING (5)
-#define TINY_LETTER_SPACING (3)
-#define NANO_LETTER_SPACING (2)
-
-/* for getting at the font scales and letter spacings, given  only font numbers */
-int font_scale[] = { BIG_FONT_SCALE, SMALL_FONT_SCALE, TINY_FONT_SCALE, NANO_FONT_SCALE };
-int letter_spacing[] = { BIG_LETTER_SPACING, SMALL_LETTER_SPACING, TINY_LETTER_SPACING, NANO_LETTER_SPACING };
 
 volatile int done_with_lobby = 0;
 pthread_t lobby_thread; pthread_attr_t lobby_attr;
@@ -4749,11 +4725,7 @@ int main(int argc, char *argv[])
 	init_game_state(the_player);
 #endif
 
-	/* Make the line segment lists from the stroke_t structures. */
-	snis_make_font(&gamefont[BIG_FONT], font_scale[BIG_FONT], font_scale[BIG_FONT]);
-	snis_make_font(&gamefont[SMALL_FONT], font_scale[SMALL_FONT], font_scale[SMALL_FONT]);
-	snis_make_font(&gamefont[TINY_FONT], font_scale[TINY_FONT], font_scale[TINY_FONT]);
-	snis_make_font(&gamefont[NANO_FONT], font_scale[NANO_FONT], font_scale[NANO_FONT]);
+	snis_typefaces_init();
 
 	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);		
 	gtk_container_set_border_width (GTK_CONTAINER (window), 0);
