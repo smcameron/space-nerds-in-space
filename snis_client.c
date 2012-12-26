@@ -49,6 +49,7 @@
 #include "snis_typeface.h"
 #include "snis_graph.h"
 #include "snis_gauge.h"
+#include "snis_button.h"
 #include "snis_socket_io.h"
 #include "ssgl/ssgl.h"
 #include "snis_marshal.h"
@@ -1228,17 +1229,6 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	return (rc < 0);
 } 
 
-typedef void (*button_function)(void *cookie);
-
-struct button {
-	int x, y, width, height, displaymode;
-	char label[20];
-	int color;
-	int font;
-	button_function bf;
-	void *cookie;
-};
-
 static int process_update_torpedo_packet(void)
 {
 	unsigned char buffer[100];
@@ -1504,12 +1494,12 @@ struct text_window {
 
 struct comms_ui {
 	struct text_window tw;
-	struct button comms_onscreen_button;
-	struct button nav_onscreen_button;
-	struct button weap_onscreen_button;
-	struct button eng_onscreen_button;
-	struct button sci_onscreen_button;
-	struct button main_onscreen_button;
+	struct button *comms_onscreen_button;
+	struct button *nav_onscreen_button;
+	struct button *weap_onscreen_button;
+	struct button *eng_onscreen_button;
+	struct button *sci_onscreen_button;
+	struct button *main_onscreen_button;
 } comms_ui;
 
 static void add_text(struct text_window *tw, char *text);
@@ -2731,10 +2721,6 @@ static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
 	do_torpedo();
 }
 
-static void button_init(struct button *b, int x, int y, int width, int height, char *label,
-			int color, int font, button_function bf, void *cookie, int displaymode);
-static void add_button(struct button *b);
-
 /*
  * begin text box related functions/types
  */
@@ -3042,77 +3028,6 @@ static void sliders_button_press(int x, int y)
  * end slider related functions/types
  */
 
-/*
- * begin button related functions/types
- */
-
-
-
-static void button_init(struct button *b, int x, int y, int width, int height, char *label,
-			int color, int font, button_function bf, void *cookie, int displaymode)
-{
-	b->x = x;
-	b->y = y;
-	b->width = width;
-	b->height = height;
-	strncpy(b->label, label, sizeof(b->label) - 1);
-	b->displaymode = displaymode;
-	b->color = color;
-	b->font = font;
-	b->bf = bf;
-	b->cookie = cookie;
-}
-
-static void button_draw(GtkWidget *w, struct button *b)
-{
-	sng_set_foreground(b->color);
-	sng_current_draw_rectangle(w->window, gc, 0, b->x, b->y, b->width, b->height);
-	sng_abs_xy_draw_string(w, gc, b->label, b->font, b->x + 10, b->y + b->height / 1.7); 
-}
-
-#define MAXBUTTONS 50
-static struct button *buttonlist[MAXBUTTONS];
-static int nbuttons = 0;
-
-static void add_button(struct button *b)
-{
-	if (nbuttons >= MAXBUTTONS)
-		return;
-	buttonlist[nbuttons] = b;
-	nbuttons++;
-}
-
-static void draw_buttons(GtkWidget *w)
-{
-	int i;
-
-	for (i = 0; i < nbuttons; i++) {
-		struct button *b = buttonlist[i];
-
-		if (b->displaymode == displaymode)
-			button_draw(w, buttonlist[i]);
-	}
-}
-
-static void buttons_button_press(int x, int y)
-{
-	int i;
-	struct button *b;
-
-	for (i = 0; i < nbuttons; i++) {
-		b = buttonlist[i];
-		if (b->displaymode == displaymode) {
-			if (x < b->x || x > b->x + b->width || 
-				y < b->y || y > b->y + b->height)
-				continue;
-			b->bf(b->cookie);
-		}
-	}
-}
-
-/*
- * end button related functions/types
- */
 static void do_adjust_byte_value(uint8_t value,  uint16_t opcode)
 {
 	struct packed_buffer *pb;
@@ -3443,9 +3358,9 @@ static struct navigation_ui {
 	struct slider warp_slider;
 	struct slider shield_slider;
 	struct gauge *warp_gauge;
-	struct button engage_warp_button;
-	struct button warp_up_button;
-	struct button warp_down_button;
+	struct button *engage_warp_button;
+	struct button *warp_up_button;
+	struct button *warp_down_button;
 } nav_ui;
 
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
@@ -3488,12 +3403,12 @@ static void warp_down_button_pressed(__attribute__((unused)) void *s)
 }
 
 struct weapons_ui {
-	struct button fire_torpedo, load_torpedo, fire_phaser;
+	struct button *fire_torpedo, *load_torpedo, *fire_phaser;
 	struct gauge *phaser_bank_gauge;
 	struct gauge *phaser_wavelength;
 	struct slider wavelen_slider;
-	struct button wavelen_up_button;
-	struct button wavelen_down_button;
+	struct button *wavelen_up_button;
+	struct button *wavelen_down_button;
 } weapons;
 
 static double sample_phaserbanks(void);
@@ -3502,32 +3417,37 @@ static void init_weapons_ui(void)
 {
 	int y = 450;
 
-	button_init(&weapons.fire_phaser, 550, y, 200, 25, "FIRE PHASER", RED,
-			TINY_FONT, fire_phaser_button_pressed, NULL, DISPLAYMODE_WEAPONS);
+	weapons.fire_phaser = snis_button_init(550, y, 200, 25, "FIRE PHASER", RED,
+			TINY_FONT, fire_phaser_button_pressed, NULL, DISPLAYMODE_WEAPONS,
+			&displaymode);
 	y += 50;
-	button_init(&weapons.load_torpedo, 550, y, 200, 25, "LOAD TORPEDO", GREEN,
-			TINY_FONT, load_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
+	weapons.load_torpedo = snis_button_init(550, y, 200, 25, "LOAD TORPEDO", GREEN,
+			TINY_FONT, load_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS,
+			&displaymode);
 	y += 50;
-	button_init(&weapons.fire_torpedo, 550, y, 200, 25, "FIRE TORPEDO", RED,
-			TINY_FONT, fire_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS);
+	weapons.fire_torpedo = snis_button_init(550, y, 200, 25, "FIRE TORPEDO", RED,
+			TINY_FONT, fire_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS,
+			&displaymode);
 	weapons.phaser_bank_gauge = gauge_init(650, 100, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, WHITE,
 			10, "CHARGE", sample_phasercharge);
 	weapons.phaser_wavelength = gauge_init(650, 300, 90, 10.0, 60.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, WHITE,
 			10, "WAVE LEN", sample_phaser_wavelength);
-	button_init(&weapons.wavelen_down_button, 550, 400, 60, 25, "DOWN", WHITE,
-			NANO_FONT, wavelen_down_button_pressed, NULL, DISPLAYMODE_WEAPONS);
-	button_init(&weapons.wavelen_up_button, 700, 400, 30, 25, "UP", WHITE,
-			NANO_FONT, wavelen_up_button_pressed, NULL, DISPLAYMODE_WEAPONS);
+	weapons.wavelen_down_button = snis_button_init(550, 400, 60, 25, "DOWN", WHITE,
+			NANO_FONT, wavelen_down_button_pressed, NULL, DISPLAYMODE_WEAPONS,
+			&displaymode);
+	weapons.wavelen_up_button = snis_button_init(700, 400, 30, 25, "UP", WHITE,
+			NANO_FONT, wavelen_up_button_pressed, NULL, DISPLAYMODE_WEAPONS,
+			&displaymode);
 	slider_init(&weapons.wavelen_slider, 620, 400, 70, AMBER, "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength, DISPLAYMODE_WEAPONS);
-	add_button(&weapons.fire_phaser);
-	add_button(&weapons.load_torpedo);
-	add_button(&weapons.fire_torpedo);
-	add_button(&weapons.wavelen_up_button);
-	add_button(&weapons.wavelen_down_button);
+	snis_add_button(weapons.fire_phaser);
+	snis_add_button(weapons.load_torpedo);
+	snis_add_button(weapons.fire_torpedo);
+	snis_add_button(weapons.wavelen_up_button);
+	snis_add_button(weapons.wavelen_down_button);
 	add_slider(&weapons.wavelen_slider);
 }
 
@@ -3581,11 +3501,11 @@ static void show_weapons(GtkWidget *w)
 	if (o->tsd.ship.torpedoes > 0 && o->tsd.ship.torpedoes_loading == 0 &&
 		o->tsd.ship.torpedoes_loaded < 2)
 		buttoncolor = GREEN;
-	weapons.load_torpedo.color = buttoncolor;
+	snis_button_set_color(weapons.load_torpedo, buttoncolor);
 	buttoncolor = RED;
 	if (o->tsd.ship.torpedoes_loaded)
 		buttoncolor = GREEN;
-	weapons.fire_torpedo.color = buttoncolor;
+	snis_button_set_color(weapons.fire_torpedo, buttoncolor);
 
 	rx = 40;
 	ry = 90;
@@ -3619,17 +3539,20 @@ static void init_nav_ui(void)
 				120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 				10, "WARP", sample_warpdrive);
 	gauge_add_needle(nav_ui.warp_gauge, sample_warpdrive_power_avail, RED);
-	button_init(&nav_ui.engage_warp_button, 570, 520, 150, 25, "ENGAGE WARP", AMBER,
-				NANO_FONT, engage_warp_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
-	button_init(&nav_ui.warp_up_button, 500, 490, 40, 25, "UP", AMBER,
-			NANO_FONT, warp_up_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
-	button_init(&nav_ui.warp_down_button, 500, 520, 60, 25, "DOWN", AMBER,
-			NANO_FONT, warp_down_button_pressed, NULL, DISPLAYMODE_NAVIGATION);
+	nav_ui.engage_warp_button = snis_button_init(570, 520, 150, 25, "ENGAGE WARP", AMBER,
+				NANO_FONT, engage_warp_button_pressed, NULL,
+				DISPLAYMODE_NAVIGATION, &displaymode);
+	nav_ui.warp_up_button = snis_button_init(500, 490, 40, 25, "UP", AMBER,
+			NANO_FONT, warp_up_button_pressed, NULL, DISPLAYMODE_NAVIGATION,
+			&displaymode);
+	nav_ui.warp_down_button = snis_button_init(500, 520, 60, 25, "DOWN", AMBER,
+			NANO_FONT, warp_down_button_pressed, NULL, DISPLAYMODE_NAVIGATION,
+			&displaymode);
 	add_slider(&nav_ui.warp_slider);
 	add_slider(&nav_ui.shield_slider);
-	add_button(&nav_ui.engage_warp_button);
-	add_button(&nav_ui.warp_up_button);
-	add_button(&nav_ui.warp_down_button);
+	snis_add_button(nav_ui.engage_warp_button);
+	snis_add_button(nav_ui.warp_up_button);
+	snis_add_button(nav_ui.warp_down_button);
 }
 
 #if 0
@@ -3847,32 +3770,38 @@ static void init_comms_ui(void)
 	int x = 200;
 	int y = 20;
 
-	button_init(&comms_ui.comms_onscreen_button, x, y, 75, 25, "COMMS", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 0, DISPLAYMODE_COMMS);
+	comms_ui.comms_onscreen_button = snis_button_init(x, y, 75, 25, "COMMS", GREEN,
+			NANO_FONT, comms_screen_button_pressed, (void *) 0, DISPLAYMODE_COMMS,
+			&displaymode);
 	x += 75;
-	button_init(&comms_ui.nav_onscreen_button, x, y, 75, 25, "NAV", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 1, DISPLAYMODE_COMMS);
+	comms_ui.nav_onscreen_button = snis_button_init(x, y, 75, 25, "NAV", GREEN,
+			NANO_FONT, comms_screen_button_pressed, (void *) 1, DISPLAYMODE_COMMS,
+			&displaymode);
 	x += 75;
-	button_init(&comms_ui.weap_onscreen_button, x, y, 75, 25, "WEAP", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 2, DISPLAYMODE_COMMS);
+	comms_ui.weap_onscreen_button = snis_button_init(x, y, 75, 25, "WEAP", GREEN,
+			NANO_FONT, comms_screen_button_pressed, (void *) 2, DISPLAYMODE_COMMS,
+			&displaymode);
 	x += 75;
-	button_init(&comms_ui.eng_onscreen_button, x, y, 75, 25, "ENG", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 3, DISPLAYMODE_COMMS);
+	comms_ui.eng_onscreen_button = snis_button_init(x, y, 75, 25, "ENG", GREEN,
+			NANO_FONT, comms_screen_button_pressed, (void *) 3, DISPLAYMODE_COMMS,
+			&displaymode);
 	x += 75;
-	button_init(&comms_ui.sci_onscreen_button, x, y, 75, 25, "SCI", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 4, DISPLAYMODE_COMMS);
+	comms_ui.sci_onscreen_button = snis_button_init(x, y, 75, 25, "SCI", GREEN,
+			NANO_FONT, comms_screen_button_pressed, (void *) 4, DISPLAYMODE_COMMS,
+			&displaymode);
 	x += 75;
-	button_init(&comms_ui.main_onscreen_button, x, y, 75, 25, "MAIN", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 5, DISPLAYMODE_COMMS);
+	comms_ui.main_onscreen_button = snis_button_init(x, y, 75, 25, "MAIN", GREEN,
+			NANO_FONT, comms_screen_button_pressed, (void *) 5, DISPLAYMODE_COMMS,
+			&displaymode);
 	text_window_init(&comms_ui.tw, 10, 70, SCREEN_WIDTH - 20,
 			40, 20, DISPLAYMODE_COMMS, GREEN);
 	add_textwindow(&comms_ui.tw);
-	add_button(&comms_ui.comms_onscreen_button);
-	add_button(&comms_ui.nav_onscreen_button);
-	add_button(&comms_ui.weap_onscreen_button);
-	add_button(&comms_ui.eng_onscreen_button);
-	add_button(&comms_ui.sci_onscreen_button);
-	add_button(&comms_ui.main_onscreen_button);
+	snis_add_button(comms_ui.comms_onscreen_button);
+	snis_add_button(comms_ui.nav_onscreen_button);
+	snis_add_button(comms_ui.weap_onscreen_button);
+	snis_add_button(comms_ui.eng_onscreen_button);
+	snis_add_button(comms_ui.sci_onscreen_button);
+	snis_add_button(comms_ui.main_onscreen_button);
 }
 
 #define SCIDIST2 100
@@ -4387,7 +4316,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		break;
 	}
 	draw_sliders(w);
-	draw_buttons(w);
+	snis_draw_buttons(w, gc);
 	draw_textwindows(w);
 	return 0;
 }
@@ -4470,7 +4399,7 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 	}
 	sliders_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
 			(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
-	buttons_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
+	snis_buttons_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
 			(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
 	return TRUE;
 }

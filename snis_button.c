@@ -32,6 +32,7 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->height = height;
 	strncpy(b->label, label, sizeof(b->label) - 1);
 	b->active_displaymode = active_displaymode;
+	b->displaymode = displaymode;
 	b->color = color;
 	b->font = font;
 	b->bf = bf;
@@ -66,7 +67,7 @@ void snis_draw_buttons(GtkWidget *w, GdkGC *gc)
 		struct button *b = buttonlist[i];
 
 		if (b->active_displaymode == *b->displaymode)
-			button_draw(w, gc, buttonlist[i]);
+			snis_button_draw(w, gc, buttonlist[i]);
 	}
 }
 
@@ -86,3 +87,7 @@ void snis_buttons_button_press(int x, int y)
 	}
 }
 
+void snis_button_set_color(struct button *b, int color)
+{
+	b->color = color;
+}
