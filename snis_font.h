@@ -31,4 +31,5 @@
 
 GLOBAL int snis_make_font(struct my_vect_obj ***font, int xscale, int yscale);
 
+#undef GLOBAL
 #endif
