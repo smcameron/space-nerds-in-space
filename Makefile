@@ -107,6 +107,10 @@ snis_button.o:	snis_button.h snis_button.c snis_graph.h
 snis_sliders.o:	snis_sliders.h snis_sliders.c snis_graph.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_sliders.c
 
+snis_text_window.o:	snis_text_window.h snis_text_window.c snis_graph.h \
+			snis_font.h snis_typeface.h
+	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_text_window.c
+
 ${SSGL}:
 	(cd ssgl ; make )
 
