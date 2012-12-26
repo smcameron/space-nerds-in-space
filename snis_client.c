@@ -51,6 +51,7 @@
 #include "snis_gauge.h"
 #include "snis_button.h"
 #include "snis_sliders.h"
+#include "snis_text_window.h"
 #include "snis_socket_io.h"
 #include "ssgl/ssgl.h"
 #include "snis_marshal.h"
@@ -1477,24 +1478,8 @@ static int process_update_netstats(void)
 	return 0;
 }
 
-struct text_window {
-	int x, y, w, h;
-	int font;
-	int total_lines;
-	int first_entry, last_entry;
-	int top_line;
-	int visible_lines;
-	int displaymode;
-	int lineheight;
-	int thumb_pos;
-	int print_slowly;
-	int printing_pos;
-	char **text;
-	int color;
-};
-
 struct comms_ui {
-	struct text_window tw;
+	struct text_window *tw;
 	struct button *comms_onscreen_button;
 	struct button *nav_onscreen_button;
 	struct button *weap_onscreen_button;
@@ -1503,7 +1488,6 @@ struct comms_ui {
 	struct button *main_onscreen_button;
 } comms_ui;
 
-static void add_text(struct text_window *tw, char *text);
 static int process_comm_transmission(void)
 {
 	char buffer[sizeof(struct comms_transmission_packet) + 100];
@@ -1521,7 +1505,7 @@ static int process_comm_transmission(void)
 	rc = snis_readsocket(gameserver_sock, string, length);
 	string[79] = '\0';
 	string[length] = '\0';
-	add_text(&comms_ui.tw, string);
+	text_window_add_text(comms_ui.tw, string);
 	return 0;
 }
 
@@ -2722,165 +2706,6 @@ static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
 	do_torpedo();
 }
 
-/*
- * begin text box related functions/types
- */
-
-#define MAXTEXTWINDOWS 20
-static int ntextwindows = 0;
-static struct text_window *textwindowlist[MAXTEXTWINDOWS];
-
-static void add_textwindow(struct text_window *tw)
-{
-	if (ntextwindows >= MAXTEXTWINDOWS)
-		return;
-	textwindowlist[ntextwindows] = tw;
-	ntextwindows++;
-}
-
-static int text_window_entry_count(struct text_window *tw)
-{
-	int rc;
-
-	rc = tw->last_entry - tw->first_entry + 1;
-	if (rc <= 0)
-		rc += tw->total_lines;
-	return rc;
-}
-
-static void add_text(struct text_window *tw, char *text)
-{
-	strncpy(tw->text[tw->last_entry], text, 79);
-	tw->last_entry = (tw->last_entry + 1) % tw->total_lines;
-	if (tw->last_entry == tw->first_entry)
-		tw->first_entry = (tw->first_entry + 1) % tw->total_lines;
-	if (tw->visible_lines > text_window_entry_count(tw))
-		tw->top_line = tw->last_entry - text_window_entry_count(tw); 
-	else
-		tw->top_line = tw->last_entry - tw->visible_lines; 
-	if (tw->top_line < 0)
-		tw->top_line += tw->total_lines;
-#if 0
-	printf("top = %d, f=%d l=%d, c=%d\n", tw->top_line, tw->first_entry, tw->last_entry,
-			text_window_entry_count(tw));
-#endif
-	tw->printing_pos = 0;
-}
-
-static void text_window_init(struct text_window *tw, int x, int y, int w,
-			int total_lines, int visible_lines, int displaymode,
-			int color)
-{
-	int i;
-
-	tw->x = x;
-	tw->y = y;
-	tw->w = w;
-	tw->total_lines = total_lines;
-	tw->visible_lines = visible_lines;
-	tw->displaymode = displaymode;
-	tw->color = color;
-	tw->text = malloc(sizeof(*tw) * total_lines);
-	for (i = 0; i < total_lines; i++) {
-		tw->text[i] = malloc(80);
-		memset(tw->text[i], 0, 80);
-	}
-	tw->lineheight = 20;
-	tw->last_entry = 0;
-	tw->top_line = 0;
-	tw->h = tw->lineheight * tw->visible_lines + 10;
-	tw->font = TINY_FONT;
-	tw->print_slowly = 1;
-	tw->printing_pos = 0;
-}
-
-static void text_window_draw(GtkWidget *w, struct text_window *tw)
-{
-	int i, j;
-	int thumb_pos, thumb_top, thumb_bottom, twec;
-
-	sng_set_foreground(tw->color);
-	/* draw outer rectangle */
-	sng_current_draw_rectangle(w->window, gc, 0, tw->x, tw->y, tw->w, tw->h);
-	/* draw scroll bar */
-	sng_current_draw_rectangle(w->window, gc, 0, tw->x + tw->w - 15, tw->y + 5, 10, tw->h - 10);
-
-	twec = text_window_entry_count(tw);
-	if (twec == 0) {
-		thumb_pos = 0;
-		thumb_top = tw->y + 5;
-		thumb_bottom = tw->y + tw->h - 10;
-	} else {
-		float f;
-		/* figure which line the thumb pos is on. */
-		thumb_pos = (tw->top_line + (tw->visible_lines / 2) - tw->first_entry) % tw->total_lines;
-		if (thumb_pos < 0)
-			thumb_pos += tw->total_lines;
-		/* figure where that is on the screen */
-		f = (float) thumb_pos / (float) text_window_entry_count(tw);
-		thumb_pos = (int) (f * tw->h) + tw->y;
-		thumb_top = (int) (((float) (tw->visible_lines / 2.0) / (float) twec) * 
-				-tw->lineheight * tw->visible_lines + thumb_pos);
-		if (thumb_top < tw->y + 5)
-			thumb_top = tw->y + 5;
-		thumb_bottom = (int) (((float) (tw->visible_lines / 2.0) / (float) twec) * 
-				tw->lineheight * tw->visible_lines + thumb_pos);
-		if (thumb_bottom > tw->y + tw->h - 10)
-			thumb_bottom = tw->y + tw->h - 10;
-			
-	}
-	sng_current_draw_rectangle(w->window, gc, 0,
-			tw->x + tw->w - 13, thumb_pos - tw->lineheight / 2,
-			6, tw->lineheight);
-	sng_current_draw_rectangle(w->window, gc, 0,
-			tw->x + tw->w - 11, thumb_top,
-			2, thumb_bottom - thumb_top);
-
-	j = 0;
-	for (i = tw->top_line;
-		j < tw->visible_lines && j < text_window_entry_count(tw);
-		i = (i + 1) % tw->total_lines) {
-			int len = strlen(tw->text[i]);
-
-			if (!tw->print_slowly || i != tw->last_entry -1) {
-				sng_abs_xy_draw_string(w, gc, tw->text[i], tw->font, tw->x + 10,
-						tw->y + j * tw->lineheight + tw->lineheight);
-			} else {
-				char tmpbuf[100];	
-				strncpy(tmpbuf, tw->text[i], 99);
-				if (tw->printing_pos < len - 1) {
-					if (((timer >> 2) & 1) == 0) {
-						tmpbuf[tw->printing_pos] = '_';
-						tmpbuf[tw->printing_pos + 1] = '\0';
-					} else {
-						tmpbuf[tw->printing_pos] = '\0';
-					}
-					tw->printing_pos++;
-					wwviaudio_add_sound(TTY_CHATTER_SOUND);
-				} else {
-					if (((timer >> 2) & 0x01) == 0) 
-						strcat(tmpbuf, "_");
-				}
-				sng_abs_xy_draw_string(w, gc, tmpbuf, tw->font, tw->x + 10,
-						tw->y + j * tw->lineheight + tw->lineheight);
-			}
-			j++;
-	}
-}
-
-static void draw_textwindows(GtkWidget *w)
-{
-	int i;
-
-	for (i = 0; i < ntextwindows; i++)
-		if (textwindowlist[i]->displaymode == displaymode)
-			text_window_draw(w, textwindowlist[i]);
-}
-
-/*
- * end text box related functions/types
- */
-
 static void do_adjust_byte_value(uint8_t value,  uint16_t opcode)
 {
 	struct packed_buffer *pb;
@@ -3662,9 +3487,9 @@ static void init_comms_ui(void)
 	comms_ui.main_onscreen_button = snis_button_init(x, y, 75, 25, "MAIN", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 5, DISPLAYMODE_COMMS,
 			&displaymode);
-	text_window_init(&comms_ui.tw, 10, 70, SCREEN_WIDTH - 20,
-			40, 20, DISPLAYMODE_COMMS, GREEN);
-	add_textwindow(&comms_ui.tw);
+	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20,
+			40, 20, DISPLAYMODE_COMMS, &displaymode, GREEN);
+	text_window_add(comms_ui.tw);
 	snis_add_button(comms_ui.comms_onscreen_button);
 	snis_add_button(comms_ui.nav_onscreen_button);
 	snis_add_button(comms_ui.weap_onscreen_button);
@@ -4186,7 +4011,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	}
 	snis_draw_sliders(w, gc);
 	snis_draw_buttons(w, gc);
-	draw_textwindows(w);
+	text_window_draw_all(w, gc);
 	return 0;
 }
 
@@ -4452,6 +4277,8 @@ int main(int argc, char *argv[])
 	gettimeofday(&start_time, NULL);
 
 	snis_slider_set_sound(SLIDER_SOUND);
+	text_window_set_chatter_sound(TTY_CHATTER_SOUND);
+	text_window_set_timer(&timer);
 	init_trig_arrays();
 	init_nav_ui();
 	init_engineering_ui();
