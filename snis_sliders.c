@@ -25,11 +25,14 @@ struct slider {
 
 static int slider_sound = -1;
 
-void slider_init(struct slider *s, int x, int y, int length, int color,
+struct slider *snis_slider_init(int x, int y, int length, int color,
 		char *label, char *l1, char *l2, double r1, double r2,
 		slider_monitor_function gmf, slider_clicked_function clicked, 
 		int active_displaymode, volatile int *displaymode)
 {
+	struct slider *s;
+
+	s = malloc(sizeof(*s));
 	s->x = x;
 	s->y = y;
 	s->length = length;
@@ -44,6 +47,7 @@ void slider_init(struct slider *s, int x, int y, int length, int color,
 	s->value = s->sample() / (s->r2 - s->r1);
 	s->active_displaymode = active_displaymode;
 	s->displaymode = displaymode;
+	return s;
 }
 
 void slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
@@ -156,4 +160,8 @@ void snis_slider_set_sound(int sound)
 	slider_sound = sound;
 }
 
+void snis_slider_set_input(struct slider *s, double input)
+{
+	s->input = input;
+}
 

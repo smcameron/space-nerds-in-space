@@ -25,6 +25,7 @@ GLOBAL double snis_slider_get_input(struct slider *s);
 GLOBAL void snis_draw_sliders(GtkWidget *w, GdkGC *gc);
 GLOBAL void snis_sliders_button_press(int x, int y);
 GLOBAL void snis_slider_set_sound(int sound);
+GLOBAL void snis_slider_set_input(struct slider *s, double input);
 
 #undef GLOBAL
 #endif
