@@ -1,0 +1,30 @@
+#ifndef SNIS_SLIDERS_H__
+#define SNIS_SLIDERS_H__
+
+#ifdef DEFINE_SLIDERS_GLOBALS
+#define GLOBAL
+#else
+#define GLOBAL extern
+#endif
+
+struct slider;
+
+typedef void (*slider_clicked_function)(struct slider *s);
+typedef double (*slider_monitor_function)(void);
+
+
+GLOBAL struct slider *snis_slider_init(int x, int y, int length, int color,
+		char *label, char *l1, char *l2, double r1, double r2,
+		slider_monitor_function gmf, slider_clicked_function clicked, 
+		int active_displaymode, volatile int *displaymode);
+
+GLOBAL void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s);
+GLOBAL void snis_add_slider(struct slider *s);
+GLOBAL double snis_slider_get_value(struct slider *s);
+GLOBAL double snis_slider_get_input(struct slider *s);
+GLOBAL void snis_draw_sliders(GtkWidget *w, GdkGC *gc);
+GLOBAL void snis_sliders_button_press(int x, int y);
+GLOBAL void snis_slider_set_sound(int sound);
+
+#undef GLOBAL
+#endif

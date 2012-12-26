@@ -104,6 +104,9 @@ snis_gauge.o:	snis_gauge.h snis_gauge.c snis_graph.h
 snis_button.o:	snis_button.h snis_button.c snis_graph.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_button.c
 
+snis_sliders.o:	snis_sliders.h snis_sliders.c snis_graph.h
+	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_sliders.c
+
 ${SSGL}:
 	(cd ssgl ; make )
 
