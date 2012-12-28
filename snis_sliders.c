@@ -50,7 +50,7 @@ struct slider *snis_slider_init(int x, int y, int length, int color,
 	return s;
 }
 
-void slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
+void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 {
 	double v;
 	int width, tx1;
@@ -131,7 +131,7 @@ void snis_draw_sliders(GtkWidget *w, GdkGC *gc)
 
 	for (i = 0; i < nsliders; i++)
 		if (sliderlist[i]->active_displaymode == *sliderlist[i]->displaymode)
-			slider_draw(w, gc, sliderlist[i]);
+			snis_slider_draw(w, gc, sliderlist[i]);
 }
 
 void snis_sliders_button_press(int x, int y)
