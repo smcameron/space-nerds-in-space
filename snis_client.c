@@ -142,6 +142,7 @@ ui_element_button_press_function ui_slider_button_press = (ui_element_button_pre
 
 ui_element_drawing_function ui_button_draw = (ui_element_drawing_function) snis_button_draw;
 ui_element_button_press_function ui_button_button_press = (ui_element_button_press_function) snis_button_button_press;
+ui_element_drawing_function ui_gauge_draw = (ui_element_drawing_function) gauge_draw;
 double sine[361];
 double cosine[361];
 
@@ -3114,6 +3115,15 @@ static void ui_add_button(struct button *b, int active_displaymode)
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
+static void ui_add_gauge(struct gauge *g, int active_displaymode)
+{
+	struct ui_element *uie;
+
+	uie = ui_element_init(g, ui_gauge_draw, NULL,
+						active_displaymode, &displaymode);
+	ui_element_list_add_element(&uiobjs, uie); 
+}
+
 static double sample_phaserbanks(void);
 static double sample_phaser_wavelength(void);
 static void init_weapons_ui(void)
@@ -3152,6 +3162,8 @@ static void init_weapons_ui(void)
 	ui_add_button(weapons.wavelen_up_button, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.wavelen_down_button, DISPLAYMODE_WEAPONS);
 	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS);
+	ui_add_gauge(weapons.phaser_bank_gauge, DISPLAYMODE_WEAPONS);
+	ui_add_gauge(weapons.phaser_wavelength, DISPLAYMODE_WEAPONS);
 }
 
 static void show_death_screen(GtkWidget *w)
@@ -3224,8 +3236,6 @@ static void show_weapons(GtkWidget *w)
 	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
 	draw_all_the_guys(w, o);
 	draw_all_the_sparks(w, o);
-	gauge_draw(w, gc, weapons.phaser_bank_gauge);
-	gauge_draw(w, gc, weapons.phaser_wavelength);
 }
 
 static double sample_reqwarpdrive(void);
@@ -3256,6 +3266,7 @@ static void init_nav_ui(void)
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.warp_up_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.warp_down_button, DISPLAYMODE_NAVIGATION);
+	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
 }
 
 #if 0
@@ -3319,7 +3330,6 @@ static void show_navigation(GtkWidget *w)
 
 	draw_all_the_guys(w, o);
 	draw_all_the_sparks(w, o);
-	gauge_draw(w, gc, nav_ui.warp_gauge);
 
 	gx1 = NAV_DATA_X + 10;
 	gy1 = 15;
@@ -3409,6 +3419,10 @@ static void init_engineering_ui(void)
 	ui_add_slider(eng_ui.warp_slider, DISPLAYMODE_ENGINEERING);
 	ui_add_slider(eng_ui.maneuvering_slider, DISPLAYMODE_ENGINEERING);
 	ui_add_slider(eng_ui.throttle_slider, DISPLAYMODE_ENGINEERING);
+	ui_add_gauge(eng_ui.rpm_gauge, DISPLAYMODE_ENGINEERING);
+	ui_add_gauge(eng_ui.fuel_gauge, DISPLAYMODE_ENGINEERING);
+	ui_add_gauge(eng_ui.power_gauge, DISPLAYMODE_ENGINEERING);
+	ui_add_gauge(eng_ui.temp_gauge, DISPLAYMODE_ENGINEERING);
 
 	y = 220 + yinc;
 	eng_ui.shield_damage = snis_slider_init(350, y += yinc, 150, AMBER, "SHIELD STATUS", "0", "100",
@@ -3444,10 +3458,6 @@ static void init_engineering_ui(void)
 static void show_engineering(GtkWidget *w)
 {
 	show_common_screen(w, "Engineering");
-	gauge_draw(w, gc, eng_ui.fuel_gauge);
-	gauge_draw(w, gc, eng_ui.rpm_gauge);
-	gauge_draw(w, gc, eng_ui.power_gauge);
-	gauge_draw(w, gc, eng_ui.temp_gauge);
 }
 
 struct science_ui {
