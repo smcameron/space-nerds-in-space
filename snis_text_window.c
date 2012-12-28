@@ -15,7 +15,6 @@ struct text_window {
 	int first_entry, last_entry;
 	int top_line;
 	int visible_lines;
-	int active_displaymode, *displaymode;
 	int lineheight;
 	int thumb_pos;
 	int print_slowly;
@@ -24,20 +23,9 @@ struct text_window {
 	int color;
 };
 
-#define MAXTEXTWINDOWS 20
-static int ntextwindows = 0;
-static struct text_window *textwindowlist[MAXTEXTWINDOWS];
 static int default_timer = 0;
 static volatile int *textwindow_timer = &default_timer;
 static int tty_chatter_sound = -1;
-
-void text_window_add(struct text_window *tw)
-{
-	if (ntextwindows >= MAXTEXTWINDOWS)
-		return;
-	textwindowlist[ntextwindows] = tw;
-	ntextwindows++;
-}
 
 int text_window_entry_count(struct text_window *tw)
 {
@@ -69,8 +57,7 @@ void text_window_add_text(struct text_window *tw, char *text)
 }
 
 struct text_window *text_window_init(int x, int y, int w,
-			int total_lines, int visible_lines,
-			int active_displaymode, int *displaymode, int color)
+			int total_lines, int visible_lines, int color)
 {
 	int i;
 
@@ -82,8 +69,6 @@ struct text_window *text_window_init(int x, int y, int w,
 	tw->w = w;
 	tw->total_lines = total_lines;
 	tw->visible_lines = visible_lines;
-	tw->displaymode = displaymode;
-	tw->active_displaymode = active_displaymode;
 	tw->color = color;
 	tw->text = malloc(sizeof(*tw) * total_lines);
 	for (i = 0; i < total_lines; i++) {
@@ -173,15 +158,6 @@ void text_window_draw(GtkWidget *w, GdkGC *gc, struct text_window *tw)
 			}
 			j++;
 	}
-}
-
-void text_window_draw_all(GtkWidget *w, GdkGC *gc)
-{
-	int i;
-
-	for (i = 0; i < ntextwindows; i++)
-		if (textwindowlist[i]->active_displaymode == *textwindowlist[i]->displaymode)
-			text_window_draw(w, gc, textwindowlist[i]);
 }
 
 void text_window_set_timer(volatile int *timer)

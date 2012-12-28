@@ -3503,8 +3503,7 @@ static void init_comms_ui(void)
 	x += 75;
 	comms_ui.main_onscreen_button = snis_button_init(x, y, 75, 25, "MAIN", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 5);
-	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20,
-			40, 20, DISPLAYMODE_COMMS, &displaymode, GREEN);
+	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20, 40, 20, GREEN);
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.nav_onscreen_button, DISPLAYMODE_COMMS);
