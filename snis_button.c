@@ -71,6 +71,14 @@ void snis_draw_buttons(GtkWidget *w, GdkGC *gc)
 	}
 }
 
+void snis_button_button_press(struct button *b, int x, int y)
+{
+	if (x < b->x || x > b->x + b->width || 
+		y < b->y || y > b->y + b->height)
+		return;
+	b->bf(b->cookie);
+}
+
 void snis_buttons_button_press(int x, int y)
 {
 	int i;
@@ -78,12 +86,8 @@ void snis_buttons_button_press(int x, int y)
 
 	for (i = 0; i < nbuttons; i++) {
 		b = buttonlist[i];
-		if (b->active_displaymode == *b->displaymode) {
-			if (x < b->x || x > b->x + b->width || 
-				y < b->y || y > b->y + b->height)
-				continue;
-			b->bf(b->cookie);
-		}
+		if (b->active_displaymode == *b->displaymode)
+			snis_button_button_press(b, x, y);
 	}
 }
 
