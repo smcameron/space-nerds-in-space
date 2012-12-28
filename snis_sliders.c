@@ -134,6 +134,19 @@ void snis_draw_sliders(GtkWidget *w, GdkGC *gc)
 			snis_slider_draw(w, gc, sliderlist[i]);
 }
 
+void snis_slider_button_press(struct slider *s, int x, int y)
+{
+	if (x < s->x || x > s->x + s->length || 
+		y < s->y || y > s->y + SLIDER_HEIGHT)
+			return;
+	s->input = ((double) x - (double) s->x) / (double) s->length;
+	if (s->clicked) {
+		s->clicked(s);
+		if (slider_sound != -1) 
+				wwviaudio_add_sound(slider_sound);
+	}
+}
+
 void snis_sliders_button_press(int x, int y)
 {
 	int i;
@@ -141,17 +154,8 @@ void snis_sliders_button_press(int x, int y)
 
 	for (i = 0; i < nsliders; i++) {
 		s = sliderlist[i];
-		if (s->active_displaymode == *s->displaymode) {
-			if (x < s->x || x > s->x + s->length || 
-				y < s->y || y > s->y + SLIDER_HEIGHT)
-				continue;
-			s->input = ((double) x - (double) s->x) / (double) s->length;
-			if (s->clicked) {
-				s->clicked(s);
-				if (slider_sound != -1) 
-					wwviaudio_add_sound(slider_sound);
-			}
-		}
+		if (s->active_displaymode == *s->displaymode)
+			snis_slider_button_press(s, x, y);
 	}
 }
 
