@@ -3131,16 +3131,13 @@ static void init_weapons_ui(void)
 	int y = 450;
 
 	weapons.fire_phaser = snis_button_init(550, y, 200, 25, "FIRE PHASER", RED,
-			TINY_FONT, fire_phaser_button_pressed, NULL, DISPLAYMODE_WEAPONS,
-			&displaymode);
+			TINY_FONT, fire_phaser_button_pressed, NULL);
 	y += 50;
 	weapons.load_torpedo = snis_button_init(550, y, 200, 25, "LOAD TORPEDO", GREEN,
-			TINY_FONT, load_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS,
-			&displaymode);
+			TINY_FONT, load_torpedo_button_pressed, NULL);
 	y += 50;
 	weapons.fire_torpedo = snis_button_init(550, y, 200, 25, "FIRE TORPEDO", RED,
-			TINY_FONT, fire_torpedo_button_pressed, NULL, DISPLAYMODE_WEAPONS,
-			&displaymode);
+			TINY_FONT, fire_torpedo_button_pressed, NULL);
 	weapons.phaser_bank_gauge = gauge_init(650, 100, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, WHITE,
 			10, "CHARGE", sample_phasercharge);
@@ -3148,11 +3145,9 @@ static void init_weapons_ui(void)
 			120.0 * 2.0 * M_PI / 180.0, RED, WHITE,
 			10, "WAVE LEN", sample_phaser_wavelength);
 	weapons.wavelen_down_button = snis_button_init(550, 400, 60, 25, "DOWN", WHITE,
-			NANO_FONT, wavelen_down_button_pressed, NULL, DISPLAYMODE_WEAPONS,
-			&displaymode);
+			NANO_FONT, wavelen_down_button_pressed, NULL);
 	weapons.wavelen_up_button = snis_button_init(700, 400, 30, 25, "UP", WHITE,
-			NANO_FONT, wavelen_up_button_pressed, NULL, DISPLAYMODE_WEAPONS,
-			&displaymode);
+			NANO_FONT, wavelen_up_button_pressed, NULL);
 	weapons.wavelen_slider = snis_slider_init(620, 400, 70, AMBER, "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength);
@@ -3253,14 +3248,11 @@ static void init_nav_ui(void)
 				10, "WARP", sample_warpdrive);
 	gauge_add_needle(nav_ui.warp_gauge, sample_warpdrive_power_avail, RED);
 	nav_ui.engage_warp_button = snis_button_init(570, 520, 150, 25, "ENGAGE WARP", AMBER,
-				NANO_FONT, engage_warp_button_pressed, NULL,
-				DISPLAYMODE_NAVIGATION, &displaymode);
+				NANO_FONT, engage_warp_button_pressed, NULL);
 	nav_ui.warp_up_button = snis_button_init(500, 490, 40, 25, "UP", AMBER,
-			NANO_FONT, warp_up_button_pressed, NULL, DISPLAYMODE_NAVIGATION,
-			&displaymode);
+			NANO_FONT, warp_up_button_pressed, NULL);
 	nav_ui.warp_down_button = snis_button_init(500, 520, 60, 25, "DOWN", AMBER,
-			NANO_FONT, warp_down_button_pressed, NULL, DISPLAYMODE_NAVIGATION,
-			&displaymode);
+			NANO_FONT, warp_down_button_pressed, NULL);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.shield_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
@@ -3484,28 +3476,22 @@ static void init_comms_ui(void)
 	int y = 20;
 
 	comms_ui.comms_onscreen_button = snis_button_init(x, y, 75, 25, "COMMS", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 0, DISPLAYMODE_COMMS,
-			&displaymode);
+			NANO_FONT, comms_screen_button_pressed, (void *) 0);
 	x += 75;
 	comms_ui.nav_onscreen_button = snis_button_init(x, y, 75, 25, "NAV", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 1, DISPLAYMODE_COMMS,
-			&displaymode);
+			NANO_FONT, comms_screen_button_pressed, (void *) 1);
 	x += 75;
 	comms_ui.weap_onscreen_button = snis_button_init(x, y, 75, 25, "WEAP", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 2, DISPLAYMODE_COMMS,
-			&displaymode);
+			NANO_FONT, comms_screen_button_pressed, (void *) 2);
 	x += 75;
 	comms_ui.eng_onscreen_button = snis_button_init(x, y, 75, 25, "ENG", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 3, DISPLAYMODE_COMMS,
-			&displaymode);
+			NANO_FONT, comms_screen_button_pressed, (void *) 3);
 	x += 75;
 	comms_ui.sci_onscreen_button = snis_button_init(x, y, 75, 25, "SCI", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 4, DISPLAYMODE_COMMS,
-			&displaymode);
+			NANO_FONT, comms_screen_button_pressed, (void *) 4);
 	x += 75;
 	comms_ui.main_onscreen_button = snis_button_init(x, y, 75, 25, "MAIN", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 5, DISPLAYMODE_COMMS,
-			&displaymode);
+			NANO_FONT, comms_screen_button_pressed, (void *) 5);
 	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20,
 			40, 20, DISPLAYMODE_COMMS, &displaymode, GREEN);
 	text_window_add(comms_ui.tw);
@@ -4028,7 +4014,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		break;
 	}
 	ui_element_list_draw(w, gc, uiobjs);
-	snis_draw_buttons(w, gc);
 	text_window_draw_all(w, gc);
 	return 0;
 }
@@ -4112,8 +4097,6 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 	ui_element_list_button_press(uiobjs,
 		(int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
 		(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
-	snis_buttons_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
-			(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
 	return TRUE;
 }
 
