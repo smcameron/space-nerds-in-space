@@ -19,16 +19,13 @@ struct slider {
 	double r1, r2;
 	slider_monitor_function sample;
 	slider_clicked_function clicked;
-	int active_displaymode;
-	volatile int *displaymode;
 };
 
 static int slider_sound = -1;
 
 struct slider *snis_slider_init(int x, int y, int length, int color,
 		char *label, char *l1, char *l2, double r1, double r2,
-		slider_monitor_function gmf, slider_clicked_function clicked, 
-		int active_displaymode, volatile int *displaymode)
+		slider_monitor_function gmf, slider_clicked_function clicked)
 {
 	struct slider *s;
 
@@ -45,8 +42,6 @@ struct slider *snis_slider_init(int x, int y, int length, int color,
 	s->sample = gmf;
 	s->clicked = clicked;
 	s->value = s->sample() / (s->r2 - s->r1);
-	s->active_displaymode = active_displaymode;
-	s->displaymode = displaymode;
 	return s;
 }
 
@@ -103,18 +98,6 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 	sng_abs_xy_draw_string(w, gc, s->label, TINY_FONT, s->x + s->length + 5, s->y + 2 * SLIDER_HEIGHT / 3); 
 }
 
-#define MAXSLIDERS 20
-static int nsliders = 0;
-static struct slider *sliderlist[MAXSLIDERS];
-
-void snis_add_slider(struct slider *s)
-{
-	if (nsliders >= MAXSLIDERS)
-		return;
-	sliderlist[nsliders] = s;
-	nsliders++;
-}
-
 double snis_slider_get_value(struct slider *s)
 {	
 	return s->value;
@@ -123,15 +106,6 @@ double snis_slider_get_value(struct slider *s)
 double snis_slider_get_input(struct slider *s)
 {	
 	return s->input;
-}
-
-void snis_draw_sliders(GtkWidget *w, GdkGC *gc)
-{
-	int i;
-
-	for (i = 0; i < nsliders; i++)
-		if (sliderlist[i]->active_displaymode == *sliderlist[i]->displaymode)
-			snis_slider_draw(w, gc, sliderlist[i]);
 }
 
 void snis_slider_button_press(struct slider *s, int x, int y)
@@ -144,18 +118,6 @@ void snis_slider_button_press(struct slider *s, int x, int y)
 		s->clicked(s);
 		if (slider_sound != -1) 
 				wwviaudio_add_sound(slider_sound);
-	}
-}
-
-void snis_sliders_button_press(int x, int y)
-{
-	int i;
-	struct slider *s;
-
-	for (i = 0; i < nsliders; i++) {
-		s = sliderlist[i];
-		if (s->active_displaymode == *s->displaymode)
-			snis_slider_button_press(s, x, y);
 	}
 }
 
