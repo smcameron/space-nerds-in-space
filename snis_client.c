@@ -140,6 +140,8 @@ struct ui_element_list *uiobjs = NULL;
 ui_element_drawing_function ui_slider_draw = (ui_element_drawing_function) snis_slider_draw;
 ui_element_button_press_function ui_slider_button_press = (ui_element_button_press_function) snis_slider_button_press;
 
+ui_element_drawing_function ui_button_draw = (ui_element_drawing_function) snis_button_draw;
+ui_element_button_press_function ui_button_button_press = (ui_element_button_press_function) snis_button_button_press;
 double sine[361];
 double cosine[361];
 
@@ -3103,6 +3105,15 @@ static void ui_add_slider(struct slider *s, int active_displaymode)
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
+static void ui_add_button(struct button *b, int active_displaymode)
+{
+	struct ui_element *uie;
+
+	uie = ui_element_init(b, ui_button_draw, ui_button_button_press,
+						active_displaymode, &displaymode);
+	ui_element_list_add_element(&uiobjs, uie); 
+}
+
 static double sample_phaserbanks(void);
 static double sample_phaser_wavelength(void);
 static void init_weapons_ui(void)
@@ -3135,11 +3146,11 @@ static void init_weapons_ui(void)
 	weapons.wavelen_slider = snis_slider_init(620, 400, 70, AMBER, "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength, DISPLAYMODE_WEAPONS, &displaymode);
-	snis_add_button(weapons.fire_phaser);
-	snis_add_button(weapons.load_torpedo);
-	snis_add_button(weapons.fire_torpedo);
-	snis_add_button(weapons.wavelen_up_button);
-	snis_add_button(weapons.wavelen_down_button);
+	ui_add_button(weapons.fire_phaser, DISPLAYMODE_WEAPONS);
+	ui_add_button(weapons.load_torpedo, DISPLAYMODE_WEAPONS);
+	ui_add_button(weapons.fire_torpedo, DISPLAYMODE_WEAPONS);
+	ui_add_button(weapons.wavelen_up_button, DISPLAYMODE_WEAPONS);
+	ui_add_button(weapons.wavelen_down_button, DISPLAYMODE_WEAPONS);
 	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS);
 }
 
@@ -3242,9 +3253,9 @@ static void init_nav_ui(void)
 			&displaymode);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.shield_slider, DISPLAYMODE_NAVIGATION);
-	snis_add_button(nav_ui.engage_warp_button);
-	snis_add_button(nav_ui.warp_up_button);
-	snis_add_button(nav_ui.warp_down_button);
+	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
+	ui_add_button(nav_ui.warp_up_button, DISPLAYMODE_NAVIGATION);
+	ui_add_button(nav_ui.warp_down_button, DISPLAYMODE_NAVIGATION);
 }
 
 #if 0
@@ -3504,12 +3515,12 @@ static void init_comms_ui(void)
 	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20,
 			40, 20, DISPLAYMODE_COMMS, &displaymode, GREEN);
 	text_window_add(comms_ui.tw);
-	snis_add_button(comms_ui.comms_onscreen_button);
-	snis_add_button(comms_ui.nav_onscreen_button);
-	snis_add_button(comms_ui.weap_onscreen_button);
-	snis_add_button(comms_ui.eng_onscreen_button);
-	snis_add_button(comms_ui.sci_onscreen_button);
-	snis_add_button(comms_ui.main_onscreen_button);
+	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS);
+	ui_add_button(comms_ui.nav_onscreen_button, DISPLAYMODE_COMMS);
+	ui_add_button(comms_ui.weap_onscreen_button, DISPLAYMODE_COMMS);
+	ui_add_button(comms_ui.eng_onscreen_button, DISPLAYMODE_COMMS);
+	ui_add_button(comms_ui.sci_onscreen_button, DISPLAYMODE_COMMS);
+	ui_add_button(comms_ui.main_onscreen_button, DISPLAYMODE_COMMS);
 }
 
 #define SCIDIST2 100
