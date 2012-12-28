@@ -48,6 +48,7 @@
 #include "snis_font.h"
 #include "snis_typeface.h"
 #include "snis_graph.h"
+#include "snis_ui_element.h"
 #include "snis_gauge.h"
 #include "snis_button.h"
 #include "snis_sliders.h"
@@ -134,6 +135,10 @@ char lobbyerror[200];
 char *lobbyhost = "localhost";
 struct ssgl_game_server lobby_game_server[100];
 int ngameservers = 0;
+
+struct ui_element_list *uiobjs = NULL;
+ui_element_drawing_function ui_slider_draw = (ui_element_drawing_function) snis_slider_draw;
+ui_element_button_press_function ui_slider_button_press = (ui_element_button_press_function) snis_slider_button_press;
 
 double sine[361];
 double cosine[361];
@@ -3089,6 +3094,15 @@ struct weapons_ui {
 	struct button *wavelen_down_button;
 } weapons;
 
+static void ui_add_slider(struct slider *s, int active_displaymode)
+{
+	struct ui_element *uie;
+
+	uie = ui_element_init(s, ui_slider_draw, ui_slider_button_press,
+						active_displaymode, &displaymode);
+	ui_element_list_add_element(&uiobjs, uie); 
+}
+
 static double sample_phaserbanks(void);
 static double sample_phaser_wavelength(void);
 static void init_weapons_ui(void)
@@ -3126,7 +3140,7 @@ static void init_weapons_ui(void)
 	snis_add_button(weapons.fire_torpedo);
 	snis_add_button(weapons.wavelen_up_button);
 	snis_add_button(weapons.wavelen_down_button);
-	snis_add_slider(weapons.wavelen_slider);
+	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS);
 }
 
 static void show_death_screen(GtkWidget *w)
@@ -3226,8 +3240,8 @@ static void init_nav_ui(void)
 	nav_ui.warp_down_button = snis_button_init(500, 520, 60, 25, "DOWN", AMBER,
 			NANO_FONT, warp_down_button_pressed, NULL, DISPLAYMODE_NAVIGATION,
 			&displaymode);
-	snis_add_slider(nav_ui.warp_slider);
-	snis_add_slider(nav_ui.shield_slider);
+	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
+	ui_add_slider(nav_ui.shield_slider, DISPLAYMODE_NAVIGATION);
 	snis_add_button(nav_ui.engage_warp_button);
 	snis_add_button(nav_ui.warp_up_button);
 	snis_add_button(nav_ui.warp_down_button);
@@ -3376,14 +3390,14 @@ static void init_engineering_ui(void)
 	eng_ui.maneuvering_slider = snis_slider_init(20, y += yinc, 150, AMBER, "MANEUVERING", "0", "100",
 				0.0, 100.0, sample_maneuvering, do_maneuvering_pwr, 
 				DISPLAYMODE_ENGINEERING, &displaymode);
-	snis_add_slider(eng_ui.shield_slider);
-	snis_add_slider(eng_ui.phaserbanks_slider);
-	snis_add_slider(eng_ui.comm_slider);
-	snis_add_slider(eng_ui.sensors_slider);
-	snis_add_slider(eng_ui.impulse_slider);
-	snis_add_slider(eng_ui.warp_slider);
-	snis_add_slider(eng_ui.maneuvering_slider);
-	snis_add_slider(eng_ui.throttle_slider);
+	ui_add_slider(eng_ui.shield_slider, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.phaserbanks_slider, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.comm_slider, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.sensors_slider, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.impulse_slider, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.warp_slider, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.maneuvering_slider, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.throttle_slider, DISPLAYMODE_ENGINEERING);
 
 	y = 220 + yinc;
 	eng_ui.shield_damage = snis_slider_init(350, y += yinc, 150, AMBER, "SHIELD STATUS", "0", "100",
@@ -3407,13 +3421,13 @@ static void init_engineering_ui(void)
 	eng_ui.comms_damage = snis_slider_init(350, y += yinc, 150, AMBER, "COMMS STATUS", "0", "100",
 				0.0, 100.0, sample_comms_damage, NULL,
 				DISPLAYMODE_ENGINEERING, &displaymode);
-	snis_add_slider(eng_ui.shield_damage);
-	snis_add_slider(eng_ui.impulse_damage);
-	snis_add_slider(eng_ui.warp_damage);
-	snis_add_slider(eng_ui.torpedo_tubes_damage);
-	snis_add_slider(eng_ui.phaser_banks_damage);
-	snis_add_slider(eng_ui.sensors_damage);
-	snis_add_slider(eng_ui.comms_damage);
+	ui_add_slider(eng_ui.shield_damage, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.impulse_damage, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.warp_damage, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.torpedo_tubes_damage, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.phaser_banks_damage, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.sensors_damage, DISPLAYMODE_ENGINEERING);
+	ui_add_slider(eng_ui.comms_damage, DISPLAYMODE_ENGINEERING);
 }
 
 static void show_engineering(GtkWidget *w)
@@ -3434,7 +3448,7 @@ static void init_science_ui(void)
 	sci_ui.scizoom = snis_slider_init(350, 50, 300, DARKGREEN, "Range", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom, DISPLAYMODE_SCIENCE,
 				&displaymode);
-	snis_add_slider(sci_ui.scizoom);
+	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 }
 
 static void comms_screen_button_pressed(void *x)
@@ -4010,6 +4024,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		break;
 	}
 	snis_draw_sliders(w, gc);
+	ui_element_list_draw(w, gc, uiobjs);
 	snis_draw_buttons(w, gc);
 	text_window_draw_all(w, gc);
 	return 0;
@@ -4091,6 +4106,9 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 	default:
 		break;
 	}
+	ui_element_list_button_press(uiobjs,
+		(int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
+		(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
 	snis_sliders_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
 			(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
 	snis_buttons_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
