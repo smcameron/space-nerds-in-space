@@ -143,6 +143,8 @@ ui_element_button_press_function ui_slider_button_press = (ui_element_button_pre
 ui_element_drawing_function ui_button_draw = (ui_element_drawing_function) snis_button_draw;
 ui_element_button_press_function ui_button_button_press = (ui_element_button_press_function) snis_button_button_press;
 ui_element_drawing_function ui_gauge_draw = (ui_element_drawing_function) gauge_draw;
+ui_element_drawing_function ui_text_window_draw = (ui_element_drawing_function) text_window_draw;
+
 double sine[361];
 double cosine[361];
 
@@ -3124,6 +3126,15 @@ static void ui_add_gauge(struct gauge *g, int active_displaymode)
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
+static void ui_add_text_window(struct text_window *tw, int active_displaymode)
+{
+	struct ui_element *uie;
+
+	uie = ui_element_init(tw, ui_text_window_draw, NULL,
+						active_displaymode, &displaymode);
+	ui_element_list_add_element(&uiobjs, uie); 
+}
+
 static double sample_phaserbanks(void);
 static double sample_phaser_wavelength(void);
 static void init_weapons_ui(void)
@@ -3494,7 +3505,7 @@ static void init_comms_ui(void)
 			NANO_FONT, comms_screen_button_pressed, (void *) 5);
 	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20,
 			40, 20, DISPLAYMODE_COMMS, &displaymode, GREEN);
-	text_window_add(comms_ui.tw);
+	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.nav_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.weap_onscreen_button, DISPLAYMODE_COMMS);
@@ -4014,7 +4025,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		break;
 	}
 	ui_element_list_draw(w, gc, uiobjs);
-	text_window_draw_all(w, gc);
 	return 0;
 }
 
