@@ -177,3 +177,8 @@ int snis_text_input_box_keyrelease(struct snis_text_input_box *t, GdkEventKey *e
 	return 0;
 }
 
+void snis_text_input_box_zero(struct snis_text_input_box *t)
+{
+	t->cursor_pos = 0;
+	memset(t->buffer, 0, t->buflen);
+}
