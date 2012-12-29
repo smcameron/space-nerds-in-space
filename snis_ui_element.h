@@ -5,7 +5,8 @@ struct ui_element;
 struct ui_element_list;
 
 typedef void (*ui_element_drawing_function)(GtkWidget *w, GdkGC *gc, void *);
-typedef void (*ui_element_button_press_function)(void *element, int x, int y);
+typedef int (*ui_element_button_press_function)(void *element, int x, int y);
+typedef void (*ui_element_set_focus_function)(void *element, int has_focus);
 
 #ifdef DEFINE_UI_ELEMENT_LIST_GLOBALS
 #define GLOBAL
@@ -24,6 +25,8 @@ GLOBAL void ui_element_list_free(struct ui_element_list *list);
 GLOBAL void ui_element_list_draw(GtkWidget *w, GdkGC *gc,
 					struct ui_element_list *list);
 GLOBAL void ui_element_list_button_press(struct ui_element_list *list, int x, int y);
+GLOBAL void ui_element_set_focus_callback(struct ui_element *e,
+						ui_element_set_focus_function set_focus);
 
 #undef GLOBAL
 #endif

@@ -44,12 +44,13 @@ void snis_button_draw(GtkWidget *w, GdkGC *gc, struct button *b)
 	sng_abs_xy_draw_string(w, gc, b->label, b->font, b->x + 10, b->y + b->height / 1.7); 
 }
 
-void snis_button_button_press(struct button *b, int x, int y)
+int snis_button_button_press(struct button *b, int x, int y)
 {
 	if (x < b->x || x > b->x + b->width || 
 		y < b->y || y > b->y + b->height)
-		return;
+		return 0;
 	b->bf(b->cookie);
+	return 1;
 }
 
 void snis_button_set_color(struct button *b, int color)

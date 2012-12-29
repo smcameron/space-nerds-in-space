@@ -108,17 +108,18 @@ double snis_slider_get_input(struct slider *s)
 	return s->input;
 }
 
-void snis_slider_button_press(struct slider *s, int x, int y)
+int snis_slider_button_press(struct slider *s, int x, int y)
 {
 	if (x < s->x || x > s->x + s->length || 
 		y < s->y || y > s->y + SLIDER_HEIGHT)
-			return;
+			return 0;
 	s->input = ((double) x - (double) s->x) / (double) s->length;
 	if (s->clicked) {
 		s->clicked(s);
 		if (slider_sound != -1) 
 				wwviaudio_add_sound(slider_sound);
 	}
+	return 1;
 }
 
 void snis_slider_set_sound(int sound)
