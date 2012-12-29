@@ -22,6 +22,8 @@ GLOBAL void snis_text_input_box_draw(GtkWidget *w, GdkGC *gc, struct snis_text_i
 
 GLOBAL void snis_text_input_box_set_focus(struct snis_text_input_box *t, int has_focus);
 GLOBAL int snis_text_input_box_button_press(struct snis_text_input_box *t, int x, int y);
+GLOBAL int snis_text_input_box_keypress(struct snis_text_input_box *t, GdkEventKey *event);
+GLOBAL int snis_text_input_box_keyrelease(struct snis_text_input_box *t, GdkEventKey *event);
 	
 #undef GLOBAL
 #endif

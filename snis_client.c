@@ -964,6 +964,8 @@ static int control_key_pressed = 0;
 static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 {
 	enum keyaction ka;
+
+	ui_element_list_keypress(uiobjs, event);
         if ((event->keyval & 0xff00) == 0) 
                 ka = keymap[event->keyval];
         else
@@ -1077,6 +1079,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 
 static gint key_release_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 {
+	ui_element_list_keyrelease(uiobjs, event);
 	if (event->keyval == GDK_Control_R ||
 		event->keyval == GDK_Control_L) {
 		control_key_pressed = 0;

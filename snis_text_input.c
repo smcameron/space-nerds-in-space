@@ -38,7 +38,7 @@ struct snis_text_input_box *snis_text_input_box_init(int x, int y,
 	t->color = color;
 	t->font = font;
 	t->buffer = buffer;
-	t->buflen = buflen;
+	t->buflen = buflen - 1;
 	t->cursor_pos = strlen(t->buffer);
 	t->timer = timer;
 	t->callback = callback;
@@ -80,5 +80,28 @@ int snis_text_input_box_button_press(struct snis_text_input_box *t, int x, int y
 		hit = 1;
 	/* put stuff for cursor positioning here. */
 	return hit;
+}
+
+int snis_text_input_box_keypress(struct snis_text_input_box *t, GdkEventKey *event)
+{
+	char c;
+	int currentlen;
+	if (event->type != GDK_KEY_PRESS)
+		return 0;
+	if ((event->keyval & ~0x7f) != 0)
+		return 0;
+	c = (event->keyval & 0x7f);
+	currentlen = strlen(t->buffer);
+	if (currentlen == t->cursor_pos)
+		t->buffer[t->cursor_pos + 1] = '\0';	
+	t->buffer[t->cursor_pos] = c;
+	if (t->cursor_pos < t->buflen - 1)
+		t->cursor_pos++;
+	return 0;
+}
+
+int snis_text_input_box_keyrelease(struct snis_text_input_box *t, GdkEventKey *event)
+{
+	return 0;
 }
 
