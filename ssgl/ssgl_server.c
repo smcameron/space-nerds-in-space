@@ -229,7 +229,7 @@ static void *expire_game_servers(__attribute__((unused)) void *arg)
 static void service_game_client(int connection)
 {
 	/* Send the game server directory to the client. */
-	struct ssgl_game_server *directory;
+	struct ssgl_game_server *directory = NULL;
 	struct ssgl_client_filter filter;
 	int nentries, i, rc, be_nentries;
 
@@ -290,12 +290,16 @@ send_the_data:
 		 * writing a new filter back to complete the readsocket
 		 * at the top of this while loop.
 		 */
+		if (directory)
+			free(directory);
+		directory = NULL;
 		ssgl_sleep(5);
 	}
 
 badclient:
 	printf("ssgl_server: bailing on client.\n");
-	free(directory);
+	if (directory)
+		free(directory);
 	shutdown(connection, SHUT_RDWR);
 	close(connection);
 	return;
