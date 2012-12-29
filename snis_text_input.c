@@ -138,11 +138,19 @@ int snis_text_input_box_keypress(struct snis_text_input_box *t, GdkEventKey *eve
 	}
 	c = (event->keyval & 0x7f);
 	currentlen = strlen(t->buffer);
-	if (currentlen == t->cursor_pos)
+	if (currentlen == t->cursor_pos) {
 		t->buffer[t->cursor_pos + 1] = '\0';	
-	t->buffer[t->cursor_pos] = c;
-	if (t->cursor_pos < t->buflen - 1)
-		t->cursor_pos++;
+		t->buffer[t->cursor_pos] = c;
+		if (t->cursor_pos < t->buflen - 1)
+			t->cursor_pos++;
+	} else {
+		if (currentlen < t->buflen - 2) {
+			memmove(&t->buffer[t->cursor_pos + 1], &t->buffer[t->cursor_pos],
+				currentlen - t->cursor_pos);
+			t->buffer[t->cursor_pos] = c;
+			t->cursor_pos++;
+		}
+	}
 	return 0;
 }
 
