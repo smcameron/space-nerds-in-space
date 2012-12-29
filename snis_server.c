@@ -1285,7 +1285,7 @@ static int process_request_ship_sdata(struct game_client *c)
 {
 	unsigned char buffer[10];
 	struct packed_buffer pb;
-	uint16_t id;
+	uint32_t id;
 	int i;
 	int rc;
 
