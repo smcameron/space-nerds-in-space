@@ -3964,6 +3964,8 @@ static void password_entered()
 static void start_lobbyserver_button_pressed()
 {
 	printf("start lobby server button pressed.\n");
+	/* I should probably do this with fork and exec, or clone, not system */
+	system("./ssgl/ssgl_server &");
 }
 
 static void start_gameserver_button_pressed()
