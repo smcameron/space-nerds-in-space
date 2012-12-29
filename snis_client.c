@@ -53,6 +53,7 @@
 #include "snis_button.h"
 #include "snis_sliders.h"
 #include "snis_text_window.h"
+#include "snis_text_input.h"
 #include "snis_socket_io.h"
 #include "ssgl/ssgl.h"
 #include "snis_marshal.h"
@@ -144,6 +145,14 @@ ui_element_drawing_function ui_button_draw = (ui_element_drawing_function) snis_
 ui_element_button_press_function ui_button_button_press = (ui_element_button_press_function) snis_button_button_press;
 ui_element_drawing_function ui_gauge_draw = (ui_element_drawing_function) gauge_draw;
 ui_element_drawing_function ui_text_window_draw = (ui_element_drawing_function) text_window_draw;
+ui_element_drawing_function ui_text_input_draw = (ui_element_drawing_function)
+					snis_text_input_box_draw;
+ui_element_set_focus_function ui_text_input_box_set_focus = (ui_element_set_focus_function)
+					snis_text_input_box_set_focus;
+ui_element_button_press_function ui_text_input_button_press = (ui_element_button_press_function)
+					snis_text_input_box_button_press;
+ui_element_keypress_function ui_text_input_keypress = (ui_element_keypress_function)
+					snis_text_input_box_keypress;
 
 double sine[361];
 double cosine[361];
@@ -3138,6 +3147,17 @@ static void ui_add_text_window(struct text_window *tw, int active_displaymode)
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
+static void ui_add_text_input_box(struct snis_text_input_box *t, int active_displaymode)
+{
+	struct ui_element *uie;
+
+	uie = ui_element_init(t, ui_text_input_draw, ui_text_input_button_press,
+						active_displaymode, &displaymode);
+	ui_element_set_focus_callback(uie, ui_text_input_box_set_focus);
+	ui_element_get_keystrokes(uie, ui_text_input_keypress, NULL);
+	ui_element_list_add_element(&uiobjs, uie); 
+}
+
 static double sample_phaserbanks(void);
 static double sample_phaser_wavelength(void);
 static void init_weapons_ui(void)
@@ -3907,6 +3927,122 @@ static void show_debug(GtkWidget *w)
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 10, SCREEN_HEIGHT - 10); 
 }
 
+struct network_setup_ui {
+	struct button *start_lobbyserver;
+	struct button *start_gameserver;
+	struct button *connect_to_lobby;
+	struct snis_text_input_box *lobbyservername;
+	struct snis_text_input_box *gameservername;
+	struct snis_text_input_box *shipname_box;
+	struct snis_text_input_box *password_box;
+	char lobbyname[60];
+	char servername[60];
+	char shipname[22];
+	char password[10];
+} net_setup_ui;
+
+static void lobby_hostname_entered()
+{
+	printf("lobby hostname entered: %s\n", net_setup_ui.lobbyname);
+}
+
+static void gameserver_hostname_entered()
+{
+	printf("game server hostname entered: %s\n", net_setup_ui.servername);
+}
+
+static void shipname_entered()
+{
+	printf("shipname entered: %s\n", net_setup_ui.lobbyname);
+}
+
+static void password_entered()
+{
+	printf("password entered: %s\n", net_setup_ui.lobbyname);
+}
+
+static void start_lobbyserver_button_pressed()
+{
+	printf("start lobby server button pressed.\n");
+}
+
+static void start_gameserver_button_pressed()
+{
+	printf("start game server button pressed.\n");
+}
+
+static void ui_add_button(struct button *b, int active_displaymode);
+static void ui_add_text_input_box(struct snis_text_input_box *t, int active_displaymode);
+static void init_net_setup_ui(void)
+{
+	int y = 10 + LINEHEIGHT * 5;
+
+	memset(net_setup_ui.lobbyname, 0, sizeof(net_setup_ui.lobbyname));
+	strcpy(net_setup_ui.lobbyname, "");
+	strcpy(net_setup_ui.servername, "");
+	net_setup_ui.start_lobbyserver =	
+		snis_button_init(20, y, 300, 25, "START LOBBY SERVER", GREEN,
+			TINY_FONT, start_lobbyserver_button_pressed, NULL);
+	y += 30;
+	net_setup_ui.start_gameserver = 
+		snis_button_init(20, y, 300, 25, "START GAME SERVER", RED,
+			TINY_FONT, start_gameserver_button_pressed, NULL);
+	net_setup_ui.connect_to_lobby = 
+		snis_button_init(420, y, 300, 25, "CONNECT TO LOBBY", RED,
+			TINY_FONT, start_gameserver_button_pressed, NULL);
+	y += 100;
+	net_setup_ui.lobbyservername =
+		snis_text_input_box_init(40, y, 30, 750, GREEN, TINY_FONT,
+					net_setup_ui.lobbyname, 50, &timer,
+					lobby_hostname_entered, NULL);
+	y += 100;
+	net_setup_ui.gameservername =
+		snis_text_input_box_init(40, y, 30, 750, GREEN, TINY_FONT,
+					net_setup_ui.servername, 50, &timer,
+					gameserver_hostname_entered, NULL);
+	y += 100;
+	net_setup_ui.shipname_box =
+		snis_text_input_box_init(300, y, 30, 250, GREEN, TINY_FONT,
+					net_setup_ui.shipname, 50, &timer,
+					shipname_entered, NULL);
+	y += 50;
+	net_setup_ui.password_box =
+		snis_text_input_box_init(300, y, 30, 250, GREEN, TINY_FONT,
+					net_setup_ui.password, 50, &timer,
+					password_entered, NULL);
+	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(net_setup_ui.start_gameserver, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_text_input_box(net_setup_ui.lobbyservername, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_text_input_box(net_setup_ui.gameservername, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_text_input_box(net_setup_ui.shipname_box, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_text_input_box(net_setup_ui.password_box, DISPLAYMODE_NETWORK_SETUP);
+} 
+
+static void show_network_setup(GtkWidget *w)
+{
+	show_common_screen(w, "SPACE NERDS IN SPACE");
+	sng_set_foreground(GREEN);
+	sng_abs_xy_draw_string(w, gc, "NETWORK SETUP", SMALL_FONT, 25, 10 + LINEHEIGHT * 2);
+	sng_abs_xy_draw_string(w, gc, "LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, 25, 270);
+	sng_abs_xy_draw_string(w, gc, "GAME SERVER NICKNAME", TINY_FONT, 25, 370);
+	sng_abs_xy_draw_string(w, gc, "SHIP NAME", TINY_FONT, 170, 510);
+	sng_abs_xy_draw_string(w, gc, "PASSWORD", TINY_FONT, 170, 560);
+
+	if (strcmp(net_setup_ui.servername, "") != 0 &&
+		strcmp(net_setup_ui.lobbyname, "") != 0)
+		snis_button_set_color(net_setup_ui.start_gameserver, GREEN);
+	else
+		snis_button_set_color(net_setup_ui.start_gameserver, RED);
+
+	if (strcmp(net_setup_ui.lobbyname, "") != 0 &&
+		strcmp(net_setup_ui.shipname, "") != 0 &&
+		strcmp(net_setup_ui.password, "") != 0)
+		snis_button_set_color(net_setup_ui.connect_to_lobby, GREEN);
+	else
+		snis_button_set_color(net_setup_ui.connect_to_lobby, RED);
+}
+
 static void make_science_forget_stuff(void)
 {
 	int i;
@@ -4021,6 +4157,9 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		break;
 	case DISPLAYMODE_DEBUG:
 		show_debug(w);
+		break;
+	case DISPLAYMODE_NETWORK_SETUP:
+		show_network_setup(w);
 		break;
 	default:
 		show_fonttest(w);
@@ -4186,12 +4325,16 @@ int main(int argc, char *argv[])
 	GtkWidget *vbox;
 	int i;
 
-	if (argc < 3)
+	if (argc > 4)
 		usage();
 
-	lobbyhost = argv[1];
-	shipname = argv[2];
-	password = argv[3];
+	if (argc >= 4) {
+		lobbyhost = argv[1];
+		shipname = argv[2];
+		password = argv[3];
+	} else {
+		displaymode = DISPLAYMODE_NETWORK_SETUP;
+	}
 
 	role = 0;
 	for (i = 4; i < argc; i++) {
@@ -4224,7 +4367,9 @@ int main(int argc, char *argv[])
 
 	setup_sound();
 
-	connect_to_lobby();
+	if (displaymode != DISPLAYMODE_NETWORK_SETUP)
+		connect_to_lobby();
+
 	real_screen_width = SCREEN_WIDTH;
 	real_screen_height = SCREEN_HEIGHT;
 	sng_set_scale(xscale_screen, yscale_screen);
@@ -4299,6 +4444,7 @@ int main(int argc, char *argv[])
 	init_weapons_ui();
 	init_science_ui();
 	init_comms_ui();
+	init_net_setup_ui();
 
 	gtk_main ();
         wwviaudio_cancel_all_sounds();
