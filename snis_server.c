@@ -2201,6 +2201,12 @@ static void service_connection(int connection)
 	if (i < 0)
 		printf("setsockopt failed.\n");
 
+	if (verify_client_protocol(connection)) {
+		printf("protocol error\n");
+		close(connection);
+		return;
+	}
+
 	client_lock();
 	if (nclients >= MAXCLIENTS) {
 		client_unlock();
@@ -2208,12 +2214,6 @@ static void service_connection(int connection)
 		return;
 	}
 	i = nclients;
-
-	if (verify_client_protocol(connection)) {
-		printf("protocol error\n");
-		close(connection);
-		return;
-	}
 
 	client[i].socket = connection;
 	client[i].timestamp = 0;  /* newborn client, needs everything */
