@@ -321,4 +321,8 @@ int snis_make_font(struct my_vect_obj ***font, int xscale, int yscale)
 	return 0;
 }
 
+int snis_font_lineheight(int yscale)
+{
+	return (decode_glyph[30].y - decode_glyph[0].y) * yscale + 2;
+}
 

@@ -30,6 +30,7 @@
 #endif
 
 GLOBAL int snis_make_font(struct my_vect_obj ***font, int xscale, int yscale);
+GLOBAL int snis_font_lineheight(int yscale);
 
 #undef GLOBAL
 #endif
