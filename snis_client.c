@@ -3968,9 +3968,28 @@ static void start_lobbyserver_button_pressed()
 	system("./ssgl/ssgl_server &");
 }
 
+static void sanitize_string(char *s)
+{
+	int i, len;
+	const char *forbidden = "\\*?\'$";
+
+	len = strlen(s);
+	for (i = 0; len; i++)
+		if (index(forbidden, s[i]))
+			s[i] = 'x';
+}
+
 static void start_gameserver_button_pressed()
 {
+	char command[220];
+
+	sanitize_string(net_setup_ui.servername);
+	sanitize_string(net_setup_ui.lobbyname);
+	memset(command, 0, sizeof(command));
+	snprintf(command, 200, "./snis_server %s SNIS '%s' . &",
+			net_setup_ui.lobbyname, net_setup_ui.servername);
 	printf("start game server button pressed.\n");
+	system(command);
 }
 
 static void ui_add_button(struct button *b, int active_displaymode);
