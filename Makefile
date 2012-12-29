@@ -115,6 +115,9 @@ snis_text_window.o:	snis_text_window.h snis_text_window.c snis_graph.h \
 snis_ui_element.o:	snis_ui_element.h snis_ui_element.c
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_ui_element.c
 
+snis_text_input.o:	snis_text_input.h snis_text_input.c
+	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_text_input.c
+
 ${SSGL}:
 	(cd ssgl ; make )
 

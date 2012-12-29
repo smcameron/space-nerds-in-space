@@ -89,10 +89,13 @@ static void ui_set_focus(struct ui_element_list *list, struct ui_element *e)
 	for (; list != NULL; list = list->next) {
 		if (!list->element->set_focus)
 			continue;
-		if (list->element == e)
+		if (list->element == e) {
 			e->set_focus(e->element, 1);
-		else
+			e->has_focus = 1;
+		} else {
 			list->element->set_focus(list->element->element, 0);
+			list->element->has_focus = 0;
+		}
 	}
 }
 
