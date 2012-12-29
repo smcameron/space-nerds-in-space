@@ -284,6 +284,28 @@ void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, int x, i
 	}
 }
 
+void sng_abs_xy_draw_string_with_cursor(GtkWidget *w, GdkGC *gc, char *s,
+			int font, int x, int y, int cursor_pos, int cursor_on) 
+{
+
+	int i, dx;	
+	int deltax = 0;
+
+	if (!cursor_on) {
+		sng_abs_xy_draw_string(w, gc, s, font, x, y);
+		return;
+	}
+
+	for (i = 0; s[i]; i++) {
+		if (i == cursor_pos)
+			sng_abs_xy_draw_letter(w, gc, gamefont[font], '_', x + deltax, y);
+		dx = (font_scale[font]) + sng_abs_xy_draw_letter(w, gc, gamefont[font], s[i], x + deltax, y);  
+		deltax += dx;
+	}
+	if (i == cursor_pos)
+		sng_abs_xy_draw_letter(w, gc, gamefont[font], '_', x + deltax, y);
+}
+
 void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y)
 {
 	gdk_draw_point(drawable, gc, x * sgc.xscale, y * sgc.yscale);

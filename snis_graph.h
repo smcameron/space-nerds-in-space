@@ -79,6 +79,8 @@ SNG_GLOBAL void sng_draw_electric_line(GdkDrawable *drawable,
 SNG_GLOBAL int sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font, 
 		unsigned char letter, int x, int y);
 SNG_GLOBAL void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, int x, int y) ;
+SNG_GLOBAL void sng_abs_xy_draw_string_with_cursor(GtkWidget *w, GdkGC *gc,
+				char *s, int font, int x, int y, int cursor_pos, int cursor_on) ;
 SNG_GLOBAL void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y);
 SNG_GLOBAL void sng_setup_colors(GtkWidget *w);
 SNG_GLOBAL void sng_set_foreground(int c);
