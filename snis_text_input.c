@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
 
 #include "snis_font.h"
 #include "snis_typeface.h"
@@ -82,14 +83,41 @@ int snis_text_input_box_button_press(struct snis_text_input_box *t, int x, int y
 	return hit;
 }
 
+static void do_backspace(struct snis_text_input_box *t)
+{
+	int i;
+	int len = strlen(t->buffer);
+
+	if (t->cursor_pos == 0)
+		return;
+
+	if (t->cursor_pos == len && len > 0) {
+		t->buffer[len - 1] = '\0';
+		t->cursor_pos--;
+		return;
+	}
+		
+	for (i = t->cursor_pos - 1; i < len; i++)
+		t->buffer[i] = t->buffer[i + 1];
+	t->cursor_pos--;
+}
+
 int snis_text_input_box_keypress(struct snis_text_input_box *t, GdkEventKey *event)
 {
 	char c;
 	int currentlen;
 	if (event->type != GDK_KEY_PRESS)
 		return 0;
-	if ((event->keyval & ~0x7f) != 0)
+	if ((event->keyval & ~0x7f) != 0) {
+		switch (event->keyval) {
+			case GDK_KEY_BackSpace:
+				do_backspace(t);
+				break;
+			default:
+				break;	
+		}
 		return 0;
+	}
 	c = (event->keyval & 0x7f);
 	currentlen = strlen(t->buffer);
 	if (currentlen == t->cursor_pos)
