@@ -84,6 +84,7 @@ SNG_GLOBAL void sng_setup_colors(GtkWidget *w);
 SNG_GLOBAL void sng_set_foreground(int c);
 SNG_GLOBAL void sng_set_gc(GdkGC *gc);
 SNG_GLOBAL void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r);
-
+SNG_GLOBAL void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
+			gint x1, gint y1, gint x2, gint y2, int color);
 #undef SNG_GLOBAL
 #endif

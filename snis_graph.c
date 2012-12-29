@@ -154,6 +154,19 @@ void sng_electric_line_plot_func(int x, int y, void *context)
 		gdk_draw_point(c->drawable, c->gc, x, y);
 }
 
+static void sng_bright_electric_line_plot_func(int x, int y, void *context)
+{
+	struct sng_dotted_plot_func_context *c = context;
+
+	if (sng_rand(100) < 10) {
+		gdk_gc_set_foreground(c->gc, &huex[c->i]);
+		gdk_draw_point(c->drawable, c->gc, x, y);
+	} else {
+		gdk_gc_set_foreground(c->gc, &huex[WHITE]);
+		gdk_draw_point(c->drawable, c->gc, x, y);
+	}
+}
+
 void sng_draw_dotted_line(GdkDrawable *drawable,
 	GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
 {
@@ -178,6 +191,42 @@ void sng_draw_electric_line(GdkDrawable *drawable,
 
 	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
 			sng_electric_line_plot_func, &context);
+}
+
+static void sng_draw_bright_white_electric_line(GdkDrawable *drawable,
+	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color)
+{
+	struct sng_dotted_plot_func_context context;
+
+	context.drawable = drawable;
+	context.gc = gc;
+	context.i = color;
+
+	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
+			sng_bright_electric_line_plot_func, &context);
+}
+
+void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
+	gint x1, gint y1, gint x2, gint y2, int color)
+{
+	int sx1, sy1, sx2, sy2, dx, dy;
+
+	if (abs(x1 - x2) > abs(y1 - y2)) {
+		dx = 0;
+		dy = 1;
+	} else {
+		dx = 1;
+		dy = 0;
+	}
+	sx1 = x1 * sgc.xscale;
+	sx2 = x2 * sgc.xscale;
+	sy1 = y1 * sgc.yscale;	
+	sy2 = y2 * sgc.yscale;
+
+	sng_draw_bright_white_electric_line(drawable, gc, sx1, sy1, sx2, sy2, color);
+	gdk_gc_set_foreground(gc, &huex[color]);
+	sng_draw_electric_line(drawable, gc, sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
+	sng_draw_electric_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
 /* Draws a letter in the given font at an absolute x,y coords on the screen. */
