@@ -3974,7 +3974,7 @@ static void sanitize_string(char *s)
 	const char *forbidden = "\\*?\'$";
 
 	len = strlen(s);
-	for (i = 0; len; i++)
+	for (i = 0; i < len; i++)
 		if (index(forbidden, s[i]))
 			s[i] = 'x';
 }
@@ -3983,6 +3983,7 @@ static void start_gameserver_button_pressed()
 {
 	char command[220];
 
+	/* FIXME this is probably not too cool. */
 	sanitize_string(net_setup_ui.servername);
 	sanitize_string(net_setup_ui.lobbyname);
 	memset(command, 0, sizeof(command));
@@ -3990,6 +3991,15 @@ static void start_gameserver_button_pressed()
 			net_setup_ui.lobbyname, net_setup_ui.servername);
 	printf("start game server button pressed.\n");
 	system(command);
+}
+
+static void connect_to_lobby_button_pressed()
+{
+	displaymode = DISPLAYMODE_LOBBYSCREEN;
+	lobbyhost = net_setup_ui.lobbyname;
+	shipname = net_setup_ui.shipname;
+	password = net_setup_ui.shipname;
+	connect_to_lobby();
 }
 
 static void ui_add_button(struct button *b, int active_displaymode);
@@ -4010,7 +4020,7 @@ static void init_net_setup_ui(void)
 			TINY_FONT, start_gameserver_button_pressed, NULL);
 	net_setup_ui.connect_to_lobby = 
 		snis_button_init(420, y, 300, 25, "CONNECT TO LOBBY", RED,
-			TINY_FONT, start_gameserver_button_pressed, NULL);
+			TINY_FONT, connect_to_lobby_button_pressed, NULL);
 	y += 100;
 	net_setup_ui.lobbyservername =
 		snis_text_input_box_init(40, y, 30, 750, GREEN, TINY_FONT,
