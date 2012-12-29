@@ -135,6 +135,7 @@ int snis_text_input_box_keypress(struct snis_text_input_box *t, GdkEventKey *eve
 	if (event->type != GDK_KEY_PRESS)
 		return 0;
 	if ((event->keyval & ~0x7f) != 0) {
+#include "snis_fixup_gnome_key_screwups.h"
 		switch (event->keyval) {
 			case GDK_KEY_BackSpace:
 				do_backspace(t);
