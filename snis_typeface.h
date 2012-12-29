@@ -22,12 +22,14 @@
 #ifdef SNIS_TYPEFACE_DECLARE_GLOBALS
 int font_scale[] = { BIG_FONT_SCALE, SMALL_FONT_SCALE, TINY_FONT_SCALE, NANO_FONT_SCALE };
 int letter_spacing[] = { BIG_LETTER_SPACING, SMALL_LETTER_SPACING, TINY_LETTER_SPACING, NANO_LETTER_SPACING };
+int font_lineheight[sizeof(font_scale) / sizeof(font_scale[0])];
 /* There are 4 home-made "fonts" in the game, all the same "typeface", but 
  * different sizes */
 struct my_vect_obj **gamefont[4];
 #else
 extern int font_scale[];
 extern int letter_spacing[];
+extern int font_lineheight[];
 extern struct my_vect_obj **gamefont[];
 #endif
 

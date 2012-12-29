@@ -10,5 +10,10 @@ void snis_typefaces_init(void)
 	snis_make_font(&gamefont[SMALL_FONT], font_scale[SMALL_FONT], font_scale[SMALL_FONT]);
 	snis_make_font(&gamefont[TINY_FONT], font_scale[TINY_FONT], font_scale[TINY_FONT]);
 	snis_make_font(&gamefont[NANO_FONT], font_scale[NANO_FONT], font_scale[NANO_FONT]);
+
+	font_lineheight[BIG_FONT] = snis_font_lineheight(font_scale[BIG_FONT]);
+	font_lineheight[SMALL_FONT] = snis_font_lineheight(font_scale[SMALL_FONT]);
+	font_lineheight[TINY_FONT] = snis_font_lineheight(font_scale[TINY_FONT]);
+	font_lineheight[NANO_FONT] = snis_font_lineheight(font_scale[NANO_FONT]);
 }
 
