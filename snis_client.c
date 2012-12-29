@@ -1508,6 +1508,9 @@ struct comms_ui {
 	struct button *eng_onscreen_button;
 	struct button *sci_onscreen_button;
 	struct button *main_onscreen_button;
+	struct button *comms_transmit_button;
+	struct snis_text_input_box *comms_input;
+	char input[100];
 } comms_ui;
 
 static int process_comm_transmission(void)
@@ -3504,6 +3507,18 @@ static void comms_screen_button_pressed(void *x)
 	}
 	return;
 }
+
+static void comms_transmit_button_pressed(void *x)
+{
+	printf("transmit '%s'\n", comms_ui.input);
+	snis_text_input_box_zero(comms_ui.comms_input);
+}
+
+static void comms_input_entered()
+{
+	printf("comms input entered\n");
+}
+
 static void init_comms_ui(void)
 {
 	int x = 200;
@@ -3527,6 +3542,11 @@ static void init_comms_ui(void)
 	comms_ui.main_onscreen_button = snis_button_init(x, y, 75, 25, "MAIN", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 5);
 	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20, 40, 20, GREEN);
+	comms_ui.comms_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
+					comms_ui.input, 50, &timer,
+					comms_input_entered, NULL);
+	comms_ui.comms_transmit_button = snis_button_init(10, 550, 160, 30, "TRANSMIT", GREEN,
+			TINY_FONT, comms_transmit_button_pressed, NULL);
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.nav_onscreen_button, DISPLAYMODE_COMMS);
@@ -3534,6 +3554,8 @@ static void init_comms_ui(void)
 	ui_add_button(comms_ui.eng_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.sci_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.main_onscreen_button, DISPLAYMODE_COMMS);
+	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS);
+	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
 }
 
 #define SCIDIST2 100
