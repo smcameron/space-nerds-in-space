@@ -12,6 +12,7 @@ struct ui_element {
 	ui_element_button_press_function button_press;
 	ui_element_set_focus_function set_focus;
 	int has_focus;
+	ui_element_keypress_function keypress_fn, keyrelease_fn;
 };
 
 struct ui_element_list {
@@ -34,6 +35,8 @@ struct ui_element *ui_element_init(void *element,
 	e->displaymode = displaymode;
 	e->set_focus = NULL;
 	e->has_focus = 0;
+	e->keypress_fn = NULL;	
+	e->keyrelease_fn = NULL;
 	return e;
 }
 
@@ -121,5 +124,41 @@ void ui_element_set_focus_callback(struct ui_element *e,
 					ui_element_set_focus_function set_focus)
 {
 	e->set_focus = set_focus;
+}
+
+void ui_element_list_keypress(struct ui_element_list *list, GdkEventKey *event)
+{
+	struct ui_element_list *i;
+
+	for (i = list; i; i = i->next) {
+		if (!i->element->has_focus)
+			continue;
+		if (!i->element->keypress_fn)
+			continue;
+		i->element->keypress_fn(i->element->element, event);
+		break;
+	}
+}
+
+void ui_element_list_keyrelease(struct ui_element_list *list, GdkEventKey *event)
+{
+	struct ui_element_list *i;
+
+	for (i = list; i; i = i->next) {
+		if (!i->element->has_focus)
+			continue;
+		if (!i->element->keyrelease_fn)
+			continue;
+		i->element->keyrelease_fn(i->element->element, event);
+		break;
+	}
+}
+
+void ui_element_get_keystrokes(struct ui_element *e,
+				ui_element_keypress_function keypress_fn,
+				ui_element_keypress_function keyrelease_fn)
+{
+	e->keypress_fn = keypress_fn;
+	e->keyrelease_fn = keyrelease_fn;
 }
 

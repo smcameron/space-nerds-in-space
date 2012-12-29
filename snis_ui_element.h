@@ -7,6 +7,7 @@ struct ui_element_list;
 typedef void (*ui_element_drawing_function)(GtkWidget *w, GdkGC *gc, void *);
 typedef int (*ui_element_button_press_function)(void *element, int x, int y);
 typedef void (*ui_element_set_focus_function)(void *element, int has_focus);
+typedef int (*ui_element_keypress_function)(void *element, GdkEventKey *event);
 
 #ifdef DEFINE_UI_ELEMENT_LIST_GLOBALS
 #define GLOBAL
@@ -27,6 +28,12 @@ GLOBAL void ui_element_list_draw(GtkWidget *w, GdkGC *gc,
 GLOBAL void ui_element_list_button_press(struct ui_element_list *list, int x, int y);
 GLOBAL void ui_element_set_focus_callback(struct ui_element *e,
 						ui_element_set_focus_function set_focus);
+GLOBAL void ui_element_get_keystrokes(struct ui_element *e, 
+				ui_element_keypress_function keypress_fn,
+				ui_element_keypress_function keyrelease_fn);
+
+GLOBAL void ui_element_list_keypress(struct ui_element_list *list, GdkEventKey *event);
+GLOBAL void ui_element_list_keyrelease(struct ui_element_list *list, GdkEventKey *event);
 
 #undef GLOBAL
 #endif
