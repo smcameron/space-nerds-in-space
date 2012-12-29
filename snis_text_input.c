@@ -102,6 +102,20 @@ static void do_backspace(struct snis_text_input_box *t)
 	t->cursor_pos--;
 }
 
+static void do_delete(struct snis_text_input_box *t)
+{
+	int i;
+	int len = strlen(t->buffer);
+
+	if (t->cursor_pos == len) {
+		do_backspace(t);
+		return;
+	}
+
+	for (i = t->cursor_pos; i < len; i++)
+		t->buffer[i] = t->buffer[i + 1];
+}
+
 static void do_rightarrow(struct snis_text_input_box *t)
 {
 	if (t->cursor_pos < t->buflen && t->cursor_pos < strlen(t->buffer))
@@ -124,6 +138,9 @@ int snis_text_input_box_keypress(struct snis_text_input_box *t, GdkEventKey *eve
 		switch (event->keyval) {
 			case GDK_KEY_BackSpace:
 				do_backspace(t);
+				break;
+			case GDK_KEY_Delete:
+				do_delete(t);
 				break;
 			case GDK_KEY_Right:
 				do_rightarrow(t);
