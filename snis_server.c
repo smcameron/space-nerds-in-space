@@ -81,6 +81,7 @@ static pthread_mutex_t listener_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t listener_started;
 int listener_port = -1;
 pthread_t lobbythread;
+char *lobbyserver = NULL;
 
 static inline void client_lock()
 {
@@ -2384,7 +2385,7 @@ static void move_objects(void)
 
 }
 
-static void register_with_game_lobby(int port,
+static void register_with_game_lobby(char *lobbyhost, int port,
 	char *servernick, char *gameinstance, char *location)
 {
 	struct ssgl_game_server gs;
@@ -2403,16 +2404,15 @@ static void register_with_game_lobby(int port,
 		fprintf(stderr, "Failed to get local ip address.\n");
 
 	printf("Registering game server\n");
-#define LOBBYHOST "localhost"
-	(void) ssgl_register_gameserver(LOBBYHOST, &gs, &lobbythread);
+	(void) ssgl_register_gameserver(lobbyhost, &gs, &lobbythread);
 	printf("Game server registered.\n");
 	return;	
 }
 
 void usage(void)
 {
-	fprintf(stderr, "snis_server gameinstance servernick location\n");
-	fprintf(stderr, "For example: snis_server 'steves game' zuul Houston\n");
+	fprintf(stderr, "snis_server lobbyserver gameinstance servernick location\n");
+	fprintf(stderr, "For example: snis_server lobbyserver 'steves game' zuul Houston\n");
 	exit(0);
 }
 
@@ -2423,7 +2423,7 @@ int main(int argc, char *argv[])
 	struct timespec time2;
 	struct timespec thirtieth_second;
 
-	if (argc < 4) 
+	if (argc < 5) 
 		usage();
 
 	memset(&thirtieth_second, 0, sizeof(thirtieth_second));
@@ -2434,7 +2434,7 @@ int main(int argc, char *argv[])
 
 	ignore_sigpipe();	
 	snis_collect_netstats(&netstats);
-	register_with_game_lobby(port, argv[2], argv[1], argv[3]);
+	register_with_game_lobby(argv[1], port, argv[2], argv[1], argv[3]);
 
 	i = 0;
 	while (1) {
