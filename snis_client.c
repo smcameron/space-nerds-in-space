@@ -4392,7 +4392,7 @@ int main(int argc, char *argv[])
 	GtkWidget *vbox;
 	int i;
 
-	if (argc > 4)
+	if (argc > 1 && argc < 4)
 		usage();
 
 	if (argc >= 4) {
