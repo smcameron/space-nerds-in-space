@@ -3955,11 +3955,14 @@ static void show_debug(GtkWidget *w)
 
 	sng_set_foreground(GREEN);
 	sng_abs_xy_draw_string(w, gc, "SERVER NET STATS:", TINY_FONT, 10, SCREEN_HEIGHT - 40); 
-	sprintf(buffer, "TX:%llu RX:%llu T=%lu SECS. BW=%llu BYTES/SEC",
-		(unsigned long long) netstats.bytes_sent,
-		(unsigned long long) netstats.bytes_recd, 
-		(unsigned long) netstats.elapsed_seconds,
-		(unsigned long long) (netstats.bytes_recd + netstats.bytes_sent) / netstats.elapsed_seconds);
+	if (netstats.elapsed_seconds == 0)
+		sprintf(buffer, "Waiting for data");
+	else 
+		sprintf(buffer, "TX:%llu RX:%llu T=%lu SECS. BW=%llu BYTES/SEC",
+			(unsigned long long) netstats.bytes_sent,
+			(unsigned long long) netstats.bytes_recd, 
+			(unsigned long) netstats.elapsed_seconds,
+			(unsigned long long) (netstats.bytes_recd + netstats.bytes_sent) / netstats.elapsed_seconds);
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 10, SCREEN_HEIGHT - 10); 
 }
 
