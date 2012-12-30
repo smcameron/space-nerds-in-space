@@ -41,5 +41,7 @@ GLOBAL int snis_randn(int n); /* returns n * snis_rand() / SNIS_RAND_MAX */
 GLOBAL void normalize_angle(double *angle);
 GLOBAL double interpolate(double x, double x1, double y1, double x2, double y2);
 GLOBAL double table_interp(double x, double xv[], double yv[], int nv);
+GLOBAL double game_angle_to_math_angle(double angle);
+GLOBAL double math_angle_to_game_angle(double angle);
 
 #endif

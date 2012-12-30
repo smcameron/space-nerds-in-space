@@ -2182,7 +2182,7 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 
 	/* draw the ship */
 	snis_draw_arrow(w, gc, x, y, r, heading, 1.0);
-	
+
 	tx1 = x + sin(heading - beam_width / 2) * r * 0.05;
 	ty1 = y - cos(heading - beam_width / 2) * r * 0.05;
 	tx2 = x + sin(heading - beam_width / 2) * r;
@@ -2275,6 +2275,8 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 		if (go[i].id == my_ship_id)
 			continue; /* skip drawing yourself. */
 		else {
+			double alter_angle; /* FIXME this is an ugly hack */
+			alter_angle = 0.0;
 			switch (go[i].type) {
 			case OBJTYPE_PLANET:
 				sng_set_foreground(BLUE);
@@ -2294,10 +2296,12 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 				break;
 			case OBJTYPE_EXPLOSION:
 				break;
-			case OBJTYPE_SHIP1:
 			case OBJTYPE_SHIP2:
+				alter_angle = M_PI / 2.0;
+			case OBJTYPE_SHIP1:
 				sng_set_foreground(WHITE);
-				snis_draw_arrow(w, gc, x, y, r, go[i].heading + M_PI / 2.0, 0.5);
+				snis_draw_arrow(w, gc, x, y, r,
+					go[i].heading + alter_angle, 0.5);
 				sng_set_foreground(GREEN);
 				if (go[i].sdata.science_data_known) {
 					sprintf(buffer, "%s", go[i].sdata.name);
@@ -2306,7 +2310,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 				break;
 			default:
 				sng_set_foreground(WHITE);
-				snis_draw_arrow(w, gc, x, y, r, go[i].heading + M_PI / 2.0, 0.5);
+				snis_draw_arrow(w, gc, x, y, r, go[i].heading, 0.5);
 			}
 		}
 	}

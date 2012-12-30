@@ -20,6 +20,7 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define DEFINE_MATHUTILS_GLOBALS 1
 #include "mathutils.h"
@@ -88,5 +89,38 @@ double table_interp(double x, double xv[], double yv[], int nv)
 	/* if you get here, it's your own damn fault. */
 	printf("tabe_interp: x value %g is not in table, your program is buggy.\n", x);
 	return 0.0;
+}
+
+static double double_modulus(double a, double b)
+{
+	return a - floor(a / b) * b;
+}
+
+/*
+ * convert an angle between the following two systems. 
+ *         game                           math
+ *          0                             PI/2
+ *          |                              |
+ *  3*PI/2--+--PI/2                  PI ---+--- 0
+ *          |                              |
+ *         PI                             3*PI/2 
+ *
+ * Note this function happens to be its own inverse.
+ */
+double math_angle_to_game_angle(double angle)
+{
+	double a;
+
+	a = (2.0 * M_PI - angle) + M_PI / 2.0;
+	if (a < 0)
+		a += 2.0 * M_PI;
+	if (a >= 2.0 * M_PI)
+		a -= 2.0 * M_PI;
+	return double_modulus(a, 2.0 * M_PI);
+}
+
+double game_angle_to_math_angle(double angle)
+{
+	return math_angle_to_game_angle(angle); 
 }
 
