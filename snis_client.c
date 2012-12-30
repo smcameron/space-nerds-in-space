@@ -3508,9 +3508,23 @@ static void comms_screen_button_pressed(void *x)
 	return;
 }
 
+static void send_comms_packet_to_server(char *msg)
+{
+	struct packed_buffer *pb;
+	uint8_t len = strlen(msg);
+
+	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + len);
+	packed_buffer_append(pb, "hb", OPCODE_COMMS_TRANSMISSION, len);
+	packed_buffer_append_raw(pb, msg, (unsigned short) len);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
 static void comms_transmit_button_pressed(void *x)
 {
-	printf("transmit '%s'\n", comms_ui.input);
+	if (strlen(comms_ui.input) == 0)
+		return;
+	send_comms_packet_to_server(comms_ui.input);
 	snis_text_input_box_zero(comms_ui.comms_input);
 }
 
