@@ -63,6 +63,7 @@ struct game_client {
 	struct packed_buffer_queue client_write_queue;
 	pthread_mutex_t client_write_queue_mutex;
 	uint32_t shipid;
+	uint32_t ship_index;
 	uint32_t role;
 	uint32_t timestamp;
 } client[MAXCLIENTS];
@@ -1178,7 +1179,7 @@ static void snis_sleep(struct timespec *begin, struct timespec *end, struct time
 
 static void do_thrust(struct game_client *c, int thrust)
 {
-	struct snis_entity *ship = &go[c->shipid];
+	struct snis_entity *ship = &go[c->ship_index];
 
 	if (thrust > 0) {
 		if (ship->tsd.ship.velocity < MAX_PLAYER_VELOCITY)
@@ -1204,7 +1205,7 @@ static void do_generic_yaw(double *yawvel, int yaw, double max_yaw, double yaw_i
 
 static void do_yaw(struct game_client *c, int yaw)
 {
-	struct snis_entity *ship = &go[c->shipid];
+	struct snis_entity *ship = &go[c->ship_index];
 
 	do_generic_yaw(&ship->tsd.ship.yaw_velocity, yaw, MAX_YAW_VELOCITY, YAW_INCREMENT);
 }
@@ -1212,7 +1213,7 @@ static void do_yaw(struct game_client *c, int yaw)
 static void do_gun_yaw(struct game_client *c, int yaw)
 {
 	/* FIXME combine this with do_yaw somehow */
-	struct snis_entity *ship = &go[c->shipid];
+	struct snis_entity *ship = &go[c->ship_index];
 
 	do_generic_yaw(&ship->tsd.ship.gun_yaw_velocity, yaw,
 				MAX_GUN_YAW_VELOCITY, GUN_YAW_INCREMENT);
@@ -1220,7 +1221,7 @@ static void do_gun_yaw(struct game_client *c, int yaw)
 
 static void do_sci_yaw(struct game_client *c, int yaw)
 {
-	struct snis_entity *ship = &go[c->shipid];
+	struct snis_entity *ship = &go[c->ship_index];
 
 	do_generic_yaw(&ship->tsd.ship.sci_yaw_velocity, yaw,
 				MAX_SCI_YAW_VELOCITY, SCI_YAW_INCREMENT);
@@ -1228,7 +1229,7 @@ static void do_sci_yaw(struct game_client *c, int yaw)
 
 static void do_sci_bw_yaw(struct game_client *c, int yaw)
 {
-	struct snis_entity *ship = &go[c->shipid];
+	struct snis_entity *ship = &go[c->ship_index];
 
 	do_generic_yaw(&ship->tsd.ship.sci_beam_width, yaw,
 			MAX_SCI_BW_YAW_VELOCITY, SCI_BW_YAW_INCREMENT);
@@ -1405,7 +1406,7 @@ static uint8_t warp_request_limit(struct game_client *c, uint8_t value)
 {
 	struct snis_entity *ship;
 
-	ship = &go[c->shipid];
+	ship = &go[c->ship_index];
 
 	return warp_limit_function(value, ship->tsd.ship.power, ship->tsd.ship.pwrdist.warp);
 }
@@ -1414,7 +1415,7 @@ static uint8_t shield_request_limit(struct game_client *c, uint8_t value)
 {
 	struct snis_entity *ship;
 
-	ship = &go[c->shipid];
+	ship = &go[c->ship_index];
 
 	return shield_limit_function(value, ship->tsd.ship.power, ship->tsd.ship.pwrdist.shields);
 }
@@ -1440,8 +1441,8 @@ static int process_request_bytevalue_pwr(struct game_client *c, int offset,
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->shipid)
-		printf("i != ship id\n");
+	if (i != c->ship_index)
+		printf("i != ship index\n");
 	bytevalue = (uint8_t *) &go[i];
 	bytevalue += offset;
 	v = limit(c, v);
@@ -1503,8 +1504,8 @@ static int process_engage_warp(struct game_client *c)
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->shipid)
-		printf("i != ship id\n");
+	if (i != c->ship_index)
+		printf("i != ship index\n");
 	o = &go[i];
 	wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
 	o->x = o->x + wfactor * sin(o->heading);
@@ -1571,7 +1572,7 @@ static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 
 static int process_load_torpedo(struct game_client *c)
 {
-	struct snis_entity *ship = &go[c->shipid];
+	struct snis_entity *ship = &go[c->ship_index];
 	// struct packed_buffer *pb;
 
 	if (ship->tsd.ship.torpedoes < 0)
@@ -1588,7 +1589,7 @@ static int process_load_torpedo(struct game_client *c)
 
 static int process_request_torpedo(struct game_client *c)
 {
-	struct snis_entity *ship = &go[c->shipid];
+	struct snis_entity *ship = &go[c->ship_index];
 	double vx, vy;
 
 	if (ship->tsd.ship.torpedoes_loaded <= 0)
@@ -1606,7 +1607,7 @@ static int process_request_torpedo(struct game_client *c)
 
 static int process_request_laser(struct game_client *c)
 {
-	struct snis_entity *ship = &go[c->shipid];
+	struct snis_entity *ship = &go[c->ship_index];
 	double vx, vy;
 
 	vx = LASER_VELOCITY * sin(ship->tsd.ship.gun_heading);
@@ -1847,7 +1848,7 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	case OBJTYPE_SHIP1:
 		send_update_ship_packet(c, o, OPCODE_UPDATE_SHIP);
 		/* send science data about player's own ship to player */
-		if (o == &go[c->shipid])
+		if (o == &go[c->ship_index])
 			pack_and_send_ship_sdata_packet(c, o);
 		if (!o->alive) {
 			send_respawn_time(c, o);
@@ -1883,7 +1884,7 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 
 static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
 {
-	struct snis_entity *ship = &go[c->shipid];
+	struct snis_entity *ship = &go[c->ship_index];
 	double dx, dy, dist;
 	const double threshold = (XKNOWN_DIM / 2) * (XKNOWN_DIM / 2);
 
@@ -1922,7 +1923,7 @@ static void queue_up_client_updates(struct game_client *c)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
 			i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type); */
-		if ((go[i].alive && go[i].timestamp > c->timestamp) || i == c->shipid) {
+		if ((go[i].alive && go[i].timestamp > c->timestamp) || i == c->ship_index) {
 			if (too_far_away_to_care(c, &go[i]))
 				continue;
 			queue_up_client_object_update(c, &go[i]);
@@ -2195,14 +2196,13 @@ static int add_new_player(struct game_client *c)
 	c->role = app.role;
 	if (c->shipid == -1) { /* did not find our bridge, have to make a new one. */
 		double x, y;
-		int ship_index;
 
 		x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
 		y = YKNOWN_DIM * (double) rand() / (double) RAND_MAX;
 		pthread_mutex_lock(&universe_mutex);
-		ship_index = add_player(x, y, 0.0, 0.0, 0.0);
-		c->shipid = go[ship_index].id;
-		strcpy(go[c->shipid].sdata.name, (const char * restrict) app.shipname);
+		c->ship_index = add_player(x, y, 0.0, 0.0, 0.0);
+		c->shipid = go[c->ship_index].id;
+		strcpy(go[c->ship_index].sdata.name, (const char * restrict) app.shipname);
 		memset(&bridgelist[nbridges], 0, sizeof(bridgelist[nbridges]));
 		strcpy((char *) bridgelist[nbridges].shipname, (const char *) app.shipname);
 		strcpy((char *) bridgelist[nbridges].password, (const char *) app.password);
