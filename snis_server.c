@@ -2195,11 +2195,13 @@ static int add_new_player(struct game_client *c)
 	c->role = app.role;
 	if (c->shipid == -1) { /* did not find our bridge, have to make a new one. */
 		double x, y;
+		int ship_index;
 
 		x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
 		y = YKNOWN_DIM * (double) rand() / (double) RAND_MAX;
 		pthread_mutex_lock(&universe_mutex);
-		c->shipid = add_player(x, y, 0.0, 0.0, 0.0);
+		ship_index = add_player(x, y, 0.0, 0.0, 0.0);
+		c->shipid = go[ship_index].id;
 		strcpy(go[c->shipid].sdata.name, (const char * restrict) app.shipname);
 		memset(&bridgelist[nbridges], 0, sizeof(bridgelist[nbridges]));
 		strcpy((char *) bridgelist[nbridges].shipname, (const char *) app.shipname);
