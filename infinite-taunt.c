@@ -24,6 +24,7 @@ static char *You[] = {
 	"your grandfather", 
 	"your wife", 
 	"the mother of your hatchlings", 
+	"the father of your hatchlings", 
 	"your mama", 
 	"your mama", 
 	"your garbage scow",
