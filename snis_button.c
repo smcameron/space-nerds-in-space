@@ -62,7 +62,8 @@ int snis_button_button_press(struct button *b, int x, int y)
 	if (x < b->x || x > b->x + b->width || 
 		y < b->y || y > b->y + b->height)
 		return 0;
-	b->bf(b->cookie);
+	if (b->bf)
+		b->bf(b->cookie);
 	if (b->checkbox_value)
 		*b->checkbox_value = !*b->checkbox_value;
 	return 1;
