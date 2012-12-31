@@ -4045,6 +4045,12 @@ static void start_gameserver_button_pressed()
 	/* FIXME this is probably not too cool. */
 	sanitize_string(net_setup_ui.servername);
 	sanitize_string(net_setup_ui.lobbyname);
+
+	/* These must be set in order to start the game server. */
+	if (strcmp(net_setup_ui.servername, "") == 0 || 
+		strcmp(net_setup_ui.lobbyname, "") == 0)
+		return;
+
 	memset(command, 0, sizeof(command));
 	snprintf(command, 200, "./snis_server %s SNIS '%s' . &",
 			net_setup_ui.lobbyname, net_setup_ui.servername);
@@ -4054,6 +4060,12 @@ static void start_gameserver_button_pressed()
 
 static void connect_to_lobby_button_pressed()
 {
+	/* These must be set to connect to the lobby... */
+	if (strcmp(net_setup_ui.lobbyname, "") == 0 ||
+		strcmp(net_setup_ui.shipname, "") == 0 ||
+		strcmp(net_setup_ui.password, "") == 0)
+		return;
+
 	displaymode = DISPLAYMODE_LOBBYSCREEN;
 	lobbyhost = net_setup_ui.lobbyname;
 	shipname = net_setup_ui.shipname;
@@ -4174,6 +4186,8 @@ static void show_network_setup(GtkWidget *w)
 	sng_abs_xy_draw_string(w, gc, "SHIP NAME", TINY_FONT, 170, 510);
 	sng_abs_xy_draw_string(w, gc, "PASSWORD", TINY_FONT, 170, 560);
 
+	sanitize_string(net_setup_ui.servername);
+	sanitize_string(net_setup_ui.lobbyname);
 	if (strcmp(net_setup_ui.servername, "") != 0 &&
 		strcmp(net_setup_ui.lobbyname, "") != 0)
 		snis_button_set_color(net_setup_ui.start_gameserver, GREEN);
