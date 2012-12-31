@@ -18,6 +18,7 @@ GLOBAL void snis_button_draw(GtkWidget *w, GdkGC *gc, struct button *b);
 
 GLOBAL int snis_button_button_press(struct button *b, int x, int y);
 GLOBAL void snis_button_set_color(struct button *b, int color);
+GLOBAL void snis_button_checkbox(struct button *b, int *value);
 
 #undef GLOBAL
 #endif

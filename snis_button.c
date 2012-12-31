@@ -14,6 +14,7 @@ struct button {
 	char label[20];
 	int color;
 	int font;
+	int *checkbox_value;
 	button_function bf;
 	void *cookie;
 };
@@ -34,6 +35,7 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->font = font;
 	b->bf = bf;
 	b->cookie = cookie;
+	b->checkbox_value = NULL;
 	return b;
 }
 
@@ -41,7 +43,18 @@ void snis_button_draw(GtkWidget *w, GdkGC *gc, struct button *b)
 {
 	sng_set_foreground(b->color);
 	sng_current_draw_rectangle(w->window, gc, 0, b->x, b->y, b->width, b->height);
-	sng_abs_xy_draw_string(w, gc, b->label, b->font, b->x + 10, b->y + b->height / 1.7); 
+	if (!b->checkbox_value) {
+		sng_abs_xy_draw_string(w, gc, b->label, b->font, b->x + 10, b->y + b->height / 1.7); 
+	} else {
+		sng_current_draw_rectangle(w->window, gc, 0, b->x + 5, b->y + 2, 15, 15);
+		if (*b->checkbox_value) {
+			sng_current_draw_line(w->window, gc,
+				b->x + 5, b->y + 2, b->x + 5 + 15, b->y + 2 + 15);
+			sng_current_draw_line(w->window, gc,
+				b->x + 5, b->y + 2 + 15, b->x + 5 + 15, b->y + 2);
+		}
+		sng_abs_xy_draw_string(w, gc, b->label, b->font, b->x + 30, b->y + b->height / 1.7); 
+	}
 }
 
 int snis_button_button_press(struct button *b, int x, int y)
@@ -50,10 +63,17 @@ int snis_button_button_press(struct button *b, int x, int y)
 		y < b->y || y > b->y + b->height)
 		return 0;
 	b->bf(b->cookie);
+	if (b->checkbox_value)
+		*b->checkbox_value = !*b->checkbox_value;
 	return 1;
 }
 
 void snis_button_set_color(struct button *b, int color)
 {
 	b->color = color;
+}
+
+void snis_button_checkbox(struct button *b, int *value)
+{
+	b->checkbox_value = value;
 }
