@@ -4101,7 +4101,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	int x, y;
 
 	x = 520;
-	y = 20;
+	y = 380;
 
 	nsu->role_main_v = 0;
 	nsu->role_nav_v = 0;
@@ -4132,7 +4132,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 static void ui_add_text_input_box(struct snis_text_input_box *t, int active_displaymode);
 static void init_net_setup_ui(void)
 {
-	int y = 10 + LINEHEIGHT * 5;
+	int y = 10 + LINEHEIGHT * 3;
 
 	memset(net_setup_ui.lobbyname, 0, sizeof(net_setup_ui.lobbyname));
 	strcpy(net_setup_ui.lobbyname, "");
@@ -4144,11 +4144,7 @@ static void init_net_setup_ui(void)
 	net_setup_ui.start_gameserver = 
 		snis_button_init(20, y, 300, 25, "START GAME SERVER", RED,
 			TINY_FONT, start_gameserver_button_pressed, NULL);
-	y += 30;
-	net_setup_ui.connect_to_lobby = 
-		snis_button_init(20, y, 300, 25, "CONNECT TO LOBBY", RED,
-			TINY_FONT, connect_to_lobby_button_pressed, NULL);
-	y += 70;
+	y += 100;
 	net_setup_ui.lobbyservername =
 		snis_text_input_box_init(40, y, 30, 750, GREEN, TINY_FONT,
 					net_setup_ui.lobbyname, 50, &timer,
@@ -4160,14 +4156,18 @@ static void init_net_setup_ui(void)
 					gameserver_hostname_entered, NULL);
 	y += 100;
 	net_setup_ui.shipname_box =
-		snis_text_input_box_init(300, y, 30, 250, GREEN, TINY_FONT,
+		snis_text_input_box_init(150, y, 30, 250, GREEN, TINY_FONT,
 					net_setup_ui.shipname, 50, &timer,
 					shipname_entered, NULL);
 	y += 50;
 	net_setup_ui.password_box =
-		snis_text_input_box_init(300, y, 30, 250, GREEN, TINY_FONT,
+		snis_text_input_box_init(150, y, 30, 250, GREEN, TINY_FONT,
 					net_setup_ui.password, 50, &timer,
 					password_entered, NULL);
+	y += 50;
+	net_setup_ui.connect_to_lobby = 
+		snis_button_init(20, y, 300, 25, "CONNECT TO LOBBY", RED,
+			TINY_FONT, connect_to_lobby_button_pressed, NULL);
 	init_net_role_buttons(&net_setup_ui);
 	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(net_setup_ui.start_gameserver, DISPLAYMODE_NETWORK_SETUP);
@@ -4183,10 +4183,10 @@ static void show_network_setup(GtkWidget *w)
 	show_common_screen(w, "SPACE NERDS IN SPACE");
 	sng_set_foreground(GREEN);
 	sng_abs_xy_draw_string(w, gc, "NETWORK SETUP", SMALL_FONT, 25, 10 + LINEHEIGHT * 2);
-	sng_abs_xy_draw_string(w, gc, "LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, 25, 270);
-	sng_abs_xy_draw_string(w, gc, "GAME SERVER NICKNAME", TINY_FONT, 25, 370);
-	sng_abs_xy_draw_string(w, gc, "SHIP NAME", TINY_FONT, 170, 510);
-	sng_abs_xy_draw_string(w, gc, "PASSWORD", TINY_FONT, 170, 560);
+	sng_abs_xy_draw_string(w, gc, "LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, 25, 210);
+	sng_abs_xy_draw_string(w, gc, "GAME SERVER NICKNAME", TINY_FONT, 25, 310);
+	sng_abs_xy_draw_string(w, gc, "SHIP NAME", TINY_FONT, 20, 450);
+	sng_abs_xy_draw_string(w, gc, "PASSWORD", TINY_FONT, 20, 500);
 
 	sanitize_string(net_setup_ui.servername);
 	sanitize_string(net_setup_ui.lobbyname);
