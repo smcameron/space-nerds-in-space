@@ -4126,6 +4126,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	ui_add_button(nsu->role_sci, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_comms, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_debug, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->role_sound, DISPLAYMODE_NETWORK_SETUP);
 }
 
 static void ui_add_text_input_box(struct snis_text_input_box *t, int active_displaymode);
@@ -4143,10 +4144,11 @@ static void init_net_setup_ui(void)
 	net_setup_ui.start_gameserver = 
 		snis_button_init(20, y, 300, 25, "START GAME SERVER", RED,
 			TINY_FONT, start_gameserver_button_pressed, NULL);
+	y += 30;
 	net_setup_ui.connect_to_lobby = 
-		snis_button_init(420, y, 300, 25, "CONNECT TO LOBBY", RED,
+		snis_button_init(20, y, 300, 25, "CONNECT TO LOBBY", RED,
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
-	y += 100;
+	y += 70;
 	net_setup_ui.lobbyservername =
 		snis_text_input_box_init(40, y, 30, 750, GREEN, TINY_FONT,
 					net_setup_ui.lobbyname, 50, &timer,
