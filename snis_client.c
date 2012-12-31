@@ -3978,6 +3978,22 @@ struct network_setup_ui {
 	struct snis_text_input_box *gameservername;
 	struct snis_text_input_box *shipname_box;
 	struct snis_text_input_box *password_box;
+	struct button *role_main;
+	struct button *role_nav;
+	struct button *role_weap;
+	struct button *role_eng;
+	struct button *role_sci;
+	struct button *role_comms;
+	struct button *role_debug;
+	struct button *role_sound;
+	int role_main_v;
+	int role_nav_v;
+	int role_weap_v;
+	int role_eng_v;
+	int role_sci_v;
+	int role_comms_v;
+	int role_debug_v;
+	int role_sound_v;
 	char lobbyname[60];
 	char servername[60];
 	char shipname[22];
@@ -4042,10 +4058,64 @@ static void connect_to_lobby_button_pressed()
 	lobbyhost = net_setup_ui.lobbyname;
 	shipname = net_setup_ui.shipname;
 	password = net_setup_ui.shipname;
+	role = 0;
+	role |= (ROLE_MAIN * !!net_setup_ui.role_main_v);
+	role |= (ROLE_WEAPONS * !!net_setup_ui.role_weap_v);
+	role |= (ROLE_NAVIGATION * !!net_setup_ui.role_nav_v);
+	role |= (ROLE_ENGINEERING * !!net_setup_ui.role_eng_v);
+	role |= (ROLE_SCIENCE * !!net_setup_ui.role_sci_v);
+	role |= (ROLE_COMMS * !!net_setup_ui.role_comms_v);
+	role |= (ROLE_DEBUG * !!net_setup_ui.role_debug_v);
+	role |= (ROLE_SOUNDSERVER * !!net_setup_ui.role_sound_v);
+	if (role == 0)
+		role = ROLE_ALL;
 	connect_to_lobby();
 }
 
+static struct button *init_net_role_button(int x, int *y, char *txt, int *value)
+{
+	struct button *b;
+	b = snis_button_init(x, *y, 225, 23, txt, GREEN,
+			NANO_FONT, NULL, NULL);
+	snis_button_checkbox(b, value);
+	*y = *y + 23;
+	return b;
+}
+
 static void ui_add_button(struct button *b, int active_displaymode);
+
+static void init_net_role_buttons(struct network_setup_ui *nsu)
+{
+	int x, y;
+
+	x = 520;
+	y = 20;
+
+	nsu->role_main_v = 0;
+	nsu->role_nav_v = 0;
+	nsu->role_weap_v = 0;
+	nsu->role_eng_v = 0;
+	nsu->role_sci_v = 0;
+	nsu->role_comms_v = 0;
+	nsu->role_debug_v = 0;
+	nsu->role_sound_v = 0;
+	nsu->role_main = init_net_role_button(x, &y, "MAIN SCREEN ROLE", &nsu->role_main_v);
+	nsu->role_nav = init_net_role_button(x, &y, "NAVIGATION ROLE", &nsu->role_nav_v);
+	nsu->role_weap = init_net_role_button(x, &y, "WEAPONS ROLE", &nsu->role_weap_v);
+	nsu->role_eng = init_net_role_button(x, &y, "ENGINEERING ROLE", &nsu->role_eng_v);
+	nsu->role_sci = init_net_role_button(x, &y, "SCIENCE ROLE", &nsu->role_sci_v);
+	nsu->role_comms = init_net_role_button(x, &y, "COMMUNICATIONS ROLE", &nsu->role_comms_v);
+	nsu->role_debug = init_net_role_button(x, &y, "DEBUG ROLE", &nsu->role_debug_v);
+	nsu->role_sound = init_net_role_button(x, &y, "SOUND SERVER ROLE", &nsu->role_sound_v);
+	ui_add_button(nsu->role_main, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->role_nav, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->role_weap, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->role_eng, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->role_sci, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->role_comms, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->role_debug, DISPLAYMODE_NETWORK_SETUP);
+}
+
 static void ui_add_text_input_box(struct snis_text_input_box *t, int active_displaymode);
 static void init_net_setup_ui(void)
 {
@@ -4084,6 +4154,7 @@ static void init_net_setup_ui(void)
 		snis_text_input_box_init(300, y, 30, 250, GREEN, TINY_FONT,
 					net_setup_ui.password, 50, &timer,
 					password_entered, NULL);
+	init_net_role_buttons(&net_setup_ui);
 	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(net_setup_ui.start_gameserver, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP);
