@@ -30,5 +30,7 @@ struct entity;
 #endif
 
 GLOBAL struct entity *add_entity(struct mesh *m, float x, float y, float z);
+GLOBAL void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e);
+GLOBAL void render_entities(GtkWidget *w, GdkGC *gc);
 
 #endif	
