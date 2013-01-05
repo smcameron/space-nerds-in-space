@@ -1,5 +1,3 @@
-#ifndef VERTEX_H__
-#define VERTEX_H__
 /*
         Copyright (C) 2010 Stephen M. Cameron
 	Author: Stephen M. Cameron
@@ -20,9 +18,17 @@
         along with Spacenerds in Space; if not, write to the Free Software
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-struct vertex {
-	float x, y, z;
-	float wx, wy, wz; /* world coords */
-	int sx, sy; /* screen coords */
-};
+#ifndef ENTITY_H__
+#define ENTITY_H__
+
+struct entity;
+
+#ifdef DEFINE_ENTITY_GLOBALS
+#define GLOBAL
+#else
+#define GLOBAL extern
 #endif
+
+GLOBAL int add_entity(struct mesh *m, float x, float y, float z);
+
+#endif	

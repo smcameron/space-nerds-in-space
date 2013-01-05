@@ -1,5 +1,3 @@
-#ifndef VERTEX_H__
-#define VERTEX_H__
 /*
         Copyright (C) 2010 Stephen M. Cameron
 	Author: Stephen M. Cameron
@@ -20,9 +18,35 @@
         along with Spacenerds in Space; if not, write to the Free Software
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-struct vertex {
-	float x, y, z;
-	float wx, wy, wz; /* world coords */
-	int sx, sy; /* screen coords */
+#include <math.h>
+#include "mathutils.h"
+
+#include "vertex.h"
+#include "triangle.h"
+#include "mesh.h"
+#include "stl_parser.h"
+#include "entity.h"
+
+#define MAX_ENTITIES 1000
+
+struct entity {
+	struct mesh *m;
+	float x, y, z; /* world coords */
 };
-#endif
+
+static int nentities = 0;
+static struct entity entity_list[MAX_ENTITIES];
+
+int add_entity(struct mesh *m, float x, float y, float z)
+{
+	if (nentities < MAX_ENTITIES) {
+		entity_list[nentities].m = m;
+		entity_list[nentities].x = x;
+		entity_list[nentities].y = y;
+		entity_list[nentities].z = z;
+		nentities++;
+		return nentities - 1;
+	}
+	return -1;
+}
+
