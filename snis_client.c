@@ -4511,6 +4511,15 @@ static void setup_sound(void)
 	read_sound_clips();
 }
 
+static void init_meshes(void)
+{
+	ship_mesh = read_stl_file("spaceship.stl");
+	torpedo_mesh = read_stl_file("torpedo.stl");
+	laser_mesh = read_stl_file("laser.stl");
+	planet_mesh = read_stl_file("planet.stl");
+	starbase_mesh = read_stl_file("starbase.stl");
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
@@ -4616,6 +4625,8 @@ int main(int argc, char *argv[])
 	sng_set_foreground(WHITE);
 
 	timer_tag = g_timeout_add(1000 / frame_rate_hz, advance_game, NULL);
+
+	init_meshes();
 
 	/* Apparently (some versions of?) portaudio calls g_thread_init(). */
 	/* It may only be called once, and subsequent calls abort, so */
