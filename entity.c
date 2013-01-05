@@ -91,3 +91,11 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 		render_entity(w, gc, &entity_list[i]);
 }
 
+void set_camera_pos(float x, float y, float z)
+{
+}
+
+void camera_look_at(float x, float y, float z)
+{
+}
+
