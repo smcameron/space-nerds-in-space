@@ -18,6 +18,8 @@
         along with Spacenerds in Space; if not, write to the Free Software
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+
+#include <math.h>
 #define DEFINE_MATRIX_GLOBALS
 #include "matrix.h"
 
@@ -33,6 +35,9 @@
  * row is contiguous, and a column is not contiguous.  In column major
  * storage, adjacent rows are adjacent in memory, and columns are
  * contiguous, and rows are not contiguous.
+ *
+ * This code is based on a very nice explanation found here:
+ * http://www.kmjn.org/notes/3d_rendering_intro.html by Mark J. Nelson
  *
  */
 
@@ -98,5 +103,55 @@ void mat41_x_mat44(const struct mat41 *lhs, const struct mat44 *rhs,
 		for (col = 0; col < 4; col++)
 			output->m[row] += lhs->m[col] * rhs->m[row][col];
 	}
+}
+
+/* column major... */
+void mat41_translate(struct mat41 *rhs, float tx, float ty, float tz, struct mat41 *output)
+{
+	struct mat44 translate = {{{ 1, 0, 0, 0 }, /* column major, so this looks xposed */
+				   { 0, 1, 0, 0 },
+				   { 0, 0, 1, 0 },
+				   { tx, ty, tz, 1}}};
+
+	mat44_x_mat41(&translate, rhs, output);
+}
+
+/* column major... */
+void mat41_rotate_x(struct mat41 *rhs, float angle, struct mat41 *output)
+{
+	struct mat44 rotatex = {{{ 1, 0,            0,           0 },
+				 { 0, cosf(angle),  sinf(angle), 0 },
+				 { 0, -sinf(angle), cosf(angle), 0 },
+				 { 0, 0,            0,           1 }}};
+	mat44_x_mat41(&rotatex, rhs, output);
+}
+
+/* column major... */
+void mat41_rotate_y(struct mat41 *rhs, float angle, struct mat41 *output)
+{
+	struct mat44 rotatey = {{{ cosf(angle), 0, -sinf(angle), 0},
+				 { 0,           1, 0,            0},
+				 { sinf(angle), 0, cosf(angle),  0},
+				 { 0,           0, 0,            1}}};
+	mat44_x_mat41(&rotatey, rhs, output);
+}
+
+/* column major... */
+void mat41_rotate_z(struct mat41 *rhs, float angle, struct mat41 *output)
+{
+	struct mat44 rotatez = {{{  cosf(angle), sinf(angle), 0,  0},
+				 { -sinf(angle), cosf(angle), 0,  0},
+				 { 0,            0,           1,  0},
+				 { 0,            0,           0,  1}}};
+	mat44_x_mat41(&rotatez, rhs, output);
+}
+
+void mat41_scale(struct mat41 *rhs, float scale, struct mat41 *output)
+{
+	struct mat44 scalem = {{{ scale, 0, 0, 0 },
+				{ 0, scale, 0, 0 },
+				{ 0, 0, scale, 0 },
+				{ 0, 0, 0,     1 }}};
+	mat44_x_mat41(&scalem, rhs, output);
 }
 

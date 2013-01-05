@@ -49,6 +49,13 @@ GLOBAL void mat44_x_mat41(const struct mat44 *lhs, const struct mat41 *rhs,
 GLOBAL void mat41_x_mat44(const struct mat41 *lhs, const struct mat44 *rhs,
 				struct mat41 *output);
 
+GLOBAL void mat41_translate(struct mat41 *rhs, float tx, float ty, float tz,
+				struct mat41 *output);
+GLOBAL void mat41_rotate_x(struct mat41 *rhs, float angle, struct mat41 *output);
+GLOBAL void mat41_rotate_y(struct mat41 *rhs, float angle, struct mat41 *output);
+GLOBAL void mat41_rotate_z(struct mat41 *rhs, float angle, struct mat41 *output);
+GLOBAL void mat41_scale(struct mat41 *rhs, float scale, struct mat41 *output);
+
 #undef GLOBAL
 #endif
 
