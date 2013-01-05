@@ -25,7 +25,7 @@ SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_graph.o \
 	snis_client.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_sliders.o snis_text_window.o \
-	matrix.o
+	matrix.o stl_parser.o
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm
 
@@ -122,10 +122,16 @@ snis_text_input.o:	snis_text_input.h snis_text_input.c
 matrix.o:	matrix.h matrix.c
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c matrix.c
 
+stl_parser.o:	stl_parser.c stl_parser.h vertex.h triangle.h mesh.h
+	gcc ${MYCFLAGS} ${GTKCFLAGS} -c stl_parser.c
+
+stl_parser:	stl_parser.o stl_parser.h vertex.h triangle.h mesh.h
+	gcc -DTEST_STL_PARSER ${MYCFLAGS} ${GTKCFLAGS} -o stl_parser stl_parser.c
+
 ${SSGL}:
 	(cd ssgl ; make )
 
 clean:
-	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${PROGS} ${SSGL}
+	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${PROGS} ${SSGL} stl_parser
 	( cd ssgl; make clean )
 
