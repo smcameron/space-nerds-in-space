@@ -216,6 +216,7 @@ struct snis_entity {
 	struct snis_entity_science_data sdata;
 	double sci_coordx; /* selected coords by science station for warp calculations */
 	double sci_coordy;
+	struct entity *entity;
 };
 
 #endif

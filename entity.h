@@ -29,6 +29,6 @@ struct entity;
 #define GLOBAL extern
 #endif
 
-GLOBAL int add_entity(struct mesh *m, float x, float y, float z);
+GLOBAL struct entity *add_entity(struct mesh *m, float x, float y, float z);
 
 #endif	

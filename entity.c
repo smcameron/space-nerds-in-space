@@ -18,16 +18,17 @@
         along with Spacenerds in Space; if not, write to the Free Software
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#include <stdio.h>
 #include <math.h>
-#include "mathutils.h"
 
+#include "mathutils.h"
 #include "vertex.h"
 #include "triangle.h"
 #include "mesh.h"
 #include "stl_parser.h"
 #include "entity.h"
 
-#define MAX_ENTITIES 1000
+#define MAX_ENTITIES 5000
 
 struct entity {
 	struct mesh *m;
@@ -37,7 +38,7 @@ struct entity {
 static int nentities = 0;
 static struct entity entity_list[MAX_ENTITIES];
 
-int add_entity(struct mesh *m, float x, float y, float z)
+struct entity *add_entity(struct mesh *m, float x, float y, float z)
 {
 	if (nentities < MAX_ENTITIES) {
 		entity_list[nentities].m = m;
@@ -45,8 +46,8 @@ int add_entity(struct mesh *m, float x, float y, float z)
 		entity_list[nentities].y = y;
 		entity_list[nentities].z = z;
 		nentities++;
-		return nentities - 1;
+		return &entity_list[nentities - 1];
 	}
-	return -1;
+	return NULL;
 }
 

@@ -63,6 +63,12 @@
 #include "bline.h"
 #include "shield_strength.h"
 
+#include "vertex.h"
+#include "triangle.h"
+#include "mesh.h"
+#include "stl_parser.h"
+#include "entity.h"
+
 #define SCREEN_WIDTH 800        /* window width, in pixels */
 #define SCREEN_HEIGHT 600       /* window height, in pixels */
 
@@ -157,6 +163,12 @@ ui_element_keypress_function ui_text_input_keypress = (ui_element_keypress_funct
 double sine[361];
 double cosine[361];
 
+struct mesh *torpedo_mesh;
+struct mesh *laser_mesh;
+struct mesh *planet_mesh;
+struct mesh *starbase_mesh;
+struct mesh *ship_mesh;
+
 void init_trig_arrays(void)
 {
 	int i;
@@ -249,7 +261,7 @@ static struct snis_object_pool *sparkpool;
 static struct snis_entity spark[MAXSPARKS];
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static int add_generic_object(uint32_t id, double x, double y, double vx, double vy, double heading, int type, uint32_t alive)
+static int add_generic_object(uint32_t id, double x, double y, double vx, double vy, double heading, int type, uint32_t alive, struct entity *entity)
 {
 	int i;
 
@@ -268,6 +280,7 @@ static int add_generic_object(uint32_t id, double x, double y, double vx, double
 	go[i].heading = heading;
 	go[i].type = type;
 	go[i].alive = alive;
+	go[i].entity = entity;
 	return i;
 }
 
@@ -295,9 +308,12 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 			double vy, double heading, uint32_t alive)
 {
 	int i;
+	struct entity *e;
+
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP2, alive);
+		e = add_entity(ship_mesh, x, 0, -y);
+		i = add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP2, alive, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -314,9 +330,12 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 			uint8_t requested_warpdrive, uint8_t requested_shield, uint8_t phaser_charge, uint8_t phaser_wavelength)
 {
 	int i;
+	struct entity *e;
+
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, vx, vy, heading, shiptype, alive);
+		e = add_entity(ship_mesh, x, 0, -y);
+		i = add_generic_object(id, x, y, vx, vy, heading, shiptype, alive, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -365,9 +384,11 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 static int update_torpedo(uint32_t id, double x, double y, double vx, double vy, uint32_t ship_id)
 {
 	int i;
+	struct entity *e;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_TORPEDO, 1);
+		e = add_entity(torpedo_mesh, x, 0, -y);
+		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.torpedo.ship_id = ship_id;
@@ -380,9 +401,12 @@ static int update_torpedo(uint32_t id, double x, double y, double vx, double vy,
 static int update_laser(uint32_t id, double x, double y, double vx, double vy, uint32_t ship_id)
 {
 	int i;
+	struct entity *e;
+
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_LASER, 1);
+		e = add_entity(laser_mesh, x, 0, -y);
+		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.laser.ship_id = ship_id;
@@ -395,9 +419,12 @@ static int update_laser(uint32_t id, double x, double y, double vx, double vy, u
 static int update_planet(uint32_t id, double x, double y)
 {
 	int i;
+	struct entity *e;
+
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_PLANET, 1);
+		e = add_entity(planet_mesh, x, 0, -y);
+		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -409,9 +436,12 @@ static int update_planet(uint32_t id, double x, double y)
 static int update_starbase(uint32_t id, double x, double y)
 {
 	int i;
+	struct entity *e;
+
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_STARBASE, 1);
+		e = add_entity(starbase_mesh, x, 0, -y);
+		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -510,7 +540,7 @@ static int update_explosion(uint32_t id, double x, double y,
 	int i;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_EXPLOSION, 1);
+		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_EXPLOSION, 1, NULL);
 		if (i < 0)
 			return i;
 		go[i].tsd.explosion.nsparks = nsparks;
@@ -522,17 +552,17 @@ static int update_explosion(uint32_t id, double x, double y,
 
 static int __attribute__((unused)) add_planet(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
 {
-	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_PLANET, alive);
+	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_PLANET, alive, NULL);
 }
 
 static int __attribute__((unused)) add_starbase(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
 {
-	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_STARBASE, alive);
+	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_STARBASE, alive, NULL);
 }
 
 static int __attribute__((unused)) add_torpedo(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
 {
-	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_TORPEDO, alive);
+	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_TORPEDO, alive, NULL);
 }
 
 void spin_points(struct my_point_t *points, int npoints, 
