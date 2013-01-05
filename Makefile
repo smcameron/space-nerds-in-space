@@ -126,7 +126,7 @@ stl_parser.o:	stl_parser.c stl_parser.h vertex.h triangle.h mesh.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c stl_parser.c
 
 stl_parser:	stl_parser.o stl_parser.h vertex.h triangle.h mesh.h
-	gcc -DTEST_STL_PARSER ${MYCFLAGS} ${GTKCFLAGS} -o stl_parser stl_parser.c
+	gcc -DTEST_STL_PARSER ${MYCFLAGS} ${GTKCFLAGS} -o stl_parser stl_parser.c -lm
 
 ${SSGL}:
 	(cd ssgl ; make )

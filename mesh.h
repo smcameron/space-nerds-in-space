@@ -23,7 +23,9 @@
 
 struct mesh {
 	int ntriangles;
+	int nvertices;
 	struct triangle *t;
+	struct vertex *v;
 };
 
 #endif

@@ -21,7 +21,7 @@
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 struct triangle {
-	struct vertex v[3]; /* three vertices */
+	struct vertex *v[3]; /* three vertices */
 	struct vertex n; /* normal */
 };
 #endif

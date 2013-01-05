@@ -26,6 +26,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <errno.h>
+#include <math.h>
 
 #include "vertex.h"
 #include "triangle.h"
@@ -87,7 +88,7 @@ static int read_facet(FILE *f, struct triangle *t, int *linecount)
 		return -1;
 	}
 	for (i = 0; i < 3; i++) {
-		rc = fscanf(f, " vertex %f %f %f\n", &t->v[i].x, &t->v[i].y, &t->v[i].z);
+		rc = fscanf(f, " vertex %f %f %f\n", &t->v[i]->x, &t->v[i]->y, &t->v[i]->z);
 		(*linecount)++;
 		if (rc != 3) {
 			fprintf(stderr, "failed reading vertex at line %d\n", *linecount);
@@ -106,6 +107,53 @@ static int read_facet(FILE *f, struct triangle *t, int *linecount)
 		fprintf(stderr, "failed 'endloop' at line %d\n", *linecount);
 		return -1;
 	}
+	return 0;
+}
+
+static float dist3d(struct vertex *v1, struct vertex *v2)
+{
+	return sqrt(
+		(v1->x - v2->x) * (v1->x - v2->x) +
+		(v1->y - v2->y) * (v1->y - v2->y) +
+		(v1->z - v2->z) * (v1->z - v2->z));
+}
+
+#define VERTEX_MERGING_THRESHOLD (0.00001)
+static struct vertex *add_vertex(struct mesh *m, struct vertex *v)
+{
+	/* Search vertices to see if we already have this one. */
+	int i;
+
+	for (i = 0; i < m->nvertices; i++) {
+		if (dist3d(v, &m->v[i]) < VERTEX_MERGING_THRESHOLD) {
+			return &m->v[i];
+		}
+	}
+	m->v[m->nvertices] = *v;
+	m->nvertices++;
+	return &m->v[m->nvertices - 1];
+}
+
+static int add_facet(FILE *f, struct mesh *m, int *linecount)
+{
+	int rc, i;
+	struct vertex v[3];
+	struct triangle t;
+	struct vertex *tv;
+
+	for (i = 0; i < 3; i++)
+		t.v[i] = &v[i];
+
+	rc = read_facet(f, &t, linecount);
+	if (rc)
+		return rc;
+
+	for (i = 0; i < 3; i++) {
+		tv = add_vertex(m, t.v[i]);
+		t.v[i] = tv;
+	}
+	m->t[m->ntriangles] = t;
+	m->ntriangles++;
 	return 0;
 }
 
@@ -133,23 +181,35 @@ struct mesh *read_stl_file(char *file)
 	if (facetcount <= 0)
 		return NULL;
 	my_mesh = malloc(sizeof(*my_mesh));
+	my_mesh->nvertices = 0;
+	my_mesh->ntriangles = 0;
 	my_mesh->t = malloc(sizeof(*my_mesh->t) * facetcount);
+	my_mesh->v = malloc(sizeof(*my_mesh->v) * facetcount * 3); /* worst case */
 
 	for (i = 0; i < facetcount; i++) {
-		rc = read_facet(f, &my_mesh->t[i], &linecount);
+		rc = add_facet(f, my_mesh, &linecount);
 		if (rc < 0)
 			goto error;
-		my_mesh->ntriangles++;
 	}
 	return my_mesh;
 
 error:
 	free(my_mesh->t);
+	free(my_mesh->v);
 	free(my_mesh);
 	return NULL;
 }
 
 #ifdef TEST_STL_PARSER 
+
+void print_mesh(struct mesh *m)
+{
+	int i;
+
+	for (i = 0; i < m->nvertices; i++)
+		printf("%d: %f, %f, %f\n", i, m->v[i].x, m->v[i].y, m->v[i].z);
+}
+
 int main(int argc, char *argv[])
 {
 	struct mesh *s;
@@ -160,8 +220,11 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "%s: %s\n", argv[1], strerror(errno));
 		else
 			fprintf(stderr, "Failed to read stl file\n");
-	} else
-		fprintf(stderr, "Success!\n");
+	} else {
+		fprintf(stderr, "Success!, nvertices = %d, ntriangle = %d\n",
+				s->nvertices, s->ntriangles);
+	}
+	print_mesh(s);
 	return 0;
 }
 #endif
