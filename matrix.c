@@ -202,3 +202,20 @@ void mat44_scale(struct mat44 *rhs, float scale, struct mat44 *output)
 	mat44_product(rhs, &scalem, output);
 }
 
+static float dist3d(float dx, float dy, float dz)
+{
+	return sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+/* safe to call with v == output */
+void normalize_vector(struct mat41 *v, struct mat41 *output)
+{
+	float d;
+
+	d = dist3d(v->m[0], v->m[1], v->m[2]);
+	output->m[0] = v->m[0] / d;
+	output->m[1] = v->m[1] / d;
+	output->m[2] = v->m[2] / d;
+}
+
+
