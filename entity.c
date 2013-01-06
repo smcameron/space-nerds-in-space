@@ -146,9 +146,9 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 
 	/* Calculate look direction, look direction, ... */
 	look_direction.m[0] = (camera.lx - camera.x);
-	look_direction.m[1] = (camera.lx - camera.x);
-	look_direction.m[2] = (camera.lx - camera.x);
-	look_direction.m[4] = 1.0;
+	look_direction.m[1] = (camera.ly - camera.y);
+	look_direction.m[2] = (camera.lz - camera.z);
+	look_direction.m[3] = 1.0;
 	normalize_vector(&look_direction, &look_direction);
 	n = &look_direction;
 
