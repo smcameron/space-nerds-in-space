@@ -21,8 +21,8 @@
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 struct vertex {
-	float x, y, z;
-	float wx, wy, wz; /* world coords */
+	float x, y, z, w;
+	float wx, wy, wz, ww; /* world coords */
 	int sx, sy; /* screen coords */
 };
 #endif
