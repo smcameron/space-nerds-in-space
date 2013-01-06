@@ -71,10 +71,10 @@ void render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 
 	v1 = t->v[0];
 	v2 = t->v[1];
-	v3 = t->v[3];
-	sng_current_draw_line(w->window, gc, v1->sx, v1->sy, v2->sx, v2->sy); 
-	sng_current_draw_line(w->window, gc, v2->sx, v2->sy, v3->sx, v3->sy); 
-	sng_current_draw_line(w->window, gc, v3->sx, v3->sy, v1->sx, v1->sy); 
+	v3 = t->v[2];
+	sng_current_draw_line(w->window, gc, v1->wx, v1->wy, v2->wx, v2->wy); 
+	sng_current_draw_line(w->window, gc, v2->wx, v2->wy, v3->wx, v3->wy); 
+	sng_current_draw_line(w->window, gc, v3->wx, v3->wy, v1->wx, v1->wy); 
 }
 
 void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
