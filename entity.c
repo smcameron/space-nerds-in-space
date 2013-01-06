@@ -114,8 +114,13 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 					    { 0,    1,     0,    0 },
 					    { 0,    0,     1,    0 },
 					    { e->x, e->y, e->z, 1 }}};
+#if 1
 	mat44_product(&object_rotation, &object_translation, &object_transform);
 	mat44_product(&object_transform, transform, &total_transform);
+#else
+	mat44_product(transform, &object_translation, &object_transform);
+	mat44_product(&object_transform, &object_rotation, &total_transform);
+#endif
 
 	/* Set homogeneous coord to 1 initially for all vertices */
 	for (i = 0; i < e->m->nvertices; i++)
@@ -141,7 +146,7 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 				    { 0, 1, 0, 0 },
 				    { 0, 0, 1, 0 },
 				    { 0, 0, 0, 1 }}};
-	struct mat44 perspective_transform;
+	struct mat44 perspective_transform = identity;
 	struct mat44 cameralook_transform;
 	struct mat44 tmp_transform;
 	struct mat44 cameralocation_transform;
@@ -205,6 +210,7 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	cameralook_transform.m[3][3] = 1.0;
 
 	/* Make perspective transform... */
+#if 1
 	perspective_transform.m[0][0] = (2 * camera.near) / camera.width;
 	perspective_transform.m[0][1] = 0.0;
 	perspective_transform.m[0][2] = 0.0;
@@ -223,6 +229,7 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	perspective_transform.m[3][2] = (-2 * camera.far * camera.near) /
 						(camera.far - camera.near);
 	perspective_transform.m[3][3] = 0.0;
+#endif
 
 #if 0
 	mat44_product(&perspective_transform, &cameralook_transform, &tmp_transform);
