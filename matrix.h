@@ -40,7 +40,7 @@ struct mat41 {
 	float m[4];
 };
 
-GLOBAL void mat44_x_mat44(const struct mat44 *lhs, const struct mat44 *rhs,
+GLOBAL void mat44_product(const struct mat44 *lhs, const struct mat44 *rhs,
 				struct mat44 *output);
 
 GLOBAL void mat44_x_mat41(const struct mat44 *lhs, const struct mat41 *rhs,
