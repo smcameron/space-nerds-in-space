@@ -124,11 +124,16 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 {
 	int i;
 
-	struct mat44 transform0 = {{{ 1, 0, 0, 0 }, /* identity matrix */
+	struct mat44 identity = {{{ 1, 0, 0, 0 }, /* identity matrix */
 				    { 0, 1, 0, 0 },
 				    { 0, 0, 1, 0 },
 				    { 0, 0, 0, 1 }}};
-	struct mat44 transform1, transform2;
+	struct mat44 perspective_transform;
+	struct mat44 cameralook_transform;
+	struct mat44 tmp_transform;
+	struct mat44 cameralocation_transform;
+	struct mat44 total_transform;
+	
 	struct mat41 look_direction;
 
 	struct mat41 up = { { 0, 1, 0, 0 } };
@@ -141,8 +146,8 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	ntris = 0;
 	nlines = 0;
 	/* Translate to camera position... */
-	mat44_translate(&transform0, -camera.x, -camera.y, -camera.z,
-				&transform1);
+	mat44_translate(&identity, -camera.x, -camera.y, -camera.z,
+				&cameralocation_transform);
 
 	/* Calculate look direction, look direction, ... */
 	look_direction.m[0] = (camera.lx - camera.x);
@@ -169,49 +174,53 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	   | nx ny nz 0 |
 	   |  0  0  0 1 |
 	 */
-	transform0.m[0][0] = u->m[0];
-	transform0.m[0][1] = v->m[0];
-	transform0.m[0][2] = n->m[0];
-	transform0.m[0][3] = 0.0;
-	transform0.m[1][0] = u->m[1];
-	transform0.m[1][1] = v->m[1];
-	transform0.m[1][2] = n->m[1];
-	transform0.m[1][3] = 0.0;
-	transform0.m[2][0] = u->m[2];
-	transform0.m[2][1] = v->m[2];
-	transform0.m[2][2] = n->m[2];
-	transform0.m[2][3] = 0.0;
-	transform0.m[3][0] = 0.0;
-	transform0.m[3][1] = 0.0;
-	transform0.m[3][2] = 0.0; 
-	transform0.m[3][3] = 1.0;
-
-	/* append the rotations... */
-	mat44_product(&transform1, &transform0, &transform2);
+	cameralook_transform.m[0][0] = u->m[0];
+	cameralook_transform.m[0][1] = v->m[0];
+	cameralook_transform.m[0][2] = n->m[0];
+	cameralook_transform.m[0][3] = 0.0;
+	cameralook_transform.m[1][0] = u->m[1];
+	cameralook_transform.m[1][1] = v->m[1];
+	cameralook_transform.m[1][2] = n->m[1];
+	cameralook_transform.m[1][3] = 0.0;
+	cameralook_transform.m[2][0] = u->m[2];
+	cameralook_transform.m[2][1] = v->m[2];
+	cameralook_transform.m[2][2] = n->m[2];
+	cameralook_transform.m[2][3] = 0.0;
+	cameralook_transform.m[3][0] = 0.0;
+	cameralook_transform.m[3][1] = 0.0;
+	cameralook_transform.m[3][2] = 0.0; 
+	cameralook_transform.m[3][3] = 1.0;
 
 	/* Make perspective transform... */
-	transform0.m[0][0] = (2 * camera.near) / camera.width;
-	transform0.m[0][1] = 0.0;
-	transform0.m[0][2] = 0.0;
-	transform0.m[0][3] = 0.0;
-	transform0.m[1][0] = 0.0;
-	transform0.m[1][1] = (2.0 * camera.near) / camera.height;
-	transform0.m[1][2] = 0.0;
-	transform0.m[1][3] = 0.0;
-	transform0.m[2][0] = 0.0;
-	transform0.m[2][1] = 0.0;
-	transform0.m[2][2] = -(camera.far + camera.near) / (camera.far - camera.near);
-	transform0.m[2][3] = -1.0;
-	transform0.m[3][0] = 0.0;
-	transform0.m[3][1] = 0.0;
-	transform0.m[3][2] = (-2 * camera.far * camera.near) / (camera.far - camera.near);
-	transform0.m[3][3] = 0.0;
+	perspective_transform.m[0][0] = (2 * camera.near) / camera.width;
+	perspective_transform.m[0][1] = 0.0;
+	perspective_transform.m[0][2] = 0.0;
+	perspective_transform.m[0][3] = 0.0;
+	perspective_transform.m[1][0] = 0.0;
+	perspective_transform.m[1][1] = (2.0 * camera.near) / camera.height;
+	perspective_transform.m[1][2] = 0.0;
+	perspective_transform.m[1][3] = 0.0;
+	perspective_transform.m[2][0] = 0.0;
+	perspective_transform.m[2][1] = 0.0;
+	perspective_transform.m[2][2] = -(camera.far + camera.near) /
+						(camera.far - camera.near);
+	perspective_transform.m[2][3] = -1.0;
+	perspective_transform.m[3][0] = 0.0;
+	perspective_transform.m[3][1] = 0.0;
+	perspective_transform.m[3][2] = (-2 * camera.far * camera.near) /
+						(camera.far - camera.near);
+	perspective_transform.m[3][3] = 0.0;
 
-	/* append the perspective transform */
-	mat44_product(&transform2, &transform0, &transform1);
+#if 0
+	mat44_product(&perspective_transform, &cameralook_transform, &tmp_transform);
+	mat44_product(&tmp_transform, &cameralocation_transform, &total_transform);
+#else
+	mat44_product(&cameralocation_transform, &cameralook_transform, &tmp_transform);
+	mat44_product(&tmp_transform, &perspective_transform, &total_transform);
+#endif
 	   
 	for (i = 0; i < nentities; i++)
-		transform_entity(&entity_list[i], &transform1);
+		transform_entity(&entity_list[i], &total_transform);
 	for (i = 0; i < nentities; i++)
 		render_entity(w, gc, &entity_list[i]);
 	printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
