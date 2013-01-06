@@ -218,4 +218,10 @@ void normalize_vector(struct mat41 *v, struct mat41 *output)
 	output->m[2] = v->m[2] / d;
 }
 
+void mat41_cross_mat41(struct mat41 *v1, struct mat41 *v2, struct mat41 *output)
+{
+	output->m[0] = (v1->m[1] * v2->m[2]) - (v2->m[1] * v1->m[2]);
+	output->m[1] = (v1->m[2] * v2->m[0]) - (v2->m[2] * v1->m[0]);
+	output->m[2] = (v1->m[0] * v2->m[1]) - (v2->m[0] * v1->m[1]);
+}
 
