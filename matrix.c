@@ -155,3 +155,50 @@ void mat41_scale(struct mat41 *rhs, float scale, struct mat41 *output)
 	mat44_x_mat41(&scalem, rhs, output);
 }
 
+void mat44_translate(struct mat44 *rhs, float tx, float ty, float tz,
+                                struct mat44 *output)
+{
+	struct mat44 translate = {{{ 1, 0, 0, 0 }, /* column major, so this looks xposed */
+				   { 0, 1, 0, 0 },
+				   { 0, 0, 1, 0 },
+				   { tx, ty, tz, 1}}};
+
+	mat44_product(&translate, rhs, output);
+}
+
+void mat44_rotate_x(struct mat44 *rhs, float angle, struct mat44 *output)
+{
+	struct mat44 rotatex = {{{ 1, 0,            0,           0 },
+				 { 0, cosf(angle),  sinf(angle), 0 },
+				 { 0, -sinf(angle), cosf(angle), 0 },
+				 { 0, 0,            0,           1 }}};
+	mat44_product(rhs, &rotatex, output);
+}
+
+void mat44_rotate_y(struct mat44 *rhs, float angle, struct mat44 *output)
+{
+	struct mat44 rotatey = {{{ cosf(angle), 0, -sinf(angle), 0},
+				 { 0,           1, 0,            0},
+				 { sinf(angle), 0, cosf(angle),  0},
+				 { 0,           0, 0,            1}}};
+	mat44_product(rhs, &rotatey, output);
+}
+
+void mat44_rotate_z(struct mat44 *rhs, float angle, struct mat44 *output)
+{
+	struct mat44 rotatez = {{{  cosf(angle), sinf(angle), 0,  0},
+				 { -sinf(angle), cosf(angle), 0,  0},
+				 { 0,            0,           1,  0},
+				 { 0,            0,           0,  1}}};
+	mat44_product(rhs, &rotatez, output);
+}
+
+void mat44_scale(struct mat44 *rhs, float scale, struct mat44 *output)
+{
+	struct mat44 scalem = {{{ scale, 0, 0, 0 },
+				{ 0, scale, 0, 0 },
+				{ 0, 0, scale, 0 },
+				{ 0, 0, 0,     1 }}};
+	mat44_product(rhs, &scalem, output);
+}
+
