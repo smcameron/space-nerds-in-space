@@ -132,10 +132,10 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	struct mat41 look_direction;
 
 	struct mat41 up = { { 0, 1, 0, 0 } };
-	struct mat41 camera_up, up_cross_look;
-	struct mat41 *v; /* camera relative x axis (left/right) */ 
+	struct mat41 camera_x, x_cross_look;
+	struct mat41 *v; /* camera relative y axis (up/down) */ 
 	struct mat41 *n; /* camera relative z axis (into view plane) */
-	struct mat41 *u; /* camera relative y axis (up/down) */
+	struct mat41 *u; /* camera relative x axis (left/right) */
 
 	nents = 0;
 	ntris = 0;
@@ -152,15 +152,16 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	normalize_vector(&look_direction, &look_direction);
 	n = &look_direction;
 
-	/* Calculate up direction relative to camera, "camera_up" */
-	mat41_cross_mat41(&up, &look_direction, &camera_up);
-	normalize_vector(&camera_up, &camera_up);
-	u = &camera_up;
+	/* Calculate x direction relative to camera, "camera_x" */
+	mat41_cross_mat41(&up, &look_direction, &camera_x);
+	normalize_vector(&camera_x, &camera_x);
+	u = &camera_x;
 
 	/* Calculate camera relative x axis */
-	v = &up_cross_look;
+	v = &x_cross_look;
 	mat41_cross_mat41(n, u, v);
-	/* v should not need normalizing as n and u already are and are perpendicular */
+	/* v should not need normalizing as n and u are already
+	 * unit, and are perpendicular */
 
 	/* Make a rotation matrix...
 	   | ux uy uz 0 |
