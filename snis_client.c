@@ -4180,7 +4180,7 @@ static void init_net_setup_ui(void)
 	int y = 10 + LINEHEIGHT * 3;
 
 	memset(net_setup_ui.lobbyname, 0, sizeof(net_setup_ui.lobbyname));
-	strcpy(net_setup_ui.lobbyname, "");
+	strcpy(net_setup_ui.lobbyname, "localhost");
 	strcpy(net_setup_ui.servername, "");
 	net_setup_ui.start_lobbyserver =	
 		snis_button_init(20, y, 300, 25, "START LOBBY SERVER", GREEN,
