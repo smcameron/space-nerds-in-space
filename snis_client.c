@@ -4528,11 +4528,19 @@ static void setup_sound(void)
 
 static void init_meshes(void)
 {
+#if 0
 	ship_mesh = read_stl_file("spaceship.stl");
 	torpedo_mesh = read_stl_file("torpedo.stl");
 	laser_mesh = read_stl_file("laser.stl");
 	planet_mesh = read_stl_file("planet.stl");
 	starbase_mesh = read_stl_file("starbase.stl");
+#else
+	ship_mesh = read_stl_file("cube.stl");
+	torpedo_mesh = read_stl_file("cube.stl");
+	laser_mesh = read_stl_file("cube.stl");
+	planet_mesh = read_stl_file("cube.stl");
+	starbase_mesh = read_stl_file("cube.stl");
+#endif
 }
 
 int main(int argc, char *argv[])
