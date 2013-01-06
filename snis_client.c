@@ -2040,7 +2040,22 @@ static void show_common_screen(GtkWidget *w, char *title)
 
 static void show_mainscreen(GtkWidget *w)
 {
+	struct snis_entity *o;
+
 	show_common_screen(w, "Main Screen");	
+
+	if (my_ship_id == UNKNOWN_ID)
+		return;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return;
+	o = &go[my_ship_oid];
+	camera_set_pos((float) o->x, (float) 0, (float) o->y);
+	camera_look_at((float) o->x + (float) cos(o->heading), (float) 0,
+			(float) o->y + (float) sin(o->heading));
+	camera_set_parameters((float) 5, (float) 500, (float) 500, (float) 500);
+	render_entities(w, gc);
 }
 
 static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
