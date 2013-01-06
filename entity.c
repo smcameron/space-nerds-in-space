@@ -42,6 +42,12 @@ struct entity {
 	float x, y, z; /* world coords */
 };
 
+struct camera_info {
+	float x, y, z;		/* position of camera */
+	float lx, ly, lz;	/* where camera is looking */
+	float near, far, width, height;
+} camera;
+
 static int nentities = 0;
 static struct entity entity_list[MAX_ENTITIES];
 
@@ -91,11 +97,19 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 		render_entity(w, gc, &entity_list[i]);
 }
 
-void set_camera_pos(float x, float y, float z)
+void camera_set_pos(float x, float y, float z)
 {
 }
 
 void camera_look_at(float x, float y, float z)
 {
+}
+
+void camera_set_parameters(float near, float far, float width, float height)
+{
+	camera.near = -near;
+	camera.far = -far;
+	camera.width = width;
+	camera.height = height;	
 }
 
