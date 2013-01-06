@@ -104,6 +104,19 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 	int i;
 	struct mat41 *m1, *m2;
 
+	/* calculate the object transform... */
+	struct mat44 object_transform, total_transform;
+	struct mat44 object_rotation = {{{ 1, 0, 0, 0 },
+					 { 0, 1, 0, 0 },
+					 { 0, 0, 1, 0 },
+					 { 0, 0, 0, 1 }}}; /* fixme, do this really. */
+	struct mat44 object_translation = {{{ 1,    0,     0,    0 },
+					    { 0,    1,     0,    0 },
+					    { 0,    0,     1,    0 },
+					    { e->x, e->y, e->z, 1 }}};
+	mat44_product(&object_rotation, &object_translation, &object_transform);
+	mat44_product(&object_transform, transform, &total_transform);
+
 	/* Set homogeneous coord to 1 initially for all vertices */
 	for (i = 0; i < e->m->nvertices; i++)
 		e->m->v[i].w = 1.0;
@@ -112,7 +125,7 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 	for (i = 0; i < e->m->nvertices; i++) {
 		m1 = (struct mat41 *) &e->m->v[i].x;
 		m2 = (struct mat41 *) &e->m->v[i].wx;
-		mat41_x_mat44(m1, transform, m2);
+		mat41_x_mat44(m1, &total_transform, m2);
 		/* normalize... */
 		m2->m[0] /= m2->m[3];
 		m2->m[1] /= m2->m[3];
