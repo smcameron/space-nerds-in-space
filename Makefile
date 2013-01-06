@@ -131,6 +131,9 @@ stl_parser:	stl_parser.o stl_parser.h vertex.h triangle.h mesh.h
 entity.o:	entity.c entity.h mathutils.h vertex.h triangle.h mesh.h stl_parser.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c entity.c
 
+test_matrix:	matrix.c matrix.h
+	gcc ${MYCFLAGS} ${GTKCFLAGS} -DTEST_MATRIX -o test_matrix matrix.c -lm
+
 ${SSGL}:
 	(cd ssgl ; make )
 

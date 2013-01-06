@@ -225,3 +225,59 @@ void mat41_cross_mat41(struct mat41 *v1, struct mat41 *v2, struct mat41 *output)
 	output->m[2] = (v1->m[0] * v2->m[1]) - (v2->m[0] * v1->m[1]);
 }
 
+#ifdef TEST_MATRIX
+#include <stdio.h>
+#include <math.h>
+
+int main(int argc, char *argv[])
+{
+	struct mat44 answer;
+	struct mat44 identity = {{ { 1, 0, 0, 0 },  
+				   { 0, 1, 0, 0 },
+				   { 0, 0, 1, 0 },
+				   { 0, 0, 0, 1 }}};
+
+	struct mat44 t = {{        { 1, 0, 0, 0 },  
+				   { 0, 1, 0, 0 },
+				   { 0, 0, 1, 0 },
+				   { 1, 2, 3, 1 }}};
+#define angle (90.0 * M_PI / 180.0)
+#if 0
+	struct mat44 rotatex = {{{ 1, 0,            0,           0 },
+				 { 0, cosf(angle),  sinf(angle), 0 },
+				 { 0, -sinf(angle), cosf(angle), 0 },
+				 { 0, 0,            0,           1 }}};
+#endif
+
+	struct mat44 rotatex = {{{ 1, 0,            0,           0 },
+				 { 0, cosf(angle), -sinf(angle), 0 },
+				 { 0, sinf(angle), cosf(angle), 0 },
+				 { 0, 0,            0,           1 }}};
+
+	struct mat41 p = {{ 2, 2, 2, 0 }};
+	struct mat41 p1 = {{ 1, 2, 3, 0 }};
+	struct mat41 p2 = {{ 0 }};
+	struct mat41 a = { { 0 } };
+	struct mat41 a2 = { { 0 } };
+	int row, column;
+
+	mat44_product(&identity, &t, &answer);
+	mat44_x_mat41(&identity, &p, &a);
+	mat44_x_mat41(&t, &p, &a2);
+	mat44_x_mat41(&rotatex, &p1, &p2);
+
+	for (column = 0; column < 4; column++) {
+		for (row = 0; row < 4; row++) {
+			printf("%f ", answer.m[row][column]);
+		}
+		printf("\n");
+	}
+
+	printf("a = %lf %lf %lf %lf\n", a.m[0], a.m[1], a.m[2], a.m[3]);
+	printf("a2 = %lf %lf %lf %lf\n", a2.m[0], a2.m[1], a2.m[2], a2.m[3]);
+	printf("p2 = %lf %lf %lf %lf\n", p2.m[0], p2.m[1], p2.m[2], p2.m[3]);
+
+	return 0;
+}
+#endif
+
