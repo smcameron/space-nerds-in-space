@@ -38,6 +38,8 @@
 
 #define MAX_ENTITIES 5000
 
+static unsigned long ntris, nents, nlines;
+
 struct entity {
 	struct mesh *m;
 	float x, y, z; /* world coords */
@@ -68,13 +70,24 @@ struct entity *add_entity(struct mesh *m, float x, float y, float z)
 void render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 {
 	struct vertex *v1, *v2, *v3;
+	int x1, y1, x2, y2, x3, y3;
 
+	ntris++;
+	nlines += 3;
 	v1 = t->v[0];
 	v2 = t->v[1];
 	v3 = t->v[2];
-	sng_current_draw_line(w->window, gc, v1->wx, v1->wy, v2->wx, v2->wy); 
-	sng_current_draw_line(w->window, gc, v2->wx, v2->wy, v3->wx, v3->wy); 
-	sng_current_draw_line(w->window, gc, v3->wx, v3->wy, v1->wx, v1->wy); 
+
+	x1 = (int) (v1->wx * 400) + 400;
+	x2 = (int) (v2->wx * 400) + 400;
+	x3 = (int) (v3->wx * 400) + 400;
+	y1 = (int) (v1->wy * 300) + 300;
+	y2 = (int) (v2->wy * 300) + 300;
+	y3 = (int) (v3->wy * 300) + 300;
+
+	sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
+	sng_current_draw_line(w->window, gc, x2, y2, x3, y3); 
+	sng_current_draw_line(w->window, gc, x3, y3, x1, y1); 
 }
 
 void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
@@ -83,6 +96,7 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 
 	for (i = 0; i < e->m->ntriangles; i++)
 		render_triangle(w, gc, &e->m->t[i]);
+	nents++;
 }
 
 static void transform_entity(struct entity *e, struct mat44 *transform)
@@ -99,6 +113,10 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 		m1 = (struct mat41 *) &e->m->v[i].x;
 		m2 = (struct mat41 *) &e->m->v[i].wx;
 		mat41_x_mat44(m1, transform, m2);
+		/* normalize... */
+		m2->m[0] /= m2->m[3];
+		m2->m[1] /= m2->m[3];
+		m2->m[2] /= m2->m[3];
 	}
 }
 
@@ -119,6 +137,9 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	struct mat41 *n; /* camera relative z axis (into view plane) */
 	struct mat41 *u; /* camera relative y axis (up/down) */
 
+	nents = 0;
+	ntris = 0;
+	nlines = 0;
 	/* Translate to camera position... */
 	mat44_translate(&transform0, -camera.x, -camera.y, -camera.z,
 				&transform1);
@@ -192,6 +213,7 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 		transform_entity(&entity_list[i], &transform1);
 	for (i = 0; i < nentities; i++)
 		render_entity(w, gc, &entity_list[i]);
+	printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
 }
 
 void camera_set_pos(float x, float y, float z)
