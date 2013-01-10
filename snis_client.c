@@ -2051,10 +2051,17 @@ static void show_mainscreen(GtkWidget *w)
 	if (my_ship_oid == UNKNOWN_ID)
 		return;
 	o = &go[my_ship_oid];
+
 	camera_set_pos((float) o->x, (float) 0, (float) o->y);
 	camera_look_at((float) o->x + (float) cos(o->heading), (float) 0,
 			(float) o->y + (float) sin(o->heading));
-	camera_set_parameters((float) 5, (float) 500, (float) 500, (float) 500);
+
+	/* override the above two for debugging. */
+	camera_set_pos(0.0, 0.0, -10.0);
+	camera_look_at(0.0, 0.0, 10.0);
+
+	camera_set_parameters((float) 5, (float) 30, (float) 16, (float) 12);
+	sng_set_foreground(GREEN);
 	render_entities(w, gc);
 }
 
@@ -4535,12 +4542,14 @@ static void init_meshes(void)
 	planet_mesh = read_stl_file("planet.stl");
 	starbase_mesh = read_stl_file("starbase.stl");
 #else
-	ship_mesh = read_stl_file("cube.stl");
-	torpedo_mesh = read_stl_file("cube.stl");
-	laser_mesh = read_stl_file("cube.stl");
-	planet_mesh = read_stl_file("cube.stl");
-	starbase_mesh = read_stl_file("cube.stl");
+#define THE_MODEL "starbase.stl"
+	ship_mesh = read_stl_file(THE_MODEL);
+	torpedo_mesh = read_stl_file(THE_MODEL);
+	laser_mesh = read_stl_file(THE_MODEL);
+	planet_mesh = read_stl_file(THE_MODEL);
+	starbase_mesh = read_stl_file(THE_MODEL);
 #endif
+
 }
 
 int main(int argc, char *argv[])

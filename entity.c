@@ -54,13 +54,17 @@ struct camera_info {
 static int nentities = 0;
 static struct entity entity_list[MAX_ENTITIES];
 
+static float rx, ry, rz;
+
 struct entity *add_entity(struct mesh *m, float x, float y, float z)
 {
-	if (nentities < MAX_ENTITIES) {
+	// if (nentities < MAX_ENTITIES) {
+
+	if (nentities < 1) {
 		entity_list[nentities].m = m;
-		entity_list[nentities].x = x;
-		entity_list[nentities].y = y;
-		entity_list[nentities].z = z;
+		entity_list[nentities].x = 0; // x;
+		entity_list[nentities].y = 0; // y;
+		entity_list[nentities].z = 2; // z;
 		nentities++;
 		return &entity_list[nentities - 1];
 	}
@@ -105,7 +109,7 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 	struct mat41 *m1, *m2;
 
 	/* calculate the object transform... */
-	struct mat44 object_transform, total_transform;
+	struct mat44 object_transform, total_transform, tmp_transform;
 	struct mat44 object_rotation = {{{ 1, 0, 0, 0 },
 					 { 0, 1, 0, 0 },
 					 { 0, 0, 1, 0 },
@@ -114,14 +118,20 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 					    { 0,    1,     0,    0 },
 					    { 0,    0,     1,    0 },
 					    { e->x, e->y, e->z, 1 }}};
-#if 1
-	mat44_product(&object_rotation, &object_translation, &object_transform);
-	mat44_product(&object_transform, transform, &total_transform);
-#else
-	mat44_product(transform, &object_translation, &object_transform);
-	mat44_product(&object_transform, &object_rotation, &total_transform);
-#endif
+	/* for testing, do small rotation... */
+	struct mat44 r1, r2;
+	mat44_rotate_x(&object_rotation, rx * M_PI / 180.0, &r1);  
+	mat44_rotate_y(&r1, ry * M_PI / 180.0, &r2);  
+	mat44_rotate_z(&r2, rz * M_PI / 180.0, &object_rotation);  
 
+	tmp_transform = *transform;
+	mat44_product(&tmp_transform, &object_translation, &object_transform);
+	mat44_product(&object_transform, &object_rotation, &total_transform);
+#if 0
+	mat44_product(&object_translation, &object_rotation, &object_transform);
+	mat44_product(&object_transform, transform, &total_transform);
+#endif
+	
 	/* Set homogeneous coord to 1 initially for all vertices */
 	for (i = 0; i < e->m->nvertices; i++)
 		e->m->v[i].w = 1.0;
@@ -130,7 +140,7 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 	for (i = 0; i < e->m->nvertices; i++) {
 		m1 = (struct mat41 *) &e->m->v[i].x;
 		m2 = (struct mat41 *) &e->m->v[i].wx;
-		mat41_x_mat44(m1, &total_transform, m2);
+		mat44_x_mat41(&total_transform, m1, m2);
 		/* normalize... */
 		m2->m[0] /= m2->m[3];
 		m2->m[1] /= m2->m[3];
@@ -146,7 +156,7 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 				    { 0, 1, 0, 0 },
 				    { 0, 0, 1, 0 },
 				    { 0, 0, 0, 1 }}};
-	struct mat44 perspective_transform = identity;
+	struct mat44 perspective_transform;
 	struct mat44 cameralook_transform;
 	struct mat44 tmp_transform;
 	struct mat44 cameralocation_transform;
@@ -185,6 +195,7 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	mat41_cross_mat41(n, u, v);
 	/* v should not need normalizing as n and u are already
 	 * unit, and are perpendicular */
+	normalize_vector(v, v);
 
 	/* Make a rotation matrix...
 	   | ux uy uz 0 |
@@ -210,7 +221,6 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	cameralook_transform.m[3][3] = 1.0;
 
 	/* Make perspective transform... */
-#if 1
 	perspective_transform.m[0][0] = (2 * camera.near) / camera.width;
 	perspective_transform.m[0][1] = 0.0;
 	perspective_transform.m[0][2] = 0.0;
@@ -229,9 +239,8 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	perspective_transform.m[3][2] = (-2 * camera.far * camera.near) /
 						(camera.far - camera.near);
 	perspective_transform.m[3][3] = 0.0;
-#endif
 
-#if 0
+#if 1
 	mat44_product(&perspective_transform, &cameralook_transform, &tmp_transform);
 	mat44_product(&tmp_transform, &cameralocation_transform, &total_transform);
 #else
@@ -243,7 +252,10 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 		transform_entity(&entity_list[i], &total_transform);
 	for (i = 0; i < nentities; i++)
 		render_entity(w, gc, &entity_list[i]);
-	printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
+	// printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
+	rx = fmod(rx + 0.3, 360.0);
+	ry = fmod(ry + 0.15, 360.0);
+	rz = fmod(rz + 0.6, 360.0);
 }
 
 void camera_set_pos(float x, float y, float z)
