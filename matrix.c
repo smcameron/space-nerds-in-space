@@ -77,7 +77,7 @@ void mat44_x_mat41(const struct mat44 *lhs, const struct mat41 *rhs,
 	for (row = 0; row < 4; row++) {
 		output->m[row] = 0;
 		for (col = 0; col < 4; col++)
-			output->m[row] += lhs->m[col][row] * rhs->m[row];
+			output->m[row] += lhs->m[col][row] * rhs->m[col];
 	}
 }
 
