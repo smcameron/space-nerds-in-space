@@ -19,6 +19,7 @@
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include <stdio.h>
 #include <math.h>
 #define DEFINE_MATRIX_GLOBALS
 #include "matrix.h"
@@ -220,9 +221,24 @@ void normalize_vector(struct mat41 *v, struct mat41 *output)
 
 void mat41_cross_mat41(struct mat41 *v1, struct mat41 *v2, struct mat41 *output)
 {
-	output->m[0] = (v1->m[1] * v2->m[2]) - (v2->m[1] * v1->m[2]);
-	output->m[1] = (v1->m[2] * v2->m[0]) - (v2->m[2] * v1->m[0]);
-	output->m[2] = (v1->m[0] * v2->m[1]) - (v2->m[0] * v1->m[1]);
+	/* A x B = (a2b3 - a3b2, a3b1 - a1b3, a1b2 - a2b1); a vector quantity */
+	output->m[0] = v1->m[1] * v2->m[2] - v1->m[2] * v2->m[1];
+	output->m[1] = v1->m[2] * v2->m[0] - v1->m[0] * v2->m[2];
+	output->m[2] = v1->m[0] * v2->m[1] - v1->m[1] * v2->m[0];
+	output->m[3] = 1.0;
+}
+
+void print44(struct mat44 *m)
+{
+	printf("%lf %lf %lf %lf\n", m->m[0][0], m->m[1][0], m->m[2][0], m->m[3][0]);
+	printf("%lf %lf %lf %lf\n", m->m[0][1], m->m[1][1], m->m[2][1], m->m[3][1]);
+	printf("%lf %lf %lf %lf\n", m->m[0][2], m->m[1][2], m->m[2][2], m->m[3][2]);
+	printf("%lf %lf %lf %lf\n", m->m[0][3], m->m[1][3], m->m[2][3], m->m[3][3]);
+}
+
+void print41(struct mat41 *m)
+{
+	printf("%lf %lf %lf %lf\n", m->m[0], m->m[1], m->m[2], m->m[3]);
 }
 
 #ifdef TEST_MATRIX
@@ -253,6 +269,10 @@ int main(int argc, char *argv[])
 				 { 0, cosf(angle), -sinf(angle), 0 },
 				 { 0, sinf(angle), cosf(angle), 0 },
 				 { 0, 0,            0,           1 }}};
+	struct mat44 abc = {{   { 0, 4, 8,  12 },
+				{ 1, 5, 9,  13 },
+				{ 2, 6, 10, 14 },
+				{ 3, 7, 11, 15 }}};
 
 	struct mat41 p = {{ 2, 2, 2, 0 }};
 	struct mat41 p1 = {{ 1, 2, 3, 0 }};
@@ -277,7 +297,13 @@ int main(int argc, char *argv[])
 	printf("a2 = %lf %lf %lf %lf\n", a2.m[0], a2.m[1], a2.m[2], a2.m[3]);
 	printf("p2 = %lf %lf %lf %lf\n", p2.m[0], p2.m[1], p2.m[2], p2.m[3]);
 
+	mat44_product(&identity, &abc, &answer);
+	printf("answer =\n");
+	print44(&answer);
+	
+
 	return 0;
 }
+
 #endif
 

@@ -64,7 +64,8 @@ GLOBAL void mat44_rotate_z(struct mat44 *rhs, float angle, struct mat44 *output)
 GLOBAL void mat44_scale(struct mat44 *rhs, float scale, struct mat44 *output);
 GLOBAL void normalize_vector(struct mat41 *v, struct mat41 *output);
 GLOBAL void mat41_cross_mat41(struct mat41 *v1, struct mat41 *v2, struct mat41 *output);
-
+GLOBAL void print44(struct mat44 *m);
+GLOBAL void print41(struct mat41 *m);
 #undef GLOBAL
 #endif
 
