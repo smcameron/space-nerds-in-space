@@ -75,6 +75,7 @@ void render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 {
 	struct vertex *v1, *v2, *v3;
 	int x1, y1, x2, y2, x3, y3;
+	int twicearea;
 
 	ntris++;
 	nlines += 3;
@@ -88,6 +89,16 @@ void render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 	y1 = (int) (v1->wy * 300) + 300;
 	y2 = (int) (v2->wy * 300) + 300;
 	y3 = (int) (v3->wy * 300) + 300;
+
+	/* Backface culling.
+	 * Figure if triangle is clockwise, or counter clockwise.
+	 * Don't render it if it's a facing away from us.
+	 */
+	twicearea =	(x1 * y2 - x2 * y1) +
+			(x2 * y3 - x3 * y2) +
+			(x3 * y1 - x1 * y3);
+	if (twicearea >= 0)
+		return;
 
 	sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
 	sng_current_draw_line(w->window, gc, x2, y2, x3, y3); 
