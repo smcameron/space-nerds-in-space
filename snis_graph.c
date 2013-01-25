@@ -358,3 +358,9 @@ void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
 {
 	sng_current_draw_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
 }
+
+void sng_device_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
+{
+	gdk_draw_line(drawable, gc, x1, y1, x2, y2);
+}
+

@@ -91,6 +91,8 @@ SNG_GLOBAL void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
 
 SNG_GLOBAL int sng_device_x(int x);
 SNG_GLOBAL int sng_device_y(int y);
+SNG_GLOBAL void sng_device_line(GdkDrawable *drawable, GdkGC *gc,
+			int x1, int y1, int x2, int y2);
 
 #undef SNG_GLOBAL
 #endif
