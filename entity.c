@@ -82,7 +82,8 @@ static int is_backface(int x1, int y1, int x2, int y2, int x3, int y3)
 	return twicearea >= 0;
 }
 
-void wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
+void __attribute__((unused))
+	wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 {
 	struct vertex *v1, *v2, *v3;
 	int x1, y1, x2, y2, x3, y3;
@@ -108,12 +109,156 @@ void wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 	sng_current_draw_line(w->window, gc, x3, y3, x1, y1); 
 }
 
+static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
+			int x1, int y1, int x2, int y2, int x3, int y3)
+{
+	float xa, xb, y;
+	float dxdy1, dxdy2;
+	int i;
+
+	if (y1 > y2 || y2 > y3)
+		printf("you dun fucked up\n");
+
+	if (y2 == y1)
+		dxdy1 = x2 - x1;
+	else
+		dxdy1 = (float) (x2 - x1) / (float) (y2 - y1);
+
+	if (y3 == y1)
+		dxdy2 = x3 - x1;
+	else
+		dxdy2 = (float) (x3 - x1) / (float) (y3 - y1);
+
+	xa = x1;
+	xb = x1;
+	y = y1;
+
+	for (i = y1; i < y2; i++) {
+		sng_device_line(w->window, gc, (int) xa, (int) y, (int) xb, (int) y);
+		xa += dxdy1;
+		xb += dxdy2;
+		y += 1;
+	}
+
+	if (y2 == y3)
+		dxdy1 = x3 - x2;
+	else
+		dxdy1 = (float) (x3 - x2) / (float) (y3 - y2);
+
+	xa = x2;
+	y = y2;
+	for (i = y2; i <= y3; i++) {
+		sng_device_line(w->window, gc, (int) xa, (int) y, (int) xb, (int) y);
+		xa += dxdy1;
+		xb += dxdy2;
+		y += 1;
+	}
+}
+
+static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
+{
+	struct vertex *v1, *v2, *v3;
+	int x1, y1, x2, y2, x3, y3;
+	int xa, ya, xb, yb, xc, yc;
+
+	ntris++;
+	nlines += 3;
+	v1 = t->v[0];
+	v2 = t->v[1];
+	v3 = t->v[2];
+
+	x1 = (int) (v1->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
+	x2 = (int) (v2->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
+	x3 = (int) (v3->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
+	y1 = (int) (v1->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
+	y2 = (int) (v2->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
+	y3 = (int) (v3->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
+
+	if (is_backface(x1, y1, x2, y2, x3, y3))
+		return;
+
+	/* sort from lowest y to highest y */
+	ya = sng_device_y(y1);
+	yb = sng_device_y(y2);
+	yc = sng_device_y(y3);
+	if (ya <= yb) {
+		if (ya <= yc) {
+			/* order is 1, ... */
+			xa = sng_device_x(x1);
+			if (yb <= yc) {
+				/* order is 1, 2, 3 */
+				xb = sng_device_x(x2);
+				xc = sng_device_x(x3);
+			} else {
+				/* order is 1, 3, 2 */
+				xb = sng_device_x(x3);
+				yb = sng_device_y(y3);
+				xc = sng_device_x(x2);
+				yc = sng_device_y(y2);
+			}
+		} else { /* we know c < a <= b, so order is 3, 1, 2... */
+			xa = sng_device_x(x3);
+			ya = sng_device_y(y3);
+			xb = sng_device_x(x1);
+			yb = sng_device_y(y1);
+			xc = sng_device_x(x2);
+			yc = sng_device_y(y2);
+		}
+	} else {
+		/* a > b */
+		if (yb > yc) { /* a > b >= c, so order is 3, 2, 1 */
+			xa = sng_device_x(x3);
+			ya = sng_device_y(y3);
+			xb = sng_device_x(x2);
+			yb = sng_device_y(y2);
+			xc = sng_device_x(x1);
+			yc = sng_device_y(y1);
+		} else { /* c >= b && b < a */
+			if (ya <= yc) {
+				/* c >= b && b < a && a <= c : 2, 1, 3 */
+				xa = sng_device_x(x2);
+				ya = sng_device_y(y2);
+				xb = sng_device_x(x1);
+				yb = sng_device_y(y1);
+				xc = sng_device_x(x3);
+				yc = sng_device_y(y3);
+			} else {
+				/* a > b && c >=b && c < a: 2, 3, 1 */ 
+				xa = sng_device_x(x2);
+				ya = sng_device_y(y2);
+				xb = sng_device_x(x3);
+				yb = sng_device_y(y3);
+				xc = sng_device_x(x1);
+				yc = sng_device_y(y1);
+			}
+		}
+	}
+	/* now device coord vertices xa, ya, xb, yb, xc, yc are sorted by y value */
+	sng_set_foreground(RED);
+	scan_convert_sorted_triangle(w, gc, xa, ya, xb, yb, xc, yc);
+	sng_set_foreground(BLUE);
+	sng_device_line(w->window, gc, xa, ya, xb, yb); 
+	sng_device_line(w->window, gc, xb, yb, xc, yc); 
+	sng_device_line(w->window, gc, xc, yc, xa, ya); 
+}
+
 void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 {
 	int i;
 
 	for (i = 0; i < e->m->ntriangles; i++)
 		wireframe_render_triangle(w, gc, &e->m->t[i]);
+	nents++;
+}
+
+void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
+{
+	int i;
+
+	for (i = 0; i < e->m->ntriangles; i++) {
+		sng_set_foreground(RED);
+		scan_convert_triangle(w, gc, &e->m->t[i]);
+	}
 	nents++;
 }
 
@@ -162,7 +307,7 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 	}
 }
 
-void wireframe_render_entities(GtkWidget *w, GdkGC *gc)
+void render_entities(GtkWidget *w, GdkGC *gc)
 {
 	int i;
 
@@ -265,11 +410,11 @@ void wireframe_render_entities(GtkWidget *w, GdkGC *gc)
 	for (i = 0; i < nentities; i++)
 		transform_entity(&entity_list[i], &total_transform);
 	for (i = 0; i < nentities; i++)
-		wireframe_render_entity(w, gc, &entity_list[i]);
+		render_entity(w, gc, &entity_list[i]);
 	// printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
-	rx = fmod(rx + 0.3, 360.0);
-	ry = fmod(ry + 0.15, 360.0);
-	rz = fmod(rz + 0.6, 360.0);
+	rx = fmod(rx + 0.03, 360.0);
+	ry = fmod(ry + 0.015, 360.0);
+	rz = fmod(rz + 0.06, 360.0);
 }
 
 void camera_set_pos(float x, float y, float z)
