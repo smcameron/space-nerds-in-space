@@ -234,12 +234,7 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 		}
 	}
 	/* now device coord vertices xa, ya, xb, yb, xc, yc are sorted by y value */
-	sng_set_foreground(RED);
 	scan_convert_sorted_triangle(w, gc, xa, ya, xb, yb, xc, yc);
-	sng_set_foreground(BLUE);
-	sng_device_line(w->window, gc, xa, ya, xb, yb); 
-	sng_device_line(w->window, gc, xb, yb, xc, yc); 
-	sng_device_line(w->window, gc, xc, yc, xa, ya); 
 }
 
 void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
@@ -254,9 +249,18 @@ void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 {
 	int i;
+	float cos_theta;
+	struct mat41 light = { {0, 1, 0, 1} };
+	struct mat41 normal;
 
 	for (i = 0; i < e->m->ntriangles; i++) {
-		sng_set_foreground(RED);
+		normal = *(struct mat41 *) &e->m->t[i].n.wx;
+		normalize_vector(&normal, &normal);
+		normalize_vector(&light, &light);
+		cos_theta = mat41_dot_mat41(&light, &normal);
+		cos_theta = (cos_theta + 1.0) / 2.0;
+		sng_set_foreground((int) fmod((cos_theta * 256.0), 255.0) + GRAY);
+		// sng_set_foreground(RED);
 		scan_convert_triangle(w, gc, &e->m->t[i]);
 	}
 	nents++;
