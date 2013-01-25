@@ -28,6 +28,8 @@
 #define NSPARKCOLORS 25         /* 25 shades from yellow to red for the sparks */
 #define NRAINBOWSTEPS (16)
 #define NRAINBOWCOLORS (NRAINBOWSTEPS*3)
+#define GRAY (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS)
+#define NSHADESOFGRAY 256
 
 typedef void line_drawing_function(GdkDrawable *drawable,
 	GdkGC *gc, gint x1, gint y1, gint x2, gint y2);

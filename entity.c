@@ -412,9 +412,9 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	for (i = 0; i < nentities; i++)
 		render_entity(w, gc, &entity_list[i]);
 	// printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
-	rx = fmod(rx + 0.03, 360.0);
-	ry = fmod(ry + 0.015, 360.0);
-	rz = fmod(rz + 0.06, 360.0);
+	rx = fmod(rx + 0.3, 360.0);
+	ry = fmod(ry + 0.15, 360.0);
+	rz = fmod(rz + 0.6, 360.0);
 }
 
 void camera_set_pos(float x, float y, float z)

@@ -8,7 +8,7 @@
 
 #include "bline.h"
 
-GdkColor huex[NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS]; 
+GdkColor huex[NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY]; 
 
 extern struct my_vect_obj **gamefont[];
 extern int font_scale[];
@@ -338,7 +338,12 @@ void sng_setup_colors(GtkWidget *w)
 	gdk_color_parse("MAGENTA", &huex[MAGENTA]);
 	gdk_color_parse("darkred", &huex[DARKRED]);
 	gdk_color_parse("orange", &huex[AMBER]);
-	for (i = 0; i < NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS; i++)
+	for (i = 0; i < NSHADESOFGRAY; i++) {
+		huex[GRAY + i].red = (i * 32767 * 2) / 256;
+		huex[GRAY + i].green = (i * 32767 * 2) / 256;
+		huex[GRAY + i].blue = (i * 32767 * 2) / 256;
+	}
+	for (i = 0; i < NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY; i++)
                 gdk_colormap_alloc_color(gtk_widget_get_colormap(w),
 				&huex[i], FALSE, FALSE);
 	gtk_widget_modify_bg(w, GTK_STATE_NORMAL, &huex[BLACK]);
