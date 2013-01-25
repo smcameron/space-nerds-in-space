@@ -66,6 +66,7 @@ GLOBAL void normalize_vector(struct mat41 *v, struct mat41 *output);
 GLOBAL void mat41_cross_mat41(struct mat41 *v1, struct mat41 *v2, struct mat41 *output);
 GLOBAL void print44(struct mat44 *m);
 GLOBAL void print41(struct mat41 *m);
+GLOBAL float mat41_dot_mat41(struct mat41 *m1, struct mat41 *m2);
 #undef GLOBAL
 #endif
 

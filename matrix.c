@@ -241,6 +241,11 @@ void print41(struct mat41 *m)
 	printf("%lf %lf %lf %lf\n", m->m[0], m->m[1], m->m[2], m->m[3]);
 }
 
+float mat41_dot_mat41(struct mat41 *m1, struct mat41 *m2)
+{
+	return m1->m[0] * m2->m[0] + m1->m[1] * m2->m[1] + m1->m[2] * m2->m[2];
+}
+
 #ifdef TEST_MATRIX
 #include <stdio.h>
 #include <math.h>
