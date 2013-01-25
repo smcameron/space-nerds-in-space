@@ -304,6 +304,17 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 		m2->m[0] /= m2->m[3];
 		m2->m[1] /= m2->m[3];
 		m2->m[2] /= m2->m[3];
+
+	}
+	
+	for (i = 0; i < e->m->ntriangles; i++) {
+		m1 = (struct mat41 *) &e->m->t[i].n.x;
+		m2 = (struct mat41 *) &e->m->t[i].n.wx;
+		mat44_x_mat41(&total_transform, m1, m2);
+		/* normalize... */
+		m2->m[0] /= m2->m[3];
+		m2->m[1] /= m2->m[3];
+		m2->m[2] /= m2->m[3];
 	}
 }
 
