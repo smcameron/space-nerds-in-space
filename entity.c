@@ -71,11 +71,20 @@ struct entity *add_entity(struct mesh *m, float x, float y, float z)
 	return NULL;
 }
 
+static int is_backface(int x1, int y1, int x2, int y2, int x3, int y3)
+{
+	int twicearea;
+
+	twicearea =	(x1 * y2 - x2 * y1) +
+			(x2 * y3 - x3 * y2) +
+			(x3 * y1 - x1 * y3);
+	return twicearea >= 0;
+}
+
 void wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 {
 	struct vertex *v1, *v2, *v3;
 	int x1, y1, x2, y2, x3, y3;
-	int twicearea;
 
 	ntris++;
 	nlines += 3;
@@ -90,14 +99,7 @@ void wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 	y2 = (int) (v2->wy * 300) + 300;
 	y3 = (int) (v3->wy * 300) + 300;
 
-	/* Backface culling.
-	 * Figure if triangle is clockwise, or counter clockwise.
-	 * Don't render it if it's a facing away from us.
-	 */
-	twicearea =	(x1 * y2 - x2 * y1) +
-			(x2 * y3 - x3 * y2) +
-			(x3 * y1 - x1 * y3);
-	if (twicearea >= 0)
+	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
 
 	sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
