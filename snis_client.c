@@ -2062,7 +2062,7 @@ static void show_mainscreen(GtkWidget *w)
 
 	camera_set_parameters((float) 5, (float) 30, (float) 16, (float) 12);
 	sng_set_foreground(GREEN);
-	render_entities(w, gc);
+	wireframe_render_entities(w, gc);
 }
 
 static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)

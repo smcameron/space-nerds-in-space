@@ -71,7 +71,7 @@ struct entity *add_entity(struct mesh *m, float x, float y, float z)
 	return NULL;
 }
 
-void render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
+void wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 {
 	struct vertex *v1, *v2, *v3;
 	int x1, y1, x2, y2, x3, y3;
@@ -105,12 +105,12 @@ void render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 	sng_current_draw_line(w->window, gc, x3, y3, x1, y1); 
 }
 
-void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
+void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 {
 	int i;
 
 	for (i = 0; i < e->m->ntriangles; i++)
-		render_triangle(w, gc, &e->m->t[i]);
+		wireframe_render_triangle(w, gc, &e->m->t[i]);
 	nents++;
 }
 
@@ -159,7 +159,7 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 	}
 }
 
-void render_entities(GtkWidget *w, GdkGC *gc)
+void wireframe_render_entities(GtkWidget *w, GdkGC *gc)
 {
 	int i;
 
@@ -262,7 +262,7 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	for (i = 0; i < nentities; i++)
 		transform_entity(&entity_list[i], &total_transform);
 	for (i = 0; i < nentities; i++)
-		render_entity(w, gc, &entity_list[i]);
+		wireframe_render_entity(w, gc, &entity_list[i]);
 	// printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
 	rx = fmod(rx + 0.3, 360.0);
 	ry = fmod(ry + 0.15, 360.0);
