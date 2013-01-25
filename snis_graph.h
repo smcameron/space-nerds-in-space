@@ -88,5 +88,9 @@ SNG_GLOBAL void sng_set_gc(GdkGC *gc);
 SNG_GLOBAL void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r);
 SNG_GLOBAL void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
 			gint x1, gint y1, gint x2, gint y2, int color);
+
+SNG_GLOBAL int sng_device_x(int x);
+SNG_GLOBAL int sng_device_y(int y);
+
 #undef SNG_GLOBAL
 #endif

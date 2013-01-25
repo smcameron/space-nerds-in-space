@@ -29,6 +29,16 @@ void sng_set_scale(float xscale, float yscale)
 	sgc.yscale = yscale;
 }
 
+int sng_device_x(int x)
+{
+	return (int) (x * sgc.xscale);
+}
+
+int sng_device_y(int y)
+{
+	return (int) (y * sgc.yscale);
+}
+
 void sng_scaled_line(GdkDrawable *drawable,
         GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
 {
