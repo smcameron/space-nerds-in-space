@@ -2060,7 +2060,8 @@ static void show_mainscreen(GtkWidget *w)
 	camera_set_pos(0.0, 0.0, -10.0);
 	camera_look_at(0.0, 0.0, 10.0);
 
-	camera_set_parameters((float) 5, (float) 30, (float) 16, (float) 12);
+	camera_set_parameters((float) 5, (float) 30, (float) 16, (float) 12,
+				SCREEN_WIDTH, SCREEN_HEIGHT);
 	sng_set_foreground(GREEN);
 	wireframe_render_entities(w, gc);
 }

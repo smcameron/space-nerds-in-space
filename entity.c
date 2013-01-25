@@ -49,6 +49,7 @@ struct camera_info {
 	float x, y, z;		/* position of camera */
 	float lx, ly, lz;	/* where camera is looking */
 	float near, far, width, height;
+	int xvpixels, yvpixels;
 } camera;
 
 static int nentities = 0;
@@ -92,12 +93,12 @@ void wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 	v2 = t->v[1];
 	v3 = t->v[2];
 
-	x1 = (int) (v1->wx * 400) + 400;
-	x2 = (int) (v2->wx * 400) + 400;
-	x3 = (int) (v3->wx * 400) + 400;
-	y1 = (int) (v1->wy * 300) + 300;
-	y2 = (int) (v2->wy * 300) + 300;
-	y3 = (int) (v3->wy * 300) + 300;
+	x1 = (int) (v1->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
+	x2 = (int) (v2->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
+	x3 = (int) (v3->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
+	y1 = (int) (v1->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
+	y2 = (int) (v2->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
+	y3 = (int) (v3->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
 
 	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
@@ -285,11 +286,14 @@ void camera_look_at(float x, float y, float z)
 	camera.lz = z;
 }
 
-void camera_set_parameters(float near, float far, float width, float height)
+void camera_set_parameters(float near, float far, float width, float height,
+				int xvpixels, int yvpixels)
 {
 	camera.near = -near;
 	camera.far = -far;
 	camera.width = width;
 	camera.height = height;	
+	camera.xvpixels = xvpixels;
+	camera.yvpixels = yvpixels;
 }
 

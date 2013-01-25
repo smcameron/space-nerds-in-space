@@ -34,6 +34,7 @@ GLOBAL void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e);
 GLOBAL void wireframe_render_entities(GtkWidget *w, GdkGC *gc);
 GLOBAL void camera_set_pos(float x, float y, float z);
 GLOBAL void camera_look_at(float x, float y, float z);
-GLOBAL void camera_set_parameters(float near, float far, float width, float height);
+GLOBAL void camera_set_parameters(float near, float far, float width, float height,
+					int xvpixels, int yvpixels);
 
 #endif	
