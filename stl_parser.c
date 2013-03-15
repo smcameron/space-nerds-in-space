@@ -52,8 +52,10 @@ static int count_facets(char *filename)
 	if (fd < 0)
 		return fd;
 	rc = fstat(fd, &buf);
-	if (rc < 0)
+	if (rc < 0) {
+		close(fd);
 		return rc;
+	}
 	tempstr = malloc(buf.st_size + 1);
 	read(fd, tempstr, buf.st_size);
 	tempstr[buf.st_size] = '\0';
@@ -189,8 +191,10 @@ struct mesh *read_stl_file(char *file)
 		return NULL;
 	}
 	facetcount = count_facets(file);
-	if (facetcount <= 0)
+	if (facetcount <= 0) {
+		fclose(f);
 		return NULL;
+	}
 	my_mesh = malloc(sizeof(*my_mesh));
 	my_mesh->nvertices = 0;
 	my_mesh->ntriangles = 0;
@@ -202,9 +206,11 @@ struct mesh *read_stl_file(char *file)
 		if (rc < 0)
 			goto error;
 	}
+	fclose(f);
 	return my_mesh;
 
 error:
+	fclose(f);
 	free_mesh(my_mesh);
 	return NULL;
 }
