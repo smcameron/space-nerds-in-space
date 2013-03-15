@@ -157,6 +157,17 @@ static int add_facet(FILE *f, struct mesh *m, int *linecount)
 	return 0;
 }
 
+void free_mesh(struct mesh * m)
+{
+	if (!m)
+		return;
+	if (m->t)
+		free(m->t);
+	if (m->v);
+		free(m->v);
+	free(m);
+}
+
 struct mesh *read_stl_file(char *file)
 {
 	FILE *f;
@@ -194,9 +205,7 @@ struct mesh *read_stl_file(char *file)
 	return my_mesh;
 
 error:
-	free(my_mesh->t);
-	free(my_mesh->v);
-	free(my_mesh);
+	free_mesh(my_mesh);
 	return NULL;
 }
 
@@ -225,6 +234,8 @@ int main(int argc, char *argv[])
 				s->nvertices, s->ntriangles);
 	}
 	print_mesh(s);
+	free_mesh(s);
+	s = NULL;
 	return 0;
 }
 #endif
