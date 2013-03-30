@@ -29,3 +29,7 @@ slider-noise.ogg:
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
 COPYRIGHT=2008 by Stephen M. Cameron
 
+warpdrive.ogg:
+LICENSE=Creative Commons Attribution 3.0 Unported (CC BY 3.0) http://creativecommons.org/licenses/by/3.0/
+COPYRIGHT=2011 by freesound.org user "vedas" and fressound.org user "owyheesound".
+

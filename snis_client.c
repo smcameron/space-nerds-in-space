@@ -1320,8 +1320,10 @@ static int process_warp_limbo_packet(void)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	packed_buffer_extract(&pb, "h", &value);
-	if (value >= 0 && value <= 30 * frame_rate_hz)
+	if (value >= 0 && value <= 40 * frame_rate_hz) { 
 		warp_limbo_countdown = value;
+		wwviaudio_add_sound(WARPDRIVE_SOUND);
+	}
 	return 0;
 } 
 
@@ -4577,6 +4579,7 @@ static void read_sound_clips(void)
 	wwviaudio_read_ogg_clip(SCIENCE_DATA_ACQUIRED_SOUND, "share/science-data-acquired.ogg");
 	wwviaudio_read_ogg_clip(SCIENCE_PROBE_SOUND, "share/science-probe.ogg");
 	wwviaudio_read_ogg_clip(TTY_CHATTER_SOUND, "share/tty-chatter.ogg");
+	wwviaudio_read_ogg_clip(WARPDRIVE_SOUND, "share/warpdrive.ogg");
 	printf("Done.\n");
 }
 
