@@ -110,6 +110,7 @@ float xscale_screen = 1.0;
 float yscale_screen= 1.0;
 int real_screen_width;
 int real_screen_height;
+int warp_limbo_countdown = 0;
 
 int displaymode = DISPLAYMODE_LOBBYSCREEN;
 
@@ -1306,6 +1307,24 @@ static int process_update_torpedo_packet(void)
 	return (rc < 0);
 } 
 
+static int process_warp_limbo_packet(void)
+{
+	unsigned char buffer[sizeof(struct warp_limbo_packet)];
+	struct packed_buffer pb;
+	int rc;
+	uint16_t value;
+
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct warp_limbo_packet) -
+					sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "h", &value);
+	if (value >= 0 && value <= 30 * frame_rate_hz)
+		warp_limbo_countdown = value;
+	return 0;
+} 
+
 static int process_update_laser_packet(void)
 {
 	unsigned char buffer[100];
@@ -1728,6 +1747,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_UPDATE_TORPEDO:
 			/* printf("processing update ship...\n"); */
 			rc = process_update_torpedo_packet();
+			if (rc != 0)
+				goto protocol_error;
+			break;
+		case OPCODE_WARP_LIMBO:
+			rc = process_warp_limbo_packet();
 			if (rc != 0)
 				goto protocol_error;
 			break;
@@ -4023,6 +4047,23 @@ static void show_debug(GtkWidget *w)
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 10, SCREEN_HEIGHT - 10); 
 }
 
+static void show_warp_limbo_screen(GtkWidget *w)
+{
+	int i;
+	//int x1, y1, x2, y2;
+	int y1, y2;
+
+	sng_set_foreground(WHITE);
+
+	for (i = 0; i < 100; i++) {
+		// x1 = snis_randn(SCREEN_WIDTH);
+		// x2 = snis_randn(SCREEN_WIDTH);
+		y1 = snis_randn(SCREEN_HEIGHT + 50);
+		y2 = y1 - 50; // snis_randn(SCREEN_HEIGHT);
+		snis_draw_line(w->window, gc, 0, y1, SCREEN_WIDTH, y2);
+	}
+}
+
 struct network_setup_ui {
 	struct button *start_lobbyserver;
 	struct button *start_gameserver;
@@ -4320,6 +4361,12 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 #endif
 
 	make_science_forget_stuff();
+
+	if (warp_limbo_countdown) {
+		warp_limbo_countdown--;
+		show_warp_limbo_screen(w);
+		return 0;
+	}
 
 	if (displaymode < DISPLAYMODE_FONTTEST) {
 		if (my_ship_id == UNKNOWN_ID)

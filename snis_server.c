@@ -1483,6 +1483,15 @@ static int process_request_laser_wavelength(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.phaser_wavelength), no_limit); 
 }
 
+static void send_warp_limbo_packet(struct game_client *c, uint16_t value)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct warp_limbo_packet));
+	packed_buffer_append(pb, "hh", OPCODE_WARP_LIMBO, value);
+	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_SCIENCE);
+}
+
 static int process_engage_warp(struct game_client *c)
 {
 	unsigned char buffer[10];
@@ -1512,6 +1521,7 @@ static int process_engage_warp(struct game_client *c)
 	o->y = o->y + wfactor * -cos(o->heading);
 	normalize_coords(o);
 	pthread_mutex_unlock(&universe_mutex);
+	send_warp_limbo_packet(c, 300);
 	return 0;
 }
 
