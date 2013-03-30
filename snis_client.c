@@ -3738,6 +3738,12 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 		}
 
 		sng_set_foreground(LIMEGREEN);
+		if (o->sdata.shield_strength < 64) {
+			sng_set_foreground(RED);
+			if ((timer & 0x07) < 4)
+				goto skip_data;
+		}
+
 		/* TODO, make sample count vary based on sensor power,damage */
 		probes = (30 * 10) / (bw / 2 + ((dist * 2.0) / XKNOWN_DIM));
 		initial_noise = (int) ((hypot((float) bw, 256.0 - pwr) / 256.0) * 20.0);
@@ -3781,6 +3787,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 			snis_draw_dotted_vline(w->window, gc, sx, sy1, sy2, 4);
 		}
 	}
+skip_data:
 	sng_set_foreground(GREEN);
 	sng_abs_xy_draw_string(w, gc, "10", NANO_FONT, x1, y2 + 10);
 	sng_abs_xy_draw_string(w, gc, "20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 10);
