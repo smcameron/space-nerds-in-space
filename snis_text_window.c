@@ -76,6 +76,7 @@ struct text_window *text_window_init(int x, int y, int w,
 		memset(tw->text[i], 0, 80);
 	}
 	tw->lineheight = 20;
+	tw->first_entry = 0;
 	tw->last_entry = 0;
 	tw->top_line = 0;
 	tw->h = tw->lineheight * tw->visible_lines + 10;
