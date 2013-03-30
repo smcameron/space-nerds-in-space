@@ -4190,23 +4190,24 @@ static void init_net_setup_ui(void)
 	memset(net_setup_ui.lobbyname, 0, sizeof(net_setup_ui.lobbyname));
 	strcpy(net_setup_ui.lobbyname, "localhost");
 	strcpy(net_setup_ui.servername, "");
+	y += 50;
+	net_setup_ui.lobbyservername =
+		snis_text_input_box_init(20, y, 30, 750, GREEN, TINY_FONT,
+					net_setup_ui.lobbyname, 50, &timer,
+					lobby_hostname_entered, NULL);
+	y += 50;
 	net_setup_ui.start_lobbyserver =	
 		snis_button_init(20, y, 300, 25, "START LOBBY SERVER", GREEN,
 			TINY_FONT, start_lobbyserver_button_pressed, NULL);
-	y += 30;
+	y += 100;
+	net_setup_ui.gameservername =
+		snis_text_input_box_init(20, y, 30, 750, GREEN, TINY_FONT,
+					net_setup_ui.servername, 50, &timer,
+					gameserver_hostname_entered, NULL);
+	y += 50;
 	net_setup_ui.start_gameserver = 
 		snis_button_init(20, y, 300, 25, "START GAME SERVER", RED,
 			TINY_FONT, start_gameserver_button_pressed, NULL);
-	y += 100;
-	net_setup_ui.lobbyservername =
-		snis_text_input_box_init(40, y, 30, 750, GREEN, TINY_FONT,
-					net_setup_ui.lobbyname, 50, &timer,
-					lobby_hostname_entered, NULL);
-	y += 100;
-	net_setup_ui.gameservername =
-		snis_text_input_box_init(40, y, 30, 750, GREEN, TINY_FONT,
-					net_setup_ui.servername, 50, &timer,
-					gameserver_hostname_entered, NULL);
 	y += 100;
 	net_setup_ui.shipname_box =
 		snis_text_input_box_init(150, y, 30, 250, GREEN, TINY_FONT,
@@ -4236,10 +4237,10 @@ static void show_network_setup(GtkWidget *w)
 	show_common_screen(w, "SPACE NERDS IN SPACE");
 	sng_set_foreground(GREEN);
 	sng_abs_xy_draw_string(w, gc, "NETWORK SETUP", SMALL_FONT, 25, 10 + LINEHEIGHT * 2);
-	sng_abs_xy_draw_string(w, gc, "LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, 25, 210);
-	sng_abs_xy_draw_string(w, gc, "GAME SERVER NICKNAME", TINY_FONT, 25, 310);
-	sng_abs_xy_draw_string(w, gc, "SHIP NAME", TINY_FONT, 20, 450);
-	sng_abs_xy_draw_string(w, gc, "PASSWORD", TINY_FONT, 20, 500);
+	sng_abs_xy_draw_string(w, gc, "LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, 25, 130);
+	sng_abs_xy_draw_string(w, gc, "GAME SERVER NICKNAME", TINY_FONT, 25, 280);
+	sng_abs_xy_draw_string(w, gc, "SHIP NAME", TINY_FONT, 20, 470);
+	sng_abs_xy_draw_string(w, gc, "PASSWORD", TINY_FONT, 20, 520);
 
 	sanitize_string(net_setup_ui.servername);
 	sanitize_string(net_setup_ui.lobbyname);
