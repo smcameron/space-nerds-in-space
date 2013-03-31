@@ -1224,11 +1224,12 @@ static void show_lobbyscreen(GtkWidget *w)
 			sprintf(msg, "%s", lobby_game_server[i].location);
 			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 650, 100 + i * LINEHEIGHT);
 		}
-		if (lobby_selected_server != -1) {
-			sng_set_foreground(WHITE);
-			snis_draw_rectangle(w->window, gc, 0, 200, 520, 400, LINEHEIGHT * 2);
-			sng_abs_xy_draw_string(w, gc, "CONNECT TO SERVER", TINY_FONT, 280, 520 + LINEHEIGHT);
-		}
+		if (lobby_selected_server != -1)
+			sng_set_foreground(GREEN);
+		else
+			sng_set_foreground(RED);
+		snis_draw_rectangle(w->window, gc, 0, 250, 520, 300, LINEHEIGHT * 2);
+		sng_abs_xy_draw_string(w, gc, "CONNECT TO SERVER", TINY_FONT, 280, 520 + LINEHEIGHT);
 	}
 }
 
