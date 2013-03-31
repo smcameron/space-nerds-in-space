@@ -4063,9 +4063,17 @@ done_drawing_item:
 	return;
 }
 
-struct demon_ui {
-	
+static struct demon_ui {
+	float ux1,uy1,ux2,uy2;	
 } demon_ui;
+
+static void init_demon_ui()
+{
+	demon_ui.ux1 = 0;
+	demon_ui.uy1 = 0;
+	demon_ui.ux2 = UNIVERSE_DIM;
+	demon_ui.uy2 = UNIVERSE_DIM;
+}
 
 static void show_demon(GtkWidget *w)
 {
@@ -4808,6 +4816,7 @@ int main(int argc, char *argv[])
 	init_weapons_ui();
 	init_science_ui();
 	init_comms_ui();
+	init_demon_ui();
 	init_net_setup_ui();
 
 	gtk_main ();
