@@ -764,7 +764,7 @@ enum keyaction { keynone, keydown, keyup, keyleft, keyright,
 		key7, key8, keysuicide, keyfullscreen, keythrust, 
 		keysoundeffects, keymusic, keyquit, keytogglemissilealarm,
 		keypausehelp, keyreverse, keyf1, keyf2, keyf3, keyf4, keyf5,
-		keyf6, keyf7, keyonscreen
+		keyf6, keyf7, keyf8, keyonscreen
 };
 
 enum keyaction keymap[256];
@@ -831,6 +831,7 @@ void init_keymap()
 	ffkeymap[GDK_F5 & 0x00ff] = keyf5;
 	ffkeymap[GDK_F6 & 0x00ff] = keyf6;
 	ffkeymap[GDK_F7 & 0x00ff] = keyf7;
+	ffkeymap[GDK_F8 & 0x00ff] = keyf8;
 
 	ffkeymap[GDK_F11 & 0x00ff] = keyfullscreen;
 }
@@ -1113,6 +1114,14 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			break;
 		if (role & ROLE_DEBUG) {
 			displaymode = DISPLAYMODE_DEBUG;
+			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		}
+		break;
+	case keyf8:
+		if (displaymode >= DISPLAYMODE_FONTTEST)
+			break;
+		if (role & ROLE_DEMON) {
+			displaymode = DISPLAYMODE_DEMON;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
@@ -1961,6 +1970,8 @@ int role_to_displaymode(uint32_t role)
 				return DISPLAYMODE_COMMS;
 			case ROLE_DEBUG:
 				return DISPLAYMODE_DEBUG;
+			case ROLE_DEMON:
+				return DISPLAYMODE_DEMON;
 			default:
 				break;
 			}
@@ -4026,6 +4037,10 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
+		sng_set_foreground(RED);
+		if (timer & 0x02)
+			goto done_drawing_item;
+		break;
 	case OBJTYPE_SHIP2:
 		if (o->id == my_ship_id)
 			sng_set_foreground(GREEN);
@@ -4043,9 +4058,16 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	}
 	snis_draw_line(w->window, gc, x1, y1, x2, y2);
 	snis_draw_line(w->window, gc, x1, y2, x2, y1);
+
+done_drawing_item:
+	return;
 }
 
-static void show_debug(GtkWidget *w)
+struct demon_ui {
+	
+} demon_ui;
+
+static void show_demon(GtkWidget *w)
 {
 	int x, y, i, ix, iy;
 	const char *letters = "ABCDEFGHIJK";
@@ -4054,7 +4076,7 @@ static void show_debug(GtkWidget *w)
 	int yoffset = 10;
 	char buffer[100];
 
-	show_common_screen(w, "Debug");
+	show_common_screen(w, "DEMON");
 
 	if (go[my_ship_oid].alive > 0)
 		sng_set_foreground(GREEN);
@@ -4128,6 +4150,7 @@ struct network_setup_ui {
 	struct button *role_comms;
 	struct button *role_debug;
 	struct button *role_sound;
+	struct button *role_demon;
 	int role_main_v;
 	int role_nav_v;
 	int role_weap_v;
@@ -4136,6 +4159,7 @@ struct network_setup_ui {
 	int role_comms_v;
 	int role_debug_v;
 	int role_sound_v;
+	int role_demon_v;
 	char lobbyname[60];
 	char servername[60];
 	char shipname[22];
@@ -4223,6 +4247,7 @@ static void connect_to_lobby_button_pressed()
 	role |= (ROLE_COMMS * !!net_setup_ui.role_comms_v);
 	role |= (ROLE_DEBUG * !!net_setup_ui.role_debug_v);
 	role |= (ROLE_SOUNDSERVER * !!net_setup_ui.role_sound_v);
+	role |= (ROLE_DEMON * !!net_setup_ui.role_demon_v);
 	if (role == 0)
 		role = ROLE_ALL;
 	connect_to_lobby();
@@ -4263,6 +4288,8 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	nsu->role_comms = init_net_role_button(x, &y, "COMMUNICATIONS ROLE", &nsu->role_comms_v);
 	nsu->role_debug = init_net_role_button(x, &y, "DEBUG ROLE", &nsu->role_debug_v);
 	nsu->role_sound = init_net_role_button(x, &y, "SOUND SERVER ROLE", &nsu->role_sound_v);
+	nsu->role_demon = init_net_role_button(x, &y, "DEMON MODE",
+							&nsu->role_demon_v);
 	ui_add_button(nsu->role_main, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_nav, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_weap, DISPLAYMODE_NETWORK_SETUP);
@@ -4271,6 +4298,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	ui_add_button(nsu->role_comms, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_debug, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_sound, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->role_demon, DISPLAYMODE_NETWORK_SETUP);
 }
 
 static void ui_add_text_input_box(struct snis_text_input_box *t, int active_displaymode);
@@ -4468,7 +4496,8 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_comms(w);
 		break;
 	case DISPLAYMODE_DEBUG:
-		show_debug(w);
+	case DISPLAYMODE_DEMON:
+		show_demon(w);
 		break;
 	case DISPLAYMODE_NETWORK_SETUP:
 		show_network_setup(w);
