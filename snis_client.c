@@ -180,6 +180,7 @@ void init_trig_arrays(void)
 	}
 }
 
+#define MAX_LOBBY_TRIES 3
 static void *connect_to_lobby_thread(__attribute__((unused)) void *arg)
 {
 	int i, sock, rc, game_server_count;
@@ -190,7 +191,7 @@ try_again:
 
 	/* Loop, trying to connect to the lobby server... */
 	strcpy(lobbyerror, "");
-	while (1) {
+	while (1 && lobby_count < MAX_LOBBY_TRIES) {
 		sock = ssgl_gameclient_connect_to_lobby(lobbyhost);
 		lobby_count++;
 		if (sock >= 0) {
@@ -204,6 +205,13 @@ try_again:
 				gai_strerror(sock), sock);
 		ssgl_sleep(5);
 	}
+
+	if (lobby_socket < 0) {
+		displaymode = DISPLAYMODE_NETWORK_SETUP;
+		lobby_count = 0;
+		goto outta_here;
+	}
+
 	strcpy(lobbyerror, "");
 
 	/* Ok, we've connected to the lobby server... */
@@ -229,6 +237,7 @@ try_again:
 		ssgl_sleep(5);  /* just a thread safe sleep. */
 	} while (!done_with_lobby);
 
+outta_here:
 	/* close connection to the lobby */
 	shutdown(sock, SHUT_RDWR);
 	close(sock);
@@ -1173,8 +1182,12 @@ static void show_lobbyscreen(GtkWidget *w)
 		sng_abs_xy_draw_string(w, gc, "Space Nerds", BIG_FONT, 80, 200); 
 		sng_abs_xy_draw_string(w, gc, "In Space", BIG_FONT, 180, 320); 
 		sng_abs_xy_draw_string(w, gc, "Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, 255, 550); 
-		sprintf(msg, "Connecting to lobby... tried %d times.",
-			lobby_count);
+		if (lobby_count >= MAX_LOBBY_TRIES)
+			sprintf(msg, "Giving up on lobby... tried %d times.",
+				lobby_count);
+		else
+			sprintf(msg, "Connecting to lobby... tried %d times.",
+				lobby_count);
 		sng_abs_xy_draw_string(w, gc, msg, SMALL_FONT, 100, 400);
 		sng_abs_xy_draw_string(w, gc, lobbyerror, NANO_FONT, 100, 430);
 	} else {
@@ -4163,12 +4176,14 @@ static void start_gameserver_button_pressed()
 
 static void connect_to_lobby_button_pressed()
 {
+	printf("connect to lobby pressed\n");
 	/* These must be set to connect to the lobby... */
 	if (strcmp(net_setup_ui.lobbyname, "") == 0 ||
 		strcmp(net_setup_ui.shipname, "") == 0 ||
 		strcmp(net_setup_ui.password, "") == 0)
 		return;
 
+	printf("connecting to lobby...\n");
 	displaymode = DISPLAYMODE_LOBBYSCREEN;
 	lobbyhost = net_setup_ui.lobbyname;
 	shipname = net_setup_ui.shipname;
