@@ -2221,6 +2221,8 @@ static int add_new_player(struct game_client *c)
 		nbridges++;
 		
 		pthread_mutex_unlock(&universe_mutex);
+	} else {
+		c->ship_index = lookup_by_id(c->shipid);
 	}
 	queue_up_client_id(c);
 	return 0;
