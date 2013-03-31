@@ -112,7 +112,7 @@ int real_screen_width;
 int real_screen_height;
 int warp_limbo_countdown = 0;
 
-int displaymode = DISPLAYMODE_LOBBYSCREEN;
+static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 
 struct client_network_stats {
 	uint64_t bytes_sent;
@@ -191,7 +191,7 @@ try_again:
 
 	/* Loop, trying to connect to the lobby server... */
 	strcpy(lobbyerror, "");
-	while (1 && lobby_count < MAX_LOBBY_TRIES) {
+	while (1 && lobby_count < MAX_LOBBY_TRIES && displaymode == DISPLAYMODE_LOBBYSCREEN) {
 		sock = ssgl_gameclient_connect_to_lobby(lobbyhost);
 		lobby_count++;
 		if (sock >= 0) {
@@ -1170,6 +1170,23 @@ static void show_introscreen(GtkWidget *w)
 int lobbylast1clickx = -1;
 int lobbylast1clicky = -1;
 int lobby_selected_server = -1;
+static struct lobby_ui {
+	struct button *lobby_cancel_button;
+} lobby_ui;
+
+static void lobby_cancel_button_pressed()
+{
+	printf("lobby cancel button pressed\n");
+	displaymode = DISPLAYMODE_NETWORK_SETUP;
+	lobby_selected_server = -1;
+	lobby_count = 0;
+	if (lobby_socket >= 0) {
+		shutdown(lobby_socket, SHUT_RDWR);
+		close(lobby_socket);
+		lobby_socket = -1;
+	}
+}
+
 static void show_lobbyscreen(GtkWidget *w)
 {
 	char msg[100];
@@ -1228,6 +1245,7 @@ static void show_lobbyscreen(GtkWidget *w)
 			sng_set_foreground(GREEN);
 		else
 			sng_set_foreground(RED);
+		/* This should be a real button, but I'm too lazy to fix it now. */
 		snis_draw_rectangle(w->window, gc, 0, 250, 520, 300, LINEHEIGHT * 2);
 		sng_abs_xy_draw_string(w, gc, "CONNECT TO SERVER", TINY_FONT, 280, 520 + LINEHEIGHT);
 	}
@@ -3258,6 +3276,13 @@ static void ui_add_text_input_box(struct snis_text_input_box *t, int active_disp
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
+static void init_lobby_ui()
+{
+	lobby_ui.lobby_cancel_button = snis_button_init(650, 520, 100, LINEHEIGHT * 2,
+			"CANCEL", GREEN, NANO_FONT, lobby_cancel_button_pressed, NULL);
+	ui_add_button(lobby_ui.lobby_cancel_button, DISPLAYMODE_LOBBYSCREEN);
+}
+
 static double sample_phaserbanks(void);
 static double sample_phaser_wavelength(void);
 static void init_weapons_ui(void)
@@ -4524,7 +4549,7 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 		lobbylast1clickx = (int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH);
 		lobbylast1clicky = (int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT);
 		
-		return TRUE;
+		break;
 	case DISPLAYMODE_SCIENCE:
 		science_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
 				(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
@@ -4748,6 +4773,7 @@ int main(int argc, char *argv[])
 	text_window_set_chatter_sound(TTY_CHATTER_SOUND);
 	text_window_set_timer(&timer);
 	init_trig_arrays();
+	init_lobby_ui();
 	init_nav_ui();
 	init_engineering_ui();
 	init_weapons_ui();
