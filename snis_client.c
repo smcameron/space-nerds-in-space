@@ -4044,7 +4044,11 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		return;
 
 	x = ux_to_demonsx(o->x);
+	if (x < 0 || x > SCREEN_WIDTH)
+		return;
 	y = uy_to_demonsy(o->y);
+	if (y < 0 || y > SCREEN_HEIGHT)
+		return;
 	x1 = x - 1;
 	y2 = y + 1;
 	y1 = y - 1;
