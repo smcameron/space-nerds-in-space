@@ -4061,6 +4061,28 @@ static int demon_id_selected(uint32_t id)
 	return 0;
 }
 
+static void demon_select(uint32_t id)
+{
+	demon_ui.selected_id[demon_ui.nselected] = id;
+	demon_ui.nselected++;
+}
+
+static void demon_deselect(uint32_t id)
+{
+	int i;
+	for (i = 0; i < demon_ui.nselected; i++) {
+		if (demon_ui.selected_id[i] == id) {
+			if (i == demon_ui.nselected - 1) {
+				demon_ui.nselected--;
+				return;
+			}
+			demon_ui.nselected--;
+			demon_ui.selected_id[i] = demon_ui.selected_id[demon_ui.nselected];
+			return;
+		}
+	}
+}
+
 static void demon_button_press(gdouble x, gdouble y)
 {
 	int i;
@@ -4077,16 +4099,15 @@ static void demon_button_press(gdouble x, gdouble y)
 		int sx, sy;
 		struct snis_entity *o = &go[i];
 
-		if (demon_id_selected(o->id))
-			continue;
-
 		sx = ux_to_demonsx(o->x);
 		sy = uy_to_demonsy(o->y);
 		dist2 = (sx - x) * (sx - x) + (sy - y) * (sy - y);
 		if (dist2 > 50)
 			continue;
-		demon_ui.selected_id[demon_ui.nselected] = o->id;
-		demon_ui.nselected++;
+		if (demon_id_selected(o->id))
+			demon_deselect(o->id);
+		else
+			demon_select(o->id);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
