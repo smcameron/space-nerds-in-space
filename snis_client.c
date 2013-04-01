@@ -4021,6 +4021,21 @@ static void show_comms(GtkWidget *w)
 	show_common_screen(w, "Comms");
 }
 
+static struct demon_ui {
+	float ux1, uy1, ux2, uy2;
+	double msx, msy;
+} demon_ui;
+
+static int ux_to_demonsx(double ux)
+{
+	return ((ux - demon_ui.ux1) / (demon_ui.ux2 - demon_ui.ux1)) * SCREEN_WIDTH;
+}
+
+static int uy_to_demonsy(double uy)
+{
+	return ((uy - demon_ui.uy1) / (demon_ui.uy2 - demon_ui.uy1)) * SCREEN_HEIGHT;
+}
+
 static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 {
 	int x, y, x1, y1, x2, y2;
@@ -4028,8 +4043,8 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	if (!o->alive)
 		return;
 
-	x = (int) ((double) SCREEN_WIDTH * o->x / XKNOWN_DIM);
-	y = (int) ((double) SCREEN_HEIGHT * o->y / YKNOWN_DIM);
+	x = ux_to_demonsx(o->x);
+	y = uy_to_demonsy(o->y);
 	x1 = x - 1;
 	y2 = y + 1;
 	y1 = y - 1;
@@ -4063,21 +4078,42 @@ done_drawing_item:
 	return;
 }
 
-static struct demon_ui {
-	float ux1,uy1,ux2,uy2;	
-} demon_ui;
-
 static void init_demon_ui()
 {
 	demon_ui.ux1 = 0;
 	demon_ui.uy1 = 0;
-	demon_ui.ux2 = UNIVERSE_DIM;
-	demon_ui.uy2 = UNIVERSE_DIM;
+	demon_ui.ux2 = XKNOWN_DIM;
+	demon_ui.uy2 = YKNOWN_DIM;
+}
+
+static void calculate_new_demon_zoom(int direction, gdouble x, gdouble y)
+{
+	double nx1, nx2, ny1, ny2, mux, muy;
+	const double zoom_amount = 0.05;
+	double zoom_factor;
+
+	if (direction == GDK_SCROLL_UP)
+		zoom_factor = 1.0 - zoom_amount;
+	else
+		zoom_factor = 1.0 + zoom_amount;
+	mux = x * (demon_ui.ux2 - demon_ui.ux1) / (double) real_screen_width;
+	muy = y * (demon_ui.uy2 - demon_ui.uy1) / (double) real_screen_height;
+	mux += demon_ui.ux1;
+	muy += demon_ui.uy1;
+	nx1 = mux - zoom_factor * (mux - demon_ui.ux1);
+	ny1 = muy - zoom_factor * (muy - demon_ui.uy1);
+	nx2 = nx1 + zoom_factor * (demon_ui.ux2 - demon_ui.ux1);
+	ny2 = ny1 + zoom_factor * (demon_ui.uy2 - demon_ui.uy1);
+	demon_ui.ux1 = nx1;
+	demon_ui.uy1 = ny1;
+	demon_ui.ux2 = nx2;
+	demon_ui.uy2 = ny2;
 }
 
 static void show_demon(GtkWidget *w)
 {
-	int x, y, i, ix, iy;
+	int x, y, i;
+	double ix, iy;
 	const char *letters = "ABCDEFGHIJK";
 	char label[10];
 	int xoffset = 7;
@@ -4091,18 +4127,57 @@ static void show_demon(GtkWidget *w)
 	else
 		sng_set_foreground(RED);
 
-	ix = SCREEN_WIDTH / 10.0;
-	for (x = 0; x <= 10; x++)
-		snis_draw_dotted_vline(w->window, gc, x * ix, 0, SCREEN_HEIGHT, 5);
+	ix = XKNOWN_DIM / 10.0;
+	for (x = 0; x <= 10; x++) {
+		int sx1, sy1, sy2;
 
-	iy = SCREEN_HEIGHT / 10.0;
-	for (y = 0; y <= 10; y++)
-		snis_draw_dotted_hline(w->window, gc, 0, y * iy, SCREEN_WIDTH, 5);
+		sx1 = ux_to_demonsx(ix * x);
+		if (sx1 < 0 || sx1 > SCREEN_WIDTH)
+			continue;
+		sy1 = uy_to_demonsy(0.0);
+		if (sy1 < 0)
+			sy1 = 0;
+		if (sy1 > SCREEN_HEIGHT)
+			continue;
+		sy2 = uy_to_demonsy(YKNOWN_DIM);
+		if (sy2 > SCREEN_HEIGHT)
+			sy2 = SCREEN_HEIGHT;
+		if (sy2 < 0)
+			continue;
+		snis_draw_dotted_vline(w->window, gc, sx1, sy1, sy2, 5);
+	}
 
+	iy = YKNOWN_DIM / 10.0;
+	for (y = 0; y <= 10; y++) {
+		int sx1, sy1, sx2;
+
+		sy1 = uy_to_demonsy(iy * y);
+		if (sy1 < 0 || sy1 > SCREEN_HEIGHT)
+			continue;
+		sx1 = ux_to_demonsx(0.0);
+		if (sx1 < 0)
+			sx1 = 0;
+		if (sx1 > SCREEN_WIDTH)
+			continue;
+		sx2 = ux_to_demonsx(XKNOWN_DIM);
+		if (sx2 > SCREEN_WIDTH)
+			sx2 = SCREEN_WIDTH;
+		if (sx2 < 0)
+			continue;
+		snis_draw_dotted_hline(w->window, gc, sx1, sy1, sx2, 5);
+	}
+
+	ix = XKNOWN_DIM / 10;
+	iy = YKNOWN_DIM / 10;
 	for (x = 0; x < 10; x++)
 		for (y = 0; y < 10; y++) {
+			int tx, ty;
+
 			snprintf(label, sizeof(label), "%c%d", letters[y], x);
-			sng_abs_xy_draw_string(w, gc, label, NANO_FONT, x * ix + xoffset, y * iy + yoffset); 
+			tx = ux_to_demonsx(x * ix);
+			ty = uy_to_demonsy(y * iy);
+			sng_abs_xy_draw_string(w, gc, label, NANO_FONT,
+				tx + xoffset,ty + yoffset);
 		}
 	pthread_mutex_lock(&universe_mutex);
 
@@ -4427,6 +4502,9 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 			newval = 255;
 		do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_SCIZOOM);
 		return 0;
+	case DISPLAYMODE_DEMON:
+		calculate_new_demon_zoom(e->direction, e->x, e->y);
+		return 0;
 	default:
 		return 0;
 	}
@@ -4461,7 +4539,8 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 			my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
 		if (my_ship_oid == UNKNOWN_ID)
 			return 0;
-		if (go[my_ship_oid].alive <= 0 && displaymode != DISPLAYMODE_DEBUG) {
+		if (go[my_ship_oid].alive <= 0 && displaymode != DISPLAYMODE_DEBUG &&
+			displaymode != DISPLAYMODE_DEMON) {
 			show_death_screen(w);
 			return 0;
 		}
