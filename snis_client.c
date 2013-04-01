@@ -4039,6 +4039,9 @@ static int uy_to_demonsy(double uy)
 static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 {
 	int x, y, x1, y1, x2, y2;
+	int xoffset = 7;
+	int yoffset = 10;
+	char *name = NULL;
 
 	if (!o->alive)
 		return;
@@ -4057,10 +4060,12 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
 		sng_set_foreground(RED);
+		name = o->tsd.ship.shipname;
 		if (timer & 0x02)
 			goto done_drawing_item;
 		break;
 	case OBJTYPE_SHIP2:
+		name = o->tsd.ship.shipname;
 		if (o->id == my_ship_id)
 			sng_set_foreground(GREEN);
 		else
@@ -4070,6 +4075,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		sng_set_foreground(BLUE);
 		break;
 	case OBJTYPE_STARBASE:
+		name = o->tsd.starbase.name;
 		sng_set_foreground(MAGENTA);
 		break;
 	default:
@@ -4077,7 +4083,10 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	}
 	snis_draw_line(w->window, gc, x1, y1, x2, y2);
 	snis_draw_line(w->window, gc, x1, y2, x2, y1);
-
+	if (name)
+		sng_abs_xy_draw_string(w, gc, name, NANO_FONT,
+				x + xoffset, y + yoffset);
+	
 done_drawing_item:
 	return;
 }
