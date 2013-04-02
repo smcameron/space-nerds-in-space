@@ -4024,6 +4024,9 @@ static void show_comms(GtkWidget *w)
 static struct demon_ui {
 	float ux1, uy1, ux2, uy2;
 	double msx, msy;
+	int nselected;
+#define MAX_DEMON_SELECTABLE 100
+	uint32_t selected_id[MAX_DEMON_SELECTABLE];
 } demon_ui;
 
 static int ux_to_demonsx(double ux)
@@ -4036,12 +4039,63 @@ static int uy_to_demonsy(double uy)
 	return ((uy - demon_ui.uy1) / (demon_ui.uy2 - demon_ui.uy1)) * SCREEN_HEIGHT;
 }
 
+#if 0
+static double demon_mousex_to_ux(double x)
+{
+	return demon_ui.ux1 + (x / real_screen_width) * (demon_ui.ux2 - demon_ui.ux1);
+}
+
+static double demon_mousey_to_uy(double y)
+{
+	return demon_ui.uy1 + (y / real_screen_height) * (demon_ui.uy2 - demon_ui.ux1);
+}
+#endif
+
+static int demon_id_selected(uint32_t id)
+{
+	int i;
+
+	for (i = 0; i < demon_ui.nselected; i++)
+		if (demon_ui.selected_id[i] == id)
+			return 1;
+	return 0;
+}
+
+static void demon_button_press(gdouble x, gdouble y)
+{
+	int i;
+	double dist2;
+
+	if (demon_ui.nselected >= MAX_DEMON_SELECTABLE)
+		return;
+
+	x = x * SCREEN_WIDTH / real_screen_width;
+	y = y * SCREEN_HEIGHT / real_screen_height;
+
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		int sx, sy;
+		struct snis_entity *o = &go[i];
+
+		if (demon_id_selected(o->id))
+			continue;
+
+		sx = ux_to_demonsx(o->x);
+		sy = uy_to_demonsy(o->y);
+		dist2 = (sx - x) * (sx - x) + (sy - y) * (sy - y);
+		if (dist2 > 50)
+			continue;
+		demon_ui.selected_id[demon_ui.nselected] = o->id;
+		demon_ui.nselected++;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 {
 	int x, y, x1, y1, x2, y2;
 	int xoffset = 7;
 	int yoffset = 10;
-	char *name = NULL;
 
 	if (!o->alive)
 		return;
@@ -4060,12 +4114,10 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
 		sng_set_foreground(RED);
-		name = o->tsd.ship.shipname;
 		if (timer & 0x02)
 			goto done_drawing_item;
 		break;
 	case OBJTYPE_SHIP2:
-		name = o->tsd.ship.shipname;
 		if (o->id == my_ship_id)
 			sng_set_foreground(GREEN);
 		else
@@ -4075,7 +4127,6 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		sng_set_foreground(BLUE);
 		break;
 	case OBJTYPE_STARBASE:
-		name = o->tsd.starbase.name;
 		sng_set_foreground(MAGENTA);
 		break;
 	default:
@@ -4083,9 +4134,16 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	}
 	snis_draw_line(w->window, gc, x1, y1, x2, y2);
 	snis_draw_line(w->window, gc, x1, y2, x2, y1);
-	if (name)
-		sng_abs_xy_draw_string(w, gc, name, NANO_FONT,
-				x + xoffset, y + yoffset);
+	if (timer & 0x02 && demon_id_selected(o->id)) {
+		snis_draw_line(w->window, gc, x1 - 1, y1 - 1, x2 + 1, y1 - 1);
+		snis_draw_line(w->window, gc, x1 - 1, y2 + 1, x2 + 1, y2 + 1);
+		snis_draw_line(w->window, gc, x1 - 1, y1 - 1, x1 - 1, y2 + 1);
+		snis_draw_line(w->window, gc, x2 + 1, y1 - 1, x2 + 1, y2 + 1);
+	}
+
+	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2)
+		sng_abs_xy_draw_string(w, gc, o->sdata.name, NANO_FONT,
+					x + xoffset, y + yoffset);
 	
 done_drawing_item:
 	return;
@@ -4097,6 +4155,8 @@ static void init_demon_ui()
 	demon_ui.uy1 = 0;
 	demon_ui.ux2 = XKNOWN_DIM;
 	demon_ui.uy2 = YKNOWN_DIM;
+	demon_ui.nselected = 0;
+	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
 }
 
 static void calculate_new_demon_zoom(int direction, gdouble x, gdouble y)
@@ -4682,6 +4742,9 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 	case DISPLAYMODE_SCIENCE:
 		science_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
 				(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
+		break;
+	case DISPLAYMODE_DEMON:
+		demon_button_press(event->x, event->y);
 		break;
 	default:
 		break;
