@@ -31,5 +31,5 @@ COPYRIGHT=2008 by Stephen M. Cameron
 
 warpdrive.ogg:
 LICENSE=Creative Commons Attribution 3.0 Unported (CC BY 3.0) http://creativecommons.org/licenses/by/3.0/
-COPYRIGHT=2011 by freesound.org user "vedas" and fressound.org user "owyheesound".
+COPYRIGHT=2011 by fressound.org user "owyheesound" and freesound.org user "vedas", aka "Uncle Reggie" (see http://unclereggiesmagicradio.tumblr.com/ the sound is from a radio play in episode 1)
 
