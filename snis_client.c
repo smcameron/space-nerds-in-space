@@ -4027,6 +4027,9 @@ static struct demon_ui {
 	int nselected;
 #define MAX_DEMON_SELECTABLE 100
 	uint32_t selected_id[MAX_DEMON_SELECTABLE];
+	struct button *demon_exec_button;
+	struct snis_text_input_box *demon_input;
+	char input[100];
 } demon_ui;
 
 static int ux_to_demonsx(double ux)
@@ -4170,6 +4173,26 @@ done_drawing_item:
 	return;
 }
 
+static void send_demon_packet_to_server(char *msg)
+{
+	struct packed_buffer *pb;
+	uint8_t len = strlen(msg);
+
+	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + len);
+	packed_buffer_append(pb, "hb", OPCODE_DEMON_COMMAND, len);
+	packed_buffer_append_raw(pb, msg, (unsigned short) len);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
+static void demon_exec_button_pressed(void *x)
+{
+	if (strlen(demon_ui.input) == 0)
+		return;
+	send_demon_packet_to_server(demon_ui.input);
+	snis_text_input_box_zero(demon_ui.demon_input);
+}
+
 static void init_demon_ui()
 {
 	demon_ui.ux1 = 0;
@@ -4178,6 +4201,12 @@ static void init_demon_ui()
 	demon_ui.uy2 = YKNOWN_DIM;
 	demon_ui.nselected = 0;
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
+	demon_ui.demon_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
+					demon_ui.input, 50, &timer, NULL, NULL);
+	demon_ui.demon_exec_button = snis_button_init(570, 520, 160, 30, "EXECUTE", GREEN,
+			TINY_FONT, demon_exec_button_pressed, NULL);
+	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
+	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
 }
 
 static void calculate_new_demon_zoom(int direction, gdouble x, gdouble y)
@@ -4282,7 +4311,6 @@ static void show_demon(GtkWidget *w)
 	pthread_mutex_unlock(&universe_mutex);
 
 	sng_set_foreground(GREEN);
-	sng_abs_xy_draw_string(w, gc, "SERVER NET STATS:", TINY_FONT, 10, SCREEN_HEIGHT - 40); 
 	if (netstats.elapsed_seconds == 0)
 		sprintf(buffer, "Waiting for data");
 	else 

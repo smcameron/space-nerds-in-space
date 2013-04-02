@@ -1395,6 +1395,32 @@ static int process_comms_transmission(struct game_client *c)
 	return 0;
 }
 
+static int process_demon_command(struct game_client *c)
+{
+	unsigned char buffer[sizeof(struct comms_transmission_packet)];
+	char txt[256];
+	struct packed_buffer pb;
+	int rc;
+	uint8_t len;
+	int client_index;
+	char name[30];
+
+	rc = snis_readsocket(c->socket, buffer,
+		sizeof(struct comms_transmission_packet) - sizeof(uint16_t));
+	if (rc)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	len = packed_buffer_extract_u8(&pb);
+	rc = snis_readsocket(c->socket, txt, len);
+	if (rc)
+		return rc;
+	txt[len] = '\0';
+	client_index = ((unsigned long) c - (unsigned long) &client[0]) / sizeof(client[0]);
+	sprintf(name, "%s: ", bridgelist[client_index].shipname);
+	printf("demon command from %s%s\n", name, txt);
+	return 0;
+}
+
 typedef uint8_t (*bytevalue_limit_function)(struct game_client *c, uint8_t value);
 
 static uint8_t no_limit(__attribute__((unused)) struct game_client *c, uint8_t value)
@@ -1765,6 +1791,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_COMMS_TRANSMISSION:
 			rc = process_comms_transmission(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_DEMON_COMMAND:
+			rc = process_demon_command(c);
 			if (rc)
 				goto protocol_error;
 			break;
