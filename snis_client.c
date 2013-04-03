@@ -4023,7 +4023,7 @@ static void show_comms(GtkWidget *w)
 
 static struct demon_ui {
 	float ux1, uy1, ux2, uy2;
-	double msx, msy;
+	double selectedx, selectedy;
 	int nselected;
 #define MAX_DEMON_SELECTABLE 100
 	uint32_t selected_id[MAX_DEMON_SELECTABLE];
@@ -4042,7 +4042,6 @@ static int uy_to_demonsy(double uy)
 	return ((uy - demon_ui.uy1) / (demon_ui.uy2 - demon_ui.uy1)) * SCREEN_HEIGHT;
 }
 
-#if 0
 static double demon_mousex_to_ux(double x)
 {
 	return demon_ui.ux1 + (x / real_screen_width) * (demon_ui.ux2 - demon_ui.ux1);
@@ -4050,9 +4049,8 @@ static double demon_mousex_to_ux(double x)
 
 static double demon_mousey_to_uy(double y)
 {
-	return demon_ui.uy1 + (y / real_screen_height) * (demon_ui.uy2 - demon_ui.ux1);
+	return demon_ui.uy1 + (y / real_screen_height) * (demon_ui.uy2 - demon_ui.uy1);
 }
-#endif
 
 static int demon_id_selected(uint32_t id)
 {
@@ -4088,15 +4086,18 @@ static void demon_deselect(uint32_t id)
 
 static void demon_button_press(gdouble x, gdouble y)
 {
-	int i;
-	double dist2;
+	int i, nselected;
+	double dist2, ox, oy;
 
 	if (demon_ui.nselected >= MAX_DEMON_SELECTABLE)
 		return;
 
+	ox = x;
+	oy = y;
 	x = x * SCREEN_WIDTH / real_screen_width;
 	y = y * SCREEN_HEIGHT / real_screen_height;
 
+	nselected = 0;
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		int sx, sy;
@@ -4107,10 +4108,15 @@ static void demon_button_press(gdouble x, gdouble y)
 		dist2 = (sx - x) * (sx - x) + (sy - y) * (sy - y);
 		if (dist2 > 50)
 			continue;
+		nselected++;
 		if (demon_id_selected(o->id))
 			demon_deselect(o->id);
 		else
 			demon_select(o->id);
+	}
+	if (nselected == 0) {
+		demon_ui.selectedx = demon_mousex_to_ux(ox);
+		demon_ui.selectedy = demon_mousey_to_uy(oy);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -4200,6 +4206,8 @@ static void init_demon_ui()
 	demon_ui.ux2 = XKNOWN_DIM;
 	demon_ui.uy2 = YKNOWN_DIM;
 	demon_ui.nselected = 0;
+	demon_ui.selectedx = -1.0;
+	demon_ui.selectedy = -1.0;
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
 	demon_ui.demon_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
 					demon_ui.input, 50, &timer, NULL, NULL);
@@ -4309,6 +4317,14 @@ static void show_demon(GtkWidget *w)
 	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++)
 		debug_draw_object(w, &spark[i]);
 	pthread_mutex_unlock(&universe_mutex);
+
+	if (timer & 0x02) {
+		x = ux_to_demonsx(demon_ui.selectedx);
+		y = uy_to_demonsy(demon_ui.selectedy);
+		sng_set_foreground(BLUE);
+		snis_draw_line(w->window, gc, x - 3, y, x + 3, y);
+		snis_draw_line(w->window, gc, x, y - 3, x, y + 3);
+	}
 
 	sng_set_foreground(GREEN);
 	if (netstats.elapsed_seconds == 0)
