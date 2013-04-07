@@ -4458,6 +4458,22 @@ static int construct_demon_command(char *input,
 	return 0;
 }
 
+static void clear_empty_demon_variables(void)
+{
+	int i;
+
+	for (i = 0; i < ndemon_groups;) {
+		if (demon_group[i].nids == 0) {
+			if (ndemon_groups - 1 > i)
+				demon_group[ndemon_groups - 1] =
+					demon_group[i];
+			ndemon_groups--;
+		} else {
+			i++;
+		}
+	}
+} 
+
 static void demon_exec_button_pressed(void *x)
 {
 	struct demon_cmd_packet *demon_cmd;
@@ -4466,6 +4482,7 @@ static void demon_exec_button_pressed(void *x)
 
 	if (strlen(demon_ui.input) == 0)
 		return;
+	clear_empty_demon_variables();
 	rc = construct_demon_command(demon_ui.input, &demon_cmd, error_msg);
 	if (rc) {
 		printf("Error msg: %s\n", error_msg);
