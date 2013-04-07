@@ -114,6 +114,11 @@ int real_screen_width;
 int real_screen_height;
 int warp_limbo_countdown = 0;
 
+struct nebula_entry {
+	double x, y, r2;
+} nebulaentry[NNEBULA];
+int nnebula;
+
 static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 
 struct client_network_stats {
@@ -463,6 +468,16 @@ static int update_starbase(uint32_t id, double x, double y)
 	return 0;
 }
 
+static void add_nebula_entry(double x, double y, double r)
+{
+	nebulaentry[nnebula].x = x;
+	nebulaentry[nnebula].y = y;
+	nebulaentry[nnebula].r2 = r * r;
+	nnebula++;
+	if (nnebula > NNEBULA)
+		printf("Bug at %s:%d\n", __FILE__, __LINE__);
+}
+
 static int update_nebula(uint32_t id, double x, double y, double r)
 {
 	int i;
@@ -474,10 +489,13 @@ static int update_nebula(uint32_t id, double x, double y, double r)
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_NEBULA, 1, e);
 		if (i < 0)
 			return i;
+		add_nebula_entry(x, y, r);
 	} else {
 		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
 	}
 	go[i].tsd.nebula.r = r;	
+	printf("added nebula, r = %lf\n", r);
+	go[i].alive = 1;
 	return 0;
 }
 
@@ -2213,7 +2231,8 @@ static void snis_draw_laser(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, 
 
 static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
 					gint x, gint y, double dist, int bw, int pwr,
-					double range, int selected)
+					double range, int selected,
+					int nebula_factor)
 {
 	int i;
 
@@ -2228,6 +2247,10 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	divisor = hypot((float) bw + 1, 256.0 - pwr);
 	dr = (int) dist / (XKNOWN_DIM / divisor);
 	dr = dr * MAX_SCIENCE_SCREEN_RADIUS / range;
+	if (nebula_factor) {
+		dr = dr * 10; 
+		dr += 200;
+	}
 
 	/* if dr is small enough, and ship info is not known, nor recently requested,
 	 * then issue OPCODE REQUEST_SHIP_SDATA to server somehow.
@@ -2488,6 +2511,22 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static int within_nebula(double x, double y)
+{
+	double dist2;
+	int i;
+
+	for (i = 0; i < nnebula; i++) {
+		dist2 = (x - nebulaentry[i].x) *
+			(x - nebulaentry[i].x) +
+			(y - nebulaentry[i].y) *
+			(y - nebulaentry[i].y);
+		if (dist2 < nebulaentry[i].r2)
+			return 1;
+	}
+	return 0;
+}
+
 /* position and dimensions of science scope */
 #define SCIENCE_SCOPE_X 20
 #define SCIENCE_SCOPE_Y 70 
@@ -2511,6 +2550,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	double angle, angle2, A1, A2;
 	double tx, ty, dist2, dist;
 	int selected_guy_still_visible = 0;
+	int nebula_factor = 0;
 
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
@@ -2551,10 +2591,17 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 
 		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
 			((go[i].y - o->y) * (go[i].y - o->y));
+		if (go[i].type == OBJTYPE_NEBULA) {
+			if (dist2 < go[i].tsd.nebula.r * go[i].tsd.nebula.r)
+				nebula_factor++;
+			continue;
+		}
 		if (dist2 > range * range)
 			continue; /* not close enough */
 		dist = sqrt(dist2);
-	
+
+		if (within_nebula(go[i].x, go[i].y))
+			continue;
 
 		tx = (go[i].x - o->x) * (double) r / range;
 		ty = (go[i].y - o->y) * (double) r / range;
@@ -2582,7 +2629,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		if (!curr_science_guy && prev_science_guy == &go[i])
 			curr_science_guy = prev_science_guy;
 
-		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, pwr, range, &go[i] == curr_science_guy);
+		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor);
 
 		/* cache screen coords for mouse picking */
 		science_guy[nscience_guys].o = &go[i];
@@ -2597,6 +2644,18 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		curr_science_guy = NULL;
 	}
 	pthread_mutex_unlock(&universe_mutex);
+	if (nebula_factor) {
+		for (i = 0; i < 300; i++) {
+			double angle;
+			double radius;
+
+			angle = (double) snis_randn(360) * M_PI / 180;
+			radius = snis_randn(SCIENCE_SCOPE_R);
+			snis_draw_line(w->window, gc, cx, cy,
+				cx + cos(angle) * radius,
+				cy + sin(angle) * radius);
+		}
+	}
 }
 
 static void draw_all_the_science_sparks(GtkWidget *w, struct snis_entity *o, double range)

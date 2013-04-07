@@ -1207,8 +1207,8 @@ static void make_universe(void)
 	pthread_mutex_lock(&universe_mutex);
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 
+	add_nebulae(); /* do nebula first */
 	add_starbases();
-	add_nebulae();
 	add_planets();
 	add_eships();
 	pthread_mutex_unlock(&universe_mutex);
