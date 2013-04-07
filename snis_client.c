@@ -115,7 +115,7 @@ int real_screen_height;
 int warp_limbo_countdown = 0;
 
 struct nebula_entry {
-	double x, y, r2;
+	double x, y, r, r2;
 } nebulaentry[NNEBULA];
 int nnebula;
 
@@ -473,6 +473,7 @@ static void add_nebula_entry(double x, double y, double r)
 	nebulaentry[nnebula].x = x;
 	nebulaentry[nnebula].y = y;
 	nebulaentry[nnebula].r2 = r * r;
+	nebulaentry[nnebula].r = r;
 	nnebula++;
 	if (nnebula > NNEBULA)
 		printf("Bug at %s:%d\n", __FILE__, __LINE__);
@@ -2658,6 +2659,45 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	}
 }
 
+static void draw_all_the_science_nebulae(GtkWidget *w, struct snis_entity *o, double range)
+{
+	int i, j;
+	double dist2, dist, range2;
+	double a, r, x, y, d2;
+	int sx, sy, cx, cy;
+
+	cx = SCIENCE_SCOPE_CX;	
+	cy = SCIENCE_SCOPE_CY;	
+
+	sng_set_foreground(GREEN);
+	range2 = range * range;
+	for (i = 0; i < nnebula; i++) {
+		dist2 = (o->x - nebulaentry[i].x) *
+			(o->x - nebulaentry[i].x) +
+			(o->y - nebulaentry[i].y) *
+			(o->y - nebulaentry[i].y);
+		dist = sqrt(dist2);
+		if (dist - nebulaentry[i].r > range)
+			continue;
+		for (j = 0; j < 80; j++) {
+			a = snis_randn(360) * M_PI / 180.0;
+			r = nebulaentry[i].r;
+			x = nebulaentry[i].x + r * cos(a);
+			y = nebulaentry[i].y + r * sin(a);
+			d2 = (x - o->x) * (x - o->x) +
+				(y - o->y) * (y - o->y);
+			if (d2 > range2)
+				continue;
+			sx = (x - o->x) * (double) SCIENCE_SCOPE_R / range + cx;
+			sy = (y - o->y) * (double) SCIENCE_SCOPE_R / range + cy;
+			d2 = (cx - sx) * (cx - sx) + (cy - sy) * (cy - sy);
+			if (d2 > SCIENCE_SCOPE_R * SCIENCE_SCOPE_R)
+				continue;
+			sng_draw_point(w->window, gc, sx, sy);
+		}
+	}
+}
+
 static void draw_all_the_science_sparks(GtkWidget *w, struct snis_entity *o, double range)
 {
 	int i, cx, cy, r, rx, ry, rw, rh;
@@ -4120,6 +4160,7 @@ static void show_science(GtkWidget *w)
 			o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width));
 	draw_all_the_science_guys(w, o, zoom);
 	draw_all_the_science_sparks(w, o, zoom);
+	draw_all_the_science_nebulae(w, o, zoom);
 	draw_science_warp_data(w, o);
 	draw_science_data(w, o, curr_science_guy);
 }
