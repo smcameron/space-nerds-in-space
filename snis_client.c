@@ -4035,7 +4035,7 @@ static struct demon_ui {
 	struct snis_text_input_box *demon_input;
 	char input[100];
 	char error_msg[80];
-	double ix, iy;
+	double ix, iy, ix2, iy2;
 	int selectmode;
 } demon_ui;
 
@@ -4098,6 +4098,8 @@ static void demon_button_press(int button, gdouble x, gdouble y)
 		return;
 	demon_ui.ix = demon_mousex_to_ux(x);
 	demon_ui.iy = demon_mousey_to_uy(y);
+	demon_ui.ix2 = demon_mousex_to_ux(x);
+	demon_ui.iy2 = demon_mousey_to_uy(y);
 	demon_ui.selectmode = 1;
 }
 
@@ -4680,6 +4682,19 @@ static void show_demon(GtkWidget *w)
 			(unsigned long long) (netstats.bytes_recd + netstats.bytes_sent) / netstats.elapsed_seconds);
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 10, SCREEN_HEIGHT - 10); 
 
+	if (demon_ui.selectmode) {
+		int x1, y1, x2, y2;
+
+		x1 = ux_to_demonsx(demon_ui.ix);
+		y1 = uy_to_demonsy(demon_ui.iy);
+		x2 = ux_to_demonsx(demon_ui.ix2);
+		y2 = uy_to_demonsy(demon_ui.iy2);
+		sng_set_foreground(WHITE);
+		sng_draw_dotted_line(w->window, gc, x1, y1, x2, y1);
+		sng_draw_dotted_line(w->window, gc, x1, y2, x2, y2);
+		sng_draw_dotted_line(w->window, gc, x1, y1, x1, y2);
+		sng_draw_dotted_line(w->window, gc, x2, y1, x2, y2);
+	}
 }
 
 static void show_warp_limbo_screen(GtkWidget *w)
@@ -5177,6 +5192,14 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	return TRUE;
 }
 
+static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
+	__attribute__((unused)) void *unused)
+{
+	demon_ui.ix2 = demon_mousex_to_ux(event->x);
+	demon_ui.iy2 = demon_mousey_to_uy(event->y);
+	return TRUE;
+}
+
 static gboolean delete_event(GtkWidget *widget, 
 	GdkEvent *event, gpointer data)
 {
@@ -5353,10 +5376,13 @@ int main(int argc, char *argv[])
 		G_CALLBACK (main_da_scroll), NULL);
 	gtk_widget_add_events(main_da, GDK_BUTTON_PRESS_MASK);
 	gtk_widget_add_events(main_da, GDK_BUTTON_RELEASE_MASK);
+	gtk_widget_add_events(main_da, GDK_BUTTON3_MOTION_MASK);
 	g_signal_connect(G_OBJECT (main_da), "button_press_event",
                       G_CALLBACK (main_da_button_press), NULL);
 	g_signal_connect(G_OBJECT (main_da), "button_release_event",
                       G_CALLBACK (main_da_button_release), NULL);
+	g_signal_connect(G_OBJECT (main_da), "motion_notify_event",
+                      G_CALLBACK (main_da_motion_notify), NULL);
 
 	gtk_container_add (GTK_CONTAINER (window), vbox);
 	gtk_box_pack_start(GTK_BOX (vbox), main_da, TRUE /* expand */, TRUE /* fill */, 0);
