@@ -4034,6 +4034,7 @@ static struct demon_ui {
 	struct button *demon_exec_button;
 	struct snis_text_input_box *demon_input;
 	char input[100];
+	char error_msg[80];
 } demon_ui;
 
 static int ux_to_demonsx(double ux)
@@ -4209,6 +4210,9 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	}
 	
 done_drawing_item:
+
+	sng_set_foreground(GREEN);
+	sng_abs_xy_draw_string(w, gc, demon_ui.error_msg, NANO_FONT, 20, 570);
 	return;
 }
 
@@ -4477,15 +4481,15 @@ static void clear_empty_demon_variables(void)
 static void demon_exec_button_pressed(void *x)
 {
 	struct demon_cmd_packet *demon_cmd;
-	char error_msg[100];
 	int rc;
 
 	if (strlen(demon_ui.input) == 0)
 		return;
 	clear_empty_demon_variables();
-	rc = construct_demon_command(demon_ui.input, &demon_cmd, error_msg);
+	strcpy(demon_ui.error_msg, "");
+	rc = construct_demon_command(demon_ui.input, &demon_cmd, demon_ui.error_msg);
 	if (rc) {
-		printf("Error msg: %s\n", error_msg);
+		printf("Error msg: %s\n", demon_ui.error_msg);
 	} else {
 		printf("Command is ok\n");
 	}
@@ -4501,6 +4505,7 @@ static void init_demon_ui()
 	demon_ui.nselected = 0;
 	demon_ui.selectedx = -1.0;
 	demon_ui.selectedy = -1.0;
+	strcpy(demon_ui.error_msg, "");
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
 	demon_ui.demon_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
 					demon_ui.input, 50, &timer, NULL, NULL);
