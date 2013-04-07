@@ -920,6 +920,11 @@ static void coords_to_location_string(double x, double y, char *buffer, int bufl
 		snprintf(buffer, buflen, "(%8.2lf, %8.2lf)", x, y);
 }
 
+static void nebula_move(struct snis_entity *o)
+{
+	return;
+}
+
 static void starbase_move(struct snis_entity *o)
 {
 	char buf[100], location[50];
@@ -1078,6 +1083,19 @@ static int add_starbase(double x, double y, double vx, double vy, double heading
 	return i;
 }
 
+static int add_nebula(double x, double y, double vx, double vy, double heading, double r)
+{
+	int i;
+
+	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_NEBULA);
+	if (i < 0)
+		return i;
+	go[i].move = nebula_move;
+	go[i].type = OBJTYPE_NEBULA;
+	go[i].tsd.nebula.r = r;
+	return i;
+}
+
 static int add_explosion(double x, double y, uint16_t velocity, uint16_t nsparks, uint16_t time)
 {
 	int i;
@@ -1145,6 +1163,20 @@ static void add_starbases(void)
 	}
 }
 
+static void add_nebulae(void)
+{
+	int i;
+	double x, y, r;
+
+	for (i = 0; i < NNEBULA; i++) {
+		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		r = (double) snis_randn(NEBULA_RADIUS) +
+				(double) MIN_NEBULA_RADIUS;
+		add_nebula(x, y, 0.0, 0.0, 0.0, r);
+	}
+}
+
 static void add_planets(void)
 {
 	int i;
@@ -1176,6 +1208,7 @@ static void make_universe(void)
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 
 	add_starbases();
+	add_nebulae();
 	add_planets();
 	add_eships();
 	pthread_mutex_unlock(&universe_mutex);
@@ -2014,6 +2047,8 @@ static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_nebula_packet(struct game_client *c,
+	struct snis_entity *o);
 
 static void send_respawn_time(struct game_client *c, struct snis_entity *o);
 
@@ -2038,6 +2073,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_STARBASE:
 		send_update_starbase_packet(c, o);
+		break;
+	case OBJTYPE_NEBULA:
+		send_update_nebula_packet(c, o);
 		break;
 	case OBJTYPE_EXPLOSION:
 		send_update_explosion_packet(c, o);
@@ -2306,6 +2344,19 @@ static void send_update_starbase_packet(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
 	packed_buffer_append(pb, "hwSS", OPCODE_UPDATE_STARBASE, o->id,
 		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
+static void send_update_nebula_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct update_nebula_packet));
+	packed_buffer_append(pb, "hwSSS", OPCODE_UPDATE_NEBULA, o->id,
+		o->x, (int32_t) UNIVERSE_DIM,
+		o->y, (int32_t) UNIVERSE_DIM,
+		o->tsd.nebula.r, (int32_t) UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

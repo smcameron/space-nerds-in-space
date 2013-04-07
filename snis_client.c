@@ -463,6 +463,23 @@ static int update_starbase(uint32_t id, double x, double y)
 	return 0;
 }
 
+static int update_nebula(uint32_t id, double x, double y, double r)
+{
+	int i;
+	struct entity *e;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		e = add_entity(starbase_mesh, x, 0, -y);
+		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_NEBULA, 1, e);
+		if (i < 0)
+			return i;
+	} else {
+		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+	}
+	go[i].tsd.nebula.r = r;	
+	return 0;
+}
 
 static void spark_move(struct snis_entity *o)
 {
@@ -1697,6 +1714,29 @@ static int process_update_starbase_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_nebula_packet(void)
+{
+	unsigned char buffer[100];
+	struct packed_buffer pb;
+	uint32_t id;
+	double dx, dy, r;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_nebula_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_nebula_packet) - sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "wSSS", &id,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
+			&r, (int32_t) UNIVERSE_DIM);
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_nebula(id, dx, dy, r);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+} 
+
 static int process_update_explosion_packet(void)
 {
 	unsigned char buffer[sizeof(struct update_explosion_packet)];
@@ -1778,6 +1818,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_STARBASE:
 			rc = process_update_starbase_packet();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_NEBULA:
+			rc = process_update_nebula_packet();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -4049,6 +4094,11 @@ static int uy_to_demonsy(double uy)
 	return ((uy - demon_ui.uy1) / (demon_ui.uy2 - demon_ui.uy1)) * SCREEN_HEIGHT;
 }
 
+static int ur_to_demonsr(double ur)
+{
+	return ((ur * SCREEN_WIDTH) / (demon_ui.ux2 - demon_ui.ux1));
+}
+
 static double demon_mousex_to_ux(double x)
 {
 	return demon_ui.ux1 + (x / real_screen_width) * (demon_ui.ux2 - demon_ui.ux1);
@@ -4219,6 +4269,11 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		break;
 	case OBJTYPE_PLANET:
 		sng_set_foreground(BLUE);
+		break;
+	case OBJTYPE_NEBULA:
+		sng_set_foreground(MAGENTA);
+		sng_draw_circle(w->window, gc, x, y,
+			ur_to_demonsr(o->tsd.nebula.r));
 		break;
 	case OBJTYPE_STARBASE:
 		sng_set_foreground(MAGENTA);

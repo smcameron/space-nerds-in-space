@@ -69,6 +69,7 @@
 #define OPCODE_COMMS_TRANSMISSION 143
 #define OPCODE_WARP_LIMBO	144	
 #define OPCODE_DEMON_COMMAND 145
+#define OPCODE_UPDATE_NEBULA		146
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -149,6 +150,12 @@ struct update_starbase_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint32_t x, y;
+};
+
+struct update_nebula_packet {
+	uint16_t opcode;
+	uint32_t id;
+	uint32_t x, y, r;
 };
 
 struct update_explosion_packet {
