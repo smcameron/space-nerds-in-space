@@ -498,12 +498,14 @@ static int add_torpedo(double x, double y, double vx, double vy, double heading,
 static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
 static uint8_t update_phaser_banks(int current, int max);
 
+static int lookup_by_id(uint32_t id);
+
 static void ship_choose_new_attack_victim(struct snis_entity *o)
 {
-	struct snis_entity *v;
 	struct command_data *cmd_data;
-	int i, nids1, nids2, swapwith;
-	int r;
+	int i, nids1, nids2;
+	double d;
+	int eid;
 
 	cmd_data = &o->tsd.ship.cmd_data;
 	if (cmd_data->command != DEMON_CMD_ATTACK)
@@ -512,27 +514,59 @@ static void ship_choose_new_attack_victim(struct snis_entity *o)
 	nids1 = cmd_data->nids1;
 	nids2 = cmd_data->nids2;
 
-	v = &go[o->tsd.ship.victim];
-	swapwith = nids1 + nids2 - 1;
+	/* delete the dead ones. */
+	for (i = 0; i < cmd_data->nids2;) {
+		int index;
+		struct snis_entity *e;
 
-	if (v->alive)
-		return;
+		index = lookup_by_id(cmd_data->id[nids1 + i]);
+		if (index < 0)
+			goto delete_it;
 
-	o->tsd.ship.victim = -1;
-	for (i = 0; i < cmd_data->nids2; i++) {
-		if (o->tsd.ship.victim == cmd_data->id[nids1 + i]) {
-			if (nids1 + i != swapwith)
-				cmd_data->id[nids1 + i] =
-					cmd_data->id[swapwith];
+		e = &go[index];
+		if (e->alive) {
+			i++;
+			continue;
+		}
+delete_it:
+		if (i == nids2 - 1) {
 			cmd_data->nids2--;
 			break;
 		}
+		cmd_data->id[nids1 + i] = cmd_data->id[nids1 + nids2 - 1];
+		cmd_data->nids2--;
 	}
-	if (cmd_data->nids2 == 0)
-		return;
 
-	r = snis_randn(cmd_data->nids2);
-	o->tsd.ship.victim = cmd_data->id[nids1 + r];
+	/* find the nearest one */
+	eid = -1;
+	d = -1.0;
+	for (i = 0; i < cmd_data->nids2; i++) {
+		double dist2;
+		struct snis_entity *e;
+		int index;
+
+		index = lookup_by_id(cmd_data->id[nids1 + i]);
+		if (index < 0)
+			continue;
+
+		e = &go[index];
+		if (!e->alive)
+			continue;
+
+		dist2 = hypot(o->x - e->x, o->y - e->y); 
+		if (d < 0 || d > dist2) {
+			d = dist2;
+			eid = index;
+		}
+	}
+		
+	if (eid >= 0) {
+		o->tsd.ship.victim = go[eid].id;
+		o->tsd.ship.dox = snis_randn(2000) - 1000;
+		o->tsd.ship.doy = snis_randn(2000) - 1000;
+	} else {
+		o->tsd.ship.victim = -1;
+	}
 }
 
 static void ship_move(struct snis_entity *o)
@@ -543,20 +577,22 @@ static void ship_move(struct snis_entity *o)
 	int close_enough = 0;
 	double maxv;
 
-
-	if (o->tsd.ship.victim != (uint32_t) -1)  {
-		v = &go[o->tsd.ship.victim];
-		if (!v->alive || (snis_randn(1000) < 50 &&
-				o->tsd.ship.cmd_data.command != DEMON_CMD_ATTACK))
-			o->tsd.ship.victim = (uint32_t) -1;
-		if (!v->alive && o->tsd.ship.cmd_data.command == DEMON_CMD_ATTACK)
+	switch (o->tsd.ship.cmd_data.command) {
+	case DEMON_CMD_ATTACK:
+		if (o->tsd.ship.victim == (uint32_t) -1 || snis_randn(1000) < 50) {
 			ship_choose_new_attack_victim(o);
-	}
-
-	if (o->tsd.ship.victim == (uint32_t) -1) {
-		o->tsd.ship.victim = find_nearest_victim(o);
-		o->tsd.ship.dox = snis_randn(2000) - 1000;
-		o->tsd.ship.doy = snis_randn(2000) - 1000;
+			v = &go[o->tsd.ship.victim];
+			o->tsd.ship.dox = snis_randn(2000) - 1000;
+			o->tsd.ship.doy = snis_randn(2000) - 1000;
+		}
+		break;
+	default:
+		if (o->tsd.ship.victim == (uint32_t) -1) {
+			o->tsd.ship.victim = find_nearest_victim(o);
+			o->tsd.ship.dox = snis_randn(2000) - 1000;
+			o->tsd.ship.doy = snis_randn(2000) - 1000;
+		}
+		break;
 	}
 
 	maxv = max_speed[o->tsd.ship.shiptype];
