@@ -69,6 +69,8 @@
 #include "stl_parser.h"
 #include "entity.h"
 
+#define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 #define SCREEN_WIDTH 800        /* window width, in pixels */
 #define SCREEN_HEIGHT 600       /* window height, in pixels */
 
@@ -4195,10 +4197,243 @@ static void send_demon_packet_to_server(char *msg)
 	wakeup_gameserver_writer();
 }
 
+#define MAX_DEMON_CMD_SIZE 100
+
+static char *demon_verb[] = {
+	"mark",
+	"select",
+	"attack",
+	"goto",
+	"patrol",
+	"halt",
+	"identify",
+};
+
+#define DEMON_CMD_DELIM " ,"
+
+static struct demon_group {
+	char name[100];
+	uint16_t id[256];
+	int nids;
+} demon_group[26];
+static int ndemon_groups = 0;
+
+static struct demon_location {
+	char name[100];
+	double x, y;
+} demon_location[26];
+static int ndemon_locations = 0;
+
+static int get_demon_location_var(char *name)
+{
+	int i;
+	struct demon_location *dl;
+
+	for (i = 0; i < ndemon_locations; i++) {
+		if (strcmp(demon_location[i].name, name) == 0)
+			return i;
+	}
+	if (ndemon_locations >= 26)
+		return -1;
+	dl = &demon_location[ndemon_locations];
+	strcpy(dl->name, name);
+	ndemon_locations++;
+	return ndemon_locations - 1;
+}
+
+static int lookup_demon_group(char *name)
+{
+	int i;
+
+	for (i = 0; i < ndemon_groups; i++) {
+		if (strcmp(demon_group[i].name, name) == 0)
+			return i;
+	}
+	return -1;
+}
+
+static int lookup_demon_location(char *name)
+{
+	int i;
+
+	for (i = 0; i < ndemon_locations; i++) {
+		if (strcmp(demon_location[i].name, name) == 0)
+			return i;
+	}
+	return -1;
+}
+
+static int get_demon_group_var(char *name)
+{
+	int i;
+	struct demon_group *dg;
+
+	for (i = 0; i < ndemon_groups; i++) {
+		if (strcmp(demon_group[i].name, name) == 0)
+			return i;
+	}
+	if (ndemon_groups >= 26)
+		return -1;
+	dg = &demon_group[ndemon_groups];
+	strcpy(dg->name, name);
+	ndemon_groups++;
+	return ndemon_groups - 1;
+}
+
+static void set_demon_group(int n)
+{
+	int i, count;
+	struct demon_group *dg;
+
+	count = demon_ui.nselected;
+	if (count > MAX_DEMON_SELECTABLE)
+		count = MAX_DEMON_SELECTABLE;
+
+	dg = &demon_group[n];
+	for (i = 0; i < count; i++)
+		dg->id[i] = demon_ui.selected_id[i];
+	dg->nids = count;
+}
+
+static int construct_demon_command(char *input, char *cmd, char *errmsg)
+{
+	char *s;
+	int i, l, g, g2, found, v;
+	char *saveptr;
+
+	saveptr = NULL;
+	s = strtok_r(input, DEMON_CMD_DELIM, &saveptr);
+	if (s == NULL) {
+		strcpy(errmsg, "empty command");
+		return -1;
+	}
+
+	found = 0;
+	for (i = 0; i < ARRAYSIZE(demon_verb); i++) {
+		if (strncmp(demon_verb[i], s, strlen(s)))
+			continue;
+		found = 1;
+		v = i;
+		break;
+	}
+	if (!found) {
+		sprintf(errmsg, "Unknown verb '%s'", s);
+		return -1;
+	}
+
+	switch (v) {
+		case 0: /* mark */
+			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
+			if (s == NULL) {
+				sprintf(errmsg, "missing argument to mark command");
+				return -1;
+			}
+			l = get_demon_location_var(s); 
+			if (l < 0) {
+				sprintf(errmsg, "out of location variables");
+				return -1;
+			}
+			demon_location[l].x = demon_ui.selectedx;
+			demon_location[l].y = demon_ui.selectedy;
+			break;
+		case 1: /* select */
+			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
+			if (s == NULL) {
+				sprintf(errmsg, "missing argument to select command");
+				return -1;
+			}
+			g = get_demon_group_var(s); 
+			if (g < 0) {
+				sprintf(errmsg, "out of group variables");
+				return -1;
+			}
+			set_demon_group(g);
+			break; 
+		case 2: /* attack */
+			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
+			if (s == NULL) {
+				sprintf(errmsg, "missing 1st argument to attack command");
+				return -1;
+			}
+			g = lookup_demon_group(s);
+			if (g < 0) {
+				sprintf(errmsg, "No such group '%s'", s);
+				return -1;
+			}
+			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
+			if (s == NULL) {
+				sprintf(errmsg, "missing 2nd argument to attack command");
+				return -1;
+			}
+			g2 = lookup_demon_group(s);
+			if (g2 < 0) {
+				sprintf(errmsg, "no such group '%s'", s);
+				return -1;
+			}
+			/* TODO - finish this */
+			printf("group %d commanded to attack group %d\n", g, g2);
+			break; 
+		case 3: /* goto */
+			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
+			if (s == NULL) {
+				sprintf(errmsg, "missing argument to goto command");
+				return -1;
+			}
+			break; 
+		case 4: /* patrol */
+			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
+			if (s == NULL) {
+				sprintf(errmsg, "missing argument to patrol command");
+				return -1;
+			}
+			break; 
+		case 5: /* halt */
+			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
+			if (s == NULL) {
+				sprintf(errmsg, "missing argument to halt command");
+				return -1;
+			}
+			break; 
+		case 6: /* identify */
+			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
+			if (s == NULL) {
+				sprintf(errmsg, "missing argument to identify command");
+				return -1;
+			}
+			g = lookup_demon_group(s);
+			if (g < 0) {
+				l = lookup_demon_location(s);
+				if (l < 0) { 
+					sprintf(errmsg, "No such group or location '%s'\n", s);
+					return -1;
+				}
+				demon_ui.selectedx = demon_location[l].x;
+				demon_ui.selectedy = demon_location[l].y;
+			}
+			for (i = 0; i < demon_group[g].nids; i++)
+				demon_ui.selected_id[i] = demon_group[g].id[i];
+			demon_ui.nselected = demon_group[g].nids;
+			break; 
+		default: /* unknown */
+			sprintf(errmsg, "Unknown ver number %d\n", v);
+			return -1;
+	}
+	return 0;
+}
+
 static void demon_exec_button_pressed(void *x)
 {
+	char demon_cmd[MAX_DEMON_CMD_SIZE], error_msg[100];
+	int rc;
+
 	if (strlen(demon_ui.input) == 0)
 		return;
+	rc = construct_demon_command(demon_ui.input, demon_cmd, error_msg);
+	if (rc) {
+		printf("Error msg: %s\n", error_msg);
+	} else {
+		printf("Command is ok\n");
+	}
 	send_demon_packet_to_server(demon_ui.input);
 	snis_text_input_box_zero(demon_ui.demon_input);
 }
