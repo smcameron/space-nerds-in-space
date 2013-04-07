@@ -4181,16 +4181,28 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	}
 	snis_draw_line(w->window, gc, x1, y1, x2, y2);
 	snis_draw_line(w->window, gc, x1, y2, x2, y1);
-	if (timer & 0x02 && demon_id_selected(o->id)) {
-		snis_draw_line(w->window, gc, x1 - 1, y1 - 1, x2 + 1, y1 - 1);
-		snis_draw_line(w->window, gc, x1 - 1, y2 + 1, x2 + 1, y2 + 1);
-		snis_draw_line(w->window, gc, x1 - 1, y1 - 1, x1 - 1, y2 + 1);
-		snis_draw_line(w->window, gc, x2 + 1, y1 - 1, x2 + 1, y2 + 1);
+	if (demon_id_selected(o->id)) {
+		if (timer & 0x02) {
+			snis_draw_line(w->window, gc, x1 - 1, y1 - 1, x2 + 1, y1 - 1);
+			snis_draw_line(w->window, gc, x1 - 1, y2 + 1, x2 + 1, y2 + 1);
+			snis_draw_line(w->window, gc, x1 - 1, y1 - 1, x1 - 1, y2 + 1);
+			snis_draw_line(w->window, gc, x2 + 1, y1 - 1, x2 + 1, y2 + 1);
+			if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
+				snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading +
+					(o->type == OBJTYPE_SHIP2) * 90.0 * M_PI / 180.0, 0.4);
+			}
+		}
+	} else {
+		if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
+			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading +
+					(o->type == OBJTYPE_SHIP2) * 90.0 * M_PI / 180.0, 0.4);
+		}
 	}
 
-	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2)
+	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
 		sng_abs_xy_draw_string(w, gc, o->sdata.name, NANO_FONT,
 					x + xoffset, y + yoffset);
+	}
 	if (v) {
 		sng_set_foreground(RED);
 		sng_draw_dotted_line(w->window, gc, x, y, vx, vy);
