@@ -4131,7 +4131,8 @@ static void demon_button_press(int button, gdouble x, gdouble y)
 
 static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 {
-	int x, y, x1, y1, x2, y2;
+	int x, y, x1, y1, x2, y2, vx, vy;
+	struct snis_entity *v = NULL;
 	int xoffset = 7;
 	int yoffset = 10;
 
@@ -4160,6 +4161,14 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 			sng_set_foreground(GREEN);
 		else
 			sng_set_foreground(WHITE);
+		if (o->tsd.ship.victim != -1) {
+			int vi = lookup_object_by_id(o->tsd.ship.victim);
+			if (vi >= 0) {	
+				v = &go[vi];
+				vx = ux_to_demonsx(v->x);
+				vy = uy_to_demonsy(v->y);
+			}
+		}
 		break;
 	case OBJTYPE_PLANET:
 		sng_set_foreground(BLUE);
@@ -4182,6 +4191,10 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2)
 		sng_abs_xy_draw_string(w, gc, o->sdata.name, NANO_FONT,
 					x + xoffset, y + yoffset);
+	if (v) {
+		sng_set_foreground(RED);
+		sng_draw_dotted_line(w->window, gc, x, y, vx, vy);
+	}
 	
 done_drawing_item:
 	return;
