@@ -4185,20 +4185,6 @@ done_drawing_item:
 	return;
 }
 
-static void send_demon_packet_to_server(char *msg)
-{
-	struct packed_buffer *pb;
-	uint8_t len = strlen(msg);
-
-	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + len);
-	packed_buffer_append(pb, "hb", OPCODE_DEMON_COMMAND, len);
-	packed_buffer_append_raw(pb, msg, (unsigned short) len);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
-}
-
-#define MAX_DEMON_CMD_SIZE 100
-
 static char *demon_verb[] = {
 	"mark",
 	"select",
@@ -4214,7 +4200,7 @@ static char *demon_verb[] = {
 static struct demon_group {
 	char name[100];
 	uint16_t id[256];
-	int nids;
+	uint8_t nids;
 } demon_group[26];
 static int ndemon_groups = 0;
 
@@ -4295,11 +4281,15 @@ static void set_demon_group(int n)
 	dg->nids = count;
 }
 
-static int construct_demon_command(char *input, char *cmd, char *errmsg)
+static int construct_demon_command(char *input,
+		struct demon_cmd_packet **cmd, char *errmsg)
 {
 	char *s;
 	int i, l, g, g2, found, v;
 	char *saveptr;
+	struct packed_buffer *pb;
+	int idcount;
+
 
 	saveptr = NULL;
 	s = strtok_r(input, DEMON_CMD_DELIM, &saveptr);
@@ -4372,6 +4362,26 @@ static int construct_demon_command(char *input, char *cmd, char *errmsg)
 			}
 			/* TODO - finish this */
 			printf("group %d commanded to attack group %d\n", g, g2);
+			idcount = demon_group[g].nids + demon_group[g2].nids;
+			pb = packed_buffer_allocate(sizeof(struct demon_cmd_packet)
+							+ (idcount - 1) * sizeof(uint32_t));
+			packed_buffer_append(pb, "hbwwbb", OPCODE_DEMON_COMMAND, DEMON_CMD_ATTACK, 0, 0,
+						demon_group[g].nids, demon_group[g2].nids);
+
+			printf("sending attack cmd\n");
+			printf("group 1:\n");
+			for (i = 0; i < demon_group[g].nids; i++) {
+				packed_buffer_append(pb, "w", demon_group[g].id[i]);
+				printf("%d ", demon_group[g].id[i]);
+			}
+			printf("\ngroup 2:\n");
+			for (i = 0; i < demon_group[g2].nids; i++) {
+				packed_buffer_append(pb, "w", demon_group[g2].id[i]);
+				printf("%d ", demon_group[g2].id[i]);
+			}
+			printf("\nend of attack cmd\n");
+			packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+			wakeup_gameserver_writer();
 			break; 
 		case 3: /* goto */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
@@ -4423,18 +4433,18 @@ static int construct_demon_command(char *input, char *cmd, char *errmsg)
 
 static void demon_exec_button_pressed(void *x)
 {
-	char demon_cmd[MAX_DEMON_CMD_SIZE], error_msg[100];
+	struct demon_cmd_packet *demon_cmd;
+	char error_msg[100];
 	int rc;
 
 	if (strlen(demon_ui.input) == 0)
 		return;
-	rc = construct_demon_command(demon_ui.input, demon_cmd, error_msg);
+	rc = construct_demon_command(demon_ui.input, &demon_cmd, error_msg);
 	if (rc) {
 		printf("Error msg: %s\n", error_msg);
 	} else {
 		printf("Command is ok\n");
 	}
-	send_demon_packet_to_server(demon_ui.input);
 	snis_text_input_box_zero(demon_ui.demon_input);
 }
 

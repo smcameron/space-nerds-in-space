@@ -1397,27 +1397,43 @@ static int process_comms_transmission(struct game_client *c)
 
 static int process_demon_command(struct game_client *c)
 {
-	unsigned char buffer[sizeof(struct comms_transmission_packet)];
-	char txt[256];
+	unsigned char buffer[sizeof(struct demon_cmd_packet) + 255 * sizeof(uint32_t)];
 	struct packed_buffer pb;
-	int rc;
-	uint8_t len;
-	int client_index;
-	char name[30];
+	int i, rc;
+	uint8_t demon_opcode;
+	uint32_t ix, iy;
+	int offset;
+	uint32_t id1[255];
+	uint32_t id2[255];
+	uint8_t nids1, nids2;
+
+	offset = offsetof(struct demon_cmd_packet, id) - sizeof(uint16_t);
 
 	rc = snis_readsocket(c->socket, buffer,
-		sizeof(struct comms_transmission_packet) - sizeof(uint16_t));
+		sizeof(struct demon_cmd_packet) - sizeof(uint32_t) - sizeof(uint16_t));
 	if (rc)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	len = packed_buffer_extract_u8(&pb);
-	rc = snis_readsocket(c->socket, txt, len);
+	packed_buffer_extract(&pb, "bwwbb", &demon_opcode, &ix, &iy, &nids1, &nids2);
+	rc = snis_readsocket(c->socket, buffer + offset, (nids1 + nids2) * sizeof(uint32_t));
 	if (rc)
 		return rc;
-	txt[len] = '\0';
-	client_index = ((unsigned long) c - (unsigned long) &client[0]) / sizeof(client[0]);
-	sprintf(name, "%s: ", bridgelist[client_index].shipname);
-	printf("demon command from %s%s\n", name, txt);
+
+	for (i = 0; i < nids1; i++)
+		packed_buffer_extract(&pb, "w", &id1[i]);
+	for (i = 0; i < nids2; i++)
+		packed_buffer_extract(&pb, "w", &id2[i]);
+
+	printf("Demon command received, opcode = %02x\n", demon_opcode);
+	printf("  x = %08x, y = %08x\n", ix, iy);
+	printf("Group 1 = \n");
+	for (i = 0; i < nids1; i++)
+		printf("%d ", id1[i]);
+	printf("\n");
+	printf("Group 2 = \n");
+	for (i = 0; i < nids2; i++)
+		printf("%d ", id2[i]);
+	printf("\n\n");
 	return 0;
 }
 

@@ -336,5 +336,16 @@ struct warp_limbo_packet {
 	uint16_t limbo_time;
 };
 
+#define MAX_DEMON_CMD_IDS 100
+struct demon_cmd_packet {
+	uint16_t opcode;
+	uint8_t demon_cmd;
+#define DEMON_CMD_ATTACK 1
+	uint32_t x, y;	
+	uint8_t nattackerids;
+	uint8_t nvictimids;
+	uint32_t id[1];
+};
+
 #pragma pack()
 #endif	
