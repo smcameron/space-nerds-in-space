@@ -131,6 +131,7 @@ struct update_econ_ship_packet {
 	uint32_t id;
 	uint32_t alive;
 	uint32_t x, y, v, heading;
+	uint32_t victim;
 };
 
 struct client_ship_id_packet {

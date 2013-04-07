@@ -317,7 +317,7 @@ static int lookup_object_by_id(uint32_t id)
 }
 
 static int update_econ_ship(uint32_t id, double x, double y, double vx,
-			double vy, double heading, uint32_t alive)
+			double vy, double heading, uint32_t alive, uint32_t victim)
 {
 	int i;
 	struct entity *e;
@@ -331,6 +331,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 	} else {
 		update_generic_object(i, x, y, vx, vy, heading, alive); 
 	}
+	go[i].tsd.ship.victim = (int32_t) victim;
 	return 0;
 }
 
@@ -1306,7 +1307,7 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
 	struct packed_buffer pb;
-	uint32_t id, alive;
+	uint32_t id, alive, victim;
 	double dx, dy, dheading, dv, dvx, dvy;
 	int rc;
 
@@ -1316,13 +1317,14 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "wwSSUU", &id, &alive,
+	packed_buffer_extract(&pb, "wwSSUUw", &id, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
-				&dv, (uint32_t) UNIVERSE_DIM, &dheading, (uint32_t) 360);
+				&dv, (uint32_t) UNIVERSE_DIM, &dheading, (uint32_t) 360,
+				&victim);
 	dvx = sin(dheading) * dv;
 	dvy = -cos(dheading) * dv;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_econ_ship(id, dx, dy, dvx, dvy, dheading, alive);
+	rc = update_econ_ship(id, dx, dy, dvx, dvy, dheading, alive, victim);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

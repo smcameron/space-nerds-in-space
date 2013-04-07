@@ -2168,9 +2168,10 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	dv = sqrt((o->vx * o->vx) + (o->vy * o->vy));
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
-	packed_buffer_append(pb, "hwwSSUU", OPCODE_ECON_UPDATE_SHIP, o->id, o->alive,
+	packed_buffer_append(pb, "hwwSSUUw", OPCODE_ECON_UPDATE_SHIP, o->id, o->alive,
 		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
-		dv, (uint32_t) UNIVERSE_DIM, o->heading, (uint32_t) 360);
+		dv, (uint32_t) UNIVERSE_DIM, o->heading, (uint32_t) 360,
+		(uint32_t) o->tsd.ship.victim);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
