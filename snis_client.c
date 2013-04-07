@@ -4035,6 +4035,8 @@ static struct demon_ui {
 	struct snis_text_input_box *demon_input;
 	char input[100];
 	char error_msg[80];
+	double ix, iy;
+	int selectmode;
 } demon_ui;
 
 static int ux_to_demonsx(double ux)
@@ -4091,12 +4093,29 @@ static void demon_deselect(uint32_t id)
 
 static void demon_button_press(int button, gdouble x, gdouble y)
 {
+	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
+	if (button != 3)
+		return;
+	demon_ui.ix = demon_mousex_to_ux(x);
+	demon_ui.iy = demon_mousey_to_uy(y);
+	demon_ui.selectmode = 1;
+}
+
+static inline int between(double a, double b, double v)
+{
+	return ((a <= v && v <= b) || (b <= v && v <= a));
+}
+
+static void demon_button_release(int button, gdouble x, gdouble y)
+{
 	int i, nselected;
 	double dist2, ox, oy;
+	int sx1, sy1;
 
 	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
 	if (button != 3)
 		return;
+	demon_ui.selectmode = 0;
 
 	if (demon_ui.nselected >= MAX_DEMON_SELECTABLE)
 		return;
@@ -4106,28 +4125,53 @@ static void demon_button_press(int button, gdouble x, gdouble y)
 	x = x * SCREEN_WIDTH / real_screen_width;
 	y = y * SCREEN_HEIGHT / real_screen_height;
 
-	nselected = 0;
-	pthread_mutex_lock(&universe_mutex);
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		int sx, sy;
-		struct snis_entity *o = &go[i];
+	sx1 = ux_to_demonsx(demon_ui.ix);
+	sy1 = uy_to_demonsy(demon_ui.iy);
 
-		sx = ux_to_demonsx(o->x);
-		sy = uy_to_demonsy(o->y);
-		dist2 = (sx - x) * (sx - x) + (sy - y) * (sy - y);
-		if (dist2 > 50)
-			continue;
-		nselected++;
-		if (demon_id_selected(o->id))
-			demon_deselect(o->id);
-		else
-			demon_select(o->id);
+	if (hypot(sx1 - x, sy1 - y) >= 5) {
+		/* multiple selection... */
+		nselected = 0;
+		pthread_mutex_lock(&universe_mutex);
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			int sx, sy;
+			struct snis_entity *o = &go[i];
+
+			sx = ux_to_demonsx(o->x);
+			sy = uy_to_demonsy(o->y);
+			if (!between(sx1, x, sx) || !between(sy1, y, sy))
+				continue;
+			nselected++;
+			if (demon_id_selected(o->id))
+				demon_deselect(o->id);
+			else
+				demon_select(o->id);
+		}
+		pthread_mutex_unlock(&universe_mutex);
+	} else {
+		/* single selection... */
+		nselected = 0;
+		pthread_mutex_lock(&universe_mutex);
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			int sx, sy;
+			struct snis_entity *o = &go[i];
+
+			sx = ux_to_demonsx(o->x);
+			sy = uy_to_demonsy(o->y);
+			dist2 = (sx - x) * (sx - x) + (sy - y) * (sy - y);
+			if (dist2 > 50)
+				continue;
+			nselected++;
+			if (demon_id_selected(o->id))
+				demon_deselect(o->id);
+			else
+				demon_select(o->id);
+		}
+		if (nselected == 0) {
+			demon_ui.selectedx = demon_mousex_to_ux(ox);
+			demon_ui.selectedy = demon_mousey_to_uy(oy);
+		}
+		pthread_mutex_unlock(&universe_mutex);
 	}
-	if (nselected == 0) {
-		demon_ui.selectedx = demon_mousex_to_ux(ox);
-		demon_ui.selectedy = demon_mousey_to_uy(oy);
-	}
-	pthread_mutex_unlock(&universe_mutex);
 }
 
 static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
@@ -4505,6 +4549,7 @@ static void init_demon_ui()
 	demon_ui.nselected = 0;
 	demon_ui.selectedx = -1.0;
 	demon_ui.selectedy = -1.0;
+	demon_ui.selectmode = 0;
 	strcpy(demon_ui.error_msg, "");
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
 	demon_ui.demon_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
@@ -4634,6 +4679,7 @@ static void show_demon(GtkWidget *w)
 			(unsigned long) netstats.elapsed_seconds,
 			(unsigned long long) (netstats.bytes_recd + netstats.bytes_sent) / netstats.elapsed_seconds);
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 10, SCREEN_HEIGHT - 10); 
+
 }
 
 static void show_warp_limbo_screen(GtkWidget *w)
@@ -5094,6 +5140,19 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 
 static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 	__attribute__((unused)) void *unused)
+{
+	switch (displaymode) {
+		case DISPLAYMODE_DEMON:
+			demon_button_press(event->button, event->x, event->y);
+			break;
+		default:
+			break;
+	}
+	return TRUE;
+}
+
+static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
+	__attribute__((unused)) void *unused)
 		
 {
 	switch (displaymode) {
@@ -5107,7 +5166,7 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 				(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
 		break;
 	case DISPLAYMODE_DEMON:
-		demon_button_press(event->button, event->x, event->y);
+		demon_button_release(event->button, event->x, event->y);
 		break;
 	default:
 		break;
@@ -5293,8 +5352,11 @@ int main(int argc, char *argv[])
         g_signal_connect(G_OBJECT (main_da), "scroll_event",
 		G_CALLBACK (main_da_scroll), NULL);
 	gtk_widget_add_events(main_da, GDK_BUTTON_PRESS_MASK);
+	gtk_widget_add_events(main_da, GDK_BUTTON_RELEASE_MASK);
 	g_signal_connect(G_OBJECT (main_da), "button_press_event",
                       G_CALLBACK (main_da_button_press), NULL);
+	g_signal_connect(G_OBJECT (main_da), "button_release_event",
+                      G_CALLBACK (main_da_button_release), NULL);
 
 	gtk_container_add (GTK_CONTAINER (window), vbox);
 	gtk_box_pack_start(GTK_BOX (vbox), main_da, TRUE /* expand */, TRUE /* fill */, 0);
