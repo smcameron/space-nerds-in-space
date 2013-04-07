@@ -4084,10 +4084,14 @@ static void demon_deselect(uint32_t id)
 	}
 }
 
-static void demon_button_press(gdouble x, gdouble y)
+static void demon_button_press(int button, gdouble x, gdouble y)
 {
 	int i, nselected;
 	double dist2, ox, oy;
+
+	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
+	if (button != 3)
+		return;
 
 	if (demon_ui.nselected >= MAX_DEMON_SELECTABLE)
 		return;
@@ -4809,7 +4813,7 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 				(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
 		break;
 	case DISPLAYMODE_DEMON:
-		demon_button_press(event->x, event->y);
+		demon_button_press(event->button, event->x, event->y);
 		break;
 	default:
 		break;
