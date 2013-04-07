@@ -498,6 +498,48 @@ static int add_torpedo(double x, double y, double vx, double vy, double heading,
 static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
 static uint8_t update_phaser_banks(int current, int max);
 
+static void ship_choose_new_attack_victim(struct snis_entity *o)
+{
+	struct snis_entity *v;
+	struct command_data *cmd_data;
+	int i, nids1, nids2, swapwith;
+	int r;
+
+	printf("choosing new victim for %d\n", o->id);
+	cmd_data = &o->tsd.ship.cmd_data;
+	if (cmd_data->command != DEMON_CMD_ATTACK)
+		return;
+
+	printf("2. choosing new victim for %d\n", o->id);
+	nids1 = cmd_data->nids1;
+	nids2 = cmd_data->nids2;
+
+	v = &go[o->tsd.ship.victim];
+	swapwith = nids1 + nids2 - 1;
+
+	if (v->alive)
+		return;
+
+	printf("3. choosing new victim for %d\n", o->id);
+	o->tsd.ship.victim = -1;
+	for (i = 0; i < cmd_data->nids2; i++) {
+		if (o->tsd.ship.victim == cmd_data->id[nids1 + i]) {
+			if (nids1 + i != swapwith)
+				cmd_data->id[nids1 + i] =
+					cmd_data->id[swapwith];
+			cmd_data->nids2--;
+			break;
+		}
+	}
+	if (cmd_data->nids2 == 0)
+		return;
+	printf("4. choosing new victim for %d\n", o->id);
+
+	r = snis_randn(cmd_data->nids2);
+	o->tsd.ship.victim = cmd_data->id[nids1 + r];
+	printf("o[%d] chose victim %d\n", o->id, o->tsd.ship.victim);
+}
+
 static void ship_move(struct snis_entity *o)
 {
 	double heading_diff, yaw_vel;
@@ -511,6 +553,8 @@ static void ship_move(struct snis_entity *o)
 		v = &go[o->tsd.ship.victim];
 		if (!v->alive || snis_randn(1000) < 50)
 			o->tsd.ship.victim = (uint32_t) -1;
+		if (!v->alive && o->tsd.ship.cmd_data.command == DEMON_CMD_ATTACK)
+			ship_choose_new_attack_victim(o);
 	}
 
 	if (o->tsd.ship.victim == (uint32_t) -1) {
@@ -1395,14 +1439,49 @@ static int process_comms_transmission(struct game_client *c)
 	return 0;
 }
 
+static void update_command_data(uint32_t id, struct command_data *cmd_data)
+{
+	struct snis_entity *o;
+	int i;
+
+	printf("updating command data for id %u\n", id);
+
+	i = lookup_by_id(id);
+	if (i < 0)
+		goto out;
+
+	printf("updating command data fo index %d\n", i);
+	o = &go[i];
+
+	if (o->type != OBJTYPE_SHIP2)
+		goto out;
+	printf("updating command data for OBJTYPE SHIP2\n");
+
+	printf("cmd_data->command = %hhu\n", cmd_data->command);
+	switch (cmd_data->command) {
+		case DEMON_CMD_ATTACK:
+		printf("updating DEMON_CMD_ATTACKfor OBJTYPE SHIP2\n");
+			o->tsd.ship.cmd_data = *cmd_data;
+			o->tsd.ship.victim = -1;
+			ship_choose_new_attack_victim(o);
+			break;
+		default:
+			goto out;	
+	}
+
+out:
+	pthread_mutex_unlock(&universe_mutex);
+	return;
+}
+
 static int process_demon_command(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct demon_cmd_packet) + 255 * sizeof(uint32_t)];
 	struct packed_buffer pb;
 	int i, rc;
-	uint8_t demon_opcode;
 	uint32_t ix, iy;
 	int offset;
+	struct command_data cmd_data;
 	uint32_t id1[255];
 	uint32_t id2[255];
 	uint8_t nids1, nids2;
@@ -1414,7 +1493,7 @@ static int process_demon_command(struct game_client *c)
 	if (rc)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "bwwbb", &demon_opcode, &ix, &iy, &nids1, &nids2);
+	packed_buffer_extract(&pb, "bwwbb", &cmd_data.command, &ix, &iy, &nids1, &nids2);
 	rc = snis_readsocket(c->socket, buffer + offset, (nids1 + nids2) * sizeof(uint32_t));
 	if (rc)
 		return rc;
@@ -1424,16 +1503,29 @@ static int process_demon_command(struct game_client *c)
 	for (i = 0; i < nids2; i++)
 		packed_buffer_extract(&pb, "w", &id2[i]);
 
-	printf("Demon command received, opcode = %02x\n", demon_opcode);
+	printf("Demon command received, opcode = %02x\n", cmd_data.command);
 	printf("  x = %08x, y = %08x\n", ix, iy);
 	printf("Group 1 = \n");
-	for (i = 0; i < nids1; i++)
+	for (i = 0; i < nids1; i++) {
 		printf("%d ", id1[i]);
+		cmd_data.id[i] = id1[i];
+	}
 	printf("\n");
 	printf("Group 2 = \n");
-	for (i = 0; i < nids2; i++)
+	for (i = 0; i < nids2; i++) {
 		printf("%d ", id2[i]);
+		cmd_data.id[nids1 + i] = id2[i];
+	}
 	printf("\n\n");
+
+	cmd_data.x = ix;
+	cmd_data.y = iy;
+	cmd_data.nids1 = nids1;
+	cmd_data.nids2 = nids2;
+
+	for (i = 0; i < nids1; i++)
+		update_command_data(id1[i], &cmd_data);
+	
 	return 0;
 }
 

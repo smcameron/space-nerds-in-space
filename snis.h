@@ -94,6 +94,13 @@ struct ship_damage_data {
 	uint8_t comms_damage;
 };
 
+struct command_data {
+	uint8_t command;
+	double x, y;
+	uint8_t nids1, nids2;
+	uint32_t id[256];
+};
+
 struct ship_data {
 	uint32_t torpedoes;
 #define TORPEDO_LIFETIME 20
@@ -153,6 +160,7 @@ struct ship_data {
 	int32_t victim;
 	double dox, doy; /* destination offsets */
 	struct ship_damage_data damage;
+	struct command_data cmd_data;
 };
 
 struct starbase_data {
