@@ -2681,7 +2681,7 @@ static void draw_all_the_science_nebulae(GtkWidget *w, struct snis_entity *o, do
 			continue;
 		for (j = 0; j < 80; j++) {
 			a = snis_randn(360) * M_PI / 180.0;
-			r = nebulaentry[i].r;
+			r = snis_randn((int) nebulaentry[i].r + 200);
 			x = nebulaentry[i].x + r * cos(a);
 			y = nebulaentry[i].y + r * sin(a);
 			d2 = (x - o->x) * (x - o->x) +
