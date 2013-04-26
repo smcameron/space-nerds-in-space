@@ -3660,11 +3660,112 @@ static void show_navigation(GtkWidget *w)
 	draw_science_graph(w, o, o, gx1, gy1, gx2, gy2);
 }
 
+struct damcon_ui {
+	struct label *robot_controls;
+	struct button *engineering_button;
+	struct button *robot_forward_button;
+	struct button *robot_backward_button;
+	struct button *robot_left_button;
+	struct button *robot_right_button;
+	struct button *robot_stop_button;
+	struct button *robot_operate_tool_button;
+	struct label *warp_core_label;
+	struct label *shield_gen_label;
+	struct label *phaser_bank_label;
+	struct label *torp_gen_label;
+	struct label *impulse_label;
+	struct label *sensor_array_label;
+	struct label *tool_locker_label;
+	struct label *storage_locker_label;
+} damcon_ui;
+
+static void main_engineering_button_pressed(void *x)
+{
+	displaymode = DISPLAYMODE_ENGINEERING;
+}
+
+static void robot_forward_button_pressed(void *x)
+{
+	printf("robot forward pressed\n");
+}
+
+static void robot_backward_button_pressed(void *x)
+{
+	printf("robot backward pressed\n");
+}
+
+static void robot_stop_button_pressed(void *x)
+{
+	printf("robot stop pressed\n");
+}
+
+static void robot_left_button_pressed(void *x)
+{
+	printf("robot left pressed\n");
+}
+
+static void robot_right_button_pressed(void *x)
+{
+	printf("robot right pressed\n");
+}
+
+static void robot_operate_tool_button_pressed(void *x)
+{
+	printf("robot operate tool pressed\n");
+}
+
+static void init_damcon_ui(void)
+{
+	damcon_ui.engineering_button = snis_button_init(630, 550, 140, 25, "ENGINEERING", AMBER,
+			NANO_FONT, main_engineering_button_pressed, (void *) 0);
+	damcon_ui.robot_controls = snis_label_init(630, 30, "ROBOT CONTROLS", AMBER, NANO_FONT);
+	
+	damcon_ui.robot_forward_button = snis_button_init(650, 60, 90, 25, "FORWARD", AMBER, NANO_FONT,
+							robot_forward_button_pressed, (void *) 0);
+	damcon_ui.robot_left_button = snis_button_init(630, 100, 25, 25, "L", AMBER, NANO_FONT,
+							robot_left_button_pressed, (void *) 0);
+	damcon_ui.robot_stop_button = snis_button_init(670, 100, 60, 25, "STOP", AMBER, NANO_FONT,
+							robot_stop_button_pressed, (void *) 0);
+	damcon_ui.robot_right_button = snis_button_init(740, 100, 25, 25, "R", AMBER, NANO_FONT,
+							robot_right_button_pressed, (void *) 0);
+	damcon_ui.robot_backward_button = snis_button_init(650, 140, 90, 25, "BACKWARD", AMBER, NANO_FONT,
+							robot_backward_button_pressed, (void *) 0);
+	damcon_ui.robot_operate_tool_button = snis_button_init(650, 180, 90, 25, "USE TOOL", AMBER, NANO_FONT,
+							robot_operate_tool_button_pressed, (void *) 0);
+
+	damcon_ui.warp_core_label = snis_label_init(270, 340, "WARP CORE", AMBER, NANO_FONT);
+	damcon_ui.shield_gen_label = snis_label_init(30, 450, "SHIELD GENERATOR", AMBER, NANO_FONT);
+	damcon_ui.phaser_bank_label = snis_label_init(510, 340, "PHASER BANK", AMBER, NANO_FONT);
+	damcon_ui.torp_gen_label = snis_label_init(30, 570, "PHOTON GENERATOR", AMBER, NANO_FONT);
+	damcon_ui.impulse_label = snis_label_init(30, 110, "IMPULSE POWER", AMBER, NANO_FONT);
+	damcon_ui.sensor_array_label = snis_label_init(30, 240, "SENSOR ARRAY", AMBER, NANO_FONT);
+	damcon_ui.tool_locker_label = snis_label_init(505, 110, "TOOL LOCKER", AMBER, NANO_FONT);
+	damcon_ui.storage_locker_label = snis_label_init(470, 570, "STORAGE LOCKER", AMBER, NANO_FONT);
+
+	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON);
+	ui_add_button(damcon_ui.robot_forward_button, DISPLAYMODE_DAMCON);
+	ui_add_button(damcon_ui.robot_left_button, DISPLAYMODE_DAMCON);
+	ui_add_button(damcon_ui.robot_stop_button, DISPLAYMODE_DAMCON);
+	ui_add_button(damcon_ui.robot_right_button, DISPLAYMODE_DAMCON);
+	ui_add_button(damcon_ui.robot_backward_button, DISPLAYMODE_DAMCON);
+	ui_add_button(damcon_ui.robot_operate_tool_button, DISPLAYMODE_DAMCON);
+	ui_add_label(damcon_ui.robot_controls, DISPLAYMODE_DAMCON);
+	ui_add_label(damcon_ui.warp_core_label, DISPLAYMODE_DAMCON);
+	ui_add_label(damcon_ui.shield_gen_label, DISPLAYMODE_DAMCON);
+	ui_add_label(damcon_ui.phaser_bank_label, DISPLAYMODE_DAMCON);
+	ui_add_label(damcon_ui.torp_gen_label, DISPLAYMODE_DAMCON);
+	ui_add_label(damcon_ui.impulse_label, DISPLAYMODE_DAMCON);
+	ui_add_label(damcon_ui.sensor_array_label, DISPLAYMODE_DAMCON);
+	ui_add_label(damcon_ui.tool_locker_label, DISPLAYMODE_DAMCON);
+	ui_add_label(damcon_ui.storage_locker_label, DISPLAYMODE_DAMCON);
+}
+
 struct enginerring_ui {
 	struct gauge *fuel_gauge;
 	struct gauge *power_gauge;
 	struct gauge *rpm_gauge;
 	struct gauge *temp_gauge;
+	struct button *damcon_button;
 	struct slider *shield_slider;
 	struct slider *maneuvering_slider;
 	struct slider *warp_slider;
@@ -3683,6 +3784,11 @@ struct enginerring_ui {
 	struct slider *comms_damage;
 
 } eng_ui;
+
+static void damcon_button_pressed(void *x)
+{
+	displaymode = DISPLAYMODE_DAMCON;
+}
 
 static void init_engineering_ui(void)
 {
@@ -3709,6 +3815,8 @@ static void init_engineering_ui(void)
 	eng_ui.throttle_slider = snis_slider_init(350, y + yinc, 200, AMBER, "THROTTLE", "0", "100",
 				0.0, 100.0, sample_throttle, do_throttle);
 
+	eng_ui.damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", AMBER,
+			NANO_FONT, damcon_button_pressed, (void *) 0);
 	y += yinc;
 	eng_ui.shield_slider = snis_slider_init(20, y += yinc, 150, AMBER, "SHIELDS", "0", "100",
 				0.0, 100.0, sample_shields, do_shields_pwr);
@@ -3736,6 +3844,7 @@ static void init_engineering_ui(void)
 	ui_add_gauge(eng_ui.fuel_gauge, DISPLAYMODE_ENGINEERING);
 	ui_add_gauge(eng_ui.power_gauge, DISPLAYMODE_ENGINEERING);
 	ui_add_gauge(eng_ui.temp_gauge, DISPLAYMODE_ENGINEERING);
+	ui_add_button(eng_ui.damcon_button, DISPLAYMODE_ENGINEERING);
 
 	y = 220 + yinc;
 	eng_ui.shield_damage = snis_slider_init(350, y += yinc, 150, AMBER, "SHIELD STATUS", "0", "100",
@@ -3764,6 +3873,15 @@ static void init_engineering_ui(void)
 static void show_engineering(GtkWidget *w)
 {
 	show_common_screen(w, "Engineering");
+}
+
+static void show_damcon(GtkWidget *w)
+{
+	show_common_screen(w, "DAMAGE CONTROL");
+
+	/* This is really rough... */
+	sng_set_foreground(AMBER);
+	sng_current_draw_rectangle(w->window, gc, 0, 20, 80, 600, 500);
 }
 
 struct science_ui {
@@ -5249,6 +5367,9 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	case DISPLAYMODE_DEMON:
 		show_demon(w);
 		break;
+	case DISPLAYMODE_DAMCON:
+		show_damcon(w);
+		break;
 	case DISPLAYMODE_NETWORK_SETUP:
 		show_network_setup(w);
 		break;
@@ -5585,6 +5706,7 @@ int main(int argc, char *argv[])
 	init_lobby_ui();
 	init_nav_ui();
 	init_engineering_ui();
+	init_damcon_ui();
 	init_weapons_ui();
 	init_science_ui();
 	init_comms_ui();
