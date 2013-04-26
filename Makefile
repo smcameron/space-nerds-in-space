@@ -24,7 +24,7 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_graph.o \
 	snis_client.o snis_font.o snis_text_input.o \
-	snis_typeface.o snis_gauge.o snis_button.o snis_sliders.o snis_text_window.o \
+	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	stl_parser.o entity.o matrix.o
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm
@@ -105,6 +105,9 @@ snis_gauge.o:	snis_gauge.h snis_gauge.c snis_graph.h
 
 snis_button.o:	snis_button.h snis_button.c snis_graph.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_button.c
+
+snis_label.o:	snis_label.h snis_label.c snis_graph.h
+	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_label.c
 
 snis_sliders.o:	snis_sliders.h snis_sliders.c snis_graph.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_sliders.c

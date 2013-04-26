@@ -51,6 +51,7 @@
 #include "snis_ui_element.h"
 #include "snis_gauge.h"
 #include "snis_button.h"
+#include "snis_label.h"
 #include "snis_sliders.h"
 #include "snis_text_window.h"
 #include "snis_text_input.h"
@@ -156,6 +157,7 @@ ui_element_drawing_function ui_slider_draw = (ui_element_drawing_function) snis_
 ui_element_button_press_function ui_slider_button_press = (ui_element_button_press_function) snis_slider_button_press;
 
 ui_element_drawing_function ui_button_draw = (ui_element_drawing_function) snis_button_draw;
+ui_element_drawing_function ui_label_draw = (ui_element_drawing_function) snis_label_draw;
 ui_element_button_press_function ui_button_button_press = (ui_element_button_press_function) snis_button_button_press;
 ui_element_drawing_function ui_gauge_draw = (ui_element_drawing_function) gauge_draw;
 ui_element_drawing_function ui_text_window_draw = (ui_element_drawing_function) text_window_draw;
@@ -3402,6 +3404,15 @@ static void ui_add_button(struct button *b, int active_displaymode)
 	struct ui_element *uie;
 
 	uie = ui_element_init(b, ui_button_draw, ui_button_button_press,
+						active_displaymode, &displaymode);
+	ui_element_list_add_element(&uiobjs, uie); 
+}
+
+static void ui_add_label(struct label *l, int active_displaymode)
+{
+	struct ui_element *uie;
+
+	uie = ui_element_init(l, ui_label_draw, NULL,
 						active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
