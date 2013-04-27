@@ -805,7 +805,7 @@ enum keyaction { keynone, keydown, keyup, keyleft, keyright,
 		key7, key8, keysuicide, keyfullscreen, keythrust, 
 		keysoundeffects, keymusic, keyquit, keytogglemissilealarm,
 		keypausehelp, keyreverse, keyf1, keyf2, keyf3, keyf4, keyf5,
-		keyf6, keyf7, keyf8, keyonscreen
+		keyf6, keyf7, keyf8, keyf9, keyonscreen
 };
 
 enum keyaction keymap[256];
@@ -873,6 +873,7 @@ void init_keymap()
 	ffkeymap[GDK_F6 & 0x00ff] = keyf6;
 	ffkeymap[GDK_F7 & 0x00ff] = keyf7;
 	ffkeymap[GDK_F8 & 0x00ff] = keyf8;
+	ffkeymap[GDK_F9 & 0x00ff] = keyf9;
 
 	ffkeymap[GDK_F11 & 0x00ff] = keyfullscreen;
 }
@@ -1137,12 +1138,20 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	case keyf5:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
+		if (role & ROLE_DAMCON) {
+			displaymode = DISPLAYMODE_DAMCON;
+			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		}
+		break;
+	case keyf6:
+		if (displaymode >= DISPLAYMODE_FONTTEST)
+			break;
 		if (role & ROLE_SCIENCE) {
 			displaymode = DISPLAYMODE_SCIENCE;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
-	case keyf6:
+	case keyf7:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_COMMS) {
@@ -1150,7 +1159,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
-	case keyf7:
+	case keyf8:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_DEBUG) {
@@ -1158,7 +1167,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
-	case keyf8:
+	case keyf9:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_DEMON) {
@@ -1538,6 +1547,7 @@ static int process_role_onscreen_packet(void)
 	case DISPLAYMODE_NAVIGATION:
 	case DISPLAYMODE_WEAPONS:
 	case DISPLAYMODE_ENGINEERING:
+	case DISPLAYMODE_DAMCON:
 	case DISPLAYMODE_SCIENCE:
 	case DISPLAYMODE_COMMS:
 	case DISPLAYMODE_DEBUG:
@@ -1640,6 +1650,7 @@ struct comms_ui {
 	struct button *nav_onscreen_button;
 	struct button *weap_onscreen_button;
 	struct button *eng_onscreen_button;
+	struct button *damcon_onscreen_button;
 	struct button *sci_onscreen_button;
 	struct button *main_onscreen_button;
 	struct button *comms_transmit_button;
@@ -3908,9 +3919,11 @@ static void comms_screen_button_pressed(void *x)
 		break;
 	case 3: do_onscreen((uint8_t) DISPLAYMODE_ENGINEERING);
 		break;
-	case 4: do_onscreen((uint8_t) DISPLAYMODE_SCIENCE);
+	case 4: do_onscreen((uint8_t) DISPLAYMODE_DAMCON);
 		break;
-	case 5: do_onscreen((uint8_t) DISPLAYMODE_MAINSCREEN);
+	case 5: do_onscreen((uint8_t) DISPLAYMODE_SCIENCE);
+		break;
+	case 6: do_onscreen((uint8_t) DISPLAYMODE_MAINSCREEN);
 		break;
 	default:
 		break;
@@ -3960,11 +3973,14 @@ static void init_comms_ui(void)
 	comms_ui.eng_onscreen_button = snis_button_init(x, y, 75, 25, "ENG", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 3);
 	x += 75;
-	comms_ui.sci_onscreen_button = snis_button_init(x, y, 75, 25, "SCI", GREEN,
+	comms_ui.damcon_onscreen_button = snis_button_init(x, y, 75, 25, "DAMCON", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 4);
 	x += 75;
-	comms_ui.main_onscreen_button = snis_button_init(x, y, 75, 25, "MAIN", GREEN,
+	comms_ui.sci_onscreen_button = snis_button_init(x, y, 75, 25, "SCI", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 5);
+	x += 75;
+	comms_ui.main_onscreen_button = snis_button_init(x, y, 75, 25, "MAIN", GREEN,
+			NANO_FONT, comms_screen_button_pressed, (void *) 6);
 	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20, 40, 20, GREEN);
 	comms_ui.comms_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
 					comms_ui.input, 50, &timer,
@@ -3976,6 +3992,7 @@ static void init_comms_ui(void)
 	ui_add_button(comms_ui.nav_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.weap_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.eng_onscreen_button, DISPLAYMODE_COMMS);
+	ui_add_button(comms_ui.damcon_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.sci_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.main_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS);
@@ -5010,6 +5027,7 @@ struct network_setup_ui {
 	struct button *role_nav;
 	struct button *role_weap;
 	struct button *role_eng;
+	struct button *role_damcon;
 	struct button *role_sci;
 	struct button *role_comms;
 	struct button *role_debug;
@@ -5019,6 +5037,7 @@ struct network_setup_ui {
 	int role_nav_v;
 	int role_weap_v;
 	int role_eng_v;
+	int role_damcon_v;
 	int role_sci_v;
 	int role_comms_v;
 	int role_debug_v;
@@ -5107,6 +5126,7 @@ static void connect_to_lobby_button_pressed()
 	role |= (ROLE_WEAPONS * !!net_setup_ui.role_weap_v);
 	role |= (ROLE_NAVIGATION * !!net_setup_ui.role_nav_v);
 	role |= (ROLE_ENGINEERING * !!net_setup_ui.role_eng_v);
+	role |= (ROLE_DAMCON * !!net_setup_ui.role_damcon_v);
 	role |= (ROLE_SCIENCE * !!net_setup_ui.role_sci_v);
 	role |= (ROLE_COMMS * !!net_setup_ui.role_comms_v);
 	role |= (ROLE_DEBUG * !!net_setup_ui.role_debug_v);
@@ -5134,7 +5154,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	int x, y;
 
 	x = 520;
-	y = 380;
+	y = 345;
 
 	nsu->role_main_v = 0;
 	nsu->role_nav_v = 0;
@@ -5148,6 +5168,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	nsu->role_nav = init_net_role_button(x, &y, "NAVIGATION ROLE", &nsu->role_nav_v);
 	nsu->role_weap = init_net_role_button(x, &y, "WEAPONS ROLE", &nsu->role_weap_v);
 	nsu->role_eng = init_net_role_button(x, &y, "ENGINEERING ROLE", &nsu->role_eng_v);
+	nsu->role_damcon = init_net_role_button(x, &y, "DAMCON ROLE", &nsu->role_damcon_v);
 	nsu->role_sci = init_net_role_button(x, &y, "SCIENCE ROLE", &nsu->role_sci_v);
 	nsu->role_comms = init_net_role_button(x, &y, "COMMUNICATIONS ROLE", &nsu->role_comms_v);
 	nsu->role_debug = init_net_role_button(x, &y, "DEBUG ROLE", &nsu->role_debug_v);
@@ -5158,6 +5179,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	ui_add_button(nsu->role_nav, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_weap, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_eng, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->role_damcon, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_sci, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_comms, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_debug, DISPLAYMODE_NETWORK_SETUP);

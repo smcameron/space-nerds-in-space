@@ -246,6 +246,7 @@ struct request_thrust_packet {
 #define ROLE_COMMS		(1 << DISPLAYMODE_COMMS)
 #define ROLE_DEBUG		(1 << DISPLAYMODE_DEBUG)
 #define ROLE_DEMON		(1 << DISPLAYMODE_DEMON)
+#define ROLE_DAMCON		(1 << DISPLAYMODE_DAMCON)
 #define ROLE_SOUNDSERVER	(1 << DISPLAYMODE_FONTTEST)
 #define ROLE_ALL		(0xffffffff)
 
