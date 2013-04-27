@@ -47,6 +47,7 @@ struct gauge *gauge_init(int x, int y, int r, double r1, double r2,
 	g->ndivs = ndivs;
 	g->sample = gmf;
 	strncpy(g->title, title, sizeof(g->title) - 1);
+	g->title[sizeof(g->title) - 1] = '\0';
 	g->sample2 = NULL;
 
 	return g;

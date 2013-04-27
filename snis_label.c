@@ -25,6 +25,7 @@ struct label *snis_label_init(int x, int y,
 	l->x = x;
 	l->y = y;
 	strncpy(l->label, label, sizeof(l->label) - 1);
+	l->label[sizeof(l->label) - 1] = '\0';
 	l->color = color;
 	l->font = font;
 	return l;

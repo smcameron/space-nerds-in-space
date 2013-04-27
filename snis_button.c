@@ -32,6 +32,7 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->width = width;
 	b->height = height;
 	strncpy(b->label, label, sizeof(b->label) - 1);
+	b->label[sizeof(b->label) - 1] = '\0';
 	b->color = color;
 	b->font = font;
 	b->bf = bf;

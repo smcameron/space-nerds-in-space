@@ -35,8 +35,11 @@ struct slider *snis_slider_init(int x, int y, int length, int color,
 	s->length = length;
 	s->color = color;
 	strncpy(s->label, label, sizeof(s->label) - 1);
+	s->label[sizeof(s->label) - 1] = '\0';
 	strncpy(s->label1, l1, sizeof(s->label1) - 1);
+	s->label1[sizeof(s->label1) - 1] = '\0';
 	strncpy(s->label2, l2, sizeof(s->label2) - 1);
+	s->label2[sizeof(s->label2) - 1] = '\0';
 	s->r1 = r1;
 	s->r2 = r2;
 	s->sample = gmf;

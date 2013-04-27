@@ -40,6 +40,7 @@ int text_window_entry_count(struct text_window *tw)
 void text_window_add_text(struct text_window *tw, char *text)
 {
 	strncpy(tw->text[tw->last_entry], text, 79);
+	tw->text[tw->last_entry][79] = '\0';
 	tw->last_entry = (tw->last_entry + 1) % tw->total_lines;
 	if (tw->last_entry == tw->first_entry)
 		tw->first_entry = (tw->first_entry + 1) % tw->total_lines;
@@ -140,6 +141,7 @@ void text_window_draw(GtkWidget *w, GdkGC *gc, struct text_window *tw)
 			} else {
 				char tmpbuf[100];	
 				strncpy(tmpbuf, tw->text[i], 99);
+				tmpbuf[99] = '\0';
 				if (tw->printing_pos < len - 1) {
 					if (((*textwindow_timer >> 2) & 1) == 0) {
 						tmpbuf[tw->printing_pos] = '_';
