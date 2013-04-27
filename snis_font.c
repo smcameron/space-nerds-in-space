@@ -142,6 +142,18 @@ static stroke_t glyph_apostrophe[] = { 2, 7, 99 };
 static stroke_t glyph_doublequote[] = { 1, 6, LP, 3, 8, 99 };
 static stroke_t glyph_asterisk[] = { 7, 17, LP, 11, 13, LP, 6, 18, LP, 16, 8, 99 };
 static stroke_t glyph_underscore[] = { 25, 29, 99 };
+static stroke_t glyph_hash[] = { 1, 30, LP, 4, 33, LP, 10, 14, LP ,20, 24, 99 }; 
+static stroke_t glyph_dollar[] = { 4, 0, 15, 19, 34, 30, LP, 2, 32, 99 };
+static stroke_t glyph_percent[] = { 4, 30, LP, 1, 5, 11, 7, 1, LP, 23, 27, 33, 29, 23, 99 };
+static stroke_t glyph_caret[] = { 6, 2, 8, 99 };
+static stroke_t glyph_ampersand[] = { 34, 10, 2, 14, 15, 30, 24, 99 };
+static stroke_t glyph_at[] = { 28, 26, 6, 8, 23, 17, 13, 99 };
+static stroke_t glyph_lessthan[] = { 4, 10, 24, 99 };
+static stroke_t glyph_greaterthan[] = { 0, 14, 20, 99 };
+static stroke_t glyph_rightbracket[] = { 2, 4, 24, 22, 99 }; 
+static stroke_t glyph_leftbracket[] = { 2, 0, 20, 22, 99 }; 
+static stroke_t glyph_semicolon[] = { 6, 7, LP, 16, 17, 22, 99 }; 
+static stroke_t glyph_tilde[] = { 5, 1, 7, 3, 4, 99 };
 
 /* x and y offsets for decoding stroke_t's, above */
 static struct my_point_t decode_glyph[] = {
@@ -317,6 +329,19 @@ int snis_make_font(struct my_vect_obj ***font, int xscale, int yscale)
 	v['\"'] = prerender_glyph(glyph_doublequote, xscale, yscale);
 	v['*'] = prerender_glyph(glyph_asterisk, xscale, yscale);
 	v['_'] = prerender_glyph(glyph_underscore, xscale, yscale);
+	v['#'] = prerender_glyph(glyph_hash, xscale, yscale); 
+	v['$'] = prerender_glyph(glyph_dollar, xscale, yscale);
+	v['%'] = prerender_glyph(glyph_percent, xscale, yscale);
+	v['^'] = prerender_glyph(glyph_caret, xscale, yscale);
+	v['&'] = prerender_glyph(glyph_ampersand, xscale, yscale);
+	v['@'] = prerender_glyph(glyph_at, xscale, yscale);
+	v['<'] = prerender_glyph(glyph_lessthan, xscale, yscale);
+	v['>'] = prerender_glyph(glyph_greaterthan, xscale, yscale);
+	v[']'] = prerender_glyph(glyph_rightbracket, xscale, yscale); 
+	v['['] = prerender_glyph(glyph_leftbracket, xscale, yscale); 
+	v[';'] = prerender_glyph(glyph_semicolon, xscale, yscale); 
+	v['~'] = prerender_glyph(glyph_tilde, xscale, yscale);
+
 	*font = v;
 	return 0;
 }
