@@ -236,4 +236,59 @@ struct snis_entity {
 	struct entity *entity;
 };
 
+/* These are for the robot and various parts on the engineering deck on the damcon screen */
+struct snis_damcon_entity;
+
+typedef void (*damcon_move_function)(struct snis_damcon_entity *o);
+
+#define DAMCON_TYPE_ROBOT 0
+#define DAMCON_TYPE_LABEL 1
+#define DAMCON_TYPE_SYSTEM 2
+#define DAMCON_TYPE_PART 3
+#define DAMCON_TYPE_SOCKET 4
+
+struct damcon_robot_type_specific_data {
+	uint32_t cargo_id; /* what the robot is carrying */
+#define ROBOT_CARGO_EMPTY 0xffffffff
+};
+
+struct damcon_label_specific_data {
+	char value[25];
+	int font;
+};
+
+struct damcon_part_specific_data {
+	uint8_t system, part;
+};
+
+struct damcon_system_specific_data {
+	uint8_t system;
+};
+
+struct damcon_socket_specific_data {
+	uint8_t system, part;
+	uint32_t contents_id; /* id of what socket contains */
+#define DAMCON_SOCKET_EMPTY 0xffffffff;
+};
+
+union damcon_type_specific_data {
+	struct damcon_robot_type_specific_data robot;
+	struct damcon_label_specific_data label;
+	struct damcon_system_specific_data system;
+	struct damcon_part_specific_data part;
+	struct damcon_socket_specific_data socket;
+};
+
+struct snis_damcon_entity {
+	uint32_t index;
+	uint32_t id;
+	uint32_t ship_id; /* ID of ship this entity is on */
+	double x, y, vx, vy, heading;
+	uint32_t type;
+	uint32_t timestamp;
+	union damcon_type_specific_data tsd;
+	damcon_move_function move;
+	void *drawing_data;
+};
+
 #endif
