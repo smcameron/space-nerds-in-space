@@ -275,7 +275,9 @@ static void connect_to_lobby()
 }
 
 static struct snis_object_pool *pool;
+static struct snis_object_pool *damcon_pool;
 static struct snis_entity go[MAXGAMEOBJS];
+static struct snis_damcon_entity dco[MAXDAMCONENTITIES];
 static struct snis_object_pool *sparkpool;
 static struct snis_entity spark[MAXSPARKS];
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -321,6 +323,69 @@ static int lookup_object_by_id(uint32_t id)
 		if (go[i].id == id)
 			return i;
 	return -1;
+}
+
+static int lookup_damcon_object_by_id(uint32_t id)
+{
+	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(damcon_pool); i++)
+		if (dco[i].id == id)
+			return i;
+	return -1;
+}
+
+static void update_generic_damcon_object(struct snis_damcon_entity *o,
+			double x, double y, double vx, double vy, double heading)
+{
+	o->x = x;
+	o->y = y;
+	o->vx = vx;
+	o->vy = vy;
+	o->heading = heading;
+}
+
+static int add_generic_damcon_object(uint32_t id, uint32_t ship_id, double x, double y,
+			double vx, double vy, double heading)
+{
+	int i;
+	struct snis_damcon_entity *o;
+
+	i = snis_object_pool_alloc_obj(damcon_pool); 	 
+	if (i < 0) {
+		printf("snis_object_pool_alloc_obj failed in add_generic_damcon_object\n");
+		return -1;
+	}
+	o = &dco[i];
+	memset(o, 0, sizeof(*o));
+	o->index = i;
+	o->id = id;
+	o->ship_id = ship_id;
+	update_generic_damcon_object(o, x, y, vx, vy, heading);
+	return 0;
+}
+
+static int update_damcon_object(uint32_t id, uint32_t ship_id,
+			double x, double y, double vx, double vy,
+			double heading)
+
+{
+	int i;
+	struct snis_damcon_entity *o;
+
+	i = lookup_damcon_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_damcon_object(id, ship_id, x, y, vx, vy, heading);
+		if (i < 0)
+			return i;
+		o = &dco[i];
+		o->id = id;
+		o->ship_id = ship_id;
+		return 0;
+	}
+	o = &dco[i];
+	update_generic_damcon_object(o, x, y, vx, vy, heading);
+	return 0;
 }
 
 static int update_econ_ship(uint32_t id, double x, double y, double vx,
@@ -1351,6 +1416,31 @@ static int process_update_ship_packet(uint16_t opcode)
 	return (rc < 0);
 } 
 
+static int process_update_damcon_object(void)
+{
+	unsigned char buffer[sizeof(struct damcon_obj_update_packet) - sizeof(uint16_t)];
+	struct packed_buffer pb;
+	uint32_t id, ship_id;
+	double x, y, vx, vy, heading;
+	int rc;
+
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "wwSSSSS",
+		&id, &ship_id,
+			&x, (int32_t) DAMCONXDIM, 
+			&y, (int32_t) DAMCONYDIM, 
+			&vx, (int32_t) DAMCONXDIM, 
+			&vy, (int32_t) DAMCONYDIM, 
+			&heading, (int32_t) 360);
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_damcon_object(id, ship_id, x, y, vx, vy, heading);
+	pthread_mutex_unlock(&universe_mutex);
+	return rc;
+}
+
 static int process_update_econ_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
@@ -1939,6 +2029,12 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_NETSTATS:
 			rc = process_update_netstats();
+			if (rc)
+				goto protocol_error;
+			break;
+		
+		case OPCODE_DAMCON_OBJ_UPDATE:
+			rc = process_update_damcon_object();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -5641,6 +5737,8 @@ int main(int argc, char *argv[])
 
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 	snis_object_pool_setup(&sparkpool, MAXSPARKS);
+	snis_object_pool_setup(&damcon_pool, MAXDAMCONENTITIES);
+	memset(dco, 0, sizeof(dco));
 
 	ignore_sigpipe();
 

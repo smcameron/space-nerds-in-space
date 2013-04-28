@@ -70,6 +70,7 @@
 #define OPCODE_WARP_LIMBO	144	
 #define OPCODE_DEMON_COMMAND 145
 #define OPCODE_UPDATE_NEBULA		146
+#define OPCODE_DAMCON_OBJ_UPDATE	147
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -355,6 +356,13 @@ struct demon_cmd_packet {
 	uint8_t nattackerids;
 	uint8_t nvictimids;
 	uint32_t id[1];
+};
+
+struct damcon_obj_update_packet {
+	uint16_t opcode;
+	uint32_t id;
+	uint32_t ship_id;
+	uint32_t x, y, vx, vy, heading;
 };
 
 #pragma pack()

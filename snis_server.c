@@ -1216,6 +1216,60 @@ static void make_universe(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static int add_generic_damcon_object(struct damcon_data *d)
+{
+	int i;
+	struct snis_damcon_entity *o;
+
+	i = snis_object_pool_alloc_obj(d->pool); 	 
+	if (i < 0)
+		return -1;
+	o = &d->o[i];
+	memset(o, 0, sizeof(*o));
+	o->x = 0;
+	o->y = 0;
+	o->vx = 0;
+	o->vy = 0;
+	o->heading = 0;
+	o->timestamp = universe_timestamp;
+	return i;
+}
+
+static void add_damcon_robot(struct damcon_data *d)
+{
+	int i;
+
+	i = add_generic_damcon_object(d);
+	if (i < 0)
+		return;
+}
+
+static void add_damcon_sockets(struct damcon_data *d)
+{
+}
+
+static void add_damcon_labels(struct damcon_data *d)
+{
+}
+
+static void add_damcon_systems(struct damcon_data *d)
+{
+}
+
+static void add_damcon_parts(struct damcon_data *d)
+{
+}
+
+static void populate_damcon_arena(struct damcon_data *d)
+{
+	snis_object_pool_setup(&d->pool, MAXDAMCONENTITIES);
+	add_damcon_robot(d);
+	add_damcon_sockets(d);
+	add_damcon_labels(d);
+	add_damcon_systems(d);
+	add_damcon_parts(d);
+}
+
 static void __attribute__((unused)) timespec_subtract(struct timespec *have, struct timespec *takeaway, struct timespec *leaves)
 {
 	leaves->tv_nsec = have->tv_nsec - takeaway->tv_nsec;
@@ -2049,6 +2103,8 @@ static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_nebula_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_damcon_obj_packet(struct game_client *c,
+	struct snis_damcon_entity *o);
 
 static void send_respawn_time(struct game_client *c, struct snis_entity *o);
 
@@ -2128,6 +2184,8 @@ static void queue_netstats(struct game_client *c)
 static void queue_up_client_damcon_object_update(struct game_client *c,
 			struct damcon_data *d, struct snis_damcon_entity *o)
 {
+	if (o->timestamp > c->timestamp)
+		send_update_damcon_obj_packet(c, o);
 }
 
 static void queue_up_client_damcon_update(struct game_client *c)
@@ -2340,6 +2398,23 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
+static void send_update_damcon_obj_packet(struct game_client *c,
+		struct snis_damcon_entity *o)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct damcon_obj_update_packet));
+	packed_buffer_append(pb, "hwwSSSSS",
+			OPCODE_DAMCON_OBJ_UPDATE,   
+			o->id, o->ship_id,
+			o->x, (int32_t) DAMCONXDIM,
+			o->y, (int32_t) DAMCONYDIM,
+			o->vx,  (int32_t) DAMCONXDIM,
+			o->vy,  (int32_t) DAMCONXDIM,
+			o->heading, (int32_t) 360);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
 static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o)
 {
@@ -2450,7 +2525,7 @@ static int add_new_player(struct game_client *c)
 		strcpy((char *) bridgelist[nbridges].password, (const char *) app.password);
 		bridgelist[nbridges].shipid = c->shipid;
 		c->bridge = nbridges;
-		snis_object_pool_setup(&bridgelist[nbridges].damcon.pool, MAXDAMCONENTITIES);
+		populate_damcon_arena(&bridgelist[c->bridge].damcon);
 	
 		nbridges++;
 		
