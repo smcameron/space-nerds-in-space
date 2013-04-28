@@ -2125,6 +2125,20 @@ static void queue_netstats(struct game_client *c)
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
+static void queue_up_client_damcon_object_update(struct game_client *c,
+			struct damcon_data *d, struct snis_damcon_entity *o)
+{
+}
+
+static void queue_up_client_damcon_update(struct game_client *c)
+{
+	int i;
+	struct damcon_data *d = &bridgelist[c->bridge].damcon;
+	
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++)
+		queue_up_client_damcon_object_update(c, d, &d->o[i]);
+}
+
 static void queue_up_client_updates(struct game_client *c)
 {
 	int i;
@@ -2143,6 +2157,7 @@ static void queue_up_client_updates(struct game_client *c)
 			count++;
 		}
 	}
+	queue_up_client_damcon_update(c);
 	pthread_mutex_unlock(&universe_mutex);
 	/* printf("queued up %d updates for client\n", count); */
 }
