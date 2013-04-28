@@ -66,6 +66,7 @@ struct game_client {
 	uint32_t ship_index;
 	uint32_t role;
 	uint32_t timestamp;
+	int bridge;
 } client[MAXCLIENTS];
 int nclients = 0;
 static pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -1485,7 +1486,6 @@ static int process_comms_transmission(struct game_client *c)
 	struct packed_buffer pb;
 	int rc;
 	uint8_t len;
-	int client_index;
 	char name[30];
 
 	rc = snis_readsocket(c->socket, buffer,
@@ -1498,8 +1498,7 @@ static int process_comms_transmission(struct game_client *c)
 	if (rc)
 		return rc;
 	txt[len] = '\0';
-	client_index = ((unsigned long) c - (unsigned long) &client[0]) / sizeof(client[0]);
-	sprintf(name, "%s: ", bridgelist[client_index].shipname);
+	sprintf(name, "%s: ", bridgelist[c->bridge].shipname);
 	send_comms_packet(name, txt);
 	return 0;
 }
@@ -2205,7 +2204,7 @@ static int verify_client_protocol(int connection)
 	return 0;
 }
 
-static int lookup_player(unsigned char *shipname, unsigned char *password)
+static int lookup_bridge(unsigned char *shipname, unsigned char *password)
 {
 	int i;
 
@@ -2214,7 +2213,7 @@ static int lookup_player(unsigned char *shipname, unsigned char *password)
 		if (strcmp((const char *) shipname, (const char *) bridgelist[i].shipname) == 0 &&
 			strcmp((const char *) password, (const char *) bridgelist[i].password) == 0) {
 			pthread_mutex_unlock(&universe_mutex);
-			return bridgelist[i].shipid;
+			return i;
 		}
 	}
 	pthread_mutex_unlock(&universe_mutex);
@@ -2419,9 +2418,9 @@ static int add_new_player(struct game_client *c)
 		goto protocol_error;
 	}
 
-	c->shipid = lookup_player(app.shipname, app.password);
+	c->bridge = lookup_bridge(app.shipname, app.password);
 	c->role = app.role;
-	if (c->shipid == -1) { /* did not find our bridge, have to make a new one. */
+	if (c->bridge == -1) { /* did not find our bridge, have to make a new one. */
 		double x, y;
 
 		x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
@@ -2434,11 +2433,12 @@ static int add_new_player(struct game_client *c)
 		strcpy((char *) bridgelist[nbridges].shipname, (const char *) app.shipname);
 		strcpy((char *) bridgelist[nbridges].password, (const char *) app.password);
 		bridgelist[nbridges].shipid = c->shipid;
-	
+		c->bridge = nbridges;
 		nbridges++;
 		
 		pthread_mutex_unlock(&universe_mutex);
 	} else {
+		c->shipid = bridgelist[c->bridge].shipid;
 		c->ship_index = lookup_by_id(c->shipid);
 	}
 	queue_up_client_id(c);
