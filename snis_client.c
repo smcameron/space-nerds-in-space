@@ -276,6 +276,12 @@ static void connect_to_lobby()
 
 static struct snis_object_pool *pool;
 static struct snis_object_pool *damcon_pool;
+static double *damconscreenx, *damconscreeny;
+static const int damconscreenxdim = 600;
+static const int damconscreenydim = 500;
+static const int damconscreenx0 = 20;
+static const int damconscreeny0 = 80;
+
 static struct snis_entity go[MAXGAMEOBJS];
 static struct snis_damcon_entity dco[MAXDAMCONENTITIES];
 static struct snis_object_pool *sparkpool;
@@ -382,6 +388,10 @@ static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
 		o->id = id;
 		o->ship_id = ship_id;
 		o->type = type;
+		if (type == DAMCON_TYPE_ROBOT) {
+			damconscreenx = &o->x;
+			damconscreeny = &o->y;
+		}
 		return 0;
 	}
 	o = &dco[i];
@@ -3959,13 +3969,64 @@ static void show_engineering(GtkWidget *w)
 	show_common_screen(w, "Engineering");
 }
 
+static int on_damcon_screen(struct snis_damcon_entity *o)
+{
+	double left, right, top, bottom;
+
+	if (damconscreenx == NULL || damconscreeny == NULL)
+		return 0;
+
+	left = *damconscreenx - damconscreenxdim / 2.0;
+	if (o->x < left)
+		return 0;
+	right = left + damconscreenxdim;
+	if (o->x > right)
+		return 0;
+	top = *damconscreeny - damconscreenydim / 2.0;
+	if (o->y < top)
+		return 0;
+	bottom = top + damconscreenydim;
+	if (o->y > bottom)
+		return 0;
+	return 1;
+}
+
+static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
+{
+	int x, y;
+
+	x = o->x + damconscreenx0 + damconscreenxdim / 2.0;
+	y = o->y + damconscreeny0 + damconscreenydim / 2.0;
+	sng_set_foreground(GREEN);
+	snis_draw_arrow(w, gc, x, y, 20, o->heading, 15.0);
+}
+
+static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
+{
+	if (!on_damcon_screen(o))
+		return;
+
+	switch (o->type) {
+	case DAMCON_TYPE_ROBOT:
+		draw_damcon_robot(w, o);
+		break;
+	default:
+		break;
+	}
+}
+
 static void show_damcon(GtkWidget *w)
 {
+	int i;
+
 	show_common_screen(w, "DAMAGE CONTROL");
 
-	/* This is really rough... */
 	sng_set_foreground(AMBER);
-	sng_current_draw_rectangle(w->window, gc, 0, 20, 80, 600, 500);
+	sng_current_draw_rectangle(w->window, gc, 0,
+		damconscreenx0, damconscreeny0, damconscreenxdim, damconscreenydim);
+
+	for (i = 0; i <= snis_object_pool_highest_object(damcon_pool); i++)
+		draw_damcon_object(w, &dco[i]);
 }
 
 struct science_ui {
@@ -5715,6 +5776,8 @@ int main(int argc, char *argv[])
 	snis_object_pool_setup(&sparkpool, MAXSPARKS);
 	snis_object_pool_setup(&damcon_pool, MAXDAMCONENTITIES);
 	memset(dco, 0, sizeof(dco));
+	damconscreenx = NULL;
+	damconscreeny = NULL;
 
 	ignore_sigpipe();
 
