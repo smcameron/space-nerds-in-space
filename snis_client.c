@@ -365,7 +365,7 @@ static int add_generic_damcon_object(uint32_t id, uint32_t ship_id, double x, do
 	return 0;
 }
 
-static int update_damcon_object(uint32_t id, uint32_t ship_id,
+static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
 			double x, double y, double vx, double vy,
 			double heading)
 
@@ -381,6 +381,7 @@ static int update_damcon_object(uint32_t id, uint32_t ship_id,
 		o = &dco[i];
 		o->id = id;
 		o->ship_id = ship_id;
+		o->type = type;
 		return 0;
 	}
 	o = &dco[i];
@@ -1420,7 +1421,7 @@ static int process_update_damcon_object(void)
 {
 	unsigned char buffer[sizeof(struct damcon_obj_update_packet) - sizeof(uint16_t)];
 	struct packed_buffer pb;
-	uint32_t id, ship_id;
+	uint32_t id, ship_id, type;
 	double x, y, vx, vy, heading;
 	int rc;
 
@@ -1428,15 +1429,15 @@ static int process_update_damcon_object(void)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "wwSSSSS",
-		&id, &ship_id,
+	packed_buffer_extract(&pb, "wwwSSSSS",
+		&id, &ship_id, &type,
 			&x, (int32_t) DAMCONXDIM, 
 			&y, (int32_t) DAMCONYDIM, 
 			&vx, (int32_t) DAMCONXDIM, 
 			&vy, (int32_t) DAMCONYDIM, 
 			&heading, (int32_t) 360);
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_damcon_object(id, ship_id, x, y, vx, vy, heading);
+	rc = update_damcon_object(id, ship_id, type, x, y, vx, vy, heading);
 	pthread_mutex_unlock(&universe_mutex);
 	return rc;
 }
@@ -3777,14 +3778,6 @@ struct damcon_ui {
 	struct button *robot_right_button;
 	struct button *robot_stop_button;
 	struct button *robot_operate_tool_button;
-	struct label *warp_core_label;
-	struct label *shield_gen_label;
-	struct label *phaser_bank_label;
-	struct label *torp_gen_label;
-	struct label *impulse_label;
-	struct label *sensor_array_label;
-	struct label *tool_locker_label;
-	struct label *storage_locker_label;
 } damcon_ui;
 
 static void main_engineering_button_pressed(void *x)
@@ -3841,15 +3834,6 @@ static void init_damcon_ui(void)
 	damcon_ui.robot_operate_tool_button = snis_button_init(650, 180, 90, 25, "USE TOOL", AMBER, NANO_FONT,
 							robot_operate_tool_button_pressed, (void *) 0);
 
-	damcon_ui.warp_core_label = snis_label_init(270, 340, "WARP CORE", AMBER, NANO_FONT);
-	damcon_ui.shield_gen_label = snis_label_init(30, 450, "SHIELD GENERATOR", AMBER, NANO_FONT);
-	damcon_ui.phaser_bank_label = snis_label_init(510, 340, "PHASER BANK", AMBER, NANO_FONT);
-	damcon_ui.torp_gen_label = snis_label_init(30, 570, "PHOTON GENERATOR", AMBER, NANO_FONT);
-	damcon_ui.impulse_label = snis_label_init(30, 110, "IMPULSE POWER", AMBER, NANO_FONT);
-	damcon_ui.sensor_array_label = snis_label_init(30, 240, "SENSOR ARRAY", AMBER, NANO_FONT);
-	damcon_ui.tool_locker_label = snis_label_init(505, 110, "TOOL LOCKER", AMBER, NANO_FONT);
-	damcon_ui.storage_locker_label = snis_label_init(470, 570, "STORAGE LOCKER", AMBER, NANO_FONT);
-
 	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_forward_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_left_button, DISPLAYMODE_DAMCON);
@@ -3858,14 +3842,6 @@ static void init_damcon_ui(void)
 	ui_add_button(damcon_ui.robot_backward_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_operate_tool_button, DISPLAYMODE_DAMCON);
 	ui_add_label(damcon_ui.robot_controls, DISPLAYMODE_DAMCON);
-	ui_add_label(damcon_ui.warp_core_label, DISPLAYMODE_DAMCON);
-	ui_add_label(damcon_ui.shield_gen_label, DISPLAYMODE_DAMCON);
-	ui_add_label(damcon_ui.phaser_bank_label, DISPLAYMODE_DAMCON);
-	ui_add_label(damcon_ui.torp_gen_label, DISPLAYMODE_DAMCON);
-	ui_add_label(damcon_ui.impulse_label, DISPLAYMODE_DAMCON);
-	ui_add_label(damcon_ui.sensor_array_label, DISPLAYMODE_DAMCON);
-	ui_add_label(damcon_ui.tool_locker_label, DISPLAYMODE_DAMCON);
-	ui_add_label(damcon_ui.storage_locker_label, DISPLAYMODE_DAMCON);
 }
 
 struct enginerring_ui {

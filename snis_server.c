@@ -1242,6 +1242,7 @@ static void add_damcon_robot(struct damcon_data *d)
 	i = add_generic_damcon_object(d);
 	if (i < 0)
 		return;
+	d->o[i].type = DAMCON_TYPE_ROBOT; 
 }
 
 static void add_damcon_sockets(struct damcon_data *d)
@@ -2404,9 +2405,9 @@ static void send_update_damcon_obj_packet(struct game_client *c,
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct damcon_obj_update_packet));
-	packed_buffer_append(pb, "hwwSSSSS",
+	packed_buffer_append(pb, "hwwwSSSSS",
 			OPCODE_DAMCON_OBJ_UPDATE,   
-			o->id, o->ship_id,
+			o->id, o->ship_id, o->type,
 			o->x, (int32_t) DAMCONXDIM,
 			o->y, (int32_t) DAMCONYDIM,
 			o->vx,  (int32_t) DAMCONXDIM,

@@ -362,6 +362,7 @@ struct damcon_obj_update_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint32_t ship_id;
+	uint32_t type;
 	uint32_t x, y, vx, vy, heading;
 };
 
