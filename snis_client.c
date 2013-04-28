@@ -379,6 +379,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.warpdrive = warpdrive;
 	go[i].tsd.ship.phaser_charge = phaser_charge;
 	go[i].tsd.ship.phaser_wavelength = phaser_wavelength;
+	go[i].tsd.ship.damcon = NULL;
 	return 0;
 }
 

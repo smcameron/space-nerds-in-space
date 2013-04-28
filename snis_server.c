@@ -71,10 +71,11 @@ struct game_client {
 int nclients = 0;
 static pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-struct bridge_credentials {
+struct bridge_data {
 	unsigned char shipname[20];
 	unsigned char password[20];
 	uint32_t shipid;
+	struct damcon_data damcon;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -2434,6 +2435,8 @@ static int add_new_player(struct game_client *c)
 		strcpy((char *) bridgelist[nbridges].password, (const char *) app.password);
 		bridgelist[nbridges].shipid = c->shipid;
 		c->bridge = nbridges;
+		snis_object_pool_setup(&bridgelist[nbridges].damcon.pool, MAXDAMCONENTITIES);
+	
 		nbridges++;
 		
 		pthread_mutex_unlock(&universe_mutex);
@@ -2626,6 +2629,25 @@ static int start_listener_thread(void)
 	return listener_port;
 }
 
+static void move_damcon_entities_on_bridge(int bridge_number)
+{
+	int i;
+	struct damcon_data *d = &bridgelist[bridge_number].damcon;
+
+	if (!d->pool)
+		return;
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++)
+		if (d->o[i].move)
+			d->o[i].move(&d->o[i], d);
+}
+
+static void move_damcon_entities(void)
+{
+	int i;
+
+	for (i = 0; i < nbridges; i++)
+		move_damcon_entities_on_bridge(i);
+}
 
 static void move_objects(void)
 {
@@ -2704,6 +2726,7 @@ int main(int argc, char *argv[])
 		/* if ((i % 30) == 0) printf("Moving objects...i = %d\n", i); */
 		i++;
 		move_objects();
+		move_damcon_entities();
 		rc = clock_gettime(CLOCK_MONOTONIC, &time2);
 		/* snis_sleep(&time1, &time2, &thirtieth_second); */
 		sleep_thirtieth_second();

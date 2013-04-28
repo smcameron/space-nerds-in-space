@@ -105,6 +105,8 @@ struct command_data {
 	uint32_t id[256];
 };
 
+struct damcon_data;
+
 struct ship_data {
 	uint32_t torpedoes;
 #define TORPEDO_LIFETIME 20
@@ -165,6 +167,7 @@ struct ship_data {
 	double dox, doy; /* destination offsets */
 	struct ship_damage_data damage;
 	struct command_data cmd_data;
+	struct damcon_data *damcon;
 };
 
 struct starbase_data {
@@ -237,9 +240,12 @@ struct snis_entity {
 };
 
 /* These are for the robot and various parts on the engineering deck on the damcon screen */
+
+#define MAXDAMCONENTITIES 200  /* per ship */
 struct snis_damcon_entity;
 
-typedef void (*damcon_move_function)(struct snis_damcon_entity *o);
+typedef void (*damcon_move_function)(struct snis_damcon_entity *o, struct damcon_data *d);
+typedef void (*damcon_draw_function)(void *drawable, struct snis_damcon_entity *o);
 
 #define DAMCON_TYPE_ROBOT 0
 #define DAMCON_TYPE_LABEL 1
@@ -290,5 +296,15 @@ struct snis_damcon_entity {
 	damcon_move_function move;
 	void *drawing_data;
 };
+
+struct damcon_data {
+	struct snis_object_pool *pool;	
+	struct snis_damcon_entity o[MAXDAMCONENTITIES];
+};
+
+#define DAMCONXDIM 1000.0
+#define DAMCONYDIM 1000.0
+#define DAMCONROBOTMAXVX 3.0
+#define DAMCONROBOTMAXVY 3.0
 
 #endif
