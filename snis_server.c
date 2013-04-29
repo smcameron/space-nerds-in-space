@@ -2031,6 +2031,7 @@ protocol_error:
 	printf("Protocol error in process_instructions_from_client, opcode = %hu\n", opcode);
 	printf("Last successful opcode was %d (0x%hx)\n", last_successful_opcode,
 			last_successful_opcode);
+	snis_print_last_buffer(c->socket);
 	shutdown(c->socket, SHUT_RDWR);
 	close(c->socket);
 	c->socket = -1;
@@ -2800,6 +2801,8 @@ int main(int argc, char *argv[])
 
 	if (argc < 5) 
 		usage();
+
+	snis_protocol_debugging(1);
 
 	memset(&thirtieth_second, 0, sizeof(thirtieth_second));
 	thirtieth_second.tv_nsec = 33333333; /* 1/30th second */

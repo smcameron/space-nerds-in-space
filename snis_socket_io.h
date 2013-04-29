@@ -44,6 +44,8 @@ GLOBAL int snis_readsocket(int fd, void *buffer, int buflen);
 GLOBAL int snis_writesocket(int fd, void *buffer, int buflen);
 GLOBAL void ignore_sigpipe(void);
 GLOBAL void snis_collect_netstats(struct network_stats *ns);
+GLOBAL void snis_protocol_debugging(int enable);
+GLOBAL void snis_print_last_buffer(int socket);
 #undef GLOBAL
 #endif
 

@@ -2056,6 +2056,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 
 protocol_error:
 	printf("Protocol error in gameserver reader, opcode = %hu\n", opcode);
+	snis_print_last_buffer(gameserver_sock);	
 	close(gameserver_sock);
 	gameserver_sock = -1;
 	return NULL;
@@ -5872,6 +5873,8 @@ int main(int argc, char *argv[])
 	init_comms_ui();
 	init_demon_ui();
 	init_net_setup_ui();
+
+	snis_protocol_debugging(1);
 
 	gtk_main ();
         wwviaudio_cancel_all_sounds();

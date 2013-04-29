@@ -33,9 +33,19 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <signal.h>
 #include <stdint.h>
 #include <sys/time.h>
+#include <stdlib.h>
 
 #define DEFINE_SNIS_SOCKET_IO_GLOBALS
 #include "snis_socket_io.h"
+
+#define MAX_DEBUGGABLE_SOCKETS 100
+static int protocol_debugging_enabled = 0;
+struct debug_buf {
+		int len;
+		unsigned char buf[100];
+};
+
+static struct debug_buf *dbgbuf[MAX_DEBUGGABLE_SOCKETS] = { 0 };
 
 static struct network_stats *netstats = NULL;
 
@@ -58,6 +68,13 @@ int snis_readsocket(int fd, void *buffer, int buflen)
 		if (rc == len) {
 			if (netstats)
 				netstats->bytes_recd += rc;
+			if (protocol_debugging_enabled && fd < MAX_DEBUGGABLE_SOCKETS) {
+				int dbglen = len;
+				if (dbglen > 100)
+					dbglen = 100;
+				memcpy(dbgbuf[fd]->buf, buffer, dbglen);
+				dbgbuf[fd]->len = dbglen;
+			}
 			return 0;
 		}
 		if (rc < 0) {
@@ -110,4 +127,35 @@ void snis_collect_netstats(struct network_stats *ns)
 	netstats->bytes_sent = 0;
 	netstats->bytes_recd = 0;
 	gettimeofday(&netstats->start, NULL);
+}
+
+void snis_protocol_debugging(int enable)
+{
+	int i;
+
+	protocol_debugging_enabled = enable;
+
+	if (enable) {
+		for (i = 0; i < MAX_DEBUGGABLE_SOCKETS; i++)
+			dbgbuf[i] = calloc(1, sizeof(*dbgbuf[i]));
+	}
+}
+
+void snis_print_last_buffer(int socket)
+{
+	int i;
+
+	if (!protocol_debugging_enabled)
+		return;
+
+	if (socket < 0)
+		return;
+
+	if (socket >= MAX_DEBUGGABLE_SOCKETS)
+		return;
+
+	printf("Last buffer length read from socket %d was %d\n", socket, dbgbuf[socket]->len);
+	for (i = 0; i < dbgbuf[socket]->len; i++)
+		printf("%02x ", dbgbuf[socket]->buf[i]);
+	printf("\n");
 }
