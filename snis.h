@@ -256,6 +256,7 @@ typedef void (*damcon_draw_function)(void *drawable, struct snis_damcon_entity *
 struct damcon_robot_type_specific_data {
 	uint32_t cargo_id; /* what the robot is carrying */
 #define ROBOT_CARGO_EMPTY 0xffffffff
+	double yaw_velocity;
 };
 
 struct damcon_label_specific_data {
@@ -289,7 +290,11 @@ struct snis_damcon_entity {
 	uint32_t index;
 	uint32_t id;
 	uint32_t ship_id; /* ID of ship this entity is on */
-	double x, y, vx, vy, heading;
+	double x, y, velocity, heading;
+#define MIN_ROBOT_VELOCITY (0.1)
+#define MAX_ROBOT_VELOCITY (5.0)
+#define ROBOT_VELOCITY_INCREMENT (0.5)
+#define ROBOT_VELOCITY_DAMPING (0.8)
 	uint32_t type;
 	uint32_t timestamp;
 	union damcon_type_specific_data tsd;
@@ -300,6 +305,7 @@ struct snis_damcon_entity {
 struct damcon_data {
 	struct snis_object_pool *pool;	
 	struct snis_damcon_entity o[MAXDAMCONENTITIES];
+	struct snis_damcon_entity *robot; /* pointer into o[] */
 };
 
 #define DAMCONXDIM 1000.0

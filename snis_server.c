@@ -76,6 +76,7 @@ struct bridge_data {
 	unsigned char password[20];
 	uint32_t shipid;
 	struct damcon_data damcon;
+	struct snis_damcon_entity *robot;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -780,6 +781,46 @@ static uint8_t update_phaser_banks(int current, int max)
 	return (uint8_t) (current + (int) delta);
 }
 
+static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *d)
+{
+	double vx, vy, lastx, lasty, lasth;
+
+	lastx = o->x;
+	lasty = o->y;
+	lasth = o->heading;
+
+	vy = o->velocity * cos(o->heading);
+	vx = o->velocity * -sin(o->heading);
+	o->x += vx;
+	o->y += vy;
+
+	/* Bounds checking */
+	if (o->x < -DAMCONXDIM / 2.0)
+		o->x = -DAMCONXDIM / 2.0;
+	if (o->x > DAMCONXDIM / 2.0)
+		o->x = DAMCONXDIM / 2.0;
+	if (o->y < -DAMCONYDIM / 2.0)
+		o->y = -DAMCONYDIM / 2.0;
+	if (o->y > DAMCONYDIM / 2.0)
+		o->y = DAMCONYDIM / 2.0;
+
+	o->heading += o->tsd.robot.yaw_velocity;
+	damp_yaw_velocity(&o->tsd.robot.yaw_velocity, YAW_DAMPING);
+
+	/* Damp velocity */
+	if (fabs(o->velocity) < MIN_ROBOT_VELOCITY)
+		o->velocity = 0.0;
+	else
+		o->velocity *= ROBOT_VELOCITY_DAMPING;
+
+	if (fabs(lastx - o->x) > 0.05 ||
+		fabs(lasty - o->y) > 0.05 ||
+		fabs(lasth - o->heading) > 0.05)
+		o->timestamp = universe_timestamp;
+
+	/* TODO: collision detection */
+}
+
 static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
@@ -1228,8 +1269,7 @@ static int add_generic_damcon_object(struct damcon_data *d)
 	memset(o, 0, sizeof(*o));
 	o->x = 0;
 	o->y = 0;
-	o->vx = 0;
-	o->vy = 0;
+	o->velocity = 0;
 	o->heading = 0;
 	o->timestamp = universe_timestamp;
 	return i;
@@ -1243,6 +1283,8 @@ static void add_damcon_robot(struct damcon_data *d)
 	if (i < 0)
 		return;
 	d->o[i].type = DAMCON_TYPE_ROBOT; 
+	d->o[i].move = damcon_robot_move;
+	d->robot = &d->o[i];
 }
 
 static void add_damcon_sockets(struct damcon_data *d)
@@ -1343,6 +1385,8 @@ static void snis_sleep(struct timespec *begin, struct timespec *end, struct time
 }
 #endif
 
+typedef void (*thrust_function)(struct game_client *c, int thrust);
+
 static void do_thrust(struct game_client *c, int thrust)
 {
 	struct snis_entity *ship = &go[c->ship_index];
@@ -1353,6 +1397,19 @@ static void do_thrust(struct game_client *c, int thrust)
 	} else {
 		if (ship->tsd.ship.velocity > -MAX_PLAYER_VELOCITY)
 			ship->tsd.ship.velocity -= PLAYER_VELOCITY_INCREMENT;
+	}
+}
+
+static void do_robot_thrust(struct game_client *c, int thrust)
+{
+	struct snis_damcon_entity *robot = bridgelist[c->bridge].damcon.robot;
+
+	if (thrust > 0) {
+		if (robot->velocity < MAX_ROBOT_VELOCITY)
+			robot->velocity += ROBOT_VELOCITY_INCREMENT;
+	} else {
+		if (robot->velocity > -MAX_ROBOT_VELOCITY)
+			robot->velocity -= ROBOT_VELOCITY_INCREMENT;
 	}
 }
 
@@ -1393,6 +1450,15 @@ static void do_sci_yaw(struct game_client *c, int yaw)
 				MAX_SCI_YAW_VELOCITY, SCI_YAW_INCREMENT);
 }
 
+static void do_robot_yaw(struct game_client *c, int yaw)
+{
+	struct damcon_data *d = &bridgelist[c->bridge].damcon;
+	struct snis_damcon_entity *r = d->robot;
+
+	do_generic_yaw(&r->tsd.robot.yaw_velocity, yaw,
+			MAX_SCI_YAW_VELOCITY, SCI_YAW_INCREMENT);
+}
+
 static void do_sci_bw_yaw(struct game_client *c, int yaw)
 {
 	struct snis_entity *ship = &go[c->ship_index];
@@ -1404,7 +1470,7 @@ static void do_sci_bw_yaw(struct game_client *c, int yaw)
 		ship->tsd.ship.sci_beam_width = MIN_SCI_BEAM_WIDTH;
 }
 
-static int process_request_thrust(struct game_client *c)
+static int process_generic_request_thrust(struct game_client *c, thrust_function thrust_fn)
 {
 	unsigned char buffer[10];
 	struct packed_buffer pb;
@@ -1418,15 +1484,25 @@ static int process_request_thrust(struct game_client *c)
 	thrust = packed_buffer_extract_u8(&pb);
 	switch (thrust) {
 	case THRUST_FORWARDS:
-		do_thrust(c, 1);
+		thrust_fn(c, 1);
 		break;
 	case THRUST_BACKWARDS:
-		do_thrust(c, -1);
+		thrust_fn(c, -1);
 		break;
 	default:
 		break;
 	}
 	return 0;
+}
+
+static int process_request_thrust(struct game_client *c)
+{
+	return process_generic_request_thrust(c, do_thrust);
+}
+
+static int process_request_robot_thrust(struct game_client *c)
+{
+	return process_generic_request_thrust(c, do_robot_thrust);
 }
 
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip);
@@ -1974,6 +2050,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_REQUEST_ROBOT_YAW:
+			rc = process_request_yaw(c, do_robot_yaw);
+			if (rc)
+				goto protocol_error;
+			break;
 		case OPCODE_REQUEST_SCIZOOM:
 			rc = process_request_scizoom(c);
 			if (rc)
@@ -1986,6 +2067,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_THRUST:
 			rc = process_request_thrust(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_ROBOT_THRUST:
+			rc = process_request_robot_thrust(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -2406,13 +2492,12 @@ static void send_update_damcon_obj_packet(struct game_client *c,
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct damcon_obj_update_packet));
-	packed_buffer_append(pb, "hwwwSSSSS",
+	packed_buffer_append(pb, "hwwwSSSS",
 			OPCODE_DAMCON_OBJ_UPDATE,   
 			o->id, o->ship_id, o->type,
 			o->x, (int32_t) DAMCONXDIM,
 			o->y, (int32_t) DAMCONYDIM,
-			o->vx,  (int32_t) DAMCONXDIM,
-			o->vy,  (int32_t) DAMCONXDIM,
+			o->velocity,  (int32_t) DAMCONXDIM,
 			o->heading, (int32_t) 360);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }

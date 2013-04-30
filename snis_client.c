@@ -342,17 +342,16 @@ static int lookup_damcon_object_by_id(uint32_t id)
 }
 
 static void update_generic_damcon_object(struct snis_damcon_entity *o,
-			double x, double y, double vx, double vy, double heading)
+			double x, double y, double velocity, double heading)
 {
 	o->x = x;
 	o->y = y;
-	o->vx = vx;
-	o->vy = vy;
+	o->velocity = velocity;
 	o->heading = heading;
 }
 
 static int add_generic_damcon_object(uint32_t id, uint32_t ship_id, double x, double y,
-			double vx, double vy, double heading)
+			double velocity, double heading)
 {
 	int i;
 	struct snis_damcon_entity *o;
@@ -367,12 +366,12 @@ static int add_generic_damcon_object(uint32_t id, uint32_t ship_id, double x, do
 	o->index = i;
 	o->id = id;
 	o->ship_id = ship_id;
-	update_generic_damcon_object(o, x, y, vx, vy, heading);
+	update_generic_damcon_object(o, x, y, velocity, heading);
 	return 0;
 }
 
 static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
-			double x, double y, double vx, double vy,
+			double x, double y, double velocity,
 			double heading)
 
 {
@@ -381,7 +380,7 @@ static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
 
 	i = lookup_damcon_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_damcon_object(id, ship_id, x, y, vx, vy, heading);
+		i = add_generic_damcon_object(id, ship_id, x, y, velocity, heading);
 		if (i < 0)
 			return i;
 		o = &dco[i];
@@ -395,7 +394,7 @@ static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
 		return 0;
 	}
 	o = &dco[i];
-	update_generic_damcon_object(o, x, y, vx, vy, heading);
+	update_generic_damcon_object(o, x, y, velocity, heading);
 	return 0;
 }
 
@@ -1052,6 +1051,28 @@ static void science_dirkey(int h, int v)
 	}
 }
 
+static void damcon_dirkey(int h, int v)
+{
+	struct packed_buffer *pb;
+	uint8_t yaw, thrust;
+
+	if (!h && !v)
+		return;
+	if (v) {
+		thrust = v < 0 ? THRUST_BACKWARDS : THRUST_FORWARDS;
+		pb = packed_buffer_allocate(sizeof(struct request_thrust_packet));
+		packed_buffer_append(pb, "hb", OPCODE_REQUEST_ROBOT_THRUST, thrust);
+		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	}
+	if (h) {
+		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
+		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
+		packed_buffer_append(pb, "hb", OPCODE_REQUEST_ROBOT_YAW, yaw);
+		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	}
+	wakeup_gameserver_writer();
+}
+
 static void do_onscreen(uint8_t mode)
 {
 	struct packed_buffer *pb;
@@ -1073,6 +1094,9 @@ static void do_dirkey(int h, int v)
 			break;
 		case DISPLAYMODE_SCIENCE:
 			science_dirkey(h, v); 
+			break;
+		case DISPLAYMODE_DAMCON:
+			damcon_dirkey(h, v);
 			break;
 		default:
 			break;
@@ -1432,22 +1456,21 @@ static int process_update_damcon_object(void)
 	unsigned char buffer[sizeof(struct damcon_obj_update_packet) - sizeof(uint16_t)];
 	struct packed_buffer pb;
 	uint32_t id, ship_id, type;
-	double x, y, vx, vy, heading;
+	double x, y, velocity, heading;
 	int rc;
 
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "wwwSSSSS",
+	packed_buffer_extract(&pb, "wwwSSSS",
 		&id, &ship_id, &type,
 			&x, (int32_t) DAMCONXDIM, 
 			&y, (int32_t) DAMCONYDIM, 
-			&vx, (int32_t) DAMCONXDIM, 
-			&vy, (int32_t) DAMCONYDIM, 
+			&velocity, (int32_t) DAMCONXDIM, 
 			&heading, (int32_t) 360);
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_damcon_object(id, ship_id, type, x, y, vx, vy, heading);
+	rc = update_damcon_object(id, ship_id, type, x, y, velocity, heading);
 	pthread_mutex_unlock(&universe_mutex);
 	return rc;
 }
@@ -3996,8 +4019,8 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 {
 	int x, y;
 
-	x = o->x + damconscreenx0 + damconscreenxdim / 2.0;
-	y = o->y + damconscreeny0 + damconscreenydim / 2.0;
+	x = o->x + damconscreenx0 + damconscreenxdim / 2.0 - *damconscreenx;
+	y = o->y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
 	sng_set_foreground(GREEN);
 	snis_draw_arrow(w, gc, x, y, 20, o->heading, 15.0);
 }
