@@ -179,6 +179,11 @@ struct mesh *planet_mesh;
 struct mesh *starbase_mesh;
 struct mesh *ship_mesh;
 
+struct my_point_t snis_logo_points[] = {
+#include "snis-logo.h"
+};
+struct my_vect_obj snis_logo;
+
 void init_trig_arrays(void)
 {
 	int i;
@@ -5398,6 +5403,8 @@ static void init_net_setup_ui(void)
 static void show_network_setup(GtkWidget *w)
 {
 	show_common_screen(w, "SPACE NERDS IN SPACE");
+	sng_set_foreground(DARKGREEN);
+	sng_draw_vect_obj(w, gc, &snis_logo, 100, 500);
 	sng_set_foreground(GREEN);
 	sng_abs_xy_draw_string(w, gc, "NETWORK SETUP", SMALL_FONT, 25, 10 + LINEHEIGHT * 2);
 	sng_abs_xy_draw_string(w, gc, "LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, 25, 130);
@@ -5756,6 +5763,11 @@ static void init_meshes(void)
 
 }
 
+static void init_vects(void)
+{
+	setup_vect(snis_logo, snis_logo_points);
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
@@ -5818,8 +5830,8 @@ int main(int argc, char *argv[])
 	gtk_init (&argc, &argv);
 
 	init_keymap();
-#if 0
 	init_vects();
+#if 0
 	init_player();
 	init_game_state(the_player);
 #endif
