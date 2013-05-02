@@ -239,6 +239,21 @@ void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
 	sng_draw_electric_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
+void sng_draw_vect_obj(GtkWidget *w, GdkGC *gc, struct my_vect_obj *v, int x, int y)
+{
+	int i, x1, y1, x2, y2;
+
+	for (i = 0; i < v->npoints-1; i++) {
+		if (v->p[i+1].x == LINE_BREAK)
+			i += 2;
+		x1 = x + v->p[i].x;
+		y1 = y + v->p[i].y;
+		x2 = x + v->p[i + 1].x;
+		y2 = y + v->p[i + 1].y;
+		sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
+	}
+}
+
 /* Draws a letter in the given font at an absolute x,y coords on the screen. */
 int sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font, 
 		unsigned char letter, int x, int y)

@@ -78,6 +78,7 @@ SNG_GLOBAL void sng_draw_dotted_line(GdkDrawable *drawable,
 SNG_GLOBAL void sng_draw_electric_line(GdkDrawable *drawable,
 	GdkGC *gc, gint x1, gint y1, gint x2, gint y2);
 
+SNG_GLOBAL void sng_draw_vect_obj(GtkWidget *w, GdkGC *gc, struct my_vect_obj *v, int x, int y);
 SNG_GLOBAL int sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font, 
 		unsigned char letter, int x, int y);
 SNG_GLOBAL void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, int x, int y) ;
