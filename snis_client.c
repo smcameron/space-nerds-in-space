@@ -184,6 +184,13 @@ struct my_point_t snis_logo_points[] = {
 };
 struct my_vect_obj snis_logo;
 
+struct my_point_t damcon_robot_points[] = {
+#include "damcon-robot-points.h"
+};
+struct my_vect_obj damcon_robot;
+struct my_point_t *damcon_robot_spun_points;
+struct my_vect_obj damcon_robot_spun[256];
+
 void init_trig_arrays(void)
 {
 	int i;
@@ -697,6 +704,21 @@ static int __attribute__((unused)) add_torpedo(uint32_t id, double x, double y, 
 	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_TORPEDO, alive, NULL);
 }
 
+void scale_points(struct my_point_t *points, int npoints,
+			double xscale, double yscale)
+{
+	int i;
+
+	for (i = 0; i < npoints; i++) {
+		if (points[i].x == LINE_BREAK)
+			continue;
+		if (points[i].x == COLOR_CHANGE)
+			continue;
+		points[i].x = (int) (xscale * points[i].x);
+		points[i].y = (int) (yscale * points[i].y);
+	} 
+}
+
 void spin_points(struct my_point_t *points, int npoints, 
 	struct my_point_t **spun_points, int nangles,
 	int originx, int originy)
@@ -709,6 +731,7 @@ void spin_points(struct my_point_t *points, int npoints,
 
 	*spun_points = (struct my_point_t *) 
 		malloc(sizeof(*spun_points) * npoints * nangles);
+	memset(*spun_points, 0, sizeof(*spun_points) * npoints * nangles);
 	if (*spun_points == NULL)
 		return;
 
@@ -4031,11 +4054,17 @@ static int on_damcon_screen(struct snis_damcon_entity *o)
 static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 {
 	int x, y;
+	int byteangle = (int) (o->heading * 128.0 / M_PI);
+	
+	while (byteangle < 0)
+		byteangle += 256;
+	while (byteangle > 255)
+		byteangle -= 256;
 
 	x = o->x + damconscreenx0 + damconscreenxdim / 2.0 - *damconscreenx;
 	y = o->y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
 	sng_set_foreground(GREEN);
-	snis_draw_arrow(w, gc, x, y, 20, o->heading, 15.0);
+	sng_draw_vect_obj(w, gc, &damcon_robot_spun[byteangle], x, y);
 }
 
 static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
@@ -5773,7 +5802,19 @@ static void init_meshes(void)
 
 static void init_vects(void)
 {
+	int i;
+
 	setup_vect(snis_logo, snis_logo_points);
+	scale_points(damcon_robot_points,
+			ARRAYSIZE(damcon_robot_points), 0.5, 0.5);
+	setup_vect(damcon_robot, damcon_robot_points);
+	spin_points(damcon_robot_points, ARRAYSIZE(damcon_robot_points),
+			&damcon_robot_spun_points, 256, 0, 0);
+	for (i = 0; i < 256; i++) {
+		damcon_robot_spun[i].p =
+			&damcon_robot_spun_points[i * ARRAYSIZE(damcon_robot_points)];
+		damcon_robot_spun[i].npoints = ARRAYSIZE(damcon_robot_points);
+	}
 }
 
 int main(int argc, char *argv[])
