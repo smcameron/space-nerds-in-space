@@ -1,7 +1,7 @@
 #ifndef MY_POINT_H
 #define MY_POINT_H
 /* 
-    (C) Copyright 2007,2008,2010 Stephen M. Cameron.
+    (C) Copyright 2007,2008,2010,2013 Stephen M. Cameron.
 
     This file is part of Space Nerds In Space.
 
@@ -20,6 +20,12 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
  */
+
+#ifdef DEFINE_MY_POINT_GLOBALS
+#define GLOBAL
+#else
+#define GLOBAL extern
+#endif
 
 /* special values to do with drawing shapes. */
 
@@ -41,5 +47,14 @@ struct my_vect_obj {
 };
 
 #define setup_vect(v, a) { v.p = a; v.npoints = ARRAY_SIZE(a); } 
+
+GLOBAL void rotate_points(struct my_point_t *points, int npoints,
+			struct my_point_t *rotated_points, double angle,
+			int originx, int originy);
+GLOBAL void spin_points(struct my_point_t *points, int npoints, 
+	struct my_point_t **spun_points, int nangles,
+	int originx, int originy);
+
+#undef GLOBAL
 
 #endif

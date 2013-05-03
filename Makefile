@@ -25,7 +25,7 @@ SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_graph.o \
 	snis_client.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
-	stl_parser.o entity.o matrix.o
+	stl_parser.o entity.o matrix.o my_point.o
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm
 
@@ -38,6 +38,10 @@ GTKLDFLAGS=`pkg-config --libs gtk+-2.0` \
         `pkg-config --libs gthread-2.0` \
 
 all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${PROGS}
+
+my_point.o:   my_point.c my_point.h Makefile
+	$(CC) ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} \
+		-pthread ${WARNFLAG} -c my_point.c
 
 ogg_to_pcm.o:   ogg_to_pcm.c ogg_to_pcm.h Makefile
 	$(CC) ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} `pkg-config --cflags vorbisfile` \
