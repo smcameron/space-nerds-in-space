@@ -4051,6 +4051,53 @@ static int on_damcon_screen(struct snis_damcon_entity *o)
 	return 1;
 }
 
+static inline int damconx_to_screenx(double x)
+{
+	return x + damconscreenx0 + damconscreenxdim / 2.0 - *damconscreenx;
+}
+
+static inline int damcony_to_screeny(double y)
+{
+	return y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
+}
+
+static void draw_damcon_arena_borders(GtkWidget *w, struct snis_damcon_entity *o)
+{
+	int y1, x1;
+
+	/* top border */
+	y1 = damcony_to_screeny(-DAMCONYDIM / 2.0);
+	if (y1 >= damconscreeny0 &&
+		y1 <= damconscreeny0 + damconscreenydim) {
+		snis_draw_line(w->window, gc, damconscreenx0, y1,
+				damconscreenx0 + damconscreenxdim, y1);
+	}
+
+	/* bottom border */
+	y1 = damcony_to_screeny(DAMCONYDIM / 2.0);
+	if (y1 >= damconscreeny0 &&
+		y1 <= damconscreeny0  + damconscreenydim) {
+		snis_draw_line(w->window, gc, damconscreenx0, y1,
+				damconscreenx0 + damconscreenxdim, y1);
+	}
+
+	/* left border */
+	x1 = damconx_to_screenx(-DAMCONXDIM / 2.0);
+	if (x1 > damconscreenx0 &&
+		x1 < damconscreenx0 + damconscreenxdim) {
+		snis_draw_line(w->window, gc, x1, damconscreeny0,
+				x1, damconscreeny0 + damconscreenydim);
+	}
+
+	/* right border */
+	x1 = damconx_to_screenx(DAMCONXDIM / 2.0);
+	if (x1 > damconscreenx0 &&
+		x1 < damconscreenx0 + damconscreenxdim) {
+		snis_draw_line(w->window, gc, x1, damconscreeny0,
+				x1, damconscreeny0 + damconscreenydim);
+	}
+}
+
 static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 {
 	int x, y;
@@ -4065,6 +4112,7 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 	y = o->y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
 	sng_set_foreground(GREEN);
 	sng_draw_vect_obj(w, gc, &damcon_robot_spun[byteangle], x, y);
+	draw_damcon_arena_borders(w, o);
 }
 
 static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
