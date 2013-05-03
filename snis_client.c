@@ -712,12 +712,20 @@ void spin_points(struct my_point_t *points, int npoints,
 	if (*spun_points == NULL)
 		return;
 
-	angle_inc = (2.0*3.1415927) / (nangles);
+	angle_inc = (2.0 * M_PI) / (nangles);
 
 	for (i = 0; i < nangles; i++) {
 		angle = angle_inc * (double) i;
-		printf("Rotation angle = %f\n", angle * 180.0/3.1415927);
-		for (j=0;j<npoints;j++) {
+		/* printf("Rotation angle = %f\n", angle * 180.0 / M_PI); */
+		for (j = 0; j < npoints; j++) {
+
+			if (points[j].x == LINE_BREAK ||
+				points[j].x == COLOR_CHANGE) {
+				(*spun_points)[i*npoints + j].x = points[j].x;
+				(*spun_points)[i*npoints + j].y = points[j].y;
+				continue;
+			}
+			
 			startx = (double) (points[j].x - originx);
 			starty = (double) (points[j].y - originy);
 			magnitude = sqrt(startx*startx + starty*starty);
@@ -725,7 +733,7 @@ void spin_points(struct my_point_t *points, int npoints,
 			if (diff < 0 && diff > -0.00001)
 				start_angle = 0.0;
 			else if (diff > 00 && diff < 0.00001)
-				start_angle = 3.1415927;
+				start_angle = M_PI;
 			else
 				start_angle = atan2(starty, startx);
 			new_angle = start_angle + angle;
@@ -733,9 +741,9 @@ void spin_points(struct my_point_t *points, int npoints,
 			newy = sin(new_angle) * magnitude + originy;
 			(*spun_points)[i*npoints + j].x = newx;
 			(*spun_points)[i*npoints + j].y = newy;
-			printf("s=%f,%f, e=%f,%f, angle = %f/%f\n", 
+			/* printf("s=%f,%f, e=%f,%f, angle = %f/%f\n", 
 				startx, starty, newx, newy, 
-				start_angle * 180/3.1415927, new_angle * 360.0 / (2.0*3.1415927)); 
+				start_angle * 180/M_PI, new_angle * 360.0 / (2.0 * M_PI));  */
 		}
 	} 
 }
