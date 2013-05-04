@@ -4070,6 +4070,14 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 {
 	int x, y;
+	static char *system_label[] = {
+		"WARP DRIVE",
+		"SENSOR ARRAY",
+		"COMMUNICATIONS SYSTEM",
+		"NAVIGATION SYSTEM",
+		"PHASER BANKS",
+		"TORPEDO SYSTEM",
+	};
 
 	if (!on_damcon_screen(o, &placeholder_system))
 		return;
@@ -4078,6 +4086,8 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 	y = damcony_to_screeny(o->y);
 	sng_set_foreground(WHITE);
 	sng_draw_vect_obj(w, gc, &placeholder_system, x, y);
+	sng_abs_xy_draw_string(w, gc, system_label[o->type - 1],
+				NANO_FONT, x + 60, y);
 }
 
 static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
