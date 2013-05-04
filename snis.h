@@ -297,6 +297,7 @@ struct snis_damcon_entity {
 #define MAX_ROBOT_VELOCITY (25.0)
 #define ROBOT_VELOCITY_INCREMENT (0.5)
 #define ROBOT_VELOCITY_DAMPING (0.9)
+#define DAMCON_WALL_DIST (50)
 	uint32_t type;
 	uint32_t timestamp;
 	union damcon_type_specific_data tsd;

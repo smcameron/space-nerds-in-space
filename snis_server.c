@@ -795,14 +795,22 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 	o->y += vy;
 
 	/* Bounds checking */
-	if (o->x < -DAMCONXDIM / 2.0)
-		o->x = -DAMCONXDIM / 2.0;
-	if (o->x > DAMCONXDIM / 2.0)
-		o->x = DAMCONXDIM / 2.0;
-	if (o->y < -DAMCONYDIM / 2.0)
-		o->y = -DAMCONYDIM / 2.0;
-	if (o->y > DAMCONYDIM / 2.0)
-		o->y = DAMCONYDIM / 2.0;
+	if (o->x < -DAMCONXDIM / 2.0 + DAMCON_WALL_DIST) {
+		o->x = -DAMCONXDIM / 2.0 + DAMCON_WALL_DIST;
+		o->velocity *= 0.4;
+	}
+	if (o->x > DAMCONXDIM / 2.0 - DAMCON_WALL_DIST) {
+		o->x = DAMCONXDIM / 2.0 - DAMCON_WALL_DIST;
+		o->velocity *= 0.4;
+	}
+	if (o->y < -DAMCONYDIM / 2.0 + DAMCON_WALL_DIST) {
+		o->y = -DAMCONYDIM / 2.0 + DAMCON_WALL_DIST;
+		o->velocity *= 0.4;
+	}
+	if (o->y > DAMCONYDIM / 2.0 - DAMCON_WALL_DIST) {
+		o->y = DAMCONYDIM / 2.0 - DAMCON_WALL_DIST;
+		o->velocity *= 0.4;
+	}
 
 	o->heading += o->tsd.robot.yaw_velocity;
 	normalize_angle(&o->heading);
