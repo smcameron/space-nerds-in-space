@@ -87,3 +87,28 @@ void spin_points(struct my_point_t *points, int npoints,
 	} 
 }
 
+void calculate_bbox(struct my_vect_obj *v)
+{
+	int i, xmin, ymin, xmax, ymax;
+
+	xmin = v->p[0].x;
+	ymin = v->p[0].y;
+	xmax = v->p[0].x;
+	ymax = v->p[0].y;
+
+	for (i = 0; i < v->npoints; i++) {
+		if (v->p[i].x < xmin)
+			xmin = v->p[i].x;
+		if (v->p[i].y < ymin)
+			ymin = v->p[i].y;
+		if (v->p[i].x > xmax)
+			xmax = v->p[i].x;
+		if (v->p[i].y > ymax)
+			ymax = v->p[i].y;
+	}
+	v->bbx1 = xmin;
+	v->bby1 = ymin;
+	v->bbx2 = xmax;
+	v->bby2 = ymax;
+}
+

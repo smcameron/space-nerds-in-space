@@ -44,9 +44,10 @@ struct my_point_t {
 struct my_vect_obj {
 	int npoints;
 	struct my_point_t *p;
+	int bbx1, bby1, bbx2, bby2; /* bounding box */
 };
 
-#define setup_vect(v, a) { v.p = a; v.npoints = ARRAY_SIZE(a); } 
+#define setup_vect(v, a) { v.p = a; v.npoints = ARRAY_SIZE(a); calculate_bbox(&v); } 
 
 GLOBAL void rotate_points(struct my_point_t *points, int npoints,
 			struct my_point_t *rotated_points, double angle,
@@ -54,6 +55,8 @@ GLOBAL void rotate_points(struct my_point_t *points, int npoints,
 GLOBAL void spin_points(struct my_point_t *points, int npoints, 
 	struct my_point_t **spun_points, int nangles,
 	int originx, int originy);
+
+GLOBAL void calculate_bbox(struct my_vect_obj *v);
 
 #undef GLOBAL
 

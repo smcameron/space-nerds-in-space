@@ -5843,6 +5843,7 @@ static void init_vects(void)
 		damcon_robot_spun[i].p =
 			&damcon_robot_spun_points[i * ARRAYSIZE(damcon_robot_points)];
 		damcon_robot_spun[i].npoints = ARRAYSIZE(damcon_robot_points);
+		calculate_bbox(&damcon_robot_spun[i]);
 	}
 }
 
