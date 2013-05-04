@@ -4009,7 +4009,7 @@ static inline int damcony_to_screeny(double y)
 	return y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
 }
 
-static void draw_damcon_arena_borders(GtkWidget *w, struct snis_damcon_entity *o)
+static void draw_damcon_arena_borders(GtkWidget *w)
 {
 	int y1, x1;
 
@@ -4055,7 +4055,6 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 	y = o->y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
 	sng_set_foreground(GREEN);
 	sng_draw_vect_obj(w, gc, &damcon_robot_spun[byteangle], x, y);
-	draw_damcon_arena_borders(w, o);
 }
 
 static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
@@ -4084,6 +4083,7 @@ static void show_damcon(GtkWidget *w)
 
 	for (i = 0; i <= snis_object_pool_highest_object(damcon_pool); i++)
 		draw_damcon_object(w, &dco[i]);
+	draw_damcon_arena_borders(w);
 }
 
 struct science_ui {
