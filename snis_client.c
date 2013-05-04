@@ -379,7 +379,7 @@ static int add_generic_damcon_object(uint32_t id, uint32_t ship_id, double x, do
 	o->id = id;
 	o->ship_id = ship_id;
 	update_generic_damcon_object(o, x, y, velocity, heading);
-	return 0;
+	return i;
 }
 
 static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
