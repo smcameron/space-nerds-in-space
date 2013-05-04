@@ -1300,6 +1300,30 @@ static void add_damcon_labels(struct damcon_data *d)
 
 static void add_damcon_systems(struct damcon_data *d)
 {
+	int i;
+	int x, y, dy;
+
+	x = -DAMCONXDIM / 2;
+	dy = DAMCONYDIM / 4;
+	y = dy - DAMCONYDIM / 2;
+	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_WARPDRIVE, NULL);
+	y += dy;
+	d->o[i].timestamp = universe_timestamp + 1;
+	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_SENSORARRAY, NULL);
+	y += dy;
+	d->o[i].timestamp = universe_timestamp + 1;
+	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_COMMUNICATIONS, NULL);
+	x = 2 * DAMCONXDIM / 3 - DAMCONXDIM / 2;
+	y = dy - DAMCONYDIM / 2;
+	d->o[i].timestamp = universe_timestamp + 1;
+	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_NAVIGATION, NULL);
+	y += dy;
+	d->o[i].timestamp = universe_timestamp + 1;
+	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_PHASERBANK, NULL);
+	y += dy;
+	d->o[i].timestamp = universe_timestamp + 1;
+	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_TORPEDOSYSTEM, NULL);
+	d->o[i].timestamp = universe_timestamp + 1;
 }
 
 static void add_damcon_parts(struct damcon_data *d)

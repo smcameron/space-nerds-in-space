@@ -248,10 +248,12 @@ typedef void (*damcon_move_function)(struct snis_damcon_entity *o, struct damcon
 typedef void (*damcon_draw_function)(void *drawable, struct snis_damcon_entity *o);
 
 #define DAMCON_TYPE_ROBOT 0
-#define DAMCON_TYPE_LABEL 1
-#define DAMCON_TYPE_SYSTEM 2
-#define DAMCON_TYPE_PART 3
-#define DAMCON_TYPE_SOCKET 4
+#define DAMCON_TYPE_WARPDRIVE 1
+#define DAMCON_TYPE_SENSORARRAY 2
+#define DAMCON_TYPE_COMMUNICATIONS 3
+#define DAMCON_TYPE_NAVIGATION 4
+#define DAMCON_TYPE_PHASERBANK 5
+#define DAMCON_TYPE_TORPEDOSYSTEM 6
 
 struct damcon_robot_type_specific_data {
 	uint32_t cargo_id; /* what the robot is carrying */
@@ -305,7 +307,7 @@ struct snis_damcon_entity {
 struct damcon_data {
 	struct snis_object_pool *pool;	
 	struct snis_damcon_entity o[MAXDAMCONENTITIES];
-	struct snis_damcon_entity *robot; /* pointer into o[] */
+	struct snis_damcon_entity *robot; /* pointers into o[] */
 };
 
 #define DAMCONXDIM 800.0

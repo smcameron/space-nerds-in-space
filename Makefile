@@ -62,7 +62,7 @@ shield_strength.o:	shield_strength.c shield_strength.h
 snis_server.o:	snis.h snis_server.c snis_packet.h snis_marshal.h sounds.h starbase-comms.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_server.c
 
-snis_client.o:	snis.h snis_client.c snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h
+snis_client.o:	snis.h snis_client.c snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_client.c
 
 snis_socket_io.o:	snis_socket_io.h

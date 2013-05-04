@@ -191,6 +191,11 @@ struct my_vect_obj damcon_robot;
 struct my_point_t *damcon_robot_spun_points;
 struct my_vect_obj damcon_robot_spun[256];
 
+struct my_point_t placeholder_system_points[] = {
+#include "placeholder-system-points.h"
+};
+struct my_vect_obj placeholder_system;
+
 void init_trig_arrays(void)
 {
 	int i;
@@ -4057,6 +4062,16 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 	sng_draw_vect_obj(w, gc, &damcon_robot_spun[byteangle], x, y);
 }
 
+static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
+{
+	int x, y;
+	
+	x = damconx_to_screenx(o->x);
+	y = damcony_to_screeny(o->y);
+	sng_set_foreground(WHITE);
+	sng_draw_vect_obj(w, gc, &placeholder_system, x, y);
+}
+
 static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 {
 	if (!on_damcon_screen(o))
@@ -4065,6 +4080,14 @@ static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 	switch (o->type) {
 	case DAMCON_TYPE_ROBOT:
 		draw_damcon_robot(w, o);
+		break;
+	case DAMCON_TYPE_WARPDRIVE:
+	case DAMCON_TYPE_SENSORARRAY:
+	case DAMCON_TYPE_COMMUNICATIONS:
+	case DAMCON_TYPE_NAVIGATION:
+	case DAMCON_TYPE_PHASERBANK:
+	case DAMCON_TYPE_TORPEDOSYSTEM:
+		draw_damcon_system(w, o);
 		break;
 	default:
 		break;
@@ -5796,6 +5819,7 @@ static void init_vects(void)
 	int i;
 
 	setup_vect(snis_logo, snis_logo_points);
+	setup_vect(placeholder_system, placeholder_system_points);
 	scale_points(damcon_robot_points,
 			ARRAYSIZE(damcon_robot_points), 0.5, 0.5);
 	setup_vect(damcon_robot, damcon_robot_points);
