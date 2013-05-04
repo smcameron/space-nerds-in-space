@@ -31,14 +31,17 @@
 #define GLOBAL extern
 #endif
 
-GLOBAL int set_clip_window(int x1, int y1, int x2, int y2);
+struct liang_barsky_clip_window {
+	float x1, y1, x2, y2;
+};
 
 /* clip_line()
  * modifies parameters in place to clip the line,
  * returns 0 if line is totally outside clip window
  * returns 1 if line is not totally outside clip window
  */
-GLOBAL int clip_line(int *x1, int *y1, int *x2,  int *y2);
+GLOBAL int clip_line(struct liang_barsky_clip_window *c,
+			int *x1, int *y1, int *x2,  int *y2);
 
 /* clip_line_copy()
  * first four params are input line coords
@@ -46,7 +49,8 @@ GLOBAL int clip_line(int *x1, int *y1, int *x2,  int *y2);
  * returns 0 if line is totally outside clip window
  * returns 1 if line is not totally outside clip window
  */
-GLOBAL int clip_line_copy(int x1, int y1, int x2, int y2,
+GLOBAL int clip_line_copy(struct liang_barsky_clip_window *c,
+			int x1, int y1, int x2, int y2,
 			int *ox1, int *oy1, int *ox2, int *oy2);
 
 #endif

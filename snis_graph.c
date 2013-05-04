@@ -16,6 +16,7 @@ extern int font_scale[];
 
 static struct snis_graph_context {
 	float xscale, yscale;
+	struct liang_barsky_clip_window c;
 	GdkGC *gc;
 } sgc;
 
@@ -32,7 +33,10 @@ void sng_set_scale(float xscale, float yscale)
 
 void sng_set_clip_window(int x1, int y1, int x2, int y2)
 {
-	set_clip_window(x1, y1, x2, y2);
+	sgc.c.x1 = x1;
+	sgc.c.y1 = y1;
+	sgc.c.x2 = x2;
+	sgc.c.y2 = y2;
 }
 
 int sng_device_x(int x)
@@ -48,7 +52,7 @@ int sng_device_y(int y)
 void sng_scaled_line(GdkDrawable *drawable,
         GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
 {
-	if (!clip_line(&x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
         gdk_draw_line(drawable, gc, x1 * sgc.xscale, y1 * sgc.yscale,
                 x2 * sgc.xscale, y2 * sgc.yscale);
@@ -59,7 +63,7 @@ void sng_thick_scaled_line(GdkDrawable *drawable,
 {
 	int sx1, sy1, sx2, sy2, dx, dy;
 
-	if (!clip_line(&x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
 
 	if (abs(x1 - x2) > abs(y1 - y2)) {
@@ -101,7 +105,7 @@ void sng_scaled_bright_line(GdkDrawable *drawable,
 		dy = 0;
 	}
 
-	if (!clip_line(&x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
 
 	sx1 = x1 * sgc.xscale;
@@ -129,7 +133,7 @@ void sng_unscaled_bright_line(GdkDrawable *drawable,
 		dy = 0;
 	}
 	
-	if (!clip_line(&x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
 
 	gdk_gc_set_foreground(gc, &huex[WHITE]);
@@ -207,7 +211,7 @@ void sng_draw_dotted_line(GdkDrawable *drawable,
 	context.gc = gc;
 	context.i = 0;
 
-	if (!clip_line(&x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
 
 	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
@@ -223,7 +227,7 @@ void sng_draw_electric_line(GdkDrawable *drawable,
 	context.gc = gc;
 	context.i = 0;
 
-	if (!clip_line(&x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
 
 	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
@@ -239,7 +243,7 @@ static void sng_draw_bright_white_electric_line(GdkDrawable *drawable,
 	context.gc = gc;
 	context.i = color;
 
-	if (!clip_line(&x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
 
 	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
@@ -259,7 +263,7 @@ void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
 		dy = 0;
 	}
 
-	if (!clip_line(&x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
 
 	sx1 = x1 * sgc.xscale;
