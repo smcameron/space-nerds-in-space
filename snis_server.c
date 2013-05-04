@@ -805,6 +805,7 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 		o->y = DAMCONYDIM / 2.0;
 
 	o->heading += o->tsd.robot.yaw_velocity;
+	normalize_angle(&o->heading);
 	damp_yaw_velocity(&o->tsd.robot.yaw_velocity, YAW_DAMPING);
 
 	/* Damp velocity */

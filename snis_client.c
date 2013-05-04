@@ -4051,11 +4051,6 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 	int x, y;
 	int byteangle = (int) (o->heading * 128.0 / M_PI);
 	
-	while (byteangle < 0)
-		byteangle += 256;
-	while (byteangle > 255)
-		byteangle -= 256;
-
 	x = o->x + damconscreenx0 + damconscreenxdim / 2.0 - *damconscreenx;
 	y = o->y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
 	sng_set_foreground(GREEN);
