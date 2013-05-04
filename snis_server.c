@@ -781,6 +781,37 @@ static uint8_t update_phaser_banks(int current, int max)
 	return (uint8_t) (current + (int) delta);
 }
 
+static int robot_collision_detect(struct snis_damcon_entity *o,
+				double x, double y, struct damcon_data *d)
+{
+	int i;
+	struct snis_damcon_entity *t;
+
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		if (i == o->index) /* skip self */
+			continue;
+		t = &d->o[i];
+		switch (d->o[i].type) {
+			case DAMCON_TYPE_ROBOT:
+				break;
+			case DAMCON_TYPE_WARPDRIVE:
+			case DAMCON_TYPE_SENSORARRAY:
+			case DAMCON_TYPE_COMMUNICATIONS:
+			case DAMCON_TYPE_NAVIGATION:
+			case DAMCON_TYPE_PHASERBANK:
+			case DAMCON_TYPE_TORPEDOSYSTEM:
+				/* ugh, this is ugly. Ideally, polygon intersection, but... bleah. */
+				if (x + 25 > t->x && x - 25 < t->x + 270 &&
+				    y + 25 > t->y - 90 && y - 25 < t->y + 90)
+					return 1;
+				break;
+			default:
+				break;
+		}
+	}
+	return 0;
+}
+
 static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *d)
 {
 	double vx, vy, lastx, lasty, lasth;
@@ -791,6 +822,13 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 
 	vy = o->velocity * cos(o->heading);
 	vx = o->velocity * -sin(o->heading);
+
+	if (robot_collision_detect(o, o->x + vx, o->y + vy, d)) {
+		vx = 0;
+		vy = 0;
+		o->velocity = 0;
+	}
+
 	o->x += vx;
 	o->y += vy;
 
@@ -811,6 +849,8 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 		o->y = DAMCONYDIM / 2.0 - DAMCON_WALL_DIST;
 		o->velocity *= 0.4;
 	}
+
+	
 
 	o->heading += o->tsd.robot.yaw_velocity;
 	normalize_angle(&o->heading);
