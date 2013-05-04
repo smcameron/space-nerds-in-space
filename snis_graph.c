@@ -48,6 +48,8 @@ int sng_device_y(int y)
 void sng_scaled_line(GdkDrawable *drawable,
         GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
 {
+	if (!clip_line(&x1, &y1, &x2, &y2))
+		return;
         gdk_draw_line(drawable, gc, x1 * sgc.xscale, y1 * sgc.yscale,
                 x2 * sgc.xscale, y2 * sgc.yscale);
 }
@@ -56,6 +58,9 @@ void sng_thick_scaled_line(GdkDrawable *drawable,
 	GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
 {
 	int sx1, sy1, sx2, sy2, dx, dy;
+
+	if (!clip_line(&x1, &y1, &x2, &y2))
+		return;
 
 	if (abs(x1 - x2) > abs(y1 - y2)) {
 		dx = 0;
@@ -77,9 +82,12 @@ void sng_thick_scaled_line(GdkDrawable *drawable,
 void sng_scaled_rectangle(GdkDrawable *drawable,
 	GdkGC *gc, gboolean filled, gint x, gint y, gint width, gint height)
 {
-	gdk_draw_rectangle(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
-		width * sgc.xscale, height * sgc.yscale);
+	sng_scaled_line(drawable, gc, x, y, x + width, y);
+	sng_scaled_line(drawable, gc, x, y, x, y + height);
+	sng_scaled_line(drawable, gc, x + width, y, x + width, y + height);
+	sng_scaled_line(drawable, gc, x, y + height, x + width, y + height);
 }
+
 void sng_scaled_bright_line(GdkDrawable *drawable,
 	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color)
 {
@@ -92,6 +100,10 @@ void sng_scaled_bright_line(GdkDrawable *drawable,
 		dx = 1;
 		dy = 0;
 	}
+
+	if (!clip_line(&x1, &y1, &x2, &y2))
+		return;
+
 	sx1 = x1 * sgc.xscale;
 	sx2 = x2 * sgc.xscale;
 	sy1 = y1 * sgc.yscale;	
@@ -117,6 +129,9 @@ void sng_unscaled_bright_line(GdkDrawable *drawable,
 		dy = 0;
 	}
 	
+	if (!clip_line(&x1, &y1, &x2, &y2))
+		return;
+
 	gdk_gc_set_foreground(gc, &huex[WHITE]);
 	gdk_draw_line(drawable, gc, x1,y1,x2,y2);
 	gdk_gc_set_foreground(gc, &huex[color]);
@@ -133,8 +148,8 @@ void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 
 void sng_use_unscaled_drawing_functions(void)
 {
-	sng_current_draw_line = gdk_draw_line;
-	sng_current_draw_rectangle = gdk_draw_rectangle;
+	sng_current_draw_line = sng_scaled_line;
+	sng_current_draw_rectangle = sng_scaled_rectangle;
 	sng_current_bright_line = sng_unscaled_bright_line;
 	sng_current_draw_arc = gdk_draw_arc;
 }
@@ -192,6 +207,9 @@ void sng_draw_dotted_line(GdkDrawable *drawable,
 	context.gc = gc;
 	context.i = 0;
 
+	if (!clip_line(&x1, &y1, &x2, &y2))
+		return;
+
 	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
 			sng_dotted_line_plot_func, &context);
 }
@@ -205,6 +223,9 @@ void sng_draw_electric_line(GdkDrawable *drawable,
 	context.gc = gc;
 	context.i = 0;
 
+	if (!clip_line(&x1, &y1, &x2, &y2))
+		return;
+
 	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
 			sng_electric_line_plot_func, &context);
 }
@@ -217,6 +238,9 @@ static void sng_draw_bright_white_electric_line(GdkDrawable *drawable,
 	context.drawable = drawable;
 	context.gc = gc;
 	context.i = color;
+
+	if (!clip_line(&x1, &y1, &x2, &y2))
+		return;
 
 	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
 			sng_bright_electric_line_plot_func, &context);
@@ -234,6 +258,10 @@ void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
 		dx = 1;
 		dy = 0;
 	}
+
+	if (!clip_line(&x1, &y1, &x2, &y2))
+		return;
+
 	sx1 = x1 * sgc.xscale;
 	sx2 = x2 * sgc.xscale;
 	sy1 = y1 * sgc.yscale;	

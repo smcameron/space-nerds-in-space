@@ -206,6 +206,11 @@ void init_trig_arrays(void)
 	}
 }
 
+static void set_default_clip_window(void)
+{
+	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+}
+
 #define MAX_LOBBY_TRIES 3
 static void *connect_to_lobby_thread(__attribute__((unused)) void *arg)
 {
@@ -4104,9 +4109,18 @@ static void show_damcon(GtkWidget *w)
 	sng_current_draw_rectangle(w->window, gc, 0,
 		damconscreenx0, damconscreeny0, damconscreenxdim, damconscreenydim);
 
+	/* clip to damcon screen */
+	sng_set_clip_window(damconscreenx0, damconscreeny0,
+			damconscreenx0 + damconscreenxdim,
+			damconscreeny0 + damconscreenydim);
+
+	/* draw all the stuff on the damcon screen */
 	for (i = 0; i <= snis_object_pool_highest_object(damcon_pool); i++)
 		draw_damcon_object(w, &dco[i]);
 	draw_damcon_arena_borders(w);
+
+	/* restore clipping back to whole window */
+	set_default_clip_window();
 }
 
 struct science_ui {
@@ -5974,6 +5988,8 @@ int main(int argc, char *argv[])
 	init_net_setup_ui();
 
 	snis_protocol_debugging(1);
+
+	set_default_clip_window();
 
 	gtk_main ();
         wwviaudio_cancel_all_sounds();
