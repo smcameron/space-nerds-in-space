@@ -308,8 +308,8 @@ struct damcon_data {
 	struct snis_damcon_entity *robot; /* pointer into o[] */
 };
 
-#define DAMCONXDIM 1000.0
-#define DAMCONYDIM 1000.0
+#define DAMCONXDIM 800.0
+#define DAMCONYDIM 1500.0
 #define DAMCONROBOTMAXVX 3.0
 #define DAMCONROBOTMAXVY 3.0
 
