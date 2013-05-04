@@ -294,9 +294,9 @@ struct snis_damcon_entity {
 	uint32_t ship_id; /* ID of ship this entity is on */
 	double x, y, velocity, heading;
 #define MIN_ROBOT_VELOCITY (0.1)
-#define MAX_ROBOT_VELOCITY (5.0)
+#define MAX_ROBOT_VELOCITY (25.0)
 #define ROBOT_VELOCITY_INCREMENT (0.5)
-#define ROBOT_VELOCITY_DAMPING (0.8)
+#define ROBOT_VELOCITY_DAMPING (0.9)
 	uint32_t type;
 	uint32_t timestamp;
 	union damcon_type_specific_data tsd;
@@ -312,7 +312,5 @@ struct damcon_data {
 
 #define DAMCONXDIM 800.0
 #define DAMCONYDIM 1500.0
-#define DAMCONROBOTMAXVX 3.0
-#define DAMCONROBOTMAXVY 3.0
 
 #endif
