@@ -1271,6 +1271,7 @@ static int add_generic_damcon_object(struct damcon_data *d, int x, int y,
 	memset(o, 0, sizeof(*o));
 	o->x = x;
 	o->y = y;
+	o->id = get_new_object_id();
 	o->velocity = 0;
 	o->heading = 0;
 	o->timestamp = universe_timestamp;
