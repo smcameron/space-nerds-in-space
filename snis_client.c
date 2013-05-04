@@ -3987,28 +3987,6 @@ static void show_engineering(GtkWidget *w)
 	show_common_screen(w, "Engineering");
 }
 
-static int on_damcon_screen(struct snis_damcon_entity *o)
-{
-	double left, right, top, bottom;
-
-	if (damconscreenx == NULL || damconscreeny == NULL)
-		return 0;
-
-	left = *damconscreenx - damconscreenxdim / 2.0;
-	if (o->x < left)
-		return 0;
-	right = left + damconscreenxdim;
-	if (o->x > right)
-		return 0;
-	top = *damconscreeny - damconscreenydim / 2.0;
-	if (o->y < top)
-		return 0;
-	bottom = top + damconscreenydim;
-	if (o->y > bottom)
-		return 0;
-	return 1;
-}
-
 static inline int damconx_to_screenx(double x)
 {
 	return x + damconscreenx0 + damconscreenxdim / 2.0 - *damconscreenx;
@@ -4017,6 +3995,32 @@ static inline int damconx_to_screenx(double x)
 static inline int damcony_to_screeny(double y)
 {
 	return y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
+}
+
+static int on_damcon_screen(struct snis_damcon_entity *o, struct my_vect_obj *v)
+{
+	float left, right, top, bottom;
+	//int ox, oy;
+
+	if (damconscreenx == NULL || damconscreeny == NULL)
+		return 0;
+
+	//ox = damconx_to_screenx(o->x);
+	//oy = damcony_to_screeny(o->y);
+
+	left = *damconscreenx - damconscreenxdim / 2.0;
+	if (v->bbx2 + o->x < left)
+		return 0;
+	right = left + damconscreenxdim;
+	if (v->bbx1 + o->x > right)
+		return 0;
+	top = *damconscreeny - damconscreenydim / 2.0;
+	if (v->bby2 + o->y < top)
+		return 0;
+	bottom = top + damconscreenydim;
+	if (v->bby1 + o->y > bottom)
+		return 0;
+	return 1;
 }
 
 static void draw_damcon_arena_borders(GtkWidget *w)
@@ -4060,7 +4064,12 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 {
 	int x, y;
 	int byteangle = (int) (o->heading * 128.0 / M_PI);
-	
+
+#if 0
+	if (!on_damcon_screen(o, &damcon_robot_spun[byteangle]))
+		return;
+#endif
+
 	x = o->x + damconscreenx0 + damconscreenxdim / 2.0 - *damconscreenx;
 	y = o->y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
 	sng_set_foreground(GREEN);
@@ -4070,6 +4079,9 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 {
 	int x, y;
+
+	if (!on_damcon_screen(o, &placeholder_system))
+		return;
 	
 	x = damconx_to_screenx(o->x);
 	y = damcony_to_screeny(o->y);
@@ -4079,9 +4091,6 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 
 static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 {
-	if (!on_damcon_screen(o))
-		return;
-
 	switch (o->type) {
 	case DAMCON_TYPE_ROBOT:
 		draw_damcon_robot(w, o);
