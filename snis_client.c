@@ -3804,7 +3804,6 @@ struct damcon_ui {
 	struct button *robot_backward_button;
 	struct button *robot_left_button;
 	struct button *robot_right_button;
-	struct button *robot_stop_button;
 	struct button *robot_operate_tool_button;
 } damcon_ui;
 
@@ -3815,27 +3814,22 @@ static void main_engineering_button_pressed(void *x)
 
 static void robot_forward_button_pressed(void *x)
 {
-	printf("robot forward pressed\n");
+	damcon_dirkey(0, -1);
 }
 
 static void robot_backward_button_pressed(void *x)
 {
-	printf("robot backward pressed\n");
-}
-
-static void robot_stop_button_pressed(void *x)
-{
-	printf("robot stop pressed\n");
+	damcon_dirkey(0, 1);
 }
 
 static void robot_left_button_pressed(void *x)
 {
-	printf("robot left pressed\n");
+	damcon_dirkey(-1, 0);
 }
 
 static void robot_right_button_pressed(void *x)
 {
-	printf("robot right pressed\n");
+	damcon_dirkey(1, 0);
 }
 
 static void robot_operate_tool_button_pressed(void *x)
@@ -3853,8 +3847,6 @@ static void init_damcon_ui(void)
 							robot_forward_button_pressed, (void *) 0);
 	damcon_ui.robot_left_button = snis_button_init(630, 100, 25, 25, "L", AMBER, NANO_FONT,
 							robot_left_button_pressed, (void *) 0);
-	damcon_ui.robot_stop_button = snis_button_init(670, 100, 60, 25, "STOP", AMBER, NANO_FONT,
-							robot_stop_button_pressed, (void *) 0);
 	damcon_ui.robot_right_button = snis_button_init(740, 100, 25, 25, "R", AMBER, NANO_FONT,
 							robot_right_button_pressed, (void *) 0);
 	damcon_ui.robot_backward_button = snis_button_init(650, 140, 90, 25, "BACKWARD", AMBER, NANO_FONT,
@@ -3865,7 +3857,6 @@ static void init_damcon_ui(void)
 	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_forward_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_left_button, DISPLAYMODE_DAMCON);
-	ui_add_button(damcon_ui.robot_stop_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_right_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_backward_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_operate_tool_button, DISPLAYMODE_DAMCON);
