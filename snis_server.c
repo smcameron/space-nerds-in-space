@@ -1258,7 +1258,8 @@ static void make_universe(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static int add_generic_damcon_object(struct damcon_data *d)
+static int add_generic_damcon_object(struct damcon_data *d, int x, int y,
+				uint32_t type, damcon_move_function move_fn)
 {
 	int i;
 	struct snis_damcon_entity *o;
@@ -1268,11 +1269,13 @@ static int add_generic_damcon_object(struct damcon_data *d)
 		return -1;
 	o = &d->o[i];
 	memset(o, 0, sizeof(*o));
-	o->x = 0;
-	o->y = 0;
+	o->x = x;
+	o->y = y;
 	o->velocity = 0;
 	o->heading = 0;
 	o->timestamp = universe_timestamp;
+	o->type = type; 
+	o->move = move_fn;
 	return i;
 }
 
@@ -1280,11 +1283,9 @@ static void add_damcon_robot(struct damcon_data *d)
 {
 	int i;
 
-	i = add_generic_damcon_object(d);
+	i = add_generic_damcon_object(d, 0, 0, DAMCON_TYPE_ROBOT, damcon_robot_move);
 	if (i < 0)
 		return;
-	d->o[i].type = DAMCON_TYPE_ROBOT; 
-	d->o[i].move = damcon_robot_move;
 	d->robot = &d->o[i];
 }
 
