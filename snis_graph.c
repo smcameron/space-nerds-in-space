@@ -6,6 +6,7 @@
 #include "snis_graph.h"
 #undef SNIS_GRAPH_DECLARE_GLOBALS
 
+#include "liang-barsky.h"
 #include "bline.h"
 
 GdkColor huex[NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY]; 
@@ -27,6 +28,11 @@ void sng_set_scale(float xscale, float yscale)
 {
 	sgc.xscale = xscale;
 	sgc.yscale = yscale;
+}
+
+void sng_set_clip_window(int x1, int y1, int x2, int y2)
+{
+	set_clip_window(x1, y1, x2, y2);
 }
 
 int sng_device_x(int x)
