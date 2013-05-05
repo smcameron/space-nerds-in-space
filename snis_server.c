@@ -814,7 +814,8 @@ static int robot_collision_detect(struct snis_damcon_entity *o,
 
 static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *d)
 {
-	double vx, vy, lastx, lasty, lasth;
+	double vx, vy, lastx, lasty, lasth, dv;
+	int bounds_hit = 0;
 
 	lastx = o->x;
 	lasty = o->y;
@@ -827,41 +828,91 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 		vx = 0;
 		vy = 0;
 		o->velocity = 0;
+		if (fabs(o->tsd.robot.desired_velocity) > MAX_ROBOT_VELOCITY / 5.0)
+			o->tsd.robot.desired_velocity =  
+				(MAX_ROBOT_VELOCITY / 5.5) * o->tsd.robot.desired_velocity /
+					fabs(o->tsd.robot.desired_velocity);
 	}
 
 	o->x += vx;
 	o->y += vy;
 
+	o->tsd.robot.desired_heading += o->tsd.robot.yaw_velocity;
+	normalize_angle(&o->tsd.robot.desired_heading);
+	damp_yaw_velocity(&o->tsd.robot.yaw_velocity, YAW_DAMPING);
+
+	normalize_angle(&o->heading);
+	if (o->heading != o->tsd.robot.desired_heading) {
+		double diff = o->tsd.robot.desired_heading - o->heading;
+		double max_heading_change;
+
+		while (fabs(diff) > M_PI) {
+			/* trying to go the wrong way around the circle */
+			if (diff < 0)
+				diff += 2.0 * M_PI;
+			else
+				diff -= 2.0 * M_PI;
+		}
+
+		/* Slower you're going, quicker you can turn */
+		max_heading_change = (MAX_ROBOT_VELOCITY / fabs(o->velocity)) * 4.0 * M_PI / 180.0; 
+		if (fabs(diff) > max_heading_change)
+			diff = max_heading_change * diff / fabs(diff);
+
+		o->heading += diff;
+		normalize_angle(&o->heading);
+	}
+
+	dv = o->tsd.robot.desired_velocity;
+	if (fabs(o->velocity - dv) > 0.01) {
+		double diff = dv - o->velocity;
+
+		if (fabs(o->velocity) - fabs(dv) > 0) {
+			/* braking */
+			if (fabs(diff) > MAX_ROBOT_BRAKING)
+				diff = MAX_ROBOT_BRAKING * diff / fabs(diff);
+		} else {
+			/* accelerating. */ 
+			if (fabs(diff) > MAX_ROBOT_ACCELERATION)
+				diff = MAX_ROBOT_ACCELERATION * diff / fabs(diff);
+		}
+		o->velocity += diff;
+	} else {
+		o->velocity = o->tsd.robot.desired_velocity;
+	}
+
 	/* Bounds checking */
 	if (o->x < -DAMCONXDIM / 2.0 + DAMCON_WALL_DIST) {
 		o->x = -DAMCONXDIM / 2.0 + DAMCON_WALL_DIST;
-		o->velocity *= 0.4;
+		bounds_hit = 1;
 	}
 	if (o->x > DAMCONXDIM / 2.0 - DAMCON_WALL_DIST) {
 		o->x = DAMCONXDIM / 2.0 - DAMCON_WALL_DIST;
-		o->velocity *= 0.4;
+		bounds_hit = 1;
 	}
 	if (o->y < -DAMCONYDIM / 2.0 + DAMCON_WALL_DIST) {
 		o->y = -DAMCONYDIM / 2.0 + DAMCON_WALL_DIST;
-		o->velocity *= 0.4;
+		bounds_hit = 1;
 	}
 	if (o->y > DAMCONYDIM / 2.0 - DAMCON_WALL_DIST) {
 		o->y = DAMCONYDIM / 2.0 - DAMCON_WALL_DIST;
+		bounds_hit = 1;
+	}
+	if (bounds_hit) {
 		o->velocity *= 0.4;
+		if (fabs(o->tsd.robot.desired_velocity) > MAX_ROBOT_VELOCITY / 5.0)
+			o->tsd.robot.desired_velocity =  
+				(MAX_ROBOT_VELOCITY / 5.5) * o->tsd.robot.desired_velocity /
+					fabs(o->tsd.robot.desired_velocity);
 	}
 
-	
-
-	o->heading += o->tsd.robot.yaw_velocity;
-	normalize_angle(&o->heading);
-	damp_yaw_velocity(&o->tsd.robot.yaw_velocity, YAW_DAMPING);
-
+#if 0
 	/* Damp velocity */
 	if (fabs(o->velocity) < MIN_ROBOT_VELOCITY)
 		o->velocity = 0.0;
 	else
 		o->velocity *= ROBOT_VELOCITY_DAMPING;
-
+#endif
 	if (fabs(lastx - o->x) > 0.05 ||
 		fabs(lasty - o->y) > 0.05 ||
 		fabs(lasth - o->heading) > 0.05)
@@ -1480,11 +1531,11 @@ static void do_robot_thrust(struct game_client *c, int thrust)
 	struct snis_damcon_entity *robot = bridgelist[c->bridge].damcon.robot;
 
 	if (thrust > 0) {
-		if (robot->velocity < MAX_ROBOT_VELOCITY)
-			robot->velocity += ROBOT_VELOCITY_INCREMENT;
+		if (robot->tsd.robot.desired_velocity < MAX_ROBOT_VELOCITY)
+			robot->tsd.robot.desired_velocity += ROBOT_VELOCITY_INCREMENT;
 	} else {
-		if (robot->velocity > -MAX_ROBOT_VELOCITY)
-			robot->velocity -= ROBOT_VELOCITY_INCREMENT;
+		if (robot->tsd.robot.desired_velocity > -MAX_ROBOT_VELOCITY)
+			robot->tsd.robot.desired_velocity -= ROBOT_VELOCITY_INCREMENT;
 	}
 }
 
@@ -1531,7 +1582,7 @@ static void do_robot_yaw(struct game_client *c, int yaw)
 	struct snis_damcon_entity *r = d->robot;
 
 	do_generic_yaw(&r->tsd.robot.yaw_velocity, yaw,
-			MAX_SCI_YAW_VELOCITY, SCI_YAW_INCREMENT);
+			2.0 * MAX_SCI_YAW_VELOCITY, SCI_YAW_INCREMENT);
 }
 
 static void do_sci_bw_yaw(struct game_client *c, int yaw)
@@ -2573,7 +2624,8 @@ static void send_update_damcon_obj_packet(struct game_client *c,
 			o->x, (int32_t) DAMCONXDIM,
 			o->y, (int32_t) DAMCONYDIM,
 			o->velocity,  (int32_t) DAMCONXDIM,
-			o->heading, (int32_t) 360);
+			/* send desired_heading as heading to client to enable drifting */
+			o->tsd.robot.desired_heading, (int32_t) 360);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

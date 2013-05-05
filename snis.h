@@ -259,6 +259,7 @@ struct damcon_robot_type_specific_data {
 	uint32_t cargo_id; /* what the robot is carrying */
 #define ROBOT_CARGO_EMPTY 0xffffffff
 	double yaw_velocity;
+	double desired_velocity, desired_heading;
 };
 
 struct damcon_label_specific_data {
@@ -297,6 +298,8 @@ struct snis_damcon_entity {
 #define MAX_ROBOT_VELOCITY (25.0)
 #define ROBOT_VELOCITY_INCREMENT (0.5)
 #define ROBOT_VELOCITY_DAMPING (0.9)
+#define MAX_ROBOT_BRAKING 5.0
+#define MAX_ROBOT_ACCELERATION 3.5
 #define DAMCON_WALL_DIST (50)
 	uint32_t type;
 	uint32_t timestamp;
