@@ -83,13 +83,42 @@ void sng_thick_scaled_line(GdkDrawable *drawable,
 	gdk_draw_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
+static int clip_rectangle(int *x, int *y, int *width, int *height)
+{
+	int x2, y2;
+
+	x2 = *x + *width;
+	y2 = *y + *height;
+	if (x2 < sgc.c.x1)
+		return 0;
+	if (*x > sgc.c.x2)
+		return 0;
+	if (y2 < sgc.c.y1)
+		return 0;
+	if (*y > sgc.c.y2)
+		return 0;
+
+	if (*x < sgc.c.x1)
+		*x = sgc.c.x1;
+	if (x2 > sgc.c.x2)
+		x2 = sgc.c.x2;
+	if (*y < sgc.c.y1)
+		*y = sgc.c.y1;
+	if (y2 > sgc.c.y2)
+		y2 = sgc.c.y2;
+
+	*width = x2 - *x;
+	*height = y2 - *y;
+	return 1;
+}
+
 void sng_scaled_rectangle(GdkDrawable *drawable,
 	GdkGC *gc, gboolean filled, gint x, gint y, gint width, gint height)
 {
-	sng_scaled_line(drawable, gc, x, y, x + width, y);
-	sng_scaled_line(drawable, gc, x, y, x, y + height);
-	sng_scaled_line(drawable, gc, x + width, y, x + width, y + height);
-	sng_scaled_line(drawable, gc, x, y + height, x + width, y + height);
+	if (!clip_rectangle(&x, &y, &width, &height))
+		return;
+	gdk_draw_rectangle(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
+		width * sgc.xscale, height * sgc.yscale);
 }
 
 void sng_scaled_bright_line(GdkDrawable *drawable,
