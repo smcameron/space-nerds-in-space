@@ -73,6 +73,8 @@ static void *update_lobby_thread(void *arg)
 		rc =  ssgl_writesocket(lobbysock, &gameserver, sizeof(gameserver)); 
 		if (rc) {
 			fprintf(stderr, "ssgl_register_gameserver failed: %s\n", strerror(errno));
+			shutdown(lobbysock, SHUT_RDWR);
+			close(lobbysock);
 			break;
 		}
 		shutdown(lobbysock, SHUT_RDWR);
