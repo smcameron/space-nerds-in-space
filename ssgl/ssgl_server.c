@@ -345,6 +345,7 @@ static void service(int connection)
 	*conn = connection; /* linux overcommits, no sense in checking malloc return. */
 
 	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	rc = pthread_create(&thread, &attr, service_thread, (void *) conn);
 	if (rc) {
 		fprintf(stderr,
@@ -363,6 +364,7 @@ static void start_game_server_expiration_thread(void)
 	int rc;
 
 	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	rc = pthread_create(&thread, &attr, expire_game_servers, NULL); 
 	if (rc < 0) {
 		fprintf(stderr, "Unable to create game server expiration thread: %s.\n",

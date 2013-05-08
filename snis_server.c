@@ -2796,9 +2796,9 @@ static void service_connection(int connection)
 	add_new_player(&client[i]);
 
 	pthread_attr_init(&client[i].read_attr);
-	pthread_attr_setdetachstate(&client[i].read_attr, PTHREAD_CREATE_JOINABLE);
+	pthread_attr_setdetachstate(&client[i].read_attr, PTHREAD_CREATE_DETACHED);
 	pthread_attr_init(&client[i].write_attr);
-	pthread_attr_setdetachstate(&client[i].write_attr, PTHREAD_CREATE_JOINABLE);
+	pthread_attr_setdetachstate(&client[i].write_attr, PTHREAD_CREATE_DETACHED);
         (void) pthread_create(&client[i].read_thread,
 		&client[i].read_attr, per_client_read_thread, (void *) &client[i]);
         (void) pthread_create(&client[i].write_thread,
@@ -2922,7 +2922,7 @@ static int start_listener_thread(void)
 
 	/* Create the listener thread... */
         pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
         (void) pthread_create(&thread, &attr, listener_thread, NULL);
 
 	/* Wait for the listener thread to become ready... */

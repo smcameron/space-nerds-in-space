@@ -291,7 +291,7 @@ handle_error:
 static void connect_to_lobby()
 {
         pthread_attr_init(&lobby_attr);
-        pthread_attr_setdetachstate(&lobby_attr, PTHREAD_CREATE_JOINABLE);
+        pthread_attr_setdetachstate(&lobby_attr, PTHREAD_CREATE_DETACHED);
 	(void) pthread_create(&lobby_thread, &lobby_attr, connect_to_lobby_thread, NULL);
 	return;
 }
@@ -2272,8 +2272,8 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 
         pthread_attr_init(&gameserver_reader_attr);
         pthread_attr_init(&gameserver_writer_attr);
-        pthread_attr_setdetachstate(&gameserver_reader_attr, PTHREAD_CREATE_JOINABLE);
-        pthread_attr_setdetachstate(&gameserver_writer_attr, PTHREAD_CREATE_JOINABLE);
+        pthread_attr_setdetachstate(&gameserver_reader_attr, PTHREAD_CREATE_DETACHED);
+        pthread_attr_setdetachstate(&gameserver_writer_attr, PTHREAD_CREATE_DETACHED);
 	printf("starting gameserver reader thread\n");
 	rc = pthread_create(&read_from_gameserver_thread, &gameserver_reader_attr, gameserver_reader, NULL);
 	printf("started gameserver reader thread\n");
@@ -2290,7 +2290,7 @@ error:
 void connect_to_gameserver(int selected_server)
 {
         pthread_attr_init(&gameserver_connect_attr);
-        pthread_attr_setdetachstate(&gameserver_connect_attr, PTHREAD_CREATE_JOINABLE);
+        pthread_attr_setdetachstate(&gameserver_connect_attr, PTHREAD_CREATE_DETACHED);
 	(void) pthread_create(&gameserver_connect_thread, &gameserver_connect_attr, connect_to_gameserver_thread, NULL);
 	return;
 }

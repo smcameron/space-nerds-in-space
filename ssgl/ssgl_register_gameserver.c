@@ -95,6 +95,8 @@ int ssgl_register_gameserver(char *lobbyhost, struct ssgl_game_server *gameserve
 	strncpy(arg->lobbyhost, lobbyhost, sizeof(arg->lobbyhost)-1);
 
 	rc = pthread_create(lobby_thread, NULL, update_lobby_thread, arg);
+	if (rc == 0 && pthread_detach(*lobby_thread))
+			fprintf(stderr, "Failed to detach update lobby thread\n");
 	return rc;
 }
 
