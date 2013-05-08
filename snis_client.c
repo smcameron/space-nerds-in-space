@@ -290,9 +290,14 @@ handle_error:
 
 static void connect_to_lobby()
 {
+	int rc;
         pthread_attr_init(&lobby_attr);
         pthread_attr_setdetachstate(&lobby_attr, PTHREAD_CREATE_DETACHED);
-	(void) pthread_create(&lobby_thread, &lobby_attr, connect_to_lobby_thread, NULL);
+	rc = pthread_create(&lobby_thread, &lobby_attr, connect_to_lobby_thread, NULL);
+	if (rc) {
+		fprintf(stderr, "Failed to create lobby connection thread.\n");
+		fprintf(stderr, "%d %s (%s)\n", rc, strerror(rc), strerror(errno));
+	}
 	return;
 }
 
@@ -2276,9 +2281,17 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
         pthread_attr_setdetachstate(&gameserver_writer_attr, PTHREAD_CREATE_DETACHED);
 	printf("starting gameserver reader thread\n");
 	rc = pthread_create(&read_from_gameserver_thread, &gameserver_reader_attr, gameserver_reader, NULL);
+	if (rc) {
+		fprintf(stderr, "Failed to create gameserver reader thread: %d '%s', '%s'\n",
+			rc, strerror(rc), strerror(errno));
+	}
 	printf("started gameserver reader thread\n");
 	printf("starting gameserver writer thread\n");
 	rc = pthread_create(&write_to_gameserver_thread, &gameserver_writer_attr, gameserver_writer, NULL);
+	if (rc) {
+		fprintf(stderr, "Failed to create gameserver writer thread: %d '%s', '%s'\n",
+			rc, strerror(rc), strerror(errno));
+	}
 	printf("started gameserver writer thread\n");
 
 error:
@@ -2289,9 +2302,15 @@ error:
 
 void connect_to_gameserver(int selected_server)
 {
+	int rc;
+
         pthread_attr_init(&gameserver_connect_attr);
         pthread_attr_setdetachstate(&gameserver_connect_attr, PTHREAD_CREATE_DETACHED);
-	(void) pthread_create(&gameserver_connect_thread, &gameserver_connect_attr, connect_to_gameserver_thread, NULL);
+	rc = pthread_create(&gameserver_connect_thread, &gameserver_connect_attr, connect_to_gameserver_thread, NULL);
+	if (rc) {
+		fprintf(stderr, "Failed to create thread to connect to gameserver: %d '%s', '%s'\n",
+			rc, strerror(rc), strerror(errno));
+	}
 	return;
 }
 

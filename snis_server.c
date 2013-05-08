@@ -2760,7 +2760,7 @@ protocol_error:
 /* Creates a thread for each incoming connection... */
 static void service_connection(int connection)
 {
-	int i, flag = 1;
+	int i, rc, flag = 1;
 
 	printf("snis_server: servicing snis_client connection %d\n", connection);
         /* get connection moved off the stack so that when the thread needs it,
@@ -2799,10 +2799,18 @@ static void service_connection(int connection)
 	pthread_attr_setdetachstate(&client[i].read_attr, PTHREAD_CREATE_DETACHED);
 	pthread_attr_init(&client[i].write_attr);
 	pthread_attr_setdetachstate(&client[i].write_attr, PTHREAD_CREATE_DETACHED);
-        (void) pthread_create(&client[i].read_thread,
+        rc = pthread_create(&client[i].read_thread,
 		&client[i].read_attr, per_client_read_thread, (void *) &client[i]);
-        (void) pthread_create(&client[i].write_thread,
+	if (rc) {
+		fprintf(stderr, "Failed to create per client read thread: %d %s %s\n",
+			rc, strerror(rc), strerror(errno));
+	}
+        rc = pthread_create(&client[i].write_thread,
 		&client[i].write_attr, per_client_write_thread, (void *) &client[i]);
+	if (rc) {
+		fprintf(stderr, "Failed to create per client read thread: %d %s %s\n",
+			rc, strerror(rc), strerror(errno));
+	}
 	nclients++;
 	client_unlock();
 
@@ -2915,6 +2923,7 @@ static int start_listener_thread(void)
 {
 	pthread_attr_t attr;
 	pthread_t thread;
+	int rc;
 
 	/* Setup to wait for the listener thread to become ready... */
 	pthread_cond_init (&listener_started, NULL);
@@ -2923,7 +2932,11 @@ static int start_listener_thread(void)
 	/* Create the listener thread... */
         pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-        (void) pthread_create(&thread, &attr, listener_thread, NULL);
+        rc = pthread_create(&thread, &attr, listener_thread, NULL);
+	if (rc) {
+		fprintf(stderr, "Failed to create listener thread: %d %s %s\n",
+				rc, strerror(rc), strerror(errno));
+	}
 
 	/* Wait for the listener thread to become ready... */
 	pthread_cond_wait(&listener_started, &listener_mutex);
