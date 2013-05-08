@@ -335,7 +335,7 @@ static void service(int connection)
 {
 	pthread_attr_t attr;
 	pthread_t thread;
-	int *conn;
+	int rc, *conn;
 
 	/* printf("ssgl_server: servicing connection %d\n", connection); */
 	/* get connection moved off the stack so that when the thread needs it,
@@ -345,7 +345,15 @@ static void service(int connection)
 	*conn = connection; /* linux overcommits, no sense in checking malloc return. */
 
 	pthread_attr_init(&attr);
-	(void) pthread_create(&thread, &attr, service_thread, (void *) conn);
+	rc = pthread_create(&thread, &attr, service_thread, (void *) conn);
+	if (rc) {
+		fprintf(stderr,
+			"Unable to create connection handling thread, rc = %d, errno = %d\n",
+			rc, errno); 
+		shutdown(SHUT_RDWR, *conn);
+		close(*conn);
+		free(conn);
+	}
 }
 
 static void start_game_server_expiration_thread(void)

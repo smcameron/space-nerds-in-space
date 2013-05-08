@@ -26,6 +26,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 #include <stdio.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
@@ -85,8 +86,11 @@ static int ssgl_connect_to_lobby(char *ssgl_hostname, int client)
 		return rc;
 
 	rc = send_protocol_id_to_lobby(lobby_sock, client);
-	if (rc)
+	if (rc) {
+		shutdown(lobby_sock, SHUT_RDWR);
+		close(lobby_sock);
 		return rc;
+	}
 
 	freeaddrinfo(lobbyserverinfo);
 	return lobby_sock;	

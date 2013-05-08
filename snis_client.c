@@ -2240,8 +2240,12 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		fprintf(stderr, "setsockopt(TCP_NODELAY) failed.\n");
 
 	rc = snis_writesocket(gameserver_sock, SNIS_PROTOCOL_VERSION, strlen(SNIS_PROTOCOL_VERSION));
-	if (rc < 0)
-		goto error;;
+	if (rc < 0) {
+		shutdown(gameserver_sock, SHUT_RDWR);
+		close(gameserver_sock);
+		gameserver_sock = -1;
+		goto error;
+	}
 
 	displaymode = DISPLAYMODE_CONNECTED;
 	done_with_lobby = 1;
@@ -2257,7 +2261,13 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	strncpy((char *) app.password, password, 19);
 
 	printf("Notifying server, opcode update player\n");
-	snis_writesocket(gameserver_sock, &app, sizeof(app));
+	if (snis_writesocket(gameserver_sock, &app, sizeof(app)) < 0) {
+		fprintf(stderr, "Initial write to gameserver failed.\n");
+		shutdown(gameserver_sock, SHUT_RDWR);
+		close(gameserver_sock);
+		gameserver_sock = -1;
+		goto error;
+	}
 	printf("Wrote update player opcode\n");
 
         pthread_attr_init(&gameserver_reader_attr);
