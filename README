@@ -3,6 +3,14 @@ This is some preliminary code for a multiplayer networked spaceship bridge simul
 
 There are three parts.
 
+The first part, ssgl (super simple game lobby) is licensed under the MIT "expat" license
+(see ssgl/LICENSE).  Ssgl is a generic lobby library which contains nothing that is
+specific to Space Nerds In Space (except that, as far as I know, Space Nerds In Space is
+the sole user of ssgl -- probably because I wrote it to enable Space Nerds In Space.)
+
+The 2nd and 3rd parts are the client and server portions of Space Nerds In Space.
+They are licensed together under the GNU GPL v. 2 or (at your option) later versions.
+
 1. ssgl/ssgl_server is the game lobby.  "ssgl" stands for "super simple game lobby".  (There is a github project, "ssgl", but the code in here is more up to date than that.)  This does matchmaking between snis_client and snis_server processes.  It does not do NAT punchthrough, so it's a LAN only thing.  It needs the following lines in /etc/services:
 
 gamelobby	2419/tcp
