@@ -35,6 +35,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <errno.h>
 #include <time.h>
 #include <pthread.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "ssgl.h"
 #include "ssgl_sanitize.h"
@@ -56,6 +58,31 @@ static void ssgl_exit(char *reason, int code)
 	ssgl_log("ssgl_server exiting, reason: %s, exit code = %d\n",
 			reason, code);
 	exit(code);
+}
+
+static void get_peer_name(int connection, char *buffer)
+{
+	struct sockaddr_in peer;
+	unsigned int addrlen;
+	int rc;
+
+	/* Get the game server's ip addr (don't trust what we were told.) */
+	rc = getpeername(connection, (struct sockaddr * __restrict__) &peer, &addrlen); 
+	if (rc != 0) {
+		ssgl_log("getpeername failed: %s\n", strerror(errno));
+		sprintf(buffer, "(UNKNOWN)");
+		return;
+	}
+	sprintf(buffer, "%s:%hu", inet_ntoa(peer.sin_addr), ntohs(peer.sin_port));
+}
+
+static void log_disconnect(int connection, char *reason)
+{
+	char client_ip[50];
+
+	get_peer_name(connection, client_ip);
+	ssgl_log("ssgl_server: Disconnecting from %s, reason: %s\n",
+			client_ip, reason);
 }
 
 static inline void ssgl_lock()
@@ -85,6 +112,7 @@ static int get_protocol_version(int connection, struct ssgl_protocol_id *proto_i
 	return 0;
 
 bad_protocol:
+	log_disconnect(connection, "bad protocol identifier");
 	shutdown(connection, SHUT_RDWR);
 	close(connection);
 	return -1;
@@ -148,12 +176,16 @@ static void service_game_server(int connection)
 
 	/* Get game server information */
 	rc = ssgl_readsocket(connection, &gs, sizeof(gs));
-	if (rc < 0)
+	if (rc < 0) {
+		ssgl_log("Failed initial socket read from game server\n");
 		return;
+	}
 
 	/* printf("1 gs.game_type = '%s', gs.port = %hu\n",gs.game_type, gs.port); */
-	if (sanitize_game_server_entry(&gs))
+	if (sanitize_game_server_entry(&gs)) { 
+		ssgl_log("Failed to sanitize game server information\n");
 		return;
+	}
 	/* printf("2 gs.game_type = '%s'\n",gs.game_type); */
 
 #if 0
@@ -193,8 +225,10 @@ static void service_game_server(int connection)
 	}
 	/* printf("4 gs.game_type = '%s'\n",gs.game_type); */
 
-	if (ngame_servers >= MAX_GAME_SERVERS)
+	if (ngame_servers >= MAX_GAME_SERVERS) {
+		ssgl_log("Too many game servers connected, rejecting game server.\n");
 		goto out; /* no room at the inn. */
+	}
 
 	/* printf("5 gs.game_type = '%s'\n",gs.game_type); */
 	/* add the new game server info into the directory... */
@@ -240,9 +274,10 @@ static void service_game_client(int connection)
 	struct ssgl_game_server *directory = NULL;
 	struct ssgl_client_filter filter;
 	int nentries, i, rc, be_nentries;
+	char client_ip[100];
 
-	ssgl_log("ssgl_server: serving client...\n");
-
+	get_peer_name(connection, client_ip);
+	ssgl_log("ssgl_server: new game client %s\n", client_ip);
 
 	while (1) {
 		/* printf("ssgl_server: reading filter data.\n"); */
@@ -251,7 +286,8 @@ static void service_game_client(int connection)
 			goto badclient;
 
 		fill_trailing_zeroes(filter.game_type, sizeof(filter.game_type));
-		/* printf("ssgl_server: client requested filter '%s'\n", filter.game_type); */
+		ssgl_log("ssgl_server: client %s requested filter '%s'\n",
+				client_ip, filter.game_type);
 
 		nentries = 0;
 		ssgl_lock();
@@ -305,7 +341,7 @@ send_the_data:
 	}
 
 badclient:
-	ssgl_log("ssgl_server: bailing on client.\n");
+	log_disconnect(connection, "client disconnected");
 	if (directory)
 		free(directory);
 	shutdown(connection, SHUT_RDWR);
@@ -333,6 +369,7 @@ static void * service_thread(void * arg)
 	else
 		service_game_client(*connection);
 out:
+	log_disconnect(*connection, "service thread terminated.");
 	shutdown(*connection, SHUT_RDWR);
 	close(*connection);
 	free(connection); /* allocated prior to thread creation in service(), below. */
@@ -344,6 +381,7 @@ static void service(int connection)
 	pthread_attr_t attr;
 	pthread_t thread;
 	int rc, *conn;
+	char client_ip[50];
 
 	/* printf("ssgl_server: servicing connection %d\n", connection); */
 	/* get connection moved off the stack so that when the thread needs it,
@@ -352,13 +390,15 @@ static void service(int connection)
 	conn = malloc(sizeof(*conn)); /* will be freed in service_thread(). */
 	*conn = connection; /* linux overcommits, no sense in checking malloc return. */
 
+	get_peer_name(connection, client_ip);
+	ssgl_log("ssgl_server: New connection from %s\n", client_ip);
+
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	rc = pthread_create(&thread, &attr, service_thread, (void *) conn);
 	if (rc) {
-		fprintf(stderr,
-			"Unable to create connection handling thread, rc = %d, errno = %d\n",
-			rc, errno); 
+		ssgl_log("ssgl_server: Unable to create connection handling thread for %s, rc = %d, errno = %d\n",
+			client_ip, rc, errno); 
 		shutdown(SHUT_RDWR, *conn);
 		close(*conn);
 		free(conn);
