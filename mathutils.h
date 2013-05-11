@@ -59,4 +59,10 @@ GLOBAL int line_intersection(double A1, double B1, double C1,
  * between the two points. */
 GLOBAL void perpendicular_line_from_two_points(double x1, double y1, double x2, double y2,
 				double *A, double *B, double *C);
+
+/* Given three points on the edge of a circle, find the circle x, y, r.  If no solution,
+   returns -1, otherwise 0 */
+GLOBAL int circle_from_three_points(double x1, double y1, double x2, double y2, double x3, double y3,
+		double *x, double *y, double *r);
+
 #endif
