@@ -51,6 +51,13 @@ static time_t expiration[MAX_GAME_SERVERS];
 /* lock to protect ngame_servers, ssgl_game_server[] and expiration[] */ 
 static pthread_mutex_t ssgl_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static void ssgl_exit(char *reason, int code)
+{
+	ssgl_log("ssgl_server exiting, reason: %s, exit code = %d\n",
+			reason, code);
+	exit(code);
+}
+
 static inline void ssgl_lock()
 {
 	(void) pthread_mutex_lock(&ssgl_mutex);
@@ -399,7 +406,7 @@ int main(int argc, char *argv[])
 		ssgl_log("Check that /etc/services contains the following lines:\n");
 		ssgl_log("gamelobby	2419/tcp\n");
 		ssgl_log("gamelobby	2419/udp\n");
-		exit(1);
+		ssgl_exit("Cannot find game lobby service\n", 1);
 	}
 
 	/* Get the protocol number... */
@@ -423,7 +430,7 @@ int main(int argc, char *argv[])
 	rc = bind(rendezvous, (struct sockaddr *) &listen_address, sizeof(listen_address));
 	if (rc < 0) {
 		ssgl_log("bind() failed: %s\n", strerror(errno));
-		exit(1);
+		ssgl_exit("ssgl_server already running?", 1);
 	}
 
 	ssgl_log("ssgl_server: listening for connections...\n");
@@ -431,7 +438,7 @@ int main(int argc, char *argv[])
 	rc = listen(rendezvous, SOMAXCONN);
 	if (rc < 0) {
 		ssgl_log("listen() failed: %s\n", strerror(errno));
-		exit(1);
+		ssgl_exit("listen failed.", 1);
 	}
 
 	while (1) {
