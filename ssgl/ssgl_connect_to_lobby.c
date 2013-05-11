@@ -66,8 +66,12 @@ static int ssgl_connect_to_lobby(char *ssgl_hostname, int client)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 	rc = getaddrinfo(ssgl_hostname, GAMELOBBY_SERVICE_NAME, &hints, &lobbyserverinfo);
-	if (rc)
-		return rc;
+	if (rc) {
+		rc = getaddrinfo(ssgl_hostname, GAMELOBBY_SERVICE_NUMBER_AS_STRING,
+					&hints, &lobbyserverinfo);
+		if (rc)
+			return rc;
+	}
 
 	for (i = lobbyserverinfo; i != NULL; i = i->ai_next) {
 		if (i->ai_family == AF_INET) {

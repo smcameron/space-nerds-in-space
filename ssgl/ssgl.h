@@ -29,6 +29,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #define GAMELOBBY_SERVICE_NUMBER 2914
 #define GAMELOBBY_SERVICE_NAME "gamelobby"
+#define GAMELOBBY_SERVICE_NUMBER_AS_STRING "2914"
 
 #pragma pack(1)
 struct ssgl_game_server {

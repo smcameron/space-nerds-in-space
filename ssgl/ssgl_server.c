@@ -449,7 +449,7 @@ int main(int argc, char *argv[])
 		ssgl_log(SSGL_WARN, "Check that /etc/services contains the following lines:\n");
 		ssgl_log(SSGL_WARN, "gamelobby	2419/tcp\n");
 		ssgl_log(SSGL_WARN, "gamelobby	2419/udp\n");
-		ssgl_exit("Cannot find game lobby service\n", 1);
+		ssgl_log(SSGL_WARN, "Continuing anyway, will assume port is 2419.\n");
 	}
 
 	/* Get the protocol number... */
@@ -469,7 +469,8 @@ int main(int argc, char *argv[])
 	/* Bind the socket to "any address" on our port */
 	listen_address.sin_family = AF_INET;
 	listen_address.sin_addr.s_addr = INADDR_ANY;
-	listen_address.sin_port = gamelobby_service ? gamelobby_service->s_port : GAMELOBBY_SERVICE_NUMBER;
+	listen_address.sin_port = gamelobby_service ?
+			gamelobby_service->s_port : htons(GAMELOBBY_SERVICE_NUMBER);
 	rc = bind(rendezvous, (struct sockaddr *) &listen_address, sizeof(listen_address));
 	if (rc < 0) {
 		ssgl_log(SSGL_ERROR, "bind() failed: %s\n", strerror(errno));
