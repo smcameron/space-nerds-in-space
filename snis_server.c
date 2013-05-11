@@ -860,6 +860,8 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 			diff = max_heading_change * diff / fabs(diff);
 
 		o->heading += diff;
+		o->velocity *= (1.0 - (0.4 * fabs(sin(diff))));
+		o->tsd.robot.desired_velocity *= (1.0 - (0.4 * fabs(sin(diff))));
 		normalize_angle(&o->heading);
 	}
 
