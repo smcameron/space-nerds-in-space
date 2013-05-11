@@ -44,4 +44,8 @@ GLOBAL double table_interp(double x, double xv[], double yv[], int nv);
 GLOBAL double game_angle_to_math_angle(double angle);
 GLOBAL double math_angle_to_game_angle(double angle);
 
+/* given two points, (x1,y1) and (x2, y2) find eqn of line Ax + By = C */
+GLOBAL void line_eqn_from_two_points(double x1, double y1, double x2, double y2,
+				double *A, double *B, double *C);
+
 #endif
