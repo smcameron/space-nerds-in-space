@@ -48,10 +48,10 @@ all:	ssgl_server ssgl_gameclient_example ssgl_gameserver_example
 
 libssglclient.a:	ssgl_sleep.o	ssgl_sanitize.o ssgl_recv_game_servers.o \
 	ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
-	ssgl_register_gameserver.o
+	ssgl_register_gameserver.o ssgl_log.o
 	ar -cr libssglclient.a ssgl_sleep.o ssgl_sanitize.o ssgl_recv_game_servers.o \
 		ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
-		ssgl_register_gameserver.o
+		ssgl_register_gameserver.o ssgl_log.o
 
 ssgl_log.o:	ssgl_log.c ssgl_log.h
 	gcc -g --pedantic -Wall -Werror -pthread -c ssgl_log.c

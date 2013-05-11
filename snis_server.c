@@ -26,6 +26,8 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <errno.h>
@@ -37,6 +39,7 @@
 
 #include "ssgl/ssgl.h"
 #include "snis.h"
+#include "snis_log.h"
 #include "mathutils.h"
 #include "snis_alloc.h"
 #include "snis_marshal.h"
@@ -86,6 +89,7 @@ pthread_cond_t listener_started;
 int listener_port = -1;
 pthread_t lobbythread;
 char *lobbyserver = NULL;
+static int snis_log_level = 2;
 
 static inline void client_lock()
 {
@@ -116,6 +120,40 @@ static uint32_t get_new_object_id(void)
 	answer = current_id++;
 	pthread_mutex_unlock(&object_id_lock);	
 	return answer;
+}
+
+static void get_peer_name(int connection, char *buffer)
+{
+	struct sockaddr_in *peer;
+	struct sockaddr p;
+	unsigned int addrlen;
+	int rc;
+
+	peer = (struct sockaddr_in *) &p;
+
+	/* This seems to get the wrong info... not sure what's going wrong */
+	/* Get the game server's ip addr (don't trust what we were told.) */
+	rc = getpeername(connection, (struct sockaddr * __restrict__) &p, &addrlen); 
+	if (rc != 0) {
+		/* this happens quite a lot, so SSGL_INFO... */
+		snis_log(SNIS_INFO, "getpeername failed: %s\n", strerror(errno));
+		sprintf(buffer, "(UNKNOWN)");
+		return;
+	}
+	sprintf(buffer, "%s:%hu", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
+	printf("put '%s' in buffer\n", buffer);
+}
+
+static void log_client_info(int level, int connection, char *info)
+{
+	char client_ip[50];
+
+	if (level < snis_log_level)
+		return;
+
+	get_peer_name(connection, client_ip);
+	snis_log(level, "snis_server: %s: %s",
+			client_ip, info);
 }
 
 static void generic_move(__attribute__((unused)) struct snis_entity *o)
@@ -1894,7 +1932,7 @@ static int process_request_bytevalue_pwr(struct game_client *c, int offset,
 		return -1;
 	}
 	if (i != c->ship_index)
-		printf("i != ship index\n");
+		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 	bytevalue = (uint8_t *) &go[i];
 	bytevalue += offset;
 	v = limit(c, v);
@@ -1966,7 +2004,7 @@ static int process_engage_warp(struct game_client *c)
 		return -1;
 	}
 	if (i != c->ship_index)
-		printf("i != ship index\n");
+		snis_log(SNIS_ERROR, "i != ship index at %s:%t\n", __FILE__, __LINE__);
 	o = &go[i];
 	wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
 	o->x = o->x + wfactor * sin(o->heading);
@@ -2242,8 +2280,9 @@ static void process_instructions_from_client(struct game_client *c)
 	return;
 
 protocol_error:
-	printf("Protocol error in process_instructions_from_client, opcode = %hu\n", opcode);
-	printf("Last successful opcode was %d (0x%hx)\n", last_successful_opcode,
+	log_client_info(SNIS_ERROR, c->socket, "bad opcode protocol violation\n");
+	snis_log(SNIS_ERROR, "Protocol error in process_instructions_from_client, opcode = %hu\n", opcode);
+	snis_log(SNIS_ERROR, "Last successful opcode was %d (0x%hx)\n", last_successful_opcode,
 			last_successful_opcode);
 	snis_print_last_buffer(c->socket);
 	shutdown(c->socket, SHUT_RDWR);
@@ -2264,7 +2303,7 @@ static void *per_client_read_thread(void /* struct game_client */ *client)
 		if (c->socket < 0)
 			break;
 	}
-	printf("client reader thread exiting\n");
+	log_client_info(SNIS_INFO, c->socket, "client reader thread exiting\n");
 	return NULL;
 }
 
@@ -2281,7 +2320,7 @@ static void write_queued_updates_to_client(struct game_client *c)
 	if (buffer->buffer_size > 0) {
 		rc = snis_writesocket(c->socket, buffer->buffer, buffer->buffer_size);
 		if (rc != 0) {
-			printf("writesocket failed, rc= %d, errno = %d(%s)\n", 
+			snis_log(SNIS_ERROR, "writesocket failed, rc= %d, errno = %d(%s)\n", 
 				rc, errno, strerror(errno));
 			goto badclient;
 		}
@@ -2289,7 +2328,7 @@ static void write_queued_updates_to_client(struct game_client *c)
 		/* no-op, just so we know if client is still there */
 		rc = snis_writesocket(c->socket, &noop, sizeof(noop));
 		if (rc != 0) {
-			printf("(noop) writesocket failed, rc= %d, errno = %d(%s)\n", 
+			snis_log(SNIS_ERROR, "(noop) writesocket failed, rc= %d, errno = %d(%s)\n", 
 				rc, errno, strerror(errno));
 			goto badclient;
 		}
@@ -2298,6 +2337,7 @@ static void write_queued_updates_to_client(struct game_client *c)
 	return;
 
 badclient:
+	log_client_info(SNIS_WARN, c->socket, "disconnected, failed writing socket\n");
 	shutdown(c->socket, SHUT_RDWR);
 	close(c->socket);
 	c->socket = -1;
@@ -2473,7 +2513,7 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 		/* snis_sleep(&time1, &time2, &tenth_second); */ /* sleep for 1/10th sec - (time2 - time1) */
 		sleep_tenth_second();
 	}
-	printf("client writer thread exiting.\n");
+	log_client_info(SNIS_INFO, c->socket, "client writer thread exiting.\n");
 	if (rc) /* satisfy the whining compiler */
 		return NULL;
 	return NULL;
@@ -2487,10 +2527,10 @@ static int verify_client_protocol(int connection)
 	if (rc < 0)
 		return rc;
 	protocol_version[7] = '\0';
-	printf("protocol read...'%s'\n", protocol_version);
+	snis_log(SNIS_INFO, "protocol read...'%s'\n", protocol_version);
 	if (strcmp(protocol_version, SNIS_PROTOCOL_VERSION) != 0)
 		return -1;
-	printf("protocol verified.\n");
+	snis_log(SNIS_INFO, "protocol verified.\n");
 	return 0;
 }
 
@@ -2714,14 +2754,14 @@ static int add_new_player(struct game_client *c)
 	app.opcode = ntohs(app.opcode);
 	app.role = ntohl(app.role);
 	if (app.opcode != OPCODE_UPDATE_PLAYER) {
-		printf("bad opcode %d\n", app.opcode);
+		snis_log(SNIS_ERROR, "bad opcode %d\n", app.opcode);
 		goto protocol_error;
 	}
 	app.shipname[19] = '\0';
 	app.password[19] = '\0';
 
 	if (insane(app.shipname, 20) || insane(app.password, 20)) {
-		printf("Bad ship name or password\n");
+		snis_log(SNIS_ERROR, "Bad ship name or password\n");
 		goto protocol_error;
 	}
 
@@ -2754,7 +2794,7 @@ static int add_new_player(struct game_client *c)
 	return 0;
 
 protocol_error:
-	printf("server: protocol error, closing socket %d\n", c->socket);
+	log_client_info(SNIS_ERROR, c->socket, "disconnected, protocol error\n");
 	close(c->socket);
 	return -1;
 }
@@ -2764,17 +2804,17 @@ static void service_connection(int connection)
 {
 	int i, rc, flag = 1;
 
-	printf("snis_server: servicing snis_client connection %d\n", connection);
+	log_client_info(SNIS_INFO, connection, "snis_server: servicing snis_client connection\n");
         /* get connection moved off the stack so that when the thread needs it,
 	 * it's actually still around. 
 	 */
 
 	i = setsockopt(connection, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 	if (i < 0)
-		printf("setsockopt failed.\n");
+		snis_log(SNIS_ERROR, "setsockopt failed: %s.\n", strerror(errno));
 
 	if (verify_client_protocol(connection)) {
-		printf("protocol error\n");
+		log_client_info(SNIS_ERROR, connection, "disconnected, protocol violation\n");
 		close(connection);
 		return;
 	}
@@ -2782,7 +2822,7 @@ static void service_connection(int connection)
 	client_lock();
 	if (nclients >= MAXCLIENTS) {
 		client_unlock();
-		printf("Too many clients.\n");
+		snis_log(SNIS_ERROR, "Too many clients.\n");
 		return;
 	}
 	i = nclients;
@@ -2790,7 +2830,7 @@ static void service_connection(int connection)
 	client[i].socket = connection;
 	client[i].timestamp = 0;  /* newborn client, needs everything */
 
-	printf("add new player\n");
+	log_client_info(SNIS_INFO, connection, "add new player\n");
 
 	pthread_mutex_init(&client[i].client_write_queue_mutex, NULL);
 	packed_buffer_queue_init(&client[i].client_write_queue);
@@ -2804,20 +2844,20 @@ static void service_connection(int connection)
         rc = pthread_create(&client[i].read_thread,
 		&client[i].read_attr, per_client_read_thread, (void *) &client[i]);
 	if (rc) {
-		fprintf(stderr, "Failed to create per client read thread: %d %s %s\n",
+		snis_log(SNIS_ERROR, "per client read thread, pthread_create failed: %d %s %s\n",
 			rc, strerror(rc), strerror(errno));
 	}
         rc = pthread_create(&client[i].write_thread,
 		&client[i].write_attr, per_client_write_thread, (void *) &client[i]);
 	if (rc) {
-		fprintf(stderr, "Failed to create per client read thread: %d %s %s\n",
+		snis_log(SNIS_ERROR, "per client write thread, pthread_create failed: %d %s %s\n",
 			rc, strerror(rc), strerror(errno));
 	}
 	nclients++;
 	client_unlock();
 
 
-	printf("bottom of 'service connection'\n");
+	snis_log(SNIS_INFO, "bottom of 'service connection'\n");
 }
 
 /* This thread listens for incoming client connections, and
@@ -2835,7 +2875,7 @@ static void *listener_thread(__attribute__((unused)) void * unused)
 	int s;
 	char portstr[20];
 
-        printf("snis_server starting\n");
+        snis_log(SNIS_INFO, "snis_server starting\n");
 
 	/* Bind "rendezvous" socket to a random port to listen for connections. */
 	while (1) {
@@ -2845,7 +2885,7 @@ static void *listener_thread(__attribute__((unused)) void * unused)
 		 * see http://www.iana.org/assignments/port-numbers
 		 */
 		port = snis_randn(65335 - 49152) + 49151;
-		printf("Trying port %d\n", port);
+		snis_log(SNIS_INFO, "Trying port %d\n", port);
 		sprintf(portstr, "%d", port);
 		memset(&hints, 0, sizeof(struct addrinfo));
 		hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
@@ -2858,7 +2898,7 @@ static void *listener_thread(__attribute__((unused)) void * unused)
 
 		s = getaddrinfo(NULL, portstr, &hints, &result);
 		if (s != 0) {
-			fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
+			snis_log(SNIS_ERROR, "getaddrinfo: %s\n", gai_strerror(s));
 			exit(EXIT_FAILURE);
 		}
 
@@ -2882,13 +2922,13 @@ static void *listener_thread(__attribute__((unused)) void * unused)
 	}
 
 	/* At this point, "rendezvous" is bound to a random port */
-	printf("snis_server listening for connections on port %d\n", port);
+	snis_log(SNIS_INFO, "snis_server listening for connections on port %d\n", port);
 	listener_port = port;
 
 	/* Listen for incoming connections... */
 	rc = listen(rendezvous, SOMAXCONN);
 	if (rc < 0) {
-		fprintf(stderr, "listen() failed: %s\n", strerror(errno));
+		snis_log(SNIS_ERROR, "listen() failed, exiting: %s\n", strerror(errno));
 		exit(1);
 	}
 
@@ -2899,17 +2939,17 @@ static void *listener_thread(__attribute__((unused)) void * unused)
 
 	while (1) {
 		remote_addr_len = sizeof(remote_addr);
-		printf("Accepting connection...\n");
+		snis_log(SNIS_INFO, "Accepting connection...\n");
 		connection = accept(rendezvous, (struct sockaddr *) &remote_addr, &remote_addr_len);
-		printf("accept returned %d\n", connection);
+		snis_log(SNIS_INFO, "accept returned %d\n", connection);
 		if (connection < 0) {
 			/* handle failed connection... */
-			fprintf(stderr, "accept() failed: %s\n", strerror(errno));
+			snis_log(SNIS_WARN, "accept() failed: %s\n", strerror(errno));
 			ssgl_sleep(1);
 			continue;
 		}
 		if (remote_addr_len != sizeof(remote_addr)) {
-			fprintf(stderr, "strange socket address length %d\n", remote_addr_len);
+			snis_log(SNIS_ERROR, "strange socket address length %d\n", remote_addr_len);
 			/* shutdown(connection, SHUT_RDWR);
 			close(connection);
 			continue; */
@@ -2936,14 +2976,14 @@ static int start_listener_thread(void)
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
         rc = pthread_create(&thread, &attr, listener_thread, NULL);
 	if (rc) {
-		fprintf(stderr, "Failed to create listener thread: %d %s %s\n",
+		snis_log(SNIS_ERROR, "Failed to create listener thread, pthread_create: %d %s %s\n",
 				rc, strerror(rc), strerror(errno));
 	}
 
 	/* Wait for the listener thread to become ready... */
 	pthread_cond_wait(&listener_started, &listener_mutex);
 	(void) pthread_mutex_unlock(&listener_mutex);
-	printf("Listener started.\n");
+	snis_log(SNIS_INFO, "Listener started.\n");
 	
 	return listener_port;
 }
@@ -2994,9 +3034,9 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 	struct ssgl_game_server gs;
 
 	memset(&gs, 0, sizeof(gs));
-	printf("port = %hu\n", port);
+	snis_log(SNIS_INFO, "port = %hu\n", port);
 	gs.port = htons(port);
-	printf("gs.port = %hu\n", gs.port);
+	snis_log(SNIS_INFO, "gs.port = %hu\n", gs.port);
 		
 	strncpy(gs.server_nickname, servernick, 14);
 	strncpy(gs.game_instance, gameinstance, 19);
@@ -3004,11 +3044,13 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 	strcpy(gs.game_type, "SNIS");
 
 	if (ssgl_get_primary_host_ip_addr(&gs.ipaddr) != 0)
-		fprintf(stderr, "Failed to get local ip address.\n");
+		snis_log(SNIS_WARN, "Failed to get local ip address.\n");
 
-	printf("Registering game server\n");
-	(void) ssgl_register_gameserver(lobbyhost, &gs, &lobbythread);
-	printf("Game server registered.\n");
+	snis_log(SNIS_INFO, "Registering game server\n");
+	if (ssgl_register_gameserver(lobbyhost, &gs, &lobbythread))
+		snis_log(SNIS_WARN, "Game server registration failed.\n");
+	else	
+		snis_log(SNIS_INFO, "Game server registered.\n");
 	return;	
 }
 
@@ -3017,6 +3059,19 @@ void usage(void)
 	fprintf(stderr, "snis_server lobbyserver gameinstance servernick location\n");
 	fprintf(stderr, "For example: snis_server lobbyserver 'steves game' zuul Houston\n");
 	exit(0);
+}
+
+static void open_log_file(void)
+{
+	char *loglevelstring;
+	int ll, rc;
+
+	rc = snis_open_logfile("snis_server.log");
+	loglevelstring = getenv("SNIS_LOG_LEVEL");
+	if (rc == 0 && loglevelstring && sscanf(loglevelstring, "%d", &ll) == 1) {
+		snis_log_level = ll;
+		snis_set_log_level(snis_log_level);
+	}
 }
 
 int main(int argc, char *argv[])
@@ -3028,6 +3083,8 @@ int main(int argc, char *argv[])
 
 	if (argc < 5) 
 		usage();
+
+	open_log_file();
 
 	snis_protocol_debugging(1);
 
@@ -3052,6 +3109,8 @@ int main(int argc, char *argv[])
 		/* snis_sleep(&time1, &time2, &thirtieth_second); */
 		sleep_thirtieth_second();
 	}
+
+	snis_close_logfile();
 
 	if (rc) /* satisfy compiler */
 		return 0; 

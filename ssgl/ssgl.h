@@ -65,6 +65,15 @@ GLOBAL void ssgl_sleep(int seconds); /* just a thread safe sleep implemented by 
 GLOBAL void ssgl_msleep(int milliseconds); /* just a thread safe sleep implemented by nanosleep w/ retries */
 GLOBAL int ssgl_get_primary_host_ip_addr(uint32_t *ipaddr);
 
+#define SSGL_INFO 1
+#define SSGL_WARN 2
+#define SSGL_ERROR 3
+
+extern int ssgl_open_logfile(char *logfilename);
+extern void ssgl_log(int level, const char* format, ...);
+extern void ssgl_close_logfile(void);
+extern void ssgl_set_log_level(int level);
+
 #undef GLOBAL
 #endif
 
