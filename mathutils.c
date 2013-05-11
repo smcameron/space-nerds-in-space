@@ -150,3 +150,25 @@ int line_intersection(double A1, double B1, double C1,
 	return 0;
 }
 
+/* Given 2 points (x1,y1), (x2,y2), find equation of the line which is perpendicular
+ * to the line passing through the two points, and which intersects the midpoint
+ * between the two points. */          
+void perpendicular_line_from_two_points(double x1, double y1, double x2, double y2,
+						double *A, double *B, double *C)
+{
+	double dx, dy, mx, my, px, py;
+
+	/* Find midpoint between p1 and p2. */
+	dx = (x2 - x1);
+	dy = (y2 - y1);
+	mx = x1 + dx / 2.0;
+	my = y1 + dy / 2.0;
+
+	/* Find point on line perpendicular to (x1,y1) - (x2,y2); */
+	px = mx + dy;
+	py = my + dx;
+
+	/* Find eqn of line through (mx,my) and (px,py) */
+	line_eqn_from_two_points(mx, my, px, py, A, B, C);
+}
+

@@ -54,4 +54,9 @@ GLOBAL void line_eqn_from_two_points(double x1, double y1, double x2, double y2,
 GLOBAL int line_intersection(double A1, double B1, double C1,
 		double A2, double B2, double C2, double *x, double *y);
 
+/* Given 2 points (x1,y1), (x2,y2), find equation of the line which is perpendicular
+ * to the line passing through the two points, and which intersects the midpoint
+ * between the two points. */
+GLOBAL void perpendicular_line_from_two_points(double x1, double y1, double x2, double y2,
+				double *A, double *B, double *C);
 #endif
