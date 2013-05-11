@@ -34,6 +34,7 @@ SRCS = ssgl_connect_to_lobby.c \
 	ssgl_sanitize.c \
 	ssgl_server.c \
 	ssgl_sleep.c \
+	ssgl_log.c \
 	ssgl_socket_io.c \
 	ssgl_connect_to_lobby.h \
 	ssgl.h \
@@ -51,6 +52,9 @@ libssglclient.a:	ssgl_sleep.o	ssgl_sanitize.o ssgl_recv_game_servers.o \
 	ar -cr libssglclient.a ssgl_sleep.o ssgl_sanitize.o ssgl_recv_game_servers.o \
 		ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
 		ssgl_register_gameserver.o
+
+ssgl_log.o:	ssgl_log.c ssgl_log.h
+	gcc -g --pedantic -Wall -Werror -pthread -c ssgl_log.c
 
 ssgl_sleep.o:	ssgl_sleep.c
 	gcc -g --pedantic -Wall -Werror -pthread -c ssgl_sleep.c
@@ -73,8 +77,9 @@ ssgl_get_primary_host_ip_addr.o:	ssgl_get_primary_host_ip_addr.c
 ssgl_connect_to_lobby.o:	ssgl_connect_to_lobby.c
 	gcc -g --pedantic -Wall -Werror -pthread -c ssgl_connect_to_lobby.c
 
-ssgl_server:	ssgl_server.c ssgl.h ssgl_sanitize.o ssgl_sleep.o ssgl_socket_io.o
-	gcc -g --pedantic -Wall -Werror -pthread -lrt ssgl_sanitize.o ssgl_sleep.o ssgl_socket_io.o -o ssgl_server ssgl_server.c
+ssgl_server:	ssgl_server.c ssgl.h ssgl_sanitize.o ssgl_sleep.o ssgl_socket_io.o ssgl_log.o
+	gcc -g --pedantic -Wall -Werror -pthread -lrt ssgl_sanitize.o ssgl_sleep.o \
+			ssgl_socket_io.o ssgl_log.o -o ssgl_server ssgl_server.c
 
 ssgl_gameclient_example:	ssgl.h ssgl_gameclient_example.c libssglclient.a
 	gcc -g --pedantic -Wall -Werror -pthread -L. -o ssgl_gameclient_example ssgl_gameclient_example.c -lssglclient

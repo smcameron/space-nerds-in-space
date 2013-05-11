@@ -40,6 +40,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "ssgl_sanitize.h"
 #include "ssgl_socket_io.h"
 #include "ssgl_protocol_id.h"
+#include "ssgl_log.h"
 
 /* This is our directory of game servers, this is the data that we serve... */
 #define MAX_GAME_SERVERS 5000
@@ -204,7 +205,7 @@ static void *expire_game_servers(__attribute__((unused)) void *arg)
 	int i, j;
 	struct timeval tv;
 
-	printf("ssgl_server: game server expiration thread started.\n");
+	ssgl_log("ssgl_server: game server expiration thread started.\n");
 	while (1) { /* TODO, replace this with some condition... */
 		(void) gettimeofday(&tv, NULL);
 		ssgl_lock();
@@ -233,7 +234,7 @@ static void service_game_client(int connection)
 	struct ssgl_client_filter filter;
 	int nentries, i, rc, be_nentries;
 
-	printf("ssgl_server: serving client...\n");
+	ssgl_log("ssgl_server: serving client...\n");
 
 
 	while (1) {
@@ -297,7 +298,7 @@ send_the_data:
 	}
 
 badclient:
-	printf("ssgl_server: bailing on client.\n");
+	ssgl_log("ssgl_server: bailing on client.\n");
 	if (directory)
 		free(directory);
 	shutdown(connection, SHUT_RDWR);
@@ -367,7 +368,7 @@ static void start_game_server_expiration_thread(void)
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	rc = pthread_create(&thread, &attr, expire_game_servers, NULL); 
 	if (rc < 0) {
-		fprintf(stderr, "Unable to create game server expiration thread: %s.\n",
+		ssgl_log("Unable to create game server expiration thread: %s.\n",
 			strerror(errno));
 	}
 }
@@ -381,20 +382,23 @@ int main(int argc, char *argv[])
 	struct sockaddr_in remote_addr;
 	socklen_t remote_addr_len;
 
+	if (ssgl_open_logfile("ssgl.log"))
+		return 0;
+
 	memset(game_server, 0, sizeof(game_server));
 	memset(expiration, 0, sizeof(expiration));
 	ngame_servers = 0;
 
-	printf("ssgl_server starting\n");
+	ssgl_log("ssgl_server starting\n");
 	start_game_server_expiration_thread();
 
 	/* Get the "gamelobby" service protocol/port */
 	gamelobby_service = getservbyname(GAMELOBBY_SERVICE_NAME, "tcp");
 	if (!gamelobby_service) {
-		fprintf(stderr, "getservbyname failed, %s\n", strerror(errno));
-		fprintf(stderr, "Check that /etc/services contains the following lines:\n");
-		fprintf(stderr, "gamelobby	2419/tcp\n");
-		fprintf(stderr, "gamelobby	2419/udp\n");
+		ssgl_log("getservbyname failed, %s\n", strerror(errno));
+		ssgl_log("Check that /etc/services contains the following lines:\n");
+		ssgl_log("gamelobby	2419/tcp\n");
+		ssgl_log("gamelobby	2419/udp\n");
 		exit(1);
 	}
 
@@ -402,7 +406,7 @@ int main(int argc, char *argv[])
 	if (gamelobby_service) {
 		gamelobby_proto = getprotobyname(gamelobby_service->s_proto);
 		if (!gamelobby_proto) {
-			fprintf(stderr, "getprotobyname(%s) failed: %s\n", 
+			ssgl_log("getprotobyname(%s) failed: %s\n", 
 				gamelobby_service->s_proto, strerror(errno));
 		}
 	} else {
@@ -418,15 +422,15 @@ int main(int argc, char *argv[])
 	listen_address.sin_port = gamelobby_service ? gamelobby_service->s_port : GAMELOBBY_SERVICE_NUMBER;
 	rc = bind(rendezvous, (struct sockaddr *) &listen_address, sizeof(listen_address));
 	if (rc < 0) {
-		fprintf(stderr, "bind() failed: %s\n", strerror(errno));
+		ssgl_log("bind() failed: %s\n", strerror(errno));
 		exit(1);
 	}
 
-	printf("ssgl_server: listening for connections...\n");
+	ssgl_log("ssgl_server: listening for connections...\n");
 	/* Listen for incoming connections... */
 	rc = listen(rendezvous, SOMAXCONN);
 	if (rc < 0) {
-		fprintf(stderr, "listen() failed: %s\n", strerror(errno));
+		ssgl_log("listen() failed: %s\n", strerror(errno));
 		exit(1);
 	}
 
@@ -437,12 +441,12 @@ int main(int argc, char *argv[])
 		/* printf("accept returned %d\n", connection); */
 		if (connection < 0) {
 			/* handle failed connection... */
-			fprintf(stderr, "accept() failed: %s\n", strerror(errno));
+			ssgl_log("accept() failed: %s\n", strerror(errno));
 			ssgl_sleep(1);
 			continue;
 		}
 		if (remote_addr_len != sizeof(remote_addr)) {
-			fprintf(stderr, "strange socket address length %d\n", remote_addr_len);
+			ssgl_log("strange socket address length %d\n", remote_addr_len);
 			shutdown(connection, SHUT_RDWR);
 			close(connection);
 			continue;
