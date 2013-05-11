@@ -9,5 +9,6 @@ extern FILE *ssgl_logfile;
 extern int ssgl_open_logfile(char *logfilename);
 extern void ssgl_log(int level, const char* format, ...);
 extern void ssgl_close_logfile(void);
+extern void ssgl_set_loglevel(int level);
 
 #endif

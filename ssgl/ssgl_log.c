@@ -1,15 +1,30 @@
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <sys/time.h>
 #include <time.h>
+
+#include "ssgl_log.h"
 
 FILE *ssgl_logfile;
 
 static int loglevel = 2;
 
+void ssgl_set_log_level(int level)
+{
+	loglevel = level;
+	ssgl_log(loglevel, "ssgl log level set to %d\n", loglevel);
+}
+
 int ssgl_open_logfile(char *logfilename)
 {
+	char *loglevelstring;
+	int ll = -1;
+
 	ssgl_logfile = fopen(logfilename, "a+");
+	loglevelstring = getenv("SSGL_LOG_LEVEL");	
+	if (ssgl_logfile && loglevelstring && 1 == sscanf(loglevelstring, "%d", &ll))
+		ssgl_set_log_level(ll);
 	return ssgl_logfile == NULL;
 }
 
