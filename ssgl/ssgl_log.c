@@ -5,19 +5,24 @@
 
 FILE *ssgl_logfile;
 
+static int loglevel = 2;
+
 int ssgl_open_logfile(char *logfilename)
 {
 	ssgl_logfile = fopen(logfilename, "a+");
 	return ssgl_logfile == NULL;
 }
 
-void ssgl_log(const char* format, ...)
+void ssgl_log(int level, const char* format, ...)
 {
         va_list args;
 	struct timeval tv;
 	time_t now;
 	struct tm nowtm;
 	char tmbuf[64], buf[64];
+
+	if (level < loglevel)
+		return;
 
 	gettimeofday(&tv, NULL);
 	now = tv.tv_sec;

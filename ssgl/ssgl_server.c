@@ -55,7 +55,7 @@ static pthread_mutex_t ssgl_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void ssgl_exit(char *reason, int code)
 {
-	ssgl_log("ssgl_server exiting, reason: %s, exit code = %d\n",
+	ssgl_log(SSGL_WARN, "ssgl_server exiting, reason: %s, exit code = %d\n",
 			reason, code);
 	exit(code);
 }
@@ -69,19 +69,20 @@ static void get_peer_name(int connection, char *buffer)
 	/* Get the game server's ip addr (don't trust what we were told.) */
 	rc = getpeername(connection, (struct sockaddr * __restrict__) &peer, &addrlen); 
 	if (rc != 0) {
-		ssgl_log("getpeername failed: %s\n", strerror(errno));
+		/* this happens quite a lot, so SSGL_INFO... */
+		ssgl_log(SSGL_INFO, "getpeername failed: %s\n", strerror(errno));
 		sprintf(buffer, "(UNKNOWN)");
 		return;
 	}
 	sprintf(buffer, "%s:%hu", inet_ntoa(peer.sin_addr), ntohs(peer.sin_port));
 }
 
-static void log_disconnect(int connection, char *reason)
+static void log_disconnect(int level, int connection, char *reason)
 {
 	char client_ip[50];
 
 	get_peer_name(connection, client_ip);
-	ssgl_log("ssgl_server: Disconnecting from %s, reason: %s\n",
+	ssgl_log(level, "ssgl_server: Disconnecting from %s, reason: %s\n",
 			client_ip, reason);
 }
 
@@ -112,7 +113,7 @@ static int get_protocol_version(int connection, struct ssgl_protocol_id *proto_i
 	return 0;
 
 bad_protocol:
-	log_disconnect(connection, "bad protocol identifier");
+	log_disconnect(SSGL_WARN, connection, "bad protocol identifier");
 	shutdown(connection, SHUT_RDWR);
 	close(connection);
 	return -1;
@@ -177,13 +178,13 @@ static void service_game_server(int connection)
 	/* Get game server information */
 	rc = ssgl_readsocket(connection, &gs, sizeof(gs));
 	if (rc < 0) {
-		ssgl_log("Failed initial socket read from game server\n");
+		ssgl_log(SSGL_WARN, "Failed initial socket read from game server\n");
 		return;
 	}
 
 	/* printf("1 gs.game_type = '%s', gs.port = %hu\n",gs.game_type, gs.port); */
 	if (sanitize_game_server_entry(&gs)) { 
-		ssgl_log("Failed to sanitize game server information\n");
+		ssgl_log(SSGL_WARN, "Failed to sanitize game server information\n");
 		return;
 	}
 	/* printf("2 gs.game_type = '%s'\n",gs.game_type); */
@@ -226,7 +227,7 @@ static void service_game_server(int connection)
 	/* printf("4 gs.game_type = '%s'\n",gs.game_type); */
 
 	if (ngame_servers >= MAX_GAME_SERVERS) {
-		ssgl_log("Too many game servers connected, rejecting game server.\n");
+		ssgl_log(SSGL_WARN, "Too many game servers connected, rejecting game server.\n");
 		goto out; /* no room at the inn. */
 	}
 
@@ -246,7 +247,7 @@ static void *expire_game_servers(__attribute__((unused)) void *arg)
 	int i, j;
 	struct timeval tv;
 
-	ssgl_log("ssgl_server: game server expiration thread started.\n");
+	ssgl_log(SSGL_INFO, "ssgl_server: game server expiration thread started.\n");
 	while (1) { /* TODO, replace this with some condition... */
 		(void) gettimeofday(&tv, NULL);
 		ssgl_lock();
@@ -277,7 +278,7 @@ static void service_game_client(int connection)
 	char client_ip[100];
 
 	get_peer_name(connection, client_ip);
-	ssgl_log("ssgl_server: new game client %s\n", client_ip);
+	ssgl_log(SSGL_INFO, "ssgl_server: new game client %s\n", client_ip);
 
 	while (1) {
 		/* printf("ssgl_server: reading filter data.\n"); */
@@ -286,7 +287,7 @@ static void service_game_client(int connection)
 			goto badclient;
 
 		fill_trailing_zeroes(filter.game_type, sizeof(filter.game_type));
-		ssgl_log("ssgl_server: client %s requested filter '%s'\n",
+		ssgl_log(SSGL_INFO, "ssgl_server: client %s requested filter '%s'\n",
 				client_ip, filter.game_type);
 
 		nentries = 0;
@@ -341,7 +342,7 @@ send_the_data:
 	}
 
 badclient:
-	log_disconnect(connection, "client disconnected");
+	log_disconnect(SSGL_INFO, connection, "client disconnected");
 	if (directory)
 		free(directory);
 	shutdown(connection, SHUT_RDWR);
@@ -369,7 +370,7 @@ static void * service_thread(void * arg)
 	else
 		service_game_client(*connection);
 out:
-	log_disconnect(*connection, "service thread terminated.");
+	log_disconnect(SSGL_INFO, *connection, "service thread terminated.");
 	shutdown(*connection, SHUT_RDWR);
 	close(*connection);
 	free(connection); /* allocated prior to thread creation in service(), below. */
@@ -391,13 +392,13 @@ static void service(int connection)
 	*conn = connection; /* linux overcommits, no sense in checking malloc return. */
 
 	get_peer_name(connection, client_ip);
-	ssgl_log("ssgl_server: New connection from %s\n", client_ip);
+	ssgl_log(SSGL_INFO, "ssgl_server: New connection from %s\n", client_ip);
 
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	rc = pthread_create(&thread, &attr, service_thread, (void *) conn);
 	if (rc) {
-		ssgl_log("ssgl_server: Unable to create connection handling thread for %s, rc = %d, errno = %d\n",
+		ssgl_log(SSGL_ERROR, "ssgl_server: pthread_create failed for %s, rc = %d, errno = %d\n",
 			client_ip, rc, errno); 
 		shutdown(SHUT_RDWR, *conn);
 		close(*conn);
@@ -415,7 +416,7 @@ static void start_game_server_expiration_thread(void)
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	rc = pthread_create(&thread, &attr, expire_game_servers, NULL); 
 	if (rc < 0) {
-		ssgl_log("Unable to create game server expiration thread: %s.\n",
+		ssgl_log(SSGL_ERROR, "Unable to create game server expiration thread: %s.\n",
 			strerror(errno));
 	}
 }
@@ -436,16 +437,16 @@ int main(int argc, char *argv[])
 	memset(expiration, 0, sizeof(expiration));
 	ngame_servers = 0;
 
-	ssgl_log("ssgl_server starting\n");
+	ssgl_log(SSGL_INFO, "ssgl_server starting\n");
 	start_game_server_expiration_thread();
 
 	/* Get the "gamelobby" service protocol/port */
 	gamelobby_service = getservbyname(GAMELOBBY_SERVICE_NAME, "tcp");
 	if (!gamelobby_service) {
-		ssgl_log("getservbyname failed, %s\n", strerror(errno));
-		ssgl_log("Check that /etc/services contains the following lines:\n");
-		ssgl_log("gamelobby	2419/tcp\n");
-		ssgl_log("gamelobby	2419/udp\n");
+		ssgl_log(SSGL_WARN, "getservbyname failed, %s\n", strerror(errno));
+		ssgl_log(SSGL_WARN, "Check that /etc/services contains the following lines:\n");
+		ssgl_log(SSGL_WARN, "gamelobby	2419/tcp\n");
+		ssgl_log(SSGL_WARN, "gamelobby	2419/udp\n");
 		ssgl_exit("Cannot find game lobby service\n", 1);
 	}
 
@@ -453,7 +454,7 @@ int main(int argc, char *argv[])
 	if (gamelobby_service) {
 		gamelobby_proto = getprotobyname(gamelobby_service->s_proto);
 		if (!gamelobby_proto) {
-			ssgl_log("getprotobyname(%s) failed: %s\n", 
+			ssgl_log(SSGL_WARN, "getprotobyname(%s) failed: %s\n", 
 				gamelobby_service->s_proto, strerror(errno));
 		}
 	} else {
@@ -469,15 +470,15 @@ int main(int argc, char *argv[])
 	listen_address.sin_port = gamelobby_service ? gamelobby_service->s_port : GAMELOBBY_SERVICE_NUMBER;
 	rc = bind(rendezvous, (struct sockaddr *) &listen_address, sizeof(listen_address));
 	if (rc < 0) {
-		ssgl_log("bind() failed: %s\n", strerror(errno));
+		ssgl_log(SSGL_ERROR, "bind() failed: %s\n", strerror(errno));
 		ssgl_exit("ssgl_server already running?", 1);
 	}
 
-	ssgl_log("ssgl_server: listening for connections...\n");
+	ssgl_log(SSGL_INFO, "ssgl_server: listening for connections...\n");
 	/* Listen for incoming connections... */
 	rc = listen(rendezvous, SOMAXCONN);
 	if (rc < 0) {
-		ssgl_log("listen() failed: %s\n", strerror(errno));
+		ssgl_log(SSGL_ERROR, "listen() failed: %s\n", strerror(errno));
 		ssgl_exit("listen failed.", 1);
 	}
 
@@ -488,12 +489,12 @@ int main(int argc, char *argv[])
 		/* printf("accept returned %d\n", connection); */
 		if (connection < 0) {
 			/* handle failed connection... */
-			ssgl_log("accept() failed: %s\n", strerror(errno));
+			ssgl_log(SSGL_WARN, "accept() failed: %s\n", strerror(errno));
 			ssgl_sleep(1);
 			continue;
 		}
 		if (remote_addr_len != sizeof(remote_addr)) {
-			ssgl_log("strange socket address length %d\n", remote_addr_len);
+			ssgl_log(SSGL_WARN, "strange socket address length %d\n", remote_addr_len);
 			shutdown(connection, SHUT_RDWR);
 			close(connection);
 			continue;

@@ -2,9 +2,12 @@
 #define SSGL_LOGFILE_H__
 
 extern FILE *ssgl_logfile;
+#define SSGL_INFO 1
+#define SSGL_WARN 2
+#define SSGL_ERROR 3
 
 extern int ssgl_open_logfile(char *logfilename);
-extern void ssgl_log(const char* format, ...);
+extern void ssgl_log(int level, const char* format, ...);
 extern void ssgl_close_logfile(void);
 
 #endif
