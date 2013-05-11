@@ -48,4 +48,10 @@ GLOBAL double math_angle_to_game_angle(double angle);
 GLOBAL void line_eqn_from_two_points(double x1, double y1, double x2, double y2,
 				double *A, double *B, double *C);
 
+/* Given two line eqns, A1x + B1y = C1 and A2x + B2y = C2, find the intersection
+ * point.  If lines are parallel and thus do not intersect, return -1, otherwise
+ * return 0 */
+GLOBAL int line_intersection(double A1, double B1, double C1,
+		double A2, double B2, double C2, double *x, double *y);
+
 #endif

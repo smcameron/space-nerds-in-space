@@ -134,3 +134,19 @@ void line_eqn_from_two_points(double x1, double y1, double x2, double y2,
 	*C = -(x1 * y2 - x2 * y1);
 }
 
+/* Given two line eqns, A1x + B1y = C1 and A2x + B2y = C2, find the intersection
+ * point.  If lines are ~parallel and thus do not intersect, return -1, otherwise
+ * return 0 */
+int line_intersection(double A1, double B1, double C1,
+				double A2, double B2, double C2, double *x, double *y)
+{
+	double delta = A1 * B2 - A2 * B1;
+
+	if (fabs(delta) < 0.0000001)
+		return -1;
+
+	*x = (B2 * C1 - B1 * C2) / delta;	
+	*y = (A1 * C2 - A2 * C1) / delta;
+	return 0;
+}
+
