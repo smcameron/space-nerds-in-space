@@ -430,6 +430,8 @@ int main(int argc, char *argv[])
 	struct sockaddr_in remote_addr;
 	socklen_t remote_addr_len;
 
+	daemon(1, 0);
+
 	if (ssgl_open_logfile("ssgl.log"))
 		return 0;
 
