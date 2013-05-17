@@ -196,6 +196,11 @@ struct my_point_t placeholder_system_points[] = {
 };
 struct my_vect_obj placeholder_system;
 
+struct my_point_t placeholder_socket_points[] = {
+#include "placeholder-socket-points.h"
+};
+struct my_vect_obj placeholder_socket;
+
 void init_trig_arrays(void)
 {
 	int i;
@@ -4120,6 +4125,22 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 				NANO_FONT, x + 60, y);
 }
 
+static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
+{
+	int x, y;
+	char msg[20];
+
+	if (!on_damcon_screen(o, &placeholder_socket))
+		return;
+	x = damconx_to_screenx(o->x);
+	y = damcony_to_screeny(o->y);
+	sprintf(msg, "%d %d", o->tsd.socket.system, o->tsd.socket.part);
+	sng_set_foreground(WHITE);
+	sng_draw_vect_obj(w, gc, &placeholder_socket, x, y);
+	sng_abs_xy_draw_string(w, gc, msg, NANO_FONT, x + 20, y);
+	
+}
+
 static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 {
 	switch (o->type) {
@@ -4134,6 +4155,9 @@ static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 	case DAMCON_TYPE_TORPEDOSYSTEM:
 	case DAMCON_TYPE_SHIELDSYSTEM:
 		draw_damcon_system(w, o);
+		break;
+	case DAMCON_TYPE_SOCKET:
+		draw_damcon_socket(w, o);
 		break;
 	default:
 		break;
@@ -5875,6 +5899,7 @@ static void init_vects(void)
 
 	setup_vect(snis_logo, snis_logo_points);
 	setup_vect(placeholder_system, placeholder_system_points);
+	setup_vect(placeholder_socket, placeholder_socket_points);
 	scale_points(damcon_robot_points,
 			ARRAYSIZE(damcon_robot_points), 0.5, 0.5);
 	setup_vect(damcon_robot, damcon_robot_points);

@@ -50,6 +50,7 @@
 #include "shield_strength.h"
 #include "starbase-comms.h"
 #include "infinite-taunt.h"
+#include "snis_damcon_systems.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
@@ -1430,8 +1431,28 @@ static void add_damcon_robot(struct damcon_data *d)
 	d->robot = &d->o[i];
 }
 
-static void add_damcon_sockets(struct damcon_data *d)
+/* offsets for sockets... */
+static int dcxo[] = { 20, 160, 205, 160, 20 };
+static int dcyo[] = { -65, -65, 0, 65, 65 };
+
+static void add_damcon_sockets(struct damcon_data *d, int x, int y,
+				uint8_t system, int left_side)
 {
+	int i, p, px, py;
+
+	for (i = 0; i < PARTS_PER_DAMCON_SYSTEM; i++) {
+		if (left_side) {
+			px = x + dcxo[i];	
+			py = y + dcyo[i];	
+		} else {
+			px = x - dcxo[i] + 210;	
+			py = y + dcyo[i];	
+		}
+		p = add_generic_damcon_object(d, px, py, DAMCON_TYPE_SOCKET, NULL);
+		d->o[p].timestamp = universe_timestamp + 1;
+		d->o[p].tsd.socket.system = system;
+		d->o[p].tsd.socket.part = i;
+	}
 }
 
 static void add_damcon_labels(struct damcon_data *d)
@@ -1447,26 +1468,34 @@ static void add_damcon_systems(struct damcon_data *d)
 	dy = DAMCONYDIM / 5;
 	y = dy - DAMCONYDIM / 2;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_WARPDRIVE, NULL);
-	y += dy;
 	d->o[i].timestamp = universe_timestamp + 1;
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_WARPDRIVE, 1);
+	y += dy;
+
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_SENSORARRAY, NULL);
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_SENSORARRAY, 1);
 	y += dy;
 	d->o[i].timestamp = universe_timestamp + 1;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_COMMUNICATIONS, NULL);
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_COMMUNICATIONS, 1);
 	x = 2 * DAMCONXDIM / 3 - DAMCONXDIM / 2;
 	y = dy - DAMCONYDIM / 2;
 	d->o[i].timestamp = universe_timestamp + 1;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_NAVIGATION, NULL);
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_NAVIGATION, 0);
 	y += dy;
 	d->o[i].timestamp = universe_timestamp + 1;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_PHASERBANK, NULL);
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_PHASERBANK, 0);
 	y += dy;
 	d->o[i].timestamp = universe_timestamp + 1;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_TORPEDOSYSTEM, NULL);
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_TORPEDOSYSTEM, 0);
 	y += dy;
 	x = -DAMCONXDIM / 2;
 	d->o[i].timestamp = universe_timestamp + 1;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_SHIELDSYSTEM, NULL);
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_SHIELDSYSTEM, 1);
 }
 
 static void add_damcon_parts(struct damcon_data *d)
@@ -1477,9 +1506,8 @@ static void populate_damcon_arena(struct damcon_data *d)
 {
 	snis_object_pool_setup(&d->pool, MAXDAMCONENTITIES);
 	add_damcon_robot(d);
-	add_damcon_sockets(d);
-	add_damcon_labels(d);
 	add_damcon_systems(d);
+	add_damcon_labels(d);
 	add_damcon_parts(d);
 }
 
