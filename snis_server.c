@@ -2393,6 +2393,8 @@ static void send_update_nebula_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_damcon_obj_packet(struct game_client *c,
 	struct snis_damcon_entity *o);
+static void send_update_damcon_socket_packet(struct game_client *c,
+	struct snis_damcon_entity *o);
 
 static void send_respawn_time(struct game_client *c, struct snis_entity *o);
 
@@ -2472,8 +2474,16 @@ static void queue_netstats(struct game_client *c)
 static void queue_up_client_damcon_object_update(struct game_client *c,
 			struct damcon_data *d, struct snis_damcon_entity *o)
 {
-	if (o->timestamp > c->timestamp)
-		send_update_damcon_obj_packet(c, o);
+	if (o->timestamp > c->timestamp) {
+		switch(o->type) {
+		case DAMCON_TYPE_SOCKET:
+			send_update_damcon_socket_packet(c, o);
+			break;
+		default:
+			send_update_damcon_obj_packet(c, o);
+			break;
+		}
+	}
 }
 
 static void queue_up_client_damcon_update(struct game_client *c)
@@ -2700,6 +2710,23 @@ static void send_update_damcon_obj_packet(struct game_client *c,
 			o->velocity,  (int32_t) DAMCONXDIM,
 			/* send desired_heading as heading to client to enable drifting */
 			o->tsd.robot.desired_heading, (int32_t) 360);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
+static void send_update_damcon_socket_packet(struct game_client *c,
+		struct snis_damcon_entity *o)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct damcon_obj_update_packet));
+	packed_buffer_append(pb, "hwwwSSwbb",
+			OPCODE_DAMCON_SOCKET_UPDATE,   
+			o->id, o->ship_id, o->type,
+			o->x, (int32_t) DAMCONXDIM,
+			o->y, (int32_t) DAMCONYDIM,
+			o->tsd.socket.contents_id,
+			o->tsd.socket.system,
+			o->tsd.socket.part);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

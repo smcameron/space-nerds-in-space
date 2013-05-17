@@ -430,6 +430,36 @@ static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
 	return 0;
 }
 
+static int update_damcon_socket(uint32_t id, uint32_t ship_id, uint32_t type,
+			double x, double y, uint32_t contents_id, uint8_t system,
+			uint8_t part)
+
+{
+	int i;
+	struct snis_damcon_entity *o;
+
+	i = lookup_damcon_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_damcon_object(id, ship_id, x, y, 0.0, 0.0);
+		if (i < 0)
+			return i;
+		o = &dco[i];
+		o->id = id;
+		o->ship_id = ship_id;
+		o->type = type;
+		o->tsd.socket.contents_id = contents_id;
+		o->tsd.socket.system = system;
+		o->tsd.socket.part = part;
+		return 0;
+	}
+	o = &dco[i];
+	update_generic_damcon_object(o, x, y, 0.0, 0.0);
+	o->tsd.socket.contents_id = contents_id;
+	o->tsd.socket.system = system;
+	o->tsd.socket.part = part;
+	return 0;
+}
+
 static int update_econ_ship(uint32_t id, double x, double y, double vx,
 			double vy, double heading, uint32_t alive, uint32_t victim)
 {
@@ -1479,6 +1509,30 @@ static int process_update_damcon_object(void)
 	return rc;
 }
 
+static int process_update_damcon_socket(void)
+{
+	unsigned char buffer[sizeof(struct damcon_socket_update_packet) - sizeof(uint16_t)];
+	struct packed_buffer pb;
+	uint32_t id, ship_id, type, contents_id;
+	double x, y;
+	uint8_t system, part;
+	int rc;
+
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "wwwSSwbb",
+		&id, &ship_id, &type,
+			&x, (int32_t) DAMCONXDIM, 
+			&y, (int32_t) DAMCONYDIM, 
+			&contents_id, &system, &part);
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_damcon_socket(id, ship_id, type, x, y, contents_id, system, part);
+	pthread_mutex_unlock(&universe_mutex);
+	return rc;
+}
+
 static int process_update_econ_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
@@ -2073,6 +2127,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		
 		case OPCODE_DAMCON_OBJ_UPDATE:
 			rc = process_update_damcon_object();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_DAMCON_SOCKET_UPDATE:
+			rc = process_update_damcon_socket();
 			if (rc)
 				goto protocol_error;
 			break;

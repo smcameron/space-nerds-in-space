@@ -73,6 +73,7 @@
 #define OPCODE_DAMCON_OBJ_UPDATE	147
 #define OPCODE_REQUEST_ROBOT_YAW	148
 #define OPCODE_REQUEST_ROBOT_THRUST	149
+#define OPCODE_DAMCON_SOCKET_UPDATE	150
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -366,6 +367,16 @@ struct damcon_obj_update_packet {
 	uint32_t ship_id;
 	uint32_t type;
 	uint32_t x, y, velocity, heading;
+};
+
+struct damcon_socket_update_packet {
+	uint16_t opcode;
+	uint32_t id;
+	uint32_t ship_id;
+	uint32_t type;
+	uint32_t x, y, contents;
+	uint8_t system;
+	uint8_t part; 
 };
 
 #pragma pack()
