@@ -254,6 +254,7 @@ typedef void (*damcon_draw_function)(void *drawable, struct snis_damcon_entity *
 #define DAMCON_TYPE_NAVIGATION 4
 #define DAMCON_TYPE_PHASERBANK 5
 #define DAMCON_TYPE_TORPEDOSYSTEM 6
+#define DAMCON_TYPE_SHIELDSYSTEM 7
 
 struct damcon_robot_type_specific_data {
 	uint32_t cargo_id; /* what the robot is carrying */
@@ -315,6 +316,6 @@ struct damcon_data {
 };
 
 #define DAMCONXDIM 800.0
-#define DAMCONYDIM 1500.0
+#define DAMCONYDIM 1800.0
 
 #endif

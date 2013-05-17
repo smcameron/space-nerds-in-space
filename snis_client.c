@@ -4106,6 +4106,7 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 		"NAVIGATION SYSTEM",
 		"PHASER BANKS",
 		"TORPEDO SYSTEM",
+		"SHIELD SYSTEM",
 	};
 
 	if (!on_damcon_screen(o, &placeholder_system))
@@ -4131,6 +4132,7 @@ static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 	case DAMCON_TYPE_NAVIGATION:
 	case DAMCON_TYPE_PHASERBANK:
 	case DAMCON_TYPE_TORPEDOSYSTEM:
+	case DAMCON_TYPE_SHIELDSYSTEM:
 		draw_damcon_system(w, o);
 		break;
 	default:

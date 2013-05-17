@@ -838,6 +838,7 @@ static int robot_collision_detect(struct snis_damcon_entity *o,
 			case DAMCON_TYPE_NAVIGATION:
 			case DAMCON_TYPE_PHASERBANK:
 			case DAMCON_TYPE_TORPEDOSYSTEM:
+			case DAMCON_TYPE_SHIELDSYSTEM:
 				/* ugh, this is ugly. Ideally, polygon intersection, but... bleah. */
 				if (x + 25 > t->x && x - 25 < t->x + 270 &&
 				    y + 25 > t->y - 90 && y - 25 < t->y + 90)
@@ -1443,7 +1444,7 @@ static void add_damcon_systems(struct damcon_data *d)
 	int x, y, dy;
 
 	x = -DAMCONXDIM / 2;
-	dy = DAMCONYDIM / 4;
+	dy = DAMCONYDIM / 5;
 	y = dy - DAMCONYDIM / 2;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_WARPDRIVE, NULL);
 	y += dy;
@@ -1462,7 +1463,10 @@ static void add_damcon_systems(struct damcon_data *d)
 	y += dy;
 	d->o[i].timestamp = universe_timestamp + 1;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_TORPEDOSYSTEM, NULL);
+	y += dy;
+	x = -DAMCONXDIM / 2;
 	d->o[i].timestamp = universe_timestamp + 1;
+	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_SHIELDSYSTEM, NULL);
 }
 
 static void add_damcon_parts(struct damcon_data *d)
