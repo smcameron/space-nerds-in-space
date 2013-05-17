@@ -25,6 +25,7 @@ SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_graph.o \
 	snis_client.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
+	snis_damcon_systems.o \
 	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm
@@ -83,6 +84,9 @@ mathutils.o:	mathutils.h mathutils.c
 
 snis_alloc.o:	snis_alloc.h snis_alloc.c
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_alloc.c
+
+snis_damcon_systems.o:	snis_damcon_systems.c snis_damcon_systems.h
+	gcc ${MYCFLAGS} ${GTKCFLAGS} -c snis_damcon_systems.c
 
 snis_server:	${SERVEROBJS} ${SSGL}
 	gcc ${MYCFLAGS} -o snis_server ${GTKCFLAGS} ${SERVEROBJS} ${GTKLDFLAGS} ${LIBS}
