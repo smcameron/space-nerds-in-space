@@ -4166,10 +4166,10 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 	static char *system_label[] = {
 		"WARP DRIVE",
 		"SENSOR ARRAY",
-		"COMMUNICATIONS SYSTEM",
-		"NAVIGATION SYSTEM",
+		"COMMUNICATIONS",
+		"NAVIGATION",
 		"PHASER BANKS",
-		"TORPEDO SYSTEM",
+		"PHOTON WEAPONS",
 		"SHIELD SYSTEM",
 	};
 
@@ -4181,7 +4181,7 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 	sng_set_foreground(WHITE);
 	sng_draw_vect_obj(w, gc, &placeholder_system, x, y);
 	sng_abs_xy_draw_string(w, gc, system_label[o->type - 1],
-				NANO_FONT, x + 60, y);
+				NANO_FONT, x + 75, y);
 }
 
 static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
