@@ -852,10 +852,12 @@ static int robot_collision_detect(struct snis_damcon_entity *o,
 	return 0;
 }
 
+static int lookup_by_damcon_id(struct damcon_data *d, int id);
 static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *d)
 {
 	double vx, vy, lastx, lasty, lasth, dv;
 	int bounds_hit = 0;
+	struct snis_damcon_entity *cargo = NULL;
 
 	lastx = o->x;
 	lasty = o->y;
@@ -876,6 +878,17 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 
 	o->x += vx;
 	o->y += vy;
+
+	if (o->tsd.robot.cargo_id != ROBOT_CARGO_EMPTY) {
+		int i;
+		
+		i = lookup_by_damcon_id(d, o->tsd.robot.cargo_id);
+		if (i >= 0) {
+			cargo = &d->o[i];
+			cargo->x = o->x;
+			cargo->y = o->y;
+		}
+	}
 
 	o->tsd.robot.desired_heading += o->tsd.robot.yaw_velocity;
 	normalize_angle(&o->tsd.robot.desired_heading);
@@ -957,8 +970,11 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 #endif
 	if (fabs(lastx - o->x) > 0.05 ||
 		fabs(lasty - o->y) > 0.05 ||
-		fabs(lasth - o->heading) > 0.05)
+		fabs(lasth - o->heading) > 0.05) {
 		o->timestamp = universe_timestamp;
+		if (cargo)
+			cargo->timestamp = universe_timestamp;
+	}
 
 	/* TODO: collision detection */
 }
@@ -1307,6 +1323,17 @@ static int lookup_by_id(uint32_t id)
 	return -1;
 }
 
+static int lookup_by_damcon_id(struct damcon_data *d, int id) 
+{
+	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		if (d->o[i].id == id)
+			return 	i;
+	}
+	return -1;
+}
+
 static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id)
 {
 	int i, s;
@@ -1429,6 +1456,7 @@ static void add_damcon_robot(struct damcon_data *d)
 	if (i < 0)
 		return;
 	d->robot = &d->o[i];
+	d->robot->tsd.robot.cargo_id = ROBOT_CARGO_EMPTY;
 }
 
 /* offsets for sockets... */
@@ -1871,6 +1899,102 @@ out:
 	return;
 }
 
+static void do_robot_drop(struct damcon_data *d)
+{
+	int i, c, found_socket;
+	struct snis_damcon_entity *cargo;
+	double dist2, mindist = -1;
+
+	c = lookup_by_damcon_id(d, d->robot->tsd.robot.cargo_id);
+	if (c >= 0) {
+		cargo = &d->o[c];
+		cargo->x = d->robot->x;
+		cargo->y = d->robot->y;
+		d->robot->tsd.robot.cargo_id = ROBOT_CARGO_EMPTY;
+		cargo->timestamp = universe_timestamp;
+		d->robot->timestamp= universe_timestamp;
+
+		/* find nearest socket... */
+		found_socket = -1;
+		for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+			if (d->o[i].type != DAMCON_TYPE_SOCKET)
+				continue;
+			dist2 = (cargo->x - d->o[i].x) * (cargo->x - d->o[i].x) + 
+				(cargo->y - d->o[i].y) * (cargo->y - d->o[i].y);
+
+			if (mindist < 0 || mindist > dist2)
+				mindist = dist2;
+			if (dist2 < (80 * 80) && d->o[i].tsd.socket.contents_id == -1) {
+				found_socket = i;
+				break;
+			}
+		}
+
+		if (found_socket >= 0) {
+			cargo->x = d->o[found_socket].x;
+			cargo->y = d->o[found_socket].y;
+			d->o[found_socket].tsd.socket.contents_id = cargo->id;
+			d->o[found_socket].timestamp = universe_timestamp;
+		}
+	}
+}
+
+static void do_robot_pickup(struct damcon_data *d)
+{
+	int i;
+	struct snis_damcon_entity *item, *socket;
+	double mindist = -1.0;
+	int found = 0;
+
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		int dist2;
+
+		item = &d->o[i];
+		if (item->type != DAMCON_TYPE_PART)
+			continue;
+		dist2 = (item->x - d->robot->x) *  (item->x - d->robot->x) +
+			(item->y - d->robot->y) *  (item->y - d->robot->y);
+
+		if (mindist < 0 || mindist > dist2)
+			mindist = dist2;
+
+		if (dist2 < 80.0 * 80.0) {
+			d->robot->tsd.robot.cargo_id = item->id;
+			item->x = d->robot->x;
+			item->y = d->robot->y;
+			item->timestamp = universe_timestamp;
+			found = 1;
+			break;
+		}
+	}
+	if (!found)
+		return;
+
+	/* See if any socket thinks it has this item, if so, remove it. */
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		socket = &d->o[i];
+		if (socket->type != DAMCON_TYPE_SOCKET)
+			continue;
+		if (socket->tsd.socket.contents_id == item->id) {
+			socket->tsd.socket.contents_id = -1;
+			socket->timestamp = universe_timestamp;
+			break;
+		}
+	}
+}
+
+static int process_request_robot_gripper(struct game_client *c)
+{
+	/* no data to read, opcode only */
+	struct damcon_data *d = &bridgelist[c->bridge].damcon;
+
+	if (d->robot->tsd.robot.cargo_id == ROBOT_CARGO_EMPTY)
+		do_robot_pickup(d);
+	else
+		do_robot_drop(d);
+	return 0;
+}
+
 static int process_demon_command(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct demon_cmd_packet) + 255 * sizeof(uint32_t)];
@@ -2311,6 +2435,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_DEMON_COMMAND:
 			rc = process_demon_command(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_ROBOT_GRIPPER:
+			rc = process_request_robot_gripper(c);
 			if (rc)
 				goto protocol_error;
 			break;

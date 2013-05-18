@@ -75,6 +75,7 @@
 #define OPCODE_REQUEST_ROBOT_THRUST	149
 #define OPCODE_DAMCON_SOCKET_UPDATE	150
 #define OPCODE_DAMCON_PART_UPDATE	151
+#define OPCODE_REQUEST_ROBOT_GRIPPER	152
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -390,6 +391,10 @@ struct damcon_part_update_packet {
 	uint8_t system;
 	uint8_t part; 
 	uint8_t damage;
+};
+
+struct request_robot_gripper_packet {
+	uint16_t opcode;
 };
 
 #pragma pack()

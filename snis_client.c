@@ -3965,7 +3965,7 @@ struct damcon_ui {
 	struct button *robot_backward_button;
 	struct button *robot_left_button;
 	struct button *robot_right_button;
-	struct button *robot_operate_tool_button;
+	struct button *robot_gripper_button;
 } damcon_ui;
 
 static void main_engineering_button_pressed(void *x)
@@ -3993,9 +3993,14 @@ static void robot_right_button_pressed(void *x)
 	damcon_dirkey(1, 0);
 }
 
-static void robot_operate_tool_button_pressed(void *x)
+static void robot_gripper_button_pressed(void *x)
 {
-	printf("robot operate tool pressed\n");
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct request_robot_gripper_packet));
+	packed_buffer_append(pb, "h", OPCODE_REQUEST_ROBOT_GRIPPER);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
 }
 
 static void init_damcon_ui(void)
@@ -4012,15 +4017,15 @@ static void init_damcon_ui(void)
 							robot_right_button_pressed, (void *) 0);
 	damcon_ui.robot_backward_button = snis_button_init(650, 140, 90, 25, "BACKWARD", AMBER, NANO_FONT,
 							robot_backward_button_pressed, (void *) 0);
-	damcon_ui.robot_operate_tool_button = snis_button_init(650, 180, 90, 25, "USE TOOL", AMBER, NANO_FONT,
-							robot_operate_tool_button_pressed, (void *) 0);
+	damcon_ui.robot_gripper_button = snis_button_init(650, 180, 90, 25, "GRIPPER", AMBER, NANO_FONT,
+							robot_gripper_button_pressed, (void *) 0);
 
 	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_forward_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_left_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_right_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_backward_button, DISPLAYMODE_DAMCON);
-	ui_add_button(damcon_ui.robot_operate_tool_button, DISPLAYMODE_DAMCON);
+	ui_add_button(damcon_ui.robot_gripper_button, DISPLAYMODE_DAMCON);
 	ui_add_label(damcon_ui.robot_controls, DISPLAYMODE_DAMCON);
 }
 
