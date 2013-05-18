@@ -2718,7 +2718,7 @@ static void send_update_damcon_socket_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct damcon_obj_update_packet));
+	pb = packed_buffer_allocate(sizeof(struct damcon_socket_update_packet));
 	packed_buffer_append(pb, "hwwwSSwbb",
 			OPCODE_DAMCON_SOCKET_UPDATE,   
 			o->id, o->ship_id, o->type,
