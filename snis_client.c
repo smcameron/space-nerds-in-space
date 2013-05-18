@@ -4179,6 +4179,7 @@ static void draw_damcon_arena_borders(GtkWidget *w)
 {
 	int y1, x1;
 
+	sng_set_foreground(RED);
 	/* top border */
 	y1 = damcony_to_screeny(-DAMCONYDIM / 2.0);
 	if (y1 >= damconscreeny0 &&
