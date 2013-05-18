@@ -858,6 +858,7 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 	double vx, vy, lastx, lasty, lasth, dv;
 	int bounds_hit = 0;
 	struct snis_damcon_entity *cargo = NULL;
+	double clawx, clawy;
 
 	lastx = o->x;
 	lasty = o->y;
@@ -874,20 +875,6 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 			o->tsd.robot.desired_velocity =  
 				(MAX_ROBOT_VELOCITY / 5.5) * o->tsd.robot.desired_velocity /
 					fabs(o->tsd.robot.desired_velocity);
-	}
-
-	o->x += vx;
-	o->y += vy;
-
-	if (o->tsd.robot.cargo_id != ROBOT_CARGO_EMPTY) {
-		int i;
-		
-		i = lookup_by_damcon_id(d, o->tsd.robot.cargo_id);
-		if (i >= 0) {
-			cargo = &d->o[i];
-			cargo->x = o->x;
-			cargo->y = o->y;
-		}
 	}
 
 	o->tsd.robot.desired_heading += o->tsd.robot.yaw_velocity;
@@ -968,6 +955,23 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 	else
 		o->velocity *= ROBOT_VELOCITY_DAMPING;
 #endif
+	o->x += vx;
+	o->y += vy;
+	clawx = o->x -30.0 + cos(o->tsd.robot.desired_heading - M_PI / 4.0)  * 60.0;
+	clawy = o->y + sin(o->tsd.robot.desired_heading - M_PI / 4.0)  * 60.0;
+
+	if (o->tsd.robot.cargo_id != ROBOT_CARGO_EMPTY) {
+		int i;
+		
+		i = lookup_by_damcon_id(d, o->tsd.robot.cargo_id);
+		if (i >= 0) {
+			cargo = &d->o[i];
+			cargo->x = clawx;
+			cargo->y = clawy;
+		}
+	}
+
+
 	if (fabs(lastx - o->x) > 0.05 ||
 		fabs(lasty - o->y) > 0.05 ||
 		fabs(lasth - o->heading) > 0.05) {
@@ -1908,8 +1912,6 @@ static void do_robot_drop(struct damcon_data *d)
 	c = lookup_by_damcon_id(d, d->robot->tsd.robot.cargo_id);
 	if (c >= 0) {
 		cargo = &d->o[c];
-		cargo->x = d->robot->x;
-		cargo->y = d->robot->y;
 		d->robot->tsd.robot.cargo_id = ROBOT_CARGO_EMPTY;
 		cargo->timestamp = universe_timestamp;
 		d->robot->timestamp= universe_timestamp;
@@ -1945,23 +1947,26 @@ static void do_robot_pickup(struct damcon_data *d)
 	struct snis_damcon_entity *item, *socket;
 	double mindist = -1.0;
 	int found = 0;
+	double clawx, clawy;
 
+	clawx = d->robot->x - 30.0 + cos(d->robot->tsd.robot.desired_heading - M_PI / 4.0) * 60.0;
+	clawy = d->robot->y + sin(d->robot->tsd.robot.desired_heading - M_PI / 4.0) * 60.0;
 	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
 		int dist2;
 
 		item = &d->o[i];
 		if (item->type != DAMCON_TYPE_PART)
 			continue;
-		dist2 = (item->x - d->robot->x) *  (item->x - d->robot->x) +
-			(item->y - d->robot->y) *  (item->y - d->robot->y);
+		dist2 = (item->x - clawx) *  (item->x - clawx) +
+			(item->y - clawy) *  (item->y - clawy);
 
 		if (mindist < 0 || mindist > dist2)
 			mindist = dist2;
 
 		if (dist2 < 80.0 * 80.0) {
 			d->robot->tsd.robot.cargo_id = item->id;
-			item->x = d->robot->x;
-			item->y = d->robot->y;
+			item->x = clawx;
+			item->y = clawy;
 			item->timestamp = universe_timestamp;
 			found = 1;
 			break;
