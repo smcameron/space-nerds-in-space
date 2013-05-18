@@ -201,6 +201,11 @@ struct my_point_t placeholder_socket_points[] = {
 };
 struct my_vect_obj placeholder_socket;
 
+struct my_point_t placeholder_part_points[] = {
+#include "placeholder-part-points.h"
+};
+struct my_vect_obj placeholder_part;
+
 void init_trig_arrays(void)
 {
 	int i;
@@ -459,6 +464,38 @@ static int update_damcon_socket(uint32_t id, uint32_t ship_id, uint32_t type,
 	o->tsd.socket.part = part;
 	return 0;
 }
+
+static int update_damcon_part(uint32_t id, uint32_t ship_id, uint32_t type,
+			double x, double y, double heading, uint8_t system,
+			uint8_t part, uint8_t damage)
+
+{
+	int i;
+	struct snis_damcon_entity *o;
+
+	i = lookup_damcon_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_damcon_object(id, ship_id, x, y, 0.0, 0.0);
+		if (i < 0)
+			return i;
+		o = &dco[i];
+		o->id = id;
+		o->ship_id = ship_id;
+		o->type = type;
+		o->heading = heading;
+		o->tsd.part.system = system;
+		o->tsd.part.part = part;
+		o->tsd.part.damage = damage;
+		return 0;
+	}
+	o = &dco[i];
+	update_generic_damcon_object(o, x, y, 0.0, heading);
+	o->tsd.part.system = system;
+	o->tsd.part.part = part;
+	o->tsd.part.damage = damage;
+	return 0;
+}
+
 
 static int update_econ_ship(uint32_t id, double x, double y, double vx,
 			double vy, double heading, uint32_t alive, uint32_t victim)
@@ -1533,6 +1570,32 @@ static int process_update_damcon_socket(void)
 	return rc;
 }
 
+static int process_update_damcon_part(void)
+{
+	unsigned char buffer[sizeof(struct damcon_part_update_packet) - sizeof(uint16_t)];
+	struct packed_buffer pb;
+	uint32_t id, ship_id, type;
+	double x, y, heading;
+	uint8_t system, part, damage;
+	int rc;
+
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "wwwSSUbbb",
+		&id, &ship_id, &type,
+			&x, (int32_t) DAMCONXDIM, 
+			&y, (int32_t) DAMCONYDIM, 
+			&heading, (uint32_t) 360, 
+			&system, &part, &damage);
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_damcon_part(id, ship_id, type, x, y, heading, system, part, damage);
+	pthread_mutex_unlock(&universe_mutex);
+	return rc;
+}
+
+
 static int process_update_econ_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
@@ -2132,6 +2195,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_DAMCON_SOCKET_UPDATE:
 			rc = process_update_damcon_socket();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_DAMCON_PART_UPDATE:
+			rc = process_update_damcon_part();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -4184,7 +4252,7 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 				NANO_FONT, x + 75, y);
 }
 
-static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
+static void draw_damcon_socket_or_part(GtkWidget *w, struct snis_damcon_entity *o, int color)
 {
 	int x, y;
 	char msg[20];
@@ -4194,10 +4262,20 @@ static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
 	x = damconx_to_screenx(o->x);
 	y = damcony_to_screeny(o->y);
 	sprintf(msg, "%d %d", o->tsd.socket.system, o->tsd.socket.part);
-	sng_set_foreground(WHITE);
+	sng_set_foreground(color);
 	sng_draw_vect_obj(w, gc, &placeholder_socket, x, y);
 	sng_abs_xy_draw_string(w, gc, msg, NANO_FONT, x + 20, y);
 	
+}
+
+static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
+{
+	draw_damcon_socket_or_part(w, o, WHITE);
+}
+
+static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
+{
+	draw_damcon_socket_or_part(w, o, YELLOW);
 }
 
 static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
@@ -4217,6 +4295,9 @@ static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 		break;
 	case DAMCON_TYPE_SOCKET:
 		draw_damcon_socket(w, o);
+		break;
+	case DAMCON_TYPE_PART:
+		draw_damcon_part(w, o);
 		break;
 	default:
 		break;
@@ -5959,6 +6040,7 @@ static void init_vects(void)
 	setup_vect(snis_logo, snis_logo_points);
 	setup_vect(placeholder_system, placeholder_system_points);
 	setup_vect(placeholder_socket, placeholder_socket_points);
+	setup_vect(placeholder_part, placeholder_part_points);
 	scale_points(damcon_robot_points,
 			ARRAYSIZE(damcon_robot_points), 0.5, 0.5);
 	setup_vect(damcon_robot, damcon_robot_points);

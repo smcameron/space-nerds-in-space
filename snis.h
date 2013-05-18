@@ -271,7 +271,7 @@ struct damcon_label_specific_data {
 };
 
 struct damcon_part_specific_data {
-	uint8_t system, part;
+	uint8_t system, part, damage;
 };
 
 struct damcon_system_specific_data {

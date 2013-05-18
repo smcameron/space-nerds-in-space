@@ -1439,6 +1439,7 @@ static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 				uint8_t system, int left_side)
 {
 	int i, p, px, py;
+	struct snis_damcon_entity *socket;
 
 	for (i = 0; i < PARTS_PER_DAMCON_SYSTEM; i++) {
 		if (left_side) {
@@ -1452,6 +1453,14 @@ static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 		d->o[p].timestamp = universe_timestamp + 1;
 		d->o[p].tsd.socket.system = system;
 		d->o[p].tsd.socket.part = i;
+		socket = &d->o[p];
+
+		p = add_generic_damcon_object(d, px, py, DAMCON_TYPE_PART, NULL);
+		d->o[p].timestamp = universe_timestamp + 1;
+		d->o[p].tsd.part.system = system;
+		d->o[p].tsd.part.part = i;
+		d->o[p].tsd.part.damage = 0;
+		socket->tsd.socket.contents_id = d->o[p].id;
 	}
 }
 
@@ -2395,6 +2404,8 @@ static void send_update_damcon_obj_packet(struct game_client *c,
 	struct snis_damcon_entity *o);
 static void send_update_damcon_socket_packet(struct game_client *c,
 	struct snis_damcon_entity *o);
+static void send_update_damcon_part_packet(struct game_client *c,
+	struct snis_damcon_entity *o);
 
 static void send_respawn_time(struct game_client *c, struct snis_entity *o);
 
@@ -2476,6 +2487,9 @@ static void queue_up_client_damcon_object_update(struct game_client *c,
 {
 	if (o->timestamp > c->timestamp) {
 		switch(o->type) {
+		case DAMCON_TYPE_PART:
+			send_update_damcon_part_packet(c, o);
+			break;
 		case DAMCON_TYPE_SOCKET:
 			send_update_damcon_socket_packet(c, o);
 			break;
@@ -2729,6 +2743,25 @@ static void send_update_damcon_socket_packet(struct game_client *c,
 			o->tsd.socket.part);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
+
+static void send_update_damcon_part_packet(struct game_client *c,
+		struct snis_damcon_entity *o)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct damcon_part_update_packet));
+	packed_buffer_append(pb, "hwwwSSUbbb",
+			OPCODE_DAMCON_PART_UPDATE,   
+			o->id, o->ship_id, o->type,
+			o->x, (int32_t) DAMCONXDIM,
+			o->y, (int32_t) DAMCONYDIM,
+			o->heading, (uint32_t) 360,
+			o->tsd.part.system,
+			o->tsd.part.part,
+			o->tsd.part.damage);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
 
 static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o)
