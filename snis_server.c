@@ -2002,10 +2002,12 @@ static int process_request_robot_gripper(struct game_client *c)
 	/* no data to read, opcode only */
 	struct damcon_data *d = &bridgelist[c->bridge].damcon;
 
+	pthread_mutex_lock(&universe_mutex);
 	if (d->robot->tsd.robot.cargo_id == ROBOT_CARGO_EMPTY)
 		do_robot_pickup(d);
 	else
 		do_robot_drop(d);
+	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
 
@@ -3259,6 +3261,7 @@ static void move_objects(void)
 			}
 		}
 	}
+	move_damcon_entities();
 	pthread_mutex_unlock(&universe_mutex);
 
 }
@@ -3339,7 +3342,6 @@ int main(int argc, char *argv[])
 		/* if ((i % 30) == 0) printf("Moving objects...i = %d\n", i); */
 		i++;
 		move_objects();
-		move_damcon_entities();
 		rc = clock_gettime(CLOCK_MONOTONIC, &time2);
 		/* snis_sleep(&time1, &time2, &thirtieth_second); */
 		sleep_thirtieth_second();
