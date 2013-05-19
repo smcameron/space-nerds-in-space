@@ -4271,7 +4271,9 @@ static void draw_damcon_socket_or_part(GtkWidget *w, struct snis_damcon_entity *
 	sng_set_foreground(color);
 	sng_draw_vect_obj(w, gc, &placeholder_socket, x, y);
 	sng_abs_xy_draw_string(w, gc, msg, NANO_FONT, x + 20, y);
-	
+	sng_set_foreground(AMBER);
+	snis_draw_line(w->window, gc, x, y - 20, x, y + 20);
+	snis_draw_line(w->window, gc, x - 20, y, x + 20, y);
 }
 
 static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
