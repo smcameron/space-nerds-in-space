@@ -281,7 +281,7 @@ struct damcon_system_specific_data {
 struct damcon_socket_specific_data {
 	uint8_t system, part;
 	uint32_t contents_id; /* id of what socket contains */
-#define DAMCON_SOCKET_EMPTY 0xffffffff;
+#define DAMCON_SOCKET_EMPTY 0xffffffff
 };
 
 union damcon_type_specific_data {

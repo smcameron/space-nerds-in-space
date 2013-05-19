@@ -4278,7 +4278,8 @@ static void draw_damcon_socket_or_part(GtkWidget *w, struct snis_damcon_entity *
 
 static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
 {
-	draw_damcon_socket_or_part(w, o, WHITE);
+	if (o->tsd.socket.contents_id == DAMCON_SOCKET_EMPTY)
+		draw_damcon_socket_or_part(w, o, WHITE);
 }
 
 static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)

@@ -1936,7 +1936,7 @@ static void do_robot_drop(struct damcon_data *d)
 
 			if (mindist < 0 || mindist > dist2) {
 				mindist = dist2;
-				if (dist2 < (80 * 80) && d->o[i].tsd.socket.contents_id == -1)
+				if (dist2 < (80 * 80) && d->o[i].tsd.socket.contents_id == DAMCON_SOCKET_EMPTY)
 					found_socket = i;
 			}
 		}
@@ -1990,7 +1990,7 @@ static void do_robot_pickup(struct damcon_data *d)
 		if (socket->type != DAMCON_TYPE_SOCKET)
 			continue;
 		if (socket->tsd.socket.contents_id == item->id) {
-			socket->tsd.socket.contents_id = -1;
+			socket->tsd.socket.contents_id = DAMCON_SOCKET_EMPTY;
 			socket->timestamp = universe_timestamp;
 			break;
 		}
