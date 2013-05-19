@@ -11,10 +11,12 @@ the sole user of ssgl -- probably because I wrote it to enable Space Nerds In Sp
 The 2nd and 3rd parts are the client and server portions of Space Nerds In Space.
 They are licensed together under the GNU GPL v. 2 or (at your option) later versions.
 
-1. ssgl/ssgl_server is the game lobby.  "ssgl" stands for "super simple game lobby".  (There is a github project, "ssgl", but the code in here is more up to date than that.)  This does matchmaking between snis_client and snis_server processes.  It does not do NAT punchthrough, so it's a LAN only thing.  It needs the following lines in /etc/services:
+1. ssgl/ssgl_server is the game lobby.  "ssgl" stands for "super simple game lobby".  (There is a github project, "ssgl", but the code in here is more up to date than that.)  This does matchmaking between snis_client and snis_server processes.  It does not do NAT punchthrough, so it's a LAN only thing.  It can use, but does not require the following lines in /etc/services:
 
 gamelobby	2419/tcp
 gamelobby	2419/udp
+
+If thos lines are missing, port 2419 will be assumed.
 
 2.  snis_server:  This is the Space Nerds In Space game server.  This runs the simulation of the space-nerds-in-space universe.  There are two threads per client, one to read, and one to write.  The simulation, runs, and periodically changed state is dumped out to all the client writer threads, and by this means the clients are updated.   The reader threads gather inputs from the clients and these inputs are fed into the simulation.
 
