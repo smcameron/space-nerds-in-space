@@ -1,28 +1,48 @@
 
-This is some preliminary code for a multiplayer networked spaceship bridge simulator game inspired by "Artemis Spaceship Bridge Simulator"
+This is some preliminary code for a multiplayer networked spaceship bridge
+simulator game inspired by "Artemis Spaceship Bridge Simulator"
 
 There are three parts.
 
-The first part, ssgl (super simple game lobby) is licensed under the MIT "expat" license
-(see ssgl/LICENSE).  Ssgl is a generic lobby library which contains nothing that is
-specific to Space Nerds In Space (except that, as far as I know, Space Nerds In Space is
-the sole user of ssgl -- probably because I wrote it to enable Space Nerds In Space.)
+The first part, ssgl (super simple game lobby) is licensed under the MIT
+"expat" license (see ssgl/LICENSE).  Ssgl is a generic lobby library which
+contains nothing that is specific to Space Nerds In Space (except that, as far
+as I know, Space Nerds In Space is the sole user of ssgl -- probably because I
+wrote it to enable Space Nerds In Space.) 
 
-The 2nd and 3rd parts are the client and server portions of Space Nerds In Space.
-They are licensed together under the GNU GPL v. 2 or (at your option) later versions.
+The 2nd and 3rd parts are the client and server portions of Space Nerds In
+Space.  They are licensed together under the GNU GPL v. 2 or (at your option)
+later versions.
 
-1. ssgl/ssgl_server is the game lobby.  "ssgl" stands for "super simple game lobby".  (There is a github project, "ssgl", but the code in here is more up to date than that.)  This does matchmaking between snis_client and snis_server processes.  It does not do NAT punchthrough, so it's a LAN only thing.  It can use, but does not require the following lines in /etc/services:
+1. ssgl/ssgl_server is the game lobby.  "ssgl" stands for "super simple game
+lobby".  (There is a github project, "ssgl", but the code in here is more up to
+date than that.)  This does matchmaking between snis_client and snis_server
+processes.  It does not do NAT punchthrough, so it's a LAN only thing.  It can
+use, but does not require the following lines in /etc/services:
 
 gamelobby	2419/tcp
 gamelobby	2419/udp
 
 If thos lines are missing, port 2419 will be assumed.
 
-2.  snis_server:  This is the Space Nerds In Space game server.  This runs the simulation of the space-nerds-in-space universe.  There are two threads per client, one to read, and one to write.  The simulation, runs, and periodically changed state is dumped out to all the client writer threads, and by this means the clients are updated.   The reader threads gather inputs from the clients and these inputs are fed into the simulation.
+2.  snis_server:  This is the Space Nerds In Space game server.  This runs the
+simulation of the space-nerds-in-space universe.  There are two threads per
+client, one to read, and one to write.  The simulation, runs, and periodically
+changed state is dumped out to all the client writer threads, and by this means
+the clients are updated.   The reader threads gather inputs from the clients
+and these inputs are fed into the simulation.
 
-3. snis_client:  There can be many instances of this.  The plan is there should be one instance per "station" on each "starship".  These process receive input from the snis_server process and display this data in whatever form is suitable for whichever starship station is being provided (e.g. navigation, weapons, communication, engineering, science, etc.)  (Currently any instance of snis_client can do any of the available functions to whatever degree they are implemented (As of Nov 2012, mostly not implemented.))
+3. snis_client:  There can be many instances of this.  The plan is there should
+be one instance per "station" on each "starship".  These process receive input
+from the snis_server process and display this data in whatever form is suitable
+for whichever starship station is being provided (e.g. navigation, weapons,
+communication, engineering, science, etc.)  (Currently any instance of
+snis_client can do any of the available functions to whatever degree they are
+implemented (As of Nov 2012, mostly not implemented.))
 
-The snis_client programs need not run on the same server as the snis_server nor on the same server as each other, and the ssgl_server may run on yet another system.
+The snis_client programs need not run on the same server as the snis_server nor
+on the same server as each other, and the ssgl_server may run on yet another
+system.
 
 The sequence to run this thing is:
 
