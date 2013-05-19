@@ -852,6 +852,16 @@ static int robot_collision_detect(struct snis_damcon_entity *o,
 	return 0;
 }
 
+static double robot_clawx(struct snis_damcon_entity *o)
+{
+	return o->x + cos(o->tsd.robot.desired_heading - M_PI / 4.0)  * 70.0;
+}
+
+static double robot_clawy(struct snis_damcon_entity *o)
+{
+	return o->y + sin(o->tsd.robot.desired_heading - M_PI / 4.0)  * 70.0;
+}
+
 static int lookup_by_damcon_id(struct damcon_data *d, int id);
 static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *d)
 {
@@ -957,8 +967,8 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 #endif
 	o->x += vx;
 	o->y += vy;
-	clawx = o->x -30.0 + cos(o->tsd.robot.desired_heading - M_PI / 4.0)  * 60.0;
-	clawy = o->y + sin(o->tsd.robot.desired_heading - M_PI / 4.0)  * 60.0;
+	clawx = robot_clawx(o);
+	clawy = robot_clawy(o);
 
 	if (o->tsd.robot.cargo_id != ROBOT_CARGO_EMPTY) {
 		int i;
@@ -1475,10 +1485,10 @@ static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 
 	for (i = 0; i < PARTS_PER_DAMCON_SYSTEM; i++) {
 		if (left_side) {
-			px = x + dcxo[i];	
+			px = x + dcxo[i] + 30;	
 			py = y + dcyo[i];	
 		} else {
-			px = x - dcxo[i] + 210;	
+			px = x - dcxo[i] + 210 + 30;	
 			py = y + dcyo[i];	
 		}
 		p = add_generic_damcon_object(d, px, py, DAMCON_TYPE_SOCKET, NULL);
@@ -1949,8 +1959,8 @@ static void do_robot_pickup(struct damcon_data *d)
 	int found = 0;
 	double clawx, clawy;
 
-	clawx = d->robot->x - 30.0 + cos(d->robot->tsd.robot.desired_heading - M_PI / 4.0) * 60.0;
-	clawy = d->robot->y + sin(d->robot->tsd.robot.desired_heading - M_PI / 4.0) * 60.0;
+	clawx = robot_clawx(d->robot);
+	clawy = robot_clawy(d->robot);
 	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
 		int dist2;
 
