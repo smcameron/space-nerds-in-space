@@ -1923,8 +1923,8 @@ static void do_robot_drop(struct damcon_data *d)
 	if (c >= 0) {
 		cargo = &d->o[c];
 		d->robot->tsd.robot.cargo_id = ROBOT_CARGO_EMPTY;
-		cargo->timestamp = universe_timestamp;
-		d->robot->timestamp= universe_timestamp;
+		cargo->timestamp = universe_timestamp + 1;
+		d->robot->timestamp= universe_timestamp + 1;
 
 		/* find nearest socket... */
 		found_socket = -1;
@@ -1945,7 +1945,7 @@ static void do_robot_drop(struct damcon_data *d)
 			cargo->x = d->o[found_socket].x;
 			cargo->y = d->o[found_socket].y;
 			d->o[found_socket].tsd.socket.contents_id = cargo->id;
-			d->o[found_socket].timestamp = universe_timestamp;
+			d->o[found_socket].timestamp = universe_timestamp + 1;
 		}
 	}
 }
@@ -1982,7 +1982,7 @@ static void do_robot_pickup(struct damcon_data *d)
 	d->robot->tsd.robot.cargo_id = item->id;
 	item->x = clawx;
 	item->y = clawy;
-	item->timestamp = universe_timestamp;
+	item->timestamp = universe_timestamp + 1;
 
 	/* See if any socket thinks it has this item, if so, remove it. */
 	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
@@ -1991,7 +1991,7 @@ static void do_robot_pickup(struct damcon_data *d)
 			continue;
 		if (socket->tsd.socket.contents_id == item->id) {
 			socket->tsd.socket.contents_id = DAMCON_SOCKET_EMPTY;
-			socket->timestamp = universe_timestamp;
+			socket->timestamp = universe_timestamp + 1;
 			break;
 		}
 	}
