@@ -2,6 +2,8 @@
 This is some preliminary code for a multiplayer networked spaceship bridge
 simulator game inspired by "Artemis Spaceship Bridge Simulator"
 
+If you would like to help work on this project, see CONTRIBUTING.md
+
 There are three parts.
 
 The first part, ssgl (super simple game lobby) is licensed under the MIT
@@ -23,7 +25,7 @@ use, but does not require the following lines in /etc/services:
 gamelobby	2419/tcp
 gamelobby	2419/udp
 
-If thos lines are missing, port 2419 will be assumed.
+If those lines are missing from /etc/services, port 2419 will be assumed.
 
 2.  snis_server:  This is the Space Nerds In Space game server.  This runs the
 simulation of the space-nerds-in-space universe.  There are two threads per
