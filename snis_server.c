@@ -1915,7 +1915,7 @@ out:
 
 static void do_robot_drop(struct damcon_data *d)
 {
-	int i, c, found_socket;
+	int i, c, found_socket = -1;
 	struct snis_damcon_entity *cargo;
 	double dist2, mindist = -1;
 
@@ -1934,11 +1934,10 @@ static void do_robot_drop(struct damcon_data *d)
 			dist2 = (cargo->x - d->o[i].x) * (cargo->x - d->o[i].x) + 
 				(cargo->y - d->o[i].y) * (cargo->y - d->o[i].y);
 
-			if (mindist < 0 || mindist > dist2)
+			if (mindist < 0 || mindist > dist2) {
 				mindist = dist2;
-			if (dist2 < (80 * 80) && d->o[i].tsd.socket.contents_id == -1) {
-				found_socket = i;
-				break;
+				if (dist2 < (80 * 80) && d->o[i].tsd.socket.contents_id == -1)
+					found_socket = i;
 			}
 		}
 
@@ -1956,7 +1955,7 @@ static void do_robot_pickup(struct damcon_data *d)
 	int i;
 	struct snis_damcon_entity *item, *socket;
 	double mindist = -1.0;
-	int found = 0;
+	int found = -1;
 	double clawx, clawy;
 
 	clawx = robot_clawx(d->robot);
@@ -1970,20 +1969,20 @@ static void do_robot_pickup(struct damcon_data *d)
 		dist2 = (item->x - clawx) *  (item->x - clawx) +
 			(item->y - clawy) *  (item->y - clawy);
 
-		if (mindist < 0 || mindist > dist2)
+		if (mindist < 0 || mindist > dist2) {
 			mindist = dist2;
-
-		if (dist2 < 80.0 * 80.0) {
-			d->robot->tsd.robot.cargo_id = item->id;
-			item->x = clawx;
-			item->y = clawy;
-			item->timestamp = universe_timestamp;
-			found = 1;
-			break;
+			if (dist2 < 80.0 * 80.0)
+				found = i;
 		}
 	}
-	if (!found)
+	if (found < 0)
 		return;
+
+	item = &d->o[found];
+	d->robot->tsd.robot.cargo_id = item->id;
+	item->x = clawx;
+	item->y = clawy;
+	item->timestamp = universe_timestamp;
 
 	/* See if any socket thinks it has this item, if so, remove it. */
 	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
