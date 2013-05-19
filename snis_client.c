@@ -204,7 +204,9 @@ struct my_vect_obj placeholder_socket;
 struct my_point_t placeholder_part_points[] = {
 #include "placeholder-part-points.h"
 };
+struct my_point_t *placeholder_part_spun_points;
 struct my_vect_obj placeholder_part;
+struct my_vect_obj placeholder_part_spun[128];
 
 void init_trig_arrays(void)
 {
@@ -4284,7 +4286,21 @@ static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
 
 static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 {
-	draw_damcon_socket_or_part(w, o, YELLOW);
+	int x, y;
+	char msg[20];
+	int byteangle = (int) (o->heading * 64.0 / M_PI);
+
+	if (!on_damcon_screen(o, &placeholder_part_spun[byteangle]))
+		return;
+	x = damconx_to_screenx(o->x);
+	y = damcony_to_screeny(o->y);
+	sprintf(msg, "%d %d", o->tsd.socket.system, o->tsd.socket.part);
+	sng_set_foreground(YELLOW);
+	sng_draw_vect_obj(w, gc, &placeholder_part_spun[byteangle], x, y);
+	sng_abs_xy_draw_string(w, gc, msg, NANO_FONT, x - 10, y);
+	sng_set_foreground(AMBER);
+	snis_draw_line(w->window, gc, x, y - 20, x, y + 20);
+	snis_draw_line(w->window, gc, x - 20, y, x + 20, y);
 }
 
 static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
@@ -6050,6 +6066,8 @@ static void init_vects(void)
 	setup_vect(placeholder_system, placeholder_system_points);
 	setup_vect(placeholder_socket, placeholder_socket_points);
 	setup_vect(placeholder_part, placeholder_part_points);
+	spin_points(placeholder_part_points, ARRAYSIZE(placeholder_part_points),
+				&placeholder_part_spun_points, 128, 0, 0);
 	scale_points(damcon_robot_points,
 			ARRAYSIZE(damcon_robot_points), 0.5, 0.5);
 	setup_vect(damcon_robot, damcon_robot_points);
@@ -6060,6 +6078,12 @@ static void init_vects(void)
 			&damcon_robot_spun_points[i * ARRAYSIZE(damcon_robot_points)];
 		damcon_robot_spun[i].npoints = ARRAYSIZE(damcon_robot_points);
 		calculate_bbox(&damcon_robot_spun[i]);
+	}
+	for (i = 0; i < 128; i++) {
+		placeholder_part_spun[i].p =
+			&placeholder_part_spun_points[i * ARRAYSIZE(placeholder_part_points)];
+		placeholder_part_spun[i].npoints = ARRAYSIZE(placeholder_part_points);
+		calculate_bbox(&placeholder_part_spun[i]);
 	}
 }
 

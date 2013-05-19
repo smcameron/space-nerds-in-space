@@ -978,6 +978,8 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 			cargo = &d->o[i];
 			cargo->x = clawx;
 			cargo->y = clawy;
+			cargo->heading = o->tsd.robot.desired_heading + M_PI;
+			normalize_angle(&cargo->heading);
 		}
 	}
 
@@ -1945,6 +1947,7 @@ static void do_robot_drop(struct damcon_data *d)
 		if (found_socket >= 0) {
 			cargo->x = d->o[found_socket].x;
 			cargo->y = d->o[found_socket].y;
+			cargo->heading = 0;
 			d->o[found_socket].tsd.socket.contents_id = cargo->id;
 			d->o[found_socket].timestamp = universe_timestamp + 1;
 		}
