@@ -3,7 +3,7 @@ How to Contribute
 
 TODO: figure out how to help people know how to contribute
 
-Jump in and start hacking... But!  Try to keep your commits sane, and make them change only one logical thing at a time (this does not mean only change one file, it is more like, make it add only one feature).  Each commit should build and work.  I have found [stacked git][http://www.procode.org/stgit/) very helpful for making sane commits, but other people have managed to get more or less the same functionality using git stashes, I think.  But, if you make a mess of it, but the code is still working and
+Jump in and start hacking... But!  Try to keep your commits sane, and make them change only one logical thing at a time (this does not mean only change one file, it is more like, make it add only one feature).  Each commit should build and work.  I have found [stacked git](http://www.procode.org/stgit/) very helpful for making sane commits, but other people have managed to get more or less the same functionality using git stashes, I think.  But, if you make a mess of it, but the code is still working and
 good, you can still try to send it to me, and I might be able to fix up the patches.
 
 Getting to know the code
@@ -67,12 +67,22 @@ My coding style is very much like [the Linux Kernel Coding Style](https://git.ke
 
 The gist of it is:
 
-1. Indent with tabs not spaces.
-2. Tabs are 8 characters wide, and this is about as malleable as the value of PI.
-3. if either the "then" or "else" arm of the if statement requires braces, then both
-   arms should use braces.  If neither arm requires braces, then no braces. 
-4. If you submit a patch that violates these, I will probably fix it for you the
-   first time or two.
-5. Patches are probably best sent via email as a bzip2ed tarball of a [stacked git][http://www.procode.org/stgit/) patch series, but other methods (pull request) might be ok too (but harder to review).
+1.  Indent with tabs not spaces.
+2.  Tabs are 8 characters wide, and this is about as malleable as the value of PI.
+3.  if either the "then" or "else" arm of the if statement requires braces, then both
+    arms should use braces.  If neither arm requires braces, then no braces. 
+4.  Variable names should_be_like_this, NotLikeThis, use lowercase with underscores
+    not camel case.
+5.  Macros all uppercase, try not to be too clever with macros.
+6.  Avoid typedefs except for function pointers.
+7.  No C++, not even C++ style comments.
+8.  Functions should be static by default unless deliberately meant to be visible
+    outside the module.
+9.  For modules, header files should ideally declare only types and function prototypes
+    and use the GLOBAL macro to make it so the implementation of the module can include
+    the same header as the users of the module.  See, e.g: wwviaudio.h
+10. If you submit a patch that violates these, I will probably fix it for you the
+    first time or two.
+11. Patches are probably best sent via email as a bzip2ed tarball of a [stacked git](http://www.procode.org/stgit/) patch series, but other methods (pull request) might be ok too (but harder to review).
 
 
