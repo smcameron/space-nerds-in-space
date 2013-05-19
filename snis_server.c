@@ -1936,7 +1936,8 @@ static void do_robot_drop(struct damcon_data *d)
 
 			if (mindist < 0 || mindist > dist2) {
 				mindist = dist2;
-				if (dist2 < (80 * 80) && d->o[i].tsd.socket.contents_id == DAMCON_SOCKET_EMPTY)
+				if (dist2 < (ROBOT_MAX_GRIP_DIST2) &&
+						d->o[i].tsd.socket.contents_id == DAMCON_SOCKET_EMPTY)
 					found_socket = i;
 			}
 		}
@@ -1971,7 +1972,7 @@ static void do_robot_pickup(struct damcon_data *d)
 
 		if (mindist < 0 || mindist > dist2) {
 			mindist = dist2;
-			if (dist2 < 80.0 * 80.0)
+			if (dist2 < ROBOT_MAX_GRIP_DIST2)
 				found = i;
 		}
 	}

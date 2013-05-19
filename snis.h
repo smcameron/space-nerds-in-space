@@ -311,6 +311,8 @@ struct snis_damcon_entity {
 	void *drawing_data;
 };
 
+#define ROBOT_MAX_GRIP_DIST2 (40.0 * 40.0)
+
 struct damcon_data {
 	struct snis_object_pool *pool;	
 	struct snis_damcon_entity o[MAXDAMCONENTITIES];
