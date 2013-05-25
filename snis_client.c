@@ -63,6 +63,7 @@
 #include "sounds.h"
 #include "bline.h"
 #include "shield_strength.h"
+#include "joystick.h"
 
 #include "vertex.h"
 #include "triangle.h"
@@ -94,6 +95,11 @@ explosion_function *explosion = NULL;
 #define snis_draw_arc DEFAULT_DRAW_ARC
 int thicklines = 0;
 int frame_rate_hz = 30;
+
+typedef void (*joystick_button_fn)(void *x);
+char joystick_device[PATH_MAX+1];
+int joystick_fd = -1;
+int joystickx, joysticky;
 
 GtkWidget *window;
 GdkGC *gc = NULL;               /* our graphics context. */
@@ -1223,6 +1229,70 @@ static void do_laser(void)
 	packed_buffer_append_u16(pb, OPCODE_REQUEST_LASER);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
+}
+
+static void robot_backward_button_pressed(void *x);
+static void robot_forward_button_pressed(void *x);
+static void robot_left_button_pressed(void *x);
+static void robot_right_button_pressed(void *x);
+static void robot_gripper_button_pressed(void *x);
+
+static joystick_button_fn do_joystick_button[] = {
+		robot_gripper_button_pressed,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+};
+
+static void deal_with_joystick()
+{
+
+#define FRAME_RATE_HZ 30 
+	static int joystick_throttle = (int) ((FRAME_RATE_HZ / 8.0) + 0.5);
+	static struct wwvi_js_event jse;
+	int i, rc;
+
+	if (joystick_fd < 0) /* no joystick */
+		return;
+
+#define XJOYSTICK_THRESHOLD 15000
+#define YJOYSTICK_THRESHOLD 15000
+
+	/* Read events even if we don't use them just to consume them. */
+	memset(&jse.button, 0, sizeof(jse.button));
+	rc = get_joystick_status(&jse);
+	if (rc != 0)
+		return;
+
+	/* If not on screen which uses joystick, ignore stick */
+	if (displaymode != DISPLAYMODE_DAMCON)
+		return;
+
+	/* Check joystick buttons (need to throttle this?) */
+	for (i = 0; i < ARRAYSIZE(jse.button); i++) {
+		if (jse.button[i] == 1 && do_joystick_button[i])
+			do_joystick_button[i](NULL);
+	}
+
+	/* Throttle back the joystick axis input rate to avoid flooding network */
+	if (timer % joystick_throttle != 0)
+		return;
+
+	if (jse.stick_x < -XJOYSTICK_THRESHOLD)
+		robot_left_button_pressed(NULL);
+	if (jse.stick_x > XJOYSTICK_THRESHOLD)
+		robot_right_button_pressed(NULL);
+	if (jse.stick_y < -YJOYSTICK_THRESHOLD)
+		robot_forward_button_pressed(NULL);
+	if (jse.stick_y > YJOYSTICK_THRESHOLD)
+		robot_backward_button_pressed(NULL);
 }
 
 static int control_key_pressed = 0;
@@ -5877,6 +5947,7 @@ gint advance_game(gpointer data)
 	}
 	move_viewport();
 #endif	
+	deal_with_joystick();
 	gdk_threads_enter();
 	gtk_widget_queue_draw(main_da);
 	move_sparks();
@@ -6003,6 +6074,7 @@ void really_quit(void)
 			(netstats.bytes_sent + netstats.bytes_recd) / netstats.elapsed_seconds);
         wwviaudio_cancel_all_sounds();
         wwviaudio_stop_portaudio();
+	close_joystick();
 	exit(1); /* probably bad form... oh well. */
 }
 
@@ -6037,6 +6109,89 @@ static void setup_sound(void)
 		return;
 	}
 	read_sound_clips();
+}
+
+static void check_for_screensaver(void)
+{
+	static char *cmd = "ps -efa | grep screensaver | grep -v grep >/dev/null 2>&1";
+	if (system(cmd) != 0)
+		return;
+
+	/* if there were a sane, universal means to inhibit screensavers, */
+	/* here is where it would go.  Instead, a message: */
+
+	fprintf(stderr, "\n\n\n");
+	fprintf(stderr, "  Screen saver and joystick detected.  Since joystick events\n");
+	fprintf(stderr, "  aren't going through X11, there is a good chance your screen saver\n");
+	fprintf(stderr, "  will unpleasantly interrupt your game.  There are several\n");
+	fprintf(stderr, "  popular screen savers (xscreensaver, gnome-screensaver and\n");
+	fprintf(stderr, "  kscreensaver being the three main ones).  Each of these\n");
+	fprintf(stderr, "  has its own methods by which an application may temporarily\n");
+	fprintf(stderr, "  inhibit it.  If the screen saver guys can come up with a sane\n");
+	fprintf(stderr, "  method for an application to inhibit a screen saver to which\n");
+	fprintf(stderr, "  they can all agree, then I might add such code to wordwarvi.\n");
+	fprintf(stderr, "  As things currently stand, you should probably disable your\n");
+	fprintf(stderr, "  screen saver manually, by whatever means they've given you,\n");
+	fprintf(stderr, "  or at least be prepared to have your game interrupted by the\n");
+	fprintf(stderr, "  screen saver from time to time.\n");
+	fprintf(stderr, "\n  -- steve\n");
+	fprintf(stderr, "\n\n\n");
+
+	/* Another possibility might be to get joystick events through X somehow. */
+	/* A quick google indicates there is such a thing as an Xorg X11 joystick */
+	/* input driver.  However, getting at this through gtk might not be possible */
+	/* and doing plain old X code is not something I want to mess with.  Also, */
+	/* strongly suspect that this joystick driver isn't in most distros, and in*/
+	/* none which I use.  So this is probably a dead end.  It would probably be */
+	/* the cleanest solution in the long run, however, as then the joystick events */
+	/* would inhibit the screen saver in precisely the same way that keyboard and */
+	/* mouse events do. */
+
+	/* Another possibility would be synthesizing events somehow.  There is a libXTst */
+	/* for testing X which could probably be used to synthesize events and thus */
+	/* possibly inhibit the screensaver, but I don't really know how to do it. */ 
+
+	/* Then there is crap like what's described here: */
+	/* http://www.jwz.org/xscreensaver/faq.html#dvd */
+	/* which advocates doing this, triggered by a timer,  while asserting */
+	/* that it's fast enough:
+ 
+		if (playing && !paused) {
+			system ("xscreensaver-command -deactivate >&- 2>&- &");
+		}  */
+
+	/* I should probably cut jwz some slack though, because he's jwz, and because */
+	/* he did a lot of work on xemacs.  And it may be fast enough, for all I know */
+	/* but I'm not interested in a screen saver specific solution.  This just papers */
+	/* over the current mess and makes it seem ok, when it isn't ok. */
+
+	/* Similarly for gnome-screensaver there is a "gnome-screensaver-command --poke"  */
+	/* command.  There's quite likely something similar (but different) for kscreensaver. */
+	/* which I can't be bothered to look up, on account of I hate KDE, because it */
+	/* seems designed by insane people who actually *like* the way the Windows UI works. */
+
+	/* All of that is of course bullshit up with which I will not put.  There needs to be */ 
+	/* a universal, screen saver agnostic, sane way that doesn't involve starting a new process. */
+	/* Nothing less is acceptable. */
+
+	/* Getting joystick events through X and gtk is probably the */
+	/* correct answer (and currently impossible, AFAICT, or at least very */
+	/* impractical) */
+}
+
+static void setup_joystick(GtkWidget *window)
+{
+	strcpy(joystick_device, JOYSTICK_DEVNAME);
+	joystickx = 0;
+	joysticky = 0;
+	set_joystick_x_axis(joystickx);
+	set_joystick_x_axis(joysticky);
+
+	joystick_fd = open_joystick(joystick_device, window->window);
+	if (joystick_fd < 0)
+                printf("No joystick...\n");
+        else
+                check_for_screensaver();
 }
 
 static void init_meshes(void)
@@ -6227,6 +6382,7 @@ int main(int argc, char *argv[])
 	init_comms_ui();
 	init_demon_ui();
 	init_net_setup_ui();
+	setup_joystick(window);
 
 	snis_protocol_debugging(1);
 
@@ -6235,5 +6391,6 @@ int main(int argc, char *argv[])
 	gtk_main ();
         wwviaudio_cancel_all_sounds();
         wwviaudio_stop_portaudio();
+	close_joystick();
 	return 0;
 }
