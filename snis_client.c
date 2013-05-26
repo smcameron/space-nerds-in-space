@@ -2568,8 +2568,8 @@ static void show_mainscreen(GtkWidget *w)
 		return;
 	o = &go[my_ship_oid];
 
-	cx = (float) o->x;
-	cy = (float) -o->y;
+	cx = (float) o->x - sin(o->heading) * 20;
+	cy = (float) -o->y - cos(o->heading) * 20;
 	lx = cx + sin(o->heading) * 10.0;
 	ly = cy + cos(o->heading) * 10.0;
 	camera_set_pos(cx, (float) 0, cy);
