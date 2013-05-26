@@ -517,6 +517,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 		i = add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP2, alive, e);
 		if (i < 0)
 			return i;
+		go[i].entity = e;
 	} else {
 		update_generic_object(i, x, y, vx, vy, heading, alive); 
 	}
@@ -1770,6 +1771,7 @@ static void delete_object(uint32_t id)
 	if (i < 0)
 		return;
 	go[i].alive = 0;
+	remove_entity(go[i].entity);
 	snis_object_pool_free_object(pool, i);
 }
 

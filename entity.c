@@ -74,6 +74,16 @@ struct entity *add_entity(struct mesh *m, float x, float y, float z)
 	return &entity_list[n];
 }
 
+void remove_entity(struct entity *e)
+{
+	int index;
+
+	if (!e)
+		return;
+	index = e - &entity_list[0]; 
+	snis_object_pool_free_object(entity_pool, index);
+}
+
 static int is_backface(int x1, int y1, int x2, int y2, int x3, int y3)
 {
 	int twicearea;
