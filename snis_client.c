@@ -6201,7 +6201,7 @@ static void setup_joystick(GtkWidget *window)
 
 static void init_meshes(void)
 {
-#if 0
+#if 1
 	ship_mesh = read_stl_file("spaceship.stl");
 	torpedo_mesh = read_stl_file("torpedo.stl");
 	laser_mesh = read_stl_file("laser.stl");
