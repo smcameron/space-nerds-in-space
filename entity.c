@@ -84,6 +84,13 @@ void remove_entity(struct entity *e)
 	snis_object_pool_free_object(entity_pool, index);
 }
 
+void update_entity_pos(struct entity *e, float x, float y, float z)
+{
+	e->x = x;
+	e->y = y;
+	e->z = z;
+}
+
 static int is_backface(int x1, int y1, int x2, int y2, int x3, int y3)
 {
 	int twicearea;

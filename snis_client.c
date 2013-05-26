@@ -364,6 +364,8 @@ static void update_generic_object(int index, double x, double y, double vx, doub
 	go[index].vy = vy;
 	go[index].heading = heading;
 	go[index].alive = alive;
+	if (go[index].entity)
+		update_entity_pos(go[index].entity, x, 0, -y);
 }
 
 static int lookup_object_by_id(uint32_t id)
