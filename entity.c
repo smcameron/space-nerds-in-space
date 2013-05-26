@@ -82,8 +82,7 @@ static int is_backface(int x1, int y1, int x2, int y2, int x3, int y3)
 	return twicearea >= 0;
 }
 
-void __attribute__((unused))
-	wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
+void wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 {
 	struct vertex *v1, *v2, *v3;
 	int x1, y1, x2, y2, x3, y3;
@@ -425,7 +424,7 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	for (i = 0; i < nentities; i++)
 		transform_entity(&entity_list[i], &total_transform);
 	for (i = 0; i < nentities; i++)
-		render_entity(w, gc, &entity_list[i]);
+		wireframe_render_entity(w, gc, &entity_list[i]);
 	// printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
 	rx = fmod(rx + 0.3, 360.0);
 	ry = fmod(ry + 0.15, 360.0);
