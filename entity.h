@@ -29,6 +29,7 @@ struct entity;
 #define GLOBAL extern
 #endif
 
+GLOBAL void entity_init(void);
 GLOBAL struct entity *add_entity(struct mesh *m, float x, float y, float z);
 GLOBAL void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e);
 GLOBAL void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e);

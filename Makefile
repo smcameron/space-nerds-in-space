@@ -147,7 +147,7 @@ stl_parser.o:	stl_parser.c stl_parser.h vertex.h triangle.h mesh.h
 stl_parser:	stl_parser.o stl_parser.h vertex.h triangle.h mesh.h
 	gcc -DTEST_STL_PARSER ${MYCFLAGS} ${GTKCFLAGS} -o stl_parser stl_parser.c -lm
 
-entity.o:	entity.c entity.h mathutils.h vertex.h triangle.h mesh.h stl_parser.h
+entity.o:	entity.c entity.h mathutils.h vertex.h triangle.h mesh.h stl_parser.h snis_alloc.h
 	gcc ${MYCFLAGS} ${GTKCFLAGS} -c entity.c
 
 test_matrix:	matrix.c matrix.h

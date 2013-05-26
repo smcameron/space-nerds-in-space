@@ -33,6 +33,7 @@
 #include "my_point.h"
 #include "snis_font.h"
 #include "snis_typeface.h"
+#include "snis_alloc.h"
 
 #include "snis_graph.h"
 
@@ -52,23 +53,25 @@ struct camera_info {
 	int xvpixels, yvpixels;
 } camera;
 
-static int nentities = 0;
+static struct snis_object_pool *entity_pool;
 static struct entity entity_list[MAX_ENTITIES];
 
 static float rx, ry, rz;
 
 struct entity *add_entity(struct mesh *m, float x, float y, float z)
 {
-	if (nentities < MAX_ENTITIES) {
-		printf("added entity at %f, %f, %f\n", x, y, z);
-		entity_list[nentities].m = m;
-		entity_list[nentities].x = x;
-		entity_list[nentities].y = y;
-		entity_list[nentities].z = z;
-		nentities++;
-		return &entity_list[nentities - 1];
-	}
-	return NULL;
+	int n;
+
+	n = snis_object_pool_alloc_obj(entity_pool);
+	if (n < 0)
+		return NULL;
+
+	printf("added entity at %f, %f, %f\n", x, y, z);
+	entity_list[n].m = m;
+	entity_list[n].x = x;
+	entity_list[n].y = y;
+	entity_list[n].z = z;
+	return &entity_list[n];
 }
 
 static int is_backface(int x1, int y1, int x2, int y2, int x3, int y3)
@@ -415,7 +418,9 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	mat44_product(&perspective_transform, &cameralook_transform, &tmp_transform);
 	mat44_product(&tmp_transform, &cameralocation_transform, &total_transform);
 	   
-	for (i = 0; i < nentities; i++) {
+	for (i = 0; i < snis_object_pool_highest_object(entity_pool); i++) {
+		if (!snis_object_pool_is_allocated(entity_pool, i))
+			continue;
 		transform_entity(&entity_list[i], &total_transform);
 		wireframe_render_entity(w, gc, &entity_list[i]);
 	}
@@ -445,5 +450,10 @@ void camera_set_parameters(float near, float far, float width, float height,
 	camera.height = height;	
 	camera.xvpixels = xvpixels;
 	camera.yvpixels = yvpixels;
+}
+
+void entity_init(void)
+{
+	snis_object_pool_setup(&entity_pool, MAX_ENTITIES);
 }
 
