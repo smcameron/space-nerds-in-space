@@ -59,13 +59,12 @@ static float rx, ry, rz;
 
 struct entity *add_entity(struct mesh *m, float x, float y, float z)
 {
-	// if (nentities < MAX_ENTITIES) {
-
-	if (nentities < 1) {
+	if (nentities < MAX_ENTITIES) {
+		printf("added entity at %f, %f, %f\n", x, y, z);
 		entity_list[nentities].m = m;
-		entity_list[nentities].x = 0; // x;
-		entity_list[nentities].y = 0; // y;
-		entity_list[nentities].z = 2; // z;
+		entity_list[nentities].x = x;
+		entity_list[nentities].y = y;
+		entity_list[nentities].z = z;
 		nentities++;
 		return &entity_list[nentities - 1];
 	}
@@ -413,22 +412,14 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 						(camera.far - camera.near);
 	perspective_transform.m[3][3] = 0.0;
 
-#if 1
 	mat44_product(&perspective_transform, &cameralook_transform, &tmp_transform);
 	mat44_product(&tmp_transform, &cameralocation_transform, &total_transform);
-#else
-	mat44_product(&cameralocation_transform, &cameralook_transform, &tmp_transform);
-	mat44_product(&tmp_transform, &perspective_transform, &total_transform);
-#endif
 	   
-	for (i = 0; i < nentities; i++)
+	for (i = 0; i < nentities; i++) {
 		transform_entity(&entity_list[i], &total_transform);
-	for (i = 0; i < nentities; i++)
 		wireframe_render_entity(w, gc, &entity_list[i]);
+	}
 	// printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
-	rx = fmod(rx + 0.3, 360.0);
-	ry = fmod(ry + 0.15, 360.0);
-	rz = fmod(rz + 0.6, 360.0);
 }
 
 void camera_set_pos(float x, float y, float z)

@@ -672,6 +672,7 @@ static int update_nebula(uint32_t id, double x, double y, double r)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(starbase_mesh, x, 0, -y);
+		printf("Added starbase at %lf %lf %lf\n", x, 0.0, -y);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_NEBULA, 1, e);
 		if (i < 0)
 			return i;
@@ -2550,6 +2551,8 @@ static void show_common_screen(GtkWidget *w, char *title)
 static void show_mainscreen(GtkWidget *w)
 {
 	struct snis_entity *o;
+	char buffer[100];
+	float cx, cy, lx, ly;
 
 	show_common_screen(w, "Main Screen");	
 
@@ -2561,18 +2564,20 @@ static void show_mainscreen(GtkWidget *w)
 		return;
 	o = &go[my_ship_oid];
 
-	camera_set_pos((float) o->x, (float) 0, (float) o->y);
-	camera_look_at((float) o->x + (float) cos(o->heading), (float) 0,
-			(float) o->y + (float) sin(o->heading));
-
-	/* override the above two for debugging. */
-	camera_set_pos(0.0, 0.0, -10.0);
-	camera_look_at(0.0, 0.0, 10.0);
-
-	camera_set_parameters((float) 5, (float) 30, (float) 16, (float) 12,
+	cx = (float) o->x;
+	cy = (float) -o->y;
+	lx = cx + cos(o->heading) * 10.0;
+	ly = cy - sin(o->heading) * 10.0;
+	camera_set_pos(cx, (float) 0, cy);
+	camera_look_at(lx, (float) 0.0, ly);
+	camera_set_parameters((float) 5, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT);
 	sng_set_foreground(GREEN);
 	render_entities(w, gc);
+	sprintf(buffer, "@ %lf %lf\n", cx, cy);
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 30, 80); 
+	sprintf(buffer, "looking at %lf %lf, h=%lf\n", lx, ly, o->heading);
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 30, 150); 
 }
 
 static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
