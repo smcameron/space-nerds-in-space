@@ -35,6 +35,6 @@ GLOBAL int snis_object_pool_use_obj(struct snis_object_pool *pool, int id);
 GLOBAL void snis_object_pool_free_object(struct snis_object_pool *pool, int i);
 GLOBAL int snis_object_pool_highest_object(struct snis_object_pool *pool);
 GLOBAL void snis_object_pool_free(struct snis_object_pool *pool);
-
+GLOBAL int snis_object_pool_is_allocated(struct snis_object_pool *pool, int id);
 
 #endif
