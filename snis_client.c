@@ -2566,8 +2566,8 @@ static void show_mainscreen(GtkWidget *w)
 
 	cx = (float) o->x;
 	cy = (float) -o->y;
-	lx = cx + cos(o->heading) * 10.0;
-	ly = cy - sin(o->heading) * 10.0;
+	lx = cx + sin(o->heading) * 10.0;
+	ly = cy + cos(o->heading) * 10.0;
 	camera_set_pos(cx, (float) 0, cy);
 	camera_look_at(lx, (float) 0.0, ly);
 	camera_set_parameters((float) 5, (float) 300, (float) 16, (float) 12,
