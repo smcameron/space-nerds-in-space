@@ -532,7 +532,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 
 static int update_ship(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive,
 			uint32_t torpedoes, uint32_t power, 
-			double gun_heading, double sci_heading, double sci_beam_width, int shiptype,
+			double gun_heading, double sci_heading, double sci_beam_width, int type,
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
 			fuel, uint8_t temp, struct power_dist *pd, uint8_t scizoom, uint8_t warpdrive,
 			uint8_t requested_warpdrive, uint8_t requested_shield, uint8_t phaser_charge, uint8_t phaser_wavelength)
@@ -543,7 +543,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ship_mesh, x, 0, -y);
-		i = add_generic_object(id, x, y, vx, vy, heading, shiptype, alive, e);
+		i = add_generic_object(id, x, y, vx, vy, heading, type, alive, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -1569,7 +1569,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	uint32_t fuel;
 	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
-	int shiptype = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
+	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength;
 	struct power_dist pd;
@@ -1593,7 +1593,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	tloading = tloading & 0x0f;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power,
-				dgheading, dsheading, dbeamwidth, shiptype,
+				dgheading, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, &pd, scizoom,
 				warpdrive, requested_warpdrive, requested_shield,
 				phaser_charge, phaser_wavelength);
