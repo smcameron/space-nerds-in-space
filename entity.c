@@ -44,6 +44,7 @@ static unsigned long ntris, nents, nlines;
 struct entity {
 	struct mesh *m;
 	float x, y, z; /* world coords */
+	float rx, ry, rz;
 };
 
 struct camera_info {
@@ -89,6 +90,13 @@ void update_entity_pos(struct entity *e, float x, float y, float z)
 	e->x = x;
 	e->y = y;
 	e->z = z;
+}
+
+void update_entity_rotation(struct entity *e, float rx, float ry, float rz)
+{
+	e->rx = rx;
+	e->ry = ry;
+	e->rz = rz;
 }
 
 static int is_backface(int x1, int y1, int x2, int y2, int x3, int y3)
