@@ -32,13 +32,21 @@ LIBS=-Lssgl -lssglclient -lrt -lm
 
 PROGS=snis_server snis_client
 
+MODELS=freighter.stl laser.stl planet.stl spaceship.stl starbase.stl torpedo.stl
+
 #MYCFLAGS=-g --pedantic -Wall -Werror -pthread -std=gnu99
 MYCFLAGS=-g --pedantic -Wall -Werror -pthread -std=gnu99
 GTKCFLAGS=`pkg-config --cflags gtk+-2.0`
 GTKLDFLAGS=`pkg-config --libs gtk+-2.0` \
         `pkg-config --libs gthread-2.0` \
 
-all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${PROGS}
+all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${PROGS} ${MODELS}
+
+starbase.stl:	starbase.scad wedge.scad
+	openscad -o starbase.stl starbase.scad
+
+%.stl:	%.scad
+	openscad -o $@ $<
 
 my_point.o:   my_point.c my_point.h Makefile
 	$(CC) ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} \
@@ -157,6 +165,6 @@ ${SSGL}:
 	(cd ssgl ; make )
 
 clean:
-	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${PROGS} ${SSGL} stl_parser
+	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${PROGS} ${SSGL} stl_parser ${MODELS} 
 	( cd ssgl; make clean )
 
