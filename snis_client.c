@@ -2558,7 +2558,7 @@ static void show_mainscreen(GtkWidget *w)
 {
 	struct snis_entity *o;
 	char buffer[100];
-	float cx, cy, lx, ly;
+	float cx, cy, cz, lx, ly;
 
 	show_common_screen(w, "Main Screen");	
 
@@ -2572,9 +2572,10 @@ static void show_mainscreen(GtkWidget *w)
 
 	cx = (float) o->x - sin(o->heading) * 20;
 	cy = (float) -o->y - cos(o->heading) * 20;
-	lx = cx + sin(o->heading) * 10.0;
-	ly = cy + cos(o->heading) * 10.0;
-	camera_set_pos(cx, (float) 0, cy);
+	cz = -2.0;
+	lx = cx + sin(o->heading) * 30.0;
+	ly = cy + cos(o->heading) * 30.0;
+	camera_set_pos(cx, (float) cz, cy);
 	camera_look_at(lx, (float) 0.0, ly);
 	camera_set_parameters((float) 5, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT);
