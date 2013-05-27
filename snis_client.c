@@ -511,7 +511,8 @@ static int update_damcon_part(uint32_t id, uint32_t ship_id, uint32_t type,
 
 
 static int update_econ_ship(uint32_t id, double x, double y, double vx,
-			double vy, double heading, uint32_t alive, uint32_t victim)
+			double vy, double heading, uint32_t alive, uint32_t victim,
+			uint8_t shiptype)
 {
 	int i;
 	struct entity *e;
@@ -527,6 +528,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 		update_generic_object(i, x, y, vx, vy, heading, alive); 
 	}
 	go[i].tsd.ship.victim = (int32_t) victim;
+	go[i].tsd.ship.shiptype = shiptype;
 	return 0;
 }
 
@@ -535,7 +537,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 			double gun_heading, double sci_heading, double sci_beam_width, int type,
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
 			fuel, uint8_t temp, struct power_dist *pd, uint8_t scizoom, uint8_t warpdrive,
-			uint8_t requested_warpdrive, uint8_t requested_shield, uint8_t phaser_charge, uint8_t phaser_wavelength)
+			uint8_t requested_warpdrive, uint8_t requested_shield, uint8_t phaser_charge, uint8_t phaser_wavelength, uint8_t shiptype)
 {
 	int i;
 	struct entity *e;
@@ -568,6 +570,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.phaser_charge = phaser_charge;
 	go[i].tsd.ship.phaser_wavelength = phaser_wavelength;
 	go[i].tsd.ship.damcon = NULL;
+	go[i].tsd.ship.shiptype = shiptype;
 	return 0;
 }
 
@@ -1571,7 +1574,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, warpdrive, requested_warpdrive,
-		requested_shield, phaser_charge, phaser_wavelength;
+		requested_shield, phaser_charge, phaser_wavelength, shiptype;
 	struct power_dist pd;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -1586,9 +1589,9 @@ static int process_update_ship_packet(uint16_t opcode)
 	packed_buffer_extract(&pb, "UwwUUU", &dheading, (uint32_t) 360,
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
 				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
-	packed_buffer_extract(&pb, "bbbwbrbbbbbb", &tloading, &throttle, &rpm, &fuel, &temp,
+	packed_buffer_extract(&pb, "bbbwbrbbbbbbb", &tloading, &throttle, &rpm, &fuel, &temp,
 			&pd, (unsigned short) sizeof(pd), &scizoom, &warpdrive, &requested_warpdrive,
-			&requested_shield, &phaser_charge, &phaser_wavelength);
+			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	pthread_mutex_lock(&universe_mutex);
@@ -1596,7 +1599,7 @@ static int process_update_ship_packet(uint16_t opcode)
 				dgheading, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, &pd, scizoom,
 				warpdrive, requested_warpdrive, requested_shield,
-				phaser_charge, phaser_wavelength);
+				phaser_charge, phaser_wavelength, shiptype);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -1681,6 +1684,7 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	struct packed_buffer pb;
 	uint32_t id, alive, victim;
 	double dx, dy, dheading, dv, dvx, dvy;
+	uint8_t shiptype;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
@@ -1689,14 +1693,14 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "wwSSUUw", &id, &alive,
+	packed_buffer_extract(&pb, "wwSSUUwb", &id, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
 				&dv, (uint32_t) UNIVERSE_DIM, &dheading, (uint32_t) 360,
-				&victim);
+				&victim, &shiptype);
 	dvx = sin(dheading) * dv;
 	dvy = -cos(dheading) * dv;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_econ_ship(id, dx, dy, dvx, dvy, dheading, alive, victim);
+	rc = update_econ_ship(id, dx, dy, dvx, dvy, dheading, alive, victim, shiptype);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

@@ -68,6 +68,14 @@ struct power_dist {
 	uint8_t shields;
 };
 
+#define SHIP_CLASS_CRUISER 0
+#define SHIP_CLASS_DESTROYER 1
+#define SHIP_CLASS_FREIGHTER 2
+#define SHIP_CLASS_TANKER 3
+#define SHIP_CLASS_TRANSPORT 4
+#define SHIP_CLASS_BATTLESTAR 5
+#define SHIP_CLASS_STARSHIP 6
+
 static char *shipclass[] = {
 	"Cruiser",
 	"Destroyer",
@@ -156,7 +164,7 @@ struct ship_data {
 	uint8_t throttle;
 	uint8_t temp;
 	struct power_dist pwrdist;
-	uint8_t shiptype;
+	uint8_t shiptype; /* same as snis_entity_science_data subclass */
 	uint8_t scizoom;
 	uint8_t warpdrive;
 	uint8_t requested_warpdrive;

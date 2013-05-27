@@ -115,12 +115,13 @@ struct update_ship_packet {
 	uint8_t requested_shield;
 	uint8_t phaser_charge;
 	uint8_t phaser_wavelength;
+	uint8_t shiptype; /* same as ship_sdata_packet subclass */
 };
 
 struct ship_sdata_packet {
 	uint16_t opcode;
 	uint32_t id;
-	uint8_t subclass;
+	uint8_t subclass; /* freighter, destroyer, etc. */
 	uint8_t shield_strength;
 	uint8_t shield_wavelength;
 	uint8_t shield_width;
@@ -139,6 +140,7 @@ struct update_econ_ship_packet {
 	uint32_t alive;
 	uint32_t x, y, v, heading;
 	uint32_t victim;
+	uint8_t shiptype; /* same as ship_sdata_packet subclass */
 };
 
 struct client_ship_id_packet {
