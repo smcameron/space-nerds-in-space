@@ -1266,7 +1266,6 @@ static int add_ship(double x, double y, double vx, double vy, double heading)
 	go[i].tsd.ship.desired_heading = 0;
 	go[i].tsd.ship.velocity = 0;
 	go[i].tsd.ship.shiptype = snis_randn(ARRAY_SIZE(shipclass));
-	go[i].tsd.ship.shiptype = SHIP_CLASS_FREIGHTER;
 	go[i].tsd.ship.victim = (uint32_t) -1;
 	memset(&go[i].tsd.ship.damage, 0, sizeof(go[i].tsd.ship.damage));
 	return i;

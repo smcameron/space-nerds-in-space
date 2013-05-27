@@ -525,8 +525,23 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		switch (shiptype) {
+		case SHIP_CLASS_CRUISER:
+			e = add_entity(cruiser_mesh, x, 0, -y);
+			break;
+		case SHIP_CLASS_DESTROYER:
+			e = add_entity(destroyer_mesh, x, 0, -y);
+			break;
 		case SHIP_CLASS_FREIGHTER:
+			e = add_entity(freighter_mesh, x, 0, -y);
+			break;
+		case SHIP_CLASS_TANKER:
+			e = add_entity(tanker_mesh, x, 0, -y);
+			break;
+		case SHIP_CLASS_BATTLESTAR:
 			e = add_entity(battlestar_mesh, x, 0, -y);
+			break;
+		case SHIP_CLASS_STARSHIP:
+			e = add_entity(ship_mesh, x, 0, -y);
 			break;
 		default:
 			e = add_entity(ship_mesh, x, 0, -y);
