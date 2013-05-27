@@ -25,6 +25,10 @@ module main_fuselage()
 			sphere(r = 1.8, center = true);
 		translate(v = [4, 10, 0])
 			little_pod();
+		translate(v = [0, 5.5, 4])
+			cylinder(h = 8, r1 = 0.1, r2 = 0.1, center = true);
+		translate(v = [0, 5.1, 4])
+			cylinder(h = 6, r1 = 0.1, r2 = 0.1, center = true);
 	}
 }
 
@@ -32,11 +36,12 @@ module sub_fuselage()
 {
 	union() {
 		rotate(a = 90, v = [1, 0, 0]) {
-			scale(v = [1, 1.2, 1])
+			scale(v = [1, 1.5, 1])
 				cylinder(h = 13, r1 = 0.7, r2 = 0.5, center = true);
 		}
-		translate(v = [0, 2, 0.5])
-			sphere(r = 1.3, center = true);
+		translate(v = [0, 2, 1])
+			scale(v = [1, 1, 1.5])
+				sphere(r = 1.3, center = true);
 	}
 }
 
@@ -44,7 +49,7 @@ module ship()
 {
 	rotate(a = -90, v = [0, 0, 1])
 	union() {
-		translate(v = [0, 0, -2.5])
+		translate(v = [0, 0, -3.5])
 			sub_fuselage();
 		main_fuselage();
 	}

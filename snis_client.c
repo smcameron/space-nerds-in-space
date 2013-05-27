@@ -186,6 +186,7 @@ struct mesh *starbase_mesh;
 struct mesh *ship_mesh;
 struct mesh *freighter_mesh;
 struct mesh *cruiser_mesh;
+struct mesh *tanker_mesh;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -522,7 +523,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 	if (i < 0) {
 		switch (shiptype) {
 		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(cruiser_mesh, x, 0, -y);
+			e = add_entity(tanker_mesh, x, 0, -y);
 			break;
 		default:
 			e = add_entity(ship_mesh, x, 0, -y);
@@ -6236,6 +6237,7 @@ static void init_meshes(void)
 	starbase_mesh = read_stl_file("starbase.stl");
 	freighter_mesh = read_stl_file("freighter.stl");
 	cruiser_mesh = read_stl_file("cruiser.stl");
+	tanker_mesh = read_stl_file("tanker.stl");
 #else
 #define THE_MODEL "starbase.stl"
 	ship_mesh = read_stl_file(THE_MODEL);
