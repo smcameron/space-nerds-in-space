@@ -184,6 +184,7 @@ struct mesh *laser_mesh;
 struct mesh *planet_mesh;
 struct mesh *starbase_mesh;
 struct mesh *ship_mesh;
+struct mesh *freighter_mesh;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -6214,6 +6215,7 @@ static void init_meshes(void)
 	laser_mesh = read_stl_file("laser.stl");
 	planet_mesh = read_stl_file("planet.stl");
 	starbase_mesh = read_stl_file("starbase.stl");
+	freighter_mesh = read_stl_file("freighter.stl");
 #else
 #define THE_MODEL "starbase.stl"
 	ship_mesh = read_stl_file(THE_MODEL);
