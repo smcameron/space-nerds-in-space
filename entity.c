@@ -309,9 +309,15 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 					    { e->x, e->y, e->z, 1 }}};
 	/* for testing, do small rotation... */
 	struct mat44 r1, r2;
+#if 0
 	mat44_rotate_x(&object_rotation, rx * M_PI / 180.0, &r1);  
 	mat44_rotate_y(&r1, ry * M_PI / 180.0, &r2);  
 	mat44_rotate_z(&r2, rz * M_PI / 180.0, &object_rotation);  
+#else
+	mat44_rotate_y(&object_rotation, e->ry, &r1);  
+	mat44_rotate_x(&r1, e->rx, &r2);  
+	mat44_rotate_z(&r2, e->rz, &object_rotation);  
+#endif
 
 	tmp_transform = *transform;
 	mat44_product(&tmp_transform, &object_translation, &object_transform);
@@ -450,6 +456,9 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 		wireframe_render_entity(w, gc, &entity_list[i]);
 	}
 	// printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
+	rx = fmod(rx + 0.3, 360.0);
+	ry = fmod(ry + 0.15, 360.0);
+	rz = fmod(rz + 0.6, 360.0);
 }
 
 void camera_set_pos(float x, float y, float z)
