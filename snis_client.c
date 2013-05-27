@@ -2596,7 +2596,6 @@ static void show_common_screen(GtkWidget *w, char *title)
 static void show_mainscreen(GtkWidget *w)
 {
 	struct snis_entity *o;
-	char buffer[100];
 	float cx, cy, cz, lx, ly;
 
 	show_common_screen(w, "Main Screen");	
@@ -2620,10 +2619,6 @@ static void show_mainscreen(GtkWidget *w)
 				SCREEN_WIDTH, SCREEN_HEIGHT);
 	sng_set_foreground(GREEN);
 	render_entities(w, gc);
-	sprintf(buffer, "@ %lf %lf\n", cx, cy);
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 30, 80); 
-	sprintf(buffer, "looking at %lf %lf, h=%lf\n", lx, ly, o->heading);
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 30, 150); 
 }
 
 static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
