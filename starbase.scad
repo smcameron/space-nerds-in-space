@@ -64,7 +64,10 @@ module spokes()
 	}
 }
 
-outer_ring();
-central_hub();
-spokes();
+scale(v = [10, 10, 10])
+union() {
+	outer_ring();
+	central_hub();
+	spokes();
+}
 
