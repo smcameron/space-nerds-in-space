@@ -519,7 +519,14 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ship_mesh, x, 0, -y);
+		switch (shiptype) {
+		case SHIP_CLASS_FREIGHTER:
+			e = add_entity(freighter_mesh, x, 0, -y);
+			break;
+		default:
+			e = add_entity(ship_mesh, x, 0, -y);
+			break;
+		}
 		i = add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP2, alive, e);
 		if (i < 0)
 			return i;
@@ -544,7 +551,14 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ship_mesh, x, 0, -y);
+		switch (shiptype) {
+		case SHIP_CLASS_FREIGHTER:
+			e = add_entity(freighter_mesh, x, 0, -y);
+			break;
+		default:
+			e = add_entity(ship_mesh, x, 0, -y);
+			break;
+		}
 		i = add_generic_object(id, x, y, vx, vy, heading, type, alive, e);
 		if (i < 0)
 			return i;
