@@ -450,6 +450,8 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	mat44_product(&tmp_transform, &cameralocation_transform, &total_transform);
 	   
 	for (i = 0; i < snis_object_pool_highest_object(entity_pool); i++) {
+		struct mat41 point_to_test;
+		float behind_camera;
 		float dist;
 
 		if (!snis_object_pool_is_allocated(entity_pool, i))
@@ -458,7 +460,13 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 			fprintf(stderr, "Unexpected null mesh, skipping.\n");
 			continue;
 		}
-
+		point_to_test.m[0] = entity_list[i].x - camera.x;
+		point_to_test.m[1] = entity_list[i].y - camera.y;
+		point_to_test.m[2] = entity_list[i].z - camera.z;
+		point_to_test.m[3] = 1.0;
+		behind_camera = mat41_dot_mat41(&look_direction, &point_to_test);
+		if (behind_camera < 0) /* behind camera */
+			continue;
 		dist = dist3d(camera.x - entity_list[i].x,
 				camera.y - entity_list[i].y,
 				camera.z - entity_list[i].z);
