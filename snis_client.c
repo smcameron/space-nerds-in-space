@@ -710,13 +710,11 @@ static void add_nebula_entry(double x, double y, double r)
 static int update_nebula(uint32_t id, double x, double y, double r)
 {
 	int i;
-	struct entity *e;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(starbase_mesh, x, 0, -y);
 		printf("Added starbase at %lf %lf %lf\n", x, 0.0, -y);
-		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_NEBULA, 1, e);
+		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_NEBULA, 1, NULL);
 		if (i < 0)
 			return i;
 		add_nebula_entry(x, y, r);
