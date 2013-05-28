@@ -2610,12 +2610,12 @@ static void show_mainscreen(GtkWidget *w)
 
 	cx = (float) o->x - sin(o->heading) * 20;
 	cy = (float) -o->y - cos(o->heading) * 20;
-	cz = -2.0;
+	cz = -4.0;
 	lx = cx + sin(o->heading) * 30.0;
 	ly = cy + cos(o->heading) * 30.0;
 	camera_set_pos(cx, (float) cz, cy);
 	camera_look_at(lx, (float) 0.0, ly);
-	camera_set_parameters((float) 5, (float) 300, (float) 16, (float) 12,
+	camera_set_parameters((float) 20, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT);
 	sng_set_foreground(GREEN);
 	render_entities(w, gc);
