@@ -452,6 +452,10 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	for (i = 0; i < snis_object_pool_highest_object(entity_pool); i++) {
 		if (!snis_object_pool_is_allocated(entity_pool, i))
 			continue;
+		if (entity_list[i].m == NULL) {
+			fprintf(stderr, "Unexpected null mesh, skipping.\n");
+			continue;
+		}
 		transform_entity(&entity_list[i], &total_transform);
 		wireframe_render_entity(w, gc, &entity_list[i]);
 	}
