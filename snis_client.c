@@ -544,7 +544,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 			e = add_entity(ship_mesh, x, 0, -y);
 			break;
 		default:
-			e = add_entity(ship_mesh, x, 0, -y);
+			e = add_entity(cruiser_mesh, x, 0, -y);
 			break;
 		}
 		i = add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP2, alive, e);
