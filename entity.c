@@ -450,12 +450,20 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	mat44_product(&tmp_transform, &cameralocation_transform, &total_transform);
 	   
 	for (i = 0; i < snis_object_pool_highest_object(entity_pool); i++) {
+		float dist;
+
 		if (!snis_object_pool_is_allocated(entity_pool, i))
 			continue;
 		if (entity_list[i].m == NULL) {
 			fprintf(stderr, "Unexpected null mesh, skipping.\n");
 			continue;
 		}
+
+		dist = dist3d(camera.x - entity_list[i].x,
+				camera.y - entity_list[i].y,
+				camera.z - entity_list[i].z);
+		if (dist > fabs(camera.far) * 20.0)
+			continue;
 		transform_entity(&entity_list[i], &total_transform);
 		wireframe_render_entity(w, gc, &entity_list[i]);
 	}
