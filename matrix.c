@@ -203,7 +203,7 @@ void mat44_scale(struct mat44 *rhs, float scale, struct mat44 *output)
 	mat44_product(rhs, &scalem, output);
 }
 
-static float dist3d(float dx, float dy, float dz)
+float dist3d(float dx, float dy, float dz)
 {
 	return sqrt(dx * dx + dy * dy + dz * dz);
 }
