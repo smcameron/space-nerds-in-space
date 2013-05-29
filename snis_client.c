@@ -2591,6 +2591,48 @@ static void show_common_screen(GtkWidget *w, char *title)
 	snis_draw_line(w->window, gc, 0, 0, 0, SCREEN_HEIGHT);
 }
 
+static int normalize_degrees(int degrees)
+{
+	while (degrees < 0)
+		degrees += 360;
+	while (degrees > 359)
+		degrees -= 360;
+	return degrees;
+}
+
+static void show_mainscreen_starfield(GtkWidget *w, double heading)
+{
+	static int stars_initialized = 0;
+	static int stary[720];
+	int i, first_angle, last_angle;
+	float x, dx;
+
+/* FIXME: make angle of view be calculated from camera parameters */
+#define ANGLE_OF_VIEW (45)
+
+	if (!stars_initialized) {
+		for (i = 0; i < 720; i++)
+			stary[i] = snis_randn(SCREEN_HEIGHT);
+		stars_initialized = 1;
+	}
+
+
+	first_angle = (heading * 180 / M_PI) - ANGLE_OF_VIEW / 2.0;
+	last_angle = (heading * 180 / M_PI) + ANGLE_OF_VIEW / 2.0;
+	first_angle = normalize_degrees(first_angle);
+	last_angle = normalize_degrees(last_angle);
+
+	sng_set_foreground(WHITE);
+
+	x = 0;
+	dx = (float) SCREEN_WIDTH / ANGLE_OF_VIEW;
+	for (i = first_angle; i != last_angle; i = (i + 1) % 360) {
+		sng_draw_point(w->window, gc, (int) x, stary[i]);
+		sng_draw_point(w->window, gc, (int) x, stary[360 + i]);
+		x += dx;
+	}
+}
+
 static void show_mainscreen(GtkWidget *w)
 {
 	struct snis_entity *o;
@@ -2605,6 +2647,8 @@ static void show_mainscreen(GtkWidget *w)
 	if (my_ship_oid == UNKNOWN_ID)
 		return;
 	o = &go[my_ship_oid];
+
+	show_mainscreen_starfield(w, o->heading);
 
 	cx = (float) o->x - sin(o->heading) * 20;
 	cy = (float) -o->y - cos(o->heading) * 20;
