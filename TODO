@@ -18,19 +18,23 @@ Too much to list, but here's a list anyway:
     take damage into account
 
 * Finish Navigation screen
-  (make warp work... various improvments.)
+  (various improvments.)
   take damage into account
+
 * Finish weapons screen
   beam weapon
   take damage into account
 
 * Science station
   take damage into account
+
 * Setup screen
+  Try to make it more intuitive for people who are seeing it for
+  the first time ever.
 
 * Some kind of session persistence so that if a network
   problem occurs, client can re-connect and pick up where
-  it left off.
+  it left off.  (This is actually already done)
 
 * write some kind of guide to hacking, to make it easier for others to
   contribute to this codebase.
@@ -44,12 +48,9 @@ Too much to list, but here's a list anyway:
 
 * asteroids/anomalies/nebulae, etc. need to be implemented
 
-* I don't like the wrapping universe.  INstead, I think it should
-  be the "known" universe with a vast empty "unknown" out there with
-  some hard limits on coords at, say, +/- a half-billion units out or
-  something.
-
 * 3D out the window view remains to be done.
+  Kinda sorta done now.   Still lots of work to do though,
+  view frustrum clipping in particular.
 
 * comms screen:
   enemies need to send insults to the crew
@@ -57,4 +58,11 @@ Too much to list, but here's a list anyway:
   various things of the starbase. 
   intercept chatter between enemy ships
   ??? need to figure out what the hell the comms screen is good for.
+
+* Damage controll screen:
+  Make the various components of the systems less generic
+  and have damage distributed around to the components.
+  Allow repairing/replacing of the components.  Am thinking
+  replacing is better than repairing with some limited spares
+  that must be refreshed at starbases.
 
