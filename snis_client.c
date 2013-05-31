@@ -817,15 +817,16 @@ void sphere_explode(int x, int y, int ivx, int ivy, int v,
 
 static void do_explosion(double x, double y, uint16_t nsparks, uint16_t velocity, int time)
 {
-	double angle, v, vx, vy, vz;
+	double zangle, angle, v, vx, vy, vz;
 	int i;
 
 	for (i = 0; i < nsparks; i++) {
 		angle = ((double) snis_randn(360) * M_PI / 180.0);
+		zangle = ((double) snis_randn(360) * M_PI / 180.0);
 		v = snis_randn(velocity * 2) - velocity;
 		vx = v * cos(angle);
 		vy = v * sin(angle);
-		vz = v;
+		vz = v * cos(zangle) / 3.0;
 		add_spark(x, y, vx, vy, vz, time);
 	}
 }
