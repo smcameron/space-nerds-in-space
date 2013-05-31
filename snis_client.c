@@ -190,6 +190,7 @@ struct mesh *tanker_mesh;
 struct mesh *destroyer_mesh;
 struct mesh *transport_mesh;
 struct mesh *battlestar_mesh;
+struct mesh *particle_mesh;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -731,9 +732,12 @@ static void spark_move(struct snis_entity *o)
 {
 	o->x += o->vx;
 	o->y += o->vy;
+	o->tsd.spark.z += o->tsd.spark.vz;
 	o->alive--;
-	if (o->alive <= 0)
+	if (o->alive <= 0) {
+		remove_entity(o->entity);
 		snis_object_pool_free_object(sparkpool, o->index);
+	}
 }
 
 static void move_sparks(void)
@@ -741,26 +745,34 @@ static void move_sparks(void)
 	int i;
 
 	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++)
-		if (spark[i].alive)
+		if (spark[i].alive) {
 			spark[i].move(&spark[i]);
+			update_entity_pos(spark[i].entity, spark[i].x,
+						spark[i].tsd.spark.z, -spark[i].y);
+		}
 }
 
-void add_spark(double x, double y, double vx, double vy, int time)
+void add_spark(double x, double y, double vx, double vy, double vz, int time)
 {
 	int i;
+	struct entity *e;
 
 	i = snis_object_pool_alloc_obj(sparkpool);
 	if (i < 0)
 		return;
+	e = add_entity(particle_mesh, x, 0, -y);
 	memset(&spark[i], 0, sizeof(spark[i]));
 	spark[i].index = i;
 	spark[i].x = x;
 	spark[i].y = y;
+	spark[i].tsd.spark.z = 0;
 	spark[i].vx = vx;
 	spark[i].vy = vy;
+	spark[i].tsd.spark.vz = vz;
 	spark[i].type = OBJTYPE_SPARK;
 	spark[i].alive = time + snis_randn(time);
 	spark[i].move = spark_move;
+	spark[i].entity = e;
 	return;
 }
 
@@ -798,7 +810,7 @@ void sphere_explode(int x, int y, int ivx, int ivy, int v,
 
 static void do_explosion(double x, double y, uint16_t nsparks, uint16_t velocity, int time)
 {
-	double angle, v, vx, vy;
+	double angle, v, vx, vy, vz;
 	int i;
 
 	for (i = 0; i < nsparks; i++) {
@@ -806,7 +818,8 @@ static void do_explosion(double x, double y, uint16_t nsparks, uint16_t velocity
 		v = snis_randn(velocity * 2) - velocity;
 		vx = v * cos(angle);
 		vy = v * sin(angle);
-		add_spark(x, y, vx, vy, time);
+		vz = v;
+		add_spark(x, y, vx, vy, vz, time);
 	}
 }
 
@@ -6296,6 +6309,7 @@ static void init_meshes(void)
 	destroyer_mesh = read_stl_file("destroyer.stl");
 	transport_mesh = read_stl_file("transport.stl");
 	battlestar_mesh = read_stl_file("battlestar.stl");
+	particle_mesh = read_stl_file("tetrahedron.stl");
 #else
 #define THE_MODEL "starbase.stl"
 	ship_mesh = read_stl_file(THE_MODEL);

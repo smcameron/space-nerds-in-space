@@ -206,6 +206,10 @@ struct explosion_data {
 	uint16_t time;
 };
 
+struct spark_data {
+	double z, vz;
+};
+
 union type_specific_data {
 	struct ship_data ship;
 	struct laser_data laser;
@@ -213,6 +217,7 @@ union type_specific_data {
 	struct starbase_data starbase;
 	struct explosion_data explosion;
 	struct nebula_data nebula;
+	struct spark_data spark;
 };
 
 struct snis_entity;
