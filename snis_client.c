@@ -71,6 +71,13 @@
 #include "stl_parser.h"
 #include "entity.h"
 
+#define SHIP_COLOR CYAN
+#define STARBASE_COLOR RED
+#define PLANET_COLOR GREEN
+#define PARTICLE_COLOR YELLOW
+#define LASER_COLOR GREEN
+#define TORPEDO_COLOR WHITE
+
 #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 #define SCREEN_WIDTH 800        /* window width, in pixels */
@@ -527,25 +534,25 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 	if (i < 0) {
 		switch (shiptype) {
 		case SHIP_CLASS_CRUISER:
-			e = add_entity(cruiser_mesh, x, 0, -y);
+			e = add_entity(cruiser_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_DESTROYER:
-			e = add_entity(destroyer_mesh, x, 0, -y);
+			e = add_entity(destroyer_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(freighter_mesh, x, 0, -y);
+			e = add_entity(freighter_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_TANKER:
-			e = add_entity(tanker_mesh, x, 0, -y);
+			e = add_entity(tanker_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_BATTLESTAR:
-			e = add_entity(battlestar_mesh, x, 0, -y);
+			e = add_entity(battlestar_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_STARSHIP:
-			e = add_entity(ship_mesh, x, 0, -y);
+			e = add_entity(ship_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		default:
-			e = add_entity(cruiser_mesh, x, 0, -y);
+			e = add_entity(cruiser_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		}
 		i = add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP2, alive, e);
@@ -574,10 +581,10 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	if (i < 0) {
 		switch (shiptype) {
 		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(freighter_mesh, x, 0, -y);
+			e = add_entity(freighter_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		default:
-			e = add_entity(ship_mesh, x, 0, -y);
+			e = add_entity(ship_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		}
 		i = add_generic_object(id, x, y, vx, vy, heading, type, alive, e);
@@ -634,7 +641,7 @@ static int update_torpedo(uint32_t id, double x, double y, double vx, double vy,
 	struct entity *e;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(torpedo_mesh, x, 0, -y);
+		e = add_entity(torpedo_mesh, x, 0, -y, TORPEDO_COLOR);
 		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
@@ -652,7 +659,7 @@ static int update_laser(uint32_t id, double x, double y, double vx, double vy, u
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(laser_mesh, x, 0, -y);
+		e = add_entity(laser_mesh, x, 0, -y, LASER_COLOR);
 		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
@@ -670,7 +677,7 @@ static int update_planet(uint32_t id, double x, double y)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(planet_mesh, x, 0, -y);
+		e = add_entity(planet_mesh, x, 0, -y, PLANET_COLOR);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
@@ -687,7 +694,7 @@ static int update_starbase(uint32_t id, double x, double y)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(starbase_mesh, x, 0, -y);
+		e = add_entity(starbase_mesh, x, 0, -y, STARBASE_COLOR);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
@@ -760,7 +767,7 @@ void add_spark(double x, double y, double vx, double vy, double vz, int time)
 	i = snis_object_pool_alloc_obj(sparkpool);
 	if (i < 0)
 		return;
-	e = add_entity(particle_mesh, x, 0, -y);
+	e = add_entity(particle_mesh, x, 0, -y, PARTICLE_COLOR);
 	memset(&spark[i], 0, sizeof(spark[i]));
 	spark[i].index = i;
 	spark[i].x = x;

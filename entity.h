@@ -30,10 +30,11 @@ struct entity;
 #endif
 
 GLOBAL void entity_init(void);
-GLOBAL struct entity *add_entity(struct mesh *m, float x, float y, float z);
+GLOBAL struct entity *add_entity(struct mesh *m, float x, float y, float z, int color);
 GLOBAL void remove_entity(struct entity *e);
 GLOBAL void update_entity_pos(struct entity *e, float x, float y, float z);
 GLOBAL void update_entity_rotation(struct entity *e, float rx, float ry, float rz);
+GLOBAL void update_entity_color(struct entity *e, int color);
 GLOBAL void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e);
 GLOBAL void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e);
 GLOBAL void render_entities(GtkWidget *w, GdkGC *gc);

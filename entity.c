@@ -45,6 +45,7 @@ struct entity {
 	struct mesh *m;
 	float x, y, z; /* world coords */
 	float rx, ry, rz;
+	int color;
 };
 
 struct camera_info {
@@ -59,7 +60,7 @@ static struct entity entity_list[MAX_ENTITIES];
 
 static float rx, ry, rz;
 
-struct entity *add_entity(struct mesh *m, float x, float y, float z)
+struct entity *add_entity(struct mesh *m, float x, float y, float z, int color)
 {
 	int n;
 
@@ -72,6 +73,7 @@ struct entity *add_entity(struct mesh *m, float x, float y, float z)
 	entity_list[n].x = x;
 	entity_list[n].y = y;
 	entity_list[n].z = z;
+	entity_list[n].color = color;
 	return &entity_list[n];
 }
 
@@ -97,6 +99,11 @@ void update_entity_rotation(struct entity *e, float rx, float ry, float rz)
 	e->rx = rx;
 	e->ry = ry;
 	e->rz = rz;
+}
+
+void update_entity_color(struct entity *e, int color)
+{
+	e->color = color;
 }
 
 static int is_backface(int x1, int y1, int x2, int y2, int x3, int y3)
@@ -267,6 +274,7 @@ void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 {
 	int i;
 
+	sng_set_foreground(e->color);
 	for (i = 0; i < e->m->ntriangles; i++)
 		wireframe_render_triangle(w, gc, &e->m->t[i]);
 	nents++;
