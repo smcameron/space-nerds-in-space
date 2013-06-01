@@ -2656,7 +2656,7 @@ static void show_mainscreen_starfield(GtkWidget *w, double heading)
 	float x, dx;
 
 /* FIXME: make angle of view be calculated from camera parameters */
-#define ANGLE_OF_VIEW (45)
+#define ANGLE_OF_VIEW (50)
 
 	if (!stars_initialized) {
 		for (i = 0; i < 720; i++)
@@ -2704,7 +2704,7 @@ static void show_mainscreen(GtkWidget *w)
 	camera_set_pos(cx, (float) cz, cy);
 	camera_look_at(lx, (float) 0.0, ly);
 	camera_set_parameters((float) 20, (float) 300, (float) 16, (float) 12,
-				SCREEN_WIDTH, SCREEN_HEIGHT);
+				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
 	sng_set_foreground(GREEN);
 	render_entities(w, gc);
 	show_common_screen(w, "");	

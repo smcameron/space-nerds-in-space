@@ -52,6 +52,7 @@ struct camera_info {
 	float x, y, z;		/* position of camera */
 	float lx, ly, lz;	/* where camera is looking */
 	float near, far, width, height;
+	float angle_of_view;
 	int xvpixels, yvpixels;
 } camera;
 
@@ -383,6 +384,7 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	struct mat41 *v; /* camera relative y axis (up/down) */ 
 	struct mat41 *n; /* camera relative z axis (into view plane) */
 	struct mat41 *u; /* camera relative x axis (left/right) */
+	float camera_angle, ent_angle; /* this is for cheezy view culling */
 
 	nents = 0;
 	ntris = 0;
@@ -398,6 +400,8 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	look_direction.m[3] = 1.0;
 	normalize_vector(&look_direction, &look_direction);
 	n = &look_direction;
+
+	camera_angle = atan2f(camera.lz - camera.z, camera.lx - camera.x);
 
 	/* Calculate x direction relative to camera, "camera_x" */
 	mat41_cross_mat41(&up, &look_direction, &camera_x);
@@ -473,11 +477,21 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 		behind_camera = mat41_dot_mat41(&look_direction, &point_to_test);
 		if (behind_camera < 0) /* behind camera */
 			continue;
+
 		dist = dist3d(camera.x - entity_list[i].x,
 				camera.y - entity_list[i].y,
 				camera.z - entity_list[i].z);
 		if (dist > fabs(camera.far) * 20.0)
 			continue;
+
+		/* Really cheezy view culling */
+		ent_angle = atan2f(point_to_test.m[2], point_to_test.m[0]);
+		ent_angle = fabs(ent_angle - camera_angle);
+		if (ent_angle > M_PI)
+			ent_angle = (2 * M_PI - ent_angle);
+		if (ent_angle > (camera.angle_of_view / 2.0) * M_PI / 180.0)
+			continue;
+
 		transform_entity(&entity_list[i], &total_transform);
 		wireframe_render_entity(w, gc, &entity_list[i]);
 	}
@@ -502,7 +516,7 @@ void camera_look_at(float x, float y, float z)
 }
 
 void camera_set_parameters(float near, float far, float width, float height,
-				int xvpixels, int yvpixels)
+				int xvpixels, int yvpixels, float angle_of_view)
 {
 	camera.near = -near;
 	camera.far = -far;
@@ -510,6 +524,7 @@ void camera_set_parameters(float near, float far, float width, float height,
 	camera.height = height;	
 	camera.xvpixels = xvpixels;
 	camera.yvpixels = yvpixels;
+	camera.angle_of_view = angle_of_view;
 }
 
 void entity_init(void)
