@@ -19,6 +19,7 @@
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 #include <gtk/gtk.h>
 
@@ -45,6 +46,7 @@ struct entity {
 	struct mesh *m;
 	float x, y, z; /* world coords */
 	float rx, ry, rz;
+	float dist3dsqrd;
 	int color;
 };
 
@@ -58,6 +60,7 @@ struct camera_info {
 
 static struct snis_object_pool *entity_pool;
 static struct entity entity_list[MAX_ENTITIES];
+static int entity_depth[MAX_ENTITIES];
 
 static float rx, ry, rz;
 
@@ -363,9 +366,50 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 	}
 }
 
-void render_entities(GtkWidget *w, GdkGC *gc)
+static void insert_distance(int e, int *nsorted)
+{
+	int i, j, insertion_point = 0;
+
+	for (i = 0; i < *nsorted; i++) {
+		j = entity_depth[i];
+		if (entity_list[j].dist3dsqrd <= entity_list[e].dist3dsqrd)
+			break;
+	}
+	insertion_point = i;
+
+	if (i < *nsorted) {
+		memmove(&entity_depth[insertion_point + 1], &entity_depth[insertion_point],
+				(*nsorted - insertion_point) * sizeof(entity_depth[0]));
+	}
+	entity_depth[insertion_point] = e;
+	(*nsorted)++;
+	return;
+}
+
+static void sort_entity_distances(void)
 {
 	int i;
+	int nsorted;
+
+	for (i = 0; i < snis_object_pool_highest_object(entity_pool); i++) {
+		entity_list[i].dist3dsqrd = dist3dsqrd(
+				camera.x - entity_list[i].x,
+				camera.y - entity_list[i].y,
+				camera.z - entity_list[i].z);
+	}
+	nsorted = 0;
+	for (i = 0; i < snis_object_pool_highest_object(entity_pool); i++)
+		insert_distance(i, &nsorted);
+}
+
+static inline float sqr(float a)
+{
+	return a * a;
+}
+
+void render_entities(GtkWidget *w, GdkGC *gc)
+{
+	int i, j;
 
 	struct mat44 identity = {{{ 1, 0, 0, 0 }, /* identity matrix */
 				    { 0, 1, 0, 0 },
@@ -460,11 +504,14 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 
 	mat44_product(&perspective_transform, &cameralook_transform, &tmp_transform);
 	mat44_product(&tmp_transform, &cameralocation_transform, &total_transform);
+
+	sort_entity_distances();
 	   
-	for (i = 0; i < snis_object_pool_highest_object(entity_pool); i++) {
+	for (j = 0; j < snis_object_pool_highest_object(entity_pool); j++) {
 		struct mat41 point_to_test;
 		float behind_camera;
-		float dist;
+
+		i = entity_depth[j];
 
 		if (!snis_object_pool_is_allocated(entity_pool, i))
 			continue;
@@ -478,10 +525,7 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 		if (behind_camera < 0) /* behind camera */
 			continue;
 
-		dist = dist3d(camera.x - entity_list[i].x,
-				camera.y - entity_list[i].y,
-				camera.z - entity_list[i].z);
-		if (dist > fabs(camera.far) * 20.0)
+		if (entity_list[i].dist3dsqrd > sqr(fabs(camera.far) * 20.0))
 			continue;
 
 		/* Really cheezy view culling */
