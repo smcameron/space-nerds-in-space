@@ -2683,8 +2683,6 @@ static void show_mainscreen(GtkWidget *w)
 	struct snis_entity *o;
 	float cx, cy, cz, lx, ly;
 
-	show_common_screen(w, "Main Screen");	
-
 	if (my_ship_id == UNKNOWN_ID)
 		return;
 	if (my_ship_oid == UNKNOWN_ID)
@@ -2706,6 +2704,8 @@ static void show_mainscreen(GtkWidget *w)
 				SCREEN_WIDTH, SCREEN_HEIGHT);
 	sng_set_foreground(GREEN);
 	render_entities(w, gc);
+	show_common_screen(w, "");	
+
 }
 
 static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
@@ -4018,7 +4018,6 @@ static void show_weapons(GtkWidget *w)
 	int r;
 	int buttoncolor;
 
-	show_common_screen(w, "Weapons");
 	sng_set_foreground(GREEN);
 
 	if (my_ship_oid == UNKNOWN_ID)
@@ -4063,6 +4062,7 @@ static void show_weapons(GtkWidget *w)
 	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
 	draw_all_the_guys(w, o);
 	draw_all_the_sparks(w, o);
+	show_common_screen(w, "WEAPONS");
 }
 
 static double sample_reqwarpdrive(void);
@@ -4117,7 +4117,6 @@ static void show_navigation(GtkWidget *w)
 	int rx, ry, rw, rh, cx, cy, gx1, gy1, gx2, gy2;
 	int r, sectorx, sectory;
 
-	show_common_screen(w, "Navigation");
 	sng_set_foreground(GREEN);
 
 	if (my_ship_id == UNKNOWN_ID)
@@ -4161,6 +4160,7 @@ static void show_navigation(GtkWidget *w)
 	gy2 = NAV_DATA_Y + NAV_DATA_H - 80;
 	sng_set_foreground(AMBER);
 	draw_science_graph(w, o, o, gx1, gy1, gx2, gy2);
+	show_common_screen(w, "NAV");
 }
 
 struct damcon_ui {
@@ -4346,7 +4346,7 @@ static void init_engineering_ui(void)
 
 static void show_engineering(GtkWidget *w)
 {
-	show_common_screen(w, "Engineering");
+	show_common_screen(w, "ENGINEERING");
 }
 
 static inline int damconx_to_screenx(double x)
@@ -4536,8 +4536,6 @@ static void show_damcon(GtkWidget *w)
 {
 	int i;
 
-	show_common_screen(w, "DAMAGE CONTROL");
-
 	sng_set_foreground(AMBER);
 	sng_current_draw_rectangle(w->window, gc, 0,
 		damconscreenx0, damconscreeny0, damconscreenxdim, damconscreenydim);
@@ -4554,6 +4552,7 @@ static void show_damcon(GtkWidget *w)
 
 	/* restore clipping back to whole window */
 	set_default_clip_window();
+	show_common_screen(w, "DAMAGE CONTROL");
 }
 
 struct science_ui {
@@ -4940,7 +4939,6 @@ static void show_science(GtkWidget *w)
 		return;
 	o = &go[my_ship_oid];
 
-	show_common_screen(w, "Science");
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 	sng_set_foreground(GREEN);
@@ -4970,11 +4968,12 @@ static void show_science(GtkWidget *w)
 	draw_all_the_science_nebulae(w, o, zoom);
 	draw_science_warp_data(w, o);
 	draw_science_data(w, o, curr_science_guy);
+	show_common_screen(w, "SCIENCE");
 }
 
 static void show_comms(GtkWidget *w)
 {
-	show_common_screen(w, "Comms");
+	show_common_screen(w, "COMMS");
 }
 
 static struct demon_ui {
@@ -5558,8 +5557,6 @@ static void show_demon(GtkWidget *w)
 	int yoffset = 10;
 	char buffer[100];
 
-	show_common_screen(w, "DEMON");
-
 	if (go[my_ship_oid].alive > 0)
 		sng_set_foreground(GREEN);
 	else
@@ -5657,6 +5654,8 @@ static void show_demon(GtkWidget *w)
 		sng_draw_dotted_line(w->window, gc, x1, y1, x1, y2);
 		sng_draw_dotted_line(w->window, gc, x2, y1, x2, y2);
 	}
+	show_common_screen(w, "DEMON");
+
 }
 
 static void show_warp_limbo_screen(GtkWidget *w)
