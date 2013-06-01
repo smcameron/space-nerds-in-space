@@ -797,9 +797,9 @@ void add_spark(double x, double y, double vx, double vy, double vz, int time)
 	spark[i].tsd.spark.rx = M_PI / 180.0 * snis_randn(180);
 	spark[i].tsd.spark.ry = M_PI / 180.0 * snis_randn(180);
 	spark[i].tsd.spark.rz = M_PI / 180.0 * snis_randn(180);
-	spark[i].tsd.spark.avx = (M_PI / 180.0) * (snis_randn(10) - 5); 
-	spark[i].tsd.spark.avy = (M_PI / 180.0) * (snis_randn(10) - 5); 
-	spark[i].tsd.spark.avz = (M_PI / 180.0) * (snis_randn(10) - 5); 
+	spark[i].tsd.spark.avx = (M_PI / 180.0) * (snis_randn(30) - 15); 
+	spark[i].tsd.spark.avy = (M_PI / 180.0) * (snis_randn(30) - 15); 
+	spark[i].tsd.spark.avz = (M_PI / 180.0) * (snis_randn(30) - 15); 
 	spark[i].type = OBJTYPE_SPARK;
 	spark[i].alive = time + snis_randn(time);
 	spark[i].move = spark_move;
