@@ -2630,10 +2630,10 @@ static void show_common_screen(GtkWidget *w, char *title)
 	sng_set_foreground(GREEN);
 	sng_abs_xy_draw_string(w, gc, title, SMALL_FONT, 25, 10 + LINEHEIGHT);
 	sng_set_foreground(BLUE);
-	snis_draw_line(w->window, gc, 0, 0, SCREEN_WIDTH, 0);
-	snis_draw_line(w->window, gc, SCREEN_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-	snis_draw_line(w->window, gc, SCREEN_WIDTH, SCREEN_HEIGHT, 0, SCREEN_HEIGHT);
-	snis_draw_line(w->window, gc, 0, 0, 0, SCREEN_HEIGHT);
+	snis_draw_line(w->window, gc, 1, 1, SCREEN_WIDTH, 0);
+	snis_draw_line(w->window, gc, SCREEN_WIDTH - 1, 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+	snis_draw_line(w->window, gc, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, 1, SCREEN_HEIGHT - 1);
+	snis_draw_line(w->window, gc, 1, 1, 1, SCREEN_HEIGHT - 1);
 }
 
 static int normalize_degrees(int degrees)
