@@ -586,7 +586,10 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 			e = add_entity(freighter_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		default:
-			e = add_entity(ship_mesh, x, 0, -y, SHIP_COLOR);
+			if (id == my_ship_id)	
+				e = add_entity(NULL, x, 0, -y, SHIP_COLOR);
+			else
+				e = add_entity(ship_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		}
 		i = add_generic_object(id, x, y, vx, vy, heading, type, alive, e);
@@ -2693,11 +2696,11 @@ static void show_mainscreen(GtkWidget *w)
 
 	show_mainscreen_starfield(w, o->heading);
 
-	cx = (float) o->x - sin(o->heading) * 20;
-	cy = (float) -o->y - cos(o->heading) * 20;
+	cx = (float) o->x;
+	cy = (float) -o->y;
 	cz = -6.0;
-	lx = cx + sin(o->heading) * 60.0;
-	ly = cy + cos(o->heading) * 60.0;
+	lx = cx + sin(o->heading) * 500.0;
+	ly = cy + cos(o->heading) * 500.0;
 	camera_set_pos(cx, (float) cz, cy);
 	camera_look_at(lx, (float) 0.0, ly);
 	camera_set_parameters((float) 20, (float) 300, (float) 16, (float) 12,

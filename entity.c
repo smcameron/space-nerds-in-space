@@ -464,10 +464,8 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 
 		if (!snis_object_pool_is_allocated(entity_pool, i))
 			continue;
-		if (entity_list[i].m == NULL) {
-			fprintf(stderr, "Unexpected null mesh, skipping.\n");
+		if (entity_list[i].m == NULL)
 			continue;
-		}
 		point_to_test.m[0] = entity_list[i].x - camera.x;
 		point_to_test.m[1] = entity_list[i].y - camera.y;
 		point_to_test.m[2] = entity_list[i].z - camera.z;
