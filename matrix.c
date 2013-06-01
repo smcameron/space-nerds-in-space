@@ -208,6 +208,11 @@ float dist3d(float dx, float dy, float dz)
 	return sqrt(dx * dx + dy * dy + dz * dz);
 }
 
+float dist3dsqrd(float dx, float dy, float dz)
+{
+	return dx * dx + dy * dy + dz * dz;
+}
+
 /* safe to call with v == output */
 void normalize_vector(struct mat41 *v, struct mat41 *output)
 {

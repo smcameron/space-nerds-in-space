@@ -68,6 +68,7 @@ GLOBAL void print44(struct mat44 *m);
 GLOBAL void print41(struct mat41 *m);
 GLOBAL float mat41_dot_mat41(struct mat41 *m1, struct mat41 *m2);
 GLOBAL float dist3d(float dx, float dy, float dz);
+GLOBAL float dist3dsqrd(float dx, float dy, float dz);
 
 #undef GLOBAL
 #endif
