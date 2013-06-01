@@ -207,7 +207,7 @@ struct explosion_data {
 };
 
 struct spark_data {
-	double z, vz;
+	double z, vz, rx, ry, rz, avx, avy, avz;
 };
 
 union type_specific_data {

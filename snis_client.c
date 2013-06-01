@@ -198,6 +198,7 @@ struct mesh *destroyer_mesh;
 struct mesh *transport_mesh;
 struct mesh *battlestar_mesh;
 struct mesh *particle_mesh;
+struct mesh *debris_mesh;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -740,6 +741,12 @@ static void spark_move(struct snis_entity *o)
 	o->x += o->vx;
 	o->y += o->vy;
 	o->tsd.spark.z += o->tsd.spark.vz;
+	o->tsd.spark.rx += o->tsd.spark.avx;
+	o->tsd.spark.ry += o->tsd.spark.avy;
+	o->tsd.spark.rz += o->tsd.spark.avz;
+	normalize_angle(&o->tsd.spark.rx);
+	normalize_angle(&o->tsd.spark.ry);
+	normalize_angle(&o->tsd.spark.rz);
 	o->alive--;
 	if (o->alive <= 0) {
 		remove_entity(o->entity);
@@ -756,6 +763,10 @@ static void move_sparks(void)
 			spark[i].move(&spark[i]);
 			update_entity_pos(spark[i].entity, spark[i].x,
 						spark[i].tsd.spark.z, -spark[i].y);
+			update_entity_rotation(spark[i].entity,
+						spark[i].tsd.spark.rx,
+						spark[i].tsd.spark.ry,
+						spark[i].tsd.spark.rz);
 		}
 }
 
@@ -767,7 +778,10 @@ void add_spark(double x, double y, double vx, double vy, double vz, int time)
 	i = snis_object_pool_alloc_obj(sparkpool);
 	if (i < 0)
 		return;
-	e = add_entity(particle_mesh, x, 0, -y, PARTICLE_COLOR);
+	if (snis_randn(100) < 50 || time < 10)
+		e = add_entity(particle_mesh, x, 0, -y, PARTICLE_COLOR);
+	else
+		e = add_entity(debris_mesh, x, 0, -y, SHIP_COLOR);
 	memset(&spark[i], 0, sizeof(spark[i]));
 	spark[i].index = i;
 	spark[i].x = x;
@@ -776,6 +790,12 @@ void add_spark(double x, double y, double vx, double vy, double vz, int time)
 	spark[i].vx = vx;
 	spark[i].vy = vy;
 	spark[i].tsd.spark.vz = vz;
+	spark[i].tsd.spark.rx = M_PI / 180.0 * snis_randn(180);
+	spark[i].tsd.spark.ry = M_PI / 180.0 * snis_randn(180);
+	spark[i].tsd.spark.rz = M_PI / 180.0 * snis_randn(180);
+	spark[i].tsd.spark.avx = (M_PI / 180.0) * (snis_randn(10) - 5); 
+	spark[i].tsd.spark.avy = (M_PI / 180.0) * (snis_randn(10) - 5); 
+	spark[i].tsd.spark.avz = (M_PI / 180.0) * (snis_randn(10) - 5); 
 	spark[i].type = OBJTYPE_SPARK;
 	spark[i].alive = time + snis_randn(time);
 	spark[i].move = spark_move;
@@ -6318,6 +6338,7 @@ static void init_meshes(void)
 	transport_mesh = read_stl_file("transport.stl");
 	battlestar_mesh = read_stl_file("battlestar.stl");
 	particle_mesh = read_stl_file("tetrahedron.stl");
+	debris_mesh = read_stl_file("flat-tetrahedron.stl");
 #else
 #define THE_MODEL "starbase.stl"
 	ship_mesh = read_stl_file(THE_MODEL);
