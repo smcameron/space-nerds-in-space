@@ -199,6 +199,7 @@ struct mesh *transport_mesh;
 struct mesh *battlestar_mesh;
 struct mesh *particle_mesh;
 struct mesh *debris_mesh;
+struct mesh *debris2_mesh;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -772,16 +773,19 @@ static void move_sparks(void)
 
 void add_spark(double x, double y, double vx, double vy, double vz, int time)
 {
-	int i;
+	int i, r;
 	struct entity *e;
 
 	i = snis_object_pool_alloc_obj(sparkpool);
 	if (i < 0)
 		return;
-	if (snis_randn(100) < 50 || time < 10)
+	r = snis_randn(100);
+	if (r < 50 || time < 10)
 		e = add_entity(particle_mesh, x, 0, -y, PARTICLE_COLOR);
-	else
+	else if (r < 75)
 		e = add_entity(debris_mesh, x, 0, -y, SHIP_COLOR);
+	else
+		e = add_entity(debris2_mesh, x, 0, -y, SHIP_COLOR);
 	memset(&spark[i], 0, sizeof(spark[i]));
 	spark[i].index = i;
 	spark[i].x = x;
@@ -6339,6 +6343,7 @@ static void init_meshes(void)
 	battlestar_mesh = read_stl_file("battlestar.stl");
 	particle_mesh = read_stl_file("tetrahedron.stl");
 	debris_mesh = read_stl_file("flat-tetrahedron.stl");
+	debris2_mesh = read_stl_file("big-flat-tetrahedron.stl");
 #else
 #define THE_MODEL "starbase.stl"
 	ship_mesh = read_stl_file(THE_MODEL);

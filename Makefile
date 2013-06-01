@@ -34,7 +34,7 @@ PROGS=snis_server snis_client
 
 MODELS=freighter.stl laser.stl planet.stl spaceship.stl starbase.stl torpedo.stl \
 	tanker.stl destroyer.stl transport.stl battlestar.stl cruiser.stl tetrahedron.stl \
-	flat-tetrahedron.stl
+	flat-tetrahedron.stl big-flat-tetrahedron.stl
 
 #MYCFLAGS=-g --pedantic -Wall -Werror -pthread -std=gnu99
 MYCFLAGS=-g --pedantic -Wall -Werror -pthread -std=gnu99
