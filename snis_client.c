@@ -6336,6 +6336,7 @@ static void init_meshes(void)
 	torpedo_mesh = read_stl_file("torpedo.stl");
 	laser_mesh = read_stl_file("laser.stl");
 	planet_mesh = read_stl_file("planet.stl");
+	distort_mesh(planet_mesh, 0.10);
 	starbase_mesh = read_stl_file("starbase.stl");
 	freighter_mesh = read_stl_file("freighter.stl");
 	cruiser_mesh = read_stl_file("cruiser.stl");
