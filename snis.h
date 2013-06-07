@@ -34,7 +34,7 @@
 #define MAXSPARKS 1000
 
 #define NBASES 5
-#define NPLANETS 200
+#define NASTEROIDS 200
 #define NESHIPS 50
 #define NNEBULA 20
 #define NEBULA_RADIUS 5000
@@ -44,7 +44,7 @@
 
 #define OBJTYPE_SHIP1 9 /* players */
 #define OBJTYPE_SHIP2 1 /* computer controlled ships */
-#define OBJTYPE_PLANET 2 
+#define OBJTYPE_ASTEROID 2
 #define OBJTYPE_STARBASE 3
 #define OBJTYPE_DEBRIS 4
 #define OBJTYPE_SPARK 5

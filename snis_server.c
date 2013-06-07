@@ -1271,11 +1271,11 @@ static int add_ship(double x, double y, double vx, double vy, double heading)
 	return i;
 }
 
-static int add_planet(double x, double y, double vx, double vy, double heading)
+static int add_asteroid(double x, double y, double vx, double vy, double heading)
 {
 	int i;
 
-	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_PLANET);
+	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_ASTEROID);
 	if (i < 0)
 		return i;
 	go[i].sdata.shield_strength = 0;
@@ -1405,15 +1405,15 @@ static void add_nebulae(void)
 	}
 }
 
-static void add_planets(void)
+static void add_asteroids(void)
 {
 	int i;
 	double x, y;
 
-	for (i = 0; i < NPLANETS; i++) {
+	for (i = 0; i < NASTEROIDS; i++) {
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
 		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
-		add_planet(x, y, 0.0, 0.0, 0.0);
+		add_asteroid(x, y, 0.0, 0.0, 0.0);
 	}
 }
 
@@ -1437,7 +1437,7 @@ static void make_universe(void)
 
 	add_nebulae(); /* do nebula first */
 	add_starbases();
-	add_planets();
+	add_asteroids();
 	add_eships();
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -2537,7 +2537,7 @@ static void send_update_ship_packet(struct game_client *c,
 	struct snis_entity *o, uint16_t opcode);
 static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o);
-static void send_update_planet_packet(struct game_client *c,
+static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o);
@@ -2574,8 +2574,8 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	case OBJTYPE_SHIP2:
 		send_econ_update_ship_packet(c, o);
 		break;
-	case OBJTYPE_PLANET:
-		send_update_planet_packet(c, o);
+	case OBJTYPE_ASTEROID:
+		send_update_asteroid_packet(c, o);
 		break;
 	case OBJTYPE_STARBASE:
 		send_update_starbase_packet(c, o);
@@ -2912,13 +2912,13 @@ static void send_update_damcon_part_packet(struct game_client *c,
 }
 
 
-static void send_update_planet_packet(struct game_client *c,
+static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct update_planet_packet));
-	packed_buffer_append(pb, "hwSS", OPCODE_UPDATE_PLANET, o->id,
+	pb = packed_buffer_allocate(sizeof(struct update_asteroid_packet));
+	packed_buffer_append(pb, "hwSS", OPCODE_UPDATE_ASTEROID, o->id,
 		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }

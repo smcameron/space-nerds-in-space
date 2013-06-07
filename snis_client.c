@@ -74,6 +74,7 @@
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
 #define PLANET_COLOR GREEN
+#define ASTEROID_COLOR AMBER
 #define PARTICLE_COLOR YELLOW
 #define LASER_COLOR GREEN
 #define TORPEDO_COLOR WHITE
@@ -676,15 +677,15 @@ static int update_laser(uint32_t id, double x, double y, double vx, double vy, u
 	return 0;
 }
 
-static int update_planet(uint32_t id, double x, double y)
+static int update_asteroid(uint32_t id, double x, double y)
 {
 	int i;
 	struct entity *e;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(asteroid_mesh[snis_randn(4)], x, 0, -y, PLANET_COLOR);
-		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_PLANET, 1, e);
+		e = add_entity(asteroid_mesh[snis_randn(4)], x, 0, -y, ASTEROID_COLOR);
+		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -875,9 +876,9 @@ static int update_explosion(uint32_t id, double x, double y,
 	return 0;
 }
 
-static int __attribute__((unused)) add_planet(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
+static int __attribute__((unused)) add_asteroid(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
 {
-	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_PLANET, alive, NULL);
+	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_ASTEROID, alive, NULL);
 }
 
 static int __attribute__((unused)) add_starbase(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
@@ -2115,7 +2116,7 @@ static int process_ship_damage_packet(void)
 	return 0;
 }
 
-static int process_update_planet_packet(void)
+static int process_update_asteroid_packet(void)
 {
 	unsigned char buffer[100];
 	struct packed_buffer pb;
@@ -2123,15 +2124,15 @@ static int process_update_planet_packet(void)
 	double dx, dy;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_planet_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_planet_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	packed_buffer_extract(&pb, "wSS", &id,
 			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM);
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_planet(id, dx, dy);
+	rc = update_asteroid(id, dx, dy);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -2254,8 +2255,8 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			if (rc)
 				goto protocol_error;
 			break;
-		case OPCODE_UPDATE_PLANET:
-			rc = process_update_planet_packet();
+		case OPCODE_UPDATE_ASTEROID:
+			rc = process_update_asteroid_packet();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -2799,7 +2800,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			sng_set_foreground(WHITE);
 			sprintf(buffer, "%s %s\n", "Starbase",  o->sdata.name); 
 			break;
-		case OBJTYPE_PLANET:
+		case OBJTYPE_ASTEROID:
 			sng_set_foreground(BLUE);
 			sprintf(buffer, "%s %s\n", "Asteroid",  o->sdata.name); 
 			break;
@@ -2982,7 +2983,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 			double alter_angle; /* FIXME this is an ugly hack */
 			alter_angle = 0.0;
 			switch (go[i].type) {
-			case OBJTYPE_PLANET:
+			case OBJTYPE_ASTEROID:
 				sng_set_foreground(BLUE);
 				sng_draw_circle(w->window, gc, x, y, r / 10);
 				break;
@@ -4852,7 +4853,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		case OBJTYPE_STARBASE:
 			sprintf(buffer, "TYPE: %s", "Starbase"); 
 			break;
-		case OBJTYPE_PLANET:
+		case OBJTYPE_ASTEROID:
 			sprintf(buffer, "TYPE: %s", "Asteroid"); 
 			break;
 		default:
@@ -5177,7 +5178,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 			}
 		}
 		break;
-	case OBJTYPE_PLANET:
+	case OBJTYPE_ASTEROID:
 		sng_set_foreground(BLUE);
 		break;
 	case OBJTYPE_NEBULA:

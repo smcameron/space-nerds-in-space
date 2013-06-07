@@ -30,7 +30,7 @@
 #define OPCODE_UPDATE_PLAYER	104
 #define OPCODE_ACK_PLAYER	105	
 #define OPCODE_ID_CLIENT_SHIP	106
-#define OPCODE_UPDATE_PLANET	107
+#define OPCODE_UPDATE_ASTEROID	107
 #define OPCODE_REQUEST_YAW	108
 #define OPCODE_REQUEST_THRUST	109
 #define OPCODE_REQUEST_GUNYAW	110
@@ -148,7 +148,7 @@ struct client_ship_id_packet {
 	uint32_t shipid;
 };
 
-struct update_planet_packet {
+struct update_asteroid_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint32_t x, y;
