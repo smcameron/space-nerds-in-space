@@ -162,6 +162,19 @@ static void generic_move(__attribute__((unused)) struct snis_entity *o)
 	return;
 }
 
+static void asteroid_move(struct snis_entity *o)
+{
+	double angle;
+
+	angle = (universe_timestamp * M_PI / 180) / o->tsd.asteroid.r +
+			o->tsd.asteroid.angle_offset;
+	angle = angle * ASTEROID_SPEED;
+
+	o->x = o->tsd.asteroid.r * sin(angle) + XKNOWN_DIM / 2.0;
+	o->y = o->tsd.asteroid.r * cos(angle) + YKNOWN_DIM / 2.0;
+	o->timestamp = universe_timestamp;
+}
+
 static void queue_delete_oid(struct game_client *c, uint32_t oid)
 {
 	struct packed_buffer *pb;
@@ -1282,6 +1295,10 @@ static int add_asteroid(double x, double y, double vx, double vy, double heading
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
 	go[i].sdata.shield_depth = 0;
+	go[i].move = asteroid_move;
+	go[i].tsd.asteroid.r = hypot(x - XKNOWN_DIM / 2.0, y - YKNOWN_DIM / 2.0);
+	go[i].tsd.asteroid.angle_offset = atan2(x - XKNOWN_DIM / 2.0,
+							y - YKNOWN_DIM / 2.0);
 	return i;
 }
 

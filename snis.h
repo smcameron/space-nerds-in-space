@@ -35,6 +35,9 @@
 
 #define NBASES 5
 #define NASTEROIDS 200
+#define NASTEROID_CLUSTERS 10
+#define ASTEROID_CLUSTER_RADIUS 20000
+#define ASTEROID_SPEED 200 
 #define NESHIPS 50
 #define NNEBULA 20
 #define NEBULA_RADIUS 5000
@@ -210,6 +213,11 @@ struct spark_data {
 	double z, vz, rx, ry, rz, avx, avy, avz;
 };
 
+struct asteroid_data {
+	double r; /* distance from center of universe */
+	double angle_offset;
+};
+
 union type_specific_data {
 	struct ship_data ship;
 	struct laser_data laser;
@@ -218,6 +226,7 @@ union type_specific_data {
 	struct explosion_data explosion;
 	struct nebula_data nebula;
 	struct spark_data spark;
+	struct asteroid_data asteroid;
 };
 
 struct snis_entity;
