@@ -49,8 +49,9 @@ Too much to list, but here's a list anyway:
 * asteroids/anomalies/nebulae, etc. need to be implemented
 
 * 3D out the window view remains to be done.
-  Kinda sorta done now.   Still lots of work to do though,
-  view frustrum clipping in particular.
+  Kinda sorta done now.
+  Fade distant objects to black
+  Represent nebulas somehow
 
 * comms screen:
   enemies need to send insults to the crew
@@ -59,10 +60,14 @@ Too much to list, but here's a list anyway:
   intercept chatter between enemy ships
   ??? need to figure out what the hell the comms screen is good for.
 
-* Damage controll screen:
+* Damage control screen:
   Make the various components of the systems less generic
   and have damage distributed around to the components.
   Allow repairing/replacing of the components.  Am thinking
   replacing is better than repairing with some limited spares
   that must be refreshed at starbases.
+
+* Make ship consume fuel.  Report remaining fuel, fuel consumption
+  rate, time left at current consumption rate, fuel consumption rate
+  per system.
 
