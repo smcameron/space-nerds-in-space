@@ -689,7 +689,16 @@ static int update_asteroid(uint32_t id, double x, double y)
 		if (i < 0)
 			return i;
 	} else {
+		int axis;
+		float angle;
+
 		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+
+		/* make asteroids spin */
+		angle = (timer % (360 * ((i % 6) + 2))) * M_PI / 180.0;
+		axis = (i % 3);
+		update_entity_rotation(go[i].entity, (axis == 0) * angle,
+					(axis == 1) * angle, (axis == 2) * angle);
 	}
 	return 0;
 }
