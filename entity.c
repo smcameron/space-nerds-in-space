@@ -22,6 +22,7 @@
 #include <string.h>
 #include <math.h>
 #include <gtk/gtk.h>
+#include <stdlib.h>
 
 #include "mathutils.h"
 #include "matrix.h"
@@ -592,5 +593,43 @@ void distort_mesh(struct mesh *m, float distortion)
 		m->v[i].y += m->v[i].y * dy;
 		m->v[i].z += m->v[i].z * dz;
 	}
+}
+
+static int lookup_vertex(struct mesh *m, struct vertex *v)
+{
+	int i;
+
+	for (i = 0; i < m->nvertices; i++)
+		if (&m->v[i] == v)
+			return i;
+	return -1;
+}
+
+struct mesh *duplicate_mesh(struct mesh *original)
+{
+	struct mesh *copy;
+	int i;
+
+	copy = malloc(sizeof(*copy));
+	copy->ntriangles = original->ntriangles;
+	copy->nvertices = original->nvertices;
+	copy->t = malloc(sizeof(*copy->t) * copy->ntriangles);
+	copy->v = malloc(sizeof(*copy->v) * copy->nvertices);
+
+	for (i = 0; i < original->nvertices; i++)
+		copy->v[i] = original->v[i];
+
+	for (i = 0; i < original->ntriangles; i++) {
+		int v0, v1, v2;
+
+		v0 = lookup_vertex(original, original->t[i].v[0]);
+		v1 = lookup_vertex(original, original->t[i].v[1]);
+		v2 = lookup_vertex(original, original->t[i].v[2]);
+
+		copy->t[i].v[0] = &copy->v[v0];
+		copy->t[i].v[1] = &copy->v[v1];
+		copy->t[i].v[2] = &copy->v[v2];
+	}
+	return copy;
 }
 
