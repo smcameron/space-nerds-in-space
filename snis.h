@@ -34,7 +34,7 @@
 #define MAXSPARKS 1000
 
 #define NBASES 5
-#define NPLANETS 10
+#define NPLANETS 200
 #define NESHIPS 50
 #define NNEBULA 20
 #define NEBULA_RADIUS 5000
