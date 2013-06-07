@@ -1424,13 +1424,19 @@ static void add_nebulae(void)
 
 static void add_asteroids(void)
 {
-	int i;
-	double x, y;
+	int i, j;
+	double x, y, cx, cy, a, r;
 
-	for (i = 0; i < NASTEROIDS; i++) {
-		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
-		add_asteroid(x, y, 0.0, 0.0, 0.0);
+	for (i = 0; i < NASTEROID_CLUSTERS; i++) {
+		cx = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+		cy = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		for (j = 0; j < NASTEROIDS / NASTEROID_CLUSTERS; j++) {
+			a = (double) snis_randn(360) * M_PI / 180.0;
+			r = snis_randn(ASTEROID_CLUSTER_RADIUS);
+			x = cx + r * sin(a);
+			y = cy + r * cos(a);
+			add_asteroid(x, y, 0.0, 0.0, 0.0);
+		}
 	}
 }
 
