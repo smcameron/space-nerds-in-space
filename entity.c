@@ -30,6 +30,7 @@
 #include "mesh.h"
 #include "stl_parser.h"
 #include "entity.h"
+#include "mathutils.h"
 
 #include "my_point.h"
 #include "snis_font.h"
@@ -574,5 +575,22 @@ void camera_set_parameters(float near, float far, float width, float height,
 void entity_init(void)
 {
 	snis_object_pool_setup(&entity_pool, MAX_ENTITIES);
+}
+
+void distort_mesh(struct mesh *m, float distortion)
+{
+	int i;
+
+	for (i = 0; i < m->nvertices; i++) {
+		float dx, dy, dz;
+
+		dx = (float) snis_randn(1000) / 1000.0 * distortion - 0.5;
+		dy = (float) snis_randn(1000) / 1000.0 * distortion - 0.5;
+		dz = (float) snis_randn(1000) / 1000.0 * distortion - 0.5;
+
+		m->v[i].x += m->v[i].x * dx;
+		m->v[i].y += m->v[i].y * dy;
+		m->v[i].z += m->v[i].z * dz;
+	}
 }
 
