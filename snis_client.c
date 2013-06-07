@@ -189,6 +189,7 @@ double cosine[361];
 struct mesh *torpedo_mesh;
 struct mesh *laser_mesh;
 struct mesh *planet_mesh;
+struct mesh *asteroid_mesh[4];
 struct mesh *starbase_mesh;
 struct mesh *ship_mesh;
 struct mesh *freighter_mesh;
@@ -682,7 +683,7 @@ static int update_planet(uint32_t id, double x, double y)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(planet_mesh, x, 0, -y, PLANET_COLOR);
+		e = add_entity(asteroid_mesh[snis_randn(4)], x, 0, -y, PLANET_COLOR);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
@@ -6336,7 +6337,14 @@ static void init_meshes(void)
 	torpedo_mesh = read_stl_file("torpedo.stl");
 	laser_mesh = read_stl_file("laser.stl");
 	planet_mesh = read_stl_file("planet.stl");
-	distort_mesh(planet_mesh, 0.10);
+	asteroid_mesh[0] = read_stl_file("asteroid.stl");
+	asteroid_mesh[1] = read_stl_file("asteroid2.stl");
+	asteroid_mesh[2] = read_stl_file("asteroid3.stl");
+	asteroid_mesh[3] = read_stl_file("asteroid4.stl");
+	distort_mesh(asteroid_mesh[0], 0.10);
+	distort_mesh(asteroid_mesh[1], 0.10);
+	distort_mesh(asteroid_mesh[2], 0.10);
+	distort_mesh(asteroid_mesh[3], 0.10);
 	starbase_mesh = read_stl_file("starbase.stl");
 	freighter_mesh = read_stl_file("freighter.stl");
 	cruiser_mesh = read_stl_file("cruiser.stl");
