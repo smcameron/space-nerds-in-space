@@ -325,15 +325,6 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 static void transform_fake_star(struct fake_star *fs, struct mat44 *transform)
 {
 	struct mat41 *m1, *m2;
-
-	/* calculate the object transform... */
-	struct mat44 total_transform, tmp_transform;
-	struct mat44 object_translation = {{{ 1,    0,     0,    0 },
-					    { 0,    1,     0,    0 },
-					    { 0,    0,     1,    0 },
-					    { fs->v.x, fs->v.y, fs->v.z, 1 }}};
-	tmp_transform = *transform;
-	mat44_product(&tmp_transform, &object_translation, &total_transform);
 	
 	/* Set homogeneous coord to 1 initially for all vertices */
 	fs->v.w = 1.0;
