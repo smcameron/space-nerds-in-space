@@ -190,7 +190,7 @@ double cosine[361];
 struct mesh *torpedo_mesh;
 struct mesh *laser_mesh;
 struct mesh *planet_mesh;
-struct mesh *asteroid_mesh[NASTEROID_MODELS];
+struct mesh *asteroid_mesh[NASTEROID_MODELS * NASTEROID_SCALES];
 struct mesh *starbase_mesh;
 struct mesh *ship_mesh;
 struct mesh *freighter_mesh;
@@ -684,7 +684,7 @@ static int update_asteroid(uint32_t id, double x, double y)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(asteroid_mesh[snis_randn(NASTEROID_MODELS)],
+		e = add_entity(asteroid_mesh[snis_randn(NASTEROID_MODELS * NASTEROID_SCALES)],
 					x, 0, -y, ASTEROID_COLOR);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
@@ -6361,6 +6361,17 @@ static void init_meshes(void)
 		printf("reading '%s'\n", filename);
 		asteroid_mesh[i] = read_stl_file(filename);
 		distort_mesh(asteroid_mesh[i], 0.10);
+	}
+
+	for (i = 0; i < NASTEROID_MODELS; i++) {
+		int j;
+
+		for (j = 1; j < NASTEROID_SCALES; j++) {
+			float scale = j * 1.5;
+			int k = j * NASTEROID_MODELS + i;
+			asteroid_mesh[k] = duplicate_mesh(asteroid_mesh[i]);
+			scale_mesh(asteroid_mesh[k], scale);
+		}
 	}
 
 	starbase_mesh = read_stl_file("starbase.stl");
