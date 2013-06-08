@@ -44,6 +44,11 @@
 
 static unsigned long ntris, nents, nlines;
 
+struct fake_star {
+	struct vertex v;
+	float dist3dsqrd;
+};
+
 struct entity {
 	struct mesh *m;
 	float x, y, z; /* world coords */
@@ -63,6 +68,8 @@ struct camera_info {
 static struct snis_object_pool *entity_pool;
 static struct entity entity_list[MAX_ENTITIES];
 static int entity_depth[MAX_ENTITIES];
+static struct fake_star *fake_star;
+static int nfakestars = 0;
 
 static float rx, ry, rz;
 
@@ -120,6 +127,15 @@ static int is_backface(int x1, int y1, int x2, int y2, int x3, int y3)
 			(x2 * y3 - x3 * y2) +
 			(x3 * y1 - x1 * y3);
 	return twicearea >= 0;
+}
+
+static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc, struct fake_star *fs)
+{
+	int x1, y1;
+
+	x1 = (int) (fs->v.wx * camera.xvpixels / 2) + camera.xvpixels / 2;
+	y1 = (int) (fs->v.wy * camera.yvpixels / 2) + camera.yvpixels / 2;
+	sng_current_draw_line(w->window, gc, x1, y1, x1 + 1, y1); 
 }
 
 void wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
@@ -306,6 +322,32 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 	nents++;
 }
 
+static void transform_fake_star(struct fake_star *fs, struct mat44 *transform)
+{
+	struct mat41 *m1, *m2;
+
+	/* calculate the object transform... */
+	struct mat44 total_transform, tmp_transform;
+	struct mat44 object_translation = {{{ 1,    0,     0,    0 },
+					    { 0,    1,     0,    0 },
+					    { 0,    0,     1,    0 },
+					    { fs->v.x, fs->v.y, fs->v.z, 1 }}};
+	tmp_transform = *transform;
+	mat44_product(&tmp_transform, &object_translation, &total_transform);
+	
+	/* Set homogeneous coord to 1 initially for all vertices */
+	fs->v.w = 1.0;
+
+	/* Do the transformation... */
+	m1 = (struct mat41 *) &fs->v.x;
+	m2 = (struct mat41 *) &fs->v.wx;
+	mat44_x_mat41(transform, m1, m2);
+	/* normalize... */
+	m2->m[0] /= m2->m[3];
+	m2->m[1] /= m2->m[3];
+	m2->m[2] /= m2->m[3];
+}
+
 static void transform_entity(struct entity *e, struct mat44 *transform)
 {
 	int i;
@@ -409,6 +451,8 @@ static inline float sqr(float a)
 	return a * a;
 }
 
+static void reposition_fake_star(struct fake_star *fs, float radius);
+
 void render_entities(GtkWidget *w, GdkGC *gc)
 {
 	int i, j;
@@ -506,6 +550,42 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 
 	mat44_product(&perspective_transform, &cameralook_transform, &tmp_transform);
 	mat44_product(&tmp_transform, &cameralocation_transform, &total_transform);
+
+	/* draw fake stars */
+	sng_set_foreground(WHITE);
+	for (i = 0; i < nfakestars; i++) {
+		float behind_camera;
+		struct fake_star *fs = &fake_star[i];
+		struct mat41 point_to_test;
+
+		point_to_test.m[0] = fs->v.x - camera.x;
+		point_to_test.m[1] = fs->v.y - camera.y;
+		point_to_test.m[2] = fs->v.z - camera.z;
+		point_to_test.m[3] = 1.0;
+
+		fs->dist3dsqrd = dist3dsqrd(camera.x - fs->v.x,
+						camera.y - fs->v.y,
+						camera.z - fs->v.z);
+
+		behind_camera = mat41_dot_mat41(&look_direction, &point_to_test);
+		if (behind_camera < 0) /* behind camera */
+			goto check_for_reposition;
+
+		/* Really cheezy view culling */
+		ent_angle = atan2f(point_to_test.m[2], point_to_test.m[0]);
+		ent_angle = fabs(ent_angle - camera_angle);
+		if (ent_angle > M_PI)
+			ent_angle = (2 * M_PI - ent_angle);
+		if (ent_angle > (camera.angle_of_view / 2.0) * M_PI / 180.0)
+			goto check_for_reposition;
+
+		transform_fake_star(fs, &total_transform);
+		wireframe_render_fake_star(w, gc, fs);
+
+check_for_reposition:
+		if (fs->dist3dsqrd > camera.far * 10.0f * camera.far * 10.0f)
+			reposition_fake_star(fs, camera.far * 10.0f);
+	}
 
 	sort_entity_distances();
 	   
@@ -644,3 +724,38 @@ struct mesh *duplicate_mesh(struct mesh *original)
 	return copy;
 }
 
+/* fill a sphere of specified radius with randomly placed stars */
+void entity_init_fake_stars(int nstars, float radius)
+{
+	int i;
+
+	fake_star = malloc(sizeof(*fake_star) * nstars);
+	memset(fake_star, 0, sizeof(*fake_star) * nstars);
+
+	for (i = 0; i < nstars; i++) {
+		struct fake_star *fs = &fake_star[i];
+
+		random_point_in_sphere(radius, &fs->v.x, &fs->v.y, &fs->v.z,
+					&fs->dist3dsqrd);
+		fs->v.x += camera.x;
+		fs->v.y += camera.y;
+		fs->v.z += camera.z;
+	}
+	nfakestars = nstars;
+}
+
+/* Re-position a star randomly on the surface of sphere of given radius */
+static void reposition_fake_star(struct fake_star *fs, float radius)
+{
+	/* I tried "on" sphere here, but I like the look of "in" better. */
+	random_point_in_sphere(radius, &fs->v.x, &fs->v.y, &fs->v.z, &fs->dist3dsqrd);
+	fs->v.x += camera.x;
+	fs->v.y += camera.y;
+	fs->v.z += camera.z;
+}
+
+void entity_free_fake_stars(void)
+{
+	nfakestars = 0;
+	free(fake_star);
+}

@@ -2698,6 +2698,7 @@ static void show_mainscreen_starfield(GtkWidget *w, double heading)
 
 static void show_mainscreen(GtkWidget *w)
 {
+	static int fake_stars_initialized = 0;
 	struct snis_entity *o;
 	float cx, cy, cz, lx, ly;
 
@@ -2721,6 +2722,10 @@ static void show_mainscreen(GtkWidget *w)
 	camera_set_parameters((float) 20, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
 	sng_set_foreground(GREEN);
+	if (!fake_stars_initialized) {
+		fake_stars_initialized = 1;
+		entity_init_fake_stars(2000, 300.0f * 10.0f);
+	}
 	render_entities(w, gc);
 	show_common_screen(w, "");	
 
