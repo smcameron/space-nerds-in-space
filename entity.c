@@ -595,6 +595,17 @@ void distort_mesh(struct mesh *m, float distortion)
 	}
 }
 
+void scale_mesh(struct mesh *m, float scale)
+{
+	int i;
+
+	for (i = 0; i < m->nvertices; i++) {
+		m->v[i].x += m->v[i].x * scale;
+		m->v[i].y += m->v[i].y * scale;
+		m->v[i].z += m->v[i].z * scale;
+	}
+}
+
 static int lookup_vertex(struct mesh *m, struct vertex *v)
 {
 	int i;
