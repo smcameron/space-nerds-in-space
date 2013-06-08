@@ -681,6 +681,7 @@ static int update_asteroid(uint32_t id, double x, double y)
 {
 	int i, m;
 	struct entity *e;
+	float z;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -694,6 +695,8 @@ static int update_asteroid(uint32_t id, double x, double y)
 		float angle;
 
 		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+		z = (id % 4) * 100.0 - 50.0;
+		update_entity_pos(go[i].entity, x, z, -y);
 
 		/* make asteroids spin */
 		angle = (timer % (360 * ((id % 6) + 2))) * M_PI / 180.0;
