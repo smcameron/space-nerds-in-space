@@ -53,6 +53,11 @@ int snis_randn(int n)
 	return n * snis_rand() / SNIS_RAND_MAX;
 }
 
+float snis_random_float(void)
+{
+	return (2.0f * ((float) snis_rand() / 32768.0f) - 1.0f);
+}
+
 void normalize_angle(double *angle)
 {
 	/* FIXME, there's undoubtedly a better way to normalize radians */
@@ -187,5 +192,48 @@ int circle_from_three_points(double x1, double y1, double x2, double y2, double 
 	dy = *y - y1;
 	*r = sqrt(dx * dx + dy * dy);
 	return 0;
+}
+
+/*
+ * Pick random point on the surface of sphere of given radius with
+ * uniform distribution (harder than I initially thought).
+ */
+void random_point_on_sphere(float radius, float *x, float *y, float *z)
+{
+	float x1, x2, s;
+
+	/* The Marsaglia 1972 rejection method */
+	do {
+		x1 = snis_random_float();
+		x2 = snis_random_float();
+		s = x1 * x1 + x2 * x2;
+	} while (s > 1.0f);
+
+	*x = 2.0f * x1 * sqrt(1.0f - s);
+	*y = 2.0f * x2 * sqrt(1.0f - s);
+	*z = fabs(1.0f - 2.0f * s);
+
+	*x *= radius;
+	*y *= radius;
+	*z *= radius;
+}
+
+static inline float dist3dsqrd(const float x, const float y, const float z)
+{
+	return x * x + y * y + z * z;
+}
+
+/* return random point inside sphere of specified radius */
+void random_point_in_sphere(float radius, float *x, float *y, float *z,
+				float *dsqrd)
+{
+	const float rsqrd = radius * radius;
+
+	do {
+		*x = snis_random_float() * radius;
+		*y = snis_random_float() * radius;
+		*z = snis_random_float() * radius;
+		*dsqrd = dist3dsqrd(*x, *y, *z);
+	} while (*dsqrd > rsqrd);
 }
 

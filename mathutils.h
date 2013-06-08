@@ -38,6 +38,7 @@ GLOBAL double radians_to_degrees(double radians);
 GLOBAL int snis_rand(void); /* like rand() */
 GLOBAL void snis_srand(unsigned seed); /* like srand() */
 GLOBAL int snis_randn(int n); /* returns n * snis_rand() / SNIS_RAND_MAX */
+GLOBAL float snis_random_float(); /* return random number -1 <= n <= 1 */
 GLOBAL void normalize_angle(double *angle);
 GLOBAL double interpolate(double x, double x1, double y1, double x2, double y2);
 GLOBAL double table_interp(double x, double xv[], double yv[], int nv);
@@ -64,5 +65,12 @@ GLOBAL void perpendicular_line_from_two_points(double x1, double y1, double x2, 
    returns -1, otherwise 0 */
 GLOBAL int circle_from_three_points(double x1, double y1, double x2, double y2, double x3, double y3,
 		double *x, double *y, double *r);
+
+/* Return random point on surface of sphere of given radius */
+GLOBAL void random_point_on_sphere(float radius, float *x, float *y, float *z)
+;
+/* return random point inside sphere of specified radius */
+GLOBAL void random_point_in_sphere(float radius, float *x, float *y, float *z,
+                                float *dist3dsqrd);
 
 #endif
