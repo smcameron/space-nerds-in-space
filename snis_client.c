@@ -699,7 +699,7 @@ static int update_asteroid(uint32_t id, double x, double y)
 		update_entity_pos(go[i].entity, x, z, -y);
 
 		/* make asteroids spin */
-		angle = (timer % (360 * ((id % 6) + 2))) * M_PI / 180.0;
+		angle = (timer % (360 * ((id % 12) + 3))) * M_PI / 180.0;
 		axis = (id % 3);
 		update_entity_rotation(go[i].entity, (axis == 0) * angle,
 					(axis == 1) * angle, (axis == 2) * angle);
