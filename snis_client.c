@@ -679,13 +679,13 @@ static int update_laser(uint32_t id, double x, double y, double vx, double vy, u
 
 static int update_asteroid(uint32_t id, double x, double y)
 {
-	int i;
+	int i, m;
 	struct entity *e;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(asteroid_mesh[snis_randn(NASTEROID_MODELS * NASTEROID_SCALES)],
-					x, 0, -y, ASTEROID_COLOR);
+		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
+		e = add_entity(asteroid_mesh[m], x, 0, -y, ASTEROID_COLOR);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
@@ -696,8 +696,8 @@ static int update_asteroid(uint32_t id, double x, double y)
 		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
 
 		/* make asteroids spin */
-		angle = (timer % (360 * ((i % 6) + 2))) * M_PI / 180.0;
-		axis = (i % 3);
+		angle = (timer % (360 * ((id % 6) + 2))) * M_PI / 180.0;
+		axis = (id % 3);
 		update_entity_rotation(go[i].entity, (axis == 0) * angle,
 					(axis == 1) * angle, (axis == 2) * angle);
 	}
