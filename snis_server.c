@@ -2038,6 +2038,30 @@ static int process_request_robot_gripper(struct game_client *c)
 	return 0;
 }
 
+static int process_mainscreen_view_mode(struct game_client *c)
+{
+	int rc;
+	const int bufsize = sizeof(struct request_mainscreen_view_change) -
+					sizeof(uint16_t);
+	unsigned char buffer[bufsize];
+	struct packed_buffer pb, *out;
+	double view_angle;
+	uint8_t view_mode;
+
+	rc = snis_readsocket(c->socket, buffer, bufsize);
+	if (rc)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "Sb", &view_angle, (int32_t) 360, &view_mode);
+
+	/* Rebuild packet and send to all clients with main screen role */
+	out = packed_buffer_allocate(sizeof(struct request_mainscreen_view_change));
+	packed_buffer_append(out, "hSb", OPCODE_MAINSCREEN_VIEW_MODE,
+				view_angle, (int32_t) 360, view_mode);
+	send_packet_to_all_clients_on_a_bridge(c->shipid, out, ROLE_MAIN);
+	return 0;
+}
+
 static int process_demon_command(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct demon_cmd_packet) + 255 * sizeof(uint32_t)];
@@ -2483,6 +2507,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_ROBOT_GRIPPER:
 			rc = process_request_robot_gripper(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_MAINSCREEN_VIEW_MODE:
+			rc = process_mainscreen_view_mode(c);
 			if (rc)
 				goto protocol_error;
 			break;

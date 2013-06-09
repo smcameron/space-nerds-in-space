@@ -76,6 +76,7 @@
 #define OPCODE_DAMCON_SOCKET_UPDATE	150
 #define OPCODE_DAMCON_PART_UPDATE	151
 #define OPCODE_REQUEST_ROBOT_GRIPPER	152
+#define OPCODE_MAINSCREEN_VIEW_MODE	153
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -397,6 +398,14 @@ struct damcon_part_update_packet {
 
 struct request_robot_gripper_packet {
 	uint16_t opcode;
+};
+
+struct request_mainscreen_view_change {
+	uint16_t opcode;
+	uint32_t heading_delta;
+	uint8_t view_mode;
+#define MAINSCREEN_VIEW_MODE_NORMAL 1
+#define MAINSCREEN_VIEW_MODE_WEAPONS 2
 };
 
 #pragma pack()

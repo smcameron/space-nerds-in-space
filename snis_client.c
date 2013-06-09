@@ -1065,7 +1065,7 @@ enum keyaction { keynone, keydown, keyup, keyleft, keyright,
 		key7, key8, keysuicide, keyfullscreen, keythrust, 
 		keysoundeffects, keymusic, keyquit, keytogglemissilealarm,
 		keypausehelp, keyreverse, keyf1, keyf2, keyf3, keyf4, keyf5,
-		keyf6, keyf7, keyf8, keyf9, keyonscreen
+		keyf6, keyf7, keyf8, keyf9, keyonscreen, keyviewmode
 };
 
 enum keyaction keymap[256];
@@ -1124,6 +1124,8 @@ void init_keymap()
 	keymap[GDK_9] = keysuicide;
 	keymap[GDK_O] = keyonscreen;
 	keymap[GDK_o] = keyonscreen;
+	keymap[GDK_w] = keyviewmode;
+	keymap[GDK_W] = keyviewmode;
 
 	ffkeymap[GDK_F1 & 0x00ff] = keyf1;
 	ffkeymap[GDK_F2 & 0x00ff] = keyf2;
@@ -1263,6 +1265,31 @@ static void do_onscreen(uint8_t mode)
 
 	pb = packed_buffer_allocate(sizeof(struct role_onscreen_packet));
 	packed_buffer_append(pb, "hb", OPCODE_ROLE_ONSCREEN, mode);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
+static void do_view_mode_change()
+{
+	uint8_t new_mode;
+	struct packed_buffer *pb;
+	struct snis_entity *o;
+
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return;
+
+	o = &go[my_ship_oid];
+	
+	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL)
+		new_mode = MAINSCREEN_VIEW_MODE_WEAPONS;
+	else
+		new_mode = MAINSCREEN_VIEW_MODE_NORMAL;
+
+	pb = packed_buffer_allocate(sizeof(struct request_mainscreen_view_change));
+	packed_buffer_append(pb, "hSb", OPCODE_MAINSCREEN_VIEW_MODE,
+			0.0, (int32_t) 360, new_mode);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
@@ -1528,6 +1555,12 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		if (control_key_pressed)
 			do_onscreen((uint8_t) displaymode & 0xff);
 		break;
+	case keyviewmode:
+		if (displaymode != DISPLAYMODE_MAINSCREEN)
+			break;
+		/* Toggle main screen between "normal" and "weapons" view */
+		do_view_mode_change();
+		break;
 	default:
 		break;
 	}
@@ -1772,6 +1805,33 @@ static int process_update_damcon_part(void)
 	return rc;
 }
 
+static int process_mainscreen_view_mode(void)
+{
+	unsigned char buffer[sizeof(struct request_mainscreen_view_change) -
+					sizeof(uint16_t)];
+	struct packed_buffer pb;
+	struct snis_entity *o;
+	uint8_t view_mode;
+	double view_angle;
+	int rc;
+
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "Sb", &view_angle, (int32_t) 360,
+				&view_mode);
+	if (my_ship_id == UNKNOWN_ID)
+		return 0;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return 0;
+	o = &go[my_ship_oid];
+	o->tsd.ship.view_angle = view_angle;
+	o->tsd.ship.view_mode = view_mode;
+	return 0;
+}
 
 static int process_update_econ_ship_packet(uint16_t opcode)
 {
@@ -2382,6 +2442,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_MAINSCREEN_VIEW_MODE:
+			rc = process_mainscreen_view_mode();
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 		}
@@ -2696,11 +2761,30 @@ static void show_mainscreen_starfield(GtkWidget *w, double heading)
 	}
 }
 
+static void show_gunsight(GtkWidget *w)
+{
+	int x1, y1, x2, y2, cx, cy;
+
+	cx = SCREEN_WIDTH / 2;
+	cy = SCREEN_HEIGHT / 2;
+	x1 = cx - 50;
+	x2 = cx + 50;
+	y1 = cy - 50;
+	y2 = cy + 50;
+
+	sng_set_foreground(GREEN);
+	snis_draw_line(w->window, gc, x1, cy, x1 + 25, cy);
+	snis_draw_line(w->window, gc, x2 - 25, cy, x2, cy);
+	snis_draw_line(w->window, gc, cx, y1, cx, y1 + 25);
+	snis_draw_line(w->window, gc, cx, y2 - 25, cx, y2);
+}
+
 static void show_mainscreen(GtkWidget *w)
 {
 	static int fake_stars_initialized = 0;
 	struct snis_entity *o;
 	float cx, cy, cz, lx, ly;
+	double camera_look_heading;
 
 	if (my_ship_id == UNKNOWN_ID)
 		return;
@@ -2710,13 +2794,17 @@ static void show_mainscreen(GtkWidget *w)
 		return;
 	o = &go[my_ship_oid];
 
-	show_mainscreen_starfield(w, o->heading);
+	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL)
+		camera_look_heading = o->heading + o->tsd.ship.view_angle;
+	else
+		camera_look_heading = o->tsd.ship.gun_heading;
+	show_mainscreen_starfield(w, camera_look_heading);
 
 	cx = (float) o->x;
 	cy = (float) -o->y;
 	cz = -6.0;
-	lx = cx + sin(o->heading) * 500.0;
-	ly = cy + cos(o->heading) * 500.0;
+	lx = cx + sin(camera_look_heading) * 500.0;
+	ly = cy + cos(camera_look_heading) * 500.0;
 	camera_set_pos(cx, (float) cz, cy);
 	camera_look_at(lx, (float) 0.0, ly);
 	camera_set_parameters((float) 20, (float) 300, (float) 16, (float) 12,
@@ -2727,6 +2815,8 @@ static void show_mainscreen(GtkWidget *w)
 		entity_init_fake_stars(2000, 300.0f * 10.0f);
 	}
 	render_entities(w, gc);
+	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
+		show_gunsight(w);
 	show_common_screen(w, "");	
 
 }

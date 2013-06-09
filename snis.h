@@ -181,6 +181,8 @@ struct ship_data {
 	struct ship_damage_data damage;
 	struct command_data cmd_data;
 	struct damcon_data *damcon;
+	uint8_t view_mode;
+	double view_angle;
 };
 
 struct starbase_data {
