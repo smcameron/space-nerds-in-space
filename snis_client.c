@@ -1556,7 +1556,9 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			do_onscreen((uint8_t) displaymode & 0xff);
 		break;
 	case keyviewmode:
-		if (displaymode != DISPLAYMODE_MAINSCREEN)
+		if (displaymode != DISPLAYMODE_MAINSCREEN &&
+			displaymode != DISPLAYMODE_WEAPONS &&
+			displaymode != DISPLAYMODE_NAVIGATION)
 			break;
 		/* Toggle main screen between "normal" and "weapons" view */
 		do_view_mode_change();
