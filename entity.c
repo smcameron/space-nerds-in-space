@@ -664,6 +664,7 @@ void distort_mesh(struct mesh *m, float distortion)
 		m->v[i].y += m->v[i].y * dy;
 		m->v[i].z += m->v[i].z * dz;
 	}
+	m->radius = mesh_compute_radius(m);
 }
 
 void scale_mesh(struct mesh *m, float scale)
@@ -675,6 +676,7 @@ void scale_mesh(struct mesh *m, float scale)
 		m->v[i].y += m->v[i].y * scale;
 		m->v[i].z += m->v[i].z * scale;
 	}
+	m->radius = mesh_compute_radius(m);
 }
 
 static int lookup_vertex(struct mesh *m, struct vertex *v)
@@ -712,6 +714,7 @@ struct mesh *duplicate_mesh(struct mesh *original)
 		copy->t[i].v[1] = &copy->v[v1];
 		copy->t[i].v[2] = &copy->v[v2];
 	}
+	copy->radius = original->radius;
 	return copy;
 }
 
@@ -750,3 +753,4 @@ void entity_free_fake_stars(void)
 	nfakestars = 0;
 	free(fake_star);
 }
+

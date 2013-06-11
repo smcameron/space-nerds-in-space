@@ -26,6 +26,9 @@ struct mesh {
 	int nvertices;
 	struct triangle *t;
 	struct vertex *v;
+	float radius;
 };
+
+float mesh_compute_radius(struct mesh *m);
 
 #endif

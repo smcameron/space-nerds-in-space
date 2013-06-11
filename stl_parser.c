@@ -207,6 +207,7 @@ struct mesh *read_stl_file(char *file)
 			goto error;
 	}
 	fclose(f);
+	my_mesh->radius = mesh_compute_radius(my_mesh);
 	return my_mesh;
 
 error:
