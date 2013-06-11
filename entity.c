@@ -598,7 +598,10 @@ check_for_reposition:
 		if (behind_camera < 0) /* behind camera */
 			continue;
 
-		if (entity_list[i].dist3dsqrd > sqr(fabs(camera.far) * 20.0))
+/* increasing STANDARD_RADIUS makes fewer objects visible, decreasing it makes more */
+#define STANDARD_RADIUS (4.0)
+		if (entity_list[i].dist3dsqrd * STANDARD_RADIUS / entity_list[i].m->radius >
+				sqr(fabs(camera.far) * 20.0))
 			continue;
 
 		/* Really cheezy view culling */
