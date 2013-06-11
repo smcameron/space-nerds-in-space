@@ -408,6 +408,17 @@ static int lookup_damcon_object_by_id(uint32_t id)
 	return -1;
 }
 
+static struct snis_entity *find_my_ship(void)
+{
+	if (my_ship_id == UNKNOWN_ID)
+		return NULL;
+	if (my_ship_oid == UNKNOWN_ID)
+		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	if (my_ship_oid == UNKNOWN_ID)
+		return NULL;
+	return &go[my_ship_oid];
+}
+
 static void update_generic_damcon_object(struct snis_damcon_entity *o,
 			double x, double y, double velocity, double heading)
 {
@@ -1275,12 +1286,8 @@ static void do_view_mode_change()
 	struct packed_buffer *pb;
 	struct snis_entity *o;
 
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+	if (!(o = find_my_ship()))
 		return;
-
-	o = &go[my_ship_oid];
 	
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL)
 		new_mode = MAINSCREEN_VIEW_MODE_WEAPONS;
@@ -1323,13 +1330,8 @@ static void do_torpedo(void)
 	if (displaymode != DISPLAYMODE_WEAPONS)
 		return;
 
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+	if (!(o = find_my_ship()))
 		return;
-
-	o = &go[my_ship_oid];
-
 	if (o->tsd.ship.torpedoes_loaded <= 0)
 		return;
 	pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
@@ -1341,22 +1343,8 @@ static void do_torpedo(void)
 static void do_laser(void)
 {
 	struct packed_buffer *pb;
-#if 0
-	struct snis_entity *o;
-#endif
 	if (displaymode != DISPLAYMODE_WEAPONS)
 		return;
-#if 0
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
-		return;
-
-	o = &go[my_ship_oid];
-
-	if (o->tsd.ship.phaser_bank_charge < 128.0)
-		return;
-#endif
 	pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
 	packed_buffer_append_u16(pb, OPCODE_REQUEST_LASER);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
@@ -1823,13 +1811,8 @@ static int process_mainscreen_view_mode(void)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	packed_buffer_extract(&pb, "Sb", &view_angle, (int32_t) 360,
 				&view_mode);
-	if (my_ship_id == UNKNOWN_ID)
+	if (!(o = find_my_ship()))
 		return 0;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
-		return 0;
-	o = &go[my_ship_oid];
 	o->tsd.ship.view_angle = view_angle;
 	o->tsd.ship.view_mode = view_mode;
 	return 0;
@@ -2076,6 +2059,7 @@ static int process_sci_select_coords_packet(void)
 {
 	char buffer[sizeof(struct snis_sci_select_coords_packet)];
 	struct packed_buffer pb;
+	struct snis_entity *o;
 	double ux, uy;
 	int rc;
 
@@ -2086,10 +2070,10 @@ static int process_sci_select_coords_packet(void)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	ux = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
 	uy = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	if (my_ship_oid == UNKNOWN_ID)
+	if (!(o = find_my_ship()))
 		return 0;
-	go[my_ship_oid].sci_coordx = ux;	
-	go[my_ship_oid].sci_coordy = uy;	
+	o->sci_coordx = ux;	
+	o->sci_coordy = uy;	
 	return 0;
 }
 
@@ -2097,6 +2081,7 @@ static int process_update_respawn_time(void)
 {
 	char buffer[sizeof(struct respawn_time_packet)];
 	struct packed_buffer pb;
+	struct snis_entity *o;
 	int rc;
 	uint8_t seconds;
 
@@ -2106,12 +2091,9 @@ static int process_update_respawn_time(void)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	seconds = packed_buffer_extract_u8(&pb);
-	if (my_ship_oid == UNKNOWN_ID) {
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-		if (my_ship_oid == UNKNOWN_ID)
-			return 0;
-	}
-	go[my_ship_oid].respawn_time = (uint32_t) seconds;
+	if (!(o = find_my_ship()))
+		return 0;
+	o->respawn_time = (uint32_t) seconds;
 	return 0;
 }
 
@@ -2788,14 +2770,8 @@ static void show_mainscreen(GtkWidget *w)
 	float cx, cy, cz, lx, ly;
 	double camera_look_heading;
 
-	if (my_ship_id == UNKNOWN_ID)
+	if (!(o = find_my_ship()))
 		return;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
-		return;
-	o = &go[my_ship_oid];
-
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL)
 		camera_look_heading = o->heading + o->tsd.ship.view_angle;
 	else
@@ -3579,13 +3555,8 @@ static void load_torpedo_button_pressed()
 	struct snis_entity *o;
 	struct packed_buffer *pb;
 
-	if (my_ship_oid == UNKNOWN_ID) {
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-		if (my_ship_oid == UNKNOWN_ID)
-			return;
-	}
-	o = &go[my_ship_oid];
-
+	if (!(o = find_my_ship()))
+		return;
 	if (o->tsd.ship.torpedoes <= 0)
 		return;
 	if (o->tsd.ship.torpedoes_loaded >= 2)
@@ -3600,23 +3571,6 @@ static void load_torpedo_button_pressed()
 
 static void fire_phaser_button_pressed(__attribute__((unused)) void *notused)
 {
-#if 0
-	struct snis_entity *o;
-	struct packed_buffer *pb;
-
-	if (my_ship_oid == UNKNOWN_ID) {
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-		if (my_ship_oid == UNKNOWN_ID)
-			return;
-	}
-	o = &go[my_ship_oid];
-	if (o->tsd.ship.phaser_bank_charge < 128.0)
-		return;
-	pb = packed_buffer_allocate(sizeof(uint16_t));
-	packed_buffer_append_u16(pb, OPCODE_REQUEST_PHASER);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
-#endif
 	do_laser();
 }
 
@@ -3630,12 +3584,8 @@ static void do_adjust_byte_value(uint8_t value,  uint16_t opcode)
 	struct packed_buffer *pb;
 	struct snis_entity *o;
 
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+	if (!(o = find_my_ship()))
 		return;
-	o = &go[my_ship_oid];
-
 	pb = packed_buffer_allocate(sizeof(struct request_throttle_packet));
 	packed_buffer_append(pb, "hwb", opcode, o->id, value);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
@@ -3705,67 +3655,75 @@ static void do_comms_pwr(struct slider *s)
 	
 static double sample_shields(void)
 {
-	int my_ship_oid;
+	struct snis_entity *o;
 
-	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (double) 100.0 * go[my_ship_oid].tsd.ship.pwrdist.shields / 255.0;
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return (double) 100.0 * o->tsd.ship.pwrdist.shields / 255.0;
 }
 
 static double sample_rpm(void)
 {
-	int my_ship_oid;
+	struct snis_entity *o;
 
-	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (100 * go[my_ship_oid].tsd.ship.rpm) / UINT8_MAX;
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return (100 * o->tsd.ship.rpm) / UINT8_MAX;
 }
 
 static double sample_power(void)
 {
-	int my_ship_oid;
+	struct snis_entity *o;
 
-	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (100.0 * go[my_ship_oid].tsd.ship.power) / UINT32_MAX;
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return (100.0 * o->tsd.ship.power) / UINT32_MAX;
 }
 
 static double sample_temp(void)
 {
-	int my_ship_oid;
+	struct snis_entity *o;
 
-	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (100 * go[my_ship_oid].tsd.ship.temp) / UINT8_MAX;
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return (100 * o->tsd.ship.temp) / UINT8_MAX;
 }
 
 static double sample_throttle(void)
 {
-	int my_ship_oid;
+	struct snis_entity *o;
 
-	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (double) 100.0 * go[my_ship_oid].tsd.ship.throttle / 255.0;
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return (double) 100.0 * o->tsd.ship.throttle / 255.0;
 }
 
 static double sample_reqshield(void)
 {
-	int my_ship_oid;
+	struct snis_entity *o;
 
-	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (double) 100.0 * go[my_ship_oid].tsd.ship.requested_shield / 255.0;
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return (double) 100.0 * o->tsd.ship.requested_shield / 255.0;
 }
 
 static double sample_reqwarpdrive(void)
 {
-	int my_ship_oid;
+	struct snis_entity *o;
 
-	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (double) 100.0 * go[my_ship_oid].tsd.ship.requested_warpdrive / 255.0;
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return (double) 100.0 * o->tsd.ship.requested_warpdrive / 255.0;
 }
 
 static double sample_warpdrive_power_avail(void)
 {
-	int my_ship_oid;
 	double answer;
+	struct snis_entity *o;
 
-	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	answer = (double) 10.0 * (double) go[my_ship_oid].tsd.ship.pwrdist.warp / 255.0 *
+	if (!(o = find_my_ship()))
+		return 0.0;
+	answer = (double) 10.0 * (double) o->tsd.ship.pwrdist.warp / 255.0 *
 			(sample_power() / 100.0) / WARP_POWER_FACTOR;
 	if (answer > 10.0)
 		answer = 10.0;
@@ -3774,58 +3732,55 @@ static double sample_warpdrive_power_avail(void)
 
 static double sample_warpdrive(void)
 {
-	int my_ship_oid;
+	struct snis_entity *o;
 
-	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (double) 10.0 * go[my_ship_oid].tsd.ship.warpdrive / 255.0;
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return (double) 10.0 * o->tsd.ship.warpdrive / 255.0;
 }
 
 static double sample_scizoom(void)
 {
-	int my_ship_oid;
+	struct snis_entity *o;
 
-	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (double) 100.0 * go[my_ship_oid].tsd.ship.scizoom / 255.0;
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return (double) 100.0 * o->tsd.ship.scizoom / 255.0;
 }
 
 static double sample_fuel(void)
 {
-	int my_ship_oid;
+	struct snis_entity *o;
 
-	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	return (100.0 * go[my_ship_oid].tsd.ship.fuel) / UINT32_MAX;
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return (100.0 * o->tsd.ship.fuel) / UINT32_MAX;
 }
 
 static double sample_phaserbanks(void)
 {
 	struct snis_entity *o;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+
+	if (!(o = find_my_ship()))
 		return 0.0;
-	o = &go[my_ship_oid];
 	return (o->tsd.ship.pwrdist.phaserbanks / 255.0) * 100.0;
 }
 
 static double sample_phasercharge(void)
 {
 	struct snis_entity *o;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+
+	if (!(o = find_my_ship()))
 		return 0.0;
-	o = &go[my_ship_oid];
 	return (o->tsd.ship.phaser_charge / 255.0) * 100.0;
 }
 
 static double sample_phaser_wavelength(void)
 {
 	struct snis_entity *o;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+
+	if (!(o = find_my_ship()))
 		return 0.0;
-	o = &go[my_ship_oid];
 	return 50.0 * o->tsd.ship.phaser_wavelength / 255.0 + 10.0;
 }
 
@@ -3840,14 +3795,9 @@ static void wavelen_updown_button_pressed(int direction)
 	struct snis_entity *o;
 	int inc;
 
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+	if (!(o = find_my_ship()))
 		return;
-
 	inc = (int) (256.0 / 50.0);
-
-	o = &go[my_ship_oid];
 	value = o->tsd.ship.phaser_wavelength;
 	if (direction > 0 && value + inc > 255)
 		return;
@@ -3870,70 +3820,56 @@ static void wavelen_down_button_pressed(__attribute__((unused)) void *s)
 static double sample_warp(void)
 {
 	struct snis_entity *o;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+
+	if (!(o = find_my_ship()))
 		return 0.0;
-	o = &go[my_ship_oid];
 	return 100.0 * o->tsd.ship.pwrdist.warp / 255.0;
 }
 
 static double sample_maneuvering(void)
 {
 	struct snis_entity *o;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+
+	if (!(o = find_my_ship()))
 		return 0.0;
-	o = &go[my_ship_oid];
 	return 100.0 * o->tsd.ship.pwrdist.maneuvering / 255.0;
 }
 
 static double sample_impulse(void)
 {
 	struct snis_entity *o;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+
+	if (!(o = find_my_ship()))
 		return 0.0;
-	o = &go[my_ship_oid];
 	return 100.0 * o->tsd.ship.pwrdist.impulse / 255.0;
 }
 
 static double sample_comms(void)
 {
 	struct snis_entity *o;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+
+	if (!(o = find_my_ship()))
 		return 0.0;
-	o = &go[my_ship_oid];
 	return 100.0 * o->tsd.ship.pwrdist.comms / 255.0;
 }
 
 static double sample_sensors(void)
 {
 	struct snis_entity *o;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+
+	if (!(o = find_my_ship()))
 		return 0.0;
-	o = &go[my_ship_oid];
 	return 100.0 * o->tsd.ship.pwrdist.sensors / 255.0;
 }
 
 static double sample_generic_damage_data(int field_offset)
 {
 	uint8_t *field;
-
 	struct snis_entity *o;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
-		return 0.0;
-	o = &go[my_ship_oid];
-	field = (uint8_t *) &o->tsd.ship.damage + field_offset; 
 
+	if (!(o = find_my_ship()))
+		return 0.0;
+	field = (uint8_t *) &o->tsd.ship.damage + field_offset; 
 	return 100.0 * (255 - *field) / 255.0;
 }
 
@@ -3971,14 +3907,9 @@ static void warp_updown_button_pressed(int direction)
 	struct snis_entity *o;
 	double inc;
 
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+	if (!(o = find_my_ship()))
 		return;
-
 	inc = 2.5;
-
-	o = &go[my_ship_oid];
 	value = o->tsd.ship.requested_warpdrive;
 	if (direction > 0 && value + inc > 255)
 		return;
@@ -4135,11 +4066,8 @@ static void show_weapons(GtkWidget *w)
 
 	sng_set_foreground(GREEN);
 
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+	if (!(o = find_my_ship()))
 		return;
-	o = &go[my_ship_oid];
 	sprintf(buf, "PHOTON TORPEDOES: %03d", o->tsd.ship.torpedoes);
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 250, 15);
 	sprintf(buf, "TORPEDOES LOADED: %03d", o->tsd.ship.torpedoes_loaded);
@@ -4234,13 +4162,8 @@ static void show_navigation(GtkWidget *w)
 
 	sng_set_foreground(GREEN);
 
-	if (my_ship_id == UNKNOWN_ID)
+	if (!(o = find_my_ship()))
 		return;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
-		return;
-	o = &go[my_ship_oid];
 	sectorx = floor(10.0 * o->x / (double) XKNOWN_DIM);
 	sectory = floor(10.0 * o->y / (double) YKNOWN_DIM);
 	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf)", sectory + 'A', sectorx, o->x, o->y);
@@ -5046,14 +4969,8 @@ static void show_science(GtkWidget *w)
 	char buf[80];
 	double zoom;
 
-	if (my_ship_id == UNKNOWN_ID)
+	if (!(o = find_my_ship()))
 		return;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
-		return;
-	o = &go[my_ship_oid];
-
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 	sng_set_foreground(GREEN);
@@ -6063,13 +5980,8 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 	struct snis_entity *o;
 	int16_t newval;
 
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-	if (my_ship_oid == UNKNOWN_ID)
+	if (!(o = find_my_ship()))
 		return 0;
-
-	o = &go[my_ship_oid];
-
 	switch (displaymode) {
 	case DISPLAYMODE_SCIENCE:
 		if (e->direction == GDK_SCROLL_UP)
@@ -6101,6 +6013,7 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	sng_set_foreground(WHITE);
+	struct snis_entity *o;
 	
 #if 0	
 	for (i = 0; i <= highest_object_number;i++) {
@@ -6120,13 +6033,9 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	}
 
 	if (displaymode < DISPLAYMODE_FONTTEST) {
-		if (my_ship_id == UNKNOWN_ID)
+		if (!(o = find_my_ship()))
 			return 0;
-		if (my_ship_oid == UNKNOWN_ID)
-			my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
-		if (my_ship_oid == UNKNOWN_ID)
-			return 0;
-		if (go[my_ship_oid].alive <= 0 && displaymode != DISPLAYMODE_DEBUG &&
+		if (o->alive <= 0 && displaymode != DISPLAYMODE_DEBUG &&
 			displaymode != DISPLAYMODE_DEMON) {
 			show_death_screen(w);
 			return 0;
