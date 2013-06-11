@@ -135,7 +135,7 @@ static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc, struct fake_star
 
 	x1 = (int) (fs->v.wx * camera.xvpixels / 2) + camera.xvpixels / 2;
 	y1 = (int) (fs->v.wy * camera.yvpixels / 2) + camera.yvpixels / 2;
-	sng_current_draw_line(w->window, gc, x1, y1, x1, y1); 
+	sng_current_draw_line(w->window, gc, x1, y1, x1 + (snis_randn(10) < 7), y1); 
 }
 
 void wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)

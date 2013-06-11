@@ -2739,8 +2739,9 @@ static void show_mainscreen_starfield(GtkWidget *w, double heading)
 	x = 0;
 	dx = (float) SCREEN_WIDTH / ANGLE_OF_VIEW;
 	for (i = first_angle; i != last_angle; i = (i + 1) % 360) {
-		sng_draw_point(w->window, gc, (int) x, stary[i]);
-		sng_draw_point(w->window, gc, (int) x, stary[360 + i]);
+		snis_draw_line(w->window, gc, (int) x, stary[i], (int) x + (snis_randn(10) < 7), stary[i]);
+		snis_draw_line(w->window, gc, (int) x, stary[360 + i],
+					(int) x + (snis_randn(10) < 7), stary[360 + i]);
 		x += dx;
 	}
 }
