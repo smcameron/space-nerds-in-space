@@ -3652,69 +3652,30 @@ static void do_comms_pwr(struct slider *s)
 {
 	do_adjust_slider_value(s, OPCODE_REQUEST_COMMS_PWR);
 }
-	
-static double sample_shields(void)
-{
-	struct snis_entity *o;
 
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return (double) 100.0 * o->tsd.ship.pwrdist.shields / 255.0;
+#define DEFINE_SAMPLER_FUNCTION(f, field, divisor, min) \
+static double f(void) \
+{ \
+	struct snis_entity *o; \
+\
+	if (!(o = find_my_ship())) \
+		return 0.0; \
+	return (double) 100.0 * o->field / (divisor) + (min); \
 }
 
-static double sample_rpm(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return (100 * o->tsd.ship.rpm) / UINT8_MAX;
-}
-
-static double sample_power(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return (100.0 * o->tsd.ship.power) / UINT32_MAX;
-}
-
-static double sample_temp(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return (100 * o->tsd.ship.temp) / UINT8_MAX;
-}
-
-static double sample_throttle(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return (double) 100.0 * o->tsd.ship.throttle / 255.0;
-}
-
-static double sample_reqshield(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return (double) 100.0 * o->tsd.ship.requested_shield / 255.0;
-}
-
-static double sample_reqwarpdrive(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return (double) 100.0 * o->tsd.ship.requested_warpdrive / 255.0;
-}
+DEFINE_SAMPLER_FUNCTION(sample_shields, tsd.ship.pwrdist.shields, 255.0, 0)	
+DEFINE_SAMPLER_FUNCTION(sample_rpm, tsd.ship.rpm, UINT8_MAX, 0)
+DEFINE_SAMPLER_FUNCTION(sample_power, tsd.ship.power, UINT32_MAX, 0)
+DEFINE_SAMPLER_FUNCTION(sample_temp, tsd.ship.temp, UINT8_MAX, 0)
+DEFINE_SAMPLER_FUNCTION(sample_throttle, tsd.ship.throttle, 255.0, 0)
+DEFINE_SAMPLER_FUNCTION(sample_reqshield, tsd.ship.requested_shield, 255.0, 0)
+DEFINE_SAMPLER_FUNCTION(sample_reqwarpdrive, tsd.ship.requested_warpdrive, 255.0, 0)
+DEFINE_SAMPLER_FUNCTION(sample_warpdrive, tsd.ship.warpdrive, 10.0 * 255.0, 0)
+DEFINE_SAMPLER_FUNCTION(sample_scizoom, tsd.ship.scizoom, 255.0, 0)
+DEFINE_SAMPLER_FUNCTION(sample_fuel, tsd.ship.fuel, UINT32_MAX, 0)
+DEFINE_SAMPLER_FUNCTION(sample_phaserbanks, tsd.ship.pwrdist.phaserbanks, 255.0, 0)
+DEFINE_SAMPLER_FUNCTION(sample_phasercharge, tsd.ship.phaser_charge, 255.0, 0)
+DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 255.0 * 2.0, 10.0)
 
 static double sample_warpdrive_power_avail(void)
 {
@@ -3728,60 +3689,6 @@ static double sample_warpdrive_power_avail(void)
 	if (answer > 10.0)
 		answer = 10.0;
 	return answer;
-}
-
-static double sample_warpdrive(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return (double) 10.0 * o->tsd.ship.warpdrive / 255.0;
-}
-
-static double sample_scizoom(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return (double) 100.0 * o->tsd.ship.scizoom / 255.0;
-}
-
-static double sample_fuel(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return (100.0 * o->tsd.ship.fuel) / UINT32_MAX;
-}
-
-static double sample_phaserbanks(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return (o->tsd.ship.pwrdist.phaserbanks / 255.0) * 100.0;
-}
-
-static double sample_phasercharge(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return (o->tsd.ship.phaser_charge / 255.0) * 100.0;
-}
-
-static double sample_phaser_wavelength(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return 50.0 * o->tsd.ship.phaser_wavelength / 255.0 + 10.0;
 }
 
 static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
@@ -3817,50 +3724,11 @@ static void wavelen_down_button_pressed(__attribute__((unused)) void *s)
 	wavelen_updown_button_pressed(-1);
 }
 
-static double sample_warp(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return 100.0 * o->tsd.ship.pwrdist.warp / 255.0;
-}
-
-static double sample_maneuvering(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return 100.0 * o->tsd.ship.pwrdist.maneuvering / 255.0;
-}
-
-static double sample_impulse(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return 100.0 * o->tsd.ship.pwrdist.impulse / 255.0;
-}
-
-static double sample_comms(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return 100.0 * o->tsd.ship.pwrdist.comms / 255.0;
-}
-
-static double sample_sensors(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return 100.0 * o->tsd.ship.pwrdist.sensors / 255.0;
-}
+DEFINE_SAMPLER_FUNCTION(sample_warp, tsd.ship.pwrdist.warp, 255.0, 0)
+DEFINE_SAMPLER_FUNCTION(sample_maneuvering, tsd.ship.pwrdist.maneuvering, 255.0, 0)
+DEFINE_SAMPLER_FUNCTION(sample_impulse, tsd.ship.pwrdist.impulse, 255.0, 0)
+DEFINE_SAMPLER_FUNCTION(sample_comms, tsd.ship.pwrdist.comms, 255.0, 0)
+DEFINE_SAMPLER_FUNCTION(sample_sensors, tsd.ship.pwrdist.sensors, 255.0, 0)
 
 static double sample_generic_damage_data(int field_offset)
 {
