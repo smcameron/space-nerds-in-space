@@ -819,6 +819,30 @@ static void move_sparks(void)
 		}
 }
 
+static void spin_wormhole(struct snis_entity *o)
+{
+	float angle;
+
+	angle = ((timer * 5) % 360) * M_PI / 180.0;
+	update_entity_rotation(o->entity, 0.0, 0.0, angle);
+}
+
+static void move_objects(void)
+{
+	int i;
+
+	for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		switch (o->type) {
+		case OBJTYPE_WORMHOLE:
+			spin_wormhole(o);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 void add_spark(double x, double y, double vx, double vy, double vz, int time, int color)
 {
 	int i, r;
@@ -6038,18 +6062,11 @@ gint advance_game(gpointer data)
 {
 	timer++;
 
-#if 0
-	for (i = 0; i <= highest_object_number; i++) {
-		if (!game_state.go[i].alive)
-			continue;
-		game_state.go[i].move(&game_state.go[i]);
-	}
-	move_viewport();
-#endif	
 	deal_with_joystick();
 	gdk_threads_enter();
 	gtk_widget_queue_draw(main_da);
 	move_sparks();
+	move_objects();
 	nframes++;
 	gdk_threads_leave();
 	if (in_the_process_of_quitting)
