@@ -5661,10 +5661,69 @@ static void show_demon(GtkWidget *w)
 
 }
 
-static void show_warp_limbo_screen(GtkWidget *w)
+struct warp_star {
+	float x, y, lx, ly, vx, vy;
+};
+
+void init_warp_star(struct warp_star *star)
+{
+	float dx, dy;
+	star->x = (float) snis_randn(SCREEN_WIDTH);
+	star->y = (float) snis_randn(SCREEN_HEIGHT);
+
+	/* cheesy avoid divide by zero. */
+	if (abs(star->x) < 0.00001)
+		star->x += 0.003;
+	if (abs(star->y) < 0.00001)
+		star->y += 0.003;
+
+	dx = star->x - (SCREEN_WIDTH/2);
+	dy = star->y - (SCREEN_HEIGHT/2);
+	if (abs(dx) > abs(dy)) {
+		star->vx = dx/abs(dx);
+		star->vy = dy/abs(dx); 
+	} else {
+		star->vx = dx/abs(dy);
+		star->vy = dy/abs(dy); 
+	}
+	star->lx = star->x;
+	star->ly = star->y;
+}
+
+static void show_warp_effect(GtkWidget *w)
+{
+#define WARP_STARS 1000
+	static int initialized = 0;
+	static struct warp_star star[WARP_STARS];
+	int x, y, x2, y2, i;
+	if (!initialized) {
+		for (i = 0; i < WARP_STARS; i++) {
+			init_warp_star(&star[i]);
+		}		
+		initialized = 1;
+	}
+	sng_set_foreground(WHITE);
+	for (i = 0; i < WARP_STARS; i++) {
+		star[i].lx = star[i].x;
+		star[i].x += star[i].vx;
+		star[i].ly = star[i].y;
+		star[i].y += star[i].vy;
+		if (star[i].x < 0 || star[i].x > SCREEN_WIDTH ||
+			star[i].y < 0 || star[i].y > SCREEN_HEIGHT)
+			init_warp_star(&star[i]);
+		star[i].vx *= 1.2;
+		star[i].vy *= 1.2;
+		x = (int) star[i].x;
+		y = (int) star[i].y;
+		x2 = (int) star[i].lx;
+		y2 = (int) star[i].ly;
+		sng_thick_scaled_line(w->window, gc, x, y, x2, y2);
+	}
+}
+
+static void show_warp_hash_screen(GtkWidget *w)
 {
 	int i;
-	//int x1, y1, x2, y2;
 	int y1, y2;
 
 	sng_set_foreground(WHITE);
@@ -5676,6 +5735,14 @@ static void show_warp_limbo_screen(GtkWidget *w)
 		y2 = y1 - 50; // snis_randn(SCREEN_HEIGHT);
 		snis_draw_line(w->window, gc, 0, y1, SCREEN_WIDTH, y2);
 	}
+}
+
+static void show_warp_limbo_screen(GtkWidget *w)
+{
+	if (displaymode == DISPLAYMODE_MAINSCREEN)
+		show_warp_effect(w);
+	else
+		show_warp_hash_screen(w);
 }
 
 struct network_setup_ui {
