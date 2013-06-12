@@ -404,8 +404,8 @@ struct request_mainscreen_view_change {
 	uint16_t opcode;
 	uint32_t heading_delta;
 	uint8_t view_mode;
-#define MAINSCREEN_VIEW_MODE_NORMAL 1
-#define MAINSCREEN_VIEW_MODE_WEAPONS 2
+#define MAINSCREEN_VIEW_MODE_NORMAL 0
+#define MAINSCREEN_VIEW_MODE_WEAPONS 1
 };
 
 #pragma pack()
