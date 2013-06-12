@@ -82,7 +82,6 @@ struct entity *add_entity(struct mesh *m, float x, float y, float z, int color)
 	if (n < 0)
 		return NULL;
 
-	printf("added entity at %f, %f, %f\n", x, y, z);
 	entity_list[n].m = m;
 	entity_list[n].x = x;
 	entity_list[n].y = y;
