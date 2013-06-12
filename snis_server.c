@@ -219,6 +219,22 @@ static void queue_delete_oid(struct game_client *c, uint32_t oid)
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
+static int add_ship(void);
+static void respawn_object(int otype)
+{
+	switch (otype) {
+		case OBJTYPE_SHIP2:
+			add_ship();
+			break;
+		case OBJTYPE_ASTEROID:
+			/* TODO: respawn asteroids */
+			break;
+		default:
+			break;
+	}
+	return;
+}
+
 static void snis_queue_delete_object(struct snis_entity *o)
 {
 	/* Iterate over all clients and inform them that
@@ -238,6 +254,7 @@ static void snis_queue_delete_object(struct snis_entity *o)
 	for (i = 0; i < nclients; i++)
 		queue_delete_oid(&client[i], oid);
 	client_unlock();
+	respawn_object(o->type);
 }
 
 #define ANY_SHIP_ID (0xffffffff)
