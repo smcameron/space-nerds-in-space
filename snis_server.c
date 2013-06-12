@@ -332,7 +332,7 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength)
 static void send_ship_damage_packet(uint32_t id);
 static void torpedo_move(struct snis_entity *o)
 {
-	int i;
+	int i, otype;
 
 	o->x += o->vx;
 	o->y += o->vy;
@@ -341,6 +341,7 @@ static void torpedo_move(struct snis_entity *o)
 	o->alive--;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		double dist2;
+		otype = go[i].type;
 
 		if (!go[i].alive)
 			continue;
@@ -348,8 +349,9 @@ static void torpedo_move(struct snis_entity *o)
 			continue;
 		if (o->alive >= TORPEDO_LIFETIME - 3)
 			continue;
-		if (go[i].type != OBJTYPE_SHIP1 && go[i].type != OBJTYPE_SHIP2 &&
-				go[i].type != OBJTYPE_STARBASE)
+		if (otype != OBJTYPE_SHIP1 && otype != OBJTYPE_SHIP2 &&
+				otype != OBJTYPE_STARBASE &&
+				otype != OBJTYPE_ASTEROID)
 			continue;
 		if (go[i].id == o->tsd.torpedo.ship_id)
 			continue; /* can't torpedo yourself. */
@@ -363,25 +365,30 @@ static void torpedo_move(struct snis_entity *o)
 		/* hit!!!! */
 		o->alive = 0;
 
-		if (go[i].type == OBJTYPE_STARBASE) {
+		if (otype == OBJTYPE_STARBASE) {
 			go[i].tsd.starbase.under_attack = 1;
 			continue;
 		}
 
-		/* must be ship type */
-		calculate_torpedo_damage(&go[i]);
-		send_ship_damage_packet(go[i].id);
+		if (otype == OBJTYPE_SHIP1 || otype == OBJTYPE_SHIP2) {
+			calculate_torpedo_damage(&go[i]);
+			send_ship_damage_packet(go[i].id);
+		} else if (otype == OBJTYPE_ASTEROID) {
+			go[i].alive = 0;
+		}
 
 		if (!go[i].alive) {
 			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
 			/* TODO -- these should be different sounds */
 			/* make sound for players that got hit */
 			/* make sound for players that did the hitting */
-			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
 			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 			if (go[i].type != OBJTYPE_SHIP1) {
 				snis_queue_delete_object(go[i].id);
 				snis_object_pool_free_object(pool, i);
+			} else {
+				snis_queue_add_sound(EXPLOSION_SOUND,
+					ROLE_SOUNDSERVER, go[i].id);
 			}
 		} else {
 			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5);
@@ -420,6 +427,7 @@ static int laser_point_collides(double lx1, double ly1, double lx2, double ly2, 
 static void laser_move(struct snis_entity *o)
 {
 	int i;
+	uint8_t otype;
 
 	o->x += o->vx;
 	o->y += o->vy;
@@ -433,8 +441,9 @@ static void laser_move(struct snis_entity *o)
 			continue;
 		if (i == o->index)
 			continue;
-		if (go[i].type != OBJTYPE_SHIP1 && go[i].type != OBJTYPE_SHIP2 &&
-			go[i].type != OBJTYPE_STARBASE)
+		otype = go[i].type;
+		if (otype != OBJTYPE_SHIP1 && otype != OBJTYPE_SHIP2 &&
+			otype != OBJTYPE_STARBASE && otype != OBJTYPE_ASTEROID)
 			continue;
 		if (go[i].id == o->tsd.laser.ship_id)
 			continue; /* can't laser yourself. */
@@ -450,25 +459,33 @@ static void laser_move(struct snis_entity *o)
 		/* hit!!!! */
 		o->alive = 0;
 
-		if (go[i].type == OBJTYPE_STARBASE) {
+		if (otype == OBJTYPE_STARBASE) {
 			go[i].tsd.starbase.under_attack = 1;
 			continue;
 		}
 
-		/* must be ship type */
-		calculate_laser_damage(&go[i], o->tsd.laser.wavelength);
-		send_ship_damage_packet(go[i].id);
+		if (otype == OBJTYPE_SHIP1 || otype == OBJTYPE_SHIP2) {
+			calculate_laser_damage(&go[i], o->tsd.laser.wavelength);
+			send_ship_damage_packet(go[i].id);
+		}
+
+		if (otype == OBJTYPE_ASTEROID) {
+			go[i].alive = 0;
+		}
 
 		if (!go[i].alive) {
 			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
 			/* TODO -- these should be different sounds */
 			/* make sound for players that got hit */
 			/* make sound for players that did the hitting */
-			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, go[i].id);
-			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
+			snis_queue_add_sound(EXPLOSION_SOUND,
+					ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
 			if (go[i].type != OBJTYPE_SHIP1) {
 				snis_queue_delete_object(go[i].id);
-					snis_object_pool_free_object(pool, i);
+				snis_object_pool_free_object(pool, i);
+			} else {
+				snis_queue_add_sound(EXPLOSION_SOUND,
+							ROLE_SOUNDSERVER, go[i].id);
 			}
 		} else {
 			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5);
