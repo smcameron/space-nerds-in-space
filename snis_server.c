@@ -177,7 +177,34 @@ static void asteroid_move(struct snis_entity *o)
 
 static void wormhole_move(struct snis_entity *o)
 {
-	return;
+	int i;
+	double dist2;
+	double a, r;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *t;
+		t = &go[i];
+
+		if (t == o)
+			continue;
+
+		switch (t->type) {
+		case OBJTYPE_ASTEROID:
+			/* because of functional movement of asteroids. *sigh* */
+		case OBJTYPE_WORMHOLE:
+			continue;
+		default:
+			dist2 = ((t->x - o->x) * (t->x - o->x)) +
+				((t->y - o->y) * (t->y - o->y));
+			if (dist2 < 30.0 * 30.0) {
+				a = snis_randn(360) * M_PI / 180.0;
+				r = 60.0;
+				t->x = o->tsd.wormhole.dest_x + cos(a) * r; 
+				t->y = o->tsd.wormhole.dest_y + sin(a) * r; 
+				t->timestamp = universe_timestamp;
+			}
+		}
+	}
 }
 
 static void queue_delete_oid(struct game_client *c, uint32_t oid)

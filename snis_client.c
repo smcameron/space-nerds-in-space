@@ -6354,7 +6354,7 @@ static void init_meshes(void)
 	debris_mesh = read_stl_file("flat-tetrahedron.stl");
 	debris2_mesh = read_stl_file("big-flat-tetrahedron.stl");
 	wormhole_mesh = read_stl_file("wormhole.stl");
-	distort_mesh(wormhole_mesh, 0.05);
+	distort_mesh(wormhole_mesh, 0.15);
 #else
 #define THE_MODEL "starbase.stl"
 	ship_mesh = read_stl_file(THE_MODEL);
