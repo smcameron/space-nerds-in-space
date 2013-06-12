@@ -175,6 +175,7 @@ static void asteroid_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
+static void send_wormhole_limbo_packet(int shipid, uint16_t value);
 static void wormhole_move(struct snis_entity *o)
 {
 	int i;
@@ -202,6 +203,8 @@ static void wormhole_move(struct snis_entity *o)
 				t->x = o->tsd.wormhole.dest_x + cos(a) * r; 
 				t->y = o->tsd.wormhole.dest_y + sin(a) * r; 
 				t->timestamp = universe_timestamp;
+				if (t->type == OBJTYPE_SHIP1)
+					send_wormhole_limbo_packet(t->id, 5 * 30);
 			}
 		}
 	}
@@ -2295,6 +2298,15 @@ static void send_warp_limbo_packet(struct game_client *c, uint16_t value)
 	pb = packed_buffer_allocate(sizeof(struct warp_limbo_packet));
 	packed_buffer_append(pb, "hh", OPCODE_WARP_LIMBO, value);
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_SCIENCE);
+}
+
+static void send_wormhole_limbo_packet(int shipid, uint16_t value)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct warp_limbo_packet));
+	packed_buffer_append(pb, "hh", OPCODE_WORMHOLE_LIMBO, value);
+	send_packet_to_all_clients_on_a_bridge(shipid, pb, ROLE_ALL);
 }
 
 static int process_engage_warp(struct game_client *c)

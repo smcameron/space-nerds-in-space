@@ -1928,7 +1928,7 @@ static int process_update_torpedo_packet(void)
 	return (rc < 0);
 } 
 
-static int process_warp_limbo_packet(void)
+static int process_warp_limbo_packet(int with_sound)
 {
 	unsigned char buffer[sizeof(struct warp_limbo_packet)];
 	struct packed_buffer pb;
@@ -1943,10 +1943,16 @@ static int process_warp_limbo_packet(void)
 	packed_buffer_extract(&pb, "h", &value);
 	if (value >= 0 && value <= 40 * frame_rate_hz) { 
 		warp_limbo_countdown = value;
-		wwviaudio_add_sound(WARPDRIVE_SOUND);
+		if (with_sound)
+			wwviaudio_add_sound(WARPDRIVE_SOUND);
 	}
 	return 0;
 } 
+
+static int process_wormhole_limbo_packet(void)
+{
+	return process_warp_limbo_packet(0);
+}
 
 static int process_update_laser_packet(void)
 {
@@ -2431,7 +2437,12 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 				goto protocol_error;
 			break;
 		case OPCODE_WARP_LIMBO:
-			rc = process_warp_limbo_packet();
+			rc = process_warp_limbo_packet(1);
+			if (rc != 0)
+				goto protocol_error;
+			break;
+		case OPCODE_WORMHOLE_LIMBO:
+			rc = process_wormhole_limbo_packet();
 			if (rc != 0)
 				goto protocol_error;
 			break;
