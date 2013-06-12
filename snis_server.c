@@ -3004,7 +3004,7 @@ static void send_update_explosion_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
+	pb = packed_buffer_allocate(sizeof(struct update_explosion_packet));
 	packed_buffer_append(pb, "hwSShhh", OPCODE_UPDATE_EXPLOSION, o->id,
 		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 		o->tsd.explosion.nsparks, o->tsd.explosion.velocity, o->tsd.explosion.time);
