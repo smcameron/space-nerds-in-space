@@ -77,6 +77,7 @@
 #define OPCODE_DAMCON_PART_UPDATE	151
 #define OPCODE_REQUEST_ROBOT_GRIPPER	152
 #define OPCODE_MAINSCREEN_VIEW_MODE	153
+#define OPCODE_UPDATE_WORMHOLE		154
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -150,6 +151,12 @@ struct client_ship_id_packet {
 };
 
 struct update_asteroid_packet {
+	uint16_t opcode;
+	uint32_t id;
+	uint32_t x, y;
+};
+
+struct update_wormhole_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint32_t x, y;

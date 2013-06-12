@@ -73,6 +73,7 @@
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
+#define WORMHOLE_COLOR WHITE
 #define PLANET_COLOR GREEN
 #define ASTEROID_COLOR AMBER
 #define PARTICLE_COLOR YELLOW
@@ -202,6 +203,7 @@ struct mesh *battlestar_mesh;
 struct mesh *particle_mesh;
 struct mesh *debris_mesh;
 struct mesh *debris2_mesh;
+struct mesh *wormhole_mesh;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -714,6 +716,23 @@ static int update_asteroid(uint32_t id, double x, double y)
 		axis = (id % 3);
 		update_entity_rotation(go[i].entity, (axis == 0) * angle,
 					(axis == 1) * angle, (axis == 2) * angle);
+	}
+	return 0;
+}
+
+static int update_wormhole(uint32_t id, double x, double y)
+{
+	int i;
+	struct entity *e;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		e = add_point_cloud(wormhole_mesh, x, 0, -y, WORMHOLE_COLOR);
+		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE, 1, e);
+		if (i < 0)
+			return i;
+	} else {
+		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
 	}
 	return 0;
 }
@@ -2211,6 +2230,27 @@ static int process_update_asteroid_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_wormhole_packet(void)
+{
+	unsigned char buffer[100];
+	struct packed_buffer pb;
+	uint32_t id;
+	double dx, dy;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_wormhole_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_starbase_packet) - sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "wSS", &id,
+			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM);
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_wormhole(id, dx, dy);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+} 
+
 static int process_update_starbase_packet(void)
 {
 	unsigned char buffer[100];
@@ -2337,6 +2377,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_STARBASE:
 			rc = process_update_starbase_packet();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_WORMHOLE:
+			rc = process_update_wormhole_packet();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -3094,6 +3139,10 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 				break;
 			case OBJTYPE_STARBASE:
 				sng_set_foreground(STARBASE_COLOR);
+				sng_draw_circle(w->window, gc, x, y, r / 20);
+				break;
+			case OBJTYPE_WORMHOLE:
+				sng_set_foreground(WORMHOLE_COLOR);
 				sng_draw_circle(w->window, gc, x, y, r / 20);
 				break;
 			case OBJTYPE_LASER:
@@ -6287,6 +6336,8 @@ static void init_meshes(void)
 	particle_mesh = read_stl_file("tetrahedron.stl");
 	debris_mesh = read_stl_file("flat-tetrahedron.stl");
 	debris2_mesh = read_stl_file("big-flat-tetrahedron.stl");
+	wormhole_mesh = read_stl_file("wormhole.stl");
+	distort_mesh(wormhole_mesh, 0.05);
 #else
 #define THE_MODEL "starbase.stl"
 	ship_mesh = read_stl_file(THE_MODEL);

@@ -42,6 +42,7 @@
 #define ASTEROID_SPEED 200 
 #define NESHIPS 50
 #define NNEBULA 20
+#define NWORMHOLE_PAIRS 10
 #define NEBULA_RADIUS 5000
 #define MIN_NEBULA_RADIUS 200
 
@@ -57,6 +58,7 @@
 #define OBJTYPE_LASER 7
 #define OBJTYPE_EXPLOSION 8
 #define OBJTYPE_NEBULA 10 
+#define OBJTYPE_WORMHOLE 11
 
 #define WARP_POWER_FACTOR (1.0 / 5.0) /* 1/5th of total power can be alloc'ed to warp */
 #define PHASER_POWER_FACTOR (1.0 / 5.0) /* 1/5th of total power can be alloc'ed to phasers */
@@ -223,6 +225,10 @@ struct asteroid_data {
 	double angle_offset;
 };
 
+struct wormhole_data {
+	double dest_x, dest_y;
+};
+
 union type_specific_data {
 	struct ship_data ship;
 	struct laser_data laser;
@@ -232,6 +238,7 @@ union type_specific_data {
 	struct nebula_data nebula;
 	struct spark_data spark;
 	struct asteroid_data asteroid;
+	struct wormhole_data wormhole;
 };
 
 struct snis_entity;

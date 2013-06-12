@@ -55,6 +55,7 @@ struct entity {
 	float rx, ry, rz;
 	float dist3dsqrd;
 	int color;
+	int render_as_point_cloud;
 };
 
 struct camera_info {
@@ -87,7 +88,19 @@ struct entity *add_entity(struct mesh *m, float x, float y, float z, int color)
 	entity_list[n].y = y;
 	entity_list[n].z = z;
 	entity_list[n].color = color;
+	entity_list[n].render_as_point_cloud = 0;
 	return &entity_list[n];
+}
+
+struct entity *add_point_cloud(struct mesh *m, float x, float y, float z, int color)
+{
+	struct entity *e;
+
+	e = add_entity(m, x, y, z, color);
+	if (!e)
+		return NULL;
+	e->render_as_point_cloud = 1;
+	return e;
 }
 
 void remove_entity(struct entity *e)
@@ -162,6 +175,15 @@ void wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 	sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
 	sng_current_draw_line(w->window, gc, x2, y2, x3, y3); 
 	sng_current_draw_line(w->window, gc, x3, y3, x1, y1); 
+}
+
+void wireframe_render_point(GtkWidget *w, GdkGC *gc, struct vertex *v)
+{
+	int x1, y1;
+
+	x1 = (int) (v->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
+	y1 = (int) (v->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
+	sng_current_draw_line(w->window, gc, x1, y1, x1 + 1, y1); 
 }
 
 static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
@@ -300,6 +322,15 @@ void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 	for (i = 0; i < e->m->ntriangles; i++)
 		wireframe_render_triangle(w, gc, &e->m->t[i]);
 	nents++;
+}
+
+void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc, struct entity *e)
+{
+	int i;
+
+	sng_set_foreground(e->color);
+	for (i = 0; i < e->m->nvertices; i++)
+		wireframe_render_point(w, gc, &e->m->v[i]);
 }
 
 void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
@@ -613,7 +644,10 @@ check_for_reposition:
 			continue;
 
 		transform_entity(&entity_list[i], &total_transform);
-		wireframe_render_entity(w, gc, &entity_list[i]);
+		if (entity_list[i].render_as_point_cloud)
+			wireframe_render_point_cloud(w, gc, &entity_list[i]);
+		else
+			wireframe_render_entity(w, gc, &entity_list[i]);
 	}
 	// printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
 	rx = fmod(rx + 0.3, 360.0);

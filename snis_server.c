@@ -175,6 +175,11 @@ static void asteroid_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
+static void wormhole_move(struct snis_entity *o)
+{
+	return;
+}
+
 static void queue_delete_oid(struct game_client *c, uint32_t oid)
 {
 	struct packed_buffer *pb;
@@ -1460,6 +1465,36 @@ static void add_asteroids(void)
 	}
 }
 
+static int add_wormhole(double x1, double y1, double x2, double y2)
+{
+	int i;
+
+	i = add_generic_object(x1, y1, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE);
+	if (i < 0)
+		return i;
+	go[i].move = wormhole_move;
+	go[i].tsd.wormhole.dest_x = x2;
+	go[i].tsd.wormhole.dest_y = y2;
+	return i;
+}
+
+static void add_wormholes(void)
+{
+	int i;
+	double x1, y1, x2, y2;
+
+	for (i = 0; i < NWORMHOLE_PAIRS; i++) {
+		do {
+			x1 = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+			y1 = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+			x2 = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+			y2 = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		} while (hypot(x1 - x2, y1 - y2) < XKNOWN_DIM / 2.0);
+		add_wormhole(x1, y1, x2, y2);
+		add_wormhole(x2, y2, x1, y1);
+	}
+}
+
 static void add_eships(void)
 {
 	int i;
@@ -1481,6 +1516,7 @@ static void make_universe(void)
 	add_nebulae(); /* do nebula first */
 	add_starbases();
 	add_asteroids();
+	add_wormholes();
 	add_eships();
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -2611,6 +2647,8 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_wormhole_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_explosion_packet(struct game_client *c,
@@ -2648,6 +2686,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_ASTEROID:
 		send_update_asteroid_packet(c, o);
+		break;
+	case OBJTYPE_WORMHOLE:
+		send_update_wormhole_packet(c, o);
 		break;
 	case OBJTYPE_STARBASE:
 		send_update_starbase_packet(c, o);
@@ -2991,6 +3032,17 @@ static void send_update_asteroid_packet(struct game_client *c,
 
 	pb = packed_buffer_allocate(sizeof(struct update_asteroid_packet));
 	packed_buffer_append(pb, "hwSS", OPCODE_UPDATE_ASTEROID, o->id,
+		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
+static void send_update_wormhole_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct update_wormhole_packet));
+	packed_buffer_append(pb, "hwSS", OPCODE_UPDATE_WORMHOLE, o->id,
 		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
