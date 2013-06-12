@@ -3071,11 +3071,11 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 			alter_angle = 0.0;
 			switch (go[i].type) {
 			case OBJTYPE_ASTEROID:
-				sng_set_foreground(BLUE);
-				sng_draw_circle(w->window, gc, x, y, r / 10);
+				sng_set_foreground(ASTEROID_COLOR);
+				sng_draw_circle(w->window, gc, x, y, r / 20);
 				break;
 			case OBJTYPE_STARBASE:
-				sng_set_foreground(MAGENTA);
+				sng_set_foreground(STARBASE_COLOR);
 				sng_draw_circle(w->window, gc, x, y, r / 20);
 				break;
 			case OBJTYPE_LASER:
