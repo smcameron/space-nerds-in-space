@@ -192,7 +192,7 @@ struct mesh *torpedo_mesh;
 struct mesh *laser_mesh;
 struct mesh *planet_mesh;
 struct mesh *asteroid_mesh[NASTEROID_MODELS * NASTEROID_SCALES];
-struct mesh *starbase_mesh;
+struct mesh *starbase_mesh[NSTARBASE_MODELS];
 struct mesh *ship_mesh;
 struct mesh *freighter_mesh;
 struct mesh *cruiser_mesh;
@@ -739,12 +739,13 @@ static int update_wormhole(uint32_t id, double x, double y)
 
 static int update_starbase(uint32_t id, double x, double y)
 {
-	int i;
+	int i, m;
 	struct entity *e;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(starbase_mesh, x, 0, -y, STARBASE_COLOR);
+		m = id % NSTARBASE_MODELS;
+		e = add_entity(starbase_mesh[m], x, 0, -y, STARBASE_COLOR);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
@@ -6421,7 +6422,17 @@ static void init_meshes(void)
 		}
 	}
 
-	starbase_mesh = read_stl_file("starbase.stl");
+	for (i = 0; i < NSTARBASE_MODELS; i++) {
+		char filename[100];
+
+		if (i == 0)
+			sprintf(filename, "starbase.stl");
+		else
+			sprintf(filename, "starbase%d.stl", i + 1);
+		printf("reading '%s'\n", filename);
+		starbase_mesh[i] = read_stl_file(filename);
+	}
+
 	freighter_mesh = read_stl_file("freighter.stl");
 	cruiser_mesh = read_stl_file("cruiser.stl");
 	tanker_mesh = read_stl_file("tanker.stl");
