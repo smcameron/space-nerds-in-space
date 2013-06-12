@@ -255,7 +255,8 @@ static void snis_queue_add_sound(uint16_t sound_number, uint32_t roles, uint32_t
 	client_unlock();
 }
 
-static int add_explosion(double x, double y, uint16_t velocity, uint16_t nsparks, uint16_t time);
+static int add_explosion(double x, double y, uint16_t velocity,
+				uint16_t nsparks, uint16_t time, uint8_t victim_type);
 
 static void normalize_coords(struct snis_entity *o)
 {
@@ -378,7 +379,7 @@ static void torpedo_move(struct snis_entity *o)
 		}
 
 		if (!go[i].alive) {
-			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
+			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50, go[i].type);
 			/* TODO -- these should be different sounds */
 			/* make sound for players that got hit */
 			/* make sound for players that did the hitting */
@@ -391,7 +392,7 @@ static void torpedo_move(struct snis_entity *o)
 					ROLE_SOUNDSERVER, go[i].id);
 			}
 		} else {
-			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5);
+			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5, go[i].type);
 			snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, go[i].id);
 			snis_queue_add_sound(TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 		}
@@ -474,7 +475,7 @@ static void laser_move(struct snis_entity *o)
 		}
 
 		if (!go[i].alive) {
-			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50);
+			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50, otype);
 			/* TODO -- these should be different sounds */
 			/* make sound for players that got hit */
 			/* make sound for players that did the hitting */
@@ -488,7 +489,7 @@ static void laser_move(struct snis_entity *o)
 							ROLE_SOUNDSERVER, go[i].id);
 			}
 		} else {
-			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5);
+			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5, otype);
 			snis_queue_add_sound(DISTANT_PHASER_HIT_SOUND, ROLE_SOUNDSERVER, go[i].id);
 			snis_queue_add_sound(PHASER_HIT_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 		}
@@ -1347,7 +1348,8 @@ static int add_nebula(double x, double y, double vx, double vy, double heading, 
 	return i;
 }
 
-static int add_explosion(double x, double y, uint16_t velocity, uint16_t nsparks, uint16_t time)
+static int add_explosion(double x, double y, uint16_t velocity,
+				uint16_t nsparks, uint16_t time, uint8_t victim_type)
 {
 	int i;
 
@@ -1359,6 +1361,7 @@ static int add_explosion(double x, double y, uint16_t velocity, uint16_t nsparks
 	go[i].tsd.explosion.velocity = velocity;
 	go[i].tsd.explosion.nsparks = nsparks;
 	go[i].tsd.explosion.time = time;
+	go[i].tsd.explosion.victim_type = victim_type;
 	return i;
 }
 
@@ -3022,9 +3025,10 @@ static void send_update_explosion_packet(struct game_client *c,
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct update_explosion_packet));
-	packed_buffer_append(pb, "hwSShhh", OPCODE_UPDATE_EXPLOSION, o->id,
+	packed_buffer_append(pb, "hwSShhhb", OPCODE_UPDATE_EXPLOSION, o->id,
 		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
-		o->tsd.explosion.nsparks, o->tsd.explosion.velocity, o->tsd.explosion.time);
+		o->tsd.explosion.nsparks, o->tsd.explosion.velocity, o->tsd.explosion.time,
+		o->tsd.explosion.victim_type);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

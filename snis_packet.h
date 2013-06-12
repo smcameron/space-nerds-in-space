@@ -174,6 +174,7 @@ struct update_explosion_packet {
 	uint16_t nsparks;
 	uint16_t velocity;
 	uint16_t time;
+	uint8_t victim_type;
 };
 
 struct add_laser_packet {

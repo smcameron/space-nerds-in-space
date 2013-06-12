@@ -800,7 +800,7 @@ static void move_sparks(void)
 		}
 }
 
-void add_spark(double x, double y, double vx, double vy, double vz, int time)
+void add_spark(double x, double y, double vx, double vy, double vz, int time, int color)
 {
 	int i, r;
 	struct entity *e;
@@ -812,9 +812,9 @@ void add_spark(double x, double y, double vx, double vy, double vz, int time)
 	if (r < 50 || time < 10)
 		e = add_entity(particle_mesh, x, 0, -y, PARTICLE_COLOR);
 	else if (r < 75)
-		e = add_entity(debris_mesh, x, 0, -y, SHIP_COLOR);
+		e = add_entity(debris_mesh, x, 0, -y, color);
 	else
-		e = add_entity(debris2_mesh, x, 0, -y, SHIP_COLOR);
+		e = add_entity(debris2_mesh, x, 0, -y, color);
 	memset(&spark[i], 0, sizeof(spark[i]));
 	spark[i].index = i;
 	spark[i].x = x;
@@ -868,10 +868,27 @@ void sphere_explode(int x, int y, int ivx, int ivy, int v,
 }
 #endif
 
-static void do_explosion(double x, double y, uint16_t nsparks, uint16_t velocity, int time)
+static void do_explosion(double x, double y, uint16_t nsparks, uint16_t velocity, int time,
+				uint8_t victim_type)
 {
 	double zangle, angle, v, vx, vy, vz;
-	int i;
+	int i, color;
+
+	switch (victim_type) {
+	case OBJTYPE_SHIP1:
+	case OBJTYPE_SHIP2:
+		color = SHIP_COLOR;
+		break;
+	case OBJTYPE_ASTEROID:
+		color = ASTEROID_COLOR;
+		break;
+	case OBJTYPE_STARBASE:
+		color = STARBASE_COLOR;
+		break;
+	default:
+		color = GREEN;
+		break;
+	}
 
 	for (i = 0; i < nsparks; i++) {
 		angle = ((double) snis_randn(360) * M_PI / 180.0);
@@ -880,12 +897,12 @@ static void do_explosion(double x, double y, uint16_t nsparks, uint16_t velocity
 		vx = v * cos(angle);
 		vy = v * sin(angle);
 		vz = v * cos(zangle) / 3.0;
-		add_spark(x, y, vx, vy, vz, time);
+		add_spark(x, y, vx, vy, vz, time, color);
 	}
 }
 
 static int update_explosion(uint32_t id, double x, double y,
-		uint16_t nsparks, uint16_t velocity, uint16_t time)
+		uint16_t nsparks, uint16_t velocity, uint16_t time, uint8_t victim_type)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -895,7 +912,7 @@ static int update_explosion(uint32_t id, double x, double y,
 			return i;
 		go[i].tsd.explosion.nsparks = nsparks;
 		go[i].tsd.explosion.velocity = velocity;
-		do_explosion(x, y, nsparks, velocity, (int) time);
+		do_explosion(x, y, nsparks, velocity, (int) time, victim_type);
 	}
 	return 0;
 }
@@ -2245,6 +2262,7 @@ static int process_update_explosion_packet(void)
 	uint32_t id;
 	double dx, dy;
 	uint16_t nsparks, velocity, time;
+	uint8_t victim_type;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_explosion_packet) - sizeof(uint16_t));
@@ -2253,11 +2271,11 @@ static int process_update_explosion_packet(void)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "wSShhh", &id,
+	packed_buffer_extract(&pb, "wSShhhb", &id,
 		&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
-		&nsparks, &velocity, &time);
+		&nsparks, &velocity, &time, &victim_type);
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_explosion(id, dx, dy, nsparks, velocity, time);
+	rc = update_explosion(id, dx, dy, nsparks, velocity, time, victim_type);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }
