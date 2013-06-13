@@ -5696,6 +5696,7 @@ static void show_warp_effect(GtkWidget *w)
 #define WARP_STARS 1000
 	static int initialized = 0;
 	static struct warp_star star[WARP_STARS];
+	static int warp_start = 0;
 	int x, y, x2, y2, i;
 	if (!initialized) {
 		for (i = 0; i < WARP_STARS; i++) {
@@ -5703,6 +5704,39 @@ static void show_warp_effect(GtkWidget *w)
 		}		
 		initialized = 1;
 	}
+
+	/* Flash the screen white, rapidly fading to black
+	 * at beginning of warp animation. This is to disguise
+	 * the fact that the warp stars don't match the stars
+	 * on the screen at the start of warp
+	 */
+	if (warp_start == 0)
+		warp_start = 10;
+
+	if (warp_start > 1) {
+		sng_set_foreground(GRAY + warp_start * 25);
+		sng_scaled_rectangle(w->window, gc, 1, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+		warp_start--;
+	}
+
+	if (warp_limbo_countdown == 1) {
+		warp_start = 0;
+	}
+
+	/* Flash the screen white, rapidly fading to black
+	 * at end of warp animation. This is to disguise
+	 * the fact that the warp stars don't match the stars
+	 * or anything else on the screen at the end of warp.
+	 * But also show the mainscreen on top of the fading
+	 * to sort of "fade in" the final view.
+	 */
+	if (warp_limbo_countdown > 0 && warp_limbo_countdown < 10) {
+		sng_set_foreground(GRAY + warp_limbo_countdown * 25);
+		sng_scaled_rectangle(w->window, gc, 1, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+		show_mainscreen(w);
+		return;
+	}
+
 	sng_set_foreground(WHITE);
 	for (i = 0; i < WARP_STARS; i++) {
 		star[i].lx = star[i].x;
