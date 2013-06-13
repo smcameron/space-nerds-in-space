@@ -82,7 +82,6 @@ Too much to list, but here's a list anyway:
 * place stations more carefully relative to one another (not right next
   door to another station.)
 * Need to be able to checkpoint-restart universe state on server side
-* improve weapons and navigation aiming and steering respectively.
 * Think about allowing weapons to aim vertically and taking altitude
   into account for lasers and torpedoes.
 * Right now, laser/torpedo collision detection is too easy/sloppy.

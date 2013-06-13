@@ -1250,12 +1250,17 @@ static void navigation_dirkey(int h, int v)
 {
 	struct packed_buffer *pb;
 	uint8_t yaw, thrust;
+	static int last_time = 0;
+	int fine;
+
+	fine = 2 * (timer - last_time > 5);
+	last_time = timer;
 
 	if (!h && !v)
 		return;
 
 	if (h) {
-		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
+		yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
 		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
 		packed_buffer_append(pb, "hb", OPCODE_REQUEST_YAW, yaw);
 		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
@@ -1272,13 +1277,17 @@ static void navigation_dirkey(int h, int v)
 static void weapons_dirkey(int h, int v)
 {
 	struct packed_buffer *pb;
+	static int last_time = 0;
+	int fine;
 	uint8_t yaw;
 
 	if (!h && !v)
 		return;
 
+	fine = 2 * (timer - last_time > 5);
+	last_time = timer;
 	if (h) {
-		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
+		yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
 		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
 		packed_buffer_append(pb, "hb", OPCODE_REQUEST_GUNYAW, yaw);
 		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
@@ -1364,6 +1373,7 @@ static void do_view_mode_change()
 
 static void do_dirkey(int h, int v)
 {
+
 	switch (displaymode) {
 		case DISPLAYMODE_NAVIGATION:
 			navigation_dirkey(h, v); 

@@ -824,7 +824,7 @@ static void ship_move(struct snis_entity *o)
 
 static void damp_yaw_velocity(double *yv, double damp_factor)
 {
-	if (fabs(*yv) < (0.3 * PI / 180.0))
+	if (fabs(*yv) < (0.02 * PI / 180.0))
 		*yv = 0.0;
 	else
 		*yv *= damp_factor;
@@ -1792,14 +1792,16 @@ static void do_robot_thrust(struct game_client *c, int thrust)
 
 typedef void (*do_yaw_function)(struct game_client *c, int yaw);
 
-static void do_generic_yaw(double *yawvel, int yaw, double max_yaw, double yaw_inc)
+static void do_generic_yaw(double *yawvel, int yaw, double max_yaw, double yaw_inc,
+				double yaw_inc_fine)
 {
+	double delta_yaw = abs(yaw) > 1 ? yaw_inc_fine : yaw_inc;
 	if (yaw > 0) {
 		if (*yawvel < max_yaw)
-			*yawvel += yaw_inc;
+			*yawvel += delta_yaw;
 	} else {
 		if (*yawvel > -max_yaw)
-			*yawvel -= yaw_inc;
+			*yawvel -= delta_yaw;
 	}
 }
 
@@ -1807,7 +1809,8 @@ static void do_yaw(struct game_client *c, int yaw)
 {
 	struct snis_entity *ship = &go[c->ship_index];
 
-	do_generic_yaw(&ship->tsd.ship.yaw_velocity, yaw, MAX_YAW_VELOCITY, YAW_INCREMENT);
+	do_generic_yaw(&ship->tsd.ship.yaw_velocity, yaw, MAX_YAW_VELOCITY,
+			YAW_INCREMENT, YAW_INCREMENT_FINE);
 }
 
 static void do_gun_yaw(struct game_client *c, int yaw)
@@ -1816,7 +1819,8 @@ static void do_gun_yaw(struct game_client *c, int yaw)
 	struct snis_entity *ship = &go[c->ship_index];
 
 	do_generic_yaw(&ship->tsd.ship.gun_yaw_velocity, yaw,
-				MAX_GUN_YAW_VELOCITY, GUN_YAW_INCREMENT);
+				MAX_GUN_YAW_VELOCITY, GUN_YAW_INCREMENT,
+				GUN_YAW_INCREMENT_FINE);
 }
 
 static void do_sci_yaw(struct game_client *c, int yaw)
@@ -1824,7 +1828,8 @@ static void do_sci_yaw(struct game_client *c, int yaw)
 	struct snis_entity *ship = &go[c->ship_index];
 
 	do_generic_yaw(&ship->tsd.ship.sci_yaw_velocity, yaw,
-				MAX_SCI_YAW_VELOCITY, SCI_YAW_INCREMENT);
+				MAX_SCI_YAW_VELOCITY, SCI_YAW_INCREMENT,
+				SCI_YAW_INCREMENT_FINE);
 }
 
 static void do_robot_yaw(struct game_client *c, int yaw)
@@ -1833,7 +1838,8 @@ static void do_robot_yaw(struct game_client *c, int yaw)
 	struct snis_damcon_entity *r = d->robot;
 
 	do_generic_yaw(&r->tsd.robot.yaw_velocity, yaw,
-			2.0 * MAX_SCI_YAW_VELOCITY, SCI_YAW_INCREMENT);
+			2.0 * MAX_SCI_YAW_VELOCITY, SCI_YAW_INCREMENT,
+				SCI_YAW_INCREMENT_FINE);
 }
 
 static void do_sci_bw_yaw(struct game_client *c, int yaw)
@@ -1841,7 +1847,8 @@ static void do_sci_bw_yaw(struct game_client *c, int yaw)
 	struct snis_entity *ship = &go[c->ship_index];
 
 	do_generic_yaw(&ship->tsd.ship.sci_beam_width, yaw,
-			MAX_SCI_BW_YAW_VELOCITY, SCI_BW_YAW_INCREMENT);
+			MAX_SCI_BW_YAW_VELOCITY, SCI_BW_YAW_INCREMENT,
+			SCI_BW_YAW_INCREMENT_FINE);
 	ship->tsd.ship.sci_beam_width = fabs(ship->tsd.ship.sci_beam_width);
 	if (ship->tsd.ship.sci_beam_width < MIN_SCI_BEAM_WIDTH)
 		ship->tsd.ship.sci_beam_width = MIN_SCI_BEAM_WIDTH;
@@ -2407,6 +2414,12 @@ static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 		break;
 	case YAW_RIGHT:
 		yaw_func(c, 1);
+		break;
+	case YAW_LEFT_FINE:
+		yaw_func(c, -2);
+		break;
+	case YAW_RIGHT_FINE:
+		yaw_func(c, 2);
 		break;
 	default:
 		break;

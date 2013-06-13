@@ -228,8 +228,10 @@ struct request_throttle_packet {
 struct request_yaw_packet {
 	uint16_t opcode;
 	uint8_t direction;
-#define YAW_LEFT 1
-#define YAW_RIGHT 2
+#define YAW_LEFT 0
+#define YAW_RIGHT 1
+#define YAW_LEFT_FINE 2
+#define YAW_RIGHT_FINE 3
 };
 
 struct request_thrust_packet {

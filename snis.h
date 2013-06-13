@@ -144,18 +144,22 @@ struct ship_data {
 	double desired_velocity;
 #define MAX_YAW_VELOCITY (5 * PI / 180.0)
 #define YAW_INCREMENT (1 * PI / 180.0)
+#define YAW_INCREMENT_FINE (0.2 * PI / 180.0)
 #define YAW_DAMPING 0.85
 #define MAX_GUN_YAW_VELOCITY (15 * PI / 180.0)
 #define GUN_YAW_INCREMENT (3.5 * PI / 180.0)
-#define GUN_YAW_DAMPING 0.45
+#define GUN_YAW_INCREMENT_FINE (0.5 * PI / 180.0)
+#define GUN_YAW_DAMPING 0.1
 	double gun_heading;
 	double gun_yaw_velocity;
 #define MAX_SCI_YAW_VELOCITY (15 * PI / 180.0)
 #define SCI_YAW_INCREMENT (3.5 * PI / 180.0)
+#define SCI_YAW_INCREMENT_FINE (0.5 * PI / 180.0)
 #define SCI_YAW_DAMPING 0.45
 	double sci_heading;
 #define MAX_SCI_BW_YAW_VELOCITY (85 * PI / 180.0)
 #define SCI_BW_YAW_INCREMENT (1 * PI / 180.0)
+#define SCI_BW_YAW_INCREMENT_FINE (0.2 * PI / 180.0)
 #define SCI_BW_YAW_DAMPING 0.45
 #define MIN_SCI_BEAM_WIDTH (5 * PI / 180.0)
 #define MAX_SCIENCE_SCREEN_RADIUS (XKNOWN_DIM / 3.0)
