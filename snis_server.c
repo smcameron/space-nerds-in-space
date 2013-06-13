@@ -219,7 +219,7 @@ static void queue_delete_oid(struct game_client *c, uint32_t oid)
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
-static void snis_queue_delete_object(uint32_t oid)
+static void snis_queue_delete_object(struct snis_entity *o)
 {
 	/* Iterate over all clients and inform them that
 	 * an object is gone.
@@ -232,6 +232,7 @@ static void snis_queue_delete_object(uint32_t oid)
 	 * client_write_queue_mutexes.  Hope there's no deadlocks.
 	 */
 	int i;
+	uint32_t oid = o->id;
 
 	client_lock();
 	for (i = 0; i < nclients; i++)
@@ -420,7 +421,7 @@ static void torpedo_move(struct snis_entity *o)
 			/* make sound for players that did the hitting */
 			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 			if (go[i].type != OBJTYPE_SHIP1) {
-				snis_queue_delete_object(go[i].id);
+				snis_queue_delete_object(&go[i]);
 				snis_object_pool_free_object(pool, i);
 			} else {
 				snis_queue_add_sound(EXPLOSION_SOUND,
@@ -435,7 +436,7 @@ static void torpedo_move(struct snis_entity *o)
 	}
 
 	if (o->alive <= 0) {
-		snis_queue_delete_object(o->id);
+		snis_queue_delete_object(o);
 		o->alive = 0;
 		snis_object_pool_free_object(pool, o->index);
 	}
@@ -517,7 +518,7 @@ static void laser_move(struct snis_entity *o)
 			snis_queue_add_sound(EXPLOSION_SOUND,
 					ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
 			if (go[i].type != OBJTYPE_SHIP1) {
-				snis_queue_delete_object(go[i].id);
+				snis_queue_delete_object(&go[i]);
 				snis_object_pool_free_object(pool, i);
 			} else {
 				snis_queue_add_sound(EXPLOSION_SOUND,
@@ -532,7 +533,7 @@ static void laser_move(struct snis_entity *o)
 	}
 
 	if (o->alive <= 0) {
-		snis_queue_delete_object(o->id);
+		snis_queue_delete_object(o);
 		o->alive = 0;
 		snis_object_pool_free_object(pool, o->index);
 	}
@@ -1236,7 +1237,7 @@ static void explosion_move(struct snis_entity *o)
 		o->alive--;
 
 	if (o->alive <= 0) {
-		snis_queue_delete_object(o->id);
+		snis_queue_delete_object(o);
 		o->alive = 0;
 		snis_object_pool_free_object(pool, o->index);
 	}
