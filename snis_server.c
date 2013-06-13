@@ -1322,6 +1322,14 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.temp = 0;
 	o->tsd.ship.power = 0;
 	o->tsd.ship.scizoom = 128;
+	o->tsd.ship.throttle = 200;
+	o->tsd.ship.pwrdist.maneuvering = 200;
+	o->tsd.ship.pwrdist.warp = 200;
+	o->tsd.ship.pwrdist.impulse = 200;
+	o->tsd.ship.pwrdist.sensors = 200;
+	o->tsd.ship.pwrdist.comms = 200;
+	o->tsd.ship.pwrdist.phaserbanks = 200;
+	o->tsd.ship.pwrdist.shields = 255;
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
 }
 
