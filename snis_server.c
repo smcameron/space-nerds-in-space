@@ -692,7 +692,7 @@ delete_it:
 		int a, r;
 
 		a = snis_randn(360);
-		r = snis_randn(600) + 400;
+		r = snis_randn(LASER_RANGE - 400) + 400;
 		o->tsd.ship.victim = go[eid].id;
 		o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
 		o->tsd.ship.doy = r * sin(a * M_PI / 180.0);
@@ -715,7 +715,7 @@ static void ship_move(struct snis_entity *o)
 			int a, r;
 
 			a = snis_randn(360);
-			r = snis_randn(600) + 400;
+			r = snis_randn(LASER_RANGE - 400) + 400;
 			ship_choose_new_attack_victim(o);
 			v = &go[o->tsd.ship.victim];
 			o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
@@ -727,7 +727,7 @@ static void ship_move(struct snis_entity *o)
 			snis_randn(1000) < 50) {
 			int a, r;
 			a = snis_randn(360);
-			r = snis_randn(600) + 400;
+			r = snis_randn(LASER_RANGE - 400) + 400;
 			o->tsd.ship.victim = find_nearest_victim(o);
 			o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
 			o->tsd.ship.doy = r * sin(a * M_PI / 180.0);
@@ -747,7 +747,7 @@ static void ship_move(struct snis_entity *o)
 		o->tsd.ship.desired_velocity = (d / maxv) * maxv + snis_randn(5);
 		if (o->tsd.ship.desired_velocity > maxv)
 			o->tsd.ship.desired_velocity = maxv;
-		if (fabs(dx) < 500 && fabs(dy) < 500) {
+		if (fabs(dx) < 1000 && fabs(dy) < 1000) {
 			o->tsd.ship.desired_velocity = 0;
 			dx = v->x - o->x;
 			dy = v->y - o->y;
@@ -755,15 +755,13 @@ static void ship_move(struct snis_entity *o)
 			close_enough = 1;
 		}
 		if (snis_randn(1000) < 20) {
-			if (snis_randn(1000) < 500) {
-				int dist;
-				double angle;
+			int dist;
+			double angle;
 
-				angle = snis_randn(360) * M_PI / 180.0;
-				dist = snis_randn(700) + 300;
-				o->tsd.ship.dox = cos(angle) * dist; 
-				o->tsd.ship.doy = sin(angle) * dist; 
-			}
+			angle = snis_randn(360) * M_PI / 180.0;
+			dist = snis_randn(LASER_RANGE - 400) + 400;
+			o->tsd.ship.dox = cos(angle) * dist; 
+			o->tsd.ship.doy = sin(angle) * dist; 
 		}
 	}
 #if 0
@@ -810,8 +808,11 @@ static void ship_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 
 	if (close_enough && o->tsd.ship.victim != (uint32_t) -1) {
+		double range;
 		v = &go[o->tsd.ship.victim];
-		if (snis_randn(1000) < 50) {
+
+		range = hypot(o->x - v->x, o->y - v->y);
+		if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE) {
 			double vx, vy, angle;
 
 			angle = atan2(v->x - o->x, v->y - o->y);

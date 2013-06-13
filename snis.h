@@ -127,9 +127,11 @@ struct ship_data {
 	uint32_t torpedoes;
 #define TORPEDO_LIFETIME 20
 #define TORPEDO_VELOCITY (45.0)
+#define TORPEDO_RANGE (TORPEDO_LIFETIME * TORPEDO_VELOCITY)
 #define TORPEDO_DETONATE_DIST2 (150 * 150)
 #define LASER_LIFETIME 30
 #define LASER_VELOCITY (200.0)
+#define LASER_RANGE (LASER_VELOCITY * LASER_LIFETIME)
 #define LASER_DETONATE_DIST2 (100 * 100)
 	uint32_t power;
 	uint32_t shields;
