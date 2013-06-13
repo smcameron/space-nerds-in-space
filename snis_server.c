@@ -1317,11 +1317,15 @@ static void respawn_player(struct snis_entity *o)
 	send_ship_damage_packet(o->id);
 }
 
-static int add_ship(double x, double y, double vx, double vy, double heading)
+static int add_ship(void)
 {
 	int i;
+	double x, y, heading;
 
-	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_SHIP2);
+	x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+	y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+	heading = degrees_to_radians(0.0 + snis_randn(360)); 
+	i = add_generic_object(x, y, 0.0, 0.0, heading, OBJTYPE_SHIP2);
 	if (i < 0)
 		return i;
 	go[i].move = ship_move;
@@ -1529,14 +1533,9 @@ static void add_wormholes(void)
 static void add_eships(void)
 {
 	int i;
-	double x, y, heading;
 
-	for (i = 0; i < NESHIPS; i++) {
-		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
-		heading = degrees_to_radians(0.0 + snis_randn(360)); 
-		add_ship(x, y, 0.0, 0.0, heading);
-	}
+	for (i = 0; i < NESHIPS; i++)
+		add_ship();
 }
 
 static void make_universe(void)
