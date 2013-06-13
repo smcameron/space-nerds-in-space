@@ -218,6 +218,8 @@ static int joystick_fd = -1;
 /* These are sensible on Logitech Dual Action Rumble and xbox360 controller. */
 static int joystick_x_axis = 0;
 static int joystick_y_axis = 1;
+static int joystick2_x_axis = 3;
+static int joystick2_y_axis = 4;
 
 int open_joystick(char *joystick_device, __attribute__((unused)) void *window)
 {
@@ -269,6 +271,10 @@ int get_joystick_status(struct wwvi_js_event *wjse)
 				wjse->stick_x = jse.value;
 			if (jse.number == joystick_y_axis)
 				wjse->stick_y = jse.value;
+			if (jse.number == joystick2_x_axis)
+				wjse->stick2_x = jse.value;
+			if (jse.number == joystick2_y_axis)
+				wjse->stick2_y = jse.value;
 		} else if (jse.type == JS_EVENT_BUTTON) {
 			if (jse.number < 11) {
 				switch (jse.value) {

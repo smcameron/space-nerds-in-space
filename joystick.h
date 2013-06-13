@@ -44,6 +44,8 @@ struct wwvi_js_event {
 	int button[11];
 	int stick_x;
 	int stick_y;
+	int stick2_x;
+	int stick2_y;
 };
 
 #ifdef __WIN32__

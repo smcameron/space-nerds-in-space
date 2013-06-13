@@ -1590,11 +1590,11 @@ static void deal_with_joystick()
 			goto nav_check_y_stick;
 		}
 nav_check_y_stick:
-		if (jse.stick_y > YJOYSTICK_THRESHOLD) {
+		if (jse.stick2_y > YJOYSTICK_THRESHOLD) {
 			request_navigation_thrust_packet(THRUST_FORWARDS);
 			break;
 		}
-		if (jse.stick_y < -YJOYSTICK_THRESHOLD) {
+		if (jse.stick2_y < -YJOYSTICK_THRESHOLD) {
 			request_navigation_thrust_packet(THRUST_BACKWARDS);
 			break;
 		}
