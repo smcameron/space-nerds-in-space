@@ -687,9 +687,13 @@ delete_it:
 	}
 		
 	if (eid >= 0) {
+		int a, r;
+
+		a = snis_randn(360);
+		r = snis_randn(600) + 400;
 		o->tsd.ship.victim = go[eid].id;
-		o->tsd.ship.dox = snis_randn(2000) - 1000;
-		o->tsd.ship.doy = snis_randn(2000) - 1000;
+		o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
+		o->tsd.ship.doy = r * sin(a * M_PI / 180.0);
 	} else {
 		o->tsd.ship.victim = -1;
 	}
@@ -706,17 +710,24 @@ static void ship_move(struct snis_entity *o)
 	switch (o->tsd.ship.cmd_data.command) {
 	case DEMON_CMD_ATTACK:
 		if (o->tsd.ship.victim == (uint32_t) -1 || snis_randn(1000) < 50) {
+			int a, r;
+
+			a = snis_randn(360);
+			r = snis_randn(600) + 400;
 			ship_choose_new_attack_victim(o);
 			v = &go[o->tsd.ship.victim];
-			o->tsd.ship.dox = snis_randn(2000) - 1000;
-			o->tsd.ship.doy = snis_randn(2000) - 1000;
+			o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
+			o->tsd.ship.doy = r * sin(a * M_PI / 180.0);
 		}
 		break;
 	default:
 		if (o->tsd.ship.victim == (uint32_t) -1) {
+			int a, r;
+			a = snis_randn(360);
+			r = snis_randn(600) + 400;
 			o->tsd.ship.victim = find_nearest_victim(o);
-			o->tsd.ship.dox = snis_randn(2000) - 1000;
-			o->tsd.ship.doy = snis_randn(2000) - 1000;
+			o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
+			o->tsd.ship.doy = r * sin(a * M_PI / 180.0);
 		}
 		break;
 	}
