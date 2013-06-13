@@ -578,6 +578,8 @@ static int find_nearest_victim(struct snis_entity *o)
 		dx = go[i].x - o->x;
 		dy = go[i].y - o->y;
 		dist2 = dx * dx + dy * dy;
+		if (go[i].type == OBJTYPE_SHIP1)
+			dist2 = dist2 * 0.5; /* prioritize hitting player... */
 		if (victim == -1 || dist2 < lowestdist) {
 			victim = i;
 			lowestdist = dist2;
@@ -721,7 +723,8 @@ static void ship_move(struct snis_entity *o)
 		}
 		break;
 	default:
-		if (o->tsd.ship.victim == (uint32_t) -1) {
+		if (o->tsd.ship.victim == (uint32_t) -1 ||
+			snis_randn(1000) < 50) {
 			int a, r;
 			a = snis_randn(360);
 			r = snis_randn(600) + 400;
@@ -744,7 +747,7 @@ static void ship_move(struct snis_entity *o)
 		o->tsd.ship.desired_velocity = (d / maxv) * maxv + snis_randn(5);
 		if (o->tsd.ship.desired_velocity > maxv)
 			o->tsd.ship.desired_velocity = maxv;
-		if (fabs(dx) < 400 && fabs(dy) < 400) {
+		if (fabs(dx) < 500 && fabs(dy) < 500) {
 			o->tsd.ship.desired_velocity = 0;
 			dx = v->x - o->x;
 			dy = v->y - o->y;
@@ -808,7 +811,7 @@ static void ship_move(struct snis_entity *o)
 
 	if (close_enough && o->tsd.ship.victim != (uint32_t) -1) {
 		v = &go[o->tsd.ship.victim];
-		if (snis_randn(1000) < 25) {
+		if (snis_randn(1000) < 50) {
 			double vx, vy, angle;
 
 			angle = atan2(v->x - o->x, v->y - o->y);
@@ -816,7 +819,7 @@ static void ship_move(struct snis_entity *o)
 			vy = TORPEDO_VELOCITY * cos(angle);
 			add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
 		} else { 
-			if (snis_randn(1000) < 25) {
+			if (snis_randn(1000) < 50) {
 				double vx, vy, angle;
 
 				angle = atan2(v->x - o->x, v->y - o->y);
