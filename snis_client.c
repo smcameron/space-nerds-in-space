@@ -1247,9 +1247,28 @@ static void request_sci_select_coords(double ux, double uy)
 	wakeup_gameserver_writer();
 }
 
-static void navigation_dirkey(int h, int v)
+static void request_navigation_yaw_packet(uint8_t yaw)
 {
 	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
+	packed_buffer_append(pb, "hb", OPCODE_REQUEST_YAW, yaw);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
+static void request_navigation_thrust_packet(uint8_t thrust)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct request_thrust_packet));
+	packed_buffer_append(pb, "hb", OPCODE_REQUEST_THRUST, thrust);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
+static void navigation_dirkey(int h, int v)
+{
 	uint8_t yaw, thrust;
 	static int last_time = 0;
 	int fine;
@@ -1262,22 +1281,26 @@ static void navigation_dirkey(int h, int v)
 
 	if (h) {
 		yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
-		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-		packed_buffer_append(pb, "hb", OPCODE_REQUEST_YAW, yaw);
-		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+		request_navigation_yaw_packet(yaw);
 	}
 	if (v) {
 		thrust = v < 0 ? THRUST_BACKWARDS : THRUST_FORWARDS;
-		pb = packed_buffer_allocate(sizeof(struct request_thrust_packet));
-		packed_buffer_append(pb, "hb", OPCODE_REQUEST_THRUST, thrust);
-		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+		request_navigation_thrust_packet(thrust);
 	}
+}
+
+static void request_weapons_yaw_packet(uint8_t yaw)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
+	packed_buffer_append(pb, "hb", OPCODE_REQUEST_GUNYAW, yaw);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
 
 static void weapons_dirkey(int h, int v)
 {
-	struct packed_buffer *pb;
 	static int last_time = 0;
 	int fine;
 	uint8_t yaw;
@@ -1289,10 +1312,7 @@ static void weapons_dirkey(int h, int v)
 	last_time = timer;
 	if (h) {
 		yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
-		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-		packed_buffer_append(pb, "hb", OPCODE_REQUEST_GUNYAW, yaw);
-		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-		wakeup_gameserver_writer();
+		request_weapons_yaw_packet(yaw);
 	}
 }
 
@@ -1429,10 +1449,49 @@ static void robot_left_button_pressed(void *x);
 static void robot_right_button_pressed(void *x);
 static void robot_gripper_button_pressed(void *x);
 
+static void fire_phaser_button_pressed(__attribute__((unused)) void *notused);
+static void joystick_button_zero(__attribute__((unused)) void *x)
+{
+	switch (displaymode) {
+	case DISPLAYMODE_WEAPONS:
+		fire_phaser_button_pressed(NULL);
+		break;
+	case DISPLAYMODE_DAMCON:
+		robot_gripper_button_pressed(NULL);
+		break;
+	default:
+		break;
+	}	
+}
+
+static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused);
+static void joystick_button_one(__attribute__((unused)) void *x)
+{
+	switch (displaymode) {
+	case DISPLAYMODE_WEAPONS:
+		fire_torpedo_button_pressed(NULL);
+		break;
+	default:
+		break;
+	}	
+}
+
+static void load_torpedo_button_pressed();
+static void joystick_button_two(__attribute__((unused)) void *x)
+{
+	switch (displaymode) {
+	case DISPLAYMODE_WEAPONS:
+		load_torpedo_button_pressed();
+		break;
+	default:
+		break;
+	}	
+}
+
 static joystick_button_fn do_joystick_button[] = {
-		robot_gripper_button_pressed,
-		NULL,
-		NULL,
+		joystick_button_zero,
+		joystick_button_one,
+		joystick_button_two,
 		NULL,
 		NULL,
 		NULL,
@@ -1447,15 +1506,16 @@ static void deal_with_joystick()
 {
 
 #define FRAME_RATE_HZ 30 
-	static int joystick_throttle = (int) ((FRAME_RATE_HZ / 8.0) + 0.5);
+	static int joystick_throttle = (int) ((FRAME_RATE_HZ / 12.0) + 0.5);
 	static struct wwvi_js_event jse;
 	int i, rc;
 
 	if (joystick_fd < 0) /* no joystick */
 		return;
 
-#define XJOYSTICK_THRESHOLD 15000
-#define YJOYSTICK_THRESHOLD 15000
+#define XJOYSTICK_THRESHOLD 23000
+#define YJOYSTICK_THRESHOLD 23000
+#define XJOYSTICK_THRESHOLD_FINE 6000
 
 	/* Read events even if we don't use them just to consume them. */
 	memset(&jse.button, 0, sizeof(jse.button));
@@ -1464,7 +1524,9 @@ static void deal_with_joystick()
 		return;
 
 	/* If not on screen which uses joystick, ignore stick */
-	if (displaymode != DISPLAYMODE_DAMCON)
+	if (displaymode != DISPLAYMODE_DAMCON &&
+		displaymode != DISPLAYMODE_WEAPONS &&
+		displaymode != DISPLAYMODE_NAVIGATION)
 		return;
 
 	/* Check joystick buttons (need to throttle this?) */
@@ -1477,14 +1539,69 @@ static void deal_with_joystick()
 	if (timer % joystick_throttle != 0)
 		return;
 
-	if (jse.stick_x < -XJOYSTICK_THRESHOLD)
-		robot_left_button_pressed(NULL);
-	if (jse.stick_x > XJOYSTICK_THRESHOLD)
-		robot_right_button_pressed(NULL);
-	if (jse.stick_y < -YJOYSTICK_THRESHOLD)
-		robot_forward_button_pressed(NULL);
-	if (jse.stick_y > YJOYSTICK_THRESHOLD)
-		robot_backward_button_pressed(NULL);
+	switch (displaymode) {
+	case DISPLAYMODE_DAMCON:
+		if (jse.stick_x < -XJOYSTICK_THRESHOLD)
+			robot_left_button_pressed(NULL);
+			break;
+		if (jse.stick_x > XJOYSTICK_THRESHOLD)
+			robot_right_button_pressed(NULL);
+			break;
+		if (jse.stick_y < -YJOYSTICK_THRESHOLD)
+			robot_forward_button_pressed(NULL);
+			break;
+		if (jse.stick_y > YJOYSTICK_THRESHOLD)
+			robot_backward_button_pressed(NULL);
+			break;
+		break;
+	case DISPLAYMODE_WEAPONS:
+		if (jse.stick_x < -XJOYSTICK_THRESHOLD) {
+			request_weapons_yaw_packet(YAW_LEFT);
+			break;
+		}
+		if (jse.stick_x > XJOYSTICK_THRESHOLD) {
+			request_weapons_yaw_packet(YAW_RIGHT);
+			break;
+		}
+		if (jse.stick_x < -XJOYSTICK_THRESHOLD_FINE) {
+			request_weapons_yaw_packet(YAW_LEFT + 2);
+			break;
+		}
+		if (jse.stick_x > XJOYSTICK_THRESHOLD_FINE) {
+			request_weapons_yaw_packet(YAW_RIGHT + 2);
+			break;
+		}
+		break;
+	case DISPLAYMODE_NAVIGATION:
+		if (jse.stick_x < -XJOYSTICK_THRESHOLD) {
+			request_navigation_yaw_packet(YAW_LEFT);
+			goto nav_check_y_stick;
+		}
+		if (jse.stick_x > XJOYSTICK_THRESHOLD) {
+			request_navigation_yaw_packet(YAW_RIGHT);
+			goto nav_check_y_stick;
+		}
+		if (jse.stick_x < -XJOYSTICK_THRESHOLD_FINE) {
+			request_navigation_yaw_packet(YAW_LEFT + 2);
+			goto nav_check_y_stick;
+		}
+		if (jse.stick_x > XJOYSTICK_THRESHOLD_FINE) {
+			request_navigation_yaw_packet(YAW_RIGHT + 2);
+			goto nav_check_y_stick;
+		}
+nav_check_y_stick:
+		if (jse.stick_y > YJOYSTICK_THRESHOLD) {
+			request_navigation_thrust_packet(THRUST_FORWARDS);
+			break;
+		}
+		if (jse.stick_y < -YJOYSTICK_THRESHOLD) {
+			request_navigation_thrust_packet(THRUST_BACKWARDS);
+			break;
+		}
+		break;
+	default:
+		break;
+	}
 }
 
 static int control_key_pressed = 0;
