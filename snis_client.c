@@ -129,6 +129,7 @@ float yscale_screen= 1.0;
 int real_screen_width;
 int real_screen_height;
 int warp_limbo_countdown = 0;
+int damage_limbo_countdown = 0;
 
 struct nebula_entry {
 	double x, y, r, r2;
@@ -2247,6 +2248,8 @@ static int process_ship_damage_packet(void)
 	pthread_mutex_lock(&universe_mutex);
 	go[i].tsd.ship.damage = damage;
 	pthread_mutex_unlock(&universe_mutex);
+	if (id == my_ship_id) 
+		damage_limbo_countdown = 8;
 	return 0;
 }
 
@@ -6112,6 +6115,10 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (warp_limbo_countdown) {
 		warp_limbo_countdown--;
 		show_warp_limbo_screen(w);
+		return 0;
+	} else if (damage_limbo_countdown) {
+		show_warp_hash_screen(w);
+		damage_limbo_countdown--;
 		return 0;
 	}
 
