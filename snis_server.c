@@ -420,7 +420,7 @@ static void torpedo_move(struct snis_entity *o)
 			/* make sound for players that got hit */
 			/* make sound for players that did the hitting */
 			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
-			if (go[i].type != OBJTYPE_SHIP1) {
+			if (otype != OBJTYPE_SHIP1) {
 				snis_queue_delete_object(&go[i]);
 				snis_object_pool_free_object(pool, i);
 			} else {
