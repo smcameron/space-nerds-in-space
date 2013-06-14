@@ -101,7 +101,7 @@ static double max_speed[] = {
 	7.5,
 	9.0,
 	11.0,
-	1.0,
+	8.0,
 };
 
 struct ship_damage_data {

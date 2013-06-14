@@ -833,7 +833,7 @@ static void spin_starbase(struct snis_entity *o)
 {
 	float angle;
 
-	angle = (timer % 360) * M_PI / 180.0;
+	angle = ((timer / 2) % 360) * M_PI / 180.0;
 	update_entity_rotation(o->entity, 0.0, 0.0, angle);
 }
 
