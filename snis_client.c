@@ -829,6 +829,14 @@ static void spin_wormhole(struct snis_entity *o)
 	update_entity_rotation(o->entity, 0.0, 0.0, angle);
 }
 
+static void spin_starbase(struct snis_entity *o)
+{
+	float angle;
+
+	angle = (timer % 360) * M_PI / 180.0;
+	update_entity_rotation(o->entity, 0.0, 0.0, angle);
+}
+
 static void move_objects(void)
 {
 	int i;
@@ -838,6 +846,9 @@ static void move_objects(void)
 		switch (o->type) {
 		case OBJTYPE_WORMHOLE:
 			spin_wormhole(o);
+			break;
+		case OBJTYPE_STARBASE:
+			spin_starbase(o);
 			break;
 		case OBJTYPE_LASER:
 		case OBJTYPE_TORPEDO:
