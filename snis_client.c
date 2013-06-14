@@ -839,6 +839,13 @@ static void move_objects(void)
 		case OBJTYPE_WORMHOLE:
 			spin_wormhole(o);
 			break;
+		case OBJTYPE_LASER:
+		case OBJTYPE_TORPEDO:
+			/* predictive movement, this is probably */
+			/* too dumb to work right */
+			o->x += o->vx;
+			o->y += o->vy;
+			break;
 		default:
 			break;
 		}
