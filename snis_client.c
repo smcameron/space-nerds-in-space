@@ -3081,6 +3081,7 @@ static void show_mainscreen_starfield(GtkWidget *w, double heading)
 	static int stary[720];
 	int i, first_angle, last_angle;
 	float x, dx;
+	float fa;
 
 /* FIXME: make angle of view be calculated from camera parameters */
 #define ANGLE_OF_VIEW (50)
@@ -3092,15 +3093,18 @@ static void show_mainscreen_starfield(GtkWidget *w, double heading)
 	}
 
 
-	first_angle = (heading * 180 / M_PI) - ANGLE_OF_VIEW / 2.0;
+	fa = (heading * 180 / M_PI) - ANGLE_OF_VIEW / 2.0;
+	if (fa < 0)
+		fa += 360.0;
+	first_angle = fa;
 	last_angle = (heading * 180 / M_PI) + ANGLE_OF_VIEW / 2.0;
 	first_angle = normalize_degrees(first_angle);
 	last_angle = normalize_degrees(last_angle);
 
 	sng_set_foreground(WHITE);
 
-	x = 0;
 	dx = (float) SCREEN_WIDTH / ANGLE_OF_VIEW;
+	x = 0.0 - (fa - (float) first_angle) * dx;
 	for (i = first_angle; i != last_angle; i = (i + 1) % 360) {
 		snis_draw_line(w->window, gc, (int) x, stary[i], (int) x + (snis_randn(10) < 7), stary[i]);
 		snis_draw_line(w->window, gc, (int) x, stary[360 + i],
