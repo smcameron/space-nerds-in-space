@@ -63,5 +63,21 @@ d) Connect the clients to the lobby, and then from there connect to the
 
 That's about all the instructions I have for now.
 
+------
+
+Logfiles:  by default, /dev/null is used as a log file.
+
+Some environment variables can cause some network related logging:
+
+	export SNIS_SERVER_LOGFILE=snis-log.txt
+	export SSGL_LOGFILE=my-ssgl-log.txt
+
+Some other environment variables influence the level of logging:
+
+	export SSGL_LOG_LEVEL=0
+	export SNIS_LOG_LEVEL=0
+
+lower values means more logging (yes, that's backwards and I should fix it.)
+
 -- steve
 

@@ -3692,7 +3692,7 @@ static void open_log_file(void)
 	char *loglevelstring;
 	int ll, rc;
 
-	rc = snis_open_logfile("snis_server.log");
+	rc = snis_open_logfile("SNIS_SERVER_LOGFILE");
 	loglevelstring = getenv("SNIS_LOG_LEVEL");
 	if (rc == 0 && loglevelstring && sscanf(loglevelstring, "%d", &ll) == 1) {
 		snis_log_level = ll;

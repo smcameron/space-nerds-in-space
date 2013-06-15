@@ -432,7 +432,7 @@ int main(int argc, char *argv[])
 
 	daemon(1, 0);
 
-	if (ssgl_open_logfile("ssgl.log"))
+	if (ssgl_open_logfile("SSGL_LOGFILE"))
 		return 0;
 
 	memset(game_server, 0, sizeof(game_server));
