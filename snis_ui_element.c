@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
 
 #define DEFINE_UI_ELEMENT_GLOBALS
 #include "snis_ui_element.h"
@@ -126,9 +127,59 @@ void ui_element_set_focus_callback(struct ui_element *e,
 	e->set_focus = set_focus;
 }
 
+static void advance_focus(struct ui_element_list *list)
+{
+	struct ui_element_list *i;
+	int found = 0;
+	int done = 0;
+
+	for (i = list; i; i = i->next) {
+		struct ui_element *e = i->element;
+		if (e->set_focus && e->has_focus &&
+				e->active_displaymode == *e->displaymode) {
+			e->has_focus = 0;
+			e->set_focus(e->element, 0);
+			found = 1;
+			continue;
+		}
+		if (found) {
+			if (e->active_displaymode == *e->displaymode && e->set_focus) {
+				e->has_focus = 1;
+				e->set_focus(e->element, 1);
+				done = 1;
+				break;				
+			}
+		}
+		
+	}
+
+	if (done)
+		return;
+
+	/* Start from the beginning of the list */
+	for (i = list; i; i = i->next) {
+		struct ui_element *e = i->element;
+		if (e->active_displaymode == *e->displaymode && e->set_focus) {
+			e->has_focus = 1;
+			e->set_focus(e->element, 1);
+			break;
+		}
+	}
+}
+
 void ui_element_list_keypress(struct ui_element_list *list, GdkEventKey *event)
 {
 	struct ui_element_list *i;
+
+	if (event->type == GDK_KEY_PRESS && (event->keyval & ~0x7f) != 0) {
+		switch (event->keyval) {
+		case GDK_KEY_Tab:
+			advance_focus(list);
+			return;
+		default:
+			break;
+		}
+	}
 
 	for (i = list; i; i = i->next) {
 		if (!i->element->has_focus)
