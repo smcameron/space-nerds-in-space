@@ -701,6 +701,23 @@ delete_it:
 	}
 }
 
+static void spacemonster_move(struct snis_entity *o)
+{
+
+	/* FIXME: make this better */
+	o->vx = cos(o->heading) * 10.0;
+	o->vy = sin(o->heading) * 10.0;
+	o->tsd.spacemonster.zz =
+		sin(M_PI *((universe_timestamp * 10 + o->id) % 360) / 180.0) * 35.0;
+	o->x += o->vx;
+	o->y += o->vy;
+	if (snis_randn(1000) < 50) {
+		o->heading += (snis_randn(40) - 20) * M_PI / 180.0;
+		normalize_angle(&o->heading);
+	}
+	o->timestamp = universe_timestamp;
+}
+
 static void ship_move(struct snis_entity *o)
 {
 	double heading_diff, yaw_vel;
@@ -1382,6 +1399,22 @@ static int add_ship(void)
 	return i;
 }
 
+static int add_spacemonster(void)
+{
+	int i;
+	double x, y, heading;
+
+	x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+	y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+	heading = degrees_to_radians(0.0 + snis_randn(360)); 
+	i = add_generic_object(x, y, 0.0, 0.0, heading, OBJTYPE_SPACEMONSTER);
+	if (i < 0)
+		return i;
+	go[i].tsd.spacemonster.zz = 0.0;
+	go[i].move = spacemonster_move;
+	return i;
+}
+
 static int add_asteroid(double x, double y, double vx, double vy, double heading)
 {
 	int i;
@@ -1578,6 +1611,14 @@ static void add_eships(void)
 		add_ship();
 }
 
+static void add_spacemonsters(void)
+{
+	int i;
+
+	for (i = 0; i < NSPACEMONSTERS; i++)
+		add_spacemonster();
+}
+
 static void make_universe(void)
 {
 	pthread_mutex_lock(&universe_mutex);
@@ -1588,6 +1629,7 @@ static void make_universe(void)
 	add_asteroids();
 	add_wormholes();
 	add_eships();
+	add_spacemonsters();
 	pthread_mutex_unlock(&universe_mutex);
 }
 
@@ -2857,6 +2899,8 @@ static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_spacemonster_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_nebula_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_damcon_obj_packet(struct game_client *c,
@@ -2908,6 +2952,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_LASER:
 		send_update_laser_packet(c, o);
+		break;
+	case OBJTYPE_SPACEMONSTER:
+		send_update_spacemonster_packet(c, o);
 		break;
 	default:
 		break;
@@ -3306,6 +3353,18 @@ static void send_update_laser_packet(struct game_client *c,
 			o->id, o->tsd.laser.ship_id,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vy, (int32_t) UNIVERSE_DIM);
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
+static void send_update_spacemonster_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(struct update_spacemonster_packet));
+	packed_buffer_append(pb, "hwSSS", OPCODE_UPDATE_SPACEMONSTER, o->id,
+			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
+			o->tsd.spacemonster.zz, (int32_t) UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

@@ -79,6 +79,7 @@
 #define PARTICLE_COLOR YELLOW
 #define LASER_COLOR GREEN
 #define TORPEDO_COLOR WHITE
+#define SPACEMONSTER_COLOR GREEN
 
 #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -205,6 +206,7 @@ struct mesh *particle_mesh;
 struct mesh *debris_mesh;
 struct mesh *debris2_mesh;
 struct mesh *wormhole_mesh;
+struct mesh *spacemonster_mesh;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -687,6 +689,91 @@ static int update_laser(uint32_t id, double x, double y, double vx, double vy, u
 		go[i].tsd.laser.ship_id = ship_id;
 	} else {
 		update_generic_object(i, x, y, vx, vy, 0.0, 1); 
+	}
+	return 0;
+}
+
+static void init_spacemonster_data(struct snis_entity *o, double z)
+{
+	int i;
+	struct spacemonster_data *sd = &o->tsd.spacemonster;
+
+	sd->zz = z;
+	sd->front = 0;
+	sd->x = malloc(sizeof(*o->tsd.spacemonster.x) *
+					MAX_SPACEMONSTER_SEGMENTS);
+	sd->y = malloc(sizeof(*o->tsd.spacemonster.x) *
+					MAX_SPACEMONSTER_SEGMENTS);
+	sd->z = malloc(sizeof(*o->tsd.spacemonster.x) *
+					MAX_SPACEMONSTER_SEGMENTS);
+	sd->entity = malloc(sizeof(*o->tsd.spacemonster.entity) *
+					MAX_SPACEMONSTER_SEGMENTS);
+	for (i = 0; i < MAX_SPACEMONSTER_SEGMENTS; i++) {
+		sd->x[i] = o->x;
+		sd->y[i] = o->y;
+		sd->z[i] = 0.0;
+		sd->entity[i] = add_point_cloud(spacemonster_mesh, o->x, 0, -o->y,
+						SPACEMONSTER_COLOR);
+	}
+		
+}
+
+static void free_spacemonster_data(struct snis_entity *o)
+{
+	int i;
+	struct spacemonster_data *sd = &o->tsd.spacemonster;
+
+	if (o->type != OBJTYPE_SPACEMONSTER)
+		return;
+
+	if (sd->x) {
+		free(sd->x);
+		sd->x = NULL;
+	}
+	if (sd->y) {
+		free(sd->y);
+		sd->y = NULL;
+	}
+	if (sd->z) {
+		free(sd->z);
+		sd->z = NULL;
+	}
+
+	if (sd->entity) {
+		for (i = 0; i < MAX_SPACEMONSTER_SEGMENTS; i++)
+			remove_entity(sd->entity[i]);
+		free(sd->entity);
+		sd->entity = NULL;
+	}
+}
+
+static int update_spacemonster(uint32_t id, double x, double y, double z)
+{
+	int i;
+	struct entity *e;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		e = add_point_cloud(spacemonster_mesh, x, 0, -y, SPACEMONSTER_COLOR);
+		i = add_generic_object(id, x, y, 0, 0, 0.0, OBJTYPE_SPACEMONSTER, 1, e);
+		if (i < 0)
+			return i;
+		go[i].entity = e;
+		init_spacemonster_data(&go[i], z);
+	} else {
+		struct spacemonster_data *sd;
+		int n;
+
+		update_generic_object(i, x, y, 0, 0, 0.0, 1); 
+		update_entity_pos(go[i].entity, x, z, -y);
+		sd = &go[i].tsd.spacemonster;
+		sd->zz = z;
+		n = (sd->front + 1) % MAX_SPACEMONSTER_SEGMENTS;
+		sd->front = n;
+		sd->x[n] = x;
+		sd->y[n] = y;
+		sd->z[n] = z;
+		update_entity_pos(sd->entity[sd->front], x, z, -y);
 	}
 	return 0;
 }
@@ -2124,6 +2211,29 @@ static int process_update_laser_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_spacemonster(void)
+{
+	unsigned char buffer[100];
+	struct packed_buffer pb;
+	uint32_t id;
+	double dx, dy, dz;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_spacemonster_packet) - sizeof(uint16_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_spacemonster_packet) -
+					sizeof(uint16_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "wSSS", &id,
+				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
+				&dz, (int32_t) UNIVERSE_DIM);
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_spacemonster(id, dx, dy, dz);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+}
+
 static void delete_object(uint32_t id)
 {
 	int i;
@@ -2134,6 +2244,7 @@ static void delete_object(uint32_t id)
 		return;
 	go[i].alive = 0;
 	remove_entity(go[i].entity);
+	free_spacemonster_data(&go[i]);
 	snis_object_pool_free_object(pool, i);
 }
 
@@ -2675,6 +2786,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_MAINSCREEN_VIEW_MODE:
 			rc = process_mainscreen_view_mode();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_SPACEMONSTER:
+			rc = process_update_spacemonster();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -3350,6 +3466,8 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 					sprintf(buffer, "%s", go[i].sdata.name);
 					sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, x + 10, y - 10);
 				}
+				break;
+			case OBJTYPE_SPACEMONSTER: /* invisible to instruments */
 				break;
 			default:
 				sng_set_foreground(WHITE);
@@ -6632,6 +6750,7 @@ static void init_meshes(void)
 	debris2_mesh = read_stl_file("big-flat-tetrahedron.stl");
 	wormhole_mesh = read_stl_file("wormhole.stl");
 	distort_mesh(wormhole_mesh, 0.15);
+	spacemonster_mesh = read_stl_file("spacemonster.stl");
 #else
 #define THE_MODEL "starbase.stl"
 	ship_mesh = read_stl_file(THE_MODEL);

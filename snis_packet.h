@@ -79,6 +79,7 @@
 #define OPCODE_MAINSCREEN_VIEW_MODE	153
 #define OPCODE_UPDATE_WORMHOLE		154
 #define OPCODE_WORMHOLE_LIMBO		155
+#define OPCODE_UPDATE_SPACEMONSTER	156
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -214,6 +215,12 @@ struct update_laser_packet {
 	uint32_t x, y;
 	uint32_t vx, vy;
 }; 
+
+struct update_spacemonster_packet {
+	uint16_t opcode;
+	uint32_t id;
+	uint32_t x, y, z;
+};
 
 struct request_torpedo_packet {
 	uint16_t opcode;
