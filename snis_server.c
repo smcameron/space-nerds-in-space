@@ -3147,7 +3147,8 @@ static void send_ship_damage_packet(uint32_t id)
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_new("hwr", OPCODE_UPDATE_DAMAGE, id,
+	pb = packed_buffer_allocate(sizeof(struct ship_damage_packet));
+	packed_buffer_append(pb, "hwr", OPCODE_UPDATE_DAMAGE, id,
 		(char *) &go[id].tsd.ship.damage, (unsigned short) sizeof(go[id].tsd.ship.damage));
 	send_packet_to_all_clients(pb, ROLE_ALL);
 }
