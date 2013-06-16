@@ -6570,10 +6570,24 @@ static void destroy(GtkWidget *widget, gpointer data)
 
 void really_quit(void)
 {
+
+	float seconds;
+
+	/* prevent divide by zero */
+	if (nframes < 1)
+		nframes = 1;
+	if (netstats.elapsed_seconds < 1)
+		netstats.elapsed_seconds = 1;
+
 	gettimeofday(&end_time, NULL);
+
+	seconds = (0.0 + end_time.tv_sec - start_time.tv_sec);
+	if (seconds < 1.0)
+		seconds = 1.0;
+
 	printf("%d frames / %d seconds, %g frames/sec\n",
 		nframes, (int) (end_time.tv_sec - start_time.tv_sec),
-		(0.0 + nframes) / (0.0 + end_time.tv_sec - start_time.tv_sec));
+		(0.0 + nframes) / seconds);
 	printf("server netstats: %llu bytes sent, %llu bytes recd, secs = %llu, bw = %llu bytes/sec\n",
 			netstats.bytes_sent, netstats.bytes_recd, (unsigned long long) netstats.elapsed_seconds,
 			(netstats.bytes_sent + netstats.bytes_recd) / netstats.elapsed_seconds);
