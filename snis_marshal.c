@@ -426,20 +426,8 @@ double packed_buffer_extract_ds32(struct packed_buffer *pb, int32_t scale)
 	return s32tod(packed_buffer_extract_u32(pb), scale);
 }
 
-/* For packed_buffer_append/extract, format is like:
- * "b" = u8 (byte)
- * "h" = u16 (half-word) ( ugh, I hate propagating the notion that "word == 16 bits")
- * "w" = u32 (word)
- * "s" = string
- * "r" = raw
- * "d" = double
- * "S" = 32-bit signed integer encoded double (takes 2 params, double + scale )
- * "U" = 32-bit unsigned integer encoded double (takes 2 params, double + scale )
- */
-
-int packed_buffer_append(struct packed_buffer *pb, const char *format, ...)
+int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_list ap)
 {
-	va_list ap;
 	uint8_t b;
 	uint16_t h;
 	uint32_t w;
@@ -451,8 +439,6 @@ int packed_buffer_append(struct packed_buffer *pb, const char *format, ...)
 	unsigned short len;
 	int rc = 0;
 	double d;
-
-	va_start(ap, format);
 
 	while (*format) {	
 		switch(*format++) {
@@ -500,13 +486,33 @@ int packed_buffer_append(struct packed_buffer *pb, const char *format, ...)
 			break;
 		}
 	}
+	return rc;
+}
+
+/* For packed_buffer_append/extract, format is like:
+ * "b" = u8 (byte)
+ * "h" = u16 (half-word) ( ugh, I hate propagating the notion that "word == 16 bits")
+ * "w" = u32 (word)
+ * "s" = string
+ * "r" = raw
+ * "d" = double
+ * "S" = 32-bit signed integer encoded double (takes 2 params, double + scale )
+ * "U" = 32-bit unsigned integer encoded double (takes 2 params, double + scale )
+ */
+
+int packed_buffer_append(struct packed_buffer *pb, const char *format, ...)
+{
+	va_list ap;
+	int rc = 0;
+
+	va_start(ap, format);
+	rc = packed_buffer_append_va(pb, format, ap);
 	va_end(ap);
 	return rc;
 }
 
-int packed_buffer_extract(struct packed_buffer *pb, const char *format, ...)
+int packed_buffer_extract_va(struct packed_buffer *pb, const char *format, va_list ap)
 {
-	va_list ap;
 	uint8_t *b;
 	uint16_t *h;
 	uint32_t *w;
@@ -519,8 +525,6 @@ int packed_buffer_extract(struct packed_buffer *pb, const char *format, ...)
 	int ilen;
 	int rc = 0;
 	double *d;
-
-	va_start(ap, format);
 
 	while (*format) {	
 		switch(*format++) {
@@ -569,6 +573,16 @@ int packed_buffer_extract(struct packed_buffer *pb, const char *format, ...)
 			break;
 		}
 	}
+	return rc;
+}
+
+int packed_buffer_extract(struct packed_buffer *pb, const char *format, ...)
+{
+	va_list ap;
+	int rc = 0;
+
+	va_start(ap, format);
+	rc = packed_buffer_extract_va(pb, format, ap);
 	va_end(ap);
 	return rc;
 }

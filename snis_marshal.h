@@ -47,7 +47,11 @@ GLOBAL void packed_buffer_free(struct packed_buffer *pb);
  */
 
 GLOBAL int packed_buffer_append(struct packed_buffer *pb, const char *format, ...);
+GLOBAL int packed_buffer_append_va(struct packed_buffer *pb, const char *format,
+					va_list ap);
 GLOBAL int packed_buffer_extract(struct packed_buffer *pb, const char *format, ...);
+GLOBAL int packed_buffer_extract_va(struct packed_buffer *pb, const char *format,
+					va_list ap);
 GLOBAL int packed_buffer_append_double(struct packed_buffer *pb, double value);
 GLOBAL int packed_buffer_append_u16(struct packed_buffer *pb, uint16_t value);
 GLOBAL int packed_buffer_append_u8(struct packed_buffer *pb, uint8_t value);
