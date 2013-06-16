@@ -214,8 +214,7 @@ static void queue_delete_oid(struct game_client *c, uint32_t oid)
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct delete_object_packet));
-	packed_buffer_append(pb, "hw",OPCODE_DELETE_OBJECT, oid);
+	pb = packed_buffer_new("hw",OPCODE_DELETE_OBJECT, oid);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -289,8 +288,7 @@ static void queue_add_sound(struct game_client *c, uint16_t sound_number)
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct play_sound_packet));
-	packed_buffer_append(pb, "hh", OPCODE_PLAY_SOUND, sound_number);
+	pb = packed_buffer_new("hh", OPCODE_PLAY_SOUND, sound_number);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -2013,8 +2011,7 @@ static int process_role_onscreen(struct game_client *c)
 	if (new_displaymode >= DISPLAYMODE_FONTTEST)
 		new_displaymode = DISPLAYMODE_MAINSCREEN;
 
-	pb2 = packed_buffer_allocate(sizeof(struct role_onscreen_packet));
-	packed_buffer_append(pb2, "hb", OPCODE_ROLE_ONSCREEN, new_displaymode);
+	pb2 = packed_buffer_new("hb", OPCODE_ROLE_ONSCREEN, new_displaymode);
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb2, ROLE_MAIN);
 	return 0;
 }
@@ -2034,8 +2031,7 @@ static int process_sci_select_target(struct game_client *c)
 	id = packed_buffer_extract_u32(&pb);
 
 	/* just turn it around and fan it out to all the right places */
-	pb2 = packed_buffer_allocate(sizeof(struct snis_sci_select_target_packet));
-	packed_buffer_append(pb2, "hw", OPCODE_SCI_SELECT_TARGET, id);
+	pb2 = packed_buffer_new("hw", OPCODE_SCI_SELECT_TARGET, id);
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb2, ROLE_SCIENCE);
 	return 0;
 }
@@ -2054,8 +2050,7 @@ static int process_sci_select_coords(struct game_client *c)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	packed_buffer_extract(&pb, "ww", &x, &y);
 	/* just turn it around and fan it out to all the right places */
-	pb2 = packed_buffer_allocate(sizeof(struct snis_sci_select_coords_packet));
-	packed_buffer_append(pb2, "hww", OPCODE_SCI_SELECT_COORDS, x, y);
+	pb2 = packed_buffer_new("hww", OPCODE_SCI_SELECT_COORDS, x, y);
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb2, ROLE_SCIENCE);
 	return 0;
 }
@@ -2338,8 +2333,7 @@ static int process_mainscreen_view_mode(struct game_client *c)
 	packed_buffer_extract(&pb, "Sb", &view_angle, (int32_t) 360, &view_mode);
 
 	/* Rebuild packet and send to all clients with main screen role */
-	out = packed_buffer_allocate(sizeof(struct request_mainscreen_view_change));
-	packed_buffer_append(out, "hSb", OPCODE_MAINSCREEN_VIEW_MODE,
+	out = packed_buffer_new("hSb", OPCODE_MAINSCREEN_VIEW_MODE,
 				view_angle, (int32_t) 360, view_mode);
 	send_packet_to_all_clients_on_a_bridge(c->shipid, out, ROLE_MAIN);
 	return 0;
@@ -2492,8 +2486,7 @@ static void send_warp_limbo_packet(struct game_client *c, uint16_t value)
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct warp_limbo_packet));
-	packed_buffer_append(pb, "hh", OPCODE_WARP_LIMBO, value);
+	pb = packed_buffer_new("hh", OPCODE_WARP_LIMBO, value);
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_SCIENCE);
 }
 
@@ -2501,8 +2494,7 @@ static void send_wormhole_limbo_packet(int shipid, uint16_t value)
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct warp_limbo_packet));
-	packed_buffer_append(pb, "hh", OPCODE_WORMHOLE_LIMBO, value);
+	pb = packed_buffer_new("hh", OPCODE_WORMHOLE_LIMBO, value);
 	send_packet_to_all_clients_on_a_bridge(shipid, pb, ROLE_ALL);
 }
 
@@ -2985,8 +2977,7 @@ static void queue_netstats(struct game_client *c)
 		return;
 	gettimeofday(&now, NULL);
 	elapsed_seconds = now.tv_sec - netstats.start.tv_sec;
-	pb = packed_buffer_allocate(sizeof(struct netstats_packet));
-	packed_buffer_append(pb, "hqqw", OPCODE_UPDATE_NETSTATS,
+	pb = packed_buffer_new("hqqw", OPCODE_UPDATE_NETSTATS,
 		netstats.bytes_sent, netstats.bytes_recd, elapsed_seconds);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
@@ -3046,8 +3037,7 @@ static void queue_up_client_id(struct game_client *c)
 	/* tell the client what his ship id is. */
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
-	packed_buffer_append(pb, "hw", OPCODE_ID_CLIENT_SHIP, c->shipid);
+	pb = packed_buffer_new("hw", OPCODE_ID_CLIENT_SHIP, c->shipid);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -3135,8 +3125,7 @@ static void send_econ_update_ship_packet(struct game_client *c,
 
 	dv = sqrt((o->vx * o->vx) + (o->vy * o->vy));
 
-	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
-	packed_buffer_append(pb, "hwwSSUUwb", OPCODE_ECON_UPDATE_SHIP, o->id, o->alive,
+	pb = packed_buffer_new("hwwSSUUwb", OPCODE_ECON_UPDATE_SHIP, o->id, o->alive,
 		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 		dv, (uint32_t) UNIVERSE_DIM, o->heading, (uint32_t) 360,
 		(uint32_t) o->tsd.ship.victim, o->tsd.ship.shiptype);
@@ -3158,8 +3147,7 @@ static void send_ship_damage_packet(uint32_t id)
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct ship_damage_packet));
-	packed_buffer_append(pb, "hwr", OPCODE_UPDATE_DAMAGE, id,
+	pb = packed_buffer_new("hwr", OPCODE_UPDATE_DAMAGE, id,
 		(char *) &go[id].tsd.ship.damage, (unsigned short) sizeof(go[id].tsd.ship.damage));
 	send_packet_to_all_clients(pb, ROLE_ALL);
 }
@@ -3182,8 +3170,7 @@ static void send_respawn_time(struct game_client *c,
 	struct packed_buffer *pb;
 	uint8_t seconds = (o->respawn_time - universe_timestamp) / 10;
 
-	pb = packed_buffer_allocate(sizeof(struct respawn_time_packet));
-	packed_buffer_append(pb, "hb", OPCODE_UPDATE_RESPAWN_TIME, seconds);
+	pb = packed_buffer_new("hb", OPCODE_UPDATE_RESPAWN_TIME, seconds);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 	
@@ -3224,8 +3211,7 @@ static void send_update_damcon_obj_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct damcon_obj_update_packet));
-	packed_buffer_append(pb, "hwwwSSSS",
+	pb = packed_buffer_new("hwwwSSSS",
 			OPCODE_DAMCON_OBJ_UPDATE,   
 			o->id, o->ship_id, o->type,
 			o->x, (int32_t) DAMCONXDIM,
@@ -3241,8 +3227,7 @@ static void send_update_damcon_socket_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct damcon_socket_update_packet));
-	packed_buffer_append(pb, "hwwwSSwbb",
+	pb = packed_buffer_new("hwwwSSwbb",
 			OPCODE_DAMCON_SOCKET_UPDATE,   
 			o->id, o->ship_id, o->type,
 			o->x, (int32_t) DAMCONXDIM,
@@ -3258,8 +3243,7 @@ static void send_update_damcon_part_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct damcon_part_update_packet));
-	packed_buffer_append(pb, "hwwwSSUbbb",
+	pb = packed_buffer_new("hwwwSSUbbb",
 			OPCODE_DAMCON_PART_UPDATE,   
 			o->id, o->ship_id, o->type,
 			o->x, (int32_t) DAMCONXDIM,
@@ -3277,8 +3261,7 @@ static void send_update_asteroid_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct update_asteroid_packet));
-	packed_buffer_append(pb, "hwSS", OPCODE_UPDATE_ASTEROID, o->id,
+	pb = packed_buffer_new("hwSS", OPCODE_UPDATE_ASTEROID, o->id,
 		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
@@ -3288,8 +3271,7 @@ static void send_update_wormhole_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct update_wormhole_packet));
-	packed_buffer_append(pb, "hwSS", OPCODE_UPDATE_WORMHOLE, o->id,
+	pb = packed_buffer_new("hwSS", OPCODE_UPDATE_WORMHOLE, o->id,
 		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
@@ -3299,8 +3281,7 @@ static void send_update_starbase_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct update_starbase_packet));
-	packed_buffer_append(pb, "hwSS", OPCODE_UPDATE_STARBASE, o->id,
+	pb = packed_buffer_new("hwSS", OPCODE_UPDATE_STARBASE, o->id,
 		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
@@ -3310,8 +3291,7 @@ static void send_update_nebula_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct update_nebula_packet));
-	packed_buffer_append(pb, "hwSSS", OPCODE_UPDATE_NEBULA, o->id,
+	pb = packed_buffer_new("hwSSS", OPCODE_UPDATE_NEBULA, o->id,
 		o->x, (int32_t) UNIVERSE_DIM,
 		o->y, (int32_t) UNIVERSE_DIM,
 		o->tsd.nebula.r, (int32_t) UNIVERSE_DIM);
@@ -3323,8 +3303,7 @@ static void send_update_explosion_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct update_explosion_packet));
-	packed_buffer_append(pb, "hwSShhhb", OPCODE_UPDATE_EXPLOSION, o->id,
+	pb = packed_buffer_new("hwSShhhb", OPCODE_UPDATE_EXPLOSION, o->id,
 		o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 		o->tsd.explosion.nsparks, o->tsd.explosion.velocity, o->tsd.explosion.time,
 		o->tsd.explosion.victim_type);
@@ -3336,8 +3315,7 @@ static void send_update_torpedo_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct update_torpedo_packet));
-	packed_buffer_append(pb, "hwwSSSS", OPCODE_UPDATE_TORPEDO, o->id, o->tsd.torpedo.ship_id,
+	pb = packed_buffer_new("hwwSSSS", OPCODE_UPDATE_TORPEDO, o->id, o->tsd.torpedo.ship_id,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vy, (int32_t) UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
@@ -3348,8 +3326,7 @@ static void send_update_laser_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct update_laser_packet));
-	packed_buffer_append(pb, "hwwSSSS", OPCODE_UPDATE_LASER,
+	pb = packed_buffer_new("hwwSSSS", OPCODE_UPDATE_LASER,
 			o->id, o->tsd.laser.ship_id,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vy, (int32_t) UNIVERSE_DIM);
@@ -3361,8 +3338,7 @@ static void send_update_spacemonster_packet(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(struct update_spacemonster_packet));
-	packed_buffer_append(pb, "hwSSS", OPCODE_UPDATE_SPACEMONSTER, o->id,
+	pb = packed_buffer_new("hwSSS", OPCODE_UPDATE_SPACEMONSTER, o->id,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->tsd.spacemonster.zz, (int32_t) UNIVERSE_DIM);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
