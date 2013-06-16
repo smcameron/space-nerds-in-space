@@ -381,7 +381,7 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength)
 	}
 }
 
-static void send_ship_damage_packet(uint32_t id);
+static void send_ship_damage_packet(struct snis_entity *o);
 static void torpedo_move(struct snis_entity *o)
 {
 	int i, otype;
@@ -424,7 +424,7 @@ static void torpedo_move(struct snis_entity *o)
 
 		if (otype == OBJTYPE_SHIP1 || otype == OBJTYPE_SHIP2) {
 			calculate_torpedo_damage(&go[i]);
-			send_ship_damage_packet(go[i].id);
+			send_ship_damage_packet(&go[i]);
 		} else if (otype == OBJTYPE_ASTEROID) {
 			go[i].alive = 0;
 		}
@@ -518,7 +518,7 @@ static void laser_move(struct snis_entity *o)
 
 		if (otype == OBJTYPE_SHIP1 || otype == OBJTYPE_SHIP2) {
 			calculate_laser_damage(&go[i], o->tsd.laser.wavelength);
-			send_ship_damage_packet(go[i].id);
+			send_ship_damage_packet(&go[i]);
 		}
 
 		if (otype == OBJTYPE_ASTEROID) {
@@ -1369,7 +1369,7 @@ static void respawn_player(struct snis_entity *o)
 	o->heading = 0;
 	init_player(o);
 	o->alive = 1;
-	send_ship_damage_packet(o->id);
+	send_ship_damage_packet(o);
 }
 
 static int add_ship(void)
@@ -3143,13 +3143,13 @@ static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_pack
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_ALL);
 }
 
-static void send_ship_damage_packet(uint32_t id)
+static void send_ship_damage_packet(struct snis_entity *o)
 {
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct ship_damage_packet));
-	packed_buffer_append(pb, "hwr", OPCODE_UPDATE_DAMAGE, id,
-		(char *) &go[id].tsd.ship.damage, (unsigned short) sizeof(go[id].tsd.ship.damage));
+	packed_buffer_append(pb, "hwr", OPCODE_UPDATE_DAMAGE, o->id,
+		(char *) &o->tsd.ship.damage, (unsigned short) sizeof(o->tsd.ship.damage));
 	send_packet_to_all_clients(pb, ROLE_ALL);
 }
 
