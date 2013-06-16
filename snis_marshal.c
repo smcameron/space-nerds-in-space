@@ -511,6 +511,56 @@ int packed_buffer_append(struct packed_buffer *pb, const char *format, ...)
 	return rc;
 }
 
+static int calculate_buffer_size(const char *format)
+{
+	int i, size = 0;
+
+	for (i = 0; format[i]; i++) {
+		switch (format[i]) {
+		case 'b':
+			size += 1;
+			break;
+		case 'h':
+			size += 2;
+			break;
+		case 'w':
+		case 'S':
+		case 'U':
+			size += 4;
+			break;
+		case 'd':
+			size += sizeof(double);
+			break;
+		case 'q':
+			size += 8;
+			break;
+		default:
+			return -1;
+		}
+	}
+	return size;
+}
+
+struct packed_buffer *packed_buffer_new(const char *format, ...)
+{
+	va_list ap;
+	struct packed_buffer *pb;
+	int size = calculate_buffer_size(format);
+	
+	if (size < 0)
+		return NULL;
+	pb = packed_buffer_allocate(size);
+	if (!pb)
+		return NULL;
+	va_start(ap, format);
+	if (packed_buffer_append_va(pb, format, ap)) {
+		packed_buffer_free(pb);
+		return NULL;
+	}
+	va_end(ap);
+	return pb;
+}
+
 int packed_buffer_extract_va(struct packed_buffer *pb, const char *format, va_list ap)
 {
 	uint8_t *b;
