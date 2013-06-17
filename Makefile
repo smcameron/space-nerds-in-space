@@ -21,7 +21,9 @@ endif
 
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o
-SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o
+SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o \
+		power-model.o
+
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_graph.o \
 	snis_client.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
@@ -58,6 +60,10 @@ my_point.o:   my_point.c my_point.h Makefile
 mesh.o:   mesh.c mesh.h Makefile
 	$(CC) ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} \
 		-pthread ${WARNFLAG} -c mesh.c
+
+power-model.o:   power-model.c power-model.h Makefile
+	$(CC) ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} \
+		-pthread ${WARNFLAG} -c power-model.c
 
 liang-barsky.o:   liang-barsky.c liang-barsky.h Makefile
 	$(CC) ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} \
