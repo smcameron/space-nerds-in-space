@@ -210,11 +210,14 @@ static void wormhole_move(struct snis_entity *o)
 	}
 }
 
+static inline void pb_queue_to_client(struct game_client *c, struct packed_buffer *pb)
+{
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
 static void queue_delete_oid(struct game_client *c, uint32_t oid)
 {
-	packed_buffer_queue_add(&c->client_write_queue, 
-			packed_buffer_new("hw",OPCODE_DELETE_OBJECT, oid),
-			&c->client_write_queue_mutex);
+	pb_queue_to_client(c, packed_buffer_new("hw",OPCODE_DELETE_OBJECT, oid));
 }
 
 static int add_ship(void);
@@ -272,7 +275,7 @@ static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packe
 			continue;
 
 		pbc = packed_buffer_copy(pb);
-		packed_buffer_queue_add(&c->client_write_queue, pbc, &c->client_write_queue_mutex);
+		pb_queue_to_client(c, pbc);
 	}
 	packed_buffer_free(pb);
 	client_unlock();
@@ -285,9 +288,7 @@ static void send_packet_to_all_clients(struct packed_buffer *pb, uint32_t roles)
 
 static void queue_add_sound(struct game_client *c, uint16_t sound_number)
 {
-	packed_buffer_queue_add(&c->client_write_queue, 
-				packed_buffer_new("hh", OPCODE_PLAY_SOUND, sound_number),
-				&c->client_write_queue_mutex);
+	pb_queue_to_client(c, packed_buffer_new("hh", OPCODE_PLAY_SOUND, sound_number));
 }
 
 static void snis_queue_add_sound(uint16_t sound_number, uint32_t roles, uint32_t shipid)
@@ -2975,11 +2976,9 @@ static void queue_netstats(struct game_client *c)
 		return;
 	gettimeofday(&now, NULL);
 	elapsed_seconds = now.tv_sec - netstats.start.tv_sec;
-	packed_buffer_queue_add(&c->client_write_queue, 
-			packed_buffer_new("hqqw", OPCODE_UPDATE_NETSTATS,
+	pb_queue_to_client(c, packed_buffer_new("hqqw", OPCODE_UPDATE_NETSTATS,
 					netstats.bytes_sent, netstats.bytes_recd,
-					elapsed_seconds),
-			&c->client_write_queue_mutex);
+					elapsed_seconds));
 }
 
 static void queue_up_client_damcon_object_update(struct game_client *c,
@@ -3035,9 +3034,7 @@ static void queue_up_client_updates(struct game_client *c)
 static void queue_up_client_id(struct game_client *c)
 {
 	/* tell the client what his ship id is. */
-	packed_buffer_queue_add(&c->client_write_queue,
-				packed_buffer_new("hw", OPCODE_ID_CLIENT_SHIP, c->shipid),
-				&c->client_write_queue_mutex);
+	pb_queue_to_client(c, packed_buffer_new("hw", OPCODE_ID_CLIENT_SHIP, c->shipid));
 }
 
 static void *per_client_write_thread(__attribute__((unused)) void /* struct game_client */ *client)
@@ -3119,16 +3116,13 @@ static int insane(unsigned char *word, int len)
 static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	double dv;
+	double dv = sqrt((o->vx * o->vx) + (o->vy * o->vy));
 
-	dv = sqrt((o->vx * o->vx) + (o->vy * o->vy));
-
-	packed_buffer_queue_add(&c->client_write_queue, 
-		packed_buffer_new("hwwSSUUwb", OPCODE_ECON_UPDATE_SHIP, o->id, o->alive,
-			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSUUwb", OPCODE_ECON_UPDATE_SHIP,
+			o->id, o->alive, o->x, (int32_t) UNIVERSE_DIM,
+			o->y, (int32_t) UNIVERSE_DIM,
 			dv, (uint32_t) UNIVERSE_DIM, o->heading, (uint32_t) 360,
-			(uint32_t) o->tsd.ship.victim, o->tsd.ship.shiptype),
-		&c->client_write_queue_mutex);
+			(uint32_t) o->tsd.ship.victim, o->tsd.ship.shiptype));
 }
 
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip)
@@ -3169,9 +3163,7 @@ static void send_respawn_time(struct game_client *c,
 {
 	uint8_t seconds = (o->respawn_time - universe_timestamp) / 10;
 
-	packed_buffer_queue_add(&c->client_write_queue,
-			packed_buffer_new("hb", OPCODE_UPDATE_RESPAWN_TIME, seconds),
-			&c->client_write_queue_mutex);
+	pb_queue_to_client(c, packed_buffer_new("hb", OPCODE_UPDATE_RESPAWN_TIME, seconds));
 }
 	
 static void send_update_ship_packet(struct game_client *c,
@@ -3203,44 +3195,39 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.scizoom, o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
 			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
 			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype);
-	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+	pb_queue_to_client(c, pb);
 }
 
 static void send_update_damcon_obj_packet(struct game_client *c,
 		struct snis_damcon_entity *o)
 {
-	packed_buffer_queue_add(&c->client_write_queue, 
-		packed_buffer_new("hwwwSSSS",
-			OPCODE_DAMCON_OBJ_UPDATE,   
-			o->id, o->ship_id, o->type,
-			o->x, (int32_t) DAMCONXDIM,
-			o->y, (int32_t) DAMCONYDIM,
-			o->velocity,  (int32_t) DAMCONXDIM,
-			/* send desired_heading as heading to client to enable drifting */
-			o->tsd.robot.desired_heading, (int32_t) 360),
-		&c->client_write_queue_mutex);
+	pb_queue_to_client(c, packed_buffer_new("hwwwSSSS",
+					OPCODE_DAMCON_OBJ_UPDATE,   
+					o->id, o->ship_id, o->type,
+					o->x, (int32_t) DAMCONXDIM,
+					o->y, (int32_t) DAMCONYDIM,
+					o->velocity,  (int32_t) DAMCONXDIM,
+		/* send desired_heading as heading to client to enable drifting */
+					o->tsd.robot.desired_heading, (int32_t) 360));
 }
 
 static void send_update_damcon_socket_packet(struct game_client *c,
 		struct snis_damcon_entity *o)
 {
-	packed_buffer_queue_add(&c->client_write_queue,
-			packed_buffer_new("hwwwSSwbb",
+	pb_queue_to_client(c, packed_buffer_new("hwwwSSwbb",
 					OPCODE_DAMCON_SOCKET_UPDATE,   
 					o->id, o->ship_id, o->type,
 					o->x, (int32_t) DAMCONXDIM,
 					o->y, (int32_t) DAMCONYDIM,
 					o->tsd.socket.contents_id,
 					o->tsd.socket.system,
-					o->tsd.socket.part),
-			&c->client_write_queue_mutex);
+					o->tsd.socket.part));
 }
 
 static void send_update_damcon_part_packet(struct game_client *c,
 		struct snis_damcon_entity *o)
 {
-	packed_buffer_queue_add(&c->client_write_queue,
-			packed_buffer_new("hwwwSSUbbb",
+	pb_queue_to_client(c, packed_buffer_new("hwwwSSUbbb",
 					OPCODE_DAMCON_PART_UPDATE,   
 					o->id, o->ship_id, o->type,
 					o->x, (int32_t) DAMCONXDIM,
@@ -3248,98 +3235,80 @@ static void send_update_damcon_part_packet(struct game_client *c,
 					o->heading, (uint32_t) 360,
 					o->tsd.part.system,
 					o->tsd.part.part,
-					o->tsd.part.damage),
-			&c->client_write_queue_mutex);
+					o->tsd.part.damage));
 }
-
 
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	packed_buffer_queue_add(&c->client_write_queue,
-			packed_buffer_new("hwSS", OPCODE_UPDATE_ASTEROID, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwSS", OPCODE_UPDATE_ASTEROID, o->id,
 					o->x, (int32_t) UNIVERSE_DIM, o->y,
-					(int32_t) UNIVERSE_DIM),
-			&c->client_write_queue_mutex);
+					(int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_wormhole_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	packed_buffer_queue_add(&c->client_write_queue,
-			packed_buffer_new("hwSS", OPCODE_UPDATE_WORMHOLE, o->id,
-				o->x, (int32_t) UNIVERSE_DIM, o->y,
-				(int32_t) UNIVERSE_DIM),
-			&c->client_write_queue_mutex);
+	pb_queue_to_client(c, packed_buffer_new("hwSS", OPCODE_UPDATE_WORMHOLE,
+					o->id, o->x, (int32_t) UNIVERSE_DIM, o->y,
+					(int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	packed_buffer_queue_add(&c->client_write_queue,
-			packed_buffer_new("hwSS", OPCODE_UPDATE_STARBASE, o->id,
-				o->x, (int32_t) UNIVERSE_DIM, o->y,
-				(int32_t) UNIVERSE_DIM),
-			&c->client_write_queue_mutex);
+	pb_queue_to_client(c, packed_buffer_new("hwSS", OPCODE_UPDATE_STARBASE,
+					o->id, o->x, (int32_t) UNIVERSE_DIM, o->y,
+					(int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_nebula_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	packed_buffer_queue_add(&c->client_write_queue,
-				packed_buffer_new("hwSSS", OPCODE_UPDATE_NEBULA, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_NEBULA, o->id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
-					o->tsd.nebula.r, (int32_t) UNIVERSE_DIM),
-				&c->client_write_queue_mutex);
+					o->tsd.nebula.r, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_explosion_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	packed_buffer_queue_add(&c->client_write_queue,
-			packed_buffer_new("hwSShhhb", OPCODE_UPDATE_EXPLOSION, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwSShhhb", OPCODE_UPDATE_EXPLOSION, o->id,
 				o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 				o->tsd.explosion.nsparks, o->tsd.explosion.velocity,
-				o->tsd.explosion.time, o->tsd.explosion.victim_type),
-			&c->client_write_queue_mutex);
+				o->tsd.explosion.time, o->tsd.explosion.victim_type));
 }
 
 static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	packed_buffer_queue_add(&c->client_write_queue,
-			packed_buffer_new("hwwSSSS", OPCODE_UPDATE_TORPEDO, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSSS", OPCODE_UPDATE_TORPEDO, o->id,
 					o->tsd.torpedo.ship_id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->vx, (int32_t) UNIVERSE_DIM,
-					o->vy, (int32_t) UNIVERSE_DIM),
-			&c->client_write_queue_mutex);
+					o->vy, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	packed_buffer_queue_add(&c->client_write_queue,
-			packed_buffer_new("hwwSSSS", OPCODE_UPDATE_LASER,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSSS", OPCODE_UPDATE_LASER,
 					o->id, o->tsd.laser.ship_id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->vx, (int32_t) UNIVERSE_DIM,
-					o->vy, (int32_t) UNIVERSE_DIM),
-			&c->client_write_queue_mutex);
+					o->vy, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_spacemonster_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	packed_buffer_queue_add(&c->client_write_queue,
-			packed_buffer_new("hwSSS", OPCODE_UPDATE_SPACEMONSTER, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_SPACEMONSTER, o->id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
-					o->tsd.spacemonster.zz, (int32_t) UNIVERSE_DIM),
-			&c->client_write_queue_mutex);
+					o->tsd.spacemonster.zz, (int32_t) UNIVERSE_DIM));
 }
 
 static int add_new_player(struct game_client *c)
