@@ -637,3 +637,15 @@ int packed_buffer_extract(struct packed_buffer *pb, const char *format, ...)
 	return rc;
 }
 
+int packed_buffer_unpack(void * buffer, const char *format, ...)
+{
+	va_list ap;
+	struct packed_buffer pb;
+	int rc, size = calculate_buffer_size(format);
+
+	packed_buffer_init(&pb, buffer, size);
+	va_start(ap, format);
+	rc = packed_buffer_extract_va(&pb, format, ap);
+	va_end(ap);
+	return rc;
+}
