@@ -6732,7 +6732,7 @@ static void init_meshes(void)
 			sprintf(filename, "asteroid%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
 		asteroid_mesh[i] = read_stl_file(filename);
-		distort_mesh(asteroid_mesh[i], 0.10);
+		mesh_distort(asteroid_mesh[i], 0.10);
 	}
 
 	for (i = 0; i < NASTEROID_MODELS; i++) {
@@ -6741,8 +6741,8 @@ static void init_meshes(void)
 		for (j = 1; j < NASTEROID_SCALES; j++) {
 			float scale = j * 1.5;
 			int k = j * NASTEROID_MODELS + i;
-			asteroid_mesh[k] = duplicate_mesh(asteroid_mesh[i]);
-			scale_mesh(asteroid_mesh[k], scale);
+			asteroid_mesh[k] = mesh_duplicate(asteroid_mesh[i]);
+			mesh_scale(asteroid_mesh[k], scale);
 		}
 	}
 
@@ -6767,7 +6767,7 @@ static void init_meshes(void)
 	debris_mesh = read_stl_file("flat-tetrahedron.stl");
 	debris2_mesh = read_stl_file("big-flat-tetrahedron.stl");
 	wormhole_mesh = read_stl_file("wormhole.stl");
-	distort_mesh(wormhole_mesh, 0.15);
+	mesh_distort(wormhole_mesh, 0.15);
 	spacemonster_mesh = read_stl_file("spacemonster.stl");
 #else
 #define THE_MODEL "starbase.stl"

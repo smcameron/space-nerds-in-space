@@ -44,9 +44,6 @@ GLOBAL void camera_set_pos(float x, float y, float z);
 GLOBAL void camera_look_at(float x, float y, float z);
 GLOBAL void camera_set_parameters(float near, float far, float width, float height,
 					int xvpixels, int yvpixels, float angle_of_view);
-GLOBAL void distort_mesh(struct mesh *m, float distortion);
-GLOBAL struct mesh *duplicate_mesh(struct mesh *original);
-GLOBAL void scale_mesh(struct mesh *m, float scale);
 GLOBAL void entity_init_fake_stars(int nstars, float radius);
 GLOBAL void entity_free_fake_stars(void);
 

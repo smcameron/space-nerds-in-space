@@ -21,6 +21,12 @@
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#ifdef DEFINE_MESH_GLOBALS
+#define GLOBAL
+#else
+#define GLOBAL extern
+#endif
+
 struct mesh {
 	int ntriangles;
 	int nvertices;
@@ -29,6 +35,10 @@ struct mesh {
 	float radius;
 };
 
-float mesh_compute_radius(struct mesh *m);
+GLOBAL float mesh_compute_radius(struct mesh *m);
+GLOBAL void mesh_distort(struct mesh *m, float distortion);
+GLOBAL struct mesh *mesh_duplicate(struct mesh *original);
+GLOBAL void mesh_scale(struct mesh *m, float scale);
 
+#undef GLOBAL
 #endif
