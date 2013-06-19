@@ -1320,56 +1320,37 @@ void init_keymap()
 
 static void wakeup_gameserver_writer(void);
 
+static void queue_to_server(struct packed_buffer *pb)
+{
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
 static void request_ship_sdata(struct snis_entity *o)
 {
-	struct packed_buffer *pb;
-
-	pb = packed_buffer_allocate(sizeof(struct request_ship_sdata_packet));
-	packed_buffer_append(pb, "hw", OPCODE_REQUEST_SHIP_SDATA, o->id);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	queue_to_server(packed_buffer_new("hw", OPCODE_REQUEST_SHIP_SDATA, o->id));
 	o->sdata.science_data_requested = 1;
-	wakeup_gameserver_writer();
 }
 
 static void request_sci_select_target(uint32_t id)
 {
-	struct packed_buffer *pb;
-
-	pb = packed_buffer_allocate(sizeof(struct snis_sci_select_target_packet));
-	packed_buffer_append(pb, "hw", OPCODE_SCI_SELECT_TARGET, id);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
+	queue_to_server(packed_buffer_new("hw", OPCODE_SCI_SELECT_TARGET, id));
 }
 
 static void request_sci_select_coords(double ux, double uy)
 {
-	struct packed_buffer *pb;
-
-	pb = packed_buffer_allocate(sizeof(struct snis_sci_select_coords_packet));
-	packed_buffer_append(pb, "hSS", OPCODE_SCI_SELECT_COORDS,
-		ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
+	queue_to_server(packed_buffer_new("hSS", OPCODE_SCI_SELECT_COORDS,
+			ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM));
 }
 
 static void request_navigation_yaw_packet(uint8_t yaw)
 {
-	struct packed_buffer *pb;
-
-	pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-	packed_buffer_append(pb, "hb", OPCODE_REQUEST_YAW, yaw);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
+	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_YAW, yaw));
 }
 
 static void request_navigation_thrust_packet(uint8_t thrust)
 {
-	struct packed_buffer *pb;
-
-	pb = packed_buffer_allocate(sizeof(struct request_thrust_packet));
-	packed_buffer_append(pb, "hb", OPCODE_REQUEST_THRUST, thrust);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
+	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_THRUST, thrust));
 }
 
 static void navigation_dirkey(int h, int v)
@@ -1396,12 +1377,7 @@ static void navigation_dirkey(int h, int v)
 
 static void request_weapons_yaw_packet(uint8_t yaw)
 {
-	struct packed_buffer *pb;
-
-	pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-	packed_buffer_append(pb, "hb", OPCODE_REQUEST_GUNYAW, yaw);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
+	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_GUNYAW, yaw));
 }
 
 static void weapons_dirkey(int h, int v)
@@ -1423,78 +1399,59 @@ static void weapons_dirkey(int h, int v)
 
 static void science_dirkey(int h, int v)
 {
-	struct packed_buffer *pb;
 	uint8_t yaw;
 
 	if (!h && !v)
 		return;
 	if (v) {
 		yaw = v < 0 ? YAW_LEFT : YAW_RIGHT;
-		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-		packed_buffer_append(pb, "hb", OPCODE_REQUEST_SCIBEAMWIDTH, yaw);
-		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-		wakeup_gameserver_writer();
+		queue_to_server(packed_buffer_new("hb",
+				OPCODE_REQUEST_SCIBEAMWIDTH, yaw));
 	}
 	if (h) {
 		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
-		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-		packed_buffer_append(pb, "hb", OPCODE_REQUEST_SCIYAW, yaw);
-		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-		wakeup_gameserver_writer();
+		queue_to_server(packed_buffer_new("hb",
+				OPCODE_REQUEST_SCIYAW, yaw));
 	}
 }
 
 static void damcon_dirkey(int h, int v)
 {
-	struct packed_buffer *pb;
 	uint8_t yaw, thrust;
 
 	if (!h && !v)
 		return;
 	if (v) {
 		thrust = v < 0 ? THRUST_BACKWARDS : THRUST_FORWARDS;
-		pb = packed_buffer_allocate(sizeof(struct request_thrust_packet));
-		packed_buffer_append(pb, "hb", OPCODE_REQUEST_ROBOT_THRUST, thrust);
-		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+		queue_to_server(packed_buffer_new("hb",
+				OPCODE_REQUEST_ROBOT_THRUST, thrust));
 	}
 	if (h) {
 		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
-		pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-		packed_buffer_append(pb, "hb", OPCODE_REQUEST_ROBOT_YAW, yaw);
-		packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+		queue_to_server(packed_buffer_new("hb",
+				OPCODE_REQUEST_ROBOT_YAW, yaw));
 	}
 	wakeup_gameserver_writer();
 }
 
 static void do_onscreen(uint8_t mode)
 {
-	struct packed_buffer *pb;
-
-	pb = packed_buffer_allocate(sizeof(struct role_onscreen_packet));
-	packed_buffer_append(pb, "hb", OPCODE_ROLE_ONSCREEN, mode);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
+	queue_to_server(packed_buffer_new("hb", OPCODE_ROLE_ONSCREEN, mode));
 }
 
 static void do_view_mode_change()
 {
 	uint8_t new_mode;
-	struct packed_buffer *pb;
 	struct snis_entity *o;
 
 	if (!(o = find_my_ship()))
 		return;
-	
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL)
 		new_mode = MAINSCREEN_VIEW_MODE_WEAPONS;
 	else
 		new_mode = MAINSCREEN_VIEW_MODE_NORMAL;
-
-	pb = packed_buffer_allocate(sizeof(struct request_mainscreen_view_change));
-	packed_buffer_append(pb, "hSb", OPCODE_MAINSCREEN_VIEW_MODE,
-			0.0, (int32_t) 360, new_mode);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
+	queue_to_server(packed_buffer_new("hSb", OPCODE_MAINSCREEN_VIEW_MODE,
+				0.0, (int32_t) 360, new_mode));
 }
 
 static void do_dirkey(int h, int v)
@@ -1521,31 +1478,22 @@ static void do_dirkey(int h, int v)
 
 static void do_torpedo(void)
 {
-	struct packed_buffer *pb;
 	struct snis_entity *o;
 
 	if (displaymode != DISPLAYMODE_WEAPONS)
 		return;
-
 	if (!(o = find_my_ship()))
 		return;
 	if (o->tsd.ship.torpedoes_loaded <= 0)
 		return;
-	pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-	packed_buffer_append_u16(pb, OPCODE_REQUEST_TORPEDO);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
+	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_TORPEDO));
 }
 
 static void do_laser(void)
 {
-	struct packed_buffer *pb;
 	if (displaymode != DISPLAYMODE_WEAPONS)
 		return;
-	pb = packed_buffer_allocate(sizeof(struct request_yaw_packet));
-	packed_buffer_append_u16(pb, OPCODE_REQUEST_LASER);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
+	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_LASER));
 }
 
 static void robot_backward_button_pressed(void *x);
@@ -3893,7 +3841,6 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 static void load_torpedo_button_pressed()
 {
 	struct snis_entity *o;
-	struct packed_buffer *pb;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -3903,10 +3850,7 @@ static void load_torpedo_button_pressed()
 		return;
 	if (o->tsd.ship.torpedoes_loading != 0)
 		return;
-	pb = packed_buffer_allocate(sizeof(uint16_t));
-	packed_buffer_append_u16(pb, OPCODE_LOAD_TORPEDO);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
+	queue_to_server(packed_buffer_new("h", OPCODE_LOAD_TORPEDO));
 }
 
 static void fire_phaser_button_pressed(__attribute__((unused)) void *notused)
@@ -3921,15 +3865,11 @@ static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
 
 static void do_adjust_byte_value(uint8_t value,  uint16_t opcode)
 {
-	struct packed_buffer *pb;
 	struct snis_entity *o;
 
 	if (!(o = find_my_ship()))
 		return;
-	pb = packed_buffer_allocate(sizeof(struct request_throttle_packet));
-	packed_buffer_append(pb, "hwb", opcode, o->id, value);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
+	queue_to_server(packed_buffer_new("hwb", opcode, o->id, value));
 }
 
 static void do_adjust_slider_value(struct slider *s,  uint16_t opcode)
@@ -4446,12 +4386,7 @@ static void robot_right_button_pressed(void *x)
 
 static void robot_gripper_button_pressed(void *x)
 {
-	struct packed_buffer *pb;
-
-	pb = packed_buffer_allocate(sizeof(struct request_robot_gripper_packet));
-	packed_buffer_append(pb, "h", OPCODE_REQUEST_ROBOT_GRIPPER);
-	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
-	wakeup_gameserver_writer();
+	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_ROBOT_GRIPPER));
 }
 
 static void init_damcon_ui(void)
