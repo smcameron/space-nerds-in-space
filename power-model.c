@@ -4,8 +4,8 @@
 #include "power-model.h"
 
 struct power_device {
-	resistor_sample_fn r1, r2;
-	float r3;
+	resistor_sample_fn r1, r2, r3;
+	void *cookie;
 	float i;
 };
 
@@ -20,8 +20,8 @@ struct power_model {
 	float actual_current;
 };
 
-struct power_device *new_power_device(resistor_sample_fn r1,
-			resistor_sample_fn r2, float r3)
+struct power_device *new_power_device(void * cookie, resistor_sample_fn r1,
+			resistor_sample_fn r2, resistor_sample_fn r3)
 {
 	struct power_device *d = malloc(sizeof(*d));
 
@@ -29,6 +29,7 @@ struct power_device *new_power_device(resistor_sample_fn r1,
 	d->r2 = r2;
 	d->r3 = r3;
 	d->i = 0;
+	d->cookie = cookie;
 	return d;
 }
 
@@ -61,7 +62,10 @@ void power_model_compute(struct power_model *m)
 	float total_current;
 
 	for (i = 0; i < m->ndevices; i++) {
-		float r = m->d[i]->r1() + m->d[i]->r2() + m->d[i]->r3;
+		struct power_device *d = m->d[i];
+		void *cookie = d->cookie;
+
+		float r = d->r1(cookie) + d->r2(cookie) + d->r3(cookie);
 		conductance += 1.0 / r; 
 	}
 	total_resistance += 1.0 / conductance;
@@ -74,8 +78,11 @@ void power_model_compute(struct power_model *m)
 	}
 
 	for (i = 0; i < m->ndevices; i++) {
-		float r = m->d[i]->r1() + m->d[i]->r2() + m->d[i]->r3;
-		m->d[i]->i = m->actual_voltage / r;
+		struct power_device *d = m->d[i];
+		void *cookie = d->cookie;
+
+		float r = d->r1(cookie) + d->r2(cookie) + d->r3(cookie);
+		d->i = m->actual_voltage / r;
 	}
 }
 

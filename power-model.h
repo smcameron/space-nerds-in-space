@@ -50,9 +50,9 @@ struct power_model;
 
 struct power_device;
 
-typedef float (*resistor_sample_fn)(void);
+typedef float (*resistor_sample_fn)(void * cookie);
 
-struct power_device *new_device(resistor_sample_fn r1, resistor_sample_fn r2, float r3);
+struct power_device *new_power_device(void *cookie, resistor_sample_fn r1, resistor_sample_fn r2, resistor_sample_fn r3);
 struct power_model *new_power_model(float max_current, float voltage,
 					float internal_resistance);
 void power_model_add_device(struct power_model *m, struct power_device *device);
