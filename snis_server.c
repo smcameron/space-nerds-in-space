@@ -51,6 +51,7 @@
 #include "starbase-comms.h"
 #include "infinite-taunt.h"
 #include "snis_damcon_systems.h"
+#include "stacktrace.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
@@ -212,6 +213,10 @@ static void wormhole_move(struct snis_entity *o)
 
 static inline void pb_queue_to_client(struct game_client *c, struct packed_buffer *pb)
 {
+	if (!pb) {
+		stacktrace("snis_server: NULL packed_buffer in pb_queue_to_client()");
+		return;
+	}
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 

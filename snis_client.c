@@ -64,6 +64,7 @@
 #include "bline.h"
 #include "shield_strength.h"
 #include "joystick.h"
+#include "stacktrace.h"
 
 #include "vertex.h"
 #include "triangle.h"
@@ -1322,6 +1323,10 @@ static void wakeup_gameserver_writer(void);
 
 static void queue_to_server(struct packed_buffer *pb)
 {
+	if (!pb) {
+		stacktrace("snis_client: NULL packed_buffer in queue_to_server()");
+		return;
+	}
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
