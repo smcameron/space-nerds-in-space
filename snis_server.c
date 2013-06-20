@@ -429,7 +429,7 @@ static void torpedo_move(struct snis_entity *o)
 		if (otype == OBJTYPE_SHIP1 || otype == OBJTYPE_SHIP2) {
 			calculate_torpedo_damage(&go[i]);
 			send_ship_damage_packet(&go[i]);
-		} else if (otype == OBJTYPE_ASTEROID) {
+		} else if (otype == OBJTYPE_ASTEROID && fabs(go[i].z) < 100.0) {
 			go[i].alive = 0;
 		}
 
@@ -525,7 +525,7 @@ static void laser_move(struct snis_entity *o)
 			send_ship_damage_packet(&go[i]);
 		}
 
-		if (otype == OBJTYPE_ASTEROID) {
+		if (otype == OBJTYPE_ASTEROID && fabs(go[i].z) < 100.0) {
 			go[i].alive = 0;
 		}
 
@@ -1309,6 +1309,7 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	go[i].alive = 1;
 	go[i].x = x;
 	go[i].y = y;
+	go[i].z = 0.0;
 	go[i].vx = vx;
 	go[i].vy = vy;
 	go[i].heading = heading;
@@ -1424,6 +1425,8 @@ static int add_asteroid(double x, double y, double vx, double vy, double heading
 	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_ASTEROID);
 	if (i < 0)
 		return i;
+	if (snis_randn(100) < 50)
+		go[i].z = (double) snis_randn(2000) - 1000;
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
@@ -3246,9 +3249,10 @@ static void send_update_damcon_part_packet(struct game_client *c,
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSS", OPCODE_UPDATE_ASTEROID, o->id,
-					o->x, (int32_t) UNIVERSE_DIM, o->y,
-					(int32_t) UNIVERSE_DIM));
+	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_ASTEROID, o->id,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_wormhole_packet(struct game_client *c,

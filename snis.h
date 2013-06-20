@@ -279,7 +279,7 @@ struct snis_entity_science_data {
 struct snis_entity {
 	uint32_t index;
 	uint32_t id;
-	double x, y;
+	double x, y, z;
 	double vx, vy;
 	double heading;
 	uint32_t alive;

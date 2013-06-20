@@ -155,7 +155,7 @@ struct client_ship_id_packet {
 struct update_asteroid_packet {
 	uint16_t opcode;
 	uint32_t id;
-	uint32_t x, y;
+	uint32_t x, y, z;
 };
 
 struct update_wormhole_packet {

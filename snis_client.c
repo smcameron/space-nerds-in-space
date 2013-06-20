@@ -371,6 +371,7 @@ static int add_generic_object(uint32_t id, double x, double y, double vx, double
 	go[i].id = id;
 	go[i].x = x;
 	go[i].y = y;
+	go[i].z = 0.0;
 	go[i].vx = vx;
 	go[i].vy = vy;
 	go[i].heading = heading;
@@ -779,17 +780,17 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 	return 0;
 }
 
-static int update_asteroid(uint32_t id, double x, double y)
+static int update_asteroid(uint32_t id, double x, double y, double z)
 {
 	int i, m;
 	struct entity *e;
-	float z;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
-		e = add_entity(asteroid_mesh[m], x, 0, -y, ASTEROID_COLOR);
+		e = add_entity(asteroid_mesh[m], x, z, -y, ASTEROID_COLOR);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_ASTEROID, 1, e);
+		go[i].z = z;
 		if (i < 0)
 			return i;
 	} else {
@@ -797,7 +798,6 @@ static int update_asteroid(uint32_t id, double x, double y)
 		float angle;
 
 		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
-		z = (id % 4) * 100.0 - 50.0;
 		update_entity_pos(go[i].entity, x, z, -y);
 
 		/* make asteroids spin */
@@ -2432,17 +2432,17 @@ static int process_update_asteroid_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id;
-	double dx, dy;
+	double dx, dy, dz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack(buffer, "wSS", &id,
-			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM);
+	packed_buffer_unpack(buffer, "wSSS", &id,
+			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, &dz, (int32_t) UNIVERSE_DIM);
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_asteroid(id, dx, dy);
+	rc = update_asteroid(id, dx, dy, dz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
