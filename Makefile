@@ -20,7 +20,7 @@ endif
 
 
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
-		bline.o shield_strength.o
+		bline.o shield_strength.o stacktrace.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o \
 		power-model.o
 
@@ -40,7 +40,7 @@ MODELS=freighter.stl laser.stl planet.stl spaceship.stl starbase.stl torpedo.stl
 	asteroid4.stl wormhole.stl starbase2.stl starbase3.stl starbase4.stl spacemonster.stl
 
 #MYCFLAGS=-g --pedantic -Wall -Werror -pthread -std=gnu99
-MYCFLAGS=-g --pedantic -Wall -Werror -pthread -std=gnu99
+MYCFLAGS=-g --pedantic -Wall -Werror -pthread -std=gnu99 -rdynamic
 GTKCFLAGS=`pkg-config --cflags gtk+-2.0`
 GTKLDFLAGS=`pkg-config --libs gtk+-2.0` \
         `pkg-config --libs gthread-2.0` \
@@ -64,6 +64,10 @@ mesh.o:   mesh.c mesh.h Makefile
 power-model.o:   power-model.c power-model.h Makefile
 	$(CC) ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} \
 		-pthread ${WARNFLAG} -c power-model.c
+
+stacktrace.o:   stacktrace.c stacktrace.h Makefile
+	$(CC) ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} \
+		-pthread ${WARNFLAG} -c stacktrace.c
 
 liang-barsky.o:   liang-barsky.c liang-barsky.h Makefile
 	$(CC) ${DEBUG} ${PROFILE_FLAG} ${OPTIMIZE_FLAG} \
