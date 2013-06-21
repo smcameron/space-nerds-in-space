@@ -36,6 +36,7 @@
 #include <math.h>
 #include <linux/tcp.h>
 #include <stddef.h>
+#include <stdarg.h>
 
 #include "ssgl/ssgl.h"
 #include "snis.h"
@@ -1926,18 +1927,31 @@ static void do_sci_bw_yaw(struct game_client *c, int yaw)
 		ship->tsd.ship.sci_beam_width = MIN_SCI_BEAM_WIDTH;
 }
 
+static int read_and_unpack_buffer(struct game_client *c, unsigned char *buffer, char *format, ...)
+{
+        va_list ap;
+        struct packed_buffer pb;
+        int rc, size = calculate_buffer_size(format);
+
+	rc = snis_readsocket(c->socket, buffer, size);
+	if (rc != 0)
+		return rc;
+        packed_buffer_init(&pb, buffer, size);
+        va_start(ap, format);
+        rc = packed_buffer_extract_va(&pb, format, ap);
+        va_end(ap);
+        return rc;
+}
+
 static int process_generic_request_thrust(struct game_client *c, thrust_function thrust_fn)
 {
 	unsigned char buffer[10];
-	struct packed_buffer pb;
 	uint8_t thrust;
 	int rc;
 
-	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_thrust_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(c, buffer, "b", &thrust);
 	if (rc)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	thrust = packed_buffer_extract_u8(&pb);
 	switch (thrust) {
 	case THRUST_FORWARDS:
 		thrust_fn(c, 1);
@@ -1984,16 +1998,13 @@ static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_e
 static int process_request_ship_sdata(struct game_client *c)
 {
 	unsigned char buffer[10];
-	struct packed_buffer pb;
 	uint32_t id;
 	int i;
 	int rc;
 
-	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_ship_sdata_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(c, buffer, "w", &id);
 	if (rc)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(id);
 	if (i < 0) {
@@ -2007,16 +2018,12 @@ static int process_request_ship_sdata(struct game_client *c)
 static int process_role_onscreen(struct game_client *c)
 {
 	unsigned char buffer[10];
-	struct packed_buffer pb;
 	uint8_t new_displaymode;
 	int rc;
 
-	rc = snis_readsocket(c->socket, buffer, sizeof(struct role_onscreen_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(c, buffer, "b", &new_displaymode);
 	if (rc)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	new_displaymode = packed_buffer_extract_u8(&pb);
-
 	if (new_displaymode >= DISPLAYMODE_FONTTEST)
 		new_displaymode = DISPLAYMODE_MAINSCREEN;
 	send_packet_to_all_clients_on_a_bridge(c->shipid, 
@@ -2028,17 +2035,12 @@ static int process_role_onscreen(struct game_client *c)
 static int process_sci_select_target(struct game_client *c)
 {
 	unsigned char buffer[10];
-	struct packed_buffer pb;
 	uint32_t id;
 	int rc;
 
-	rc = snis_readsocket(c->socket, buffer,
-		sizeof(struct snis_sci_select_target_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(c, buffer, "w", &id);
 	if (rc)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
-
 	/* just turn it around and fan it out to all the right places */
 	send_packet_to_all_clients_on_a_bridge(c->shipid, 
 			packed_buffer_new("hw", OPCODE_SCI_SELECT_TARGET, id),
@@ -2049,16 +2051,12 @@ static int process_sci_select_target(struct game_client *c)
 static int process_sci_select_coords(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct snis_sci_select_coords_packet)];
-	struct packed_buffer pb;
 	uint32_t x, y;
 	int rc;
 
-	rc = snis_readsocket(c->socket, buffer,
-		sizeof(struct snis_sci_select_coords_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(c, buffer, "ww", &x, &y);
 	if (rc)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "ww", &x, &y);
 	/* just turn it around and fan it out to all the right places */
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
 				packed_buffer_new("hww", OPCODE_SCI_SELECT_COORDS, x, y),
@@ -2177,17 +2175,13 @@ static int process_comms_transmission(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct comms_transmission_packet)];
 	char txt[256];
-	struct packed_buffer pb;
 	int rc;
 	uint8_t len;
 	char name[30];
 
-	rc = snis_readsocket(c->socket, buffer,
-		sizeof(struct comms_transmission_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(c, buffer, "b", &len);
 	if (rc)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	len = packed_buffer_extract_u8(&pb);
 	rc = snis_readsocket(c->socket, txt, len);
 	if (rc)
 		return rc;
@@ -2333,16 +2327,13 @@ static int process_mainscreen_view_mode(struct game_client *c)
 	const int bufsize = sizeof(struct request_mainscreen_view_change) -
 					sizeof(uint16_t);
 	unsigned char buffer[bufsize];
-	struct packed_buffer pb;
 	double view_angle;
 	uint8_t view_mode;
 
-	rc = snis_readsocket(c->socket, buffer, bufsize);
+	rc = read_and_unpack_buffer(c, buffer, "Sb",
+				&view_angle, (int32_t) 360, &view_mode);
 	if (rc)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "Sb", &view_angle, (int32_t) 360, &view_mode);
-
 	/* Rebuild packet and send to all clients with main screen role */
 	send_packet_to_all_clients_on_a_bridge(c->shipid, 
 			packed_buffer_new("hSb", OPCODE_MAINSCREEN_VIEW_MODE,
@@ -2435,17 +2426,14 @@ static int process_request_bytevalue_pwr(struct game_client *c, int offset,
 		bytevalue_limit_function limit)
 {
 	unsigned char buffer[10];
-	struct packed_buffer pb;
 	int i, rc;
 	uint32_t id;
 	uint8_t *bytevalue;
 	uint8_t v;
 
-	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_throttle_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(c, buffer, "wb", &id, &v);
 	if (rc)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "wb", &id, &v);
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(id);
 	if (i < 0) {
@@ -2511,18 +2499,15 @@ static void send_wormhole_limbo_packet(int shipid, uint16_t value)
 static int process_engage_warp(struct game_client *c)
 {
 	unsigned char buffer[10];
-	struct packed_buffer pb;
 	int i, rc;
 	uint32_t id;
 	uint8_t __attribute__((unused)) v;
 	double wfactor;
 	struct snis_entity *o;
 
-	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_throttle_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(c, buffer, "wb", &id, &v);
 	if (rc)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "wb", &id, &v);
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(id);
 	if (i < 0) {
@@ -2574,15 +2559,12 @@ static int process_request_phaserbanks_pwr(struct game_client *c)
 static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 {
 	unsigned char buffer[10];
-	struct packed_buffer pb;
 	uint8_t yaw;
 	int rc;
 
-	rc = snis_readsocket(c->socket, buffer, sizeof(struct request_yaw_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(c, buffer, "b", &yaw);
 	if (rc)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	yaw = packed_buffer_extract_u8(&pb);
 	switch (yaw) {
 	case YAW_LEFT:
 		yaw_func(c, -1);
@@ -2605,7 +2587,6 @@ static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 static int process_load_torpedo(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
-	// struct packed_buffer *pb;
 
 	if (ship->tsd.ship.torpedoes < 0)
 		return -1;
