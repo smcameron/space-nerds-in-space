@@ -118,6 +118,8 @@ GtkWidget *main_da;             /* main drawing area. */
 gint timer_tag;  
 int fullscreen = 0;
 int in_the_process_of_quitting = 0;
+int current_quit_selection = 0;
+int final_quit_selection = 0;
 
 uint32_t role = ROLE_ALL;
 char *password;
@@ -1461,6 +1463,13 @@ static void do_view_mode_change()
 
 static void do_dirkey(int h, int v)
 {
+	if (in_the_process_of_quitting) {
+		if (h < 0)
+			current_quit_selection = 1;
+		if (h > 0)
+			current_quit_selection = 0;
+		return;
+	}
 
 	switch (displaymode) {
 		case DISPLAYMODE_NAVIGATION:
@@ -1484,6 +1493,13 @@ static void do_dirkey(int h, int v)
 static void do_torpedo(void)
 {
 	struct snis_entity *o;
+
+	if (in_the_process_of_quitting) {
+		final_quit_selection = current_quit_selection;
+		if (!final_quit_selection)
+			in_the_process_of_quitting = 0;
+		return;
+	}
 
 	if (displaymode != DISPLAYMODE_WEAPONS)
 		return;
@@ -1681,7 +1697,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	}
 
 #if 0
-	printf("event->keyval = 0x%08x\n", event->keyval);
+	printf("event->keyval = 0x%08x, GDK_z = %08x, GDK_space = %08x\n", event->keyval, GDK_z, GDK_space);
 #endif
 
         switch (ka) {
@@ -1698,6 +1714,8 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			return TRUE;
 		}
 	case keyquit:	in_the_process_of_quitting = !in_the_process_of_quitting;
+			if (!in_the_process_of_quitting)
+				current_quit_selection = 0;
 			break;
 	case keyleft:
 		do_dirkey(-1, 0);
@@ -6261,6 +6279,40 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 	return 0;
 }
 
+static void draw_quit_screen(GtkWidget *w)
+{
+	int x;
+	static int quittimer = 0;
+
+	quittimer++;
+
+	sng_set_foreground(BLACK);
+	sng_scaled_rectangle(w->window, gc, 1, 100, 100, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 200);
+	sng_set_foreground(RED);
+	sng_scaled_rectangle(w->window, gc, FALSE, 100, 100, SCREEN_WIDTH-200, SCREEN_HEIGHT-200);
+	sng_set_foreground(WHITE);
+	sng_abs_xy_draw_string(w, gc, "Quit?", BIG_FONT, 300, 280);
+
+	if (current_quit_selection == 1) {
+		x = 130;
+		sng_set_foreground(WHITE);
+	} else {
+		x = 480;
+		sng_set_foreground(RED);
+	}
+	sng_abs_xy_draw_string(w, gc, "Quit Now", SMALL_FONT, 150, 450);
+	if (current_quit_selection == 0)
+		sng_set_foreground(WHITE);
+	else
+		sng_set_foreground(RED);
+	sng_abs_xy_draw_string(w, gc, "Don't Quit", SMALL_FONT, 500, 450);
+
+	if ((quittimer & 0x04)) {
+		sng_set_foreground(WHITE);
+		sng_scaled_rectangle(w->window, gc, FALSE, x, 420, 200, 50);
+	}
+}
+
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	sng_set_foreground(WHITE);
@@ -6348,6 +6400,10 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		break;
 	}
 	ui_element_list_draw(w, gc, uiobjs);
+
+	if (in_the_process_of_quitting)
+		draw_quit_screen(w);
+
 	return 0;
 }
 
@@ -6358,14 +6414,22 @@ gint advance_game(gpointer data)
 	timer++;
 
 	deal_with_joystick();
+
+	if (in_the_process_of_quitting) {
+		gdk_threads_enter();
+		gtk_widget_queue_draw(main_da);
+		gdk_threads_leave();
+		if (final_quit_selection)
+			really_quit();
+		return TRUE;
+	}
+
 	gdk_threads_enter();
 	gtk_widget_queue_draw(main_da);
 	move_sparks();
 	move_objects();
 	nframes++;
 	gdk_threads_leave();
-	if (in_the_process_of_quitting)
-		really_quit();
 	return TRUE;
 }
 

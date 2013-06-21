@@ -1426,7 +1426,9 @@ static int add_asteroid(double x, double y, double vx, double vy, double heading
 	if (i < 0)
 		return i;
 	if (snis_randn(100) < 50)
-		go[i].z = (double) snis_randn(2000) - 1000;
+		go[i].z = (double) snis_randn(3000) - 1500;
+	else
+		go[i].z = (double) snis_randn(70) - 35;
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
