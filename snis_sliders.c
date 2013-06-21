@@ -113,10 +113,15 @@ double snis_slider_get_input(struct slider *s)
 
 int snis_slider_button_press(struct slider *s, int x, int y)
 {
-	if (x < s->x || x > s->x + s->length || 
+	if (x < s->x - 5 || x > s->x + s->length + 5 || 
 		y < s->y || y > s->y + SLIDER_HEIGHT)
 			return 0;
-	s->input = ((double) x - (double) s->x) / (double) s->length;
+	if (x >= s->x + s->length)
+		s->input = 1.0;
+	else if (x <= s->x)
+		s->input = 0.0;
+	else
+		s->input = ((double) x - (double) s->x) / (double) s->length;
 	if (s->clicked) {
 		s->clicked(s);
 		if (slider_sound != -1) 
