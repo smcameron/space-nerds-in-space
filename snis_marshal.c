@@ -511,7 +511,7 @@ int packed_buffer_append(struct packed_buffer *pb, const char *format, ...)
 	return rc;
 }
 
-static int calculate_buffer_size(const char *format)
+int calculate_buffer_size(const char *format)
 {
 	int i, size = 0;
 

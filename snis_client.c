@@ -1987,6 +1987,22 @@ static int process_update_ship_packet(uint16_t opcode)
 	return (rc < 0);
 } 
 
+static int read_and_unpack_buffer(unsigned char *buffer, char *format, ...)
+{
+        va_list ap;
+        struct packed_buffer pb;
+        int rc, size = calculate_buffer_size(format);
+
+	rc = snis_readsocket(gameserver_sock, buffer, size);
+	if (rc != 0)
+		return rc;
+        packed_buffer_init(&pb, buffer, size);
+        va_start(ap, format);
+        rc = packed_buffer_extract_va(&pb, format, ap);
+        va_end(ap);
+        return rc;
+}
+
 static int process_update_damcon_object(void)
 {
 	unsigned char buffer[sizeof(struct damcon_obj_update_packet) - sizeof(uint16_t)];
@@ -1994,15 +2010,14 @@ static int process_update_damcon_object(void)
 	double x, y, velocity, heading;
 	int rc;
 
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
-	if (rc != 0)
-		return rc;
-	packed_buffer_unpack(buffer, "wwwSSSS",
-		&id, &ship_id, &type,
+	rc = read_and_unpack_buffer(buffer, "wwwSSSS",
+			&id, &ship_id, &type,
 			&x, (int32_t) DAMCONXDIM, 
 			&y, (int32_t) DAMCONYDIM, 
 			&velocity, (int32_t) DAMCONXDIM, 
 			&heading, (int32_t) 360);
+	if (rc)
+		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_damcon_object(id, ship_id, type, x, y, velocity, heading);
 	pthread_mutex_unlock(&universe_mutex);
@@ -2017,14 +2032,13 @@ static int process_update_damcon_socket(void)
 	uint8_t system, part;
 	int rc;
 
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
-	if (rc != 0)
-		return rc;
-	packed_buffer_unpack(buffer, "wwwSSwbb",
+	rc = read_and_unpack_buffer(buffer, "wwwSSwbb",
 		&id, &ship_id, &type,
 			&x, (int32_t) DAMCONXDIM, 
 			&y, (int32_t) DAMCONYDIM, 
 			&contents_id, &system, &part);
+	if (rc)
+		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_damcon_socket(id, ship_id, type, x, y, contents_id, system, part);
 	pthread_mutex_unlock(&universe_mutex);
@@ -2039,15 +2053,14 @@ static int process_update_damcon_part(void)
 	uint8_t system, part, damage;
 	int rc;
 
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
-	if (rc != 0)
-		return rc;
-	packed_buffer_unpack(buffer, "wwwSSUbbb",
+	rc = read_and_unpack_buffer(buffer, "wwwSSUbbb",
 		&id, &ship_id, &type,
 			&x, (int32_t) DAMCONXDIM, 
 			&y, (int32_t) DAMCONYDIM, 
 			&heading, (uint32_t) 360, 
 			&system, &part, &damage);
+	if (rc != 0)
+		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_damcon_part(id, ship_id, type, x, y, heading, system, part, damage);
 	pthread_mutex_unlock(&universe_mutex);
@@ -2063,11 +2076,10 @@ static int process_mainscreen_view_mode(void)
 	double view_angle;
 	int rc;
 
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
+	rc = read_and_unpack_buffer(buffer, "Sb", &view_angle, (int32_t) 360,
+				&view_mode);
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack(buffer, "Sb", &view_angle, (int32_t) 360,
-				&view_mode);
 	if (!(o = find_my_ship()))
 		return 0;
 	o->tsd.ship.view_angle = view_angle;
@@ -2084,14 +2096,12 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
-	/* printf("process_update_econ_ship_packet, snis_readsocket returned %d\n", rc); */
-	if (rc != 0)
-		return rc;
-	packed_buffer_unpack(buffer, "wwSSUUwb", &id, &alive,
+	rc = read_and_unpack_buffer(buffer, "wwSSUUwb", &id, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
 				&dv, (uint32_t) UNIVERSE_DIM, &dheading, (uint32_t) 360,
 				&victim, &shiptype);
+	if (rc != 0)
+		return rc;
 	dvx = sin(dheading) * dv;
 	dvy = -cos(dheading) * dv;
 	pthread_mutex_lock(&universe_mutex);
@@ -2108,13 +2118,11 @@ static int process_update_torpedo_packet(void)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_torpedo_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_torpedo_packet) -
-					sizeof(uint16_t));
-	if (rc != 0)
-		return rc;
-	packed_buffer_unpack(buffer, "wwSSSS", &id, &ship_id,
+	rc = read_and_unpack_buffer(buffer, "wwSSSS", &id, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
+	if (rc != 0)
+		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_torpedo(id, dx, dy, dvx, dvy, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
@@ -2127,11 +2135,9 @@ static int process_warp_limbo_packet(int with_sound)
 	int rc;
 	uint16_t value;
 
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct warp_limbo_packet) -
-					sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "h", &value);
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack(buffer, "h", &value);
 	if (value >= 0 && value <= 40 * frame_rate_hz) { 
 		warp_limbo_countdown = value;
 		if (with_sound)
@@ -2153,13 +2159,11 @@ static int process_update_laser_packet(void)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_laser_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_laser_packet) -
-					sizeof(uint16_t));
-	if (rc != 0)
-		return rc;
-	packed_buffer_unpack(buffer, "wwSSSS", &id, &ship_id,
+	rc = read_and_unpack_buffer(buffer, "wwSSSS", &id, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
+	if (rc != 0)
+		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_laser(id, dx, dy, dvx, dvy, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
@@ -2174,13 +2178,11 @@ static int process_update_spacemonster(void)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_spacemonster_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_spacemonster_packet) -
-					sizeof(uint16_t));
-	if (rc != 0)
-		return rc;
-	packed_buffer_unpack(buffer, "wSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM);
+	if (rc != 0)
+		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_spacemonster(id, dx, dy, dz);
 	pthread_mutex_unlock(&universe_mutex);
@@ -2204,17 +2206,13 @@ static void delete_object(uint32_t id)
 static int process_delete_object_packet(void)
 {
 	unsigned char buffer[10];
-	struct packed_buffer pb;
 	uint32_t id;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct delete_object_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct delete_object_packet) -
-					sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "w", &id);
 	if (rc != 0)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
 	pthread_mutex_lock(&universe_mutex);
 	delete_object(id);
 	pthread_mutex_unlock(&universe_mutex);
@@ -2224,17 +2222,13 @@ static int process_delete_object_packet(void)
 static int process_play_sound_packet(void)
 {
 	unsigned char buffer[10];
-	struct packed_buffer pb;
 	uint16_t sound_number;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct play_sound_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct play_sound_packet) -
-					sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "h", &sound_number);
 	if (rc != 0)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	sound_number = packed_buffer_extract_u16(&pb);
 	wwviaudio_add_sound(sound_number);
 	return 0;
 }
@@ -2261,16 +2255,13 @@ static int process_ship_sdata_packet(void)
 
 static int process_role_onscreen_packet(void)
 {
-	char buffer[sizeof(struct role_onscreen_packet)];
-	struct packed_buffer pb;
+	unsigned char buffer[sizeof(struct role_onscreen_packet)];
 	uint8_t new_displaymode;
 	int rc;
 
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct role_onscreen_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "b", &new_displaymode);
 	if (rc != 0)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	new_displaymode = packed_buffer_extract_u8(&pb);
 
 	if (!(role & ROLE_MAIN)) {
 		/*
@@ -2311,17 +2302,13 @@ static struct snis_entity *curr_science_guy = NULL;
 static struct snis_entity *prev_science_guy = NULL;
 static int process_sci_select_target_packet(void)
 {
-	char buffer[sizeof(struct snis_sci_select_target_packet)];
-	struct packed_buffer pb;
+	unsigned char buffer[sizeof(struct snis_sci_select_target_packet)];
 	uint32_t id;
 	int rc, i;
 
-	rc = snis_readsocket(gameserver_sock, buffer,
-			sizeof(struct snis_sci_select_target_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "w", &id);
 	if (rc != 0)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
 	i = lookup_object_by_id(id);
 	if (i >= 0) {
 		curr_science_guy = &go[i];
@@ -2332,19 +2319,14 @@ static int process_sci_select_target_packet(void)
 
 static int process_sci_select_coords_packet(void)
 {
-	char buffer[sizeof(struct snis_sci_select_coords_packet)];
-	struct packed_buffer pb;
+	unsigned char buffer[sizeof(struct snis_sci_select_coords_packet)];
 	struct snis_entity *o;
 	double ux, uy;
 	int rc;
 
-	rc = snis_readsocket(gameserver_sock, buffer,
-			sizeof(struct snis_sci_select_coords_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "SS", &ux, UNIVERSE_DIM, &uy, UNIVERSE_DIM); 
 	if (rc != 0)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	ux = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
-	uy = packed_buffer_extract_ds32(&pb, UNIVERSE_DIM);
 	if (!(o = find_my_ship()))
 		return 0;
 	o->sci_coordx = ux;	
@@ -2354,18 +2336,14 @@ static int process_sci_select_coords_packet(void)
 
 static int process_update_respawn_time(void)
 {
-	char buffer[sizeof(struct respawn_time_packet)];
-	struct packed_buffer pb;
+	unsigned char buffer[sizeof(struct respawn_time_packet)];
 	struct snis_entity *o;
 	int rc;
 	uint8_t seconds;
 
-	rc = snis_readsocket(gameserver_sock, buffer,
-			sizeof(struct respawn_time_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "b", &seconds);
 	if (rc != 0)
 		return rc;
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	seconds = packed_buffer_extract_u8(&pb);
 	if (!(o = find_my_ship()))
 		return 0;
 	o->respawn_time = (uint32_t) seconds;
@@ -2374,15 +2352,13 @@ static int process_update_respawn_time(void)
 
 static int process_update_netstats(void)
 {
-	char buffer[sizeof(struct netstats_packet)];
+	unsigned char buffer[sizeof(struct netstats_packet)];
 	int rc;
 
-	rc = snis_readsocket(gameserver_sock, buffer,
-			sizeof(struct netstats_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "qqw", &netstats.bytes_sent,
+				&netstats.bytes_recd, &netstats.elapsed_seconds);
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack(buffer, "qqw", &netstats.bytes_sent,
-				&netstats.bytes_recd, &netstats.elapsed_seconds);
 	return 0;
 }
 
@@ -2402,16 +2378,14 @@ struct comms_ui {
 
 static int process_comm_transmission(void)
 {
-	char buffer[sizeof(struct comms_transmission_packet) + 100];
+	unsigned char buffer[sizeof(struct comms_transmission_packet) + 100];
 	char string[256];
 	uint8_t length;
 	int rc;
 
-	rc = snis_readsocket(gameserver_sock, buffer,
-			sizeof(struct comms_transmission_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "b", &length);
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack(buffer, "b", &length);
 	rc = snis_readsocket(gameserver_sock, string, length);
 	string[79] = '\0';
 	string[length] = '\0';
@@ -2454,11 +2428,12 @@ static int process_update_asteroid_packet(void)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy,(int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack(buffer, "wSSS", &id,
-			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, &dz, (int32_t) UNIVERSE_DIM);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_asteroid(id, dx, dy, dz);
 	pthread_mutex_unlock(&universe_mutex);
@@ -2473,11 +2448,10 @@ static int process_update_wormhole_packet(void)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_wormhole_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_starbase_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "wSS", &id,
+			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack(buffer, "wSS", &id,
-			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_wormhole(id, dx, dy);
 	pthread_mutex_unlock(&universe_mutex);
@@ -2492,11 +2466,10 @@ static int process_update_starbase_packet(void)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_starbase_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_starbase_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "wSS", &id,
+			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack(buffer, "wSS", &id,
-			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_starbase(id, dx, dy);
 	pthread_mutex_unlock(&universe_mutex);
@@ -2511,13 +2484,12 @@ static int process_update_nebula_packet(void)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_nebula_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_nebula_packet) - sizeof(uint16_t));
-	if (rc != 0)
-		return rc;
-	packed_buffer_unpack(buffer, "wSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&r, (int32_t) UNIVERSE_DIM);
+	if (rc != 0)
+		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_nebula(id, dx, dy, r);
 	pthread_mutex_unlock(&universe_mutex);
@@ -2534,13 +2506,11 @@ static int process_update_explosion_packet(void)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_explosion_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_explosion_packet)
-				- sizeof(uint16_t));
-	if (rc != 0)
-		return rc;
-	packed_buffer_unpack(buffer, "wSShhhb", &id,
+	rc = read_and_unpack_buffer(buffer, "wSShhhb", &id,
 		&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 		&nsparks, &velocity, &time, &victim_type);
+	if (rc != 0)
+		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_explosion(id, dx, dy, nsparks, velocity, time, victim_type);
 	pthread_mutex_unlock(&universe_mutex);
@@ -2550,14 +2520,11 @@ static int process_update_explosion_packet(void)
 static int process_client_id_packet(void)
 {
 	unsigned char buffer[100];
-	struct packed_buffer pb;
 	uint32_t id;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct client_ship_id_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct client_ship_id_packet) - sizeof(uint16_t));
-	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	id = packed_buffer_extract_u32(&pb);
+	rc = read_and_unpack_buffer(buffer, "w", &id);
 	if (rc)
 		return rc;
 	my_ship_id = id;
