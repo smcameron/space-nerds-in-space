@@ -61,7 +61,8 @@ The grid numbers can be decoded into (x,y) coords like:
 
 	instead, use decode_glyph[] to get x and y values -- see below
 ***************************/
-
+static stroke_t glyph_open_curly[] = { 2, 6, 11, 15, 21, 26, 32, 99 };
+static stroke_t glyph_close_curly[] = { 2, 8, 13, 19, 23, 28, 32, 99 };
 static stroke_t glyph_Z[] = { 0, 4, 20, 24, 99 };
 static stroke_t glyph_Y[] = { 0, 12, 22, LP, 12, 4, 99 };
 static stroke_t glyph_X[] = { 0, 23, LP, 20, 3, 99 };
@@ -341,6 +342,8 @@ int snis_make_font(struct my_vect_obj ***font, int xscale, int yscale)
 	v['['] = prerender_glyph(glyph_leftbracket, xscale, yscale); 
 	v[';'] = prerender_glyph(glyph_semicolon, xscale, yscale); 
 	v['~'] = prerender_glyph(glyph_tilde, xscale, yscale);
+	v['{'] = prerender_glyph(glyph_open_curly, xscale, yscale);
+	v['}'] = prerender_glyph(glyph_close_curly, xscale, yscale);
 
 	*font = v;
 	return 0;
