@@ -6298,11 +6298,15 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 	if (warp_limbo_countdown) {
 		warp_limbo_countdown--;
+		if (in_the_process_of_quitting)
+			draw_quit_screen(w);
 		show_warp_limbo_screen(w);
 		return 0;
 	} else if (damage_limbo_countdown) {
 		show_warp_hash_screen(w);
 		damage_limbo_countdown--;
+		if (in_the_process_of_quitting)
+			draw_quit_screen(w);
 		return 0;
 	}
 
@@ -6312,6 +6316,8 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		if (o->alive <= 0 && displaymode != DISPLAYMODE_DEBUG &&
 			displaymode != DISPLAYMODE_DEMON) {
 			show_death_screen(w);
+			if (in_the_process_of_quitting)
+				draw_quit_screen(w);
 			return 0;
 		}
 	}
