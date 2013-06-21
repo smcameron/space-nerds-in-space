@@ -2324,7 +2324,9 @@ static int process_sci_select_coords_packet(void)
 	double ux, uy;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "SS", &ux, UNIVERSE_DIM, &uy, UNIVERSE_DIM); 
+	rc = read_and_unpack_buffer(buffer, "SS",
+			&ux, (int32_t) UNIVERSE_DIM,
+			&uy, (int32_t) UNIVERSE_DIM); 
 	if (rc != 0)
 		return rc;
 	if (!(o = find_my_ship()))
