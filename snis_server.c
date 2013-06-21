@@ -3098,9 +3098,12 @@ static int insane(unsigned char *word, int len)
 
 	word[len-1] = '\0';
 	len = strlen((const char *) word);
-	for (i = 0; i < len; i++)
+	for (i = 0; i < len; i++) {
+		if (index(" 	-@#%^&*()=+_/?>.<,~", word[i]))
+			continue;
 		if (!isalnum(word[i]))
 			return 1;
+	}
 	return 0;
 }
 
