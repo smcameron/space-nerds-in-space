@@ -24,7 +24,7 @@
 #define SNIS_PROTOCOL_VERSION "SNIS001"
 
 /* dimensions of the "known" universe */
-#define XKNOWN_DIM 100000.0
+#define XKNOWN_DIM 300000.0
 #define YKNOWN_DIM (XKNOWN_DIM * (600.0/800.0))  /* assumes 800x600 screen aspect ratio */
 
 #define UNIVERSE_DIM ((XKNOWN_DIM) * 20.0)
