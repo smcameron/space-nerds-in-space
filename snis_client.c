@@ -1292,6 +1292,9 @@ void init_keymap()
 	keymap[GDK_o] = keyonscreen;
 	keymap[GDK_w] = keyviewmode;
 	keymap[GDK_W] = keyviewmode;
+	keymap[GDK_KEY_plus] = keyzoom;
+	keymap[GDK_KEY_equal] = keyzoom;
+	keymap[GDK_KEY_minus] = keyunzoom;
 
 	ffkeymap[GDK_F1 & 0x00ff] = keyf1;
 	ffkeymap[GDK_F2 & 0x00ff] = keyf2;
@@ -1663,15 +1666,47 @@ nav_check_y_stick:
 	}
 }
 
+static void do_adjust_byte_value(uint8_t value,  uint16_t opcode);
+static void do_zoom(int z)
+{
+	int newval;
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return;
+
+	switch (displaymode) {
+	case DISPLAYMODE_WEAPONS:
+		newval = o->tsd.ship.weapzoom + z;
+		if (newval < 0)
+			newval = 0;
+		if (newval > 255)
+			newval = 255;
+                do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_WEAPZOOM);
+		break;
+	case DISPLAYMODE_NAVIGATION:
+		newval = o->tsd.ship.navzoom + z;
+		if (newval < 0)
+			newval = 0;
+		if (newval > 255)
+			newval = 255;
+                do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_NAVZOOM);
+		break;
+	default:
+		break;
+	}
+}
+
 static void deal_with_keyboard()
 {
+	int h, v, z;
 	static const int keyboard_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
 	if (timer % keyboard_throttle != 0)
 		return;
-	int h, v;
 
 	h = 0;
 	v = 0;
+	z = 0;
 
 	if (kbstate.pressed[keyleft])	
 		h = -1;
@@ -1683,6 +1718,13 @@ static void deal_with_keyboard()
 		v = 1;
 	if (h || v)
 		do_dirkey(h, v);
+
+	if (kbstate.pressed[keyzoom])
+		z = 10;
+	if (kbstate.pressed[keyunzoom])
+		z = -10;
+	if (z)
+		do_zoom(z);
 }
 
 static int control_key_pressed = 0;

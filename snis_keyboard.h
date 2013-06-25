@@ -25,7 +25,9 @@ enum keyaction {
 		keyf9		= 20,
 		keyonscreen	= 21,
 		keyviewmode	= 22,
-#define NKEYSTATES 23
+		keyzoom		= 23,
+		keyunzoom	= 24,
+#define NKEYSTATES 25
 };
 
 struct keyboard_state {
