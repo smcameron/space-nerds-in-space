@@ -3319,7 +3319,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 	r = rh / 2;
 	sng_set_foreground(DARKRED);
 	/* Draw all the stuff */
-#define NAVSCREEN_RADIUS (XKNOWN_DIM / 100.0)
+#define NAVSCREEN_RADIUS (0.05 * XKNOWN_DIM)
 #define NR2 (NAVSCREEN_RADIUS * NAVSCREEN_RADIUS)
 	pthread_mutex_lock(&universe_mutex);
 
