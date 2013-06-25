@@ -65,6 +65,7 @@
 #include "shield_strength.h"
 #include "joystick.h"
 #include "stacktrace.h"
+#include "snis_keyboard.h"
 
 #include "vertex.h"
 #include "triangle.h"
@@ -1240,18 +1241,10 @@ struct keyname_value_entry {
 	{ "f12", GDK_F12 }, 
 };
 
-enum keyaction { keynone, keydown, keyup, keyleft, keyright, 
-		keytorpedo, keytransform, 
-		keyquarter, keypause, key2, key3, key4, key5, key6,
-		key7, key8, keysuicide, keyfullscreen, keythrust, 
-		keysoundeffects, keymusic, keyquit, keytogglemissilealarm,
-		keypausehelp, keyreverse, keyf1, keyf2, keyf3, keyf4, keyf5,
-		keyf6, keyf7, keyf8, keyf9, keyonscreen, keyviewmode
-};
-
 enum keyaction keymap[256];
 enum keyaction ffkeymap[256];
 unsigned char *keycharmap[256];
+struct keyboard_state kbstate = { {0} };
 
 char *keyactionstring[] = {
 	"none", "down", "up", "left", "right", 
@@ -1260,6 +1253,8 @@ char *keyactionstring[] = {
 	"7x", "8x", "suicide", "fullscreen", "thrust", 
 	"soundeffect", "music", "quit", "missilealarm", "help", "reverse"
 };
+
+
 void init_keymap()
 {
 	memset(keymap, 0, sizeof(keymap));
@@ -1287,22 +1282,9 @@ void init_keymap()
 
 	keymap[GDK_b] = keytransform;
 	keymap[GDK_x] = keythrust;
-	keymap[GDK_p] = keypause;
 	ffkeymap[GDK_F1 & 0x00ff] = keypausehelp;
-	keymap[GDK_q] = keyquarter;
-	keymap[GDK_m] = keymusic;
-	keymap[GDK_s] = keysoundeffects;
 	ffkeymap[GDK_Escape & 0x00ff] = keyquit;
-	keymap[GDK_1] = keytogglemissilealarm;
 
-	keymap[GDK_2] = key2;
-	keymap[GDK_3] = key3;
-	keymap[GDK_4] = key4;
-	keymap[GDK_5] = key5;
-	keymap[GDK_6] = key6;
-	keymap[GDK_7] = key7;
-	keymap[GDK_8] = key8;
-	keymap[GDK_9] = keysuicide;
 	keymap[GDK_O] = keyonscreen;
 	keymap[GDK_o] = keyonscreen;
 	keymap[GDK_w] = keyviewmode;
@@ -1580,7 +1562,7 @@ static void deal_with_joystick()
 {
 
 #define FRAME_RATE_HZ 30 
-	static int joystick_throttle = (int) ((FRAME_RATE_HZ / 12.0) + 0.5);
+	static const int joystick_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
 	static struct wwvi_js_event jse;
 	int i, rc;
 
@@ -1678,6 +1660,28 @@ nav_check_y_stick:
 	}
 }
 
+static void deal_with_keyboard()
+{
+	static const int keyboard_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
+	if (timer % keyboard_throttle != 0)
+		return;
+	int h, v;
+
+	h = 0;
+	v = 0;
+
+	if (kbstate.pressed[keyleft])	
+		h = -1;
+	if (kbstate.pressed[keyright])
+		h = 1;
+	if (kbstate.pressed[keyup])
+		v = -1;
+	if (kbstate.pressed[keydown])
+		v = 1;
+	if (h || v)
+		do_dirkey(h, v);
+}
+
 static int control_key_pressed = 0;
 
 static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
@@ -1689,6 +1693,8 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
                 ka = keymap[event->keyval];
         else
                 ka = ffkeymap[event->keyval & 0x00ff];
+	if (ka > 0 && ka < NKEYSTATES)
+		kbstate.pressed[ka] = 1;
 
 	if (event->keyval == GDK_Control_R ||
 		event->keyval == GDK_Control_L) {
@@ -1717,18 +1723,6 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			if (!in_the_process_of_quitting)
 				current_quit_selection = 0;
 			break;
-	case keyleft:
-		do_dirkey(-1, 0);
-		break;
-	case keyright:
-		do_dirkey(1, 0);
-		break;
-	case keyup:
-		do_dirkey(0, -1);
-		break;
-	case keydown:
-		do_dirkey(0, 1);
-		break;
 	case keytorpedo:
 		do_torpedo();
 		break;
@@ -1824,12 +1818,23 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 
 static gint key_release_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 {
+	enum keyaction ka;
+
+
 	ui_element_list_keyrelease(uiobjs, event);
 	if (event->keyval == GDK_Control_R ||
 		event->keyval == GDK_Control_L) {
 		control_key_pressed = 0;
 		return TRUE;
 	}
+
+        if ((event->keyval & 0xff00) == 0)
+                ka = keymap[event->keyval];
+        else
+                ka = ffkeymap[event->keyval & 0x00ff];
+	if (ka > 0 && ka < NKEYSTATES)
+		kbstate.pressed[ka] = 0;
+
 	return FALSE;
 }
 
@@ -6389,6 +6394,7 @@ gint advance_game(gpointer data)
 	timer++;
 
 	deal_with_joystick();
+	deal_with_keyboard();
 
 	if (in_the_process_of_quitting) {
 		gdk_threads_enter();
