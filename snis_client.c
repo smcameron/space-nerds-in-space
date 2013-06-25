@@ -4311,7 +4311,7 @@ static void show_weapons(GtkWidget *w)
 	sng_set_foreground(GREEN);
 	screen_radius = ((((255.0 - o->tsd.ship.weapzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, 1);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, o->tsd.ship.weapzoom > 100);
 	sng_set_foreground(BLUE);
 	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
 
@@ -4403,7 +4403,7 @@ static void show_navigation(GtkWidget *w)
 	sng_set_foreground(GREEN);
 	screen_radius = ((((255.0 - o->tsd.ship.navzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, 1);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, o->tsd.ship.navzoom > 100);
 	sng_set_foreground(DARKRED);
 	snis_draw_reticule(w, gc, cx, cy, r, o->heading);
 
