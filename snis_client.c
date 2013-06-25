@@ -3396,15 +3396,15 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen
 			switch (go[i].type) {
 			case OBJTYPE_ASTEROID:
 				sng_set_foreground(ASTEROID_COLOR);
-				sng_draw_circle(w->window, gc, x, y, r / 20);
+				sng_draw_circle(w->window, gc, x, y, r / 30);
 				break;
 			case OBJTYPE_STARBASE:
 				sng_set_foreground(STARBASE_COLOR);
-				sng_draw_circle(w->window, gc, x, y, r / 20);
+				sng_draw_circle(w->window, gc, x, y, r / 30);
 				break;
 			case OBJTYPE_WORMHOLE:
 				sng_set_foreground(WORMHOLE_COLOR);
-				sng_draw_circle(w->window, gc, x, y, r / 20);
+				sng_draw_circle(w->window, gc, x, y, r / 30);
 				break;
 			case OBJTYPE_LASER:
 				snis_draw_laser(w->window, gc, x, y,
@@ -3412,7 +3412,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen
 					y - go[i].vy * (double) r / (2 * screen_radius));
 				break;
 			case OBJTYPE_TORPEDO:
-				snis_draw_torpedo(w->window, gc, x, y, r / 25);
+				snis_draw_torpedo(w->window, gc, x, y, r / 30);
 				break;
 			case OBJTYPE_EXPLOSION:
 				break;
