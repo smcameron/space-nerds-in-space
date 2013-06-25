@@ -80,6 +80,8 @@
 #define OPCODE_UPDATE_WORMHOLE		154
 #define OPCODE_WORMHOLE_LIMBO		155
 #define OPCODE_UPDATE_SPACEMONSTER	156
+#define OPCODE_REQUEST_WEAPZOOM		157
+#define OPCODE_REQUEST_NAVZOOM		158
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -114,6 +116,8 @@ struct update_ship_packet {
 	uint8_t shields_slider;
 /* end of struct power_dist */
 	uint8_t scizoom;
+	uint8_t weapzoom;
+	uint8_t navzoom;
 	uint8_t warpdrive;
 	uint8_t requested_warpdrive;
 	uint8_t requested_shield;

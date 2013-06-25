@@ -183,6 +183,8 @@ struct ship_data {
 	struct power_dist pwrdist;
 	uint8_t shiptype; /* same as snis_entity_science_data subclass */
 	uint8_t scizoom;
+	uint8_t weapzoom;
+	uint8_t navzoom;
 	uint8_t warpdrive;
 	uint8_t requested_warpdrive;
 	uint8_t requested_shield;

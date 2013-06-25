@@ -596,7 +596,8 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 			uint32_t torpedoes, uint32_t power, 
 			double gun_heading, double sci_heading, double sci_beam_width, int type,
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
-			fuel, uint8_t temp, struct power_dist *pd, uint8_t scizoom, uint8_t warpdrive,
+			fuel, uint8_t temp, struct power_dist *pd, uint8_t scizoom, uint8_t weapzoom,
+			uint8_t navzoom, uint8_t warpdrive,
 			uint8_t requested_warpdrive, uint8_t requested_shield, uint8_t phaser_charge, uint8_t phaser_wavelength, uint8_t shiptype)
 {
 	int i;
@@ -634,6 +635,8 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.temp = temp;
 	go[i].tsd.ship.pwrdist = *pd;
 	go[i].tsd.ship.scizoom = scizoom;
+	go[i].tsd.ship.weapzoom = weapzoom;
+	go[i].tsd.ship.navzoom = navzoom;
 	go[i].tsd.ship.requested_warpdrive = requested_warpdrive;
 	go[i].tsd.ship.requested_shield = requested_shield;
 	go[i].tsd.ship.warpdrive = warpdrive;
@@ -1961,7 +1964,8 @@ static int process_update_ship_packet(uint16_t opcode)
 	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
-	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, warpdrive, requested_warpdrive,
+	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
+		warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype;
 	struct power_dist pd;
 
@@ -1977,8 +1981,9 @@ static int process_update_ship_packet(uint16_t opcode)
 	packed_buffer_extract(&pb, "UwwUUU", &dheading, (uint32_t) 360,
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
 				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
-	packed_buffer_extract(&pb, "bbbwbrbbbbbbb", &tloading, &throttle, &rpm, &fuel, &temp,
-			&pd, (unsigned short) sizeof(pd), &scizoom, &warpdrive, &requested_warpdrive,
+	packed_buffer_extract(&pb, "bbbwbrbbbbbbbbb", &tloading, &throttle, &rpm, &fuel, &temp,
+			&pd, (unsigned short) sizeof(pd), &scizoom, &weapzoom, &navzoom,
+			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
@@ -1986,7 +1991,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power,
 				dgheading, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, &pd, scizoom,
-				warpdrive, requested_warpdrive, requested_shield,
+				weapzoom, navzoom, warpdrive, requested_warpdrive, requested_shield,
 				phaser_charge, phaser_wavelength, shiptype);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
@@ -3305,7 +3310,7 @@ static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 	snis_draw_line(w->window, gc, tx1, ty1, tx2, ty2);
 }
 
-static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
+static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen_radius)
 {
 	int i, cx, cy, r, rx, ry, rw, rh;
 	char buffer[200];
@@ -3319,8 +3324,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 	r = rh / 2;
 	sng_set_foreground(DARKRED);
 	/* Draw all the stuff */
-#define NAVSCREEN_RADIUS (0.05 * XKNOWN_DIM)
-#define NR2 (NAVSCREEN_RADIUS * NAVSCREEN_RADIUS)
+#define NR2 (screen_radius * screen_radius)
 	pthread_mutex_lock(&universe_mutex);
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
@@ -3337,8 +3341,8 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 			continue; /* not close enough */
 	
 
-		tx = (go[i].x - o->x) * (double) r / NAVSCREEN_RADIUS;
-		ty = (go[i].y - o->y) * (double) r / NAVSCREEN_RADIUS;
+		tx = (go[i].x - o->x) * (double) r / screen_radius;
+		ty = (go[i].y - o->y) * (double) r / screen_radius;
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
 
@@ -3362,8 +3366,8 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o)
 				break;
 			case OBJTYPE_LASER:
 				snis_draw_laser(w->window, gc, x, y,
-					x - go[i].vx * (double) r / (2 * NAVSCREEN_RADIUS),
-					y - go[i].vy * (double) r / (2 * NAVSCREEN_RADIUS));
+					x - go[i].vx * (double) r / (2 * screen_radius),
+					y - go[i].vy * (double) r / (2 * screen_radius));
 				break;
 			case OBJTYPE_TORPEDO:
 				snis_draw_torpedo(w->window, gc, x, y, r / 25);
@@ -3621,7 +3625,7 @@ static void draw_all_the_science_sparks(GtkWidget *w, struct snis_entity *o, dou
 }
 
 
-static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o)
+static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o, double screen_radius)
 {
 	int i, cx, cy, r, rx, ry, rw, rh;
 
@@ -3649,8 +3653,8 @@ static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o)
 		if (dist2 > NR2)
 			continue; /* not close enough */
 
-		tx = (spark[i].x - o->x) * (double) r / NAVSCREEN_RADIUS;
-		ty = (spark[i].y - o->y) * (double) r / NAVSCREEN_RADIUS;
+		tx = (spark[i].x - o->x) * (double) r / screen_radius;
+		ty = (spark[i].y - o->y) * (double) r / screen_radius;
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
 
@@ -3875,6 +3879,16 @@ static void do_adjust_slider_value(struct slider *s,  uint16_t opcode)
 	do_adjust_byte_value(value, opcode);
 }
 
+static void do_weapzoom(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_WEAPZOOM);
+}
+
+static void do_navzoom(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_NAVZOOM);
+}
+
 static void do_scizoom(struct slider *s)
 {
 	do_adjust_slider_value(s, OPCODE_REQUEST_SCIZOOM);
@@ -3953,6 +3967,8 @@ DEFINE_SAMPLER_FUNCTION(sample_fuel, tsd.ship.fuel, UINT32_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phaserbanks, tsd.ship.pwrdist.phaserbanks, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phasercharge, tsd.ship.phaser_charge, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 255.0 * 2.0, 10.0)
+DEFINE_SAMPLER_FUNCTION(sample_weapzoom, tsd.ship.weapzoom, 25.5, 1.0)
+DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 25.5, 1.0)
 
 static double sample_warpdrive_power_avail(void)
 {
@@ -4035,6 +4051,7 @@ CREATE_DAMAGE_SAMPLER_FUNC(comms_damage) /* sample_comms__damage defined here */
 static struct navigation_ui {
 	struct slider *warp_slider;
 	struct slider *shield_slider;
+	struct slider *navzoom_slider;
 	struct gauge *warp_gauge;
 	struct button *engage_warp_button;
 	struct button *warp_up_button;
@@ -4080,6 +4097,7 @@ struct weapons_ui {
 	struct gauge *phaser_bank_gauge;
 	struct gauge *phaser_wavelength;
 	struct slider *wavelen_slider;
+	struct slider *weapzoom_slider;
 	struct button *wavelen_up_button;
 	struct button *wavelen_down_button;
 } weapons;
@@ -4174,12 +4192,16 @@ static void init_weapons_ui(void)
 	weapons.wavelen_slider = snis_slider_init(620, 400, 70, AMBER, "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength);
+	weapons.weapzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, AMBER, "ZOOM",
+				"1", "10", 0.0, 255.0, sample_weapzoom,
+				do_weapzoom);
 	ui_add_button(weapons.fire_phaser, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.load_torpedo, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.fire_torpedo, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.wavelen_up_button, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.wavelen_down_button, DISPLAYMODE_WEAPONS);
 	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS);
+	ui_add_slider(weapons.weapzoom_slider, DISPLAYMODE_WEAPONS);
 	ui_add_gauge(weapons.phaser_bank_gauge, DISPLAYMODE_WEAPONS);
 	ui_add_gauge(weapons.phaser_wavelength, DISPLAYMODE_WEAPONS);
 }
@@ -4208,6 +4230,7 @@ static void show_weapons(GtkWidget *w)
 	int rx, ry, rw, rh, cx, cy;
 	int r;
 	int buttoncolor;
+	double screen_radius;
 
 	sng_set_foreground(GREEN);
 
@@ -4244,12 +4267,14 @@ static void show_weapons(GtkWidget *w)
 	cy = ry + (rh / 2);
 	r = rh / 2;
 	sng_set_foreground(GREEN);
-	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, NAVSCREEN_RADIUS, 1);
+	screen_radius = (((o->tsd.ship.weapzoom / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
+	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, 1);
 	sng_set_foreground(BLUE);
 	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
-	draw_all_the_guys(w, o);
-	draw_all_the_sparks(w, o);
+
+	draw_all_the_guys(w, o, screen_radius);
+	draw_all_the_sparks(w, o, screen_radius);
 	show_common_screen(w, "WEAPONS");
 }
 
@@ -4263,6 +4288,9 @@ static void init_nav_ui(void)
 	nav_ui.warp_slider = snis_slider_init(500, SCREEN_HEIGHT - 40, 200, AMBER, "Warp",
 				"0", "100", 0.0, 100.0, sample_reqwarpdrive,
 				do_warpdrive);
+	nav_ui.navzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, AMBER, "ZOOM",
+				"1", "10", 0.0, 255.0, sample_navzoom,
+				do_navzoom);
 	nav_ui.warp_gauge = gauge_init(650, 410, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 				10, "WARP", sample_warpdrive);
@@ -4275,6 +4303,7 @@ static void init_nav_ui(void)
 			NANO_FONT, warp_down_button_pressed, NULL);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.shield_slider, DISPLAYMODE_NAVIGATION);
+	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.warp_up_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.warp_down_button, DISPLAYMODE_NAVIGATION);
@@ -4304,6 +4333,7 @@ static void show_navigation(GtkWidget *w)
 	struct snis_entity *o;
 	int rx, ry, rw, rh, cx, cy, gx1, gy1, gx2, gy2;
 	int r, sectorx, sectory;
+	double screen_radius;
 
 	sng_set_foreground(GREEN);
 
@@ -4329,13 +4359,14 @@ static void show_navigation(GtkWidget *w)
 	cy = ry + (rh / 2);
 	r = rh / 2;
 	sng_set_foreground(GREEN);
-	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, NAVSCREEN_RADIUS);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, NAVSCREEN_RADIUS, 1);
+	screen_radius = (((o->tsd.ship.navzoom / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
+	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, 1);
 	sng_set_foreground(DARKRED);
 	snis_draw_reticule(w, gc, cx, cy, r, o->heading);
 
-	draw_all_the_guys(w, o);
-	draw_all_the_sparks(w, o);
+	draw_all_the_guys(w, o, screen_radius);
+	draw_all_the_sparks(w, o, screen_radius);
 
 	gx1 = NAV_DATA_X + 10;
 	gy1 = 15;
