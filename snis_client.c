@@ -3967,8 +3967,8 @@ DEFINE_SAMPLER_FUNCTION(sample_fuel, tsd.ship.fuel, UINT32_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phaserbanks, tsd.ship.pwrdist.phaserbanks, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phasercharge, tsd.ship.phaser_charge, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 255.0 * 2.0, 10.0)
-DEFINE_SAMPLER_FUNCTION(sample_weapzoom, tsd.ship.weapzoom, 25.5, 1.0)
-DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 25.5, 1.0)
+DEFINE_SAMPLER_FUNCTION(sample_weapzoom, tsd.ship.weapzoom, 255.0, 0.0)
+DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 255.0, 0.0)
 
 static double sample_warpdrive_power_avail(void)
 {
@@ -4193,7 +4193,7 @@ static void init_weapons_ui(void)
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength);
 	weapons.weapzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, AMBER, "ZOOM",
-				"1", "10", 0.0, 255.0, sample_weapzoom,
+				"1", "10", 0.0, 100.0, sample_weapzoom,
 				do_weapzoom);
 	ui_add_button(weapons.fire_phaser, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.load_torpedo, DISPLAYMODE_WEAPONS);
@@ -4267,7 +4267,7 @@ static void show_weapons(GtkWidget *w)
 	cy = ry + (rh / 2);
 	r = rh / 2;
 	sng_set_foreground(GREEN);
-	screen_radius = (((o->tsd.ship.weapzoom / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
+	screen_radius = ((((255.0 - o->tsd.ship.weapzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, 1);
 	sng_set_foreground(BLUE);
@@ -4289,7 +4289,7 @@ static void init_nav_ui(void)
 				"0", "100", 0.0, 100.0, sample_reqwarpdrive,
 				do_warpdrive);
 	nav_ui.navzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, AMBER, "ZOOM",
-				"1", "10", 0.0, 255.0, sample_navzoom,
+				"1", "10", 0.0, 100.0, sample_navzoom,
 				do_navzoom);
 	nav_ui.warp_gauge = gauge_init(650, 410, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
@@ -4359,7 +4359,7 @@ static void show_navigation(GtkWidget *w)
 	cy = ry + (rh / 2);
 	r = rh / 2;
 	sng_set_foreground(GREEN);
-	screen_radius = (((o->tsd.ship.navzoom / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
+	screen_radius = ((((255.0 - o->tsd.ship.navzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, 1);
 	sng_set_foreground(DARKRED);
