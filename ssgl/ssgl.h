@@ -38,7 +38,8 @@ struct ssgl_game_server {
 	char game_type[15];		/* What kind of game is this? */
 	char game_instance[20];		/* which instance on the server of the game */
 	char server_nickname[15];	/* server nickname where game is hosted */
-	char location[20]; 
+	char location[20];
+	uint32_t nconnections;
 };
 
 struct ssgl_client_filter {
@@ -56,7 +57,7 @@ struct ssgl_client_filter {
 
 GLOBAL int ssgl_gameclient_connect_to_lobby(char *hostname);
 GLOBAL int ssgl_register_gameserver(char *lobbyhost, struct ssgl_game_server *gameserver,
-	pthread_t *lobby_thread);
+	pthread_t *lobby_thread, int *nconnections);
 GLOBAL int ssgl_recv_game_servers(int sock,
 	struct ssgl_game_server **server_list, int *server_count,
 	struct ssgl_client_filter *filter);

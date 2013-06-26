@@ -27,6 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <string.h>
 #include <stdint.h>
 #include <pthread.h>
+#include <arpa/inet.h>
 
 #include "ssgl.h"
 
@@ -62,6 +63,7 @@ int ssgl_sanitize_game_server_entry(struct ssgl_game_server *gs)
 	fill_trailing_zeroes(gs->game_instance, sizeof(gs->game_instance));
 	fill_trailing_zeroes(gs->server_nickname, sizeof(gs->server_nickname));
 	fill_trailing_zeroes(gs->location, sizeof(gs->location));
+	gs->nconnections = ntohl(gs->nconnections);
 	
 	return 0;	
 }

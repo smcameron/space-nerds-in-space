@@ -46,6 +46,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 struct lobby_thread_arg {
 	struct ssgl_game_server gameserver;
 	char lobbyhost[1000];
+	volatile int *nconnections;
 };
 
 static void *update_lobby_thread(void *arg)
@@ -54,6 +55,7 @@ static void *update_lobby_thread(void *arg)
 	struct lobby_thread_arg *a = (struct lobby_thread_arg *) arg;
 	struct ssgl_game_server gameserver;
 	char lobbyhost[1024];
+	volatile int *nconnections = a->nconnections;
 
 	/* now move this to stack, and free malloc'ed memory. */
 	memset(lobbyhost, 0, sizeof(lobbyhost));
@@ -70,6 +72,7 @@ static void *update_lobby_thread(void *arg)
 		}
 
 		/* printf("writing, gs.game_type = '%s'\n", gameserver.game_type); */
+		gameserver.nconnections = htonl(*nconnections);
 		rc =  ssgl_writesocket(lobbysock, &gameserver, sizeof(gameserver)); 
 		if (rc) {
 			fprintf(stderr, "ssgl_register_gameserver failed: %s\n", strerror(errno));
@@ -84,7 +87,8 @@ static void *update_lobby_thread(void *arg)
 	pthread_exit(NULL);
 }
 
-int ssgl_register_gameserver(char *lobbyhost, struct ssgl_game_server *gameserver, pthread_t *lobby_thread)
+int ssgl_register_gameserver(char *lobbyhost, struct ssgl_game_server *gameserver,
+			pthread_t *lobby_thread, int *nconnections)
 {
 	int rc;
 	struct lobby_thread_arg *arg;
@@ -92,6 +96,7 @@ int ssgl_register_gameserver(char *lobbyhost, struct ssgl_game_server *gameserve
 	/* Can't put this on the stack as the stack will be gone when thread needs it */
 	arg = malloc(sizeof(*arg));
 	arg->gameserver = *gameserver;
+	arg->nconnections = (volatile int *) nconnections;
 	strncpy(arg->lobbyhost, lobbyhost, sizeof(arg->lobbyhost)-1);
 
 	rc = pthread_create(lobby_thread, NULL, update_lobby_thread, arg);

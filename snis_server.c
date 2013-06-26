@@ -3632,7 +3632,7 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 		snis_log(SNIS_WARN, "Failed to get local ip address.\n");
 
 	snis_log(SNIS_INFO, "Registering game server\n");
-	if (ssgl_register_gameserver(lobbyhost, &gs, &lobbythread))
+	if (ssgl_register_gameserver(lobbyhost, &gs, &lobbythread, &nclients))
 		snis_log(SNIS_WARN, "Game server registration failed.\n");
 	else	
 		snis_log(SNIS_INFO, "Game server registered.\n");

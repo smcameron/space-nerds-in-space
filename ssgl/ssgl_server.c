@@ -218,8 +218,15 @@ static void service_game_server(int connection)
 
 	/* replace with faster algorithm if need be. */
 	for (i = 0; i < ngame_servers; i++) {
+		struct ssgl_game_server *ogs = &game_server[i];
 		/* already present? */
-		if (memcmp(&game_server[i], &gs, sizeof(gs)) == 0) {
+		if (ogs->port == gs.port &&
+			ogs->ipaddr == gs.ipaddr &&
+			memcmp(ogs->game_type, gs.game_type, sizeof(gs.game_type)) == 0 &&
+			memcmp(ogs->game_instance, gs.game_instance, sizeof(gs.game_instance)) == 0 &&
+			memcmp(ogs->server_nickname, gs.server_nickname, sizeof(gs.server_nickname)) == 0 &&
+			memcmp(ogs->location, gs.location, sizeof(gs.location)) == 0) {
+			ogs->nconnections = gs.nconnections;
 			update_expiration(i);
 			goto out;
 		}

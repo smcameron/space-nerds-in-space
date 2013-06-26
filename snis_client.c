@@ -2065,6 +2065,8 @@ static void show_lobbyscreen(GtkWidget *w)
 			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 450, 100 + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].location);
 			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 650, 100 + i * LINEHEIGHT);
+			sprintf(msg, "%d", lobby_game_server[i].nconnections);
+			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 700, 100 + i * LINEHEIGHT);
 		}
 		if (lobby_selected_server != -1)
 			sng_set_foreground(GREEN);

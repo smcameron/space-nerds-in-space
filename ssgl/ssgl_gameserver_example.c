@@ -44,6 +44,8 @@ static void usage()
 	exit(1);
 }
 
+int nconnections = 0;
+
 int main(int argc, char *argv[])
 {
 	struct ssgl_game_server gameserver;
@@ -63,7 +65,7 @@ int main(int argc, char *argv[])
 	COPYINARG(location, 5);
 
 	/* create a thread to contact and update the lobby server... */
-	(void) ssgl_register_gameserver(argv[1], &gameserver, &lobby_thread);
+	(void) ssgl_register_gameserver(argv[1], &gameserver, &lobby_thread, &nconnections);
 	
 	do {
 		/* do whatever it is that your game server does here... */
