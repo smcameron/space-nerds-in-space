@@ -948,8 +948,8 @@ static void move_objects(void)
 		case OBJTYPE_TORPEDO:
 			/* predictive movement, this is probably */
 			/* too dumb to work right */
-			o->x += o->vx;
-			o->y += o->vy;
+			o->x += o->vx / 2.0;
+			o->y += o->vy / 2.0;
 			break;
 		default:
 			break;
