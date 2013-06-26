@@ -799,13 +799,13 @@ static void ship_move(struct snis_entity *o)
 		heading_diff += 2.0 * M_PI;
 	if (heading_diff > M_PI)
 		heading_diff -= 2.0 * M_PI;
-	if (heading_diff > MAX_YAW_VELOCITY) {
-		yaw_vel = MAX_YAW_VELOCITY;
+	if (heading_diff > MAX_YAW_VELOCITY * 0.5) {
+		yaw_vel = MAX_YAW_VELOCITY * 0.5 ;
 	} else {
-		if (heading_diff < -MAX_YAW_VELOCITY) {
-			yaw_vel = -MAX_YAW_VELOCITY;
+		if (heading_diff < -MAX_YAW_VELOCITY * 0.5) {
+			yaw_vel = -MAX_YAW_VELOCITY * 0.5;
 		} else {
-			yaw_vel = heading_diff * 0.8;
+			yaw_vel = heading_diff * 0.2;
 		}
 	}
 	if (fabs(heading_diff) < (M_PI / 180.0))
@@ -815,8 +815,8 @@ static void ship_move(struct snis_entity *o)
 
 	/* Adjust velocity towards desired velocity */
 	o->tsd.ship.velocity = o->tsd.ship.velocity +
-			(o->tsd.ship.desired_velocity - o->tsd.ship.velocity) * 0.3;
-	if (fabs(o->tsd.ship.velocity - o->tsd.ship.desired_velocity) < 2.0)
+			(o->tsd.ship.desired_velocity - o->tsd.ship.velocity) * 0.1;
+	if (fabs(o->tsd.ship.velocity - o->tsd.ship.desired_velocity) < 1.0)
 		o->tsd.ship.velocity = o->tsd.ship.desired_velocity;
 
 	/* set vx, vy, move x, y */

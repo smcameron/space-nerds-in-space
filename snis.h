@@ -142,8 +142,8 @@ struct ship_data {
 	double velocity;
 #define MIN_PLAYER_VELOCITY (0.1)
 #define MAX_PLAYER_VELOCITY (30.0)
-#define PLAYER_VELOCITY_DAMPING (0.8)
-#define PLAYER_VELOCITY_INCREMENT (4.0)
+#define PLAYER_VELOCITY_DAMPING (0.97)
+#define PLAYER_VELOCITY_INCREMENT (1.0)
 	double yaw_velocity;
 	double desired_heading;
 	double desired_velocity;
