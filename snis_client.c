@@ -1295,6 +1295,8 @@ void init_keymap()
 	keymap[GDK_KEY_plus] = keyzoom;
 	keymap[GDK_KEY_equal] = keyzoom;
 	keymap[GDK_KEY_minus] = keyunzoom;
+	ffkeymap[GDK_KEY_KP_Add & 0x00ff] = keyzoom;
+	ffkeymap[GDK_KEY_KP_Subtract & 0x00ff] = keyunzoom;
 
 	ffkeymap[GDK_F1 & 0x00ff] = keyf1;
 	ffkeymap[GDK_F2 & 0x00ff] = keyf2;
