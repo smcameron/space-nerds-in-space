@@ -1251,12 +1251,12 @@ struct keyboard_state kbstate = { {0} };
 
 char *keyactionstring[] = {
 	"none", "down", "up", "left", "right", 
-	"laser", "bomb", "chaff", "gravitybomb",
-	"quarter", "pause", "2x", "3x", "4x", "5x", "6x",
-	"7x", "8x", "suicide", "fullscreen", "thrust", 
-	"soundeffect", "music", "quit", "missilealarm", "help", "reverse"
+	"torpedo", "transform", "fullscreen", "thrust",
+	"quit", "pause", "reverse",
+	"mainscreen", "navigation", "weapons", "science",
+	"damage", "debug", "demon", "f8", "f9",
+	"onscreen", "viewmode", "zoom", "unzoom",
 };
-
 
 void init_keymap()
 {
@@ -1309,6 +1309,83 @@ void init_keymap()
 	ffkeymap[GDK_F9 & 0x00ff] = keyf9;
 
 	ffkeymap[GDK_F11 & 0x00ff] = keyfullscreen;
+}
+
+static int remapkey(char *keyname, char *actionname)
+{
+	enum keyaction i;
+	unsigned int j;
+	int index;
+
+	for (i = keynone; i <= NKEYSTATES; i++) {
+		if (strcmp(keyactionstring[i], actionname) != 0)
+			continue;
+
+		for (j=0;j<ARRAY_SIZE(keyname_value_map);j++) {
+			if (strcmp(keyname_value_map[j].name, keyname) == 0) {
+				if ((keyname_value_map[j].value & 0xff00) != 0) {
+					index = keyname_value_map[j].value & 0x00ff;
+					ffkeymap[index] = i;
+				} else
+					keymap[keyname_value_map[j].value] = i;
+				return 0;
+			}
+		}
+	}
+	return 1;
+}
+
+char *trim_whitespace(char *s)
+{
+	char *x, *z;
+
+	for (x = s; *x == ' ' || *x == '\t'; x++)
+		;
+	z = x + (strlen(x) - 1);
+
+	while (z >= x && (*z == ' ' ||  *z == '\t' || *z == '\n')) {
+		*z = '\0';
+		z--;
+	}
+	return x;
+}
+
+static void read_keymap_config_file(void)
+{
+	FILE *f;
+	char line[256];
+	char *s, *homedir;
+	char filename[PATH_MAX], keyname[256], actionname[256];
+	int lineno, rc;
+
+	homedir = getenv("HOME");
+	if (homedir == NULL)
+		return;
+
+	sprintf(filename, "%s/.space-nerds-in-space/snis-keymap.txt", homedir);
+	f = fopen(filename, "r");
+	if (!f)
+		return;
+
+	lineno = 0;
+	while (!feof(f)) {
+		s = fgets(line, 256, f);
+		if (!s)
+			break;
+		s = trim_whitespace(s);
+		lineno++;
+		if (strcmp(s, "") == 0)
+			continue;
+		if (s[0] == '#') /* comment? */
+			continue;
+		rc = sscanf(s, "map %s %s", keyname, actionname);
+		if (rc == 2) {
+			if (remapkey(keyname, actionname) == 0)
+				continue;
+		}
+		fprintf(stderr, "%s: syntax error at line %d:'%s'\n",
+			filename, lineno, line);
+	}
 }
 
 static void wakeup_gameserver_writer(void);
@@ -6897,6 +6974,7 @@ int main(int argc, char *argv[])
 	gtk_init (&argc, &argv);
 
 	init_keymap();
+	read_keymap_config_file();
 	init_vects();
 #if 0
 	init_player();
