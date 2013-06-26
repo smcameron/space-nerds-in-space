@@ -50,6 +50,46 @@ Print the program's version number and exit.
 /dev/input/event5, the rumble effect device. 
 .PP
 ~/.space-nerds-in-space/snis-keymap.txt, the keyboard remapping configuration file.
+.TP
+The format of the keyboard remapping file is as follows:
+.br
+.br
+Lines beginning with a '#' are comments.
+.br
+.br
+Key mappings are defined by lines of the form "map key action"
+.br
+.br
+Valid actions are:
+.br
+.br
+.DI
+    none, down, up, left, right, torpedo, transform,
+    fullscreen, thrust, quit, pause, reverse,
+    mainscreen, navigation, weapons, science,
+    damage, debug, demon, f8, f9, onscreen,
+    viewmode, zoom, unzoom
+.DI
+.br
+Valid keys are:  
+.br
+.br
+a-z, A-Z, 0-9, and most printable characters.
+Keypad numerals 0-9 may be specified as kp_0 through  kp_9,  and
+function  keys  f1  through  f12 can be specified f1 through f12
+(obviously).  In addition the following strings may be  used  to
+specify the corresponding keys:
+.br
+.br
+.DI
+       space       enter         return   backspace    delete
+       pause       scrolllock    escape   sysreq       left
+       right       up            down     kp_home      kp_down
+       kp_up       kp_left       kp_right kp_end       kp_delete
+       kp_insert   home          down     end          delete
+       insert
+.DE
+
 .PP
 /usr/share/snis/sounds/*.ogg contain the audio data used by the game.
 .PP
