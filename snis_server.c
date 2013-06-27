@@ -836,6 +836,7 @@ static void ship_move(struct snis_entity *o)
 			double vx, vy, angle;
 
 			angle = atan2(v->x - o->x, v->y - o->y);
+			angle += (M_PI / 180.0 / 50.0) * (snis_randn(100) - 50);
 			vx = TORPEDO_VELOCITY * sin(angle);
 			vy = TORPEDO_VELOCITY * cos(angle);
 			add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
