@@ -6395,11 +6395,16 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 		calculate_new_demon_zoom(e->direction, e->x, e->y);
 		return 0;
 	case DISPLAYMODE_NAVIGATION:
-	case DISPLAYMODE_WEAPONS:
 		if (e->direction == GDK_SCROLL_UP)
 			do_dirkey(-1, 0);
 		if (e->direction == GDK_SCROLL_DOWN)
 			do_dirkey(1, 0);
+		return 0;
+	case DISPLAYMODE_WEAPONS:
+		if (e->direction == GDK_SCROLL_UP)
+			do_zoom(10);
+		if (e->direction == GDK_SCROLL_DOWN)
+			do_zoom(-10);
 		return 0;
 	default:
 		return 0;
