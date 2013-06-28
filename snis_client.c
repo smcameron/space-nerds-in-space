@@ -1280,7 +1280,7 @@ void init_keymap()
 	keymap[GDK_comma] = keyleft;
 	keymap[GDK_less] = keyleft;
 
-	keymap[GDK_space] = keytorpedo;
+	keymap[GDK_space] = keyphaser;
 	keymap[GDK_z] = keytorpedo;
 
 	keymap[GDK_b] = keytransform;
@@ -1560,13 +1560,6 @@ static void do_dirkey(int h, int v)
 static void do_torpedo(void)
 {
 	struct snis_entity *o;
-
-	if (in_the_process_of_quitting) {
-		final_quit_selection = current_quit_selection;
-		if (!final_quit_selection)
-			in_the_process_of_quitting = 0;
-		return;
-	}
 
 	if (displaymode != DISPLAYMODE_WEAPONS)
 		return;
@@ -1849,6 +1842,15 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			break;
 	case keytorpedo:
 		do_torpedo();
+		break;
+	case keyphaser:
+		if (in_the_process_of_quitting) {
+			final_quit_selection = current_quit_selection;
+			if (!final_quit_selection)
+				in_the_process_of_quitting = 0;
+			break;
+		}
+		do_laser();
 		break;
 	case keyf1:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
