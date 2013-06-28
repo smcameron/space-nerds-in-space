@@ -2533,7 +2533,7 @@ static int process_engage_warp(struct game_client *c)
 	o->y = o->y + wfactor * -cos(o->heading);
 	normalize_coords(o);
 	pthread_mutex_unlock(&universe_mutex);
-	send_warp_limbo_packet(c, 950);
+	send_warp_limbo_packet(c, 9 * 30); /* ~9 seconds */
 	return 0;
 }
 
