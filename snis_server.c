@@ -2607,7 +2607,8 @@ static int process_load_torpedo(struct game_client *c)
 		return -1;
 	ship->tsd.ship.torpedoes--;
 	ship->tsd.ship.torpedoes_loading++;
-	ship->tsd.ship.torpedo_load_time = 4 * 10; /* 4 secs */ 
+	ship->tsd.ship.torpedo_load_time = 18 * 10; /* 18 secs */ 
+	snis_queue_add_sound(TORPEDO_LOAD_SOUND, ROLE_SOUNDSERVER, ship->id);
 	return 0;
 }
 

@@ -6728,6 +6728,7 @@ static void read_sound_clips(void)
 	wwviaudio_read_ogg_clip(SCIENCE_PROBE_SOUND, "share/science-probe.ogg");
 	wwviaudio_read_ogg_clip(TTY_CHATTER_SOUND, "share/tty-chatter.ogg");
 	wwviaudio_read_ogg_clip(WARPDRIVE_SOUND, "share/short-warpdrive.ogg");
+	wwviaudio_read_ogg_clip(TORPEDO_LOAD_SOUND, "share/torpedo-loading.ogg");
 	printf("Done.\n");
 }
 
