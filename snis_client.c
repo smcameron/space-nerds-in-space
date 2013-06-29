@@ -3451,6 +3451,21 @@ static int within_nebula(double x, double y)
 	return 0;
 }
 
+static void draw_nebula_noise(GtkWidget *w, int cx, int cy, int r)
+{
+	int i, radius, x1, y1;
+	double angle;
+
+	sng_set_foreground(WHITE);
+	for (i = 0; i < 50; i++) {
+		angle = 0.001 * snis_randn(1000) * 2 * M_PI;
+		radius = snis_randn(r);
+		x1 = cos(angle) * radius + cx;
+		y1 = sin(angle) * radius + cy;
+		snis_draw_line(w->window, gc, x1, y1, x1 + 1, y1);
+	}
+}
+
 static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen_radius)
 {
 	int i, cx, cy, r, rx, ry, rw, rh, in_nebula;
@@ -3542,6 +3557,8 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen
 		}
 	}
 	pthread_mutex_unlock(&universe_mutex);
+	if (in_nebula)
+		draw_nebula_noise(w, cx, cy, r); 
 }
 
 /* position and dimensions of science scope */
