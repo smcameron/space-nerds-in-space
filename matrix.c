@@ -251,6 +251,36 @@ float mat41_dot_mat41(struct mat41 *m1, struct mat41 *m2)
 	return m1->m[0] * m2->m[0] + m1->m[1] * m2->m[1] + m1->m[2] * m2->m[2];
 }
 
+/*
+ * Rotate vector v around axis by angle, store answer in rhs.
+ * based on stackoverflow code here:
+ * http://stackoverflow.com/questions/7582398/rotate-a-vector-about-another-vector
+ */
+void mat41_rotate_mat41(struct mat41 *rhs, struct mat41 *v, struct mat41 *axis, float angle)
+{
+	float c = cosf(angle);
+	float s = sinf(angle);
+	float C = 1.0 - c;
+	float Q[3][3];
+
+	Q[0][0] = axis->m[0] * axis->m[0] * C + c;
+	Q[0][1] = axis->m[1] * axis->m[0] * C + axis->m[2] * s;
+	Q[0][2] = axis->m[2] * axis->m[0] * C - axis->m[1] * s;
+
+	Q[1][0] = axis->m[1] * axis->m[0] * C - axis->m[2] * s;
+	Q[1][1] = axis->m[1] * axis->m[1] * C + c;
+	Q[1][2] = axis->m[2] * axis->m[1] * C + axis->m[0] * s;
+
+	Q[2][0] = axis->m[0] * axis->m[2] * C + axis->m[1] * s;
+	Q[2][1] = axis->m[2] * axis->m[1] * C - axis->m[0] * s;
+	Q[2][2] = axis->m[2] * axis->m[2] * C + c;
+
+	rhs->m[0] = v->m[0] * Q[0][0] + v->m[0] * Q[0][1] + v->m[0] * Q[0][2];
+	rhs->m[1] = v->m[1] * Q[1][0] + v->m[1] * Q[1][1] + v->m[1] * Q[1][2];
+	rhs->m[2] = v->m[2] * Q[2][0] + v->m[2] * Q[2][1] + v->m[2] * Q[2][2];
+	rhs->m[3] = 1.0;
+}
+
 #ifdef TEST_MATRIX
 #include <stdio.h>
 #include <math.h>
