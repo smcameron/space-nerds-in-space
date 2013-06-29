@@ -833,18 +833,28 @@ static void ship_move(struct snis_entity *o)
 
 		range = hypot(o->x - v->x, o->y - v->y);
 		if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE) {
-			double vx, vy, angle;
+			double dist, flight_time, tx, ty, vx, vy, angle;
 
-			angle = atan2(v->x - o->x, v->y - o->y);
+			dist = hypot(v->x - o->x, v->y - o->y);
+			flight_time = dist / TORPEDO_VELOCITY;
+			tx = v->x + (v->vx * flight_time);
+			ty = v->y + (v->vy * flight_time);
+
+			angle = atan2(tx - o->x, ty - o->y);
 			angle += (M_PI / 180.0 / 50.0) * (snis_randn(100) - 50);
 			vx = TORPEDO_VELOCITY * sin(angle);
 			vy = TORPEDO_VELOCITY * cos(angle);
 			add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
 		} else { 
 			if (snis_randn(1000) < 50) {
-				double vx, vy, angle;
+				double dist, flight_time, tx, ty, vx, vy, angle;
 
-				angle = atan2(v->x - o->x, v->y - o->y);
+				dist = hypot(v->x - o->x, v->y - o->y);
+				flight_time = dist / LASER_VELOCITY;
+				tx = v->x + (v->vx * flight_time);
+				ty = v->y + (v->vy * flight_time);
+			
+				angle = atan2(tx - o->x, ty - o->y);
 				vx = LASER_VELOCITY * sin(angle);
 				vy = LASER_VELOCITY * cos(angle);
 				add_laser(o->x, o->y, vx, vy, o->heading, o->id);
