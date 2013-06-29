@@ -3435,11 +3435,28 @@ static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 	snis_draw_line(w->window, gc, tx1, ty1, tx2, ty2);
 }
 
+static int within_nebula(double x, double y)
+{
+	double dist2;
+	int i;
+
+	for (i = 0; i < nnebula; i++) {
+		dist2 = (x - nebulaentry[i].x) *
+			(x - nebulaentry[i].x) +
+			(y - nebulaentry[i].y) *
+			(y - nebulaentry[i].y);
+		if (dist2 < nebulaentry[i].r2)
+			return 1;
+	}
+	return 0;
+}
+
 static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen_radius)
 {
-	int i, cx, cy, r, rx, ry, rw, rh;
+	int i, cx, cy, r, rx, ry, rw, rh, in_nebula;
 	char buffer[200];
 
+	in_nebula = within_nebula(o->x, o->y);
 	rx = 20;
 	ry = 70;
 	rw = 500;
@@ -3454,22 +3471,27 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		int x, y;
-		double tx, ty;
+		double tx, ty, nx, ny;
 		double dist2;
 
 		if (!go[i].alive)
 			continue;
 
-		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
-			((go[i].y - o->y) * (go[i].y - o->y));
+		nx = in_nebula * (0.01 * snis_randn(100) - 0.5) * 0.1 * screen_radius;
+		ny = in_nebula * (0.01 * snis_randn(100) - 0.5) * 0.1 * screen_radius;
+		dist2 = ((go[i].x - o->x + nx) * (go[i].x - o->x + nx)) +
+			((go[i].y - o->y + ny) * (go[i].y - o->y + ny));
 		if (dist2 > NR2)
 			continue; /* not close enough */
 	
 
-		tx = (go[i].x - o->x) * (double) r / screen_radius;
-		ty = (go[i].y - o->y) * (double) r / screen_radius;
+		tx = (go[i].x + nx - o->x) * (double) r / screen_radius;
+		ty = (go[i].y + ny - o->y) * (double) r / screen_radius;
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
+
+		if (in_nebula && snis_randn(1000) < 850)
+			continue;
 
 		if (go[i].id == my_ship_id)
 			continue; /* skip drawing yourself. */
@@ -3521,24 +3543,6 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
-
-#if 0
-static int within_nebula(double x, double y)
-{
-	double dist2;
-	int i;
-
-	for (i = 0; i < nnebula; i++) {
-		dist2 = (x - nebulaentry[i].x) *
-			(x - nebulaentry[i].x) +
-			(y - nebulaentry[i].y) *
-			(y - nebulaentry[i].y);
-		if (dist2 < nebulaentry[i].r2)
-			return 1;
-	}
-	return 0;
-}
-#endif
 
 /* position and dimensions of science scope */
 #define SCIENCE_SCOPE_X 20
