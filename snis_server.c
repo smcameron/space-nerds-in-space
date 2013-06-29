@@ -53,6 +53,7 @@
 #include "infinite-taunt.h"
 #include "snis_damcon_systems.h"
 #include "stacktrace.h"
+#include "power-model.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
@@ -1130,6 +1131,7 @@ static void player_move(struct snis_entity *o)
 	int desired_rpm, desired_temp, diff;
 	int max_phaserbank, current_phaserbank;
 
+	power_model_compute(o->tsd.ship.power_model);
 	o->vy = o->tsd.ship.velocity * cos(o->heading);
 	o->vx = o->tsd.ship.velocity * -sin(o->heading);
 	o->x += o->vx;
@@ -1337,6 +1339,41 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	return i;
 }
 
+#define DECLARE_POWER_MODEL_SAMPLER(name, which) \
+static float sample_##name##_##which(void *cookie) \
+{ \
+	struct snis_entity *o = cookie; \
+\
+	return (float) (256.0 - (float) o->tsd.ship.power_data.name.which) / 256.0; \
+}
+
+DECLARE_POWER_MODEL_SAMPLER(warp, r1) /* declares sample_warp_r1 */
+DECLARE_POWER_MODEL_SAMPLER(warp, r2) /* declares sample_warp_r2 */
+DECLARE_POWER_MODEL_SAMPLER(warp, r3) /* declares sample_warp_r3 */
+
+static void init_power_model(struct snis_entity *o)
+{
+	struct power_model *pm;
+	struct power_device *d;
+
+/*
+	if (o->tsd.ship.power_model)
+		free_power_model(o->tsd.ship.power_model);
+*/
+	memset(&o->tsd.ship.power_data, 0, sizeof(o->tsd.ship.power_data));
+	o->tsd.ship.power_data.warp.r1 = 255;
+	o->tsd.ship.power_data.warp.r2 = 255;
+	o->tsd.ship.power_data.warp.r3 = 255;
+	
+#define MAX_CURRENT 1000000.0
+#define MAX_VOLTAGE 1000000.0
+#define INTERNAL_RESIST 0.00001
+	pm = new_power_model(MAX_CURRENT, MAX_VOLTAGE, INTERNAL_RESIST);
+	o->tsd.ship.power_model = pm; 
+	d = new_power_device(o, sample_warp_r1, sample_warp_r2, sample_warp_r3);
+	power_model_add_device(pm, d);
+}
+
 static void init_player(struct snis_entity *o)
 {
 	o->move = player_move;
@@ -1374,7 +1411,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.phaser_wavelength = 0;
 	o->tsd.ship.victim = 0;
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
-	memset(&o->tsd.ship.power_data, 0, sizeof(o->tsd.ship.power_data));
+	init_power_model(o);
 }
 
 static int add_player(double x, double y, double vx, double vy, double heading)
@@ -3207,7 +3244,7 @@ static void send_ship_damage_packet(struct snis_entity *o)
 
 	pb = packed_buffer_allocate(sizeof(struct ship_damage_packet));
 	packed_buffer_append(pb, "hwr", OPCODE_UPDATE_DAMAGE, o->id,
-		(char *) &o->tsd.ship.damage, (unsigned short) sizeof(o->tsd.ship.damage));
+		(char *) &o->tsd.ship.damage, sizeof(o->tsd.ship.damage));
 	send_packet_to_all_clients(pb, ROLE_ALL);
 }
 
