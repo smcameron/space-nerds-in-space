@@ -3522,6 +3522,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+#if 0
 static int within_nebula(double x, double y)
 {
 	double dist2;
@@ -3537,6 +3538,7 @@ static int within_nebula(double x, double y)
 	}
 	return 0;
 }
+#endif
 
 /* position and dimensions of science scope */
 #define SCIENCE_SCOPE_X 20
@@ -3611,24 +3613,29 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 			continue; /* not close enough */
 		dist = sqrt(dist2);
 
+#if 0
 		if (within_nebula(go[i].x, go[i].y))
 			continue;
+#endif
 
 		tx = (go[i].x - o->x) * (double) r / range;
 		ty = (go[i].y - o->y) * (double) r / range;
 		angle = atan2(ty, tx);
 
-		if (!(A2 < 0 && A1 > 0 && fabs(A1) > M_PI / 2.0)) {
-			if (angle < A1)
-				continue;
-			if (angle > A2)
-				continue;
-		} else {
-			if (angle < 0 && angle > A2)
-				continue;
-			if (angle > 0 && angle < A1)
-				continue;
+		if (dist2 > SCIENCE_SHORT_RANGE * SCIENCE_SHORT_RANGE) {
+			if (!(A2 < 0 && A1 > 0 && fabs(A1) > M_PI / 2.0)) {
+				if (angle < A1)
+					continue;
+				if (angle > A2)
+					continue;
+			} else {
+				if (angle < 0 && angle > A2)
+					continue;
+				if (angle > 0 && angle < A1)
+					continue;
+			}
 		}
+
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
 
