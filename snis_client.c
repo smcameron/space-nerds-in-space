@@ -3660,9 +3660,14 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 			double angle;
 			double radius;
 
-			angle = (double) snis_randn(360) * M_PI / 180;
-			radius = snis_randn(SCIENCE_SCOPE_R);
-			snis_draw_line(w->window, gc, cx, cy,
+			angle = 360.0 * ((double) snis_randn(10000) / 10000.0) * M_PI / 180.0;
+			radius = (snis_randn(1000) / 1000.0) / 2.0;
+			radius = 1.0 - (radius * radius * radius);
+			radius = radius * SCIENCE_SCOPE_R;
+			radius = radius - ((range / MAX_SCIENCE_SCREEN_RADIUS)  * (snis_randn(50) / 75.0) * r);
+			snis_draw_line(w->window, gc,
+				cx + cos(angle) * r,
+				cy + sin(angle) * r,
 				cx + cos(angle) * radius,
 				cy + sin(angle) * radius);
 		}
