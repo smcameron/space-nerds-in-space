@@ -86,6 +86,7 @@ struct power_dist {
 #define SHIP_CLASS_TRANSPORT 4
 #define SHIP_CLASS_BATTLESTAR 5
 #define SHIP_CLASS_STARSHIP 6
+#define SHIP_CLASS_ASTEROIDMINER 7
 
 static char *shipclass[] = {
 	"Cruiser",
@@ -95,6 +96,7 @@ static char *shipclass[] = {
 	"Transport",
 	"Battlestar",
 	"Starship",
+	"Miner",
 };
 
 static double max_speed[] = {
@@ -105,6 +107,7 @@ static double max_speed[] = {
 	9.0,
 	11.0,
 	8.0,
+	10.0,
 };
 
 struct ship_damage_data {
