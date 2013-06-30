@@ -2002,7 +2002,9 @@ static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_e
 	p.shield_wavelength = o->sdata.shield_wavelength;
 	p.shield_width = o->sdata.shield_width;
 	p.shield_depth = o->sdata.shield_depth;
+	pthread_mutex_unlock(&universe_mutex);
 	send_ship_sdata_packet(c, &p);
+	pthread_mutex_lock(&universe_mutex);
 }
 
 static int process_request_ship_sdata(struct game_client *c)
