@@ -213,6 +213,7 @@ struct mesh *debris2_mesh;
 struct mesh *wormhole_mesh;
 struct mesh *spacemonster_mesh;
 struct mesh *asteroidminer_mesh;
+struct mesh *spaceship2_mesh;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -577,6 +578,9 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 			break;
 		case SHIP_CLASS_ASTEROIDMINER:
 			e = add_entity(asteroidminer_mesh, x, 0, -y, SHIP_COLOR);
+			break;
+		case SHIP_CLASS_SCIENCE:
+			e = add_entity(spaceship2_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_STARSHIP:
 			e = add_entity(ship_mesh, x, 0, -y, SHIP_COLOR);
@@ -6969,6 +6973,7 @@ static void init_meshes(void)
 	mesh_distort(wormhole_mesh, 0.15);
 	spacemonster_mesh = read_stl_file("spacemonster.stl");
 	asteroidminer_mesh = read_stl_file("asteroid-miner.stl");
+	spaceship2_mesh = read_stl_file("spaceship2.stl");
 #else
 #define THE_MODEL "starbase.stl"
 	ship_mesh = read_stl_file(THE_MODEL);

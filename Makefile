@@ -38,7 +38,7 @@ MODELS=freighter.stl laser.stl planet.stl spaceship.stl starbase.stl torpedo.stl
 	tanker.stl destroyer.stl transport.stl battlestar.stl cruiser.stl tetrahedron.stl \
 	flat-tetrahedron.stl big-flat-tetrahedron.stl asteroid.stl asteroid2.stl asteroid3.stl \
 	asteroid4.stl wormhole.stl starbase2.stl starbase3.stl starbase4.stl spacemonster.stl \
-	asteroid-miner.stl
+	asteroid-miner.stl spaceship2.stl
 
 #MYCFLAGS=-g --pedantic -Wall -Werror -pthread -std=gnu99
 MYCFLAGS=-g --pedantic -Wall -Werror -pthread -std=gnu99 -rdynamic
