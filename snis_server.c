@@ -1363,6 +1363,16 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.pwrdist.comms = 200;
 	o->tsd.ship.pwrdist.phaserbanks = 200;
 	o->tsd.ship.pwrdist.shields = 255;
+	o->tsd.ship.torpedo_load_time = 0;
+	o->tsd.ship.phaser_bank_charge = 0;
+	o->tsd.ship.scizoom = 0;
+	o->tsd.ship.weapzoom = 0;
+	o->tsd.ship.navzoom = 0;
+	o->tsd.ship.warpdrive = 0;
+	o->tsd.ship.requested_warpdrive = 0;
+	o->tsd.ship.requested_shield = 0;
+	o->tsd.ship.phaser_wavelength = 0;
+	o->tsd.ship.victim = 0;
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
 }
 
