@@ -3003,6 +3003,10 @@ static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
 	double dx, dy, dist;
 	const double threshold = (XKNOWN_DIM / 2) * (XKNOWN_DIM / 2);
 
+	/* do not optimize updates for brand new clients, they need everything. */
+	if (c->timestamp == 0)
+		return 0;
+
 	dx = (ship->x - o->x);
 	dy = (ship->y - o->y);
 	dist = (dx * dx) + (dy * dy);
