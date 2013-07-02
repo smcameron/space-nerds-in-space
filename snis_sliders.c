@@ -44,7 +44,7 @@ struct slider *snis_slider_init(int x, int y, int length, int color,
 	s->r2 = r2;
 	s->sample = gmf;
 	s->clicked = clicked;
-	s->value = s->sample() / (s->r2 - s->r1);
+	s->value = (s->sample() - s->r1) / (s->r2 - s->r1);
 	return s;
 }
 
