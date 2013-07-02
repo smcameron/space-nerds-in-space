@@ -2329,6 +2329,19 @@ static int process_update_spacemonster(void)
 	return (rc < 0);
 }
 
+static int process_red_alert()
+{
+	int rc;
+	unsigned char buffer[10];
+	unsigned char alert_value;
+
+	rc = read_and_unpack_buffer(buffer, "b", &alert_value);
+	if (rc != 0)
+		return rc;
+	red_alert_mode = (alert_value != 0);
+	return 0;
+}
+
 static void delete_object(uint32_t id)
 {
 	int i;
@@ -2842,7 +2855,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 				goto protocol_error;
 			break;
 		case OPCODE_REQUEST_REDALERT:
-			red_alert_mode = !red_alert_mode;
+			rc = process_red_alert();
+			if (rc)
+				goto protocol_error;
 			break;
 		default:
 			goto protocol_error;
@@ -4980,7 +4995,10 @@ static void comms_screen_button_pressed(void *x)
 
 static void comms_screen_red_alert_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_REDALERT));
+	unsigned char new_alert_mode;
+
+	new_alert_mode = (red_alert_mode == 0);	
+	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_REDALERT, new_alert_mode));
 }
 
 static void send_comms_packet_to_server(char *msg)

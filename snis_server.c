@@ -2355,10 +2355,18 @@ static int process_mainscreen_view_mode(struct game_client *c)
 	return 0;
 }
 
-static void process_request_redalert(struct game_client *c)
+static int process_request_redalert(struct game_client *c)
 {
+	int rc;
+	unsigned char buffer[10];
+	unsigned char new_alert_mode;
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &new_alert_mode);
+	if (rc)
+		return rc;
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
-			packed_buffer_new("h", OPCODE_REQUEST_REDALERT), ROLE_ALL);
+			packed_buffer_new("hb", OPCODE_REQUEST_REDALERT, new_alert_mode), ROLE_ALL);
+	return 0;
 }
 
 static int process_demon_command(struct game_client *c)
@@ -2837,7 +2845,9 @@ static void process_instructions_from_client(struct game_client *c)
 				goto protocol_error;
 			break;
 		case OPCODE_REQUEST_REDALERT:
-			process_request_redalert(c);
+			rc = process_request_redalert(c);
+			if (rc)
+				goto protocol_error;
 			break;
 		default:
 			goto protocol_error;
