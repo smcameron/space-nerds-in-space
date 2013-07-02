@@ -6554,7 +6554,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	} else if (damage_limbo_countdown) {
 		show_warp_hash_screen(w);
 		damage_limbo_countdown--;
-		red_alert_mode = 0;
 		if (in_the_process_of_quitting)
 			draw_quit_screen(w);
 		return 0;
@@ -6565,6 +6564,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 			return 0;
 		if (o->alive <= 0 && displaymode != DISPLAYMODE_DEBUG &&
 			displaymode != DISPLAYMODE_DEMON) {
+			red_alert_mode = 0;
 			show_death_screen(w);
 			if (in_the_process_of_quitting)
 				draw_quit_screen(w);
