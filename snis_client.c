@@ -3553,6 +3553,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen
 				}
 				break;
 			case OBJTYPE_SPACEMONSTER: /* invisible to instruments */
+			case OBJTYPE_NEBULA:
 				break;
 			default:
 				sng_set_foreground(WHITE);
