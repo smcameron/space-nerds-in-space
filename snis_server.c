@@ -2355,6 +2355,12 @@ static int process_mainscreen_view_mode(struct game_client *c)
 	return 0;
 }
 
+static void process_request_redalert(struct game_client *c)
+{
+	send_packet_to_all_clients_on_a_bridge(c->shipid,
+			packed_buffer_new("h", OPCODE_REQUEST_REDALERT), ROLE_ALL);
+}
+
 static int process_demon_command(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct demon_cmd_packet) + 255 * sizeof(uint32_t)];
@@ -2829,6 +2835,9 @@ static void process_instructions_from_client(struct game_client *c)
 			rc = process_mainscreen_view_mode(c);
 			if (rc)
 				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_REDALERT:
+			process_request_redalert(c);
 			break;
 		default:
 			goto protocol_error;

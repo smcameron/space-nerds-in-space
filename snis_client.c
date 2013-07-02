@@ -107,6 +107,7 @@ explosion_function *explosion = NULL;
 #define snis_draw_arc DEFAULT_DRAW_ARC
 int thicklines = 0;
 int frame_rate_hz = 30;
+int red_alert_mode = 0;
 
 typedef void (*joystick_button_fn)(void *x);
 char joystick_device[PATH_MAX+1];
@@ -2513,6 +2514,7 @@ struct comms_ui {
 	struct button *sci_onscreen_button;
 	struct button *main_onscreen_button;
 	struct button *comms_transmit_button;
+	struct button *red_alert_button;
 	struct snis_text_input_box *comms_input;
 	char input[100];
 } comms_ui;
@@ -2839,6 +2841,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_REQUEST_REDALERT:
+			red_alert_mode = !red_alert_mode;
+			break;
 		default:
 			goto protocol_error;
 		}
@@ -3102,9 +3107,19 @@ static void show_connected_screen(GtkWidget *w)
 
 static void show_common_screen(GtkWidget *w, char *title)
 {
-	sng_set_foreground(GREEN);
+	int title_color;
+	int border_color;
+
+	if (red_alert_mode) {
+		title_color = RED;
+		border_color = RED;
+	} else {
+		title_color = GREEN;
+		border_color = BLUE;
+	}
+	sng_set_foreground(title_color);
 	sng_abs_xy_draw_string(w, gc, title, SMALL_FONT, 25, 10 + LINEHEIGHT);
-	sng_set_foreground(BLUE);
+	sng_set_foreground(border_color);
 	snis_draw_line(w->window, gc, 1, 1, SCREEN_WIDTH, 0);
 	snis_draw_line(w->window, gc, SCREEN_WIDTH - 1, 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
 	snis_draw_line(w->window, gc, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, 1, SCREEN_HEIGHT - 1);
@@ -4963,6 +4978,11 @@ static void comms_screen_button_pressed(void *x)
 	return;
 }
 
+static void comms_screen_red_alert_pressed(void *x)
+{
+	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_REDALERT));
+}
+
 static void send_comms_packet_to_server(char *msg)
 {
 	struct packed_buffer *pb;
@@ -5012,7 +5032,11 @@ static void init_comms_ui(void)
 			NANO_FONT, comms_screen_button_pressed, (void *) 5);
 	x += 75;
 	comms_ui.main_onscreen_button = snis_button_init(x, y, 75, 25, "MAIN", GREEN,
-			NANO_FONT, comms_screen_button_pressed, (void *) 6);
+			NANO_FONT, comms_screen_button_pressed, (void *) 7);
+	x = SCREEN_WIDTH - 150;
+	y = SCREEN_HEIGHT - 60;
+	comms_ui.red_alert_button = snis_button_init(x, y, 120, 25, "RED ALERT", RED,
+			NANO_FONT, comms_screen_red_alert_pressed, (void *) 6);
 	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20, 40, 20, GREEN);
 	comms_ui.comms_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
 					comms_ui.input, 50, &timer,
@@ -5027,6 +5051,7 @@ static void init_comms_ui(void)
 	ui_add_button(comms_ui.damcon_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.sci_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.main_onscreen_button, DISPLAYMODE_COMMS);
+	ui_add_button(comms_ui.red_alert_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS);
 	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
 }
@@ -6511,6 +6536,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	} else if (damage_limbo_countdown) {
 		show_warp_hash_screen(w);
 		damage_limbo_countdown--;
+		red_alert_mode = 0;
 		if (in_the_process_of_quitting)
 			draw_quit_screen(w);
 		return 0;
@@ -6591,6 +6617,9 @@ void really_quit(void);
 gint advance_game(gpointer data)
 {
 	timer++;
+
+	if (red_alert_mode && (timer % 35) == 0)
+		wwviaudio_add_sound(RED_ALERT_SOUND);
 
 	deal_with_joystick();
 	deal_with_keyboard();
@@ -6769,6 +6798,7 @@ static void read_sound_clips(void)
 	wwviaudio_read_ogg_clip(TTY_CHATTER_SOUND, "share/tty-chatter.ogg");
 	wwviaudio_read_ogg_clip(WARPDRIVE_SOUND, "share/short-warpdrive.ogg");
 	wwviaudio_read_ogg_clip(TORPEDO_LOAD_SOUND, "share/torpedo-loading.ogg");
+	wwviaudio_read_ogg_clip(RED_ALERT_SOUND, "share/red-alert.ogg");
 	printf("Done.\n");
 }
 

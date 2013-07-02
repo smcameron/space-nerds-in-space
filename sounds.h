@@ -2,7 +2,7 @@
 #define SOUNDS_H
 
 #define MAX_CONCURRENT_SOUNDS 20
-#define NSOUND_CLIPS 13 
+#define NSOUND_CLIPS 14
 
 #define EXPLOSION_SOUND 1
 #define TORPEDO_LAUNCH_SOUND 2
@@ -20,5 +20,6 @@
 #define TTY_CHATTER_SOUND 10 
 #define WARPDRIVE_SOUND 11
 #define TORPEDO_LOAD_SOUND 12
+#define RED_ALERT_SOUND 13
 
 #endif
