@@ -23,11 +23,12 @@ enum keyaction {
 		keyf7		= 18,
 		keyf8		= 19,
 		keyf9		= 20,
-		keyonscreen	= 21,
-		keyviewmode	= 22,
-		keyzoom		= 23,
-		keyunzoom	= 24,
-		keyphaser	= 25
+		keyf10		= 21,
+		keyonscreen	= 22,
+		keyviewmode	= 23,
+		keyzoom		= 24,
+		keyunzoom	= 25,
+		keyphaser	= 26
 #define NKEYSTATES 26
 };
 

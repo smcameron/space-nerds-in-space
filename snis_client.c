@@ -1278,7 +1278,7 @@ char *keyactionstring[] = {
 	"torpedo", "transform", "fullscreen", "thrust",
 	"quit", "pause", "reverse",
 	"mainscreen", "navigation", "weapons", "science",
-	"damage", "debug", "demon", "f8", "f9",
+	"damage", "debug", "demon", "f8", "f9", "f10",
 	"onscreen", "viewmode", "zoom", "unzoom",
 };
 
@@ -1331,6 +1331,7 @@ void init_keymap()
 	ffkeymap[GDK_F7 & 0x00ff] = keyf7;
 	ffkeymap[GDK_F8 & 0x00ff] = keyf8;
 	ffkeymap[GDK_F9 & 0x00ff] = keyf9;
+	ffkeymap[GDK_F10 & 0x00ff] = keyf10;
 
 	ffkeymap[GDK_F11 & 0x00ff] = keyfullscreen;
 }
@@ -1905,6 +1906,14 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			break;
 		if (role & ROLE_ENGINEERING) {
 			displaymode = DISPLAYMODE_ENGINEERING;
+			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		}
+		break;
+	case keyf10:
+		if (displaymode >= DISPLAYMODE_FONTTEST)
+			break;
+		if (role & ROLE_ENGINEERING) {
+			displaymode = DISPLAYMODE_ENGINEERING2;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
@@ -4679,7 +4688,7 @@ static void init_damcon_ui(void)
 	ui_add_label(damcon_ui.robot_controls, DISPLAYMODE_DAMCON);
 }
 
-struct enginerring_ui {
+struct engineering_ui {
 	struct gauge *fuel_gauge;
 	struct gauge *power_gauge;
 	struct gauge *rpm_gauge;
@@ -4702,7 +4711,7 @@ struct enginerring_ui {
 	struct slider *sensors_damage;
 	struct slider *comms_damage;
 
-} eng_ui;
+} eng_ui, new_eng_ui;
 
 static void damcon_button_pressed(void *x)
 {
@@ -4789,9 +4798,99 @@ static void init_engineering_ui(void)
 	ui_add_slider(eng_ui.comms_damage, DISPLAYMODE_ENGINEERING);
 }
 
+static void init_new_engineering_ui(void)
+{
+	int y = 220;
+	int x = 100;
+	int xinc = 190;
+	int yinc = 40; 
+	int dm = DISPLAYMODE_ENGINEERING2;
+	int color = GREEN;
+
+	struct engineering_ui *eu = &new_eng_ui;
+
+	eu->rpm_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, RED, color,
+			10, "RPM", sample_rpm);
+	x += xinc;
+	eu->fuel_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, RED, color,
+			10, "FUEL", sample_fuel);
+	x += xinc;
+	eu->power_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, RED, color,
+			10, "POWER", sample_power);
+	x += xinc;
+	eu->temp_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, RED, color,
+			10, "TEMP", sample_temp);
+	x += xinc;
+	eu->throttle_slider = snis_slider_init(350, y + yinc, 200, color, "THROTTLE", "0", "100",
+				0.0, 100.0, sample_throttle, do_throttle);
+
+	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
+			NANO_FONT, damcon_button_pressed, (void *) 0);
+	y += yinc;
+	eu->shield_slider = snis_slider_init(20, y += yinc, 150, color, "SHIELDS", "0", "100",
+				0.0, 100.0, sample_shields, do_shields_pwr);
+	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, 150, color, "PHASERS", "0", "100",
+				0.0, 100.0, sample_phaserbanks, do_phaserbanks_pwr);
+	eu->comm_slider = snis_slider_init(20, y += yinc, 150, color, "COMMS", "0", "100",
+				0.0, 100.0, sample_comms, do_comms_pwr);
+	eu->sensors_slider = snis_slider_init(20, y += yinc, 150, color, "SENSORS", "0", "100",
+				0.0, 100.0, sample_sensors, do_sensors_pwr);
+	eu->impulse_slider = snis_slider_init(20, y += yinc, 150, color, "IMPULSE DR", "0", "100",
+				0.0, 100.0, sample_impulse, do_impulse_pwr);
+	eu->warp_slider = snis_slider_init(20, y += yinc, 150, color, "WARP DR", "0", "100",
+				0.0, 100.0, sample_warp, do_warp_pwr);
+	eu->maneuvering_slider = snis_slider_init(20, y += yinc, 150, color, "MANEUVERING", "0", "100",
+				0.0, 100.0, sample_maneuvering, do_maneuvering_pwr);
+	ui_add_slider(eu->shield_slider, dm);
+	ui_add_slider(eu->phaserbanks_slider, dm);
+	ui_add_slider(eu->comm_slider, dm);
+	ui_add_slider(eu->sensors_slider, dm);
+	ui_add_slider(eu->impulse_slider, dm);
+	ui_add_slider(eu->warp_slider, dm);
+	ui_add_slider(eu->maneuvering_slider, dm);
+	ui_add_slider(eu->throttle_slider, dm);
+	ui_add_gauge(eu->rpm_gauge, dm);
+	ui_add_gauge(eu->fuel_gauge, dm);
+	ui_add_gauge(eu->power_gauge, dm);
+	ui_add_gauge(eu->temp_gauge, dm);
+	ui_add_button(eu->damcon_button, dm);
+
+	y = 220 + yinc;
+	eu->shield_damage = snis_slider_init(350, y += yinc, 150, color, "SHIELD STATUS", "0", "100",
+				0.0, 100.0, sample_shield_damage, NULL);
+	eu->impulse_damage = snis_slider_init(350, y += yinc, 150, color, "IMPULSE STATUS", "0", "100",
+				0.0, 100.0, sample_impulse_damage, NULL);
+	eu->warp_damage = snis_slider_init(350, y += yinc, 150, color, "WARP STATUS", "0", "100",
+				0.0, 100.0, sample_warp_damage, NULL);
+	eu->torpedo_tubes_damage = snis_slider_init(350, y += yinc, 150, color, "TORPEDO STATUS", "0", "100",
+				0.0, 100.0, sample_torpedo_tubes_damage, NULL);
+	eu->phaser_banks_damage = snis_slider_init(350, y += yinc, 150, color, "PHASER STATUS", "0", "100",
+				0.0, 100.0, sample_phaser_banks_damage, NULL);
+	eu->sensors_damage = snis_slider_init(350, y += yinc, 150, color, "SENSORS STATUS", "0", "100",
+				0.0, 100.0, sample_sensors_damage, NULL);
+	eu->comms_damage = snis_slider_init(350, y += yinc, 150, color, "COMMS STATUS", "0", "100",
+				0.0, 100.0, sample_comms_damage, NULL);
+	ui_add_slider(eu->shield_damage, dm);
+	ui_add_slider(eu->impulse_damage, dm);
+	ui_add_slider(eu->warp_damage, dm);
+	ui_add_slider(eu->torpedo_tubes_damage, dm);
+	ui_add_slider(eu->phaser_banks_damage, dm);
+	ui_add_slider(eu->sensors_damage, dm);
+	ui_add_slider(eu->comms_damage, dm);
+}
+
 static void show_engineering(GtkWidget *w)
 {
 	show_common_screen(w, "ENGINEERING");
+}
+
+static void show_new_engineering(GtkWidget *w)
+{
+	show_common_screen(w, "NEW ENGINEERING");
 }
 
 static inline int damconx_to_screenx(double x)
@@ -6645,6 +6744,9 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	case DISPLAYMODE_ENGINEERING:
 		show_engineering(w);
 		break;
+	case DISPLAYMODE_ENGINEERING2:
+		show_new_engineering(w);
+		break;
 	case DISPLAYMODE_SCIENCE:
 		show_science(w);
 		break;
@@ -7189,6 +7291,7 @@ int main(int argc, char *argv[])
 	init_lobby_ui();
 	init_nav_ui();
 	init_engineering_ui();
+	init_new_engineering_ui();
 	init_damcon_ui();
 	init_weapons_ui();
 	init_science_ui();
