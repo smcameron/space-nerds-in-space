@@ -68,8 +68,13 @@ void power_model_compute(struct power_model *m)
 	for (i = 0; i < m->ndevices; i++) {
 		struct power_device *d = m->d[i];
 		void *cookie = d->cookie;
+		float r, r1, r2;
 
-		float r = d->r1(cookie) + d->r2(cookie) + d->r3(cookie);
+		r1 = d->r1(cookie);
+		r2 = d->r2(cookie);
+		if (r1 < r2)
+			r1 = r2;
+		r = r1 + d->r3(cookie); 
 		conductance += 1.0 / r; 
 	}
 	total_resistance += 1.0 / conductance;
