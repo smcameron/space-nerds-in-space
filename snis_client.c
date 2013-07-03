@@ -1261,7 +1261,7 @@ struct keyname_value_entry {
 	{ "f5", GDK_F5 }, 
 	{ "f6", GDK_F6 }, 
 	{ "f7", GDK_F7 }, 
-	{ "f9", GDK_F9 }, 
+	{ "f8", GDK_F8 }, 
 	{ "f9", GDK_F9 }, 
 	{ "f10", GDK_F10 }, 
 	{ "f11", GDK_F11 }, 
