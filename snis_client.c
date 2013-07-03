@@ -4843,10 +4843,6 @@ static void init_new_engineering_ui(void)
 	eu->temp_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "TEMP", sample_temp);
-	x += xinc;
-	eu->throttle_slider = snis_slider_init(350, y + yinc, 200, color, "THROTTLE", "0", "100",
-				0.0, 100.0, sample_throttle, do_throttle);
-
 	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
 			NANO_FONT, damcon_button_pressed, (void *) 0);
 	y += yinc;
@@ -4871,7 +4867,6 @@ static void init_new_engineering_ui(void)
 	ui_add_slider(eu->impulse_slider, dm);
 	ui_add_slider(eu->warp_slider, dm);
 	ui_add_slider(eu->maneuvering_slider, dm);
-	ui_add_slider(eu->throttle_slider, dm);
 	ui_add_gauge(eu->rpm_gauge, dm);
 	ui_add_gauge(eu->fuel_gauge, dm);
 	ui_add_gauge(eu->power_gauge, dm);
