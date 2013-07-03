@@ -4214,6 +4214,16 @@ DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 25
 DEFINE_SAMPLER_FUNCTION(sample_weapzoom, tsd.ship.weapzoom, 255.0, 0.0)
 DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 255.0, 0.0)
 
+static double sample_power_model_voltage(void)
+{
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return 0.0;
+
+	return 100.0 * o->tsd.ship.power_data.voltage / 255.0;
+}
+
 static double sample_power_model_current(void)
 {
 	struct snis_entity *o;
@@ -4719,6 +4729,7 @@ struct engineering_ui {
 	struct gauge *fuel_gauge;
 	struct gauge *power_gauge;
 	struct gauge *rpm_gauge;
+	struct gauge *voltage_gauge;
 	struct gauge *temp_gauge;
 	struct button *damcon_button;
 	struct slider *shield_slider;
@@ -4827,30 +4838,37 @@ static void init_engineering_ui(void)
 
 static void init_new_engineering_ui(void)
 {
-	int y = 220;
+	int y;
 	int x = 100;
-	int xinc = 190;
+	int r = 75;
+	int xinc = 155;
 	int yinc = 40; 
 	int dm = DISPLAYMODE_ENGINEERING2;
 	int color = GREEN;
 
 	struct engineering_ui *eu = &new_eng_ui;
-
-	eu->rpm_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	y = 140;
+	eu->rpm_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "AMPS", sample_power_model_current);
 	x += xinc;
-	eu->fuel_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	eu->voltage_gauge = gauge_init(x, y, r, 0.0, 200.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, RED, color,
+			10, "VOLTS", sample_power_model_voltage);
+	x += xinc;
+	eu->fuel_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "FUEL", sample_fuel);
 	x += xinc;
-	eu->power_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	eu->power_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "POWER", sample_power);
 	x += xinc;
-	eu->temp_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	eu->temp_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "TEMP", sample_temp);
+
+	y = 220;
 	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
 			NANO_FONT, damcon_button_pressed, (void *) 0);
 	y += yinc;
@@ -4876,6 +4894,7 @@ static void init_new_engineering_ui(void)
 	ui_add_slider(eu->warp_slider, dm);
 	ui_add_slider(eu->maneuvering_slider, dm);
 	ui_add_gauge(eu->rpm_gauge, dm);
+	ui_add_gauge(eu->voltage_gauge, dm);
 	ui_add_gauge(eu->fuel_gauge, dm);
 	ui_add_gauge(eu->power_gauge, dm);
 	ui_add_gauge(eu->temp_gauge, dm);

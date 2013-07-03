@@ -91,6 +91,7 @@ struct power_model_data {
 	struct power_model_device comms;
 	struct power_model_device phasers;
 	struct power_model_device shields;
+	uint8_t voltage;
 };
 
 #define SHIP_CLASS_CRUISER 0

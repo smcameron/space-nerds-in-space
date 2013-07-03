@@ -1133,14 +1133,17 @@ static unsigned char device_power_byte_form(struct power_device *d)
 
 static void do_power_model_computations(struct snis_entity *o)
 {
+	struct power_model *m = o->tsd.ship.power_model;
 	struct power_device *warp_device;
 
-	power_model_compute(o->tsd.ship.power_model);
+	power_model_compute(m);
 
 #define WARP_POWER_DEVICE 0
 
-	warp_device = power_model_get_device(o->tsd.ship.power_model, WARP_POWER_DEVICE);
+	warp_device = power_model_get_device(m, WARP_POWER_DEVICE);
 	o->tsd.ship.power_data.warp.i = device_power_byte_form(warp_device);
+	o->tsd.ship.power_data.voltage = (unsigned char)
+		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
 }
 
 static void player_move(struct snis_entity *o)

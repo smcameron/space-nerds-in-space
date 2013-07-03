@@ -121,3 +121,14 @@ void free_power_model(struct power_model *m)
 	free(m);
 }
 
+float power_model_nominal_voltage(struct power_model *m)
+{
+	return m->nominal_voltage;
+}
+
+float power_model_actual_voltage(struct power_model *m)
+{
+	return m->actual_voltage;
+}
+	
+
