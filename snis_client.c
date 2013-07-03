@@ -4253,20 +4253,6 @@ static double sample_warp_current(void)
 	return o->tsd.ship.power_data.warp.i;
 }
 
-static double sample_warpdrive_power_avail(void)
-{
-	double answer;
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	answer = (double) 10.0 * (double) o->tsd.ship.pwrdist.warp / 255.0 *
-			(sample_power() / 100.0) / WARP_POWER_FACTOR;
-	if (answer > 10.0)
-		answer = 10.0;
-	return answer;
-}
-
 static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
 {
 	do_adjust_slider_value(s, OPCODE_REQUEST_LASER_WAVELENGTH);
@@ -4576,7 +4562,6 @@ static void init_nav_ui(void)
 	nav_ui.warp_gauge = gauge_init(650, 410, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 				10, "WARP", sample_warpdrive);
-	gauge_add_needle(nav_ui.warp_gauge, sample_warpdrive_power_avail, RED);
 	nav_ui.engage_warp_button = snis_button_init(570, 520, 150, 25, "ENGAGE WARP", AMBER,
 				NANO_FONT, engage_warp_button_pressed, NULL);
 	nav_ui.warp_up_button = snis_button_init(500, 490, 40, 25, "UP", AMBER,
