@@ -1374,6 +1374,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.phaser_wavelength = 0;
 	o->tsd.ship.victim = 0;
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
+	memset(&o->tsd.ship.power_data, 0, sizeof(o->tsd.ship.power_data));
 }
 
 static int add_player(double x, double y, double vx, double vy, double heading)
@@ -2955,6 +2956,8 @@ static void send_update_damcon_socket_packet(struct game_client *c,
 	struct snis_damcon_entity *o);
 static void send_update_damcon_part_packet(struct game_client *c,
 	struct snis_damcon_entity *o);
+static void send_update_power_model_data(struct game_client *c,
+		struct snis_entity *o);
 
 static void send_respawn_time(struct game_client *c, struct snis_entity *o);
 
@@ -2970,6 +2973,7 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 			send_respawn_time(c, o);
 			o->timestamp = universe_timestamp + 1;
 		}
+		send_update_power_model_data(c, o);
 		break;
 	case OBJTYPE_SHIP2:
 		send_econ_update_ship_packet(c, o);
@@ -3225,6 +3229,17 @@ static void send_respawn_time(struct game_client *c,
 	uint8_t seconds = (o->respawn_time - universe_timestamp) / 10;
 
 	pb_queue_to_client(c, packed_buffer_new("hb", OPCODE_UPDATE_RESPAWN_TIME, seconds));
+}
+
+static void send_update_power_model_data(struct game_client *c,
+		struct snis_entity *o)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(o->tsd.ship.power_data) + sizeof(uint32_t));
+	packed_buffer_append(pb, "hwr", OPCODE_UPDATE_POWER_DATA, o->id,
+		(char *) &o->tsd.ship.power_data, (unsigned short) sizeof(o->tsd.ship.power_data)); 
+	pb_queue_to_client(c, pb);
 }
 	
 static void send_update_ship_packet(struct game_client *c,

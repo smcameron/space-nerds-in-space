@@ -605,6 +605,17 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 	return 0;
 }
 
+static int update_power_model_data(uint32_t id, struct power_model_data *pmd)
+{
+	int i;
+
+	i = lookup_object_by_id(id);
+	if (i < 0)
+		return -1;
+	go[i].tsd.ship.power_data = *pmd;
+	return 0;
+}
+
 static int update_ship(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive,
 			uint32_t torpedoes, uint32_t power, 
 			double gun_heading, double sci_heading, double sci_beam_width, int type,
@@ -2093,6 +2104,25 @@ static void show_lobbyscreen(GtkWidget *w)
 	}
 }
 
+static int process_update_power_data(void)
+{
+	struct packed_buffer pb;
+	uint32_t id;
+	int rc;
+	struct power_model_data pmd;
+	unsigned char buffer[sizeof(pmd) + sizeof(uint32_t)];
+
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(pmd) + sizeof(uint32_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "wr", &id, &pmd, sizeof(pmd));
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_power_model_data(id, &pmd);
+	pthread_mutex_unlock(&universe_mutex);
+	return rc;
+}
+
 static int process_update_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
@@ -2715,6 +2745,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_UPDATE_SHIP2:
 			/* printf("processing update ship...\n"); */
 			rc = process_update_ship_packet(opcode);
+			if (rc != 0)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_POWER_DATA:
+			rc = process_update_power_data();
 			if (rc != 0)
 				goto protocol_error;
 			break;

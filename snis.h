@@ -79,6 +79,20 @@ struct power_dist {
 	uint8_t shields;
 };
 
+struct power_model_device {
+	uint8_t r1, r2, r3, i;
+};
+
+struct power_model_data {
+	struct power_model_device maneuvering;
+	struct power_model_device warp;
+	struct power_model_device impulse;
+	struct power_model_device sensors;
+	struct power_model_device comms;
+	struct power_model_device phasers;
+	struct power_model_device shields;
+};
+
 #define SHIP_CLASS_CRUISER 0
 #define SHIP_CLASS_DESTROYER 1
 #define SHIP_CLASS_FREIGHTER 2
@@ -207,6 +221,8 @@ struct ship_data {
 	struct damcon_data *damcon;
 	uint8_t view_mode;
 	double view_angle;
+	struct power_model_data power_data;
+	struct power_model *power_model;
 };
 
 struct starbase_data {
