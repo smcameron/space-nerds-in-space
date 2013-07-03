@@ -1363,8 +1363,9 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 static float sample_##name##_##which(void *cookie) \
 { \
 	struct snis_entity *o = cookie; \
+	float v = (float) o->tsd.ship.power_data.name.which; \
 \
-	return powf(1.033, (255.0 - (float) o->tsd.ship.power_data.name.which)); \
+	return (float) (255.0 - v) * 10000.0; \
 	/* return (float) 255.0 / (float) (o->tsd.ship.power_data.name.which + 1.0); */ \
 	/* return (float) (256.0 - (float) o->tsd.ship.power_data.name.which) / 256.0; */  \
 }
@@ -1383,12 +1384,12 @@ static void init_power_model(struct snis_entity *o)
 		free_power_model(o->tsd.ship.power_model);
 */
 	memset(&o->tsd.ship.power_data, 0, sizeof(o->tsd.ship.power_data));
-	o->tsd.ship.power_data.warp.r1 = 255;
-	o->tsd.ship.power_data.warp.r2 = 255;
-	o->tsd.ship.power_data.warp.r3 = 1;
+	o->tsd.ship.power_data.warp.r1 = 0;
+	o->tsd.ship.power_data.warp.r2 = 0;
+	o->tsd.ship.power_data.warp.r3 = 200;
 	
-#define MAX_CURRENT 1000000.0
-#define MAX_VOLTAGE 10000.0
+#define MAX_CURRENT 100000000.0
+#define MAX_VOLTAGE 1000000.0
 #define INTERNAL_RESIST 0.000001
 	pm = new_power_model(MAX_CURRENT, MAX_VOLTAGE, INTERNAL_RESIST);
 	o->tsd.ship.power_model = pm; 
