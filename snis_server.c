@@ -1126,12 +1126,29 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 	/* TODO: collision detection */
 }
 
+static unsigned char device_power_byte_form(struct power_device *d)
+{
+	return (unsigned char) (255.0 * device_current(d) / device_max_current(d));
+}
+
+static void do_power_model_computations(struct snis_entity *o)
+{
+	struct power_device *warp_device;
+
+	power_model_compute(o->tsd.ship.power_model);
+
+#define WARP_POWER_DEVICE 0
+
+	warp_device = power_model_get_device(o->tsd.ship.power_model, WARP_POWER_DEVICE);
+	o->tsd.ship.power_data.warp.i = device_power_byte_form(warp_device);
+}
+
 static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
 	int max_phaserbank, current_phaserbank;
-
-	power_model_compute(o->tsd.ship.power_model);
+	
+	do_power_model_computations(o);
 	o->vy = o->tsd.ship.velocity * cos(o->heading);
 	o->vx = o->tsd.ship.velocity * -sin(o->heading);
 	o->x += o->vx;
@@ -1344,7 +1361,8 @@ static float sample_##name##_##which(void *cookie) \
 { \
 	struct snis_entity *o = cookie; \
 \
-	return (float) (256.0 - (float) o->tsd.ship.power_data.name.which) / 256.0; \
+	return (float) 255.0 / (float) (o->tsd.ship.power_data.name.which + 1.0); \
+	/* return (float) (256.0 - (float) o->tsd.ship.power_data.name.which) / 256.0; */  \
 }
 
 DECLARE_POWER_MODEL_SAMPLER(warp, r1) /* declares sample_warp_r1 */
@@ -1363,11 +1381,11 @@ static void init_power_model(struct snis_entity *o)
 	memset(&o->tsd.ship.power_data, 0, sizeof(o->tsd.ship.power_data));
 	o->tsd.ship.power_data.warp.r1 = 255;
 	o->tsd.ship.power_data.warp.r2 = 255;
-	o->tsd.ship.power_data.warp.r3 = 255;
+	o->tsd.ship.power_data.warp.r3 = 128;
 	
 #define MAX_CURRENT 1000000.0
-#define MAX_VOLTAGE 1000000.0
-#define INTERNAL_RESIST 0.00001
+#define MAX_VOLTAGE 10000.0
+#define INTERNAL_RESIST 0.001
 	pm = new_power_model(MAX_CURRENT, MAX_VOLTAGE, INTERNAL_RESIST);
 	o->tsd.ship.power_model = pm; 
 	d = new_power_device(o, sample_warp_r1, sample_warp_r2, sample_warp_r3);
@@ -2613,7 +2631,7 @@ static int process_engage_warp(struct game_client *c)
 
 static int process_request_warp_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.warp), no_limit); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.warp.r2), no_limit); 
 }
 
 static int process_request_impulse_pwr(struct game_client *c)

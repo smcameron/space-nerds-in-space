@@ -4234,6 +4234,16 @@ static double sample_power_model_current(void)
 	return 100.0 * total_current / (255.0 * 7); 
 }
 
+static double sample_warp_current(void)
+{
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return 0.0;
+
+	return o->tsd.ship.power_data.warp.i;
+}
+
 static double sample_warpdrive_power_avail(void)
 {
 	double answer;
@@ -4857,7 +4867,7 @@ static void init_new_engineering_ui(void)
 	eu->impulse_slider = snis_slider_init(20, y += yinc, 150, color, "IMPULSE DR", "0", "100",
 				0.0, 100.0, sample_impulse, do_impulse_pwr);
 	eu->warp_slider = snis_slider_init(20, y += yinc, 150, color, "WARP DR", "0", "100",
-				0.0, 100.0, sample_warp, do_warp_pwr);
+				0.0, 255.0, sample_warp_current, do_warp_pwr);
 	eu->maneuvering_slider = snis_slider_init(20, y += yinc, 150, color, "MANEUVERING", "0", "100",
 				0.0, 100.0, sample_maneuvering, do_maneuvering_pwr);
 	ui_add_slider(eu->shield_slider, dm);
