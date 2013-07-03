@@ -1363,9 +1363,12 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 static float sample_##name##_##which(void *cookie) \
 { \
 	struct snis_entity *o = cookie; \
-	float v = (float) o->tsd.ship.power_data.name.which; \
+	float v = 255.0 - (float) o->tsd.ship.power_data.name.which; \
 \
-	return (float) (255.0 - v) * 10000.0; \
+	if (v > 250.0) \
+		v = 10000.0; \
+	v =  v * 10000.0; \
+	return v; \
 	/* return (float) 255.0 / (float) (o->tsd.ship.power_data.name.which + 1.0); */ \
 	/* return (float) (256.0 - (float) o->tsd.ship.power_data.name.which) / 256.0; */  \
 }
