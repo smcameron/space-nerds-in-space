@@ -2497,15 +2497,6 @@ static uint8_t no_limit(__attribute__((unused)) struct game_client *c, uint8_t v
 	return value;
 }
 
-static uint8_t warp_request_limit(struct game_client *c, uint8_t value)
-{
-	struct snis_entity *ship;
-
-	ship = &go[c->ship_index];
-
-	return warp_limit_function(value, ship->tsd.ship.power, ship->tsd.ship.pwrdist.warp);
-}
-
 static uint8_t shield_request_limit(struct game_client *c, uint8_t value)
 {
 	struct snis_entity *ship;
@@ -2566,7 +2557,7 @@ static int process_request_throttle(struct game_client *c)
 static int process_request_warpdrive(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity,
-			tsd.ship.requested_warpdrive), warp_request_limit); 
+			tsd.ship.power_data.warp.r1), no_limit); 
 }
 
 static int process_request_shield(struct game_client *c)

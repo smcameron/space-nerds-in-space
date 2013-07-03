@@ -4205,7 +4205,6 @@ DEFINE_SAMPLER_FUNCTION(sample_power, tsd.ship.power, UINT32_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_temp, tsd.ship.temp, UINT8_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_throttle, tsd.ship.throttle, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_reqshield, tsd.ship.requested_shield, 255.0, 0)
-DEFINE_SAMPLER_FUNCTION(sample_reqwarpdrive, tsd.ship.requested_warpdrive, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_warpdrive, tsd.ship.warpdrive, 10.0 * 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_scizoom, tsd.ship.scizoom, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_fuel, tsd.ship.fuel, UINT32_MAX, 0)
@@ -4552,7 +4551,6 @@ static void show_weapons(GtkWidget *w)
 	show_common_screen(w, "WEAPONS");
 }
 
-static double sample_reqwarpdrive(void);
 static double sample_warpdrive(void);
 static void init_nav_ui(void)
 {
@@ -4560,7 +4558,7 @@ static void init_nav_ui(void)
 				"0", "100", 0.0, 100.0, sample_reqshield,
 				do_shieldadj);
 	nav_ui.warp_slider = snis_slider_init(500, SCREEN_HEIGHT - 40, 200, AMBER, "Warp",
-				"0", "100", 0.0, 100.0, sample_reqwarpdrive,
+				"0", "100", 0.0, 255.0, sample_warp_current,
 				do_warpdrive);
 	nav_ui.navzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, AMBER, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_navzoom,
