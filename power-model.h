@@ -58,6 +58,7 @@ struct power_model *new_power_model(float max_current, float voltage,
 void power_model_add_device(struct power_model *m, struct power_device *device);
 void power_model_compute(struct power_model *m);
 float device_current(struct power_device *d);
+float device_max_current(struct power_device *d);
 float power_model_total_current(struct power_model *m);
 struct power_device *power_model_get_device(struct power_model *m, int i);
 void free_power_model(struct power_model *m);

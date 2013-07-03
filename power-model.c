@@ -3,7 +3,10 @@
 
 #include "power-model.h"
 
+struct power_model;
+
 struct power_device {
+	struct power_model *pm;
 	resistor_sample_fn r1, r2, r3;
 	void *cookie;
 	float i;
@@ -52,6 +55,7 @@ void power_model_add_device(struct power_model *m, struct power_device *device)
 		return;
 	m->d[n] = device;
 	m->ndevices++;
+	device->pm = m;
 }
 
 void power_model_compute(struct power_model *m)
@@ -89,6 +93,11 @@ void power_model_compute(struct power_model *m)
 float device_current(struct power_device *d)
 {
 	return d->i;
+}
+
+float device_max_current(struct power_device *d)
+{
+	return d->pm->nominal_voltage / d->r3(d->cookie);
 }
 
 float power_model_total_current(struct power_model *m)
