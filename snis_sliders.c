@@ -84,7 +84,7 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 	if (!s->clicked)
 		sng_set_foreground(s->color);
 
-	tx1 = (int) (s->value * s->length) + s->x;
+	tx1 = (int) (s->input * s->length) + s->x;
 
 	if (s->clicked) {
 		sng_current_draw_line(w->window, gc, tx1, s->y, tx1 - SLIDER_POINTER_WIDTH, s->y - SLIDER_POINTER_HEIGHT); 
