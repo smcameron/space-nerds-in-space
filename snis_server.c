@@ -1364,7 +1364,8 @@ static float sample_##name##_##which(void *cookie) \
 { \
 	struct snis_entity *o = cookie; \
 \
-	return (float) 255.0 / (float) (o->tsd.ship.power_data.name.which + 1.0); \
+	return powf(1.033, (255.0 - (float) o->tsd.ship.power_data.name.which)); \
+	/* return (float) 255.0 / (float) (o->tsd.ship.power_data.name.which + 1.0); */ \
 	/* return (float) (256.0 - (float) o->tsd.ship.power_data.name.which) / 256.0; */  \
 }
 
@@ -1384,11 +1385,11 @@ static void init_power_model(struct snis_entity *o)
 	memset(&o->tsd.ship.power_data, 0, sizeof(o->tsd.ship.power_data));
 	o->tsd.ship.power_data.warp.r1 = 255;
 	o->tsd.ship.power_data.warp.r2 = 255;
-	o->tsd.ship.power_data.warp.r3 = 128;
+	o->tsd.ship.power_data.warp.r3 = 1;
 	
 #define MAX_CURRENT 1000000.0
 #define MAX_VOLTAGE 10000.0
-#define INTERNAL_RESIST 0.001
+#define INTERNAL_RESIST 0.000001
 	pm = new_power_model(MAX_CURRENT, MAX_VOLTAGE, INTERNAL_RESIST);
 	o->tsd.ship.power_model = pm; 
 	d = new_power_device(o, sample_warp_r1, sample_warp_r2, sample_warp_r3);
