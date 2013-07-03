@@ -4215,6 +4215,25 @@ DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 25
 DEFINE_SAMPLER_FUNCTION(sample_weapzoom, tsd.ship.weapzoom, 255.0, 0.0)
 DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 255.0, 0.0)
 
+static double sample_power_model_current(void)
+{
+	struct snis_entity *o;
+	int total_current = 0;
+
+	if (!(o = find_my_ship()))
+		return 0.0;
+
+	total_current += o->tsd.ship.power_data.maneuvering.i;
+	total_current += o->tsd.ship.power_data.warp.i;
+	total_current += o->tsd.ship.power_data.impulse.i;
+	total_current += o->tsd.ship.power_data.sensors.i;
+	total_current += o->tsd.ship.power_data.comms.i;
+	total_current += o->tsd.ship.power_data.phasers.i;
+	total_current += o->tsd.ship.power_data.shields.i;
+
+	return 100.0 * total_current / (255.0 * 7); 
+}
+
 static double sample_warpdrive_power_avail(void)
 {
 	double answer;
@@ -4811,7 +4830,7 @@ static void init_new_engineering_ui(void)
 
 	eu->rpm_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
-			10, "RPM", sample_rpm);
+			10, "AMPS", sample_power_model_current);
 	x += xinc;
 	eu->fuel_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
