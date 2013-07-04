@@ -4224,7 +4224,7 @@ static double sample_power_model_current(void)
 	total_current += o->tsd.ship.power_data.phasers.i;
 	total_current += o->tsd.ship.power_data.shields.i;
 
-	return 100.0 * total_current / (255.0 * 7); 
+	return 100.0 * total_current / (255.0 * 3.5); 
 }
 
 #define DEFINE_CURRENT_SAMPLER(name) \
