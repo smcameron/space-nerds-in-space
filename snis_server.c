@@ -1127,12 +1127,16 @@ static void do_power_model_computations(struct snis_entity *o)
 
 #define WARP_POWER_DEVICE 0
 #define SENSORS_POWER_DEVICE 1
+#define PHASERS_POWER_DEVICE 2
 
 	device = power_model_get_device(m, WARP_POWER_DEVICE);
 	o->tsd.ship.power_data.warp.i = device_power_byte_form(device);
 
 	device = power_model_get_device(m, SENSORS_POWER_DEVICE);
 	o->tsd.ship.power_data.sensors.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, PHASERS_POWER_DEVICE);
+	o->tsd.ship.power_data.phasers.i = device_power_byte_form(device);
 
 	o->tsd.ship.power_data.voltage = (unsigned char)
 		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
@@ -1244,11 +1248,9 @@ static void player_move(struct snis_entity *o)
 		o->tsd.ship.warpdrive--;
 
 	/* Update phaser charge */
+	/* TODO: change this so phaser power affects charge rate, damage affects max. */
 	current_phaserbank = o->tsd.ship.phaser_charge;
-	max_phaserbank = (int) (((double) o->tsd.ship.power / (double) UINT32_MAX) *
-		(double) o->tsd.ship.pwrdist.phaserbanks / PHASER_POWER_FACTOR);
-	if (max_phaserbank > 255)
-		max_phaserbank = 255;
+	max_phaserbank = o->tsd.ship.power_data.phasers.i;
 	o->tsd.ship.phaser_charge = update_phaser_banks(current_phaserbank, max_phaserbank);
 }
 
@@ -1364,6 +1366,9 @@ DECLARE_POWER_MODEL_SAMPLER(warp, r3) /* declares sample_warp_r3 */
 DECLARE_POWER_MODEL_SAMPLER(sensors, r1) /* declares sample_sensors_r1 */
 DECLARE_POWER_MODEL_SAMPLER(sensors, r2) /* declares sample_sensors_r2 */
 DECLARE_POWER_MODEL_SAMPLER(sensors, r3) /* declares sample_sensors_r3 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, r1) /* declares sample_phasers_r1 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, r2) /* declares sample_phasers_r2 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, r3) /* declares sample_phasers_r3 */
 
 static void init_power_model(struct snis_entity *o)
 {
@@ -1394,6 +1399,13 @@ static void init_power_model(struct snis_entity *o)
 	o->tsd.ship.power_data.sensors.r2 = 0;
 	o->tsd.ship.power_data.sensors.r3 = 200;
 	d = new_power_device(o, sample_sensors_r1, sample_sensors_r2, sample_sensors_r3);
+	power_model_add_device(pm, d);
+
+	/* Phasers */
+	o->tsd.ship.power_data.phasers.r1 = 255;
+	o->tsd.ship.power_data.phasers.r2 = 0;
+	o->tsd.ship.power_data.phasers.r3 = 200;
+	d = new_power_device(o, sample_phasers_r1, sample_phasers_r2, sample_phasers_r3);
 	power_model_add_device(pm, d);
 }
 
@@ -2652,7 +2664,7 @@ static int process_request_shields_pwr(struct game_client *c)
 
 static int process_request_phaserbanks_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.phaserbanks), no_limit); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.phasers.r2), no_limit); 
 }
 
 static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)

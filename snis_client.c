@@ -4264,6 +4264,15 @@ static double sample_sensors_current(void)
 	return o->tsd.ship.power_data.sensors.i;
 }
 
+static double sample_phasers_current(void)
+{
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return o->tsd.ship.power_data.phasers.i;
+}
+
 static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
 {
 	do_adjust_slider_value(s, OPCODE_REQUEST_LASER_WAVELENGTH);
@@ -4871,7 +4880,7 @@ static void init_new_engineering_ui(void)
 	eu->shield_slider = snis_slider_init(20, y += yinc, 150, color, "SHIELDS", "0", "100",
 				0.0, 100.0, sample_shields, do_shields_pwr);
 	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, 150, color, "PHASERS", "0", "100",
-				0.0, 100.0, sample_phaserbanks, do_phaserbanks_pwr);
+				0.0, 255.0, sample_phasers_current, do_phaserbanks_pwr);
 	eu->comm_slider = snis_slider_init(20, y += yinc, 150, color, "COMMS", "0", "100",
 				0.0, 100.0, sample_comms, do_comms_pwr);
 	eu->sensors_slider = snis_slider_init(20, y += yinc, 150, color, "SENSORS", "0", "100",
