@@ -1388,8 +1388,11 @@ static void init_power_model(struct snis_entity *o)
 		free_power_model(o->tsd.ship.power_model);
 */
 	memset(&o->tsd.ship.power_data, 0, sizeof(o->tsd.ship.power_data));
-	
-#define MAX_CURRENT 100000000.0
+
+/* Careful, CURRENT / VOLTAGE ratio is twitchy, keep it in the sweet spot
+ * MAX_CURRENT between 5 and 10, MAX_VOLTAGE at 1000000.0.
+ */	
+#define MAX_CURRENT 6.5
 #define MAX_VOLTAGE 1000000.0
 #define INTERNAL_RESIST 0.000001
 	pm = new_power_model(MAX_CURRENT, MAX_VOLTAGE, INTERNAL_RESIST);
