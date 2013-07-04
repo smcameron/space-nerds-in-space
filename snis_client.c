@@ -4207,7 +4207,6 @@ DEFINE_SAMPLER_FUNCTION(sample_rpm, tsd.ship.rpm, UINT8_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_power, tsd.ship.power, UINT32_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_temp, tsd.ship.temp, UINT8_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_throttle, tsd.ship.throttle, 255.0, 0)
-DEFINE_SAMPLER_FUNCTION(sample_reqshield, tsd.ship.requested_shield, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_warpdrive, tsd.ship.warpdrive, 10.0 * 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_scizoom, tsd.ship.scizoom, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_fuel, tsd.ship.fuel, UINT32_MAX, 0)
@@ -4260,6 +4259,7 @@ DEFINE_CURRENT_SAMPLER(warp) /* defines sample_warp_current */
 DEFINE_CURRENT_SAMPLER(sensors) /* defines sample_sensors_current */
 DEFINE_CURRENT_SAMPLER(phasers) /* defines sample_phasers_current */
 DEFINE_CURRENT_SAMPLER(maneuvering) /* defines sample_maneuvering_current */
+DEFINE_CURRENT_SAMPLER(shields) /* defines sample_shields_current */
 
 static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
 {
@@ -4559,7 +4559,7 @@ static double sample_warpdrive(void);
 static void init_nav_ui(void)
 {
 	nav_ui.shield_slider = snis_slider_init(540, 270, 160, AMBER, "SHIELDS",
-				"0", "100", 0.0, 100.0, sample_reqshield,
+				"0", "100", 0.0, 255.0, sample_shields_current,
 				do_shieldadj);
 	nav_ui.warp_slider = snis_slider_init(500, SCREEN_HEIGHT - 40, 200, AMBER, "Warp",
 				"0", "100", 0.0, 255.0, sample_warp_current,
@@ -4866,7 +4866,7 @@ static void init_new_engineering_ui(void)
 			NANO_FONT, damcon_button_pressed, (void *) 0);
 	y += yinc;
 	eu->shield_slider = snis_slider_init(20, y += yinc, 150, color, "SHIELDS", "0", "100",
-				0.0, 100.0, sample_shields, do_shields_pwr);
+				0.0, 255.0, sample_shields_current, do_shields_pwr);
 	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, 150, color, "PHASERS", "0", "100",
 				0.0, 255.0, sample_phasers_current, do_phaserbanks_pwr);
 	eu->comm_slider = snis_slider_init(20, y += yinc, 150, color, "COMMS", "0", "100",

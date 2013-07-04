@@ -911,19 +911,6 @@ static double powertempy[] = {
 		1.0,
 };
 
-static uint8_t shield_limit_function(uint8_t value, uint32_t total_power, uint8_t shield_power_dist)
-{
-	double max_value;
-
-	max_value = 255.0 * (double) total_power / UINT32_MAX *
-			((double) shield_power_dist / 255.0) / SHIELD_POWER_FACTOR;
-	if (max_value > 255.0)
-		max_value = 255.0;
-	if (value > max_value)
-		return (uint8_t) max_value;
-	return value;
-}
-
 static uint8_t update_phaser_banks(int current, int max)
 {
 	double delta;
@@ -1129,6 +1116,7 @@ static void do_power_model_computations(struct snis_entity *o)
 #define SENSORS_POWER_DEVICE 1
 #define PHASERS_POWER_DEVICE 2
 #define MANEUVERING_POWER_DEVICE 3
+#define SHIELDS_POWER_DEVICE 4
 
 	device = power_model_get_device(m, WARP_POWER_DEVICE);
 	o->tsd.ship.power_data.warp.i = device_power_byte_form(device);
@@ -1141,6 +1129,9 @@ static void do_power_model_computations(struct snis_entity *o)
 
 	device = power_model_get_device(m, MANEUVERING_POWER_DEVICE);
 	o->tsd.ship.power_data.maneuvering.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, SHIELDS_POWER_DEVICE);
+	o->tsd.ship.power_data.shields.i = device_power_byte_form(device);
 
 	o->tsd.ship.power_data.voltage = (unsigned char)
 		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
@@ -1230,17 +1221,10 @@ static void player_move(struct snis_entity *o)
 	o->tsd.ship.power *= table_interp((double) o->tsd.ship.temp,
 			rpmx, powertempy, ARRAY_SIZE(powertempy));
 
-	/* Check that requested shield is not out of line with power distribution */
-	if (o->tsd.ship.requested_shield > 
-		shield_limit_function(o->tsd.ship.requested_shield, o->tsd.ship.power,
-						o->tsd.ship.pwrdist.shields))
-		o->tsd.ship.requested_shield = 
-			shield_limit_function(o->tsd.ship.requested_shield,
-					o->tsd.ship.power, o->tsd.ship.pwrdist.shields);
-	/* Update shield str */
-	if (o->sdata.shield_strength < o->tsd.ship.requested_shield)
+	/* Update shield strength */
+	if (o->sdata.shield_strength < o->tsd.ship.power_data.shields.i)
 		o->sdata.shield_strength++;
-	if (o->sdata.shield_strength > o->tsd.ship.requested_shield)
+	if (o->sdata.shield_strength > o->tsd.ship.power_data.shields.i)
 		o->sdata.shield_strength--;
 	if (o->sdata.shield_strength > (255 - o->tsd.ship.damage.shield_damage))
 		o->sdata.shield_strength = 255 - o->tsd.ship.damage.shield_damage;
@@ -1376,6 +1360,9 @@ DECLARE_POWER_MODEL_SAMPLER(phasers, r3) /* declares sample_phasers_r3 */
 DECLARE_POWER_MODEL_SAMPLER(maneuvering, r1) /* declares sample_maneuvering_r1 */
 DECLARE_POWER_MODEL_SAMPLER(maneuvering, r2) /* declares sample_maneuvering_r2 */
 DECLARE_POWER_MODEL_SAMPLER(maneuvering, r3) /* declares sample_maneuvering_r3 */
+DECLARE_POWER_MODEL_SAMPLER(shields, r1) /* declares sample_shields_r1 */
+DECLARE_POWER_MODEL_SAMPLER(shields, r2) /* declares sample_shields_r2 */
+DECLARE_POWER_MODEL_SAMPLER(shields, r3) /* declares sample_shields_r3 */
 
 static void init_power_model(struct snis_entity *o)
 {
@@ -1420,6 +1407,13 @@ static void init_power_model(struct snis_entity *o)
 	o->tsd.ship.power_data.maneuvering.r2 = 0;
 	o->tsd.ship.power_data.maneuvering.r3 = 200;
 	d = new_power_device(o, sample_maneuvering_r1, sample_maneuvering_r2, sample_maneuvering_r3);
+	power_model_add_device(pm, d);
+
+	/* Shields */
+	o->tsd.ship.power_data.shields.r1 = 255;
+	o->tsd.ship.power_data.shields.r2 = 0;
+	o->tsd.ship.power_data.shields.r3 = 200;
+	d = new_power_device(o, sample_shields_r1, sample_shields_r2, sample_shields_r3);
 	power_model_add_device(pm, d);
 }
 
@@ -2528,15 +2522,6 @@ static uint8_t no_limit(__attribute__((unused)) struct game_client *c, uint8_t v
 	return value;
 }
 
-static uint8_t shield_request_limit(struct game_client *c, uint8_t value)
-{
-	struct snis_entity *ship;
-
-	ship = &go[c->ship_index];
-
-	return shield_limit_function(value, ship->tsd.ship.power, ship->tsd.ship.pwrdist.shields);
-}
-
 static int process_request_bytevalue_pwr(struct game_client *c, int offset,
 		bytevalue_limit_function limit)
 {
@@ -2594,7 +2579,7 @@ static int process_request_warpdrive(struct game_client *c)
 static int process_request_shield(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity,
-			tsd.ship.requested_shield), shield_request_limit); 
+			tsd.ship.power_data.shields.r1), no_limit); 
 }
 
 static int process_request_maneuvering_pwr(struct game_client *c)
@@ -2673,7 +2658,7 @@ static int process_request_comms_pwr(struct game_client *c)
 
 static int process_request_shields_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.shields), no_limit); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.shields.r2), no_limit); 
 }
 
 static int process_request_phaserbanks_pwr(struct game_client *c)
