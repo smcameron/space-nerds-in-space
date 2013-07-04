@@ -8,6 +8,7 @@ struct power_model;
 struct power_device {
 	struct power_model *pm;
 	resistor_sample_fn r1, r2, r3;
+	float or1, or2, or3; /* previous values of resistors */
 	void *cookie;
 	float i;
 };
@@ -58,6 +59,32 @@ void power_model_add_device(struct power_model *m, struct power_device *device)
 	device->pm = m;
 }
 
+static void update_resistance(float *r, float new_r)
+{
+	*r = *r + ((new_r - *r) / 2.0);
+}
+
+static void power_model_update_resistances(struct power_model *m)
+{
+	float nr1, nr2, nr3;
+	int i;
+
+	for (i = 0; i < m->ndevices; i++) {
+		struct power_device *d = m->d[i];
+		void *cookie = d->cookie;
+
+		nr1 = d->r1(cookie);
+		nr2 = d->r2(cookie);
+		if (nr1 < nr2)
+			nr1 = nr2;
+		nr3 = d->r3(cookie);
+
+		update_resistance(&d->or1, nr1);
+		update_resistance(&d->or2, nr2);
+		update_resistance(&d->or3, nr3);
+	}
+}
+
 void power_model_compute(struct power_model *m)
 {
 	int i;
@@ -65,16 +92,13 @@ void power_model_compute(struct power_model *m)
 	float conductance = 0.0;
 	float total_current;
 
+	power_model_update_resistances(m);
 	for (i = 0; i < m->ndevices; i++) {
 		struct power_device *d = m->d[i];
 		void *cookie = d->cookie;
-		float r, r1, r2;
+		float r;
 
-		r1 = d->r1(cookie);
-		r2 = d->r2(cookie);
-		if (r1 < r2)
-			r1 = r2;
-		r = r1 + d->r3(cookie); 
+		r = d->or1 + d->or3; 
 		conductance += 1.0 / r; 
 	}
 	total_resistance += 1.0 / conductance;
@@ -90,7 +114,7 @@ void power_model_compute(struct power_model *m)
 		struct power_device *d = m->d[i];
 		void *cookie = d->cookie;
 
-		float r = d->r1(cookie) + d->r2(cookie) + d->r3(cookie);
+		float r = d->or1 + d->or2 + d->or3;
 		d->i = m->actual_voltage / r;
 	}
 }

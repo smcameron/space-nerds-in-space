@@ -4729,8 +4729,8 @@ static void init_engineering_ui(void)
 {
 	int y;
 	int x = 100;
-	int r = 75;
-	int xinc = 155;
+	int r = 90;
+	int xinc = 190;
 	int yinc = 40; 
 	int dm = DISPLAYMODE_ENGINEERING;
 	int color = AMBER;
@@ -4745,13 +4745,13 @@ static void init_engineering_ui(void)
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "VOLTS", sample_power_model_voltage);
 	x += xinc;
-	eu->fuel_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, color,
-			10, "FUEL", sample_fuel);
-	x += xinc;
 	eu->temp_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "TEMP", sample_temp);
+	x += xinc;
+	eu->fuel_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, RED, color,
+			10, "FUEL", sample_fuel);
 
 	y = 220;
 	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,

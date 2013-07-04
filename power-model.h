@@ -9,25 +9,25 @@
    The circuit looks like this:
 
              R01        R02        R03
- +---------/\/\/-------/\/\/-------/\/\/--------+ S0
+ +---------/\/\/-------------------/\/\/--------+ S0
  |                                              |
  |           R11        R12         R13         |
- +---------/\/\/-------/\/\/-------/\/\/--------+ S1
+ +---------/\/\/-------------------/\/\/--------+ S1
  |                                              |
  |           R21        R22         R23         |
- +---------/\/\/-------/\/\/-------/\/\/--------+ S2
+ +---------/\/\/-------------------/\/\/--------+ S2
  |                                              |
  |           R31        R32         R33         |
- +---------/\/\/-------/\/\/-------/\/\/--------+ S3
+ +---------/\/\/-------------------/\/\/--------+ S3
  |                                              |
  |           R41        R42         R43         |
- +---------/\/\/-------/\/\/-------/\/\/--------+ S4
+ +---------/\/\/-------------------/\/\/--------+ S4
  |                                              |
  |           R51        R52         R53         |
- +---------/\/\/-------/\/\/-------/\/\/--------+ S5
+ +---------/\/\/-------------------/\/\/--------+ S5
  |                                              |
  |           R61        R62         R63         |
- +---------/\/\/-------/\/\/-------/\/\/--------+ S6
+ +---------/\/\/-------------------/\/\/--------+ S6
  |                                              |
  |                                              |
  |      RS        | | | |                       |
@@ -39,9 +39,13 @@ The power supply is a constant voltage supply with a limited
 maximum current.   Each row of three resistors represents a
 system.  R*1 is a variable resistor controlled by crewmembers
 and specific to a device, e.g. Warp power setting, or phaser
-power setting.   R*2 is a variable resistor controlled by engineering
-to control power consumption of a system.   R*3 is the innate
-resistance of the device.
+power setting.   R*2 is a limit on R*1 controlled by engineering
+to control power consumption of a system, R*1 is not allowed to
+be a value below R*2, so engineering can limit the current consumed
+by a device.   R*3 is the innate resistance of the device.
+Some devices may have a constant R*1 (not user controllable), and
+then it is only engineering which controls the power consumption
+of the device.  r*3 is typically a constant.
 
 
 **************************************************************/
