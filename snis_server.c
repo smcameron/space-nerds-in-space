@@ -1128,6 +1128,7 @@ static void do_power_model_computations(struct snis_entity *o)
 #define WARP_POWER_DEVICE 0
 #define SENSORS_POWER_DEVICE 1
 #define PHASERS_POWER_DEVICE 2
+#define MANEUVERING_POWER_DEVICE 3
 
 	device = power_model_get_device(m, WARP_POWER_DEVICE);
 	o->tsd.ship.power_data.warp.i = device_power_byte_form(device);
@@ -1137,6 +1138,9 @@ static void do_power_model_computations(struct snis_entity *o)
 
 	device = power_model_get_device(m, PHASERS_POWER_DEVICE);
 	o->tsd.ship.power_data.phasers.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, MANEUVERING_POWER_DEVICE);
+	o->tsd.ship.power_data.maneuvering.i = device_power_byte_form(device);
 
 	o->tsd.ship.power_data.voltage = (unsigned char)
 		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
@@ -1369,6 +1373,9 @@ DECLARE_POWER_MODEL_SAMPLER(sensors, r3) /* declares sample_sensors_r3 */
 DECLARE_POWER_MODEL_SAMPLER(phasers, r1) /* declares sample_phasers_r1 */
 DECLARE_POWER_MODEL_SAMPLER(phasers, r2) /* declares sample_phasers_r2 */
 DECLARE_POWER_MODEL_SAMPLER(phasers, r3) /* declares sample_phasers_r3 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, r1) /* declares sample_maneuvering_r1 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, r2) /* declares sample_maneuvering_r2 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, r3) /* declares sample_maneuvering_r3 */
 
 static void init_power_model(struct snis_entity *o)
 {
@@ -1406,6 +1413,13 @@ static void init_power_model(struct snis_entity *o)
 	o->tsd.ship.power_data.phasers.r2 = 0;
 	o->tsd.ship.power_data.phasers.r3 = 200;
 	d = new_power_device(o, sample_phasers_r1, sample_phasers_r2, sample_phasers_r3);
+	power_model_add_device(pm, d);
+
+	/* Maneuvering */
+	o->tsd.ship.power_data.maneuvering.r1 = 255;
+	o->tsd.ship.power_data.maneuvering.r2 = 0;
+	o->tsd.ship.power_data.maneuvering.r3 = 200;
+	d = new_power_device(o, sample_maneuvering_r1, sample_maneuvering_r2, sample_maneuvering_r3);
 	power_model_add_device(pm, d);
 }
 
@@ -2585,7 +2599,7 @@ static int process_request_shield(struct game_client *c)
 
 static int process_request_maneuvering_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.maneuvering), no_limit); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.maneuvering.r2), no_limit); 
 }
 
 static int process_request_laser_wavelength(struct game_client *c)

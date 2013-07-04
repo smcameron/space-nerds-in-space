@@ -4259,6 +4259,7 @@ static double sample_##name##_current(void) \
 DEFINE_CURRENT_SAMPLER(warp) /* defines sample_warp_current */
 DEFINE_CURRENT_SAMPLER(sensors) /* defines sample_sensors_current */
 DEFINE_CURRENT_SAMPLER(phasers) /* defines sample_phasers_current */
+DEFINE_CURRENT_SAMPLER(maneuvering) /* defines sample_maneuvering_current */
 
 static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
 {
@@ -4877,7 +4878,7 @@ static void init_new_engineering_ui(void)
 	eu->warp_slider = snis_slider_init(20, y += yinc, 150, color, "WARP DR", "0", "100",
 				0.0, 255.0, sample_warp_current, do_warp_pwr);
 	eu->maneuvering_slider = snis_slider_init(20, y += yinc, 150, color, "MANEUVERING", "0", "100",
-				0.0, 100.0, sample_maneuvering, do_maneuvering_pwr);
+				0.0, 255.0, sample_maneuvering_current, do_maneuvering_pwr);
 	ui_add_slider(eu->shield_slider, dm);
 	ui_add_slider(eu->phaserbanks_slider, dm);
 	ui_add_slider(eu->comm_slider, dm);
