@@ -2007,8 +2007,10 @@ static void do_generic_yaw(double *yawvel, int yaw, double max_yaw, double yaw_i
 static void do_yaw(struct game_client *c, int yaw)
 {
 	struct snis_entity *ship = &go[c->ship_index];
+	double max_yaw_velocity =
+		(MAX_YAW_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
 
-	do_generic_yaw(&ship->tsd.ship.yaw_velocity, yaw, MAX_YAW_VELOCITY,
+	do_generic_yaw(&ship->tsd.ship.yaw_velocity, yaw, max_yaw_velocity,
 			YAW_INCREMENT, YAW_INCREMENT_FINE);
 }
 
