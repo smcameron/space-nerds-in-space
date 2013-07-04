@@ -64,21 +64,6 @@
 #define OBJTYPE_WORMHOLE 11
 #define OBJTYPE_SPACEMONSTER 12
 
-#define WARP_POWER_FACTOR (1.0 / 5.0) /* 1/5th of total power can be alloc'ed to warp */
-#define PHASER_POWER_FACTOR (1.0 / 5.0) /* 1/5th of total power can be alloc'ed to phasers */
-#define SHIELD_POWER_FACTOR (1.0 / 5.0) /* 1/5th of total power can be alloc'ed to shield */
-#define SENSORS_POWER_FACTOR (1.0 / 5.0) /* 1/5th of total power can be alloc'ed to sensors */
-struct power_dist {
-	/* Note: do not add any members to this which are not endian clean. */
-	uint8_t maneuvering;
-	uint8_t warp;
-	uint8_t impulse;
-	uint8_t sensors;
-	uint8_t comms;
-	uint8_t phaserbanks;
-	uint8_t shields;
-};
-
 struct power_model_device {
 	uint8_t r1, r2, r3, i;
 };
@@ -205,7 +190,6 @@ struct ship_data {
 	uint8_t rpm;
 	uint8_t throttle;
 	uint8_t temp;
-	struct power_dist pwrdist;
 	uint8_t shiptype; /* same as snis_entity_science_data subclass */
 	uint8_t scizoom;
 	uint8_t weapzoom;

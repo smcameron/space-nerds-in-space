@@ -620,7 +620,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 			uint32_t torpedoes, uint32_t power, 
 			double gun_heading, double sci_heading, double sci_beam_width, int type,
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
-			fuel, uint8_t temp, struct power_dist *pd, uint8_t scizoom, uint8_t weapzoom,
+			fuel, uint8_t temp, uint8_t scizoom, uint8_t weapzoom,
 			uint8_t navzoom, uint8_t warpdrive,
 			uint8_t requested_warpdrive, uint8_t requested_shield, uint8_t phaser_charge, uint8_t phaser_wavelength, uint8_t shiptype)
 {
@@ -657,7 +657,6 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.rpm = rpm;
 	go[i].tsd.ship.fuel = fuel;
 	go[i].tsd.ship.temp = temp;
-	go[i].tsd.ship.pwrdist = *pd;
 	go[i].tsd.ship.scizoom = scizoom;
 	go[i].tsd.ship.weapzoom = weapzoom;
 	go[i].tsd.ship.navzoom = navzoom;
@@ -2136,7 +2135,6 @@ static int process_update_ship_packet(uint16_t opcode)
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
 		warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype;
-	struct power_dist pd;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -2150,8 +2148,8 @@ static int process_update_ship_packet(uint16_t opcode)
 	packed_buffer_extract(&pb, "UwwUUU", &dheading, (uint32_t) 360,
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
 				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
-	packed_buffer_extract(&pb, "bbbwbrbbbbbbbbb", &tloading, &throttle, &rpm, &fuel, &temp,
-			&pd, (unsigned short) sizeof(pd), &scizoom, &weapzoom, &navzoom,
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbb", &tloading, &throttle, &rpm, &fuel, &temp,
+			&scizoom, &weapzoom, &navzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype);
 	tloaded = (tloading >> 4) & 0x0f;
@@ -2159,7 +2157,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power,
 				dgheading, dsheading, dbeamwidth, type,
-				tloading, tloaded, throttle, rpm, fuel, temp, &pd, scizoom,
+				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
 				weapzoom, navzoom, warpdrive, requested_warpdrive, requested_shield,
 				phaser_charge, phaser_wavelength, shiptype);
 	pthread_mutex_unlock(&universe_mutex);
@@ -3668,12 +3666,6 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
 	r = SCIENCE_SCOPE_R;
-#if 0
-	pwr = 255.0 * ((float) o->tsd.ship.pwrdist.sensors / 255.0) / SENSORS_POWER_FACTOR *
-				(float) o->tsd.ship.power / (float) UINT32_MAX;
-	if (pwr > 255)
-		pwr = 255;
-#endif
 	pwr = o->tsd.ship.power_data.sensors.i;
 	/* Draw all the stuff */
 
@@ -5208,14 +5200,6 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 		if (o != ship) {
 			dist = hypot(o->x - go[my_ship_oid].x, o->y - go[my_ship_oid].y);
 			bw = (int) (go[my_ship_oid].tsd.ship.sci_beam_width * 180.0 / M_PI);
-#if 0
-			pwr = (( (float) go[my_ship_oid].tsd.ship.pwrdist.sensors / 255.0) /
-					SENSORS_POWER_FACTOR) * go[my_ship_oid].tsd.ship.power;
-			pwr = 255.0 * ((float) o->tsd.ship.pwrdist.sensors / 255.0) / SENSORS_POWER_FACTOR *
-						(float) o->tsd.ship.power / (float) UINT32_MAX;
-			if (pwr > 255)
-				pwr = 255;
-#endif
 			pwr = ship->tsd.ship.power_data.sensors.i;
 		} else {
 			dist = 0.1;

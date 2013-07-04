@@ -108,15 +108,6 @@ struct update_ship_packet {
 	uint8_t rpm;
 	uint32_t fuel;
 	uint8_t temp;
-/* next fields must match struct power_dist from snis.h */
-        uint8_t maneuvering_slider;
-        uint8_t warp_slider;
-        uint8_t impulse_slider;
-        uint8_t sensors_slider;
-        uint8_t comm_slider;
-        uint8_t phaserbanks_slider;
-	uint8_t shields_slider;
-/* end of struct power_dist */
 	uint8_t scizoom;
 	uint8_t weapzoom;
 	uint8_t navzoom;

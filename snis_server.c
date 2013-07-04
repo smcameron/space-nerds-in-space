@@ -1467,13 +1467,6 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.power = 0;
 	o->tsd.ship.scizoom = 128;
 	o->tsd.ship.throttle = 200;
-	o->tsd.ship.pwrdist.maneuvering = 200;
-	o->tsd.ship.pwrdist.warp = 200;
-	o->tsd.ship.pwrdist.impulse = 200;
-	o->tsd.ship.pwrdist.sensors = 200;
-	o->tsd.ship.pwrdist.comms = 200;
-	o->tsd.ship.pwrdist.phaserbanks = 200;
-	o->tsd.ship.pwrdist.shields = 255;
 	o->tsd.ship.torpedo_load_time = 0;
 	o->tsd.ship.phaser_bank_charge = 0;
 	o->tsd.ship.scizoom = 0;
@@ -3354,13 +3347,12 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "hwwSSSS", opcode, o->id, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vy, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "UwwUUUbbbwbrbbbbbbbbb", o->heading, (uint32_t) 360,
+	packed_buffer_append(pb, "UwwUUUbbbwbbbbbbbbbb", o->heading, (uint32_t) 360,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
 			o->tsd.ship.gun_heading, (uint32_t) 360,
 			o->tsd.ship.sci_heading, (uint32_t) 360,
 			o->tsd.ship.sci_beam_width, (uint32_t) 360,
 			tloading, throttle, rpm, fuel, o->tsd.ship.temp,
-			(char *) &o->tsd.ship.pwrdist, (unsigned short) sizeof(o->tsd.ship.pwrdist),
 			o->tsd.ship.scizoom, o->tsd.ship.weapzoom, o->tsd.ship.navzoom,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
 			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
