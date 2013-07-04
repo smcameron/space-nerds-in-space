@@ -1966,14 +1966,20 @@ typedef void (*thrust_function)(struct game_client *c, int thrust);
 static void do_thrust(struct game_client *c, int thrust)
 {
 	struct snis_entity *ship = &go[c->ship_index];
+	double max_player_velocity =
+		(MAX_PLAYER_VELOCITY * ship->tsd.ship.power_data.impulse.i) / 255;
 
 	if (thrust > 0) {
-		if (ship->tsd.ship.velocity < MAX_PLAYER_VELOCITY)
+		if (ship->tsd.ship.velocity < max_player_velocity)
 			ship->tsd.ship.velocity += PLAYER_VELOCITY_INCREMENT;
 	} else {
-		if (ship->tsd.ship.velocity > -MAX_PLAYER_VELOCITY)
+		if (ship->tsd.ship.velocity > -max_player_velocity)
 			ship->tsd.ship.velocity -= PLAYER_VELOCITY_INCREMENT;
 	}
+	if (ship->tsd.ship.velocity > max_player_velocity)
+		ship->tsd.ship.velocity = max_player_velocity;
+	else if (ship->tsd.ship.velocity < -max_player_velocity)
+		ship->tsd.ship.velocity = -max_player_velocity;
 }
 
 static void do_robot_thrust(struct game_client *c, int thrust)
