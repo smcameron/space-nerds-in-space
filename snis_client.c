@@ -3542,11 +3542,13 @@ static void draw_nebula_noise(GtkWidget *w, int cx, int cy, int r)
 	}
 }
 
-static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen_radius)
+static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen_radius,
+				double visible_distance)
 {
 	int i, cx, cy, r, rx, ry, rw, rh, in_nebula;
 	char buffer[200];
 
+	visible_distance *= visible_distance;
 	in_nebula = within_nebula(o->x, o->y);
 	rx = 20;
 	ry = 70;
@@ -3556,6 +3558,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen
 	cy = ry + (rh / 2);
 	r = rh / 2;
 	sng_set_foreground(DARKRED);
+
 	/* Draw all the stuff */
 #define NR2 (screen_radius * screen_radius)
 	pthread_mutex_lock(&universe_mutex);
@@ -3572,7 +3575,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen
 		ny = in_nebula * (0.01 * snis_randn(100) - 0.5) * 0.1 * screen_radius;
 		dist2 = ((go[i].x - o->x + nx) * (go[i].x - o->x + nx)) +
 			((go[i].y - o->y + ny) * (go[i].y - o->y + ny));
-		if (dist2 > NR2)
+		if (dist2 > NR2 || dist2 > visible_distance)
 			continue; /* not close enough */
 	
 
@@ -4477,6 +4480,8 @@ static void show_weapons(GtkWidget *w)
 	int r;
 	int buttoncolor;
 	double screen_radius;
+	double max_possible_screen_radius;
+	double visible_distance;
 
 	sng_set_foreground(GREEN);
 
@@ -4514,12 +4519,14 @@ static void show_weapons(GtkWidget *w)
 	r = rh / 2;
 	sng_set_foreground(GREEN);
 	screen_radius = ((((255.0 - o->tsd.ship.weapzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
+	max_possible_screen_radius = 0.09 * XKNOWN_DIM;
+	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, o->tsd.ship.weapzoom > 100);
 	sng_set_foreground(BLUE);
 	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
 
-	draw_all_the_guys(w, o, screen_radius);
+	draw_all_the_guys(w, o, screen_radius, visible_distance);
 	draw_all_the_sparks(w, o, screen_radius);
 	show_common_screen(w, "WEAPONS");
 }
@@ -4577,7 +4584,7 @@ static void show_navigation(GtkWidget *w)
 	struct snis_entity *o;
 	int rx, ry, rw, rh, cx, cy, gx1, gy1, gx2, gy2;
 	int r, sectorx, sectory;
-	double screen_radius;
+	double screen_radius, max_possible_screen_radius, visible_distance;
 
 	sng_set_foreground(GREEN);
 
@@ -4604,12 +4611,14 @@ static void show_navigation(GtkWidget *w)
 	r = rh / 2;
 	sng_set_foreground(GREEN);
 	screen_radius = ((((255.0 - o->tsd.ship.navzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
+	max_possible_screen_radius = 0.09 * XKNOWN_DIM;
+	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, o->tsd.ship.navzoom > 100);
 	sng_set_foreground(DARKRED);
 	snis_draw_reticule(w, gc, cx, cy, r, o->heading);
 
-	draw_all_the_guys(w, o, screen_radius);
+	draw_all_the_guys(w, o, screen_radius, visible_distance);
 	draw_all_the_sparks(w, o, screen_radius);
 
 	gx1 = NAV_DATA_X + 10;
