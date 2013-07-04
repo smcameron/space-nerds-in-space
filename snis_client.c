@@ -4697,7 +4697,7 @@ static void init_damcon_ui(void)
 
 struct engineering_ui {
 	struct gauge *fuel_gauge;
-	struct gauge *rpm_gauge;
+	struct gauge *amp_gauge;
 	struct gauge *voltage_gauge;
 	struct gauge *temp_gauge;
 	struct button *damcon_button;
@@ -4737,7 +4737,7 @@ static void init_engineering_ui(void)
 
 	struct engineering_ui *eu = &eng_ui;
 	y = 140;
-	eu->rpm_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	eu->amp_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "AMPS", sample_power_model_current);
 	x += xinc;
@@ -4778,7 +4778,7 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->impulse_slider, dm);
 	ui_add_slider(eu->warp_slider, dm);
 	ui_add_slider(eu->maneuvering_slider, dm);
-	ui_add_gauge(eu->rpm_gauge, dm);
+	ui_add_gauge(eu->amp_gauge, dm);
 	ui_add_gauge(eu->voltage_gauge, dm);
 	ui_add_gauge(eu->fuel_gauge, dm);
 	ui_add_gauge(eu->temp_gauge, dm);
