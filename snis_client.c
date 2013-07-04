@@ -4720,14 +4720,14 @@ struct engineering_ui {
 	struct slider *sensors_damage;
 	struct slider *comms_damage;
 
-} eng_ui, new_eng_ui;
+} eng_ui;
 
 static void damcon_button_pressed(void *x)
 {
 	displaymode = DISPLAYMODE_DAMCON;
 }
 
-static void init_new_engineering_ui(void)
+static void init_engineering_ui(void)
 {
 	int y;
 	int x = 100;
@@ -4737,7 +4737,7 @@ static void init_new_engineering_ui(void)
 	int dm = DISPLAYMODE_ENGINEERING;
 	int color = AMBER;
 
-	struct engineering_ui *eu = &new_eng_ui;
+	struct engineering_ui *eu = &eng_ui;
 	y = 140;
 	eu->rpm_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
@@ -4815,9 +4815,9 @@ static void init_new_engineering_ui(void)
 	ui_add_slider(eu->comms_damage, dm);
 }
 
-static void show_new_engineering(GtkWidget *w)
+static void show_engineering(GtkWidget *w)
 {
-	show_common_screen(w, "NEW ENGINEERING");
+	show_common_screen(w, "ENGINEERING");
 }
 
 static inline int damconx_to_screenx(double x)
@@ -6672,7 +6672,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_weapons(w);
 		break;
 	case DISPLAYMODE_ENGINEERING:
-		show_new_engineering(w);
+		show_engineering(w);
 		break;
 	case DISPLAYMODE_SCIENCE:
 		show_science(w);
@@ -7217,7 +7217,7 @@ int main(int argc, char *argv[])
 	init_trig_arrays();
 	init_lobby_ui();
 	init_nav_ui();
-	init_new_engineering_ui();
+	init_engineering_ui();
 	init_damcon_ui();
 	init_weapons_ui();
 	init_science_ui();
