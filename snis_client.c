@@ -4246,32 +4246,19 @@ static double sample_power_model_current(void)
 	return 100.0 * total_current / (255.0 * 7); 
 }
 
-static double sample_warp_current(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return o->tsd.ship.power_data.warp.i;
+#define DEFINE_CURRENT_SAMPLER(name) \
+static double sample_##name##_current(void) \
+{ \
+	struct snis_entity *o; \
+\
+	if (!(o = find_my_ship())) \
+		return 0.0; \
+	return o->tsd.ship.power_data.name.i; \
 }
 
-static double sample_sensors_current(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return o->tsd.ship.power_data.sensors.i;
-}
-
-static double sample_phasers_current(void)
-{
-	struct snis_entity *o;
-
-	if (!(o = find_my_ship()))
-		return 0.0;
-	return o->tsd.ship.power_data.phasers.i;
-}
+DEFINE_CURRENT_SAMPLER(warp) /* defines sample_warp_current */
+DEFINE_CURRENT_SAMPLER(sensors) /* defines sample_sensors_current */
+DEFINE_CURRENT_SAMPLER(phasers) /* defines sample_phasers_current */
 
 static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
 {
