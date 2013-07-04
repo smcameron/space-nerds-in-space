@@ -4189,7 +4189,6 @@ static double f(void) \
 	return (double) 100.0 * o->field / (divisor) + (min); \
 }
 
-DEFINE_SAMPLER_FUNCTION(sample_power, tsd.ship.power, UINT32_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_temp, tsd.ship.temp, UINT8_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_warpdrive, tsd.ship.warpdrive, 10.0 * 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_scizoom, tsd.ship.scizoom, 255.0, 0)
@@ -4698,7 +4697,6 @@ static void init_damcon_ui(void)
 
 struct engineering_ui {
 	struct gauge *fuel_gauge;
-	struct gauge *power_gauge;
 	struct gauge *rpm_gauge;
 	struct gauge *voltage_gauge;
 	struct gauge *temp_gauge;
@@ -4751,10 +4749,6 @@ static void init_engineering_ui(void)
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "FUEL", sample_fuel);
 	x += xinc;
-	eu->power_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, color,
-			10, "POWER", sample_power);
-	x += xinc;
 	eu->temp_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "TEMP", sample_temp);
@@ -4787,7 +4781,6 @@ static void init_engineering_ui(void)
 	ui_add_gauge(eu->rpm_gauge, dm);
 	ui_add_gauge(eu->voltage_gauge, dm);
 	ui_add_gauge(eu->fuel_gauge, dm);
-	ui_add_gauge(eu->power_gauge, dm);
 	ui_add_gauge(eu->temp_gauge, dm);
 	ui_add_button(eu->damcon_button, dm);
 
