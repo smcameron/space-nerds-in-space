@@ -1117,6 +1117,7 @@ static void do_power_model_computations(struct snis_entity *o)
 #define PHASERS_POWER_DEVICE 2
 #define MANEUVERING_POWER_DEVICE 3
 #define SHIELDS_POWER_DEVICE 4
+#define COMMS_POWER_DEVICE 5
 
 	device = power_model_get_device(m, WARP_POWER_DEVICE);
 	o->tsd.ship.power_data.warp.i = device_power_byte_form(device);
@@ -1132,6 +1133,9 @@ static void do_power_model_computations(struct snis_entity *o)
 
 	device = power_model_get_device(m, SHIELDS_POWER_DEVICE);
 	o->tsd.ship.power_data.shields.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, COMMS_POWER_DEVICE);
+	o->tsd.ship.power_data.comms.i = device_power_byte_form(device);
 
 	o->tsd.ship.power_data.voltage = (unsigned char)
 		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
@@ -1363,6 +1367,9 @@ DECLARE_POWER_MODEL_SAMPLER(maneuvering, r3) /* declares sample_maneuvering_r3 *
 DECLARE_POWER_MODEL_SAMPLER(shields, r1) /* declares sample_shields_r1 */
 DECLARE_POWER_MODEL_SAMPLER(shields, r2) /* declares sample_shields_r2 */
 DECLARE_POWER_MODEL_SAMPLER(shields, r3) /* declares sample_shields_r3 */
+DECLARE_POWER_MODEL_SAMPLER(comms, r1) /* declares sample_comms_r1 */
+DECLARE_POWER_MODEL_SAMPLER(comms, r2) /* declares sample_comms_r2 */
+DECLARE_POWER_MODEL_SAMPLER(comms, r3) /* declares sample_comms_r3 */
 
 static void init_power_model(struct snis_entity *o)
 {
@@ -1414,6 +1421,13 @@ static void init_power_model(struct snis_entity *o)
 	o->tsd.ship.power_data.shields.r2 = 0;
 	o->tsd.ship.power_data.shields.r3 = 200;
 	d = new_power_device(o, sample_shields_r1, sample_shields_r2, sample_shields_r3);
+	power_model_add_device(pm, d);
+
+	/* Comms */
+	o->tsd.ship.power_data.comms.r1 = 255;
+	o->tsd.ship.power_data.comms.r2 = 0;
+	o->tsd.ship.power_data.comms.r3 = 200;
+	d = new_power_device(o, sample_comms_r1, sample_comms_r2, sample_comms_r3);
 	power_model_add_device(pm, d);
 }
 
@@ -2653,7 +2667,7 @@ static int process_request_sensors_pwr(struct game_client *c)
 
 static int process_request_comms_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.comms), no_limit); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.comms.r2), no_limit); 
 }
 
 static int process_request_shields_pwr(struct game_client *c)

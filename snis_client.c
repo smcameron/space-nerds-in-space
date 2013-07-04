@@ -4260,6 +4260,7 @@ DEFINE_CURRENT_SAMPLER(sensors) /* defines sample_sensors_current */
 DEFINE_CURRENT_SAMPLER(phasers) /* defines sample_phasers_current */
 DEFINE_CURRENT_SAMPLER(maneuvering) /* defines sample_maneuvering_current */
 DEFINE_CURRENT_SAMPLER(shields) /* defines sample_shields_current */
+DEFINE_CURRENT_SAMPLER(comms) /* defines sample_comms_current */
 
 static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
 {
@@ -4870,7 +4871,7 @@ static void init_new_engineering_ui(void)
 	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, 150, color, "PHASERS", "0", "100",
 				0.0, 255.0, sample_phasers_current, do_phaserbanks_pwr);
 	eu->comm_slider = snis_slider_init(20, y += yinc, 150, color, "COMMS", "0", "100",
-				0.0, 100.0, sample_comms, do_comms_pwr);
+				0.0, 255.0, sample_comms_current, do_comms_pwr);
 	eu->sensors_slider = snis_slider_init(20, y += yinc, 150, color, "SENSORS", "0", "100",
 				0.0, 255.0, sample_sensors_current, do_sensors_pwr);
 	eu->impulse_slider = snis_slider_init(20, y += yinc, 150, color, "IMPULSE DR", "0", "100",
