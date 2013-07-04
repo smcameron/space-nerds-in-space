@@ -1909,14 +1909,6 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
-	case keyf10:
-		if (displaymode >= DISPLAYMODE_FONTTEST)
-			break;
-		if (role & ROLE_ENGINEERING) {
-			displaymode = DISPLAYMODE_ENGINEERING2;
-			wwviaudio_add_sound(CHANGESCREEN_SOUND);
-		}
-		break;
 	case keyf5:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
@@ -4142,11 +4134,6 @@ static void do_scizoom(struct slider *s)
 	do_adjust_slider_value(s, OPCODE_REQUEST_SCIZOOM);
 }
 	
-static void do_throttle(struct slider *s)
-{
-	do_adjust_slider_value(s, OPCODE_REQUEST_THROTTLE);
-}
-	
 static void do_warpdrive(struct slider *s)
 {
 	do_adjust_slider_value(s, OPCODE_REQUEST_WARPDRIVE);
@@ -4202,15 +4189,11 @@ static double f(void) \
 	return (double) 100.0 * o->field / (divisor) + (min); \
 }
 
-DEFINE_SAMPLER_FUNCTION(sample_shields, tsd.ship.pwrdist.shields, 255.0, 0)	
-DEFINE_SAMPLER_FUNCTION(sample_rpm, tsd.ship.rpm, UINT8_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_power, tsd.ship.power, UINT32_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_temp, tsd.ship.temp, UINT8_MAX, 0)
-DEFINE_SAMPLER_FUNCTION(sample_throttle, tsd.ship.throttle, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_warpdrive, tsd.ship.warpdrive, 10.0 * 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_scizoom, tsd.ship.scizoom, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_fuel, tsd.ship.fuel, UINT32_MAX, 0)
-DEFINE_SAMPLER_FUNCTION(sample_phaserbanks, tsd.ship.pwrdist.phaserbanks, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phasercharge, tsd.ship.phaser_charge, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 255.0 * 2.0, 10.0)
 DEFINE_SAMPLER_FUNCTION(sample_weapzoom, tsd.ship.weapzoom, 255.0, 0.0)
@@ -4295,12 +4278,6 @@ static void wavelen_down_button_pressed(__attribute__((unused)) void *s)
 {
 	wavelen_updown_button_pressed(-1);
 }
-
-DEFINE_SAMPLER_FUNCTION(sample_warp, tsd.ship.pwrdist.warp, 255.0, 0)
-DEFINE_SAMPLER_FUNCTION(sample_maneuvering, tsd.ship.pwrdist.maneuvering, 255.0, 0)
-DEFINE_SAMPLER_FUNCTION(sample_impulse, tsd.ship.pwrdist.impulse, 255.0, 0)
-DEFINE_SAMPLER_FUNCTION(sample_comms, tsd.ship.pwrdist.comms, 255.0, 0)
-DEFINE_SAMPLER_FUNCTION(sample_sensors, tsd.ship.pwrdist.sensors, 255.0, 0)
 
 static double sample_generic_damage_data(int field_offset)
 {
@@ -4444,7 +4421,6 @@ static void init_lobby_ui()
 	ui_add_button(lobby_ui.lobby_cancel_button, DISPLAYMODE_LOBBYSCREEN);
 }
 
-static double sample_phaserbanks(void);
 static double sample_phaser_wavelength(void);
 static void init_weapons_ui(void)
 {
@@ -4751,86 +4727,6 @@ static void damcon_button_pressed(void *x)
 	displaymode = DISPLAYMODE_DAMCON;
 }
 
-static void init_engineering_ui(void)
-{
-	int y = 220;
-	int x = 100;
-	int xinc = 190;
-	int yinc = 40; 
-	eng_ui.rpm_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
-			10, "RPM", sample_rpm);
-	x += xinc;
-	eng_ui.fuel_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
-			10, "FUEL", sample_fuel);
-	x += xinc;
-	eng_ui.power_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
-			10, "POWER", sample_power);
-	x += xinc;
-	eng_ui.temp_gauge = gauge_init(x, 140, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
-			10, "TEMP", sample_temp);
-	x += xinc;
-	eng_ui.throttle_slider = snis_slider_init(350, y + yinc, 200, AMBER, "THROTTLE", "0", "100",
-				0.0, 100.0, sample_throttle, do_throttle);
-
-	eng_ui.damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", AMBER,
-			NANO_FONT, damcon_button_pressed, (void *) 0);
-	y += yinc;
-	eng_ui.shield_slider = snis_slider_init(20, y += yinc, 150, AMBER, "SHIELDS", "0", "100",
-				0.0, 100.0, sample_shields, do_shields_pwr);
-	eng_ui.phaserbanks_slider = snis_slider_init(20, y += yinc, 150, AMBER, "PHASERS", "0", "100",
-				0.0, 100.0, sample_phaserbanks, do_phaserbanks_pwr);
-	eng_ui.comm_slider = snis_slider_init(20, y += yinc, 150, AMBER, "COMMS", "0", "100",
-				0.0, 100.0, sample_comms, do_comms_pwr);
-	eng_ui.sensors_slider = snis_slider_init(20, y += yinc, 150, AMBER, "SENSORS", "0", "100",
-				0.0, 100.0, sample_sensors, do_sensors_pwr);
-	eng_ui.impulse_slider = snis_slider_init(20, y += yinc, 150, AMBER, "IMPULSE DR", "0", "100",
-				0.0, 100.0, sample_impulse, do_impulse_pwr);
-	eng_ui.warp_slider = snis_slider_init(20, y += yinc, 150, AMBER, "WARP DR", "0", "100",
-				0.0, 100.0, sample_warp, do_warp_pwr);
-	eng_ui.maneuvering_slider = snis_slider_init(20, y += yinc, 150, AMBER, "MANEUVERING", "0", "100",
-				0.0, 100.0, sample_maneuvering, do_maneuvering_pwr);
-	ui_add_slider(eng_ui.shield_slider, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.phaserbanks_slider, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.comm_slider, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.sensors_slider, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.impulse_slider, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.warp_slider, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.maneuvering_slider, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.throttle_slider, DISPLAYMODE_ENGINEERING);
-	ui_add_gauge(eng_ui.rpm_gauge, DISPLAYMODE_ENGINEERING);
-	ui_add_gauge(eng_ui.fuel_gauge, DISPLAYMODE_ENGINEERING);
-	ui_add_gauge(eng_ui.power_gauge, DISPLAYMODE_ENGINEERING);
-	ui_add_gauge(eng_ui.temp_gauge, DISPLAYMODE_ENGINEERING);
-	ui_add_button(eng_ui.damcon_button, DISPLAYMODE_ENGINEERING);
-
-	y = 220 + yinc;
-	eng_ui.shield_damage = snis_slider_init(350, y += yinc, 150, AMBER, "SHIELD STATUS", "0", "100",
-				0.0, 100.0, sample_shield_damage, NULL);
-	eng_ui.impulse_damage = snis_slider_init(350, y += yinc, 150, AMBER, "IMPULSE STATUS", "0", "100",
-				0.0, 100.0, sample_impulse_damage, NULL);
-	eng_ui.warp_damage = snis_slider_init(350, y += yinc, 150, AMBER, "WARP STATUS", "0", "100",
-				0.0, 100.0, sample_warp_damage, NULL);
-	eng_ui.torpedo_tubes_damage = snis_slider_init(350, y += yinc, 150, AMBER, "TORPEDO STATUS", "0", "100",
-				0.0, 100.0, sample_torpedo_tubes_damage, NULL);
-	eng_ui.phaser_banks_damage = snis_slider_init(350, y += yinc, 150, AMBER, "PHASER STATUS", "0", "100",
-				0.0, 100.0, sample_phaser_banks_damage, NULL);
-	eng_ui.sensors_damage = snis_slider_init(350, y += yinc, 150, AMBER, "SENSORS STATUS", "0", "100",
-				0.0, 100.0, sample_sensors_damage, NULL);
-	eng_ui.comms_damage = snis_slider_init(350, y += yinc, 150, AMBER, "COMMS STATUS", "0", "100",
-				0.0, 100.0, sample_comms_damage, NULL);
-	ui_add_slider(eng_ui.shield_damage, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.impulse_damage, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.warp_damage, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.torpedo_tubes_damage, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.phaser_banks_damage, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.sensors_damage, DISPLAYMODE_ENGINEERING);
-	ui_add_slider(eng_ui.comms_damage, DISPLAYMODE_ENGINEERING);
-}
-
 static void init_new_engineering_ui(void)
 {
 	int y;
@@ -4838,8 +4734,8 @@ static void init_new_engineering_ui(void)
 	int r = 75;
 	int xinc = 155;
 	int yinc = 40; 
-	int dm = DISPLAYMODE_ENGINEERING2;
-	int color = GREEN;
+	int dm = DISPLAYMODE_ENGINEERING;
+	int color = AMBER;
 
 	struct engineering_ui *eu = &new_eng_ui;
 	y = 140;
@@ -4917,11 +4813,6 @@ static void init_new_engineering_ui(void)
 	ui_add_slider(eu->phaser_banks_damage, dm);
 	ui_add_slider(eu->sensors_damage, dm);
 	ui_add_slider(eu->comms_damage, dm);
-}
-
-static void show_engineering(GtkWidget *w)
-{
-	show_common_screen(w, "ENGINEERING");
 }
 
 static void show_new_engineering(GtkWidget *w)
@@ -6781,9 +6672,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_weapons(w);
 		break;
 	case DISPLAYMODE_ENGINEERING:
-		show_engineering(w);
-		break;
-	case DISPLAYMODE_ENGINEERING2:
 		show_new_engineering(w);
 		break;
 	case DISPLAYMODE_SCIENCE:
@@ -7329,7 +7217,6 @@ int main(int argc, char *argv[])
 	init_trig_arrays();
 	init_lobby_ui();
 	init_nav_ui();
-	init_engineering_ui();
 	init_new_engineering_ui();
 	init_damcon_ui();
 	init_weapons_ui();
