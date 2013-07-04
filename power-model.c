@@ -114,7 +114,7 @@ void power_model_compute(struct power_model *m)
 		struct power_device *d = m->d[i];
 		void *cookie = d->cookie;
 
-		float r = d->or1 + d->or2 + d->or3;
+		float r = d->or1 + d->or3;
 		d->i = m->actual_voltage / r;
 	}
 }
