@@ -1121,14 +1121,19 @@ static unsigned char device_power_byte_form(struct power_device *d)
 static void do_power_model_computations(struct snis_entity *o)
 {
 	struct power_model *m = o->tsd.ship.power_model;
-	struct power_device *warp_device;
+	struct power_device *device;
 
 	power_model_compute(m);
 
 #define WARP_POWER_DEVICE 0
+#define SENSORS_POWER_DEVICE 1
 
-	warp_device = power_model_get_device(m, WARP_POWER_DEVICE);
-	o->tsd.ship.power_data.warp.i = device_power_byte_form(warp_device);
+	device = power_model_get_device(m, WARP_POWER_DEVICE);
+	o->tsd.ship.power_data.warp.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, SENSORS_POWER_DEVICE);
+	o->tsd.ship.power_data.sensors.i = device_power_byte_form(device);
+
 	o->tsd.ship.power_data.voltage = (unsigned char)
 		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
 }
@@ -1356,6 +1361,9 @@ static float sample_##name##_##which(void *cookie) \
 DECLARE_POWER_MODEL_SAMPLER(warp, r1) /* declares sample_warp_r1 */
 DECLARE_POWER_MODEL_SAMPLER(warp, r2) /* declares sample_warp_r2 */
 DECLARE_POWER_MODEL_SAMPLER(warp, r3) /* declares sample_warp_r3 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, r1) /* declares sample_sensors_r1 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, r2) /* declares sample_sensors_r2 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, r3) /* declares sample_sensors_r3 */
 
 static void init_power_model(struct snis_entity *o)
 {
@@ -1367,16 +1375,25 @@ static void init_power_model(struct snis_entity *o)
 		free_power_model(o->tsd.ship.power_model);
 */
 	memset(&o->tsd.ship.power_data, 0, sizeof(o->tsd.ship.power_data));
-	o->tsd.ship.power_data.warp.r1 = 0;
-	o->tsd.ship.power_data.warp.r2 = 0;
-	o->tsd.ship.power_data.warp.r3 = 200;
 	
 #define MAX_CURRENT 100000000.0
 #define MAX_VOLTAGE 1000000.0
 #define INTERNAL_RESIST 0.000001
 	pm = new_power_model(MAX_CURRENT, MAX_VOLTAGE, INTERNAL_RESIST);
 	o->tsd.ship.power_model = pm; 
+
+	/* Warp */
+	o->tsd.ship.power_data.warp.r1 = 0;
+	o->tsd.ship.power_data.warp.r2 = 0;
+	o->tsd.ship.power_data.warp.r3 = 200;
 	d = new_power_device(o, sample_warp_r1, sample_warp_r2, sample_warp_r3);
+	power_model_add_device(pm, d);
+
+	/* Sensors */
+	o->tsd.ship.power_data.sensors.r1 = 255;
+	o->tsd.ship.power_data.sensors.r2 = 0;
+	o->tsd.ship.power_data.sensors.r3 = 200;
+	d = new_power_device(o, sample_sensors_r1, sample_sensors_r2, sample_sensors_r3);
 	power_model_add_device(pm, d);
 }
 
@@ -2620,7 +2637,7 @@ static int process_request_impulse_pwr(struct game_client *c)
 
 static int process_request_sensors_pwr(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.pwrdist.sensors), no_limit); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.sensors.r2), no_limit); 
 }
 
 static int process_request_comms_pwr(struct game_client *c)

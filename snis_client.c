@@ -3676,10 +3676,13 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
 	r = SCIENCE_SCOPE_R;
+#if 0
 	pwr = 255.0 * ((float) o->tsd.ship.pwrdist.sensors / 255.0) / SENSORS_POWER_FACTOR *
 				(float) o->tsd.ship.power / (float) UINT32_MAX;
 	if (pwr > 255)
 		pwr = 255;
+#endif
+	pwr = o->tsd.ship.power_data.sensors.i;
 	/* Draw all the stuff */
 
 	/* Draw selected coordinate */
@@ -4249,8 +4252,16 @@ static double sample_warp_current(void)
 
 	if (!(o = find_my_ship()))
 		return 0.0;
-
 	return o->tsd.ship.power_data.warp.i;
+}
+
+static double sample_sensors_current(void)
+{
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return o->tsd.ship.power_data.sensors.i;
 }
 
 static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
@@ -4864,7 +4875,7 @@ static void init_new_engineering_ui(void)
 	eu->comm_slider = snis_slider_init(20, y += yinc, 150, color, "COMMS", "0", "100",
 				0.0, 100.0, sample_comms, do_comms_pwr);
 	eu->sensors_slider = snis_slider_init(20, y += yinc, 150, color, "SENSORS", "0", "100",
-				0.0, 100.0, sample_sensors, do_sensors_pwr);
+				0.0, 255.0, sample_sensors_current, do_sensors_pwr);
 	eu->impulse_slider = snis_slider_init(20, y += yinc, 150, color, "IMPULSE DR", "0", "100",
 				0.0, 100.0, sample_impulse, do_impulse_pwr);
 	eu->warp_slider = snis_slider_init(20, y += yinc, 150, color, "WARP DR", "0", "100",
@@ -5314,16 +5325,19 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 		if (o != ship) {
 			dist = hypot(o->x - go[my_ship_oid].x, o->y - go[my_ship_oid].y);
 			bw = (int) (go[my_ship_oid].tsd.ship.sci_beam_width * 180.0 / M_PI);
+#if 0
 			pwr = (( (float) go[my_ship_oid].tsd.ship.pwrdist.sensors / 255.0) /
 					SENSORS_POWER_FACTOR) * go[my_ship_oid].tsd.ship.power;
 			pwr = 255.0 * ((float) o->tsd.ship.pwrdist.sensors / 255.0) / SENSORS_POWER_FACTOR *
 						(float) o->tsd.ship.power / (float) UINT32_MAX;
 			if (pwr > 255)
 				pwr = 255;
+#endif
+			pwr = ship->tsd.ship.power_data.sensors.i;
 		} else {
 			dist = 0.1;
 			bw = 5.0;
-			pwr = 255;
+			pwr = 255; /* never any trouble scanning our own ship */
 		}
 
 		sng_set_foreground(LIMEGREEN);
