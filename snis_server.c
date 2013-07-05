@@ -95,6 +95,8 @@ pthread_t lobbythread;
 char *lobbyserver = NULL;
 static int snis_log_level = 2;
 
+static int nebulalist[NNEBULA] = { 0 };
+
 static inline void client_lock()
 {
         (void) pthread_mutex_lock(&client_mutex);
@@ -722,6 +724,24 @@ static void spacemonster_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
+static int in_nebula(double x, double y)
+{
+	double dist2;
+	int i, j;
+	struct snis_entity *n;
+
+	for (i = 0; i < NNEBULA; i++) {
+		j = nebulalist[i];
+		if (j < 0)
+			continue;
+		n = &go[j];
+		dist2 = (x - n->x) * (x - n->x) + (y - n->y) * (y - n->y);
+		if (dist2 < n->tsd.nebula.r * n->tsd.nebula.r)
+			return 1;
+	}
+	return 0;
+}
+
 static void ship_move(struct snis_entity *o)
 {
 	double heading_diff, yaw_vel;
@@ -835,6 +855,7 @@ static void ship_move(struct snis_entity *o)
 		range = hypot(o->x - v->x, o->y - v->y);
 		if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE) {
 			double dist, flight_time, tx, ty, vx, vy, angle;
+			int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y);
 
 			dist = hypot(v->x - o->x, v->y - o->y);
 			flight_time = dist / TORPEDO_VELOCITY;
@@ -842,13 +863,17 @@ static void ship_move(struct snis_entity *o)
 			ty = v->y + (v->vy * flight_time);
 
 			angle = atan2(tx - o->x, ty - o->y);
-			angle += (M_PI / 180.0 / 50.0) * (snis_randn(100) - 50);
+			if (inside_nebula)
+				angle += (M_PI / 180.0 / 25.0) * (snis_randn(100) - 50);
+			else
+				angle += (M_PI / 180.0 / 5.0) * (snis_randn(100) - 50);
 			vx = TORPEDO_VELOCITY * sin(angle);
 			vy = TORPEDO_VELOCITY * cos(angle);
 			add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
 		} else { 
 			if (snis_randn(1000) < 50) {
 				double dist, flight_time, tx, ty, vx, vy, angle;
+				int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y);
 
 				dist = hypot(v->x - o->x, v->y - o->y);
 				flight_time = dist / LASER_VELOCITY;
@@ -856,6 +881,10 @@ static void ship_move(struct snis_entity *o)
 				ty = v->y + (v->vy * flight_time);
 			
 				angle = atan2(tx - o->x, ty - o->y);
+				if (inside_nebula)
+					angle += (M_PI / 180.0 / 25.0) * (snis_randn(100) - 50);
+				else
+					angle += (M_PI / 180.0 / 5.0) * (snis_randn(100) - 50);
 				vx = LASER_VELOCITY * sin(angle);
 				vy = LASER_VELOCITY * cos(angle);
 				add_laser(o->x, o->y, vx, vy, o->heading, o->id);
@@ -1586,6 +1615,7 @@ static int add_nebula(double x, double y, double vx, double vy, double heading, 
 {
 	int i;
 
+
 	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_NEBULA);
 	if (i < 0)
 		return i;
@@ -1677,7 +1707,7 @@ static void add_starbases(void)
 
 static void add_nebulae(void)
 {
-	int i;
+	int i, j;
 	double x, y, r;
 
 	for (i = 0; i < NNEBULA; i++) {
@@ -1685,7 +1715,8 @@ static void add_nebulae(void)
 		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
 		r = (double) snis_randn(NEBULA_RADIUS) +
 				(double) MIN_NEBULA_RADIUS;
-		add_nebula(x, y, 0.0, 0.0, 0.0, r);
+		j = add_nebula(x, y, 0.0, 0.0, 0.0, r);
+		nebulalist[i] = j;
 	}
 }
 
