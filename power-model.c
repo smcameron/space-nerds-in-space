@@ -22,6 +22,7 @@ struct power_model {
 	float actual_voltage;
 	float internal_resistance;
 	float actual_current;
+	int enabled;
 };
 
 struct power_device *new_power_device(void * cookie, resistor_sample_fn r1,
@@ -46,6 +47,7 @@ struct power_model *new_power_model(float max_current, float voltage,
 	m->nominal_voltage = voltage;
 	m->max_current = max_current;
 	m->internal_resistance = internal_resistance;
+	m->enabled = 1;
 }
 
 void power_model_add_device(struct power_model *m, struct power_device *device)
@@ -102,7 +104,7 @@ void power_model_compute(struct power_model *m)
 		conductance += 1.0 / r; 
 	}
 	total_resistance += 1.0 / conductance;
-	m->actual_current = m->nominal_voltage / total_resistance;
+	m->actual_current = (float) m->enabled * m->nominal_voltage / total_resistance;
 
 	if (m->actual_current > m->max_current) {
 		m->actual_voltage = m->max_current * total_resistance;
@@ -160,4 +162,12 @@ float power_model_actual_voltage(struct power_model *m)
 	return m->actual_voltage;
 }
 	
+void power_model_enable(struct power_model *m)
+{
+	m->enabled = 1;
+}
 
+void power_model_disable(struct power_model *m)
+{
+	m->enabled = 0;
+}

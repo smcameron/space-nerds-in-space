@@ -64,6 +64,13 @@
 #define OBJTYPE_WORMHOLE 11
 #define OBJTYPE_SPACEMONSTER 12
 
+/* Careful, CURRENT / VOLTAGE ratio is twitchy, keep it in the sweet spot
+ * MAX_CURRENT between 5 and 10, MAX_VOLTAGE at 1000000.0.
+ */	
+#define MAX_CURRENT 6.5
+#define MAX_VOLTAGE 1000000.0
+#define INTERNAL_RESIST 0.000001
+
 struct power_model_device {
 	uint8_t r1, r2, r3, i;
 };
@@ -185,7 +192,9 @@ struct ship_data {
 	uint8_t torpedoes_loading;
 	uint16_t torpedo_load_time;
 	uint8_t phaser_bank_charge;
-#define FUEL_USE_FACTOR (1)
+#define FUEL_DURATION (5.0) /* minutes */
+#define FUEL_UNITS (FUEL_DURATION * 60.0 * 30.0)
+#define FUEL_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / FUEL_UNITS))
 	uint32_t fuel;
 	uint8_t rpm;
 	uint8_t throttle;

@@ -37,6 +37,7 @@
 #include <linux/tcp.h>
 #include <stddef.h>
 #include <stdarg.h>
+#include <limits.h>
 
 #include "ssgl/ssgl.h"
 #include "snis.h"
@@ -1180,6 +1181,13 @@ static void player_move(struct snis_entity *o)
 	int max_phaserbank, current_phaserbank;
 	
 	do_power_model_computations(o);
+	if (o->tsd.ship.fuel > FUEL_CONSUMPTION_UNIT) {
+		power_model_enable(o->tsd.ship.power_model);
+		o->tsd.ship.fuel -= (int) (FUEL_CONSUMPTION_UNIT *
+			power_model_total_current(o->tsd.ship.power_model) / MAX_CURRENT);
+	} else {
+		power_model_disable(o->tsd.ship.power_model);
+	}
 	o->vy = o->tsd.ship.velocity * cos(o->heading);
 	o->vx = o->tsd.ship.velocity * -sin(o->heading);
 	o->x += o->vx;
@@ -1238,7 +1246,6 @@ static void player_move(struct snis_entity *o)
 			o->tsd.ship.rpm -= diff;
 		}
 	}
-	o->tsd.ship.fuel -= (int) (o->tsd.ship.rpm * FUEL_USE_FACTOR);
 	o->tsd.ship.power = table_interp((double) o->tsd.ship.rpm,
 			rpmx, powery, ARRAY_SIZE(rpmx));
 	desired_temp = (uint8_t) table_interp((double) o->tsd.ship.rpm,
@@ -1418,12 +1425,6 @@ static void init_power_model(struct snis_entity *o)
 */
 	memset(&o->tsd.ship.power_data, 0, sizeof(o->tsd.ship.power_data));
 
-/* Careful, CURRENT / VOLTAGE ratio is twitchy, keep it in the sweet spot
- * MAX_CURRENT between 5 and 10, MAX_VOLTAGE at 1000000.0.
- */	
-#define MAX_CURRENT 6.5
-#define MAX_VOLTAGE 1000000.0
-#define INTERNAL_RESIST 0.000001
 	pm = new_power_model(MAX_CURRENT, MAX_VOLTAGE, INTERNAL_RESIST);
 	o->tsd.ship.power_model = pm; 
 
