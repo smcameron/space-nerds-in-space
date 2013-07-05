@@ -2526,6 +2526,19 @@ static int process_sci_select_coords_packet(void)
 	return 0;
 }
 
+static void zero_nav_sliders(void);
+static void zero_weapons_sliders(void);
+static void zero_engineering_sliders(void);
+static void zero_science_sliders(void);
+
+static void zero_slider_inputs(void)
+{
+	zero_nav_sliders();
+	zero_weapons_sliders();
+	zero_engineering_sliders();
+	zero_science_sliders();
+}
+
 static int process_update_respawn_time(void)
 {
 	unsigned char buffer[sizeof(struct respawn_time_packet)];
@@ -2539,6 +2552,8 @@ static int process_update_respawn_time(void)
 	if (!(o = find_my_ship()))
 		return 0;
 	o->respawn_time = (uint32_t) seconds;
+	if (o->respawn_time == 0)
+		zero_slider_inputs();
 	return 0;
 }
 
@@ -4308,6 +4323,13 @@ static struct navigation_ui {
 	struct button *warp_down_button;
 } nav_ui;
 
+static void zero_nav_sliders(void)
+{
+	snis_slider_set_input(nav_ui.warp_slider, 0);	
+	snis_slider_set_input(nav_ui.shield_slider, 0);	
+	snis_slider_set_input(nav_ui.navzoom_slider, 0);	
+}
+
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
 {
 	do_adjust_byte_value(0,  OPCODE_ENGAGE_WARP);
@@ -4351,6 +4373,12 @@ struct weapons_ui {
 	struct button *wavelen_up_button;
 	struct button *wavelen_down_button;
 } weapons;
+
+static void zero_weapons_sliders(void)
+{
+	snis_slider_set_input(weapons.weapzoom_slider, 0);
+	snis_slider_set_input(weapons.wavelen_slider, 0);
+}
 
 static void ui_add_slider(struct slider *s, int active_displaymode)
 {
@@ -4721,6 +4749,17 @@ struct engineering_ui {
 
 } eng_ui;
 
+static void zero_engineering_sliders(void)
+{
+	snis_slider_set_input(eng_ui.shield_slider, 0);
+	snis_slider_set_input(eng_ui.maneuvering_slider, 0);
+	snis_slider_set_input(eng_ui.warp_slider, 0);
+	snis_slider_set_input(eng_ui.impulse_slider, 0);
+	snis_slider_set_input(eng_ui.sensors_slider, 0);
+	snis_slider_set_input(eng_ui.comm_slider, 0);
+	snis_slider_set_input(eng_ui.phaserbanks_slider, 0);
+}
+
 static void damcon_button_pressed(void *x)
 {
 	displaymode = DISPLAYMODE_DAMCON;
@@ -5023,6 +5062,11 @@ static void show_damcon(GtkWidget *w)
 struct science_ui {
 	struct slider *scizoom;
 } sci_ui;
+
+static void zero_science_sliders(void)
+{
+	snis_slider_set_input(sci_ui.scizoom, 0);
+}
 
 static void init_science_ui(void)
 {
