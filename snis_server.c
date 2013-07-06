@@ -1748,6 +1748,42 @@ static void add_asteroids(void)
 	}
 }
 
+static int add_planet(double x, double y)
+{
+	int i;
+
+	i = add_generic_object(x, y, 0, 0, 0, OBJTYPE_PLANET);
+	if (i < 0)
+		return i;
+	if (snis_randn(100) < 50)
+		go[i].z = (double) snis_randn(3000) - 1500;
+	else
+		go[i].z = (double) snis_randn(70) - 35;
+	go[i].sdata.shield_strength = 0;
+	go[i].sdata.shield_wavelength = 0;
+	go[i].sdata.shield_width = 0;
+	go[i].sdata.shield_depth = 0;
+	go[i].move = generic_move;
+	return i;
+}
+
+static void add_planets(void)
+{
+	int i;
+	double x, y, cx, cy, a, r;
+
+	for (i = 0; i < NPLANETS; i++) {
+		cx = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+		cy = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		a = (double) snis_randn(360) * M_PI / 180.0;
+		r = snis_randn(ASTEROID_CLUSTER_RADIUS);
+		x = cx + r * sin(a);
+		y = cy + r * cos(a);
+		add_planet(x, y);
+	}
+}
+
+
 static int add_wormhole(double x1, double y1, double x2, double y2)
 {
 	int i;
@@ -1802,6 +1838,7 @@ static void make_universe(void)
 	add_nebulae(); /* do nebula first */
 	add_starbases();
 	add_asteroids();
+	add_planets();
 	add_wormholes();
 	add_eships();
 	add_spacemonsters();
@@ -3071,6 +3108,8 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_planet_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_wormhole_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_starbase_packet(struct game_client *c,
@@ -3115,6 +3154,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_ASTEROID:
 		send_update_asteroid_packet(c, o);
+		break;
+	case OBJTYPE_PLANET:
+		send_update_planet_packet(c, o);
 		break;
 	case OBJTYPE_WORMHOLE:
 		send_update_wormhole_packet(c, o);
@@ -3453,6 +3495,15 @@ static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_ASTEROID, o->id,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM));
+}
+
+static void send_update_planet_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_PLANET, o->id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM));

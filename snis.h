@@ -49,6 +49,9 @@
 #define NEBULA_RADIUS 5000
 #define MIN_NEBULA_RADIUS 200
 
+#define NPLANET_MODELS 3
+#define NPLANETS 4
+
 #define MAXPLAYERS 10
 
 #define OBJTYPE_SHIP1 9 /* players */
@@ -63,6 +66,7 @@
 #define OBJTYPE_NEBULA 10 
 #define OBJTYPE_WORMHOLE 11
 #define OBJTYPE_SPACEMONSTER 12
+#define OBJTYPE_PLANET 13
 
 /* Careful, CURRENT / VOLTAGE ratio is twitchy, keep it in the sweet spot
  * MAX_CURRENT between 5 and 10, MAX_VOLTAGE at 1000000.0.

@@ -197,8 +197,8 @@ double cosine[361];
 
 struct mesh *torpedo_mesh;
 struct mesh *laser_mesh;
-struct mesh *planet_mesh;
 struct mesh *asteroid_mesh[NASTEROID_MODELS * NASTEROID_SCALES];
+struct mesh *planet_mesh[NPLANET_MODELS];
 struct mesh *starbase_mesh[NSTARBASE_MODELS];
 struct mesh *ship_mesh;
 struct mesh *freighter_mesh;
@@ -834,6 +834,34 @@ static int update_asteroid(uint32_t id, double x, double y, double z)
 		axis = (id % 3);
 		update_entity_rotation(go[i].entity, (axis == 0) * angle,
 					(axis == 1) * angle, (axis == 2) * angle);
+	}
+	return 0;
+}
+
+static int update_planet(uint32_t id, double x, double y, double z)
+{
+	int i, m;
+	struct entity *e;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		int axis;
+		float angle;
+
+		m = id % NPLANET_MODELS;
+		e = add_entity(planet_mesh[m], x, z, -y, PLANET_COLOR);
+		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_PLANET, 1, e);
+		if (i < 0)
+			return i;
+		go[i].z = z;
+		angle = (20 % (360 * ((id % 12) + 3))) * M_PI / 180.0;
+		axis = (id % 3);
+		update_entity_rotation(go[i].entity, (axis == 0) * angle,
+					(axis == 1) * angle, (axis == 2) * angle);
+	} else {
+
+		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+		update_entity_pos(go[i].entity, x, z, -y);
 	}
 	return 0;
 }
@@ -2648,6 +2676,26 @@ static int process_update_asteroid_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_planet_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id;
+	double dx, dy, dz;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy,(int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_planet(id, dx, dy, dz);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+} 
+
 static int process_update_wormhole_packet(void)
 {
 	unsigned char buffer[100];
@@ -2779,6 +2827,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_ASTEROID:
 			rc = process_update_asteroid_packet();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_PLANET:
+			rc = process_update_planet_packet();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -3390,6 +3443,10 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			sng_set_foreground(BLUE);
 			sprintf(buffer, "%s %s\n", "Asteroid",  o->sdata.name); 
 			break;
+		case OBJTYPE_PLANET:
+			sng_set_foreground(BLUE);
+			sprintf(buffer, "%s %s\n", "Planet",  o->sdata.name); 
+			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_SPARK:
 		case OBJTYPE_EXPLOSION:
@@ -3627,6 +3684,10 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen
 			switch (go[i].type) {
 			case OBJTYPE_ASTEROID:
 				sng_set_foreground(ASTEROID_COLOR);
+				sng_draw_circle(w->window, gc, x, y, r / 30);
+				break;
+			case OBJTYPE_PLANET:
+				sng_set_foreground(PLANET_COLOR);
 				sng_draw_circle(w->window, gc, x, y, r / 30);
 				break;
 			case OBJTYPE_STARBASE:
@@ -7043,7 +7104,6 @@ static void init_meshes(void)
 	ship_mesh = read_stl_file("spaceship.stl");
 	torpedo_mesh = read_stl_file("torpedo.stl");
 	laser_mesh = read_stl_file("laser.stl");
-	planet_mesh = read_stl_file("planet.stl");
 
 	for (i = 0; i < NASTEROID_MODELS; i++) {
 		char filename[100];
@@ -7066,6 +7126,14 @@ static void init_meshes(void)
 			asteroid_mesh[k] = mesh_duplicate(asteroid_mesh[i]);
 			mesh_scale(asteroid_mesh[k], scale);
 		}
+	}
+
+	for (i = 0; i < NPLANET_MODELS; i++) {
+		char filename[100];
+
+		sprintf(filename, "planet%d.stl", i + 1);
+		printf("reading '%s'\n", filename);
+		planet_mesh[i] = read_stl_file(filename);
 	}
 
 	for (i = 0; i < NSTARBASE_MODELS; i++) {
