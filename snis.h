@@ -68,6 +68,14 @@
 #define OBJTYPE_SPACEMONSTER 12
 #define OBJTYPE_PLANET 13
 
+char *faction[] = {
+	"Neutral",
+	"Wallunni",
+	"Gordouni",
+	"Zarkon",
+	"Vekkazi",
+};
+
 /* Careful, CURRENT / VOLTAGE ratio is twitchy, keep it in the sweet spot
  * MAX_CURRENT between 5 and 10, MAX_VOLTAGE at 1000000.0.
  */	
@@ -300,6 +308,7 @@ struct snis_entity_science_data {
 	uint8_t shield_wavelength;
 	uint8_t shield_width;
 	uint8_t shield_depth;
+	uint8_t faction;
 };
 	
 struct snis_entity {

@@ -672,7 +672,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 
 static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 				uint8_t shield_strength, uint8_t shield_wavelength,
-				uint8_t shield_width, uint8_t shield_depth)
+				uint8_t shield_width, uint8_t shield_depth, uint8_t faction)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -683,6 +683,7 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	go[i].sdata.shield_wavelength = shield_wavelength;
 	go[i].sdata.shield_width = shield_width;
 	go[i].sdata.shield_depth = shield_depth;
+	go[i].sdata.faction = faction;
 	strcpy(go[i].sdata.name, name);
 	go[i].sdata.science_data_known = 30 * 10; /* only remember for ten secs. */
 	go[i].sdata.science_data_requested = 0; /* request is fullfilled */
@@ -2455,7 +2456,7 @@ static int process_ship_sdata_packet(void)
 {
 	unsigned char buffer[50];
 	uint32_t id;
-	uint8_t subclass, shstrength, shwavelength, shwidth, shdepth;
+	uint8_t subclass, shstrength, shwavelength, shwidth, shdepth, faction;
 	int rc;
 	char name[NAMESIZE];
 
@@ -2463,10 +2464,10 @@ static int process_ship_sdata_packet(void)
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct ship_sdata_packet) - sizeof(uint16_t));
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack(buffer, "wbbbbbr",&id, &subclass, &shstrength, &shwavelength,
-			&shwidth, &shdepth, name, (unsigned short) sizeof(name));
+	packed_buffer_unpack(buffer, "wbbbbbbr",&id, &subclass, &shstrength, &shwavelength,
+			&shwidth, &shdepth, &faction, name, (unsigned short) sizeof(name));
 	pthread_mutex_lock(&universe_mutex);
-	update_ship_sdata(id, subclass, name, shstrength, shwavelength, shwidth, shdepth);
+	update_ship_sdata(id, subclass, name, shstrength, shwavelength, shwidth, shdepth, faction);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -5429,6 +5430,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	char buffer[40];
 	int x, y, gx1, gy1, gx2, gy2;
 	double bearing, dx, dy, range;
+	char *the_faction;
 
 	if (!ship)
 		return;
@@ -5438,6 +5440,15 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
 	sprintf(buffer, "NAME: %s", o ? o->sdata.name : "");
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	if (o && (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2)) {
+		y += 25;
+		the_faction = o ? 
+			o->sdata.faction >= 0 &&
+			o->sdata.faction < ARRAY_SIZE(faction) ?
+				faction[o->sdata.faction] : "UNKNOWN" : "UNKNOWN";
+		sprintf(buffer, "ORIG: %s", the_faction);
+		sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	}
 
 	if (o) {
 		switch (o->type) {
