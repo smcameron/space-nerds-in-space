@@ -420,6 +420,7 @@ void sng_setup_colors(GtkWidget *w)
 	gdk_color_parse("MAGENTA", &huex[MAGENTA]);
 	gdk_color_parse("darkred", &huex[DARKRED]);
 	gdk_color_parse("orange", &huex[AMBER]);
+	gdk_color_parse("darkturquoise", &huex[DARKTURQUOISE]);
 	for (i = 0; i < NSHADESOFGRAY; i++) {
 		huex[GRAY + i].red = (i * 32767 * 2) / 256;
 		huex[GRAY + i].green = (i * 32767 * 2) / 256;

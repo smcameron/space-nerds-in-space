@@ -23,8 +23,9 @@
 #define DARKRED 10
 #define AMBER 11
 #define LIMEGREEN 12
+#define DARKTURQUOISE 13
 
-#define NCOLORS 13              /* number of "cardinal" colors */
+#define NCOLORS 14              /* number of "cardinal" colors */
 #define NSPARKCOLORS 25         /* 25 shades from yellow to red for the sparks */
 #define NRAINBOWSTEPS (16)
 #define NRAINBOWCOLORS (NRAINBOWSTEPS*3)

@@ -3487,12 +3487,32 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 	sng_draw_electric_line(w->window, gc, tx1, ty1, tx2, ty2);
 }
 
+static void snis_draw_heading_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
+			double heading, int color)
+{
+	int tx1, ty1, tx2, ty2;
+
+	tx1 = x + sin(heading) * r * 0.85;
+	ty1 = y - cos(heading) * r * 0.85;
+	tx2 = x + sin(heading) * r;
+	ty2 = y - cos(heading) * r;
+	sng_set_foreground(color);
+	snis_draw_line(w->window, gc, tx1, ty1, tx2, ty2);
+}
+
+static void snis_draw_headings_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
+		struct snis_entity *o)
+{
+	snis_draw_heading_on_reticule(w, gc, x, y, r, o->heading, RED);
+	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.gun_heading, DARKTURQUOISE);
+	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.sci_heading, GREEN);
+}
+
 static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		double heading)
 {
 	int i;
 	// int nx, ny, 
-	int tx1, ty1, tx2, ty2;
 	char buf[10];
 
 	for (i = r; i > r / 4; i -= r / 5)
@@ -3517,13 +3537,6 @@ static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 
 	/* draw the ship */
 	snis_draw_arrow(w, gc, x, y, r, heading, 1.0);
-	
-	tx1 = x + sin(heading) * r * 0.85;
-	ty1 = y - cos(heading) * r * 0.85;
-	tx2 = x + sin(heading) * r;
-	ty2 = y - cos(heading) * r;
-	sng_set_foreground(RED);
-	snis_draw_line(w->window, gc, tx1, ty1, tx2, ty2);
 }
 
 static int within_nebula(double x, double y)
@@ -4553,6 +4566,7 @@ static void show_weapons(GtkWidget *w)
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, o->tsd.ship.weapzoom > 100);
 	sng_set_foreground(BLUE);
 	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
+	snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
 
 	draw_all_the_guys(w, o, screen_radius, visible_distance);
 	draw_all_the_sparks(w, o, screen_radius);
@@ -4645,6 +4659,7 @@ static void show_navigation(GtkWidget *w)
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, o->tsd.ship.navzoom > 100);
 	sng_set_foreground(DARKRED);
 	snis_draw_reticule(w, gc, cx, cy, r, o->heading);
+	snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
 
 	draw_all_the_guys(w, o, screen_radius, visible_distance);
 	draw_all_the_sparks(w, o, screen_radius);
