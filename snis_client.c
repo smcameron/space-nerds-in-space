@@ -3391,12 +3391,11 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			sprintf(buffer, "%s %s\n", "Asteroid",  o->sdata.name); 
 			break;
 		case OBJTYPE_TORPEDO:
-			sng_set_foreground(GREEN);
-			strcpy(buffer, "TORPEDO");
-			break;
+		case OBJTYPE_SPARK:
+		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_LASER:
-			sng_set_foreground(GREEN);
-			strcpy(buffer, "ENERGY");
+			sng_set_foreground(LIMEGREEN);
+			strcpy(buffer, "");
 			break;
 		default:
 			sng_set_foreground(GREEN);
