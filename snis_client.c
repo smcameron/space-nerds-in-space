@@ -3508,6 +3508,14 @@ static void snis_draw_headings_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint
 	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.sci_heading, GREEN);
 }
 
+static void snis_draw_ship_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
+		struct snis_entity *o)
+{
+	sng_set_foreground(CYAN);
+	snis_draw_arrow(w, gc, x, y, r, o->heading, 1.5);
+	snis_draw_arrow(w, gc, x, y, r, o->tsd.ship.gun_heading, 0.75);
+}
+
 static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		double heading)
 {
@@ -3534,9 +3542,6 @@ static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		sprintf(buf, "%3d", (90 + i * 10) % 360);
 		sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, x3, y3);
 	}
-
-	/* draw the ship */
-	snis_draw_arrow(w, gc, x, y, r, heading, 1.0);
 }
 
 static int within_nebula(double x, double y)
@@ -4567,6 +4572,7 @@ static void show_weapons(GtkWidget *w)
 	sng_set_foreground(BLUE);
 	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
 	snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
+	snis_draw_ship_on_reticule(w, gc, cx, cy, r, o);
 
 	draw_all_the_guys(w, o, screen_radius, visible_distance);
 	draw_all_the_sparks(w, o, screen_radius);
@@ -4660,6 +4666,7 @@ static void show_navigation(GtkWidget *w)
 	sng_set_foreground(DARKRED);
 	snis_draw_reticule(w, gc, cx, cy, r, o->heading);
 	snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
+	snis_draw_ship_on_reticule(w, gc, cx, cy, r, o);
 
 	draw_all_the_guys(w, o, screen_radius, visible_distance);
 	draw_all_the_sparks(w, o, screen_radius);
