@@ -1498,6 +1498,8 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.scizoom = 128;
 	o->tsd.ship.throttle = 200;
 	o->tsd.ship.torpedo_load_time = 0;
+	o->tsd.ship.torpedoes_loaded = 0;
+	o->tsd.ship.torpedoes_loading = 0;
 	o->tsd.ship.phaser_bank_charge = 0;
 	o->tsd.ship.scizoom = 0;
 	o->tsd.ship.weapzoom = 0;
@@ -1507,6 +1509,13 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.requested_shield = 0;
 	o->tsd.ship.phaser_wavelength = 0;
 	o->tsd.ship.victim = 0;
+	o->tsd.ship.power_data.shields.r1 = 0;
+	o->tsd.ship.power_data.phasers.r1 = 0;
+	o->tsd.ship.power_data.sensors.r1 = 0;
+	o->tsd.ship.power_data.comms.r1 = 0;
+	o->tsd.ship.power_data.warp.r1 = 0;
+	o->tsd.ship.power_data.maneuvering.r1 = 0;
+	o->tsd.ship.power_data.impulse.r1 = 0;
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
 	init_power_model(o);
 }
