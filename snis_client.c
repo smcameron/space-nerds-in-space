@@ -7015,6 +7015,7 @@ static void read_sound_clips(void)
 	wwviaudio_read_ogg_clip(STARSHIP_JOINED, "share/new-starship.ogg");
 	wwviaudio_read_ogg_clip(CREWMEMBER_JOINED, "share/crewmember-has-joined.ogg");
 	wwviaudio_read_ogg_clip(HULL_BREACH_IMMINENT, "share/warning-hull-breach-imminent.ogg");
+	wwviaudio_read_ogg_clip(FUEL_LEVELS_CRITICAL, "share/fuel-levels-critical.ogg");
 	printf("Done.\n");
 }
 
