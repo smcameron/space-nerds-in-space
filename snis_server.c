@@ -85,6 +85,8 @@ struct bridge_data {
 	uint32_t shipid;
 	struct damcon_data damcon;
 	struct snis_damcon_entity *robot;
+	int incoming_fire_detected;
+	int last_incoming_fire_sound_time;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -751,6 +753,26 @@ static int in_nebula(double x, double y)
 	return 0;
 }
 
+static void check_for_incoming_fire(struct snis_entity *o)
+{
+	int i;
+
+	if (o->type != OBJTYPE_SHIP1)
+		return;
+
+	for (i = 0; i < nbridges; i++) {
+		if (bridgelist[i].shipid == o->id) {
+			if (universe_timestamp - bridgelist[i].last_incoming_fire_sound_time >
+				30 * 20) {
+				snis_queue_add_sound(INCOMING_FIRE_DETECTED,
+					ROLE_SOUNDSERVER, o->id);
+				bridgelist[i].last_incoming_fire_sound_time = universe_timestamp;
+			}
+			break;
+		}
+	}
+}
+
 static void ship_move(struct snis_entity *o)
 {
 	double heading_diff, yaw_vel;
@@ -879,6 +901,7 @@ static void ship_move(struct snis_entity *o)
 			vx = TORPEDO_VELOCITY * sin(angle);
 			vy = TORPEDO_VELOCITY * cos(angle);
 			add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
+			check_for_incoming_fire(v);
 		} else { 
 			if (snis_randn(1000) < 50) {
 				double dist, flight_time, tx, ty, vx, vy, angle;
@@ -897,6 +920,7 @@ static void ship_move(struct snis_entity *o)
 				vx = LASER_VELOCITY * sin(angle);
 				vy = LASER_VELOCITY * cos(angle);
 				add_laser(o->x, o->y, vx, vy, o->heading, o->id);
+				check_for_incoming_fire(v);
 			}
 		}
 		if (v->type == OBJTYPE_SHIP1 && snis_randn(1000) < 25)
