@@ -444,6 +444,11 @@ static void torpedo_move(struct snis_entity *o)
 		if (otype == OBJTYPE_SHIP1 || otype == OBJTYPE_SHIP2) {
 			calculate_torpedo_damage(&go[i]);
 			send_ship_damage_packet(&go[i]);
+
+			/* make ships attack their attacker */
+			if (snis_randn(100) < 75)
+				go[i].tsd.ship.victim = o->tsd.torpedo.ship_id;
+
 		} else if (otype == OBJTYPE_ASTEROID && fabs(go[i].z) < 100.0) {
 			go[i].alive = 0;
 		}
