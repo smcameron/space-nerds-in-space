@@ -315,6 +315,14 @@ static void snis_queue_add_sound(uint16_t sound_number, uint32_t roles, uint32_t
 	client_unlock();
 }
 
+static void snis_queue_add_global_sound(uint16_t sound_number)
+{
+	int i;
+
+	for (i = 0; i < nbridges; i++)
+		snis_queue_add_sound(sound_number, ROLE_ALL, bridgelist[i].shipid);
+}
+
 static int add_explosion(double x, double y, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type);
 
@@ -3635,7 +3643,8 @@ protocol_error:
 /* Creates a thread for each incoming connection... */
 static void service_connection(int connection)
 {
-	int i, rc, flag = 1;
+	int i, j, rc, flag = 1;
+	int bridgenum, client_count;
 
 	log_client_info(SNIS_INFO, connection, "snis_server: servicing snis_client connection\n");
         /* get connection moved off the stack so that when the thread needs it,
@@ -3687,8 +3696,20 @@ static void service_connection(int connection)
 			rc, strerror(rc), strerror(errno));
 	}
 	nclients++;
+	client_count = 0;
+	bridgenum = client[i].bridge;
+
+	for (j = 0; j < nclients; j++) {
+		if (client[j].bridge == bridgenum)
+			client_count++;
+	} 
 	client_unlock();
 
+	if (client_count == 1)
+		snis_queue_add_global_sound(STARSHIP_JOINED);
+	else
+		snis_queue_add_sound(CREWMEMBER_JOINED, ROLE_ALL,
+					bridgelist[bridgenum].shipid);
 
 	snis_log(SNIS_INFO, "bottom of 'service connection'\n");
 }
