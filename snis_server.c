@@ -1188,7 +1188,7 @@ static void player_move(struct snis_entity *o)
 	int desired_rpm, desired_temp, diff;
 	int max_phaserbank, current_phaserbank;
 
-	if (o->tsd.ship.damage.shield_damage > 20 && (universe_timestamp % (10 * 5)) == 0)
+	if (o->tsd.ship.damage.shield_damage > 200 && (universe_timestamp % (10 * 5)) == 0)
 		snis_queue_add_sound(HULL_BREACH_IMMINENT, ROLE_SOUNDSERVER, o->id);
 
 	do_power_model_computations(o);
