@@ -2902,8 +2902,12 @@ static int process_request_laser(struct game_client *c)
 	vx = LASER_VELOCITY * sin(ship->tsd.ship.gun_heading);
 	vy = LASER_VELOCITY * -cos(ship->tsd.ship.gun_heading);
 	pthread_mutex_lock(&universe_mutex);
-	add_laser(ship->x + vx, ship->y + vy, vx, vy, ship->tsd.ship.gun_heading, ship->id); 
-	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
+	if (ship->tsd.ship.phaser_charge >= (ship->tsd.ship.power_data.phasers.i * 3) / 4) {
+		add_laser(ship->x + vx, ship->y + vy, vx, vy, ship->tsd.ship.gun_heading, ship->id); 
+		snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
+	} else {
+		snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
+	}
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }

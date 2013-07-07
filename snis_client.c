@@ -7017,6 +7017,7 @@ static void read_sound_clips(void)
 	wwviaudio_read_ogg_clip(HULL_BREACH_IMMINENT, "share/warning-hull-breach-imminent.ogg");
 	wwviaudio_read_ogg_clip(FUEL_LEVELS_CRITICAL, "share/fuel-levels-critical.ogg");
 	wwviaudio_read_ogg_clip(INCOMING_FIRE_DETECTED, "share/incoming-fire-detected.ogg");
+	wwviaudio_read_ogg_clip(LASER_FAILURE, "share/laser-fail.ogg");
 	printf("Done.\n");
 }
 
