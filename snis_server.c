@@ -585,12 +585,23 @@ static int find_nearest_victim(struct snis_entity *o)
 		if (i == o->index) /* don't victimize self */
 			continue;
 
-		/* only victimize players and starbases */
-		if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_SHIP1)
+		/* only victimize players, other ships and starbases */
+		if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_SHIP1 &&
+			go[i].type != OBJTYPE_SHIP2)
 			continue;
 
 		if (!go[i].alive) /* skip the dead guys */
 			continue;
+
+		if (go[i].type == OBJTYPE_SHIP2 || go[i].type == OBJTYPE_STARBASE) {
+			/* don't attack neutrals */
+			if (go[i].sdata.faction == 0)
+				continue;
+			/* Even factions attack odd factions, and vice versa */
+			/* TODO: something better here. */
+			if ((o->sdata.faction % 2) == (go[i].sdata.faction % 2))
+				continue;
+		}
 
 		dx = go[i].x - o->x;
 		dy = go[i].y - o->y;
