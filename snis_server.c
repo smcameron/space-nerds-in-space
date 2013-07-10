@@ -2396,6 +2396,7 @@ static void comm_dock_function(struct game_client *c, char *txt)
 	sprintf(msg, "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
 		bridgelist[c->bridge].shipname);
 	init_player(o);
+	send_ship_damage_packet(o);
 	o->timestamp = universe_timestamp;
 	send_comms_packet(sb->tsd.starbase.name, msg);
 	return;
