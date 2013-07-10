@@ -590,28 +590,36 @@ static int find_nearest_victim(struct snis_entity *o)
 		if (i == o->index) /* don't victimize self */
 			continue;
 
-		/* only victimize players, other ships and starbases */
-		if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_SHIP1 &&
-			go[i].type != OBJTYPE_SHIP2)
-			continue;
+		if (o->sdata.faction == 0) { /* neutral */
+			/* only travel to planets and starbases */
+			if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_PLANET)
+				continue;
+		} else {
+			/* only victimize players, other ships and starbases */
+			if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_SHIP1 &&
+				go[i].type != OBJTYPE_SHIP2)
+				continue;
+		}
 
 		if (!go[i].alive) /* skip the dead guys */
 			continue;
 
-		if (go[i].type == OBJTYPE_SHIP2 || go[i].type == OBJTYPE_STARBASE) {
-			/* don't attack neutrals */
-			if (go[i].sdata.faction == 0)
-				continue;
-			/* Even factions attack odd factions, and vice versa */
-			/* TODO: something better here. */
-			if ((o->sdata.faction % 2) == (go[i].sdata.faction % 2))
-				continue;
+		if (o->sdata.faction != 0) {
+			if (go[i].type == OBJTYPE_SHIP2 || go[i].type == OBJTYPE_STARBASE) {
+				/* don't attack neutrals */
+				if (go[i].sdata.faction == 0)
+					continue;
+				/* Even factions attack odd factions, and vice versa */
+				/* TODO: something better here. */
+				if ((o->sdata.faction % 2) == (go[i].sdata.faction % 2))
+					continue;
+			}
 		}
 
 		dx = go[i].x - o->x;
 		dy = go[i].y - o->y;
 		dist2 = dx * dx + dy * dy;
-		if (go[i].type == OBJTYPE_SHIP1)
+		if (go[i].type == OBJTYPE_SHIP1 && o->sdata.faction != 0)
 			dist2 = dist2 * 0.5; /* prioritize hitting player... */
 		if (victim == -1 || dist2 < lowestdist) {
 			victim = i;
@@ -900,47 +908,55 @@ static void ship_move(struct snis_entity *o)
 		v = &go[o->tsd.ship.victim];
 
 		range = hypot(o->x - v->x, o->y - v->y);
-		if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE) {
-			double dist, flight_time, tx, ty, vx, vy, angle;
-			int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y);
 
-			dist = hypot(v->x - o->x, v->y - o->y);
-			flight_time = dist / TORPEDO_VELOCITY;
-			tx = v->x + (v->vx * flight_time);
-			ty = v->y + (v->vy * flight_time);
+		/* neutrals do not attack planets or starbases, and only select ships
+		 * when attacked.
+		 */
+		if (o->sdata.faction != 0 || 
+			(v->type != OBJTYPE_STARBASE && v->type == OBJTYPE_PLANET)) {
 
-			angle = atan2(tx - o->x, ty - o->y);
-			if (inside_nebula)
-				angle += (M_PI / 180.0 / 25.0) * (snis_randn(100) - 50);
-			else
-				angle += (M_PI / 180.0 / 5.0) * (snis_randn(100) - 50);
-			vx = TORPEDO_VELOCITY * sin(angle);
-			vy = TORPEDO_VELOCITY * cos(angle);
-			add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
-			check_for_incoming_fire(v);
-		} else { 
-			if (snis_randn(1000) < 50) {
+			if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE) {
 				double dist, flight_time, tx, ty, vx, vy, angle;
 				int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y);
 
 				dist = hypot(v->x - o->x, v->y - o->y);
-				flight_time = dist / LASER_VELOCITY;
+				flight_time = dist / TORPEDO_VELOCITY;
 				tx = v->x + (v->vx * flight_time);
 				ty = v->y + (v->vy * flight_time);
-			
+
 				angle = atan2(tx - o->x, ty - o->y);
 				if (inside_nebula)
 					angle += (M_PI / 180.0 / 25.0) * (snis_randn(100) - 50);
 				else
 					angle += (M_PI / 180.0 / 5.0) * (snis_randn(100) - 50);
-				vx = LASER_VELOCITY * sin(angle);
-				vy = LASER_VELOCITY * cos(angle);
-				add_laser(o->x, o->y, vx, vy, o->heading, o->id);
+				vx = TORPEDO_VELOCITY * sin(angle);
+				vy = TORPEDO_VELOCITY * cos(angle);
+				add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
 				check_for_incoming_fire(v);
+			} else { 
+				if (snis_randn(1000) < 50) {
+					double dist, flight_time, tx, ty, vx, vy, angle;
+					int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y);
+
+					dist = hypot(v->x - o->x, v->y - o->y);
+					flight_time = dist / LASER_VELOCITY;
+					tx = v->x + (v->vx * flight_time);
+					ty = v->y + (v->vy * flight_time);
+			
+					angle = atan2(tx - o->x, ty - o->y);
+					if (inside_nebula)
+						angle += (M_PI / 180.0 / 25.0) * (snis_randn(100) - 50);
+					else
+						angle += (M_PI / 180.0 / 5.0) * (snis_randn(100) - 50);
+					vx = LASER_VELOCITY * sin(angle);
+					vy = LASER_VELOCITY * cos(angle);
+					add_laser(o->x, o->y, vx, vy, o->heading, o->id);
+					check_for_incoming_fire(v);
+				}
 			}
+			if (v->type == OBJTYPE_SHIP1 && snis_randn(1000) < 25)
+				taunt_player(o, v);
 		}
-		if (v->type == OBJTYPE_SHIP1 && snis_randn(1000) < 25)
-			taunt_player(o, v);
 	}
 	o->tsd.ship.phaser_charge = update_phaser_banks(o->tsd.ship.phaser_charge, 255);
 	if (o->sdata.shield_strength > (255 - o->tsd.ship.damage.shield_damage))
