@@ -2740,6 +2740,35 @@ static int process_create_item(struct game_client *c)
 	return 0;
 }
 
+static int process_delete_item(struct game_client *c)
+{
+	unsigned char buffer[10];
+	struct snis_entity *o;
+	uint32_t oid;
+	int rc, i;
+
+	rc = read_and_unpack_buffer(c, buffer, "w", &oid);
+	if (rc)
+		return rc;
+	if (!(c->role & ROLE_DEMON))
+		return 0;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto out;
+	o = &go[i];
+	if (o->type == OBJTYPE_SHIP1)
+		goto out;
+	snis_queue_delete_object(o);
+	o->alive = 0;
+	snis_object_pool_free_object(pool, i);
+out:
+	pthread_mutex_unlock(&universe_mutex);
+
+	return 0;
+}
+
+
 typedef uint8_t (*bytevalue_limit_function)(struct game_client *c, uint8_t value);
 
 static uint8_t no_limit(__attribute__((unused)) struct game_client *c, uint8_t value)
@@ -3153,6 +3182,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_CREATE_ITEM:
 			rc = process_create_item(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_DELETE_OBJECT:
+			rc = process_delete_item(c);
 			if (rc)
 				goto protocol_error;
 			break;

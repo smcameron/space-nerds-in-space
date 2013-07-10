@@ -2422,6 +2422,7 @@ static void delete_object(uint32_t id)
 	snis_object_pool_free_object(pool, i);
 }
 
+static void demon_deselect(uint32_t id);
 static int process_delete_object_packet(void)
 {
 	unsigned char buffer[10];
@@ -2434,6 +2435,7 @@ static int process_delete_object_packet(void)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	delete_object(id);
+	demon_deselect(id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -5591,6 +5593,7 @@ static struct demon_ui {
 	struct button *demon_starbase_button;
 	struct button *demon_planet_button;
 	struct button *demon_nebula_button;
+	struct button *demon_delete_button;
 	struct snis_text_input_box *demon_input;
 	char input[100];
 	char error_msg[80];
@@ -5602,6 +5605,7 @@ static struct demon_ui {
 #define DEMON_BUTTON_STARBASEMODE 2
 #define DEMON_BUTTON_PLANETMODE 3
 #define DEMON_BUTTON_NEBULAMODE 4
+#define DEMON_BUTTON_DELETE 5
 } demon_ui;
 
 static int ux_to_demonsx(double ux)
@@ -5717,7 +5721,8 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 		return;
 
 	/* If the item creation buttons selected, create item... */ 
-	if (demon_ui.buttonmode != DEMON_BUTTON_NOMODE) {
+	if (demon_ui.buttonmode > DEMON_BUTTON_NOMODE &&
+		demon_ui.buttonmode < DEMON_BUTTON_DELETE) {
 		demon_button_create_item(x, y);
 		return;
 	}
@@ -6194,6 +6199,18 @@ static void demon_nebula_button_pressed(void *x)
 	demon_modebutton_pressed(DEMON_BUTTON_NEBULAMODE);
 }
 
+static void demon_delete_button_pressed(void *x)
+{
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i < demon_ui.nselected; i++) {
+		queue_to_server(packed_buffer_new("hw",
+				OPCODE_DELETE_OBJECT, demon_ui.selected_id[i]));
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 static void init_demon_ui()
 {
 	demon_ui.ux1 = 0;
@@ -6218,11 +6235,14 @@ static void init_demon_ui()
 			PICO_FONT, demon_planet_button_pressed, NULL);
 	demon_ui.demon_nebula_button = snis_button_init(3, 135, 70, 20, "NEBULA", DARKGREEN,
 			PICO_FONT, demon_nebula_button_pressed, NULL);
+	demon_ui.demon_delete_button = snis_button_init(3, 160, 70, 20, "DELETE", DARKGREEN,
+			PICO_FONT, demon_delete_button_pressed, NULL);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_starbase_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_planet_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_nebula_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_delete_button, DISPLAYMODE_DEMON);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
 }
 
