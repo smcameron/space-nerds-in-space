@@ -5586,7 +5586,7 @@ static struct demon_ui {
 	float ux1, uy1, ux2, uy2;
 	double selectedx, selectedy;
 	int nselected;
-#define MAX_DEMON_SELECTABLE 100
+#define MAX_DEMON_SELECTABLE 256
 	uint32_t selected_id[MAX_DEMON_SELECTABLE];
 	struct button *demon_exec_button;
 	struct button *demon_ship_button;
@@ -5896,7 +5896,7 @@ static char *demon_verb[] = {
 
 static struct demon_group {
 	char name[100];
-	uint16_t id[256];
+	uint16_t id[MAX_DEMON_SELECTABLE];
 	uint8_t nids;
 } demon_group[26];
 static int ndemon_groups = 0;
