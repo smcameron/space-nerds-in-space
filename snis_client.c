@@ -5587,11 +5587,21 @@ static struct demon_ui {
 #define MAX_DEMON_SELECTABLE 100
 	uint32_t selected_id[MAX_DEMON_SELECTABLE];
 	struct button *demon_exec_button;
+	struct button *demon_ship_button;
+	struct button *demon_starbase_button;
+	struct button *demon_planet_button;
+	struct button *demon_nebula_button;
 	struct snis_text_input_box *demon_input;
 	char input[100];
 	char error_msg[80];
 	double ix, iy, ix2, iy2;
 	int selectmode;
+	int buttonmode;
+#define DEMON_BUTTON_NOMODE 0
+#define DEMON_BUTTON_SHIPMODE 1
+#define DEMON_BUTTON_STARBASEMODE 2
+#define DEMON_BUTTON_PLANETMODE 3
+#define DEMON_BUTTON_NEBULAMODE 4
 } demon_ui;
 
 static int ux_to_demonsx(double ux)
@@ -6107,6 +6117,47 @@ static void demon_exec_button_pressed(void *x)
 	snis_text_input_box_zero(demon_ui.demon_input);
 }
 
+static void set_demon_button_colors()
+{
+	snis_button_set_color(demon_ui.demon_ship_button,
+		demon_ui.buttonmode == DEMON_BUTTON_SHIPMODE ? GREEN : DARKGREEN);
+	snis_button_set_color(demon_ui.demon_starbase_button,
+		demon_ui.buttonmode == DEMON_BUTTON_STARBASEMODE ? GREEN : DARKGREEN);
+	snis_button_set_color(demon_ui.demon_planet_button,
+		demon_ui.buttonmode == DEMON_BUTTON_PLANETMODE ? GREEN : DARKGREEN);
+	snis_button_set_color(demon_ui.demon_nebula_button,
+		demon_ui.buttonmode == DEMON_BUTTON_NEBULAMODE ? GREEN : DARKGREEN);
+}
+
+static void demon_modebutton_pressed(int whichmode)
+{
+	if (demon_ui.buttonmode == whichmode)
+		demon_ui.buttonmode = DEMON_BUTTON_NOMODE;
+	else
+		demon_ui.buttonmode = whichmode;
+	set_demon_button_colors();
+}
+
+static void demon_ship_button_pressed(void *x)
+{
+	demon_modebutton_pressed(DEMON_BUTTON_SHIPMODE);
+}
+
+static void demon_starbase_button_pressed(void *x)
+{
+	demon_modebutton_pressed(DEMON_BUTTON_STARBASEMODE);
+}
+
+static void demon_planet_button_pressed(void *x)
+{
+	demon_modebutton_pressed(DEMON_BUTTON_PLANETMODE);
+}
+
+static void demon_nebula_button_pressed(void *x)
+{
+	demon_modebutton_pressed(DEMON_BUTTON_NEBULAMODE);
+}
+
 static void init_demon_ui()
 {
 	demon_ui.ux1 = 0;
@@ -6123,7 +6174,19 @@ static void init_demon_ui()
 					demon_ui.input, 50, &timer, NULL, NULL);
 	demon_ui.demon_exec_button = snis_button_init(570, 520, 160, 30, "EXECUTE", GREEN,
 			TINY_FONT, demon_exec_button_pressed, NULL);
+	demon_ui.demon_ship_button = snis_button_init(3, 60, 100, 25, "SHIP", DARKGREEN,
+			PICO_FONT, demon_ship_button_pressed, NULL);
+	demon_ui.demon_starbase_button = snis_button_init(3, 90, 100, 25, "STARBASE", DARKGREEN,
+			PICO_FONT, demon_starbase_button_pressed, NULL);
+	demon_ui.demon_planet_button = snis_button_init(3, 120, 100, 25, "PLANET", DARKGREEN,
+			PICO_FONT, demon_planet_button_pressed, NULL);
+	demon_ui.demon_nebula_button = snis_button_init(3, 150, 100, 25, "NEBULA", DARKGREEN,
+			PICO_FONT, demon_nebula_button_pressed, NULL);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_starbase_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_planet_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_nebula_button, DISPLAYMODE_DEMON);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
 }
 
