@@ -904,13 +904,15 @@ static int update_starbase(uint32_t id, double x, double y)
 
 static void add_nebula_entry(double x, double y, double r)
 {
+	if (nnebula >= NNEBULA) {
+		printf("Bug at %s:%d\n", __FILE__, __LINE__);
+		return;
+	}
 	nebulaentry[nnebula].x = x;
 	nebulaentry[nnebula].y = y;
 	nebulaentry[nnebula].r2 = r * r;
 	nebulaentry[nnebula].r = r;
 	nnebula++;
-	if (nnebula > NNEBULA)
-		printf("Bug at %s:%d\n", __FILE__, __LINE__);
 }
 
 static int update_nebula(uint32_t id, double x, double y, double r)
@@ -919,7 +921,6 @@ static int update_nebula(uint32_t id, double x, double y, double r)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		printf("Added starbase at %lf %lf %lf\n", x, 0.0, -y);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_NEBULA, 1, NULL);
 		if (i < 0)
 			return i;
@@ -928,7 +929,6 @@ static int update_nebula(uint32_t id, double x, double y, double r)
 		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
 	}
 	go[i].tsd.nebula.r = r;	
-	printf("added nebula, r = %lf\n", r);
 	go[i].alive = 1;
 	return 0;
 }

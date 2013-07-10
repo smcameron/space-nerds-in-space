@@ -1696,7 +1696,6 @@ static int add_nebula(double x, double y, double vx, double vy, double heading, 
 {
 	int i;
 
-
 	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_NEBULA);
 	if (i < 0)
 		return i;
