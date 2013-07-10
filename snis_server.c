@@ -267,7 +267,6 @@ static void snis_queue_delete_object(struct snis_entity *o)
 	for (i = 0; i < nclients; i++)
 		queue_delete_oid(&client[i], oid);
 	client_unlock();
-	respawn_object(o->type);
 }
 
 #define ANY_SHIP_ID (0xffffffff)
@@ -462,6 +461,7 @@ static void torpedo_move(struct snis_entity *o)
 			if (otype != OBJTYPE_SHIP1) {
 				snis_queue_delete_object(&go[i]);
 				snis_object_pool_free_object(pool, i);
+				respawn_object(otype);
 			} else {
 				snis_queue_add_sound(EXPLOSION_SOUND,
 					ROLE_SOUNDSERVER, go[i].id);
@@ -559,6 +559,7 @@ static void laser_move(struct snis_entity *o)
 			if (go[i].type != OBJTYPE_SHIP1) {
 				snis_queue_delete_object(&go[i]);
 				snis_object_pool_free_object(pool, i);
+				respawn_object(otype);
 			} else {
 				snis_queue_add_sound(EXPLOSION_SOUND,
 							ROLE_SOUNDSERVER, go[i].id);
