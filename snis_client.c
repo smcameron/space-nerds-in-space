@@ -5751,6 +5751,8 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 			int sx, sy;
 			struct snis_entity *o = &go[i];
 
+			if (!o->alive)
+				continue;
 			sx = ux_to_demonsx(o->x);
 			sy = uy_to_demonsy(o->y);
 			if (!between(sx1, x, sx) || !between(sy1, y, sy))
@@ -5769,6 +5771,8 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 			int sx, sy;
 			struct snis_entity *o = &go[i];
 
+			if (!o->alive)
+				continue;
 			sx = ux_to_demonsx(o->x);
 			sy = uy_to_demonsy(o->y);
 			dist2 = (sx - x) * (sx - x) + (sy - y) * (sy - y);
