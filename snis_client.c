@@ -2434,8 +2434,8 @@ static int process_delete_object_packet(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	delete_object(id);
 	demon_deselect(id);
+	delete_object(id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -5645,6 +5645,8 @@ static int demon_id_selected(uint32_t id)
 
 static void demon_select(uint32_t id)
 {
+	if (demon_ui.nselected >= MAX_DEMON_SELECTABLE)
+		return;
 	demon_ui.selected_id[demon_ui.nselected] = id;
 	demon_ui.nselected++;
 }
@@ -5753,7 +5755,6 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 			sy = uy_to_demonsy(o->y);
 			if (!between(sx1, x, sx) || !between(sy1, y, sy))
 				continue;
-			nselected++;
 			if (demon_id_selected(o->id))
 				demon_deselect(o->id);
 			else
@@ -5773,7 +5774,6 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 			dist2 = (sx - x) * (sx - x) + (sy - y) * (sy - y);
 			if (dist2 > 50)
 				continue;
-			nselected++;
 			if (demon_id_selected(o->id))
 				demon_deselect(o->id);
 			else
