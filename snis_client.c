@@ -5678,6 +5678,34 @@ static inline int between(double a, double b, double v)
 	return ((a <= v && v <= b) || (b <= v && v <= a));
 }
 
+static void demon_button_create_item(gdouble x, gdouble y)
+{
+	double ux, uy;
+	uint8_t item_type;
+
+	ux = demon_mousex_to_ux(x);
+	uy = demon_mousey_to_uy(y);
+
+	switch (demon_ui.buttonmode) {
+		case DEMON_BUTTON_SHIPMODE:
+			item_type = OBJTYPE_SHIP2;
+			break;
+		case DEMON_BUTTON_STARBASEMODE:
+			item_type = OBJTYPE_STARBASE;
+			break;
+		case DEMON_BUTTON_PLANETMODE:
+			item_type = OBJTYPE_PLANET;
+			break;
+		case DEMON_BUTTON_NEBULAMODE:
+			item_type = OBJTYPE_NEBULA;
+			break;
+		default:
+			return;
+	}
+	queue_to_server(packed_buffer_new("hbSS", OPCODE_CREATE_ITEM, item_type,
+			ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM));
+}
+
 static void demon_button_release(int button, gdouble x, gdouble y)
 {
 	int i, nselected;
@@ -5687,6 +5715,14 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
 	if (button != 3)
 		return;
+
+	/* If the item creation buttons selected, create item... */ 
+	if (demon_ui.buttonmode != DEMON_BUTTON_NOMODE) {
+		demon_button_create_item(x, y);
+		return;
+	}
+
+	/* otherwise, selecting a thing or a location... */
 	demon_ui.selectmode = 0;
 
 	if (demon_ui.nselected >= MAX_DEMON_SELECTABLE)
@@ -6174,13 +6210,13 @@ static void init_demon_ui()
 					demon_ui.input, 50, &timer, NULL, NULL);
 	demon_ui.demon_exec_button = snis_button_init(570, 520, 160, 30, "EXECUTE", GREEN,
 			TINY_FONT, demon_exec_button_pressed, NULL);
-	demon_ui.demon_ship_button = snis_button_init(3, 60, 100, 25, "SHIP", DARKGREEN,
+	demon_ui.demon_ship_button = snis_button_init(3, 60, 70, 20, "SHIP", DARKGREEN,
 			PICO_FONT, demon_ship_button_pressed, NULL);
-	demon_ui.demon_starbase_button = snis_button_init(3, 90, 100, 25, "STARBASE", DARKGREEN,
+	demon_ui.demon_starbase_button = snis_button_init(3, 85, 70, 20, "STARBASE", DARKGREEN,
 			PICO_FONT, demon_starbase_button_pressed, NULL);
-	demon_ui.demon_planet_button = snis_button_init(3, 120, 100, 25, "PLANET", DARKGREEN,
+	demon_ui.demon_planet_button = snis_button_init(3, 110, 70, 20, "PLANET", DARKGREEN,
 			PICO_FONT, demon_planet_button_pressed, NULL);
-	demon_ui.demon_nebula_button = snis_button_init(3, 150, 100, 25, "NEBULA", DARKGREEN,
+	demon_ui.demon_nebula_button = snis_button_init(3, 135, 70, 20, "NEBULA", DARKGREEN,
 			PICO_FONT, demon_nebula_button_pressed, NULL);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);

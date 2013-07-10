@@ -2697,6 +2697,48 @@ static int process_demon_command(struct game_client *c)
 	return 0;
 }
 
+static int process_create_item(struct game_client *c)
+{
+	unsigned char buffer[10];
+	unsigned char item_type;
+	double x, y, r;
+	int rc, i = -1;
+
+	rc = read_and_unpack_buffer(c, buffer, "bSS", &item_type,
+			&x, (int32_t) UNIVERSE_DIM, &y, (int32_t) UNIVERSE_DIM);
+	if (rc)
+		return rc;
+
+	switch (item_type) {
+	case OBJTYPE_SHIP2:
+		i = add_ship();
+		break;
+	case OBJTYPE_STARBASE:
+		i = add_starbase(x, y, 0, 0, 0, snis_randn(100));
+		break;
+	case OBJTYPE_PLANET:
+		i = add_planet(x, y);
+		break;
+	case OBJTYPE_NEBULA:
+		r = (double) snis_randn(NEBULA_RADIUS) +
+				(double) MIN_NEBULA_RADIUS;
+		i = add_nebula(x, y, 0, 0, 0, r);
+		break;
+	default:
+		break;
+	}
+	if (i >= 0) {
+		/* FIXME, the + 10 here is an awful hack to (mostly) get around
+		 * the "too far away to care" bandwidth saving optimization in
+		 * queue_up_client_updates().  Need a better, more sure way.
+		 */
+		go[i].timestamp = universe_timestamp + 10;
+		go[i].x = x;
+		go[i].y = y;
+	}
+	return 0;
+}
+
 typedef uint8_t (*bytevalue_limit_function)(struct game_client *c, uint8_t value);
 
 static uint8_t no_limit(__attribute__((unused)) struct game_client *c, uint8_t value)
@@ -3105,6 +3147,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_REDALERT:
 			rc = process_request_redalert(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_CREATE_ITEM:
+			rc = process_create_item(c);
 			if (rc)
 				goto protocol_error;
 			break;
