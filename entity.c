@@ -86,6 +86,9 @@ struct entity *add_entity(struct mesh *m, float x, float y, float z, int color)
 	entity_list[n].x = x;
 	entity_list[n].y = y;
 	entity_list[n].z = z;
+	entity_list[n].rx = 0;
+	entity_list[n].ry = 0;
+	entity_list[n].rz = 0;
 	entity_list[n].color = color;
 	entity_list[n].render_as_point_cloud = 0;
 	return &entity_list[n];
