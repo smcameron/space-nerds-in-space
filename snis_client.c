@@ -990,6 +990,9 @@ static void move_objects(void)
 
 	for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
+
+		if (!o->alive)
+			continue;
 		switch (o->type) {
 		case OBJTYPE_WORMHOLE:
 			spin_wormhole(o);
