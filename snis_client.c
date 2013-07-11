@@ -82,6 +82,7 @@
 #define LASER_COLOR GREEN
 #define TORPEDO_COLOR WHITE
 #define SPACEMONSTER_COLOR GREEN
+#define NEBULA_COLOR MAGENTA
 
 #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -5815,10 +5816,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 			goto done_drawing_item;
 		break;
 	case OBJTYPE_SHIP2:
-		if (o->id == my_ship_id)
-			sng_set_foreground(GREEN);
-		else
-			sng_set_foreground(WHITE);
+		sng_set_foreground(SHIP_COLOR);
 		if (o->tsd.ship.victim != -1) {
 			int vi = lookup_object_by_id(o->tsd.ship.victim);
 			if (vi >= 0) {	
@@ -5829,15 +5827,24 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		}
 		break;
 	case OBJTYPE_ASTEROID:
-		sng_set_foreground(BLUE);
+		sng_set_foreground(ASTEROID_COLOR);
 		break;
 	case OBJTYPE_NEBULA:
-		sng_set_foreground(MAGENTA);
+		sng_set_foreground(NEBULA_COLOR);
 		sng_draw_circle(w->window, gc, x, y,
 			ur_to_demonsr(o->tsd.nebula.r));
 		break;
 	case OBJTYPE_STARBASE:
-		sng_set_foreground(MAGENTA);
+		sng_set_foreground(STARBASE_COLOR);
+		sng_draw_circle(w->window, gc, x, y, 5);
+		break;
+	case OBJTYPE_PLANET:
+		sng_set_foreground(PLANET_COLOR);
+		sng_draw_circle(w->window, gc, x, y, 5);
+		break;
+	case OBJTYPE_WORMHOLE:
+		sng_set_foreground(WORMHOLE_COLOR);
+		sng_draw_circle(w->window, gc, x, y, 5);
 		break;
 	default:
 		sng_set_foreground(WHITE);
@@ -5846,10 +5853,10 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	snis_draw_line(w->window, gc, x1, y2, x2, y1);
 	if (demon_id_selected(o->id)) {
 		if (timer & 0x02) {
-			snis_draw_line(w->window, gc, x1 - 1, y1 - 1, x2 + 1, y1 - 1);
-			snis_draw_line(w->window, gc, x1 - 1, y2 + 1, x2 + 1, y2 + 1);
-			snis_draw_line(w->window, gc, x1 - 1, y1 - 1, x1 - 1, y2 + 1);
-			snis_draw_line(w->window, gc, x2 + 1, y1 - 1, x2 + 1, y2 + 1);
+			snis_draw_line(w->window, gc, x1 - 6, y1 - 6, x2 + 6, y1 - 6);
+			snis_draw_line(w->window, gc, x1 - 6, y2 + 6, x2 + 6, y2 + 6);
+			snis_draw_line(w->window, gc, x1 - 6, y1 - 6, x1 - 6, y2 + 6);
+			snis_draw_line(w->window, gc, x2 + 6, y1 - 6, x2 + 6, y2 + 6);
 			if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
 				snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading +
 					(o->type == OBJTYPE_SHIP2) * 90.0 * M_PI / 180.0, 0.4);
