@@ -5583,12 +5583,14 @@ static struct demon_ui {
 	struct button *demon_starbase_button;
 	struct button *demon_planet_button;
 	struct button *demon_nebula_button;
+	struct button *demon_captain_button;
 	struct button *demon_delete_button;
 	struct button *demon_select_none_button;
 	struct snis_text_input_box *demon_input;
 	char input[100];
 	char error_msg[80];
 	double ix, iy, ix2, iy2;
+	int captain_of;
 	int selectmode;
 	int buttonmode;
 #define DEMON_BUTTON_NOMODE 0
@@ -5598,6 +5600,8 @@ static struct demon_ui {
 #define DEMON_BUTTON_NEBULAMODE 4
 #define DEMON_BUTTON_DELETE 5
 #define DEMON_BUTTON_SELECTNONE 6
+#define DEMON_BUTTON_CAPTAINMODE 7
+
 } demon_ui;
 
 static int ux_to_demonsx(double ux)
@@ -5641,6 +5645,12 @@ static void demon_select(uint32_t id)
 		return;
 	demon_ui.selected_id[demon_ui.nselected] = id;
 	demon_ui.nselected++;
+	if (demon_ui.buttonmode == DEMON_BUTTON_CAPTAINMODE) {
+		int index = lookup_object_by_id(id);
+
+		if (index >= 0 && go[index].type == OBJTYPE_SHIP2)
+			demon_ui.captain_of = lookup_object_by_id(id);
+	}
 }
 
 static void demon_deselect(uint32_t id)
@@ -5876,6 +5886,11 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	if (v) {
 		sng_set_foreground(RED);
 		sng_draw_dotted_line(w->window, gc, x, y, vx, vy);
+	}
+
+	if (o->type == OBJTYPE_SHIP2 && o->index == demon_ui.captain_of) {
+		sng_set_foreground(RED);
+		sng_draw_circle(w->window, gc, x, y, 10 + (timer % 10));
 	}
 	
 done_drawing_item:
@@ -6175,6 +6190,8 @@ static void set_demon_button_colors()
 		demon_ui.buttonmode == DEMON_BUTTON_PLANETMODE ? GREEN : DARKGREEN);
 	snis_button_set_color(demon_ui.demon_nebula_button,
 		demon_ui.buttonmode == DEMON_BUTTON_NEBULAMODE ? GREEN : DARKGREEN);
+	snis_button_set_color(demon_ui.demon_captain_button,
+		demon_ui.buttonmode == DEMON_BUTTON_CAPTAINMODE ? GREEN : DARKGREEN);
 }
 
 static void demon_modebutton_pressed(int whichmode)
@@ -6206,6 +6223,11 @@ static void demon_nebula_button_pressed(void *x)
 	demon_modebutton_pressed(DEMON_BUTTON_NEBULAMODE);
 }
 
+static void demon_captain_button_pressed(void *x)
+{
+	demon_modebutton_pressed(DEMON_BUTTON_CAPTAINMODE);
+}
+
 static void demon_delete_button_pressed(void *x)
 {
 	int i;
@@ -6233,6 +6255,7 @@ static void init_demon_ui()
 	demon_ui.selectedx = -1.0;
 	demon_ui.selectedy = -1.0;
 	demon_ui.selectmode = 0;
+	demon_ui.captain_of = -1;
 	strcpy(demon_ui.error_msg, "");
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
 	demon_ui.demon_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
@@ -6247,9 +6270,11 @@ static void init_demon_ui()
 			PICO_FONT, demon_planet_button_pressed, NULL);
 	demon_ui.demon_nebula_button = snis_button_init(3, 135, 70, 20, "NEBULA", DARKGREEN,
 			PICO_FONT, demon_nebula_button_pressed, NULL);
-	demon_ui.demon_delete_button = snis_button_init(3, 160, 70, 20, "DELETE", DARKGREEN,
+	demon_ui.demon_captain_button = snis_button_init(3, 160, 70, 20, "CAPTAIN", DARKGREEN,
+			PICO_FONT, demon_captain_button_pressed, NULL);
+	demon_ui.demon_delete_button = snis_button_init(3, 185, 70, 20, "DELETE", DARKGREEN,
 			PICO_FONT, demon_delete_button_pressed, NULL);
-	demon_ui.demon_select_none_button = snis_button_init(3, 185, 70, 20, "SELECT NONE", DARKGREEN,
+	demon_ui.demon_select_none_button = snis_button_init(3, 210, 70, 20, "SELECT NONE", DARKGREEN,
 			PICO_FONT, demon_select_none_button_pressed, NULL);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
@@ -6258,6 +6283,7 @@ static void init_demon_ui()
 	ui_add_button(demon_ui.demon_nebula_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_delete_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_select_none_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_captain_button, DISPLAYMODE_DEMON);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
 }
 
