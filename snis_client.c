@@ -5183,23 +5183,28 @@ static void comms_screen_red_alert_pressed(void *x)
 	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_REDALERT, new_alert_mode));
 }
 
-static void send_comms_packet_to_server(char *msg)
+static void send_comms_packet_to_server(char *msg, uint16_t opcode, uint32_t id)
 {
 	struct packed_buffer *pb;
 	uint8_t len = strlen(msg);
 
 	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + len);
-	packed_buffer_append(pb, "hb", OPCODE_COMMS_TRANSMISSION, len);
+	packed_buffer_append(pb, "hbw", opcode, len, id);
 	packed_buffer_append_raw(pb, msg, (unsigned short) len);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
+}
+
+static void send_normal_comms_packet_to_server(char *msg)
+{
+	send_comms_packet_to_server(msg, OPCODE_COMMS_TRANSMISSION, my_ship_id);
 }
 
 static void comms_transmit_button_pressed(void *x)
 {
 	if (strlen(comms_ui.input) == 0)
 		return;
-	send_comms_packet_to_server(comms_ui.input);
+	send_normal_comms_packet_to_server(comms_ui.input);
 	snis_text_input_box_zero(comms_ui.comms_input);
 }
 
@@ -5604,6 +5609,14 @@ static struct demon_ui {
 
 } demon_ui;
 
+static void send_demon_comms_packet_to_server(char *msg)
+{
+	if (demon_ui.captain_of < 0)
+		return;
+	printf("demon_ui.captain_of = %d\n", demon_ui.captain_of);
+	send_comms_packet_to_server(msg, OPCODE_DEMON_COMMS_XMIT, go[demon_ui.captain_of].id);
+}
+
 static int ux_to_demonsx(double ux)
 {
 	return ((ux - demon_ui.ux1) / (demon_ui.ux2 - demon_ui.ux1)) * SCREEN_WIDTH;
@@ -5908,6 +5921,7 @@ static char *demon_verb[] = {
 	"patrol",
 	"halt",
 	"identify",
+	"say",
 };
 
 #define DEMON_CMD_DELIM " ,"
@@ -6139,6 +6153,9 @@ static int construct_demon_command(char *input,
 				demon_ui.selected_id[i] = demon_group[g].id[i];
 			demon_ui.nselected = demon_group[g].nids;
 			break; 
+		case 7: /* say */
+			send_demon_comms_packet_to_server(saveptr);
+			break;
 		default: /* unknown */
 			sprintf(errmsg, "Unknown ver number %d\n", v);
 			return -1;

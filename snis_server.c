@@ -2457,24 +2457,33 @@ static void interpret_comms_packet(struct game_client *c, char *txt)
 	}
 }
 
-static int process_comms_transmission(struct game_client *c)
+static int process_comms_transmission(struct game_client *c, int use_real_name)
 {
 	unsigned char buffer[sizeof(struct comms_transmission_packet)];
 	char txt[256];
-	int rc;
+	int rc, i;
 	uint8_t len;
+	uint32_t id;
 	char name[30];
 
-	rc = read_and_unpack_buffer(c, buffer, "b", &len);
+	rc = read_and_unpack_buffer(c, buffer, "bw", &len, &id);
 	if (rc)
 		return rc;
 	rc = snis_readsocket(c->socket, txt, len);
 	if (rc)
 		return rc;
 	txt[len] = '\0';
-	sprintf(name, "%s: ", bridgelist[c->bridge].shipname);
+	if (use_real_name) {
+		sprintf(name, "%s: ", bridgelist[c->bridge].shipname);
+	} else {
+		i = lookup_by_id(id);
+		if (i < 0)
+			return 0;
+		sprintf(name, "%s: ", go[i].sdata.name);
+	}
 	send_comms_packet(name, txt);
-	interpret_comms_packet(c, txt);
+	if (use_real_name)
+		interpret_comms_packet(c, txt);
 	return 0;
 }
 
@@ -3155,7 +3164,12 @@ static void process_instructions_from_client(struct game_client *c)
 				goto protocol_error;
 			break;
 		case OPCODE_COMMS_TRANSMISSION:
-			rc = process_comms_transmission(c);
+			rc = process_comms_transmission(c, 1);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_DEMON_COMMS_XMIT:
+			rc = process_comms_transmission(c, 0);
 			if (rc)
 				goto protocol_error;
 			break;

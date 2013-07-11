@@ -86,6 +86,7 @@
 #define OPCODE_UPDATE_POWER_DATA	160
 #define OPCODE_UPDATE_PLANET		161
 #define OPCODE_CREATE_ITEM		162
+#define OPCODE_DEMON_COMMS_XMIT		163
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -364,6 +365,7 @@ struct netstats_packet {
 struct comms_transmission_packet {
 	uint16_t opcode;
 	uint8_t length;
+	uint32_t id;
 };
 
 struct warp_limbo_packet {
