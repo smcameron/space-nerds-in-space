@@ -1964,14 +1964,6 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	case keyf8:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
-		if (role & ROLE_DEBUG) {
-			displaymode = DISPLAYMODE_DEBUG;
-			wwviaudio_add_sound(CHANGESCREEN_SOUND);
-		}
-		break;
-	case keyf9:
-		if (displaymode >= DISPLAYMODE_FONTTEST)
-			break;
 		if (role & ROLE_DEMON) {
 			displaymode = DISPLAYMODE_DEMON;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
@@ -2507,7 +2499,6 @@ static int process_role_onscreen_packet(void)
 	case DISPLAYMODE_DAMCON:
 	case DISPLAYMODE_SCIENCE:
 	case DISPLAYMODE_COMMS:
-	case DISPLAYMODE_DEBUG:
 		wwviaudio_add_sound(ONSCREEN_SOUND);
 		displaymode = new_displaymode;
 		break;
@@ -3081,8 +3072,6 @@ int role_to_displaymode(uint32_t role)
 				return DISPLAYMODE_SCIENCE;
 			case ROLE_COMMS:
 				return DISPLAYMODE_COMMS;
-			case ROLE_DEBUG:
-				return DISPLAYMODE_DEBUG;
 			case ROLE_DEMON:
 				return DISPLAYMODE_DEMON;
 			default:
@@ -6518,7 +6507,6 @@ struct network_setup_ui {
 	struct button *role_damcon;
 	struct button *role_sci;
 	struct button *role_comms;
-	struct button *role_debug;
 	struct button *role_sound;
 	struct button *role_demon;
 	int role_main_v;
@@ -6528,7 +6516,6 @@ struct network_setup_ui {
 	int role_damcon_v;
 	int role_sci_v;
 	int role_comms_v;
-	int role_debug_v;
 	int role_sound_v;
 	int role_demon_v;
 	char lobbyname[60];
@@ -6617,7 +6604,6 @@ static void connect_to_lobby_button_pressed()
 	role |= (ROLE_DAMCON * !!net_setup_ui.role_damcon_v);
 	role |= (ROLE_SCIENCE * !!net_setup_ui.role_sci_v);
 	role |= (ROLE_COMMS * !!net_setup_ui.role_comms_v);
-	role |= (ROLE_DEBUG * !!net_setup_ui.role_debug_v);
 	role |= (ROLE_SOUNDSERVER * !!net_setup_ui.role_sound_v);
 	role |= (ROLE_DEMON * !!net_setup_ui.role_demon_v);
 	if (role == 0)
@@ -6650,7 +6636,6 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	nsu->role_eng_v = 0;
 	nsu->role_sci_v = 0;
 	nsu->role_comms_v = 0;
-	nsu->role_debug_v = 0;
 	nsu->role_sound_v = 0;
 	nsu->role_main = init_net_role_button(x, &y, "MAIN SCREEN ROLE", &nsu->role_main_v);
 	nsu->role_nav = init_net_role_button(x, &y, "NAVIGATION ROLE", &nsu->role_nav_v);
@@ -6659,7 +6644,6 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	nsu->role_damcon = init_net_role_button(x, &y, "DAMCON ROLE", &nsu->role_damcon_v);
 	nsu->role_sci = init_net_role_button(x, &y, "SCIENCE ROLE", &nsu->role_sci_v);
 	nsu->role_comms = init_net_role_button(x, &y, "COMMUNICATIONS ROLE", &nsu->role_comms_v);
-	nsu->role_debug = init_net_role_button(x, &y, "DEBUG ROLE", &nsu->role_debug_v);
 	nsu->role_sound = init_net_role_button(x, &y, "SOUND SERVER ROLE", &nsu->role_sound_v);
 	nsu->role_demon = init_net_role_button(x, &y, "DEMON MODE",
 							&nsu->role_demon_v);
@@ -6670,7 +6654,6 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	ui_add_button(nsu->role_damcon, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_sci, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_comms, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(nsu->role_debug, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_sound, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_demon, DISPLAYMODE_NETWORK_SETUP);
 }
@@ -6880,8 +6863,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (displaymode < DISPLAYMODE_FONTTEST) {
 		if (!(o = find_my_ship()))
 			return 0;
-		if (o->alive <= 0 && displaymode != DISPLAYMODE_DEBUG &&
-			displaymode != DISPLAYMODE_DEMON) {
+		if (o->alive <= 0 && displaymode != DISPLAYMODE_DEMON) {
 			red_alert_mode = 0;
 			show_death_screen(w);
 			if (in_the_process_of_quitting)
@@ -6926,7 +6908,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	case DISPLAYMODE_COMMS:
 		show_comms(w);
 		break;
-	case DISPLAYMODE_DEBUG:
 	case DISPLAYMODE_DEMON:
 		show_demon(w);
 		break;
@@ -7374,8 +7355,6 @@ int main(int argc, char *argv[])
 			role |= ROLE_SCIENCE;
 		if (strcmp(argv[i], "--comms") == 0)
 			role |= ROLE_COMMS;
-		if (strcmp(argv[i], "--debug") == 0)
-			role |= ROLE_DEBUG;
 		if (strcmp(argv[i], "--soundserver") == 0)
 			role |= ROLE_SOUNDSERVER;
 	}
