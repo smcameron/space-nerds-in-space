@@ -5583,6 +5583,7 @@ static struct demon_ui {
 	struct button *demon_planet_button;
 	struct button *demon_nebula_button;
 	struct button *demon_delete_button;
+	struct button *demon_select_none_button;
 	struct snis_text_input_box *demon_input;
 	char input[100];
 	char error_msg[80];
@@ -5595,6 +5596,7 @@ static struct demon_ui {
 #define DEMON_BUTTON_PLANETMODE 3
 #define DEMON_BUTTON_NEBULAMODE 4
 #define DEMON_BUTTON_DELETE 5
+#define DEMON_BUTTON_SELECTNONE 6
 } demon_ui;
 
 static int ux_to_demonsx(double ux)
@@ -5654,6 +5656,11 @@ static void demon_deselect(uint32_t id)
 			return;
 		}
 	}
+}
+
+static void demon_select_none(void)
+{
+	demon_ui.nselected = 0;
 }
 
 static void demon_button_press(int button, gdouble x, gdouble y)
@@ -6204,6 +6211,11 @@ static void demon_delete_button_pressed(void *x)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static void demon_select_none_button_pressed(void *x)
+{
+	demon_select_none();
+}
+
 static void init_demon_ui()
 {
 	demon_ui.ux1 = 0;
@@ -6230,12 +6242,15 @@ static void init_demon_ui()
 			PICO_FONT, demon_nebula_button_pressed, NULL);
 	demon_ui.demon_delete_button = snis_button_init(3, 160, 70, 20, "DELETE", DARKGREEN,
 			PICO_FONT, demon_delete_button_pressed, NULL);
+	demon_ui.demon_select_none_button = snis_button_init(3, 185, 70, 20, "SELECT NONE", DARKGREEN,
+			PICO_FONT, demon_select_none_button_pressed, NULL);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_starbase_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_planet_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_nebula_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_delete_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_select_none_button, DISPLAYMODE_DEMON);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
 }
 
