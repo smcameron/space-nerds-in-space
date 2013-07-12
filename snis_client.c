@@ -5595,6 +5595,8 @@ static struct demon_ui {
 	struct button *demon_captain_button;
 	struct button *demon_delete_button;
 	struct button *demon_select_none_button;
+	struct button *demon_torpedo_button;
+	struct button *demon_phaser_button;
 	struct snis_text_input_box *demon_input;
 	char input[100];
 	char error_msg[80];
@@ -6266,6 +6268,22 @@ static void demon_select_none_button_pressed(void *x)
 	demon_select_none();
 }
 
+static void demon_torpedo_button_pressed(void *x)
+{
+	if (demon_ui.captain_of < 0)
+		return;
+	queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_FIRE_TORPEDO,
+				go[demon_ui.captain_of].id));
+}
+
+static void demon_phaser_button_pressed(void *x)
+{
+	if (demon_ui.captain_of < 0)
+		return;
+	queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_FIRE_PHASER,
+				go[demon_ui.captain_of].id));
+}
+
 static void init_demon_ui()
 {
 	demon_ui.ux1 = 0;
@@ -6297,6 +6315,10 @@ static void init_demon_ui()
 			PICO_FONT, demon_delete_button_pressed, NULL);
 	demon_ui.demon_select_none_button = snis_button_init(3, 210, 70, 20, "SELECT NONE", DARKGREEN,
 			PICO_FONT, demon_select_none_button_pressed, NULL);
+	demon_ui.demon_torpedo_button = snis_button_init(3, 235, 70, 20, "TORPEDO", DARKGREEN,
+			PICO_FONT, demon_torpedo_button_pressed, NULL);
+	demon_ui.demon_phaser_button = snis_button_init(3, 260, 70, 20, "PHASER", DARKGREEN,
+			PICO_FONT, demon_phaser_button_pressed, NULL);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_starbase_button, DISPLAYMODE_DEMON);
@@ -6305,6 +6327,8 @@ static void init_demon_ui()
 	ui_add_button(demon_ui.demon_delete_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_select_none_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_captain_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_torpedo_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_phaser_button, DISPLAYMODE_DEMON);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
 }
 

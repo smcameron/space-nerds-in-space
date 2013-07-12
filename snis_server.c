@@ -2991,6 +2991,34 @@ static int process_request_torpedo(struct game_client *c)
 	return 0;
 }
 
+static int process_demon_fire_torpedo(struct game_client *c)
+{
+	struct snis_entity *o;
+	unsigned char buffer[10];
+	double vx, vy;
+	uint32_t oid;
+	int i, rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "w", &oid);
+	if (rc)
+		return rc;
+	if (!(c->role & ROLE_DEMON))
+		return 0;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto out;
+	o = &go[i];
+
+	vx = TORPEDO_VELOCITY * cos(o->heading);
+	vy = TORPEDO_VELOCITY * sin(o->heading);
+	add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
+out:
+	pthread_mutex_unlock(&universe_mutex);
+
+	return 0;
+}
+
 static int process_request_laser(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
@@ -3006,6 +3034,34 @@ static int process_request_laser(struct game_client *c)
 		snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
 	}
 	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static int process_demon_fire_phaser(struct game_client *c)
+{
+	struct snis_entity *o;
+	unsigned char buffer[10];
+	double vx, vy;
+	uint32_t oid;
+	int i, rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "w", &oid);
+	if (rc)
+		return rc;
+	if (!(c->role & ROLE_DEMON))
+		return 0;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto out;
+	o = &go[i];
+
+	vx = LASER_VELOCITY * cos(o->heading);
+	vy = LASER_VELOCITY * sin(o->heading);
+	add_laser(o->x, o->y, vx, vy, o->heading, o->id);
+out:
+	pthread_mutex_unlock(&universe_mutex);
+
 	return 0;
 }
 
@@ -3025,8 +3081,14 @@ static void process_instructions_from_client(struct game_client *c)
 		case OPCODE_REQUEST_TORPEDO:
 			process_request_torpedo(c);
 			break;
+		case OPCODE_DEMON_FIRE_TORPEDO:
+			process_demon_fire_torpedo(c);
+			break;
 		case OPCODE_REQUEST_LASER:
 			process_request_laser(c);
+			break;
+		case OPCODE_DEMON_FIRE_PHASER:
+			process_demon_fire_phaser(c);
 			break;
 		case OPCODE_LOAD_TORPEDO:
 			process_load_torpedo(c);
