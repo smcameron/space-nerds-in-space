@@ -1356,6 +1356,29 @@ static void player_move(struct snis_entity *o)
 	o->tsd.ship.phaser_charge = update_phaser_banks(current_phaserbank, max_phaserbank);
 }
 
+static void demon_ship_move(struct snis_entity *o)
+{
+	o->vy = o->tsd.ship.velocity * sin(o->heading);
+	o->vx = o->tsd.ship.velocity * cos(o->heading);
+	o->x -= o->vx;
+	o->y -= o->vy;
+	normalize_coords(o);
+	o->heading += o->tsd.ship.yaw_velocity;
+
+	normalize_angle(&o->heading);
+	o->timestamp = universe_timestamp;
+
+	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, YAW_DAMPING);
+	damp_yaw_velocity(&o->tsd.ship.gun_yaw_velocity, GUN_YAW_DAMPING);
+	damp_yaw_velocity(&o->tsd.ship.sci_yaw_velocity, SCI_YAW_DAMPING);
+
+	/* Damp velocity */
+	if (fabs(o->tsd.ship.velocity) < MIN_PLAYER_VELOCITY)
+		o->tsd.ship.velocity = 0.0;
+	else
+		o->tsd.ship.velocity *= PLAYER_VELOCITY_DAMPING;
+}
+
 static void coords_to_location_string(double x, double y, char *buffer, int buflen)
 {
 	int sectorx, sectory;
@@ -2130,6 +2153,23 @@ static void do_thrust(struct game_client *c, int thrust)
 		ship->tsd.ship.velocity = -max_player_velocity;
 }
 
+static void do_demon_thrust(struct snis_entity *o, int thrust)
+{
+	double max_player_velocity = MAX_PLAYER_VELOCITY;
+
+	if (thrust > 0) {
+		if (o->tsd.ship.velocity < max_player_velocity)
+			o->tsd.ship.velocity += PLAYER_VELOCITY_INCREMENT;
+	} else {
+		if (o->tsd.ship.velocity > -max_player_velocity)
+			o->tsd.ship.velocity -= PLAYER_VELOCITY_INCREMENT;
+	}
+	if (o->tsd.ship.velocity > max_player_velocity)
+		o->tsd.ship.velocity = max_player_velocity;
+	else if (o->tsd.ship.velocity < -max_player_velocity)
+		o->tsd.ship.velocity = -max_player_velocity;
+}
+
 static void do_robot_thrust(struct game_client *c, int thrust)
 {
 	struct snis_damcon_entity *robot = bridgelist[c->bridge].damcon.robot;
@@ -2165,6 +2205,14 @@ static void do_yaw(struct game_client *c, int yaw)
 		(MAX_YAW_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
 
 	do_generic_yaw(&ship->tsd.ship.yaw_velocity, yaw, max_yaw_velocity,
+			YAW_INCREMENT, YAW_INCREMENT_FINE);
+}
+
+static void do_demon_yaw(struct snis_entity *o, int yaw)
+{
+	double max_yaw_velocity = MAX_YAW_VELOCITY;
+
+	do_generic_yaw(&o->tsd.ship.yaw_velocity, yaw, max_yaw_velocity,
 			YAW_INCREMENT, YAW_INCREMENT_FINE);
 }
 
@@ -2250,6 +2298,40 @@ static int process_generic_request_thrust(struct game_client *c, thrust_function
 static int process_request_thrust(struct game_client *c)
 {
 	return process_generic_request_thrust(c, do_thrust);
+}
+
+static int process_demon_thrust(struct game_client *c)
+{
+	struct snis_entity *o;
+	unsigned char buffer[10];
+	uint8_t thrust;
+	uint32_t oid;
+	int i, rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "wb", &oid, &thrust);
+	if (rc)
+		return rc;
+	if (!(c->role & ROLE_DEMON))
+		return 0;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto out;
+	o = &go[i];
+
+	switch (thrust) {
+	case THRUST_FORWARDS:
+		do_demon_thrust(o, 1);
+		break;
+	case THRUST_BACKWARDS:
+		do_demon_thrust(o, -1);
+		break;
+	default:
+		break;
+	}
+out:
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
 }
 
 static int process_request_robot_thrust(struct game_client *c)
@@ -2956,6 +3038,46 @@ static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 	return 0;
 }
 
+static int process_demon_yaw(struct game_client *c)
+{
+	unsigned char buffer[10];
+	struct snis_entity *o;
+	uint32_t oid;
+	uint8_t yaw;
+	int i, rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "wb", &oid, &yaw);
+	if (rc)
+		return rc;
+	if (!(c->role & ROLE_DEMON))
+		return 0;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto out;
+	o = &go[i];
+
+	switch (yaw) {
+	case YAW_LEFT:
+		do_demon_yaw(o, -1);
+		break;
+	case YAW_RIGHT:
+		do_demon_yaw(o, 1);
+		break;
+	case YAW_LEFT_FINE:
+		do_demon_yaw(o, -2);
+		break;
+	case YAW_RIGHT_FINE:
+		do_demon_yaw(o, 2);
+		break;
+	default:
+		break;
+	}
+out:
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_load_torpedo(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
@@ -3017,6 +3139,44 @@ out:
 	pthread_mutex_unlock(&universe_mutex);
 
 	return 0;
+}
+
+static int process_demon_change_possession(struct game_client *c, int possessed)
+{
+	struct snis_entity *o;
+	unsigned char buffer[10];
+	uint32_t oid;
+	int i, rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "w", &oid);
+	if (rc)
+		return rc;
+	if (!(c->role & ROLE_DEMON))
+		return 0;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto out;
+	o = &go[i];
+	if (o->type != OBJTYPE_SHIP2)
+		goto out;
+	if (possessed)
+		o->move = demon_ship_move;
+	else
+		o->move = ship_move;
+out:
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static int process_demon_possess(struct game_client *c)
+{
+	return process_demon_change_possession(c, 1);
+}
+
+static int process_demon_dispossess(struct game_client *c)
+{
+	return process_demon_change_possession(c, 0);
 }
 
 static int process_request_laser(struct game_client *c)
@@ -3084,6 +3244,12 @@ static void process_instructions_from_client(struct game_client *c)
 		case OPCODE_DEMON_FIRE_TORPEDO:
 			process_demon_fire_torpedo(c);
 			break;
+		case OPCODE_DEMON_POSSESS:
+			process_demon_possess(c);
+			break;
+		case OPCODE_DEMON_DISPOSSESS:
+			process_demon_dispossess(c);
+			break;
 		case OPCODE_REQUEST_LASER:
 			process_request_laser(c);
 			break;
@@ -3095,6 +3261,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_YAW:
 			rc = process_request_yaw(c, do_yaw);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_DEMON_YAW:
+			rc = process_demon_yaw(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -3195,6 +3366,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_THRUST:
 			rc = process_request_thrust(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_DEMON_THRUST:
+			rc = process_demon_thrust(c);
 			if (rc)
 				goto protocol_error;
 			break;

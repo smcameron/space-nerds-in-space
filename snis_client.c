@@ -1506,6 +1506,79 @@ static void navigation_dirkey(int h, int v)
 	}
 }
 
+static void request_demon_yaw_packet(uint32_t oid, uint8_t yaw)
+{
+	queue_to_server(packed_buffer_new("hwb", OPCODE_DEMON_YAW, oid, yaw));
+}
+
+static void request_demon_thrust_packet(uint32_t oid, uint8_t thrust)
+{
+	queue_to_server(packed_buffer_new("hwb",
+				OPCODE_DEMON_THRUST, oid, thrust));
+}
+
+static struct demon_ui {
+	float ux1, uy1, ux2, uy2;
+	double selectedx, selectedy;
+	int nselected;
+#define MAX_DEMON_SELECTABLE 256
+	uint32_t selected_id[MAX_DEMON_SELECTABLE];
+	struct button *demon_exec_button;
+	struct button *demon_ship_button;
+	struct button *demon_starbase_button;
+	struct button *demon_planet_button;
+	struct button *demon_nebula_button;
+	struct button *demon_captain_button;
+	struct button *demon_delete_button;
+	struct button *demon_select_none_button;
+	struct button *demon_torpedo_button;
+	struct button *demon_phaser_button;
+	struct snis_text_input_box *demon_input;
+	char input[100];
+	char error_msg[80];
+	double ix, iy, ix2, iy2;
+	int captain_of;
+	int selectmode;
+	int buttonmode;
+#define DEMON_BUTTON_NOMODE 0
+#define DEMON_BUTTON_SHIPMODE 1
+#define DEMON_BUTTON_STARBASEMODE 2
+#define DEMON_BUTTON_PLANETMODE 3
+#define DEMON_BUTTON_NEBULAMODE 4
+#define DEMON_BUTTON_DELETE 5
+#define DEMON_BUTTON_SELECTNONE 6
+#define DEMON_BUTTON_CAPTAINMODE 7
+
+} demon_ui;
+
+static void demon_dirkey(int h, int v)
+{
+	uint8_t yaw, thrust;
+	static int last_time = 0;
+	uint32_t oid;
+	int fine;
+
+	if (demon_ui.captain_of < 0)
+		return;
+	oid = go[demon_ui.captain_of].id;
+
+	fine = 2 * (timer - last_time > 5);
+	last_time = timer;
+
+	if (!h && !v)
+		return;
+
+	if (h) {
+		yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
+		request_demon_yaw_packet(oid, yaw);
+	}
+	if (v) {
+		thrust = v < 0 ? THRUST_BACKWARDS : THRUST_FORWARDS;
+		request_demon_thrust_packet(oid, thrust);
+	}
+}
+
+
 static void request_weapons_yaw_packet(uint8_t yaw)
 {
 	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_GUNYAW, yaw));
@@ -1607,6 +1680,9 @@ static void do_dirkey(int h, int v)
 			break;
 		case DISPLAYMODE_DAMCON:
 			damcon_dirkey(h, v);
+			break;
+		case DISPLAYMODE_DEMON:
+			demon_dirkey(h, v);
 			break;
 		default:
 			break;
@@ -5581,40 +5657,6 @@ static void show_comms(GtkWidget *w)
 	show_common_screen(w, "COMMS");
 }
 
-static struct demon_ui {
-	float ux1, uy1, ux2, uy2;
-	double selectedx, selectedy;
-	int nselected;
-#define MAX_DEMON_SELECTABLE 256
-	uint32_t selected_id[MAX_DEMON_SELECTABLE];
-	struct button *demon_exec_button;
-	struct button *demon_ship_button;
-	struct button *demon_starbase_button;
-	struct button *demon_planet_button;
-	struct button *demon_nebula_button;
-	struct button *demon_captain_button;
-	struct button *demon_delete_button;
-	struct button *demon_select_none_button;
-	struct button *demon_torpedo_button;
-	struct button *demon_phaser_button;
-	struct snis_text_input_box *demon_input;
-	char input[100];
-	char error_msg[80];
-	double ix, iy, ix2, iy2;
-	int captain_of;
-	int selectmode;
-	int buttonmode;
-#define DEMON_BUTTON_NOMODE 0
-#define DEMON_BUTTON_SHIPMODE 1
-#define DEMON_BUTTON_STARBASEMODE 2
-#define DEMON_BUTTON_PLANETMODE 3
-#define DEMON_BUTTON_NEBULAMODE 4
-#define DEMON_BUTTON_DELETE 5
-#define DEMON_BUTTON_SELECTNONE 6
-#define DEMON_BUTTON_CAPTAINMODE 7
-
-} demon_ui;
-
 static void send_demon_comms_packet_to_server(char *msg)
 {
 	if (demon_ui.captain_of < 0)
@@ -5667,8 +5709,16 @@ static void demon_select(uint32_t id)
 	if (demon_ui.buttonmode == DEMON_BUTTON_CAPTAINMODE) {
 		int index = lookup_object_by_id(id);
 
-		if (index >= 0 && go[index].type == OBJTYPE_SHIP2)
+		if (demon_ui.captain_of != -1) {
+			queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_DISPOSSESS,
+				go[demon_ui.captain_of].id));
+				demon_ui.captain_of = -1;
+		}
+		if (index >= 0 && go[index].type == OBJTYPE_SHIP2) {
 			demon_ui.captain_of = lookup_object_by_id(id);
+			queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_POSSESS,
+				go[demon_ui.captain_of].id));
+		}
 	}
 }
 
@@ -5677,6 +5727,11 @@ static void demon_deselect(uint32_t id)
 	int i;
 	for (i = 0; i < demon_ui.nselected; i++) {
 		if (demon_ui.selected_id[i] == id) {
+			if (demon_ui.captain_of == id && id != -1) {
+				queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_DISPOSSESS,
+					go[demon_ui.captain_of].id));
+				demon_ui.captain_of = -1;
+			}
 			if (i == demon_ui.nselected - 1) {
 				demon_ui.nselected--;
 				return;
