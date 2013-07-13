@@ -86,6 +86,7 @@ struct mesh *mesh_duplicate(struct mesh *original)
 		copy->t[i].v[0] = &copy->v[v0];
 		copy->t[i].v[1] = &copy->v[v1];
 		copy->t[i].v[2] = &copy->v[v2];
+		copy->t[i].n = original->t[i].n; 
 	}
 	copy->radius = original->radius;
 	return copy;
