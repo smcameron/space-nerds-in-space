@@ -78,6 +78,8 @@ static int read_facet(FILE *f, struct triangle *t, int *linecount)
 	int i, rc;
 
 	rc = fscanf(f, " facet normal %f %f %f\n", &t->n.x, &t->n.y, &t->n.z);
+	t->n.w = 1.0;
+	t->n.ww = 1.0;
 	(*linecount)++;
 	if (rc != 3) {
 		fprintf(stderr, "failed reading normal at line %d\n", *linecount);
