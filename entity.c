@@ -348,7 +348,7 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 		normalize_vector(&light, &light);
 		cos_theta = mat41_dot_mat41(&light, &normal);
 		cos_theta = (cos_theta + 1.0) / 2.0;
-		sng_set_foreground((int) fmod((cos_theta * 256.0), 255.0) + GRAY);
+		sng_set_foreground((int) fmod((cos_theta * 255.0), 254.0) + GRAY);
 		// sng_set_foreground(RED);
 		scan_convert_triangle(w, gc, &e->m->t[i]);
 	}
