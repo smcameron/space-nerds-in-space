@@ -339,7 +339,7 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 {
 	int i;
 	float cos_theta;
-	struct mat41 light = { {0, 1, 0, 1} };
+	struct mat41 light = { {0, -1, -1, 1} };
 	struct mat41 normal;
 
 	for (i = 0; i < e->m->ntriangles; i++) {
