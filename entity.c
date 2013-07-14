@@ -41,6 +41,7 @@
 #include "snis_graph.h"
 
 #define MAX_ENTITIES 5000
+#define MAX_TRIANGLES_PER_ENTITY 10000
 
 static unsigned long ntris, nents, nlines;
 
@@ -69,6 +70,7 @@ struct camera_info {
 static struct snis_object_pool *entity_pool;
 static struct entity entity_list[MAX_ENTITIES];
 static int entity_depth[MAX_ENTITIES];
+static int tri_depth[MAX_TRIANGLES_PER_ENTITY];
 static struct fake_star *fake_star;
 static int nfakestars = 0;
 
@@ -335,6 +337,60 @@ void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc, struct entity *e)
 		wireframe_render_point(w, gc, &e->m->v[i]);
 }
 
+static void insert_triangle(struct entity *e, int tri_index, int *nsorted_tris)
+{
+	float dist;
+	struct triangle *tri, *t;
+	int i, ntris, insertion_point;
+
+	tri = &e->m->t[tri_index];
+	dist = tri->v[0]->dist3sqrd;
+	if (dist > tri->v[1]->dist3sqrd)
+		dist = tri->v[1]->dist3sqrd;
+	if (dist > tri->v[2]->dist3sqrd)
+		dist = tri->v[2]->dist3sqrd;
+	tri->dist3sqrd = dist;
+
+	insertion_point = 0;
+	ntris = *nsorted_tris;
+	for (i = 0; i < ntris; i++) {
+		t = &e->m->t[tri_depth[i]];
+		if (t->dist3sqrd < dist)
+			break;
+	}
+	insertion_point = i;
+	if (i < *nsorted_tris) {
+		memmove(&tri_depth[insertion_point + 1], &tri_depth[insertion_point],
+				(*nsorted_tris - insertion_point) * sizeof(tri_depth[0]));
+	}
+	tri_depth[insertion_point] = tri_index;
+	(*nsorted_tris)++;
+}
+
+static void sort_triangle_distances(struct entity *e)
+{
+	int i;
+	int nsorted_tris;
+
+	/* Calculate camera distances for each vertex in the entity */
+	for (i = 0; i < e->m->nvertices; i++) {
+		struct vertex *v = &e->m->v[i];
+		v->dist3sqrd = dist3dsqrd(camera.x - v->wx,
+					  camera.y - v->wy,
+					  camera.z - v->wz); 
+	}
+
+	if (e->m->ntriangles > MAX_TRIANGLES_PER_ENTITY)
+		printf("Too many triangles, %d vs %d at %s:%d\n",
+			e->m->ntriangles, MAX_TRIANGLES_PER_ENTITY,
+			__FILE__, __LINE__);
+
+	/* Sort the triangles */
+	nsorted_tris = 0;
+	for (i = 0; i < e->m->ntriangles; i++)
+		insert_triangle(e, i, &nsorted_tris);
+}
+
 void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 {
 	int i;
@@ -342,15 +398,18 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 	struct mat41 light = { {0, -1, -1, 1} };
 	struct mat41 normal;
 
+	sort_triangle_distances(e);
+
 	for (i = 0; i < e->m->ntriangles; i++) {
-		normal = *(struct mat41 *) &e->m->t[i].n.wx;
+		int tri_index = tri_depth[i];
+		normal = *(struct mat41 *) &e->m->t[tri_index].n.wx;
 		normalize_vector(&normal, &normal);
 		normalize_vector(&light, &light);
 		cos_theta = mat41_dot_mat41(&light, &normal);
 		cos_theta = (cos_theta + 1.0) / 2.0;
 		sng_set_foreground((int) fmod((cos_theta * 255.0), 254.0) + GRAY);
 		// sng_set_foreground(RED);
-		scan_convert_triangle(w, gc, &e->m->t[i]);
+		scan_convert_triangle(w, gc, &e->m->t[tri_index]);
 	}
 	nents++;
 }

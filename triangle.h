@@ -23,6 +23,7 @@
 struct triangle {
 	struct vertex *v[3]; /* three vertices */
 	struct vertex n; /* normal */
+	float dist3sqrd;
 };
 #endif
 

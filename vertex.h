@@ -24,5 +24,6 @@ struct vertex {
 	float x, y, z, w;
 	float wx, wy, wz, ww; /* world coords */
 	int sx, sy; /* screen coords */
+	float dist3sqrd;
 };
 #endif
