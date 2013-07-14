@@ -649,7 +649,7 @@ check_for_reposition:
 		if (entity_list[i].render_as_point_cloud)
 			wireframe_render_point_cloud(w, gc, &entity_list[i]);
 		else
-			wireframe_render_entity(w, gc, &entity_list[i]);
+			render_entity(w, gc, &entity_list[i]);
 	}
 	// printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
 	rx = fmod(rx + 0.3, 360.0);
