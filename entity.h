@@ -46,5 +46,9 @@ GLOBAL void camera_set_parameters(float near, float far, float width, float heig
 					int xvpixels, int yvpixels, float angle_of_view);
 GLOBAL void entity_init_fake_stars(int nstars, float radius);
 GLOBAL void entity_free_fake_stars(void);
+GLOBAL void set_renderer(int renderer);
+GLOBAL int get_renderer(void);
+#define WIREFRAME_RENDERER (1 << 0)
+#define FLATSHADING_RENDERER (1 << 1)
 
 #endif	

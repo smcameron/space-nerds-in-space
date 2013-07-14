@@ -28,7 +28,8 @@ enum keyaction {
 		keyviewmode	= 23,
 		keyzoom		= 24,
 		keyunzoom	= 25,
-		keyphaser	= 26
+		keyphaser	= 26,
+		keyrenderswitch	= 28
 #define NKEYSTATES 26
 };
 

@@ -65,6 +65,7 @@ struct camera_info {
 	float near, far, width, height;
 	float angle_of_view;
 	int xvpixels, yvpixels;
+	int renderer;
 } camera;
 
 static struct snis_object_pool *entity_pool;
@@ -707,8 +708,12 @@ check_for_reposition:
 		transform_entity(&entity_list[i], &total_transform);
 		if (entity_list[i].render_as_point_cloud)
 			wireframe_render_point_cloud(w, gc, &entity_list[i]);
-		else
-			render_entity(w, gc, &entity_list[i]);
+		else {
+			if (camera.renderer & FLATSHADING_RENDERER)
+				render_entity(w, gc, &entity_list[i]);
+			if (camera.renderer & WIREFRAME_RENDERER)
+				wireframe_render_entity(w, gc, &entity_list[i]);
+		}
 	}
 	// printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
 	rx = fmod(rx + 0.3, 360.0);
@@ -745,6 +750,7 @@ void camera_set_parameters(float near, float far, float width, float height,
 void entity_init(void)
 {
 	snis_object_pool_setup(&entity_pool, MAX_ENTITIES);
+	set_renderer(FLATSHADING_RENDERER);
 }
 
 /* fill a sphere of specified radius with randomly placed stars */
@@ -783,3 +789,12 @@ void entity_free_fake_stars(void)
 	free(fake_star);
 }
 
+void set_renderer(int renderer)
+{
+	camera.renderer = renderer;
+}
+
+int get_renderer(void)
+{
+	return camera.renderer;
+}

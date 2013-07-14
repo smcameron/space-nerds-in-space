@@ -1341,6 +1341,7 @@ void init_keymap()
 
 	keymap[GDK_b] = keytransform;
 	keymap[GDK_x] = keythrust;
+	keymap[GDK_r] = keyrenderswitch;
 	ffkeymap[GDK_F1 & 0x00ff] = keypausehelp;
 	ffkeymap[GDK_Escape & 0x00ff] = keyquit;
 
@@ -2061,6 +2062,16 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		/* Toggle main screen between "normal" and "weapons" view */
 		do_view_mode_change();
 		break;
+	case keyrenderswitch: {
+		int r;
+
+		if (displaymode != DISPLAYMODE_MAINSCREEN)
+			break;
+		r = get_renderer();
+		r = r % (FLATSHADING_RENDERER | WIREFRAME_RENDERER) + 1;
+		set_renderer(r);
+		break;
+		}
 	default:
 		break;
 	}
