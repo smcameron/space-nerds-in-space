@@ -2063,13 +2063,17 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		do_view_mode_change();
 		break;
 	case keyrenderswitch: {
-		int r;
-
+		static int r = 0;
+		static int valid_combos[] = {
+			FLATSHADING_RENDERER,
+			WIREFRAME_RENDERER,
+			FLATSHADING_RENDERER | WIREFRAME_RENDERER,
+			FLATSHADING_RENDERER | WIREFRAME_RENDERER | BLACK_TRIS,
+			};
 		if (displaymode != DISPLAYMODE_MAINSCREEN)
 			break;
-		r = get_renderer();
-		r = r % (FLATSHADING_RENDERER | WIREFRAME_RENDERER) + 1;
-		set_renderer(r);
+		r = (r + 1) % ARRAY_SIZE(valid_combos);
+		set_renderer(valid_combos[r]);
 		break;
 		}
 	default:

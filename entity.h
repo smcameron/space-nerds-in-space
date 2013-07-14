@@ -50,5 +50,6 @@ GLOBAL void set_renderer(int renderer);
 GLOBAL int get_renderer(void);
 #define WIREFRAME_RENDERER (1 << 0)
 #define FLATSHADING_RENDERER (1 << 1)
+#define BLACK_TRIS (1 << 2)
 
 #endif	
