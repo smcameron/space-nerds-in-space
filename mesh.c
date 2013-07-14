@@ -71,7 +71,9 @@ struct mesh *mesh_duplicate(struct mesh *original)
 	copy->ntriangles = original->ntriangles;
 	copy->nvertices = original->nvertices;
 	copy->t = malloc(sizeof(*copy->t) * copy->ntriangles);
+	memset(copy->t, 0, sizeof(*copy->t) * copy->ntriangles); 
 	copy->v = malloc(sizeof(*copy->v) * copy->nvertices);
+	memset(copy->v, 0, sizeof(*copy->v) * copy->nvertices);
 
 	for (i = 0; i < original->nvertices; i++)
 		copy->v[i] = original->v[i];
