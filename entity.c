@@ -345,11 +345,8 @@ static void insert_triangle(struct entity *e, int tri_index, int *nsorted_tris)
 	int i, ntris, insertion_point;
 
 	tri = &e->m->t[tri_index];
-	dist = tri->v[0]->dist3sqrd;
-	if (dist > tri->v[1]->dist3sqrd)
-		dist = tri->v[1]->dist3sqrd;
-	if (dist > tri->v[2]->dist3sqrd)
-		dist = tri->v[2]->dist3sqrd;
+	dist = tri->v[0]->dist3sqrd + tri->v[1]->dist3sqrd + tri->v[2]->dist3sqrd;
+	dist = dist / 3.0;
 	tri->dist3sqrd = dist;
 
 	insertion_point = 0;
