@@ -408,7 +408,7 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 		if (camera.renderer & BLACK_TRIS)
 			sng_set_foreground(BLACK);
 		else
-			sng_set_foreground((int) fmod((cos_theta * 255.0), 254.0) + GRAY);
+			sng_set_foreground((int) fmod((cos_theta * 240.0), 240.0) + GRAY + 10);
 		scan_convert_triangle(w, gc, &e->m->t[tri_index]);
 	}
 	nents++;
