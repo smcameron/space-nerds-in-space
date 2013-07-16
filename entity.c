@@ -491,40 +491,32 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 	}
 }
 
-static void insert_distance(int e, int *nsorted)
+static int object_depth_compare(const void *a, const void *b)
 {
-	int i, j, insertion_point = 0;
+	struct entity *A = &entity_list[*(const int *) a];
+	struct entity *B = &entity_list[*(const int *) b];
 
-	for (i = 0; i < *nsorted; i++) {
-		j = entity_depth[i];
-		if (entity_list[j].dist3dsqrd <= entity_list[e].dist3dsqrd)
-			break;
-	}
-	insertion_point = i;
-
-	if (i < *nsorted) {
-		memmove(&entity_depth[insertion_point + 1], &entity_depth[insertion_point],
-				(*nsorted - insertion_point) * sizeof(entity_depth[0]));
-	}
-	entity_depth[insertion_point] = e;
-	(*nsorted)++;
-	return;
+	if (A->dist3dsqrd < B->dist3dsqrd)
+		return 1;
+	if (A->dist3dsqrd < B->dist3dsqrd)
+		return -1;
+	return 0;
 }
 
 static void sort_entity_distances(void)
 {
-	int i;
-	int nsorted;
+	int i, n;
 
-	for (i = 0; i < snis_object_pool_highest_object(entity_pool); i++) {
+	n = snis_object_pool_highest_object(entity_pool);
+
+	for (i = 0; i < n; i++) {
 		entity_list[i].dist3dsqrd = dist3dsqrd(
 				camera.x - entity_list[i].x,
 				camera.y - entity_list[i].y,
 				camera.z - entity_list[i].z);
+		entity_depth[i] = i;
 	}
-	nsorted = 0;
-	for (i = 0; i < snis_object_pool_highest_object(entity_pool); i++)
-		insert_distance(i, &nsorted);
+	qsort(entity_depth, n, sizeof(entity_depth[0]),  object_depth_compare);
 }
 
 static inline float sqr(float a)
