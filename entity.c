@@ -71,7 +71,13 @@ struct camera_info {
 static struct snis_object_pool *entity_pool;
 static struct entity entity_list[MAX_ENTITIES];
 static int entity_depth[MAX_ENTITIES];
-static int tri_depth[MAX_TRIANGLES_PER_ENTITY];
+
+struct tri_depth_entry {
+	int tri_index;
+	float depth;
+};
+
+static struct tri_depth_entry tri_depth[MAX_TRIANGLES_PER_ENTITY];
 static struct fake_star *fake_star;
 static int nfakestars = 0;
 
@@ -338,37 +344,21 @@ void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc, struct entity *e)
 		wireframe_render_point(w, gc, &e->m->v[i]);
 }
 
-static void insert_triangle(struct entity *e, int tri_index, int *nsorted_tris)
+int tri_depth_compare(const void *a, const void *b)
 {
-	float dist;
-	struct triangle *tri, *t;
-	int i, ntris, insertion_point;
+	const struct tri_depth_entry *A = a;
+	const struct tri_depth_entry *B = b;
 
-	tri = &e->m->t[tri_index];
-	dist = tri->v[0]->dist3sqrd + tri->v[1]->dist3sqrd + tri->v[2]->dist3sqrd;
-	dist = dist / 3.0;
-	tri->dist3sqrd = dist;
-
-	insertion_point = 0;
-	ntris = *nsorted_tris;
-	for (i = 0; i < ntris; i++) {
-		t = &e->m->t[tri_depth[i]];
-		if (t->dist3sqrd < dist)
-			break;
-	}
-	insertion_point = i;
-	if (i < *nsorted_tris) {
-		memmove(&tri_depth[insertion_point + 1], &tri_depth[insertion_point],
-				(*nsorted_tris - insertion_point) * sizeof(tri_depth[0]));
-	}
-	tri_depth[insertion_point] = tri_index;
-	(*nsorted_tris)++;
+	if (A->depth > B->depth)
+		return -1;
+	if (A->depth < B->depth)
+		return 1;
+	return 0;
 }
 
 static void sort_triangle_distances(struct entity *e)
 {
 	int i;
-	int nsorted_tris;
 
 	/* Calculate camera distances for each vertex in the entity */
 	for (i = 0; i < e->m->nvertices; i++) {
@@ -383,10 +373,18 @@ static void sort_triangle_distances(struct entity *e)
 			e->m->ntriangles, MAX_TRIANGLES_PER_ENTITY,
 			__FILE__, __LINE__);
 
+	/* Initialize array */
+	for (i = 0; i < e->m->ntriangles; i++) {
+		float dist;
+		struct triangle *t = &e->m->t[i];
+		dist = t->v[0]->dist3sqrd + t->v[1]->dist3sqrd + t->v[2]->dist3sqrd;
+		dist = dist / 3.0;
+		tri_depth[i].tri_index = i;
+		tri_depth[i].depth = dist;
+	}
+
 	/* Sort the triangles */
-	nsorted_tris = 0;
-	for (i = 0; i < e->m->ntriangles; i++)
-		insert_triangle(e, i, &nsorted_tris);
+	qsort(tri_depth, e->m->ntriangles, sizeof(tri_depth[0]), tri_depth_compare);
 }
 
 void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
@@ -399,7 +397,7 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 	sort_triangle_distances(e);
 
 	for (i = 0; i < e->m->ntriangles; i++) {
-		int tri_index = tri_depth[i];
+		int tri_index = tri_depth[i].tri_index;
 		normal = *(struct mat41 *) &e->m->t[tri_index].n.wx;
 		normalize_vector(&normal, &normal);
 		normalize_vector(&light, &light);
