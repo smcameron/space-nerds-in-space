@@ -6711,7 +6711,8 @@ static void start_lobbyserver_button_pressed()
 {
 	printf("start lobby server button pressed.\n");
 	/* I should probably do this with fork and exec, or clone, not system */
-	system("./ssgl/ssgl_server &");
+	if (system("./ssgl/ssgl_server &") < 0)
+		printf("Failed to exec lobby server process.\n");
 }
 
 static void sanitize_string(char *s)
@@ -6742,7 +6743,8 @@ static void start_gameserver_button_pressed()
 	snprintf(command, 200, "./snis_server %s SNIS '%s' . &",
 			net_setup_ui.lobbyname, net_setup_ui.servername);
 	printf("start game server button pressed.\n");
-	system(command);
+	if (system(command) < 0)
+		printf("Failed to exec game server process.\n");
 }
 
 static void connect_to_lobby_button_pressed()
