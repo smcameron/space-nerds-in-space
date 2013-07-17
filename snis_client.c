@@ -6924,7 +6924,7 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	struct _GdkEventScroll *e = (struct _GdkEventScroll *) event;
 	struct snis_entity *o;
-	int16_t newval;
+	int16_t newval = 0;
 
 	if (!(o = find_my_ship()))
 		return 0;
