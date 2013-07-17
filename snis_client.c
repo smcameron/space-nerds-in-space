@@ -821,9 +821,9 @@ static int update_asteroid(uint32_t id, double x, double y, double z)
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
 		e = add_entity(asteroid_mesh[m], x, z, -y, ASTEROID_COLOR);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_ASTEROID, 1, e);
-		go[i].z = z;
 		if (i < 0)
 			return i;
+		go[i].z = z;
 	} else {
 		int axis;
 		float angle;
