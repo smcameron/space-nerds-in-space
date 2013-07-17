@@ -53,7 +53,7 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 {
 	double v;
 	int width, tx1;
-	int bar_color;
+	int bar_color = DARKGREEN;
 
 #define SLIDER_HEIGHT 15
 #define SLIDER_POINTER_HEIGHT 8
