@@ -264,7 +264,7 @@ static void set_default_clip_window(void)
 #define MAX_LOBBY_TRIES 3
 static void *connect_to_lobby_thread(__attribute__((unused)) void *arg)
 {
-	int i, sock, rc, game_server_count;
+	int i, sock = -1, rc, game_server_count;
 	struct ssgl_game_server *game_server = NULL;
 	struct ssgl_client_filter filter;
 
