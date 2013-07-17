@@ -57,7 +57,21 @@ static int count_facets(char *filename)
 		return rc;
 	}
 	tempstr = malloc(buf.st_size + 1);
-	read(fd, tempstr, buf.st_size);
+	rc = read(fd, tempstr, buf.st_size);
+	if (rc < 0) {
+		fprintf(stderr, "stl_parser: Error reading %llu bytes of %s: %s\n",
+			(unsigned long long) buf.st_size, filename, strerror(errno));
+		free(tempstr);
+		close(fd);
+		return rc;
+	}
+	if (rc != buf.st_size) {
+		fprintf(stderr, "stl_parser: Tried reading %llu bytes of %s, got only %d\n",
+			(unsigned long long) buf.st_size, filename, rc);
+		free(tempstr);
+		close(fd);
+		return rc;
+	}	
 	tempstr[buf.st_size] = '\0';
 	close(fd);
 
