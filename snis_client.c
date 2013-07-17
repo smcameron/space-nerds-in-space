@@ -6275,16 +6275,19 @@ static void demon_exec_button_pressed(void *x)
 
 static void set_demon_button_colors()
 {
+	const int selected = WHITE;
+	const int deselected = GREEN;
+
 	snis_button_set_color(demon_ui.demon_ship_button,
-		demon_ui.buttonmode == DEMON_BUTTON_SHIPMODE ? GREEN : DARKGREEN);
+		demon_ui.buttonmode == DEMON_BUTTON_SHIPMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_starbase_button,
-		demon_ui.buttonmode == DEMON_BUTTON_STARBASEMODE ? GREEN : DARKGREEN);
+		demon_ui.buttonmode == DEMON_BUTTON_STARBASEMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_planet_button,
-		demon_ui.buttonmode == DEMON_BUTTON_PLANETMODE ? GREEN : DARKGREEN);
+		demon_ui.buttonmode == DEMON_BUTTON_PLANETMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_nebula_button,
-		demon_ui.buttonmode == DEMON_BUTTON_NEBULAMODE ? GREEN : DARKGREEN);
+		demon_ui.buttonmode == DEMON_BUTTON_NEBULAMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_captain_button,
-		demon_ui.buttonmode == DEMON_BUTTON_CAPTAINMODE ? GREEN : DARKGREEN);
+		demon_ui.buttonmode == DEMON_BUTTON_CAPTAINMODE ? selected : deselected);
 }
 
 static void demon_modebutton_pressed(int whichmode)
@@ -6371,23 +6374,23 @@ static void init_demon_ui()
 					demon_ui.input, 50, &timer, NULL, NULL);
 	demon_ui.demon_exec_button = snis_button_init(570, 520, 160, 30, "EXECUTE", GREEN,
 			TINY_FONT, demon_exec_button_pressed, NULL);
-	demon_ui.demon_ship_button = snis_button_init(3, 60, 70, 20, "SHIP", DARKGREEN,
+	demon_ui.demon_ship_button = snis_button_init(3, 60, 70, 20, "SHIP", GREEN,
 			PICO_FONT, demon_ship_button_pressed, NULL);
-	demon_ui.demon_starbase_button = snis_button_init(3, 85, 70, 20, "STARBASE", DARKGREEN,
+	demon_ui.demon_starbase_button = snis_button_init(3, 85, 70, 20, "STARBASE", GREEN,
 			PICO_FONT, demon_starbase_button_pressed, NULL);
-	demon_ui.demon_planet_button = snis_button_init(3, 110, 70, 20, "PLANET", DARKGREEN,
+	demon_ui.demon_planet_button = snis_button_init(3, 110, 70, 20, "PLANET", GREEN,
 			PICO_FONT, demon_planet_button_pressed, NULL);
-	demon_ui.demon_nebula_button = snis_button_init(3, 135, 70, 20, "NEBULA", DARKGREEN,
+	demon_ui.demon_nebula_button = snis_button_init(3, 135, 70, 20, "NEBULA", GREEN,
 			PICO_FONT, demon_nebula_button_pressed, NULL);
-	demon_ui.demon_captain_button = snis_button_init(3, 160, 70, 20, "CAPTAIN", DARKGREEN,
+	demon_ui.demon_captain_button = snis_button_init(3, 160, 70, 20, "CAPTAIN", GREEN,
 			PICO_FONT, demon_captain_button_pressed, NULL);
-	demon_ui.demon_delete_button = snis_button_init(3, 185, 70, 20, "DELETE", DARKGREEN,
+	demon_ui.demon_delete_button = snis_button_init(3, 185, 70, 20, "DELETE", GREEN,
 			PICO_FONT, demon_delete_button_pressed, NULL);
-	demon_ui.demon_select_none_button = snis_button_init(3, 210, 70, 20, "SELECT NONE", DARKGREEN,
+	demon_ui.demon_select_none_button = snis_button_init(3, 210, 70, 20, "SELECT NONE", GREEN,
 			PICO_FONT, demon_select_none_button_pressed, NULL);
-	demon_ui.demon_torpedo_button = snis_button_init(3, 235, 70, 20, "TORPEDO", DARKGREEN,
+	demon_ui.demon_torpedo_button = snis_button_init(3, 235, 70, 20, "TORPEDO", GREEN,
 			PICO_FONT, demon_torpedo_button_pressed, NULL);
-	demon_ui.demon_phaser_button = snis_button_init(3, 260, 70, 20, "PHASER", DARKGREEN,
+	demon_ui.demon_phaser_button = snis_button_init(3, 260, 70, 20, "PHASER", GREEN,
 			PICO_FONT, demon_phaser_button_pressed, NULL);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
