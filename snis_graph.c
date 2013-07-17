@@ -331,6 +331,8 @@ int sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font,
 	if (letter == ' ' || letter == '\n' || letter == '\t' || font[letter] == NULL)
 		return abs(font['Z']->p[0].x - font['Z']->p[1].x);
 
+	minx = x + font[letter]->p[0].x;
+	maxx = minx;
 	for (i = 0; i < font[letter]->npoints-1; i++) {
 		if (font[letter]->p[i+1].x == LINE_BREAK)
 			i += 2;
@@ -338,11 +340,6 @@ int sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font,
 		y1 = y + font[letter]->p[i].y;
 		x2 = x + font[letter]->p[i + 1].x;
 		y2 = y + font[letter]->p[i + 1].y;
-
-		if (i == 0) {
-			minx = x1;
-			maxx = x1;
-		}
 
 		if (x1 < minx)
 			minx = x1;
