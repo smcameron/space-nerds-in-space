@@ -586,6 +586,7 @@ static int find_nearest_victim(struct snis_entity *o)
 
 	/* assume universe mutex is held */
 	victim = -1;
+	lowestdist = 1e60;  /* very big number */
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 
 		if (i == o->index) /* don't victimize self */
