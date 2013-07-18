@@ -93,6 +93,7 @@
 #define OPCODE_DEMON_DISPOSSESS		167
 #define OPCODE_DEMON_YAW		168
 #define OPCODE_DEMON_THRUST		169
+#define OPCODE_DEMON_MOVE_OBJECT	170
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -422,6 +423,12 @@ struct damcon_part_update_packet {
 
 struct request_robot_gripper_packet {
 	uint16_t opcode;
+};
+
+struct demon_move_object_packet {
+	uint16_t opcode;
+	uint32_t id;
+	uint32_t x, y;
 };
 
 struct request_mainscreen_view_change {

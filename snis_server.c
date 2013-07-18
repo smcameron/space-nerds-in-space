@@ -2335,6 +2335,33 @@ out:
 	return 0;
 }
 
+static int process_demon_move_object(struct game_client *c)
+{
+	struct snis_entity *o;
+	unsigned char buffer[sizeof(struct demon_move_object_packet)];
+	uint32_t oid;
+	double dx, dy;
+	int i, rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "wSS", &oid,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM);
+	if (rc)
+		return rc;
+	if (!(c->role & ROLE_DEMON))
+		return 0;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0 || !go[i].alive)
+		return 0;
+	o = &go[i];
+	o->x += dx;
+	o->y += dy;
+	o->timestamp = universe_timestamp + 10;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_request_robot_thrust(struct game_client *c)
 {
 	return process_generic_request_thrust(c, do_robot_thrust);
@@ -3377,6 +3404,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_ROBOT_THRUST:
 			rc = process_request_robot_thrust(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_DEMON_MOVE_OBJECT:
+			rc = process_demon_move_object(c);
 			if (rc)
 				goto protocol_error;
 			break;

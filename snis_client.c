@@ -1541,6 +1541,7 @@ static struct demon_ui {
 	int captain_of;
 	int selectmode;
 	int buttonmode;
+	int move_from_x, move_from_y; /* mouse coords where move begins */
 #define DEMON_BUTTON_NOMODE 0
 #define DEMON_BUTTON_SHIPMODE 1
 #define DEMON_BUTTON_STARBASEMODE 2
@@ -5766,13 +5767,17 @@ static void demon_select_none(void)
 static void demon_button_press(int button, gdouble x, gdouble y)
 {
 	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
-	if (button != 3)
-		return;
-	demon_ui.ix = demon_mousex_to_ux(x);
-	demon_ui.iy = demon_mousey_to_uy(y);
-	demon_ui.ix2 = demon_mousex_to_ux(x);
-	demon_ui.iy2 = demon_mousey_to_uy(y);
-	demon_ui.selectmode = 1;
+	if (button == 3) {
+		demon_ui.ix = demon_mousex_to_ux(x);
+		demon_ui.iy = demon_mousey_to_uy(y);
+		demon_ui.ix2 = demon_mousex_to_ux(x);
+		demon_ui.iy2 = demon_mousey_to_uy(y);
+		demon_ui.selectmode = 1;
+	}
+	if (button == 2) {
+		demon_ui.move_from_x = x;
+		demon_ui.move_from_y = y;
+	}
 }
 
 static inline int between(double a, double b, double v)
@@ -5842,15 +5847,11 @@ static void demon_select_and_act(double sx1, double sy1,
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void demon_button_release(int button, gdouble x, gdouble y)
+static void demon_button3_release(int button, gdouble x, gdouble y)
 {
 	int nselected;
 	double ox, oy;
 	int sx1, sy1;
-
-	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
-	if (button != 3)
-		return;
 
 	/* If the item creation buttons selected, create item... */ 
 	if (demon_ui.buttonmode > DEMON_BUTTON_NOMODE &&
@@ -5890,6 +5891,43 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 			demon_ui.selectedy = demon_mousey_to_uy(oy);
 		}
 		pthread_mutex_unlock(&universe_mutex);
+	}
+}
+
+static void demon_button2_release(int button, gdouble x, gdouble y)
+{
+	int i;
+	double dx, dy;
+
+	if (demon_ui.nselected <= 0)
+		return;
+
+	/* Moving objects... */
+	dx = demon_mousex_to_ux(x) - demon_mousex_to_ux(demon_ui.move_from_x);
+	dy = demon_mousey_to_uy(y) - demon_mousey_to_uy(demon_ui.move_from_y);
+	
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i < demon_ui.nselected; i++) {
+		queue_to_server(packed_buffer_new("hwSS",
+				OPCODE_DEMON_MOVE_OBJECT,
+				demon_ui.selected_id[i],
+				dx, (int32_t) UNIVERSE_DIM,
+				dy, (int32_t) UNIVERSE_DIM));
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
+static void demon_button_release(int button, gdouble x, gdouble y)
+{
+	switch (button) {
+	case 2:
+		demon_button2_release(button, x, y);
+		return;
+	case 3:
+		demon_button3_release(button, x, y);
+		return;
+	default:
+		return;
 	}
 }
 
