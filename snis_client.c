@@ -5808,10 +5808,44 @@ static void demon_button_create_item(gdouble x, gdouble y)
 			ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM));
 }
 
+typedef int (*demon_select_test)(uint32_t oid);
+typedef void (*demon_select_action)(uint32_t oid);
+
+static void demon_select_and_act(double sx1, double sy1,
+		double sx2, double sy2, demon_select_test dtest,
+		demon_select_action dact1, demon_select_action dact2,
+		int *ndact2)
+{
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		int sx, sy;
+		struct snis_entity *o = &go[i];
+
+		if (!o->alive)
+			continue;
+		sx = ux_to_demonsx(o->x);
+		sy = uy_to_demonsy(o->y);
+		if (!between(sx1, sx2, sx) || !between(sy1, sy2, sy))
+			continue;
+		if (dtest(o->id)) {
+			if (dact1)
+				dact1(o->id);
+		} else {
+			if (dact2) {
+				(*ndact2)++;
+				dact2(o->id);
+			}
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 static void demon_button_release(int button, gdouble x, gdouble y)
 {
-	int i, nselected;
-	double dist2, ox, oy;
+	int nselected;
+	double ox, oy;
 	int sx1, sy1;
 
 	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
@@ -5842,43 +5876,15 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 	if (hypot(sx1 - x, sy1 - y) >= 5) {
 		/* multiple selection... */
 		nselected = 0;
-		pthread_mutex_lock(&universe_mutex);
-		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-			int sx, sy;
-			struct snis_entity *o = &go[i];
-
-			if (!o->alive)
-				continue;
-			sx = ux_to_demonsx(o->x);
-			sy = uy_to_demonsy(o->y);
-			if (!between(sx1, x, sx) || !between(sy1, y, sy))
-				continue;
-			if (demon_id_selected(o->id))
-				demon_deselect(o->id);
-			else
-				demon_select(o->id);
-		}
-		pthread_mutex_unlock(&universe_mutex);
+		demon_select_and_act(sx1, sy1, x, y,
+			demon_id_selected,
+			demon_deselect, demon_select, &nselected); 
 	} else {
 		/* single selection... */
 		nselected = 0;
-		pthread_mutex_lock(&universe_mutex);
-		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-			int sx, sy;
-			struct snis_entity *o = &go[i];
-
-			if (!o->alive)
-				continue;
-			sx = ux_to_demonsx(o->x);
-			sy = uy_to_demonsy(o->y);
-			dist2 = (sx - x) * (sx - x) + (sy - y) * (sy - y);
-			if (dist2 > 50)
-				continue;
-			if (demon_id_selected(o->id))
-				demon_deselect(o->id);
-			else
-				demon_select(o->id);
-		}
+		demon_select_and_act(x - 7, y - 7, x + 7, y + 7,
+			demon_id_selected,
+			demon_deselect, demon_select, &nselected); 
 		if (nselected == 0) {
 			demon_ui.selectedx = demon_mousex_to_ux(ox);
 			demon_ui.selectedy = demon_mousey_to_uy(oy);
