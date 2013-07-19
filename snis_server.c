@@ -3033,20 +3033,23 @@ static int process_engage_warp(struct game_client *c)
 	if (i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%t\n", __FILE__, __LINE__);
 	o = &go[i];
-	if (o->tsd.ship.warp_time >= 0) /* already engaged */
+	if (o->tsd.ship.warp_time >= 0) {/* already engaged */
+		pthread_mutex_unlock(&universe_mutex);
 		return 0;
+	}
 	b = lookup_bridge_by_shipid(o->id);
 	if (b < 0) {
 		snis_log(SNIS_ERROR, "Can't find bridge for shipid %u\n",
 				o->id, __FILE__, __LINE__);
+		pthread_mutex_unlock(&universe_mutex);
 		return 0;
 	}
 	wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
 	bridgelist[b].warpx = o->x + wfactor * sin(o->heading);
 	bridgelist[b].warpy = o->y + wfactor * -cos(o->heading);
+	o->tsd.ship.warp_time = 85; /* 8.5 seconds */
 	pthread_mutex_unlock(&universe_mutex);
 	send_initiate_warp_packet(c);
-	o->tsd.ship.warp_time = 85; /* 8.5 seconds */
 	return 0;
 }
 
