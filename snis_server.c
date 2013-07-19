@@ -2319,6 +2319,8 @@ static int process_demon_thrust(struct game_client *c)
 	if (i < 0)
 		goto out;
 	o = &go[i];
+	if (o->type != OBJTYPE_SHIP2)
+		goto out;
 
 	switch (thrust) {
 	case THRUST_FORWARDS:
@@ -3159,6 +3161,8 @@ static int process_demon_fire_torpedo(struct game_client *c)
 	if (i < 0)
 		goto out;
 	o = &go[i];
+	if (o->type != OBJTYPE_SHIP2)
+		goto out;
 
 	vx = TORPEDO_VELOCITY * cos(o->heading);
 	vy = TORPEDO_VELOCITY * sin(o->heading);
@@ -3186,7 +3190,7 @@ static int process_demon_change_possession(struct game_client *c, int possessed)
 	if (i < 0)
 		goto out;
 	o = &go[i];
-	if (o->type != OBJTYPE_SHIP2)
+	if (o->type != OBJTYPE_SHIP2 && o->type != OBJTYPE_STARBASE)
 		goto out;
 	if (possessed)
 		o->move = demon_ship_move;
@@ -3243,6 +3247,8 @@ static int process_demon_fire_phaser(struct game_client *c)
 	if (i < 0)
 		goto out;
 	o = &go[i];
+	if (o->type != OBJTYPE_SHIP2)
+		goto out;
 
 	vx = LASER_VELOCITY * cos(o->heading);
 	vy = LASER_VELOCITY * sin(o->heading);

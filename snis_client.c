@@ -1562,6 +1562,8 @@ static void demon_dirkey(int h, int v)
 
 	if (demon_ui.captain_of < 0)
 		return;
+	if (go[demon_ui.captain_of].type != OBJTYPE_SHIP2)
+		return;
 	oid = go[demon_ui.captain_of].id;
 
 	fine = 2 * (timer - last_time > 5);
@@ -5730,7 +5732,8 @@ static void demon_select(uint32_t id)
 				go[demon_ui.captain_of].id));
 				demon_ui.captain_of = -1;
 		}
-		if (index >= 0 && go[index].type == OBJTYPE_SHIP2) {
+		if (index >= 0 && (go[index].type == OBJTYPE_SHIP2 ||
+			go[index].type == OBJTYPE_STARBASE)) {
 			demon_ui.captain_of = lookup_object_by_id(id);
 			queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_POSSESS,
 				go[demon_ui.captain_of].id));
@@ -6021,7 +6024,8 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		sng_draw_dotted_line(w->window, gc, x, y, vx, vy);
 	}
 
-	if (o->type == OBJTYPE_SHIP2 && o->index == demon_ui.captain_of) {
+	if ((o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_STARBASE) &&
+			o->index == demon_ui.captain_of) {
 		sng_set_foreground(RED);
 		sng_draw_circle(w->window, gc, x, y, 10 + (timer % 10));
 	}
@@ -6389,6 +6393,8 @@ static void demon_torpedo_button_pressed(void *x)
 {
 	if (demon_ui.captain_of < 0)
 		return;
+	if (go[demon_ui.captain_of].type != OBJTYPE_SHIP2)
+		return;
 	queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_FIRE_TORPEDO,
 				go[demon_ui.captain_of].id));
 }
@@ -6396,6 +6402,8 @@ static void demon_torpedo_button_pressed(void *x)
 static void demon_phaser_button_pressed(void *x)
 {
 	if (demon_ui.captain_of < 0)
+		return;
+	if (go[demon_ui.captain_of].type != OBJTYPE_SHIP2)
 		return;
 	queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_FIRE_PHASER,
 				go[demon_ui.captain_of].id));
