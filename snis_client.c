@@ -3441,9 +3441,11 @@ static void show_mainscreen(GtkWidget *w)
 		fake_stars_initialized = 1;
 		entity_init_fake_stars(2000, 300.0f * 10.0f);
 	}
+	pthread_mutex_lock(&universe_mutex);
 	render_entities(w, gc);
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
 		show_gunsight(w);
+	pthread_mutex_unlock(&universe_mutex);
 	show_common_screen(w, "");	
 
 }
