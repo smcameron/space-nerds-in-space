@@ -2512,6 +2512,7 @@ static void delete_object(uint32_t id)
 	remove_entity(go[i].entity);
 	go[i].entity = NULL;
 	free_spacemonster_data(&go[i]);
+	go[i].id = -1;
 	snis_object_pool_free_object(pool, i);
 }
 

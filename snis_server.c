@@ -400,6 +400,13 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength)
 	}
 }
 
+static void delete_object(struct snis_entity *o)
+{
+	snis_object_pool_free_object(pool, o->index);
+	o->id = -1;
+	o->alive = 0;
+}
+
 static void send_ship_damage_packet(struct snis_entity *o);
 static void torpedo_move(struct snis_entity *o)
 {
@@ -461,7 +468,7 @@ static void torpedo_move(struct snis_entity *o)
 			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 			if (otype != OBJTYPE_SHIP1) {
 				snis_queue_delete_object(&go[i]);
-				snis_object_pool_free_object(pool, i);
+				delete_object(&go[i]);
 				respawn_object(otype);
 			} else {
 				snis_queue_add_sound(EXPLOSION_SOUND,
@@ -477,8 +484,7 @@ static void torpedo_move(struct snis_entity *o)
 
 	if (o->alive <= 0) {
 		snis_queue_delete_object(o);
-		o->alive = 0;
-		snis_object_pool_free_object(pool, o->index);
+		delete_object(o);
 	}
 }
 
@@ -559,7 +565,7 @@ static void laser_move(struct snis_entity *o)
 					ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
 			if (go[i].type != OBJTYPE_SHIP1) {
 				snis_queue_delete_object(&go[i]);
-				snis_object_pool_free_object(pool, i);
+				delete_object(&go[i]);
 				respawn_object(otype);
 			} else {
 				snis_queue_add_sound(EXPLOSION_SOUND,
@@ -575,8 +581,7 @@ static void laser_move(struct snis_entity *o)
 
 	if (o->alive <= 0) {
 		snis_queue_delete_object(o);
-		o->alive = 0;
-		snis_object_pool_free_object(pool, o->index);
+		delete_object(o);
 	}
 }
 
@@ -1467,8 +1472,7 @@ static void explosion_move(struct snis_entity *o)
 
 	if (o->alive <= 0) {
 		snis_queue_delete_object(o);
-		o->alive = 0;
-		snis_object_pool_free_object(pool, o->index);
+		delete_object(o);
 	}
 }
 
@@ -2912,8 +2916,7 @@ static int process_delete_item(struct game_client *c)
 	if (o->type == OBJTYPE_SHIP1)
 		goto out;
 	snis_queue_delete_object(o);
-	o->alive = 0;
-	snis_object_pool_free_object(pool, i);
+	delete_object(o);
 out:
 	pthread_mutex_unlock(&universe_mutex);
 
