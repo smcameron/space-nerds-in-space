@@ -2866,6 +2866,7 @@ static int process_create_item(struct game_client *c)
 	if (rc)
 		return rc;
 
+	pthread_mutex_lock(&universe_mutex);
 	switch (item_type) {
 	case OBJTYPE_SHIP2:
 		i = add_ship();
@@ -2893,6 +2894,7 @@ static int process_create_item(struct game_client *c)
 		go[i].x = x;
 		go[i].y = y;
 	}
+	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
 
