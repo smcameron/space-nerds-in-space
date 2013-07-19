@@ -229,6 +229,7 @@ struct ship_data {
 	double view_angle;
 	struct power_model_data power_data;
 	struct power_model *power_model;
+	int32_t warp_time; /* time remaining until warp engages */
 };
 
 struct starbase_data {

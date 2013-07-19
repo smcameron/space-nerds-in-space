@@ -87,6 +87,7 @@ struct bridge_data {
 	struct snis_damcon_entity *robot;
 	int incoming_fire_detected;
 	int last_incoming_fire_sound_time;
+	double warpx, warpy;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -1241,6 +1242,17 @@ static void do_power_model_computations(struct snis_entity *o)
 		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
 }
 
+static int lookup_bridge_by_shipid(uint32_t shipid)
+{
+	/* assumes universe lock is held */
+	int i;
+
+	for (i = 0; i < nbridges; i++)
+		if (bridgelist[i].shipid == shipid)
+			return i;
+	return -1;
+}
+
 static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
@@ -1355,6 +1367,25 @@ static void player_move(struct snis_entity *o)
 	current_phaserbank = o->tsd.ship.phaser_charge;
 	max_phaserbank = o->tsd.ship.power_data.phasers.i;
 	o->tsd.ship.phaser_charge = update_phaser_banks(current_phaserbank, max_phaserbank);
+
+	/* Warp the ship if it's time to engage warp. */
+	if (o->tsd.ship.warp_time >= 0) {
+		o->tsd.ship.warp_time--;
+		if (o->tsd.ship.warp_time == 0) {
+			int b;
+
+			b = lookup_bridge_by_shipid(o->id);
+			if (b >= 0) {
+				/* 5 seconds of warp limbo */
+				send_packet_to_all_clients_on_a_bridge(o->id,
+					packed_buffer_new("hh", OPCODE_WARP_LIMBO,
+						(uint16_t) (5 * 30)), ROLE_ALL);
+				o->x = bridgelist[b].warpx;
+				o->y = bridgelist[b].warpy;
+				normalize_coords(o);
+			}
+		}
+	}
 }
 
 static void demon_ship_move(struct snis_entity *o)
@@ -1611,6 +1642,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.power_data.warp.r1 = 0;
 	o->tsd.ship.power_data.maneuvering.r1 = 0;
 	o->tsd.ship.power_data.impulse.r1 = 0;
+	o->tsd.ship.warp_time = -1;
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
 	init_power_model(o);
 }
@@ -2966,10 +2998,10 @@ static int process_request_laser_wavelength(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.phaser_wavelength), no_limit); 
 }
 
-static void send_warp_limbo_packet(struct game_client *c, uint16_t value)
+static void send_initiate_warp_packet(struct game_client *c)
 {
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
-			packed_buffer_new("hh", OPCODE_WARP_LIMBO, value),
+			packed_buffer_new("h", OPCODE_INITIATE_WARP),
 			ROLE_ALL);
 }
 
@@ -2983,7 +3015,7 @@ static void send_wormhole_limbo_packet(int shipid, uint16_t value)
 static int process_engage_warp(struct game_client *c)
 {
 	unsigned char buffer[10];
-	int i, rc;
+	int b, i, rc;
 	uint32_t id;
 	uint8_t __attribute__((unused)) v;
 	double wfactor;
@@ -3001,12 +3033,20 @@ static int process_engage_warp(struct game_client *c)
 	if (i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%t\n", __FILE__, __LINE__);
 	o = &go[i];
+	if (o->tsd.ship.warp_time >= 0) /* already engaged */
+		return 0;
+	b = lookup_bridge_by_shipid(o->id);
+	if (b < 0) {
+		snis_log(SNIS_ERROR, "Can't find bridge for shipid %u\n",
+				o->id, __FILE__, __LINE__);
+		return 0;
+	}
 	wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
-	o->x = o->x + wfactor * sin(o->heading);
-	o->y = o->y + wfactor * -cos(o->heading);
-	normalize_coords(o);
+	bridgelist[b].warpx = o->x + wfactor * sin(o->heading);
+	bridgelist[b].warpy = o->y + wfactor * -cos(o->heading);
 	pthread_mutex_unlock(&universe_mutex);
-	send_warp_limbo_packet(c, 9 * 30); /* ~9 seconds */
+	send_initiate_warp_packet(c);
+	o->tsd.ship.warp_time = 85; /* 8.5 seconds */
 	return 0;
 }
 
