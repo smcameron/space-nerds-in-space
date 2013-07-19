@@ -5968,7 +5968,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
 		sng_set_foreground(RED);
-		if (timer & 0x02)
+		if ((timer & 0x02) && !demon_id_selected(o->id))
 			goto done_drawing_item;
 		break;
 	case OBJTYPE_SHIP2:
