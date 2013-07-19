@@ -198,7 +198,7 @@ void wireframe_render_point(GtkWidget *w, GdkGC *gc, struct vertex *v)
 }
 
 static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
-			int x1, int y1, int x2, int y2, int x3, int y3)
+			int x1, int y1, int x2, int y2, int x3, int y3, int color)
 {
 	float xa, xb, y;
 	float dxdy1, dxdy2;
@@ -241,9 +241,15 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
 		xb += dxdy2;
 		y += 1;
 	}
+	if (camera.renderer & WIREFRAME_RENDERER) {
+		sng_set_foreground(color);
+		sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
+		sng_current_draw_line(w->window, gc, x2, y2, x3, y3); 
+		sng_current_draw_line(w->window, gc, x3, y3, x1, y1); 
+	}
 }
 
-static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
+static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t, int color)
 {
 	struct vertex *v1, *v2, *v3;
 	int x1, y1, x2, y2, x3, y3;
@@ -322,7 +328,7 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 		}
 	}
 	/* now device coord vertices xa, ya, xb, yb, xc, yc are sorted by y value */
-	scan_convert_sorted_triangle(w, gc, xa, ya, xb, yb, xc, yc);
+	scan_convert_sorted_triangle(w, gc, xa, ya, xb, yb, xc, yc, color);
 }
 
 void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
@@ -407,7 +413,7 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 			sng_set_foreground(BLACK);
 		else
 			sng_set_foreground((int) fmod((cos_theta * 240.0), 240.0) + GRAY + 10);
-		scan_convert_triangle(w, gc, &e->m->t[tri_index]);
+		scan_convert_triangle(w, gc, &e->m->t[tri_index], e->color);
 	}
 	nents++;
 }
@@ -700,7 +706,7 @@ check_for_reposition:
 		else {
 			if (camera.renderer & FLATSHADING_RENDERER)
 				render_entity(w, gc, &entity_list[i]);
-			if (camera.renderer & WIREFRAME_RENDERER)
+			else if (camera.renderer & WIREFRAME_RENDERER)
 				wireframe_render_entity(w, gc, &entity_list[i]);
 		}
 	}
