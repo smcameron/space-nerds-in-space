@@ -1699,13 +1699,11 @@ static int add_ship(void)
 	return i;
 }
 
-static int add_spacemonster(void)
+static int add_spacemonster(double x, double y)
 {
 	int i;
-	double x, y, heading;
+	double heading;
 
-	x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-	y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
 	heading = degrees_to_radians(0.0 + snis_randn(360)); 
 	i = add_generic_object(x, y, 0.0, 0.0, heading, OBJTYPE_SPACEMONSTER);
 	if (i < 0)
@@ -1955,9 +1953,13 @@ static void add_eships(void)
 static void add_spacemonsters(void)
 {
 	int i;
+	double x, y;
 
-	for (i = 0; i < NSPACEMONSTERS; i++)
-		add_spacemonster();
+	for (i = 0; i < NSPACEMONSTERS; i++) {
+		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		add_spacemonster(x, y);
+	}
 }
 
 static void make_universe(void)
@@ -2881,6 +2883,9 @@ static int process_create_item(struct game_client *c)
 		r = (double) snis_randn(NEBULA_RADIUS) +
 				(double) MIN_NEBULA_RADIUS;
 		i = add_nebula(x, y, 0, 0, 0, r);
+		break;
+	case OBJTYPE_SPACEMONSTER:
+		i = add_spacemonster(x, y);
 		break;
 	default:
 		break;
