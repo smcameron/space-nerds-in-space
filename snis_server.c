@@ -2970,7 +2970,7 @@ static void send_warp_limbo_packet(struct game_client *c, uint16_t value)
 {
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
 			packed_buffer_new("hh", OPCODE_WARP_LIMBO, value),
-			ROLE_SCIENCE);
+			ROLE_ALL);
 }
 
 static void send_wormhole_limbo_packet(int shipid, uint16_t value)
