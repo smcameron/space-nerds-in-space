@@ -5352,6 +5352,8 @@ static void init_comms_ui(void)
 	comms_ui.comms_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
 					comms_ui.input, 50, &timer,
 					comms_input_entered, NULL);
+	snis_text_input_box_set_return(comms_ui.comms_input,
+					comms_transmit_button_pressed);
 	comms_ui.comms_transmit_button = snis_button_init(10, 550, 160, 30, "TRANSMIT", GREEN,
 			TINY_FONT, comms_transmit_button_pressed, NULL);
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
@@ -6432,6 +6434,8 @@ static void init_demon_ui()
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
 	demon_ui.demon_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
 					demon_ui.input, 50, &timer, NULL, NULL);
+	snis_text_input_box_set_return(demon_ui.demon_input,
+					demon_exec_button_pressed); 
 	demon_ui.demon_exec_button = snis_button_init(570, 520, 160, 30, "EXECUTE", GREEN,
 			TINY_FONT, demon_exec_button_pressed, NULL);
 	demon_ui.demon_ship_button = snis_button_init(3, 60, 70, 20, "SHIP", GREEN,

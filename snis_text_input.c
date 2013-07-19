@@ -15,7 +15,7 @@ struct snis_text_input_box {
 	int color, font;
 	char *buffer;
 	int buflen;
-	snis_text_input_box_callback callback;
+	snis_text_input_box_callback callback, return_function;
 	void *cookie;
 	int cursor_pos;
 	volatile int *timer;
@@ -43,6 +43,7 @@ struct snis_text_input_box *snis_text_input_box_init(int x, int y,
 	t->cursor_pos = strlen(t->buffer);
 	t->timer = timer;
 	t->callback = callback;
+	t->return_function = NULL;
 	t->cookie = cookie;
 	t->height = height;
 	t->width = width;
@@ -149,6 +150,10 @@ int snis_text_input_box_keypress(struct snis_text_input_box *t, GdkEventKey *eve
 			case GDK_KEY_Left:
 				do_leftarrow(t);
 				break;
+			case GDK_KEY_Return:
+				if (t->return_function)
+					t->return_function(t->cookie);
+				break;
 			default:
 				break;	
 		}
@@ -181,4 +186,10 @@ void snis_text_input_box_zero(struct snis_text_input_box *t)
 {
 	t->cursor_pos = 0;
 	memset(t->buffer, 0, t->buflen);
+}
+
+void snis_text_input_box_set_return(struct snis_text_input_box *t, 
+		snis_text_input_box_callback return_function)
+{
+	t->return_function = return_function;
 }

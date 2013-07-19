@@ -25,6 +25,8 @@ GLOBAL int snis_text_input_box_button_press(struct snis_text_input_box *t, int x
 GLOBAL int snis_text_input_box_keypress(struct snis_text_input_box *t, GdkEventKey *event);
 GLOBAL int snis_text_input_box_keyrelease(struct snis_text_input_box *t, GdkEventKey *event);
 GLOBAL void snis_text_input_box_zero(struct snis_text_input_box *t);
+GLOBAL void snis_text_input_box_set_return(struct snis_text_input_box *t,
+		snis_text_input_box_callback return_function);
 	
 #undef GLOBAL
 #endif
