@@ -988,7 +988,7 @@ static void move_objects(void)
 {
 	int i;
 
-	for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 
 		if (!o->alive)

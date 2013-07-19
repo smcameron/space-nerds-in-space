@@ -515,7 +515,7 @@ static void sort_entity_distances(void)
 
 	n = snis_object_pool_highest_object(entity_pool);
 
-	for (i = 0; i < n; i++) {
+	for (i = 0; i <= n; i++) {
 		entity_list[i].dist3dsqrd = dist3dsqrd(
 				camera.x - entity_list[i].x,
 				camera.y - entity_list[i].y,
@@ -668,7 +668,7 @@ check_for_reposition:
 
 	sort_entity_distances();
 	   
-	for (j = 0; j < snis_object_pool_highest_object(entity_pool); j++) {
+	for (j = 0; j <= snis_object_pool_highest_object(entity_pool); j++) {
 		struct mat41 point_to_test;
 		float behind_camera;
 
