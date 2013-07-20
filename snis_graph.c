@@ -449,3 +449,27 @@ void sng_device_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, i
 	gdk_draw_line(drawable, gc, x1, y1, x2, y2);
 }
 
+void sng_bright_device_line(GdkDrawable *drawable,
+	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color)
+{
+	int dx, dy;
+
+	if (abs(x1 - x2) > abs(y1 - y2)) {
+		dx = 0;
+		dy = 1;
+	} else {
+		dx = 1;
+		dy = 0;
+	}
+
+	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
+		return;
+
+	gdk_gc_set_foreground(gc, &huex[WHITE]);
+	gdk_draw_line(drawable, gc, x1, y1, x2, y2);
+	gdk_gc_set_foreground(gc, &huex[color]);
+	gdk_draw_line(drawable, gc, x1 - dx, y1 - dy, x2 - dx, y2 - dy);
+	gdk_draw_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
+}
+
+

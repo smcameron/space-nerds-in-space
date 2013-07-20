@@ -97,6 +97,8 @@ SNG_GLOBAL int sng_device_x(int x);
 SNG_GLOBAL int sng_device_y(int y);
 SNG_GLOBAL void sng_device_line(GdkDrawable *drawable, GdkGC *gc,
 			int x1, int y1, int x2, int y2);
+SNG_GLOBAL void sng_bright_device_line(GdkDrawable *drawable, GdkGC *gc,
+			int x1, int y1, int x2, int y2, int color);
 
 SNG_GLOBAL void sng_set_clip_window(int x1, int y1, int x2, int y2);
 

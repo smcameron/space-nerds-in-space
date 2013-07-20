@@ -230,7 +230,7 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
 		xb += dxdy2;
 		y += 1;
 	}
-	if (camera.renderer & WIREFRAME_RENDERER) {
+	if (camera.renderer & WIREFRAME_RENDERER || wireframe) {
 		sng_set_foreground(color);
 		sng_device_line(w->window, gc, x1, y1, x2, y2); 
 		sng_device_line(w->window, gc, x2, y2, x3, y3); 
