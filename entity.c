@@ -369,9 +369,7 @@ static void sort_triangle_distances(struct entity *e)
 	/* Calculate camera distances for each vertex in the entity */
 	for (i = 0; i < e->m->nvertices; i++) {
 		struct vertex *v = &e->m->v[i];
-		v->dist3sqrd = dist3dsqrd(camera.x - v->wx,
-					  camera.y - v->wy,
-					  camera.z - v->wz); 
+		v->dist3sqrd = v->wz;
 	}
 
 	if (e->m->ntriangles > MAX_TRIANGLES_PER_ENTITY)
