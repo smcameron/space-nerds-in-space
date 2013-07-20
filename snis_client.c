@@ -3617,14 +3617,9 @@ static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 	snis_draw_line(w->window, gc, x + tx2, y + ty2, x + nx, y + ny);
 }
 
-static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
-		double heading, double beam_width)
+static void draw_degree_markings(GtkWidget *w, GdkGC *gc, int x, int y, int r)
 {
 	int i;
-	// int nx, ny, 
-	int tx1, ty1, tx2, ty2;
-
-	sng_draw_circle(w->window, gc, x, y, r);
 
 	for (i = 0; i < 36; i++) { /* 10 degree increments */
 		int x1 = (int) (cos((10.0 * i) * 3.1415927 / 180.0) * r);
@@ -3637,7 +3632,15 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 		y2 += y;
 		sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
 	}
+}
 
+static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
+		double heading, double beam_width)
+{
+	int tx1, ty1, tx2, ty2;
+
+	sng_draw_circle(w->window, gc, x, y, r);
+	draw_degree_markings(w, gc, x, y, r);
 	/* draw the ship */
 	snis_draw_arrow(w, gc, x, y, r, heading, 1.0);
 
