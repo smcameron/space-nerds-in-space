@@ -3617,20 +3617,27 @@ static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 	snis_draw_line(w->window, gc, x + tx2, y + ty2, x + nx, y + ny);
 }
 
-static void draw_degree_markings(GtkWidget *w, GdkGC *gc, int x, int y, int r)
+static void draw_degree_marks_with_labels(GtkWidget *w, GdkGC *gc,
+		gint x, gint y, gint r, int font)
 {
+	char buf[10];
 	int i;
 
 	for (i = 0; i < 36; i++) { /* 10 degree increments */
-		int x1 = (int) (cos((10.0 * i) * 3.1415927 / 180.0) * r);
-		int y1 = (int) (sin((10.0 * i) * 3.1415927 / 180.0) * r);
+		int x3, y3;
+		int x1 = (int) (cos((10.0 * i) * M_PI / 180.0) * r);
+		int y1 = (int) (sin((10.0 * i) * M_PI / 180.0) * r);
 		int x2 = x1 * 0.25;
 		int y2 = y1 * 0.25;
+		x3 = x1 * 1.08 + x - 15;
+		y3 = y1 * 1.08 + y;
 		x1 += x;
 		x2 += x;
 		y1 += y;
 		y2 += y;
 		sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
+		sprintf(buf, "%3d", (90 + i * 10) % 360);
+		sng_abs_xy_draw_string(w, gc, buf, font, x3, y3);
 	}
 }
 
@@ -3640,7 +3647,7 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 	int tx1, ty1, tx2, ty2;
 
 	sng_draw_circle(w->window, gc, x, y, r);
-	draw_degree_markings(w, gc, x, y, r);
+	draw_degree_marks_with_labels(w, gc, x, y, r, NANO_FONT);
 	/* draw the ship */
 	snis_draw_arrow(w, gc, x, y, r, heading, 1.0);
 
@@ -3687,31 +3694,15 @@ static void snis_draw_ship_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 }
 
 static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
-		double heading)
+		double heading, int c1, int c2)
 {
 	int i;
-	// int nx, ny, 
-	char buf[10];
 
+	sng_set_foreground(c1);
 	for (i = r; i > r / 4; i -= r / 5)
 		sng_draw_circle(w->window, gc, x, y, i);
-
-	for (i = 0; i < 36; i++) { /* 10 degree increments */
-		int x3, y3;
-		int x1 = (int) (cos((10.0 * i) * M_PI / 180.0) * r);
-		int y1 = (int) (sin((10.0 * i) * M_PI / 180.0) * r);
-		int x2 = x1 * 0.25;
-		int y2 = y1 * 0.25;
-		x3 = x1 * 1.08 + x - 15;
-		y3 = y1 * 1.08 + y;
-		x1 += x;
-		x2 += x;
-		y1 += y;
-		y2 += y;
-		snis_draw_line(w->window, gc, x1, y1, x2, y2);
-		sprintf(buf, "%3d", (90 + i * 10) % 360);
-		sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, x3, y3);
-	}
+	sng_set_foreground(c2);
+	draw_degree_marks_with_labels(w, gc, x, y, r, NANO_FONT);
 }
 
 static int within_nebula(double x, double y)
@@ -3742,7 +3733,7 @@ static void draw_nebula_noise(GtkWidget *w, int cx, int cy, int r)
 		x1 = cos(angle) * radius + cx;
 		y1 = sin(angle) * radius + cy;
 		snis_draw_line(w->window, gc, x1, y1, x1 + 1, y1);
-	}
+       }
 }
 
 struct snis_radar_extent {
@@ -4733,7 +4724,7 @@ static void show_weapons(GtkWidget *w)
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, o->tsd.ship.weapzoom > 100);
 	sng_set_foreground(BLUE);
-	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading);
+	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading, BLUE, BLUE);
 	snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
 	snis_draw_ship_on_reticule(w, gc, cx, cy, r, o);
 
@@ -4824,7 +4815,7 @@ static void show_navigation(GtkWidget *w)
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
 	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, o->tsd.ship.navzoom > 100);
 	sng_set_foreground(DARKRED);
-	snis_draw_reticule(w, gc, cx, cy, r, o->heading);
+	snis_draw_reticule(w, gc, cx, cy, r, o->heading, DARKRED, RED);
 	snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
 	snis_draw_ship_on_reticule(w, gc, cx, cy, r, o);
 
