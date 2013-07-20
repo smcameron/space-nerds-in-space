@@ -1696,6 +1696,7 @@ static int add_ship(void)
 	go[i].tsd.ship.shiptype = snis_randn(ARRAY_SIZE(shipclass));
 	go[i].tsd.ship.victim = (uint32_t) -1;
 	memset(&go[i].tsd.ship.damage, 0, sizeof(go[i].tsd.ship.damage));
+	memset(&go[i].tsd.ship.power_data, 0, sizeof(go[i].tsd.ship.power_data));
 	return i;
 }
 
