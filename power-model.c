@@ -95,12 +95,10 @@ void power_model_compute(struct power_model *m)
 	int i;
 	float total_resistance = m->internal_resistance;
 	float conductance = 0.0;
-	float total_current;
 
 	power_model_update_resistances(m);
 	for (i = 0; i < m->ndevices; i++) {
 		struct power_device *d = m->d[i];
-		void *cookie = d->cookie;
 		float r;
 
 		r = d->or1 + d->or3; 
@@ -117,9 +115,8 @@ void power_model_compute(struct power_model *m)
 
 	for (i = 0; i < m->ndevices; i++) {
 		struct power_device *d = m->d[i];
-		void *cookie = d->cookie;
-
 		float r = d->or1 + d->or3;
+
 		d->i = m->actual_voltage / r;
 	}
 }
