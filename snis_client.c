@@ -3742,21 +3742,21 @@ static void draw_nebula_noise(GtkWidget *w, int cx, int cy, int r)
 	}
 }
 
-static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, double screen_radius,
+struct snis_radar_extent {
+	int rx, ry, rw, rh;
+};
+
+static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_radar_extent* extent, double screen_radius,
 				double visible_distance)
 {
-	int i, cx, cy, r, rx, ry, rw, rh, in_nebula;
+	int i, cx, cy, r, in_nebula;
 	char buffer[200];
 
 	visible_distance *= visible_distance;
 	in_nebula = within_nebula(o->x, o->y);
-	rx = 20;
-	ry = 70;
-	rw = 500;
-	rh = 500;
-	cx = rx + (rw / 2);
-	cy = ry + (rh / 2);
-	r = rh / 2;
+	cx = extent->rx + (extent->rw / 2);
+	cy = extent->ry + (extent->rh / 2);
+	r = extent->rh / 2;
 	sng_set_foreground(DARKRED);
 
 	/* Draw all the stuff */
@@ -4024,15 +4024,11 @@ static void draw_all_the_science_nebulae(GtkWidget *w, struct snis_entity *o, do
 
 static void draw_all_the_science_sparks(GtkWidget *w, struct snis_entity *o, double range)
 {
-	int i, cx, cy, r, rx, ry, rw, rh;
+	int i, cx, cy, r;
 
-	rx = 20;
-	ry = 70;
-	rw = 500;
-	rh = 500;
-	cx = rx + (rw / 2);
-	cy = ry + (rh / 2);
-	r = rh / 2;
+	cx = SCIENCE_SCOPE_CX;	
+	cy = SCIENCE_SCOPE_CY;	
+	r = SCIENCE_SCOPE_R;
 	sng_set_foreground(DARKRED);
 	/* Draw all the stuff */
 	pthread_mutex_lock(&universe_mutex);
@@ -4064,17 +4060,13 @@ static void draw_all_the_science_sparks(GtkWidget *w, struct snis_entity *o, dou
 }
 
 
-static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o, double screen_radius)
+static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o, struct snis_radar_extent* extent, double screen_radius)
 {
-	int i, cx, cy, r, rx, ry, rw, rh;
+	int i, cx, cy, r;
 
-	rx = 20;
-	ry = 70;
-	rw = 500;
-	rh = 500;
-	cx = rx + (rw / 2);
-	cy = ry + (rh / 2);
-	r = rh / 2;
+	cx = extent->rx + (extent->rw / 2);
+	cy = extent->ry + (extent->rh / 2);
+	r = extent->rh / 2;
 	sng_set_foreground(DARKRED);
 	/* Draw all the stuff */
 	pthread_mutex_lock(&universe_mutex);
@@ -4693,7 +4685,7 @@ static void show_weapons(GtkWidget *w)
 {
 	char buf[100];
 	struct snis_entity *o;
-	int rx, ry, rw, rh, cx, cy;
+	int cx, cy;
 	int r;
 	int buttoncolor;
 	double screen_radius;
@@ -4727,13 +4719,10 @@ static void show_weapons(GtkWidget *w)
 		buttoncolor = GREEN;
 	snis_button_set_color(weapons.fire_torpedo, buttoncolor);
 
-	rx = 40;
-	ry = 90;
-	rw = 470;
-	rh = 470;
-	cx = rx + (rw / 2);
-	cy = ry + (rh / 2);
-	r = rh / 2;
+	static struct snis_radar_extent extent = { 40, 90, 470, 470 };
+	cx = extent.rx + (extent.rw / 2);
+	cy = extent.ry + (extent.rh / 2);
+	r = extent.rh / 2;
 	sng_set_foreground(GREEN);
 	screen_radius = ((((255.0 - o->tsd.ship.weapzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	max_possible_screen_radius = 0.09 * XKNOWN_DIM;
@@ -4745,8 +4734,8 @@ static void show_weapons(GtkWidget *w)
 	snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
 	snis_draw_ship_on_reticule(w, gc, cx, cy, r, o);
 
-	draw_all_the_guys(w, o, screen_radius, visible_distance);
-	draw_all_the_sparks(w, o, screen_radius);
+	draw_all_the_guys(w, o, &extent, screen_radius, visible_distance);
+	draw_all_the_sparks(w, o, &extent, screen_radius);
 	show_common_screen(w, "WEAPONS");
 }
 
@@ -4801,7 +4790,7 @@ static void show_navigation(GtkWidget *w)
 {
 	char buf[100];
 	struct snis_entity *o;
-	int rx, ry, rw, rh, cx, cy, gx1, gy1, gx2, gy2;
+	int cx, cy, gx1, gy1, gx2, gy2;
 	int r, sectorx, sectory;
 	double screen_radius, max_possible_screen_radius, visible_distance;
 
@@ -4821,13 +4810,10 @@ static void show_navigation(GtkWidget *w)
 	sprintf(buf, "vy: %5.2lf", o->vy);
 	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 600, LINEHEIGHT * 4);
 #endif
-	rx = 40;
-	ry = 90;
-	rw = 470;
-	rh = 470;
-	cx = rx + (rw / 2);
-	cy = ry + (rh / 2);
-	r = rh / 2;
+	static struct snis_radar_extent extent = { 40, 90, 470, 470 };
+	cx = extent.rx + (extent.rw / 2);
+	cy = extent.ry + (extent.rh / 2);
+	r = extent.rh / 2;
 	sng_set_foreground(GREEN);
 	screen_radius = ((((255.0 - o->tsd.ship.navzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	max_possible_screen_radius = 0.09 * XKNOWN_DIM;
@@ -4839,8 +4825,8 @@ static void show_navigation(GtkWidget *w)
 	snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
 	snis_draw_ship_on_reticule(w, gc, cx, cy, r, o);
 
-	draw_all_the_guys(w, o, screen_radius, visible_distance);
-	draw_all_the_sparks(w, o, screen_radius);
+	draw_all_the_guys(w, o, &extent, screen_radius, visible_distance);
+	draw_all_the_sparks(w, o, &extent, screen_radius);
 
 	gx1 = NAV_DATA_X + 10;
 	gy1 = 15;
