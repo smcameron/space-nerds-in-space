@@ -25,6 +25,46 @@
 
 VERSION=0.1
 
+CC=gcc
+
+ifeq (${E},1)
+STOP_ON_WARN=-Werror
+else
+STOP_ON_WARN=
+endif
+
+ifeq (${O},1)
+DEBUGFLAG=
+OPTIMIZEFLAG=-O3
+else
+DEBUGFLAG=-g
+OPTIMIZEFLAG=
+endif
+
+ifeq (${V},1)
+Q=
+ECHO=true
+else
+Q=@
+ECHO=echo
+endif
+
+LINKFLAGS=-lrt
+
+COMPILE=$(CC) ${MYCFLAGS} -c -o $@ $< ; $(ECHO) '  COMPILE' $<
+
+MYCFLAGS=${DEBUGFLAG} ${OPTIMIZEFLAG} --pedantic -Wall ${STOP_ON_WARN} -pthread -lrt
+
+SERVEROBJS=ssgl_sanitize.o ssgl_sleep.o \
+	ssgl_socket_io.o ssgl_log.o
+LINKSERVER=$(CC) ${MYCFLAGS} ${LINKFLAGS} $< ${SERVEROBJS} -o $@ ; $(ECHO) '  LINK' $<
+LINKCLIENT=$(CC) ${MYCFLAGS} -L. -o $@ $< -lssglclient ; $(ECHO) '  LINK' $<
+
+ARCHIVEOBJS=ssgl_sleep.o ssgl_sanitize.o ssgl_recv_game_servers.o \
+		ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
+		ssgl_register_gameserver.o ssgl_log.o
+ARCHIVE=ar -cr $@ ${ARCHIVEOBJS} ; $(ECHO) '  ARCHIVE' $@
+
 SRCS = ssgl_connect_to_lobby.c \
 	ssgl_gameclient_example.c \
 	ssgl_gameserver_example.c \
@@ -46,46 +86,50 @@ TXTFILES = AUTHORS COPYING LICENSE README
 
 all:	ssgl_server ssgl_gameclient_example ssgl_gameserver_example
 
-libssglclient.a:	ssgl_sleep.o	ssgl_sanitize.o ssgl_recv_game_servers.o \
-	ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
-	ssgl_register_gameserver.o ssgl_log.o
-	ar -cr libssglclient.a ssgl_sleep.o ssgl_sanitize.o ssgl_recv_game_servers.o \
-		ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
-		ssgl_register_gameserver.o ssgl_log.o
+libssglclient.a:	${ARCHIVEOBJS}
+	$(Q)$(ARCHIVE)
 
 ssgl_log.o:	ssgl_log.c ssgl_log.h
-	gcc -g --pedantic -Wall -Werror -pthread -c ssgl_log.c
+	$(Q)$(COMPILE)
 
 ssgl_sleep.o:	ssgl_sleep.c
-	gcc -g --pedantic -Wall -Werror -pthread -c ssgl_sleep.c
+	$(Q)$(COMPILE)
 
 ssgl_socket_io.o:	ssgl_socket_io.c
-	gcc -g --pedantic -Wall -Werror -pthread -c ssgl_socket_io.c
+	$(Q)$(COMPILE)
 
 ssgl_sanitize.o:	ssgl_sanitize.c ssgl_sanitize.h
-	gcc -g --pedantic -Wall -Werror -pthread -c ssgl_sanitize.c
+	$(Q)$(COMPILE)
 
 ssgl_recv_game_servers.o:	ssgl_recv_game_servers.c
-	gcc -g --pedantic -Wall -Werror -pthread -c ssgl_recv_game_servers.c
+	$(Q)$(COMPILE)
 
 ssgl_register_gameserver.o:	ssgl_register_gameserver.c
-	gcc -g --pedantic -Wall -Werror -pthread -c ssgl_register_gameserver.c
+	$(Q)$(COMPILE)
 
 ssgl_get_primary_host_ip_addr.o:	ssgl_get_primary_host_ip_addr.c
-	gcc -g --pedantic -Wall -Werror -pthread -c ssgl_get_primary_host_ip_addr.c
+	$(Q)$(COMPILE)
 
 ssgl_connect_to_lobby.o:	ssgl_connect_to_lobby.c
-	gcc -g --pedantic -Wall -Werror -pthread -c ssgl_connect_to_lobby.c
+	$(Q)$(COMPILE)
 
-ssgl_server:	ssgl_server.c ssgl.h ssgl_sanitize.o ssgl_sleep.o ssgl_socket_io.o ssgl_log.o
-	gcc -g --pedantic -Wall -Werror -pthread -lrt ssgl_sanitize.o ssgl_sleep.o \
-			ssgl_socket_io.o ssgl_log.o -o ssgl_server ssgl_server.c
+ssgl_server.o:	ssgl_server.c ${SERVEROBJS}
+	$(Q)$(COMPILE)
 
-ssgl_gameclient_example:	ssgl.h ssgl_gameclient_example.c libssglclient.a
-	gcc -g --pedantic -Wall -Werror -pthread -L. -o ssgl_gameclient_example ssgl_gameclient_example.c -lssglclient
+ssgl_server:	ssgl_server.o
+	$(Q)$(LINKSERVER)
 
-ssgl_gameserver_example:	ssgl.h ssgl_gameserver_example.c libssglclient.a
-	gcc -g --pedantic -Wall -Werror -pthread -L. -o ssgl_gameserver_example ssgl_gameserver_example.c -lssglclient
+ssgl_gameclient_example.o:	ssgl_gameclient_example.c ssgl.h libssglclient.a
+	$(Q)$(COMPILE)
+
+ssgl_gameserver_example.o:	ssgl_gameserver_example.c ssgl.h libssglclient.a
+	$(Q)$(COMPILE)
+
+ssgl_gameclient_example:	ssgl_gameclient_example.o
+	$(Q)$(LINKCLIENT)
+
+ssgl_gameserver_example:	ssgl_gameserver_example.o
+	$(Q)$(LINKCLIENT)
 
 tarball: ${SRCS} ${TXTFILES} Makefile 
 	mkdir ssgl-${VERSION}
