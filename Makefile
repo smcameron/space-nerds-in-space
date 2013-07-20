@@ -26,6 +26,15 @@ else
 STOP_ON_WARN=
 endif
 
+ifeq (${O},1)
+DEBUGFLAG=
+OPTIMIZEFLAG=-O3
+else
+DEBUGFLAG=-g
+OPTIMIZEFLAG=
+endif
+
+
 
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o
@@ -48,8 +57,7 @@ MODELS=freighter.stl laser.stl planet.stl spaceship.stl starbase.stl torpedo.stl
 	asteroid4.stl wormhole.stl starbase2.stl starbase3.stl starbase4.stl spacemonster.stl \
 	asteroid-miner.stl spaceship2.stl spaceship3.stl planet1.stl planet2.stl planet3.stl
 
-#MYCFLAGS=-g --pedantic -Wall -Werror -pthread -std=gnu99
-MYCFLAGS=-g --pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
+MYCFLAGS=${DEBUGFLAG} ${OPTIMIZEFLAG} --pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
 GTKCFLAGS=`pkg-config --cflags gtk+-2.0`
 GTKLDFLAGS=`pkg-config --libs gtk+-2.0` \
         `pkg-config --libs gthread-2.0` \
