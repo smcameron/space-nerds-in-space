@@ -408,6 +408,7 @@ static void delete_object(struct snis_entity *o)
 }
 
 static void send_ship_damage_packet(struct snis_entity *o);
+static int lookup_by_id(uint32_t id);
 static void torpedo_move(struct snis_entity *o)
 {
 	int i, otype;
@@ -453,9 +454,12 @@ static void torpedo_move(struct snis_entity *o)
 			send_ship_damage_packet(&go[i]);
 
 			/* make ships attack their attacker */
-			if (snis_randn(100) < 75)
-				go[i].tsd.ship.victim = o->tsd.torpedo.ship_id;
+			if (snis_randn(100) < 75) {
+				int index = lookup_by_id(o->tsd.torpedo.ship_id);
 
+				if (index >= 0)
+					go[i].tsd.ship.victim = index;
+			}
 		} else if (otype == OBJTYPE_ASTEROID && fabs(go[i].z) < 100.0) {
 			go[i].alive = 0;
 		}
@@ -674,8 +678,6 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 static int add_torpedo(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
 static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
 static uint8_t update_phaser_banks(int current, int max);
-
-static int lookup_by_id(uint32_t id);
 
 static void ship_choose_new_attack_victim(struct snis_entity *o)
 {
