@@ -33,6 +33,9 @@ struct power_device *new_power_device(void * cookie, resistor_sample_fn r1,
 	d->r1 = r1;
 	d->r2 = r2;
 	d->r3 = r3;
+	d->or1 = 0;
+	d->or2 = 0;
+	d->or3 = 0;
 	d->i = 0;
 	d->cookie = cookie;
 	return d;
