@@ -243,9 +243,9 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
 	}
 	if (camera.renderer & WIREFRAME_RENDERER) {
 		sng_set_foreground(color);
-		sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
-		sng_current_draw_line(w->window, gc, x2, y2, x3, y3); 
-		sng_current_draw_line(w->window, gc, x3, y3, x1, y1); 
+		sng_device_line(w->window, gc, x1, y1, x2, y2); 
+		sng_device_line(w->window, gc, x2, y2, x3, y3); 
+		sng_device_line(w->window, gc, x3, y3, x1, y1); 
 	}
 }
 
