@@ -19,6 +19,7 @@
 
  */
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 
 #define DEFINE_MY_POINT_GLOBALS
