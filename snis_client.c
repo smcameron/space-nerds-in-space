@@ -1027,13 +1027,14 @@ void add_spark(double x, double y, double vx, double vy, double vz, int time, in
 	if (i < 0)
 		return;
 	r = snis_randn(100);
-	if (r < 50 || time < 10)
+	if (r < 50 || time < 10) {
 		e = add_entity(particle_mesh, x, 0, -y, PARTICLE_COLOR);
-	else if (r < 75)
+		set_render_style(e, RENDER_WIREFRAME);
+	} else if (r < 75) {
 		e = add_entity(debris_mesh, x, 0, -y, color);
-	else
+	} else {
 		e = add_entity(debris2_mesh, x, 0, -y, color);
-	set_render_style(e, RENDER_WIREFRAME);
+	}
 	memset(&spark[i], 0, sizeof(spark[i]));
 	spark[i].index = i;
 	spark[i].x = x;
