@@ -391,15 +391,17 @@ static int add_generic_object(uint32_t id, double x, double y, double vx, double
 
 static void update_generic_object(int index, double x, double y, double vx, double vy, double heading, uint32_t alive)
 {
-	go[index].x = x;
-	go[index].y = y;
-	go[index].vx = vx;
-	go[index].vy = vy;
-	go[index].heading = heading;
-	go[index].alive = alive;
-	if (go[index].entity) {
-		update_entity_pos(go[index].entity, x, 0, -y);
-		update_entity_rotation(go[index].entity, M_PI / 2.0, heading + M_PI, 0);
+	struct snis_entity *o = &go[index];
+
+	o->x = x;
+	o->y = y;
+	o->vx = vx;
+	o->vy = vy;
+	o->heading = heading;
+	o->alive = alive;
+	if (o->entity) {
+		update_entity_pos(o->entity, x, 0, -y);
+		update_entity_rotation(o->entity, M_PI / 2.0, heading + M_PI, 0);
 	}
 }
 
