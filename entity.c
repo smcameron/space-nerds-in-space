@@ -56,7 +56,7 @@ struct entity {
 	float rx, ry, rz;
 	float dist3dsqrd;
 	int color;
-	int render_as_point_cloud;
+	int render_style;
 };
 
 struct camera_info {
@@ -99,19 +99,8 @@ struct entity *add_entity(struct mesh *m, float x, float y, float z, int color)
 	entity_list[n].ry = 0;
 	entity_list[n].rz = 0;
 	entity_list[n].color = color;
-	entity_list[n].render_as_point_cloud = 0;
+	entity_list[n].render_style = RENDER_NORMAL;
 	return &entity_list[n];
-}
-
-struct entity *add_point_cloud(struct mesh *m, float x, float y, float z, int color)
-{
-	struct entity *e;
-
-	e = add_entity(m, x, y, z, color);
-	if (!e)
-		return NULL;
-	e->render_as_point_cloud = 1;
-	return e;
 }
 
 void remove_entity(struct entity *e)
@@ -198,7 +187,7 @@ void wireframe_render_point(GtkWidget *w, GdkGC *gc, struct vertex *v)
 }
 
 static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
-			int x1, int y1, int x2, int y2, int x3, int y3, int color)
+			int x1, int y1, int x2, int y2, int x3, int y3, int color, int wireframe)
 {
 	float xa, xb, y;
 	float dxdy1, dxdy2;
@@ -249,7 +238,8 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
 	}
 }
 
-static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t, int color)
+static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t, int color,
+				int wireframe)
 {
 	struct vertex *v1, *v2, *v3;
 	int x1, y1, x2, y2, x3, y3;
@@ -328,7 +318,7 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t, i
 		}
 	}
 	/* now device coord vertices xa, ya, xb, yb, xc, yc are sorted by y value */
-	scan_convert_sorted_triangle(w, gc, xa, ya, xb, yb, xc, yc, color);
+	scan_convert_sorted_triangle(w, gc, xa, ya, xb, yb, xc, yc, color, wireframe);
 }
 
 void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
@@ -407,11 +397,12 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 		normalize_vector(&light, &light);
 		cos_theta = mat41_dot_mat41(&light, &normal);
 		cos_theta = (cos_theta + 1.0) / 2.0;
-		if (camera.renderer & BLACK_TRIS)
+		if (camera.renderer & BLACK_TRIS || e->render_style & RENDER_WIREFRAME)
 			sng_set_foreground(BLACK);
 		else
 			sng_set_foreground((int) fmod((cos_theta * 240.0), 240.0) + GRAY + 10);
-		scan_convert_triangle(w, gc, &e->m->t[tri_index], e->color);
+		scan_convert_triangle(w, gc, &e->m->t[tri_index], e->color,
+					e->render_style & RENDER_WIREFRAME);
 	}
 	nents++;
 }
@@ -699,7 +690,7 @@ check_for_reposition:
 			continue;
 
 		transform_entity(&entity_list[i], &total_transform);
-		if (entity_list[i].render_as_point_cloud)
+		if (entity_list[i].render_style & RENDER_POINT_CLOUD)
 			wireframe_render_point_cloud(w, gc, &entity_list[i]);
 		else {
 			if (camera.renderer & FLATSHADING_RENDERER)
@@ -790,4 +781,10 @@ void set_renderer(int renderer)
 int get_renderer(void)
 {
 	return camera.renderer;
+}
+
+void set_render_style(struct entity *e, int render_style)
+{
+	if (e)
+		e->render_style = render_style;
 }

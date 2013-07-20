@@ -698,6 +698,7 @@ static int update_torpedo(uint32_t id, double x, double y, double vx, double vy,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(torpedo_mesh, x, 0, -y, TORPEDO_COLOR);
+		set_render_style(e, RENDER_WIREFRAME);
 		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
@@ -716,6 +717,7 @@ static int update_laser(uint32_t id, double x, double y, double vx, double vy, u
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(laser_mesh, x, 0, -y, LASER_COLOR);
+		set_render_style(e, RENDER_WIREFRAME);
 		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
@@ -745,8 +747,9 @@ static void init_spacemonster_data(struct snis_entity *o, double z)
 		sd->x[i] = o->x;
 		sd->y[i] = o->y;
 		sd->z[i] = 0.0;
-		sd->entity[i] = add_point_cloud(spacemonster_mesh, o->x, 0, -o->y,
+		sd->entity[i] = add_entity(spacemonster_mesh, o->x, 0, -o->y,
 						SPACEMONSTER_COLOR);
+		set_render_style(sd->entity[i], RENDER_POINT_CLOUD);
 	}
 		
 }
@@ -787,7 +790,8 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_point_cloud(spacemonster_mesh, x, 0, -y, SPACEMONSTER_COLOR);
+		e = add_entity(spacemonster_mesh, x, 0, -y, SPACEMONSTER_COLOR);
+		set_render_style(e, RENDER_POINT_CLOUD);
 		i = add_generic_object(id, x, y, 0, 0, 0.0, OBJTYPE_SPACEMONSTER, 1, e);
 		if (i < 0)
 			return i;
@@ -875,7 +879,8 @@ static int update_wormhole(uint32_t id, double x, double y)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_point_cloud(wormhole_mesh, x, 0, -y, WORMHOLE_COLOR);
+		e = add_entity(wormhole_mesh, x, 0, -y, WORMHOLE_COLOR);
+		set_render_style(e, RENDER_POINT_CLOUD);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
 			return i;
@@ -1028,6 +1033,7 @@ void add_spark(double x, double y, double vx, double vy, double vz, int time, in
 		e = add_entity(debris_mesh, x, 0, -y, color);
 	else
 		e = add_entity(debris2_mesh, x, 0, -y, color);
+	set_render_style(e, RENDER_WIREFRAME);
 	memset(&spark[i], 0, sizeof(spark[i]));
 	spark[i].index = i;
 	spark[i].x = x;

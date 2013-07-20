@@ -31,7 +31,6 @@ struct entity;
 
 GLOBAL void entity_init(void);
 GLOBAL struct entity *add_entity(struct mesh *m, float x, float y, float z, int color);
-GLOBAL struct entity *add_point_cloud(struct mesh *m, float x, float y, float z, int color);
 GLOBAL void remove_entity(struct entity *e);
 GLOBAL void update_entity_pos(struct entity *e, float x, float y, float z);
 GLOBAL void update_entity_rotation(struct entity *e, float rx, float ry, float rz);
@@ -51,5 +50,10 @@ GLOBAL int get_renderer(void);
 #define WIREFRAME_RENDERER (1 << 0)
 #define FLATSHADING_RENDERER (1 << 1)
 #define BLACK_TRIS (1 << 2)
+
+GLOBAL void set_render_style(struct entity *e, int render_style);
+#define RENDER_NORMAL 0
+#define RENDER_POINT_CLOUD (1 << 0)
+#define RENDER_WIREFRAME (1 << 1)
 
 #endif	
