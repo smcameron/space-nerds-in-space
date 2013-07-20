@@ -187,7 +187,7 @@ void wireframe_render_point(GtkWidget *w, GdkGC *gc, struct vertex *v)
 }
 
 static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
-			int x1, int y1, int x2, int y2, int x3, int y3, int color, int wireframe)
+			int x1, int y1, int x2, int y2, int x3, int y3, int color, int render_style)
 {
 	float xa, xb, y;
 	float dxdy1, dxdy2;
@@ -230,16 +230,22 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
 		xb += dxdy2;
 		y += 1;
 	}
-	if (camera.renderer & WIREFRAME_RENDERER || wireframe) {
-		sng_set_foreground(color);
-		sng_device_line(w->window, gc, x1, y1, x2, y2); 
-		sng_device_line(w->window, gc, x2, y2, x3, y3); 
-		sng_device_line(w->window, gc, x3, y3, x1, y1); 
+	if (camera.renderer & WIREFRAME_RENDERER || render_style & RENDER_WIREFRAME) {
+		if (render_style & RENDER_BRIGHT_LINE) {
+			sng_bright_device_line(w->window, gc, x1, y1, x2, y2, color); 
+			sng_bright_device_line(w->window, gc, x2, y2, x3, y3, color); 
+			sng_bright_device_line(w->window, gc, x3, y3, x1, y1, color); 
+		} else {
+			sng_set_foreground(color);
+			sng_device_line(w->window, gc, x1, y1, x2, y2); 
+			sng_device_line(w->window, gc, x2, y2, x3, y3); 
+			sng_device_line(w->window, gc, x3, y3, x1, y1); 
+		}
 	}
 }
 
 static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t, int color,
-				int wireframe)
+				int render_style)
 {
 	struct vertex *v1, *v2, *v3;
 	int x1, y1, x2, y2, x3, y3;
@@ -318,7 +324,7 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t, i
 		}
 	}
 	/* now device coord vertices xa, ya, xb, yb, xc, yc are sorted by y value */
-	scan_convert_sorted_triangle(w, gc, xa, ya, xb, yb, xc, yc, color, wireframe);
+	scan_convert_sorted_triangle(w, gc, xa, ya, xb, yb, xc, yc, color, render_style);
 }
 
 void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
@@ -402,7 +408,7 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
 		else
 			sng_set_foreground((int) fmod((cos_theta * 240.0), 240.0) + GRAY + 10);
 		scan_convert_triangle(w, gc, &e->m->t[tri_index], e->color,
-					e->render_style & RENDER_WIREFRAME);
+					e->render_style);
 	}
 	nents++;
 }

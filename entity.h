@@ -55,5 +55,6 @@ GLOBAL void set_render_style(struct entity *e, int render_style);
 #define RENDER_NORMAL 0
 #define RENDER_POINT_CLOUD (1 << 0)
 #define RENDER_WIREFRAME (1 << 1)
+#define RENDER_BRIGHT_LINE (1 << 2)
 
 #endif	
