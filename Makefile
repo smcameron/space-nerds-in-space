@@ -77,14 +77,15 @@ VORBISCOMPILE=$(CC) ${MYCFLAGS} ${VORBISFLAGS} ${SNDFLAGS} -c -o $@ $< ; $(ECHO)
 
 CLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS}  ${CLIENTOBJS} ${GTKLDFLAGS} ${LIBS} ${SNDLIBS} ; $(ECHO) '  LINK' $@
 SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} ${SERVEROBJS} ${GTKLDFLAGS} ${LIBS} ; $(ECHO) '  LINK' $@
+OPENSCAD=openscad -o $@ $< ; $(ECHO) '  OPENSCAD' $<
 
 all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${PROGS} ${MODELS}
 
 starbase.stl:	starbase.scad wedge.scad
-	openscad -o starbase.stl starbase.scad
+	$(Q)$(OPENSCAD)
 
 %.stl:	%.scad
-	openscad -o $@ $<
+	$(Q)$(OPENSCAD)
 
 my_point.o:   my_point.c my_point.h Makefile
 	$(Q)$(COMPILE)
