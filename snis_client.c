@@ -698,7 +698,7 @@ static int update_torpedo(uint32_t id, double x, double y, double vx, double vy,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(torpedo_mesh, x, 0, -y, TORPEDO_COLOR);
-		set_render_style(e, RENDER_WIREFRAME);
+		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
@@ -717,7 +717,7 @@ static int update_laser(uint32_t id, double x, double y, double vx, double vy, u
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(laser_mesh, x, 0, -y, LASER_COLOR);
-		set_render_style(e, RENDER_WIREFRAME);
+		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
@@ -1029,7 +1029,7 @@ void add_spark(double x, double y, double vx, double vy, double vz, int time, in
 	r = snis_randn(100);
 	if (r < 50 || time < 10) {
 		e = add_entity(particle_mesh, x, 0, -y, PARTICLE_COLOR);
-		set_render_style(e, RENDER_WIREFRAME);
+		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 	} else if (r < 75) {
 		e = add_entity(debris_mesh, x, 0, -y, color);
 	} else {
