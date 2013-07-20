@@ -3871,15 +3871,6 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 		draw_nebula_noise(w, cx, cy, r); 
 }
 
-/* position and dimensions of science scope */
-#define SCIENCE_SCOPE_X 20
-#define SCIENCE_SCOPE_Y 70 
-#define SCIENCE_SCOPE_W 500
-#define SCIENCE_SCOPE_H SCIENCE_SCOPE_W
-#define SCIENCE_SCOPE_R (SCIENCE_SCOPE_H / 2)
-#define SCIENCE_SCOPE_CX (SCIENCE_SCOPE_X + SCIENCE_SCOPE_R)
-#define SCIENCE_SCOPE_CY (SCIENCE_SCOPE_Y + SCIENCE_SCOPE_R)
-
 /* this science_guy[] array is used for mouse clicking. */
 struct science_data {
 	int sx, sy; /* screen coords on scope */
