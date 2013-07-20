@@ -51,6 +51,7 @@ struct power_model *new_power_model(float max_current, float voltage,
 	m->max_current = max_current;
 	m->internal_resistance = internal_resistance;
 	m->enabled = 1;
+	return m;
 }
 
 void power_model_add_device(struct power_model *m, struct power_device *device)
