@@ -3490,10 +3490,12 @@ static void snis_draw_laser(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, 
 #define SCIENCE_SCOPE_CX (SCIENCE_SCOPE_X + SCIENCE_SCOPE_R)
 #define SCIENCE_SCOPE_CY (SCIENCE_SCOPE_Y + SCIENCE_SCOPE_R)
 
+static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
+		double heading, double scale);
 static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
 					gint x, gint y, double dist, int bw, int pwr,
 					double range, int selected,
-					int nebula_factor)
+					int nebula_factor, int in_beam)
 {
 	int i;
 
@@ -3502,6 +3504,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	double tx, ty;
 	char buffer[50];
 	int divisor;
+	char resolved = 0;
 
 
 	/* Compute radius of ship blip */
@@ -3516,25 +3519,53 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	/* if dr is small enough, and ship info is not known, nor recently requested,
 	 * then issue OPCODE REQUEST_SHIP_SDATA to server somehow.
 	 */
-	if (dr < 5 && !o->sdata.science_data_known && !o->sdata.science_data_requested)
+	if (in_beam && dr < 5 && !o->sdata.science_data_known && !o->sdata.science_data_requested) {
+		resolved = 1;
 		request_ship_sdata(o);
+	}
 
 	sng_set_foreground(GREEN);
-	for (i = 0; i < 10; i++) {
-		float r;
-		da = snis_randn(360) * M_PI / 180.0;
-#if 1
-		tx = (int) ((double) x + sin(da) * (double) snis_randn(dr));
-		ty = (int) ((double) y + cos(da) * (double) snis_randn(dr)); 
+	if (!resolved && !o->sdata.science_data_known) {
+		for (i = 0; i < 10; i++) {
+			float r;
+			da = snis_randn(360) * M_PI / 180.0;
+			tx = (int) ((double) x + sin(da) * (double) snis_randn(dr));
+			ty = (int) ((double) y + cos(da) * (double) snis_randn(dr)); 
 
-		r = hypot(tx - SCIENCE_SCOPE_CX, ty - SCIENCE_SCOPE_CY);
-		if (r >= SCIENCE_SCOPE_R)
-			continue;
-#else
-		tx = x;
-		ty = y;
-#endif
-		sng_draw_point(w->window, gc, tx, ty);
+			r = hypot(tx - SCIENCE_SCOPE_CX, ty - SCIENCE_SCOPE_CY);
+			if (r >= SCIENCE_SCOPE_R)
+				continue;
+			sng_draw_point(w->window, gc, tx, ty);
+		}
+	} else {
+		switch(o->type) {
+		case OBJTYPE_SHIP2:
+		case OBJTYPE_SHIP1:
+			sng_set_foreground(LIMEGREEN);
+			break;
+		case OBJTYPE_STARBASE:
+			sng_set_foreground(WHITE);
+			break;
+		case OBJTYPE_ASTEROID:
+			sng_set_foreground(AMBER);
+			break;
+		case OBJTYPE_PLANET:
+			sng_set_foreground(BLUE);
+			break;
+		case OBJTYPE_TORPEDO:
+		case OBJTYPE_SPARK:
+		case OBJTYPE_EXPLOSION:
+		case OBJTYPE_LASER:
+		default:
+			sng_set_foreground(LIMEGREEN);
+		}
+		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1) {
+			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R / 2,
+				o->heading, 0.3);
+		} else {
+			snis_draw_line(w->window, gc, x - 1, y, x + 1, y);
+			snis_draw_line(w->window, gc, x, y - 1, x, y + 1);
+		}
 	}
 
 	if (selected)
@@ -3543,20 +3574,21 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
 		case OBJTYPE_SHIP2:
-			sng_set_foreground(GREEN);
+		case OBJTYPE_SHIP1:
+			sng_set_foreground(LIMEGREEN);
 			sprintf(buffer, "%s %s\n", o->sdata.name, shipclass[o->sdata.subclass]); 
 			break;
 		case OBJTYPE_STARBASE:
 			sng_set_foreground(WHITE);
-			sprintf(buffer, "%s %s\n", "Starbase",  o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "SB",  o->sdata.name); 
 			break;
 		case OBJTYPE_ASTEROID:
-			sng_set_foreground(BLUE);
-			sprintf(buffer, "%s %s\n", "Asteroid",  o->sdata.name); 
+			sng_set_foreground(AMBER);
+			sprintf(buffer, "%s %s\n", "AST",  o->sdata.name); 
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(BLUE);
-			sprintf(buffer, "%s %s\n", "Planet",  o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "PL",  o->sdata.name); 
 			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_SPARK:
@@ -3567,10 +3599,10 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			break;
 		default:
 			sng_set_foreground(GREEN);
-			sprintf(buffer, "%s %s\n", "Unknown", o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "?", o->sdata.name); 
 			break;
 		}
-		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, x + 8, y - 8);
+		sng_abs_xy_draw_string(w, gc, buffer, PICO_FONT, x + 8, y - 8);
 	}
 }
 
@@ -3863,6 +3895,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	double tx, ty, dist2, dist;
 	int selected_guy_still_visible = 0;
 	int nebula_factor = 0;
+	char in_beam;
 
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
@@ -3918,7 +3951,9 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		ty = (go[i].y - o->y) * (double) r / range;
 		angle = atan2(ty, tx);
 
-		if (dist2 > SCIENCE_SHORT_RANGE * SCIENCE_SHORT_RANGE) {
+		in_beam = 0;
+		if (dist2 > SCIENCE_SHORT_RANGE * SCIENCE_SHORT_RANGE &&
+			!go[i].sdata.science_data_known) {
 			if (!(A2 < 0 && A1 > 0 && fabs(A1) > M_PI / 2.0)) {
 				if (angle < A1)
 					continue;
@@ -3930,6 +3965,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 				if (angle > 0 && angle < A1)
 					continue;
 			}
+			in_beam = 1;
 		}
 
 		x = (int) (tx + (double) cx);
@@ -3943,7 +3979,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		if (!curr_science_guy && prev_science_guy == &go[i])
 			curr_science_guy = prev_science_guy;
 
-		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor);
+		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor, in_beam);
 
 		/* cache screen coords for mouse picking */
 		science_guy[nscience_guys].o = &go[i];
