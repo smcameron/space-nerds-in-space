@@ -401,7 +401,8 @@ static void update_generic_object(int index, double x, double y, double vx, doub
 	o->alive = alive;
 	if (o->entity) {
 		update_entity_pos(o->entity, x, 0, -y);
-		update_entity_rotation(o->entity, M_PI / 2.0, heading + M_PI, 0);
+		update_entity_rotation(o->entity, M_PI / 2.0,
+			heading + M_PI - (o->type == OBJTYPE_SHIP1) * (M_PI / 2.0), 0);
 	}
 }
 
