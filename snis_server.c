@@ -3915,7 +3915,8 @@ static void send_update_power_model_data(struct game_client *c,
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_allocate(sizeof(o->tsd.ship.power_data) + sizeof(uint32_t));
+	pb = packed_buffer_allocate(sizeof(uint16_t) +
+			sizeof(o->tsd.ship.power_data) + sizeof(uint32_t));
 	packed_buffer_append(pb, "hwr", OPCODE_UPDATE_POWER_DATA, o->id,
 		(char *) &o->tsd.ship.power_data, (unsigned short) sizeof(o->tsd.ship.power_data)); 
 	pb_queue_to_client(c, pb);
