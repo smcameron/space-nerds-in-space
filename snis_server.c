@@ -742,7 +742,7 @@ delete_it:
 
 		a = snis_randn(360);
 		r = snis_randn(LASER_RANGE - 400) + 400;
-		o->tsd.ship.victim = go[eid].id;
+		o->tsd.ship.victim = eid;
 		o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
 		o->tsd.ship.doy = r * sin(a * M_PI / 180.0);
 	} else {
