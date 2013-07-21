@@ -208,13 +208,11 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
 
 	xa = x1;
 	xb = x1;
-	y = y1;
 
 	for (i = y1; i < y2; i++) {
-		sng_device_line(w->window, gc, (int) xa, (int) y, (int) xb, (int) y);
+		sng_device_line(w->window, gc, (int) xa, i, (int) xb, i);
 		xa += dxdy1;
 		xb += dxdy2;
-		y += 1;
 	}
 
 	if (y2 == y3)
@@ -223,12 +221,10 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
 		dxdy1 = (float) (x3 - x2) / (float) (y3 - y2);
 
 	xa = x2;
-	y = y2;
 	for (i = y2; i <= y3; i++) {
-		sng_device_line(w->window, gc, (int) xa, (int) y, (int) xb, (int) y);
+		sng_device_line(w->window, gc, (int) xa, i, (int) xb, i);
 		xa += dxdy1;
 		xb += dxdy2;
-		y += 1;
 	}
 	if (camera.renderer & WIREFRAME_RENDERER || render_style & RENDER_WIREFRAME) {
 		if (render_style & RENDER_BRIGHT_LINE) {
