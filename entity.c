@@ -189,7 +189,7 @@ void wireframe_render_point(GtkWidget *w, GdkGC *gc, struct vertex *v)
 static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
 			int x1, int y1, int x2, int y2, int x3, int y3, int color, int render_style)
 {
-	float xa, xb, y;
+	float xa, xb;
 	float dxdy1, dxdy2;
 	int i;
 
