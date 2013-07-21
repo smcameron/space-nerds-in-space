@@ -342,7 +342,7 @@ void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc, struct entity *e)
 		wireframe_render_point(w, gc, &e->m->v[i]);
 }
 
-int tri_depth_compare(const void *a, const void *b)
+static int tri_depth_compare(const void *a, const void *b)
 {
 	const struct tri_depth_entry *A = a;
 	const struct tri_depth_entry *B = b;
