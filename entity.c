@@ -43,8 +43,6 @@
 #define MAX_ENTITIES 5000
 #define MAX_TRIANGLES_PER_ENTITY 10000
 
-static unsigned long ntris, nents, nlines;
-
 struct fake_star {
 	struct vertex v;
 	float dist3dsqrd;
@@ -66,51 +64,54 @@ struct camera_info {
 	float angle_of_view;
 	int xvpixels, yvpixels;
 	int renderer;
-} camera;
-
-static struct snis_object_pool *entity_pool;
-static struct entity entity_list[MAX_ENTITIES];
-static int entity_depth[MAX_ENTITIES];
+};
 
 struct tri_depth_entry {
 	int tri_index;
 	float depth;
 };
 
-static struct tri_depth_entry tri_depth[MAX_TRIANGLES_PER_ENTITY];
-static struct fake_star *fake_star;
-static int nfakestars = 0;
+struct entity_context {
+	struct snis_object_pool *entity_pool;
+	struct entity entity_list[MAX_ENTITIES];
+	int entity_depth[MAX_ENTITIES];
+	unsigned long ntris, nents, nlines;
+	struct camera_info camera;
+	struct tri_depth_entry tri_depth[MAX_TRIANGLES_PER_ENTITY];
+	struct fake_star *fake_star;
+	int nfakestars; /* = 0; */
+	float rx, ry, rz;
+};
 
-static float rx, ry, rz;
-
-struct entity *add_entity(struct mesh *m, float x, float y, float z, int color)
+struct entity *add_entity(struct entity_context *cx,
+	struct mesh *m, float x, float y, float z, int color)
 {
 	int n;
 
-	n = snis_object_pool_alloc_obj(entity_pool);
+	n = snis_object_pool_alloc_obj(cx->entity_pool);
 	if (n < 0)
 		return NULL;
 
-	entity_list[n].m = m;
-	entity_list[n].x = x;
-	entity_list[n].y = y;
-	entity_list[n].z = z;
-	entity_list[n].rx = 0;
-	entity_list[n].ry = 0;
-	entity_list[n].rz = 0;
-	entity_list[n].color = color;
-	entity_list[n].render_style = RENDER_NORMAL;
-	return &entity_list[n];
+	cx->entity_list[n].m = m;
+	cx->entity_list[n].x = x;
+	cx->entity_list[n].y = y;
+	cx->entity_list[n].z = z;
+	cx->entity_list[n].rx = 0;
+	cx->entity_list[n].ry = 0;
+	cx->entity_list[n].rz = 0;
+	cx->entity_list[n].color = color;
+	cx->entity_list[n].render_style = RENDER_NORMAL;
+	return &cx->entity_list[n];
 }
 
-void remove_entity(struct entity *e)
+void remove_entity(struct entity_context *cx, struct entity *e)
 {
 	int index;
 
 	if (!e)
 		return;
-	index = e - &entity_list[0]; 
-	snis_object_pool_free_object(entity_pool, index);
+	index = e - &cx->entity_list[0]; 
+	snis_object_pool_free_object(cx->entity_pool, index);
 }
 
 void update_entity_pos(struct entity *e, float x, float y, float z)
@@ -142,32 +143,35 @@ static int is_backface(int x1, int y1, int x2, int y2, int x3, int y3)
 	return twicearea >= 0;
 }
 
-static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc, struct fake_star *fs)
+static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc,
+	struct entity_context *cx, struct fake_star *fs)
 {
 	int x1, y1;
 
-	x1 = (int) (fs->v.wx * camera.xvpixels / 2) + camera.xvpixels / 2;
-	y1 = (int) (fs->v.wy * camera.yvpixels / 2) + camera.yvpixels / 2;
+	x1 = (int) (fs->v.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+	y1 = (int) (fs->v.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 	sng_current_draw_line(w->window, gc, x1, y1, x1 + (snis_randn(10) < 7), y1); 
 }
 
-void wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
+void wireframe_render_triangle(GtkWidget *w, GdkGC *gc,
+		struct entity_context *cx, struct triangle *t)
 {
 	struct vertex *v1, *v2, *v3;
 	int x1, y1, x2, y2, x3, y3;
+	struct camera_info *c = &cx->camera;
 
-	ntris++;
-	nlines += 3;
+	cx->ntris++;
+	cx->nlines += 3;
 	v1 = t->v[0];
 	v2 = t->v[1];
 	v3 = t->v[2];
 
-	x1 = (int) (v1->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
-	x2 = (int) (v2->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
-	x3 = (int) (v3->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
-	y1 = (int) (v1->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
-	y2 = (int) (v2->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
-	y3 = (int) (v3->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
+	x1 = (int) (v1->wx * c->xvpixels / 2) + c->xvpixels / 2;
+	x2 = (int) (v2->wx * c->xvpixels / 2) + c->xvpixels / 2;
+	x3 = (int) (v3->wx * c->xvpixels / 2) + c->xvpixels / 2;
+	y1 = (int) (v1->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y2 = (int) (v2->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y3 = (int) (v3->wy * c->yvpixels / 2) + c->yvpixels / 2;
 
 	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
@@ -177,16 +181,17 @@ void wireframe_render_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t)
 	sng_current_draw_line(w->window, gc, x3, y3, x1, y1); 
 }
 
-void wireframe_render_point(GtkWidget *w, GdkGC *gc, struct vertex *v)
+void wireframe_render_point(GtkWidget *w, GdkGC *gc,
+		struct entity_context *cx, struct vertex *v)
 {
 	int x1, y1;
 
-	x1 = (int) (v->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
-	y1 = (int) (v->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
+	x1 = (int) (v->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+	y1 = (int) (v->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 	sng_current_draw_line(w->window, gc, x1, y1, x1 + 1, y1); 
 }
 
-static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
+static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
 			int x1, int y1, int x2, int y2, int x3, int y3, int color, int render_style)
 {
 	float xa, xb;
@@ -226,7 +231,7 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
 		xa += dxdy1;
 		xb += dxdy2;
 	}
-	if (camera.renderer & WIREFRAME_RENDERER || render_style & RENDER_WIREFRAME) {
+	if (cx->camera.renderer & WIREFRAME_RENDERER || render_style & RENDER_WIREFRAME) {
 		if (render_style & RENDER_BRIGHT_LINE) {
 			sng_bright_device_line(w->window, gc, x1, y1, x2, y2, color); 
 			sng_bright_device_line(w->window, gc, x2, y2, x3, y3, color); 
@@ -240,25 +245,27 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc,
 	}
 }
 
-static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t, int color,
+static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
+				struct triangle *t, int color,
 				int render_style)
 {
 	struct vertex *v1, *v2, *v3;
 	int x1, y1, x2, y2, x3, y3;
 	int xa, ya, xb, yb, xc, yc;
+	struct camera_info *c = &cx->camera;
 
-	ntris++;
-	nlines += 3;
+	cx->ntris++;
+	cx->nlines += 3;
 	v1 = t->v[0];
 	v2 = t->v[1];
 	v3 = t->v[2];
 
-	x1 = (int) (v1->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
-	x2 = (int) (v2->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
-	x3 = (int) (v3->wx * camera.xvpixels / 2) + camera.xvpixels / 2;
-	y1 = (int) (v1->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
-	y2 = (int) (v2->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
-	y3 = (int) (v3->wy * camera.yvpixels / 2) + camera.yvpixels / 2;
+	x1 = (int) (v1->wx * c->xvpixels / 2) + c->xvpixels / 2;
+	x2 = (int) (v2->wx * c->xvpixels / 2) + c->xvpixels / 2;
+	x3 = (int) (v3->wx * c->xvpixels / 2) + c->xvpixels / 2;
+	y1 = (int) (v1->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y2 = (int) (v2->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y3 = (int) (v3->wy * c->yvpixels / 2) + c->yvpixels / 2;
 
 	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
@@ -320,26 +327,28 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct triangle *t, i
 		}
 	}
 	/* now device coord vertices xa, ya, xb, yb, xc, yc are sorted by y value */
-	scan_convert_sorted_triangle(w, gc, xa, ya, xb, yb, xc, yc, color, render_style);
+	scan_convert_sorted_triangle(w, gc, cx, xa, ya, xb, yb, xc, yc, color, render_style);
 }
 
-void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
+void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
+			struct entity *e)
 {
 	int i;
 
 	sng_set_foreground(e->color);
 	for (i = 0; i < e->m->ntriangles; i++)
-		wireframe_render_triangle(w, gc, &e->m->t[i]);
-	nents++;
+		wireframe_render_triangle(w, gc, cx, &e->m->t[i]);
+	cx->nents++;
 }
 
-void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc, struct entity *e)
+void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
+				struct entity *e)
 {
 	int i;
 
 	sng_set_foreground(e->color);
 	for (i = 0; i < e->m->nvertices; i++)
-		wireframe_render_point(w, gc, &e->m->v[i]);
+		wireframe_render_point(w, gc, cx, &e->m->v[i]);
 }
 
 static int tri_depth_compare(const void *a, const void *b)
@@ -354,7 +363,7 @@ static int tri_depth_compare(const void *a, const void *b)
 	return 0;
 }
 
-static void sort_triangle_distances(struct entity *e)
+static void sort_triangle_distances(struct entity_context *cx, struct entity *e)
 {
 	int i;
 
@@ -375,38 +384,38 @@ static void sort_triangle_distances(struct entity *e)
 		struct triangle *t = &e->m->t[i];
 		dist = t->v[0]->dist3sqrd + t->v[1]->dist3sqrd + t->v[2]->dist3sqrd;
 		dist = dist / 3.0;
-		tri_depth[i].tri_index = i;
-		tri_depth[i].depth = dist;
+		cx->tri_depth[i].tri_index = i;
+		cx->tri_depth[i].depth = dist;
 	}
 
 	/* Sort the triangles */
-	qsort(tri_depth, e->m->ntriangles, sizeof(tri_depth[0]), tri_depth_compare);
+	qsort(cx->tri_depth, e->m->ntriangles, sizeof(cx->tri_depth[0]), tri_depth_compare);
 }
 
-void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e)
+void render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct entity *e)
 {
 	int i;
 	float cos_theta;
 	struct mat41 light = { {0, -1, -1, 1} };
 	struct mat41 normal;
 
-	sort_triangle_distances(e);
+	sort_triangle_distances(cx, e);
 
 	for (i = 0; i < e->m->ntriangles; i++) {
-		int tri_index = tri_depth[i].tri_index;
+		int tri_index = cx->tri_depth[i].tri_index;
 		normal = *(struct mat41 *) &e->m->t[tri_index].n.wx;
 		normalize_vector(&normal, &normal);
 		normalize_vector(&light, &light);
 		cos_theta = mat41_dot_mat41(&light, &normal);
 		cos_theta = (cos_theta + 1.0) / 2.0;
-		if (camera.renderer & BLACK_TRIS || e->render_style & RENDER_WIREFRAME)
+		if (cx->camera.renderer & BLACK_TRIS || e->render_style & RENDER_WIREFRAME)
 			sng_set_foreground(BLACK);
 		else
 			sng_set_foreground((int) fmod((cos_theta * 240.0), 240.0) + GRAY + 10);
-		scan_convert_triangle(w, gc, &e->m->t[tri_index], e->color,
+		scan_convert_triangle(w, gc, cx, &e->m->t[tri_index], e->color,
 					e->render_style);
 	}
-	nents++;
+	cx->nents++;
 }
 
 static void transform_fake_star(struct fake_star *fs, struct mat44 *transform)
@@ -488,10 +497,11 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 	}
 }
 
-static int object_depth_compare(const void *a, const void *b)
+static int object_depth_compare(const void *a, const void *b, void *vcx)
 {
-	struct entity *A = &entity_list[*(const int *) a];
-	struct entity *B = &entity_list[*(const int *) b];
+	struct entity_context *cx = vcx;
+	struct entity *A = &cx->entity_list[*(const int *) a];
+	struct entity *B = &cx->entity_list[*(const int *) b];
 
 	if (A->dist3dsqrd < B->dist3dsqrd)
 		return 1;
@@ -500,20 +510,29 @@ static int object_depth_compare(const void *a, const void *b)
 	return 0;
 }
 
-static void sort_entity_distances(void)
+/*
+ * For whatever reason, qsort_r seems to be missing from stdlib.h lots of times,
+ * so I'll just declare it extern here myself.  Seems to be present in glibc.
+ */
+extern void qsort_r(void *base, size_t nmemb, size_t size,
+			int (*compar)(const void *, const void *, void *),
+			void *arg);
+
+static void sort_entity_distances(struct entity_context *cx)
 {
 	int i, n;
+	struct camera_info *c = &cx->camera;
 
-	n = snis_object_pool_highest_object(entity_pool);
+	n = snis_object_pool_highest_object(cx->entity_pool);
 
 	for (i = 0; i <= n; i++) {
-		entity_list[i].dist3dsqrd = dist3dsqrd(
-				camera.x - entity_list[i].x,
-				camera.y - entity_list[i].y,
-				camera.z - entity_list[i].z);
-		entity_depth[i] = i;
+		cx->entity_list[i].dist3dsqrd = dist3dsqrd(
+				c->x - cx->entity_list[i].x,
+				c->y - cx->entity_list[i].y,
+				c->z - cx->entity_list[i].z);
+		cx->entity_depth[i] = i;
 	}
-	qsort(entity_depth, n, sizeof(entity_depth[0]),  object_depth_compare);
+	qsort_r(cx->entity_depth, n, sizeof(cx->entity_depth[0]),  object_depth_compare, cx);
 }
 
 static inline float sqr(float a)
@@ -521,9 +540,9 @@ static inline float sqr(float a)
 	return a * a;
 }
 
-static void reposition_fake_star(struct fake_star *fs, float radius);
+static void reposition_fake_star(struct entity_context *cx, struct fake_star *fs, float radius);
 
-void render_entities(GtkWidget *w, GdkGC *gc)
+void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 {
 	int i, j;
 
@@ -546,22 +565,22 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	struct mat41 *u; /* camera relative x axis (left/right) */
 	float camera_angle, ent_angle; /* this is for cheezy view culling */
 
-	nents = 0;
-	ntris = 0;
-	nlines = 0;
+	cx->nents = 0;
+	cx->ntris = 0;
+	cx->nlines = 0;
 	/* Translate to camera position... */
-	mat44_translate(&identity, -camera.x, -camera.y, -camera.z,
+	mat44_translate(&identity, -cx->camera.x, -cx->camera.y, -cx->camera.z,
 				&cameralocation_transform);
 
 	/* Calculate look direction, look direction, ... */
-	look_direction.m[0] = (camera.lx - camera.x);
-	look_direction.m[1] = (camera.ly - camera.y);
-	look_direction.m[2] = (camera.lz - camera.z);
+	look_direction.m[0] = (cx->camera.lx - cx->camera.x);
+	look_direction.m[1] = (cx->camera.ly - cx->camera.y);
+	look_direction.m[2] = (cx->camera.lz - cx->camera.z);
 	look_direction.m[3] = 1.0;
 	normalize_vector(&look_direction, &look_direction);
 	n = &look_direction;
 
-	camera_angle = atan2f(camera.lz - camera.z, camera.lx - camera.x);
+	camera_angle = atan2f(cx->camera.lz - cx->camera.z, cx->camera.lx - cx->camera.x);
 
 	/* Calculate x direction relative to camera, "camera_x" */
 	mat41_cross_mat41(&up, &look_direction, &camera_x);
@@ -599,23 +618,23 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 	cameralook_transform.m[3][3] = 1.0;
 
 	/* Make perspective transform... */
-	perspective_transform.m[0][0] = (2 * camera.near) / camera.width;
+	perspective_transform.m[0][0] = (2 * cx->camera.near) / cx->camera.width;
 	perspective_transform.m[0][1] = 0.0;
 	perspective_transform.m[0][2] = 0.0;
 	perspective_transform.m[0][3] = 0.0;
 	perspective_transform.m[1][0] = 0.0;
-	perspective_transform.m[1][1] = (2.0 * camera.near) / camera.height;
+	perspective_transform.m[1][1] = (2.0 * cx->camera.near) / cx->camera.height;
 	perspective_transform.m[1][2] = 0.0;
 	perspective_transform.m[1][3] = 0.0;
 	perspective_transform.m[2][0] = 0.0;
 	perspective_transform.m[2][1] = 0.0;
-	perspective_transform.m[2][2] = -(camera.far + camera.near) /
-						(camera.far - camera.near);
+	perspective_transform.m[2][2] = -(cx->camera.far + cx->camera.near) /
+						(cx->camera.far - cx->camera.near);
 	perspective_transform.m[2][3] = -1.0;
 	perspective_transform.m[3][0] = 0.0;
 	perspective_transform.m[3][1] = 0.0;
-	perspective_transform.m[3][2] = (-2 * camera.far * camera.near) /
-						(camera.far - camera.near);
+	perspective_transform.m[3][2] = (-2 * cx->camera.far * cx->camera.near) /
+						(cx->camera.far - cx->camera.near);
 	perspective_transform.m[3][3] = 0.0;
 
 	mat44_product(&perspective_transform, &cameralook_transform, &tmp_transform);
@@ -623,19 +642,19 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 
 	/* draw fake stars */
 	sng_set_foreground(WHITE);
-	for (i = 0; i < nfakestars; i++) {
+	for (i = 0; i < cx->nfakestars; i++) {
 		float behind_camera;
-		struct fake_star *fs = &fake_star[i];
+		struct fake_star *fs = &cx->fake_star[i];
 		struct mat41 point_to_test;
 
-		point_to_test.m[0] = fs->v.x - camera.x;
-		point_to_test.m[1] = fs->v.y - camera.y;
-		point_to_test.m[2] = fs->v.z - camera.z;
+		point_to_test.m[0] = fs->v.x - cx->camera.x;
+		point_to_test.m[1] = fs->v.y - cx->camera.y;
+		point_to_test.m[2] = fs->v.z - cx->camera.z;
 		point_to_test.m[3] = 1.0;
 
-		fs->dist3dsqrd = dist3dsqrd(camera.x - fs->v.x,
-						camera.y - fs->v.y,
-						camera.z - fs->v.z);
+		fs->dist3dsqrd = dist3dsqrd(cx->camera.x - fs->v.x,
+						cx->camera.y - fs->v.y,
+						cx->camera.z - fs->v.z);
 
 		behind_camera = mat41_dot_mat41(&look_direction, &point_to_test);
 		if (behind_camera < 0) /* behind camera */
@@ -646,32 +665,32 @@ void render_entities(GtkWidget *w, GdkGC *gc)
 		ent_angle = fabs(ent_angle - camera_angle);
 		if (ent_angle > M_PI)
 			ent_angle = (2 * M_PI - ent_angle);
-		if (ent_angle > (camera.angle_of_view / 2.0) * M_PI / 180.0)
+		if (ent_angle > (cx->camera.angle_of_view / 2.0) * M_PI / 180.0)
 			goto check_for_reposition;
 
 		transform_fake_star(fs, &total_transform);
-		wireframe_render_fake_star(w, gc, fs);
+		wireframe_render_fake_star(w, gc, cx, fs);
 
 check_for_reposition:
-		if (fs->dist3dsqrd > camera.far * 10.0f * camera.far * 10.0f)
-			reposition_fake_star(fs, camera.far * 10.0f);
+		if (fs->dist3dsqrd > cx->camera.far * 10.0f * cx->camera.far * 10.0f)
+			reposition_fake_star(cx, fs, cx->camera.far * 10.0f);
 	}
 
-	sort_entity_distances();
+	sort_entity_distances(cx);
 	   
-	for (j = 0; j <= snis_object_pool_highest_object(entity_pool); j++) {
+	for (j = 0; j <= snis_object_pool_highest_object(cx->entity_pool); j++) {
 		struct mat41 point_to_test;
 		float behind_camera;
 
-		i = entity_depth[j];
+		i = cx->entity_depth[j];
 
-		if (!snis_object_pool_is_allocated(entity_pool, i))
+		if (!snis_object_pool_is_allocated(cx->entity_pool, i))
 			continue;
-		if (entity_list[i].m == NULL)
+		if (cx->entity_list[i].m == NULL)
 			continue;
-		point_to_test.m[0] = entity_list[i].x - camera.x;
-		point_to_test.m[1] = entity_list[i].y - camera.y;
-		point_to_test.m[2] = entity_list[i].z - camera.z;
+		point_to_test.m[0] = cx->entity_list[i].x - cx->camera.x;
+		point_to_test.m[1] = cx->entity_list[i].y - cx->camera.y;
+		point_to_test.m[2] = cx->entity_list[i].z - cx->camera.z;
 		point_to_test.m[3] = 1.0;
 		behind_camera = mat41_dot_mat41(&look_direction, &point_to_test);
 		if (behind_camera < 0) /* behind camera */
@@ -679,8 +698,8 @@ check_for_reposition:
 
 /* increasing STANDARD_RADIUS makes fewer objects visible, decreasing it makes more */
 #define STANDARD_RADIUS (4.0)
-		if (entity_list[i].dist3dsqrd * STANDARD_RADIUS / entity_list[i].m->radius >
-				sqr(fabs(camera.far) * 20.0))
+		if (cx->entity_list[i].dist3dsqrd * STANDARD_RADIUS / cx->entity_list[i].m->radius >
+				sqr(fabs(cx->camera.far) * 20.0))
 			continue;
 
 		/* Really cheezy view culling */
@@ -688,101 +707,106 @@ check_for_reposition:
 		ent_angle = fabs(ent_angle - camera_angle);
 		if (ent_angle > M_PI)
 			ent_angle = (2 * M_PI - ent_angle);
-		if (ent_angle > (camera.angle_of_view / 2.0) * M_PI / 180.0)
+		if (ent_angle > (cx->camera.angle_of_view / 2.0) * M_PI / 180.0)
 			continue;
 
-		transform_entity(&entity_list[i], &total_transform);
-		if (entity_list[i].render_style & RENDER_POINT_CLOUD)
-			wireframe_render_point_cloud(w, gc, &entity_list[i]);
+		transform_entity(&cx->entity_list[i], &total_transform);
+		if (cx->entity_list[i].render_style & RENDER_POINT_CLOUD)
+			wireframe_render_point_cloud(w, gc, cx, &cx->entity_list[i]);
 		else {
-			if (camera.renderer & FLATSHADING_RENDERER)
-				render_entity(w, gc, &entity_list[i]);
-			else if (camera.renderer & WIREFRAME_RENDERER)
-				wireframe_render_entity(w, gc, &entity_list[i]);
+			if (cx->camera.renderer & FLATSHADING_RENDERER)
+				render_entity(w, gc, cx, &cx->entity_list[i]);
+			else if (cx->camera.renderer & WIREFRAME_RENDERER)
+				wireframe_render_entity(w, gc, cx, &cx->entity_list[i]);
 		}
 	}
 	// printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
-	rx = fmod(rx + 0.3, 360.0);
-	ry = fmod(ry + 0.15, 360.0);
-	rz = fmod(rz + 0.6, 360.0);
+	cx->rx = fmod(cx->rx + 0.3, 360.0);
+	cx->ry = fmod(cx->ry + 0.15, 360.0);
+	cx->rz = fmod(cx->rz + 0.6, 360.0);
 }
 
-void camera_set_pos(float x, float y, float z)
+void camera_set_pos(struct entity_context *cx, float x, float y, float z)
 {
-	camera.x = x;
-	camera.y = y;
-	camera.z = z;
+	cx->camera.x = x;
+	cx->camera.y = y;
+	cx->camera.z = z;
 }
 
-void camera_look_at(float x, float y, float z)
+void camera_look_at(struct entity_context *cx, float x, float y, float z)
 {
-	camera.lx = x;
-	camera.ly = y;
-	camera.lz = z;
+	cx->camera.lx = x;
+	cx->camera.ly = y;
+	cx->camera.lz = z;
 }
 
-void camera_set_parameters(float near, float far, float width, float height,
+void camera_set_parameters(struct entity_context *cx, float near, float far, float width, float height,
 				int xvpixels, int yvpixels, float angle_of_view)
 {
-	camera.near = -near;
-	camera.far = -far;
-	camera.width = width;
-	camera.height = height;	
-	camera.xvpixels = xvpixels;
-	camera.yvpixels = yvpixels;
-	camera.angle_of_view = angle_of_view;
+	cx->camera.near = -near;
+	cx->camera.far = -far;
+	cx->camera.width = width;
+	cx->camera.height = height;	
+	cx->camera.xvpixels = xvpixels;
+	cx->camera.yvpixels = yvpixels;
+	cx->camera.angle_of_view = angle_of_view;
 }
 
-void entity_init(void)
+struct entity_context *entity_context_new(void)
 {
-	snis_object_pool_setup(&entity_pool, MAX_ENTITIES);
-	set_renderer(FLATSHADING_RENDERER);
+	struct entity_context *cx;
+
+	cx = malloc(sizeof(*cx));
+	memset(cx, 0, sizeof(*cx));
+	snis_object_pool_setup(&cx->entity_pool, MAX_ENTITIES);
+	set_renderer(cx, FLATSHADING_RENDERER);
+	return cx;
 }
 
 /* fill a sphere of specified radius with randomly placed stars */
-void entity_init_fake_stars(int nstars, float radius)
+void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius)
 {
 	int i;
 
-	fake_star = malloc(sizeof(*fake_star) * nstars);
-	memset(fake_star, 0, sizeof(*fake_star) * nstars);
+	cx->fake_star = malloc(sizeof(*cx->fake_star) * nstars);
+	memset(cx->fake_star, 0, sizeof(*cx->fake_star) * nstars);
 
 	for (i = 0; i < nstars; i++) {
-		struct fake_star *fs = &fake_star[i];
+		struct fake_star *fs = &cx->fake_star[i];
 
 		random_point_in_sphere(radius, &fs->v.x, &fs->v.y, &fs->v.z,
 					&fs->dist3dsqrd);
-		fs->v.x += camera.x;
-		fs->v.y += camera.y;
-		fs->v.z += camera.z;
+		fs->v.x += cx->camera.x;
+		fs->v.y += cx->camera.y;
+		fs->v.z += cx->camera.z;
 	}
-	nfakestars = nstars;
+	cx->nfakestars = nstars;
 }
 
 /* Re-position a star randomly on the surface of sphere of given radius */
-static void reposition_fake_star(struct fake_star *fs, float radius)
+static void reposition_fake_star(struct entity_context *cx, struct fake_star *fs, float radius)
 {
 	/* I tried "on" sphere here, but I like the look of "in" better. */
 	random_point_in_sphere(radius, &fs->v.x, &fs->v.y, &fs->v.z, &fs->dist3dsqrd);
-	fs->v.x += camera.x;
-	fs->v.y += camera.y;
-	fs->v.z += camera.z;
+	fs->v.x += cx->camera.x;
+	fs->v.y += cx->camera.y;
+	fs->v.z += cx->camera.z;
 }
 
-void entity_free_fake_stars(void)
+void entity_free_fake_stars(struct entity_context *cx)
 {
-	nfakestars = 0;
-	free(fake_star);
+	cx->nfakestars = 0;
+	free(cx->fake_star);
 }
 
-void set_renderer(int renderer)
+void set_renderer(struct entity_context *cx, int renderer)
 {
-	camera.renderer = renderer;
+	cx->camera.renderer = renderer;
 }
 
-int get_renderer(void)
+int get_renderer(struct entity_context *cx)
 {
-	return camera.renderer;
+	return cx->camera.renderer;
 }
 
 void set_render_style(struct entity *e, int render_style)

@@ -138,6 +138,8 @@ int real_screen_height;
 int warp_limbo_countdown = 0;
 int damage_limbo_countdown = 0;
 
+struct entity_context *ecx;
+
 struct nebula_entry {
 	double x, y, r, r2;
 } nebulaentry[NNEBULA];
@@ -567,34 +569,34 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 	if (i < 0) {
 		switch (shiptype) {
 		case SHIP_CLASS_CRUISER:
-			e = add_entity(cruiser_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, cruiser_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_DESTROYER:
-			e = add_entity(destroyer_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, destroyer_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(freighter_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, freighter_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_TANKER:
-			e = add_entity(tanker_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, tanker_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_BATTLESTAR:
-			e = add_entity(battlestar_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, battlestar_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_ASTEROIDMINER:
-			e = add_entity(asteroidminer_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, asteroidminer_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_SCOUT:
-			e = add_entity(scout_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, scout_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_SCIENCE:
-			e = add_entity(spaceship2_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, spaceship2_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_STARSHIP:
-			e = add_entity(ship_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, ship_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		default:
-			e = add_entity(cruiser_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, cruiser_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		}
 		i = add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP2, alive, e);
@@ -635,13 +637,13 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	if (i < 0) {
 		switch (shiptype) {
 		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(freighter_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, freighter_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		default:
 			if (id == my_ship_id)	
-				e = add_entity(NULL, x, 0, -y, SHIP_COLOR);
+				e = add_entity(ecx, NULL, x, 0, -y, SHIP_COLOR);
 			else
-				e = add_entity(ship_mesh, x, 0, -y, SHIP_COLOR);
+				e = add_entity(ecx, ship_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		}
 		i = add_generic_object(id, x, y, vx, vy, heading, type, alive, e);
@@ -700,7 +702,7 @@ static int update_torpedo(uint32_t id, double x, double y, double vx, double vy,
 	struct entity *e;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(torpedo_mesh, x, 0, -y, TORPEDO_COLOR);
+		e = add_entity(ecx, torpedo_mesh, x, 0, -y, TORPEDO_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
@@ -719,7 +721,7 @@ static int update_laser(uint32_t id, double x, double y, double vx, double vy, u
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(laser_mesh, x, 0, -y, LASER_COLOR);
+		e = add_entity(ecx, laser_mesh, x, 0, -y, LASER_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_LASER, 1, e);
 		if (i < 0)
@@ -750,7 +752,7 @@ static void init_spacemonster_data(struct snis_entity *o, double z)
 		sd->x[i] = o->x;
 		sd->y[i] = o->y;
 		sd->z[i] = 0.0;
-		sd->entity[i] = add_entity(spacemonster_mesh, o->x, 0, -o->y,
+		sd->entity[i] = add_entity(ecx, spacemonster_mesh, o->x, 0, -o->y,
 						SPACEMONSTER_COLOR);
 		set_render_style(sd->entity[i], RENDER_POINT_CLOUD);
 	}
@@ -780,7 +782,7 @@ static void free_spacemonster_data(struct snis_entity *o)
 
 	if (sd->entity) {
 		for (i = 0; i < MAX_SPACEMONSTER_SEGMENTS; i++)
-			remove_entity(sd->entity[i]);
+			remove_entity(ecx, sd->entity[i]);
 		free(sd->entity);
 		sd->entity = NULL;
 	}
@@ -793,7 +795,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(spacemonster_mesh, x, 0, -y, SPACEMONSTER_COLOR);
+		e = add_entity(ecx, spacemonster_mesh, x, 0, -y, SPACEMONSTER_COLOR);
 		set_render_style(e, RENDER_POINT_CLOUD);
 		i = add_generic_object(id, x, y, 0, 0, 0.0, OBJTYPE_SPACEMONSTER, 1, e);
 		if (i < 0)
@@ -826,7 +828,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
-		e = add_entity(asteroid_mesh[m], x, z, -y, ASTEROID_COLOR);
+		e = add_entity(ecx, asteroid_mesh[m], x, z, -y, ASTEROID_COLOR);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
@@ -858,7 +860,7 @@ static int update_planet(uint32_t id, double x, double y, double z)
 		float angle;
 
 		m = id % NPLANET_MODELS;
-		e = add_entity(planet_mesh[m], x, z, -y, PLANET_COLOR);
+		e = add_entity(ecx, planet_mesh[m], x, z, -y, PLANET_COLOR);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
@@ -882,7 +884,7 @@ static int update_wormhole(uint32_t id, double x, double y)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(wormhole_mesh, x, 0, -y, WORMHOLE_COLOR);
+		e = add_entity(ecx, wormhole_mesh, x, 0, -y, WORMHOLE_COLOR);
 		set_render_style(e, RENDER_POINT_CLOUD);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
@@ -901,7 +903,7 @@ static int update_starbase(uint32_t id, double x, double y)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		m = id % NSTARBASE_MODELS;
-		e = add_entity(starbase_mesh[m], x, 0, -y, STARBASE_COLOR);
+		e = add_entity(ecx, starbase_mesh[m], x, 0, -y, STARBASE_COLOR);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
@@ -955,7 +957,7 @@ static void spark_move(struct snis_entity *o)
 	normalize_angle(&o->tsd.spark.rz);
 	o->alive--;
 	if (o->alive <= 0) {
-		remove_entity(o->entity);
+		remove_entity(ecx, o->entity);
 		snis_object_pool_free_object(sparkpool, o->index);
 	}
 }
@@ -1031,12 +1033,12 @@ void add_spark(double x, double y, double vx, double vy, double vz, int time, in
 		return;
 	r = snis_randn(100);
 	if (r < 50 || time < 10) {
-		e = add_entity(particle_mesh, x, 0, -y, PARTICLE_COLOR);
+		e = add_entity(ecx, particle_mesh, x, 0, -y, PARTICLE_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 	} else if (r < 75) {
-		e = add_entity(debris_mesh, x, 0, -y, color);
+		e = add_entity(ecx, debris_mesh, x, 0, -y, color);
 	} else {
-		e = add_entity(debris2_mesh, x, 0, -y, color);
+		e = add_entity(ecx, debris2_mesh, x, 0, -y, color);
 	}
 	memset(&spark[i], 0, sizeof(spark[i]));
 	spark[i].index = i;
@@ -2082,7 +2084,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		if (displaymode != DISPLAYMODE_MAINSCREEN)
 			break;
 		r = (r + 1) % ARRAY_SIZE(valid_combos);
-		set_renderer(valid_combos[r]);
+		set_renderer(ecx, valid_combos[r]);
 		break;
 		}
 	default:
@@ -2515,7 +2517,7 @@ static void delete_object(uint32_t id)
 	if (i < 0)
 		return;
 	go[i].alive = 0;
-	remove_entity(go[i].entity);
+	remove_entity(ecx, go[i].entity);
 	go[i].entity = NULL;
 	free_spacemonster_data(&go[i]);
 	go[i].id = -1;
@@ -3439,17 +3441,17 @@ static void show_mainscreen(GtkWidget *w)
 	cz = -6.0;
 	lx = cx + sin(camera_look_heading) * 500.0;
 	ly = cy + cos(camera_look_heading) * 500.0;
-	camera_set_pos(cx, (float) cz, cy);
-	camera_look_at(lx, (float) 0.0, ly);
-	camera_set_parameters((float) 20, (float) 300, (float) 16, (float) 12,
+	camera_set_pos(ecx, cx, (float) cz, cy);
+	camera_look_at(ecx, lx, (float) 0.0, ly);
+	camera_set_parameters(ecx, (float) 20, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
 	sng_set_foreground(GREEN);
 	if (!fake_stars_initialized) {
 		fake_stars_initialized = 1;
-		entity_init_fake_stars(2000, 300.0f * 10.0f);
+		entity_init_fake_stars(ecx, 2000, 300.0f * 10.0f);
 	}
 	pthread_mutex_lock(&universe_mutex);
-	render_entities(w, gc);
+	render_entities(w, gc, ecx);
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
 		show_gunsight(w);
 	pthread_mutex_unlock(&universe_mutex);
@@ -7683,7 +7685,7 @@ int main(int argc, char *argv[])
 	init_demon_ui();
 	init_net_setup_ui();
 	setup_joystick(window);
-	entity_init();
+	ecx = entity_context_new();
 
 	snis_protocol_debugging(1);
 

@@ -22,6 +22,7 @@
 #define ENTITY_H__
 
 struct entity;
+struct entity_context;
 
 #ifdef DEFINE_ENTITY_GLOBALS
 #define GLOBAL
@@ -29,24 +30,30 @@ struct entity;
 #define GLOBAL extern
 #endif
 
-GLOBAL void entity_init(void);
-GLOBAL struct entity *add_entity(struct mesh *m, float x, float y, float z, int color);
-GLOBAL void remove_entity(struct entity *e);
+GLOBAL struct entity_context *entity_context_new(void);
+GLOBAL struct entity *add_entity(struct entity_context *cx,
+	struct mesh *m, float x, float y, float z, int color);
+GLOBAL void remove_entity(struct entity_context *cx,
+	struct entity *e);
 GLOBAL void update_entity_pos(struct entity *e, float x, float y, float z);
 GLOBAL void update_entity_rotation(struct entity *e, float rx, float ry, float rz);
 GLOBAL void update_entity_color(struct entity *e, int color);
-GLOBAL void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity *e);
-GLOBAL void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc, struct entity *e);
-GLOBAL void render_entity(GtkWidget *w, GdkGC *gc, struct entity *e);
-GLOBAL void render_entities(GtkWidget *w, GdkGC *gc);
-GLOBAL void camera_set_pos(float x, float y, float z);
-GLOBAL void camera_look_at(float x, float y, float z);
-GLOBAL void camera_set_parameters(float near, float far, float width, float height,
-					int xvpixels, int yvpixels, float angle_of_view);
-GLOBAL void entity_init_fake_stars(int nstars, float radius);
-GLOBAL void entity_free_fake_stars(void);
-GLOBAL void set_renderer(int renderer);
-GLOBAL int get_renderer(void);
+GLOBAL void wireframe_render_entity(GtkWidget *w, GdkGC *gc,
+		struct entity_context *cx, struct entity *e);
+GLOBAL void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc,
+		struct entity_context *cx, struct entity *e);
+GLOBAL void render_entity(GtkWidget *w, GdkGC *gc,
+		struct entity_context *cx, struct entity *e);
+GLOBAL void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx);
+GLOBAL void camera_set_pos(struct entity_context *cx, float x, float y, float z);
+GLOBAL void camera_look_at(struct entity_context *cx, float x, float y, float z);
+GLOBAL void camera_set_parameters(struct entity_context *cx,
+		float near, float far, float width, float height,
+		int xvpixels, int yvpixels, float angle_of_view);
+GLOBAL void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius);
+GLOBAL void entity_free_fake_stars(struct entity_context *cx);
+GLOBAL void set_renderer(struct entity_context *cx, int renderer);
+GLOBAL int get_renderer(struct entity_context *cx);
 #define WIREFRAME_RENDERER (1 << 0)
 #define FLATSHADING_RENDERER (1 << 1)
 #define BLACK_TRIS (1 << 2)
