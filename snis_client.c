@@ -3942,21 +3942,24 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		ty = (go[i].y - o->y) * (double) r / range;
 		angle = atan2(ty, tx);
 
-		in_beam = 0;
-		if (dist2 > SCIENCE_SHORT_RANGE * SCIENCE_SHORT_RANGE &&
-			!go[i].sdata.science_data_known) {
-			if (!(A2 < 0 && A1 > 0 && fabs(A1) > M_PI / 2.0)) {
-				if (angle < A1)
-					continue;
-				if (angle > A2)
-					continue;
-			} else {
-				if (angle < 0 && angle > A2)
-					continue;
-				if (angle > 0 && angle < A1)
-					continue;
-			}
+		if (dist2 < SCIENCE_SHORT_RANGE * SCIENCE_SHORT_RANGE) {
 			in_beam = 1;
+		} else {
+			in_beam = 0;
+			if (!go[i].sdata.science_data_known) {
+				if (!(A2 < 0 && A1 > 0 && fabs(A1) > M_PI / 2.0)) {
+					if (angle < A1)
+						continue;
+					if (angle > A2)
+						continue;
+				} else {
+					if (angle < 0 && angle > A2)
+						continue;
+					if (angle > 0 && angle < A1)
+						continue;
+				}
+				in_beam = 1;
+			}
 		}
 
 		x = (int) (tx + (double) cx);
