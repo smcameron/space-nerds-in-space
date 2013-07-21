@@ -2463,6 +2463,8 @@ static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_e
 static int save_sdata_bandwidth(void)
 {
 	/* TODO: something clever here. */
+	if (snis_randn(100) > 25)
+		return 1;
 	return 0;
 }
 
