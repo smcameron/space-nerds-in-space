@@ -6027,7 +6027,7 @@ done_drawing_item:
 
 static char *demon_verb[] = {
 	"mark",
-	"select",
+	"name",
 	"attack",
 	"goto",
 	"patrol",
@@ -6170,7 +6170,7 @@ static int construct_demon_command(char *input,
 		case 1: /* select */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
-				sprintf(errmsg, "missing argument to select command");
+				sprintf(errmsg, "missing argument to name command");
 				return -1;
 			}
 			g = get_demon_group_var(s); 
