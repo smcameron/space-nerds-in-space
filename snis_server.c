@@ -1260,6 +1260,30 @@ static int lookup_bridge_by_shipid(uint32_t shipid)
 	return -1;
 }
 
+static void calculate_ship_scibeam_info(struct snis_entity *ship)
+{
+	double range, tx, ty, angle, A1, A2;
+
+	/* calculate the range of the science scope based on power. */
+	range = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
+		(ship->tsd.ship.scizoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
+	ship->tsd.ship.scibeam_range = range;
+
+	tx = sin(ship->tsd.ship.sci_heading) * range;
+	ty = -cos(ship->tsd.ship.sci_heading) * range;
+
+	angle = atan2(ty, tx);
+	A1 = angle - ship->tsd.ship.sci_beam_width / 2.0;
+	A2 = angle + ship->tsd.ship.sci_beam_width / 2.0;
+        if (A1 < -M_PI)
+                A1 += 2.0 * M_PI;
+        if (A2 > M_PI)
+                A2 -= 2.0 * M_PI;
+	ship->tsd.ship.scibeam_a1 = A1;
+	ship->tsd.ship.scibeam_a2 = A2;
+	return;
+}
+
 static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
@@ -1393,6 +1417,7 @@ static void player_move(struct snis_entity *o)
 			}
 		}
 	}
+	calculate_ship_scibeam_info(o);
 }
 
 static void demon_ship_move(struct snis_entity *o)
@@ -1649,6 +1674,9 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.power_data.maneuvering.r1 = 0;
 	o->tsd.ship.power_data.impulse.r1 = 0;
 	o->tsd.ship.warp_time = -1;
+	o->tsd.ship.scibeam_range = 0;
+	o->tsd.ship.scibeam_a1 = 0;
+	o->tsd.ship.scibeam_a2 = 0;
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
 	init_power_model(o);
 }
@@ -2432,25 +2460,97 @@ static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_e
 	pthread_mutex_lock(&universe_mutex);
 }
 
-static int process_request_ship_sdata(struct game_client *c)
+static int save_sdata_bandwidth(void)
 {
-	unsigned char buffer[10];
-	uint32_t id;
-	int i;
-	int rc;
-
-	rc = read_and_unpack_buffer(c, buffer, "w", &id);
-	if (rc)
-		return rc;
-	pthread_mutex_lock(&universe_mutex);
-	i = lookup_by_id(id);
-	if (i < 0) {
-		pthread_mutex_unlock(&universe_mutex);
-		return -1;
-	}
-	pack_and_send_ship_sdata_packet(c, &go[i]);
-	pthread_mutex_unlock(&universe_mutex);
+	/* TODO: something clever here. */
 	return 0;
+}
+
+static int should_send_sdata(struct game_client *c, struct snis_entity *ship,
+				struct snis_entity *o)
+{
+	double dist, dist2, angle, range, range2, A1, A2;
+	int in_beam, bw, pwr, divisor, dr;
+
+	/*
+	 * Figure out if we should send sdata. Contributing factors:
+	 *
+	 * 1. science beam direction and angle.
+	 * 2. science beam power
+	 * 3. proximity
+	 * 4. science beam zoom level
+	 * 5. nebula effects
+	 */
+
+	if (ship == o) /* always send our own sdata to ourself */
+		return 1;
+
+	range2 = ship->tsd.ship.scibeam_range * ship->tsd.ship.scibeam_range;
+	/* distance to target... */
+	dist2 = (o->x - ship->x) * (o->x - ship->x) +
+		(o->y - ship->y) * (o->y - ship->y);
+	if (dist2 > range2) /* too far, no sdata for you. */
+		return 0;
+
+	/* super close? Send it. */
+	if (dist2 < 1.2 * (MIN_SCIENCE_SCREEN_RADIUS * MIN_SCIENCE_SCREEN_RADIUS))
+		return 1;
+
+	range = sqrt(range2);
+	dist = sqrt(dist2);
+	bw =  ship->tsd.ship.sci_beam_width * 180.0 / M_PI;
+	pwr = ship->tsd.ship.power_data.sensors.i;
+
+	/* Compute radius of ship blip */
+	divisor = hypot((float) bw + 1, 256.0 - pwr);
+	dr = (int) (dist / (3.0 * XKNOWN_DIM / divisor));
+	dr = dr * MAX_SCIENCE_SCREEN_RADIUS / range;
+#if 0
+	if (nebula_factor) {
+		dr = dr * 10; 
+		dr += 200;
+	}
+#endif
+	if (dr >= 5)
+		return 0;
+
+	/* Is the target in the beam? */
+	angle = atan2(o->y - ship->y, o->x - ship->x);
+	in_beam = 1;
+	A1 = ship->tsd.ship.scibeam_a1;
+	A2 = ship->tsd.ship.scibeam_a2;
+
+	if (!(A2 < 0 && A1 > 0 && fabs(A1) > M_PI / 2.0)) {
+		if (angle < A1)
+			in_beam = 0;
+		if (angle > A2)
+			in_beam = 0;
+	} else {
+		if (angle < 0 && angle > A2)
+			in_beam = 0;
+		if (angle > 0 && angle < A1)
+			in_beam = 0;
+	}
+	return in_beam;
+}
+
+static void send_update_sdata_packets(struct game_client *c, struct snis_entity *o)
+{
+	struct snis_entity *ship;
+	int i;
+
+	/* Assume universe mutex held. */
+	if (!o->alive)
+		return;
+	i = lookup_by_id(c->shipid);
+	if (i < 0)
+		return;
+	ship = &go[i];
+	if (save_sdata_bandwidth())
+		return;
+	if (!should_send_sdata(c, ship, o))
+		return;
+	pack_and_send_ship_sdata_packet(c, o);
 }
 
 static int process_role_onscreen(struct game_client *c)
@@ -3476,11 +3576,6 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_NOOP:
 			break;
-		case OPCODE_REQUEST_SHIP_SDATA:
-			rc = process_request_ship_sdata(c);
-			if (rc)
-				goto protocol_error;
-			break;
 		case OPCODE_ROLE_ONSCREEN:
 			rc = process_role_onscreen(c);
 			if (rc)
@@ -3644,7 +3739,8 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	switch(o->type) {
 	case OBJTYPE_SHIP1:
 		send_update_ship_packet(c, o, OPCODE_UPDATE_SHIP);
-		/* send science data about player's own ship to player */
+		send_update_sdata_packets(c, o);
+		/* TODO: remove the next two lines when send_update_sdata_packets does it already */
 		if (o == &go[c->ship_index])
 			pack_and_send_ship_sdata_packet(c, o);
 		if (!o->alive) {
@@ -3655,18 +3751,23 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_SHIP2:
 		send_econ_update_ship_packet(c, o);
+		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_ASTEROID:
 		send_update_asteroid_packet(c, o);
+		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_PLANET:
 		send_update_planet_packet(c, o);
+		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_WORMHOLE:
 		send_update_wormhole_packet(c, o);
+		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_STARBASE:
 		send_update_starbase_packet(c, o);
+		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_NEBULA:
 		send_update_nebula_packet(c, o);
@@ -3680,12 +3781,15 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_TORPEDO:
 		send_update_torpedo_packet(c, o);
+		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_LASER:
 		send_update_laser_packet(c, o);
+		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_SPACEMONSTER:
 		send_update_spacemonster_packet(c, o);
+		send_update_sdata_packets(c, o);
 		break;
 	default:
 		break;

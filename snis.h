@@ -230,6 +230,7 @@ struct ship_data {
 	struct power_model_data power_data;
 	struct power_model *power_model;
 	int32_t warp_time; /* time remaining until warp engages */
+	double scibeam_a1, scibeam_a2, scibeam_range; /* used server side to cache sci beam calcs */
 };
 
 struct starbase_data {

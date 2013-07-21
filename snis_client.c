@@ -1468,12 +1468,6 @@ static void queue_to_server(struct packed_buffer *pb)
 	wakeup_gameserver_writer();
 }
 
-static void request_ship_sdata(struct snis_entity *o)
-{
-	queue_to_server(packed_buffer_new("hw", OPCODE_REQUEST_SHIP_SDATA, o->id));
-	o->sdata.science_data_requested = 1;
-}
-
 static void request_sci_select_target(uint32_t id)
 {
 	queue_to_server(packed_buffer_new("hw", OPCODE_SCI_SELECT_TARGET, id));
@@ -3504,8 +3498,6 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	double tx, ty;
 	char buffer[50];
 	int divisor;
-	char resolved = 0;
-
 
 	/* Compute radius of ship blip */
 	divisor = hypot((float) bw + 1, 256.0 - pwr);
@@ -3516,16 +3508,8 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		dr += 200;
 	}
 
-	/* if dr is small enough, and ship info is not known, nor recently requested,
-	 * then issue OPCODE REQUEST_SHIP_SDATA to server somehow.
-	 */
-	if (in_beam && dr < 5 && !o->sdata.science_data_known && !o->sdata.science_data_requested) {
-		resolved = 1;
-		request_ship_sdata(o);
-	}
-
 	sng_set_foreground(GREEN);
-	if (!resolved && !o->sdata.science_data_known) {
+	if (!o->sdata.science_data_known) {
 		for (i = 0; i < 10; i++) {
 			float r;
 			da = snis_randn(360) * M_PI / 180.0;
