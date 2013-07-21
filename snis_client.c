@@ -3568,11 +3568,11 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			break;
 		case OBJTYPE_ASTEROID:
 			sng_set_foreground(AMBER);
-			sprintf(buffer, "%s %s\n", "AST",  o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "A",  o->sdata.name); 
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(BLUE);
-			sprintf(buffer, "%s %s\n", "PL",  o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "P",  o->sdata.name); 
 			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_SPARK:
@@ -5567,13 +5567,13 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 			sprintf(buffer, "TYPE: %s", shipclass[o->sdata.subclass]); 
 			break;
 		case OBJTYPE_STARBASE:
-			sprintf(buffer, "TYPE: %s", "Starbase"); 
+			sprintf(buffer, "TYPE: %s", "STARBASE"); 
 			break;
 		case OBJTYPE_ASTEROID:
-			sprintf(buffer, "TYPE: %s", "Asteroid"); 
+			sprintf(buffer, "TYPE: %s", "ASTEROID"); 
 			break;
 		default:
-			sprintf(buffer, "TYPE: %s", "Unknown"); 
+			sprintf(buffer, "TYPE: %s", "UNKNOWN"); 
 			break;
 		}
 	} else  {
