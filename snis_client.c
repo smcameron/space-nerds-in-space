@@ -3489,7 +3489,7 @@ static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
 					gint x, gint y, double dist, int bw, int pwr,
 					double range, int selected,
-					int nebula_factor, int in_beam)
+					int nebula_factor)
 {
 	int i;
 
@@ -3866,11 +3866,9 @@ static int nscience_guys = 0;
 static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, double range)
 {
 	int i, x, y, cx, cy, r, bw, pwr;
-	double angle, angle2, A1, A2;
 	double tx, ty, dist2, dist;
 	int selected_guy_still_visible = 0;
 	int nebula_factor = 0;
-	char in_beam;
 
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
@@ -3892,13 +3890,6 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
         tx = sin(o->tsd.ship.sci_heading) * range;
         ty = -cos(o->tsd.ship.sci_heading) * range;
 
-	angle2 = atan2(ty, tx);
-	A1 = angle2 - o->tsd.ship.sci_beam_width / 2.0;
-	A2 = angle2 + o->tsd.ship.sci_beam_width / 2.0;
-	if (A1 < -M_PI)
-		A1 += 2.0 * M_PI;
-	if (A2 > M_PI)
-		A2 -= 2.0 * M_PI;
 	sng_set_foreground(GREEN);
 	pthread_mutex_lock(&universe_mutex);
 	nscience_guys = 0;
@@ -3924,28 +3915,6 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 
 		tx = (go[i].x - o->x) * (double) r / range;
 		ty = (go[i].y - o->y) * (double) r / range;
-		angle = atan2(ty, tx);
-
-		if (dist2 < SCIENCE_SHORT_RANGE * SCIENCE_SHORT_RANGE) {
-			in_beam = 1;
-		} else {
-			in_beam = 0;
-			if (!go[i].sdata.science_data_known) {
-				if (!(A2 < 0 && A1 > 0 && fabs(A1) > M_PI / 2.0)) {
-					if (angle < A1)
-						continue;
-					if (angle > A2)
-						continue;
-				} else {
-					if (angle < 0 && angle > A2)
-						continue;
-					if (angle > 0 && angle < A1)
-						continue;
-				}
-				in_beam = 1;
-			}
-		}
-
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
 
@@ -3957,7 +3926,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		if (!curr_science_guy && prev_science_guy == &go[i])
 			curr_science_guy = prev_science_guy;
 
-		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor, in_beam);
+		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor);
 
 		/* cache screen coords for mouse picking */
 		science_guy[nscience_guys].o = &go[i];
