@@ -18,6 +18,9 @@
         along with Spacenerds in Space; if not, write to the Free Software
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+
+/* Need _GNU_SOURCE for qsort_r, must be defined before any include directives */
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -509,14 +512,6 @@ static int object_depth_compare(const void *a, const void *b, void *vcx)
 		return -1;
 	return 0;
 }
-
-/*
- * For whatever reason, qsort_r seems to be missing from stdlib.h lots of times,
- * so I'll just declare it extern here myself.  Seems to be present in glibc.
- */
-extern void qsort_r(void *base, size_t nmemb, size_t size,
-			int (*compar)(const void *, const void *, void *),
-			void *arg);
 
 static void sort_entity_distances(struct entity_context *cx)
 {
