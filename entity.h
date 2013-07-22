@@ -30,7 +30,7 @@ struct entity_context;
 #define GLOBAL extern
 #endif
 
-GLOBAL struct entity_context *entity_context_new(void);
+GLOBAL struct entity_context *entity_context_new(int maxobjs);
 GLOBAL struct entity *add_entity(struct entity_context *cx,
 	struct mesh *m, float x, float y, float z, int color);
 GLOBAL void remove_entity(struct entity_context *cx,
@@ -59,6 +59,7 @@ GLOBAL int get_renderer(struct entity_context *cx);
 #define BLACK_TRIS (1 << 2)
 
 GLOBAL void set_render_style(struct entity *e, int render_style);
+GLOBAL void entity_context_free(struct entity_context *cx);
 #define RENDER_NORMAL 0
 #define RENDER_POINT_CLOUD (1 << 0)
 #define RENDER_WIREFRAME (1 << 1)

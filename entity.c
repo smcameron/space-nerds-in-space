@@ -40,7 +40,6 @@
 
 #include "snis_graph.h"
 
-#define MAX_ENTITIES 5000
 #define MAX_TRIANGLES_PER_ENTITY 10000
 
 struct fake_star {
@@ -72,9 +71,10 @@ struct tri_depth_entry {
 };
 
 struct entity_context {
+	int maxobjs;
 	struct snis_object_pool *entity_pool;
-	struct entity entity_list[MAX_ENTITIES];
-	int entity_depth[MAX_ENTITIES];
+	struct entity *entity_list; /* array, [maxobjs] */
+	int *entity_depth; /* array [maxobjs] */
 	unsigned long ntris, nents, nlines;
 	struct camera_info camera;
 	struct tri_depth_entry tri_depth[MAX_TRIANGLES_PER_ENTITY];
@@ -752,15 +752,28 @@ void camera_set_parameters(struct entity_context *cx, float near, float far, flo
 	cx->camera.angle_of_view = angle_of_view;
 }
 
-struct entity_context *entity_context_new(void)
+struct entity_context *entity_context_new(int maxobjs)
 {
 	struct entity_context *cx;
 
 	cx = malloc(sizeof(*cx));
+
 	memset(cx, 0, sizeof(*cx));
-	snis_object_pool_setup(&cx->entity_pool, MAX_ENTITIES);
+	cx->entity_list = malloc(sizeof(cx->entity_list[0]) * maxobjs);
+	memset(cx->entity_list, 0, sizeof(cx->entity_list[0]) * maxobjs);
+	cx->entity_depth = malloc(sizeof(cx->entity_depth[0]) * maxobjs);
+	memset(cx->entity_depth, 0, sizeof(cx->entity_depth[0]) * maxobjs);
+	snis_object_pool_setup(&cx->entity_pool, maxobjs);
+	cx->maxobjs = maxobjs;
 	set_renderer(cx, FLATSHADING_RENDERER);
 	return cx;
+}
+
+void entity_context_free(struct entity_context *cx)
+{
+	free(cx->entity_list);
+	free(cx->entity_depth);
+	free(cx);
 }
 
 /* fill a sphere of specified radius with randomly placed stars */
@@ -814,3 +827,4 @@ void set_render_style(struct entity *e, int render_style)
 	if (e)
 		e->render_style = render_style;
 }
+

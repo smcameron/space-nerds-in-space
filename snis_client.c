@@ -7685,7 +7685,7 @@ int main(int argc, char *argv[])
 	init_demon_ui();
 	init_net_setup_ui();
 	setup_joystick(window);
-	ecx = entity_context_new();
+	ecx = entity_context_new(5000);
 
 	snis_protocol_debugging(1);
 
