@@ -7,7 +7,6 @@ Too much to list, but here's a list anyway:
 * Engineering screen
     Damage reporting
     Damage repairing
-    Energy distribution
     Coolant distribution(?)
     make comms power do something
 
@@ -33,10 +32,6 @@ Too much to list, but here's a list anyway:
   Try to make it more intuitive for people who are seeing it for
   the first time ever.
 
-* Some kind of session persistence so that if a network
-  problem occurs, client can re-connect and pick up where
-  it left off.  (This is actually already done)
-
 * write some kind of guide to hacking, to make it easier for others to
   contribute to this codebase.
 
@@ -45,17 +40,15 @@ Too much to list, but here's a list anyway:
   remains to be done.
 
 * starbase behavior
-	allow docking with starbase
+  improve docking with starbase
 
-* asteroids/anomalies/nebulae, etc. need to be implemented
+* anomalies, etc. need to be implemented
 
-* 3D out the window view remains to be done.
-  Kinda sorta done now.
+* 3D out the window view
   Fade distant objects to black
   Represent nebulas somehow
 
 * comms screen:
-  enemies need to send insults to the crew
   need to be able to communicate with starbases -- request
   various things of the starbase. 
   intercept chatter between enemy ships
@@ -67,10 +60,6 @@ Too much to list, but here's a list anyway:
   Allow repairing/replacing of the components.  Am thinking
   replacing is better than repairing with some limited spares
   that must be refreshed at starbases.
-
-* Make ship consume fuel.  Report remaining fuel, fuel consumption
-  rate, time left at current consumption rate, fuel consumption rate
-  per system.
 
 * Need sound for wormhole travel
 * I think the universe needs to be bigger, you can see too far out
@@ -88,3 +77,4 @@ Too much to list, but here's a list anyway:
 * Right now, laser/torpedo collision detection is too easy/sloppy.
 * Consider dead-reckoning laser/torpedo/ship positions client side between
   server updates.
+* some kind of scripting (lua?)
