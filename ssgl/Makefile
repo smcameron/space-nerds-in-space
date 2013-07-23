@@ -51,19 +51,19 @@ endif
 
 LINKFLAGS=-lrt
 
-COMPILE=$(CC) ${MYCFLAGS} -c -o $@ $< ; $(ECHO) '  COMPILE' $<
+COMPILE=$(CC) ${MYCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 
 MYCFLAGS=${DEBUGFLAG} ${OPTIMIZEFLAG} --pedantic -Wall ${STOP_ON_WARN} -pthread -lrt
 
 SERVEROBJS=ssgl_sanitize.o ssgl_sleep.o \
 	ssgl_socket_io.o ssgl_log.o
-LINKSERVER=$(CC) ${MYCFLAGS} ${LINKFLAGS} $< ${SERVEROBJS} -o $@ ; $(ECHO) '  LINK' $<
-LINKCLIENT=$(CC) ${MYCFLAGS} -L. -o $@ $< -lssglclient ; $(ECHO) '  LINK' $<
+LINKSERVER=$(CC) ${MYCFLAGS} ${LINKFLAGS} $< ${SERVEROBJS} -o $@ && $(ECHO) '  LINK' $<
+LINKCLIENT=$(CC) ${MYCFLAGS} -L. -o $@ $< -lssglclient && $(ECHO) '  LINK' $<
 
 ARCHIVEOBJS=ssgl_sleep.o ssgl_sanitize.o ssgl_recv_game_servers.o \
 		ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
 		ssgl_register_gameserver.o ssgl_log.o
-ARCHIVE=ar -cr $@ ${ARCHIVEOBJS} ; $(ECHO) '  ARCHIVE' $@
+ARCHIVE=ar -cr $@ ${ARCHIVEOBJS} && $(ECHO) '  ARCHIVE' $@
 
 SRCS = ssgl_connect_to_lobby.c \
 	ssgl_gameclient_example.c \
