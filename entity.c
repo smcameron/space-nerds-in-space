@@ -78,12 +78,11 @@ struct entity_context {
 	struct snis_object_pool *entity_pool;
 	struct entity *entity_list; /* array, [maxobjs] */
 	int *entity_depth; /* array [maxobjs] */
-	unsigned long ntris, nents, nlines;
+	// unsigned long ntris, nents, nlines;
 	struct camera_info camera;
 	struct tri_depth_entry tri_depth[MAX_TRIANGLES_PER_ENTITY];
 	struct fake_star *fake_star;
 	int nfakestars; /* = 0; */
-	float rx, ry, rz;
 };
 
 struct entity *add_entity(struct entity_context *cx,
@@ -163,8 +162,6 @@ void wireframe_render_triangle(GtkWidget *w, GdkGC *gc,
 	int x1, y1, x2, y2, x3, y3;
 	struct camera_info *c = &cx->camera;
 
-	cx->ntris++;
-	cx->nlines += 3;
 	v1 = t->v[0];
 	v2 = t->v[1];
 	v3 = t->v[2];
@@ -257,8 +254,6 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 	int xa, ya, xb, yb, xc, yc;
 	struct camera_info *c = &cx->camera;
 
-	cx->ntris++;
-	cx->nlines += 3;
 	v1 = t->v[0];
 	v2 = t->v[1];
 	v3 = t->v[2];
@@ -341,7 +336,6 @@ void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
 	sng_set_foreground(e->color);
 	for (i = 0; i < e->m->ntriangles; i++)
 		wireframe_render_triangle(w, gc, cx, &e->m->t[i]);
-	cx->nents++;
 }
 
 void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
@@ -412,7 +406,6 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct en
 		scan_convert_triangle(w, gc, cx, &e->m->t[tri_index], e->color,
 					e->render_style);
 	}
-	cx->nents++;
 }
 
 static void transform_fake_star(struct fake_star *fs, struct mat44 *transform)
@@ -554,9 +547,6 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 	struct mat41 *u; /* camera relative x axis (left/right) */
 	float camera_angle, ent_angle; /* this is for cheezy view culling */
 
-	cx->nents = 0;
-	cx->ntris = 0;
-	cx->nlines = 0;
 	/* Translate to camera position... */
 	mat44_translate(&identity, -cx->camera.x, -cx->camera.y, -cx->camera.z,
 				&cameralocation_transform);
@@ -709,10 +699,6 @@ check_for_reposition:
 				wireframe_render_entity(w, gc, cx, &cx->entity_list[i]);
 		}
 	}
-	// printf("ntris = %lu, nlines = %lu, nents = %lu\n", ntris, nlines, nents);
-	cx->rx = fmod(cx->rx + 0.3, 360.0);
-	cx->ry = fmod(cx->ry + 0.15, 360.0);
-	cx->rz = fmod(cx->rz + 0.6, 360.0);
 }
 
 void camera_set_pos(struct entity_context *cx, float x, float y, float z)
