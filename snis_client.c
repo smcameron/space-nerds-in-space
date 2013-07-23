@@ -691,7 +691,11 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	go[i].sdata.shield_depth = shield_depth;
 	go[i].sdata.faction = faction;
 	strcpy(go[i].sdata.name, name);
-	go[i].sdata.science_data_known = 30 * 10; /* only remember for ten secs. */
+	if (go[i].type != OBJTYPE_PLANET && go[i].type != OBJTYPE_STARBASE)
+		go[i].sdata.science_data_known = 30 * 10; /* only remember for ten secs. */
+	else
+		go[i].sdata.science_data_known = 30 * 60; /* unless planet or starbase */
+		
 	go[i].sdata.science_data_requested = 0; /* request is fullfilled */
 	return 0;
 }
