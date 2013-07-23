@@ -370,12 +370,6 @@ static void sort_triangle_distances(struct entity_context *cx, struct entity *e)
 {
 	int i;
 
-	/* Calculate camera distances for each vertex in the entity */
-	for (i = 0; i < e->m->nvertices; i++) {
-		struct vertex *v = &e->m->v[i];
-		v->dist3sqrd = v->wz;
-	}
-
 	if (e->m->ntriangles > MAX_TRIANGLES_PER_ENTITY)
 		printf("Too many triangles, %d vs %d at %s:%d\n",
 			e->m->ntriangles, MAX_TRIANGLES_PER_ENTITY,
@@ -385,7 +379,7 @@ static void sort_triangle_distances(struct entity_context *cx, struct entity *e)
 	for (i = 0; i < e->m->ntriangles; i++) {
 		float dist;
 		struct triangle *t = &e->m->t[i];
-		dist = t->v[0]->dist3sqrd + t->v[1]->dist3sqrd + t->v[2]->dist3sqrd;
+		dist = t->v[0]->wz + t->v[1]->wz + t->v[2]->wz;
 		dist = dist / 3.0;
 		cx->tri_depth[i].tri_index = i;
 		cx->tri_depth[i].depth = dist;
