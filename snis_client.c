@@ -7326,28 +7326,43 @@ static void usage(void)
 	exit(1);
 }
 
+static void read_ogg_clip(int sound, char *directory, char *filename)
+{
+	char path[PATH_MAX];
+
+	sprintf(path, "%s/sounds/%s", directory, filename);
+	wwviaudio_read_ogg_clip(sound, path);
+}
+
 static void read_sound_clips(void)
 {
+	char *default_asset_dir = "share/snis";
+	char *d;
+
+	d = getenv("SNIS_ASSET_DIR");
+	if (!d)
+		d = default_asset_dir;
+	
 	printf("Decoding audio data..."); fflush(stdout);
-	wwviaudio_read_ogg_clip(EXPLOSION_SOUND, "share/big_explosion.ogg");
-	wwviaudio_read_ogg_clip(TORPEDO_LAUNCH_SOUND, "share/flak_gun_sound.ogg");
-	wwviaudio_read_ogg_clip(LASER_FIRE_SOUND, "share/bigshotlaser.ogg");
-	wwviaudio_read_ogg_clip(ONSCREEN_SOUND, "share/onscreen.ogg");
-	wwviaudio_read_ogg_clip(OFFSCREEN_SOUND, "share/offscreen.ogg");
-	wwviaudio_read_ogg_clip(CHANGESCREEN_SOUND, "share/changescreen.ogg");
-	wwviaudio_read_ogg_clip(SLIDER_SOUND, "share/slider-noise.ogg");
-	wwviaudio_read_ogg_clip(SCIENCE_DATA_ACQUIRED_SOUND, "share/science-data-acquired.ogg");
-	wwviaudio_read_ogg_clip(SCIENCE_PROBE_SOUND, "share/science-probe.ogg");
-	wwviaudio_read_ogg_clip(TTY_CHATTER_SOUND, "share/tty-chatter.ogg");
-	wwviaudio_read_ogg_clip(WARPDRIVE_SOUND, "share/short-warpdrive.ogg");
-	wwviaudio_read_ogg_clip(TORPEDO_LOAD_SOUND, "share/torpedo-loading.ogg");
-	wwviaudio_read_ogg_clip(RED_ALERT_SOUND, "share/red-alert.ogg");
-	wwviaudio_read_ogg_clip(STARSHIP_JOINED, "share/new-starship.ogg");
-	wwviaudio_read_ogg_clip(CREWMEMBER_JOINED, "share/crewmember-has-joined.ogg");
-	wwviaudio_read_ogg_clip(HULL_BREACH_IMMINENT, "share/warning-hull-breach-imminent.ogg");
-	wwviaudio_read_ogg_clip(FUEL_LEVELS_CRITICAL, "share/fuel-levels-critical.ogg");
-	wwviaudio_read_ogg_clip(INCOMING_FIRE_DETECTED, "share/incoming-fire-detected.ogg");
-	wwviaudio_read_ogg_clip(LASER_FAILURE, "share/laser-fail.ogg");
+	read_ogg_clip(EXPLOSION_SOUND, d, "big_explosion.ogg");
+	read_ogg_clip(TORPEDO_LAUNCH_SOUND, d, "flak_gun_sound.ogg");
+	read_ogg_clip(LASER_FIRE_SOUND, d, "bigshotlaser.ogg");
+	read_ogg_clip(ONSCREEN_SOUND, d, "onscreen.ogg");
+	read_ogg_clip(OFFSCREEN_SOUND, d, "offscreen.ogg");
+	read_ogg_clip(CHANGESCREEN_SOUND, d, "changescreen.ogg");
+	read_ogg_clip(SLIDER_SOUND, d, "slider-noise.ogg");
+	read_ogg_clip(SCIENCE_DATA_ACQUIRED_SOUND, d, "science-data-acquired.ogg");
+	read_ogg_clip(SCIENCE_PROBE_SOUND, d, "science-probe.ogg");
+	read_ogg_clip(TTY_CHATTER_SOUND, d, "tty-chatter.ogg");
+	read_ogg_clip(WARPDRIVE_SOUND, d, "short-warpdrive.ogg");
+	read_ogg_clip(TORPEDO_LOAD_SOUND, d, "torpedo-loading.ogg");
+	read_ogg_clip(RED_ALERT_SOUND, d, "red-alert.ogg");
+	read_ogg_clip(STARSHIP_JOINED, d, "new-starship.ogg");
+	read_ogg_clip(CREWMEMBER_JOINED, d, "crewmember-has-joined.ogg");
+	read_ogg_clip(HULL_BREACH_IMMINENT, d, "warning-hull-breach-imminent.ogg");
+	read_ogg_clip(FUEL_LEVELS_CRITICAL, d, "fuel-levels-critical.ogg");
+	read_ogg_clip(INCOMING_FIRE_DETECTED, d, "incoming-fire-detected.ogg");
+	read_ogg_clip(LASER_FAILURE, d, "laser-fail.ogg");
 	printf("Done.\n");
 }
 
@@ -7443,14 +7458,27 @@ static void setup_joystick(GtkWidget *window)
                 check_for_screensaver();
 }
 
+static struct mesh *snis_read_stl_file(char *directory, char *filename)
+{
+	char path[PATH_MAX];
+
+	sprintf(path, "%s/models/%s", directory, filename);
+	return read_stl_file(path);
+}
+
 static void init_meshes(void)
 {
-#if 1
 	int i;
+	char *default_asset_dir = "share/snis";
+	char *d;
 
-	ship_mesh = read_stl_file("spaceship.stl");
-	torpedo_mesh = read_stl_file("torpedo.stl");
-	laser_mesh = read_stl_file("laser.stl");
+	d = getenv("SNIS_ASSET_DIR");
+	if (!d)
+		d = default_asset_dir;
+
+	ship_mesh = snis_read_stl_file(d, "spaceship.stl");
+	torpedo_mesh = snis_read_stl_file(d, "torpedo.stl");
+	laser_mesh = snis_read_stl_file(d, "laser.stl");
 
 	for (i = 0; i < NASTEROID_MODELS; i++) {
 		char filename[100];
@@ -7460,7 +7488,7 @@ static void init_meshes(void)
 		else
 			sprintf(filename, "asteroid%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
-		asteroid_mesh[i] = read_stl_file(filename);
+		asteroid_mesh[i] = snis_read_stl_file(d, filename);
 		mesh_distort(asteroid_mesh[i], 0.10);
 	}
 
@@ -7480,7 +7508,7 @@ static void init_meshes(void)
 
 		sprintf(filename, "planet%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
-		planet_mesh[i] = read_stl_file(filename);
+		planet_mesh[i] = snis_read_stl_file(d, filename);
 	}
 
 	for (i = 0; i < NSTARBASE_MODELS; i++) {
@@ -7491,33 +7519,24 @@ static void init_meshes(void)
 		else
 			sprintf(filename, "starbase%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
-		starbase_mesh[i] = read_stl_file(filename);
+		starbase_mesh[i] = snis_read_stl_file(d, filename);
 	}
 
-	freighter_mesh = read_stl_file("freighter.stl");
-	cruiser_mesh = read_stl_file("cruiser.stl");
-	tanker_mesh = read_stl_file("tanker.stl");
-	destroyer_mesh = read_stl_file("destroyer.stl");
-	transport_mesh = read_stl_file("transport.stl");
-	battlestar_mesh = read_stl_file("battlestar.stl");
-	particle_mesh = read_stl_file("tetrahedron.stl");
-	debris_mesh = read_stl_file("flat-tetrahedron.stl");
-	debris2_mesh = read_stl_file("big-flat-tetrahedron.stl");
-	wormhole_mesh = read_stl_file("wormhole.stl");
+	freighter_mesh = snis_read_stl_file(d, "freighter.stl");
+	cruiser_mesh = snis_read_stl_file(d, "cruiser.stl");
+	tanker_mesh = snis_read_stl_file(d, "tanker.stl");
+	destroyer_mesh = snis_read_stl_file(d, "destroyer.stl");
+	transport_mesh = snis_read_stl_file(d, "transport.stl");
+	battlestar_mesh = snis_read_stl_file(d, "battlestar.stl");
+	particle_mesh = snis_read_stl_file(d, "tetrahedron.stl");
+	debris_mesh = snis_read_stl_file(d, "flat-tetrahedron.stl");
+	debris2_mesh = snis_read_stl_file(d, "big-flat-tetrahedron.stl");
+	wormhole_mesh = snis_read_stl_file(d, "wormhole.stl");
 	mesh_distort(wormhole_mesh, 0.15);
-	spacemonster_mesh = read_stl_file("spacemonster.stl");
-	asteroidminer_mesh = read_stl_file("asteroid-miner.stl");
-	spaceship2_mesh = read_stl_file("spaceship2.stl");
-	scout_mesh = read_stl_file("spaceship3.stl");
-#else
-#define THE_MODEL "starbase.stl"
-	ship_mesh = read_stl_file(THE_MODEL);
-	torpedo_mesh = read_stl_file(THE_MODEL);
-	laser_mesh = read_stl_file(THE_MODEL);
-	planet_mesh = read_stl_file(THE_MODEL);
-	starbase_mesh = read_stl_file(THE_MODEL);
-#endif
-
+	spacemonster_mesh = snis_read_stl_file(d, "spacemonster.stl");
+	asteroidminer_mesh = snis_read_stl_file(d, "asteroid-miner.stl");
+	spaceship2_mesh = snis_read_stl_file(d, "spaceship2.stl");
+	scout_mesh = snis_read_stl_file(d, "spaceship3.stl");
 }
 
 static void init_vects(void)

@@ -56,11 +56,38 @@ LIBS=-Lssgl -lssglclient -lrt -lm
 
 PROGS=snis_server snis_client
 
-MODELS=freighter.stl laser.stl planet.stl spaceship.stl starbase.stl torpedo.stl \
-	tanker.stl destroyer.stl transport.stl battlestar.stl cruiser.stl tetrahedron.stl \
-	flat-tetrahedron.stl big-flat-tetrahedron.stl asteroid.stl asteroid2.stl asteroid3.stl \
-	asteroid4.stl wormhole.stl starbase2.stl starbase3.stl starbase4.stl spacemonster.stl \
-	asteroid-miner.stl spaceship2.stl spaceship3.stl planet1.stl planet2.stl planet3.stl
+# model directory
+MD=share/snis/models
+
+MODELS=${MD}/freighter.stl \
+	${MD}/laser.stl \
+	${MD}/planet.stl \
+	${MD}/spaceship.stl \
+	${MD}/starbase.stl \
+	${MD}/torpedo.stl \
+	${MD}/tanker.stl \
+	${MD}/destroyer.stl \
+	${MD}/transport.stl \
+	${MD}/battlestar.stl \
+	${MD}/cruiser.stl \
+	${MD}/tetrahedron.stl \
+	${MD}/flat-tetrahedron.stl \
+	${MD}/big-flat-tetrahedron.stl \
+	${MD}/asteroid.stl \
+	${MD}/asteroid2.stl \
+	${MD}/asteroid3.stl \
+	${MD}/asteroid4.stl \
+	${MD}/wormhole.stl \
+	${MD}/starbase2.stl \
+	${MD}/starbase3.stl \
+	${MD}/starbase4.stl \
+	${MD}/spacemonster.stl \
+	${MD}/asteroid-miner.stl \
+	${MD}/spaceship2.stl \
+	${MD}/spaceship3.stl \
+	${MD}/planet1.stl \
+	${MD}/planet2.stl \
+	${MD}/planet3.stl
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} \
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
