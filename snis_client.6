@@ -43,7 +43,14 @@ Request this client process support the COMMS (communication) role.
 .PP
 \fB\--version\fR
 Print the program's version number and exit.
+.SH ENVIRONMENT VARIABLES
+SNIS_ASSET_DIR if set controls the directory from which sounds and 3D models
+are read.  By default, "share/snis" is used.
 .SH FILES
+.PP
+$SNIS_ASSET_DIR/sounds/*.ogg, various audio files used by the game.
+.PP
+$SNIS_ASSET_DIR/models/*.stl, various 3D models used by the game.
 .PP
 /dev/input/js0, the joystick device node.
 .PP
