@@ -63,7 +63,7 @@ static void ssgl_exit(char *reason, int code)
 static void get_peer_name(int connection, char *buffer)
 {
 	struct sockaddr_in peer;
-	unsigned int addrlen;
+	socklen_t addrlen;
 	int rc;
 
 	/* Get the game server's ip addr (don't trust what we were told.) */
