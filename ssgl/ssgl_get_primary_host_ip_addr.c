@@ -79,7 +79,7 @@ int ssgl_get_primary_host_ip_addr(uint32_t *ipaddr)
 		goto close_and_err;
 	*/
 
-	memcpy(ipaddr, &name.sin_addr, sizeof(ipaddr));
+	memcpy(ipaddr, &name.sin_addr, sizeof(*ipaddr));
 
 	close(sock);
 	return 0;
