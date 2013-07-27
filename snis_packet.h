@@ -94,6 +94,7 @@
 #define OPCODE_DEMON_THRUST		169
 #define OPCODE_DEMON_MOVE_OBJECT	170
 #define OPCODE_INITIATE_WARP		171
+#define OPCODE_REQUEST_REVERSE		172
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -127,6 +128,7 @@ struct update_ship_packet {
 	uint8_t phaser_charge;
 	uint8_t phaser_wavelength;
 	uint8_t shiptype; /* same as ship_sdata_packet subclass */
+	uint8_t reverse;
 };
 
 struct ship_sdata_packet {

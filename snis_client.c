@@ -629,7 +629,9 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
 			fuel, uint8_t temp, uint8_t scizoom, uint8_t weapzoom,
 			uint8_t navzoom, uint8_t warpdrive,
-			uint8_t requested_warpdrive, uint8_t requested_shield, uint8_t phaser_charge, uint8_t phaser_wavelength, uint8_t shiptype)
+			uint8_t requested_warpdrive, uint8_t requested_shield,
+			uint8_t phaser_charge, uint8_t phaser_wavelength, uint8_t shiptype,
+			uint8_t reverse)
 {
 	int i;
 	struct entity *e;
@@ -674,6 +676,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.phaser_wavelength = phaser_wavelength;
 	go[i].tsd.ship.damcon = NULL;
 	go[i].tsd.ship.shiptype = shiptype;
+	go[i].tsd.ship.reverse = reverse;
 	return 0;
 }
 
@@ -2268,7 +2271,8 @@ static int process_update_ship_packet(uint16_t opcode)
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
 		warpdrive, requested_warpdrive,
-		requested_shield, phaser_charge, phaser_wavelength, shiptype;
+		requested_shield, phaser_charge, phaser_wavelength, shiptype,
+		reverse;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -2282,10 +2286,11 @@ static int process_update_ship_packet(uint16_t opcode)
 	packed_buffer_extract(&pb, "UwwUUU", &dheading, (uint32_t) 360,
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
 				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
-	packed_buffer_extract(&pb, "bbbwbbbbbbbbbb", &tloading, &throttle, &rpm, &fuel, &temp,
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbb", &tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom,
 			&warpdrive, &requested_warpdrive,
-			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype);
+			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
+			&reverse);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	pthread_mutex_lock(&universe_mutex);
@@ -2293,7 +2298,7 @@ static int process_update_ship_packet(uint16_t opcode)
 				dgheading, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
 				weapzoom, navzoom, warpdrive, requested_warpdrive, requested_shield,
-				phaser_charge, phaser_wavelength, shiptype);
+				phaser_charge, phaser_wavelength, shiptype, reverse);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -4379,7 +4384,6 @@ DEFINE_SAMPLER_FUNCTION(sample_phasercharge, tsd.ship.phaser_charge, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 255.0 * 2.0, 10.0)
 DEFINE_SAMPLER_FUNCTION(sample_weapzoom, tsd.ship.weapzoom, 255.0, 0.0)
 DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 255.0, 0.0)
-DEFINE_SAMPLER_FUNCTION(sample_throttle, tsd.ship.throttle, 255.0, 0.0)
 
 static double sample_power_model_voltage(void)
 {
@@ -4541,6 +4545,12 @@ static void warp_down_button_pressed(__attribute__((unused)) void *s)
 
 static void reverse_button_pressed(__attribute__((unused)) void *s)
 {
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return;
+	snis_button_set_color(nav_ui.reverse_button, !o->tsd.ship.reverse ? RED : AMBER);
+	do_adjust_byte_value(!o->tsd.ship.reverse,  OPCODE_REQUEST_REVERSE);
 }
 
 struct weapons_ui {
@@ -4750,7 +4760,7 @@ static void init_nav_ui(void)
 				"1", "10", 0.0, 100.0, sample_navzoom,
 				do_navzoom);
 	nav_ui.throttle_slider = snis_slider_init(SCREEN_WIDTH - 30, SCREEN_HEIGHT - 250, 230,
-				AMBER, "THROTTLE", "1", "10", 0.0, 100.0, sample_throttle,
+				AMBER, "THROTTLE", "1", "10", 0.0, 255.0, sample_impulse_current,
 				do_throttle);
 	snis_slider_set_vertical(nav_ui.throttle_slider, 1);
 	nav_ui.warp_gauge = gauge_init(650, 410, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,

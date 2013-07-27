@@ -1288,9 +1288,8 @@ static void do_thrust(struct snis_entity *ship)
 {
 	double max_player_velocity =
 		(MAX_PLAYER_VELOCITY * ship->tsd.ship.power_data.impulse.i) / 255;
-	const int reverse = 0;
 
-	if (!reverse) {
+	if (!ship->tsd.ship.reverse) {
 		if (ship->tsd.ship.velocity < max_player_velocity)
 			ship->tsd.ship.velocity += PLAYER_VELOCITY_INCREMENT;
 	} else {
@@ -1647,7 +1646,7 @@ static void init_power_model(struct snis_entity *o)
 	power_model_add_device(pm, d);
 
 	/* Impulse */
-	o->tsd.ship.power_data.impulse.r1 = 255;
+	o->tsd.ship.power_data.impulse.r1 = 0; //255;
 	o->tsd.ship.power_data.impulse.r2 = 0;
 	o->tsd.ship.power_data.impulse.r3 = 200;
 	d = new_power_device(o, sample_impulse_r1, sample_impulse_r2, sample_impulse_r3);
@@ -1696,6 +1695,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.scibeam_range = 0;
 	o->tsd.ship.scibeam_a1 = 0;
 	o->tsd.ship.scibeam_a2 = 0;
+	o->tsd.ship.reverse = 0;
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
 	init_power_model(o);
 }
@@ -3088,6 +3088,29 @@ static int process_request_weapzoom(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.weapzoom), no_limit);
 }
 
+static int process_request_reverse(struct game_client *c)
+{
+	unsigned char buffer[10];
+	int i, rc;
+	uint32_t id;
+	uint8_t v;
+
+	rc = read_and_unpack_buffer(c, buffer, "wb", &id, &v);
+	if (rc)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->ship_index)
+		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
+	go[i].tsd.ship.reverse = !!v;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_request_throttle(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity,
@@ -3556,6 +3579,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_SCIBEAMWIDTH:
 			rc = process_request_yaw(c, do_sci_bw_yaw);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_REVERSE:
+			rc = process_request_reverse(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -4058,7 +4086,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "hwwSSSS", opcode, o->id, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vy, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "UwwUUUbbbwbbbbbbbbbb", o->heading, (uint32_t) 360,
+	packed_buffer_append(pb, "UwwUUUbbbwbbbbbbbbbbb", o->heading, (uint32_t) 360,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
 			o->tsd.ship.gun_heading, (uint32_t) 360,
 			o->tsd.ship.sci_heading, (uint32_t) 360,
@@ -4067,7 +4095,8 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.scizoom, o->tsd.ship.weapzoom, o->tsd.ship.navzoom,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
 			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
-			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype);
+			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype,
+			o->tsd.ship.reverse);
 	pb_queue_to_client(c, pb);
 }
 
