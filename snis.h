@@ -67,6 +67,7 @@
 #define OBJTYPE_WORMHOLE 11
 #define OBJTYPE_SPACEMONSTER 12
 #define OBJTYPE_PLANET 13
+#define OBJTYPE_LASERBEAM 14
 
 char *faction[] = {
 	"Neutral",
@@ -286,6 +287,18 @@ struct spacemonster_data {
 	struct entity **entity;
 };
 
+#define MAX_LASERBEAM_SEGMENTS 60
+struct laserbeam_data {
+	double *x;
+	double *y;
+	double *z;
+	uint32_t origin;
+	uint32_t target;
+	uint8_t power;
+	uint8_t wavelength;
+	struct entity **entity;
+};
+
 union type_specific_data {
 	struct ship_data ship;
 	struct laser_data laser;
@@ -297,6 +310,7 @@ union type_specific_data {
 	struct asteroid_data asteroid;
 	struct wormhole_data wormhole;
 	struct spacemonster_data spacemonster;
+	struct laserbeam_data laserbeam;
 };
 
 struct snis_entity;

@@ -722,6 +722,25 @@ static int update_torpedo(uint32_t id, double x, double y, double vx, double vy,
 	return 0;
 }
 
+static void init_laserbeam_data(struct snis_entity *o);
+static void update_laserbeam_segments(struct snis_entity *o);
+static int update_laserbeam(uint32_t id, uint32_t origin, uint32_t target)
+{
+	int i;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_object(id, 0, 0, 0, 0, 0.0, OBJTYPE_LASERBEAM, 1, NULL);
+		if (i < 0)
+			return i;
+		go[i].tsd.laserbeam.origin = origin;
+		go[i].tsd.laserbeam.target = target;
+		init_laserbeam_data(&go[i]);
+		go[i].move = update_laserbeam_segments;
+	} /* nothing to do */
+	return 0;
+}
+
 static int update_laser(uint32_t id, double x, double y, double vx, double vy, uint32_t ship_id)
 {
 	int i;
@@ -795,6 +814,102 @@ static void free_spacemonster_data(struct snis_entity *o)
 		sd->entity = NULL;
 	}
 }
+
+static void update_laserbeam_segments(struct snis_entity *o)
+{
+	double x1, y1, z1, x2, y2, z2, dx, dy, dz;
+	double lastd;
+	int i, oid, tid;
+	struct snis_entity *origin, *target;
+	struct laserbeam_data *ld = &o->tsd.laserbeam;
+	double rx, ry, rz;
+
+	oid = lookup_object_by_id(o->tsd.laserbeam.origin);
+	tid = lookup_object_by_id(o->tsd.laserbeam.target);
+
+	if (oid < 0 || tid < 0)
+		return;
+	origin = &go[oid];
+	target = &go[tid];
+
+	x1 = origin->x;
+	y1 = origin->y;
+	z1 = origin->z;
+	x2 = target->x;
+	y2 = target->y;
+	z2 = target->z;
+
+	dx = (x2 - x1) / MAX_LASERBEAM_SEGMENTS;
+	dy = (y2 - y1) / MAX_LASERBEAM_SEGMENTS;
+	dz = (z2 - z1) / MAX_LASERBEAM_SEGMENTS;
+
+	
+	for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++) {
+		lastd = (snis_randn(100) + 50) / 100.0;
+		rx = snis_randn(360) * M_PI / 180.0;
+		ry = snis_randn(360) * M_PI / 180.0;
+		rz = snis_randn(360) * M_PI / 180.0;
+		ld->x[i] = x1 + (i + lastd) * dx;
+		ld->y[i] = y1 + (i + lastd) * dy;
+		ld->z[i] = z1 + (i + lastd) * dz; 
+		update_entity_pos(ld->entity[i], ld->x[i], ld->z[i], -ld->y[i]);
+		update_entity_rotation(ld->entity[i], rx, ry, rz);
+	}
+}
+
+static void init_laserbeam_data(struct snis_entity *o)
+{
+	struct laserbeam_data *ld = &o->tsd.laserbeam;
+	int i;
+
+	ld->x = malloc(sizeof(*o->tsd.laserbeam.x) *
+					MAX_LASERBEAM_SEGMENTS);
+	ld->y = malloc(sizeof(*o->tsd.laserbeam.y) *
+					MAX_LASERBEAM_SEGMENTS);
+	ld->z = malloc(sizeof(*o->tsd.laserbeam.z) *
+					MAX_LASERBEAM_SEGMENTS);
+	ld->entity = malloc(sizeof(*o->tsd.laserbeam.entity) *
+					MAX_LASERBEAM_SEGMENTS);
+	for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++) {
+		ld->x[i] = o->x;
+		ld->y[i] = o->y;
+		ld->z[i] = 0.0;
+		ld->entity[i] = add_entity(ecx, particle_mesh, o->x, 0, -o->y,
+						LASER_COLOR);
+		set_render_style(ld->entity[i], RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
+	}
+	update_laserbeam_segments(o);
+}
+
+static void free_laserbeam_data(struct snis_entity *o)
+{
+	int i;
+	struct laserbeam_data *ld = &o->tsd.laserbeam;
+
+	if (o->type != OBJTYPE_LASERBEAM)
+		return;
+
+	if (ld->x) {
+		free(ld->x);
+		ld->x = NULL;
+	}
+	if (ld->y) {
+		free(ld->y);
+		ld->y = NULL;
+	}
+	if (ld->z) {
+		free(ld->z);
+		ld->z = NULL;
+	}
+
+	if (ld->entity) {
+		for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++)
+			remove_entity(ecx, ld->entity[i]);
+		free(ld->entity);
+		ld->entity = NULL;
+	}
+}
+
 
 static int update_spacemonster(uint32_t id, double x, double y, double z)
 {
@@ -1024,6 +1139,9 @@ static void move_objects(void)
 			/* too dumb to work right */
 			o->x += o->vx / 2.0;
 			o->y += o->vy / 2.0;
+			break;
+		case OBJTYPE_LASERBEAM:
+			o->move(o);
 			break;
 		default:
 			break;
@@ -2532,6 +2650,7 @@ static void delete_object(uint32_t id)
 	remove_entity(ecx, go[i].entity);
 	go[i].entity = NULL;
 	free_spacemonster_data(&go[i]);
+	free_laserbeam_data(&go[i]);
 	go[i].id = -1;
 	snis_object_pool_free_object(pool, i);
 }
@@ -2868,6 +2987,21 @@ static int process_update_nebula_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_laserbeam(void)
+{
+	unsigned char buffer[100];
+	uint32_t id, origin, target;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "www", &id, &origin, &target);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_laserbeam(id, origin, target);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+} 
+
 static int process_update_explosion_packet(void)
 {
 	unsigned char buffer[sizeof(struct update_explosion_packet)];
@@ -2963,6 +3097,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_NEBULA:
 			rc = process_update_nebula_packet();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_LASERBEAM:
+			rc = process_update_laserbeam();
 			if (rc)
 				goto protocol_error;
 			break;

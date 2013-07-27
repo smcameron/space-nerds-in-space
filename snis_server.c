@@ -807,6 +807,7 @@ static void check_for_incoming_fire(struct snis_entity *o)
 	}
 }
 
+static int add_laserbeam(uint32_t origin, uint32_t target, int alive);
 static void ship_move(struct snis_entity *o)
 {
 	double heading_diff, yaw_vel;
@@ -942,6 +943,7 @@ static void ship_move(struct snis_entity *o)
 				vx = TORPEDO_VELOCITY * sin(angle);
 				vy = TORPEDO_VELOCITY * cos(angle);
 				add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
+				add_laserbeam(o->id, v->id, 30);
 				check_for_incoming_fire(v);
 			} else { 
 				if (snis_randn(1000) < 50) {
@@ -961,6 +963,7 @@ static void ship_move(struct snis_entity *o)
 					vx = LASER_VELOCITY * sin(angle);
 					vy = LASER_VELOCITY * cos(angle);
 					add_laser(o->x, o->y, vx, vy, o->heading, o->id);
+					add_laserbeam(o->id, v->id, 30);
 					check_for_incoming_fire(v);
 				}
 			}
@@ -1866,6 +1869,34 @@ static int add_laser(double x, double y, double vx, double vy, double heading, u
 	go[i].tsd.laser.power = go[s].tsd.ship.phaser_charge;
 	go[s].tsd.ship.phaser_charge = 0;
 	go[i].tsd.laser.wavelength = go[s].tsd.ship.phaser_wavelength;
+	return i;
+}
+
+static void laserbeam_move(struct snis_entity *o)
+{
+	o->alive--;
+	if (o->alive <= 0) {
+		snis_queue_delete_object(o);
+		delete_object(o);
+	}
+}
+
+static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
+{
+	int i, s;
+
+	i = add_generic_object(0, 0, 0, 0, 0, OBJTYPE_LASERBEAM);
+	if (i < 0)
+		return i;
+
+	go[i].move = laserbeam_move;
+	go[i].alive = alive;
+	go[i].tsd.laserbeam.origin = origin;
+	go[i].tsd.laserbeam.target = target;
+	s = lookup_by_id(origin);
+	go[i].tsd.laserbeam.power = go[s].tsd.ship.phaser_charge;
+	go[s].tsd.ship.phaser_charge = 0;
+	go[i].tsd.laserbeam.wavelength = go[s].tsd.ship.phaser_wavelength;
 	return i;
 }
 
@@ -3754,6 +3785,8 @@ static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_laserbeam_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_spacemonster_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_nebula_packet(struct game_client *c,
@@ -3825,6 +3858,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	case OBJTYPE_SPACEMONSTER:
 		send_update_spacemonster_packet(c, o);
 		send_update_sdata_packets(c, o);
+		break;
+	case OBJTYPE_LASERBEAM:
+		send_update_laserbeam_packet(c, o);
 		break;
 	default:
 		break;
@@ -4212,6 +4248,14 @@ static void send_update_laser_packet(struct game_client *c,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->vx, (int32_t) UNIVERSE_DIM,
 					o->vy, (int32_t) UNIVERSE_DIM));
+}
+
+static void send_update_laserbeam_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, packed_buffer_new("hwww", OPCODE_UPDATE_LASERBEAM,
+					o->id, o->tsd.laserbeam.origin,
+					o->tsd.laserbeam.target));
 }
 
 static void send_update_spacemonster_packet(struct game_client *c,
