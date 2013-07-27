@@ -201,6 +201,7 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc, struct entity_
 	if (y1 > y2 || y2 > y3)
 		printf("you dun fucked up\n");
 
+	if (!(render_style & RENDER_NO_FILL)) {
 	if (y2 == y1)
 		dxdy1 = x2 - x1;
 	else
@@ -230,6 +231,7 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc, struct entity_
 		sng_device_line(w->window, gc, (int) xa, i, (int) xb, i);
 		xa += dxdy1;
 		xb += dxdy2;
+	}
 	}
 	if (cx->camera.renderer & WIREFRAME_RENDERER || render_style & RENDER_WIREFRAME) {
 		if (render_style & RENDER_BRIGHT_LINE) {
@@ -378,6 +380,9 @@ static void sort_triangle_distances(struct entity_context *cx, struct entity *e)
 		cx->tri_depth[i].tri_index = i;
 		cx->tri_depth[i].depth = dist;
 	}
+
+	if (e->render_style & RENDER_NO_FILL)
+		return;
 
 	/* Sort the triangles */
 	qsort(cx->tri_depth, e->m->ntriangles, sizeof(cx->tri_depth[0]), tri_depth_compare);
