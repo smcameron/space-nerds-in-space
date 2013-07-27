@@ -1284,6 +1284,24 @@ static void calculate_ship_scibeam_info(struct snis_entity *ship)
 	return;
 }
 
+static void do_thrust(struct snis_entity *ship)
+{
+	double max_player_velocity =
+		(MAX_PLAYER_VELOCITY * ship->tsd.ship.power_data.impulse.i) / 255;
+	const int reverse = 0;
+
+	if (!reverse) {
+		if (ship->tsd.ship.velocity < max_player_velocity)
+			ship->tsd.ship.velocity += PLAYER_VELOCITY_INCREMENT;
+	} else {
+		if (ship->tsd.ship.velocity > -max_player_velocity)
+			ship->tsd.ship.velocity -= PLAYER_VELOCITY_INCREMENT;
+	}
+	if (ship->tsd.ship.velocity > max_player_velocity ||
+		ship->tsd.ship.velocity < -max_player_velocity)
+		ship->tsd.ship.velocity = ship->tsd.ship.velocity * 0.99;
+}
+
 static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
@@ -1302,8 +1320,9 @@ static void player_move(struct snis_entity *o)
 	} else {
 		power_model_disable(o->tsd.ship.power_model);
 	}
-	o->vy = o->tsd.ship.velocity * cos(o->heading);
-	o->vx = o->tsd.ship.velocity * -sin(o->heading);
+	do_thrust(o);
+	o->vy = o->tsd.ship.velocity * -cos(o->heading);
+	o->vx = o->tsd.ship.velocity * sin(o->heading);
 	o->x += o->vx;
 	o->y += o->vy;
 	normalize_coords(o);
@@ -2204,25 +2223,6 @@ static void snis_sleep(struct timespec *begin, struct timespec *end, struct time
 
 typedef void (*thrust_function)(struct game_client *c, int thrust);
 
-static void do_thrust(struct game_client *c, int thrust)
-{
-	struct snis_entity *ship = &go[c->ship_index];
-	double max_player_velocity =
-		(MAX_PLAYER_VELOCITY * ship->tsd.ship.power_data.impulse.i) / 255;
-
-	if (thrust > 0) {
-		if (ship->tsd.ship.velocity < max_player_velocity)
-			ship->tsd.ship.velocity += PLAYER_VELOCITY_INCREMENT;
-	} else {
-		if (ship->tsd.ship.velocity > -max_player_velocity)
-			ship->tsd.ship.velocity -= PLAYER_VELOCITY_INCREMENT;
-	}
-	if (ship->tsd.ship.velocity > max_player_velocity)
-		ship->tsd.ship.velocity = max_player_velocity;
-	else if (ship->tsd.ship.velocity < -max_player_velocity)
-		ship->tsd.ship.velocity = -max_player_velocity;
-}
-
 static void do_demon_thrust(struct snis_entity *o, int thrust)
 {
 	double max_player_velocity = MAX_PLAYER_VELOCITY;
@@ -2365,10 +2365,12 @@ static int process_generic_request_thrust(struct game_client *c, thrust_function
 	return 0;
 }
 
+#if 0
 static int process_request_thrust(struct game_client *c)
 {
 	return process_generic_request_thrust(c, do_thrust);
 }
+#endif
 
 static int process_demon_thrust(struct game_client *c)
 {
@@ -3088,7 +3090,8 @@ static int process_request_weapzoom(struct game_client *c)
 
 static int process_request_throttle(struct game_client *c)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.throttle), no_limit); 
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity,
+			tsd.ship.power_data.impulse.r1), no_limit); 
 }
 
 static int process_request_warpdrive(struct game_client *c)
@@ -3556,11 +3559,13 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+#if 0
 		case OPCODE_REQUEST_THRUST:
 			rc = process_request_thrust(c);
 			if (rc)
 				goto protocol_error;
 			break;
+#endif
 		case OPCODE_DEMON_THRUST:
 			rc = process_demon_thrust(c);
 			if (rc)

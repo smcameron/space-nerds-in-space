@@ -1497,7 +1497,7 @@ static void request_navigation_thrust_packet(uint8_t thrust)
 
 static void navigation_dirkey(int h, int v)
 {
-	uint8_t yaw, thrust;
+	uint8_t yaw;
 	static int last_time = 0;
 	int fine;
 
@@ -1511,10 +1511,12 @@ static void navigation_dirkey(int h, int v)
 		yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
 		request_navigation_yaw_packet(yaw);
 	}
+#if 0
 	if (v) {
 		thrust = v < 0 ? THRUST_BACKWARDS : THRUST_FORWARDS;
 		request_navigation_thrust_packet(thrust);
 	}
+#endif
 }
 
 static void request_demon_yaw_packet(uint32_t oid, uint8_t yaw)
@@ -4305,8 +4307,7 @@ static void do_navzoom(struct slider *s)
 
 static void do_throttle(struct slider *s)
 {
-	/* FIXME */
-	printf("throttle\n");
+	do_adjust_slider_value(s, OPCODE_REQUEST_THROTTLE);
 }
 
 static void do_scizoom(struct slider *s)
