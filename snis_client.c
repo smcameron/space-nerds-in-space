@@ -430,10 +430,11 @@ static int lookup_damcon_object_by_id(uint32_t id)
 
 static struct snis_entity *find_my_ship(void)
 {
+	if (my_ship_oid != UNKNOWN_ID)
+		return &go[my_ship_oid];
 	if (my_ship_id == UNKNOWN_ID)
 		return NULL;
-	if (my_ship_oid == UNKNOWN_ID)
-		my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
+	my_ship_oid = (uint32_t) lookup_object_by_id(my_ship_id);
 	if (my_ship_oid == UNKNOWN_ID)
 		return NULL;
 	return &go[my_ship_oid];
