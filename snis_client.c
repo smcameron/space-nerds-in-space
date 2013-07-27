@@ -3695,7 +3695,7 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 }
 
 static void snis_draw_heading_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
-			double heading, int color)
+			double heading, int color, int dotted)
 {
 	int tx1, ty1, tx2, ty2;
 
@@ -3705,14 +3705,18 @@ static void snis_draw_heading_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint 
 	ty2 = y - cos(heading) * r;
 	sng_set_foreground(color);
 	snis_draw_line(w->window, gc, tx1, ty1, tx2, ty2);
+	if (dotted)
+		sng_draw_dotted_line(w->window, gc, x, y, tx2, ty2);
 }
 
 static void snis_draw_headings_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		struct snis_entity *o)
 {
-	snis_draw_heading_on_reticule(w, gc, x, y, r, o->heading, RED);
-	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.gun_heading, DARKTURQUOISE);
-	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.sci_heading, GREEN);
+	snis_draw_heading_on_reticule(w, gc, x, y, r, o->heading, RED,
+			displaymode == DISPLAYMODE_NAVIGATION);
+	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.gun_heading, DARKTURQUOISE,
+			displaymode == DISPLAYMODE_WEAPONS);
+	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.sci_heading, GREEN, 0);
 }
 
 static void snis_draw_ship_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
