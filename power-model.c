@@ -119,6 +119,8 @@ void power_model_compute(struct power_model *m)
 		float r = d->or1 + d->or3;
 
 		d->i = m->actual_voltage / r;
+		if (d->i < (m->max_current / 256.0))
+			d->i = 0.0;
 	}
 }
 
