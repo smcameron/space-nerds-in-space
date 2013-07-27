@@ -19,6 +19,7 @@ struct slider {
 	double r1, r2;
 	slider_monitor_function sample;
 	slider_clicked_function clicked;
+	int vertical;
 };
 
 static int slider_sound = -1;
@@ -46,13 +47,19 @@ struct slider *snis_slider_init(int x, int y, int length, int color,
 	s->clicked = clicked;
 	s->value = (s->sample() - s->r1) / (s->r2 - s->r1);
 	s->input = 0.0;
+	s->vertical = 0;
 	return s;
 }
 
-void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
+void snis_slider_set_vertical(struct slider *s, int v)
+{
+	s->vertical = v;
+}
+
+static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 {
 	double v;
-	int width, tx1;
+	int height, ty1;
 	int bar_color = DARKGREEN;
 
 #define SLIDER_HEIGHT 15
@@ -62,7 +69,71 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 	v = s->sample();
 	s->value = (v - s->r1) / (s->r2 - s->r1);
 	v = s->sample();
-	tx1 = (int) (s->value * s->length) + s->x;
+	ty1 = (int) (s->y + s->length - s->input * s->length);
+	if (!s->clicked) {
+		if (v < 25.0) {
+			bar_color = RED;
+		} else {
+			if (v < 50.0)  {
+				bar_color = AMBER;
+			} else {
+				bar_color = DARKGREEN;
+			}
+		}
+	}
+	sng_set_foreground(s->color);
+	sng_current_draw_rectangle(w->window, gc, 0, s->x, s->y, SLIDER_HEIGHT, s->length);
+	height = s->value * s->length - 1;
+	if (height < 0)
+		height = 0;
+	if (!s->clicked)
+		sng_set_foreground(bar_color);
+	sng_current_draw_rectangle(w->window, gc, 1, s->x + 1, s->y + s->length - height,
+					SLIDER_HEIGHT - 2, height);
+	if (!s->clicked)
+		sng_set_foreground(s->color);
+
+	if (s->clicked) {
+		sng_current_draw_line(w->window, gc,
+			s->x, ty1,
+			s->x - SLIDER_POINTER_HEIGHT, ty1 - SLIDER_POINTER_WIDTH); 
+		sng_current_draw_line(w->window, gc,
+			s->x - SLIDER_POINTER_HEIGHT, ty1 - SLIDER_POINTER_WIDTH,
+			s->x - SLIDER_POINTER_HEIGHT, ty1 + SLIDER_POINTER_WIDTH);
+		sng_current_draw_line(w->window, gc,
+			s->x - SLIDER_POINTER_HEIGHT, ty1 + SLIDER_POINTER_WIDTH,
+			s->x, ty1);
+
+		sng_current_draw_line(w->window, gc,
+			s->x + SLIDER_HEIGHT, ty1,
+			s->x + SLIDER_POINTER_HEIGHT + SLIDER_HEIGHT, ty1 - SLIDER_POINTER_WIDTH); 
+		sng_current_draw_line(w->window, gc,
+			s->x + SLIDER_POINTER_HEIGHT + SLIDER_HEIGHT, ty1 - SLIDER_POINTER_WIDTH,
+			s->x + SLIDER_POINTER_HEIGHT + SLIDER_HEIGHT, ty1 + SLIDER_POINTER_WIDTH);
+		sng_current_draw_line(w->window, gc,
+			s->x + SLIDER_POINTER_HEIGHT + SLIDER_HEIGHT, ty1 + SLIDER_POINTER_WIDTH,
+			s->x + SLIDER_HEIGHT, ty1);
+	}
+	/* sng_abs_xy_draw_string(w, gc, s->label, TINY_FONT, s->x + s->length + 5, s->y + 2 * SLIDER_HEIGHT / 3);  */
+} 
+
+void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
+{
+	double v;
+	int width, tx1;
+	int bar_color = DARKGREEN;
+
+	if (s->vertical) {
+		snis_slider_draw_vertical(w, gc, s);
+		return;
+	}
+#define SLIDER_HEIGHT 15
+#define SLIDER_POINTER_HEIGHT 8
+#define SLIDER_POINTER_WIDTH 5
+
+	v = s->sample();
+	s->value = (v - s->r1) / (s->r2 - s->r1);
+	v = s->sample();
 	if (!s->clicked) {
 		if (v < 25.0) {
 			bar_color = RED;
@@ -112,8 +183,29 @@ double snis_slider_get_input(struct slider *s)
 	return s->input;
 }
 
+static int snis_slider_button_press_vertical(struct slider *s, int x, int y)
+{
+	if (x < s->x || x > s->x + SLIDER_HEIGHT || 
+		y < s->y - 5 || y > s->y + s->length + 5)
+			return 0;
+	if (y >= s->y + s->length)
+		s->input = 0.0;
+	else if (y <= s->y)
+		s->input = 1.0;
+	else
+		s->input = ((double) (s->y + s->length) - (double) y) / (double) s->length;
+	if (s->clicked) {
+		s->clicked(s);
+		if (slider_sound != -1) 
+				wwviaudio_add_sound(slider_sound);
+	}
+	return 1;
+}
+
 int snis_slider_button_press(struct slider *s, int x, int y)
 {
+	if (s->vertical)
+		return snis_slider_button_press_vertical(s, x, y);
 	if (x < s->x - 5 || x > s->x + s->length + 5 || 
 		y < s->y || y > s->y + SLIDER_HEIGHT)
 			return 0;

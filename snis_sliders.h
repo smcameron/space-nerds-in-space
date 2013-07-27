@@ -17,6 +17,7 @@ GLOBAL struct slider *snis_slider_init(int x, int y, int length, int color,
 		char *label, char *l1, char *l2, double r1, double r2,
 		slider_monitor_function gmf, slider_clicked_function clicked);
 
+GLOBAL void snis_slider_set_vertical(struct slider *s, int v);
 GLOBAL void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s);
 GLOBAL double snis_slider_get_value(struct slider *s);
 GLOBAL double snis_slider_get_input(struct slider *s);
