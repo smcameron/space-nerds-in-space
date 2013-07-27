@@ -4493,6 +4493,7 @@ static struct navigation_ui {
 	struct button *engage_warp_button;
 	struct button *warp_up_button;
 	struct button *warp_down_button;
+	struct button *reverse_button;
 } nav_ui;
 
 static void zero_nav_sliders(void)
@@ -4534,6 +4535,10 @@ static void warp_up_button_pressed(__attribute__((unused)) void *s)
 static void warp_down_button_pressed(__attribute__((unused)) void *s)
 {
 	warp_updown_button_pressed(-1);
+}
+
+static void reverse_button_pressed(__attribute__((unused)) void *s)
+{
 }
 
 struct weapons_ui {
@@ -4755,6 +4760,8 @@ static void init_nav_ui(void)
 			NANO_FONT, warp_up_button_pressed, NULL);
 	nav_ui.warp_down_button = snis_button_init(500, 520, 60, 25, "DOWN", AMBER,
 			NANO_FONT, warp_down_button_pressed, NULL);
+	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40, 315, 30, 25, "R", AMBER,
+			NANO_FONT, reverse_button_pressed, NULL);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.shield_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
@@ -4762,6 +4769,7 @@ static void init_nav_ui(void)
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.warp_up_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.warp_down_button, DISPLAYMODE_NAVIGATION);
+	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION);
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
 }
 
