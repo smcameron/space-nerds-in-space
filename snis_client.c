@@ -4303,6 +4303,12 @@ static void do_navzoom(struct slider *s)
 	do_adjust_slider_value(s, OPCODE_REQUEST_NAVZOOM);
 }
 
+static void do_throttle(struct slider *s)
+{
+	/* FIXME */
+	printf("throttle\n");
+}
+
 static void do_scizoom(struct slider *s)
 {
 	do_adjust_slider_value(s, OPCODE_REQUEST_SCIZOOM);
@@ -4371,6 +4377,7 @@ DEFINE_SAMPLER_FUNCTION(sample_phasercharge, tsd.ship.phaser_charge, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 255.0 * 2.0, 10.0)
 DEFINE_SAMPLER_FUNCTION(sample_weapzoom, tsd.ship.weapzoom, 255.0, 0.0)
 DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 255.0, 0.0)
+DEFINE_SAMPLER_FUNCTION(sample_throttle, tsd.ship.throttle, 255.0, 0.0)
 
 static double sample_power_model_voltage(void)
 {
@@ -4481,6 +4488,7 @@ static struct navigation_ui {
 	struct slider *warp_slider;
 	struct slider *shield_slider;
 	struct slider *navzoom_slider;
+	struct slider *throttle_slider;
 	struct gauge *warp_gauge;
 	struct button *engage_warp_button;
 	struct button *warp_up_button;
@@ -4734,6 +4742,10 @@ static void init_nav_ui(void)
 	nav_ui.navzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, AMBER, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_navzoom,
 				do_navzoom);
+	nav_ui.throttle_slider = snis_slider_init(SCREEN_WIDTH - 30, SCREEN_HEIGHT - 250, 230,
+				AMBER, "THROTTLE", "1", "10", 0.0, 100.0, sample_throttle,
+				do_throttle);
+	snis_slider_set_vertical(nav_ui.throttle_slider, 1);
 	nav_ui.warp_gauge = gauge_init(650, 410, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 				10, "WARP", sample_warpdrive);
@@ -4746,6 +4758,7 @@ static void init_nav_ui(void)
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.shield_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
+	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.warp_up_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.warp_down_button, DISPLAYMODE_NAVIGATION);
