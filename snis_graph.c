@@ -461,9 +461,10 @@ void sng_bright_device_line(GdkDrawable *drawable,
 		dx = 1;
 		dy = 0;
 	}
-
+#if 0
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
+#endif
 
 	gdk_gc_set_foreground(gc, &huex[WHITE]);
 	gdk_draw_line(drawable, gc, x1, y1, x2, y2);
