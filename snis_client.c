@@ -824,6 +824,7 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	struct snis_entity *origin, *target;
 	struct laserbeam_data *ld = &o->tsd.laserbeam;
 	double rx, ry, rz;
+	double angle;
 
 	oid = lookup_object_by_id(o->tsd.laserbeam.origin);
 	tid = lookup_object_by_id(o->tsd.laserbeam.target);
@@ -840,6 +841,8 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	y2 = target->y;
 	z2 = target->z;
 
+	angle = atan2(y2 - y1, x2 - x1);
+
 	dx = (x2 - x1) / MAX_LASERBEAM_SEGMENTS;
 	dy = (y2 - y1) / MAX_LASERBEAM_SEGMENTS;
 	dz = (z2 - z1) / MAX_LASERBEAM_SEGMENTS;
@@ -847,9 +850,17 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	
 	for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++) {
 		lastd = (snis_randn(100) + 50) / 100.0;
+#if 0
 		rx = snis_randn(360) * M_PI / 180.0;
 		ry = snis_randn(360) * M_PI / 180.0;
 		rz = snis_randn(360) * M_PI / 180.0;
+		rx = M_PI / 2.0;
+		ry = o->heading + M_PI;
+		rz = 0;
+#endif
+		rx = 0;
+		ry = angle;
+		rz = 0;
 		ld->x[i] = x1 + (i + lastd) * dx;
 		ld->y[i] = y1 + (i + lastd) * dy;
 		ld->z[i] = z1 + (i + lastd) * dz; 
