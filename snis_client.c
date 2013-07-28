@@ -2900,7 +2900,7 @@ static int process_ship_damage_packet(void)
 	go[i].tsd.ship.damage = damage;
 	pthread_mutex_unlock(&universe_mutex);
 	if (id == my_ship_id) 
-		damage_limbo_countdown = 8;
+		damage_limbo_countdown = 2;
 	return 0;
 }
 
