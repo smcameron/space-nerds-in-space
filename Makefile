@@ -87,7 +87,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/spaceship3.stl \
 	${MD}/planet1.stl \
 	${MD}/planet2.stl \
-	${MD}/planet3.stl
+	${MD}/planet3.stl \
+	${MD}/long-triangular-prism.stl
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} \
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic

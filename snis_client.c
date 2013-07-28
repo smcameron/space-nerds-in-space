@@ -218,6 +218,7 @@ struct mesh *spacemonster_mesh;
 struct mesh *asteroidminer_mesh;
 struct mesh *spaceship2_mesh;
 struct mesh *scout_mesh;
+struct mesh *laserbeam_mesh;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -874,7 +875,7 @@ static void init_laserbeam_data(struct snis_entity *o)
 		ld->x[i] = o->x;
 		ld->y[i] = o->y;
 		ld->z[i] = 0.0;
-		ld->entity[i] = add_entity(ecx, particle_mesh, o->x, 0, -o->y,
+		ld->entity[i] = add_entity(ecx, laserbeam_mesh, o->x, 0, -o->y,
 						LASER_COLOR);
 		set_render_style(ld->entity[i], RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 	}
@@ -7715,6 +7716,7 @@ static void init_meshes(void)
 	asteroidminer_mesh = snis_read_stl_file(d, "asteroid-miner.stl");
 	spaceship2_mesh = snis_read_stl_file(d, "spaceship2.stl");
 	scout_mesh = snis_read_stl_file(d, "spaceship3.stl");
+	laserbeam_mesh = snis_read_stl_file(d, "long-triangular-prism.stl");
 }
 
 static void init_vects(void)
