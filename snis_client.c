@@ -1821,6 +1821,7 @@ static void do_dirkey(int h, int v)
 	}
 
 	switch (displaymode) {
+		case DISPLAYMODE_MAINSCREEN:
 		case DISPLAYMODE_NAVIGATION:
 			navigation_dirkey(h, v); 
 			break;
