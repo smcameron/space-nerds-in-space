@@ -3951,6 +3951,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		int x, y;
 		double tx, ty, nx, ny;
+		double time_to_target, svx, svy, targx, targy;
 		double dist2;
 
 		if (!go[i].alive)
@@ -3962,7 +3963,6 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 			((go[i].y - o->y + ny) * (go[i].y - o->y + ny));
 		if (dist2 > NR2 || dist2 > visible_distance)
 			continue; /* not close enough */
-	
 
 		tx = (go[i].x + nx - o->x) * (double) r / screen_radius;
 		ty = (go[i].y + ny - o->y) * (double) r / screen_radius;
@@ -4015,6 +4015,14 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 					sprintf(buffer, "%s", go[i].sdata.name);
 					sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, x + 10, y - 10);
 				}
+				time_to_target = sqrt(dist2) / TORPEDO_VELOCITY;
+				svx = go[i].vx * (double) r / screen_radius;
+				svy = go[i].vy * (double) r / screen_radius;
+				targx = x + svx * time_to_target;
+				targy = y + svy * time_to_target;
+				sng_set_foreground(RED);
+				snis_draw_line(w->window, gc, targx - 5, targy, targx + 5, targy);
+				snis_draw_line(w->window, gc, targx, targy - 5, targx, targy + 5);
 				break;
 			case OBJTYPE_SPACEMONSTER: /* invisible to instruments */
 			case OBJTYPE_NEBULA:
