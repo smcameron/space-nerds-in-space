@@ -2554,8 +2554,8 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 				&victim, &shiptype);
 	if (rc != 0)
 		return rc;
-	dvx = sin(dheading) * dv;
-	dvy = -cos(dheading) * dv;
+	dvx = cos(dheading) * dv;
+	dvy = sin(dheading) * dv;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_econ_ship(id, dx, dy, dvx, dvy, dheading, alive, victim, shiptype);
 	pthread_mutex_unlock(&universe_mutex);
