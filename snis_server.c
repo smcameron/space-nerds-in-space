@@ -4042,12 +4042,17 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	double dv = sqrt((o->vx * o->vx) + (o->vy * o->vy));
+	uint32_t victim_id;
 
+	if (o->tsd.ship.victim >= 0)
+		victim_id = go[o->tsd.ship.victim].id;
+	else
+		victim_id = (uint32_t) - 1;
 	pb_queue_to_client(c, packed_buffer_new("hwwSSUUwb", OPCODE_ECON_UPDATE_SHIP,
 			o->id, o->alive, o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM,
 			dv, (uint32_t) UNIVERSE_DIM, o->heading, (uint32_t) 360,
-			(uint32_t) o->tsd.ship.victim, o->tsd.ship.shiptype));
+			victim_id, o->tsd.ship.shiptype));
 }
 
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip)
