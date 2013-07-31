@@ -843,13 +843,18 @@ static void update_laserbeam_segments(struct snis_entity *o)
 
 	angle = atan2(y2 - y1, x2 - x1);
 
+	x1 += cos(angle) * 5.0;
+	y1 -= sin(angle) * 5.0;
+	x2 -= cos(angle) * 5.0;
+	y2 += sin(angle) * 5.0;
+
 	dx = (x2 - x1) / MAX_LASERBEAM_SEGMENTS;
 	dy = (y2 - y1) / MAX_LASERBEAM_SEGMENTS;
 	dz = (z2 - z1) / MAX_LASERBEAM_SEGMENTS;
 
 	
 	for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++) {
-		lastd = (snis_randn(100) + 50) / 100.0;
+		lastd = (snis_randn(50) - 25) / 100.0;
 #if 0
 		rx = snis_randn(360) * M_PI / 180.0;
 		ry = snis_randn(360) * M_PI / 180.0;
