@@ -1861,13 +1861,72 @@ static int add_laser(double x, double y, double vx, double vy, double heading, u
 	return i;
 }
 
+static void laserbeam_dead(struct snis_entity *o)
+{
+	snis_queue_delete_object(o);
+	delete_object(o);
+}
+
 static void laserbeam_move(struct snis_entity *o)
 {
+	int tid, oid, ttype;
+	struct snis_entity *target, *origin;
+
 	o->alive--;
 	if (o->alive <= 0) {
-		snis_queue_delete_object(o);
-		delete_object(o);
+		laserbeam_dead(o);
+		return;
 	}
+
+	/* only deal laser damage every 16th tick */
+	if (universe_timestamp & 0x0f)
+		return;
+
+	tid = lookup_by_id(o->tsd.laserbeam.target);
+	oid = lookup_by_id(o->tsd.laserbeam.origin);
+	if (tid < 0 || oid < 0) {
+		laserbeam_dead(o);
+		return;
+	}
+	target = &go[tid];
+	origin = &go[oid];
+	ttype = target->type;
+	
+	if (ttype == OBJTYPE_STARBASE) {
+		target->tsd.starbase.under_attack = 1;
+		return;
+	}
+
+	if (ttype == OBJTYPE_SHIP1 || ttype == OBJTYPE_SHIP2) {
+		calculate_laser_damage(target, o->tsd.laser.wavelength);
+		send_ship_damage_packet(target);
+	}
+
+	if (ttype == OBJTYPE_ASTEROID && fabs(target->z) < 100.0) {
+		target->alive = 0;
+	}
+
+	if (!target->alive) {
+		(void) add_explosion(target->x, target->y, 50, 50, 50, ttype);
+		/* TODO -- these should be different sounds */
+		/* make sound for players that got hit */
+		/* make sound for players that did the hitting */
+
+		if (origin->type == OBJTYPE_SHIP1)
+			snis_queue_add_sound(EXPLOSION_SOUND,
+					ROLE_SOUNDSERVER, origin->id);
+		if (ttype != OBJTYPE_SHIP1) {
+			snis_queue_delete_object(target);
+			delete_object(target);
+			respawn_object(ttype);
+		} else {
+			snis_queue_add_sound(EXPLOSION_SOUND,
+						ROLE_SOUNDSERVER, target->id);
+		}
+	} else {
+		(void) add_explosion(target->x, target->y, 50, 5, 5, ttype);
+	}
+	return;
 }
 
 static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
