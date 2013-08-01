@@ -307,7 +307,7 @@ int circle_line_segment_intersection(double x1, double y1, double x2, double y2,
 	/* Now the line equation is x = dx*t + x1, y = dy*t + y1 with 0 <= t <= 1. */
 
 	/* compute the value t of the closest point to the circle center (Cx, Cy) */
-	t = dx * (cx - x1) + dy * (cy - x1);
+	t = dx * (cx - x1) + dy * (cy - y1);
 
 	/* This is the projection of C on the line segment. */
 
