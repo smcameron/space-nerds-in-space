@@ -3646,7 +3646,7 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 
 static void snis_draw_laser(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
 {
-	sng_current_bright_line(drawable, gc, x1, y1, x2, y2, RED);
+	sng_current_bright_line(drawable, gc, x1, y1, x2, y2, GREEN);
 }
 
 /* position and dimensions of science scope */
@@ -3984,6 +3984,50 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
 	}
 }
 
+static void draw_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *ship,
+		struct snis_entity *laserbeam,
+		struct snis_radar_extent *extent, double screen_radius, int r)
+{
+	double x1, y1, x2, y2, ix1, iy1, ix2, iy2;
+	int oid, tid, cx, cy, tx, ty, lx1, ly1, lx2, ly2;
+	int nintersections;
+
+	oid = lookup_object_by_id(laserbeam->tsd.laserbeam.origin);
+	tid = lookup_object_by_id(laserbeam->tsd.laserbeam.target);
+
+	x1 = go[oid].x;
+	y1 = go[oid].y;
+	x2 = go[tid].x;
+	y2 = go[tid].y;
+
+	nintersections = circle_line_segment_intersection(x1, y1, x2, y2,
+				ship->x, ship->y, screen_radius,
+				&ix1, &iy1, &ix2, &iy2);
+
+	if (nintersections == -1) /* no intersections, all points outside circle */
+		return;
+
+	/* otherwise, 3 cases, but do the same in all of them
+	 * 1. no intersections, all points inside circle
+	 * 2. 1 intersection, 1 point inside circle
+	 * 3. 2 intersections 
+	 *
+	 * in any case, draw a line from *ix1,*iy1 to *ix2,*iy2
+	 * scaling to radar coords first.
+	 */
+	cx = extent->rx + (extent->rw / 2);
+	cy = extent->ry + (extent->rh / 2);
+	tx = (ix1 - ship->x) * (double) r / screen_radius;
+	ty = (iy1 - ship->y) * (double) r / screen_radius;
+	lx1 = (int) (tx + (double) cx);
+	ly1 = (int) (ty + (double) cy);
+	tx = (ix2 - ship->x) * (double) r / screen_radius;
+	ty = (iy2 - ship->y) * (double) r / screen_radius;
+	lx2 = (int) (tx + (double) cx);
+	ly2 = (int) (ty + (double) cy);
+	snis_draw_laser(w->window, gc, lx1, ly1, lx2, ly2);
+}
+
 static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_radar_extent* extent, double screen_radius,
 				double visible_distance)
 {
@@ -4010,6 +4054,10 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 		if (!go[i].alive)
 			continue;
 
+		if (go[i].type == OBJTYPE_LASERBEAM) {
+			draw_laserbeam(w, gc, o, &go[i], extent, screen_radius, r);
+			continue;
+		}
 		nx = in_nebula * (0.01 * snis_randn(100) - 0.5) * 0.1 * screen_radius;
 		ny = in_nebula * (0.01 * snis_randn(100) - 0.5) * 0.1 * screen_radius;
 		dist2 = ((go[i].x - o->x + nx) * (go[i].x - o->x + nx)) +
