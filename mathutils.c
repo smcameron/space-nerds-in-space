@@ -347,11 +347,11 @@ int circle_line_segment_intersection(double x1, double y1, double x2, double y2,
 	}
 	if (second_point_inside) {
 		if (point_between(x1, y1, *ix1, *iy1, x2, y2)) {
+			*ix1 = *ix2;
+			*iy1 = *iy2;
 			*ix2 = x2;
 			*iy2 = y2;
 		} else {
-			*ix1 = *ix2;
-			*iy1 = *iy2;
 			*ix2 = x2;
 			*iy2 = y2;
 		}
