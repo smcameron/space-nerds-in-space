@@ -948,7 +948,7 @@ static void ship_move(struct snis_entity *o)
 					ENEMY_TORPEDO_FIRE_INTERVAL;
 				check_for_incoming_fire(v);
 			} else { 
-				if (snis_randn(1000) < 50 &&
+				if (snis_randn(1000) < 150 &&
 					o->tsd.ship.next_laser_time <= universe_timestamp) {
 					o->tsd.ship.next_laser_time = universe_timestamp +
 						ENEMY_LASER_FIRE_INTERVAL;
