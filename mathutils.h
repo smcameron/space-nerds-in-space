@@ -73,4 +73,28 @@ GLOBAL void random_point_on_sphere(float radius, float *x, float *y, float *z)
 GLOBAL void random_point_in_sphere(float radius, float *x, float *y, float *z,
                                 float *dist3dsqrd);
 
+/*
+ * circle line intersection code adapted from:
+ * http://stackoverflow.com/questions/1073336/circle-line-collision-detection
+ *
+ * with changes to handle cases:
+ *    both points inside circle
+ *    neither point inside circle, no intersections
+ *    neither point inside circle, two intersections
+ *    first point inside, 2nd outside, 1 intersection
+ *    first point outside, 2nd inside, 1 intersection 
+ *
+ * Returns number of intersections (-1, 0, 1 or 2), and intersection values in
+ * 	(*ix1,*iy1) and * (*ix2,*iy2)
+ * 
+ * -1 means no intersections, both endpoints are outside the circle
+ * 0 means no intersections, both endpoints are inside the circle
+ * 1 means 1 intersection, 1 point inside the circle
+ *         (*ix1,*iy1, and *ix2,*iy2 will all be filled in.)
+ * 2 means 2 intersections
+ *
+ */
+int circle_line_segment_intersection(double x1, double y1, double x2, double y2,
+	double cx, double cy, double r,
+	double *ix1, double *iy1, double *ix2, double *iy2);
 #endif

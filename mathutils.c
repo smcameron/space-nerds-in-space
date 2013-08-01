@@ -237,3 +237,126 @@ void random_point_in_sphere(float radius, float *x, float *y, float *z,
 	} while (*dsqrd > rsqrd);
 }
 
+static inline int between(double a, double p, double b)
+{
+	if (a <= p && p <= b)
+		return 1;
+	if (b <= p && p <= a)
+		return 1;
+	return 0;
+}
+
+static inline int point_between(double ax, double ay, double px, double py, double bx, double by)
+{
+	return between(ax, px, bx) && between(ay, px, by);
+}
+
+/*
+ * circle line intersection code adapted from:
+ * http://stackoverflow.com/questions/1073336/circle-line-collision-detection
+ *
+ * with changes to handle cases:
+ *    both points inside circle
+ *    neither point inside circle, no intersections
+ *    neither point inside circle, two intersections
+ *    first point inside, 2nd outside, 1 intersection
+ *    first point outside, 2nd inside, 1 intersection 
+ *
+ * Returns number of intersections (-1, 0, 1 or 2), and intersection values in
+ * 	(*ix1,*iy1) and * (*ix2,*iy2)
+ * 
+ * -1 means no intersections, both endpoints are outside the circle
+ * 0 means no intersections, both endpoints are inside the circle
+ * 1 means 1 intersection, 1 point inside the circle
+ *         (*ix1,*iy1, and *ix2,*iy2 will all be filled in.)
+ * 2 means 2 intersections
+ *
+ */
+
+int circle_line_segment_intersection(double x1, double y1, double x2, double y2,
+	double cx, double cy, double r,
+	double *ix1, double *iy1, double *ix2, double *iy2)
+{
+	double line_seg_length;
+	double dx, dy, ex, ey, LEC, t, dt, r2;
+	double da, db;
+	int first_point_inside = 0;
+	int second_point_inside = 0;
+
+	r2 = r * r;
+	da = (cx - x1) * (cx - x1) + (cy - y1) * (cy - y1);
+	if (da <= r2)
+		first_point_inside = 1;
+	db = (cx - x2) * (cx - x2) + (cy - y2) * (cy - y2);
+	if (db <= r2)
+		second_point_inside = 1;
+	if (first_point_inside && second_point_inside) {
+		*ix1 = x1;
+		*iy1 = y1;
+		*ix2 = x2;
+		*iy2 = y2;
+		return 0;
+	}
+
+	line_seg_length = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+
+	/* compute the direction vector d for the line segment */
+	dx = (x2 - x1) / line_seg_length;
+	dy = (y2 - y1) / line_seg_length;
+
+	/* Now the line equation is x = dx*t + x1, y = dy*t + y1 with 0 <= t <= 1. */
+
+	/* compute the value t of the closest point to the circle center (Cx, Cy) */
+	t = dx * (cx - x1) + dy * (cy - x1);
+
+	/* This is the projection of C on the line segment. */
+
+	/* compute the coordinates of the point E on line and closest to C */
+	ex = t * dx + x1;
+	ey = t * dy + y1;
+
+	/* compute the euclidean distance from E to C */
+	LEC = sqrt((ex - cx) * (ex - cx) + (ey - cy) * (ey - cy));
+
+	/* test if the line intersects the circle */
+	if (LEC >= r)
+		return -1;
+
+	/* compute distance from t to circle intersection point */
+	dt = sqrt(r2 - LEC * LEC);
+
+	/* compute first intersection point */
+	*ix1 = (t - dt) * dx + x1;
+	*iy1 = (t - dt) * dy + y1; 
+
+	/* compute second intersection point */
+	*ix2 = (t + dt) * dx + x1; 
+	*iy2 = (t + dt) * dy + y1; 
+
+	if (first_point_inside) {
+		if (point_between(x1, y1, *ix1, *iy1, x2, y2)) {
+			*ix2 = x1;
+			*iy2 = y1;
+		} else {
+			*ix1 = *ix2;
+			*iy1 = *iy2;
+			*ix2 = x1;
+			*iy2 = y1;
+		}
+		return 1;
+	}
+	if (second_point_inside) {
+		if (point_between(x1, y1, *ix1, *iy1, x2, y2)) {
+			*ix2 = x2;
+			*iy2 = y2;
+		} else {
+			*ix1 = *ix2;
+			*iy1 = *iy2;
+			*ix2 = x2;
+			*iy2 = y2;
+		}
+		return 1;
+	}
+	return 2;
+}
+
