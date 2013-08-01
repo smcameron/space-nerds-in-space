@@ -3985,20 +3985,12 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
 }
 
 static void draw_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *ship,
-		struct snis_entity *laserbeam,
+		double x1, double y1, double x2, double y2,
 		struct snis_radar_extent *extent, double screen_radius, int r)
 {
-	double x1, y1, x2, y2, ix1, iy1, ix2, iy2;
-	int oid, tid, cx, cy, tx, ty, lx1, ly1, lx2, ly2;
+	double ix1, iy1, ix2, iy2;
+	int cx, cy, tx, ty, lx1, ly1, lx2, ly2;
 	int nintersections;
-
-	oid = lookup_object_by_id(laserbeam->tsd.laserbeam.origin);
-	tid = lookup_object_by_id(laserbeam->tsd.laserbeam.target);
-
-	x1 = go[oid].x;
-	y1 = go[oid].y;
-	x2 = go[tid].x;
-	y2 = go[tid].y;
 
 	nintersections = circle_line_segment_intersection(x1, y1, x2, y2,
 				ship->x, ship->y, screen_radius,
@@ -4055,7 +4047,12 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 			continue;
 
 		if (go[i].type == OBJTYPE_LASERBEAM) {
-			draw_laserbeam(w, gc, o, &go[i], extent, screen_radius, r);
+			int oid, tid;
+
+			oid = lookup_object_by_id(go[i].tsd.laserbeam.origin);
+			tid = lookup_object_by_id(go[i].tsd.laserbeam.target);
+			draw_laserbeam(w, gc, o, go[oid].x, go[oid].y, go[tid].x, go[tid].y,
+					extent, screen_radius, r);
 			continue;
 		}
 		nx = in_nebula * (0.01 * snis_randn(100) - 0.5) * 0.1 * screen_radius;
