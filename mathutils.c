@@ -357,6 +357,15 @@ int circle_line_segment_intersection(double x1, double y1, double x2, double y2,
 		}
 		return 1;
 	}
-	return 2;
+
+	/*
+	 * Both points are outside the circle, and we have two co-linear points
+	 * that intersect the circle.  Either both of those interesections are
+	 * between (x1,y1) (x2,y2), in which case the line crosses the circle, or
+	 * not, in which case the segment is totally outside the circle.
+	 */
+	if (point_between(x1, y1, *ix1, *iy1, x2, y2))
+		return 2;
+	return -1;
 }
 
