@@ -926,7 +926,8 @@ static void ship_move(struct snis_entity *o)
 		if (o->sdata.faction != 0 || 
 			(v->type != OBJTYPE_STARBASE && v->type == OBJTYPE_PLANET)) {
 
-			if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE) {
+			if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE &&
+				o->tsd.ship.next_torpedo_time <= universe_timestamp) {
 				double dist, flight_time, tx, ty, vx, vy, angle;
 				int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y);
 
@@ -944,9 +945,12 @@ static void ship_move(struct snis_entity *o)
 				vy = TORPEDO_VELOCITY * cos(angle);
 				add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
 				add_laserbeam(o->id, v->id, 30);
+				o->tsd.ship.next_torpedo_time = universe_timestamp +
+					ENEMY_TORPEDO_FIRE_INTERVAL;
 				check_for_incoming_fire(v);
 			} else { 
-				if (snis_randn(1000) < 50) {
+				if (snis_randn(1000) < 50 &&
+					o->tsd.ship.next_laser_time >= universe_timestamp) {
 					double dist, flight_time, tx, ty, vx, vy, angle;
 					int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y);
 
@@ -963,6 +967,8 @@ static void ship_move(struct snis_entity *o)
 					vx = LASER_VELOCITY * sin(angle);
 					vy = LASER_VELOCITY * cos(angle);
 					add_laser(o->x, o->y, vx, vy, o->heading, o->id);
+					o->tsd.ship.next_laser_time = universe_timestamp +
+						ENEMY_LASER_FIRE_INTERVAL;
 					add_laserbeam(o->id, v->id, 30);
 					check_for_incoming_fire(v);
 				}

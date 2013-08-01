@@ -233,6 +233,10 @@ struct ship_data {
 	int32_t warp_time; /* time remaining until warp engages */
 	double scibeam_a1, scibeam_a2, scibeam_range; /* used server side to cache sci beam calcs */
 	uint8_t reverse;
+	int32_t next_torpedo_time;
+#define ENEMY_TORPEDO_FIRE_INTERVAL (10 * 30) /* 10 seconds */ 
+	int32_t next_laser_time;
+#define ENEMY_LASER_FIRE_INTERVAL (5 * 30) /* 5 seconds */ 
 };
 
 struct starbase_data {
