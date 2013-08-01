@@ -96,6 +96,7 @@
 #define OPCODE_INITIATE_WARP		171
 #define OPCODE_REQUEST_REVERSE		172
 #define OPCODE_UPDATE_LASERBEAM		173
+#define OPCODE_WEAP_SELECT_TARGET 	174
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -130,6 +131,7 @@ struct update_ship_packet {
 	uint8_t phaser_wavelength;
 	uint8_t shiptype; /* same as ship_sdata_packet subclass */
 	uint8_t reverse;
+	uint32_t victimid;
 };
 
 struct ship_sdata_packet {

@@ -632,9 +632,9 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 			uint8_t navzoom, uint8_t warpdrive,
 			uint8_t requested_warpdrive, uint8_t requested_shield,
 			uint8_t phaser_charge, uint8_t phaser_wavelength, uint8_t shiptype,
-			uint8_t reverse)
+			uint8_t reverse, uint32_t victim_id)
 {
-	int i;
+	int vi, i;
 	struct entity *e;
 
 	i = lookup_object_by_id(id);
@@ -678,6 +678,9 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.damcon = NULL;
 	go[i].tsd.ship.shiptype = shiptype;
 	go[i].tsd.ship.reverse = reverse;
+	vi = lookup_object_by_id(victim_id);
+	if (vi >= 0)
+		go[i].tsd.ship.victim = vi;
 	return 0;
 }
 
@@ -2401,7 +2404,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	unsigned char buffer[100];
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, power;
-	uint32_t fuel;
+	uint32_t fuel, victim_id;
 	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
@@ -2422,11 +2425,11 @@ static int process_update_ship_packet(uint16_t opcode)
 	packed_buffer_extract(&pb, "UwwUUU", &dheading, (uint32_t) 360,
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
 				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
-	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbb", &tloading, &throttle, &rpm, &fuel, &temp,
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbw", &tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
-			&reverse);
+			&reverse, &victim_id);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	pthread_mutex_lock(&universe_mutex);
@@ -2434,7 +2437,7 @@ static int process_update_ship_packet(uint16_t opcode)
 				dgheading, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
 				weapzoom, navzoom, warpdrive, requested_warpdrive, requested_shield,
-				phaser_charge, phaser_wavelength, shiptype, reverse);
+				phaser_charge, phaser_wavelength, shiptype, reverse, victim_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -3931,6 +3934,56 @@ struct snis_radar_extent {
 	int rx, ry, rw, rh;
 };
 
+static double radarx_to_ux(struct snis_entity *o,
+		double x, struct snis_radar_extent *extent, double screen_radius)
+{
+	int cx = extent->rx + (extent->rw / 2);
+
+	return screen_radius * (x - cx) / ((double) extent->rh / 2.0) + o->x;
+}
+
+static double radary_to_uy(struct snis_entity *o,
+		double y, struct snis_radar_extent *extent, double screen_radius)
+{
+	int cy = extent->ry + (extent->rh / 2);
+
+	return screen_radius * (y - cy) / ((double) extent->rh / 2.0) + o->y;
+}
+
+static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
+{
+	int i;
+
+	sng_set_foreground(RED);
+	for (i = 0; i < 4; i++) {
+		int x1, y1, x2, y2;
+		double angle;
+		double dx, dy, ddx, ddy;
+
+		angle = (M_PI * ((i * 90 + timer * 4) % 360)) / 180.0;
+
+		dx = 15.0 * cos(angle);
+		dy = 15.0 * sin(angle);
+		ddx = 5.0 * cos(angle + M_PI / 2.0);
+		ddy = 5.0 * sin(angle + M_PI / 2.0);
+
+		x1 = x + dx;
+		y1 = y + dy;
+		x2 = x + 2.0 * dx;
+		y2 = y + 2.0 * dy;
+#if 0
+		x1 = (int) ((double) x + 10.0 * cos(angle));
+		y1 = (int) ((double) y + 10.0 * sin(angle));
+		x2 = (int) ((double) x + 20.0 * cos(angle));
+		y2 = (int) ((double) y + 20.0 * sin(angle));
+#endif
+		/* snis_draw_line(w->window, gc, x1, y1, x2, y2); */
+		snis_draw_line(w->window, gc, x2 - ddx, y2 - ddy, x2 + ddx, y2 + ddy);
+		snis_draw_line(w->window, gc, x2 - ddx, y2 - ddy, x1, y1);
+		snis_draw_line(w->window, gc, x1, y1, x2 + ddx, y2 + ddy);
+	}
+}
+
 static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_radar_extent* extent, double screen_radius,
 				double visible_distance)
 {
@@ -4031,6 +4084,8 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 				sng_set_foreground(WHITE);
 				snis_draw_arrow(w, gc, x, y, r, go[i].heading, 0.5);
 			}
+			if (i == o->tsd.ship.victim)
+				draw_targeting_indicator(w, gc, x, y);
 		}
 	}
 	pthread_mutex_unlock(&universe_mutex);
@@ -5550,6 +5605,53 @@ static void init_comms_ui(void)
 	ui_add_button(comms_ui.red_alert_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS);
 	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
+}
+
+static int weapons_button_press(int x, int y)
+{
+	double ux, uy;
+	static struct snis_radar_extent extent = { 40, 90, 470, 470 };
+	struct snis_entity *o = &go[my_ship_oid];
+	double screen_radius;
+	int i, cx, cy;
+	double dist2, mindist2, sxdist2, rdist2;
+	int minindex;
+
+	screen_radius = ((((255.0 - o->tsd.ship.weapzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
+	ux = radarx_to_ux(o, x, &extent, screen_radius);
+	uy = radary_to_uy(o, y, &extent, screen_radius);
+
+	minindex = -1;
+	mindist2 = 0;
+	dist2 = 0;
+
+	/* TODO: make sure that click is actually on the radar screen. */
+	cx = extent.rx + (extent.rw / 2);
+	cy = extent.ry + (extent.rh / 2);
+	sxdist2 = (cx - x) * (cx - x) + (cy - y) * (cy - y);
+	rdist2 = (extent.rw / 2) * (extent.rw / 2) +
+		(extent.rh / 2) * (extent.rh / 2);
+	printf("sxdist2 = %lf, rdist2 = %lf\n", sxdist2, rdist2);
+	if (sxdist2 > rdist2)
+		return 0;
+
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (!go[i].alive)
+			continue;
+		dist2 = (ux - go[i].x) * (ux - go[i].x) +
+			(uy - go[i].y) * (uy - go[i].y);
+		/* if (dist2 > 5000.0)
+			continue; */
+		if (minindex == -1 || dist2 < mindist2) {
+			mindist2 = dist2;
+			minindex = i;
+		}
+	}
+	if (minindex >= 0)
+		queue_to_server(packed_buffer_new("hw", OPCODE_WEAP_SELECT_TARGET, go[minindex].id));
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
 }
 
 #define SCIDIST2 100
@@ -7453,6 +7555,10 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 		break;
 	case DISPLAYMODE_DEMON:
 		demon_button_release(event->button, event->x, event->y);
+		break;
+	case DISPLAYMODE_WEAPONS:
+		weapons_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
+				(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
 		break;
 	default:
 		break;

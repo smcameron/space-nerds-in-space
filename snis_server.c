@@ -2627,6 +2627,27 @@ static int process_sci_select_target(struct game_client *c)
 	return 0;
 }
 
+static int process_weap_select_target(struct game_client *c)
+{
+	unsigned char buffer[10];
+	uint32_t id;
+	int rc, i, index;
+	struct snis_entity *ship;
+
+	rc = read_and_unpack_buffer(c, buffer, "w", &id);
+	if (rc)
+		return rc;
+	index = lookup_by_id(id);
+	if (index < 0)
+		return 0;
+	i = lookup_by_id(c->shipid);
+	if (i < 0)
+		return 0;
+	ship = &go[i];
+	ship->tsd.ship.victim = index;
+	return 0;
+}
+
 static int process_sci_select_coords(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct snis_sci_select_coords_packet)];
@@ -3658,6 +3679,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_WEAP_SELECT_TARGET:
+			rc = process_weap_select_target(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		case OPCODE_SCI_SELECT_COORDS:
 			rc = process_sci_select_coords(c);
 			if (rc)
@@ -4118,12 +4144,17 @@ static void send_update_ship_packet(struct game_client *c,
 	struct snis_entity *o, uint16_t opcode)
 {
 	struct packed_buffer *pb;
-	uint32_t fuel;
+	uint32_t fuel, victimid;
 	uint8_t tloading, tloaded, throttle, rpm;
 
 	throttle = o->tsd.ship.throttle;
 	rpm = o->tsd.ship.rpm;
 	fuel = o->tsd.ship.fuel;
+
+	if (o->tsd.ship.victim < 0)
+		victimid = (uint32_t) -1;
+	else
+		victimid = go[o->tsd.ship.victim].id;
 
 	tloading = (uint8_t) (o->tsd.ship.torpedoes_loading & 0x0f);
 	tloaded = (uint8_t) (o->tsd.ship.torpedoes_loaded & 0x0f);
@@ -4133,7 +4164,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "hwwSSSS", opcode, o->id, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vy, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "UwwUUUbbbwbbbbbbbbbbb", o->heading, (uint32_t) 360,
+	packed_buffer_append(pb, "UwwUUUbbbwbbbbbbbbbbbw", o->heading, (uint32_t) 360,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
 			o->tsd.ship.gun_heading, (uint32_t) 360,
 			o->tsd.ship.sci_heading, (uint32_t) 360,
@@ -4143,7 +4174,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
 			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
 			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype,
-			o->tsd.ship.reverse);
+			o->tsd.ship.reverse, victimid);
 	pb_queue_to_client(c, pb);
 }
 
