@@ -950,22 +950,6 @@ static void ship_move(struct snis_entity *o)
 			} else { 
 				if (snis_randn(1000) < 50 &&
 					o->tsd.ship.next_laser_time >= universe_timestamp) {
-					double dist, flight_time, tx, ty, vx, vy, angle;
-					int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y);
-
-					dist = hypot(v->x - o->x, v->y - o->y);
-					flight_time = dist / LASER_VELOCITY;
-					tx = v->x + (v->vx * flight_time);
-					ty = v->y + (v->vy * flight_time);
-			
-					angle = atan2(tx - o->x, ty - o->y);
-					if (inside_nebula)
-						angle += (M_PI / 180.0 / 25.0) * (snis_randn(100) - 50);
-					else
-						angle += (M_PI / 180.0 / 5.0) * (snis_randn(100) - 50);
-					vx = LASER_VELOCITY * sin(angle);
-					vy = LASER_VELOCITY * cos(angle);
-					add_laser(o->x, o->y, vx, vy, o->heading, o->id);
 					o->tsd.ship.next_laser_time = universe_timestamp +
 						ENEMY_LASER_FIRE_INTERVAL;
 					add_laserbeam(o->id, v->id, 30);
@@ -3455,17 +3439,22 @@ static int process_demon_dispossess(struct game_client *c)
 static int process_request_laser(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
-	double vx, vy;
+	int tid;
 
-	vx = LASER_VELOCITY * sin(ship->tsd.ship.gun_heading);
-	vy = LASER_VELOCITY * -cos(ship->tsd.ship.gun_heading);
 	pthread_mutex_lock(&universe_mutex);
-	if (ship->tsd.ship.phaser_charge >= (ship->tsd.ship.power_data.phasers.i * 3) / 4) {
-		add_laser(ship->x + vx, ship->y + vy, vx, vy, ship->tsd.ship.gun_heading, ship->id); 
-		snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
-	} else {
-		snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
-	}
+	if (ship->tsd.ship.victim < 0)
+		goto laserfail;
+
+	tid = go[ship->tsd.ship.victim].id;
+	if (ship->tsd.ship.phaser_charge < (ship->tsd.ship.power_data.phasers.i * 3) / 4)
+		goto laserfail;
+	add_laserbeam(ship->id, tid, 30);
+	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+
+laserfail:
+	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
