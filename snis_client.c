@@ -5676,7 +5676,6 @@ static int weapons_button_press(int x, int y)
 	sxdist2 = (cx - x) * (cx - x) + (cy - y) * (cy - y);
 	rdist2 = (extent.rw / 2) * (extent.rw / 2) +
 		(extent.rh / 2) * (extent.rh / 2);
-	printf("sxdist2 = %lf, rdist2 = %lf\n", sxdist2, rdist2);
 	if (sxdist2 > rdist2)
 		return 0;
 
