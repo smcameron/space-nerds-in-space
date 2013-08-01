@@ -3602,7 +3602,7 @@ static void show_mainscreen(GtkWidget *w)
 
 	cx = (float) o->x;
 	cy = (float) -o->y;
-	cz = -6.0;
+	cz = -10.0;
 	lx = cx + sin(camera_look_heading) * 500.0;
 	ly = cy + cos(camera_look_heading) * 500.0;
 	camera_set_pos(ecx, cx, (float) cz, cy);
