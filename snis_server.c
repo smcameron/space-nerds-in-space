@@ -944,7 +944,6 @@ static void ship_move(struct snis_entity *o)
 				vx = TORPEDO_VELOCITY * sin(angle);
 				vy = TORPEDO_VELOCITY * cos(angle);
 				add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
-				add_laserbeam(o->id, v->id, 30);
 				o->tsd.ship.next_torpedo_time = universe_timestamp +
 					ENEMY_TORPEDO_FIRE_INTERVAL;
 				check_for_incoming_fire(v);
