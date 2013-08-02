@@ -1902,9 +1902,8 @@ static void laserbeam_move(struct snis_entity *o)
 		send_ship_damage_packet(target);
 	}
 
-	if (ttype == OBJTYPE_ASTEROID && fabs(target->z) < 100.0) {
+	if (ttype == OBJTYPE_ASTEROID)
 		target->alive = 0;
-	}
 
 	if (!target->alive) {
 		(void) add_explosion(target->x, target->y, 50, 50, 50, ttype);
