@@ -424,6 +424,20 @@ static struct snis_entity *lookup_entity_by_id(uint32_t id)
 		return NULL;
 }
 
+static void attack_your_attacker(struct snis_entity *attackee, struct snis_entity *attacker)
+{
+	if (!attacker)
+		return;
+
+	if (attackee->type != OBJTYPE_SHIP2)
+		return;
+
+	if (snis_randn(100) >= 75)
+		return;
+
+	attackee->tsd.ship.victim_id = attacker->id;
+}
+
 static void torpedo_move(struct snis_entity *o)
 {
 	int i, otype;
@@ -467,16 +481,7 @@ static void torpedo_move(struct snis_entity *o)
 		if (otype == OBJTYPE_SHIP1 || otype == OBJTYPE_SHIP2) {
 			calculate_torpedo_damage(&go[i]);
 			send_ship_damage_packet(&go[i]);
-
-			/* make ships attack their attacker */
-			if (otype == OBJTYPE_SHIP2 && snis_randn(100) < 75) {
-				int index = lookup_by_id(o->tsd.torpedo.ship_id);
-
-				if (index >= 0)
-					go[i].tsd.ship.victim_id = go[index].id;
-				else
-					go[i].tsd.ship.victim_id = (uint32_t) -1;
-			}
+			attack_your_attacker(&go[i], lookup_entity_by_id(o->tsd.torpedo.ship_id));
 		} else if (otype == OBJTYPE_ASTEROID && fabs(go[i].z) < 100.0) {
 			go[i].alive = 0;
 		}
