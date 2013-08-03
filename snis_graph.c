@@ -279,7 +279,7 @@ static void sng_draw_bright_white_electric_line(GdkDrawable *drawable,
 void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
 	gint x1, gint y1, gint x2, gint y2, int color)
 {
-	int sx1, sy1, sx2, sy2, dx, dy;
+	int dx, dy;
 
 	if (abs(x1 - x2) > abs(y1 - y2)) {
 		dx = 0;
@@ -292,15 +292,10 @@ void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
 
-	sx1 = x1 * sgc.xscale;
-	sx2 = x2 * sgc.xscale;
-	sy1 = y1 * sgc.yscale;	
-	sy2 = y2 * sgc.yscale;
-
-	sng_draw_bright_white_electric_line(drawable, gc, sx1, sy1, sx2, sy2, color);
+	sng_draw_bright_white_electric_line(drawable, gc, x1, y1, x2, y2, color);
 	gdk_gc_set_foreground(gc, &huex[color]);
-	sng_draw_electric_line(drawable, gc, sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
-	sng_draw_electric_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
+	sng_draw_electric_line(drawable, gc, x1 - dx, y1 - dy, x2 - dx, y2 - dy);
+	sng_draw_electric_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
 }
 
 void sng_draw_vect_obj(GtkWidget *w, GdkGC *gc, struct my_vect_obj *v, int x, int y)
