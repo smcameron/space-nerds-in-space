@@ -90,6 +90,7 @@ MODELS=${MD}/freighter.stl \
 	${MD}/planet3.stl \
 	${MD}/dragonhawk.stl \
 	${MD}/skorpio.stl \
+	${MD}/disruptor.stl \
 	${MD}/long-triangular-prism.stl
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} \

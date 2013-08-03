@@ -111,6 +111,7 @@ struct power_model_data {
 #define SHIP_CLASS_SCOUT 9
 #define SHIP_CLASS_DRAGONHAWK 10 
 #define SHIP_CLASS_SKORPIO 11 
+#define SHIP_CLASS_DISRUPTOR 12 
 
 static char *shipclass[] = {
 	"Cruiser",
@@ -125,6 +126,7 @@ static char *shipclass[] = {
 	"Spacefarer",
 	"Dragonhawk",
 	"Skorpio",
+	"Disruptor",
 };
 
 static double max_speed[] = {
@@ -140,6 +142,7 @@ static double max_speed[] = {
 	9.0,
 	12.0,
 	14.0,
+	10.0,
 };
 
 struct ship_damage_data {
