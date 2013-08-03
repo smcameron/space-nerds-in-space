@@ -222,11 +222,8 @@ static void sng_bright_electric_line_plot_func(int x, int y, void *context)
 {
 	struct sng_dotted_plot_func_context *c = context;
 
-	if (sng_rand(100) < 10) {
+	if (sng_rand(100) < 20) {
 		gdk_gc_set_foreground(c->gc, &huex[c->i]);
-		gdk_draw_point(c->drawable, c->gc, x, y);
-	} else {
-		gdk_gc_set_foreground(c->gc, &huex[WHITE]);
 		gdk_draw_point(c->drawable, c->gc, x, y);
 	}
 }

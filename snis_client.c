@@ -3644,7 +3644,7 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 
 static void snis_draw_laser(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
 {
-	sng_current_bright_line(drawable, gc, x1, y1, x2, y2, GREEN);
+	sng_draw_laser_line(drawable, gc, x1, y1, x2, y2, GREEN);
 }
 
 /* position and dimensions of science scope */
