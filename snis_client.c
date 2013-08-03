@@ -3952,7 +3952,7 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
 {
 	int i;
 
-	sng_set_foreground(RED);
+	sng_set_foreground(ORANGERED);
 	for (i = 0; i < 4; i++) {
 		int x1, y1, x2, y2;
 		double angle;
