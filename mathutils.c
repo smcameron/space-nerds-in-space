@@ -35,6 +35,11 @@ double radians_to_degrees(double radians)
 	return radians * 180.0 / PI;
 }
 
+double hypot2(double x, double y)
+{
+	return x * x + y * y;
+}
+
 static unsigned long snis_rand_next = 1;
 
 int snis_rand(void)
