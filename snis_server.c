@@ -469,7 +469,7 @@ static void torpedo_move(struct snis_entity *o)
 			send_ship_damage_packet(&go[i]);
 
 			/* make ships attack their attacker */
-			if (snis_randn(100) < 75) {
+			if (otype == OBJTYPE_SHIP2 && snis_randn(100) < 75) {
 				int index = lookup_by_id(o->tsd.torpedo.ship_id);
 
 				if (index >= 0)
