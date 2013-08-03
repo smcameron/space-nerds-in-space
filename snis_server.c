@@ -576,6 +576,7 @@ static void laser_move(struct snis_entity *o)
 		if (otype == OBJTYPE_SHIP1 || otype == OBJTYPE_SHIP2) {
 			calculate_laser_damage(&go[i], o->tsd.laser.wavelength);
 			send_ship_damage_packet(&go[i]);
+			attack_your_attacker(&go[i], lookup_entity_by_id(o->tsd.laser.ship_id));
 		}
 
 		if (otype == OBJTYPE_ASTEROID && fabs(go[i].z) < 100.0) {
@@ -1922,6 +1923,7 @@ static void laserbeam_move(struct snis_entity *o)
 	if (ttype == OBJTYPE_SHIP1 || ttype == OBJTYPE_SHIP2) {
 		calculate_laser_damage(target, o->tsd.laser.wavelength);
 		send_ship_damage_packet(target);
+		attack_your_attacker(target, lookup_entity_by_id(o->tsd.laser.ship_id));
 	}
 
 	if (ttype == OBJTYPE_ASTEROID)
