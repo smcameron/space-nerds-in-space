@@ -1299,6 +1299,61 @@ static void calculate_ship_scibeam_info(struct snis_entity *ship)
 	return;
 }
 
+static void auto_select_enemies(struct snis_entity *o)
+{
+	uint32_t new_victim_id = -1;
+	const double acceptable_angle = 5.0 * M_PI / 180.0;
+	const double acceptable_range2 = (LASER_RANGE * LASER_RANGE);
+	double minrange2, angle, range2, a1;
+	int i, found;
+
+	if ((universe_timestamp & 0x3) != 0) /* throttle this computation */
+		return;
+
+	found = 0;
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *t = &go[i];
+
+		if (t->alive <= 0)
+			continue;
+
+		if (t->id == o->id) /* avoid self selection */
+			continue;
+
+		switch (t->type) {
+		case OBJTYPE_SHIP1:
+		case OBJTYPE_SHIP2:
+		case OBJTYPE_ASTEROID:
+		case OBJTYPE_STARBASE: 
+			range2 = hypot2(t->x - o->x, t->y - o->y);
+			if (range2 > acceptable_range2)
+				continue;
+			angle = atan2(t->y - o->y, t->x - o->x);
+			angle += M_PI / 2.0;
+			if (angle < 0.0)
+				angle += 2.0 * M_PI;
+			else if (angle > 2 * M_PI)
+				angle -= 2.0 * M_PI;
+			a1 = o->tsd.ship.gun_heading;
+			if (a1 < 0.0)
+				a1 += 2.0 * M_PI;
+		
+			angle = (a1 > angle) * (a1 - angle) + (a1 <= angle) * (angle - a1);
+			if (angle > acceptable_angle)
+				continue;
+			if (!found || range2 < minrange2) {
+				found = 1;
+				minrange2 = range2;
+				new_victim_id = t->id;
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	o->tsd.ship.victim_id = new_victim_id;
+}
+
 static void do_thrust(struct snis_entity *ship)
 {
 	double max_player_velocity =
@@ -1451,6 +1506,7 @@ static void player_move(struct snis_entity *o)
 		}
 	}
 	calculate_ship_scibeam_info(o);
+	auto_select_enemies(o);
 }
 
 static void demon_ship_move(struct snis_entity *o)
