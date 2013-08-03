@@ -80,6 +80,8 @@
 #define ASTEROID_COLOR AMBER
 #define PARTICLE_COLOR YELLOW
 #define LASER_COLOR GREEN
+#define PLAYER_LASER_COLOR GREEN
+#define NPC_LASER_COLOR ORANGERED
 #define TORPEDO_COLOR RED
 #define SPACEMONSTER_COLOR GREEN
 #define NEBULA_COLOR MAGENTA
@@ -891,7 +893,8 @@ static void update_laserbeam_segments(struct snis_entity *o)
 static void init_laserbeam_data(struct snis_entity *o)
 {
 	struct laserbeam_data *ld = &o->tsd.laserbeam;
-	int i;
+	int i, color;
+	struct snis_entity *shooter;
 
 	ld->x = malloc(sizeof(*o->tsd.laserbeam.x) *
 					MAX_LASERBEAM_SEGMENTS);
@@ -901,12 +904,16 @@ static void init_laserbeam_data(struct snis_entity *o)
 					MAX_LASERBEAM_SEGMENTS);
 	ld->entity = malloc(sizeof(*o->tsd.laserbeam.entity) *
 					MAX_LASERBEAM_SEGMENTS);
+	shooter = lookup_entity_by_id(ld->origin);
+	if (shooter)
+		color = (shooter->type == OBJTYPE_SHIP2) ? NPC_LASER_COLOR : PLAYER_LASER_COLOR;
+	else
+		color = NPC_LASER_COLOR;
 	for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++) {
 		ld->x[i] = o->x;
 		ld->y[i] = o->y;
 		ld->z[i] = 0.0;
-		ld->entity[i] = add_entity(ecx, laserbeam_mesh, o->x, 0, -o->y,
-						LASER_COLOR);
+		ld->entity[i] = add_entity(ecx, laserbeam_mesh, o->x, 0, -o->y, color);
 		set_render_style(ld->entity[i], RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 	}
 	update_laserbeam_segments(o);
@@ -3655,11 +3662,6 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 	/* sng_draw_circle(drawable, gc, x, y, (int) (SCREEN_WIDTH * 150.0 / XKNOWN_DIM)); */
 }
 
-static void snis_draw_laser(GdkDrawable *drawable, GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
-{
-	sng_draw_laser_line(drawable, gc, x1, y1, x2, y2, GREEN);
-}
-
 /* position and dimensions of science scope */
 #define SCIENCE_SCOPE_X 20
 #define SCIENCE_SCOPE_Y 70 
@@ -3997,7 +3999,7 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
 
 static void draw_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *ship,
 		double x1, double y1, double x2, double y2,
-		struct snis_radar_extent *extent, double screen_radius, int r)
+		struct snis_radar_extent *extent, double screen_radius, int r, int color)
 {
 	double ix1, iy1, ix2, iy2;
 	int cx, cy, tx, ty, lx1, ly1, lx2, ly2;
@@ -4028,7 +4030,7 @@ static void draw_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *ship,
 	ty = (iy2 - ship->y) * (double) r / screen_radius;
 	lx2 = (int) (tx + (double) cx);
 	ly2 = (int) (ty + (double) cy);
-	snis_draw_laser(w->window, gc, lx1, ly1, lx2, ly2);
+	sng_draw_laser_line(w->window, gc, lx1, ly1, lx2, ly2, color);
 }
 
 static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_radar_extent* extent, double screen_radius,
@@ -4058,12 +4060,17 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 			continue;
 
 		if (go[i].type == OBJTYPE_LASERBEAM) {
-			int oid, tid;
+			int oid, tid, color;
+			struct snis_entity *shooter = lookup_entity_by_id(go[i].tsd.laserbeam.origin);
+			if (shooter && shooter->type == OBJTYPE_SHIP2)
+				color = NPC_LASER_COLOR;
+			else
+				color = PLAYER_LASER_COLOR;
 
 			oid = lookup_object_by_id(go[i].tsd.laserbeam.origin);
 			tid = lookup_object_by_id(go[i].tsd.laserbeam.target);
 			draw_laserbeam(w, gc, o, go[oid].x, go[oid].y, go[tid].x, go[tid].y,
-					extent, screen_radius, r);
+					extent, screen_radius, r, color);
 			continue;
 		}
 		nx = in_nebula * (0.01 * snis_randn(100) - 0.5) * 0.1 * screen_radius;
@@ -4104,9 +4111,10 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 				sng_draw_circle(w->window, gc, x, y, r / 30);
 				break;
 			case OBJTYPE_LASER:
-				snis_draw_laser(w->window, gc, x, y,
+				sng_draw_laser_line(w->window, gc, x, y,
 					x - go[i].vx * (double) r / (2 * screen_radius),
-					y - go[i].vy * (double) r / (2 * screen_radius));
+					y - go[i].vy * (double) r / (2 * screen_radius),
+					NPC_LASER_COLOR);
 				break;
 			case OBJTYPE_TORPEDO:
 				snis_draw_torpedo(w->window, gc, x, y, r / 30);
@@ -4161,7 +4169,7 @@ static void draw_science_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *
 		struct snis_entity *laserbeam, int cx, int cy, double r, double range)
 {
 	double tx1, ty1, tx2, ty2, ix1, iy1, ix2, iy2;
-	int rc;
+	int rc, color;
 
 	struct snis_entity *shooter, *shootee;
 
@@ -4172,6 +4180,10 @@ static void draw_science_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *
 	if (!shootee)
 		return;
 
+	if (shooter->type == OBJTYPE_SHIP2)
+		color = NPC_LASER_COLOR;
+	else
+		color = PLAYER_LASER_COLOR;
 	tx1 = ((shooter->x - o->x) * (double) r / range) + (double) cx;
 	ty1 = ((shooter->y - o->y) * (double) r / range) + (double) cy;
 	tx2 = ((shootee->x - o->x) * (double) r / range) + (double) cx;
@@ -4181,7 +4193,7 @@ static void draw_science_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *
 			(double) cx, (double) cy, r, &ix1, &iy1, &ix2, &iy2);
 	if (rc < 0)
 		return;
-	sng_draw_laser_line(w->window, gc, (int) tx1, (int) ty1, (int) tx2, (int) ty2, GREEN);
+	sng_draw_laser_line(w->window, gc, (int) tx1, (int) ty1, (int) tx2, (int) ty2, color);
 }
 
 static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, double range)
