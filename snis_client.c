@@ -211,6 +211,7 @@ struct mesh *cruiser_mesh;
 struct mesh *tanker_mesh;
 struct mesh *destroyer_mesh;
 struct mesh *transport_mesh;
+struct mesh *dragonhawk_mesh;
 struct mesh *battlestar_mesh;
 struct mesh *particle_mesh;
 struct mesh *debris_mesh;
@@ -593,6 +594,9 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 			break;
 		case SHIP_CLASS_TRANSPORT:
 			e = add_entity(ecx, transport_mesh, x, 0, -y, SHIP_COLOR);
+			break;
+		case SHIP_CLASS_DRAGONHAWK:
+			e = add_entity(ecx, dragonhawk_mesh, x, 0, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_FREIGHTER:
 			e = add_entity(ecx, freighter_mesh, x, 0, -y, SHIP_COLOR);
@@ -7959,6 +7963,7 @@ static void init_meshes(void)
 	tanker_mesh = snis_read_stl_file(d, "tanker.stl");
 	destroyer_mesh = snis_read_stl_file(d, "destroyer.stl");
 	transport_mesh = snis_read_stl_file(d, "transport.stl");
+	dragonhawk_mesh = snis_read_stl_file(d, "dragonhawk.stl");
 	battlestar_mesh = snis_read_stl_file(d, "battlestar.stl");
 	particle_mesh = snis_read_stl_file(d, "tetrahedron.stl");
 	debris_mesh = snis_read_stl_file(d, "flat-tetrahedron.stl");
