@@ -591,6 +591,9 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 		case SHIP_CLASS_DESTROYER:
 			e = add_entity(ecx, destroyer_mesh, x, 0, -y, SHIP_COLOR);
 			break;
+		case SHIP_CLASS_TRANSPORT:
+			e = add_entity(ecx, transport_mesh, x, 0, -y, SHIP_COLOR);
+			break;
 		case SHIP_CLASS_FREIGHTER:
 			e = add_entity(ecx, freighter_mesh, x, 0, -y, SHIP_COLOR);
 			break;
