@@ -1302,7 +1302,7 @@ static void calculate_ship_scibeam_info(struct snis_entity *ship)
 static void auto_select_enemies(struct snis_entity *o)
 {
 	uint32_t new_victim_id = -1;
-	const double acceptable_angle = 5.0 * M_PI / 180.0;
+	const double acceptable_angle = 8.0 * M_PI / 180.0;
 	const double acceptable_range2 = (LASER_RANGE * LASER_RANGE);
 	double minrange2, angle, range2, a1;
 	int i, found;

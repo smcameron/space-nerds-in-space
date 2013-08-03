@@ -3997,6 +3997,22 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
 	}
 }
 
+static void draw_torpedo_leading_indicator(GtkWidget *w, GdkGC *gc,
+			struct snis_entity *ship, struct snis_entity *target,
+			int x, int y, double dist2, int r, double screen_radius)
+{
+	double time_to_target, svx, svy, targx, targy;
+
+	time_to_target = sqrt(dist2) / TORPEDO_VELOCITY;
+	svx = target->vx * (double) r / screen_radius;
+	svy = target->vy * (double) r / screen_radius;
+	targx = x + svx * time_to_target;
+	targy = y + svy * time_to_target;
+	sng_set_foreground(ORANGERED);
+	snis_draw_line(w->window, gc, targx - 5, targy, targx + 5, targy);
+	snis_draw_line(w->window, gc, targx, targy - 5, targx, targy + 5);
+}
+
 static void draw_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *ship,
 		double x1, double y1, double x2, double y2,
 		struct snis_radar_extent *extent, double screen_radius, int r, int color)
@@ -4053,7 +4069,6 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		int x, y;
 		double tx, ty, nx, ny;
-		double time_to_target, svx, svy, targx, targy;
 		double dist2;
 
 		if (!go[i].alive)
@@ -4132,14 +4147,16 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 					sprintf(buffer, "%s", go[i].sdata.name);
 					sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, x + 10, y - 10);
 				}
+#if 0
 				time_to_target = sqrt(dist2) / TORPEDO_VELOCITY;
 				svx = go[i].vx * (double) r / screen_radius;
 				svy = go[i].vy * (double) r / screen_radius;
 				targx = x + svx * time_to_target;
 				targy = y + svy * time_to_target;
-				sng_set_foreground(RED);
+				sng_set_foreground(ORANGERED);
 				snis_draw_line(w->window, gc, targx - 5, targy, targx + 5, targy);
 				snis_draw_line(w->window, gc, targx, targy - 5, targx, targy + 5);
+#endif
 				break;
 			case OBJTYPE_SPACEMONSTER: /* invisible to instruments */
 			case OBJTYPE_NEBULA:
@@ -4148,8 +4165,11 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 				sng_set_foreground(WHITE);
 				snis_draw_arrow(w, gc, x, y, r, go[i].heading, 0.5);
 			}
-			if (go[i].id == o->tsd.ship.victim_id)
+			if (go[i].id == o->tsd.ship.victim_id) {
 				draw_targeting_indicator(w, gc, x, y);
+				draw_torpedo_leading_indicator(w, gc, o, &go[i],
+								x, y, dist2, r, screen_radius);
+			}
 		}
 	}
 	pthread_mutex_unlock(&universe_mutex);
