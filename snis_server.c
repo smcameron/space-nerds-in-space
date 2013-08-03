@@ -409,6 +409,21 @@ static void delete_object(struct snis_entity *o)
 
 static void send_ship_damage_packet(struct snis_entity *o);
 static int lookup_by_id(uint32_t id);
+
+static struct snis_entity *lookup_entity_by_id(uint32_t id)
+{
+	int index;
+
+	if (id == (uint32_t) -1)
+		return NULL;
+
+	index = lookup_by_id(id);
+	if (index >= 0)
+		return &go[index];
+	else
+		return NULL;
+}
+
 static void torpedo_move(struct snis_entity *o)
 {
 	int i, otype;
@@ -458,7 +473,9 @@ static void torpedo_move(struct snis_entity *o)
 				int index = lookup_by_id(o->tsd.torpedo.ship_id);
 
 				if (index >= 0)
-					go[i].tsd.ship.victim = index;
+					go[i].tsd.ship.victim_id = go[index].id;
+				else
+					go[i].tsd.ship.victim_id = (uint32_t) -1;
 			}
 		} else if (otype == OBJTYPE_ASTEROID && fabs(go[i].z) < 100.0) {
 			go[i].alive = 0;
@@ -591,11 +608,11 @@ static void laser_move(struct snis_entity *o)
 
 static int find_nearest_victim(struct snis_entity *o)
 {
-	int i, victim;
+	int i, victim_id;
 	double dist2, dx, dy, lowestdist;
 
 	/* assume universe mutex is held */
-	victim = -1;
+	victim_id = -1;
 	lowestdist = 1e60;  /* very big number */
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 
@@ -633,12 +650,12 @@ static int find_nearest_victim(struct snis_entity *o)
 		dist2 = dx * dx + dy * dy;
 		if (go[i].type == OBJTYPE_SHIP1 && o->sdata.faction != 0)
 			dist2 = dist2 * 0.5; /* prioritize hitting player... */
-		if (victim == -1 || dist2 < lowestdist) {
-			victim = i;
+		if (victim_id == -1 || dist2 < lowestdist) {
+			victim_id = go[i].id;
 			lowestdist = dist2;
 		}
 	}
-	return victim;
+	return victim_id;
 }
 
 static void send_comms_packet(char *sender, char *str);
@@ -735,7 +752,7 @@ delete_it:
 		dist2 = hypot(o->x - e->x, o->y - e->y); 
 		if (d < 0 || d > dist2) {
 			d = dist2;
-			eid = index;
+			eid = go[index].id;
 		}
 	}
 		
@@ -744,11 +761,11 @@ delete_it:
 
 		a = snis_randn(360);
 		r = snis_randn(LASER_RANGE - 400) + 400;
-		o->tsd.ship.victim = eid;
+		o->tsd.ship.victim_id = eid;
 		o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
 		o->tsd.ship.doy = r * sin(a * M_PI / 180.0);
 	} else {
-		o->tsd.ship.victim = -1;
+		o->tsd.ship.victim_id = -1;
 	}
 }
 
@@ -818,24 +835,24 @@ static void ship_move(struct snis_entity *o)
 
 	switch (o->tsd.ship.cmd_data.command) {
 	case DEMON_CMD_ATTACK:
-		if (o->tsd.ship.victim == (uint32_t) -1 || snis_randn(1000) < 50) {
+		if (o->tsd.ship.victim_id == (uint32_t) -1 || snis_randn(1000) < 50) {
 			int a, r;
 
 			a = snis_randn(360);
 			r = snis_randn(LASER_RANGE - 400) + 400;
 			ship_choose_new_attack_victim(o);
-			v = &go[o->tsd.ship.victim];
+			v = lookup_entity_by_id(o->tsd.ship.victim_id);
 			o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
 			o->tsd.ship.doy = r * sin(a * M_PI / 180.0);
 		}
 		break;
 	default:
-		if (o->tsd.ship.victim == (uint32_t) -1 ||
+		if (o->tsd.ship.victim_id == (uint32_t) -1 ||
 			snis_randn(1000) < 50) {
 			int a, r;
 			a = snis_randn(360);
 			r = snis_randn(LASER_RANGE - 400) + 400;
-			o->tsd.ship.victim = find_nearest_victim(o);
+			o->tsd.ship.victim_id = find_nearest_victim(o);
 			o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
 			o->tsd.ship.doy = r * sin(a * M_PI / 180.0);
 		}
@@ -843,8 +860,8 @@ static void ship_move(struct snis_entity *o)
 	}
 
 	maxv = max_speed[o->tsd.ship.shiptype];
-	if (o->tsd.ship.victim != (uint32_t) -1) {
-		v = &go[o->tsd.ship.victim];
+	v = lookup_entity_by_id(o->tsd.ship.victim_id);
+	if (v) {
 		destx = v->x + o->tsd.ship.dox;
 		desty = v->y + o->tsd.ship.doy;
 		dx = destx - o->x;
@@ -914,9 +931,9 @@ static void ship_move(struct snis_entity *o)
 	normalize_coords(o);
 	o->timestamp = universe_timestamp;
 
-	if (close_enough && o->tsd.ship.victim != (uint32_t) -1) {
+	if (close_enough && o->tsd.ship.victim_id != (uint32_t) -1) {
 		double range;
-		v = &go[o->tsd.ship.victim];
+		v = lookup_entity_by_id(o->tsd.ship.victim_id);
 
 		range = hypot(o->x - v->x, o->y - v->y);
 
@@ -1675,7 +1692,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.requested_warpdrive = 0;
 	o->tsd.ship.requested_shield = 0;
 	o->tsd.ship.phaser_wavelength = 0;
-	o->tsd.ship.victim = 0;
+	o->tsd.ship.victim_id = -1;
 	o->tsd.ship.power_data.shields.r1 = 0;
 	o->tsd.ship.power_data.phasers.r1 = 0;
 	o->tsd.ship.power_data.sensors.r1 = 0;
@@ -1735,7 +1752,7 @@ static int add_ship(void)
 	go[i].tsd.ship.desired_heading = 0;
 	go[i].tsd.ship.velocity = 0;
 	go[i].tsd.ship.shiptype = snis_randn(ARRAY_SIZE(shipclass));
-	go[i].tsd.ship.victim = (uint32_t) -1;
+	go[i].tsd.ship.victim_id = (uint32_t) -1;
 	memset(&go[i].tsd.ship.damage, 0, sizeof(go[i].tsd.ship.damage));
 	memset(&go[i].tsd.ship.power_data, 0, sizeof(go[i].tsd.ship.power_data));
 	return i;
@@ -2685,7 +2702,7 @@ static int process_weap_select_target(struct game_client *c)
 	if (i < 0)
 		return 0;
 	ship = &go[i];
-	ship->tsd.ship.victim = index;
+	ship->tsd.ship.victim_id = go[index].id;
 	return 0;
 }
 
@@ -2860,7 +2877,7 @@ static void update_command_data(uint32_t id, struct command_data *cmd_data)
 	switch (cmd_data->command) {
 		case DEMON_CMD_ATTACK:
 			o->tsd.ship.cmd_data = *cmd_data;
-			o->tsd.ship.victim = -1;
+			o->tsd.ship.victim_id = (uint32_t) -1;
 			ship_choose_new_attack_victim(o);
 			break;
 		default:
@@ -3500,10 +3517,10 @@ static int process_request_laser(struct game_client *c)
 	int tid;
 
 	pthread_mutex_lock(&universe_mutex);
-	if (ship->tsd.ship.victim < 0)
+	if (ship->tsd.ship.victim_id < 0)
 		goto laserfail;
 
-	tid = go[ship->tsd.ship.victim].id;
+	tid = ship->tsd.ship.victim_id;
 	if (ship->tsd.ship.phaser_charge < (ship->tsd.ship.power_data.phasers.i * 3) / 4)
 		goto laserfail;
 	add_laserbeam(ship->id, tid, 30);
@@ -4120,17 +4137,12 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	double dv = sqrt((o->vx * o->vx) + (o->vy * o->vy));
-	uint32_t victim_id;
 
-	if (o->tsd.ship.victim >= 0)
-		victim_id = go[o->tsd.ship.victim].id;
-	else
-		victim_id = (uint32_t) - 1;
 	pb_queue_to_client(c, packed_buffer_new("hwwSSUUwb", OPCODE_ECON_UPDATE_SHIP,
 			o->id, o->alive, o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM,
 			dv, (uint32_t) UNIVERSE_DIM, o->heading, (uint32_t) 360,
-			victim_id, o->tsd.ship.shiptype));
+			o->tsd.ship.victim_id, o->tsd.ship.shiptype));
 }
 
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip)
@@ -4190,17 +4202,12 @@ static void send_update_ship_packet(struct game_client *c,
 	struct snis_entity *o, uint16_t opcode)
 {
 	struct packed_buffer *pb;
-	uint32_t fuel, victimid;
+	uint32_t fuel;
 	uint8_t tloading, tloaded, throttle, rpm;
 
 	throttle = o->tsd.ship.throttle;
 	rpm = o->tsd.ship.rpm;
 	fuel = o->tsd.ship.fuel;
-
-	if (o->tsd.ship.victim < 0)
-		victimid = (uint32_t) -1;
-	else
-		victimid = go[o->tsd.ship.victim].id;
 
 	tloading = (uint8_t) (o->tsd.ship.torpedoes_loading & 0x0f);
 	tloaded = (uint8_t) (o->tsd.ship.torpedoes_loaded & 0x0f);
@@ -4220,7 +4227,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
 			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
 			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype,
-			o->tsd.ship.reverse, victimid);
+			o->tsd.ship.reverse, o->tsd.ship.victim_id);
 	pb_queue_to_client(c, pb);
 }
 

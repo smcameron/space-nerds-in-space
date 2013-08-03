@@ -131,7 +131,7 @@ struct update_ship_packet {
 	uint8_t phaser_wavelength;
 	uint8_t shiptype; /* same as ship_sdata_packet subclass */
 	uint8_t reverse;
-	uint32_t victimid;
+	uint32_t victim_id;
 };
 
 struct ship_sdata_packet {
@@ -156,7 +156,7 @@ struct update_econ_ship_packet {
 	uint32_t id;
 	uint32_t alive;
 	uint32_t x, y, v, heading;
-	uint32_t victim;
+	uint32_t victim_id;
 	uint8_t shiptype; /* same as ship_sdata_packet subclass */
 };
 

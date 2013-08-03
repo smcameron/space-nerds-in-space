@@ -561,7 +561,7 @@ static int update_damcon_part(uint32_t id, uint32_t ship_id, uint32_t type,
 
 
 static int update_econ_ship(uint32_t id, double x, double y, double vx,
-			double vy, double heading, uint32_t alive, uint32_t victim,
+			double vy, double heading, uint32_t alive, uint32_t victim_id,
 			uint8_t shiptype)
 {
 	int i;
@@ -608,7 +608,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 	} else {
 		update_generic_object(i, x, y, vx, vy, heading, alive); 
 	}
-	go[i].tsd.ship.victim = (int32_t) victim;
+	go[i].tsd.ship.victim_id = (int32_t) victim_id;
 	go[i].tsd.ship.shiptype = shiptype;
 	return 0;
 }
@@ -634,7 +634,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 			uint8_t phaser_charge, uint8_t phaser_wavelength, uint8_t shiptype,
 			uint8_t reverse, uint32_t victim_id)
 {
-	int vi, i;
+	int i;
 	struct entity *e;
 
 	i = lookup_object_by_id(id);
@@ -678,9 +678,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	go[i].tsd.ship.damcon = NULL;
 	go[i].tsd.ship.shiptype = shiptype;
 	go[i].tsd.ship.reverse = reverse;
-	vi = lookup_object_by_id(victim_id);
-	if (vi >= 0)
-		go[i].tsd.ship.victim = vi;
+	go[i].tsd.ship.victim_id = victim_id;
 	return 0;
 }
 
@@ -2545,7 +2543,7 @@ static int process_mainscreen_view_mode(void)
 static int process_update_econ_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
-	uint32_t id, alive, victim;
+	uint32_t id, alive, victim_id;
 	double dx, dy, dheading, dv, dvx, dvy;
 	uint8_t shiptype;
 	int rc;
@@ -2554,13 +2552,13 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	rc = read_and_unpack_buffer(buffer, "wwSSUUwb", &id, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
 				&dv, (uint32_t) UNIVERSE_DIM, &dheading, (uint32_t) 360,
-				&victim, &shiptype);
+				&victim_id, &shiptype);
 	if (rc != 0)
 		return rc;
 	dvx = cos(dheading) * dv;
 	dvy = sin(dheading) * dv;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_econ_ship(id, dx, dy, dvx, dvy, dheading, alive, victim, shiptype);
+	rc = update_econ_ship(id, dx, dy, dvx, dvy, dheading, alive, victim_id, shiptype);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -4129,7 +4127,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 				sng_set_foreground(WHITE);
 				snis_draw_arrow(w, gc, x, y, r, go[i].heading, 0.5);
 			}
-			if (i == o->tsd.ship.victim)
+			if (go[i].id == o->tsd.ship.victim_id)
 				draw_targeting_indicator(w, gc, x, y);
 		}
 	}
@@ -6305,8 +6303,8 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		break;
 	case OBJTYPE_SHIP2:
 		sng_set_foreground(SHIP_COLOR);
-		if (o->tsd.ship.victim != -1) {
-			int vi = lookup_object_by_id(o->tsd.ship.victim);
+		if (o->tsd.ship.victim_id != -1) {
+			int vi = lookup_object_by_id(o->tsd.ship.victim_id);
 			if (vi >= 0) {	
 				v = &go[vi];
 				vx = ux_to_demonsx(v->x);
