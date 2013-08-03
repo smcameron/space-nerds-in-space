@@ -419,6 +419,19 @@ static int lookup_object_by_id(uint32_t id)
 	return -1;
 }
 
+static struct snis_entity *lookup_entity_by_id(uint32_t id)
+{
+	int index;
+
+	if (id < 0)
+		return NULL;
+
+	index = lookup_object_by_id(id);
+	if (index < 0)
+		return NULL;
+	return &go[index];
+}
+
 static int lookup_damcon_object_by_id(uint32_t id)
 {
 	int i;
@@ -4144,6 +4157,33 @@ struct science_data {
 static struct science_data science_guy[MAXGAMEOBJS] = { {0}, };
 static int nscience_guys = 0;
 
+static void draw_science_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
+		struct snis_entity *laserbeam, int cx, int cy, double r, double range)
+{
+	double tx1, ty1, tx2, ty2, ix1, iy1, ix2, iy2;
+	int rc;
+
+	struct snis_entity *shooter, *shootee;
+
+	shooter = lookup_entity_by_id(laserbeam->tsd.laserbeam.origin);
+	if (!shooter)
+		return;
+	shootee = lookup_entity_by_id(laserbeam->tsd.laserbeam.target);
+	if (!shootee)
+		return;
+
+	tx1 = ((shooter->x - o->x) * (double) r / range) + (double) cx;
+	ty1 = ((shooter->y - o->y) * (double) r / range) + (double) cy;
+	tx2 = ((shootee->x - o->x) * (double) r / range) + (double) cx;
+	ty2 = ((shootee->y - o->y) * (double) r / range) + (double) cy;
+
+	rc = circle_line_segment_intersection(tx1, ty1, tx2, ty2,
+			(double) cx, (double) cy, r, &ix1, &iy1, &ix2, &iy2);
+	if (rc < 0)
+		return;
+	sng_draw_laser_line(w->window, gc, (int) tx1, (int) ty1, (int) tx2, (int) ty2, GREEN);
+}
+
 static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, double range)
 {
 	int i, x, y, cx, cy, r, bw, pwr;
@@ -4177,6 +4217,11 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (!go[i].alive)
 			continue;
+
+		if (go[i].type == OBJTYPE_LASERBEAM) {
+			draw_science_laserbeam(w, gc, o, &go[i], cx, cy, r, range);
+			continue;
+		}
 
 		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
 			((go[i].y - o->y) * (go[i].y - o->y));
