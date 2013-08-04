@@ -82,6 +82,7 @@ MODELS=${MD}/freighter.stl \
 	${MD}/starbase2.stl \
 	${MD}/starbase3.stl \
 	${MD}/starbase4.stl \
+	${MD}/starbase5.stl \
 	${MD}/spacemonster.stl \
 	${MD}/asteroid-miner.stl \
 	${MD}/spaceship2.stl \
