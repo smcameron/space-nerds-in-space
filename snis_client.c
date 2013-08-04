@@ -3654,6 +3654,8 @@ static void show_mainscreen(GtkWidget *w)
 	camera_look_at(ecx, lx, (float) 0.0, ly);
 	camera_set_parameters(ecx, (float) 20, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
+	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
+			cos(((timer / 4) % 360) * M_PI / 180));
 	sng_set_foreground(GREEN);
 	if (!fake_stars_initialized) {
 		fake_stars_initialized = 1;

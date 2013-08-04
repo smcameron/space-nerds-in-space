@@ -83,6 +83,7 @@ struct entity_context {
 	struct tri_depth_entry tri_depth[MAX_TRIANGLES_PER_ENTITY];
 	struct fake_star *fake_star;
 	int nfakestars; /* = 0; */
+	struct mat41 light;
 };
 
 struct entity *add_entity(struct entity_context *cx,
@@ -392,7 +393,6 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct en
 {
 	int i;
 	float cos_theta;
-	struct mat41 light = { {0, -1, -1, 1} };
 	struct mat41 normal;
 
 	sort_triangle_distances(cx, e);
@@ -401,8 +401,7 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct en
 		int tri_index = cx->tri_depth[i].tri_index;
 		normal = *(struct mat41 *) &e->m->t[tri_index].n.wx;
 		normalize_vector(&normal, &normal);
-		normalize_vector(&light, &light);
-		cos_theta = mat41_dot_mat41(&light, &normal);
+		cos_theta = mat41_dot_mat41(&cx->light, &normal);
 		cos_theta = (cos_theta + 1.0) / 2.0;
 		if (cx->camera.renderer & BLACK_TRIS || e->render_style & RENDER_WIREFRAME)
 			sng_set_foreground(BLACK);
@@ -551,6 +550,8 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 	struct mat41 *n; /* camera relative z axis (into view plane) */
 	struct mat41 *u; /* camera relative x axis (left/right) */
 	float camera_angle, ent_angle; /* this is for cheezy view culling */
+
+	normalize_vector(&cx->light, &cx->light);
 
 	/* Translate to camera position... */
 	mat44_translate(&identity, -cx->camera.x, -cx->camera.y, -cx->camera.z,
@@ -746,6 +747,10 @@ struct entity_context *entity_context_new(int maxobjs)
 	snis_object_pool_setup(&cx->entity_pool, maxobjs);
 	cx->maxobjs = maxobjs;
 	set_renderer(cx, FLATSHADING_RENDERER);
+	cx->light.m[0] = 0;
+	cx->light.m[1] = 1;
+	cx->light.m[2] = 1;
+	cx->light.m[3] = 1;
 	return cx;
 }
 
@@ -806,5 +811,12 @@ void set_render_style(struct entity *e, int render_style)
 {
 	if (e)
 		e->render_style = render_style;
+}
+
+void set_lighting(struct entity_context *cx, double x, double y, double z)
+{
+	cx->light.m[0] = x;
+	cx->light.m[1] = y;
+	cx->light.m[2] = z;
 }
 
