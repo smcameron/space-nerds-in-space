@@ -1,5 +1,5 @@
 
-$fn=16;
+$fn=32;
 radius=200;
 difference() {
 	sphere(r = radius);
