@@ -141,6 +141,7 @@ int warp_limbo_countdown = 0;
 int damage_limbo_countdown = 0;
 
 struct entity_context *ecx;
+struct entity_context *sciecx;
 
 struct nebula_entry {
 	double x, y, r, r2;
@@ -5620,7 +5621,9 @@ static void show_damcon(GtkWidget *w)
 }
 
 struct science_ui {
+	int details_mode;
 	struct slider *scizoom;
+	struct button *details_button;
 } sci_ui;
 
 static void zero_science_sliders(void)
@@ -5628,11 +5631,21 @@ static void zero_science_sliders(void)
 	snis_slider_set_input(sci_ui.scizoom, 0);
 }
 
+static void sci_details_pressed(void *x)
+{
+	/* FIXME: this needs to round trip to the server */
+	sci_ui.details_mode = !sci_ui.details_mode;
+}
+
 static void init_science_ui(void)
 {
 	sci_ui.scizoom = snis_slider_init(350, 50, 300, DARKGREEN, "Range", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom);
+	sci_ui.details_button = snis_button_init(450, 570, 75, 25, "DETAILS",
+			GREEN, NANO_FONT, sci_details_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
+	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
+	sciecx = entity_context_new(50);
 }
 
 static void comms_screen_button_pressed(void *x)
@@ -6063,6 +6076,27 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	gy2 = SCIENCE_DATA_Y + SCIENCE_DATA_H - 40;
 	draw_science_graph(w, ship, o, gx1, gy1, gx2, gy2);
 }
+
+static void draw_science_details(GtkWidget *w, GdkGC *gc)
+{
+	struct entity *e = NULL;
+	struct mesh *m;
+
+	if (!curr_science_guy || !curr_science_guy->entity)
+		return;
+
+	m = entity_get_mesh(curr_science_guy->entity);
+	e = add_entity(sciecx, m, 0, 0, 0, GREEN);
+	update_entity_rotation(e, M_PI / 2.0, 0, (M_PI / 180.0) * (timer % 360));
+	set_render_style(e, RENDER_WIREFRAME);
+	camera_set_pos(sciecx, -m->radius * 4, -20, 0);
+	camera_look_at(sciecx, (float) 0, (float) 0, (float) -m->radius / 2.0);
+	camera_set_parameters(sciecx, (float) 20, (float) 300,
+				(float) 16, (float) 12,
+				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
+	render_entities(w, gc, sciecx);
+	remove_entity(sciecx, e);
+}
  
 static void show_science(GtkWidget *w)
 {
@@ -6092,14 +6126,18 @@ static void show_science(GtkWidget *w)
 			(o->tsd.ship.scizoom / 255.0) +
 			MIN_SCIENCE_SCREEN_RADIUS;
 	sng_set_foreground(DARKGREEN);
-	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, zoom);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, zoom, o->tsd.ship.scizoom < 50);
-	sng_set_foreground(DARKRED);
-	snis_draw_science_reticule(w, gc, cx, cy, r,
-			o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width));
-	draw_all_the_science_guys(w, o, zoom);
-	draw_all_the_science_sparks(w, o, zoom);
-	draw_all_the_science_nebulae(w, o, zoom);
+	if (!sci_ui.details_mode) {
+		snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, zoom);
+		snis_draw_radar_grid(w->window, gc, o, cx, cy, r, zoom, o->tsd.ship.scizoom < 50);
+		sng_set_foreground(DARKRED);
+		snis_draw_science_reticule(w, gc, cx, cy, r,
+				o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width));
+		draw_all_the_science_guys(w, o, zoom);
+		draw_all_the_science_sparks(w, o, zoom);
+		draw_all_the_science_nebulae(w, o, zoom);
+	} else {
+		draw_science_details(w, gc);
+	}
 	draw_science_warp_data(w, o);
 	draw_science_data(w, o, curr_science_guy);
 	show_common_screen(w, "SCIENCE");
