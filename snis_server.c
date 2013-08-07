@@ -2732,6 +2732,22 @@ static int process_role_onscreen(struct game_client *c)
 	return 0;
 }
 
+static int process_sci_details(struct game_client *c)
+{
+	unsigned char buffer[10];
+	uint8_t new_details;
+	int rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &new_details);
+	if (rc)
+		return rc;
+	/* just turn it around and fan it out to all the right places */
+	send_packet_to_all_clients_on_a_bridge(c->shipid, 
+			packed_buffer_new("hb", OPCODE_SCI_DETAILS,
+			!!(new_details)), ROLE_SCIENCE);
+	return 0;
+}
+
 static int process_sci_select_target(struct game_client *c)
 {
 	unsigned char buffer[10];
@@ -3802,6 +3818,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_SCI_SELECT_TARGET:
 			rc = process_sci_select_target(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_SCI_DETAILS:
+			rc = process_sci_details(c);
 			if (rc)
 				goto protocol_error;
 			break;

@@ -2810,6 +2810,25 @@ static int process_role_onscreen_packet(void)
 	return 0;
 }
 
+static struct science_ui {
+	int details_mode;
+	struct slider *scizoom;
+	struct button *details_button;
+} sci_ui;
+
+static int process_sci_details(void)
+{
+	unsigned char buffer[10];
+	uint8_t new_details;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "b", &new_details);
+	if (rc != 0)
+		return rc;
+	sci_ui.details_mode = new_details;
+	return 0;
+}
+
 static struct snis_entity *curr_science_guy = NULL;
 static struct snis_entity *prev_science_guy = NULL;
 static int process_sci_select_target_packet(void)
@@ -3215,6 +3234,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_SCI_SELECT_TARGET:
 			rc = process_sci_select_target_packet();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_SCI_DETAILS:
+			rc = process_sci_details();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -5620,12 +5644,6 @@ static void show_damcon(GtkWidget *w)
 	show_common_screen(w, "DAMAGE CONTROL");
 }
 
-struct science_ui {
-	int details_mode;
-	struct slider *scizoom;
-	struct button *details_button;
-} sci_ui;
-
 static void zero_science_sliders(void)
 {
 	snis_slider_set_input(sci_ui.scizoom, 0);
@@ -5633,8 +5651,8 @@ static void zero_science_sliders(void)
 
 static void sci_details_pressed(void *x)
 {
-	/* FIXME: this needs to round trip to the server */
-	sci_ui.details_mode = !sci_ui.details_mode;
+	queue_to_server(packed_buffer_new("hb", OPCODE_SCI_DETAILS,
+		(unsigned char) !sci_ui.details_mode));
 }
 
 static void init_science_ui(void)
