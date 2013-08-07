@@ -50,7 +50,6 @@ module legset()
 
 module main_body()
 {
-	$fn = 8;
 	union() {
 		difference() {
 			translate(v = [0, 0, 5])
@@ -59,9 +58,11 @@ module main_body()
 			translate(v = [0, 0, -10.1])
 				cube(size = [20, 20, 20], center = true);
 		}
-		cylinder(h = 4, r1 = 7, r2 = 7, center = true);
+		translate(v = [0, 0, 1.2])
+			cylinder(h = 4, r1 = 7.5, r2 = 7.5, center = true);
 		translate(v = [3, 3, 2])
-			cylinder(h = 15, r1 = 0.4, r2 = 0.4);
+			cube(size = [0.4, 0.4, 15]);
+			/* cylinder(h = 15, r1 = 0.4, r2 = 0.4); */
 		translate(v = [-3, -3, 8])
 			sphere(r = 3);
 		translate(v = [-5, 0, -1.5])
@@ -70,15 +71,23 @@ module main_body()
 			cube(size = [10, 15, 5], center = true);
 		translate(v = [8, 0, 2.5])
 		rotate(a = 90, v = [0, 1, 0]) 
-			cylinder(h = 8, r1 = 1, r2 = 2.3);
+			difference() {
+				cylinder(h = 8, r1 = 1, r2 = 2.3);
+				cylinder(h = 8.02, r1 = 0, r2 = 2.2);
+			}
 		translate(v = [8, -5, 2.5])
 		rotate(a = 90, v = [0, 1, 0]) 
-			cylinder(h = 5, r1 = 1, r2 = 2.3);
+			difference() {
+				cylinder(h = 5, r1 = 1, r2 = 2.3);
+				cylinder(h = 5.02, r1 = 0, r2 = 2.2);
+			}
 		translate(v = [8, 5, 2.5])
-		rotate(a = 90, v = [0, 1, 0]) 
-			cylinder(h = 5, r1 = 1, r2 = 2.3);
+		rotate(a = 90, v = [0, 1, 0])
+			difference() {
+				cylinder(h = 5, r1 = 1, r2 = 2.3);
+				cylinder(h = 5.02, r1 = 0, r2 = 2.2);
+			}
 	}
-	$fn = 16;
 }
 
 main_body();
