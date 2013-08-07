@@ -27,11 +27,20 @@ translate(v = [11, 0, 10])
 translate(v = [10, 0, 7])
 	cylinder(h = 8, r1 = 0.3, r2 = 0.3, center = true);
 translate(v = [20, 5, -5])
-	rotate(a = 90, v = [0, 1, 0])
-		cylinder(h = 7, r1 = 0.9, r2 = 1.9, center = true);
+	rotate(a = 90, v = [0, 1, 0]) {
+		difference() {
+			cylinder(h = 7, r1 = 0.9, r2 = 1.9, center = true);
+			translate(v = [0, 0, 2])
+			cylinder(h = 4, r1 = 0.1, r2 = 1.85, center = true);
+		}
+	}
 translate(v = [20, -5, -5])
 	rotate(a = 90, v = [0, 1, 0])
-		cylinder(h = 7, r1 = 0.9, r2 = 1.9, center = true);
-}
+		difference() {
+			cylinder(h = 7, r1 = 0.9, r2 = 1.9, center = true);
+			translate(v = [0, 0, 2])
+			cylinder(h = 4, r1 = 0.1, r2 = 1.85, center = true);
+		}	
+	}	
 }
 
