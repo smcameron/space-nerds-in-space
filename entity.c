@@ -820,3 +820,9 @@ void set_lighting(struct entity_context *cx, double x, double y, double z)
 	cx->light.m[2] = z;
 }
 
+struct mesh *entity_get_mesh(struct entity *e)
+{
+	return e->m;
+}
+
+
