@@ -952,7 +952,8 @@ static void ship_move(struct snis_entity *o)
 			(v->type != OBJTYPE_STARBASE && v->type == OBJTYPE_PLANET)) {
 
 			if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE &&
-				o->tsd.ship.next_torpedo_time <= universe_timestamp) {
+				o->tsd.ship.next_torpedo_time <= universe_timestamp &&
+				o->tsd.ship.torpedoes > 0) {
 				double dist, flight_time, tx, ty, vx, vy, angle;
 				int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y);
 
@@ -969,6 +970,7 @@ static void ship_move(struct snis_entity *o)
 				vx = TORPEDO_VELOCITY * sin(angle);
 				vy = TORPEDO_VELOCITY * cos(angle);
 				add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
+				o->tsd.ship.torpedoes--;
 				o->tsd.ship.next_torpedo_time = universe_timestamp +
 					ENEMY_TORPEDO_FIRE_INTERVAL;
 				check_for_incoming_fire(v);
@@ -1729,7 +1731,7 @@ static void init_power_model(struct snis_entity *o)
 static void init_player(struct snis_entity *o)
 {
 	o->move = player_move;
-	o->tsd.ship.torpedoes = 1000;
+	o->tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
 	o->tsd.ship.shields = 100.0;
 	o->tsd.ship.power = 100.0;
 	o->tsd.ship.yaw_velocity = 0.0;
@@ -1808,7 +1810,7 @@ static int add_ship(void)
 	if (i < 0)
 		return i;
 	go[i].move = ship_move;
-	go[i].tsd.ship.torpedoes = 0;
+	go[i].tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
 	go[i].tsd.ship.shields = 100.0;
 	go[i].tsd.ship.power = 100.0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
