@@ -2697,6 +2697,16 @@ static int process_red_alert()
 	return 0;
 }
 
+static int process_proximity_alert()
+{
+	static int last_time = 0;
+
+	if ((timer - last_time) > (30 * 3))
+		wwviaudio_add_sound(PROXIMITY_ALERT);
+	last_time = timer; 
+	return 0;
+}
+
 static void delete_object(uint32_t id)
 {
 	int i;
@@ -3309,6 +3319,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			rc = process_red_alert();
 			if (rc)
 				goto protocol_error;
+			break;
+		case OPCODE_PROXIMITY_ALERT:
+			process_proximity_alert();
 			break;
 		default:
 			goto protocol_error;
@@ -7869,6 +7882,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(FUEL_LEVELS_CRITICAL, d, "fuel-levels-critical.ogg");
 	read_ogg_clip(INCOMING_FIRE_DETECTED, d, "incoming-fire-detected.ogg");
 	read_ogg_clip(LASER_FAILURE, d, "laser-fail.ogg");
+	read_ogg_clip(PROXIMITY_ALERT, d, "proximity-alert.ogg");
 	printf("Done.\n");
 }
 
