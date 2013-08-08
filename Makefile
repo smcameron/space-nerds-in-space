@@ -45,13 +45,13 @@ endif
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o \
-		power-model.o
+		power-model.o quat.o
 
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_graph.o \
 	snis_client.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	snis_damcon_systems.o mesh.o \
-	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o
+	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm
 
@@ -245,6 +245,9 @@ entity.o:	entity.c entity.h mathutils.h vertex.h triangle.h mesh.h stl_parser.h 
 	$(Q)$(GTKCOMPILE)
 
 names.o:	names.c names.h
+	$(Q)$(COMPILE)
+
+quat.o:	quat.c quat.h
 	$(Q)$(COMPILE)
 
 test_matrix:	matrix.c matrix.h
