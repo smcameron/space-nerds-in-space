@@ -346,9 +346,10 @@ fixit:
 	o->y = snis_randn(YKNOWN_DIM);
 }
 
-static int roll_damage(double shield_strength, uint8_t system)
+static int roll_damage(double weapons_factor, double shield_strength, uint8_t system)
 {
-	int damage = system + (uint8_t) ((double) (20 + snis_randn(40)) * (1.2 - shield_strength));
+	int damage = system + (uint8_t) (weapons_factor *
+				(double) (20 + snis_randn(40)) * (1.2 - shield_strength));
 	if (damage > 255)
 		damage = 255;
 	return damage;
@@ -357,19 +358,20 @@ static int roll_damage(double shield_strength, uint8_t system)
 static void calculate_torpedo_damage(struct snis_entity *o)
 {
 	double ss;
+	const double twp = TORPEDO_WEAPONS_FACTOR;
 
 	ss = shield_strength(snis_randn(255), o->sdata.shield_strength,
 				o->sdata.shield_width,
 				o->sdata.shield_depth,
 				o->sdata.shield_wavelength);
 
-	o->tsd.ship.damage.shield_damage = roll_damage(ss, o->tsd.ship.damage.shield_damage);
-	o->tsd.ship.damage.impulse_damage = roll_damage(ss, o->tsd.ship.damage.impulse_damage);
-	o->tsd.ship.damage.warp_damage = roll_damage(ss, o->tsd.ship.damage.warp_damage);
-	o->tsd.ship.damage.torpedo_tubes_damage = roll_damage(ss, o->tsd.ship.damage.torpedo_tubes_damage);
-	o->tsd.ship.damage.phaser_banks_damage = roll_damage(ss, o->tsd.ship.damage.phaser_banks_damage);
-	o->tsd.ship.damage.sensors_damage = roll_damage(ss, o->tsd.ship.damage.sensors_damage);
-	o->tsd.ship.damage.comms_damage = roll_damage(ss, o->tsd.ship.damage.comms_damage);
+	o->tsd.ship.damage.shield_damage = roll_damage(twp, ss, o->tsd.ship.damage.shield_damage);
+	o->tsd.ship.damage.impulse_damage = roll_damage(twp, ss, o->tsd.ship.damage.impulse_damage);
+	o->tsd.ship.damage.warp_damage = roll_damage(twp, ss, o->tsd.ship.damage.warp_damage);
+	o->tsd.ship.damage.torpedo_tubes_damage = roll_damage(twp, ss, o->tsd.ship.damage.torpedo_tubes_damage);
+	o->tsd.ship.damage.phaser_banks_damage = roll_damage(twp, ss, o->tsd.ship.damage.phaser_banks_damage);
+	o->tsd.ship.damage.sensors_damage = roll_damage(twp, ss, o->tsd.ship.damage.sensors_damage);
+	o->tsd.ship.damage.comms_damage = roll_damage(twp, ss, o->tsd.ship.damage.comms_damage);
 
 	if (o->tsd.ship.damage.shield_damage == 255) { 
 		o->respawn_time = universe_timestamp + 30 * 10;
