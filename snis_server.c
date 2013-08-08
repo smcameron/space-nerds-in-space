@@ -132,6 +132,13 @@ static uint32_t get_new_object_id(void)
 	return answer;
 }
 
+static void set_object_location(struct snis_entity *o, double x, double y, double z)
+{
+	o->x = x;
+	o->y = y;
+	o->z = z;
+} 
+
 static void get_peer_name(int connection, char *buffer)
 {
 	struct sockaddr_in *peer;
@@ -178,9 +185,8 @@ static void asteroid_move(struct snis_entity *o)
 	angle = (universe_timestamp * M_PI / 180) / o->tsd.asteroid.r +
 			o->tsd.asteroid.angle_offset;
 	angle = angle * ASTEROID_SPEED;
-
-	o->x = o->tsd.asteroid.r * sin(angle) + XKNOWN_DIM / 2.0;
-	o->y = o->tsd.asteroid.r * cos(angle) + YKNOWN_DIM / 2.0;
+	set_object_location(o, o->tsd.asteroid.r * sin(angle) + XKNOWN_DIM / 2.0,
+			o->tsd.asteroid.r * cos(angle) + YKNOWN_DIM / 2.0, o->z);
 	o->timestamp = universe_timestamp;
 }
 
@@ -209,8 +215,8 @@ static void wormhole_move(struct snis_entity *o)
 			if (dist2 < 30.0 * 30.0) {
 				a = snis_randn(360) * M_PI / 180.0;
 				r = 60.0;
-				t->x = o->tsd.wormhole.dest_x + cos(a) * r; 
-				t->y = o->tsd.wormhole.dest_y + sin(a) * r; 
+				set_object_location(t, o->tsd.wormhole.dest_x + cos(a) * r, 
+							o->tsd.wormhole.dest_y + sin(a) * r, t->z);
 				t->timestamp = universe_timestamp;
 				if (t->type == OBJTYPE_SHIP1)
 					send_wormhole_limbo_packet(t->id, 5 * 30);
@@ -342,8 +348,7 @@ static void normalize_coords(struct snis_entity *o)
 		goto fixit;
 	return;
 fixit:
-	o->x = snis_randn(XKNOWN_DIM);
-	o->y = snis_randn(YKNOWN_DIM);
+	set_object_location(o, snis_randn(XKNOWN_DIM), snis_randn(YKNOWN_DIM), o->z);
 }
 
 static int roll_damage(double weapons_factor, double shield_strength, uint8_t system)
@@ -444,8 +449,7 @@ static void torpedo_move(struct snis_entity *o)
 {
 	int i, otype;
 
-	o->x += o->vx;
-	o->y += o->vy;
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
 	normalize_coords(o);
 	o->timestamp = universe_timestamp;
 	o->alive--;
@@ -540,8 +544,7 @@ static void laser_move(struct snis_entity *o)
 	int i;
 	uint8_t otype;
 
-	o->x += o->vx;
-	o->y += o->vy;
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
 	normalize_coords(o);
 	o->timestamp = universe_timestamp;
 	o->alive--;
@@ -785,8 +788,7 @@ static void spacemonster_move(struct snis_entity *o)
 	o->vy = sin(o->heading) * 10.0;
 	o->tsd.spacemonster.zz =
 		sin(M_PI *((universe_timestamp * 10 + o->id) % 360) / 180.0) * 35.0;
-	o->x += o->vx;
-	o->y += o->vy;
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
 	if (snis_randn(1000) < 50) {
 		o->heading += (snis_randn(40) - 20) * M_PI / 180.0;
 		normalize_angle(&o->heading);
@@ -934,8 +936,7 @@ static void ship_move(struct snis_entity *o)
 	/* set vx, vy, move x, y */
 	o->vy = o->tsd.ship.velocity * sin(o->heading);
 	o->vx = o->tsd.ship.velocity * cos(o->heading);
-	o->x += o->vx;
-	o->y += o->vy;
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
 	normalize_coords(o);
 	o->timestamp = universe_timestamp;
 
@@ -1396,8 +1397,7 @@ static void player_move(struct snis_entity *o)
 	do_thrust(o);
 	o->vy = o->tsd.ship.velocity * -cos(o->heading);
 	o->vx = o->tsd.ship.velocity * sin(o->heading);
-	o->x += o->vx;
-	o->y += o->vy;
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
 	normalize_coords(o);
 	o->heading += o->tsd.ship.yaw_velocity;
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
@@ -1503,8 +1503,8 @@ static void player_move(struct snis_entity *o)
 				send_packet_to_all_clients_on_a_bridge(o->id,
 					packed_buffer_new("hh", OPCODE_WARP_LIMBO,
 						(uint16_t) (5 * 30)), ROLE_ALL);
-				o->x = bridgelist[b].warpx;
-				o->y = bridgelist[b].warpy;
+				set_object_location(o, bridgelist[b].warpx,
+							bridgelist[b].warpy, o->z);
 				normalize_coords(o);
 			}
 		}
@@ -1517,8 +1517,7 @@ static void demon_ship_move(struct snis_entity *o)
 {
 	o->vy = o->tsd.ship.velocity * sin(o->heading);
 	o->vx = o->tsd.ship.velocity * cos(o->heading);
-	o->x -= o->vx;
-	o->y -= o->vy;
+	set_object_location(o, o->x - o->vx, o->y - o->vy, o->z);
 	normalize_coords(o);
 	o->heading += o->tsd.ship.yaw_velocity;
 
@@ -1609,9 +1608,7 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	go[i].id = get_new_object_id();
 	go[i].index = i;
 	go[i].alive = 1;
-	go[i].x = x;
-	go[i].y = y;
-	go[i].z = 0.0;
+	set_object_location(&go[i], x, y, 0.0);
 	go[i].vx = vx;
 	go[i].vy = vy;
 	go[i].heading = heading;
@@ -1788,8 +1785,9 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 
 static void respawn_player(struct snis_entity *o)
 {
-	o->x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
-	o->y = YKNOWN_DIM * (double) rand() / (double) RAND_MAX;
+	set_object_location(o, XKNOWN_DIM * (double) rand() / (double) RAND_MAX,
+				YKNOWN_DIM * (double) rand() / (double) RAND_MAX,
+				o->z);
 	o->vx = 0;
 	o->vy = 0;
 	o->heading = 0;
@@ -2590,8 +2588,7 @@ static int process_demon_move_object(struct game_client *c)
 	if (i < 0 || !go[i].alive)
 		return 0;
 	o = &go[i];
-	o->x += dx;
-	o->y += dy;
+	set_object_location(o, o->x + dx, o->y + dy, o->z);
 	o->timestamp = universe_timestamp + 10;
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
