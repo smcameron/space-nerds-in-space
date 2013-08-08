@@ -170,6 +170,7 @@ struct damcon_data;
 struct ship_data {
 	uint32_t torpedoes;
 #define TORPEDO_LIFETIME 40
+#define TORPEDO_LOAD_SECONDS 3
 #define TORPEDO_VELOCITY (90.0)
 #define TORPEDO_RANGE (TORPEDO_LIFETIME * TORPEDO_VELOCITY)
 #define TORPEDO_DETONATE_DIST2 (150 * 150)
