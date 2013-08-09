@@ -31,11 +31,11 @@ COPYRIGHT=2008 by Stephen M. Cameron
 
 warpdrive.ogg:
 LICENSE=Creative Commons Attribution 3.0 Unported (CC BY 3.0) http://creativecommons.org/licenses/by/3.0/
-COPYRIGHT=2011 by fressound.org user "owyheesound" and freesound.org user "vedas", aka "Uncle Reggie" (see http://unclereggiesmagicradio.tumblr.com/ the sound is from a radio play in episode 1)
+COPYRIGHT=2011 by fressound.org user "owyheesound" and freesound.org user "vedas", aka "Uncle Reggie" aka JB Slater (see http://unclereggiesmagicradio.tumblr.com/ the sound is from a radio play in episode 1)
 
 short-warpdrive.ogg (modified version of warpdrive.ogg):
 LICENSE=Creative Commons Attribution 3.0 Unported (CC BY 3.0) http://creativecommons.org/licenses/by/3.0/
-COPYRIGHT=2011 by fressound.org user "owyheesound" and freesound.org user "vedas", aka "Uncle Reggie" (see http://unclereggiesmagicradio.tumblr.com/ the sound is from a radio play in episode 1)
+COPYRIGHT=2011 by fressound.org user "owyheesound" and freesound.org user "vedas", aka "Uncle Reggie"  aka JB Slater (see http://unclereggiesmagicradio.tumblr.com/ the sound is from a radio play in episode 1)
 
 torpedo-loading.ogg (public domain)
 An old elevator you hear a folding door shut, then heard the engine and finally gets to hear the folding door.  **Sound free for all, can download and share**
