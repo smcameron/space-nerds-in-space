@@ -1405,11 +1405,11 @@ static void do_player_collision_detection(struct snis_entity *o)
 			send_packet_to_all_clients_on_a_bridge(o->id, 
 				packed_buffer_new("h", OPCODE_PROXIMITY_ALERT),
 						ROLE_SOUNDSERVER | ROLE_NAVIGATION);
-#if 0
 			if (dist2 < CRASH_DIST2) {
-				printf("crash distance transgression\n");
+				send_packet_to_all_clients_on_a_bridge(o->id, 
+					packed_buffer_new("h", OPCODE_COLLISION_NOTIFICATION),
+						ROLE_SOUNDSERVER | ROLE_NAVIGATION);
 			}
-#endif
 		}
 	}
 }
