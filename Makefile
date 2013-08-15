@@ -130,7 +130,7 @@ starbase.stl:	starbase.scad wedge.scad
 my_point.o:   my_point.c my_point.h Makefile
 	$(Q)$(COMPILE)
 
-mesh.o:   mesh.c mesh.h Makefile
+mesh.o:   mesh.c mesh.h vertex.h Makefile
 	$(Q)$(COMPILE)
 
 power-model.o:   power-model.c power-model.h Makefile
@@ -160,7 +160,7 @@ shield_strength.o:	shield_strength.c shield_strength.h
 snis_server.o:	snis_server.c snis.h snis_packet.h snis_marshal.h sounds.h starbase-comms.h
 	$(Q)$(COMPILE)
 
-snis_client.o:	snis_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h
+snis_client.o:	snis_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h
 	$(Q)$(GTKCOMPILE)
 
 snis_socket_io.o:	snis_socket_io.c snis_socket_io.h
