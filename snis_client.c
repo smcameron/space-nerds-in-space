@@ -307,6 +307,7 @@ try_again:
 
 	/* Ok, we've connected to the lobby server... */
 
+	memset(&filter, 0, sizeof(filter));
 	strcpy(filter.game_type, "SNIS");
 	do {
 		rc = ssgl_recv_game_servers(sock, &game_server, &game_server_count, &filter);
