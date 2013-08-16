@@ -453,6 +453,7 @@ static void attack_your_attacker(struct snis_entity *attackee, struct snis_entit
 	attackee->tsd.ship.victim_id = attacker->id;
 }
 
+static int add_derelict(double x, double y, int shiptype);
 static void torpedo_move(struct snis_entity *o)
 {
 	int i, otype;
@@ -507,9 +508,12 @@ static void torpedo_move(struct snis_entity *o)
 			/* make sound for players that did the hitting */
 			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 			if (otype != OBJTYPE_SHIP1) {
+				if (otype == OBJTYPE_SHIP2)
+					add_derelict(go[i].x, go[i].y, go[i].tsd.ship.shiptype);
 				snis_queue_delete_object(&go[i]);
 				delete_object(&go[i]);
 				respawn_object(otype);
+				
 			} else {
 				snis_queue_add_sound(EXPLOSION_SOUND,
 					ROLE_SOUNDSERVER, go[i].id);
@@ -604,6 +608,8 @@ static void laser_move(struct snis_entity *o)
 			snis_queue_add_sound(EXPLOSION_SOUND,
 					ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
 			if (go[i].type != OBJTYPE_SHIP1) {
+				if (go[i].type == OBJTYPE_SHIP2)
+					add_derelict(go[i].x, go[i].y, go[i].tsd.ship.shiptype);
 				snis_queue_delete_object(&go[i]);
 				delete_object(&go[i]);
 				respawn_object(otype);
@@ -2044,6 +2050,8 @@ static void laserbeam_move(struct snis_entity *o)
 			snis_queue_add_sound(EXPLOSION_SOUND,
 					ROLE_SOUNDSERVER, origin->id);
 		if (ttype != OBJTYPE_SHIP1) {
+			if (ttype == OBJTYPE_SHIP2)
+				add_derelict(target->x, target->y, target->tsd.ship.shiptype);
 			snis_queue_delete_object(target);
 			delete_object(target);
 			respawn_object(ttype);
@@ -2133,7 +2141,7 @@ static void add_asteroids(void)
 	}
 }
 
-static int add_derelict(double x, double y)
+static int add_derelict(double x, double y, int shiptype)
 {
 	int i;
 
@@ -2146,7 +2154,10 @@ static int add_derelict(double x, double y)
 	go[i].sdata.shield_width = 0;
 	go[i].sdata.shield_depth = 0;
 	go[i].move = derelict_move;
-	go[i].tsd.derelict.shiptype = snis_randn(ARRAY_SIZE(shipclass));
+	if (shiptype != -1 && shiptype <= 255)
+		go[i].tsd.derelict.shiptype = (uint8_t) shiptype;
+	else
+		go[i].tsd.derelict.shiptype = snis_randn(ARRAY_SIZE(shipclass));
 	go[i].vx = (float) snis_randn(100) / 400.0 * max_speed[0];
 	go[i].vy = (float) snis_randn(100) / 400.0 * max_speed[0];
 	return i;
@@ -2160,7 +2171,7 @@ static void add_derelicts(void)
 	for (i = 0; i < NDERELICTS; i++) {
 		x = (double) snis_randn(1000) * XKNOWN_DIM / 1000.0;
 		y = (double) snis_randn(1000) * YKNOWN_DIM / 1000.0;
-		add_derelict(x, y);
+		add_derelict(x, y, -1);
 	}
 }
 
