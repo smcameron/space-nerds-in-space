@@ -37,6 +37,7 @@ struct mesh {
 
 GLOBAL float mesh_compute_radius(struct mesh *m);
 GLOBAL void mesh_distort(struct mesh *m, float distortion);
+GLOBAL void mesh_derelict(struct mesh *m, float distortion);
 GLOBAL struct mesh *mesh_duplicate(struct mesh *original);
 GLOBAL void mesh_scale(struct mesh *m, float scale);
 

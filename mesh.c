@@ -41,6 +41,21 @@ void mesh_distort(struct mesh *m, float distortion)
 	m->radius = mesh_compute_radius(m);
 }
 
+void mesh_derelict(struct mesh *m, float distortion)
+{
+	int i;
+
+	for (i = 0; i < m->nvertices; i++) {
+		float dx;
+
+		dx = (float) (snis_randn(1000) / 1000.0 - 0.5) * distortion;
+
+		if (m->v[i].x < 0)
+			m->v[i].x = dx;
+	}
+	m->radius = mesh_compute_radius(m);
+}
+
 void mesh_scale(struct mesh *m, float scale)
 {
 	int i;
