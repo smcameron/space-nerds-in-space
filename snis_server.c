@@ -190,6 +190,14 @@ static void asteroid_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
+static void normalize_coords(struct snis_entity *o);
+static void derelict_move(struct snis_entity *o)
+{
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
+	normalize_coords(o);
+	o->timestamp = universe_timestamp;
+}
+
 static void send_wormhole_limbo_packet(int shipid, uint16_t value);
 static void wormhole_move(struct snis_entity *o)
 {
@@ -2125,6 +2133,37 @@ static void add_asteroids(void)
 	}
 }
 
+static int add_derelict(double x, double y)
+{
+	int i;
+
+	i = add_generic_object(x, y, 0, 0, 0, OBJTYPE_DERELICT);
+	if (i < 0)
+		return i;
+	go[i].z = (double) snis_randn(70) - 35;
+	go[i].sdata.shield_strength = 0;
+	go[i].sdata.shield_wavelength = 0;
+	go[i].sdata.shield_width = 0;
+	go[i].sdata.shield_depth = 0;
+	go[i].move = derelict_move;
+	go[i].tsd.derelict.shiptype = snis_randn(ARRAY_SIZE(shipclass));
+	go[i].vx = (float) snis_randn(100) / 400.0 * max_speed[0];
+	go[i].vy = (float) snis_randn(100) / 400.0 * max_speed[0];
+	return i;
+}
+
+static void add_derelicts(void)
+{
+	int i;
+	double x, y;
+
+	for (i = 0; i < NDERELICTS; i++) {
+		x = (double) snis_randn(1000) * XKNOWN_DIM / 1000.0;
+		y = (double) snis_randn(1000) * YKNOWN_DIM / 1000.0;
+		add_derelict(x, y);
+	}
+}
+
 static int add_planet(double x, double y)
 {
 	int i;
@@ -2219,6 +2258,7 @@ static void make_universe(void)
 	add_nebulae(); /* do nebula first */
 	add_starbases();
 	add_asteroids();
+	add_derelicts();
 	add_planets();
 	add_wormholes();
 	add_eships();
@@ -3992,6 +4032,8 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_derelict_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_wormhole_packet(struct game_client *c,
@@ -4042,6 +4084,10 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_ASTEROID:
 		send_update_asteroid_packet(c, o);
+		send_update_sdata_packets(c, o);
+		break;
+	case OBJTYPE_DERELICT:
+		send_update_derelict_packet(c, o);
 		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_PLANET:
@@ -4403,6 +4449,17 @@ static void send_update_asteroid_packet(struct game_client *c,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM));
 }
+
+static void send_update_derelict_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, packed_buffer_new("hwSSSb", OPCODE_UPDATE_DERELICT, o->id,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
+					o->tsd.derelict.shiptype));
+}
+
 
 static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o)

@@ -50,6 +50,8 @@
 #define NWORMHOLE_PAIRS 10
 #define NEBULA_RADIUS 5000
 #define MIN_NEBULA_RADIUS 200
+#define NDERELICTS 20
+#define NDERELICT_MESHES 11
 
 #define NPLANET_MODELS 3
 #define NPLANETS 4
@@ -70,6 +72,7 @@
 #define OBJTYPE_SPACEMONSTER 12
 #define OBJTYPE_PLANET 13
 #define OBJTYPE_LASERBEAM 14
+#define OBJTYPE_DERELICT 15
 
 char *faction[] = {
 	"Neutral",
@@ -294,6 +297,10 @@ struct asteroid_data {
 	double angle_offset;
 };
 
+struct derelict_data {
+	uint8_t shiptype; /* same as snis_entity_science_data subclass */
+};
+
 struct wormhole_data {
 	double dest_x, dest_y;
 };
@@ -332,6 +339,7 @@ union type_specific_data {
 	struct wormhole_data wormhole;
 	struct spacemonster_data spacemonster;
 	struct laserbeam_data laserbeam;
+	struct derelict_data derelict;
 };
 
 struct snis_entity;

@@ -78,6 +78,7 @@
 #define WORMHOLE_COLOR WHITE
 #define PLANET_COLOR GREEN
 #define ASTEROID_COLOR AMBER
+#define DERELICT_COLOR BLUE 
 #define PARTICLE_COLOR YELLOW
 #define LASER_COLOR GREEN
 #define PLAYER_LASER_COLOR GREEN
@@ -226,6 +227,8 @@ struct mesh *asteroidminer_mesh;
 struct mesh *spaceship2_mesh;
 struct mesh *scout_mesh;
 struct mesh *laserbeam_mesh;
+
+struct mesh *derelict_mesh[NDERELICT_MESHES];
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -1031,6 +1034,35 @@ static int update_asteroid(uint32_t id, double x, double y, double z)
 	return 0;
 }
 
+static int update_derelict(uint32_t id, double x, double y, double z, uint8_t ship_type)
+{
+	int i, m;
+	struct entity *e;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		m = ship_type % NDERELICT_MESHES;
+		e = add_entity(ecx, derelict_mesh[m], x, z, -y, SHIP_COLOR);
+		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_DERELICT, 1, e);
+		if (i < 0)
+			return i;
+		go[i].z = z;
+	} else {
+		int axis;
+		float angle;
+
+		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+		update_entity_pos(go[i].entity, x, z, -y);
+
+		/* make it spin */
+		angle = (timer % (360 * ((id % 12) + 3))) * M_PI / 180.0;
+		axis = (id % 3);
+		update_entity_rotation(go[i].entity, (axis == 0) * angle,
+					(axis == 1) * angle, (axis == 2) * angle);
+	}
+	return 0;
+}
+
 static int update_planet(uint32_t id, double x, double y, double z)
 {
 	int i, m;
@@ -1287,6 +1319,7 @@ static void do_explosion(double x, double y, uint16_t nsparks, uint16_t velocity
 	switch (victim_type) {
 	case OBJTYPE_SHIP1:
 	case OBJTYPE_SHIP2:
+	case OBJTYPE_DERELICT:
 		color = SHIP_COLOR;
 		break;
 	case OBJTYPE_ASTEROID:
@@ -3010,6 +3043,27 @@ static int process_update_asteroid_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_derelict_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id;
+	double dx, dy, dz;
+	uint8_t shiptype;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "wSSSb", &id,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy,(int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM, &shiptype);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_derelict(id, dx, dy, dz, shiptype);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+} 
+
 static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
@@ -3176,6 +3230,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_ASTEROID:
 			rc = process_update_asteroid_packet();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_DERELICT:
+			rc = process_update_derelict_packet();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -3791,6 +3850,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			sng_set_foreground(WHITE);
 			break;
 		case OBJTYPE_ASTEROID:
+		case OBJTYPE_DERELICT:
 			sng_set_foreground(AMBER);
 			break;
 		case OBJTYPE_PLANET:
@@ -3829,6 +3889,10 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		case OBJTYPE_ASTEROID:
 			sng_set_foreground(AMBER);
 			sprintf(buffer, "%s %s\n", "A",  o->sdata.name); 
+			break;
+		case OBJTYPE_DERELICT:
+			sng_set_foreground(AMBER);
+			sprintf(buffer, "%s %s\n", "A",  "???"); 
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(BLUE);
@@ -4183,6 +4247,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 			alter_angle = 0.0;
 			switch (go[i].type) {
 			case OBJTYPE_ASTEROID:
+			case OBJTYPE_DERELICT:
 				sng_set_foreground(ASTEROID_COLOR);
 				sng_draw_circle(w->window, gc, x, y, r / 30);
 				break;
@@ -6047,6 +6112,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 			sprintf(buffer, "TYPE: %s", "STARBASE"); 
 			break;
 		case OBJTYPE_ASTEROID:
+		case OBJTYPE_DERELICT:
 			sprintf(buffer, "TYPE: %s", "ASTEROID"); 
 			break;
 		default:
@@ -6495,6 +6561,9 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		break;
 	case OBJTYPE_ASTEROID:
 		sng_set_foreground(ASTEROID_COLOR);
+		break;
+	case OBJTYPE_DERELICT:
+		sng_set_foreground(DERELICT_COLOR);
 		break;
 	case OBJTYPE_NEBULA:
 		sng_set_foreground(NEBULA_COLOR);
@@ -8001,6 +8070,14 @@ static struct mesh *snis_read_stl_file(char *directory, char *filename)
 	return read_stl_file(path);
 }
 
+static struct mesh *make_derelict_mesh(struct mesh *source)
+{
+	struct mesh *m = mesh_duplicate(source);
+
+	mesh_derelict(m, 10.0);
+	return m;
+}
+
 static void init_meshes(void)
 {
 	int i;
@@ -8077,6 +8154,18 @@ static void init_meshes(void)
 	spaceship2_mesh = snis_read_stl_file(d, "spaceship2.stl");
 	scout_mesh = snis_read_stl_file(d, "spaceship3.stl");
 	laserbeam_mesh = snis_read_stl_file(d, "long-triangular-prism.stl");
+
+	derelict_mesh[0] = make_derelict_mesh(freighter_mesh);
+	derelict_mesh[1] = make_derelict_mesh(tanker_mesh);
+	derelict_mesh[2] = make_derelict_mesh(destroyer_mesh);
+	derelict_mesh[3] = make_derelict_mesh(transport_mesh);
+	derelict_mesh[4] = make_derelict_mesh(dragonhawk_mesh);
+	derelict_mesh[5] = make_derelict_mesh(skorpio_mesh);
+	derelict_mesh[6] = make_derelict_mesh(disruptor_mesh);
+	derelict_mesh[7] = make_derelict_mesh(research_vessel_mesh);
+	derelict_mesh[8] = make_derelict_mesh(battlestar_mesh);
+	derelict_mesh[9] = make_derelict_mesh(asteroidminer_mesh);
+	derelict_mesh[10] = make_derelict_mesh(scout_mesh);
 }
 
 static void init_vects(void)
