@@ -54,6 +54,9 @@ void mesh_derelict(struct mesh *m, float distortion)
 			m->v[i].x = dx;
 	}
 	m->radius = mesh_compute_radius(m);
+	for (i = 0; i < m->nvertices; i++)
+		m->v[i].x -= m->radius / 2.0;
+	m->radius = mesh_compute_radius(m);
 }
 
 void mesh_scale(struct mesh *m, float scale)
