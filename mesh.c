@@ -46,12 +46,17 @@ void mesh_derelict(struct mesh *m, float distortion)
 	int i;
 
 	for (i = 0; i < m->nvertices; i++) {
-		float dx;
+		float dx, dy, dz;
 
 		dx = (float) (snis_randn(1000) / 1000.0 - 0.5) * distortion;
+		dy = (float) (snis_randn(1000) / 1000.0 - 0.5) * (distortion / 10.0) - 0.5;
+		dz = (float) (snis_randn(1000) / 1000.0 - 0.5) * (distortion / 10.0) - 0.5;
 
-		if (m->v[i].x < 0)
+		if (m->v[i].x < 0) {
 			m->v[i].x = dx;
+			m->v[i].y += dy;
+			m->v[i].z += dz;
+		}
 	}
 	m->radius = mesh_compute_radius(m);
 	for (i = 0; i < m->nvertices; i++)
