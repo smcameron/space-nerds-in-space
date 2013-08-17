@@ -6285,6 +6285,11 @@ static void send_demon_comms_packet_to_server(char *msg)
 	send_comms_packet_to_server(msg, OPCODE_DEMON_COMMS_XMIT, go[demon_ui.captain_of].id);
 }
 
+static void send_demon_clear_all_packet_to_server(void)
+{
+	queue_to_server(packed_buffer_new("h", OPCODE_DEMON_CLEAR_ALL));
+}
+
 static int ux_to_demonsx(double ux)
 {
 	return ((ux - demon_ui.ux1) / (demon_ui.ux2 - demon_ui.ux1)) * SCREEN_WIDTH;
@@ -6654,6 +6659,7 @@ static char *demon_verb[] = {
 	"halt",
 	"identify",
 	"say",
+	"clear-all",
 };
 
 #define DEMON_CMD_DELIM " ,"
@@ -6888,6 +6894,7 @@ static int construct_demon_command(char *input,
 		case 7: /* say */
 			send_demon_comms_packet_to_server(saveptr);
 			break;
+		case 8: send_demon_clear_all_packet_to_server();
 		default: /* unknown */
 			sprintf(errmsg, "Unknown ver number %d\n", v);
 			return -1;

@@ -3258,6 +3258,20 @@ static int process_demon_command(struct game_client *c)
 	return 0;
 }
 
+static void process_demon_clear_all(void)
+{
+	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+
+		if (o->type != OBJTYPE_SHIP1) {
+			snis_queue_delete_object(o);
+			delete_object(o);
+		}
+	}
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[10];
@@ -3975,6 +3989,9 @@ static void process_instructions_from_client(struct game_client *c)
 			rc = process_delete_item(c);
 			if (rc)
 				goto protocol_error;
+			break;
+		case OPCODE_DEMON_CLEAR_ALL:
+			process_demon_clear_all();
 			break;
 		default:
 			goto protocol_error;
