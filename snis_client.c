@@ -738,6 +738,8 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	strcpy(go[i].sdata.name, name);
 	if (go[i].type == OBJTYPE_SHIP1 || go[i].type == OBJTYPE_SHIP2)
 		go[i].tsd.ship.lifeform_count = lifeform_count;
+	if (go[i].type == OBJTYPE_STARBASE)
+		go[i].tsd.starbase.lifeform_count = lifeform_count;
 	if (go[i].type != OBJTYPE_PLANET && go[i].type != OBJTYPE_STARBASE)
 		go[i].sdata.science_data_known = 30 * 10; /* only remember for ten secs. */
 	else
@@ -6216,7 +6218,11 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		curr_science_guy->type == OBJTYPE_SHIP2) {
 		sprintf(buf, "LIFEFORMS: %d", curr_science_guy->tsd.ship.lifeform_count);
 	} else {
-		sprintf(buf, "LIFEFORMS: 0");
+		if (curr_science_guy->type == OBJTYPE_STARBASE) {
+			sprintf(buf, "LIFEFORMS: %d", curr_science_guy->tsd.starbase.lifeform_count);
+		} else {
+			sprintf(buf, "LIFEFORMS: 0");
+		}
 	}
 	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 250, SCREEN_HEIGHT - 50);
 }

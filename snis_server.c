@@ -1923,6 +1923,7 @@ static int add_starbase(double x, double y, double vx, double vy, double heading
 	go[i].type = OBJTYPE_STARBASE;
 	go[i].tsd.starbase.last_time_called_for_help = 0;
 	go[i].tsd.starbase.under_attack = 0;
+	go[i].tsd.starbase.lifeform_count = snis_randn(100) + 100;
 	sprintf(go[i].tsd.starbase.name, "SB-%02d", n);
 	return i;
 }
@@ -2710,6 +2711,8 @@ static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_e
 	p.lifeform_count = 0;
 	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)
 		p.lifeform_count = o->tsd.ship.lifeform_count;
+	else if (o->type == OBJTYPE_STARBASE)
+		p.lifeform_count = o->tsd.starbase.lifeform_count;
 	else
 		p.lifeform_count = 0;
 	pthread_mutex_unlock(&universe_mutex);
