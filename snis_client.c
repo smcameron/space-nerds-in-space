@@ -7108,6 +7108,16 @@ static void calculate_new_demon_zoom(int direction, gdouble x, gdouble y)
 	demon_ui.uy2 = ny2;
 }
 
+static void show_demon_groups(GtkWidget *w)
+{
+	int i;
+	sng_set_foreground(GREEN);
+
+	for (i = 0; i < ndemon_groups; i++)
+		sng_abs_xy_draw_string(w, gc, demon_group[i].name,
+			NANO_FONT, SCREEN_WIDTH - 50, i * 18 + 40);
+}
+
 static void show_demon(GtkWidget *w)
 {
 	int x, y, i;
@@ -7215,8 +7225,8 @@ static void show_demon(GtkWidget *w)
 		sng_draw_dotted_line(w->window, gc, x1, y1, x1, y2);
 		sng_draw_dotted_line(w->window, gc, x2, y1, x2, y2);
 	}
+	show_demon_groups(w);
 	show_common_screen(w, "DEMON");
-
 }
 
 struct warp_star {
