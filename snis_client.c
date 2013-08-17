@@ -723,7 +723,7 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 
 static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 				uint8_t shield_strength, uint8_t shield_wavelength,
-				uint8_t shield_width, uint8_t shield_depth, uint8_t faction)
+				uint8_t shield_width, uint8_t shield_depth, uint8_t faction, uint8_t lifeform_count)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -736,6 +736,8 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	go[i].sdata.shield_depth = shield_depth;
 	go[i].sdata.faction = faction;
 	strcpy(go[i].sdata.name, name);
+	if (go[i].type == OBJTYPE_SHIP1 || go[i].type == OBJTYPE_SHIP2)
+		go[i].tsd.ship.lifeform_count = lifeform_count;
 	if (go[i].type != OBJTYPE_PLANET && go[i].type != OBJTYPE_STARBASE)
 		go[i].sdata.science_data_known = 30 * 10; /* only remember for ten secs. */
 	else
@@ -2804,7 +2806,8 @@ static int process_ship_sdata_packet(void)
 {
 	unsigned char buffer[50];
 	uint32_t id;
-	uint8_t subclass, shstrength, shwavelength, shwidth, shdepth, faction;
+	uint8_t subclass, shstrength, shwavelength, shwidth,
+		shdepth, faction, lifeform_count;
 	int rc;
 	char name[NAMESIZE];
 
@@ -2812,10 +2815,11 @@ static int process_ship_sdata_packet(void)
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct ship_sdata_packet) - sizeof(uint16_t));
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack(buffer, "wbbbbbbr",&id, &subclass, &shstrength, &shwavelength,
-			&shwidth, &shdepth, &faction, name, (unsigned short) sizeof(name));
+	packed_buffer_unpack(buffer, "wbbbbbbbr",&id, &subclass, &shstrength, &shwavelength,
+			&shwidth, &shdepth, &faction, &lifeform_count,
+			name, (unsigned short) sizeof(name));
 	pthread_mutex_lock(&universe_mutex);
-	update_ship_sdata(id, subclass, name, shstrength, shwavelength, shwidth, shdepth, faction);
+	update_ship_sdata(id, subclass, name, shstrength, shwavelength, shwidth, shdepth, faction, lifeform_count);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -6192,6 +6196,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 {
 	struct entity *e = NULL;
 	struct mesh *m;
+	char buf[100];
 
 	if (!curr_science_guy || !curr_science_guy->entity)
 		return;
@@ -6207,6 +6212,13 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
 	render_entities(w, gc, sciecx);
 	remove_entity(sciecx, e);
+	if (curr_science_guy->type == OBJTYPE_SHIP1 ||
+		curr_science_guy->type == OBJTYPE_SHIP2) {
+		sprintf(buf, "LIFEFORMS: %d", curr_science_guy->tsd.ship.lifeform_count);
+	} else {
+		sprintf(buf, "LIFEFORMS: 0");
+	}
+	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 250, SCREEN_HEIGHT - 50);
 }
  
 static void show_science(GtkWidget *w)

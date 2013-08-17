@@ -147,6 +147,7 @@ struct ship_sdata_packet {
 	uint8_t shield_width;
 	uint8_t shield_depth;
 	uint8_t faction;
+	uint8_t lifeform_count;
 	char name[NAMESIZE];
 };
 

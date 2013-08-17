@@ -153,6 +153,26 @@ static double max_speed[] = {
 	7.0,
 };
 
+/* TODO: combine max_speed[], ship_crew_max[], and ship_class[]
+ * into a struct.
+ */ 
+static uint8_t ship_crew_max[] = {
+	15,	
+	10,
+	10,
+	10,
+	200,
+	75,
+	10,
+	3,
+	7,
+	5,
+	5,
+	9,
+	21,
+	7,
+};
+
 struct ship_damage_data {
 	uint8_t shield_damage;
 	uint8_t impulse_damage;
@@ -257,12 +277,14 @@ struct ship_data {
 #define ENEMY_TORPEDO_FIRE_INTERVAL (10 * 30) /* 10 seconds */ 
 	int32_t next_laser_time;
 #define ENEMY_LASER_FIRE_INTERVAL (5 * 30) /* 5 seconds */ 
+	uint8_t lifeform_count;
 };
 
 struct starbase_data {
 	uint32_t sheilds;
 	uint8_t under_attack;
 	uint32_t last_time_called_for_help;
+	uint8_t lifeform_count;
 	char name[16];
 };
 

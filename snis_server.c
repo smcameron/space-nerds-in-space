@@ -1870,6 +1870,7 @@ static int add_ship(void)
 	go[i].tsd.ship.velocity = 0;
 	go[i].tsd.ship.shiptype = snis_randn(ARRAY_SIZE(shipclass));
 	go[i].tsd.ship.victim_id = (uint32_t) -1;
+	go[i].tsd.ship.lifeform_count = ship_crew_max[go[i].tsd.ship.shiptype];
 	memset(&go[i].tsd.ship.damage, 0, sizeof(go[i].tsd.ship.damage));
 	memset(&go[i].tsd.ship.power_data, 0, sizeof(go[i].tsd.ship.power_data));
 	return i;
@@ -2706,6 +2707,11 @@ static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_e
 	p.shield_width = o->sdata.shield_width;
 	p.shield_depth = o->sdata.shield_depth;
 	p.faction = o->sdata.faction;
+	p.lifeform_count = 0;
+	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)
+		p.lifeform_count = o->tsd.ship.lifeform_count;
+	else
+		p.lifeform_count = 0;
 	pthread_mutex_unlock(&universe_mutex);
 	send_ship_sdata_packet(c, &p);
 	pthread_mutex_lock(&universe_mutex);
@@ -4331,9 +4337,10 @@ static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_pack
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct ship_sdata_packet));
-	packed_buffer_append(pb, "hwbbbbbbr", OPCODE_SHIP_SDATA, sip->id, sip->subclass,
+	packed_buffer_append(pb, "hwbbbbbbbr", OPCODE_SHIP_SDATA, sip->id, sip->subclass,
 		sip->shield_strength, sip->shield_wavelength, sip->shield_width, sip->shield_depth,
-		sip->faction, sip->name, (unsigned short) sizeof(sip->name));
+		sip->faction, sip->lifeform_count,
+		sip->name, (unsigned short) sizeof(sip->name));
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_ALL);
 }
 
