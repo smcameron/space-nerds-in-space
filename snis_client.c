@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include <malloc.h>
@@ -6650,19 +6651,39 @@ done_drawing_item:
 	return;
 }
 
-static char *demon_verb[] = {
-	"mark",
-	"name",
-	"attack",
-	"goto",
-	"patrol",
-	"halt",
-	"identify",
-	"say",
-	"clear-all",
+static struct demon_cmd_def {
+	char *verb;
+	char *help;
+} demon_cmd[] = {
+	{ "MARK", "MARK LOCATION WITH A NAME" },
+	{ "NAME", "NAME CURRENTLY SELECTED GROUP OF OBJECTS" },
+	{ "ATTACK", "ATTACK G1 G2 - COMMAND GROUP G1 to ATTACK GROUP G2" },
+	{ "GOTO", "COMMAND SELECTED SHIP TO GOTO NAMED LOCATION" },
+	{ "PATROL", "NOT IMPLEMENTED" },
+	{ "HALT", "NOT IMPLEMENTED" },
+	{ "IDENTIFY", "SELECT NAMED GROUP" },
+	{ "SAY", "CAUSE CURRENTLY CAPTAINED SHIP TO TRANSMIT WHAT YOU LIKE" },
+	{ "CLEAR-ALL", "DELETE ALL OBJECTS EXCEPT HUMAN CONTROLLED SHIPS" },
+	{ "HELP", "PRINT THIS HELP INFORMATION" },
 };
-
+static int demon_help_mode = 0;
 #define DEMON_CMD_DELIM " ,"
+
+static void demon_cmd_help(GtkWidget *w)
+{
+	int i;
+	char buffer[100];
+
+	sng_set_foreground(WHITE);
+	if (!demon_help_mode)
+		return;
+	for (i = 0; i < ARRAYSIZE(demon_cmd); i++) {
+		sprintf(buffer, "%s", demon_cmd[i].verb);
+		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, 85, i * 18 + 60);
+		sprintf(buffer, "%s", demon_cmd[i].help);
+		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, 170, i * 18 + 60);
+	}
+}
 
 static struct demon_group {
 	char name[100];
@@ -6748,6 +6769,14 @@ static void set_demon_group(int n)
 	dg->nids = count;
 }
 
+static void uppercase(char *s)
+{
+	while (*s) {
+		*s = toupper(*s);
+		s++;
+	}
+}
+
 static int construct_demon_command(char *input,
 		struct demon_cmd_packet **cmd, char *errmsg)
 {
@@ -6757,7 +6786,7 @@ static int construct_demon_command(char *input,
 	struct packed_buffer *pb;
 	int idcount;
 
-
+	uppercase(input);
 	saveptr = NULL;
 	s = strtok_r(input, DEMON_CMD_DELIM, &saveptr);
 	if (s == NULL) {
@@ -6766,8 +6795,8 @@ static int construct_demon_command(char *input,
 	}
 
 	found = 0;
-	for (i = 0; i < ARRAYSIZE(demon_verb); i++) {
-		if (strncmp(demon_verb[i], s, strlen(s)))
+	for (i = 0; i < ARRAYSIZE(demon_cmd); i++) {
+		if (strncmp(demon_cmd[i].verb, s, strlen(s)))
 			continue;
 		found = 1;
 		v = i;
@@ -6895,6 +6924,9 @@ static int construct_demon_command(char *input,
 			send_demon_comms_packet_to_server(saveptr);
 			break;
 		case 8: send_demon_clear_all_packet_to_server();
+			break;
+		case 9: demon_help_mode = 1; 
+			break;
 		default: /* unknown */
 			sprintf(errmsg, "Unknown ver number %d\n", v);
 			return -1;
@@ -6923,6 +6955,7 @@ static void demon_exec_button_pressed(void *x)
 	struct demon_cmd_packet *demon_cmd;
 	int rc;
 
+	demon_help_mode = 0;
 	if (strlen(demon_ui.input) == 0)
 		return;
 	clear_empty_demon_variables();
@@ -7226,6 +7259,7 @@ static void show_demon(GtkWidget *w)
 		sng_draw_dotted_line(w->window, gc, x2, y1, x2, y2);
 	}
 	show_demon_groups(w);
+	demon_cmd_help(w);
 	show_common_screen(w, "DEMON");
 }
 
