@@ -38,6 +38,9 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <limits.h>
+#include <lua.h>
+#include "lualib.h"
+#include "lauxlib.h"
 
 #include "ssgl/ssgl.h"
 #include "snis.h"
@@ -111,6 +114,7 @@ static inline void client_unlock()
         (void) pthread_mutex_unlock(&client_mutex);
 }
 
+static lua_State *lua_state = NULL;
 
 int nframes = 0;
 int timer = 0;
@@ -3039,6 +3043,32 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 	return 0;
 }
 
+static int process_exec_lua_script(struct game_client *c)
+{
+	unsigned char buffer[sizeof(struct lua_script_packet)];
+	char txt[256];
+	int rc;
+	uint8_t len;
+	char scriptname[PATH_MAX];
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &len);
+	if (rc)
+		return rc;
+	rc = snis_readsocket(c->socket, txt, len);
+	if (rc)
+		return rc;
+	txt[len] = '\0';
+
+#define LUASCRIPTDIR "share/snis/luascripts"
+	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", LUASCRIPTDIR, txt);
+	rc = luaL_dofile(lua_state, scriptname);
+	if (rc) {
+		/* TODO: something proper when it fails */
+		printf("Lua script %s failed to execute.\n", scriptname);
+	}
+	return 0;
+}
+
 static void update_command_data(uint32_t id, struct command_data *cmd_data)
 {
 	struct snis_entity *o;
@@ -3270,6 +3300,12 @@ static void process_demon_clear_all(void)
 			delete_object(o);
 		}
 	}
+}
+
+static int l_clear_all(lua_State *l)
+{
+	process_demon_clear_all();
+	return 0;
 }
 
 static int process_create_item(struct game_client *c)
@@ -3992,6 +4028,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_DEMON_CLEAR_ALL:
 			process_demon_clear_all();
+			break;
+		case OPCODE_EXEC_LUA_SCRIPT:
+			rc = process_exec_lua_script(c);
+			if (rc)
+				goto protocol_error;
 			break;
 		default:
 			goto protocol_error;
@@ -4926,6 +4967,29 @@ static void open_log_file(void)
 	}
 }
 
+static void setup_lua(void)
+{
+	int dofile = -1;
+
+	lua_state = luaL_newstate();
+	luaL_openlibs(lua_state);
+	dofile = luaL_dostring(lua_state, "print(\"Lua setup done.\");");
+	if (dofile) {
+		fprintf(stderr, "Lua setup failed. Lua scripts will be unavailable.\n");
+		lua_close(lua_state);
+		lua_state = NULL;
+		return;
+	}
+	lua_pushcfunction(lua_state, l_clear_all);
+	lua_setglobal(lua_state, "clear_all");
+}
+
+static void lua_teardown(void)
+{
+	lua_close(lua_state);
+	lua_state = NULL;
+}
+
 int main(int argc, char *argv[])
 {
 	int port, rc, i;
@@ -4938,6 +5002,7 @@ int main(int argc, char *argv[])
 
 	open_log_file();
 
+	setup_lua();
 	snis_protocol_debugging(1);
 
 	memset(&thirtieth_second, 0, sizeof(thirtieth_second));
@@ -4960,6 +5025,8 @@ int main(int argc, char *argv[])
 		/* snis_sleep(&time1, &time2, &thirtieth_second); */
 		sleep_thirtieth_second();
 	}
+
+	lua_teardown();
 
 	snis_close_logfile();
 

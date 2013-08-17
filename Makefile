@@ -53,7 +53,24 @@ CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_graph.o \
 	snis_damcon_systems.o mesh.o \
 	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o
 SSGL=ssgl/libssglclient.a
-LIBS=-Lssgl -lssglclient -lrt -lm
+LIBS=-Lssgl -lssglclient -lrt -lm -llua5.2
+#
+# NOTE: if you get
+#
+# /usr/bin/ld: cannot find -llua5.2
+# collect2: ld returned 1 exit status 
+#
+# try:
+#
+# sudo ln -s /usr/lib/i386-linux-gnu/liblua5.1.so.0 /usr/local/lib/liblua5.2.so
+#
+# or, if on x86_64:
+#
+# sudo ln -s /usr/lib/x86_64-linux-gnu/liblua5.1.so.0 /usr/local/lib/liblua5.2.so
+#
+# You might first have to "sudo apt-get install lua5.2"
+#
+
 
 PROGS=snis_server snis_client
 
@@ -111,7 +128,7 @@ Q=@
 ECHO=echo
 endif
 
-COMPILE=$(CC) ${MYCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
+COMPILE=$(CC) ${MYCFLAGS} -I/usr/include/lua5.2 -c -o $@ $< && $(ECHO) '  COMPILE' $<
 GTKCOMPILE=$(CC) ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 VORBISCOMPILE=$(CC) ${MYCFLAGS} ${VORBISFLAGS} ${SNDFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 

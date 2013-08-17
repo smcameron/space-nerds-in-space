@@ -5810,6 +5810,18 @@ static void send_comms_packet_to_server(char *msg, uint16_t opcode, uint32_t id)
 	wakeup_gameserver_writer();
 }
 
+static void send_lua_script_packet_to_server(char *script)
+{
+	struct packed_buffer *pb;
+	uint8_t len = strlen(script);
+
+	pb = packed_buffer_allocate(sizeof(struct lua_script_packet) + len);
+	packed_buffer_append(pb, "hb", OPCODE_EXEC_LUA_SCRIPT, len);
+	packed_buffer_append_raw(pb, script, (unsigned short) len);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
 static void send_normal_comms_packet_to_server(char *msg)
 {
 	send_comms_packet_to_server(msg, OPCODE_COMMS_TRANSMISSION, my_ship_id);
@@ -6664,6 +6676,7 @@ static struct demon_cmd_def {
 	{ "IDENTIFY", "SELECT NAMED GROUP" },
 	{ "SAY", "CAUSE CURRENTLY CAPTAINED SHIP TO TRANSMIT WHAT YOU LIKE" },
 	{ "CLEAR-ALL", "DELETE ALL OBJECTS EXCEPT HUMAN CONTROLLED SHIPS" },
+	{ "LUA", "RUN SPECIFIED SERVER-SIDE LUA SCRIPT" },
 	{ "HELP", "PRINT THIS HELP INFORMATION" },
 };
 static int demon_help_mode = 0;
@@ -6925,7 +6938,9 @@ static int construct_demon_command(char *input,
 			break;
 		case 8: send_demon_clear_all_packet_to_server();
 			break;
-		case 9: demon_help_mode = 1; 
+		case 9: send_lua_script_packet_to_server(saveptr);
+			break;
+		case 10: demon_help_mode = 1; 
 			break;
 		default: /* unknown */
 			sprintf(errmsg, "Unknown ver number %d\n", v);

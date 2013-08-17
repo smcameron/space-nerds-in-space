@@ -102,6 +102,7 @@
 #define OPCODE_COLLISION_NOTIFICATION	177
 #define OPCODE_UPDATE_DERELICT		178
 #define OPCODE_DEMON_CLEAR_ALL		179
+#define OPCODE_EXEC_LUA_SCRIPT		180
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -384,6 +385,11 @@ struct comms_transmission_packet {
 	uint16_t opcode;
 	uint8_t length;
 	uint32_t id;
+};
+
+struct lua_script_packet {
+	uint16_t opcode;
+	uint8_t length;
 };
 
 struct warp_limbo_packet {
