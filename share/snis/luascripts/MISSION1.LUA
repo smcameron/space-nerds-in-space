@@ -58,3 +58,7 @@ print("derelict id = ", derelict_id);
 wh1, wh2 = add_wormhole_pair(50000, 0, 0, 50000, 100000, 0);
 print("wh1 = ", wh1, " wh2 = ", wh2);
 
+player_ids = get_player_ship_ids();
+for i, v in pairs(player_ids) do
+	print(i, v);
+end

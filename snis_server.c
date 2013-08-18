@@ -1933,6 +1933,25 @@ static int l_add_ship(lua_State *l)
 	return 1;
 }
 
+static int l_get_player_ship_ids(lua_State *l)
+{
+	int i, index;
+
+	index = 1;
+	pthread_mutex_lock(&universe_mutex);
+	lua_newtable(l);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].type == OBJTYPE_SHIP1) {
+			lua_pushnumber(l, (double) index);
+			lua_pushnumber(l, (double) go[i].id);
+			lua_settable(l, -3);
+			index++;
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	return 1;
+}
+
 static int l_add_random_ship(lua_State *l)
 {
 	int i;
@@ -5224,6 +5243,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_spacemonster, "add_spacemonster");
 	add_lua_callable_fn(l_add_derelict, "add_derelict");
 	add_lua_callable_fn(l_add_wormhole_pair, "add_wormhole_pair");
+	add_lua_callable_fn(l_get_player_ship_ids, "get_player_ship_ids");
 }
 
 static void lua_teardown(void)
