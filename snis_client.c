@@ -147,6 +147,7 @@ struct entity_context *sciecx;
 
 struct nebula_entry {
 	double x, y, r, r2;
+	uint32_t id;
 } nebulaentry[NNEBULA];
 int nnebula;
 
@@ -1132,17 +1133,37 @@ static int update_starbase(uint32_t id, double x, double y)
 	return 0;
 }
 
-static void add_nebula_entry(double x, double y, double r)
+static void add_nebula_entry(uint32_t id, double x, double y, double r)
 {
 	if (nnebula >= NNEBULA) {
 		printf("Bug at %s:%d\n", __FILE__, __LINE__);
 		return;
 	}
+	nebulaentry[nnebula].id = id;
 	nebulaentry[nnebula].x = x;
 	nebulaentry[nnebula].y = y;
 	nebulaentry[nnebula].r2 = r * r;
 	nebulaentry[nnebula].r = r;
 	nnebula++;
+}
+
+static void delete_nebula_entry(uint32_t id)
+{
+	int i;
+
+	for (i = 0; i < nnebula; i++) {
+		if (nebulaentry[i].id == id)
+			break;
+	}
+	if (i >= nnebula)
+		return;
+
+	nnebula--;
+	if (i == nnebula - 1) {
+		return;
+	}
+	memmove(&nebulaentry[i], &nebulaentry[i + 1],
+		(sizeof(nebulaentry[0]) * (nnebula - i)));
 }
 
 static int update_nebula(uint32_t id, double x, double y, double r)
@@ -1154,7 +1175,7 @@ static int update_nebula(uint32_t id, double x, double y, double r)
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_NEBULA, 1, NULL);
 		if (i < 0)
 			return i;
-		add_nebula_entry(x, y, r);
+		add_nebula_entry(go[i].id, x, y, r);
 	} else {
 		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
 	}
@@ -2769,6 +2790,8 @@ static void delete_object(uint32_t id)
 	go[i].entity = NULL;
 	free_spacemonster_data(&go[i]);
 	free_laserbeam_data(&go[i]);
+	if (go[i].type == OBJTYPE_NEBULA)
+		delete_nebula_entry(go[i].id);
 	go[i].id = -1;
 	snis_object_pool_free_object(pool, i);
 }
