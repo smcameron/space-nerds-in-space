@@ -46,4 +46,8 @@ print("planet id = ", planet_id);
 nebula_id = add_nebula("IMPENETRABLE", 100000, 70000, 10000);
 print("nebula id = ", nebula_id);
 
+-- add a spacemonster:
+spacemonster_id = add_spacemonster("GEORGE", 6000, 40000);
+print("spacemonster id = ", spacemonster_id);
+
 
