@@ -1880,6 +1880,61 @@ static int add_ship(void)
 	return i;
 }
 
+static int add_specific_ship(const char *name, double x, double y,
+			uint8_t shiptype, uint8_t the_faction)
+{
+	int i;
+
+	i = add_ship();
+	if (i < 0)
+		return i;
+	go[i].x = x;
+	go[i].y = y;
+	normalize_coords(&go[i]);
+	go[i].tsd.ship.shiptype = shiptype % ARRAY_SIZE(shipclass);
+	go[i].sdata.faction = the_faction % ARRAY_SIZE(faction);
+	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
+	return i;
+}
+
+static int l_add_ship(lua_State *l)
+{
+	const char *name;
+	double x, y;
+	double shiptype, the_faction;
+	int i;
+
+	name = lua_tostring(lua_state, 1);
+	x = lua_tonumber(lua_state, 2);
+	y = lua_tonumber(lua_state, 3);
+	shiptype = lua_tonumber(lua_state, 4);
+	the_faction = lua_tonumber(lua_state, 5);
+
+	if (shiptype < 0 || shiptype > ARRAY_SIZE(shipclass) - 1) {
+		lua_pushnumber(lua_state, -1.0);
+		return 1;
+	}
+
+	i = add_specific_ship(name, x, y,
+		(uint8_t) shiptype % ARRAY_SIZE(shipclass),
+		(uint8_t) the_faction % ARRAY_SIZE(faction));
+	if (i < 0)
+		lua_pushnumber(lua_state, -1.0);
+	else
+		lua_pushnumber(lua_state, (double) go[i].id);
+	return 1;
+}
+
+static int l_add_random_ship(lua_State *l)
+{
+	int i = add_ship();
+	if (i >= 0)
+		lua_pushnumber(lua_state, (double) go[i].id);
+	else
+		lua_pushnumber(lua_state, -1.0);
+	return 1;
+}
+
 static int add_spacemonster(double x, double y)
 {
 	int i;
@@ -4967,6 +5022,12 @@ static void open_log_file(void)
 	}
 }
 
+static void add_lua_callable_fn(int (*fn)(lua_State *l), char *lua_fn_name)
+{
+	lua_pushcfunction(lua_state, fn);
+	lua_setglobal(lua_state, lua_fn_name);
+}
+
 static void setup_lua(void)
 {
 	int dofile = -1;
@@ -4980,8 +5041,9 @@ static void setup_lua(void)
 		lua_state = NULL;
 		return;
 	}
-	lua_pushcfunction(lua_state, l_clear_all);
-	lua_setglobal(lua_state, "clear_all");
+	add_lua_callable_fn(l_clear_all, "clear_all");
+	add_lua_callable_fn(l_add_random_ship, "add_random_ship");
+	add_lua_callable_fn(l_add_ship, "add_ship");
 }
 
 static void lua_teardown(void)

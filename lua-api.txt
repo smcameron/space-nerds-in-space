@@ -1,0 +1,49 @@
+NOTE: I am still working out what the lua api should look like, so
+      all of this is subject to change.  But this is what it looks like
+      now (barring bitrot of this document, which is not inconceivable.)
+
+Space Nerds In Space lua inteface:
+
+Locations in space nerds in space:
+	x,y coords, (0,0) is the upper left of the known universe,
+	TBD function to return size of known universe?
+
+FACTIONS in snis:
+
+        0 "Neutral",
+        1 "Wallunni",
+        2 "Gordouni",
+        3 "Zarkon",
+        4 "Vekkazi",
+
+SHIPTYPES in snis:
+
+	SHIP_CLASS_CRUISER 0
+	SHIP_CLASS_DESTROYER 1
+	SHIP_CLASS_FREIGHTER 2
+	SHIP_CLASS_TANKER 3
+	SHIP_CLASS_TRANSPORT 4
+	SHIP_CLASS_BATTLESTAR 5
+	SHIP_CLASS_STARSHIP 6
+	SHIP_CLASS_ASTEROIDMINER 7
+	SHIP_CLASS_SCIENCE 8
+	SHIP_CLASS_SCOUT 9
+	SHIP_CLASS_DRAGONHAWK 10 
+	SHIP_CLASS_SKORPIO 11 
+	SHIP_CLASS_DISRUPTOR 12 
+	SHIP_CLASS_RESEARCH_VESSEL 13 
+
+Functions which you may call from lua: 
+
+clear_all() -- this clears the entire universe except for human controlled ships
+	all objects are deleted.  Probably you only use this at the beginning of
+	a mission script.
+
+id = add_random_ship() -- adds a random ship to the universe in a random location
+	returns the "id" of the ship.  If adding ship failed, -1.0 is returned.
+
+id = add_ship(name, x, y, type, faction) -- adds a ship to the universe of the 
+	specified type and faction at the specified locations.  If adding ship
+	failed, -1.0 is returned.
+	
+
