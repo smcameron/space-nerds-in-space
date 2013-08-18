@@ -54,4 +54,7 @@ print("spacemonster id = ", spacemonster_id);
 derelict_id = add_derelict("MARIE CELESTE", 9000, 90000, 0, DISRUPTOR, wallunni);
 print("derelict id = ", derelict_id);
 
+-- add a wormhole pair
+wh1, wh2 = add_wormhole_pair(50000, 0, 0, 50000, 100000, 0);
+print("wh1 = ", wh1, " wh2 = ", wh2);
 

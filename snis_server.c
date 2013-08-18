@@ -2417,7 +2417,7 @@ static void add_planets(void)
 }
 
 
-static int add_wormhole(double x1, double y1, double x2, double y2)
+static int add_wormhole(double x1, double y1, double z1, double x2, double y2, double z2)
 {
 	int i;
 
@@ -2430,9 +2430,37 @@ static int add_wormhole(double x1, double y1, double x2, double y2)
 	return i;
 }
 
+static void add_wormhole_pair(int *id1, int *id2,
+	double x1, double y1, double z1, double x2, double y2, double z2)
+{
+	*id1 = add_wormhole(x1, y1, z1, x2, y2, z2);
+	*id2 = add_wormhole(x2, y2, z2, x1, y1, z1);
+	return;
+}
+
+static int l_add_wormhole_pair(lua_State *l)
+{
+	double x1, y1, z1, x2, y2, z2; 
+	int id1, id2;
+
+	x1 = lua_tonumber(lua_state, 1);
+	y1 = lua_tonumber(lua_state, 2);
+	z1 = lua_tonumber(lua_state, 3);
+	x2 = lua_tonumber(lua_state, 4);
+	y2 = lua_tonumber(lua_state, 5);
+	z2 = lua_tonumber(lua_state, 6);
+
+	pthread_mutex_lock(&universe_mutex);
+	add_wormhole_pair(&id1, &id2, x1, y1, z1, x2, y2, z2);
+	lua_pushnumber(lua_state, (double) go[id1].id);
+	lua_pushnumber(lua_state, (double) go[id2].id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 2;
+}
+
 static void add_wormholes(void)
 {
-	int i;
+	int i, id1, id2;
 	double x1, y1, x2, y2;
 
 	for (i = 0; i < NWORMHOLE_PAIRS; i++) {
@@ -2442,8 +2470,7 @@ static void add_wormholes(void)
 			x2 = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
 			y2 = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
 		} while (hypot(x1 - x2, y1 - y2) < XKNOWN_DIM / 2.0);
-		add_wormhole(x1, y1, x2, y2);
-		add_wormhole(x2, y2, x1, y1);
+		add_wormhole_pair(&id1, &id2, x1, y1, 0.0, x2, y2, 0.0);
 	}
 }
 
@@ -5196,6 +5223,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_nebula, "add_nebula");
 	add_lua_callable_fn(l_add_spacemonster, "add_spacemonster");
 	add_lua_callable_fn(l_add_derelict, "add_derelict");
+	add_lua_callable_fn(l_add_wormhole_pair, "add_wormhole_pair");
 }
 
 static void lua_teardown(void)
