@@ -8262,17 +8262,21 @@ static void init_meshes(void)
 	scout_mesh = snis_read_stl_file(d, "spaceship3.stl");
 	laserbeam_mesh = snis_read_stl_file(d, "long-triangular-prism.stl");
 
-	derelict_mesh[0] = make_derelict_mesh(freighter_mesh);
-	derelict_mesh[1] = make_derelict_mesh(tanker_mesh);
-	derelict_mesh[2] = make_derelict_mesh(destroyer_mesh);
-	derelict_mesh[3] = make_derelict_mesh(transport_mesh);
-	derelict_mesh[4] = make_derelict_mesh(dragonhawk_mesh);
-	derelict_mesh[5] = make_derelict_mesh(skorpio_mesh);
-	derelict_mesh[6] = make_derelict_mesh(disruptor_mesh);
-	derelict_mesh[7] = make_derelict_mesh(research_vessel_mesh);
-	derelict_mesh[8] = make_derelict_mesh(battlestar_mesh);
-	derelict_mesh[9] = make_derelict_mesh(asteroidminer_mesh);
-	derelict_mesh[10] = make_derelict_mesh(scout_mesh);
+	/* Note: these must match defines of SHIPTYPEs in snis.h */
+	derelict_mesh[0] = make_derelict_mesh(cruiser_mesh);
+	derelict_mesh[1] = make_derelict_mesh(destroyer_mesh);
+	derelict_mesh[2] = make_derelict_mesh(freighter_mesh);
+	derelict_mesh[3] = make_derelict_mesh(tanker_mesh);
+	derelict_mesh[4] = make_derelict_mesh(transport_mesh);
+	derelict_mesh[5] = make_derelict_mesh(battlestar_mesh);
+	derelict_mesh[6] = make_derelict_mesh(ship_mesh);
+	derelict_mesh[7] = make_derelict_mesh(asteroidminer_mesh);
+	derelict_mesh[8] = make_derelict_mesh(spaceship2_mesh);
+	derelict_mesh[9] = make_derelict_mesh(scout_mesh);
+	derelict_mesh[10] = make_derelict_mesh(dragonhawk_mesh);
+	derelict_mesh[11] = make_derelict_mesh(skorpio_mesh);
+	derelict_mesh[12] = make_derelict_mesh(disruptor_mesh);
+	derelict_mesh[13] = make_derelict_mesh(research_vessel_mesh);
 }
 
 static void init_vects(void)
