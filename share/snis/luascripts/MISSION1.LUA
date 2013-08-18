@@ -61,4 +61,10 @@ print("wh1 = ", wh1, " wh2 = ", wh2);
 player_ids = get_player_ship_ids();
 for i, v in pairs(player_ids) do
 	print(i, v);
+	s, x, y, z = get_object_location(v);
+	if s >= 0 then
+		print("object ", v, "location is ", x, ", ", y, ", ", z);
+	else
+		print("get_object_location returned bad status");
+	end
 end
