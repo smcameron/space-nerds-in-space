@@ -3368,6 +3368,42 @@ out:
 	return;
 }
 
+static int l_attack_ship(lua_State *l)
+{
+	int i;
+	double attacker_id, victim_id;
+	struct snis_entity *attacker;
+
+	pthread_mutex_lock(&universe_mutex);
+	attacker_id = lua_tonumber(lua_state, 1);
+	victim_id = lua_tonumber(lua_state, 2);
+
+	i = lookup_by_id(attacker_id);
+	if (i < 0)
+		goto error;
+	attacker = &go[i];
+		
+	i = lookup_by_id(victim_id);
+	if (i < 0)
+		goto error;
+
+	attacker->tsd.ship.cmd_data.command = DEMON_CMD_ATTACK;
+	attacker->tsd.ship.cmd_data.x = 0;
+	attacker->tsd.ship.cmd_data.y = 0;
+	attacker->tsd.ship.cmd_data.nids1 = 0;
+	attacker->tsd.ship.cmd_data.nids2 = 1;
+	attacker->tsd.ship.cmd_data.id[0] = victim_id;	
+	ship_choose_new_attack_victim(attacker);
+
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, 0.0);
+	return 1;
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, -1.0);
+	return 1;
+}
+
 static void do_robot_drop(struct damcon_data *d)
 {
 	int i, c, found_socket = -1;
@@ -5269,6 +5305,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_wormhole_pair, "add_wormhole_pair");
 	add_lua_callable_fn(l_get_player_ship_ids, "get_player_ship_ids");
 	add_lua_callable_fn(l_get_object_location, "get_object_location");
+	add_lua_callable_fn(l_attack_ship, "attack_ship");
 }
 
 static void lua_teardown(void)

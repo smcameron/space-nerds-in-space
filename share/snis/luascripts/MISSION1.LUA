@@ -68,3 +68,6 @@ for i, v in pairs(player_ids) do
 		print("get_object_location returned bad status");
 	end
 end
+
+attack_ship(specific_ship_id, player_ids[1]);
+
