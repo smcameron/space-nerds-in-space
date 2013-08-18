@@ -50,4 +50,8 @@ print("nebula id = ", nebula_id);
 spacemonster_id = add_spacemonster("GEORGE", 6000, 40000, 0);
 print("spacemonster id = ", spacemonster_id);
 
+-- add a derelict:
+derelict_id = add_derelict("MARIE CELESTE", 9000, 90000, 0, DISRUPTOR, wallunni);
+print("derelict id = ", derelict_id);
+
 

@@ -457,7 +457,14 @@ static void attack_your_attacker(struct snis_entity *attackee, struct snis_entit
 	attackee->tsd.ship.victim_id = attacker->id;
 }
 
-static int add_derelict(double x, double y, int shiptype);
+static int add_derelict(const char *name, double x, double y, double z,
+			int shiptype, int the_faction);
+
+static int make_derelict(struct snis_entity *o)
+{
+	return add_derelict(o->sdata.name, o->x, o->y, o->z, o->tsd.ship.shiptype, o->sdata.faction);
+}
+
 static void torpedo_move(struct snis_entity *o)
 {
 	int i, otype;
@@ -513,7 +520,7 @@ static void torpedo_move(struct snis_entity *o)
 			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 			if (otype != OBJTYPE_SHIP1) {
 				if (otype == OBJTYPE_SHIP2)
-					add_derelict(go[i].x, go[i].y, go[i].tsd.ship.shiptype);
+					make_derelict(&go[i]);
 				snis_queue_delete_object(&go[i]);
 				delete_object(&go[i]);
 				respawn_object(otype);
@@ -613,7 +620,7 @@ static void laser_move(struct snis_entity *o)
 					ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
 			if (go[i].type != OBJTYPE_SHIP1) {
 				if (go[i].type == OBJTYPE_SHIP2)
-					add_derelict(go[i].x, go[i].y, go[i].tsd.ship.shiptype);
+					make_derelict(&go[i]);
 				snis_queue_delete_object(&go[i]);
 				delete_object(&go[i]);
 				respawn_object(otype);
@@ -2168,7 +2175,7 @@ static void laserbeam_move(struct snis_entity *o)
 					ROLE_SOUNDSERVER, origin->id);
 		if (ttype != OBJTYPE_SHIP1) {
 			if (ttype == OBJTYPE_SHIP2)
-				add_derelict(target->x, target->y, target->tsd.ship.shiptype);
+				make_derelict(target);
 			snis_queue_delete_object(target);
 			delete_object(target);
 			respawn_object(ttype);
@@ -2284,13 +2291,16 @@ static void add_asteroids(void)
 	}
 }
 
-static int add_derelict(double x, double y, int shiptype)
+static int add_derelict(const char *name, double x, double y, double z,
+			int shiptype, int the_faction)
 {
 	int i;
 
 	i = add_generic_object(x, y, 0, 0, 0, OBJTYPE_DERELICT);
 	if (i < 0)
 		return i;
+	if (name)
+		strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
 	go[i].z = (double) snis_randn(70) - 35;
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
@@ -2301,10 +2311,35 @@ static int add_derelict(double x, double y, int shiptype)
 		go[i].tsd.derelict.shiptype = (uint8_t) shiptype;
 	else
 		go[i].tsd.derelict.shiptype = snis_randn(ARRAY_SIZE(shipclass));
+	if (the_faction >= 0)
+		go[i].sdata.faction = (uint8_t) (the_faction % ARRAY_SIZE(faction));
+	else
+		go[i].sdata.faction = (uint8_t) snis_randn(ARRAY_SIZE(faction));
 	go[i].vx = (float) snis_randn(100) / 400.0 * max_speed[0];
 	go[i].vy = (float) snis_randn(100) / 400.0 * max_speed[0];
 	return i;
 }
+
+static int l_add_derelict(lua_State *l)
+{
+	double x, y, z, shiptype, the_faction;
+	const char *name;
+	int i;
+
+	name = lua_tostring(lua_state, 1);
+	x = lua_tonumber(lua_state, 2);
+	y = lua_tonumber(lua_state, 3);
+	z = lua_tonumber(lua_state, 4);
+	shiptype = lua_tonumber(lua_state, 5);
+	the_faction = lua_tonumber(lua_state, 6);
+
+	pthread_mutex_lock(&universe_mutex);
+	i = add_derelict(name, x, y, z, shiptype, the_faction);
+	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 1;
+}
+
 
 static void add_derelicts(void)
 {
@@ -2314,7 +2349,7 @@ static void add_derelicts(void)
 	for (i = 0; i < NDERELICTS; i++) {
 		x = (double) snis_randn(1000) * XKNOWN_DIM / 1000.0;
 		y = (double) snis_randn(1000) * YKNOWN_DIM / 1000.0;
-		add_derelict(x, y, -1);
+		add_derelict(NULL, x, y, 0.0, -1, -1);
 	}
 }
 
@@ -5160,6 +5195,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_planet, "add_planet");
 	add_lua_callable_fn(l_add_nebula, "add_nebula");
 	add_lua_callable_fn(l_add_spacemonster, "add_spacemonster");
+	add_lua_callable_fn(l_add_derelict, "add_derelict");
 }
 
 static void lua_teardown(void)
