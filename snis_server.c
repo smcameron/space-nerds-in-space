@@ -1915,23 +1915,23 @@ static int l_add_ship(lua_State *l)
 		return 1;
 	}
 
+	pthread_mutex_lock(&universe_mutex);
 	i = add_specific_ship(name, x, y,
 		(uint8_t) shiptype % ARRAY_SIZE(shipclass),
 		(uint8_t) the_faction % ARRAY_SIZE(faction));
-	if (i < 0)
-		lua_pushnumber(lua_state, -1.0);
-	else
-		lua_pushnumber(lua_state, (double) go[i].id);
+	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
 
 static int l_add_random_ship(lua_State *l)
 {
-	int i = add_ship();
-	if (i >= 0)
-		lua_pushnumber(lua_state, (double) go[i].id);
-	else
-		lua_pushnumber(lua_state, -1.0);
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = add_ship();
+	lua_pushnumber(lua_state, i >= 0 ? (double) go[i].id : -1.0);
+	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
 
@@ -1959,13 +1959,16 @@ static int l_add_spacemonster(lua_State *l)
 	x = lua_tonumber(lua_state, 2);
 	y = lua_tonumber(lua_state, 3);
 
+	pthread_mutex_lock(&universe_mutex);
 	i = add_spacemonster(x, y);
 	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
 	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
 	lua_pushnumber(lua_state, (double) go[i].id);
+	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
 
@@ -2025,11 +2028,10 @@ static int l_add_starbase(lua_State *l)
 	y = lua_tonumber(lua_state, 2);
 	n = lua_tonumber(lua_state, 3);
 
+	pthread_mutex_lock(&universe_mutex);
 	i  = add_starbase(x, y, 0, 0, 0, n);
-	if (i >= 0)
-		lua_pushnumber(lua_state, (double) go[i].id);
-	else
-		lua_pushnumber(lua_state, -1.0);
+	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
 
@@ -2241,13 +2243,16 @@ static int l_add_nebula(lua_State *l)
 	y = lua_tonumber(lua_state, 3);
 	r = lua_tonumber(lua_state, 4);
 
+	pthread_mutex_lock(&universe_mutex);
 	i = add_nebula(x, y, 0.0, 0.0, 0.0, r);
 	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
 	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
 	lua_pushnumber(lua_state, (double) go[i].id);
+	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
 
@@ -2333,13 +2338,16 @@ static int l_add_planet(lua_State *l)
 	x = lua_tonumber(lua_state, 2);
 	y = lua_tonumber(lua_state, 3);
 
+	pthread_mutex_lock(&universe_mutex);
 	i = add_planet(x, y);
 	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
 	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
 	lua_pushnumber(lua_state, (double) go[i].id);
+	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
 
@@ -3435,6 +3443,7 @@ static void process_demon_clear_all(void)
 {
 	int i;
 
+	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 
@@ -3443,6 +3452,7 @@ static void process_demon_clear_all(void)
 			delete_object(o);
 		}
 	}
+	pthread_mutex_unlock(&universe_mutex);
 }
 
 static int l_clear_all(lua_State *l)
