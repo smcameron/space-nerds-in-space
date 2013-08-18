@@ -2210,6 +2210,28 @@ static void add_nebulae(void)
 	}
 }
 
+static int l_add_nebula(lua_State *l)
+{
+	double x, y, r;
+	const char *name;
+	int i;
+
+	name = lua_tostring(lua_state, 1);
+	x = lua_tonumber(lua_state, 2);
+	y = lua_tonumber(lua_state, 3);
+	r = lua_tonumber(lua_state, 4);
+
+	i = add_nebula(x, y, 0.0, 0.0, 0.0, r);
+	if (i < 0) {
+		lua_pushnumber(lua_state, -1.0);
+		return 1;
+	}
+	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
+	lua_pushnumber(lua_state, (double) go[i].id);
+	return 1;
+}
+
+
 static void add_asteroids(void)
 {
 	int i, j;
@@ -5092,6 +5114,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_ship, "add_ship");
 	add_lua_callable_fn(l_add_starbase, "add_starbase");
 	add_lua_callable_fn(l_add_planet, "add_planet");
+	add_lua_callable_fn(l_add_nebula, "add_nebula");
 }
 
 static void lua_teardown(void)

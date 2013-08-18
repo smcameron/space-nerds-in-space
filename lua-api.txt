@@ -53,3 +53,6 @@ id = add_starbase(x, y, n) - adds a starbase at location x,y with number n (0 <=
 id = add_planet(name, x, y) - adds planet at x,y with specified name, returns id of planet
 	or -1.0 on failure. 
 
+id = add_nebula(name, x, y, r) - adds nebula at x,y with specified radius and name,
+	returns id of nebula or -1.0 on failure. 
+

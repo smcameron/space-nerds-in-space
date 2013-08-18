@@ -42,3 +42,8 @@ print("starbase id", starbase_id);
 planet_id = add_planet("NOWWHAT", 50000, 50000);
 print("planet id = ", planet_id);
 
+-- add a nebula:
+nebula_id = add_nebula("IMPENETRABLE", 100000, 70000, 10000);
+print("nebula id = ", nebula_id);
+
+
