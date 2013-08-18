@@ -38,3 +38,7 @@ print("specific ship id = ", specific_ship_id);
 starbase_id = add_starbase(10000, 10000, 76);
 print("starbase id", starbase_id);
 
+-- add a planet:
+planet_id = add_planet("NOWWHAT", 50000, 50000);
+print("planet id = ", planet_id);
+

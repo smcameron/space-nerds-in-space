@@ -50,3 +50,6 @@ id = add_starbase(x, y, n) - adds a starbase at location x,y with number n (0 <=
 	the starbase will be named "SB-n"
 	TODO: allow starbases to be named arbitrary strings.
 
+id = add_planet(name, x, y) - adds planet at x,y with specified name, returns id of planet
+	or -1.0 on failure. 
+

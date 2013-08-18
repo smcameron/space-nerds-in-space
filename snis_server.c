@@ -2281,6 +2281,26 @@ static int add_planet(double x, double y)
 	return i;
 }
 
+static int l_add_planet(lua_State *l)
+{
+	double x, y;
+	const char *name;
+	int i;
+
+	name = lua_tostring(lua_state, 1);
+	x = lua_tonumber(lua_state, 2);
+	y = lua_tonumber(lua_state, 3);
+
+	i = add_planet(x, y);
+	if (i < 0) {
+		lua_pushnumber(lua_state, -1.0);
+		return 1;
+	}
+	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
+	lua_pushnumber(lua_state, (double) go[i].id);
+	return 1;
+}
+
 static void add_planets(void)
 {
 	int i;
@@ -5071,6 +5091,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_random_ship, "add_random_ship");
 	add_lua_callable_fn(l_add_ship, "add_ship");
 	add_lua_callable_fn(l_add_starbase, "add_starbase");
+	add_lua_callable_fn(l_add_planet, "add_planet");
 }
 
 static void lua_teardown(void)
