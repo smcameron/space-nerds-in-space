@@ -45,5 +45,8 @@ id = add_random_ship() -- adds a random ship to the universe in a random locatio
 id = add_ship(name, x, y, type, faction) -- adds a ship to the universe of the 
 	specified type and faction at the specified locations.  If adding ship
 	failed, -1.0 is returned.
-	
+
+id = add_starbase(x, y, n) - adds a starbase at location x,y with number n (0 <= n <= 99).
+	the starbase will be named "SB-n"
+	TODO: allow starbases to be named arbitrary strings.
 

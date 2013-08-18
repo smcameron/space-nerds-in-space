@@ -1971,20 +1971,46 @@ static int add_asteroid(double x, double y, double vx, double vy, double heading
 	return i;
 }
 
-static int add_starbase(double x, double y, double vx, double vy, double heading, int n)
+static int add_starbase(double x, double y,
+			double vx, double vy, double heading, int n)
 {
 	int i;
 
 	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_STARBASE);
 	if (i < 0)
 		return i;
+	if (n < 0)
+		n = -n;
+	n %= 99;
 	go[i].move = starbase_move;
 	go[i].type = OBJTYPE_STARBASE;
 	go[i].tsd.starbase.last_time_called_for_help = 0;
 	go[i].tsd.starbase.under_attack = 0;
 	go[i].tsd.starbase.lifeform_count = snis_randn(100) + 100;
+	/* FIXME, why name stored twice? probably just use sdata.name is best
+	 * but might be because we should know starbase name even if science
+	 * doesn't scan it.
+	 */
 	sprintf(go[i].tsd.starbase.name, "SB-%02d", n);
+	sprintf(go[i].sdata.name, "SB-%02d", n);
 	return i;
+}
+
+static int l_add_starbase(lua_State *l)
+{
+	double x, y, n;
+	int i;
+
+	x = lua_tonumber(lua_state, 1);
+	y = lua_tonumber(lua_state, 2);
+	n = lua_tonumber(lua_state, 3);
+
+	i  = add_starbase(x, y, 0, 0, 0, n);
+	if (i >= 0)
+		lua_pushnumber(lua_state, (double) go[i].id);
+	else
+		lua_pushnumber(lua_state, -1.0);
+	return 1;
 }
 
 static int add_nebula(double x, double y, double vx, double vy, double heading, double r)
@@ -5044,6 +5070,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_clear_all, "clear_all");
 	add_lua_callable_fn(l_add_random_ship, "add_random_ship");
 	add_lua_callable_fn(l_add_ship, "add_ship");
+	add_lua_callable_fn(l_add_starbase, "add_starbase");
 }
 
 static void lua_teardown(void)

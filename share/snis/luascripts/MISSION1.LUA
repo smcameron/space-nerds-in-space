@@ -34,3 +34,7 @@ print(random_ship_id);
 specific_ship_id = add_ship("REVENGE", 0, 0, DRAGONHAWK, vekkazi);
 print("specific ship id = ", specific_ship_id);
 
+-- add a starbases:
+starbase_id = add_starbase(10000, 10000, 76);
+print("starbase id", starbase_id);
+
