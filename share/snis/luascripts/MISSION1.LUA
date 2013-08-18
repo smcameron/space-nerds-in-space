@@ -31,23 +31,23 @@ print("random ship id = ");
 print(random_ship_id);
 
 -- add a specific ship to the universe in a specific location
-specific_ship_id = add_ship("REVENGE", 0, 0, DRAGONHAWK, vekkazi);
+specific_ship_id = add_ship("REVENGE", 0, 0, 0, DRAGONHAWK, vekkazi);
 print("specific ship id = ", specific_ship_id);
 
 -- add a starbases:
-starbase_id = add_starbase(10000, 10000, 76);
+starbase_id = add_starbase(10000, 10000, 0, 76);
 print("starbase id", starbase_id);
 
 -- add a planet:
-planet_id = add_planet("NOWWHAT", 50000, 50000);
+planet_id = add_planet("NOWWHAT", 50000, 500000, 0);
 print("planet id = ", planet_id);
 
 -- add a nebula:
-nebula_id = add_nebula("IMPENETRABLE", 100000, 70000, 10000);
+nebula_id = add_nebula("IMPENETRABLE", 100000, 70000, 0, 10000);
 print("nebula id = ", nebula_id);
 
 -- add a spacemonster:
-spacemonster_id = add_spacemonster("GEORGE", 6000, 40000);
+spacemonster_id = add_spacemonster("GEORGE", 6000, 40000, 0);
 print("spacemonster id = ", spacemonster_id);
 
 

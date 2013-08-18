@@ -1880,7 +1880,7 @@ static int add_ship(void)
 	return i;
 }
 
-static int add_specific_ship(const char *name, double x, double y,
+static int add_specific_ship(const char *name, double x, double y, double z,
 			uint8_t shiptype, uint8_t the_faction)
 {
 	int i;
@@ -1890,6 +1890,7 @@ static int add_specific_ship(const char *name, double x, double y,
 		return i;
 	go[i].x = x;
 	go[i].y = y;
+	go[i].z = z;
 	normalize_coords(&go[i]);
 	go[i].tsd.ship.shiptype = shiptype % ARRAY_SIZE(shipclass);
 	go[i].sdata.faction = the_faction % ARRAY_SIZE(faction);
@@ -1900,15 +1901,16 @@ static int add_specific_ship(const char *name, double x, double y,
 static int l_add_ship(lua_State *l)
 {
 	const char *name;
-	double x, y;
+	double x, y, z;
 	double shiptype, the_faction;
 	int i;
 
 	name = lua_tostring(lua_state, 1);
 	x = lua_tonumber(lua_state, 2);
 	y = lua_tonumber(lua_state, 3);
-	shiptype = lua_tonumber(lua_state, 4);
-	the_faction = lua_tonumber(lua_state, 5);
+	z = lua_tonumber(lua_state, 4);
+	shiptype = lua_tonumber(lua_state, 5);
+	the_faction = lua_tonumber(lua_state, 6);
 
 	if (shiptype < 0 || shiptype > ARRAY_SIZE(shipclass) - 1) {
 		lua_pushnumber(lua_state, -1.0);
@@ -1916,7 +1918,7 @@ static int l_add_ship(lua_State *l)
 	}
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_specific_ship(name, x, y,
+	i = add_specific_ship(name, x, y, z,
 		(uint8_t) shiptype % ARRAY_SIZE(shipclass),
 		(uint8_t) the_faction % ARRAY_SIZE(faction));
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
@@ -1935,7 +1937,7 @@ static int l_add_random_ship(lua_State *l)
 	return 1;
 }
 
-static int add_spacemonster(double x, double y)
+static int add_spacemonster(double x, double y, double z)
 {
 	int i;
 	double heading;
@@ -1946,21 +1948,23 @@ static int add_spacemonster(double x, double y)
 		return i;
 	go[i].tsd.spacemonster.zz = 0.0;
 	go[i].move = spacemonster_move;
+	go[i].z = z;
 	return i;
 }
 
 static int l_add_spacemonster(lua_State *l)
 {
-	double x, y;
+	double x, y, z;
 	const char *name;
 	int i;
 
 	name = lua_tostring(lua_state, 1);
 	x = lua_tonumber(lua_state, 2);
 	y = lua_tonumber(lua_state, 3);
+	z = lua_tonumber(lua_state, 4);
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_spacemonster(x, y);
+	i = add_spacemonster(x, y, z);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		lua_pushnumber(lua_state, -1.0);
@@ -1994,7 +1998,7 @@ static int add_asteroid(double x, double y, double vx, double vy, double heading
 	return i;
 }
 
-static int add_starbase(double x, double y,
+static int add_starbase(double x, double y, double z,
 			double vx, double vy, double heading, int n)
 {
 	int i;
@@ -2002,6 +2006,7 @@ static int add_starbase(double x, double y,
 	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_STARBASE);
 	if (i < 0)
 		return i;
+	go[i].z = z;
 	if (n < 0)
 		n = -n;
 	n %= 99;
@@ -2021,27 +2026,30 @@ static int add_starbase(double x, double y,
 
 static int l_add_starbase(lua_State *l)
 {
-	double x, y, n;
+	double x, y, z, n;
 	int i;
 
 	x = lua_tonumber(lua_state, 1);
 	y = lua_tonumber(lua_state, 2);
-	n = lua_tonumber(lua_state, 3);
+	z = lua_tonumber(lua_state, 3) * 0.0;
+	n = lua_tonumber(lua_state, 4);
 
 	pthread_mutex_lock(&universe_mutex);
-	i  = add_starbase(x, y, 0, 0, 0, n);
+	i  = add_starbase(x, y, z, 0, 0, 0, n);
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
 
-static int add_nebula(double x, double y, double vx, double vy, double heading, double r)
+static int add_nebula(double x, double y, double z,
+		double vx, double vy, double heading, double r)
 {
 	int i;
 
 	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_NEBULA);
 	if (i < 0)
 		return i;
+	go[i].z = z;
 	go[i].move = nebula_move;
 	go[i].type = OBJTYPE_NEBULA;
 	go[i].tsd.nebula.r = r;
@@ -2213,7 +2221,7 @@ static void add_starbases(void)
 	for (i = 0; i < NBASES; i++) {
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
 		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
-		add_starbase(x, y, 0.0, 0.0, 0.0, i);
+		add_starbase(x, y, 0.0, 0.0, 0.0, 0.0, i);
 	}
 }
 
@@ -2227,24 +2235,25 @@ static void add_nebulae(void)
 		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
 		r = (double) snis_randn(NEBULA_RADIUS) +
 				(double) MIN_NEBULA_RADIUS;
-		j = add_nebula(x, y, 0.0, 0.0, 0.0, r);
+		j = add_nebula(x, y, 0.0, 0.0, 0.0, 0.0, r);
 		nebulalist[i] = j;
 	}
 }
 
 static int l_add_nebula(lua_State *l)
 {
-	double x, y, r;
+	double x, y, z, r;
 	const char *name;
 	int i;
 
 	name = lua_tostring(lua_state, 1);
 	x = lua_tonumber(lua_state, 2);
 	y = lua_tonumber(lua_state, 3);
-	r = lua_tonumber(lua_state, 4);
+	z = lua_tonumber(lua_state, 4);
+	r = lua_tonumber(lua_state, 5);
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_nebula(x, y, 0.0, 0.0, 0.0, r);
+	i = add_nebula(x, y, z, 0.0, 0.0, 0.0, r);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		lua_pushnumber(lua_state, -1.0);
@@ -2309,17 +2318,21 @@ static void add_derelicts(void)
 	}
 }
 
-static int add_planet(double x, double y)
+static int add_planet(double x, double y, double z)
 {
 	int i;
 
 	i = add_generic_object(x, y, 0, 0, 0, OBJTYPE_PLANET);
 	if (i < 0)
 		return i;
-	if (snis_randn(100) < 50)
-		go[i].z = (double) snis_randn(3000) - 1500;
-	else
-		go[i].z = (double) snis_randn(70) - 35;
+	if (fabsl(z) < 0.01) {
+		if (snis_randn(100) < 50)
+			go[i].z = (double) snis_randn(3000) - 1500;
+		else
+			go[i].z = (double) snis_randn(70) - 35;
+	} else {
+		go[i].z = z;
+	}
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
@@ -2330,16 +2343,17 @@ static int add_planet(double x, double y)
 
 static int l_add_planet(lua_State *l)
 {
-	double x, y;
+	double x, y, z;
 	const char *name;
 	int i;
 
 	name = lua_tostring(lua_state, 1);
 	x = lua_tonumber(lua_state, 2);
 	y = lua_tonumber(lua_state, 3);
+	z = lua_tonumber(lua_state, 4);
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_planet(x, y);
+	i = add_planet(x, y, z);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		lua_pushnumber(lua_state, -1.0);
@@ -2363,7 +2377,7 @@ static void add_planets(void)
 		r = snis_randn(ASTEROID_CLUSTER_RADIUS);
 		x = cx + r * sin(a);
 		y = cy + r * cos(a);
-		add_planet(x, y);
+		add_planet(x, y, 0.0);
 	}
 }
 
@@ -2414,7 +2428,7 @@ static void add_spacemonsters(void)
 	for (i = 0; i < NSPACEMONSTERS; i++) {
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
 		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
-		add_spacemonster(x, y);
+		add_spacemonster(x, y, 0.0);
 	}
 }
 
@@ -3479,18 +3493,18 @@ static int process_create_item(struct game_client *c)
 		i = add_ship();
 		break;
 	case OBJTYPE_STARBASE:
-		i = add_starbase(x, y, 0, 0, 0, snis_randn(100));
+		i = add_starbase(x, y, 0, 0, 0, 0, snis_randn(100));
 		break;
 	case OBJTYPE_PLANET:
-		i = add_planet(x, y);
+		i = add_planet(x, y, 0.0);
 		break;
 	case OBJTYPE_NEBULA:
 		r = (double) snis_randn(NEBULA_RADIUS) +
 				(double) MIN_NEBULA_RADIUS;
-		i = add_nebula(x, y, 0, 0, 0, r);
+		i = add_nebula(x, y, 0, 0, 0, 0, r);
 		break;
 	case OBJTYPE_SPACEMONSTER:
-		i = add_spacemonster(x, y);
+		i = add_spacemonster(x, y, 0.0);
 		break;
 	default:
 		break;
