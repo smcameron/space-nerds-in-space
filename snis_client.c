@@ -1105,7 +1105,7 @@ static int update_wormhole(uint32_t id, double x, double y)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, wormhole_mesh, x, 0, -y, WORMHOLE_COLOR);
-		set_render_style(e, RENDER_POINT_CLOUD);
+		set_render_style(e, RENDER_POINT_CLOUD | RENDER_SPARKLE);
 		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
 			return i;

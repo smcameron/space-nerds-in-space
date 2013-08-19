@@ -347,8 +347,14 @@ void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc, struct entity_context
 	int i;
 
 	sng_set_foreground(e->color);
-	for (i = 0; i < e->m->nvertices; i++)
-		wireframe_render_point(w, gc, cx, &e->m->v[i]);
+	if (e->render_style & RENDER_SPARKLE) {
+		for (i = 0; i < e->m->nvertices; i++)
+			if (snis_randn(100) < 35)
+				wireframe_render_point(w, gc, cx, &e->m->v[i]);
+	} else {
+		for (i = 0; i < e->m->nvertices; i++)
+			wireframe_render_point(w, gc, cx, &e->m->v[i]);
+	}
 }
 
 static int tri_depth_compare(const void *a, const void *b)

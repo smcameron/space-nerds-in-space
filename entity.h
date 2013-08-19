@@ -67,5 +67,6 @@ GLOBAL void entity_context_free(struct entity_context *cx);
 #define RENDER_WIREFRAME (1 << 1)
 #define RENDER_BRIGHT_LINE (1 << 2)
 #define RENDER_NO_FILL (1 << 3)
+#define RENDER_SPARKLE (1 << 4)
 
 #endif	
