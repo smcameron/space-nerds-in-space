@@ -68,7 +68,8 @@ LIBS=-Lssgl -lssglclient -lrt -lm -llua5.2
 #
 # sudo ln -s /usr/lib/x86_64-linux-gnu/liblua5.1.so.0 /usr/local/lib/liblua5.2.so
 #
-# You might first have to "sudo apt-get install lua5.2"
+# Also, you will need to install lua5.2 and liblua5.2-dev
+# "sudo apt-get install liblua5.2-dev lua5.2"
 #
 
 
