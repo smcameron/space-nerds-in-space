@@ -115,6 +115,47 @@ static inline void client_unlock()
 }
 
 static lua_State *lua_state = NULL;
+/* should obtain universe_mutex before touching this queue. */
+struct lua_command_queue_entry {
+	struct lua_command_queue_entry *next;
+	char lua_command[PATH_MAX];
+} *lua_command_queue_head = NULL,  *lua_command_queue_tail = NULL;
+
+static void enqueue_lua_command(char *cmd)
+{
+	/* should obtain universe_mutex before touching this queue. */
+	struct lua_command_queue_entry *q;
+
+	q = malloc(sizeof(*q));
+	q->next = NULL;
+	strncpy(q->lua_command, cmd, sizeof(q->lua_command) - 1);
+	q->lua_command[sizeof(q->lua_command) - 1] = '\0';
+
+	if (!lua_command_queue_head) {
+		lua_command_queue_head = q;
+		lua_command_queue_tail = q;
+		return;
+	}
+	lua_command_queue_tail->next = q;
+	return;
+}
+
+static void dequeue_lua_command(char *cmdbuf, int bufsize)
+{
+	/* should obtain universe_mutex before touching this queue. */
+	struct lua_command_queue_entry *qe;
+
+	qe = lua_command_queue_head;
+	if (!qe) {
+		strncpy(cmdbuf, "", bufsize - 1);
+		return;
+	}
+
+	lua_command_queue_head = qe->next;
+	qe->next = NULL;
+	strncpy(cmdbuf, qe->lua_command, bufsize - 1);
+	free(qe);
+}
 
 int nframes = 0;
 int timer = 0;
@@ -3329,11 +3370,9 @@ static int process_exec_lua_script(struct game_client *c)
 
 #define LUASCRIPTDIR "share/snis/luascripts"
 	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", LUASCRIPTDIR, txt);
-	rc = luaL_dofile(lua_state, scriptname);
-	if (rc) {
-		/* TODO: something proper when it fails */
-		printf("Lua script %s failed to execute.\n", scriptname);
-	}
+	pthread_mutex_lock(&universe_mutex);
+	enqueue_lua_command(scriptname); /* queue up for execution by main thread. */
+	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
 
@@ -5306,6 +5345,28 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_attack_ship, "attack_ship");
 }
 
+static void process_lua_commands(void)
+{
+	char lua_command[PATH_MAX];
+	int rc;
+
+	pthread_mutex_lock(&universe_mutex);
+	for (;;) {
+		dequeue_lua_command(lua_command, sizeof(lua_command));
+		if (lua_command[0] == '\0') /* empty string */
+			break;
+
+		pthread_mutex_unlock(&universe_mutex);
+		rc = luaL_dofile(lua_state, lua_command);
+		if (rc) {
+			/* TODO: something? */
+			printf("lua script %s failed to execute.\n", lua_command);
+		}
+		pthread_mutex_lock(&universe_mutex);
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 static void lua_teardown(void)
 {
 	lua_close(lua_state);
@@ -5343,6 +5404,7 @@ int main(int argc, char *argv[])
 		/* if ((i % 30) == 0) printf("Moving objects...i = %d\n", i); */
 		i++;
 		move_objects();
+		process_lua_commands();
 		rc = clock_gettime(CLOCK_MONOTONIC, &time2);
 		/* snis_sleep(&time1, &time2, &thirtieth_second); */
 		sleep_thirtieth_second();
