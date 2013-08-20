@@ -65,6 +65,6 @@ id1, id2 = add_wormhole_pair(x1, y1, z1, x2, y2, z2) - adds connected wormholes 
 (table of player ship ids) = get_list_of_players(); -- returns a table containing the
 	ids of all the player ships, indexed 1..n.
 
-s,x,y,z = get_object_location(object_id); -- returns s (status), x,y,z location coordinates
-	of specified object.  If s is < 0, the object_id does not exist, and x,y,z are invalid.
+x,y,z = get_object_location(object_id); -- x,y,z location coordinates of specified object.
+	If the object_id does not exist (anymore), x,y,z will be nil.
 

@@ -1962,18 +1962,16 @@ static int l_get_object_location(lua_State *l)
 	i = lookup_by_id((uint32_t) id);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(lua_state, -1.0);
-		lua_pushnumber(lua_state, -1.0);
-		lua_pushnumber(lua_state, -1.0);
-		lua_pushnumber(lua_state, -1.0);
-		return 4;
+		lua_pushnil(lua_state);
+		lua_pushnil(lua_state);
+		lua_pushnil(lua_state);
+		return 3;
 	}
-	lua_pushnumber(lua_state, -0.0);
 	lua_pushnumber(lua_state, go[i].x);
 	lua_pushnumber(lua_state, go[i].y);
 	lua_pushnumber(lua_state, go[i].z);
 	pthread_mutex_unlock(&universe_mutex);
-	return 4;
+	return 3;
 }
 
 static int l_add_random_ship(lua_State *l)
