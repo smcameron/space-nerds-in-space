@@ -2015,6 +2015,32 @@ static int l_get_object_location(lua_State *l)
 	return 3;
 }
 
+static int l_move_object(lua_State *l)
+{
+	int i;
+	double id, x, y, z;
+	struct snis_entity *o;
+
+	id = lua_tonumber(lua_state, 1);
+	x = lua_tonumber(lua_state, 2);
+	y = lua_tonumber(lua_state, 3);
+	z = lua_tonumber(lua_state, 4);
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id((uint32_t) id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	o = &go[i];
+	o->x = x;
+	o->y = y;
+	o->z = z;
+	normalize_coords(o);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int l_add_random_ship(lua_State *l)
 {
 	int i;
@@ -5342,6 +5368,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_wormhole_pair, "add_wormhole_pair");
 	add_lua_callable_fn(l_get_player_ship_ids, "get_player_ship_ids");
 	add_lua_callable_fn(l_get_object_location, "get_object_location");
+	add_lua_callable_fn(l_move_object, "move_object");
 	add_lua_callable_fn(l_attack_ship, "attack_ship");
 }
 

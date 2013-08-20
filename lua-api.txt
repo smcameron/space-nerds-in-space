@@ -68,3 +68,5 @@ id1, id2 = add_wormhole_pair(x1, y1, z1, x2, y2, z2) - adds connected wormholes 
 x,y,z = get_object_location(object_id); -- x,y,z location coordinates of specified object.
 	If the object_id does not exist (anymore), x,y,z will be nil.
 
+move_object(object_id, x, y, z); -- move object to x, y, z location.
+

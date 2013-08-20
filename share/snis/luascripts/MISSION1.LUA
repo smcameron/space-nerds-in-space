@@ -69,5 +69,12 @@ for i, v in pairs(player_ids) do
 	end
 end
 
+if (player_ids[1]) then
+	move_object(player_ids[1], 75000, 75000, 0);
+end
+if (player_ids[2]) then
+	move_object(player_ids[1], 25000, 25000, 0);
+end
 attack_ship(specific_ship_id, player_ids[1]);
+
 
