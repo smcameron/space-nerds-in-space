@@ -828,7 +828,7 @@ static void init_spacemonster_data(struct snis_entity *o, double z)
 		sd->z[i] = 0.0;
 		sd->entity[i] = add_entity(ecx, spacemonster_mesh, o->x, 0, -o->y,
 						SPACEMONSTER_COLOR);
-		set_render_style(sd->entity[i], RENDER_POINT_CLOUD);
+		set_render_style(sd->entity[i], RENDER_POINT_CLOUD | RENDER_SPARKLE);
 	}
 		
 }
@@ -987,7 +987,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, spacemonster_mesh, x, 0, -y, SPACEMONSTER_COLOR);
-		set_render_style(e, RENDER_POINT_CLOUD);
+		set_render_style(e, RENDER_POINT_CLOUD | RENDER_SPARKLE);
 		i = add_generic_object(id, x, y, 0, 0, 0.0, OBJTYPE_SPACEMONSTER, 1, e);
 		if (i < 0)
 			return i;
