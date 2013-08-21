@@ -308,6 +308,13 @@ static void respawn_object(int otype)
 	return;
 }
 
+static void delete_object(struct snis_entity *o)
+{
+	snis_object_pool_free_object(pool, o->index);
+	o->id = -1;
+	o->alive = 0;
+}
+
 static void snis_queue_delete_object(struct snis_entity *o)
 {
 	/* Iterate over all clients and inform them that
@@ -327,6 +334,12 @@ static void snis_queue_delete_object(struct snis_entity *o)
 	for (i = 0; i < nclients; i++)
 		queue_delete_oid(&client[i], oid);
 	client_unlock();
+}
+
+static void delete_from_clients_and_server(struct snis_entity *o)
+{
+	snis_queue_delete_object(o);
+	delete_object(o);
 }
 
 #define ANY_SHIP_ID (0xffffffff)
@@ -460,13 +473,6 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength)
 	}
 }
 
-static void delete_object(struct snis_entity *o)
-{
-	snis_object_pool_free_object(pool, o->index);
-	o->id = -1;
-	o->alive = 0;
-}
-
 static void send_ship_damage_packet(struct snis_entity *o);
 static int lookup_by_id(uint32_t id);
 
@@ -562,8 +568,7 @@ static void torpedo_move(struct snis_entity *o)
 			if (otype != OBJTYPE_SHIP1) {
 				if (otype == OBJTYPE_SHIP2)
 					make_derelict(&go[i]);
-				snis_queue_delete_object(&go[i]);
-				delete_object(&go[i]);
+				delete_from_clients_and_server(&go[i]);
 				respawn_object(otype);
 				
 			} else {
@@ -578,10 +583,8 @@ static void torpedo_move(struct snis_entity *o)
 		continue;
 	}
 
-	if (o->alive <= 0) {
-		snis_queue_delete_object(o);
-		delete_object(o);
-	}
+	if (o->alive <= 0)
+		delete_from_clients_and_server(o);
 }
 
 static double point_to_line_dist(double lx1, double ly1, double lx2, double ly2, double px, double py)
@@ -662,8 +665,7 @@ static void laser_move(struct snis_entity *o)
 			if (go[i].type != OBJTYPE_SHIP1) {
 				if (go[i].type == OBJTYPE_SHIP2)
 					make_derelict(&go[i]);
-				snis_queue_delete_object(&go[i]);
-				delete_object(&go[i]);
+				delete_from_clients_and_server(&go[i]);
 				respawn_object(otype);
 			} else {
 				snis_queue_add_sound(EXPLOSION_SOUND,
@@ -677,10 +679,8 @@ static void laser_move(struct snis_entity *o)
 		continue;
 	}
 
-	if (o->alive <= 0) {
-		snis_queue_delete_object(o);
-		delete_object(o);
-	}
+	if (o->alive <= 0)
+		delete_from_clients_and_server(o);
 }
 
 static int find_nearest_victim(struct snis_entity *o)
@@ -1694,10 +1694,8 @@ static void explosion_move(struct snis_entity *o)
 	if (o->alive > 0)
 		o->alive--;
 
-	if (o->alive <= 0) {
-		snis_queue_delete_object(o);
-		delete_object(o);
-	}
+	if (o->alive <= 0)
+		delete_from_clients_and_server(o);
 }
 
 static int add_generic_object(double x, double y, double vx, double vy, double heading, int type)
@@ -2227,12 +2225,6 @@ static int add_laser(double x, double y, double vx, double vy, double heading, u
 	return i;
 }
 
-static void laserbeam_dead(struct snis_entity *o)
-{
-	snis_queue_delete_object(o);
-	delete_object(o);
-}
-
 static void laserbeam_move(struct snis_entity *o)
 {
 	int tid, oid, ttype;
@@ -2240,7 +2232,7 @@ static void laserbeam_move(struct snis_entity *o)
 
 	o->alive--;
 	if (o->alive <= 0) {
-		laserbeam_dead(o);
+		delete_from_clients_and_server(o);
 		return;
 	}
 
@@ -2251,7 +2243,7 @@ static void laserbeam_move(struct snis_entity *o)
 	tid = lookup_by_id(o->tsd.laserbeam.target);
 	oid = lookup_by_id(o->tsd.laserbeam.origin);
 	if (tid < 0 || oid < 0) {
-		laserbeam_dead(o);
+		delete_from_clients_and_server(o);
 		return;
 	}
 	target = &go[tid];
@@ -2284,8 +2276,7 @@ static void laserbeam_move(struct snis_entity *o)
 		if (ttype != OBJTYPE_SHIP1) {
 			if (ttype == OBJTYPE_SHIP2)
 				make_derelict(target);
-			snis_queue_delete_object(target);
-			delete_object(target);
+			delete_from_clients_and_server(target);
 			respawn_object(ttype);
 		} else {
 			snis_queue_add_sound(EXPLOSION_SOUND,
@@ -3665,10 +3656,8 @@ static void process_demon_clear_all(void)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 
-		if (o->type != OBJTYPE_SHIP1) {
-			snis_queue_delete_object(o);
-			delete_object(o);
-		}
+		if (o->type != OBJTYPE_SHIP1)
+			delete_from_clients_and_server(o);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -3745,8 +3734,7 @@ static int process_delete_item(struct game_client *c)
 	o = &go[i];
 	if (o->type == OBJTYPE_SHIP1)
 		goto out;
-	snis_queue_delete_object(o);
-	delete_object(o);
+	delete_from_clients_and_server(o);
 out:
 	pthread_mutex_unlock(&universe_mutex);
 
