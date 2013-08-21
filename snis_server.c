@@ -2288,6 +2288,35 @@ static void laserbeam_move(struct snis_entity *o)
 	return;
 }
 
+static void tractorbeam_move(struct snis_entity *o)
+{
+	int tid, oid, ttype;
+	struct snis_entity *target, *origin;
+
+	o->alive--;
+	if (o->alive <= 0) {
+		delete_from_clients_and_server(o);
+		return;
+	}
+
+	if (universe_timestamp & 0x0f)
+		return;
+
+	tid = lookup_by_id(o->tsd.laserbeam.target);
+	oid = lookup_by_id(o->tsd.laserbeam.origin);
+	if (tid < 0 || oid < 0) {
+		delete_from_clients_and_server(o);
+		return;
+	}
+	target = &go[tid];
+	origin = &go[oid];
+	ttype = target->type;
+
+	/* TODO: actual tractoring... */
+
+	return;
+}
+
 static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
 {
 	int i, s;
@@ -2298,6 +2327,26 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
 
 	go[i].move = laserbeam_move;
 	go[i].alive = alive;
+	go[i].tsd.laserbeam.origin = origin;
+	go[i].tsd.laserbeam.target = target;
+	s = lookup_by_id(origin);
+	go[i].tsd.laserbeam.power = go[s].tsd.ship.phaser_charge;
+	go[s].tsd.ship.phaser_charge = 0;
+	go[i].tsd.laserbeam.wavelength = go[s].tsd.ship.phaser_wavelength;
+	return i;
+}
+
+static int add_tractorbeam(uint32_t origin, uint32_t target, int alive)
+{
+	int i, s;
+
+	i = add_generic_object(0, 0, 0, 0, 0, OBJTYPE_TRACTORBEAM);
+	if (i < 0)
+		return i;
+
+	go[i].move = tractorbeam_move;
+	go[i].alive = alive;
+	/* TODO: for now, re-use laserbeam data...consider if we need tbeam data */
 	go[i].tsd.laserbeam.origin = origin;
 	go[i].tsd.laserbeam.target = target;
 	s = lookup_by_id(origin);
@@ -4122,6 +4171,33 @@ laserfail:
 	return 0;
 }
 
+static int process_request_tractor_beam(struct game_client *c)
+{
+	struct snis_entity *ship = &go[c->ship_index];
+	int tid;
+
+	pthread_mutex_lock(&universe_mutex);
+	if (ship->tsd.ship.victim_id < 0)
+		goto tractorfail;
+
+	tid = ship->tsd.ship.victim_id;
+	/* TODO: check tractor beam energy here */
+	if (0) 
+		goto tractorfail;
+
+	add_tractorbeam(ship->id, tid, 30);
+	/* TODO: tractor beam sound here. */
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+
+tractorfail:
+	/* TODO: make special tractor failure sound */
+	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+
 static int process_demon_fire_phaser(struct game_client *c)
 {
 	struct snis_entity *o;
@@ -4167,6 +4243,9 @@ static void process_instructions_from_client(struct game_client *c)
 	switch (opcode) {
 		case OPCODE_REQUEST_TORPEDO:
 			process_request_torpedo(c);
+			break;
+		case OPCODE_REQUEST_TRACTORBEAM:
+			process_request_tractor_beam(c);
 			break;
 		case OPCODE_DEMON_FIRE_TORPEDO:
 			process_demon_fire_torpedo(c);
@@ -4485,6 +4564,8 @@ static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_laserbeam_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_tractorbeam_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_spacemonster_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_nebula_packet(struct game_client *c,
@@ -4563,6 +4644,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_LASERBEAM:
 		send_update_laserbeam_packet(c, o);
+		break;
+	case OBJTYPE_TRACTORBEAM:
+		send_update_tractorbeam_packet(c, o);
 		break;
 	default:
 		break;
@@ -4968,6 +5052,14 @@ static void send_update_laserbeam_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	pb_queue_to_client(c, packed_buffer_new("hwww", OPCODE_UPDATE_LASERBEAM,
+					o->id, o->tsd.laserbeam.origin,
+					o->tsd.laserbeam.target));
+}
+
+static void send_update_tractorbeam_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, packed_buffer_new("hwww", OPCODE_UPDATE_TRACTORBEAM,
 					o->id, o->tsd.laserbeam.origin,
 					o->tsd.laserbeam.target));
 }

@@ -73,6 +73,7 @@
 #define OBJTYPE_PLANET 13
 #define OBJTYPE_LASERBEAM 14
 #define OBJTYPE_DERELICT 15
+#define OBJTYPE_TRACTORBEAM 16
 
 char *faction[] = {
 	"Neutral",

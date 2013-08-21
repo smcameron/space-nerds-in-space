@@ -87,6 +87,7 @@
 #define TORPEDO_COLOR RED
 #define SPACEMONSTER_COLOR GREEN
 #define NEBULA_COLOR MAGENTA
+#define TRACTORBEAM_COLOR BLUE
 
 #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -788,6 +789,24 @@ static int update_laserbeam(uint32_t id, uint32_t origin, uint32_t target)
 	return 0;
 }
 
+static int update_tractorbeam(uint32_t id, uint32_t origin, uint32_t target)
+{
+	int i;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_object(id, 0, 0, 0, 0, 0.0, OBJTYPE_TRACTORBEAM, 1, NULL);
+		if (i < 0)
+			return i;
+		go[i].tsd.laserbeam.origin = origin;
+		go[i].tsd.laserbeam.target = target;
+		init_laserbeam_data(&go[i]);
+		go[i].move = update_laserbeam_segments;
+	} /* nothing to do */
+	return 0;
+}
+
+
 static int update_laser(uint32_t id, double x, double y, double vx, double vy, uint32_t ship_id)
 {
 	int i;
@@ -935,10 +954,15 @@ static void init_laserbeam_data(struct snis_entity *o)
 	ld->entity = malloc(sizeof(*o->tsd.laserbeam.entity) *
 					MAX_LASERBEAM_SEGMENTS);
 	shooter = lookup_entity_by_id(ld->origin);
-	if (shooter)
-		color = (shooter->type == OBJTYPE_SHIP2) ? NPC_LASER_COLOR : PLAYER_LASER_COLOR;
-	else
-		color = NPC_LASER_COLOR;
+	if (o->type == OBJTYPE_TRACTORBEAM) {
+		color = TRACTORBEAM_COLOR;
+	} else {
+		if (shooter)
+			color = (shooter->type == OBJTYPE_SHIP2) ?
+				NPC_LASER_COLOR : PLAYER_LASER_COLOR;
+		else
+			color = NPC_LASER_COLOR;
+	}
 	for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++) {
 		ld->x[i] = o->x;
 		ld->y[i] = o->y;
@@ -954,7 +978,7 @@ static void free_laserbeam_data(struct snis_entity *o)
 	int i;
 	struct laserbeam_data *ld = &o->tsd.laserbeam;
 
-	if (o->type != OBJTYPE_LASERBEAM)
+	if (o->type != OBJTYPE_LASERBEAM && o->type != OBJTYPE_TRACTORBEAM)
 		return;
 
 	if (ld->x) {
@@ -977,7 +1001,6 @@ static void free_laserbeam_data(struct snis_entity *o)
 		ld->entity = NULL;
 	}
 }
-
 
 static int update_spacemonster(uint32_t id, double x, double y, double z)
 {
@@ -1258,6 +1281,7 @@ static void move_objects(void)
 			o->y += o->vy / 2.0;
 			break;
 		case OBJTYPE_LASERBEAM:
+		case OBJTYPE_TRACTORBEAM:
 			o->move(o);
 			break;
 		default:
@@ -1960,6 +1984,17 @@ static void do_torpedo(void)
 	if (o->tsd.ship.torpedoes_loaded <= 0)
 		return;
 	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_TORPEDO));
+}
+
+static void do_tractor_beam(void)
+{
+	struct snis_entity *o;
+
+	if (displaymode != DISPLAYMODE_WEAPONS)
+		return;
+	if (!(o = find_my_ship()))
+		return;
+	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_TRACTORBEAM));
 }
 
 static void do_laser(void)
@@ -3185,6 +3220,21 @@ static int process_update_laserbeam(void)
 	return (rc < 0);
 } 
 
+static int process_update_tractorbeam(void)
+{
+	unsigned char buffer[100];
+	uint32_t id, origin, target;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "www", &id, &origin, &target);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_tractorbeam(id, origin, target);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+} 
+
 static int process_update_explosion_packet(void)
 {
 	unsigned char buffer[sizeof(struct update_explosion_packet)];
@@ -3290,6 +3340,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_LASERBEAM:
 			rc = process_update_laserbeam();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_TRACTORBEAM:
+			rc = process_update_tractorbeam();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -4241,13 +4296,17 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 		if (!go[i].alive)
 			continue;
 
-		if (go[i].type == OBJTYPE_LASERBEAM) {
+		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
 			int oid, tid, color;
 			struct snis_entity *shooter = lookup_entity_by_id(go[i].tsd.laserbeam.origin);
-			if (shooter && shooter->type == OBJTYPE_SHIP2)
-				color = NPC_LASER_COLOR;
-			else
-				color = PLAYER_LASER_COLOR;
+			if (go[i].type == OBJTYPE_TRACTORBEAM) {
+				color = TRACTORBEAM_COLOR;
+			} else {
+				if (shooter && shooter->type == OBJTYPE_SHIP2)
+					color = NPC_LASER_COLOR;
+				else
+					color = PLAYER_LASER_COLOR;
+			}
 
 			oid = lookup_object_by_id(go[i].tsd.laserbeam.origin);
 			tid = lookup_object_by_id(go[i].tsd.laserbeam.target);
@@ -4418,7 +4477,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		if (!go[i].alive)
 			continue;
 
-		if (go[i].type == OBJTYPE_LASERBEAM) {
+		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
 			draw_science_laserbeam(w, gc, o, &go[i], cx, cy, r, range);
 			continue;
 		}
@@ -4798,6 +4857,11 @@ static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
 	do_torpedo();
 }
 
+static void tractor_beam_button_pressed(__attribute__((unused)) void *notused)
+{
+	do_tractor_beam();
+}
+
 static void do_adjust_byte_value(uint8_t value,  uint16_t opcode)
 {
 	struct snis_entity *o;
@@ -5066,7 +5130,7 @@ static void reverse_button_pressed(__attribute__((unused)) void *s)
 }
 
 struct weapons_ui {
-	struct button *fire_torpedo, *load_torpedo, *fire_phaser;
+	struct button *fire_torpedo, *load_torpedo, *fire_phaser, *tractor_beam;
 	struct gauge *phaser_bank_gauge;
 	struct gauge *phaser_wavelength;
 	struct slider *wavelen_slider;
@@ -5147,16 +5211,19 @@ static void init_lobby_ui()
 static double sample_phaser_wavelength(void);
 static void init_weapons_ui(void)
 {
-	int y = 450;
+	int y = 440;
 
 	weapons.fire_phaser = snis_button_init(550, y, 200, 25, "FIRE PHASER", RED,
 			TINY_FONT, fire_phaser_button_pressed, NULL);
-	y += 50;
+	y += 35;
 	weapons.load_torpedo = snis_button_init(550, y, 200, 25, "LOAD TORPEDO", GREEN,
 			TINY_FONT, load_torpedo_button_pressed, NULL);
-	y += 50;
+	y += 35;
 	weapons.fire_torpedo = snis_button_init(550, y, 200, 25, "FIRE TORPEDO", RED,
 			TINY_FONT, fire_torpedo_button_pressed, NULL);
+	y += 35;
+	weapons.tractor_beam = snis_button_init(550, y, 200, 25, "TRACTOR BEAM", RED,
+			TINY_FONT, tractor_beam_button_pressed, NULL);
 	weapons.phaser_bank_gauge = gauge_init(650, 100, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, WHITE,
 			10, "CHARGE", sample_phasercharge);
@@ -5176,6 +5243,7 @@ static void init_weapons_ui(void)
 	ui_add_button(weapons.fire_phaser, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.load_torpedo, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.fire_torpedo, DISPLAYMODE_WEAPONS);
+	ui_add_button(weapons.tractor_beam, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.wavelen_up_button, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.wavelen_down_button, DISPLAYMODE_WEAPONS);
 	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS);
