@@ -443,6 +443,7 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 	o->tsd.ship.damage.phaser_banks_damage = roll_damage(twp, ss, o->tsd.ship.damage.phaser_banks_damage);
 	o->tsd.ship.damage.sensors_damage = roll_damage(twp, ss, o->tsd.ship.damage.sensors_damage);
 	o->tsd.ship.damage.comms_damage = roll_damage(twp, ss, o->tsd.ship.damage.comms_damage);
+	o->tsd.ship.damage.tractor_damage = roll_damage(twp, ss, o->tsd.ship.damage.tractor_damage);
 
 	if (o->tsd.ship.damage.shield_damage == 255) { 
 		o->respawn_time = universe_timestamp + 30 * 10;
@@ -1309,6 +1310,7 @@ static void do_power_model_computations(struct snis_entity *o)
 #define SHIELDS_POWER_DEVICE 4
 #define COMMS_POWER_DEVICE 5
 #define IMPULSE_POWER_DEVICE 6
+#define TRACTOR_POWER_DEVICE 6
 
 	device = power_model_get_device(m, WARP_POWER_DEVICE);
 	o->tsd.ship.power_data.warp.i = device_power_byte_form(device);
@@ -1330,6 +1332,9 @@ static void do_power_model_computations(struct snis_entity *o)
 
 	device = power_model_get_device(m, IMPULSE_POWER_DEVICE);
 	o->tsd.ship.power_data.impulse.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, TRACTOR_POWER_DEVICE);
+	o->tsd.ship.power_data.tractor.i = device_power_byte_form(device);
 
 	o->tsd.ship.power_data.voltage = (unsigned char)
 		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
@@ -1763,6 +1768,9 @@ DECLARE_POWER_MODEL_SAMPLER(comms, r3) /* declares sample_comms_r3 */
 DECLARE_POWER_MODEL_SAMPLER(impulse, r1) /* declares sample_impulse_r1 */
 DECLARE_POWER_MODEL_SAMPLER(impulse, r2) /* declares sample_impulse_r2 */
 DECLARE_POWER_MODEL_SAMPLER(impulse, r3) /* declares sample_impulse_r3 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, r1) /* declares sample_tractor_r1 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, r2) /* declares sample_tractor_r2 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, r3) /* declares sample_tractor_r3 */
 
 static void init_power_model(struct snis_entity *o)
 {
@@ -1826,6 +1834,14 @@ static void init_power_model(struct snis_entity *o)
 	o->tsd.ship.power_data.impulse.r3 = 200;
 	d = new_power_device(o, sample_impulse_r1, sample_impulse_r2, sample_impulse_r3);
 	power_model_add_device(pm, d);
+
+	/* Tractor Beam */
+	o->tsd.ship.power_data.tractor.r1 = 255;
+	o->tsd.ship.power_data.tractor.r2 = 0;
+	o->tsd.ship.power_data.tractor.r3 = 200;
+	d = new_power_device(o, sample_tractor_r1, sample_tractor_r2, sample_tractor_r3);
+	power_model_add_device(pm, d);
+
 }
 
 static void init_player(struct snis_entity *o)
@@ -1866,6 +1882,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.power_data.warp.r1 = 0;
 	o->tsd.ship.power_data.maneuvering.r1 = 0;
 	o->tsd.ship.power_data.impulse.r1 = 0;
+	o->tsd.ship.power_data.tractor.r1 = 0;
 	o->tsd.ship.warp_time = -1;
 	o->tsd.ship.scibeam_range = 0;
 	o->tsd.ship.scibeam_a1 = 0;
@@ -3887,6 +3904,11 @@ static int process_request_maneuvering_pwr(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.maneuvering.r2), no_limit); 
 }
 
+static int process_request_tractor_pwr(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.tractor.r2), no_limit); 
+}
+
 static int process_request_laser_wavelength(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.phaser_wavelength), no_limit); 
@@ -4302,6 +4324,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_MANEUVERING_PWR:
 			rc = process_request_maneuvering_pwr(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_TRACTOR_PWR:
+			rc = process_request_tractor_pwr(c);
 			if (rc)
 				goto protocol_error;
 			break;

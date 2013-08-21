@@ -105,6 +105,7 @@
 #define OPCODE_EXEC_LUA_SCRIPT		180
 #define OPCODE_REQUEST_TRACTORBEAM	181
 #define OPCODE_UPDATE_TRACTORBEAM	182
+#define OPCODE_REQUEST_TRACTOR_PWR	183
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -369,6 +370,7 @@ struct ship_damage_packet {
 	uint8_t phaser_banks;
 	uint8_t sensors;
 	uint8_t comms;
+	uint8_t tractor;
 };
 
 struct respawn_time_packet {

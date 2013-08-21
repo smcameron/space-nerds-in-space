@@ -102,6 +102,7 @@ struct power_model_data {
 	struct power_model_device comms;
 	struct power_model_device phasers;
 	struct power_model_device shields;
+	struct power_model_device tractor;
 	uint8_t voltage;
 };
 
@@ -182,6 +183,7 @@ struct ship_damage_data {
 	uint8_t phaser_banks_damage;
 	uint8_t sensors_damage;
 	uint8_t comms_damage;
+	uint8_t tractor_damage;
 };
 
 struct command_data {

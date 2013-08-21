@@ -4912,6 +4912,11 @@ static void do_maneuvering_pwr(struct slider *s)
 	do_adjust_slider_value(s, OPCODE_REQUEST_MANEUVERING_PWR);
 }
 	
+static void do_tractor_pwr(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_TRACTOR_PWR);
+}
+
 static void do_shields_pwr(struct slider *s)
 {
 	do_adjust_slider_value(s, OPCODE_REQUEST_SHIELDS_PWR);
@@ -5007,6 +5012,7 @@ DEFINE_CURRENT_SAMPLER(maneuvering) /* defines sample_maneuvering_current */
 DEFINE_CURRENT_SAMPLER(shields) /* defines sample_shields_current */
 DEFINE_CURRENT_SAMPLER(comms) /* defines sample_comms_current */
 DEFINE_CURRENT_SAMPLER(impulse) /* defines sample_impulse_current */
+DEFINE_CURRENT_SAMPLER(tractor) /* defines sample_tractor_current */
 
 static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
 {
@@ -5064,7 +5070,8 @@ CREATE_DAMAGE_SAMPLER_FUNC(warp_damage) /* sample_warp_damage defined here */
 CREATE_DAMAGE_SAMPLER_FUNC(torpedo_tubes_damage) /* sample_torpedo_tubes_damage defined here */
 CREATE_DAMAGE_SAMPLER_FUNC(phaser_banks_damage) /* sample_phaser_banks_damage defined here */
 CREATE_DAMAGE_SAMPLER_FUNC(sensors_damage) /* sample_sensors_damage defined here */
-CREATE_DAMAGE_SAMPLER_FUNC(comms_damage) /* sample_comms__damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(comms_damage) /* sample_comms_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(tractor_damage) /* sample_tractor_damage defined here */
 
 static struct navigation_ui {
 	struct slider *warp_slider;
@@ -5513,6 +5520,7 @@ struct engineering_ui {
 	struct slider *comm_slider;
 	struct slider *phaserbanks_slider;
 	struct slider *throttle_slider;
+	struct slider *tractor_slider;
 
 	struct slider *shield_damage;
 	struct slider *impulse_damage;
@@ -5521,6 +5529,7 @@ struct engineering_ui {
 	struct slider *phaser_banks_damage;
 	struct slider *sensors_damage;
 	struct slider *comms_damage;
+	struct slider *tractor_damage;
 
 } eng_ui;
 
@@ -5533,6 +5542,7 @@ static void zero_engineering_sliders(void)
 	snis_slider_set_input(eng_ui.sensors_slider, 0);
 	snis_slider_set_input(eng_ui.comm_slider, 0);
 	snis_slider_set_input(eng_ui.phaserbanks_slider, 0);
+	snis_slider_set_input(eng_ui.tractor_slider, 0);
 }
 
 static void damcon_button_pressed(void *x)
@@ -5546,7 +5556,7 @@ static void init_engineering_ui(void)
 	int x = 100;
 	int r = 90;
 	int xinc = 190;
-	int yinc = 40; 
+	int yinc = 35; 
 	int dm = DISPLAYMODE_ENGINEERING;
 	int color = AMBER;
 
@@ -5586,6 +5596,8 @@ static void init_engineering_ui(void)
 				0.0, 255.0, sample_warp_current, do_warp_pwr);
 	eu->maneuvering_slider = snis_slider_init(20, y += yinc, 150, color, "MANEUVERING", "0", "100",
 				0.0, 255.0, sample_maneuvering_current, do_maneuvering_pwr);
+	eu->tractor_slider = snis_slider_init(20, y += yinc, 150, color, "TRACTOR", "0", "100",
+				0.0, 255.0, sample_tractor_current, do_tractor_pwr);
 	ui_add_slider(eu->shield_slider, dm);
 	ui_add_slider(eu->phaserbanks_slider, dm);
 	ui_add_slider(eu->comm_slider, dm);
@@ -5593,6 +5605,7 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->impulse_slider, dm);
 	ui_add_slider(eu->warp_slider, dm);
 	ui_add_slider(eu->maneuvering_slider, dm);
+	ui_add_slider(eu->tractor_slider, dm);
 	ui_add_gauge(eu->amp_gauge, dm);
 	ui_add_gauge(eu->voltage_gauge, dm);
 	ui_add_gauge(eu->fuel_gauge, dm);
@@ -5614,6 +5627,8 @@ static void init_engineering_ui(void)
 				0.0, 100.0, sample_sensors_damage, NULL);
 	eu->comms_damage = snis_slider_init(350, y += yinc, 150, color, "COMMS STATUS", "0", "100",
 				0.0, 100.0, sample_comms_damage, NULL);
+	eu->tractor_damage = snis_slider_init(350, y += yinc, 150, color, "TRACTOR STATUS", "0", "100",
+				0.0, 100.0, sample_tractor_damage, NULL);
 	ui_add_slider(eu->shield_damage, dm);
 	ui_add_slider(eu->impulse_damage, dm);
 	ui_add_slider(eu->warp_damage, dm);
@@ -5621,6 +5636,7 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->phaser_banks_damage, dm);
 	ui_add_slider(eu->sensors_damage, dm);
 	ui_add_slider(eu->comms_damage, dm);
+	ui_add_slider(eu->tractor_damage, dm);
 }
 
 static void show_engineering(GtkWidget *w)
