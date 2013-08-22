@@ -20,10 +20,6 @@
 
 #include "quat.h"
 
-#ifndef FOR_N
-#define FOR_N(v, m) for (int v = 0; v < m; ++v)
-#endif /* FOR_N */
-
 void vec3_copy(union vec3 *vo, union vec3 *vi)
 {
 	memcpy(vo, vi, sizeof(union vec3));   
@@ -112,7 +108,8 @@ void quat_copy(union quat *qo, const union quat *qi)
 float quat_len(const union quat *q)
 {
 	float s = 0.0f;
-	FOR_N(i, 4)
+
+	for (int i = 0; i < 4; ++i)
 		s += q->vec[i] * q->vec[i];
 	return sqrtf(s);
 }
@@ -166,7 +163,7 @@ void quat_scale(union quat *o, const union quat *q, float f)
 {
 	/* see: http://www.euclideanspace.com/maths/algebra/
 	   realNormedAlgebra/quaternions/code/index.htm#scale*/
-	FOR_N(i, 4)
+	for (int i = 0; i < 4; ++i)
 		o->vec[i] = q->vec[i] * f;
 }
 
