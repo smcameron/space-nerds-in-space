@@ -1,4 +1,3 @@
-
 /*
    quaternion library - interface
 
@@ -110,6 +109,4 @@ void quat_to_euler(union euler *e, const union quat *q);
 /* normalize angle */
 float normalize_euler_0_2pi(float a);
 
-
 #endif /* __QUAT_H__ */
-
