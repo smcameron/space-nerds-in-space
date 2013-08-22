@@ -406,18 +406,20 @@ static int add_generic_object(uint32_t id, double x, double y, double vx, double
 	return i;
 }
 
-static void update_generic_object(int index, double x, double y, double vx, double vy, double heading, uint32_t alive)
+static void update_generic_object(int index, double x, double y, double z,
+				double vx, double vy, double heading, uint32_t alive)
 {
 	struct snis_entity *o = &go[index];
 
 	o->x = x;
 	o->y = y;
+	o->z = z;
 	o->vx = vx;
 	o->vy = vy;
 	o->heading = heading;
 	o->alive = alive;
 	if (o->entity) {
-		update_entity_pos(o->entity, x, 0, -y);
+		update_entity_pos(o->entity, x, z, -y);
 		update_entity_rotation(o->entity, M_PI / 2.0,
 			heading + M_PI - (o->type == OBJTYPE_SHIP1) * (M_PI / 2.0), 0);
 	}
@@ -587,7 +589,7 @@ static int update_damcon_part(uint32_t id, uint32_t ship_id, uint32_t type,
 }
 
 
-static int update_econ_ship(uint32_t id, double x, double y, double vx,
+static int update_econ_ship(uint32_t id, double x, double y, double z, double vx,
 			double vy, double heading, uint32_t alive, uint32_t victim_id,
 			uint8_t shiptype)
 {
@@ -598,49 +600,49 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 	if (i < 0) {
 		switch (shiptype) {
 		case SHIP_CLASS_CRUISER:
-			e = add_entity(ecx, cruiser_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, cruiser_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_DESTROYER:
-			e = add_entity(ecx, destroyer_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, destroyer_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_TRANSPORT:
-			e = add_entity(ecx, transport_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, transport_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_DRAGONHAWK:
-			e = add_entity(ecx, dragonhawk_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, dragonhawk_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_SKORPIO:
-			e = add_entity(ecx, skorpio_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, skorpio_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_DISRUPTOR:
-			e = add_entity(ecx, disruptor_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, disruptor_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_RESEARCH_VESSEL:
-			e = add_entity(ecx, research_vessel_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, research_vessel_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(ecx, freighter_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, freighter_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_TANKER:
-			e = add_entity(ecx, tanker_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, tanker_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_BATTLESTAR:
-			e = add_entity(ecx, battlestar_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, battlestar_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_ASTEROIDMINER:
-			e = add_entity(ecx, asteroidminer_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, asteroidminer_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_SCOUT:
-			e = add_entity(ecx, scout_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, scout_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_SCIENCE:
-			e = add_entity(ecx, spaceship2_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, spaceship2_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_STARSHIP:
-			e = add_entity(ecx, ship_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, ship_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		default:
-			e = add_entity(ecx, cruiser_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, cruiser_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		}
 		i = add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP2, alive, e);
@@ -648,8 +650,9 @@ static int update_econ_ship(uint32_t id, double x, double y, double vx,
 			return i;
 		go[i].entity = e;
 	} else {
-		update_generic_object(i, x, y, vx, vy, heading, alive); 
+		update_generic_object(i, x, y, z, vx, vy, heading, alive); 
 	}
+	go[i].z = z;
 	go[i].tsd.ship.victim_id = (int32_t) victim_id;
 	go[i].tsd.ship.shiptype = shiptype;
 	return 0;
@@ -666,7 +669,7 @@ static int update_power_model_data(uint32_t id, struct power_model_data *pmd)
 	return 0;
 }
 
-static int update_ship(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive,
+static int update_ship(uint32_t id, double x, double y, double z, double vx, double vy, double heading, uint32_t alive,
 			uint32_t torpedoes, uint32_t power, 
 			double gun_heading, double sci_heading, double sci_beam_width, int type,
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
@@ -683,21 +686,22 @@ static int update_ship(uint32_t id, double x, double y, double vx, double vy, do
 	if (i < 0) {
 		switch (shiptype) {
 		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(ecx, freighter_mesh, x, 0, -y, SHIP_COLOR);
+			e = add_entity(ecx, freighter_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		default:
 			if (id == my_ship_id)	
-				e = add_entity(ecx, NULL, x, 0, -y, SHIP_COLOR);
+				e = add_entity(ecx, NULL, x, z, -y, SHIP_COLOR);
 			else
-				e = add_entity(ecx, ship_mesh, x, 0, -y, SHIP_COLOR);
+				e = add_entity(ecx, ship_mesh, x, z, -y, SHIP_COLOR);
 			break;
 		}
 		i = add_generic_object(id, x, y, vx, vy, heading, type, alive, e);
 		if (i < 0)
 			return i;
 	} else {
-		update_generic_object(i, x, y, vx, vy, heading, alive); 
+		update_generic_object(i, x, y, z, vx, vy, heading, alive); 
 	}
+	go[i].z = z;
 	go[i].tsd.ship.torpedoes = torpedoes;
 	go[i].tsd.ship.power = power;
 	go[i].tsd.ship.gun_heading = gun_heading;
@@ -752,7 +756,8 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	return 0;
 }
 
-static int update_torpedo(uint32_t id, double x, double y, double vx, double vy, uint32_t ship_id)
+static int update_torpedo(uint32_t id, double x, double y, double z,
+			double vx, double vy, uint32_t ship_id)
 {
 	int i;
 	struct entity *e;
@@ -765,7 +770,7 @@ static int update_torpedo(uint32_t id, double x, double y, double vx, double vy,
 			return i;
 		go[i].tsd.torpedo.ship_id = ship_id;
 	} else {
-		update_generic_object(i, x, y, vx, vy, 0.0, 1); 
+		update_generic_object(i, x, y, z, vx, vy, 0.0, 1); 
 	}
 	return 0;
 }
@@ -807,21 +812,22 @@ static int update_tractorbeam(uint32_t id, uint32_t origin, uint32_t target)
 }
 
 
-static int update_laser(uint32_t id, double x, double y, double vx, double vy, uint32_t ship_id)
+static int update_laser(uint32_t id, double x, double y, double z,
+			double vx, double vy, uint32_t ship_id)
 {
 	int i;
 	struct entity *e;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, laser_mesh, x, 0, -y, LASER_COLOR);
+		e = add_entity(ecx, laser_mesh, x, z, -y, LASER_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.laser.ship_id = ship_id;
 	} else {
-		update_generic_object(i, x, y, vx, vy, 0.0, 1); 
+		update_generic_object(i, x, y, z, vx, vy, 0.0, 1); 
 	}
 	return 0;
 }
@@ -1020,7 +1026,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 		struct spacemonster_data *sd;
 		int n;
 
-		update_generic_object(i, x, y, 0, 0, 0.0, 1); 
+		update_generic_object(i, x, y, 0, 0, 0, 0.0, 1); 
 		update_entity_pos(go[i].entity, x, z, -y);
 		sd = &go[i].tsd.spacemonster;
 		sd->zz = z;
@@ -1051,7 +1057,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z)
 		int axis;
 		float angle;
 
-		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, 1);
 		update_entity_pos(go[i].entity, x, z, -y);
 
 		/* make asteroids spin */
@@ -1080,7 +1086,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 		int axis;
 		float angle;
 
-		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, 1);
 		update_entity_pos(go[i].entity, x, z, -y);
 
 		/* make it spin */
@@ -1114,7 +1120,7 @@ static int update_planet(uint32_t id, double x, double y, double z)
 					(axis == 1) * angle, (axis == 2) * angle);
 	} else {
 
-		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, 1);
 		update_entity_pos(go[i].entity, x, z, -y);
 	}
 	return 0;
@@ -1133,7 +1139,7 @@ static int update_wormhole(uint32_t id, double x, double y)
 		if (i < 0)
 			return i;
 	} else {
-		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+		update_generic_object(i, x, y, 0, 0.0, 0.0, 0.0, 1);
 	}
 	return 0;
 }
@@ -1151,7 +1157,7 @@ static int update_starbase(uint32_t id, double x, double y)
 		if (i < 0)
 			return i;
 	} else {
-		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+		update_generic_object(i, x, y, 0, 0.0, 0.0, 0.0, 1);
 	}
 	return 0;
 }
@@ -1200,7 +1206,7 @@ static int update_nebula(uint32_t id, double x, double y, double r)
 			return i;
 		add_nebula_entry(go[i].id, x, y, r);
 	} else {
-		update_generic_object(i, x, y, 0.0, 0.0, 0.0, 1);
+		update_generic_object(i, x, y, 0, 0.0, 0.0, 0.0, 1);
 	}
 	go[i].tsd.nebula.r = r;	
 	go[i].alive = 1;
@@ -2538,7 +2544,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, power;
 	uint32_t fuel, victim_id;
-	double dx, dy, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
+	double dx, dy, dz, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
@@ -2552,8 +2558,9 @@ static int process_update_ship_packet(uint16_t opcode)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "wwSSSS", &id, &alive,
+	packed_buffer_extract(&pb, "wwSSSSS", &id, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
+				&dz, (int32_t) UNIVERSE_DIM,
 				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
 	packed_buffer_extract(&pb, "UwwUUU", &dheading, (uint32_t) 360,
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
@@ -2566,7 +2573,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_ship(id, dx, dy, dvx, dvy, dheading, alive, torpedoes, power,
+	rc = update_ship(id, dx, dy, dz, dvx, dvy, dheading, alive, torpedoes, power,
 				dgheading, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
 				weapzoom, navzoom, warpdrive, requested_warpdrive, requested_shield,
@@ -2679,13 +2686,14 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
 	uint32_t id, alive, victim_id;
-	double dx, dy, dheading, dv, dvx, dvy;
+	double dx, dy, dz, dheading, dv, dvx, dvy;
 	uint8_t shiptype;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSUUwb", &id, &alive,
+	rc = read_and_unpack_buffer(buffer, "wwSSSUUwb", &id, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
+				&dz, (int32_t) UNIVERSE_DIM,
 				&dv, (uint32_t) UNIVERSE_DIM, &dheading, (uint32_t) 360,
 				&victim_id, &shiptype);
 	if (rc != 0)
@@ -2693,7 +2701,7 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	dvx = cos(dheading) * dv;
 	dvy = sin(dheading) * dv;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_econ_ship(id, dx, dy, dvx, dvy, dheading, alive, victim_id, shiptype);
+	rc = update_econ_ship(id, dx, dy, dz, dvx, dvy, dheading, alive, victim_id, shiptype);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -2702,17 +2710,18 @@ static int process_update_torpedo_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, ship_id;
-	double dx, dy, dvx, dvy;
+	double dx, dy, dz, dvx, dvy;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_torpedo_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSS", &id, &ship_id,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSS", &id, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
+				&dz, (int32_t) UNIVERSE_DIM,
 				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_torpedo(id, dx, dy, dvx, dvy, ship_id);
+	rc = update_torpedo(id, dx, dy, dz, dvx, dvy, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -2745,17 +2754,18 @@ static int process_update_laser_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, ship_id;
-	double dx, dy, dvx, dvy;
+	double dx, dy, dz, dvx, dvy;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_laser_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSS", &id, &ship_id,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSS", &id, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
+				&dz, (int32_t) UNIVERSE_DIM,
 				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_laser(id, dx, dy, dvx, dvy, ship_id);
+	rc = update_laser(id, dx, dy, dz, dvx, dvy, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

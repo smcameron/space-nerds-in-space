@@ -119,7 +119,7 @@ struct update_ship_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint32_t alive;
-	uint32_t x, y, vx, vy, heading;
+	uint32_t x, y, z, vx, vy, heading;
         uint32_t ntorpedoes;
         uint32_t power;
 	uint32_t gun_heading;
@@ -165,7 +165,7 @@ struct update_econ_ship_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint32_t alive;
-	uint32_t x, y, v, heading;
+	uint32_t x, y, z, v, heading;
 	uint32_t victim_id;
 	uint8_t shiptype; /* same as ship_sdata_packet subclass */
 };

@@ -1915,14 +1915,16 @@ static void respawn_player(struct snis_entity *o)
 static int add_ship(void)
 {
 	int i;
-	double x, y, heading;
+	double x, y, z, heading;
 
 	x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
 	y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+	z = (double) snis_randn(700) - 350;
 	heading = degrees_to_radians(0.0 + snis_randn(360)); 
 	i = add_generic_object(x, y, 0.0, 0.0, heading, OBJTYPE_SHIP2);
 	if (i < 0)
 		return i;
+	go[i].z = z;
 	go[i].move = ship_move;
 	go[i].tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
 	go[i].tsd.ship.shields = 100.0;
@@ -4851,9 +4853,9 @@ static void send_econ_update_ship_packet(struct game_client *c,
 {
 	double dv = sqrt((o->vx * o->vx) + (o->vy * o->vy));
 
-	pb_queue_to_client(c, packed_buffer_new("hwwSSUUwb", OPCODE_ECON_UPDATE_SHIP,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSSUUwb", OPCODE_ECON_UPDATE_SHIP,
 			o->id, o->alive, o->x, (int32_t) UNIVERSE_DIM,
-			o->y, (int32_t) UNIVERSE_DIM,
+			o->y, (int32_t) UNIVERSE_DIM, o->z, (int32_t) UNIVERSE_DIM,
 			dv, (uint32_t) UNIVERSE_DIM, o->heading, (uint32_t) 360,
 			o->tsd.ship.victim_id, o->tsd.ship.shiptype));
 }
@@ -4928,8 +4930,9 @@ static void send_update_ship_packet(struct game_client *c,
 	tloading = tloading | (tloaded << 4);
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
-	packed_buffer_append(pb, "hwwSSSS", opcode, o->id, o->alive,
+	packed_buffer_append(pb, "hwwSSSSS", opcode, o->id, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
+			o->z, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vy, (int32_t) UNIVERSE_DIM);
 	packed_buffer_append(pb, "UwwUUUbbbwbbbbbbbbbbbw", o->heading, (uint32_t) 360,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
@@ -5051,10 +5054,11 @@ static void send_update_explosion_packet(struct game_client *c,
 static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwwSSSS", OPCODE_UPDATE_TORPEDO, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSSSS", OPCODE_UPDATE_TORPEDO, o->id,
 					o->tsd.torpedo.ship_id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
 					o->vx, (int32_t) UNIVERSE_DIM,
 					o->vy, (int32_t) UNIVERSE_DIM));
 }
@@ -5062,10 +5066,11 @@ static void send_update_torpedo_packet(struct game_client *c,
 static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwwSSSS", OPCODE_UPDATE_LASER,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSSSS", OPCODE_UPDATE_LASER,
 					o->id, o->tsd.laser.ship_id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
 					o->vx, (int32_t) UNIVERSE_DIM,
 					o->vy, (int32_t) UNIVERSE_DIM));
 }
