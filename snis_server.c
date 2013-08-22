@@ -225,13 +225,9 @@ static void generic_move(__attribute__((unused)) struct snis_entity *o)
 
 static void asteroid_move(struct snis_entity *o)
 {
-	double angle;
-
-	angle = (universe_timestamp * M_PI / 180) / o->tsd.asteroid.r +
-			o->tsd.asteroid.angle_offset;
-	angle = angle * ASTEROID_SPEED;
-	set_object_location(o, o->tsd.asteroid.r * sin(angle) + XKNOWN_DIM / 2.0,
-			o->tsd.asteroid.r * cos(angle) + YKNOWN_DIM / 2.0, o->z);
+	o->x += o->vx;
+	o->y += o->vy;
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
 	o->timestamp = universe_timestamp;
 }
 
@@ -2122,9 +2118,8 @@ static int add_asteroid(double x, double y, double vx, double vy, double heading
 	go[i].sdata.shield_width = 0;
 	go[i].sdata.shield_depth = 0;
 	go[i].move = asteroid_move;
-	go[i].tsd.asteroid.r = hypot(x - XKNOWN_DIM / 2.0, y - YKNOWN_DIM / 2.0);
-	go[i].tsd.asteroid.angle_offset = atan2(x - XKNOWN_DIM / 2.0,
-							y - YKNOWN_DIM / 2.0);
+	go[i].vx = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
+	go[i].vy = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
 	return i;
 }
 
