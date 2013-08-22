@@ -70,11 +70,21 @@ for i, v in pairs(player_ids) do
 end
 
 if (player_ids[1]) then
-	move_object(player_ids[1], 75000, 75000, 0);
+	move_object(player_ids[1], 70000, 70000, 0);
 end
 if (player_ids[2]) then
-	move_object(player_ids[1], 25000, 25000, 0);
+	move_object(player_ids[2], 25000, 25000, 0);
 end
 attack_ship(specific_ship_id, player_ids[1]);
 
+for i = -3, 3 do
+	for j = -3, 3 do
+		id1 = add_ship("a", 80000 + j * 100, 68000 - i * 100,
+				j * 100, DRAGONHAWK, vekkazi);
+		id2 = add_ship("a", 60000 + j * 100, 68000 - i * 100,
+				j * 100, SKORPIO, zarkon);
+		attack_ship(id1, id2);
+		attack_ship(id2, id1);
+	end
+end
 
