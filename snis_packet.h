@@ -202,7 +202,7 @@ struct update_nebula_packet {
 struct update_explosion_packet {
 	uint16_t opcode;
 	uint32_t id;
-	uint32_t x, y;
+	uint32_t x, y, z;
 	uint16_t nsparks;
 	uint16_t velocity;
 	uint16_t time;

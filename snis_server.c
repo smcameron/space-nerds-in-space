@@ -393,7 +393,7 @@ static void snis_queue_add_global_sound(uint16_t sound_number)
 		snis_queue_add_sound(sound_number, ROLE_ALL, bridgelist[i].shipid);
 }
 
-static int add_explosion(double x, double y, uint16_t velocity,
+static int add_explosion(double x, double y, double z, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type);
 
 static void normalize_coords(struct snis_entity *o)
@@ -557,7 +557,7 @@ static void torpedo_move(struct snis_entity *o)
 		}
 
 		if (!go[i].alive) {
-			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50, go[i].type);
+			(void) add_explosion(go[i].x, go[i].y, go[i].z, 50, 50, 50, go[i].type);
 			/* TODO -- these should be different sounds */
 			/* make sound for players that got hit */
 			/* make sound for players that did the hitting */
@@ -573,7 +573,7 @@ static void torpedo_move(struct snis_entity *o)
 					ROLE_SOUNDSERVER, go[i].id);
 			}
 		} else {
-			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5, go[i].type);
+			(void) add_explosion(go[i].x, go[i].y, go[i].z, 50, 5, 5, go[i].type);
 			snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, go[i].id);
 			snis_queue_add_sound(TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 		}
@@ -653,7 +653,7 @@ static void laser_move(struct snis_entity *o)
 		}
 
 		if (!go[i].alive) {
-			(void) add_explosion(go[i].x, go[i].y, 50, 50, 50, otype);
+			(void) add_explosion(go[i].x, go[i].y, go[i].z, 50, 50, 50, otype);
 			/* TODO -- these should be different sounds */
 			/* make sound for players that got hit */
 			/* make sound for players that did the hitting */
@@ -669,7 +669,7 @@ static void laser_move(struct snis_entity *o)
 							ROLE_SOUNDSERVER, go[i].id);
 			}
 		} else {
-			(void) add_explosion(go[i].x, go[i].y, 50, 5, 5, otype);
+			(void) add_explosion(go[i].x, go[i].y, go[i].z, 50, 5, 5, otype);
 			snis_queue_add_sound(DISTANT_PHASER_HIT_SOUND, ROLE_SOUNDSERVER, go[i].id);
 			snis_queue_add_sound(PHASER_HIT_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
 		}
@@ -2183,7 +2183,7 @@ static int add_nebula(double x, double y, double z,
 	return i;
 }
 
-static int add_explosion(double x, double y, uint16_t velocity,
+static int add_explosion(double x, double y, double z, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type)
 {
 	int i;
@@ -2191,6 +2191,7 @@ static int add_explosion(double x, double y, uint16_t velocity,
 	i = add_generic_object(x, y, 0, 0, 0, OBJTYPE_EXPLOSION);
 	if (i < 0)
 		return i;
+	go[i].z = z;
 	go[i].move = explosion_move;
 	go[i].alive = 30; /* long enough to get propagaed out to all clients */
 	go[i].tsd.explosion.velocity = velocity;
@@ -2279,7 +2280,7 @@ static void laserbeam_move(struct snis_entity *o)
 		target->alive = 0;
 
 	if (!target->alive) {
-		(void) add_explosion(target->x, target->y, 50, 50, 50, ttype);
+		(void) add_explosion(target->x, target->y, target->z, 50, 50, 50, ttype);
 		/* TODO -- these should be different sounds */
 		/* make sound for players that got hit */
 		/* make sound for players that did the hitting */
@@ -2297,7 +2298,7 @@ static void laserbeam_move(struct snis_entity *o)
 						ROLE_SOUNDSERVER, target->id);
 		}
 	} else {
-		(void) add_explosion(target->x, target->y, 50, 5, 5, ttype);
+		(void) add_explosion(target->x, target->y, target->z, 50, 5, 5, ttype);
 	}
 	return;
 }
@@ -2463,7 +2464,7 @@ static int add_derelict(const char *name, double x, double y, double z,
 		return i;
 	if (name)
 		strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
-	go[i].z = (double) snis_randn(70) - 35;
+	go[i].z = z;
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
@@ -5045,8 +5046,9 @@ static void send_update_nebula_packet(struct game_client *c,
 static void send_update_explosion_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSShhhb", OPCODE_UPDATE_EXPLOSION, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwSSShhhb", OPCODE_UPDATE_EXPLOSION, o->id,
 				o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
+				o->z, (int32_t) UNIVERSE_DIM,
 				o->tsd.explosion.nsparks, o->tsd.explosion.velocity,
 				o->tsd.explosion.time, o->tsd.explosion.victim_type));
 }
