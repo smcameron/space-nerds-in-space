@@ -28,20 +28,20 @@
 #endif /* FOR_N */
 
 
-void vec3_copy(vec3_t *vo, vec3_t *vi)
+void vec3_copy(union vec3 *vo, union vec3 *vi)
 {
-   memcpy(vo, vi, sizeof(vec3_t));   
+   memcpy(vo, vi, sizeof(union vec3));   
 }
 
 
-void quat_init(quat_t *q, const vec3_t *acc, const vec3_t *mag)
+void quat_init(union quat *q, const union vec3 *acc, const union vec3 *mag)
 {
-   float ax = acc->x;
-   float ay = acc->y;
-   float az = acc->z;
-   float mx = mag->x;
-   float my = mag->y;
-   float mz = mag->z;
+   float ax = acc->v.x;
+   float ay = acc->v.y;
+   float az = acc->v.z;
+   float mx = mag->v.x;
+   float my = mag->v.y;
+   float mz = mag->v.z;
 
 
    float init_roll = atan2(-ay, -az);
@@ -66,61 +66,56 @@ void quat_init(quat_t *q, const vec3_t *acc, const vec3_t *mag)
    float cosHeading = cosf(init_yaw * 0.5f);
    float sinHeading = sinf(init_yaw * 0.5f);
 
-   q->q0 = cos_roll * cos_pitch * cosHeading + sin_roll * sin_pitch * sinHeading;
-   q->q1 = sin_roll * cos_pitch * cosHeading - cos_roll * sin_pitch * sinHeading;
-   q->q2 = cos_roll * sin_pitch * cosHeading + sin_roll * cos_pitch * sinHeading;
-   q->q3 = cos_roll * cos_pitch * sinHeading - sin_roll * sin_pitch * cosHeading;
+   q->q.q0 = cos_roll * cos_pitch * cosHeading + sin_roll * sin_pitch * sinHeading;
+   q->q.q1 = sin_roll * cos_pitch * cosHeading - cos_roll * sin_pitch * sinHeading;
+   q->q.q2 = cos_roll * sin_pitch * cosHeading + sin_roll * cos_pitch * sinHeading;
+   q->q.q3 = cos_roll * cos_pitch * sinHeading - sin_roll * sin_pitch * cosHeading;
 }
 
 
-void quat_init_axis(quat_t *q, float x, float y, float z, float a)
+void quat_init_axis(union quat *q, float x, float y, float z, float a)
 {
    /* see: http://www.euclideanspace.com/maths/geometry/rotations
            /conversions/angleToQuaternion/index.htm */
    float a2 = a * 0.5f;
    float s = sin(a2);
-   q->x = x * s;   
-   q->y = y * s;   
-   q->z = z * s;   
-   q->w = cos(a2);   
+   q->v.x = x * s;   
+   q->v.y = y * s;   
+   q->v.z = z * s;   
+   q->v.w = cos(a2);   
 }
 
-
-void quat_init_axis_v(quat_t *q, const vec3_t *v, float a)
+void quat_init_axis_v(union quat *q, const union vec3 *v, float a)
 {
-   quat_init_axis(q, v->x, v->y, v->z, a);
+   quat_init_axis(q, v->v.x, v->v.y, v->v.z, a);
 }
 
-
-void quat_rot_vec_self(vec3_t *v, const quat_t *q)
+void quat_rot_vec_self(union vec3 *v, const union quat *q)
 {
-   vec3_t vo;
+   union vec3 vo;
    quat_rot_vec(&vo, v, q);
    vec3_copy(v, &vo);
 }
 
-
-void quat_rot_vec(vec3_t *vo, const vec3_t *vi, const quat_t *q)
+void quat_rot_vec(union vec3 *vo, const union vec3 *vi, const union quat *q)
 {
    /* see: https://github.com/qsnake/ase/blob/master/ase/quaternions.py */
-   const float vx = vi->x, vy = vi->y, vz = vi->z;
-   const float qw = q->w, qx = q->x, qy = q->y, qz = q->z;
+   const float vx = vi->v.x, vy = vi->v.y, vz = vi->v.z;
+   const float qw = q->v.w, qx = q->v.x, qy = q->v.y, qz = q->v.z;
    const float qww = qw * qw, qxx = qx * qx, qyy = qy * qy, qzz = qz * qz;
    const float qwx = qw * qx, qwy = qw * qy, qwz = qw * qz, qxy = qx * qy;
    const float qxz = qx * qz, qyz = qy * qz;
-   vo->x = (qww + qxx - qyy - qzz) * vx + 2 * ((qxy - qwz) * vy + (qxz + qwy) * vz);
-   vo->y = (qww - qxx + qyy - qzz) * vy + 2 * ((qxy + qwz) * vx + (qyz - qwx) * vz);
-   vo->z = (qww - qxx - qyy + qzz) * vz + 2 * ((qxz - qwy) * vx + (qyz + qwx) * vy);
+   vo->v.x = (qww + qxx - qyy - qzz) * vx + 2 * ((qxy - qwz) * vy + (qxz + qwy) * vz);
+   vo->v.y = (qww - qxx + qyy - qzz) * vy + 2 * ((qxy + qwz) * vx + (qyz - qwx) * vz);
+   vo->v.z = (qww - qxx - qyy + qzz) * vz + 2 * ((qxz - qwy) * vx + (qyz + qwx) * vy);
 }
 
-
-void quat_copy(quat_t *qo, const quat_t *qi)
+void quat_copy(union quat *qo, const union quat *qi)
 {
-   memcpy(qo, qi, sizeof(quat_t));   
+   memcpy(qo, qi, sizeof(union quat));   
 }
 
-
-float quat_len(const quat_t *q)
+float quat_len(const union quat *q)
 {
    float s = 0.0f;
    FOR_N(i, 4)
@@ -128,57 +123,52 @@ float quat_len(const quat_t *q)
    return sqrtf(s);
 }
 
-
-void quat_conj(quat_t *q_out, const quat_t *q_in)
+void quat_conj(union quat *q_out, const union quat *q_in)
 {
-   q_out->x = -q_in->x;
-   q_out->y = -q_in->y;
-   q_out->z = -q_in->z;
-   q_out->w = q_in->w;
+   q_out->v.x = -q_in->v.x;
+   q_out->v.y = -q_in->v.y;
+   q_out->v.z = -q_in->v.z;
+   q_out->v.w = q_in->v.w;
 }
 
-
-void quat_to_euler(euler_t *euler, const quat_t *quat)
+void quat_to_euler(union euler *euler, const union quat *quat)
 {
-   const float x = quat->x, y = quat->y, z = quat->z, w = quat->w;
+   const float x = quat->v.x, y = quat->v.y, z = quat->v.z, w = quat->v.w;
    const float ww = w * w, xx = x * x, yy = y * y, zz = z * z;
-   euler->yaw = normalize_euler_0_2pi(atan2f(2.f * (x * y + z * w), xx - yy - zz + ww));
-   euler->pitch = asinf(-2.f * (x * z - y * w));
-   euler->roll = atan2f(2.f * (y * z + x * w), -xx - yy + zz + ww);
+   euler->a.yaw = normalize_euler_0_2pi(atan2f(2.f * (x * y + z * w), xx - yy - zz + ww));
+   euler->a.pitch = asinf(-2.f * (x * z - y * w));
+   euler->a.roll = atan2f(2.f * (y * z + x * w), -xx - yy + zz + ww);
 }
 
-
-void quat_mul(quat_t *o, const quat_t *q1, const quat_t *q2)
+void quat_mul(union quat *o, const union quat *q1, const union quat *q2)
 {
    /* see: http://www.euclideanspace.com/maths/algebra/
            realNormedAlgebra/quaternions/code/index.htm#mul */
-   o->x =  q1->x * q2->w + q1->y * q2->z - q1->z * q2->y + q1->w * q2->x;
-   o->y = -q1->x * q2->z + q1->y * q2->w + q1->z * q2->x + q1->w * q2->y;
-   o->z =  q1->x * q2->y - q1->y * q2->x + q1->z * q2->w + q1->w * q2->z;
-   o->w = -q1->x * q2->x - q1->y * q2->y - q1->z * q2->z + q1->w * q2->w;
+   o->v.x =  q1->v.x * q2->v.w + q1->v.y * q2->v.z - q1->v.z * q2->v.y + q1->v.w * q2->v.x;
+   o->v.y = -q1->v.x * q2->v.z + q1->v.y * q2->v.w + q1->v.z * q2->v.x + q1->v.w * q2->v.y;
+   o->v.z =  q1->v.x * q2->v.y - q1->v.y * q2->v.x + q1->v.z * q2->v.w + q1->v.w * q2->v.z;
+   o->v.w = -q1->v.x * q2->v.x - q1->v.y * q2->v.y - q1->v.z * q2->v.z + q1->v.w * q2->v.w;
 }
 
-
-void quat_add(quat_t *o, const quat_t *q1, const quat_t *q2)
+void quat_add(union quat *o, const union quat *q1, const union quat *q2)
 {
    /* see: http://www.euclideanspace.com/maths/algebra/
            realNormedAlgebra/quaternions/code/index.htm#add */
-   o->x = q1->x + q2->x;
-   o->y = q1->y + q2->y;
-   o->z = q1->z + q2->z;
-   o->w = q1->w + q2->w;
+   o->v.x = q1->v.x + q2->v.x;
+   o->v.y = q1->v.y + q2->v.y;
+   o->v.z = q1->v.z + q2->v.z;
+   o->v.w = q1->v.w + q2->v.w;
 }
 
-
-void quat_add_to(quat_t *o, const quat_t *q)
+void quat_add_to(union quat *o, const union quat *q)
 {
-   quat_t tmp;
+   union quat tmp;
    quat_add(&tmp, o, q);
    quat_copy(o, &tmp);
 }
 
 
-void quat_scale(quat_t *o, const quat_t *q, float f)
+void quat_scale(union quat *o, const union quat *q, float f)
 {
    /* see: http://www.euclideanspace.com/maths/algebra/
            realNormedAlgebra/quaternions/code/index.htm#scale*/
@@ -187,13 +177,13 @@ void quat_scale(quat_t *o, const quat_t *q, float f)
 }
 
 
-void quat_scale_self(quat_t *q, float f)
+void quat_scale_self(union quat *q, float f)
 {
    quat_scale(q, q, f);
 }
 
 
-void quat_normalize(quat_t *o, const quat_t *q)
+void quat_normalize(union quat *o, const union quat *q)
 {
    /* see: http://www.euclideanspace.com/maths/algebra/
            realNormedAlgebra/quaternions/code/index.htm#normalise */
@@ -201,7 +191,7 @@ void quat_normalize(quat_t *o, const quat_t *q)
 }
 
 
-void quat_normalize_self(quat_t *q)
+void quat_normalize_self(union quat *q)
 {
    quat_normalize(q, q);
 }
