@@ -386,7 +386,7 @@ struct snis_entity {
 	uint32_t index;
 	uint32_t id;
 	double x, y, z;
-	double vx, vy;
+	double vx, vy, vz;
 	double heading;
 	uint32_t alive;
 	uint32_t type;

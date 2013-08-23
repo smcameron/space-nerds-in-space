@@ -40,6 +40,11 @@ double hypot2(double x, double y)
 	return x * x + y * y;
 }
 
+double hypot3d(double x, double y, double z)
+{
+	return sqrt(x * x + y * y + z * z);
+}
+
 static unsigned long snis_rand_next = 1;
 
 int snis_rand(void)

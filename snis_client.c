@@ -763,7 +763,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 	struct entity *e;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, torpedo_mesh, x, 0, -y, TORPEDO_COLOR);
+		e = add_entity(ecx, torpedo_mesh, x, z, -y, TORPEDO_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
@@ -771,6 +771,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 		go[i].tsd.torpedo.ship_id = ship_id;
 	} else {
 		update_generic_object(i, x, y, z, vx, vy, 0.0, 1); 
+		update_entity_pos(go[i].entity, x, z, -y);
 	}
 	return 0;
 }

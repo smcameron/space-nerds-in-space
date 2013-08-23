@@ -46,6 +46,7 @@
 #include "snis.h"
 #include "snis_log.h"
 #include "mathutils.h"
+#include "matrix.h"
 #include "snis_alloc.h"
 #include "snis_marshal.h"
 #include "snis_socket_io.h"
@@ -513,7 +514,7 @@ static void torpedo_move(struct snis_entity *o)
 {
 	int i, otype;
 
-	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	normalize_coords(o);
 	o->timestamp = universe_timestamp;
 	o->alive--;
@@ -766,7 +767,26 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 	}
 }
 
-static int add_torpedo(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
+static void calculate_torpedo_velocities(double ox, double oy, double oz, 
+			double tx, double ty, double tz, double speed,
+			double *vx, double *vy, double *vz)
+{
+	struct mat41 m;
+
+	m.m[0] = tx - ox;
+	m.m[1] = ty - oy;
+	m.m[2] = tz - oz;
+	m.m[3] = 1.0;
+
+	normalize_vector(&m, &m);
+
+	*vx = m.m[0] * speed;
+	*vy = m.m[1] * speed;
+	*vz = m.m[2] * speed;
+}
+
+static int add_torpedo(double x, double y, double z,
+		double vx, double vy, double vz, uint32_t ship_id);
 static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
 static uint8_t update_phaser_banks(int current, int max);
 
@@ -1018,22 +1038,19 @@ static void ship_move(struct snis_entity *o)
 			if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE &&
 				o->tsd.ship.next_torpedo_time <= universe_timestamp &&
 				o->tsd.ship.torpedoes > 0) {
-				double dist, flight_time, tx, ty, vx, vy, angle;
-				int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y);
+				double dist, flight_time, tx, ty, tz, vx, vy, vz;
+				/* int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y); */
 
-				dist = hypot(v->x - o->x, v->y - o->y);
+				dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
 				flight_time = dist / TORPEDO_VELOCITY;
 				tx = v->x + (v->vx * flight_time);
 				ty = v->y + (v->vy * flight_time);
+				tz = v->z;
 
-				angle = atan2(tx - o->x, ty - o->y);
-				if (inside_nebula)
-					angle += (M_PI / 180.0 / 25.0) * (snis_randn(100) - 50);
-				else
-					angle += (M_PI / 180.0 / 5.0) * (snis_randn(100) - 50);
-				vx = TORPEDO_VELOCITY * sin(angle);
-				vy = TORPEDO_VELOCITY * cos(angle);
-				add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
+				calculate_torpedo_velocities(o->x, o->y, o->z,
+					tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
+
+				add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
 				o->tsd.ship.torpedoes--;
 				o->tsd.ship.next_torpedo_time = universe_timestamp +
 					ENEMY_TORPEDO_FIRE_INTERVAL;
@@ -2371,12 +2388,14 @@ static int add_tractorbeam(uint32_t origin, uint32_t target, int alive)
 	return i;
 }
 
-static int add_torpedo(double x, double y, double vx, double vy, double heading, uint32_t ship_id)
+static int add_torpedo(double x, double y, double z, double vx, double vy, double vz, uint32_t ship_id)
 {
 	int i;
-	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_TORPEDO);
+	i = add_generic_object(x, y, vx, vy, 0.0, OBJTYPE_TORPEDO);
 	if (i < 0)
 		return i;
+	go[i].z = z;
+	go[i].vz = vz;
 	go[i].move = torpedo_move;
 	go[i].alive = TORPEDO_LIFETIME;
 	go[i].tsd.torpedo.ship_id = ship_id;
@@ -4085,17 +4104,32 @@ static int process_load_torpedo(struct game_client *c)
 static int process_request_torpedo(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
-	double vx, vy;
+	struct snis_entity *victim = NULL;
+	double vx, vy, vz;
+	int i, tid;
 
-	if (ship->tsd.ship.torpedoes_loaded <= 0)
-		return 0;
-
-	vx = TORPEDO_VELOCITY * sin(ship->tsd.ship.gun_heading);
-	vy = TORPEDO_VELOCITY * -cos(ship->tsd.ship.gun_heading);
 	pthread_mutex_lock(&universe_mutex);
-	add_torpedo(ship->x, ship->y, vx, vy, ship->tsd.ship.gun_heading, ship->id); 
+	if (ship->tsd.ship.torpedoes_loaded <= 0)
+		goto torpedo_fail;
+	tid = ship->tsd.ship.victim_id;
+	if (tid == -1)
+		goto torpedo_fail;
+	i = lookup_by_id(tid);
+	if (i < 0)
+		goto torpedo_fail;
+	victim = &go[i];
+
+	calculate_torpedo_velocities(ship->x, ship->y, ship->z,
+			victim->x, victim->y, victim->z, TORPEDO_VELOCITY, &vx, &vy, &vz);
+			
+	add_torpedo(ship->x, ship->y, ship->z, vx, vy, vz, ship->id); 
 	ship->tsd.ship.torpedoes_loaded--;
 	snis_queue_add_sound(TORPEDO_LAUNCH_SOUND, ROLE_SOUNDSERVER, ship->id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+
+torpedo_fail:
+	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -4123,7 +4157,7 @@ static int process_demon_fire_torpedo(struct game_client *c)
 
 	vx = TORPEDO_VELOCITY * cos(o->heading);
 	vy = TORPEDO_VELOCITY * sin(o->heading);
-	add_torpedo(o->x, o->y, vx, vy, o->heading, o->id);
+	add_torpedo(o->x, o->y, o->z, vx, vy, 0.0, o->id); /* vz is wrong here... */
 out:
 	pthread_mutex_unlock(&universe_mutex);
 
