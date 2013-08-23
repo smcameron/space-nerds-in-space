@@ -281,6 +281,10 @@ struct ship_data {
 	int32_t next_laser_time;
 #define ENEMY_LASER_FIRE_INTERVAL (5 * 30) /* 5 seconds */ 
 	uint8_t lifeform_count;
+#define MAX_TRACTOR_DIST 5000.0 /* TODO: tweak this */
+#define TRACTOR_BEAM_IDEAL_DIST 200.0 /* TODO: tweak this */
+#define MAX_TRACTOR_VELOCITY 10.0
+	uint32_t tractor_beam; 
 };
 
 struct starbase_data {

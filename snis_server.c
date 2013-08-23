@@ -2324,8 +2324,9 @@ static void tractorbeam_move(struct snis_entity *o)
 {
 	int tid, oid, ttype;
 	struct snis_entity *target, *origin;
+	struct mat41 to_object, nto_object, desired_object_loc, tractor_vec, tractor_velocity;
+	double dist;
 
-	o->alive--;
 	if (o->alive <= 0) {
 		delete_from_clients_and_server(o);
 		return;
@@ -2344,7 +2345,44 @@ static void tractorbeam_move(struct snis_entity *o)
 	origin = &go[oid];
 	ttype = target->type;
 
-	/* TODO: actual tractoring... */
+	dist = hypot3d(target->x - origin->x, target->y - origin->y, target->z - origin->z);
+
+	if (dist > MAX_TRACTOR_DIST) {
+		/* Tractor beam distance too much, beam failure... */
+		o->alive = 0;
+		delete_from_clients_and_server(o);
+		return;
+	}
+
+	/* Make unit vector pointing to object */
+	to_object.m[0] = target->x - origin->x;
+	to_object.m[1] = target->y - origin->y;
+	to_object.m[2] = target->z - origin->z;
+	to_object.m[3] = 1.0;
+
+	/* Find desired location of object */
+	nto_object = to_object;
+	nto_object.m[2] = 0.0;
+	normalize_vector(&nto_object, &nto_object);
+	mat41_scale(&nto_object, TRACTOR_BEAM_IDEAL_DIST, &desired_object_loc);
+
+	/* Find vector from current object position towards desired position */ 
+	tractor_vec.m[0] = desired_object_loc.m[0] - to_object.m[0];
+	tractor_vec.m[1] = desired_object_loc.m[1] - to_object.m[1];
+	tractor_vec.m[2] = desired_object_loc.m[2] - to_object.m[2];
+	tractor_vec.m[3] = 1.0;
+
+	/* Find how much velocity to impart to tractored object */
+	dist = hypot3d(tractor_vec.m[0], tractor_vec.m[1], tractor_vec.m[2]);
+	if (dist > MAX_TRACTOR_VELOCITY)
+		dist = MAX_TRACTOR_VELOCITY;
+	normalize_vector(&tractor_vec, &tractor_vec);
+	mat41_scale(&tractor_vec, dist, &tractor_velocity);
+
+	/* move tractored object */
+	target->vx += tractor_velocity.m[0];
+	target->vy += tractor_velocity.m[1];
+	target->vz += tractor_velocity.m[2];
 
 	return;
 }
@@ -2368,9 +2406,9 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
 	return i;
 }
 
-static int add_tractorbeam(uint32_t origin, uint32_t target, int alive)
+static int add_tractorbeam(struct snis_entity *origin, uint32_t target, int alive)
 {
-	int i, s;
+	int i;
 
 	i = add_generic_object(0, 0, 0, 0, 0, OBJTYPE_TRACTORBEAM);
 	if (i < 0)
@@ -2379,12 +2417,12 @@ static int add_tractorbeam(uint32_t origin, uint32_t target, int alive)
 	go[i].move = tractorbeam_move;
 	go[i].alive = alive;
 	/* TODO: for now, re-use laserbeam data...consider if we need tbeam data */
-	go[i].tsd.laserbeam.origin = origin;
+	go[i].tsd.laserbeam.origin = origin->id;
 	go[i].tsd.laserbeam.target = target;
-	s = lookup_by_id(origin);
-	go[i].tsd.laserbeam.power = go[s].tsd.ship.phaser_charge;
-	go[s].tsd.ship.phaser_charge = 0;
-	go[i].tsd.laserbeam.wavelength = go[s].tsd.ship.phaser_wavelength;
+	go[i].tsd.laserbeam.power = origin->tsd.ship.phaser_charge;
+	origin->tsd.ship.phaser_charge = 0; /* TODO: fix this */
+	go[i].tsd.laserbeam.wavelength = origin->tsd.ship.phaser_wavelength;
+	origin->tsd.ship.tractor_beam = go[i].id;
 	return i;
 }
 
@@ -4227,19 +4265,35 @@ laserfail:
 
 static int process_request_tractor_beam(struct game_client *c)
 {
-	struct snis_entity *ship = &go[c->ship_index];
-	int tid;
+	struct snis_entity *tb, *ship = &go[c->ship_index];
+	int tid, i;
 
 	pthread_mutex_lock(&universe_mutex);
 	if (ship->tsd.ship.victim_id < 0)
 		goto tractorfail;
+
+	if (ship->tsd.ship.tractor_beam != -1) {
+		/* turn off the tractor beam */
+		i = lookup_by_id(ship->tsd.ship.tractor_beam);
+		if (i < 0) {
+			/* thing we were tractoring died. */
+			ship->tsd.ship.tractor_beam = -1;
+			pthread_mutex_unlock(&universe_mutex);
+			return 0;
+		}
+		tb = &go[i];
+		delete_from_clients_and_server(tb);
+		ship->tsd.ship.tractor_beam = -1;
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
 
 	tid = ship->tsd.ship.victim_id;
 	/* TODO: check tractor beam energy here */
 	if (0) 
 		goto tractorfail;
 
-	add_tractorbeam(ship->id, tid, 30);
+	add_tractorbeam(ship, tid, 30);
 	/* TODO: tractor beam sound here. */
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
