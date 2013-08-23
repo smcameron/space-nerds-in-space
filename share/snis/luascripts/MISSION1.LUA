@@ -88,3 +88,7 @@ for i = -3, 3 do
 	end
 end
 
+sbase_id = add_starbase(72500, 68500, 0, 76);
+p1 = add_planet("NOWWHAT", 72000, 50000, 100);
+p2 = add_planet("NOWWHAT", 68000, 55000, -100);
+
