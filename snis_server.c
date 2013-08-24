@@ -1323,7 +1323,7 @@ static void do_power_model_computations(struct snis_entity *o)
 #define SHIELDS_POWER_DEVICE 4
 #define COMMS_POWER_DEVICE 5
 #define IMPULSE_POWER_DEVICE 6
-#define TRACTOR_POWER_DEVICE 6
+#define TRACTOR_POWER_DEVICE 7
 
 	device = power_model_get_device(m, WARP_POWER_DEVICE);
 	o->tsd.ship.power_data.warp.i = device_power_byte_form(device);
