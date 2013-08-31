@@ -26,6 +26,8 @@
 #include <stdint.h>
 #include <malloc.h>
 #include <gtk/gtk.h>
+#include <gtk/gtkgl.h>
+#include <GL/gl.h>
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -2401,6 +2403,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	default:
 		break;
 	}
+
 	return FALSE;
 }
 
@@ -8018,8 +8021,30 @@ static void draw_quit_screen(GtkWidget *w)
 
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
-	sng_set_foreground(WHITE);
 	struct snis_entity *o;
+
+	make_science_forget_stuff();
+
+	if (displaymode == DISPLAYMODE_GLMAIN)	
+		return 0;
+
+	GdkGLContext *gl_context = gtk_widget_get_gl_context(main_da);
+	GdkGLDrawable *gl_drawable = gtk_widget_get_gl_drawable(main_da);
+
+	if (!gdk_gl_drawable_gl_begin(gl_drawable, gl_context))
+		g_assert_not_reached();
+
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glColor3f(1.0, 1.0, 1.0); /* set colour to white */
+
+	const gboolean SOLID = TRUE; /* toggle if you don't want wireframe */
+	const gdouble SCALE = 0.5;
+
+	gdk_gl_draw_teapot(SOLID, SCALE);
+	gdk_gl_drawable_wait_gl(gl_drawable);
+
+	sng_set_foreground(WHITE);
 	
 #if 0	
 	for (i = 0; i <= highest_object_number;i++) {
@@ -8030,31 +8055,29 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	}
 #endif
 
-	make_science_forget_stuff();
-
 	if (warp_limbo_countdown) {
 		warp_limbo_countdown--;
 		if (in_the_process_of_quitting)
 			draw_quit_screen(w);
 		show_warp_limbo_screen(w);
-		return 0;
+		goto end_of_drawing;
 	} else if (damage_limbo_countdown) {
 		show_warp_hash_screen(w);
 		damage_limbo_countdown--;
 		if (in_the_process_of_quitting)
 			draw_quit_screen(w);
-		return 0;
+		goto end_of_drawing;
 	}
 
 	if (displaymode < DISPLAYMODE_FONTTEST) {
 		if (!(o = find_my_ship()))
-			return 0;
+			goto end_of_drawing;
 		if (o->alive <= 0 && displaymode != DISPLAYMODE_DEMON) {
 			red_alert_mode = 0;
 			show_death_screen(w);
 			if (in_the_process_of_quitting)
 				draw_quit_screen(w);
-			return 0;
+			goto end_of_drawing;
 		}
 	}
 	switch (displaymode) {
@@ -8077,7 +8100,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_fonttest(w);
 		break;
 	case DISPLAYMODE_MAINSCREEN:
-	case DISPLAYMODE_GLMAIN:
 		show_mainscreen(w);
 		break;
 	case DISPLAYMODE_NAVIGATION:
@@ -8115,6 +8137,23 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (in_the_process_of_quitting)
 		draw_quit_screen(w);
 
+end_of_drawing:
+	gdk_gl_drawable_wait_gdk(gl_drawable);
+
+	/* swap buffer if we're using double-buffering */
+	if (gdk_gl_drawable_is_double_buffered(gl_drawable))     
+		gdk_gl_drawable_swap_buffers(gl_drawable); 
+	else {
+		/* All programs should call glFlush whenever 
+		 * they count on having all of their previously 
+		 * issued commands completed.
+		 */
+		glFlush();
+	}
+
+	/* Delimits the end of the OpenGL execution. */
+	gdk_gl_drawable_gl_end(gl_drawable);
+
 	return 0;
 }
 
@@ -8146,6 +8185,11 @@ gint advance_game(gpointer data)
 	move_objects();
 	pthread_mutex_unlock(&universe_mutex);
 	nframes++;
+
+	GtkAllocation alloc;
+	gtk_widget_get_allocation(main_da, &alloc);
+	gdk_window_invalidate_rect(gtk_widget_get_root_window(main_da), &alloc, FALSE);
+
 	gdk_threads_leave();
 	return TRUE;
 }
@@ -8182,6 +8226,29 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	cliprect.width = real_screen_width;	
 	cliprect.height = real_screen_height;	
 	gdk_gc_set_clip_rectangle(gc, &cliprect);
+
+	GdkGLContext *gl_context = gtk_widget_get_gl_context(main_da);
+	GdkGLDrawable *gl_drawable = gtk_widget_get_gl_drawable(main_da);
+
+	/* Delimits the begining of the OpenGL execution. */
+	if (!gdk_gl_drawable_gl_begin(gl_drawable, gl_context))
+		g_assert_not_reached();
+
+	/* specify the lower left corner of our viewport, as well as width/height
+	 * of the viewport
+	 */
+	GtkAllocation alloc;
+	gtk_widget_get_allocation(main_da, &alloc);
+	glViewport(0, 0, alloc.width, alloc.height);
+
+	const static GLfloat light0_position[] = {1.0, 1.0, 1.0, 0.0};
+	glLightfv(GL_LIGHT0, GL_POSITION, light0_position);
+	glEnable(GL_DEPTH_TEST);    
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0); 
+
+	/* Delimits the end of the OpenGL execution. */
+	gdk_gl_drawable_gl_end(gl_drawable);
 	return TRUE;
 }
 
@@ -8568,6 +8635,34 @@ static void init_vects(void)
 	}
 }
 
+static void init_gl(int argc, char *argv[], GtkWidget *drawing_area)
+{
+	gtk_gl_init(&argc, &argv);
+
+	/* prepare GL */
+	GdkGLConfig *gl_config = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGBA |
+				       GDK_GL_MODE_DEPTH | GDK_GL_MODE_DOUBLE);
+	if (!gl_config)
+		g_assert_not_reached();
+
+	if (!gtk_widget_set_gl_capability(drawing_area, gl_config, NULL, TRUE,
+						GDK_GL_RGBA_TYPE))
+		g_assert_not_reached();
+
+#if 0
+	/* only called once in practice */
+	g_signal_connect(drawing_area, "configure-event", G_CALLBACK(main_da), NULL);
+	/* called every time we need to redraw due to becoming visible or being resized */
+	g_signal_connect(drawing_area, "expose-event", G_CALLBACK(expose_cb), NULL);
+#endif
+
+#if 0
+	const gdouble TIMEOUT_PERIOD = 1000 / 60;
+	/* idleCb called every timeoutPeriod */
+	g_timeout_add(TIMEOUT_PERIOD, idle_cb, drawing_area);
+#endif
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
@@ -8668,9 +8763,11 @@ int main(int argc, char *argv[])
 
 	gtk_container_add (GTK_CONTAINER (window), vbox);
 	gtk_box_pack_start(GTK_BOX (vbox), main_da, TRUE /* expand */, TRUE /* fill */, 0);
+	gtk_box_pack_start(GTK_BOX (vbox), main_da, TRUE /* expand */, TRUE /* fill */, 0);
 
         gtk_window_set_default_size(GTK_WINDOW(window), real_screen_width, real_screen_height);
 
+	init_gl(argc, argv, main_da);
         gtk_widget_show (vbox);
         gtk_widget_show (main_da);
         gtk_widget_show (window);
@@ -8713,6 +8810,7 @@ int main(int argc, char *argv[])
 	snis_protocol_debugging(1);
 
 	set_default_clip_window();
+
 
 	gtk_main ();
         wwviaudio_cancel_all_sounds();

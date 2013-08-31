@@ -116,8 +116,8 @@ MODELS=${MD}/freighter.stl \
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} \
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
-GTKCFLAGS=`pkg-config --cflags gtk+-2.0`
-GTKLDFLAGS=`pkg-config --libs gtk+-2.0` \
+GTKCFLAGS=`pkg-config --cflags gtk+-2.0 gtkglext-1.0`
+GTKLDFLAGS=`pkg-config --libs gtk+-2.0 gtkglext-1.0` \
         `pkg-config --libs gthread-2.0`
 VORBISFLAGS=`pkg-config --cflags vorbisfile`
 
