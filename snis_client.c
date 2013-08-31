@@ -8019,6 +8019,28 @@ static void draw_quit_screen(GtkWidget *w)
 	}
 }
 
+static void draw_some_gl_lines(GdkGLDrawable *gl_drawable, GdkGLContext *gl_context)
+{
+	glPushMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glOrtho(0.0f, (float) real_screen_width, 0.0f, (float) real_screen_height, -1.0, 1.0);
+	glMatrixMode(GL_MODELVIEW);
+	glLineWidth(3.0f);
+	glBegin(GL_LINES);
+	glColor3f(1.0, 0.0, 0.0);
+	glVertex2f(0.0f, 0.0f);
+	glVertex2f((float) real_screen_width, (float) real_screen_height);
+	glEnd();
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glPopMatrix();
+}
+
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	struct snis_entity *o;
@@ -8036,12 +8058,17 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glColor3f(1.0, 1.0, 1.0); /* set colour to white */
+	glColor3f(1.0, 0.0, 0.0); /* set colour to white */
 
-	const gboolean SOLID = TRUE; /* toggle if you don't want wireframe */
+	const gboolean SOLID = FALSE; /* toggle if you don't want wireframe */
 	const gdouble SCALE = 0.5;
 
 	gdk_gl_draw_teapot(SOLID, SCALE);
+
+#if 1
+	glFlush();
+	draw_some_gl_lines(gl_drawable, gl_context);
+#endif
 	gdk_gl_drawable_wait_gl(gl_drawable);
 
 	sng_set_foreground(WHITE);
@@ -8244,8 +8271,8 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	const static GLfloat light0_position[] = {1.0, 1.0, 1.0, 0.0};
 	glLightfv(GL_LIGHT0, GL_POSITION, light0_position);
 	glEnable(GL_DEPTH_TEST);    
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0); 
+	/* glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);  */
 
 	/* Delimits the end of the OpenGL execution. */
 	gdk_gl_drawable_gl_end(gl_drawable);
@@ -8762,7 +8789,6 @@ int main(int argc, char *argv[])
                       G_CALLBACK (main_da_motion_notify), NULL);
 
 	gtk_container_add (GTK_CONTAINER (window), vbox);
-	gtk_box_pack_start(GTK_BOX (vbox), main_da, TRUE /* expand */, TRUE /* fill */, 0);
 	gtk_box_pack_start(GTK_BOX (vbox), main_da, TRUE /* expand */, TRUE /* fill */, 0);
 
         gtk_window_set_default_size(GTK_WINDOW(window), real_screen_width, real_screen_height);
