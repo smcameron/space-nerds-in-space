@@ -80,9 +80,9 @@ attack_ship(specific_ship_id, player_ids[1]);
 for i = -3, 3 do
 	for j = -3, 3 do
 		id1 = add_ship("a", 80000 + j * 100, 68000 - i * 100,
-				j * 100, DRAGONHAWK, vekkazi);
+				j * 100 + math.random() * 25.0, 13 * math.random(), vekkazi);
 		id2 = add_ship("a", 60000 + j * 100, 68000 - i * 100,
-				j * 100, SKORPIO, zarkon);
+				j * 100 + math.random() * 25.0, 13 * math.random(), zarkon);
 		attack_ship(id1, id2);
 		attack_ship(id2, id1);
 	end
