@@ -1484,7 +1484,7 @@ static void do_player_collision_detection(struct snis_entity *o)
 		}
 		if (i == o->index) /* skip self */
 			continue;
-		dist2 = hypot2(o->x - go[i].x, o->y - go[i].y);
+		dist2 = dist3dsqrd(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z);
 		if (dist2 < PROXIMITY_DIST2 && (universe_timestamp & 0x7) == 0) {
 			send_packet_to_all_clients_on_a_bridge(o->id, 
 				packed_buffer_new("h", OPCODE_PROXIMITY_ALERT),
