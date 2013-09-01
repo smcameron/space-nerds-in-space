@@ -2288,14 +2288,6 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		}
 		do_laser();
 		break;
-	case keyf1:
-		if (displaymode >= DISPLAYMODE_FONTTEST)
-			break;
-		if (role & ROLE_MAIN) {
-			displaymode = DISPLAYMODE_MAINSCREEN;
-			wwviaudio_add_sound(CHANGESCREEN_SOUND);
-		}
-		break;
 	case keyf2:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
@@ -2345,6 +2337,14 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		}
 		break;
 	case keyf8:
+		if (displaymode >= DISPLAYMODE_FONTTEST)
+			break;
+		if (role & ROLE_MAIN) {
+			displaymode = DISPLAYMODE_MAINSCREEN;
+			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		}
+		break;
+	case keyf9:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_DEMON) {
