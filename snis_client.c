@@ -153,6 +153,8 @@ struct nebula_entry {
 int nnebula;
 
 static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
+static volatile int helpmode = 0;
+static volatile int helpmodeline = 0;
 
 struct client_network_stats {
 	uint64_t bytes_sent;
@@ -2272,7 +2274,12 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			}
 			return TRUE;
 		}
-	case keyquit:	in_the_process_of_quitting = !in_the_process_of_quitting;
+	case keyquit:	
+			if (helpmode) {
+				helpmode = 0;
+				break;
+			}
+			in_the_process_of_quitting = !in_the_process_of_quitting;
 			if (!in_the_process_of_quitting)
 				current_quit_selection = 0;
 			break;
@@ -2287,6 +2294,11 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			break;
 		}
 		do_laser();
+		break;
+	case keyf1:
+		if (!helpmode)
+			helpmodeline = 0;
+		helpmode = 1;
 		break;
 	case keyf2:
 		if (displaymode >= DISPLAYMODE_FONTTEST)
@@ -7823,6 +7835,145 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 	return 0;
 }
 
+static char *help_text[] = {
+
+	/* Main screen help text */
+	"MAIN SCREEN\n\n"
+	"  CONTROLS\n\n"
+	"  * USE ARROW KEYS TO TURN SHIP\n\n"
+	"  * W KEY TOGGLES BETWEEN WEAPONS VIEW\n"
+	"    AND MAIN VIEW\n"
+	"\nPRESS ESC TO EXIT HELP\n",
+
+	/* Navigation help text */
+	"NAVIGATION\n\n"
+	"  CONTROLS\n\n"
+	"  * USE ARROW KEYS TO TURN SHIP\n"
+	"    (OR USE MOUSE WHEEL)\n"
+	"  * VERTICAL SLIDER ON RIGHT OF SCREEN\n"
+	"    CONTROLS THROTTLE\n"
+	"  * R BUTTON ABOVE THROTTLE REVERSES THRUST\n"
+	"  * USE WARP FOR FAST TRAVEL\n"
+	"  * USE PLUS/MINUS KEYS TO ZOOM SCANNER VIEW\n"
+	"  * USE SHIELD SLIDER TO SET SHIELD LEVEL\n"
+	"\nPRESS ESC TO EXIT HELP\n",
+
+	/* Weapons help text */
+	"WEAPONS\n\n"
+	"  CONTROLS\n\n"
+	"  * USE ARROW KEYS TO AIM WEAPONS\n"
+	"  * FIRE WHEN TARGET SELECTED\n"
+	"  * PLUS/MINUS KEYS ZOOM SCANNER VIEW\n"
+	"    (OR USE MOUSE WHEEL)\n"
+	"  * MATCH PHASER WAVELENGTH TO WEAKNESSES\n"
+	"    IN ENEMY SHIELDS\n"
+	"\nPRESS ESC TO EXIT HELP\n",
+
+	/* Engineering help text */
+	"ENGINEERING\n\n"
+	"  CONTROLS\n\n"
+	"  * USE SLIDERS ON LEFT SIDE OF SCREEN\n"
+        "    TO LIMIT POWER CONSUMPTION OF SHIP\n"
+        "    SYSTEMS\n"
+        "  * HEALTH OF SYSTEMS IS INDICATED ON RIGHT\n"
+	"    SIDE OF SCREEN\n"
+	"\nPRESS ESC TO EXIT HELP\n",
+
+	/* Science help text */
+	"SCIENCE\n\n"
+	"  CONTROLS\n\n"
+	"  * USE MOUSE WHEEL TO ZOOM/UNZOOM\n"
+	"  * USE UP/DOWN ARROWS TO FOCUS/WIDEN\n"
+	"    SCANNING BEAM\n"
+	"  * SELECT TARGETS WITH MOUSE TO EXAMINE\n"
+	"  * USE DETAILS BUTTON FOR MORE INFO\n"
+	"  * WARP DRIVE CALCULATIONS IN LOWER LEFT\n"
+	"\nPRESS ESC TO EXIT HELP\n",
+
+
+	/* Comms help text */
+	"TO DO\n"
+	"  HELP TEXT FOR COMMS",
+
+	/* Demon screen help text */
+	"DEMON\n\n"
+	"THE DEMON, (AKA GAMEMASTER) SCREEN ALLOWS A\n"
+	"USER TO MANIPULATE THE GAME UNIVERSE\n\n"
+	"* USE THE MOUSE WHEEL TO ZOOM IN AND OUT\n"
+	"* SELECT BUTTONS ON LEFT SIDE OF SCREEN AND\n"
+	"  USE LEFT MOUSE BUTTON TO ADD NEW ITEMS\n"
+	"* UNSELECT BUTTONS ON LEFT SIDE OF SCREEN AND\n"
+	"  USE OR DRAG RIGHT MOUSE BUTTON TO SELECT ITEMS\n"
+	"* USE MIDDLE MOUSE BUTTON TO MOVE SELECTED ITEMS\n"
+	"* USE TEXT BOX TO ENTER COMMANDS\n"
+	"* USE \"SELECT NONE\" BUTTON TO DE-SELECT ITEMS\n"
+	"* USE \"CAPTAIN\" BUTTON TO TAKE CONTROL OF SHIPS\n"
+	"  USE ARROW KEYS TO CONTROL \"CAPTAINED\" SHIPS\n"
+	"  USE PHASER AND TORPEDO BUTTONS WHILE\n"
+	"  \"CAPTAINING SHIPS.\n"
+	"* USE \"HELP\" COMAND IN TEXT BOX FOR MORE INFO\n"
+	"\nPRESS ESC TO EXIT HELP\n",
+
+	/* Damage control help text */
+	"TO DO\n"
+	"   HELP TEXT FOR DAMAGE CONTROL",
+
+	"help text 8",
+	"help text 9",
+	"TO DO\n"
+	"   HELP TEXT FOR LOBBY CONNECTION SCREEN",
+	"help text 11",
+	"help text 12",
+	"help text 13",
+	"TO DO\n"
+	"   HELP TEXT FOR NETWORK SETUP SCREEN\n",
+};
+
+static void draw_help_text(GtkWidget *w, char *text)
+{
+	int line = 0;
+	int i, y = 70;
+	char buffer[256];
+	int buflen = 0;
+
+	strcpy(buffer, "");
+
+	i = 0;
+	do {
+		if (text[i] == '\n' || text[i] == '\0') {
+			if (line >= helpmodeline && line < helpmodeline + 20) {
+				buffer[buflen] = '\0';
+				sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 60, y);
+				y += 19;
+				strcpy(buffer, "");
+				buflen = 0;
+				line++;
+				if (text[i] == '\0')
+					break;
+				i++;
+				continue;
+			} else {
+				if (line >= helpmodeline + 20)
+					break;
+			}
+		}
+		buffer[buflen++] = text[i++];
+	} while (1);
+}
+
+static void draw_help_screen(GtkWidget *w)
+{
+	sng_set_foreground(BLACK);
+	sng_scaled_rectangle(w->window, gc, 1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	sng_set_foreground(GREEN);
+	sng_scaled_rectangle(w->window, gc, 0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	if (displaymode < 0 || displaymode >= ARRAYSIZE(help_text)) {
+		draw_help_text(w, "Unknown screen, no help available");
+		return;
+	}
+	draw_help_text(w, help_text[displaymode]);
+}
+
 static void draw_quit_screen(GtkWidget *w)
 {
 	int x;
@@ -7950,6 +8101,8 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	}
 	ui_element_list_draw(w, gc, uiobjs);
 
+	if (helpmode)
+		draw_help_screen(w);
 	if (in_the_process_of_quitting)
 		draw_quit_screen(w);
 
