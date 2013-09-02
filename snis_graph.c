@@ -12,7 +12,8 @@
 #include "liang-barsky.h"
 #include "bline.h"
 
-GdkColor huex[NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY]; 
+#define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY)
+GdkColor huex[TOTAL_COLORS]; 
 
 extern struct my_vect_obj **gamefont[];
 extern int font_scale[];
@@ -22,6 +23,7 @@ static struct snis_graph_context {
 	struct liang_barsky_clip_window c;
 	int screen_height;
 	GdkGC *gc;
+	int hue; /* current color, index into huex[] and glhue[] */
 } sgc;
 
 void sng_fixup_gl_y_coordinate(int screen_height)
@@ -61,8 +63,10 @@ int sng_device_y(int y)
 
 void sng_gl_draw_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
 {
+	GdkColor *h = &huex[sgc.hue];
+
         glBegin(GL_LINES);
-        glColor3f(1.0, 0.0, 0.0);
+        glColor3us(h->red, h->green, h->blue);
         glVertex2i(x1, sgc.screen_height - y1);
         glVertex2i(x2, sgc.screen_height - y2);
         glEnd();
@@ -135,6 +139,7 @@ static void gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean filled,
 		gint x, gint y, gint width, gint height)
 {
 	int x2, y2;
+	GdkColor *h = &huex[sgc.hue];
 
 	x2 = x + width;
 	y2 = y + height;
@@ -142,7 +147,7 @@ static void gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean filled,
 		glBegin(GL_POLYGON);
 	else
 		glBegin(GL_LINE_LOOP);
-        glColor3f(1.0, 0.0, 0.0);
+        glColor3us(h->red, h->green, h->blue);
         glVertex2i(x, sgc.screen_height - y);
         glVertex2i(x2, sgc.screen_height - y);
         glVertex2i(x2, sgc.screen_height - y2);
@@ -179,10 +184,10 @@ void sng_scaled_bright_line(GdkDrawable *drawable,
 	sx2 = x2 * sgc.xscale;
 	sy1 = y1 * sgc.yscale;	
 	sy2 = y2 * sgc.yscale;	
-	
-	gdk_gc_set_foreground(gc, &huex[WHITE]);
+
+	sng_set_foreground(WHITE);	
 	sng_gl_draw_line(drawable, gc, sx1, sy1, sx2, sy2);
-	gdk_gc_set_foreground(gc, &huex[color]);
+	sng_set_foreground(color);
 	sng_gl_draw_line(drawable, gc, sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
 	sng_gl_draw_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
@@ -203,9 +208,9 @@ void sng_unscaled_bright_line(GdkDrawable *drawable,
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
 
-	gdk_gc_set_foreground(gc, &huex[WHITE]);
+	sng_set_foreground(WHITE);
 	sng_gl_draw_line(drawable, gc, x1,y1,x2,y2);
-	gdk_gc_set_foreground(gc, &huex[color]);
+	sng_set_foreground(color);
 	sng_gl_draw_line(drawable, gc, x1-dx,y1-dy,x2-dx,y2-dy);
 	sng_gl_draw_line(drawable, gc, x1+dx,y1+dy,x2+dx,y2+dy);
 }
@@ -240,8 +245,10 @@ void sng_use_thick_lines(void)
 
 static void gl_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y)
 {
+	GdkColor *h = &huex[sgc.hue];
+
 	glBegin(GL_POINTS);
-        glColor3f(1.0, 0.0, 0.0);
+        glColor3us(h->red, h->green, h->blue);
 	glVertex2i(x, sgc.screen_height - y);
 	glEnd();
 }
@@ -269,7 +276,7 @@ static void sng_bright_electric_line_plot_func(int x, int y, void *context)
 	struct sng_dotted_plot_func_context *c = context;
 
 	if (sng_rand(100) < 20) {
-		gdk_gc_set_foreground(c->gc, &huex[c->i]);
+		sng_set_foreground(c->i);
 		gl_draw_point(c->drawable, c->gc, x, y);
 	}
 }
@@ -339,7 +346,7 @@ void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
 		return;
 
 	sng_draw_bright_white_electric_line(drawable, gc, x1, y1, x2, y2, color);
-	gdk_gc_set_foreground(gc, &huex[color]);
+	sng_set_foreground(color);
 	sng_draw_electric_line(drawable, gc, x1 - dx, y1 - dy, x2 - dx, y2 - dy);
 	sng_draw_electric_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
 }
@@ -470,7 +477,8 @@ void sng_setup_colors(GtkWidget *w)
 
 void sng_set_foreground(int c)
 {
-	gdk_gc_set_foreground(sgc.gc, &huex[c]);
+	sgc.hue = c;
+	/* gdk_gc_set_foreground(sgc.gc, &huex[c]); */
 }
 
 void sng_set_gc(GdkGC *gc)
@@ -481,8 +489,10 @@ void sng_set_gc(GdkGC *gc)
 static void gl_draw_circle(int x, int y,  int r)
 {
 	int i;
+	GdkColor *h = &huex[sgc.hue];
  
 	glBegin(GL_LINE_LOOP);
+        glColor3us(h->red, h->green, h->blue);
 	for (i = 0; i < 360; i += 2)
 		glVertex2f(sgc.xscale * (x + cos(i * M_PI / 180.0) * r),
 			(sgc.screen_height - y * sgc.yscale) + sin(i * M_PI / 180.0) * r * sgc.yscale);
@@ -516,11 +526,10 @@ void sng_bright_device_line(GdkDrawable *drawable,
 		return;
 #endif
 
-	gdk_gc_set_foreground(gc, &huex[WHITE]);
+	sng_set_foreground(WHITE);
 	sng_gl_draw_line(drawable, gc, x1, y1, x2, y2);
-	gdk_gc_set_foreground(gc, &huex[color]);
+	sng_set_foreground(color);
 	sng_gl_draw_line(drawable, gc, x1 - dx, y1 - dy, x2 - dx, y2 - dy);
 	sng_gl_draw_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
 }
-
 
