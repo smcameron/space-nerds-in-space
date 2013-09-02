@@ -237,6 +237,14 @@ void sng_use_thick_lines(void)
 	sng_current_draw_line = sng_thick_scaled_line;
 }
 
+static void gl_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y)
+{
+	glBegin(GL_POINTS);
+        glColor3f(1.0, 0.0, 0.0);
+	glVertex2i(x, sgc.screen_height - y);
+	glEnd();
+}
+
 void sng_dotted_line_plot_func(int x, int y, void *context)
 {
 	struct sng_dotted_plot_func_context *c = context;
@@ -244,7 +252,7 @@ void sng_dotted_line_plot_func(int x, int y, void *context)
 	c->i = (c->i + 1) % 10;
 	if (c->i != 0)
 		return;
-	gdk_draw_point(c->drawable, c->gc, x, y);
+	gl_draw_point(c->drawable, c->gc, x, y);
 }
 
 void sng_electric_line_plot_func(int x, int y, void *context)
@@ -252,7 +260,7 @@ void sng_electric_line_plot_func(int x, int y, void *context)
 	struct sng_dotted_plot_func_context *c = context;
 
 	if (sng_rand(100) < 10)
-		gdk_draw_point(c->drawable, c->gc, x, y);
+		gl_draw_point(c->drawable, c->gc, x, y);
 }
 
 static void sng_bright_electric_line_plot_func(int x, int y, void *context)
@@ -261,7 +269,7 @@ static void sng_bright_electric_line_plot_func(int x, int y, void *context)
 
 	if (sng_rand(100) < 20) {
 		gdk_gc_set_foreground(c->gc, &huex[c->i]);
-		gdk_draw_point(c->drawable, c->gc, x, y);
+		gl_draw_point(c->drawable, c->gc, x, y);
 	}
 }
 
@@ -426,7 +434,7 @@ void sng_abs_xy_draw_string_with_cursor(GtkWidget *w, GdkGC *gc, char *s,
 
 void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y)
 {
-	gdk_draw_point(drawable, gc, x * sgc.xscale, y * sgc.yscale);
+	gl_draw_point(drawable, gc, x * sgc.xscale, y * sgc.yscale);
 }
 
 void sng_setup_colors(GtkWidget *w)
