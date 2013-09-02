@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <math.h>
 #include <gtk/gtk.h>
 #include <gtk/gtkgl.h>
 #include <GL/gl.h>
@@ -477,9 +478,20 @@ void sng_set_gc(GdkGC *gc)
 	sgc.gc = gc;
 }
 
+static void gl_draw_circle(int x, int y,  int r)
+{
+	int i;
+ 
+	glBegin(GL_LINE_LOOP);
+	for (i = 0; i < 360; i += 2)
+		glVertex2f(sgc.xscale * (x + cos(i * M_PI / 180.0) * r),
+			(sgc.screen_height - y * sgc.yscale) + sin(i * M_PI / 180.0) * r * sgc.yscale);
+	glEnd();
+}
+
 void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
 {
-	sng_current_draw_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
+	gl_draw_circle(x, y, r);
 }
 
 void sng_device_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
