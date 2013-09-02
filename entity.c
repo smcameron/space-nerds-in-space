@@ -202,6 +202,7 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc, struct entity_
 	if (y1 > y2 || y2 > y3)
 		printf("you dun fucked up\n");
 
+#if 0
 	if (!(render_style & RENDER_NO_FILL)) {
 	if (y2 == y1)
 		dxdy1 = x2 - x1;
@@ -234,6 +235,7 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc, struct entity_
 		xb += dxdy2;
 	}
 	}
+#endif
 	if (cx->camera.renderer & WIREFRAME_RENDERER || render_style & RENDER_WIREFRAME) {
 		if (render_style & RENDER_BRIGHT_LINE) {
 			sng_bright_device_line(w->window, gc, x1, y1, x2, y2, color); 
@@ -270,6 +272,14 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 
 	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
+
+	if (!(render_style & RENDER_NO_FILL)) {
+		sng_filled_tri(sng_device_x(x1), sng_device_y(y1),
+				sng_device_x(x2), sng_device_y(y2),
+				sng_device_x(x3), sng_device_y(y3));
+		if (render_style == RENDER_NORMAL)
+			return;
+	}
 
 	/* sort from lowest y to highest y */
 	ya = sng_device_y(y1);

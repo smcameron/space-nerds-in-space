@@ -533,3 +533,15 @@ void sng_bright_device_line(GdkDrawable *drawable,
 	sng_gl_draw_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
 }
 
+void sng_filled_tri(int x1, int y1, int x2, int y2, int x3, int y3)
+{
+	GdkColor *h = &huex[sgc.hue];
+
+        glBegin(GL_TRIANGLES);
+        glColor3us(h->red, h->green, h->blue);
+        glVertex2i(x1, sgc.screen_height - y1);
+        glVertex2i(x2, sgc.screen_height - y2);
+        glVertex2i(x3, sgc.screen_height - y3);
+        glEnd();
+}
+
