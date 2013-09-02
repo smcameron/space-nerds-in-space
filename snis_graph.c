@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <gtk/gtk.h>
+#include <gtk/gtkgl.h>
+#include <GL/gl.h>
 
 #include "snis_font.h"
 #define SNIS_GRAPH_DECLARE_GLOBALS
@@ -17,8 +19,15 @@ extern int font_scale[];
 static struct snis_graph_context {
 	float xscale, yscale;
 	struct liang_barsky_clip_window c;
+	int screen_height;
 	GdkGC *gc;
 } sgc;
+
+void sng_fixup_gl_y_coordinate(int screen_height)
+{
+	sgc.screen_height = screen_height;
+}
+
 
 static int sng_rand(int n)
 {
@@ -49,12 +58,21 @@ int sng_device_y(int y)
 	return (int) (y * sgc.yscale);
 }
 
+void sng_gl_draw_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
+{
+        glBegin(GL_LINES);
+        glColor3f(1.0, 0.0, 0.0);
+        glVertex2i(x1, sgc.screen_height - y1);
+        glVertex2i(x2, sgc.screen_height - y2);
+        glEnd();
+}
+
 void sng_scaled_line(GdkDrawable *drawable,
         GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
 {
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
-        gdk_draw_line(drawable, gc, x1 * sgc.xscale, y1 * sgc.yscale,
+        sng_gl_draw_line(drawable, gc, x1 * sgc.xscale, y1 * sgc.yscale,
                 x2 * sgc.xscale, y2 * sgc.yscale);
 }
 
@@ -78,9 +96,9 @@ void sng_thick_scaled_line(GdkDrawable *drawable,
 	sy1 = y1 * sgc.yscale;	
 	sy2 = y2 * sgc.yscale;	
 	
-	gdk_draw_line(drawable, gc, sx1, sy1, sx2, sy2);
-	gdk_draw_line(drawable, gc, sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
-	gdk_draw_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
+	sng_gl_draw_line(drawable, gc, sx1, sy1, sx2, sy2);
+	sng_gl_draw_line(drawable, gc, sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
+	sng_gl_draw_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
 static int clip_rectangle(int *x, int *y, int *width, int *height)
@@ -143,10 +161,10 @@ void sng_scaled_bright_line(GdkDrawable *drawable,
 	sy2 = y2 * sgc.yscale;	
 	
 	gdk_gc_set_foreground(gc, &huex[WHITE]);
-	gdk_draw_line(drawable, gc, sx1, sy1, sx2, sy2);
+	sng_gl_draw_line(drawable, gc, sx1, sy1, sx2, sy2);
 	gdk_gc_set_foreground(gc, &huex[color]);
-	gdk_draw_line(drawable, gc, sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
-	gdk_draw_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
+	sng_gl_draw_line(drawable, gc, sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
+	sng_gl_draw_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
 void sng_unscaled_bright_line(GdkDrawable *drawable,
@@ -166,10 +184,10 @@ void sng_unscaled_bright_line(GdkDrawable *drawable,
 		return;
 
 	gdk_gc_set_foreground(gc, &huex[WHITE]);
-	gdk_draw_line(drawable, gc, x1,y1,x2,y2);
+	sng_gl_draw_line(drawable, gc, x1,y1,x2,y2);
 	gdk_gc_set_foreground(gc, &huex[color]);
-	gdk_draw_line(drawable, gc, x1-dx,y1-dy,x2-dx,y2-dy);
-	gdk_draw_line(drawable, gc, x1+dx,y1+dy,x2+dx,y2+dy);
+	sng_gl_draw_line(drawable, gc, x1-dx,y1-dy,x2-dx,y2-dy);
+	sng_gl_draw_line(drawable, gc, x1+dx,y1+dy,x2+dx,y2+dy);
 }
 
 void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
@@ -439,7 +457,7 @@ void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
 
 void sng_device_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
 {
-	gdk_draw_line(drawable, gc, x1, y1, x2, y2);
+	sng_gl_draw_line(drawable, gc, x1, y1, x2, y2);
 }
 
 void sng_bright_device_line(GdkDrawable *drawable,
@@ -460,10 +478,10 @@ void sng_bright_device_line(GdkDrawable *drawable,
 #endif
 
 	gdk_gc_set_foreground(gc, &huex[WHITE]);
-	gdk_draw_line(drawable, gc, x1, y1, x2, y2);
+	sng_gl_draw_line(drawable, gc, x1, y1, x2, y2);
 	gdk_gc_set_foreground(gc, &huex[color]);
-	gdk_draw_line(drawable, gc, x1 - dx, y1 - dy, x2 - dx, y2 - dy);
-	gdk_draw_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
+	sng_gl_draw_line(drawable, gc, x1 - dx, y1 - dy, x2 - dx, y2 - dy);
+	sng_gl_draw_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
 }
 
 

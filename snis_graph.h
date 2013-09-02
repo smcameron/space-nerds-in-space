@@ -69,7 +69,9 @@ extern void sng_use_scaled_drawing_functions(void);
 extern void sng_use_unscaled_drawing_functions(void);
 extern void sng_use_thick_lines(void);
 
-SNG_GLOBAL line_drawing_function *sng_current_draw_line INIT(gdk_draw_line);
+extern void sng_gl_draw_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2);
+
+SNG_GLOBAL line_drawing_function *sng_current_draw_line INIT(sng_gl_draw_line);
 SNG_GLOBAL rectangle_drawing_function *sng_current_draw_rectangle INIT(gdk_draw_rectangle);
 SNG_GLOBAL bright_line_drawing_function *sng_current_bright_line INIT(sng_unscaled_bright_line);
 SNG_GLOBAL arc_drawing_function *sng_current_draw_arc INIT(gdk_draw_arc);
@@ -102,6 +104,7 @@ SNG_GLOBAL void sng_bright_device_line(GdkDrawable *drawable, GdkGC *gc,
 			int x1, int y1, int x2, int y2, int color);
 
 SNG_GLOBAL void sng_set_clip_window(int x1, int y1, int x2, int y2);
+SNG_GLOBAL void sng_fixup_gl_y_coordinate(int screen_height);
 
 #undef SNG_GLOBAL
 #endif

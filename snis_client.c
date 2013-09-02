@@ -8041,6 +8041,27 @@ static void draw_some_gl_lines(GdkGLDrawable *gl_drawable, GdkGLContext *gl_cont
 	glPopMatrix();
 }
 
+static void begin_2d_gl(void)
+{
+	glPushMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glOrtho(0.0f, (float) real_screen_width, 0.0f, (float) real_screen_height, -1.0, 1.0);
+	glMatrixMode(GL_MODELVIEW);
+	glDisable(GL_DEPTH_TEST);
+}
+
+static void end_2d_gl(void)
+{
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glPopMatrix();
+}
+
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	struct snis_entity *o;
@@ -8058,18 +8079,8 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glColor3f(1.0, 0.0, 0.0); /* set colour to white */
 
-	const gboolean SOLID = FALSE; /* toggle if you don't want wireframe */
-	const gdouble SCALE = 0.5;
-
-	gdk_gl_draw_teapot(SOLID, SCALE);
-
-#if 1
-	glFlush();
-	draw_some_gl_lines(gl_drawable, gl_context);
-#endif
-	gdk_gl_drawable_wait_gl(gl_drawable);
+	begin_2d_gl();
 
 	sng_set_foreground(WHITE);
 	
@@ -8166,6 +8177,9 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 end_of_drawing:
 	gdk_gl_drawable_wait_gdk(gl_drawable);
+	gdk_gl_drawable_wait_gl(gl_drawable);
+
+	end_2d_gl();
 
 	/* swap buffer if we're using double-buffering */
 	if (gdk_gl_drawable_is_double_buffered(gl_drawable))     
@@ -8276,6 +8290,7 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 
 	/* Delimits the end of the OpenGL execution. */
 	gdk_gl_drawable_gl_end(gl_drawable);
+	sng_fixup_gl_y_coordinate(real_screen_height);
 	return TRUE;
 }
 
@@ -8688,6 +8703,7 @@ static void init_gl(int argc, char *argv[], GtkWidget *drawing_area)
 	/* idleCb called every timeoutPeriod */
 	g_timeout_add(TIMEOUT_PERIOD, idle_cb, drawing_area);
 #endif
+	sng_fixup_gl_y_coordinate(SCREEN_HEIGHT);
 }
 
 int main(int argc, char *argv[])
