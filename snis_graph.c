@@ -130,12 +130,29 @@ static int clip_rectangle(int *x, int *y, int *width, int *height)
 	return 1;
 }
 
+static void gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean filled,
+		gint x, gint y, gint width, gint height)
+{
+	/* TODO: honor filled */
+	int x2, y2;
+
+	x2 = x + width;
+	y2 = y + height;
+        glBegin(GL_LINE_LOOP);
+        glColor3f(1.0, 0.0, 0.0);
+        glVertex2i(x, sgc.screen_height - y);
+        glVertex2i(x2, sgc.screen_height - y);
+        glVertex2i(x2, sgc.screen_height - y2);
+        glVertex2i(x, sgc.screen_height - y2);
+	glEnd();
+}
+
 void sng_scaled_rectangle(GdkDrawable *drawable,
 	GdkGC *gc, gboolean filled, gint x, gint y, gint width, gint height)
 {
 	if (!clip_rectangle(&x, &y, &width, &height))
 		return;
-	gdk_draw_rectangle(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
+	gl_draw_rectangle(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
 		width * sgc.xscale, height * sgc.yscale);
 }
 
