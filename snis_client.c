@@ -3805,7 +3805,6 @@ static void show_common_screen(GtkWidget *w, char *title)
 /* FIXME: make angle of view be calculated from camera parameters */
 #define ANGLE_OF_VIEW (50)
 
-#ifndef WITHOUTOPENGL
 static int normalize_degrees(int degrees)
 {
 	while (degrees < 0)
@@ -3867,18 +3866,9 @@ static void show_gunsight(GtkWidget *w)
 	snis_draw_line(w->window, gc, cx, y1, cx, y1 + 25);
 	snis_draw_line(w->window, gc, cx, y2 - 25, cx, y2);
 }
-#endif
 
 static void show_mainscreen(GtkWidget *w)
 {
-#ifdef WITHOUTOPENGL
-	sng_set_foreground(RED);
-	sng_abs_xy_draw_string(w, gc, "NO OPENGL", BIG_FONT, 90, 100);
-	sng_abs_xy_draw_string(w, gc, "MAINSCREEN", BIG_FONT, 70, 200);
-	sng_abs_xy_draw_string(w, gc, "OUT OF", BIG_FONT, 100, 300);
-	sng_abs_xy_draw_string(w, gc, "ORDER", BIG_FONT, 120, 400);
-	return;
-#else
 	static int fake_stars_initialized = 0;
 	struct snis_entity *o;
 	float cx, cy, cz, lx, ly;
@@ -3914,7 +3904,6 @@ static void show_mainscreen(GtkWidget *w)
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
 		show_gunsight(w);
 	pthread_mutex_unlock(&universe_mutex);
-#endif
 	show_common_screen(w, "");	
 }
 
