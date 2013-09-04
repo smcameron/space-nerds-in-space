@@ -26,8 +26,12 @@
 #include <stdint.h>
 #include <malloc.h>
 #include <gtk/gtk.h>
+
+#ifndef WITHOUTOPENGL
 #include <gtk/gtkgl.h>
 #include <GL/gl.h>
+#endif
+
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -3798,6 +3802,10 @@ static void show_common_screen(GtkWidget *w, char *title)
 	snis_draw_line(w->window, gc, 1, 1, 1, SCREEN_HEIGHT - 1);
 }
 
+/* FIXME: make angle of view be calculated from camera parameters */
+#define ANGLE_OF_VIEW (50)
+
+#ifndef WITHOUTOPENGL
 static int normalize_degrees(int degrees)
 {
 	while (degrees < 0)
@@ -3814,9 +3822,6 @@ static void show_mainscreen_starfield(GtkWidget *w, double heading)
 	int i, first_angle, last_angle;
 	float x, dx;
 	float fa;
-
-/* FIXME: make angle of view be calculated from camera parameters */
-#define ANGLE_OF_VIEW (50)
 
 	if (!stars_initialized) {
 		for (i = 0; i < 720; i++)
@@ -3862,13 +3867,23 @@ static void show_gunsight(GtkWidget *w)
 	snis_draw_line(w->window, gc, cx, y1, cx, y1 + 25);
 	snis_draw_line(w->window, gc, cx, y2 - 25, cx, y2);
 }
+#endif
 
 static void show_mainscreen(GtkWidget *w)
 {
+#ifdef WITHOUTOPENGL
+	sng_set_foreground(RED);
+	sng_abs_xy_draw_string(w, gc, "NO OPENGL", BIG_FONT, 90, 100);
+	sng_abs_xy_draw_string(w, gc, "MAINSCREEN", BIG_FONT, 70, 200);
+	sng_abs_xy_draw_string(w, gc, "OUT OF", BIG_FONT, 100, 300);
+	sng_abs_xy_draw_string(w, gc, "ORDER", BIG_FONT, 120, 400);
+	return;
+#else
 	static int fake_stars_initialized = 0;
 	struct snis_entity *o;
 	float cx, cy, cz, lx, ly;
 	double camera_look_heading;
+
 
 	if (!(o = find_my_ship()))
 		return;
@@ -3899,8 +3914,8 @@ static void show_mainscreen(GtkWidget *w)
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
 		show_gunsight(w);
 	pthread_mutex_unlock(&universe_mutex);
+#endif
 	show_common_screen(w, "");	
-
 }
 
 static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
@@ -8019,6 +8034,7 @@ static void draw_quit_screen(GtkWidget *w)
 	}
 }
 
+#ifndef WITHOUTOPENGL
 static void draw_some_gl_lines(GdkGLDrawable *gl_drawable, GdkGLContext *gl_context)
 {
 	glPushMatrix();
@@ -8040,9 +8056,11 @@ static void draw_some_gl_lines(GdkGLDrawable *gl_drawable, GdkGLContext *gl_cont
 	glLoadIdentity();
 	glPopMatrix();
 }
+#endif
 
 static void begin_2d_gl(void)
 {
+#ifndef WITHOUTOPENGL
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
@@ -8050,16 +8068,19 @@ static void begin_2d_gl(void)
 	glOrtho(0.0f, (float) real_screen_width, 0.0f, (float) real_screen_height, -1.0, 1.0);
 	glMatrixMode(GL_MODELVIEW);
 	glDisable(GL_DEPTH_TEST);
+#endif
 }
 
 static void end_2d_gl(void)
 {
+#ifndef WITHOUTOPENGL
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glPopMatrix();
+#endif
 }
 
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
@@ -8071,6 +8092,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (displaymode == DISPLAYMODE_GLMAIN)	
 		return 0;
 
+#ifndef WITHOUTOPENGL
 	GdkGLContext *gl_context = gtk_widget_get_gl_context(main_da);
 	GdkGLDrawable *gl_drawable = gtk_widget_get_gl_drawable(main_da);
 
@@ -8079,7 +8101,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+#endif
 	begin_2d_gl();
 
 	sng_set_foreground(WHITE);
@@ -8176,11 +8198,14 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		draw_quit_screen(w);
 
 end_of_drawing:
+#ifndef WITHOUTOPENGL
 	gdk_gl_drawable_wait_gdk(gl_drawable);
 	gdk_gl_drawable_wait_gl(gl_drawable);
+#endif
 
 	end_2d_gl();
 
+#ifndef WITHOUTOPENGL
 	/* swap buffer if we're using double-buffering */
 	if (gdk_gl_drawable_is_double_buffered(gl_drawable))     
 		gdk_gl_drawable_swap_buffers(gl_drawable); 
@@ -8194,6 +8219,7 @@ end_of_drawing:
 
 	/* Delimits the end of the OpenGL execution. */
 	gdk_gl_drawable_gl_end(gl_drawable);
+#endif
 
 	return 0;
 }
@@ -8268,6 +8294,7 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	cliprect.height = real_screen_height;	
 	gdk_gc_set_clip_rectangle(gc, &cliprect);
 
+#ifndef WITHOUTOPENGL
 	GdkGLContext *gl_context = gtk_widget_get_gl_context(main_da);
 	GdkGLDrawable *gl_drawable = gtk_widget_get_gl_drawable(main_da);
 
@@ -8291,6 +8318,7 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	/* Delimits the end of the OpenGL execution. */
 	gdk_gl_drawable_gl_end(gl_drawable);
 	sng_fixup_gl_y_coordinate(real_screen_height);
+#endif
 	return TRUE;
 }
 
@@ -8679,6 +8707,7 @@ static void init_vects(void)
 
 static void init_gl(int argc, char *argv[], GtkWidget *drawing_area)
 {
+#ifndef WITHOUTOPENGL
 	gtk_gl_init(&argc, &argv);
 
 	/* prepare GL */
@@ -8704,6 +8733,7 @@ static void init_gl(int argc, char *argv[], GtkWidget *drawing_area)
 	g_timeout_add(TIMEOUT_PERIOD, idle_cb, drawing_area);
 #endif
 	sng_fixup_gl_y_coordinate(SCREEN_HEIGHT);
+#endif
 }
 
 int main(int argc, char *argv[])

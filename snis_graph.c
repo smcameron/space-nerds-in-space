@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <math.h>
 #include <gtk/gtk.h>
+#ifndef WITHOUTOPENGL
 #include <gtk/gtkgl.h>
 #include <GL/gl.h>
+#endif
 
 #include "snis_font.h"
 #define SNIS_GRAPH_DECLARE_GLOBALS
@@ -30,7 +32,6 @@ void sng_fixup_gl_y_coordinate(int screen_height)
 {
 	sgc.screen_height = screen_height;
 }
-
 
 static int sng_rand(int n)
 {
@@ -63,6 +64,7 @@ int sng_device_y(int y)
 
 void sng_gl_draw_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
 {
+#ifndef WITHOUTOPENGL
 	GdkColor *h = &huex[sgc.hue];
 
         glBegin(GL_LINES);
@@ -70,6 +72,9 @@ void sng_gl_draw_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, 
         glVertex2i(x1, sgc.screen_height - y1);
         glVertex2i(x2, sgc.screen_height - y2);
         glEnd();
+#else
+	gdk_draw_line(drawable, gc, x1, y1, x2, y2);
+#endif
 }
 
 void sng_scaled_line(GdkDrawable *drawable,
@@ -138,6 +143,7 @@ static int clip_rectangle(int *x, int *y, int *width, int *height)
 static void gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean filled,
 		gint x, gint y, gint width, gint height)
 {
+#ifndef WITHOUTOPENGL
 	int x2, y2;
 	GdkColor *h = &huex[sgc.hue];
 
@@ -153,6 +159,9 @@ static void gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean filled,
         glVertex2i(x2, sgc.screen_height - y2);
         glVertex2i(x, sgc.screen_height - y2);
 	glEnd();
+#else
+	gdk_draw_rectangle(drawable, gc, filled, x, y, width, height);
+#endif
 }
 
 void sng_scaled_rectangle(GdkDrawable *drawable,
@@ -245,12 +254,16 @@ void sng_use_thick_lines(void)
 
 static void gl_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y)
 {
+#ifndef WITHOUTOPENGL
 	GdkColor *h = &huex[sgc.hue];
 
 	glBegin(GL_POINTS);
         glColor3us(h->red, h->green, h->blue);
 	glVertex2i(x, sgc.screen_height - y);
 	glEnd();
+#else
+	gdk_draw_point(drawable, gc, x, y);
+#endif
 }
 
 void sng_dotted_line_plot_func(int x, int y, void *context)
@@ -478,7 +491,9 @@ void sng_setup_colors(GtkWidget *w)
 void sng_set_foreground(int c)
 {
 	sgc.hue = c;
-	/* gdk_gc_set_foreground(sgc.gc, &huex[c]); */
+#ifdef WITHOUTOPENGL
+	gdk_gc_set_foreground(sgc.gc, &huex[c]);
+#endif
 }
 
 void sng_set_gc(GdkGC *gc)
@@ -488,6 +503,7 @@ void sng_set_gc(GdkGC *gc)
 
 static void gl_draw_circle(int x, int y,  int r)
 {
+#ifndef WITHOUTOPENGL
 	int i;
 	GdkColor *h = &huex[sgc.hue];
  
@@ -497,11 +513,16 @@ static void gl_draw_circle(int x, int y,  int r)
 		glVertex2f(sgc.xscale * (x + cos(i * M_PI / 180.0) * r),
 			(sgc.screen_height - y * sgc.yscale) + sin(i * M_PI / 180.0) * r * sgc.yscale);
 	glEnd();
+#endif
 }
 
 void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
 {
+#ifndef WITHOUTOPENGL
 	gl_draw_circle(x, y, r);
+#else
+	sng_current_draw_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
+#endif
 }
 
 void sng_device_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
@@ -535,6 +556,7 @@ void sng_bright_device_line(GdkDrawable *drawable,
 
 void sng_filled_tri(int x1, int y1, int x2, int y2, int x3, int y3)
 {
+#ifndef WITHOUTOPENGL
 	GdkColor *h = &huex[sgc.hue];
 
         glBegin(GL_TRIANGLES);
@@ -543,5 +565,8 @@ void sng_filled_tri(int x1, int y1, int x2, int y2, int x3, int y3)
         glVertex2i(x2, sgc.screen_height - y2);
         glVertex2i(x3, sgc.screen_height - y3);
         glEnd();
+#else
+	/* TODO: write gtk variant */
+#endif
 }
 

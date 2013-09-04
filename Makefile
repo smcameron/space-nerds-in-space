@@ -52,6 +52,13 @@ CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_graph.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	snis_damcon_systems.o mesh.o \
 	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o
+
+LIMCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_limited_graph.o \
+	snis_limited_client.o snis_font.o snis_text_input.o \
+	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
+	snis_damcon_systems.o mesh.o \
+	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o
+
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm -llua5.2
 #
@@ -73,7 +80,7 @@ LIBS=-Lssgl -lssglclient -lrt -lm -llua5.2
 #
 
 
-PROGS=snis_server snis_client
+PROGS=snis_server snis_client snis_limited_client
 
 # model directory
 MD=share/snis/models
@@ -116,9 +123,11 @@ MODELS=${MD}/freighter.stl \
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} \
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
-GTKCFLAGS=`pkg-config --cflags gtk+-2.0 gtkglext-1.0`
-GTKLDFLAGS=`pkg-config --libs gtk+-2.0 gtkglext-1.0` \
+GTKCFLAGS=`pkg-config --cflags gtk+-2.0`
+GLEXTCFLAGS=`pkg-config --cflags gtkglext-1.0`
+GTKLDFLAGS=`pkg-config --libs gtk+-2.0` \
         `pkg-config --libs gthread-2.0`
+GLEXTLDFLAGS=`pkg-config --libs gtkglext-1.0` 
 VORBISFLAGS=`pkg-config --cflags vorbisfile`
 
 ifeq (${V},1)
@@ -131,13 +140,16 @@ endif
 
 COMPILE=$(CC) ${MYCFLAGS} -I/usr/include/lua5.2 -c -o $@ $< && $(ECHO) '  COMPILE' $<
 GTKCOMPILE=$(CC) ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
+LIMCOMPILE=$(CC) -DWITHOUTOPENGL=1 ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
+GLEXTCOMPILE=$(CC) ${MYCFLAGS} ${GTKCFLAGS} ${GLEXTCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 VORBISCOMPILE=$(CC) ${MYCFLAGS} ${VORBISFLAGS} ${SNDFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 
-CLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS}  ${CLIENTOBJS} ${GTKLDFLAGS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
+CLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${GLEXTCFLAGS} ${CLIENTOBJS} ${GTKLDFLAGS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
+LIMCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${LIMCLIENTOBJS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
 SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} ${SERVEROBJS} ${GTKLDFLAGS} ${LIBS} && $(ECHO) '  LINK' $@
 OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 
-all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${PROGS} ${MODELS}
+all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS}
 
 starbase.stl:	starbase.scad wedge.scad
 	$(Q)$(OPENSCAD)
@@ -179,7 +191,13 @@ snis_server.o:	snis_server.c snis.h snis_packet.h snis_marshal.h sounds.h starba
 	$(Q)$(COMPILE)
 
 snis_client.o:	snis_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(GLEXTCOMPILE)
+
+snis_limited_client.c:	snis_client.c
+	cp snis_client.c snis_limited_client.c
+
+snis_limited_client.o:	snis_limited_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h
+	$(Q)$(LIMCOMPILE)
 
 snis_socket_io.o:	snis_socket_io.c snis_socket_io.h
 	$(Q)$(COMPILE)
@@ -208,6 +226,9 @@ snis_server:	${SERVEROBJS} ${SSGL}
 snis_client:	${CLIENTOBJS} ${SSGL}
 	$(Q)$(CLIENTLINK)
 
+snis_limited_client:	${LIMCLIENTOBJS} ${SSGL}
+	$(Q)$(LIMCLIENTLINK)
+
 #	$(CC) ${MYCFLAGS} ${SNDFLAGS} -o snis_client ${GTKCFLAGS}  ${CLIENTOBJS} ${GTKLDFLAGS} ${LIBS} ${SNDLIBS}
 
 starbase-comms.o:	starbase-comms.c starbase-comms.h
@@ -222,8 +243,14 @@ infinite-taunt:	infinite-taunt.c infinite-taunt.h
 names:	names.c names.h
 	$(CC) -DTEST_NAMES -o names ${MYCFLAGS} ${GTKCFLAGS} names.c
 
+snis_limited_graph.c:	snis_graph.c
+	cp snis_graph.c snis_limited_graph.c
+
+snis_limited_graph.o:	snis_limited_graph.c snis_graph.h
+	$(Q)$(LIMCOMPILE)
+
 snis_graph.o:	snis_graph.c snis_graph.h
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(GLEXTCOMPILE)
 
 snis_typeface.o:	snis_typeface.c snis_typeface.h
 	$(Q)$(GTKCOMPILE)
@@ -275,6 +302,6 @@ ${SSGL}:
 	(cd ssgl ; make )
 
 clean:
-	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${PROGS} ${SSGL} stl_parser ${MODELS} 
+	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${PROGS} ${SSGL} stl_parser ${MODELS} snis_limited_graph.c snis_limited_client.c
 	( cd ssgl; make clean )
 
