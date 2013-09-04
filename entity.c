@@ -274,7 +274,7 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 		return;
 
 	if (!(render_style & RENDER_NO_FILL)) {
-		sng_filled_tri(sng_device_x(x1), sng_device_y(y1),
+		sng_filled_tri(w->window, gc, sng_device_x(x1), sng_device_y(y1),
 				sng_device_x(x2), sng_device_y(y2),
 				sng_device_x(x3), sng_device_y(y3));
 		if (render_style == RENDER_NORMAL)

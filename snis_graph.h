@@ -105,7 +105,8 @@ SNG_GLOBAL void sng_bright_device_line(GdkDrawable *drawable, GdkGC *gc,
 
 SNG_GLOBAL void sng_set_clip_window(int x1, int y1, int x2, int y2);
 SNG_GLOBAL void sng_fixup_gl_y_coordinate(int screen_height);
-SNG_GLOBAL void sng_filled_tri(int x1, int y1, int x2, int y2, int x3, int y3);
+SNG_GLOBAL void sng_filled_tri(GdkDrawable *drawable, GdkGC *gc,
+			int x1, int y1, int x2, int y2, int x3, int y3);
 
 #undef SNG_GLOBAL
 #endif

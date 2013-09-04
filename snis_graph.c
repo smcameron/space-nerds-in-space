@@ -554,7 +554,8 @@ void sng_bright_device_line(GdkDrawable *drawable,
 	sng_gl_draw_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
 }
 
-void sng_filled_tri(int x1, int y1, int x2, int y2, int x3, int y3)
+void sng_filled_tri(GdkDrawable *drawable, GdkGC *gc,
+			int x1, int y1, int x2, int y2, int x3, int y3)
 {
 #ifndef WITHOUTOPENGL
 	GdkColor *h = &huex[sgc.hue];
@@ -566,7 +567,16 @@ void sng_filled_tri(int x1, int y1, int x2, int y2, int x3, int y3)
         glVertex2i(x3, sgc.screen_height - y3);
         glEnd();
 #else
-	/* TODO: write gtk variant */
+	GdkPoint tri[3];
+
+	tri[0].x = x1;
+	tri[0].y = y1;
+	tri[1].x = x2;
+	tri[1].y = y2;
+	tri[2].x = x3;
+	tri[2].y = y3;
+
+	gdk_draw_polygon(drawable, gc, 1, tri, 3);
 #endif
 }
 
