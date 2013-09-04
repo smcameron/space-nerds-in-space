@@ -8034,30 +8034,6 @@ static void draw_quit_screen(GtkWidget *w)
 	}
 }
 
-#ifndef WITHOUTOPENGL
-static void draw_some_gl_lines(GdkGLDrawable *gl_drawable, GdkGLContext *gl_context)
-{
-	glPushMatrix();
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
-	glOrtho(0.0f, (float) real_screen_width, 0.0f, (float) real_screen_height, -1.0, 1.0);
-	glMatrixMode(GL_MODELVIEW);
-	glLineWidth(3.0f);
-	glBegin(GL_LINES);
-	glColor3f(1.0, 0.0, 0.0);
-	glVertex2f(0.0f, 0.0f);
-	glVertex2f((float) real_screen_width, (float) real_screen_height);
-	glEnd();
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glPopMatrix();
-}
-#endif
-
 static void begin_2d_gl(void)
 {
 #ifndef WITHOUTOPENGL
