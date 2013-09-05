@@ -1,9 +1,12 @@
 #include <stdlib.h>
 #include <math.h>
+#include <errno.h>
+#include <string.h>
 #include <gtk/gtk.h>
 #ifndef WITHOUTOPENGL
 #include <gtk/gtkgl.h>
 #include <GL/gl.h>
+#include <png.h>
 #endif
 
 #include "snis_font.h"
@@ -13,6 +16,7 @@
 
 #include "liang-barsky.h"
 #include "bline.h"
+
 
 #define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY)
 GdkColor huex[TOTAL_COLORS]; 
@@ -577,6 +581,119 @@ void sng_filled_tri(GdkDrawable *drawable, GdkGC *gc,
 	tri[2].y = y3;
 
 	gdk_draw_polygon(drawable, gc, 1, tri, 3);
+#endif
+}
+
+int sng_load_png_texture(const char * filename, int *w, int *h, char *whynot, int whynotlen)
+{
+#ifndef WITHOUTOPENGL
+	int i, bit_depth, color_type, row_bytes;
+	png_byte header[8];
+	png_uint_32 tw, th;
+	png_structp png_ptr = NULL;
+	png_infop info_ptr = NULL;
+	png_infop end_info = NULL;
+	png_byte *image_data = NULL;
+	png_bytep *row = NULL;
+	GLuint texture = -1;
+
+	FILE *fp = fopen(filename, "rb");
+	if (!fp) {
+		snprintf(whynot, whynotlen, "Failed to open '%s': %s",
+			filename, strerror(errno));
+		return -1;
+	}
+
+	fread(header, 1, 8, fp);
+	if (png_sig_cmp(header, 0, 8)) {
+		snprintf(whynot, whynotlen, "'%s' isn't a png file.",
+			filename);
+		goto cleanup;
+	}
+
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,
+							NULL, NULL, NULL);
+	if (!png_ptr) {
+		snprintf(whynot, whynotlen,
+			"png_create_read_struct() returned NULL");
+		goto cleanup;
+	}
+
+	info_ptr = png_create_info_struct(png_ptr);
+	if (!info_ptr) {
+		snprintf(whynot, whynotlen,
+			"png_create_info_struct() returned NULL");
+		goto cleanup;
+	}
+
+	end_info = png_create_info_struct(png_ptr);
+	if (!end_info) {
+		snprintf(whynot, whynotlen,
+			"2nd png_create_info_struct() returned NULL");
+		goto cleanup;
+	}
+
+	if (setjmp(png_jmpbuf(png_ptr))) {
+		snprintf(whynot, whynotlen, "libpng encounted an error");
+		goto cleanup;
+	}
+
+	png_init_io(png_ptr, fp);
+	png_set_sig_bytes(png_ptr, 8);
+	png_read_info(png_ptr, info_ptr);
+	png_get_IHDR(png_ptr, info_ptr, &tw, &th, &bit_depth, &color_type, NULL, NULL, NULL);
+
+	if (w)
+		*w = tw;
+	if (h)
+		*h = th;
+
+	png_read_update_info(png_ptr, info_ptr);
+	row_bytes = png_get_rowbytes(png_ptr, info_ptr);
+
+	/* align to 4 byte boundary */
+	if (row_bytes & 0x03)
+		row_bytes += 4 - (row_bytes & 0x03);
+
+	image_data = malloc(row_bytes * th * sizeof(png_byte) + 15);
+	if (!image_data) {
+		snprintf(whynot, whynotlen,
+			"malloc failed in load_png_texture");
+		goto cleanup;
+	}
+
+	row = malloc(th * sizeof(png_bytep));
+	if (!row) {
+		snprintf(whynot, whynotlen, "malloc failed in load_png_texture");
+		goto cleanup;
+	}
+
+	for (i = 0; i < th; i++)
+		row[i] = image_data + i * row_bytes;
+
+	png_read_image(png_ptr, row);
+
+	glGenTextures(1, &texture);
+	if (texture == -1) {
+		snprintf(whynot, whynotlen, "glGenTextures failed.");
+		goto cleanup;
+	}
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tw, th, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+cleanup:
+	if (row)
+		free(row);
+	if (image_data)
+		free(image_data);
+	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+	fclose(fp);
+	return texture;
+#else
+	snprintf(whynot, whynotlen, "load_png_texture: compiled without opengl support.");
+	return -1;
 #endif
 }
 
