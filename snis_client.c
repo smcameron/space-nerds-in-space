@@ -30,6 +30,7 @@
 #ifndef WITHOUTOPENGL
 #include <gtk/gtkgl.h>
 #include <GL/gl.h>
+#include <GL/glu.h>
 #endif
 
 #include <string.h>
@@ -3849,6 +3850,124 @@ static void show_mainscreen_starfield(GtkWidget *w, double heading)
 	}
 }
 
+static void begin_2d_gl(void);
+static void end_2d_gl(void);
+#ifndef WITHOUTOPENGL
+static void begin_3d_gl(void)
+{
+	glPushMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	gluPerspective(50.0, (float) real_screen_width / real_screen_height, 0.5, 1000.0);
+	gluLookAt(0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0);
+	glMatrixMode(GL_MODELVIEW);
+	/* glDisable(GL_DEPTH_TEST); */
+}
+
+static void end_3d_gl(void)
+{
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glPopMatrix();
+}
+#endif
+
+static void render_skybox(GtkWidget *w, double camera_look_heading)
+{
+#ifndef WITHOUTOPENGL
+#if 1
+	static const float v[8][3] = {
+		{ -1.0, 1.0, -1.0 },
+		{ 1.0, 1.0, -1.0 },
+		{ 1.0, -1.0, -1.0 },
+		{ -1.0, -1.0, -1.0 },
+		{ -1.0, 1.0, 1.0 },
+		{ 1.0, 1.0, 1.0 },
+		{ 1.0, -1.0, 1.0 },
+		{ -1.0, -1.0, 1.0 },
+	};
+
+	static const float n[6][3] = {
+		{ 0.0, 0.0, 1.0 },
+		{ 1.0, 0.0, 0.0 },
+		{ 0.0, -1.0, 0.0 },
+		{ -1.0, 0.0, 0.0 },
+		{ 0.0, 1.0, 0.0 },
+		{ 0.0, 0.0, -1.0 },
+	};
+#endif
+	end_2d_gl();
+	begin_3d_gl();
+
+	glColor4ub(255, 255, 255, 255);
+	const static GLfloat light0_position[] = {1.0, 1.0, 1.0, 0.0};
+	glLightfv(GL_LIGHT0, GL_POSITION, light0_position);
+	glEnable(GL_DEPTH_TEST);    
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+#if 1
+	glBegin(GL_QUADS);
+	glNormal3fv(&n[0][0]);
+	glVertex3fv(&v[0][0]);
+	glVertex3fv(&v[1][0]);
+	glVertex3fv(&v[2][0]);
+	glVertex3fv(&v[3][0]);
+	glEnd();
+
+	glBegin(GL_QUADS);
+	glNormal3fv(&n[1][0]);
+	glVertex3fv(&v[0][0]);
+	glVertex3fv(&v[3][0]);
+	glVertex3fv(&v[7][0]);
+	glVertex3fv(&v[4][0]);
+	glEnd();
+
+	glBegin(GL_QUADS);
+	glNormal3fv(&n[2][0]);
+	glVertex3fv(&v[1][0]);
+	glVertex3fv(&v[0][0]);
+	glVertex3fv(&v[4][0]);
+	glVertex3fv(&v[5][0]);
+	glEnd();
+
+	glBegin(GL_QUADS);
+	glNormal3fv(&n[3][0]);
+	glVertex3fv(&v[1][0]);
+	glVertex3fv(&v[5][0]);
+	glVertex3fv(&v[6][0]);
+	glVertex3fv(&v[2][0]);
+	glEnd();
+
+	glBegin(GL_QUADS);
+	glNormal3fv(&n[4][0]);
+	glVertex3fv(&v[3][0]);
+	glVertex3fv(&v[2][0]);
+	glVertex3fv(&v[6][0]);
+	glVertex3fv(&v[7][0]);
+	glEnd();
+
+	glBegin(GL_QUADS);
+	glNormal3fv(&n[5][0]);
+	glVertex3fv(&v[6][0]);
+	glVertex3fv(&v[5][0]);
+	glVertex3fv(&v[4][0]);
+	glVertex3fv(&v[7][0]);
+	glEnd();
+#endif
+	// gdk_gl_draw_teapot(1, 3.5);
+	glDisable(GL_DEPTH_TEST);    
+	glDisable(GL_LIGHTING);
+	glDisable(GL_LIGHT0);
+
+	end_3d_gl();
+	begin_2d_gl();
+#endif
+}
+
 static void show_gunsight(GtkWidget *w)
 {
 	int x1, y1, x2, y2, cx, cy;
@@ -3881,6 +4000,9 @@ static void show_mainscreen(GtkWidget *w)
 		camera_look_heading = o->heading + o->tsd.ship.view_angle;
 	else
 		camera_look_heading = o->tsd.ship.gun_heading;
+
+	render_skybox(w, camera_look_heading);
+
 	show_mainscreen_starfield(w, camera_look_heading);
 
 	cx = (float) o->x;
