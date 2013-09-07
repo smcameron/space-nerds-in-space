@@ -3923,31 +3923,31 @@ static void render_skybox(GtkWidget *w, double camera_look_heading)
 	glEnable(GL_TEXTURE_2D);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-	glBindTexture(GL_TEXTURE_2D, texture[0]);
+	glBindTexture(GL_TEXTURE_2D, texture[2]);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	glBegin(GL_QUADS);
 	glNormal3fv(&n[0][0]);
-	glTexCoord2f(0, 0); glVertex3fv(&v[1][0]);
-	glTexCoord2f(1, 0); glVertex3fv(&v[0][0]);
-	glTexCoord2f(1, 1); glVertex3fv(&v[3][0]);
-	glTexCoord2f(0, 1); glVertex3fv(&v[2][0]);
+	glTexCoord2f(1, 0); glVertex3fv(&v[1][0]);
+	glTexCoord2f(0, 0); glVertex3fv(&v[0][0]);
+	glTexCoord2f(0, 1); glVertex3fv(&v[3][0]);
+	glTexCoord2f(1, 1); glVertex3fv(&v[2][0]);
 	glEnd();
 
-	glBindTexture(GL_TEXTURE_2D, texture[0]);
+	glBindTexture(GL_TEXTURE_2D, texture[1]);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	glBegin(GL_QUADS);
 	glNormal3fv(&n[1][0]);
-	glTexCoord2f(0, 0); glVertex3fv(&v[0][0]);
-	glTexCoord2f(1, 0); glVertex3fv(&v[3][0]);
-	glTexCoord2f(1, 1); glVertex3fv(&v[7][0]);
-	glTexCoord2f(0, 1); glVertex3fv(&v[4][0]);
+	glTexCoord2f(1, 0); glVertex3fv(&v[0][0]);
+	glTexCoord2f(1, 1); glVertex3fv(&v[3][0]);
+	glTexCoord2f(0, 1); glVertex3fv(&v[7][0]);
+	glTexCoord2f(0, 0); glVertex3fv(&v[4][0]);
 	glEnd();
 
-	glBindTexture(GL_TEXTURE_2D, texture[0]);
+	glBindTexture(GL_TEXTURE_2D, texture[4]);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -3959,19 +3959,19 @@ static void render_skybox(GtkWidget *w, double camera_look_heading)
 	glTexCoord2f(0, 1); glVertex3fv(&v[5][0]);
 	glEnd();
 
-	glBindTexture(GL_TEXTURE_2D, texture[0]);
+	glBindTexture(GL_TEXTURE_2D, texture[3]);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	glBegin(GL_QUADS);
 	glNormal3fv(&n[3][0]);
-	glTexCoord2f(0, 0); glVertex3fv(&v[5][0]);
-	glTexCoord2f(1, 0); glVertex3fv(&v[1][0]);
-	glTexCoord2f(1, 1); glVertex3fv(&v[2][0]);
-	glTexCoord2f(0, 1); glVertex3fv(&v[6][0]);
+	glTexCoord2f(1, 0); glVertex3fv(&v[5][0]);
+	glTexCoord2f(0, 0); glVertex3fv(&v[1][0]);
+	glTexCoord2f(0, 1); glVertex3fv(&v[2][0]);
+	glTexCoord2f(1, 1); glVertex3fv(&v[6][0]);
 	glEnd();
 
-	glBindTexture(GL_TEXTURE_2D, texture[0]);
+	glBindTexture(GL_TEXTURE_2D, texture[5]);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -3990,10 +3990,10 @@ static void render_skybox(GtkWidget *w, double camera_look_heading)
 
 	glBegin(GL_QUADS);
 	glNormal3fv(&n[5][0]);
-	glTexCoord2f(0, 0); glVertex3fv(&v[4][0]);
-	glTexCoord2f(0, 1); glVertex3fv(&v[5][0]);
-	glTexCoord2f(1, 1); glVertex3fv(&v[6][0]);
-	glTexCoord2f(1, 0); glVertex3fv(&v[7][0]);
+	glTexCoord2f(1, 0); glVertex3fv(&v[4][0]);
+	glTexCoord2f(0, 0); glVertex3fv(&v[5][0]);
+	glTexCoord2f(0, 1); glVertex3fv(&v[6][0]);
+	glTexCoord2f(1, 1); glVertex3fv(&v[7][0]);
 	glEnd();
 
 	glDisable(GL_DEPTH_TEST);    
@@ -8403,7 +8403,12 @@ static int load_texture(const char *filename)
 
 static void load_textures(void)
 {
-	load_texture("share/snis/textures/space-blue-plasma.png");
+	load_texture("share/snis/textures/image0.png");
+	load_texture("share/snis/textures/image1.png");
+	load_texture("share/snis/textures/image2.png");
+	load_texture("share/snis/textures/image3.png");
+	load_texture("share/snis/textures/image4.png");
+	load_texture("share/snis/textures/image5.png");
 }
 #endif
 
