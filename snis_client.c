@@ -8394,7 +8394,8 @@ static int load_texture(const char *filename)
 	char whynot[100];
 	rc = sng_load_png_texture(filename, &texw, &texh, whynot, sizeof(whynot));
 	if (rc < 0) {
-		printf("texture %s failed to load: %s\n", whynot);
+		fprintf(stderr, "texture %s failed to load: %s\n",
+			filename, whynot);
 		return rc;
 	}
 	texture[ntextures++] = rc;
