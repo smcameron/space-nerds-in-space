@@ -160,6 +160,102 @@ static void dequeue_lua_command(char *cmdbuf, int bufsize)
 	free(qe);
 }
 
+struct timer_event {
+	char *callback;
+	uint32_t firetime;
+	double cookie_val;
+	struct timer_event *next;
+} *lua_timer = NULL;
+
+static struct timer_event *init_lua_timer(const char *callback,
+			const double firetime, const double cookie_val,
+			struct timer_event *next)
+{
+	struct timer_event *newone = calloc(sizeof(*newone), 1);
+
+	newone->callback = strdup(callback);
+	newone->firetime = firetime;
+	newone->cookie_val = cookie_val;
+	newone->next = next;
+	return newone;
+}
+
+static uint32_t universe_timestamp = 1;
+
+/* insert new timer into list, keeping list in sorted order. */
+static double register_lua_timer_callback(const char *callback,
+		const double timer_ticks, const double cookie_val)
+{
+	struct timer_event *i, *last, *newone;
+	uint32_t firetime = universe_timestamp + (uint32_t) timer_ticks;
+
+	last = NULL;
+	for (i = lua_timer; i != NULL; i = i->next) {
+		if (i->firetime < firetime) {
+			last = i;
+			continue;
+		}
+	}
+	newone = init_lua_timer(callback, firetime, cookie_val, i);
+	if (!last)
+		lua_timer = newone;
+	else
+		last->next = newone;
+	return 0.0;
+}
+
+static void free_timer_event(struct timer_event **e)
+{
+	free((*e)->callback);
+	free(*e);
+	*e = NULL;
+}
+
+static void free_timer_events(struct timer_event **e)
+{
+	struct timer_event *i, *next;
+
+	for (i = *e; i != NULL; i = next) {
+		next = i->next;
+		free_timer_event(&i);
+	}
+	*e = NULL;
+}
+
+static void fire_lua_timers(void)
+{
+	struct timer_event *i, *last, *next;
+	struct timer_event *temp_list = NULL;
+
+	last = NULL;
+	pthread_mutex_lock(&universe_mutex);
+	for (i = lua_timer; i != NULL && i->firetime <= universe_timestamp;) {
+		next = i->next;
+
+		/* remove the timer */
+		if (last)
+			last->next = next;
+		else
+			lua_timer = next;
+
+		/* add the timer to temp list */
+		i->next = temp_list;
+		temp_list = i;
+		i = next;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+
+	for (i = temp_list; i != NULL; i = next) {
+		/* Call the lua timer function */
+		next = i->next;
+		lua_getglobal(lua_state, i->callback);
+		lua_pushnumber(lua_state, i->cookie_val);
+		lua_pcall(lua_state, 1, 0, 0);
+		free_timer_event(&i);
+	}
+
+}
+
 struct event_callback_entry *event_callback = NULL;
 
 void lua_object_id_event(char *event, uint32_t object_id)
@@ -193,7 +289,6 @@ struct timeval start_time, end_time;
 
 static struct snis_object_pool *pool;
 static struct snis_entity go[MAXGAMEOBJS];
-static uint32_t universe_timestamp = 1;
 
 static uint32_t get_new_object_id(void)
 {
@@ -3632,6 +3727,20 @@ static int l_register_callback(lua_State *l)
 	return 1;
 }
 
+static int l_register_timer_callback(lua_State *l)
+{
+	const char *callback = luaL_checkstring(l, 1);
+	const double timer_ticks = luaL_checknumber(l, 2);
+	const double cookie_value = luaL_checknumber(l, 3);
+	int rc;
+
+	pthread_mutex_lock(&universe_mutex);
+	rc = register_lua_timer_callback(callback, timer_ticks, cookie_value);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, rc);
+	return 1;
+}
+
 static void do_robot_drop(struct damcon_data *d)
 {
 	int i, c, found_socket = -1;
@@ -3828,6 +3937,7 @@ static void process_demon_clear_all(void)
 
 	pthread_mutex_lock(&universe_mutex);
 	free_event_callbacks(&event_callback);
+	free_timer_events(&lua_timer);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 
@@ -5541,7 +5651,7 @@ static void move_objects(void)
 	}
 	move_damcon_entities();
 	pthread_mutex_unlock(&universe_mutex);
-
+	fire_lua_timers();
 }
 
 static void register_with_game_lobby(char *lobbyhost, int port,
@@ -5623,6 +5733,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_move_object, "move_object");
 	add_lua_callable_fn(l_attack_ship, "attack_ship");
 	add_lua_callable_fn(l_register_callback, "register_callback");
+	add_lua_callable_fn(l_register_timer_callback, "register_timer_callback");
 }
 
 static int run_initial_lua_scripts(void)

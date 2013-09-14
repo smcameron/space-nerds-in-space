@@ -85,3 +85,7 @@ register_callback(event, callback); -- event is a string, the name of the event 
 	function and return values from the lua function depend on the event (see events,
 	above.)
 
+register_timer_callback(callback, timer_ticks, cookie)
+	register a function to be called back in timer_ticks (each timer_tick is 1/10th second).
+	the cookie value is passed to your callback function.
+
