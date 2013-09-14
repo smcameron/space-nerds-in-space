@@ -279,15 +279,15 @@ void fire_lua_callbacks(struct callback_schedule_entry **sched)
 {
 	struct callback_schedule_entry *i, *next;
 	char *callback;
-	double param;
 
 	for (i = *sched; i != NULL; i = next) {
 		next = next_scheduled_callback(*sched);
 		callback = callback_name(i);
-		param = callback_schedule_entry_param(i, 0); 
 		lua_getglobal(lua_state, callback);
-		lua_pushnumber(lua_state, param);
-		lua_pcall(lua_state, 1, 0, 0);
+		lua_pushnumber(lua_state, callback_schedule_entry_param(i, 0));
+		lua_pushnumber(lua_state, callback_schedule_entry_param(i, 1));
+		lua_pushnumber(lua_state, callback_schedule_entry_param(i, 2));
+		lua_pcall(lua_state, 3, 0, 0);
 	}
 	free_callback_schedule(sched);
 }
