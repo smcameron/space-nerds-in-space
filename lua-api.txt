@@ -33,6 +33,15 @@ SHIPTYPES in snis:
 	SHIP_CLASS_DISRUPTOR 12 
 	SHIP_CLASS_RESEARCH_VESSEL 13 
 
+EVENT TYPES in snis:
+
+	"player-respawn-event",
+		arguments: object id of player
+		return values: none.
+	"player-death-event",
+		arguments: object id of player
+		return values: none.
+
 Functions which you may call from lua: 
 
 clear_all() -- this clears the entire universe except for human controlled ships
@@ -69,4 +78,10 @@ x,y,z = get_object_location(object_id); -- x,y,z location coordinates of specifi
 	If the object_id does not exist (anymore), x,y,z will be nil.
 
 move_object(object_id, x, y, z); -- move object to x, y, z location.
+
+register_callback(event, callback); -- event is a string, the name of the event you wish
+	to register a callback for, and	callback is a string, the name of the lua function
+	you want to get called when that event occurs.  The arguments passed to the lua
+	function and return values from the lua function depend on the event (see events,
+	above.)
 

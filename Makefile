@@ -45,7 +45,7 @@ endif
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o \
-		power-model.o quat.o matrix.o
+		power-model.o quat.o matrix.o snis_event_callback.o
 
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_graph.o \
 	snis_client.o snis_font.o snis_text_input.o \
@@ -297,6 +297,9 @@ quat.o:	quat.c quat.h
 
 test_matrix:	matrix.c matrix.h
 	$(CC) ${MYCFLAGS} ${GTKCFLAGS} -DTEST_MATRIX -o test_matrix matrix.c -lm
+
+snis_event_callback.o:	snis_event_callback.h snis_event_callback.c
+	$(CC) ${MYCFLAGS} -c snis_event_callback.c
 
 ${SSGL}:
 	(cd ssgl ; make )
