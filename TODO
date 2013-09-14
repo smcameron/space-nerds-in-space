@@ -9,6 +9,8 @@ Too much to list, but here's a list anyway:
     Damage repairing
     Coolant distribution(?)
     make comms power do something
+    Some sliders set only a maximum, while others control power usage
+	this is confusing.  Figure something out to make it less confusing.
 
 * Communications screen
     Starbase comm stuff
@@ -47,6 +49,7 @@ Too much to list, but here's a list anyway:
 * 3D out the window view
   Fade distant objects to black
   Represent nebulas somehow
+  finish conversion to opengl
 
 * comms screen:
   need to be able to communicate with starbases -- request
@@ -77,4 +80,6 @@ Too much to list, but here's a list anyway:
 * Right now, laser/torpedo collision detection is too easy/sloppy.
 * Consider dead-reckoning laser/torpedo/ship positions client side between
   server updates.
-* some kind of scripting (lua?)
+* more lua event callbacks, some mission scripts done with lua
+  basically, flesh out the lua scripting system.
+
