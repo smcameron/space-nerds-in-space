@@ -12,6 +12,53 @@ struct event_callback_entry {
 	struct event_callback_entry *next;
 };
 
+struct callback_schedule_entry {
+	char *callback;
+	int nparams;
+	double param[3];
+	struct callback_schedule_entry *next;
+};
+
+static void schedule_one_callback(struct callback_schedule_entry **e, 
+		const char *callback, double param)
+{
+	struct callback_schedule_entry *newone;
+	newone = calloc(sizeof(**e), 1);
+	newone->callback = strdup(callback);
+	newone->nparams = 1;
+	newone->param[0] = param;
+
+	if (!*e) {
+		*e = newone;
+	} else {
+		newone->next = *e;
+		*e = newone;
+	}
+}
+
+void schedule_callback(struct event_callback_entry *e, struct callback_schedule_entry **s,
+		const char *event, double param)
+{
+	struct event_callback_entry *i, *next;
+	int j;
+
+	for (i = e; i != NULL; i = next) {
+		next = i->next;
+		if (strcmp(i->event, event))
+			continue;
+		for (j = 0; j < i->ncallbacks; j++) {
+			schedule_one_callback(s, i->callback[j], param);
+			break;
+		}
+		return;
+	}
+}
+
+struct callback_schedule_entry *next_scheduled_callback(struct callback_schedule_entry *e)
+{
+	return e->next;
+}
+
 static struct event_callback_entry *init_new_event_callback(const char *event, const char *callback)
 {
 	struct event_callback_entry *e;
@@ -77,5 +124,32 @@ void free_event_callbacks(struct event_callback_entry **map)
 		free(i);
 	}
 	*map = NULL;
+}
+
+void free_callback_schedule(struct callback_schedule_entry **e)
+{
+	struct callback_schedule_entry *i, *next;
+
+	for (i = *e; i != NULL; i = next) {
+		next = i->next;
+		free(i->callback);
+		free(i);
+	}
+	*e = NULL;
+}
+
+int callback_schedule_entry_nparams(struct callback_schedule_entry *e)
+{
+	return e->nparams;
+}
+
+double callback_schedule_entry_param(struct callback_schedule_entry *e, int param)
+{
+	return e->param[param];
+}
+
+char *callback_name(struct callback_schedule_entry *e)
+{
+	return strdup(e->callback);
 }
 

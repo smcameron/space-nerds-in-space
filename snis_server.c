@@ -167,6 +167,9 @@ struct timer_event {
 	struct timer_event *next;
 } *lua_timer = NULL;
 
+struct event_callback_entry *event_callback = NULL;
+struct callback_schedule_entry *callback_schedule = NULL; 
+
 static struct timer_event *init_lua_timer(const char *callback,
 			const double firetime, const double cookie_val,
 			struct timer_event *next)
@@ -256,7 +259,6 @@ static void fire_lua_timers(void)
 
 }
 
-struct event_callback_entry *event_callback = NULL;
 
 void lua_object_id_event(char *event, uint32_t object_id)
 {
@@ -271,6 +273,23 @@ void lua_object_id_event(char *event, uint32_t object_id)
 		lua_pushnumber(lua_state, tmp);
 		lua_pcall(lua_state, 1, 0, 0);
 	}
+}
+
+void fire_lua_callbacks(struct callback_schedule_entry **sched)
+{
+	struct callback_schedule_entry *i, *next;
+	char *callback;
+	double param;
+
+	for (i = *sched; i != NULL; i = next) {
+		next = next_scheduled_callback(*sched);
+		callback = callback_name(i);
+		param = callback_schedule_entry_param(i, 0); 
+		lua_getglobal(lua_state, callback);
+		lua_pushnumber(lua_state, param);
+		lua_pcall(lua_state, 1, 0, 0);
+	}
+	free_callback_schedule(sched);
 }
 
 void lua_player_respawn_event(uint32_t object_id)
@@ -696,7 +715,8 @@ static void torpedo_move(struct snis_entity *o)
 			} else {
 				snis_queue_add_sound(EXPLOSION_SOUND,
 					ROLE_SOUNDSERVER, go[i].id);
-				lua_player_death_event(go[i].id);
+				schedule_callback(event_callback, &callback_schedule,
+						"player-death-callback", go[i].id);
 			}
 		} else {
 			(void) add_explosion(go[i].x, go[i].y, go[i].z, 50, 5, 5, go[i].type);
@@ -793,7 +813,8 @@ static void laser_move(struct snis_entity *o)
 			} else {
 				snis_queue_add_sound(EXPLOSION_SOUND,
 							ROLE_SOUNDSERVER, go[i].id);
-				lua_player_death_event(go[i].id);
+				schedule_callback(event_callback, &callback_schedule,
+						"player-death-callback", go[i].id);
 			}
 		} else {
 			(void) add_explosion(go[i].x, go[i].y, go[i].z, 50, 5, 5, otype);
@@ -2439,7 +2460,8 @@ static void laserbeam_move(struct snis_entity *o)
 		} else {
 			snis_queue_add_sound(EXPLOSION_SOUND,
 						ROLE_SOUNDSERVER, target->id);
-			lua_player_death_event(target->id);
+			schedule_callback(event_callback, &callback_schedule,
+					"player-death-callback", target->id);
 		}
 	} else {
 		(void) add_explosion(target->x, target->y, target->z, 50, 5, 5, ttype);
@@ -5395,7 +5417,8 @@ static int add_new_player(struct game_client *c)
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
 	
 		nbridges++;
-		lua_player_respawn_event(c->shipid);	
+		schedule_callback(event_callback, &callback_schedule,
+				"player-respawn-event", (double) c->shipid);
 		pthread_mutex_unlock(&universe_mutex);
 	} else {
 		c->shipid = bridgelist[c->bridge].shipid;
@@ -5645,13 +5668,15 @@ static void move_objects(void)
 			if (go[i].type == OBJTYPE_SHIP1 &&
 				universe_timestamp >= go[i].respawn_time) {
 				respawn_player(&go[i]);
-				lua_player_respawn_event(go[i].id);	
+				schedule_callback(event_callback, &callback_schedule,
+					"player-respawn-event", (double) go[i].id);
 			}
 		}
 	}
 	move_damcon_entities();
 	pthread_mutex_unlock(&universe_mutex);
 	fire_lua_timers();
+	fire_lua_callbacks(&callback_schedule);
 }
 
 static void register_with_game_lobby(char *lobbyhost, int port,
