@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <string.h>
 #include <sys/time.h>
 #include <stdint.h>
@@ -5569,6 +5570,21 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_attack_ship, "attack_ship");
 }
 
+static int run_initial_lua_scripts(void)
+{
+	int rc;
+	struct stat statbuf;
+	char scriptname[PATH_MAX];
+
+	snprintf(scriptname, sizeof(scriptname) - 1,
+			"%s/%s", LUASCRIPTDIR, "initialize.lua");
+	rc = stat(scriptname, &statbuf);
+	if (rc != 0)
+		return rc;
+	rc = luaL_dofile(lua_state, scriptname);
+	return rc;
+}
+
 static void process_lua_commands(void)
 {
 	char lua_command[PATH_MAX];
@@ -5616,6 +5632,7 @@ int main(int argc, char *argv[])
 	thirtieth_second.tv_nsec = 33333333; /* 1/30th second */
 
 	make_universe();
+	run_initial_lua_scripts();
 	port = start_listener_thread();
 
 	ignore_sigpipe();	
