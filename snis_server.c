@@ -880,7 +880,7 @@ static int find_nearest_victim(struct snis_entity *o)
 	return victim_id;
 }
 
-static void send_comms_packet(char *sender, char *str);
+static void send_comms_packet(char *sender, const char *str);
 static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 {
 	char buffer[1000];
@@ -3765,6 +3765,31 @@ static int l_register_timer_callback(lua_State *l)
 	return 1;
 }
 
+static int l_comms_transmission(lua_State *l)
+{
+	int i;
+	const double transmitter_id = luaL_checknumber(l, 1);
+	const char *transmission = luaL_checkstring(l, 2);
+	struct snis_entity *transmitter;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(transmitter_id);
+	if (i < 0)
+		goto error;
+	transmitter = &go[i];
+	switch (transmitter->type) {
+	case OBJTYPE_STARBASE:
+		send_comms_packet(transmitter->tsd.starbase.name, transmission);
+		break;
+	default:
+		send_comms_packet(transmitter->sdata.name, transmission);
+		break;
+	}
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static void do_robot_drop(struct damcon_data *d)
 {
 	int i, c, found_socket = -1;
@@ -5160,7 +5185,7 @@ static void send_ship_damage_packet(struct snis_entity *o)
 	send_packet_to_all_clients(pb, ROLE_ALL);
 }
 
-static void send_comms_packet(char *sender, char *str)
+static void send_comms_packet(char *sender, const char *str)
 {
 	struct packed_buffer *pb;
 	char tmpbuf[100];
@@ -5762,6 +5787,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_attack_ship, "attack_ship");
 	add_lua_callable_fn(l_register_callback, "register_callback");
 	add_lua_callable_fn(l_register_timer_callback, "register_timer_callback");
+	add_lua_callable_fn(l_comms_transmission, "comms_transmission");
 }
 
 static int run_initial_lua_scripts(void)

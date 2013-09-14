@@ -82,6 +82,9 @@ x,y,z = get_object_location(object_id); -- x,y,z location coordinates of specifi
 
 move_object(object_id, x, y, z); -- move object to x, y, z location.
 
+comms_transmission(object_id, transmission); -- causes the object to transmit the
+	specified transmission via comms.
+
 register_callback(event, callback); -- event is a string, the name of the event you wish
 	to register a callback for, and	callback is a string, the name of the lua function
 	you want to get called when that event occurs.  The arguments passed to the lua
