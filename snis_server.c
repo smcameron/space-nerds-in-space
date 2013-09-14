@@ -3790,6 +3790,32 @@ error:
 	return 0;
 }
 
+static int l_get_object_name(lua_State *l)
+{
+	const double id = luaL_checknumber(l, 1);
+	struct snis_entity *o;
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		lua_pushstring(l, "unknown");
+		goto error;
+	}
+	o = &go[i];
+	switch (o->type) {
+	case OBJTYPE_STARBASE:
+		lua_pushstring(l, o->tsd.starbase.name);
+		break;
+	default:
+		lua_pushstring(l, o->sdata.name);
+		break;
+	}
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	return 1;
+}
+
 static void do_robot_drop(struct damcon_data *d)
 {
 	int i, c, found_socket = -1;
@@ -5788,6 +5814,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_register_callback, "register_callback");
 	add_lua_callable_fn(l_register_timer_callback, "register_timer_callback");
 	add_lua_callable_fn(l_comms_transmission, "comms_transmission");
+	add_lua_callable_fn(l_get_object_name, "get_object_name");
 }
 
 static int run_initial_lua_scripts(void)
