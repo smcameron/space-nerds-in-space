@@ -3827,6 +3827,7 @@ static void process_demon_clear_all(void)
 	int i;
 
 	pthread_mutex_lock(&universe_mutex);
+	free_event_callbacks(&event_callback);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 
