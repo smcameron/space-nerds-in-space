@@ -41,6 +41,9 @@ EVENT TYPES in snis:
 	"player-death-event",
 		arguments: object id of player
 		return values: none.
+	"player-docked-event",
+		arguments: object id of player, object id of station
+		return values none.
 
 Functions which you may call from lua: 
 

@@ -3567,6 +3567,8 @@ static void comm_dock_function(struct game_client *c, char *txt)
 	send_ship_damage_packet(o);
 	o->timestamp = universe_timestamp;
 	send_comms_packet(sb->tsd.starbase.name, msg);
+	schedule_callback2(event_callback, &callback_schedule,
+			"player-docked-event", (double) c->shipid, sb->id);
 	return;
 }
 
