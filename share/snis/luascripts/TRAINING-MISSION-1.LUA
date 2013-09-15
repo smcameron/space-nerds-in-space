@@ -76,6 +76,12 @@ end
 
 -- called whenever the player docks at a starbase
 function player_docked_callback(player_id, station_id)
+
+	-- only the first player counts
+	if player_id ~= player_ids[1] then
+		return;
+	end
+
 	if station_id == sb1 then
 		if next_base == sb1 then
 			if all_bases_visited == 1 then
