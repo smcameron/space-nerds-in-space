@@ -7,6 +7,8 @@
 -- First, clear the board
 clear_all();
 
+start_time = 0;
+
 -- make 4 starbases in a big rectangle
 sb1 = add_starbase(100.0, 100.0, 0, 1);
 sb2 = add_starbase(50000.0, 100.0, 0, 2);
@@ -34,6 +36,10 @@ end
 
 -- Explain to the player via comms what they are expected to do.
 function greetings(cookie)
+
+	start_time = os.time();
+	print("initial start_time = ", start_time);
+
 	comms_transmission(sb1, ": WELCOME TO YOUR TRAINING MISSION, " .. player_name);
 	comms_transmission(sb1, ": YOUR FIRST TASK WILL TO BE TO COMPLETE");
 	comms_transmission(sb1, ": A NAVIGATION COURSE.  YOU WILL BE TIMED.");
@@ -64,7 +70,11 @@ function congrats_on_this_leg(base, base_name, next_location)
 	comms_transmission(base, "");
 	comms_transmission(base, ": CONGRATULATIONS " .. player_name .. ", ");
 	comms_transmission(base, ": FOR COMPLETING THIS LEG OF THE COURSE.");
+	comms_transmission(base, string.format("%s %5.2f %s",
+				": ELAPSED TIME: ", os.time() - start_time, " SECONDS"));
 	comms_transmission(base, ": NOW PROCEED TO " .. next_location);
+	print("os.time() = ", os.time);
+	print("start_time = ", start_time);
 end
 
 function we_have_a_winner(base)
@@ -72,6 +82,7 @@ function we_have_a_winner(base)
 	comms_transmission(base, ": CONGRATULATIONS, " .. player_name);
 	comms_transmission(base, ": YOU HAVE COMPLETED THE RACE COURSE,");
 	comms_transmission(base, ": AND THIS TRAINING MISSION.");
+	comms_transmission(base, ": TOTAL ELAPSED TIME: ", os.time() - start_time, " SECONDS");
 end
 
 -- called whenever the player docks at a starbase
