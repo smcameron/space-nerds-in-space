@@ -186,6 +186,8 @@ void ui_element_list_keypress(struct ui_element_list *list, GdkEventKey *event)
 			continue;
 		if (!i->element->keypress_fn)
 			continue;
+		if (*i->element->displaymode != i->element->active_displaymode)
+			continue;
 		i->element->keypress_fn(i->element->element, event);
 		break;
 	}
@@ -199,6 +201,8 @@ void ui_element_list_keyrelease(struct ui_element_list *list, GdkEventKey *event
 		if (!i->element->has_focus)
 			continue;
 		if (!i->element->keyrelease_fn)
+			continue;
+		if (*i->element->displaymode != i->element->active_displaymode)
 			continue;
 		i->element->keyrelease_fn(i->element->element, event);
 		break;
