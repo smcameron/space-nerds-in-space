@@ -9,9 +9,9 @@ clear_all();
 
 -- make 4 starbases in a big rectangle
 sb1 = add_starbase(100.0, 100.0, 0, 1);
-sb2 = add_starbase(100000.0, 100.0, 0, 2);
-sb3 = add_starbase(100000.0, 70000.0, 0, 3);
-sb4 = add_starbase(0.0, 70000.0, 0, 4);
+sb2 = add_starbase(50000.0, 100.0, 0, 2);
+sb3 = add_starbase(50000.0, 70000.0, 0, 3);
+sb4 = add_starbase(100.0, 70000.0, 0, 4);
 
 -- get the names of the starbases.
 sb1_name = get_object_name(sb1);
@@ -28,7 +28,7 @@ all_bases_visited = 0;
 player_ids = get_player_ship_ids();
 player_name = "Unknown Player"
 if (player_ids[1]) then
-    move_object(player_ids[1], 101000, 71000, 0);
+    move_object(player_ids[1], 25000, 25000, 0);
     player_name = get_object_name(player_ids[1]);
 end
 
