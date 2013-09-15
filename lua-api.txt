@@ -74,11 +74,24 @@ id = add_spacemonster(name, x, y, z, r) - adds spacemonster at x,y with specifie
 id1, id2 = add_wormhole_pair(x1, y1, z1, x2, y2, z2) - adds connected wormholes at the
 	specified location, returns -1 for a wormhole id that fails to create.
 
-(table of player ship ids) = get_list_of_players(); -- returns a table containing the
-	ids of all the player ships, indexed 1..n.
-
 x,y,z = get_object_location(object_id); -- x,y,z location coordinates of specified object.
 	If the object_id does not exist (anymore), x,y,z will be nil.
+
+(table of player ship ids) = get_player_ship_ids(); -- returns a table containing the
+	ids of all the player ships, indexed 1..n.
+
+	Example:
+
+	player_ids = get_player_ship_ids();
+	for i, v in pairs(player_ids) do
+		print(i, v);
+		x, y, z = get_object_location(v);
+		if (x) then
+			print("object ", v, " location is ", x, ", ", y, ", ", z);
+		else
+			print("object ", v, " no longer exists.");
+		end
+	end
 
 move_object(object_id, x, y, z); -- move object to x, y, z location.
 
