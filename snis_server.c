@@ -194,7 +194,7 @@ static double register_lua_timer_callback(const char *callback,
 
 	last = NULL;
 	for (i = lua_timer; i != NULL; i = i->next) {
-		if (i->firetime < firetime) {
+		if (i->firetime <= firetime) {
 			last = i;
 			continue;
 		}
