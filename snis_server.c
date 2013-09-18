@@ -1559,6 +1559,7 @@ static void auto_select_enemies(struct snis_entity *o)
 		case OBJTYPE_SHIP1:
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_ASTEROID:
+		case OBJTYPE_DERELICT:
 		case OBJTYPE_STARBASE: 
 			range2 = hypot2(t->x - o->x, t->y - o->y);
 			if (range2 > acceptable_range2)
