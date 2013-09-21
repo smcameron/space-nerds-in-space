@@ -6419,7 +6419,9 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
 	sprintf(buffer, "NAME: %s", o ? o->sdata.name : "");
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
-	if (o && (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2)) {
+	if (o && (o->type == OBJTYPE_SHIP1 ||
+		o->type == OBJTYPE_SHIP2 ||
+		o->type == OBJTYPE_STARBASE)) {
 		y += 25;
 		the_faction = o ? 
 			o->sdata.faction >= 0 &&

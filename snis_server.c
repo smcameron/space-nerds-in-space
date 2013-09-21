@@ -613,6 +613,25 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength)
 	}
 }
 
+static void calculate_laser_starbase_damage(struct snis_entity *o, uint8_t wavelength)
+{
+	double damage, ss, new_strength;
+
+	ss = shield_strength(wavelength, o->sdata.shield_strength,
+				o->sdata.shield_width,
+				o->sdata.shield_depth,
+				o->sdata.shield_wavelength);
+
+	damage = (0.95 - ss) * (double) (snis_randn(5) + 2.0) + 1.0;
+	
+	new_strength = (double) o->sdata.shield_strength - damage;
+	if (new_strength < 0)
+		new_strength = 0;
+	o->sdata.shield_strength = (int) new_strength;
+	if (o->sdata.shield_strength == 0)
+		o->alive = 0;
+}
+
 static void send_ship_damage_packet(struct snis_entity *o);
 static int lookup_by_id(uint32_t id);
 
@@ -2306,6 +2325,7 @@ static int add_starbase(double x, double y, double z,
 	go[i].tsd.starbase.last_time_called_for_help = 0;
 	go[i].tsd.starbase.under_attack = 0;
 	go[i].tsd.starbase.lifeform_count = snis_randn(100) + 100;
+	go[i].sdata.shield_strength = 255;
 	/* FIXME, why name stored twice? probably just use sdata.name is best
 	 * but might be because we should know starbase name even if science
 	 * doesn't scan it.
@@ -2431,7 +2451,7 @@ static void laserbeam_move(struct snis_entity *o)
 	
 	if (ttype == OBJTYPE_STARBASE) {
 		target->tsd.starbase.under_attack = 1;
-		return;
+		calculate_laser_starbase_damage(target, o->tsd.laser.wavelength);
 	}
 
 	if (ttype == OBJTYPE_SHIP1 || ttype == OBJTYPE_SHIP2) {
