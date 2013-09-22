@@ -3843,6 +3843,120 @@ error:
 	return 1;
 }
 
+static int l_set_player_damage(lua_State *l)
+{
+	const double id = luaL_checknumber(l, 1);
+	const char *system = luaL_checkstring(l, 2);
+	const double value = luaL_checknumber(l, 3);
+	uint32_t oid = (uint32_t) id;
+	uint8_t bvalue;
+	int i;
+	struct snis_entity *o;
+
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto error;
+	o = &go[i];
+	if (o->type != OBJTYPE_SHIP1)
+		goto error;
+	if (value < 0 || value > 255)
+		goto error;
+	bvalue = (uint8_t) value;
+	if (strncmp(system, "shield", 6) == 0) {
+		o->tsd.ship.damage.shield_damage = bvalue;
+		goto done;
+	}
+	if (strncmp(system, "impulse", 7) == 0) {
+		o->tsd.ship.damage.impulse_damage = bvalue;
+		goto done;
+	}
+	if (strncmp(system, "warp", 4) == 0) {
+		o->tsd.ship.damage.warp_damage = bvalue;
+		goto done;
+	}
+	if (strncmp(system, "torpedo", 7) == 0) {
+		o->tsd.ship.damage.torpedo_tubes_damage = bvalue;
+		goto done;
+	}
+	if (strncmp(system, "phaser", 6) == 0) {
+		o->tsd.ship.damage.phaser_banks_damage = bvalue;
+		goto done;
+	}
+	if (strncmp(system, "sensor", 6) == 0) {
+		o->tsd.ship.damage.sensors_damage = bvalue;
+		goto done;
+	}
+	if (strncmp(system, "comms", 5) == 0) {
+		o->tsd.ship.damage.comms_damage = bvalue;
+		goto done;
+	}
+	if (strncmp(system, "tractor", 7) == 0) {
+		o->tsd.ship.damage.tractor_damage = bvalue;
+		goto done;
+	}
+error:
+	lua_pushnil(lua_state);
+	return 1;
+done:
+	lua_pushnumber(lua_state, 0.0);
+	return 1;
+}
+
+static int l_get_player_damage(lua_State *l)
+{
+	const double id = luaL_checknumber(l, 1);
+	const char *system = luaL_checkstring(l, 2);
+	uint32_t oid = (uint32_t) id;
+	uint8_t bvalue;
+	int i;
+	struct snis_entity *o;
+
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto error;
+	o = &go[i];
+	if (o->type != OBJTYPE_SHIP1)
+		goto error;
+	if (strncmp(system, "shields", 6) == 0) {
+		bvalue = o->tsd.ship.damage.shield_damage;
+		goto done;
+	}
+	if (strncmp(system, "impulse", 7) == 0) {
+		bvalue = o->tsd.ship.damage.impulse_damage;
+		goto done;
+	}
+	if (strncmp(system, "warp", 4) == 0) {
+		bvalue = o->tsd.ship.damage.warp_damage;
+		goto done;
+	}
+	if (strncmp(system, "torpedo", 7) == 0) {
+		bvalue = o->tsd.ship.damage.torpedo_tubes_damage;
+		goto done;
+	}
+	if (strncmp(system, "phaser", 6) == 0) {
+		bvalue = o->tsd.ship.damage.phaser_banks_damage;
+		goto done;
+	}
+	if (strncmp(system, "sensors", 6) == 0) {
+		bvalue = o->tsd.ship.damage.sensors_damage;
+		goto done;
+	}
+	if (strncmp(system, "comms", 5) == 0) {
+		bvalue = o->tsd.ship.damage.comms_damage;
+		goto done;
+	}
+	if (strncmp(system, "tractor", 7) == 0) {
+		bvalue = o->tsd.ship.damage.tractor_damage;
+		goto done;
+	}
+error:
+	lua_pushnil(lua_state);
+	return 1;
+done:
+	lua_pushnumber(lua_state, (double) bvalue);
+	return 1;
+}
+
 static void do_robot_drop(struct damcon_data *d)
 {
 	int i, c, found_socket = -1;
@@ -5842,6 +5956,8 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_register_timer_callback, "register_timer_callback");
 	add_lua_callable_fn(l_comms_transmission, "comms_transmission");
 	add_lua_callable_fn(l_get_object_name, "get_object_name");
+	add_lua_callable_fn(l_get_player_damage, "get_player_damage");
+	add_lua_callable_fn(l_set_player_damage, "set_player_damage");
 }
 
 static int run_initial_lua_scripts(void)

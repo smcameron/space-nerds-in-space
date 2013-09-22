@@ -110,3 +110,16 @@ register_timer_callback(callback, timer_ticks, cookie)
 	register a function to be called back in timer_ticks (each timer_tick is 1/10th second).
 	the cookie value is passed to your callback function.
 
+get_player_damage(id, system); -- returns value of damage to player ship system.
+	id is the id of the player's ship (see get_player_ship_ids() above.)
+	system is the name of the system for which you want damage info, and must be one of:
+        "shields", "impulse" "warp", "torpedo", "phaser", "sensors", "comms", "tractor"
+	The returned value is between 0 (no damage) and (255) max damage, inclusive. 
+	nil is returned on error (e.g. bad system, bad id, etc.)
+
+set_player_damage(id, system, value) -- sets the damage of the specified system of the
+		specified player.  Id is the id of the player ship, system is the name
+		of the system to damage (see get_player_damage() above.)
+
+
+
