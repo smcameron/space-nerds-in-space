@@ -27,7 +27,7 @@
 #define XKNOWN_DIM 300000.0
 #define YKNOWN_DIM (XKNOWN_DIM * (600.0/800.0))  /* assumes 800x600 screen aspect ratio */
 
-#define UNIVERSE_DIM ((XKNOWN_DIM) * 20.0)
+#define UNIVERSE_DIM ((XKNOWN_DIM) * 4.0)
 #define UNIVERSE_LIMIT (UNIVERSE_DIM / 2.0) /* plus or minus, x, or y, this is as far as you can go. */
 #define PROXIMITY_DIST2 (400.0 * 400.0)
 #define CRASH_DIST2 (70.0 * 70.0)
