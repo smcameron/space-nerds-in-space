@@ -1642,40 +1642,38 @@ static void do_thrust(struct snis_entity *ship)
 		ship->tsd.ship.velocity = ship->tsd.ship.velocity * 0.99;
 }
 
-static void do_player_collision_detection(struct snis_entity *o)
+static void player_collision_detection(void *player, void *object)
 {
-	int i;
+	struct snis_entity *o, *t;
 	double dist2;
 
-	/* TODO: some sort of space partitioning to make this not such an n^2 problem */
-
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		/* skip non-collidable items */
-		switch (go[i].type) {
-		case OBJTYPE_DEBRIS:
-		case OBJTYPE_SPARK:
-		case OBJTYPE_TORPEDO:
-		case OBJTYPE_LASER:
-		case OBJTYPE_EXPLOSION:
-		case OBJTYPE_NEBULA:
-		case OBJTYPE_WORMHOLE:
-		case OBJTYPE_SPACEMONSTER:
-			continue;
-		default:
-			break;
-		}
-		if (i == o->index) /* skip self */
-			continue;
-		dist2 = dist3dsqrd(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z);
-		if (dist2 < PROXIMITY_DIST2 && (universe_timestamp & 0x7) == 0) {
+	o = player;
+	t = object;
+	
+	switch (t->type) {
+	case OBJTYPE_DEBRIS:
+	case OBJTYPE_SPARK:
+	case OBJTYPE_TORPEDO:
+	case OBJTYPE_LASER:
+	case OBJTYPE_EXPLOSION:
+	case OBJTYPE_NEBULA:
+	case OBJTYPE_WORMHOLE:
+	case OBJTYPE_SPACEMONSTER:
+		return;
+	default:
+		break;
+	}
+	if (t->index == o->index) /* skip self */
+		return;
+	dist2 = dist3dsqrd(o->x - t->x, o->y - t->y, o->z - t->z);
+	if (dist2 < PROXIMITY_DIST2 && (universe_timestamp & 0x7) == 0) {
+		send_packet_to_all_clients_on_a_bridge(o->id, 
+			packed_buffer_new("h", OPCODE_PROXIMITY_ALERT),
+					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
+		if (dist2 < CRASH_DIST2) {
 			send_packet_to_all_clients_on_a_bridge(o->id, 
-				packed_buffer_new("h", OPCODE_PROXIMITY_ALERT),
-						ROLE_SOUNDSERVER | ROLE_NAVIGATION);
-			if (dist2 < CRASH_DIST2) {
-				send_packet_to_all_clients_on_a_bridge(o->id, 
-					packed_buffer_new("h", OPCODE_COLLISION_NOTIFICATION),
-						ROLE_SOUNDSERVER | ROLE_NAVIGATION);
-			}
+				packed_buffer_new("h", OPCODE_COLLISION_NOTIFICATION),
+					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
 		}
 	}
 }
@@ -1702,7 +1700,8 @@ static void player_move(struct snis_entity *o)
 	o->vy = o->tsd.ship.velocity * -cos(o->heading);
 	o->vx = o->tsd.ship.velocity * sin(o->heading);
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
-	do_player_collision_detection(o);
+	space_partition_process(space_partition, o, o->x, o->x, o,
+				player_collision_detection);
 	o->heading += o->tsd.ship.yaw_velocity;
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
 	o->tsd.ship.sci_heading += o->tsd.ship.sci_yaw_velocity;
