@@ -320,11 +320,30 @@ static uint32_t get_new_object_id(void)
 	return answer;
 }
 
+static void set_object_location(struct snis_entity *o, double x, double y, double z);
+static void normalize_coords(struct snis_entity *o)
+{
+	/* This algorihm is like that big ball in "The Prisoner". */
+
+	if (o->x < -UNIVERSE_LIMIT)
+		goto fixit;
+	if (o->x > UNIVERSE_LIMIT)
+		goto fixit;
+	if (o->y < -UNIVERSE_LIMIT)
+		goto fixit;
+	if (o->y > UNIVERSE_LIMIT)
+		goto fixit;
+	return;
+fixit:
+	set_object_location(o, snis_randn(XKNOWN_DIM), snis_randn(YKNOWN_DIM), o->z);
+}
+
 static void set_object_location(struct snis_entity *o, double x, double y, double z)
 {
 	o->x = x;
 	o->y = y;
 	o->z = z;
+	normalize_coords(o);
 } 
 
 static void get_peer_name(int connection, char *buffer)
@@ -374,11 +393,9 @@ static void asteroid_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
-static void normalize_coords(struct snis_entity *o);
 static void derelict_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
-	normalize_coords(o);
 	o->timestamp = universe_timestamp;
 }
 
@@ -539,23 +556,6 @@ static void snis_queue_add_global_sound(uint16_t sound_number)
 static int add_explosion(double x, double y, double z, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type);
 
-static void normalize_coords(struct snis_entity *o)
-{
-	/* This algorihm is like that big ball in "The Prisoner". */
-
-	if (o->x < -UNIVERSE_LIMIT)
-		goto fixit;
-	if (o->x > UNIVERSE_LIMIT)
-		goto fixit;
-	if (o->y < -UNIVERSE_LIMIT)
-		goto fixit;
-	if (o->y > UNIVERSE_LIMIT)
-		goto fixit;
-	return;
-fixit:
-	set_object_location(o, snis_randn(XKNOWN_DIM), snis_randn(YKNOWN_DIM), o->z);
-}
-
 static int roll_damage(double weapons_factor, double shield_strength, uint8_t system)
 {
 	int damage = system + (uint8_t) (weapons_factor *
@@ -676,7 +676,6 @@ static void torpedo_move(struct snis_entity *o)
 	int i, otype;
 
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
-	normalize_coords(o);
 	o->timestamp = universe_timestamp;
 	o->alive--;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
@@ -773,7 +772,6 @@ static void laser_move(struct snis_entity *o)
 	uint8_t otype;
 
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
-	normalize_coords(o);
 	o->timestamp = universe_timestamp;
 	o->alive--;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
@@ -1185,7 +1183,6 @@ static void ship_move(struct snis_entity *o)
 	o->vy = o->tsd.ship.velocity * sin(o->heading);
 	o->vx = o->tsd.ship.velocity * cos(o->heading);
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
-	normalize_coords(o);
 	o->timestamp = universe_timestamp;
 
 	if (close_enough && o->tsd.ship.victim_id != (uint32_t) -1) {
@@ -1687,7 +1684,6 @@ static void player_move(struct snis_entity *o)
 	o->vx = o->tsd.ship.velocity * sin(o->heading);
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
 	do_player_collision_detection(o);
-	normalize_coords(o);
 	o->heading += o->tsd.ship.yaw_velocity;
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
 	o->tsd.ship.sci_heading += o->tsd.ship.sci_yaw_velocity;
@@ -1794,7 +1790,6 @@ static void player_move(struct snis_entity *o)
 						(uint16_t) (5 * 30)), ROLE_ALL);
 				set_object_location(o, bridgelist[b].warpx,
 							bridgelist[b].warpy, o->z);
-				normalize_coords(o);
 			}
 		}
 	}
@@ -1807,7 +1802,6 @@ static void demon_ship_move(struct snis_entity *o)
 	o->vy = o->tsd.ship.velocity * sin(o->heading);
 	o->vx = o->tsd.ship.velocity * cos(o->heading);
 	set_object_location(o, o->x - o->vx, o->y - o->vy, o->z);
-	normalize_coords(o);
 	o->heading += o->tsd.ship.yaw_velocity;
 
 	normalize_angle(&o->heading);
@@ -2132,10 +2126,7 @@ static int add_specific_ship(const char *name, double x, double y, double z,
 	i = add_ship();
 	if (i < 0)
 		return i;
-	go[i].x = x;
-	go[i].y = y;
-	go[i].z = z;
-	normalize_coords(&go[i]);
+	set_object_location(&go[i], x, y, z);
 	go[i].tsd.ship.shiptype = shiptype % ARRAY_SIZE(shipclass);
 	go[i].sdata.faction = the_faction % ARRAY_SIZE(faction);
 	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
@@ -2229,10 +2220,7 @@ static int l_move_object(lua_State *l)
 		return 0;
 	}
 	o = &go[i];
-	o->x = x;
-	o->y = y;
-	o->z = z;
-	normalize_coords(o);
+	set_object_location(o, x, y, z);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
