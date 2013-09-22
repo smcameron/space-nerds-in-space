@@ -401,6 +401,7 @@ struct snis_entity {
 	double sci_coordx; /* selected coords by science station for warp calculations */
 	double sci_coordy;
 	struct entity *entity;
+	struct space_partition_entry partition;
 };
 
 /* These are for the robot and various parts on the engineering deck on the damcon screen */

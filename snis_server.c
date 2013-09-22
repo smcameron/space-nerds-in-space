@@ -44,6 +44,7 @@
 #include "lauxlib.h"
 
 #include "ssgl/ssgl.h"
+#include "space-part.h"
 #include "snis.h"
 #include "snis_log.h"
 #include "mathutils.h"
@@ -307,6 +308,7 @@ struct timeval start_time, end_time;
 
 static struct snis_object_pool *pool;
 static struct snis_entity go[MAXGAMEOBJS];
+static struct space_partition *space_partition = NULL;
 
 static uint32_t get_new_object_id(void)
 {
@@ -344,6 +346,7 @@ static void set_object_location(struct snis_entity *o, double x, double y, doubl
 	o->y = y;
 	o->z = z;
 	normalize_coords(o);
+	space_partition_update(space_partition, o, x, y);
 } 
 
 static void get_peer_name(int connection, char *buffer)
@@ -466,6 +469,7 @@ static void respawn_object(int otype)
 
 static void delete_object(struct snis_entity *o)
 {
+	remove_space_partition_entry(space_partition, &o->partition);
 	snis_object_pool_free_object(pool, o->index);
 	o->id = -1;
 	o->alive = 0;
@@ -5891,6 +5895,11 @@ int main(int argc, char *argv[])
 	memset(&thirtieth_second, 0, sizeof(thirtieth_second));
 	thirtieth_second.tv_nsec = 33333333; /* 1/30th second */
 
+	space_partition = space_partition_init(40, 40,
+			-UNIVERSE_LIMIT, UNIVERSE_LIMIT,
+			-UNIVERSE_LIMIT, UNIVERSE_LIMIT,
+			offsetof(struct snis_entity, partition));
+
 	make_universe();
 	run_initial_lua_scripts();
 	port = start_listener_thread();
@@ -5910,7 +5919,7 @@ int main(int argc, char *argv[])
 		/* snis_sleep(&time1, &time2, &thirtieth_second); */
 		sleep_thirtieth_second();
 	}
-
+	space_partition_free(space_partition);
 	lua_teardown();
 
 	snis_close_logfile();

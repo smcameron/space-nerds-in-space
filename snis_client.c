@@ -49,6 +49,7 @@
 #include <assert.h>
 #include <linux/tcp.h>
 
+#include "space-part.h"
 #include "snis.h"
 #include "mathutils.h"
 #include "snis_alloc.h"
