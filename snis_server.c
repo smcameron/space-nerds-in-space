@@ -675,78 +675,78 @@ static int make_derelict(struct snis_entity *o)
 	return add_derelict(o->sdata.name, o->x, o->y, o->z, o->tsd.ship.shiptype, o->sdata.faction);
 }
 
+static void torpedo_collision_detection(void *context, void *entity)
+{
+	struct snis_entity *o = context; /* torpedo */
+	struct snis_entity *t = entity;  /* target */
+	double dist2;
+
+	if (!t->alive)
+		return;
+	if (t->index == o->index)
+		return;
+	if (o->alive >= TORPEDO_LIFETIME - 3)
+		return;
+	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
+			t->type != OBJTYPE_STARBASE &&
+			t->type != OBJTYPE_ASTEROID)
+		return;
+	if (t->id == o->tsd.torpedo.ship_id)
+		return; /* can't torpedo yourself. */
+	dist2 = ((t->x - o->x) * (t->x - o->x) +
+		(t->y - o->y) * (t->y - o->y));
+
+	if (dist2 > TORPEDO_DETONATE_DIST2)
+		return; /* not close enough */
+
+	/* hit!!!! */
+	o->alive = 0;
+
+	if (t->type == OBJTYPE_STARBASE) {
+		t->tsd.starbase.under_attack = 1;
+		return;
+	}
+
+	if (t->type == OBJTYPE_SHIP1 || t->type == OBJTYPE_SHIP2) {
+		calculate_torpedo_damage(t);
+		send_ship_damage_packet(t);
+		attack_your_attacker(t, lookup_entity_by_id(o->tsd.torpedo.ship_id));
+	} else if (t->type == OBJTYPE_ASTEROID && fabs(t->z) < 100.0) {
+		t->alive = 0;
+	}
+
+	if (!t->alive) {
+		(void) add_explosion(t->x, t->y, t->z, 50, 50, 50, t->type);
+		/* TODO -- these should be different sounds */
+		/* make sound for players that got hit */
+		/* make sound for players that did the hitting */
+		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
+		if (t->type != OBJTYPE_SHIP1) {
+			if (t->type == OBJTYPE_SHIP2)
+				make_derelict(t);
+			delete_from_clients_and_server(t);
+			respawn_object(t->type);
+			
+		} else {
+			snis_queue_add_sound(EXPLOSION_SOUND,
+				ROLE_SOUNDSERVER, t->id);
+			schedule_callback(event_callback, &callback_schedule,
+					"player-death-callback", t->id);
+		}
+	} else {
+		(void) add_explosion(t->x, t->y, t->z, 50, 5, 5, t->type);
+		snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
+		snis_queue_add_sound(TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
+	}
+}
+
 static void torpedo_move(struct snis_entity *o)
 {
-	int i, otype;
-
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
 	o->alive--;
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		double dist2;
-		otype = go[i].type;
-
-		if (!go[i].alive)
-			continue;
-		if (i == o->index)
-			continue;
-		if (o->alive >= TORPEDO_LIFETIME - 3)
-			continue;
-		if (otype != OBJTYPE_SHIP1 && otype != OBJTYPE_SHIP2 &&
-				otype != OBJTYPE_STARBASE &&
-				otype != OBJTYPE_ASTEROID)
-			continue;
-		if (go[i].id == o->tsd.torpedo.ship_id)
-			continue; /* can't torpedo yourself. */
-		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
-			((go[i].y - o->y) * (go[i].y - o->y));
-
-		if (dist2 > TORPEDO_DETONATE_DIST2)
-			continue; /* not close enough */
-
-		
-		/* hit!!!! */
-		o->alive = 0;
-
-		if (otype == OBJTYPE_STARBASE) {
-			go[i].tsd.starbase.under_attack = 1;
-			continue;
-		}
-
-		if (otype == OBJTYPE_SHIP1 || otype == OBJTYPE_SHIP2) {
-			calculate_torpedo_damage(&go[i]);
-			send_ship_damage_packet(&go[i]);
-			attack_your_attacker(&go[i], lookup_entity_by_id(o->tsd.torpedo.ship_id));
-		} else if (otype == OBJTYPE_ASTEROID && fabs(go[i].z) < 100.0) {
-			go[i].alive = 0;
-		}
-
-		if (!go[i].alive) {
-			(void) add_explosion(go[i].x, go[i].y, go[i].z, 50, 50, 50, go[i].type);
-			/* TODO -- these should be different sounds */
-			/* make sound for players that got hit */
-			/* make sound for players that did the hitting */
-			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
-			if (otype != OBJTYPE_SHIP1) {
-				if (otype == OBJTYPE_SHIP2)
-					make_derelict(&go[i]);
-				delete_from_clients_and_server(&go[i]);
-				respawn_object(otype);
-				
-			} else {
-				snis_queue_add_sound(EXPLOSION_SOUND,
-					ROLE_SOUNDSERVER, go[i].id);
-				schedule_callback(event_callback, &callback_schedule,
-						"player-death-callback", go[i].id);
-			}
-		} else {
-			(void) add_explosion(go[i].x, go[i].y, go[i].z, 50, 5, 5, go[i].type);
-			snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, go[i].id);
-			snis_queue_add_sound(TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
-		}
-		continue;
-	}
-
+	space_partition_process(space_partition, o, o->x, o->y, o,
+			torpedo_collision_detection);
 	if (o->alive <= 0)
 		delete_from_clients_and_server(o);
 }
