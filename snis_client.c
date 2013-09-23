@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <locale.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <stdint.h>
@@ -8901,6 +8902,9 @@ int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
 	int i;
+
+	if (!setlocale(LC_ALL, "C"))
+		fprintf(stderr, "Failed to set locale to 'C'\n");
 
 	if (argc > 1 && argc < 4)
 		usage();

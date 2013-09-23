@@ -20,6 +20,7 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <locale.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <string.h>
@@ -5866,6 +5867,9 @@ int main(int argc, char *argv[])
 	struct timespec time1;
 	struct timespec time2;
 	struct timespec thirtieth_second;
+
+	if (!setlocale(LC_ALL, "C"))
+		fprintf(stderr, "Failed to set locale to 'C'\n");
 
 	if (argc < 5) 
 		usage();
