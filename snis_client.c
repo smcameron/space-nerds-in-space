@@ -21,7 +21,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <locale.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <stdint.h>
@@ -8903,8 +8902,11 @@ int main(int argc, char *argv[])
 	GtkWidget *vbox;
 	int i;
 
-	if (!setlocale(LC_ALL, "C"))
-		fprintf(stderr, "Failed to set locale to 'C'\n");
+	/* Need this so that fscanf reads floats properly. */
+#define LOCALE_THAT_WORKS "en_US.UTF-8"
+	if (!setenv("LANG", LOCALE_THAT_WORKS, 1))
+		fprintf(stderr, "Failed to setenv LANG to '%s'\n",
+			LOCALE_THAT_WORKS);
 
 	if (argc > 1 && argc < 4)
 		usage();

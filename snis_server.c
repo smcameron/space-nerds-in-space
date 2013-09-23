@@ -20,7 +20,6 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
-#include <locale.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <string.h>
@@ -5868,9 +5867,11 @@ int main(int argc, char *argv[])
 	struct timespec time2;
 	struct timespec thirtieth_second;
 
-	if (!setlocale(LC_ALL, "C"))
-		fprintf(stderr, "Failed to set locale to 'C'\n");
-
+	/* need this so that fscanf can read floats properly */
+#define LOCALE_THAT_WORKS "en_US.UTF-8"
+	if (!setenv("LANG", LOCALE_THAT_WORKS, 1))
+		fprintf(stderr, "Failed to setenv LANG to '%s'\n",
+				LOCALE_THAT_WORKS);
 	if (argc < 5) 
 		usage();
 
