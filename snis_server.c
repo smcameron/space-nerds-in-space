@@ -5868,7 +5868,7 @@ int main(int argc, char *argv[])
 	struct timespec time2;
 	struct timespec thirtieth_second;
 
-	if (!setlocale(LC_ALL, "C"))
+	if (!setenv("LANG", "en_US.UTF-8", 1))
 		fprintf(stderr, "Failed to set locale to 'C'\n");
 
 	if (argc < 5) 

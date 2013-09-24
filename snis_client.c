@@ -8903,7 +8903,7 @@ int main(int argc, char *argv[])
 	GtkWidget *vbox;
 	int i;
 
-	if (!setlocale(LC_ALL, "C"))
+	if (!setenv("LANG", "en_US.UTF-8", 1))
 		fprintf(stderr, "Failed to set locale to 'C'\n");
 
 	if (argc > 1 && argc < 4)
