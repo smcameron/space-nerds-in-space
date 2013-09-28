@@ -1145,6 +1145,7 @@ static int update_wormhole(uint32_t id, double x, double y)
 {
 	int i;
 	struct entity *e;
+	struct snis_entity *o;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -1154,7 +1155,14 @@ static int update_wormhole(uint32_t id, double x, double y)
 		if (i < 0)
 			return i;
 	} else {
-		update_generic_object(i, x, y, 0, 0.0, 0.0, 0.0, 1);
+		o = &go[i];
+		/* Don't call update_generic_object as it will reset orientation
+		 * and orientation is handled client side via spin_starbase
+		 */
+		o->x = x;
+		o->y = y;
+		if (o->entity)
+			update_entity_pos(o->entity, x, 0, -y);
 	}
 	return 0;
 }
@@ -1163,6 +1171,7 @@ static int update_starbase(uint32_t id, double x, double y)
 {
 	int i, m;
 	struct entity *e;
+	struct snis_entity *o;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -1172,7 +1181,14 @@ static int update_starbase(uint32_t id, double x, double y)
 		if (i < 0)
 			return i;
 	} else {
-		update_generic_object(i, x, y, 0, 0.0, 0.0, 0.0, 1);
+		o = &go[i];
+		/* Don't call update_generic_object as it will reset orientation
+		 * and orientation is handled client side via spin_starbase
+		 */
+		o->x = x;
+		o->y = y;
+		if (o->entity)
+			update_entity_pos(o->entity, x, 0, -y);
 	}
 	return 0;
 }
