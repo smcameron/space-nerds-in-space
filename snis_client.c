@@ -3114,6 +3114,7 @@ struct comms_ui {
 	char input[100];
 } comms_ui;
 
+static void main_screen_add_text(char *msg);
 static int process_comm_transmission(void)
 {
 	unsigned char buffer[sizeof(struct comms_transmission_packet) + 100];
@@ -3128,6 +3129,7 @@ static int process_comm_transmission(void)
 	string[79] = '\0';
 	string[length] = '\0';
 	text_window_add_text(comms_ui.tw, string);
+	main_screen_add_text(string);
 	return 0;
 }
 
@@ -4048,6 +4050,31 @@ static void show_gunsight(GtkWidget *w)
 	snis_draw_line(w->window, gc, cx, y2 - 25, cx, y2);
 }
 
+static struct main_screen_text_data {
+	char text[4][100];
+	int last;
+} main_screen_text;
+
+static void main_screen_add_text(char *msg)
+{
+	main_screen_text.last = (main_screen_text.last + 1) % 4;
+	strncpy(main_screen_text.text[main_screen_text.last], msg, 99);
+}
+
+static void draw_main_screen_text(GtkWidget *w, GdkGC *gc)
+{
+	int first, i;
+
+	first = (main_screen_text.last + 1) % 4;;
+
+	sng_set_foreground(GREEN);
+	for (i = 0; i < 4; i++) {
+		sng_abs_xy_draw_string(w, gc, main_screen_text.text[first],
+				NANO_FONT, 10, SCREEN_HEIGHT - (4 - i) * 18 - 10);
+		first = (first + 1) % 4;
+	}
+}
+
 static void show_mainscreen(GtkWidget *w)
 {
 	static int fake_stars_initialized = 0;
@@ -4087,6 +4114,7 @@ static void show_mainscreen(GtkWidget *w)
 	render_entities(w, gc, ecx);
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
 		show_gunsight(w);
+	draw_main_screen_text(w, gc);
 	pthread_mutex_unlock(&universe_mutex);
 	show_common_screen(w, "");	
 }
@@ -8969,6 +8997,7 @@ int main(int argc, char *argv[])
 	if (role == 0)
 		role = ROLE_ALL;
 
+	memset(&main_screen_text, 0, sizeof(main_screen_text));
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 	snis_object_pool_setup(&sparkpool, MAXSPARKS);
 	snis_object_pool_setup(&damcon_pool, MAXDAMCONENTITIES);
