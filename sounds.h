@@ -2,7 +2,7 @@
 #define SOUNDS_H
 
 #define MAX_CONCURRENT_SOUNDS 20
-#define NSOUND_CLIPS 22
+#define NSOUND_CLIPS 23
 
 #define EXPLOSION_SOUND 1
 #define TORPEDO_LAUNCH_SOUND 2
@@ -29,5 +29,6 @@
 #define LASER_FAILURE 19
 #define PROXIMITY_ALERT 20
 #define SPACESHIP_CRASH 21
+#define REVERSE_SOUND 22
 
 #endif

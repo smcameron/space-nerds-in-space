@@ -737,6 +737,8 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 	go[i].tsd.ship.phaser_wavelength = phaser_wavelength;
 	go[i].tsd.ship.damcon = NULL;
 	go[i].tsd.ship.shiptype = shiptype;
+	if (!go[i].tsd.ship.reverse && reverse)
+		wwviaudio_add_sound(REVERSE_SOUND);
 	go[i].tsd.ship.reverse = reverse;
 	go[i].tsd.ship.victim_id = victim_id;
 	return 0;
@@ -8656,6 +8658,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(LASER_FAILURE, d, "laser-fail.ogg");
 	read_ogg_clip(PROXIMITY_ALERT, d, "proximity-alert.ogg");
 	read_ogg_clip(SPACESHIP_CRASH, d, "spaceship-crash.ogg");
+	read_ogg_clip(REVERSE_SOUND, d, "reverse.ogg");
 	printf("Done.\n");
 }
 
