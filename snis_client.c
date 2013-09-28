@@ -3883,7 +3883,7 @@ static void begin_3d_gl(double camera_look_heading)
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	gluPerspective(40.0, (float) real_screen_width / real_screen_height, 0.5, 8000.0);
+	gluPerspective(33.0, (float) SCREEN_WIDTH / SCREEN_HEIGHT, 0.5, 8000.0);
 	gluLookAt(0, 0, 0, cos(camera_look_heading), 0.0, sin(camera_look_heading),
 				0.0, 1.0, 0.0); 
 	glMatrixMode(GL_MODELVIEW);
