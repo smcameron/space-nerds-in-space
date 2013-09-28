@@ -3307,10 +3307,11 @@ static int process_demon_move_object(struct game_client *c)
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(oid);
 	if (i < 0 || !go[i].alive)
-		return 0;
+		goto out;
 	o = &go[i];
 	set_object_location(o, o->x + dx, o->y + dy, o->z);
 	o->timestamp = universe_timestamp + 10;
+out:
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
