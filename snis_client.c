@@ -1908,6 +1908,7 @@ static void request_weapons_yaw_packet(uint8_t yaw)
 	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_GUNYAW, yaw));
 }
 
+static void wavelen_updown_button_pressed(int direction);
 static void weapons_dirkey(int h, int v)
 {
 	static int last_time = 0;
@@ -1923,6 +1924,8 @@ static void weapons_dirkey(int h, int v)
 		yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
 		request_weapons_yaw_packet(yaw);
 	}
+	if (v)
+		wavelen_updown_button_pressed(-v);
 }
 
 static void science_dirkey(int h, int v)
