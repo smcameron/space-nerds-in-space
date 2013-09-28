@@ -1666,7 +1666,10 @@ void init_keymap()
 
 	keymap[GDK_O] = keyonscreen;
 	keymap[GDK_o] = keyonscreen;
-	keymap[GDK_w] = keyviewmode;
+	keymap[GDK_w] = keyup;
+	keymap[GDK_a] = keyleft;
+	keymap[GDK_s] = keydown;
+	keymap[GDK_d] = keyright;
 	keymap[GDK_W] = keyviewmode;
 	keymap[GDK_KEY_plus] = keyzoom;
 	keymap[GDK_KEY_equal] = keyzoom;
