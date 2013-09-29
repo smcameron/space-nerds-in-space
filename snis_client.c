@@ -1305,6 +1305,8 @@ static void move_ship(struct snis_entity *o)
 	/* predict yaw changes to smooth movement out on the main screen. */
 	o->heading += o->tsd.ship.yaw_velocity / 3.0;
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity / 3.0;
+	o->x += o->vx / 3.0;
+	o->y += o->vy / 3.0;
 }
 
 static void move_objects(void)
@@ -1318,6 +1320,7 @@ static void move_objects(void)
 			continue;
 		switch (o->type) {
 		case OBJTYPE_SHIP1:
+		case OBJTYPE_SHIP2:
 			move_ship(o);
 			break;
 		case OBJTYPE_WORMHOLE:
