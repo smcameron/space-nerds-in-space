@@ -683,9 +683,11 @@ static int update_power_model_data(uint32_t id, struct power_model_data *pmd)
 	return 0;
 }
 
-static int update_ship(uint32_t id, double x, double y, double z, double vx, double vy, double heading, uint32_t alive,
+static int update_ship(uint32_t id, double x, double y, double z, double vx, double vy,
+			double heading, double yawvel, uint32_t alive,
 			uint32_t torpedoes, uint32_t power, 
-			double gun_heading, double sci_heading, double sci_beam_width, int type,
+			double gun_heading, double gunyawvel,
+			double sci_heading, double sci_beam_width, int type,
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
 			fuel, uint8_t temp, uint8_t scizoom, uint8_t weapzoom,
 			uint8_t navzoom, uint8_t warpdrive,
@@ -716,9 +718,11 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 		update_generic_object(i, x, y, z, vx, vy, heading, alive); 
 	}
 	go[i].z = z;
+	go[i].tsd.ship.yaw_velocity = yawvel;
 	go[i].tsd.ship.torpedoes = torpedoes;
 	go[i].tsd.ship.power = power;
 	go[i].tsd.ship.gun_heading = gun_heading;
+	go[i].tsd.ship.gun_yaw_velocity = gunyawvel;
 	go[i].tsd.ship.sci_heading = sci_heading;
 	go[i].tsd.ship.sci_beam_width = sci_beam_width;
 	go[i].tsd.ship.torpedoes_loaded = tloaded;
@@ -1296,6 +1300,13 @@ static void spin_starbase(struct snis_entity *o)
 	update_entity_rotation(o->entity, 0.0, 0.0, angle);
 }
 
+static void move_ship(struct snis_entity *o)
+{
+	/* predict yaw changes to smooth movement out on the main screen. */
+	o->heading += o->tsd.ship.yaw_velocity / 3.0;
+	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity / 3.0;
+}
+
 static void move_objects(void)
 {
 	int i;
@@ -1306,6 +1317,9 @@ static void move_objects(void)
 		if (!o->alive)
 			continue;
 		switch (o->type) {
+		case OBJTYPE_SHIP1:
+			move_ship(o);
+			break;
 		case OBJTYPE_WORMHOLE:
 			spin_wormhole(o);
 			break;
@@ -2604,7 +2618,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, power;
 	uint32_t fuel, victim_id;
-	double dx, dy, dz, dheading, dgheading, dsheading, dbeamwidth, dvx, dvy;
+	double dx, dy, dz, dheading, dyawvel, dgheading, dgunyawvel, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
@@ -2622,8 +2636,10 @@ static int process_update_ship_packet(uint16_t opcode)
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
 				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
-	packed_buffer_extract(&pb, "UwwUUU", &dheading, (uint32_t) 360,
+	packed_buffer_extract(&pb, "USwwUSUU", &dheading, (uint32_t) 360,
+				&dyawvel, (int32_t) 360,
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
+				&dgunyawvel, (int32_t) 360,
 				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
 	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbw", &tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom,
@@ -2633,8 +2649,8 @@ static int process_update_ship_packet(uint16_t opcode)
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_ship(id, dx, dy, dz, dvx, dvy, dheading, alive, torpedoes, power,
-				dgheading, dsheading, dbeamwidth, type,
+	rc = update_ship(id, dx, dy, dz, dvx, dvy, dheading, dyawvel, alive, torpedoes, power,
+				dgheading, dgunyawvel, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
 				weapzoom, navzoom, warpdrive, requested_warpdrive, requested_shield,
 				phaser_charge, phaser_wavelength, shiptype, reverse, victim_id);
