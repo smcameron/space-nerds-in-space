@@ -2862,6 +2862,25 @@ static int process_red_alert()
 	return 0;
 }
 
+static struct main_screen_text_data {
+	char text[4][100];
+	int last;
+	int comms_on_mainscreen;
+} main_screen_text;
+
+static int process_comms_mainscreen()
+{
+	int rc;
+	unsigned char buffer[10];
+	unsigned char comms_mainscreen;
+
+	rc = read_and_unpack_buffer(buffer, "b", &comms_mainscreen);
+	if (rc != 0)
+		return rc;
+	main_screen_text.comms_on_mainscreen = (comms_mainscreen != 0);
+	return 0;
+}
+
 static int process_proximity_alert()
 {
 	static int last_time = 0;
@@ -3110,6 +3129,7 @@ struct comms_ui {
 	struct button *main_onscreen_button;
 	struct button *comms_transmit_button;
 	struct button *red_alert_button;
+	struct button *mainscreen_comms;
 	struct snis_text_input_box *comms_input;
 	char input[100];
 } comms_ui;
@@ -3545,6 +3565,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_REQUEST_REDALERT:
 			rc = process_red_alert();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_COMMS_MAINSCREEN:
+			rc = process_comms_mainscreen();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -4050,11 +4075,6 @@ static void show_gunsight(GtkWidget *w)
 	snis_draw_line(w->window, gc, cx, y2 - 25, cx, y2);
 }
 
-static struct main_screen_text_data {
-	char text[4][100];
-	int last;
-} main_screen_text;
-
 static void main_screen_add_text(char *msg)
 {
 	main_screen_text.last = (main_screen_text.last + 1) % 4;
@@ -4064,6 +4084,9 @@ static void main_screen_add_text(char *msg)
 static void draw_main_screen_text(GtkWidget *w, GdkGC *gc)
 {
 	int first, i;
+
+	if (!main_screen_text.comms_on_mainscreen)
+		return;
 
 	first = (main_screen_text.last + 1) % 4;;
 
@@ -6158,6 +6181,14 @@ static void comms_screen_red_alert_pressed(void *x)
 	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_REDALERT, new_alert_mode));
 }
 
+static void comms_main_screen_pressed(void *x)
+{
+	unsigned char new_comms_mode;
+
+	new_comms_mode = (main_screen_text.comms_on_mainscreen == 0);	
+	queue_to_server(packed_buffer_new("hb", OPCODE_COMMS_MAINSCREEN, new_comms_mode));
+}
+
 static void send_comms_packet_to_server(char *msg, uint16_t opcode, uint32_t id)
 {
 	struct packed_buffer *pb;
@@ -6226,9 +6257,12 @@ static void init_comms_ui(void)
 	comms_ui.main_onscreen_button = snis_button_init(x, y, 75, 25, "MAIN", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 7);
 	x = SCREEN_WIDTH - 150;
-	y = SCREEN_HEIGHT - 60;
+	y = SCREEN_HEIGHT - 90;
 	comms_ui.red_alert_button = snis_button_init(x, y, 120, 25, "RED ALERT", RED,
 			NANO_FONT, comms_screen_red_alert_pressed, (void *) 6);
+	y = SCREEN_HEIGHT - 60;
+	comms_ui.mainscreen_comms = snis_button_init(x, y, 120, 25, "MAIN SCREEN", GREEN,
+			NANO_FONT, comms_main_screen_pressed, (void *) 8);
 	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20, 40, 20, GREEN);
 	comms_ui.comms_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
 					comms_ui.input, 50, &timer,
@@ -6246,6 +6280,7 @@ static void init_comms_ui(void)
 	ui_add_button(comms_ui.sci_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.main_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.red_alert_button, DISPLAYMODE_COMMS);
+	ui_add_button(comms_ui.mainscreen_comms, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS);
 	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
 }

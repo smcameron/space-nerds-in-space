@@ -4095,6 +4095,21 @@ static int process_request_redalert(struct game_client *c)
 	return 0;
 }
 
+static int process_comms_mainscreen(struct game_client *c)
+{
+	int rc;
+	unsigned char buffer[10];
+	unsigned char new_comms_mainscreen;
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &new_comms_mainscreen);
+	if (rc)
+		return rc;
+	send_packet_to_all_clients_on_a_bridge(c->shipid,
+			packed_buffer_new("hb", OPCODE_COMMS_MAINSCREEN,
+						new_comms_mainscreen), ROLE_ALL);
+	return 0;
+}
+
 static int process_demon_command(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct demon_cmd_packet) + 255 * sizeof(uint32_t)];
@@ -4948,6 +4963,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_REDALERT:
 			rc = process_request_redalert(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_COMMS_MAINSCREEN:
+			rc = process_comms_mainscreen(c);
 			if (rc)
 				goto protocol_error;
 			break;
