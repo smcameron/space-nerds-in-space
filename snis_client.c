@@ -8500,6 +8500,15 @@ gint advance_game(gpointer data)
 
 #ifndef WITHOUTOPENGL
 
+static void free_textures(void)
+{
+	int i;
+
+	for (i = 0; i < ntextures; i++)
+		glDeleteTextures(1, &texture[i]);
+	ntextures = 0;
+}
+
 static int load_texture(const char *filename)
 {
 	int rc, texw, texh;
@@ -8514,14 +8523,17 @@ static int load_texture(const char *filename)
 	return rc;
 }
 
-static void load_textures(void)
+static void load_textures(char *filenameprefix)
 {
-	load_texture("share/snis/textures/image0.png");
-	load_texture("share/snis/textures/image1.png");
-	load_texture("share/snis/textures/image2.png");
-	load_texture("share/snis/textures/image3.png");
-	load_texture("share/snis/textures/image4.png");
-	load_texture("share/snis/textures/image5.png");
+	int i;
+	char filename[PATH_MAX + 1];
+
+	free_textures();
+
+	for (i = 0; i < 6; i++) {
+		sprintf(filename, "%s/textures/%s%d.png", asset_dir, filenameprefix, i);
+		load_texture(filename);
+	}
 }
 #endif
 
@@ -8587,7 +8599,7 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	sng_fixup_gl_y_coordinate(real_screen_height);
 
 	if (!textures_loaded) {
-		load_textures();
+		load_textures("image");
 		textures_loaded = 1;
 	}
 #endif
