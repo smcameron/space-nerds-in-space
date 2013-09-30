@@ -123,6 +123,9 @@ int thicklines = 0;
 int frame_rate_hz = 30;
 int red_alert_mode = 0;
 
+char *default_asset_dir = "share/snis";
+char *asset_dir;
+
 typedef void (*joystick_button_fn)(void *x);
 char joystick_device[PATH_MAX+1];
 int joystick_fd = -1;
@@ -8709,15 +8712,21 @@ static void read_ogg_clip(int sound, char *directory, char *filename)
 	wwviaudio_read_ogg_clip(sound, path);
 }
 
-static void read_sound_clips(void)
+static void override_asset_dir(void)
 {
-	char *default_asset_dir = "share/snis";
 	char *d;
 
+	asset_dir = default_asset_dir;
 	d = getenv("SNIS_ASSET_DIR");
 	if (!d)
-		d = default_asset_dir;
-	
+		return;
+	asset_dir = d;
+}
+
+static void read_sound_clips(void)
+{
+	char *d = asset_dir;
+
 	printf("Decoding audio data..."); fflush(stdout);
 	read_ogg_clip(EXPLOSION_SOUND, d, "big_explosion.ogg");
 	read_ogg_clip(TORPEDO_LAUNCH_SOUND, d, "flak_gun_sound.ogg");
@@ -8855,12 +8864,7 @@ static struct mesh *make_derelict_mesh(struct mesh *source)
 static void init_meshes(void)
 {
 	int i;
-	char *default_asset_dir = "share/snis";
-	char *d;
-
-	d = getenv("SNIS_ASSET_DIR");
-	if (!d)
-		d = default_asset_dir;
+	char *d = asset_dir;
 
 	ship_mesh = snis_read_stl_file(d, "spaceship.stl");
 	torpedo_mesh = snis_read_stl_file(d, "torpedo.stl");
@@ -9050,6 +9054,8 @@ int main(int argc, char *argv[])
 	}
 	if (role == 0)
 		role = ROLE_ALL;
+
+	override_asset_dir();
 
 	memset(&main_screen_text, 0, sizeof(main_screen_text));
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
