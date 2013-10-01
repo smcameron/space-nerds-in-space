@@ -2920,7 +2920,6 @@ static void load_textures(char *filenameprefix);
 #endif
 static int process_load_skybox(void)
 {
-#ifndef WITHOUTOPENGL
 	int rc;
 	unsigned char length;
 	char string[PATH_MAX + 1];
@@ -2933,6 +2932,7 @@ static int process_load_skybox(void)
 	rc = snis_readsocket(gameserver_sock, string, length);
 	if (rc != 0)
 		return rc;
+#ifndef WITHOUTOPENGL
 	string[100] = '\0';
 	string[length] = '\0';
 	strcpy(skybox_texture_prefix, string);
