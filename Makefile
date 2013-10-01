@@ -42,6 +42,12 @@ else
 PROFILEFLAG=
 endif
 
+ifeq (${ILDA},1)
+ILDAFLAG=-DWITH_ILDA_SUPPORT
+else
+ILDAFLAG=
+endif
+
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o \
@@ -121,7 +127,7 @@ MODELS=${MD}/freighter.stl \
 	${MD}/research-vessel.stl \
 	${MD}/long-triangular-prism.stl
 
-MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} \
+MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${ILDAFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
 GTKCFLAGS=`pkg-config --cflags gtk+-2.0`
 GLEXTCFLAGS=`pkg-config --cflags gtkglext-1.0 libpng12`

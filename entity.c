@@ -84,6 +84,10 @@ struct entity_context {
 	struct fake_star *fake_star;
 	int nfakestars; /* = 0; */
 	struct mat41 light;
+#ifdef WITH_ILDA_SUPPORT
+	int framenumber;
+	FILE *f;
+#endif
 };
 
 struct entity *add_entity(struct entity_context *cx,
@@ -179,7 +183,7 @@ void wireframe_render_triangle(GtkWidget *w, GdkGC *gc,
 
 	sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
 	sng_current_draw_line(w->window, gc, x2, y2, x3, y3); 
-	sng_current_draw_line(w->window, gc, x3, y3, x1, y1); 
+	sng_current_draw_line(w->window, gc, x3, y3, x1, y1);
 }
 
 void wireframe_render_point(GtkWidget *w, GdkGC *gc,
@@ -191,6 +195,50 @@ void wireframe_render_point(GtkWidget *w, GdkGC *gc,
 	y1 = (int) (v->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 	sng_current_draw_line(w->window, gc, x1, y1, x1 + 1, y1); 
 }
+
+#ifdef WITH_ILDA_SUPPORT
+
+static unsigned short to_ildax(struct entity_context *cx, int x)
+{
+	double tx;
+	struct camera_info *c = &cx->camera;
+
+	tx = ((double) x - (double) (c->xvpixels / 2.0)) / (double) c->xvpixels;
+	tx = tx * (32767 * 2);
+	return (unsigned short) tx;
+}
+
+static unsigned short to_ilday(struct entity_context *cx, int y)
+{
+	double ty;
+	struct camera_info *c = &cx->camera;
+
+	/* note, use of xvpixels rather than yvpixels here is correct. */
+	ty = ((double) y - (double) (c->xvpixels / 2.0)) / (double) c->xvpixels;
+	ty = ty * (32767 * 2);
+	return (unsigned short) ty;
+}
+
+static void ilda_render_triangle(struct entity_context *cx, 
+			int x1, int y1, int x2, int y2, int x3, int y3)
+{
+	unsigned short sx1, sy1, sx2, sy2, sx3, sy3;
+
+	sx1 = to_ildax(cx, x1);
+	sy1 = to_ilday(cx, y1);
+	sx2 = to_ildax(cx, x2);
+	sy2 = to_ilday(cx, y2);
+	sx3 = to_ildax(cx, x3);
+	sy3 = to_ilday(cx, y3);
+
+	if (!cx->f)
+		return;
+	fprintf(cx->f, "  %hd %hd %d\n", sx1, sy1, -1);
+	fprintf(cx->f, "  %hd %hd %d\n", sx2, sy2, 56);
+	fprintf(cx->f, "  %hd %hd %d\n", sx3, sy3, 56);
+	fprintf(cx->f, "  %hd %hd %d\n", sx1, sy1, 56);
+}
+#endif
 
 static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
 			int x1, int y1, int x2, int y2, int x3, int y3, int color, int render_style)
@@ -247,6 +295,10 @@ static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc, struct entity_
 			sng_device_line(w->window, gc, x2, y2, x3, y3); 
 			sng_device_line(w->window, gc, x3, y3, x1, y1); 
 		}
+#ifdef WITH_ILDA_SUPPORT
+		if (render_style & RENDER_ILDA)
+			ilda_render_triangle(cx, x1, y1, x2, y2, x3, y3);
+#endif
 	}
 }
 
@@ -542,6 +594,30 @@ static inline float sqr(float a)
 	return a * a;
 }
 
+#ifdef WITH_ILDA_SUPPORT
+static void ilda_file_open(struct entity_context *cx)
+{
+	if (cx->f)
+		return;
+
+	cx->f = fopen("/tmp/ilda.txt", "w+");
+	cx->framenumber = 0;
+	return;
+}
+
+static void ilda_file_newframe(struct entity_context *cx)
+{
+	if (!cx->f)
+		return;
+	cx->framenumber++;
+	fprintf(cx->f, "\n#      %d ------------------------------------------\n",
+			cx->framenumber);
+	fprintf(cx->f, "frame xy palette short\n");
+	if ((cx->framenumber % 60) == 0)
+		fflush(cx->f);
+}
+#endif
+
 static void reposition_fake_star(struct entity_context *cx, struct fake_star *fs, float radius);
 
 void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
@@ -566,6 +642,11 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 	struct mat41 *n; /* camera relative z axis (into view plane) */
 	struct mat41 *u; /* camera relative x axis (left/right) */
 	float camera_angle, ent_angle; /* this is for cheezy view culling */
+
+#ifdef WITH_ILDA_SUPPORT
+	ilda_file_open(cx);
+	ilda_file_newframe(cx);
+#endif
 
 	normalize_vector(&cx->light, &cx->light);
 
@@ -767,6 +848,9 @@ struct entity_context *entity_context_new(int maxobjs)
 	cx->light.m[1] = 1;
 	cx->light.m[2] = 1;
 	cx->light.m[3] = 1;
+#ifdef WITH_ILDA_SUPPORT
+	cx->f = NULL;
+#endif
 	return cx;
 }
 

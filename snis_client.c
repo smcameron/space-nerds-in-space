@@ -6674,6 +6674,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	struct entity *e = NULL;
 	struct mesh *m;
 	char buf[100];
+	int science_style = RENDER_WIREFRAME;
 
 	if (!curr_science_guy || !curr_science_guy->entity)
 		return;
@@ -6681,7 +6682,10 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	m = entity_get_mesh(curr_science_guy->entity);
 	e = add_entity(sciecx, m, 0, 0, 0, GREEN);
 	update_entity_rotation(e, M_PI / 2.0, 0, (M_PI / 180.0) * (timer % 360));
-	set_render_style(e, RENDER_WIREFRAME);
+#ifdef WITH_ILDA_SUPPORT
+	science_style |= RENDER_ILDA;
+#endif
+	set_render_style(e, science_style);
 	camera_set_pos(sciecx, -m->radius * 4, -20, 0);
 	camera_look_at(sciecx, (float) 0, (float) 0, (float) -m->radius / 2.0);
 	camera_set_parameters(sciecx, (float) 20, (float) 300,
