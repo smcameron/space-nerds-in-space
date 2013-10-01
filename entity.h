@@ -39,6 +39,7 @@ GLOBAL void update_entity_pos(struct entity *e, float x, float y, float z);
 GLOBAL void update_entity_rotation(struct entity *e, float rx, float ry, float rz);
 GLOBAL void update_entity_color(struct entity *e, int color);
 GLOBAL struct mesh *entity_get_mesh(struct entity *e);
+GLOBAL void entity_set_mesh(struct entity *e, struct mesh *m);
 GLOBAL void wireframe_render_entity(GtkWidget *w, GdkGC *gc,
 		struct entity_context *cx, struct entity *e);
 GLOBAL void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc,

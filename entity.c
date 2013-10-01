@@ -841,4 +841,9 @@ struct mesh *entity_get_mesh(struct entity *e)
 	return e->m;
 }
 
+void entity_set_mesh(struct entity *e, struct mesh *m)
+{
+	e->m = m;
+}
+
 
