@@ -121,5 +121,10 @@ set_player_damage(id, system, value) -- sets the damage of the specified system 
 		specified player.  Id is the id of the player ship, system is the name
 		of the system to damage (see get_player_damage() above.)
 
+load_skybox(ship_id, filenameprefix) -- loads a new skybox composed of six images for any clients
+	with specified ship id that have the role of main screen.  If filenameprefix is
+	the string "x", then the six images are x0.png, x1.png, x2.png, x3.png, x4.png, and
+	x5.png.
+
 
 

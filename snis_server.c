@@ -3905,6 +3905,33 @@ done:
 	return 1;
 }
 
+static int l_load_skybox(lua_State *l)
+{
+	const double id = luaL_checknumber(l, 1);
+	const char *fileprefix = luaL_checkstring(l, 2);
+	struct snis_entity *o;
+	struct packed_buffer *pb;
+	int i;
+
+	i = lookup_by_id(id);
+	if (i < 0)
+		goto error;
+	o = &go[i];
+	if (o->type != OBJTYPE_SHIP1)
+		goto error;
+	if (strlen(fileprefix) > 100)
+		goto error;
+	pb = packed_buffer_allocate(3 + 100);
+	packed_buffer_append(pb, "hb", OPCODE_LOAD_SKYBOX, (uint8_t) strlen(fileprefix) + 1);
+	packed_buffer_append_raw(pb, fileprefix, strlen(fileprefix) + 1);
+	send_packet_to_all_clients_on_a_bridge(o->id, pb, ROLE_MAIN);
+	lua_pushnumber(lua_state, 0.0);
+	return 1;
+error:
+	lua_pushnil(lua_state);
+	return 1;
+}
+
 static int l_get_player_damage(lua_State *l)
 {
 	const double id = luaL_checknumber(l, 1);
@@ -5983,6 +6010,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_object_name, "get_object_name");
 	add_lua_callable_fn(l_get_player_damage, "get_player_damage");
 	add_lua_callable_fn(l_set_player_damage, "set_player_damage");
+	add_lua_callable_fn(l_load_skybox, "load_skybox");
 }
 
 static int run_initial_lua_scripts(void)

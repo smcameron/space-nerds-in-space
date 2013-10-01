@@ -216,8 +216,17 @@ ui_element_keypress_function ui_text_input_keypress = (ui_element_keypress_funct
 					snis_text_input_box_keypress;
 
 #define MAXTEXTURES 10
-int texture[MAXTEXTURES];
+
+#ifdef WITHOUTOPENGL
+#define GLuint int
+#endif
+
+GLuint texture[MAXTEXTURES];
 int ntextures = 0;
+char skybox_texture_prefix[255];
+#ifndef WITHOUTOPENGL
+volatile int textures_loaded = 0; /* blech, volatile global. */
+#endif
 
 double sine[361];
 double cosine[361];
@@ -2903,6 +2912,32 @@ static int process_comms_mainscreen()
 	return 0;
 }
 
+#ifndef WITHOUTOPENGL
+static void load_textures(char *filenameprefix);
+#endif
+static int process_load_skybox(void)
+{
+#ifndef WITHOUTOPENGL
+	int rc;
+	unsigned char length;
+	char string[PATH_MAX + 1];
+	unsigned char buffer[PATH_MAX + 1];
+
+	memset(string, 0, sizeof(string));
+	rc = read_and_unpack_buffer(buffer, "b", &length);
+	if (rc != 0)
+		return rc;
+	rc = snis_readsocket(gameserver_sock, string, length);
+	if (rc != 0)
+		return rc;
+	string[100] = '\0';
+	string[length] = '\0';
+	strcpy(skybox_texture_prefix, string);
+	textures_loaded = 0;
+#endif
+	return 0;
+}
+
 static int process_proximity_alert()
 {
 	static int last_time = 0;
@@ -3600,6 +3635,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_COLLISION_NOTIFICATION:
 			process_collision_notification();
+			break;
+		case OPCODE_LOAD_SKYBOX:
+			rc = process_load_skybox();
+			if (rc)
+				goto protocol_error;
 			break;
 		default:
 			goto protocol_error;
@@ -8330,6 +8370,11 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		return 0;
 
 #ifndef WITHOUTOPENGL
+	if (!textures_loaded) {
+		load_textures(skybox_texture_prefix);
+		textures_loaded = 1;
+	}
+
 	GdkGLContext *gl_context = gtk_widget_get_gl_context(main_da);
 	GdkGLDrawable *gl_drawable = gtk_widget_get_gl_drawable(main_da);
 
@@ -8504,8 +8549,10 @@ static void free_textures(void)
 {
 	int i;
 
-	for (i = 0; i < ntextures; i++)
+	for (i = 0; i < ntextures; i++) {
 		glDeleteTextures(1, &texture[i]);
+		texture[i] = 0;
+	}
 	ntextures = 0;
 }
 
@@ -8541,9 +8588,6 @@ static void load_textures(char *filenameprefix)
 static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 {
 	GdkRectangle cliprect;
-#ifndef WITHOUTOPENGL
-	static int textures_loaded = 0; /* blech, static. */
-#endif
 
 	/* first time through, gc is null, because gc can't be set without */
 	/* a window, but, the window isn't there yet until it's shown, but */
@@ -8599,7 +8643,7 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	sng_fixup_gl_y_coordinate(real_screen_height);
 
 	if (!textures_loaded) {
-		load_textures("image");
+		load_textures(skybox_texture_prefix);
 		textures_loaded = 1;
 	}
 #endif
@@ -9067,6 +9111,7 @@ int main(int argc, char *argv[])
 	if (role == 0)
 		role = ROLE_ALL;
 
+	strcpy(skybox_texture_prefix, "image");
 	override_asset_dir();
 
 	memset(&main_screen_text, 0, sizeof(main_screen_text));

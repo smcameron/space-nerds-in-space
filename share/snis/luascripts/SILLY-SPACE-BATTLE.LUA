@@ -70,6 +70,7 @@ for i, v in pairs(player_ids) do
 end
 
 if (player_ids[1]) then
+	load_skybox(player_ids[1], "orange-haze");
 	move_object(player_ids[1], 70000, 70000, 0);
 end
 if (player_ids[2]) then
