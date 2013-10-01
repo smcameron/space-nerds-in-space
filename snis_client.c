@@ -947,10 +947,10 @@ static void update_laserbeam_segments(struct snis_entity *o)
 
 	angle = atan2(y2 - y1, x2 - x1);
 
-	x1 += cos(angle) * 5.0;
-	y1 -= sin(angle) * 5.0;
-	x2 -= cos(angle) * 5.0;
-	y2 += sin(angle) * 5.0;
+	x1 += cos(angle) * 15.0;
+	y1 -= sin(angle) * 15.0;
+	x2 -= cos(angle) * 15.0;
+	y2 += sin(angle) * 15.0;
 
 	dx = (x2 - x1) / MAX_LASERBEAM_SEGMENTS;
 	dy = (y2 - y1) / MAX_LASERBEAM_SEGMENTS;
