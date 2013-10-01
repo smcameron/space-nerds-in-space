@@ -933,8 +933,11 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	oid = lookup_object_by_id(o->tsd.laserbeam.origin);
 	tid = lookup_object_by_id(o->tsd.laserbeam.target);
 
-	if (oid < 0 || tid < 0)
+	if (oid < 0 || tid < 0) {
+		for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++)
+			entity_set_mesh(ld->entity[i], NULL);
 		return;
+	}
 	origin = &go[oid];
 	target = &go[tid];
 
