@@ -44,6 +44,12 @@ EVENT TYPES in snis:
 	"player-docked-event",
 		arguments: object id of player, object id of station
 		return values none.
+	"object-death-event",
+		arguments: object id of thing that died.
+		Certain types of object deaths are not reported, e.g.
+		debris, sparks, laserbeams, torpedoes, explosion objects, tractor beams.
+		Only the "important" object deaths are reported.
+		(see delete_from_clients_and_server() in snis_server.c)
 
 Functions which you may call from lua: 
 

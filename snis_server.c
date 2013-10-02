@@ -502,6 +502,20 @@ static void snis_queue_delete_object(struct snis_entity *o)
 static void delete_from_clients_and_server(struct snis_entity *o)
 {
 	snis_queue_delete_object(o);
+	switch (o->type) {
+	case OBJTYPE_DEBRIS:
+	case OBJTYPE_SPARK:
+	case OBJTYPE_TORPEDO:
+	case OBJTYPE_LASER:
+	case OBJTYPE_EXPLOSION:
+	case OBJTYPE_LASERBEAM:
+	case OBJTYPE_TRACTORBEAM:
+		break;
+	default:
+		schedule_callback(event_callback, &callback_schedule,
+				"object-death-callback", o->id);
+		break;
+	}
 	delete_object(o);
 }
 
