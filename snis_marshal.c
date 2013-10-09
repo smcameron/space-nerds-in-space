@@ -231,7 +231,7 @@ int packed_buffer_extract_string(struct packed_buffer *pb, char *buffer, int buf
 	return len > buflen ? buflen : len;
 }
 
-int packed_buffer_append_raw(struct packed_buffer *pb, char *buffer, unsigned short len)
+int packed_buffer_append_raw(struct packed_buffer *pb, const char *buffer, unsigned short len)
 {
 	memcpy(&pb->buffer[pb->buffer_cursor], buffer, len);
 	pb->buffer_cursor += len;
