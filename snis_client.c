@@ -21,9 +21,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <ctype.h>
 #include <sys/types.h>
-#include <stdint.h>
 #include <malloc.h>
 #include <gtk/gtk.h>
 
@@ -8751,8 +8751,8 @@ void really_quit(void)
 	printf("%d frames / %d seconds, %g frames/sec\n",
 		nframes, (int) (end_time.tv_sec - start_time.tv_sec),
 		(0.0 + nframes) / seconds);
-	printf("server netstats: %llu bytes sent, %llu bytes recd, secs = %llu, bw = %llu bytes/sec\n",
-			netstats.bytes_sent, netstats.bytes_recd, (unsigned long long) netstats.elapsed_seconds,
+	printf("server netstats: %"PRIu64" bytes sent, %"PRIu64" bytes recd, secs = %"PRIu64", bw = %"PRIu64" bytes/sec\n",
+			netstats.bytes_sent, netstats.bytes_recd, (uint64_t) netstats.elapsed_seconds,
 			(netstats.bytes_sent + netstats.bytes_recd) / netstats.elapsed_seconds);
         wwviaudio_cancel_all_sounds();
         wwviaudio_stop_portaudio();
