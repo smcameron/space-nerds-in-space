@@ -1,4 +1,4 @@
-#ifndef BUILD_BUG_ON
+#ifndef BUILD_ASSERT
 
 /* Cribbed from ccan.org build_assert.h
  * See: https://github.com/rustyrussell/stats/blob/master/ccan/build_assert/build_assert.h
