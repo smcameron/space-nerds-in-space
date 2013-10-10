@@ -49,6 +49,7 @@
 #include <assert.h>
 #include <linux/tcp.h>
 
+#include "build_bug_on.h"
 #include "space-part.h"
 #include "snis.h"
 #include "mathutils.h"
@@ -1664,7 +1665,8 @@ char *keyactionstring[] = {
 	"quit", "pause", "reverse",
 	"mainscreen", "navigation", "weapons", "science",
 	"damage", "debug", "demon", "f8", "f9", "f10",
-	"onscreen", "viewmode", "zoom", "unzoom",
+	"onscreen", "viewmode", "zoom", "unzoom", "phaser",
+	"rendermode"
 };
 
 void init_keymap()
@@ -1730,6 +1732,8 @@ static int remapkey(char *keyname, char *actionname)
 	enum keyaction i;
 	unsigned int j;
 	int index;
+
+	BUILD_ASSERT(ARRAY_SIZE(keyactionstring) == NKEYSTATES);
 
 	for (i = keynone; i <= NKEYSTATES; i++) {
 		if (strcmp(keyactionstring[i], actionname) != 0)
