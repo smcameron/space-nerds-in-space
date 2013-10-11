@@ -3069,6 +3069,7 @@ static void sleep_thirtieth_second(void)
 
 	do {
 		rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &t, &x);
+		t.tv_nsec = x.tv_nsec;
 	} while (rc == EINTR);
 }
 
