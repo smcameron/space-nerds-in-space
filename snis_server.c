@@ -39,9 +39,9 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <limits.h>
-#include <lua.h>
-#include "lualib.h"
-#include "lauxlib.h"
+#include <lua5.2/lua.h>
+#include <lua5.2/lualib.h>
+#include <lua5.2/lauxlib.h>
 
 #include "ssgl/ssgl.h"
 #include "space-part.h"
