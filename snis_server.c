@@ -281,7 +281,7 @@ void fire_lua_callbacks(struct callback_schedule_entry **sched)
 	char *callback;
 
 	for (i = *sched; i != NULL; i = next) {
-		next = next_scheduled_callback(*sched);
+		next = next_scheduled_callback(i);
 		callback = callback_name(i);
 		lua_getglobal(lua_state, callback);
 		lua_pushnumber(lua_state, callback_schedule_entry_param(i, 0));
