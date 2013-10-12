@@ -48,6 +48,9 @@ else
 ILDAFLAG=
 endif
 
+LUALIBS=`pkg-config --libs lua5.2`
+LUACFLAGS=`pkg-config --cflags lua5.2`
+
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o \
@@ -66,7 +69,7 @@ LIMCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_limited_
 	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o
 
 SSGL=ssgl/libssglclient.a
-LIBS=-Lssgl -lssglclient -lrt -lm -llua5.2
+LIBS=-Lssgl -lssglclient -lrt -lm ${LUALIBS}
 #
 # NOTE: if you get
 #
@@ -144,7 +147,7 @@ Q=@
 ECHO=echo
 endif
 
-COMPILE=$(CC) ${MYCFLAGS} -I/usr/include/lua5.2 -c -o $@ $< && $(ECHO) '  COMPILE' $<
+COMPILE=$(CC) ${MYCFLAGS} ${LUACFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 GTKCOMPILE=$(CC) ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 LIMCOMPILE=$(CC) -DWITHOUTOPENGL=1 ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 GLEXTCOMPILE=$(CC) ${MYCFLAGS} ${GTKCFLAGS} ${GLEXTCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
