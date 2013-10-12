@@ -48,8 +48,11 @@ else
 ILDAFLAG=
 endif
 
-LUALIBS=`pkg-config --libs lua5.2`
-LUACFLAGS=`pkg-config --cflags lua5.2`
+# Arch pkg-config seems to be broken for lua5.2, so we have
+# this "... || echo" hack thing.
+#
+LUALIBS=`pkg-config --libs lua5.2 || echo '-llua5.2'`
+LUACFLAGS=`pkg-config --cflags lua5.2 || echo '-Ilua5.2'`
 
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o
