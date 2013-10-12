@@ -51,8 +51,11 @@ endif
 # Arch pkg-config seems to be broken for lua5.2, so we have
 # this "... || echo" hack thing.
 #
-LUALIBS=`pkg-config --libs lua5.2 || echo '-llua5.2'`
-LUACFLAGS=`pkg-config --cflags lua5.2 || echo '-Ilua5.2'`
+LUALIBS=`pkg-config --libs lua5.2 || echo '-llua'`
+LUACFLAGS=`pkg-config --cflags lua5.2 || echo ''`
+
+PNGLIBS=`pkg-config --libs libpng`
+PNGCFLAGS=`pkg-config --cflags libpng`
 
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o
@@ -72,7 +75,7 @@ LIMCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_limited_
 	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o
 
 SSGL=ssgl/libssglclient.a
-LIBS=-Lssgl -lssglclient -lrt -lm ${LUALIBS}
+LIBS=-Lssgl -lssglclient -lrt -lm ${LUALIBS} ${PNGLIBS}
 #
 # NOTE: if you get
 #
