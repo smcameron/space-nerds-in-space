@@ -139,7 +139,7 @@ MODELS=${MD}/freighter.stl \
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${ILDAFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
 GTKCFLAGS=`pkg-config --cflags gtk+-2.0`
-GLEXTCFLAGS=`pkg-config --cflags gtkglext-1.0`
+GLEXTCFLAGS=`pkg-config --cflags gtkglext-1.0` ${PNGCFLAGS}
 GTKLDFLAGS=`pkg-config --libs gtk+-2.0` \
         `pkg-config --libs gthread-2.0`
 GLEXTLDFLAGS=`pkg-config --libs gtkglext-1.0` 
