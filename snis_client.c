@@ -526,13 +526,27 @@ static int add_generic_damcon_object(uint32_t id, uint32_t ship_id, double x, do
 	return i;
 }
 
+struct damcon_ui {
+	struct label *robot_controls;
+	struct button *engineering_button;
+	struct button *robot_forward_button;
+	struct button *robot_backward_button;
+	struct button *robot_left_button;
+	struct button *robot_right_button;
+	struct button *robot_gripper_button;
+	struct button *robot_auto_button;
+	struct button *robot_manual_button;
+} damcon_ui;
+
 static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
 			double x, double y, double velocity,
-			double heading)
+			double heading, uint8_t autonomous_mode)
 
 {
 	int i;
 	struct snis_damcon_entity *o;
+	const int selected = WHITE;
+	const int deselected = AMBER;
 
 	i = lookup_damcon_object_by_id(id);
 	if (i < 0) {
@@ -546,11 +560,21 @@ static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
 		if (type == DAMCON_TYPE_ROBOT) {
 			damconscreenx = &o->x;
 			damconscreeny = &o->y;
+			o->tsd.robot.autonomous_mode = !!autonomous_mode;
+			snis_button_set_color(damcon_ui.robot_auto_button,
+				autonomous_mode ? selected : deselected);
 		}
 		return 0;
 	}
 	o = &dco[i];
 	update_generic_damcon_object(o, x, y, velocity, heading);
+	if (o->type == DAMCON_TYPE_ROBOT) {
+		o->tsd.robot.autonomous_mode = !!autonomous_mode;
+		snis_button_set_color(damcon_ui.robot_auto_button,
+			autonomous_mode ? selected : deselected);
+		snis_button_set_color(damcon_ui.robot_manual_button,
+			autonomous_mode ? deselected : selected);
+	}
 	return 0;
 }
 
@@ -2092,6 +2116,8 @@ static void robot_forward_button_pressed(void *x);
 static void robot_left_button_pressed(void *x);
 static void robot_right_button_pressed(void *x);
 static void robot_gripper_button_pressed(void *x);
+static void robot_auto_button_pressed(void *x);
+static void robot_manual_button_pressed(void *x);
 
 static void fire_phaser_button_pressed(__attribute__((unused)) void *notused);
 static void joystick_button_zero(__attribute__((unused)) void *x)
@@ -2701,18 +2727,20 @@ static int process_update_damcon_object(void)
 	unsigned char buffer[sizeof(struct damcon_obj_update_packet) - sizeof(uint16_t)];
 	uint32_t id, ship_id, type;
 	double x, y, velocity, heading;
+	uint8_t autonomous_mode;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "wwwSSSS",
+	rc = read_and_unpack_buffer(buffer, "wwwSSSSb",
 			&id, &ship_id, &type,
 			&x, (int32_t) DAMCONXDIM, 
 			&y, (int32_t) DAMCONYDIM, 
 			&velocity, (int32_t) DAMCONXDIM, 
-			&heading, (int32_t) 360);
+			&heading, (int32_t) 360,
+			&autonomous_mode);
 	if (rc)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_damcon_object(id, ship_id, type, x, y, velocity, heading);
+	rc = update_damcon_object(id, ship_id, type, x, y, velocity, heading, autonomous_mode);
 	pthread_mutex_unlock(&universe_mutex);
 	return rc;
 }
@@ -5785,16 +5813,6 @@ static void show_navigation(GtkWidget *w)
 	show_common_screen(w, "NAV");
 }
 
-struct damcon_ui {
-	struct label *robot_controls;
-	struct button *engineering_button;
-	struct button *robot_forward_button;
-	struct button *robot_backward_button;
-	struct button *robot_left_button;
-	struct button *robot_right_button;
-	struct button *robot_gripper_button;
-} damcon_ui;
-
 static void main_engineering_button_pressed(void *x)
 {
 	displaymode = DISPLAYMODE_ENGINEERING;
@@ -5825,6 +5843,16 @@ static void robot_gripper_button_pressed(void *x)
 	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_ROBOT_GRIPPER));
 }
 
+static void robot_auto_button_pressed(void *x)
+{
+	queue_to_server(packed_buffer_new("hb", OPCODE_ROBOT_AUTO_MANUAL, 1));
+}
+
+static void robot_manual_button_pressed(void *x)
+{
+	queue_to_server(packed_buffer_new("hb", OPCODE_ROBOT_AUTO_MANUAL, 0));
+}
+
 static void init_damcon_ui(void)
 {
 	damcon_ui.engineering_button = snis_button_init(630, 550, 140, 25, "ENGINEERING", AMBER,
@@ -5841,6 +5869,10 @@ static void init_damcon_ui(void)
 							robot_backward_button_pressed, (void *) 0);
 	damcon_ui.robot_gripper_button = snis_button_init(650, 180, 90, 25, "GRIPPER", AMBER, NANO_FONT,
 							robot_gripper_button_pressed, (void *) 0);
+	damcon_ui.robot_auto_button = snis_button_init(400, 30, 90, 25, "AUTO", AMBER, NANO_FONT,
+							robot_auto_button_pressed, (void *) 0);
+	damcon_ui.robot_manual_button = snis_button_init(500, 30, 90, 25, "MANUAL", WHITE, NANO_FONT,
+							robot_manual_button_pressed, (void *) 0);
 
 	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_forward_button, DISPLAYMODE_DAMCON);
@@ -5848,6 +5880,8 @@ static void init_damcon_ui(void)
 	ui_add_button(damcon_ui.robot_right_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_backward_button, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.robot_gripper_button, DISPLAYMODE_DAMCON);
+	ui_add_button(damcon_ui.robot_auto_button, DISPLAYMODE_DAMCON);
+	ui_add_button(damcon_ui.robot_manual_button, DISPLAYMODE_DAMCON);
 	ui_add_label(damcon_ui.robot_controls, DISPLAYMODE_DAMCON);
 }
 

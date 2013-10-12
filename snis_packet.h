@@ -108,6 +108,7 @@
 #define OPCODE_REQUEST_TRACTOR_PWR	183
 #define OPCODE_COMMS_MAINSCREEN	184
 #define OPCODE_LOAD_SKYBOX 185
+#define OPCODE_ROBOT_AUTO_MANUAL 	186
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -421,6 +422,7 @@ struct damcon_obj_update_packet {
 	uint32_t ship_id;
 	uint32_t type;
 	uint32_t x, y, velocity, heading;
+	uint8_t autonomous_mode;
 };
 
 struct damcon_socket_update_packet {

@@ -428,6 +428,7 @@ struct damcon_robot_type_specific_data {
 #define ROBOT_CARGO_EMPTY 0xffffffff
 	double yaw_velocity;
 	double desired_velocity, desired_heading;
+	uint8_t autonomous_mode;
 };
 
 struct damcon_label_specific_data {

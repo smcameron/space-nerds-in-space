@@ -4303,6 +4303,22 @@ out:
 	return 0;
 }
 
+static int process_robot_auto_manual(struct game_client *c)
+{
+	unsigned char buffer[10];
+	unsigned char new_mode;
+	struct damcon_data *d;
+	int rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &new_mode);
+	if (rc)
+		return rc;
+	new_mode = !!new_mode;
+	d = &bridgelist[c->bridge].damcon;
+	d->robot->tsd.robot.autonomous_mode = new_mode;
+	d->robot->timestamp = universe_timestamp + 1;
+	return 0;
+}
 
 typedef uint8_t (*bytevalue_limit_function)(struct game_client *c, uint8_t value);
 
@@ -5031,6 +5047,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_ROBOT_AUTO_MANUAL:
+			rc = process_robot_auto_manual(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -5488,14 +5509,15 @@ static void send_update_ship_packet(struct game_client *c,
 static void send_update_damcon_obj_packet(struct game_client *c,
 		struct snis_damcon_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwwwSSSS",
+	pb_queue_to_client(c, packed_buffer_new("hwwwSSSSb",
 					OPCODE_DAMCON_OBJ_UPDATE,   
 					o->id, o->ship_id, o->type,
 					o->x, (int32_t) DAMCONXDIM,
 					o->y, (int32_t) DAMCONYDIM,
 					o->velocity,  (int32_t) DAMCONXDIM,
 		/* send desired_heading as heading to client to enable drifting */
-					o->tsd.robot.desired_heading, (int32_t) 360));
+					o->tsd.robot.desired_heading, (int32_t) 360,
+					o->tsd.robot.autonomous_mode));
 }
 
 static void send_update_damcon_socket_packet(struct game_client *c,
