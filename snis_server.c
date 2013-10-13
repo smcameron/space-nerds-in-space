@@ -5550,10 +5550,12 @@ static void send_update_damcon_part_packet(struct game_client *c,
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_ASTEROID, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwSSSSS", OPCODE_UPDATE_ASTEROID, o->id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
-					o->z, (int32_t) UNIVERSE_DIM));
+					o->z, (int32_t) UNIVERSE_DIM,
+					o->vx, (int32_t) UNIVERSE_DIM,
+					o->vy, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_derelict_packet(struct game_client *c,

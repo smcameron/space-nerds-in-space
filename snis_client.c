@@ -1101,7 +1101,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 	return 0;
 }
 
-static int update_asteroid(uint32_t id, double x, double y, double z)
+static int update_asteroid(uint32_t id, double x, double y, double z, double vx, double vy)
 {
 	int i, m;
 	struct entity *e;
@@ -1110,7 +1110,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z)
 	if (i < 0) {
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
 		e = add_entity(ecx, asteroid_mesh[m], x, z, -y, ASTEROID_COLOR);
-		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_ASTEROID, 1, e);
+		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
 		go[i].z = z;
@@ -1118,7 +1118,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z)
 		int axis;
 		float angle;
 
-		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, 1);
+		update_generic_object(i, x, y, z, vx, vy, 0.0, 1);
 		update_entity_pos(go[i].entity, x, z, -y);
 
 		/* make asteroids spin */
@@ -1369,10 +1369,11 @@ static void move_objects(void)
 			break;
 		case OBJTYPE_LASER:
 		case OBJTYPE_TORPEDO:
+		case OBJTYPE_ASTEROID:
 			/* predictive movement, this is probably */
 			/* too dumb to work right */
-			o->x += o->vx / 2.0;
-			o->y += o->vy / 2.0;
+			o->x += o->vx / 3.0;
+			o->y += o->vy / 3.0;
 			break;
 		case OBJTYPE_LASERBEAM:
 		case OBJTYPE_TRACTORBEAM:
@@ -3274,18 +3275,20 @@ static int process_update_asteroid_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id;
-	double dx, dy, dz;
+	double dx, dy, dz, dvx, dvy;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wSSSSS", &id,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
-			&dz, (int32_t) UNIVERSE_DIM);
+			&dz, (int32_t) UNIVERSE_DIM,
+			&dvx, (int32_t) UNIVERSE_DIM,
+			&dvy, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_asteroid(id, dx, dy, dz);
+	rc = update_asteroid(id, dx, dy, dz, dvx, dvy);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
