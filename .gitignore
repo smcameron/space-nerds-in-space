@@ -5,3 +5,7 @@ ssgl/ssgl_gameserver_example
 ssgl/ssgl_server
 snis_client
 snis_server
+snis_limited_client
+snis_limited_client.c
+snis_limited_graph.c
+
