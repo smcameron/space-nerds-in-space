@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <fcntl.h>
 #include <malloc.h>
 #include <string.h>
@@ -59,15 +60,15 @@ static int count_facets(char *filename)
 	tempstr = malloc(buf.st_size + 1);
 	rc = read(fd, tempstr, buf.st_size);
 	if (rc < 0) {
-		fprintf(stderr, "stl_parser: Error reading %llu bytes of %s: %s\n",
-			(unsigned long long) buf.st_size, filename, strerror(errno));
+		fprintf(stderr, "stl_parser: Error reading %"PRIu64" bytes of %s: %s\n",
+			(uint64_t) buf.st_size, filename, strerror(errno));
 		free(tempstr);
 		close(fd);
 		return rc;
 	}
 	if (rc != buf.st_size) {
-		fprintf(stderr, "stl_parser: Tried reading %llu bytes of %s, got only %d\n",
-			(unsigned long long) buf.st_size, filename, rc);
+		fprintf(stderr, "stl_parser: Tried reading %"PRIu64" bytes of %s, got only %d\n",
+			(uint64_t) buf.st_size, filename, rc);
 		free(tempstr);
 		close(fd);
 		return rc;

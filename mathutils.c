@@ -20,6 +20,7 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <math.h>
 
 #define DEFINE_MATHUTILS_GLOBALS 1
@@ -45,7 +46,7 @@ double hypot3d(double x, double y, double z)
 	return sqrt(x * x + y * y + z * z);
 }
 
-static unsigned long snis_rand_next = 1;
+static uint32_t snis_rand_next = 1;
 
 int snis_rand(void)
 {
