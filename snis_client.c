@@ -1163,11 +1163,10 @@ static int update_planet(uint32_t id, double x, double y, double z)
 {
 	int i, m;
 	struct entity *e;
+	float r1, r2, r3;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		int axis;
-		float angle;
 
 		m = id % NPLANET_MODELS;
 		e = add_entity(ecx, planet_mesh[m], x, z, -y, PLANET_COLOR);
@@ -1175,15 +1174,14 @@ static int update_planet(uint32_t id, double x, double y, double z)
 		if (i < 0)
 			return i;
 		go[i].z = z;
-		angle = (20 % (360 * ((id % 12) + 3))) * M_PI / 180.0;
-		axis = (id % 3);
-		update_entity_rotation(go[i].entity, (axis == 0) * angle,
-					(axis == 1) * angle, (axis == 2) * angle);
 	} else {
-
 		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, 1);
 		update_entity_pos(go[i].entity, x, z, -y);
 	}
+	r1 = (i % 20) * (360.0 / 20.0) * M_PI / 180.0;
+	r2 = (i % 40) * (360.0 / 40.0) * M_PI / 180.0;
+	r3 = (i % 15) * (360.0 / 15.0) * M_PI / 180.0;
+	update_entity_rotation(go[i].entity, r1, r2, r3);
 	return 0;
 }
 
