@@ -3174,6 +3174,33 @@ static int process_sci_details(void)
 	return 0;
 }
 
+static struct navigation_ui {
+	struct slider *warp_slider;
+	struct slider *shield_slider;
+	struct slider *navzoom_slider;
+	struct slider *throttle_slider;
+	struct gauge *warp_gauge;
+	struct button *engage_warp_button;
+	struct button *warp_up_button;
+	struct button *warp_down_button;
+	struct button *reverse_button;
+	int details_mode;
+	struct button *details_button;
+} nav_ui;
+
+static int process_nav_details(void)
+{
+	unsigned char buffer[10];
+	uint8_t new_details;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "b", &new_details);
+	if (rc != 0)
+		return rc;
+	nav_ui.details_mode = new_details;
+	return 0;
+}
+
 static struct snis_entity *curr_science_guy = NULL;
 static struct snis_entity *prev_science_guy = NULL;
 static int process_sci_select_target_packet(void)
@@ -3636,6 +3663,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_SCI_DETAILS:
 			rc = process_sci_details();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_NAV_DETAILS:
+			rc = process_nav_details();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -5493,20 +5525,6 @@ CREATE_DAMAGE_SAMPLER_FUNC(sensors_damage) /* sample_sensors_damage defined here
 CREATE_DAMAGE_SAMPLER_FUNC(comms_damage) /* sample_comms_damage defined here */
 CREATE_DAMAGE_SAMPLER_FUNC(tractor_damage) /* sample_tractor_damage defined here */
 
-static struct navigation_ui {
-	struct slider *warp_slider;
-	struct slider *shield_slider;
-	struct slider *navzoom_slider;
-	struct slider *throttle_slider;
-	struct gauge *warp_gauge;
-	struct button *engage_warp_button;
-	struct button *warp_up_button;
-	struct button *warp_down_button;
-	struct button *reverse_button;
-	int details_mode;
-	struct button *details_button;
-} nav_ui;
-
 static void zero_nav_sliders(void)
 {
 	snis_slider_set_input(nav_ui.warp_slider, 0);	
@@ -5758,7 +5776,8 @@ static void show_weapons(GtkWidget *w)
 
 static void nav_details_pressed(void *x)
 {
-	nav_ui.details_mode = !nav_ui.details_mode;
+	queue_to_server(packed_buffer_new("hb", OPCODE_NAV_DETAILS,
+		(unsigned char) !nav_ui.details_mode));
 }
 
 static double sample_warpdrive(void);
