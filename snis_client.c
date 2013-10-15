@@ -5914,21 +5914,22 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		}
 		else {
 			switch (go[i].type) {
-			case OBJTYPE_ASTEROID:
-			case OBJTYPE_DERELICT:
-			case OBJTYPE_PLANET:
-			case OBJTYPE_STARBASE:
 			case OBJTYPE_WORMHOLE:
 			case OBJTYPE_EXPLOSION:
 			case OBJTYPE_TORPEDO:
 			case OBJTYPE_LASER:
 				break;
+			case OBJTYPE_ASTEROID:
+			case OBJTYPE_DERELICT:
+			case OBJTYPE_PLANET:
+			case OBJTYPE_STARBASE:
 			case OBJTYPE_SHIP2:
 			case OBJTYPE_SHIP1:
 			{
 				struct entity *ship;
 
-				ship = add_entity(navecx, ship_mesh, go[i].x, go[i].z, -go[i].y, GREEN);
+				ship = add_entity(navecx, entity_get_mesh(go[i].entity),
+							go[i].x, go[i].z, -go[i].y, GREEN);
 				set_render_style(ship, science_style);
 				update_entity_scale(ship, ship_scale);
 				update_entity_rotation(ship, M_PI / 2.0, go[i].heading + M_PI -
