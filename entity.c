@@ -123,6 +123,11 @@ void remove_entity(struct entity_context *cx, struct entity *e)
 	snis_object_pool_free_object(cx->entity_pool, index);
 }
 
+void remove_all_entity(struct entity_context *cx)
+{
+	snis_object_pool_free_all_objects(cx->entity_pool);
+}
+
 void update_entity_pos(struct entity *e, float x, float y, float z)
 {
 	e->x = x;

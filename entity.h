@@ -35,6 +35,7 @@ GLOBAL struct entity *add_entity(struct entity_context *cx,
 	struct mesh *m, float x, float y, float z, int color);
 GLOBAL void remove_entity(struct entity_context *cx,
 	struct entity *e);
+GLOBAL void remove_all_entity(struct entity_context *cx);
 GLOBAL void update_entity_pos(struct entity *e, float x, float y, float z);
 GLOBAL void update_entity_rotation(struct entity *e, float rx, float ry, float rz);
 GLOBAL void update_entity_scale(struct entity *e, float scale);
