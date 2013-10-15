@@ -54,6 +54,7 @@ struct entity {
 	struct mesh *m;
 	float x, y, z; /* world coords */
 	float rx, ry, rz;
+	float scale;
 	float dist3dsqrd;
 	int color;
 	int render_style;
@@ -106,6 +107,7 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].rx = 0;
 	cx->entity_list[n].ry = 0;
 	cx->entity_list[n].rz = 0;
+	cx->entity_list[n].scale = 1.0;
 	cx->entity_list[n].color = color;
 	cx->entity_list[n].render_style = RENDER_NORMAL;
 	return &cx->entity_list[n];
@@ -133,6 +135,11 @@ void update_entity_rotation(struct entity *e, float rx, float ry, float rz)
 	e->rx = rx;
 	e->ry = ry;
 	e->rz = rz;
+}
+
+void update_entity_scale(struct entity *e, float scale)
+{
+	e->scale = scale;
 }
 
 void update_entity_color(struct entity *e, int color)
@@ -504,9 +511,9 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 
 	/* calculate the object transform... */
 	struct mat44 object_transform, total_transform, tmp_transform;
-	struct mat44 object_rotation = {{{ 1, 0, 0, 0 },
-					 { 0, 1, 0, 0 },
-					 { 0, 0, 1, 0 },
+	struct mat44 object_rotation = {{{ e->scale, 0, 0, 0 },
+					 { 0, e->scale, 0, 0 },
+					 { 0, 0, e->scale, 0 },
 					 { 0, 0, 0, 1 }}}; /* fixme, do this really. */
 	struct mat44 object_translation = {{{ 1,    0,     0,    0 },
 					    { 0,    1,     0,    0 },
