@@ -833,19 +833,21 @@ check_for_reposition:
 		if (behind_camera < 0) /* behind camera */
 			continue;
 
+		if ( !(cx->entity_list[i].render_style & RENDER_DISABLE_CLIP) ) {
 /* increasing STANDARD_RADIUS makes fewer objects visible, decreasing it makes more */
 #define STANDARD_RADIUS (4.0)
-		if (cx->entity_list[i].dist3dsqrd * STANDARD_RADIUS / cx->entity_list[i].m->radius >
-				sqr(fabs(cx->camera.far) * 20.0))
-			continue;
+			if (cx->entity_list[i].dist3dsqrd * STANDARD_RADIUS / cx->entity_list[i].m->radius * cx->entity_list[i].scale >
+					sqr(fabs(cx->camera.far) * 20.0))
+				continue;
 
-		/* Really cheezy view culling */
-		ent_angle = atan2f(point_to_test.m[2], point_to_test.m[0]);
-		ent_angle = fabs(ent_angle - camera_angle);
-		if (ent_angle > M_PI)
-			ent_angle = (2 * M_PI - ent_angle);
-		if (ent_angle > (cx->camera.angle_of_view / 2.0) * M_PI / 180.0)
-			continue;
+			/* Really cheezy view culling */
+			ent_angle = atan2f(point_to_test.m[2], point_to_test.m[0]);
+			ent_angle = fabs(ent_angle - camera_angle);
+			if (ent_angle > M_PI)
+				ent_angle = (2 * M_PI - ent_angle);
+			if (ent_angle > (cx->camera.angle_of_view / 2.0) * M_PI / 180.0)
+				continue;
+		}
 
 		transform_entity(&cx->entity_list[i], &total_transform);
 		if (cx->entity_list[i].render_style & RENDER_POINT_CLOUD)
