@@ -5843,6 +5843,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 
 static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 {
+	float cx, cy, cz; /* camera position */
 	static struct mesh* ring_mesh = 0;
 	static struct mesh* vline_mesh = 0;
 	static struct mesh* sector_mesh = 0;
@@ -5860,9 +5861,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	double screen_radius;
 	double visible_distance;
 	int science_style = RENDER_WIREFRAME | RENDER_DISABLE_CLIP;
+	double camera_heading;
 
 	if (!(o = find_my_ship()))
 		return;
+
+	camera_heading = -o->heading + M_PI / 2.0;
+	normalize_angle(&camera_heading);
 
 	screen_radius = ((((255.0 - o->tsd.ship.navzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
@@ -5870,6 +5875,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	double ship_scale = screen_radius/200.0;
 
 	camera_set_pos(navecx, o->x - screen_radius*2.5, o->z - screen_radius, -o->y);
+	cx = (float) o->x - (float) cos(camera_heading) * screen_radius * 2.5; // screen_radius * 0.1;
+	cy = (float) o->z - screen_radius;
+	cz = (float) -o->y - (float) sin(camera_heading) * screen_radius * 2.5; // screen_radius * 0.1;
+	camera_set_pos(navecx, cx, cy, cz);
 	camera_look_at(navecx, o->x, o->z, -o->y);
 	camera_set_parameters(navecx, (float) 20, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
