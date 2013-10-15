@@ -129,6 +129,12 @@ void snis_object_pool_free_object(struct snis_object_pool *pool, int i)
 	pool->highest_object_number = -1;
 }
 
+void snis_object_pool_free_all_objects(struct snis_object_pool* pool)
+{
+	pool->highest_object_number = -1;
+	memset(pool->free_obj_bitmap, 0, sizeof(*pool->free_obj_bitmap) * pool->nbitblocks);
+}
+
 int snis_object_pool_highest_object(struct snis_object_pool *pool)
 {
 	return pool->highest_object_number;
