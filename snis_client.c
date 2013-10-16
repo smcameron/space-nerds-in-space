@@ -260,6 +260,7 @@ struct mesh *asteroidminer_mesh;
 struct mesh *spaceship2_mesh;
 struct mesh *scout_mesh;
 struct mesh *laserbeam_mesh;
+struct mesh *ship_icon_mesh;
 
 struct mesh *derelict_mesh[NDERELICT_MESHES];
 
@@ -5955,8 +5956,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			case OBJTYPE_SHIP2:
 			case OBJTYPE_SHIP1:
 			{
-				contact = add_entity(navecx, entity_get_mesh(go[i].entity),
-							go[i].x, go[i].z, -go[i].y, GREEN);
+				struct mesh *m;
+
+				if (go[i].type == OBJTYPE_SHIP2)
+					m = ship_icon_mesh;
+				else
+					m = entity_get_mesh(go[i].entity);
+				contact = add_entity(navecx, m, go[i].x, go[i].z, -go[i].y, GREEN);
 				set_render_style(contact, science_style);
 				entity_set_user_data(contact, &go[i]);
 				break;
@@ -9308,6 +9314,7 @@ static void init_meshes(void)
 	spaceship2_mesh = snis_read_stl_file(d, "spaceship2.stl");
 	scout_mesh = snis_read_stl_file(d, "spaceship3.stl");
 	laserbeam_mesh = snis_read_stl_file(d, "long-triangular-prism.stl");
+	ship_icon_mesh = snis_read_stl_file(d, "ship-icon.stl");
 
 	/* Note: these must match defines of SHIPTYPEs in snis.h */
 	derelict_mesh[0] = make_derelict_mesh(cruiser_mesh);
