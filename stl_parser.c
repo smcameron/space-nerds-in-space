@@ -215,8 +215,10 @@ struct mesh *read_stl_file(char *file)
 	my_mesh = malloc(sizeof(*my_mesh));
 	my_mesh->nvertices = 0;
 	my_mesh->ntriangles = 0;
+	my_mesh->nlines = 0;
 	my_mesh->t = malloc(sizeof(*my_mesh->t) * facetcount);
 	my_mesh->v = malloc(sizeof(*my_mesh->v) * facetcount * 3); /* worst case */
+	my_mesh->l = NULL;
 
 	for (i = 0; i < facetcount; i++) {
 		rc = add_facet(f, my_mesh, &linecount);

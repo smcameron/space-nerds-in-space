@@ -46,6 +46,8 @@ GLOBAL void wireframe_render_entity(GtkWidget *w, GdkGC *gc,
 		struct entity_context *cx, struct entity *e);
 GLOBAL void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc,
 		struct entity_context *cx, struct entity *e);
+GLOBAL void wireframe_render_point_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
+		struct entity *e);
 GLOBAL void render_entity(GtkWidget *w, GdkGC *gc,
 		struct entity_context *cx, struct entity *e);
 GLOBAL void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx);
@@ -72,5 +74,6 @@ GLOBAL void entity_context_free(struct entity_context *cx);
 #define RENDER_NO_FILL (1 << 3)
 #define RENDER_SPARKLE (1 << 4)
 #define RENDER_ILDA (1 << 5) /* for laser projectors */
+#define RENDER_POINT_LINE (1 << 6)
 
 #endif	

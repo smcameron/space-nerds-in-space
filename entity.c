@@ -431,6 +431,49 @@ void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc, struct entity_context
 	}
 }
 
+void wireframe_render_point_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
+				struct entity *e)
+{
+	int i;
+	int x1, y1;
+	int x2, y2;
+
+	sng_set_foreground(e->color);
+	for (i = 0; i < e->m->nlines; i++) {
+		struct vertex* vstart = e->m->l[i].start;
+		struct vertex* vend = e->m->l[i].end;
+
+		if (e->m->l[i].flag & MESH_LINE_STRIP) {
+			struct vertex* vcurr = vstart;
+
+			while (vcurr <= vend) {
+				x2 = (int) (vcurr->wx * cx->camera.xvpixels / 2) +
+							cx->camera.xvpixels / 2;
+				y2 = (int) (vcurr->wy * cx->camera.yvpixels / 2) +
+							cx->camera.yvpixels / 2;
+				if (vcurr != vstart) {
+					if (e->m->l[i].flag & MESH_LINE_DOTTED)
+						sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
+					else
+						sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
+				}
+				x1 = x2;
+				y1 = y2;
+				++vcurr;
+			}
+		} else {
+			x1 = (int) (vstart->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+			y1 = (int) (vstart->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+			x2 = (int) (vend->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+			y2 = (int) (vend->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+			if (e->m->l[i].flag & MESH_LINE_DOTTED)
+				sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
+			else
+				sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
+		}
+	}
+}
+
 static int tri_depth_compare(const void *a, const void *b)
 {
 	const struct tri_depth_entry *A = a;
@@ -807,6 +850,8 @@ check_for_reposition:
 		transform_entity(&cx->entity_list[i], &total_transform);
 		if (cx->entity_list[i].render_style & RENDER_POINT_CLOUD)
 			wireframe_render_point_cloud(w, gc, cx, &cx->entity_list[i]);
+		else if (cx->entity_list[i].render_style & RENDER_POINT_LINE)
+			wireframe_render_point_line(w, gc, cx, &cx->entity_list[i]);
 		else {
 			if (cx->camera.renderer & FLATSHADING_RENDERER)
 				render_entity(w, gc, cx, &cx->entity_list[i]);
