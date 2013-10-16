@@ -5912,7 +5912,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	pthread_mutex_lock(&universe_mutex);
 
 	/* add my ship */
-	e = add_entity(navecx, cruiser_mesh, o->x, o->z, -o->y, GREEN );
+	e = add_entity(navecx, ship_mesh, o->x, o->z, -o->y, GREEN);
 	set_render_style(e, science_style);
 	update_entity_scale(e, ship_scale);
 	update_entity_rotation(e, M_PI / 2.0, o->heading + M_PI -
