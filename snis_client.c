@@ -3239,19 +3239,6 @@ static int process_sci_select_coords_packet(void)
 	return 0;
 }
 
-static void zero_nav_sliders(void);
-static void zero_weapons_sliders(void);
-static void zero_engineering_sliders(void);
-static void zero_science_sliders(void);
-
-static void zero_slider_inputs(void)
-{
-	zero_nav_sliders();
-	zero_weapons_sliders();
-	zero_engineering_sliders();
-	zero_science_sliders();
-}
-
 static int process_update_respawn_time(void)
 {
 	unsigned char buffer[sizeof(struct respawn_time_packet)];
@@ -3265,8 +3252,6 @@ static int process_update_respawn_time(void)
 	if (!(o = find_my_ship()))
 		return 0;
 	o->respawn_time = (uint32_t) seconds;
-	if (o->respawn_time == 0)
-		zero_slider_inputs();
 	return 0;
 }
 
@@ -5525,13 +5510,6 @@ CREATE_DAMAGE_SAMPLER_FUNC(sensors_damage) /* sample_sensors_damage defined here
 CREATE_DAMAGE_SAMPLER_FUNC(comms_damage) /* sample_comms_damage defined here */
 CREATE_DAMAGE_SAMPLER_FUNC(tractor_damage) /* sample_tractor_damage defined here */
 
-static void zero_nav_sliders(void)
-{
-	snis_slider_set_input(nav_ui.warp_slider, 0);	
-	snis_slider_set_input(nav_ui.shield_slider, 0);	
-	snis_slider_set_input(nav_ui.navzoom_slider, 0);	
-}
-
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
 {
 	do_adjust_byte_value(0,  OPCODE_ENGAGE_WARP);
@@ -5585,12 +5563,6 @@ struct weapons_ui {
 	struct button *wavelen_up_button;
 	struct button *wavelen_down_button;
 } weapons;
-
-static void zero_weapons_sliders(void)
-{
-	snis_slider_set_input(weapons.weapzoom_slider, 0);
-	snis_slider_set_input(weapons.wavelen_slider, 0);
-}
 
 static void ui_add_slider(struct slider *s, int active_displaymode)
 {
@@ -5748,6 +5720,9 @@ static void show_weapons(GtkWidget *w)
 
 	if (!(o = find_my_ship()))
 		return;
+
+	snis_slider_set_input(weapons.wavelen_slider, o->tsd.ship.phaser_wavelength / 255.0 );
+	snis_slider_set_input(weapons.weapzoom_slider, o->tsd.ship.weapzoom / 255.0 );
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.weapzoom);
 	sprintf(buf, "PHOTON TORPEDOES: %03d", o->tsd.ship.torpedoes);
@@ -6038,6 +6013,11 @@ static void show_navigation(GtkWidget *w)
 	if (!(o = find_my_ship()))
 		return;
 
+	snis_slider_set_input(nav_ui.warp_slider, o->tsd.ship.power_data.warp.r1/255.0 );
+	snis_slider_set_input(nav_ui.shield_slider, o->tsd.ship.power_data.shields.r1/255.0 );
+	snis_slider_set_input(nav_ui.navzoom_slider, o->tsd.ship.navzoom/255.0 );
+	snis_slider_set_input(nav_ui.throttle_slider, o->tsd.ship.power_data.impulse.r1/255.0 );
+
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
 	sectorx = floor(10.0 * o->x / (double) XKNOWN_DIM);
 	sectory = floor(10.0 * o->y / (double) YKNOWN_DIM);
@@ -6181,18 +6161,6 @@ struct engineering_ui {
 
 } eng_ui;
 
-static void zero_engineering_sliders(void)
-{
-	snis_slider_set_input(eng_ui.shield_slider, 0);
-	snis_slider_set_input(eng_ui.maneuvering_slider, 0);
-	snis_slider_set_input(eng_ui.warp_slider, 0);
-	snis_slider_set_input(eng_ui.impulse_slider, 0);
-	snis_slider_set_input(eng_ui.sensors_slider, 0);
-	snis_slider_set_input(eng_ui.comm_slider, 0);
-	snis_slider_set_input(eng_ui.phaserbanks_slider, 0);
-	snis_slider_set_input(eng_ui.tractor_slider, 0);
-}
-
 static void damcon_button_pressed(void *x)
 {
 	displaymode = DISPLAYMODE_DAMCON;
@@ -6289,6 +6257,20 @@ static void init_engineering_ui(void)
 
 static void show_engineering(GtkWidget *w)
 {
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return;
+
+	snis_slider_set_input(eng_ui.shield_slider, o->tsd.ship.power_data.shields.r2/255.0 );
+	snis_slider_set_input(eng_ui.phaserbanks_slider, o->tsd.ship.power_data.phasers.r2/255.0 );
+	snis_slider_set_input(eng_ui.comm_slider, o->tsd.ship.power_data.comms.r2/255.0 );
+	snis_slider_set_input(eng_ui.sensors_slider, o->tsd.ship.power_data.sensors.r2/255.0 );
+	snis_slider_set_input(eng_ui.impulse_slider, o->tsd.ship.power_data.impulse.r2/255.0 );
+	snis_slider_set_input(eng_ui.warp_slider, o->tsd.ship.power_data.warp.r2/255.0 );
+	snis_slider_set_input(eng_ui.maneuvering_slider, o->tsd.ship.power_data.maneuvering.r2/255.0 );
+	snis_slider_set_input(eng_ui.tractor_slider, o->tsd.ship.power_data.tractor.r2/255.0 );
+
 	show_common_screen(w, "ENGINEERING");
 }
 
@@ -6496,11 +6478,6 @@ static void show_damcon(GtkWidget *w)
 	/* restore clipping back to whole window */
 	set_default_clip_window();
 	show_common_screen(w, "DAMAGE CONTROL");
-}
-
-static void zero_science_sliders(void)
-{
-	snis_slider_set_input(sci_ui.scizoom, 0);
 }
 
 static void sci_details_pressed(void *x)
@@ -7022,6 +6999,9 @@ static void show_science(GtkWidget *w)
 
 	if (!(o = find_my_ship()))
 		return;
+
+	snis_slider_set_input(sci_ui.scizoom, o->tsd.ship.scizoom/255.0 );
+
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 	sng_set_foreground(GREEN);
