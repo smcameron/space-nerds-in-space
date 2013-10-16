@@ -946,7 +946,7 @@ static struct mesh *init_sector_mesh(int extra_extent)
 
 			if (j == extra_extent) {
 				/* line right */
-				mesh_add_point(my_mesh, i, j,  0);
+				mesh_add_point(my_mesh, i, j + 1,  0);
 				mesh_add_point(my_mesh, i + 1, j + 1, 0);
 				mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
 			}
