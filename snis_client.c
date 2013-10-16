@@ -157,6 +157,7 @@ int damage_limbo_countdown = 0;
 
 struct entity_context *ecx;
 struct entity_context *sciecx;
+struct entity_context *navecx;
 
 struct nebula_entry {
 	double x, y, r, r2;
@@ -914,6 +915,50 @@ static void init_spacemonster_data(struct snis_entity *o, double z)
 		set_render_style(sd->entity[i], RENDER_POINT_CLOUD | RENDER_SPARKLE);
 	}
 		
+}
+
+static struct mesh *init_sector_mesh(int extra_extent)
+{
+	int nlines = (2 * extra_extent + 2) * (2 * extra_extent + 2) * 4;
+        struct mesh *my_mesh = malloc(sizeof(*my_mesh));
+
+	my_mesh->nvertices = 0;
+	my_mesh->ntriangles = 0;
+	my_mesh->nlines = 0;
+	my_mesh->t = 0;
+	my_mesh->v = malloc(sizeof(*my_mesh->v) * nlines * 2);
+	my_mesh->l = malloc(sizeof(*my_mesh->l) * nlines);
+	my_mesh->radius = sqrt((extra_extent + 1) * 2);
+
+	int i, j;
+	for (i = -1 - extra_extent; i < 1 + extra_extent; ++i) {
+		for (j = -1 -extra_extent; j < 1 + extra_extent; ++j) {
+
+			/* line left */
+			mesh_add_point(my_mesh, i,  j, 0);
+			mesh_add_point(my_mesh, i + 1, j, 0);
+			mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
+
+			/* line bottom */
+			mesh_add_point(my_mesh, i, j, 0);
+			mesh_add_point(my_mesh, i, j + 1, 0);
+			mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
+
+			if (j == extra_extent) {
+				/* line right */
+				mesh_add_point(my_mesh, i, j,  0);
+				mesh_add_point(my_mesh, i + 1, j + 1, 0);
+				mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
+			}
+			if (i == extra_extent) {
+				/* line top */
+				mesh_add_point(my_mesh, i + 1, j, 0);
+				mesh_add_point(my_mesh, i + 1, j + 1, 0);
+				mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
+			}
+		}
+	}
+	return my_mesh;
 }
 
 static void free_spacemonster_data(struct snis_entity *o)
@@ -5458,6 +5503,8 @@ static struct navigation_ui {
 	struct button *warp_up_button;
 	struct button *warp_down_button;
 	struct button *reverse_button;
+	int details_mode;
+	struct button *details_button;
 } nav_ui;
 
 static void zero_nav_sliders(void)
@@ -5709,6 +5756,11 @@ static void show_weapons(GtkWidget *w)
 	show_common_screen(w, "WEAPONS");
 }
 
+static void nav_details_pressed(void *x)
+{
+	nav_ui.details_mode = !nav_ui.details_mode;
+}
+
 static double sample_warpdrive(void);
 static void init_nav_ui(void)
 {
@@ -5745,6 +5797,12 @@ static void init_nav_ui(void)
 	ui_add_button(nav_ui.warp_down_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION);
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
+
+	nav_ui.details_mode = 0;
+	nav_ui.details_button = snis_button_init(450, 570, 40, 25, "3D",
+			GREEN, NANO_FONT, nav_details_pressed, (void *) 0);
+	ui_add_button(nav_ui.details_button, DISPLAYMODE_NAVIGATION);
+	navecx = entity_context_new(5000);
 }
 
 #if 0
@@ -5763,6 +5821,142 @@ static void init_nav_ui(void)
 
 static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o,
 		int x1, int y1, int x2, int y2);
+
+static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
+{
+	static struct mesh* ring_mesh = 0;
+	static struct mesh* vline_mesh = 0;
+	static struct mesh* sector_mesh = 0;
+
+	if ( !ring_mesh )
+		ring_mesh = init_circle_mesh(0, 0, 1);
+	if ( !vline_mesh )
+		vline_mesh = init_line_mesh(0, 0, 0, 0, 0, 1);
+	if ( !sector_mesh )
+		sector_mesh = init_sector_mesh(7);
+
+	struct snis_entity *o;
+	struct entity *e = NULL;
+	double max_possible_screen_radius = 0.09 * XKNOWN_DIM;
+	double screen_radius;
+	double visible_distance;
+	int science_style = RENDER_WIREFRAME | RENDER_DISABLE_CLIP;
+
+	if (!(o = find_my_ship()))
+		return;
+
+	screen_radius = ((((255.0 - o->tsd.ship.navzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
+	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
+
+	double ship_scale = screen_radius/200.0;
+
+	camera_set_pos(navecx, o->x - screen_radius*2.5, o->z - screen_radius, -o->y);
+	camera_look_at(navecx, o->x, o->z, -o->y);
+	camera_set_parameters(navecx, (float) 20, (float) 300, (float) 16, (float) 12,
+				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
+	int in_nebula = 0;
+	int i;
+	double incr;
+
+	for (incr = screen_radius; incr > screen_radius / 4.0; incr -= screen_radius / 5.0) {
+		e = add_entity(navecx, ring_mesh, o->x, o->z, -o->y, DARKRED);
+		update_entity_scale(e, incr);
+		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+	}
+
+	double sector_size = XKNOWN_DIM / 10.0;
+	if ( o->tsd.ship.navzoom > 100 ) {
+		/* turn on fine sector lines */
+		sector_size /= 10.0;
+	}
+
+	e = add_entity(navecx, sector_mesh,
+		trunc(o->x/sector_size)*sector_size,
+		trunc(o->z/sector_size)*sector_size,
+		-trunc(o->y/sector_size)*sector_size,
+		DARKGREEN );
+	update_entity_scale(e, sector_size);
+	set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+
+	visible_distance *= visible_distance;
+
+	/* Draw all the stuff */
+	pthread_mutex_lock(&universe_mutex);
+
+	/* add my ship */
+	e = add_entity(navecx, cruiser_mesh, o->x, o->z, -o->y, GREEN );
+	set_render_style(e, science_style);
+	update_entity_scale(e, ship_scale);
+	update_entity_rotation(e, M_PI / 2.0, o->heading + M_PI -
+		(o->type == OBJTYPE_SHIP1) * (M_PI / 2.0), 0);
+
+#define NR2 (screen_radius * screen_radius)
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		double dist2;
+
+		if (!go[i].alive)
+			continue;
+
+		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
+			continue;
+		}
+		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
+			((go[i].y - o->y) * (go[i].y - o->y));
+		if (dist2 > NR2 || dist2 > visible_distance)
+			continue; /* not close enough */
+
+		if (in_nebula && snis_randn(1000) < 850)
+			continue;
+
+		if (go[i].id == my_ship_id) {
+			continue;
+		}
+		else {
+			switch (go[i].type) {
+			case OBJTYPE_ASTEROID:
+			case OBJTYPE_DERELICT:
+			case OBJTYPE_PLANET:
+			case OBJTYPE_STARBASE:
+			case OBJTYPE_WORMHOLE:
+			case OBJTYPE_EXPLOSION:
+			case OBJTYPE_TORPEDO:
+			case OBJTYPE_LASER:
+				break;
+			case OBJTYPE_SHIP2:
+			case OBJTYPE_SHIP1:
+			{
+				struct entity *ship;
+
+				ship = add_entity(navecx, ship_mesh, go[i].x, go[i].z, -go[i].y, GREEN);
+				set_render_style(ship, science_style);
+				update_entity_scale(ship, ship_scale);
+				update_entity_rotation(ship, M_PI / 2.0, go[i].heading + M_PI -
+					(go[i].type == OBJTYPE_SHIP1) * (M_PI / 2.0), 0);
+
+				// add line from center disk to ship in z axis
+				e = add_entity(navecx, vline_mesh, go[i].x, o->z, -go[i].y, DARKRED);
+				update_entity_scale(e, go[i].z-o->z);
+				set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+
+				e = add_entity(navecx, ring_mesh, go[i].x, o->z, -go[i].y, DARKRED);
+				update_entity_scale(e, entity_get_mesh(ship)->radius*ship_scale/4.0);
+				set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+				break;
+			}
+			case OBJTYPE_SPACEMONSTER: /* invisible to instruments */
+			case OBJTYPE_NEBULA:
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	render_entities(w, gc, navecx);
+	pthread_mutex_unlock(&universe_mutex);
+
+	remove_all_entity(navecx);
+}
 
 static void show_navigation(GtkWidget *w)
 {
@@ -5796,15 +5990,19 @@ static void show_navigation(GtkWidget *w)
 	screen_radius = ((((255.0 - o->tsd.ship.navzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	max_possible_screen_radius = 0.09 * XKNOWN_DIM;
 	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
-	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, o->tsd.ship.navzoom > 100);
-	sng_set_foreground(DARKRED);
-	snis_draw_reticule(w, gc, cx, cy, r, o->heading, DARKRED, RED);
-	snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
-	snis_draw_ship_on_reticule(w, gc, cx, cy, r, o);
+        if (!nav_ui.details_mode) {
+		snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
+		snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, o->tsd.ship.navzoom > 100);
+		sng_set_foreground(DARKRED);
+		snis_draw_reticule(w, gc, cx, cy, r, o->heading, DARKRED, RED);
+		snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
+		snis_draw_ship_on_reticule(w, gc, cx, cy, r, o);
 
-	draw_all_the_guys(w, o, &extent, screen_radius, visible_distance);
-	draw_all_the_sparks(w, o, &extent, screen_radius);
+		draw_all_the_guys(w, o, &extent, screen_radius, visible_distance);
+		draw_all_the_sparks(w, o, &extent, screen_radius);
+        } else {
+                draw_3d_nav_display(w, gc);
+        }
 
 	gx1 = NAV_DATA_X + 10;
 	gy1 = 15;
