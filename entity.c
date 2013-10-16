@@ -54,6 +54,7 @@ struct entity {
 	struct mesh *m;
 	float x, y, z; /* world coords */
 	float rx, ry, rz;
+	float sx, sy; /* screen coords */
 	float scale;
 	float dist3dsqrd;
 	int color;
@@ -555,10 +556,12 @@ static void transform_fake_star(struct fake_star *fs, struct mat44 *transform)
 	m2->m[2] /= m2->m[3];
 }
 
-static void transform_entity(struct entity *e, struct mat44 *transform)
+static void transform_entity(struct entity_context *cx,
+				struct entity *e,struct mat44 *transform)
 {
 	int i;
 	struct mat41 *m1, *m2;
+	struct vertex t;
 
 	/* calculate the object transform... */
 	struct mat44 object_transform, total_transform, tmp_transform;
@@ -615,6 +618,18 @@ static void transform_entity(struct entity *e, struct mat44 *transform)
 		m2->m[1] /= m2->m[3];
 		m2->m[2] /= m2->m[3];
 	}
+
+	/* calculate screen coords of entity as a whole */
+	t.x = 0;
+	t.y = 0;
+	t.z = 0;
+	t.w = 1.0;
+	mat44_x_mat41(&total_transform, (struct mat41 *) &t.x, (struct mat41 *) &t.wx);
+	t.wx /= t.ww;
+	t.wy /= t.ww;
+	t.wz /= t.ww;
+	e->sx = (t.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+	e->sy = (t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 }
 
 static int object_depth_compare(const void *a, const void *b, void *vcx)
@@ -852,7 +867,7 @@ check_for_reposition:
 				continue;
 		}
 
-		transform_entity(&cx->entity_list[i], &total_transform);
+		transform_entity(cx, &cx->entity_list[i], &total_transform);
 		if (cx->entity_list[i].render_style & RENDER_POINT_CLOUD)
 			wireframe_render_point_cloud(w, gc, cx, &cx->entity_list[i]);
 		else if (cx->entity_list[i].render_style & RENDER_POINT_LINE)
@@ -1000,5 +1015,11 @@ int get_entity_count(struct entity_context *cx)
 struct entity *get_entity(struct entity_context *cx, int n)
 {
 	return &cx->entity_list[n];
+}
+
+void entity_get_screen_coords(struct entity *e, float *x, float *y)
+{
+	*x = e->sx;
+	*y = e->sy;
 }
 
