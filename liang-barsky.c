@@ -34,7 +34,7 @@ static int is_zero(float v)
 	return (v > -0.000001f && v < 0.000001f);
 }
 
-static inline int point_inside(struct liang_barsky_clip_window *c, int x, int y)
+static inline int point_inside(struct liang_barsky_clip_window *c, float x, float y)
 {
 	return (x >= c->x1 && x <= c->x2 &&
 		y >= c->y1 && y <= c->y2);
@@ -64,7 +64,7 @@ static int clipT(float num, float denom, float *tE, float *tL)
 }
 
 int clip_line(struct liang_barsky_clip_window *c,
-		int *x1, int *y1, int *x2,  int *y2)
+		float *x1, float *y1, float *x2,  float *y2)
 {
 	float dx, dy, tE, tL;
 
@@ -77,13 +77,13 @@ int clip_line(struct liang_barsky_clip_window *c,
 	tE = 0;
 	tL = 1;
 
-	if (clipT(c->x1 - (float) *x1,  dx, &tE, &tL) &&
-		clipT((float) *x1 - c->x2, -dx, &tE, &tL) &&
-		clipT(c->y1 - (float) *y1,  dy, &tE, &tL) &&
-		clipT((float) *y1 - c->y2, -dy, &tE, &tL)) {
+	if (clipT(c->x1 - *x1,  dx, &tE, &tL) &&
+		clipT( *x1 - c->x2, -dx, &tE, &tL) &&
+		clipT(c->y1 - *y1,  dy, &tE, &tL) &&
+		clipT( *y1 - c->y2, -dy, &tE, &tL)) {
 		if (tL < 1) {
-			*x2 = (int) ((float) *x1 + tL * dx);
-			*y2 = (int) ((float) *y1 + tL * dy);
+			*x2 = ((float) *x1 + tL * dx);
+			*y2 = ((float) *y1 + tL * dy);
 		}
 		if (tE > 0) {
 			*x1 += tE * dx;
@@ -95,8 +95,8 @@ int clip_line(struct liang_barsky_clip_window *c,
 }
 
 int clip_line_copy(struct liang_barsky_clip_window *c,
-		int x1, int y1, int x2,  int y2,
-		int *ox1, int *oy1, int *ox2, int *oy2)
+		float x1, float y1, float x2,  float y2,
+		float *ox1, float *oy1, float *ox2, float *oy2)
 {
 	*ox1 = x1;
 	*oy1 = y1;

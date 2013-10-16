@@ -152,7 +152,7 @@ void update_entity_color(struct entity *e, int color)
 	e->color = color;
 }
 
-static int is_backface(int x1, int y1, int x2, int y2, int x3, int y3)
+static int is_backface(float x1, float y1, float x2, float y2, float x3, float y3)
 {
 	int twicearea;
 
@@ -165,10 +165,10 @@ static int is_backface(int x1, int y1, int x2, int y2, int x3, int y3)
 static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc,
 	struct entity_context *cx, struct fake_star *fs)
 {
-	int x1, y1;
+	float x1, y1;
 
-	x1 = (int) (fs->v.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-	y1 = (int) (fs->v.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+	x1 = (fs->v.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+	y1 = (fs->v.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 	sng_current_draw_line(w->window, gc, x1, y1, x1 + (snis_randn(10) < 7), y1); 
 }
 
@@ -176,19 +176,19 @@ void wireframe_render_triangle(GtkWidget *w, GdkGC *gc,
 		struct entity_context *cx, struct triangle *t)
 {
 	struct vertex *v1, *v2, *v3;
-	int x1, y1, x2, y2, x3, y3;
+	float x1, y1, x2, y2, x3, y3;
 	struct camera_info *c = &cx->camera;
 
 	v1 = t->v[0];
 	v2 = t->v[1];
 	v3 = t->v[2];
 
-	x1 = (int) (v1->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	x2 = (int) (v2->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	x3 = (int) (v3->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	y1 = (int) (v1->wy * c->yvpixels / 2) + c->yvpixels / 2;
-	y2 = (int) (v2->wy * c->yvpixels / 2) + c->yvpixels / 2;
-	y3 = (int) (v3->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	x1 = (v1->wx * c->xvpixels / 2) + c->xvpixels / 2;
+	x2 = (v2->wx * c->xvpixels / 2) + c->xvpixels / 2;
+	x3 = (v3->wx * c->xvpixels / 2) + c->xvpixels / 2;
+	y1 = (v1->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y2 = (v2->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y3 = (v3->wy * c->yvpixels / 2) + c->yvpixels / 2;
 
 	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
@@ -201,10 +201,10 @@ void wireframe_render_triangle(GtkWidget *w, GdkGC *gc,
 void wireframe_render_point(GtkWidget *w, GdkGC *gc,
 		struct entity_context *cx, struct vertex *v)
 {
-	int x1, y1;
+	float x1, y1;
 
-	x1 = (int) (v->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-	y1 = (int) (v->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+	x1 = (v->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+	y1 = (v->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 	sng_current_draw_line(w->window, gc, x1, y1, x1 + 1, y1); 
 }
 
@@ -319,7 +319,7 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 				int render_style)
 {
 	struct vertex *v1, *v2, *v3;
-	int x1, y1, x2, y2, x3, y3;
+	float x1, y1, x2, y2, x3, y3;
 	int xa, ya, xb, yb, xc, yc;
 	struct camera_info *c = &cx->camera;
 
@@ -327,20 +327,18 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 	v2 = t->v[1];
 	v3 = t->v[2];
 
-	x1 = (int) (v1->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	x2 = (int) (v2->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	x3 = (int) (v3->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	y1 = (int) (v1->wy * c->yvpixels / 2) + c->yvpixels / 2;
-	y2 = (int) (v2->wy * c->yvpixels / 2) + c->yvpixels / 2;
-	y3 = (int) (v3->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	x1 = (v1->wx * c->xvpixels / 2) + c->xvpixels / 2;
+	x2 = (v2->wx * c->xvpixels / 2) + c->xvpixels / 2;
+	x3 = (v3->wx * c->xvpixels / 2) + c->xvpixels / 2;
+	y1 = (v1->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y2 = (v2->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y3 = (v3->wy * c->yvpixels / 2) + c->yvpixels / 2;
 
 	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
 
 	if (!(render_style & RENDER_NO_FILL)) {
-		sng_filled_tri(w->window, gc, sng_device_x(x1), sng_device_y(y1),
-				sng_device_x(x2), sng_device_y(y2),
-				sng_device_x(x3), sng_device_y(y3));
+		sng_filled_tri(w->window, gc, x1, y1, x2, y2, x3, y3);
 		if (render_style == RENDER_NORMAL)
 			return;
 	}
@@ -435,8 +433,8 @@ void wireframe_render_point_line(GtkWidget *w, GdkGC *gc, struct entity_context 
 				struct entity *e)
 {
 	int i;
-	int x1, y1;
-	int x2, y2;
+	float x1, y1;
+	float x2, y2;
 
 	sng_set_foreground(e->color);
 	for (i = 0; i < e->m->nlines; i++) {
@@ -447,9 +445,9 @@ void wireframe_render_point_line(GtkWidget *w, GdkGC *gc, struct entity_context 
 			struct vertex* vcurr = vstart;
 
 			while (vcurr <= vend) {
-				x2 = (int) (vcurr->wx * cx->camera.xvpixels / 2) +
+				x2 = (vcurr->wx * cx->camera.xvpixels / 2) +
 							cx->camera.xvpixels / 2;
-				y2 = (int) (vcurr->wy * cx->camera.yvpixels / 2) +
+				y2 = (vcurr->wy * cx->camera.yvpixels / 2) +
 							cx->camera.yvpixels / 2;
 				if (vcurr != vstart) {
 					if (e->m->l[i].flag & MESH_LINE_DOTTED)
@@ -462,10 +460,10 @@ void wireframe_render_point_line(GtkWidget *w, GdkGC *gc, struct entity_context 
 				++vcurr;
 			}
 		} else {
-			x1 = (int) (vstart->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-			y1 = (int) (vstart->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
-			x2 = (int) (vend->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-			y2 = (int) (vend->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+			x1 = (vstart->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+			y1 = (vstart->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+			x2 = (vend->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+			y2 = (vend->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 			if (e->m->l[i].flag & MESH_LINE_DOTTED)
 				sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
 			else

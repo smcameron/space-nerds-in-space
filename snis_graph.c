@@ -56,17 +56,17 @@ void sng_set_clip_window(int x1, int y1, int x2, int y2)
 	sgc.c.y2 = y2;
 }
 
-int sng_device_x(int x)
+int sng_device_x(float x)
 {
 	return (int) (x * sgc.xscale);
 }
 
-int sng_device_y(int y)
+int sng_device_y(float y)
 {
 	return (int) (y * sgc.yscale);
 }
 
-void sng_gl_draw_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
+static void sng_gl_draw_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
 {
 #ifndef WITHOUTOPENGL
 	GdkColor *h = &huex[sgc.hue];
@@ -82,7 +82,7 @@ void sng_gl_draw_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, 
 }
 
 void sng_scaled_line(GdkDrawable *drawable,
-        GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
+        GdkGC *gc, float x1, float y1, float x2, float y2)
 {
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
@@ -91,14 +91,14 @@ void sng_scaled_line(GdkDrawable *drawable,
 }
 
 void sng_thick_scaled_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
+	GdkGC *gc, float x1, float y1, float x2, float y2)
 {
-	int sx1, sy1, sx2, sy2, dx, dy;
+	float sx1, sy1, sx2, sy2, dx, dy;
 
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
 
-	if (abs(x1 - x2) > abs(y1 - y2)) {
+	if (fabs(x1 - x2) > fabs(y1 - y2)) {
 		dx = 0;
 		dy = 1;
 	} else {
@@ -115,9 +115,9 @@ void sng_thick_scaled_line(GdkDrawable *drawable,
 	sng_gl_draw_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
-static int clip_rectangle(int *x, int *y, int *width, int *height)
+static int clip_rectangle(float *x, float *y, float *width, float *height)
 {
-	int x2, y2;
+	float x2, y2;
 
 	x2 = *x + *width;
 	y2 = *y + *height;
@@ -144,8 +144,8 @@ static int clip_rectangle(int *x, int *y, int *width, int *height)
 	return 1;
 }
 
-static void gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean filled,
-		gint x, gint y, gint width, gint height)
+static void sng_gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean filled,
+		int x, int y, int width, int height)
 {
 #ifndef WITHOUTOPENGL
 	int x2, y2;
@@ -169,20 +169,20 @@ static void gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean filled,
 }
 
 void sng_scaled_rectangle(GdkDrawable *drawable,
-	GdkGC *gc, gboolean filled, gint x, gint y, gint width, gint height)
+	GdkGC *gc, gboolean filled, float x, float y, float width, float height)
 {
 	if (!clip_rectangle(&x, &y, &width, &height))
 		return;
-	gl_draw_rectangle(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
+	sng_gl_draw_rectangle(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
 		width * sgc.xscale, height * sgc.yscale);
 }
 
 void sng_scaled_bright_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color)
+	GdkGC *gc, float x1, float y1, float x2, float y2, int color)
 {
-	int sx1, sy1, sx2, sy2, dx, dy;
+	float sx1, sy1, sx2, sy2, dx, dy;
 
-	if (abs(x1 - x2) > abs(y1 - y2)) {
+	if (fabs(x1 - x2) > fabs(y1 - y2)) {
 		dx = 0;
 		dy = 1;
 	} else {
@@ -205,31 +205,8 @@ void sng_scaled_bright_line(GdkDrawable *drawable,
 	sng_gl_draw_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
-void sng_unscaled_bright_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color)
-{
-	int dx,dy;
-
-	if (abs(x1-x2) > abs(y1-y2)) {
-		dx = 0;
-		dy = 1;
-	} else {
-		dx = 1;
-		dy = 0;
-	}
-	
-	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
-		return;
-
-	sng_set_foreground(WHITE);
-	sng_gl_draw_line(drawable, gc, x1,y1,x2,y2);
-	sng_set_foreground(color);
-	sng_gl_draw_line(drawable, gc, x1-dx,y1-dy,x2-dx,y2-dy);
-	sng_gl_draw_line(drawable, gc, x1+dx,y1+dy,x2+dx,y2+dy);
-}
-
 void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
-	gboolean filled, gint x, gint y, gint width, gint height, gint angle1, gint angle2)
+	gboolean filled, float x, float y, float width, float height, float angle1, float angle2)
 {
 	gdk_draw_arc(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
 			width * sgc.xscale, height * sgc.yscale, angle1, angle2);
@@ -239,8 +216,8 @@ void sng_use_unscaled_drawing_functions(void)
 {
 	sng_current_draw_line = sng_scaled_line;
 	sng_current_draw_rectangle = sng_scaled_rectangle;
-	sng_current_bright_line = sng_unscaled_bright_line;
-	sng_current_draw_arc = gdk_draw_arc;
+	sng_current_bright_line = sng_scaled_bright_line;
+	sng_current_draw_arc = sng_scaled_arc;
 }
 
 void sng_use_scaled_drawing_functions(void)
@@ -256,7 +233,7 @@ void sng_use_thick_lines(void)
 	sng_current_draw_line = sng_thick_scaled_line;
 }
 
-static void gl_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y)
+static void sng_gl_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y)
 {
 #ifndef WITHOUTOPENGL
 	GdkColor *h = &huex[sgc.hue];
@@ -277,7 +254,7 @@ void sng_dotted_line_plot_func(int x, int y, void *context)
 	c->i = (c->i + 1) % 10;
 	if (c->i != 0)
 		return;
-	gl_draw_point(c->drawable, c->gc, x, y);
+	sng_gl_draw_point(c->drawable, c->gc, x, y);
 }
 
 void sng_electric_line_plot_func(int x, int y, void *context)
@@ -285,7 +262,7 @@ void sng_electric_line_plot_func(int x, int y, void *context)
 	struct sng_dotted_plot_func_context *c = context;
 
 	if (sng_rand(100) < 10)
-		gl_draw_point(c->drawable, c->gc, x, y);
+		sng_gl_draw_point(c->drawable, c->gc, x, y);
 }
 
 static void sng_bright_electric_line_plot_func(int x, int y, void *context)
@@ -294,12 +271,12 @@ static void sng_bright_electric_line_plot_func(int x, int y, void *context)
 
 	if (sng_rand(100) < 20) {
 		sng_set_foreground(c->i);
-		gl_draw_point(c->drawable, c->gc, x, y);
+		sng_gl_draw_point(c->drawable, c->gc, x, y);
 	}
 }
 
 void sng_draw_dotted_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
+	GdkGC *gc, float x1, float y1, float x2, float y2)
 {
 	struct sng_dotted_plot_func_context context;
 
@@ -315,7 +292,7 @@ void sng_draw_dotted_line(GdkDrawable *drawable,
 }
 
 void sng_draw_electric_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2)
+	GdkGC *gc, float x1, float y1, float x2, float y2)
 {
 	struct sng_dotted_plot_func_context context;
 
@@ -331,7 +308,7 @@ void sng_draw_electric_line(GdkDrawable *drawable,
 }
 
 static void sng_draw_bright_white_electric_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color)
+	GdkGC *gc, float x1, float y1, float x2, float y2, int color)
 {
 	struct sng_dotted_plot_func_context context;
 
@@ -347,11 +324,11 @@ static void sng_draw_bright_white_electric_line(GdkDrawable *drawable,
 }
 
 void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
-	gint x1, gint y1, gint x2, gint y2, int color)
+	float x1, float y1, float x2, float y2, int color)
 {
-	int dx, dy;
+	float dx, dy;
 
-	if (abs(x1 - x2) > abs(y1 - y2)) {
+	if (fabs(x1 - x2) > fabs(y1 - y2)) {
 		dx = 0;
 		dy = 1;
 	} else {
@@ -368,9 +345,10 @@ void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
 	sng_draw_electric_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
 }
 
-void sng_draw_vect_obj(GtkWidget *w, GdkGC *gc, struct my_vect_obj *v, int x, int y)
+void sng_draw_vect_obj(GtkWidget *w, GdkGC *gc, struct my_vect_obj *v, float x, float y)
 {
-	int i, x1, y1, x2, y2;
+	int i;
+	float x1, y1, x2, y2;
 
 	for (i = 0; i < v->npoints-1; i++) {
 		if (v->p[i+1].x == LINE_BREAK)
@@ -384,11 +362,12 @@ void sng_draw_vect_obj(GtkWidget *w, GdkGC *gc, struct my_vect_obj *v, int x, in
 }
 
 /* Draws a letter in the given font at an absolute x,y coords on the screen. */
-int sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font, 
-		unsigned char letter, int x, int y)
+float sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font, 
+		unsigned char letter, float x, float y)
 {
-	int i, x1, y1, x2, y2;
-	int minx, maxx, diff;
+	int i;
+	float x1, y1, x2, y2;
+	float minx, maxx, diff;
 
 	if (letter == ' ' || letter == '\n' || letter == '\t' || font[letter] == NULL)
 		return abs(font['Z']->p[0].x - font['Z']->p[1].x);
@@ -415,7 +394,7 @@ int sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font,
 		if (x1 > 0 && x2 > 0)
 			sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
 	}
-	diff = abs(maxx - minx);
+	diff = fabs(maxx - minx);
 	/* if (diff == 0)
 		return (abs(font['Z']->p[0].x - font['Z']->p[1].x) / 4); */
 	return diff; 
@@ -423,11 +402,11 @@ int sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font,
 
 /* Used for floating labels in the game. */
 /* Draws a string at an absolute x,y position on the screen. */ 
-void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, int x, int y) 
+void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, float x, float y) 
 {
 
 	int i, dx;	
-	int deltax = 0;
+	float deltax = 0;
 
 	for (i=0;s[i];i++) {
 		dx = (font_scale[font]) + sng_abs_xy_draw_letter(w, gc, gamefont[font], s[i], x + deltax, y);  
@@ -436,11 +415,12 @@ void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, int x, i
 }
 
 void sng_abs_xy_draw_string_with_cursor(GtkWidget *w, GdkGC *gc, char *s,
-			int font, int x, int y, int cursor_pos, int cursor_on) 
+			int font, float x, float y, int cursor_pos, int cursor_on) 
 {
 
-	int i, dx;	
-	int deltax = 0;
+	int i;
+	float dx;	
+	float deltax = 0;
 
 	if (!cursor_on) {
 		sng_abs_xy_draw_string(w, gc, s, font, x, y);
@@ -457,9 +437,9 @@ void sng_abs_xy_draw_string_with_cursor(GtkWidget *w, GdkGC *gc, char *s,
 		sng_abs_xy_draw_letter(w, gc, gamefont[font], '_', x + deltax, y);
 }
 
-void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y)
+void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, float x, float y)
 {
-	gl_draw_point(drawable, gc, x * sgc.xscale, y * sgc.yscale);
+	sng_gl_draw_point(drawable, gc, x * sgc.xscale, y * sgc.yscale);
 }
 
 void sng_setup_colors(GtkWidget *w)
@@ -505,8 +485,9 @@ void sng_set_gc(GdkGC *gc)
 	sgc.gc = gc;
 }
 
-static void gl_draw_circle(int x, int y,  int r)
+void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, float x, float y, float r)
 {
+	/* can't break into sng_draw and sng_gl_draw as r can't be scaled independantly */
 #ifndef WITHOUTOPENGL
 	int i;
 	GdkColor *h = &huex[sgc.hue];
@@ -517,15 +498,8 @@ static void gl_draw_circle(int x, int y,  int r)
 		glVertex2f(sgc.xscale * (x + cos(i * M_PI / 180.0) * r),
 			(sgc.screen_height - y * sgc.yscale) + sin(i * M_PI / 180.0) * r * sgc.yscale);
 	glEnd();
-#endif
-}
-
-void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
-{
-#ifndef WITHOUTOPENGL
-	gl_draw_circle(x, y, r);
 #else
-	sng_current_draw_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
+	sng_scaled_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
 #endif
 }
 
@@ -535,50 +509,50 @@ void sng_device_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, i
 }
 
 void sng_bright_device_line(GdkDrawable *drawable,
-	GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color)
+       GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color)
 {
-	int dx, dy;
+       int dx, dy;
 
-	if (abs(x1 - x2) > abs(y1 - y2)) {
-		dx = 0;
-		dy = 1;
-	} else {
-		dx = 1;
-		dy = 0;
-	}
+       if (abs(x1 - x2) > abs(y1 - y2)) {
+	       dx = 0;
+	       dy = 1;
+       } else {
+	       dx = 1;
+	       dy = 0;
+       }
 #if 0
-	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
-		return;
+       if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
+	       return;
 #endif
 
-	sng_set_foreground(WHITE);
-	sng_gl_draw_line(drawable, gc, x1, y1, x2, y2);
-	sng_set_foreground(color);
-	sng_gl_draw_line(drawable, gc, x1 - dx, y1 - dy, x2 - dx, y2 - dy);
-	sng_gl_draw_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
+       sng_set_foreground(WHITE);
+       sng_gl_draw_line(drawable, gc, x1, y1, x2, y2);
+       sng_set_foreground(color);
+       sng_gl_draw_line(drawable, gc, x1 - dx, y1 - dy, x2 - dx, y2 - dy);
+       sng_gl_draw_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
 }
 
 void sng_filled_tri(GdkDrawable *drawable, GdkGC *gc,
-			int x1, int y1, int x2, int y2, int x3, int y3)
+			float x1, float y1, float x2, float y2, float x3, float y3)
 {
 #ifndef WITHOUTOPENGL
 	GdkColor *h = &huex[sgc.hue];
 
         glBegin(GL_TRIANGLES);
         glColor3us(h->red, h->green, h->blue);
-        glVertex2i(x1, sgc.screen_height - y1);
-        glVertex2i(x2, sgc.screen_height - y2);
-        glVertex2i(x3, sgc.screen_height - y3);
+        glVertex2i(x1 * sgc.xscale, sgc.screen_height - y1 * sgc.yscale);
+        glVertex2i(x2 * sgc.xscale, sgc.screen_height - y2 * sgc.yscale);
+        glVertex2i(x3 * sgc.xscale, sgc.screen_height - y3 * sgc.yscale);
         glEnd();
 #else
 	GdkPoint tri[3];
 
-	tri[0].x = x1;
-	tri[0].y = y1;
-	tri[1].x = x2;
-	tri[1].y = y2;
-	tri[2].x = x3;
-	tri[2].y = y3;
+	tri[0].x = x1 * sgc.xscale;
+	tri[0].y = y1 * sgc.yscale;
+	tri[1].x = x2 * sgc.xscale;
+	tri[1].y = y2 * sgc.yscale;
+	tri[2].x = x3 * sgc.xscale;
+	tri[2].y = y3 * sgc.yscale;
 
 	gdk_draw_polygon(drawable, gc, 1, tri, 3);
 #endif

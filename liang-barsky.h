@@ -41,7 +41,7 @@ struct liang_barsky_clip_window {
  * returns 1 if line is not totally outside clip window
  */
 GLOBAL int clip_line(struct liang_barsky_clip_window *c,
-			int *x1, int *y1, int *x2,  int *y2);
+			float *x1, float *y1, float *x2,  float *y2);
 
 /* clip_line_copy()
  * first four params are input line coords
@@ -50,7 +50,7 @@ GLOBAL int clip_line(struct liang_barsky_clip_window *c,
  * returns 1 if line is not totally outside clip window
  */
 GLOBAL int clip_line_copy(struct liang_barsky_clip_window *c,
-			int x1, int y1, int x2, int y2,
-			int *ox1, int *oy1, int *ox2, int *oy2);
+			float x1, float y1, float x2, float y2,
+			float *ox1, float *oy1, float *ox2, float *oy2);
 
 #endif
