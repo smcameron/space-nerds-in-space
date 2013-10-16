@@ -5716,6 +5716,22 @@ static void show_death_screen(GtkWidget *w)
 	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, 500);
 }
 
+static int newzoom(int current_zoom, int desired_zoom)
+{
+	if (current_zoom != desired_zoom) {
+		int delta;
+
+		delta = abs(desired_zoom - current_zoom) / 10;
+		if (delta <= 0)
+			delta = 1;
+		if (desired_zoom < current_zoom)
+			current_zoom -= delta;
+		else
+			current_zoom += delta;
+	} 
+	return current_zoom;
+}
+
 static void show_weapons(GtkWidget *w)
 {
 	char buf[100];
@@ -5726,11 +5742,14 @@ static void show_weapons(GtkWidget *w)
 	double screen_radius;
 	double max_possible_screen_radius;
 	double visible_distance;
+	static int current_zoom = 0;
 
 	sng_set_foreground(GREEN);
 
 	if (!(o = find_my_ship()))
 		return;
+
+	current_zoom = newzoom(current_zoom, o->tsd.ship.weapzoom);
 	sprintf(buf, "PHOTON TORPEDOES: %03d", o->tsd.ship.torpedoes);
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 250, 15);
 	sprintf(buf, "TORPEDOES LOADED: %03d", o->tsd.ship.torpedoes_loaded);
@@ -5759,11 +5778,11 @@ static void show_weapons(GtkWidget *w)
 	cy = extent.ry + (extent.rh / 2);
 	r = extent.rh / 2;
 	sng_set_foreground(GREEN);
-	screen_radius = ((((255.0 - o->tsd.ship.weapzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
+	screen_radius = ((((255.0 - current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	max_possible_screen_radius = 0.09 * XKNOWN_DIM;
 	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
 	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, o->tsd.ship.weapzoom > 100);
+	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, current_zoom > 100);
 	sng_set_foreground(BLUE);
 	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading, BLUE, BLUE);
 	snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
@@ -5847,6 +5866,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	static struct mesh* ring_mesh = 0;
 	static struct mesh* vline_mesh = 0;
 	static struct mesh* sector_mesh = 0;
+	static int current_zoom = 0;
 
 	if ( !ring_mesh )
 		ring_mesh = init_circle_mesh(0, 0, 1);
@@ -5866,10 +5886,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	if (!(o = find_my_ship()))
 		return;
 
+	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
 	camera_heading = -o->heading + M_PI / 2.0;
 	normalize_angle(&camera_heading);
 
-	screen_radius = ((((255.0 - o->tsd.ship.navzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
+	screen_radius = ((((255.0 - current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
 
 	double ship_scale = screen_radius/250.0;
@@ -5893,7 +5914,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	}
 
 	double sector_size = XKNOWN_DIM / 10.0;
-	if ( o->tsd.ship.navzoom > 100 ) {
+	if (current_zoom > 100 ) {
 		/* turn on fine sector lines */
 		sector_size /= 10.0;
 	}
@@ -5970,11 +5991,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			if ( contact ) {
 				switch (go[i].type) {
 				case OBJTYPE_PLANET:
-					contact_scale = ((255.0 - o->tsd.ship.navzoom) / 255.0) * 3.0 + 1.0;
+					contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 1.0;
 					update_entity_scale(contact, contact_scale);
 					break;
 				case OBJTYPE_STARBASE:
-					contact_scale = ((255.0 - o->tsd.ship.navzoom) / 255.0) * 3.0 + 3.0;
+					contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 3.0;
 					update_entity_scale(contact, contact_scale);
 					break;
 				case OBJTYPE_SHIP2:
@@ -6010,11 +6031,14 @@ static void show_navigation(GtkWidget *w)
 	int cx, cy, gx1, gy1, gx2, gy2;
 	int r, sectorx, sectory;
 	double screen_radius, max_possible_screen_radius, visible_distance;
+	static int current_zoom = 0;
 
 	sng_set_foreground(GREEN);
 
 	if (!(o = find_my_ship()))
 		return;
+
+	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
 	sectorx = floor(10.0 * o->x / (double) XKNOWN_DIM);
 	sectory = floor(10.0 * o->y / (double) YKNOWN_DIM);
 	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf)", sectory + 'A', sectorx, o->x, o->y);
@@ -6032,12 +6056,12 @@ static void show_navigation(GtkWidget *w)
 	cy = extent.ry + (extent.rh / 2);
 	r = extent.rh / 2;
 	sng_set_foreground(GREEN);
-	screen_radius = ((((255.0 - o->tsd.ship.navzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
+	screen_radius = ((((255.0 - current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	max_possible_screen_radius = 0.09 * XKNOWN_DIM;
 	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
         if (!nav_ui.details_mode) {
 		snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
-		snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, o->tsd.ship.navzoom > 100);
+		snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, current_zoom > 100);
 		sng_set_foreground(DARKRED);
 		snis_draw_reticule(w, gc, cx, cy, r, o->heading, DARKRED, RED);
 		snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
