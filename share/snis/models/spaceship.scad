@@ -111,6 +111,6 @@ module sixth_wedge()
 
 $fn = 8;
 rotate(a = -90, v = [0, 0, 1]) 
-	scale (v = [1.2, 1.2, 2.4])
+	scale (v = [2.4, 2.4, 4.8])
 		sixth_wedge();
 
