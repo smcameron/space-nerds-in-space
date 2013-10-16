@@ -5946,8 +5946,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			case OBJTYPE_TORPEDO:
 			case OBJTYPE_DERELICT:
 			case OBJTYPE_LASER:
-			case OBJTYPE_ASTEROID:
 				break;
+			case OBJTYPE_ASTEROID:
 			case OBJTYPE_PLANET:
 			case OBJTYPE_STARBASE:
 			case OBJTYPE_SHIP2:
@@ -5970,6 +5970,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 					update_entity_scale(contact, contact_scale);
 					break;
 				case OBJTYPE_STARBASE:
+				case OBJTYPE_ASTEROID:
 					contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 3.0;
 					update_entity_scale(contact, contact_scale);
 					break;
