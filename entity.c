@@ -142,6 +142,11 @@ void update_entity_rotation(struct entity *e, float rx, float ry, float rz)
 	e->rz = rz;
 }
 
+float entity_get_scale(struct entity *e)
+{
+	return e->scale;
+}
+
 void update_entity_scale(struct entity *e, float scale)
 {
 	e->scale = scale;
