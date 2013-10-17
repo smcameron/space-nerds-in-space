@@ -82,6 +82,7 @@
 #include "mesh.h"
 #include "stl_parser.h"
 #include "entity.h"
+#include "matrix.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -5837,7 +5838,6 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 
 static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 {
-	float cx, cy, cz; /* camera position */
 	static struct mesh* ring_mesh = 0;
 	static struct mesh* vline_mesh = 0;
 	static struct mesh* sector_mesh = 0;
@@ -5870,11 +5870,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 	double ship_scale = screen_radius/250.0;
 
-	camera_set_pos(navecx, o->x - screen_radius*2.5, o->z - screen_radius, -o->y);
-	cx = (float) o->x - (float) cos(camera_heading) * screen_radius * 2.5; // screen_radius * 0.1;
-	cy = (float) o->z - screen_radius;
-	cz = (float) -o->y - (float) sin(camera_heading) * screen_radius * 2.5; // screen_radius * 0.1;
-	camera_set_pos(navecx, cx, cy, cz);
+	/* rotate camera to be behind my ship */
+	struct mat41 camera_pos = { { -screen_radius * 2.5, -screen_radius, 0 } };
+	struct mat41 camera_pos_heading;
+	mat41_rotate_y(&camera_pos, camera_heading, &camera_pos_heading);
+
+	camera_set_pos(navecx, o->x + camera_pos_heading.m[0], o->z + camera_pos_heading.m[1], -o->y - camera_pos_heading.m[2]);
 	camera_look_at(navecx, o->x, o->z, -o->y);
 	camera_set_parameters(navecx, (float) 20, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
