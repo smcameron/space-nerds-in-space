@@ -5958,6 +5958,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				contact = add_entity(navecx, entity_get_mesh(go[i].entity),
 							go[i].x, go[i].z, -go[i].y, GREEN);
 				set_render_style(contact, science_style);
+				entity_set_user_data(contact, &go[i]);
 				break;
 			}
 			case OBJTYPE_SPACEMONSTER: /* invisible to instruments */
@@ -5997,6 +5998,26 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		}
 	}
 	render_entities(w, gc, navecx);
+
+	/* Draw labels on ships... */
+	sng_set_foreground(GREEN);
+	for (i = 0; i <= get_entity_count(navecx); i++) {
+		float sx, sy;
+		char buffer[20];
+		struct entity *e;
+		struct snis_entity *o;
+
+		e = get_entity(navecx, i);
+		o = entity_get_user_data(e);
+		if (!o)
+			continue;
+		if (!o->sdata.science_data_known)
+			continue;
+		entity_get_screen_coords(e, &sx, &sy);
+		sprintf(buffer, "%s", o->sdata.name);
+		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy - 15);
+	}
+
 	pthread_mutex_unlock(&universe_mutex);
 
 	remove_all_entity(navecx);
