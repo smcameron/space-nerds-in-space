@@ -143,6 +143,7 @@ int current_quit_selection = 0;
 int final_quit_selection = 0;
 
 uint32_t role = ROLE_ALL;
+
 char *password;
 char *shipname;
 #define UNKNOWN_ID 0xffffffff
@@ -8292,12 +8293,14 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	y = 345;
 
 	nsu->role_main_v = 0;
-	nsu->role_nav_v = 0;
-	nsu->role_weap_v = 0;
-	nsu->role_eng_v = 0;
-	nsu->role_sci_v = 0;
-	nsu->role_comms_v = 0;
-	nsu->role_sound_v = 0;
+	nsu->role_nav_v = 1;
+	nsu->role_weap_v = 1;
+	nsu->role_eng_v = 1;
+	nsu->role_sci_v = 1;
+	nsu->role_comms_v = 1;
+	nsu->role_sound_v = 1;
+	nsu->role_damcon_v = 1;
+	nsu->role_demon_v = 1;
 	nsu->role_main = init_net_role_button(x, &y, "MAIN SCREEN ROLE", &nsu->role_main_v);
 	nsu->role_nav = init_net_role_button(x, &y, "NAVIGATION ROLE", &nsu->role_nav_v);
 	nsu->role_weap = init_net_role_button(x, &y, "WEAPONS ROLE", &nsu->role_weap_v);
