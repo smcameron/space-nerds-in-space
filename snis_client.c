@@ -5840,16 +5840,16 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 
 static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 {
-	static struct mesh* ring_mesh = 0;
-	static struct mesh* vline_mesh = 0;
-	static struct mesh* sector_mesh = 0;
+	static struct mesh *ring_mesh = 0;
+	static struct mesh *vline_mesh = 0;
+	static struct mesh *sector_mesh = 0;
 	static int current_zoom = 0;
 
-	if ( !ring_mesh )
+	if (!ring_mesh)
 		ring_mesh = init_circle_mesh(0, 0, 1);
-	if ( !vline_mesh )
+	if (!vline_mesh)
 		vline_mesh = init_line_mesh(0, 0, 0, 0, 0, 1);
-	if ( !sector_mesh )
+	if (!sector_mesh)
 		sector_mesh = init_sector_mesh(7);
 
 	struct snis_entity *o;
