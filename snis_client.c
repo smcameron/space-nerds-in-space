@@ -5843,14 +5843,18 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *vline_mesh = 0;
 	static struct mesh *sector_mesh = 0;
+	static struct mesh *axis_mesh[4] = { 0, 0, 0, 0 };
 	static int current_zoom = 0;
 
-	if (!ring_mesh)
+	if (!ring_mesh) {
 		ring_mesh = init_circle_mesh(0, 0, 1);
-	if (!vline_mesh)
 		vline_mesh = init_line_mesh(0, 0, 0, 0, 0, 1);
-	if (!sector_mesh)
 		sector_mesh = init_sector_mesh(7);
+		axis_mesh[0] = init_line_mesh(-1, 0, 0, 1, 0, 0);
+		axis_mesh[1]= init_line_mesh(0, -1, 0, 0, 1, 0);
+		axis_mesh[2] = init_line_mesh(0, 0, -1, 0, 0, 1);
+		axis_mesh[3] = init_line_mesh(0, -1, 0, 0, -0.8, 0);
+	}
 
 	struct snis_entity *o;
 	struct entity *e = NULL;
@@ -5888,6 +5892,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	for (incr = screen_radius; incr > screen_radius / 4.0; incr -= screen_radius / 5.0) {
 		e = add_entity(navecx, ring_mesh, o->x, o->z, -o->y, DARKRED);
 		update_entity_scale(e, incr);
+		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+	}
+
+	for (i = 0; i < 4; i++) {
+		e = add_entity(navecx, axis_mesh[i], o->x, o->z, -o->y, i == 3 ? WHITE : DARKRED);
+		update_entity_scale(e, screen_radius);
 		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 	}
 
