@@ -81,5 +81,7 @@ GLOBAL void entity_get_screen_coords(struct entity *e, float *x, float *y);
 
 GLOBAL int get_entity_count(struct entity_context *cx);
 GLOBAL struct entity *get_entity(struct entity_context *cx, int n);
+GLOBAL void entity_set_user_data(struct entity *e, void *user_data);
+GLOBAL void *entity_get_user_data(struct entity *e);
 
 #endif	

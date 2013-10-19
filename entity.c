@@ -59,6 +59,7 @@ struct entity {
 	float dist3dsqrd;
 	int color;
 	int render_style;
+	void *user_data;
 };
 
 struct camera_info {
@@ -111,6 +112,7 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].scale = 1.0;
 	cx->entity_list[n].color = color;
 	cx->entity_list[n].render_style = RENDER_NORMAL;
+	cx->entity_list[n].user_data = NULL;
 	return &cx->entity_list[n];
 }
 
@@ -1021,5 +1023,15 @@ void entity_get_screen_coords(struct entity *e, float *x, float *y)
 {
 	*x = e->sx;
 	*y = e->sy;
+}
+
+void entity_set_user_data(struct entity *e, void *user_data)
+{
+	e->user_data = user_data;
+}
+
+void *entity_get_user_data(struct entity *e)
+{
+	return e->user_data;
 }
 
