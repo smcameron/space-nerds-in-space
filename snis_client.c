@@ -7042,11 +7042,14 @@ static void show_science(GtkWidget *w)
 	struct snis_entity *o;
 	char buf[80];
 	double zoom;
+	static int current_zoom = 0;
 
 	if (!(o = find_my_ship()))
 		return;
 
 	snis_slider_set_input(sci_ui.scizoom, o->tsd.ship.scizoom/255.0 );
+
+	current_zoom = newzoom(current_zoom, o->tsd.ship.scizoom);
 
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
@@ -7064,12 +7067,11 @@ static void show_science(GtkWidget *w)
 	cy = SCIENCE_SCOPE_CY;
 	r = SCIENCE_SCOPE_R;
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
-			(o->tsd.ship.scizoom / 255.0) +
-			MIN_SCIENCE_SCREEN_RADIUS;
+			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
 	sng_set_foreground(DARKGREEN);
 	if (!sci_ui.details_mode) {
 		snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, zoom);
-		snis_draw_radar_grid(w->window, gc, o, cx, cy, r, zoom, o->tsd.ship.scizoom < 50);
+		snis_draw_radar_grid(w->window, gc, o, cx, cy, r, zoom, current_zoom < 50);
 		sng_set_foreground(DARKRED);
 		snis_draw_science_reticule(w, gc, cx, cy, r,
 				o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width));
