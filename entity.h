@@ -78,4 +78,7 @@ GLOBAL void entity_context_free(struct entity_context *cx);
 #define RENDER_POINT_LINE (1 << 6)
 #define RENDER_DISABLE_CLIP (1 << 7)
 
+GLOBAL int get_entity_count(struct entity_context *cx);
+GLOBAL struct entity *get_entity(struct entity_context *cx, int n);
+
 #endif	

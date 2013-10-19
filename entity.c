@@ -992,4 +992,13 @@ void entity_set_mesh(struct entity *e, struct mesh *m)
 	e->m = m;
 }
 
+int get_entity_count(struct entity_context *cx)
+{
+	return snis_object_pool_highest_object(cx->entity_pool);
+}
+
+struct entity *get_entity(struct entity_context *cx, int n)
+{
+	return &cx->entity_list[n];
+}
 
