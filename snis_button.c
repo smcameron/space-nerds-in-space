@@ -20,6 +20,11 @@ struct button {
 	unsigned char button_press_feedback_counter;
 };
 
+void snis_button_set_label(struct button *b, char *label)
+{
+	strncpy(b->label, label, sizeof(b->label) - 1);
+}
+
 struct button *snis_button_init(int x, int y, int width, int height,
 			char *label, int color, int font, button_function bf,
 			void *cookie)
@@ -31,7 +36,7 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->y = y;
 	b->width = width;
 	b->height = height;
-	strncpy(b->label, label, sizeof(b->label) - 1);
+	snis_button_set_label(b, label);
 	b->label[sizeof(b->label) - 1] = '\0';
 	b->color = color;
 	b->font = font;
@@ -92,3 +97,4 @@ void snis_button_checkbox(struct button *b, int *value)
 {
 	b->checkbox_value = value;
 }
+
