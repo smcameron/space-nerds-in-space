@@ -5959,68 +5959,66 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		if (go[i].id == my_ship_id) {
 			continue;
 		}
-		else {
-			struct entity *contact = 0;
-			float contact_scale = 0;
+		struct entity *contact = 0;
+		float contact_scale = 0;
 
+		switch (go[i].type) {
+		case OBJTYPE_WORMHOLE:
+		case OBJTYPE_EXPLOSION:
+		case OBJTYPE_TORPEDO:
+		case OBJTYPE_DERELICT:
+		case OBJTYPE_LASER:
+			break;
+		case OBJTYPE_ASTEROID:
+		case OBJTYPE_PLANET:
+		case OBJTYPE_STARBASE:
+		case OBJTYPE_SHIP2:
+		case OBJTYPE_SHIP1:
+		{
+			struct mesh *m;
+
+			if (go[i].type == OBJTYPE_SHIP2)
+				m = ship_icon_mesh;
+			else
+				m = entity_get_mesh(go[i].entity);
+			contact = add_entity(navecx, m, go[i].x, go[i].z, -go[i].y, GREEN);
+			set_render_style(contact, science_style);
+			entity_set_user_data(contact, &go[i]);
+			break;
+		}
+		case OBJTYPE_SPACEMONSTER: /* invisible to instruments */
+		case OBJTYPE_NEBULA:
+			break;
+		}
+
+		if ( contact ) {
 			switch (go[i].type) {
-			case OBJTYPE_WORMHOLE:
-			case OBJTYPE_EXPLOSION:
-			case OBJTYPE_TORPEDO:
-			case OBJTYPE_DERELICT:
-			case OBJTYPE_LASER:
-				break;
-			case OBJTYPE_ASTEROID:
 			case OBJTYPE_PLANET:
+				contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 1.0;
+				update_entity_scale(contact, contact_scale);
+				break;
 			case OBJTYPE_STARBASE:
+			case OBJTYPE_ASTEROID:
+				contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 3.0;
+				update_entity_scale(contact, contact_scale);
+				break;
 			case OBJTYPE_SHIP2:
 			case OBJTYPE_SHIP1:
-			{
-				struct mesh *m;
-
-				if (go[i].type == OBJTYPE_SHIP2)
-					m = ship_icon_mesh;
-				else
-					m = entity_get_mesh(go[i].entity);
-				contact = add_entity(navecx, m, go[i].x, go[i].z, -go[i].y, GREEN);
-				set_render_style(contact, science_style);
-				entity_set_user_data(contact, &go[i]);
-				break;
-			}
-			case OBJTYPE_SPACEMONSTER: /* invisible to instruments */
-			case OBJTYPE_NEBULA:
+				contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
+				update_entity_scale(contact, contact_scale);
+				update_entity_rotation(contact, M_PI / 2.0, go[i].heading + M_PI -
+					(go[i].type == OBJTYPE_SHIP1) * (M_PI / 2.0), 0);
 				break;
 			}
 
-			if ( contact ) {
-				switch (go[i].type) {
-				case OBJTYPE_PLANET:
-					contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 1.0;
-					update_entity_scale(contact, contact_scale);
-					break;
-				case OBJTYPE_STARBASE:
-				case OBJTYPE_ASTEROID:
-					contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 3.0;
-					update_entity_scale(contact, contact_scale);
-					break;
-				case OBJTYPE_SHIP2:
-				case OBJTYPE_SHIP1:
-					contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
-					update_entity_scale(contact, contact_scale);
-					update_entity_rotation(contact, M_PI / 2.0, go[i].heading + M_PI -
-						(go[i].type == OBJTYPE_SHIP1) * (M_PI / 2.0), 0);
-					break;
-				}
+			/* add line from center disk to contact in z axis */
+			e = add_entity(navecx, vline_mesh, go[i].x, o->z, -go[i].y, DARKRED);
+			update_entity_scale(e, go[i].z-o->z);
+			set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 
-				// add line from center disk to contact in z axis
-				e = add_entity(navecx, vline_mesh, go[i].x, o->z, -go[i].y, DARKRED);
-				update_entity_scale(e, go[i].z-o->z);
-				set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
-
-				e = add_entity(navecx, ring_mesh, go[i].x, o->z, -go[i].y, DARKRED);
-				update_entity_scale(e, entity_get_mesh(contact)->radius*entity_get_scale(contact)/4.0);
-				set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
-			}
+			e = add_entity(navecx, ring_mesh, go[i].x, o->z, -go[i].y, DARKRED);
+			update_entity_scale(e, entity_get_mesh(contact)->radius*entity_get_scale(contact)/4.0);
+			set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 		}
 	}
 	render_entities(w, gc, navecx);
