@@ -323,7 +323,10 @@ snis_event_callback.o:	snis_event_callback.h snis_event_callback.c
 ${SSGL}:
 	(cd ssgl ; make )
 
-clean:
-	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${PROGS} ${SSGL} stl_parser ${MODELS} snis_limited_graph.c snis_limited_client.c test-space-partition
+mostly-clean:
+	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${PROGS} ${SSGL} stl_parser snis_limited_graph.c snis_limited_client.c test-space-partition
 	( cd ssgl; make clean )
+
+clean:	mostly-clean
+	rm -f ${MODELS}
 
