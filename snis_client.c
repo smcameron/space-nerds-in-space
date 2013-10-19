@@ -5855,6 +5855,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	static struct mesh *sector_mesh = 0;
 	static struct mesh *axis_mesh[4] = { 0, 0, 0, 0 };
 	static int current_zoom = 0;
+	struct entity *targeted_entity = NULL;
 
 	if (!ring_mesh) {
 		ring_mesh = init_circle_mesh(0, 0, 1);
@@ -5984,6 +5985,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			contact = add_entity(navecx, m, go[i].x, go[i].z, -go[i].y, GREEN);
 			set_render_style(contact, science_style);
 			entity_set_user_data(contact, &go[i]);
+			if (o->tsd.ship.victim_id != -1 && go[i].id == o->tsd.ship.victim_id)
+				targeted_entity = contact;
 			break;
 		}
 		case OBJTYPE_SPACEMONSTER: /* invisible to instruments */
@@ -6040,6 +6043,14 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		entity_get_screen_coords(e, &sx, &sy);
 		sprintf(buffer, "%s", o->sdata.name);
 		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy - 15);
+	}
+
+	/* Draw targeting indicator on 3d nav screen */
+	if (targeted_entity) {
+		float sx, sy;
+
+		entity_get_screen_coords(targeted_entity, &sx, &sy);
+		draw_targeting_indicator(w, gc, sx, sy);
 	}
 
 	pthread_mutex_unlock(&universe_mutex);
