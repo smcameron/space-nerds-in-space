@@ -4262,6 +4262,34 @@ static void draw_main_screen_text(GtkWidget *w, GdkGC *gc)
 	}
 }
 
+static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
+{
+	int i;
+
+	sng_set_foreground(ORANGERED);
+	for (i = 0; i < 4; i++) {
+		int x1, y1, x2, y2;
+		double angle;
+		double dx, dy, ddx, ddy;
+
+		angle = (M_PI * ((i * 90 + timer * 4) % 360)) / 180.0;
+
+		dx = 15.0 * cos(angle);
+		dy = 15.0 * sin(angle);
+		ddx = 5.0 * cos(angle + M_PI / 2.0);
+		ddy = 5.0 * sin(angle + M_PI / 2.0);
+
+		x1 = x + dx;
+		y1 = y + dy;
+		x2 = x + 2.0 * dx;
+		y2 = y + 2.0 * dy;
+		/* snis_draw_line(w->window, gc, x1, y1, x2, y2); */
+		snis_draw_line(w->window, gc, x2 - ddx, y2 - ddy, x2 + ddx, y2 + ddy);
+		snis_draw_line(w->window, gc, x2 - ddx, y2 - ddy, x1, y1);
+		snis_draw_line(w->window, gc, x1, y1, x2 + ddx, y2 + ddy);
+	}
+}
+
 static void show_mainscreen(GtkWidget *w)
 {
 	static int fake_stars_initialized = 0;
@@ -4299,6 +4327,18 @@ static void show_mainscreen(GtkWidget *w)
 	}
 	pthread_mutex_lock(&universe_mutex);
 	render_entities(w, gc, ecx);
+
+	/* Draw targeting indicator on main screen */
+	if (o->tsd.ship.victim_id != -1) {
+		float sx, sy;
+		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.victim_id);
+
+		if (target) {
+			entity_get_screen_coords(target->entity, &sx, &sy);
+			draw_targeting_indicator(w, gc, sx, sy);
+		}
+	}
+
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
 		show_gunsight(w);
 	draw_main_screen_text(w, gc);
@@ -4623,40 +4663,6 @@ static double radary_to_uy(struct snis_entity *o,
 	int cy = extent->ry + (extent->rh / 2);
 
 	return screen_radius * (y - cy) / ((double) extent->rh / 2.0) + o->y;
-}
-
-static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
-{
-	int i;
-
-	sng_set_foreground(ORANGERED);
-	for (i = 0; i < 4; i++) {
-		int x1, y1, x2, y2;
-		double angle;
-		double dx, dy, ddx, ddy;
-
-		angle = (M_PI * ((i * 90 + timer * 4) % 360)) / 180.0;
-
-		dx = 15.0 * cos(angle);
-		dy = 15.0 * sin(angle);
-		ddx = 5.0 * cos(angle + M_PI / 2.0);
-		ddy = 5.0 * sin(angle + M_PI / 2.0);
-
-		x1 = x + dx;
-		y1 = y + dy;
-		x2 = x + 2.0 * dx;
-		y2 = y + 2.0 * dy;
-#if 0
-		x1 = (int) ((double) x + 10.0 * cos(angle));
-		y1 = (int) ((double) y + 10.0 * sin(angle));
-		x2 = (int) ((double) x + 20.0 * cos(angle));
-		y2 = (int) ((double) y + 20.0 * sin(angle));
-#endif
-		/* snis_draw_line(w->window, gc, x1, y1, x2, y2); */
-		snis_draw_line(w->window, gc, x2 - ddx, y2 - ddy, x2 + ddx, y2 + ddy);
-		snis_draw_line(w->window, gc, x2 - ddx, y2 - ddy, x1, y1);
-		snis_draw_line(w->window, gc, x1, y1, x2 + ddx, y2 + ddy);
-	}
 }
 
 static void draw_torpedo_leading_indicator(GtkWidget *w, GdkGC *gc,
