@@ -3201,6 +3201,10 @@ static int process_nav_details(void)
 	if (rc != 0)
 		return rc;
 	nav_ui.details_mode = new_details;
+	if (new_details)
+		snis_button_set_label(nav_ui.details_button, "2D");
+	else
+		snis_button_set_label(nav_ui.details_button, "3D");
 	return 0;
 }
 
