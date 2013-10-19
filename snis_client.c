@@ -5967,8 +5967,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		case OBJTYPE_WORMHOLE:
 		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_DERELICT:
-		case OBJTYPE_LASER:
 			break;
+		case OBJTYPE_LASER:
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_ASTEROID:
 		case OBJTYPE_PLANET:
@@ -5984,6 +5984,9 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				m = entity_get_mesh(go[i].entity);
 			if (go[i].type == OBJTYPE_TORPEDO) {
 				contact = add_entity(navecx, m, go[i].x, go[i].z, -go[i].y, ORANGERED);
+				set_render_style(contact, science_style | RENDER_BRIGHT_LINE);
+			} else if (go[i].type == OBJTYPE_LASER) {
+				contact = add_entity(navecx, m, go[i].x, go[i].z, -go[i].y, LASER_COLOR);
 				set_render_style(contact, science_style | RENDER_BRIGHT_LINE);
 			} else {
 				contact = add_entity(navecx, m, go[i].x, go[i].z, -go[i].y, GREEN);
@@ -6011,6 +6014,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				update_entity_scale(contact, contact_scale);
 				break;
 			case OBJTYPE_TORPEDO:
+			case OBJTYPE_LASER:
 			case OBJTYPE_SHIP2:
 			case OBJTYPE_SHIP1:
 				contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
