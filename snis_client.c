@@ -5822,7 +5822,7 @@ static void init_nav_ui(void)
 
 	nav_ui.details_mode = 0;
 	nav_ui.details_button = snis_button_init(450, 570, 40, 25, "3D",
-			GREEN, NANO_FONT, nav_details_pressed, (void *) 0);
+			RED, NANO_FONT, nav_details_pressed, (void *) 0);
 	ui_add_button(nav_ui.details_button, DISPLAYMODE_NAVIGATION);
 	navecx = entity_context_new(5000);
 }
