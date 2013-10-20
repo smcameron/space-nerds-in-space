@@ -145,6 +145,7 @@ struct update_ship_packet {
 	uint8_t shiptype; /* same as ship_sdata_packet subclass */
 	uint8_t reverse;
 	uint32_t victim_id;
+	int32_t orientation[4]; /* int32_t encoded orientation quaternion */
 };
 
 struct ship_sdata_packet {
