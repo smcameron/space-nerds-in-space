@@ -1726,7 +1726,7 @@ static void player_move(struct snis_entity *o)
 	o->tsd.ship.shields = universe_timestamp % 100;
 
 	normalize_angle(&o->heading);
-	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
+	quat_init_axis(&o->orientation, 0, 0, 1, o->heading);
 	normalize_angle(&o->tsd.ship.gun_heading);
 	normalize_angle(&o->tsd.ship.sci_heading);
 	o->timestamp = universe_timestamp;
@@ -1939,7 +1939,7 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	go[i].sdata.shield_width = snis_randn(128);
 	go[i].sdata.shield_depth = snis_randn(255);
 	go[i].sdata.faction = snis_randn(ARRAY_SIZE(faction));
-	quat_init_axis(&go[i].orientation, 0, 1, 0, heading);
+	quat_init_axis(&go[i].orientation, 0, 0, 1, heading);
 	free(n);
 	return i;
 }
@@ -2122,7 +2122,7 @@ static void respawn_player(struct snis_entity *o)
 	o->vx = 0;
 	o->vy = 0;
 	o->heading = 0;
-	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
+	quat_init_axis(&o->orientation, 0, 0, 1, o->heading);
 	init_player(o);
 	o->alive = 1;
 	send_ship_damage_packet(o);

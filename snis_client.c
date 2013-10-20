@@ -435,7 +435,7 @@ static int add_generic_object(uint32_t id, double x, double y, double vx, double
 	go[i].type = type;
 	go[i].alive = alive;
 	go[i].entity = entity;
-	quat_init_axis(&go[i].orientation, 0, 1, 0, heading);
+	quat_init_axis(&go[i].orientation, 0, 0, 1, heading);
 	return i;
 }
 
@@ -450,7 +450,7 @@ static void update_generic_object(int index, double x, double y, double z,
 	o->vx = vx;
 	o->vy = vy;
 	o->heading = heading;
-	quat_init_axis(&o->orientation, 0, 1, 0, heading);
+	quat_init_axis(&o->orientation, 0, 0, 1, heading);
 	o->alive = alive;
 	if (o->entity) {
 		update_entity_pos(o->entity, x, z, -y);
