@@ -1194,6 +1194,7 @@ static void ship_move(struct snis_entity *o)
 		yaw_vel = heading_diff;
 	o->heading += yaw_vel;
 	normalize_angle(&o->heading);
+	quat_init_axis(&o->orientation, 0, 0, 1, o->heading);
 
 	/* Adjust velocity towards desired velocity */
 	o->tsd.ship.velocity = o->tsd.ship.velocity +
@@ -1840,8 +1841,8 @@ static void demon_ship_move(struct snis_entity *o)
 	o->vx = o->tsd.ship.velocity * cos(o->heading);
 	set_object_location(o, o->x - o->vx, o->y - o->vy, o->z);
 	o->heading += o->tsd.ship.yaw_velocity;
-
 	normalize_angle(&o->heading);
+	quat_init_axis(&o->orientation, 0, 0, 1, o->heading);
 	o->timestamp = universe_timestamp;
 
 	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, YAW_DAMPING);
