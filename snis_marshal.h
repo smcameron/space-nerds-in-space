@@ -44,6 +44,7 @@ GLOBAL void packed_buffer_free(struct packed_buffer *pb);
  * "d" = double
  * "DS" = 32-bit signed integer encoded double (takes 2 params, double + scale )
  * "DU" = 32-bit unsigned integer encoded double (takes 2 params, double + scale )
+ * "Q" = 4 32-bit signed integer encoded floats representing a quaternion axis + angle
  */
 
 GLOBAL int packed_buffer_append(struct packed_buffer *pb, const char *format, ...);
@@ -59,11 +60,13 @@ GLOBAL int packed_buffer_append_u16(struct packed_buffer *pb, uint16_t value);
 GLOBAL int packed_buffer_append_u8(struct packed_buffer *pb, uint8_t value);
 GLOBAL int packed_buffer_append_u32(struct packed_buffer *pb, uint32_t value);
 GLOBAL int packed_buffer_append_u64(struct packed_buffer *pb, uint64_t value);
+GLOBAL int packed_buffer_append_quat(struct packed_buffer *pb, float q[]);
 GLOBAL uint16_t packed_buffer_extract_u16(struct packed_buffer *pb);
 GLOBAL uint8_t packed_buffer_extract_u8(struct packed_buffer *pb);
 GLOBAL uint32_t packed_buffer_extract_u32(struct packed_buffer *pb);
 GLOBAL uint64_t packed_buffer_extract_u64(struct packed_buffer *pb);
 GLOBAL double packed_buffer_extract_double(struct packed_buffer *pb);
+GLOBAL void packed_buffer_extract_quat(struct packed_buffer *pb, float q[]);
 GLOBAL int packed_buffer_append_string(struct packed_buffer *pb, unsigned char *str, unsigned short len);
 GLOBAL int packed_buffer_extract_string(struct packed_buffer *pb, char *buffer, int buflen);
 GLOBAL int packed_buffer_append_raw(struct packed_buffer *pb, const char *buffer, unsigned short len);
@@ -80,6 +83,8 @@ GLOBAL uint32_t dtou32(double d, uint32_t scale);
 GLOBAL double u32tod(uint32_t u, uint32_t scale);
 GLOBAL int32_t dtos32(double d, int32_t scale);
 GLOBAL double s32tod(int32_t u, int32_t scale);
+GLOBAL int32_t Qtos32(float q); /* for quaternion elements. (-1.0 <= q <= 1.0) must hold */
+GLOBAL float s32toQ(int32_t i);
 
 GLOBAL int packed_buffer_append_du32(struct packed_buffer *pb, double d, uint32_t scale);
 GLOBAL int packed_buffer_append_ds32(struct packed_buffer *pb, double d, int32_t scale);

@@ -401,6 +401,19 @@ int32_t dtos32(double d, int32_t scale)
 	return (int32_t) ((d / scale) * (double) INT32_MAX);
 }
 
+/* Q for quaternion */
+int32_t Qtos32(float q)
+{
+	/* q must be between -1.0 and 1.0 */
+	return (int32_t) (q * (float) (INT32_MAX - 1));
+}
+
+/* Q for quaternion */
+float s32toQ(int32_t i)
+{
+	return (float) i / (float) (INT32_MAX - 1);
+}
+
 double s32tod(int32_t u, int32_t scale)
 {
 	return ((double) u * (double) scale) / (double) INT32_MAX;
@@ -426,6 +439,33 @@ double packed_buffer_extract_ds32(struct packed_buffer *pb, int32_t scale)
 	return s32tod(packed_buffer_extract_u32(pb), scale);
 }
 
+int packed_buffer_append_quat(struct packed_buffer *pb, float q[])
+{
+	int i;
+	int32_t v[4];
+
+	if (pb->buffer_cursor + sizeof(v) > pb->buffer_size)
+		return -1; /* no room */
+	for (i = 0; i < 4; i++)
+		v[i] = htonl(Qtos32(q[i]));
+	memcpy(&pb->buffer[pb->buffer_cursor], v, sizeof(v));
+	pb->buffer_cursor += sizeof(v);
+	return 0;
+}
+
+void packed_buffer_extract_quat(struct packed_buffer *pb, float q[])
+{
+	int i;
+	int32_t v;
+
+	for (i = 0; i < 4; i++) {
+		/* need the memcpy for alignment reasons (not on x86, but for others) */
+		memcpy(&v, &pb->buffer[pb->buffer_cursor], sizeof(v));
+		q[i] = s32toQ(ntohl(v));
+		pb->buffer_cursor += sizeof(v);
+	}
+}
+
 int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_list ap)
 {
 	uint8_t b;
@@ -439,6 +479,7 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 	unsigned short len;
 	int rc = 0;
 	double d;
+	float quaternion[4];
 
 	while (*format) {	
 		switch(*format++) {
@@ -480,6 +521,17 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 			d = va_arg(ap, double);
 			uscale = va_arg(ap, uint32_t); 
 			packed_buffer_append_du32(pb, d, uscale);
+			break;
+		case 'Q':
+			/* quaternion[*] are all values between -1.0 and 1.0
+			 * floats get promoted to doubles when passed thru '...'
+			 * which is why the casts are there.
+			 */
+			quaternion[0] = (float) va_arg(ap, double);
+			quaternion[1] = (float) va_arg(ap, double);
+			quaternion[2] = (float) va_arg(ap, double);
+			quaternion[3] = (float) va_arg(ap, double);
+			packed_buffer_append_quat(pb, quaternion);
 			break;
 		default:
 			rc = -EINVAL;
@@ -534,6 +586,9 @@ int calculate_buffer_size(const char *format)
 		case 'q':
 			size += 8;
 			break;
+		case 'Q':
+			size += 16;
+			break;
 		default:
 			return -1;
 		}
@@ -575,6 +630,7 @@ int packed_buffer_extract_va(struct packed_buffer *pb, const char *format, va_li
 	int ilen;
 	int rc = 0;
 	double *d;
+	float *quaternion;
 
 	while (*format) {	
 		switch(*format++) {
@@ -617,6 +673,10 @@ int packed_buffer_extract_va(struct packed_buffer *pb, const char *format, va_li
 			d = va_arg(ap, double *);
 			uscale = va_arg(ap, uint32_t); 
 			*d = packed_buffer_extract_du32(pb, uscale);
+			break;
+		case 'Q':
+			quaternion = va_arg(ap, float *);
+			packed_buffer_extract_quat(pb, quaternion);
 			break;
 		default:
 			rc = -EINVAL;
