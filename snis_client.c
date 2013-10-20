@@ -2718,7 +2718,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, power;
 	uint32_t fuel, victim_id;
-	double dx, dy, dz, dheading, dyawvel, dgheading, dgunyawvel, dsheading, dbeamwidth, dvx, dvy;
+	double dx, dy, dz, dyawvel, dgheading, dgunyawvel, dsheading, dbeamwidth, dvx, dvy;
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
@@ -2726,6 +2726,7 @@ static int process_update_ship_packet(uint16_t opcode)
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
 		reverse;
 	union quat orientation;
+	union euler ypr;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -2737,7 +2738,7 @@ static int process_update_ship_packet(uint16_t opcode)
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
 				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
-	packed_buffer_extract(&pb, "USwwUSUU", &dheading, (uint32_t) 360,
+	packed_buffer_extract(&pb, "SwwUSUU",
 				&dyawvel, (int32_t) 360,
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
 				&dgunyawvel, (int32_t) 360,
@@ -2749,8 +2750,10 @@ static int process_update_ship_packet(uint16_t opcode)
 			&reverse, &victim_id, &orientation.vec[0]);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
+	quat_to_euler(&ypr, &orientation);	
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_ship(id, dx, dy, dz, dvx, dvy, dheading, dyawvel, alive, torpedoes, power,
+	rc = update_ship(id, dx, dy, dz, dvx, dvy, (double) ypr.a.yaw,
+				dyawvel, alive, torpedoes, power,
 				dgheading, dgunyawvel, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
 				weapzoom, navzoom, warpdrive, requested_warpdrive, requested_shield,

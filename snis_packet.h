@@ -123,7 +123,7 @@ struct update_ship_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint32_t alive;
-	uint32_t x, y, z, vx, vy, heading, yawvel;
+	uint32_t x, y, z, vx, vy, yawvel;
         uint32_t ntorpedoes;
         uint32_t power;
 	uint32_t gun_heading, gunyawvel;

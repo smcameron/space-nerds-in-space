@@ -5516,7 +5516,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vy, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "USwwUSUUbbbwbbbbbbbbbbbwQ", o->heading, (uint32_t) 360,
+	packed_buffer_append(pb, "SwwUSUUbbbwbbbbbbbbbbbwQ",
 			o->tsd.ship.yaw_velocity, (int32_t) 360,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
 			o->tsd.ship.gun_heading, (uint32_t) 360,
