@@ -402,6 +402,7 @@ struct snis_entity {
 	double sci_coordy;
 	struct entity *entity;
 	struct space_partition_entry partition;
+	union quat orientation;
 };
 
 /* These are for the robot and various parts on the engineering deck on the damcon screen */

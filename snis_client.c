@@ -51,6 +51,7 @@
 
 #include "build_bug_on.h"
 #include "space-part.h"
+#include "quat.h"
 #include "snis.h"
 #include "mathutils.h"
 #include "snis_alloc.h"
@@ -434,6 +435,7 @@ static int add_generic_object(uint32_t id, double x, double y, double vx, double
 	go[i].type = type;
 	go[i].alive = alive;
 	go[i].entity = entity;
+	quat_init_axis(&go[i].orientation, 0, 1, 0, heading);
 	return i;
 }
 
@@ -448,6 +450,7 @@ static void update_generic_object(int index, double x, double y, double z,
 	o->vx = vx;
 	o->vy = vy;
 	o->heading = heading;
+	quat_init_axis(&o->orientation, 0, 1, 0, heading);
 	o->alive = alive;
 	if (o->entity) {
 		update_entity_pos(o->entity, x, z, -y);
@@ -734,7 +737,7 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 			uint8_t navzoom, uint8_t warpdrive,
 			uint8_t requested_warpdrive, uint8_t requested_shield,
 			uint8_t phaser_charge, uint8_t phaser_wavelength, uint8_t shiptype,
-			uint8_t reverse, uint32_t victim_id)
+			uint8_t reverse, uint32_t victim_id, float *orientation)
 {
 	int i;
 	struct entity *e;
@@ -786,6 +789,7 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 		wwviaudio_add_sound(REVERSE_SOUND);
 	go[i].tsd.ship.reverse = reverse;
 	go[i].tsd.ship.victim_id = victim_id;
+	memcpy(&go[i].orientation.vec[0], orientation, sizeof(go[i].orientation));
 	return 0;
 }
 
@@ -2721,6 +2725,7 @@ static int process_update_ship_packet(uint16_t opcode)
 		warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
 		reverse;
+	union quat orientation;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -2737,11 +2742,11 @@ static int process_update_ship_packet(uint16_t opcode)
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
 				&dgunyawvel, (int32_t) 360,
 				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
-	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbw", &tloading, &throttle, &rpm, &fuel, &temp,
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbwQ", &tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
-			&reverse, &victim_id);
+			&reverse, &victim_id, &orientation.vec[0]);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	pthread_mutex_lock(&universe_mutex);
@@ -2749,7 +2754,8 @@ static int process_update_ship_packet(uint16_t opcode)
 				dgheading, dgunyawvel, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
 				weapzoom, navzoom, warpdrive, requested_warpdrive, requested_shield,
-				phaser_charge, phaser_wavelength, shiptype, reverse, victim_id);
+				phaser_charge, phaser_wavelength, shiptype, reverse, victim_id,
+				&orientation.vec[0]);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

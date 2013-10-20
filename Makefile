@@ -206,13 +206,13 @@ shield_strength.o:	shield_strength.c shield_strength.h
 snis_server.o:	snis_server.c snis.h snis_packet.h snis_marshal.h sounds.h starbase-comms.h
 	$(Q)$(COMPILE)
 
-snis_client.o:	snis_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h
+snis_client.o:	snis_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h quat.o
 	$(Q)$(GLEXTCOMPILE)
 
 snis_limited_client.c:	snis_client.c
 	cp snis_client.c snis_limited_client.c
 
-snis_limited_client.o:	snis_limited_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h
+snis_limited_client.o:	snis_limited_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h quat.o
 	$(Q)$(LIMCOMPILE)
 
 snis_socket_io.o:	snis_socket_io.c snis_socket_io.h

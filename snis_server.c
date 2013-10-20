@@ -45,6 +45,7 @@
 
 #include "ssgl/ssgl.h"
 #include "space-part.h"
+#include "quat.h"
 #include "snis.h"
 #include "snis_log.h"
 #include "mathutils.h"
@@ -1937,6 +1938,7 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	go[i].sdata.shield_width = snis_randn(128);
 	go[i].sdata.shield_depth = snis_randn(255);
 	go[i].sdata.faction = snis_randn(ARRAY_SIZE(faction));
+	quat_init_axis(&go[i].orientation, 0, 1, 0, heading);
 	free(n);
 	return i;
 }
@@ -2119,6 +2121,7 @@ static void respawn_player(struct snis_entity *o)
 	o->vx = 0;
 	o->vy = 0;
 	o->heading = 0;
+	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
 	init_player(o);
 	o->alive = 1;
 	send_ship_damage_packet(o);
@@ -5511,7 +5514,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vy, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "USwwUSUUbbbwbbbbbbbbbbbw", o->heading, (uint32_t) 360,
+	packed_buffer_append(pb, "USwwUSUUbbbwbbbbbbbbbbbwQ", o->heading, (uint32_t) 360,
 			o->tsd.ship.yaw_velocity, (int32_t) 360,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
 			o->tsd.ship.gun_heading, (uint32_t) 360,
@@ -5523,7 +5526,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
 			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
 			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype,
-			o->tsd.ship.reverse, o->tsd.ship.victim_id);
+			o->tsd.ship.reverse, o->tsd.ship.victim_id, &o->orientation.vec[0]);
 	pb_queue_to_client(c, pb);
 }
 
