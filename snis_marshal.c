@@ -411,7 +411,7 @@ int32_t Qtos32(float q)
 /* Q for quaternion */
 float s32toQ(int32_t i)
 {
-	return (float) i / (float) (INT32_MAX - 1);
+	return ((float) i) / (float) (INT32_MAX - 1);
 }
 
 double s32tod(int32_t u, int32_t scale)
@@ -479,7 +479,7 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 	unsigned short len;
 	int rc = 0;
 	double d;
-	float quaternion[4];
+	float *quaternion;
 
 	while (*format) {	
 		switch(*format++) {
@@ -523,14 +523,7 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 			packed_buffer_append_du32(pb, d, uscale);
 			break;
 		case 'Q':
-			/* quaternion[*] are all values between -1.0 and 1.0
-			 * floats get promoted to doubles when passed thru '...'
-			 * which is why the casts are there.
-			 */
-			quaternion[0] = (float) va_arg(ap, double);
-			quaternion[1] = (float) va_arg(ap, double);
-			quaternion[2] = (float) va_arg(ap, double);
-			quaternion[3] = (float) va_arg(ap, double);
+			quaternion = va_arg(ap, float *);
 			packed_buffer_append_quat(pb, quaternion);
 			break;
 		default:
