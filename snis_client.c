@@ -6082,6 +6082,7 @@ static void show_navigation(GtkWidget *w)
 	int r, sectorx, sectory;
 	double screen_radius, max_possible_screen_radius, visible_distance;
 	static int current_zoom = 0;
+	union euler ypr;
 
 	sng_set_foreground(GREEN);
 
@@ -6100,6 +6101,14 @@ static void show_navigation(GtkWidget *w)
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, LINEHEIGHT);
 	sprintf(buf, "HEADING: %3.1lf", 360.0 * o->heading / (2.0 * M_PI));
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
+
+	quat_to_euler(&ypr, &o->orientation);	
+	sprintf(buf, "YAW: %3.1F PITCH: %3.1f ROLL: %3.1f",
+			ypr.a.yaw * 180.0 / M_PI,
+			ypr.a.pitch * 180.0 / M_PI,
+			ypr.a.roll * 180.0 / M_PI);
+	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, 2.0 * LINEHEIGHT);
+	
 #if 0
 	sprintf(buf, "vx: %5.2lf", o->vx);
 	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 600, LINEHEIGHT * 3);
