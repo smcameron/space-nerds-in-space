@@ -327,6 +327,9 @@ mostly-clean:
 	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${PROGS} ${SSGL} stl_parser snis_limited_graph.c snis_limited_client.c test-space-partition
 	( cd ssgl; make clean )
 
+test_marshal:	snis_marshal.c snis_marshal.h
+	$(CC) -DTEST_MARSHALL -o test_marshal snis_marshal.c
+
 clean:	mostly-clean
-	rm -f ${MODELS}
+	rm -f ${MODELS} test_marshal
 
