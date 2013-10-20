@@ -1726,6 +1726,7 @@ static void player_move(struct snis_entity *o)
 	o->tsd.ship.shields = universe_timestamp % 100;
 
 	normalize_angle(&o->heading);
+	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
 	normalize_angle(&o->tsd.ship.gun_heading);
 	normalize_angle(&o->tsd.ship.sci_heading);
 	o->timestamp = universe_timestamp;
