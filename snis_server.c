@@ -1558,8 +1558,8 @@ static void calculate_ship_scibeam_info(struct snis_entity *ship)
 		(ship->tsd.ship.scizoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
 	ship->tsd.ship.scibeam_range = range;
 
-	tx = sin(ship->tsd.ship.sci_heading) * range;
-	ty = -cos(ship->tsd.ship.sci_heading) * range;
+	tx = cos(ship->tsd.ship.sci_heading) * range;
+	ty = sin(ship->tsd.ship.sci_heading) * range;
 
 	angle = atan2(ty, tx);
 	A1 = angle - ship->tsd.ship.sci_beam_width / 2.0;
@@ -1610,9 +1610,11 @@ static void auto_select_enemy(void *context, void *entity)
 			angle += 2.0 * M_PI;
 		else if (angle > 2 * M_PI)
 			angle -= 2.0 * M_PI;
-		a1 = o->tsd.ship.gun_heading;
-			if (a1 < 0.0)
-				a1 += 2.0 * M_PI;
+		a1 = o->tsd.ship.gun_heading + M_PI / 2.0;
+		if (a1 < 0.0)
+			a1 += 2.0 * M_PI;
+		else if (a1 > 2.0 * M_PI)
+			a1 -= 2.0 * M_PI;
 		
 		angle = (a1 > angle) * (a1 - angle) + (a1 <= angle) * (angle - a1);
 		if (angle > acceptable_angle)
@@ -1716,8 +1718,8 @@ static void player_move(struct snis_entity *o)
 		power_model_disable(o->tsd.ship.power_model);
 	}
 	do_thrust(o);
-	o->vy = o->tsd.ship.velocity * -cos(o->heading);
-	o->vx = o->tsd.ship.velocity * sin(o->heading);
+	o->vx = o->tsd.ship.velocity * cos(o->heading);
+	o->vy = o->tsd.ship.velocity * sin(o->heading);
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
 	space_partition_process(space_partition, o, o->x, o->x, o,
 				player_collision_detection);
@@ -2064,7 +2066,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.power = 100.0;
 	o->tsd.ship.yaw_velocity = 0.0;
 	o->tsd.ship.gun_yaw_velocity = 0.0;
-	o->tsd.ship.gun_heading = 0.0;
+	o->tsd.ship.gun_heading = 3 * M_PI / 2.0;
 	o->tsd.ship.velocity = 0.0;
 	o->tsd.ship.desired_velocity = 0.0;
 	o->tsd.ship.desired_heading = 0.0;
@@ -5718,7 +5720,7 @@ static int add_new_player(struct game_client *c)
 		x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
 		y = YKNOWN_DIM * (double) rand() / (double) RAND_MAX;
 		pthread_mutex_lock(&universe_mutex);
-		c->ship_index = add_player(x, y, 0.0, 0.0, 0.0);
+		c->ship_index = add_player(x, y, 0.0, 0.0, 3.0 * M_PI / 2.0);
 		c->shipid = go[c->ship_index].id;
 		strcpy(go[c->ship_index].sdata.name, (const char * restrict) app.shipname);
 		memset(&bridgelist[nbridges], 0, sizeof(bridgelist[nbridges]));

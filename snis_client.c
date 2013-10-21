@@ -454,8 +454,7 @@ static void update_generic_object(int index, double x, double y, double z,
 	o->alive = alive;
 	if (o->entity) {
 		update_entity_pos(o->entity, x, z, -y);
-		update_entity_rotation(o->entity, M_PI / 2.0,
-			heading + M_PI - (o->type == OBJTYPE_SHIP1) * (M_PI / 2.0), 0);
+		update_entity_rotation(o->entity, M_PI / 2.0, heading + M_PI, 0);
 	}
 }
 
@@ -4325,8 +4324,8 @@ static void show_mainscreen(GtkWidget *w)
 	cx = (float) o->x;
 	cy = (float) -o->y;
 	cz = -10.0;
-	lx = cx + sin(camera_look_heading) * 500.0;
-	ly = cy + cos(camera_look_heading) * 500.0;
+	lx = cx + cos(camera_look_heading) * 500.0;
+	ly = cy - sin(camera_look_heading) * 500.0;
 	camera_set_pos(ecx, cx, (float) cz, cy);
 	camera_look_at(ecx, lx, (float) 0.0, ly);
 	camera_set_parameters(ecx, (float) 20, (float) 300, (float) 16, (float) 12,
@@ -4443,7 +4442,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		}
 		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1) {
 			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R / 2,
-				o->heading, 0.3);
+				o->heading + M_PI / 2.0, 0.3);
 		} else {
 			snis_draw_line(w->window, gc, x - 1, y, x + 1, y);
 			snis_draw_line(w->window, gc, x, y - 1, x, y + 1);
@@ -4600,19 +4599,19 @@ static void snis_draw_heading_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint 
 static void snis_draw_headings_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		struct snis_entity *o)
 {
-	snis_draw_heading_on_reticule(w, gc, x, y, r, o->heading, RED,
+	snis_draw_heading_on_reticule(w, gc, x, y, r, o->heading + M_PI / 2.0, RED,
 			displaymode == DISPLAYMODE_NAVIGATION);
-	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.gun_heading, DARKTURQUOISE,
-			displaymode == DISPLAYMODE_WEAPONS);
-	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.sci_heading, GREEN, 0);
+	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.gun_heading + M_PI / 2.0,
+			DARKTURQUOISE, displaymode == DISPLAYMODE_WEAPONS);
+	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.sci_heading + M_PI / 2.0, GREEN, 0);
 }
 
 static void snis_draw_ship_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		struct snis_entity *o)
 {
 	sng_set_foreground(CYAN);
-	snis_draw_arrow(w, gc, x, y, r, o->heading, 1.5);
-	snis_draw_arrow(w, gc, x, y, r, o->tsd.ship.gun_heading, 0.75);
+	snis_draw_arrow(w, gc, x, y, r, o->heading + M_PI / 2.0, 1.5);
+	snis_draw_arrow(w, gc, x, y, r, o->tsd.ship.gun_heading + M_PI / 2.0, 0.75);
 }
 
 static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
@@ -4791,8 +4790,6 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 		if (go[i].id == my_ship_id)
 			continue; /* skip drawing yourself. */
 		else {
-			double alter_angle; /* FIXME this is an ugly hack */
-			alter_angle = 0.0;
 			switch (go[i].type) {
 			case OBJTYPE_ASTEROID:
 			case OBJTYPE_DERELICT:
@@ -4823,11 +4820,9 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 			case OBJTYPE_EXPLOSION:
 				break;
 			case OBJTYPE_SHIP2:
-				alter_angle = M_PI / 2.0;
 			case OBJTYPE_SHIP1:
 				sng_set_foreground(WHITE);
-				snis_draw_arrow(w, gc, x, y, r,
-					go[i].heading + alter_angle, 0.5);
+				snis_draw_arrow(w, gc, x, y, r, go[i].heading + M_PI / 2.0, 0.5);
 				sng_set_foreground(GREEN);
 				if (go[i].sdata.science_data_known) {
 					sprintf(buffer, "%s", go[i].sdata.name);
@@ -4849,7 +4844,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 				break;
 			default:
 				sng_set_foreground(WHITE);
-				snis_draw_arrow(w, gc, x, y, r, go[i].heading, 0.5);
+				snis_draw_arrow(w, gc, x, y, r, go[i].heading + M_PI / 2.0, 0.5);
 			}
 			if (go[i].id == o->tsd.ship.victim_id) {
 				draw_targeting_indicator(w, gc, x, y);
@@ -5888,7 +5883,9 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		return;
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
-	camera_heading = -o->heading + M_PI / 2.0;
+	/* camera_heading = -o->heading + M_PI / 2.0; */
+	/* camera_heading = -o->heading; */
+	camera_heading = -o->heading;
 	normalize_angle(&camera_heading);
 
 	screen_radius = ((((255.0 - current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
@@ -5944,8 +5941,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	e = add_entity(navecx, ship_mesh, o->x, o->z, -o->y, GREEN);
 	set_render_style(e, science_style);
 	update_entity_scale(e, ship_scale);
-	update_entity_rotation(e, M_PI / 2.0, o->heading + M_PI -
-		(o->type == OBJTYPE_SHIP1) * (M_PI / 2.0), 0);
+	update_entity_rotation(e, M_PI / 2.0, o->heading + M_PI, 0);
 
 #define NR2 (screen_radius * screen_radius)
 
@@ -6028,8 +6024,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			case OBJTYPE_SHIP1:
 				contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
 				update_entity_scale(contact, contact_scale);
-				update_entity_rotation(contact, M_PI / 2.0, go[i].heading + M_PI -
-					(go[i].type == OBJTYPE_SHIP1) * (M_PI / 2.0), 0);
+				update_entity_rotation(contact, M_PI / 2.0, go[i].heading + M_PI, 0);
 				break;
 			}
 
@@ -6083,7 +6078,8 @@ static void show_navigation(GtkWidget *w)
 	struct snis_entity *o;
 	int cx, cy, gx1, gy1, gx2, gy2;
 	int r, sectorx, sectory;
-	double screen_radius, max_possible_screen_radius, visible_distance;
+	double screen_radius, max_possible_screen_radius, visible_distance, display_heading;
+	double display_yaw;
 	static int current_zoom = 0;
 	union euler ypr;
 
@@ -6102,12 +6098,17 @@ static void show_navigation(GtkWidget *w)
 	sectory = floor(10.0 * o->y / (double) YKNOWN_DIM);
 	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf)", sectory + 'A', sectorx, o->x, o->y);
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, LINEHEIGHT);
-	sprintf(buf, "HEADING: %3.1lf", 360.0 * o->heading / (2.0 * M_PI));
+	display_heading = o->heading + M_PI / 2.0;
+	normalize_angle(&display_heading);	
+	sprintf(buf, "HEADING: %3.1lf", 180.0 * display_heading / M_PI);
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
 
 	quat_to_euler(&ypr, &o->orientation);	
+	display_yaw = ypr.a.yaw + M_PI / 2.0;
+	normalize_angle(&display_yaw);
+	display_yaw *= 180.0 / M_PI;
 	sprintf(buf, "YAW: %3.1F PITCH: %3.1f ROLL: %3.1f",
-			ypr.a.yaw * 180.0 / M_PI,
+			display_yaw,
 			ypr.a.pitch * 180.0 / M_PI,
 			ypr.a.roll * 180.0 / M_PI);
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, 2.0 * LINEHEIGHT);
@@ -7084,6 +7085,7 @@ static void show_science(GtkWidget *w)
 	char buf[80];
 	double zoom;
 	static int current_zoom = 0;
+	double display_heading;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -7095,9 +7097,12 @@ static void show_science(GtkWidget *w)
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 	sng_set_foreground(GREEN);
-	sprintf(buf, "Location: (%5.2lf, %5.2lf)  Heading: %3.1lf", o->x, o->y,
-			360.0 * o->tsd.ship.sci_heading / (2.0 * 3.1415927));
-	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 250, 10 + LINEHEIGHT);
+	display_heading = (o->tsd.ship.sci_heading + M_PI / 2.0);
+	normalize_angle(&display_heading);
+	display_heading *= 180.0 / M_PI;
+	sprintf(buf, "LOCATION: (%5.2lf, %5.2lf)  HEADING: %3.1lf", o->x, o->y,
+			display_heading);
+	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 200, LINEHEIGHT);
 #if 0
 	rx = SCIENCE_SCOPE_X;
 	ry = SCIENCE_SCOPE_Y;
@@ -7115,7 +7120,7 @@ static void show_science(GtkWidget *w)
 		snis_draw_radar_grid(w->window, gc, o, cx, cy, r, zoom, current_zoom < 50);
 		sng_set_foreground(DARKRED);
 		snis_draw_science_reticule(w, gc, cx, cy, r,
-				o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width));
+				o->tsd.ship.sci_heading + M_PI / 2.0, fabs(o->tsd.ship.sci_beam_width));
 		draw_all_the_science_guys(w, o, zoom);
 		draw_all_the_science_sparks(w, o, zoom);
 		draw_all_the_science_nebulae(w, o, zoom);
@@ -7472,14 +7477,14 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 			snis_draw_line(w->window, gc, x1 - 6, y1 - 6, x1 - 6, y2 + 6);
 			snis_draw_line(w->window, gc, x2 + 6, y1 - 6, x2 + 6, y2 + 6);
 			if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
-				snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading +
-					(o->type == OBJTYPE_SHIP2) * 90.0 * M_PI / 180.0, 0.4);
+				snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R,
+					o->heading + M_PI / 2.0, 0.4);
 			}
 		}
 	} else {
 		if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
-			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading +
-					(o->type == OBJTYPE_SHIP2) * 90.0 * M_PI / 180.0, 0.4);
+			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R,
+					o->heading + M_PI / 2.0, 0.4);
 		}
 	}
 
