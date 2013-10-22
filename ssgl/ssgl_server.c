@@ -436,6 +436,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in listen_address;
 	struct sockaddr_in remote_addr;
 	socklen_t remote_addr_len;
+	int on;
 
 	daemon(1, 0);
 
@@ -472,6 +473,13 @@ int main(int argc, char *argv[])
 
 	/* Make ourselves a socket */
 	rendezvous = socket(AF_INET, SOCK_STREAM, gamelobby_proto ? gamelobby_proto->p_proto : 0);
+
+	on = 1;
+	rc = setsockopt(rendezvous, SOL_SOCKET, SO_REUSEADDR, (const char *) &on, sizeof(on));
+	if (rc < 0) {
+		ssgl_log(SSGL_ERROR, "setsockopt() failed: %s\n", strerror(errno));
+		ssgl_exit("setsockopt failed.", 1);
+	}
 
 	/* Bind the socket to "any address" on our port */
 	listen_address.sin_family = AF_INET;
