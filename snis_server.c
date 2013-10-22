@@ -4749,7 +4749,7 @@ static int process_request_tractor_beam(struct game_client *c)
 	int tid, i;
 
 	pthread_mutex_lock(&universe_mutex);
-	if (ship->tsd.ship.victim_id < 0)
+	if (ship->tsd.ship.victim_id < 0 && ship->tsd.ship.tractor_beam == -1)
 		goto tractorfail;
 
 	if (ship->tsd.ship.tractor_beam != -1) {
