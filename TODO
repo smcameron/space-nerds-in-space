@@ -87,6 +87,92 @@ Too much to list, but here's a list anyway:
 * REAL 3D -- have full control of yaw/pitch/roll, be able to look and
   fly in any direction, etc.
 
+* FIX THE COORDINATE SYSTEMS
+
+Currently (Oct 22, 2013) we have several coordinate systems in the game,
+several exist by accident without having been thought through.  This
+needs fixing.
+
+1.  The coordinate system the user sees (this is fine):
+
+             0 degrees      +z
+                      -y    ^
+                       \    |
+                        \   |
+                         \  |
+                          \ |
+ 180 degrees               \|
+   -x <---------------------\------------------------> +x   90 degrees
+                            |\                    \
+                            | \  the universe      \
+                            |  \                    \
+                            |   \---------------------
+                            |    \
+                            v     +y
+                           -z      270 degrees
+
+2.  The coordinate system the game "thinks" in:
+    This coordinate system is "left handed" (wrong)
+    and does not match what opengl wants.
+
+             270 degrees      +z
+                      -y    ^
+                       \    |
+                        \   |
+                         \  |
+                          \ |
+ 180 degrees               \|
+   -x <---------------------\------------------------> +x   0 degrees
+                            |\
+                            | \
+                            |  \
+                            |   \
+                            |    \
+                            v     +y
+                           -z      90 degrees
+
+
+3.  The coordinate system the software renderer uses:
+
+                ??? degrees -y
+                      +z    ^
+                       \    |
+                        \   |
+                         \  |
+                          \ |
+ ??? degrees               \|
+   -x <---------------------\------------------------> +x  ??? degrees
+                            |\
+                            | \
+                            |  \
+                            |   \
+                            |    \
+                            v     -z
+                           +y    ??? degrees
+
+4.  The coordinate system OpenGL uses 
+
+                ??? degrees -y
+                      -z    ^
+                       \    |
+                        \   |
+                         \  |
+                          \ |
+ ??? degrees               \|
+   -x <---------------------\------------------------> +x  ??? degrees
+                            |\
+                            | \
+                            |  \
+                            |   \
+                            |    \
+                            v     +z
+                           +y    ??? degrees
+
+There is no reason for #2 and #3 to be different than #4, so those
+differences must be eliminated.
+
+
+
 NICE TO HAVE:
 
 * Make the universe more realistic in a variety of ways (but not too realistic,
