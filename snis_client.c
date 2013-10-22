@@ -294,6 +294,14 @@ struct my_point_t *placeholder_part_spun_points;
 struct my_vect_obj placeholder_part;
 struct my_vect_obj placeholder_part_spun[128];
 
+double to_uheading(double heading)
+{
+	/* FIXME: when coordinate system is fixed, use mathutils.h:game_angle_to_math_angle()
+	 * instead
+	 */
+	return heading + M_PI / 2.0;
+}
+
 void init_trig_arrays(void)
 {
 	int i;
@@ -4516,7 +4524,7 @@ static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		double heading, double scale)
 {
 	int nx, ny, tx1, ty1, tx2, ty2;
-	const double uheading = heading + M_PI / 2.0;
+	const double uheading = to_uheading(heading);
 
 	/* Draw ship... */
 #define SHIP_SCALE_DOWN 15.0
@@ -4562,7 +4570,7 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 		double heading, double beam_width)
 {
 	int tx1, ty1, tx2, ty2;
-	double uheading = heading + M_PI / 2.0;
+	double uheading = to_uheading(heading);
 
 	sng_draw_circle(w->window, gc, x, y, r);
 	draw_degree_marks_with_labels(w, gc, x, y, r, NANO_FONT);
@@ -4586,11 +4594,12 @@ static void snis_draw_heading_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint 
 			double heading, int color, int dotted)
 {
 	int tx1, ty1, tx2, ty2;
+	double uheading = to_uheading(heading);
 
-	tx1 = x + sin(heading) * r * 0.85;
-	ty1 = y - cos(heading) * r * 0.85;
-	tx2 = x + sin(heading) * r;
-	ty2 = y - cos(heading) * r;
+	tx1 = x + sin(uheading) * r * 0.85;
+	ty1 = y - cos(uheading) * r * 0.85;
+	tx2 = x + sin(uheading) * r;
+	ty2 = y - cos(uheading) * r;
 	sng_set_foreground(color);
 	snis_draw_line(w->window, gc, tx1, ty1, tx2, ty2);
 	if (dotted)
@@ -4600,11 +4609,11 @@ static void snis_draw_heading_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint 
 static void snis_draw_headings_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		struct snis_entity *o)
 {
-	snis_draw_heading_on_reticule(w, gc, x, y, r, o->heading + M_PI / 2.0, RED,
+	snis_draw_heading_on_reticule(w, gc, x, y, r, o->heading, RED,
 			displaymode == DISPLAYMODE_NAVIGATION);
-	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.gun_heading + M_PI / 2.0,
+	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.gun_heading,
 			DARKTURQUOISE, displaymode == DISPLAYMODE_WEAPONS);
-	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.sci_heading + M_PI / 2.0, GREEN, 0);
+	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.sci_heading, GREEN, 0);
 }
 
 static void snis_draw_ship_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
@@ -5884,8 +5893,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		return;
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
-	/* camera_heading = -o->heading + M_PI / 2.0; */
-	/* camera_heading = -o->heading; */
 	camera_heading = -o->heading;
 	normalize_angle(&camera_heading);
 
@@ -6099,7 +6106,7 @@ static void show_navigation(GtkWidget *w)
 	sectory = floor(10.0 * o->y / (double) YKNOWN_DIM);
 	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf)", sectory + 'A', sectorx, o->x, o->y);
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, LINEHEIGHT);
-	display_heading = o->heading + M_PI / 2.0;
+	display_heading = to_uheading(o->heading);
 	normalize_angle(&display_heading);	
 	sprintf(buf, "HEADING: %3.1lf", 180.0 * display_heading / M_PI);
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
@@ -7018,7 +7025,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o) {
-		display_heading = (o->heading + M_PI / 2.0);
+		display_heading = to_uheading(o->heading);
 		normalize_angle(&display_heading);
 		display_heading *= 180.0 / M_PI;
 		sprintf(buffer, "HEADING: %3.2lf", display_heading);
@@ -7102,7 +7109,7 @@ static void show_science(GtkWidget *w)
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 	sng_set_foreground(GREEN);
-	display_heading = (o->tsd.ship.sci_heading + M_PI / 2.0);
+	display_heading = to_uheading(o->tsd.ship.sci_heading);
 	normalize_angle(&display_heading);
 	display_heading *= 180.0 / M_PI;
 	sprintf(buf, "LOCATION: (%5.2lf, %5.2lf)  HEADING: %3.1lf", o->x, o->y,
