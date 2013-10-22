@@ -152,7 +152,7 @@ needs fixing.
 
 4.  The coordinate system OpenGL uses 
 
-                ??? degrees -y
+                ??? degrees +y
                       -z    ^
                        \    |
                         \   |
@@ -166,7 +166,7 @@ needs fixing.
                             |   \
                             |    \
                             v     +z
-                           +y    ??? degrees
+                           -y    ??? degrees
 
 There is no reason for #2 and #3 to be different than #4, so those
 differences must be eliminated.
