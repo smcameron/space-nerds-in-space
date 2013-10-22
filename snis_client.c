@@ -6933,7 +6933,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 {
 	char buffer[40];
 	int x, y, gx1, gy1, gx2, gy2;
-	double bearing, dx, dy, range;
+	double bearing, dx, dy, range, display_heading;
 	char *the_faction;
 
 	if (!ship)
@@ -7016,10 +7016,14 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	y += 25;
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
-	if (o)
-		sprintf(buffer, "HEADING: %3.2lf", o->heading);
-	else
+	if (o) {
+		display_heading = (o->heading + M_PI / 2.0);
+		normalize_angle(&display_heading);
+		display_heading *= 180.0 / M_PI;
+		sprintf(buffer, "HEADING: %3.2lf", display_heading);
+	} else {
 		sprintf(buffer, "HEADING:");
+	}
 	y += 25;
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 #if 0
