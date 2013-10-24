@@ -6004,7 +6004,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		{
 			struct mesh *m;
 
-			if (go[i].type == OBJTYPE_SHIP2)
+			if (0 && go[i].type == OBJTYPE_SHIP2)
 				m = ship_icon_mesh;
 			else
 				m = entity_get_mesh(go[i].entity);
@@ -6047,7 +6047,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			case OBJTYPE_SHIP1:
 				contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
 				update_entity_scale(contact, contact_scale);
-				update_entity_rotation(contact, 0, go[i].heading, 0);
+				update_entity_rotation(contact, 0, -go[i].heading, 0);
 				break;
 			}
 
