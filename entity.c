@@ -176,7 +176,7 @@ static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc,
 	float x1, y1;
 
 	x1 = (fs->v.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-	y1 = (fs->v.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+	y1 = (-fs->v.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 	sng_current_draw_line(w->window, gc, x1, y1, x1 + (snis_randn(10) < 7), y1); 
 }
 
@@ -194,9 +194,9 @@ void wireframe_render_triangle(GtkWidget *w, GdkGC *gc,
 	x1 = (v1->wx * c->xvpixels / 2) + c->xvpixels / 2;
 	x2 = (v2->wx * c->xvpixels / 2) + c->xvpixels / 2;
 	x3 = (v3->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	y1 = (v1->wy * c->yvpixels / 2) + c->yvpixels / 2;
-	y2 = (v2->wy * c->yvpixels / 2) + c->yvpixels / 2;
-	y3 = (v3->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y1 = (-v1->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y2 = (-v2->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y3 = (-v3->wy * c->yvpixels / 2) + c->yvpixels / 2;
 
 	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
@@ -212,7 +212,7 @@ void wireframe_render_point(GtkWidget *w, GdkGC *gc,
 	float x1, y1;
 
 	x1 = (v->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-	y1 = (v->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+	y1 = (-v->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 	sng_current_draw_line(w->window, gc, x1, y1, x1 + 1, y1); 
 }
 
@@ -338,9 +338,9 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 	x1 = (v1->wx * c->xvpixels / 2) + c->xvpixels / 2;
 	x2 = (v2->wx * c->xvpixels / 2) + c->xvpixels / 2;
 	x3 = (v3->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	y1 = (v1->wy * c->yvpixels / 2) + c->yvpixels / 2;
-	y2 = (v2->wy * c->yvpixels / 2) + c->yvpixels / 2;
-	y3 = (v3->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y1 = (-v1->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y2 = (-v2->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	y3 = (-v3->wy * c->yvpixels / 2) + c->yvpixels / 2;
 
 	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
@@ -469,9 +469,9 @@ void wireframe_render_point_line(GtkWidget *w, GdkGC *gc, struct entity_context 
 			}
 		} else {
 			x1 = (vstart->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-			y1 = (vstart->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+			y1 = (-vstart->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 			x2 = (vend->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-			y2 = (vend->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+			y2 = (-vend->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 			if (e->m->l[i].flag & MESH_LINE_DOTTED)
 				sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
 			else
@@ -631,7 +631,7 @@ static void transform_entity(struct entity_context *cx,
 	t.wy /= t.ww;
 	t.wz /= t.ww;
 	e->sx = (t.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-	e->sy = (t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+	e->sy = (-t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 }
 
 static int object_depth_compare(const void *a, const void *b, void *vcx)
