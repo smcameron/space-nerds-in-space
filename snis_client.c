@@ -440,6 +440,8 @@ static int add_generic_object(uint32_t id, double x, double z, double vx, double
 	go[i].type = type;
 	go[i].alive = alive;
 	go[i].entity = entity;
+	if (entity)
+		entity_set_user_data(entity, &go[i]);
 	quat_init_axis(&go[i].orientation, 0, 0, 1, heading);
 	return i;
 }
@@ -711,6 +713,8 @@ static int update_econ_ship(uint32_t id, double x, double y, double z, double vx
 		if (i < 0)
 			return i;
 		go[i].entity = e;
+		if (e)
+			entity_set_user_data(e, &go[i]);
 	} else {
 		update_generic_object(i, x, y, z, vx, vz, heading, alive); 
 	}
@@ -4298,7 +4302,7 @@ static void show_mainscreen(GtkWidget *w)
 	struct snis_entity *o;
 	float cx, cy, cz, lx, lz;
 	double camera_look_heading;
-
+	int i;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -4339,6 +4343,24 @@ static void show_mainscreen(GtkWidget *w)
 			entity_get_screen_coords(target->entity, &sx, &sy);
 			draw_targeting_indicator(w, gc, sx, sy);
 		}
+	}
+
+	/* Debug info */
+	sng_set_foreground(GREEN);
+	for (i = 0; i <= get_entity_count(ecx); i++) {
+		struct entity *e;
+		struct snis_entity *o;
+		float sx, sy;
+		char buffer[100];
+
+		e = get_entity(ecx, i);
+		o = entity_get_user_data(e);
+		if (!o)
+			continue;
+		entity_get_screen_coords(e, &sx, &sy);
+		sprintf(buffer, "%3.1f,%6.1f,%6.1f,%6.1f",
+				o->heading * 180.0 / M_PI, o->x, o->y, o->z);
+		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy);
 	}
 
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
@@ -5989,9 +6011,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			if (go[i].type == OBJTYPE_TORPEDO) {
 				contact = add_entity(navecx, m, go[i].x, go[i].y, -go[i].z, ORANGERED);
 				set_render_style(contact, science_style | RENDER_BRIGHT_LINE);
+				entity_set_user_data(contact, &go[i]); /* for debug */
 			} else if (go[i].type == OBJTYPE_LASER) {
 				contact = add_entity(navecx, m, go[i].x, go[i].y, -go[i].z, LASER_COLOR);
 				set_render_style(contact, science_style | RENDER_BRIGHT_LINE);
+				entity_set_user_data(contact, &go[i]); /* for debug */
 			} else {
 				contact = add_entity(navecx, m, go[i].x, go[i].y, -go[i].z, GREEN);
 				set_render_style(contact, science_style);
@@ -6043,19 +6067,22 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	sng_set_foreground(GREEN);
 	for (i = 0; i <= get_entity_count(navecx); i++) {
 		float sx, sy;
-		char buffer[20];
+		char buffer[100];
 		struct entity *e;
 		struct snis_entity *o;
 
 		e = get_entity(navecx, i);
 		o = entity_get_user_data(e);
 		if (!o)
-			continue;
-		if (!o->sdata.science_data_known)
-			continue;
+			continue; 
 		entity_get_screen_coords(e, &sx, &sy);
-		sprintf(buffer, "%s", o->sdata.name);
-		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy - 15);
+		if (o->sdata.science_data_known) {
+			sprintf(buffer, "%s", o->sdata.name);
+			sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy - 15);
+		}
+		sprintf(buffer, "%3.1f,%6.1f,%6.1f,%6.1f",
+				o->heading * 180.0 / M_PI, o->x, o->y, o->z);
+		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy);
 	}
 
 	/* Draw targeting indicator on 3d nav screen */
