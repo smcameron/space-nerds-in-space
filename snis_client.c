@@ -460,7 +460,7 @@ static void update_generic_object(int index, double x, double y, double z,
 	quat_init_axis(&o->orientation, 0, 0, 1, heading);
 	o->alive = alive;
 	if (o->entity) {
-		update_entity_pos(o->entity, x, y, -z);
+		update_entity_pos(o->entity, x, y, z);
 		update_entity_rotation(o->entity, 0, heading, 0); /* FIXME: correct? */
 	}
 }
@@ -664,49 +664,49 @@ static int update_econ_ship(uint32_t id, double x, double y, double z, double vx
 	if (i < 0) {
 		switch (shiptype) {
 		case SHIP_CLASS_CRUISER:
-			e = add_entity(ecx, cruiser_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, cruiser_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_DESTROYER:
-			e = add_entity(ecx, destroyer_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, destroyer_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_TRANSPORT:
-			e = add_entity(ecx, transport_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, transport_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_DRAGONHAWK:
-			e = add_entity(ecx, dragonhawk_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, dragonhawk_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_SKORPIO:
-			e = add_entity(ecx, skorpio_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, skorpio_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_DISRUPTOR:
-			e = add_entity(ecx, disruptor_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, disruptor_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_RESEARCH_VESSEL:
-			e = add_entity(ecx, research_vessel_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, research_vessel_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(ecx, freighter_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, freighter_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_TANKER:
-			e = add_entity(ecx, tanker_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, tanker_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_BATTLESTAR:
-			e = add_entity(ecx, battlestar_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, battlestar_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_ASTEROIDMINER:
-			e = add_entity(ecx, asteroidminer_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, asteroidminer_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_SCOUT:
-			e = add_entity(ecx, scout_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, scout_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_SCIENCE:
-			e = add_entity(ecx, spaceship2_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, spaceship2_mesh, x, y, z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_STARSHIP:
-			e = add_entity(ecx, ship_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, ship_mesh, x, y, z, SHIP_COLOR);
 			break;
 		default:
-			e = add_entity(ecx, cruiser_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, cruiser_mesh, x, y, z, SHIP_COLOR);
 			break;
 		}
 		i = add_generic_object(id, x, z, vx, vz, heading, OBJTYPE_SHIP2, alive, e);
@@ -754,13 +754,13 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 	if (i < 0) {
 		switch (shiptype) {
 		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(ecx, freighter_mesh, x, y, -z, SHIP_COLOR);
+			e = add_entity(ecx, freighter_mesh, x, y, z, SHIP_COLOR);
 			break;
 		default:
 			if (id == my_ship_id)	
-				e = add_entity(ecx, NULL, x, y, -z, SHIP_COLOR);
+				e = add_entity(ecx, NULL, x, y, z, SHIP_COLOR);
 			else
-				e = add_entity(ecx, ship_mesh, x, y, -z, SHIP_COLOR);
+				e = add_entity(ecx, ship_mesh, x, y, z, SHIP_COLOR);
 			break;
 		}
 		i = add_generic_object(id, x, z, vx, vz, heading, type, alive, e);
@@ -836,7 +836,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 	struct entity *e;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, torpedo_mesh, x, y, -z, TORPEDO_COLOR);
+		e = add_entity(ecx, torpedo_mesh, x, y, z, TORPEDO_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 		i = add_generic_object(id, x, z, vx, vz, 0.0, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
@@ -845,7 +845,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 		go[i].y = y;
 	} else {
 		update_generic_object(i, x, y, z, vx, vz, 0.0, 1); 
-		update_entity_pos(go[i].entity, x, z, -y);
+		update_entity_pos(go[i].entity, x, y, z);
 	}
 	return 0;
 }
@@ -895,7 +895,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, laser_mesh, x, y, -z, LASER_COLOR);
+		e = add_entity(ecx, laser_mesh, x, y, z, LASER_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 		i = add_generic_object(id, x, z, vx, vz, 0.0, OBJTYPE_LASER, 1, e);
 		if (i < 0)
@@ -927,7 +927,7 @@ static void init_spacemonster_data(struct snis_entity *o, double y)
 		sd->x[i] = o->x;
 		sd->y[i] = 0.0;
 		sd->z[i] = o->z;
-		sd->entity[i] = add_entity(ecx, spacemonster_mesh, o->x, 0, -o->z,
+		sd->entity[i] = add_entity(ecx, spacemonster_mesh, o->x, 0, o->z,
 						SPACEMONSTER_COLOR);
 		set_render_style(sd->entity[i], RENDER_POINT_CLOUD | RENDER_SPARKLE);
 	}
@@ -1063,7 +1063,7 @@ static void update_laserbeam_segments(struct snis_entity *o)
 		ld->x[i] = x1 + (i + lastd) * dx;
 		ld->y[i] = y1 + (i + lastd) * dy;
 		ld->z[i] = z1 + (i + lastd) * dz; 
-		update_entity_pos(ld->entity[i], ld->x[i], ld->z[i], -ld->y[i]);
+		update_entity_pos(ld->entity[i], ld->x[i], ld->z[i], ld->y[i]);
 		update_entity_rotation(ld->entity[i], rx, ry, rz);
 	}
 }
@@ -1138,7 +1138,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, spacemonster_mesh, x, 0, -z, SPACEMONSTER_COLOR);
+		e = add_entity(ecx, spacemonster_mesh, x, 0, z, SPACEMONSTER_COLOR);
 		set_render_style(e, RENDER_POINT_CLOUD | RENDER_SPARKLE);
 		i = add_generic_object(id, x, z, 0, 0, 0.0, OBJTYPE_SPACEMONSTER, 1, e);
 		if (i < 0)
@@ -1150,7 +1150,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 		int n;
 
 		update_generic_object(i, x, 0, z, 0, 0, 0.0, 1); 
-		update_entity_pos(go[i].entity, x, y, -z);
+		update_entity_pos(go[i].entity, x, y, z);
 		sd = &go[i].tsd.spacemonster;
 		sd->zz = y;
 		n = (sd->front + 1) % MAX_SPACEMONSTER_SEGMENTS;
@@ -1158,7 +1158,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 		sd->x[n] = x;
 		sd->y[n] = y;
 		sd->z[n] = z;
-		update_entity_pos(sd->entity[sd->front], x, y, -z);
+		update_entity_pos(sd->entity[sd->front], x, y, z);
 	}
 	return 0;
 }
@@ -1171,7 +1171,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
-		e = add_entity(ecx, asteroid_mesh[m], x, z, -y, ASTEROID_COLOR);
+		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
 		i = add_generic_object(id, x, z, vx, vz, 0.0, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
@@ -1181,7 +1181,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 		float angle;
 
 		update_generic_object(i, x, y, z, vx, vz, 0.0, 1);
-		update_entity_pos(go[i].entity, x, y, -z);
+		update_entity_pos(go[i].entity, x, y, z);
 
 		/* make asteroids spin */
 		angle = (timer % (360 * ((id % 12) + 3))) * M_PI / 180.0;
@@ -1200,7 +1200,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		m = ship_type % NDERELICT_MESHES;
-		e = add_entity(ecx, derelict_mesh[m], x, z, -y, SHIP_COLOR);
+		e = add_entity(ecx, derelict_mesh[m], x, y, z, SHIP_COLOR);
 		i = add_generic_object(id, x, z, 0.0, 0.0, 0.0, OBJTYPE_DERELICT, 1, e);
 		if (i < 0)
 			return i;
@@ -1210,7 +1210,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 		float angle;
 
 		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, 1);
-		update_entity_pos(go[i].entity, x, y, -z);
+		update_entity_pos(go[i].entity, x, y, z);
 
 		/* make it spin */
 		angle = (timer % (360 * ((id % 12) + 3))) * M_PI / 180.0;
@@ -1231,14 +1231,14 @@ static int update_planet(uint32_t id, double x, double y, double z)
 	if (i < 0) {
 
 		m = id % NPLANET_MODELS;
-		e = add_entity(ecx, planet_mesh[m], x, y, -z, PLANET_COLOR);
+		e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR);
 		i = add_generic_object(id, x, z, 0.0, 0.0, 0.0, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
 		go[i].y = y;
 	} else {
 		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, 1);
-		update_entity_pos(go[i].entity, x, y, -z);
+		update_entity_pos(go[i].entity, x, y, z);
 	}
 	r1 = (i % 20) * (360.0 / 20.0) * M_PI / 180.0;
 	r2 = (i % 40) * (360.0 / 40.0) * M_PI / 180.0;
@@ -1255,7 +1255,7 @@ static int update_wormhole(uint32_t id, double x, double z)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, wormhole_mesh, x, 0, -z, WORMHOLE_COLOR);
+		e = add_entity(ecx, wormhole_mesh, x, 0, z, WORMHOLE_COLOR);
 		set_render_style(e, RENDER_POINT_CLOUD | RENDER_SPARKLE);
 		i = add_generic_object(id, x, z, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
@@ -1268,7 +1268,7 @@ static int update_wormhole(uint32_t id, double x, double z)
 		o->x = x;
 		o->z = z;
 		if (o->entity)
-			update_entity_pos(o->entity, x, 0, -z);
+			update_entity_pos(o->entity, x, 0, z);
 	}
 	return 0;
 }
@@ -1282,7 +1282,7 @@ static int update_starbase(uint32_t id, double x, double z)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		m = id % NSTARBASE_MODELS;
-		e = add_entity(ecx, starbase_mesh[m], x, 0, -z, STARBASE_COLOR);
+		e = add_entity(ecx, starbase_mesh[m], x, 0, z, STARBASE_COLOR);
 		i = add_generic_object(id, x, z, 0.0, 0.0, 0.0, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
@@ -1294,7 +1294,7 @@ static int update_starbase(uint32_t id, double x, double z)
 		o->x = x;
 		o->z = z;
 		if (o->entity)
-			update_entity_pos(o->entity, x, 0, -z);
+			update_entity_pos(o->entity, x, 0, z);
 	}
 	return 0;
 }
@@ -1376,7 +1376,7 @@ static void move_sparks(void)
 		if (spark[i].alive) {
 			spark[i].move(&spark[i]);
 			update_entity_pos(spark[i].entity, spark[i].x,
-						spark[i].y, -spark[i].z);
+						spark[i].y, spark[i].z);
 			update_entity_rotation(spark[i].entity,
 						spark[i].tsd.spark.rx,
 						spark[i].tsd.spark.ry,
@@ -1457,12 +1457,12 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 		return;
 	r = snis_randn(100);
 	if (r < 50 || time < 10) {
-		e = add_entity(ecx, particle_mesh, x, y, -z, PARTICLE_COLOR);
+		e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 	} else if (r < 75) {
-		e = add_entity(ecx, debris_mesh, x, y, -z, color);
+		e = add_entity(ecx, debris_mesh, x, y, z, color);
 	} else {
-		e = add_entity(ecx, debris2_mesh, x, y, -z, color);
+		e = add_entity(ecx, debris2_mesh, x, y, z, color);
 	}
 	memset(&spark[i], 0, sizeof(spark[i]));
 	spark[i].index = i;
@@ -5921,7 +5921,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	double incr;
 
 	for (incr = screen_radius; incr > screen_radius / 4.0; incr -= screen_radius / 5.0) {
-		e = add_entity(navecx, ring_mesh, o->x, o->y, -o->z, DARKRED);
+		e = add_entity(navecx, ring_mesh, o->x, o->y, o->z, DARKRED);
 		update_entity_scale(e, incr);
 		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 	}
@@ -5934,7 +5934,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			color = CYAN;
 		else if (i == 5)
 			color = GREEN;
-		e = add_entity(navecx, axis_mesh[i], o->x, o->y, -o->z, color);
+		e = add_entity(navecx, axis_mesh[i], o->x, o->y, o->z, color);
 		update_entity_scale(e, screen_radius);
 		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 	}
@@ -5948,7 +5948,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	e = add_entity(navecx, sector_mesh,
 		trunc(o->x / sector_size) * sector_size,
 		trunc(o->y / sector_size) * sector_size,
-		-trunc(o->z / sector_size) * sector_size,
+		trunc(o->z / sector_size) * sector_size,
 		DARKGREEN );
 	update_entity_scale(e, sector_size);
 	set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
@@ -5959,7 +5959,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	pthread_mutex_lock(&universe_mutex);
 
 	/* add my ship */
-	e = add_entity(navecx, ship_mesh, o->x, o->y, -o->z, GREEN);
+	e = add_entity(navecx, ship_mesh, o->x, o->y, o->z, GREEN);
 	set_render_style(e, science_style);
 	update_entity_scale(e, ship_scale);
 	update_entity_rotation(e, 0, -o->heading, 0);
@@ -6009,15 +6009,15 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			else
 				m = entity_get_mesh(go[i].entity);
 			if (go[i].type == OBJTYPE_TORPEDO) {
-				contact = add_entity(navecx, m, go[i].x, go[i].y, -go[i].z, ORANGERED);
+				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, ORANGERED);
 				set_render_style(contact, science_style | RENDER_BRIGHT_LINE);
 				entity_set_user_data(contact, &go[i]); /* for debug */
 			} else if (go[i].type == OBJTYPE_LASER) {
-				contact = add_entity(navecx, m, go[i].x, go[i].y, -go[i].z, LASER_COLOR);
+				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, LASER_COLOR);
 				set_render_style(contact, science_style | RENDER_BRIGHT_LINE);
 				entity_set_user_data(contact, &go[i]); /* for debug */
 			} else {
-				contact = add_entity(navecx, m, go[i].x, go[i].y, -go[i].z, GREEN);
+				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, GREEN);
 				set_render_style(contact, science_style);
 				entity_set_user_data(contact, &go[i]);
 			}
@@ -6052,11 +6052,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			}
 
 			/* add line from center disk to contact in z axis */
-			e = add_entity(navecx, vline_mesh, go[i].x, o->y, -go[i].z, DARKRED);
+			e = add_entity(navecx, vline_mesh, go[i].x, o->y, go[i].z, DARKRED);
 			update_entity_scale(e, go[i].y - o->y);
 			set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 
-			e = add_entity(navecx, ring_mesh, go[i].x, o->y, -go[i].z, DARKRED);
+			e = add_entity(navecx, ring_mesh, go[i].x, o->y, go[i].z, DARKRED);
 			update_entity_scale(e, entity_get_mesh(contact)->radius*entity_get_scale(contact)/4.0);
 			set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 		}
