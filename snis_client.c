@@ -7083,7 +7083,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 
 	m = entity_get_mesh(curr_science_guy->entity);
 	e = add_entity(sciecx, m, 0, 0, 0, GREEN);
-	update_entity_rotation(e, M_PI / 2.0, 0, (M_PI / 180.0) * (timer % 360));
+	update_entity_rotation(e, 0, (M_PI / 180.0) * (timer % 360), 0);
 #ifdef WITH_ILDA_SUPPORT
 	science_style |= RENDER_ILDA;
 #endif
