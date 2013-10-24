@@ -95,7 +95,7 @@ struct bridge_data {
 	struct snis_damcon_entity *robot;
 	int incoming_fire_detected;
 	int last_incoming_fire_sound_time;
-	double warpx, warpy;
+	double warpx, warpz;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -332,13 +332,13 @@ static void normalize_coords(struct snis_entity *o)
 		goto fixit;
 	if (o->x > UNIVERSE_LIMIT)
 		goto fixit;
-	if (o->y < -UNIVERSE_LIMIT)
+	if (o->z < -UNIVERSE_LIMIT)
 		goto fixit;
-	if (o->y > UNIVERSE_LIMIT)
+	if (o->z > UNIVERSE_LIMIT)
 		goto fixit;
 	return;
 fixit:
-	set_object_location(o, snis_randn(XKNOWN_DIM), snis_randn(YKNOWN_DIM), o->z);
+	set_object_location(o, snis_randn(XKNOWN_DIM), o->y, snis_randn(ZKNOWN_DIM));
 }
 
 static void set_object_location(struct snis_entity *o, double x, double y, double z)
@@ -347,7 +347,7 @@ static void set_object_location(struct snis_entity *o, double x, double y, doubl
 	o->y = y;
 	o->z = z;
 	normalize_coords(o);
-	space_partition_update(space_partition, o, x, y);
+	space_partition_update(space_partition, o, x, z);
 } 
 
 static void get_peer_name(int connection, char *buffer)
@@ -391,15 +391,13 @@ static void generic_move(__attribute__((unused)) struct snis_entity *o)
 
 static void asteroid_move(struct snis_entity *o)
 {
-	o->x += o->vx;
-	o->y += o->vy;
-	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
 }
 
 static void derelict_move(struct snis_entity *o)
 {
-	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
 }
 
@@ -422,12 +420,12 @@ static void wormhole_collision_detection(void *wormhole, void *object)
 		return;
 	default:
 		dist2 = ((t->x - o->x) * (t->x - o->x)) +
-			((t->y - o->y) * (t->y - o->y));
+			((t->z - o->z) * (t->z - o->z));
 		if (dist2 < 30.0 * 30.0) {
 			a = snis_randn(360) * M_PI / 180.0;
 			r = 60.0;
 			set_object_location(t, o->tsd.wormhole.dest_x + cos(a) * r, 
-						o->tsd.wormhole.dest_y + sin(a) * r, t->z);
+						t->y, o->tsd.wormhole.dest_z + sin(a) * r);
 			t->timestamp = universe_timestamp;
 			if (t->type == OBJTYPE_SHIP1)
 				send_wormhole_limbo_packet(t->id, 5 * 30);
@@ -437,7 +435,7 @@ static void wormhole_collision_detection(void *wormhole, void *object)
 
 static void wormhole_move(struct snis_entity *o)
 {
-	space_partition_process(space_partition, o, o->x, o->y, o,
+	space_partition_process(space_partition, o, o->x, o->z, o,
 				wormhole_collision_detection);
 }
 
@@ -712,7 +710,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 	if (t->id == o->tsd.torpedo.ship_id)
 		return; /* can't torpedo yourself. */
 	dist2 = ((t->x - o->x) * (t->x - o->x) +
-		(t->y - o->y) * (t->y - o->y));
+		(t->z - o->z) * (t->z - o->z));
 
 	if (dist2 > TORPEDO_DETONATE_DIST2)
 		return; /* not close enough */
@@ -729,7 +727,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 		calculate_torpedo_damage(t);
 		send_ship_damage_packet(t);
 		attack_your_attacker(t, lookup_entity_by_id(o->tsd.torpedo.ship_id));
-	} else if (t->type == OBJTYPE_ASTEROID && fabs(t->z) < 100.0) {
+	} else if (t->type == OBJTYPE_ASTEROID && fabs(t->y) < 100.0) {
 		t->alive = 0;
 	}
 
@@ -763,7 +761,7 @@ static void torpedo_move(struct snis_entity *o)
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
 	o->alive--;
-	space_partition_process(space_partition, o, o->x, o->y, o,
+	space_partition_process(space_partition, o, o->x, o->z, o,
 			torpedo_collision_detection);
 	if (o->alive <= 0)
 		delete_from_clients_and_server(o);
@@ -793,7 +791,7 @@ static void laser_move(struct snis_entity *o)
 	int i;
 	uint8_t otype;
 
-	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
 	o->alive--;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
@@ -812,8 +810,8 @@ static void laser_move(struct snis_entity *o)
 		/* dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
 			((go[i].y - o->y) * (go[i].y - o->y)); */
 
-		if (!laser_point_collides(o->x + o->vx, o->y + o->vy, o->x - o->vx, o->y - o->vy,
-						go[i].x, go[i].y))
+		if (!laser_point_collides(o->x + o->vx, o->z + o->vz, o->x - o->vx, o->z - o->vz,
+						go[i].x, go[i].z))
 		/* if (dist2 > LASER_DETONATE_DIST2) */
 			continue; /* not close enough */
 
@@ -832,7 +830,7 @@ static void laser_move(struct snis_entity *o)
 			attack_your_attacker(&go[i], lookup_entity_by_id(o->tsd.laser.ship_id));
 		}
 
-		if (otype == OBJTYPE_ASTEROID && fabs(go[i].z) < 100.0) {
+		if (otype == OBJTYPE_ASTEROID && fabs(go[i].y) < 100.0) {
 			go[i].alive = 0;
 		}
 
@@ -869,7 +867,7 @@ static void laser_move(struct snis_entity *o)
 static int find_nearest_victim(struct snis_entity *o)
 {
 	int i, victim_id;
-	double dist2, dx, dy, lowestdist;
+	double dist2, dx, dz, lowestdist;
 
 	/* assume universe mutex is held */
 	victim_id = -1;
@@ -906,8 +904,8 @@ static int find_nearest_victim(struct snis_entity *o)
 		}
 
 		dx = go[i].x - o->x;
-		dy = go[i].y - o->y;
-		dist2 = dx * dx + dy * dy;
+		dz = go[i].z - o->z;
+		dist2 = dx * dx + dz * dz;
 		if (go[i].type == OBJTYPE_SHIP1 && o->sdata.faction != 0)
 			dist2 = dist2 * 0.5; /* prioritize hitting player... */
 		if (victim_id == -1 || dist2 < lowestdist) {
@@ -972,7 +970,7 @@ static void calculate_torpedo_velocities(double ox, double oy, double oz,
 
 static int add_torpedo(double x, double y, double z,
 		double vx, double vy, double vz, uint32_t ship_id);
-static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id);
+static int add_laser(double x, double z, double vx, double vz, double heading, uint32_t ship_id);
 static uint8_t update_phaser_banks(int current, int max);
 
 static void ship_choose_new_attack_victim(struct snis_entity *o)
@@ -1028,7 +1026,7 @@ delete_it:
 		if (!e->alive)
 			continue;
 
-		dist2 = hypot(o->x - e->x, o->y - e->y); 
+		dist2 = hypot(o->x - e->x, o->z - e->z); 
 		if (d < 0 || d > dist2) {
 			d = dist2;
 			eid = go[index].id;
@@ -1042,7 +1040,7 @@ delete_it:
 		r = snis_randn(LASER_RANGE - 400) + 400;
 		o->tsd.ship.victim_id = eid;
 		o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
-		o->tsd.ship.doy = r * sin(a * M_PI / 180.0);
+		o->tsd.ship.doz = r * -sin(a * M_PI / 180.0);
 	} else {
 		o->tsd.ship.victim_id = -1;
 	}
@@ -1050,13 +1048,12 @@ delete_it:
 
 static void spacemonster_move(struct snis_entity *o)
 {
-
 	/* FIXME: make this better */
 	o->vx = cos(o->heading) * 10.0;
-	o->vy = sin(o->heading) * 10.0;
+	o->vz = -sin(o->heading) * 10.0;
 	o->tsd.spacemonster.zz =
 		sin(M_PI *((universe_timestamp * 10 + o->id) % 360) / 180.0) * 35.0;
-	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	if (snis_randn(1000) < 50) {
 		o->heading += (snis_randn(40) - 20) * M_PI / 180.0;
 		normalize_angle(&o->heading);
@@ -1064,7 +1061,7 @@ static void spacemonster_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
-static int in_nebula(double x, double y)
+static int in_nebula(double x, double z)
 {
 	double dist2;
 	int i, j;
@@ -1075,7 +1072,8 @@ static int in_nebula(double x, double y)
 		if (j < 0)
 			continue;
 		n = &go[j];
-		dist2 = (x - n->x) * (x - n->x) + (y - n->y) * (y - n->y);
+		/* FIXME make this 3d */
+		dist2 = (x - n->x) * (x - n->x) + (z - n->z) * (z - n->z);
 		if (dist2 < n->tsd.nebula.r * n->tsd.nebula.r)
 			return 1;
 	}
@@ -1107,7 +1105,7 @@ static void ship_move(struct snis_entity *o)
 {
 	double heading_diff, yaw_vel;
 	struct snis_entity *v;
-	double destx, desty, dx, dy, d;
+	double destx, destz, dx, dz, d;
 	int close_enough = 0;
 	double maxv;
 
@@ -1121,7 +1119,7 @@ static void ship_move(struct snis_entity *o)
 			ship_choose_new_attack_victim(o);
 			v = lookup_entity_by_id(o->tsd.ship.victim_id);
 			o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
-			o->tsd.ship.doy = r * sin(a * M_PI / 180.0);
+			o->tsd.ship.doz = r * -sin(a * M_PI / 180.0);
 		}
 		break;
 	default:
@@ -1132,7 +1130,7 @@ static void ship_move(struct snis_entity *o)
 			r = snis_randn(LASER_RANGE - 400) + 400;
 			o->tsd.ship.victim_id = find_nearest_victim(o);
 			o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
-			o->tsd.ship.doy = r * sin(a * M_PI / 180.0);
+			o->tsd.ship.doz = r * -sin(a * M_PI / 180.0);
 		}
 		break;
 	}
@@ -1141,19 +1139,19 @@ static void ship_move(struct snis_entity *o)
 	v = lookup_entity_by_id(o->tsd.ship.victim_id);
 	if (v) {
 		destx = v->x + o->tsd.ship.dox;
-		desty = v->y + o->tsd.ship.doy;
+		destz = v->z + o->tsd.ship.doz;
 		dx = destx - o->x;
-		dy = desty - o->y;
-		d = sqrt(dx * dx + dy * dy);
-		o->tsd.ship.desired_heading = atan2(dy, dx);
+		dz = destz - o->z;
+		d = sqrt(dx * dx + dz * dz);
+		o->tsd.ship.desired_heading = atan2(-dz, dx);
 		o->tsd.ship.desired_velocity = (d / maxv) * maxv + snis_randn(5);
 		if (o->tsd.ship.desired_velocity > maxv)
 			o->tsd.ship.desired_velocity = maxv;
-		if (fabs(dx) < 1000 && fabs(dy) < 1000) {
+		if (fabs(dx) < 1000 && fabs(dz) < 1000) {
 			o->tsd.ship.desired_velocity = 0;
 			dx = v->x - o->x;
-			dy = v->y - o->y;
-			o->tsd.ship.desired_heading = atan2(dy, dx);
+			dz = v->z - o->z;
+			o->tsd.ship.desired_heading = atan2(-dz, dx);
 			close_enough = 1;
 		}
 		if (snis_randn(1000) < 20) {
@@ -1163,7 +1161,7 @@ static void ship_move(struct snis_entity *o)
 			angle = snis_randn(360) * M_PI / 180.0;
 			dist = snis_randn(LASER_RANGE - 400) + 400;
 			o->tsd.ship.dox = cos(angle) * dist; 
-			o->tsd.ship.doy = sin(angle) * dist; 
+			o->tsd.ship.doz = sin(angle) * dist; 
 		}
 	}
 #if 0
@@ -1202,17 +1200,17 @@ static void ship_move(struct snis_entity *o)
 	if (fabs(o->tsd.ship.velocity - o->tsd.ship.desired_velocity) < 1.0)
 		o->tsd.ship.velocity = o->tsd.ship.desired_velocity;
 
-	/* set vx, vy, move x, y */
-	o->vy = o->tsd.ship.velocity * sin(o->heading);
+	/* set vx, vz, move x, z */
+	o->vz = o->tsd.ship.velocity * -sin(o->heading);
 	o->vx = o->tsd.ship.velocity * cos(o->heading);
-	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
 
 	if (close_enough && o->tsd.ship.victim_id != (uint32_t) -1) {
 		double range;
 		v = lookup_entity_by_id(o->tsd.ship.victim_id);
 
-		range = hypot(o->x - v->x, o->y - v->y);
+		range = hypot(o->x - v->x, o->z - v->z);
 
 		/* neutrals do not attack planets or starbases, and only select ships
 		 * when attacked.
@@ -1229,8 +1227,9 @@ static void ship_move(struct snis_entity *o)
 				dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
 				flight_time = dist / TORPEDO_VELOCITY;
 				tx = v->x + (v->vx * flight_time);
-				ty = v->y + (v->vy * flight_time);
-				tz = v->z;
+				tz = v->z + (v->vz * flight_time);
+				ty = v->y;
+				/* FIXME: double check the above logic for ty */
 
 				calculate_torpedo_velocities(o->x, o->y, o->z,
 					tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
@@ -1551,7 +1550,7 @@ static int lookup_bridge_by_shipid(uint32_t shipid)
 
 static void calculate_ship_scibeam_info(struct snis_entity *ship)
 {
-	double range, tx, ty, angle, A1, A2;
+	double range, tx, tz, angle, A1, A2;
 
 	/* calculate the range of the science scope based on power. */
 	range = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
@@ -1559,9 +1558,9 @@ static void calculate_ship_scibeam_info(struct snis_entity *ship)
 	ship->tsd.ship.scibeam_range = range;
 
 	tx = cos(ship->tsd.ship.sci_heading) * range;
-	ty = sin(ship->tsd.ship.sci_heading) * range;
+	tz = -sin(ship->tsd.ship.sci_heading) * range;
 
-	angle = atan2(ty, tx);
+	angle = atan2(tz, tx);
 	A1 = angle - ship->tsd.ship.sci_beam_width / 2.0;
 	A2 = angle + ship->tsd.ship.sci_beam_width / 2.0;
         if (A1 < -M_PI)
@@ -1601,16 +1600,17 @@ static void auto_select_enemy(void *context, void *entity)
 	case OBJTYPE_ASTEROID:
 	case OBJTYPE_DERELICT:
 	case OBJTYPE_STARBASE: 
-		range2 = hypot2(t->x - o->x, t->y - o->y);
+		range2 = hypot2(t->x - o->x, t->z - o->z);
 		if (range2 > acceptable_range2)
 			return;
-		angle = atan2(t->y - o->y, t->x - o->x);
-		angle += M_PI / 2.0;
+		angle = atan2(t->z - o->z, t->x - o->x);
+		/* FIXME: are these angle adjustments of M_PI / 2.0 correct now? */
+		/* angle += M_PI / 2.0; */
 		if (angle < 0.0)
 			angle += 2.0 * M_PI;
 		else if (angle > 2 * M_PI)
 			angle -= 2.0 * M_PI;
-		a1 = o->tsd.ship.gun_heading + M_PI / 2.0;
+		/* a1 = o->tsd.ship.gun_heading + M_PI / 2.0; */
 		if (a1 < 0.0)
 			a1 += 2.0 * M_PI;
 		else if (a1 > 2.0 * M_PI)
@@ -1642,7 +1642,7 @@ static void auto_select_enemies(struct snis_entity *o)
 	asc.minrange2 = UNIVERSE_DIM * 10.0;
 	asc.new_victim_id = -1;
 
-	space_partition_process(space_partition, o, o->x, o->y, &asc, auto_select_enemy);
+	space_partition_process(space_partition, o, o->x, o->z, &asc, auto_select_enemy);
 	o->tsd.ship.victim_id = asc.new_victim_id;
 }
 
@@ -1719,9 +1719,9 @@ static void player_move(struct snis_entity *o)
 	}
 	do_thrust(o);
 	o->vx = o->tsd.ship.velocity * cos(o->heading);
-	o->vy = o->tsd.ship.velocity * sin(o->heading);
-	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z);
-	space_partition_process(space_partition, o, o->x, o->x, o,
+	o->vz = o->tsd.ship.velocity * -sin(o->heading);
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+	space_partition_process(space_partition, o, o->x, o->z, o,
 				player_collision_detection);
 	o->heading += o->tsd.ship.yaw_velocity;
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
@@ -1829,7 +1829,7 @@ static void player_move(struct snis_entity *o)
 					packed_buffer_new("hh", OPCODE_WARP_LIMBO,
 						(uint16_t) (5 * 30)), ROLE_ALL);
 				set_object_location(o, bridgelist[b].warpx,
-							bridgelist[b].warpy, o->z);
+							o->y, bridgelist[b].warpz);
 			}
 		}
 	}
@@ -1839,9 +1839,9 @@ static void player_move(struct snis_entity *o)
 
 static void demon_ship_move(struct snis_entity *o)
 {
-	o->vy = o->tsd.ship.velocity * sin(o->heading);
 	o->vx = o->tsd.ship.velocity * cos(o->heading);
-	set_object_location(o, o->x - o->vx, o->y - o->vy, o->z);
+	o->vz = o->tsd.ship.velocity * -sin(o->heading);
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->heading += o->tsd.ship.yaw_velocity;
 	normalize_angle(&o->heading);
 	quat_init_axis(&o->orientation, 0, 0, 1, o->heading);
@@ -1858,9 +1858,9 @@ static void demon_ship_move(struct snis_entity *o)
 		o->tsd.ship.velocity *= PLAYER_VELOCITY_DAMPING;
 }
 
-static void coords_to_location_string(double x, double y, char *buffer, int buflen)
+static void coords_to_location_string(double x, double z, char *buffer, int buflen)
 {
-	int sectorx, sectory;
+	int sectorx, sectorz;
 	static char *military_alphabet[] = {
 		"ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO",
 		"FOXTROT", "GOLF", "HOTEL", "INDIA", "JULIETT",
@@ -1871,13 +1871,13 @@ static void coords_to_location_string(double x, double y, char *buffer, int bufl
 		"ZERO SIX", "ZERO SEVEN", "ZERO EIGHT", "ZERO NINER", "ONE ZERO", };
 
 	sectorx = floor((x / (double) XKNOWN_DIM) * 10.0);
-	sectory = floor((y / (double) YKNOWN_DIM) * 10.0);
+	sectorz = floor((z / (double) ZKNOWN_DIM) * 10.0);
 
-	if (sectorx >= 0 && sectorx <= 9 && sectory >= 0 && sectory <= 10)
+	if (sectorx >= 0 && sectorx <= 9 && sectorz >= 0 && sectorz <= 10)
 		snprintf(buffer, buflen, "SECTOR %s %s",
-			military_alphabet[sectory], military_numerals[sectorx]);
+			military_alphabet[sectorz], military_numerals[sectorx]);
 	else
-		snprintf(buffer, buflen, "(%8.2lf, %8.2lf)", x, y);
+		snprintf(buffer, buflen, "(%8.2lf, %8.2lf)", x, z);
 }
 
 static void nebula_move(struct snis_entity *o)
@@ -1901,7 +1901,7 @@ static void starbase_move(struct snis_entity *o)
 		sprintf(buf, "STARBASE %s:", o->sdata.name);
 		send_comms_packet("", buf);
 		send_comms_packet("-  ", starbase_comm_under_attack());
-		coords_to_location_string(o->x, o->y, location, sizeof(location) - 1);
+		coords_to_location_string(o->x, o->z, location, sizeof(location) - 1);
 		sprintf(buf, "LOCATION %s", location);
 		send_comms_packet("-  ", buf);
 	}
@@ -1916,7 +1916,7 @@ static void explosion_move(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 }
 
-static int add_generic_object(double x, double y, double vx, double vy, double heading, int type)
+static int add_generic_object(double x, double z, double vx, double vz, double heading, int type)
 {
 	int i;
 	char *n;
@@ -1929,9 +1929,9 @@ static int add_generic_object(double x, double y, double vx, double vy, double h
 	go[i].id = get_new_object_id();
 	go[i].index = i;
 	go[i].alive = 1;
-	set_object_location(&go[i], x, y, 0.0);
+	set_object_location(&go[i], x, 0.0, z);
 	go[i].vx = vx;
-	go[i].vy = vy;
+	go[i].vz = vz;
 	go[i].heading = heading;
 	go[i].type = type;
 	go[i].timestamp = universe_timestamp + 1;
@@ -2066,7 +2066,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.power = 100.0;
 	o->tsd.ship.yaw_velocity = 0.0;
 	o->tsd.ship.gun_yaw_velocity = 0.0;
-	o->tsd.ship.gun_heading = 3 * M_PI / 2.0;
+	o->tsd.ship.gun_heading = M_PI / 2.0;
 	o->tsd.ship.velocity = 0.0;
 	o->tsd.ship.desired_velocity = 0.0;
 	o->tsd.ship.desired_heading = 0.0;
@@ -2101,16 +2101,17 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.scibeam_range = 0;
 	o->tsd.ship.scibeam_a1 = 0;
 	o->tsd.ship.scibeam_a2 = 0;
+	o->tsd.ship.sci_heading = M_PI / 2.0;
 	o->tsd.ship.reverse = 0;
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
 	init_power_model(o);
 }
 
-static int add_player(double x, double y, double vx, double vy, double heading)
+static int add_player(double x, double z, double vx, double vz, double heading)
 {
 	int i;
 
-	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_SHIP1);
+	i = add_generic_object(x, z, vx, vz, heading, OBJTYPE_SHIP1);
 	if (i < 0)
 		return i;
 	init_player(&go[i]);
@@ -2120,11 +2121,10 @@ static int add_player(double x, double y, double vx, double vy, double heading)
 static void respawn_player(struct snis_entity *o)
 {
 	set_object_location(o, XKNOWN_DIM * (double) rand() / (double) RAND_MAX,
-				YKNOWN_DIM * (double) rand() / (double) RAND_MAX,
-				o->z);
+				o->y, ZKNOWN_DIM * (double) rand() / (double) RAND_MAX);
 	o->vx = 0;
-	o->vy = 0;
-	o->heading = 0;
+	o->vz = 0;
+	o->heading = 3 * M_PI / 2;
 	quat_init_axis(&o->orientation, 0, 0, 1, o->heading);
 	init_player(o);
 	o->alive = 1;
@@ -2137,13 +2137,13 @@ static int add_ship(void)
 	double x, y, z, heading;
 
 	x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-	y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
-	z = (double) snis_randn(700) - 350;
+	y = (double) snis_randn(700) - 350;
+	z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
 	heading = degrees_to_radians(0.0 + snis_randn(360)); 
-	i = add_generic_object(x, y, 0.0, 0.0, heading, OBJTYPE_SHIP2);
+	i = add_generic_object(x, z, 0.0, 0.0, heading, OBJTYPE_SHIP2);
 	if (i < 0)
 		return i;
-	go[i].z = z;
+	go[i].y = y;
 	go[i].move = ship_move;
 	go[i].tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
 	go[i].tsd.ship.shields = 100.0;
@@ -2284,12 +2284,12 @@ static int add_spacemonster(double x, double y, double z)
 	double heading;
 
 	heading = degrees_to_radians(0.0 + snis_randn(360)); 
-	i = add_generic_object(x, y, 0.0, 0.0, heading, OBJTYPE_SPACEMONSTER);
+	i = add_generic_object(x, z, 0.0, 0.0, heading, OBJTYPE_SPACEMONSTER);
 	if (i < 0)
 		return i;
 	go[i].tsd.spacemonster.zz = 0.0;
 	go[i].move = spacemonster_move;
-	go[i].z = z;
+	go[i].y = y;
 	return i;
 }
 
@@ -2317,36 +2317,36 @@ static int l_add_spacemonster(lua_State *l)
 	return 1;
 }
 
-static int add_asteroid(double x, double y, double vx, double vy, double heading)
+static int add_asteroid(double x, double z, double vx, double vz, double heading)
 {
 	int i;
 
-	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_ASTEROID);
+	i = add_generic_object(x, z, vx, vz, heading, OBJTYPE_ASTEROID);
 	if (i < 0)
 		return i;
 	if (snis_randn(100) < 50)
-		go[i].z = (double) snis_randn(3000) - 1500;
+		go[i].y = (double) snis_randn(3000) - 1500;
 	else
-		go[i].z = (double) snis_randn(70) - 35;
+		go[i].y = (double) snis_randn(70) - 35;
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
 	go[i].sdata.shield_depth = 0;
 	go[i].move = asteroid_move;
 	go[i].vx = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
-	go[i].vy = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
+	go[i].vz = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
 	return i;
 }
 
 static int add_starbase(double x, double y, double z,
-			double vx, double vy, double heading, int n)
+			double vx, double vz, double heading, int n)
 {
 	int i;
 
-	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_STARBASE);
+	i = add_generic_object(x, z, vx, vz, heading, OBJTYPE_STARBASE);
 	if (i < 0)
 		return i;
-	go[i].z = z;
+	go[i].y = y;
 	if (n < 0)
 		n = -n;
 	n %= 99;
@@ -2383,14 +2383,14 @@ static int l_add_starbase(lua_State *l)
 }
 
 static int add_nebula(double x, double y, double z,
-		double vx, double vy, double heading, double r)
+		double vx, double vz, double heading, double r)
 {
 	int i;
 
-	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_NEBULA);
+	i = add_generic_object(x, z, vx, vz, heading, OBJTYPE_NEBULA);
 	if (i < 0)
 		return i;
-	go[i].z = z;
+	go[i].y = y;
 	go[i].move = nebula_move;
 	go[i].type = OBJTYPE_NEBULA;
 	go[i].tsd.nebula.r = r;
@@ -2402,10 +2402,10 @@ static int add_explosion(double x, double y, double z, uint16_t velocity,
 {
 	int i;
 
-	i = add_generic_object(x, y, 0, 0, 0, OBJTYPE_EXPLOSION);
+	i = add_generic_object(x, z, 0, 0, 0, OBJTYPE_EXPLOSION);
 	if (i < 0)
 		return i;
-	go[i].z = z;
+	go[i].y = y;
 	go[i].move = explosion_move;
 	go[i].alive = 30; /* long enough to get propagaed out to all clients */
 	go[i].tsd.explosion.velocity = velocity;
@@ -2437,11 +2437,11 @@ static int lookup_by_damcon_id(struct damcon_data *d, int id)
 	return -1;
 }
 
-static int add_laser(double x, double y, double vx, double vy, double heading, uint32_t ship_id)
+static int add_laser(double x, double z, double vx, double vz, double heading, uint32_t ship_id)
 {
 	int i, s;
 
-	i = add_generic_object(x, y, vx, vy, heading, OBJTYPE_LASER);
+	i = add_generic_object(x, z, vx, vz, heading, OBJTYPE_LASER);
 	if (i < 0)
 		return i;
 	go[i].move = laser_move;
@@ -2628,11 +2628,11 @@ static int add_tractorbeam(struct snis_entity *origin, uint32_t target, int aliv
 static int add_torpedo(double x, double y, double z, double vx, double vy, double vz, uint32_t ship_id)
 {
 	int i;
-	i = add_generic_object(x, y, vx, vy, 0.0, OBJTYPE_TORPEDO);
+	i = add_generic_object(x, z, vx, vz, 0.0, OBJTYPE_TORPEDO);
 	if (i < 0)
 		return i;
-	go[i].z = z;
-	go[i].vz = vz;
+	go[i].y = y;
+	go[i].vy = vy;
 	go[i].move = torpedo_move;
 	go[i].alive = TORPEDO_LIFETIME;
 	go[i].tsd.torpedo.ship_id = ship_id;
@@ -2642,26 +2642,26 @@ static int add_torpedo(double x, double y, double z, double vx, double vy, doubl
 static void add_starbases(void)
 {
 	int i;
-	double x, y;
+	double x, z;
 
 	for (i = 0; i < NBASES; i++) {
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
-		add_starbase(x, y, 0.0, 0.0, 0.0, 0.0, i);
+		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		add_starbase(x, 0.0, z, 0.0, 0.0, 0.0, i);
 	}
 }
 
 static void add_nebulae(void)
 {
 	int i, j;
-	double x, y, r;
+	double x, z, r;
 
 	for (i = 0; i < NNEBULA; i++) {
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
 		r = (double) snis_randn(NEBULA_RADIUS) +
 				(double) MIN_NEBULA_RADIUS;
-		j = add_nebula(x, y, 0.0, 0.0, 0.0, 0.0, r);
+		j = add_nebula(x, 0.0, z, 0.0, 0.0, 0.0, r);
 		nebulalist[i] = j;
 	}
 }
@@ -2695,17 +2695,17 @@ static int l_add_nebula(lua_State *l)
 static void add_asteroids(void)
 {
 	int i, j;
-	double x, y, cx, cy, a, r;
+	double x, z, cx, cz, a, r;
 
 	for (i = 0; i < NASTEROID_CLUSTERS; i++) {
 		cx = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		cy = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		cz = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
 		for (j = 0; j < NASTEROIDS / NASTEROID_CLUSTERS; j++) {
 			a = (double) snis_randn(360) * M_PI / 180.0;
 			r = snis_randn(ASTEROID_CLUSTER_RADIUS);
 			x = cx + r * sin(a);
-			y = cy + r * cos(a);
-			add_asteroid(x, y, 0.0, 0.0, 0.0);
+			z = cz + r * cos(a);
+			add_asteroid(x, z, 0.0, 0.0, 0.0);
 		}
 	}
 }
@@ -2715,12 +2715,12 @@ static int add_derelict(const char *name, double x, double y, double z,
 {
 	int i;
 
-	i = add_generic_object(x, y, 0, 0, 0, OBJTYPE_DERELICT);
+	i = add_generic_object(x, z, 0, 0, 0, OBJTYPE_DERELICT);
 	if (i < 0)
 		return i;
 	if (name)
 		strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
-	go[i].z = z;
+	go[i].y = y;
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
@@ -2735,7 +2735,7 @@ static int add_derelict(const char *name, double x, double y, double z,
 	else
 		go[i].sdata.faction = (uint8_t) snis_randn(ARRAY_SIZE(faction));
 	go[i].vx = (float) snis_randn(100) / 400.0 * max_speed[0];
-	go[i].vy = (float) snis_randn(100) / 400.0 * max_speed[0];
+	go[i].vz = (float) snis_randn(100) / 400.0 * max_speed[0];
 	return i;
 }
 
@@ -2763,12 +2763,12 @@ static int l_add_derelict(lua_State *l)
 static void add_derelicts(void)
 {
 	int i;
-	double x, y;
+	double x, z;
 
 	for (i = 0; i < NDERELICTS; i++) {
 		x = (double) snis_randn(1000) * XKNOWN_DIM / 1000.0;
-		y = (double) snis_randn(1000) * YKNOWN_DIM / 1000.0;
-		add_derelict(NULL, x, y, 0.0, -1, -1);
+		z = (double) snis_randn(1000) * ZKNOWN_DIM / 1000.0;
+		add_derelict(NULL, x, 0.0, z, -1, -1);
 	}
 }
 
@@ -2776,16 +2776,16 @@ static int add_planet(double x, double y, double z)
 {
 	int i;
 
-	i = add_generic_object(x, y, 0, 0, 0, OBJTYPE_PLANET);
+	i = add_generic_object(x, z, 0, 0, 0, OBJTYPE_PLANET);
 	if (i < 0)
 		return i;
-	if (fabsl(z) < 0.01) {
+	if (fabsl(y) < 0.01) {
 		if (snis_randn(100) < 50)
-			go[i].z = (double) snis_randn(3000) - 1500;
+			go[i].y = (double) snis_randn(3000) - 1500;
 		else
-			go[i].z = (double) snis_randn(70) - 35;
+			go[i].y = (double) snis_randn(70) - 35;
 	} else {
-		go[i].z = z;
+		go[i].y = y;
 	}
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
@@ -2822,30 +2822,29 @@ static int l_add_planet(lua_State *l)
 static void add_planets(void)
 {
 	int i;
-	double x, y, cx, cy, a, r;
+	double x, z, cx, cz, a, r;
 
 	for (i = 0; i < NPLANETS; i++) {
 		cx = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		cy = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		cz = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
 		a = (double) snis_randn(360) * M_PI / 180.0;
 		r = snis_randn(ASTEROID_CLUSTER_RADIUS);
 		x = cx + r * sin(a);
-		y = cy + r * cos(a);
-		add_planet(x, y, 0.0);
+		z = cz + r * cos(a);
+		add_planet(x, 0.0, z);
 	}
 }
-
 
 static int add_wormhole(double x1, double y1, double z1, double x2, double y2, double z2)
 {
 	int i;
 
-	i = add_generic_object(x1, y1, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE);
+	i = add_generic_object(x1, z1, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE);
 	if (i < 0)
 		return i;
 	go[i].move = wormhole_move;
 	go[i].tsd.wormhole.dest_x = x2;
-	go[i].tsd.wormhole.dest_y = y2;
+	go[i].tsd.wormhole.dest_z = z2;
 	return i;
 }
 
@@ -2880,16 +2879,16 @@ static int l_add_wormhole_pair(lua_State *l)
 static void add_wormholes(void)
 {
 	int i, id1, id2;
-	double x1, y1, x2, y2;
+	double x1, z1, x2, z2;
 
 	for (i = 0; i < NWORMHOLE_PAIRS; i++) {
 		do {
 			x1 = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-			y1 = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+			z1 = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
 			x2 = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-			y2 = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
-		} while (hypot(x1 - x2, y1 - y2) < XKNOWN_DIM / 2.0);
-		add_wormhole_pair(&id1, &id2, x1, y1, 0.0, x2, y2, 0.0);
+			z2 = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		} while (hypot(x1 - x2, z1 - z2) < XKNOWN_DIM / 2.0);
+		add_wormhole_pair(&id1, &id2, x1, 0.0, z1, x2, 0.0, z2);
 	}
 }
 
@@ -2904,12 +2903,12 @@ static void add_eships(void)
 static void add_spacemonsters(void)
 {
 	int i;
-	double x, y;
+	double x, z;
 
 	for (i = 0; i < NSPACEMONSTERS; i++) {
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
-		add_spacemonster(x, y, 0.0);
+		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		add_spacemonster(x, 0.0, z);
 	}
 }
 
@@ -3316,12 +3315,12 @@ static int process_demon_move_object(struct game_client *c)
 	struct snis_entity *o;
 	unsigned char buffer[sizeof(struct demon_move_object_packet)];
 	uint32_t oid;
-	double dx, dy;
+	double dx, dz;
 	int i, rc;
 
 	rc = read_and_unpack_buffer(c, buffer, "wSS", &oid,
 			&dx, (int32_t) UNIVERSE_DIM,
-			&dy, (int32_t) UNIVERSE_DIM);
+			&dz, (int32_t) UNIVERSE_DIM);
 	if (rc)
 		return rc;
 	if (!(c->role & ROLE_DEMON))
@@ -3331,7 +3330,7 @@ static int process_demon_move_object(struct game_client *c)
 	if (i < 0 || !go[i].alive)
 		goto out;
 	o = &go[i];
-	set_object_location(o, o->x + dx, o->y + dy, o->z);
+	set_object_location(o, o->x + dx, o->y, o->z + dz);
 	o->timestamp = universe_timestamp + 10;
 out:
 	pthread_mutex_unlock(&universe_mutex);
@@ -3402,7 +3401,7 @@ static int should_send_sdata(struct game_client *c, struct snis_entity *ship,
 	range2 = ship->tsd.ship.scibeam_range * ship->tsd.ship.scibeam_range;
 	/* distance to target... */
 	dist2 = (o->x - ship->x) * (o->x - ship->x) +
-		(o->y - ship->y) * (o->y - ship->y);
+		(o->z - ship->z) * (o->z - ship->z);
 	if (dist2 > range2) /* too far, no sdata for you. */
 		return 0;
 
@@ -3429,7 +3428,7 @@ static int should_send_sdata(struct game_client *c, struct snis_entity *ship,
 		return 0;
 
 	/* Is the target in the beam? */
-	angle = atan2(o->y - ship->y, o->x - ship->x);
+	angle = atan2(o->z - ship->z, o->x - ship->x);
 	in_beam = 1;
 	A1 = ship->tsd.ship.scibeam_a1;
 	A2 = ship->tsd.ship.scibeam_a2;
@@ -3556,15 +3555,15 @@ static int process_weap_select_target(struct game_client *c)
 static int process_sci_select_coords(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct snis_sci_select_coords_packet)];
-	uint32_t x, y;
+	uint32_t x, z;
 	int rc;
 
-	rc = read_and_unpack_buffer(c, buffer, "ww", &x, &y);
+	rc = read_and_unpack_buffer(c, buffer, "ww", &x, &z);
 	if (rc)
 		return rc;
 	/* just turn it around and fan it out to all the right places */
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
-				packed_buffer_new("hww", OPCODE_SCI_SELECT_COORDS, x, y),
+				packed_buffer_new("hww", OPCODE_SCI_SELECT_COORDS, x, z),
 				ROLE_SCIENCE);
 	return 0;
 }
@@ -3578,7 +3577,7 @@ static struct snis_entity *nearest_starbase(struct snis_entity *o)
 		if (go[i].type != OBJTYPE_STARBASE)
 			continue;
 		c = (o->x - go[i].x) * (o->x - go[i].x) +
-			(o->y - go[i].y) * (o->y - go[i].y);
+			(o->z - go[i].z) * (o->z - go[i].z);
 		if (dist2 < 0 || c < dist2) {
 			dist2 = c;
 			answer = i;
@@ -3609,7 +3608,7 @@ static void comm_dock_function(struct game_client *c, char *txt)
 	sb = nearest_starbase(o);
 	if (!sb)
 		return;
-	dist = hypot(sb->x - o->x, sb->y - o->y);
+	dist = hypot(sb->x - o->x, sb->z - o->z);
 	if (dist > STARBASE_DOCKING_DIST) {
 		sprintf(msg, "%s, YOU ARE TOO FAR AWAY (%lf).\n",
 			bridgelist[c->bridge].shipname, dist);
@@ -3783,7 +3782,7 @@ static int l_attack_ship(lua_State *l)
 
 	attacker->tsd.ship.cmd_data.command = DEMON_CMD_ATTACK;
 	attacker->tsd.ship.cmd_data.x = 0;
-	attacker->tsd.ship.cmd_data.y = 0;
+	attacker->tsd.ship.cmd_data.z = 0;
 	attacker->tsd.ship.cmd_data.nids1 = 0;
 	attacker->tsd.ship.cmd_data.nids2 = 1;
 	attacker->tsd.ship.cmd_data.id[0] = victim_id;	
@@ -4180,7 +4179,7 @@ static int process_demon_command(struct game_client *c)
 	unsigned char buffer[sizeof(struct demon_cmd_packet) + 255 * sizeof(uint32_t)];
 	struct packed_buffer pb;
 	int i, rc;
-	uint32_t ix, iy;
+	uint32_t ix, iz;
 	int offset;
 	struct command_data cmd_data;
 	uint32_t id1[255];
@@ -4194,7 +4193,7 @@ static int process_demon_command(struct game_client *c)
 	if (rc)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "bwwbb", &cmd_data.command, &ix, &iy, &nids1, &nids2);
+	packed_buffer_extract(&pb, "bwwbb", &cmd_data.command, &ix, &iz, &nids1, &nids2);
 	rc = snis_readsocket(c->socket, buffer + offset, (nids1 + nids2) * sizeof(uint32_t));
 	if (rc)
 		return rc;
@@ -4205,7 +4204,7 @@ static int process_demon_command(struct game_client *c)
 		packed_buffer_extract(&pb, "w", &id2[i]);
 
 	printf("Demon command received, opcode = %02x\n", cmd_data.command);
-	printf("  x = %08x, y = %08x\n", ix, iy);
+	printf("  x = %08x, z = %08x\n", ix, iz);
 	printf("Group 1 = \n");
 	for (i = 0; i < nids1; i++) {
 		printf("%d ", id1[i]);
@@ -4220,7 +4219,7 @@ static int process_demon_command(struct game_client *c)
 	printf("\n\n");
 
 	cmd_data.x = ix;
-	cmd_data.y = iy;
+	cmd_data.z = iz;
 	cmd_data.nids1 = nids1;
 	cmd_data.nids2 = nids2;
 
@@ -4257,11 +4256,11 @@ static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[10];
 	unsigned char item_type;
-	double x, y, r;
+	double x, z, r;
 	int rc, i = -1;
 
 	rc = read_and_unpack_buffer(c, buffer, "bSS", &item_type,
-			&x, (int32_t) UNIVERSE_DIM, &y, (int32_t) UNIVERSE_DIM);
+			&x, (int32_t) UNIVERSE_DIM, &z, (int32_t) UNIVERSE_DIM);
 	if (rc)
 		return rc;
 
@@ -4271,18 +4270,18 @@ static int process_create_item(struct game_client *c)
 		i = add_ship();
 		break;
 	case OBJTYPE_STARBASE:
-		i = add_starbase(x, y, 0, 0, 0, 0, snis_randn(100));
+		i = add_starbase(x, 0, z, 0, 0, 0, snis_randn(100));
 		break;
 	case OBJTYPE_PLANET:
-		i = add_planet(x, y, 0.0);
+		i = add_planet(x, 0.0, z);
 		break;
 	case OBJTYPE_NEBULA:
 		r = (double) snis_randn(NEBULA_RADIUS) +
 				(double) MIN_NEBULA_RADIUS;
-		i = add_nebula(x, y, 0, 0, 0, 0, r);
+		i = add_nebula(x, 0, z, 0, 0, 0, r);
 		break;
 	case OBJTYPE_SPACEMONSTER:
-		i = add_spacemonster(x, y, 0.0);
+		i = add_spacemonster(x, 0.0, z);
 		break;
 	default:
 		break;
@@ -4294,7 +4293,7 @@ static int process_create_item(struct game_client *c)
 		 */
 		go[i].timestamp = universe_timestamp + 10;
 		go[i].x = x;
-		go[i].y = y;
+		go[i].z = z;
 	}
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
@@ -4496,8 +4495,8 @@ static int process_engage_warp(struct game_client *c)
 		return 0;
 	}
 	wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
-	bridgelist[b].warpx = o->x + wfactor * sin(o->heading);
-	bridgelist[b].warpy = o->y + wfactor * -cos(o->heading);
+	bridgelist[b].warpx = o->x + wfactor * cos(o->heading);
+	bridgelist[b].warpz = o->z + wfactor * -sin(o->heading);
 	o->tsd.ship.warp_time = 85; /* 8.5 seconds */
 	pthread_mutex_unlock(&universe_mutex);
 	send_initiate_warp_packet(c);
@@ -4545,16 +4544,16 @@ static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 		return rc;
 	switch (yaw) {
 	case YAW_LEFT:
-		yaw_func(c, -1);
-		break;
-	case YAW_RIGHT:
 		yaw_func(c, 1);
 		break;
+	case YAW_RIGHT:
+		yaw_func(c, -1);
+		break;
 	case YAW_LEFT_FINE:
-		yaw_func(c, -2);
+		yaw_func(c, 2);
 		break;
 	case YAW_RIGHT_FINE:
-		yaw_func(c, 2);
+		yaw_func(c, +2);
 		break;
 	default:
 		break;
@@ -4583,16 +4582,16 @@ static int process_demon_yaw(struct game_client *c)
 
 	switch (yaw) {
 	case YAW_LEFT:
-		do_demon_yaw(o, -1);
-		break;
-	case YAW_RIGHT:
 		do_demon_yaw(o, 1);
 		break;
+	case YAW_RIGHT:
+		do_demon_yaw(o, +1);
+		break;
 	case YAW_LEFT_FINE:
-		do_demon_yaw(o, -2);
+		do_demon_yaw(o, 2);
 		break;
 	case YAW_RIGHT_FINE:
-		do_demon_yaw(o, 2);
+		do_demon_yaw(o, -2);
 		break;
 	default:
 		break;
@@ -4656,7 +4655,7 @@ static int process_demon_fire_torpedo(struct game_client *c)
 {
 	struct snis_entity *o;
 	unsigned char buffer[10];
-	double vx, vy;
+	double vx, vz;
 	uint32_t oid;
 	int i, rc;
 
@@ -4674,8 +4673,8 @@ static int process_demon_fire_torpedo(struct game_client *c)
 		goto out;
 
 	vx = TORPEDO_VELOCITY * cos(o->heading);
-	vy = TORPEDO_VELOCITY * sin(o->heading);
-	add_torpedo(o->x, o->y, o->z, vx, vy, 0.0, o->id); /* vz is wrong here... */
+	vz = TORPEDO_VELOCITY * -sin(o->heading);
+	add_torpedo(o->x, o->y, o->z, vx, 0.0, vz, o->id); /* vy is wrong here... */
 out:
 	pthread_mutex_unlock(&universe_mutex);
 
@@ -4790,7 +4789,7 @@ static int process_demon_fire_phaser(struct game_client *c)
 {
 	struct snis_entity *o;
 	unsigned char buffer[10];
-	double vx, vy;
+	double vx, vz;
 	uint32_t oid;
 	int i, rc;
 
@@ -4808,8 +4807,8 @@ static int process_demon_fire_phaser(struct game_client *c)
 		goto out;
 
 	vx = LASER_VELOCITY * cos(o->heading);
-	vy = LASER_VELOCITY * sin(o->heading);
-	add_laser(o->x, o->y, vx, vy, o->heading, o->id);
+	vz = LASER_VELOCITY * -sin(o->heading);
+	add_laser(o->x, o->z, vx, vz, o->heading, o->id);
 out:
 	pthread_mutex_unlock(&universe_mutex);
 
@@ -5264,7 +5263,7 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
 {
 	struct snis_entity *ship = &go[c->ship_index];
-	double dx, dy, dist;
+	double dx, dz, dist;
 	const double threshold = (XKNOWN_DIM / 2) * (XKNOWN_DIM / 2);
 
 	/* do not optimize updates for brand new clients, they need everything. */
@@ -5272,8 +5271,8 @@ static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
 		return 0;
 
 	dx = (ship->x - o->x);
-	dy = (ship->y - o->y);
-	dist = (dx * dx) + (dy * dy);
+	dz = (ship->z - o->z);
+	dist = (dx * dx) + (dz * dz);
 	if (dist > threshold && snis_randn(100) < 70)
 	 	return 1;	
 	return 0;
@@ -5435,7 +5434,7 @@ static int insane(unsigned char *word, int len)
 static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	double dv = sqrt((o->vx * o->vx) + (o->vy * o->vy));
+	double dv = sqrt((o->vx * o->vz) + (o->vy * o->vz));
 
 	pb_queue_to_client(c, packed_buffer_new("hwwSSSUUwb", OPCODE_ECON_UPDATE_SHIP,
 			o->id, o->alive, o->x, (int32_t) UNIVERSE_DIM,
@@ -5517,7 +5516,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "hwwSSSSS", opcode, o->id, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM,
-			o->vx, (int32_t) UNIVERSE_DIM, o->vy, (int32_t) UNIVERSE_DIM);
+			o->vx, (int32_t) UNIVERSE_DIM, o->vz, (int32_t) UNIVERSE_DIM);
 	packed_buffer_append(pb, "SwwUSUUbbbwbbbbbbbbbbbwQ",
 			o->tsd.ship.yaw_velocity, (int32_t) 360,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
@@ -5583,7 +5582,7 @@ static void send_update_asteroid_packet(struct game_client *c,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					o->vx, (int32_t) UNIVERSE_DIM,
-					o->vy, (int32_t) UNIVERSE_DIM));
+					o->vz, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_derelict_packet(struct game_client *c,
@@ -5610,7 +5609,7 @@ static void send_update_wormhole_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	pb_queue_to_client(c, packed_buffer_new("hwSS", OPCODE_UPDATE_WORMHOLE,
-					o->id, o->x, (int32_t) UNIVERSE_DIM, o->y,
+					o->id, o->x, (int32_t) UNIVERSE_DIM, o->z,
 					(int32_t) UNIVERSE_DIM));
 }
 
@@ -5618,7 +5617,7 @@ static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	pb_queue_to_client(c, packed_buffer_new("hwSS", OPCODE_UPDATE_STARBASE,
-					o->id, o->x, (int32_t) UNIVERSE_DIM, o->y,
+					o->id, o->x, (int32_t) UNIVERSE_DIM, o->z,
 					(int32_t) UNIVERSE_DIM));
 }
 
@@ -5627,7 +5626,7 @@ static void send_update_nebula_packet(struct game_client *c,
 {
 	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_NEBULA, o->id,
 					o->x, (int32_t) UNIVERSE_DIM,
-					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
 					o->tsd.nebula.r, (int32_t) UNIVERSE_DIM));
 }
 
@@ -5650,7 +5649,7 @@ static void send_update_torpedo_packet(struct game_client *c,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					o->vx, (int32_t) UNIVERSE_DIM,
-					o->vy, (int32_t) UNIVERSE_DIM));
+					o->vz, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_laser_packet(struct game_client *c,
@@ -5662,7 +5661,7 @@ static void send_update_laser_packet(struct game_client *c,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					o->vx, (int32_t) UNIVERSE_DIM,
-					o->vy, (int32_t) UNIVERSE_DIM));
+					o->vz, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_laserbeam_packet(struct game_client *c,
@@ -5686,7 +5685,7 @@ static void send_update_spacemonster_packet(struct game_client *c,
 {
 	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_SPACEMONSTER, o->id,
 					o->x, (int32_t) UNIVERSE_DIM,
-					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
 					o->tsd.spacemonster.zz, (int32_t) UNIVERSE_DIM));
 }
 
@@ -5715,12 +5714,12 @@ static int add_new_player(struct game_client *c)
 	c->bridge = lookup_bridge(app.shipname, app.password);
 	c->role = app.role;
 	if (c->bridge == -1) { /* did not find our bridge, have to make a new one. */
-		double x, y;
+		double x, z;
 
 		x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
-		y = YKNOWN_DIM * (double) rand() / (double) RAND_MAX;
+		z = ZKNOWN_DIM * (double) rand() / (double) RAND_MAX;
 		pthread_mutex_lock(&universe_mutex);
-		c->ship_index = add_player(x, y, 0.0, 0.0, 3.0 * M_PI / 2.0);
+		c->ship_index = add_player(x, z, 0.0, 0.0, M_PI / 2.0);
 		c->shipid = go[c->ship_index].id;
 		strcpy(go[c->ship_index].sdata.name, (const char * restrict) app.shipname);
 		memset(&bridgelist[nbridges], 0, sizeof(bridgelist[nbridges]));

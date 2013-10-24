@@ -25,7 +25,7 @@
 
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 300000.0
-#define YKNOWN_DIM (XKNOWN_DIM * (600.0/800.0))  /* assumes 800x600 screen aspect ratio */
+#define ZKNOWN_DIM (XKNOWN_DIM * (600.0/800.0))  /* assumes 800x600 screen aspect ratio */
 
 #define UNIVERSE_DIM ((XKNOWN_DIM) * 4.0)
 #define UNIVERSE_LIMIT (UNIVERSE_DIM / 2.0) /* plus or minus, x, or y, this is as far as you can go. */
@@ -188,7 +188,7 @@ struct ship_damage_data {
 
 struct command_data {
 	uint8_t command;
-	double x, y;
+	double x, z;
 	uint8_t nids1, nids2;
 	uint32_t id[256];
 };
@@ -265,7 +265,7 @@ struct ship_data {
 	uint8_t phaser_wavelength;
 	uint8_t phaser_charge;
 	int32_t victim_id;
-	double dox, doy; /* destination offsets */
+	double dox, doz; /* destination offsets */
 	struct ship_damage_data damage;
 	struct command_data cmd_data;
 	struct damcon_data *damcon;
@@ -317,7 +317,7 @@ struct explosion_data {
 };
 
 struct spark_data {
-	double z, vz, rx, ry, rz, avx, avy, avz;
+	double rx, ry, rz, avx, avy, avz;
 };
 
 struct asteroid_data {
@@ -330,7 +330,7 @@ struct derelict_data {
 };
 
 struct wormhole_data {
-	double dest_x, dest_y;
+	double dest_x, dest_z;
 };
 
 #define MAX_SPACEMONSTER_SEGMENTS 20
@@ -399,7 +399,7 @@ struct snis_entity {
 	move_function move;
 	struct snis_entity_science_data sdata;
 	double sci_coordx; /* selected coords by science station for warp calculations */
-	double sci_coordy;
+	double sci_coordz;
 	struct entity *entity;
 	struct space_partition_entry partition;
 	union quat orientation;

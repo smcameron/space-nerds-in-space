@@ -163,7 +163,7 @@ struct entity_context *sciecx;
 struct entity_context *navecx;
 
 struct nebula_entry {
-	double x, y, r, r2;
+	double x, z, r, r2;
 	uint32_t id;
 } nebulaentry[NNEBULA];
 int nnebula;
@@ -294,12 +294,9 @@ struct my_point_t *placeholder_part_spun_points;
 struct my_vect_obj placeholder_part;
 struct my_vect_obj placeholder_part_spun[128];
 
-double to_uheading(double heading)
+static inline double to_uheading(double heading)
 {
-	/* FIXME: when coordinate system is fixed, use mathutils.h:game_angle_to_math_angle()
-	 * instead
-	 */
-	return heading + M_PI / 2.0;
+	return game_angle_to_math_angle(heading);
 }
 
 void init_trig_arrays(void)
@@ -422,7 +419,7 @@ static struct snis_object_pool *sparkpool;
 static struct snis_entity spark[MAXSPARKS];
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static int add_generic_object(uint32_t id, double x, double y, double vx, double vy, double heading, int type, uint32_t alive, struct entity *entity)
+static int add_generic_object(uint32_t id, double x, double z, double vx, double vz, double heading, int type, uint32_t alive, struct entity *entity)
 {
 	int i;
 
@@ -435,10 +432,10 @@ static int add_generic_object(uint32_t id, double x, double y, double vx, double
 	go[i].index = i;
 	go[i].id = id;
 	go[i].x = x;
-	go[i].y = y;
-	go[i].z = 0.0;
+	go[i].y = 0.0;
+	go[i].z = z;
 	go[i].vx = vx;
-	go[i].vy = vy;
+	go[i].vz = vz;
 	go[i].heading = heading;
 	go[i].type = type;
 	go[i].alive = alive;
@@ -448,7 +445,7 @@ static int add_generic_object(uint32_t id, double x, double y, double vx, double
 }
 
 static void update_generic_object(int index, double x, double y, double z,
-				double vx, double vy, double heading, uint32_t alive)
+				double vx, double vz, double heading, uint32_t alive)
 {
 	struct snis_entity *o = &go[index];
 
@@ -456,13 +453,13 @@ static void update_generic_object(int index, double x, double y, double z,
 	o->y = y;
 	o->z = z;
 	o->vx = vx;
-	o->vy = vy;
+	o->vz = vz;
 	o->heading = heading;
 	quat_init_axis(&o->orientation, 0, 0, 1, heading);
 	o->alive = alive;
 	if (o->entity) {
-		update_entity_pos(o->entity, x, z, -y);
-		update_entity_rotation(o->entity, M_PI / 2.0, heading + M_PI, 0);
+		update_entity_pos(o->entity, x, y, -z);
+		update_entity_rotation(o->entity, 0, heading, 0); /* FIXME: correct? */
 	}
 }
 
@@ -655,7 +652,7 @@ static int update_damcon_part(uint32_t id, uint32_t ship_id, uint32_t type,
 
 
 static int update_econ_ship(uint32_t id, double x, double y, double z, double vx,
-			double vy, double heading, uint32_t alive, uint32_t victim_id,
+			double vz, double heading, uint32_t alive, uint32_t victim_id,
 			uint8_t shiptype)
 {
 	int i;
@@ -665,59 +662,59 @@ static int update_econ_ship(uint32_t id, double x, double y, double z, double vx
 	if (i < 0) {
 		switch (shiptype) {
 		case SHIP_CLASS_CRUISER:
-			e = add_entity(ecx, cruiser_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, cruiser_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_DESTROYER:
-			e = add_entity(ecx, destroyer_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, destroyer_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_TRANSPORT:
-			e = add_entity(ecx, transport_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, transport_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_DRAGONHAWK:
-			e = add_entity(ecx, dragonhawk_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, dragonhawk_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_SKORPIO:
-			e = add_entity(ecx, skorpio_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, skorpio_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_DISRUPTOR:
-			e = add_entity(ecx, disruptor_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, disruptor_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_RESEARCH_VESSEL:
-			e = add_entity(ecx, research_vessel_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, research_vessel_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(ecx, freighter_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, freighter_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_TANKER:
-			e = add_entity(ecx, tanker_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, tanker_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_BATTLESTAR:
-			e = add_entity(ecx, battlestar_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, battlestar_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_ASTEROIDMINER:
-			e = add_entity(ecx, asteroidminer_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, asteroidminer_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_SCOUT:
-			e = add_entity(ecx, scout_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, scout_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_SCIENCE:
-			e = add_entity(ecx, spaceship2_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, spaceship2_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		case SHIP_CLASS_STARSHIP:
-			e = add_entity(ecx, ship_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, ship_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		default:
-			e = add_entity(ecx, cruiser_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, cruiser_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		}
-		i = add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_SHIP2, alive, e);
+		i = add_generic_object(id, x, z, vx, vz, heading, OBJTYPE_SHIP2, alive, e);
 		if (i < 0)
 			return i;
 		go[i].entity = e;
 	} else {
-		update_generic_object(i, x, y, z, vx, vy, heading, alive); 
+		update_generic_object(i, x, y, z, vx, vz, heading, alive); 
 	}
-	go[i].z = z;
+	go[i].y = y;
 	go[i].tsd.ship.victim_id = (int32_t) victim_id;
 	go[i].tsd.ship.shiptype = shiptype;
 	return 0;
@@ -734,7 +731,7 @@ static int update_power_model_data(uint32_t id, struct power_model_data *pmd)
 	return 0;
 }
 
-static int update_ship(uint32_t id, double x, double y, double z, double vx, double vy,
+static int update_ship(uint32_t id, double x, double y, double z, double vx, double vz,
 			double heading, double yawvel, uint32_t alive,
 			uint32_t torpedoes, uint32_t power, 
 			double gun_heading, double gunyawvel,
@@ -753,22 +750,22 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 	if (i < 0) {
 		switch (shiptype) {
 		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(ecx, freighter_mesh, x, z, -y, SHIP_COLOR);
+			e = add_entity(ecx, freighter_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		default:
 			if (id == my_ship_id)	
-				e = add_entity(ecx, NULL, x, z, -y, SHIP_COLOR);
+				e = add_entity(ecx, NULL, x, y, -z, SHIP_COLOR);
 			else
-				e = add_entity(ecx, ship_mesh, x, z, -y, SHIP_COLOR);
+				e = add_entity(ecx, ship_mesh, x, y, -z, SHIP_COLOR);
 			break;
 		}
-		i = add_generic_object(id, x, y, vx, vy, heading, type, alive, e);
+		i = add_generic_object(id, x, z, vx, vz, heading, type, alive, e);
 		if (i < 0)
 			return i;
 	} else {
-		update_generic_object(i, x, y, z, vx, vy, heading, alive); 
+		update_generic_object(i, x, y, z, vx, vz, heading, alive); 
 	}
-	go[i].z = z;
+	go[i].y = y;
 	go[i].tsd.ship.yaw_velocity = yawvel;
 	go[i].tsd.ship.torpedoes = torpedoes;
 	go[i].tsd.ship.power = power;
@@ -829,20 +826,21 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 }
 
 static int update_torpedo(uint32_t id, double x, double y, double z,
-			double vx, double vy, uint32_t ship_id)
+			double vx, double vz, uint32_t ship_id)
 {
 	int i;
 	struct entity *e;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, torpedo_mesh, x, z, -y, TORPEDO_COLOR);
+		e = add_entity(ecx, torpedo_mesh, x, y, -z, TORPEDO_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
-		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_TORPEDO, 1, e);
+		i = add_generic_object(id, x, z, vx, vz, 0.0, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.torpedo.ship_id = ship_id;
+		go[i].y = y;
 	} else {
-		update_generic_object(i, x, y, z, vx, vy, 0.0, 1); 
+		update_generic_object(i, x, y, z, vx, vz, 0.0, 1); 
 		update_entity_pos(go[i].entity, x, z, -y);
 	}
 	return 0;
@@ -886,31 +884,32 @@ static int update_tractorbeam(uint32_t id, uint32_t origin, uint32_t target)
 
 
 static int update_laser(uint32_t id, double x, double y, double z,
-			double vx, double vy, uint32_t ship_id)
+			double vx, double vz, uint32_t ship_id)
 {
 	int i;
 	struct entity *e;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, laser_mesh, x, z, -y, LASER_COLOR);
+		e = add_entity(ecx, laser_mesh, x, y, -z, LASER_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
-		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_LASER, 1, e);
+		i = add_generic_object(id, x, z, vx, vz, 0.0, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.laser.ship_id = ship_id;
+		go[i].y = y;
 	} else {
-		update_generic_object(i, x, y, z, vx, vy, 0.0, 1); 
+		update_generic_object(i, x, y, z, vx, vz, 0.0, 1); 
 	}
 	return 0;
 }
 
-static void init_spacemonster_data(struct snis_entity *o, double z)
+static void init_spacemonster_data(struct snis_entity *o, double y)
 {
 	int i;
 	struct spacemonster_data *sd = &o->tsd.spacemonster;
 
-	sd->zz = z;
+	sd->zz = y;
 	sd->front = 0;
 	sd->x = malloc(sizeof(*o->tsd.spacemonster.x) *
 					MAX_SPACEMONSTER_SEGMENTS);
@@ -922,13 +921,12 @@ static void init_spacemonster_data(struct snis_entity *o, double z)
 					MAX_SPACEMONSTER_SEGMENTS);
 	for (i = 0; i < MAX_SPACEMONSTER_SEGMENTS; i++) {
 		sd->x[i] = o->x;
-		sd->y[i] = o->y;
-		sd->z[i] = 0.0;
-		sd->entity[i] = add_entity(ecx, spacemonster_mesh, o->x, 0, -o->y,
+		sd->y[i] = 0.0;
+		sd->z[i] = o->z;
+		sd->entity[i] = add_entity(ecx, spacemonster_mesh, o->x, 0, -o->z,
 						SPACEMONSTER_COLOR);
 		set_render_style(sd->entity[i], RENDER_POINT_CLOUD | RENDER_SPARKLE);
 	}
-		
 }
 
 static struct mesh *init_sector_mesh(int extra_extent)
@@ -1136,32 +1134,32 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, spacemonster_mesh, x, 0, -y, SPACEMONSTER_COLOR);
+		e = add_entity(ecx, spacemonster_mesh, x, 0, -z, SPACEMONSTER_COLOR);
 		set_render_style(e, RENDER_POINT_CLOUD | RENDER_SPARKLE);
-		i = add_generic_object(id, x, y, 0, 0, 0.0, OBJTYPE_SPACEMONSTER, 1, e);
+		i = add_generic_object(id, x, z, 0, 0, 0.0, OBJTYPE_SPACEMONSTER, 1, e);
 		if (i < 0)
 			return i;
 		go[i].entity = e;
-		init_spacemonster_data(&go[i], z);
+		init_spacemonster_data(&go[i], y);
 	} else {
 		struct spacemonster_data *sd;
 		int n;
 
-		update_generic_object(i, x, y, 0, 0, 0, 0.0, 1); 
-		update_entity_pos(go[i].entity, x, z, -y);
+		update_generic_object(i, x, 0, z, 0, 0, 0.0, 1); 
+		update_entity_pos(go[i].entity, x, y, -z);
 		sd = &go[i].tsd.spacemonster;
-		sd->zz = z;
+		sd->zz = y;
 		n = (sd->front + 1) % MAX_SPACEMONSTER_SEGMENTS;
 		sd->front = n;
 		sd->x[n] = x;
 		sd->y[n] = y;
 		sd->z[n] = z;
-		update_entity_pos(sd->entity[sd->front], x, z, -y);
+		update_entity_pos(sd->entity[sd->front], x, y, -z);
 	}
 	return 0;
 }
 
-static int update_asteroid(uint32_t id, double x, double y, double z, double vx, double vy)
+static int update_asteroid(uint32_t id, double x, double y, double z, double vx, double vz)
 {
 	int i, m;
 	struct entity *e;
@@ -1170,16 +1168,16 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 	if (i < 0) {
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
 		e = add_entity(ecx, asteroid_mesh[m], x, z, -y, ASTEROID_COLOR);
-		i = add_generic_object(id, x, y, vx, vy, 0.0, OBJTYPE_ASTEROID, 1, e);
+		i = add_generic_object(id, x, z, vx, vz, 0.0, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
-		go[i].z = z;
+		go[i].y = y;
 	} else {
 		int axis;
 		float angle;
 
-		update_generic_object(i, x, y, z, vx, vy, 0.0, 1);
-		update_entity_pos(go[i].entity, x, z, -y);
+		update_generic_object(i, x, y, z, vx, vz, 0.0, 1);
+		update_entity_pos(go[i].entity, x, y, -z);
 
 		/* make asteroids spin */
 		angle = (timer % (360 * ((id % 12) + 3))) * M_PI / 180.0;
@@ -1199,16 +1197,16 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 	if (i < 0) {
 		m = ship_type % NDERELICT_MESHES;
 		e = add_entity(ecx, derelict_mesh[m], x, z, -y, SHIP_COLOR);
-		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_DERELICT, 1, e);
+		i = add_generic_object(id, x, z, 0.0, 0.0, 0.0, OBJTYPE_DERELICT, 1, e);
 		if (i < 0)
 			return i;
-		go[i].z = z;
+		go[i].y = y;
 	} else {
 		int axis;
 		float angle;
 
 		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, 1);
-		update_entity_pos(go[i].entity, x, z, -y);
+		update_entity_pos(go[i].entity, x, y, -z);
 
 		/* make it spin */
 		angle = (timer % (360 * ((id % 12) + 3))) * M_PI / 180.0;
@@ -1229,14 +1227,14 @@ static int update_planet(uint32_t id, double x, double y, double z)
 	if (i < 0) {
 
 		m = id % NPLANET_MODELS;
-		e = add_entity(ecx, planet_mesh[m], x, z, -y, PLANET_COLOR);
-		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_PLANET, 1, e);
+		e = add_entity(ecx, planet_mesh[m], x, y, -z, PLANET_COLOR);
+		i = add_generic_object(id, x, z, 0.0, 0.0, 0.0, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
-		go[i].z = z;
+		go[i].y = y;
 	} else {
 		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, 1);
-		update_entity_pos(go[i].entity, x, z, -y);
+		update_entity_pos(go[i].entity, x, y, -z);
 	}
 	r1 = (i % 20) * (360.0 / 20.0) * M_PI / 180.0;
 	r2 = (i % 40) * (360.0 / 40.0) * M_PI / 180.0;
@@ -1245,7 +1243,7 @@ static int update_planet(uint32_t id, double x, double y, double z)
 	return 0;
 }
 
-static int update_wormhole(uint32_t id, double x, double y)
+static int update_wormhole(uint32_t id, double x, double z)
 {
 	int i;
 	struct entity *e;
@@ -1253,9 +1251,9 @@ static int update_wormhole(uint32_t id, double x, double y)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, wormhole_mesh, x, 0, -y, WORMHOLE_COLOR);
+		e = add_entity(ecx, wormhole_mesh, x, 0, -z, WORMHOLE_COLOR);
 		set_render_style(e, RENDER_POINT_CLOUD | RENDER_SPARKLE);
-		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE, 1, e);
+		i = add_generic_object(id, x, z, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -1264,14 +1262,14 @@ static int update_wormhole(uint32_t id, double x, double y)
 		 * and orientation is handled client side via spin_starbase
 		 */
 		o->x = x;
-		o->y = y;
+		o->z = z;
 		if (o->entity)
-			update_entity_pos(o->entity, x, 0, -y);
+			update_entity_pos(o->entity, x, 0, -z);
 	}
 	return 0;
 }
 
-static int update_starbase(uint32_t id, double x, double y)
+static int update_starbase(uint32_t id, double x, double z)
 {
 	int i, m;
 	struct entity *e;
@@ -1280,8 +1278,8 @@ static int update_starbase(uint32_t id, double x, double y)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		m = id % NSTARBASE_MODELS;
-		e = add_entity(ecx, starbase_mesh[m], x, 0, -y, STARBASE_COLOR);
-		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_STARBASE, 1, e);
+		e = add_entity(ecx, starbase_mesh[m], x, 0, -z, STARBASE_COLOR);
+		i = add_generic_object(id, x, z, 0.0, 0.0, 0.0, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -1290,14 +1288,14 @@ static int update_starbase(uint32_t id, double x, double y)
 		 * and orientation is handled client side via spin_starbase
 		 */
 		o->x = x;
-		o->y = y;
+		o->z = z;
 		if (o->entity)
-			update_entity_pos(o->entity, x, 0, -y);
+			update_entity_pos(o->entity, x, 0, -z);
 	}
 	return 0;
 }
 
-static void add_nebula_entry(uint32_t id, double x, double y, double r)
+static void add_nebula_entry(uint32_t id, double x, double z, double r)
 {
 	if (nnebula >= NNEBULA) {
 		printf("Bug at %s:%d\n", __FILE__, __LINE__);
@@ -1305,7 +1303,7 @@ static void add_nebula_entry(uint32_t id, double x, double y, double r)
 	}
 	nebulaentry[nnebula].id = id;
 	nebulaentry[nnebula].x = x;
-	nebulaentry[nnebula].y = y;
+	nebulaentry[nnebula].z = z;
 	nebulaentry[nnebula].r2 = r * r;
 	nebulaentry[nnebula].r = r;
 	nnebula++;
@@ -1330,18 +1328,18 @@ static void delete_nebula_entry(uint32_t id)
 		(sizeof(nebulaentry[0]) * (nnebula - i)));
 }
 
-static int update_nebula(uint32_t id, double x, double y, double r)
+static int update_nebula(uint32_t id, double x, double z, double r)
 {
 	int i;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, 0.0, 0.0, 0.0, OBJTYPE_NEBULA, 1, NULL);
+		i = add_generic_object(id, x, z, 0.0, 0.0, 0.0, OBJTYPE_NEBULA, 1, NULL);
 		if (i < 0)
 			return i;
-		add_nebula_entry(go[i].id, x, y, r);
+		add_nebula_entry(go[i].id, x, z, r);
 	} else {
-		update_generic_object(i, x, y, 0, 0.0, 0.0, 0.0, 1);
+		update_generic_object(i, x, 0, z, 0.0, 0.0, 0.0, 1);
 	}
 	go[i].tsd.nebula.r = r;	
 	go[i].alive = 1;
@@ -1352,7 +1350,7 @@ static void spark_move(struct snis_entity *o)
 {
 	o->x += o->vx;
 	o->y += o->vy;
-	o->tsd.spark.z += o->tsd.spark.vz;
+	o->z += o->vz;
 	o->tsd.spark.rx += o->tsd.spark.avx;
 	o->tsd.spark.ry += o->tsd.spark.avy;
 	o->tsd.spark.rz += o->tsd.spark.avz;
@@ -1374,7 +1372,7 @@ static void move_sparks(void)
 		if (spark[i].alive) {
 			spark[i].move(&spark[i]);
 			update_entity_pos(spark[i].entity, spark[i].x,
-						spark[i].tsd.spark.z, -spark[i].y);
+						spark[i].y, -spark[i].z);
 			update_entity_rotation(spark[i].entity,
 						spark[i].tsd.spark.rx,
 						spark[i].tsd.spark.ry,
@@ -1387,7 +1385,7 @@ static void spin_wormhole(struct snis_entity *o)
 	float angle;
 
 	angle = ((timer * 5) % 360) * M_PI / 180.0;
-	update_entity_rotation(o->entity, 0.0, 0.0, angle);
+	update_entity_rotation(o->entity, 0.0, angle, 0.0); /* FIXME: correct? */
 }
 
 static void spin_starbase(struct snis_entity *o)
@@ -1395,7 +1393,7 @@ static void spin_starbase(struct snis_entity *o)
 	float angle;
 
 	angle = ((timer / 2) % 360) * M_PI / 180.0;
-	update_entity_rotation(o->entity, 0.0, 0.0, angle);
+	update_entity_rotation(o->entity, 0.0, angle, 0.0);
 }
 
 static void move_ship(struct snis_entity *o)
@@ -1404,7 +1402,7 @@ static void move_ship(struct snis_entity *o)
 	o->heading += o->tsd.ship.yaw_velocity / 3.0;
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity / 3.0;
 	o->x += o->vx / 3.0;
-	o->y += o->vy / 3.0;
+	o->z += o->vz / 3.0;
 }
 
 static void move_objects(void)
@@ -1433,7 +1431,7 @@ static void move_objects(void)
 			/* predictive movement, this is probably */
 			/* too dumb to work right */
 			o->x += o->vx / 3.0;
-			o->y += o->vy / 3.0;
+			o->z += o->vz / 3.0;
 			break;
 		case OBJTYPE_LASERBEAM:
 		case OBJTYPE_TRACTORBEAM:
@@ -1455,22 +1453,21 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 		return;
 	r = snis_randn(100);
 	if (r < 50 || time < 10) {
-		e = add_entity(ecx, particle_mesh, x, z, -y, PARTICLE_COLOR);
+		e = add_entity(ecx, particle_mesh, x, y, -z, PARTICLE_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 	} else if (r < 75) {
-		e = add_entity(ecx, debris_mesh, x, z, -y, color);
+		e = add_entity(ecx, debris_mesh, x, y, -z, color);
 	} else {
-		e = add_entity(ecx, debris2_mesh, x, z, -y, color);
+		e = add_entity(ecx, debris2_mesh, x, y, -z, color);
 	}
 	memset(&spark[i], 0, sizeof(spark[i]));
 	spark[i].index = i;
 	spark[i].x = x;
 	spark[i].y = y;
 	spark[i].z = z;
-	spark[i].tsd.spark.z = z;
 	spark[i].vx = vx;
 	spark[i].vy = vy;
-	spark[i].tsd.spark.vz = vz;
+	spark[i].vz = vz;
 	spark[i].tsd.spark.rx = M_PI / 180.0 * snis_randn(180);
 	spark[i].tsd.spark.ry = M_PI / 180.0 * snis_randn(180);
 	spark[i].tsd.spark.rz = M_PI / 180.0 * snis_randn(180);
@@ -1544,8 +1541,8 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 		zangle = ((double) snis_randn(360) * M_PI / 180.0);
 		v = snis_randn(velocity * 2) - velocity;
 		vx = v * cos(angle);
-		vy = v * sin(angle);
-		vz = v * cos(zangle) / 3.0;
+		vy = v * cos(zangle) / 3.0;
+		vz = v * -sin(angle);
 		add_spark(x, y, z, vx, vy, vz, time, color);
 	}
 }
@@ -1561,25 +1558,10 @@ static int update_explosion(uint32_t id, double x, double y, double z,
 			return i;
 		go[i].tsd.explosion.nsparks = nsparks;
 		go[i].tsd.explosion.velocity = velocity;
-		go[i].z = z;
+		go[i].y = y;
 		do_explosion(x, y, z, nsparks, velocity, (int) time, victim_type);
 	}
 	return 0;
-}
-
-static int __attribute__((unused)) add_asteroid(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
-{
-	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_ASTEROID, alive, NULL);
-}
-
-static int __attribute__((unused)) add_starbase(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
-{
-	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_STARBASE, alive, NULL);
-}
-
-static int __attribute__((unused)) add_torpedo(uint32_t id, double x, double y, double vx, double vy, double heading, uint32_t alive)
-{
-	return add_generic_object(id, x, y, vx, vy, heading, OBJTYPE_TORPEDO, alive, NULL);
 }
 
 void scale_points(struct my_point_t *points, int npoints,
@@ -1959,7 +1941,7 @@ static void request_demon_thrust_packet(uint32_t oid, uint8_t thrust)
 
 static struct demon_ui {
 	float ux1, uy1, ux2, uy2;
-	double selectedx, selectedy;
+	double selectedx, selectedz;
 	int nselected;
 #define MAX_DEMON_SELECTABLE 256
 	uint32_t selected_id[MAX_DEMON_SELECTABLE];
@@ -1977,7 +1959,7 @@ static struct demon_ui {
 	struct snis_text_input_box *demon_input;
 	char input[100];
 	char error_msg[80];
-	double ix, iy, ix2, iy2;
+	double ix, iz, ix2, iz2;
 	int captain_of;
 	int selectmode;
 	int buttonmode;
@@ -2125,7 +2107,7 @@ static void do_dirkey(int h, int v)
 			weapons_dirkey(h, v); 
 			break;
 		case DISPLAYMODE_SCIENCE:
-			science_dirkey(h, v); 
+			science_dirkey(h, -v); 
 			break;
 		case DISPLAYMODE_DAMCON:
 			damcon_dirkey(h, v);
@@ -2725,7 +2707,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, power;
 	uint32_t fuel, victim_id;
-	double dx, dy, dz, dyawvel, dgheading, dgunyawvel, dsheading, dbeamwidth, dvx, dvy;
+	double dx, dy, dz, dyawvel, dgheading, dgunyawvel, dsheading, dbeamwidth, dvx, dvz;
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
@@ -2744,7 +2726,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	packed_buffer_extract(&pb, "wwSSSSS", &id, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
-				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
+				&dvx, (int32_t) UNIVERSE_DIM, &dvz, (int32_t) UNIVERSE_DIM);
 	packed_buffer_extract(&pb, "SwwUSUU",
 				&dyawvel, (int32_t) 360,
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
@@ -2759,7 +2741,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_ship(id, dx, dy, dz, dvx, dvy, (double) ypr.a.yaw,
+	rc = update_ship(id, dx, dy, dz, dvx, dvz, (double) ypr.a.yaw,
 				dyawvel, alive, torpedoes, power,
 				dgheading, dgunyawvel, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
@@ -2876,7 +2858,7 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
 	uint32_t id, alive, victim_id;
-	double dx, dy, dz, dheading, dv, dvx, dvy;
+	double dx, dy, dz, dheading, dv, dvx, dvz;
 	uint8_t shiptype;
 	int rc;
 
@@ -2889,9 +2871,9 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	if (rc != 0)
 		return rc;
 	dvx = cos(dheading) * dv;
-	dvy = sin(dheading) * dv;
+	dvz = -sin(dheading) * dv;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_econ_ship(id, dx, dy, dz, dvx, dvy, dheading, alive, victim_id, shiptype);
+	rc = update_econ_ship(id, dx, dy, dz, dvx, dvz, dheading, alive, victim_id, shiptype);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -2900,18 +2882,18 @@ static int process_update_torpedo_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, ship_id;
-	double dx, dy, dz, dvx, dvy;
+	double dx, dy, dz, dvx, dvz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_torpedo_packet) - sizeof(uint16_t));
 	rc = read_and_unpack_buffer(buffer, "wwSSSSS", &id, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
-				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
+				&dvx, (int32_t) UNIVERSE_DIM, &dvz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_torpedo(id, dx, dy, dz, dvx, dvy, ship_id);
+	rc = update_torpedo(id, dx, dy, dz, dvx, dvz, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -2944,18 +2926,18 @@ static int process_update_laser_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, ship_id;
-	double dx, dy, dz, dvx, dvy;
+	double dx, dy, dz, dvx, dvz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_laser_packet) - sizeof(uint16_t));
 	rc = read_and_unpack_buffer(buffer, "wwSSSSS", &id, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
-				&dvx, (int32_t) UNIVERSE_DIM, &dvy, (int32_t) UNIVERSE_DIM);
+				&dvx, (int32_t) UNIVERSE_DIM, &dvz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_laser(id, dx, dy, dz, dvx, dvy, ship_id);
+	rc = update_laser(id, dx, dy, dz, dvx, dvz, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -3247,18 +3229,18 @@ static int process_sci_select_coords_packet(void)
 {
 	unsigned char buffer[sizeof(struct snis_sci_select_coords_packet)];
 	struct snis_entity *o;
-	double ux, uy;
+	double ux, uz;
 	int rc;
 
 	rc = read_and_unpack_buffer(buffer, "SS",
 			&ux, (int32_t) UNIVERSE_DIM,
-			&uy, (int32_t) UNIVERSE_DIM); 
+			&uz, (int32_t) UNIVERSE_DIM); 
 	if (rc != 0)
 		return rc;
 	if (!(o = find_my_ship()))
 		return 0;
 	o->sci_coordx = ux;	
-	o->sci_coordy = uy;	
+	o->sci_coordz = uz;	
 	return 0;
 }
 
@@ -3356,7 +3338,7 @@ static int process_update_asteroid_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id;
-	double dx, dy, dz, dvx, dvy;
+	double dx, dy, dz, dvx, dvz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
@@ -3365,11 +3347,11 @@ static int process_update_asteroid_packet(void)
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
 			&dvx, (int32_t) UNIVERSE_DIM,
-			&dvy, (int32_t) UNIVERSE_DIM);
+			&dvz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_asteroid(id, dx, dy, dz, dvx, dvy);
+	rc = update_asteroid(id, dx, dy, dz, dvx, dvz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -3419,16 +3401,16 @@ static int process_update_wormhole_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id;
-	double dx, dy;
+	double dx, dz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_wormhole_packet) - sizeof(uint16_t));
 	rc = read_and_unpack_buffer(buffer, "wSS", &id,
-			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM);
+			&dx, (int32_t) UNIVERSE_DIM, &dz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_wormhole(id, dx, dy);
+	rc = update_wormhole(id, dx, dz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -3437,16 +3419,16 @@ static int process_update_starbase_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id;
-	double dx, dy;
+	double dx, dz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_starbase_packet) - sizeof(uint16_t));
 	rc = read_and_unpack_buffer(buffer, "wSS", &id,
-			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM);
+			&dx, (int32_t) UNIVERSE_DIM, &dz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_starbase(id, dx, dy);
+	rc = update_starbase(id, dx, dz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -3455,18 +3437,18 @@ static int process_update_nebula_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id;
-	double dx, dy, r;
+	double dx, dz, r;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_nebula_packet) - sizeof(uint16_t));
 	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
 			&dx, (int32_t) UNIVERSE_DIM,
-			&dy, (int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM,
 			&r, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_nebula(id, dx, dy, r);
+	rc = update_nebula(id, dx, dz, r);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -4314,7 +4296,7 @@ static void show_mainscreen(GtkWidget *w)
 {
 	static int fake_stars_initialized = 0;
 	struct snis_entity *o;
-	float cx, cy, cz, lx, ly;
+	float cx, cy, cz, lx, lz;
 	double camera_look_heading;
 
 
@@ -4325,17 +4307,17 @@ static void show_mainscreen(GtkWidget *w)
 	else
 		camera_look_heading = o->tsd.ship.gun_heading;
 
-	render_skybox(w, camera_look_heading);
+	render_skybox(w, M_PI - camera_look_heading);
 
 	show_mainscreen_starfield(w, camera_look_heading);
 
 	cx = (float) o->x;
-	cy = (float) -o->y;
-	cz = -10.0;
+	cy = -10.0;
+	cz = (float) -o->z;
 	lx = cx + cos(camera_look_heading) * 500.0;
-	ly = cy - sin(camera_look_heading) * 500.0;
-	camera_set_pos(ecx, cx, (float) cz, cy);
-	camera_look_at(ecx, lx, (float) 0.0, ly);
+	lz = cz + sin(camera_look_heading) * 500.0;
+	camera_set_pos(ecx, cx, cy, cz);
+	camera_look_at(ecx, lx, (float) 0.0, lz);
 	camera_set_parameters(ecx, (float) 20, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
 	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
@@ -4636,7 +4618,7 @@ static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 	draw_degree_marks_with_labels(w, gc, x, y, r, NANO_FONT);
 }
 
-static int within_nebula(double x, double y)
+static int within_nebula(double x, double z)
 {
 	double dist2;
 	int i;
@@ -4644,8 +4626,8 @@ static int within_nebula(double x, double y)
 	for (i = 0; i < nnebula; i++) {
 		dist2 = (x - nebulaentry[i].x) *
 			(x - nebulaentry[i].x) +
-			(y - nebulaentry[i].y) *
-			(y - nebulaentry[i].y);
+			(z - nebulaentry[i].z) *
+			(z - nebulaentry[i].z);
 		if (dist2 < nebulaentry[i].r2)
 			return 1;
 	}
@@ -4679,12 +4661,12 @@ static double radarx_to_ux(struct snis_entity *o,
 	return screen_radius * (x - cx) / ((double) extent->rh / 2.0) + o->x;
 }
 
-static double radary_to_uy(struct snis_entity *o,
+static double radary_to_uz(struct snis_entity *o,
 		double y, struct snis_radar_extent *extent, double screen_radius)
 {
 	int cy = extent->ry + (extent->rh / 2);
 
-	return screen_radius * (y - cy) / ((double) extent->rh / 2.0) + o->y;
+	return screen_radius * (y - cy) / ((double) extent->rh / 2.0) + o->z;
 }
 
 static void draw_torpedo_leading_indicator(GtkWidget *w, GdkGC *gc,
@@ -4695,7 +4677,7 @@ static void draw_torpedo_leading_indicator(GtkWidget *w, GdkGC *gc,
 
 	time_to_target = sqrt(dist2) / TORPEDO_VELOCITY;
 	svx = target->vx * (double) r / screen_radius;
-	svy = target->vy * (double) r / screen_radius;
+	svy = target->vz * (double) r / screen_radius;
 	targx = x + svx * time_to_target;
 	targy = y + svy * time_to_target;
 	sng_set_foreground(ORANGERED);
@@ -4712,7 +4694,7 @@ static void draw_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *ship,
 	int nintersections;
 
 	nintersections = circle_line_segment_intersection(x1, y1, x2, y2,
-				ship->x, ship->y, screen_radius,
+				ship->x, ship->z, screen_radius,
 				&ix1, &iy1, &ix2, &iy2);
 
 	if (nintersections == -1) /* no intersections, all points outside circle */
@@ -4778,19 +4760,19 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 
 			oid = lookup_object_by_id(go[i].tsd.laserbeam.origin);
 			tid = lookup_object_by_id(go[i].tsd.laserbeam.target);
-			draw_laserbeam(w, gc, o, go[oid].x, go[oid].y, go[tid].x, go[tid].y,
+			draw_laserbeam(w, gc, o, go[oid].x, go[oid].z, go[tid].x, go[tid].z,
 					extent, screen_radius, r, color);
 			continue;
 		}
 		nx = in_nebula * (0.01 * snis_randn(100) - 0.5) * 0.1 * screen_radius;
 		ny = in_nebula * (0.01 * snis_randn(100) - 0.5) * 0.1 * screen_radius;
 		dist2 = ((go[i].x - o->x + nx) * (go[i].x - o->x + nx)) +
-			((go[i].y - o->y + ny) * (go[i].y - o->y + ny));
+			((go[i].z - o->z + ny) * (go[i].z - o->z + ny));
 		if (dist2 > NR2 || dist2 > visible_distance)
 			continue; /* not close enough */
 
 		tx = (go[i].x + nx - o->x) * (double) r / screen_radius;
-		ty = (go[i].y + ny - o->y) * (double) r / screen_radius;
+		ty = (go[i].z + ny - o->z) * (double) r / screen_radius;
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
 
@@ -4821,7 +4803,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 			case OBJTYPE_LASER:
 				sng_draw_laser_line(w->window, gc, x, y,
 					x - go[i].vx * (double) r / (2 * screen_radius),
-					y - go[i].vy * (double) r / (2 * screen_radius),
+					y - go[i].vz * (double) r / (2 * screen_radius),
 					NPC_LASER_COLOR);
 				break;
 			case OBJTYPE_TORPEDO:
@@ -4896,9 +4878,9 @@ static void draw_science_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *
 	else
 		color = PLAYER_LASER_COLOR;
 	tx1 = ((shooter->x - o->x) * (double) r / range) + (double) cx;
-	ty1 = ((shooter->y - o->y) * (double) r / range) + (double) cy;
+	ty1 = ((shooter->z - o->z) * (double) r / range) + (double) cy;
 	tx2 = ((shootee->x - o->x) * (double) r / range) + (double) cx;
-	ty2 = ((shootee->y - o->y) * (double) r / range) + (double) cy;
+	ty2 = ((shootee->z - o->z) * (double) r / range) + (double) cy;
 
 	rc = circle_line_segment_intersection(tx1, ty1, tx2, ty2,
 			(double) cx, (double) cy, r, &ix1, &iy1, &ix2, &iy2);
@@ -4921,16 +4903,17 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	/* Draw all the stuff */
 
 	/* Draw selected coordinate */
-	dist = hypot(o->x - o->sci_coordx, o->y - o->sci_coordy);
+	dist = hypot(o->x - o->sci_coordx, o->z - o->sci_coordz);
 	if (dist < range) {
 		tx = (o->sci_coordx - o->x) * (double) r / range;
-		ty = (o->sci_coordy - o->y) * (double) r / range;
+		ty = (o->sci_coordz - o->z) * (double) r / range;
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
 		snis_draw_line(w->window, gc, x - 5, y, x + 5, y);
 		snis_draw_line(w->window, gc, x, y - 5, x, y + 5);
 	}
 
+	/* FIXME this is quite likely wrong */
         tx = sin(o->tsd.ship.sci_heading) * range;
         ty = -cos(o->tsd.ship.sci_heading) * range;
 
@@ -4947,7 +4930,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		}
 
 		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
-			((go[i].y - o->y) * (go[i].y - o->y));
+			((go[i].z - o->z) * (go[i].z - o->z));
 		if (go[i].type == OBJTYPE_NEBULA) {
 			if (dist2 < go[i].tsd.nebula.r * go[i].tsd.nebula.r)
 				nebula_factor++;
@@ -4963,7 +4946,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 #endif
 
 		tx = (go[i].x - o->x) * (double) r / range;
-		ty = (go[i].y - o->y) * (double) r / range;
+		ty = (go[i].z - o->z) * (double) r / range;
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
 
@@ -5024,8 +5007,8 @@ static void draw_all_the_science_nebulae(GtkWidget *w, struct snis_entity *o, do
 	for (i = 0; i < nnebula; i++) {
 		dist2 = (o->x - nebulaentry[i].x) *
 			(o->x - nebulaentry[i].x) +
-			(o->y - nebulaentry[i].y) *
-			(o->y - nebulaentry[i].y);
+			(o->z - nebulaentry[i].z) *
+			(o->z - nebulaentry[i].z);
 		dist = sqrt(dist2);
 		if (dist - nebulaentry[i].r > range)
 			continue;
@@ -5033,13 +5016,13 @@ static void draw_all_the_science_nebulae(GtkWidget *w, struct snis_entity *o, do
 			a = snis_randn(360) * M_PI / 180.0;
 			r = snis_randn((int) nebulaentry[i].r + 200);
 			x = nebulaentry[i].x + r * cos(a);
-			y = nebulaentry[i].y + r * sin(a);
+			y = nebulaentry[i].z + r * -sin(a);
 			d2 = (x - o->x) * (x - o->x) +
-				(y - o->y) * (y - o->y);
+				(y - o->z) * (y - o->z);
 			if (d2 > range2)
 				continue;
 			sx = (x - o->x) * (double) SCIENCE_SCOPE_R / range + cx;
-			sy = (y - o->y) * (double) SCIENCE_SCOPE_R / range + cy;
+			sy = (y - o->z) * (double) SCIENCE_SCOPE_R / range + cy;
 			d2 = (cx - sx) * (cx - sx) + (cy - sy) * (cy - sy);
 			if (d2 > SCIENCE_SCOPE_R * SCIENCE_SCOPE_R)
 				continue;
@@ -5068,14 +5051,14 @@ static void draw_all_the_science_sparks(GtkWidget *w, struct snis_entity *o, dou
 			continue;
 
 		dist2 = ((spark[i].x - o->x) * (spark[i].x - o->x)) +
-			((spark[i].y - o->y) * (spark[i].y - o->y));
+			((spark[i].z - o->z) * (spark[i].z - o->z));
 		if (dist2 > range * range)
 			continue; /* not close enough */
 		dist = sqrt(dist2);
 	
 
 		tx = (spark[i].x - o->x) * (double) r / range;
-		ty = (spark[i].y - o->y) * (double) r / range;
+		ty = (spark[i].z - o->z) * (double) r / range;
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
 
@@ -5084,7 +5067,6 @@ static void draw_all_the_science_sparks(GtkWidget *w, struct snis_entity *o, dou
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
-
 
 static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o, struct snis_radar_extent* extent, double screen_radius)
 {
@@ -5106,12 +5088,12 @@ static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o, struct snis
 			continue;
 
 		dist2 = ((spark[i].x - o->x) * (spark[i].x - o->x)) +
-			((spark[i].y - o->y) * (spark[i].y - o->y));
+			((spark[i].z - o->z) * (spark[i].z - o->z));
 		if (dist2 > NR2)
 			continue; /* not close enough */
 
 		tx = (spark[i].x - o->x) * (double) r / screen_radius;
-		ty = (spark[i].y - o->y) * (double) r / screen_radius;
+		ty = (spark[i].z - o->z) * (double) r / screen_radius;
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
 
@@ -5151,7 +5133,7 @@ static void snis_draw_radar_sector_labels(GtkWidget *w,
 	/* FIXME, this algorithm is really fricken dumb. */
 	int x, y;
 	double xincrement = (XKNOWN_DIM / 10.0);
-	double yincrement = (YKNOWN_DIM / 10.0);
+	double yincrement = (ZKNOWN_DIM / 10.0);
 	int x1, y1;
 	const char *letters = "ABCDEFGHIJK";
 	char label[10];
@@ -5164,12 +5146,12 @@ static void snis_draw_radar_sector_labels(GtkWidget *w,
 		if ((x * xincrement) >= (o->x + range * 0.9))
 			continue;
 		for (y = 0; y < 10; y++) {
-			if ((y * yincrement) <= (o->y - range * 0.9))
+			if ((y * yincrement) <= (o->z - range * 0.9))
 				continue;
-			if ((y * yincrement) >= (o->y + range * 0.9))
+			if ((y * yincrement) >= (o->z + range * 0.9))
 				continue;
 			x1 = (int) (((double) r) / range * (x * xincrement - o->x)) + cx + xoffset;
-			y1 = (int) (((double) r) / range * (y * yincrement - o->y)) + cy + yoffset;
+			y1 = (int) (((double) r) / range * (y * yincrement - o->z)) + cy + yoffset;
 			snprintf(label, sizeof(label), "%c%d", letters[y], x);
 			sng_abs_xy_draw_string(w, gc, label, NANO_FONT, x1, y1);
 		}
@@ -5189,8 +5171,8 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 
 	xlow = (int) ((double) r / range * (0 -o->x)) + cx;
 	xhigh = (int) ((double) r / range * (XKNOWN_DIM - o->x)) + cx;
-	ylow = (int) (((double) r) / range * (0.0 - o->y)) + cy;
-	yhigh = (int) (((double) r) / range * (YKNOWN_DIM - o->y)) + cy;
+	ylow = (int) (((double) r) / range * (0.0 - o->z)) + cy;
+	yhigh = (int) (((double) r) / range * (ZKNOWN_DIM - o->z)) + cy;
 	/* vertical lines */
 	increment = (XKNOWN_DIM / 10.0);
 	for (x = 0; x <= 10; x++) {
@@ -5218,14 +5200,14 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 		snis_draw_dotted_vline(drawable, gc, x1, y2, y1, 5);
 	}
 	/* horizontal lines */
-	increment = (YKNOWN_DIM / 10.0);
+	increment = (ZKNOWN_DIM / 10.0);
 	for (y = 0; y <= 10; y++) {
-		if ((y * increment) <= (o->y - range))
+		if ((y * increment) <= (o->z - range))
 			continue;
-		if ((y * increment) >= (o->y + range))
+		if ((y * increment) >= (o->z + range))
 			continue;
 		/* find x intersections with radar circle by pyth. theorem. */
-		ly1 = y * increment - o->y;
+		ly1 = y * increment - o->z;
 		lx1 = sqrt((range2 - (ly1 * ly1)));
 		lx2 = -lx1;
 		y1 = (int) (((double) r) / range * ly1) + cy;
@@ -5271,14 +5253,14 @@ static void snis_draw_radar_grid(GdkDrawable *drawable,
 		snis_draw_dotted_vline(drawable, gc, x1, y2, y1, 10);
 	}
 	/* horizontal lines */
-	increment = (YKNOWN_DIM / 100.0);
+	increment = (ZKNOWN_DIM / 100.0);
 	for (y = 0; y <= 100; y++) {
-		if ((y * increment) <= (o->y - range))
+		if ((y * increment) <= (o->z - range))
 			continue;
-		if ((y * increment) >= (o->y + range))
+		if ((y * increment) >= (o->z + range))
 			continue;
 		/* find x intersections with radar circle by pyth. theorem. */
-		ly1 = y * increment - o->y;
+		ly1 = y * increment - o->z;
 		lx1 = sqrt((range2 - (ly1 * ly1)));
 		lx2 = -lx1;
 		y1 = (int) (((double) r) / range * ly1) + cy;
@@ -5867,7 +5849,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *vline_mesh = 0;
 	static struct mesh *sector_mesh = 0;
-	static struct mesh *axis_mesh[4] = { 0, 0, 0, 0 };
+	static struct mesh *axis_mesh[6] = { 0, 0, 0, 0, 0, 0 };
 	static int current_zoom = 0;
 	struct entity *targeted_entity = NULL;
 
@@ -5879,6 +5861,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		axis_mesh[1]= init_line_mesh(0, -1, 0, 0, 1, 0);
 		axis_mesh[2] = init_line_mesh(0, 0, -1, 0, 0, 1);
 		axis_mesh[3] = init_line_mesh(0, -1, 0, 0, -0.8, 0);
+		axis_mesh[4] = init_line_mesh(1, 0, 0, 0.8, 0, 0);
+		axis_mesh[5] = init_line_mesh(0, 0, 1, 0, 0, 0.8);
 	}
 
 	struct snis_entity *o;
@@ -5893,7 +5877,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		return;
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
-	camera_heading = -o->heading;
+	camera_heading = o->heading + M_PI;
 	normalize_angle(&camera_heading);
 
 	screen_radius = ((((255.0 - current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
@@ -5902,12 +5886,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	double ship_scale = screen_radius/250.0;
 
 	/* rotate camera to be behind my ship */
-	struct mat41 camera_pos = { { -screen_radius * 2.5, -screen_radius, 0 } };
+	struct mat41 camera_pos = { { screen_radius * 2.5, -screen_radius, 0} };
 	struct mat41 camera_pos_heading;
 	mat41_rotate_y(&camera_pos, camera_heading, &camera_pos_heading);
 
-	camera_set_pos(navecx, o->x + camera_pos_heading.m[0], o->z + camera_pos_heading.m[1], -o->y - camera_pos_heading.m[2]);
-	camera_look_at(navecx, o->x, o->z, -o->y);
+	camera_set_pos(navecx, o->x + camera_pos_heading.m[0], o->y + camera_pos_heading.m[1], -o->z - camera_pos_heading.m[2]);
+	camera_look_at(navecx, o->x, o->y, -o->z);
 	camera_set_parameters(navecx, (float) 20, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
 	int in_nebula = 0;
@@ -5915,13 +5899,20 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	double incr;
 
 	for (incr = screen_radius; incr > screen_radius / 4.0; incr -= screen_radius / 5.0) {
-		e = add_entity(navecx, ring_mesh, o->x, o->z, -o->y, DARKRED);
+		e = add_entity(navecx, ring_mesh, o->x, o->y, -o->z, DARKRED);
 		update_entity_scale(e, incr);
 		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 	}
 
-	for (i = 0; i < 4; i++) {
-		e = add_entity(navecx, axis_mesh[i], o->x, o->z, -o->y, i == 3 ? WHITE : DARKRED);
+	for (i = 0; i < 6; i++) {
+		int color = DARKRED;
+		if (i == 3)
+			color = WHITE;
+		else if (i == 4)
+			color = CYAN;
+		else if (i == 5)
+			color = GREEN;
+		e = add_entity(navecx, axis_mesh[i], o->x, o->y, -o->z, color);
 		update_entity_scale(e, screen_radius);
 		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 	}
@@ -5933,9 +5924,9 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	}
 
 	e = add_entity(navecx, sector_mesh,
-		trunc(o->x/sector_size)*sector_size,
-		trunc(o->z/sector_size)*sector_size,
-		-trunc(o->y/sector_size)*sector_size,
+		trunc(o->x / sector_size) * sector_size,
+		trunc(o->y / sector_size) * sector_size,
+		-trunc(o->z / sector_size) * sector_size,
 		DARKGREEN );
 	update_entity_scale(e, sector_size);
 	set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
@@ -5946,10 +5937,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	pthread_mutex_lock(&universe_mutex);
 
 	/* add my ship */
-	e = add_entity(navecx, ship_mesh, o->x, o->z, -o->y, GREEN);
+	e = add_entity(navecx, ship_mesh, o->x, o->y, -o->z, GREEN);
 	set_render_style(e, science_style);
 	update_entity_scale(e, ship_scale);
-	update_entity_rotation(e, M_PI / 2.0, o->heading + M_PI, 0);
+	update_entity_rotation(e, M_PI / 2.0, -o->heading + M_PI, 0);
 
 #define NR2 (screen_radius * screen_radius)
 
@@ -5963,7 +5954,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			continue;
 		}
 		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
-			((go[i].y - o->y) * (go[i].y - o->y));
+			((go[i].z - o->z) * (go[i].z - o->z));
 		if (dist2 > NR2 || dist2 > visible_distance)
 			continue; /* not close enough */
 
@@ -5996,13 +5987,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			else
 				m = entity_get_mesh(go[i].entity);
 			if (go[i].type == OBJTYPE_TORPEDO) {
-				contact = add_entity(navecx, m, go[i].x, go[i].z, -go[i].y, ORANGERED);
+				contact = add_entity(navecx, m, go[i].x, go[i].y, -go[i].z, ORANGERED);
 				set_render_style(contact, science_style | RENDER_BRIGHT_LINE);
 			} else if (go[i].type == OBJTYPE_LASER) {
-				contact = add_entity(navecx, m, go[i].x, go[i].z, -go[i].y, LASER_COLOR);
+				contact = add_entity(navecx, m, go[i].x, go[i].y, -go[i].z, LASER_COLOR);
 				set_render_style(contact, science_style | RENDER_BRIGHT_LINE);
 			} else {
-				contact = add_entity(navecx, m, go[i].x, go[i].z, -go[i].y, GREEN);
+				contact = add_entity(navecx, m, go[i].x, go[i].y, -go[i].z, GREEN);
 				set_render_style(contact, science_style);
 				entity_set_user_data(contact, &go[i]);
 			}
@@ -6037,11 +6028,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			}
 
 			/* add line from center disk to contact in z axis */
-			e = add_entity(navecx, vline_mesh, go[i].x, o->z, -go[i].y, DARKRED);
-			update_entity_scale(e, go[i].z-o->z);
+			e = add_entity(navecx, vline_mesh, go[i].x, o->y, -go[i].z, DARKRED);
+			update_entity_scale(e, go[i].y - o->y);
 			set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 
-			e = add_entity(navecx, ring_mesh, go[i].x, o->z, -go[i].y, DARKRED);
+			e = add_entity(navecx, ring_mesh, go[i].x, o->y, -go[i].z, DARKRED);
 			update_entity_scale(e, entity_get_mesh(contact)->radius*entity_get_scale(contact)/4.0);
 			set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 		}
@@ -6085,7 +6076,7 @@ static void show_navigation(GtkWidget *w)
 	char buf[100];
 	struct snis_entity *o;
 	int cx, cy, gx1, gy1, gx2, gy2;
-	int r, sectorx, sectory;
+	int r, sectorx, sectorz;
 	double screen_radius, max_possible_screen_radius, visible_distance, display_heading;
 	double display_yaw;
 	static int current_zoom = 0;
@@ -6103,8 +6094,8 @@ static void show_navigation(GtkWidget *w)
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
 	sectorx = floor(10.0 * o->x / (double) XKNOWN_DIM);
-	sectory = floor(10.0 * o->y / (double) YKNOWN_DIM);
-	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf)", sectory + 'A', sectorx, o->x, o->y);
+	sectorz = floor(10.0 * o->z / (double) ZKNOWN_DIM);
+	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf)", sectorz + 'A', sectorx, o->x, o->z);
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, LINEHEIGHT);
 	display_heading = to_uheading(o->heading);
 	normalize_angle(&display_heading);	
@@ -6732,7 +6723,7 @@ static void init_comms_ui(void)
 
 static int weapons_button_press(int x, int y)
 {
-	double ux, uy;
+	double ux, uz;
 	static struct snis_radar_extent extent = { 40, 90, 470, 470 };
 	struct snis_entity *o = &go[my_ship_oid];
 	double screen_radius;
@@ -6742,7 +6733,7 @@ static int weapons_button_press(int x, int y)
 
 	screen_radius = ((((255.0 - o->tsd.ship.weapzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	ux = radarx_to_ux(o, x, &extent, screen_radius);
-	uy = radary_to_uy(o, y, &extent, screen_radius);
+	uz = radary_to_uz(o, y, &extent, screen_radius);
 
 	minindex = -1;
 	mindist2 = 0;
@@ -6762,7 +6753,7 @@ static int weapons_button_press(int x, int y)
 		if (!go[i].alive)
 			continue;
 		dist2 = (ux - go[i].x) * (ux - go[i].x) +
-			(uy - go[i].y) * (uy - go[i].y);
+			(uz - go[i].z) * (uz - go[i].z);
 		/* if (dist2 > 5000.0)
 			continue; */
 		if (minindex == -1 || dist2 < mindist2) {
@@ -6783,7 +6774,7 @@ static int science_button_press(int x, int y)
 	int xdist, ydist, dist2;
 	struct snis_entity *selected;
 	struct snis_entity *o;
-	double ur, ux, uy;
+	double ur, ux, uz;
 	int cx, cy, r;
 	double dx, dy;
 
@@ -6811,8 +6802,8 @@ static int science_button_press(int x, int y)
 		dx = x - cx;
 		dy = y - cy;
 		ux = o->x + dx * ur / r;
-		uy = o->y + dy * ur / r;
-		request_sci_select_coords(ux, uy);
+		uz = o->z + dy * ur / r;
+		request_sci_select_coords(ux, uz);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 
@@ -6917,15 +6908,15 @@ skip_data:
 
 static void draw_science_warp_data(GtkWidget *w, struct snis_entity *ship)
 {
-	double bearing, dx, dy;
+	double bearing, dx, dz;
 	char buffer[40];
 
 	if (!ship)
 		return;
 	sng_set_foreground(GREEN);
 	dx = ship->x - ship->sci_coordx;
-	dy = ship->y - ship->sci_coordy;
-	bearing = atan2(dx, dy) * 180 / M_PI;
+	dz = ship->z - ship->sci_coordz;
+	bearing = atan2(dx, dz) * 180 / M_PI;
 	if (bearing < 0)
 		bearing = -bearing;
 	else
@@ -6933,7 +6924,7 @@ static void draw_science_warp_data(GtkWidget *w, struct snis_entity *ship)
 	sng_abs_xy_draw_string(w, gc, "WARP DATA:", NANO_FONT, 10, SCREEN_HEIGHT - 40);
 	sprintf(buffer, "BEARING: %3.2lf", bearing);
 	sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 25);
-	sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * hypot(dy, dx) / (XKNOWN_DIM / 2.0));
+	sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * hypot(dz, dx) / (XKNOWN_DIM / 2.0));
 	sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
 }
  
@@ -6941,7 +6932,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 {
 	char buffer[40];
 	int x, y, gx1, gy1, gx2, gy2;
-	double bearing, dx, dy, range, display_heading;
+	double bearing, dx, dz, range, display_heading;
 	char *the_faction;
 
 	if (!ship)
@@ -6994,7 +6985,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o)
-		sprintf(buffer, "Y: %8.2lf", o->y);
+		sprintf(buffer, "Y: %8.2lf", o->z);
 	else
 		sprintf(buffer, "Y:");
 	y += 25;
@@ -7002,8 +6993,8 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 
 	if (o) { 
 		dx = go[my_ship_oid].x - o->x;
-		dy = go[my_ship_oid].y - o->y;
-		bearing = atan2(dx, dy) * 180 / M_PI;
+		dz = go[my_ship_oid].z - o->z;
+		bearing = atan2(dx, dz) * 180 / M_PI;
 		if (bearing < 0)
 			bearing = -bearing;
 		else
@@ -7016,7 +7007,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o) {
-		range = sqrt(dx * dx + dy * dy);
+		range = sqrt(dx * dx + dz * dz);
 		sprintf(buffer, "RANGE: %8.2lf", range);
 	} else {
 		sprintf(buffer, "RANGE:");
@@ -7167,9 +7158,9 @@ static int ux_to_demonsx(double ux)
 	return ((ux - demon_ui.ux1) / (demon_ui.ux2 - demon_ui.ux1)) * SCREEN_WIDTH;
 }
 
-static int uy_to_demonsy(double uy)
+static int uz_to_demonsy(double uz)
 {
-	return ((uy - demon_ui.uy1) / (demon_ui.uy2 - demon_ui.uy1)) * SCREEN_HEIGHT;
+	return ((uz - demon_ui.uy1) / (demon_ui.uy2 - demon_ui.uy1)) * SCREEN_HEIGHT;
 }
 
 static int ur_to_demonsr(double ur)
@@ -7182,7 +7173,7 @@ static double demon_mousex_to_ux(double x)
 	return demon_ui.ux1 + (x / real_screen_width) * (demon_ui.ux2 - demon_ui.ux1);
 }
 
-static double demon_mousey_to_uy(double y)
+static double demon_mousey_to_uz(double y)
 {
 	return demon_ui.uy1 + (y / real_screen_height) * (demon_ui.uy2 - demon_ui.uy1);
 }
@@ -7251,9 +7242,9 @@ static void demon_button_press(int button, gdouble x, gdouble y)
 	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
 	if (button == 3) {
 		demon_ui.ix = demon_mousex_to_ux(x);
-		demon_ui.iy = demon_mousey_to_uy(y);
+		demon_ui.iz = demon_mousey_to_uz(y);
 		demon_ui.ix2 = demon_mousex_to_ux(x);
-		demon_ui.iy2 = demon_mousey_to_uy(y);
+		demon_ui.iz2 = demon_mousey_to_uz(y);
 		demon_ui.selectmode = 1;
 	}
 	if (button == 2) {
@@ -7269,11 +7260,11 @@ static inline int between(double a, double b, double v)
 
 static void demon_button_create_item(gdouble x, gdouble y)
 {
-	double ux, uy;
+	double ux, uz;
 	uint8_t item_type;
 
 	ux = demon_mousex_to_ux(x);
-	uy = demon_mousey_to_uy(y);
+	uz = demon_mousey_to_uz(y);
 
 	switch (demon_ui.buttonmode) {
 		case DEMON_BUTTON_SHIPMODE:
@@ -7295,7 +7286,7 @@ static void demon_button_create_item(gdouble x, gdouble y)
 			return;
 	}
 	queue_to_server(packed_buffer_new("hbSS", OPCODE_CREATE_ITEM, item_type,
-			ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM));
+			ux, (int32_t) UNIVERSE_DIM, uz, (int32_t) UNIVERSE_DIM));
 }
 
 typedef int (*demon_select_test)(uint32_t oid);
@@ -7316,7 +7307,7 @@ static void demon_select_and_act(double sx1, double sy1,
 		if (!o->alive)
 			continue;
 		sx = ux_to_demonsx(o->x);
-		sy = uy_to_demonsy(o->y);
+		sy = uz_to_demonsy(o->z);
 		if (!between(sx1, sx2, sx) || !between(sy1, sy2, sy))
 			continue;
 		if (dtest(o->id)) {
@@ -7357,7 +7348,7 @@ static void demon_button3_release(int button, gdouble x, gdouble y)
 	y = y * SCREEN_HEIGHT / real_screen_height;
 
 	sx1 = ux_to_demonsx(demon_ui.ix);
-	sy1 = uy_to_demonsy(demon_ui.iy);
+	sy1 = uz_to_demonsy(demon_ui.iz);
 
 	if (hypot(sx1 - x, sy1 - y) >= 5) {
 		/* multiple selection... */
@@ -7373,7 +7364,7 @@ static void demon_button3_release(int button, gdouble x, gdouble y)
 			demon_deselect, demon_select, &nselected); 
 		if (nselected == 0) {
 			demon_ui.selectedx = demon_mousex_to_ux(ox);
-			demon_ui.selectedy = demon_mousey_to_uy(oy);
+			demon_ui.selectedz = demon_mousey_to_uz(oy);
 		}
 		pthread_mutex_unlock(&universe_mutex);
 	}
@@ -7382,14 +7373,14 @@ static void demon_button3_release(int button, gdouble x, gdouble y)
 static void demon_button2_release(int button, gdouble x, gdouble y)
 {
 	int i;
-	double dx, dy;
+	double dx, dz;
 
 	if (demon_ui.nselected <= 0)
 		return;
 
 	/* Moving objects... */
 	dx = demon_mousex_to_ux(x) - demon_mousex_to_ux(demon_ui.move_from_x);
-	dy = demon_mousey_to_uy(y) - demon_mousey_to_uy(demon_ui.move_from_y);
+	dz = demon_mousey_to_uz(y) - demon_mousey_to_uz(demon_ui.move_from_y);
 	
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < demon_ui.nselected; i++) {
@@ -7397,7 +7388,7 @@ static void demon_button2_release(int button, gdouble x, gdouble y)
 				OPCODE_DEMON_MOVE_OBJECT,
 				demon_ui.selected_id[i],
 				dx, (int32_t) UNIVERSE_DIM,
-				dy, (int32_t) UNIVERSE_DIM));
+				dz, (int32_t) UNIVERSE_DIM));
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -7429,7 +7420,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	x = ux_to_demonsx(o->x);
 	if (x < 0 || x > SCREEN_WIDTH)
 		return;
-	y = uy_to_demonsy(o->y);
+	y = uz_to_demonsy(o->z);
 	if (y < 0 || y > SCREEN_HEIGHT)
 		return;
 	x1 = x - 1;
@@ -7450,7 +7441,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 			if (vi >= 0) {	
 				v = &go[vi];
 				vx = ux_to_demonsx(v->x);
-				vy = uy_to_demonsy(v->y);
+				vy = uz_to_demonsy(v->z);
 			}
 		}
 		break;
@@ -7564,7 +7555,7 @@ static int ndemon_groups = 0;
 
 static struct demon_location {
 	char name[100];
-	double x, y;
+	double x, z;
 } demon_location[26];
 static int ndemon_locations = 0;
 
@@ -7690,7 +7681,7 @@ static int construct_demon_command(char *input,
 				return -1;
 			}
 			demon_location[l].x = demon_ui.selectedx;
-			demon_location[l].y = demon_ui.selectedy;
+			demon_location[l].z = demon_ui.selectedz;
 			break;
 		case 1: /* select */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
@@ -7784,7 +7775,7 @@ static int construct_demon_command(char *input,
 					return -1;
 				}
 				demon_ui.selectedx = demon_location[l].x;
-				demon_ui.selectedy = demon_location[l].y;
+				demon_ui.selectedz = demon_location[l].z;
 			}
 			for (i = 0; i < demon_group[g].nids; i++)
 				demon_ui.selected_id[i] = demon_group[g].id[i];
@@ -7941,10 +7932,10 @@ static void init_demon_ui()
 	demon_ui.ux1 = 0;
 	demon_ui.uy1 = 0;
 	demon_ui.ux2 = XKNOWN_DIM;
-	demon_ui.uy2 = YKNOWN_DIM;
+	demon_ui.uy2 = ZKNOWN_DIM;
 	demon_ui.nselected = 0;
 	demon_ui.selectedx = -1.0;
-	demon_ui.selectedy = -1.0;
+	demon_ui.selectedz = -1.0;
 	demon_ui.selectmode = 0;
 	demon_ui.captain_of = -1;
 	strcpy(demon_ui.error_msg, "");
@@ -8045,12 +8036,12 @@ static void show_demon(GtkWidget *w)
 		sx1 = ux_to_demonsx(ix * x);
 		if (sx1 < 0 || sx1 > SCREEN_WIDTH)
 			continue;
-		sy1 = uy_to_demonsy(0.0);
+		sy1 = uz_to_demonsy(0.0);
 		if (sy1 < 0)
 			sy1 = 0;
 		if (sy1 > SCREEN_HEIGHT)
 			continue;
-		sy2 = uy_to_demonsy(YKNOWN_DIM);
+		sy2 = uz_to_demonsy(ZKNOWN_DIM);
 		if (sy2 > SCREEN_HEIGHT)
 			sy2 = SCREEN_HEIGHT;
 		if (sy2 < 0)
@@ -8058,11 +8049,11 @@ static void show_demon(GtkWidget *w)
 		snis_draw_dotted_vline(w->window, gc, sx1, sy1, sy2, 5);
 	}
 
-	iy = YKNOWN_DIM / 10.0;
+	iy = ZKNOWN_DIM / 10.0;
 	for (y = 0; y <= 10; y++) {
 		int sx1, sy1, sx2;
 
-		sy1 = uy_to_demonsy(iy * y);
+		sy1 = uz_to_demonsy(iy * y);
 		if (sy1 < 0 || sy1 > SCREEN_HEIGHT)
 			continue;
 		sx1 = ux_to_demonsx(0.0);
@@ -8079,14 +8070,14 @@ static void show_demon(GtkWidget *w)
 	}
 
 	ix = XKNOWN_DIM / 10;
-	iy = YKNOWN_DIM / 10;
+	iy = ZKNOWN_DIM / 10;
 	for (x = 0; x < 10; x++)
 		for (y = 0; y < 10; y++) {
 			int tx, ty;
 
 			snprintf(label, sizeof(label), "%c%d", letters[y], x);
 			tx = ux_to_demonsx(x * ix);
-			ty = uy_to_demonsy(y * iy);
+			ty = uz_to_demonsy(y * iy);
 			sng_abs_xy_draw_string(w, gc, label, NANO_FONT,
 				tx + xoffset,ty + yoffset);
 		}
@@ -8100,7 +8091,7 @@ static void show_demon(GtkWidget *w)
 
 	if (timer & 0x02) {
 		x = ux_to_demonsx(demon_ui.selectedx);
-		y = uy_to_demonsy(demon_ui.selectedy);
+		y = uz_to_demonsy(demon_ui.selectedz);
 		sng_set_foreground(BLUE);
 		snis_draw_line(w->window, gc, x - 3, y, x + 3, y);
 		snis_draw_line(w->window, gc, x, y - 3, x, y + 3);
@@ -8121,9 +8112,9 @@ static void show_demon(GtkWidget *w)
 		int x1, y1, x2, y2;
 
 		x1 = ux_to_demonsx(demon_ui.ix);
-		y1 = uy_to_demonsy(demon_ui.iy);
+		y1 = uz_to_demonsy(demon_ui.iz);
 		x2 = ux_to_demonsx(demon_ui.ix2);
-		y2 = uy_to_demonsy(demon_ui.iy2);
+		y2 = uz_to_demonsy(demon_ui.iz2);
 		sng_set_foreground(WHITE);
 		sng_draw_dotted_line(w->window, gc, x1, y1, x2, y1);
 		sng_draw_dotted_line(w->window, gc, x1, y2, x2, y2);
@@ -9097,7 +9088,7 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 	__attribute__((unused)) void *unused)
 {
 	demon_ui.ix2 = demon_mousex_to_ux(event->x);
-	demon_ui.iy2 = demon_mousey_to_uy(event->y);
+	demon_ui.iz2 = demon_mousey_to_uz(event->y);
 	return TRUE;
 }
 
