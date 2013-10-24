@@ -105,7 +105,7 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].m = m;
 	cx->entity_list[n].x = x;
 	cx->entity_list[n].y = y;
-	cx->entity_list[n].z = z;
+	cx->entity_list[n].z = -z;
 	cx->entity_list[n].rx = 0;
 	cx->entity_list[n].ry = 0;
 	cx->entity_list[n].rz = 0;
@@ -135,7 +135,7 @@ void update_entity_pos(struct entity *e, float x, float y, float z)
 {
 	e->x = x;
 	e->y = y;
-	e->z = z;
+	e->z = -z;
 }
 
 void update_entity_rotation(struct entity *e, float rx, float ry, float rz)

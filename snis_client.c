@@ -5962,7 +5962,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	e = add_entity(navecx, ship_mesh, o->x, o->y, -o->z, GREEN);
 	set_render_style(e, science_style);
 	update_entity_scale(e, ship_scale);
-	update_entity_rotation(e, M_PI / 2.0, -o->heading + M_PI, 0);
+	update_entity_rotation(e, 0, -o->heading, 0);
 
 #define NR2 (screen_radius * screen_radius)
 
@@ -6047,7 +6047,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			case OBJTYPE_SHIP1:
 				contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
 				update_entity_scale(contact, contact_scale);
-				update_entity_rotation(contact, M_PI / 2.0, go[i].heading + M_PI, 0);
+				update_entity_rotation(contact, 0, go[i].heading, 0);
 				break;
 			}
 
