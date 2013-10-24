@@ -110,7 +110,8 @@ module sixth_wedge()
 }
 
 $fn = 8;
-rotate(a = -90, v = [0, 0, 1]) 
+rotate(a = 90, v = [0, 1, 0])
+	rotate(a = -90, v = [1, 0, 0])
 	scale (v = [2.4, 2.4, 4.8])
 		sixth_wedge();
 

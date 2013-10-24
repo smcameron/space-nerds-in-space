@@ -90,7 +90,10 @@ module main_body()
 	}
 }
 
-main_body();
-translate(v = [-7, 0, 0])
-	legset();
+rotate (a = -90, v = [1, 0, 0])
+rotate (a = 180, v = [0, 0, 1]) {
+	main_body();
+	translate(v = [-7, 0, 0])
+		legset();
+}
 

@@ -29,5 +29,6 @@ module transport()
 }
 
 $fn = 5;
-rotate(a = 180, v = [0, 0, 1])
+
+rotate(a = -90, v = [1, 0, 0])
 	transport();

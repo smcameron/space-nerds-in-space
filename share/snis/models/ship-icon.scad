@@ -9,6 +9,6 @@ module pointer()
 
 scale(v = [5, 5, 5])
 	translate(v = [-1.7, 0, 0])
-		rotate(a = -90, v = [0, 1, 0]) 
+		rotate(a = 90, v = [0, 1, 0]) 
 			pointer();
 

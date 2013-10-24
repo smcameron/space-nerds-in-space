@@ -1,5 +1,7 @@
 
 $fn=12;
+rotate(a = 180, v = [0, 1, 0])
+rotate(a = -90, v = [1, 0, 0])
 union() {
 difference() {
 	scale (v = [2, 0.5, 1])

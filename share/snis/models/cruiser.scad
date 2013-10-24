@@ -56,5 +56,7 @@ module ship()
 }
 
 $fn = 6;
+rotate(a = 180, v = [0, 1, 0])
+rotate(a = -90, v = [1, 0, 0])
 ship();
 

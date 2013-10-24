@@ -39,7 +39,8 @@ module fuselage(sz) {
 	}
 }
 
-rotate(a = 180, v = [0, 0, 1])
+
+rotate(a = -90, v = [1, 0, 0])
 union() {
 fuselage(10);
 rotate(a = -30, v = [0, 1, 0])

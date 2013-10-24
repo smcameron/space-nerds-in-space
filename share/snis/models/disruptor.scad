@@ -79,7 +79,8 @@ module antenna()
 			cylinder(h = 8, r1 = 0.2, r2 = 0.2, cetner = true);
 }
 
-
+rotate(a = 180, v = [0, 1, 0])
+rotate(a = -90, v = [1, 0, 0])
 scale(v = [2.5, 2.5, 2.5])
 union() {
 	main_body();

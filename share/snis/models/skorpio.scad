@@ -29,8 +29,7 @@ module main_body() {
 	}
 }
 
-
-rotate(a = 180, v = [0, 0, 1])
+rotate(a = -90, v = [1, 0, 0])
 union() {
 main_body();
 rotate(a = 90, v = [0, 1, 0]) {
