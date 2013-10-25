@@ -167,7 +167,7 @@ static int is_backface(float x1, float y1, float x2, float y2, float x3, float y
 	twicearea =	(x1 * y2 - x2 * y1) +
 			(x2 * y3 - x3 * y2) +
 			(x3 * y1 - x1 * y3);
-	return twicearea >= 0;
+	return twicearea <= 0;
 }
 
 static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc,
