@@ -1603,14 +1603,12 @@ static void auto_select_enemy(void *context, void *entity)
 		range2 = hypot2(t->x - o->x, t->z - o->z);
 		if (range2 > acceptable_range2)
 			return;
-		angle = atan2(t->z - o->z, t->x - o->x);
-		/* FIXME: are these angle adjustments of M_PI / 2.0 correct now? */
-		/* angle += M_PI / 2.0; */
+		angle = atan2(-(t->z - o->z), t->x - o->x);
 		if (angle < 0.0)
 			angle += 2.0 * M_PI;
 		else if (angle > 2 * M_PI)
 			angle -= 2.0 * M_PI;
-		/* a1 = o->tsd.ship.gun_heading + M_PI / 2.0; */
+		a1 = o->tsd.ship.gun_heading;
 		if (a1 < 0.0)
 			a1 += 2.0 * M_PI;
 		else if (a1 > 2.0 * M_PI)
