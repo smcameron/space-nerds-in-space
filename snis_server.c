@@ -4553,7 +4553,7 @@ static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 		yaw_func(c, 2);
 		break;
 	case YAW_RIGHT_FINE:
-		yaw_func(c, +2);
+		yaw_func(c, -2);
 		break;
 	default:
 		break;
