@@ -455,7 +455,7 @@ void wireframe_render_point_line(GtkWidget *w, GdkGC *gc, struct entity_context 
 			while (vcurr <= vend) {
 				x2 = (vcurr->wx * cx->camera.xvpixels / 2) +
 							cx->camera.xvpixels / 2;
-				y2 = (vcurr->wy * cx->camera.yvpixels / 2) +
+				y2 = (-vcurr->wy * cx->camera.yvpixels / 2) +
 							cx->camera.yvpixels / 2;
 				if (vcurr != vstart) {
 					if (e->m->l[i].flag & MESH_LINE_DOTTED)
