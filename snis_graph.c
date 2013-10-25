@@ -156,12 +156,14 @@ static void sng_gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean fil
 	if (filled)
 		glBegin(GL_POLYGON);
 	else
-		glBegin(GL_LINE_LOOP);
+		glBegin(GL_LINE_STRIP);
         glColor3us(h->red, h->green, h->blue);
         glVertex2i(x, sgc.screen_height - y);
         glVertex2i(x2, sgc.screen_height - y);
         glVertex2i(x2, sgc.screen_height - y2);
         glVertex2i(x, sgc.screen_height - y2);
+	if (!filled)
+        	glVertex2i(x, sgc.screen_height - y);
 	glEnd();
 #else
 	gdk_draw_rectangle(drawable, gc, filled, x, y, width, height);
@@ -492,9 +494,9 @@ void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, float x, float y, float r
 	int i;
 	GdkColor *h = &huex[sgc.hue];
  
-	glBegin(GL_LINE_LOOP);
+	glBegin(GL_LINE_STRIP);
         glColor3us(h->red, h->green, h->blue);
-	for (i = 0; i < 360; i += 2)
+	for (i = 0; i <= 360; i += 2)
 		glVertex2f(sgc.xscale * (x + cos(i * M_PI / 180.0) * r),
 			(sgc.screen_height - y * sgc.yscale) + sin(i * M_PI / 180.0) * r * sgc.yscale);
 	glEnd();
