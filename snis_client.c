@@ -1034,13 +1034,13 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	y2 = target->y;
 	z2 = target->z;
 
-	yaw = atan2(y2 - y1, x2 - x1);
-	pitch = atan2(z2 - z1, hypot(x2 - x1, y2 - y1));
+	yaw = atan2(z2 - z1, x2 - x1);
+	pitch = atan2(y2 - y1, hypot(x2 - x1, z2 - z1));
 
 	x1 += cos(yaw) * 15.0;
-	y1 -= sin(yaw) * 15.0;
+	z1 -= sin(yaw) * 15.0;
 	x2 -= cos(yaw) * 15.0;
-	y2 += sin(yaw) * 15.0;
+	z2 += sin(yaw) * 15.0;
 
 	dx = (x2 - x1) / MAX_LASERBEAM_SEGMENTS;
 	dy = (y2 - y1) / MAX_LASERBEAM_SEGMENTS;
@@ -1063,7 +1063,7 @@ static void update_laserbeam_segments(struct snis_entity *o)
 		ld->x[i] = x1 + (i + lastd) * dx;
 		ld->y[i] = y1 + (i + lastd) * dy;
 		ld->z[i] = z1 + (i + lastd) * dz; 
-		update_entity_pos(ld->entity[i], ld->x[i], ld->z[i], ld->y[i]);
+		update_entity_pos(ld->entity[i], ld->x[i], ld->y[i], ld->z[i]);
 		update_entity_rotation(ld->entity[i], rx, ry, rz);
 	}
 }
