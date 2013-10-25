@@ -5877,7 +5877,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 	if (!ring_mesh) {
 		ring_mesh = init_circle_mesh(0, 0, 1);
-		vline_mesh = init_line_mesh(0, 0, 0, 0, 0, 1);
+		vline_mesh = init_line_mesh(0, 0, 0, 0, 1, 0);
 		sector_mesh = init_sector_mesh(7);
 		axis_mesh[0] = init_line_mesh(-1, 0, 0, 1, 0, 0);
 		axis_mesh[1]= init_line_mesh(0, -1, 0, 0, 1, 0);
