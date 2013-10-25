@@ -887,14 +887,14 @@ void camera_set_pos(struct entity_context *cx, float x, float y, float z)
 {
 	cx->camera.x = x;
 	cx->camera.y = y;
-	cx->camera.z = z;
+	cx->camera.z = -z;
 }
 
 void camera_look_at(struct entity_context *cx, float x, float y, float z)
 {
 	cx->camera.lx = x;
 	cx->camera.ly = y;
-	cx->camera.lz = z;
+	cx->camera.lz = -z;
 }
 
 void camera_set_parameters(struct entity_context *cx, float near, float far, float width, float height,

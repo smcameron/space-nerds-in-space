@@ -4317,9 +4317,9 @@ static void show_mainscreen(GtkWidget *w)
 
 	cx = (float) o->x;
 	cy = -10.0;
-	cz = (float) -o->z;
+	cz = (float) o->z;
 	lx = cx + cos(camera_look_heading) * 500.0;
-	lz = cz + sin(camera_look_heading) * 500.0;
+	lz = cz - sin(camera_look_heading) * 500.0;
 	camera_set_pos(ecx, cx, cy, cz);
 	camera_look_at(ecx, lx, (float) 0.0, lz);
 	camera_set_parameters(ecx, (float) 20, (float) 300, (float) 16, (float) 12,
@@ -5908,12 +5908,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	double ship_scale = screen_radius/250.0;
 
 	/* rotate camera to be behind my ship */
-	struct mat41 camera_pos = { { screen_radius * 2.5, -screen_radius, 0} };
+	struct mat41 camera_pos = { { screen_radius * 2.5, screen_radius, 0} };
 	struct mat41 camera_pos_heading;
 	mat41_rotate_y(&camera_pos, camera_heading, &camera_pos_heading);
 
-	camera_set_pos(navecx, o->x + camera_pos_heading.m[0], o->y + camera_pos_heading.m[1], -o->z - camera_pos_heading.m[2]);
-	camera_look_at(navecx, o->x, o->y, -o->z);
+	camera_set_pos(navecx, o->x + camera_pos_heading.m[0],
+			o->y + camera_pos_heading.m[1], o->z + camera_pos_heading.m[2]);
+	camera_look_at(navecx, o->x, o->y, o->z);
 	camera_set_parameters(navecx, (float) 20, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
 	int in_nebula = 0;
@@ -7088,8 +7089,8 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	science_style |= RENDER_ILDA;
 #endif
 	set_render_style(e, science_style);
-	camera_set_pos(sciecx, -m->radius * 4, -20, 0);
-	camera_look_at(sciecx, (float) 0, (float) 0, (float) -m->radius / 2.0);
+	camera_set_pos(sciecx, -m->radius * 4, 20, 0);
+	camera_look_at(sciecx, (float) 0, (float) 0, (float) m->radius / 2.0);
 	camera_set_parameters(sciecx, (float) 20, (float) 300,
 				(float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
