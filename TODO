@@ -150,23 +150,23 @@ needs fixing.
                             v     -z
                            +y    ??? degrees
 
-4.  The coordinate system OpenGL uses 
+4.  The coordinate system OpenGL uses (degrees of yaw around +y)
 
-                ??? degrees +y
+             90 degrees    +y (up)
                       -z    ^
                        \    |
                         \   |
                          \  |
                           \ |
- ??? degrees               \|
-   -x <---------------------\------------------------> +x  ??? degrees
+ 180 degrees               \|
+   -x <---------------------\------------------------> +x  0 degrees (right)
                             |\
                             | \
                             |  \
                             |   \
                             |    \
                             v     +z
-                           -y    ??? degrees
+                           -y    270 degrees
 
 There is no reason for #2 and #3 to be different than #4, so those
 differences must be eliminated.
