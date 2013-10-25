@@ -4708,16 +4708,16 @@ static void draw_torpedo_leading_indicator(GtkWidget *w, GdkGC *gc,
 }
 
 static void draw_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *ship,
-		double x1, double y1, double x2, double y2,
+		double x1, double z1, double x2, double z2,
 		struct snis_radar_extent *extent, double screen_radius, int r, int color)
 {
-	double ix1, iy1, ix2, iy2;
+	double ix1, iz1, ix2, iz2;
 	int cx, cy, tx, ty, lx1, ly1, lx2, ly2;
 	int nintersections;
 
-	nintersections = circle_line_segment_intersection(x1, y1, x2, y2,
+	nintersections = circle_line_segment_intersection(x1, z1, x2, z2,
 				ship->x, ship->z, screen_radius,
-				&ix1, &iy1, &ix2, &iy2);
+				&ix1, &iz1, &ix2, &iz2);
 
 	if (nintersections == -1) /* no intersections, all points outside circle */
 		return;
@@ -4733,11 +4733,11 @@ static void draw_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *ship,
 	cx = extent->rx + (extent->rw / 2);
 	cy = extent->ry + (extent->rh / 2);
 	tx = (ix1 - ship->x) * (double) r / screen_radius;
-	ty = (iy1 - ship->y) * (double) r / screen_radius;
+	ty = (iz1 - ship->z) * (double) r / screen_radius;
 	lx1 = (int) (tx + (double) cx);
 	ly1 = (int) (ty + (double) cy);
 	tx = (ix2 - ship->x) * (double) r / screen_radius;
-	ty = (iy2 - ship->y) * (double) r / screen_radius;
+	ty = (iz2 - ship->z) * (double) r / screen_radius;
 	lx2 = (int) (tx + (double) cx);
 	ly2 = (int) (ty + (double) cy);
 	sng_draw_laser_line(w->window, gc, lx1, ly1, lx2, ly2, color);
