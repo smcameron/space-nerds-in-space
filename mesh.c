@@ -135,8 +135,8 @@ struct mesh *mesh_duplicate(struct mesh *original)
 void mesh_add_point(struct mesh *m, float x, float y, float z)
 {
 	m->v[m->nvertices].x = x;
-	m->v[m->nvertices].y = z;
-	m->v[m->nvertices].z = -y;
+	m->v[m->nvertices].y = y;
+	m->v[m->nvertices].z = z;
 	m->nvertices++;
 }
 
@@ -148,7 +148,7 @@ void mesh_add_line_last_2(struct mesh *m, int flag)
 	m->nlines++;
 }
 
-struct mesh *init_circle_mesh(double x, double y, double r)
+struct mesh *init_circle_mesh(double x, double z, double r)
 {
 	int i;
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
@@ -164,7 +164,7 @@ struct mesh *init_circle_mesh(double x, double y, double r)
 	for (i = 0; i <= 360; i += 2) {
 		my_mesh->v[my_mesh->nvertices].x = x + cos(i * M_PI / 180.0) * r;
 		my_mesh->v[my_mesh->nvertices].y = 0;
-		my_mesh->v[my_mesh->nvertices].z = -y - sin(i * M_PI / 180.0) * r;
+		my_mesh->v[my_mesh->nvertices].z = z - sin(i * M_PI / 180.0) * r;
 		my_mesh->nvertices++;
 	}
 	my_mesh->l[0].start = &my_mesh->v[0];
@@ -186,11 +186,11 @@ struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y
 	my_mesh->radius = dist3d(x2 - x1, y2 - y1, z2 - z1);
 
 	my_mesh->v[0].x = x1;
-	my_mesh->v[0].y = z1;
-	my_mesh->v[0].z = -y1;
+	my_mesh->v[0].y = y1;
+	my_mesh->v[0].z = z1;
 	my_mesh->v[1].x = x2;
-	my_mesh->v[1].y = z2;
-	my_mesh->v[1].z = -y2;
+	my_mesh->v[1].y = y2;
+	my_mesh->v[1].z = z2;
 
 	my_mesh->l[0].start = &my_mesh->v[0];
 	my_mesh->l[0].end = &my_mesh->v[1];

@@ -951,25 +951,25 @@ static struct mesh *init_sector_mesh(int extra_extent)
 		for (j = -1 -extra_extent; j < 1 + extra_extent; ++j) {
 
 			/* line left */
-			mesh_add_point(my_mesh, i,  j, 0);
-			mesh_add_point(my_mesh, i + 1, j, 0);
+			mesh_add_point(my_mesh, i,  0, j);
+			mesh_add_point(my_mesh, i + 1, 0, j);
 			mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
 
 			/* line bottom */
-			mesh_add_point(my_mesh, i, j, 0);
-			mesh_add_point(my_mesh, i, j + 1, 0);
+			mesh_add_point(my_mesh, i, 0, j);
+			mesh_add_point(my_mesh, i, 0, j + 1);
 			mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
 
 			if (j == extra_extent) {
 				/* line right */
-				mesh_add_point(my_mesh, i, j + 1,  0);
-				mesh_add_point(my_mesh, i + 1, j + 1, 0);
+				mesh_add_point(my_mesh, i, 0, j + 1);
+				mesh_add_point(my_mesh, i + 1, 0, j + 1);
 				mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
 			}
 			if (i == extra_extent) {
 				/* line top */
-				mesh_add_point(my_mesh, i + 1, j, 0);
-				mesh_add_point(my_mesh, i + 1, j + 1, 0);
+				mesh_add_point(my_mesh, i + 1, 0, j);
+				mesh_add_point(my_mesh, i + 1, 0, j + 1);
 				mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
 			}
 		}
