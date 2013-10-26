@@ -18,7 +18,7 @@
 #include "bline.h"
 
 
-#define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY)
+#define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY * (NSHADECOLORS + 1))
 GdkColor huex[TOTAL_COLORS]; 
 
 extern struct my_vect_obj **gamefont[];
@@ -468,7 +468,40 @@ void sng_setup_colors(GtkWidget *w)
 		huex[GRAY + i].green = (i * 32767 * 2) / 256;
 		huex[GRAY + i].blue = (i * 32767 * 2) / 256;
 	}
-	for (i = 0; i < NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY; i++)
+
+	for (i = 1; i <= NSHADECOLORS; i++) {
+		int j, r, g, b;
+
+		r = sng_rand(32767); 
+		g = sng_rand(32767); 
+		b = sng_rand(32767); 
+
+		for (j = 0; j < NSHADESOFGRAY / 2; j++) { 
+			int index;
+			float f;
+
+			f = (float) j / (float) (NSHADESOFGRAY / 2.0);
+
+			index = GRAY + (i * NSHADESOFGRAY) + j;
+			huex[index].red = (f * (float) r);
+			huex[index].green = (f * (float) g); 
+			huex[index].blue = (f * (float) b); 
+		}
+
+		for (j = NSHADESOFGRAY / 2; j < NSHADESOFGRAY; j++) {
+			int index;
+			float f;
+
+			f = (float) (j - NSHADESOFGRAY / 2) / (float) NSHADESOFGRAY / 2.0;
+
+			index = GRAY + (i * NSHADESOFGRAY) + j;
+			huex[index].red = r + (f * ((32767.0 * 2.0) - (float) r));
+			huex[index].green = g + (f * ((32767.0 * 2.0) - (float) g)); 
+			huex[index].blue = b + (f * ((32767.0 * 2.0) - (float) b)); 
+		}
+	}
+
+	for (i = 0; i < TOTAL_COLORS; i++)
                 gdk_colormap_alloc_color(gtk_widget_get_colormap(w),
 				&huex[i], FALSE, FALSE);
 	gtk_widget_modify_bg(w, GTK_STATE_NORMAL, &huex[BLACK]);

@@ -32,6 +32,7 @@
 #define NRAINBOWCOLORS (NRAINBOWSTEPS*3)
 #define GRAY (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS)
 #define NSHADESOFGRAY 256
+#define NSHADECOLORS 10
 
 typedef void line_drawing_function(GdkDrawable *drawable,
 	GdkGC *gc, float x1, float y1, float x2, float y2);
@@ -88,7 +89,7 @@ SNG_GLOBAL void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int fon
 SNG_GLOBAL void sng_abs_xy_draw_string_with_cursor(GtkWidget *w, GdkGC *gc,
 				char *s, int font, float x, float y, int cursor_pos, int cursor_on) ;
 SNG_GLOBAL void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, float x, float y);
-SNG_GLOBAL void sng_setup_colors(GtkWidget *w);
+SNG_GLOBAL void sng_setup_olors(GtkWidget *w);
 SNG_GLOBAL void sng_set_foreground(int c);
 SNG_GLOBAL void sng_set_gc(GdkGC *gc);
 SNG_GLOBAL void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, float x, float y, float r);
