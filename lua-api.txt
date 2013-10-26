@@ -5,7 +5,17 @@ NOTE: I am still working out what the lua api should look like, so
 Space Nerds In Space lua inteface:
 
 Locations in space nerds in space:
-	x,y coords, (0,0) is the upper left of the known universe,
+	x,y,z coords, (0,0,0) is the upper left of the known universe,
+	Most of the action is more or less confined to the x-z plane.
+	Positive x is to the right, negative x is to the left
+	Positive z is out of the screen, negative z is into the screen,
+	Positive y is up, negative y is down.
+
+	Note: that to the player within the game, the z and y coords are swapped,
+	so that *to the player*, positive y is out of the screen, negative y into the
+	screen, and positive z is up, negative z is down.  (See user_coords() function
+	below.)
+
 	TBD function to return size of known universe?
 
 FACTIONS in snis:
@@ -132,5 +142,6 @@ load_skybox(ship_id, filenameprefix) -- loads a new skybox composed of six image
 	the string "x", then the six images are x0.png, x1.png, x2.png, x3.png, x4.png, and
 	x5.png.
 
-
+ux,uy,uz = user_coords(x, y, z) -- returns user (player) coordinates given program coordinates.
+	(this really just swaps y and z. ux == x, uy == z, uz == y).
 

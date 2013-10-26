@@ -3967,6 +3967,18 @@ error:
 	return 1;
 }
 
+static int l_user_coords(lua_State *l)
+{
+	const double x = luaL_checknumber(l, 1);
+	const double y = luaL_checknumber(l, 2);
+	const double z = luaL_checknumber(l, 3);
+
+	lua_pushnumber(lua_state, x);
+	lua_pushnumber(lua_state, z);
+	lua_pushnumber(lua_state, y);
+	return 3;
+}
+
 static int l_get_player_damage(lua_State *l)
 {
 	const double id = luaL_checknumber(l, 1);
@@ -6075,6 +6087,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_player_damage, "get_player_damage");
 	add_lua_callable_fn(l_set_player_damage, "set_player_damage");
 	add_lua_callable_fn(l_load_skybox, "load_skybox");
+	add_lua_callable_fn(l_user_coords, "user_coords");
 }
 
 static int run_initial_lua_scripts(void)
