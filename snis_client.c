@@ -4345,6 +4345,7 @@ static void show_mainscreen(GtkWidget *w)
 		}
 	}
 
+#if 0
 	/* Debug info */
 	sng_set_foreground(GREEN);
 	for (i = 0; i <= get_entity_count(ecx); i++) {
@@ -4362,6 +4363,7 @@ static void show_mainscreen(GtkWidget *w)
 				o->heading * 180.0 / M_PI, o->x, o->y, o->z);
 		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy);
 	}
+#endif
 
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
 		show_gunsight(w);
@@ -6081,9 +6083,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			sprintf(buffer, "%s", o->sdata.name);
 			sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy - 15);
 		}
+#if 0
 		sprintf(buffer, "%3.1f,%6.1f,%6.1f,%6.1f",
 				o->heading * 180.0 / M_PI, o->x, o->y, o->z);
 		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy);
+#endif
 	}
 
 	/* Draw targeting indicator on 3d nav screen */
