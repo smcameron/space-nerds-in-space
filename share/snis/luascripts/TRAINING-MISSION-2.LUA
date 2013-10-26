@@ -6,10 +6,11 @@ startx = 1000;
 starty = 1000;
 
 trapx = 100000;
-trapy = 90000;
+trapz = 90000;
 itrapx = trapx;
-itrapy = trapy;
-trapz = 0;
+itrapy = 0;
+itrapz = trapz;
+trapy = 0;
 trap_spring_distance = 3000;
 
 -- find the player and move him where we want him to start.
@@ -37,12 +38,12 @@ function spring_the_trap()
 	trap_sprung = 1;
 	x, y, z = get_object_location(player_ids[1]);
 
-	badguy1 = add_ship("MERCILESS", x + 5000, y + 4000, 25, disruptor, zarkon); 
-	badguy2 = add_ship("SCOURGE", x - 5500, y + 5000, 15, disruptor, zarkon); 
-	badguy3 = add_ship("RESISTANCE", x - 7000, y + 2000, 25, disruptor, zarkon); 
-	badguy4 = add_ship("FEARLESS", x - 5000, y + 4500, 25, disruptor, zarkon); 
-	badguy5 = add_ship("ZHARK", x + 5300, y + 6000, 25, battlestar, zarkon); 
-	badguy6 = add_ship("XANUU", x - 3000, y + 4000, 25, battlestar, zarkon); 
+	badguy1 = add_ship("MERCILESS", x + 5000, 25, z + 4000, disruptor, zarkon); 
+	badguy2 = add_ship("SCOURGE", x - 5500, 15, z + 5000, disruptor, zarkon); 
+	badguy3 = add_ship("RESISTANCE", x - 7000, 25, z + 2000, disruptor, zarkon); 
+	badguy4 = add_ship("FEARLESS", x - 5000, 25, z + 4500, disruptor, zarkon); 
+	badguy5 = add_ship("ZHARK", x + 5300, 25, z + 6000, battlestar, zarkon); 
+	badguy6 = add_ship("XANUU", x - 3000, 25, z + 4000, battlestar, zarkon); 
 
 	attack_ship(badguy1, player_ids[1]);
 	attack_ship(badguy2, player_ids[1]);
@@ -58,12 +59,12 @@ function spring_second_trap()
 	trap_sprung = 1;
 	x, y, z = get_object_location(player_ids[1]);
 
-	badguy1 = add_ship("KHUBHI", x - 5000, y - 4000, 25, disruptor, zarkon); 
-	badguy2 = add_ship("BIZHONI", x - 3500, y - 4100, 15, disruptor, zarkon); 
-	badguy3 = add_ship("RHO", x - 7000, y - 2000, 25, disruptor, zarkon); 
-	badguy4 = add_ship("DAAR", x - 2700, y - 4200, 25, disruptor, zarkon); 
-	badguy5 = add_ship("ZUURHI", x + 1300, y - 6000, 25, battlestar, zarkon); 
-	badguy6 = add_ship("KHONRAD", x - 1000, y - 4000, 25, battlestar, zarkon); 
+	badguy1 = add_ship("KHUBHI", x - 5000, 25, z - 4000, disruptor, zarkon); 
+	badguy2 = add_ship("BIZHONI", x - 3500, 15, z - 4100, disruptor, zarkon); 
+	badguy3 = add_ship("RHO", x - 7000, 25, z - 2000, disruptor, zarkon); 
+	badguy4 = add_ship("DAAR", x - 2700, 25, z - 4200, disruptor, zarkon); 
+	badguy5 = add_ship("ZUURHI", x + 1300, 25, z - 6000, battlestar, zarkon); 
+	badguy6 = add_ship("KHONRAD", x - 1000, 25, z - 4000, battlestar, zarkon); 
 
 	attack_ship(badguy1, player_ids[1]);
 	attack_ship(badguy2, player_ids[1]);
@@ -88,13 +89,15 @@ end
 function mayday_message(cookie)
 
 	local dist;
+	local ux, uy, uz;
 
 	dist = distance(derelict, player_ids[1]);
 
 	if dist < 50000 and dist > 2000 then
+		ux, uy, uz = user_coords(trapx, trapy, trapz);
 		comms_transmission(derelict, ": MAYDAY. SITUATION CRITICAL. SEND HELP.");
 		comms_transmission(derelict, ": LAST KNOWN LOCATION:");
-		comms_transmission(derelict, string.format(": (%f %f)", trapx, trapy));
+		comms_transmission(derelict, string.format(": (%f %f %f)", ux, uy, uz));
 		comms_transmission(derelict, ": LIFE SUPPORT SYSTEMS NEAR FAILURE");
 		comms_transmission(derelict, ": MOST OF THE CREW IS DEAD");
 		comms_transmission(derelict, ": SHIP IS BADLY DAMAGED");
@@ -115,11 +118,12 @@ function check_trap(cookie)
 end
 
 function starbase_message(cookie)
+	local ux, uy, uz = user_coords(itrapx, itrapy, itrapz);
 	comms_transmission(sb, string.format(": %s, WE HAVE RECEIVED A WEAK DISTRESS",
 			player_name));
 	comms_transmission(sb, ": SIGNAL FROM THE COR AUREOS WHICH HAS BEEN");
 	comms_transmission(sb, ": BADLY DAMAGED.  LAST KNOWN LOCATION:");
-	comms_transmission(sb, string.format(": (%f %f)", itrapx, itrapy));
+	comms_transmission(sb, string.format(": (%f %f %f)", ux, uy, uz));
 	comms_transmission(sb, ": YOUR NEW ORDERS ARE TO INVESTIGATE AND RESCUE");
 	comms_transmission(sb, ": ANY SURVIVORS.  ADDITIONALLY, WE HAVE REASON");
 	comms_transmission(sb, ": TO BELIEVE THE COR AUREOS WAS CARRYING TOP");
