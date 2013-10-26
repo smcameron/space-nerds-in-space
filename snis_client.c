@@ -461,7 +461,8 @@ static void update_generic_object(int index, double x, double y, double z,
 	o->alive = alive;
 	if (o->entity) {
 		update_entity_pos(o->entity, x, y, z);
-		update_entity_rotation(o->entity, 0, heading, 0); /* FIXME: correct? */
+		/* FIXME, why is heading negative? */
+		update_entity_rotation(o->entity, 0, -heading, 0);
 	}
 }
 
