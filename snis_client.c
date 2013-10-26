@@ -4089,7 +4089,7 @@ static void begin_3d_gl(double camera_look_heading)
 	glPushMatrix();
 	glLoadIdentity();
 	gluPerspective(33.0, (float) SCREEN_WIDTH / SCREEN_HEIGHT, 0.5, 8000.0);
-	gluLookAt(0, 0, 0, cos(camera_look_heading), 0.0, sin(camera_look_heading),
+	gluLookAt(0, 0, 0, cos(camera_look_heading), 0.0, -sin(camera_look_heading),
 				0.0, 1.0, 0.0); 
 	glMatrixMode(GL_MODELVIEW);
 	/* glDisable(GL_DEPTH_TEST); */
@@ -4311,7 +4311,7 @@ static void show_mainscreen(GtkWidget *w)
 	else
 		camera_look_heading = o->tsd.ship.gun_heading;
 
-	render_skybox(w, M_PI - camera_look_heading);
+	render_skybox(w, camera_look_heading);
 
 	show_mainscreen_starfield(w, camera_look_heading);
 
