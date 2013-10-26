@@ -2370,7 +2370,7 @@ static int l_add_starbase(lua_State *l)
 
 	x = lua_tonumber(lua_state, 1);
 	y = lua_tonumber(lua_state, 2);
-	z = lua_tonumber(lua_state, 3) * 0.0;
+	z = lua_tonumber(lua_state, 3);
 	n = lua_tonumber(lua_state, 4);
 
 	pthread_mutex_lock(&universe_mutex);
