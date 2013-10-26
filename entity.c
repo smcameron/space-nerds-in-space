@@ -58,6 +58,7 @@ struct entity {
 	float scale;
 	float dist3dsqrd;
 	int color;
+	int shadecolor;
 	int render_style;
 	void *user_data;
 };
@@ -113,6 +114,7 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].color = color;
 	cx->entity_list[n].render_style = RENDER_NORMAL;
 	cx->entity_list[n].user_data = NULL;
+	cx->entity_list[n].shadecolor = 0;
 	return &cx->entity_list[n];
 }
 
@@ -158,6 +160,11 @@ void update_entity_scale(struct entity *e, float scale)
 void update_entity_color(struct entity *e, int color)
 {
 	e->color = color;
+}
+
+void update_entity_shadecolor(struct entity *e, int color)
+{
+	e->shadecolor = color;
 }
 
 static int is_backface(float x1, float y1, float x2, float y2, float x3, float y3)
@@ -535,7 +542,8 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct en
 		if (cx->camera.renderer & BLACK_TRIS || e->render_style & RENDER_WIREFRAME)
 			sng_set_foreground(BLACK);
 		else
-			sng_set_foreground((int) fmod((cos_theta * 240.0), 240.0) + GRAY + 10);
+			sng_set_foreground((int) fmod((cos_theta * 240.0), 240.0) +
+					GRAY + (NSHADESOFGRAY * e->shadecolor) + 10);
 		scan_convert_triangle(w, gc, cx, &e->m->t[tri_index], e->color,
 					e->render_style);
 	}

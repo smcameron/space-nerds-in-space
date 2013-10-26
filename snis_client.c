@@ -1236,6 +1236,7 @@ static int update_planet(uint32_t id, double x, double y, double z)
 		if (i < 0)
 			return i;
 		go[i].y = y;
+		update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
 	} else {
 		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, 1);
 		update_entity_pos(go[i].entity, x, y, z);
