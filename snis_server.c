@@ -4595,7 +4595,7 @@ static int process_demon_yaw(struct game_client *c)
 		do_demon_yaw(o, 1);
 		break;
 	case YAW_RIGHT:
-		do_demon_yaw(o, +1);
+		do_demon_yaw(o, -1);
 		break;
 	case YAW_LEFT_FINE:
 		do_demon_yaw(o, 2);
