@@ -136,7 +136,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/research-vessel.stl \
 	${MD}/long-triangular-prism.stl \
 	${MD}/ship-icon.stl \
-	${MD}/heading_indicator.stl
+	${MD}/heading_indicator.stl \
+	${MD}/axis.stl
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${ILDAFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
