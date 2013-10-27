@@ -5881,11 +5881,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		vline_mesh = init_line_mesh(0, 0, 0, 0, 1, 0);
 		sector_mesh = init_sector_mesh(7);
 		axis_mesh[0] = init_line_mesh(-1, 0, 0, 1, 0, 0);
-		axis_mesh[1]= init_line_mesh(0, -1, 0, 0, 1, 0);
+		axis_mesh[1] = init_line_mesh(0, -1, 0, 0, 1, 0);
 		axis_mesh[2] = init_line_mesh(0, 0, -1, 0, 0, 1);
-		axis_mesh[3] = init_line_mesh(0, -1, 0, 0, -0.8, 0);
-		axis_mesh[4] = init_line_mesh(1, 0, 0, 0.8, 0, 0);
-		axis_mesh[5] = init_line_mesh(0, 0, 1, 0, 0, 0.8);
+		axis_mesh[3] = init_line_mesh(0, 1, 0, 0, 0.5, 0);
+		axis_mesh[4] = init_line_mesh(1, 0, 0, 0.5, 0, 0);
+		axis_mesh[5] = init_line_mesh(0, 0, 0.5, 0, 0, 1);
 	}
 
 	struct snis_entity *o;
