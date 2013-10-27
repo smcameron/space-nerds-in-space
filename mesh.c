@@ -164,7 +164,7 @@ struct mesh *init_circle_mesh(double x, double z, double r)
 	for (i = 0; i <= 360; i += 2) {
 		my_mesh->v[my_mesh->nvertices].x = x + cos(i * M_PI / 180.0) * r;
 		my_mesh->v[my_mesh->nvertices].y = 0;
-		my_mesh->v[my_mesh->nvertices].z = z - sin(i * M_PI / 180.0) * r;
+		my_mesh->v[my_mesh->nvertices].z = -z + sin(i * M_PI / 180.0) * r;
 		my_mesh->nvertices++;
 	}
 	my_mesh->l[0].start = &my_mesh->v[0];
@@ -187,10 +187,10 @@ struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y
 
 	my_mesh->v[0].x = x1;
 	my_mesh->v[0].y = y1;
-	my_mesh->v[0].z = z1;
+	my_mesh->v[0].z = -z1;
 	my_mesh->v[1].x = x2;
 	my_mesh->v[1].y = y2;
-	my_mesh->v[1].z = z2;
+	my_mesh->v[1].z = -z2;
 
 	my_mesh->l[0].start = &my_mesh->v[0];
 	my_mesh->l[0].end = &my_mesh->v[1];
