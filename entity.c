@@ -588,23 +588,14 @@ static void transform_entity(struct entity_context *cx,
 					    { e->x, e->y, e->z, 1 }}};
 	/* for testing, do small rotation... */
 	struct mat44 r1, r2;
-#if 0
-	mat44_rotate_x(&object_rotation, rx * M_PI / 180.0, &r1);  
-	mat44_rotate_y(&r1, ry * M_PI / 180.0, &r2);  
-	mat44_rotate_z(&r2, rz * M_PI / 180.0, &object_rotation);  
-#else
+
 	mat44_rotate_y(&object_rotation, e->ry, &r1);  
 	mat44_rotate_x(&r1, e->rx, &r2);  
 	mat44_rotate_z(&r2, e->rz, &object_rotation);  
-#endif
 
 	tmp_transform = *transform;
 	mat44_product(&tmp_transform, &object_translation, &object_transform);
 	mat44_product(&object_transform, &object_rotation, &total_transform);
-#if 0
-	mat44_product(&object_translation, &object_rotation, &object_transform);
-	mat44_product(&object_transform, transform, &total_transform);
-#endif
 	
 	/* Set homogeneous coord to 1 initially for all vertices */
 	for (i = 0; i < e->m->nvertices; i++)
