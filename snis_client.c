@@ -4318,7 +4318,7 @@ static void show_mainscreen(GtkWidget *w)
 	show_mainscreen_starfield(w, camera_look_heading);
 
 	cx = (float) o->x;
-	cy = -10.0;
+	cy = 0;
 	cz = (float) o->z;
 	lx = cx + cos(camera_look_heading) * 500.0;
 	lz = cz - sin(camera_look_heading) * 500.0;
