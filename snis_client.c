@@ -4323,7 +4323,8 @@ static void show_mainscreen(GtkWidget *w)
 	lx = cx + cos(camera_look_heading) * 500.0;
 	lz = cz - sin(camera_look_heading) * 500.0;
 	camera_set_pos(ecx, cx, cy, cz);
-	camera_look_at(ecx, lx, (float) 0.0, lz);
+	/* camera_look_at(ecx, lx, (float) 0.0, lz); */
+	camera_set_orientation(ecx, &o->orientation); 
 	camera_set_parameters(ecx, (float) 20, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
 	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
