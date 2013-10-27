@@ -4532,18 +4532,17 @@ static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		double heading, double scale)
 {
 	int nx, ny, tx1, ty1, tx2, ty2;
-	const double uheading = to_uheading(heading);
 
 	/* Draw ship... */
 #define SHIP_SCALE_DOWN 15.0
-	nx = sin(uheading) * scale * r / SHIP_SCALE_DOWN;
-	ny = -cos(uheading) * scale * r / SHIP_SCALE_DOWN;
+	nx = cos(heading) * scale * r / SHIP_SCALE_DOWN;
+	ny = -sin(heading) * scale * r / SHIP_SCALE_DOWN;
 	snis_draw_line(w->window, gc, x, y, x + nx, y + ny);
-	tx1 = sin(uheading + PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
-	ty1 = -cos(uheading + PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
+	tx1 = cos(heading + PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
+	ty1 = -sin(heading + PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
 	snis_draw_line(w->window, gc, x, y, x + tx1, y + ty1);
-	tx2 = sin(uheading - PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
-	ty2 = -cos(uheading - PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
+	tx2 = cos(heading - PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
+	ty2 = -sin(heading - PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
 	snis_draw_line(w->window, gc, x, y, x + tx2, y + ty2);
 	snis_draw_line(w->window, gc, x + nx, y + ny, x + tx1, y + ty1);
 	snis_draw_line(w->window, gc, x + tx1, y + ty1, x + tx2, y + ty2);
@@ -4578,23 +4577,22 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 		double heading, double beam_width)
 {
 	int tx1, ty1, tx2, ty2;
-	double uheading = to_uheading(heading);
 
 	sng_draw_circle(w->window, gc, x, y, r);
 	draw_degree_marks_with_labels(w, gc, x, y, r, NANO_FONT);
 	/* draw the ship */
 	snis_draw_arrow(w, gc, x, y, r, heading, 1.0);
 
-	tx1 = x + sin(uheading - beam_width / 2) * r * 0.05;
-	ty1 = y - cos(uheading - beam_width / 2) * r * 0.05;
-	tx2 = x + sin(uheading - beam_width / 2) * r;
-	ty2 = y - cos(uheading - beam_width / 2) * r;
+	tx1 = x + cos(heading - beam_width / 2) * r * 0.05;
+	ty1 = y - sin(heading - beam_width / 2) * r * 0.05;
+	tx2 = x + cos(heading - beam_width / 2) * r;
+	ty2 = y - sin(heading - beam_width / 2) * r;
 	sng_set_foreground(GREEN);
 	sng_draw_electric_line(w->window, gc, tx1, ty1, tx2, ty2);
-	tx1 = x + sin(uheading + beam_width / 2) * r * 0.05;
-	ty1 = y - cos(uheading + beam_width / 2) * r * 0.05;
-	tx2 = x + sin(uheading + beam_width / 2) * r;
-	ty2 = y - cos(uheading + beam_width / 2) * r;
+	tx1 = x + cos(heading + beam_width / 2) * r * 0.05;
+	ty1 = y - sin(heading + beam_width / 2) * r * 0.05;
+	tx2 = x + cos(heading + beam_width / 2) * r;
+	ty2 = y - sin(heading + beam_width / 2) * r;
 	sng_draw_electric_line(w->window, gc, tx1, ty1, tx2, ty2);
 }
 
@@ -4602,12 +4600,11 @@ static void snis_draw_heading_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint 
 			double heading, int color, int dotted)
 {
 	int tx1, ty1, tx2, ty2;
-	double uheading = to_uheading(heading);
 
-	tx1 = x + sin(uheading) * r * 0.85;
-	ty1 = y - cos(uheading) * r * 0.85;
-	tx2 = x + sin(uheading) * r;
-	ty2 = y - cos(uheading) * r;
+	tx1 = x + cos(heading) * r * 0.85;
+	ty1 = y - sin(heading) * r * 0.85;
+	tx2 = x + cos(heading) * r;
+	ty2 = y - sin(heading) * r;
 	sng_set_foreground(color);
 	snis_draw_line(w->window, gc, tx1, ty1, tx2, ty2);
 	if (dotted)
