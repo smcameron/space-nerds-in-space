@@ -20,9 +20,18 @@
         along with Spacenerds in Space; if not, write to the Free Software
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+
+#define TRIANGLE_0_SHARED (1<<1)
+#define TRIANGLE_1_SHARED (1<<2)
+#define TRIANGLE_2_SHARED (1<<3)
+#define TRIANGLE_0_1_COPLANAR (1<<4)
+#define TRIANGLE_0_2_COPLANAR (1<<5)
+#define TRIANGLE_1_2_COPLANAR (1<<6)
+
 struct triangle {
 	struct vertex *v[3]; /* three vertices */
 	struct vertex n; /* normal */
+	int flag;
 };
 #endif
 

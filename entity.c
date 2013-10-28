@@ -208,9 +208,12 @@ void wireframe_render_triangle(GtkWidget *w, GdkGC *gc,
 	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
 
-	sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
-	sng_current_draw_line(w->window, gc, x2, y2, x3, y3); 
-	sng_current_draw_line(w->window, gc, x3, y3, x1, y1);
+	if ( !(t->flag & TRIANGLE_0_1_COPLANAR))
+		sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
+	if ( !(t->flag & TRIANGLE_1_2_COPLANAR))
+		sng_current_draw_line(w->window, gc, x2, y2, x3, y3);
+	if ( !(t->flag & TRIANGLE_0_2_COPLANAR))
+		sng_current_draw_line(w->window, gc, x3, y3, x1, y1);
 }
 
 void wireframe_render_point(GtkWidget *w, GdkGC *gc,
