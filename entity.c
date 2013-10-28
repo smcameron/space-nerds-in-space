@@ -888,7 +888,7 @@ check_for_reposition:
 		else {
 			if (cx->camera.renderer & FLATSHADING_RENDERER)
 				render_entity(w, gc, cx, &cx->entity_list[i]);
-			else if (cx->camera.renderer & WIREFRAME_RENDERER)
+			if (cx->camera.renderer & WIREFRAME_RENDERER)
 				wireframe_render_entity(w, gc, cx, &cx->entity_list[i]);
 		}
 	}
