@@ -750,6 +750,7 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 {
 	int i;
 	struct entity *e;
+	union quat prev_orientation;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -767,7 +768,11 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 		i = add_generic_object(id, x, z, vx, vz, heading, type, alive, e);
 		if (i < 0)
 			return i;
+		prev_orientation = go[i].orientation;
 	} else {
+		struct snis_entity *o = &go[i];
+
+		prev_orientation = o->orientation;
 		update_generic_object(i, x, y, z, vx, vz, heading, alive); 
 	}
 	go[i].y = y;

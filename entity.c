@@ -908,16 +908,23 @@ void camera_look_at(struct entity_context *cx, float x, float y, float z)
 
 void camera_set_orientation(struct entity_context *cx, union quat *q)
 {
-	union vec3 v;
+	union vec3 forward, up;
 
-	v.v.x = 1;
-	v.v.y = 0;
-	v.v.z = 0;
+	forward.v.x = 1;
+	forward.v.y = 0;
+	forward.v.z = 0;
 
-	quat_rot_vec_self(&v, q);
-	printf("o-%lf,%lf,%lf\n", v.v.x, v.v.y, v.v.z);
+	up.v.x = 0;
+	up.v.y = 0;
+	up.v.z = 1;
 
-	camera_look_at(cx, cx->camera.x + v.v.x * 500, cx->camera.y + v.v.z * 500, -cx->camera.z - v.v.y * 500);
+	quat_rot_vec_self(&forward, q);
+	quat_rot_vec_self(&up, q);
+
+	camera_look_at(cx, cx->camera.x + forward.v.x * 500,
+			cx->camera.y + forward.v.z * 500,
+			-cx->camera.z - forward.v.y * 500);
+	camera_assign_up_direction(cx, up.v.x, up.v.z, -up.v.y);
 }
 
 void camera_assign_up_direction(struct entity_context *cx, float x, float y, float z)
