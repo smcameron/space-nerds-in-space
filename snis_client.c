@@ -4085,14 +4085,17 @@ static void end_2d_gl(void);
 #ifndef WITHOUTOPENGL
 static void begin_3d_gl(double camera_look_heading)
 {
+	float cux, cuy, cuz; /* camera up direction */
+
 	glEnable(GL_TEXTURE_2D);
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
 	gluPerspective(33.0, (float) SCREEN_WIDTH / SCREEN_HEIGHT, 0.5, 8000.0);
+	camera_get_up_direction(ecx, &cux, &cuy, &cuz);
 	gluLookAt(0, 0, 0, cos(camera_look_heading), 0.0, -sin(camera_look_heading),
-				0.0, 1.0, 0.0); 
+				cux, cuy, cuz); 
 	glMatrixMode(GL_MODELVIEW);
 	/* glDisable(GL_DEPTH_TEST); */
 }
@@ -4108,7 +4111,7 @@ static void end_3d_gl(void)
 }
 #endif
 
-static void render_skybox(GtkWidget *w, double camera_look_heading)
+static void render_skybox(GtkWidget *w, float camera_look_heading)
 {
 
 	/* TODO:  Probably there is a better way than creating these every frame */
@@ -4305,17 +4308,12 @@ static void show_mainscreen(GtkWidget *w)
 	float cx, cy, cz, lx, lz;
 	double camera_look_heading;
 	int i;
-
 	if (!(o = find_my_ship()))
 		return;
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL)
 		camera_look_heading = o->heading + o->tsd.ship.view_angle;
 	else
 		camera_look_heading = o->tsd.ship.gun_heading;
-
-	render_skybox(w, camera_look_heading);
-
-	show_mainscreen_starfield(w, camera_look_heading);
 
 	cx = (float) o->x;
 	cy = 0;
@@ -4327,8 +4325,13 @@ static void show_mainscreen(GtkWidget *w)
 	camera_set_orientation(ecx, &o->orientation); 
 	camera_set_parameters(ecx, (float) 20, (float) 300, (float) 16, (float) 12,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
+
 	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
 			cos(((timer / 4) % 360) * M_PI / 180));
+
+	render_skybox(w, camera_look_heading);
+	show_mainscreen_starfield(w, camera_look_heading);
+
 	sng_set_foreground(GREEN);
 	if (!fake_stars_initialized) {
 		fake_stars_initialized = 1;

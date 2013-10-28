@@ -55,6 +55,8 @@ GLOBAL void render_entity(GtkWidget *w, GdkGC *gc,
 GLOBAL void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx);
 GLOBAL void camera_set_pos(struct entity_context *cx, float x, float y, float z);
 GLOBAL void camera_look_at(struct entity_context *cx, float x, float y, float z);
+GLOBAL void camera_assign_up_direction(struct entity_context *cx, float x, float y, float z);
+GLOBAL void camera_get_up_direction(struct entity_context *cx, float *x, float *y, float *z);
 GLOBAL void camera_set_parameters(struct entity_context *cx,
 		float near, float far, float width, float height,
 		int xvpixels, int yvpixels, float angle_of_view);

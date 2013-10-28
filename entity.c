@@ -67,6 +67,7 @@ struct entity {
 struct camera_info {
 	float x, y, z;		/* position of camera */
 	float lx, ly, lz;	/* where camera is looking */
+	float ux, uy, uz;	/* up vector */
 	float near, far, width, height;
 	float angle_of_view;
 	int xvpixels, yvpixels;
@@ -714,7 +715,7 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 	
 	struct mat41 look_direction;
 
-	struct mat41 up = { { 0, 1, 0, 0 } };
+	struct mat41 up;
 	struct mat41 camera_x, x_cross_look;
 	struct mat41 *v; /* camera relative y axis (up/down) */ 
 	struct mat41 *n; /* camera relative z axis (into view plane) */
@@ -725,6 +726,11 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 	ilda_file_open(cx);
 	ilda_file_newframe(cx);
 #endif
+
+	up.m[0] = cx->camera.ux;
+	up.m[1] = cx->camera.uy;
+	up.m[2] = cx->camera.uz;
+	up.m[3] = 1;
 
 	normalize_vector(&cx->light, &cx->light);
 
@@ -914,6 +920,20 @@ void camera_set_orientation(struct entity_context *cx, union quat *q)
 	camera_look_at(cx, cx->camera.x + v.v.x * 500, cx->camera.y + v.v.z * 500, -cx->camera.z - v.v.y * 500);
 }
 
+void camera_assign_up_direction(struct entity_context *cx, float x, float y, float z)
+{
+	cx->camera.ux = x;
+	cx->camera.uy = y;
+	cx->camera.uz = -z;
+}
+
+void camera_get_up_direction(struct entity_context *cx, float *x, float *y, float *z)
+{
+	*x = cx->camera.ux;
+	*y = cx->camera.uy;
+	*z = -cx->camera.uz;
+}
+
 void camera_set_parameters(struct entity_context *cx, float near, float far, float width, float height,
 				int xvpixels, int yvpixels, float angle_of_view)
 {
@@ -944,6 +964,9 @@ struct entity_context *entity_context_new(int maxobjs)
 	cx->light.m[1] = 1;
 	cx->light.m[2] = 1;
 	cx->light.m[3] = 1;
+	cx->camera.ux = 0;
+	cx->camera.uy = 1;
+	cx->camera.uz = 0;  
 #ifdef WITH_ILDA_SUPPORT
 	cx->f = NULL;
 #endif
