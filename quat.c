@@ -190,3 +190,38 @@ float normalize_euler_0_2pi(float a)
 		a += (float) (2 * M_PI);
 	return a;
 }
+
+/* m is pointer to array of 16 floats in column major order */
+void quat_to_rot_matrix(union quat *q, float *m)
+{
+	union quat qn;
+	float qw, qx, qy, qz;
+
+	quat_normalize(&qn, q);
+
+	qw = qn.v.w;
+	qx = qn.v.x;
+	qy = qn.v.y;
+	qz = qn.v.z;
+
+	m[0] = 1.0f - 2.0f * qy * qy - 2.0f * qz * qz;
+	m[1] = 2.0f * qx * qy + 2.0f * qz * qw;
+	m[2] = 2.0f * qx * qz - 2.0f * qy * qw;
+	m[3] = 0.0f;
+
+	m[4] = 2.0f * qx * qy - 2.0f * qz * qw;
+	m[5] = 1.0f - 2.0f * qx * qx - 2.0f * qz * qz;
+	m[6] = 2.0f * qy * qz + 2.0f * qx * qw;
+	m[7] = 0.0f;
+
+	m[8] = 2.0f * qx * qz + 2.0f * qy * qw;
+	m[9] = 2.0f * qy * qz - 2.0f * qx * qw;
+	m[10] = 1.0f - 2.0f * qx * qx - 2.0f * qy * qy;
+	m[11] = 0.0f;
+
+	m[12] = 0.0f;
+	m[13] = 0.0f;
+	m[14] = 0.0f;
+	m[15] = 1.0f;
+}
+

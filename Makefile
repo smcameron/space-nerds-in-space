@@ -330,8 +330,8 @@ mostly-clean:
 test_marshal:	snis_marshal.c snis_marshal.h
 	$(CC) -DTEST_MARSHALL -o test_marshal snis_marshal.c
 
-test-quat:	test-quat.c quat.o
-	gcc -Wall -Wextra --pedantic -o test-quat test-quat.c quat.o -lm
+test-quat:	test-quat.c quat.o matrix.o
+	gcc -Wall -Wextra --pedantic -o test-quat test-quat.c quat.o matrix.o -lm
 
 clean:	mostly-clean
 	rm -f ${MODELS} test_marshal
