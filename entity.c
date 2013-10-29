@@ -624,7 +624,7 @@ static void transform_entity(struct entity_context *cx,
 	mat44_product(&tmp_transform, &object_translation, &object_transform);
 	mat44_product(&object_transform, &object_rotation, &total_transform);
 #else
-	quat_to_rot_matrix(&e->orientation, &object_rotation.m[0][0]);
+	quat_to_rh_rot_matrix(&e->orientation, &object_rotation.m[0][0]);
 	tmp_transform = *transform;
 	mat44_product(&tmp_transform, &object_translation, &object_transform);
 	mat44_product(&object_transform, &object_rotation, &tmp_transform);
