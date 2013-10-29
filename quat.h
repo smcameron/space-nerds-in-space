@@ -109,4 +109,7 @@ void quat_to_euler(union euler *e, const union quat *q);
 /* normalize angle */
 float normalize_euler_0_2pi(float a);
 
+/* m is pointer to array of 16 floats in column major order */
+void quat_to_rot_matrix(union quat *q, float *m);
+
 #endif /* __QUAT_H__ */
