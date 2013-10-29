@@ -55,6 +55,7 @@ struct entity {
 	struct mesh *m;
 	float x, y, z; /* world coords */
 	float rx, ry, rz;
+	union quat orientation;
 	float sx, sy; /* screen coords */
 	float scale;
 	float dist3dsqrd;
@@ -112,6 +113,7 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].rx = 0;
 	cx->entity_list[n].ry = 0;
 	cx->entity_list[n].rz = 0;
+	quat_init_axis(&cx->entity_list[n].orientation, 0, 0, 1, 0);
 	cx->entity_list[n].scale = 1.0;
 	cx->entity_list[n].color = color;
 	cx->entity_list[n].render_style = RENDER_NORMAL;
@@ -144,9 +146,29 @@ void update_entity_pos(struct entity *e, float x, float y, float z)
 
 void update_entity_rotation(struct entity *e, float rx, float ry, float rz)
 {
+	union quat qx, qy, qz, tmp, q;
+
 	e->rx = rx;
 	e->ry = ry;
 	e->rz = rz;
+
+	quat_init_axis(&e->orientation, 1, 0, 0, 0);
+	quat_init_axis(&qx, 1, 0, 0, rx);
+	quat_init_axis(&qy, 0, 1, 0, ry);
+	quat_init_axis(&qz, 0, 0, 1, rz);
+	quat_mul(&q, &qz, &qx);
+	quat_mul(&e->orientation, &qy, &q);
+}
+
+void update_entity_orientation(struct entity *e, union quat *q)
+{
+	union euler angle;
+
+	quat_to_euler(q, &angle);
+	e->orientation = *q;
+	e->rx = angle.a.pitch;
+	e->ry = angle.a.yaw;
+	e->rz = angle.a.roll;
 }
 
 float entity_get_scale(struct entity *e)
@@ -580,7 +602,8 @@ static void transform_entity(struct entity_context *cx,
 
 	/* calculate the object transform... */
 	struct mat44 object_transform, total_transform, tmp_transform;
-	struct mat44 object_rotation = {{{ e->scale, 0, 0, 0 },
+	struct mat44 object_rotation;
+	struct mat44 object_scale =    {{{ e->scale, 0, 0, 0 },
 					 { 0, e->scale, 0, 0 },
 					 { 0, 0, e->scale, 0 },
 					 { 0, 0, 0, 1 }}}; /* fixme, do this really. */
@@ -591,6 +614,8 @@ static void transform_entity(struct entity_context *cx,
 	/* for testing, do small rotation... */
 	struct mat44 r1, r2;
 
+#if 0
+	object_rotation = object_scale;
 	mat44_rotate_y(&object_rotation, e->ry, &r1);  
 	mat44_rotate_x(&r1, e->rx, &r2);  
 	mat44_rotate_z(&r2, e->rz, &object_rotation);  
@@ -598,6 +623,13 @@ static void transform_entity(struct entity_context *cx,
 	tmp_transform = *transform;
 	mat44_product(&tmp_transform, &object_translation, &object_transform);
 	mat44_product(&object_transform, &object_rotation, &total_transform);
+#else
+	quat_to_rot_matrix(&e->orientation, &object_rotation.m[0][0]);
+	tmp_transform = *transform;
+	mat44_product(&tmp_transform, &object_translation, &object_transform);
+	mat44_product(&object_transform, &object_rotation, &tmp_transform);
+	mat44_product(&tmp_transform, &object_scale, &total_transform);
+#endif
 	
 	/* Set homogeneous coord to 1 initially for all vertices */
 	for (i = 0; i < e->m->nvertices; i++)
