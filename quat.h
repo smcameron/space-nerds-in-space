@@ -58,7 +58,25 @@ union euler {
 };
 
 /* copy vector vi to vo */
-void vec3_copy(union vec3 *vo, union vec3 *vi);
+union vec3* vec3_copy(union vec3 *vo, union vec3 *vi);
+
+/* vo = v1 + v2, return vo */
+union vec3* vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
+
+/* vo = v1 - v2, return vo */
+union vec3* vec3_sub(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
+
+/* vo = vi * scalar, return vo */
+union vec3* vec3_mul(union vec3 *vo, const union vec3 *vi, float scalar);
+
+/* vi *= scalar, return vi */
+union vec3* vec3_mul_self(union vec3 *vi, float scalar);
+
+/* dot product */
+float vec3_dot(const union vec3 *v1, const union vec3 *v2);
+
+/* cross product vo = v1 X v2, return vo */
+union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
 
 /* init orientation quaternion from measurements */
 void quaternion_init(union quat *quat, const union vec3 *acc, const union vec3 *mag);
@@ -90,7 +108,7 @@ void quat_scale_self(union quat *q, float f);
 /* conjugate quaternion */
 void quat_conj(union quat *qo, const union quat *qi);
 
-/* o = q1 + 12 */
+/* o = q1 + q2 */
 void quat_add(union quat *qo, const union quat *q1, const union quat *q2);
 
 /* o += q */

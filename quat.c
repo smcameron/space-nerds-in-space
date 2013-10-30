@@ -21,9 +21,10 @@
 #include "quat.h"
 #include "mathutils.h"
 
-void vec3_copy(union vec3 *vo, union vec3 *vi)
+union vec3* vec3_copy(union vec3 *vo, union vec3 *vi)
 {
 	memcpy(vo, vi, sizeof(union vec3));   
+	return vo;
 }
 
 void quat_init(union quat *q, const union vec3 *acc, const union vec3 *mag)
@@ -280,5 +281,48 @@ void random_axis_quat(union quat *q)
 	random_point_on_sphere(1.0, &v.v.x, &v.v.y, &v.v.z);
 	angle = 0.0;
 	quat_init_axis_v(q, &v, angle);
+}
+
+union vec3* vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
+{
+	vo->vec[0] = v1->vec[0] + v2->vec[0];
+	vo->vec[1] = v1->vec[1] + v2->vec[1];
+	vo->vec[2] = v1->vec[2] + v2->vec[2];
+	return vo;
+}
+
+union vec3* vec3_sub(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
+{
+	vo->vec[0] = v1->vec[0] - v2->vec[0];
+	vo->vec[1] = v1->vec[1] - v2->vec[1];
+	vo->vec[2] = v1->vec[2] - v2->vec[2];
+	return vo;
+}
+
+union vec3* vec3_mul(union vec3 *vo, const union vec3 *vi, float scalar)
+{
+	vo->vec[0] = vi->vec[0] * scalar;
+	vo->vec[1] = vi->vec[1] * scalar;
+	vo->vec[2] = vi->vec[2] * scalar;
+	return vo;
+}
+
+union vec3* vec3_mul_self(union vec3 *vi, float scalar)
+{
+	return vec3_mul( vi, vi, scalar );
+}
+
+float vec3_dot(const union vec3 *v1, const union vec3 *v2)
+{
+	return v1->vec[0] * v2->vec[0] + v1->vec[1] * v2->vec[1] + v1->vec[2] * v2->vec[2];
+
+}
+
+union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
+{
+	vo->vec[0] = v1->vec[2]*v2->vec[3] - v1->vec[3]*v2->vec[2];
+	vo->vec[1] = v1->vec[3]*v2->vec[1] - v1->vec[1]*v2->vec[3];
+	vo->vec[2] = v1->vec[1]*v2->vec[2] - v1->vec[1]*v2->vec[2];
+	return vo;
 }
 
