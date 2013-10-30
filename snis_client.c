@@ -5904,7 +5904,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	double max_possible_screen_radius = 0.09 * XKNOWN_DIM;
 	double screen_radius;
 	double visible_distance;
-	int science_style = RENDER_WIREFRAME | RENDER_DISABLE_CLIP;
+	int science_style = RENDER_DISABLE_CLIP;
 	double camera_heading;
 
 	if (!(o = find_my_ship()))
@@ -5924,6 +5924,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	struct mat41 camera_pos_heading;
 	mat41_rotate_y(&camera_pos, camera_heading, &camera_pos_heading);
 
+        set_renderer(navecx, WIREFRAME_RENDERER);
 	camera_set_pos(navecx, o->x + camera_pos_heading.m[0],
 			o->y + camera_pos_heading.m[1], o->z + camera_pos_heading.m[2]);
 	camera_look_at(navecx, o->x, o->y, o->z);

@@ -270,68 +270,6 @@ static void ilda_render_triangle(struct entity_context *cx,
 }
 #endif
 
-static void scan_convert_sorted_triangle(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
-			int x1, int y1, int x2, int y2, int x3, int y3, int color, int render_style)
-{
-	float xa, xb;
-	float dxdy1, dxdy2;
-	int i;
-
-	if (y1 > y2 || y2 > y3)
-		printf("you dun fucked up\n");
-
-#if 0
-	if (!(render_style & RENDER_NO_FILL)) {
-	if (y2 == y1)
-		dxdy1 = x2 - x1;
-	else
-		dxdy1 = (float) (x2 - x1) / (float) (y2 - y1);
-
-	if (y3 == y1)
-		dxdy2 = x3 - x1;
-	else
-		dxdy2 = (float) (x3 - x1) / (float) (y3 - y1);
-
-	xa = x1;
-	xb = x1;
-
-	for (i = y1; i < y2; i++) {
-		sng_device_line(w->window, gc, (int) xa, i, (int) xb, i);
-		xa += dxdy1;
-		xb += dxdy2;
-	}
-
-	if (y2 == y3)
-		dxdy1 = x3 - x2;
-	else
-		dxdy1 = (float) (x3 - x2) / (float) (y3 - y2);
-
-	xa = x2;
-	for (i = y2; i <= y3; i++) {
-		sng_device_line(w->window, gc, (int) xa, i, (int) xb, i);
-		xa += dxdy1;
-		xb += dxdy2;
-	}
-	}
-#endif
-	if (cx->camera.renderer & WIREFRAME_RENDERER || render_style & RENDER_WIREFRAME) {
-		if (render_style & RENDER_BRIGHT_LINE) {
-			sng_bright_device_line(w->window, gc, x1, y1, x2, y2, color); 
-			sng_bright_device_line(w->window, gc, x2, y2, x3, y3, color); 
-			sng_bright_device_line(w->window, gc, x3, y3, x1, y1, color); 
-		} else {
-			sng_set_foreground(color);
-			sng_device_line(w->window, gc, x1, y1, x2, y2); 
-			sng_device_line(w->window, gc, x2, y2, x3, y3); 
-			sng_device_line(w->window, gc, x3, y3, x1, y1); 
-		}
-#ifdef WITH_ILDA_SUPPORT
-		if (render_style & RENDER_ILDA)
-			ilda_render_triangle(cx, x1, y1, x2, y2, x3, y3);
-#endif
-	}
-}
-
 static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
 				struct triangle *t, int color,
 				int render_style)
@@ -355,70 +293,32 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
 
-	if (!(render_style & RENDER_NO_FILL)) {
+	if (!(render_style & RENDER_NO_FILL) && cx->camera.renderer != WIREFRAME_RENDERER) {
 		sng_filled_tri(w->window, gc, x1, y1, x2, y2, x3, y3);
-		if (render_style == RENDER_NORMAL)
-			return;
 	}
 
-	/* sort from lowest y to highest y */
-	ya = sng_device_y(y1);
-	yb = sng_device_y(y2);
-	yc = sng_device_y(y3);
-	if (ya <= yb) {
-		if (ya <= yc) {
-			/* order is 1, ... */
-			xa = sng_device_x(x1);
-			if (yb <= yc) {
-				/* order is 1, 2, 3 */
-				xb = sng_device_x(x2);
-				xc = sng_device_x(x3);
-			} else {
-				/* order is 1, 3, 2 */
-				xb = sng_device_x(x3);
-				yb = sng_device_y(y3);
-				xc = sng_device_x(x2);
-				yc = sng_device_y(y2);
-			}
-		} else { /* we know c < a <= b, so order is 3, 1, 2... */
-			xa = sng_device_x(x3);
-			ya = sng_device_y(y3);
-			xb = sng_device_x(x1);
-			yb = sng_device_y(y1);
-			xc = sng_device_x(x2);
-			yc = sng_device_y(y2);
+	if (cx->camera.renderer & WIREFRAME_RENDERER || render_style & RENDER_WIREFRAME) {
+		if (render_style & RENDER_BRIGHT_LINE) {
+			if ( !(t->flag & TRIANGLE_0_1_COPLANAR))
+				sng_current_bright_line(w->window, gc, x1, y1, x2, y2, color); 
+			if ( !(t->flag & TRIANGLE_1_2_COPLANAR))
+				sng_current_bright_line(w->window, gc, x2, y2, x3, y3, color); 
+			if ( !(t->flag & TRIANGLE_0_2_COPLANAR))
+				sng_current_bright_line(w->window, gc, x3, y3, x1, y1, color); 
+		} else {
+			sng_set_foreground(color);
+			if ( !(t->flag & TRIANGLE_0_1_COPLANAR))
+				sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
+			if ( !(t->flag & TRIANGLE_1_2_COPLANAR))
+				sng_current_draw_line(w->window, gc, x2, y2, x3, y3); 
+			if ( !(t->flag & TRIANGLE_0_2_COPLANAR))
+				sng_current_draw_line(w->window, gc, x3, y3, x1, y1); 
 		}
-	} else {
-		/* a > b */
-		if (yb > yc) { /* a > b >= c, so order is 3, 2, 1 */
-			xa = sng_device_x(x3);
-			ya = sng_device_y(y3);
-			xb = sng_device_x(x2);
-			yb = sng_device_y(y2);
-			xc = sng_device_x(x1);
-			yc = sng_device_y(y1);
-		} else { /* c >= b && b < a */
-			if (ya <= yc) {
-				/* c >= b && b < a && a <= c : 2, 1, 3 */
-				xa = sng_device_x(x2);
-				ya = sng_device_y(y2);
-				xb = sng_device_x(x1);
-				yb = sng_device_y(y1);
-				xc = sng_device_x(x3);
-				yc = sng_device_y(y3);
-			} else {
-				/* a > b && c >=b && c < a: 2, 3, 1 */ 
-				xa = sng_device_x(x2);
-				ya = sng_device_y(y2);
-				xb = sng_device_x(x3);
-				yb = sng_device_y(y3);
-				xc = sng_device_x(x1);
-				yc = sng_device_y(y1);
-			}
-		}
+#ifdef WITH_ILDA_SUPPORT
+		if (render_style & RENDER_ILDA)
+			ilda_render_triangle(cx, x1, y1, x2, y2, x3, y3);
+#endif
 	}
-	/* now device coord vertices xa, ya, xb, yb, xc, yc are sorted by y value */
-	scan_convert_sorted_triangle(w, gc, cx, xa, ya, xb, yb, xc, yc, color, render_style);
 }
 
 void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
@@ -885,10 +785,7 @@ check_for_reposition:
 		else if (cx->entity_list[i].render_style & RENDER_POINT_LINE)
 			wireframe_render_point_line(w, gc, cx, &cx->entity_list[i]);
 		else {
-			if (cx->camera.renderer & FLATSHADING_RENDERER)
-				render_entity(w, gc, cx, &cx->entity_list[i]);
-			if (cx->camera.renderer & WIREFRAME_RENDERER)
-				wireframe_render_entity(w, gc, cx, &cx->entity_list[i]);
+			render_entity(w, gc, cx, &cx->entity_list[i]);
 		}
 	}
 }
