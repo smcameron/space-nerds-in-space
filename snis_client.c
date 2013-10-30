@@ -5917,6 +5917,9 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 	double ship_scale = screen_radius/250.0;
 
+	union vec3 ship_pos = { { o->x, o->y, o->z } };
+	union vec3 ship_normal = { { 0, 1, 0 } };
+
 	/* rotate camera to be behind my ship */
 	struct mat41 camera_pos = { { screen_radius * 2.5, screen_radius, 0} };
 	struct mat41 camera_pos_heading;
@@ -5987,8 +5990,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
 			continue;
 		}
-		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
-			((go[i].z - o->z) * (go[i].z - o->z));
+		dist2 = dist3dsqrd(go[i].x - o->x, 0, go[i].z - o->z);
 		if (dist2 > NR2 || dist2 > visible_distance)
 			continue; /* not close enough */
 
@@ -6064,12 +6066,39 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			}
 
 			/* add line from center disk to contact in z axis */
-			e = add_entity(navecx, vline_mesh, go[i].x, o->y, go[i].z, DARKRED);
-			update_entity_scale(e, go[i].y - o->y);
+			union vec3 contact_pos = { { go[i].x, go[i].y, go[i].z } };
+			union vec3 ship_plane_proj;
+			float proj_distance = 0;
+
+			/* first find the point where the contact is orthogonally projected onto the ships normal plane */
+
+			/* orthogonal projection of point onto plane
+			   q_proj = q - dot( q - p, n) * n
+			   q = point to project, p = point on plane, n = normal to plane */
+			union vec3 temp1, temp2;
+			proj_distance = vec3_dot(vec3_sub(&temp1, &contact_pos, &ship_pos), &ship_normal);
+			vec3_sub(&ship_plane_proj, &contact_pos, vec3_mul(&temp2, &ship_normal, proj_distance));
+
+			float contact_radius = entity_get_mesh(contact)->radius*entity_get_scale(contact);
+			float contact_ring_radius = 0;
+
+			if ( fabs(proj_distance) < contact_radius) {
+				/* contact intersacts the ship normal plane so make the radius the size of that intersection */
+				contact_ring_radius = sqrt(contact_radius*contact_radius - proj_distance*proj_distance);
+			}
+			if (contact_ring_radius < contact_radius/5.0) {
+				/* set a lower bound on size */
+				contact_ring_radius = contact_radius/5.0;
+			}
+
+			e = add_entity(navecx, vline_mesh, contact_pos.v.x, contact_pos.v.y, contact_pos.v.z, DARKRED);
+			update_entity_scale(e, -proj_distance);
+			/* update_entity_rotation(e, ship_normal); 3d todo */
 			set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 
-			e = add_entity(navecx, ring_mesh, go[i].x, o->y, go[i].z, DARKRED);
-			update_entity_scale(e, entity_get_mesh(contact)->radius*entity_get_scale(contact)/4.0);
+			e = add_entity(navecx, ring_mesh, ship_plane_proj.v.x, ship_plane_proj.v.y, ship_plane_proj.v.z, DARKRED);
+			update_entity_scale(e, contact_ring_radius);
+			/* update_entity_rotation(e, ship_normal); 3d todo */
 			set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 		}
 	}
