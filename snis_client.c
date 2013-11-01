@@ -461,8 +461,7 @@ static void update_generic_object(int index, double x, double y, double z,
 	o->alive = alive;
 	if (o->entity) {
 		update_entity_pos(o->entity, x, y, z);
-		/* FIXME, why is heading negative? */
-		update_entity_rotation(o->entity, 0, -heading, 0);
+		update_entity_rotation(o->entity, 0, heading, 0);
 	}
 }
 
@@ -4031,8 +4030,7 @@ static void show_common_screen(GtkWidget *w, char *title)
 	snis_draw_line(w->window, gc, 1, 1, 1, SCREEN_HEIGHT - 1);
 }
 
-/* FIXME: make angle of view be calculated from camera parameters */
-#define ANGLE_OF_VIEW (70)
+#define ANGLE_OF_VIEW (60)
 
 static int normalize_degrees(int degrees)
 {
@@ -4090,7 +4088,7 @@ static void begin_3d_gl(double camera_look_heading)
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	gluPerspective(33.0, (float) SCREEN_WIDTH / SCREEN_HEIGHT, 0.5, 8000.0);
+	gluPerspective(ANGLE_OF_VIEW, (float) SCREEN_WIDTH / SCREEN_HEIGHT, 0.5, 8000.0);
 	gluLookAt(0, 0, 0, cos(camera_look_heading), 0.0, -sin(camera_look_heading),
 				0.0, 1.0, 0.0); 
 	glMatrixMode(GL_MODELVIEW);
@@ -4317,15 +4315,17 @@ static void show_mainscreen(GtkWidget *w)
 
 	show_mainscreen_starfield(w, camera_look_heading);
 
-	cx = (float) o->x;
-	cy = -10.0;
-	cz = (float) o->z;
-	lx = cx + cos(camera_look_heading) * 500.0;
-	lz = cz - sin(camera_look_heading) * 500.0;
+	cx = o->x;
+	cy = o->y;
+	cz = o->z;
+
+	struct mat41 camera_lookat = { { 500, 0, 0} };
+	mat41_rotate_y_self(&camera_lookat, camera_look_heading);
+
 	camera_set_pos(ecx, cx, cy, cz);
-	camera_look_at(ecx, lx, (float) 0.0, lz);
-	camera_set_parameters(ecx, (float) 20, (float) 300, (float) 16, (float) 12,
-				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
+	camera_look_at(ecx, cx + camera_lookat.m[0], cy + camera_lookat.m[1], cz + camera_lookat.m[2]);
+
+	camera_set_parameters(ecx, 0.5, 8000.0, SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
 	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
 			cos(((timer / 4) % 360) * M_PI / 180));
 	sng_set_foreground(GREEN);
@@ -4352,18 +4352,24 @@ static void show_mainscreen(GtkWidget *w)
 	sng_set_foreground(GREEN);
 	for (i = 0; i <= get_entity_count(ecx); i++) {
 		struct entity *e;
-		struct snis_entity *o;
+		struct snis_entity *oo;
 		float sx, sy;
 		char buffer[100];
 
 		e = get_entity(ecx, i);
-		o = entity_get_user_data(e);
-		if (!o)
+		oo = entity_get_user_data(e);
+		if (!oo)
 			continue;
 		entity_get_screen_coords(e, &sx, &sy);
 		sprintf(buffer, "%3.1f,%6.1f,%6.1f,%6.1f",
-				o->heading * 180.0 / M_PI, o->x, o->y, o->z);
+				oo->heading * 180.0 / M_PI, oo->x, oo->y, oo->z);
 		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy);
+	}
+	{
+		char buffer[100];
+		sprintf(buffer, "%3.1f,%6.1f,%6.1f,%6.1f",
+				o->heading * 180.0 / M_PI, o->x, o->y, o->z);
+		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, 0, 10);
 	}
 #endif
 
@@ -5916,7 +5922,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	camera_set_pos(navecx, o->x + camera_pos_heading.m[0],
 			o->y + camera_pos_heading.m[1], o->z + camera_pos_heading.m[2]);
 	camera_look_at(navecx, o->x, o->y, o->z);
-	camera_set_parameters(navecx, (float) 20, (float) 300, (float) 16, (float) 12,
+	camera_set_parameters(navecx, 0.5, 8000.0,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
 	int in_nebula = 0;
 	int i;
@@ -5964,7 +5970,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	e = add_entity(navecx, ship_mesh, o->x, o->y, o->z, GREEN);
 	set_render_style(e, science_style);
 	update_entity_scale(e, ship_scale);
-	update_entity_rotation(e, 0, -o->heading, 0);
+	update_entity_rotation(e, 0, o->heading, 0);
 
 #define NR2 (screen_radius * screen_radius)
 
@@ -6049,7 +6055,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			case OBJTYPE_SHIP1:
 				contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
 				update_entity_scale(contact, contact_scale);
-				update_entity_rotation(contact, 0, -go[i].heading, 0);
+				update_entity_rotation(contact, 0, go[i].heading, 0);
 				break;
 			}
 
@@ -7094,8 +7100,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	set_render_style(e, science_style);
 	camera_set_pos(sciecx, -m->radius * 4, 20, 0);
 	camera_look_at(sciecx, (float) 0, (float) 0, (float) m->radius / 2.0);
-	camera_set_parameters(sciecx, (float) 20, (float) 300,
-				(float) 16, (float) 12,
+	camera_set_parameters(sciecx, 0.5, 8000.0,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
 	render_entities(w, gc, sciecx);
 	remove_entity(sciecx, e);

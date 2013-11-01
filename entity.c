@@ -66,7 +66,7 @@ struct entity {
 struct camera_info {
 	float x, y, z;		/* position of camera */
 	float lx, ly, lz;	/* where camera is looking */
-	float near, far, width, height;
+	float near, far, right, left, top, bottom;
 	float angle_of_view;
 	int xvpixels, yvpixels;
 	int renderer;
@@ -106,7 +106,7 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].m = m;
 	cx->entity_list[n].x = x;
 	cx->entity_list[n].y = y;
-	cx->entity_list[n].z = -z;
+	cx->entity_list[n].z = z;
 	cx->entity_list[n].rx = 0;
 	cx->entity_list[n].ry = 0;
 	cx->entity_list[n].rz = 0;
@@ -137,7 +137,7 @@ void update_entity_pos(struct entity *e, float x, float y, float z)
 {
 	e->x = x;
 	e->y = y;
-	e->z = -z;
+	e->z = z;
 }
 
 void update_entity_rotation(struct entity *e, float rx, float ry, float rz)
@@ -174,7 +174,7 @@ static int is_backface(float x1, float y1, float x2, float y2, float x3, float y
 	twicearea =	(x1 * y2 - x2 * y1) +
 			(x2 * y3 - x3 * y2) +
 			(x3 * y1 - x1 * y3);
-	return twicearea <= 0;
+	return twicearea > 0;
 }
 
 static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc,
@@ -589,9 +589,11 @@ static void transform_entity(struct entity_context *cx,
 	/* for testing, do small rotation... */
 	struct mat44 r1, r2;
 
+#if 1
 	mat44_rotate_y(&object_rotation, e->ry, &r1);  
 	mat44_rotate_x(&r1, e->rx, &r2);  
 	mat44_rotate_z(&r2, e->rz, &object_rotation);  
+#endif
 
 	tmp_transform = *transform;
 	mat44_product(&tmp_transform, &object_translation, &object_transform);
@@ -731,7 +733,18 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 	mat44_translate(&identity, -cx->camera.x, -cx->camera.y, -cx->camera.z,
 				&cameralocation_transform);
 
-	/* Calculate look direction, look direction, ... */
+	/* Calculate camera rotation based on look direction ...
+	   http://ksimek.github.io/2012/08/22/extrinsic/ 'The "Look-At" Camera'
+	   p = look at point, C = camera, u = up
+	   L = p - C
+	   s = L x u 
+	   u' = s x L
+	   camera rotation = | s1  s2  s3  |
+			     | u'1 u'2 u'3 |
+			     | -L1 -L2 -L3 |
+	  snis n = L
+  	  snis u = s
+	  snis v = u' */
 	look_direction.m[0] = (cx->camera.lx - cx->camera.x);
 	look_direction.m[1] = (cx->camera.ly - cx->camera.y);
 	look_direction.m[2] = (cx->camera.lz - cx->camera.z);
@@ -742,53 +755,54 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 	camera_angle = atan2f(cx->camera.lz - cx->camera.z, cx->camera.lx - cx->camera.x);
 
 	/* Calculate x direction relative to camera, "camera_x" */
-	mat41_cross_mat41(&up, &look_direction, &camera_x);
+	mat41_cross_mat41(&look_direction, &up, &camera_x);
 	normalize_vector(&camera_x, &camera_x);
 	u = &camera_x;
 
 	/* Calculate camera relative x axis */
-	v = &x_cross_look;
-	mat41_cross_mat41(n, u, v);
+	mat41_cross_mat41(&camera_x, &look_direction, &x_cross_look);
 	/* v should not need normalizing as n and u are already
 	 * unit, and are perpendicular */
-	normalize_vector(v, v);
+	normalize_vector(&x_cross_look, &x_cross_look);
+	v = &x_cross_look;
 
 	/* Make a rotation matrix...
 	   | ux uy uz 0 |
 	   | vx vy vz 0 |
-	   | nx ny nz 0 |
+	   | -nx -ny -nz 0 |
 	   |  0  0  0 1 |
 	 */
 	cameralook_transform.m[0][0] = u->m[0];
 	cameralook_transform.m[0][1] = v->m[0];
-	cameralook_transform.m[0][2] = n->m[0];
+	cameralook_transform.m[0][2] = -n->m[0];
 	cameralook_transform.m[0][3] = 0.0;
 	cameralook_transform.m[1][0] = u->m[1];
 	cameralook_transform.m[1][1] = v->m[1];
-	cameralook_transform.m[1][2] = n->m[1];
+	cameralook_transform.m[1][2] = -n->m[1];
 	cameralook_transform.m[1][3] = 0.0;
 	cameralook_transform.m[2][0] = u->m[2];
 	cameralook_transform.m[2][1] = v->m[2];
-	cameralook_transform.m[2][2] = n->m[2];
+	cameralook_transform.m[2][2] = -n->m[2];
 	cameralook_transform.m[2][3] = 0.0;
 	cameralook_transform.m[3][0] = 0.0;
 	cameralook_transform.m[3][1] = 0.0;
 	cameralook_transform.m[3][2] = 0.0; 
 	cameralook_transform.m[3][3] = 1.0;
 
-	/* Make perspective transform... */
-	perspective_transform.m[0][0] = (2 * cx->camera.near) / cx->camera.width;
+	/* Make perspective transform based on OpenGL frustum
+	   http://www.scratchapixel.com/lessons/3d-advanced-lessons/perspective-and-orthographic-projection-matrix/opengl-perspective-projection-matrix/
+	*/
+	perspective_transform.m[0][0] = (2 * cx->camera.near) / (cx->camera.right - cx->camera.left);
 	perspective_transform.m[0][1] = 0.0;
 	perspective_transform.m[0][2] = 0.0;
 	perspective_transform.m[0][3] = 0.0;
 	perspective_transform.m[1][0] = 0.0;
-	perspective_transform.m[1][1] = (2.0 * cx->camera.near) / cx->camera.height;
+	perspective_transform.m[1][1] = (2.0 * cx->camera.near) / (cx->camera.top - cx->camera.bottom);
 	perspective_transform.m[1][2] = 0.0;
 	perspective_transform.m[1][3] = 0.0;
-	perspective_transform.m[2][0] = 0.0;
-	perspective_transform.m[2][1] = 0.0;
-	perspective_transform.m[2][2] = -(cx->camera.far + cx->camera.near) /
-						(cx->camera.far - cx->camera.near);
+	perspective_transform.m[2][0] = (cx->camera.right + cx->camera.left) / (cx->camera.right - cx->camera.left);
+	perspective_transform.m[2][1] = (cx->camera.top + cx->camera.bottom) / (cx->camera.top - cx->camera.bottom);
+	perspective_transform.m[2][2] = -(cx->camera.far + cx->camera.near) / (cx->camera.far - cx->camera.near);
 	perspective_transform.m[2][3] = -1.0;
 	perspective_transform.m[3][0] = 0.0;
 	perspective_transform.m[3][1] = 0.0;
@@ -847,6 +861,7 @@ check_for_reposition:
 			continue;
 		if (cx->entity_list[i].m == NULL)
 			continue;
+
 		point_to_test.m[0] = cx->entity_list[i].x - cx->camera.x;
 		point_to_test.m[1] = cx->entity_list[i].y - cx->camera.y;
 		point_to_test.m[2] = cx->entity_list[i].z - cx->camera.z;
@@ -854,7 +869,6 @@ check_for_reposition:
 		behind_camera = mat41_dot_mat41(&look_direction, &point_to_test);
 		if (behind_camera < 0) /* behind camera */
 			continue;
-
 		if ( !(cx->entity_list[i].render_style & RENDER_DISABLE_CLIP) ) {
 /* increasing STANDARD_RADIUS makes fewer objects visible, decreasing it makes more */
 #define STANDARD_RADIUS (4.0)
@@ -889,26 +903,31 @@ void camera_set_pos(struct entity_context *cx, float x, float y, float z)
 {
 	cx->camera.x = x;
 	cx->camera.y = y;
-	cx->camera.z = -z;
+	cx->camera.z = z;
 }
 
 void camera_look_at(struct entity_context *cx, float x, float y, float z)
 {
 	cx->camera.lx = x;
 	cx->camera.ly = y;
-	cx->camera.lz = -z;
+	cx->camera.lz = z;
 }
 
-void camera_set_parameters(struct entity_context *cx, float near, float far, float width, float height,
+void camera_set_parameters(struct entity_context *cx, float near, float far,
 				int xvpixels, int yvpixels, float angle_of_view)
 {
-	cx->camera.near = -near;
-	cx->camera.far = -far;
-	cx->camera.width = width;
-	cx->camera.height = height;	
+	cx->camera.near = near;
+	cx->camera.far = far;
 	cx->camera.xvpixels = xvpixels;
 	cx->camera.yvpixels = yvpixels;
 	cx->camera.angle_of_view = angle_of_view;
+
+	/* based on gluPerspective to find the right, left, top, and bottom */
+	float scale = tan(cx->camera.angle_of_view * 0.5 * M_PI / 180.0) * cx->camera.near;
+	cx->camera.right = xvpixels/yvpixels * scale;
+	cx->camera.left = -cx->camera.right;
+	cx->camera.top = scale;
+	cx->camera.bottom = -cx->camera.top;
 }
 
 struct entity_context *entity_context_new(int maxobjs)

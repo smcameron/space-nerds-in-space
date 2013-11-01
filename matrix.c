@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 #define DEFINE_MATRIX_GLOBALS
 #include "matrix.h"
 
@@ -135,6 +136,13 @@ void mat41_rotate_y(struct mat41 *rhs, float angle, struct mat41 *output)
 				 { sinf(angle), 0, cosf(angle),  0},
 				 { 0,           0, 0,            1}}};
 	mat44_x_mat41(&rotatey, rhs, output);
+}
+
+void mat41_rotate_y_self(struct mat41 *rhs, float angle)
+{
+	struct mat41 input;
+	memcpy(&input,rhs,sizeof(input));
+	mat41_rotate_y(&input, angle, rhs);
 }
 
 /* column major... */
