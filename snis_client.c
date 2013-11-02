@@ -4366,7 +4366,8 @@ static void show_mainscreen(GtkWidget *w)
 	mat41_rotate_y_self(&camera_lookat, camera_look_heading);
 
 	camera_set_pos(ecx, cx, cy, cz);
-	camera_look_at(ecx, cx + camera_lookat.m[0], cy + camera_lookat.m[1], cz + camera_lookat.m[2]);
+	camera_set_orientation(ecx, &o->orientation);
+	/* camera_look_at(ecx, cx + camera_lookat.m[0], cy + camera_lookat.m[1], cz + camera_lookat.m[2]); */
 
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
