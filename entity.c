@@ -552,7 +552,8 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct en
 	}
 }
 
-static void transform_fake_star(struct fake_star *fs, struct mat44 *transform)
+static int transform_fake_star(struct entity_context *cx,
+				struct fake_star *fs, struct mat44 *transform)
 {
 	struct mat41 *m1, *m2;
 	
@@ -567,10 +568,14 @@ static void transform_fake_star(struct fake_star *fs, struct mat44 *transform)
 	m2->m[0] /= m2->m[3];
 	m2->m[1] /= m2->m[3];
 	m2->m[2] /= m2->m[3];
+	if (fs->v.wx < -cx->camera.xvpixels || fs->v.wx > cx->camera.xvpixels ||
+		fs->v.wy < -cx->camera.yvpixels || fs->v.wy > cx->camera.yvpixels)
+		return 1;
+	return 0;
 }
 
-static void transform_entity(struct entity_context *cx,
-				struct entity *e,struct mat44 *transform)
+static int transform_entity(struct entity_context *cx,
+				struct entity *e,struct mat44 *transform, int do_clip)
 {
 	int i;
 	struct mat41 *m1, *m2;
@@ -589,16 +594,32 @@ static void transform_entity(struct entity_context *cx,
 	/* for testing, do small rotation... */
 	struct mat44 r1, r2;
 
-#if 1
 	mat44_rotate_y(&object_rotation, e->ry, &r1);  
 	mat44_rotate_x(&r1, e->rx, &r2);  
 	mat44_rotate_z(&r2, e->rz, &object_rotation);  
-#endif
 
 	tmp_transform = *transform;
 	mat44_product(&tmp_transform, &object_translation, &object_transform);
 	mat44_product(&object_transform, &object_rotation, &total_transform);
 	
+	/* calculate screen coords of entity as a whole */
+	t.x = 0;
+	t.y = 0;
+	t.z = 0;
+	t.w = 1.0;
+	mat44_x_mat41(&total_transform, (struct mat41 *) &t.x, (struct mat41 *) &t.wx);
+	t.wx /= t.ww;
+	t.wy /= t.ww;
+	t.wz /= t.ww;
+	e->sx = (t.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+	e->sy = (-t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+
+	if (do_clip) {
+		if (e->sx < 0 || e->sx > cx->camera.xvpixels ||
+			e->sy < 0 || e->sy > cx->camera.yvpixels) /* off screen? */
+			return 1; /* clip it. */
+	}
+
 	/* Set homogeneous coord to 1 initially for all vertices */
 	for (i = 0; i < e->m->nvertices; i++)
 		e->m->v[i].w = 1.0;
@@ -624,18 +645,7 @@ static void transform_entity(struct entity_context *cx,
 		m2->m[1] /= m2->m[3];
 		m2->m[2] /= m2->m[3];
 	}
-
-	/* calculate screen coords of entity as a whole */
-	t.x = 0;
-	t.y = 0;
-	t.z = 0;
-	t.w = 1.0;
-	mat44_x_mat41(&total_transform, (struct mat41 *) &t.x, (struct mat41 *) &t.wx);
-	t.wx /= t.ww;
-	t.wy /= t.ww;
-	t.wz /= t.ww;
-	e->sx = (t.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-	e->sy = (-t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+	return 0;
 }
 
 static int object_depth_compare(const void *a, const void *b, void *vcx)
@@ -720,7 +730,7 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 	struct mat41 *v; /* camera relative y axis (up/down) */ 
 	struct mat41 *n; /* camera relative z axis (into view plane) */
 	struct mat41 *u; /* camera relative x axis (left/right) */
-	float camera_angle, ent_angle; /* this is for cheezy view culling */
+	int clipped, do_clip;
 
 #ifdef WITH_ILDA_SUPPORT
 	ilda_file_open(cx);
@@ -751,8 +761,6 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 	look_direction.m[3] = 1.0;
 	normalize_vector(&look_direction, &look_direction);
 	n = &look_direction;
-
-	camera_angle = atan2f(cx->camera.lz - cx->camera.z, cx->camera.lx - cx->camera.x);
 
 	/* Calculate x direction relative to camera, "camera_x" */
 	mat41_cross_mat41(&look_direction, &up, &camera_x);
@@ -832,18 +840,8 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 		behind_camera = mat41_dot_mat41(&look_direction, &point_to_test);
 		if (behind_camera < 0) /* behind camera */
 			goto check_for_reposition;
-
-		/* Really cheezy view culling */
-		ent_angle = atan2f(point_to_test.m[2], point_to_test.m[0]);
-		ent_angle = fabs(ent_angle - camera_angle);
-		if (ent_angle > M_PI)
-			ent_angle = (2 * M_PI - ent_angle);
-		if (ent_angle > (cx->camera.angle_of_view / 2.0) * M_PI / 180.0)
-			goto check_for_reposition;
-
-		transform_fake_star(fs, &total_transform);
-		wireframe_render_fake_star(w, gc, cx, fs);
-
+		if (!transform_fake_star(cx, fs, &total_transform))
+			wireframe_render_fake_star(w, gc, cx, fs);
 check_for_reposition:
 		if (fs->dist3dsqrd > cx->camera.far * 10.0f * cx->camera.far * 10.0f)
 			reposition_fake_star(cx, fs, cx->camera.far * 10.0f);
@@ -869,23 +867,19 @@ check_for_reposition:
 		behind_camera = mat41_dot_mat41(&look_direction, &point_to_test);
 		if (behind_camera < 0) /* behind camera */
 			continue;
-		if ( !(cx->entity_list[i].render_style & RENDER_DISABLE_CLIP) ) {
+		do_clip = !(cx->entity_list[i].render_style & RENDER_DISABLE_CLIP);
+		if (do_clip) {
 /* increasing STANDARD_RADIUS makes fewer objects visible, decreasing it makes more */
 #define STANDARD_RADIUS (4.0)
 			if (cx->entity_list[i].dist3dsqrd * STANDARD_RADIUS / cx->entity_list[i].m->radius * cx->entity_list[i].scale >
 					sqr(fabs(cx->camera.far) * 20.0))
 				continue;
-
-			/* Really cheezy view culling */
-			ent_angle = atan2f(point_to_test.m[2], point_to_test.m[0]);
-			ent_angle = fabs(ent_angle - camera_angle);
-			if (ent_angle > M_PI)
-				ent_angle = (2 * M_PI - ent_angle);
-			if (ent_angle > (cx->camera.angle_of_view / 2.0) * M_PI / 180.0)
-				continue;
 		}
 
-		transform_entity(cx, &cx->entity_list[i], &total_transform);
+		clipped = transform_entity(cx, &cx->entity_list[i], &total_transform, do_clip);
+		if (clipped)
+			continue;
+
 		if (cx->entity_list[i].render_style & RENDER_POINT_CLOUD)
 			wireframe_render_point_cloud(w, gc, cx, &cx->entity_list[i]);
 		else if (cx->entity_list[i].render_style & RENDER_POINT_LINE)
