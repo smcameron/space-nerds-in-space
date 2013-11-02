@@ -1697,6 +1697,22 @@ static void player_collision_detection(void *player, void *object)
 	}
 }
 
+static void update_ship_orientation(struct snis_entity *o)
+{
+	union quat qyaw, q1, q2, q3, q4;
+
+	/* calculate amount of yaw to impart this iteration... */
+	quat_init_axis(&qyaw, 0.0, 1.0, 0.0, o->tsd.ship.yaw_velocity);
+	/* Convert to ship's coordinate system */
+	quat_mul(&q1, &qyaw, &o->orientation);
+	quat_conj(&q2, &o->orientation);
+	quat_mul(&q3, &q2, &q1);
+	/* Apply to ship's orientation */
+	quat_mul(&q4, &o->orientation, &q3);
+	quat_normalize_self(&q4);
+	o->orientation = q4;
+}
+
 static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
@@ -1721,13 +1737,11 @@ static void player_move(struct snis_entity *o)
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	space_partition_process(space_partition, o, o->x, o->z, o,
 				player_collision_detection);
-	o->heading += o->tsd.ship.yaw_velocity;
+	update_ship_orientation(o);
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
 	o->tsd.ship.sci_heading += o->tsd.ship.sci_yaw_velocity;
 	o->tsd.ship.shields = universe_timestamp % 100;
 
-	normalize_angle(&o->heading);
-	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
 	normalize_angle(&o->tsd.ship.gun_heading);
 	normalize_angle(&o->tsd.ship.sci_heading);
 	o->timestamp = universe_timestamp;
