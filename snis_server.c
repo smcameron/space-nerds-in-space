@@ -1192,7 +1192,7 @@ static void ship_move(struct snis_entity *o)
 		yaw_vel = heading_diff;
 	o->heading += yaw_vel;
 	normalize_angle(&o->heading);
-	quat_init_axis(&o->orientation, 0, 0, 1, o->heading);
+	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
 
 	/* Adjust velocity towards desired velocity */
 	o->tsd.ship.velocity = o->tsd.ship.velocity +
@@ -1727,7 +1727,7 @@ static void player_move(struct snis_entity *o)
 	o->tsd.ship.shields = universe_timestamp % 100;
 
 	normalize_angle(&o->heading);
-	quat_init_axis(&o->orientation, 0, 0, 1, o->heading);
+	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
 	normalize_angle(&o->tsd.ship.gun_heading);
 	normalize_angle(&o->tsd.ship.sci_heading);
 	o->timestamp = universe_timestamp;
@@ -1842,7 +1842,7 @@ static void demon_ship_move(struct snis_entity *o)
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->heading += o->tsd.ship.yaw_velocity;
 	normalize_angle(&o->heading);
-	quat_init_axis(&o->orientation, 0, 0, 1, o->heading);
+	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
 	o->timestamp = universe_timestamp;
 
 	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, YAW_DAMPING);
@@ -1940,7 +1940,7 @@ static int add_generic_object(double x, double z, double vx, double vz, double h
 	go[i].sdata.shield_width = snis_randn(128);
 	go[i].sdata.shield_depth = snis_randn(255);
 	go[i].sdata.faction = snis_randn(ARRAY_SIZE(faction));
-	quat_init_axis(&go[i].orientation, 0, 0, 1, heading);
+	quat_init_axis(&go[i].orientation, 0, 1, 0, heading);
 	free(n);
 	return i;
 }
@@ -2124,7 +2124,7 @@ static void respawn_player(struct snis_entity *o)
 	o->vx = 0;
 	o->vz = 0;
 	o->heading = 3 * M_PI / 2;
-	quat_init_axis(&o->orientation, 0, 0, 1, o->heading);
+	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
 	init_player(o);
 	o->alive = 1;
 	send_ship_damage_packet(o);

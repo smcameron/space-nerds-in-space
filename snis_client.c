@@ -442,7 +442,7 @@ static int add_generic_object(uint32_t id, double x, double z, double vx, double
 	go[i].entity = entity;
 	if (entity)
 		entity_set_user_data(entity, &go[i]);
-	quat_init_axis(&go[i].orientation, 0, 0, 1, heading);
+	quat_init_axis(&go[i].orientation, 0, 1, 0, heading);
 	return i;
 }
 
@@ -457,7 +457,7 @@ static void update_generic_object(int index, double x, double y, double z,
 	o->vx = vx;
 	o->vz = vz;
 	o->heading = heading;
-	quat_init_axis(&o->orientation, 0, 0, 1, heading);
+	quat_init_axis(&o->orientation, 0, 1, 0, heading);
 	o->alive = alive;
 	if (o->entity) {
 		update_entity_pos(o->entity, x, y, z);
@@ -2755,7 +2755,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_ship(id, dx, dy, dz, dvx, dvz, (double) ypr.a.yaw,
+	rc = update_ship(id, dx, dy, dz, dvx, dvz, (double) ypr.a.pitch,
 				dyawvel, alive, torpedoes, power,
 				dgheading, dgunyawvel, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
