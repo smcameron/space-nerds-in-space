@@ -2063,6 +2063,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.shields = 100.0;
 	o->tsd.ship.power = 100.0;
 	o->tsd.ship.yaw_velocity = 0.0;
+	o->tsd.ship.pitch_velocity = 0.0;
 	o->tsd.ship.gun_yaw_velocity = 0.0;
 	o->tsd.ship.gun_heading = M_PI / 2.0;
 	o->tsd.ship.velocity = 0.0;
@@ -2148,6 +2149,7 @@ static int add_ship(void)
 	go[i].tsd.ship.shields = 100.0;
 	go[i].tsd.ship.power = 100.0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
+	go[i].tsd.ship.pitch_velocity = 0.0;
 	go[i].tsd.ship.desired_velocity = 0;
 	go[i].tsd.ship.desired_heading = 0;
 	go[i].tsd.ship.velocity = 0;
@@ -5539,8 +5541,9 @@ static void send_update_ship_packet(struct game_client *c,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "SwwUSUUbbbwbbbbbbbbbbbbwQ",
+	packed_buffer_append(pb, "SSwwUSUUbbbwbbbbbbbbbbbbwQ",
 			o->tsd.ship.yaw_velocity, (int32_t) 360,
+			o->tsd.ship.pitch_velocity, (int32_t) 360,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
 			o->tsd.ship.gun_heading, (uint32_t) 360,
 			o->tsd.ship.gun_yaw_velocity, (int32_t) 360,

@@ -739,7 +739,7 @@ static int update_power_model_data(uint32_t id, struct power_model_data *pmd)
 }
 
 static int update_ship(uint32_t id, double x, double y, double z, double vx, double vz,
-			union quat *orientation, double yawvel, uint32_t alive,
+			union quat *orientation, double yawvel, double pitchvel, uint32_t alive,
 			uint32_t torpedoes, uint32_t power, 
 			double gun_heading, double gunyawvel,
 			double sci_heading, double sci_beam_width, int type,
@@ -774,6 +774,7 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 	}
 	go[i].y = y;
 	go[i].tsd.ship.yaw_velocity = yawvel;
+	go[i].tsd.ship.pitch_velocity = pitchvel;
 	go[i].tsd.ship.torpedoes = torpedoes;
 	go[i].tsd.ship.power = power;
 	go[i].tsd.ship.gun_heading = gun_heading;
@@ -2724,7 +2725,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, power;
 	uint32_t fuel, victim_id;
-	double dx, dy, dz, dyawvel, dgheading, dgunyawvel, dsheading, dbeamwidth, dvx, dvz;
+	double dx, dy, dz, dyawvel, dpitchvel, dgheading, dgunyawvel, dsheading, dbeamwidth, dvx, dvz;
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
@@ -2744,8 +2745,9 @@ static int process_update_ship_packet(uint16_t opcode)
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
 				&dvx, (int32_t) UNIVERSE_DIM, &dvz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_extract(&pb, "SwwUSUU",
+	packed_buffer_extract(&pb, "SSwwUSUU",
 				&dyawvel, (int32_t) 360,
+				&dpitchvel, (int32_t) 360,
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
 				&dgunyawvel, (int32_t) 360,
 				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
@@ -2759,7 +2761,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	quat_to_euler(&ypr, &orientation);	
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dz, dvx, dvz, &orientation,
-				dyawvel, alive, torpedoes, power,
+				dyawvel, dpitchvel, alive, torpedoes, power,
 				dgheading, dgunyawvel, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
 				weapzoom, navzoom, mainzoom, warpdrive, requested_warpdrive,
