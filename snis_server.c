@@ -2082,6 +2082,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.scizoom = 0;
 	o->tsd.ship.weapzoom = 0;
 	o->tsd.ship.navzoom = 0;
+	o->tsd.ship.mainzoom = 0;
 	o->tsd.ship.warpdrive = 0;
 	o->tsd.ship.requested_warpdrive = 0;
 	o->tsd.ship.requested_shield = 0;
@@ -4397,6 +4398,12 @@ static int process_request_navzoom(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.navzoom), no_limit);
 }
 
+static int process_request_mainzoom(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.mainzoom), no_limit);
+}
+
+
 static int process_request_weapzoom(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.weapzoom), no_limit);
@@ -4959,6 +4966,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_NAVZOOM:
 			rc = process_request_navzoom(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_MAINZOOM:
+			rc = process_request_mainzoom(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -5527,7 +5539,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "SwwUSUUbbbwbbbbbbbbbbbwQ",
+	packed_buffer_append(pb, "SwwUSUUbbbwbbbbbbbbbbbbwQ",
 			o->tsd.ship.yaw_velocity, (int32_t) 360,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
 			o->tsd.ship.gun_heading, (uint32_t) 360,
@@ -5536,6 +5548,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.sci_beam_width, (uint32_t) 360,
 			tloading, throttle, rpm, fuel, o->tsd.ship.temp,
 			o->tsd.ship.scizoom, o->tsd.ship.weapzoom, o->tsd.ship.navzoom,
+			o->tsd.ship.mainzoom,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
 			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
 			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype,

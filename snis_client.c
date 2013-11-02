@@ -742,7 +742,7 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 			double sci_heading, double sci_beam_width, int type,
 			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
 			fuel, uint8_t temp, uint8_t scizoom, uint8_t weapzoom,
-			uint8_t navzoom, uint8_t warpdrive,
+			uint8_t navzoom, uint8_t mainzoom, uint8_t warpdrive,
 			uint8_t requested_warpdrive, uint8_t requested_shield,
 			uint8_t phaser_charge, uint8_t phaser_wavelength, uint8_t shiptype,
 			uint8_t reverse, uint32_t victim_id, float *orientation)
@@ -786,6 +786,7 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 	go[i].tsd.ship.scizoom = scizoom;
 	go[i].tsd.ship.weapzoom = weapzoom;
 	go[i].tsd.ship.navzoom = navzoom;
+	go[i].tsd.ship.mainzoom = mainzoom;
 	go[i].tsd.ship.requested_warpdrive = requested_warpdrive;
 	go[i].tsd.ship.requested_shield = requested_shield;
 	go[i].tsd.ship.warpdrive = warpdrive;
@@ -2346,6 +2347,14 @@ static void do_zoom(int z)
 			newval = 255;
                 do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_NAVZOOM);
 		break;
+	case DISPLAYMODE_MAINSCREEN:
+		newval = o->tsd.ship.mainzoom + z;
+		if (newval < 0)
+			newval = 0;
+		if (newval > 255)
+			newval = 255;
+                do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_MAINZOOM);
+		break;
 	default:
 		break;
 	}
@@ -2716,7 +2725,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
-		warpdrive, requested_warpdrive,
+		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
 		reverse;
 	union quat orientation;
@@ -2737,8 +2746,8 @@ static int process_update_ship_packet(uint16_t opcode)
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
 				&dgunyawvel, (int32_t) 360,
 				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
-	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbwQ", &tloading, &throttle, &rpm, &fuel, &temp,
-			&scizoom, &weapzoom, &navzoom,
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbwQ", &tloading, &throttle, &rpm, &fuel, &temp,
+			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &victim_id, &orientation.vec[0]);
@@ -2750,7 +2759,8 @@ static int process_update_ship_packet(uint16_t opcode)
 				dyawvel, alive, torpedoes, power,
 				dgheading, dgunyawvel, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
-				weapzoom, navzoom, warpdrive, requested_warpdrive, requested_shield,
+				weapzoom, navzoom, mainzoom, warpdrive, requested_warpdrive,
+				requested_shield,
 				phaser_charge, phaser_wavelength, shiptype, reverse, victim_id,
 				&orientation.vec[0]);
 	pthread_mutex_unlock(&universe_mutex);
@@ -4041,6 +4051,22 @@ static int normalize_degrees(int degrees)
 	return degrees;
 }
 
+static int newzoom(int current_zoom, int desired_zoom)
+{
+	if (current_zoom != desired_zoom) {
+		int delta;
+
+		delta = abs(desired_zoom - current_zoom) / 10;
+		if (delta <= 0)
+			delta = 1;
+		if (desired_zoom < current_zoom)
+			current_zoom -= delta;
+		else
+			current_zoom += delta;
+	} 
+	return current_zoom;
+}
+
 static void show_mainscreen_starfield(GtkWidget *w, double heading)
 {
 #ifdef WITHOUTOPENGL
@@ -4084,14 +4110,14 @@ static void show_mainscreen_starfield(GtkWidget *w, double heading)
 static void begin_2d_gl(void);
 static void end_2d_gl(void);
 #ifndef WITHOUTOPENGL
-static void begin_3d_gl(double camera_look_heading)
+static void begin_3d_gl(double camera_look_heading, float angle_of_view)
 {
 	glEnable(GL_TEXTURE_2D);
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	gluPerspective(ANGLE_OF_VIEW, (float) SCREEN_WIDTH / SCREEN_HEIGHT,
+	gluPerspective(angle_of_view, (float) SCREEN_WIDTH / SCREEN_HEIGHT,
 			NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE);
 	gluLookAt(0, 0, 0, cos(camera_look_heading), 0.0, -sin(camera_look_heading),
 				0.0, 1.0, 0.0); 
@@ -4110,7 +4136,7 @@ static void end_3d_gl(void)
 }
 #endif
 
-static void render_skybox(GtkWidget *w, double camera_look_heading)
+static void render_skybox(GtkWidget *w, double camera_look_heading, float angle_of_view)
 {
 
 	/* TODO:  Probably there is a better way than creating these every frame */
@@ -4138,7 +4164,7 @@ static void render_skybox(GtkWidget *w, double camera_look_heading)
 	};
 
 	end_2d_gl();
-	begin_3d_gl(camera_look_heading);
+	begin_3d_gl(camera_look_heading, angle_of_view);
 
 	glColor4ub(255, 255, 255, 255);
 	const static GLfloat light0_position[] = {1.0, 1.0, 1.0, 0.0};
@@ -4302,7 +4328,11 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
 
 static void show_mainscreen(GtkWidget *w)
 {
+	const float min_angle_of_view = 20.0;
+	const float max_angle_of_view = ANGLE_OF_VIEW;
 	static int fake_stars_initialized = 0;
+	static int current_zoom = 0;
+	float angle_of_view;
 	struct snis_entity *o;
 	float cx, cy, cz, lx, lz;
 	double camera_look_heading;
@@ -4310,12 +4340,17 @@ static void show_mainscreen(GtkWidget *w)
 
 	if (!(o = find_my_ship()))
 		return;
+
+	current_zoom = newzoom(current_zoom, o->tsd.ship.mainzoom);
+	angle_of_view = ((255.0 - (float) current_zoom) / 255.0) *
+				(max_angle_of_view - min_angle_of_view) + min_angle_of_view;
+
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL)
 		camera_look_heading = o->heading + o->tsd.ship.view_angle;
 	else
 		camera_look_heading = o->tsd.ship.gun_heading;
 
-	render_skybox(w, camera_look_heading);
+	render_skybox(w, camera_look_heading, angle_of_view);
 
 	show_mainscreen_starfield(w, camera_look_heading);
 
@@ -4330,7 +4365,7 @@ static void show_mainscreen(GtkWidget *w)
 	camera_look_at(ecx, cx + camera_lookat.m[0], cy + camera_lookat.m[1], cz + camera_lookat.m[2]);
 
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
-				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
+				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
 			cos(((timer / 4) % 360) * M_PI / 180));
 	sng_set_foreground(GREEN);
@@ -5729,22 +5764,6 @@ static void show_death_screen(GtkWidget *w)
 	sng_abs_xy_draw_string(w, gc, buf, BIG_FONT, 20, 450);
 	sprintf(buf, "RESPAWNING IN %d SECONDS", go[my_ship_oid].respawn_time);
 	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, 500);
-}
-
-static int newzoom(int current_zoom, int desired_zoom)
-{
-	if (current_zoom != desired_zoom) {
-		int delta;
-
-		delta = abs(desired_zoom - current_zoom) / 10;
-		if (delta <= 0)
-			delta = 1;
-		if (desired_zoom < current_zoom)
-			current_zoom -= delta;
-		else
-			current_zoom += delta;
-	} 
-	return current_zoom;
 }
 
 static void show_weapons(GtkWidget *w)
@@ -8583,6 +8602,12 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 			do_dirkey(1, 0);
 		return 0;
 	case DISPLAYMODE_WEAPONS:
+		if (e->direction == GDK_SCROLL_UP)
+			do_zoom(10);
+		if (e->direction == GDK_SCROLL_DOWN)
+			do_zoom(-10);
+		return 0;
+	case DISPLAYMODE_MAINSCREEN:
 		if (e->direction == GDK_SCROLL_UP)
 			do_zoom(10);
 		if (e->direction == GDK_SCROLL_DOWN)

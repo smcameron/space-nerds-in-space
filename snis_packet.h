@@ -110,6 +110,7 @@
 #define OPCODE_LOAD_SKYBOX 185
 #define OPCODE_ROBOT_AUTO_MANUAL 	186
 #define OPCODE_NAV_DETAILS		187
+#define OPCODE_REQUEST_MAINZOOM		188
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -137,6 +138,7 @@ struct update_ship_packet {
 	uint8_t scizoom;
 	uint8_t weapzoom;
 	uint8_t navzoom;
+	uint8_t mainzoom;
 	uint8_t warpdrive;
 	uint8_t requested_warpdrive;
 	uint8_t requested_shield;

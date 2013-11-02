@@ -259,6 +259,7 @@ struct ship_data {
 	uint8_t scizoom;
 	uint8_t weapzoom;
 	uint8_t navzoom;
+	uint8_t mainzoom;
 	uint8_t warpdrive;
 	uint8_t requested_warpdrive;
 	uint8_t requested_shield;
