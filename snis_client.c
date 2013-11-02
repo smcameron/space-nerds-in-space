@@ -4328,7 +4328,7 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
 
 static void show_mainscreen(GtkWidget *w)
 {
-	const float min_angle_of_view = 20.0;
+	const float min_angle_of_view = 5.0;
 	const float max_angle_of_view = ANGLE_OF_VIEW;
 	static int fake_stars_initialized = 0;
 	static int current_zoom = 0;
