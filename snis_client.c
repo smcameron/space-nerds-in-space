@@ -3300,6 +3300,7 @@ struct comms_ui {
 	struct button *red_alert_button;
 	struct button *mainscreen_comms;
 	struct snis_text_input_box *comms_input;
+	struct slider *mainzoom_slider;
 	char input[100];
 } comms_ui;
 
@@ -5402,6 +5403,11 @@ static void do_navzoom(struct slider *s)
 	do_adjust_slider_value(s, OPCODE_REQUEST_NAVZOOM);
 }
 
+static void do_mainzoom(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_MAINZOOM);
+}
+
 static void do_throttle(struct slider *s)
 {
 	do_adjust_slider_value(s, OPCODE_REQUEST_THROTTLE);
@@ -5480,6 +5486,7 @@ DEFINE_SAMPLER_FUNCTION(sample_phasercharge, tsd.ship.phaser_charge, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 255.0 * 2.0, 10.0)
 DEFINE_SAMPLER_FUNCTION(sample_weapzoom, tsd.ship.weapzoom, 255.0, 0.0)
 DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 255.0, 0.0)
+DEFINE_SAMPLER_FUNCTION(sample_mainzoom, tsd.ship.mainzoom, 255.0, 0.0)
 
 static double sample_power_model_voltage(void)
 {
@@ -6769,6 +6776,9 @@ static void init_comms_ui(void)
 					comms_transmit_button_pressed);
 	comms_ui.comms_transmit_button = snis_button_init(10, 550, 160, 30, "TRANSMIT", GREEN,
 			TINY_FONT, comms_transmit_button_pressed, NULL);
+	comms_ui.mainzoom_slider = snis_slider_init(180, 560, 380, GREEN, "ZOOM",
+				"1", "10", 0.0, 100.0, sample_mainzoom,
+				do_mainzoom);
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.nav_onscreen_button, DISPLAYMODE_COMMS);
@@ -6781,6 +6791,7 @@ static void init_comms_ui(void)
 	ui_add_button(comms_ui.mainscreen_comms, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS);
 	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
+	ui_add_slider(comms_ui.mainzoom_slider, DISPLAYMODE_COMMS);
 }
 
 static int weapons_button_press(int x, int y)
