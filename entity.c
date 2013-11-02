@@ -33,6 +33,7 @@
 #include "triangle.h"
 #include "mesh.h"
 #include "stl_parser.h"
+#include "quat.h"
 #include "entity.h"
 #include "mathutils.h"
 
@@ -969,5 +970,25 @@ void entity_set_user_data(struct entity *e, void *user_data)
 void *entity_get_user_data(struct entity *e)
 {
 	return e->user_data;
+}
+
+void camera_set_orientation(struct entity_context *cx, union quat *q)
+{
+	union vec3 look, up;
+
+	look.v.x = 1;
+	look.v.y = 0;
+	look.v.z = 0;
+	up.v.x = 0;
+	up.v.y = 1;
+	up.v.z = 0;
+
+	quat_rot_vec_self(&look, q);
+	quat_rot_vec_self(&up, q);
+
+	camera_look_at(cx, cx->camera.x + look.v.x * 256,
+			cx->camera.y + look.v.y * 256,
+			cx->camera.z + look.v.z * 256);
+	camera_assign_up_direction(cx, up.v.x, up.v.y, up.v.z);
 }
 
