@@ -4382,7 +4382,7 @@ static void show_mainscreen(GtkWidget *w)
 		float sx, sy;
 		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.victim_id);
 
-		if (target) {
+		if (target && target->entity) {
 			entity_get_screen_coords(target->entity, &sx, &sy);
 			draw_targeting_indicator(w, gc, sx, sy);
 		}
