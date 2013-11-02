@@ -739,7 +739,8 @@ static int update_power_model_data(uint32_t id, struct power_model_data *pmd)
 }
 
 static int update_ship(uint32_t id, double x, double y, double z, double vx, double vz,
-			union quat *orientation, double yawvel, double pitchvel, uint32_t alive,
+			union quat *orientation, double yawvel, double pitchvel, double rollvel,
+			uint32_t alive,
 			uint32_t torpedoes, uint32_t power, 
 			double gun_heading, double gunyawvel,
 			double sci_heading, double sci_beam_width, int type,
@@ -775,6 +776,7 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 	go[i].y = y;
 	go[i].tsd.ship.yaw_velocity = yawvel;
 	go[i].tsd.ship.pitch_velocity = pitchvel;
+	go[i].tsd.ship.roll_velocity = rollvel;
 	go[i].tsd.ship.torpedoes = torpedoes;
 	go[i].tsd.ship.power = power;
 	go[i].tsd.ship.gun_heading = gun_heading;
@@ -1741,7 +1743,7 @@ char *keyactionstring[] = {
 	"mainscreen", "navigation", "weapons", "science",
 	"damage", "debug", "demon", "f8", "f9", "f10",
 	"onscreen", "viewmode", "zoom", "unzoom", "phaser",
-	"rendermode"
+	"rendermode", "keyrollleft", "keyrollright",
 };
 
 void init_keymap()
@@ -1765,6 +1767,8 @@ void init_keymap()
 	ffkeymap[GDK_Left & 0x00ff] = keyleft;
 	keymap[GDK_comma] = keyleft;
 	keymap[GDK_less] = keyleft;
+	keymap[GDK_q] = keyrollleft;
+	keymap[GDK_e] = keyrollright;
 
 	keymap[GDK_space] = keyphaser;
 	keymap[GDK_z] = keytorpedo;
@@ -1919,16 +1923,21 @@ static void request_navigation_pitch_packet(uint8_t pitch)
 	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_PITCH, pitch));
 }
 
-static void navigation_dirkey(int h, int v)
+static void request_navigation_roll_packet(uint8_t roll)
 {
-	uint8_t yaw, pitch;
+	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_ROLL, roll));
+}
+
+static void navigation_dirkey(int h, int v, int r)
+{
+	uint8_t yaw, pitch, roll;
 	static int last_time = 0;
 	int fine;
 
 	fine = 2 * (timer - last_time > 5);
 	last_time = timer;
 
-	if (!h && !v)
+	if (!h && !v && !r)
 		return;
 
 	if (h) {
@@ -1938,6 +1947,10 @@ static void navigation_dirkey(int h, int v)
 	if (v) {
 		pitch = v < 0 ? PITCH_BACK + fine : PITCH_FORWARD + fine;
 		request_navigation_pitch_packet(pitch);
+	}
+	if (r) {
+		roll = r < 0 ? ROLL_LEFT + fine : ROLL_RIGHT + fine;
+		request_navigation_roll_packet(roll);
 	}
 }
 
@@ -2101,7 +2114,7 @@ static void do_view_mode_change()
 				0.0, (int32_t) 360, new_mode));
 }
 
-static void do_dirkey(int h, int v)
+static void do_dirkey(int h, int v, int r)
 {
 	if (in_the_process_of_quitting) {
 		if (h < 0)
@@ -2114,7 +2127,7 @@ static void do_dirkey(int h, int v)
 	switch (displaymode) {
 		case DISPLAYMODE_MAINSCREEN:
 		case DISPLAYMODE_NAVIGATION:
-			navigation_dirkey(h, v); 
+			navigation_dirkey(h, v, r); 
 			break;
 		case DISPLAYMODE_WEAPONS:
 			weapons_dirkey(h, v); 
@@ -2369,13 +2382,14 @@ static void do_zoom(int z)
 
 static void deal_with_keyboard()
 {
-	int h, v, z;
+	int h, v, z, r;
 	static const int keyboard_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
 	if (timer % keyboard_throttle != 0)
 		return;
 
 	h = 0;
 	v = 0;
+	r = 0;
 	z = 0;
 
 	if (kbstate.pressed[keyleft])	
@@ -2386,8 +2400,12 @@ static void deal_with_keyboard()
 		v = -1;
 	if (kbstate.pressed[keydown])
 		v = 1;
-	if (h || v)
-		do_dirkey(h, v);
+	if (kbstate.pressed[keyrollleft])
+		r = -1;
+	if (kbstate.pressed[keyrollright])
+		r = 1;
+	if (h || v || r)
+		do_dirkey(h, v, r);
 
 	if (kbstate.pressed[keyzoom])
 		z = 10;
@@ -2724,11 +2742,12 @@ static int process_update_power_data(void)
 
 static int process_update_ship_packet(uint16_t opcode)
 {
-	unsigned char buffer[100];
+	unsigned char buffer[120];
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, power;
 	uint32_t fuel, victim_id;
-	double dx, dy, dz, dyawvel, dpitchvel, dgheading, dgunyawvel, dsheading, dbeamwidth, dvx, dvz;
+	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
+	double dgheading, dgunyawvel, dsheading, dbeamwidth, dvx, dvz;
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
@@ -2748,9 +2767,10 @@ static int process_update_ship_packet(uint16_t opcode)
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
 				&dvx, (int32_t) UNIVERSE_DIM, &dvz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_extract(&pb, "SSwwUSUU",
+	packed_buffer_extract(&pb, "SSSwwUSUU",
 				&dyawvel, (int32_t) 360,
 				&dpitchvel, (int32_t) 360,
+				&drollvel, (int32_t) 360,
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
 				&dgunyawvel, (int32_t) 360,
 				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
@@ -2764,7 +2784,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	quat_to_euler(&ypr, &orientation);	
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_ship(id, dx, dy, dz, dvx, dvz, &orientation,
-				dyawvel, dpitchvel, alive, torpedoes, power,
+				dyawvel, dpitchvel, drollvel, alive, torpedoes, power,
 				dgheading, dgunyawvel, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
 				weapzoom, navzoom, mainzoom, warpdrive, requested_warpdrive,
@@ -8627,9 +8647,9 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 		return 0;
 	case DISPLAYMODE_NAVIGATION:
 		if (e->direction == GDK_SCROLL_UP)
-			do_dirkey(-1, 0);
+			do_dirkey(-1, 0, 0);
 		if (e->direction == GDK_SCROLL_DOWN)
-			do_dirkey(1, 0);
+			do_dirkey(1, 0, 0);
 		return 0;
 	case DISPLAYMODE_WEAPONS:
 		if (e->direction == GDK_SCROLL_UP)

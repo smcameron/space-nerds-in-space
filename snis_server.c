@@ -1699,14 +1699,17 @@ static void player_collision_detection(void *player, void *object)
 
 static void update_ship_orientation(struct snis_entity *o)
 {
-	union quat qyaw, qpitch, qrot, q1, q2, q3, q4;
+	union quat qyaw, qpitch, qroll, qrot, q1, q2, q3, q4;
 
 	/* calculate amount of yaw to impart this iteration... */
 	quat_init_axis(&qyaw, 0.0, 1.0, 0.0, o->tsd.ship.yaw_velocity);
 	/* Calculate amount of pitch to impart this iteration... */
 	quat_init_axis(&qpitch, 0.0, 0.0, 1.0, o->tsd.ship.pitch_velocity);
-	/* Combine pitch and yaw */
-	quat_mul(&qrot, &qyaw, &qpitch);
+	/* Calculate amount of pitch to impart this iteration... */
+	quat_init_axis(&qroll, 1.0, 0.0, 0.0, o->tsd.ship.roll_velocity);
+	/* Combine pitch, roll and yaw */
+	quat_mul(&q1, &qyaw, &qpitch);
+	quat_mul(&qrot, &q1, &qroll);
 
 	/* Convert rotation to ship's coordinate system */
 	quat_mul(&q1, &o->orientation, &qrot);
@@ -1753,6 +1756,7 @@ static void player_move(struct snis_entity *o)
 
 	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.pitch_velocity, PITCH_DAMPING);
+	damp_yaw_velocity(&o->tsd.ship.roll_velocity, ROLL_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.gun_yaw_velocity, GUN_YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.sci_yaw_velocity, SCI_YAW_DAMPING);
 
@@ -2084,6 +2088,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.power = 100.0;
 	o->tsd.ship.yaw_velocity = 0.0;
 	o->tsd.ship.pitch_velocity = 0.0;
+	o->tsd.ship.roll_velocity = 0.0;
 	o->tsd.ship.gun_yaw_velocity = 0.0;
 	o->tsd.ship.gun_heading = M_PI / 2.0;
 	o->tsd.ship.velocity = 0.0;
@@ -2170,6 +2175,7 @@ static int add_ship(void)
 	go[i].tsd.ship.power = 100.0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
 	go[i].tsd.ship.pitch_velocity = 0.0;
+	go[i].tsd.ship.roll_velocity = 0.0;
 	go[i].tsd.ship.desired_velocity = 0;
 	go[i].tsd.ship.desired_heading = 0;
 	go[i].tsd.ship.velocity = 0;
@@ -3209,6 +3215,17 @@ static void do_pitch(struct game_client *c, int pitch)
 
 	do_generic_yaw(&ship->tsd.ship.pitch_velocity, pitch, max_pitch_velocity,
 			PITCH_INCREMENT, PITCH_INCREMENT_FINE);
+}
+
+static void do_roll(struct game_client *c, int roll)
+{
+	struct snis_entity *ship = &go[c->ship_index];
+	double max_roll_velocity =
+		(MAX_ROLL_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
+
+	do_generic_yaw(&ship->tsd.ship.roll_velocity, roll, max_roll_velocity,
+			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
+	printf("do_roll\n");
 }
 
 static void do_demon_yaw(struct snis_entity *o, int yaw)
@@ -4911,6 +4928,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_REQUEST_ROLL:
+			rc = process_request_yaw(c, do_roll); /* process_request_yaw is correct */
+			if (rc)
+				goto protocol_error;
+			break;
 		case OPCODE_DEMON_YAW:
 			rc = process_demon_yaw(c);
 			if (rc)
@@ -5576,9 +5598,10 @@ static void send_update_ship_packet(struct game_client *c,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "SSwwUSUUbbbwbbbbbbbbbbbbwQ",
+	packed_buffer_append(pb, "SSSwwUSUUbbbwbbbbbbbbbbbbwQ",
 			o->tsd.ship.yaw_velocity, (int32_t) 360,
 			o->tsd.ship.pitch_velocity, (int32_t) 360,
+			o->tsd.ship.roll_velocity, (int32_t) 360,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
 			o->tsd.ship.gun_heading, (uint32_t) 360,
 			o->tsd.ship.gun_yaw_velocity, (int32_t) 360,
