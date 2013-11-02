@@ -111,6 +111,7 @@
 #define OPCODE_ROBOT_AUTO_MANUAL 	186
 #define OPCODE_NAV_DETAILS		187
 #define OPCODE_REQUEST_MAINZOOM		188
+#define OPCODE_REQUEST_PITCH		189
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -269,6 +270,10 @@ struct request_yaw_packet {
 #define YAW_RIGHT 1
 #define YAW_LEFT_FINE 2
 #define YAW_RIGHT_FINE 3
+#define PITCH_FORWARD 0
+#define PITCH_BACK 1
+#define PITCH_FORWARD_FINE 2
+#define PITCH_BACK_FINE 3
 };
 
 struct request_thrust_packet {

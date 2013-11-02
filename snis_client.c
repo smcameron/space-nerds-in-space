@@ -1914,9 +1914,14 @@ static void request_navigation_thrust_packet(uint8_t thrust)
 	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_THRUST, thrust));
 }
 
+static void request_navigation_pitch_packet(uint8_t pitch)
+{
+	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_PITCH, pitch));
+}
+
 static void navigation_dirkey(int h, int v)
 {
-	uint8_t yaw;
+	uint8_t yaw, pitch;
 	static int last_time = 0;
 	int fine;
 
@@ -1930,12 +1935,10 @@ static void navigation_dirkey(int h, int v)
 		yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
 		request_navigation_yaw_packet(yaw);
 	}
-#if 0
 	if (v) {
-		thrust = v < 0 ? THRUST_BACKWARDS : THRUST_FORWARDS;
-		request_navigation_thrust_packet(thrust);
+		pitch = v < 0 ? PITCH_BACK + fine : PITCH_FORWARD + fine;
+		request_navigation_pitch_packet(pitch);
 	}
-#endif
 }
 
 static void request_demon_yaw_packet(uint32_t oid, uint8_t yaw)

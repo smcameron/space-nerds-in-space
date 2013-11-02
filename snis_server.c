@@ -1699,16 +1699,21 @@ static void player_collision_detection(void *player, void *object)
 
 static void update_ship_orientation(struct snis_entity *o)
 {
-	union quat qyaw, q1, q2, q3, q4;
+	union quat qyaw, qpitch, qrot, q1, q2, q3, q4;
 
 	/* calculate amount of yaw to impart this iteration... */
 	quat_init_axis(&qyaw, 0.0, 1.0, 0.0, o->tsd.ship.yaw_velocity);
-	/* Convert to ship's coordinate system */
-	quat_mul(&q1, &qyaw, &o->orientation);
+	/* Calculate amount of pitch to impart this iteration... */
+	quat_init_axis(&qpitch, 0.0, 0.0, 1.0, o->tsd.ship.pitch_velocity);
+	/* Combine pitch and yaw */
+	quat_mul(&qrot, &qyaw, &qpitch);
+
+	/* Convert rotation to ship's coordinate system */
+	quat_mul(&q1, &o->orientation, &qrot);
 	quat_conj(&q2, &o->orientation);
-	quat_mul(&q3, &q2, &q1);
+	quat_mul(&q3, &q1, &q2);
 	/* Apply to ship's orientation */
-	quat_mul(&q4, &o->orientation, &q3);
+	quat_mul(&q4, &q3, &o->orientation);
 	quat_normalize_self(&q4);
 	o->orientation = q4;
 }
@@ -1747,6 +1752,7 @@ static void player_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 
 	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, YAW_DAMPING);
+	damp_yaw_velocity(&o->tsd.ship.pitch_velocity, PITCH_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.gun_yaw_velocity, GUN_YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.sci_yaw_velocity, SCI_YAW_DAMPING);
 
@@ -3193,6 +3199,16 @@ static void do_yaw(struct game_client *c, int yaw)
 
 	do_generic_yaw(&ship->tsd.ship.yaw_velocity, yaw, max_yaw_velocity,
 			YAW_INCREMENT, YAW_INCREMENT_FINE);
+}
+
+static void do_pitch(struct game_client *c, int pitch)
+{
+	struct snis_entity *ship = &go[c->ship_index];
+	double max_pitch_velocity =
+		(MAX_PITCH_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
+
+	do_generic_yaw(&ship->tsd.ship.pitch_velocity, pitch, max_pitch_velocity,
+			PITCH_INCREMENT, PITCH_INCREMENT_FINE);
 }
 
 static void do_demon_yaw(struct snis_entity *o, int yaw)
@@ -4887,6 +4903,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_YAW:
 			rc = process_request_yaw(c, do_yaw);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_PITCH:
+			rc = process_request_yaw(c, do_pitch); /* process_request_yaw is correct */
 			if (rc)
 				goto protocol_error;
 			break;
