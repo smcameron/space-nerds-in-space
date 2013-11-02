@@ -5920,7 +5920,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	double ship_scale = screen_radius/250.0;
 
 	/* rotate camera to be behind my ship */
-	struct mat41 camera_pos = { { screen_radius * 2.5, screen_radius, 0} };
+	struct mat41 camera_pos = { { screen_radius * 1.85, screen_radius * 0.85, 0} };
 	struct mat41 camera_pos_heading;
 	mat41_rotate_y(&camera_pos, camera_heading, &camera_pos_heading);
 
