@@ -814,7 +814,7 @@ void camera_set_parameters(struct entity_context *cx, float near, float far,
 	cx->camera.angle_of_view = angle_of_view;
 
 	/* based on gluPerspective to find the right, left, top, and bottom */
-	float scale = tan(cx->camera.angle_of_view * 0.5 * M_PI / 180.0) * cx->camera.near;
+	float scale = tan(cx->camera.angle_of_view * 0.5) * cx->camera.near;
 	cx->camera.right = ((float) xvpixels / (float) yvpixels * scale);
 	cx->camera.left = -cx->camera.right;
 	cx->camera.top = scale;

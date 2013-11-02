@@ -4118,7 +4118,7 @@ static void begin_3d_gl(double camera_look_heading, float angle_of_view)
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	gluPerspective(angle_of_view, (float) SCREEN_WIDTH / SCREEN_HEIGHT,
+	gluPerspective(angle_of_view * 180.0 / M_PI, (float) SCREEN_WIDTH / SCREEN_HEIGHT,
 			NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE);
 	gluLookAt(0, 0, 0, cos(camera_look_heading), 0.0, -sin(camera_look_heading),
 				0.0, 1.0, 0.0); 
@@ -4329,8 +4329,8 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
 
 static void show_mainscreen(GtkWidget *w)
 {
-	const float min_angle_of_view = 5.0;
-	const float max_angle_of_view = ANGLE_OF_VIEW;
+	const float min_angle_of_view = 5.0 * M_PI / 180.0;
+	const float max_angle_of_view = ANGLE_OF_VIEW * M_PI / 180.0;
 	static int fake_stars_initialized = 0;
 	static int current_zoom = 0;
 	float angle_of_view;
@@ -5955,7 +5955,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			o->y + camera_pos_heading.m[1], o->z + camera_pos_heading.m[2]);
 	camera_look_at(navecx, o->x, o->y, o->z);
 	camera_set_parameters(navecx, 0.5, 8000.0,
-				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
+				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
 	int in_nebula = 0;
 	int i;
 	double incr;
@@ -7137,7 +7137,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	camera_set_pos(sciecx, -m->radius * 4, 20, 0);
 	camera_look_at(sciecx, (float) 0, (float) 0, (float) m->radius / 2.0);
 	camera_set_parameters(sciecx, 0.5, 8000.0,
-				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
+				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
 	render_entities(w, gc, sciecx);
 	remove_entity(sciecx, e);
 	if (curr_science_guy->type == OBJTYPE_SHIP1 ||
