@@ -4111,17 +4111,22 @@ static void show_mainscreen_starfield(GtkWidget *w, double heading)
 static void begin_2d_gl(void);
 static void end_2d_gl(void);
 #ifndef WITHOUTOPENGL
-static void begin_3d_gl(double camera_look_heading, float angle_of_view)
+static void begin_3d_gl(struct entity_context *ecx)
 {
+	float near, far, angle_of_view, lx, ly, lz, ux, uy, uz;
+	int xvpixels, yvpixels;
+
+	camera_get_parameters(ecx, &near, &far, &xvpixels, &yvpixels, &angle_of_view);
+	camera_get_look_at(ecx, &lx, &ly, &lz);
+	camera_get_up_direction(ecx, &ux, &uy, &uz);
+
 	glEnable(GL_TEXTURE_2D);
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	gluPerspective(angle_of_view * 180.0 / M_PI, (float) SCREEN_WIDTH / SCREEN_HEIGHT,
-			NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE);
-	gluLookAt(0, 0, 0, cos(camera_look_heading), 0.0, -sin(camera_look_heading),
-				0.0, 1.0, 0.0); 
+	gluPerspective(angle_of_view * 180.0 / M_PI, (float) SCREEN_WIDTH / SCREEN_HEIGHT, near, far);
+	gluLookAt(0, 0, 0, lx, ly, lz, ux, uy, uz); 
 	glMatrixMode(GL_MODELVIEW);
 	/* glDisable(GL_DEPTH_TEST); */
 }
@@ -4137,7 +4142,7 @@ static void end_3d_gl(void)
 }
 #endif
 
-static void render_skybox(GtkWidget *w, double camera_look_heading, float angle_of_view)
+static void render_skybox(GtkWidget *w, struct entity_context *ecx)
 {
 
 	/* TODO:  Probably there is a better way than creating these every frame */
@@ -4165,7 +4170,7 @@ static void render_skybox(GtkWidget *w, double camera_look_heading, float angle_
 	};
 
 	end_2d_gl();
-	begin_3d_gl(camera_look_heading, angle_of_view);
+	begin_3d_gl(ecx);
 
 	glColor4ub(255, 255, 255, 255);
 	const static GLfloat light0_position[] = {1.0, 1.0, 1.0, 0.0};
@@ -4351,8 +4356,6 @@ static void show_mainscreen(GtkWidget *w)
 	else
 		camera_look_heading = o->tsd.ship.gun_heading;
 
-	render_skybox(w, camera_look_heading, angle_of_view);
-
 	show_mainscreen_starfield(w, camera_look_heading);
 
 	cx = o->x;
@@ -4374,6 +4377,9 @@ static void show_mainscreen(GtkWidget *w)
 		fake_stars_initialized = 1;
 		entity_init_fake_stars(ecx, 2000, 300.0f * 10.0f);
 	}
+
+	render_skybox(w, ecx);
+
 	pthread_mutex_lock(&universe_mutex);
 	render_entities(w, gc, ecx);
 

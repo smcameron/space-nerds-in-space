@@ -811,6 +811,13 @@ void camera_look_at(struct entity_context *cx, float x, float y, float z)
 	cx->camera.lz = z;
 }
 
+void camera_get_look_at(struct entity_context *cx, float *x, float *y, float *z)
+{
+	*x = cx->camera.lx;
+	*y = cx->camera.ly;
+	*z = cx->camera.lz;
+}
+
 void camera_assign_up_direction(struct entity_context *cx, float x, float y, float z)
 {
        cx->camera.ux = x;
@@ -840,6 +847,16 @@ void camera_set_parameters(struct entity_context *cx, float near, float far,
 	cx->camera.left = -cx->camera.right;
 	cx->camera.top = scale;
 	cx->camera.bottom = -cx->camera.top;
+}
+
+void camera_get_parameters(struct entity_context *cx, float *near, float *far,
+				int *xvpixels, int *yvpixels, float *angle_of_view)
+{
+	*near = cx->camera.near;
+	*far = cx->camera.far;
+	*xvpixels = cx->camera.xvpixels;
+	*yvpixels = cx->camera.yvpixels;
+	*angle_of_view = cx->camera.angle_of_view;
 }
 
 struct entity_context *entity_context_new(int maxobjs)
