@@ -62,6 +62,7 @@ struct entity {
 	int shadecolor;
 	int render_style;
 	void *user_data;
+	union quat orientation;
 };
 
 struct camera_info {
@@ -117,6 +118,7 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].render_style = RENDER_NORMAL;
 	cx->entity_list[n].user_data = NULL;
 	cx->entity_list[n].shadecolor = 0;
+	quat_init_axis(&cx->entity_list[n].orientation, 0, 1, 0, 0);
 	return &cx->entity_list[n];
 }
 
@@ -147,6 +149,11 @@ void update_entity_rotation(struct entity *e, float rx, float ry, float rz)
 	e->rx = rx;
 	e->ry = ry;
 	e->rz = rz;
+}
+
+void update_entity_orientation(struct entity *e, union quat *orientation)
+{
+	e->orientation = *orientation;
 }
 
 float entity_get_scale(struct entity *e)
@@ -802,6 +809,13 @@ void camera_set_pos(struct entity_context *cx, float x, float y, float z)
 	cx->camera.x = x;
 	cx->camera.y = y;
 	cx->camera.z = z;
+}
+
+void camera_get_pos(struct entity_context *cx, float *x, float *y, float *z)
+{
+	*x = cx->camera.x;
+	*y = cx->camera.y;
+	*z = cx->camera.z;
 }
 
 void camera_look_at(struct entity_context *cx, float x, float y, float z)
