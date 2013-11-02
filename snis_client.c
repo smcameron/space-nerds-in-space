@@ -4078,6 +4078,9 @@ static void show_mainscreen_starfield(GtkWidget *w, double heading)
 #endif
 }
 
+#define NEAR_CAMERA_PLANE 1.0
+#define FAR_CAMERA_PLANE 400.0
+
 static void begin_2d_gl(void);
 static void end_2d_gl(void);
 #ifndef WITHOUTOPENGL
@@ -4088,7 +4091,8 @@ static void begin_3d_gl(double camera_look_heading)
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	gluPerspective(ANGLE_OF_VIEW, (float) SCREEN_WIDTH / SCREEN_HEIGHT, 0.5, 8000.0);
+	gluPerspective(ANGLE_OF_VIEW, (float) SCREEN_WIDTH / SCREEN_HEIGHT,
+			NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE);
 	gluLookAt(0, 0, 0, cos(camera_look_heading), 0.0, -sin(camera_look_heading),
 				0.0, 1.0, 0.0); 
 	glMatrixMode(GL_MODELVIEW);
@@ -4325,7 +4329,8 @@ static void show_mainscreen(GtkWidget *w)
 	camera_set_pos(ecx, cx, cy, cz);
 	camera_look_at(ecx, cx + camera_lookat.m[0], cy + camera_lookat.m[1], cz + camera_lookat.m[2]);
 
-	camera_set_parameters(ecx, 0.5, 8000.0, SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
+	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
+				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW);
 	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
 			cos(((timer / 4) % 360) * M_PI / 180));
 	sng_set_foreground(GREEN);
