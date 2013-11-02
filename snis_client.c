@@ -4030,7 +4030,7 @@ static void show_common_screen(GtkWidget *w, char *title)
 	snis_draw_line(w->window, gc, 1, 1, 1, SCREEN_HEIGHT - 1);
 }
 
-#define ANGLE_OF_VIEW (60)
+#define ANGLE_OF_VIEW (45)
 
 static int normalize_degrees(int degrees)
 {
