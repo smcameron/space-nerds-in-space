@@ -1,6 +1,9 @@
 
-Space Nerds In Space was written by 
+Space Nerds In Space was written mainly by 
 Stephen M. Cameron - <smcameron@users.sourceforge.net>
+
+The 3D rendering code would not be remotely as sane as it is, and probably
+wouldn't even function quite right if it weren't for the work of Jeremy Van Grinsven.
 
 Some of the audio code was modelled very loosely on
 some test programs that come with portaudio (e.g. 
