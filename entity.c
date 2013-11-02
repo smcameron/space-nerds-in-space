@@ -468,8 +468,8 @@ static int transform_fake_star(struct entity_context *cx,
 	m2->m[0] /= m2->m[3];
 	m2->m[1] /= m2->m[3];
 	m2->m[2] /= m2->m[3];
-	if (fs->v.wx < -cx->camera.xvpixels || fs->v.wx > cx->camera.xvpixels ||
-		fs->v.wy < -cx->camera.yvpixels || fs->v.wy > cx->camera.yvpixels)
+	if (fs->v.wx < -1.0 || fs->v.wx > 1.0 ||
+		fs->v.wy < -1.0 || fs->v.wy > 1.0)
 		return 1;
 	return 0;
 }
