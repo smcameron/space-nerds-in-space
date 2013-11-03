@@ -1224,6 +1224,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 {
 	int i, m;
 	struct entity *e;
+	union quat orientation;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -1237,14 +1238,14 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 		int axis;
 		float angle;
 
-		update_generic_object(i, x, y, z, 0.0, 0.0, &identity_quat, 1);
-		update_entity_pos(go[i].entity, x, y, z);
-
 		/* make it spin */
 		angle = (timer % (360 * ((id % 12) + 3))) * M_PI / 180.0;
 		axis = (id % 3);
-		update_entity_rotation(go[i].entity, (axis == 0) * angle,
-					(axis == 1) * angle, (axis == 2) * angle);
+		quat_init_axis(&orientation,
+			(axis == 0) * 1.0, (axis == 1) * 1.0, (axis == 2) * 1.0, angle);
+		update_entity_orientation(go[i].entity, &orientation);
+		update_generic_object(i, x, y, z, 0.0, 0.0, &orientation, 1);
+		update_entity_pos(go[i].entity, x, y, z);
 	}
 	return 0;
 }
