@@ -19,6 +19,7 @@
 #include <math.h>
 
 #include "quat.h"
+#include "mathutils.h"
 
 void vec3_copy(union vec3 *vo, union vec3 *vi)
 {
@@ -259,4 +260,15 @@ void quat_to_rh_rot_matrix(union quat *q, float *m)
 }
 
 const union quat identity_quat = { {0.0, 0.0, 0.0, 1.0} };
+
+void random_quat(union quat *q)
+{
+	float angle;
+	union vec3 v;
+
+	random_point_on_sphere(1.0, &v.v.x, &v.v.y, &v.v.z);
+	angle = (float) snis_randn(360) * M_PI / 180.0;
+	quat_init_axis_v(q, &v, angle);
+	
+}
 

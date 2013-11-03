@@ -115,4 +115,7 @@ float normalize_euler_0_2pi(float a);
 void quat_to_lh_rot_matrix(union quat *q, float *m); /* quat to left handed rotation matrix */
 void quat_to_rh_rot_matrix(union quat *q, float *m); /* quat to right handed rotation matrix */
 
+/* Create a random quaternion */
+void random_quat(union quat *q);
+
 #endif /* __QUAT_H__ */
