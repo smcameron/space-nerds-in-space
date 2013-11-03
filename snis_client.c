@@ -172,8 +172,6 @@ static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
 static volatile int helpmodeline = 0;
 
-static union quat no_rotation;
-
 struct client_network_stats {
 	uint64_t bytes_sent;
 	uint64_t bytes_recd;
@@ -845,13 +843,13 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, torpedo_mesh, x, y, z, TORPEDO_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
-		i = add_generic_object(id, x, z, vx, vz, &no_rotation, OBJTYPE_TORPEDO, 1, e);
+		i = add_generic_object(id, x, z, vx, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.torpedo.ship_id = ship_id;
 		go[i].y = y;
 	} else {
-		update_generic_object(i, x, y, z, vx, vz, &no_rotation, 1); 
+		update_generic_object(i, x, y, z, vx, vz, &identity_quat, 1); 
 		update_entity_pos(go[i].entity, x, y, z);
 	}
 	return 0;
@@ -865,7 +863,7 @@ static int update_laserbeam(uint32_t id, uint32_t origin, uint32_t target)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, 0, 0, 0, 0, &no_rotation, OBJTYPE_LASERBEAM, 1, NULL);
+		i = add_generic_object(id, 0, 0, 0, 0, &identity_quat, OBJTYPE_LASERBEAM, 1, NULL);
 		if (i < 0)
 			return i;
 		go[i].tsd.laserbeam.origin = origin;
@@ -882,7 +880,7 @@ static int update_tractorbeam(uint32_t id, uint32_t origin, uint32_t target)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, 0, 0, 0, 0, &no_rotation, OBJTYPE_TRACTORBEAM, 1, NULL);
+		i = add_generic_object(id, 0, 0, 0, 0, &identity_quat, OBJTYPE_TRACTORBEAM, 1, NULL);
 		if (i < 0)
 			return i;
 		go[i].tsd.laserbeam.origin = origin;
@@ -904,13 +902,13 @@ static int update_laser(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, laser_mesh, x, y, z, LASER_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
-		i = add_generic_object(id, x, z, vx, vz, &no_rotation, OBJTYPE_LASER, 1, e);
+		i = add_generic_object(id, x, z, vx, vz, &identity_quat, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.laser.ship_id = ship_id;
 		go[i].y = y;
 	} else {
-		update_generic_object(i, x, y, z, vx, vz, &no_rotation, 1); 
+		update_generic_object(i, x, y, z, vx, vz, &identity_quat, 1); 
 	}
 	return 0;
 }
@@ -1147,7 +1145,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 	if (i < 0) {
 		e = add_entity(ecx, spacemonster_mesh, x, 0, z, SPACEMONSTER_COLOR);
 		set_render_style(e, RENDER_POINT_CLOUD | RENDER_SPARKLE);
-		i = add_generic_object(id, x, z, 0, 0, &no_rotation, OBJTYPE_SPACEMONSTER, 1, e);
+		i = add_generic_object(id, x, z, 0, 0, &identity_quat, OBJTYPE_SPACEMONSTER, 1, e);
 		if (i < 0)
 			return i;
 		go[i].entity = e;
@@ -1156,7 +1154,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 		struct spacemonster_data *sd;
 		int n;
 
-		update_generic_object(i, x, 0, z, 0, 0, &no_rotation, 1); 
+		update_generic_object(i, x, 0, z, 0, 0, &identity_quat, 1); 
 		update_entity_pos(go[i].entity, x, y, z);
 		sd = &go[i].tsd.spacemonster;
 		sd->zz = y;
@@ -1179,7 +1177,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 	if (i < 0) {
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
 		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
-		i = add_generic_object(id, x, z, vx, vz, &no_rotation, OBJTYPE_ASTEROID, 1, e);
+		i = add_generic_object(id, x, z, vx, vz, &identity_quat, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
 		go[i].y = y;
@@ -1187,7 +1185,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 		int axis;
 		float angle;
 
-		update_generic_object(i, x, y, z, vx, vz, &no_rotation, 1);
+		update_generic_object(i, x, y, z, vx, vz, &identity_quat, 1);
 		update_entity_pos(go[i].entity, x, y, z);
 
 		/* make asteroids spin */
@@ -1208,7 +1206,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 	if (i < 0) {
 		m = ship_type % NDERELICT_MESHES;
 		e = add_entity(ecx, derelict_mesh[m], x, y, z, SHIP_COLOR);
-		i = add_generic_object(id, x, z, 0.0, 0.0, &no_rotation, OBJTYPE_DERELICT, 1, e);
+		i = add_generic_object(id, x, z, 0.0, 0.0, &identity_quat, OBJTYPE_DERELICT, 1, e);
 		if (i < 0)
 			return i;
 		go[i].y = y;
@@ -1216,7 +1214,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 		int axis;
 		float angle;
 
-		update_generic_object(i, x, y, z, 0.0, 0.0, &no_rotation, 1);
+		update_generic_object(i, x, y, z, 0.0, 0.0, &identity_quat, 1);
 		update_entity_pos(go[i].entity, x, y, z);
 
 		/* make it spin */
@@ -1239,13 +1237,13 @@ static int update_planet(uint32_t id, double x, double y, double z)
 
 		m = id % NPLANET_MODELS;
 		e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR);
-		i = add_generic_object(id, x, z, 0.0, 0.0, &no_rotation, OBJTYPE_PLANET, 1, e);
+		i = add_generic_object(id, x, z, 0.0, 0.0, &identity_quat, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
 		go[i].y = y;
 		update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
 	} else {
-		update_generic_object(i, x, y, z, 0.0, 0.0, &no_rotation, 1);
+		update_generic_object(i, x, y, z, 0.0, 0.0, &identity_quat, 1);
 		update_entity_pos(go[i].entity, x, y, z);
 	}
 	r1 = (i % 20) * (360.0 / 20.0) * M_PI / 180.0;
@@ -1265,7 +1263,7 @@ static int update_wormhole(uint32_t id, double x, double z)
 	if (i < 0) {
 		e = add_entity(ecx, wormhole_mesh, x, 0, z, WORMHOLE_COLOR);
 		set_render_style(e, RENDER_POINT_CLOUD | RENDER_SPARKLE);
-		i = add_generic_object(id, x, z, 0.0, 0.0, &no_rotation, OBJTYPE_WORMHOLE, 1, e);
+		i = add_generic_object(id, x, z, 0.0, 0.0, &identity_quat, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -1291,7 +1289,7 @@ static int update_starbase(uint32_t id, double x, double z)
 	if (i < 0) {
 		m = id % NSTARBASE_MODELS;
 		e = add_entity(ecx, starbase_mesh[m], x, 0, z, STARBASE_COLOR);
-		i = add_generic_object(id, x, z, 0.0, 0.0, &no_rotation, OBJTYPE_STARBASE, 1, e);
+		i = add_generic_object(id, x, z, 0.0, 0.0, &identity_quat, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -1346,12 +1344,12 @@ static int update_nebula(uint32_t id, double x, double z, double r)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, z, 0.0, 0.0, &no_rotation, OBJTYPE_NEBULA, 1, NULL);
+		i = add_generic_object(id, x, z, 0.0, 0.0, &identity_quat, OBJTYPE_NEBULA, 1, NULL);
 		if (i < 0)
 			return i;
 		add_nebula_entry(go[i].id, x, z, r);
 	} else {
-		update_generic_object(i, x, 0, z, 0.0, 0.0, &no_rotation, 1);
+		update_generic_object(i, x, 0, z, 0.0, 0.0, &identity_quat, 1);
 	}
 	go[i].tsd.nebula.r = r;	
 	go[i].alive = 1;
@@ -1565,7 +1563,7 @@ static int update_explosion(uint32_t id, double x, double y, double z,
 	int i;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, 0.0, 0.0, &no_rotation, OBJTYPE_EXPLOSION, 1, NULL);
+		i = add_generic_object(id, x, y, 0.0, 0.0, &identity_quat, OBJTYPE_EXPLOSION, 1, NULL);
 		if (i < 0)
 			return i;
 		go[i].tsd.explosion.nsparks = nsparks;
@@ -9581,7 +9579,6 @@ int main(int argc, char *argv[])
 	GtkWidget *vbox;
 	int i;
 
-	no_rotation = identity_quat;
 	/* Need this so that fscanf reads floats properly. */
 #define LOCALE_THAT_WORKS "en_US.UTF-8"
 	if (!setenv("LANG", LOCALE_THAT_WORKS, 1))
