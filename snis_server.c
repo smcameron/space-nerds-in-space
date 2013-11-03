@@ -1721,6 +1721,40 @@ static void update_ship_orientation(struct snis_entity *o)
 	o->orientation = q4;
 }
 
+static float new_velocity(float desired_velocity, float current_velocity)
+{
+	float delta;
+
+	delta = desired_velocity - current_velocity;
+	if (fabs(delta) < 0.1)
+		return desired_velocity;
+	return current_velocity + (delta / 2.0);
+}
+
+static void update_ship_position_and_velocity(struct snis_entity *o)
+{
+	union vec3 desired_velocity;
+
+	/* Apply player's thrust input from power model */
+	do_thrust(o);
+
+	/* Construct vector of desired velocity */
+	desired_velocity.v.x = o->tsd.ship.velocity;
+	desired_velocity.v.y = 0;
+	desired_velocity.v.z = 0;
+	quat_rot_vec_self(&desired_velocity, &o->orientation);
+
+	/* Make actual velocity move towards desired velocity */
+	o->vx = new_velocity(desired_velocity.v.x, o->vx);
+	o->vy = new_velocity(desired_velocity.v.y, o->vy);
+	o->vz = new_velocity(desired_velocity.v.z, o->vz);
+
+	/* Move ship */
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+	space_partition_process(space_partition, o, o->x, o->z, o,
+				player_collision_detection);
+}
+
 static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
@@ -1739,13 +1773,9 @@ static void player_move(struct snis_entity *o)
 	} else {
 		power_model_disable(o->tsd.ship.power_model);
 	}
-	do_thrust(o);
-	o->vx = o->tsd.ship.velocity * cos(o->heading);
-	o->vz = o->tsd.ship.velocity * -sin(o->heading);
-	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
-	space_partition_process(space_partition, o, o->x, o->z, o,
-				player_collision_detection);
 	update_ship_orientation(o);
+	update_ship_position_and_velocity(o);
+	
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
 	o->tsd.ship.sci_heading += o->tsd.ship.sci_yaw_velocity;
 	o->tsd.ship.shields = universe_timestamp % 100;
