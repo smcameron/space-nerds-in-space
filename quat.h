@@ -117,5 +117,7 @@ void quat_to_rh_rot_matrix(union quat *q, float *m); /* quat to right handed rot
 
 /* Create a random quaternion */
 void random_quat(union quat *q);
+/* Create a random quaternion axis with zero rotation */
+void random_axis_quat(union quat *q);
 
 #endif /* __QUAT_H__ */

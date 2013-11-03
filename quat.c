@@ -272,3 +272,13 @@ void random_quat(union quat *q)
 	
 }
 
+void random_axis_quat(union quat *q)
+{
+	float angle;
+	union vec3 v;
+
+	random_point_on_sphere(1.0, &v.v.x, &v.v.y, &v.v.z);
+	angle = 0.0;
+	quat_init_axis_v(q, &v, angle);
+}
+
