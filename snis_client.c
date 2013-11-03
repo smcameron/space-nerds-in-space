@@ -441,8 +441,11 @@ static int add_generic_object(uint32_t id, double x, double z, double vx, double
 	go[i].type = type;
 	go[i].alive = alive;
 	go[i].entity = entity;
-	if (entity)
+	if (entity) {
 		entity_set_user_data(entity, &go[i]);
+		if (orientation)
+			update_entity_orientation(entity, orientation);
+	}
 	go[i].orientation = *orientation;
 	return i;
 }
