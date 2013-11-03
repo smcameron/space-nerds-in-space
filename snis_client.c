@@ -1253,26 +1253,22 @@ static int update_planet(uint32_t id, double x, double y, double z)
 {
 	int i, m;
 	struct entity *e;
-	float r1, r2, r3;
+	union quat orientation;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-
+		random_quat(&orientation); /* FIXME: make this come out the same on all clients */
 		m = id % NPLANET_MODELS;
 		e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR);
-		i = add_generic_object(id, x, z, 0.0, 0.0, &identity_quat, OBJTYPE_PLANET, 1, e);
+		i = add_generic_object(id, x, z, 0.0, 0.0, &orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
 		go[i].y = y;
 		update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
 	} else {
-		update_generic_object(i, x, y, z, 0.0, 0.0, &identity_quat, 1);
+		update_generic_object(i, x, y, z, 0.0, 0.0, NULL, 1);
 		update_entity_pos(go[i].entity, x, y, z);
 	}
-	r1 = (i % 20) * (360.0 / 20.0) * M_PI / 180.0;
-	r2 = (i % 40) * (360.0 / 40.0) * M_PI / 180.0;
-	r3 = (i % 15) * (360.0 / 15.0) * M_PI / 180.0;
-	update_entity_rotation(go[i].entity, r1, r2, r3);
 	return 0;
 }
 
