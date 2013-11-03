@@ -492,7 +492,7 @@ static int transform_entity(struct entity_context *cx,
 
 	/* calculate the object transform... */
 	struct mat44 object_transform, total_transform, tmp_transform;
-	struct mat44 object_rotation = {{{ e->scale, 0, 0, 0 },
+	struct mat44 object_scale = {{{ e->scale, 0, 0, 0 },
 					 { 0, e->scale, 0, 0 },
 					 { 0, 0, e->scale, 0 },
 					 { 0, 0, 0, 1 }}}; /* fixme, do this really. */
@@ -500,12 +500,10 @@ static int transform_entity(struct entity_context *cx,
 					    { 0,    1,     0,    0 },
 					    { 0,    0,     1,    0 },
 					    { e->x, e->y, e->z, 1 }}};
-	/* for testing, do small rotation... */
-	struct mat44 r1, r2;
+	struct mat44 orientation, object_rotation;
 
-	mat44_rotate_y(&object_rotation, e->ry, &r1);  
-	mat44_rotate_x(&r1, e->rx, &r2);  
-	mat44_rotate_z(&r2, e->rz, &object_rotation);  
+	quat_to_rh_rot_matrix(&e->orientation, &orientation.m[0][0]);
+	mat44_product(&orientation, &object_scale, &object_rotation);  
 
 	tmp_transform = *transform;
 	mat44_product(&tmp_transform, &object_translation, &object_transform);
