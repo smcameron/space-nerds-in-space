@@ -258,5 +258,5 @@ void quat_to_rh_rot_matrix(union quat *q, float *m)
 	m[15] = 1.0f;
 }
 
-const union quat identity_quat = { .v = {0.0, 0.0, 0.0, 1.0} };
+const union quat identity_quat = { {0.0, 0.0, 0.0, 1.0} };
 
