@@ -1360,16 +1360,17 @@ static int update_nebula(uint32_t id, double x, double z, double r)
 
 static void spark_move(struct snis_entity *o)
 {
+	union quat orientation;
+
 	o->x += o->vx;
 	o->y += o->vy;
 	o->z += o->vz;
-	o->tsd.spark.rx += o->tsd.spark.avx;
-	o->tsd.spark.ry += o->tsd.spark.avy;
-	o->tsd.spark.rz += o->tsd.spark.avz;
-	normalize_angle(&o->tsd.spark.rx);
-	normalize_angle(&o->tsd.spark.ry);
-	normalize_angle(&o->tsd.spark.rz);
 	o->alive--;
+
+	/* Apply incremental rotation */
+	quat_mul(&orientation, &o->tsd.spark.rotational_velocity, entity_get_orientation(o->entity));
+	update_entity_orientation(o->entity, &orientation);
+
 	if (o->alive <= 0) {
 		remove_entity(ecx, o->entity);
 		snis_object_pool_free_object(sparkpool, o->index);
@@ -1385,10 +1386,6 @@ static void move_sparks(void)
 			spark[i].move(&spark[i]);
 			update_entity_pos(spark[i].entity, spark[i].x,
 						spark[i].y, spark[i].z);
-			update_entity_rotation(spark[i].entity,
-						spark[i].tsd.spark.rx,
-						spark[i].tsd.spark.ry,
-						spark[i].tsd.spark.rz);
 		}
 }
 
@@ -1459,6 +1456,8 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 {
 	int i, r;
 	struct entity *e;
+	float angular_speed;
+	union quat xrot, orientation, rot, q1, q2;
 
 	i = snis_object_pool_alloc_obj(sparkpool);
 	if (i < 0)
@@ -1480,12 +1479,23 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	spark[i].vx = vx;
 	spark[i].vy = vy;
 	spark[i].vz = vz;
-	spark[i].tsd.spark.rx = M_PI / 180.0 * snis_randn(180);
-	spark[i].tsd.spark.ry = M_PI / 180.0 * snis_randn(180);
-	spark[i].tsd.spark.rz = M_PI / 180.0 * snis_randn(180);
-	spark[i].tsd.spark.avx = (M_PI / 180.0) * (snis_randn(30) - 15); 
-	spark[i].tsd.spark.avy = (M_PI / 180.0) * (snis_randn(30) - 15); 
-	spark[i].tsd.spark.avz = (M_PI / 180.0) * (snis_randn(30) - 15); 
+	/* calculate a small rotational velocity quaternion about x axis */
+	angular_speed = ((float) snis_randn(100) / 10.0 - 5.0) * M_PI / 180.0;
+	quat_init_axis(&xrot, 1.0, 0.0, 0.0, angular_speed);
+
+	quat_init_axis(&spark[i].tsd.spark.rotational_velocity, 1.0, 0.0, 0.0, angular_speed);
+	random_axis_quat(entity_get_orientation(e));
+
+	/* Set entity to random orientation axis, no rotation */
+	random_axis_quat(&orientation);
+	update_entity_orientation(e, &orientation);
+
+	/* transform rotational velocity quaternion into spark's orientation */
+        quat_mul(&q1, &orientation, &xrot);
+        quat_conj(&q2, &orientation);
+        quat_mul(&rot, &q1, &q2);
+	spark[i].tsd.spark.rotational_velocity = rot;
+	
 	spark[i].type = OBJTYPE_SPARK;
 	spark[i].alive = time + snis_randn(time);
 	spark[i].move = spark_move;

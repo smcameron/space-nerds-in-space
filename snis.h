@@ -326,7 +326,7 @@ struct explosion_data {
 };
 
 struct spark_data {
-	double rx, ry, rz, avx, avy, avz;
+	union quat rotational_velocity;
 };
 
 struct asteroid_data {
