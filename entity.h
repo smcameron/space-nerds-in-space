@@ -65,6 +65,7 @@ GLOBAL void camera_set_parameters(struct entity_context *cx,
 		float near, float far, int xvpixels, int yvpixels, float angle_of_view);
 GLOBAL void camera_get_parameters(struct entity_context *cx,
 		float *near, float *far, int *xvpixels, int *yvpixels, float *angle_of_view);
+GLOBAL void camera_set_orientation(struct entity_context *cx, union quat *q);
 GLOBAL void set_lighting(struct entity_context *cx, double x, double y, double z);
 GLOBAL void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius);
 GLOBAL void entity_free_fake_stars(struct entity_context *cx);
