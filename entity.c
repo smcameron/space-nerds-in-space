@@ -285,7 +285,7 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 {
 	struct vertex *v1, *v2, *v3;
 	float x1, y1, x2, y2, x3, y3;
-	int xa, ya, xb, yb, xc, yc;
+	/* int xa, ya, xb, yb, xc, yc; */
 	struct camera_info *c = &cx->camera;
 
 	v1 = t->v[0];
@@ -1019,5 +1019,10 @@ void camera_set_orientation(struct entity_context *cx, union quat *q)
 			cx->camera.y + look.v.y * 256,
 			cx->camera.z + look.v.z * 256);
 	camera_assign_up_direction(cx, up.v.x, up.v.y, up.v.z);
+}
+
+union quat *entity_get_orientation(struct entity *e)
+{
+	return &e->orientation;
 }
 
