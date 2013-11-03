@@ -9581,7 +9581,7 @@ int main(int argc, char *argv[])
 	GtkWidget *vbox;
 	int i;
 
-	quat_init_axis(&no_rotation, 0, 1, 0, 0);
+	no_rotation = identity_quat;
 	/* Need this so that fscanf reads floats properly. */
 #define LOCALE_THAT_WORKS "en_US.UTF-8"
 	if (!setenv("LANG", LOCALE_THAT_WORKS, 1))

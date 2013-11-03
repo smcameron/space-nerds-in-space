@@ -45,6 +45,8 @@ union quat {
 	float vec[4];
 };
 
+extern const union quat identity_quat;
+
 /* euler angle */
 union euler {
 	struct {
