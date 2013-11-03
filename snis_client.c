@@ -447,6 +447,14 @@ static int add_generic_object(uint32_t id, double x, double z, double vx, double
 	return i;
 }
 
+static double quat_to_heading(const union quat *q)
+{
+	union vec3 v = { { 1.0, 0.0, 0.0 } };
+
+	quat_rot_vec_self(&v, q);
+	return atan2(-v.v.z, v.v.x);
+}
+
 static void update_generic_object(int index, double x, double y, double z,
 				double vx, double vz, const union quat *orientation, uint32_t alive)
 {
@@ -458,8 +466,10 @@ static void update_generic_object(int index, double x, double y, double z,
 	o->vx = vx;
 	o->vz = vz;
 	o->heading = 0;
-	if (orientation)
+	if (orientation) {
 		o->orientation = *orientation;
+		o->heading = quat_to_heading(orientation);
+	}
 	o->alive = alive;
 	if (o->entity) {
 		update_entity_pos(o->entity, x, y, z);
