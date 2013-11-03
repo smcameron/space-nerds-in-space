@@ -5544,12 +5544,13 @@ static int insane(unsigned char *word, int len)
 static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	double dv = sqrt((o->vx * o->vz) + (o->vy * o->vz));
-
-	pb_queue_to_client(c, packed_buffer_new("hwwSSSUQwb", OPCODE_ECON_UPDATE_SHIP,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSSSSSQwb", OPCODE_ECON_UPDATE_SHIP,
 			o->id, o->alive, o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM, o->z, (int32_t) UNIVERSE_DIM,
-			dv, (uint32_t) UNIVERSE_DIM, &o->orientation, (uint32_t) 360,
+			o->vx, (uint32_t) UNIVERSE_DIM,
+			o->vy, (uint32_t) UNIVERSE_DIM,
+			o->vz, (uint32_t) UNIVERSE_DIM,
+			&o->orientation, (uint32_t) 360,
 			o->tsd.ship.victim_id, o->tsd.ship.shiptype));
 }
 

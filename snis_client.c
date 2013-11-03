@@ -656,8 +656,9 @@ static int update_damcon_part(uint32_t id, uint32_t ship_id, uint32_t type,
 }
 
 
-static int update_econ_ship(uint32_t id, double x, double y, double z, double vx,
-			double vz, union quat *orientation, uint32_t alive, uint32_t victim_id,
+static int update_econ_ship(uint32_t id, double x, double y, double z,
+			double vx, double vy, double vz,
+			union quat *orientation, uint32_t alive, uint32_t victim_id,
 			uint8_t shiptype)
 {
 	int i;
@@ -2910,23 +2911,24 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
 	uint32_t id, alive, victim_id;
-	double dx, dy, dz, dheading, dv, dvx, dvz;
+	double dx, dy, dz, dheading, dvx, dvy, dvz;
 	union quat orientation;
 	uint8_t shiptype;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSUQwb", &id, &alive,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSSSQwb", &id, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
 				&dz, (int32_t) UNIVERSE_DIM,
-				&dv, (uint32_t) UNIVERSE_DIM, &orientation,
+				&dvx, (uint32_t) UNIVERSE_DIM,
+				&dvy, (uint32_t) UNIVERSE_DIM,
+				&dvz, (uint32_t) UNIVERSE_DIM,
+				&orientation,
 				&victim_id, &shiptype);
 	if (rc != 0)
 		return rc;
-	dvx = cos(dheading) * dv;
-	dvz = -sin(dheading) * dv;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_econ_ship(id, dx, dy, dz, dvx, dvz, &orientation, alive, victim_id, shiptype);
+	rc = update_econ_ship(id, dx, dy, dz, dvx, dvy, dvz, &orientation, alive, victim_id, shiptype);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
