@@ -1185,27 +1185,34 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 {
 	int i, m;
 	struct entity *e;
+	union quat orientation, xrot, q1, q2, rot;
+	float angular_speed;
+	struct snis_entity *o;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
+		random_axis_quat(&orientation);
 		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
-		i = add_generic_object(id, x, z, vx, vz, &identity_quat, OBJTYPE_ASTEROID, 1, e);
+		i = add_generic_object(id, x, z, vx, vz, &orientation, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
-		go[i].y = y;
+		o = &go[i];
+
+		/* Pick a small rotational velocity around x axis */ 
+		angular_speed = ((float) snis_randn(100) / 10.0 - 5.0) * M_PI / 180.0;
+		quat_init_axis(&xrot, 1.0, 0.0, 0.0, angular_speed);
+		/* transform rotational velocity into asteroid's orientation */
+		quat_mul(&q1, &orientation, &xrot);
+		quat_conj(&q2, &orientation);
+		quat_mul(&rot, &q1, &q2);
+		o->tsd.asteroid.rotational_velocity = rot;
+		o->y = y;
 	} else {
-		int axis;
-		float angle;
-
-		update_generic_object(i, x, y, z, vx, vz, &identity_quat, 1);
-		update_entity_pos(go[i].entity, x, y, z);
-
-		/* make asteroids spin */
-		angle = (timer % (360 * ((id % 12) + 3))) * M_PI / 180.0;
-		axis = (id % 3);
-		update_entity_rotation(go[i].entity, (axis == 0) * angle,
-					(axis == 1) * angle, (axis == 2) * angle);
+		o = &go[i];
+		/* move asteroid */
+		update_generic_object(i, x, y, z, vx, vz, NULL, 1);
+		update_entity_pos(o->entity, x, y, z);
 	}
 	return 0;
 }
@@ -1416,6 +1423,17 @@ static void spin_starbase(struct snis_entity *o)
 	update_entity_rotation(o->entity, 0.0, 0.0, angle);
 }
 
+static void spin_asteroid(struct snis_entity *o)
+{
+	union quat orientation;
+
+	quat_mul(&orientation, &o->tsd.asteroid.rotational_velocity, &o->orientation);
+	quat_normalize_self(&orientation);
+	o->orientation = orientation;
+	if (o->entity)
+		update_entity_orientation(o->entity, &orientation);
+}
+
 static void move_ship(struct snis_entity *o)
 {
 	/* predict yaw changes to smooth movement out on the main screen. */
@@ -1447,11 +1465,15 @@ static void move_objects(void)
 			break;
 		case OBJTYPE_LASER:
 		case OBJTYPE_TORPEDO:
-		case OBJTYPE_ASTEROID:
 			/* predictive movement, this is probably */
 			/* too dumb to work right */
 			o->x += o->vx / 3.0;
 			o->z += o->vz / 3.0;
+			break;
+		case OBJTYPE_ASTEROID:
+			o->x += o->vx / 3.0;
+			o->z += o->vz / 3.0;
+			spin_asteroid(o);
 			break;
 		case OBJTYPE_LASERBEAM:
 		case OBJTYPE_TRACTORBEAM:

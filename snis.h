@@ -332,6 +332,7 @@ struct spark_data {
 struct asteroid_data {
 	double r; /* distance from center of universe */
 	double angle_offset;
+	union quat rotational_velocity;
 };
 
 struct derelict_data {
