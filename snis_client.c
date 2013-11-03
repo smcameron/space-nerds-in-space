@@ -1304,12 +1304,14 @@ static int update_starbase(uint32_t id, double x, double z)
 	int i, m;
 	struct entity *e;
 	struct snis_entity *o;
+	union quat orientation;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
+		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
 		m = id % NSTARBASE_MODELS;
 		e = add_entity(ecx, starbase_mesh[m], x, 0, z, STARBASE_COLOR);
-		i = add_generic_object(id, x, z, 0.0, 0.0, &identity_quat, OBJTYPE_STARBASE, 1, e);
+		i = add_generic_object(id, x, z, 0.0, 0.0, &orientation, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -1321,7 +1323,7 @@ static int update_starbase(uint32_t id, double x, double z)
 		o->z = z;
 		if (o->entity)
 			update_entity_pos(o->entity, x, 0, z);
-	}
+	}	
 	return 0;
 }
 
@@ -1417,10 +1419,13 @@ static void spin_wormhole(struct snis_entity *o)
 
 static void spin_starbase(struct snis_entity *o)
 {
-	float angle;
+	union quat spin, orientation;
 
-	angle = ((timer / 2) % 360) * M_PI / 180.0;
-	update_entity_rotation(o->entity, 0.0, 0.0, angle);
+	quat_init_axis(&spin, 0.0, 0.0, 1.0, 0.5 * M_PI / 180.0);
+	quat_mul(&orientation, &spin, &o->orientation);
+	o->orientation = orientation;
+	if (o->entity)
+		update_entity_orientation(o->entity, &orientation);
 }
 
 static void spin_asteroid(struct snis_entity *o)
