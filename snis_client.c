@@ -420,7 +420,7 @@ static struct snis_entity spark[MAXSPARKS];
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int add_generic_object(uint32_t id, double x, double z, double vx, double vz,
-		union quat *orientation, int type, uint32_t alive, struct entity *entity)
+		const union quat *orientation, int type, uint32_t alive, struct entity *entity)
 {
 	int i;
 
@@ -448,7 +448,7 @@ static int add_generic_object(uint32_t id, double x, double z, double vx, double
 }
 
 static void update_generic_object(int index, double x, double y, double z,
-				double vx, double vz, union quat *orientation, uint32_t alive)
+				double vx, double vz, const union quat *orientation, uint32_t alive)
 {
 	struct snis_entity *o = &go[index];
 
@@ -4382,9 +4382,8 @@ static void show_mainscreen(GtkWidget *w)
 	static int current_zoom = 0;
 	float angle_of_view;
 	struct snis_entity *o;
-	float cx, cy, cz, lx, lz;
+	float cx, cy, cz;
 	double camera_look_heading;
-	int i;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -4409,8 +4408,6 @@ static void show_mainscreen(GtkWidget *w)
 
 	camera_set_pos(ecx, cx, cy, cz);
 	camera_set_orientation(ecx, &o->orientation);
-	/* camera_look_at(ecx, cx + camera_lookat.m[0], cy + camera_lookat.m[1], cz + camera_lookat.m[2]); */
-
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),

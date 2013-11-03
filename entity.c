@@ -151,7 +151,7 @@ void update_entity_rotation(struct entity *e, float rx, float ry, float rz)
 	e->rz = rz;
 }
 
-void update_entity_orientation(struct entity *e, union quat *orientation)
+void update_entity_orientation(struct entity *e, const union quat *orientation)
 {
 	e->orientation = *orientation;
 }
