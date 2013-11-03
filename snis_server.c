@@ -3225,7 +3225,6 @@ static void do_roll(struct game_client *c, int roll)
 
 	do_generic_yaw(&ship->tsd.ship.roll_velocity, roll, max_roll_velocity,
 			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
-	printf("do_roll\n");
 }
 
 static void do_demon_yaw(struct snis_entity *o, int yaw)
