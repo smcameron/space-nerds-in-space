@@ -458,11 +458,13 @@ static void update_generic_object(int index, double x, double y, double z,
 	o->vx = vx;
 	o->vz = vz;
 	o->heading = 0;
-	o->orientation = *orientation;
+	if (orientation)
+		o->orientation = *orientation;
 	o->alive = alive;
 	if (o->entity) {
 		update_entity_pos(o->entity, x, y, z);
-		update_entity_orientation(o->entity, orientation);
+		if (orientation)
+			update_entity_orientation(o->entity, orientation);
 	}
 }
 
