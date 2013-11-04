@@ -51,7 +51,6 @@
 #define NEBULA_RADIUS 5000
 #define MIN_NEBULA_RADIUS 200
 #define NDERELICTS 20
-#define NDERELICT_MESHES 14
 
 #define NPLANET_MODELS 3
 #define NPLANETS 4
@@ -137,6 +136,7 @@ static char *shipclass[] = {
 	"Disruptor",
 	"Research",
 };
+#define NSHIPTYPES ARRAYSIZE(shipclass)
 
 static double max_speed[] = {
 	10.0,

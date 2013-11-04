@@ -263,7 +263,8 @@ struct mesh *scout_mesh;
 struct mesh *laserbeam_mesh;
 struct mesh *ship_icon_mesh;
 
-struct mesh *derelict_mesh[NDERELICT_MESHES];
+struct mesh *ship_mesh_map[NSHIPTYPES];
+struct mesh *derelict_mesh[NSHIPTYPES];
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -679,53 +680,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		switch (shiptype) {
-		case SHIP_CLASS_CRUISER:
-			e = add_entity(ecx, cruiser_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_DESTROYER:
-			e = add_entity(ecx, destroyer_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_TRANSPORT:
-			e = add_entity(ecx, transport_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_DRAGONHAWK:
-			e = add_entity(ecx, dragonhawk_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_SKORPIO:
-			e = add_entity(ecx, skorpio_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_DISRUPTOR:
-			e = add_entity(ecx, disruptor_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_RESEARCH_VESSEL:
-			e = add_entity(ecx, research_vessel_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(ecx, freighter_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_TANKER:
-			e = add_entity(ecx, tanker_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_BATTLESTAR:
-			e = add_entity(ecx, battlestar_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_ASTEROIDMINER:
-			e = add_entity(ecx, asteroidminer_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_SCOUT:
-			e = add_entity(ecx, scout_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_SCIENCE:
-			e = add_entity(ecx, spaceship2_mesh, x, y, z, SHIP_COLOR);
-			break;
-		case SHIP_CLASS_STARSHIP:
-			e = add_entity(ecx, ship_mesh, x, y, z, SHIP_COLOR);
-			break;
-		default:
-			e = add_entity(ecx, cruiser_mesh, x, y, z, SHIP_COLOR);
-			break;
-		}
+		e = add_entity(ecx, ship_mesh_map[shiptype % NSHIPTYPES], x, y, z, SHIP_COLOR);
 		i = add_generic_object(id, x, z, vx, vz, orientation, OBJTYPE_SHIP2, alive, e);
 		if (i < 0)
 			return i;
@@ -770,17 +725,10 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		switch (shiptype) {
-		case SHIP_CLASS_FREIGHTER:
-			e = add_entity(ecx, freighter_mesh, x, y, z, SHIP_COLOR);
-			break;
-		default:
-			if (id == my_ship_id)	
-				e = add_entity(ecx, NULL, x, y, z, SHIP_COLOR);
-			else
-				e = add_entity(ecx, ship_mesh, x, y, z, SHIP_COLOR);
-			break;
-		}
+		if (id == my_ship_id)	
+			e = add_entity(ecx, NULL, x, y, z, SHIP_COLOR);
+		else
+			e = add_entity(ecx, ship_mesh_map[shiptype % NSHIPTYPES], x, y, z, SHIP_COLOR);
 		i = add_generic_object(id, x, z, vx, vz, orientation, type, alive, e);
 		if (i < 0)
 			return i;
@@ -1233,7 +1181,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		m = ship_type % NDERELICT_MESHES;
+		m = ship_type % NSHIPTYPES;
 		e = add_entity(ecx, derelict_mesh[m], x, y, z, SHIP_COLOR);
 		i = add_generic_object(id, x, z, 0.0, 0.0, &identity_quat, OBJTYPE_DERELICT, 1, e);
 		if (i < 0)
@@ -9560,20 +9508,23 @@ static void init_meshes(void)
 	ship_icon_mesh = snis_read_stl_file(d, "ship-icon.stl");
 
 	/* Note: these must match defines of SHIPTYPEs in snis.h */
-	derelict_mesh[0] = make_derelict_mesh(cruiser_mesh);
-	derelict_mesh[1] = make_derelict_mesh(destroyer_mesh);
-	derelict_mesh[2] = make_derelict_mesh(freighter_mesh);
-	derelict_mesh[3] = make_derelict_mesh(tanker_mesh);
-	derelict_mesh[4] = make_derelict_mesh(transport_mesh);
-	derelict_mesh[5] = make_derelict_mesh(battlestar_mesh);
-	derelict_mesh[6] = make_derelict_mesh(ship_mesh);
-	derelict_mesh[7] = make_derelict_mesh(asteroidminer_mesh);
-	derelict_mesh[8] = make_derelict_mesh(spaceship2_mesh);
-	derelict_mesh[9] = make_derelict_mesh(scout_mesh);
-	derelict_mesh[10] = make_derelict_mesh(dragonhawk_mesh);
-	derelict_mesh[11] = make_derelict_mesh(skorpio_mesh);
-	derelict_mesh[12] = make_derelict_mesh(disruptor_mesh);
-	derelict_mesh[13] = make_derelict_mesh(research_vessel_mesh);
+	ship_mesh_map[0] = cruiser_mesh;
+	ship_mesh_map[1] = destroyer_mesh;
+	ship_mesh_map[2] = freighter_mesh;
+	ship_mesh_map[3] = tanker_mesh;
+	ship_mesh_map[4] = transport_mesh;
+	ship_mesh_map[5] = battlestar_mesh;
+	ship_mesh_map[6] = ship_mesh;
+	ship_mesh_map[7] = asteroidminer_mesh;
+	ship_mesh_map[8] = spaceship2_mesh;
+	ship_mesh_map[9] = scout_mesh;
+	ship_mesh_map[10] = dragonhawk_mesh;
+	ship_mesh_map[11] = skorpio_mesh;
+	ship_mesh_map[12] = disruptor_mesh;
+	ship_mesh_map[13] = research_vessel_mesh;
+
+	for (i = 0; i < NSHIPTYPES; i++)
+		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
 }
 
 static void init_vects(void)
