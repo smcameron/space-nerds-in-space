@@ -7214,13 +7214,17 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	struct mesh *m;
 	char buf[100];
 	int science_style = RENDER_WIREFRAME;
+	float angle;
+	union quat orientation;
 
 	if (!curr_science_guy || !curr_science_guy->entity)
 		return;
 
 	m = entity_get_mesh(curr_science_guy->entity);
 	e = add_entity(sciecx, m, 0, 0, 0, GREEN);
-	update_entity_rotation(e, 0, (M_PI / 180.0) * (timer % 360), 0);
+	angle = (M_PI / 180.0) * (timer % 360);
+	quat_init_axis(&orientation, 0.0, 1.0, 0.0, angle);
+	update_entity_orientation(e, &orientation);
 #ifdef WITH_ILDA_SUPPORT
 	science_style |= RENDER_ILDA;
 #endif
