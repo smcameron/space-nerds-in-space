@@ -5550,8 +5550,7 @@ static void send_econ_update_ship_packet(struct game_client *c,
 			o->vx, (uint32_t) UNIVERSE_DIM,
 			o->vy, (uint32_t) UNIVERSE_DIM,
 			o->vz, (uint32_t) UNIVERSE_DIM,
-			&o->orientation, (uint32_t) 360,
-			o->tsd.ship.victim_id, o->tsd.ship.shiptype));
+			&o->orientation, o->tsd.ship.victim_id, o->tsd.ship.shiptype));
 }
 
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip)
