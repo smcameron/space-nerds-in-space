@@ -1036,6 +1036,7 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	struct laserbeam_data *ld = &o->tsd.laserbeam;
 	double rx, ry, rz;
 	double yaw, pitch;
+	union quat yq, pq, orientation;
 
 	oid = lookup_object_by_id(o->tsd.laserbeam.origin);
 	tid = lookup_object_by_id(o->tsd.laserbeam.target);
@@ -1067,6 +1068,10 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	dy = (y2 - y1) / MAX_LASERBEAM_SEGMENTS;
 	dz = (z2 - z1) / MAX_LASERBEAM_SEGMENTS;
 
+	quat_init_axis(&yq, 0.0, 1.0, 0.0, yaw);
+	quat_init_axis(&pq, 0.0, 0.0, 1.0, pitch);
+
+	quat_mul(&orientation, &yq, &pq);
 	
 	for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++) {
 		lastd = (snis_randn(50) - 25) / 100.0;
@@ -1085,7 +1090,7 @@ static void update_laserbeam_segments(struct snis_entity *o)
 		ld->y[i] = y1 + (i + lastd) * dy;
 		ld->z[i] = z1 + (i + lastd) * dz; 
 		update_entity_pos(ld->entity[i], ld->x[i], ld->y[i], ld->z[i]);
-		update_entity_rotation(ld->entity[i], rx, ry, rz);
+		update_entity_orientation(ld->entity[i], &orientation);
 	}
 }
 
