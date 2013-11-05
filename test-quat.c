@@ -81,7 +81,7 @@ static void test1()
 	quat_init_axis(&q, 1, 0, 0, 90 * M_PI / 180.0); /* rotate 90 degrees about x axis */
 	quat_init_axis(&q2, 0, 1, 0, 45 * M_PI / 180.0); /* rotate 45 degrees about y axis */
 	quat_mul(&q3, &q2, &q);
-	quat_to_lh_rot_matrix(&q3, &rotm.m[0][0]);
+	quat_to_rh_rot_matrix(&q3, &rotm.m[0][0]);
 	mat44_x_mat41(&rotm, &v1, &v2);
 	quat_rot_vec(&vo, &vi, &q3);
 	printf("x,y,z = %f,%f,%f\n", v2.m[0], v2.m[1], v2.m[2]);
@@ -102,7 +102,7 @@ static void test1()
 	vi.v.y = v1.m[1];
 	vi.v.z = v1.m[2];
 	quat_init_axis(&q2, 0, 1, 0, 45 * M_PI / 180.0); /* rotate 45 degrees about y axis */
-	quat_to_lh_rot_matrix(&q2, &rotm.m[0][0]);
+	quat_to_rh_rot_matrix(&q2, &rotm.m[0][0]);
 	mat44_x_mat41(&rotm, &v1, &v2);
 	quat_rot_vec(&vo, &vi, &q2);
 	printf("x,y,z = %f,%f,%f\n", v2.m[0], v2.m[1], v2.m[2]);
@@ -141,8 +141,8 @@ static void test1()
 		/* compose the 2 random rotations */
 		quat_mul(&q3, &q2, &q);
 		/* convert to rotation matrix */
-		quat_to_lh_rot_matrix(&q3, &rotm.m[0][0]);
-		quat_to_rh_rot_matrix(&q3, &rhrotm.m[0][0]);
+		quat_to_rh_rot_matrix(&q3, &rotm.m[0][0]);
+		quat_to_lh_rot_matrix(&q3, &rhrotm.m[0][0]);
 
 		/* do rotation with matrix */
 		mat44_x_mat41(&rotm, &v1, &v2);
