@@ -984,7 +984,10 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	struct laserbeam_data *ld = &o->tsd.laserbeam;
 	double rx, ry, rz;
 	double yaw, pitch;
-	union quat yq, pq, orientation;
+	union vec3 right = { { 1.0f, 0.0f, 0.0f } };
+	union vec3 up = { { 0.0f, 0.1f, 0.0f } } ;
+	union vec3 target_vector;
+	union quat orientation;
 
 	oid = lookup_object_by_id(o->tsd.laserbeam.origin);
 	tid = lookup_object_by_id(o->tsd.laserbeam.target);
@@ -997,6 +1000,13 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	origin = &go[oid];
 	target = &go[tid];
 
+	target_vector.v.x = target->x - origin->x;
+	target_vector.v.y = target->y - origin->y;
+	target_vector.v.z = target->z - origin->z;
+
+	quat_from_u2v(&orientation, &right, &target_vector, &up); /* correct up vector? */
+	quat_normalize(&right, &orientation);
+	
 	x1 = origin->x;
 	y1 = origin->y;
 	z1 = origin->z;
@@ -1016,21 +1026,8 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	dy = (y2 - y1) / MAX_LASERBEAM_SEGMENTS;
 	dz = (z2 - z1) / MAX_LASERBEAM_SEGMENTS;
 
-	quat_init_axis(&yq, 0.0, 1.0, 0.0, yaw);
-	quat_init_axis(&pq, 0.0, 0.0, 1.0, pitch);
-
-	quat_mul(&orientation, &yq, &pq);
-	
 	for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++) {
 		lastd = (snis_randn(50) - 25) / 100.0;
-#if 0
-		rx = snis_randn(360) * M_PI / 180.0;
-		ry = snis_randn(360) * M_PI / 180.0;
-		rz = snis_randn(360) * M_PI / 180.0;
-		rx = M_PI / 2.0;
-		ry = o->heading + M_PI;
-		rz = 0;
-#endif
 		rx = 0;
 		ry = yaw;
 		rz = pitch;
@@ -1038,7 +1035,7 @@ static void update_laserbeam_segments(struct snis_entity *o)
 		ld->y[i] = y1 + (i + lastd) * dy;
 		ld->z[i] = z1 + (i + lastd) * dz; 
 		update_entity_pos(ld->entity[i], ld->x[i], ld->y[i], ld->z[i]);
-		update_entity_orientation(ld->entity[i], &orientation);
+		update_entity_orientation(ld->entity[i], &right);
 	}
 }
 
