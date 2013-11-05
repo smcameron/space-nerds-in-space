@@ -12,6 +12,7 @@ static void test1()
 {
 	union quat q, q2, q3;
 	union vec3 vi, vo;
+	union euler ypr;
 	float dx,dy,dz;
 	struct mat44 rotm, rhrotm;
 	struct mat41 v1, v2, v3;
@@ -91,6 +92,37 @@ static void test1()
 	TESTIT(dx > 0.00001, "test failed, x wrong\n");
 	TESTIT(dz > 0.00001, "test failed, z wrong\n");
 	TESTIT(dy > 0.00001, "test failed, y wrong\n");
+
+	/* Test that quat(0,1,0,45°) rotate (1,0,0) = (.707,0,-.707) */
+	v1.m[0] = 1;
+	v1.m[1] = 0;
+	v1.m[2] = 0;
+	v1.m[3] = 0;
+	vi.v.x = v1.m[0];
+	vi.v.y = v1.m[1];
+	vi.v.z = v1.m[2];
+	quat_init_axis(&q2, 0, 1, 0, 45 * M_PI / 180.0); /* rotate 45 degrees about y axis */
+	quat_to_lh_rot_matrix(&q2, &rotm.m[0][0]);
+	mat44_x_mat41(&rotm, &v1, &v2);
+	quat_rot_vec(&vo, &vi, &q2);
+	printf("x,y,z = %f,%f,%f\n", v2.m[0], v2.m[1], v2.m[2]);
+	printf("x,y,z = %f,%f,%f\n", vo.v.x, vo.v.y, vo.v.z);
+	dx = fabs(v2.m[0] - vo.v.x);
+	dy = fabs(v2.m[1] - vo.v.y);
+	dz = fabs(v2.m[2] - vo.v.z);
+	TESTIT(dx > 0.00001, "test failed, x wrong\n");
+	TESTIT(dz > 0.00001, "test failed, z wrong\n");
+	TESTIT(dy > 0.00001, "test failed, y wrong\n");
+	dx = fabs(v2.m[0] - sqrt(2.0) / 2.0);
+	dy = fabs(v2.m[1] - 0);
+	dz = fabs(v2.m[2] - -sqrt(2.0) / 2.0);
+	TESTIT(dx > 0.00001, "test failed, x wrong\n");
+	TESTIT(dz > 0.00001, "test failed, z wrong\n");
+	TESTIT(dy > 0.00001, "test failed, y wrong\n");
+	quat_to_euler(&ypr, &q2);
+	printf("ypr = %f,%f,%f\n", ypr.a.yaw * 180.0 / M_PI,
+				ypr.a.pitch * 180.0 / M_PI,
+				ypr.a.roll * 180.0 / M_PI);
 
 	for (i = 0; i < 1000; i++) {
 		float px, py, pz;
