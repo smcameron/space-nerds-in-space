@@ -320,9 +320,9 @@ float vec3_dot(const union vec3 *v1, const union vec3 *v2)
 
 union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
 {
-	vo->vec[0] = v1->vec[2]*v2->vec[3] - v1->vec[3]*v2->vec[2];
-	vo->vec[1] = v1->vec[3]*v2->vec[1] - v1->vec[1]*v2->vec[3];
-	vo->vec[2] = v1->vec[1]*v2->vec[2] - v1->vec[1]*v2->vec[2];
+	vo->vec[0] = v1->vec[1]*v2->vec[2] - v1->vec[2]*v2->vec[1];
+	vo->vec[1] = v1->vec[2]*v2->vec[0] - v1->vec[0]*v2->vec[2];
+	vo->vec[2] = v1->vec[0]*v2->vec[1] - v1->vec[1]*v2->vec[0];
 	return vo;
 }
 
