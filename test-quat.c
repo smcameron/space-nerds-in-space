@@ -171,6 +171,28 @@ static void test1()
 		TESTIT(dy > 0.001, "rh test failed, y wrong\n");
 #endif
 	}
+
+	for (i = 0; i < 1000; i++) {
+		union vec3 v1, v2, v3, v4, up;
+		union quat r;
+		random_point_on_sphere(1.0, &v1.v.x, &v1.v.y, &v1.v.z);
+		random_point_on_sphere(1.0, &v2.v.x, &v2.v.y, &v2.v.z);
+		random_point_on_sphere(1.0, &up.v.x, &up.v.y, &up.v.z);
+		printf("p1 = %f,%f,%f, p2 = %f,%f,%f\n", v1.v.x, v1.v.y, v1.v.z,
+						v2.v.x, v2.v.y, v2.v.z);
+		quat_from_u2v(&r, &v1, &v2, &up);
+		v3 = v1;
+		quat_rot_vec(&v4, &v3, &r);
+		dx = fabs(v4.v.x - v2.v.x);
+		dy = fabs(v4.v.y - v2.v.y);
+		dz = fabs(v4.v.z - v2.v.z);
+		TESTIT(dx > 0.001, "quat_from_u2v test failed, x wrong\n");
+		TESTIT(dz > 0.001, "quat_from_u2v test failed, z wrong\n");
+		TESTIT(dy > 0.001, "quat_from_u2v test failed, y wrong\n");
+		printf("got %f, expected %f\n", v4.v.x, v2.v.x);
+		printf("got %f, expected %f\n", v4.v.y, v2.v.y);
+		printf("got %f, expected %f\n", v4.v.z, v2.v.z);
+	}
 }
 
 int main(__attribute__((unused)) int argc, __attribute__((unused))  char *argv[])

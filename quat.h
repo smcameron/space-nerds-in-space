@@ -141,4 +141,9 @@ void random_axis_quat(union quat *q);
 /* returns square of the length of a vector */
 float vec3_len2(union vec3 *v);
 
+/* Calculate the quaternion to rotate from vector u to vector v */
+void quat_from_u2v(union quat *q, union vec3 *u, union vec3 *v, union vec3 *up);
+/* Calculate the quaternion to rotate from unit_vector u to unit_vector v */
+void quat_from_unit_u2v(union quat *q, union vec3 *u, union vec3 *v);
+
 #endif /* __QUAT_H__ */

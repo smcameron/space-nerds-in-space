@@ -340,3 +340,34 @@ void vec3_normalize(union vec3 *vo, union vec3 *vi)
 	vo->v.z = vi->v.z / len;
 }
 
+/* see http://gamedev.stackexchange.com/questions/15070/orienting-a-model-to-face-a-target */
+/* Calculate the quaternion to rotate from vector u to vector v */
+void quat_from_u2v(union quat *q, union vec3 *u, union vec3 *v, union vec3 *up)
+{
+	union vec3 un, vn, axis, axisn;
+	float dot;
+	float angle;
+
+	vec3_normalize(&un, u);
+	vec3_normalize(&vn, v);
+	dot = vec3_dot(&un, &vn);
+	if (fabs(dot - -1.0f) <  0.000001f) {
+		/* vector a and b point exactly in the opposite direction
+		 * so it is a 180 degrees turn around the up-axis 
+		 */
+		quat_init_axis(q, up->v.x, up->v.y, up->v.z, M_PI);
+		return;
+	}
+	if (fabs(dot - 1.0f) <  0.000001f) {
+		/* vector a and b point exactly in the same direction
+		 * so we return the identity quaternion
+		 */
+		*q = identity_quat; 
+		return;
+	}
+	angle = acos(dot);
+	vec3_cross(&axis, &un, &vn);
+	vec3_normalize(&axisn, &axis);
+	quat_init_axis(q, axisn.v.x, axisn.v.y, axisn.v.z, angle);
+}
+
