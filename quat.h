@@ -78,6 +78,8 @@ float vec3_dot(const union vec3 *v1, const union vec3 *v2);
 /* cross product vo = v1 X v2, return vo */
 union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
 
+union vec3 *vec3_normalize(union vec3 *vo, union vec3 *vi);
+
 /* init orientation quaternion from measurements */
 void quaternion_init(union quat *quat, const union vec3 *acc, const union vec3 *mag);
 

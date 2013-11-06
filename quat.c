@@ -332,12 +332,13 @@ float vec3_len2(union vec3 *v)
 	return v->v.x * v->v.x + v->v.y * v->v.y + v->v.z * v->v.z;
 }
 
-void vec3_normalize(union vec3 *vo, union vec3 *vi)
+union vec3 *vec3_normalize(union vec3 *vo, union vec3 *vi)
 {
 	float len = sqrt(vec3_len2(vi));
 	vo->v.x = vi->v.x / len;
 	vo->v.y = vi->v.y / len;
 	vo->v.z = vi->v.z / len;
+	return vo;
 }
 
 /* see http://gamedev.stackexchange.com/questions/15070/orienting-a-model-to-face-a-target */
