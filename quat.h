@@ -138,4 +138,7 @@ void random_quat(union quat *q);
 /* Create a random quaternion axis with zero rotation */
 void random_axis_quat(union quat *q);
 
+/* returns square of the length of a vector */
+float vec3_len2(union vec3 *v);
+
 #endif /* __QUAT_H__ */

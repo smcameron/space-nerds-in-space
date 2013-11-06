@@ -326,3 +326,9 @@ union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v
 	return vo;
 }
 
+/* returns square of the length of a vector */
+float vec3_len2(union vec3 *v)
+{
+	return v->v.x * v->v.x + v->v.y * v->v.y + v->v.z * v->v.z;
+}
+
