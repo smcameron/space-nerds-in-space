@@ -109,5 +109,6 @@ SNG_GLOBAL void sng_filled_tri(GdkDrawable *drawable, GdkGC *gc,
 			float x1, float y1, float x2, float y2, float x3, float y3);
 SNG_GLOBAL int sng_load_png_texture(const char * filename, int *w, int *h,
                         char *whynot, int whynotlen);
+SNG_GLOBAL void sng_setup_colors(GtkWidget *w);
 #undef SNG_GLOBAL
 #endif

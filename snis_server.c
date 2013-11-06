@@ -2578,7 +2578,7 @@ static void laserbeam_move(struct snis_entity *o)
 
 static void tractorbeam_move(struct snis_entity *o)
 {
-	int tid, oid, ttype;
+	int tid, oid;
 	struct snis_entity *target, *origin;
 	struct mat41 to_object, nto_object, desired_object_loc, tractor_vec, tractor_velocity;
 	double dist;
@@ -2599,7 +2599,6 @@ static void tractorbeam_move(struct snis_entity *o)
 	}
 	target = &go[tid];
 	origin = &go[oid];
-	ttype = target->type;
 
 	dist = hypot3d(target->x - origin->x, target->y - origin->y, target->z - origin->z);
 

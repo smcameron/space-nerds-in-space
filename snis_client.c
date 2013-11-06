@@ -982,8 +982,7 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	int i, oid, tid;
 	struct snis_entity *origin, *target;
 	struct laserbeam_data *ld = &o->tsd.laserbeam;
-	double rx, ry, rz;
-	double yaw, pitch;
+	double yaw;
 	union vec3 right = { { 1.0f, 0.0f, 0.0f } };
 	union vec3 up = { { 0.0f, 0.1f, 0.0f } } ;
 	union vec3 target_vector;
@@ -1015,7 +1014,6 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	z2 = target->z;
 
 	yaw = atan2(z2 - z1, x2 - x1);
-	pitch = atan2(y2 - y1, hypot(x2 - x1, z2 - z1));
 
 	x1 += cos(yaw) * 15.0;
 	z1 -= sin(yaw) * 15.0;
@@ -1028,9 +1026,6 @@ static void update_laserbeam_segments(struct snis_entity *o)
 
 	for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++) {
 		lastd = (snis_randn(50) - 25) / 100.0;
-		rx = 0;
-		ry = yaw;
-		rz = pitch;
 		ld->x[i] = x1 + (i + lastd) * dx;
 		ld->y[i] = y1 + (i + lastd) * dy;
 		ld->z[i] = z1 + (i + lastd) * dz; 
@@ -2904,7 +2899,7 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
 	uint32_t id, alive, victim_id;
-	double dx, dy, dz, dheading, dvx, dvy, dvz;
+	double dx, dy, dz, dvx, dvy, dvz;
 	union quat orientation;
 	uint8_t shiptype;
 	int rc;
