@@ -229,6 +229,26 @@ void random_point_on_sphere(float radius, float *x, float *y, float *z)
 	*z *= radius;
 }
 
+void random_dpoint_on_sphere(float radius, double *x, double *y, double *z)
+{
+	float x1, x2, s;
+
+	/* The Marsaglia 1972 rejection method */
+	do {
+		x1 = snis_random_float();
+		x2 = snis_random_float();
+		s = x1 * x1 + x2 * x2;
+	} while (s > 1.0f);
+
+	*x = 2.0f * x1 * sqrt(1.0f - s);
+	*y = 2.0f * x2 * sqrt(1.0f - s);
+	*z = fabs(1.0f - 2.0f * s);
+
+	*x *= radius;
+	*y *= radius;
+	*z *= radius;
+}
+
 static inline float dist3dsqrd(const float x, const float y, const float z)
 {
 	return x * x + y * y + z * z;
