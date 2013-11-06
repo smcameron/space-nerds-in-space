@@ -274,7 +274,7 @@ struct ship_data {
 	uint8_t phaser_wavelength;
 	uint8_t phaser_charge;
 	int32_t victim_id;
-	double dox, doz; /* destination offsets */
+	double dox, doy, doz; /* destination offsets */
 	struct ship_damage_data damage;
 	struct command_data cmd_data;
 	struct damcon_data *damcon;

@@ -1026,7 +1026,7 @@ delete_it:
 		if (!e->alive)
 			continue;
 
-		dist2 = hypot(o->x - e->x, o->z - e->z); 
+		dist2 = dist3dsqrd(o->x - e->x, o->y - e->y, o->z - e->z); 
 		if (d < 0 || d > dist2) {
 			d = dist2;
 			eid = go[index].id;
@@ -1034,13 +1034,9 @@ delete_it:
 	}
 		
 	if (eid >= 0) {
-		int a, r;
-
-		a = snis_randn(360);
-		r = snis_randn(LASER_RANGE - 400) + 400;
+		int r = snis_randn(LASER_RANGE - 400) + 400;
 		o->tsd.ship.victim_id = eid;
-		o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
-		o->tsd.ship.doz = r * -sin(a * M_PI / 180.0);
+		random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
 	} else {
 		o->tsd.ship.victim_id = -1;
 	}
@@ -1100,37 +1096,27 @@ static void check_for_incoming_fire(struct snis_entity *o)
 	}
 }
 
+static void update_ship_position_and_velocity(struct snis_entity *o);
 static int add_laserbeam(uint32_t origin, uint32_t target, int alive);
 static void ship_move(struct snis_entity *o)
 {
 	double heading_diff, yaw_vel;
 	struct snis_entity *v;
-	double destx, destz, dx, dz, d;
+	double destx, desty, destz, dx, dy, dz, d;
 	int close_enough = 0;
 	double maxv;
 
 	switch (o->tsd.ship.cmd_data.command) {
 	case DEMON_CMD_ATTACK:
-		if (o->tsd.ship.victim_id == (uint32_t) -1 || snis_randn(1000) < 50) {
-			int a, r;
-
-			a = snis_randn(360);
-			r = snis_randn(LASER_RANGE - 400) + 400;
+		if (o->tsd.ship.victim_id == (uint32_t) -1 || snis_randn(1000) < 50)
 			ship_choose_new_attack_victim(o);
-			v = lookup_entity_by_id(o->tsd.ship.victim_id);
-			o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
-			o->tsd.ship.doz = r * -sin(a * M_PI / 180.0);
-		}
 		break;
 	default:
 		if (o->tsd.ship.victim_id == (uint32_t) -1 ||
 			snis_randn(1000) < 50) {
-			int a, r;
-			a = snis_randn(360);
-			r = snis_randn(LASER_RANGE - 400) + 400;
+			int r = snis_randn(LASER_RANGE - 400) + 400;
 			o->tsd.ship.victim_id = find_nearest_victim(o);
-			o->tsd.ship.dox = r * cos(a * M_PI / 180.0);
-			o->tsd.ship.doz = r * -sin(a * M_PI / 180.0);
+			random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
 		}
 		break;
 	}
@@ -1139,29 +1125,30 @@ static void ship_move(struct snis_entity *o)
 	v = lookup_entity_by_id(o->tsd.ship.victim_id);
 	if (v) {
 		destx = v->x + o->tsd.ship.dox;
+		desty = v->y + o->tsd.ship.doy;
 		destz = v->z + o->tsd.ship.doz;
 		dx = destx - o->x;
+		dy = desty - o->y;
 		dz = destz - o->z;
-		d = sqrt(dx * dx + dz * dz);
+		d = dist3d(dx, dy, dz);
+
+		/* FIXME: slerp this or something */
 		o->tsd.ship.desired_heading = atan2(-dz, dx);
 		o->tsd.ship.desired_velocity = (d / maxv) * maxv + snis_randn(5);
 		if (o->tsd.ship.desired_velocity > maxv)
 			o->tsd.ship.desired_velocity = maxv;
-		if (fabs(dx) < 1000 && fabs(dz) < 1000) {
+		if (fabs(dx) < 1000 && fabs(dy) < 1000 && fabs(dz) < 1000) {
 			o->tsd.ship.desired_velocity = 0;
 			dx = v->x - o->x;
+			dy = v->y - o->y;
 			dz = v->z - o->z;
 			o->tsd.ship.desired_heading = atan2(-dz, dx);
 			close_enough = 1;
 		}
 		if (snis_randn(1000) < 20) {
-			int dist;
-			double angle;
-
-			angle = snis_randn(360) * M_PI / 180.0;
-			dist = snis_randn(LASER_RANGE - 400) + 400;
-			o->tsd.ship.dox = cos(angle) * dist; 
-			o->tsd.ship.doz = sin(angle) * dist; 
+			int dist = snis_randn(LASER_RANGE - 400) + 400;
+			random_dpoint_on_sphere((float) dist, 
+				&o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
 		}
 	}
 #if 0
@@ -1173,7 +1160,7 @@ static void ship_move(struct snis_entity *o)
 	}
 #endif
 
-	/* Adjust heading towards desired heading */
+	/* Adjust heading towards desired heading (FIXME: slerp or something) */
 	heading_diff = o->tsd.ship.desired_heading - o->heading;
 	if (heading_diff < -M_PI)
 		heading_diff += 2.0 * M_PI;
@@ -1200,17 +1187,14 @@ static void ship_move(struct snis_entity *o)
 	if (fabs(o->tsd.ship.velocity - o->tsd.ship.desired_velocity) < 1.0)
 		o->tsd.ship.velocity = o->tsd.ship.desired_velocity;
 
-	/* set vx, vz, move x, z */
-	o->vz = o->tsd.ship.velocity * -sin(o->heading);
-	o->vx = o->tsd.ship.velocity * cos(o->heading);
-	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+	update_ship_position_and_velocity(o);
 	o->timestamp = universe_timestamp;
 
 	if (close_enough && o->tsd.ship.victim_id != (uint32_t) -1) {
 		double range;
 		v = lookup_entity_by_id(o->tsd.ship.victim_id);
 
-		range = hypot(o->x - v->x, o->z - v->z);
+		range = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
 
 		/* neutrals do not attack planets or starbases, and only select ships
 		 * when attacked.
@@ -1228,8 +1212,7 @@ static void ship_move(struct snis_entity *o)
 				flight_time = dist / TORPEDO_VELOCITY;
 				tx = v->x + (v->vx * flight_time);
 				tz = v->z + (v->vz * flight_time);
-				ty = v->y;
-				/* FIXME: double check the above logic for ty */
+				ty = v->y + (v->vy * flight_time);
 
 				calculate_torpedo_velocities(o->x, o->y, o->z,
 					tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
@@ -1250,7 +1233,10 @@ static void ship_move(struct snis_entity *o)
 			}
 			if (v->type == OBJTYPE_SHIP1 && snis_randn(1000) < 25)
 				taunt_player(o, v);
+		} else {
+			/* FIXME: give neutrals soemthing to do so they don't just sit there */;
 		}
+
 	}
 	o->tsd.ship.phaser_charge = update_phaser_banks(o->tsd.ship.phaser_charge, 255);
 	if (o->sdata.shield_strength > (255 - o->tsd.ship.damage.shield_damage))
@@ -1734,6 +1720,42 @@ static float new_velocity(float desired_velocity, float current_velocity)
 static void update_ship_position_and_velocity(struct snis_entity *o)
 {
 	union vec3 desired_velocity;
+	union vec3 dest, destn;
+	struct snis_entity *v;
+
+	/* FIXME: need a better way to do this. */
+	v = lookup_entity_by_id(o->tsd.ship.victim_id);
+	if (v) {
+		dest.v.x = v->x + o->tsd.ship.dox - o->x;
+		dest.v.y = v->y + o->tsd.ship.doy - o->y;
+		dest.v.z = v->z + o->tsd.ship.doz - o->z;
+	} else {
+		dest.v.x = o->tsd.ship.dox - o->x;
+		dest.v.y = o->tsd.ship.doy - o->y;
+		dest.v.z = o->tsd.ship.doz - o->z;
+	}
+	vec3_normalize(&destn, &dest);
+
+	/* Construct vector of desired velocity */
+	desired_velocity.v.x = destn.v.x * o->tsd.ship.velocity; 
+	desired_velocity.v.y = destn.v.y * o->tsd.ship.velocity;
+	desired_velocity.v.z = destn.v.z * o->tsd.ship.velocity;
+
+	/* Make actual velocity move towards desired velocity */
+	o->vx = new_velocity(desired_velocity.v.x, o->vx);
+	o->vy = new_velocity(desired_velocity.v.y, o->vy);
+	o->vz = new_velocity(desired_velocity.v.z, o->vz);
+
+	/* Move ship */
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+	space_partition_process(space_partition, o, o->x, o->z, o,
+				player_collision_detection);
+	/* FIXME: player_collision_detection probably wrong */
+}
+
+static void update_player_position_and_velocity(struct snis_entity *o)
+{
+	union vec3 desired_velocity;
 
 	/* Apply player's thrust input from power model */
 	do_thrust(o);
@@ -1774,7 +1796,7 @@ static void player_move(struct snis_entity *o)
 		power_model_disable(o->tsd.ship.power_model);
 	}
 	update_ship_orientation(o);
-	update_ship_position_and_velocity(o);
+	update_player_position_and_velocity(o);
 	
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
 	o->tsd.ship.sci_heading += o->tsd.ship.sci_yaw_velocity;
