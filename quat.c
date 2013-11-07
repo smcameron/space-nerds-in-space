@@ -301,6 +301,11 @@ union vec3* vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
 	return vo;
 }
 
+union vec3* vec3_add_self(const union vec3 *v1, const union vec3 *v2)
+{
+	return vec3_add(v1, v1, v2);
+}
+
 union vec3* vec3_sub(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
 {
 	vo->vec[0] = v1->vec[0] - v2->vec[0];

@@ -63,6 +63,9 @@ union vec3* vec3_copy(union vec3 *vo, union vec3 *vi);
 /* vo = v1 + v2, return vo */
 union vec3* vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
 
+/* v1 = v1 + v2, return v1 */
+union vec3* vec3_add_self(const union vec3 *v1, const union vec3 *v2);
+
 /* vo = v1 - v2, return vo */
 union vec3* vec3_sub(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
 
