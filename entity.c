@@ -522,8 +522,9 @@ static int transform_entity(struct entity_context *cx,
 	e->sy = (-t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 
 	if (do_clip) {
-		if (e->sx < 0 || e->sx > cx->camera.xvpixels ||
-			e->sy < 0 || e->sy > cx->camera.yvpixels) /* off screen? */
+		/* consider rendering stuff that is also 50% off the screen
+		   to stop objects popping in on rotate */
+		if (t.wx < -1.5 || t.wx > 1.5 || t.wy < -1.5 || t.wy > 1.5) /* off screen? */
 			return 1; /* clip it. */
 	}
 
