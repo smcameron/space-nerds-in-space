@@ -1154,7 +1154,7 @@ static void ship_move(struct snis_entity *o)
 			o->tsd.ship.desired_heading = atan2(-dz, dx);
 			close_enough = 1;
 		}
-		if (snis_randn(1000) < 20) {
+		if (snis_randn(10000) < 20) {
 			int dist = snis_randn(LASER_RANGE - 400) + 400;
 			random_dpoint_on_sphere((float) dist, 
 				&o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
@@ -1722,9 +1722,9 @@ static float new_velocity(float desired_velocity, float current_velocity)
 	float delta;
 
 	delta = desired_velocity - current_velocity;
-	if (fabs(delta) < 0.1)
+	if (fabs(delta) < 0.05)
 		return desired_velocity;
-	return current_velocity + (delta / 2.0);
+	return current_velocity + (delta / 20.0);
 }
 
 static void update_ship_position_and_velocity(struct snis_entity *o)
