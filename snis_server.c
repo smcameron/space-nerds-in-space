@@ -1096,6 +1096,15 @@ static void check_for_incoming_fire(struct snis_entity *o)
 	}
 }
 
+static void update_ship_orientation(struct snis_entity *o)
+{
+	union vec3 right = { { 1.0f, 0.0f, 0.0f } };
+	union vec3 up = { { 0.0f, 1.0f, 0.0f } };
+	union vec3 current = { { o->vx, o->vy, o->vz } };
+
+	quat_from_u2v(&o->orientation, &right, &current, &up);
+}
+
 static void update_ship_position_and_velocity(struct snis_entity *o);
 static int add_laserbeam(uint32_t origin, uint32_t target, int alive);
 static void ship_move(struct snis_entity *o)
@@ -1179,7 +1188,6 @@ static void ship_move(struct snis_entity *o)
 		yaw_vel = heading_diff;
 	o->heading += yaw_vel;
 	normalize_angle(&o->heading);
-	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
 
 	/* Adjust velocity towards desired velocity */
 	o->tsd.ship.velocity = o->tsd.ship.velocity +
@@ -1188,7 +1196,9 @@ static void ship_move(struct snis_entity *o)
 		o->tsd.ship.velocity = o->tsd.ship.desired_velocity;
 
 	update_ship_position_and_velocity(o);
+	update_ship_orientation(o);
 	o->timestamp = universe_timestamp;
+
 
 	if (close_enough && o->tsd.ship.victim_id != (uint32_t) -1) {
 		double range;
@@ -1683,7 +1693,7 @@ static void player_collision_detection(void *player, void *object)
 	}
 }
 
-static void update_ship_orientation(struct snis_entity *o)
+static void update_player_orientation(struct snis_entity *o)
 {
 	union quat qyaw, qpitch, qroll, qrot, q1, q2, q3, q4;
 
@@ -1795,7 +1805,7 @@ static void player_move(struct snis_entity *o)
 	} else {
 		power_model_disable(o->tsd.ship.power_model);
 	}
-	update_ship_orientation(o);
+	update_player_orientation(o);
 	update_player_position_and_velocity(o);
 	
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
