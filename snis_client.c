@@ -262,6 +262,7 @@ struct mesh *spaceship2_mesh;
 struct mesh *scout_mesh;
 struct mesh *laserbeam_mesh;
 struct mesh *ship_icon_mesh;
+struct mesh *heading_indicator_mesh;
 
 struct mesh *ship_mesh_map[NSHIPTYPES];
 struct mesh *derelict_mesh[NSHIPTYPES];
@@ -5949,6 +5950,8 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 {
 	static struct mesh *ring_mesh = 0;
+	static struct mesh *radar_ring_mesh[4] = {0, 0, 0, 0};
+	static struct mesh *heading_ind_line_mesh = 0;
 	static struct mesh *vline_mesh = 0;
 	static struct mesh *sector_mesh = 0;
 	static struct mesh *axis_mesh[6] = { 0, 0, 0, 0, 0, 0 };
@@ -5957,8 +5960,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 	if (!ring_mesh) {
 		ring_mesh = init_circle_mesh(0, 0, 1);
+		radar_ring_mesh[0] = init_radar_circle_xz_plane_mesh(0, 0, 0.4, 0, 0);
+		radar_ring_mesh[1] = init_radar_circle_xz_plane_mesh(0, 0, 0.6, 18, 0.2);
+		radar_ring_mesh[2] = init_radar_circle_xz_plane_mesh(0, 0, 0.8, 18, 0.2);
+		radar_ring_mesh[3] = init_radar_circle_xz_plane_mesh(0, 0, 1.0, 36, 0.2);
 		vline_mesh = init_line_mesh(0, 0, 0, 0, 1, 0);
 		sector_mesh = init_sector_mesh(7);
+		heading_ind_line_mesh = init_line_mesh(0.7, 0, 0, 1, 0, 0);
 		axis_mesh[0] = init_line_mesh(-1, 0, 0, 1, 0, 0);
 		axis_mesh[1] = init_line_mesh(0, -1, 0, 0, 1, 0);
 		axis_mesh[2] = init_line_mesh(0, 0, -1, 0, 0, 1);
@@ -5994,10 +6002,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	/* rotate camera to be behind my ship */
 	union vec3 camera_pos = { { -screen_radius * 1.85, screen_radius * 0.85, 0} };
 	quat_rot_vec_self(&camera_pos, &o->orientation);
+	vec3_add_self(&camera_pos, &ship_pos);
 
         set_renderer(navecx, WIREFRAME_RENDERER);
 	camera_assign_up_direction(navecx, ship_normal.v.x, ship_normal.v.y, ship_normal.v.z);
-	camera_set_pos(navecx, o->x + camera_pos.v.x, o->y + camera_pos.v.y, o->z + camera_pos.v.z);
+	camera_set_pos(navecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
 	camera_look_at(navecx, o->x, o->y, o->z);
 	camera_set_parameters(navecx, 0.5, 8000.0,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
@@ -6005,13 +6014,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	int i;
 	double incr;
 
-	for (incr = screen_radius; incr > screen_radius / 4.0; incr -= screen_radius / 5.0) {
-		e = add_entity(navecx, ring_mesh, o->x, o->y, o->z, DARKRED);
-		update_entity_scale(e, incr);
+	for (i=0; i<4; ++i) {
+		e = add_entity(navecx, radar_ring_mesh[i], o->x, o->y, o->z, DARKRED);
+		update_entity_scale(e, screen_radius);
 		update_entity_orientation(e, &o->orientation);
 		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 	}
-
+#if 0
 	for (i = 0; i < 6; i++) {
 		int color = DARKRED;
 		if (i == 3)
@@ -6022,9 +6031,39 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			color = GREEN;
 		e = add_entity(navecx, axis_mesh[i], o->x, o->y, o->z, color);
 		update_entity_scale(e, screen_radius);
-		update_entity_orientation(e, &o->orientation);
 		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 	}
+#endif
+
+	for (i=0; i<2; ++i) {
+		int color = (i==0) ? CYAN : GREEN;
+		double ind_heading = (i==0) ? o->tsd.ship.gun_heading : o->tsd.ship.sci_heading;
+
+		/* temp until heading is a quat */
+		union quat ind_orientation;
+		quat_init_axis(&ind_orientation,0,1,0,ind_heading);
+
+		/* add gun heading arrow */
+		union vec3 ind_pos = {{screen_radius,0,0}};
+		quat_rot_vec_self(&ind_pos, &ind_orientation);
+		vec3_add_self(&ind_pos, &ship_pos);
+		e = add_entity(navecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
+		update_entity_scale(e, heading_indicator_mesh->radius*screen_radius/100.0);
+		update_entity_orientation(e, &ind_orientation);
+		set_render_style(e, RENDER_DISABLE_CLIP);
+
+		/* gun heading arrow tail */
+		e = add_entity(navecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
+		update_entity_scale(e, screen_radius);
+		update_entity_orientation(e, &ind_orientation);
+		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+	}
+
+	/* ship forward vector */
+	e = add_entity(navecx, axis_mesh[4], o->x, o->y, o->z, WHITE);
+	update_entity_scale(e, screen_radius);
+	update_entity_orientation(e, &o->orientation);
+	set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 
 	double sector_size = XKNOWN_DIM / 10.0;
 	if (current_zoom > 100 ) {
@@ -6032,6 +6071,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		sector_size /= 10.0;
 	}
 
+	/* sector backround */
 	e = add_entity(navecx, sector_mesh,
 		trunc(o->x / sector_size) * sector_size,
 		trunc(o->y / sector_size) * sector_size,
@@ -9535,6 +9575,7 @@ static void init_meshes(void)
 	scout_mesh = snis_read_stl_file(d, "spaceship3.stl");
 	laserbeam_mesh = snis_read_stl_file(d, "long-triangular-prism.stl");
 	ship_icon_mesh = snis_read_stl_file(d, "ship-icon.stl");
+	heading_indicator_mesh = snis_read_stl_file(d, "heading_indicator.stl");
 
 	/* Note: these must match defines of SHIPTYPEs in snis.h */
 	ship_mesh_map[0] = cruiser_mesh;

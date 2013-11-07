@@ -164,12 +164,46 @@ struct mesh *init_circle_mesh(double x, double z, double r)
 	for (i = 0; i <= 360; i += 2) {
 		my_mesh->v[my_mesh->nvertices].x = x + cos(i * M_PI / 180.0) * r;
 		my_mesh->v[my_mesh->nvertices].y = 0;
-		my_mesh->v[my_mesh->nvertices].z = -z + sin(i * M_PI / 180.0) * r;
+		my_mesh->v[my_mesh->nvertices].z = z + sin(i * M_PI / 180.0) * r;
 		my_mesh->nvertices++;
 	}
 	my_mesh->l[0].start = &my_mesh->v[0];
 	my_mesh->l[0].end = &my_mesh->v[my_mesh->nvertices - 1];
 	my_mesh->l[0].flag = MESH_LINE_STRIP;
+	return my_mesh;
+}
+
+struct mesh *init_radar_circle_xz_plane_mesh(double x, double z, double r, int ticks, double tick_radius)
+{
+	int i;
+	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
+
+	my_mesh->nvertices = 0;
+	my_mesh->ntriangles = 0;
+	my_mesh->nlines = 0;
+	my_mesh->t = 0;
+	my_mesh->v = malloc(sizeof(*my_mesh->v) * (360 / 2 + 1 + ticks*2));
+	my_mesh->l = malloc(sizeof(*my_mesh->l) * (1 + ticks));
+	my_mesh->radius = r;
+
+	for (i = 0; i <= 360; i += 2) {
+		my_mesh->v[my_mesh->nvertices].x = x + cos(i * M_PI / 180.0) * r;
+		my_mesh->v[my_mesh->nvertices].y = 0;
+		my_mesh->v[my_mesh->nvertices].z = z + sin(i * M_PI / 180.0) * r;
+		my_mesh->nvertices++;
+	}
+	my_mesh->l[0].start = &my_mesh->v[0];
+	my_mesh->l[0].end = &my_mesh->v[my_mesh->nvertices - 1];
+	my_mesh->l[0].flag = MESH_LINE_STRIP;
+	my_mesh->nlines++;
+
+	for (i = 0; i < ticks; ++i) {
+		double c = cos(i * 2.0 * M_PI / (double)ticks);
+		double s = sin(i * 2.0 * M_PI / (double)ticks);
+		mesh_add_point(my_mesh, x + c * (r - tick_radius), 0, z + s * (r - tick_radius));
+		mesh_add_point(my_mesh, x + c * r, 0, z + s * r);
+		mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
+	}
 	return my_mesh;
 }
 
