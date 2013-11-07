@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include <math.h>
+#include <stdio.h>
 
 #include "quat.h"
 #include "mathutils.h"
@@ -122,6 +123,15 @@ void quat_conj(union quat *q_out, const union quat *q_in)
 	q_out->v.y = -q_in->v.y;
 	q_out->v.z = -q_in->v.z;
 	q_out->v.w = q_in->v.w;
+}
+
+void quat_to_heading_mark(const union quat *q, double *heading, double *mark)
+{
+	union vec3 dir = {{1,0,0}};
+	quat_rot_vec_self(&dir, q);
+
+	*heading = normalize_euler_0_2pi(atan2(-dir.v.z,dir.v.x));
+	*mark = copysign(acos(sqrt(dir.v.x*dir.v.x + dir.v.z*dir.v.z)),dir.v.y);
 }
 
 void quat_to_euler(union euler *euler, const union quat *quat)
@@ -339,6 +349,11 @@ union vec3 *vec3_normalize(union vec3 *vo, union vec3 *vi)
 	vo->v.y = vi->v.y / len;
 	vo->v.z = vi->v.z / len;
 	return vo;
+}
+
+void vec3_print(const char* prefix, const union vec3 *v)
+{
+	printf("%s%f, %f, %f\n", prefix, v->v.x, v->v.y, v->v.z);
 }
 
 /* see http://gamedev.stackexchange.com/questions/15070/orienting-a-model-to-face-a-target */

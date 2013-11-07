@@ -80,6 +80,8 @@ union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v
 
 union vec3 *vec3_normalize(union vec3 *vo, union vec3 *vi);
 
+void vec3_print(const char* prefix, const union vec3 *v);
+
 /* init orientation quaternion from measurements */
 void quaternion_init(union quat *quat, const union vec3 *acc, const union vec3 *mag);
 
@@ -127,6 +129,11 @@ void quat_normalize_self(union quat *q);
 
 /* convert quaternion to euler angles */
 void quat_to_euler(union euler *e, const union quat *q);
+
+/* return angles
+   heading as angle around y axis with zero at {1,0,0), positive toward -z, 0 to 2pi
+   mark as angle from xz plane with zero at xz plane, positive toward +y, pi/2 to -pi/2 */
+void quat_to_heading_mark(const union quat *q, double *heading, double *mark);
 
 /* normalize angle */
 float normalize_euler_0_2pi(float a);
