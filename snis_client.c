@@ -295,6 +295,12 @@ struct my_point_t *placeholder_part_spun_points;
 struct my_vect_obj placeholder_part;
 struct my_vect_obj placeholder_part_spun[128];
 
+void to_snis_heading_mark(const union quat *q, double *heading, double *mark)
+{
+	quat_to_heading_mark(q,heading,mark);
+	*heading = game_angle_to_math_angle(*heading);
+}
+
 static inline double to_uheading(double heading)
 {
 	return game_angle_to_math_angle(heading);
@@ -5983,15 +5989,15 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 	union vec3 ship_pos = { { o->x, o->y, o->z } };
 	union vec3 ship_normal = { { 0, 1, 0 } };
+	quat_rot_vec_self(&ship_normal, &o->orientation);
 
 	/* rotate camera to be behind my ship */
-	struct mat41 camera_pos = { { screen_radius * 1.85, screen_radius * 0.85, 0} };
-	struct mat41 camera_pos_heading;
-	mat41_rotate_y(&camera_pos, camera_heading, &camera_pos_heading);
+	union vec3 camera_pos = { { -screen_radius * 1.85, screen_radius * 0.85, 0} };
+	quat_rot_vec_self(&camera_pos, &o->orientation);
 
         set_renderer(navecx, WIREFRAME_RENDERER);
-	camera_set_pos(navecx, o->x + camera_pos_heading.m[0],
-			o->y + camera_pos_heading.m[1], o->z + camera_pos_heading.m[2]);
+	camera_assign_up_direction(navecx, ship_normal.v.x, ship_normal.v.y, ship_normal.v.z);
+	camera_set_pos(navecx, o->x + camera_pos.v.x, o->y + camera_pos.v.y, o->z + camera_pos.v.z);
 	camera_look_at(navecx, o->x, o->y, o->z);
 	camera_set_parameters(navecx, 0.5, 8000.0,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
@@ -6002,6 +6008,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	for (incr = screen_radius; incr > screen_radius / 4.0; incr -= screen_radius / 5.0) {
 		e = add_entity(navecx, ring_mesh, o->x, o->y, o->z, DARKRED);
 		update_entity_scale(e, incr);
+		update_entity_orientation(e, &o->orientation);
 		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 	}
 
@@ -6015,6 +6022,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			color = GREEN;
 		e = add_entity(navecx, axis_mesh[i], o->x, o->y, o->z, color);
 		update_entity_scale(e, screen_radius);
+		update_entity_orientation(e, &o->orientation);
 		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 	}
 
@@ -6030,9 +6038,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		trunc(o->z / sector_size) * sector_size,
 		DARKGREEN );
 	update_entity_scale(e, sector_size);
+	update_entity_orientation(e, &o->orientation);
 	set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
-
-	visible_distance *= visible_distance;
 
 	/* Draw all the stuff */
 	pthread_mutex_lock(&universe_mutex);
@@ -6041,29 +6048,31 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	e = add_entity(navecx, ship_mesh, o->x, o->y, o->z, GREEN);
 	set_render_style(e, science_style);
 	update_entity_scale(e, ship_scale);
-	update_entity_rotation(e, 0, o->heading, 0);
-
-#define NR2 (screen_radius * screen_radius)
+	update_entity_orientation(e, &o->orientation);
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		double dist2;
+		double dist;
 
 		if (!go[i].alive)
-			continue;
-
-		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
-			continue;
-		}
-		dist2 = dist3dsqrd(go[i].x - o->x, 0, go[i].z - o->z);
-		if (dist2 > NR2 || dist2 > visible_distance)
-			continue; /* not close enough */
-
-		if (in_nebula && snis_randn(1000) < 850)
 			continue;
 
 		if (go[i].id == my_ship_id) {
 			continue;
 		}
+
+		if (!go[i].entity)
+			continue;
+
+		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
+			continue;
+		}
+		dist = dist3d(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
+		if (dist > screen_radius || dist > visible_distance)
+			continue; /* not close enough */
+
+		if (in_nebula && snis_randn(1000) < 850)
+			continue;
+
 		struct entity *contact = 0;
 		float contact_scale = 0;
 
@@ -6080,12 +6089,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_SHIP1:
 		{
-			struct mesh *m;
+			struct mesh *m = entity_get_mesh(go[i].entity);
 
-			if (0 && go[i].type == OBJTYPE_SHIP2)
-				m = ship_icon_mesh;
-			else
-				m = entity_get_mesh(go[i].entity);
 			if (go[i].type == OBJTYPE_TORPEDO) {
 				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, ORANGERED);
 				set_render_style(contact, science_style | RENDER_BRIGHT_LINE);
@@ -6099,6 +6104,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				set_render_style(contact, science_style);
 				entity_set_user_data(contact, &go[i]);
 			}
+			update_entity_orientation(contact, entity_get_orientation(go[i].entity));
+
 			if (o->tsd.ship.victim_id != -1 && go[i].id == o->tsd.ship.victim_id)
 				targeted_entity = contact;
 			break;
@@ -6157,12 +6164,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 			e = add_entity(navecx, vline_mesh, contact_pos.v.x, contact_pos.v.y, contact_pos.v.z, DARKRED);
 			update_entity_scale(e, -proj_distance);
-			/* update_entity_rotation(e, ship_normal); 3d todo */
+			update_entity_orientation(e, &o->orientation);
 			set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 
 			e = add_entity(navecx, ring_mesh, ship_plane_proj.v.x, ship_plane_proj.v.y, ship_plane_proj.v.z, DARKRED);
 			update_entity_scale(e, contact_ring_radius);
-			/* update_entity_rotation(e, ship_normal); 3d todo */
+			update_entity_orientation(e, &o->orientation);
 			set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
 		}
 	}
@@ -6231,9 +6238,10 @@ static void show_navigation(GtkWidget *w)
 	sectorz = floor(10.0 * o->z / (double) ZKNOWN_DIM);
 	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf)", sectorz + 'A', sectorx, o->x, o->z);
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, LINEHEIGHT);
-	display_heading = to_uheading(o->heading);
-	normalize_angle(&display_heading);	
-	sprintf(buf, "HEADING: %3.1lf", 180.0 * display_heading / M_PI);
+
+	double display_mark;
+	to_snis_heading_mark(&o->orientation, &display_heading, &display_mark);
+	sprintf(buf, "HEADING: %3.1lf MARK: %3.1lf", radians_to_degrees(display_heading), radians_to_degrees(display_mark));
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
 
 	quat_to_euler(&ypr, &o->orientation);	
