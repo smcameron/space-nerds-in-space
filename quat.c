@@ -131,7 +131,12 @@ void quat_to_heading_mark(const union quat *q, double *heading, double *mark)
 	quat_rot_vec_self(&dir, q);
 
 	*heading = normalize_euler_0_2pi(atan2(-dir.v.z,dir.v.x));
-	*mark = copysign(acos(sqrt(dir.v.x*dir.v.x + dir.v.z*dir.v.z)),dir.v.y);
+	float xz_distance = sqrt(dir.v.x*dir.v.x + dir.v.z*dir.v.z);
+	if ( xz_distance >= 1 ) {
+		*mark = 0;
+	} else {
+		*mark = copysign(acos(xz_distance),dir.v.y);
+	}
 }
 
 void quat_to_euler(union euler *euler, const union quat *quat)
