@@ -131,6 +131,7 @@ void quat_to_heading_mark(const union quat *q, double *heading, double *mark)
 	quat_rot_vec_self(&dir, q);
 
 	*heading = normalize_euler_0_2pi(atan2(-dir.v.z,dir.v.x));
+vec3_print("quat_to_heading_mark=",&dir);
 	*mark = copysign(acos(sqrt(dir.v.x*dir.v.x + dir.v.z*dir.v.z)),dir.v.y);
 }
 
@@ -301,7 +302,7 @@ union vec3* vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
 	return vo;
 }
 
-union vec3* vec3_add_self(const union vec3 *v1, const union vec3 *v2)
+union vec3* vec3_add_self(union vec3 *v1, const union vec3 *v2)
 {
 	return vec3_add(v1, v1, v2);
 }
