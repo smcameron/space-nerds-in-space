@@ -6012,7 +6012,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
 	int in_nebula = 0;
 	int i;
-	double incr;
 
 	for (i=0; i<4; ++i) {
 		e = add_entity(navecx, radar_ring_mesh[i], o->x, o->y, o->z, DARKRED);
@@ -9786,11 +9785,15 @@ int main(int argc, char *argv[])
 
 	init_meshes();
 
+#ifndef GLIB_VERSION_2_32
+	/* this is only needed in glibc versions before 2.32 */
+
 	/* Apparently (some versions of?) portaudio calls g_thread_init(). */
 	/* It may only be called once, and subsequent calls abort, so */
 	/* only call it if the thread system is not already initialized. */
 	if (!g_thread_supported ())
 		g_thread_init(NULL);
+#endif
 	gdk_threads_init();
 
 	gettimeofday(&start_time, NULL);
