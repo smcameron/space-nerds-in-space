@@ -2407,9 +2407,9 @@ static void deal_with_keyboard()
 	if (kbstate.pressed[keydown])
 		v = 1;
 	if (kbstate.pressed[keyrollleft])
-		r = -1;
-	if (kbstate.pressed[keyrollright])
 		r = 1;
+	if (kbstate.pressed[keyrollright])
+		r = -1;
 	if (h || v || r)
 		do_dirkey(h, v, r);
 
