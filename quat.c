@@ -83,6 +83,11 @@ void quat_init_axis_v(union quat *q, const union vec3 *v, float a)
 	quat_init_axis(q, v->v.x, v->v.y, v->v.z, a);
 }
 
+float quat_dot(const union quat *q1, const union quat *q2)
+{
+	return q1->vec[0] * q2->vec[0] + q1->vec[1] * q2->vec[1] + q1->vec[2] * q2->vec[2] + q1->vec[3] * q2->vec[3];
+}
+
 void quat_rot_vec_self(union vec3 *v, const union quat *q)
 {
 	union vec3 vo;
@@ -335,7 +340,6 @@ union vec3* vec3_mul_self(union vec3 *vi, float scalar)
 float vec3_dot(const union vec3 *v1, const union vec3 *v2)
 {
 	return v1->vec[0] * v2->vec[0] + v1->vec[1] * v2->vec[1] + v1->vec[2] * v2->vec[2];
-
 }
 
 union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
@@ -395,5 +399,90 @@ void quat_from_u2v(union quat *q, union vec3 *u, union vec3 *v, union vec3 *up)
 	vec3_cross(&axis, &un, &vn);
 	vec3_normalize(&axisn, &axis);
 	quat_init_axis(q, axisn.v.x, axisn.v.y, axisn.v.z, angle);
+}
+
+union quat* quat_lerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t)
+{
+	double cosom = quat_dot(qfrom, qto);
+
+	// qto=qfrom or qto=-qfrom so no rotation to slerp
+	if (cosom >= 1.0) {
+		quat_copy(qo, qfrom);
+		return qo;
+	}
+
+	// adjust for shortest path
+	union quat to1;
+	if (cosom < 0.0) {
+		to1.v.x = -qto->v.x;
+		to1.v.y = -qto->v.y;
+		to1.v.z = -qto->v.z;
+		to1.v.w = -qto->v.w;
+	} else {
+		quat_copy(&to1, qto);
+	}
+
+	double scale0 = 1.0 - t;
+	double scale1 = t;
+
+	// calculate final values
+	qo->v.x = scale0 * qfrom->v.x + scale1 * to1.v.x;
+	qo->v.y = scale0 * qfrom->v.y + scale1 * to1.v.y;
+	qo->v.z = scale0 * qfrom->v.z + scale1 * to1.v.z;
+	qo->v.w = scale0 * qfrom->v.w + scale1 * to1.v.w;
+	return qo;
+}
+
+union quat* quat_nlerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t)
+{
+	quat_lerp(qo, qfrom, qto, t);
+	quat_normalize_self(qo);
+	return qo;
+}
+
+union quat* quat_slerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t)
+{
+	// calc cosine
+	double cosom = quat_dot(qfrom, qto);
+
+	// qto=qfrom or qto=-qfrom so no rotation to slerp
+	if (cosom >= 1.0) {
+		quat_copy(qo, qfrom);
+		return qo;
+	}
+
+	// adjust for shortest path
+	union quat to1;
+	if (cosom < 0.0) {
+		cosom = -cosom;
+		to1.v.x = -qto->v.x;
+		to1.v.y = -qto->v.y;
+		to1.v.z = -qto->v.z;
+		to1.v.w = -qto->v.w;
+	} else {
+		quat_copy(&to1, qto);
+	}
+
+	// calculate coefficients
+	double scale0, scale1;
+	if (cosom < 0.99995) {
+		// standard case (slerp)
+		double omega = acos(cosom);
+		double sinom = sin(omega);
+		scale0 = sin((1.0 - t) * omega) / sinom;
+		scale1 = sin(t * omega) / sinom;
+	} else {
+		// "from" and "to" quaternions are very close
+		//  ... so we can do a linear interpolation
+		scale0 = 1.0 - t;
+		scale1 = t;
+	}
+
+	// calculate final values
+	qo->v.x = scale0 * qfrom->v.x + scale1 * to1.v.x;
+	qo->v.y = scale0 * qfrom->v.y + scale1 * to1.v.y;
+	qo->v.z = scale0 * qfrom->v.z + scale1 * to1.v.z;
+	qo->v.w = scale0 * qfrom->v.w + scale1 * to1.v.w;
+	return qo;
 }
 

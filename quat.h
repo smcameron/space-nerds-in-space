@@ -94,6 +94,9 @@ void quat_init_axis(union quat *q, float x, float y, float z, float a);
 /* initialize quaternion from axis angle using a vector */
 void quat_init_axis_v(union quat *q, const union vec3 *v, float a);
 
+/* quaternion dot product q1 . q2 */
+float quat_dot(const union quat *q1, const union quat *q2);
+
 /* rotate vector vi via unit quaternion q and put result into vector vo */
 void quat_rot_vec(union vec3 *vo, const union vec3 *vi, const union quat *q);
 
@@ -155,7 +158,14 @@ float vec3_len2(union vec3 *v);
 
 /* Calculate the quaternion to rotate from vector u to vector v */
 void quat_from_u2v(union quat *q, union vec3 *u, union vec3 *v, union vec3 *up);
+
 /* Calculate the quaternion to rotate from unit_vector u to unit_vector v */
 void quat_from_unit_u2v(union quat *q, union vec3 *u, union vec3 *v);
+
+/* calculate normalized linear quaternion interpolation */
+union quat* quat_nlerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t);
+
+/* calculate spherical quaternion interpolation */
+union quat* quat_slerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t);
 
 #endif /* __QUAT_H__ */
