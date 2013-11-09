@@ -5999,15 +5999,27 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	union vec3 ship_normal = { { 0, 1, 0 } };
 	quat_rot_vec_self(&ship_normal, &o->orientation);
 
+	static union quat cam_orientation = {{0,0,0,1}};
+	quat_nlerp(&cam_orientation, &cam_orientation, &o->orientation, 0.1);
+	/* quat_copy(&cam_orientation, &o->orientation); */
+
+	union vec3 camera_up = {{0,1,0}};
+	quat_rot_vec_self(&camera_up, &cam_orientation);
+
 	/* rotate camera to be behind my ship */
-	union vec3 camera_pos = { { -screen_radius * 1.85, screen_radius * 0.85, 0} };
-	quat_rot_vec_self(&camera_pos, &o->orientation);
+	union vec3 camera_pos = {{ -screen_radius * 1.85, screen_radius * 0.85, 0}};
+	quat_rot_vec_self(&camera_pos, &cam_orientation);
 	vec3_add_self(&camera_pos, &ship_pos);
 
-        set_renderer(navecx, WIREFRAME_RENDERER);
-	camera_assign_up_direction(navecx, ship_normal.v.x, ship_normal.v.y, ship_normal.v.z);
+	union vec3 camera_lookat = {{screen_radius*0.20, 0, 0}};
+	quat_rot_vec_self(&camera_lookat, &cam_orientation);
+	vec3_add_self(&camera_lookat, &ship_pos);
+
+	camera_assign_up_direction(navecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
 	camera_set_pos(navecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
-	camera_look_at(navecx, o->x, o->y, o->z);
+	camera_look_at(navecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
+
+        set_renderer(navecx, WIREFRAME_RENDERER);
 	camera_set_parameters(navecx, 0.5, 8000.0,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
 	int in_nebula = 0;
@@ -6070,6 +6082,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		sector_size /= 10.0;
 	}
 
+#if 0
 	/* sector backround */
 	e = add_entity(navecx, sector_mesh,
 		trunc(o->x / sector_size) * sector_size,
@@ -6077,8 +6090,9 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		trunc(o->z / sector_size) * sector_size,
 		DARKGREEN );
 	update_entity_scale(e, sector_size);
-	update_entity_orientation(e, &o->orientation);
+	/* update_entity_orientation(e, &o->orientation); */
 	set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+#endif
 
 	/* Draw all the stuff */
 	pthread_mutex_lock(&universe_mutex);
