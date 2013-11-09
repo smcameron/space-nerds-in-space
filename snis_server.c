@@ -3601,9 +3601,11 @@ static int process_sci_details(struct game_client *c)
 	if (rc)
 		return rc;
 	/* just turn it around and fan it out to all the right places */
+	if (new_details > 2)
+		new_details = 0;
 	send_packet_to_all_clients_on_a_bridge(c->shipid, 
 			packed_buffer_new("hb", OPCODE_SCI_DETAILS,
-			!!(new_details)), ROLE_SCIENCE);
+			new_details), ROLE_SCIENCE);
 	return 0;
 }
 

@@ -3209,8 +3209,13 @@ static int process_role_onscreen_packet(void)
 
 static struct science_ui {
 	int details_mode;
+#define SCI_DETAILS_MODE_TWOD 0
+#define SCI_DETAILS_MODE_THREED 1
+#define SCI_DETAILS_MODE_DETAILS 2
 	struct slider *scizoom;
 	struct button *details_button;
+	struct button *threed_button;
+	struct button *twod_button;
 } sci_ui;
 
 static int process_sci_details(void)
@@ -7044,7 +7049,19 @@ static void show_damcon(GtkWidget *w)
 static void sci_details_pressed(void *x)
 {
 	queue_to_server(packed_buffer_new("hb", OPCODE_SCI_DETAILS,
-		(unsigned char) !sci_ui.details_mode));
+		(unsigned char) SCI_DETAILS_MODE_DETAILS));
+}
+
+static void sci_twod_pressed(void *x)
+{
+	queue_to_server(packed_buffer_new("hb", OPCODE_SCI_DETAILS,
+		(unsigned char) SCI_DETAILS_MODE_TWOD));
+}
+
+static void sci_threed_pressed(void *x)
+{
+	queue_to_server(packed_buffer_new("hb", OPCODE_SCI_DETAILS,
+		(unsigned char) SCI_DETAILS_MODE_THREED));
 }
 
 static void init_science_ui(void)
@@ -7053,8 +7070,14 @@ static void init_science_ui(void)
 				0.0, 100.0, sample_scizoom, do_scizoom);
 	sci_ui.details_button = snis_button_init(450, 570, 75, 25, "DETAILS",
 			GREEN, NANO_FONT, sci_details_pressed, (void *) 0);
+	sci_ui.twod_button = snis_button_init(350, 570, 75, 25, "2D",
+			GREEN, NANO_FONT, sci_twod_pressed, (void *) 0);
+	sci_ui.threed_button = snis_button_init(250, 570, 75, 25, "3D",
+			GREEN, NANO_FONT, sci_threed_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
+	ui_add_button(sci_ui.twod_button, DISPLAYMODE_SCIENCE);
+	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE);
 	sciecx = entity_context_new(50);
 	sciballecx = entity_context_new(50);
 }
@@ -7600,7 +7623,7 @@ static void show_science(GtkWidget *w)
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
 	sng_set_foreground(DARKGREEN);
-	if (!sci_ui.details_mode) {
+	if (sci_ui.details_mode == SCI_DETAILS_MODE_TWOD) {
 		snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, zoom);
 		snis_draw_radar_grid(w->window, gc, o, cx, cy, r, zoom, current_zoom < 50);
 		sng_set_foreground(DARKRED);
@@ -7654,7 +7677,7 @@ static void show_3d_science(GtkWidget *w)
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
 	sng_set_foreground(DARKGREEN);
-	if (!sci_ui.details_mode) {
+	if (sci_ui.details_mode == SCI_DETAILS_MODE_THREED) {
 		sng_set_foreground(DARKRED);
 /*
 		snis_draw_science_reticule(w, gc, cx, cy, r,
@@ -9388,7 +9411,10 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_engineering(w);
 		break;
 	case DISPLAYMODE_SCIENCE:
-		show_3d_science(w);
+		if (sci_ui.details_mode == SCI_DETAILS_MODE_THREED)
+			show_3d_science(w);
+		else
+			show_science(w);
 		break;
 	case DISPLAYMODE_COMMS:
 		show_comms(w);
