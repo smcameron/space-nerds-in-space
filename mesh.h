@@ -54,7 +54,7 @@ GLOBAL struct mesh *mesh_duplicate(struct mesh *original);
 GLOBAL void mesh_scale(struct mesh *m, float scale);
 GLOBAL void mesh_add_point(struct mesh *m, float x, float y, float z);
 GLOBAL void mesh_add_line_last_2(struct mesh *m, int flag);
-GLOBAL struct mesh *init_circle_mesh(double x, double y, double r);
+GLOBAL struct mesh *init_circle_mesh(double x, double y, double r, int npoints);
 GLOBAL struct mesh *init_radar_circle_xz_plane_mesh(double x, double z, double r, int ticks, double tick_radius);
 GLOBAL struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y2, double z2);
 

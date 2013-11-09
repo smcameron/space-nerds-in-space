@@ -5959,7 +5959,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	struct entity *targeted_entity = NULL;
 
 	if (!ring_mesh) {
-		ring_mesh = init_circle_mesh(0, 0, 1);
+		ring_mesh = init_circle_mesh(0, 0, 1, 180);
 		radar_ring_mesh[0] = init_radar_circle_xz_plane_mesh(0, 0, 0.4, 0, 0);
 		radar_ring_mesh[1] = init_radar_circle_xz_plane_mesh(0, 0, 0.6, 18, 0.2);
 		radar_ring_mesh[2] = init_radar_circle_xz_plane_mesh(0, 0, 0.8, 18, 0.2);
