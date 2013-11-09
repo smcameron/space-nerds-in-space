@@ -93,6 +93,7 @@ struct entity_context {
 	struct fake_star *fake_star;
 	int nfakestars; /* = 0; */
 	struct mat41 light;
+	float window_offset_x, window_offset_y;
 #ifdef WITH_ILDA_SUPPORT
 	int framenumber;
 	FILE *f;
@@ -193,8 +194,8 @@ static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc,
 {
 	float x1, y1;
 
-	x1 = (fs->v.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-	y1 = (-fs->v.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+	x1 = (fs->v.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2 + cx->window_offset_x;
+	y1 = (-fs->v.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2 + cx->window_offset_y;
 	sng_current_draw_line(w->window, gc, x1, y1, x1 + (snis_randn(10) < 7), y1); 
 }
 
@@ -209,12 +210,12 @@ void wireframe_render_triangle(GtkWidget *w, GdkGC *gc,
 	v2 = t->v[1];
 	v3 = t->v[2];
 
-	x1 = (v1->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	x2 = (v2->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	x3 = (v3->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	y1 = (-v1->wy * c->yvpixels / 2) + c->yvpixels / 2;
-	y2 = (-v2->wy * c->yvpixels / 2) + c->yvpixels / 2;
-	y3 = (-v3->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	x1 = (v1->wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
+	x2 = (v2->wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
+	x3 = (v3->wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
+	y1 = (-v1->wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
+	y2 = (-v2->wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
+	y3 = (-v3->wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
 
 	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
@@ -232,8 +233,8 @@ void wireframe_render_point(GtkWidget *w, GdkGC *gc,
 {
 	float x1, y1;
 
-	x1 = (v->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-	y1 = (-v->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+	x1 = (v->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2 + cx->window_offset_x;
+	y1 = (-v->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2 + cx->window_offset_y;
 	sng_current_draw_line(w->window, gc, x1, y1, x1 + 1, y1); 
 }
 
@@ -244,7 +245,7 @@ static unsigned short to_ildax(struct entity_context *cx, int x)
 	double tx;
 	struct camera_info *c = &cx->camera;
 
-	tx = ((double) x - (double) (c->xvpixels / 2.0)) / (double) c->xvpixels;
+	tx = ((double) x - (double) (c->xvpixels / 2.0)) / (double) c->xvpixels + cx->window_offset_x;
 	tx = tx * (32767 * 2);
 	return (unsigned short) tx;
 }
@@ -255,7 +256,7 @@ static unsigned short to_ilday(struct entity_context *cx, int y)
 	struct camera_info *c = &cx->camera;
 
 	/* note, use of xvpixels rather than yvpixels here is correct. */
-	ty = ((double) y - (double) (c->xvpixels / 2.0)) / (double) c->xvpixels;
+	ty = ((double) y - (double) (c->xvpixels / 2.0)) / (double) c->xvpixels + cx->window_offset_y;
 	ty = ty * (32767 * 2);
 	return (unsigned short) ty;
 }
@@ -294,12 +295,12 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 	v2 = t->v[1];
 	v3 = t->v[2];
 
-	x1 = (v1->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	x2 = (v2->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	x3 = (v3->wx * c->xvpixels / 2) + c->xvpixels / 2;
-	y1 = (-v1->wy * c->yvpixels / 2) + c->yvpixels / 2;
-	y2 = (-v2->wy * c->yvpixels / 2) + c->yvpixels / 2;
-	y3 = (-v3->wy * c->yvpixels / 2) + c->yvpixels / 2;
+	x1 = (v1->wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
+	x2 = (v2->wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
+	x3 = (v3->wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
+	y1 = (-v1->wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
+	y2 = (-v2->wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
+	y3 = (-v3->wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
 
 	if (is_backface(x1, y1, x2, y2, x3, y3))
 		return;
@@ -375,9 +376,9 @@ void wireframe_render_point_line(GtkWidget *w, GdkGC *gc, struct entity_context 
 
 			while (vcurr <= vend) {
 				x2 = (vcurr->wx * cx->camera.xvpixels / 2) +
-							cx->camera.xvpixels / 2;
+							cx->camera.xvpixels / 2 + cx->window_offset_x;
 				y2 = (-vcurr->wy * cx->camera.yvpixels / 2) +
-							cx->camera.yvpixels / 2;
+							cx->camera.yvpixels / 2 + cx->window_offset_y;
 				if (vcurr != vstart) {
 					if (e->m->l[i].flag & MESH_LINE_DOTTED)
 						sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
@@ -389,10 +390,14 @@ void wireframe_render_point_line(GtkWidget *w, GdkGC *gc, struct entity_context 
 				++vcurr;
 			}
 		} else {
-			x1 = (vstart->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-			y1 = (-vstart->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
-			x2 = (vend->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-			y2 = (-vend->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+			x1 = (vstart->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2
+					+ cx->window_offset_x;
+			y1 = (-vstart->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2
+					+ cx->window_offset_y;
+			x2 = (vend->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2
+					+ cx->window_offset_x;
+			y2 = (-vend->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2
+					+ cx->window_offset_y;
 			if (e->m->l[i].flag & MESH_LINE_DOTTED)
 				sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
 			else
@@ -507,8 +512,8 @@ int transform_point(struct entity_context *cx,
 	t.wx /= t.ww;
 	t.wy /= t.ww;
 	t.wz /= t.ww;
-	*sx = (t.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-	*sy = (-t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+	*sx = cx->window_offset_x + (t.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+	*sy = cx->window_offset_y + (-t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 
 	if (do_clip) {
 		/* consider rendering stuff that is also 50% off the screen
@@ -554,8 +559,8 @@ static int transform_entity(struct entity_context *cx,
 	t.wx /= t.ww;
 	t.wy /= t.ww;
 	t.wz /= t.ww;
-	e->sx = (t.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-	e->sy = (-t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+	e->sx = cx->window_offset_x + (t.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+	e->sy = cx->window_offset_y + (-t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
 
 	if (do_clip) {
 		/* consider rendering stuff that is also 50% off the screen
@@ -937,6 +942,8 @@ struct entity_context *entity_context_new(int maxobjs)
 	cx->camera.ux = 0;
 	cx->camera.uy = 1;
 	cx->camera.uz = 0;
+	cx->window_offset_x = 0;
+	cx->window_offset_y = 0;
 #ifdef WITH_ILDA_SUPPORT
 	cx->f = NULL;
 #endif
@@ -1073,4 +1080,10 @@ union quat *entity_get_orientation(struct entity *e)
 struct mat44 get_camera_transform(struct entity_context *cx)
 {
 	return cx->camera.camera_transform;
+}
+
+void set_window_offset(struct entity_context *cx, float x, float y)
+{
+	cx->window_offset_x = x;
+	cx->window_offset_y = y;
 }
