@@ -73,6 +73,8 @@ struct camera_info {
 	float angle_of_view;
 	int xvpixels, yvpixels;
 	int renderer;
+	struct mat41 look_direction;
+	struct mat44 camera_transform;
 };
 
 struct tri_depth_entry {
@@ -615,12 +617,8 @@ static void ilda_file_newframe(struct entity_context *cx)
 }
 #endif
 
-static void reposition_fake_star(struct entity_context *cx, struct fake_star *fs, float radius);
-
-void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
+void calculate_camera_transform(struct entity_context *cx)
 {
-	int i, j;
-
 	struct mat44 identity = {{{ 1, 0, 0, 0 }, /* identity matrix */
 				    { 0, 1, 0, 0 },
 				    { 0, 0, 1, 0 },
@@ -638,12 +636,6 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 	struct mat41 *v; /* camera relative y axis (up/down) */ 
 	struct mat41 *n; /* camera relative z axis (into view plane) */
 	struct mat41 *u; /* camera relative x axis (left/right) */
-	int clipped, do_clip;
-
-#ifdef WITH_ILDA_SUPPORT
-	ilda_file_open(cx);
-	ilda_file_newframe(cx);
-#endif
 
 	up.m[0] = cx->camera.ux;
 	up.m[1] = cx->camera.uy;
@@ -673,6 +665,7 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 	look_direction.m[2] = (cx->camera.lz - cx->camera.z);
 	look_direction.m[3] = 1.0;
 	normalize_vector(&look_direction, &look_direction);
+	cx->camera.look_direction = look_direction;
 	n = &look_direction;
 
 	/* Calculate x direction relative to camera, "camera_x" */
@@ -733,6 +726,22 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 
 	mat44_product(&perspective_transform, &cameralook_transform, &tmp_transform);
 	mat44_product(&tmp_transform, &cameralocation_transform, &total_transform);
+	cx->camera.camera_transform = total_transform;
+}
+
+static void reposition_fake_star(struct entity_context *cx, struct fake_star *fs, float radius);
+
+void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
+{
+	int i, j;
+	int clipped, do_clip;
+
+	calculate_camera_transform(cx);
+
+#ifdef WITH_ILDA_SUPPORT
+	ilda_file_open(cx);
+	ilda_file_newframe(cx);
+#endif
 
 	/* draw fake stars */
 	sng_set_foreground(WHITE);
@@ -750,10 +759,10 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 						cx->camera.y - fs->v.y,
 						cx->camera.z - fs->v.z);
 
-		behind_camera = mat41_dot_mat41(&look_direction, &point_to_test);
+		behind_camera = mat41_dot_mat41(&cx->camera.look_direction, &point_to_test);
 		if (behind_camera < 0) /* behind camera */
 			goto check_for_reposition;
-		if (!transform_fake_star(cx, fs, &total_transform))
+		if (!transform_fake_star(cx, fs, &cx->camera.camera_transform))
 			wireframe_render_fake_star(w, gc, cx, fs);
 check_for_reposition:
 		if (fs->dist3dsqrd > cx->camera.far * 10.0f * cx->camera.far * 10.0f)
@@ -777,7 +786,7 @@ check_for_reposition:
 		point_to_test.m[1] = cx->entity_list[i].y - cx->camera.y;
 		point_to_test.m[2] = cx->entity_list[i].z - cx->camera.z;
 		point_to_test.m[3] = 1.0;
-		behind_camera = mat41_dot_mat41(&look_direction, &point_to_test);
+		behind_camera = mat41_dot_mat41(&cx->camera.look_direction, &point_to_test);
 		if (behind_camera < 0) /* behind camera */
 			continue;
 		do_clip = !(cx->entity_list[i].render_style & RENDER_DISABLE_CLIP);
@@ -789,7 +798,7 @@ check_for_reposition:
 				continue;
 		}
 
-		clipped = transform_entity(cx, &cx->entity_list[i], &total_transform, do_clip);
+		clipped = transform_entity(cx, &cx->entity_list[i], &cx->camera.camera_transform, do_clip);
 		if (clipped)
 			continue;
 
@@ -1027,3 +1036,7 @@ union quat *entity_get_orientation(struct entity *e)
 	return &e->orientation;
 }
 
+struct mat44 get_camera_transform(struct entity_context *cx)
+{
+	return cx->camera.camera_transform;
+}

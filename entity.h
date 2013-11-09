@@ -74,6 +74,8 @@ GLOBAL int get_renderer(struct entity_context *cx);
 #define WIREFRAME_RENDERER (1 << 0)
 #define FLATSHADING_RENDERER (1 << 1)
 #define BLACK_TRIS (1 << 2)
+GLOBAL void calculate_camera_transform(struct entity_context *cx);
+GLOBAL struct mat44 get_camera_transform(struct entity_context *cx);
 
 GLOBAL void set_render_style(struct entity *e, int render_style);
 GLOBAL void entity_context_free(struct entity_context *cx);
