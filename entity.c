@@ -485,6 +485,40 @@ static int transform_fake_star(struct entity_context *cx,
 	return 0;
 }
 
+int transform_point(struct entity_context *cx,
+			float x, float y, float z, float *sx, float *sy, int do_clip)
+{
+	struct vertex t;
+
+	/* calculate the object transform... */
+	struct mat44 object_transform;
+	struct mat44 object_translation = {{{ 1, 0, 0, 0 },
+					    { 0, 1, 0, 0 },
+					    { 0, 0, 1, 0 },
+					    { x, y, z, 1 }}};
+	mat44_product(&cx->camera.camera_transform, &object_translation, &object_transform);
+	
+	/* calculate screen coords */
+	t.x = 0;
+	t.y = 0;
+	t.z = 0;
+	t.w = 1.0;
+	mat44_x_mat41(&object_transform, (struct mat41 *) &t.x, (struct mat41 *) &t.wx);
+	t.wx /= t.ww;
+	t.wy /= t.ww;
+	t.wz /= t.ww;
+	*sx = (t.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
+	*sy = (-t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+
+	if (do_clip) {
+		/* consider rendering stuff that is also 50% off the screen
+		   to stop objects popping in on rotate */
+		if (t.wx < -1.5 || t.wx > 1.5 || t.wy < -1.5 || t.wy > 1.5) /* off screen? */
+			return 1; /* clip it. */
+	}
+	return 0;
+}
+
 static int transform_entity(struct entity_context *cx,
 				struct entity *e,struct mat44 *transform, int do_clip)
 {
