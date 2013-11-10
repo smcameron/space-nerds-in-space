@@ -396,8 +396,10 @@ struct snis_entity_science_data {
 };
 	
 struct snis_entity {
+	double updatetime;
 	uint32_t index;
 	uint32_t id;
+	union vec3 r1, r2;
 	double x, y, z;
 	double vx, vy, vz;
 	double heading;
@@ -412,6 +414,7 @@ struct snis_entity {
 	double sci_coordz;
 	struct entity *entity;
 	struct space_partition_entry partition;
+	union quat o1, o2;
 	union quat orientation;
 };
 

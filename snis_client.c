@@ -308,6 +308,15 @@ static inline double to_uheading(double heading)
 	return game_angle_to_math_angle(heading);
 }
 
+double time_now_double()
+{
+	struct timeval time;
+	if (gettimeofday(&time,NULL)){
+		return 0;
+	}
+	return (double)time.tv_sec + (double)time.tv_usec * .000001;
+}
+
 void init_trig_arrays(void)
 {
 	int i;
@@ -740,10 +749,27 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 		i = add_generic_object(id, x, z, vx, vz, orientation, type, alive, e);
 		if (i < 0)
 			return i;
+		go[i].o1 = go[i].o2 = go[i].orientation = *orientation;
+		go[i].r2.v.x = x;
+		go[i].r2.v.y = y;
+		go[i].r2.v.z = z;
+		go[i].r1 = go[i].r2;
+		go[i].x = x;
+		go[i].y = y;
+		go[i].y = z;
 	} else {
-		update_generic_object(i, x, y, z, vx, vz, orientation, alive); 
+		go[i].o1 = go[i].o2;
+		go[i].o2 = *orientation;
+		go[i].r1 = go[i].r2;
+		go[i].r2.v.x = x;
+		go[i].r2.v.y = y;
+		go[i].r2.v.z = z;
+		go[i].x = go[i].r1.v.x;
+		go[i].y = go[i].r1.v.y;
+		go[i].y = go[i].r1.v.z;
+		update_generic_object(i, go[i].x, go[i].y, go[i].z, vx, vz, orientation, alive); 
 	}
-	go[i].y = y;
+	go[i].updatetime = time_now_double();
 	go[i].tsd.ship.yaw_velocity = yawvel;
 	go[i].tsd.ship.pitch_velocity = pitchvel;
 	go[i].tsd.ship.roll_velocity = rollvel;
@@ -774,7 +800,6 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 		wwviaudio_add_sound(REVERSE_SOUND);
 	go[i].tsd.ship.reverse = reverse;
 	go[i].tsd.ship.victim_id = victim_id;
-	go[i].orientation = *orientation;
 	return 0;
 }
 
@@ -1399,12 +1424,23 @@ static void spin_asteroid(struct snis_entity *o)
 
 static void move_ship(struct snis_entity *o)
 {
-	/* predict yaw changes to smooth movement out on the main screen. */
-	/* o->heading += o->tsd.ship.yaw_velocity / 3.0; */
+	if (o->id == my_ship_id) {
+		/* updates are sent every 1/10th of a second */
+		double delta = 1.0/10.0;
+
+		double currentTime = time_now_double();
+
+		double t = (currentTime - o->updatetime) / delta;
+
+		union vec3 interp_position;
+		vec3_lerp(&interp_position, &o->r1, &o->r2, t);
+		o->x = interp_position.v.x;
+		o->y = interp_position.v.y;
+		o->z = interp_position.v.z;
+
+		quat_nlerp(&o->orientation, &o->o1, &o->o2, t);
+	}
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity / 3.0;
-	o->x += o->vx / 3.0;
-	o->y += o->vy / 3.0;
-	o->z += o->vz / 3.0;
 }
 
 static void move_objects(void)
