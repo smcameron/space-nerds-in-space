@@ -7127,7 +7127,7 @@ static void init_science_ui(void)
 	ui_add_button(sci_ui.twod_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE);
 	sciecx = entity_context_new(50);
-	sciballecx = entity_context_new(50);
+	sciballecx = entity_context_new(5000);
 }
 
 static void comms_screen_button_pressed(void *x)
