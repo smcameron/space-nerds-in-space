@@ -6233,8 +6233,6 @@ static void lua_teardown(void)
 int main(int argc, char *argv[])
 {
 	int port, rc, i;
-	struct timespec time1;
-	struct timespec time2;
 	struct timespec thirtieth_second;
 
 	/* need this so that fscanf can read floats properly */
