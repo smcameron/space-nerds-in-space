@@ -486,3 +486,11 @@ union quat* quat_slerp(union quat *qo, const union quat *qfrom, const union quat
 	return qo;
 }
 
+union vec3* vec3_lerp(union vec3* vo, const union vec3* vfrom, const union vec3* vto, double t)
+{
+	vo->v.x = vfrom->v.x + t * (vto->v.x - vfrom->v.x);
+	vo->v.y = vfrom->v.y + t * (vto->v.y - vfrom->v.y);
+	vo->v.z = vfrom->v.z + t * (vto->v.z - vfrom->v.z);
+	return vo;
+}
+

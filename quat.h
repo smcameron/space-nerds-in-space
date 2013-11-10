@@ -168,4 +168,7 @@ union quat* quat_nlerp(union quat *qo, const union quat *qfrom, const union quat
 /* calculate spherical quaternion interpolation */
 union quat* quat_slerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t);
 
+/* calculate vec3 linear interpolation */
+union vec3* vec3_lerp(union vec3* vo, const union vec3* vfrom, const union vec3* vto, double t);
+
 #endif /* __QUAT_H__ */
