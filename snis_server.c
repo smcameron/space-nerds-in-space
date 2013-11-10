@@ -3138,78 +3138,31 @@ static void populate_damcon_arena(struct damcon_data *d)
 	add_damcon_parts(d);
 }
 
-static void __attribute__((unused)) timespec_subtract(struct timespec *have, struct timespec *takeaway, struct timespec *leaves)
-{
-	leaves->tv_nsec = have->tv_nsec - takeaway->tv_nsec;
-	if (have->tv_nsec < takeaway->tv_nsec) {
-		leaves->tv_nsec += 1000000000;
-		leaves->tv_sec = have->tv_sec - takeaway->tv_sec - 1;
-	} else {
-		leaves->tv_sec = have->tv_sec - takeaway->tv_sec;
-	}
-}
-
-static void sleep_tenth_second(void)
+static void sleep_double(double time)
 {
 	struct timespec t, x;
+	double intpart, fractpart;
 	int rc;
 
-	t.tv_sec = 0;
-	t.tv_nsec = 99999999; 
-	x.tv_sec = 0;
-	x.tv_nsec = 0;
-
-	do {
-		rc = clock_nanosleep(CLOCK_MONOTONIC, 0,
-				(const struct timespec *) &t, &x);
-	} while (rc == EINTR);
-}
-
-static void sleep_thirtieth_second(void)
-{
-	struct timespec t, x;
-	int rc;
-
-	t.tv_sec = 0;
-	t.tv_nsec = 99999999; 
-	x.tv_sec = 0;
-	x.tv_nsec = 0;
+	fractpart = modf(time, &intpart);
+	t.tv_sec = intpart;
+	t.tv_nsec = fractpart * 1000000000;
 
 	do {
 		rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &t, &x);
+		t.tv_sec = x.tv_sec;
 		t.tv_nsec = x.tv_nsec;
 	} while (rc == EINTR);
 }
 
-#if 0
-/* Sleep for enough time, x, such that (end - begin + x) == total*/
-static void snis_sleep(struct timespec *begin, struct timespec *end, struct timespec *total)
+double time_now_double()
 {
-#if 0
-
-	/* this code seems to be buggy. */
-	int rc;
-	struct timespec used, diff, remain;
-
-	timespec_subtract(end, begin, &used);
-	if (used.tv_nsec >= total->tv_nsec)
-		return; 
-
-	timespec_subtract(total, &used, &remain);
-	do {
-		diff = remain;
-		rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &diff, &remain);	
-	} while (rc == EINTR);
-#else
-	int rc;
-
-	do {
-		rc = clock_nanosleep(CLOCK_MONOTONIC, 0,
-			(const struct timespec *) total, begin);
-	} while (rc == EINTR);
-#endif
+	struct timeval time;
+	if (gettimeofday(&time,NULL)){
+		return 0;
+	}
+	return (double)time.tv_sec + (double)time.tv_usec * .000001;
 }
-#endif
 
 typedef void (*thrust_function)(struct game_client *c, int thrust);
 
@@ -5497,30 +5450,38 @@ static void queue_up_client_id(struct game_client *c)
 
 static void *per_client_write_thread(__attribute__((unused)) void /* struct game_client */ *client)
 {
-	struct timespec time1;
-	struct timespec time2;
-	struct timespec tenth_second;
 	int rc;
 	struct game_client *c = (struct game_client *) client;
-
-	memset(&tenth_second, 0, sizeof(tenth_second));
-	tenth_second.tv_sec = 1;
-	tenth_second.tv_nsec = 999999999;
-	tenth_second.tv_nsec = 999999999;
 
 	/* Wait for client[] array to get fully updated before proceeding. */
 	client_lock();
 	client_unlock();
+
+	const double maxTimeBehind = 0.5;
+	double delta = 1.0/10.0;
+
+	double currentTime = time_now_double();
+	double nextTime = currentTime + delta;
 	while (1) {
-		rc = clock_gettime(CLOCK_MONOTONIC, &time1);
-		queue_up_client_updates(c);
-		write_queued_updates_to_client(c);
 		if (c->socket < 0)
 			break;
-		c->timestamp = universe_timestamp;
-		rc = clock_gettime(CLOCK_MONOTONIC, &time2);
-		/* snis_sleep(&time1, &time2, &tenth_second); */ /* sleep for 1/10th sec - (time2 - time1) */
-		sleep_tenth_second();
+
+		currentTime = time_now_double();
+
+		if (currentTime - nextTime > maxTimeBehind)
+			nextTime = currentTime;
+
+		if (currentTime >= nextTime) {
+			nextTime += delta;
+
+			queue_up_client_updates(c);
+			write_queued_updates_to_client(c);
+			c->timestamp = universe_timestamp;
+		} else {
+			double timeToSleep = nextTime-currentTime;
+			if (timeToSleep > 0)
+				sleep_double(timeToSleep);
+		}
 	}
 	log_client_info(SNIS_INFO, c->socket, "client writer thread exiting.\n");
 	if (rc) /* satisfy the whining compiler */
@@ -6305,16 +6266,30 @@ int main(int argc, char *argv[])
 	snis_collect_netstats(&netstats);
 	register_with_game_lobby(argv[1], port, argv[2], argv[1], argv[3]);
 
+	const double maxTimeBehind = 0.5;
+	double delta = 1.0/10.0;
+
 	i = 0;
+	double currentTime = time_now_double();
+	double nextTime = currentTime + delta;
 	while (1) {
-		rc = clock_gettime(CLOCK_MONOTONIC, &time1);
-		/* if ((i % 30) == 0) printf("Moving objects...i = %d\n", i); */
-		i++;
-		move_objects();
-		process_lua_commands();
-		rc = clock_gettime(CLOCK_MONOTONIC, &time2);
-		/* snis_sleep(&time1, &time2, &thirtieth_second); */
-		sleep_thirtieth_second();
+		currentTime = time_now_double();
+
+		if (currentTime - nextTime > maxTimeBehind)
+			nextTime = currentTime;
+
+		if (currentTime >= nextTime) {
+			nextTime += delta;
+
+			/* if ((i % 30) == 0) printf("Moving objects...i = %d\n", i); */
+			i++;
+			move_objects();
+			process_lua_commands();
+		} else {
+			double timeToSleep = nextTime-currentTime;
+			if (timeToSleep > 0)
+				sleep_double(timeToSleep);
+		}
 	}
 	space_partition_free(space_partition);
 	lua_teardown();
