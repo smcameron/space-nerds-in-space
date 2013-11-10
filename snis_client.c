@@ -10076,7 +10076,7 @@ int main(int argc, char *argv[])
 	if (role == 0)
 		role = ROLE_ALL;
 
-	strcpy(skybox_texture_prefix, "image");
+	strcpy(skybox_texture_prefix, "orange-haze");
 	override_asset_dir();
 
 	memset(&main_screen_text, 0, sizeof(main_screen_text));
