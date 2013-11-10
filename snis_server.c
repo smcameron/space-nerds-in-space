@@ -5450,7 +5450,6 @@ static void queue_up_client_id(struct game_client *c)
 
 static void *per_client_write_thread(__attribute__((unused)) void /* struct game_client */ *client)
 {
-	int rc;
 	struct game_client *c = (struct game_client *) client;
 
 	/* Wait for client[] array to get fully updated before proceeding. */
@@ -5484,8 +5483,6 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 		}
 	}
 	log_client_info(SNIS_INFO, c->socket, "client writer thread exiting.\n");
-	if (rc) /* satisfy the whining compiler */
-		return NULL;
 	return NULL;
 }
 
