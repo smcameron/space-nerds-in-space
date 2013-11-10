@@ -148,7 +148,7 @@ void mesh_add_line_last_2(struct mesh *m, int flag)
 	m->nlines++;
 }
 
-struct mesh *init_circle_mesh(double x, double z, double r, int npoints)
+struct mesh *init_circle_mesh(double x, double z, double r, int npoints, double angle)
 {
 	float i, increment;
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
@@ -161,13 +161,19 @@ struct mesh *init_circle_mesh(double x, double z, double r, int npoints)
 	my_mesh->l = malloc(sizeof(*my_mesh->l) * 1);
 	my_mesh->radius = r;
 
-	increment = 360.0f / (float) npoints;
-	for (i = 0.0f; i <= 360.0f; i += increment) {
-		my_mesh->v[my_mesh->nvertices].x = x + cos(i * M_PI / 180.0) * r;
+	increment = angle / (float) npoints;
+	for (i = 0.0f; i <= angle; i += increment) {
+		my_mesh->v[my_mesh->nvertices].x = x + cos(i) * r;
 		my_mesh->v[my_mesh->nvertices].y = 0;
-		my_mesh->v[my_mesh->nvertices].z = z + sin(i * M_PI / 180.0) * r;
+		my_mesh->v[my_mesh->nvertices].z = z + sin(i) * r;
 		my_mesh->nvertices++;
 	}
+
+	/* close the mesh */
+	my_mesh->v[my_mesh->nvertices - 1].x = my_mesh->v[0].x;
+	my_mesh->v[my_mesh->nvertices - 1].y = my_mesh->v[0].y;
+	my_mesh->v[my_mesh->nvertices - 1].z = my_mesh->v[0].z;
+
 	my_mesh->l[0].start = &my_mesh->v[0];
 	my_mesh->l[0].end = &my_mesh->v[my_mesh->nvertices - 1];
 	my_mesh->l[0].flag = MESH_LINE_STRIP;

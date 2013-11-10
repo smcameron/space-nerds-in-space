@@ -5275,7 +5275,7 @@ static void add_basis_ring(struct entity_context *ecx, float x, float y, float z
 	struct entity *e;
 
 	if (!ring_mesh)
-		ring_mesh = init_circle_mesh(0, 0, 1, 60);
+		ring_mesh = init_circle_mesh(0, 0, 1, 60, 2.0f * M_PI);
 
 	quat_init_axis(&q, ax, ay, az, angle);
 	e = add_entity(sciballecx, ring_mesh, x, y, z, color);
@@ -6279,7 +6279,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	struct entity *targeted_entity = NULL;
 
 	if (!ring_mesh) {
-		ring_mesh = init_circle_mesh(0, 0, 1, 180);
+		ring_mesh = init_circle_mesh(0, 0, 1, 180, 2.0f * M_PI);
 		radar_ring_mesh[0] = init_radar_circle_xz_plane_mesh(0, 0, 0.4, 0, 0);
 		radar_ring_mesh[1] = init_radar_circle_xz_plane_mesh(0, 0, 0.6, 18, 0.2);
 		radar_ring_mesh[2] = init_radar_circle_xz_plane_mesh(0, 0, 0.8, 18, 0.2);
