@@ -161,6 +161,7 @@ int damage_limbo_countdown = 0;
 struct entity_context *ecx;
 struct entity_context *sciecx;
 struct entity_context *navecx;
+struct entity_context *sciballecx;
 
 struct nebula_entry {
 	double x, z, r, r2;
@@ -4596,6 +4597,126 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	}
 }
 
+static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
+					gint *x, gint *y, double dist, int bw, int pwr,
+					double range, int selected,
+					int nebula_factor)
+{
+	int i;
+
+	double da, db;
+	int dr;
+	float tx, ty, tz;
+	float sx, sy, r;
+	char buffer[50];
+	int divisor;
+	struct entity *e;
+
+	/* Compute radius of ship blip */
+	divisor = hypot((float) bw + 1, 256.0 - pwr);
+	dr = (int) dist / (XKNOWN_DIM / divisor);
+	dr = dr * MAX_SCIENCE_SCREEN_RADIUS / range;
+	if (nebula_factor) {
+		dr = dr * 10; 
+		dr += 200;
+	}
+	dr *= 100.0;
+
+	transform_point(sciballecx, o->x, o->y, o->z, &sx, &sy, 0);
+	*x = (int) sx;
+	*y = (int) sy;
+	r = hypot(sx - SCIENCE_SCOPE_CX, sy - SCIENCE_SCOPE_CY);
+	if (r >= SCIENCE_SCOPE_R)
+		return;
+	sng_set_foreground(GREEN);
+	if (!o->sdata.science_data_known) {
+		for (i = 0; i < 10; i++) {
+			da = snis_randn(360) * M_PI / 180.0;
+			db = snis_randn(360) * M_PI / 180.0;
+			tx = o->x + sin(da) * (float) snis_randn(dr);
+			ty = o->y + cos(da) * (float) snis_randn(dr); 
+			tz = o->z + cos(db) * (float) snis_randn(dr); 
+			if (transform_point(sciballecx, tx, ty, tz, &sx, &sy, 1))
+				continue;
+			r = hypot(sx - SCIENCE_SCOPE_CX, sy - SCIENCE_SCOPE_CY);
+			if (r >= SCIENCE_SCOPE_R)
+				continue;
+			sng_draw_point(w->window, gc, sx, sy);
+		}
+	} else {
+		switch(o->type) {
+		case OBJTYPE_SHIP2:
+		case OBJTYPE_SHIP1:
+			sng_set_foreground(LIMEGREEN);
+			break;
+		case OBJTYPE_STARBASE:
+			sng_set_foreground(WHITE);
+			break;
+		case OBJTYPE_ASTEROID:
+		case OBJTYPE_DERELICT:
+			sng_set_foreground(AMBER);
+			break;
+		case OBJTYPE_PLANET:
+			sng_set_foreground(BLUE);
+			break;
+		case OBJTYPE_TORPEDO:
+		case OBJTYPE_SPARK:
+		case OBJTYPE_EXPLOSION:
+		case OBJTYPE_LASER:
+		default:
+			sng_set_foreground(LIMEGREEN);
+		}
+		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1) {
+			e = add_entity(sciballecx, ship_icon_mesh, o->x, o->y, o->z, LIMEGREEN);
+			update_entity_orientation(e, &o->orientation);
+		} else {
+			snis_draw_line(w->window, gc, *x - 1, *y, *x + 1, *y);
+			snis_draw_line(w->window, gc, *x, *y - 1, *x, *y + 1);
+		}
+	}
+	if (selected)
+		sng_draw_circle(w->window, gc, sx, sy, 10);
+
+	if (o->sdata.science_data_known) {
+		switch (o->type) {
+		case OBJTYPE_SHIP2:
+		case OBJTYPE_SHIP1:
+			sng_set_foreground(LIMEGREEN);
+			sprintf(buffer, "%s %s\n", o->sdata.name, shipclass[o->sdata.subclass]); 
+			break;
+		case OBJTYPE_STARBASE:
+			sng_set_foreground(WHITE);
+			sprintf(buffer, "%s %s\n", "SB",  o->sdata.name); 
+			break;
+		case OBJTYPE_ASTEROID:
+			sng_set_foreground(AMBER);
+			sprintf(buffer, "%s %s\n", "A",  o->sdata.name); 
+			break;
+		case OBJTYPE_DERELICT:
+			sng_set_foreground(AMBER);
+			sprintf(buffer, "%s %s\n", "A",  "???"); 
+			break;
+		case OBJTYPE_PLANET:
+			sng_set_foreground(BLUE);
+			sprintf(buffer, "%s %s\n", "P",  o->sdata.name); 
+			break;
+		case OBJTYPE_TORPEDO:
+		case OBJTYPE_SPARK:
+		case OBJTYPE_EXPLOSION:
+		case OBJTYPE_LASER:
+			sng_set_foreground(LIMEGREEN);
+			strcpy(buffer, "");
+			break;
+		default:
+			sng_set_foreground(GREEN);
+			sprintf(buffer, "%s %s\n", "?", o->sdata.name); 
+			break;
+		}
+		sng_abs_xy_draw_string(w, gc, buffer, PICO_FONT, *x + 8, *y - 8);
+	}
+}
+
+
 static void snis_draw_science_spark(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, double dist)
 {
 	int i;
@@ -5104,6 +5225,164 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		}
 	}
 }
+
+static void add_basis_ring(struct entity_context *ecx, float x, float y, float z,
+		float ax, float ay, float az, float angle, float r, int color)
+{
+	union quat q;
+	static struct mesh *ring_mesh = 0;
+	struct entity *e;
+
+	if (!ring_mesh)
+		ring_mesh = init_circle_mesh(0, 0, 1, 60);
+
+	quat_init_axis(&q, ax, ay, az, angle);
+	e = add_entity(sciballecx, ring_mesh, x, y, z, color);
+	update_entity_scale(e, r);
+	update_entity_orientation(e, &q);
+	set_render_style(e, RENDER_POINT_CLOUD | RENDER_DISABLE_CLIP);
+}
+
+static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, double range, double current_zoom)
+{
+	int i, x, y, cx, cy, r, bw, pwr;
+	double tx, ty, dist2, dist;
+	int selected_guy_still_visible = 0;
+	int nebula_factor = 0;
+	union vec3 ship_pos = { { o->x, o->y, o->z } };
+	union vec3 ship_up = { { 0, 1, 0 } };
+	double screen_radius = ((((current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM * 2;
+	union vec3 camera_pos = { { -screen_radius * 1.80, screen_radius * 0.85, 0} };
+	quat_rot_vec_self(&ship_up, &o->orientation);
+
+	/* rotate camera to be behind my ship */
+	quat_rot_vec_self(&camera_pos, &o->orientation);
+	vec3_add_self(&camera_pos, &ship_pos);
+        set_renderer(sciballecx, WIREFRAME_RENDERER);
+	camera_assign_up_direction(sciballecx, ship_up.v.x, ship_up.v.y, ship_up.v.z);
+	camera_set_pos(sciballecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(sciballecx, o->x, o->y, o->z);
+	camera_set_parameters(sciballecx, screen_radius * 0.5, screen_radius * 2.5,
+				SCIENCE_SCOPE_W * 0.95, SCIENCE_SCOPE_W * 0.95,
+				60.0 * M_PI / 180.0);
+	set_window_offset(sciballecx, SCIENCE_SCOPE_CX - (SCIENCE_SCOPE_W * 0.95) / 2.0,
+				SCIENCE_SCOPE_CY - (SCIENCE_SCOPE_W * 0.95) / 2.0);
+	calculate_camera_transform(sciballecx);
+
+	/* Add basis rings */
+	for (i = 1; i <= 3; i++) {
+		add_basis_ring(sciballecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 0.0f,
+					screen_radius * (float) i / 3.0f, RED);
+		add_basis_ring(sciballecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 90.0f * M_PI / 180.0,
+					screen_radius * (float) i / 3.0f, DARKGREEN);
+		add_basis_ring(sciballecx, o->x, o->y, o->z, 0.0f, 0.0f, 1.0f, 90.0f * M_PI / 180.0,
+					screen_radius * (float) i / 3.0f, BLUE);
+	}
+
+	render_entities(w, gc, sciballecx);
+	remove_all_entity(sciballecx);
+
+	cx = SCIENCE_SCOPE_CX;
+	cy = SCIENCE_SCOPE_CY;
+	r = SCIENCE_SCOPE_R;
+	pwr = o->tsd.ship.power_data.sensors.i;
+	/* Draw all the stuff */
+
+#if 1
+	/* Draw selected coordinate */
+	dist = hypot(o->x - o->sci_coordx, o->z - o->sci_coordz);
+	if (dist < range) {
+		tx = (o->sci_coordx - o->x) * (double) r / range;
+		ty = (o->sci_coordz - o->z) * (double) r / range;
+		x = (int) (tx + (double) cx);
+		y = (int) (ty + (double) cy);
+		snis_draw_line(w->window, gc, x - 5, y, x + 5, y);
+		snis_draw_line(w->window, gc, x, y - 5, x, y + 5);
+	}
+#endif
+
+	/* FIXME this is quite likely wrong */
+        tx = sin(o->tsd.ship.sci_heading) * range;
+        ty = -cos(o->tsd.ship.sci_heading) * range;
+
+	sng_set_foreground(GREEN);
+	pthread_mutex_lock(&universe_mutex);
+	nscience_guys = 0;
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (!go[i].alive)
+			continue;
+#if 0
+		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
+			draw_science_laserbeam(w, gc, o, &go[i], cx, cy, r, range);
+			continue;
+		}
+#endif
+
+		dist2 = dist3dsqrd(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
+		if (go[i].type == OBJTYPE_NEBULA) {
+			if (dist2 < go[i].tsd.nebula.r * go[i].tsd.nebula.r)
+				nebula_factor++;
+			continue;
+		}
+#if 0
+		if (dist2 > range * range)
+			continue; /* not close enough */
+#endif
+		dist = sqrt(dist2);
+
+#if 0
+		if (within_nebula(go[i].x, go[i].y))
+			continue;
+#endif
+
+		tx = (go[i].x - o->x) * (double) r / range;
+		ty = (go[i].z - o->z) * (double) r / range;
+		x = (int) (tx + (double) cx);
+		y = (int) (ty + (double) cy);
+
+		if (go[i].id == my_ship_id)
+			continue; /* skip drawing yourself. */
+		bw = o->tsd.ship.sci_beam_width * 180.0 / M_PI;
+
+		/* If we moved the beam off our guy, and back on, select him again. */
+		if (!curr_science_guy && prev_science_guy == &go[i])
+			curr_science_guy = prev_science_guy;
+
+		snis_draw_3d_science_guy(w, gc, &go[i], &x, &y, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor);
+
+		/* cache screen coords for mouse picking */
+		science_guy[nscience_guys].o = &go[i];
+		science_guy[nscience_guys].sx = x;
+		science_guy[nscience_guys].sy = y;
+		if (&go[i] == curr_science_guy)
+			selected_guy_still_visible = 1;
+		nscience_guys++;
+	}
+	if (!selected_guy_still_visible && curr_science_guy) {
+		prev_science_guy = curr_science_guy;
+		curr_science_guy = NULL;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	if (nebula_factor) {
+		for (i = 0; i < 300; i++) {
+			double angle;
+			double radius;
+
+			angle = 360.0 * ((double) snis_randn(10000) / 10000.0) * M_PI / 180.0;
+			radius = (snis_randn(1000) / 1000.0) / 2.0;
+			radius = 1.0 - (radius * radius * radius);
+			radius = radius * SCIENCE_SCOPE_R;
+			radius = radius - ((range / MAX_SCIENCE_SCREEN_RADIUS)  * (snis_randn(50) / 75.0) * r);
+			snis_draw_line(w->window, gc,
+				cx + cos(angle) * r,
+				cy + sin(angle) * r,
+				cx + cos(angle) * radius,
+				cy + sin(angle) * radius);
+		}
+	}
+	remove_all_entity(sciballecx);
+}
+
 
 static void draw_all_the_science_nebulae(GtkWidget *w, struct snis_entity *o, double range)
 {
@@ -6777,6 +7056,7 @@ static void init_science_ui(void)
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
 	sciecx = entity_context_new(50);
+	sciballecx = entity_context_new(50);
 }
 
 static void comms_screen_button_pressed(void *x)
@@ -7336,6 +7616,61 @@ static void show_science(GtkWidget *w)
 	draw_science_data(w, o, curr_science_guy);
 	show_common_screen(w, "SCIENCE");
 }
+
+static void show_3d_science(GtkWidget *w)
+{
+	int /* rx, ry, rw, rh, */ cx, cy, r;
+	struct snis_entity *o;
+	char buf[80];
+	double zoom;
+	static int current_zoom = 0;
+	double display_heading;
+
+	if (!(o = find_my_ship()))
+		return;
+
+	snis_slider_set_input(sci_ui.scizoom, o->tsd.ship.scizoom/255.0 );
+
+	current_zoom = newzoom(current_zoom, o->tsd.ship.scizoom);
+
+	if ((timer & 0x3f) == 0)
+		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
+	sng_set_foreground(CYAN);
+	display_heading = to_uheading(o->tsd.ship.sci_heading);
+	normalize_angle(&display_heading);
+	display_heading *= 180.0 / M_PI;
+	sprintf(buf, "LOCATION: (%5.2lf, %5.2lf)  HEADING: %3.1lf", o->x, o->y,
+			display_heading);
+	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 200, LINEHEIGHT);
+#if 0
+	rx = SCIENCE_SCOPE_X;
+	ry = SCIENCE_SCOPE_Y;
+	rw = SCIENCE_SCOPE_W;
+	rh = SCIENCE_SCOPE_H;
+#endif
+	cx = SCIENCE_SCOPE_CX;
+	cy = SCIENCE_SCOPE_CY;
+	r = SCIENCE_SCOPE_R;
+	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
+			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
+	sng_set_foreground(DARKGREEN);
+	if (!sci_ui.details_mode) {
+		sng_set_foreground(DARKRED);
+/*
+		snis_draw_science_reticule(w, gc, cx, cy, r,
+				o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width)); */
+		sng_draw_circle(w->window, gc, cx, cy, r);
+		draw_all_the_3d_science_guys(w, o, zoom, current_zoom);
+		/* draw_all_the_science_sparks(w, o, zoom);
+		draw_all_the_science_nebulae(w, o, zoom); */
+	} else {
+		draw_science_details(w, gc);
+	}
+	draw_science_warp_data(w, o);
+	draw_science_data(w, o, curr_science_guy);
+	show_common_screen(w, "SCIENCE");
+}
+
 
 static void show_comms(GtkWidget *w)
 {
@@ -9053,7 +9388,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_engineering(w);
 		break;
 	case DISPLAYMODE_SCIENCE:
-		show_science(w);
+		show_3d_science(w);
 		break;
 	case DISPLAYMODE_COMMS:
 		show_comms(w);
