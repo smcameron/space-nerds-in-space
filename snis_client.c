@@ -1591,7 +1591,7 @@ static int update_explosion(uint32_t id, double x, double y, double z,
 	int i;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, y, 0.0, 0.0, &identity_quat, OBJTYPE_EXPLOSION, 1, NULL);
+		i = add_generic_object(id, x, y, z, 0.0, 0.0, &identity_quat, OBJTYPE_EXPLOSION, 1, NULL);
 		if (i < 0)
 			return i;
 		go[i].tsd.explosion.nsparks = nsparks;
