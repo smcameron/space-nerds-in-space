@@ -157,7 +157,7 @@ struct mesh *init_circle_mesh(double x, double z, double r, int npoints)
 	my_mesh->ntriangles = 0;
 	my_mesh->nlines = 1;
 	my_mesh->t = 0;
-	my_mesh->v = malloc(sizeof(*my_mesh->v) * (360 / 2 + 1));
+	my_mesh->v = malloc(sizeof(*my_mesh->v) * (npoints + 1));
 	my_mesh->l = malloc(sizeof(*my_mesh->l) * 1);
 	my_mesh->radius = r;
 
