@@ -252,6 +252,8 @@ struct ship_data {
 #define SCIENCE_SHORT_RANGE (0.08 * XKNOWN_DIM)
 	double sci_beam_width;
 	double sci_yaw_velocity;
+	union quat sciball_orientation;
+	double sciball_yawvel, sciball_pitchvel, sciball_rollvel;
 	uint8_t torpedoes_loaded;
 	uint8_t torpedoes_loading;
 	uint16_t torpedo_load_time;

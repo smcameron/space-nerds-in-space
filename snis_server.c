@@ -1717,6 +1717,31 @@ static void update_player_orientation(struct snis_entity *o)
 	o->orientation = q4;
 }
 
+/* TODO: factor out common code between this and update_player_orientation */
+static void update_player_sciball_orientation(struct snis_entity *o)
+{
+	union quat qyaw, qpitch, qroll, qrot, q1, q2, q3, q4;
+
+	/* calculate amount of yaw to impart this iteration... */
+	quat_init_axis(&qyaw, 0.0, 1.0, 0.0, o->tsd.ship.sciball_yawvel);
+	/* Calculate amount of pitch to impart this iteration... */
+	quat_init_axis(&qpitch, 0.0, 0.0, 1.0, o->tsd.ship.sciball_pitchvel);
+	/* Calculate amount of pitch to impart this iteration... */
+	quat_init_axis(&qroll, 1.0, 0.0, 0.0, o->tsd.ship.sciball_rollvel);
+	/* Combine pitch, roll and yaw */
+	quat_mul(&q1, &qyaw, &qpitch);
+	quat_mul(&qrot, &q1, &qroll);
+
+	/* Convert rotation to sciball's coordinate system */
+	quat_mul(&q1, &o->tsd.ship.sciball_orientation, &qrot);
+	quat_conj(&q2, &o->tsd.ship.sciball_orientation);
+	quat_mul(&q3, &q1, &q2);
+	/* Apply to sciball's orientation */
+	quat_mul(&q4, &q3, &o->tsd.ship.sciball_orientation);
+	quat_normalize_self(&q4);
+	o->tsd.ship.sciball_orientation = q4;
+}
+
 static float new_velocity(float desired_velocity, float current_velocity)
 {
 	float delta;
@@ -1806,6 +1831,7 @@ static void player_move(struct snis_entity *o)
 		power_model_disable(o->tsd.ship.power_model);
 	}
 	update_player_orientation(o);
+	update_player_sciball_orientation(o);
 	update_player_position_and_velocity(o);
 	
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
@@ -1821,6 +1847,9 @@ static void player_move(struct snis_entity *o)
 	damp_yaw_velocity(&o->tsd.ship.roll_velocity, ROLL_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.gun_yaw_velocity, GUN_YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.sci_yaw_velocity, SCI_YAW_DAMPING);
+	damp_yaw_velocity(&o->tsd.ship.sciball_yawvel, YAW_DAMPING);
+	damp_yaw_velocity(&o->tsd.ship.sciball_pitchvel, PITCH_DAMPING);
+	damp_yaw_velocity(&o->tsd.ship.sciball_rollvel, ROLL_DAMPING);
 
 	/* Damp velocity */
 	if (fabs(o->tsd.ship.velocity) < MIN_PLAYER_VELOCITY)
@@ -2190,6 +2219,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.scibeam_a2 = 0;
 	o->tsd.ship.sci_heading = M_PI / 2.0;
 	o->tsd.ship.reverse = 0;
+	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
 	init_power_model(o);
 }
@@ -3238,6 +3268,33 @@ static void do_roll(struct game_client *c, int roll)
 		(MAX_ROLL_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
 
 	do_generic_yaw(&ship->tsd.ship.roll_velocity, roll, max_roll_velocity,
+			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
+}
+
+static void do_sciball_yaw(struct game_client *c, int yaw)
+{
+	struct snis_entity *ship = &go[c->ship_index];
+	const double max_yaw_velocity = MAX_YAW_VELOCITY;
+
+	do_generic_yaw(&ship->tsd.ship.sciball_yawvel, yaw, max_yaw_velocity,
+			YAW_INCREMENT, YAW_INCREMENT_FINE);
+}
+
+static void do_sciball_pitch(struct game_client *c, int pitch)
+{
+	struct snis_entity *ship = &go[c->ship_index];
+	double max_pitch_velocity = MAX_PITCH_VELOCITY;
+
+	do_generic_yaw(&ship->tsd.ship.sciball_pitchvel, pitch, max_pitch_velocity,
+			PITCH_INCREMENT, PITCH_INCREMENT_FINE);
+}
+
+static void do_sciball_roll(struct game_client *c, int roll)
+{
+	struct snis_entity *ship = &go[c->ship_index];
+	double max_roll_velocity = MAX_ROLL_VELOCITY;
+
+	do_generic_yaw(&ship->tsd.ship.sciball_rollvel, roll, max_roll_velocity,
 			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
 }
 
@@ -4948,6 +5005,21 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_REQUEST_SCIBALL_YAW:
+			rc = process_request_yaw(c, do_sciball_yaw);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_SCIBALL_PITCH:
+			rc = process_request_yaw(c, do_sciball_pitch); /* process_request_yaw is correct */
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_SCIBALL_ROLL:
+			rc = process_request_yaw(c, do_sciball_roll); /* process_request_yaw is correct */
+			if (rc)
+				goto protocol_error;
+			break;
 		case OPCODE_DEMON_YAW:
 			rc = process_demon_yaw(c);
 			if (rc)
@@ -5618,7 +5690,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "SSSwwUSUUbbbwbbbbbbbbbbbbwQ",
+	packed_buffer_append(pb, "SSSwwUSUUbbbwbbbbbbbbbbbbwQQ",
 			o->tsd.ship.yaw_velocity, (int32_t) 360,
 			o->tsd.ship.pitch_velocity, (int32_t) 360,
 			o->tsd.ship.roll_velocity, (int32_t) 360,
@@ -5633,7 +5705,8 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
 			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
 			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype,
-			o->tsd.ship.reverse, o->tsd.ship.victim_id, &o->orientation.vec[0]);
+			o->tsd.ship.reverse, o->tsd.ship.victim_id,
+			&o->orientation.vec[0], &o->tsd.ship.sciball_orientation.vec[0]);
 	pb_queue_to_client(c, pb);
 }
 

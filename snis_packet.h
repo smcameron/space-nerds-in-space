@@ -113,6 +113,9 @@
 #define OPCODE_REQUEST_MAINZOOM		188
 #define OPCODE_REQUEST_PITCH		189
 #define OPCODE_REQUEST_ROLL		190
+#define OPCODE_REQUEST_SCIBALL_YAW	191
+#define OPCODE_REQUEST_SCIBALL_PITCH	192
+#define OPCODE_REQUEST_SCIBALL_ROLL	193
 
 #define OPCODE_POS_SHIP		200
 #define OPCODE_POS_STARBASE	201
@@ -150,6 +153,7 @@ struct update_ship_packet {
 	uint8_t reverse;
 	uint32_t victim_id;
 	int32_t orientation[4]; /* int32_t encoded orientation quaternion */
+	int32_t sciball_orientation[4]; /* int32_t encoded orientation quaternion */
 };
 
 struct ship_sdata_packet {

@@ -31,8 +31,14 @@ enum keyaction {
 		keyphaser	= 26,
 		keyrenderswitch	= 27,
 		keyrollleft = 28,
-		keyrollright = 29
-#define NKEYSTATES 30 
+		keyrollright = 29,
+		keysciball_yawleft = 30,
+		keysciball_yawright = 31,
+		keysciball_pitchup = 32,
+		keysciball_pitchdown= 33,
+		keysciball_rollleft = 34,
+		keysciball_rollright = 35,
+#define NKEYSTATES 36 
 };
 
 struct keyboard_state {

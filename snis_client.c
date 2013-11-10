@@ -733,7 +733,8 @@ static int update_power_model_data(uint32_t id, struct power_model_data *pmd)
 }
 
 static int update_ship(uint32_t id, double x, double y, double z, double vx, double vz,
-			union quat *orientation, double yawvel, double pitchvel, double rollvel,
+			union quat *orientation, union quat *sciball_orientation,
+			double yawvel, double pitchvel, double rollvel,
 			uint32_t alive,
 			uint32_t torpedoes, uint32_t power, 
 			double gun_heading, double gunyawvel,
@@ -786,6 +787,7 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 	go[i].tsd.ship.phaser_wavelength = phaser_wavelength;
 	go[i].tsd.ship.damcon = NULL;
 	go[i].tsd.ship.shiptype = shiptype;
+	go[i].tsd.ship.sciball_orientation = *sciball_orientation;
 	if (!go[i].tsd.ship.reverse && reverse)
 		wwviaudio_add_sound(REVERSE_SOUND);
 	go[i].tsd.ship.reverse = reverse;
@@ -1771,6 +1773,12 @@ char *keyactionstring[] = {
 	"damage", "debug", "demon", "f8", "f9", "f10",
 	"onscreen", "viewmode", "zoom", "unzoom", "phaser",
 	"rendermode", "keyrollleft", "keyrollright",
+	"keysciball_yawleft",
+	"keysciball_yawright",
+	"keysciball_pitchup",
+	"keysciball_pitchdown",
+	"keysciball_rollleft",
+	"keysciball_rollright",
 };
 
 void init_keymap()
@@ -1812,6 +1820,14 @@ void init_keymap()
 	keymap[GDK_a] = keyleft;
 	keymap[GDK_s] = keydown;
 	keymap[GDK_d] = keyright;
+
+	keymap[GDK_k] = keysciball_rollleft;
+	keymap[GDK_semicolon] = keysciball_rollright;
+	keymap[GDK_comma] = keysciball_yawleft;
+	keymap[GDK_slash] = keysciball_yawright;
+	keymap[GDK_l] = keysciball_pitchdown;
+	keymap[GDK_period] = keysciball_pitchup;
+
 	keymap[GDK_W] = keyviewmode;
 	keymap[GDK_KEY_plus] = keyzoom;
 	keymap[GDK_KEY_equal] = keyzoom;
@@ -2174,6 +2190,36 @@ static void do_dirkey(int h, int v, int r)
 	return;
 }
 
+static void do_sciball_dirkey(int h, int v, int r)
+{
+	uint8_t value;
+
+	switch (displaymode) {
+		case DISPLAYMODE_SCIENCE:
+			if (!h && !v && !r)
+				return;
+			if (v) {
+				value = v < 0 ? YAW_LEFT : YAW_RIGHT;
+				queue_to_server(packed_buffer_new("hb",
+						OPCODE_REQUEST_SCIBALL_PITCH, value));
+			}
+			if (h) {
+				value = h < 0 ? YAW_LEFT : YAW_RIGHT;
+				queue_to_server(packed_buffer_new("hb",
+						OPCODE_REQUEST_SCIBALL_YAW, value));
+			}
+			if (r) {
+				value = r < 0 ? YAW_LEFT : YAW_RIGHT;
+				queue_to_server(packed_buffer_new("hb",
+						OPCODE_REQUEST_SCIBALL_ROLL, value));
+			}
+			break;
+		default:
+			break;
+	}
+	return;
+}
+
 static void do_torpedo(void)
 {
 	struct snis_entity *o;
@@ -2410,6 +2456,8 @@ static void do_zoom(int z)
 static void deal_with_keyboard()
 {
 	int h, v, z, r;
+	int sbh, sbv, sbr; /* sciball keys */
+
 	static const int keyboard_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
 	if (timer % keyboard_throttle != 0)
 		return;
@@ -2418,6 +2466,9 @@ static void deal_with_keyboard()
 	v = 0;
 	r = 0;
 	z = 0;
+	sbh = 0;
+	sbv = 0;
+	sbr = 0;
 
 	if (kbstate.pressed[keyleft])	
 		h = -1;
@@ -2440,6 +2491,22 @@ static void deal_with_keyboard()
 		z = -10;
 	if (z)
 		do_zoom(z);
+
+	if (kbstate.pressed[keysciball_rollleft])
+		sbr = -1;
+	if (kbstate.pressed[keysciball_rollright])
+		sbr = +1;
+	if (kbstate.pressed[keysciball_pitchup])
+		sbv = +1;
+	if (kbstate.pressed[keysciball_pitchdown])
+		sbv = -1;
+	if (kbstate.pressed[keysciball_yawleft])
+		sbh = -1;
+	if (kbstate.pressed[keysciball_yawright])
+		sbh = +1;
+
+	if (sbh || sbv || sbr)
+		do_sciball_dirkey(sbh, sbv, sbr);
 }
 
 static int control_key_pressed = 0;
@@ -2781,7 +2848,7 @@ static int process_update_ship_packet(uint16_t opcode)
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
 		reverse;
-	union quat orientation;
+	union quat orientation, sciball_orientation;
 	union euler ypr;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -2801,16 +2868,16 @@ static int process_update_ship_packet(uint16_t opcode)
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
 				&dgunyawvel, (int32_t) 360,
 				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
-	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbwQ", &tloading, &throttle, &rpm, &fuel, &temp,
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbwQQ", &tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
-			&reverse, &victim_id, &orientation.vec[0]);
+			&reverse, &victim_id, &orientation.vec[0], &sciball_orientation.vec[0]);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_ship(id, dx, dy, dz, dvx, dvz, &orientation,
+	rc = update_ship(id, dx, dy, dz, dvx, dvz, &orientation, &sciball_orientation,
 				dyawvel, dpitchvel, drollvel, alive, torpedoes, power,
 				dgheading, dgunyawvel, dsheading, dbeamwidth, type,
 				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
@@ -5321,10 +5388,10 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 	union vec3 ship_up = { { 0, 1, 0 } };
 	double screen_radius = ((((current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM * 2;
 	union vec3 camera_pos = { { -screen_radius * 1.80, screen_radius * 0.85, 0} };
-	quat_rot_vec_self(&ship_up, &o->orientation);
+	quat_rot_vec_self(&ship_up, &o->tsd.ship.sciball_orientation);
 
 	/* rotate camera to be behind my ship */
-	quat_rot_vec_self(&camera_pos, &o->orientation);
+	quat_rot_vec_self(&camera_pos, &o->tsd.ship.sciball_orientation);
 	vec3_add_self(&camera_pos, &ship_pos);
         set_renderer(sciballecx, WIREFRAME_RENDERER);
 	camera_assign_up_direction(sciballecx, ship_up.v.x, ship_up.v.y, ship_up.v.z);
