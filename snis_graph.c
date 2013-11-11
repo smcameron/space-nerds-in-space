@@ -23,6 +23,8 @@ GdkColor huex[TOTAL_COLORS];
 
 extern struct my_vect_obj **gamefont[];
 extern int font_scale[];
+extern int letter_spacing[];
+extern int font_lineheight[];
 
 static struct snis_graph_context {
 	float xscale, yscale;
@@ -411,7 +413,50 @@ void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, float x,
 	float deltax = 0;
 
 	for (i=0;s[i];i++) {
-		dx = (font_scale[font]) + sng_abs_xy_draw_letter(w, gc, gamefont[font], s[i], x + deltax, y);  
+		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(w, gc, gamefont[font], s[i], x + deltax, y);
+		deltax += dx;
+	}
+}
+
+void sng_string_bounding_box(char *s, int font, float *bbx1, float *bby1, float *bbx2, float *bby2)
+{
+	struct my_vect_obj **fontobj = gamefont[font];
+	int i;
+
+	*bbx1 = *bbx2 = *bby1 = *bby2 = 0;
+
+	for (i=0;s[i];i++) {
+		unsigned char letter = s[i];
+		if (letter == ' ' || letter == '\n' || letter == '\t' || fontobj[letter] == NULL) {
+			letter = 'Z';
+		}
+
+		/* figure out the letter size based on the bouding box */
+		*bbx2 += fontobj[letter]->bbx2 - fontobj[letter]->bbx1;
+
+		/* add between character space */
+		if (i!=0) *bbx2 += letter_spacing[font];
+
+		if (i==0 || fontobj[letter]->bby1 < *bby1) *bby1=fontobj[letter]->bby1;
+		if (i==0 || fontobj[letter]->bby2 > *bby2) *bby2=fontobj[letter]->bby2;
+	}
+}
+
+/* Used for floating labels in the game. */
+/* Draws a string centered at x,y position on the screen. */
+void sng_center_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, float x, float y)
+{
+	float bbx1, bby1, bbx2, bby2;
+	sng_string_bounding_box(s, font, &bbx1, &bby1, &bbx2, &bby2);
+
+	float ox = x - (bbx2 + bbx1)/2.0;
+	float oy = y - (bby2 + bby1)/2.0;
+
+	int i, dx;
+	float deltax = 0;
+
+	for (i=0;s[i];i++) {
+		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(w, gc, gamefont[font], s[i], ox + deltax, oy);
 		deltax += dx;
 	}
 }
@@ -432,7 +477,7 @@ void sng_abs_xy_draw_string_with_cursor(GtkWidget *w, GdkGC *gc, char *s,
 	for (i = 0; s[i]; i++) {
 		if (i == cursor_pos)
 			sng_abs_xy_draw_letter(w, gc, gamefont[font], '_', x + deltax, y);
-		dx = (font_scale[font]) + sng_abs_xy_draw_letter(w, gc, gamefont[font], s[i], x + deltax, y);  
+		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(w, gc, gamefont[font], s[i], x + deltax, y);
 		deltax += dx;
 	}
 	if (i == cursor_pos)

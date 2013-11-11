@@ -208,6 +208,8 @@ static struct my_vect_obj *prerender_glyph(stroke_t g[], int xscale, int yscale)
 	struct my_point_t scratch[100];
 	struct my_vect_obj *v;
 
+	int bbx1=0, bby1=0, bbx2=0, bby2=0;
+
 	/* printf("Prerendering glyph..\n"); */
 
 	for (i=0;g[i] != 99;i++) {
@@ -221,6 +223,11 @@ static struct my_vect_obj *prerender_glyph(stroke_t g[], int xscale, int yscale)
 			x = decode_glyph[g[i]].x * xscale;
 			y = decode_glyph[g[i]].y * yscale;
 			/* printf("x=%d, y=%d\n", x,y); */
+
+			if (i==0 || x < bbx1) bbx1=x;
+			if (i==0 || x > bbx2) bbx2=x;
+			if (i==0 || y < bby1) bby1=y;
+			if (i==0 || y > bby2) bby2=y;
 		}
 		scratch[npoints].x = x;
 		scratch[npoints].y = y;
@@ -234,6 +241,10 @@ static struct my_vect_obj *prerender_glyph(stroke_t g[], int xscale, int yscale)
 		memcpy(v->p, scratch, sizeof(struct my_point_t) * npoints);
 	} else
 		v->p = NULL;
+	v->bbx1 = bbx1;
+	v->bby1 = bby1;
+	v->bbx2 = bbx2;
+	v->bby2 = bby2;
 	return v;
 }
 
