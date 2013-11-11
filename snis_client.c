@@ -6402,7 +6402,16 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 		/* temp until heading is a quat */
 		union quat ind_orientation;
-		quat_init_axis(&ind_orientation,0,1,0,ind_heading);
+		if (i == 0 || !curr_science_guy)
+			quat_init_axis(&ind_orientation, 0, 1, 0, ind_heading);
+		else {
+			union vec3 up = { { 0, 1, 0 } };
+			union vec3 xaxis = { { 1, 0, 0 } };
+			union vec3 to_science_guy = { { curr_science_guy->x - o->x,
+						  curr_science_guy->y - o->y,
+						  curr_science_guy->z - o->z, } };
+			quat_from_u2v(&ind_orientation, &xaxis, &to_science_guy, &up);
+		}
 
 		/* add gun heading arrow */
 		union vec3 ind_pos = {{screen_radius,0,0}};
