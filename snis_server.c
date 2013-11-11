@@ -1695,51 +1695,18 @@ static void player_collision_detection(void *player, void *object)
 
 static void update_player_orientation(struct snis_entity *o)
 {
-	union quat qyaw, qpitch, qroll, qrot, q1, q2, q3, q4;
-
-	/* calculate amount of yaw to impart this iteration... */
-	quat_init_axis(&qyaw, 0.0, 1.0, 0.0, o->tsd.ship.yaw_velocity);
-	/* Calculate amount of pitch to impart this iteration... */
-	quat_init_axis(&qpitch, 0.0, 0.0, 1.0, o->tsd.ship.pitch_velocity);
-	/* Calculate amount of pitch to impart this iteration... */
-	quat_init_axis(&qroll, 1.0, 0.0, 0.0, o->tsd.ship.roll_velocity);
-	/* Combine pitch, roll and yaw */
-	quat_mul(&q1, &qyaw, &qpitch);
-	quat_mul(&qrot, &q1, &qroll);
-
-	/* Convert rotation to ship's coordinate system */
-	quat_mul(&q1, &o->orientation, &qrot);
-	quat_conj(&q2, &o->orientation);
-	quat_mul(&q3, &q1, &q2);
-	/* Apply to ship's orientation */
-	quat_mul(&q4, &q3, &o->orientation);
-	quat_normalize_self(&q4);
-	o->orientation = q4;
+	quat_apply_relative_yaw_pitch_roll(&o->orientation,
+			o->tsd.ship.yaw_velocity,
+			o->tsd.ship.pitch_velocity,
+			o->tsd.ship.roll_velocity);
 }
 
-/* TODO: factor out common code between this and update_player_orientation */
 static void update_player_sciball_orientation(struct snis_entity *o)
 {
-	union quat qyaw, qpitch, qroll, qrot, q1, q2, q3, q4;
-
-	/* calculate amount of yaw to impart this iteration... */
-	quat_init_axis(&qyaw, 0.0, 1.0, 0.0, o->tsd.ship.sciball_yawvel);
-	/* Calculate amount of pitch to impart this iteration... */
-	quat_init_axis(&qpitch, 0.0, 0.0, 1.0, o->tsd.ship.sciball_pitchvel);
-	/* Calculate amount of pitch to impart this iteration... */
-	quat_init_axis(&qroll, 1.0, 0.0, 0.0, o->tsd.ship.sciball_rollvel);
-	/* Combine pitch, roll and yaw */
-	quat_mul(&q1, &qyaw, &qpitch);
-	quat_mul(&qrot, &q1, &qroll);
-
-	/* Convert rotation to sciball's coordinate system */
-	quat_mul(&q1, &o->tsd.ship.sciball_orientation, &qrot);
-	quat_conj(&q2, &o->tsd.ship.sciball_orientation);
-	quat_mul(&q3, &q1, &q2);
-	/* Apply to sciball's orientation */
-	quat_mul(&q4, &q3, &o->tsd.ship.sciball_orientation);
-	quat_normalize_self(&q4);
-	o->tsd.ship.sciball_orientation = q4;
+	quat_apply_relative_yaw_pitch_roll(&o->tsd.ship.sciball_orientation,
+			o->tsd.ship.sciball_yawvel,
+			o->tsd.ship.sciball_pitchvel,
+			o->tsd.ship.sciball_rollvel);
 }
 
 static float new_velocity(float desired_velocity, float current_velocity)

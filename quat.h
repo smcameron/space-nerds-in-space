@@ -171,4 +171,12 @@ union quat* quat_slerp(union quat *qo, const union quat *qfrom, const union quat
 /* calculate vec3 linear interpolation */
 union vec3* vec3_lerp(union vec3* vo, const union vec3* vfrom, const union vec3* vto, double t);
 
+/* Apply incremental yaw, pitch and roll relative to the quaternion.
+ * For example, if the quaternion represents an orientation of a ship,
+ * this will apply yaw/pitch/roll *in the ship's local coord system* to the
+ * orientation.
+ */
+void quat_apply_relative_yaw_pitch_roll(union quat *q,
+                                        double yaw, double pitch, double roll);
+
 #endif /* __QUAT_H__ */
