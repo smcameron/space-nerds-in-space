@@ -787,7 +787,9 @@ static int update_ship(uint32_t id, double x, double y, double z, double vx, dou
 	go[i].tsd.ship.phaser_wavelength = phaser_wavelength;
 	go[i].tsd.ship.damcon = NULL;
 	go[i].tsd.ship.shiptype = shiptype;
-	go[i].tsd.ship.sciball_orientation = *sciball_orientation;
+	go[i].tsd.ship.sciball_o1 = go[i].tsd.ship.sciball_o2;
+	go[i].tsd.ship.sciball_orientation = go[i].tsd.ship.sciball_o1; 
+	go[i].tsd.ship.sciball_o2 = *sciball_orientation;
 	if (!go[i].tsd.ship.reverse && reverse)
 		wwviaudio_add_sound(REVERSE_SOUND);
 	go[i].tsd.ship.reverse = reverse;
@@ -1426,6 +1428,9 @@ static void move_ship(struct snis_entity *o)
 
 	quat_nlerp(&o->orientation, &o->o1, &o->o2, t);
 	o->heading = quat_to_heading(&o->orientation);
+
+	quat_nlerp(&o->tsd.ship.sciball_orientation,
+			&o->tsd.ship.sciball_o1, &o->tsd.ship.sciball_o2, t);
 
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity / 3.0;
 }

@@ -253,6 +253,7 @@ struct ship_data {
 	double sci_beam_width;
 	double sci_yaw_velocity;
 	union quat sciball_orientation;
+	union quat sciball_o1, sciball_o2;
 	double sciball_yawvel, sciball_pitchvel, sciball_rollvel;
 	uint8_t torpedoes_loaded;
 	uint8_t torpedoes_loading;
