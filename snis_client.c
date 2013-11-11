@@ -6421,7 +6421,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	union vec3 ship_normal = { { 0, 1, 0 } };
 	quat_rot_vec_self(&ship_normal, &o->orientation);
 
-	static union quat cam_orientation = {{0,0,0,1}};
+	static union quat cam_orientation = {{1,0,0,0}};
 	quat_nlerp(&cam_orientation, &cam_orientation, &o->orientation, 0.1);
 	/* quat_copy(&cam_orientation, &o->orientation); */
 

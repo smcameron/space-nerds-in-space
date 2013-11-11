@@ -280,7 +280,7 @@ void quat_to_lh_rot_matrix(union quat *q, float *m)
 	m[15] = 1.0f;
 }
 
-const union quat identity_quat = { {0.0, 0.0, 0.0, 1.0} };
+const union quat identity_quat = { {1.0, 0.0, 0.0, 0.0} };
 
 void random_quat(union quat *q)
 {
