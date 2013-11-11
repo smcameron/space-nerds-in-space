@@ -95,6 +95,8 @@
 #define LASER_COLOR GREEN
 #define PLAYER_LASER_COLOR GREEN
 #define NPC_LASER_COLOR ORANGERED
+#define TARGETING_COLOR ORANGERED
+#define SCIENCE_SELECT_COLOR GREEN
 #define TORPEDO_COLOR RED
 #define SPACEMONSTER_COLOR GREEN
 #define NEBULA_COLOR MAGENTA
@@ -4367,17 +4369,18 @@ static void draw_main_screen_text(GtkWidget *w, GdkGC *gc)
 	}
 }
 
-static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
+static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int color, int ring)
 {
 	int i;
 
-	sng_set_foreground(ORANGERED);
+	sng_set_foreground(color);
 	for (i = 0; i < 4; i++) {
 		int x1, y1, x2, y2;
 		double angle;
 		double dx, dy, ddx, ddy;
+		int offset = ring ? 0 : 45;
 
-		angle = (M_PI * ((i * 90 + timer * 4) % 360)) / 180.0;
+		angle = (M_PI * ((i * 90 + offset + timer * 4) % 360)) / 180.0;
 
 		dx = 15.0 * cos(angle);
 		dy = 15.0 * sin(angle);
@@ -4392,6 +4395,8 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y)
 		snis_draw_line(w->window, gc, x2 - ddx, y2 - ddy, x2 + ddx, y2 + ddy);
 		snis_draw_line(w->window, gc, x2 - ddx, y2 - ddy, x1, y1);
 		snis_draw_line(w->window, gc, x1, y1, x2 + ddx, y2 + ddy);
+		if (ring)
+			sng_draw_circle(w->window, gc, x, y, 33);
 	}
 }
 
@@ -4451,7 +4456,17 @@ static void show_mainscreen(GtkWidget *w)
 
 		if (target && target->entity) {
 			entity_get_screen_coords(target->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy);
+			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
+		}
+	}
+
+	/* Draw science selector indicator on main screen */
+	if (curr_science_guy) {
+		float sx, sy;
+
+		if (curr_science_guy->entity) {
+			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
+			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 1);
 		}
 	}
 
@@ -5096,10 +5111,12 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 				snis_draw_arrow(w, gc, x, y, r, go[i].heading, 0.5);
 			}
 			if (go[i].id == o->tsd.ship.victim_id) {
-				draw_targeting_indicator(w, gc, x, y);
+				draw_targeting_indicator(w, gc, x, y, TARGETING_COLOR, 0);
 				draw_torpedo_leading_indicator(w, gc, o, &go[i],
 								x, y, dist2, r, screen_radius);
 			}
+			if (curr_science_guy == &go[i])
+				draw_targeting_indicator(w, gc, x, y, SCIENCE_SELECT_COLOR, 1);
 		}
 	}
 	pthread_mutex_unlock(&universe_mutex);
@@ -6289,6 +6306,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	static struct mesh *axis_mesh[6] = { 0, 0, 0, 0, 0, 0 };
 	static int current_zoom = 0;
 	struct entity *targeted_entity = NULL;
+	struct entity *science_entity = NULL;
 
 	if (!ring_mesh) {
 		ring_mesh = init_circle_mesh(0, 0, 1, 180, 2.0f * M_PI);
@@ -6493,6 +6511,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 			if (o->tsd.ship.victim_id != -1 && go[i].id == o->tsd.ship.victim_id)
 				targeted_entity = contact;
+			if (curr_science_guy == &go[i])
+				science_entity = contact;
 			break;
 		}
 		case OBJTYPE_SPACEMONSTER: /* invisible to instruments */
@@ -6589,7 +6609,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		float sx, sy;
 
 		entity_get_screen_coords(targeted_entity, &sx, &sy);
-		draw_targeting_indicator(w, gc, sx, sy);
+		draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
+	}
+	if (science_entity) {
+		float sx, sy;
+
+		entity_get_screen_coords(science_entity, &sx, &sy);
+		draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 1);
 	}
 
 	pthread_mutex_unlock(&universe_mutex);
