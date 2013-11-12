@@ -4709,7 +4709,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 
 static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
 					gint *x, gint *y, double dist, int bw, int pwr,
-					double range, int selected,
+					double range, int selected, double scale,
 					int nebula_factor)
 {
 	int i;
@@ -4778,6 +4778,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 		}
 		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1) {
 			e = add_entity(sciballecx, ship_icon_mesh, o->x, o->y, o->z, LIMEGREEN);
+			update_entity_scale(e, scale);
 			update_entity_orientation(e, &o->orientation);
 		} else {
 			snis_draw_line(w->window, gc, *x - 1, *y, *x + 1, *y);
@@ -5487,7 +5488,8 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 		if (!curr_science_guy && prev_science_guy == &go[i])
 			curr_science_guy = prev_science_guy;
 
-		snis_draw_3d_science_guy(w, gc, &go[i], &x, &y, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor);
+		snis_draw_3d_science_guy(w, gc, &go[i], &x, &y, dist, bw, pwr, range,
+			&go[i] == curr_science_guy, 100.0 * current_zoom / 255.0, nebula_factor);
 
 		/* cache screen coords for mouse picking */
 		science_guy[nscience_guys].o = &go[i];
