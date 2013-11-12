@@ -5421,9 +5421,6 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 
 	add_scanner_beam_orange_slice(sciballecx, o, screen_radius, AMBER);
 
-	render_entities(w, gc, sciballecx);
-	remove_all_entity(sciballecx);
-
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
 	r = SCIENCE_SCOPE_R;
@@ -5522,6 +5519,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 				cy + sin(angle) * radius);
 		}
 	}
+	render_entities(w, gc, sciballecx);
 	remove_all_entity(sciballecx);
 }
 
