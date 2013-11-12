@@ -7223,11 +7223,11 @@ static void init_science_ui(void)
 {
 	sci_ui.scizoom = snis_slider_init(350, 50, 300, DARKGREEN, "Range", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom);
-	sci_ui.details_button = snis_button_init(450, 570, 75, 25, "DETAILS",
+	sci_ui.details_button = snis_button_init(450, 575, 75, 20, "DETAILS",
 			GREEN, NANO_FONT, sci_details_pressed, (void *) 0);
-	sci_ui.twod_button = snis_button_init(350, 570, 75, 25, "2D",
+	sci_ui.twod_button = snis_button_init(410, 575, 40, 20, "2D",
 			GREEN, NANO_FONT, sci_twod_pressed, (void *) 0);
-	sci_ui.threed_button = snis_button_init(250, 570, 75, 25, "3D",
+	sci_ui.threed_button = snis_button_init(370, 575, 40, 20, "3D",
 			GREEN, NANO_FONT, sci_threed_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
