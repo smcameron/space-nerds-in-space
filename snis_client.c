@@ -2333,7 +2333,7 @@ static void deal_with_joystick()
 #define XJOYSTICK_THRESHOLD_FINE 6000
 
 	/* Read events even if we don't use them just to consume them. */
-	memset(&jse, 0, sizeof(jse));
+	memset(&jse.button, 0, sizeof(jse.button));
 	rc = get_joystick_status(&jse);
 	if (rc != 0)
 		return;
