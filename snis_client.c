@@ -5507,6 +5507,7 @@ static struct tween_map* sciplane_tween = 0;
 
 static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double range)
 {
+	static int first_run = 1;
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *heading_ind_line_mesh = 0;
 
@@ -5515,10 +5516,12 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		heading_ind_line_mesh = init_line_mesh(0.9, 0, 0, 1, 0, 0);
 	}
 
-	float extra_popout_dist = range * 0.2;
-	float popout_rate = 0.10;
 	float fovy = 30.0 * M_PI / 180.0;
-	float distance_to_cam = range / tan(fovy/2.0);
+	float dist_to_cam = range / tan(fovy/2.0);
+
+	float mark_popout_extra_dist = range * 0.2;
+	float mark_popout_rate = 0.10;
+	float mark_popout_zoom_dist_to_cam = range * 0.4 / tan(fovy/2.0);
 
 	struct entity *e = NULL;
 	int science_style = RENDER_DISABLE_CLIP;
@@ -5527,8 +5530,25 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	union vec3 ship_normal = {{0, 1, 0}};
 	quat_rot_vec_self(&ship_normal, &o->orientation);
 
+	/* figure out the location of curr selected target in real space and on sciplane */
+	union vec3 selected_pos;
+	union vec3 selected_m0_pos;
+	if (curr_science_guy) {
+		vec3_init(&selected_pos, curr_science_guy->x, curr_science_guy->y, curr_science_guy->z);
+
+		/* take currnet position, find dir from ship to it, get heading/mark, recalc pos with mark=0 */
+		double dist, heading, mark;
+		union vec3 selected_dir;
+		vec3_sub(&selected_dir, &selected_pos, &ship_pos);
+		vec3_to_heading_mark(&selected_dir, &dist, &heading, &mark);
+		heading_mark_to_vec3(dist, heading, 0, &selected_m0_pos);
+		vec3_add_self(&selected_m0_pos, &ship_pos);
+	}
+
 	/* cam orientation is locked with world */
 	static union quat cam_orientation = {{1,0,0,0}};
+	static union vec3 camera_pos = {{0,0,0}};
+	static union vec3 camera_lookat = {{0,0,0}};
 
 	/* tilt camera foward */
 	union quat cam_orientation_selected;
@@ -5536,25 +5556,46 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	union quat cam_orientation_not_selected;
 	quat_init_axis(&cam_orientation_not_selected,1,0,0,degrees_to_radians(-60));
 
+	union quat *desired_cam_orientation;
+	union vec3 desired_camera_pos;
+	union vec3 desired_lookat;
+
 	if (curr_science_guy) {
-		quat_nlerp(&cam_orientation, &cam_orientation,&cam_orientation_selected,0.15);
+		desired_cam_orientation = &cam_orientation_selected;
+		vec3_init(&desired_camera_pos, 0, 0, mark_popout_zoom_dist_to_cam);
+		desired_lookat = selected_pos;
 	} else {
-		quat_nlerp(&cam_orientation, &cam_orientation,&cam_orientation_not_selected,0.15);
+		desired_cam_orientation = &cam_orientation_not_selected;
+		vec3_init(&desired_camera_pos, 0, 0, dist_to_cam);
+		desired_lookat = ship_pos;
 	}
+
+	/* finish off rotating cam positions */
+
+	if (first_run) {
+		cam_orientation = *desired_cam_orientation;
+
+		quat_rot_vec_self(&desired_camera_pos, &cam_orientation);
+		vec3_add_self(&desired_camera_pos, &desired_lookat);
+
+		camera_pos = desired_camera_pos;
+		camera_lookat = desired_lookat;
+		first_run = 0;
+	} else {
+		quat_nlerp(&cam_orientation, &cam_orientation, desired_cam_orientation, 0.15);
+
+		quat_rot_vec_self(&desired_camera_pos, &cam_orientation);
+		vec3_add_self(&desired_camera_pos, &desired_lookat);
+
+		vec3_lerp(&camera_pos, &camera_pos, &desired_camera_pos, 0.15);
+		vec3_lerp(&camera_lookat, &camera_lookat, &desired_lookat, 0.15);
+	}
+
+	/* churn the mark tween values */
 	tween_update(sciplane_tween);
 
 	union vec3 camera_up = {{0,1,0}};
 	quat_rot_vec_self(&camera_up, &cam_orientation);
-
-	/* rotate camera position to match cam_orientation */
-	union vec3 camera_pos = {{0, 0, distance_to_cam}};
-	quat_rot_vec_self(&camera_pos, &cam_orientation);
-	vec3_add_self(&camera_pos, &ship_pos);
-
-	/* look directly at ship */
-	union vec3 camera_lookat = {{0, 0, 0}};
-	quat_rot_vec_self(&camera_lookat, &cam_orientation);
-	vec3_add_self(&camera_lookat, &ship_pos);
 
 	camera_assign_up_direction(navecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
 	camera_set_pos(navecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
@@ -5676,26 +5717,10 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		pwr = o->tsd.ship.power_data.sensors.i;
 		/* Draw all the stuff */
 
-		union vec3 ship_pos = {{o->x, o->y, o->z}};
 		bw = o->tsd.ship.sci_beam_width * 180.0 / M_PI;
 
 		sng_set_foreground(GREEN);
 		pthread_mutex_lock(&universe_mutex);
-
-		/* figure out the location of curr selected target in real space and on sciplane */
-		union vec3 curr_science_guy_pos;
-		union vec3 curr_science_guy_mark_zero_pos;
-		if (curr_science_guy) {
-			vec3_init(&curr_science_guy_pos, curr_science_guy->x, curr_science_guy->y, curr_science_guy->z);
-
-			/* take currnet position, find dir from ship to it, get heading/mark, recalc pos with mark=0 */
-			double dist, heading, mark;
-			union vec3 curr_science_guy_dir = curr_science_guy_pos;
-			vec3_sub_self(&curr_science_guy_dir, &ship_pos);
-			vec3_to_heading_mark(&curr_science_guy_dir, &dist, &heading, &mark);
-			heading_mark_to_vec3(dist, heading, 0, &curr_science_guy_mark_zero_pos);
-			vec3_add_self(&curr_science_guy_mark_zero_pos, &ship_pos);
-		}
 
 		nscience_guys = 0;
 		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
@@ -5750,22 +5775,26 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 			if (go[i].sdata.science_data_known && curr_science_guy) {
 				int popout = 0;
-				double dist_to_selected = vec3_dist(&curr_science_guy_pos, &contact_pos);
-				if (dist_to_selected < extra_popout_dist) {
+
+				/* check if contact is close to selected in 3d space */
+				double dist_to_selected = vec3_dist(&selected_pos, &contact_pos);
+				if (dist_to_selected < mark_popout_extra_dist) {
 					popout = 1;
 				} else {
-					union vec3 contact_mark_zero_pos;
-					heading_mark_to_vec3(dist, heading, 0, &contact_mark_zero_pos);
-					vec3_add_self(&contact_mark_zero_pos, &ship_pos);
+					/* check if contact is close to selected on sciplane */
+					union vec3 contact_m0_pos;
+					heading_mark_to_vec3(dist, heading, 0, &contact_m0_pos);
+					vec3_add_self(&contact_m0_pos, &ship_pos);
 
-					double dist_to_selected_zero_mark = vec3_dist(&curr_science_guy_mark_zero_pos, &contact_mark_zero_pos);
-					if (dist_to_selected_zero_mark < extra_popout_dist) {
+					double dist_to_selected_m0 = vec3_dist(&selected_m0_pos, &contact_m0_pos);
+					if (dist_to_selected_m0 < mark_popout_extra_dist) {
 						popout = 1;
 					}
 				}
 
 				if (popout) {
-					tween_add_or_update(sciplane_tween, go[i].id, 0, TWEEN_EXP_DECAY, popout_rate, 0, 1);
+					/* start the mark tween to popout */
+					tween_add_or_update(sciplane_tween, go[i].id, 0, TWEEN_EXP_DECAY, mark_popout_rate, 0, 1);
 				}
 			}
 
