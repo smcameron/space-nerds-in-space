@@ -5505,6 +5505,11 @@ void tween_add_or_update(struct tween_map* map, uint32_t id, float initial_value
 
 static struct tween_map* sciplane_tween = 0;
 
+float float_lerp(float from, float to, float t)
+{
+	return from + t * (to - from);
+}
+
 static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double range)
 {
 	static int first_run = 1;
@@ -5517,11 +5522,11 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	}
 
 	float fovy = 30.0 * M_PI / 180.0;
-	float dist_to_cam = range / tan(fovy/2.0);
+	float dist_to_cam_frac = 1.0 / tan(fovy/2.0);
 
 	float mark_popout_extra_dist = range * 0.2;
 	float mark_popout_rate = 0.10;
-	float mark_popout_zoom_dist_to_cam = range * 0.4 / tan(fovy/2.0);
+	float mark_popout_zoom_dist_to_cam_frac = 0.4 / tan(fovy/2.0);
 
 	struct entity *e = NULL;
 	int science_style = RENDER_DISABLE_CLIP;
@@ -5547,8 +5552,8 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 	/* cam orientation is locked with world */
 	static union quat cam_orientation = {{1,0,0,0}};
-	static union vec3 camera_pos = {{0,0,0}};
 	static union vec3 camera_lookat = {{0,0,0}};
+	static float cam_range_fraction = 0;
 
 	/* tilt camera foward */
 	union quat cam_orientation_selected;
@@ -5557,16 +5562,16 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	quat_init_axis(&cam_orientation_not_selected,1,0,0,degrees_to_radians(-60));
 
 	union quat *desired_cam_orientation;
-	union vec3 desired_camera_pos;
 	union vec3 desired_lookat;
+	float desired_cam_range_fraction;
 
 	if (curr_science_guy) {
 		desired_cam_orientation = &cam_orientation_selected;
-		vec3_init(&desired_camera_pos, 0, 0, mark_popout_zoom_dist_to_cam);
+		desired_cam_range_fraction = mark_popout_zoom_dist_to_cam_frac;
 		desired_lookat = selected_pos;
 	} else {
 		desired_cam_orientation = &cam_orientation_not_selected;
-		vec3_init(&desired_camera_pos, 0, 0, dist_to_cam);
+		desired_cam_range_fraction = dist_to_cam_frac;
 		desired_lookat = ship_pos;
 	}
 
@@ -5574,22 +5579,18 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 	if (first_run) {
 		cam_orientation = *desired_cam_orientation;
-
-		quat_rot_vec_self(&desired_camera_pos, &cam_orientation);
-		vec3_add_self(&desired_camera_pos, &desired_lookat);
-
-		camera_pos = desired_camera_pos;
+		cam_range_fraction = desired_cam_range_fraction;
 		camera_lookat = desired_lookat;
 		first_run = 0;
 	} else {
 		quat_nlerp(&cam_orientation, &cam_orientation, desired_cam_orientation, 0.15);
-
-		quat_rot_vec_self(&desired_camera_pos, &cam_orientation);
-		vec3_add_self(&desired_camera_pos, &desired_lookat);
-
-		vec3_lerp(&camera_pos, &camera_pos, &desired_camera_pos, 0.15);
 		vec3_lerp(&camera_lookat, &camera_lookat, &desired_lookat, 0.15);
+		cam_range_fraction = float_lerp(cam_range_fraction, desired_cam_range_fraction, 0.15);
 	}
+
+	union vec3 camera_pos = {{0, 0, cam_range_fraction * range}};
+	quat_rot_vec_self(&camera_pos, &cam_orientation);
+	vec3_add_self(&camera_pos, &desired_lookat);
 
 	/* churn the mark tween values */
 	tween_update(sciplane_tween);
