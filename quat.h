@@ -145,6 +145,7 @@ void quat_to_euler(union euler *e, const union quat *q);
 /* return angles
    heading as angle around y axis with zero at {1,0,0), positive toward -z, 0 to 2pi
    mark as angle from xz plane with zero at xz plane, positive toward +y, pi/2 to -pi/2 */
+void vec3_to_heading_mark(const union vec3 *dir, double *heading, double *mark);
 void quat_to_heading_mark(const union quat *q, double *heading, double *mark);
 
 /* normalize angle */

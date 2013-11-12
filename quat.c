@@ -130,18 +130,19 @@ void quat_conj(union quat *q_out, const union quat *q_in)
 	q_out->v.w = q_in->v.w;
 }
 
+/* heading is around y from x at zero torwards -z, heading is up/down from xz plane */
+void vec3_to_heading_mark(const union vec3 *dir, double *heading, double *mark)
+{
+	*heading = normalize_euler_0_2pi(atan2(-dir->v.z,dir->v.x));
+	float dist = sqrt(dir->v.x*dir->v.x + dir->v.y*dir->v.y + dir->v.z*dir->v.z);
+	*mark = asin(dir->v.y/dist);
+}
+
 void quat_to_heading_mark(const union quat *q, double *heading, double *mark)
 {
 	union vec3 dir = {{1,0,0}};
 	quat_rot_vec_self(&dir, q);
-
-	*heading = normalize_euler_0_2pi(atan2(-dir.v.z,dir.v.x));
-	float xz_distance = sqrt(dir.v.x*dir.v.x + dir.v.z*dir.v.z);
-	if ( xz_distance >= 1 ) {
-		*mark = 0;
-	} else {
-		*mark = copysign(acos(xz_distance),dir.v.y);
-	}
+	vec3_to_heading_mark(&dir, heading, mark);
 }
 
 void quat_to_euler(union euler *euler, const union quat *quat)
