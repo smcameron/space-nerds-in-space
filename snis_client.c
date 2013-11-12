@@ -2322,7 +2322,7 @@ static void deal_with_joystick()
 
 #define FRAME_RATE_HZ 30 
 	static const int joystick_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
-	static struct wwvi_js_event jse;
+	static struct wwvi_js_event jse = { { 0 } };
 	int i, rc;
 
 	if (joystick_fd < 0) /* no joystick */
