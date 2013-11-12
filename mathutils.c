@@ -115,6 +115,29 @@ static double double_modulus(double a, double b)
 /*
  * convert an angle between the following two systems. 
  *         game                           math
+ *          0                             90
+ *          |                              |
+ *    270 --+-- 90                  180 ---+--- 0
+ *          |                              |
+ *         180                            270
+ *
+ * Note this function happens to be its own inverse.
+ */
+double math_angle_to_game_angle_degrees(double angle)
+{
+	double a;
+
+	a = (360.0 - angle) + 90.0;
+	if (a < 0)
+		a += 360.0;
+	if (a >= 360.0)
+		a -= 360.0;
+	return double_modulus(a, 360.0);
+}
+
+/*
+ * convert an angle between the following two systems. 
+ *         game                           math
  *          0                             PI/2
  *          |                              |
  *  3*PI/2--+--PI/2                  PI ---+--- 0
