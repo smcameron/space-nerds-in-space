@@ -4883,15 +4883,15 @@ static void draw_degree_marks_with_labels(GtkWidget *w, GdkGC *gc,
 		int y1 = (int) (sin((10.0 * i) * M_PI / 180.0) * r);
 		int x2 = x1 * 0.25;
 		int y2 = y1 * 0.25;
-		x3 = x1 * 1.08 + x - 15;
+		x3 = x1 * 1.08 + x;
 		y3 = y1 * 1.08 + y;
 		x1 += x;
 		x2 += x;
 		y1 += y;
 		y2 += y;
 		sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
-		sprintf(buf, "%3d", (90 + i * 10) % 360);
-		sng_abs_xy_draw_string(w, gc, buf, font, x3, y3);
+		sprintf(buf, "%d", (90 + i * 10) % 360);
+		sng_center_xy_draw_string(w, gc, buf, font, x3, y3);
 	}
 }
 
@@ -6529,7 +6529,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	pthread_mutex_lock(&universe_mutex);
 
 	/* add my ship */
-	e = add_entity(navecx, ship_mesh, o->x, o->y, o->z, GREEN);
+	e = add_entity(navecx, ship_mesh, o->x, o->y, o->z, SHIP_COLOR);
 	set_render_style(e, science_style);
 	update_entity_scale(e, ship_scale);
 	update_entity_orientation(e, &o->orientation);
