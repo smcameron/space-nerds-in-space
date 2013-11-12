@@ -5350,7 +5350,7 @@ static void add_basis_ring(struct entity_context *ecx, float x, float y, float z
 		ring_mesh = init_circle_mesh(0, 0, 1, 60, 2.0f * M_PI);
 
 	quat_init_axis(&q, ax, ay, az, angle);
-	e = add_entity(sciballecx, ring_mesh, x, y, z, color);
+	e = add_entity(ecx, ring_mesh, x, y, z, color);
 	update_entity_scale(e, r);
 	update_entity_orientation(e, &q);
 	set_render_style(e, RENDER_POINT_CLOUD | RENDER_DISABLE_CLIP);
