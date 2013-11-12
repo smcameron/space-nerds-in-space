@@ -57,6 +57,9 @@ union euler {
 	float vec[3];
 };
 
+/* initialize with (x,y,z) */
+void vec3_init(union vec3 *vo, float x, float y, float z);
+
 /* copy vector vi to vo */
 union vec3* vec3_copy(union vec3 *vo, union vec3 *vi);
 
@@ -66,8 +69,17 @@ union vec3* vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
 /* v1 = v1 + v2, return v1 */
 union vec3* vec3_add_self(union vec3 *v1, const union vec3 *v2);
 
+/* v1 = v1 + (x,y,z), return v1 */
+union vec3* vec3_add_c_self(union vec3 *v1, float x, float y, float z);
+
 /* vo = v1 - v2, return vo */
 union vec3* vec3_sub(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
+
+/* v1 = v1 - v2, return v1 */
+union vec3* vec3_sub_self(union vec3 *v1, const union vec3 *v2);
+        
+/* v1 = v1 - (x,y,z), return v1 */
+union vec3* vec3_sub_c_self(union vec3 *v1, float x, float y, float z);
 
 /* vo = vi * scalar, return vo */
 union vec3* vec3_mul(union vec3 *vo, const union vec3 *vi, float scalar);
@@ -88,6 +100,9 @@ union vec3* vec3_rot_axis(union vec3 *vo, union vec3 *vi, float x, float y, floa
 
 /* vec3 rotate self by axis and angle */
 union vec3* vec3_rot_axis_self(union vec3 *vo, float x, float y, float z, float angle);
+
+double vec3_dist(const union vec3 *v1, const union vec3 *v2);
+double vec3_dist_c(const union vec3 *v1, float x, float y, float z);
 
 void vec3_print(const char* prefix, const union vec3 *v);
 
@@ -145,7 +160,8 @@ void quat_to_euler(union euler *e, const union quat *q);
 /* return angles
    heading as angle around y axis with zero at {1,0,0), positive toward -z, 0 to 2pi
    mark as angle from xz plane with zero at xz plane, positive toward +y, pi/2 to -pi/2 */
-void vec3_to_heading_mark(const union vec3 *dir, double *heading, double *mark);
+union vec3* heading_mark_to_vec3(float r, double heading, double mark, union vec3 *dir);
+void vec3_to_heading_mark(const union vec3 *dir, double *r, double *heading, double *mark);
 void quat_to_heading_mark(const union quat *q, double *heading, double *mark);
 
 /* normalize angle */

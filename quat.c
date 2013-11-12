@@ -130,19 +130,29 @@ void quat_conj(union quat *q_out, const union quat *q_in)
 	q_out->v.w = q_in->v.w;
 }
 
+union vec3* heading_mark_to_vec3(float r, double heading, double mark, union vec3 *dir)
+{
+	dir->v.x = r*cos(mark)*cos(heading);
+	dir->v.y = r*sin(mark);
+	dir->v.z = -r*cos(mark)*sin(heading);
+	return dir;
+}
+
 /* heading is around y from x at zero torwards -z, heading is up/down from xz plane */
-void vec3_to_heading_mark(const union vec3 *dir, double *heading, double *mark)
+void vec3_to_heading_mark(const union vec3 *dir, double *r, double *heading, double *mark)
 {
 	*heading = normalize_euler_0_2pi(atan2(-dir->v.z,dir->v.x));
 	float dist = sqrt(dir->v.x*dir->v.x + dir->v.y*dir->v.y + dir->v.z*dir->v.z);
 	*mark = asin(dir->v.y/dist);
+	if (r)
+		*r = dist;
 }
 
 void quat_to_heading_mark(const union quat *q, double *heading, double *mark)
 {
 	union vec3 dir = {{1,0,0}};
 	quat_rot_vec_self(&dir, q);
-	vec3_to_heading_mark(&dir, heading, mark);
+	vec3_to_heading_mark(&dir, 0, heading, mark);
 }
 
 void quat_to_euler(union euler *euler, const union quat *quat)
@@ -304,6 +314,13 @@ void random_axis_quat(union quat *q)
 	quat_init_axis_v(q, &v, angle);
 }
 
+void vec3_init(union vec3 *vo, float x, float y, float z)
+{
+	vo->v.x = x;
+	vo->v.y = y;
+	vo->v.z = z;
+}
+
 union vec3* vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
 {
 	vo->vec[0] = v1->vec[0] + v2->vec[0];
@@ -317,12 +334,33 @@ union vec3* vec3_add_self(union vec3 *v1, const union vec3 *v2)
 	return vec3_add(v1, v1, v2);
 }
 
+union vec3* vec3_add_c_self(union vec3 *v1, float x, float y, float z)
+{
+	v1->v.x += x;
+	v1->v.y += y;
+	v1->v.z += z;
+	return v1;
+}
+
 union vec3* vec3_sub(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
 {
 	vo->vec[0] = v1->vec[0] - v2->vec[0];
 	vo->vec[1] = v1->vec[1] - v2->vec[1];
 	vo->vec[2] = v1->vec[2] - v2->vec[2];
 	return vo;
+}
+
+union vec3* vec3_sub_self(union vec3 *v1, const union vec3 *v2)
+{
+	return vec3_sub(v1, v1, v2);
+}
+
+union vec3* vec3_sub_c_self(union vec3 *v1, float x, float y, float z)
+{
+	v1->v.x -= x;
+	v1->v.y -= y;
+	v1->v.z -= z;
+	return v1;
 }
 
 union vec3* vec3_mul(union vec3 *vo, const union vec3 *vi, float scalar)
@@ -380,6 +418,22 @@ union vec3* vec3_rot_axis_self(union vec3 *vo, float x, float y, float z, float 
 	quat_init_axis(&rotate, x, y, z, angle);
 	quat_rot_vec_self(vo, &rotate);
 	return vo;
+}
+
+double vec3_dist(const union vec3 *v1, const union vec3 *v2)
+{
+	return sqrt(
+		(v1->v.x - v2->v.x)*(v1->v.x - v2->v.x) +
+		(v1->v.y - v2->v.y)*(v1->v.y - v2->v.y) +
+		(v1->v.z - v2->v.z)*(v1->v.z - v2->v.z));
+}
+
+double vec3_dist_c(const union vec3 *v1, float x, float y, float z)
+{
+	return sqrt(
+		(v1->v.x - x)*(v1->v.x - x) +
+		(v1->v.y - y)*(v1->v.y - y) +
+		(v1->v.z - z)*(v1->v.z - z));
 }
 
 void vec3_print(const char* prefix, const union vec3 *v)
