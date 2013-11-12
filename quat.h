@@ -176,7 +176,7 @@ union vec3* vec3_lerp(union vec3* vo, const union vec3* vfrom, const union vec3*
  * this will apply yaw/pitch/roll *in the ship's local coord system* to the
  * orientation.
  */
-void quat_apply_relative_yaw_pitch_roll(union quat *q,
+union quat *quat_apply_relative_yaw_pitch_roll(union quat *q,
                                         double yaw, double pitch, double roll);
 
 #endif /* __QUAT_H__ */
