@@ -6728,7 +6728,7 @@ static void show_navigation(GtkWidget *w)
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
 	sectorx = floor(10.0 * o->x / (double) XKNOWN_DIM);
 	sectorz = floor(10.0 * o->z / (double) ZKNOWN_DIM);
-	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf)", sectorz + 'A', sectorx, o->x, o->z);
+	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf, %5.2lf)", sectorz + 'A', sectorx, o->x, o->y, o->z);
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, LINEHEIGHT);
 
 	double display_mark;
