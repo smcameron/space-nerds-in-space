@@ -83,6 +83,12 @@ union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v
 
 union vec3 *vec3_normalize(union vec3 *vo, union vec3 *vi);
 
+/* vec3 rotate by axis and angle */
+union vec3* vec3_rot_axis(union vec3 *vo, union vec3 *vi, float x, float y, float z, float angle);
+
+/* vec3 rotate self by axis and angle */
+union vec3* vec3_rot_axis_self(union vec3 *vo, float x, float y, float z, float angle);
+
 void vec3_print(const char* prefix, const union vec3 *v);
 
 /* init orientation quaternion from measurements */

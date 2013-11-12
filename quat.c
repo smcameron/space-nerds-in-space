@@ -365,6 +365,22 @@ union vec3 *vec3_normalize(union vec3 *vo, union vec3 *vi)
 	return vo;
 }
 
+/* vec3 rotate by axis and angle */
+union vec3* vec3_rot_axis(union vec3 *vo, union vec3 *vi, float x, float y, float z, float angle)
+{
+	vec3_copy(vo, vi);
+	return vec3_rot_axis_self(vo, x, y, z, angle);
+}
+
+/* vec3 rotate self by axis and angle */
+union vec3* vec3_rot_axis_self(union vec3 *vo, float x, float y, float z, float angle)
+{
+	union quat rotate;
+	quat_init_axis(&rotate, x, y, z, angle);
+	quat_rot_vec_self(vo, &rotate);
+	return vo;
+}
+
 void vec3_print(const char* prefix, const union vec3 *v)
 {
 	printf("%s%f, %f, %f\n", prefix, v->v.x, v->v.y, v->v.z);
