@@ -7642,9 +7642,16 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o)
-		sprintf(buffer, "Y: %8.2lf", o->z);
+		sprintf(buffer, "Y: %8.2lf", o->y);
 	else
 		sprintf(buffer, "Y:");
+	y += 25;
+	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+
+	if (o)
+		sprintf(buffer, "Z: %8.2lf", o->z);
+	else
+		sprintf(buffer, "Z:");
 	y += 25;
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
@@ -7763,8 +7770,7 @@ static void show_science(GtkWidget *w)
 	display_heading = to_uheading(o->tsd.ship.sci_heading);
 	normalize_angle(&display_heading);
 	display_heading *= 180.0 / M_PI;
-	sprintf(buf, "LOCATION: (%5.2lf, %5.2lf)  HEADING: %3.1lf", o->x, o->y,
-			display_heading);
+	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf) HEADING: %3.1lf", o->x, o->y, o->z, display_heading);
 	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 200, LINEHEIGHT);
 #if 0
 	rx = SCIENCE_SCOPE_X;
@@ -7817,8 +7823,7 @@ static void show_3d_science(GtkWidget *w)
 	display_heading = to_uheading(o->tsd.ship.sci_heading);
 	normalize_angle(&display_heading);
 	display_heading *= 180.0 / M_PI;
-	sprintf(buf, "LOCATION: (%5.2lf, %5.2lf)  HEADING: %3.1lf", o->x, o->y,
-			display_heading);
+	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf) HEADING: %3.1lf", o->x, o->y, o->z, display_heading);
 	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 200, LINEHEIGHT);
 #if 0
 	rx = SCIENCE_SCOPE_X;
