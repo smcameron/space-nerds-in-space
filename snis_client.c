@@ -3304,9 +3304,11 @@ static struct science_ui {
 #define SCI_DETAILS_MODE_TWOD 0
 #define SCI_DETAILS_MODE_THREED 1
 #define SCI_DETAILS_MODE_DETAILS 2
+#define SCI_DETAILS_MODE_SCIPLANE 3
 	struct slider *scizoom;
 	struct button *details_button;
 	struct button *threed_button;
+	struct button *sciplane_button;
 	struct button *twod_button;
 } sci_ui;
 
@@ -5339,6 +5341,482 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	}
 }
 
+void snis_draw_3d_dotted_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2 )
+{
+	float sx1, sy1, sx2, sy2;
+	transform_point(cx, x1, y1, z1, &sx1, &sy1, 0);
+	transform_point(cx, x2, y2, z2, &sx2, &sy2, 0);
+	sng_draw_dotted_line(w->window, gc, sx1, sy1, sx2, sy2);
+}
+
+void snis_draw_3d_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2 )
+{
+	float sx1, sy1, sx2, sy2;
+	transform_point(cx, x1, y1, z1, &sx1, &sy1, 0);
+	transform_point(cx, x2, y2, z2, &sx2, &sy2, 0);
+	snis_draw_line(w->window, gc, sx1, sy1, sx2, sy2);
+}
+
+void draw_3d_mark_arc(GtkWidget *w, GdkGC *gc, struct entity_context *ecx, const union vec3 *center, float r, float heading, float mark)
+{
+	/* break arc into max 5 degree segments */
+	int increments = abs(mark / (5.0 * M_PI / 180.0))+1;
+	float delta = mark/increments;
+	int i;
+	union vec3 p1;
+	for (i=0;i<=increments; i++){
+		union vec3 p2;
+		heading_mark_to_vec3(r, heading, delta * i, &p2);
+		vec3_add_self(&p2, center);
+
+		if (i!=0) {
+			snis_draw_3d_line(w, gc, ecx, p1.v.x, p1.v.y, p1.v.z, p2.v.x, p2.v.y, p2.v.z);
+		}
+		p1 = p2;
+	}
+}
+
+static void add_basis_ring(struct entity_context *ecx, float x, float y, float z,
+		float ax, float ay, float az, float angle, float r, int color);
+
+enum {
+	TWEEN_EXP_DECAY,
+	TWEEN_LINEAR_DECAY
+};
+
+struct tween_state
+{
+	char active;
+	uint32_t id;
+	float value;
+	int mode;
+	float delta;
+	float min;
+	float max;
+};
+
+struct tween_map
+{
+	int last_index;
+	struct tween_state* states;
+};
+
+struct tween_map* tween_init(int max_size)
+{
+	struct tween_map* result = malloc(sizeof(struct tween_map));
+	result->last_index=0;
+	result->states = malloc(sizeof(struct tween_state) * max_size);
+	memset(result->states,0,sizeof(struct tween_state) * max_size);
+	return result;
+}
+
+void tween_update(struct tween_map* map)
+{
+	int i;
+	for (i=0; i < map->last_index; i++) {
+		if (!map->states[i].active)
+			continue;
+
+		switch (map->states[i].mode) {
+		case TWEEN_LINEAR_DECAY:
+			map->states[i].value += map->states[i].delta;
+			break;
+		case TWEEN_EXP_DECAY:
+			if (map->states[i].delta < 0)
+				map->states[i].value += (map->states[i].value - map->states[i].min) * map->states[i].delta;
+			else
+				map->states[i].value += (map->states[i].max - map->states[i].value) * map->states[i].delta;
+			break;
+		}
+		if (map->states[i].value > map->states[i].max)
+			map->states[i].value = map->states[i].max;
+		if (map->states[i].value < map->states[i].min)
+			map->states[i].value = map->states[i].min;
+
+		if (map->states[i].mode == TWEEN_EXP_DECAY || map->states[i].mode == TWEEN_EXP_DECAY) {
+			/* if we have decayed to < 1% then we are not active */
+			if (map->states[i].value < (map->states[i].max - map->states[i].min) * 0.01) {
+				map->states[i].active = 0;
+			}
+		}
+	}
+}
+
+int tween_get_value(struct tween_map* map, uint32_t id, float *value)
+{
+	int i;
+	for (i=0; i < map->last_index; i++) {
+		if (map->states[i].active && map->states[i].id == id) {
+			*value = map->states[i].value;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int tween_get_value_and_decay(struct tween_map* map, uint32_t id, float *value)
+{
+	int i;
+	for (i=0; i < map->last_index; i++) {
+		if (map->states[i].active && map->states[i].id == id) {
+			if (map->states[i].delta>0) {
+				map->states[i].delta = -map->states[i].delta;
+			}
+			*value = map->states[i].value;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
+void tween_add_or_update(struct tween_map* map, uint32_t id, float initial_value, int mode, float delta, float min, float max)
+{
+	int first_free = map->last_index;
+        int i;
+        for (i=0; i < map->last_index; i++) {
+                if (!map->states[i].active) {
+			if (i<first_free) {
+				first_free=i;
+			}
+			continue;
+		}
+		if (map->states[i].id == id) {
+			map->states[i].mode = mode;
+			map->states[i].delta = delta;
+			map->states[i].min = min;
+			map->states[i].max = max;
+                        return;
+		}
+        }
+
+	map->states[first_free].id = id;
+	map->states[first_free].active = 1;
+	map->states[first_free].value = initial_value;
+	map->states[first_free].mode = mode;
+	map->states[first_free].delta = delta;
+	map->states[first_free].min = min;
+	map->states[first_free].max = max;
+
+	if (first_free>=map->last_index) {
+		map->last_index = first_free+1;
+	}
+}
+
+static struct tween_map* sciplane_tween = 0;
+
+static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double range)
+{
+	static struct mesh *ring_mesh = 0;
+	static struct mesh *heading_ind_line_mesh = 0;
+
+	if (!ring_mesh) {
+		ring_mesh = init_circle_mesh(0, 0, 1, 90, 2.0f * M_PI);
+		heading_ind_line_mesh = init_line_mesh(0.9, 0, 0, 1, 0, 0);
+	}
+
+	float extra_popout_dist = range * 0.2;
+	float popout_rate = 0.10;
+	float fovy = 30.0 * M_PI / 180.0;
+	float distance_to_cam = range / tan(fovy/2.0);
+
+	struct entity *e = NULL;
+	int science_style = RENDER_DISABLE_CLIP;
+
+	union vec3 ship_pos = {{o->x, o->y, o->z}};
+	union vec3 ship_normal = {{0, 1, 0}};
+	quat_rot_vec_self(&ship_normal, &o->orientation);
+
+	/* cam orientation is locked with world */
+	static union quat cam_orientation = {{1,0,0,0}};
+
+	/* tilt camera foward */
+	union quat cam_orientation_selected;
+	quat_init_axis(&cam_orientation_selected,1,0,0,degrees_to_radians(-30));
+	union quat cam_orientation_not_selected;
+	quat_init_axis(&cam_orientation_not_selected,1,0,0,degrees_to_radians(-60));
+
+	if (curr_science_guy) {
+		quat_nlerp(&cam_orientation, &cam_orientation,&cam_orientation_selected,0.15);
+	} else {
+		quat_nlerp(&cam_orientation, &cam_orientation,&cam_orientation_not_selected,0.15);
+	}
+	tween_update(sciplane_tween);
+
+	union vec3 camera_up = {{0,1,0}};
+	quat_rot_vec_self(&camera_up, &cam_orientation);
+
+	/* rotate camera position to match cam_orientation */
+	union vec3 camera_pos = {{0, 0, distance_to_cam}};
+	quat_rot_vec_self(&camera_pos, &cam_orientation);
+	vec3_add_self(&camera_pos, &ship_pos);
+
+	/* look directly at ship */
+	union vec3 camera_lookat = {{0, 0, 0}};
+	quat_rot_vec_self(&camera_lookat, &cam_orientation);
+	vec3_add_self(&camera_lookat, &ship_pos);
+
+	camera_assign_up_direction(navecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
+	camera_set_pos(navecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(navecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
+
+        set_renderer(navecx, WIREFRAME_RENDERER);
+	/* camera_set_orthgraphic_parameters(navecx, 0.5, 8000.0, range, SCREEN_WIDTH, SCREEN_HEIGHT); */
+	camera_set_parameters(navecx, 0.5, 8000.0, SCREEN_WIDTH, SCREEN_HEIGHT, fovy);
+	calculate_camera_transform(navecx);
+
+	e = add_entity(navecx, ring_mesh, o->x, o->y, o->z, DARKRED);
+	update_entity_scale(e, range);
+	set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+
+	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 0.0f, range * 0.98, RED);
+	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 90.0f * M_PI / 180.0, range * 0.98, DARKGREEN);
+	add_basis_ring(navecx, o->x, o->y, o->z, 0.0f, 0.0f, 1.0f, 90.0f * M_PI / 180.0, range * 0.98, BLUE);
+
+	int i;
+	for (i=0; i<2; ++i) {
+		int color;
+		union quat ind_orientation;
+		if (i==0) {
+			color = RED;
+			ind_orientation = o->orientation;
+		} else {
+			color = DARKTURQUOISE;
+			/* temp until gun heading is a quat */
+			quat_init_axis(&ind_orientation,0,1,0,o->tsd.ship.gun_heading);
+		}
+
+		/* add gun heading arrow */
+		union vec3 ind_pos = {{range,0,0}};
+		quat_rot_vec_self(&ind_pos, &ind_orientation);
+		vec3_add_self(&ind_pos, &ship_pos);
+		e = add_entity(navecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
+		update_entity_scale(e, heading_indicator_mesh->radius*range/100.0);
+		update_entity_orientation(e, &ind_orientation);
+		set_render_style(e, RENDER_DISABLE_CLIP);
+
+		/* gun heading arrow tail */
+		e = add_entity(navecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
+		update_entity_scale(e, range);
+		update_entity_orientation(e, &ind_orientation);
+		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+	}
+
+	/* heading labels */
+	{
+		int font = NANO_FONT;
+		char buf[10];
+		int i;
+		const int slices = 24;
+
+		for (i = 0; i < slices; i++) { /* 10 degree increments */
+			float angle = i * 2.0 * M_PI / (float)slices;
+			float x3, z3;
+			float x1 = cos(angle) * range;
+			float z1 = -sin(angle) * range;
+			float x2 = x1 * 0.25;
+			float z2 = z1 * 0.25;
+			x3 = x1 * 1.08 + o->x;
+			z3 = z1 * 1.08 + o->z;
+			x1 += o->x;
+			z1 += o->z;
+			x2 += o->x;
+			z2 += o->z;
+
+			float sx1, sy1, sx2, sy2, sx3, sy3;
+			transform_point(navecx, x1, o->y, z1, &sx1, &sy1, 0);
+			transform_point(navecx, x2, o->y, z2, &sx2, &sy2, 0);
+			transform_point(navecx, x3, o->y, z3, &sx3, &sy3, 0);
+
+			sng_draw_dotted_line(w->window, gc, sx1, sy1, sx2, sy2);
+			sprintf(buf, "%d", (int)math_angle_to_game_angle_degrees(i * 360.0/slices));
+			sng_center_xy_draw_string(w, gc, buf, font, sx3, sy3);
+		}
+	}
+
+	/* scan indicator */
+	{
+		float tx1, tz1, tx2, tz2, sx1, sy1, sx2, sy2;
+		float heading = o->tsd.ship.sci_heading;
+		float beam_width = fabs(o->tsd.ship.sci_beam_width);
+		sng_set_foreground(LIMEGREEN);
+
+		tx1 = o->x + cos(heading - beam_width / 2) * range * 0.05;
+		tz1 = o->z - sin(heading - beam_width / 2) * range * 0.05;
+		tx2 = o->x + cos(heading - beam_width / 2) * range;
+		tz2 = o->z - sin(heading - beam_width / 2) * range;
+		transform_point(navecx, tx1, o->y, tz1, &sx1, &sy1, 0);
+		transform_point(navecx, tx2, o->y, tz2, &sx2, &sy2, 0);
+		sng_draw_electric_line(w->window, gc, sx1, sy1, sx2, sy2);
+
+		tx1 = o->x + cos(heading + beam_width / 2) * range * 0.05;
+		tz1 = o->z - sin(heading + beam_width / 2) * range * 0.05;
+		tx2 = o->x + cos(heading + beam_width / 2) * range;
+		tz2 = o->z - sin(heading + beam_width / 2) * range;
+		transform_point(navecx, tx1, o->y, tz1, &sx1, &sy1, 0);
+		transform_point(navecx, tx2, o->y, tz2, &sx2, &sy2, 0);
+		sng_draw_electric_line(w->window, gc, sx1, sy1, sx2, sy2);
+	}
+
+	/* add my ship */
+	e = add_entity(navecx, ship_mesh, o->x, o->y, o->z, SHIP_COLOR);
+	set_render_style(e, science_style);
+	update_entity_scale(e, range/250.0);
+	update_entity_orientation(e, &o->orientation);
+
+	render_entities(w, gc, navecx);
+
+	/* draw all the rest onto the 3d scene */
+	{
+		int i, pwr;
+		double bw, dist2, dist;
+		int selected_guy_still_visible = 0, prev_selected_guy_still_visible = 0;
+		int nebula_factor = 0;
+
+		pwr = o->tsd.ship.power_data.sensors.i;
+		/* Draw all the stuff */
+
+		union vec3 ship_pos = {{o->x, o->y, o->z}};
+		bw = o->tsd.ship.sci_beam_width * 180.0 / M_PI;
+
+		sng_set_foreground(GREEN);
+		pthread_mutex_lock(&universe_mutex);
+
+		/* figure out the location of curr selected target in real space and on sciplane */
+		union vec3 curr_science_guy_pos;
+		union vec3 curr_science_guy_mark_zero_pos;
+		if (curr_science_guy) {
+			vec3_init(&curr_science_guy_pos, curr_science_guy->x, curr_science_guy->y, curr_science_guy->z);
+
+			/* take currnet position, find dir from ship to it, get heading/mark, recalc pos with mark=0 */
+			double dist, heading, mark;
+			union vec3 curr_science_guy_dir = curr_science_guy_pos;
+			vec3_sub_self(&curr_science_guy_dir, &ship_pos);
+			vec3_to_heading_mark(&curr_science_guy_dir, &dist, &heading, &mark);
+			heading_mark_to_vec3(dist, heading, 0, &curr_science_guy_mark_zero_pos);
+			vec3_add_self(&curr_science_guy_mark_zero_pos, &ship_pos);
+		}
+
+		nscience_guys = 0;
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			if (!go[i].alive)
+				continue;
+
+			if (go[i].id == my_ship_id)
+				continue; /* skip drawing yourself. */
+#if 0
+			if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
+				draw_science_laserbeam(w, gc, o, &go[i], cx, cy, r, range);
+				continue;
+			}
+#endif
+			dist2 = dist3dsqrd(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
+			if (go[i].type == OBJTYPE_NEBULA) {
+				if (dist2 < go[i].tsd.nebula.r * go[i].tsd.nebula.r)
+					nebula_factor++;
+				continue;
+			}
+			if (dist2 > range * range)
+				continue; /* not close enough */
+			dist = sqrt(dist2);
+
+#if 0
+			if (within_nebula(go[i].x, go[i].y))
+				continue;
+#endif
+			union vec3 contact_pos = {{go[i].x, go[i].y, go[i].z}};
+
+			union vec3 dir;
+			vec3_sub(&dir, &contact_pos, &ship_pos);
+			double heading, mark;
+			vec3_to_heading_mark(&dir, 0, &heading, &mark);
+
+			float tween = 0;
+			tween_get_value_and_decay(sciplane_tween, go[i].id, &tween);
+
+			union vec3 display_pos;
+			heading_mark_to_vec3(dist, heading, mark * tween, &display_pos);
+			vec3_add_self(&display_pos, &ship_pos);
+
+			if ( tween > 0 ) {
+				/* show the flyout arc */
+				sng_set_foreground(DARKTURQUOISE);
+				draw_3d_mark_arc(w, gc, navecx, &ship_pos, dist, heading, mark * tween * 0.9);
+			}
+
+			float sx, sy;
+			transform_point(navecx, display_pos.v.x, display_pos.v.y, display_pos.v.z, &sx, &sy, 0);
+			snis_draw_science_guy(w, gc, &go[i], sx, sy, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor);
+
+			if (go[i].sdata.science_data_known && curr_science_guy) {
+				int popout = 0;
+				double dist_to_selected = vec3_dist(&curr_science_guy_pos, &contact_pos);
+				if (dist_to_selected < extra_popout_dist) {
+					popout = 1;
+				} else {
+					union vec3 contact_mark_zero_pos;
+					heading_mark_to_vec3(dist, heading, 0, &contact_mark_zero_pos);
+					vec3_add_self(&contact_mark_zero_pos, &ship_pos);
+
+					double dist_to_selected_zero_mark = vec3_dist(&curr_science_guy_mark_zero_pos, &contact_mark_zero_pos);
+					if (dist_to_selected_zero_mark < extra_popout_dist) {
+						popout = 1;
+					}
+				}
+
+				if (popout) {
+					tween_add_or_update(sciplane_tween, go[i].id, 0, TWEEN_EXP_DECAY, popout_rate, 0, 1);
+				}
+			}
+
+			/* cache screen coords for mouse picking */
+			science_guy[nscience_guys].o = &go[i];
+			science_guy[nscience_guys].sx = sx;
+			science_guy[nscience_guys].sy = sy;
+			if (&go[i] == curr_science_guy) {
+				selected_guy_still_visible = 1;
+			}
+			if (prev_science_guy == &go[i]) {
+				prev_selected_guy_still_visible = 1;
+			}
+			nscience_guys++;
+		}
+
+		if (prev_science_guy && !selected_guy_still_visible && prev_selected_guy_still_visible) {
+			/* If we moved the beam off our guy, and back on, select him again. */
+			curr_science_guy = prev_science_guy;
+			prev_science_guy = NULL;
+		}
+		else if (!selected_guy_still_visible && curr_science_guy) {
+			prev_science_guy = curr_science_guy;
+			curr_science_guy = NULL;
+		}
+
+		pthread_mutex_unlock(&universe_mutex);
+
+		if (nebula_factor) {
+			for (i = 0; i < 300; i++) {
+				double angle;
+				double radius;
+
+				angle = 360.0 * ((double) snis_randn(10000) / 10000.0) * M_PI / 180.0;
+				radius = (snis_randn(1000) / 1000.0) / 2.0;
+				radius = 1.0 - (radius * radius * radius);
+				radius = radius * range;
+				radius = radius - ((range / MAX_SCIENCE_SCREEN_RADIUS)  * (snis_randn(50) / 75.0) * range);
+
+				float sx1, sy1, sx2, sy2;
+				transform_point(navecx, o->x + cos(angle) * range, o->y, o->z - sin(angle) * range, &sx1, &sy1, 0);
+				transform_point(navecx, o->x + cos(angle) * radius, o->y, o->z - sin(angle) * radius, &sx2, &sy2, 0);
+
+				snis_draw_line(w->window, gc, sx1, sy1, sx2, sy2);
+			}
+		}
+	}
+
+	remove_all_entity(navecx);
+}
+
 static void add_basis_ring(struct entity_context *ecx, float x, float y, float z,
 		float ax, float ay, float az, float angle, float r, int color)
 {
@@ -7219,22 +7697,32 @@ static void sci_threed_pressed(void *x)
 		(unsigned char) SCI_DETAILS_MODE_THREED));
 }
 
+static void sci_sciplane_pressed(void *x)
+{
+	queue_to_server(packed_buffer_new("hb", OPCODE_SCI_DETAILS,
+		(unsigned char) SCI_DETAILS_MODE_SCIPLANE));
+}
+
 static void init_science_ui(void)
 {
 	sci_ui.scizoom = snis_slider_init(350, 50, 300, DARKGREEN, "Range", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom);
-	sci_ui.details_button = snis_button_init(450, 575, 75, 20, "DETAILS",
-			GREEN, NANO_FONT, sci_details_pressed, (void *) 0);
-	sci_ui.twod_button = snis_button_init(410, 575, 40, 20, "2D",
+	sci_ui.twod_button = snis_button_init(370, 575, 40, 20, "2D",
 			GREEN, NANO_FONT, sci_twod_pressed, (void *) 0);
-	sci_ui.threed_button = snis_button_init(370, 575, 40, 20, "3D",
+	sci_ui.sciplane_button = snis_button_init(410, 575, 40, 20, "3DP",
+			GREEN, NANO_FONT, sci_sciplane_pressed, (void *) 0);
+	sci_ui.threed_button = snis_button_init(450, 575, 40, 20, "3DB",
 			GREEN, NANO_FONT, sci_threed_pressed, (void *) 0);
+	sci_ui.details_button = snis_button_init(490, 575, 75, 20, "DETAILS",
+			GREEN, NANO_FONT, sci_details_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.twod_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE);
+	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE);
 	sciecx = entity_context_new(50);
 	sciballecx = entity_context_new(5000);
+	sciplane_tween = tween_init(500);
 }
 
 static void comms_screen_button_pressed(void *x)
@@ -7793,6 +8281,8 @@ static void show_science(GtkWidget *w)
 		draw_all_the_science_guys(w, o, zoom);
 		draw_all_the_science_sparks(w, o, zoom);
 		draw_all_the_science_nebulae(w, o, zoom);
+	} else if (sci_ui.details_mode == SCI_DETAILS_MODE_SCIPLANE) {
+		draw_sciplane_display(w, o, zoom);
 	} else {
 		draw_science_details(w, gc);
 	}
