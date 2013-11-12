@@ -5391,7 +5391,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 	int nebula_factor = 0;
 	union vec3 ship_pos = { { o->x, o->y, o->z } };
 	union vec3 ship_up = { { 0, 1, 0 } };
-	double screen_radius = ((((current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM * 2;
+	double screen_radius = ((((current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM * 3;
 	union vec3 camera_pos = { { -screen_radius * 1.80, screen_radius * 0.85, 0} };
 	quat_rot_vec_self(&ship_up, &o->tsd.ship.sciball_orientation);
 
