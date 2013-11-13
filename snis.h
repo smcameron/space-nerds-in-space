@@ -25,6 +25,7 @@
 
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 300000.0
+#define YKNOWN_DIM (XKNOWN_DIM * 0.1) /* i guess... */
 #define ZKNOWN_DIM (XKNOWN_DIM * (600.0/800.0))  /* assumes 800x600 screen aspect ratio */
 
 #define UNIVERSE_DIM ((XKNOWN_DIM) * 4.0)
