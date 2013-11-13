@@ -541,6 +541,38 @@ static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packe
 	client_unlock();
 }
 
+/* send packet to a particular client, plus clients with the specified roles,
+ * on a bridge.  This is used for the sub-modes of various screens, so that
+ * that multiple science stations (for example) on the same ship can be on
+ * different sub screens (e.g. sciball vs. 2d) so long as those stations do
+ * not support MAIN_SCREEN_ROLE (for example).  This enables "spectator" screens
+ * that do not have their modes myteriously changed by remote parties while
+ * still enabling the captain to order any screen "onscreen!" to be mirrored
+ * by the MAIN SCREEN.
+ */
+static void send_packet_to_requestor_plus_role_on_a_bridge(struct game_client *requestor,
+				struct packed_buffer *pb, uint32_t roles)
+{
+	int i;
+
+	client_lock();
+	for (i = 0; i < nclients; i++) {
+		struct packed_buffer *pbc;
+		struct game_client *c = &client[i];
+
+		if (c->shipid != requestor->shipid)
+			continue;
+
+		if (!(c->role & roles) && c != requestor)
+			continue;
+
+		pbc = packed_buffer_copy(pb);
+		pb_queue_to_client(c, pbc);
+	}
+	packed_buffer_free(pb);
+	client_unlock();
+}
+
 static void send_packet_to_all_clients(struct packed_buffer *pb, uint32_t roles)
 {
 	send_packet_to_all_clients_on_a_bridge(ANY_SHIP_ID, pb, roles);
@@ -3580,9 +3612,9 @@ static int process_sci_details(struct game_client *c)
 	/* just turn it around and fan it out to all the right places */
 	if (new_details > 2)
 		new_details = 0;
-	send_packet_to_all_clients_on_a_bridge(c->shipid, 
+	send_packet_to_requestor_plus_role_on_a_bridge(c, 
 			packed_buffer_new("hb", OPCODE_SCI_DETAILS,
-			new_details), ROLE_SCIENCE);
+			new_details), ROLE_MAIN);
 	return 0;
 }
 
@@ -3596,9 +3628,9 @@ static int process_nav_details(struct game_client *c)
 	if (rc)
 		return rc;
 	/* just turn it around and fan it out to all the right places */
-	send_packet_to_all_clients_on_a_bridge(c->shipid, 
+	send_packet_to_requestor_plus_role_on_a_bridge(c, 
 			packed_buffer_new("hb", OPCODE_NAV_DETAILS,
-			!!(new_details)), ROLE_NAVIGATION);
+			!!(new_details)), ROLE_MAIN);
 	return 0;
 }
 
