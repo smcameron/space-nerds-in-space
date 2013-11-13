@@ -2028,7 +2028,8 @@ static void explosion_move(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 }
 
-static int add_generic_object(double x, double z, double vx, double vz, double heading, int type)
+static int add_generic_object(double x, double y, double z,
+				double vx, double vy, double vz, double heading, int type)
 {
 	int i;
 	char *n;
@@ -2041,8 +2042,9 @@ static int add_generic_object(double x, double z, double vx, double vz, double h
 	go[i].id = get_new_object_id();
 	go[i].index = i;
 	go[i].alive = 1;
-	set_object_location(&go[i], x, 0.0, z);
+	set_object_location(&go[i], x, y, z);
 	go[i].vx = vx;
+	go[i].vy = vy;
 	go[i].vz = vz;
 	go[i].heading = heading;
 	go[i].type = type;
@@ -2227,7 +2229,7 @@ static int add_player(double x, double z, double vx, double vz, double heading)
 {
 	int i;
 
-	i = add_generic_object(x, z, vx, vz, heading, OBJTYPE_SHIP1);
+	i = add_generic_object(x, 0.0, z, vx, 0.0, vz, heading, OBJTYPE_SHIP1);
 	if (i < 0)
 		return i;
 	init_player(&go[i]);
@@ -2256,10 +2258,9 @@ static int add_ship(void)
 	y = (double) snis_randn(700) - 350;
 	z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
 	heading = degrees_to_radians(0.0 + snis_randn(360)); 
-	i = add_generic_object(x, z, 0.0, 0.0, heading, OBJTYPE_SHIP2);
+	i = add_generic_object(x, y, z, 0.0, 0.0, 0.0, heading, OBJTYPE_SHIP2);
 	if (i < 0)
 		return i;
-	go[i].y = y;
 	go[i].move = ship_move;
 	go[i].tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
 	go[i].tsd.ship.shields = 100.0;
@@ -2402,12 +2403,11 @@ static int add_spacemonster(double x, double y, double z)
 	double heading;
 
 	heading = degrees_to_radians(0.0 + snis_randn(360)); 
-	i = add_generic_object(x, z, 0.0, 0.0, heading, OBJTYPE_SPACEMONSTER);
+	i = add_generic_object(x, y, z, 0.0, 0.0, 0.0, heading, OBJTYPE_SPACEMONSTER);
 	if (i < 0)
 		return i;
 	go[i].tsd.spacemonster.zz = 0.0;
 	go[i].move = spacemonster_move;
-	go[i].y = y;
 	return i;
 }
 
@@ -2439,7 +2439,7 @@ static int add_asteroid(double x, double z, double vx, double vz, double heading
 {
 	int i;
 
-	i = add_generic_object(x, z, vx, vz, heading, OBJTYPE_ASTEROID);
+	i = add_generic_object(x, 0.0, z, vx, 0.0, vz, heading, OBJTYPE_ASTEROID);
 	if (i < 0)
 		return i;
 	if (snis_randn(100) < 50)
@@ -2461,10 +2461,9 @@ static int add_starbase(double x, double y, double z,
 {
 	int i;
 
-	i = add_generic_object(x, z, vx, vz, heading, OBJTYPE_STARBASE);
+	i = add_generic_object(x, y, z, vx, 0.0, vz, heading, OBJTYPE_STARBASE);
 	if (i < 0)
 		return i;
-	go[i].y = y;
 	if (n < 0)
 		n = -n;
 	n %= 99;
@@ -2505,10 +2504,9 @@ static int add_nebula(double x, double y, double z,
 {
 	int i;
 
-	i = add_generic_object(x, z, vx, vz, heading, OBJTYPE_NEBULA);
+	i = add_generic_object(x, y, z, vx, 0.0, vz, heading, OBJTYPE_NEBULA);
 	if (i < 0)
 		return i;
-	go[i].y = y;
 	go[i].move = nebula_move;
 	go[i].type = OBJTYPE_NEBULA;
 	go[i].tsd.nebula.r = r;
@@ -2520,10 +2518,9 @@ static int add_explosion(double x, double y, double z, uint16_t velocity,
 {
 	int i;
 
-	i = add_generic_object(x, z, 0, 0, 0, OBJTYPE_EXPLOSION);
+	i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_EXPLOSION);
 	if (i < 0)
 		return i;
-	go[i].y = y;
 	go[i].move = explosion_move;
 	go[i].alive = 30; /* long enough to get propagaed out to all clients */
 	go[i].tsd.explosion.velocity = velocity;
@@ -2559,7 +2556,7 @@ static int add_laser(double x, double z, double vx, double vz, double heading, u
 {
 	int i, s;
 
-	i = add_generic_object(x, z, vx, vz, heading, OBJTYPE_LASER);
+	i = add_generic_object(x, 0.0, z, vx, 0.0, vz, heading, OBJTYPE_LASER);
 	if (i < 0)
 		return i;
 	go[i].move = laser_move;
@@ -2707,7 +2704,7 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
 {
 	int i, s;
 
-	i = add_generic_object(0, 0, 0, 0, 0, OBJTYPE_LASERBEAM);
+	i = add_generic_object(0, 0, 0, 0, 0, 0, 0, OBJTYPE_LASERBEAM);
 	if (i < 0)
 		return i;
 
@@ -2726,7 +2723,7 @@ static int add_tractorbeam(struct snis_entity *origin, uint32_t target, int aliv
 {
 	int i;
 
-	i = add_generic_object(0, 0, 0, 0, 0, OBJTYPE_TRACTORBEAM);
+	i = add_generic_object(0, 0, 0, 0, 0, 0, 0, OBJTYPE_TRACTORBEAM);
 	if (i < 0)
 		return i;
 
@@ -2745,11 +2742,9 @@ static int add_tractorbeam(struct snis_entity *origin, uint32_t target, int aliv
 static int add_torpedo(double x, double y, double z, double vx, double vy, double vz, uint32_t ship_id)
 {
 	int i;
-	i = add_generic_object(x, z, vx, vz, 0.0, OBJTYPE_TORPEDO);
+	i = add_generic_object(x, y, z, vx, vy, vz, 0.0, OBJTYPE_TORPEDO);
 	if (i < 0)
 		return i;
-	go[i].y = y;
-	go[i].vy = vy;
 	go[i].move = torpedo_move;
 	go[i].alive = TORPEDO_LIFETIME;
 	go[i].tsd.torpedo.ship_id = ship_id;
@@ -2832,12 +2827,11 @@ static int add_derelict(const char *name, double x, double y, double z,
 {
 	int i;
 
-	i = add_generic_object(x, z, 0, 0, 0, OBJTYPE_DERELICT);
+	i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_DERELICT);
 	if (i < 0)
 		return i;
 	if (name)
 		strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
-	go[i].y = y;
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
@@ -2893,7 +2887,7 @@ static int add_planet(double x, double y, double z)
 {
 	int i;
 
-	i = add_generic_object(x, z, 0, 0, 0, OBJTYPE_PLANET);
+	i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_PLANET);
 	if (i < 0)
 		return i;
 	if (fabsl(y) < 0.01) {
@@ -2901,8 +2895,6 @@ static int add_planet(double x, double y, double z)
 			go[i].y = (double) snis_randn(3000) - 1500;
 		else
 			go[i].y = (double) snis_randn(70) - 35;
-	} else {
-		go[i].y = y;
 	}
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
@@ -2956,7 +2948,7 @@ static int add_wormhole(double x1, double y1, double z1, double x2, double y2, d
 {
 	int i;
 
-	i = add_generic_object(x1, z1, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE);
+	i = add_generic_object(x1, 0, z1, 0.0, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE);
 	if (i < 0)
 		return i;
 	go[i].move = wormhole_move;
