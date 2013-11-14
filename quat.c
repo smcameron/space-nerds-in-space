@@ -168,7 +168,10 @@ void vec3_to_heading_mark(const union vec3 *dir, double *r, double *heading, dou
 {
 	*heading = normalize_euler_0_2pi(atan2(-dir->v.z,dir->v.x));
 	float dist = sqrt(dir->v.x*dir->v.x + dir->v.y*dir->v.y + dir->v.z*dir->v.z);
-	*mark = asin(dir->v.y/dist);
+	if (dist < ZERO_TOLERANCE)
+		*mark = 0;
+	else
+		*mark = asin(dir->v.y / dist);
 	if (r)
 		*r = dist;
 }
