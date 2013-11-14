@@ -5505,11 +5505,6 @@ void tween_add_or_update(struct tween_map* map, uint32_t id, float initial_value
 
 static struct tween_map* sciplane_tween = 0;
 
-float float_lerp(float from, float to, float t)
-{
-	return from + t * (to - from);
-}
-
 static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double range)
 {
 	static int first_run = 1;

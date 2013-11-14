@@ -101,4 +101,7 @@ GLOBAL void random_point_in_sphere(float radius, float *x, float *y, float *z,
 int circle_line_segment_intersection(double x1, double y1, double x2, double y2,
 	double cx, double cy, double r,
 	double *ix1, double *iy1, double *ix2, double *iy2);
+
+float float_lerp(float from, float to, float t);
+
 #endif

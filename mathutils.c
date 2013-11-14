@@ -423,3 +423,9 @@ int circle_line_segment_intersection(double x1, double y1, double x2, double y2,
 	return -1;
 }
 
+float float_lerp(float from, float to, float t)
+{
+	return from + t * (to - from);
+}
+
+
