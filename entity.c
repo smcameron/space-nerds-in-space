@@ -597,7 +597,11 @@ static int transform_entity(struct entity_context *cx,
 	return 0;
 }
 
+#if defined(__APPLE__)  || defined(__FreeBSD__)
+static int object_depth_compare(void *vcx, const void *a, const void *b)
+#else
 static int object_depth_compare(const void *a, const void *b, void *vcx)
+#endif
 {
 	struct entity_context *cx = vcx;
 	struct entity *A = &cx->entity_list[*(const int *) a];
@@ -624,7 +628,11 @@ static void sort_entity_distances(struct entity_context *cx)
 				c->z - cx->entity_list[i].z);
 		cx->entity_depth[i] = i;
 	}
-	qsort_r(cx->entity_depth, n, sizeof(cx->entity_depth[0]),  object_depth_compare, cx);
+#if defined(__APPLE__)  || defined(__FreeBSD__)
+	qsort_r(cx->entity_depth, n, sizeof(cx->entity_depth[0]), cx, object_depth_compare);
+#else
+	qsort_r(cx->entity_depth, n, sizeof(cx->entity_depth[0]), object_depth_compare, cx);
+#endif
 }
 
 static inline float sqr(float a)

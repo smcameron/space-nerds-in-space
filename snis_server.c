@@ -35,7 +35,11 @@
 #include <time.h>
 #include <ctype.h>
 #include <math.h>
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
 #include <linux/tcp.h>
+#else
+#include <netinet/tcp.h>
+#endif
 #include <stddef.h>
 #include <stdarg.h>
 #include <limits.h>
@@ -3179,7 +3183,11 @@ static void sleep_double(double time)
 	t.tv_nsec = fractpart * 1000000000;
 
 	do {
+#if defined(__APPLE__) || defined(__FreeBSD__)
+		rc = nanosleep(&t, &x);
+#else
 		rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &t, &x);
+#endif
 		t.tv_sec = x.tv_sec;
 		t.tv_nsec = x.tv_nsec;
 	} while (rc == EINTR);

@@ -18,13 +18,17 @@
         along with Spacenerds in Space; if not, write to the Free Software
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <inttypes.h>
 #include <fcntl.h>
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
+/* Apple gets what it needs for malloc from stdlib.h */
 #include <malloc.h>
+#endif
 #include <string.h>
 #include <errno.h>
 #include <math.h>

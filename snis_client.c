@@ -24,7 +24,10 @@
 #include <inttypes.h>
 #include <ctype.h>
 #include <sys/types.h>
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
+/* Apple gets what it needs for malloc from stdlib.h */
 #include <malloc.h>
+#endif
 #include <gtk/gtk.h>
 
 #ifndef WITHOUTOPENGL
@@ -47,7 +50,12 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <assert.h>
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
 #include <linux/tcp.h>
+#else
+#include <netinet/tcp.h>
+#include <netinet/in.h>
+#endif
 
 #include "build_bug_on.h"
 #include "space-part.h"
