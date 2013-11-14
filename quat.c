@@ -22,6 +22,8 @@
 #include "quat.h"
 #include "mathutils.h"
 
+static const float ZERO_TOLERANCE = 0.000001f;
+
 union vec3* vec3_copy(union vec3 *vo, const union vec3 *vi)
 {
 	memcpy(vo, vi, sizeof(union vec3));   
@@ -452,7 +454,7 @@ void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, cons
 	vec3_normalize(&un, u);
 	vec3_normalize(&vn, v);
 	dot = vec3_dot(&un, &vn);
-	if (fabs(dot - -1.0f) <  0.000001f) {
+	if (fabs(dot - -1.0f) <  ZERO_TOLERANCE) {
 		/* vector a and b point exactly in the opposite direction
 		 * so it is a 180 degrees turn around the up-axis 
 		 */
@@ -462,7 +464,7 @@ void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, cons
 		quat_init_axis(q, up->v.x, up->v.y, up->v.z, M_PI);
 		return;
 	}
-	if (fabs(dot - 1.0f) <  0.000001f) {
+	if (fabs(dot - 1.0f) <  ZERO_TOLERANCE) {
 		/* vector a and b point exactly in the same direction
 		 * so we return the identity quaternion
 		 */
