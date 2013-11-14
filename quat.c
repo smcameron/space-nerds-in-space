@@ -85,6 +85,29 @@ void quat_init_axis_v(union quat *q, const union vec3 *v, float a)
 	quat_init_axis(q, v->v.x, v->v.y, v->v.z, a);
 }
 
+void quat_to_axis(const union quat *q, float *x, float *y, float *z, float *a)
+{
+	/* see: http://www.euclideanspace.com/maths/geometry/rotations
+	   /conversions/quaternionToAngle/index.htm */
+	*a = 2 * acos(q->v.w);
+	float s = sqrt(1 - q->v.w * q->v.w);
+	if (s < ZERO_TOLERANCE) {
+		// if s close to zero then direction of axis not important
+		*x = 1;
+		*y = 0;
+		*z = 0;
+	} else {
+		*x = q->v.x / s; // normalise axis
+		*y = q->v.y / s;
+		*z = q->v.z / s;
+	}
+}
+
+void quat_to_axis_v(const union quat *q, union vec3 *v, float *a)
+{
+	quat_to_axis(q, &v->v.x, &v->v.y, &v->v.z, a);
+}
+
 float quat_dot(const union quat *q1, const union quat *q2)
 {
 	return q1->vec[0] * q2->vec[0] + q1->vec[1] * q2->vec[1] + q1->vec[2] * q2->vec[2] + q1->vec[3] * q2->vec[3];
@@ -599,5 +622,27 @@ union quat *quat_apply_relative_yaw_pitch_roll(union quat *q,
 	quat_normalize_self(&q4);
 	*q = q4;
 	return q;
+}
+
+void quat_decompose_twist_swing(const union quat *q, const union vec3 *v1, union quat *twist, union quat *swing)
+{
+	union vec3 v2;
+	quat_rot_vec(&v2, v1, q);
+
+	quat_from_u2v(swing, v1, &v2, 0);
+	union quat swing_conj;
+	quat_conj(&swing_conj, swing);
+	quat_mul(twist, q, &swing_conj);
+}
+
+void quat_decompose_swing_twist(const union quat *q, const union vec3 *v1, union quat *swing, union quat *twist)
+{
+	union vec3 v2;
+	quat_rot_vec(&v2, v1, q);
+
+	quat_from_u2v(swing, v1, &v2, 0);
+	union quat swing_conj;
+	quat_conj(&swing_conj, swing);
+	quat_mul(twist, &swing_conj, q);
 }
 

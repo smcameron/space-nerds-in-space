@@ -115,6 +115,12 @@ void quat_init_axis(union quat *q, float x, float y, float z, float a);
 /* initialize quaternion from axis angle using a vector */
 void quat_init_axis_v(union quat *q, const union vec3 *v, float a);
 
+/* decompose a quaternion into an axis angle using floats */
+void quat_to_axis(const union quat *q, float *x, float *y, float *z, float *a);
+
+/* decompose a quaternion into an axis angle using vector */
+void quat_to_axis_v(const union quat *q, union vec3 *v, float *a);
+
 /* quaternion dot product q1 . q2 */
 float quat_dot(const union quat *q1, const union quat *q2);
 
@@ -201,5 +207,9 @@ union vec3* vec3_lerp(union vec3* vo, const union vec3* vfrom, const union vec3*
  */
 union quat *quat_apply_relative_yaw_pitch_roll(union quat *q,
                                         double yaw, double pitch, double roll);
+
+/* decompose a quaternion into a rotation (swing) perpendicular to v1 and a rotation (twist) around v1 */
+void quat_decompose_twist_swing(const union quat *q, const union vec3 *v1, union quat *twist, union quat *swing);
+void quat_decompose_swing_twist(const union quat *q, const union vec3 *v1, union quat *swing, union quat *twist);
 
 #endif /* __QUAT_H__ */
