@@ -5253,6 +5253,38 @@ static void draw_science_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *
 	sng_draw_laser_line(w->window, gc, (int) tx1, (int) ty1, (int) tx2, (int) ty2, color);
 }
 
+static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct snis_entity *o, struct snis_entity *laserbeam, double r)
+{
+	int rc, color;
+	struct snis_entity *shooter, *shootee;
+
+	shooter = lookup_entity_by_id(laserbeam->tsd.laserbeam.origin);
+	if (!shooter)
+		return;
+	shootee = lookup_entity_by_id(laserbeam->tsd.laserbeam.target);
+	if (!shootee)
+		return;
+
+	if (shooter->type == OBJTYPE_SHIP2)
+		color = NPC_LASER_COLOR;
+	else
+		color = PLAYER_LASER_COLOR;
+
+	union vec3 center = {{o->x, o->y, o->z}};
+	union vec3 vshooter = {{shooter->x, shooter->y, shooter->z}};
+	union vec3 vshootee = {{shootee->x, shootee->y, shootee->z}};
+
+	union vec3 clip1, clip2;
+	rc = sphere_line_segment_intersection(&vshooter, &vshootee, &center, r, &clip1, &clip2);
+	if (rc < 0)
+		return;
+	float sx1, sy1, sx2, sy2;
+	transform_point(cx, clip1.v.x, clip1.v.y, clip1.v.z, &sx1, &sy1, 0);
+	transform_point(cx, clip2.v.x, clip2.v.y, clip2.v.z, &sx2, &sy2, 0);
+	sng_draw_laser_line(w->window, gc, sx1, sy1, sx2, sy2, color);
+}
+
+
 static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, double range)
 {
 	int i, x, y, cx, cy, r, bw, pwr;
@@ -5525,6 +5557,83 @@ static void tween_add_or_update(struct tween_map* map, uint32_t id, float initia
 
 static struct tween_map* sciplane_tween = 0;
 
+static void draw_sciplane_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct snis_entity *o, struct snis_entity *laserbeam, double r)
+{
+	int i, rc, color;
+	struct snis_entity *shooter=0, *shootee=0;
+
+	for (i=0; i<nscience_guys; i++) {
+		if (science_guy[i].o->id == laserbeam->tsd.laserbeam.origin)
+			shooter = science_guy[i].o;
+		if (science_guy[i].o->id == laserbeam->tsd.laserbeam.target)
+			shootee = science_guy[i].o;
+		if (shooter && shootee)
+			break;
+	}
+
+	if (laserbeam->tsd.laserbeam.origin == o->id)
+		shooter = o;
+	if (laserbeam->tsd.laserbeam.target == o->id)
+		shootee = o;
+
+	/* one end of the beam needs to be on the screen */
+	if (!shooter && !shootee)
+		return;
+
+	if (!shooter) {
+		shooter = lookup_entity_by_id(laserbeam->tsd.laserbeam.origin);
+		if (!shooter)
+			return;
+	}
+	if (!shootee) {
+		shootee = lookup_entity_by_id(laserbeam->tsd.laserbeam.target);
+		if (!shootee)
+			return;
+	}
+
+	if (shooter->type == OBJTYPE_SHIP2)
+		color = NPC_LASER_COLOR;
+	else
+		color = PLAYER_LASER_COLOR;
+
+
+	/* figure out where in 3d space the ends show up on sciplane */
+	union vec3 ship_pos = {{o->x, o->y, o->z}};
+
+	/* shooter position */
+	double shooter_range, shooter_heading, shooter_mark;
+	float shooter_tween = 0;
+	union vec3 vshooter;
+
+	union vec3 shooter_dir = {{shooter->x, shooter->y, shooter->z}};
+	vec3_sub_self(&shooter_dir, &ship_pos);
+	vec3_to_heading_mark(&shooter_dir, &shooter_range, &shooter_heading, &shooter_mark);
+	tween_get_value(sciplane_tween, shooter->id, &shooter_tween);
+	heading_mark_to_vec3(shooter_range, shooter_heading, shooter_mark * shooter_tween, &vshooter);
+	vec3_add_self(&vshooter, &ship_pos);
+
+	/* shootee position */
+	double shootee_range, shootee_heading, shootee_mark;
+	float shootee_tween = 0;
+	union vec3 vshootee;
+
+	union vec3 shootee_dir = {{shootee->x, shootee->y, shootee->z}};
+	vec3_sub_self(&shootee_dir, &ship_pos);
+	vec3_to_heading_mark(&shootee_dir, &shootee_range, &shootee_heading, &shootee_mark);
+	tween_get_value(sciplane_tween, shootee->id, &shootee_tween);
+	heading_mark_to_vec3(shootee_range, shootee_heading, shootee_mark * shootee_tween, &vshootee);
+	vec3_add_self(&vshootee, &ship_pos);
+
+	union vec3 clip1, clip2;
+	rc = sphere_line_segment_intersection(&vshooter, &vshootee, &ship_pos, r, &clip1, &clip2);
+	if (rc < 0)
+		return;
+	float sx1, sy1, sx2, sy2;
+	transform_point(cx, clip1.v.x, clip1.v.y, clip1.v.z, &sx1, &sy1, 0);
+	transform_point(cx, clip2.v.x, clip2.v.y, clip2.v.z, &sx2, &sy2, 0);
+	sng_draw_laser_line(w->window, gc, sx1, sy1, sx2, sy2, color);
+}
+
 static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double range)
 {
 	static int first_run = 1;
@@ -5738,6 +5847,10 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		sng_set_foreground(GREEN);
 		pthread_mutex_lock(&universe_mutex);
 
+		static int nlaserbeams = 0;
+		static struct snis_entity* laserbeams[MAXGAMEOBJS] = {0};
+
+		nlaserbeams = 0;
 		nscience_guys = 0;
 		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 			if (!go[i].alive)
@@ -5745,12 +5858,13 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 			if (go[i].id == my_ship_id)
 				continue; /* skip drawing yourself. */
-#if 0
+
 			if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
-				draw_science_laserbeam(w, gc, o, &go[i], cx, cy, r, range);
+				laserbeams[nlaserbeams] = &go[i];
+				nlaserbeams++;
 				continue;
 			}
-#endif
+
 			dist2 = dist3dsqrd(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
 			if (go[i].type == OBJTYPE_NEBULA) {
 				if (dist2 < go[i].tsd.nebula.r * go[i].tsd.nebula.r)
@@ -5835,6 +5949,11 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		else if (!selected_guy_still_visible && curr_science_guy) {
 			prev_science_guy = curr_science_guy;
 			curr_science_guy = NULL;
+		}
+
+		/* draw in the laserbeams */
+		for (i = 0; i < nlaserbeams; i++) {
+			draw_sciplane_laserbeam(w, gc, navecx, o, laserbeams[i], range);
 		}
 
 		pthread_mutex_unlock(&universe_mutex);
@@ -6963,6 +7082,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	camera_assign_up_direction(navecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
 	camera_set_pos(navecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
 	camera_look_at(navecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
+	calculate_camera_transform(navecx);
 
         set_renderer(navecx, WIREFRAME_RENDERER);
 	camera_set_parameters(navecx, 0.5, 8000.0,
@@ -7067,12 +7187,14 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			continue;
 		}
 
+		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
+			draw_3d_laserbeam(w, gc, navecx, o, &go[i], visible_distance);
+			continue;
+		}
+
 		if (!go[i].entity)
 			continue;
 
-		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
-			continue;
-		}
 		dist = dist3d(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
 		if (dist > screen_radius || dist > visible_distance)
 			continue; /* not close enough */
