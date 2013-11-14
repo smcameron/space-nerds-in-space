@@ -8327,7 +8327,8 @@ static void show_science(GtkWidget *w)
 		draw_science_details(w, gc);
 	}
 	draw_science_warp_data(w, o);
-	draw_science_data(w, o, curr_science_guy);
+	if (sci_ui.details_mode != SCI_DETAILS_MODE_SCIPLANE)
+		draw_science_data(w, o, curr_science_guy);
 	show_common_screen(w, "SCIENCE");
 }
 
