@@ -5341,7 +5341,9 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 	}
 }
 
-void snis_draw_3d_dotted_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2 )
+static void __attribute__((unused)) snis_draw_3d_dotted_line(GtkWidget *w, GdkGC *gc,
+				struct entity_context *cx,
+				float x1, float y1, float z1, float x2, float y2, float z2 )
 {
 	float sx1, sy1, sx2, sy2;
 	transform_point(cx, x1, y1, z1, &sx1, &sy1, 0);
@@ -5349,7 +5351,8 @@ void snis_draw_3d_dotted_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx
 	sng_draw_dotted_line(w->window, gc, sx1, sy1, sx2, sy2);
 }
 
-void snis_draw_3d_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2 )
+static void snis_draw_3d_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
+				float x1, float y1, float z1, float x2, float y2, float z2 )
 {
 	float sx1, sy1, sx2, sy2;
 	transform_point(cx, x1, y1, z1, &sx1, &sy1, 0);
@@ -5357,7 +5360,8 @@ void snis_draw_3d_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx, float
 	snis_draw_line(w->window, gc, sx1, sy1, sx2, sy2);
 }
 
-void draw_3d_mark_arc(GtkWidget *w, GdkGC *gc, struct entity_context *ecx, const union vec3 *center, float r, float heading, float mark)
+static void draw_3d_mark_arc(GtkWidget *w, GdkGC *gc, struct entity_context *ecx,
+			const union vec3 *center, float r, float heading, float mark)
 {
 	/* break arc into max 5 degree segments */
 	int increments = abs(mark / (5.0 * M_PI / 180.0))+1;
@@ -5401,7 +5405,7 @@ struct tween_map
 	struct tween_state* states;
 };
 
-struct tween_map* tween_init(int max_size)
+static struct tween_map* tween_init(int max_size)
 {
 	struct tween_map* result = malloc(sizeof(struct tween_map));
 	result->last_index=0;
@@ -5410,7 +5414,7 @@ struct tween_map* tween_init(int max_size)
 	return result;
 }
 
-void tween_update(struct tween_map* map)
+static void tween_update(struct tween_map* map)
 {
 	int i;
 	for (i=0; i < map->last_index; i++) {
@@ -5442,7 +5446,7 @@ void tween_update(struct tween_map* map)
 	}
 }
 
-int tween_get_value(struct tween_map* map, uint32_t id, float *value)
+static int __attribute__((unused)) tween_get_value(struct tween_map* map, uint32_t id, float *value)
 {
 	int i;
 	for (i=0; i < map->last_index; i++) {
@@ -5454,7 +5458,7 @@ int tween_get_value(struct tween_map* map, uint32_t id, float *value)
 	return 0;
 }
 
-int tween_get_value_and_decay(struct tween_map* map, uint32_t id, float *value)
+static int tween_get_value_and_decay(struct tween_map* map, uint32_t id, float *value)
 {
 	int i;
 	for (i=0; i < map->last_index; i++) {
@@ -5470,7 +5474,8 @@ int tween_get_value_and_decay(struct tween_map* map, uint32_t id, float *value)
 }
 
 
-void tween_add_or_update(struct tween_map* map, uint32_t id, float initial_value, int mode, float delta, float min, float max)
+static void tween_add_or_update(struct tween_map* map, uint32_t id, float initial_value,
+					int mode, float delta, float min, float max)
 {
 	int first_free = map->last_index;
         int i;
