@@ -3367,6 +3367,13 @@ static int process_sci_select_target_packet(void)
 	rc = read_and_unpack_buffer(buffer, "w", &id);
 	if (rc != 0)
 		return rc;
+
+	if (id == (uint32_t) -1) { /* deselection */
+		curr_science_guy = NULL;
+		wwviaudio_add_sound(SCIENCE_DATA_ACQUIRED_SOUND);
+		return 0;
+	}
+
 	i = lookup_object_by_id(id);
 	if (i >= 0) {
 		curr_science_guy = &go[i];
@@ -7964,9 +7971,12 @@ static int science_button_press(int x, int y)
 			selected = science_guy[i].o;
 		}
 	}
-	if (selected)
-		request_sci_select_target(selected->id);
-	else {
+	if (selected) {
+		if (curr_science_guy != selected)
+			request_sci_select_target(selected->id);
+		else
+			request_sci_select_target((uint32_t) -1); /* deselect */
+	} else {
 		o = &go[my_ship_oid];
 		cx = SCIENCE_SCOPE_CX;
 		cy = SCIENCE_SCOPE_CY;
