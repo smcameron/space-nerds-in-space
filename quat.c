@@ -646,3 +646,52 @@ void quat_decompose_swing_twist(const union quat *q, const union vec3 *v1, union
 	quat_mul(twist, &swing_conj, q);
 }
 
+/* find the two endpoints of a line segment that are inside a given sphere
+   http://stackoverflow.com/a/17499940 */
+int sphere_line_segment_intersection(const union vec3 *v0, const union vec3 *v1, const union vec3 *center, double r, union vec3 *vo0, union vec3 *vo1)
+{
+	double cx = center->v.x;
+	double cy = center->v.y;
+	double cz = center->v.z;
+
+	double px = v0->v.x;
+	double py = v0->v.y;
+	double pz = v0->v.z;
+
+	double vx = v1->v.x - px;
+	double vy = v1->v.y - py;
+	double vz = v1->v.z - pz;
+
+	double A = vx * vx + vy * vy + vz * vz;
+	double B = 2.0 * (px * vx + py * vy + pz * vz - vx * cx - vy * cy - vz * cz);
+	double C = px * px - 2 * px * cx + cx * cx + py * py - 2 * py * cy + cy * cy +
+		pz * pz - 2 * pz * cz + cz * cz - r * r; 
+	double D = B * B - 4.0 * A * C;
+
+	/* outside or tanget to sphere, no segment intersection */
+	if (D <= 0)
+		return -1;
+
+        double t1 = (-B - sqrt(D)) / (2.0 * A);
+	double t2 = (-B + sqrt(D)) / (2.0 * A);
+
+	/* infinte line intersects but this segment doesn't */
+	if ((t1 < 0 && t2 < 0) || (t1 > 1 && t2 > 1))
+		return -1;
+
+	if (t1 < 0)
+		vec3_copy(vo0, v0);
+	else if (t1 > 1)
+		vec3_copy(vo1, v1);
+	else
+		vec3_init(vo0, v0->v.x * (1.0 - t1) + t1 * v1->v.x, v0->v.y * (1.0 - t1) + t1 * v1->v.y, v0->v.z * (1.0 - t1) + t1 * v1->v.z);
+
+	if (t2 < 0)
+		vec3_copy(vo0, v0);
+	else if (t2 > 1)
+		vec3_copy(vo1, v1);
+	else
+		vec3_init(vo1, v0->v.x * (1.0 - t2) + t2 * v1->v.x, v0->v.y * (1.0 - t2) + t2 * v1->v.y, v0->v.z * (1.0 - t2) + t2 * v1->v.z);
+	return 2;
+}
+

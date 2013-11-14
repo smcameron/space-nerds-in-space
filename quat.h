@@ -212,4 +212,6 @@ union quat *quat_apply_relative_yaw_pitch_roll(union quat *q,
 void quat_decompose_twist_swing(const union quat *q, const union vec3 *v1, union quat *twist, union quat *swing);
 void quat_decompose_swing_twist(const union quat *q, const union vec3 *v1, union quat *swing, union quat *twist);
 
+int sphere_line_segment_intersection(const union vec3 *v0, const union vec3 *v1, const union vec3 *center, double r, union vec3 *vo0, union vec3 *vo1);
+
 #endif /* __QUAT_H__ */
