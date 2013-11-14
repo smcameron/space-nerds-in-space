@@ -456,6 +456,9 @@ void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, cons
 		/* vector a and b point exactly in the opposite direction
 		 * so it is a 180 degrees turn around the up-axis 
 		 */
+		union vec3 default_up = { { 0, 1, 0} };
+		if (!up)
+			up = &default_up;
 		quat_init_axis(q, up->v.x, up->v.y, up->v.z, M_PI);
 		return;
 	}
