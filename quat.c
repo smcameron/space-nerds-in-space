@@ -22,7 +22,7 @@
 #include "quat.h"
 #include "mathutils.h"
 
-union vec3* vec3_copy(union vec3 *vo, union vec3 *vi)
+union vec3* vec3_copy(union vec3 *vo, const union vec3 *vi)
 {
 	memcpy(vo, vi, sizeof(union vec3));   
 	return vo;
@@ -390,12 +390,12 @@ union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v
 }
 
 /* returns square of the length of a vector */
-float vec3_len2(union vec3 *v)
+float vec3_len2(const union vec3 *v)
 {
 	return v->v.x * v->v.x + v->v.y * v->v.y + v->v.z * v->v.z;
 }
 
-union vec3 *vec3_normalize(union vec3 *vo, union vec3 *vi)
+union vec3 *vec3_normalize(union vec3 *vo, const union vec3 *vi)
 {
 	float len = sqrt(vec3_len2(vi));
 	vo->v.x = vi->v.x / len;
@@ -443,7 +443,7 @@ void vec3_print(const char* prefix, const union vec3 *v)
 
 /* see http://gamedev.stackexchange.com/questions/15070/orienting-a-model-to-face-a-target */
 /* Calculate the quaternion to rotate from vector u to vector v */
-void quat_from_u2v(union quat *q, union vec3 *u, union vec3 *v, union vec3 *up)
+void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, const union vec3 *up)
 {
 	union vec3 un, vn, axis, axisn;
 	float dot;

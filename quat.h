@@ -61,7 +61,7 @@ union euler {
 void vec3_init(union vec3 *vo, float x, float y, float z);
 
 /* copy vector vi to vo */
-union vec3* vec3_copy(union vec3 *vo, union vec3 *vi);
+union vec3* vec3_copy(union vec3 *vo, const union vec3 *vi);
 
 /* vo = v1 + v2, return vo */
 union vec3* vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
@@ -93,7 +93,7 @@ float vec3_dot(const union vec3 *v1, const union vec3 *v2);
 /* cross product vo = v1 X v2, return vo */
 union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
 
-union vec3 *vec3_normalize(union vec3 *vo, union vec3 *vi);
+union vec3 *vec3_normalize(union vec3 *vo, const union vec3 *vi);
 
 /* vec3 rotate by axis and angle */
 union vec3* vec3_rot_axis(union vec3 *vo, union vec3 *vi, float x, float y, float z, float angle);
@@ -177,10 +177,10 @@ void random_quat(union quat *q);
 void random_axis_quat(union quat *q);
 
 /* returns square of the length of a vector */
-float vec3_len2(union vec3 *v);
+float vec3_len2(const union vec3 *v);
 
 /* Calculate the quaternion to rotate from vector u to vector v */
-void quat_from_u2v(union quat *q, union vec3 *u, union vec3 *v, union vec3 *up);
+void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, const union vec3 *up);
 
 /* Calculate the quaternion to rotate from unit_vector u to unit_vector v */
 void quat_from_unit_u2v(union quat *q, union vec3 *u, union vec3 *v);
