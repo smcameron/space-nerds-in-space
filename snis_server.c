@@ -1010,7 +1010,8 @@ static void calculate_torpedo_velocities(double ox, double oy, double oz,
 
 static int add_torpedo(double x, double y, double z,
 		double vx, double vy, double vz, uint32_t ship_id);
-static int add_laser(double x, double z, double vx, double vz, double heading, uint32_t ship_id);
+static int add_laser(double x, double y, double z,
+		double vx, double vy, double vz, double heading, uint32_t ship_id);
 static uint8_t update_phaser_banks(int current, int max);
 
 static void ship_choose_new_attack_victim(struct snis_entity *o)
@@ -2567,11 +2568,12 @@ static int lookup_by_damcon_id(struct damcon_data *d, int id)
 	return -1;
 }
 
-static int add_laser(double x, double z, double vx, double vz, double heading, uint32_t ship_id)
+static int add_laser(double x, double y, double z,
+		double vx, double vy, double vz, double heading, uint32_t ship_id)
 {
 	int i, s;
 
-	i = add_generic_object(x, 0.0, z, vx, 0.0, vz, heading, OBJTYPE_LASER);
+	i = add_generic_object(x, y, z, vx, vy, vz, heading, OBJTYPE_LASER);
 	if (i < 0)
 		return i;
 	go[i].move = laser_move;
@@ -4999,7 +5001,7 @@ static int process_demon_fire_phaser(struct game_client *c)
 
 	vx = LASER_VELOCITY * cos(o->heading);
 	vz = LASER_VELOCITY * -sin(o->heading);
-	add_laser(o->x, o->z, vx, vz, o->heading, o->id);
+	add_laser(o->x, 0.0, o->z, vx, 0.0, vz, o->heading, o->id);
 out:
 	pthread_mutex_unlock(&universe_mutex);
 
