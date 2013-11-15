@@ -1374,6 +1374,8 @@ static void move_ship(struct snis_entity *o)
 
 	quat_nlerp(&o->tsd.ship.sciball_orientation,
 			&o->tsd.ship.sciball_o1, &o->tsd.ship.sciball_o2, t);
+	quat_nlerp(&o->tsd.ship.weap_orientation,
+			&o->tsd.ship.weap_o1, &o->tsd.ship.weap_o2, t);
 
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity / 3.0;
 }
