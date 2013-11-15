@@ -4564,6 +4564,70 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int 
 	}
 }
 
+static void show_weapons_camera_view(GtkWidget *w)
+{
+	const float min_angle_of_view = 5.0 * M_PI / 180.0;
+	const float max_angle_of_view = ANGLE_OF_VIEW * M_PI / 180.0;
+	static int fake_stars_initialized = 0;
+	static int current_zoom = 0;
+	float angle_of_view;
+	struct snis_entity *o;
+	float cx, cy, cz;
+
+	if (!(o = find_my_ship()))
+		return;
+
+	/* current_zoom = newzoom(current_zoom, o->tsd.ship.mainzoom); */
+	current_zoom = 0;
+	angle_of_view = ((255.0 - (float) current_zoom) / 255.0) *
+				(max_angle_of_view - min_angle_of_view) + min_angle_of_view;
+
+	cx = o->x;
+	cy = o->y;
+	cz = o->z;
+
+	camera_set_pos(ecx, cx, cy, cz);
+	camera_set_orientation(ecx, &o->tsd.ship.weap_orientation);
+	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
+				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
+	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
+			cos(((timer / 4) % 360) * M_PI / 180));
+	sng_set_foreground(GREEN);
+	if (!fake_stars_initialized) {
+		fake_stars_initialized = 1;
+		entity_init_fake_stars(ecx, 2000, 300.0f * 10.0f);
+	}
+
+	render_skybox(w, ecx);
+
+	pthread_mutex_lock(&universe_mutex);
+	render_entities(w, gc, ecx);
+
+	/* Draw targeting indicator on main screen */
+	if (o->tsd.ship.victim_id != -1) {
+		float sx, sy;
+		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.victim_id);
+
+		if (target && target->entity) {
+			entity_get_screen_coords(target->entity, &sx, &sy);
+			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
+		}
+	}
+
+	/* Draw science selector indicator on main screen */
+	if (curr_science_guy) {
+		float sx, sy;
+
+		if (curr_science_guy->entity) {
+			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
+			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 1);
+		}
+	}
+
+	show_gunsight(w);
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 static void show_mainscreen(GtkWidget *w)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
@@ -6955,7 +7019,7 @@ static void show_death_screen(GtkWidget *w)
 
 static void show_manual_weapons(GtkWidget *w)
 {
-	show_mainscreen(w);
+	show_weapons_camera_view(w);
 	show_common_screen(w, "WEAPONS");
 }
 
