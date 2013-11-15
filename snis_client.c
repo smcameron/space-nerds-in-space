@@ -4640,19 +4640,19 @@ static void show_weapons_camera_view(GtkWidget *w)
 	pthread_mutex_lock(&universe_mutex);
 
 	/* Add our ship into the scene (on the mainscreen, it is omitted) */
-
+#if 0
 	o->entity = add_entity(ecx, ship_mesh, o->x, o->y, o->z, SHIP_COLOR);
 	update_entity_orientation(o->entity, &o->orientation);
-
+#endif
 	/* FIXME: Note, because of our own ship's extreme proximity, some
 	 * limitations of the renderer become glaringly apparent
 	 */
 	render_entities(w, gc, ecx);
-
+#if 0 
 	/* Remove our ship from the scene */
 	remove_entity(ecx, o->entity);
 	o->entity = NULL;
-
+#endif
 	/* Draw targeting indicator on main screen */
 	if (o->tsd.ship.victim_id != -1) {
 		float sx, sy;
