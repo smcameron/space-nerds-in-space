@@ -826,7 +826,8 @@ static int update_tractorbeam(uint32_t id, uint32_t origin, uint32_t target)
 
 
 static int update_laser(uint32_t id, double x, double y, double z,
-			double vx, double vz, uint32_t ship_id)
+			double vx, double vy, double vz, union quat *orientation,
+			uint32_t ship_id)
 {
 	int i;
 	struct entity *e;
@@ -835,12 +836,14 @@ static int update_laser(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, laser_mesh, x, y, z, LASER_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
-		i = add_generic_object(id, x, y, z, vx, vz, &identity_quat, OBJTYPE_LASER, 1, e);
+		i = add_generic_object(id, x, y, z, vx, vz, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.laser.ship_id = ship_id;
+		go[i].vy = vy; /* FIXME: fix add_generic_object */
 	} else {
-		update_generic_object(i, x, y, z, vx, vz, &identity_quat, 1); 
+		update_generic_object(i, x, y, z, vx, vz, orientation, 1); 
+		go[i].vy = vy; /* FIXME: fix update_generic_object */
 	}
 	return 0;
 }
@@ -3110,18 +3113,23 @@ static int process_update_laser_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, ship_id;
-	double dx, dy, dz, dvx, dvz;
+	double dx, dy, dz, dvx, dvy, dvz;
+	union quat orientation;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_laser_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSS", &id, &ship_id,
-				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSSSQ", &id, &ship_id,
+				&dx, (int32_t) UNIVERSE_DIM,
+				&dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
-				&dvx, (int32_t) UNIVERSE_DIM, &dvz, (int32_t) UNIVERSE_DIM);
+				&dvx, (int32_t) UNIVERSE_DIM,
+				&dvy, (int32_t) UNIVERSE_DIM,
+				&dvz, (int32_t) UNIVERSE_DIM,
+				&orientation);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_laser(id, dx, dy, dz, dvx, dvz, ship_id);
+	rc = update_laser(id, dx, dy, dz, dvx, dvy, dvz, &orientation, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
