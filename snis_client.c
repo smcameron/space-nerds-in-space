@@ -7048,6 +7048,8 @@ static void init_weapons_ui(void)
 	ui_add_slider(weapons.weapzoom_slider, DISPLAYMODE_WEAPONS);
 	ui_add_gauge(weapons.phaser_bank_gauge, DISPLAYMODE_WEAPONS);
 	ui_add_gauge(weapons.phaser_wavelength, DISPLAYMODE_WEAPONS);
+	weapons.manual_mode = WEAPONS_MODE_MANUAL;
+	hide_weapons_widgets();
 }
 
 static void show_death_screen(GtkWidget *w)
