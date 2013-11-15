@@ -4597,6 +4597,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	float angle_of_view;
 	struct snis_entity *o;
 	float cx, cy, cz;
+	union quat camera_orientation;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -4611,7 +4612,8 @@ static void show_weapons_camera_view(GtkWidget *w)
 	cz = o->z;
 
 	camera_set_pos(ecx, cx, cy, cz);
-	camera_set_orientation(ecx, &o->tsd.ship.weap_orientation);
+	quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
+	camera_set_orientation(ecx, &camera_orientation);
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
