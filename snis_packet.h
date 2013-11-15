@@ -154,6 +154,7 @@ struct update_ship_packet {
 	uint32_t victim_id;
 	int32_t orientation[4]; /* int32_t encoded orientation quaternion */
 	int32_t sciball_orientation[4]; /* int32_t encoded orientation quaternion */
+	int32_t weap_orientation[4];
 };
 
 struct ship_sdata_packet {

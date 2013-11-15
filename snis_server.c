@@ -2229,6 +2229,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.sci_heading = M_PI / 2.0;
 	o->tsd.ship.reverse = 0;
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
+	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
 	init_power_model(o);
 }
@@ -5698,7 +5699,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM, o->vz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "SSSwwUSUUbbbwbbbbbbbbbbbbwQQ",
+	packed_buffer_append(pb, "SSSwwUSUUbbbwbbbbbbbbbbbbwQQQ",
 			o->tsd.ship.yaw_velocity, (int32_t) 360,
 			o->tsd.ship.pitch_velocity, (int32_t) 360,
 			o->tsd.ship.roll_velocity, (int32_t) 360,
@@ -5714,7 +5715,9 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
 			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype,
 			o->tsd.ship.reverse, o->tsd.ship.victim_id,
-			&o->orientation.vec[0], &o->tsd.ship.sciball_orientation.vec[0]);
+			&o->orientation.vec[0],
+			&o->tsd.ship.sciball_orientation.vec[0],
+			&o->tsd.ship.weap_orientation.vec[0]);
 	pb_queue_to_client(c, pb);
 }
 

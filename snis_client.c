@@ -2849,7 +2849,7 @@ static int process_update_power_data(void)
 
 static int process_update_ship_packet(uint16_t opcode)
 {
-	unsigned char buffer[120];
+	unsigned char buffer[136];
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, power;
 	uint32_t fuel, victim_id;
@@ -2861,7 +2861,7 @@ static int process_update_ship_packet(uint16_t opcode)
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
 		reverse;
-	union quat orientation, sciball_orientation;
+	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -2881,11 +2881,13 @@ static int process_update_ship_packet(uint16_t opcode)
 				&torpedoes, &power, &dgheading, (uint32_t) 360,
 				&dgunyawvel, (int32_t) 360,
 				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
-	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbwQQ", &tloading, &throttle, &rpm, &fuel, &temp,
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbwQQQ",
+			&tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
-			&reverse, &victim_id, &orientation.vec[0], &sciball_orientation.vec[0]);
+			&reverse, &victim_id, &orientation.vec[0],
+			&sciball_orientation.vec[0], &weap_orientation.vec[0]);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	

@@ -256,6 +256,8 @@ struct ship_data {
 	union quat sciball_orientation;
 	union quat sciball_o1, sciball_o2;
 	double sciball_yawvel, sciball_pitchvel, sciball_rollvel;
+	union quat weap_orientation, weap_o1, weap_o2;
+	double weap_yawvel, weap_pitchvel; /* no roll for weapons */
 	uint8_t torpedoes_loaded;
 	uint8_t torpedoes_loading;
 	uint16_t torpedo_load_time;
