@@ -2141,7 +2141,7 @@ static void weapons_dirkey(int h, int v)
 			request_weapons_manual_yaw_packet(yaw);
 		}
 		if (v) {
-			pitch = v < 0 ? PITCH_FORWARD + fine : PITCH_BACK + fine;
+			pitch = v < 0 ? PITCH_BACK + fine : PITCH_FORWARD + fine;
 			request_weapons_manual_pitch_packet(pitch);
 		}
 	} else {
