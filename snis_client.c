@@ -2070,6 +2070,9 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 		sng_current_draw_arc(w->window, gc, 0, cx-0.5*r, cy-0.5*r, r, r, angle - M_PI/8.0, angle + M_PI/8.0);
 	}
 
+	if ((timer & 0x07) < 4)
+		return;
+
 	float range2 = range*range;
 	union vec3 ship_pos = {{o->x, o->y, o->z}};
 
