@@ -1749,6 +1749,13 @@ static void update_player_sciball_orientation(struct snis_entity *o)
 			o->tsd.ship.sciball_rollvel);
 }
 
+static void update_player_weap_orientation(struct snis_entity *o)
+{
+	quat_apply_relative_yaw_pitch_roll(&o->tsd.ship.weap_orientation,
+			o->tsd.ship.weap_yawvel,
+			o->tsd.ship.weap_pitchvel, 0.0f);
+}
+
 static float new_velocity(float desired_velocity, float current_velocity)
 {
 	float delta;
@@ -1839,6 +1846,7 @@ static void player_move(struct snis_entity *o)
 	}
 	update_player_orientation(o);
 	update_player_sciball_orientation(o);
+	update_player_weap_orientation(o);
 	update_player_position_and_velocity(o);
 	
 	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
@@ -1857,6 +1865,8 @@ static void player_move(struct snis_entity *o)
 	damp_yaw_velocity(&o->tsd.ship.sciball_yawvel, YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.sciball_pitchvel, PITCH_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.sciball_rollvel, ROLL_DAMPING);
+	damp_yaw_velocity(&o->tsd.ship.weap_yawvel, YAW_DAMPING);
+	damp_yaw_velocity(&o->tsd.ship.weap_pitchvel, PITCH_DAMPING);
 
 	/* Damp velocity */
 	if (fabs(o->tsd.ship.velocity) < MIN_PLAYER_VELOCITY)
@@ -3305,6 +3315,24 @@ static void do_sciball_roll(struct game_client *c, int roll)
 
 	do_generic_yaw(&ship->tsd.ship.sciball_rollvel, roll, max_roll_velocity,
 			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
+}
+
+static void do_manual_gunyaw(struct game_client *c, int yaw)
+{
+	struct snis_entity *ship = &go[c->ship_index];
+	double max_yaw_velocity = MAX_YAW_VELOCITY;
+
+	do_generic_yaw(&ship->tsd.ship.weap_yawvel, yaw, max_yaw_velocity,
+			YAW_INCREMENT, YAW_INCREMENT_FINE);
+}
+
+static void do_manual_gunpitch(struct game_client *c, int pitch)
+{
+	struct snis_entity *ship = &go[c->ship_index];
+	double max_pitch_velocity = MAX_PITCH_VELOCITY;
+
+	do_generic_yaw(&ship->tsd.ship.weap_pitchvel, pitch, max_pitch_velocity,
+			PITCH_INCREMENT, PITCH_INCREMENT_FINE);
 }
 
 static void do_demon_yaw(struct snis_entity *o, int yaw)
@@ -5117,6 +5145,16 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_GUNYAW:
 			rc = process_request_yaw(c, do_gun_yaw);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_MANUAL_GUNYAW:
+			rc = process_request_yaw(c, do_manual_gunyaw);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_MANUAL_GUNPITCH:
+			rc = process_request_yaw(c, do_manual_gunpitch);
 			if (rc)
 				goto protocol_error;
 			break;

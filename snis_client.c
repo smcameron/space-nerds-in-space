@@ -2028,24 +2028,60 @@ static void request_weapons_yaw_packet(uint8_t yaw)
 	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_GUNYAW, yaw));
 }
 
+static void request_weapons_manual_yaw_packet(uint8_t yaw)
+{
+	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_MANUAL_GUNYAW, yaw));
+}
+
+static void request_weapons_manual_pitch_packet(uint8_t pitch)
+{
+	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_MANUAL_GUNPITCH, pitch));
+}
+
+struct weapons_ui {
+	int manual_mode;
+#define WEAPONS_MODE_NORMAL 0
+#define WEAPONS_MODE_MANUAL 1
+	struct button *fire_torpedo, *load_torpedo, *fire_phaser, *tractor_beam;
+	struct gauge *phaser_bank_gauge;
+	struct gauge *phaser_wavelength;
+	struct slider *wavelen_slider;
+	struct slider *weapzoom_slider;
+	struct button *wavelen_up_button;
+	struct button *wavelen_down_button;
+	struct button *manual_button;
+} weapons;
+
 static void wavelen_updown_button_pressed(int direction);
 static void weapons_dirkey(int h, int v)
 {
 	static int last_time = 0;
 	int fine;
-	uint8_t yaw;
+	uint8_t yaw, pitch;
 
 	if (!h && !v)
 		return;
 
 	fine = 2 * (timer - last_time > 5);
 	last_time = timer;
-	if (h) {
-		yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
-		request_weapons_yaw_packet(yaw);
+
+	if (weapons.manual_mode == WEAPONS_MODE_MANUAL) {
+		if (h) {
+			yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
+			request_weapons_manual_yaw_packet(yaw);
+		}
+		if (v) {
+			pitch = v < 0 ? PITCH_FORWARD + fine : PITCH_BACK + fine;
+			request_weapons_manual_pitch_packet(pitch);
+		}
+	} else {
+		if (h) {
+			yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
+			request_weapons_yaw_packet(yaw);
+		}
+		if (v)
+			wavelen_updown_button_pressed(-v);
 	}
-	if (v)
-		wavelen_updown_button_pressed(-v);
 }
 
 static void science_dirkey(int h, int v)
@@ -3355,20 +3391,6 @@ static int process_nav_details(void)
 		snis_button_set_label(nav_ui.details_button, "3D");
 	return 0;
 }
-
-struct weapons_ui {
-	int manual_mode;
-#define WEAPONS_MODE_NORMAL 0
-#define WEAPONS_MODE_MANUAL 1
-	struct button *fire_torpedo, *load_torpedo, *fire_phaser, *tractor_beam;
-	struct gauge *phaser_bank_gauge;
-	struct gauge *phaser_wavelength;
-	struct slider *wavelen_slider;
-	struct slider *weapzoom_slider;
-	struct button *wavelen_up_button;
-	struct button *wavelen_down_button;
-	struct button *manual_button;
-} weapons;
 
 static void hide_widget(struct ui_element_list *list, void *widget)
 {
