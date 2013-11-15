@@ -7103,7 +7103,7 @@ static void init_weapons_ui(void)
 	weapons.weapzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, AMBER, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_weapzoom,
 				do_weapzoom);
-	weapons.manual_button = snis_button_init(715, 575, 80, 25, "MANUAL", WHITE,
+	weapons.manual_button = snis_button_init(715, 575, 80, 25, "AUTO", WHITE,
 			NANO_FONT, weapons_manual_button_pressed, NULL);
 	ui_add_button(weapons.fire_phaser, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.load_torpedo, DISPLAYMODE_WEAPONS);
