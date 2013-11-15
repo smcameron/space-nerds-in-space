@@ -174,8 +174,8 @@ void quat_to_heading_mark(const union quat *q, double *heading, double *mark);
 float normalize_euler_0_2pi(float a);
 
 /* m is pointer to array of 16 floats in column major order */
-void quat_to_lh_rot_matrix(union quat *q, float *m); /* quat to left handed rotation matrix */
-void quat_to_rh_rot_matrix(union quat *q, float *m); /* quat to right handed rotation matrix */
+void quat_to_lh_rot_matrix(const union quat *q, float *m); /* quat to left handed rotation matrix */
+void quat_to_rh_rot_matrix(const union quat *q, float *m); /* quat to right handed rotation matrix */
 
 /* Create a random quaternion */
 void random_quat(union quat *q);

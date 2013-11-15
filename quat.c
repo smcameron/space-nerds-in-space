@@ -253,7 +253,7 @@ float normalize_euler_0_2pi(float a)
 }
 
 /* m is pointer to array of 16 floats in column major order */
-void quat_to_rh_rot_matrix(union quat *q, float *m)
+void quat_to_rh_rot_matrix(const union quat *q, float *m)
 {
 	union quat qn;
 	float qw, qx, qy, qz;
@@ -286,7 +286,7 @@ void quat_to_rh_rot_matrix(union quat *q, float *m)
 	m[15] = 1.0f;
 }
 
-void quat_to_lh_rot_matrix(union quat *q, float *m)
+void quat_to_lh_rot_matrix(const union quat *q, float *m)
 {
 	union quat qn;
 	float qw, qx, qy, qz;
