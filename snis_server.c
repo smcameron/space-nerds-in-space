@@ -1011,7 +1011,8 @@ static void calculate_torpedo_velocities(double ox, double oy, double oz,
 static int add_torpedo(double x, double y, double z,
 		double vx, double vy, double vz, uint32_t ship_id);
 static int add_laser(double x, double y, double z,
-		double vx, double vy, double vz, double heading, uint32_t ship_id);
+		double vx, double vy, double vz, union quat *orientation,
+		double heading, uint32_t ship_id);
 static uint8_t update_phaser_banks(int current, int max);
 
 static void ship_choose_new_attack_victim(struct snis_entity *o)
@@ -2569,7 +2570,8 @@ static int lookup_by_damcon_id(struct damcon_data *d, int id)
 }
 
 static int add_laser(double x, double y, double z,
-		double vx, double vy, double vz, double heading, uint32_t ship_id)
+		double vx, double vy, double vz, union quat *orientation,
+		double heading, uint32_t ship_id)
 {
 	int i, s;
 
@@ -2583,6 +2585,13 @@ static int add_laser(double x, double y, double z,
 	go[i].tsd.laser.power = go[s].tsd.ship.phaser_charge;
 	go[s].tsd.ship.phaser_charge = 0;
 	go[i].tsd.laser.wavelength = go[s].tsd.ship.phaser_wavelength;
+	if (orientation) {
+		go[i].orientation = *orientation;
+	} else {
+		union vec3 from = { { 1.0, 0.0, 0.0 } };
+		union vec3 to = { { vx, vy, vz } };
+		quat_from_u2v(&go[i].orientation, &from, &to, NULL);
+	}
 	return i;
 }
 
@@ -4951,7 +4960,7 @@ static int process_request_manual_laser(struct game_client *c)
 	if (ship->tsd.ship.phaser_charge < (ship->tsd.ship.power_data.phasers.i * 3) / 4)
 		goto laserfail;
 	add_laser(ship->x, ship->y, ship->z, velocity.v.x, velocity.v.y, velocity.v.z,
-			0.0, ship->id);
+			&orientation, 0.0, ship->id);
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
@@ -5031,7 +5040,7 @@ static int process_demon_fire_phaser(struct game_client *c)
 
 	vx = LASER_VELOCITY * cos(o->heading);
 	vz = LASER_VELOCITY * -sin(o->heading);
-	add_laser(o->x, 0.0, o->z, vx, 0.0, vz, o->heading, o->id);
+	add_laser(o->x, 0.0, o->z, vx, 0.0, vz, NULL, o->heading, o->id);
 out:
 	pthread_mutex_unlock(&universe_mutex);
 
