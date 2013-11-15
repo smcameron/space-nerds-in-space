@@ -4658,7 +4658,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 		float sx, sy;
 		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.victim_id);
 
-		if (target && target->entity) {
+		if (target && target->alive && target->entity) {
 			entity_get_screen_coords(target->entity, &sx, &sy);
 			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
 		}
@@ -4668,7 +4668,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	if (curr_science_guy) {
 		float sx, sy;
 
-		if (curr_science_guy->entity) {
+		if (curr_science_guy->alive && curr_science_guy->entity) {
 			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
 			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 1);
 		}
@@ -4732,7 +4732,7 @@ static void show_mainscreen(GtkWidget *w)
 		float sx, sy;
 		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.victim_id);
 
-		if (target && target->entity) {
+		if (target && target->alive && target->entity) {
 			entity_get_screen_coords(target->entity, &sx, &sy);
 			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
 		}
@@ -4742,7 +4742,7 @@ static void show_mainscreen(GtkWidget *w)
 	if (curr_science_guy) {
 		float sx, sy;
 
-		if (curr_science_guy->entity) {
+		if (curr_science_guy->alive && curr_science_guy->entity) {
 			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
 			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 1);
 		}
