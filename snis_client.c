@@ -1215,7 +1215,7 @@ static int update_wormhole(uint32_t id, double x, double z)
 	return 0;
 }
 
-static int update_starbase(uint32_t id, double x, double z)
+static int update_starbase(uint32_t id, double x, double y, double z)
 {
 	int i, m;
 	struct entity *e;
@@ -1227,7 +1227,7 @@ static int update_starbase(uint32_t id, double x, double z)
 		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
 		m = id % NSTARBASE_MODELS;
 		e = add_entity(ecx, starbase_mesh[m], x, 0, z, STARBASE_COLOR);
-		i = add_generic_object(id, x, 0, z, 0.0, 0.0, &orientation, OBJTYPE_STARBASE, 1, e);
+		i = add_generic_object(id, x, y, z, 0.0, 0.0, &orientation, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -1236,10 +1236,10 @@ static int update_starbase(uint32_t id, double x, double z)
 		 * and orientation is handled client side via spin_starbase
 		 */
 		o->x = x;
-		o->y = 0;
+		o->y = y;
 		o->z = z;
 		if (o->entity)
-			update_entity_pos(o->entity, x, 0, z);
+			update_entity_pos(o->entity, x, y, z);
 	}	
 	return 0;
 }
@@ -3690,16 +3690,16 @@ static int process_update_starbase_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id;
-	double dx, dz;
+	double dx, dy, dz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_starbase_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSS", &id,
-			&dx, (int32_t) UNIVERSE_DIM, &dz, (int32_t) UNIVERSE_DIM);
+	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
+			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, &dz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_starbase(id, dx, dz);
+	rc = update_starbase(id, dx, dy, dz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
