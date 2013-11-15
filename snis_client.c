@@ -2057,6 +2057,68 @@ struct weapons_ui {
 	struct button *manual_button;
 } weapons;
 
+static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *aim, float cx, float cy, float r, float range)
+{
+	int i;
+
+	/* draw background overlay */
+	sng_set_foreground(AMBER);
+	sng_draw_circle(w->window, gc, cx, cy, r);
+	for (i=0; i<4; i++) {
+		float angle = i * M_PI / 2.0 + M_PI / 4.0;
+		sng_current_draw_line(w->window, gc, cx + cos(angle)*r, cy - sin(angle)*r, cx + 0.5*cos(angle)*r, cy - 0.5*sin(angle)*r);
+		sng_current_draw_arc(w->window, gc, 0, cx-0.5*r, cy-0.5*r, r, r, angle - M_PI/8.0, angle + M_PI/8.0);
+	}
+
+	float range2 = range*range;
+	union vec3 ship_pos = {{o->x, o->y, o->z}};
+
+	union quat aim_conj;
+	quat_conj(&aim_conj, aim);
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (!go[i].alive)
+			continue;
+
+		if (go[i].id == my_ship_id)
+			continue; /* skip drawing yourself. */
+
+		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
+			continue;
+		}
+		if (go[i].type == OBJTYPE_NEBULA) {
+			continue;
+		}
+
+		float dist2 = dist3dsqrd(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
+		if (dist2 > range2)
+			continue; /* not close enough */
+
+		float dist = sqrt(dist2);
+		if (dist > range)
+			continue;
+
+		union vec3 contact_pos = {{go[i].x, go[i].y, go[i].z}};
+
+		/* get direction vector, rotate back to basis axis, then normalize */
+		union vec3 dir;
+		vec3_sub(&dir, &contact_pos, &ship_pos);
+		quat_rot_vec_self(&dir, &aim_conj);
+		vec3_normalize(&dir, &dir);
+
+		/* dist to forward vector */
+		float d = dist3d(dir.v.x - 1.0, dir.v.y, dir.v.z) / 2.0;
+		/* angle off center when looking towards +x */
+		float twist = atan2(dir.v.y, dir.v.z);
+
+		float sx = cx + r * cos(twist) * d * 0.98;
+		float sy = cy - r * sin(twist) * d * 0.98;
+
+		sng_set_foreground(RED);
+		sng_draw_circle(w->window, gc, sx, sy, r*0.01);
+	}
+}
+
 static void wavelen_updown_button_pressed(int direction);
 static void weapons_dirkey(int h, int v)
 {
@@ -4638,6 +4700,9 @@ static void show_weapons_camera_view(GtkWidget *w)
 	render_skybox(w, ecx);
 
 	pthread_mutex_lock(&universe_mutex);
+
+	/* range is the same as max zoom on old weapons */
+	draw_plane_radar(w, o, &camera_orientation, 400, 500, 75, XKNOWN_DIM * 0.01);
 
 	/* Add our ship into the scene (on the mainscreen, it is omitted) */
 #if 0
