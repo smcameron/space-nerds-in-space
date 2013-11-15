@@ -212,8 +212,30 @@ void sng_scaled_bright_line(GdkDrawable *drawable,
 void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 	gboolean filled, float x, float y, float width, float height, float angle1, float angle2)
 {
+#ifndef WITHOUTOPENGL
+	float rx = width/2.0;
+	float ry = height/2.0;
+	float cx = x + rx;
+	float cy = y + ry;
+	
+	int i;
+	GdkColor *h = &huex[sgc.hue];
+
+	int segments = (int)((angle2 - angle1)/(M_PI/90.0)) + 1; 
+	float delta = (angle2 - angle1) / segments;
+
+	glBegin(GL_LINE_STRIP);
+        glColor3us(h->red, h->green, h->blue);
+	for (i = 0; i <= segments; i++) {
+		float a = angle1 + delta * (float)i;
+		glVertex2f(sgc.xscale * (cx + cos(a) * rx),
+			(sgc.screen_height - cy * sgc.yscale) + sin(a) * ry * sgc.yscale);
+	}
+	glEnd();
+#else
 	gdk_draw_arc(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
 			width * sgc.xscale, height * sgc.yscale, angle1, angle2);
+#endif
 }
 
 void sng_use_unscaled_drawing_functions(void)
