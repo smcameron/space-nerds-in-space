@@ -3356,6 +3356,37 @@ static int process_nav_details(void)
 	return 0;
 }
 
+struct weapons_ui {
+	int manual_mode;
+#define WEAPONS_MODE_NORMAL 0
+#define WEAPONS_MODE_MANUAL 1
+	struct button *fire_torpedo, *load_torpedo, *fire_phaser, *tractor_beam;
+	struct gauge *phaser_bank_gauge;
+	struct gauge *phaser_wavelength;
+	struct slider *wavelen_slider;
+	struct slider *weapzoom_slider;
+	struct button *wavelen_up_button;
+	struct button *wavelen_down_button;
+	struct button *manual_button;
+} weapons;
+
+static int process_weapons_manual(void)
+{
+	unsigned char buffer[10];
+	uint8_t new_mode;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "b", &new_mode);
+	if (rc != 0)
+		return rc;
+	weapons.manual_mode = new_mode;
+	if (new_mode)
+		snis_button_set_label(weapons.manual_button, "AUTO");
+	else
+		snis_button_set_label(weapons.manual_button, "MANUAL");
+	return 0;
+}
+
 static struct snis_entity *curr_science_guy = NULL;
 static struct snis_entity *prev_science_guy = NULL;
 static int process_sci_select_target_packet(void)
@@ -3816,6 +3847,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_NAV_DETAILS:
 			rc = process_nav_details();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_WEAPONS_MANUAL:
+			rc = process_weapons_manual();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -6737,15 +6773,11 @@ static void reverse_button_pressed(__attribute__((unused)) void *s)
 	do_adjust_byte_value(!o->tsd.ship.reverse,  OPCODE_REQUEST_REVERSE);
 }
 
-struct weapons_ui {
-	struct button *fire_torpedo, *load_torpedo, *fire_phaser, *tractor_beam;
-	struct gauge *phaser_bank_gauge;
-	struct gauge *phaser_wavelength;
-	struct slider *wavelen_slider;
-	struct slider *weapzoom_slider;
-	struct button *wavelen_up_button;
-	struct button *wavelen_down_button;
-} weapons;
+static void weapons_manual_button_pressed(void *x)
+{
+	queue_to_server(packed_buffer_new("hb", OPCODE_WEAPONS_MANUAL,
+		(unsigned char) !weapons.manual_mode));
+}
 
 static void ui_add_slider(struct slider *s, int active_displaymode)
 {
@@ -6842,12 +6874,15 @@ static void init_weapons_ui(void)
 	weapons.weapzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, AMBER, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_weapzoom,
 				do_weapzoom);
+	weapons.manual_button = snis_button_init(715, 575, 80, 25, "MANUAL", WHITE,
+			NANO_FONT, weapons_manual_button_pressed, NULL);
 	ui_add_button(weapons.fire_phaser, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.load_torpedo, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.fire_torpedo, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.tractor_beam, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.wavelen_up_button, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.wavelen_down_button, DISPLAYMODE_WEAPONS);
+	ui_add_button(weapons.manual_button, DISPLAYMODE_WEAPONS);
 	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS);
 	ui_add_slider(weapons.weapzoom_slider, DISPLAYMODE_WEAPONS);
 	ui_add_gauge(weapons.phaser_bank_gauge, DISPLAYMODE_WEAPONS);
