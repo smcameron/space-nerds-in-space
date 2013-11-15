@@ -4611,7 +4611,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	cy = o->y;
 	cz = o->z;
 
-	camera_set_pos(ecx, cx, cy, cz);
+	camera_set_pos(ecx, cx, cy + 15.0f, cz - 5.0);
 	quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 	camera_set_orientation(ecx, &camera_orientation);
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
@@ -4627,7 +4627,20 @@ static void show_weapons_camera_view(GtkWidget *w)
 	render_skybox(w, ecx);
 
 	pthread_mutex_lock(&universe_mutex);
+
+	/* Add our ship into the scene (on the mainscreen, it is omitted) */
+
+	o->entity = add_entity(ecx, ship_mesh, o->x, o->y, o->z, SHIP_COLOR);
+	update_entity_orientation(o->entity, &o->orientation);
+
+	/* FIXME: Note, because of our own ship's extreme proximity, some
+	 * limitations of the renderer become glaringly apparent
+	 */
 	render_entities(w, gc, ecx);
+
+	/* Remove our ship from the scene */
+	remove_entity(ecx, o->entity);
+	o->entity = NULL;
 
 	/* Draw targeting indicator on main screen */
 	if (o->tsd.ship.victim_id != -1) {
