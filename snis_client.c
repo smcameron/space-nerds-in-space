@@ -115,6 +115,11 @@
 #define SCREEN_WIDTH 800        /* window width, in pixels */
 #define SCREEN_HEIGHT 600       /* window height, in pixels */
 
+#define VERTICAL_CONTROLS_INVERTED -1
+#define VERTICAL_CONTROLS_NORMAL 1
+static int vertical_controls_inverted = VERTICAL_CONTROLS_NORMAL;
+static volatile vertical_controls_timer = 0;
+
 __attribute__((unused)) static double max_speed[];
 
 typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nsparks, int time);
@@ -1774,6 +1779,8 @@ void init_keymap()
 	keymap[GDK_s] = keydown;
 	keymap[GDK_d] = keyright;
 
+	keymap[GDK_i] = key_invert_vertical;
+
 	keymap[GDK_k] = keysciball_rollleft;
 	keymap[GDK_semicolon] = keysciball_rollright;
 	keymap[GDK_comma] = keysciball_yawleft;
@@ -2213,6 +2220,8 @@ static void do_view_mode_change()
 
 static void do_dirkey(int h, int v, int r)
 {
+	v = v * vertical_controls_inverted;
+
 	if (in_the_process_of_quitting) {
 		if (h < 0)
 			current_quit_selection = 1;
@@ -2247,6 +2256,8 @@ static void do_dirkey(int h, int v, int r)
 static void do_sciball_dirkey(int h, int v, int r)
 {
 	uint8_t value;
+
+	v = v * vertical_controls_inverted;
 
 	switch (displaymode) {
 		case DISPLAYMODE_SCIENCE:
@@ -2591,6 +2602,12 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 #endif
 
         switch (ka) {
+	case key_invert_vertical:
+			if (control_key_pressed) {
+				vertical_controls_inverted *= -1;
+				vertical_controls_timer = FRAME_RATE_HZ;
+			}
+			return TRUE;
         case keyfullscreen: {
 			if (fullscreen) {
 				gtk_window_unfullscreen(GTK_WINDOW(window));
@@ -4364,6 +4381,17 @@ static void show_common_screen(GtkWidget *w, char *title)
 	snis_draw_line(w->window, gc, SCREEN_WIDTH - 1, 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
 	snis_draw_line(w->window, gc, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, 1, SCREEN_HEIGHT - 1);
 	snis_draw_line(w->window, gc, 1, 1, 1, SCREEN_HEIGHT - 1);
+
+	if (vertical_controls_timer) {
+		sng_set_foreground(WHITE);
+		vertical_controls_timer--;
+		if (vertical_controls_inverted > 0)
+			sng_center_xy_draw_string(w, gc, "VERTICAL CONTROLS NORMAL",
+					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+		else
+			sng_center_xy_draw_string(w, gc, "VERTICAL CONTROLS INVERTED",
+					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+	}
 }
 
 #define ANGLE_OF_VIEW (45)

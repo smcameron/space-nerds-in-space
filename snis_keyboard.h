@@ -38,6 +38,7 @@ enum keyaction {
 		keysciball_pitchdown= 33,
 		keysciball_rollleft = 34,
 		keysciball_rollright = 35,
+		key_invert_vertical = 36,
 #define NKEYSTATES 36 
 };
 
