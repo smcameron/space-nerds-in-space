@@ -7157,10 +7157,11 @@ static void init_nav_ui(void)
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
 
 	nav_ui.details_mode = 0;
-	nav_ui.details_button = snis_button_init(450, 570, 40, 25, "3D",
+	nav_ui.details_button = snis_button_init(450, 570, 40, 25, "2D",
 			RED, NANO_FONT, nav_details_pressed, (void *) 0);
 	ui_add_button(nav_ui.details_button, DISPLAYMODE_NAVIGATION);
 	navecx = entity_context_new(5000);
+	nav_ui.details_mode = 1;
 }
 
 #if 0
