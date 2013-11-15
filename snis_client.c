@@ -3370,6 +3370,50 @@ struct weapons_ui {
 	struct button *manual_button;
 } weapons;
 
+static void hide_widget(struct ui_element_list *list, void *widget)
+{
+	struct ui_element *uie;
+
+	uie = widget_to_ui_element(list, widget);
+	ui_element_hide(uie);
+}
+	
+static void unhide_widget(struct ui_element_list *list, void *widget)
+{
+	struct ui_element *uie;
+
+	uie = widget_to_ui_element(list, widget);
+	ui_element_unhide(uie);
+}
+	
+static void hide_weapons_widgets()
+{
+	hide_widget(uiobjs, weapons.fire_torpedo);
+	hide_widget(uiobjs, weapons.load_torpedo);
+	hide_widget(uiobjs, weapons.fire_phaser);
+	hide_widget(uiobjs, weapons.tractor_beam);
+	hide_widget(uiobjs, weapons.phaser_bank_gauge);
+	hide_widget(uiobjs, weapons.phaser_wavelength);
+	hide_widget(uiobjs, weapons.wavelen_slider);
+	hide_widget(uiobjs, weapons.weapzoom_slider);
+	hide_widget(uiobjs, weapons.wavelen_up_button);
+	hide_widget(uiobjs, weapons.wavelen_down_button);
+}
+
+static void unhide_weapons_widgets()
+{
+	unhide_widget(uiobjs, weapons.fire_torpedo);
+	unhide_widget(uiobjs, weapons.load_torpedo);
+	unhide_widget(uiobjs, weapons.fire_phaser);
+	unhide_widget(uiobjs, weapons.tractor_beam);
+	unhide_widget(uiobjs, weapons.phaser_bank_gauge);
+	unhide_widget(uiobjs, weapons.phaser_wavelength);
+	unhide_widget(uiobjs, weapons.wavelen_slider);
+	unhide_widget(uiobjs, weapons.weapzoom_slider);
+	unhide_widget(uiobjs, weapons.wavelen_up_button);
+	unhide_widget(uiobjs, weapons.wavelen_down_button);
+}
+
 static int process_weapons_manual(void)
 {
 	unsigned char buffer[10];
@@ -3380,10 +3424,13 @@ static int process_weapons_manual(void)
 	if (rc != 0)
 		return rc;
 	weapons.manual_mode = new_mode;
-	if (new_mode == WEAPONS_MODE_MANUAL)
+	if (new_mode == WEAPONS_MODE_MANUAL) {
 		snis_button_set_label(weapons.manual_button, "AUTO");
-	else
+		hide_weapons_widgets();
+	} else {
 		snis_button_set_label(weapons.manual_button, "MANUAL");
+		unhide_weapons_widgets();
+	}
 	return 0;
 }
 
