@@ -834,7 +834,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, laser_mesh, x, y, z, LASER_COLOR);
+		e = add_entity(ecx, laserbeam_mesh, x, y, z, LASER_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
 		i = add_generic_object(id, x, y, z, vx, vz, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
