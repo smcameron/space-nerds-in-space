@@ -4935,6 +4935,36 @@ laserfail:
 	return 0;
 }
 
+static int process_request_manual_laser(struct game_client *c)
+{
+	struct snis_entity *ship = &go[c->ship_index];
+	union vec3 rightvec = { { LASER_VELOCITY, 0.0f, 0.0f } };
+	union vec3 velocity;
+	union quat orientation;
+
+	pthread_mutex_lock(&universe_mutex);
+
+	/* Calculate which way weapons is pointed, and velocity of laser. */
+	quat_mul(&orientation, &ship->orientation, &ship->tsd.ship.weap_orientation);
+	quat_rot_vec(&velocity, &rightvec, &orientation);
+
+	if (ship->tsd.ship.phaser_charge < (ship->tsd.ship.power_data.phasers.i * 3) / 4)
+		goto laserfail;
+	add_laser(ship->x, ship->y, ship->z, velocity.v.x, velocity.v.y, velocity.v.z,
+			0.0, ship->id);
+	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+
+laserfail:
+	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+
+
+
 static int process_request_tractor_beam(struct game_client *c)
 {
 	struct snis_entity *tb, *ship = &go[c->ship_index];
@@ -5038,6 +5068,9 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_LASER:
 			process_request_laser(c);
+			break;
+		case OPCODE_REQUEST_MANUAL_LASER:
+			process_request_manual_laser(c);
 			break;
 		case OPCODE_DEMON_FIRE_PHASER:
 			process_demon_fire_phaser(c);

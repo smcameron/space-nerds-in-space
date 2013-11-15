@@ -2234,7 +2234,10 @@ static void do_laser(void)
 {
 	if (displaymode != DISPLAYMODE_WEAPONS)
 		return;
-	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_LASER));
+	if (weapons.manual_mode == WEAPONS_MODE_MANUAL)
+		queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_MANUAL_LASER));
+	else
+		queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_LASER));
 }
 
 static void robot_backward_button_pressed(void *x);
