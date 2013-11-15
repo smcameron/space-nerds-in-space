@@ -46,7 +46,7 @@ struct power_model *new_power_model(float max_current, float voltage,
 {
 	struct power_model *m = malloc(sizeof(*m));
 
-	memset(m, 0, sizeof(m));
+	memset(m, 0, sizeof(*m));
 	m->nominal_voltage = voltage;
 	m->max_current = max_current;
 	m->internal_resistance = internal_resistance;
