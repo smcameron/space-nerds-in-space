@@ -740,71 +740,6 @@ static int update_power_model_data(uint32_t id, struct power_model_data *pmd)
 	return 0;
 }
 
-static int update_ship(uint32_t id, double x, double y, double z, double vx, double vz,
-			union quat *orientation, union quat *sciball_orientation,
-			double yawvel, double pitchvel, double rollvel,
-			uint32_t alive,
-			uint32_t torpedoes, uint32_t power, 
-			double gun_heading, double gunyawvel,
-			double sci_heading, double sci_beam_width, int type,
-			uint8_t tloading, uint8_t tloaded, uint8_t throttle, uint8_t rpm, uint32_t
-			fuel, uint8_t temp, uint8_t scizoom, uint8_t weapzoom,
-			uint8_t navzoom, uint8_t mainzoom, uint8_t warpdrive,
-			uint8_t requested_warpdrive, uint8_t requested_shield,
-			uint8_t phaser_charge, uint8_t phaser_wavelength, uint8_t shiptype,
-			uint8_t reverse, uint32_t victim_id)
-{
-	int i;
-	struct entity *e;
-
-	i = lookup_object_by_id(id);
-	if (i < 0) {
-		if (id == my_ship_id)	
-			e = add_entity(ecx, NULL, x, y, z, SHIP_COLOR);
-		else
-			e = add_entity(ecx, ship_mesh_map[shiptype % NSHIPTYPES], x, y, z, SHIP_COLOR);
-		i = add_generic_object(id, x, y, z, vx, vz, orientation, type, alive, e);
-		if (i < 0)
-			return i;
-	} else {
-		update_generic_object(i, x, y, z, vx, vz, orientation, alive); 
-	}
-	go[i].tsd.ship.yaw_velocity = yawvel;
-	go[i].tsd.ship.pitch_velocity = pitchvel;
-	go[i].tsd.ship.roll_velocity = rollvel;
-	go[i].tsd.ship.torpedoes = torpedoes;
-	go[i].tsd.ship.power = power;
-	go[i].tsd.ship.gun_heading = gun_heading;
-	go[i].tsd.ship.gun_yaw_velocity = gunyawvel;
-	go[i].tsd.ship.sci_heading = sci_heading;
-	go[i].tsd.ship.sci_beam_width = sci_beam_width;
-	go[i].tsd.ship.torpedoes_loaded = tloaded;
-	go[i].tsd.ship.torpedoes_loading = tloading;
-	go[i].tsd.ship.throttle = throttle;
-	go[i].tsd.ship.rpm = rpm;
-	go[i].tsd.ship.fuel = fuel;
-	go[i].tsd.ship.temp = temp;
-	go[i].tsd.ship.scizoom = scizoom;
-	go[i].tsd.ship.weapzoom = weapzoom;
-	go[i].tsd.ship.navzoom = navzoom;
-	go[i].tsd.ship.mainzoom = mainzoom;
-	go[i].tsd.ship.requested_warpdrive = requested_warpdrive;
-	go[i].tsd.ship.requested_shield = requested_shield;
-	go[i].tsd.ship.warpdrive = warpdrive;
-	go[i].tsd.ship.phaser_charge = phaser_charge;
-	go[i].tsd.ship.phaser_wavelength = phaser_wavelength;
-	go[i].tsd.ship.damcon = NULL;
-	go[i].tsd.ship.shiptype = shiptype;
-	go[i].tsd.ship.sciball_o1 = go[i].tsd.ship.sciball_o2;
-	go[i].tsd.ship.sciball_orientation = go[i].tsd.ship.sciball_o1; 
-	go[i].tsd.ship.sciball_o2 = *sciball_orientation;
-	if (!go[i].tsd.ship.reverse && reverse)
-		wwviaudio_add_sound(REVERSE_SOUND);
-	go[i].tsd.ship.reverse = reverse;
-	go[i].tsd.ship.victim_id = victim_id;
-	return 0;
-}
-
 static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 				uint8_t shield_strength, uint8_t shield_wavelength,
 				uint8_t shield_width, uint8_t shield_depth, uint8_t faction, uint8_t lifeform_count)
@@ -2849,6 +2784,7 @@ static int process_update_power_data(void)
 
 static int process_update_ship_packet(uint16_t opcode)
 {
+	int i;
 	unsigned char buffer[136];
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, power;
@@ -2863,6 +2799,8 @@ static int process_update_ship_packet(uint16_t opcode)
 		reverse;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
+	struct entity *e;
+	struct snis_entity *o;
 
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint16_t));
@@ -2892,16 +2830,68 @@ static int process_update_ship_packet(uint16_t opcode)
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_ship(id, dx, dy, dz, dvx, dvz, &orientation, &sciball_orientation,
-				dyawvel, dpitchvel, drollvel, alive, torpedoes, power,
-				dgheading, dgunyawvel, dsheading, dbeamwidth, type,
-				tloading, tloaded, throttle, rpm, fuel, temp, scizoom,
-				weapzoom, navzoom, mainzoom, warpdrive, requested_warpdrive,
-				requested_shield,
-				phaser_charge, phaser_wavelength, shiptype, reverse, victim_id);
+
+	/* Now update the ship... do it inline here instead of a function because
+	 * such a function would require 8 million params.
+	 */
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		if (id == my_ship_id)
+			e = add_entity(ecx, NULL, dx, dy, dz, SHIP_COLOR);
+		else
+			e = add_entity(ecx, ship_mesh_map[shiptype % NSHIPTYPES],
+					dx, dy, dz, SHIP_COLOR);
+		i = add_generic_object(id, dx, dy, dz, dvx, dvz, &orientation, type, alive, e);
+		if (i < 0) {
+			rc = i;
+			goto out;
+		}
+	} else {
+		update_generic_object(i, dx, dy, dz, dvx, dvz, &orientation, alive);
+	}
+	o = &go[i];
+	o->tsd.ship.yaw_velocity = dyawvel;
+	o->tsd.ship.pitch_velocity = dpitchvel;
+	o->tsd.ship.roll_velocity = drollvel;
+	o->tsd.ship.torpedoes = torpedoes;
+	o->tsd.ship.power = power;
+	o->tsd.ship.gun_heading = dgheading;
+	o->tsd.ship.gun_yaw_velocity = dgunyawvel;
+	o->tsd.ship.sci_heading = dsheading;
+	o->tsd.ship.sci_beam_width = dbeamwidth;
+	o->tsd.ship.torpedoes_loaded = tloaded;
+	o->tsd.ship.torpedoes_loading = tloading;
+	o->tsd.ship.throttle = throttle;
+	o->tsd.ship.rpm = rpm;
+	o->tsd.ship.fuel = fuel;
+	o->tsd.ship.temp = temp;
+	o->tsd.ship.scizoom = scizoom;
+	o->tsd.ship.weapzoom = weapzoom;
+	o->tsd.ship.navzoom = navzoom;
+	o->tsd.ship.mainzoom = mainzoom;
+	o->tsd.ship.requested_warpdrive = requested_warpdrive;
+	o->tsd.ship.requested_shield = requested_shield;
+	o->tsd.ship.warpdrive = warpdrive;
+	o->tsd.ship.phaser_charge = phaser_charge;
+	o->tsd.ship.phaser_wavelength = phaser_wavelength;
+	o->tsd.ship.damcon = NULL;
+	o->tsd.ship.shiptype = shiptype;
+	o->tsd.ship.sciball_o1 = o->tsd.ship.sciball_o2;
+	o->tsd.ship.sciball_orientation = o->tsd.ship.sciball_o1;
+	o->tsd.ship.sciball_o2 = sciball_orientation;
+	o->tsd.ship.weap_o1 = o->tsd.ship.weap_o2;
+	o->tsd.ship.weap_orientation = o->tsd.ship.weap_o1;
+	o->tsd.ship.weap_o2 = weap_orientation;
+	if (!o->tsd.ship.reverse && reverse)
+		wwviaudio_add_sound(REVERSE_SOUND);
+	o->tsd.ship.reverse = reverse;
+	o->tsd.ship.victim_id = victim_id;
+	rc = 0;
+out:
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int read_and_unpack_buffer(unsigned char *buffer, char *format, ...)
 {
