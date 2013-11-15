@@ -34,6 +34,9 @@ GLOBAL void ui_element_get_keystrokes(struct ui_element *e,
 
 GLOBAL void ui_element_list_keypress(struct ui_element_list *list, GdkEventKey *event);
 GLOBAL void ui_element_list_keyrelease(struct ui_element_list *list, GdkEventKey *event);
+GLOBAL void ui_element_hide(struct ui_element *e);
+GLOBAL void ui_element_unhide(struct ui_element *e);
+GLOBAL struct ui_element *widget_to_ui_element(struct ui_element_list *list, void *widget);
 
 #undef GLOBAL
 #endif

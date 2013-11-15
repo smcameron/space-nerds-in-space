@@ -14,6 +14,7 @@ struct ui_element {
 	ui_element_set_focus_function set_focus;
 	int has_focus;
 	ui_element_keypress_function keypress_fn, keyrelease_fn;
+	int hidden;
 };
 
 struct ui_element_list {
@@ -38,6 +39,7 @@ struct ui_element *ui_element_init(void *element,
 	e->has_focus = 0;
 	e->keypress_fn = NULL;	
 	e->keyrelease_fn = NULL;
+	e->hidden = 0;
 	return e;
 }
 
@@ -80,7 +82,7 @@ void ui_element_list_draw(GtkWidget *w, GdkGC *gc,
 {
 	for (; list != NULL; list = list->next) {
 		struct ui_element *e = list->element;
-		if (e->draw && e->active_displaymode == *e->displaymode)
+		if (e->draw && e->active_displaymode == *e->displaymode && !e->hidden)
 			e->draw(w, gc, e->element);
 	}
 }
@@ -215,5 +217,24 @@ void ui_element_get_keystrokes(struct ui_element *e,
 {
 	e->keypress_fn = keypress_fn;
 	e->keyrelease_fn = keyrelease_fn;
+}
+
+void ui_element_hide(struct ui_element *e)
+{
+	e->hidden = 1;
+}
+
+void ui_element_unhide(struct ui_element *e)
+{
+	e->hidden = 0;
+}
+
+struct ui_element *widget_to_ui_element(struct ui_element_list *list, void *widget)
+{
+	for (; list != NULL; list = list->next) {
+		if (list->element->element == widget)
+			return list->element;
+	}
+	return NULL;
 }
 
