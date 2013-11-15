@@ -3380,7 +3380,7 @@ static int process_weapons_manual(void)
 	if (rc != 0)
 		return rc;
 	weapons.manual_mode = new_mode;
-	if (new_mode)
+	if (new_mode == WEAPONS_MODE_MANUAL)
 		snis_button_set_label(weapons.manual_button, "AUTO");
 	else
 		snis_button_set_label(weapons.manual_button, "MANUAL");
@@ -6906,6 +6906,12 @@ static void show_death_screen(GtkWidget *w)
 	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, 500);
 }
 
+static void show_manual_weapons(GtkWidget *w)
+{
+	show_mainscreen(w);
+	show_common_screen(w, "WEAPONS");
+}
+
 static void show_weapons(GtkWidget *w)
 {
 	char buf[100];
@@ -10253,7 +10259,10 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_navigation(w);
 		break;
 	case DISPLAYMODE_WEAPONS:
-		show_weapons(w);
+		if (weapons.manual_mode == WEAPONS_MODE_MANUAL)
+			show_manual_weapons(w);
+		else
+			show_weapons(w);
 		break;
 	case DISPLAYMODE_ENGINEERING:
 		show_engineering(w);
