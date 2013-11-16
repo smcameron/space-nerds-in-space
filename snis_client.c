@@ -4425,43 +4425,6 @@ static int newzoom(int current_zoom, int desired_zoom)
 	return current_zoom;
 }
 
-static void show_mainscreen_starfield(GtkWidget *w, double heading)
-{
-#ifdef WITHOUTOPENGL
-	static int stars_initialized = 0;
-	static int stary[720];
-	int i, first_angle, last_angle;
-	float x, dx;
-	float fa;
-
-	if (!stars_initialized) {
-		for (i = 0; i < 720; i++)
-			stary[i] = snis_randn(SCREEN_HEIGHT);
-		stars_initialized = 1;
-	}
-
-
-	fa = (heading * 180 / M_PI) - ANGLE_OF_VIEW / 2.0;
-	if (fa < 0)
-		fa += 360.0;
-	first_angle = fa;
-	last_angle = (heading * 180 / M_PI) + ANGLE_OF_VIEW / 2.0;
-	first_angle = normalize_degrees(first_angle);
-	last_angle = normalize_degrees(last_angle);
-
-	sng_set_foreground(WHITE);
-
-	dx = (float) SCREEN_WIDTH / ANGLE_OF_VIEW;
-	x = 0.0 - (fa - (float) first_angle) * dx;
-	for (i = first_angle; i != last_angle; i = (i + 1) % 360) {
-		snis_draw_line(w->window, gc, (int) x, stary[i], (int) x + (snis_randn(10) < 7), stary[i]);
-		snis_draw_line(w->window, gc, (int) x, stary[360 + i],
-					(int) x + (snis_randn(10) < 7), stary[360 + i]);
-		x += dx;
-	}
-#endif
-}
-
 #define NEAR_CAMERA_PLANE 1.0
 #define FAR_CAMERA_PLANE 400.0
 
@@ -4804,8 +4767,6 @@ static void show_mainscreen(GtkWidget *w)
 		camera_look_heading = o->heading + o->tsd.ship.view_angle;
 	else
 		camera_look_heading = o->tsd.ship.gun_heading;
-
-	show_mainscreen_starfield(w, camera_look_heading);
 
 	cx = o->x;
 	cy = o->y;
