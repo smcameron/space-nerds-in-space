@@ -3510,8 +3510,8 @@ static void hide_weapons_widgets()
 	hide_widget(uiobjs, weapons.fire_phaser);
 	hide_widget(uiobjs, weapons.tractor_beam);
 	/* hide_widget(uiobjs, weapons.phaser_bank_gauge); */
-	hide_widget(uiobjs, weapons.phaser_wavelength);
-	hide_widget(uiobjs, weapons.wavelen_slider);
+	/* hide_widget(uiobjs, weapons.phaser_wavelength); */
+	/* hide_widget(uiobjs, weapons.wavelen_slider); */
 	hide_widget(uiobjs, weapons.weapzoom_slider);
 	hide_widget(uiobjs, weapons.wavelen_up_button);
 	hide_widget(uiobjs, weapons.wavelen_down_button);
@@ -7119,17 +7119,17 @@ static void init_weapons_ui(void)
 	y += 35;
 	weapons.tractor_beam = snis_button_init(550, y, 200, 25, "TRACTOR BEAM", RED,
 			TINY_FONT, tractor_beam_button_pressed, NULL);
-	weapons.phaser_bank_gauge = gauge_init(650, 100, 90, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, WHITE,
+	weapons.phaser_bank_gauge = gauge_init(280, 550, 45, 0.0, 100.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "CHARGE", sample_phasercharge);
-	weapons.phaser_wavelength = gauge_init(650, 300, 90, 10.0, 60.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, WHITE,
+	weapons.phaser_wavelength = gauge_init(520, 550, 45, 10.0, 60.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "WAVE LEN", sample_phaser_wavelength);
 	weapons.wavelen_down_button = snis_button_init(550, 400, 60, 25, "DOWN", WHITE,
 			NANO_FONT, wavelen_down_button_pressed, NULL);
 	weapons.wavelen_up_button = snis_button_init(700, 400, 30, 25, "UP", WHITE,
 			NANO_FONT, wavelen_up_button_pressed, NULL);
-	weapons.wavelen_slider = snis_slider_init(620, 400, 70, AMBER, "",
+	weapons.wavelen_slider = snis_slider_init(315, 588, 170, AMBER, "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength);
 	weapons.weapzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, AMBER, "ZOOM",
