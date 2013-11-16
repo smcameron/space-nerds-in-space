@@ -118,7 +118,7 @@
 #define VERTICAL_CONTROLS_INVERTED -1
 #define VERTICAL_CONTROLS_NORMAL 1
 static int vertical_controls_inverted = VERTICAL_CONTROLS_NORMAL;
-static volatile vertical_controls_timer = 0;
+static volatile int vertical_controls_timer = 0;
 
 __attribute__((unused)) static double max_speed[];
 
