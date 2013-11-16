@@ -81,6 +81,13 @@ void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g)
 	double value;
 	double inc, v;
 	char buffer[10], buf2[10];
+	int dial_font = NANO_FONT;
+	int label_font = TINY_FONT;
+
+	if (g->r < 60) {
+		dial_font = PICO_FONT;
+		label_font = PICO_FONT;
+	}
 
 	sng_set_foreground(g->dial_color);
 	sng_draw_circle(w->window, gc, g->x, g->y, g->r);
@@ -109,13 +116,13 @@ void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g)
 		sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
 		sprintf(buf2, "%3.0lf", v);
 		v += inc;
-		sng_abs_xy_draw_string(w, gc, buf2, NANO_FONT, x3, y3);
+		sng_abs_xy_draw_string(w, gc, buf2, dial_font, x3, y3);
 	}
-	sng_abs_xy_draw_string(w, gc, g->title, TINY_FONT,
+	sng_abs_xy_draw_string(w, gc, g->title, label_font,
 			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)));
 	value = g->sample();
 	sprintf(buffer, "%4.2lf", value);
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT,
+	sng_abs_xy_draw_string(w, gc, buffer, label_font,
 			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)) + 15);
 
 	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
