@@ -8183,6 +8183,7 @@ static void init_science_ui(void)
 	sciecx = entity_context_new(50);
 	sciballecx = entity_context_new(5000);
 	sciplane_tween = tween_init(500);
+	sci_ui.details_mode = SCI_DETAILS_MODE_SCIPLANE;
 }
 
 static void comms_screen_button_pressed(void *x)
