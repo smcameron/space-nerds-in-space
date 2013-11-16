@@ -2493,12 +2493,16 @@ static void do_zoom(int z)
 
 	switch (displaymode) {
 	case DISPLAYMODE_WEAPONS:
-		newval = o->tsd.ship.weapzoom + z;
-		if (newval < 0)
-			newval = 0;
-		if (newval > 255)
-			newval = 255;
-                do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_WEAPZOOM);
+		if (weapons.manual_mode == WEAPONS_MODE_MANUAL) {
+			wavelen_updown_button_pressed(z);
+		} else {
+			newval = o->tsd.ship.weapzoom + z;
+			if (newval < 0)
+				newval = 0;
+			if (newval > 255)
+				newval = 255;
+			do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_WEAPZOOM);
+		}
 		break;
 	case DISPLAYMODE_NAVIGATION:
 		newval = o->tsd.ship.navzoom + z;
