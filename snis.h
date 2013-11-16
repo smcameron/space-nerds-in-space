@@ -508,4 +508,7 @@ struct damcon_data {
 #define DAMCONXDIM 800.0
 #define DAMCONYDIM 1800.0
 
+/* Time after being killed to wait for respawn */
+#define RESPAWN_TIME_SECS 20
+
 #endif

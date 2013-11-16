@@ -645,7 +645,7 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 	o->tsd.ship.damage.tractor_damage = roll_damage(twp, ss, o->tsd.ship.damage.tractor_damage);
 
 	if (o->tsd.ship.damage.shield_damage == 255) { 
-		o->respawn_time = universe_timestamp + 30 * 10;
+		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
 		o->alive = 0;
 	}
 }
@@ -668,7 +668,7 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength)
 		x[i] = damage;
 	}
 	if (o->tsd.ship.damage.shield_damage == 255) {
-		o->respawn_time = universe_timestamp + 30 * 10;
+		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
 		o->alive = 0;
 	}
 }
