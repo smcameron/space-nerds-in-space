@@ -209,6 +209,24 @@ struct ship_data {
 #define LASER_VELOCITY (200.0)
 #define LASER_RANGE (LASER_VELOCITY * LASER_LIFETIME)
 #define LASER_DETONATE_DIST2 (100 * 100)
+
+/* Max damage dealt per "hit"
+ * laser damage is boosted by increased phaser power and diminished
+ * by deflector shields.
+ * 
+ * There are 2 types of lasers -- "laserbeams", and "lasers"
+ * "laserbeams" last for a few seconds, and deal damage 5 times per second.
+ * and cannot miss.
+ *
+ * "lasers" are projectile weapons and deal a single dose of damage
+ * 
+ * lasers deal boosted damage relative to laserbeams by a factor
+ * of LASER_PROJECTILE_BOOST because they are single dose weapons,
+ * and because they are harder to use (require aiming).
+ */
+#define LASER_DAMAGE_MAX (4)
+#define LASER_PROJECTILE_BOOST 20.0
+
 	uint32_t power;
 	uint32_t shields;
 	char shipname[100];

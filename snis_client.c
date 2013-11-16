@@ -3509,7 +3509,7 @@ static void hide_weapons_widgets()
 	hide_widget(uiobjs, weapons.load_torpedo);
 	hide_widget(uiobjs, weapons.fire_phaser);
 	hide_widget(uiobjs, weapons.tractor_beam);
-	hide_widget(uiobjs, weapons.phaser_bank_gauge);
+	/* hide_widget(uiobjs, weapons.phaser_bank_gauge); */
 	hide_widget(uiobjs, weapons.phaser_wavelength);
 	hide_widget(uiobjs, weapons.wavelen_slider);
 	hide_widget(uiobjs, weapons.weapzoom_slider);

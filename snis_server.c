@@ -650,11 +650,13 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 	}
 }
 
-static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength)
+static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, float power)
 {
-	int damage, i;
+	int i;
 	unsigned char *x = (unsigned char *) &o->tsd.ship.damage;
 	double ss;
+	float power_factor = (float) power / 255.0;
+	float damage;
 
 	ss = shield_strength(wavelength, o->sdata.shield_strength,
 				o->sdata.shield_width,
@@ -662,10 +664,16 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength)
 				o->sdata.shield_wavelength);
 
 	for (i = 0; i < sizeof(o->tsd.ship.damage); i++) {
-		damage = (int) x[i] + ((double) snis_randn(40) * (1 - ss));
-		if (damage > 255)
-			damage = 255;
-		x[i] = damage;
+		damage = ((float) (snis_randn(LASER_DAMAGE_MAX) + 1) * (1 - ss) * power_factor);
+
+		/* if damage will get rounded down to nothing bump it up to 1.0 */
+		if (damage < 0.5)
+			damage = 1.0;
+
+		damage = (int) ((float) x[i] + damage);
+		if (damage > 255.0)
+			damage = 255.0;
+		x[i] = (uint8_t) damage;
 	}
 	if (o->tsd.ship.damage.shield_damage == 255) {
 		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
@@ -865,7 +873,8 @@ static void laser_move(struct snis_entity *o)
 		}
 
 		if (otype == OBJTYPE_SHIP1 || otype == OBJTYPE_SHIP2) {
-			calculate_laser_damage(&go[i], o->tsd.laser.wavelength);
+			calculate_laser_damage(&go[i], o->tsd.laser.wavelength,
+				(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST);
 			send_ship_damage_packet(&go[i]);
 			attack_your_attacker(&go[i], lookup_entity_by_id(o->tsd.laser.ship_id));
 		}
@@ -2606,8 +2615,8 @@ static void laserbeam_move(struct snis_entity *o)
 		return;
 	}
 
-	/* only deal laser damage every 16th tick */
-	if (universe_timestamp & 0x0f)
+	/* only deal laser damage every other tick */
+	if (universe_timestamp & 0x01)
 		return;
 
 	tid = lookup_by_id(o->tsd.laserbeam.target);
@@ -2622,13 +2631,14 @@ static void laserbeam_move(struct snis_entity *o)
 	
 	if (ttype == OBJTYPE_STARBASE) {
 		target->tsd.starbase.under_attack = 1;
-		calculate_laser_starbase_damage(target, o->tsd.laser.wavelength);
+		calculate_laser_starbase_damage(target, o->tsd.laserbeam.wavelength);
 	}
 
 	if (ttype == OBJTYPE_SHIP1 || ttype == OBJTYPE_SHIP2) {
-		calculate_laser_damage(target, o->tsd.laser.wavelength);
+		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
+					(float) o->tsd.laserbeam.power);
 		send_ship_damage_packet(target);
-		attack_your_attacker(target, lookup_entity_by_id(o->tsd.laser.ship_id));
+		attack_your_attacker(target, lookup_entity_by_id(o->tsd.laserbeam.origin));
 	}
 
 	if (ttype == OBJTYPE_ASTEROID)
@@ -4931,8 +4941,6 @@ static int process_request_laser(struct game_client *c)
 		goto laserfail;
 
 	tid = ship->tsd.ship.victim_id;
-	if (ship->tsd.ship.phaser_charge < (ship->tsd.ship.power_data.phasers.i * 3) / 4)
-		goto laserfail;
 	add_laserbeam(ship->id, tid, 30);
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
@@ -4956,19 +4964,19 @@ static int process_request_manual_laser(struct game_client *c)
 	/* Calculate which way weapons is pointed, and velocity of laser. */
 	quat_mul(&orientation, &ship->orientation, &ship->tsd.ship.weap_orientation);
 	quat_rot_vec(&velocity, &rightvec, &orientation);
-
-	if (ship->tsd.ship.phaser_charge < (ship->tsd.ship.power_data.phasers.i * 3) / 4)
-		goto laserfail;
 	add_laser(ship->x, ship->y, ship->z, velocity.v.x, velocity.v.y, velocity.v.z,
 			&orientation, 0.0, ship->id);
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 
+#if 0
+	/* resurrect this code for laser overheating later? */
 laserfail:
 	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
+#endif
 }
 
 
