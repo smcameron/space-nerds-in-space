@@ -104,7 +104,7 @@ void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g)
 		x2 = 0.9 * x1;
 		y1 = g->r * -cos(a);
 		y2 = 0.9 * y1;
-		x3 = 0.7 * x1 - 20;
+		x3 = 0.7 * x1;
 		y3 = 0.7 * y1;
 
 		x1 = (x1 + g->x);
@@ -114,16 +114,16 @@ void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g)
 		y2 = (y2 + g->y);
 		y3 = (y3 + g->y);
 		sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
-		sprintf(buf2, "%3.0lf", v);
+		sprintf(buf2, "%1.0lf", v);
 		v += inc;
-		sng_abs_xy_draw_string(w, gc, buf2, dial_font, x3, y3);
+		sng_center_xy_draw_string(w, gc, buf2, dial_font, x3, y3);
 	}
-	sng_abs_xy_draw_string(w, gc, g->title, label_font,
-			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)));
+	sng_center_xy_draw_string(w, gc, g->title, label_font,
+			g->x, (g->y + (g->r * 0.5)));
 	value = g->sample();
 	sprintf(buffer, "%4.2lf", value);
-	sng_abs_xy_draw_string(w, gc, buffer, label_font,
-			(g->x - (g->r * 0.5)), (g->y + (g->r * 0.5)) + 15);
+	sng_center_xy_draw_string(w, gc, buffer, label_font,
+			g->x, (g->y + (g->r * 0.5)) + 15);
 
 	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
 	sng_set_foreground(g->needle_color);
