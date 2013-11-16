@@ -4715,8 +4715,12 @@ static void show_weapons_camera_view(GtkWidget *w)
 	cy = o->y;
 	cz = o->z;
 
-	camera_set_pos(ecx, cx, cy + 15.0f, cz - 5.0);
 	quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
+
+	union vec3 cam_offset = {{0,15,-5}};
+	quat_rot_vec_self(&cam_offset,&camera_orientation);
+
+	camera_set_pos(ecx, cx + cam_offset.v.x, cy + cam_offset.v.y, cz + cam_offset.v.z);
 	camera_set_orientation(ecx, &camera_orientation);
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
