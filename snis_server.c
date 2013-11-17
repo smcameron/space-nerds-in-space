@@ -2067,7 +2067,6 @@ static int add_generic_object(double x, double y, double z,
 	i = snis_object_pool_alloc_obj(pool); 	 
 	if (i < 0)
 		return -1;
-	n = random_name();
 	memset(&go[i], 0, sizeof(go[i]));
 	go[i].id = get_new_object_id();
 	go[i].index = i;
@@ -2080,14 +2079,29 @@ static int add_generic_object(double x, double y, double z,
 	go[i].type = type;
 	go[i].timestamp = universe_timestamp + 1;
 	go[i].move = generic_move;
-	strncpy(go[i].sdata.name, n, sizeof(go[i].sdata.name) - 1);
+
+	switch (type) {
+	case OBJTYPE_SHIP1:
+	case OBJTYPE_SHIP2:
+	case OBJTYPE_ASTEROID:
+	case OBJTYPE_STARBASE:
+	case OBJTYPE_DERELICT:
+	case OBJTYPE_PLANET:
+		n = random_name();
+		strncpy(go[i].sdata.name, n, sizeof(go[i].sdata.name) - 1);
+		free(n);
+		break;
+	default:
+		memset(go[i].sdata.name, 0, sizeof(go[i].sdata.name));
+		break;
+	}
+
 	go[i].sdata.shield_strength = snis_randn(256);
 	go[i].sdata.shield_wavelength = snis_randn(256);
 	go[i].sdata.shield_width = snis_randn(128);
 	go[i].sdata.shield_depth = snis_randn(255);
 	go[i].sdata.faction = snis_randn(ARRAY_SIZE(faction));
 	quat_init_axis(&go[i].orientation, 0, 1, 0, heading);
-	free(n);
 	return i;
 }
 
