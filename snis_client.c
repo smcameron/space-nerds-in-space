@@ -3466,10 +3466,6 @@ static struct navigation_ui {
 	struct slider *throttle_slider;
 	struct gauge *warp_gauge;
 	struct button *engage_warp_button;
-#if 0
-	struct button *warp_up_button;
-	struct button *warp_down_button;
-#endif
 	struct button *reverse_button;
 	int details_mode;
 	struct button *details_button;
@@ -6961,37 +6957,6 @@ static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
 	do_adjust_byte_value(0,  OPCODE_ENGAGE_WARP);
 }
 
-#if 0
-static void warp_updown_button_pressed(int direction)
-{
-	int value;
-	struct snis_entity *o;
-	double inc;
-
-	if (!(o = find_my_ship()))
-		return;
-	inc = 2.5;
-	value = o->tsd.ship.requested_warpdrive;
-	if (direction > 0 && value + inc > 255)
-		return;
-	if (direction < 0 && value - inc < 0)
-		return;
-	value += direction < 0 ? -inc : direction > 0 ? inc : 0;
-	snis_slider_set_input(nav_ui.warp_slider, (double) value / 255.0);
-	do_adjust_slider_value(nav_ui.warp_slider, OPCODE_REQUEST_WARPDRIVE);
-}
-
-static void warp_up_button_pressed(__attribute__((unused)) void *s)
-{
-	warp_updown_button_pressed(1);
-}
-
-static void warp_down_button_pressed(__attribute__((unused)) void *s)
-{
-	warp_updown_button_pressed(-1);
-}
-#endif
-
 static void reverse_button_pressed(__attribute__((unused)) void *s)
 {
 	struct snis_entity *o;
@@ -7238,22 +7203,12 @@ static void init_nav_ui(void)
 				10, "WARP", sample_warpdrive);
 	nav_ui.engage_warp_button = snis_button_init(620 + x, 520 + y, 125, 25, "ENGAGE WARP", AMBER,
 				NANO_FONT, engage_warp_button_pressed, NULL);
-#if 0
-	nav_ui.warp_up_button = snis_button_init(520 + x, 50, 40, 25, "UP", AMBER,
-			NANO_FONT, warp_up_button_pressed, NULL);
-	nav_ui.warp_down_button = snis_button_init(520 + x, 80, 60, 25, "DOWN", AMBER,
-			NANO_FONT, warp_down_button_pressed, NULL);
-#endif
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", AMBER,
 			NANO_FONT, reverse_button_pressed, NULL);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
-#if 0
-	ui_add_button(nav_ui.warp_up_button, DISPLAYMODE_NAVIGATION);
-	ui_add_button(nav_ui.warp_down_button, DISPLAYMODE_NAVIGATION);
-#endif
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION);
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
 
