@@ -4725,7 +4725,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 		float sx, sy;
 		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.victim_id);
 
-		if (target && target->alive && target->entity) {
+		if (target && target->alive && target->entity && entity_onscreen(target->entity)) {
 			entity_get_screen_coords(target->entity, &sx, &sy);
 			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
 		}
@@ -4735,7 +4735,8 @@ static void show_weapons_camera_view(GtkWidget *w)
 	if (curr_science_guy) {
 		float sx, sy;
 
-		if (curr_science_guy->alive && curr_science_guy->entity) {
+		if (curr_science_guy->alive && curr_science_guy->entity &&
+			entity_onscreen(curr_science_guy->entity)) {
 			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
 			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 1);
 		}
@@ -4797,7 +4798,8 @@ static void show_mainscreen(GtkWidget *w)
 		float sx, sy;
 		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.victim_id);
 
-		if (target && target->alive && target->entity) {
+		if (target && target->alive && target->entity &&
+			entity_onscreen(target->entity)) {
 			entity_get_screen_coords(target->entity, &sx, &sy);
 			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
 		}
@@ -4807,7 +4809,8 @@ static void show_mainscreen(GtkWidget *w)
 	if (curr_science_guy) {
 		float sx, sy;
 
-		if (curr_science_guy->alive && curr_science_guy->entity) {
+		if (curr_science_guy->alive && curr_science_guy->entity &&
+			entity_onscreen(curr_science_guy->entity)) {
 			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
 			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 1);
 		}
@@ -7561,13 +7564,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	}
 
 	/* Draw targeting indicator on 3d nav screen */
-	if (targeted_entity) {
+	if (targeted_entity && entity_onscreen(targeted_entity)) {
 		float sx, sy;
 
 		entity_get_screen_coords(targeted_entity, &sx, &sy);
 		draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
 	}
-	if (science_entity) {
+	if (science_entity && entity_onscreen(science_entity)) {
 		float sx, sy;
 
 		entity_get_screen_coords(science_entity, &sx, &sy);
