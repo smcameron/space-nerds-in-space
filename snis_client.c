@@ -7797,9 +7797,9 @@ static void damcon_button_pressed(void *x)
 static void init_engineering_ui(void)
 {
 	int y;
-	int x = 100;
-	int r = 90;
-	int xinc = 190;
+	int r = 59;
+	int x = r * 1.1;
+	int xinc = (2.0 * r) * 1.1;
 	int yinc = 35; 
 	int dm = DISPLAYMODE_ENGINEERING;
 	int color = AMBER;
