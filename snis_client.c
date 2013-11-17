@@ -3462,7 +3462,6 @@ static int process_sci_details(void)
 
 static struct navigation_ui {
 	struct slider *warp_slider;
-	struct slider *shield_slider;
 	struct slider *navzoom_slider;
 	struct slider *throttle_slider;
 	struct gauge *warp_gauge;
@@ -7213,9 +7212,6 @@ static void nav_details_pressed(void *x)
 static double sample_warpdrive(void);
 static void init_nav_ui(void)
 {
-	nav_ui.shield_slider = snis_slider_init(540, 270, 160, AMBER, "SHIELDS",
-				"0", "100", 0.0, 255.0, sample_shields_current,
-				do_shieldadj);
 	nav_ui.warp_slider = snis_slider_init(500, SCREEN_HEIGHT - 40, 200, AMBER, "Warp",
 				"0", "100", 0.0, 255.0, sample_warp_current,
 				do_warpdrive);
@@ -7238,7 +7234,6 @@ static void init_nav_ui(void)
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40, 315, 30, 25, "R", AMBER,
 			NANO_FONT, reverse_button_pressed, NULL);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
-	ui_add_slider(nav_ui.shield_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
@@ -7615,7 +7610,7 @@ static void show_navigation(GtkWidget *w)
 {
 	char buf[100];
 	struct snis_entity *o;
-	int cx, cy, gx1, gy1, gx2, gy2;
+	int cx, cy;
 	int r, sectorx, sectorz;
 	double screen_radius, max_possible_screen_radius, visible_distance, display_heading;
 	double display_yaw;
@@ -7628,7 +7623,6 @@ static void show_navigation(GtkWidget *w)
 		return;
 
 	snis_slider_set_input(nav_ui.warp_slider, o->tsd.ship.power_data.warp.r1/255.0 );
-	snis_slider_set_input(nav_ui.shield_slider, o->tsd.ship.power_data.shields.r1/255.0 );
 	snis_slider_set_input(nav_ui.navzoom_slider, o->tsd.ship.navzoom/255.0 );
 	snis_slider_set_input(nav_ui.throttle_slider, o->tsd.ship.power_data.impulse.r1/255.0 );
 
@@ -7681,12 +7675,6 @@ static void show_navigation(GtkWidget *w)
                 draw_3d_nav_display(w, gc);
         }
 
-	gx1 = NAV_DATA_X + 10;
-	gy1 = 15;
-	gx2 = NAV_DATA_X + NAV_DATA_W - 10;
-	gy2 = NAV_DATA_Y + NAV_DATA_H - 80;
-	sng_set_foreground(AMBER);
-	draw_science_graph(w, o, o, gx1, gy1, gx2, gy2);
 	show_common_screen(w, "NAV");
 }
 
@@ -7777,6 +7765,7 @@ struct engineering_ui {
 	struct slider *phaserbanks_slider;
 	struct slider *throttle_slider;
 	struct slider *tractor_slider;
+	struct slider *shield_control_slider;
 
 	struct slider *shield_damage;
 	struct slider *impulse_damage;
@@ -7822,6 +7811,10 @@ static void init_engineering_ui(void)
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "FUEL", sample_fuel);
 
+	eu->shield_control_slider = snis_slider_init(540, 270, 160, AMBER, "SHIELDS",
+				"0", "100", 0.0, 255.0, sample_shields_current,
+				do_shieldadj);
+
 	y = 220;
 	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
 			NANO_FONT, damcon_button_pressed, (void *) 0);
@@ -7850,6 +7843,7 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->warp_slider, dm);
 	ui_add_slider(eu->maneuvering_slider, dm);
 	ui_add_slider(eu->tractor_slider, dm);
+	ui_add_slider(eu->shield_control_slider, dm);
 	ui_add_gauge(eu->amp_gauge, dm);
 	ui_add_gauge(eu->voltage_gauge, dm);
 	ui_add_gauge(eu->fuel_gauge, dm);
@@ -7886,6 +7880,7 @@ static void init_engineering_ui(void)
 static void show_engineering(GtkWidget *w)
 {
 	struct snis_entity *o;
+	int gx1, gy1, gx2, gy2;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -7898,7 +7893,14 @@ static void show_engineering(GtkWidget *w)
 	snis_slider_set_input(eng_ui.warp_slider, o->tsd.ship.power_data.warp.r2/255.0 );
 	snis_slider_set_input(eng_ui.maneuvering_slider, o->tsd.ship.power_data.maneuvering.r2/255.0 );
 	snis_slider_set_input(eng_ui.tractor_slider, o->tsd.ship.power_data.tractor.r2/255.0 );
+	snis_slider_set_input(eng_ui.shield_control_slider, o->tsd.ship.power_data.shields.r1/255.0 );
 
+	gx1 = NAV_DATA_X + 10;
+	gy1 = 15;
+	gx2 = NAV_DATA_X + NAV_DATA_W - 10;
+	gy2 = NAV_DATA_Y + NAV_DATA_H - 80;
+	sng_set_foreground(AMBER);
+	draw_science_graph(w, o, o, gx1, gy1, gx2, gy2);
 	show_common_screen(w, "ENGINEERING");
 }
 
