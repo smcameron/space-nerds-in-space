@@ -63,6 +63,7 @@ struct entity {
 	int render_style;
 	void *user_data;
 	union quat orientation;
+	unsigned char onscreen;
 };
 
 struct camera_info {
@@ -828,6 +829,7 @@ check_for_reposition:
 			continue;
 		if (cx->entity_list[i].m == NULL)
 			continue;
+		cx->entity_list[i].onscreen = 0;
 
 		point_to_test.m[0] = cx->entity_list[i].x - cx->camera.x;
 		point_to_test.m[1] = cx->entity_list[i].y - cx->camera.y;
@@ -856,6 +858,7 @@ check_for_reposition:
 		else {
 			render_entity(w, gc, cx, &cx->entity_list[i]);
 		}
+		cx->entity_list[i].onscreen = 1;
 	}
 }
 
@@ -1094,4 +1097,9 @@ void set_window_offset(struct entity_context *cx, float x, float y)
 {
 	cx->window_offset_x = x;
 	cx->window_offset_y = y;
+}
+
+int entity_onscreen(struct entity *e)
+{
+	return (int) e->onscreen;
 }
