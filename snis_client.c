@@ -4700,8 +4700,6 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	pthread_mutex_lock(&universe_mutex);
 
-	/* range is the same as max zoom on old weapons */
-	draw_plane_radar(w, o, &camera_orientation, 400, 500, 75, XKNOWN_DIM * 0.01);
 
 	/* Add our ship into the scene (on the mainscreen, it is omitted) */
 #if 0
@@ -4717,6 +4715,10 @@ static void show_weapons_camera_view(GtkWidget *w)
 	remove_entity(ecx, o->entity);
 	o->entity = NULL;
 #endif
+
+	/* range is the same as max zoom on old weapons */
+	draw_plane_radar(w, o, &camera_orientation, 400, 500, 75, XKNOWN_DIM * 0.01);
+
 	/* Draw targeting indicator on main screen */
 	if (o->tsd.ship.victim_id != -1) {
 		float sx, sy;
