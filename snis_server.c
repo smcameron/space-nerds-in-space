@@ -99,7 +99,7 @@ struct bridge_data {
 	struct snis_damcon_entity *robot;
 	int incoming_fire_detected;
 	int last_incoming_fire_sound_time;
-	double warpx, warpz;
+	double warpx, warpy, warpz;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -1970,7 +1970,8 @@ static void player_move(struct snis_entity *o)
 					packed_buffer_new("hh", OPCODE_WARP_LIMBO,
 						(uint16_t) (5 * 30)), ROLE_ALL);
 				set_object_location(o, bridgelist[b].warpx,
-							o->y, bridgelist[b].warpz);
+							bridgelist[b].warpy,
+							bridgelist[b].warpz);
 			}
 		}
 	}
@@ -4689,6 +4690,8 @@ static int process_engage_warp(struct game_client *c)
 	uint8_t __attribute__((unused)) v;
 	double wfactor;
 	struct snis_entity *o;
+	const union vec3 rightvec = { { 1.0f, 0.0f, 0.0f, } };
+	union vec3 warpvec;
 
 	rc = read_and_unpack_buffer(c, buffer, "wb", &id, &v);
 	if (rc)
@@ -4714,8 +4717,10 @@ static int process_engage_warp(struct game_client *c)
 		return 0;
 	}
 	wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
-	bridgelist[b].warpx = o->x + wfactor * cos(o->heading);
-	bridgelist[b].warpz = o->z + wfactor * -sin(o->heading);
+	quat_rot_vec(&warpvec, &rightvec, &o->orientation);
+	bridgelist[b].warpx = o->x + wfactor * warpvec.v.x;
+	bridgelist[b].warpy = o->y + wfactor * warpvec.v.y;
+	bridgelist[b].warpz = o->z + wfactor * warpvec.v.z;
 	o->tsd.ship.warp_time = 85; /* 8.5 seconds */
 	pthread_mutex_unlock(&universe_mutex);
 	send_initiate_warp_packet(c);
