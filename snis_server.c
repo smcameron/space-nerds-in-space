@@ -2816,7 +2816,7 @@ static void add_starbases(void)
 
 	for (i = 0; i < NBASES; i++) {
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
 		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
 		add_starbase(x, y, z, 0.0, 0.0, 0.0, i);
 	}
@@ -2829,7 +2829,7 @@ static void add_nebulae(void)
 
 	for (i = 0; i < NNEBULA; i++) {
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
 		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
 		r = (double) snis_randn(NEBULA_RADIUS) +
 				(double) MIN_NEBULA_RADIUS;
@@ -2871,7 +2871,7 @@ static void add_asteroids(void)
 
 	for (i = 0; i < NASTEROID_CLUSTERS; i++) {
 		cx = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		cy = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		cy = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
 		cz = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
 		for (j = 0; j < NASTEROIDS / NASTEROID_CLUSTERS; j++) {
 			a = (double) snis_randn(360) * M_PI / 180.0;
@@ -2941,7 +2941,7 @@ static void add_derelicts(void)
 
 	for (i = 0; i < NDERELICTS; i++) {
 		x = (double) snis_randn(1000) * XKNOWN_DIM / 1000.0;
-		y = (double) snis_randn(1000) * YKNOWN_DIM / 1000.0;
+		y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
 		z = (double) snis_randn(1000) * ZKNOWN_DIM / 1000.0;
 		add_derelict(NULL, x, y, z, -1, -1);
 	}
@@ -3000,7 +3000,7 @@ static void add_planets(void)
 	for (i = 0; i < NPLANETS; i++) {
 		cx = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
 		cz = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
-		cy = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		cy = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
 		a = (double) snis_randn(360) * M_PI / 180.0;
 		r = snis_randn(ASTEROID_CLUSTER_RADIUS);
 		x = cx + r * sin(a);
@@ -3082,7 +3082,7 @@ static void add_spacemonsters(void)
 
 	for (i = 0; i < NSPACEMONSTERS; i++) {
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(1000)) * YKNOWN_DIM / 1000.0;
+		y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
 		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
 		add_spacemonster(x, y, z);
 	}
