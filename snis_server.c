@@ -2625,6 +2625,13 @@ static void laserbeam_move(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 		return;
 	}
+
+	/* if target or shooter is dead, stop firing */
+	if (!go[tid].alive || !go[oid].alive) {
+		delete_from_clients_and_server(o);
+		return;
+	}
+		 
 	target = &go[tid];
 	origin = &go[oid];
 	ttype = target->type;
