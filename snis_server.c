@@ -4964,6 +4964,12 @@ static int process_request_manual_laser(struct game_client *c)
 	/* Calculate which way weapons is pointed, and velocity of laser. */
 	quat_mul(&orientation, &ship->orientation, &ship->tsd.ship.weap_orientation);
 	quat_rot_vec(&velocity, &rightvec, &orientation);
+
+	/* Add ship velocity into laser velocity */
+	velocity.v.x += ship->vx;
+	velocity.v.y += ship->vy;
+	velocity.v.z += ship->vz;
+
 	add_laser(ship->x, ship->y, ship->z, velocity.v.x, velocity.v.y, velocity.v.z,
 			&orientation, 0.0, ship->id);
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
