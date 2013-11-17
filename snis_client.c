@@ -3466,8 +3466,10 @@ static struct navigation_ui {
 	struct slider *throttle_slider;
 	struct gauge *warp_gauge;
 	struct button *engage_warp_button;
+#if 0
 	struct button *warp_up_button;
 	struct button *warp_down_button;
+#endif
 	struct button *reverse_button;
 	int details_mode;
 	struct button *details_button;
@@ -6959,6 +6961,7 @@ static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
 	do_adjust_byte_value(0,  OPCODE_ENGAGE_WARP);
 }
 
+#if 0
 static void warp_updown_button_pressed(int direction)
 {
 	int value;
@@ -6987,6 +6990,7 @@ static void warp_down_button_pressed(__attribute__((unused)) void *s)
 {
 	warp_updown_button_pressed(-1);
 }
+#endif
 
 static void reverse_button_pressed(__attribute__((unused)) void *s)
 {
@@ -7212,38 +7216,49 @@ static void nav_details_pressed(void *x)
 static double sample_warpdrive(void);
 static void init_nav_ui(void)
 {
-	nav_ui.warp_slider = snis_slider_init(500, SCREEN_HEIGHT - 40, 200, AMBER, "Warp",
+	int x, y, gauge_radius;
+
+	x = 0;
+	y = -340;
+	gauge_radius = 80;
+	
+	nav_ui.warp_slider = snis_slider_init(590 + x, SCREEN_HEIGHT - 40 + y, 160, AMBER, "",
 				"0", "100", 0.0, 255.0, sample_warp_current,
 				do_warpdrive);
-	nav_ui.navzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, AMBER, "ZOOM",
+	nav_ui.navzoom_slider = snis_slider_init(10, 80, 200, AMBER, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_navzoom,
 				do_navzoom);
-	nav_ui.throttle_slider = snis_slider_init(SCREEN_WIDTH - 30, SCREEN_HEIGHT - 250, 230,
+	nav_ui.throttle_slider = snis_slider_init(SCREEN_WIDTH - 30 + x, 40, 230,
 				AMBER, "THROTTLE", "1", "10", 0.0, 255.0, sample_impulse_current,
 				do_throttle);
 	snis_slider_set_vertical(nav_ui.throttle_slider, 1);
-	nav_ui.warp_gauge = gauge_init(650, 410, 100, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	nav_ui.warp_gauge = gauge_init(SCREEN_WIDTH - gauge_radius - 40, gauge_radius + 5,
+				gauge_radius, 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 				10, "WARP", sample_warpdrive);
-	nav_ui.engage_warp_button = snis_button_init(570, 520, 150, 25, "ENGAGE WARP", AMBER,
+	nav_ui.engage_warp_button = snis_button_init(620 + x, 520 + y, 125, 25, "ENGAGE WARP", AMBER,
 				NANO_FONT, engage_warp_button_pressed, NULL);
-	nav_ui.warp_up_button = snis_button_init(500, 490, 40, 25, "UP", AMBER,
+#if 0
+	nav_ui.warp_up_button = snis_button_init(520 + x, 50, 40, 25, "UP", AMBER,
 			NANO_FONT, warp_up_button_pressed, NULL);
-	nav_ui.warp_down_button = snis_button_init(500, 520, 60, 25, "DOWN", AMBER,
+	nav_ui.warp_down_button = snis_button_init(520 + x, 80, 60, 25, "DOWN", AMBER,
 			NANO_FONT, warp_down_button_pressed, NULL);
-	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40, 315, 30, 25, "R", AMBER,
+#endif
+	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", AMBER,
 			NANO_FONT, reverse_button_pressed, NULL);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
+#if 0
 	ui_add_button(nav_ui.warp_up_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.warp_down_button, DISPLAYMODE_NAVIGATION);
+#endif
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION);
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
 
 	nav_ui.details_mode = 0;
-	nav_ui.details_button = snis_button_init(450, 570, 40, 25, "2D",
+	nav_ui.details_button = snis_button_init(SCREEN_WIDTH - 41, SCREEN_HEIGHT - 41, 40, 25, "2D",
 			RED, NANO_FONT, nav_details_pressed, (void *) 0);
 	ui_add_button(nav_ui.details_button, DISPLAYMODE_NAVIGATION);
 	navecx = entity_context_new(5000);
