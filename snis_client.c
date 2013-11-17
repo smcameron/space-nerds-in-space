@@ -2124,8 +2124,9 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 		float sx = cx + r * cos(twist) * d * 0.98;
 		float sy = cy - r * sin(twist) * d * 0.98;
 
-		sng_set_foreground(RED);
-		sng_draw_circle(w->window, gc, sx, sy, r*0.01);
+		sng_set_foreground(ORANGERED);
+		snis_draw_line(w->window, gc, sx, sy - 2, sx, sy + 2);
+		snis_draw_line(w->window, gc, sx - 2, sy, sx + 2, sy);
 	}
 }
 
