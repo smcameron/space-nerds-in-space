@@ -4981,7 +4981,9 @@ laserfail:
 static int process_request_manual_laser(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
-	union vec3 rightvec = { { LASER_VELOCITY, 0.0f, 0.0f } };
+	union vec3 forwardvec = { { LASER_VELOCITY, 0.0f, 0.0f } };
+	union vec3 rightvec = { { 0.0f, 0.0f, 10.0f } };
+	union vec3 offset;
 	union vec3 velocity;
 	union quat orientation;
 
@@ -4989,14 +4991,19 @@ static int process_request_manual_laser(struct game_client *c)
 
 	/* Calculate which way weapons is pointed, and velocity of laser. */
 	quat_mul(&orientation, &ship->orientation, &ship->tsd.ship.weap_orientation);
-	quat_rot_vec(&velocity, &rightvec, &orientation);
+	quat_rot_vec(&velocity, &forwardvec, &orientation);
+	quat_rot_vec(&offset, &rightvec, &orientation);
 
 	/* Add ship velocity into laser velocity */
 	velocity.v.x += ship->vx;
 	velocity.v.y += ship->vy;
 	velocity.v.z += ship->vz;
 
-	add_laser(ship->x, ship->y, ship->z, velocity.v.x, velocity.v.y, velocity.v.z,
+	add_laser(ship->x + offset.v.x, ship->y + offset.v.y, ship->z + offset.v.z,
+			velocity.v.x, velocity.v.y, velocity.v.z,
+			&orientation, 0.0, ship->id);
+	add_laser(ship->x - offset.v.x, ship->y - offset.v.y, ship->z - offset.v.z,
+			velocity.v.x, velocity.v.y, velocity.v.z,
 			&orientation, 0.0, ship->id);
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
