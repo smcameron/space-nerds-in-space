@@ -1762,9 +1762,49 @@ static void update_player_sciball_orientation(struct snis_entity *o)
 
 static void update_player_weap_orientation(struct snis_entity *o)
 {
-	quat_apply_relative_yaw_pitch_roll(&o->tsd.ship.weap_orientation,
+	quat_apply_relative_yaw_pitch(&o->tsd.ship.weap_orientation,
 			o->tsd.ship.weap_yawvel,
-			o->tsd.ship.weap_pitchvel, 0.0f);
+			o->tsd.ship.weap_pitchvel);
+
+	/* turret is on top of the ship */
+	union vec3 aim = {{0,1,0}};
+	union quat swing, twist;
+	quat_decompose_swing_twist(&o->tsd.ship.weap_orientation, &aim, &swing, &twist);
+
+	union vec3 swing_axis;
+	float swing_angle;
+	quat_to_axis_v(&swing, &swing_axis, &swing_angle);
+#if 0
+	union vec3 twist_axis;
+	float twist_angle;
+	quat_to_axis_v(&twist, &twist_axis, &twist_angle);
+
+	printf("----\n");
+	printf("twist w=%f x=%f y=%f z=%f\n", twist.v.w, twist.v.x, twist.v.y, twist.v.z);
+	printf("twist axis a=%f x=%f, y=%f, z=%f\n", radians_to_degrees(twist_angle),twist_axis.v.x, twist_axis.v.y, twist_axis.v.z);
+	printf("swing w=%f x=%f y=%f z=%f\n", swing.v.w, swing.v.x, swing.v.y, swing.v.z);
+	printf("swing axis a=%f x=%f, y=%f, z=%f\n", radians_to_degrees(swing_angle),swing_axis.v.x, swing_axis.v.y, swing_axis.v.z);
+#endif
+	/* need to use dot product to determine if the swing angle is toward +y or -y */
+	union vec3 dir = {{1,0,0}};
+	quat_rot_vec_self(&dir, &o->tsd.ship.weap_orientation);
+	float dot = vec3_dot(&aim, &dir);
+
+	if (dot<0) {
+		/* we are <0 from x axis, so that is >90 from y */
+
+		/* remove swing which means align with xz plane */
+		o->tsd.ship.weap_orientation = twist;
+		quat_normalize_self(&o->tsd.ship.weap_orientation);
+	}
+	else if (swing_angle > M_PI/2.0) {
+		/* we are >90 from x axis so that is past vertical on y */
+
+		/* force the swing to 90 and recombine with the twist */
+		quat_init_axis_v(&swing, &swing_axis, M_PI/2.0);
+		quat_mul(&o->tsd.ship.weap_orientation, &swing, &twist);
+		quat_normalize_self(&o->tsd.ship.weap_orientation);
+	}
 }
 
 static float new_velocity(float desired_velocity, float current_velocity)

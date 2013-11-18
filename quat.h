@@ -208,6 +208,10 @@ union vec3* vec3_lerp(union vec3* vo, const union vec3* vfrom, const union vec3*
 union quat *quat_apply_relative_yaw_pitch_roll(union quat *q,
                                         double yaw, double pitch, double roll);
 
+/* Apply incremental yaw and pitch relative to the quaternion.
+ * Yaw is applied to world axis so no roll will accumulate */
+union quat *quat_apply_relative_yaw_pitch(union quat *q, double yaw, double pitch);
+
 /* decompose a quaternion into a rotation (swing) perpendicular to v1 and a rotation (twist) around v1 */
 void quat_decompose_twist_swing(const union quat *q, const union vec3 *v1, union quat *twist, union quat *swing);
 void quat_decompose_swing_twist(const union quat *q, const union vec3 *v1, union quat *swing, union quat *twist);

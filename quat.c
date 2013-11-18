@@ -89,14 +89,16 @@ void quat_to_axis(const union quat *q, float *x, float *y, float *z, float *a)
 {
 	/* see: http://www.euclideanspace.com/maths/geometry/rotations
 	   /conversions/quaternionToAngle/index.htm */
-	*a = 2 * acos(q->v.w);
-	float s = sqrt(1 - q->v.w * q->v.w);
+	float angle = 2 * acos(q->v.w);
+	float s = sqrt(1.0 - q->v.w * q->v.w);
 	if (s < ZERO_TOLERANCE) {
 		// if s close to zero then direction of axis not important
+		*a = 0;
 		*x = 1;
 		*y = 0;
 		*z = 0;
 	} else {
+		*a = angle;
 		*x = q->v.x / s; // normalise axis
 		*y = q->v.y / s;
 		*z = q->v.z / s;
@@ -624,6 +626,22 @@ union quat *quat_apply_relative_yaw_pitch_roll(union quat *q,
 	quat_mul(&q4, &q3, q);
 	quat_normalize_self(&q4);
 	*q = q4;
+	return q;
+}
+
+/* Apply incremental yaw and pitch relative to the quaternion.
+ * Yaw is applied to world axis so no roll will accumulate */
+union quat *quat_apply_relative_yaw_pitch(union quat *q, double yaw, double pitch)
+{
+	union quat qyaw, qpitch, q1;
+
+	/* calculate amount of yaw to impart this iteration... */
+	quat_init_axis(&qyaw, 0.0, 1.0, 0.0, yaw);
+	/* Calculate amount of pitch to impart this iteration... */
+	quat_init_axis(&qpitch, 0.0, 0.0, 1.0, pitch);
+
+	quat_mul(&q1, &qyaw, q);
+	quat_mul(q, &q1, &qpitch);
 	return q;
 }
 
