@@ -5975,12 +5975,13 @@ static void send_update_explosion_packet(struct game_client *c,
 static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwwSSSSS", OPCODE_UPDATE_TORPEDO, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSSSSS", OPCODE_UPDATE_TORPEDO, o->id,
 					o->tsd.torpedo.ship_id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					o->vx, (int32_t) UNIVERSE_DIM,
+					o->vy, (int32_t) UNIVERSE_DIM,
 					o->vz, (int32_t) UNIVERSE_DIM));
 }
 

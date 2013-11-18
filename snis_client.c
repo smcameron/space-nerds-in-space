@@ -777,7 +777,7 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 }
 
 static int update_torpedo(uint32_t id, double x, double y, double z,
-			double vx, double vz, uint32_t ship_id)
+			double vx, double vy, double vz, uint32_t ship_id)
 {
 	int i;
 	struct entity *e;
@@ -785,12 +785,12 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, torpedo_mesh, x, y, z, TORPEDO_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
-		i = add_generic_object(id, x, y, z, vx, 0.0, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
+		i = add_generic_object(id, x, y, z, vx, vy, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.torpedo.ship_id = ship_id;
 	} else {
-		update_generic_object(i, x, y, z, vx, 0.0, vz, &identity_quat, 1); 
+		update_generic_object(i, x, y, z, vx, vy, vz, &identity_quat, 1); 
 		update_entity_pos(go[i].entity, x, y, z);
 	}
 	return 0;
@@ -3168,18 +3168,20 @@ static int process_update_torpedo_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, ship_id;
-	double dx, dy, dz, dvx, dvz;
+	double dx, dy, dz, dvx, dvy, dvz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_torpedo_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSS", &id, &ship_id,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSSS", &id, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
-				&dvx, (int32_t) UNIVERSE_DIM, &dvz, (int32_t) UNIVERSE_DIM);
+				&dvx, (int32_t) UNIVERSE_DIM,
+				&dvy, (int32_t) UNIVERSE_DIM,
+				&dvz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_torpedo(id, dx, dy, dz, dvx, dvz, ship_id);
+	rc = update_torpedo(id, dx, dy, dz, dvx, dvy, dvz, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

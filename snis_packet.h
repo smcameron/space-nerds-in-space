@@ -246,8 +246,8 @@ struct update_torpedo_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint32_t ship_oid; /* ship torpedo came from */
-	uint32_t x, y;
-	uint32_t vx, vy;
+	uint32_t x, y, z;
+	uint32_t vx, vy, vz;
 }; 
 
 struct update_laser_packet {
