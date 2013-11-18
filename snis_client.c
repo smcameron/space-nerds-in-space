@@ -460,7 +460,8 @@ static double quat_to_heading(const union quat *q)
 	return atan2(-v.v.z, v.v.x);
 }
 
-static int add_generic_object(uint32_t id, double x, double y, double z, double vx, double vz,
+static int add_generic_object(uint32_t id, double x, double y, double z,
+		double vx, double vy, double vz,
 		const union quat *orientation, int type, uint32_t alive, struct entity *entity)
 {
 	int i;
@@ -720,7 +721,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, ship_mesh_map[shiptype % NSHIPTYPES], x, y, z, SHIP_COLOR);
-		i = add_generic_object(id, x, y, z, vx, vz, orientation, OBJTYPE_SHIP2, alive, e);
+		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_SHIP2, alive, e);
 		if (i < 0)
 			return i;
 		go[i].entity = e;
@@ -782,7 +783,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, torpedo_mesh, x, y, z, TORPEDO_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
-		i = add_generic_object(id, x, y, z, vx, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
+		i = add_generic_object(id, x, y, z, vx, 0.0, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.torpedo.ship_id = ship_id;
@@ -801,7 +802,8 @@ static int update_laserbeam(uint32_t id, uint32_t origin, uint32_t target)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, 0, 0, 0, 0, 0, &identity_quat, OBJTYPE_LASERBEAM, 1, NULL);
+		i = add_generic_object(id, 0, 0, 0, 0, 0, 0,
+			&identity_quat, OBJTYPE_LASERBEAM, 1, NULL);
 		if (i < 0)
 			return i;
 		go[i].tsd.laserbeam.origin = origin;
@@ -818,7 +820,8 @@ static int update_tractorbeam(uint32_t id, uint32_t origin, uint32_t target)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, 0, 0, 0, 0, 0, &identity_quat, OBJTYPE_TRACTORBEAM, 1, NULL);
+		i = add_generic_object(id, 0, 0, 0, 0, 0, 0,
+				&identity_quat, OBJTYPE_TRACTORBEAM, 1, NULL);
 		if (i < 0)
 			return i;
 		go[i].tsd.laserbeam.origin = origin;
@@ -841,11 +844,10 @@ static int update_laser(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, laserbeam_mesh, x, y, z, LASER_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
-		i = add_generic_object(id, x, y, z, vx, vz, orientation, OBJTYPE_LASER, 1, e);
+		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.laser.ship_id = ship_id;
-		go[i].vy = vy; /* FIXME: fix add_generic_object */
 	} else {
 		update_generic_object(i, x, y, z, vx, vz, orientation, 1); 
 		go[i].vy = vy; /* FIXME: fix update_generic_object */
@@ -1082,7 +1084,8 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 	if (i < 0) {
 		e = add_entity(ecx, spacemonster_mesh, x, 0, z, SPACEMONSTER_COLOR);
 		set_render_style(e, RENDER_POINT_CLOUD | RENDER_SPARKLE);
-		i = add_generic_object(id, x, 0, z, 0, 0, &identity_quat, OBJTYPE_SPACEMONSTER, 1, e);
+		i = add_generic_object(id, x, 0, z, 0, 0, 0,
+				&identity_quat, OBJTYPE_SPACEMONSTER, 1, e);
 		if (i < 0)
 			return i;
 		go[i].entity = e;
@@ -1118,7 +1121,8 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
 		random_axis_quat(&orientation);
 		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
-		i = add_generic_object(id, x, y, z, vx, vz, &orientation, OBJTYPE_ASTEROID, 1, e);
+		i = add_generic_object(id, x, y, z, vx, 0.0, vz,
+				&orientation, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
 		o = &go[i];
@@ -1150,7 +1154,8 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 	if (i < 0) {
 		m = ship_type % NSHIPTYPES;
 		e = add_entity(ecx, derelict_mesh[m], x, y, z, SHIP_COLOR);
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, &identity_quat, OBJTYPE_DERELICT, 1, e);
+		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
+				&identity_quat, OBJTYPE_DERELICT, 1, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -1180,7 +1185,8 @@ static int update_planet(uint32_t id, double x, double y, double z)
 		random_quat(&orientation); /* FIXME: make this come out the same on all clients */
 		m = id % NPLANET_MODELS;
 		e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR);
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, &orientation, OBJTYPE_PLANET, 1, e);
+		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
+					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
 		update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
@@ -1203,7 +1209,8 @@ static int update_wormhole(uint32_t id, double x, double z)
 		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
 		e = add_entity(ecx, wormhole_mesh, x, 0, z, WORMHOLE_COLOR);
 		set_render_style(e, RENDER_POINT_CLOUD | RENDER_SPARKLE);
-		i = add_generic_object(id, x, 0, z, 0.0, 0.0, &orientation, OBJTYPE_WORMHOLE, 1, e);
+		i = add_generic_object(id, x, 0, z, 0.0, 0.0, 0.0,
+					&orientation, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -1232,7 +1239,8 @@ static int update_starbase(uint32_t id, double x, double y, double z)
 		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
 		m = id % NSTARBASE_MODELS;
 		e = add_entity(ecx, starbase_mesh[m], x, 0, z, STARBASE_COLOR);
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, &orientation, OBJTYPE_STARBASE, 1, e);
+		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
+					&orientation, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
 	} else {
@@ -1288,7 +1296,8 @@ static int update_nebula(uint32_t id, double x, double z, double r)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, 0, z, 0.0, 0.0, &identity_quat, OBJTYPE_NEBULA, 1, NULL);
+		i = add_generic_object(id, x, 0, z, 0.0, 0.0, 0.0,
+					&identity_quat, OBJTYPE_NEBULA, 1, NULL);
 		if (i < 0)
 			return i;
 		add_nebula_entry(go[i].id, x, z, r);
@@ -1553,7 +1562,8 @@ static int update_explosion(uint32_t id, double x, double y, double z,
 	int i;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, &identity_quat, OBJTYPE_EXPLOSION, 1, NULL);
+		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
+					&identity_quat, OBJTYPE_EXPLOSION, 1, NULL);
 		if (i < 0)
 			return i;
 		go[i].tsd.explosion.nsparks = nsparks;
@@ -2973,7 +2983,7 @@ static int process_update_ship_packet(uint16_t opcode)
 		else
 			e = add_entity(ecx, ship_mesh_map[shiptype % NSHIPTYPES],
 					dx, dy, dz, SHIP_COLOR);
-		i = add_generic_object(id, dx, dy, dz, dvx, dvz, &orientation, type, alive, e);
+		i = add_generic_object(id, dx, dy, dz, dvx, 0.0, dvz, &orientation, type, alive, e);
 		if (i < 0) {
 			rc = i;
 			goto out;
