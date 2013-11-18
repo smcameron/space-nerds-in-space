@@ -1110,7 +1110,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 	return 0;
 }
 
-static int update_asteroid(uint32_t id, double x, double y, double z, double vx, double vz)
+static int update_asteroid(uint32_t id, double x, double y, double z, double vx, double vy, double vz)
 {
 	int i, m;
 	struct entity *e;
@@ -1123,7 +1123,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
 		random_axis_quat(&orientation);
 		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
-		i = add_generic_object(id, x, y, z, vx, 0.0, vz,
+		i = add_generic_object(id, x, y, z, vx, vy, vz,
 				&orientation, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
@@ -1140,7 +1140,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 	} else {
 		o = &go[i];
 		/* move asteroid */
-		update_generic_object(i, x, y, z, vx, 0.0, vz, NULL, 1);
+		update_generic_object(i, x, y, z, vx, vy, vz, NULL, 1);
 		update_entity_pos(o->entity, x, y, z);
 	}
 	return 0;
@@ -3707,20 +3707,21 @@ static int process_update_asteroid_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id;
-	double dx, dy, dz, dvx, dvz;
+	double dx, dy, dz, dvx, dvy, dvz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wSSSSSS", &id,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
 			&dvx, (int32_t) UNIVERSE_DIM,
+			&dvy, (int32_t) UNIVERSE_DIM,
 			&dvz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_asteroid(id, dx, dy, dz, dvx, dvz);
+	rc = update_asteroid(id, dx, dy, dz, dvx, dvy, dvz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
