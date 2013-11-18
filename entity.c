@@ -296,6 +296,10 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 	v2 = t->v[1];
 	v3 = t->v[2];
 
+	/* part of triangle is behind screen */
+	if (v1->ww < 0 || v2->ww < 0 || v3->ww < 0)
+		return;
+
 	x1 = (v1->wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
 	x2 = (v2->wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
 	x3 = (v3->wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
