@@ -493,7 +493,8 @@ static int add_generic_object(uint32_t id, double x, double y, double z,
 }
 
 static void update_generic_object(int index, double x, double y, double z,
-				double vx, double vz, const union quat *orientation, uint32_t alive)
+				double vx, double vy, double vz,
+				const union quat *orientation, uint32_t alive)
 {
 	struct snis_entity *o = &go[index];
 
@@ -506,6 +507,7 @@ static void update_generic_object(int index, double x, double y, double z,
 	o->r2.v.y = y;
 	o->r2.v.z = z;
 	o->vx = vx;
+	o->vy = vy;
 	o->vz = vz;
 	o->heading = 0;
 	if (orientation) {
@@ -728,7 +730,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 		if (e)
 			entity_set_user_data(e, &go[i]);
 	} else {
-		update_generic_object(i, x, y, z, vx, vz, orientation, alive); 
+		update_generic_object(i, x, y, z, vx, vy, vz, orientation, alive); 
 	}
 	go[i].tsd.ship.victim_id = (int32_t) victim_id;
 	go[i].tsd.ship.shiptype = shiptype;
@@ -788,7 +790,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 			return i;
 		go[i].tsd.torpedo.ship_id = ship_id;
 	} else {
-		update_generic_object(i, x, y, z, vx, vz, &identity_quat, 1); 
+		update_generic_object(i, x, y, z, vx, 0.0, vz, &identity_quat, 1); 
 		update_entity_pos(go[i].entity, x, y, z);
 	}
 	return 0;
@@ -849,7 +851,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 			return i;
 		go[i].tsd.laser.ship_id = ship_id;
 	} else {
-		update_generic_object(i, x, y, z, vx, vz, orientation, 1); 
+		update_generic_object(i, x, y, z, vx, vy, vz, orientation, 1); 
 		go[i].vy = vy; /* FIXME: fix update_generic_object */
 	}
 	return 0;
@@ -1094,7 +1096,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 		struct spacemonster_data *sd;
 		int n;
 
-		update_generic_object(i, x, 0, z, 0, 0, &identity_quat, 1); 
+		update_generic_object(i, x, 0, z, 0, 0, 0, &identity_quat, 1); 
 		update_entity_pos(go[i].entity, x, y, z);
 		sd = &go[i].tsd.spacemonster;
 		sd->zz = y;
@@ -1138,7 +1140,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 	} else {
 		o = &go[i];
 		/* move asteroid */
-		update_generic_object(i, x, y, z, vx, vz, NULL, 1);
+		update_generic_object(i, x, y, z, vx, 0.0, vz, NULL, 1);
 		update_entity_pos(o->entity, x, y, z);
 	}
 	return 0;
@@ -1168,7 +1170,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 		quat_init_axis(&orientation,
 			(axis == 0) * 1.0, (axis == 1) * 1.0, (axis == 2) * 1.0, angle);
 		update_entity_orientation(go[i].entity, &orientation);
-		update_generic_object(i, x, y, z, 0.0, 0.0, &orientation, 1);
+		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, &orientation, 1);
 		update_entity_pos(go[i].entity, x, y, z);
 	}
 	return 0;
@@ -1191,7 +1193,7 @@ static int update_planet(uint32_t id, double x, double y, double z)
 			return i;
 		update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
 	} else {
-		update_generic_object(i, x, y, z, 0.0, 0.0, NULL, 1);
+		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 		update_entity_pos(go[i].entity, x, y, z);
 	}
 	return 0;
@@ -1302,7 +1304,7 @@ static int update_nebula(uint32_t id, double x, double z, double r)
 			return i;
 		add_nebula_entry(go[i].id, x, z, r);
 	} else {
-		update_generic_object(i, x, 0, z, 0.0, 0.0, &identity_quat, 1);
+		update_generic_object(i, x, 0, z, 0.0, 0.0, 0.0, &identity_quat, 1);
 	}
 	go[i].tsd.nebula.r = r;	
 	go[i].alive = 1;
@@ -2989,7 +2991,7 @@ static int process_update_ship_packet(uint16_t opcode)
 			goto out;
 		}
 	} else {
-		update_generic_object(i, dx, dy, dz, dvx, dvz, &orientation, alive);
+		update_generic_object(i, dx, dy, dz, dvx, 0.0, dvz, &orientation, alive);
 	}
 	o = &go[i];
 	o->tsd.ship.yaw_velocity = dyawvel;
