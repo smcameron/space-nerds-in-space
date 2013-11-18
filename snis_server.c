@@ -5838,10 +5838,12 @@ static void send_update_ship_packet(struct game_client *c,
 	tloading = tloading | (tloaded << 4);
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
-	packed_buffer_append(pb, "hwwSSSSS", opcode, o->id, o->alive,
+	packed_buffer_append(pb, "hwwSSSSSS", opcode, o->id, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM,
-			o->vx, (int32_t) UNIVERSE_DIM, o->vz, (int32_t) UNIVERSE_DIM);
+			o->vx, (int32_t) UNIVERSE_DIM,
+			o->vy, (int32_t) UNIVERSE_DIM,
+			o->vz, (int32_t) UNIVERSE_DIM);
 	packed_buffer_append(pb, "SSSwwUSUUbbbwbbbbbbbbbbbbwQQQ",
 			o->tsd.ship.yaw_velocity, (int32_t) 360,
 			o->tsd.ship.pitch_velocity, (int32_t) 360,

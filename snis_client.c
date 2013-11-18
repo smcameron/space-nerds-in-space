@@ -2928,12 +2928,12 @@ static int process_update_power_data(void)
 static int process_update_ship_packet(uint16_t opcode)
 {
 	int i;
-	unsigned char buffer[136];
+	unsigned char buffer[140];
 	struct packed_buffer pb;
 	uint32_t id, alive, torpedoes, power;
 	uint32_t fuel, victim_id;
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
-	double dgheading, dgunyawvel, dsheading, dbeamwidth, dvx, dvz;
+	double dgheading, dgunyawvel, dsheading, dbeamwidth, dvx, dvy, dvz;
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
@@ -2951,10 +2951,12 @@ static int process_update_ship_packet(uint16_t opcode)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "wwSSSSS", &id, &alive,
+	packed_buffer_extract(&pb, "wwSSSSSS", &id, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
-				&dvx, (int32_t) UNIVERSE_DIM, &dvz, (int32_t) UNIVERSE_DIM);
+				&dvx, (int32_t) UNIVERSE_DIM,
+				&dvy, (int32_t) UNIVERSE_DIM,
+				&dvz, (int32_t) UNIVERSE_DIM);
 	packed_buffer_extract(&pb, "SSSwwUSUU",
 				&dyawvel, (int32_t) 360,
 				&dpitchvel, (int32_t) 360,
@@ -2985,13 +2987,13 @@ static int process_update_ship_packet(uint16_t opcode)
 		else
 			e = add_entity(ecx, ship_mesh_map[shiptype % NSHIPTYPES],
 					dx, dy, dz, SHIP_COLOR);
-		i = add_generic_object(id, dx, dy, dz, dvx, 0.0, dvz, &orientation, type, alive, e);
+		i = add_generic_object(id, dx, dy, dz, dvx, dvy, dvz, &orientation, type, alive, e);
 		if (i < 0) {
 			rc = i;
 			goto out;
 		}
 	} else {
-		update_generic_object(i, dx, dy, dz, dvx, 0.0, dvz, &orientation, alive);
+		update_generic_object(i, dx, dy, dz, dvx, dvy, dvz, &orientation, alive);
 	}
 	o = &go[i];
 	o->tsd.ship.yaw_velocity = dyawvel;
