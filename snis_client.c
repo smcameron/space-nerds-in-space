@@ -3697,7 +3697,7 @@ static int process_ship_damage_packet(void)
 	i = lookup_object_by_id(id);
 	
 	if (i < 0)
-		return -1;
+		return 0;
 	packed_buffer_extract_raw(&pb, (char *) &damage, sizeof(damage));
 	pthread_mutex_lock(&universe_mutex);
 	go[i].tsd.ship.damage = damage;
