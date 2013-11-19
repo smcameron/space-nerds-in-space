@@ -835,15 +835,15 @@ check_for_reposition:
 			continue;
 		cx->entity_list[i].onscreen = 0;
 
-		point_to_test.m[0] = cx->entity_list[i].x - cx->camera.x;
-		point_to_test.m[1] = cx->entity_list[i].y - cx->camera.y;
-		point_to_test.m[2] = cx->entity_list[i].z - cx->camera.z;
-		point_to_test.m[3] = 1.0;
-		behind_camera = mat41_dot_mat41(&cx->camera.look_direction, &point_to_test);
-		if (behind_camera < 0) /* behind camera */
-			continue;
 		do_clip = !(cx->entity_list[i].render_style & RENDER_DISABLE_CLIP);
 		if (do_clip) {
+			point_to_test.m[0] = cx->entity_list[i].x - cx->camera.x;
+			point_to_test.m[1] = cx->entity_list[i].y - cx->camera.y;
+			point_to_test.m[2] = cx->entity_list[i].z - cx->camera.z;
+			point_to_test.m[3] = 1.0;
+			behind_camera = mat41_dot_mat41(&cx->camera.look_direction, &point_to_test);
+			if (behind_camera < 0) /* behind camera */
+				continue;
 /* increasing STANDARD_RADIUS makes fewer objects visible, decreasing it makes more */
 #define STANDARD_RADIUS (4.0)
 			if (cx->entity_list[i].dist3dsqrd * STANDARD_RADIUS / cx->entity_list[i].m->radius * cx->entity_list[i].scale >

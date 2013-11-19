@@ -4701,8 +4701,8 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 
-	union vec3 cam_offset = {{0,15,-5}};
-	quat_rot_vec_self(&cam_offset,&camera_orientation);
+	union vec3 cam_offset = {{-3.5,2.7,0}};
+	quat_rot_vec_self(&cam_offset,&o->orientation);
 
 	camera_set_pos(ecx, cx + cam_offset.v.x, cy + cam_offset.v.y, cz + cam_offset.v.z);
 	camera_set_orientation(ecx, &camera_orientation);
@@ -4722,19 +4722,18 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 
 	/* Add our ship into the scene (on the mainscreen, it is omitted) */
-#if 0
 	o->entity = add_entity(ecx, ship_mesh, o->x, o->y, o->z, SHIP_COLOR);
 	update_entity_orientation(o->entity, &o->orientation);
-#endif
+	set_render_style(o->entity, RENDER_DISABLE_CLIP);
+
 	/* FIXME: Note, because of our own ship's extreme proximity, some
 	 * limitations of the renderer become glaringly apparent
 	 */
 	render_entities(w, gc, ecx);
-#if 0 
+
 	/* Remove our ship from the scene */
 	remove_entity(ecx, o->entity);
 	o->entity = NULL;
-#endif
 
 	/* range is the same as max zoom on old weapons */
 	draw_plane_radar(w, o, &camera_orientation, 400, 500, 75, XKNOWN_DIM * 0.01);
