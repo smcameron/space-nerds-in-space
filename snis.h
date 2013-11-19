@@ -136,6 +136,7 @@ static char *shipclass[] = {
 	"Skorpio",
 	"Disruptor",
 	"Research",
+	"Conqueror",
 };
 #define NSHIPTYPES ARRAYSIZE(shipclass)
 
@@ -154,6 +155,7 @@ static double max_speed[] = {
 	14.0,
 	10.0,
 	7.0,
+	10.0,
 };
 
 /* TODO: combine max_speed[], ship_crew_max[], and ship_class[]
@@ -174,6 +176,7 @@ static uint8_t ship_crew_max[] = {
 	9,
 	21,
 	7,
+	17,
 };
 
 struct ship_damage_data {

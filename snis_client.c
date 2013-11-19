@@ -279,6 +279,7 @@ struct mesh *scout_mesh;
 struct mesh *laserbeam_mesh;
 struct mesh *ship_icon_mesh;
 struct mesh *heading_indicator_mesh;
+struct mesh *conqueror_mesh;
 
 struct mesh *ship_mesh_map[NSHIPTYPES];
 struct mesh *derelict_mesh[NSHIPTYPES];
@@ -11011,6 +11012,7 @@ static void init_meshes(void)
 	}
 
 	freighter_mesh = snis_read_stl_file(d, "freighter.stl");
+	conqueror_mesh = snis_read_stl_file(d, "conqueror.stl");
 	cruiser_mesh = snis_read_stl_file(d, "cruiser.stl");
 	tanker_mesh = snis_read_stl_file(d, "tanker.stl");
 	destroyer_mesh = snis_read_stl_file(d, "destroyer.stl");
@@ -11048,6 +11050,7 @@ static void init_meshes(void)
 	ship_mesh_map[11] = skorpio_mesh;
 	ship_mesh_map[12] = disruptor_mesh;
 	ship_mesh_map[13] = research_vessel_mesh;
+	ship_mesh_map[14] = conqueror_mesh;
 
 	for (i = 0; i < NSHIPTYPES; i++)
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
