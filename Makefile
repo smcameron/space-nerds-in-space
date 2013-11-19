@@ -138,7 +138,9 @@ MODELS=${MD}/freighter.stl \
 	${MD}/ship-icon.stl \
 	${MD}/heading_indicator.stl \
 	${MD}/axis.stl \
-	${MD}/conqueror.stl
+	${MD}/conqueror.stl \
+	${MD}/scrambler.stl
+	
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${ILDAFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic

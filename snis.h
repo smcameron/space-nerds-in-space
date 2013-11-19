@@ -120,6 +120,8 @@ struct power_model_data {
 #define SHIP_CLASS_SKORPIO 11 
 #define SHIP_CLASS_DISRUPTOR 12 
 #define SHIP_CLASS_RESEARCH_VESSEL 13 
+#define SHIP_CLASS_CONQUERER 14 
+#define SHIP_CLASS_SCRAMBLER 15 
 
 static char *shipclass[] = {
 	"Cruiser",
@@ -137,6 +139,7 @@ static char *shipclass[] = {
 	"Disruptor",
 	"Research",
 	"Conqueror",
+	"Scrambler",
 };
 #define NSHIPTYPES ARRAYSIZE(shipclass)
 
@@ -156,6 +159,7 @@ static double max_speed[] = {
 	10.0,
 	7.0,
 	10.0,
+	14.0,
 };
 
 /* TODO: combine max_speed[], ship_crew_max[], and ship_class[]
@@ -177,6 +181,7 @@ static uint8_t ship_crew_max[] = {
 	21,
 	7,
 	17,
+	30,
 };
 
 struct ship_damage_data {
