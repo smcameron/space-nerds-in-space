@@ -113,7 +113,7 @@ void ui_element_list_button_press(struct ui_element_list *list, int x, int y)
 
 	for (i = list; i != NULL; i = i->next) {
 		e = i->element;
-		if (e->button_press && e->active_displaymode == *e->displaymode) {
+		if (e->button_press && e->active_displaymode == *e->displaymode && !e->hidden) {
 			hit = e->button_press(e->element, x, y);
 			if (hit) {
 				ui_set_focus(list, e);
@@ -145,7 +145,8 @@ static void advance_focus(struct ui_element_list *list)
 			continue;
 		}
 		if (found) {
-			if (e->active_displaymode == *e->displaymode && e->set_focus) {
+			if (e->active_displaymode == *e->displaymode &&
+				e->set_focus && !e->hidden) {
 				e->has_focus = 1;
 				e->set_focus(e->element, 1);
 				done = 1;
@@ -161,7 +162,7 @@ static void advance_focus(struct ui_element_list *list)
 	/* Start from the beginning of the list */
 	for (i = list; i; i = i->next) {
 		struct ui_element *e = i->element;
-		if (e->active_displaymode == *e->displaymode && e->set_focus) {
+		if (e->active_displaymode == *e->displaymode && e->set_focus && !e->hidden) {
 			e->has_focus = 1;
 			e->set_focus(e->element, 1);
 			break;
@@ -190,6 +191,8 @@ void ui_element_list_keypress(struct ui_element_list *list, GdkEventKey *event)
 			continue;
 		if (*i->element->displaymode != i->element->active_displaymode)
 			continue;
+		if (i->element->hidden)
+			continue;
 		i->element->keypress_fn(i->element->element, event);
 		break;
 	}
@@ -205,6 +208,8 @@ void ui_element_list_keyrelease(struct ui_element_list *list, GdkEventKey *event
 		if (!i->element->keyrelease_fn)
 			continue;
 		if (*i->element->displaymode != i->element->active_displaymode)
+			continue;
+		if (!i->element->hidden)
 			continue;
 		i->element->keyrelease_fn(i->element->element, event);
 		break;
