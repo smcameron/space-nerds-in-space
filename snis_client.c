@@ -2230,8 +2230,8 @@ static void do_view_mode_change()
 		new_mode = MAINSCREEN_VIEW_MODE_WEAPONS;
 	else
 		new_mode = MAINSCREEN_VIEW_MODE_NORMAL;
-	queue_to_server(packed_buffer_new("hSb", OPCODE_MAINSCREEN_VIEW_MODE,
-				0.0, (int32_t) 360, new_mode));
+	queue_to_server(packed_buffer_new("hRb", OPCODE_MAINSCREEN_VIEW_MODE,
+				0.0, new_mode));
 }
 
 static void do_dirkey(int h, int v, int r)
@@ -2960,13 +2960,15 @@ static int process_update_ship_packet(uint16_t opcode)
 				&dvx, (int32_t) UNIVERSE_DIM,
 				&dvy, (int32_t) UNIVERSE_DIM,
 				&dvz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_extract(&pb, "SSSwwUSUU",
-				&dyawvel, (int32_t) 360,
-				&dpitchvel, (int32_t) 360,
-				&drollvel, (int32_t) 360,
-				&torpedoes, &power, &dgheading, (uint32_t) 360,
-				&dgunyawvel, (int32_t) 360,
-				&dsheading, (uint32_t) 360, &dbeamwidth, (uint32_t) 360);
+	packed_buffer_extract(&pb, "RRRwwRRRR",
+				&dyawvel,
+				&dpitchvel,
+				&drollvel,
+				&torpedoes, &power,
+				&dgheading,
+				&dgunyawvel,
+				&dsheading,
+				&dbeamwidth);
 	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbwQQQ",
 			&tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
@@ -3065,12 +3067,12 @@ static int process_update_damcon_object(void)
 	uint8_t autonomous_mode;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "wwwSSSSb",
+	rc = read_and_unpack_buffer(buffer, "wwwSSSRb",
 			&id, &ship_id, &type,
 			&x, (int32_t) DAMCONXDIM, 
 			&y, (int32_t) DAMCONYDIM, 
 			&velocity, (int32_t) DAMCONXDIM, 
-			&heading, (int32_t) 360,
+			&heading,
 			&autonomous_mode);
 	if (rc)
 		return rc;
@@ -3109,11 +3111,11 @@ static int process_update_damcon_part(void)
 	uint8_t system, part, damage;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "wwwSSUbbb",
+	rc = read_and_unpack_buffer(buffer, "wwwSSRbbb",
 		&id, &ship_id, &type,
 			&x, (int32_t) DAMCONXDIM, 
 			&y, (int32_t) DAMCONYDIM, 
-			&heading, (uint32_t) 360, 
+			&heading,
 			&system, &part, &damage);
 	if (rc != 0)
 		return rc;
@@ -3132,8 +3134,7 @@ static int process_mainscreen_view_mode(void)
 	double view_angle;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "Sb", &view_angle, (int32_t) 360,
-				&view_mode);
+	rc = read_and_unpack_buffer(buffer, "Rb", &view_angle, &view_mode);
 	if (rc != 0)
 		return rc;
 	if (!(o = find_my_ship()))
@@ -10781,8 +10782,8 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 			break;
 		yaw = weapons_mousex_to_yaw(event->x);
 		pitch = weapons_mousey_to_pitch(event->y);
-		queue_to_server(packed_buffer_new("hSS", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
-					yaw, (int32_t) 360, pitch, (int32_t) 360));
+		queue_to_server(packed_buffer_new("hRR", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
+					yaw, pitch));
 		break;
 	default:
 		break;

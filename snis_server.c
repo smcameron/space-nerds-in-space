@@ -3780,8 +3780,7 @@ static int process_request_weapons_yaw_pitch(struct game_client *c)
 	int i, rc;
 	struct snis_entity *o;
 
-	rc = read_and_unpack_buffer(c, buffer, "SS",
-					&yaw, (int32_t) 360, &pitch, (int32_t) 360);
+	rc = read_and_unpack_buffer(c, buffer, "RR", &yaw, &pitch);
 	if (rc)
 		return rc;
 
@@ -4430,14 +4429,13 @@ static int process_mainscreen_view_mode(struct game_client *c)
 	double view_angle;
 	uint8_t view_mode;
 
-	rc = read_and_unpack_buffer(c, buffer, "Sb",
-				&view_angle, (int32_t) 360, &view_mode);
+	rc = read_and_unpack_buffer(c, buffer, "Rb", &view_angle, &view_mode);
 	if (rc)
 		return rc;
 	/* Rebuild packet and send to all clients with main screen role */
 	send_packet_to_all_clients_on_a_bridge(c->shipid, 
-			packed_buffer_new("hSb", OPCODE_MAINSCREEN_VIEW_MODE,
-					view_angle, (int32_t) 360, view_mode),
+			packed_buffer_new("hRb", OPCODE_MAINSCREEN_VIEW_MODE,
+					view_angle, view_mode),
 			ROLE_MAIN);
 	return 0;
 }
@@ -5925,15 +5923,15 @@ static void send_update_ship_packet(struct game_client *c,
 			o->vx, (int32_t) UNIVERSE_DIM,
 			o->vy, (int32_t) UNIVERSE_DIM,
 			o->vz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "SSSwwUSUUbbbwbbbbbbbbbbbbwQQQ",
-			o->tsd.ship.yaw_velocity, (int32_t) 360,
-			o->tsd.ship.pitch_velocity, (int32_t) 360,
-			o->tsd.ship.roll_velocity, (int32_t) 360,
+	packed_buffer_append(pb, "RRRwwRRRRbbbwbbbbbbbbbbbbwQQQ",
+			o->tsd.ship.yaw_velocity,
+			o->tsd.ship.pitch_velocity,
+			o->tsd.ship.roll_velocity,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
-			o->tsd.ship.gun_heading, (uint32_t) 360,
-			o->tsd.ship.gun_yaw_velocity, (int32_t) 360,
-			o->tsd.ship.sci_heading, (uint32_t) 360,
-			o->tsd.ship.sci_beam_width, (uint32_t) 360,
+			o->tsd.ship.gun_heading,
+			o->tsd.ship.gun_yaw_velocity,
+			o->tsd.ship.sci_heading,
+			o->tsd.ship.sci_beam_width,
 			tloading, throttle, rpm, fuel, o->tsd.ship.temp,
 			o->tsd.ship.scizoom, o->tsd.ship.weapzoom, o->tsd.ship.navzoom,
 			o->tsd.ship.mainzoom,
@@ -5950,14 +5948,14 @@ static void send_update_ship_packet(struct game_client *c,
 static void send_update_damcon_obj_packet(struct game_client *c,
 		struct snis_damcon_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwwwSSSSb",
+	pb_queue_to_client(c, packed_buffer_new("hwwwSSSRb",
 					OPCODE_DAMCON_OBJ_UPDATE,   
 					o->id, o->ship_id, o->type,
 					o->x, (int32_t) DAMCONXDIM,
 					o->y, (int32_t) DAMCONYDIM,
 					o->velocity,  (int32_t) DAMCONXDIM,
 		/* send desired_heading as heading to client to enable drifting */
-					o->tsd.robot.desired_heading, (int32_t) 360,
+					o->tsd.robot.desired_heading,
 					o->tsd.robot.autonomous_mode));
 }
 
@@ -5977,12 +5975,12 @@ static void send_update_damcon_socket_packet(struct game_client *c,
 static void send_update_damcon_part_packet(struct game_client *c,
 		struct snis_damcon_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwwwSSUbbb",
+	pb_queue_to_client(c, packed_buffer_new("hwwwSSRbbb",
 					OPCODE_DAMCON_PART_UPDATE,   
 					o->id, o->ship_id, o->type,
 					o->x, (int32_t) DAMCONXDIM,
 					o->y, (int32_t) DAMCONYDIM,
-					o->heading, (uint32_t) 360,
+					o->heading,
 					o->tsd.part.system,
 					o->tsd.part.part,
 					o->tsd.part.damage));
