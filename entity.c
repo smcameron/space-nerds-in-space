@@ -303,7 +303,7 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 	struct mat41* mv2 = (struct mat41 *) &t->v[2]->wx;
 
 	/* part of triangle is behind screen so try and clip it */
-	if (mv0->m[3] < 0 || mv1->m[3] < 0 || mv2->m[3] < 0) {
+	if (mv0->m[2] < -mv0->m[3] || mv1->m[2] < -mv1->m[3] || mv2->m[2] < -mv2->m[3]) {
 		ntriangles = clipTriangle(&triangles[0], mv0, mv1, mv2);
 	} else {
 		/* not clipped by near plane so just draw it and not worry about the back or sides */
@@ -1246,8 +1246,8 @@ static int clipTriangleToPlane(
 	}
 	else if (isVtx0outside && isVtx1outside && !isVtx2outside)
 	{
-		int line1_t = clippingFunc( component1, pos1w, component2, pos2w);
-		int line2_t = clippingFunc( component0, pos0w, component2, pos2w);
+		float line1_t = clippingFunc( component1, pos1w, component2, pos2w);
+		float line2_t = clippingFunc( component0, pos0w, component2, pos2w);
 		clipped_triangles[0].v[0] = *vsOutput2;
 		clippedLineFromPlane(&clipped_triangles[0].v[1], line2_t, vsOutput0, vsOutput2);
 		clippedLineFromPlane(&clipped_triangles[0].v[2], line1_t, vsOutput1, vsOutput2);
