@@ -258,6 +258,7 @@ struct mesh *asteroid_mesh[NASTEROID_MODELS * NASTEROID_SCALES];
 struct mesh *planet_mesh[NPLANET_MODELS];
 struct mesh *starbase_mesh[NSTARBASE_MODELS];
 struct mesh *ship_mesh;
+struct mesh *ship_turret_mesh;
 struct mesh *freighter_mesh;
 struct mesh *cruiser_mesh;
 struct mesh *tanker_mesh;
@@ -4701,10 +4702,11 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 
-	union vec3 cam_offset = {{-3.5,2.7,0}};
-	quat_rot_vec_self(&cam_offset,&o->orientation);
+	union vec3 cam_pos = {{-3.5,2.7,0}};
+	quat_rot_vec_self(&cam_pos,&o->orientation);
+	vec3_add_c_self(&cam_pos, cx, cy, cz);
 
-	camera_set_pos(ecx, cx + cam_offset.v.x, cy + cam_offset.v.y, cz + cam_offset.v.z);
+	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	camera_set_orientation(ecx, &camera_orientation);
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
@@ -4726,12 +4728,18 @@ static void show_weapons_camera_view(GtkWidget *w)
 	update_entity_orientation(o->entity, &o->orientation);
 	set_render_style(o->entity, RENDER_DISABLE_CLIP);
 
+	/* Add our current into the mix */
+	struct entity* turrent_entity = add_entity(ecx, ship_turret_mesh, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z, SHIP_COLOR);
+	update_entity_orientation(turrent_entity, &camera_orientation);
+	set_render_style(turrent_entity, RENDER_DISABLE_CLIP);
+
 	/* FIXME: Note, because of our own ship's extreme proximity, some
 	 * limitations of the renderer become glaringly apparent
 	 */
 	render_entities(w, gc, ecx);
 
 	/* Remove our ship from the scene */
+	remove_entity(ecx, turrent_entity);
 	remove_entity(ecx, o->entity);
 	o->entity = NULL;
 
@@ -11004,6 +11012,7 @@ static void init_meshes(void)
 	char *d = asset_dir;
 
 	ship_mesh = snis_read_stl_file(d, "spaceship.stl");
+	ship_turret_mesh = snis_read_stl_file(d, "spaceship_turret.stl");
 	torpedo_mesh = snis_read_stl_file(d, "torpedo.stl");
 	laser_mesh = snis_read_stl_file(d, "laser.stl");
 

@@ -139,7 +139,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/heading_indicator.stl \
 	${MD}/axis.stl \
 	${MD}/conqueror.stl \
-	${MD}/scrambler.stl
+	${MD}/scrambler.stl \
+	${MD}/spaceship_turret.stl
 	
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${ILDAFLAG}\
