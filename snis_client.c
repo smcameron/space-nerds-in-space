@@ -2431,12 +2431,14 @@ static joystick_button_fn do_joystick_button[] = {
 		NULL,
 };
 
+/* client joystick status */
+static struct wwvi_js_event jse = { { 0 } };
+
 static void deal_with_joystick()
 {
 
 #define FRAME_RATE_HZ 30 
 	static const int joystick_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
-	static struct wwvi_js_event jse = { { 0 } };
 	int i, rc;
 
 	if (joystick_fd < 0) /* no joystick */
@@ -11525,8 +11527,24 @@ static void setup_joystick(GtkWidget *window)
 	joystick_fd = open_joystick(joystick_device, window->window);
 	if (joystick_fd < 0)
                 printf("No joystick...\n");
-        else
+        else {
+		/* pull all the events off the joystick */
+		memset(&jse.button, 0, sizeof(jse.button));
+		int rc = get_joystick_status(&jse);
+		if (rc != 0) {
+			printf("Joystick '%s' not sending events, ignoring...\n", joystick_device);
+			joystick_fd = -1;
+			return;
+		}
+
+		if ( jse.stick_x <= -32767 || jse.stick_y <= -32767) {
+			printf("Joystick '%s' stuck at neg limits, ignoring...\n", joystick_device);
+			joystick_fd = -1;
+			return;
+		}
+
                 check_for_screensaver();
+	}
 }
 
 static struct mesh *snis_read_stl_file(char *directory, char *filename)
