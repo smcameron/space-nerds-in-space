@@ -75,7 +75,9 @@ struct camera_info {
 	int xvpixels, yvpixels;
 	int renderer;
 	struct mat41 look_direction;
+	union vec3 camera_translation;
 	struct mat44 camera_transform;
+	struct mat44 camera_total_transform;
 };
 
 struct tri_depth_entry {
@@ -527,10 +529,14 @@ int transform_point(struct entity_context *cx,
 
 	/* calculate the object transform... */
 	struct mat44 object_transform;
+
+	union vec3 total_translation = {{x, y, z}};
+	vec3_add_self(&total_translation, &cx->camera.camera_translation);
+
 	struct mat44 object_translation = {{{ 1, 0, 0, 0 },
 					    { 0, 1, 0, 0 },
 					    { 0, 0, 1, 0 },
-					    { x, y, z, 1 }}};
+					    { total_translation.v.x, total_translation.v.y, total_translation.v.z, 1 }}};
 	mat44_product(&cx->camera.camera_transform, &object_translation, &object_transform);
 	
 	/* calculate screen coords */
@@ -554,30 +560,32 @@ int transform_point(struct entity_context *cx,
 	return 0;
 }
 
-static int transform_entity(struct entity_context *cx,
-				struct entity *e,struct mat44 *transform, int do_clip)
+static int transform_entity(struct entity_context *cx, struct entity *e, int do_clip)
 {
 	int i;
 	struct mat41 *m1, *m2;
 	struct vertex t;
 
 	/* calculate the object transform... */
-	struct mat44 object_transform, total_transform, tmp_transform;
+	struct mat44 object_transform, total_transform;
 	struct mat44 object_scale = {{{ e->scale, 0, 0, 0 },
 					 { 0, e->scale, 0, 0 },
 					 { 0, 0, e->scale, 0 },
 					 { 0, 0, 0, 1 }}}; /* fixme, do this really. */
+
+	union vec3 total_translation = {{e->x, e->y, e->z}};
+	vec3_add_self(&total_translation, &cx->camera.camera_translation);
+
 	struct mat44 object_translation = {{{ 1,    0,     0,    0 },
 					    { 0,    1,     0,    0 },
 					    { 0,    0,     1,    0 },
-					    { e->x, e->y, e->z, 1 }}};
+					    { total_translation.v.x, total_translation.v.y, total_translation.v.z, 1 }}};
 	struct mat44 orientation, object_rotation;
 
 	quat_to_rh_rot_matrix(&e->orientation, &orientation.m[0][0]);
 	mat44_product(&orientation, &object_scale, &object_rotation);  
 
-	tmp_transform = *transform;
-	mat44_product(&tmp_transform, &object_translation, &object_transform);
+	mat44_product(&cx->camera.camera_transform, &object_translation, &object_transform);
 	mat44_product(&object_transform, &object_rotation, &total_transform);
 	
 	/* calculate screen coords of entity as a whole */
@@ -691,15 +699,8 @@ static void ilda_file_newframe(struct entity_context *cx)
 
 void calculate_camera_transform(struct entity_context *cx)
 {
-	struct mat44 identity = {{{ 1, 0, 0, 0 }, /* identity matrix */
-				    { 0, 1, 0, 0 },
-				    { 0, 0, 1, 0 },
-				    { 0, 0, 0, 1 }}};
 	struct mat44 perspective_transform;
 	struct mat44 cameralook_transform;
-	struct mat44 tmp_transform;
-	struct mat44 cameralocation_transform;
-	struct mat44 total_transform;
 	
 	struct mat41 look_direction;
 
@@ -716,9 +717,9 @@ void calculate_camera_transform(struct entity_context *cx)
 
 	normalize_vector(&cx->light, &cx->light);
 
+	
 	/* Translate to camera position... */
-	mat44_translate(&identity, -cx->camera.x, -cx->camera.y, -cx->camera.z,
-				&cameralocation_transform);
+	vec3_init(&cx->camera.camera_translation, -cx->camera.x, -cx->camera.y, -cx->camera.z);
 
 	/* Calculate camera rotation based on look direction ...
 	   http://ksimek.github.io/2012/08/22/extrinsic/ 'The "Look-At" Camera'
@@ -796,9 +797,11 @@ void calculate_camera_transform(struct entity_context *cx)
 						(cx->camera.far - cx->camera.near);
 	perspective_transform.m[3][3] = 0.0;
 
-	mat44_product(&perspective_transform, &cameralook_transform, &tmp_transform);
-	mat44_product(&tmp_transform, &cameralocation_transform, &total_transform);
-	cx->camera.camera_transform = total_transform;
+	/* camera matrix without any translation */
+	mat44_product(&perspective_transform, &cameralook_transform, &cx->camera.camera_transform);
+	/* camera matrix with translation */
+	mat44_translate(&cx->camera.camera_transform, cx->camera.camera_translation.v.x,
+		cx->camera.camera_translation.v.y, cx->camera.camera_translation.v.z, &cx->camera.camera_total_transform);
 }
 
 static void reposition_fake_star(struct entity_context *cx, struct fake_star *fs, float radius);
@@ -844,7 +847,7 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 		behind_camera = mat41_dot_mat41(&cx->camera.look_direction, &point_to_test);
 		if (behind_camera < 0) /* behind camera */
 			goto check_for_reposition;
-		if (!transform_fake_star(cx, fs, &cx->camera.camera_transform))
+		if (!transform_fake_star(cx, fs, &cx->camera.camera_total_transform))
 			wireframe_render_fake_star(w, gc, cx, fs);
 check_for_reposition:
 		if (fs->dist3dsqrd > cx->camera.far * 10.0f * cx->camera.far * 10.0f)
@@ -881,7 +884,7 @@ check_for_reposition:
 				continue;
 		}
 
-		clipped = transform_entity(cx, &cx->entity_list[i], &cx->camera.camera_transform, do_clip);
+		clipped = transform_entity(cx, &cx->entity_list[i], do_clip);
 		if (clipped)
 			continue;
 
@@ -1124,9 +1127,9 @@ union quat *entity_get_orientation(struct entity *e)
 	return &e->orientation;
 }
 
-struct mat44 get_camera_transform(struct entity_context *cx)
+struct mat44 get_camera_total_transform(struct entity_context *cx)
 {
-	return cx->camera.camera_transform;
+	return cx->camera.camera_total_transform;
 }
 
 void set_window_offset(struct entity_context *cx, float x, float y)
