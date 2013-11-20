@@ -517,6 +517,15 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 			sscale = va_arg(ap, int32_t); 
 			packed_buffer_append_ds32(pb, d, sscale);
 			break;
+		case 'R':
+			d = va_arg(ap, double);
+			sscale = INT32_MAX / 100; 
+			if (d < -2.0 * M_PI || d > 2.0 * M_PI) {
+				printf("out of range angle %d\n", (int) (d * 180.0 / M_PI));
+				stacktrace();
+			}
+			packed_buffer_append_ds32(pb, d, sscale);
+			break;
 		case 'U':
 			d = va_arg(ap, double);
 			uscale = va_arg(ap, uint32_t); 
@@ -543,6 +552,9 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
  * "d" = double
  * "S" = 32-bit signed integer encoded double (takes 2 params, double + scale )
  * "U" = 32-bit unsigned integer encoded double (takes 2 params, double + scale )
+ * "Q" = 4 32-bit signed integer encoded floats representing a quaternion axis + angle
+ * "R" = 32-bit signed integer encoded double radians representing an angle
+ *       (-2 * M_PI <= angle <= 2 * M_PI must hold.)
  */
 
 int packed_buffer_append(struct packed_buffer *pb, const char *format, ...)
@@ -571,6 +583,7 @@ int calculate_buffer_size(const char *format)
 		case 'w':
 		case 'S':
 		case 'U':
+		case 'R':
 			size += 4;
 			break;
 		case 'd':
@@ -660,6 +673,11 @@ int packed_buffer_extract_va(struct packed_buffer *pb, const char *format, va_li
 		case 'S':
 			d = va_arg(ap, double *);
 			sscale = va_arg(ap, int32_t); 
+			*d = packed_buffer_extract_ds32(pb, sscale);
+			break;
+		case 'R':
+			d = va_arg(ap, double *);
+			sscale = INT32_MAX / 100; 
 			*d = packed_buffer_extract_ds32(pb, sscale);
 			break;
 		case 'U':

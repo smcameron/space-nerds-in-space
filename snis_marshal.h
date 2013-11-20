@@ -42,9 +42,11 @@ GLOBAL void packed_buffer_free(struct packed_buffer *pb);
  * "s" = string (char *)
  * "r" = raw (char *) (unsigned short len)
  * "d" = double
- * "DS" = 32-bit signed integer encoded double (takes 2 params, double + scale )
- * "DU" = 32-bit unsigned integer encoded double (takes 2 params, double + scale )
+ * "S" = 32-bit signed integer encoded double (takes 2 params, double + scale )
+ * "U" = 32-bit unsigned integer encoded double (takes 2 params, double + scale )
  * "Q" = 4 32-bit signed integer encoded floats representing a quaternion axis + angle
+ * "R" = 32-bit signed integer encoded double radians representing an angle
+ *       (-2 * M_PI <= angle <= 2 * M_PI must hold.)
  */
 
 GLOBAL int packed_buffer_append(struct packed_buffer *pb, const char *format, ...);
