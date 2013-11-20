@@ -8822,7 +8822,7 @@ static double weapons_mousex_to_yaw(double x)
 {
 	double scaledx;
 
-	scaledx = -((x - real_screen_width / 2.0) / (real_screen_width / 2.0));
+	scaledx = -((x - real_screen_width / 1.1) / (real_screen_width / 1.1));
 	return scaledx * 2 * M_PI; 
 }
 
