@@ -3562,7 +3562,11 @@ static int process_weapons_manual(void)
 	rc = read_and_unpack_buffer(buffer, "b", &new_mode);
 	if (rc != 0)
 		return rc;
+#if 0
 	weapons.manual_mode = new_mode;
+#else
+	weapons.manual_mode = WEAPONS_MODE_MANUAL;
+#endif
 	if (new_mode == WEAPONS_MODE_MANUAL) {
 		snis_button_set_label(weapons.manual_button, "AUTO");
 		hide_weapons_widgets();
@@ -7109,7 +7113,7 @@ static void init_weapons_ui(void)
 	ui_add_button(weapons.tractor_beam, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.wavelen_up_button, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.wavelen_down_button, DISPLAYMODE_WEAPONS);
-	ui_add_button(weapons.manual_button, DISPLAYMODE_WEAPONS);
+	/* ui_add_button(weapons.manual_button, DISPLAYMODE_WEAPONS); */
 	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS);
 	ui_add_slider(weapons.weapzoom_slider, DISPLAYMODE_WEAPONS);
 	ui_add_gauge(weapons.phaser_bank_gauge, DISPLAYMODE_WEAPONS);
