@@ -3771,6 +3771,35 @@ static int process_weapons_manual(struct game_client *c)
 	return 0;
 }
 
+/* This is for mouse control of weapons */
+static int process_request_weapons_yaw_pitch(struct game_client *c)
+{
+	unsigned char buffer[10];
+	double yaw, pitch;
+	union quat y, p;
+	int i, rc;
+	struct snis_entity *o;
+
+	rc = read_and_unpack_buffer(c, buffer, "SS",
+					&yaw, (int32_t) 360, &pitch, (int32_t) 360);
+	if (rc)
+		return rc;
+
+	i = lookup_by_id(c->shipid);
+	if (i < 0)
+		return 0;
+	o = &go[i];
+	yaw = fmod(yaw, 2.0 * M_PI); 
+	pitch = fmod(pitch, M_PI / 2.0); 
+
+	quat_init_axis(&y, 0, 1, 0, yaw);
+	quat_init_axis(&p, 0, 0, 1, pitch);
+	quat_mul(&o->tsd.ship.weap_orientation, &y, &p);
+	quat_normalize_self(&o->tsd.ship.weap_orientation);
+	
+	return 0;
+}
+
 static int process_sci_select_target(struct game_client *c)
 {
 	unsigned char buffer[10];
@@ -5375,6 +5404,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_WEAPONS_MANUAL:
 			rc = process_weapons_manual(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_WEAPONS_YAW_PITCH:
+			rc = process_request_weapons_yaw_pitch(c);
 			if (rc)
 				goto protocol_error;
 			break;

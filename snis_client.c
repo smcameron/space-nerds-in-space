@@ -8818,6 +8818,22 @@ static double demon_mousey_to_uz(double y)
 	return demon_ui.uy1 + (y / real_screen_height) * (demon_ui.uy2 - demon_ui.uy1);
 }
 
+static double weapons_mousex_to_yaw(double x)
+{
+	double scaledx;
+
+	scaledx = -((x - real_screen_width / 2.0) / (real_screen_width / 2.0));
+	return scaledx * 2 * M_PI; 
+}
+
+static double weapons_mousey_to_pitch(double y)
+{
+	double scaledy;
+
+	scaledy = (real_screen_height - y) / real_screen_height;
+	return scaledy * M_PI / 2.0; 
+}
+
 static int demon_id_selected(uint32_t id)
 {
 	int i;
@@ -10739,8 +10755,25 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 	__attribute__((unused)) void *unused)
 {
-	demon_ui.ix2 = demon_mousex_to_ux(event->x);
-	demon_ui.iz2 = demon_mousey_to_uz(event->y);
+	float pitch, yaw;
+
+	switch (displaymode) {
+	case DISPLAYMODE_DEMON:
+		demon_ui.ix2 = demon_mousex_to_ux(event->x);
+		demon_ui.iz2 = demon_mousey_to_uz(event->y);
+		break;
+	case DISPLAYMODE_WEAPONS:
+		/* FIXME: throttle this network traffic */
+		if (weapons.manual_mode != WEAPONS_MODE_MANUAL)
+			break;
+		yaw = weapons_mousex_to_yaw(event->x);
+		pitch = weapons_mousey_to_pitch(event->y);
+		queue_to_server(packed_buffer_new("hSS", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
+					yaw, (int32_t) 360, pitch, (int32_t) 360));
+		break;
+	default:
+		break;
+	}
 	return TRUE;
 }
 
@@ -11220,6 +11253,7 @@ int main(int argc, char *argv[])
 	gtk_widget_add_events(main_da, GDK_BUTTON_PRESS_MASK);
 	gtk_widget_add_events(main_da, GDK_BUTTON_RELEASE_MASK);
 	gtk_widget_add_events(main_da, GDK_BUTTON3_MOTION_MASK);
+	gtk_widget_add_events(main_da, GDK_POINTER_MOTION_MASK);
 	g_signal_connect(G_OBJECT (main_da), "button_press_event",
                       G_CALLBACK (main_da_button_press), NULL);
 	g_signal_connect(G_OBJECT (main_da), "button_release_event",
