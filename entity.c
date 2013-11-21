@@ -662,9 +662,9 @@ static void sort_entity_distances(struct entity_context *cx)
 		cx->entity_depth[i] = i;
 	}
 #if defined(__APPLE__)  || defined(__FreeBSD__)
-	qsort_r(cx->entity_depth, n, sizeof(cx->entity_depth[0]), cx, object_depth_compare);
+	qsort_r(cx->entity_depth, n + 1, sizeof(cx->entity_depth[0]), cx, object_depth_compare);
 #else
-	qsort_r(cx->entity_depth, n, sizeof(cx->entity_depth[0]), object_depth_compare, cx);
+	qsort_r(cx->entity_depth, n + 1, sizeof(cx->entity_depth[0]), object_depth_compare, cx);
 #endif
 }
 
