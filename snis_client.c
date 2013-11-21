@@ -7620,7 +7620,6 @@ static void show_navigation(GtkWidget *w)
 	int cx, cy;
 	int r, sectorx, sectorz;
 	double screen_radius, max_possible_screen_radius, visible_distance, display_heading;
-	double display_yaw;
 	static int current_zoom = 0;
 	union euler ypr;
 
@@ -7645,21 +7644,7 @@ static void show_navigation(GtkWidget *w)
 	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
 
 	quat_to_euler(&ypr, &o->orientation);	
-	display_yaw = ypr.a.yaw + M_PI / 2.0;
-	normalize_angle(&display_yaw);
-	display_yaw *= 180.0 / M_PI;
-	sprintf(buf, "YAW: %3.1F PITCH: %3.1f ROLL: %3.1f",
-			display_yaw,
-			ypr.a.pitch * 180.0 / M_PI,
-			ypr.a.roll * 180.0 / M_PI);
-	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, 2.0 * LINEHEIGHT);
 	
-#if 0
-	sprintf(buf, "vx: %5.2lf", o->vx);
-	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 600, LINEHEIGHT * 3);
-	sprintf(buf, "vy: %5.2lf", o->vy);
-	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 600, LINEHEIGHT * 4);
-#endif
 	static struct snis_radar_extent extent = { 40, 90, 470, 470 };
 	cx = extent.rx + (extent.rw / 2);
 	cy = extent.ry + (extent.rh / 2);
