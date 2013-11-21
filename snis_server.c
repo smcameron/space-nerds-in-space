@@ -873,82 +873,76 @@ static int laser_point_collides(double lx1, double ly1, double lz1,
 	return (point_to_3d_line_dist(lx1, ly1, lz1, lx2, ly2, lz2, px, py, pz) < 350.0);
 }
 
+static void laser_collision_detection(void *context, void *entity)
+{
+	struct snis_entity *o = context; /* laser */
+	struct snis_entity *t = entity;  /* target */
+
+	if (!t->alive)
+		return;
+	if (t->index == o->index)
+		return;
+	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
+		t->type != OBJTYPE_STARBASE && t->type != OBJTYPE_ASTEROID)
+		return;
+	if (t->id == t->tsd.laser.ship_id)
+		return; /* can't laser yourself. */
+
+	if (!laser_point_collides(o->x + o->vx, o->y + o->vy, o->z + o->vz,
+				o->x - o->vx, o->y - o->vy, o->z - o->vz,
+				t->x, t->y, t->z))
+		return; /* not close enough */
+		
+	/* hit!!!! */
+	o->alive = 0;
+
+	if (t->type == OBJTYPE_STARBASE) {
+		t->tsd.starbase.under_attack = 1;
+		return;
+	}
+
+	if (t->type == OBJTYPE_SHIP1 || t->type == OBJTYPE_SHIP2) {
+		calculate_laser_damage(t, o->tsd.laser.wavelength,
+			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST);
+		send_ship_damage_packet(t);
+		attack_your_attacker(t, lookup_entity_by_id(o->tsd.laser.ship_id));
+	}
+
+	if (t->type == OBJTYPE_ASTEROID)
+		t->alive = 0;
+
+	if (!t->alive) {
+		(void) add_explosion(t->x, t->y, t->z, 50, 50, 50, t->type);
+		/* TODO -- these should be different sounds */
+		/* make sound for players that got hit */
+		/* make sound for players that did the hitting */
+		snis_queue_add_sound(EXPLOSION_SOUND,
+				ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
+		if (t->type != OBJTYPE_SHIP1) {
+			if (t->type == OBJTYPE_SHIP2)
+				make_derelict(t);
+			delete_from_clients_and_server(t);
+			respawn_object(t->type);
+		} else {
+			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, t->id);
+			schedule_callback(event_callback, &callback_schedule,
+					"player-death-callback", t->id);
+		}
+	} else {
+		(void) add_explosion(t->x, t->y, t->z, 50, 5, 5, t->type);
+		snis_queue_add_sound(DISTANT_PHASER_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
+		snis_queue_add_sound(PHASER_HIT_SOUND, ROLE_SOUNDSERVER,
+					o->tsd.torpedo.ship_id);
+	}
+}
+
 static void laser_move(struct snis_entity *o)
 {
-	int i;
-	uint8_t otype;
-
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
 	o->alive--;
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		/* double dist2; */
-
-		if (!go[i].alive)
-			continue;
-		if (i == o->index)
-			continue;
-		otype = go[i].type;
-		if (otype != OBJTYPE_SHIP1 && otype != OBJTYPE_SHIP2 &&
-			otype != OBJTYPE_STARBASE && otype != OBJTYPE_ASTEROID)
-			continue;
-		if (go[i].id == o->tsd.laser.ship_id)
-			continue; /* can't laser yourself. */
-		/* dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
-			((go[i].y - o->y) * (go[i].y - o->y)); */
-
-		if (!laser_point_collides(o->x + o->vx, o->y + o->vy, o->z + o->vz,
-					o->x - o->vx, o->y - o->vy, o->z - o->vz,
-					go[i].x, go[i].y, go[i].z))
-		/* if (dist2 > LASER_DETONATE_DIST2) */
-			continue; /* not close enough */
-
-		
-		/* hit!!!! */
-		o->alive = 0;
-
-		if (otype == OBJTYPE_STARBASE) {
-			go[i].tsd.starbase.under_attack = 1;
-			continue;
-		}
-
-		if (otype == OBJTYPE_SHIP1 || otype == OBJTYPE_SHIP2) {
-			calculate_laser_damage(&go[i], o->tsd.laser.wavelength,
-				(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST);
-			send_ship_damage_packet(&go[i]);
-			attack_your_attacker(&go[i], lookup_entity_by_id(o->tsd.laser.ship_id));
-		}
-
-		if (otype == OBJTYPE_ASTEROID && fabs(go[i].y) < 100.0) {
-			go[i].alive = 0;
-		}
-
-		if (!go[i].alive) {
-			(void) add_explosion(go[i].x, go[i].y, go[i].z, 50, 50, 50, otype);
-			/* TODO -- these should be different sounds */
-			/* make sound for players that got hit */
-			/* make sound for players that did the hitting */
-			snis_queue_add_sound(EXPLOSION_SOUND,
-					ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
-			if (go[i].type != OBJTYPE_SHIP1) {
-				if (go[i].type == OBJTYPE_SHIP2)
-					make_derelict(&go[i]);
-				delete_from_clients_and_server(&go[i]);
-				respawn_object(otype);
-			} else {
-				snis_queue_add_sound(EXPLOSION_SOUND,
-							ROLE_SOUNDSERVER, go[i].id);
-				schedule_callback(event_callback, &callback_schedule,
-						"player-death-callback", go[i].id);
-			}
-		} else {
-			(void) add_explosion(go[i].x, go[i].y, go[i].z, 50, 5, 5, otype);
-			snis_queue_add_sound(DISTANT_PHASER_HIT_SOUND, ROLE_SOUNDSERVER, go[i].id);
-			snis_queue_add_sound(PHASER_HIT_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
-		}
-		continue;
-	}
-
+	space_partition_process(space_partition, o, o->x, o->z, o,
+			laser_collision_detection);
 	if (o->alive <= 0)
 		delete_from_clients_and_server(o);
 }
