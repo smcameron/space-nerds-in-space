@@ -821,7 +821,42 @@ static double point_to_line_dist(double lx1, double ly1, double lx2, double ly2,
 	return fabs((px - lx1) * (ly2 - ly1) - (py - ly1) * (lx2 - lx1)) / normal_length;
 }
 
-static int laser_point_collides(double lx1, double ly1, double lx2, double ly2, double px, double py)
+static double point_to_3d_line_dist(double lx1, double ly1, double lz1,
+				double lx2, double ly2, double lz2,
+				double px, double py, double pz)
+{
+	union vec3 p0, p1, p2, t1, t2, t3;
+	float numerator, denominator;
+
+	p0.v.x = px;
+	p0.v.y = py;
+	p0.v.z = pz;
+
+	p1.v.x = lx1;
+	p1.v.y = ly1;
+	p1.v.z = lz1;
+
+	p2.v.x = lx2;
+	p2.v.y = ly2;
+	p2.v.z = lz2;
+
+	/* see http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html */
+	vec3_sub(&t1, &p0, &p1);
+	vec3_sub(&t2, &p0, &p2);
+	vec3_cross(&t3, &t1, &t2);
+	numerator = vec3_magnitude(&t3);
+	vec3_sub(&t3, &p2, &p1);
+	denominator = vec3_magnitude(&t3);
+	if (denominator < 0.0001) {
+		stacktrace("Bad denominator");
+		return 0;
+	}
+	return numerator / denominator;
+}
+
+static int laser_point_collides(double lx1, double ly1, double lz1,
+				double lx2, double ly2, double lz2,
+				double px, double py, double pz)
 {
 	if (px < lx1 && px < lx2)
 		return 0;
@@ -831,7 +866,11 @@ static int laser_point_collides(double lx1, double ly1, double lx2, double ly2, 
 		return 0;
 	if (py > ly1 && py > ly2)
 		return 0;
-	return (point_to_line_dist(lx1, ly1, lx2, ly2, px, py) < 350.0);
+	if (pz > lz1 && pz > lz2)
+		return 0;
+	if (pz < lz1 && pz < lz2)
+		return 0;
+	return (point_to_3d_line_dist(lx1, ly1, lz1, lx2, ly2, lz2, px, py, pz) < 350.0);
 }
 
 static void laser_move(struct snis_entity *o)
@@ -858,8 +897,9 @@ static void laser_move(struct snis_entity *o)
 		/* dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
 			((go[i].y - o->y) * (go[i].y - o->y)); */
 
-		if (!laser_point_collides(o->x + o->vx, o->z + o->vz, o->x - o->vx, o->z - o->vz,
-						go[i].x, go[i].z))
+		if (!laser_point_collides(o->x + o->vx, o->y + o->vy, o->z + o->vz,
+					o->x - o->vx, o->y - o->vy, o->z - o->vz,
+					go[i].x, go[i].y, go[i].z))
 		/* if (dist2 > LASER_DETONATE_DIST2) */
 			continue; /* not close enough */
 
