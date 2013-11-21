@@ -218,4 +218,6 @@ void quat_decompose_swing_twist(const union quat *q, const union vec3 *v1, union
 
 int sphere_line_segment_intersection(const union vec3 *v0, const union vec3 *v1, const union vec3 *center, double r, union vec3 *vo0, union vec3 *vo1);
 
+float vec3_magnitude(union vec3 *v);
+
 #endif /* __QUAT_H__ */

@@ -716,3 +716,12 @@ int sphere_line_segment_intersection(const union vec3 *v0, const union vec3 *v1,
 	return 2;
 }
 
+float vec3_magnitude(union vec3 *v)
+{
+	const float x2 = v->v.x * v->v.x;
+	const float y2 = v->v.y * v->v.y;
+	const float z2 = v->v.z * v->v.z;
+
+	return sqrt(x2 + y2 + z2);
+}
+
