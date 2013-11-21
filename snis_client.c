@@ -3477,6 +3477,8 @@ static int process_sci_details(void)
 	rc = read_and_unpack_buffer(buffer, "b", &new_details);
 	if (rc != 0)
 		return rc;
+	if (new_details == SCI_DETAILS_MODE_TWOD)
+		new_details = SCI_DETAILS_MODE_SCIPLANE;
 	sci_ui.details_mode = new_details;
 	return 0;
 }
@@ -8145,7 +8147,9 @@ static void init_science_ui(void)
 			GREEN, NANO_FONT, sci_details_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
+#if 0
 	ui_add_button(sci_ui.twod_button, DISPLAYMODE_SCIENCE);
+#endif
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE);
 	sciecx = entity_context_new(50);
