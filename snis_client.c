@@ -3501,7 +3501,10 @@ static int process_nav_details(void)
 	rc = read_and_unpack_buffer(buffer, "b", &new_details);
 	if (rc != 0)
 		return rc;
+#if 0
 	nav_ui.details_mode = new_details;
+#endif
+	nav_ui.details_mode = 1;
 	if (new_details)
 		snis_button_set_label(nav_ui.details_button, "2D");
 	else
@@ -7252,7 +7255,9 @@ static void init_nav_ui(void)
 	nav_ui.details_mode = 0;
 	nav_ui.details_button = snis_button_init(SCREEN_WIDTH - 41, SCREEN_HEIGHT - 41, 40, 25, "2D",
 			RED, NANO_FONT, nav_details_pressed, (void *) 0);
+#if 0
 	ui_add_button(nav_ui.details_button, DISPLAYMODE_NAVIGATION);
+#endif
 	navecx = entity_context_new(5000);
 	nav_ui.details_mode = 1;
 }
