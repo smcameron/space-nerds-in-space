@@ -8828,16 +8828,24 @@ static double demon_mousey_to_uz(double y)
 static double weapons_mousex_to_yaw(double x)
 {
 	double scaledx;
+	double angle;
 
-	scaledx = -((x - real_screen_width / 1.1) / (real_screen_width / 1.1));
-	return scaledx * 2 * M_PI; 
+	scaledx = (0.9 * real_screen_width - x) / (real_screen_width * 0.8);
+	angle = scaledx * 2 * M_PI + M_PI; 
+	normalize_angle(&angle);
+	return angle;
 }
 
 static double weapons_mousey_to_pitch(double y)
 {
 	double scaledy;
 
-	scaledy = (real_screen_height - y) / real_screen_height;
+	scaledy = (0.9 * real_screen_height - y) / (real_screen_height * 0.8);
+	if (scaledy > 1.0f)
+		scaledy = 1.0f;
+	else
+		if (scaledy < 0.0f)
+			scaledy = 0.0f;
 	return scaledy * M_PI / 2.0; 
 }
 
