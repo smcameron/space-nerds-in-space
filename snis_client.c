@@ -10764,10 +10764,24 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	return TRUE;
 }
 
+static void smooth_mousexy(float x, float y, float *nx, float *ny)
+{
+	const float smoothness = 200.0f;
+	const float interval = 1.0f / 30.0f;
+	double d = 1 - exp(log(0.5) * smoothness * interval);
+	static float smoothx = 0, smoothy = 0;
+
+	smoothx += (x - smoothx) * d;
+	smoothy += (y - smoothy) * d;
+	*nx = smoothx;
+	*ny = smoothy;
+}
+
 static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 	__attribute__((unused)) void *unused)
 {
 	float pitch, yaw;
+	float smoothx, smoothy;
 
 	switch (displaymode) {
 	case DISPLAYMODE_DEMON:
@@ -10778,8 +10792,9 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 		/* FIXME: throttle this network traffic */
 		if (weapons.manual_mode != WEAPONS_MODE_MANUAL)
 			break;
-		yaw = weapons_mousex_to_yaw(event->x);
-		pitch = weapons_mousey_to_pitch(event->y);
+		smooth_mousexy(event->x, event->y, &smoothx, &smoothy);
+		yaw = weapons_mousex_to_yaw(smoothx);
+		pitch = weapons_mousey_to_pitch(smoothy);
 		queue_to_server(packed_buffer_new("hRR", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
 					yaw, pitch));
 		break;
