@@ -14,4 +14,13 @@ oggdec.c from vorbistools, by Michael Smith <msmith@xiph.org>
 
 rumble.h and rumble.c borrow heavily from Johann Deneux's fftest.c
 
+The code for clipping triangles against the view frustrum within entity.c
+is essentially a port to C of Simon Yeung's javascript code found here:
+http://simonstechblog.blogspot.com/2012/04/software-rasterizer-part-2.html
+It is included in Space Nerds In Space with Simon Yeung's express permission.
+
+The quaternion library, quat.c and quat.h, originally came from
+Tobias Simon here: https://github.com/TobiasSimon/quat
+although considerable enhancements have been made since it was
+originally imported.
 
