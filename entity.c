@@ -1,22 +1,22 @@
 /*
-        Copyright (C) 2010 Stephen M. Cameron
+	Copyright (C) 2010 Stephen M. Cameron
 	Author: Stephen M. Cameron
 
-        This file is part of Spacenerds In Space.
+	This file is part of Spacenerds In Space.
 
-        Spacenerds in Space is free software; you can redistribute it and/or modify
-        it under the terms of the GNU General Public License as published by
-        the Free Software Foundation; either version 2 of the License, or
-        (at your option) any later version.
+	Spacenerds in Space is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 2 of the License, or
+	(at your option) any later version.
 
-        Spacenerds in Space is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-        GNU General Public License for more details.
+	Spacenerds in Space is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-        You should have received a copy of the GNU General Public License
-        along with Spacenerds in Space; if not, write to the Free Software
-        Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU General Public License
+	along with Spacenerds in Space; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 /* Need _GNU_SOURCE for qsort_r, must be defined before any include directives */
@@ -106,7 +106,7 @@ struct entity_context {
 struct clip_triangle {
 	struct mat41 v[3]; /* three vertices */
 };
-static int clipTriangle(struct clip_triangle* triangles, struct mat41* vsOutput0, struct mat41* vsOutput1, struct mat41* vsOutput2);
+static int clip_triangle(struct clip_triangle* triangles, struct mat41* vs_out0, struct mat41* vs_out1, struct mat41* vs_out2);
 
 struct entity *add_entity(struct entity_context *cx,
 	struct mesh *m, float x, float y, float z, int color)
@@ -139,7 +139,7 @@ void remove_entity(struct entity_context *cx, struct entity *e)
 
 	if (!e)
 		return;
-	index = e - &cx->entity_list[0]; 
+	index = e - &cx->entity_list[0];
 	snis_object_pool_free_object(cx->entity_pool, index);
 }
 
@@ -204,7 +204,7 @@ static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc,
 
 	x1 = (fs->v.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2 + cx->window_offset_x;
 	y1 = (-fs->v.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2 + cx->window_offset_y;
-	sng_current_draw_line(w->window, gc, x1, y1, x1 + (snis_randn(10) < 7), y1); 
+	sng_current_draw_line(w->window, gc, x1, y1, x1 + (snis_randn(10) < 7), y1);
 }
 
 void wireframe_render_triangle(GtkWidget *w, GdkGC *gc,
@@ -243,7 +243,7 @@ void wireframe_render_point(GtkWidget *w, GdkGC *gc,
 
 	x1 = (v->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2 + cx->window_offset_x;
 	y1 = (-v->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2 + cx->window_offset_y;
-	sng_current_draw_line(w->window, gc, x1, y1, x1 + 1, y1); 
+	sng_current_draw_line(w->window, gc, x1, y1, x1 + 1, y1);
 }
 
 #ifdef WITH_ILDA_SUPPORT
@@ -269,7 +269,7 @@ static unsigned short to_ilday(struct entity_context *cx, int y)
 	return (unsigned short) ty;
 }
 
-static void ilda_render_triangle(struct entity_context *cx, 
+static void ilda_render_triangle(struct entity_context *cx,
 			int x1, int y1, int x2, int y2, int x3, int y3)
 {
 	unsigned short sx1, sy1, sx2, sy2, sx3, sy3;
@@ -306,7 +306,7 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 
 	/* part of triangle is behind screen so try and clip it */
 	if (mv0->m[2] < -mv0->m[3] || mv1->m[2] < -mv1->m[3] || mv2->m[2] < -mv2->m[3]) {
-		ntriangles = clipTriangle(&triangles[0], mv0, mv1, mv2);
+		ntriangles = clip_triangle(&triangles[0], mv0, mv1, mv2);
 	} else {
 		/* not clipped by near plane so just draw it and not worry about the back or sides */
 		ntriangles = 1;
@@ -343,19 +343,19 @@ static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context
 		if (cx->camera.renderer & WIREFRAME_RENDERER || render_style & RENDER_WIREFRAME) {
 			if (render_style & RENDER_BRIGHT_LINE) {
 				if ( !(t->flag & TRIANGLE_0_1_COPLANAR))
-					sng_current_bright_line(w->window, gc, x1, y1, x2, y2, color); 
+					sng_current_bright_line(w->window, gc, x1, y1, x2, y2, color);
 				if ( !(t->flag & TRIANGLE_1_2_COPLANAR))
-					sng_current_bright_line(w->window, gc, x2, y2, x3, y3, color); 
+					sng_current_bright_line(w->window, gc, x2, y2, x3, y3, color);
 				if ( !(t->flag & TRIANGLE_0_2_COPLANAR))
-					sng_current_bright_line(w->window, gc, x3, y3, x1, y1, color); 
+					sng_current_bright_line(w->window, gc, x3, y3, x1, y1, color);
 			} else {
 				sng_set_foreground(color);
 				if ( !(t->flag & TRIANGLE_0_1_COPLANAR))
-					sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
+					sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
 				if ( !(t->flag & TRIANGLE_1_2_COPLANAR))
-					sng_current_draw_line(w->window, gc, x2, y2, x3, y3); 
+					sng_current_draw_line(w->window, gc, x2, y2, x3, y3);
 				if ( !(t->flag & TRIANGLE_0_2_COPLANAR))
-					sng_current_draw_line(w->window, gc, x3, y3, x1, y1); 
+					sng_current_draw_line(w->window, gc, x3, y3, x1, y1);
 			}
 	#ifdef WITH_ILDA_SUPPORT
 			if (render_style & RENDER_ILDA)
@@ -504,7 +504,7 @@ static int transform_fake_star(struct entity_context *cx,
 				struct fake_star *fs, struct mat44 *transform)
 {
 	struct mat41 *m1, *m2;
-	
+
 	/* Set homogeneous coord to 1 initially for all vertices */
 	fs->v.w = 1.0;
 
@@ -538,7 +538,7 @@ int transform_point(struct entity_context *cx,
 					    { 0, 0, 1, 0 },
 					    { total_translation.v.x, total_translation.v.y, total_translation.v.z, 1 }}};
 	mat44_product(&cx->camera.camera_transform, &object_translation, &object_transform);
-	
+
 	/* calculate screen coords */
 	t.x = 0;
 	t.y = 0;
@@ -583,11 +583,11 @@ static int transform_entity(struct entity_context *cx, struct entity *e, int do_
 	struct mat44 orientation, object_rotation;
 
 	quat_to_rh_rot_matrix(&e->orientation, &orientation.m[0][0]);
-	mat44_product(&orientation, &object_scale, &object_rotation);  
+	mat44_product(&orientation, &object_scale, &object_rotation);
 
 	mat44_product(&cx->camera.camera_transform, &object_translation, &object_transform);
 	mat44_product(&object_transform, &object_rotation, &total_transform);
-	
+
 	/* calculate screen coords of entity as a whole */
 	t.x = 0;
 	t.y = 0;
@@ -617,7 +617,7 @@ static int transform_entity(struct entity_context *cx, struct entity *e, int do_
 		m2 = (struct mat41 *) &e->m->v[i].wx;
 		mat44_x_mat41(&total_transform, m1, m2);
 	}
-	
+
 	for (i = 0; i < e->m->ntriangles; i++) {
 		m1 = (struct mat41 *) &e->m->t[i].n.x;
 		m2 = (struct mat41 *) &e->m->t[i].n.wx;
@@ -701,12 +701,12 @@ void calculate_camera_transform(struct entity_context *cx)
 {
 	struct mat44 perspective_transform;
 	struct mat44 cameralook_transform;
-	
+
 	struct mat41 look_direction;
 
 	struct mat41 up;
 	struct mat41 camera_x, x_cross_look;
-	struct mat41 *v; /* camera relative y axis (up/down) */ 
+	struct mat41 *v; /* camera relative y axis (up/down) */
 	struct mat41 *n; /* camera relative z axis (into view plane) */
 	struct mat41 *u; /* camera relative x axis (left/right) */
 
@@ -717,7 +717,6 @@ void calculate_camera_transform(struct entity_context *cx)
 
 	normalize_vector(&cx->light, &cx->light);
 
-	
 	/* Translate to camera position... */
 	vec3_init(&cx->camera.camera_translation, -cx->camera.x, -cx->camera.y, -cx->camera.z);
 
@@ -725,13 +724,13 @@ void calculate_camera_transform(struct entity_context *cx)
 	   http://ksimek.github.io/2012/08/22/extrinsic/ 'The "Look-At" Camera'
 	   p = look at point, C = camera, u = up
 	   L = p - C
-	   s = L x u 
+	   s = L x u
 	   u' = s x L
 	   camera rotation = | s1  s2  s3  |
 			     | u'1 u'2 u'3 |
 			     | -L1 -L2 -L3 |
 	  snis n = L
-  	  snis u = s
+	  snis u = s
 	  snis v = u' */
 	look_direction.m[0] = (cx->camera.lx - cx->camera.x);
 	look_direction.m[1] = (cx->camera.ly - cx->camera.y);
@@ -773,7 +772,7 @@ void calculate_camera_transform(struct entity_context *cx)
 	cameralook_transform.m[2][3] = 0.0;
 	cameralook_transform.m[3][0] = 0.0;
 	cameralook_transform.m[3][1] = 0.0;
-	cameralook_transform.m[3][2] = 0.0; 
+	cameralook_transform.m[3][2] = 0.0;
 	cameralook_transform.m[3][3] = 1.0;
 
 	/* Make perspective transform based on OpenGL frustum
@@ -855,7 +854,7 @@ check_for_reposition:
 	}
 
 	sort_entity_distances(cx);
-	   
+
 	for (j = 0; j <= snis_object_pool_highest_object(cx->entity_pool); j++) {
 		struct mat41 point_to_test;
 		float behind_camera;
@@ -931,9 +930,9 @@ void camera_get_look_at(struct entity_context *cx, float *x, float *y, float *z)
 
 void camera_assign_up_direction(struct entity_context *cx, float x, float y, float z)
 {
-       cx->camera.ux = x;
-       cx->camera.uy = y;
-       cx->camera.uz = z;
+	cx->camera.ux = x;
+	cx->camera.uy = y;
+	cx->camera.uz = z;
 }
 
 void camera_get_up_direction(struct entity_context *cx, float *x, float *y, float *z)
@@ -1148,56 +1147,61 @@ int entity_onscreen(struct entity *e)
    converted from javascript to c */
 static const float ZERO_TOLERANCE = 0.000001f;
 
-typedef float (*func_clipLine)(float vtx0x, float vtx0w, float vtx1x, float vtx1w );
-typedef float (*func_getComp)(const struct mat41* m);
-typedef int (*func_isOutside)(float x, float w);
+typedef float (*clip_line_fn)(float vtx0x, float vtx0w, float vtx1x, float vtx1w );
+typedef float (*get_comp_fn)(const struct mat41 *m);
+typedef int (*is_outside_fn)(float x, float w);
 
-// return a pareameter t for line segment within range [0, 1] is intersect
-static float clipLine_pos(float vtx0x, float vtx0w, float vtx1x, float vtx1w )
+/* return a pareameter t for line segment within range [0, 1] is intersect */
+static float clip_line_pos(float vtx0x, float vtx0w, float vtx1x, float vtx1w)
 {
-	float denominator= vtx0w-vtx1w-vtx0x+vtx1x;
+	float denominator = vtx0w - vtx1w - vtx0x + vtx1x;
 	if (fabs(denominator) < ZERO_TOLERANCE)
-		return -1;	// line parallel to the plane...
+		return -1;	/* line parallel to the plane... */
 
-	float t = (vtx0w - vtx0x)/denominator;
-	if (t>=0.0 && t<=1.0)
-		return t;	// intersect
+	float t = (vtx0w - vtx0x) / denominator;
+	if (t >= 0.0 && t <= 1.0)
+		return t;	/* intersect */
 	else
-		return -1;	// line segment not intersect
+		return -1;	/* line segment not intersect */
 }
 
-static float clipLine_neg(float vtx0x, float vtx0w, float vtx1x, float vtx1w)
+static float clip_line_neg(float vtx0x, float vtx0w, float vtx1x, float vtx1w)
 {
-	float denominator= vtx0w-vtx1w+vtx0x-vtx1x;
+	float denominator = vtx0w - vtx1w + vtx0x - vtx1x;
 	if (fabs(denominator) < ZERO_TOLERANCE)
-		return -1;	// line parallel to the plane...
+		return -1;	/* line parallel to the plane... */
 
-	float t= (vtx0w + vtx0x)/denominator;
-	if (t>=0.0 && t<=1.0)
-		return t;	// intersect
+	float t = (vtx0w + vtx0x) / denominator;
+	if (t >= 0.0 && t <= 1.0)
+		return t;	/* intersect */
 	else
-		return -1;	// line segment not intersect
+		return -1;	/* line segment not intersect */
 }
 
-static int isOutside_pos(float x, float w) { 
+static int is_outside_pos(float x, float w)
+{
 	return x > w;
 }
 
-static int isOutside_neg(float x, float w) {
+static int is_outside_neg(float x, float w)
+{
 	return x < -w;
 }
 
-static float getX(const struct mat41* m) {
+static float get_x(const struct mat41 *m) {
 	return m->m[0];
 }
-static float getY(const struct mat41* m) {
+
+static float get_y(const struct mat41 *m)
+{
 	return m->m[1];
 }
-static float getZ(const struct mat41* m) {
+
+static float get_z(const struct mat41* m) {
 	return m->m[2];
 }
 
-static void mat41_lerp(struct mat41* out, struct mat41* v1, struct mat41* v2, float t)
+static void mat41_lerp(struct mat41 *out, struct mat41 *v1, struct mat41 *v2, float t)
 {
 	float invT = 1.0-t;
 	out->m[0] = t * v2->m[0] + invT * v1->m[0];
@@ -1206,162 +1210,160 @@ static void mat41_lerp(struct mat41* out, struct mat41* v1, struct mat41* v2, fl
 	out->m[3] = t * v2->m[3] + invT * v1->m[3];
 }
 
-// the clip line to plane with interpolated varying
-static void clippedLineFromPlane(struct mat41* out, float t, struct mat41* vsOutput0, struct mat41* vsOutput1)
+/* the clip line to plane with interpolated varying */
+static void clipped_line_from_plane(struct mat41 *out, float t, struct mat41 *vs_out0,
+					struct mat41 *vs_out1)
 {
 	if (t<0)
 		printf("Assert: two vertex does not intersect plane\n");
 
-	mat41_lerp(out, vsOutput0, vsOutput1, t);
+	mat41_lerp(out, vs_out0, vs_out1, t);
 }
 
-static int clipTriangleToPlane(
-	struct clip_triangle* clipped_triangles,
-	func_clipLine clippingFunc,
-	struct mat41* vsOutput0, struct mat41* vsOutput1, struct mat41* vsOutput2,
-	int isVtx0outside, int isVtx1outside, int isVtx2outside,
+static int clip_triangle_to_plane(struct clip_triangle* clipped_triangles,
+	clip_line_fn clipping_func,
+	struct mat41* vs_out0, struct mat41* vs_out1, struct mat41* vs_out2,
+	int vtx_0_outside, int vtx_1_outside, int vtx_2_outside,
 	float component0, float component1, float component2,
 	float pos0w, float pos1w, float pos2w)
 {
-	if (isVtx0outside && isVtx1outside && isVtx2outside)
-	{
-		// whole triangle get clipped
-		return 0;
-	}
-	else if (!isVtx0outside && isVtx1outside && isVtx2outside)
-	{
-		// 2 vtx outside, split into 1 smaller triangles
-		float line0_t = clippingFunc(component1, pos1w, component0, pos0w);
-		float line2_t = clippingFunc(component2, pos2w, component0, pos0w);
-		clipped_triangles[0].v[0] = *vsOutput0;
-		clippedLineFromPlane(&clipped_triangles[0].v[1], line0_t, vsOutput1, vsOutput0);
-		clippedLineFromPlane(&clipped_triangles[0].v[2], line2_t, vsOutput2, vsOutput0);
-		return 1;
-	}
-	else if (isVtx0outside && !isVtx1outside && isVtx2outside)
-	{
-		float line0_t = clippingFunc( component0, pos0w, component1, pos1w);
-		float line1_t = clippingFunc( component2, pos2w, component1, pos1w);
-		clipped_triangles[0].v[0] = *vsOutput1;
-		clippedLineFromPlane(&clipped_triangles[0].v[1], line1_t, vsOutput2, vsOutput1);
-		clippedLineFromPlane(&clipped_triangles[0].v[2], line0_t, vsOutput0, vsOutput1);
-		return 1;
-	}
-	else if (isVtx0outside && isVtx1outside && !isVtx2outside)
-	{
-		float line1_t = clippingFunc( component1, pos1w, component2, pos2w);
-		float line2_t = clippingFunc( component0, pos0w, component2, pos2w);
-		clipped_triangles[0].v[0] = *vsOutput2;
-		clippedLineFromPlane(&clipped_triangles[0].v[1], line2_t, vsOutput0, vsOutput2);
-		clippedLineFromPlane(&clipped_triangles[0].v[2], line1_t, vsOutput1, vsOutput2);
-		return 1;
-	}
-	else if (!isVtx0outside && !isVtx1outside && isVtx2outside)
-	{
-		// 1 vtx outside, split into 2 triangles
-		float line1_t = clippingFunc( component2, pos2w, component1, pos1w);
-		float line2_t = clippingFunc( component2, pos2w, component0, pos0w);
+	if (vtx_0_outside && vtx_1_outside && vtx_2_outside)
+		return 0; /* whole triangle gets clipped */
 
-		struct mat41 clippedVertex0;
-		clippedLineFromPlane(&clippedVertex0, line1_t, vsOutput2, vsOutput1);
-		struct mat41 clippedVertex1;
-		clippedLineFromPlane(&clippedVertex1, line2_t, vsOutput2, vsOutput0);
+	if (!vtx_0_outside && vtx_1_outside && vtx_2_outside) {
+		/* 2 vtx outside, split into 1 smaller triangles */
+		float line0_t = clipping_func(component1, pos1w, component0, pos0w);
+		float line2_t = clipping_func(component2, pos2w, component0, pos0w);
+		clipped_triangles[0].v[0] = *vs_out0;
+		clipped_line_from_plane(&clipped_triangles[0].v[1], line0_t, vs_out1, vs_out0);
+		clipped_line_from_plane(&clipped_triangles[0].v[2], line2_t, vs_out2, vs_out0);
+		return 1;
+	}
 
-		clipped_triangles[0].v[0] = *vsOutput0;
-		clipped_triangles[0].v[1] = *vsOutput1;
-		clipped_triangles[0].v[2] = clippedVertex0;
-		clipped_triangles[1].v[0] = *vsOutput0;
-		clipped_triangles[1].v[1] = clippedVertex0;
-		clipped_triangles[1].v[2] = clippedVertex1;
+	if (vtx_0_outside && !vtx_1_outside && vtx_2_outside) {
+		float line0_t = clipping_func( component0, pos0w, component1, pos1w);
+		float line1_t = clipping_func( component2, pos2w, component1, pos1w);
+		clipped_triangles[0].v[0] = *vs_out1;
+		clipped_line_from_plane(&clipped_triangles[0].v[1], line1_t, vs_out2, vs_out1);
+		clipped_line_from_plane(&clipped_triangles[0].v[2], line0_t, vs_out0, vs_out1);
+		return 1;
+	}
+
+	if (vtx_0_outside && vtx_1_outside && !vtx_2_outside) {
+		float line1_t = clipping_func( component1, pos1w, component2, pos2w);
+		float line2_t = clipping_func( component0, pos0w, component2, pos2w);
+		clipped_triangles[0].v[0] = *vs_out2;
+		clipped_line_from_plane(&clipped_triangles[0].v[1], line2_t, vs_out0, vs_out2);
+		clipped_line_from_plane(&clipped_triangles[0].v[2], line1_t, vs_out1, vs_out2);
+		return 1;
+	}
+
+	if (!vtx_0_outside && !vtx_1_outside && vtx_2_outside) {
+		/* 1 vtx outside, split into 2 triangles */
+		float line1_t = clipping_func( component2, pos2w, component1, pos1w);
+		float line2_t = clipping_func( component2, pos2w, component0, pos0w);
+
+		struct mat41 clipped_vertex0;
+		clipped_line_from_plane(&clipped_vertex0, line1_t, vs_out2, vs_out1);
+		struct mat41 clipped_vertex1;
+		clipped_line_from_plane(&clipped_vertex1, line2_t, vs_out2, vs_out0);
+
+		clipped_triangles[0].v[0] = *vs_out0;
+		clipped_triangles[0].v[1] = *vs_out1;
+		clipped_triangles[0].v[2] = clipped_vertex0;
+		clipped_triangles[1].v[0] = *vs_out0;
+		clipped_triangles[1].v[1] = clipped_vertex0;
+		clipped_triangles[1].v[2] = clipped_vertex1;
 		return 2;
 	}
-	else if (!isVtx0outside && isVtx1outside && !isVtx2outside)
-	{
-		float line0_t = clippingFunc( component1, pos1w, component0, pos0w);
-		float line1_t = clippingFunc( component1, pos1w, component2, pos2w);
 
-		struct mat41 clippedVertex0;
-		clippedLineFromPlane(&clippedVertex0, line0_t, vsOutput1, vsOutput0);
-		struct mat41 clippedVertex1;
-		clippedLineFromPlane(&clippedVertex1, line1_t, vsOutput1, vsOutput2);
+	if (!vtx_0_outside && vtx_1_outside && !vtx_2_outside) {
+		float line0_t = clipping_func( component1, pos1w, component0, pos0w);
+		float line1_t = clipping_func( component1, pos1w, component2, pos2w);
 
-		clipped_triangles[0].v[0] = *vsOutput2;
-		clipped_triangles[0].v[1] = *vsOutput0;
-		clipped_triangles[0].v[2] = clippedVertex0;
-		clipped_triangles[1].v[0] = *vsOutput2;
-		clipped_triangles[1].v[1] = clippedVertex0;
-		clipped_triangles[1].v[2] = clippedVertex1;
+		struct mat41 clipped_vertex0;
+		clipped_line_from_plane(&clipped_vertex0, line0_t, vs_out1, vs_out0);
+		struct mat41 clipped_vertex1;
+		clipped_line_from_plane(&clipped_vertex1, line1_t, vs_out1, vs_out2);
+
+		clipped_triangles[0].v[0] = *vs_out2;
+		clipped_triangles[0].v[1] = *vs_out0;
+		clipped_triangles[0].v[2] = clipped_vertex0;
+		clipped_triangles[1].v[0] = *vs_out2;
+		clipped_triangles[1].v[1] = clipped_vertex0;
+		clipped_triangles[1].v[2] = clipped_vertex1;
 		return 2;
 	}
-	else if (isVtx0outside && !isVtx1outside && !isVtx2outside)
-	{
-		float line0_t = clippingFunc( component0, pos0w, component1, pos1w);
-		float line2_t = clippingFunc( component0, pos0w, component2, pos2w);
 
-		struct mat41 clippedVertex0;
-		clippedLineFromPlane(&clippedVertex0, line2_t, vsOutput0, vsOutput2);
-		struct mat41 clippedVertex1;
-		clippedLineFromPlane(&clippedVertex1, line0_t, vsOutput0, vsOutput1);
+	if (vtx_0_outside && !vtx_1_outside && !vtx_2_outside) {
+		float line0_t = clipping_func( component0, pos0w, component1, pos1w);
+		float line2_t = clipping_func( component0, pos0w, component2, pos2w);
 
-		clipped_triangles[0].v[0] = *vsOutput1;
-		clipped_triangles[0].v[1] = *vsOutput2;
-		clipped_triangles[0].v[2] = clippedVertex0;
-		clipped_triangles[1].v[0] = *vsOutput1;
-		clipped_triangles[1].v[1] = clippedVertex0;
-		clipped_triangles[1].v[2] = clippedVertex1;
+		struct mat41 clipped_vertex0;
+		clipped_line_from_plane(&clipped_vertex0, line2_t, vs_out0, vs_out2);
+		struct mat41 clipped_vertex1;
+		clipped_line_from_plane(&clipped_vertex1, line0_t, vs_out0, vs_out1);
+
+		clipped_triangles[0].v[0] = *vs_out1;
+		clipped_triangles[0].v[1] = *vs_out2;
+		clipped_triangles[0].v[2] = clipped_vertex0;
+		clipped_triangles[1].v[0] = *vs_out1;
+		clipped_triangles[1].v[1] = clipped_vertex0;
+		clipped_triangles[1].v[2] = clipped_vertex1;
 		return 2;
 	}
-	else
-	{
-		// nothing get clipped
-		clipped_triangles[0].v[0] = *vsOutput0;
-		clipped_triangles[0].v[1] = *vsOutput1;
-		clipped_triangles[0].v[2] = *vsOutput2;
-		return 1;
-	}
+
+	/* nothing gets clipped */
+	clipped_triangles[0].v[0] = *vs_out0;
+	clipped_triangles[0].v[1] = *vs_out1;
+	clipped_triangles[0].v[2] = *vs_out2;
+	return 1;
 }
 
-static int clipTriangle(struct clip_triangle* triangles, struct mat41* vsOutput0, struct mat41* vsOutput1, struct mat41* vsOutput2)
+static int clip_triangle(struct clip_triangle* triangles, struct mat41* vs_out0,
+				struct mat41* vs_out1, struct mat41* vs_out2)
 {
-	func_clipLine clippingFunc[] = {clipLine_pos, clipLine_neg, clipLine_pos, clipLine_neg, clipLine_pos, clipLine_neg};
-	func_getComp getComponentFunc[] = {getX, getX, getY, getY, getZ, getZ};
-	func_isOutside isOutsideFunc[] = {isOutside_pos, isOutside_neg, isOutside_pos, isOutside_neg, isOutside_pos, isOutside_neg};
+	clip_line_fn clipping_func[] = {clip_line_pos, clip_line_neg, clip_line_pos,
+					clip_line_neg, clip_line_pos, clip_line_neg};
+	get_comp_fn get_component_func[] = {get_x, get_x, get_y, get_y, get_z, get_z};
+	is_outside_fn is_outside_func[] = {is_outside_pos, is_outside_neg, is_outside_pos,
+						is_outside_neg, is_outside_pos, is_outside_neg};
 
 	int ntriangles = 0;
 
 	ntriangles = 1;
-	triangles[0].v[0] = *vsOutput0;
-	triangles[0].v[1] = *vsOutput1;
-	triangles[0].v[2] = *vsOutput2;
+	triangles[0].v[0] = *vs_out0;
+	triangles[0].v[1] = *vs_out1;
+	triangles[0].v[2] = *vs_out2;
 
 	int plane;
-	for(plane=0; plane<6; plane++)
-	{
-		int nremainingTriangles=0;
-		struct clip_triangle remainingTriangles[12];
+	for (plane = 0; plane < 6; plane++) {
+		int nremaining_triangles = 0;
+		struct clip_triangle remaining_triangles[12];
 
 		int i;
-		for(i=0; i<ntriangles; i++)
-		{
+		for(i = 0; i < ntriangles; i++) {
 			struct mat41* vtx0 = &triangles[i].v[0];
 			struct mat41* vtx1 = &triangles[i].v[1];
 			struct mat41* vtx2 = &triangles[i].v[2];
 
-			float component0 = getComponentFunc[plane](vtx0);
-			float component1 = getComponentFunc[plane](vtx1);
-			float component2 = getComponentFunc[plane](vtx2);
+			float component0 = get_component_func[plane](vtx0);
+			float component1 = get_component_func[plane](vtx1);
+			float component2 = get_component_func[plane](vtx2);
 
-			int isOutside0 = isOutsideFunc[plane](component0, vtx0->m[3]);
-			int isOutside1 = isOutsideFunc[plane](component1, vtx1->m[3]);
-			int isOutside2 = isOutsideFunc[plane](component2, vtx2->m[3]);
+			int is_outside0 = is_outside_func[plane](component0, vtx0->m[3]);
+			int is_outside1 = is_outside_func[plane](component1, vtx1->m[3]);
+			int is_outside2 = is_outside_func[plane](component2, vtx2->m[3]);
 
-			nremainingTriangles += clipTriangleToPlane(
-				&remainingTriangles[nremainingTriangles],
-				clippingFunc[plane], vtx0, vtx1, vtx2, isOutside0 , isOutside1, isOutside2,
-				component0, component1, component2, vtx0->m[3], vtx1->m[3], vtx2->m[3]);
+			nremaining_triangles += clip_triangle_to_plane(
+				&remaining_triangles[nremaining_triangles],
+				clipping_func[plane], vtx0, vtx1, vtx2,
+				is_outside0 , is_outside1, is_outside2,
+				component0, component1, component2,
+				vtx0->m[3], vtx1->m[3], vtx2->m[3]);
 		}
-		ntriangles = nremainingTriangles;
-		memcpy(triangles, &remainingTriangles[0], sizeof(struct clip_triangle) * ntriangles);
+		ntriangles = nremaining_triangles;
+		memcpy(triangles, &remaining_triangles[0], sizeof(struct clip_triangle) * ntriangles);
 	}
 	return ntriangles;
 }
