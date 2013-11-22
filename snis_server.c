@@ -2312,7 +2312,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.scizoom = 128;
 	o->tsd.ship.throttle = 200;
 	o->tsd.ship.torpedo_load_time = 0;
-	o->tsd.ship.torpedoes_loaded = 0;
+	o->tsd.ship.torpedoes_loaded = 1;
 	o->tsd.ship.torpedoes_loading = 0;
 	o->tsd.ship.phaser_bank_charge = 0;
 	o->tsd.ship.scizoom = 0;
