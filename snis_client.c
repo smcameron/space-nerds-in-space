@@ -2651,6 +2651,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			break;
 	case keytorpedo:
 		do_torpedo();
+		load_torpedo_button_pressed();
 		break;
 	case keyphaser:
 		if (in_the_process_of_quitting) {
@@ -6770,6 +6771,7 @@ static void fire_phaser_button_pressed(__attribute__((unused)) void *notused)
 static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
 {
 	do_torpedo();
+	load_torpedo_button_pressed();
 }
 
 static void tractor_beam_button_pressed(__attribute__((unused)) void *notused)
@@ -10758,8 +10760,10 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 		if (weapons.manual_mode == WEAPONS_MODE_MANUAL) {
 			if (event->button == 1)
 				do_laser();
-			if (event->button == 3)
+			if (event->button == 3) { 
 				do_torpedo();
+				load_torpedo_button_pressed();
+			}
 		} else {
 			/* FIXME: Does this code even work? */
 			weapons_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
