@@ -213,6 +213,7 @@ void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 	gboolean filled, float x, float y, float width, float height, float angle1, float angle2)
 {
 #ifndef WITHOUTOPENGL
+	float max_angle_delta = 2.0 * M_PI / 180.0; /*some ratio to height and width? */
 	float rx = width/2.0;
 	float ry = height/2.0;
 	float cx = x + rx;
@@ -221,7 +222,7 @@ void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 	int i;
 	GdkColor *h = &huex[sgc.hue];
 
-	int segments = (int)((angle2 - angle1)/(M_PI/90.0)) + 1; 
+	int segments = (int)((angle2 - angle1)/max_angle_delta) + 1; 
 	float delta = (angle2 - angle1) / segments;
 
 	glBegin(GL_LINE_STRIP);
@@ -234,7 +235,7 @@ void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 	glEnd();
 #else
 	gdk_draw_arc(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
-			width * sgc.xscale, height * sgc.yscale, angle1, angle2);
+			width * sgc.xscale, height * sgc.yscale, angle1*64.0*180.0/M_PI, (angle2-angle1)*64.0*180.0/M_PI);
 #endif
 }
 
@@ -589,20 +590,7 @@ void sng_set_gc(GdkGC *gc)
 
 void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, float x, float y, float r)
 {
-	/* can't break into sng_draw and sng_gl_draw as r can't be scaled independantly */
-#ifndef WITHOUTOPENGL
-	int i;
-	GdkColor *h = &huex[sgc.hue];
- 
-	glBegin(GL_LINE_STRIP);
-        glColor3us(h->red, h->green, h->blue);
-	for (i = 0; i <= 360; i += 2)
-		glVertex2f(sgc.xscale * (x + cos(i * M_PI / 180.0) * r),
-			(sgc.screen_height - y * sgc.yscale) + sin(i * M_PI / 180.0) * r * sgc.yscale);
-	glEnd();
-#else
-	sng_scaled_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 360*64);
-#endif
+	sng_scaled_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
 }
 
 void sng_device_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
