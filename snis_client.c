@@ -4698,6 +4698,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	struct snis_entity *o;
 	float cx, cy, cz;
 	union quat camera_orientation;
+	char buf[20];
 
 	if (!(o = find_my_ship()))
 		return;
@@ -4778,6 +4779,13 @@ static void show_weapons_camera_view(GtkWidget *w)
 			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 1);
 		}
 	}
+
+	/* show torpedo count */
+	sng_set_foreground(AMBER);
+	sprintf(buf, "TORP: %03d", o->tsd.ship.torpedoes +
+					o->tsd.ship.torpedoes_loading +
+					o->tsd.ship.torpedoes_loaded);
+        sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 570, SCREEN_HEIGHT - 15);
 
 	show_gunsight(w);
 	pthread_mutex_unlock(&universe_mutex);
