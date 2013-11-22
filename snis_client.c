@@ -10756,7 +10756,10 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 		break;
 	case DISPLAYMODE_WEAPONS:
 		if (weapons.manual_mode == WEAPONS_MODE_MANUAL) {
-			do_laser();
+			if (event->button == 1)
+				do_laser();
+			if (event->button == 3)
+				do_torpedo();
 		} else {
 			/* FIXME: Does this code even work? */
 			weapons_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),

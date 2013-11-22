@@ -4961,27 +4961,27 @@ static int process_load_torpedo(struct game_client *c)
 static int process_request_torpedo(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
-	struct snis_entity *victim = NULL;
-	double vx, vy, vz;
-	int i, tid;
+	union vec3 forwardvec = { { TORPEDO_VELOCITY, 0.0f, 0.0f } };
+	union vec3 velocity;
+	union quat orientation;
 
 	pthread_mutex_lock(&universe_mutex);
 	if (ship->tsd.ship.torpedoes_loaded <= 0)
 		goto torpedo_fail;
-	tid = ship->tsd.ship.victim_id;
-	if (tid == -1)
-		goto torpedo_fail;
-	i = lookup_by_id(tid);
-	if (i < 0)
-		goto torpedo_fail;
-	victim = &go[i];
 
-	calculate_torpedo_velocities(ship->x, ship->y, ship->z,
-			victim->x, victim->y, victim->z, TORPEDO_VELOCITY, &vx, &vy, &vz);
-			
-	add_torpedo(ship->x, ship->y, ship->z, vx, vy, vz, ship->id); 
+	/* Calculate which way weapons is pointed, and velocity of torpedo. */
+	quat_mul(&orientation, &ship->orientation, &ship->tsd.ship.weap_orientation);
+	quat_rot_vec(&velocity, &forwardvec, &orientation);
+
+	/* Add ship velocity into torpedo velocity */
+	velocity.v.x += ship->vx;
+	velocity.v.y += ship->vy;
+	velocity.v.z += ship->vz;
+
+	add_torpedo(ship->x, ship->y, ship->z,
+			velocity.v.x, velocity.v.y, velocity.v.z, ship->id);
 	ship->tsd.ship.torpedoes_loaded--;
-	snis_queue_add_sound(TORPEDO_LAUNCH_SOUND, ROLE_SOUNDSERVER, ship->id);
+	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 
