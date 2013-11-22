@@ -26,7 +26,7 @@ static const float ZERO_TOLERANCE = 0.000001f;
 
 union vec3* vec3_copy(union vec3 *vo, const union vec3 *vi)
 {
-	memcpy(vo, vi, sizeof(union vec3));   
+	memcpy(vo, vi, sizeof(union vec3));
 	return vo;
 }
 
@@ -53,19 +53,19 @@ void quat_init(union quat *q, const union vec3 *acc, const union vec3 *mag)
 
 	float init_yaw = atan2(-mag_y, mag_x);
 
-	cos_roll =  cosf(init_roll * 0.5f);
-	sin_roll =  sinf(init_roll * 0.5f);
+	cos_roll = cosf(init_roll * 0.5f);
+	sin_roll = sinf(init_roll * 0.5f);
 
-	cos_pitch = cosf(init_pitch * 0.5f );
-	sin_pitch = sinf(init_pitch * 0.5f );
+	cos_pitch = cosf(init_pitch * 0.5f);
+	sin_pitch = sinf(init_pitch * 0.5f);
 
-	float cosHeading = cosf(init_yaw * 0.5f);
-	float sinHeading = sinf(init_yaw * 0.5f);
+	float cos_heading = cosf(init_yaw * 0.5f);
+	float sin_heading = sinf(init_yaw * 0.5f);
 
-	q->q.q0 = cos_roll * cos_pitch * cosHeading + sin_roll * sin_pitch * sinHeading;
-	q->q.q1 = sin_roll * cos_pitch * cosHeading - cos_roll * sin_pitch * sinHeading;
-	q->q.q2 = cos_roll * sin_pitch * cosHeading + sin_roll * cos_pitch * sinHeading;
-	q->q.q3 = cos_roll * cos_pitch * sinHeading - sin_roll * sin_pitch * cosHeading;
+	q->q.q0 = cos_roll * cos_pitch * cos_heading + sin_roll * sin_pitch * sin_heading;
+	q->q.q1 = sin_roll * cos_pitch * cos_heading - cos_roll * sin_pitch * sin_heading;
+	q->q.q2 = cos_roll * sin_pitch * cos_heading + sin_roll * cos_pitch * sin_heading;
+	q->q.q3 = cos_roll * cos_pitch * sin_heading - sin_roll * sin_pitch * cos_heading;
 }
 
 void quat_init_axis(union quat *q, float x, float y, float z, float a)
@@ -74,10 +74,10 @@ void quat_init_axis(union quat *q, float x, float y, float z, float a)
 	   /conversions/angleToQuaternion/index.htm */
 	float a2 = a * 0.5f;
 	float s = sin(a2);
-	q->v.x = x * s;   
-	q->v.y = y * s;   
-	q->v.z = z * s;   
-	q->v.w = cos(a2);   
+	q->v.x = x * s;
+	q->v.y = y * s;
+	q->v.z = z * s;
+	q->v.w = cos(a2);
 }
 
 void quat_init_axis_v(union quat *q, const union vec3 *v, float a)
@@ -92,14 +92,14 @@ void quat_to_axis(const union quat *q, float *x, float *y, float *z, float *a)
 	float angle = 2 * acos(q->v.w);
 	float s = sqrt(1.0 - q->v.w * q->v.w);
 	if (s < ZERO_TOLERANCE) {
-		// if s close to zero then direction of axis not important
+		/* if s close to zero then direction of axis not important */
 		*a = 0;
 		*x = 1;
 		*y = 0;
 		*z = 0;
 	} else {
 		*a = angle;
-		*x = q->v.x / s; // normalise axis
+		*x = q->v.x / s; /* normalise axis */
 		*y = q->v.y / s;
 		*z = q->v.z / s;
 	}
@@ -137,7 +137,7 @@ void quat_rot_vec(union vec3 *vo, const union vec3 *vi, const union quat *q)
 
 void quat_copy(union quat *qo, const union quat *qi)
 {
-	memcpy(qo, qi, sizeof(union quat));   
+	memcpy(qo, qi, sizeof(union quat));
 }
 
 float quat_len(const union quat *q)
@@ -331,7 +331,7 @@ void random_quat(union quat *q)
 	random_point_on_sphere(1.0, &v.v.x, &v.v.y, &v.v.z);
 	angle = (float) snis_randn(360) * M_PI / 180.0;
 	quat_init_axis_v(q, &v, angle);
-	
+
 }
 
 void random_axis_quat(union quat *q)
@@ -403,7 +403,7 @@ union vec3* vec3_mul(union vec3 *vo, const union vec3 *vi, float scalar)
 
 union vec3* vec3_mul_self(union vec3 *vi, float scalar)
 {
-	return vec3_mul( vi, vi, scalar );
+	return vec3_mul(vi, vi, scalar);
 }
 
 float vec3_dot(const union vec3 *v1, const union vec3 *v2)
@@ -466,7 +466,7 @@ double vec3_dist_c(const union vec3 *v1, float x, float y, float z)
 		(v1->v.z - z)*(v1->v.z - z));
 }
 
-void vec3_print(const char* prefix, const union vec3 *v)
+void vec3_print(const char *prefix, const union vec3 *v)
 {
 	printf("%s%f, %f, %f\n", prefix, v->v.x, v->v.y, v->v.z);
 }
@@ -482,9 +482,9 @@ void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, cons
 	vec3_normalize(&un, u);
 	vec3_normalize(&vn, v);
 	dot = vec3_dot(&un, &vn);
-	if (fabs(dot - -1.0f) <  ZERO_TOLERANCE) {
+	if (fabs(dot - -1.0f) < ZERO_TOLERANCE) {
 		/* vector a and b point exactly in the opposite direction
-		 * so it is a 180 degrees turn around the up-axis 
+		 * so it is a 180 degrees turn around the up-axis
 		 */
 		union vec3 default_up = { { 0, 1, 0} };
 		if (!up)
@@ -492,11 +492,11 @@ void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, cons
 		quat_init_axis(q, up->v.x, up->v.y, up->v.z, M_PI);
 		return;
 	}
-	if (fabs(dot - 1.0f) <  ZERO_TOLERANCE) {
+	if (fabs(dot - 1.0f) < ZERO_TOLERANCE) {
 		/* vector a and b point exactly in the same direction
 		 * so we return the identity quaternion
 		 */
-		*q = identity_quat; 
+		*q = identity_quat;
 		return;
 	}
 	angle = acos(dot);
@@ -505,17 +505,17 @@ void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, cons
 	quat_init_axis(q, axisn.v.x, axisn.v.y, axisn.v.z, angle);
 }
 
-union quat* quat_lerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t)
+union quat *quat_lerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t)
 {
 	double cosom = quat_dot(qfrom, qto);
 
-	// qto=qfrom or qto=-qfrom so no rotation to slerp
+	/* qto = qfrom or qto = -qfrom so no rotation to slerp */
 	if (cosom >= 1.0) {
 		quat_copy(qo, qfrom);
 		return qo;
 	}
 
-	// adjust for shortest path
+	/* adjust for shortest path */
 	union quat to1;
 	if (cosom < 0.0) {
 		to1.v.x = -qto->v.x;
@@ -529,7 +529,7 @@ union quat* quat_lerp(union quat *qo, const union quat *qfrom, const union quat 
 	double scale0 = 1.0 - t;
 	double scale1 = t;
 
-	// calculate final values
+	/* calculate final values */
 	qo->v.x = scale0 * qfrom->v.x + scale1 * to1.v.x;
 	qo->v.y = scale0 * qfrom->v.y + scale1 * to1.v.y;
 	qo->v.z = scale0 * qfrom->v.z + scale1 * to1.v.z;
@@ -537,25 +537,25 @@ union quat* quat_lerp(union quat *qo, const union quat *qfrom, const union quat 
 	return qo;
 }
 
-union quat* quat_nlerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t)
+union quat *quat_nlerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t)
 {
 	quat_lerp(qo, qfrom, qto, t);
 	quat_normalize_self(qo);
 	return qo;
 }
 
-union quat* quat_slerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t)
+union quat *quat_slerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t)
 {
-	// calc cosine
+	/* calc cosine */
 	double cosom = quat_dot(qfrom, qto);
 
-	// qto=qfrom or qto=-qfrom so no rotation to slerp
+	/* qto = qfrom or qto = -qfrom so no rotation to slerp */
 	if (cosom >= 1.0) {
 		quat_copy(qo, qfrom);
 		return qo;
 	}
 
-	// adjust for shortest path
+	/* adjust for shortest path */
 	union quat to1;
 	if (cosom < 0.0) {
 		cosom = -cosom;
@@ -567,22 +567,23 @@ union quat* quat_slerp(union quat *qo, const union quat *qfrom, const union quat
 		quat_copy(&to1, qto);
 	}
 
-	// calculate coefficients
+	/* calculate coefficients */
 	double scale0, scale1;
 	if (cosom < 0.99995) {
-		// standard case (slerp)
+		/* standard case (slerp) */
 		double omega = acos(cosom);
 		double sinom = sin(omega);
 		scale0 = sin((1.0 - t) * omega) / sinom;
 		scale1 = sin(t * omega) / sinom;
 	} else {
-		// "from" and "to" quaternions are very close
-		//  ... so we can do a linear interpolation
+		/* "from" and "to" quaternions are very close
+		 *  ... so we can do a linear interpolation
+		 */
 		scale0 = 1.0 - t;
 		scale1 = t;
 	}
 
-	// calculate final values
+	/* calculate final values */
 	qo->v.x = scale0 * qfrom->v.x + scale1 * to1.v.x;
 	qo->v.y = scale0 * qfrom->v.y + scale1 * to1.v.y;
 	qo->v.z = scale0 * qfrom->v.z + scale1 * to1.v.z;
@@ -600,7 +601,7 @@ union vec3* vec3_lerp(union vec3* vo, const union vec3* vfrom, const union vec3*
 
 /* Apply incremental yaw, pitch and roll relative to the quaternion.
  * For example, if the quaternion represents an orientation of a ship,
- * this will apply yaw/pitch/roll *in the ship's local coord system* to the
+ * this will apply yaw/pitch/roll *in the ship's local coord system to the
  * orientation.
  */
 union quat *quat_apply_relative_yaw_pitch_roll(union quat *q,
@@ -686,14 +687,14 @@ int sphere_line_segment_intersection(const union vec3 *v0, const union vec3 *v1,
 	double A = vx * vx + vy * vy + vz * vz;
 	double B = 2.0 * (px * vx + py * vy + pz * vz - vx * cx - vy * cy - vz * cz);
 	double C = px * px - 2 * px * cx + cx * cx + py * py - 2 * py * cy + cy * cy +
-		pz * pz - 2 * pz * cz + cz * cz - r * r; 
+		pz * pz - 2 * pz * cz + cz * cz - r * r;
 	double D = B * B - 4.0 * A * C;
 
 	/* outside or tanget to sphere, no segment intersection */
 	if (D <= 0)
 		return -1;
 
-        double t1 = (-B - sqrt(D)) / (2.0 * A);
+	double t1 = (-B - sqrt(D)) / (2.0 * A);
 	double t2 = (-B + sqrt(D)) / (2.0 * A);
 
 	/* infinte line intersects but this segment doesn't */
