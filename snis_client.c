@@ -751,6 +751,17 @@ static int update_power_model_data(uint32_t id, struct power_model_data *pmd)
 	return 0;
 }
 
+static int update_coolant_model_data(uint32_t id, struct power_model_data *pmd)
+{
+	int i;
+
+	i = lookup_object_by_id(id);
+	if (i < 0)
+		return -1;
+	go[i].tsd.ship.coolant_data = *pmd;
+	return 0;
+}
+
 static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 				uint8_t shield_strength, uint8_t shield_wavelength,
 				uint8_t shield_width, uint8_t shield_depth, uint8_t faction, uint8_t lifeform_count)
@@ -2929,6 +2940,25 @@ static int process_update_power_data(void)
 	return rc;
 }
 
+static int process_update_coolant_data(void)
+{
+	struct packed_buffer pb;
+	uint32_t id;
+	int rc;
+	struct power_model_data pmd;
+	unsigned char buffer[sizeof(pmd) + sizeof(uint32_t)];
+
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(pmd) + sizeof(uint32_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "wr", &id, &pmd, sizeof(pmd));
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_coolant_model_data(id, &pmd);
+	pthread_mutex_unlock(&universe_mutex);
+	return rc;
+}
+
 static int process_update_ship_packet(uint16_t opcode)
 {
 	int i;
@@ -3933,6 +3963,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			if (rc != 0)
 				goto protocol_error;
 			break;
+		case OPCODE_UPDATE_COOLANT_DATA:
+			rc = process_update_coolant_data();
+			if (rc != 0)
+				goto protocol_error;
+			break;
 		case OPCODE_ECON_UPDATE_SHIP:
 			rc = process_update_econ_ship_packet(opcode);
 			if (rc != 0)
@@ -4070,12 +4105,6 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_UPDATE_PLAYER:
 			break;
 		case OPCODE_ACK_PLAYER:
-			break;
-		case OPCODE_POS_SHIP:
-			break;
-		case OPCODE_POS_STARBASE:
-			break;
-		case OPCODE_POS_LASER:
 			break;
 		case OPCODE_NOOP:
 			break;
@@ -6882,6 +6911,46 @@ static void do_comms_pwr(struct slider *s)
 	do_adjust_slider_value(s, OPCODE_REQUEST_COMMS_PWR);
 }
 
+static void do_maneuvering_coolant(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_MANEUVERING_COOLANT);
+}
+	
+static void do_tractor_coolant(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_TRACTOR_COOLANT);
+}
+
+static void do_shields_coolant(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_SHIELDS_COOLANT);
+}
+	
+static void do_impulse_coolant(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_IMPULSE_COOLANT);
+}
+
+static void do_warp_coolant(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_WARP_COOLANT);
+}
+
+static void do_sensors_coolant(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_SENSORS_COOLANT);
+}
+	
+static void do_phaserbanks_coolant(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_PHASERBANKS_COOLANT);
+}
+	
+static void do_comms_coolant(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_COMMS_COOLANT);
+}
+
 #define DEFINE_SAMPLER_FUNCTION(f, field, divisor, min) \
 static double f(void) \
 { \
@@ -6912,6 +6981,16 @@ static double sample_power_model_voltage(void)
 	return 100.0 * o->tsd.ship.power_data.voltage / 255.0;
 }
 
+static double sample_coolant_model_voltage(void)
+{
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return 0.0;
+
+	return 100.0 * o->tsd.ship.coolant_data.voltage / 255.0;
+}
+
 static double sample_power_model_current(void)
 {
 	struct snis_entity *o;
@@ -6927,28 +7006,59 @@ static double sample_power_model_current(void)
 	total_current += o->tsd.ship.power_data.comms.i;
 	total_current += o->tsd.ship.power_data.phasers.i;
 	total_current += o->tsd.ship.power_data.shields.i;
+	total_current += o->tsd.ship.power_data.tractor.i;
 
 	return 100.0 * total_current / (255.0 * 3.5); 
 }
 
-#define DEFINE_CURRENT_SAMPLER(name) \
-static double sample_##name##_current(void) \
+static double sample_coolant_model_current(void)
+{
+	struct snis_entity *o;
+	int total_current = 0;
+
+	if (!(o = find_my_ship()))
+		return 0.0;
+
+	total_current += o->tsd.ship.coolant_data.maneuvering.i;
+	total_current += o->tsd.ship.coolant_data.warp.i;
+	total_current += o->tsd.ship.coolant_data.impulse.i;
+	total_current += o->tsd.ship.coolant_data.sensors.i;
+	total_current += o->tsd.ship.coolant_data.comms.i;
+	total_current += o->tsd.ship.coolant_data.phasers.i;
+	total_current += o->tsd.ship.coolant_data.shields.i;
+	total_current += o->tsd.ship.coolant_data.tractor.i;
+
+	return 100.0 * total_current / (255.0 * 3.5); 
+}
+
+#define DEFINE_CURRENT_SAMPLER(system, name) \
+static double sample_##system##_##name##_current(void) \
 { \
 	struct snis_entity *o; \
 \
 	if (!(o = find_my_ship())) \
 		return 0.0; \
-	return o->tsd.ship.power_data.name.i; \
+	return o->tsd.ship.system.name.i; \
 }
 
-DEFINE_CURRENT_SAMPLER(warp) /* defines sample_warp_current */
-DEFINE_CURRENT_SAMPLER(sensors) /* defines sample_sensors_current */
-DEFINE_CURRENT_SAMPLER(phasers) /* defines sample_phasers_current */
-DEFINE_CURRENT_SAMPLER(maneuvering) /* defines sample_maneuvering_current */
-DEFINE_CURRENT_SAMPLER(shields) /* defines sample_shields_current */
-DEFINE_CURRENT_SAMPLER(comms) /* defines sample_comms_current */
-DEFINE_CURRENT_SAMPLER(impulse) /* defines sample_impulse_current */
-DEFINE_CURRENT_SAMPLER(tractor) /* defines sample_tractor_current */
+DEFINE_CURRENT_SAMPLER(power_data, warp) /* defines sample_power_data_warp_current */
+DEFINE_CURRENT_SAMPLER(power_data, sensors) /* defines sample_power_data_sensors_current */
+DEFINE_CURRENT_SAMPLER(power_data, phasers) /* defines sample_power_data_phasers_current */
+DEFINE_CURRENT_SAMPLER(power_data, maneuvering) /* defines sample_power_data_maneuvering_current */
+DEFINE_CURRENT_SAMPLER(power_data, shields) /* defines sample_power_data_shields_current */
+DEFINE_CURRENT_SAMPLER(power_data, comms) /* defines sample_power_data_comms_current */
+DEFINE_CURRENT_SAMPLER(power_data, impulse) /* defines sample_power_data_impulse_current */
+DEFINE_CURRENT_SAMPLER(power_data, tractor) /* defines sample_power_data_tractor_current */
+
+DEFINE_CURRENT_SAMPLER(coolant_data, warp) /* defines sample_coolant_data_warp_current */
+DEFINE_CURRENT_SAMPLER(coolant_data, sensors) /* defines sample_coolant_data_sensors_current */
+DEFINE_CURRENT_SAMPLER(coolant_data, phasers) /* defines sample_coolant_data_phasers_current */
+DEFINE_CURRENT_SAMPLER(coolant_data, maneuvering) /* defines sample_coolant_data_maneuvering_current */
+DEFINE_CURRENT_SAMPLER(coolant_data, shields) /* defines sample_coolant_data_shields_current */
+DEFINE_CURRENT_SAMPLER(coolant_data, comms) /* defines sample_coolant_data_comms_current */
+DEFINE_CURRENT_SAMPLER(coolant_data, impulse) /* defines sample_coolant_data_impulse_current */
+DEFINE_CURRENT_SAMPLER(coolant_data, tractor) /* defines sample_coolant_data_tractor_current */
+
 
 static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
 {
@@ -7245,13 +7355,13 @@ static void init_nav_ui(void)
 	gauge_radius = 80;
 	
 	nav_ui.warp_slider = snis_slider_init(590 + x, SCREEN_HEIGHT - 40 + y, 160, 15, AMBER, "",
-				"0", "100", 0.0, 255.0, sample_warp_current,
+				"0", "100", 0.0, 255.0, sample_power_data_warp_current,
 				do_warpdrive);
 	nav_ui.navzoom_slider = snis_slider_init(10, 80, 200, 15, AMBER, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_navzoom,
 				do_navzoom);
 	nav_ui.throttle_slider = snis_slider_init(SCREEN_WIDTH - 30 + x, 40, 230, 15,
-				AMBER, "THROTTLE", "1", "10", 0.0, 255.0, sample_impulse_current,
+				AMBER, "THROTTLE", "1", "10", 0.0, 255.0, sample_power_data_impulse_current,
 				do_throttle);
 	snis_slider_set_vertical(nav_ui.throttle_slider, 1);
 	nav_ui.warp_gauge = gauge_init(SCREEN_WIDTH - gauge_radius - 40, gauge_radius + 5,
@@ -7836,7 +7946,7 @@ static void init_engineering_ui(void)
 			10, "FUEL", sample_fuel);
 
 	eu->shield_control_slider = snis_slider_init(540, 270, 160, sh, AMBER, "SHIELDS",
-				"0", "100", 0.0, 255.0, sample_shields_current,
+				"0", "100", 0.0, 255.0, sample_power_data_shields_current,
 				do_shieldadj);
 
 	y = 220;
@@ -7844,45 +7954,45 @@ static void init_engineering_ui(void)
 			NANO_FONT, damcon_button_pressed, (void *) 0);
 	y += yinc;
 	eu->shield_slider = snis_slider_init(20, y += yinc, 150, sh, color, "SHIELDS", "0", "100",
-				0.0, 255.0, sample_shields_current, do_shields_pwr);
+				0.0, 255.0, sample_power_data_shields_current, do_shields_pwr);
 	eu->shield_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
 				ccolor, "", "0", "100", 0.0, 255.0,
-				sample_shields_current, do_shields_pwr);
+				sample_coolant_data_shields_current, do_shields_coolant);
 	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, 150, sh, color, "PHASERS", "0", "100",
-				0.0, 255.0, sample_phasers_current, do_phaserbanks_pwr);
+				0.0, 255.0, sample_power_data_phasers_current, do_phaserbanks_pwr);
 	eu->phaserbanks_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
 				ccolor, "", "0", "100", 0.0, 255.0,
-				sample_phasers_current, do_phaserbanks_pwr);
+				sample_coolant_data_phasers_current, do_phaserbanks_coolant);
 	eu->comm_slider = snis_slider_init(20, y += yinc, 150, sh, color, "COMMS", "0", "100",
-				0.0, 255.0, sample_comms_current, do_comms_pwr);
+				0.0, 255.0, sample_power_data_comms_current, do_comms_pwr);
 	eu->comm_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
 				ccolor, "", "0", "100", 0.0, 255.0,
-				sample_comms_current, do_comms_pwr);
+				sample_coolant_data_comms_current, do_comms_coolant);
 	eu->sensors_slider = snis_slider_init(20, y += yinc, 150, sh, color, "SENSORS", "0", "100",
-				0.0, 255.0, sample_sensors_current, do_sensors_pwr);
+				0.0, 255.0, sample_power_data_sensors_current, do_sensors_pwr);
 	eu->sensors_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
 				ccolor, "", "0", "100", 0.0, 255.0,
-				sample_sensors_current, do_sensors_pwr);
+				sample_coolant_data_sensors_current, do_sensors_coolant);
 	eu->impulse_slider = snis_slider_init(20, y += yinc, 150, sh, color, "IMPULSE DR", "0", "100",
-				0.0, 255.0, sample_impulse_current, do_impulse_pwr);
+				0.0, 255.0, sample_power_data_impulse_current, do_impulse_pwr);
 	eu->impulse_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
 				ccolor, "", "0", "100", 0.0, 255.0,
-				sample_impulse_current, do_impulse_pwr);
+				sample_coolant_data_impulse_current, do_impulse_coolant);
 	eu->warp_slider = snis_slider_init(20, y += yinc, 150, sh, color, "WARP DR", "0", "100",
-				0.0, 255.0, sample_warp_current, do_warp_pwr);
+				0.0, 255.0, sample_power_data_warp_current, do_warp_pwr);
 	eu->warp_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
 				ccolor, "", "0", "100", 0.0, 255.0,
-				sample_warp_current, do_warp_pwr);
+				sample_coolant_data_warp_current, do_warp_coolant);
 	eu->maneuvering_slider = snis_slider_init(20, y += yinc, 150, sh, color, "MANEUVERING", "0", "100",
-				0.0, 255.0, sample_maneuvering_current, do_maneuvering_pwr);
+				0.0, 255.0, sample_power_data_maneuvering_current, do_maneuvering_pwr);
 	eu->maneuvering_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
 				ccolor, "", "0", "100", 0.0, 255.0,
-				sample_maneuvering_current, do_maneuvering_pwr);
+				sample_coolant_data_maneuvering_current, do_maneuvering_coolant);
 	eu->tractor_slider = snis_slider_init(20, y += yinc, 150, sh, color, "TRACTOR", "0", "100",
-				0.0, 255.0, sample_tractor_current, do_tractor_pwr);
+				0.0, 255.0, sample_power_data_tractor_current, do_tractor_pwr);
 	eu->tractor_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
 				ccolor, "", "0", "100", 0.0, 255.0,
-				sample_tractor_current, do_tractor_pwr);
+				sample_coolant_data_tractor_current, do_tractor_coolant);
 	ui_add_slider(eu->shield_slider, dm);
 	ui_add_slider(eu->shield_coolant_slider, dm);
 	ui_add_slider(eu->phaserbanks_slider, dm);

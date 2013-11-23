@@ -1618,6 +1618,41 @@ static void do_power_model_computations(struct snis_entity *o)
 		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
 }
 
+static void do_coolant_model_computations(struct snis_entity *o)
+{
+	struct power_model *m = o->tsd.ship.coolant_model;
+	struct power_device *device;
+
+	power_model_compute(m);
+
+	device = power_model_get_device(m, WARP_POWER_DEVICE);
+	o->tsd.ship.coolant_data.warp.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, SENSORS_POWER_DEVICE);
+	o->tsd.ship.coolant_data.sensors.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, PHASERS_POWER_DEVICE);
+	o->tsd.ship.coolant_data.phasers.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, MANEUVERING_POWER_DEVICE);
+	o->tsd.ship.coolant_data.maneuvering.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, SHIELDS_POWER_DEVICE);
+	o->tsd.ship.coolant_data.shields.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, COMMS_POWER_DEVICE);
+	o->tsd.ship.coolant_data.comms.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, IMPULSE_POWER_DEVICE);
+	o->tsd.ship.coolant_data.impulse.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, TRACTOR_POWER_DEVICE);
+	o->tsd.ship.coolant_data.tractor.i = device_power_byte_form(device);
+
+	o->tsd.ship.coolant_data.voltage = (unsigned char)
+		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
+}
+
 static int lookup_bridge_by_shipid(uint32_t shipid)
 {
 	/* assumes universe lock is held */
@@ -1922,6 +1957,7 @@ static void player_move(struct snis_entity *o)
 		snis_queue_add_sound(FUEL_LEVELS_CRITICAL, ROLE_SOUNDSERVER, o->id);
 
 	do_power_model_computations(o);
+	do_coolant_model_computations(o);
 	if (o->tsd.ship.fuel > FUEL_CONSUMPTION_UNIT) {
 		power_model_enable(o->tsd.ship.power_model);
 		o->tsd.ship.fuel -= (int) (FUEL_CONSUMPTION_UNIT *
@@ -2179,11 +2215,11 @@ static int add_generic_object(double x, double y, double z,
 	return i;
 }
 
-#define DECLARE_POWER_MODEL_SAMPLER(name, which) \
-static float sample_##name##_##which(void *cookie) \
+#define DECLARE_POWER_MODEL_SAMPLER(name, model, which) \
+static float sample_##model##_##name##_##which(void *cookie) \
 { \
 	struct snis_entity *o = cookie; \
-	float v = 255.0 - (float) o->tsd.ship.power_data.name.which; \
+	float v = 255.0 - (float) o->tsd.ship.model.name.which; \
 \
 	if (v > 250.0) \
 		v = 10000.0; \
@@ -2193,34 +2229,73 @@ static float sample_##name##_##which(void *cookie) \
 	/* return (float) (256.0 - (float) o->tsd.ship.power_data.name.which) / 256.0; */  \
 }
 
-DECLARE_POWER_MODEL_SAMPLER(warp, r1) /* declares sample_warp_r1 */
-DECLARE_POWER_MODEL_SAMPLER(warp, r2) /* declares sample_warp_r2 */
-DECLARE_POWER_MODEL_SAMPLER(warp, r3) /* declares sample_warp_r3 */
-DECLARE_POWER_MODEL_SAMPLER(sensors, r1) /* declares sample_sensors_r1 */
-DECLARE_POWER_MODEL_SAMPLER(sensors, r2) /* declares sample_sensors_r2 */
-DECLARE_POWER_MODEL_SAMPLER(sensors, r3) /* declares sample_sensors_r3 */
-DECLARE_POWER_MODEL_SAMPLER(phasers, r1) /* declares sample_phasers_r1 */
-DECLARE_POWER_MODEL_SAMPLER(phasers, r2) /* declares sample_phasers_r2 */
-DECLARE_POWER_MODEL_SAMPLER(phasers, r3) /* declares sample_phasers_r3 */
-DECLARE_POWER_MODEL_SAMPLER(maneuvering, r1) /* declares sample_maneuvering_r1 */
-DECLARE_POWER_MODEL_SAMPLER(maneuvering, r2) /* declares sample_maneuvering_r2 */
-DECLARE_POWER_MODEL_SAMPLER(maneuvering, r3) /* declares sample_maneuvering_r3 */
-DECLARE_POWER_MODEL_SAMPLER(shields, r1) /* declares sample_shields_r1 */
-DECLARE_POWER_MODEL_SAMPLER(shields, r2) /* declares sample_shields_r2 */
-DECLARE_POWER_MODEL_SAMPLER(shields, r3) /* declares sample_shields_r3 */
-DECLARE_POWER_MODEL_SAMPLER(comms, r1) /* declares sample_comms_r1 */
-DECLARE_POWER_MODEL_SAMPLER(comms, r2) /* declares sample_comms_r2 */
-DECLARE_POWER_MODEL_SAMPLER(comms, r3) /* declares sample_comms_r3 */
-DECLARE_POWER_MODEL_SAMPLER(impulse, r1) /* declares sample_impulse_r1 */
-DECLARE_POWER_MODEL_SAMPLER(impulse, r2) /* declares sample_impulse_r2 */
-DECLARE_POWER_MODEL_SAMPLER(impulse, r3) /* declares sample_impulse_r3 */
-DECLARE_POWER_MODEL_SAMPLER(tractor, r1) /* declares sample_tractor_r1 */
-DECLARE_POWER_MODEL_SAMPLER(tractor, r2) /* declares sample_tractor_r2 */
-DECLARE_POWER_MODEL_SAMPLER(tractor, r3) /* declares sample_tractor_r3 */
+DECLARE_POWER_MODEL_SAMPLER(warp, power_data, r1) /* declares sample_power_data_warp_r1 */
+DECLARE_POWER_MODEL_SAMPLER(warp, power_data, r2) /* declares sample_power_data_warp_r2 */
+DECLARE_POWER_MODEL_SAMPLER(warp, power_data, r3) /* declares sample_power_data_warp_r3 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, power_data, r1) /* declares sample_power_data_sensors_r1 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, power_data, r2) /* declares sample_power_data_sensors_r2 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, power_data, r3) /* declares sample_power_data_sensors_r3 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, power_data, r1) /* declares sample_power_data_phasers_r1 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, power_data, r2) /* declares sample_power_data_phasers_r2 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, power_data, r3) /* declares sample_power_data_phasers_r3 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, power_data, r1) /* declares sample_power_data_maneuvering_r1 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, power_data, r2) /* declares sample_power_data_maneuvering_r2 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, power_data, r3) /* declares sample_power_data_maneuvering_r3 */
+DECLARE_POWER_MODEL_SAMPLER(shields, power_data, r1) /* declares sample_power_data_shields_r1 */
+DECLARE_POWER_MODEL_SAMPLER(shields, power_data, r2) /* declares sample_power_data_shields_r2 */
+DECLARE_POWER_MODEL_SAMPLER(shields, power_data, r3) /* declares sample_power_data_shields_r3 */
+DECLARE_POWER_MODEL_SAMPLER(comms, power_data, r1) /* declares sample_power_data_comms_r1 */
+DECLARE_POWER_MODEL_SAMPLER(comms, power_data, r2) /* declares sample_power_data_comms_r2 */
+DECLARE_POWER_MODEL_SAMPLER(comms, power_data, r3) /* declares sample_power_data_comms_r3 */
+DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, r1) /* declares sample_power_data_impulse_r1 */
+DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, r2) /* declares sample_power_data_impulse_r2 */
+DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, r3) /* declares sample_power_data_impulse_r3 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, power_data, r1) /* declares sample_power_data_tractor_r1 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, power_data, r2) /* declares sample_power_data_tractor_r2 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, power_data, r3) /* declares sample_power_data_tractor_r3 */
+
+DECLARE_POWER_MODEL_SAMPLER(warp, coolant_data, r1) /* declares sample_coolant_data_warp_r1 */
+DECLARE_POWER_MODEL_SAMPLER(warp, coolant_data, r2) /* declares sample_coolant_data_warp_r2 */
+DECLARE_POWER_MODEL_SAMPLER(warp, coolant_data, r3) /* declares sample_coolant_data_warp_r3 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, coolant_data, r1) /* declares sample_coolant_data_sensors_r1 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, coolant_data, r2) /* declares sample_coolant_data_sensors_r2 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, coolant_data, r3) /* declares sample_coolant_data_sensors_r3 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, coolant_data, r1) /* declares sample_coolant_data_phasers_r1 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, coolant_data, r2) /* declares sample_coolant_data_phasers_r2 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, coolant_data, r3) /* declares sample_coolant_data_phasers_r3 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, coolant_data, r1) /* declares sample_coolant_data_maneuvering_r1 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, coolant_data, r2) /* declares sample_coolant_data_maneuvering_r2 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, coolant_data, r3) /* declares sample_coolant_data_maneuvering_r3 */
+DECLARE_POWER_MODEL_SAMPLER(shields, coolant_data, r1) /* declares sample_coolant_data_shields_r1 */
+DECLARE_POWER_MODEL_SAMPLER(shields, coolant_data, r2) /* declares sample_coolant_data_shields_r2 */
+DECLARE_POWER_MODEL_SAMPLER(shields, coolant_data, r3) /* declares sample_coolant_data_shields_r3 */
+DECLARE_POWER_MODEL_SAMPLER(comms, coolant_data, r1) /* declares sample_coolant_data_comms_r1 */
+DECLARE_POWER_MODEL_SAMPLER(comms, coolant_data, r2) /* declares sample_coolant_data_comms_r2 */
+DECLARE_POWER_MODEL_SAMPLER(comms, coolant_data, r3) /* declares sample_coolant_data_comms_r3 */
+DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, r1) /* declares sample_coolant_data_impulse_r1 */
+DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, r2) /* declares sample_coolant_data_impulse_r2 */
+DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, r3) /* declares sample_coolant_data_impulse_r3 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, coolant_data, r1) /* declares sample_coolant_data_tractor_r1 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, coolant_data, r2) /* declares sample_coolant_data_tractor_r2 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, coolant_data, r3) /* declares sample_coolant_data_tractor_r3 */
+
+
+#define POWERFUNC(system, number) \
+	sample_power_data_##system##_r##number
+
+#define POWERFUNCS(system) \
+	POWERFUNC(system, 1), POWERFUNC(system, 2), POWERFUNC(system, 3)
+
+#define COOLANTFUNC(system, number) \
+	sample_coolant_data_##system##_r##number
+
+#define COOLANTFUNCS(system) \
+	COOLANTFUNC(system, 1), COOLANTFUNC(system, 2), COOLANTFUNC(system, 3)
 
 static void init_power_model(struct snis_entity *o)
 {
 	struct power_model *pm;
+	struct power_model_data *pd;
 	struct power_device *d;
 
 /*
@@ -2230,65 +2305,139 @@ static void init_power_model(struct snis_entity *o)
 	memset(&o->tsd.ship.power_data, 0, sizeof(o->tsd.ship.power_data));
 
 	pm = new_power_model(MAX_CURRENT, MAX_VOLTAGE, INTERNAL_RESIST);
+	pd = &o->tsd.ship.power_data;
 	o->tsd.ship.power_model = pm; 
 
 	/* Warp */
-	o->tsd.ship.power_data.warp.r1 = 0;
-	o->tsd.ship.power_data.warp.r2 = 0;
-	o->tsd.ship.power_data.warp.r3 = 200;
-	d = new_power_device(o, sample_warp_r1, sample_warp_r2, sample_warp_r3);
+	pd->warp.r1 = 0;
+	pd->warp.r2 = 0;
+	pd->warp.r3 = 200;
+	d = new_power_device(o, POWERFUNCS(warp));
 	power_model_add_device(pm, d);
 
 	/* Sensors */
-	o->tsd.ship.power_data.sensors.r1 = 255;
-	o->tsd.ship.power_data.sensors.r2 = 0;
-	o->tsd.ship.power_data.sensors.r3 = 200;
-	d = new_power_device(o, sample_sensors_r1, sample_sensors_r2, sample_sensors_r3);
+	pd->sensors.r1 = 255;
+	pd->sensors.r2 = 0;
+	pd->sensors.r3 = 200;
+	d = new_power_device(o, POWERFUNCS(sensors));
 	power_model_add_device(pm, d);
 
 	/* Phasers */
-	o->tsd.ship.power_data.phasers.r1 = 255;
-	o->tsd.ship.power_data.phasers.r2 = 0;
-	o->tsd.ship.power_data.phasers.r3 = 200;
-	d = new_power_device(o, sample_phasers_r1, sample_phasers_r2, sample_phasers_r3);
+	pd->phasers.r1 = 255;
+	pd->phasers.r2 = 0;
+	pd->phasers.r3 = 200;
+	d = new_power_device(o, POWERFUNCS(phasers));
 	power_model_add_device(pm, d);
 
 	/* Maneuvering */
-	o->tsd.ship.power_data.maneuvering.r1 = 255;
-	o->tsd.ship.power_data.maneuvering.r2 = 0;
-	o->tsd.ship.power_data.maneuvering.r3 = 200;
-	d = new_power_device(o, sample_maneuvering_r1, sample_maneuvering_r2, sample_maneuvering_r3);
+	pd->maneuvering.r1 = 255;
+	pd->maneuvering.r2 = 0;
+	pd->maneuvering.r3 = 200;
+	d = new_power_device(o, POWERFUNCS(maneuvering));
 	power_model_add_device(pm, d);
 
 	/* Shields */
-	o->tsd.ship.power_data.shields.r1 = 255;
-	o->tsd.ship.power_data.shields.r2 = 0;
-	o->tsd.ship.power_data.shields.r3 = 200;
-	d = new_power_device(o, sample_shields_r1, sample_shields_r2, sample_shields_r3);
+	pd->shields.r1 = 255;
+	pd->shields.r2 = 0;
+	pd->shields.r3 = 200;
+	d = new_power_device(o, POWERFUNCS(shields));
 	power_model_add_device(pm, d);
 
 	/* Comms */
-	o->tsd.ship.power_data.comms.r1 = 255;
-	o->tsd.ship.power_data.comms.r2 = 0;
-	o->tsd.ship.power_data.comms.r3 = 200;
-	d = new_power_device(o, sample_comms_r1, sample_comms_r2, sample_comms_r3);
+	pd->comms.r1 = 255;
+	pd->comms.r2 = 0;
+	pd->comms.r3 = 200;
+	d = new_power_device(o, POWERFUNCS(comms));
 	power_model_add_device(pm, d);
 
 	/* Impulse */
-	o->tsd.ship.power_data.impulse.r1 = 0; //255;
-	o->tsd.ship.power_data.impulse.r2 = 0;
-	o->tsd.ship.power_data.impulse.r3 = 200;
-	d = new_power_device(o, sample_impulse_r1, sample_impulse_r2, sample_impulse_r3);
+	pd->impulse.r1 = 0; //255;
+	pd->impulse.r2 = 0;
+	pd->impulse.r3 = 200;
+	d = new_power_device(o, POWERFUNCS(impulse));
 	power_model_add_device(pm, d);
 
 	/* Tractor Beam */
-	o->tsd.ship.power_data.tractor.r1 = 255;
-	o->tsd.ship.power_data.tractor.r2 = 0;
-	o->tsd.ship.power_data.tractor.r3 = 200;
-	d = new_power_device(o, sample_tractor_r1, sample_tractor_r2, sample_tractor_r3);
+	pd->tractor.r1 = 255;
+	pd->tractor.r2 = 0;
+	pd->tractor.r3 = 200;
+	d = new_power_device(o, POWERFUNCS(tractor));
+	power_model_add_device(pm, d);
+}
+
+static void init_coolant_model(struct snis_entity *o)
+{
+	struct power_model *pm;
+	struct power_model_data *pd;
+	struct power_device *d;
+
+/*
+	if (o->tsd.ship.power_model)
+		free_power_model(o->tsd.ship.power_model);
+*/
+	memset(&o->tsd.ship.coolant_data, 0, sizeof(o->tsd.ship.coolant_data));
+
+	pm = new_power_model(MAX_CURRENT, MAX_VOLTAGE, INTERNAL_RESIST);
+	pd = &o->tsd.ship.coolant_data;
+	o->tsd.ship.coolant_model = pm; 
+
+	/* Warp */
+	pd->warp.r1 = 255;
+	pd->warp.r2 = 0;
+	pd->warp.r3 = 200;
+	d = new_power_device(o, COOLANTFUNCS(warp));
 	power_model_add_device(pm, d);
 
+	/* Sensors */
+	pd->sensors.r1 = 255;
+	pd->sensors.r2 = 0;
+	pd->sensors.r3 = 200;
+	d = new_power_device(o, COOLANTFUNCS(sensors));
+	power_model_add_device(pm, d);
+
+	/* Phasers */
+	pd->phasers.r1 = 255;
+	pd->phasers.r2 = 0;
+	pd->phasers.r3 = 200;
+	d = new_power_device(o, COOLANTFUNCS(phasers));
+	power_model_add_device(pm, d);
+
+	/* Maneuvering */
+	pd->maneuvering.r1 = 255;
+	pd->maneuvering.r2 = 0;
+	pd->maneuvering.r3 = 200;
+	d = new_power_device(o, COOLANTFUNCS(maneuvering));
+	power_model_add_device(pm, d);
+
+	/* Shields */
+	pd->shields.r1 = 255;
+	pd->shields.r2 = 0;
+	pd->shields.r3 = 200;
+	d = new_power_device(o, COOLANTFUNCS(shields));
+	power_model_add_device(pm, d);
+
+	/* Comms */
+	pd->comms.r1 = 255;
+	pd->comms.r2 = 0;
+	pd->comms.r3 = 200;
+	d = new_power_device(o, COOLANTFUNCS(comms));
+	power_model_add_device(pm, d);
+
+	/* Impulse */
+	pd->impulse.r1 = 255;
+	pd->impulse.r2 = 0;
+	pd->impulse.r3 = 200;
+	d = new_power_device(o, COOLANTFUNCS(impulse));
+	power_model_add_device(pm, d);
+
+	/* Tractor Beam */
+	pd->tractor.r1 = 255;
+	pd->tractor.r2 = 0;
+	pd->tractor.r3 = 200;
+	d = new_power_device(o, COOLANTFUNCS(tractor));
+	power_model_add_device(pm, d);
 }
+
 
 static void init_player(struct snis_entity *o)
 {
@@ -2343,6 +2492,7 @@ static void init_player(struct snis_entity *o)
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
 	init_power_model(o);
+	init_coolant_model(o);
 }
 
 static int add_player(double x, double z, double vx, double vz, double heading)
@@ -4774,9 +4924,19 @@ static int process_request_maneuvering_pwr(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.maneuvering.r2), no_limit); 
 }
 
+static int process_request_maneuvering_coolant(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.maneuvering.r2), no_limit); 
+}
+
 static int process_request_tractor_pwr(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.tractor.r2), no_limit); 
+}
+
+static int process_request_tractor_coolant(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.tractor.r2), no_limit); 
 }
 
 static int process_request_laser_wavelength(struct game_client *c)
@@ -4848,9 +5008,19 @@ static int process_request_warp_pwr(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.warp.r2), no_limit); 
 }
 
+static int process_request_warp_coolant(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.warp.r2), no_limit); 
+}
+
 static int process_request_impulse_pwr(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.impulse.r2), no_limit); 
+}
+
+static int process_request_impulse_coolant(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.impulse.r2), no_limit); 
 }
 
 static int process_request_sensors_pwr(struct game_client *c)
@@ -4858,9 +5028,19 @@ static int process_request_sensors_pwr(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.sensors.r2), no_limit); 
 }
 
+static int process_request_sensors_coolant(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.sensors.r2), no_limit); 
+}
+
 static int process_request_comms_pwr(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.comms.r2), no_limit); 
+}
+
+static int process_request_comms_coolant(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.comms.r2), no_limit); 
 }
 
 static int process_request_shields_pwr(struct game_client *c)
@@ -4868,9 +5048,19 @@ static int process_request_shields_pwr(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.shields.r2), no_limit); 
 }
 
+static int process_request_shields_coolant(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.shields.r2), no_limit); 
+}
+
 static int process_request_phaserbanks_pwr(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.phasers.r2), no_limit); 
+}
+
+static int process_request_phaserbanks_coolant(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.phasers.r2), no_limit); 
 }
 
 static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
@@ -5336,6 +5526,46 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_REQUEST_MANEUVERING_COOLANT:
+			rc = process_request_maneuvering_coolant(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_TRACTOR_COOLANT:
+			rc = process_request_tractor_coolant(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_WARP_COOLANT:
+			rc = process_request_warp_coolant(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_IMPULSE_COOLANT:
+			rc = process_request_impulse_coolant(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_SHIELDS_COOLANT:
+			rc = process_request_shields_coolant(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_SENSORS_COOLANT:
+			rc = process_request_sensors_coolant(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_COMMS_COOLANT:
+			rc = process_request_comms_coolant(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_PHASERBANKS_COOLANT:
+			rc = process_request_phaserbanks_coolant(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		case OPCODE_REQUEST_GUNYAW:
 			rc = process_request_yaw(c, do_gun_yaw);
 			if (rc)
@@ -5619,6 +5849,8 @@ static void send_update_damcon_part_packet(struct game_client *c,
 	struct snis_damcon_entity *o);
 static void send_update_power_model_data(struct game_client *c,
 		struct snis_entity *o);
+static void send_update_coolant_model_data(struct game_client *c,
+		struct snis_entity *o);
 
 static void send_respawn_time(struct game_client *c, struct snis_entity *o);
 
@@ -5636,6 +5868,7 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 			o->timestamp = universe_timestamp + 1;
 		}
 		send_update_power_model_data(c, o);
+		send_update_coolant_model_data(c, o);
 		break;
 	case OBJTYPE_SHIP2:
 		send_econ_update_ship_packet(c, o);
@@ -5936,6 +6169,18 @@ static void send_update_power_model_data(struct game_client *c,
 	pb_queue_to_client(c, pb);
 }
 	
+static void send_update_coolant_model_data(struct game_client *c,
+		struct snis_entity *o)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(sizeof(uint16_t) +
+			sizeof(o->tsd.ship.coolant_data) + sizeof(uint32_t));
+	packed_buffer_append(pb, "hwr", OPCODE_UPDATE_COOLANT_DATA, o->id,
+		(char *) &o->tsd.ship.coolant_data, (unsigned short) sizeof(o->tsd.ship.coolant_data)); 
+	pb_queue_to_client(c, pb);
+}
+
 static void send_update_ship_packet(struct game_client *c,
 	struct snis_entity *o, uint16_t opcode)
 {

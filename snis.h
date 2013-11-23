@@ -314,6 +314,8 @@ struct ship_data {
 	double view_angle;
 	struct power_model_data power_data;
 	struct power_model *power_model;
+	struct power_model_data coolant_data;
+	struct power_model *coolant_model;
 	int32_t warp_time; /* time remaining until warp engages */
 	double scibeam_a1, scibeam_a2, scibeam_range; /* used server side to cache sci beam calcs */
 	uint8_t reverse;
