@@ -7771,14 +7771,21 @@ struct engineering_ui {
 	struct gauge *temp_gauge;
 	struct button *damcon_button;
 	struct slider *shield_slider;
+	struct slider *shield_coolant_slider;
 	struct slider *maneuvering_slider;
+	struct slider *maneuvering_coolant_slider;
 	struct slider *warp_slider;
+	struct slider *warp_coolant_slider;
 	struct slider *impulse_slider;
+	struct slider *impulse_coolant_slider;
 	struct slider *sensors_slider;
+	struct slider *sensors_coolant_slider;
 	struct slider *comm_slider;
+	struct slider *comm_coolant_slider;
 	struct slider *phaserbanks_slider;
-	struct slider *throttle_slider;
+	struct slider *phaserbanks_coolant_slider;
 	struct slider *tractor_slider;
+	struct slider *tractor_coolant_slider;
 	struct slider *shield_control_slider;
 
 	struct slider *shield_damage;
@@ -7803,9 +7810,12 @@ static void init_engineering_ui(void)
 	int r = 59;
 	int x = r * 1.1;
 	int xinc = (2.0 * r) * 1.1;
-	int yinc = 35; 
+	int yinc = 38; 
 	int dm = DISPLAYMODE_ENGINEERING;
 	int color = AMBER;
+	const int ccolor = BLUE; /* coolant color */
+	const int coolant_inc = 19;
+	const int sh = 12; /* slider height */
 
 	struct engineering_ui *eu = &eng_ui;
 	y = 140;
@@ -7825,7 +7835,7 @@ static void init_engineering_ui(void)
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "FUEL", sample_fuel);
 
-	eu->shield_control_slider = snis_slider_init(540, 270, 160, 15, AMBER, "SHIELDS",
+	eu->shield_control_slider = snis_slider_init(540, 270, 160, sh, AMBER, "SHIELDS",
 				"0", "100", 0.0, 255.0, sample_shields_current,
 				do_shieldadj);
 
@@ -7833,30 +7843,62 @@ static void init_engineering_ui(void)
 	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
 			NANO_FONT, damcon_button_pressed, (void *) 0);
 	y += yinc;
-	eu->shield_slider = snis_slider_init(20, y += yinc, 150, 15, color, "SHIELDS", "0", "100",
+	eu->shield_slider = snis_slider_init(20, y += yinc, 150, sh, color, "SHIELDS", "0", "100",
 				0.0, 255.0, sample_shields_current, do_shields_pwr);
-	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, 150, 15, color, "PHASERS", "0", "100",
+	eu->shield_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+				ccolor, "", "0", "100", 0.0, 255.0,
+				sample_shields_current, do_shields_pwr);
+	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, 150, sh, color, "PHASERS", "0", "100",
 				0.0, 255.0, sample_phasers_current, do_phaserbanks_pwr);
-	eu->comm_slider = snis_slider_init(20, y += yinc, 150, 15, color, "COMMS", "0", "100",
+	eu->phaserbanks_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+				ccolor, "", "0", "100", 0.0, 255.0,
+				sample_phasers_current, do_phaserbanks_pwr);
+	eu->comm_slider = snis_slider_init(20, y += yinc, 150, sh, color, "COMMS", "0", "100",
 				0.0, 255.0, sample_comms_current, do_comms_pwr);
-	eu->sensors_slider = snis_slider_init(20, y += yinc, 150, 15, color, "SENSORS", "0", "100",
+	eu->comm_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+				ccolor, "", "0", "100", 0.0, 255.0,
+				sample_comms_current, do_comms_pwr);
+	eu->sensors_slider = snis_slider_init(20, y += yinc, 150, sh, color, "SENSORS", "0", "100",
 				0.0, 255.0, sample_sensors_current, do_sensors_pwr);
-	eu->impulse_slider = snis_slider_init(20, y += yinc, 150, 15, color, "IMPULSE DR", "0", "100",
+	eu->sensors_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+				ccolor, "", "0", "100", 0.0, 255.0,
+				sample_sensors_current, do_sensors_pwr);
+	eu->impulse_slider = snis_slider_init(20, y += yinc, 150, sh, color, "IMPULSE DR", "0", "100",
 				0.0, 255.0, sample_impulse_current, do_impulse_pwr);
-	eu->warp_slider = snis_slider_init(20, y += yinc, 150, 15, color, "WARP DR", "0", "100",
+	eu->impulse_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+				ccolor, "", "0", "100", 0.0, 255.0,
+				sample_impulse_current, do_impulse_pwr);
+	eu->warp_slider = snis_slider_init(20, y += yinc, 150, sh, color, "WARP DR", "0", "100",
 				0.0, 255.0, sample_warp_current, do_warp_pwr);
-	eu->maneuvering_slider = snis_slider_init(20, y += yinc, 150, 15, color, "MANEUVERING", "0", "100",
+	eu->warp_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+				ccolor, "", "0", "100", 0.0, 255.0,
+				sample_warp_current, do_warp_pwr);
+	eu->maneuvering_slider = snis_slider_init(20, y += yinc, 150, sh, color, "MANEUVERING", "0", "100",
 				0.0, 255.0, sample_maneuvering_current, do_maneuvering_pwr);
-	eu->tractor_slider = snis_slider_init(20, y += yinc, 150, 15, color, "TRACTOR", "0", "100",
+	eu->maneuvering_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+				ccolor, "", "0", "100", 0.0, 255.0,
+				sample_maneuvering_current, do_maneuvering_pwr);
+	eu->tractor_slider = snis_slider_init(20, y += yinc, 150, sh, color, "TRACTOR", "0", "100",
 				0.0, 255.0, sample_tractor_current, do_tractor_pwr);
+	eu->tractor_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+				ccolor, "", "0", "100", 0.0, 255.0,
+				sample_tractor_current, do_tractor_pwr);
 	ui_add_slider(eu->shield_slider, dm);
+	ui_add_slider(eu->shield_coolant_slider, dm);
 	ui_add_slider(eu->phaserbanks_slider, dm);
+	ui_add_slider(eu->phaserbanks_coolant_slider, dm);
 	ui_add_slider(eu->comm_slider, dm);
+	ui_add_slider(eu->comm_coolant_slider, dm);
 	ui_add_slider(eu->sensors_slider, dm);
+	ui_add_slider(eu->sensors_coolant_slider, dm);
 	ui_add_slider(eu->impulse_slider, dm);
+	ui_add_slider(eu->impulse_coolant_slider, dm);
 	ui_add_slider(eu->warp_slider, dm);
+	ui_add_slider(eu->warp_coolant_slider, dm);
 	ui_add_slider(eu->maneuvering_slider, dm);
+	ui_add_slider(eu->maneuvering_coolant_slider, dm);
 	ui_add_slider(eu->tractor_slider, dm);
+	ui_add_slider(eu->tractor_coolant_slider, dm);
 	ui_add_slider(eu->shield_control_slider, dm);
 	ui_add_gauge(eu->amp_gauge, dm);
 	ui_add_gauge(eu->voltage_gauge, dm);
