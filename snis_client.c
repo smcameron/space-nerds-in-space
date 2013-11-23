@@ -7119,10 +7119,10 @@ static void init_weapons_ui(void)
 			NANO_FONT, wavelen_down_button_pressed, NULL);
 	weapons.wavelen_up_button = snis_button_init(700, 400, 30, 25, "UP", WHITE,
 			NANO_FONT, wavelen_up_button_pressed, NULL);
-	weapons.wavelen_slider = snis_slider_init(315, 588, 170, AMBER, "",
+	weapons.wavelen_slider = snis_slider_init(315, 588, 170, 15, AMBER, "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength);
-	weapons.weapzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, AMBER, "ZOOM",
+	weapons.weapzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, 15, AMBER, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_weapzoom,
 				do_weapzoom);
 	weapons.manual_button = snis_button_init(715, 575, 80, 25, "AUTO", WHITE,
@@ -7244,13 +7244,13 @@ static void init_nav_ui(void)
 	y = -340;
 	gauge_radius = 80;
 	
-	nav_ui.warp_slider = snis_slider_init(590 + x, SCREEN_HEIGHT - 40 + y, 160, AMBER, "",
+	nav_ui.warp_slider = snis_slider_init(590 + x, SCREEN_HEIGHT - 40 + y, 160, 15, AMBER, "",
 				"0", "100", 0.0, 255.0, sample_warp_current,
 				do_warpdrive);
-	nav_ui.navzoom_slider = snis_slider_init(10, 80, 200, AMBER, "ZOOM",
+	nav_ui.navzoom_slider = snis_slider_init(10, 80, 200, 15, AMBER, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_navzoom,
 				do_navzoom);
-	nav_ui.throttle_slider = snis_slider_init(SCREEN_WIDTH - 30 + x, 40, 230,
+	nav_ui.throttle_slider = snis_slider_init(SCREEN_WIDTH - 30 + x, 40, 230, 15,
 				AMBER, "THROTTLE", "1", "10", 0.0, 255.0, sample_impulse_current,
 				do_throttle);
 	snis_slider_set_vertical(nav_ui.throttle_slider, 1);
@@ -7825,7 +7825,7 @@ static void init_engineering_ui(void)
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "FUEL", sample_fuel);
 
-	eu->shield_control_slider = snis_slider_init(540, 270, 160, AMBER, "SHIELDS",
+	eu->shield_control_slider = snis_slider_init(540, 270, 160, 15, AMBER, "SHIELDS",
 				"0", "100", 0.0, 255.0, sample_shields_current,
 				do_shieldadj);
 
@@ -7833,21 +7833,21 @@ static void init_engineering_ui(void)
 	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
 			NANO_FONT, damcon_button_pressed, (void *) 0);
 	y += yinc;
-	eu->shield_slider = snis_slider_init(20, y += yinc, 150, color, "SHIELDS", "0", "100",
+	eu->shield_slider = snis_slider_init(20, y += yinc, 150, 15, color, "SHIELDS", "0", "100",
 				0.0, 255.0, sample_shields_current, do_shields_pwr);
-	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, 150, color, "PHASERS", "0", "100",
+	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, 150, 15, color, "PHASERS", "0", "100",
 				0.0, 255.0, sample_phasers_current, do_phaserbanks_pwr);
-	eu->comm_slider = snis_slider_init(20, y += yinc, 150, color, "COMMS", "0", "100",
+	eu->comm_slider = snis_slider_init(20, y += yinc, 150, 15, color, "COMMS", "0", "100",
 				0.0, 255.0, sample_comms_current, do_comms_pwr);
-	eu->sensors_slider = snis_slider_init(20, y += yinc, 150, color, "SENSORS", "0", "100",
+	eu->sensors_slider = snis_slider_init(20, y += yinc, 150, 15, color, "SENSORS", "0", "100",
 				0.0, 255.0, sample_sensors_current, do_sensors_pwr);
-	eu->impulse_slider = snis_slider_init(20, y += yinc, 150, color, "IMPULSE DR", "0", "100",
+	eu->impulse_slider = snis_slider_init(20, y += yinc, 150, 15, color, "IMPULSE DR", "0", "100",
 				0.0, 255.0, sample_impulse_current, do_impulse_pwr);
-	eu->warp_slider = snis_slider_init(20, y += yinc, 150, color, "WARP DR", "0", "100",
+	eu->warp_slider = snis_slider_init(20, y += yinc, 150, 15, color, "WARP DR", "0", "100",
 				0.0, 255.0, sample_warp_current, do_warp_pwr);
-	eu->maneuvering_slider = snis_slider_init(20, y += yinc, 150, color, "MANEUVERING", "0", "100",
+	eu->maneuvering_slider = snis_slider_init(20, y += yinc, 150, 15, color, "MANEUVERING", "0", "100",
 				0.0, 255.0, sample_maneuvering_current, do_maneuvering_pwr);
-	eu->tractor_slider = snis_slider_init(20, y += yinc, 150, color, "TRACTOR", "0", "100",
+	eu->tractor_slider = snis_slider_init(20, y += yinc, 150, 15, color, "TRACTOR", "0", "100",
 				0.0, 255.0, sample_tractor_current, do_tractor_pwr);
 	ui_add_slider(eu->shield_slider, dm);
 	ui_add_slider(eu->phaserbanks_slider, dm);
@@ -7865,21 +7865,21 @@ static void init_engineering_ui(void)
 	ui_add_button(eu->damcon_button, dm);
 
 	y = 220 + yinc;
-	eu->shield_damage = snis_slider_init(350, y += yinc, 150, color, "SHIELD STATUS", "0", "100",
+	eu->shield_damage = snis_slider_init(350, y += yinc, 150, 15, color, "SHIELD STATUS", "0", "100",
 				0.0, 100.0, sample_shield_damage, NULL);
-	eu->impulse_damage = snis_slider_init(350, y += yinc, 150, color, "IMPULSE STATUS", "0", "100",
+	eu->impulse_damage = snis_slider_init(350, y += yinc, 150, 15, color, "IMPULSE STATUS", "0", "100",
 				0.0, 100.0, sample_impulse_damage, NULL);
-	eu->warp_damage = snis_slider_init(350, y += yinc, 150, color, "WARP STATUS", "0", "100",
+	eu->warp_damage = snis_slider_init(350, y += yinc, 150, 15, color, "WARP STATUS", "0", "100",
 				0.0, 100.0, sample_warp_damage, NULL);
-	eu->torpedo_tubes_damage = snis_slider_init(350, y += yinc, 150, color, "TORPEDO STATUS", "0", "100",
+	eu->torpedo_tubes_damage = snis_slider_init(350, y += yinc, 150, 15, color, "TORPEDO STATUS", "0", "100",
 				0.0, 100.0, sample_torpedo_tubes_damage, NULL);
-	eu->phaser_banks_damage = snis_slider_init(350, y += yinc, 150, color, "PHASER STATUS", "0", "100",
+	eu->phaser_banks_damage = snis_slider_init(350, y += yinc, 150, 15, color, "PHASER STATUS", "0", "100",
 				0.0, 100.0, sample_phaser_banks_damage, NULL);
-	eu->sensors_damage = snis_slider_init(350, y += yinc, 150, color, "SENSORS STATUS", "0", "100",
+	eu->sensors_damage = snis_slider_init(350, y += yinc, 150, 15, color, "SENSORS STATUS", "0", "100",
 				0.0, 100.0, sample_sensors_damage, NULL);
-	eu->comms_damage = snis_slider_init(350, y += yinc, 150, color, "COMMS STATUS", "0", "100",
+	eu->comms_damage = snis_slider_init(350, y += yinc, 150, 15, color, "COMMS STATUS", "0", "100",
 				0.0, 100.0, sample_comms_damage, NULL);
-	eu->tractor_damage = snis_slider_init(350, y += yinc, 150, color, "TRACTOR STATUS", "0", "100",
+	eu->tractor_damage = snis_slider_init(350, y += yinc, 150, 15, color, "TRACTOR STATUS", "0", "100",
 				0.0, 100.0, sample_tractor_damage, NULL);
 	ui_add_slider(eu->shield_damage, dm);
 	ui_add_slider(eu->impulse_damage, dm);
@@ -8150,7 +8150,7 @@ static void sci_sciplane_pressed(void *x)
 
 static void init_science_ui(void)
 {
-	sci_ui.scizoom = snis_slider_init(350, 50, 300, DARKGREEN, "Range", "0", "100",
+	sci_ui.scizoom = snis_slider_init(350, 50, 300, 15, DARKGREEN, "Range", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom);
 	sci_ui.twod_button = snis_button_init(370, 575, 40, 20, "2D",
 			GREEN, NANO_FONT, sci_twod_pressed, (void *) 0);
@@ -8296,7 +8296,7 @@ static void init_comms_ui(void)
 					comms_transmit_button_pressed);
 	comms_ui.comms_transmit_button = snis_button_init(10, 550, 160, 30, "TRANSMIT", GREEN,
 			TINY_FONT, comms_transmit_button_pressed, NULL);
-	comms_ui.mainzoom_slider = snis_slider_init(180, 560, 380, GREEN, "ZOOM",
+	comms_ui.mainzoom_slider = snis_slider_init(180, 560, 380, 15, GREEN, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_mainzoom,
 				do_mainzoom);
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
