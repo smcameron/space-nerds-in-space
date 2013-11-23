@@ -4781,11 +4781,16 @@ static void show_weapons_camera_view(GtkWidget *w)
 	}
 
 	/* show torpedo count */
-	sng_set_foreground(AMBER);
-	sprintf(buf, "TORP: %03d", o->tsd.ship.torpedoes +
+	if (!o->tsd.ship.torpedoes_loading || (timer & 0x4)) {
+		if (o->tsd.ship.torpedoes_loading)
+			sng_set_foreground(RED);
+		else
+			sng_set_foreground(AMBER);
+		sprintf(buf, "TORP: %03d", o->tsd.ship.torpedoes +
 					o->tsd.ship.torpedoes_loading +
 					o->tsd.ship.torpedoes_loaded);
-        sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 570, SCREEN_HEIGHT - 15);
+		sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 570, SCREEN_HEIGHT - 15);
+	}
 
 	show_gunsight(w);
 	pthread_mutex_unlock(&universe_mutex);
