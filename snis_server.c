@@ -1653,6 +1653,73 @@ static void do_coolant_model_computations(struct snis_entity *o)
 		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
 }
 
+static uint8_t steady_state_temperature(uint8_t current, uint8_t coolant)
+{
+	float t;
+	t = ((float) current * 1.05f / (coolant * 0.95f + 1.0f));
+	t = (200.0f * t) + 25.0f;
+	if (t > 255.0)
+		t = 255.0;
+	if (t < 0)
+		t = 0;
+	return (uint8_t) t;
+}
+
+static void calc_temperature_change(uint8_t current, uint8_t coolant, uint8_t *temperature)
+{
+	float diff, steady, answer;
+
+	steady = (float) steady_state_temperature(current, coolant);
+	diff = steady - (float) *temperature;
+	diff = diff / 100.0f;
+
+	if (diff > 0) /* heating up */
+		diff = diff * 255.0f / ((float) coolant + 20.0);
+	else /* cooling down */
+		diff = diff * ((float) coolant) / 255.0f;
+
+	if (diff < 1.0f && diff > 0.0f)
+		diff = 1.0f;
+	if (diff > -1.0f && diff < 0.0f)
+		diff = -1.0f;
+
+	answer = (float) *temperature + diff;
+	if (answer > 255.0f)
+		answer = 255.0f;
+	if (answer < 0.0f)
+		answer = 0.0f;
+	*temperature = answer;
+}
+
+static void do_temperature_computations(struct snis_entity *o)
+{
+
+	calc_temperature_change(o->tsd.ship.power_data.warp.i,
+			o->tsd.ship.coolant_data.warp.i,
+			&o->tsd.ship.temperature_data.warp_damage);
+	calc_temperature_change(o->tsd.ship.power_data.sensors.i,
+			o->tsd.ship.coolant_data.sensors.i,
+			&o->tsd.ship.temperature_data.sensors_damage);
+	calc_temperature_change(o->tsd.ship.power_data.phasers.i,
+			o->tsd.ship.coolant_data.phasers.i,
+			&o->tsd.ship.temperature_data.phaser_banks_damage);
+	calc_temperature_change(o->tsd.ship.power_data.maneuvering.i,
+			o->tsd.ship.coolant_data.maneuvering.i,
+			&o->tsd.ship.temperature_data.torpedo_tubes_damage);/*FIXME, wut? */
+	calc_temperature_change(o->tsd.ship.power_data.shields.i,
+			o->tsd.ship.coolant_data.shields.i,
+			&o->tsd.ship.temperature_data.shield_damage);
+	calc_temperature_change(o->tsd.ship.power_data.comms.i,
+			o->tsd.ship.coolant_data.comms.i,
+			&o->tsd.ship.temperature_data.comms_damage);
+	calc_temperature_change(o->tsd.ship.power_data.impulse.i,
+			o->tsd.ship.coolant_data.impulse.i,
+			&o->tsd.ship.temperature_data.impulse_damage);
+	calc_temperature_change(o->tsd.ship.power_data.tractor.i,
+			o->tsd.ship.coolant_data.tractor.i,
+			&o->tsd.ship.temperature_data.tractor_damage);
+}
+
 static int lookup_bridge_by_shipid(uint32_t shipid)
 {
 	/* assumes universe lock is held */
@@ -1958,6 +2025,7 @@ static void player_move(struct snis_entity *o)
 
 	do_power_model_computations(o);
 	do_coolant_model_computations(o);
+	do_temperature_computations(o);
 	if (o->tsd.ship.fuel > FUEL_CONSUMPTION_UNIT) {
 		power_model_enable(o->tsd.ship.power_model);
 		o->tsd.ship.fuel -= (int) (FUEL_CONSUMPTION_UNIT *
@@ -6175,9 +6243,13 @@ static void send_update_coolant_model_data(struct game_client *c,
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(uint16_t) +
-			sizeof(o->tsd.ship.coolant_data) + sizeof(uint32_t));
+			sizeof(o->tsd.ship.coolant_data) + sizeof(uint32_t) +
+			sizeof(o->tsd.ship.temperature_data));
 	packed_buffer_append(pb, "hwr", OPCODE_UPDATE_COOLANT_DATA, o->id,
-		(char *) &o->tsd.ship.coolant_data, (unsigned short) sizeof(o->tsd.ship.coolant_data)); 
+		(char *) &o->tsd.ship.coolant_data, (unsigned short) sizeof(o->tsd.ship.coolant_data));
+	packed_buffer_append(pb, "r",
+		(char *) &o->tsd.ship.temperature_data,
+			(unsigned short) sizeof(o->tsd.ship.temperature_data)); 
 	pb_queue_to_client(c, pb);
 }
 

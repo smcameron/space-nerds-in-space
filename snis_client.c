@@ -751,7 +751,8 @@ static int update_power_model_data(uint32_t id, struct power_model_data *pmd)
 	return 0;
 }
 
-static int update_coolant_model_data(uint32_t id, struct power_model_data *pmd)
+static int update_coolant_model_data(uint32_t id, struct power_model_data *pmd,
+			struct ship_damage_data *temperature_data)
 {
 	int i;
 
@@ -759,6 +760,7 @@ static int update_coolant_model_data(uint32_t id, struct power_model_data *pmd)
 	if (i < 0)
 		return -1;
 	go[i].tsd.ship.coolant_data = *pmd;
+	go[i].tsd.ship.temperature_data = *temperature_data;
 	return 0;
 }
 
@@ -2946,15 +2948,17 @@ static int process_update_coolant_data(void)
 	uint32_t id;
 	int rc;
 	struct power_model_data pmd;
-	unsigned char buffer[sizeof(pmd) + sizeof(uint32_t)];
+	struct ship_damage_data temperature_data;
+	unsigned char buffer[sizeof(pmd) + sizeof(temperature_data) + sizeof(uint32_t)];
 
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(pmd) + sizeof(uint32_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	packed_buffer_extract(&pb, "wr", &id, &pmd, sizeof(pmd));
+	packed_buffer_extract(&pb, "r", &temperature_data, sizeof(temperature_data));
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_coolant_model_data(id, &pmd);
+	rc = update_coolant_model_data(id, &pmd, &temperature_data);
 	pthread_mutex_unlock(&universe_mutex);
 	return rc;
 }
@@ -7104,20 +7108,46 @@ static double sample_generic_damage_data(int field_offset)
 	return 100.0 * (255 - *field) / 255.0;
 }
 
+static double sample_generic_temperature_data(int field_offset)
+{
+	uint8_t *field;
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return 0.0;
+	field = (uint8_t *) &o->tsd.ship.temperature_data + field_offset; 
+	return 100.0 * (*field) / 255.0;
+}
+
 #define CREATE_DAMAGE_SAMPLER_FUNC(fieldname) \
-	static double sample_##fieldname(void) \
+	static double sample_##fieldname##_damage(void) \
 	{ \
-		return sample_generic_damage_data(offsetof(struct ship_damage_data, fieldname)); \
+		return sample_generic_damage_data(offsetof(struct ship_damage_data, fieldname##_damage)); \
 	}
 
-CREATE_DAMAGE_SAMPLER_FUNC(shield_damage) /* sample_shield_damage defined here */
-CREATE_DAMAGE_SAMPLER_FUNC(impulse_damage) /* sample_impulse_damage defined here */
-CREATE_DAMAGE_SAMPLER_FUNC(warp_damage) /* sample_warp_damage defined here */
-CREATE_DAMAGE_SAMPLER_FUNC(torpedo_tubes_damage) /* sample_torpedo_tubes_damage defined here */
-CREATE_DAMAGE_SAMPLER_FUNC(phaser_banks_damage) /* sample_phaser_banks_damage defined here */
-CREATE_DAMAGE_SAMPLER_FUNC(sensors_damage) /* sample_sensors_damage defined here */
-CREATE_DAMAGE_SAMPLER_FUNC(comms_damage) /* sample_comms_damage defined here */
-CREATE_DAMAGE_SAMPLER_FUNC(tractor_damage) /* sample_tractor_damage defined here */
+#define CREATE_TEMPERATURE_SAMPLER_FUNC(fieldname) \
+	static double sample_##fieldname##_temperature(void) \
+	{ \
+		return sample_generic_temperature_data(offsetof(struct ship_damage_data, fieldname##_damage)); \
+	}
+
+CREATE_DAMAGE_SAMPLER_FUNC(shield) /* sample_shield_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(impulse) /* sample_impulse_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(warp) /* sample_warp_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(torpedo_tubes) /* sample_torpedo_tubes_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(phaser_banks) /* sample_phaser_banks_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(sensors) /* sample_sensors_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(comms) /* sample_comms_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(tractor) /* sample_tractor_damage defined here */
+
+CREATE_TEMPERATURE_SAMPLER_FUNC(shield) /* sample_shield_temperature defined here */
+CREATE_TEMPERATURE_SAMPLER_FUNC(impulse) /* sample_impulse_temperature defined here */
+CREATE_TEMPERATURE_SAMPLER_FUNC(warp) /* sample_warp_temperature defined here */
+CREATE_TEMPERATURE_SAMPLER_FUNC(torpedo_tubes) /* sample_torpedo_tubes_temperature defined here */
+CREATE_TEMPERATURE_SAMPLER_FUNC(phaser_banks) /* sample_phaser_banks_temperature defined here */
+CREATE_TEMPERATURE_SAMPLER_FUNC(sensors) /* sample_sensors_temperature defined here */
+CREATE_TEMPERATURE_SAMPLER_FUNC(comms) /* sample_comms_temperature defined here */
+CREATE_TEMPERATURE_SAMPLER_FUNC(tractor) /* sample_tractor_temperature defined here */
 
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
 {
@@ -7907,6 +7937,15 @@ struct engineering_ui {
 	struct slider *comms_damage;
 	struct slider *tractor_damage;
 
+	struct slider *shield_temperature;
+	struct slider *impulse_temperature;
+	struct slider *warp_temperature;
+	struct slider *torpedo_tubes_temperature;
+	struct slider *phaser_banks_temperature;
+	struct slider *sensors_temperature;
+	struct slider *comms_temperature;
+	struct slider *tractor_temperature;
+
 } eng_ui;
 
 static void damcon_button_pressed(void *x)
@@ -7924,6 +7963,7 @@ static void init_engineering_ui(void)
 	int dm = DISPLAYMODE_ENGINEERING;
 	int color = AMBER;
 	const int ccolor = BLUE; /* coolant color */
+	const int tcolor = GREEN; /* temperature color */
 	const int coolant_inc = 19;
 	const int sh = 12; /* slider height */
 
@@ -8017,22 +8057,43 @@ static void init_engineering_ui(void)
 	ui_add_button(eu->damcon_button, dm);
 
 	y = 220 + yinc;
-	eu->shield_damage = snis_slider_init(350, y += yinc, 150, 15, color, "SHIELD STATUS", "0", "100",
+	eu->shield_damage = snis_slider_init(350, y += yinc, 150, sh, color, "SHIELD STATUS", "0", "100",
 				0.0, 100.0, sample_shield_damage, NULL);
-	eu->impulse_damage = snis_slider_init(350, y += yinc, 150, 15, color, "IMPULSE STATUS", "0", "100",
+	eu->shield_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+				"", "0", "100", 0.0, 100.0,
+				sample_shield_temperature, NULL);
+	eu->impulse_damage = snis_slider_init(350, y += yinc, 150, sh, color, "IMPULSE STATUS", "0", "100",
 				0.0, 100.0, sample_impulse_damage, NULL);
-	eu->warp_damage = snis_slider_init(350, y += yinc, 150, 15, color, "WARP STATUS", "0", "100",
+	eu->impulse_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+				"", "0", "100", 0.0, 100.0,
+				sample_impulse_temperature, NULL);
+	eu->warp_damage = snis_slider_init(350, y += yinc, 150, sh, color, "WARP STATUS", "0", "100",
 				0.0, 100.0, sample_warp_damage, NULL);
-	eu->torpedo_tubes_damage = snis_slider_init(350, y += yinc, 150, 15, color, "TORPEDO STATUS", "0", "100",
+	eu->warp_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+				"", "0", "100", 0.0, 100.0,
+				sample_warp_temperature, NULL);
+	eu->torpedo_tubes_damage = snis_slider_init(350, y += yinc, 150, sh, color, "TORPEDO STATUS", "0", "100",
 				0.0, 100.0, sample_torpedo_tubes_damage, NULL);
-	eu->phaser_banks_damage = snis_slider_init(350, y += yinc, 150, 15, color, "PHASER STATUS", "0", "100",
+	eu->torpedo_tubes_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+				"", "0", "100", 0.0, 100.0, sample_torpedo_tubes_temperature, NULL);
+	eu->phaser_banks_damage = snis_slider_init(350, y += yinc, 150, sh, color, "PHASER STATUS", "0", "100",
 				0.0, 100.0, sample_phaser_banks_damage, NULL);
-	eu->sensors_damage = snis_slider_init(350, y += yinc, 150, 15, color, "SENSORS STATUS", "0", "100",
+	eu->phaser_banks_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+				"", "0", "100", 0.0, 100.0, sample_phaser_banks_temperature, NULL);
+	eu->sensors_damage = snis_slider_init(350, y += yinc, 150, sh, color, "SENSORS STATUS", "0", "100",
 				0.0, 100.0, sample_sensors_damage, NULL);
-	eu->comms_damage = snis_slider_init(350, y += yinc, 150, 15, color, "COMMS STATUS", "0", "100",
+	eu->sensors_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+				"", "0", "100", 0.0, 100.0, sample_sensors_temperature, NULL);
+	eu->comms_damage = snis_slider_init(350, y += yinc, 150, sh, color, "COMMS STATUS", "0", "100",
 				0.0, 100.0, sample_comms_damage, NULL);
-	eu->tractor_damage = snis_slider_init(350, y += yinc, 150, 15, color, "TRACTOR STATUS", "0", "100",
+	eu->comms_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+				"", "0", "100", 0.0, 100.0,
+				sample_comms_temperature, NULL);
+	eu->tractor_damage = snis_slider_init(350, y += yinc, 150, sh, color, "TRACTOR STATUS", "0", "100",
 				0.0, 100.0, sample_tractor_damage, NULL);
+	eu->tractor_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+				"", "0", "100", 0.0, 100.0,
+				sample_tractor_temperature, NULL);
 	ui_add_slider(eu->shield_damage, dm);
 	ui_add_slider(eu->impulse_damage, dm);
 	ui_add_slider(eu->warp_damage, dm);
@@ -8041,6 +8102,14 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->sensors_damage, dm);
 	ui_add_slider(eu->comms_damage, dm);
 	ui_add_slider(eu->tractor_damage, dm);
+	ui_add_slider(eu->shield_temperature, dm);
+	ui_add_slider(eu->impulse_temperature, dm);
+	ui_add_slider(eu->warp_temperature, dm);
+	ui_add_slider(eu->torpedo_tubes_temperature, dm);
+	ui_add_slider(eu->phaser_banks_temperature, dm);
+	ui_add_slider(eu->sensors_temperature, dm);
+	ui_add_slider(eu->comms_temperature, dm);
+	ui_add_slider(eu->tractor_temperature, dm);
 }
 
 static void show_engineering(GtkWidget *w)
