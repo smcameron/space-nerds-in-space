@@ -7998,46 +7998,70 @@ static void init_engineering_ui(void)
 	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
 			NANO_FONT, damcon_button_pressed, (void *) 0);
 	y += yinc;
-	eu->shield_slider = snis_slider_init(20, y += yinc, 150, sh, color, "SHIELDS", "0", "100",
-				0.0, 255.0, sample_power_data_shields_current, do_shields_pwr);
+	eu->shield_slider = snis_slider_init(20, y += yinc, 150, sh, color,
+				"POWER SHIELDS", "0", "100", 0.0, 255.0,
+				sample_power_data_shields_current, do_shields_pwr);
+	snis_slider_set_label_font(eu->shield_slider, NANO_FONT);
 	eu->shield_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
-				ccolor, "", "0", "100", 0.0, 255.0,
+				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_shields_current, do_shields_coolant);
-	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, 150, sh, color, "PHASERS", "0", "100",
-				0.0, 255.0, sample_power_data_phasers_current, do_phaserbanks_pwr);
+	snis_slider_set_label_font(eu->shield_coolant_slider, NANO_FONT);
+	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, 150, sh, color,
+				"POWER PHASERS", "0", "100", 0.0, 255.0,
+				sample_power_data_phasers_current, do_phaserbanks_pwr);
+	snis_slider_set_label_font(eu->phaserbanks_slider, NANO_FONT);
 	eu->phaserbanks_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
-				ccolor, "", "0", "100", 0.0, 255.0,
+				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_phasers_current, do_phaserbanks_coolant);
-	eu->comm_slider = snis_slider_init(20, y += yinc, 150, sh, color, "COMMS", "0", "100",
-				0.0, 255.0, sample_power_data_comms_current, do_comms_pwr);
+	snis_slider_set_label_font(eu->phaserbanks_coolant_slider, NANO_FONT);
+	eu->comm_slider = snis_slider_init(20, y += yinc, 150, sh, color,
+				"POWER COMMS", "0", "100", 0.0, 255.0,
+				sample_power_data_comms_current, do_comms_pwr);
+	snis_slider_set_label_font(eu->comm_slider, NANO_FONT);
 	eu->comm_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
-				ccolor, "", "0", "100", 0.0, 255.0,
+				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_comms_current, do_comms_coolant);
-	eu->sensors_slider = snis_slider_init(20, y += yinc, 150, sh, color, "SENSORS", "0", "100",
-				0.0, 255.0, sample_power_data_sensors_current, do_sensors_pwr);
+	snis_slider_set_label_font(eu->comm_coolant_slider, NANO_FONT);
+	eu->sensors_slider = snis_slider_init(20, y += yinc, 150, sh, color,
+				"POWER SENSORS", "0", "100", 0.0, 255.0,
+				sample_power_data_sensors_current, do_sensors_pwr);
+	snis_slider_set_label_font(eu->sensors_slider, NANO_FONT);
 	eu->sensors_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
-				ccolor, "", "0", "100", 0.0, 255.0,
+				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_sensors_current, do_sensors_coolant);
-	eu->impulse_slider = snis_slider_init(20, y += yinc, 150, sh, color, "IMPULSE DR", "0", "100",
-				0.0, 255.0, sample_power_data_impulse_current, do_impulse_pwr);
+	snis_slider_set_label_font(eu->sensors_coolant_slider, NANO_FONT);
+	eu->impulse_slider = snis_slider_init(20, y += yinc, 150, sh, color,
+				"POWER IMPULSE DR", "0", "100", 0.0, 255.0,
+				sample_power_data_impulse_current, do_impulse_pwr);
+	snis_slider_set_label_font(eu->impulse_slider, NANO_FONT);
 	eu->impulse_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
-				ccolor, "", "0", "100", 0.0, 255.0,
+				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_impulse_current, do_impulse_coolant);
-	eu->warp_slider = snis_slider_init(20, y += yinc, 150, sh, color, "WARP DR", "0", "100",
-				0.0, 255.0, sample_power_data_warp_current, do_warp_pwr);
+	snis_slider_set_label_font(eu->impulse_coolant_slider, NANO_FONT);
+	eu->warp_slider = snis_slider_init(20, y += yinc, 150, sh, color,
+				"POWER WARP DR", "0", "100", 0.0, 255.0,
+				sample_power_data_warp_current, do_warp_pwr);
+	snis_slider_set_label_font(eu->warp_slider, NANO_FONT);
 	eu->warp_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
-				ccolor, "", "0", "100", 0.0, 255.0,
+				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_warp_current, do_warp_coolant);
-	eu->maneuvering_slider = snis_slider_init(20, y += yinc, 150, sh, color, "MANEUVERING", "0", "100",
-				0.0, 255.0, sample_power_data_maneuvering_current, do_maneuvering_pwr);
+	snis_slider_set_label_font(eu->warp_coolant_slider, NANO_FONT);
+	eu->maneuvering_slider = snis_slider_init(20, y += yinc, 150, sh, color,
+				"POWER MANEUVERING", "0", "100", 0.0, 255.0,
+				sample_power_data_maneuvering_current, do_maneuvering_pwr);
+	snis_slider_set_label_font(eu->maneuvering_slider, NANO_FONT);
 	eu->maneuvering_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
-				ccolor, "", "0", "100", 0.0, 255.0,
+				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_maneuvering_current, do_maneuvering_coolant);
-	eu->tractor_slider = snis_slider_init(20, y += yinc, 150, sh, color, "TRACTOR", "0", "100",
-				0.0, 255.0, sample_power_data_tractor_current, do_tractor_pwr);
+	snis_slider_set_label_font(eu->maneuvering_coolant_slider, NANO_FONT);
+	eu->tractor_slider = snis_slider_init(20, y += yinc, 150, sh, color,
+				"POWER TRACTOR", "0", "100", 0.0, 255.0,
+				sample_power_data_tractor_current, do_tractor_pwr);
+	snis_slider_set_label_font(eu->tractor_slider, NANO_FONT);
 	eu->tractor_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
-				ccolor, "", "0", "100", 0.0, 255.0,
+				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_tractor_current, do_tractor_coolant);
+	snis_slider_set_label_font(eu->tractor_coolant_slider, NANO_FONT);
 	ui_add_slider(eu->shield_slider, dm);
 	ui_add_slider(eu->shield_coolant_slider, dm);
 	ui_add_slider(eu->phaserbanks_slider, dm);
@@ -8064,48 +8088,67 @@ static void init_engineering_ui(void)
 	y = 220 + yinc;
 	eu->shield_damage = snis_slider_init(350, y += yinc, 150, sh, color, "SHIELD STATUS", "0", "100",
 				0.0, 100.0, sample_shield_damage, NULL);
+	snis_slider_set_label_font(eu->shield_damage, NANO_FONT);
 	eu->shield_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
-				"", "0", "100", 0.0, 100.0,
+				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_shield_temperature, NULL);
+	snis_slider_set_label_font(eu->shield_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->shield_temperature, 1);	
 	eu->phaser_banks_damage = snis_slider_init(350, y += yinc, 150, sh, color, "PHASER STATUS", "0", "100",
 				0.0, 100.0, sample_phaser_banks_damage, NULL);
+	snis_slider_set_label_font(eu->phaser_banks_damage, NANO_FONT);
 	eu->phaser_banks_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
-				"", "0", "100", 0.0, 100.0, sample_phaser_banks_temperature, NULL);
+				"TEMPERATURE", "0", "100", 0.0, 100.0,
+				sample_phaser_banks_temperature, NULL);
+	snis_slider_set_label_font(eu->phaser_banks_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->phaser_banks_temperature, 1);	
 	eu->comms_damage = snis_slider_init(350, y += yinc, 150, sh, color, "COMMS STATUS", "0", "100",
 				0.0, 100.0, sample_comms_damage, NULL);
+	snis_slider_set_label_font(eu->comms_damage, NANO_FONT);
 	eu->comms_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
-				"", "0", "100", 0.0, 100.0,
+				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_comms_temperature, NULL);
+	snis_slider_set_label_font(eu->comms_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->comms_temperature, 1);	
 	eu->sensors_damage = snis_slider_init(350, y += yinc, 150, sh, color, "SENSORS STATUS", "0", "100",
 				0.0, 100.0, sample_sensors_damage, NULL);
+	snis_slider_set_label_font(eu->sensors_damage, NANO_FONT);
 	eu->sensors_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
-				"", "0", "100", 0.0, 100.0, sample_sensors_temperature, NULL);
+				"TEMPERATURE", "0", "100", 0.0, 100.0,
+				sample_sensors_temperature, NULL);
+	snis_slider_set_label_font(eu->sensors_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->sensors_temperature, 1);	
 	eu->impulse_damage = snis_slider_init(350, y += yinc, 150, sh, color, "IMPULSE STATUS", "0", "100",
 				0.0, 100.0, sample_impulse_damage, NULL);
+	snis_slider_set_label_font(eu->impulse_damage, NANO_FONT);
 	eu->impulse_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
-				"", "0", "100", 0.0, 100.0,
+				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_impulse_temperature, NULL);
+	snis_slider_set_label_font(eu->impulse_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->impulse_temperature, 1);	
 	eu->warp_damage = snis_slider_init(350, y += yinc, 150, sh, color, "WARP STATUS", "0", "100",
 				0.0, 100.0, sample_warp_damage, NULL);
+	snis_slider_set_label_font(eu->warp_damage, NANO_FONT);
 	eu->warp_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
-				"", "0", "100", 0.0, 100.0,
+				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_warp_temperature, NULL);
+	snis_slider_set_label_font(eu->warp_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->warp_temperature, 1);	
 	eu->maneuvering_damage = snis_slider_init(350, y += yinc, 150, sh, color, "MANEUVERING STATUS", "0", "100",
 				0.0, 100.0, sample_maneuvering_damage, NULL);
+	snis_slider_set_label_font(eu->maneuvering_damage, NANO_FONT);
 	eu->maneuvering_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
-				"", "0", "100", 0.0, 100.0, sample_maneuvering_temperature, NULL);
+				"TEMPERATURE", "0", "100", 0.0, 100.0,
+				sample_maneuvering_temperature, NULL);
+	snis_slider_set_label_font(eu->maneuvering_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->maneuvering_temperature, 1);	
 	eu->tractor_damage = snis_slider_init(350, y += yinc, 150, sh, color, "TRACTOR STATUS", "0", "100",
 				0.0, 100.0, sample_tractor_damage, NULL);
+	snis_slider_set_label_font(eu->tractor_damage, NANO_FONT);
 	eu->tractor_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
-				"", "0", "100", 0.0, 100.0,
+				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_tractor_temperature, NULL);
+	snis_slider_set_label_font(eu->tractor_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->tractor_temperature, 1);	
 	ui_add_slider(eu->shield_damage, dm);
 	ui_add_slider(eu->impulse_damage, dm);
