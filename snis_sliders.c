@@ -21,6 +21,7 @@ struct slider {
 	slider_clicked_function clicked;
 	int vertical;
 	int colors_reversed;
+	unsigned char timer;
 };
 
 static int slider_sound = -1;
@@ -51,6 +52,7 @@ struct slider *snis_slider_init(int x, int y, int length, int height, int color,
 	s->input = 0.0;
 	s->vertical = 0;
 	s->colors_reversed = 0;
+	s->timer = 0;
 	return s;
 }
 
@@ -65,7 +67,7 @@ static int choose_barcolor(struct slider *s, double v)
 		return DARKGREEN;
 	if (!s->colors_reversed) {
 		if (v < 25.0)
-			return RED;
+			return ((s->timer & 0x04) == 0) ? BLACK : RED;
 		if (v < 50.0)
 			return AMBER;
 		return DARKGREEN;
@@ -74,7 +76,7 @@ static int choose_barcolor(struct slider *s, double v)
 		return DARKGREEN;
 	if (v < 90.0)
 		return AMBER;
-	return RED;
+	return ((s->timer & 0x04) == 0) ? BLACK : RED;
 }
 
 static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
@@ -85,6 +87,7 @@ static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 	int ptr_height = s->height / 2;
 	int ptr_width = s->height / 3;
 
+	s->timer++;
 	v = s->sample();
 	s->value = (v - s->r1) / (s->r2 - s->r1);
 	v = s->sample();
@@ -134,6 +137,7 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 	int ptr_height = s->height / 2;
 	int ptr_width = s->height / 3;
 
+	s->timer++;
 	if (s->vertical) {
 		snis_slider_draw_vertical(w, gc, s);
 		return;
