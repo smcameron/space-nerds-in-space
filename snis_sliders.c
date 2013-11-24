@@ -20,6 +20,7 @@ struct slider {
 	slider_monitor_function sample;
 	slider_clicked_function clicked;
 	int vertical;
+	int colors_reversed;
 };
 
 static int slider_sound = -1;
@@ -49,6 +50,7 @@ struct slider *snis_slider_init(int x, int y, int length, int height, int color,
 	s->value = (s->sample() - s->r1) / (s->r2 - s->r1);
 	s->input = 0.0;
 	s->vertical = 0;
+	s->colors_reversed = 0;
 	return s;
 }
 
@@ -57,11 +59,29 @@ void snis_slider_set_vertical(struct slider *s, int v)
 	s->vertical = v;
 }
 
+static int choose_barcolor(struct slider *s, double v)
+{
+	if (s->clicked)
+		return DARKGREEN;
+	if (!s->colors_reversed) {
+		if (v < 25.0)
+			return RED;
+		if (v < 50.0)
+			return AMBER;
+		return DARKGREEN;
+	}
+	if (v < 75.0)
+		return DARKGREEN;
+	if (v < 90.0)
+		return AMBER;
+	return RED;
+}
+
 static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 {
 	double v;
 	int height, ty1;
-	int bar_color = DARKGREEN;
+	int bar_color;
 	int ptr_height = s->height / 2;
 	int ptr_width = s->height / 3;
 
@@ -69,17 +89,7 @@ static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 	s->value = (v - s->r1) / (s->r2 - s->r1);
 	v = s->sample();
 	ty1 = (int) (s->y + s->length - s->input * s->length);
-	if (!s->clicked) {
-		if (v < 25.0) {
-			bar_color = RED;
-		} else {
-			if (v < 50.0)  {
-				bar_color = AMBER;
-			} else {
-				bar_color = DARKGREEN;
-			}
-		}
-	}
+	bar_color = choose_barcolor(s, v);
 	sng_set_foreground(s->color);
 	sng_current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->height, s->length);
 	height = s->value * s->length - 1;
@@ -132,17 +142,7 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 	v = s->sample();
 	s->value = (v - s->r1) / (s->r2 - s->r1);
 	v = s->sample();
-	if (!s->clicked) {
-		if (v < 25.0) {
-			bar_color = RED;
-		} else {
-			if (v < 50.0)  {
-				bar_color = AMBER;
-			} else {
-				bar_color = DARKGREEN;
-			}
-		}
-	}
+	bar_color = choose_barcolor(s, v);
 	sng_set_foreground(s->color);
 	sng_current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->length, s->height);
 	width = s->value * s->length - 1;
@@ -230,4 +230,10 @@ void snis_slider_set_input(struct slider *s, double input)
 {
 	s->input = input;
 }
+
+void snis_slider_set_color_scheme(struct slider *s, int reversed)
+{
+	s->colors_reversed = reversed;
+}
+
 

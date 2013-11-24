@@ -8062,38 +8062,46 @@ static void init_engineering_ui(void)
 	eu->shield_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
 				"", "0", "100", 0.0, 100.0,
 				sample_shield_temperature, NULL);
+	snis_slider_set_color_scheme(eu->shield_temperature, 1);	
 	eu->phaser_banks_damage = snis_slider_init(350, y += yinc, 150, sh, color, "PHASER STATUS", "0", "100",
 				0.0, 100.0, sample_phaser_banks_damage, NULL);
 	eu->phaser_banks_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
 				"", "0", "100", 0.0, 100.0, sample_phaser_banks_temperature, NULL);
+	snis_slider_set_color_scheme(eu->phaser_banks_temperature, 1);	
 	eu->comms_damage = snis_slider_init(350, y += yinc, 150, sh, color, "COMMS STATUS", "0", "100",
 				0.0, 100.0, sample_comms_damage, NULL);
 	eu->comms_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
 				"", "0", "100", 0.0, 100.0,
 				sample_comms_temperature, NULL);
+	snis_slider_set_color_scheme(eu->comms_temperature, 1);	
 	eu->sensors_damage = snis_slider_init(350, y += yinc, 150, sh, color, "SENSORS STATUS", "0", "100",
 				0.0, 100.0, sample_sensors_damage, NULL);
 	eu->sensors_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
 				"", "0", "100", 0.0, 100.0, sample_sensors_temperature, NULL);
+	snis_slider_set_color_scheme(eu->sensors_temperature, 1);	
 	eu->impulse_damage = snis_slider_init(350, y += yinc, 150, sh, color, "IMPULSE STATUS", "0", "100",
 				0.0, 100.0, sample_impulse_damage, NULL);
 	eu->impulse_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
 				"", "0", "100", 0.0, 100.0,
 				sample_impulse_temperature, NULL);
+	snis_slider_set_color_scheme(eu->impulse_temperature, 1);	
 	eu->warp_damage = snis_slider_init(350, y += yinc, 150, sh, color, "WARP STATUS", "0", "100",
 				0.0, 100.0, sample_warp_damage, NULL);
 	eu->warp_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
 				"", "0", "100", 0.0, 100.0,
 				sample_warp_temperature, NULL);
+	snis_slider_set_color_scheme(eu->warp_temperature, 1);	
 	eu->maneuvering_damage = snis_slider_init(350, y += yinc, 150, sh, color, "MANEUVERING STATUS", "0", "100",
 				0.0, 100.0, sample_maneuvering_damage, NULL);
 	eu->maneuvering_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
 				"", "0", "100", 0.0, 100.0, sample_maneuvering_temperature, NULL);
+	snis_slider_set_color_scheme(eu->maneuvering_temperature, 1);	
 	eu->tractor_damage = snis_slider_init(350, y += yinc, 150, sh, color, "TRACTOR STATUS", "0", "100",
 				0.0, 100.0, sample_tractor_damage, NULL);
 	eu->tractor_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
 				"", "0", "100", 0.0, 100.0,
 				sample_tractor_temperature, NULL);
+	snis_slider_set_color_scheme(eu->tractor_temperature, 1);	
 	ui_add_slider(eu->shield_damage, dm);
 	ui_add_slider(eu->impulse_damage, dm);
 	ui_add_slider(eu->warp_damage, dm);
