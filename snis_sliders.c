@@ -68,7 +68,7 @@ static int choose_barcolor(struct slider *s, double v)
 	if (!s->colors_reversed) {
 		if (v <= 10.0)
 			return ((s->timer & 0x04) == 0) ? BLACK : RED;
-		if (v <= 75.0)
+		if (v <= 25.0)
 			return AMBER;
 		return DARKGREEN;
 	}
