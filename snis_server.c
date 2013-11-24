@@ -701,6 +701,7 @@ static void calculate_laser_starbase_damage(struct snis_entity *o, uint8_t wavel
 }
 
 static void send_ship_damage_packet(struct snis_entity *o);
+static void send_overheat_ship_damage_packet(struct snis_entity *o);
 static int lookup_by_id(uint32_t id);
 
 static struct snis_entity *lookup_entity_by_id(uint32_t id)
@@ -1720,6 +1721,50 @@ static void do_temperature_computations(struct snis_entity *o)
 			&o->tsd.ship.temperature_data.tractor_damage);
 }
 
+static int calc_overheat_damage(uint8_t *system, uint8_t temperature)
+{
+	float damage, overheat_amount, new_value;
+
+	if (temperature < (uint8_t) (0.9f * 255.0f))
+		return 0; /* temp is ok, no damage */
+
+	if (snis_randn(100) > 10) 
+		return 0; /* lucky, no damage */
+
+	overheat_amount = (temperature - (0.9f * 255.0f)) / (0.1f * 255.0f);
+
+	damage = (float) snis_randn(5) / 100.0f;
+	damage *= overheat_amount; 
+	new_value = (float) *system + 255.0f * damage;
+	if (new_value > 255.0f)
+		new_value = 255.0f;
+	*system = (uint8_t) new_value;
+	return 1;
+}
+
+static int do_overheating_damage(struct snis_entity *o)
+{
+	int damage_was_done = 0;
+
+	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.warp_damage,
+			o->tsd.ship.temperature_data.warp_damage);
+	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.sensors_damage,
+			o->tsd.ship.temperature_data.sensors_damage);
+	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.phaser_banks_damage,
+			o->tsd.ship.temperature_data.phaser_banks_damage);
+	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.maneuvering_damage,
+			o->tsd.ship.temperature_data.maneuvering_damage);
+	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.shield_damage,
+			o->tsd.ship.temperature_data.shield_damage);
+	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.comms_damage,
+			o->tsd.ship.temperature_data.comms_damage);
+	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.impulse_damage,
+			o->tsd.ship.temperature_data.impulse_damage);
+	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.tractor_damage,
+			o->tsd.ship.temperature_data.tractor_damage);
+	return damage_was_done;
+}
+
 static int lookup_bridge_by_shipid(uint32_t shipid)
 {
 	/* assumes universe lock is held */
@@ -2026,6 +2071,7 @@ static void player_move(struct snis_entity *o)
 	do_power_model_computations(o);
 	do_coolant_model_computations(o);
 	do_temperature_computations(o);
+	o->tsd.ship.overheating_damage_done = do_overheating_damage(o);
 	if (o->tsd.ship.fuel > FUEL_CONSUMPTION_UNIT) {
 		power_model_enable(o->tsd.ship.power_model);
 		o->tsd.ship.fuel -= (int) (FUEL_CONSUMPTION_UNIT *
@@ -2556,6 +2602,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.sci_heading = M_PI / 2.0;
 	o->tsd.ship.reverse = 0;
 	o->tsd.ship.shiptype = SHIP_CLASS_STARSHIP; 
+	o->tsd.ship.overheating_damage_done = 0;
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
@@ -5937,6 +5984,8 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		}
 		send_update_power_model_data(c, o);
 		send_update_coolant_model_data(c, o);
+		if (o->tsd.ship.overheating_damage_done)
+			send_overheat_ship_damage_packet(o); /* sends to all clients. */
 		break;
 	case OBJTYPE_SHIP2:
 		send_econ_update_ship_packet(c, o);
@@ -6195,14 +6244,24 @@ static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_pack
 	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_ALL);
 }
 
-static void send_ship_damage_packet(struct snis_entity *o)
+static void send_generic_ship_damage_packet(struct snis_entity *o, uint16_t opcode)
 {
 	struct packed_buffer *pb;
 
 	pb = packed_buffer_allocate(sizeof(struct ship_damage_packet));
-	packed_buffer_append(pb, "hwr", OPCODE_UPDATE_DAMAGE, o->id,
+	packed_buffer_append(pb, "hwr", opcode, o->id,
 		(char *) &o->tsd.ship.damage, sizeof(o->tsd.ship.damage));
 	send_packet_to_all_clients(pb, ROLE_ALL);
+}
+
+static void send_ship_damage_packet(struct snis_entity *o)
+{
+	send_generic_ship_damage_packet(o, OPCODE_UPDATE_DAMAGE);
+}
+
+static void send_overheat_ship_damage_packet(struct snis_entity *o)
+{
+	send_generic_ship_damage_packet(o, OPCODE_OVERHEAT_DAMAGE);
 }
 
 static void send_comms_packet(char *sender, const char *str)

@@ -3726,7 +3726,7 @@ static int process_comm_transmission(void)
 	return 0;
 }
 
-static int process_ship_damage_packet(void)
+static int process_ship_damage_packet(int do_damage_limbo)
 {
 	char buffer[sizeof(struct ship_damage_packet)];
 	struct packed_buffer pb;
@@ -3748,7 +3748,7 @@ static int process_ship_damage_packet(void)
 	pthread_mutex_lock(&universe_mutex);
 	go[i].tsd.ship.damage = damage;
 	pthread_mutex_unlock(&universe_mutex);
-	if (id == my_ship_id) 
+	if (id == my_ship_id && do_damage_limbo) 
 		damage_limbo_countdown = 2;
 	return 0;
 }
@@ -4097,7 +4097,12 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_DAMAGE:
-			rc = process_ship_damage_packet();
+			rc = process_ship_damage_packet(1);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_OVERHEAT_DAMAGE:
+			rc = process_ship_damage_packet(0);
 			if (rc)
 				goto protocol_error;
 			break;

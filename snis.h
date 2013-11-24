@@ -329,6 +329,7 @@ struct ship_data {
 #define TRACTOR_BEAM_IDEAL_DIST 200.0 /* TODO: tweak this */
 #define MAX_TRACTOR_VELOCITY 10.0
 	uint32_t tractor_beam; 
+	uint8_t overheating_damage_done;
 };
 
 struct starbase_data {
