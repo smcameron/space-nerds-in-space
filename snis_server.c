@@ -886,7 +886,7 @@ static void laser_collision_detection(void *context, void *entity)
 	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
 		t->type != OBJTYPE_STARBASE && t->type != OBJTYPE_ASTEROID)
 		return;
-	if (t->id == t->tsd.laser.ship_id)
+	if (t->id == o->tsd.laser.ship_id)
 		return; /* can't laser yourself. */
 
 	if (!laser_point_collides(o->x + o->vx, o->y + o->vy, o->z + o->vz,
