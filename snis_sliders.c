@@ -20,6 +20,7 @@ struct slider {
 	slider_monitor_function sample;
 	slider_clicked_function clicked;
 	int vertical;
+	int font;
 	int colors_reversed;
 	unsigned char timer;
 };
@@ -53,6 +54,7 @@ struct slider *snis_slider_init(int x, int y, int length, int height, int color,
 	s->vertical = 0;
 	s->colors_reversed = 0;
 	s->timer = 0;
+	s->font = TINY_FONT;
 	return s;
 }
 
@@ -126,7 +128,7 @@ static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 			s->x + ptr_height + s->height, ty1 + ptr_width,
 			s->x + s->height, ty1);
 	}
-	/* sng_abs_xy_draw_string(w, gc, s->label, TINY_FONT, s->x + s->length + 5, s->y + 2 * s->height / 3);  */
+	/* sng_abs_xy_draw_string(w, gc, s->label, s->font, s->x + s->length + 5, s->y + 2 * s->height / 3);  */
 } 
 
 void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
@@ -172,7 +174,8 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 		sng_current_draw_line(w->window, gc, tx1 - ptr_width, s->y + s->height + ptr_height,
 				tx1 + ptr_width, s->y + s->height + ptr_height); 
 	}
-	sng_abs_xy_draw_string(w, gc, s->label, TINY_FONT, s->x + s->length + 5, s->y + 2 * s->height / 3); 
+	sng_abs_xy_draw_string(w, gc, s->label, s->font,
+				s->x + s->length + 5, s->y + 2 * s->height / 3); 
 }
 
 double snis_slider_get_value(struct slider *s)
@@ -240,4 +243,8 @@ void snis_slider_set_color_scheme(struct slider *s, int reversed)
 	s->colors_reversed = reversed;
 }
 
+void snis_slider_set_label_font(struct slider *s, int font)
+{
+	s->font = font;
+}
 
