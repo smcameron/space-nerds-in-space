@@ -129,7 +129,7 @@ register_timer_callback(callback, timer_ticks, cookie)
 get_player_damage(id, system); -- returns value of damage to player ship system.
 	id is the id of the player's ship (see get_player_ship_ids() above.)
 	system is the name of the system for which you want damage info, and must be one of:
-        "shields", "impulse" "warp", "torpedo", "phaser", "sensors", "comms", "tractor"
+        "shields", "impulse" "warp", "maneuvering", "phaser", "sensors", "comms", "tractor"
 	The returned value is between 0 (no damage) and (255) max damage, inclusive. 
 	nil is returned on error (e.g. bad system, bad id, etc.)
 

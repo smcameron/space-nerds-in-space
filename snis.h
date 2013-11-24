@@ -188,7 +188,7 @@ struct ship_damage_data {
 	uint8_t shield_damage;
 	uint8_t impulse_damage;
 	uint8_t warp_damage;
-	uint8_t torpedo_tubes_damage;
+	uint8_t maneuvering_damage;
 	uint8_t phaser_banks_damage;
 	uint8_t sensors_damage;
 	uint8_t comms_damage;

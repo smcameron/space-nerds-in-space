@@ -638,7 +638,7 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 	o->tsd.ship.damage.shield_damage = roll_damage(twp, ss, o->tsd.ship.damage.shield_damage);
 	o->tsd.ship.damage.impulse_damage = roll_damage(twp, ss, o->tsd.ship.damage.impulse_damage);
 	o->tsd.ship.damage.warp_damage = roll_damage(twp, ss, o->tsd.ship.damage.warp_damage);
-	o->tsd.ship.damage.torpedo_tubes_damage = roll_damage(twp, ss, o->tsd.ship.damage.torpedo_tubes_damage);
+	o->tsd.ship.damage.maneuvering_damage = roll_damage(twp, ss, o->tsd.ship.damage.maneuvering_damage);
 	o->tsd.ship.damage.phaser_banks_damage = roll_damage(twp, ss, o->tsd.ship.damage.phaser_banks_damage);
 	o->tsd.ship.damage.sensors_damage = roll_damage(twp, ss, o->tsd.ship.damage.sensors_damage);
 	o->tsd.ship.damage.comms_damage = roll_damage(twp, ss, o->tsd.ship.damage.comms_damage);
@@ -1705,7 +1705,7 @@ static void do_temperature_computations(struct snis_entity *o)
 			&o->tsd.ship.temperature_data.phaser_banks_damage);
 	calc_temperature_change(o->tsd.ship.power_data.maneuvering.i,
 			o->tsd.ship.coolant_data.maneuvering.i,
-			&o->tsd.ship.temperature_data.torpedo_tubes_damage);/*FIXME, wut? */
+			&o->tsd.ship.temperature_data.maneuvering_damage);
 	calc_temperature_change(o->tsd.ship.power_data.shields.i,
 			o->tsd.ship.coolant_data.shields.i,
 			&o->tsd.ship.temperature_data.shield_damage);
@@ -4451,8 +4451,8 @@ static int l_set_player_damage(lua_State *l)
 		o->tsd.ship.damage.warp_damage = bvalue;
 		goto done;
 	}
-	if (strncmp(system, "torpedo", 7) == 0) {
-		o->tsd.ship.damage.torpedo_tubes_damage = bvalue;
+	if (strncmp(system, "maneuvering", 7) == 0) {
+		o->tsd.ship.damage.maneuvering_damage = bvalue;
 		goto done;
 	}
 	if (strncmp(system, "phaser", 6) == 0) {
@@ -4545,8 +4545,8 @@ static int l_get_player_damage(lua_State *l)
 		bvalue = o->tsd.ship.damage.warp_damage;
 		goto done;
 	}
-	if (strncmp(system, "torpedo", 7) == 0) {
-		bvalue = o->tsd.ship.damage.torpedo_tubes_damage;
+	if (strncmp(system, "maneuvering", 7) == 0) {
+		bvalue = o->tsd.ship.damage.maneuvering_damage;
 		goto done;
 	}
 	if (strncmp(system, "phaser", 6) == 0) {

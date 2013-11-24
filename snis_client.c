@@ -7134,7 +7134,7 @@ static double sample_generic_temperature_data(int field_offset)
 CREATE_DAMAGE_SAMPLER_FUNC(shield) /* sample_shield_damage defined here */
 CREATE_DAMAGE_SAMPLER_FUNC(impulse) /* sample_impulse_damage defined here */
 CREATE_DAMAGE_SAMPLER_FUNC(warp) /* sample_warp_damage defined here */
-CREATE_DAMAGE_SAMPLER_FUNC(torpedo_tubes) /* sample_torpedo_tubes_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(maneuvering) /* sample_maneuvering_damage defined here */
 CREATE_DAMAGE_SAMPLER_FUNC(phaser_banks) /* sample_phaser_banks_damage defined here */
 CREATE_DAMAGE_SAMPLER_FUNC(sensors) /* sample_sensors_damage defined here */
 CREATE_DAMAGE_SAMPLER_FUNC(comms) /* sample_comms_damage defined here */
@@ -7143,7 +7143,7 @@ CREATE_DAMAGE_SAMPLER_FUNC(tractor) /* sample_tractor_damage defined here */
 CREATE_TEMPERATURE_SAMPLER_FUNC(shield) /* sample_shield_temperature defined here */
 CREATE_TEMPERATURE_SAMPLER_FUNC(impulse) /* sample_impulse_temperature defined here */
 CREATE_TEMPERATURE_SAMPLER_FUNC(warp) /* sample_warp_temperature defined here */
-CREATE_TEMPERATURE_SAMPLER_FUNC(torpedo_tubes) /* sample_torpedo_tubes_temperature defined here */
+CREATE_TEMPERATURE_SAMPLER_FUNC(maneuvering) /* sample_maneuvering_temperature defined here */
 CREATE_TEMPERATURE_SAMPLER_FUNC(phaser_banks) /* sample_phaser_banks_temperature defined here */
 CREATE_TEMPERATURE_SAMPLER_FUNC(sensors) /* sample_sensors_temperature defined here */
 CREATE_TEMPERATURE_SAMPLER_FUNC(comms) /* sample_comms_temperature defined here */
@@ -7931,7 +7931,7 @@ struct engineering_ui {
 	struct slider *shield_damage;
 	struct slider *impulse_damage;
 	struct slider *warp_damage;
-	struct slider *torpedo_tubes_damage;
+	struct slider *maneuvering_damage;
 	struct slider *phaser_banks_damage;
 	struct slider *sensors_damage;
 	struct slider *comms_damage;
@@ -7940,7 +7940,7 @@ struct engineering_ui {
 	struct slider *shield_temperature;
 	struct slider *impulse_temperature;
 	struct slider *warp_temperature;
-	struct slider *torpedo_tubes_temperature;
+	struct slider *maneuvering_temperature;
 	struct slider *phaser_banks_temperature;
 	struct slider *sensors_temperature;
 	struct slider *comms_temperature;
@@ -8062,6 +8062,19 @@ static void init_engineering_ui(void)
 	eu->shield_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
 				"", "0", "100", 0.0, 100.0,
 				sample_shield_temperature, NULL);
+	eu->phaser_banks_damage = snis_slider_init(350, y += yinc, 150, sh, color, "PHASER STATUS", "0", "100",
+				0.0, 100.0, sample_phaser_banks_damage, NULL);
+	eu->phaser_banks_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+				"", "0", "100", 0.0, 100.0, sample_phaser_banks_temperature, NULL);
+	eu->comms_damage = snis_slider_init(350, y += yinc, 150, sh, color, "COMMS STATUS", "0", "100",
+				0.0, 100.0, sample_comms_damage, NULL);
+	eu->comms_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+				"", "0", "100", 0.0, 100.0,
+				sample_comms_temperature, NULL);
+	eu->sensors_damage = snis_slider_init(350, y += yinc, 150, sh, color, "SENSORS STATUS", "0", "100",
+				0.0, 100.0, sample_sensors_damage, NULL);
+	eu->sensors_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+				"", "0", "100", 0.0, 100.0, sample_sensors_temperature, NULL);
 	eu->impulse_damage = snis_slider_init(350, y += yinc, 150, sh, color, "IMPULSE STATUS", "0", "100",
 				0.0, 100.0, sample_impulse_damage, NULL);
 	eu->impulse_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
@@ -8072,23 +8085,10 @@ static void init_engineering_ui(void)
 	eu->warp_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
 				"", "0", "100", 0.0, 100.0,
 				sample_warp_temperature, NULL);
-	eu->torpedo_tubes_damage = snis_slider_init(350, y += yinc, 150, sh, color, "TORPEDO STATUS", "0", "100",
-				0.0, 100.0, sample_torpedo_tubes_damage, NULL);
-	eu->torpedo_tubes_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
-				"", "0", "100", 0.0, 100.0, sample_torpedo_tubes_temperature, NULL);
-	eu->phaser_banks_damage = snis_slider_init(350, y += yinc, 150, sh, color, "PHASER STATUS", "0", "100",
-				0.0, 100.0, sample_phaser_banks_damage, NULL);
-	eu->phaser_banks_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
-				"", "0", "100", 0.0, 100.0, sample_phaser_banks_temperature, NULL);
-	eu->sensors_damage = snis_slider_init(350, y += yinc, 150, sh, color, "SENSORS STATUS", "0", "100",
-				0.0, 100.0, sample_sensors_damage, NULL);
-	eu->sensors_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
-				"", "0", "100", 0.0, 100.0, sample_sensors_temperature, NULL);
-	eu->comms_damage = snis_slider_init(350, y += yinc, 150, sh, color, "COMMS STATUS", "0", "100",
-				0.0, 100.0, sample_comms_damage, NULL);
-	eu->comms_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
-				"", "0", "100", 0.0, 100.0,
-				sample_comms_temperature, NULL);
+	eu->maneuvering_damage = snis_slider_init(350, y += yinc, 150, sh, color, "MANEUVERING STATUS", "0", "100",
+				0.0, 100.0, sample_maneuvering_damage, NULL);
+	eu->maneuvering_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+				"", "0", "100", 0.0, 100.0, sample_maneuvering_temperature, NULL);
 	eu->tractor_damage = snis_slider_init(350, y += yinc, 150, sh, color, "TRACTOR STATUS", "0", "100",
 				0.0, 100.0, sample_tractor_damage, NULL);
 	eu->tractor_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
@@ -8097,7 +8097,7 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->shield_damage, dm);
 	ui_add_slider(eu->impulse_damage, dm);
 	ui_add_slider(eu->warp_damage, dm);
-	ui_add_slider(eu->torpedo_tubes_damage, dm);
+	ui_add_slider(eu->maneuvering_damage, dm);
 	ui_add_slider(eu->phaser_banks_damage, dm);
 	ui_add_slider(eu->sensors_damage, dm);
 	ui_add_slider(eu->comms_damage, dm);
@@ -8105,7 +8105,7 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->shield_temperature, dm);
 	ui_add_slider(eu->impulse_temperature, dm);
 	ui_add_slider(eu->warp_temperature, dm);
-	ui_add_slider(eu->torpedo_tubes_temperature, dm);
+	ui_add_slider(eu->maneuvering_temperature, dm);
 	ui_add_slider(eu->phaser_banks_temperature, dm);
 	ui_add_slider(eu->sensors_temperature, dm);
 	ui_add_slider(eu->comms_temperature, dm);
