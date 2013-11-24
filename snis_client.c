@@ -7963,7 +7963,7 @@ static void init_engineering_ui(void)
 	int dm = DISPLAYMODE_ENGINEERING;
 	int color = AMBER;
 	const int ccolor = BLUE; /* coolant color */
-	const int tcolor = GREEN; /* temperature color */
+	const int tcolor = AMBER; /* temperature color */
 	const int coolant_inc = 19;
 	const int sh = 12; /* slider height */
 
