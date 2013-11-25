@@ -4466,7 +4466,7 @@ static void show_common_screen(GtkWidget *w, char *title)
 
 #define ANGLE_OF_VIEW (45)
 
-static int normalize_degrees(int degrees)
+static int __attribute__((unused)) normalize_degrees(int degrees)
 {
 	while (degrees < 0)
 		degrees += 360;
@@ -7467,7 +7467,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	static struct mesh *radar_ring_mesh[4] = {0, 0, 0, 0};
 	static struct mesh *heading_ind_line_mesh = 0;
 	static struct mesh *vline_mesh = 0;
-	static struct mesh *sector_mesh = 0;
+	static struct mesh __attribute__((unused)) *sector_mesh = 0;
 	static struct mesh *axis_mesh[6] = { 0, 0, 0, 0, 0, 0 };
 	static int current_zoom = 0;
 	struct entity *targeted_entity = NULL;
