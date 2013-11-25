@@ -7971,6 +7971,8 @@ static void init_engineering_ui(void)
 	const int tcolor = AMBER; /* temperature color */
 	const int coolant_inc = 19;
 	const int sh = 12; /* slider height */
+	const int powersliderlen = 180; 
+	const int coolantsliderlen = 150;
 
 	struct engineering_ui *eu = &eng_ui;
 	y = 140;
@@ -7998,67 +8000,67 @@ static void init_engineering_ui(void)
 	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
 			NANO_FONT, damcon_button_pressed, (void *) 0);
 	y += yinc;
-	eu->shield_slider = snis_slider_init(20, y += yinc, 150, sh, color,
-				"POWER SHIELDS", "0", "100", 0.0, 255.0,
+	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
+				"PWR SHIELDS", "0", "100", 0.0, 255.0,
 				sample_power_data_shields_current, do_shields_pwr);
 	snis_slider_set_label_font(eu->shield_slider, NANO_FONT);
-	eu->shield_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+	eu->shield_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_shields_current, do_shields_coolant);
 	snis_slider_set_label_font(eu->shield_coolant_slider, NANO_FONT);
-	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, 150, sh, color,
-				"POWER PHASERS", "0", "100", 0.0, 255.0,
+	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
+				"PWR PHASERS", "0", "100", 0.0, 255.0,
 				sample_power_data_phasers_current, do_phaserbanks_pwr);
 	snis_slider_set_label_font(eu->phaserbanks_slider, NANO_FONT);
-	eu->phaserbanks_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+	eu->phaserbanks_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_phasers_current, do_phaserbanks_coolant);
 	snis_slider_set_label_font(eu->phaserbanks_coolant_slider, NANO_FONT);
-	eu->comm_slider = snis_slider_init(20, y += yinc, 150, sh, color,
-				"POWER COMMS", "0", "100", 0.0, 255.0,
+	eu->comm_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
+				"PWR COMMS", "0", "100", 0.0, 255.0,
 				sample_power_data_comms_current, do_comms_pwr);
 	snis_slider_set_label_font(eu->comm_slider, NANO_FONT);
-	eu->comm_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+	eu->comm_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_comms_current, do_comms_coolant);
 	snis_slider_set_label_font(eu->comm_coolant_slider, NANO_FONT);
-	eu->sensors_slider = snis_slider_init(20, y += yinc, 150, sh, color,
-				"POWER SENSORS", "0", "100", 0.0, 255.0,
+	eu->sensors_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
+				"PWR SENSORS", "0", "100", 0.0, 255.0,
 				sample_power_data_sensors_current, do_sensors_pwr);
 	snis_slider_set_label_font(eu->sensors_slider, NANO_FONT);
-	eu->sensors_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+	eu->sensors_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_sensors_current, do_sensors_coolant);
 	snis_slider_set_label_font(eu->sensors_coolant_slider, NANO_FONT);
-	eu->impulse_slider = snis_slider_init(20, y += yinc, 150, sh, color,
-				"POWER IMPULSE DR", "0", "100", 0.0, 255.0,
+	eu->impulse_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
+				"PWR IMPULSE DR", "0", "100", 0.0, 255.0,
 				sample_power_data_impulse_current, do_impulse_pwr);
 	snis_slider_set_label_font(eu->impulse_slider, NANO_FONT);
-	eu->impulse_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+	eu->impulse_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_impulse_current, do_impulse_coolant);
 	snis_slider_set_label_font(eu->impulse_coolant_slider, NANO_FONT);
-	eu->warp_slider = snis_slider_init(20, y += yinc, 150, sh, color,
-				"POWER WARP DR", "0", "100", 0.0, 255.0,
+	eu->warp_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
+				"PWR WARP DR", "0", "100", 0.0, 255.0,
 				sample_power_data_warp_current, do_warp_pwr);
 	snis_slider_set_label_font(eu->warp_slider, NANO_FONT);
-	eu->warp_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+	eu->warp_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_warp_current, do_warp_coolant);
 	snis_slider_set_label_font(eu->warp_coolant_slider, NANO_FONT);
-	eu->maneuvering_slider = snis_slider_init(20, y += yinc, 150, sh, color,
-				"POWER MANEUVERING", "0", "100", 0.0, 255.0,
+	eu->maneuvering_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
+				"PWR MANEUVERING", "0", "100", 0.0, 255.0,
 				sample_power_data_maneuvering_current, do_maneuvering_pwr);
 	snis_slider_set_label_font(eu->maneuvering_slider, NANO_FONT);
-	eu->maneuvering_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+	eu->maneuvering_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_maneuvering_current, do_maneuvering_coolant);
 	snis_slider_set_label_font(eu->maneuvering_coolant_slider, NANO_FONT);
-	eu->tractor_slider = snis_slider_init(20, y += yinc, 150, sh, color,
-				"POWER TRACTOR", "0", "100", 0.0, 255.0,
+	eu->tractor_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
+				"PWR TRACTOR", "0", "100", 0.0, 255.0,
 				sample_power_data_tractor_current, do_tractor_pwr);
 	snis_slider_set_label_font(eu->tractor_slider, NANO_FONT);
-	eu->tractor_coolant_slider = snis_slider_init(20, y + coolant_inc, 150, sh,
+	eu->tractor_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_tractor_current, do_tractor_coolant);
 	snis_slider_set_label_font(eu->tractor_coolant_slider, NANO_FONT);
