@@ -7009,7 +7009,7 @@ static double sample_power_model_voltage(void)
 	return 100.0 * o->tsd.ship.power_data.voltage / 255.0;
 }
 
-static double sample_coolant_model_voltage(void)
+static double __attribute__((unused)) sample_coolant_model_voltage(void)
 {
 	struct snis_entity *o;
 
@@ -7039,7 +7039,7 @@ static double sample_power_model_current(void)
 	return 100.0 * total_current / (255.0 * 3.5); 
 }
 
-static double sample_coolant_model_current(void)
+static double __attribute__((unused)) sample_coolant_model_current(void)
 {
 	struct snis_entity *o;
 	int total_current = 0;
