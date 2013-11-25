@@ -1144,7 +1144,7 @@ static void spacemonster_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
-static int in_nebula(double x, double z)
+static int __attribute__((unused)) in_nebula(double x, double z)
 {
 	double dist2;
 	int i, j;
