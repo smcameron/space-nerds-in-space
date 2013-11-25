@@ -12,6 +12,7 @@
 #include "snis_marshal.h"
 #undef DEFINE_SNIS_MARSHAL_GLOBALS
 
+#include "stacktrace.h"
 
 #define MAX_FRACTIONAL 0x7FFFFFFFFFFFFFFFLL /* 2^63 - 1 */
 
@@ -522,7 +523,7 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 			sscale = INT32_MAX / 100; 
 			if (d < -2.0 * M_PI || d > 2.0 * M_PI) {
 				printf("out of range angle %d\n", (int) (d * 180.0 / M_PI));
-				stacktrace();
+				stacktrace("out of range angle in packed_buffer_append_va");
 			}
 			packed_buffer_append_ds32(pb, d, sscale);
 			break;
