@@ -816,7 +816,8 @@ static void torpedo_move(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 }
 
-static double point_to_line_dist(double lx1, double ly1, double lx2, double ly2, double px, double py)
+static double __attribute__((unused)) point_to_line_dist(double lx1, double ly1,
+				double lx2, double ly2, double px, double py)
 {
 	double normal_length = hypot(lx1 - lx2, ly1 - ly2);
 	return fabs((px - lx1) * (ly2 - ly1) - (py - ly1) * (lx2 - lx1)) / normal_length;
