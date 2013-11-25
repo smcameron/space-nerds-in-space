@@ -6980,6 +6980,15 @@ DEFINE_SAMPLER_FUNCTION(sample_weapzoom, tsd.ship.weapzoom, 255.0, 0.0)
 DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 255.0, 0.0)
 DEFINE_SAMPLER_FUNCTION(sample_mainzoom, tsd.ship.mainzoom, 255.0, 0.0)
 
+static double sample_phaser_power(void)
+{
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return 100.0 * (double) o->tsd.ship.power_data.phasers.i / 255.0;
+}
+
 static double sample_power_model_voltage(void)
 {
 	struct snis_entity *o;
@@ -7257,6 +7266,7 @@ static void init_weapons_ui(void)
 	weapons.phaser_bank_gauge = gauge_init(280, 550, 45, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "CHARGE", sample_phasercharge);
+	gauge_add_needle(weapons.phaser_bank_gauge, sample_phaser_power, RED);
 	weapons.phaser_wavelength = gauge_init(520, 550, 45, 10.0, 60.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "WAVE LEN", sample_phaser_wavelength);
