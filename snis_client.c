@@ -3495,6 +3495,7 @@ static struct science_ui {
 #define SCI_DETAILS_MODE_DETAILS 2
 #define SCI_DETAILS_MODE_SCIPLANE 3
 	struct slider *scizoom;
+	struct slider *scipower;
 	struct button *details_button;
 	struct button *threed_button;
 	struct button *sciplane_button;
@@ -6989,6 +6990,15 @@ static double sample_phaser_power(void)
 	return 100.0 * (double) o->tsd.ship.power_data.phasers.i / 255.0;
 }
 
+static double sample_sensors_power(void)
+{
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return 0.0;
+	return 100.0 * (double) o->tsd.ship.power_data.sensors.i / 255.0;
+}
+
 static double sample_power_model_voltage(void)
 {
 	struct snis_entity *o;
@@ -8439,8 +8449,12 @@ static void sci_sciplane_pressed(void *x)
 
 static void init_science_ui(void)
 {
-	sci_ui.scizoom = snis_slider_init(350, 50, 300, 15, DARKGREEN, "Range", "0", "100",
+	sci_ui.scizoom = snis_slider_init(350, 35, 300, 12, DARKGREEN, "RANGE", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom);
+	snis_slider_set_label_font(sci_ui.scizoom, NANO_FONT);
+	sci_ui.scipower = snis_slider_init(350, 50, 300, 12, DARKGREEN, "POWER", "0", "100",
+				0.0, 100.0, sample_sensors_power, NULL);
+	snis_slider_set_label_font(sci_ui.scipower, NANO_FONT);
 	sci_ui.twod_button = snis_button_init(370, 575, 40, 20, "2D",
 			GREEN, NANO_FONT, sci_twod_pressed, (void *) 0);
 	sci_ui.sciplane_button = snis_button_init(410, 575, 40, 20, "3DP",
@@ -8450,6 +8464,7 @@ static void init_science_ui(void)
 	sci_ui.details_button = snis_button_init(490, 575, 75, 20, "DETAILS",
 			GREEN, NANO_FONT, sci_details_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
+	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
 #if 0
 	ui_add_button(sci_ui.twod_button, DISPLAYMODE_SCIENCE);
@@ -8999,7 +9014,7 @@ static void show_science(GtkWidget *w)
 	normalize_angle(&display_heading);
 	display_heading *= 180.0 / M_PI;
 	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf) HEADING: %3.1lf", o->x, o->y, o->z, display_heading);
-	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 200, LINEHEIGHT);
+	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 200, LINEHEIGHT * 0.5);
 #if 0
 	rx = SCIENCE_SCOPE_X;
 	ry = SCIENCE_SCOPE_Y;
@@ -9055,7 +9070,7 @@ static void show_3d_science(GtkWidget *w)
 	normalize_angle(&display_heading);
 	display_heading *= 180.0 / M_PI;
 	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf) HEADING: %3.1lf", o->x, o->y, o->z, display_heading);
-	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 200, LINEHEIGHT);
+	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 200, LINEHEIGHT * 0.5);
 #if 0
 	rx = SCIENCE_SCOPE_X;
 	ry = SCIENCE_SCOPE_Y;
