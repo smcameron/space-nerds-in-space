@@ -1672,16 +1672,16 @@ static void calc_temperature_change(uint8_t current, uint8_t coolant, uint8_t *t
 
 	steady = (float) steady_state_temperature(current, coolant);
 	diff = steady - (float) *temperature;
-	diff = diff / 150.0f;
+	diff = diff / 255.0f;
 
 	if (diff > 0) /* heating up */
 		diff = diff * 255.0f / ((float) coolant + 20.0);
 	else /* cooling down */
 		diff = diff * ((float) coolant) / 255.0f;
 
-	if (diff < 1.0f && diff > 0.0f)
+	if (diff < 1.0f && diff > 0.0f && (universe_timestamp & 0x08) == 0)
 		diff = 1.0f;
-	if (diff > -1.0f && diff < 0.0f)
+	if (diff > -1.0f && diff < 0.0f && (universe_timestamp & 0x08) == 0)
 		diff = -1.0f;
 
 	answer = (float) *temperature + diff;

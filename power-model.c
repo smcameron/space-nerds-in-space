@@ -67,7 +67,7 @@ void power_model_add_device(struct power_model *m, struct power_device *device)
 
 static void update_resistance(float *r, float new_r)
 {
-	*r = *r + ((new_r - *r) / 2.0);
+	*r = *r + ((new_r - *r) / 4.0);
 }
 
 static void power_model_update_resistances(struct power_model *m)
