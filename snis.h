@@ -123,66 +123,30 @@ struct power_model_data {
 #define SHIP_CLASS_CONQUERER 14 
 #define SHIP_CLASS_SCRAMBLER 15 
 
-static char *shipclass[] = {
-	"Cruiser",
-	"Destroyer",
-	"Freighter",
-	"Tanker",
-	"Transport",
-	"Battlestar",
-	"Starship",
-	"Miner",
-	"Science",
-	"Spacefarer",
-	"Dragonhawk",
-	"Skorpio",
-	"Disruptor",
-	"Research",
-	"Conqueror",
-	"Scrambler",
-};
-#define NSHIPTYPES ARRAYSIZE(shipclass)
-
-static double max_speed[] = {
-	10.0,
-	15.0,
-	8.0,
-	7.5,
-	9.0,
-	11.0,
-	8.0,
-	11.5,
-	7.5,
-	9.0,
-	12.0,
-	14.0,
-	10.0,
-	7.0,
-	10.0,
-	14.0,
+struct ship_type_entry {
+	char *class;
+	double max_speed;
+	int crew_max;
+} ship_type[] = {
+	{ "CRUISER", 10.0, 15 },
+	{ "DESTROYER", 15.0, 10 },
+	{ "FREIGHTER", 8.0, 10 },
+	{ "TANKER", 7.5, 10 },
+	{ "TRANSPORT", 9.0, 200 },
+	{ "BATTLESTAR", 11.0, 75 },
+	{ "STARSHIP", 8.0, 10 },
+	{ "MINER", 11.5, 3 },
+	{ "SCIENCE", 7.5, 7 },
+	{ "SPACEFARER", 9.0, 5 },
+	{ "DRAGONHAWK", 12.0, 5 },
+	{ "SKORPIO", 14.0, 9 },
+	{ "DISRUPTOR", 10.0, 21 },
+	{ "RESEARCH", 7.0, 7 },
+	{ "CONQUEROR", 10.0, 17 },
+	{ "SCRAMBLER", 14.0, 30 },
 };
 
-/* TODO: combine max_speed[], ship_crew_max[], and ship_class[]
- * into a struct.
- */ 
-static uint8_t ship_crew_max[] = {
-	15,	
-	10,
-	10,
-	10,
-	200,
-	75,
-	10,
-	3,
-	7,
-	5,
-	5,
-	9,
-	21,
-	7,
-	17,
-	30,
-};
+#define NSHIPTYPES ARRAYSIZE(ship_type)
 
 struct ship_damage_data {
 	uint8_t shield_damage;

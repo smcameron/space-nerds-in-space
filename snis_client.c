@@ -120,8 +120,6 @@
 static int vertical_controls_inverted = VERTICAL_CONTROLS_NORMAL;
 static volatile int vertical_controls_timer = 0;
 
-__attribute__((unused)) static double max_speed[];
-
 typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nsparks, int time);
 
 explosion_function *explosion = NULL;
@@ -1162,7 +1160,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 	return 0;
 }
 
-static int update_derelict(uint32_t id, double x, double y, double z, uint8_t ship_type)
+static int update_derelict(uint32_t id, double x, double y, double z, uint8_t ship_kind)
 {
 	int i, m;
 	struct entity *e;
@@ -1170,7 +1168,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		m = ship_type % NSHIPTYPES;
+		m = ship_kind % NSHIPTYPES;
 		e = add_entity(ecx, derelict_mesh[m], x, y, z, SHIP_COLOR);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 				&identity_quat, OBJTYPE_DERELICT, 1, e);
@@ -5035,7 +5033,8 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_SHIP1:
 			sng_set_foreground(LIMEGREEN);
-			sprintf(buffer, "%s %s\n", o->sdata.name, shipclass[o->sdata.subclass]); 
+			sprintf(buffer, "%s %s\n", o->sdata.name,
+					ship_type[o->sdata.subclass].class); 
 			break;
 		case OBJTYPE_STARBASE:
 			sng_set_foreground(WHITE);
@@ -5155,7 +5154,8 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_SHIP1:
 			sng_set_foreground(LIMEGREEN);
-			sprintf(buffer, "%s %s\n", o->sdata.name, shipclass[o->sdata.subclass]); 
+			sprintf(buffer, "%s %s\n", o->sdata.name,
+				ship_type[o->sdata.subclass].class); 
 			break;
 		case OBJTYPE_STARBASE:
 			sng_set_foreground(WHITE);
@@ -8833,7 +8833,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	if (o) {
 		switch (o->type) {
 		case OBJTYPE_SHIP2:
-			sprintf(buffer, "TYPE: %s", shipclass[o->sdata.subclass]); 
+			sprintf(buffer, "TYPE: %s", ship_type[o->sdata.subclass].class); 
 			break;
 		case OBJTYPE_STARBASE:
 			sprintf(buffer, "TYPE: %s", "STARBASE"); 

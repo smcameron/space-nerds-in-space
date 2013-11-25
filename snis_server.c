@@ -1216,7 +1216,7 @@ static void ship_move(struct snis_entity *o)
 		break;
 	}
 
-	maxv = max_speed[o->tsd.ship.shiptype];
+	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
 	v = lookup_entity_by_id(o->tsd.ship.victim_id);
 	if (v) {
 		destx = v->x + o->tsd.ship.dox;
@@ -2656,9 +2656,9 @@ static int add_ship(void)
 	go[i].tsd.ship.desired_velocity = 0;
 	go[i].tsd.ship.desired_heading = 0;
 	go[i].tsd.ship.velocity = 0;
-	go[i].tsd.ship.shiptype = snis_randn(ARRAY_SIZE(shipclass));
+	go[i].tsd.ship.shiptype = snis_randn(ARRAY_SIZE(ship_type));
 	go[i].tsd.ship.victim_id = (uint32_t) -1;
-	go[i].tsd.ship.lifeform_count = ship_crew_max[go[i].tsd.ship.shiptype];
+	go[i].tsd.ship.lifeform_count = ship_type[go[i].tsd.ship.shiptype].crew_max;
 	memset(&go[i].tsd.ship.damage, 0, sizeof(go[i].tsd.ship.damage));
 	memset(&go[i].tsd.ship.power_data, 0, sizeof(go[i].tsd.ship.power_data));
 	return i;
@@ -2673,7 +2673,7 @@ static int add_specific_ship(const char *name, double x, double y, double z,
 	if (i < 0)
 		return i;
 	set_object_location(&go[i], x, y, z);
-	go[i].tsd.ship.shiptype = shiptype % ARRAY_SIZE(shipclass);
+	go[i].tsd.ship.shiptype = shiptype % ARRAY_SIZE(ship_type);
 	go[i].sdata.faction = the_faction % ARRAY_SIZE(faction);
 	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
 	return i;
@@ -2693,14 +2693,14 @@ static int l_add_ship(lua_State *l)
 	shiptype = lua_tonumber(lua_state, 5);
 	the_faction = lua_tonumber(lua_state, 6);
 
-	if (shiptype < 0 || shiptype > ARRAY_SIZE(shipclass) - 1) {
+	if (shiptype < 0 || shiptype > ARRAY_SIZE(ship_type) - 1) {
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
 
 	pthread_mutex_lock(&universe_mutex);
 	i = add_specific_ship(name, x, y, z,
-		(uint8_t) shiptype % ARRAY_SIZE(shipclass),
+		(uint8_t) shiptype % ARRAY_SIZE(ship_type),
 		(uint8_t) the_faction % ARRAY_SIZE(faction));
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
@@ -3243,13 +3243,13 @@ static int add_derelict(const char *name, double x, double y, double z,
 	if (shiptype != -1 && shiptype <= 255)
 		go[i].tsd.derelict.shiptype = (uint8_t) shiptype;
 	else
-		go[i].tsd.derelict.shiptype = snis_randn(ARRAY_SIZE(shipclass));
+		go[i].tsd.derelict.shiptype = snis_randn(ARRAY_SIZE(ship_type));
 	if (the_faction >= 0)
 		go[i].sdata.faction = (uint8_t) (the_faction % ARRAY_SIZE(faction));
 	else
 		go[i].sdata.faction = (uint8_t) snis_randn(ARRAY_SIZE(faction));
-	go[i].vx = (float) snis_randn(100) / 400.0 * max_speed[0];
-	go[i].vz = (float) snis_randn(100) / 400.0 * max_speed[0];
+	go[i].vx = (float) snis_randn(100) / 400.0 * ship_type[0].max_speed;
+	go[i].vz = (float) snis_randn(100) / 400.0 * ship_type[0].max_speed;
 	return i;
 }
 
