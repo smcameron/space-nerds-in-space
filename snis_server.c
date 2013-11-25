@@ -1057,7 +1057,7 @@ static int add_torpedo(double x, double y, double z,
 static int add_laser(double x, double y, double z,
 		double vx, double vy, double vz, union quat *orientation,
 		double heading, uint32_t ship_id);
-static uint8_t update_phaser_banks(int current, int max);
+static uint8_t update_phaser_banks(int current, int rate, int max);
 
 static void ship_choose_new_attack_victim(struct snis_entity *o)
 {
@@ -1334,7 +1334,7 @@ static void ship_move(struct snis_entity *o)
 		}
 
 	}
-	o->tsd.ship.phaser_charge = update_phaser_banks(o->tsd.ship.phaser_charge, 255);
+	o->tsd.ship.phaser_charge = update_phaser_banks(o->tsd.ship.phaser_charge, 200, 255);
 	if (o->sdata.shield_strength > (255 - o->tsd.ship.damage.shield_damage))
 		o->sdata.shield_strength = 255 - o->tsd.ship.damage.shield_damage;
 }
@@ -1381,13 +1381,13 @@ static double powertempy[] = {
 		1.0,
 };
 
-static uint8_t update_phaser_banks(int current, int max)
+static uint8_t update_phaser_banks(int current, int power, int max)
 {
 	double delta;
 	if (current == max)
 		return (uint8_t) current;
 
-	delta = (max - current) / 10.0;
+	delta = ((max - current) / 10.0) * (float) power / 80.0f;
 	if (delta < 0 && delta > -1.0)
 		delta = -1.0;
 	if (delta > 0 && delta < 1.0)
@@ -2061,7 +2061,7 @@ static void update_player_position_and_velocity(struct snis_entity *o)
 static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
-	int max_phaserbank, current_phaserbank;
+	int phaser_chargerate, current_phaserbank;
 
 	if (o->tsd.ship.damage.shield_damage > 200 && (universe_timestamp % (10 * 5)) == 0)
 		snis_queue_add_sound(HULL_BREACH_IMMINENT, ROLE_SOUNDSERVER, o->id);
@@ -2178,8 +2178,8 @@ static void player_move(struct snis_entity *o)
 	/* Update phaser charge */
 	/* TODO: change this so phaser power affects charge rate, damage affects max. */
 	current_phaserbank = o->tsd.ship.phaser_charge;
-	max_phaserbank = o->tsd.ship.power_data.phasers.i;
-	o->tsd.ship.phaser_charge = update_phaser_banks(current_phaserbank, max_phaserbank);
+	phaser_chargerate = o->tsd.ship.power_data.phasers.i;
+	o->tsd.ship.phaser_charge = update_phaser_banks(current_phaserbank, phaser_chargerate, 255);
 
 	/* Warp the ship if it's time to engage warp. */
 	if (o->tsd.ship.warp_time >= 0) {
