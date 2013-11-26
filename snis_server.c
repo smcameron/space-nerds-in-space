@@ -1982,6 +1982,20 @@ static float new_velocity(float desired_velocity, float current_velocity)
 	return current_velocity + (delta / 20.0);
 }
 
+static void enforce_minimum_attack_speed(double *vx, double *vy, double *vz)
+{
+	double v = dist3d(*vx, *vy, *vz);
+
+	if (v < MINIMUM_ATTACK_SPEED) {
+		union vec3 veln, vel = { { *vx, *vy, *vz } };
+		vec3_normalize(&veln, &vel);
+		vec3_mul(&vel, &veln, MINIMUM_ATTACK_SPEED);
+		*vx = vel.v.x;
+		*vy = vel.v.y;
+		*vy = vel.v.y;
+	}
+}
+
 static void update_ship_position_and_velocity(struct snis_entity *o)
 {
 	union vec3 desired_velocity;
@@ -2010,6 +2024,8 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	o->vx = new_velocity(desired_velocity.v.x, o->vx);
 	o->vy = new_velocity(desired_velocity.v.y, o->vy);
 	o->vz = new_velocity(desired_velocity.v.z, o->vz);
+
+	enforce_minimum_attack_speed(&o->vx, &o->vy, &o->vz);
 
 	/* Move ship */
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
