@@ -1196,7 +1196,6 @@ static void update_ship_position_and_velocity(struct snis_entity *o);
 static int add_laserbeam(uint32_t origin, uint32_t target, int alive);
 static void ship_move(struct snis_entity *o)
 {
-	double heading_diff, yaw_vel;
 	struct snis_entity *v;
 	double destx, desty, destz, dx, dy, dz, d;
 	int close_enough = 0;
@@ -1210,7 +1209,7 @@ static void ship_move(struct snis_entity *o)
 	default:
 		if (o->tsd.ship.victim_id == (uint32_t) -1 ||
 			snis_randn(1000) < 50) {
-			int r = snis_randn(LASER_RANGE - 400) + 400;
+			int r = snis_randn(1000 - 400) + 400;
 			o->tsd.ship.victim_id = find_nearest_victim(o);
 			random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
 		}
@@ -1229,7 +1228,6 @@ static void ship_move(struct snis_entity *o)
 		d = dist3d(dx, dy, dz);
 
 		/* FIXME: slerp this or something */
-		o->tsd.ship.desired_heading = atan2(-dz, dx);
 		o->tsd.ship.desired_velocity = (d / maxv) * maxv + snis_randn(5);
 		if (o->tsd.ship.desired_velocity > maxv)
 			o->tsd.ship.desired_velocity = maxv;
@@ -1238,7 +1236,6 @@ static void ship_move(struct snis_entity *o)
 			dx = v->x - o->x;
 			dy = v->y - o->y;
 			dz = v->z - o->z;
-			o->tsd.ship.desired_heading = atan2(-dz, dx);
 			close_enough = 1;
 		}
 		if (snis_randn(10000) < 20) {
@@ -1247,34 +1244,6 @@ static void ship_move(struct snis_entity *o)
 				&o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
 		}
 	}
-#if 0
-	/* Decide where to go... */
-	if (snis_randn(100) < 5) {
-		dx = v
-		o->tsd.ship.desired_heading = degrees_to_radians(0.0 + snis_randn(360)); 
-		o->tsd.ship.desired_velocity = snis_randn(20);
-	}
-#endif
-
-	/* Adjust heading towards desired heading (FIXME: slerp or something) */
-	heading_diff = o->tsd.ship.desired_heading - o->heading;
-	if (heading_diff < -M_PI)
-		heading_diff += 2.0 * M_PI;
-	if (heading_diff > M_PI)
-		heading_diff -= 2.0 * M_PI;
-	if (heading_diff > MAX_YAW_VELOCITY * 0.5) {
-		yaw_vel = MAX_YAW_VELOCITY * 0.5 ;
-	} else {
-		if (heading_diff < -MAX_YAW_VELOCITY * 0.5) {
-			yaw_vel = -MAX_YAW_VELOCITY * 0.5;
-		} else {
-			yaw_vel = heading_diff * 0.2;
-		}
-	}
-	if (fabs(heading_diff) < (M_PI / 180.0))
-		yaw_vel = heading_diff;
-	o->heading += yaw_vel;
-	normalize_angle(&o->heading);
 
 	/* Adjust velocity towards desired velocity */
 	o->tsd.ship.velocity = o->tsd.ship.velocity +
@@ -1285,7 +1254,6 @@ static void ship_move(struct snis_entity *o)
 	update_ship_position_and_velocity(o);
 	update_ship_orientation(o);
 	o->timestamp = universe_timestamp;
-
 
 	if (close_enough && o->tsd.ship.victim_id != (uint32_t) -1) {
 		double range;
