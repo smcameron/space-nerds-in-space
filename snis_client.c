@@ -280,6 +280,7 @@ struct mesh *ship_icon_mesh;
 struct mesh *heading_indicator_mesh;
 struct mesh *conqueror_mesh;
 struct mesh *scrambler_mesh;
+struct mesh *swordfish_mesh;
 
 struct mesh *ship_mesh_map[NSHIPTYPES];
 struct mesh *derelict_mesh[NSHIPTYPES];
@@ -4751,7 +4752,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 
-	union vec3 cam_pos = {{-3.5,2.7,0}};
+	union vec3 cam_pos = { {0, 4.7, 0} };
 	quat_rot_vec_self(&cam_pos,&o->orientation);
 	vec3_add_c_self(&cam_pos, cx, cy, cz);
 
@@ -4773,7 +4774,8 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 
 	/* Add our ship into the scene (on the mainscreen, it is omitted) */
-	o->entity = add_entity(ecx, ship_mesh, o->x, o->y, o->z, SHIP_COLOR);
+	o->entity = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
+				o->x, o->y, o->z, SHIP_COLOR);
 	update_entity_orientation(o->entity, &o->orientation);
 	set_render_style(o->entity, RENDER_DISABLE_CLIP);
 
@@ -6171,7 +6173,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	}
 
 	/* add my ship */
-	e = add_entity(navecx, ship_mesh, o->x, o->y, o->z, SHIP_COLOR);
+	e = add_entity(navecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, SHIP_COLOR);
 	set_render_style(e, science_style);
 	update_entity_scale(e, range/250.0);
 	update_entity_orientation(e, &o->orientation);
@@ -7623,7 +7625,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	pthread_mutex_lock(&universe_mutex);
 
 	/* add my ship */
-	e = add_entity(navecx, ship_mesh, o->x, o->y, o->z, SHIP_COLOR);
+	e = add_entity(navecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, SHIP_COLOR);
 	set_render_style(e, science_style);
 	update_entity_scale(e, ship_scale);
 	update_entity_orientation(e, &o->orientation);
@@ -11409,6 +11411,7 @@ static void init_meshes(void)
 	freighter_mesh = snis_read_stl_file(d, "freighter.stl");
 	conqueror_mesh = snis_read_stl_file(d, "conqueror.stl");
 	scrambler_mesh = snis_read_stl_file(d, "scrambler.stl");
+	swordfish_mesh = snis_read_stl_file(d, "swordfish.stl");
 	cruiser_mesh = snis_read_stl_file(d, "cruiser.stl");
 	tanker_mesh = snis_read_stl_file(d, "tanker.stl");
 	destroyer_mesh = snis_read_stl_file(d, "destroyer.stl");
@@ -11448,6 +11451,7 @@ static void init_meshes(void)
 	ship_mesh_map[13] = research_vessel_mesh;
 	ship_mesh_map[14] = conqueror_mesh;
 	ship_mesh_map[15] = scrambler_mesh;
+	ship_mesh_map[16] = swordfish_mesh;
 
 	for (i = 0; i < NSHIPTYPES; i++)
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);

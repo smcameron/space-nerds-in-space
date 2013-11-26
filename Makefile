@@ -140,6 +140,7 @@ MODELS=${MD}/freighter.stl \
 	${MD}/axis.stl \
 	${MD}/conqueror.stl \
 	${MD}/scrambler.stl \
+	${MD}/swordfish.stl \
 	${MD}/spaceship_turret.stl
 	
 
