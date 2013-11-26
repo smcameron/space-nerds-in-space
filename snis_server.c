@@ -1197,8 +1197,8 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive);
 static void ship_move(struct snis_entity *o)
 {
 	struct snis_entity *v;
-	double destx, desty, destz, dx, dy, dz, d;
-	int close_enough = 0;
+	double destx, desty, destz, dx, dy, dz, vdist;
+	int firing_range = 0;
 	double maxv;
 
 	switch (o->tsd.ship.cmd_data.command) {
@@ -1207,9 +1207,8 @@ static void ship_move(struct snis_entity *o)
 			ship_choose_new_attack_victim(o);
 		break;
 	default:
-		if (o->tsd.ship.victim_id == (uint32_t) -1 ||
-			snis_randn(1000) < 50) {
-			int r = snis_randn(1000 - 400) + 400;
+		if (o->tsd.ship.victim_id == (uint32_t) -1) {
+			int r = snis_randn(400) + 200;
 			o->tsd.ship.victim_id = find_nearest_victim(o);
 			random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
 		}
@@ -1218,6 +1217,7 @@ static void ship_move(struct snis_entity *o)
 
 	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
 	v = lookup_entity_by_id(o->tsd.ship.victim_id);
+	firing_range = 0;
 	if (v) {
 		destx = v->x + o->tsd.ship.dox;
 		desty = v->y + o->tsd.ship.doy;
@@ -1225,24 +1225,39 @@ static void ship_move(struct snis_entity *o)
 		dx = destx - o->x;
 		dy = desty - o->y;
 		dz = destz - o->z;
-		d = dist3d(dx, dy, dz);
+		vdist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
+		firing_range = (vdist <= LASER_RANGE);
+		o->tsd.ship.desired_velocity = maxv;
 
-		/* FIXME: slerp this or something */
-		o->tsd.ship.desired_velocity = (d / maxv) * maxv + snis_randn(5);
-		if (o->tsd.ship.desired_velocity > maxv)
-			o->tsd.ship.desired_velocity = maxv;
-		if (fabs(dx) < 1000 && fabs(dy) < 1000 && fabs(dz) < 1000) {
-			o->tsd.ship.desired_velocity = 0;
-			dx = v->x - o->x;
-			dy = v->y - o->y;
-			dz = v->z - o->z;
-			close_enough = 1;
+		/* Close enough to destination? */
+		if (fabs(dx) < 400 && fabs(dy) < 400 && fabs(dz) < 400) {
+			union vec3 vel, veln;
+
+			/* pretty close to enemy? */
+			if (vdist < 1000) {
+				/* continue zipping past target */
+				vel.v.x = (float) o->vx;
+				vel.v.y = (float) o->vy;
+				vel.v.z = (float) o->vz;
+				vec3_normalize(&veln, &vel);
+				vec3_mul_self(&veln, 800.0f + snis_randn(600));
+				o->tsd.ship.dox = veln.v.x;
+				o->tsd.ship.doy = veln.v.y;
+				o->tsd.ship.doz = veln.v.z;
+			} else {
+				/* head back toward target */
+				int r = snis_randn(400) + 200;
+				random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
+			}
+			
 		}
+#if 0
 		if (snis_randn(10000) < 20) {
 			int dist = snis_randn(LASER_RANGE - 400) + 400;
 			random_dpoint_on_sphere((float) dist, 
 				&o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
 		}
+#endif
 	}
 
 	/* Adjust velocity towards desired velocity */
@@ -1255,7 +1270,7 @@ static void ship_move(struct snis_entity *o)
 	update_ship_orientation(o);
 	o->timestamp = universe_timestamp;
 
-	if (close_enough && o->tsd.ship.victim_id != (uint32_t) -1) {
+	if (firing_range && o->tsd.ship.victim_id != (uint32_t) -1) {
 		double range;
 		v = lookup_entity_by_id(o->tsd.ship.victim_id);
 
