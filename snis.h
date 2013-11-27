@@ -87,6 +87,7 @@ char *faction[] = {
  * MAX_CURRENT between 5 and 10, MAX_VOLTAGE at 1000000.0.
  */	
 #define MAX_CURRENT 6.5
+#define MAX_COOLANT 10 
 #define MAX_VOLTAGE 1000000.0
 #define INTERNAL_RESIST 0.000001
 

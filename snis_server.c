@@ -2491,7 +2491,7 @@ static void init_coolant_model(struct snis_entity *o)
 */
 	memset(&o->tsd.ship.coolant_data, 0, sizeof(o->tsd.ship.coolant_data));
 
-	pm = new_power_model(MAX_CURRENT, MAX_VOLTAGE, INTERNAL_RESIST);
+	pm = new_power_model(MAX_COOLANT, MAX_VOLTAGE, INTERNAL_RESIST);
 	pd = &o->tsd.ship.coolant_data;
 	o->tsd.ship.coolant_model = pm; 
 
