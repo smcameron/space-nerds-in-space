@@ -281,6 +281,7 @@ struct mesh *heading_indicator_mesh;
 struct mesh *conqueror_mesh;
 struct mesh *scrambler_mesh;
 struct mesh *swordfish_mesh;
+struct mesh *wombat_mesh;
 
 struct mesh *ship_mesh_map[NSHIPTYPES];
 struct mesh *derelict_mesh[NSHIPTYPES];
@@ -4752,7 +4753,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 
-	union vec3 cam_pos = { {0, 4.7, 0} };
+	union vec3 cam_pos = { {0, 5.2, 0} };
 	quat_rot_vec_self(&cam_pos,&o->orientation);
 	vec3_add_c_self(&cam_pos, cx, cy, cz);
 
@@ -11412,6 +11413,7 @@ static void init_meshes(void)
 	conqueror_mesh = snis_read_stl_file(d, "conqueror.stl");
 	scrambler_mesh = snis_read_stl_file(d, "scrambler.stl");
 	swordfish_mesh = snis_read_stl_file(d, "swordfish.stl");
+	wombat_mesh = snis_read_stl_file(d, "wombat.stl");
 	cruiser_mesh = snis_read_stl_file(d, "cruiser.stl");
 	tanker_mesh = snis_read_stl_file(d, "tanker.stl");
 	destroyer_mesh = snis_read_stl_file(d, "destroyer.stl");
@@ -11452,6 +11454,7 @@ static void init_meshes(void)
 	ship_mesh_map[14] = conqueror_mesh;
 	ship_mesh_map[15] = scrambler_mesh;
 	ship_mesh_map[16] = swordfish_mesh;
+	ship_mesh_map[17] = wombat_mesh;
 
 	for (i = 0; i < NSHIPTYPES; i++)
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);

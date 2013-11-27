@@ -141,6 +141,7 @@ MODELS=${MD}/freighter.stl \
 	${MD}/conqueror.stl \
 	${MD}/scrambler.stl \
 	${MD}/swordfish.stl \
+	${MD}/wombat.stl \
 	${MD}/spaceship_turret.stl
 	
 

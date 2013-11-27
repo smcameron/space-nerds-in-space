@@ -123,6 +123,7 @@ struct power_model_data {
 #define SHIP_CLASS_CONQUERER 14 
 #define SHIP_CLASS_SCRAMBLER 15 
 #define SHIP_CLASS_SWORDFISH 16
+#define SHIP_CLASS_WOMBAT 17
 
 struct ship_type_entry {
 	char *class;
@@ -146,6 +147,7 @@ struct ship_type_entry {
 	{ "CONQUEROR", 10.0, 17 },
 	{ "SCRAMBLER", 14.0, 30 },
 	{ "SWORDFISH", 14.0, 30 },
+	{ "WOMBAT", 14.0, 30 },
 };
 
 #define NSHIPTYPES ARRAYSIZE(ship_type)

@@ -2601,7 +2601,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.scibeam_a2 = 0;
 	o->tsd.ship.sci_heading = M_PI / 2.0;
 	o->tsd.ship.reverse = 0;
-	o->tsd.ship.shiptype = SHIP_CLASS_SWORDFISH; 
+	o->tsd.ship.shiptype = SHIP_CLASS_WOMBAT; 
 	o->tsd.ship.overheating_damage_done = 0;
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
