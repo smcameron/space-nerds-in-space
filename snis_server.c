@@ -628,7 +628,7 @@ static int roll_damage(double weapons_factor, double shield_strength, uint8_t sy
 static void calculate_torpedo_damage(struct snis_entity *o)
 {
 	double ss;
-	const double twp = TORPEDO_WEAPONS_FACTOR;
+	const double twp = TORPEDO_WEAPONS_FACTOR * (o->type == OBJTYPE_SHIP1 ? 0.333 : 1.0);
 
 	ss = shield_strength(snis_randn(255), o->sdata.shield_strength,
 				o->sdata.shield_width,
