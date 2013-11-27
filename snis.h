@@ -186,6 +186,7 @@ struct ship_data {
 #define LASER_VELOCITY (200.0)
 #define LASER_RANGE (LASER_VELOCITY * LASER_LIFETIME)
 #define LASER_DETONATE_DIST2 (100 * 100)
+#define LASERBEAM_DURATION 5 
 #define MINIMUM_ATTACK_SPEED 3.0
 
 /* Max damage dealt per "hit"

@@ -1307,7 +1307,7 @@ static void ship_move(struct snis_entity *o)
 					o->tsd.ship.next_laser_time <= universe_timestamp) {
 					o->tsd.ship.next_laser_time = universe_timestamp +
 						ENEMY_LASER_FIRE_INTERVAL;
-					add_laserbeam(o->id, v->id, 30);
+					add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
 					check_for_incoming_fire(v);
 				}
 			}
@@ -1318,7 +1318,7 @@ static void ship_move(struct snis_entity *o)
 		}
 
 	}
-	o->tsd.ship.phaser_charge = update_phaser_banks(o->tsd.ship.phaser_charge, 200, 255);
+	o->tsd.ship.phaser_charge = update_phaser_banks(o->tsd.ship.phaser_charge, 200, 100);
 	if (o->sdata.shield_strength > (255 - o->tsd.ship.damage.shield_damage))
 		o->sdata.shield_strength = 255 - o->tsd.ship.damage.shield_damage;
 }
@@ -5374,7 +5374,7 @@ static int process_request_laser(struct game_client *c)
 		goto laserfail;
 
 	tid = ship->tsd.ship.victim_id;
-	add_laserbeam(ship->id, tid, 30);
+	add_laserbeam(ship->id, tid, LASERBEAM_DURATION);
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
