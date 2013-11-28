@@ -58,7 +58,8 @@ PNGLIBS=`pkg-config --libs libpng`
 PNGCFLAGS=`pkg-config --cflags libpng`
 
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
-		bline.o shield_strength.o stacktrace.o snis_ship_type.o
+		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
+		snis_faction.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o \
 		power-model.o quat.o matrix.o snis_event_callback.o space-part.o
 
@@ -196,6 +197,8 @@ stacktrace.o:   stacktrace.c stacktrace.h Makefile
 snis_ship_type.o:   snis_ship_type.c snis_ship_type.h Makefile
 	$(Q)$(COMPILE)
 
+snis_faction.o:   snis_faction.c snis_faction.h Makefile
+	$(Q)$(COMPILE)
 
 liang-barsky.o:   liang-barsky.c liang-barsky.h Makefile
 	$(Q)$(COMPILE)

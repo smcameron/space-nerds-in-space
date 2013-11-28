@@ -75,14 +75,6 @@
 #define OBJTYPE_DERELICT 15
 #define OBJTYPE_TRACTORBEAM 16
 
-char *faction[] = {
-	"Neutral",
-	"Wallunni",
-	"Gordouni",
-	"Zarkon",
-	"Vekkazi",
-};
-
 /* Careful, CURRENT / VOLTAGE ratio is twitchy, keep it in the sweet spot
  * MAX_CURRENT between 5 and 10, MAX_VOLTAGE at 1000000.0.
  */	

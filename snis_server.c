@@ -49,6 +49,7 @@
 
 #include "ssgl/ssgl.h"
 #include "snis_ship_type.h"
+#include "snis_faction.h"
 #include "space-part.h"
 #include "quat.h"
 #include "snis.h"
@@ -2328,7 +2329,7 @@ static int add_generic_object(double x, double y, double z,
 	go[i].sdata.shield_wavelength = snis_randn(256);
 	go[i].sdata.shield_width = snis_randn(128);
 	go[i].sdata.shield_depth = snis_randn(255);
-	go[i].sdata.faction = snis_randn(ARRAY_SIZE(faction));
+	go[i].sdata.faction = snis_randn(nfactions);
 	quat_init_axis(&go[i].orientation, 0, 1, 0, heading);
 	return i;
 }
@@ -2678,7 +2679,7 @@ static int add_specific_ship(const char *name, double x, double y, double z,
 		return i;
 	set_object_location(&go[i], x, y, z);
 	go[i].tsd.ship.shiptype = shiptype % nshiptypes;
-	go[i].sdata.faction = the_faction % ARRAY_SIZE(faction);
+	go[i].sdata.faction = the_faction % nfactions;
 	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
 	return i;
 }
@@ -2705,7 +2706,7 @@ static int l_add_ship(lua_State *l)
 	pthread_mutex_lock(&universe_mutex);
 	i = add_specific_ship(name, x, y, z,
 		(uint8_t) shiptype % nshiptypes,
-		(uint8_t) the_faction % ARRAY_SIZE(faction));
+		(uint8_t) the_faction % nfactions);
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -3249,9 +3250,9 @@ static int add_derelict(const char *name, double x, double y, double z,
 	else
 		go[i].tsd.derelict.shiptype = snis_randn(nshiptypes);
 	if (the_faction >= 0)
-		go[i].sdata.faction = (uint8_t) (the_faction % ARRAY_SIZE(faction));
+		go[i].sdata.faction = (uint8_t) (the_faction % nfactions);
 	else
-		go[i].sdata.faction = (uint8_t) snis_randn(ARRAY_SIZE(faction));
+		go[i].sdata.faction = (uint8_t) snis_randn(nfactions);
 	go[i].vx = (float) snis_randn(100) / 400.0 * ship_type[0].max_speed;
 	go[i].vz = (float) snis_randn(100) / 400.0 * ship_type[0].max_speed;
 	return i;
@@ -6972,6 +6973,22 @@ static int read_ship_types()
 	return 0;
 }
 
+static int read_factions(void)
+{
+	char path[PATH_MAX];
+	const char *asset_dir = "share/snis"; /* FIXME, do this right. */
+
+	sprintf(path, "%s/%s", asset_dir, "factions.txt");
+
+	if (snis_read_factions(path)) {
+		fprintf(stderr, "Unable to read factions from %s", path);
+		if (errno)
+			fprintf(stderr, "%s: %s\n", path, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	int port, rc, i;
@@ -6989,6 +7006,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s: unable to read ship types\n", argv[0]);
 		return -1;
 	}
+
+	if (read_factions())
+		return -1;
 
 	open_log_file();
 

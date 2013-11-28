@@ -59,6 +59,7 @@
 
 #include "build_bug_on.h"
 #include "snis_ship_type.h"
+#include "snis_faction.h"
 #include "space-part.h"
 #include "quat.h"
 #include "snis.h"
@@ -8856,7 +8857,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		y += 25;
 		the_faction = o ? 
 			o->sdata.faction >= 0 &&
-			o->sdata.faction < ARRAY_SIZE(faction) ?
+			o->sdata.faction < nfactions ?
 				faction[o->sdata.faction] : "UNKNOWN" : "UNKNOWN";
 		sprintf(buffer, "ORIG: %s", the_faction);
 		sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
@@ -11239,6 +11240,21 @@ static int read_ship_types(void)
 	return 0;
 }
 
+static int read_factions(void)
+{
+	char path[PATH_MAX];
+
+	sprintf(path, "%s/%s", asset_dir, "factions.txt");
+
+	if (snis_read_factions(path)) {
+		fprintf(stderr, "Unable to read factions from %s", path);
+		if (errno)
+			fprintf(stderr, "%s: %s\n", path, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 static void read_sound_clips(void)
 {
 	char *d = asset_dir;
@@ -11603,6 +11619,10 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "%s: unable to read ship types\n", argv[0]);
                 return -1;
         }
+
+	if (read_factions())
+		return -1;
+
 	ship_mesh_map = malloc(sizeof(*ship_mesh_map) * nshiptypes);
 	derelict_mesh = malloc(sizeof(*derelict_mesh) * nshiptypes);
 	if (!ship_mesh_map || !derelict_mesh) {
