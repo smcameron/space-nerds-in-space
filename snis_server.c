@@ -48,6 +48,7 @@
 #include <lauxlib.h>
 
 #include "ssgl/ssgl.h"
+#include "snis_ship_type.h"
 #include "space-part.h"
 #include "quat.h"
 #include "snis.h"
@@ -110,6 +111,8 @@ int listener_port = -1;
 pthread_t lobbythread;
 char *lobbyserver = NULL;
 static int snis_log_level = 2;
+static struct ship_type_entry *ship_type;
+int nshiptypes;
 
 static int nebulalist[NNEBULA] = { 0 };
 
@@ -1227,6 +1230,7 @@ static void ship_move(struct snis_entity *o)
 		dz = destz - o->z;
 		vdist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
 		firing_range = (vdist <= LASER_RANGE);
+		firing_range = 0;
 		o->tsd.ship.desired_velocity = maxv;
 
 		/* Close enough to destination? */
@@ -2656,7 +2660,7 @@ static int add_ship(void)
 	go[i].tsd.ship.desired_velocity = 0;
 	go[i].tsd.ship.desired_heading = 0;
 	go[i].tsd.ship.velocity = 0;
-	go[i].tsd.ship.shiptype = snis_randn(ARRAY_SIZE(ship_type));
+	go[i].tsd.ship.shiptype = snis_randn(nshiptypes);
 	go[i].tsd.ship.victim_id = (uint32_t) -1;
 	go[i].tsd.ship.lifeform_count = ship_type[go[i].tsd.ship.shiptype].crew_max;
 	memset(&go[i].tsd.ship.damage, 0, sizeof(go[i].tsd.ship.damage));
@@ -2673,7 +2677,7 @@ static int add_specific_ship(const char *name, double x, double y, double z,
 	if (i < 0)
 		return i;
 	set_object_location(&go[i], x, y, z);
-	go[i].tsd.ship.shiptype = shiptype % ARRAY_SIZE(ship_type);
+	go[i].tsd.ship.shiptype = shiptype % nshiptypes;
 	go[i].sdata.faction = the_faction % ARRAY_SIZE(faction);
 	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
 	return i;
@@ -2693,14 +2697,14 @@ static int l_add_ship(lua_State *l)
 	shiptype = lua_tonumber(lua_state, 5);
 	the_faction = lua_tonumber(lua_state, 6);
 
-	if (shiptype < 0 || shiptype > ARRAY_SIZE(ship_type) - 1) {
+	if (shiptype < 0 || shiptype > nshiptypes - 1) {
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
 
 	pthread_mutex_lock(&universe_mutex);
 	i = add_specific_ship(name, x, y, z,
-		(uint8_t) shiptype % ARRAY_SIZE(ship_type),
+		(uint8_t) shiptype % nshiptypes,
 		(uint8_t) the_faction % ARRAY_SIZE(faction));
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
@@ -3243,7 +3247,7 @@ static int add_derelict(const char *name, double x, double y, double z,
 	if (shiptype != -1 && shiptype <= 255)
 		go[i].tsd.derelict.shiptype = (uint8_t) shiptype;
 	else
-		go[i].tsd.derelict.shiptype = snis_randn(ARRAY_SIZE(ship_type));
+		go[i].tsd.derelict.shiptype = snis_randn(nshiptypes);
 	if (the_faction >= 0)
 		go[i].sdata.faction = (uint8_t) (the_faction % ARRAY_SIZE(faction));
 	else
@@ -6951,6 +6955,23 @@ static void lua_teardown(void)
 	lua_state = NULL;
 }
 
+static int read_ship_types()
+{
+	char path[PATH_MAX];
+	const char *asset_dir = "share/snis"; /* FIXME, do this right. */
+
+	sprintf(path, "%s/%s", asset_dir, "ship_types.txt");
+
+	ship_type = snis_read_ship_types(path, &nshiptypes);
+	if (!ship_type) {
+		fprintf(stderr, "Unable to read ship types from %s", path);
+		if (errno)
+			fprintf(stderr, "%s: %s\n", path, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	int port, rc, i;
@@ -6963,6 +6984,11 @@ int main(int argc, char *argv[])
 				LOCALE_THAT_WORKS);
 	if (argc < 5) 
 		usage();
+
+	if (read_ship_types()) {
+		fprintf(stderr, "%s: unable to read ship types\n", argv[0]);
+		return -1;
+	}
 
 	open_log_file();
 

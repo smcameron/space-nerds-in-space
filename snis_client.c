@@ -58,6 +58,7 @@
 #endif
 
 #include "build_bug_on.h"
+#include "snis_ship_type.h"
 #include "space-part.h"
 #include "quat.h"
 #include "snis.h"
@@ -155,6 +156,9 @@ int fullscreen = 0;
 int in_the_process_of_quitting = 0;
 int current_quit_selection = 0;
 int final_quit_selection = 0;
+
+struct ship_type_entry *ship_type;
+int nshiptypes = 0;
 
 uint32_t role = ROLE_ALL;
 
@@ -283,8 +287,8 @@ struct mesh *scrambler_mesh;
 struct mesh *swordfish_mesh;
 struct mesh *wombat_mesh;
 
-struct mesh *ship_mesh_map[NSHIPTYPES];
-struct mesh *derelict_mesh[NSHIPTYPES];
+struct mesh **ship_mesh_map;
+struct mesh **derelict_mesh;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -725,7 +729,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, ship_mesh_map[shiptype % NSHIPTYPES], x, y, z, SHIP_COLOR);
+		e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes], x, y, z, SHIP_COLOR);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_SHIP2, alive, e);
 		if (i < 0)
 			return i;
@@ -1170,7 +1174,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		m = ship_kind % NSHIPTYPES;
+		m = ship_kind % nshiptypes;
 		e = add_entity(ecx, derelict_mesh[m], x, y, z, SHIP_COLOR);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 				&identity_quat, OBJTYPE_DERELICT, 1, e);
@@ -3025,7 +3029,7 @@ static int process_update_ship_packet(uint16_t opcode)
 		if (id == my_ship_id)
 			e = add_entity(ecx, NULL, dx, dy, dz, SHIP_COLOR);
 		else
-			e = add_entity(ecx, ship_mesh_map[shiptype % NSHIPTYPES],
+			e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes],
 					dx, dy, dz, SHIP_COLOR);
 		i = add_generic_object(id, dx, dy, dz, dvx, dvy, dvz, &orientation, type, alive, e);
 		if (i < 0) {
@@ -11219,6 +11223,22 @@ static void override_asset_dir(void)
 	asset_dir = d;
 }
 
+static int read_ship_types(void)
+{
+	char path[PATH_MAX];
+
+	sprintf(path, "%s/%s", asset_dir, "ship_types.txt");
+
+	ship_type = snis_read_ship_types(path, &nshiptypes);
+	if (!ship_type) {
+		fprintf(stderr, "Unable to read ship types from %s", path);
+		if (errno)
+			fprintf(stderr, "%s: %s\n", path, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 static void read_sound_clips(void)
 {
 	char *d = asset_dir;
@@ -11456,7 +11476,7 @@ static void init_meshes(void)
 	ship_mesh_map[16] = swordfish_mesh;
 	ship_mesh_map[17] = wombat_mesh;
 
-	for (i = 0; i < NSHIPTYPES; i++)
+	for (i = 0; i < nshiptypes; i++)
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
 }
 
@@ -11579,6 +11599,18 @@ int main(int argc, char *argv[])
 	ignore_sigpipe();
 
 	setup_sound();
+	if (read_ship_types()) {
+                fprintf(stderr, "%s: unable to read ship types\n", argv[0]);
+                return -1;
+        }
+	ship_mesh_map = malloc(sizeof(*ship_mesh_map) * nshiptypes);
+	derelict_mesh = malloc(sizeof(*derelict_mesh) * nshiptypes);
+	if (!ship_mesh_map || !derelict_mesh) {
+		fprintf(stderr, "out of memory at %s:%d\n", __FILE__, __LINE__);
+		exit(1);
+	}
+	memset(ship_mesh_map, 0, sizeof(*ship_mesh_map) * nshiptypes);
+	memset(derelict_mesh, 0, sizeof(*derelict_mesh) * nshiptypes);
 
 	if (displaymode != DISPLAYMODE_NETWORK_SETUP)
 		connect_to_lobby();

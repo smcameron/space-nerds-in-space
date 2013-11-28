@@ -107,6 +107,7 @@ struct power_model_data {
 	uint8_t voltage;
 };
 
+/*
 #define SHIP_CLASS_CRUISER 0
 #define SHIP_CLASS_DESTROYER 1
 #define SHIP_CLASS_FREIGHTER 2
@@ -130,7 +131,8 @@ struct ship_type_entry {
 	char *class;
 	double max_speed;
 	int crew_max;
-} ship_type[] = {
+} *ship_type;
+[] = {
 	{ "CRUISER", 10.0, 15 },
 	{ "DESTROYER", 15.0, 10 },
 	{ "FREIGHTER", 8.0, 10 },
@@ -150,6 +152,7 @@ struct ship_type_entry {
 	{ "SWORDFISH", 14.0, 30 },
 	{ "WOMBAT", 14.0, 30 },
 };
+*/
 
 #define NSHIPTYPES ARRAYSIZE(ship_type)
 
