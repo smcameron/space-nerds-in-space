@@ -121,6 +121,7 @@
 #define VERTICAL_CONTROLS_NORMAL 1
 static int vertical_controls_inverted = VERTICAL_CONTROLS_NORMAL;
 static volatile int vertical_controls_timer = 0;
+static int display_frame_stats = 0;
 
 typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nsparks, int time);
 
@@ -1770,6 +1771,8 @@ char *keyactionstring[] = {
 	"keysciball_pitchdown",
 	"keysciball_rollleft",
 	"keysciball_rollright",
+	"key_invert_vertical",
+	"key_toggle_frame_stats",
 };
 
 void init_keymap()
@@ -1813,6 +1816,7 @@ void init_keymap()
 	keymap[GDK_d] = keyright;
 
 	keymap[GDK_i] = key_invert_vertical;
+	ffkeymap[GDK_KEY_Pause & 0x00ff] = key_toggle_frame_stats;
 
 	keymap[GDK_k] = keysciball_rollleft;
 	keymap[GDK_semicolon] = keysciball_rollright;
@@ -2645,6 +2649,9 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 				vertical_controls_inverted *= -1;
 				vertical_controls_timer = FRAME_RATE_HZ;
 			}
+			return TRUE;
+	case key_toggle_frame_stats:
+			display_frame_stats = !display_frame_stats;
 			return TRUE;
         case keyfullscreen: {
 			if (fullscreen) {
@@ -10757,8 +10764,17 @@ static void end_2d_gl(void)
 #endif
 }
 
+#define FRAME_INDEX_MAX 10
+
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
+	static double last_frame_time = 0;
+	static int frame_index = 0;
+	static float frame_rates[FRAME_INDEX_MAX];
+	static float frame_times[FRAME_INDEX_MAX];
+
+	double start_time = time_now_double();
+
 	struct snis_entity *o;
 
 	make_science_forget_stuff();
@@ -10882,6 +10898,25 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (in_the_process_of_quitting)
 		draw_quit_screen(w);
 
+	if (display_frame_stats) {
+		float avg_frame_rate=0;
+		float avg_frame_time=0;
+		int i;
+		for (i=0; i<FRAME_INDEX_MAX; i++) {
+			avg_frame_rate += frame_rates[i];
+			avg_frame_time += frame_times[i];
+		}
+		avg_frame_rate /= (float)FRAME_INDEX_MAX;
+		avg_frame_time /= (float)FRAME_INDEX_MAX;
+
+		sng_set_foreground(WHITE);
+		char stat_buffer[30];
+		sprintf(stat_buffer,"fps %5.2f", 1.0/avg_frame_rate);
+		sng_abs_xy_draw_string(w, gc, stat_buffer, NANO_FONT, 2, 10);
+		sprintf(stat_buffer,"t %0.2f ms", avg_frame_time*1000.0);
+		sng_abs_xy_draw_string(w, gc, stat_buffer, NANO_FONT, 92, 10);
+	}
+
 end_of_drawing:
 #ifndef WITHOUTOPENGL
 	gdk_gl_drawable_wait_gdk(gl_drawable);
@@ -10906,6 +10941,14 @@ end_of_drawing:
 	gdk_gl_drawable_gl_end(gl_drawable);
 #endif
 
+	if (display_frame_stats) {
+		double end_time = time_now_double();
+
+		frame_rates[frame_index] = start_time - last_frame_time;
+		frame_times[frame_index] = end_time - start_time;
+		frame_index = (frame_index+1) % FRAME_INDEX_MAX;
+		last_frame_time = start_time;
+	}
 	return 0;
 }
 
