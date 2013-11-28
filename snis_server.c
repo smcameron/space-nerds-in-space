@@ -115,6 +115,9 @@ static int snis_log_level = 2;
 static struct ship_type_entry *ship_type;
 int nshiptypes;
 
+static char *default_asset_dir = "share/snis";
+static char *asset_dir;
+
 static int nebulalist[NNEBULA] = { 0 };
 
 static inline void client_lock()
@@ -6956,10 +6959,20 @@ static void lua_teardown(void)
 	lua_state = NULL;
 }
 
+static void override_asset_dir(void)
+{
+	char *d;
+
+	asset_dir = default_asset_dir;
+	d = getenv("SNIS_ASSET_DIR");
+	if (!d)
+		return;
+	asset_dir = d;
+}
+
 static int read_ship_types()
 {
 	char path[PATH_MAX];
-	const char *asset_dir = "share/snis"; /* FIXME, do this right. */
 
 	sprintf(path, "%s/%s", asset_dir, "ship_types.txt");
 
@@ -6976,7 +6989,6 @@ static int read_ship_types()
 static int read_factions(void)
 {
 	char path[PATH_MAX];
-	const char *asset_dir = "share/snis"; /* FIXME, do this right. */
 
 	sprintf(path, "%s/%s", asset_dir, "factions.txt");
 
@@ -7001,6 +7013,8 @@ int main(int argc, char *argv[])
 				LOCALE_THAT_WORKS);
 	if (argc < 5) 
 		usage();
+
+	override_asset_dir();
 
 	if (read_ship_types()) {
 		fprintf(stderr, "%s: unable to read ship types\n", argv[0]);
