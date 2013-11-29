@@ -2005,14 +2005,18 @@ static void enforce_minimum_attack_speed(double *vx, double *vy, double *vz)
 {
 	double v = dist3d(*vx, *vy, *vz);
 
-	if (v < MINIMUM_ATTACK_SPEED) {
-		union vec3 veln, vel = { { *vx, *vy, *vz } };
-		vec3_normalize(&veln, &vel);
-		vec3_mul(&vel, &veln, MINIMUM_ATTACK_SPEED);
-		*vx = vel.v.x;
-		*vy = vel.v.y;
-		*vy = vel.v.y;
-	}
+	if (v < 0.000001) /* Avoid NaNs when close to stopped */
+		return;
+
+	if (v >= MINIMUM_ATTACK_SPEED)
+		return;
+
+	union vec3 veln, vel = { { (float) *vx, (float) *vy, (float) *vz } };
+	vec3_normalize(&veln, &vel);
+	vec3_mul(&vel, &veln, MINIMUM_ATTACK_SPEED);
+	*vx = (double) vel.v.x;
+	*vy = (double) vel.v.y;
+	*vy = (double) vel.v.y;
 }
 
 static void update_ship_position_and_velocity(struct snis_entity *o)
