@@ -2626,6 +2626,7 @@ static void init_player(struct snis_entity *o)
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
+	memset(&o->tsd.ship.temperature_data, 0, sizeof(o->tsd.ship.temperature_data));
 	init_power_model(o);
 	init_coolant_model(o);
 }
