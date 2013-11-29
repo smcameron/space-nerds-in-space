@@ -874,7 +874,6 @@ static int update_laser(uint32_t id, double x, double y, double z,
 		go[i].tsd.laser.ship_id = ship_id;
 	} else {
 		update_generic_object(i, x, y, z, vx, vy, vz, orientation, 1); 
-		go[i].vy = vy; /* FIXME: fix update_generic_object */
 	}
 	return 0;
 }
