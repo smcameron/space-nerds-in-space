@@ -7,7 +7,7 @@
 #define GLOBAL
 #endif
 
-GLOBAL char *faction[];
+GLOBAL char **faction;
 GLOBAL int nfactions;
 
 GLOBAL int snis_read_factions(char *filename);

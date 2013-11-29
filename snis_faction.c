@@ -7,6 +7,8 @@
 #include "snis_faction.h"
 #undef DEFINE_FACTION_GLOBALS
 
+#define MAX_FACTIONS 20
+
 int snis_read_factions(char *filename)
 {
 	FILE *f;
@@ -20,7 +22,13 @@ int snis_read_factions(char *filename)
 	if (!f)
 		return -1;
 
-	while (!feof(f)) {
+	faction = malloc(MAX_FACTIONS * sizeof(*faction));
+	if (!faction) {
+		fprintf(stderr, "out of memory at %s:%d\n", __FILE__, __LINE__);
+		return -1;
+	}
+
+	while (!feof(f) && n < MAX_FACTIONS) {
 		x = fgets(line, sizeof(line) - 1, f);
 		if (!x)
 			break;
