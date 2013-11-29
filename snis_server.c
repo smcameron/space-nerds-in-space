@@ -408,6 +408,22 @@ static void asteroid_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
+
+	if (((o->timestamp + o->id) & 0x07) == 0) { /* throttle this calculation */
+		union vec3 from_center, dir, dirn;
+		union vec3 up = { { 0.0f, 1.0f, 0.0f } };
+
+		from_center.v.x = o->x - XKNOWN_DIM / 2.0f;
+		from_center.v.y = o->y - YKNOWN_DIM / 2.0f;
+		from_center.v.z = o->z - ZKNOWN_DIM / 2.0f;
+
+		vec3_cross(&dir, &from_center, &up);
+		vec3_normalize(&dirn, &dir);
+		vec3_mul(&dir, &dirn, ASTEROID_SPEED);
+		o->vx = dir.v.x;
+		o->vy = dir.v.y;
+		o->vz = dir.v.z;
+	}
 }
 
 static void derelict_move(struct snis_entity *o)
