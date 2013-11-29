@@ -1711,6 +1711,18 @@ static void do_temperature_computations(struct snis_entity *o)
 	calc_temperature_change(o->tsd.ship.power_data.tractor.i,
 			o->tsd.ship.coolant_data.tractor.i,
 			&o->tsd.ship.temperature_data.tractor_damage);
+
+	/* overheated and overdamaged warp system == self destruct */
+	if (o->tsd.ship.temperature_data.warp_damage > 240 &&
+		o->tsd.ship.damage.warp_damage > 240) {
+		o->alive = 0;
+		o->tsd.ship.damage.shield_damage = 255;
+		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+		snis_queue_add_sound(EXPLOSION_SOUND,
+				ROLE_SOUNDSERVER, o->id);
+		schedule_callback(event_callback, &callback_schedule,
+			"player-death-callback", o->id);
+	}
 }
 
 static int calc_overheat_damage(uint8_t *system, uint8_t temperature)
