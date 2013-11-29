@@ -1397,6 +1397,20 @@ static void spin_asteroid(struct snis_entity *o)
 		update_entity_orientation(o->entity, &orientation);
 }
 
+static void move_generic_object(struct snis_entity *o)
+{
+	/* updates are sent every 1/10th of a second */
+	double delta = 1.0/10.0;
+	double currentTime = time_now_double();
+	double t = (currentTime - o->updatetime) / delta;
+
+	union vec3 interp_position;
+	vec3_lerp(&interp_position, &o->r1, &o->r2, t);
+	o->x = interp_position.v.x;
+	o->y = interp_position.v.y;
+	o->z = interp_position.v.z;
+}
+
 static void move_ship(struct snis_entity *o)
 {
 	/* updates are sent every 1/10th of a second */
@@ -1445,14 +1459,10 @@ static void move_objects(void)
 			break;
 		case OBJTYPE_LASER:
 		case OBJTYPE_TORPEDO:
-			/* predictive movement, this is probably */
-			/* too dumb to work right */
-			o->x += o->vx / 3.0;
-			o->z += o->vz / 3.0;
+			move_generic_object(o);
 			break;
 		case OBJTYPE_ASTEROID:
-			o->x += o->vx / 3.0;
-			o->z += o->vz / 3.0;
+			move_generic_object(o);
 			spin_asteroid(o);
 			break;
 		case OBJTYPE_LASERBEAM:
