@@ -1234,7 +1234,6 @@ static void ship_move(struct snis_entity *o)
 		dz = destz - o->z;
 		vdist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
 		firing_range = (vdist <= LASER_RANGE);
-		firing_range = 0;
 		o->tsd.ship.desired_velocity = maxv;
 
 		/* Close enough to destination? */
