@@ -6008,7 +6008,6 @@ static void draw_sciplane_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_conte
 
 static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double range)
 {
-	static int first_run = 1;
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *heading_ind_line_mesh = 0;
 
@@ -6016,6 +6015,10 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		ring_mesh = init_circle_mesh(0, 0, 1, 90, 2.0f * M_PI);
 		heading_ind_line_mesh = init_line_mesh(0.9, 0, 0, 1, 0, 0);
 	}
+
+	static int last_timer = 0;
+	int first_frame = (timer != last_timer+1);
+	last_timer = timer;
 
 	float fovy = 30.0 * M_PI / 180.0;
 	float dist_to_cam_frac = 1.0 / tan(fovy/2.0);
@@ -6073,11 +6076,10 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 	/* finish off rotating cam positions */
 
-	if (first_run) {
+	if (first_frame) {
 		cam_orientation = *desired_cam_orientation;
 		cam_range_fraction = desired_cam_range_fraction;
 		camera_lookat = desired_lookat;
-		first_run = 0;
 	} else {
 		quat_nlerp(&cam_orientation, &cam_orientation, desired_cam_orientation, 0.15);
 		vec3_lerp(&camera_lookat, &camera_lookat, &desired_lookat, 0.15);
@@ -7527,6 +7529,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	if (!(o = find_my_ship()))
 		return;
 
+	static int last_timer = 0;
+	int first_frame = (timer != last_timer+1);
+	last_timer = timer;
+
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
 	camera_heading = o->heading + M_PI;
 	normalize_angle(&camera_heading);
@@ -7541,14 +7547,18 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	quat_rot_vec_self(&ship_normal, &o->orientation);
 
 	static union quat cam_orientation = {{1,0,0,0}};
-	quat_nlerp(&cam_orientation, &cam_orientation, &o->orientation, 0.1);
-	/* quat_copy(&cam_orientation, &o->orientation); */
+	if (first_frame) {
+		quat_copy(&cam_orientation, &o->orientation);
+	} else {
+		quat_nlerp(&cam_orientation, &cam_orientation, &o->orientation, 0.1);
+	}
 
 	union vec3 camera_up = {{0,1,0}};
 	quat_rot_vec_self(&camera_up, &cam_orientation);
 
 	/* rotate camera to be behind my ship */
 	union vec3 camera_pos = {{ -screen_radius * 1.85, screen_radius * 0.85, 0}};
+	float camera_pos_len = vec3_magnitude(&camera_pos);
 	quat_rot_vec_self(&camera_pos, &cam_orientation);
 	vec3_add_self(&camera_pos, &ship_pos);
 
