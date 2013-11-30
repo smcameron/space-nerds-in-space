@@ -2052,7 +2052,14 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 		dest.v.y = o->tsd.ship.doy - o->y;
 		dest.v.z = o->tsd.ship.doz - o->z;
 	}
-	vec3_normalize(&destn, &dest);
+
+	if (vec3_len2(&dest) > 0.01) {
+		vec3_normalize(&destn, &dest);
+	} else {
+		destn.v.x = 0.0f;
+		destn.v.y = 0.0f;
+		destn.v.z = 0.0f;
+	}
 
 	/* Construct vector of desired velocity */
 	desired_velocity.v.x = destn.v.x * o->tsd.ship.velocity; 
