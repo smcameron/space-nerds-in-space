@@ -798,9 +798,14 @@ void calculate_camera_transform(struct entity_context *cx)
 
 	/* camera matrix without any translation */
 	mat44_product(&perspective_transform, &cameralook_transform, &cx->camera.camera_transform);
+
 	/* camera matrix with translation */
-	mat44_translate(&cx->camera.camera_transform, cx->camera.camera_translation.v.x,
-		cx->camera.camera_translation.v.y, cx->camera.camera_translation.v.z, &cx->camera.camera_total_transform);
+	struct mat44 cameratrans_transform = {{
+		{1, 0, 0, 0},
+		{0, 1, 0, 0},
+		{0, 0, 1, 0},
+		{cx->camera.camera_translation.v.x, cx->camera.camera_translation.v.y, cx->camera.camera_translation.v.z, 1}}};
+	mat44_product(&cx->camera.camera_transform, &cameratrans_transform, &cx->camera.camera_total_transform);
 }
 
 static void reposition_fake_star(struct entity_context *cx, struct fake_star *fs, float radius);
