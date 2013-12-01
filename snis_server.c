@@ -741,12 +741,25 @@ static struct snis_entity *lookup_entity_by_id(uint32_t id)
 		return NULL;
 }
 
+static int enemy_faction(int faction1, int faction2)
+{
+	return (faction1 != faction2);
+}
+
+static int friendly_fire(struct snis_entity *attacker, struct snis_entity *victim)
+{
+	return !enemy_faction(attacker->sdata.faction, victim->sdata.faction);
+}
+
 static void attack_your_attacker(struct snis_entity *attackee, struct snis_entity *attacker)
 {
 	if (!attacker)
 		return;
 
 	if (attackee->type != OBJTYPE_SHIP2)
+		return;
+
+	if (friendly_fire(attacker, attackee))
 		return;
 
 	if (snis_randn(100) >= 75)
