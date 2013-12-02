@@ -548,6 +548,9 @@ static void delete_from_clients_and_server(struct snis_entity *o)
 				"object-death-callback", o->id);
 		break;
 	}
+
+	if (o->type == OBJTYPE_SHIP2)
+		fleet_leave(o->id); /* leave any fleets ship might be a member of */
 	delete_object(o);
 }
 
