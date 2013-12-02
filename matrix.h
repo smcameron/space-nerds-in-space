@@ -36,14 +36,29 @@ struct mat44 {
 	float m[4][4];
 };
 
+struct mat44d {
+	double m[4][4];
+};
+
 struct mat41 {
 	float m[4];
 };
 
+GLOBAL void mat44_convert_df(const struct mat44d *src, struct mat44 *output);
+
 GLOBAL void mat44_product(const struct mat44 *lhs, const struct mat44 *rhs,
 				struct mat44 *output);
 
+GLOBAL void mat44_product_ddd(const struct mat44d *lhs, const struct mat44d *rhs,
+				struct mat44d *output);
+
+GLOBAL void mat44_product_ddf(const struct mat44d *lhs, const struct mat44d *rhs,
+				struct mat44 *output);
+
 GLOBAL void mat44_x_mat41(const struct mat44 *lhs, const struct mat41 *rhs,
+				struct mat41 *output);
+
+GLOBAL void mat44_x_mat41_dff(const struct mat44d *lhs, const struct mat41 *rhs,
 				struct mat41 *output);
 
 GLOBAL void mat41_x_mat44(const struct mat41 *lhs, const struct mat44 *rhs,

@@ -25,6 +25,16 @@
 #define DEFINE_MATRIX_GLOBALS
 #include "matrix.h"
 
+void mat44_convert_df(const struct mat44d *src, struct mat44 *output)
+{
+	int i, j;
+
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 4; j++)
+			output->m[i][j] = (float)src->m[i][j];
+
+}
+
 /* Matrices need to be row-major and use row-major memory layout with
  * pre-multiplication 
  *
@@ -57,6 +67,35 @@ void mat44_product(const struct mat44 *lhs, const struct mat44 *rhs,
 	}
 }
 
+void mat44_product_ddd(const struct mat44d *lhs, const struct mat44d *rhs,
+                                struct mat44d *output)
+{
+	int i, j, k;
+
+	for (i = 0; i < 4; i++) {
+		for (j = 0; j < 4; j++) {
+			output->m[i][j] = 0;
+			for (k = 0; k < 4; k++)
+				output->m[i][j] += lhs->m[k][j] * rhs->m[i][k];
+		}
+	}
+}
+
+void mat44_product_ddf(const struct mat44d *lhs, const struct mat44d *rhs,
+                                struct mat44 *output)
+{
+	int i, j, k;
+
+	for (i = 0; i < 4; i++) {
+		for (j = 0; j < 4; j++) {
+			double cell = 0;
+			for (k = 0; k < 4; k++)
+				cell += lhs->m[k][j] * rhs->m[i][k];
+			output->m[i][j] = (float)cell;
+		}
+	}
+}
+
 /* for post muliplication, mat44 must be column major and stored column major order */
 void mat44_x_mat41(const struct mat44 *lhs, const struct mat41 *rhs,
 				struct mat41 *output)
@@ -81,6 +120,21 @@ void mat44_x_mat41(const struct mat44 *lhs, const struct mat41 *rhs,
 			output->m[row] += lhs->m[col][row] * rhs->m[col];
 	}
 }
+
+/* see mat44_x_mat41 */
+void mat44_x_mat41_dff(const struct mat44d *lhs, const struct mat41 *rhs,
+                                struct mat41 *output)
+{
+	int row, col;
+
+	for (row = 0; row < 4; row++) {
+		double cell = 0;
+		for (col = 0; col < 4; col++)
+			cell += lhs->m[col][row] * rhs->m[col];
+		output->m[row] = (float)cell;
+	}
+}
+
 
 /* for pre muliplication, mat44 must be row major and stored row major order */
 void mat41_x_mat44(const struct mat41 *lhs, const struct mat44 *rhs,
