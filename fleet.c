@@ -96,7 +96,59 @@ static union vec3 fleet_triangle_position(int position)
 static union vec3 fleet_square_position(int position)
 {
 	union vec3 v = { { 0.0f, 0.0f, 0.0f } };
-	/* FIXME: do some kind of hilbert curve thing here? */
+	int i, r, c, cdir, rdir, squaresize;
+	static int row[MAXSHIPSPERFLEET];
+	static int column[MAXSHIPSPERFLEET];
+	static int initialized = 0;
+
+	/*  0  1  8  9                 */
+	/*  3  2  7  10                */
+	/*  4  5  6  11                */
+	/*  15 14 13 12                */
+        /*  etc.  */
+
+	if (position == 0)
+		return zero;
+
+	r = 0;
+	c = -1;
+	squaresize = 1;
+	cdir = 1;
+	rdir = 0;
+
+	if (!initialized) {
+		for (i = 0; i < MAXSHIPSPERFLEET; i++) {
+			c += cdir;
+			r += rdir;
+			row[i] = r;
+			column[i] = c;
+			if (cdir == 1 && c == squaresize) {
+				cdir = 0;
+				if (r == 0)
+					rdir = 1;
+				else
+					rdir = -1;
+			} else if (cdir == -1 && c == 0) {
+				cdir = 0;
+				rdir = 1;
+				squaresize++;
+			} else if (rdir == -1 && r == 0) {
+				cdir = 1;
+				rdir = 0;
+				squaresize++;
+			} else if (rdir == 1 && r == squaresize) {
+				rdir = 0;
+				if (c == 0)
+					cdir = 1;
+				else if (c == squaresize)
+					cdir = -1;
+			}
+		}
+		initialized = 1;
+	}
+	v.v.x = (float) row[position] * FLEET_SPACING;
+	v.v.y = 0.0f;
+	v.v.z = (float) column[position] * FLEET_SPACING;
 	return v;
 }
 
