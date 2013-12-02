@@ -150,7 +150,8 @@ void mesh_add_line_last_2(struct mesh *m, int flag)
 
 struct mesh *init_circle_mesh(double x, double z, double r, int npoints, double angle)
 {
-	float i, increment;
+	int i;
+	float increment;
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
 
 	my_mesh->nvertices = 0;
@@ -162,10 +163,11 @@ struct mesh *init_circle_mesh(double x, double z, double r, int npoints, double 
 	my_mesh->radius = r;
 
 	increment = angle / (float) npoints;
-	for (i = 0.0f; i <= angle; i += increment) {
-		my_mesh->v[my_mesh->nvertices].x = x + cos(i) * r;
+	for (i = 0; i <= npoints; i++) {
+		float a = i * increment;
+		my_mesh->v[my_mesh->nvertices].x = x + cos(a) * r;
 		my_mesh->v[my_mesh->nvertices].y = 0;
-		my_mesh->v[my_mesh->nvertices].z = z + sin(i) * r;
+		my_mesh->v[my_mesh->nvertices].z = z + sin(a) * r;
 		my_mesh->nvertices++;
 	}
 
@@ -191,7 +193,7 @@ struct mesh *init_radar_circle_xz_plane_mesh(double x, double z, double r, int t
 	my_mesh->t = 0;
 	my_mesh->v = malloc(sizeof(*my_mesh->v) * (360 / 2 + 1 + ticks*2));
 	my_mesh->l = malloc(sizeof(*my_mesh->l) * (1 + ticks));
-	my_mesh->radius = r;
+	my_mesh->radius = dist3d(x, 0, z) + r;
 
 	for (i = 0; i <= 360; i += 2) {
 		my_mesh->v[my_mesh->nvertices].x = x + cos(i * M_PI / 180.0) * r;
@@ -224,7 +226,7 @@ struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y
 	my_mesh->t = 0;
 	my_mesh->v = malloc(sizeof(*my_mesh->v) * 2);
 	my_mesh->l = malloc(sizeof(*my_mesh->l) * 1);
-	my_mesh->radius = dist3d(x2 - x1, y2 - y1, z2 - z1);
+	my_mesh->radius = fmax(dist3d(x1, y1, z1), dist3d(x2, y2, z2));
 
 	my_mesh->v[0].x = x1;
 	my_mesh->v[0].y = y1;
