@@ -988,16 +988,9 @@ struct entity_context *entity_context_new(int maxobjs)
 	snis_object_pool_setup(&cx->entity_pool, maxobjs);
 	cx->maxobjs = maxobjs;
 	set_renderer(cx, FLATSHADING_RENDERER);
-	cx->light.m[0] = 0;
-	cx->light.m[1] = 1;
-	cx->light.m[2] = 1;
-	cx->light.m[3] = 1;
+	set_lighting(cx, 0.0, 1.0, 1.0);
 	camera_assign_up_direction(cx, 0.0, 1.0, 0.0);
-	cx->camera.ux = 0;
-	cx->camera.uy = 1;
-	cx->camera.uz = 0;
-	cx->window_offset_x = 0;
-	cx->window_offset_y = 0;
+	set_window_offset(cx, 0.0, 0.0);
 #ifdef WITH_ILDA_SUPPORT
 	cx->f = NULL;
 #endif
@@ -1068,6 +1061,7 @@ void set_lighting(struct entity_context *cx, double x, double y, double z)
 	cx->light.m[0] = x;
 	cx->light.m[1] = y;
 	cx->light.m[2] = z;
+	cx->light.m[3] = 1;
 }
 
 struct mesh *entity_get_mesh(struct entity *e)
