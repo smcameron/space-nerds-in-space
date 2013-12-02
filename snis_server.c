@@ -46,6 +46,7 @@
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
+#include <assert.h>
 
 #include "ssgl/ssgl.h"
 #include "snis_ship_type.h"
@@ -1287,12 +1288,134 @@ static void update_ship_orientation(struct snis_entity *o)
 
 static void update_ship_position_and_velocity(struct snis_entity *o);
 static int add_laserbeam(uint32_t origin, uint32_t target, int alive);
-static void ship_move(struct snis_entity *o)
+
+static void ai_attack_mode_brain(struct snis_entity *o)
 {
 	struct snis_entity *v;
 	double destx, desty, destz, dx, dy, dz, vdist;
 	int n, firing_range;
 	double maxv;
+
+	n = o->tsd.ship.nai_entries - 1;
+	assert(n >= 0);
+
+	if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -1) {
+		int r = snis_randn(400) + 200;
+		o->tsd.ship.ai[n].u.attack.victim_id = find_nearest_victim(o);
+		random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
+	}
+	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
+	v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
+	firing_range = 0;
+	if (!v)
+		return;
+	if (!v->alive) {
+		pop_ai_attack_mode(o);
+		return;
+	}
+
+	destx = v->x + o->tsd.ship.dox;
+	desty = v->y + o->tsd.ship.doy;
+	destz = v->z + o->tsd.ship.doz;
+	dx = destx - o->x;
+	dy = desty - o->y;
+	dz = destz - o->z;
+	vdist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
+	firing_range = (vdist <= LASER_RANGE);
+	o->tsd.ship.desired_velocity = maxv;
+
+	/* Close enough to destination? */
+	if (fabs(dx) < 400 && fabs(dy) < 400 && fabs(dz) < 400) {
+		union vec3 vel, veln;
+
+		/* pretty close to enemy? */
+		if (vdist < 1000) {
+			/* continue zipping past target */
+			vel.v.x = (float) o->vx;
+			vel.v.y = (float) o->vy;
+			vel.v.z = (float) o->vz;
+			vec3_normalize(&veln, &vel);
+			vec3_mul_self(&veln, 800.0f + snis_randn(600));
+			o->tsd.ship.dox = veln.v.x;
+			o->tsd.ship.doy = veln.v.y;
+			o->tsd.ship.doz = veln.v.z;
+		} else {
+			/* head back toward target */
+			int r = snis_randn(400) + 200;
+			random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
+		}
+	}
+
+	if (!firing_range)
+		return;
+
+	double range = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
+
+	/* neutrals do not attack planets or starbases, and only select ships
+	 * when attacked.
+	 */
+	if (o->sdata.faction != 0 ||
+		(v->type != OBJTYPE_STARBASE && v->type == OBJTYPE_PLANET)) {
+
+		if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE &&
+			o->tsd.ship.next_torpedo_time <= universe_timestamp &&
+			o->tsd.ship.torpedoes > 0) {
+			double dist, flight_time, tx, ty, tz, vx, vy, vz;
+			/* int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y); */
+
+			dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
+			flight_time = dist / TORPEDO_VELOCITY;
+			tx = v->x + (v->vx * flight_time);
+			tz = v->z + (v->vz * flight_time);
+			ty = v->y + (v->vy * flight_time);
+
+			calculate_torpedo_velocities(o->x, o->y, o->z,
+				tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
+
+			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
+			o->tsd.ship.torpedoes--;
+			o->tsd.ship.next_torpedo_time = universe_timestamp +
+				ENEMY_TORPEDO_FIRE_INTERVAL;
+			check_for_incoming_fire(v);
+		} else {
+			if (snis_randn(1000) < 150 &&
+				o->tsd.ship.next_laser_time <= universe_timestamp) {
+				o->tsd.ship.next_laser_time = universe_timestamp +
+					ENEMY_LASER_FIRE_INTERVAL;
+				add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
+				check_for_incoming_fire(v);
+			}
+		}
+		if (v->type == OBJTYPE_SHIP1 && snis_randn(1000) < 25)
+			taunt_player(o, v);
+	} else {
+		/* FIXME: give neutrals soemthing to do so they don't just sit there */;
+	}
+}
+
+static void ai_brain(struct snis_entity *o)
+{
+	int n;
+
+	n = o->tsd.ship.nai_entries - 1;
+	if (n < 0) {
+		ship_figure_out_what_to_do(o);
+		n = o->tsd.ship.nai_entries - 1;
+	}
+		
+	/* main AI brain code is here... */
+	switch (o->tsd.ship.ai[n].ai_mode) {
+	case AI_MODE_ATTACK:
+		ai_attack_mode_brain(o);
+		break;
+	default:
+		break;
+	}
+}
+
+static void ship_move(struct snis_entity *o)
+{
+	int n;
 
 	if (o->tsd.ship.nai_entries == 0)
 		ship_figure_out_what_to_do(o);
@@ -1309,98 +1432,7 @@ static void ship_move(struct snis_entity *o)
 		break;
 	}
 
-	/* main AI brain code is here... */
-	switch (o->tsd.ship.ai[n].ai_mode) {
-	case AI_MODE_ATTACK:
-		if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -1) {
-			int r = snis_randn(400) + 200;
-			o->tsd.ship.ai[n].u.attack.victim_id = find_nearest_victim(o);
-			random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
-		}
-		maxv = ship_type[o->tsd.ship.shiptype].max_speed;
-		v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
-		firing_range = 0;
-		if (v) {
-			destx = v->x + o->tsd.ship.dox;
-			desty = v->y + o->tsd.ship.doy;
-			destz = v->z + o->tsd.ship.doz;
-			dx = destx - o->x;
-			dy = desty - o->y;
-			dz = destz - o->z;
-			vdist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
-			firing_range = (vdist <= LASER_RANGE);
-			o->tsd.ship.desired_velocity = maxv;
-
-			/* Close enough to destination? */
-			if (fabs(dx) < 400 && fabs(dy) < 400 && fabs(dz) < 400) {
-				union vec3 vel, veln;
-
-				/* pretty close to enemy? */
-				if (vdist < 1000) {
-					/* continue zipping past target */
-					vel.v.x = (float) o->vx;
-					vel.v.y = (float) o->vy;
-					vel.v.z = (float) o->vz;
-					vec3_normalize(&veln, &vel);
-					vec3_mul_self(&veln, 800.0f + snis_randn(600));
-					o->tsd.ship.dox = veln.v.x;
-					o->tsd.ship.doy = veln.v.y;
-					o->tsd.ship.doz = veln.v.z;
-				} else {
-					/* head back toward target */
-					int r = snis_randn(400) + 200;
-					random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
-				}
-			}
-
-			if (firing_range) {
-				double range = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
-
-				/* neutrals do not attack planets or starbases, and only select ships
-				 * when attacked.
-				 */
-				if (o->sdata.faction != 0 ||
-					(v->type != OBJTYPE_STARBASE && v->type == OBJTYPE_PLANET)) {
-
-						if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE &&
-							o->tsd.ship.next_torpedo_time <= universe_timestamp &&
-							o->tsd.ship.torpedoes > 0) {
-							double dist, flight_time, tx, ty, tz, vx, vy, vz;
-							/* int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y); */
-
-							dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
-							flight_time = dist / TORPEDO_VELOCITY;
-							tx = v->x + (v->vx * flight_time);
-							tz = v->z + (v->vz * flight_time);
-							ty = v->y + (v->vy * flight_time);
-
-							calculate_torpedo_velocities(o->x, o->y, o->z,
-								tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
-
-							add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
-							o->tsd.ship.torpedoes--;
-							o->tsd.ship.next_torpedo_time = universe_timestamp +
-								ENEMY_TORPEDO_FIRE_INTERVAL;
-							check_for_incoming_fire(v);
-						} else {
-							if (snis_randn(1000) < 150 &&
-								o->tsd.ship.next_laser_time <= universe_timestamp) {
-								o->tsd.ship.next_laser_time = universe_timestamp +
-									ENEMY_LASER_FIRE_INTERVAL;
-								add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
-								check_for_incoming_fire(v);
-							}
-						}
-						if (v->type == OBJTYPE_SHIP1 && snis_randn(1000) < 25)
-							taunt_player(o, v);
-					} else {
-						/* FIXME: give neutrals soemthing to do so they don't just sit there */;
-					}
-				}
-			}
-		default:
-			break;
-	}
+	ai_brain(o);
 
 	/* Adjust velocity towards desired velocity */
 	o->tsd.ship.velocity = o->tsd.ship.velocity +
