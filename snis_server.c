@@ -793,8 +793,10 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id)
 
 	n = attacker->tsd.ship.nai_entries;
 	if (n > 0 && attacker->tsd.ship.ai[n - 1].ai_mode == AI_MODE_ATTACK) {
+
 		if (attacker->tsd.ship.ai[n - 1].u.attack.victim_id == victim_id)
 			return; /* already attacking this guy */
+
 		i = lookup_by_id(victim_id);
 		if (i < 0)
 			return;
@@ -1472,6 +1474,28 @@ static void update_ship_orientation(struct snis_entity *o)
 static void update_ship_position_and_velocity(struct snis_entity *o);
 static int add_laserbeam(uint32_t origin, uint32_t target, int alive);
 
+static void check_for_nearby_targets(struct snis_entity *o)
+{
+	uint32_t victim_id;
+
+	/* check for nearby targets... */
+	if (((universe_timestamp + o->id) & 0x0f) == 0) {
+		victim_id = find_nearest_victim(o);
+		int i;
+		struct snis_entity *v;
+
+		i = lookup_by_id(victim_id);
+		if (i >= 0) {
+			double dist2;
+
+			v = &go[i];
+			dist2 = dist3dsqrd(o->x - v->x, o->y - v->y, o->z - v->z);
+			if (dist2 < PATROL_ATTACK_DIST * PATROL_ATTACK_DIST)
+				push_attack_mode(o, victim_id);
+		}
+	}
+}
+
 static void ai_attack_mode_brain(struct snis_entity *o)
 {
 	struct snis_entity *v;
@@ -1574,6 +1598,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	} else {
 		/* FIXME: give neutrals soemthing to do so they don't just sit there */;
 	}
+	check_for_nearby_targets(o);
 }
 
 static void ai_fleet_member_mode_brain(struct snis_entity *o)
@@ -1659,7 +1684,7 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 
 	if (dist2 < 25.0 * 25.0)
 		patrol->dest = (patrol->dest + 1) % patrol->npoints;
-
+	check_for_nearby_targets(o);
 }
 
 static void ai_brain(struct snis_entity *o)
