@@ -351,6 +351,10 @@ test_marshal:	snis_marshal.c snis_marshal.h
 test-quat:	test-quat.c quat.o matrix.o mathutils.o
 	gcc -Wall -Wextra --pedantic -o test-quat test-quat.c quat.o matrix.o mathutils.o -lm
 
+test-fleet: quat.o fleet.o mathutils.o
+	gcc -DTESTFLEET=1 -c -o test-fleet.o fleet.c
+	gcc -DTESTFLEET=1 -o test-fleet test-fleet.o mathutils.o quat.o -lm
+
 clean:	mostly-clean
 	rm -f ${MODELS} test_marshal
 
