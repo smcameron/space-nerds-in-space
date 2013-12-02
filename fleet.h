@@ -5,7 +5,11 @@
 #define FLEET_TRIANGLE 1
 #define FLEET_SQUARE 2
 
-union vec3 fleet_position(int fleet_shape, int position, union quat *fleet_orientation);
+struct fleet;
+
+union vec3 fleet_position(int fleet_number, int position, union quat *fleet_orientation);
+
+int fleet_new(int fleet_shape, int32_t leader);
 
 #endif
 
