@@ -785,10 +785,28 @@ static uint32_t buddies_pick_who_to_attack(struct snis_entity *attacker)
 	return fleet_member_get_id(f, snis_randn(fleet_members(f)));
 }
 
+static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id)
+{
+	int n;
+
+	n = attacker->tsd.ship.nai_entries;
+	if (n > 0 && attacker->tsd.ship.ai[n - 1].ai_mode == AI_MODE_ATTACK) /* already attacking */
+		return;
+	if (n < MAX_AI_STACK_ENTRIES) {
+		attacker->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
+		attacker->tsd.ship.ai[n].u.attack.victim_id = victim_id;
+		attacker->tsd.ship.nai_entries++;
+		random_dpoint_on_sphere(snis_randn(LASER_RANGE - 400) + 400,
+						&attacker->tsd.ship.dox,
+						&attacker->tsd.ship.doy,
+						&attacker->tsd.ship.doz);
+	}
+}
+
 static void buddies_join_the_fight(uint32_t id, struct snis_entity *attacker)
 {
 	struct snis_entity *o;
-	int i, n;
+	int i;
 
 	if (id == (uint32_t) -1) /* shouldn't happen */
 		return;
@@ -804,21 +822,11 @@ static void buddies_join_the_fight(uint32_t id, struct snis_entity *attacker)
 		return;
 	if (o->type != OBJTYPE_SHIP2) /* shouldn't happen */
 		return;
-	n = o->tsd.ship.nai_entries;
-	if (n > 0 && o->tsd.ship.ai[n - 1].ai_mode == AI_MODE_ATTACK) /* already attacking? */
-			return;
-	if (n >= MAX_AI_STACK_ENTRIES || n < 0)
-		return;
-	o->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
-	o->tsd.ship.ai[n].u.attack.victim_id = buddies_pick_who_to_attack(attacker);
-	o->tsd.ship.nai_entries++;
-	random_dpoint_on_sphere(snis_randn(LASER_RANGE - 400) + 400,
-			&o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
+	push_attack_mode(o, buddies_pick_who_to_attack(attacker));
 }
 
 static void attack_your_attacker(struct snis_entity *attackee, struct snis_entity *attacker)
 {
-	int n;
 	int f;
 
 	if (!attacker)
@@ -833,8 +841,6 @@ static void attack_your_attacker(struct snis_entity *attackee, struct snis_entit
 	if (snis_randn(100) >= 75)
 		return;
 
-	n = attackee->tsd.ship.nai_entries;
-	
 	/* if attackee is member of a fleet, get the fleet in on this fight */
 	f = find_fleet_number(attackee);
 	if (f >= 0) {
@@ -843,12 +849,7 @@ static void attack_your_attacker(struct snis_entity *attackee, struct snis_entit
 		for (i = 0; i < fleet_members(f); i++)
 			buddies_join_the_fight(fleet_member_get_id(f, i), attacker);
 	}
-
-	if (n < MAX_AI_STACK_ENTRIES) {
-		attackee->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
-		attackee->tsd.ship.ai[n].u.attack.victim_id = attacker->id;
-		attackee->tsd.ship.nai_entries++;
-	}
+	push_attack_mode(attackee, attacker->id);
 }
 
 static int add_derelict(const char *name, double x, double y, double z,
@@ -966,9 +967,7 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 		return;
 	switch (snis_randn(100) % 3) {
 	case 0:
-		o->tsd.ship.nai_entries = 1;
-		o->tsd.ship.ai[0].ai_mode = AI_MODE_ATTACK;
-		o->tsd.ship.ai[0].u.attack.victim_id = find_nearest_victim(o);
+		push_attack_mode(o, find_nearest_victim(o));
 		break;
 	case 1:	
 		setup_patrol_route(o);
@@ -1375,22 +1374,7 @@ delete_it:
 			eid = go[index].id;
 		}
 	}
-		
-	if (eid >= 0) {
-		int r = snis_randn(LASER_RANGE - 400) + 400;
-		int n;
-
-		n = o->tsd.ship.nai_entries - 1;
-		o->tsd.ship.ai[n].u.attack.victim_id = eid;
-		o->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
-		random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
-	} else {
-		int n;
-
-		n = o->tsd.ship.nai_entries - 1;
-		o->tsd.ship.ai[n].u.attack.victim_id = -1;
-		o->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
-	}
+	push_attack_mode(o, eid);
 }
 
 static void spacemonster_move(struct snis_entity *o)
