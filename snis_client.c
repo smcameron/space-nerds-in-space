@@ -7526,7 +7526,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	double screen_radius;
 	double visible_distance;
 	int science_style = RENDER_DISABLE_CLIP;
-	double camera_heading;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -7536,8 +7535,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	last_timer = timer;
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
-	camera_heading = o->heading + M_PI;
-	normalize_angle(&camera_heading);
 
 	screen_radius = ((((255.0 - current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
 	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
