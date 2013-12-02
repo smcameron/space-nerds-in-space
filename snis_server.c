@@ -1495,11 +1495,14 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 	o->tsd.ship.dox = offset.v.x + leader->x;
 	o->tsd.ship.doy = offset.v.y + leader->y;
 	o->tsd.ship.doz = offset.v.z + leader->z;
+	o->tsd.ship.velocity = leader->tsd.ship.velocity * 1.05;
 
-	/* If distance is too far, just warp */
 	dist2 = dist3dsqrd(o->x - o->tsd.ship.dox, o->y - o->tsd.ship.doy,
 			o->z - o->tsd.ship.doz);
-	if (dist2 > 500.0 * 500.0) {
+
+	if (dist2 > 75.0 * 75.0 && dist2 <= 1000.0 * 1000.0) { /* catch up if too far away */
+		o->tsd.ship.velocity = leader->tsd.ship.velocity * 1.5;
+	} else if (dist2 > 1000.0 * 1000.0) { /* If distance is too far, just warp */
 		o->x = o->tsd.ship.dox;
 		o->y = o->tsd.ship.doy;
 		o->z = o->tsd.ship.doz;
@@ -1517,19 +1520,43 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 	double maxv;
 	int d;
 
-	double dist2 = dist3dsqrd(o->x - o->tsd.ship.dox,
-				o->y - o->tsd.ship.doy,
-				o->z - o->tsd.ship.doz);
-
-	if (dist2 < 25.0 * 25.0)
-		patrol->dest = (patrol->dest + 1) % patrol->npoints;
 	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
 	o->tsd.ship.desired_velocity = maxv;
 	d = patrol->dest;
 
-	o->tsd.ship.dox = patrol->p[d].v.x;
-	o->tsd.ship.doy = patrol->p[d].v.y;
-	o->tsd.ship.doz = patrol->p[d].v.z;
+	double dist2 = dist3dsqrd(o->x - patrol->p[d].v.x,
+				o->y - patrol->p[d].v.y,
+				o->z - patrol->p[d].v.z);
+
+	if (dist2 > 1000.0 * 1000.0) {
+		double ld = dist3dsqrd(o->x - o->tsd.ship.dox,
+				o->y - o->tsd.ship.doy, o->z - o->tsd.ship.doz);
+		/* give ships some variety in movement */
+		if (((universe_timestamp + o->id) & 0x0ff) == 0 || ld < 100.0 * 100.0) {
+			union vec3 v, vn;
+
+			v.v.x = patrol->p[d].v.x - o->x;
+			v.v.y = patrol->p[d].v.y - o->y;
+			v.v.z = patrol->p[d].v.z - o->z;
+			vec3_normalize(&vn, &v);
+			vec3_mul(&v, &vn, 300.0f);
+			v.v.x += (float) snis_randn(100);
+			v.v.y += (float) snis_randn(100);
+			v.v.z += (float) snis_randn(100);
+
+			o->tsd.ship.dox = v.v.x + o->x;
+			o->tsd.ship.doy = v.v.y + o->y;
+			o->tsd.ship.doz = v.v.z + o->z;
+		}
+	} else {
+		o->tsd.ship.dox = patrol->p[d].v.x;
+		o->tsd.ship.doy = patrol->p[d].v.y;
+		o->tsd.ship.doz = patrol->p[d].v.z;
+	}
+
+	if (dist2 < 25.0 * 25.0)
+		patrol->dest = (patrol->dest + 1) % patrol->npoints;
+
 }
 
 static void ai_brain(struct snis_entity *o)
@@ -2320,7 +2347,7 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 		dest.v.z = o->tsd.ship.doz - o->z;
 	}
 
-	if (vec3_len2(&dest) > 0.01) {
+	if (vec3_len2(&dest) > 0.0001) {
 		vec3_normalize(&destn, &dest);
 	} else {
 		destn.v.x = 0.0f;
