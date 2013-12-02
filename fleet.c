@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "quat.h"
 #include "fleet.h"
@@ -195,5 +196,69 @@ int fleet_new(int fleet_shape, int32_t leader)
 	f[i].id[0] = leader;
 	f[i].fleet_shape = fleet_shape;
 	return i;
+}
+
+int fleet_count(void)
+{
+	return nfleets;
+}
+
+void fleet_leave(int32_t id)
+{
+	int i, j;
+
+	for (i = 0; i < nfleets; i++) {
+		for (j = 0; j < f[i].nships;) {
+			if (f[i].id[j] == id) {
+					memmove(&f[i].id[j], &f[i].id[j + 1],
+						sizeof(f[i].id[j]) * (f[i].nships - 1 - j));
+					f[i].nships--;
+			} else {
+				j++;
+			}
+		}
+	}
+}
+
+int fleet_join(int fleet_number, int32_t id)
+{
+	int i, j;
+
+	if (f[fleet_number].nships >= MAXSHIPSPERFLEET)
+		return -1;
+
+	for (i = 0; i < nfleets; i++) {
+		for (j = 0; j < f[i].nships;) {
+			if (f[i].id[j] == id) {
+				if (i == fleet_number) {
+					return j;
+				} else {
+					memmove(&f[i].id[j], &f[i].id[j + 1],
+						sizeof(f[i].id[j]) * (f[i].nships - 1 - j));
+					f[i].nships--;
+				}
+			} else {
+				j++;
+			}
+		}
+	}
+	f[fleet_number].id[f[fleet_number].nships] = id;
+	f[fleet_number].nships++;
+	return f[fleet_number].nships - 1;
+}
+
+int fleet_position_number(int fleet_number, int32_t id)
+{
+	int i;
+
+	for (i = 0; i < f[fleet_number].nships; i++)
+		if (f[fleet_number].id[i] == id)
+			return i;
+	return -1;
+}
+
+int32_t fleet_get_leader_id(int fleet_number)
+{
+	return f[fleet_number].id[0];
 }
 
