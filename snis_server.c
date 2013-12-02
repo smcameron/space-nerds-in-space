@@ -756,9 +756,68 @@ static int friendly_fire(struct snis_entity *attacker, struct snis_entity *victi
 	return !enemy_faction(attacker->sdata.faction, victim->sdata.faction);
 }
 
+static int find_fleet_number(struct snis_entity *o)
+{
+	int i;
+
+	for (i = o->tsd.ship.nai_entries - 1; i >= 0; i--) {
+		if (o->tsd.ship.ai[i].ai_mode == AI_MODE_FLEET_MEMBER ||
+			o->tsd.ship.ai[i].ai_mode == AI_MODE_FLEET_LEADER)
+			return o->tsd.ship.ai[i].u.fleet.fleet;
+	}
+	return -1;
+}
+
+static uint32_t buddies_pick_who_to_attack(struct snis_entity *attacker)
+{
+	int f;
+
+	if (attacker->type == OBJTYPE_SHIP1) /* player controlled ship */
+		return attacker->id;
+
+	f = find_fleet_number(attacker);
+
+	/* if attacker isn't a fleet member, attack attacker */
+	if (f < 0)
+		return attacker->id;
+
+	/* if attacker is a fleet member, attack random fleet member */
+	return fleet_member_get_id(f, snis_randn(fleet_members(f)));
+}
+
+static void buddies_join_the_fight(uint32_t id, struct snis_entity *attacker)
+{
+	struct snis_entity *o;
+	int i, n;
+
+	if (id == (uint32_t) -1) /* shouldn't happen */
+		return;
+
+	if (snis_randn(100) > 33)  /* only get involved 1/3 times */
+		return;
+
+	i = lookup_by_id(id);
+	if (i < 0)
+		return;
+	o = &go[i];
+	if (!o->alive)
+		return;
+	if (o->type != OBJTYPE_SHIP2) /* shouldn't happen */
+		return;
+	n = o->tsd.ship.nai_entries;
+	if (n > 0 && o->tsd.ship.ai[n - 1].ai_mode == AI_MODE_ATTACK) /* already attacking? */
+			return;
+	if (n >= MAX_AI_STACK_ENTRIES || n < 0)
+		return;
+	o->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
+	o->tsd.ship.ai[n].u.attack.victim_id = buddies_pick_who_to_attack(attacker);
+	o->tsd.ship.nai_entries++;
+}
+
 static void attack_your_attacker(struct snis_entity *attackee, struct snis_entity *attacker)
 {
 	int n;
+	int f;
 
 	if (!attacker)
 		return;
@@ -773,6 +832,16 @@ static void attack_your_attacker(struct snis_entity *attackee, struct snis_entit
 		return;
 
 	n = attackee->tsd.ship.nai_entries;
+	
+	/* if attackee is member of a fleet, get the fleet in on this fight */
+	f = find_fleet_number(attackee);
+	if (f >= 0) {
+		int i;
+
+		for (i = 0; i < fleet_members(f); i++)
+			buddies_join_the_fight(fleet_member_get_id(f, i), attacker);
+	}
+
 	if (n < MAX_AI_STACK_ENTRIES) {
 		attackee->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
 		attackee->tsd.ship.ai[n].u.attack.victim_id = attacker->id;
