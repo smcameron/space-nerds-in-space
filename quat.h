@@ -95,6 +95,8 @@ union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v
 
 union vec3 *vec3_normalize(union vec3 *vo, const union vec3 *vi);
 
+union vec3 *vec3_normalize_self(union vec3 *vo);
+
 /* vec3 rotate by axis and angle */
 union vec3* vec3_rot_axis(union vec3 *vo, union vec3 *vi, float x, float y, float z, float angle);
 

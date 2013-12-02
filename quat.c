@@ -469,6 +469,11 @@ union vec3 *vec3_normalize(union vec3 *vo, const union vec3 *vi)
 	return vo;
 }
 
+union vec3 *vec3_normalize_self(union vec3 *vo)
+{
+	return vec3_normalize(vo, vo);
+}
+
 /* vec3 rotate by axis and angle */
 union vec3* vec3_rot_axis(union vec3 *vo, union vec3 *vi, float x, float y, float z, float angle)
 {
