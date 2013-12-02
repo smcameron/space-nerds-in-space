@@ -753,6 +753,8 @@ static int friendly_fire(struct snis_entity *attacker, struct snis_entity *victi
 
 static void attack_your_attacker(struct snis_entity *attackee, struct snis_entity *attacker)
 {
+	int n;
+
 	if (!attacker)
 		return;
 
@@ -765,7 +767,12 @@ static void attack_your_attacker(struct snis_entity *attackee, struct snis_entit
 	if (snis_randn(100) >= 75)
 		return;
 
-	attackee->tsd.ship.victim_id = attacker->id;
+	n = attackee->tsd.ship.nai_entries;
+	if (n < MAX_AI_STACK_ENTRIES) {
+		attackee->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
+		attackee->tsd.ship.ai[n].u.attack.victim_id = attacker->id;
+		attackee->tsd.ship.nai_entries++;
+	}
 }
 
 static int add_derelict(const char *name, double x, double y, double z,
@@ -1158,10 +1165,18 @@ delete_it:
 		
 	if (eid >= 0) {
 		int r = snis_randn(LASER_RANGE - 400) + 400;
-		o->tsd.ship.victim_id = eid;
+		int n;
+
+		n = o->tsd.ship.nai_entries - 1;
+		o->tsd.ship.ai[n].u.attack.victim_id = eid;
+		o->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
 		random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
 	} else {
-		o->tsd.ship.victim_id = -1;
+		int n;
+
+		n = o->tsd.ship.nai_entries - 1;
+		o->tsd.ship.ai[n].u.attack.victim_id = -1;
+		o->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
 	}
 }
 
@@ -1228,72 +1243,130 @@ static void update_ship_orientation(struct snis_entity *o)
 	quat_from_u2v(&o->orientation, &right, &current, &up);
 }
 
+static void ship_figure_out_what_to_do(struct snis_entity *o)
+{
+	if (o->tsd.ship.nai_entries > 0)
+		return;
+	o->tsd.ship.nai_entries = 1;
+	o->tsd.ship.ai[0].ai_mode = AI_MODE_ATTACK;
+	o->tsd.ship.ai[0].u.attack.victim_id = find_nearest_victim(o);
+}
+
 static void update_ship_position_and_velocity(struct snis_entity *o);
 static int add_laserbeam(uint32_t origin, uint32_t target, int alive);
 static void ship_move(struct snis_entity *o)
 {
 	struct snis_entity *v;
 	double destx, desty, destz, dx, dy, dz, vdist;
-	int firing_range = 0;
+	int n, firing_range;
 	double maxv;
+
+	if (o->tsd.ship.nai_entries == 0)
+		ship_figure_out_what_to_do(o);
+
+	n = o->tsd.ship.nai_entries - 1;
 
 	switch (o->tsd.ship.cmd_data.command) {
 	case DEMON_CMD_ATTACK:
-		if (o->tsd.ship.victim_id == (uint32_t) -1 || snis_randn(1000) < 50)
+		o->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
+		if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -1 || snis_randn(1000) < 50)
 			ship_choose_new_attack_victim(o);
 		break;
 	default:
-		if (o->tsd.ship.victim_id == (uint32_t) -1) {
-			int r = snis_randn(400) + 200;
-			o->tsd.ship.victim_id = find_nearest_victim(o);
-			random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
-		}
 		break;
 	}
 
-	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
-	v = lookup_entity_by_id(o->tsd.ship.victim_id);
-	firing_range = 0;
-	if (v) {
-		destx = v->x + o->tsd.ship.dox;
-		desty = v->y + o->tsd.ship.doy;
-		destz = v->z + o->tsd.ship.doz;
-		dx = destx - o->x;
-		dy = desty - o->y;
-		dz = destz - o->z;
-		vdist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
-		firing_range = (vdist <= LASER_RANGE);
-		o->tsd.ship.desired_velocity = maxv;
+	/* main AI brain code is here... */
+	switch (o->tsd.ship.ai[n].ai_mode) {
+	case AI_MODE_ATTACK:
+		if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -1) {
+			int r = snis_randn(400) + 200;
+			o->tsd.ship.ai[n].u.attack.victim_id = find_nearest_victim(o);
+			random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
+		}
+		maxv = ship_type[o->tsd.ship.shiptype].max_speed;
+		v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
+		firing_range = 0;
+		if (v) {
+			destx = v->x + o->tsd.ship.dox;
+			desty = v->y + o->tsd.ship.doy;
+			destz = v->z + o->tsd.ship.doz;
+			dx = destx - o->x;
+			dy = desty - o->y;
+			dz = destz - o->z;
+			vdist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
+			firing_range = (vdist <= LASER_RANGE);
+			o->tsd.ship.desired_velocity = maxv;
 
-		/* Close enough to destination? */
-		if (fabs(dx) < 400 && fabs(dy) < 400 && fabs(dz) < 400) {
-			union vec3 vel, veln;
+			/* Close enough to destination? */
+			if (fabs(dx) < 400 && fabs(dy) < 400 && fabs(dz) < 400) {
+				union vec3 vel, veln;
 
-			/* pretty close to enemy? */
-			if (vdist < 1000) {
-				/* continue zipping past target */
-				vel.v.x = (float) o->vx;
-				vel.v.y = (float) o->vy;
-				vel.v.z = (float) o->vz;
-				vec3_normalize(&veln, &vel);
-				vec3_mul_self(&veln, 800.0f + snis_randn(600));
-				o->tsd.ship.dox = veln.v.x;
-				o->tsd.ship.doy = veln.v.y;
-				o->tsd.ship.doz = veln.v.z;
-			} else {
-				/* head back toward target */
-				int r = snis_randn(400) + 200;
-				random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
+				/* pretty close to enemy? */
+				if (vdist < 1000) {
+					/* continue zipping past target */
+					vel.v.x = (float) o->vx;
+					vel.v.y = (float) o->vy;
+					vel.v.z = (float) o->vz;
+					vec3_normalize(&veln, &vel);
+					vec3_mul_self(&veln, 800.0f + snis_randn(600));
+					o->tsd.ship.dox = veln.v.x;
+					o->tsd.ship.doy = veln.v.y;
+					o->tsd.ship.doz = veln.v.z;
+				} else {
+					/* head back toward target */
+					int r = snis_randn(400) + 200;
+					random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
+				}
 			}
-			
-		}
-#if 0
-		if (snis_randn(10000) < 20) {
-			int dist = snis_randn(LASER_RANGE - 400) + 400;
-			random_dpoint_on_sphere((float) dist, 
-				&o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
-		}
-#endif
+
+			if (firing_range) {
+				double range = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
+
+				/* neutrals do not attack planets or starbases, and only select ships
+				 * when attacked.
+				 */
+				if (o->sdata.faction != 0 ||
+					(v->type != OBJTYPE_STARBASE && v->type == OBJTYPE_PLANET)) {
+
+						if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE &&
+							o->tsd.ship.next_torpedo_time <= universe_timestamp &&
+							o->tsd.ship.torpedoes > 0) {
+							double dist, flight_time, tx, ty, tz, vx, vy, vz;
+							/* int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y); */
+
+							dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
+							flight_time = dist / TORPEDO_VELOCITY;
+							tx = v->x + (v->vx * flight_time);
+							tz = v->z + (v->vz * flight_time);
+							ty = v->y + (v->vy * flight_time);
+
+							calculate_torpedo_velocities(o->x, o->y, o->z,
+								tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
+
+							add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
+							o->tsd.ship.torpedoes--;
+							o->tsd.ship.next_torpedo_time = universe_timestamp +
+								ENEMY_TORPEDO_FIRE_INTERVAL;
+							check_for_incoming_fire(v);
+						} else {
+							if (snis_randn(1000) < 150 &&
+								o->tsd.ship.next_laser_time <= universe_timestamp) {
+								o->tsd.ship.next_laser_time = universe_timestamp +
+									ENEMY_LASER_FIRE_INTERVAL;
+								add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
+								check_for_incoming_fire(v);
+							}
+						}
+						if (v->type == OBJTYPE_SHIP1 && snis_randn(1000) < 25)
+							taunt_player(o, v);
+					} else {
+						/* FIXME: give neutrals soemthing to do so they don't just sit there */;
+					}
+				}
+			}
+		default:
+			break;
 	}
 
 	/* Adjust velocity towards desired velocity */
@@ -1306,54 +1379,6 @@ static void ship_move(struct snis_entity *o)
 	update_ship_orientation(o);
 	o->timestamp = universe_timestamp;
 
-	if (firing_range && o->tsd.ship.victim_id != (uint32_t) -1) {
-		double range;
-		v = lookup_entity_by_id(o->tsd.ship.victim_id);
-
-		range = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
-
-		/* neutrals do not attack planets or starbases, and only select ships
-		 * when attacked.
-		 */
-		if (o->sdata.faction != 0 || 
-			(v->type != OBJTYPE_STARBASE && v->type == OBJTYPE_PLANET)) {
-
-			if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE &&
-				o->tsd.ship.next_torpedo_time <= universe_timestamp &&
-				o->tsd.ship.torpedoes > 0) {
-				double dist, flight_time, tx, ty, tz, vx, vy, vz;
-				/* int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y); */
-
-				dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
-				flight_time = dist / TORPEDO_VELOCITY;
-				tx = v->x + (v->vx * flight_time);
-				tz = v->z + (v->vz * flight_time);
-				ty = v->y + (v->vy * flight_time);
-
-				calculate_torpedo_velocities(o->x, o->y, o->z,
-					tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
-
-				add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
-				o->tsd.ship.torpedoes--;
-				o->tsd.ship.next_torpedo_time = universe_timestamp +
-					ENEMY_TORPEDO_FIRE_INTERVAL;
-				check_for_incoming_fire(v);
-			} else { 
-				if (snis_randn(1000) < 150 &&
-					o->tsd.ship.next_laser_time <= universe_timestamp) {
-					o->tsd.ship.next_laser_time = universe_timestamp +
-						ENEMY_LASER_FIRE_INTERVAL;
-					add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
-					check_for_incoming_fire(v);
-				}
-			}
-			if (v->type == OBJTYPE_SHIP1 && snis_randn(1000) < 25)
-				taunt_player(o, v);
-		} else {
-			/* FIXME: give neutrals soemthing to do so they don't just sit there */;
-		}
-
-	}
 	o->tsd.ship.phaser_charge = update_phaser_banks(o->tsd.ship.phaser_charge, 200, 100);
 	if (o->sdata.shield_strength > (255 - o->tsd.ship.damage.shield_damage))
 		o->sdata.shield_strength = 255 - o->tsd.ship.damage.shield_damage;
@@ -1891,6 +1916,11 @@ static void auto_select_enemy(void *context, void *entity)
 static void auto_select_enemies(struct snis_entity *o)
 {
 	struct auto_select_context asc;
+	int n;
+
+	if (o->tsd.ship.nai_entries == 0)
+		ship_figure_out_what_to_do(o);
+	n = o->tsd.ship.nai_entries - 1;
 
 	if ((universe_timestamp & 0x3) != 0) /* throttle this computation */
 		return;
@@ -1901,7 +1931,7 @@ static void auto_select_enemies(struct snis_entity *o)
 	asc.new_victim_id = -1;
 
 	space_partition_process(space_partition, o, o->x, o->z, &asc, auto_select_enemy);
-	o->tsd.ship.victim_id = asc.new_victim_id;
+	o->tsd.ship.ai[n].u.attack.victim_id = asc.new_victim_id;
 }
 
 static void do_thrust(struct snis_entity *ship)
@@ -2053,13 +2083,22 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	union vec3 desired_velocity;
 	union vec3 dest, destn;
 	struct snis_entity *v;
+	int n;
+
+	if (o->tsd.ship.nai_entries == 0)
+		ship_figure_out_what_to_do(o);
+	n = o->tsd.ship.nai_entries - 1;
 
 	/* FIXME: need a better way to do this. */
-	v = lookup_entity_by_id(o->tsd.ship.victim_id);
-	if (v) {
-		dest.v.x = v->x + o->tsd.ship.dox - o->x;
-		dest.v.y = v->y + o->tsd.ship.doy - o->y;
-		dest.v.z = v->z + o->tsd.ship.doz - o->z;
+	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK) {
+		v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
+		if (v) {
+			dest.v.x = v->x + o->tsd.ship.dox - o->x;
+			dest.v.y = v->y + o->tsd.ship.doy - o->y;
+			dest.v.z = v->z + o->tsd.ship.doz - o->z;
+		} else {
+			stacktrace("bad ai stack in update_ship_position_and_velocity\n");
+		}
 	} else {
 		dest.v.x = o->tsd.ship.dox - o->x;
 		dest.v.y = o->tsd.ship.doy - o->y;
@@ -2645,7 +2684,8 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.requested_warpdrive = 0;
 	o->tsd.ship.requested_shield = 0;
 	o->tsd.ship.phaser_wavelength = 0;
-	o->tsd.ship.victim_id = -1;
+	o->tsd.ship.nai_entries = 0;
+	memset(o->tsd.ship.ai, 0, sizeof(o->tsd.ship.ai));
 	o->tsd.ship.power_data.shields.r1 = 0;
 	o->tsd.ship.power_data.phasers.r1 = 0;
 	o->tsd.ship.power_data.sensors.r1 = 0;
@@ -2717,7 +2757,8 @@ static int add_ship(void)
 	go[i].tsd.ship.desired_heading = 0;
 	go[i].tsd.ship.velocity = 0;
 	go[i].tsd.ship.shiptype = snis_randn(nshiptypes);
-	go[i].tsd.ship.victim_id = (uint32_t) -1;
+	go[i].tsd.ship.nai_entries = 0;
+	memset(go[i].tsd.ship.ai, 0, sizeof(go[i].tsd.ship.ai));
 	go[i].tsd.ship.lifeform_count = ship_type[go[i].tsd.ship.shiptype].crew_max;
 	memset(&go[i].tsd.ship.damage, 0, sizeof(go[i].tsd.ship.damage));
 	memset(&go[i].tsd.ship.power_data, 0, sizeof(go[i].tsd.ship.power_data));
@@ -4192,7 +4233,8 @@ static int process_weap_select_target(struct game_client *c)
 	if (i < 0)
 		return 0;
 	ship = &go[i];
-	ship->tsd.ship.victim_id = go[index].id;
+	ship->tsd.ship.nai_entries = 1;
+	ship->tsd.ship.ai[0].u.attack.victim_id = go[index].id;
 	return 0;
 }
 
@@ -4379,13 +4421,16 @@ static int process_exec_lua_script(struct game_client *c)
 static void update_command_data(uint32_t id, struct command_data *cmd_data)
 {
 	struct snis_entity *o;
-	int i;
+	int i, n;
 
 	i = lookup_by_id(id);
 	if (i < 0)
 		goto out;
 
 	o = &go[i];
+	if (o->tsd.ship.nai_entries == 0)
+		ship_figure_out_what_to_do(o);
+	n = o->tsd.ship.nai_entries - 1;
 
 	if (o->type != OBJTYPE_SHIP2)
 		goto out;
@@ -4393,7 +4438,8 @@ static void update_command_data(uint32_t id, struct command_data *cmd_data)
 	switch (cmd_data->command) {
 		case DEMON_CMD_ATTACK:
 			o->tsd.ship.cmd_data = *cmd_data;
-			o->tsd.ship.victim_id = (uint32_t) -1;
+			o->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
+			o->tsd.ship.ai[n].u.attack.victim_id = (uint32_t) -1;
 			ship_choose_new_attack_victim(o);
 			break;
 		default:
@@ -5430,10 +5476,10 @@ static int process_request_laser(struct game_client *c)
 	int tid;
 
 	pthread_mutex_lock(&universe_mutex);
-	if (ship->tsd.ship.victim_id < 0)
+	if (ship->tsd.ship.ai[0].u.attack.victim_id < 0)
 		goto laserfail;
 
-	tid = ship->tsd.ship.victim_id;
+	tid = ship->tsd.ship.ai[0].u.attack.victim_id;
 	add_laserbeam(ship->id, tid, LASERBEAM_DURATION);
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
@@ -5494,7 +5540,7 @@ static int process_request_tractor_beam(struct game_client *c)
 	int tid, i;
 
 	pthread_mutex_lock(&universe_mutex);
-	if (ship->tsd.ship.victim_id < 0 && ship->tsd.ship.tractor_beam == -1)
+	if (ship->tsd.ship.ai[0].u.attack.victim_id < 0 && ship->tsd.ship.tractor_beam == -1)
 		goto tractorfail;
 
 	if (ship->tsd.ship.tractor_beam != -1) {
@@ -5513,7 +5559,7 @@ static int process_request_tractor_beam(struct game_client *c)
 		return 0;
 	}
 
-	tid = ship->tsd.ship.victim_id;
+	tid = ship->tsd.ship.ai[0].u.attack.victim_id;
 	/* TODO: check tractor beam energy here */
 	if (0) 
 		goto tractorfail;
@@ -6283,13 +6329,22 @@ static int insane(unsigned char *word, int len)
 static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o)
 {
+	int n;
+	int32_t victim_id;
+
+	n = o->tsd.ship.nai_entries - 1;
+	if (n < 0 || o->tsd.ship.ai[n].ai_mode != AI_MODE_ATTACK)
+		victim_id = -1;
+	else
+		victim_id = o->tsd.ship.ai[n].u.attack.victim_id;
+
 	pb_queue_to_client(c, packed_buffer_new("hwwSSSSSSQwb", OPCODE_ECON_UPDATE_SHIP,
 			o->id, o->alive, o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM, o->z, (int32_t) UNIVERSE_DIM,
 			o->vx, (uint32_t) UNIVERSE_DIM,
 			o->vy, (uint32_t) UNIVERSE_DIM,
 			o->vz, (uint32_t) UNIVERSE_DIM,
-			&o->orientation, o->tsd.ship.victim_id, o->tsd.ship.shiptype));
+			&o->orientation, victim_id, o->tsd.ship.shiptype));
 }
 
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip)
@@ -6409,7 +6464,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
 			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
 			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype,
-			o->tsd.ship.reverse, o->tsd.ship.victim_id,
+			o->tsd.ship.reverse, o->tsd.ship.ai[0].u.attack.victim_id,
 			&o->orientation.vec[0],
 			&o->tsd.ship.sciball_orientation.vec[0],
 			&o->tsd.ship.weap_orientation.vec[0]);

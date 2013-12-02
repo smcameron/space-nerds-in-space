@@ -193,7 +193,6 @@ struct update_econ_ship_packet {
 	uint32_t alive;
 	uint32_t x, y, z, vx, vy, vz;
 	union quat orientation;
-	uint32_t victim_id;
 	uint8_t shiptype; /* same as ship_sdata_packet subclass */
 };
 
