@@ -204,6 +204,11 @@ int fleet_count(void)
 	return nfleets;
 }
 
+int fleet_members(int fleet_number)
+{
+	return f[fleet_number].nships;
+}
+
 uint32_t fleet_member_get_id(int fleet_number, int position)
 {
 	assert(fleet_number >= 0 && fleet_number < nfleets);

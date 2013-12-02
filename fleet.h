@@ -15,6 +15,8 @@ void fleet_leave(int32_t id);
 
 int fleet_count(void);
 
+int fleet_members(int fleet_number);
+
 uint32_t fleet_member_get_id(int fleet_number, int position);
 
 int fleet_join(int fleet_number, int32_t id);
