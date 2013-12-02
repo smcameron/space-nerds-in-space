@@ -787,11 +787,40 @@ static uint32_t buddies_pick_who_to_attack(struct snis_entity *attacker)
 
 static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id)
 {
-	int n;
+	int n, i;
+	double d1, d2;
+	struct snis_entity *v;
 
 	n = attacker->tsd.ship.nai_entries;
-	if (n > 0 && attacker->tsd.ship.ai[n - 1].ai_mode == AI_MODE_ATTACK) /* already attacking */
-		return;
+	if (n > 0 && attacker->tsd.ship.ai[n - 1].ai_mode == AI_MODE_ATTACK) {
+		if (attacker->tsd.ship.ai[n - 1].u.attack.victim_id == victim_id)
+			return; /* already attacking this guy */
+		i = lookup_by_id(victim_id);
+		if (i < 0)
+			return;
+		v = &go[i];
+		d1 = dist3dsqrd(v->x - attacker->x, v->y - attacker->y, v->z - attacker->z);
+		i = lookup_by_id(attacker->tsd.ship.ai[n - 1].u.attack.victim_id);
+		if (i < 0) {
+			attacker->tsd.ship.ai[n - 1].u.attack.victim_id = victim_id;
+			random_dpoint_on_sphere(snis_randn(LASER_RANGE - 400) + 400,
+							&attacker->tsd.ship.dox,
+							&attacker->tsd.ship.doy,
+							&attacker->tsd.ship.doz);
+			return;
+		}
+		v = &go[i];
+		d2 = dist3dsqrd(v->x - attacker->x, v->y - attacker->y, v->z - attacker->z);
+		if (d1 < d2) {
+			/* new attack victim closer than old one. */
+			attacker->tsd.ship.ai[n - 1].u.attack.victim_id = victim_id;
+			random_dpoint_on_sphere(snis_randn(LASER_RANGE - 400) + 400,
+							&attacker->tsd.ship.dox,
+							&attacker->tsd.ship.doy,
+							&attacker->tsd.ship.doz);
+			return;
+		}
+	}
 	if (n < MAX_AI_STACK_ENTRIES) {
 		attacker->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
 		attacker->tsd.ship.ai[n].u.attack.victim_id = victim_id;
