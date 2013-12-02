@@ -889,6 +889,7 @@ static void setup_patrol_route(struct snis_entity *o)
 static void ship_figure_out_what_to_do(struct snis_entity *o)
 {
 	int n;
+	int fleet_shape;
 
 	if (o->tsd.ship.nai_entries > 0)
 		return;
@@ -902,10 +903,14 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 		setup_patrol_route(o);
 		break;
 	case 2:
+		if ((snis_randn(100) % 2) == 0)
+			fleet_shape = FLEET_TRIANGLE;
+		else
+			fleet_shape = FLEET_SQUARE;
 		setup_patrol_route(o);
 		if (fleet_count() < 5) {
 			o->tsd.ship.ai[0].ai_mode = AI_MODE_FLEET_LEADER;
-			o->tsd.ship.ai[0].u.fleet.fleet = fleet_new(FLEET_TRIANGLE, o->id);
+			o->tsd.ship.ai[0].u.fleet.fleet = fleet_new(fleet_shape, o->id);
 			o->tsd.ship.ai[0].u.fleet.fleet_position = 0;
 		} else {
 			struct snis_entity *leader;
