@@ -265,13 +265,18 @@ int32_t fleet_get_leader_id(int fleet_number)
 #ifdef TESTFLEET
 int main(int argc, char *argv[])
 {
-	int n, i;
+	int n, n2, i;
 	union vec3 v;
 	union quat q = identity_quat;
 
 	n = fleet_new(FLEET_TRIANGLE, 1);
 	for (i = 0; i < 10; i++) {
 		v = fleet_position(n, i, &q);
+		printf("%d, %f,%f,%f\n", i, v.v.x, v.v.y, v.v.z);
+	}
+	n2 = fleet_new(FLEET_SQUARE, 1);
+	for (i = 0; i < 10; i++) {
+		v = fleet_position(n2, i, &q);
 		printf("%d, %f,%f,%f\n", i, v.v.x, v.v.y, v.v.z);
 	}
 	return 0;
