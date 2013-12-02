@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #include "quat.h"
 #include "fleet.h"
@@ -201,6 +202,14 @@ int fleet_new(int fleet_shape, int32_t leader)
 int fleet_count(void)
 {
 	return nfleets;
+}
+
+uint32_t fleet_member_get_id(int fleet_number, int position)
+{
+	assert(fleet_number >= 0 && fleet_number < nfleets);
+	if (position < 0 || position >= f[fleet_number].nships)
+		return (uint32_t) -1;
+	return f[fleet_number].id[position];
 }
 
 void fleet_leave(int32_t id)
