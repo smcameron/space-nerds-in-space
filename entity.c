@@ -107,6 +107,7 @@ struct clip_triangle {
 	struct mat41 v[3]; /* three vertices */
 };
 static int clip_triangle(struct clip_triangle* triangles, struct mat41* vs_out0, struct mat41* vs_out1, struct mat41* vs_out2);
+static int clip_line(struct mat41* vtx0, struct mat41* vtx1);
 
 struct entity *add_entity(struct entity_context *cx,
 	struct mesh *m, float x, float y, float z, int color)
@@ -1365,5 +1366,39 @@ static int clip_triangle(struct clip_triangle* triangles, struct mat41* vs_out0,
 		memcpy(triangles, &remaining_triangles[0], sizeof(struct clip_triangle) * ntriangles);
 	}
 	return ntriangles;
+}
+
+static int clip_line(struct mat41* vtx0, struct mat41* vtx1)
+{
+	clip_line_fn clipping_func[] = {clip_line_pos, clip_line_neg, clip_line_pos,
+					clip_line_neg, clip_line_pos, clip_line_neg};
+	get_comp_fn get_component_func[] = {get_x, get_x, get_y, get_y, get_z, get_z};
+	is_outside_fn is_outside_func[] = {is_outside_pos, is_outside_neg, is_outside_pos,
+						is_outside_neg, is_outside_pos, is_outside_neg};
+
+	int plane;
+	for (plane = 0; plane < 6; plane++) {
+		float component0 = get_component_func[plane](vtx0);
+		float component1 = get_component_func[plane](vtx1);
+
+		float pos0w = vtx0->m[3];
+		float pos1w = vtx1->m[3];
+
+		int is_outside0 = is_outside_func[plane](component0, pos0w);
+		int is_outside1 = is_outside_func[plane](component1, pos1w);
+
+		if (is_outside0 && is_outside1)
+			return 1;
+
+		if (is_outside0 && !is_outside1) {
+			float line0_t = clipping_func[plane](component0, pos0w, component1, pos1w);
+			clipped_line_from_plane(vtx0, line0_t, vtx0, vtx1);
+		}
+		else if (!is_outside0 && is_outside1) {
+			float line1_t = clipping_func[plane](component1, pos1w, component0, pos0w);
+			clipped_line_from_plane(vtx1, line1_t, vtx1, vtx0);
+		}
+	}
+	return 0;
 }
 
