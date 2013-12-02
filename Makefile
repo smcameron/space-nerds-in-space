@@ -73,7 +73,7 @@ LIMCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_limited_
 	snis_limited_client.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	snis_damcon_systems.o mesh.o \
-	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o
+	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o fleet.o
 
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -lrt -lm ${LUALIBS} ${PNGLIBS}
@@ -324,6 +324,9 @@ names.o:	names.c names.h
 	$(Q)$(COMPILE)
 
 quat.o:	quat.c quat.h
+	$(Q)$(COMPILE)
+
+fleet.o:	fleet.c fleet.h
 	$(Q)$(COMPILE)
 
 test_matrix:	matrix.c matrix.h
