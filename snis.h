@@ -181,8 +181,16 @@ struct ai_attack_data {
 	int32_t victim_id;
 };
 
+struct ai_patrol_data {
+#define MAX_PATROL_POINTS 5
+	uint8_t npoints;
+	uint8_t dest;
+	union vec3 p[MAX_PATROL_POINTS];
+};
+
 union ai_data {
 	struct ai_attack_data attack;
+	struct ai_patrol_data patrol;
 };
 
 struct ai_stack_entry {

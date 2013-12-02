@@ -837,13 +837,68 @@ static int find_nearest_victim(struct snis_entity *o)
 	return victim_id;
 }
 
+union vec3 pick_random_patrol_destination(void)
+{
+	union vec3 v;
+	struct snis_entity *o;
+	int i;
+	double dx, dy, dz;
+
+	random_dpoint_on_sphere(100.0, &dx, &dy, &dz);
+	while (1) {
+		i = snis_randn(snis_object_pool_highest_object(pool));
+		o = &go[i];
+		if (!o->alive)
+			continue;
+		if (o->type != OBJTYPE_PLANET && o->type != OBJTYPE_STARBASE)
+			continue;
+		break;
+	}
+	v.v.x = o->x + dx;
+	v.v.y = o->y + dy;
+	v.v.z = o->z + dz;
+	return v;
+}
+
+static void setup_patrol_route(struct snis_entity *o)
+{
+	int n, npoints, i;
+	struct ai_patrol_data *patrol;
+
+	n = o->tsd.ship.nai_entries;
+	o->tsd.ship.nai_entries = n + 1;
+	o->tsd.ship.ai[n].ai_mode = AI_MODE_PATROL;
+
+	npoints = (snis_randn(100) % 4) + 2;
+	assert(npoints > 1 && npoints <= MAX_PATROL_POINTS);
+	patrol = &o->tsd.ship.ai[n].u.patrol;
+	patrol->npoints = npoints;
+	patrol->dest = 0;
+
+	/* FIXME: ensure no duplicate points and order in some sane way */
+	for (i = 0; i < npoints; i++)
+		patrol->p[i] = pick_random_patrol_destination();
+	o->tsd.ship.dox = patrol->p[0].v.x;
+	o->tsd.ship.doy = patrol->p[0].v.y;
+	o->tsd.ship.doz = patrol->p[0].v.z;
+}
+
 static void ship_figure_out_what_to_do(struct snis_entity *o)
 {
 	if (o->tsd.ship.nai_entries > 0)
 		return;
-	o->tsd.ship.nai_entries = 1;
-	o->tsd.ship.ai[0].ai_mode = AI_MODE_ATTACK;
-	o->tsd.ship.ai[0].u.attack.victim_id = find_nearest_victim(o);
+	switch (snis_randn(100) % 2) {
+	case 0:
+		o->tsd.ship.nai_entries = 1;
+		o->tsd.ship.ai[0].ai_mode = AI_MODE_ATTACK;
+		o->tsd.ship.ai[0].u.attack.victim_id = find_nearest_victim(o);
+		break;
+	case 1:	
+		setup_patrol_route(o);
+		break;
+	default:
+		break;
+	}
 }
 
 static void pop_ai_stack(struct snis_entity *o)
@@ -1393,6 +1448,28 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	}
 }
 
+static void ai_patrol_mode_brain(struct snis_entity *o)
+{
+	int n = o->tsd.ship.nai_entries - 1;
+	struct ai_patrol_data *patrol = &o->tsd.ship.ai[n].u.patrol;
+	double maxv;
+	int d;
+
+	double dist2 = dist3dsqrd(o->x - o->tsd.ship.dox,
+				o->y - o->tsd.ship.doy,
+				o->z - o->tsd.ship.doz);
+
+	if (dist2 < 25.0 * 25.0)
+		patrol->dest = (patrol->dest + 1) % patrol->npoints;
+	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
+	o->tsd.ship.desired_velocity = maxv;
+	d = patrol->dest;
+
+	o->tsd.ship.dox = patrol->p[d].v.x;
+	o->tsd.ship.doy = patrol->p[d].v.y;
+	o->tsd.ship.doz = patrol->p[d].v.z;
+}
+
 static void ai_brain(struct snis_entity *o)
 {
 	int n;
@@ -1407,6 +1484,9 @@ static void ai_brain(struct snis_entity *o)
 	switch (o->tsd.ship.ai[n].ai_mode) {
 	case AI_MODE_ATTACK:
 		ai_attack_mode_brain(o);
+		break;
+	case AI_MODE_PATROL:
+		ai_patrol_mode_brain(o);
 		break;
 	default:
 		break;
