@@ -784,6 +784,94 @@ static int make_derelict(struct snis_entity *o)
 	return add_derelict(o->sdata.name, o->x, o->y, o->z, o->tsd.ship.shiptype, o->sdata.faction);
 }
 
+static int find_nearest_victim(struct snis_entity *o)
+{
+	int i, victim_id;
+	double dist2, dx, dz, lowestdist;
+
+	/* assume universe mutex is held */
+	victim_id = -1;
+	lowestdist = 1e60;  /* very big number */
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+
+		if (i == o->index) /* don't victimize self */
+			continue;
+
+		if (o->sdata.faction == 0) { /* neutral */
+			/* only travel to planets and starbases */
+			if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_PLANET)
+				continue;
+		} else {
+			/* only victimize players, other ships and starbases */
+			if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_SHIP1 &&
+				go[i].type != OBJTYPE_SHIP2)
+				continue;
+		}
+
+		if (!go[i].alive) /* skip the dead guys */
+			continue;
+
+		if (o->sdata.faction != 0) {
+			if (go[i].type == OBJTYPE_SHIP2 || go[i].type == OBJTYPE_STARBASE) {
+				/* don't attack neutrals */
+				if (go[i].sdata.faction == 0)
+					continue;
+				/* Even factions attack odd factions, and vice versa */
+				/* TODO: something better here. */
+				if ((o->sdata.faction % 2) == (go[i].sdata.faction % 2))
+					continue;
+			}
+		}
+
+		dx = go[i].x - o->x;
+		dz = go[i].z - o->z;
+		dist2 = dx * dx + dz * dz;
+		if (go[i].type == OBJTYPE_SHIP1 && o->sdata.faction != 0)
+			dist2 = dist2 * 0.5; /* prioritize hitting player... */
+		if (victim_id == -1 || dist2 < lowestdist) {
+			victim_id = go[i].id;
+			lowestdist = dist2;
+		}
+	}
+	return victim_id;
+}
+
+static void ship_figure_out_what_to_do(struct snis_entity *o)
+{
+	if (o->tsd.ship.nai_entries > 0)
+		return;
+	o->tsd.ship.nai_entries = 1;
+	o->tsd.ship.ai[0].ai_mode = AI_MODE_ATTACK;
+	o->tsd.ship.ai[0].u.attack.victim_id = find_nearest_victim(o);
+}
+
+static void pop_ai_stack(struct snis_entity *o)
+{
+	int n;
+
+	n = o->tsd.ship.nai_entries;
+	if (n <= 0) {
+		ship_figure_out_what_to_do(o);
+		return;
+	}
+	o->tsd.ship.nai_entries--;
+}
+
+static void pop_ai_attack_mode(struct snis_entity *o)
+{
+	int n;
+
+	n = o->tsd.ship.nai_entries;
+	if (n <= 0) {
+		ship_figure_out_what_to_do(o);
+		return;
+	}
+	n--;
+	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
+		o->tsd.ship.nai_entries--;
+	return;
+}
+
 static void torpedo_collision_detection(void *context, void *entity)
 {
 	struct snis_entity *o = context; /* torpedo */
@@ -830,6 +918,11 @@ static void torpedo_collision_detection(void *context, void *entity)
 		/* make sound for players that got hit */
 		/* make sound for players that did the hitting */
 		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
+		if (t->type == OBJTYPE_SHIP1 || t->type == OBJTYPE_SHIP2) {
+			int i = lookup_by_id(o->tsd.torpedo.ship_id);
+			if (i > 0)
+				pop_ai_attack_mode(&go[i]);
+		}
 		if (t->type != OBJTYPE_SHIP1) {
 			if (t->type == OBJTYPE_SHIP2)
 				make_derelict(t);
@@ -991,58 +1084,6 @@ static void laser_move(struct snis_entity *o)
 			laser_collision_detection);
 	if (o->alive <= 0)
 		delete_from_clients_and_server(o);
-}
-
-static int find_nearest_victim(struct snis_entity *o)
-{
-	int i, victim_id;
-	double dist2, dx, dz, lowestdist;
-
-	/* assume universe mutex is held */
-	victim_id = -1;
-	lowestdist = 1e60;  /* very big number */
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-
-		if (i == o->index) /* don't victimize self */
-			continue;
-
-		if (o->sdata.faction == 0) { /* neutral */
-			/* only travel to planets and starbases */
-			if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_PLANET)
-				continue;
-		} else {
-			/* only victimize players, other ships and starbases */
-			if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_SHIP1 &&
-				go[i].type != OBJTYPE_SHIP2)
-				continue;
-		}
-
-		if (!go[i].alive) /* skip the dead guys */
-			continue;
-
-		if (o->sdata.faction != 0) {
-			if (go[i].type == OBJTYPE_SHIP2 || go[i].type == OBJTYPE_STARBASE) {
-				/* don't attack neutrals */
-				if (go[i].sdata.faction == 0)
-					continue;
-				/* Even factions attack odd factions, and vice versa */
-				/* TODO: something better here. */
-				if ((o->sdata.faction % 2) == (go[i].sdata.faction % 2))
-					continue;
-			}
-		}
-
-		dx = go[i].x - o->x;
-		dz = go[i].z - o->z;
-		dist2 = dx * dx + dz * dz;
-		if (go[i].type == OBJTYPE_SHIP1 && o->sdata.faction != 0)
-			dist2 = dist2 * 0.5; /* prioritize hitting player... */
-		if (victim_id == -1 || dist2 < lowestdist) {
-			victim_id = go[i].id;
-			lowestdist = dist2;
-		}
-	}
-	return victim_id;
 }
 
 static void send_comms_packet(char *sender, const char *str);
@@ -1242,15 +1283,6 @@ static void update_ship_orientation(struct snis_entity *o)
 	union vec3 current = { { o->vx, o->vy, o->vz } };
 
 	quat_from_u2v(&o->orientation, &right, &current, &up);
-}
-
-static void ship_figure_out_what_to_do(struct snis_entity *o)
-{
-	if (o->tsd.ship.nai_entries > 0)
-		return;
-	o->tsd.ship.nai_entries = 1;
-	o->tsd.ship.ai[0].ai_mode = AI_MODE_ATTACK;
-	o->tsd.ship.ai[0].u.attack.victim_id = find_nearest_victim(o);
 }
 
 static void update_ship_position_and_velocity(struct snis_entity *o);
@@ -2098,7 +2130,9 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 			dest.v.y = v->y + o->tsd.ship.doy - o->y;
 			dest.v.z = v->z + o->tsd.ship.doz - o->z;
 		} else {
-			stacktrace("bad ai stack in update_ship_position_and_velocity\n");
+			/* victim must have died. */
+			pop_ai_attack_mode(o);
+			return;
 		}
 	} else {
 		dest.v.x = o->tsd.ship.dox - o->x;
@@ -3085,6 +3119,8 @@ static void laserbeam_move(struct snis_entity *o)
 
 	/* if target or shooter is dead, stop firing */
 	if (!go[tid].alive || !go[oid].alive) {
+		if (!go[tid].alive)
+			pop_ai_attack_mode(&go[oid]);
 		delete_from_clients_and_server(o);
 		return;
 	}
