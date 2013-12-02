@@ -75,9 +75,10 @@ GLOBAL int get_renderer(struct entity_context *cx);
 #define FLATSHADING_RENDERER (1 << 1)
 #define BLACK_TRIS (1 << 2)
 GLOBAL void calculate_camera_transform(struct entity_context *cx);
-GLOBAL struct mat44 get_camera_total_transform(struct entity_context *cx);
-GLOBAL int transform_point(struct entity_context *cx,
-				float x, float y, float z, float *sx, float *sy, int do_clip);
+GLOBAL struct mat44d get_camera_transform(struct entity_context *cx);
+GLOBAL int transform_point(struct entity_context *cx, float x, float y, float z, float *sx, float *sy);
+GLOBAL int transform_line(struct entity_context *cx, float x1, float y1, float z1,
+	float x2, float y2, float z2, float *sx1, float *sy1, float *sx2, float *sy2);
 
 GLOBAL void set_render_style(struct entity *e, int render_style);
 GLOBAL void entity_context_free(struct entity_context *cx);

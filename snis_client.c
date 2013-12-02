@@ -4517,7 +4517,8 @@ static int newzoom(int current_zoom, int desired_zoom)
 }
 
 #define NEAR_CAMERA_PLANE 1.0
-#define FAR_CAMERA_PLANE 400.0
+/* far plane is one sectors, which is about max that can be seen on full zoom */
+#define FAR_CAMERA_PLANE (XKNOWN_DIM/10.0)
 
 static void begin_2d_gl(void);
 static void end_2d_gl(void);
@@ -5122,7 +5123,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 	}
 	dr *= 100.0;
 
-	transform_point(sciballecx, o->x, o->y, o->z, &sx, &sy, 0);
+	transform_point(sciballecx, o->x, o->y, o->z, &sx, &sy);
 	*x = (int) sx;
 	*y = (int) sy;
 	r = hypot(sx - SCIENCE_SCOPE_CX, sy - SCIENCE_SCOPE_CY);
@@ -5136,7 +5137,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 			tx = o->x + sin(da) * (float) snis_randn(dr);
 			ty = o->y + cos(da) * (float) snis_randn(dr); 
 			tz = o->z + cos(db) * (float) snis_randn(dr); 
-			if (transform_point(sciballecx, tx, ty, tz, &sx, &sy, 1))
+			if (transform_point(sciballecx, tx, ty, tz, &sx, &sy))
 				continue;
 			r = hypot(sx - SCIENCE_SCOPE_CX, sy - SCIENCE_SCOPE_CY);
 			if (r >= SCIENCE_SCOPE_R)
@@ -5653,9 +5654,9 @@ static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx
 	if (rc < 0)
 		return;
 	float sx1, sy1, sx2, sy2;
-	transform_point(cx, clip1.v.x, clip1.v.y, clip1.v.z, &sx1, &sy1, 0);
-	transform_point(cx, clip2.v.x, clip2.v.y, clip2.v.z, &sx2, &sy2, 0);
-	sng_draw_laser_line(w->window, gc, sx1, sy1, sx2, sy2, color);
+	if (!transform_line(cx, clip1.v.x, clip1.v.y, clip1.v.z, clip2.v.x, clip2.v.y, clip2.v.z, &sx1, &sy1, &sx2, &sy2)) {
+		sng_draw_laser_line(w->window, gc, sx1, sy1, sx2, sy2, color);
+	}
 }
 
 
@@ -5767,18 +5768,18 @@ static void __attribute__((unused)) snis_draw_3d_dotted_line(GtkWidget *w, GdkGC
 				float x1, float y1, float z1, float x2, float y2, float z2 )
 {
 	float sx1, sy1, sx2, sy2;
-	transform_point(cx, x1, y1, z1, &sx1, &sy1, 0);
-	transform_point(cx, x2, y2, z2, &sx2, &sy2, 0);
-	sng_draw_dotted_line(w->window, gc, sx1, sy1, sx2, sy2);
+	if (!transform_line(cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
+		sng_draw_dotted_line(w->window, gc, sx1, sy1, sx2, sy2);
+	}
 }
 
 static void snis_draw_3d_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
 				float x1, float y1, float z1, float x2, float y2, float z2 )
 {
 	float sx1, sy1, sx2, sy2;
-	transform_point(cx, x1, y1, z1, &sx1, &sy1, 0);
-	transform_point(cx, x2, y2, z2, &sx2, &sy2, 0);
-	snis_draw_line(w->window, gc, sx1, sy1, sx2, sy2);
+	if (!transform_line(cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
+		snis_draw_line(w->window, gc, sx1, sy1, sx2, sy2);
+	}
 }
 
 static void draw_3d_mark_arc(GtkWidget *w, GdkGC *gc, struct entity_context *ecx,
@@ -6003,9 +6004,9 @@ static void draw_sciplane_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_conte
 	if (rc < 0)
 		return;
 	float sx1, sy1, sx2, sy2;
-	transform_point(cx, clip1.v.x, clip1.v.y, clip1.v.z, &sx1, &sy1, 0);
-	transform_point(cx, clip2.v.x, clip2.v.y, clip2.v.z, &sx2, &sy2, 0);
-	sng_draw_laser_line(w->window, gc, sx1, sy1, sx2, sy2, color);
+	if (!transform_line(cx, clip1.v.x, clip1.v.y, clip1.v.z, clip2.v.x, clip2.v.y, clip2.v.z, &sx1, &sy1, &sx2, &sy2)) {
+		sng_draw_laser_line(w->window, gc, sx1, sy1, sx2, sy2, color);
+	}
 }
 
 static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double range)
@@ -6023,7 +6024,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	last_timer = timer;
 
 	float fovy = 30.0 * M_PI / 180.0;
-	float dist_to_cam_frac = 1.0 / tan(fovy/2.0);
+	float dist_to_cam_frac = 1.09 / tan(fovy/2.0); /*range + 8% for labels */
 
 	float mark_popout_extra_dist = range * 0.2;
 	float mark_popout_rate = 0.10;
@@ -6103,8 +6104,9 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	camera_look_at(navecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
 
         set_renderer(navecx, WIREFRAME_RENDERER);
-	/* camera_set_orthgraphic_parameters(navecx, 0.5, 8000.0, range, SCREEN_WIDTH, SCREEN_HEIGHT); */
-	camera_set_parameters(navecx, 0.5, 8000.0, SCREEN_WIDTH, SCREEN_HEIGHT, fovy);
+	camera_set_parameters(navecx, range*(cam_range_fraction-1.0), range*(cam_range_fraction+1.0),
+				SCREEN_WIDTH, SCREEN_HEIGHT, fovy);
+	set_window_offset(navecx, 0, 0);
 	calculate_camera_transform(navecx);
 
 	e = add_entity(navecx, ring_mesh, o->x, o->y, o->z, DARKRED);
@@ -6166,13 +6168,13 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			z2 += o->z;
 
 			float sx1, sy1, sx2, sy2, sx3, sy3;
-			transform_point(navecx, x1, o->y, z1, &sx1, &sy1, 0);
-			transform_point(navecx, x2, o->y, z2, &sx2, &sy2, 0);
-			transform_point(navecx, x3, o->y, z3, &sx3, &sy3, 0);
-
-			sng_draw_dotted_line(w->window, gc, sx1, sy1, sx2, sy2);
-			sprintf(buf, "%d", (int)math_angle_to_game_angle_degrees(i * 360.0/slices));
-			sng_center_xy_draw_string(w, gc, buf, font, sx3, sy3);
+			if (!transform_line(navecx, x1, o->y, z1, x2, o->y, z2, &sx1, &sy1, &sx2, &sy2)) {
+				sng_draw_dotted_line(w->window, gc, sx1, sy1, sx2, sy2);
+			}
+			if (!transform_point(navecx, x3, o->y, z3, &sx3, &sy3)) {
+				sprintf(buf, "%d", (int)math_angle_to_game_angle_degrees(i * 360.0/slices));
+				sng_center_xy_draw_string(w, gc, buf, font, sx3, sy3);
+			}
 		}
 	}
 
@@ -6187,17 +6189,17 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		tz1 = o->z - sin(heading - beam_width / 2) * range * 0.05;
 		tx2 = o->x + cos(heading - beam_width / 2) * range;
 		tz2 = o->z - sin(heading - beam_width / 2) * range;
-		transform_point(navecx, tx1, o->y, tz1, &sx1, &sy1, 0);
-		transform_point(navecx, tx2, o->y, tz2, &sx2, &sy2, 0);
-		sng_draw_electric_line(w->window, gc, sx1, sy1, sx2, sy2);
+		if (!transform_line(navecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2)) {
+			sng_draw_electric_line(w->window, gc, sx1, sy1, sx2, sy2);
+		}
 
 		tx1 = o->x + cos(heading + beam_width / 2) * range * 0.05;
 		tz1 = o->z - sin(heading + beam_width / 2) * range * 0.05;
 		tx2 = o->x + cos(heading + beam_width / 2) * range;
 		tz2 = o->z - sin(heading + beam_width / 2) * range;
-		transform_point(navecx, tx1, o->y, tz1, &sx1, &sy1, 0);
-		transform_point(navecx, tx2, o->y, tz2, &sx2, &sy2, 0);
-		sng_draw_electric_line(w->window, gc, sx1, sy1, sx2, sy2);
+		if (!transform_line(navecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2)) {
+			sng_draw_electric_line(w->window, gc, sx1, sy1, sx2, sy2);
+		}
 	}
 
 	/* add my ship */
@@ -6276,8 +6278,9 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			}
 
 			float sx, sy;
-			transform_point(navecx, display_pos.v.x, display_pos.v.y, display_pos.v.z, &sx, &sy, 0);
-			snis_draw_science_guy(w, gc, &go[i], sx, sy, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor);
+			if (!transform_point(navecx, display_pos.v.x, display_pos.v.y, display_pos.v.z, &sx, &sy)) {
+				snis_draw_science_guy(w, gc, &go[i], sx, sy, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor);
+			}
 
 			if (go[i].sdata.science_data_known && curr_science_guy) {
 				int popout = 0;
@@ -6345,11 +6348,17 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 				radius = radius * range;
 				radius = radius - ((range / MAX_SCIENCE_SCREEN_RADIUS)  * (snis_randn(50) / 75.0) * range);
 
-				float sx1, sy1, sx2, sy2;
-				transform_point(navecx, o->x + cos(angle) * range, o->y, o->z - sin(angle) * range, &sx1, &sy1, 0);
-				transform_point(navecx, o->x + cos(angle) * radius, o->y, o->z - sin(angle) * radius, &sx2, &sy2, 0);
+				float x1 = o->x + cos(angle) * range;
+				float y1 = o->y;
+				float z1 = o->z - sin(angle) * range;
+				float x2 = o->x + cos(angle) * radius;
+				float y2 = o->y;
+				float z2 = o->z - sin(angle) * radius;
 
-				snis_draw_line(w->window, gc, sx1, sy1, sx2, sy2);
+				float sx1, sy1, sx2, sy2;
+				if (!transform_line(navecx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
+					snis_draw_line(w->window, gc, sx1, sy1, sx2, sy2);
+				}
 			}
 		}
 	}
@@ -6412,6 +6421,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 	union vec3 ship_up = { { 0, 1, 0 } };
 	double screen_radius = ((((current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM * 3;
 	union vec3 camera_pos = { { -screen_radius * 1.80, screen_radius * 0.85, 0} };
+	float camera_pos_len = vec3_magnitude(&camera_pos);
 	quat_rot_vec_self(&ship_up, &o->tsd.ship.sciball_orientation);
 
 	/* rotate camera to be behind my ship */
@@ -6421,7 +6431,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 	camera_assign_up_direction(sciballecx, ship_up.v.x, ship_up.v.y, ship_up.v.z);
 	camera_set_pos(sciballecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
 	camera_look_at(sciballecx, o->x, o->y, o->z);
-	camera_set_parameters(sciballecx, screen_radius * 0.5, screen_radius * 2.5,
+	camera_set_parameters(sciballecx, camera_pos_len-screen_radius, camera_pos_len+screen_radius,
 				SCIENCE_SCOPE_W * 0.95, SCIENCE_SCOPE_W * 0.95,
 				60.0 * M_PI / 180.0);
 	set_window_offset(sciballecx, SCIENCE_SCOPE_CX - (SCIENCE_SCOPE_W * 0.95) / 2.0,
@@ -7571,7 +7581,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	calculate_camera_transform(navecx);
 
         set_renderer(navecx, WIREFRAME_RENDERER);
-	camera_set_parameters(navecx, 0.5, 8000.0,
+	camera_set_parameters(navecx, camera_pos_len-screen_radius, camera_pos_len+screen_radius,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
 	int in_nebula = 0;
 	int i;
@@ -8991,13 +9001,13 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	struct entity *e = NULL;
 	struct mesh *m;
 	char buf[100];
-	int science_style = RENDER_WIREFRAME;
 	float angle;
 	union quat orientation;
 
 	if (!curr_science_guy || !curr_science_guy->entity)
 		return;
 
+	set_renderer(sciecx, WIREFRAME_RENDERER | BLACK_TRIS);
 	m = entity_get_mesh(curr_science_guy->entity);
 	e = add_entity(sciecx, m, 0, 0, 0, GREEN);
 	angle = (M_PI / 180.0) * (timer % 360);
@@ -9006,7 +9016,6 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 #ifdef WITH_ILDA_SUPPORT
 	science_style |= RENDER_ILDA;
 #endif
-	set_render_style(e, science_style);
 	camera_set_pos(sciecx, -m->radius * 4, 20, 0);
 	camera_look_at(sciecx, (float) 0, (float) 0, (float) m->radius / 2.0);
 	camera_set_parameters(sciecx, 0.5, 8000.0,

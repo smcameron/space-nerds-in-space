@@ -46,11 +46,6 @@
 
 #define MAX_TRIANGLES_PER_ENTITY 10000
 
-struct fake_star {
-	struct vertex v;
-	float dist3dsqrd;
-};
-
 struct entity {
 	struct mesh *m;
 	float x, y, z; /* world coords */
@@ -75,9 +70,19 @@ struct camera_info {
 	int xvpixels, yvpixels;
 	int renderer;
 	struct mat41 look_direction;
-	union vec3 camera_translation;
-	struct mat44 camera_transform;
-	struct mat44 camera_total_transform;
+	struct mat44d camera_vp_matrix;
+	float frustum[6][4];
+};
+
+struct screen_triangle {
+	float x1;
+	float y1;
+	float x2;
+	float y2;
+	float x3;
+	float y3;
+	int clipped;
+	struct triangle *src;
 };
 
 struct tri_depth_entry {
@@ -89,12 +94,16 @@ struct entity_context {
 	int maxobjs;
 	struct snis_object_pool *entity_pool;
 	struct entity *entity_list; /* array, [maxobjs] */
+	int nentity_depth;
 	int *entity_depth; /* array [maxobjs] */
-	// unsigned long ntris, nents, nlines;
 	struct camera_info camera;
+	int nscreen_triangle_list;
+	struct screen_triangle screen_triangle_list[MAX_TRIANGLES_PER_ENTITY];
+	int ntri_depth;
 	struct tri_depth_entry tri_depth[MAX_TRIANGLES_PER_ENTITY];
-	struct fake_star *fake_star;
+	struct vertex *fake_star;
 	int nfakestars; /* = 0; */
+	float fakestars_radius;
 	struct mat41 light;
 	float window_offset_x, window_offset_y;
 #ifdef WITH_ILDA_SUPPORT
@@ -198,52 +207,42 @@ static int is_backface(float x1, float y1, float x2, float y2, float x3, float y
 	return twicearea > 0;
 }
 
-static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc,
-	struct entity_context *cx, struct fake_star *fs)
+static inline float wx_screen(struct entity_context *cx, float wx)
 {
+	struct camera_info *c = &cx->camera;
+	return (wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
+}
+
+static inline float wy_screen(struct entity_context *cx, float wy)
+{
+	struct camera_info *c = &cx->camera;
+	return (-wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
+}
+
+
+static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc,
+	struct entity_context *cx, struct vertex *fs)
+{
+	float wx = fs->wx / fs->ww;
+	float wy = fs->wy / fs->ww;
+
 	float x1, y1;
 
-	x1 = (fs->v.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2 + cx->window_offset_x;
-	y1 = (-fs->v.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2 + cx->window_offset_y;
+	x1 = wx_screen(cx, wx);
+	y1 = wy_screen(cx, wy);
 	sng_current_draw_line(w->window, gc, x1, y1, x1 + (snis_randn(10) < 7), y1);
 }
 
-void wireframe_render_triangle(GtkWidget *w, GdkGC *gc,
-		struct entity_context *cx, struct triangle *t)
-{
-	struct vertex *v1, *v2, *v3;
-	float x1, y1, x2, y2, x3, y3;
-	struct camera_info *c = &cx->camera;
-
-	v1 = t->v[0];
-	v2 = t->v[1];
-	v3 = t->v[2];
-
-	x1 = (v1->wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
-	x2 = (v2->wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
-	x3 = (v3->wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
-	y1 = (-v1->wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
-	y2 = (-v2->wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
-	y3 = (-v3->wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
-
-	if (is_backface(x1, y1, x2, y2, x3, y3))
-		return;
-
-	if ( !(t->flag & TRIANGLE_0_1_COPLANAR))
-		sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
-	if ( !(t->flag & TRIANGLE_1_2_COPLANAR))
-		sng_current_draw_line(w->window, gc, x2, y2, x3, y3);
-	if ( !(t->flag & TRIANGLE_0_2_COPLANAR))
-		sng_current_draw_line(w->window, gc, x3, y3, x1, y1);
-}
-
-void wireframe_render_point(GtkWidget *w, GdkGC *gc,
+void software_render_point(GtkWidget *w, GdkGC *gc,
 		struct entity_context *cx, struct vertex *v)
 {
+	float wx = v->wx / v->ww;
+	float wy = v->wy / v->ww;
+
 	float x1, y1;
 
-	x1 = (v->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2 + cx->window_offset_x;
-	y1 = (-v->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2 + cx->window_offset_y;
+	x1 = wx_screen(cx, wx);
+	y1 = wy_screen(cx, wy);
 	sng_current_draw_line(w->window, gc, x1, y1, x1 + 1, y1);
 }
 
@@ -291,92 +290,7 @@ static void ilda_render_triangle(struct entity_context *cx,
 }
 #endif
 
-static void scan_convert_triangle(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
-				struct triangle *t, int color,
-				int render_style)
-{
-	/* int xa, ya, xb, yb, xc, yc; */
-	struct camera_info *c = &cx->camera;
-
-	int ntriangles;
-	struct clip_triangle triangles[12];
-
-	struct mat41* mv0 = (struct mat41 *) &t->v[0]->wx;
-	struct mat41* mv1 = (struct mat41 *) &t->v[1]->wx;
-	struct mat41* mv2 = (struct mat41 *) &t->v[2]->wx;
-
-	/* part of triangle is behind screen so try and clip it */
-	if (mv0->m[2] < -mv0->m[3] || mv1->m[2] < -mv1->m[3] || mv2->m[2] < -mv2->m[3]) {
-		ntriangles = clip_triangle(&triangles[0], mv0, mv1, mv2);
-	} else {
-		/* not clipped by near plane so just draw it and not worry about the back or sides */
-		ntriangles = 1;
-		triangles[0].v[0] = *mv0;
-		triangles[0].v[1] = *mv1;
-		triangles[0].v[2] = *mv2;
-	}
-
-	int i;
-	for (i=0; i<ntriangles; i++) {
-		/* do the w divide now that the triangles are culled and clipped */
-		float v1wx = triangles[i].v[0].m[0] / triangles[i].v[0].m[3];
-		float v1wy = triangles[i].v[0].m[1] / triangles[i].v[0].m[3];
-		float v2wx = triangles[i].v[1].m[0] / triangles[i].v[1].m[3];
-		float v2wy = triangles[i].v[1].m[1] / triangles[i].v[1].m[3];
-		float v3wx = triangles[i].v[2].m[0] / triangles[i].v[2].m[3];
-		float v3wy = triangles[i].v[2].m[1] / triangles[i].v[2].m[3];
-
-		float x1, y1, x2, y2, x3, y3;
-		x1 = (v1wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
-		x2 = (v2wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
-		x3 = (v3wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
-		y1 = (-v1wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
-		y2 = (-v2wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
-		y3 = (-v3wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
-
-		if (is_backface(x1, y1, x2, y2, x3, y3))
-			return;
-
-		if (!(render_style & RENDER_NO_FILL) && cx->camera.renderer != WIREFRAME_RENDERER) {
-			sng_filled_tri(w->window, gc, x1, y1, x2, y2, x3, y3);
-		}
-
-		if (cx->camera.renderer & WIREFRAME_RENDERER || render_style & RENDER_WIREFRAME) {
-			if (render_style & RENDER_BRIGHT_LINE) {
-				if ( !(t->flag & TRIANGLE_0_1_COPLANAR))
-					sng_current_bright_line(w->window, gc, x1, y1, x2, y2, color);
-				if ( !(t->flag & TRIANGLE_1_2_COPLANAR))
-					sng_current_bright_line(w->window, gc, x2, y2, x3, y3, color);
-				if ( !(t->flag & TRIANGLE_0_2_COPLANAR))
-					sng_current_bright_line(w->window, gc, x3, y3, x1, y1, color);
-			} else {
-				sng_set_foreground(color);
-				if ( !(t->flag & TRIANGLE_0_1_COPLANAR))
-					sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
-				if ( !(t->flag & TRIANGLE_1_2_COPLANAR))
-					sng_current_draw_line(w->window, gc, x2, y2, x3, y3);
-				if ( !(t->flag & TRIANGLE_0_2_COPLANAR))
-					sng_current_draw_line(w->window, gc, x3, y3, x1, y1);
-			}
-	#ifdef WITH_ILDA_SUPPORT
-			if (render_style & RENDER_ILDA)
-				ilda_render_triangle(cx, x1, y1, x2, y2, x3, y3);
-	#endif
-		}
-	}
-}
-
-void wireframe_render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
-			struct entity *e)
-{
-	int i;
-
-	sng_set_foreground(e->color);
-	for (i = 0; i < e->m->ntriangles; i++)
-		wireframe_render_triangle(w, gc, cx, &e->m->t[i]);
-}
-
-void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
+void software_render_entity_point_cloud(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
 				struct entity *e)
 {
 	int i;
@@ -384,15 +298,16 @@ void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc, struct entity_context
 	sng_set_foreground(e->color);
 	if (e->render_style & RENDER_SPARKLE) {
 		for (i = 0; i < e->m->nvertices; i++)
-			if (snis_randn(100) < 35)
-				wireframe_render_point(w, gc, cx, &e->m->v[i]);
+			if (!e->m->v[i].clip && snis_randn(100) < 35)
+				software_render_point(w, gc, cx, &e->m->v[i]);
 	} else {
 		for (i = 0; i < e->m->nvertices; i++)
-			wireframe_render_point(w, gc, cx, &e->m->v[i]);
+			if (!e->m->v[i].clip)
+				software_render_point(w, gc, cx, &e->m->v[i]);
 	}
 }
 
-void wireframe_render_point_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
+void software_render_entity_lines(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
 				struct entity *e)
 {
 	int i;
@@ -406,35 +321,50 @@ void wireframe_render_point_line(GtkWidget *w, GdkGC *gc, struct entity_context 
 
 		if (e->m->l[i].flag & MESH_LINE_STRIP) {
 			struct vertex* vcurr = vstart;
+			struct vertex v1;
 
 			while (vcurr <= vend) {
-				x2 = (vcurr->wx * cx->camera.xvpixels / 2) +
-							cx->camera.xvpixels / 2 + cx->window_offset_x;
-				y2 = (-vcurr->wy * cx->camera.yvpixels / 2) +
-							cx->camera.yvpixels / 2 + cx->window_offset_y;
+
 				if (vcurr != vstart) {
-					if (e->m->l[i].flag & MESH_LINE_DOTTED)
-						sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
-					else
-						sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
+					struct vertex v2 = *vcurr;
+
+					int clipped = 0;
+					if (v1.clip || v2.clip) {
+						clipped = clip_line((struct mat41*)&v1.wx, (struct mat41*)&v2.wx);
+					}
+
+					if (!clipped) {
+						x1 = wx_screen(cx, v1.wx / v1.ww);
+						y1 = wy_screen(cx, v1.wy / v1.ww);
+						x2 = wx_screen(cx, v2.wx / v2.ww);
+						y2 = wy_screen(cx, v2.wy / v2.ww);
+
+						if (e->m->l[i].flag & MESH_LINE_DOTTED)
+							sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
+						else
+							sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
+					}
 				}
-				x1 = x2;
-				y1 = y2;
+
+				v1 = *vcurr;
 				++vcurr;
 			}
 		} else {
-			x1 = (vstart->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2
-					+ cx->window_offset_x;
-			y1 = (-vstart->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2
-					+ cx->window_offset_y;
-			x2 = (vend->wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2
-					+ cx->window_offset_x;
-			y2 = (-vend->wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2
-					+ cx->window_offset_y;
-			if (e->m->l[i].flag & MESH_LINE_DOTTED)
-				sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
-			else
-				sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
+			int clipped = 0;
+			if (vstart->clip || vend->clip) {
+				clipped = clip_line((struct mat41*)&vstart->wx, (struct mat41*)&vend->wx);
+			}
+
+			if (!clipped) {
+				x1 = wx_screen(cx, vstart->wx / vstart->ww);
+				y1 = wy_screen(cx, vstart->wy / vstart->ww);
+				x2 = wx_screen(cx, vend->wx / vend->ww);
+				y2 = wy_screen(cx, vend->wy / vend->ww);
+				if (e->m->l[i].flag & MESH_LINE_DOTTED)
+					sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
+				else
+					sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
+			}
 		}
 	}
 }
@@ -451,182 +381,379 @@ static int tri_depth_compare(const void *a, const void *b)
 	return 0;
 }
 
-static void sort_triangle_distances(struct entity_context *cx, struct entity *e)
+static void sort_triangle_distances(struct entity_context *cx)
 {
-	int i;
+	/* Sort the triangles */
+	qsort(cx->tri_depth, cx->ntri_depth, sizeof(cx->tri_depth[0]), tri_depth_compare);
+}
 
-	if (e->m->ntriangles > MAX_TRIANGLES_PER_ENTITY)
-		printf("Too many triangles, %d vs %d at %s:%d\n",
-			e->m->ntriangles, MAX_TRIANGLES_PER_ENTITY,
-			__FILE__, __LINE__);
+static void draw_outline_tri(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
+				struct entity *e, struct screen_triangle *st)
+{
+	if (!st->clipped) {
+		if (e->render_style & RENDER_BRIGHT_LINE) {
+			if (!(st->src->flag & TRIANGLE_0_1_COPLANAR))
+				sng_current_bright_line(w->window, gc, st->x1, st->y1, st->x2, st->y2, e->color);
+			if (!(st->src->flag & TRIANGLE_1_2_COPLANAR))
+				sng_current_bright_line(w->window, gc, st->x2, st->y2, st->x3, st->y3, e->color);
+			if (!(st->src->flag & TRIANGLE_0_2_COPLANAR))
+				sng_current_bright_line(w->window, gc, st->x3, st->y3, st->x1, st->y1, e->color);
+		} else {
+			sng_set_foreground(e->color);
+			if (!(st->src->flag & TRIANGLE_0_1_COPLANAR))
+				sng_current_draw_line(w->window, gc, st->x1, st->y1, st->x2, st->y2);
+			if (!(st->src->flag & TRIANGLE_1_2_COPLANAR))
+				sng_current_draw_line(w->window, gc, st->x2, st->y2, st->x3, st->y3);
+			if (!(st->src->flag & TRIANGLE_0_2_COPLANAR))
+				sng_current_draw_line(w->window, gc, st->x3, st->y3, st->x1, st->y1);
+		}
+	} else {
+		/* all the triangle edges to test for clipping */
+		int e1_clipped = 0;
+		struct vertex *e1_v1 = st->src->v[0];
+		struct vertex *e1_v2 = st->src->v[1];
+		int e2_clipped = 0;
+		struct vertex *e2_v1 = st->src->v[1];
+		struct vertex *e2_v2 = st->src->v[2];
+		int e3_clipped = 0;
+		struct vertex *e3_v1 = st->src->v[0];
+		struct vertex *e3_v2 = st->src->v[2];
 
-	/* Initialize array */
+		/* test to see if any edges need to be clipped */
+		struct vertex ce1_v1, ce1_v2, ce2_v1, ce2_v2, ce3_v1, ce3_v2;
+		if (e1_v1->clip || e1_v2->clip) {
+			ce1_v1 = *e1_v1;
+			ce1_v2 = *e1_v2;
+			e1_clipped = clip_line((struct mat41 *) &ce1_v1.wx, (struct mat41 *) &ce1_v2.wx);
+			e1_v1 = &ce1_v1;
+			e1_v2 = &ce1_v2;
+		}
+		if (e2_v1->clip || e2_v2->clip) {
+			ce2_v1 = *e2_v1;
+			ce2_v2 = *e2_v2;
+			e2_clipped = clip_line((struct mat41 *) &ce2_v1.wx, (struct mat41 *) &ce2_v2.wx);
+			e2_v1 = &ce2_v1;
+			e2_v2 = &ce2_v2;
+		}
+		if (e3_v1->clip || e3_v2->clip) {
+			ce3_v1 = *e3_v1;
+			ce3_v2 = *e3_v2;
+			e3_clipped = clip_line((struct mat41 *) &ce3_v1.wx, (struct mat41 *) &ce3_v2.wx);
+			e3_v1 = &ce3_v1;
+			e3_v2 = &ce3_v2;
+		}
+
+		float e1_x1 = wx_screen(cx, e1_v1->wx / e1_v1->ww);
+		float e1_y1 = wy_screen(cx, e1_v1->wy / e1_v1->ww);
+		float e1_x2 = wx_screen(cx, e1_v2->wx / e1_v2->ww);
+		float e1_y2 = wy_screen(cx, e1_v2->wy / e1_v2->ww);
+
+		float e2_x1 = wx_screen(cx, e2_v1->wx / e2_v1->ww);
+		float e2_y1 = wy_screen(cx, e2_v1->wy / e2_v1->ww);
+		float e2_x2 = wx_screen(cx, e2_v2->wx / e2_v2->ww);
+		float e2_y2 = wy_screen(cx, e2_v2->wy / e2_v2->ww);
+
+		float e3_x1 = wx_screen(cx, e3_v1->wx / e3_v1->ww);
+		float e3_y1 = wy_screen(cx, e3_v1->wy / e3_v1->ww);
+		float e3_x2 = wx_screen(cx, e3_v2->wx / e3_v2->ww);
+		float e3_y2 = wy_screen(cx, e3_v2->wy / e3_v2->ww);
+
+		if (e->render_style & RENDER_BRIGHT_LINE) {
+			if (!e1_clipped && !(st->src->flag & TRIANGLE_0_1_COPLANAR))
+				sng_current_bright_line(w->window, gc, e1_x1, e1_y1, e1_x2, e1_y2, e->color);
+			if (!e2_clipped && !(st->src->flag & TRIANGLE_1_2_COPLANAR))
+				sng_current_bright_line(w->window, gc, e2_x1, e2_y1, e2_x2, e2_y2, e->color);
+			if (!e3_clipped && !(st->src->flag & TRIANGLE_0_2_COPLANAR))
+				sng_current_bright_line(w->window, gc, e3_x1, e3_y1, e3_x2, e3_y2, e->color);
+		} else {
+			sng_set_foreground(e->color);
+			if (!e1_clipped && !(st->src->flag & TRIANGLE_0_1_COPLANAR))
+				sng_current_draw_line(w->window, gc, e1_x1, e1_y1, e1_x2, e1_y2);
+			if (!e2_clipped && !(st->src->flag & TRIANGLE_1_2_COPLANAR))
+				sng_current_draw_line(w->window, gc, e2_x1, e2_y1, e2_x2, e2_y2);
+			if (!e3_clipped && !(st->src->flag & TRIANGLE_0_2_COPLANAR))
+				sng_current_draw_line(w->window, gc, e3_x1, e3_y1, e3_x2, e3_y2);
+		}
+	}
+}
+
+void software_render_entity_triangles(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct entity *e)
+{
+	int i, j;
+
+	struct camera_info *c = &cx->camera;
+
+	int filled_triangle = ((c->renderer & FLATSHADING_RENDERER) || (c->renderer & BLACK_TRIS))
+				&& !(e->render_style & RENDER_NO_FILL);
+	int outline_triangle = (c->renderer & WIREFRAME_RENDERER) || (e->render_style & RENDER_WIREFRAME);
+
+	cx->ntri_depth = 0;
+	cx->nscreen_triangle_list = 0;
+
 	for (i = 0; i < e->m->ntriangles; i++) {
-		float dist;
 		struct triangle *t = &e->m->t[i];
-		dist = t->v[0]->wz + t->v[1]->wz + t->v[2]->wz;
-		dist = dist / 3.0;
-		cx->tri_depth[i].tri_index = i;
-		cx->tri_depth[i].depth = dist;
+
+		/* whole triangle is outside the same clip plane */
+		if (t->v[0]->clip & t->v[1]->clip & t->v[2]->clip)
+			continue;
+
+		int nclip_gen;
+		struct clip_triangle clip_gen[12];
+
+		int is_clipped = 0;
+		struct mat41* mv0 = (struct mat41 *) &t->v[0]->wx;
+		struct mat41* mv1 = (struct mat41 *) &t->v[1]->wx;
+		struct mat41* mv2 = (struct mat41 *) &t->v[2]->wx;
+
+		if (t->v[0]->clip || t->v[1]->clip || t->v[2]->clip) {
+			/* part of triangle is clipped */
+			is_clipped = 1;
+			nclip_gen = clip_triangle(&clip_gen[0], mv0, mv1, mv2);
+		} else {
+			/* not clipped so just draw it */
+			nclip_gen = 1;
+			clip_gen[0].v[0] = *mv0;
+			clip_gen[0].v[1] = *mv1;
+			clip_gen[0].v[2] = *mv2;
+		}
+
+		for (j=0; j<nclip_gen; j++) {
+			/* do the w divide now that the triangles are clipped */
+			float x1 = wx_screen(cx, clip_gen[j].v[0].m[0] / clip_gen[j].v[0].m[3]);
+			float y1 = wy_screen(cx, clip_gen[j].v[0].m[1] / clip_gen[j].v[0].m[3]);
+
+			float x2 = wx_screen(cx, clip_gen[j].v[1].m[0] / clip_gen[j].v[1].m[3]);
+			float y2 = wy_screen(cx, clip_gen[j].v[1].m[1] / clip_gen[j].v[1].m[3]);
+
+			float x3 = wx_screen(cx, clip_gen[j].v[2].m[0] / clip_gen[j].v[2].m[3]);
+			float y3 = wy_screen(cx, clip_gen[j].v[2].m[1] / clip_gen[j].v[2].m[3]);
+
+			if (is_backface(x1, y1, x2, y2, x3, y3))
+				continue;
+
+			if (cx->nscreen_triangle_list > MAX_TRIANGLES_PER_ENTITY) {
+				printf("Too many triangles, clipping rendering: max %d at %s:%d\n",
+					MAX_TRIANGLES_PER_ENTITY, __FILE__, __LINE__);
+				continue;
+			}
+
+			/* record this triangle to be rendered */
+			struct screen_triangle *st = &cx->screen_triangle_list[cx->nscreen_triangle_list];
+			st->x1 = x1;
+			st->y1 = y1;
+			st->x2 = x2;
+			st->y2 = y2;
+			st->x3 = x3;
+			st->y3 = y3;
+			st->clipped = is_clipped;
+			st->src = t;
+
+			/* setup triangle depth sorting */
+			float wz1 = clip_gen[j].v[0].m[2] / clip_gen[j].v[0].m[3];
+			float wz2 = clip_gen[j].v[1].m[2] / clip_gen[j].v[1].m[3];
+			float wz3 = clip_gen[j].v[2].m[2] / clip_gen[j].v[2].m[3];
+
+			cx->tri_depth[cx->ntri_depth].tri_index = cx->nscreen_triangle_list;
+			cx->tri_depth[cx->ntri_depth].depth = (wz1 + wz2 + wz3) / 3.0;
+
+			cx->nscreen_triangle_list++;
+			cx->ntri_depth++;
+
+			/* if the triangles are not filled then we only need one valid one from the clip */
+			if (!filled_triangle)
+				break;
+		}
 	}
 
-	if (e->render_style & RENDER_NO_FILL)
-		return;
+	/* filled triangles need tobe sorted back to front */
+	if (filled_triangle)
+		sort_triangle_distances(cx);
 
-	/* Sort the triangles */
-	qsort(cx->tri_depth, e->m->ntriangles, sizeof(cx->tri_depth[0]), tri_depth_compare);
+	for (i = 0; i < cx->ntri_depth; i++) {
+		struct screen_triangle *st = &cx->screen_triangle_list[cx->tri_depth[i].tri_index];
+
+		if (filled_triangle) {
+			int fill_color;
+			if (cx->camera.renderer & BLACK_TRIS) {
+				fill_color = BLACK;
+			} else {
+				float cos_theta;
+				struct mat41 normal;
+				normal = *(struct mat41 *) &st->src->n.wx;
+				normalize_vector(&normal, &normal);
+				cos_theta = mat41_dot_mat41(&cx->light, &normal);
+				cos_theta = (cos_theta + 1.0) / 2.0;
+				fill_color = (int) fmod((cos_theta * 240.0), 240.0) +
+						GRAY + (NSHADESOFGRAY * e->shadecolor) + 10;
+			}
+
+			sng_set_foreground(fill_color);
+			sng_filled_tri(w->window, gc, st->x1, st->y1, st->x2, st->y2, st->x3, st->y3);
+		}
+
+		if (outline_triangle) {
+			draw_outline_tri(w, gc, cx, e, st);
+		}
+	}
 }
 
 void render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct entity *e)
 {
-	int i;
-	float cos_theta;
-	struct mat41 normal;
-
-	sort_triangle_distances(cx, e);
-
-	for (i = 0; i < e->m->ntriangles; i++) {
-		int tri_index = cx->tri_depth[i].tri_index;
-		normal = *(struct mat41 *) &e->m->t[tri_index].n.wx;
-		normalize_vector(&normal, &normal);
-		cos_theta = mat41_dot_mat41(&cx->light, &normal);
-		cos_theta = (cos_theta + 1.0) / 2.0;
-		if (cx->camera.renderer & BLACK_TRIS || e->render_style & RENDER_WIREFRAME)
-			sng_set_foreground(BLACK);
-		else
-			sng_set_foreground((int) fmod((cos_theta * 240.0), 240.0) +
-					GRAY + (NSHADESOFGRAY * e->shadecolor) + 10);
-		scan_convert_triangle(w, gc, cx, &e->m->t[tri_index], e->color,
-					e->render_style);
+	if (e->render_style & RENDER_POINT_CLOUD) {
+		software_render_entity_point_cloud(w, gc, cx, e);
+	} else if (e->render_style & RENDER_POINT_LINE) {
+		software_render_entity_lines(w, gc, cx, e);
+	} else {
+		software_render_entity_triangles(w, gc, cx, e);
 	}
 }
 
-static int transform_fake_star(struct entity_context *cx,
-				struct fake_star *fs, struct mat44 *transform)
+static void calculate_model_matricies(float x, float y, float z, union quat* orientation, float scale,
+					struct mat44d *mat_r, struct mat44d *mat_model)
 {
-	struct mat41 *m1, *m2;
+	/* Model = (T*R)*S
+	   T - translation matrix
+	   R - rotation matrix
+	   S - scale matrix
+	   Combine for post multiply of vector */
 
-	/* Set homogeneous coord to 1 initially for all vertices */
-	fs->v.w = 1.0;
+	struct mat44d mat_t = {{
+		{ 1, 0, 0, 0 },
+		{ 0, 1, 0, 0 },
+		{ 0, 0, 1, 0 },
+		{ x, y, z, 1 }}};
 
-	/* Do the transformation... */
-	m1 = (struct mat41 *) &fs->v.x;
-	m2 = (struct mat41 *) &fs->v.wx;
-	mat44_x_mat41(transform, m1, m2);
-	/* normalize... */
-	m2->m[0] /= m2->m[3];
-	m2->m[1] /= m2->m[3];
-	m2->m[2] /= m2->m[3];
-	if (fs->v.wx < -1.0 || fs->v.wx > 1.0 ||
-		fs->v.wy < -1.0 || fs->v.wy > 1.0)
+	quat_to_rh_rot_matrix_fd(orientation, &mat_r->m[0][0]);
+
+	struct mat44d mat_s = {{
+		{ scale, 0, 0, 0 },
+		{ 0, scale, 0, 0 },
+		{ 0, 0, scale, 0 },
+		{ 0, 0, 0, 1 }}};
+
+	struct mat44d mat_t_r;
+	mat44_product_ddd(&mat_t, mat_r, &mat_t_r);
+
+	mat44_product_ddd(&mat_t_r, &mat_s, mat_model);
+}
+
+int transform_vertices(struct entity_context *cx, struct mat44d* mat_model, struct vertex *v, int len)
+{
+	/* calculate the transform... */
+
+	struct mat44 mat_mvp;
+
+	if (mat_model) {
+		mat44_product_ddf(&cx->camera.camera_vp_matrix, mat_model, &mat_mvp);
+	} else {
+		mat44_convert_df(&cx->camera.camera_vp_matrix, &mat_mvp);
+	}
+
+	int total_clip_flag = 0x3f;
+
+	int i;
+	for (i = 0; i < len; i++) {
+		/* Set homogeneous coord to 1 */
+		v[i].w = 1.0;
+
+		/* Do the transformation... */
+		struct mat41 *m1 = (struct mat41 *) &v[i].x;
+		struct mat41 *m2 = (struct mat41 *) &v[i].wx;
+		mat44_x_mat41(&mat_mvp, m1, m2);
+
+		/* check all 6 clip planes for this vertex */
+		v[i].clip = 0;
+		v[i].clip |= (v[i].wx < -v[i].ww) ? (1<<0) : 0;
+		v[i].clip |= (v[i].wx > v[i].ww) ? (1<<1) : 0;
+		v[i].clip |= (v[i].wy < -v[i].ww) ? (1<<2) : 0;
+		v[i].clip |= (v[i].wy > v[i].ww) ? (1<<3) : 0;
+		v[i].clip |= (v[i].wz < -v[i].ww) ? (1<<4) : 0;
+		v[i].clip |= (v[i].wz > v[i].ww) ? (1<<5) : 0;
+
+		/* total is the intersection of all the vertices */
+		total_clip_flag &= v[i].clip;
+	}
+
+	/* if all vertices were clipped by the same plane then this set is all out */
+	return total_clip_flag > 0;
+}
+
+int transform_line(struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2,
+			float *sx1, float *sy1, float *sx2, float *sy2)
+{
+	struct vertex v[2] = {
+		{x1, y1, z1},
+		{x2, y2, z2}};
+
+	/* there is no model transform on a point */
+	if (transform_vertices(cx, 0, &v[0], 2)) {
+		/* both ends outside frustum */
+		*sx1 = -1;
+		*sy1 = -1;
+		*sx2 = -1;
+		*sy2 = -1;
 		return 1;
-	return 0;
-}
-
-int transform_point(struct entity_context *cx,
-			float x, float y, float z, float *sx, float *sy, int do_clip)
-{
-	struct vertex t;
-
-	/* calculate the object transform... */
-	struct mat44 object_transform;
-
-	union vec3 total_translation = {{x, y, z}};
-	vec3_add_self(&total_translation, &cx->camera.camera_translation);
-
-	struct mat44 object_translation = {{{ 1, 0, 0, 0 },
-					    { 0, 1, 0, 0 },
-					    { 0, 0, 1, 0 },
-					    { total_translation.v.x, total_translation.v.y, total_translation.v.z, 1 }}};
-	mat44_product(&cx->camera.camera_transform, &object_translation, &object_transform);
-
-	/* calculate screen coords */
-	t.x = 0;
-	t.y = 0;
-	t.z = 0;
-	t.w = 1.0;
-	mat44_x_mat41(&object_transform, (struct mat41 *) &t.x, (struct mat41 *) &t.wx);
-	t.wx /= t.ww;
-	t.wy /= t.ww;
-	t.wz /= t.ww;
-	*sx = cx->window_offset_x + (t.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-	*sy = cx->window_offset_y + (-t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
-
-	if (do_clip) {
-		/* consider rendering stuff that is also 50% off the screen
-		   to stop objects popping in on rotate */
-		if (t.wx < -1.5 || t.wx > 1.5 || t.wy < -1.5 || t.wy > 1.5) /* off screen? */
-			return 1; /* clip it. */
 	}
+
+	if (v[0].clip || v[1].clip) {
+		if (clip_line((struct mat41 *) &v[0].wx, (struct mat41 *) &v[1].wx)) {
+			/* both ends clipped */
+			return 1;
+		}
+	}
+
+	/* perspective divide */
+	v[0].wx /= v[0].ww;
+	v[0].wy /= v[0].ww;
+	v[1].wx /= v[1].ww;
+	v[1].wy /= v[1].ww;
+
+	/* convert to screen coordinates */
+	*sx1 = wx_screen(cx, v[0].wx);
+	*sy1 = wy_screen(cx, v[0].wy);
+	*sx2 = wx_screen(cx, v[1].wx);
+	*sy2 = wy_screen(cx, v[1].wy);
+	return 0;
+
+}
+
+int transform_point(struct entity_context *cx, float x, float y, float z, float *sx, float *sy)
+{
+	struct vertex v = {x, y, z};
+
+	/* there is no model transform on a point */
+	if (transform_vertices(cx, 0, &v, 1)) {
+		*sx = -1;
+		*sy = -1;
+		return 1;
+	}
+
+	v.wx /= v.ww;
+	v.wy /= v.ww;
+
+	*sx = wx_screen(cx, v.wx);
+	*sy = wy_screen(cx, v.wy);
 	return 0;
 }
 
-static int transform_entity(struct entity_context *cx, struct entity *e, int do_clip)
+static int transform_entity(struct entity_context *cx, struct entity *e)
 {
-	int i;
-	struct mat41 *m1, *m2;
-	struct vertex t;
-
-	/* calculate the object transform... */
-	struct mat44 object_transform, total_transform;
-	struct mat44 object_scale = {{{ e->scale, 0, 0, 0 },
-					 { 0, e->scale, 0, 0 },
-					 { 0, 0, e->scale, 0 },
-					 { 0, 0, 0, 1 }}}; /* fixme, do this really. */
-
-	union vec3 total_translation = {{e->x, e->y, e->z}};
-	vec3_add_self(&total_translation, &cx->camera.camera_translation);
-
-	struct mat44 object_translation = {{{ 1,    0,     0,    0 },
-					    { 0,    1,     0,    0 },
-					    { 0,    0,     1,    0 },
-					    { total_translation.v.x, total_translation.v.y, total_translation.v.z, 1 }}};
-	struct mat44 orientation, object_rotation;
-
-	quat_to_rh_rot_matrix(&e->orientation, &orientation.m[0][0]);
-	mat44_product(&orientation, &object_scale, &object_rotation);
-
-	mat44_product(&cx->camera.camera_transform, &object_translation, &object_transform);
-	mat44_product(&object_transform, &object_rotation, &total_transform);
+	struct mat44d mat_rotation;
+	struct mat44d mat_model;
+	calculate_model_matricies(e->x, e->y, e->z, &e->orientation, e->scale, &mat_rotation, &mat_model);
 
 	/* calculate screen coords of entity as a whole */
-	t.x = 0;
-	t.y = 0;
-	t.z = 0;
-	t.w = 1.0;
-	mat44_x_mat41(&total_transform, (struct mat41 *) &t.x, (struct mat41 *) &t.wx);
-	t.wx /= t.ww;
-	t.wy /= t.ww;
-	t.wz /= t.ww;
-	e->sx = cx->window_offset_x + (t.wx * cx->camera.xvpixels / 2) + cx->camera.xvpixels / 2;
-	e->sy = cx->window_offset_y + (-t.wy * cx->camera.yvpixels / 2) + cx->camera.yvpixels / 2;
+	transform_point(cx, e->x, e->y, e->z, &e->sx, &e->sy);
 
-	if (do_clip) {
-		/* consider rendering stuff that is also 50% off the screen
-		   to stop objects popping in on rotate */
-		if (t.wx < -1.5 || t.wx > 1.5 || t.wy < -1.5 || t.wy > 1.5) /* off screen? */
-			return 1; /* clip it. */
-	}
+	/* Do the vertex transformation */
+	transform_vertices(cx, &mat_model, &e->m->v[0], e->m->nvertices);
 
-	/* Set homogeneous coord to 1 initially for all vertices */
-	for (i = 0; i < e->m->nvertices; i++)
-		e->m->v[i].w = 1.0;
-
-	/* Do the transformation... */
-	for (i = 0; i < e->m->nvertices; i++) {
-		m1 = (struct mat41 *) &e->m->v[i].x;
-		m2 = (struct mat41 *) &e->m->v[i].wx;
-		mat44_x_mat41(&total_transform, m1, m2);
-	}
-
+	/* rotate the normals */
+	int i;
 	for (i = 0; i < e->m->ntriangles; i++) {
-		m1 = (struct mat41 *) &e->m->t[i].n.x;
-		m2 = (struct mat41 *) &e->m->t[i].n.wx;
-		mat44_x_mat41(&object_rotation, m1, m2);
-		/* normalize... */
-		m2->m[0] /= m2->m[3];
-		m2->m[1] /= m2->m[3];
-		m2->m[2] /= m2->m[3];
+		struct mat41 *m1 = (struct mat41 *) &e->m->t[i].n.x;
+		struct mat41 *m2 = (struct mat41 *) &e->m->t[i].n.wx;
+		mat44_x_mat41_dff(&mat_rotation, m1, m2);
 	}
 	return 0;
 }
@@ -650,22 +777,10 @@ static int object_depth_compare(const void *a, const void *b, void *vcx)
 
 static void sort_entity_distances(struct entity_context *cx)
 {
-	int i, n;
-	struct camera_info *c = &cx->camera;
-
-	n = snis_object_pool_highest_object(cx->entity_pool);
-
-	for (i = 0; i <= n; i++) {
-		cx->entity_list[i].dist3dsqrd = dist3dsqrd(
-				c->x - cx->entity_list[i].x,
-				c->y - cx->entity_list[i].y,
-				c->z - cx->entity_list[i].z);
-		cx->entity_depth[i] = i;
-	}
 #if defined(__APPLE__)  || defined(__FreeBSD__)
-	qsort_r(cx->entity_depth, n + 1, sizeof(cx->entity_depth[0]), cx, object_depth_compare);
+	qsort_r(cx->entity_depth, cx->nentity_depth, sizeof(cx->entity_depth[0]), cx, object_depth_compare);
 #else
-	qsort_r(cx->entity_depth, n + 1, sizeof(cx->entity_depth[0]), object_depth_compare, cx);
+	qsort_r(cx->entity_depth, cx->nentity_depth, sizeof(cx->entity_depth[0]), object_depth_compare, cx);
 #endif
 }
 
@@ -698,28 +813,127 @@ static void ilda_file_newframe(struct entity_context *cx)
 }
 #endif
 
+/* from http://www.crownandcutlass.com/features/technicaldetails/frustum.html
+This page and its contents are Copyright 2000 by Mark Morley
+Unless otherwise noted, you may use any and all code examples provided herein in any way you want. */
+
+int sphere_in_frustum(struct camera_info *c, float x, float y, float z, float radius )
+{
+   int p;
+
+   for( p = 0; p < 6; p++ )
+      if( c->frustum[p][0] * x + c->frustum[p][1] * y + c->frustum[p][2] * z + c->frustum[p][3] <= -radius )
+         return 0;
+   return 1;
+}
+
+/* from http://www.crownandcutlass.com/features/technicaldetails/frustum.html
+This page and its contents are Copyright 2000 by Mark Morley
+Unless otherwise noted, you may use any and all code examples provided herein in any way you want. */
+
+void extract_frustum_planes(struct camera_info *c)
+{
+	double *clip = &c->camera_vp_matrix.m[0][0];
+	float t;
+
+	/* Extract the numbers for the RIGHT plane */
+	c->frustum[0][0] = clip[ 3] - clip[ 0];
+	c->frustum[0][1] = clip[ 7] - clip[ 4];
+	c->frustum[0][2] = clip[11] - clip[ 8];
+	c->frustum[0][3] = clip[15] - clip[12];
+
+	/* Normalize the result */
+	t = dist3d( c->frustum[0][0], c->frustum[0][1], c->frustum[0][2] );
+	c->frustum[0][0] /= t;
+	c->frustum[0][1] /= t;
+	c->frustum[0][2] /= t;
+	c->frustum[0][3] /= t;
+
+	/* Extract the numbers for the LEFT plane */
+	c->frustum[1][0] = clip[ 3] + clip[ 0];
+	c->frustum[1][1] = clip[ 7] + clip[ 4];
+	c->frustum[1][2] = clip[11] + clip[ 8];
+	c->frustum[1][3] = clip[15] + clip[12];
+
+	/* Normalize the result */
+	t = dist3d( c->frustum[1][0], c->frustum[1][1], c->frustum[1][2] );
+	c->frustum[1][0] /= t;
+	c->frustum[1][1] /= t;
+	c->frustum[1][2] /= t;
+	c->frustum[1][3] /= t;
+
+	/* Extract the BOTTOM plane */
+	c->frustum[2][0] = clip[ 3] + clip[ 1];
+	c->frustum[2][1] = clip[ 7] + clip[ 5];
+	c->frustum[2][2] = clip[11] + clip[ 9];
+	c->frustum[2][3] = clip[15] + clip[13];
+
+	/* Normalize the result */
+	t = dist3d( c->frustum[2][0], c->frustum[2][1], c->frustum[2][2] );
+	c->frustum[2][0] /= t;
+	c->frustum[2][1] /= t;
+	c->frustum[2][2] /= t;
+	c->frustum[2][3] /= t;
+
+	/* Extract the TOP plane */
+	c->frustum[3][0] = clip[ 3] - clip[ 1];
+	c->frustum[3][1] = clip[ 7] - clip[ 5];
+	c->frustum[3][2] = clip[11] - clip[ 9];
+	c->frustum[3][3] = clip[15] - clip[13];
+
+	/* Normalize the result */
+	t = dist3d( c->frustum[3][0], c->frustum[3][1], c->frustum[3][2] );
+	c->frustum[3][0] /= t;
+	c->frustum[3][1] /= t;
+	c->frustum[3][2] /= t;
+	c->frustum[3][3] /= t;
+
+	/* Extract the FAR plane */
+	c->frustum[4][0] = clip[ 3] - clip[ 2];
+	c->frustum[4][1] = clip[ 7] - clip[ 6];
+	c->frustum[4][2] = clip[11] - clip[10];
+	c->frustum[4][3] = clip[15] - clip[14];
+
+	/* Normalize the result */
+	t = dist3d( c->frustum[4][0], c->frustum[4][1], c->frustum[4][2] );
+	c->frustum[4][0] /= t;
+	c->frustum[4][1] /= t;
+	c->frustum[4][2] /= t;
+	c->frustum[4][3] /= t;
+
+	/* Extract the NEAR plane */
+	c->frustum[5][0] = clip[ 3] + clip[ 2];
+	c->frustum[5][1] = clip[ 7] + clip[ 6];
+	c->frustum[5][2] = clip[11] + clip[10];
+	c->frustum[5][3] = clip[15] + clip[14];
+
+	/* Normalize the result */
+	t = dist3d( c->frustum[5][0], c->frustum[5][1], c->frustum[5][2] );
+	c->frustum[5][0] /= t;
+	c->frustum[5][1] /= t;
+	c->frustum[5][2] /= t;
+	c->frustum[5][3] /= t;
+}
+
 void calculate_camera_transform(struct entity_context *cx)
 {
-	struct mat44 perspective_transform;
-	struct mat44 cameralook_transform;
-
-	struct mat41 look_direction;
-
-	struct mat41 up;
-	struct mat41 camera_x, x_cross_look;
 	struct mat41 *v; /* camera relative y axis (up/down) */
 	struct mat41 *n; /* camera relative z axis (into view plane) */
 	struct mat41 *u; /* camera relative x axis (left/right) */
 
+	normalize_vector(&cx->light, &cx->light);
+
+	struct mat41 up;
 	up.m[0] = cx->camera.ux;
 	up.m[1] = cx->camera.uy;
 	up.m[2] = cx->camera.uz;
 	up.m[3] = 1;
 
-	normalize_vector(&cx->light, &cx->light);
-
 	/* Translate to camera position... */
-	vec3_init(&cx->camera.camera_translation, -cx->camera.x, -cx->camera.y, -cx->camera.z);
+	struct mat44d cameratrans_transform = {{{1, 0, 0, 0},
+						{0, 1, 0, 0},
+						{0, 0, 1, 0},
+						{-cx->camera.x, -cx->camera.y, -cx->camera.z, 1}}};
 
 	/* Calculate camera rotation based on look direction ...
 	   http://ksimek.github.io/2012/08/22/extrinsic/ 'The "Look-At" Camera'
@@ -733,6 +947,7 @@ void calculate_camera_transform(struct entity_context *cx)
 	  snis n = L
 	  snis u = s
 	  snis v = u' */
+	struct mat41 look_direction;
 	look_direction.m[0] = (cx->camera.lx - cx->camera.x);
 	look_direction.m[1] = (cx->camera.ly - cx->camera.y);
 	look_direction.m[2] = (cx->camera.lz - cx->camera.z);
@@ -742,11 +957,13 @@ void calculate_camera_transform(struct entity_context *cx)
 	n = &look_direction;
 
 	/* Calculate x direction relative to camera, "camera_x" */
+	struct mat41 camera_x;
 	mat41_cross_mat41(&look_direction, &up, &camera_x);
 	normalize_vector(&camera_x, &camera_x);
 	u = &camera_x;
 
 	/* Calculate camera relative x axis */
+	struct mat41 x_cross_look;
 	mat41_cross_mat41(&camera_x, &look_direction, &x_cross_look);
 	/* v should not need normalizing as n and u are already
 	 * unit, and are perpendicular */
@@ -759,6 +976,7 @@ void calculate_camera_transform(struct entity_context *cx)
 	   | -nx -ny -nz 0 |
 	   |  0  0  0 1 |
 	 */
+	struct mat44d cameralook_transform;
 	cameralook_transform.m[0][0] = u->m[0];
 	cameralook_transform.m[0][1] = v->m[0];
 	cameralook_transform.m[0][2] = -n->m[0];
@@ -779,6 +997,7 @@ void calculate_camera_transform(struct entity_context *cx)
 	/* Make perspective transform based on OpenGL frustum
 	   http://www.scratchapixel.com/lessons/3d-advanced-lessons/perspective-and-orthographic-projection-matrix/opengl-perspective-projection-matrix/
 	*/
+	struct mat44d perspective_transform;
 	perspective_transform.m[0][0] = (2 * cx->camera.near) / (cx->camera.right - cx->camera.left);
 	perspective_transform.m[0][1] = 0.0;
 	perspective_transform.m[0][2] = 0.0;
@@ -797,36 +1016,26 @@ void calculate_camera_transform(struct entity_context *cx)
 						(cx->camera.far - cx->camera.near);
 	perspective_transform.m[3][3] = 0.0;
 
-	/* camera matrix without any translation */
-	mat44_product(&perspective_transform, &cameralook_transform, &cx->camera.camera_transform);
+	/* make the view matrix, V = L * T */
+	struct mat44d view_matrix;
+	mat44_product_ddd(&cameralook_transform, &cameratrans_transform, &view_matrix);
 
-	/* camera matrix with translation */
-	struct mat44 cameratrans_transform = {{
-		{1, 0, 0, 0},
-		{0, 1, 0, 0},
-		{0, 0, 1, 0},
-		{cx->camera.camera_translation.v.x, cx->camera.camera_translation.v.y, cx->camera.camera_translation.v.z, 1}}};
-	mat44_product(&cx->camera.camera_transform, &cameratrans_transform, &cx->camera.camera_total_transform);
+	/* make the view-perspective matrix, VP = P * V */
+	mat44_product_ddd(&perspective_transform, &view_matrix, &cx->camera.camera_vp_matrix);
+
+	/* pull out the frustum planes for entity culling */
+	extract_frustum_planes(&cx->camera);
 }
 
-static void reposition_fake_star(struct entity_context *cx, struct fake_star *fs, float radius);
-
-static void do_w_divide(struct entity *e)
-{
-	int i;
-	for (i = 0; i < e->m->nvertices; i++) {
-		e->m->v[i].wx /= e->m->v[i].ww;
-		e->m->v[i].wy /= e->m->v[i].ww;
-		e->m->v[i].wz /= e->m->v[i].ww;
-	}
-}
+static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, float radius);
 
 void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 {
-	int i, j;
-	int clipped, do_clip;
+	int i, j, n;
 
 	calculate_camera_transform(cx);
+
+	struct camera_info *c = &cx->camera;
 
 #ifdef WITH_ILDA_SUPPORT
 	ilda_file_open(cx);
@@ -835,74 +1044,56 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 
 	/* draw fake stars */
 	sng_set_foreground(WHITE);
+	transform_vertices(cx, 0, &cx->fake_star[0], cx->nfakestars);
+
 	for (i = 0; i < cx->nfakestars; i++) {
-		float behind_camera;
-		struct fake_star *fs = &cx->fake_star[i];
-		struct mat41 point_to_test;
+		struct vertex *fs = &cx->fake_star[i];
 
-		point_to_test.m[0] = fs->v.x - cx->camera.x;
-		point_to_test.m[1] = fs->v.y - cx->camera.y;
-		point_to_test.m[2] = fs->v.z - cx->camera.z;
-		point_to_test.m[3] = 1.0;
+		float dist2 = dist3dsqrd(c->x - fs->x, c->y - fs->y, c->z - fs->z);
 
-		fs->dist3dsqrd = dist3dsqrd(cx->camera.x - fs->v.x,
-						cx->camera.y - fs->v.y,
-						cx->camera.z - fs->v.z);
-
-		behind_camera = mat41_dot_mat41(&cx->camera.look_direction, &point_to_test);
-		if (behind_camera < 0) /* behind camera */
-			goto check_for_reposition;
-		if (!transform_fake_star(cx, fs, &cx->camera.camera_total_transform))
+		if (!fs->clip)
 			wireframe_render_fake_star(w, gc, cx, fs);
-check_for_reposition:
-		if (fs->dist3dsqrd > cx->camera.far * 10.0f * cx->camera.far * 10.0f)
-			reposition_fake_star(cx, fs, cx->camera.far * 10.0f);
+
+		if (dist2 > cx->fakestars_radius * cx->fakestars_radius)
+			reposition_fake_star(cx, fs, cx->fakestars_radius);
+	}
+
+	/* find all entities in view frustum and sort them by distance */
+	n = snis_object_pool_highest_object(cx->entity_pool);
+
+	cx->nentity_depth = 0;
+
+	for (j = 0; j <= n; j++) {
+		if (!snis_object_pool_is_allocated(cx->entity_pool, j))
+			continue;
+
+		struct entity *e = &cx->entity_list[j];
+
+		if (e->m == NULL)
+			continue;
+
+		e->onscreen = 0;
+
+		if (!sphere_in_frustum(c, e->x, e->y, e->z, e->m->radius * e->scale))
+			continue;
+
+		e->dist3dsqrd = dist3dsqrd(c->x - e->x, c->y - e->y, c->z - e->z);
+		cx->entity_depth[cx->nentity_depth] = j;
+		cx->nentity_depth++;
 	}
 
 	sort_entity_distances(cx);
 
-	for (j = 0; j <= snis_object_pool_highest_object(cx->entity_pool); j++) {
-		struct mat41 point_to_test;
-		float behind_camera;
+	/* render the sorted entities */
+	for (j = 0; j < cx->nentity_depth; j++) {
+		struct entity *e = &cx->entity_list[cx->entity_depth[j]];
 
-		i = cx->entity_depth[j];
+		transform_entity(cx, e);
 
-		if (!snis_object_pool_is_allocated(cx->entity_pool, i))
-			continue;
-		if (cx->entity_list[i].m == NULL)
-			continue;
-		cx->entity_list[i].onscreen = 0;
+		if (e->sx >=0 && e->sy >= 0)
+			e->onscreen = 1;
 
-		do_clip = !(cx->entity_list[i].render_style & RENDER_DISABLE_CLIP);
-		if (do_clip) {
-			point_to_test.m[0] = cx->entity_list[i].x - cx->camera.x;
-			point_to_test.m[1] = cx->entity_list[i].y - cx->camera.y;
-			point_to_test.m[2] = cx->entity_list[i].z - cx->camera.z;
-			point_to_test.m[3] = 1.0;
-			behind_camera = mat41_dot_mat41(&cx->camera.look_direction, &point_to_test);
-			if (behind_camera < 0) /* behind camera */
-				continue;
-/* increasing STANDARD_RADIUS makes fewer objects visible, decreasing it makes more */
-#define STANDARD_RADIUS (4.0)
-			if (cx->entity_list[i].dist3dsqrd * STANDARD_RADIUS / cx->entity_list[i].m->radius * cx->entity_list[i].scale >
-					sqr(fabs(cx->camera.far) * 20.0))
-				continue;
-		}
-
-		clipped = transform_entity(cx, &cx->entity_list[i], do_clip);
-		if (clipped)
-			continue;
-
-		if (cx->entity_list[i].render_style & RENDER_POINT_CLOUD) {
-			do_w_divide(&cx->entity_list[i]);
-			wireframe_render_point_cloud(w, gc, cx, &cx->entity_list[i]);
-		} else if (cx->entity_list[i].render_style & RENDER_POINT_LINE) {
-			do_w_divide(&cx->entity_list[i]);
-			wireframe_render_point_line(w, gc, cx, &cx->entity_list[i]);
-		} else {
-			render_entity(w, gc, cx, &cx->entity_list[i]);
-		}
-		cx->entity_list[i].onscreen = 1;
+		render_entity(w, gc, cx, e);
 	}
 }
 
@@ -1005,6 +1196,17 @@ void entity_context_free(struct entity_context *cx)
 	free(cx);
 }
 
+/* Re-position a star randomly on the surface of sphere of given radius */
+static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, float radius)
+{
+	/* I tried "on" sphere here, but I like the look of "in" better. */
+	float dist3dsqrd;
+	random_point_in_sphere(radius, &fs->x, &fs->y, &fs->z, &dist3dsqrd);
+	fs->x += cx->camera.x;
+	fs->y += cx->camera.y;
+	fs->z += cx->camera.z;
+}
+
 /* fill a sphere of specified radius with randomly placed stars */
 void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius)
 {
@@ -1014,25 +1216,10 @@ void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius)
 	memset(cx->fake_star, 0, sizeof(*cx->fake_star) * nstars);
 
 	for (i = 0; i < nstars; i++) {
-		struct fake_star *fs = &cx->fake_star[i];
-
-		random_point_in_sphere(radius, &fs->v.x, &fs->v.y, &fs->v.z,
-					&fs->dist3dsqrd);
-		fs->v.x += cx->camera.x;
-		fs->v.y += cx->camera.y;
-		fs->v.z += cx->camera.z;
+		reposition_fake_star(cx, &cx->fake_star[i], radius);
 	}
 	cx->nfakestars = nstars;
-}
-
-/* Re-position a star randomly on the surface of sphere of given radius */
-static void reposition_fake_star(struct entity_context *cx, struct fake_star *fs, float radius)
-{
-	/* I tried "on" sphere here, but I like the look of "in" better. */
-	random_point_in_sphere(radius, &fs->v.x, &fs->v.y, &fs->v.z, &fs->dist3dsqrd);
-	fs->v.x += cx->camera.x;
-	fs->v.y += cx->camera.y;
-	fs->v.z += cx->camera.z;
+	cx->fakestars_radius = radius;
 }
 
 void entity_free_fake_stars(struct entity_context *cx)
@@ -1126,9 +1313,9 @@ union quat *entity_get_orientation(struct entity *e)
 	return &e->orientation;
 }
 
-struct mat44 get_camera_total_transform(struct entity_context *cx)
+struct mat44d get_camera_transform(struct entity_context *cx)
 {
-	return cx->camera.camera_total_transform;
+	return cx->camera.camera_vp_matrix;
 }
 
 void set_window_offset(struct entity_context *cx, float x, float y)
@@ -1142,7 +1329,7 @@ int entity_onscreen(struct entity *e)
 	return (int) e->onscreen;
 }
 
-/* clipping triangles to frustrum taken from
+/* clipping triangles to frustum taken from
    http://simonstechblog.blogspot.com/2012/04/software-rasterizer-part-2.html
    converted from javascript to c */
 static const float ZERO_TOLERANCE = 0.000001f;
