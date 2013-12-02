@@ -4784,6 +4784,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	camera_set_orientation(ecx, &camera_orientation);
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
+	set_window_offset(ecx, 0, 0);
 	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
 			cos(((timer / 4) % 360) * M_PI / 180));
 	sng_set_foreground(GREEN);
@@ -4893,6 +4894,7 @@ static void show_mainscreen(GtkWidget *w)
 	camera_set_orientation(ecx, &o->orientation);
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
+	set_window_offset(ecx, 0, 0);
 	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
 			cos(((timer / 4) % 360) * M_PI / 180));
 	sng_set_foreground(GREEN);
