@@ -188,9 +188,16 @@ struct ai_patrol_data {
 	union vec3 p[MAX_PATROL_POINTS];
 };
 
+struct ai_fleet_data {
+	struct ai_patrol_data patrol;
+	int fleet;
+	int fleet_position;
+};
+
 union ai_data {
 	struct ai_attack_data attack;
 	struct ai_patrol_data patrol;
+	struct ai_fleet_data fleet;
 };
 
 struct ai_stack_entry {

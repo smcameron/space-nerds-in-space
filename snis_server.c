@@ -885,9 +885,11 @@ static void setup_patrol_route(struct snis_entity *o)
 
 static void ship_figure_out_what_to_do(struct snis_entity *o)
 {
+	int n;
+
 	if (o->tsd.ship.nai_entries > 0)
 		return;
-	switch (snis_randn(100) % 2) {
+	switch (snis_randn(100) % 3) {
 	case 0:
 		o->tsd.ship.nai_entries = 1;
 		o->tsd.ship.ai[0].ai_mode = AI_MODE_ATTACK;
@@ -896,6 +898,29 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 	case 1:	
 		setup_patrol_route(o);
 		break;
+	case 2:
+		setup_patrol_route(o);
+		if (fleet_count() < 5) {
+			o->tsd.ship.ai[0].ai_mode = AI_MODE_FLEET_LEADER;
+			o->tsd.ship.ai[0].u.fleet.fleet = fleet_new(FLEET_TRIANGLE, o->id);
+			o->tsd.ship.ai[0].u.fleet.fleet_position = 0;
+		} else {
+			struct snis_entity *leader;
+			int32_t leader_id;
+			int i;
+
+			n = snis_randn(5);
+			o->tsd.ship.ai[0].ai_mode = AI_MODE_FLEET_MEMBER;
+			o->tsd.ship.ai[0].u.fleet.fleet = n;
+			o->tsd.ship.ai[0].u.fleet.fleet_position = fleet_join(n, o->id);
+
+			/* keep fleet memebers from fighting each other */
+			/* FIXME: think of something better */
+			leader_id = fleet_get_leader_id(n);
+			i = lookup_by_id(leader_id);
+			leader = &go[i];
+			o->sdata.faction = leader->sdata.faction;
+		}
 	default:
 		break;
 	}
@@ -1448,6 +1473,43 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	}
 }
 
+static void ai_fleet_member_mode_brain(struct snis_entity *o)
+{
+	int i, n = o->tsd.ship.nai_entries - 1;
+	struct ai_fleet_data *f = &o->tsd.ship.ai[n].u.fleet;
+	struct snis_entity *leader;
+	int position;
+	union vec3 offset;
+	int32_t leader_id;
+	double dist2;
+
+	position = fleet_position_number(f->fleet, o->id);
+	leader_id = fleet_get_leader_id(f->fleet);
+	i = lookup_by_id(leader_id);
+	if (i == o->id) { /* I'm the leader now */
+		o->tsd.ship.ai[n].ai_mode = AI_MODE_FLEET_LEADER;
+		return;
+	}
+	leader = &go[i];
+	offset = fleet_position(f->fleet, position, &leader->orientation);
+	o->tsd.ship.dox = offset.v.x + leader->x;
+	o->tsd.ship.doy = offset.v.y + leader->y;
+	o->tsd.ship.doz = offset.v.z + leader->z;
+
+	/* If distance is too far, just warp */
+	dist2 = dist3dsqrd(o->x - o->tsd.ship.dox, o->y - o->tsd.ship.doy,
+			o->z - o->tsd.ship.doz);
+	if (dist2 > 500.0 * 500.0) {
+		o->x = o->tsd.ship.dox;
+		o->y = o->tsd.ship.doy;
+		o->z = o->tsd.ship.doz;
+		o->vx = leader->vx;
+		o->vy = leader->vy;
+		o->vz = leader->vz;
+		o->orientation = leader->orientation;
+	}
+}
+
 static void ai_patrol_mode_brain(struct snis_entity *o)
 {
 	int n = o->tsd.ship.nai_entries - 1;
@@ -1487,6 +1549,12 @@ static void ai_brain(struct snis_entity *o)
 		break;
 	case AI_MODE_PATROL:
 		ai_patrol_mode_brain(o);
+		break;
+	case AI_MODE_FLEET_LEADER:
+		ai_patrol_mode_brain(o);
+		break;
+	case AI_MODE_FLEET_MEMBER:
+		ai_fleet_member_mode_brain(o);
 		break;
 	default:
 		break;
