@@ -743,7 +743,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 	} else {
 		update_generic_object(i, x, y, z, vx, vy, vz, orientation, alive); 
 	}
-	go[i].tsd.ship.victim_id = (int32_t) victim_id;
+	go[i].tsd.ship.ai[0].u.attack.victim_id = (int32_t) victim_id;
 	go[i].tsd.ship.shiptype = shiptype;
 	return 0;
 }
@@ -3096,7 +3096,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	if (!o->tsd.ship.reverse && reverse)
 		wwviaudio_add_sound(REVERSE_SOUND);
 	o->tsd.ship.reverse = reverse;
-	o->tsd.ship.victim_id = victim_id;
+	o->tsd.ship.ai[0].u.attack.victim_id = victim_id;
 	rc = 0;
 out:
 	pthread_mutex_unlock(&universe_mutex);
@@ -4823,9 +4823,9 @@ static void show_weapons_camera_view(GtkWidget *w)
 	draw_plane_radar(w, o, &camera_orientation, 400, 500, 75, XKNOWN_DIM * 0.01);
 
 	/* Draw targeting indicator on main screen */
-	if (o->tsd.ship.victim_id != -1) {
+	if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
 		float sx, sy;
-		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.victim_id);
+		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.ai[0].u.attack.victim_id);
 
 		if (target && target->alive && target->entity && entity_onscreen(target->entity)) {
 			entity_get_screen_coords(target->entity, &sx, &sy);
@@ -4902,9 +4902,9 @@ static void show_mainscreen(GtkWidget *w)
 	render_entities(w, gc, ecx);
 
 	/* Draw targeting indicator on main screen */
-	if (o->tsd.ship.victim_id != -1) {
+	if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
 		float sx, sy;
-		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.victim_id);
+		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.ai[0].u.attack.victim_id);
 
 		if (target && target->alive && target->entity &&
 			entity_onscreen(target->entity)) {
@@ -5567,7 +5567,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 				sng_set_foreground(WHITE);
 				snis_draw_arrow(w, gc, x, y, r, go[i].heading, 0.5);
 			}
-			if (go[i].id == o->tsd.ship.victim_id) {
+			if (go[i].id == o->tsd.ship.ai[0].u.attack.victim_id) {
 				draw_targeting_indicator(w, gc, x, y, TARGETING_COLOR, 0);
 				draw_torpedo_leading_indicator(w, gc, o, &go[i],
 								x, y, dist2, r, screen_radius);
@@ -7798,7 +7798,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			}
 			update_entity_orientation(contact, entity_get_orientation(go[i].entity));
 
-			if (o->tsd.ship.victim_id != -1 && go[i].id == o->tsd.ship.victim_id)
+			if (o->tsd.ship.ai[0].u.attack.victim_id != -1 && go[i].id == o->tsd.ship.ai[0].u.attack.victim_id)
 				targeted_entity = contact;
 			if (curr_science_guy == &go[i])
 				science_entity = contact;
@@ -9543,8 +9543,8 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		break;
 	case OBJTYPE_SHIP2:
 		sng_set_foreground(SHIP_COLOR);
-		if (o->tsd.ship.victim_id != -1) {
-			int vi = lookup_object_by_id(o->tsd.ship.victim_id);
+		if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
+			int vi = lookup_object_by_id(o->tsd.ship.ai[0].u.attack.victim_id);
 			if (vi >= 0) {	
 				v = &go[vi];
 				vx = ux_to_demonsx(v->x);

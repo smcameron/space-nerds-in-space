@@ -168,6 +168,28 @@ struct command_data {
 
 struct damcon_data;
 
+/* tentative ai modes... */
+#define AI_MODE_IDLE 0
+#define AI_MODE_ATTACK 1
+#define AI_MODE_TRAVEL 2
+#define AI_MODE_FLEE 3
+#define AI_MODE_PATROL 4
+#define AI_MODE_FLEET_MEMBER 5
+#define AI_MODE_FLEET_LEADER 6
+
+struct ai_attack_data {
+	int32_t victim_id;
+};
+
+union ai_data {
+	struct ai_attack_data attack;
+};
+
+struct ai_stack_entry {
+	uint8_t ai_mode;
+	union ai_data u;
+};
+
 struct ship_data {
 	uint32_t torpedoes;
 #define TORPEDO_LIFETIME 40
@@ -271,7 +293,9 @@ struct ship_data {
 	uint8_t requested_shield;
 	uint8_t phaser_wavelength;
 	uint8_t phaser_charge;
-	int32_t victim_id;
+#define MAX_AI_STACK_ENTRIES 5
+	struct ai_stack_entry ai[MAX_AI_STACK_ENTRIES];
+	int nai_entries;
 	double dox, doy, doz; /* destination offsets */
 	struct ship_damage_data damage;
 	struct command_data cmd_data;
