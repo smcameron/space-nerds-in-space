@@ -1,9 +1,22 @@
 #include <math.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "quat.h"
 #include "fleet.h"
 
 #define FLEET_SPACING 100.0f
+#define MAXSHIPSPERFLEET 100
+#define MAXFLEETS 50
+
+struct fleet {
+	int nships;
+	int fleet_shape;
+	int32_t id[MAXSHIPSPERFLEET];
+};
+
+static struct fleet f[MAXFLEETS];
+static int nfleets;
 
 static union vec3 zero = { { 0, 0, 0 } };
 
@@ -87,11 +100,12 @@ static union vec3 fleet_square_position(int position)
 	return v;
 }
 
-union vec3 fleet_position(int fleet_shape, int position, union quat *fleet_orientation)
+union vec3 fleet_position(int fleet_number, int position, union quat *fleet_orientation)
 {
 	union vec3 v;
+	struct fleet *fleet = &f[fleet_number];
 
-	switch (fleet_shape) {
+	switch (fleet->fleet_shape) {
 	case FLEET_LINE:
 		v = fleet_line_position(position);
 		break;
@@ -107,5 +121,27 @@ union vec3 fleet_position(int fleet_shape, int position, union quat *fleet_orien
 	}
 	quat_rot_vec_self(&v, fleet_orientation);
 	return v;
+}
+
+int fleet_new(int fleet_shape, int32_t leader)
+{
+	int i;
+
+	for (i = 0; i < nfleets; i++) {
+		if (f[i].nships == 0) {
+			f[i].nships = 1;
+			f[i].id[0] = leader;
+			f[i].fleet_shape = fleet_shape;
+			return i;
+		}
+	}
+	if (nfleets >= MAXFLEETS)
+		return -1;
+	i = nfleets;
+	nfleets++;
+	f[i].nships = 1;
+	f[i].id[0] = leader;
+	f[i].fleet_shape = fleet_shape;
+	return i;
 }
 
