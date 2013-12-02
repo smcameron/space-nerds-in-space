@@ -812,6 +812,8 @@ static void buddies_join_the_fight(uint32_t id, struct snis_entity *attacker)
 	o->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
 	o->tsd.ship.ai[n].u.attack.victim_id = buddies_pick_who_to_attack(attacker);
 	o->tsd.ship.nai_entries++;
+	random_dpoint_on_sphere(snis_randn(LASER_RANGE - 400) + 400,
+			&o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
 }
 
 static void attack_your_attacker(struct snis_entity *attackee, struct snis_entity *attacker)
@@ -981,6 +983,8 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 			o->tsd.ship.ai[0].ai_mode = AI_MODE_FLEET_LEADER;
 			o->tsd.ship.ai[0].u.fleet.fleet = fleet_new(fleet_shape, o->id);
 			o->tsd.ship.ai[0].u.fleet.fleet_position = 0;
+			if (o->sdata.faction == 0)
+				o->sdata.faction = 1;
 		} else {
 			struct snis_entity *leader;
 			int32_t leader_id;
@@ -1013,6 +1017,11 @@ static void pop_ai_stack(struct snis_entity *o)
 		return;
 	}
 	o->tsd.ship.nai_entries--;
+	n = o->tsd.ship.nai_entries - 1;
+	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
+		random_dpoint_on_sphere(snis_randn(LASER_RANGE - 400) + 400,
+			&o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
+	
 }
 
 static void pop_ai_attack_mode(struct snis_entity *o)
@@ -1027,6 +1036,10 @@ static void pop_ai_attack_mode(struct snis_entity *o)
 	n--;
 	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
 		o->tsd.ship.nai_entries--;
+	n--;
+	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
+		random_dpoint_on_sphere(snis_randn(LASER_RANGE - 400) + 400,
+			&o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
 	return;
 }
 
