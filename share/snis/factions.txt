@@ -1,5 +1,23 @@
+# 
+# this file defines factions
+#
+# format is:
+#
+# faction_name
+# x y z
+# 
+# where x, y and z are integers that indicate the center of the factions
+# sphere of influence.  When ships are randomly added to the system, they
+# take on the faction whose center is closest to their position.
+#
 Neutral
+0 0 0
 Wallunni
+300000 0 300000 
 Gordouni
+150000 0 150000
 Zarkon
+0 0 300000
 Vekkazi
+300000 0 0
+

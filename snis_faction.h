@@ -7,11 +7,13 @@
 #define GLOBAL
 #endif
 
-GLOBAL char **faction;
-GLOBAL int nfactions;
-
 GLOBAL int snis_read_factions(char *filename);
 GLOBAL void snis_free_factions(void);
+GLOBAL int nfactions(void);
+
+GLOBAL char *faction_name(int faction_number);
+GLOBAL union vec3 faction_center(int faction_number);
+GLOBAL int nearest_faction(union vec3 v);
 
 #undef GLOBAL
 #endif

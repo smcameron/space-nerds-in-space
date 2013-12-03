@@ -8894,8 +8894,8 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		y += 25;
 		the_faction = o ? 
 			o->sdata.faction >= 0 &&
-			o->sdata.faction < nfactions ?
-				faction[o->sdata.faction] : "UNKNOWN" : "UNKNOWN";
+			o->sdata.faction < nfactions() ?
+				faction_name(o->sdata.faction) : "UNKNOWN" : "UNKNOWN";
 		sprintf(buffer, "ORIG: %s", the_faction);
 		sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 	}
