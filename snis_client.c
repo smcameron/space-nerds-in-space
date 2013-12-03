@@ -4803,12 +4803,12 @@ static void show_weapons_camera_view(GtkWidget *w)
 	o->entity = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
 				o->x, o->y, o->z, SHIP_COLOR);
 	update_entity_orientation(o->entity, &o->orientation);
-	set_render_style(o->entity, RENDER_DISABLE_CLIP);
+	set_render_style(o->entity, RENDER_NORMAL);
 
-	/* Add our current into the mix */
+	/* Add our turret into the mix */
 	struct entity* turrent_entity = add_entity(ecx, ship_turret_mesh, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z, SHIP_COLOR);
 	update_entity_orientation(turrent_entity, &camera_orientation);
-	set_render_style(turrent_entity, RENDER_DISABLE_CLIP);
+	set_render_style(turrent_entity, RENDER_NORMAL);
 
 	/* FIXME: Note, because of our own ship's extreme proximity, some
 	 * limitations of the renderer become glaringly apparent
@@ -6031,7 +6031,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	float mark_popout_zoom_dist_to_cam_frac = 0.4 / tan(fovy/2.0);
 
 	struct entity *e = NULL;
-	int science_style = RENDER_DISABLE_CLIP;
+	int science_style = RENDER_NORMAL;
 
 	union vec3 ship_pos = {{o->x, o->y, o->z}};
 	union vec3 ship_normal = {{0, 1, 0}};
@@ -6111,7 +6111,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 	e = add_entity(navecx, ring_mesh, o->x, o->y, o->z, DARKRED);
 	update_entity_scale(e, range);
-	set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+	set_render_style(e, RENDER_POINT_LINE);
 
 	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 0.0f, range * 0.98, RED);
 	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 90.0f * M_PI / 180.0, range * 0.98, DARKGREEN);
@@ -6137,13 +6137,13 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		e = add_entity(navecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
 		update_entity_scale(e, heading_indicator_mesh->radius*range/100.0);
 		update_entity_orientation(e, &ind_orientation);
-		set_render_style(e, RENDER_DISABLE_CLIP);
+		set_render_style(e, RENDER_NORMAL);
 
 		/* gun heading arrow tail */
 		e = add_entity(navecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
 		update_entity_scale(e, range);
 		update_entity_orientation(e, &ind_orientation);
-		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+		set_render_style(e, RENDER_POINT_LINE);
 	}
 
 	/* heading labels */
@@ -6380,7 +6380,7 @@ static void add_basis_ring(struct entity_context *ecx, float x, float y, float z
 	e = add_entity(ecx, ring_mesh, x, y, z, color);
 	update_entity_scale(e, r);
 	update_entity_orientation(e, &q);
-	set_render_style(e, RENDER_POINT_CLOUD | RENDER_DISABLE_CLIP);
+	set_render_style(e, RENDER_POINT_CLOUD);
 }
 
 static void add_scanner_beam_orange_slice(struct entity_context *ecx,
@@ -6402,13 +6402,13 @@ static void add_scanner_beam_orange_slice(struct entity_context *ecx,
 	quat_mul(&q3, &q1, &q);
 	update_entity_orientation(e, &q3);
 	update_entity_scale(e, r);
-	set_render_style(e, RENDER_POINT_CLOUD | RENDER_DISABLE_CLIP);
+	set_render_style(e, RENDER_POINT_CLOUD);
 
 	e = add_entity(sciballecx, orange_slice, o->x, o->y, o->z, color);
 	quat_mul(&q3, &q2, &q);
 	update_entity_orientation(e, &q3);
 	update_entity_scale(e, r);
-	set_render_style(e, RENDER_POINT_CLOUD | RENDER_DISABLE_CLIP);
+	set_render_style(e, RENDER_POINT_CLOUD);
 }
 
 static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, double range, double current_zoom)
@@ -7535,7 +7535,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	double max_possible_screen_radius = 0.09 * XKNOWN_DIM;
 	double screen_radius;
 	double visible_distance;
-	int science_style = RENDER_DISABLE_CLIP;
+	int science_style = RENDER_NORMAL;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -7590,7 +7590,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		e = add_entity(navecx, radar_ring_mesh[i], o->x, o->y, o->z, DARKRED);
 		update_entity_scale(e, screen_radius);
 		update_entity_orientation(e, &o->orientation);
-		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+		set_render_style(e, RENDER_POINT_LINE);
 	}
 #if 0
 	for (i = 0; i < 6; i++) {
@@ -7603,7 +7603,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			color = GREEN;
 		e = add_entity(navecx, axis_mesh[i], o->x, o->y, o->z, color);
 		update_entity_scale(e, screen_radius);
-		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+		set_render_style(e, RENDER_POINT_LINE);
 	}
 #endif
 
@@ -7631,20 +7631,20 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		e = add_entity(navecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
 		update_entity_scale(e, heading_indicator_mesh->radius*screen_radius/100.0);
 		update_entity_orientation(e, &ind_orientation);
-		set_render_style(e, RENDER_DISABLE_CLIP);
+		set_render_style(e, RENDER_NORMAL);
 
 		/* gun heading arrow tail */
 		e = add_entity(navecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
 		update_entity_scale(e, screen_radius);
 		update_entity_orientation(e, &ind_orientation);
-		set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+		set_render_style(e, RENDER_POINT_LINE);
 	}
 
 	/* ship forward vector */
 	e = add_entity(navecx, axis_mesh[4], o->x, o->y, o->z, WHITE);
 	update_entity_scale(e, screen_radius);
 	update_entity_orientation(e, &o->orientation);
-	set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+	set_render_style(e, RENDER_POINT_LINE);
 
 	double sector_size = XKNOWN_DIM / 10.0;
 	if (current_zoom > 100 ) {
@@ -7661,7 +7661,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		DARKGREEN );
 	update_entity_scale(e, sector_size);
 	/* update_entity_orientation(e, &o->orientation); */
-	set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+	set_render_style(e, RENDER_POINT_LINE);
 #endif
 
 	/* Draw all the stuff */
@@ -7792,12 +7792,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			e = add_entity(navecx, vline_mesh, contact_pos.v.x, contact_pos.v.y, contact_pos.v.z, DARKRED);
 			update_entity_scale(e, -proj_distance);
 			update_entity_orientation(e, &o->orientation);
-			set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+			set_render_style(e, RENDER_POINT_LINE);
 
 			e = add_entity(navecx, ring_mesh, ship_plane_proj.v.x, ship_plane_proj.v.y, ship_plane_proj.v.z, DARKRED);
 			update_entity_scale(e, contact_ring_radius);
 			update_entity_orientation(e, &o->orientation);
-			set_render_style(e, RENDER_POINT_LINE | RENDER_DISABLE_CLIP);
+			set_render_style(e, RENDER_POINT_LINE);
 		}
 	}
 	render_entities(w, gc, navecx);

@@ -90,7 +90,6 @@ GLOBAL void entity_context_free(struct entity_context *cx);
 #define RENDER_SPARKLE (1 << 4)
 #define RENDER_ILDA (1 << 5) /* for laser projectors */
 #define RENDER_POINT_LINE (1 << 6)
-#define RENDER_DISABLE_CLIP (1 << 7)
 GLOBAL void entity_get_screen_coords(struct entity *e, float *x, float *y);
 
 GLOBAL int get_entity_count(struct entity_context *cx);
