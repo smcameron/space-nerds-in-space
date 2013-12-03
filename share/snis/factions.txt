@@ -34,9 +34,14 @@ Zarkon
 0 0 300000
 Vekkazi
 300000 0 0
-hostility Wallunni Gordouni 20
-hostility Wallunni Zarkon 20
-hostility Vekkazi Zarkon 40
-hostility Vekkazi Gordouni 0
-hostility Zarkon Gordouni 50 
+hostility Wallunni Gordouni 90
+hostility Wallunni Zarkon 90
+hostility Wallunni Vekkazi 90
+hostility Wallunni Neutral 90
+hostility Zarkon Gourouni 90
+hostility Zarkon Vekkazi 90
+hostility Zarkon Neutral 90
+hostility Gordouni Neutral 90
+hostility Gordouni Vekkazi 90
+hostility Vekkazi Neutral 90
 
