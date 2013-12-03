@@ -958,26 +958,38 @@ static int find_nearest_victim(struct snis_entity *o)
 	return info.victim_id;
 }
 
-union vec3 pick_random_patrol_destination(void)
+union vec3 pick_random_patrol_destination(struct snis_entity *ship)
 {
 	union vec3 v;
 	struct snis_entity *o;
-	int i;
+	int i, count;
 	double dx, dy, dz;
 
 	random_dpoint_on_sphere(100.0, &dx, &dy, &dz);
+	/* FIXME: do something better here. */
+	count = 0;
 	while (1) {
 		i = snis_randn(snis_object_pool_highest_object(pool));
 		o = &go[i];
+		count++;
+		if (count > 1000)
+			break;
 		if (!o->alive)
 			continue;
 		if (o->type != OBJTYPE_PLANET && o->type != OBJTYPE_STARBASE)
 			continue;
 		break;
 	}
-	v.v.x = o->x + dx;
-	v.v.y = o->y + dy;
-	v.v.z = o->z + dz;
+	if (count <= 1000) {
+		v.v.x = o->x + dx;
+		v.v.y = o->y + dy;
+		v.v.z = o->z + dz;
+	} else {
+		/* FIXME: do something better */
+		v.v.x = ship->x + (float) snis_randn(XKNOWN_DIM / 3);
+		v.v.y = ship->y + (float) snis_randn(YKNOWN_DIM / 3);
+		v.v.z = ship->z + (float) snis_randn(ZKNOWN_DIM / 3);
+	}
 	return v;
 }
 
@@ -998,7 +1010,7 @@ static void setup_patrol_route(struct snis_entity *o)
 
 	/* FIXME: ensure no duplicate points and order in some sane way */
 	for (i = 0; i < npoints; i++)
-		patrol->p[i] = pick_random_patrol_destination();
+		patrol->p[i] = pick_random_patrol_destination(o);
 	o->tsd.ship.dox = patrol->p[0].v.x;
 	o->tsd.ship.doy = patrol->p[0].v.y;
 	o->tsd.ship.doz = patrol->p[0].v.z;
