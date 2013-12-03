@@ -938,13 +938,18 @@ static void process_potential_victim(void *context, void *entity)
 	if (dist > XKNOWN_DIM / 10.0) /* too far away */
 		return;
 
-	fightiness = hostility / (dist + 1.0);
+	if (hostility < FACTION_HOSTILITY_THRESHOLD)
+		return;
+
+	fightiness = (10000.0 * hostility) / (dist + 1.0);
+	printf("fightiness = %f\n", fightiness);
 
 	if (v->type == OBJTYPE_SHIP1)
 		fightiness *= 3.0f; /* prioritize hitting player... */
 	if (info->victim_id == -1 || fightiness > info->fightiness) {
 		info->victim_id = v->id;
 		info->fightiness = fightiness;
+		printf("xxx fightiness = %f\n", fightiness);
 	}
 }
 
