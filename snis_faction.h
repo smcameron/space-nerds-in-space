@@ -14,6 +14,7 @@ GLOBAL int nfactions(void);
 GLOBAL char *faction_name(int faction_number);
 GLOBAL union vec3 faction_center(int faction_number);
 GLOBAL int nearest_faction(union vec3 v);
+GLOBAL float faction_hostility(int f1, int f2);
 
 #undef GLOBAL
 #endif
