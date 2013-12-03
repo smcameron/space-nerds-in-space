@@ -748,7 +748,7 @@ static struct snis_entity *lookup_entity_by_id(uint32_t id)
 
 static int enemy_faction(int faction1, int faction2)
 {
-	return (faction1 != faction2);
+	return (faction_hostility(faction1, faction2) > FACTION_HOSTILITY_THRESHOLD);
 }
 
 static int friendly_fire(struct snis_entity *attacker, struct snis_entity *victim)
@@ -909,7 +909,7 @@ static int make_derelict(struct snis_entity *o)
 
 struct potential_victim_info {
 	struct snis_entity *o;
-	double lowestdist;
+	double fightiness;
 	int victim_id;
 };
 
@@ -918,45 +918,33 @@ static void process_potential_victim(void *context, void *entity)
 	struct potential_victim_info *info = context;
 	struct snis_entity *v = entity; 
 	struct snis_entity *o = info->o; 
-	double dist2, dx, dz;
+	double dist;
+	float hostility, fightiness;
 
 	if (o->index == v->index) /* don't victimize self */
 		return;
 
-	if (o->sdata.faction == 0) { /* neutral */
-		/* only travel to planets and starbases */
-		if (v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_PLANET)
-			return;
-	} else {
-		/* only victimize players, other ships and starbases */
-		if (v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_SHIP1 &&
-			v->type != OBJTYPE_SHIP2)
-			return;
-	}
+	/* only victimize players, other ships and starbases */
+	if (v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_SHIP1 &&
+		v->type != OBJTYPE_SHIP2)
+		return;
 
 	if (!v->alive) /* skip the dead guys */
 		return;
 
-	if (o->sdata.faction != 0) {
-		if (v->type == OBJTYPE_SHIP2 || v->type == OBJTYPE_STARBASE) {
-			/* don't attack neutrals */
-			if (v->sdata.faction == 0)
-				return;
-			/* Even factions attack odd factions, and vice versa */
-			/* TODO: something better here. */
-			if ((o->sdata.faction % 2) == (v->sdata.faction % 2))
-				return;
-		}
-	}
+	hostility = faction_hostility(o->sdata.faction, v->sdata.faction);
+	dist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
 
-	dx = v->x - o->x;
-	dz = v->z - o->z;
-	dist2 = dx * dx + dz * dz;
-	if (v->type == OBJTYPE_SHIP1 && o->sdata.faction != 0)
-		dist2 = dist2 * 0.5; /* prioritize hitting player... */
-	if (info->victim_id == -1 || dist2 < info->lowestdist) {
+	if (dist > XKNOWN_DIM / 10.0) /* too far away */
+		return;
+
+	fightiness = hostility / (dist + 1.0);
+
+	if (v->type == OBJTYPE_SHIP1)
+		fightiness *= 3.0f; /* prioritize hitting player... */
+	if (info->victim_id == -1 || fightiness > info->fightiness) {
 		info->victim_id = v->id;
-		info->lowestdist = dist2;
+		info->fightiness = fightiness;
 	}
 }
 
@@ -966,7 +954,7 @@ static int find_nearest_victim(struct snis_entity *o)
 
 	/* assume universe mutex is held */
 	info.victim_id = -1;
-	info.lowestdist = 1e60;  /* very big number */
+	info.fightiness = -1.0f;
 	info.o = o;
 
 	space_partition_process(space_partition, o, o->x, o->y, &info,
