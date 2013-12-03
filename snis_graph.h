@@ -10,9 +10,9 @@
 #endif
 
 /* cardinal color indexes into huex array */
-#define WHITE 0
-#define BLUE 1
-#define BLACK 2
+#define BLACK 0
+#define WHITE 1
+#define BLUE 2
 #define GREEN 3
 #define YELLOW 4
 #define RED 5
