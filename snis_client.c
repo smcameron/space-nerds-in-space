@@ -9542,7 +9542,14 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 			goto done_drawing_item;
 		break;
 	case OBJTYPE_SHIP2:
-		sng_set_foreground(SHIP_COLOR);
+
+#define FACTION_COLORS 8
+		if (o->sdata.science_data_known)
+			sng_set_foreground((o->sdata.faction % FACTION_COLORS) + 2);
+		else
+			sng_set_foreground(1); /* unknown faction */
+		sng_set_foreground((o->sdata.faction % FACTION_COLORS) + 2);
+
 		if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
 			int vi = lookup_object_by_id(o->tsd.ship.ai[0].u.attack.victim_id);
 			if (vi >= 0) {	
