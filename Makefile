@@ -323,6 +323,9 @@ entity.o:	entity.c entity.h mathutils.h vertex.h triangle.h mesh.h stl_parser.h 
 names.o:	names.c names.h
 	$(Q)$(COMPILE)
 
+space-part.o:	space-part.c space-part.h
+	$(Q)$(COMPILE)
+
 quat.o:	quat.c quat.h
 	$(Q)$(COMPILE)
 
@@ -335,6 +338,7 @@ test_matrix:	matrix.c matrix.h
 test-space-partition:	space-part.c space-part.h
 	$(CC) ${MYCFLAGS} -g -DTEST_SPACE_PARTITION -o test-space-partition space-part.c -lm
 
+# something is weird with this one:
 snis_event_callback.o:	snis_event_callback.h snis_event_callback.c
 	$(CC) ${MYCFLAGS} -c snis_event_callback.c
 
