@@ -785,9 +785,10 @@ static uint32_t buddies_pick_who_to_attack(struct snis_entity *attacker)
 	return fleet_member_get_id(f, snis_randn(fleet_members(f)));
 }
 
-static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id);
+static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id,
+		int recursion_level);
 
-static void buddy_join_the_fight(uint32_t id, struct snis_entity *attacker)
+static void buddy_join_the_fight(uint32_t id, struct snis_entity *attacker, int recursion_level)
 {
 	struct snis_entity *o;
 	int i;
@@ -806,10 +807,10 @@ static void buddy_join_the_fight(uint32_t id, struct snis_entity *attacker)
 		return;
 	if (o->type != OBJTYPE_SHIP2) /* shouldn't happen */
 		return;
-	push_attack_mode(o, buddies_pick_who_to_attack(attacker));
+	push_attack_mode(o, buddies_pick_who_to_attack(attacker), recursion_level + 1);
 }
 
-static void buddies_join_the_fight(int fleet_number, struct snis_entity *victim)
+static void buddies_join_the_fight(int fleet_number, struct snis_entity *victim, int recursion_level)
 {
 	int i;
 
@@ -817,15 +818,18 @@ static void buddies_join_the_fight(int fleet_number, struct snis_entity *victim)
 		return;
 
 	for (i = 0; i < fleet_members(fleet_number); i++)
-		buddy_join_the_fight(fleet_member_get_id(fleet_number, i), victim);
+		buddy_join_the_fight(fleet_member_get_id(fleet_number, i), victim, recursion_level);
 }
 
-static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id)
+static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, int recursion_level)
 {
 	int n, i;
 	double d1, d2;
 	struct snis_entity *v;
 	int fleet_number;
+
+	if (recursion_level > 2) /* guard against infinite recursion */
+		return;
 
 	fleet_number = find_fleet_number(attacker);
 
@@ -849,7 +853,7 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id)
 							&attacker->tsd.ship.doz);
 			i = lookup_by_id(victim_id);
 			if (i >= 0)
-				buddies_join_the_fight(fleet_number, &go[i]);
+				buddies_join_the_fight(fleet_number, &go[i], recursion_level);
 			return;
 		}
 		v = &go[i];
@@ -861,7 +865,7 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id)
 							&attacker->tsd.ship.dox,
 							&attacker->tsd.ship.doy,
 							&attacker->tsd.ship.doz);
-			buddies_join_the_fight(fleet_number, v);
+			buddies_join_the_fight(fleet_number, v, recursion_level);
 			return;
 		}
 	}
@@ -875,7 +879,7 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id)
 						&attacker->tsd.ship.doz);
 		i = lookup_by_id(victim_id);
 		if (i >= 0)
-			buddies_join_the_fight(fleet_number, &go[i]);
+			buddies_join_the_fight(fleet_number, &go[i], recursion_level);
 	}
 }
 
@@ -892,7 +896,7 @@ static void attack_your_attacker(struct snis_entity *attackee, struct snis_entit
 
 	if (snis_randn(100) >= 75)
 		return;
-	push_attack_mode(attackee, attacker->id);
+	push_attack_mode(attackee, attacker->id, 0);
 }
 
 static int add_derelict(const char *name, double x, double y, double z,
@@ -1442,7 +1446,7 @@ delete_it:
 			eid = go[index].id;
 		}
 	}
-	push_attack_mode(o, eid);
+	push_attack_mode(o, eid, 0);
 }
 
 static void spacemonster_move(struct snis_entity *o)
@@ -1531,7 +1535,7 @@ static void check_for_nearby_targets(struct snis_entity *o)
 			v = &go[i];
 			dist2 = dist3dsqrd(o->x - v->x, o->y - v->y, o->z - v->z);
 			if (dist2 < PATROL_ATTACK_DIST * PATROL_ATTACK_DIST)
-				push_attack_mode(o, victim_id);
+				push_attack_mode(o, victim_id, 0);
 		}
 	}
 }
