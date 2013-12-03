@@ -1013,8 +1013,6 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 		return;
 	switch (snis_randn(100) % 3) {
 	case 0:
-		push_attack_mode(o, find_nearest_victim(o));
-		break;
 	case 1:	
 		setup_patrol_route(o);
 		break;
@@ -1499,6 +1497,9 @@ static void check_for_nearby_targets(struct snis_entity *o)
 		int i;
 		struct snis_entity *v;
 
+		if (victim_id == -1) /* no nearby victims */
+			return;
+
 		i = lookup_by_id(victim_id);
 		if (i >= 0) {
 			double dist2;
@@ -1523,7 +1524,13 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 
 	if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -1) {
 		int r = snis_randn(400) + 200;
-		o->tsd.ship.ai[n].u.attack.victim_id = find_nearest_victim(o);
+		int victim_id = find_nearest_victim(o);
+
+		if (victim_id == -1) { /* no nearby victims */
+			pop_ai_attack_mode(o);
+			return;
+		}
+		o->tsd.ship.ai[n].u.attack.victim_id = victim_id;
 		random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
 	}
 	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
