@@ -1631,9 +1631,7 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 	if (dist2 > 75.0 * 75.0 && dist2 <= 1000.0 * 1000.0) { /* catch up if too far away */
 		o->tsd.ship.velocity = leader->tsd.ship.velocity * 1.5;
 	} else if (dist2 > 1000.0 * 1000.0) { /* If distance is too far, just warp */
-		o->x = o->tsd.ship.dox;
-		o->y = o->tsd.ship.doy;
-		o->z = o->tsd.ship.doz;
+		set_object_location(o, o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 		o->vx = leader->vx;
 		o->vy = leader->vy;
 		o->vz = leader->vz;
