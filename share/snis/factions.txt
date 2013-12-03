@@ -5,11 +5,25 @@
 #
 # faction_name
 # x y z
+# faction_name
+# x y z
+# faction_name
+# x y z
 # 
 # where x, y and z are integers that indicate the center of the factions
 # sphere of influence.  When ships are randomly added to the system, they
 # take on the faction whose center is closest to their position.
 #
+# After the factions and spheres of influence are listed, the faction hostility
+# matrix may be modified.  Default hostility between factions is 3 (very low).
+#
+# To modify, add lines such as
+# faction_name_1 faction_name_2 hostility_value
+# hostility values are between 0 and 100.
+# e.g:
+#
+# hostility Wallunni Zarkon 50
+# 
 Neutral
 0 0 0
 Wallunni
@@ -20,4 +34,9 @@ Zarkon
 0 0 300000
 Vekkazi
 300000 0 0
+hostility Wallunni Gordouni 20
+hostility Wallunni Zarkon 20
+hostility Vekkazi Zarkon 40
+hostility Vekkazi Gordouni 0
+hostility Zarkon Gordouni 50 
 
