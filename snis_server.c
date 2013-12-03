@@ -891,56 +891,71 @@ static int make_derelict(struct snis_entity *o)
 	return add_derelict(o->sdata.name, o->x, o->y, o->z, o->tsd.ship.shiptype, o->sdata.faction);
 }
 
-static int find_nearest_victim(struct snis_entity *o)
+struct potential_victim_info {
+	struct snis_entity *o;
+	double lowestdist;
+	int victim_id;
+};
+
+static void process_potential_victim(void *context, void *entity)
 {
-	int i, victim_id;
-	double dist2, dx, dz, lowestdist;
+	struct potential_victim_info *info = context;
+	struct snis_entity *v = entity; 
+	struct snis_entity *o = info->o; 
+	double dist2, dx, dz;
 
-	/* assume universe mutex is held */
-	victim_id = -1;
-	lowestdist = 1e60;  /* very big number */
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+	if (o->index == v->index) /* don't victimize self */
+		return;
 
-		if (i == o->index) /* don't victimize self */
-			continue;
+	if (o->sdata.faction == 0) { /* neutral */
+		/* only travel to planets and starbases */
+		if (v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_PLANET)
+			return;
+	} else {
+		/* only victimize players, other ships and starbases */
+		if (v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_SHIP1 &&
+			v->type != OBJTYPE_SHIP2)
+			return;
+	}
 
-		if (o->sdata.faction == 0) { /* neutral */
-			/* only travel to planets and starbases */
-			if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_PLANET)
-				continue;
-		} else {
-			/* only victimize players, other ships and starbases */
-			if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_SHIP1 &&
-				go[i].type != OBJTYPE_SHIP2)
-				continue;
-		}
+	if (!v->alive) /* skip the dead guys */
+		return;
 
-		if (!go[i].alive) /* skip the dead guys */
-			continue;
-
-		if (o->sdata.faction != 0) {
-			if (go[i].type == OBJTYPE_SHIP2 || go[i].type == OBJTYPE_STARBASE) {
-				/* don't attack neutrals */
-				if (go[i].sdata.faction == 0)
-					continue;
-				/* Even factions attack odd factions, and vice versa */
-				/* TODO: something better here. */
-				if ((o->sdata.faction % 2) == (go[i].sdata.faction % 2))
-					continue;
-			}
-		}
-
-		dx = go[i].x - o->x;
-		dz = go[i].z - o->z;
-		dist2 = dx * dx + dz * dz;
-		if (go[i].type == OBJTYPE_SHIP1 && o->sdata.faction != 0)
-			dist2 = dist2 * 0.5; /* prioritize hitting player... */
-		if (victim_id == -1 || dist2 < lowestdist) {
-			victim_id = go[i].id;
-			lowestdist = dist2;
+	if (o->sdata.faction != 0) {
+		if (v->type == OBJTYPE_SHIP2 || v->type == OBJTYPE_STARBASE) {
+			/* don't attack neutrals */
+			if (v->sdata.faction == 0)
+				return;
+			/* Even factions attack odd factions, and vice versa */
+			/* TODO: something better here. */
+			if ((o->sdata.faction % 2) == (v->sdata.faction % 2))
+				return;
 		}
 	}
-	return victim_id;
+
+	dx = v->x - o->x;
+	dz = v->z - o->z;
+	dist2 = dx * dx + dz * dz;
+	if (v->type == OBJTYPE_SHIP1 && o->sdata.faction != 0)
+		dist2 = dist2 * 0.5; /* prioritize hitting player... */
+	if (info->victim_id == -1 || dist2 < info->lowestdist) {
+		info->victim_id = v->id;
+		info->lowestdist = dist2;
+	}
+}
+
+static int find_nearest_victim(struct snis_entity *o)
+{
+	struct potential_victim_info info;
+
+	/* assume universe mutex is held */
+	info.victim_id = -1;
+	info.lowestdist = 1e60;  /* very big number */
+	info.o = o;
+
+	space_partition_process(space_partition, o, o->x, o->y, &info,
+				process_potential_victim);
+	return info.victim_id;
 }
 
 union vec3 pick_random_patrol_destination(void)
