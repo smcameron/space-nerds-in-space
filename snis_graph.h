@@ -106,7 +106,9 @@ SNG_GLOBAL void sng_bright_device_line(GdkDrawable *drawable, GdkGC *gc,
 
 SNG_GLOBAL void sng_set_clip_window(int x1, int y1, int x2, int y2);
 SNG_GLOBAL void sng_fixup_gl_y_coordinate(int screen_height);
-SNG_GLOBAL void sng_filled_tri(GdkDrawable *drawable, GdkGC *gc,
+SNG_GLOBAL void sng_draw_tri_outline(GdkDrawable *drawable, GdkGC *gc,
+                        int draw12, float x1, float y1, int draw23, float x2, float y2, int draw31, float x3, float y3);
+SNG_GLOBAL void sng_draw_tri(GdkDrawable *drawable, GdkGC *gc, int filled,
 			float x1, float y1, float x2, float y2, float x3, float y3);
 SNG_GLOBAL int sng_load_png_texture(const char * filename, int *w, int *h,
                         char *whynot, int whynotlen);

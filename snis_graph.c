@@ -622,18 +622,65 @@ void sng_bright_device_line(GdkDrawable *drawable,
        sng_gl_draw_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
 }
 
-void sng_filled_tri(GdkDrawable *drawable, GdkGC *gc,
+void sng_draw_tri_outline(GdkDrawable *drawable, GdkGC *gc,
+			int draw12, float x1, float y1, int draw23, float x2, float y2, int draw31, float x3, float y3)
+{
+	/* nothing to draw */
+	if (!draw12 && !draw23 && !draw31)
+		return;
+
+#ifndef WITHOUTOPENGL
+	/* draw all the edges as a non-filled tri */
+	if (draw12 && draw23 && draw31) {
+		sng_draw_tri(drawable, gc, 0, x1, y1, x2, y2, x3, y3);
+		return;
+	}
+
+	GdkColor *h = &huex[sgc.hue];
+
+	glBegin(GL_LINES);
+	glColor3us(h->red, h->green, h->blue);
+	if (draw12) {
+		glVertex2f(x1 * sgc.xscale, sgc.screen_height - y1 * sgc.yscale);
+		glVertex2f(x2 * sgc.xscale, sgc.screen_height - y2 * sgc.yscale);
+	}
+	if (draw23) {
+		glVertex2f(x2 * sgc.xscale, sgc.screen_height - y2 * sgc.yscale);
+		glVertex2f(x3 * sgc.xscale, sgc.screen_height - y3 * sgc.yscale);
+	}
+	if (draw31) {
+		glVertex2f(x3 * sgc.xscale, sgc.screen_height - y3 * sgc.yscale);
+		glVertex2f(x1 * sgc.xscale, sgc.screen_height - y1 * sgc.yscale);
+	}
+	glEnd();
+#else
+	/* faster than gdk_draw_segments or non-filled gdk_draw_polygon */
+	if (draw12)
+		gdk_draw_line(drawable, gc, x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale);
+	if (draw23)
+		gdk_draw_line(drawable, gc, x2 * sgc.xscale, y2 * sgc.yscale, x3 * sgc.xscale, y3 * sgc.yscale);
+	if (draw31)
+		gdk_draw_line(drawable, gc, x3 * sgc.xscale, y3 * sgc.yscale, x1 * sgc.xscale, y1 * sgc.yscale);
+#endif
+}
+
+void sng_draw_tri(GdkDrawable *drawable, GdkGC *gc, int filled,
 			float x1, float y1, float x2, float y2, float x3, float y3)
 {
 #ifndef WITHOUTOPENGL
 	GdkColor *h = &huex[sgc.hue];
 
-        glBegin(GL_TRIANGLES);
-        glColor3us(h->red, h->green, h->blue);
-        glVertex2i(x1 * sgc.xscale, sgc.screen_height - y1 * sgc.yscale);
-        glVertex2i(x2 * sgc.xscale, sgc.screen_height - y2 * sgc.yscale);
-        glVertex2i(x3 * sgc.xscale, sgc.screen_height - y3 * sgc.yscale);
-        glEnd();
+	if (filled)
+		glBegin(GL_TRIANGLES);
+	else
+		glBegin(GL_LINE_STRIP);
+	glColor3us(h->red, h->green, h->blue);
+	glVertex2f(x1 * sgc.xscale, sgc.screen_height - y1 * sgc.yscale);
+	glVertex2f(x2 * sgc.xscale, sgc.screen_height - y2 * sgc.yscale);
+	glVertex2f(x3 * sgc.xscale, sgc.screen_height - y3 * sgc.yscale);
+	if (!filled)
+		glVertex2i(x1 * sgc.xscale, sgc.screen_height - y1 * sgc.yscale);
+	glEnd();
 #else
 	GdkPoint tri[3];
 
@@ -644,7 +691,7 @@ void sng_filled_tri(GdkDrawable *drawable, GdkGC *gc,
 	tri[2].x = x3 * sgc.xscale;
 	tri[2].y = y3 * sgc.yscale;
 
-	gdk_draw_polygon(drawable, gc, 1, tri, 3);
+	gdk_draw_polygon(drawable, gc, filled, tri, 3);
 #endif
 }
 

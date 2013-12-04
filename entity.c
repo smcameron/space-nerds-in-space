@@ -400,12 +400,10 @@ static void draw_outline_tri(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
 				sng_current_bright_line(w->window, gc, st->x3, st->y3, st->x1, st->y1, e->color);
 		} else {
 			sng_set_foreground(e->color);
-			if (!(st->src->flag & TRIANGLE_0_1_COPLANAR))
-				sng_current_draw_line(w->window, gc, st->x1, st->y1, st->x2, st->y2);
-			if (!(st->src->flag & TRIANGLE_1_2_COPLANAR))
-				sng_current_draw_line(w->window, gc, st->x2, st->y2, st->x3, st->y3);
-			if (!(st->src->flag & TRIANGLE_0_2_COPLANAR))
-				sng_current_draw_line(w->window, gc, st->x3, st->y3, st->x1, st->y1);
+			sng_draw_tri_outline(w->window, gc,
+				!(st->src->flag & TRIANGLE_0_1_COPLANAR), st->x1, st->y1,
+				!(st->src->flag & TRIANGLE_1_2_COPLANAR), st->x2, st->y2,
+				!(st->src->flag & TRIANGLE_0_2_COPLANAR), st->x3, st->y3);
 		}
 	} else {
 		/* all the triangle edges to test for clipping */
@@ -588,7 +586,7 @@ void software_render_entity_triangles(GtkWidget *w, GdkGC *gc, struct entity_con
 			}
 
 			sng_set_foreground(fill_color);
-			sng_filled_tri(w->window, gc, st->x1, st->y1, st->x2, st->y2, st->x3, st->y3);
+			sng_draw_tri(w->window, gc, 1, st->x1, st->y1, st->x2, st->y2, st->x3, st->y3);
 		}
 
 		if (outline_triangle) {
