@@ -496,7 +496,7 @@ void software_render_entity_triangles(GtkWidget *w, GdkGC *gc, struct entity_con
 			continue;
 
 		int nclip_gen;
-		struct clip_triangle clip_gen[12];
+		struct clip_triangle clip_gen[64];
 
 		int is_clipped = 0;
 		struct mat41* mv0 = (struct mat41 *) &t->v[0]->wx;
@@ -1524,7 +1524,7 @@ static int clip_triangle(struct clip_triangle* triangles, struct mat41* vs_out0,
 	int plane;
 	for (plane = 0; plane < 6; plane++) {
 		int nremaining_triangles = 0;
-		struct clip_triangle remaining_triangles[12];
+		struct clip_triangle remaining_triangles[64];
 
 		int i;
 		for(i = 0; i < ntriangles; i++) {
