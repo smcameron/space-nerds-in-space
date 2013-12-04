@@ -1074,7 +1074,7 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 
 		e->onscreen = 0;
 
-		if (!sphere_in_frustum(c, e->x, e->y, e->z, e->m->radius * e->scale))
+		if (!sphere_in_frustum(c, e->x, e->y, e->z, e->m->radius * fabs(e->scale)))
 			continue;
 
 		e->dist3dsqrd = dist3dsqrd(c->x - e->x, c->y - e->y, c->z - e->z);
