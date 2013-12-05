@@ -59,6 +59,7 @@ struct entity {
 	void *user_data;
 	union quat orientation;
 	unsigned char onscreen;
+	entity_fragment_shader_fn fragment_shader;
 };
 
 struct camera_info {
@@ -140,6 +141,7 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].user_data = NULL;
 	cx->entity_list[n].shadecolor = 0;
 	quat_init_axis(&cx->entity_list[n].orientation, 0, 1, 0, 0);
+	cx->entity_list[n].fragment_shader = 0;
 	return &cx->entity_list[n];
 }
 
@@ -156,6 +158,11 @@ void remove_entity(struct entity_context *cx, struct entity *e)
 void remove_all_entity(struct entity_context *cx)
 {
 	snis_object_pool_free_all_objects(cx->entity_pool);
+}
+
+void update_entity_fragment_shader(struct entity *e, entity_fragment_shader_fn shader)
+{
+	e->fragment_shader = shader;
 }
 
 void update_entity_pos(struct entity *e, float x, float y, float z)
@@ -334,15 +341,27 @@ void software_render_entity_lines(GtkWidget *w, GdkGC *gc, struct entity_context
 					}
 
 					if (!clipped) {
-						x1 = wx_screen(cx, v1.wx / v1.ww);
-						y1 = wy_screen(cx, v1.wy / v1.ww);
-						x2 = wx_screen(cx, v2.wx / v2.ww);
-						y2 = wy_screen(cx, v2.wy / v2.ww);
+						x1 = v1.wx / v1.ww;
+						y1 = v1.wy / v1.ww;
+						float z1 = v1.wz / v1.ww;
+						x2 = v2.wx / v2.ww;
+						y2 = v2.wy / v2.ww;
+						float z2 = v2.wz / v2.ww;
 
+						int frag_color = e->color;
+						if (e->fragment_shader) {
+							e->fragment_shader((x1+x2)/2.0, (y1+y2)/2.0, (z1+z2)/2.0, frag_color, &frag_color);
+						}
+						sng_set_foreground(frag_color);
+
+						float wx1 = wx_screen(cx, x1);
+						float wy1 = wy_screen(cx, y1);
+						float wx2 = wx_screen(cx, x2);
+						float wy2 = wy_screen(cx, y2);
 						if (e->m->l[i].flag & MESH_LINE_DOTTED)
-							sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
+							sng_draw_dotted_line(w->window, gc, wx1, wy1, wx2, wy2);
 						else
-							sng_current_draw_line(w->window, gc, x1, y1, x2, y2);
+							sng_current_draw_line(w->window, gc, wx1, wy1, wx2, wy2);
 					}
 				}
 
