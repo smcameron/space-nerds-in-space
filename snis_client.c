@@ -10654,9 +10654,9 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 		return 0;
 	case DISPLAYMODE_NAVIGATION:
 		if (e->direction == GDK_SCROLL_UP)
-			do_dirkey(-1, 0, 0);
+			do_zoom(10);
 		if (e->direction == GDK_SCROLL_DOWN)
-			do_dirkey(1, 0, 0);
+			do_zoom(-10);
 		return 0;
 	case DISPLAYMODE_WEAPONS:
 		if (e->direction == GDK_SCROLL_UP)
