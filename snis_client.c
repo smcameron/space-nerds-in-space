@@ -7599,13 +7599,14 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 	for (i=0; i<2; ++i) {
 		int color = (i==0) ? CYAN : GREEN;
-		double ind_heading = (i==0) ? o->tsd.ship.gun_heading : o->tsd.ship.sci_heading;
 
-		/* temp until heading is a quat */
 		union quat ind_orientation;
-		if (i == 0 || !curr_science_guy)
-			quat_init_axis(&ind_orientation, 0, 1, 0, ind_heading);
+		if (i == 0)
+			quat_mul(&ind_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 		else {
+			if (!curr_science_guy)
+				continue;
+
 			union vec3 up = { { 0, 1, 0 } };
 			union vec3 xaxis = { { 1, 0, 0 } };
 			union vec3 to_science_guy = { { curr_science_guy->x - o->x,
