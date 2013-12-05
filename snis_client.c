@@ -7585,8 +7585,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	static struct mesh *radar_ring_mesh[4] = {0, 0, 0, 0};
 	static struct mesh *heading_ind_line_mesh = 0;
 	static struct mesh *vline_mesh = 0;
-	static struct mesh __attribute__((unused)) *sector_mesh = 0;
-	static struct mesh *axis_mesh[6] = { 0, 0, 0, 0, 0, 0 };
+	static struct mesh *forward_line_mesh = 0;
 	static int current_zoom = 0;
 	struct entity *targeted_entity = NULL;
 	struct entity *science_entity = NULL;
@@ -7598,14 +7597,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		radar_ring_mesh[2] = init_radar_circle_xz_plane_mesh(0, 0, 0.8, 18, 0.2);
 		radar_ring_mesh[3] = init_radar_circle_xz_plane_mesh(0, 0, 1.0, 36, 0.2);
 		vline_mesh = init_line_mesh(0, 0, 0, 0, 1, 0);
-		sector_mesh = init_sector_mesh(7);
 		heading_ind_line_mesh = init_line_mesh(0.7, 0, 0, 1, 0, 0);
-		axis_mesh[0] = init_line_mesh(-1, 0, 0, 1, 0, 0);
-		axis_mesh[1] = init_line_mesh(0, -1, 0, 0, 1, 0);
-		axis_mesh[2] = init_line_mesh(0, 0, -1, 0, 0, 1);
-		axis_mesh[3] = init_line_mesh(0, 1, 0, 0, 0.5, 0);
-		axis_mesh[4] = init_line_mesh(1, 0, 0, 0.5, 0, 0);
-		axis_mesh[5] = init_line_mesh(0, 0, 0.5, 0, 0, 1);
+		forward_line_mesh = init_line_mesh(1, 0, 0, 0.5, 0, 0);
 	}
 
 	struct snis_entity *o;
@@ -7627,13 +7620,18 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	else
 		current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
 
-	screen_radius = ((((255.0 - current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
+	const float min_xknown_pct = 0.001;
+	const float max_xknown_pct = 0.080;
+
+	float zoom_pct = (255.0 - current_zoom) / 255.0;
+	screen_radius = ((zoom_pct * (max_xknown_pct-min_xknown_pct)) + min_xknown_pct) * XKNOWN_DIM;
 	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
 
-	double ship_scale = screen_radius/250.0;
+	float ship_radius = ship_mesh_map[o->tsd.ship.shiptype]->radius;
+	double ship_scale = 1.0 + zoom_pct * (XKNOWN_DIM*max_xknown_pct*0.05/ship_radius); /*5% of radius at max */
 
-	union vec3 ship_pos = { { o->x, o->y, o->z } };
-	union vec3 ship_normal = { { 0, 1, 0 } };
+	union vec3 ship_pos = {{o->x, o->y, o->z}};
+	union vec3 ship_normal = {{0, 1, 0}};
 	quat_rot_vec_self(&ship_normal, &o->orientation);
 
 	static union quat cam_orientation = {{1,0,0,0}};
@@ -7662,7 +7660,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	calculate_camera_transform(navecx);
 
         set_renderer(navecx, WIREFRAME_RENDERER);
-	camera_set_parameters(navecx, camera_pos_len-screen_radius, camera_pos_len+screen_radius,
+	camera_set_parameters(navecx, 1.0, camera_pos_len+screen_radius*2,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
 	int in_nebula = 0;
 	int i;
@@ -7673,20 +7671,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		update_entity_orientation(e, &o->orientation);
 		set_render_style(e, RENDER_POINT_LINE);
 	}
-#if 0
-	for (i = 0; i < 6; i++) {
-		int color = DARKRED;
-		if (i == 3)
-			color = WHITE;
-		else if (i == 4)
-			color = CYAN;
-		else if (i == 5)
-			color = GREEN;
-		e = add_entity(navecx, axis_mesh[i], o->x, o->y, o->z, color);
-		update_entity_scale(e, screen_radius);
-		set_render_style(e, RENDER_POINT_LINE);
-	}
-#endif
 
 	for (i=0; i<2; ++i) {
 		int color = (i==0) ? CYAN : GREEN;
@@ -7706,7 +7690,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			quat_from_u2v(&ind_orientation, &xaxis, &to_science_guy, &up);
 		}
 
-		/* add gun heading arrow */
+		/* heading arrow head */
 		union vec3 ind_pos = {{screen_radius,0,0}};
 		quat_rot_vec_self(&ind_pos, &ind_orientation);
 		vec3_add_self(&ind_pos, &ship_pos);
@@ -7715,7 +7699,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		update_entity_orientation(e, &ind_orientation);
 		set_render_style(e, RENDER_NORMAL);
 
-		/* gun heading arrow tail */
+		/* heading arrow tail */
 		e = add_entity(navecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
 		update_entity_scale(e, screen_radius);
 		update_entity_orientation(e, &ind_orientation);
@@ -7723,7 +7707,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	}
 
 	/* ship forward vector */
-	e = add_entity(navecx, axis_mesh[4], o->x, o->y, o->z, WHITE);
+	e = add_entity(navecx, forward_line_mesh, o->x, o->y, o->z, WHITE);
 	update_entity_scale(e, screen_radius);
 	update_entity_orientation(e, &o->orientation);
 	set_render_style(e, RENDER_POINT_LINE);
@@ -7734,18 +7718,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		sector_size /= 10.0;
 	}
 
-	draw_orientation_trident(w, gc, o, 75, 175, 100);
-#if 0
-	/* sector backround */
-	e = add_entity(navecx, sector_mesh,
-		trunc(o->x / sector_size) * sector_size,
-		trunc(o->y / sector_size) * sector_size,
-		trunc(o->z / sector_size) * sector_size,
-		DARKGREEN );
-	update_entity_scale(e, sector_size);
-	/* update_entity_orientation(e, &o->orientation); */
-	set_render_style(e, RENDER_POINT_LINE);
-#endif
+	/* add the dynamic starts */
+	/* TODO */
 
 	/* Draw all the stuff */
 	pthread_mutex_lock(&universe_mutex);
@@ -7775,6 +7749,16 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			continue;
 
 		dist = dist3d(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
+
+		/* use the distance to the edge and not the center */
+		struct mesh *obj_entity_mesh = entity_get_mesh(go[i].entity);
+		if (obj_entity_mesh) {
+			float obj_radius = obj_entity_mesh->radius * entity_get_scale(go[i].entity);
+			if (dist > obj_radius) {
+				dist -= obj_radius;
+			}
+		}
+
 		if (dist > screen_radius || dist > visible_distance)
 			continue; /* not close enough */
 
@@ -7828,12 +7812,15 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		if ( contact ) {
 			switch (go[i].type) {
 			case OBJTYPE_PLANET:
-				contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 1.0;
+				contact_scale = ((255.0 - current_zoom) / 255.0) * 0.0 + 1.0;
 				update_entity_scale(contact, contact_scale);
 				break;
 			case OBJTYPE_STARBASE:
+				contact_scale = ((255.0 - current_zoom) / 255.0) * 4.0 + 1.0;
+				update_entity_scale(contact, contact_scale);
+				break;
 			case OBJTYPE_ASTEROID:
-				contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 3.0;
+				contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 1.0;
 				update_entity_scale(contact, contact_scale);
 				break;
 			case OBJTYPE_TORPEDO:
@@ -7884,6 +7871,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		}
 	}
 	render_entities(w, gc, navecx);
+
+	draw_orientation_trident(w, gc, o, 75, 175, 100);
 
 	/* Draw labels on ships... */
 	sng_set_foreground(GREEN);
