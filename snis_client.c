@@ -7943,6 +7943,7 @@ static void show_navigation(GtkWidget *w)
 	snis_slider_set_input(nav_ui.warp_slider, o->tsd.ship.power_data.warp.r1/255.0 );
 	snis_slider_set_input(nav_ui.navzoom_slider, o->tsd.ship.navzoom/255.0 );
 	snis_slider_set_input(nav_ui.throttle_slider, o->tsd.ship.power_data.impulse.r1/255.0 );
+	snis_button_set_color(nav_ui.reverse_button, o->tsd.ship.reverse ? RED : AMBER);
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
 	sectorx = floor(10.0 * o->x / (double) XKNOWN_DIM);
