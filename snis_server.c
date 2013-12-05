@@ -821,6 +821,22 @@ static void buddies_join_the_fight(int fleet_number, struct snis_entity *victim,
 		buddy_join_the_fight(fleet_member_get_id(fleet_number, i), victim, recursion_level);
 }
 
+static void calculate_attack_vector(struct snis_entity *o, int mindist, int maxdist)
+{
+	/* Assumptions: 
+	 * o is attacker, 
+	 * o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].u.attack.victim_id is victim
+ 	 * o->tsd.ship.dox,doy,doz are set to offsets from victim location to aim at.
+	 * mindist and maxdist are the min and max dist for the offset.
+	 */
+
+	/* FIXME: do something smarter/better */
+	random_dpoint_on_sphere(snis_randn(maxdist - mindist) + mindist,
+					&o->tsd.ship.dox,
+					&o->tsd.ship.doy,
+					&o->tsd.ship.doz);
+}
+
 static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, int recursion_level)
 {
 	int n, i;
@@ -847,10 +863,7 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 		i = lookup_by_id(attacker->tsd.ship.ai[n - 1].u.attack.victim_id);
 		if (i < 0) {
 			attacker->tsd.ship.ai[n - 1].u.attack.victim_id = victim_id;
-			random_dpoint_on_sphere(snis_randn(LASER_RANGE - 400) + 400,
-							&attacker->tsd.ship.dox,
-							&attacker->tsd.ship.doy,
-							&attacker->tsd.ship.doz);
+			calculate_attack_vector(attacker, LASER_RANGE, 400);
 			i = lookup_by_id(victim_id);
 			if (i >= 0)
 				buddies_join_the_fight(fleet_number, &go[i], recursion_level);
@@ -861,10 +874,7 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 		if (d1 < d2) {
 			/* new attack victim closer than old one. */
 			attacker->tsd.ship.ai[n - 1].u.attack.victim_id = victim_id;
-			random_dpoint_on_sphere(snis_randn(LASER_RANGE - 400) + 400,
-							&attacker->tsd.ship.dox,
-							&attacker->tsd.ship.doy,
-							&attacker->tsd.ship.doz);
+			calculate_attack_vector(attacker, LASER_RANGE, 400);
 			buddies_join_the_fight(fleet_number, v, recursion_level);
 			return;
 		}
@@ -873,10 +883,7 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 		attacker->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
 		attacker->tsd.ship.ai[n].u.attack.victim_id = victim_id;
 		attacker->tsd.ship.nai_entries++;
-		random_dpoint_on_sphere(snis_randn(LASER_RANGE - 400) + 400,
-						&attacker->tsd.ship.dox,
-						&attacker->tsd.ship.doy,
-						&attacker->tsd.ship.doz);
+		calculate_attack_vector(attacker, LASER_RANGE, 400);
 		i = lookup_by_id(victim_id);
 		if (i >= 0)
 			buddies_join_the_fight(fleet_number, &go[i], recursion_level);
@@ -1083,9 +1090,7 @@ static void pop_ai_stack(struct snis_entity *o)
 	o->tsd.ship.nai_entries--;
 	n = o->tsd.ship.nai_entries - 1;
 	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
-		random_dpoint_on_sphere(snis_randn(LASER_RANGE - 400) + 400,
-			&o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
-	
+		calculate_attack_vector(o, LASER_RANGE, 400);
 }
 
 static void pop_ai_attack_mode(struct snis_entity *o)
@@ -1102,8 +1107,7 @@ static void pop_ai_attack_mode(struct snis_entity *o)
 		o->tsd.ship.nai_entries--;
 	n--;
 	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
-		random_dpoint_on_sphere(snis_randn(LASER_RANGE - 400) + 400,
-			&o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
+		calculate_attack_vector(o, LASER_RANGE, 400);
 	return;
 }
 
@@ -1544,7 +1548,6 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	assert(n >= 0);
 
 	if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -1) {
-		int r = snis_randn(400) + 200;
 		int victim_id = find_nearest_victim(o);
 
 		if (victim_id == -1) { /* no nearby victims */
@@ -1552,7 +1555,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 			return;
 		}
 		o->tsd.ship.ai[n].u.attack.victim_id = victim_id;
-		random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
+		calculate_attack_vector(o, 400, 200);
 	}
 	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
 	v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
@@ -1590,9 +1593,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 			o->tsd.ship.doy = veln.v.y;
 			o->tsd.ship.doz = veln.v.z;
 		} else {
-			/* head back toward target */
-			int r = snis_randn(400) + 200;
-			random_dpoint_on_sphere(r, &o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
+			calculate_attack_vector(o, 400, 200); /* head back toward target */
 		}
 	}
 
