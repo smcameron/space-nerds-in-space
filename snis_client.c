@@ -4810,9 +4810,6 @@ static void show_weapons_camera_view(GtkWidget *w)
 	update_entity_orientation(turrent_entity, &camera_orientation);
 	set_render_style(turrent_entity, RENDER_NORMAL);
 
-	/* FIXME: Note, because of our own ship's extreme proximity, some
-	 * limitations of the renderer become glaringly apparent
-	 */
 	render_entities(w, gc, ecx);
 
 	/* Remove our ship from the scene */
@@ -4869,8 +4866,7 @@ static void show_mainscreen(GtkWidget *w)
 	static int current_zoom = 0;
 	float angle_of_view;
 	struct snis_entity *o;
-	float cx, cy, cz;
-	double camera_look_heading;
+	union quat camera_orientation;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -4879,20 +4875,14 @@ static void show_mainscreen(GtkWidget *w)
 	angle_of_view = ((255.0 - (float) current_zoom) / 255.0) *
 				(max_angle_of_view - min_angle_of_view) + min_angle_of_view;
 
-	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL)
-		camera_look_heading = o->heading + o->tsd.ship.view_angle;
-	else
-		camera_look_heading = o->tsd.ship.gun_heading;
+	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL) {
+		camera_orientation = o->orientation;
+	} else {
+		quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
+	}
 
-	cx = o->x;
-	cy = o->y;
-	cz = o->z;
-
-	struct mat41 camera_lookat = { { 500, 0, 0} };
-	mat41_rotate_y_self(&camera_lookat, camera_look_heading);
-
-	camera_set_pos(ecx, cx, cy, cz);
-	camera_set_orientation(ecx, &o->orientation);
+	camera_set_pos(ecx, o->x, o->y, o->z);
+	camera_set_orientation(ecx, &camera_orientation);
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
