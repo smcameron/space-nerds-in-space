@@ -48,6 +48,7 @@
 #include <lauxlib.h>
 #include <assert.h>
 
+#include "build_bug_on.h"
 #include "ssgl/ssgl.h"
 #include "snis_ship_type.h"
 #include "snis_faction.h"
@@ -1748,6 +1749,11 @@ static void ai_brain(struct snis_entity *o)
 		ai_patrol_mode_brain(o);
 		break;
 	case AI_MODE_FLEET_LEADER:
+		/* Because fleet leader uses patrol brain, these assumptions need to hold */
+		BUILD_ASSERT(offsetof(union ai_data, patrol) ==
+				offsetof(union ai_data, fleet.patrol));
+		BUILD_ASSERT(sizeof(((union ai_data *) 0)->patrol) ==
+				sizeof(((union ai_data *) 0)->fleet.patrol));
 		ai_patrol_mode_brain(o);
 		break;
 	case AI_MODE_FLEET_MEMBER:
