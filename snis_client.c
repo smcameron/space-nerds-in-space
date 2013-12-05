@@ -116,6 +116,7 @@
 
 #define SCREEN_WIDTH 800        /* window width, in pixels */
 #define SCREEN_HEIGHT 600       /* window height, in pixels */
+#define ASPECT_RATIO (SCREEN_WIDTH/(float)SCREEN_HEIGHT)
 
 #define VERTICAL_CONTROLS_INVERTED -1
 #define VERTICAL_CONTROLS_NORMAL 1
@@ -180,6 +181,7 @@ int damage_limbo_countdown = 0;
 struct entity_context *ecx;
 struct entity_context *sciecx;
 struct entity_context *navecx;
+struct entity_context *tridentecx;
 struct entity_context *sciballecx;
 
 struct nebula_entry {
@@ -7471,7 +7473,93 @@ static void init_nav_ui(void)
 	ui_add_button(nav_ui.details_button, DISPLAYMODE_NAVIGATION);
 #endif
 	navecx = entity_context_new(5000);
+	tridentecx = entity_context_new(10);
 	nav_ui.details_mode = 1;
+}
+
+static void trident_ring_fragment_shader(float x, float y, float z, int cin, int *cout)
+{
+	/* shade color so it is darker father away from center and ligher closer */
+	if (z<0)
+		*cout = cin + (int)(z*0.8 * NGRADIENT_SHADES);
+	else
+		*cout = cin + (int)(z * NGRADIENT_SHADES);
+}
+
+void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, float rx, float ry, float rr)
+{
+	static struct mesh *xz_ring_mesh = 0;
+	if (!xz_ring_mesh) {
+		xz_ring_mesh = init_circle_mesh(0, 0, 1, 40, 2.0*M_PI);
+	}
+
+	struct entity *e;
+
+	union quat cam_orientation = o->orientation;
+	union vec3 center_pos = {{0, 0, 0}};
+
+	/* given field of view angle, calculate how far away to show a radius 1.0 sphere */
+	float fovy = 20.0 * M_PI / 180.0;
+	float dist_to_cam = 1.05 / tan(fovy/2.0);
+
+        set_renderer(tridentecx, WIREFRAME_RENDERER);
+	camera_set_parameters(tridentecx, dist_to_cam-1.0, dist_to_cam+1.0,
+				rr*ASPECT_RATIO, rr, fovy);
+	set_window_offset(tridentecx, rx-rr*ASPECT_RATIO/2.0, ry-rr/2.0);
+
+	/* figure out the camera positions */
+	union vec3 camera_up = {{0, 1, 0}};
+	quat_rot_vec_self(&camera_up, &cam_orientation);
+
+	union vec3 camera_pos = {{-dist_to_cam, 0, 0}};
+	quat_rot_vec_self(&camera_pos, &cam_orientation);
+	vec3_add_self(&camera_pos, &center_pos);
+
+	union vec3 camera_lookat = {{0, 0, 0}};
+	quat_rot_vec_self(&camera_lookat, &cam_orientation);
+	vec3_add_self(&camera_lookat, &center_pos);
+
+	camera_assign_up_direction(tridentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
+	camera_set_pos(tridentecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(tridentecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
+
+	calculate_camera_transform(tridentecx);
+
+	/* add yaw axis */
+	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, CYAN);
+	set_render_style(e, RENDER_POINT_LINE);
+	update_entity_fragment_shader(e, trident_ring_fragment_shader);
+
+	/* add pitch1 axis */
+	union quat pitch1_orientation;
+	quat_init_axis(&pitch1_orientation, 1, 0, 0, M_PI/2.0);
+	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
+	update_entity_orientation(e, &pitch1_orientation);
+	set_render_style(e, RENDER_POINT_LINE);
+	update_entity_fragment_shader(e, trident_ring_fragment_shader);
+
+	/* add pitch2 axis */
+	union quat pitch2_orientation;
+	quat_init_axis(&pitch2_orientation, 0, 0, 1, M_PI/2.0);
+	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
+	update_entity_orientation(e, &pitch2_orientation);
+	set_render_style(e, RENDER_POINT_LINE);
+	update_entity_fragment_shader(e, trident_ring_fragment_shader);
+
+	/* add absolute straight ahead ind, down z axis with y up to match heading = 0 mark 0 */
+	union quat ind_orientation;
+	quat_init_axis(&ind_orientation, 0, 1, 0, -M_PI/2.0);
+	union vec3 ind_pos = {{0.9,0,0}};
+	quat_rot_vec_self(&ind_pos, &ind_orientation);
+	vec3_add_self(&ind_pos, &center_pos);
+	e = add_entity(tridentecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, WHITE);
+	update_entity_orientation(e, &ind_orientation);
+	update_entity_scale(e, 0.1/heading_indicator_mesh->radius);
+	set_render_style(e, RENDER_NORMAL);
+
+	render_entities(w, gc, tridentecx);
+
+	remove_all_entity(tridentecx);
 }
 
 #if 0
@@ -7643,6 +7731,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		sector_size /= 10.0;
 	}
 
+	draw_orientation_trident(w, gc, o, 75, 175, 100);
 #if 0
 	/* sector backround */
 	e = add_entity(navecx, sector_mesh,
