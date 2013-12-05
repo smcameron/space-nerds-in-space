@@ -4990,7 +4990,7 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		double heading, double scale);
 static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
-					gint x, gint y, double dist, int bw, int pwr,
+					float x, float y, double dist, int bw, int pwr,
 					double range, int selected,
 					int nebula_factor)
 {
