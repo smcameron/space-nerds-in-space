@@ -13,11 +13,13 @@
 #define WHITE 0
 #define BLUE 1
 #define BLACK 2
-#define GREEN 3
+extern int GREEN;
+#define OLD_GREEN 3
 #define YELLOW 4
 #define RED 5
 #define ORANGE 6
-#define CYAN 7
+extern int CYAN;
+#define OLD_CYAN 7
 #define MAGENTA 8
 #define DARKGREEN 9
 #define DARKRED 10
@@ -33,6 +35,10 @@
 #define GRAY (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS)
 #define NSHADESOFGRAY 256
 #define NSHADECOLORS 10
+#define GRADIENTS (GRAY + NSHADESOFGRAY + NSHADECOLORS*NSHADESOFGRAY)
+#define NGRADIENTS 2
+#define NGRADIENT_SHADES 16
+#define NTOTAL_GRADIENT_SHADES (NGRADIENT_SHADES*2 + 1)
 
 typedef void line_drawing_function(GdkDrawable *drawable,
 	GdkGC *gc, float x1, float y1, float x2, float y2);

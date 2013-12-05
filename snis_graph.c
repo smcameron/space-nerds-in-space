@@ -18,7 +18,7 @@
 #include "bline.h"
 
 
-#define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY * (NSHADECOLORS + 1))
+#define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY * (NSHADECOLORS + 1) + (NGRADIENTS * NTOTAL_GRADIENT_SHADES))
 GdkColor huex[TOTAL_COLORS]; 
 
 extern struct my_vect_obj **gamefont[];
@@ -512,6 +512,78 @@ void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, float x, float y)
 	sng_gl_draw_point(drawable, gc, x * sgc.xscale, y * sgc.yscale);
 }
 
+/* from http://stackoverflow.com/a/6930407
+0 <= h < 360, 0 <= s <= 1, , 0 <= v <= 1 */
+static void hsv2rgb(double h, double s, double v, GdkColor* rgb)
+{
+    double      hh, p, q, t, ff;
+    long        i;
+
+    if(s <= 0.0) {       // < is bogus, just shuts up warnings
+        rgb->red = v * 65535;
+        rgb->green = v * 65535;
+        rgb->blue = v * 65535;
+        return;
+    }
+    hh = h;
+    if(hh >= 360.0) hh = 0.0;
+    hh /= 60.0;
+    i = (long)hh;
+    ff = hh - i;
+    p = v * (1.0 - s);
+    q = v * (1.0 - (s * ff));
+    t = v * (1.0 - (s * (1.0 - ff)));
+
+    switch(i) {
+    case 0:
+        rgb->red = v * 65535;
+        rgb->green = t * 65535;
+        rgb->blue = p * 65535;
+        break;
+    case 1:
+        rgb->red = q * 65535;
+        rgb->green = v * 65535;
+        rgb->blue = p * 65535;
+        break;
+    case 2:
+        rgb->red = p * 65535;
+        rgb->green = v * 65535;
+        rgb->blue = t * 65535;
+        break;
+
+    case 3:
+        rgb->red = p * 65535;
+        rgb->green = q * 65535;
+        rgb->blue = v * 65535;
+        break;
+    case 4:
+        rgb->red = t * 65535;
+        rgb->green = p * 65535;
+        rgb->blue = v * 65535;
+        break;
+    case 5:
+    default:
+        rgb->red = v * 65535;
+        rgb->green = p * 65535;
+        rgb->blue = q * 65535;
+        break;
+    }
+}
+
+int GREEN = 0;
+int CYAN = 0;
+
+struct gradient_color {
+	int *color_index;
+	double h;
+	double s;
+	double v;
+};
+static struct gradient_color gradient_colors[] = {
+	{&GREEN, 120, 1, 1},
+	{&CYAN, 180, 1, 1}
+};
+
 void sng_setup_colors(GtkWidget *w)
 {
 	int i;
@@ -519,13 +591,13 @@ void sng_setup_colors(GtkWidget *w)
 	gdk_color_parse("white", &huex[WHITE]);
 	gdk_color_parse("blue", &huex[BLUE]);
 	gdk_color_parse("black", &huex[BLACK]);
-	gdk_color_parse("green", &huex[GREEN]);
+	gdk_color_parse("green", &huex[OLD_GREEN]);
 	gdk_color_parse("lime green", &huex[LIMEGREEN]);
 	gdk_color_parse("darkgreen", &huex[DARKGREEN]);
 	gdk_color_parse("yellow", &huex[YELLOW]);
 	gdk_color_parse("red", &huex[RED]);
 	gdk_color_parse("orange", &huex[ORANGE]);
-	gdk_color_parse("cyan", &huex[CYAN]);
+	gdk_color_parse("cyan", &huex[OLD_CYAN]);
 	gdk_color_parse("MAGENTA", &huex[MAGENTA]);
 	gdk_color_parse("darkred", &huex[DARKRED]);
 	gdk_color_parse("orange", &huex[AMBER]);
@@ -566,6 +638,36 @@ void sng_setup_colors(GtkWidget *w)
 			huex[index].red = r + (f * ((32767.0 * 2.0) - (float) r));
 			huex[index].green = g + (f * ((32767.0 * 2.0) - (float) g)); 
 			huex[index].blue = b + (f * ((32767.0 * 2.0) - (float) b)); 
+		}
+	}
+
+	int grad_index = GRADIENTS;
+
+	for (i=0; i<NGRADIENTS; i++ ) {
+		int j;
+		double h = gradient_colors[i].h;
+		double s = gradient_colors[i].s;
+		double v = gradient_colors[i].v;
+
+		/* add the shades from black to color */
+		for (j=0; j<NGRADIENT_SHADES; j++) {
+			double f = j/(double)NGRADIENT_SHADES;
+			double fi = 1.0 - f;
+			hsv2rgb(h, s + (1.0-s)*fi, v * f, &huex[grad_index]);
+			grad_index++;
+		}
+
+		/* add the pure color */
+		hsv2rgb(h, s, v, &huex[grad_index]);
+		*gradient_colors[i].color_index = grad_index;
+		grad_index++;
+
+		/* add the shades from color to white */
+		for (j=1; j<=NGRADIENT_SHADES; j++) {
+			double f = (NGRADIENT_SHADES-j)/(double)NGRADIENT_SHADES;
+			double fi = 1.0 - f;
+			hsv2rgb(h, s * f, v + (1.0-v)*fi, &huex[grad_index]);
+			grad_index++;
 		}
 	}
 
