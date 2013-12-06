@@ -6237,7 +6237,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	/* add my ship */
 	e = add_entity(navecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, SHIP_COLOR);
 	set_render_style(e, science_style);
-	update_entity_scale(e, range/250.0);
+	update_entity_scale(e, range/300.0);
 	update_entity_orientation(e, &o->orientation);
 
 	render_entities(w, gc, navecx);
