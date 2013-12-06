@@ -1077,7 +1077,7 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 	}
 }
 
-static void pop_ai_stack(struct snis_entity *o)
+static void __attribute__((unused)) pop_ai_stack(struct snis_entity *o)
 {
 	int n;
 
