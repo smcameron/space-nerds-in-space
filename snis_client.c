@@ -4901,7 +4901,15 @@ static void show_mainscreen(GtkWidget *w)
 	if (!(o = find_my_ship()))
 		return;
 
-	current_zoom = newzoom(current_zoom, o->tsd.ship.mainzoom);
+	static int last_timer = 0;
+	int first_frame = (timer != last_timer+1);
+	last_timer = timer;
+
+	if (first_frame)
+		current_zoom = o->tsd.ship.mainzoom;
+	else
+		current_zoom = newzoom(current_zoom, o->tsd.ship.mainzoom);
+
 	angle_of_view = ((255.0 - (float) current_zoom) / 255.0) *
 				(max_angle_of_view - min_angle_of_view) + min_angle_of_view;
 
