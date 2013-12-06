@@ -8859,9 +8859,9 @@ static int science_button_press(int x, int y)
 }
 
 #define SCIENCE_DATA_X (SCIENCE_SCOPE_X + SCIENCE_SCOPE_W + 20)
-#define SCIENCE_DATA_Y (SCIENCE_SCOPE_Y + 20)
+#define SCIENCE_DATA_Y (SCIENCE_SCOPE_Y + 0)
 #define SCIENCE_DATA_W (SCREEN_WIDTH - 20 - SCIENCE_DATA_X)
-#define SCIENCE_DATA_H (SCREEN_HEIGHT - 20 - SCIENCE_DATA_Y)
+#define SCIENCE_DATA_H (SCREEN_HEIGHT - 40 - SCIENCE_DATA_Y)
 
 static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o,
 		int x1, int y1, int x2, int y2)
@@ -8979,8 +8979,9 @@ static void draw_science_warp_data(GtkWidget *w, struct snis_entity *ship)
 static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o)
 {
 	char buffer[40];
+	char buffer2[40];
 	int x, y, gx1, gy1, gx2, gy2;
-	double bearing, dx, dz, range, display_heading;
+	double dx, dy, dz, range;
 	char *the_faction;
 
 	if (!ship)
@@ -9028,43 +9029,52 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o)
-		sprintf(buffer, "X: %8.2lf", o->x);
+		sprintf(buffer, "X: %0.2lf", o->x);
 	else
 		sprintf(buffer, "X:");
 	y += 25;
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o)
-		sprintf(buffer, "Y: %8.2lf", o->y);
+		sprintf(buffer, "Y: %0.2lf", o->y);
 	else
 		sprintf(buffer, "Y:");
 	y += 25;
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o)
-		sprintf(buffer, "Z: %8.2lf", o->z);
+		sprintf(buffer, "Z: %0.2lf", o->z);
 	else
 		sprintf(buffer, "Z:");
 	y += 25;
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o) { 
-		dx = go[my_ship_oid].x - o->x;
-		dz = go[my_ship_oid].z - o->z;
-		bearing = atan2(dx, dz) * 180 / M_PI;
-		if (bearing < 0)
-			bearing = -bearing;
-		else
-			bearing = 360.0 - bearing;
-		sprintf(buffer, "BEARING: %3.2lf", bearing);
+		dx = o->x - go[my_ship_oid].x;
+		dy = o->y - go[my_ship_oid].y;
+		dz = o->z - go[my_ship_oid].z;
+
+		union quat q_to_o;
+		union vec3 dir_forward = {{1, 0, 0}};
+		union vec3 dir_to_o = {{dx, dy, dz}};
+		quat_from_u2v(&q_to_o, &dir_forward, &dir_to_o, 0);
+
+		double bearing=0, mark=0;
+		to_snis_heading_mark(&q_to_o, &bearing, &mark);
+
+		sprintf(buffer,  "BEARING: %0.1lf", radians_to_degrees(bearing));
+		sprintf(buffer2, "MARK: %0.1lf", radians_to_degrees(mark));
 	} else {
-		sprintf(buffer, "BEARING");
+		sprintf(buffer,  "BEARING:");
+		sprintf(buffer2, "MARK:");
 	}
 	y += 25;
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	y += 25;
+	sng_abs_xy_draw_string(w, gc, buffer2, TINY_FONT, x, y);
 
 	if (o) {
-		range = sqrt(dx * dx + dz * dz);
+		range = dist3d(dx, dy, dz);
 		sprintf(buffer, "RANGE: %8.2lf", range);
 	} else {
 		sprintf(buffer, "RANGE:");
@@ -9073,12 +9083,9 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
 
 	if (o) {
-		display_heading = to_uheading(o->heading);
-		normalize_angle(&display_heading);
-		display_heading *= 180.0 / M_PI;
-		sprintf(buffer, "HEADING: %3.2lf", display_heading);
+		sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * range / (XKNOWN_DIM / 2.0));
 	} else {
-		sprintf(buffer, "HEADING:");
+		sprintf(buffer, "WARP FACTOR:");
 	}
 	y += 25;
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
@@ -9095,7 +9102,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 #endif
 
 	gx1 = x;
-	gy1 = y + 25;
+	gy1 = y + 20;
 	gx2 = SCIENCE_DATA_X + SCIENCE_DATA_W - 10;
 	gy2 = SCIENCE_DATA_Y + SCIENCE_DATA_H - 40;
 	draw_science_graph(w, ship, o, gx1, gy1, gx2, gy2);
@@ -9185,14 +9192,14 @@ static void show_science(GtkWidget *w)
 		draw_all_the_science_guys(w, o, zoom);
 		draw_all_the_science_sparks(w, o, zoom);
 		draw_all_the_science_nebulae(w, o, zoom);
+		draw_science_data(w, o, curr_science_guy);
+		draw_science_warp_data(w, o);
 	} else if (sci_ui.details_mode == SCI_DETAILS_MODE_SCIPLANE) {
 		draw_sciplane_display(w, o, zoom);
 	} else {
 		draw_science_details(w, gc);
-	}
-	draw_science_warp_data(w, o);
-	if (sci_ui.details_mode != SCI_DETAILS_MODE_SCIPLANE)
 		draw_science_data(w, o, curr_science_guy);
+	}
 	show_common_screen(w, "SCIENCE");
 }
 
@@ -9244,7 +9251,6 @@ static void show_3d_science(GtkWidget *w)
 	} else {
 		draw_science_details(w, gc);
 	}
-	draw_science_warp_data(w, o);
 	draw_science_data(w, o, curr_science_guy);
 	show_common_screen(w, "SCIENCE");
 }
