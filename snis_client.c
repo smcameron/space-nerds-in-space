@@ -142,6 +142,7 @@ explosion_function *explosion = NULL;
 int thicklines = 0;
 int frame_rate_hz = 30;
 int red_alert_mode = 0;
+#define MAX_UPDATETIME_INTERVAL 0.5
 
 char *default_asset_dir = "share/snis";
 char *asset_dir;
@@ -483,7 +484,7 @@ static int add_generic_object(uint32_t id, double x, double y, double z,
 		return -1;
 	}
 	memset(&go[i], 0, sizeof(go[i]));
-	go[i].updatetime = time_now_double();
+	go[i].updatetime1 = go[i].updatetime2 = time_now_double();
 	go[i].index = i;
 	go[i].id = id;
 	go[i].orientation = go[i].o1 = go[i].o2 = *orientation;
@@ -508,23 +509,35 @@ static void update_generic_object(int index, double x, double y, double z,
 				const union quat *orientation, uint32_t alive)
 {
 	struct snis_entity *o = &go[index];
-
-	o->updatetime = time_now_double();
-	o->r1 = o->r2;
-	o->x = o->r1.v.x;
-	o->y = o->r1.v.y;
-	o->z = o->r1.v.z;
-	o->r2.v.x = x;
-	o->r2.v.y = y;
-	o->r2.v.z = z;
+	o->updatetime1 = o->updatetime2;
+	o->updatetime2 = time_now_double();
+	int update_stale = (o->updatetime2 - o->updatetime1 > MAX_UPDATETIME_INTERVAL);
+	if (update_stale) {
+		o->updatetime1 = o->updatetime2;
+		o->x = o->r1.v.x = o->r2.v.x = x;
+		o->y = o->r1.v.y = o->r2.v.y = y;
+		o->z = o->r1.v.z = o->r2.v.z = z;
+	} else {
+		o->r1 = o->r2;
+		o->x = o->r1.v.x;
+		o->y = o->r1.v.y;
+		o->z = o->r1.v.z;
+		o->r2.v.x = x;
+		o->r2.v.y = y;
+		o->r2.v.z = z;
+	}
 	o->vx = vx;
 	o->vy = vy;
 	o->vz = vz;
 	o->heading = 0;
 	if (orientation) {
-		o->o1 = o->o2;
-		o->orientation = o->o1;
-		o->o2 = *orientation;
+		if (update_stale) {
+			o->orientation = o->o1 = o->o2 = *orientation;
+		} else {
+			o->o1 = o->o2;
+			o->orientation = o->o1;
+			o->o2 = *orientation;
+		}
 		o->heading = quat_to_heading(&o->orientation);
 	}
 	o->alive = alive;
@@ -1401,41 +1414,45 @@ static void spin_asteroid(struct snis_entity *o)
 static void move_generic_object(struct snis_entity *o)
 {
 	/* updates are sent every 1/10th of a second */
-	double delta = 1.0/10.0;
-	double currentTime = time_now_double();
-	double t = (currentTime - o->updatetime) / delta;
+	double delta = o->updatetime2 - o->updatetime1;
+	if ( delta >= 0.000001 ) {
+		double currentTime = time_now_double();
+		double t = (currentTime - o->updatetime2) / delta;
 
-	union vec3 interp_position;
-	vec3_lerp(&interp_position, &o->r1, &o->r2, t);
-	o->x = interp_position.v.x;
-	o->y = interp_position.v.y;
-	o->z = interp_position.v.z;
+		union vec3 interp_position;
+		vec3_lerp(&interp_position, &o->r1, &o->r2, t);
+		o->x = interp_position.v.x;
+		o->y = interp_position.v.y;
+		o->z = interp_position.v.z;
+	}
 }
 
 static void move_ship(struct snis_entity *o)
 {
 	/* updates are sent every 1/10th of a second */
-	double delta = 1.0/10.0;
-	double currentTime = time_now_double();
-	double t = (currentTime - o->updatetime) / delta;
+	double delta = o->updatetime2 - o->updatetime1;
+	if ( delta >= 0.000001 ) {
+		double currentTime = time_now_double();
+		double t = (currentTime - o->updatetime2) / delta;
 
-	union vec3 interp_position;
-	vec3_lerp(&interp_position, &o->r1, &o->r2, t);
-	o->x = interp_position.v.x;
-	o->y = interp_position.v.y;
-	o->z = interp_position.v.z;
+		union vec3 interp_position;
+		vec3_lerp(&interp_position, &o->r1, &o->r2, t);
+		o->x = interp_position.v.x;
+		o->y = interp_position.v.y;
+		o->z = interp_position.v.z;
 
-	quat_nlerp(&o->orientation, &o->o1, &o->o2, t);
-	o->heading = quat_to_heading(&o->orientation);
+		quat_nlerp(&o->orientation, &o->o1, &o->o2, t);
+		o->heading = quat_to_heading(&o->orientation);
 
-	if (o->type == OBJTYPE_SHIP1) {
-		quat_nlerp(&o->tsd.ship.sciball_orientation,
-				&o->tsd.ship.sciball_o1, &o->tsd.ship.sciball_o2, t);
-		quat_nlerp(&o->tsd.ship.weap_orientation,
-				&o->tsd.ship.weap_o1, &o->tsd.ship.weap_o2, t);
+		if (o->type == OBJTYPE_SHIP1) {
+			quat_nlerp(&o->tsd.ship.sciball_orientation,
+					&o->tsd.ship.sciball_o1, &o->tsd.ship.sciball_o2, t);
+			quat_nlerp(&o->tsd.ship.weap_orientation,
+					&o->tsd.ship.weap_o1, &o->tsd.ship.weap_o2, t);
+		}
+
+		o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity / 3.0;
 	}
-
-	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity / 3.0;
 }
 
 static void move_objects(void)

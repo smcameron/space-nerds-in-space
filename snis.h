@@ -438,7 +438,8 @@ struct snis_entity_science_data {
 };
 	
 struct snis_entity {
-	double updatetime;
+	double updatetime1;
+	double updatetime2;
 	uint32_t index;
 	uint32_t id;
 	union vec3 r1, r2;
