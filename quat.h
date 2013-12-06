@@ -221,6 +221,9 @@ void quat_decompose_swing_twist(const union quat *q, const union vec3 *v1, union
 
 int sphere_line_segment_intersection(const union vec3 *v0, const union vec3 *v1, const union vec3 *center, double r, union vec3 *vo0, union vec3 *vo1);
 
+void plane_vector_u_and_v_from_normal(union vec3 *u, union vec3 *v, const union vec3 *n);
+void random_point_in_3d_annulus(float r1, float r2, const union vec3 *center, const union vec3 *u, const union vec3 *v, union vec3 *point);
+
 float vec3_magnitude(union vec3 *v);
 
 #endif /* __QUAT_H__ */

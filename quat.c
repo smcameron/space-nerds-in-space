@@ -757,6 +757,39 @@ int sphere_line_segment_intersection(const union vec3 *v0, const union vec3 *v1,
 	return 2;
 }
 
+/* for a plane defined by n=normal, return a u and v vector that is on that plane and perpendictular */
+void plane_vector_u_and_v_from_normal(union vec3 *u, union vec3 *v, const union vec3 *n)
+{
+	union vec3 basis = { { 1, 0, 0 } };
+
+	/* find a vector we can use for our basis to define v */
+	float dot = vec3_dot(n, &basis);
+	if (fabs(dot) < ZERO_TOLERANCE) {
+		/* if forward is parallel, we can use up */
+		vec3_init(&basis, 0, 1, 0);
+	}
+
+	/* find the right vector from our basis and the normal */
+	vec3_cross(v, &basis, n);
+	vec3_normalize_self(v);
+
+	/* now the final forward vector is perpendicular n and v */
+	vec3_cross(u, n, v);
+	vec3_normalize_self(u);
+}
+
+/* return a random point in an annulus on a plane in 3d, r1=inner radius, r2=outer radius, c=center, n=normal */
+void random_point_in_3d_annulus(float r1, float r2, const union vec3 *center, const union vec3 *u, const union vec3 *v, union vec3 *point)
+{
+	float angle = snis_random_float() * M_PI;
+	float r = fabs(snis_random_float()) * (r2 - r1) + r1;
+
+	point->v.x = center->v.x + r * cos(angle) * u->v.x + r * sin(angle) * v->v.x;
+	point->v.y = center->v.y + r * cos(angle) * u->v.y + r * sin(angle) * v->v.y;
+	point->v.z = center->v.z + r * cos(angle) * u->v.z + r * sin(angle) * v->v.z;
+}
+
+
 float vec3_magnitude(union vec3 *v)
 {
 	const float x2 = v->v.x * v->v.x;
