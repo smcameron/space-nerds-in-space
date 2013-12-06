@@ -905,7 +905,7 @@ static void init_spacemonster_data(struct snis_entity *o, double y)
 	}
 }
 
-static struct mesh *init_sector_mesh(int extra_extent)
+static __attribute__((unused)) struct mesh *init_sector_mesh(int extra_extent)
 {
 	int nlines = (2 * extra_extent + 2) * (2 * extra_extent + 2) * 4;
         struct mesh *my_mesh = malloc(sizeof(*my_mesh));
