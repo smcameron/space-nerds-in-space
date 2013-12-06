@@ -4848,7 +4848,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	o->entity = NULL;
 
 	/* range is the same as max zoom on old weapons */
-	draw_plane_radar(w, o, &camera_orientation, 400, 500, 75, XKNOWN_DIM * 0.01);
+	draw_plane_radar(w, o, &camera_orientation, 400, 500, 75, XKNOWN_DIM * 0.02);
 
 	/* Draw targeting indicator on main screen */
 	if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
