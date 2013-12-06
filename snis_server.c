@@ -6669,6 +6669,17 @@ static void queue_up_client_id(struct game_client *c)
 	pb_queue_to_client(c, packed_buffer_new("hw", OPCODE_ID_CLIENT_SHIP, c->shipid));
 }
 
+#define SIMULATE_SLOW_SERVER 0
+#if SIMULATE_SLOW_SERVER
+static void simulate_slow_server(__attribute__((unused)) int x)
+{
+	/* sleep an extra amount between 2/10th and 4/10ths seconds */
+	sleep_double(0.02 + 0.2 * ((double) snis_randn(100) / 100.0));
+}
+#else
+#define simulate_slow_server(x)
+#endif
+	
 static void *per_client_write_thread(__attribute__((unused)) void /* struct game_client */ *client)
 {
 	struct game_client *c = (struct game_client *) client;
@@ -6702,6 +6713,7 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 			if (timeToSleep > 0)
 				sleep_double(timeToSleep);
 		}
+		simulate_slow_server(0);
 	}
 	log_client_info(SNIS_INFO, c->socket, "client writer thread exiting.\n");
 	return NULL;
@@ -7603,6 +7615,7 @@ int main(int argc, char *argv[])
 			if (timeToSleep > 0)
 				sleep_double(timeToSleep);
 		}
+		simulate_slow_server(0);
 	}
 	space_partition_free(space_partition);
 	lua_teardown();
