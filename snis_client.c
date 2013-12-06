@@ -7658,6 +7658,21 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	else
 		current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
 
+	const int low_power_threshold = 10;
+	sng_set_foreground(RED);
+	if (o->tsd.ship.power_data.sensors.i < low_power_threshold) {
+		sng_abs_xy_draw_string(w, gc, "Low Sensor Power", NANO_FONT, 320, 65);
+	}
+	if (o->tsd.ship.power_data.maneuvering.i < low_power_threshold) {
+		sng_abs_xy_draw_string(w, gc, "Low Maneuvering Power", NANO_FONT, 320, 80);
+	}
+	if (o->tsd.ship.power_data.impulse.r2 < low_power_threshold) {
+		sng_abs_xy_draw_string(w, gc, "Low Impulse Power", NANO_FONT, 320, 95);
+	}
+	if (o->tsd.ship.power_data.warp.r2 < low_power_threshold) {
+		sng_abs_xy_draw_string(w, gc, "Low Warp Power", NANO_FONT, 610, 228);
+	}
+
 	const float min_xknown_pct = 0.001;
 	const float max_xknown_pct = 0.080;
 
