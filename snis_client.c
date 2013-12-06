@@ -2169,10 +2169,12 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 		if (go[i].id == my_ship_id)
 			continue; /* skip drawing yourself. */
 
-		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
-			continue;
-		}
-		if (go[i].type == OBJTYPE_NEBULA) {
+		if (go[i].type != OBJTYPE_SHIP1 &&
+			go[i].type != OBJTYPE_SHIP2 &&
+			go[i].type != OBJTYPE_STARBASE &&
+			go[i].type != OBJTYPE_ASTEROID &&
+			go[i].type != OBJTYPE_SPACEMONSTER)
+		{
 			continue;
 		}
 
