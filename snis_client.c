@@ -1424,6 +1424,10 @@ static void move_generic_object(struct snis_entity *o)
 		o->x = interp_position.v.x;
 		o->y = interp_position.v.y;
 		o->z = interp_position.v.z;
+
+		if (o->entity) {
+			update_entity_pos(o->entity, o->x, o->y, o->z);
+		}
 	}
 }
 
@@ -1452,6 +1456,11 @@ static void move_ship(struct snis_entity *o)
 		}
 
 		o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity / 3.0;
+
+		if (o->entity) {
+			update_entity_pos(o->entity, o->x, o->y, o->z);
+			update_entity_orientation(o->entity, &o->orientation);
+		}
 	}
 }
 
