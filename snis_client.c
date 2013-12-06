@@ -5054,8 +5054,10 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			sng_set_foreground(WHITE);
 			break;
 		case OBJTYPE_ASTEROID:
-		case OBJTYPE_DERELICT:
 			sng_set_foreground(AMBER);
+			break;
+		case OBJTYPE_DERELICT:
+			sng_set_foreground(ORANGERED);
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(BLUE);
@@ -5095,8 +5097,8 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			sprintf(buffer, "%s %s\n", "A",  o->sdata.name); 
 			break;
 		case OBJTYPE_DERELICT:
-			sng_set_foreground(AMBER);
-			sprintf(buffer, "%s %s\n", "A",  "???"); 
+			sng_set_foreground(ORANGERED);
+			sprintf(buffer, "%s %s\n", "D",  "???"); 
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(BLUE);
@@ -9010,8 +9012,10 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 			sprintf(buffer, "TYPE: %s", "STARBASE"); 
 			break;
 		case OBJTYPE_ASTEROID:
-		case OBJTYPE_DERELICT:
 			sprintf(buffer, "TYPE: %s", "ASTEROID"); 
+			break;
+		case OBJTYPE_DERELICT:
+			sprintf(buffer, "TYPE: %s", "DERELICT");
 			break;
 		default:
 			sprintf(buffer, "TYPE: %s", "UNKNOWN"); 
