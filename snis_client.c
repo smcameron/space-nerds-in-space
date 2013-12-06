@@ -7751,6 +7751,27 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	/* add the dynamic starts */
 	/* TODO */
 
+	/* draw some static in the region that we can't see because of sensor power */
+	if (screen_radius > visible_distance) {
+		union vec3 u, v;
+		plane_vector_u_and_v_from_normal(&u, &v, &ship_normal);
+
+		/* specs to draw is based on the area of the annulus */
+		int specs = 500 * (screen_radius * screen_radius -
+				visible_distance * visible_distance) / (screen_radius * screen_radius);
+
+		sng_set_foreground(GRAY+192);
+		for (i=0; i<specs; i++) {
+			union vec3 point;
+			random_point_in_3d_annulus(visible_distance, screen_radius, &ship_pos, &u, &v, &point);
+
+			float sx, sy;
+			if (!transform_point(navecx, point.v.x, point.v.y, point.v.z, &sx, &sy)) {
+				sng_draw_point(w->window, gc, sx, sy);
+			}
+		}
+	}
+
 	/* Draw all the stuff */
 	pthread_mutex_lock(&universe_mutex);
 
