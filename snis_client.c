@@ -8883,9 +8883,10 @@ static int science_button_press(int x, int y)
 		xdist = (x - science_guy[i].sx);
 		ydist = (y - science_guy[i].sy);
 		dist2 = xdist * xdist + ydist * ydist; 
-		if (dist2 < SCIDIST2 && science_guy[i].o->sdata.science_data_known) {
-			// curr_science_guy = science_guy[i].o;
-			selected = science_guy[i].o;
+		if (dist2 < SCIDIST2) {
+			if (curr_science_guy == science_guy[i].o || science_guy[i].o->sdata.science_data_known) {
+				selected = science_guy[i].o;
+			}
 		}
 	}
 	if (selected) {
