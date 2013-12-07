@@ -16,7 +16,7 @@
 
 #include "liang-barsky.h"
 #include "bline.h"
-
+#include "build_bug_on.h"
 
 #define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY * (NSHADECOLORS + 1) + (NGRADIENTS * NTOTAL_GRADIENT_SHADES))
 GdkColor huex[TOTAL_COLORS]; 
@@ -589,6 +589,8 @@ static struct gradient_color gradient_colors[] = {
 void sng_setup_colors(GtkWidget *w)
 {
 	int i;
+
+	BUILD_ASSERT(ARRAY_SIZE(gradient_colors) == NGRADIENTS);
 
 	gdk_color_parse("white", &huex[WHITE]);
 	gdk_color_parse("blue", &huex[OLD_BLUE]);
