@@ -7661,21 +7661,19 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
 
 	/* idiot lights for low power of various systems */
-	if ((timer & 0x07) < 4) { /* <--- make idiot lights blink */
-		const int low_power_threshold = 10;
-		sng_set_foreground(RED);
-		if (o->tsd.ship.power_data.sensors.i < low_power_threshold) {
-			sng_abs_xy_draw_string(w, gc, "LOW SENSOR POWER", NANO_FONT, 320, 65);
-		}
-		if (o->tsd.ship.power_data.maneuvering.i < low_power_threshold) {
-			sng_abs_xy_draw_string(w, gc, "LOW MANEUVERING POWER", NANO_FONT, 320, 80);
-		}
-		if (o->tsd.ship.power_data.impulse.r2 < low_power_threshold) {
-			sng_abs_xy_draw_string(w, gc, "LOW IMPULSE POWER", NANO_FONT, 320, 95);
-		}
-		if (o->tsd.ship.power_data.warp.r2 < low_power_threshold) {
-			sng_abs_xy_draw_string(w, gc, "LOW WARP_POWER", NANO_FONT, 610, 228);
-		}
+	const int low_power_threshold = 10;
+	sng_set_foreground(RED);
+	if (o->tsd.ship.power_data.sensors.i < low_power_threshold) {
+		sng_abs_xy_draw_string(w, gc, "LOW SENSOR POWER", NANO_FONT, 320, 65);
+	}
+	if (o->tsd.ship.power_data.maneuvering.i < low_power_threshold) {
+		sng_abs_xy_draw_string(w, gc, "LOW MANEUVERING POWER", NANO_FONT, 320, 80);
+	}
+	if (o->tsd.ship.power_data.impulse.r2 < low_power_threshold) {
+		sng_abs_xy_draw_string(w, gc, "LOW IMPULSE POWER", NANO_FONT, 320, 95);
+	}
+	if (o->tsd.ship.power_data.warp.r2 < low_power_threshold) {
+		sng_abs_xy_draw_string(w, gc, "LOW WARP POWER", NANO_FONT, 610, 228);
 	}
 
 	const float min_xknown_pct = 0.001;
