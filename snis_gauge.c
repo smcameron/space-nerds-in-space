@@ -19,6 +19,7 @@ struct gauge {
 	int needle_color, dial_color, needle_color2;
 	int ndivs;
 	char title[16]; 
+	int bg_color;
 };
 
 void gauge_add_needle(struct gauge *g, gauge_monitor_function sample, int color)
@@ -49,6 +50,7 @@ struct gauge *gauge_init(int x, int y, int r, double r1, double r2,
 	strncpy(g->title, title, sizeof(g->title) - 1);
 	g->title[sizeof(g->title) - 1] = '\0';
 	g->sample2 = NULL;
+	g->bg_color = -1;
 
 	return g;
 }
@@ -73,6 +75,11 @@ void draw_gauge_needle(GdkDrawable *drawable, GdkGC *gc,
 	sng_current_draw_line(drawable, gc, x4, y4, x1, y1);
 }
 
+void gauge_fill_background(struct gauge *g, int bg)
+{
+	g->bg_color = bg;
+}
+
 void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g)
 {
 	int i;
@@ -89,6 +96,10 @@ void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g)
 		label_font = PICO_FONT;
 	}
 
+	if (g->bg_color >= 0) {
+		sng_set_foreground(g->bg_color);
+		sng_draw_circle(w->window, gc, 1, g->x, g->y, g->r);
+	}
 	sng_set_foreground(g->dial_color);
 	sng_draw_circle(w->window, gc, 0, g->x, g->y, g->r);
 
