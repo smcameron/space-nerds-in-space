@@ -5055,14 +5055,10 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	sng_set_foreground(GREEN);
 	if (!o->sdata.science_data_known) {
 		for (i = 0; i < 10; i++) {
-			float r;
 			da = snis_randn(360) * M_PI / 180.0;
 			tx = (int) ((double) x + sin(da) * (double) snis_randn(dr));
 			ty = (int) ((double) y + cos(da) * (double) snis_randn(dr)); 
 
-			r = hypot(tx - SCIENCE_SCOPE_CX, ty - SCIENCE_SCOPE_CY);
-			if (r >= SCIENCE_SCOPE_R)
-				continue;
 			sng_draw_point(w->window, gc, tx, ty);
 		}
 	} else {
