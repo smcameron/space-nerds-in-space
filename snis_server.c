@@ -1727,8 +1727,13 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 		o->tsd.ship.doz = patrol->p[d].v.z;
 	}
 
-	if (dist2 < 25.0 * 25.0)
+	if (dist2 < 300.0 * 300.0) {
 		patrol->dest = (patrol->dest + 1) % patrol->npoints;
+		d = patrol->dest;
+		o->tsd.ship.dox = patrol->p[d].v.x;
+		o->tsd.ship.doy = patrol->p[d].v.y;
+		o->tsd.ship.doz = patrol->p[d].v.z;
+	}
 	check_for_nearby_targets(o);
 }
 
