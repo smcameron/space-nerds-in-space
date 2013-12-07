@@ -6132,7 +6132,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 	union vec3 camera_pos = {{0, 0, cam_range_fraction * range}};
 	quat_rot_vec_self(&camera_pos, &cam_orientation);
-	vec3_add_self(&camera_pos, &desired_lookat);
+	vec3_add_self(&camera_pos, &camera_lookat);
 
 	/* churn the mark tween values */
 	tween_update(sciplane_tween);
@@ -6145,7 +6145,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	camera_look_at(navecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
 
         set_renderer(navecx, WIREFRAME_RENDERER);
-	camera_set_parameters(navecx, range*(cam_range_fraction-1.0), range*(cam_range_fraction+1.0),
+	camera_set_parameters(navecx, range*(cam_range_fraction-1.0), range*(dist_to_cam_frac+1.0),
 				SCREEN_WIDTH, SCREEN_HEIGHT, fovy);
 	set_window_offset(navecx, 0, 0);
 	calculate_camera_transform(navecx);
