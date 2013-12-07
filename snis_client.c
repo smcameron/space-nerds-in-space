@@ -739,7 +739,7 @@ static int update_damcon_part(uint32_t id, uint32_t ship_id, uint32_t type,
 static int update_econ_ship(uint32_t id, double x, double y, double z,
 			double vx, double vy, double vz,
 			union quat *orientation, uint32_t alive, uint32_t victim_id,
-			uint8_t shiptype)
+			uint8_t shiptype, uint8_t ai[])
 {
 	int i;
 	struct entity *e;
@@ -758,6 +758,8 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 	}
 	go[i].tsd.ship.ai[0].u.attack.victim_id = (int32_t) victim_id;
 	go[i].tsd.ship.shiptype = shiptype;
+	memcpy(go[i].ai, ai, 5);
+	ai[5] = '\0';
 	return 0;
 }
 
@@ -3240,7 +3242,7 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	uint32_t id, alive, victim_id;
 	double dx, dy, dz, dvx, dvy, dvz;
 	union quat orientation;
-	uint8_t shiptype;
+	uint8_t shiptype, ai[5];
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
@@ -3254,8 +3256,16 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 				&victim_id, &shiptype);
 	if (rc != 0)
 		return rc;
+	if (opcode == OPCODE_ECON_UPDATE_SHIP_DEBUG_AI)
+		rc = read_and_unpack_buffer(buffer, "bbbbb",
+					&ai[0], &ai[1], &ai[2], &ai[3], &ai[4]);
+	else
+		memset(ai, 0, 5);
+	if (rc != 0)
+		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_econ_ship(id, dx, dy, dz, dvx, dvy, dvz, &orientation, alive, victim_id, shiptype);
+	rc = update_econ_ship(id, dx, dy, dz, dvx, dvy, dvz, &orientation, alive, victim_id,
+				shiptype, ai);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -4029,6 +4039,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 				goto protocol_error;
 			break;
 		case OPCODE_ECON_UPDATE_SHIP:
+		case OPCODE_ECON_UPDATE_SHIP_DEBUG_AI:
 			rc = process_update_econ_ship_packet(opcode);
 			if (rc != 0)
 				goto protocol_error;
@@ -9321,6 +9332,11 @@ static void send_demon_clear_all_packet_to_server(void)
 	queue_to_server(packed_buffer_new("h", OPCODE_DEMON_CLEAR_ALL));
 }
 
+static void toggle_demon_ai_debug_mode(void)
+{
+	queue_to_server(packed_buffer_new("h", OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE));
+}
+
 static int ux_to_demonsx(double ux)
 {
 	return ((ux - demon_ui.ux1) / (demon_ui.ux2 - demon_ui.ux1)) * SCREEN_WIDTH;
@@ -9691,6 +9707,8 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
 		sng_abs_xy_draw_string(w, gc, o->sdata.name, NANO_FONT,
 					x + xoffset, y + yoffset);
+		sng_abs_xy_draw_string(w, gc, o->ai, NANO_FONT,
+					x + xoffset, y + yoffset + 10);
 	}
 	if (v) {
 		sng_set_foreground(RED);
@@ -9724,6 +9742,7 @@ static struct demon_cmd_def {
 	{ "SAY", "CAUSE CURRENTLY CAPTAINED SHIP TO TRANSMIT WHAT YOU LIKE" },
 	{ "CLEAR-ALL", "DELETE ALL OBJECTS EXCEPT HUMAN CONTROLLED SHIPS" },
 	{ "LUA", "RUN SPECIFIED SERVER-SIDE LUA SCRIPT" },
+	{ "AIDEBUG", "TOGGLES AI DEBUGGING INFO" },
 	{ "HELP", "PRINT THIS HELP INFORMATION" },
 };
 static int demon_help_mode = 0;
@@ -9987,7 +10006,9 @@ static int construct_demon_command(char *input,
 			break;
 		case 9: send_lua_script_packet_to_server(saveptr);
 			break;
-		case 10: demon_help_mode = 1; 
+		case 10: toggle_demon_ai_debug_mode();
+			break;
+		case 11: demon_help_mode = 1; 
 			break;
 		default: /* unknown */
 			sprintf(errmsg, "Unknown ver number %d\n", v);

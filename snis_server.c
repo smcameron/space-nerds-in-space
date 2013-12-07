@@ -92,6 +92,7 @@ struct game_client {
 	uint32_t role;
 	uint32_t timestamp;
 	int bridge;
+	int debug_ai;
 } client[MAXCLIENTS];
 int nclients = 0;
 static pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -5374,6 +5375,12 @@ static void process_demon_clear_all(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static int process_toggle_demon_ai_debug_mode(struct game_client *c)
+{
+	c->debug_ai = !c->debug_ai;
+	return 0;
+}
+
 static int l_clear_all(lua_State *l)
 {
 	process_demon_clear_all();
@@ -6381,6 +6388,9 @@ static void process_instructions_from_client(struct game_client *c)
 		case OPCODE_DEMON_CLEAR_ALL:
 			process_demon_clear_all();
 			break;
+		case OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE:
+			process_toggle_demon_ai_debug_mode(c);
+			break;
 		case OPCODE_EXEC_LUA_SCRIPT:
 			rc = process_exec_lua_script(c);
 			if (rc)
@@ -6770,20 +6780,52 @@ static void send_econ_update_ship_packet(struct game_client *c,
 {
 	int n;
 	int32_t victim_id;
+	uint8_t ai[5];
+	int i;
+	uint16_t opcode = OPCODE_ECON_UPDATE_SHIP;
 
+	if (c->debug_ai) {
+		opcode = OPCODE_ECON_UPDATE_SHIP_DEBUG_AI; 
+		memset(ai, 0, 5);
+		for (i = 0; i < o->tsd.ship.nai_entries; i++) {
+			switch (o->tsd.ship.ai[i].ai_mode) {
+			case AI_MODE_IDLE:
+				ai[i] = 'I';
+				break;
+			case AI_MODE_ATTACK:
+				ai[i] = 'A';
+				break;
+			case AI_MODE_FLEET_LEADER:
+				ai[i] = 'L';
+				break;
+			case AI_MODE_FLEET_MEMBER:
+				ai[i] = 'M';
+				break;
+			case AI_MODE_PATROL:
+				ai[i] = 'P';
+				break;
+			default:
+				ai[i] = '?';
+				break;
+			}
+		}
+	}
 	n = o->tsd.ship.nai_entries - 1;
 	if (n < 0 || o->tsd.ship.ai[n].ai_mode != AI_MODE_ATTACK)
 		victim_id = -1;
 	else
 		victim_id = o->tsd.ship.ai[n].u.attack.victim_id;
 
-	pb_queue_to_client(c, packed_buffer_new("hwwSSSSSSQwb", OPCODE_ECON_UPDATE_SHIP,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSSSSSQwb", opcode,
 			o->id, o->alive, o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM, o->z, (int32_t) UNIVERSE_DIM,
 			o->vx, (uint32_t) UNIVERSE_DIM,
 			o->vy, (uint32_t) UNIVERSE_DIM,
 			o->vz, (uint32_t) UNIVERSE_DIM,
 			&o->orientation, victim_id, o->tsd.ship.shiptype));
+	if (c->debug_ai)
+		pb_queue_to_client(c, packed_buffer_new("bbbbb",
+				ai[0], ai[1], ai[2], ai[3], ai[4]));
 }
 
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip)
@@ -7119,6 +7161,7 @@ static int add_new_player(struct game_client *c)
 		c->shipid = bridgelist[c->bridge].shipid;
 		c->ship_index = lookup_by_id(c->shipid);
 	}
+	c->debug_ai = 0;
 	queue_up_client_id(c);
 	return 0;
 

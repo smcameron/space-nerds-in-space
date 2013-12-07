@@ -459,6 +459,7 @@ struct snis_entity {
 	struct space_partition_entry partition;
 	union quat o1, o2;
 	union quat orientation;
+	char ai[6];
 };
 
 /* These are for the robot and various parts on the engineering deck on the damcon screen */
