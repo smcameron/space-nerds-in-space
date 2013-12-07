@@ -755,6 +755,9 @@ static int enemy_faction(int faction1, int faction2)
 
 static int friendly_fire(struct snis_entity *attacker, struct snis_entity *victim)
 {
+	if (attacker->type == OBJTYPE_SHIP1) /* players cannot commit friendly fire */
+		return 0;
+
 	return !enemy_faction(attacker->sdata.faction, victim->sdata.faction);
 }
 
