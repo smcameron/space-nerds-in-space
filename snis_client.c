@@ -6077,9 +6077,11 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	quat_rot_vec_self(&ship_normal, &o->orientation);
 
 	/* figure out the location of curr selected target in real space and on sciplane */
+	int selected_guy_popout = 0;
 	union vec3 selected_pos;
 	union vec3 selected_m0_pos;
-	if (curr_science_guy) {
+	if (curr_science_guy && curr_science_guy->sdata.science_data_known) {
+		selected_guy_popout = 1;
 		vec3_init(&selected_pos, curr_science_guy->x, curr_science_guy->y, curr_science_guy->z);
 
 		/* take currnet position, find dir from ship to it, get heading/mark, recalc pos with mark=0 */
@@ -6106,7 +6108,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	union vec3 desired_lookat;
 	float desired_cam_range_fraction;
 
-	if (curr_science_guy) {
+	if (selected_guy_popout) {
 		desired_cam_orientation = &cam_orientation_selected;
 		desired_cam_range_fraction = mark_popout_zoom_dist_to_cam_frac;
 		desired_lookat = selected_pos;
@@ -6321,7 +6323,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 				snis_draw_science_guy(w, gc, &go[i], sx, sy, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor);
 			}
 
-			if (go[i].sdata.science_data_known && curr_science_guy) {
+			if (go[i].sdata.science_data_known && selected_guy_popout) {
 				int popout = 0;
 
 				/* check if contact is close to selected in 3d space */
