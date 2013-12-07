@@ -570,6 +570,7 @@ static void hsv2rgb(double h, double s, double v, GdkColor* rgb)
     }
 }
 
+int BLUE = 0;
 int GREEN = 0;
 int CYAN = 0;
 
@@ -580,6 +581,7 @@ struct gradient_color {
 	double v;
 };
 static struct gradient_color gradient_colors[] = {
+	{&BLUE, 240, 1, 1},
 	{&GREEN, 120, 1, 1},
 	{&CYAN, 180, 1, 1}
 };
@@ -589,7 +591,7 @@ void sng_setup_colors(GtkWidget *w)
 	int i;
 
 	gdk_color_parse("white", &huex[WHITE]);
-	gdk_color_parse("blue", &huex[BLUE]);
+	gdk_color_parse("blue", &huex[OLD_BLUE]);
 	gdk_color_parse("black", &huex[BLACK]);
 	gdk_color_parse("green", &huex[OLD_GREEN]);
 	gdk_color_parse("lime green", &huex[LIMEGREEN]);

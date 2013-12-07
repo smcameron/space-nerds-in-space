@@ -12,7 +12,8 @@
 /* cardinal color indexes into huex array */
 #define BLACK 0
 #define WHITE 1
-#define BLUE 2
+extern int BLUE;
+#define OLD_BLUE 2
 extern int GREEN;
 #define OLD_GREEN 3
 #define YELLOW 4
@@ -39,6 +40,9 @@ extern int CYAN;
 #define NGRADIENTS 2
 #define NGRADIENT_SHADES 16
 #define NTOTAL_GRADIENT_SHADES (NGRADIENT_SHADES*2 + 1)
+
+#define COLOR_DARKER(c,p) (c-(p*NGRADIENT_SHADES/100))
+#define COLOR_LIGHTER(c, p) (c+(p*NGRADIENT_SHADES/100))
 
 typedef void line_drawing_function(GdkDrawable *drawable,
 	GdkGC *gc, float x1, float y1, float x2, float y2);

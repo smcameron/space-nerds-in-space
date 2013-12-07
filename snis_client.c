@@ -8193,7 +8193,7 @@ static void init_engineering_ui(void)
 	int yinc = 38; 
 	int dm = DISPLAYMODE_ENGINEERING;
 	int color = AMBER;
-	const int ccolor = BLUE; /* coolant color */
+	const int ccolor = COLOR_LIGHTER(BLUE, 25); /* coolant color */
 	const int tcolor = AMBER; /* temperature color */
 	const int coolant_inc = 19;
 	const int sh = 12; /* slider height */
