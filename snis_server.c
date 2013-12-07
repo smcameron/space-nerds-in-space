@@ -119,6 +119,8 @@ static int snis_log_level = 2;
 static struct ship_type_entry *ship_type;
 int nshiptypes;
 
+static int safe_mode = 0; /* prevents enemies from attacking if set */
+
 static char *default_asset_dir = "share/snis";
 static char *asset_dir;
 
@@ -848,6 +850,9 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 	double d1, d2;
 	struct snis_entity *v;
 	int fleet_number;
+
+	if (safe_mode)
+		return;
 
 	if (recursion_level > 2) /* guard against infinite recursion */
 		return;
@@ -5511,6 +5516,12 @@ static int process_toggle_demon_ai_debug_mode(struct game_client *c)
 	return 0;
 }
 
+static int process_toggle_demon_safe_mode(void)
+{
+	safe_mode = !safe_mode;
+	return 0;
+}
+
 static int l_clear_all(lua_State *l)
 {
 	process_demon_clear_all();
@@ -6520,6 +6531,9 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE:
 			process_toggle_demon_ai_debug_mode(c);
+			break;
+		case OPCODE_TOGGLE_DEMON_SAFE_MODE:
+			process_toggle_demon_safe_mode();
 			break;
 		case OPCODE_EXEC_LUA_SCRIPT:
 			rc = process_exec_lua_script(c);

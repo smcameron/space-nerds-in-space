@@ -9349,6 +9349,12 @@ static void toggle_demon_ai_debug_mode(void)
 	queue_to_server(packed_buffer_new("h", OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE));
 }
 
+static void toggle_demon_safe_mode(void)
+{
+	queue_to_server(packed_buffer_new("h", OPCODE_TOGGLE_DEMON_SAFE_MODE));
+}
+
+
 static int ux_to_demonsx(double ux)
 {
 	return ((ux - demon_ui.ux1) / (demon_ui.ux2 - demon_ui.ux1)) * SCREEN_WIDTH;
@@ -9755,6 +9761,7 @@ static struct demon_cmd_def {
 	{ "CLEAR-ALL", "DELETE ALL OBJECTS EXCEPT HUMAN CONTROLLED SHIPS" },
 	{ "LUA", "RUN SPECIFIED SERVER-SIDE LUA SCRIPT" },
 	{ "AIDEBUG", "TOGGLES AI DEBUGGING INFO" },
+	{ "SAFEMODE", "TOGGLES SAFE MODE (prevents enemies from attacking)" },
 	{ "HELP", "PRINT THIS HELP INFORMATION" },
 };
 static int demon_help_mode = 0;
@@ -10020,7 +10027,9 @@ static int construct_demon_command(char *input,
 			break;
 		case 10: toggle_demon_ai_debug_mode();
 			break;
-		case 11: demon_help_mode = 1; 
+		case 11: toggle_demon_safe_mode();
+			break;
+		case 12: demon_help_mode = 1; 
 			break;
 		default: /* unknown */
 			sprintf(errmsg, "Unknown ver number %d\n", v);
