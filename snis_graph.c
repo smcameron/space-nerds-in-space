@@ -219,18 +219,36 @@ void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 	float cx = x + rx;
 	float cy = y + ry;
 	
+	float scx = sgc.xscale * cx;
+	float scy = sgc.screen_height - cy * sgc.yscale;
+
 	int i;
 	GdkColor *h = &huex[sgc.hue];
 
 	int segments = (int)((angle2 - angle1)/max_angle_delta) + 1; 
 	float delta = (angle2 - angle1) / segments;
 
-	glBegin(GL_LINE_STRIP);
+	if (filled)
+		glBegin(GL_TRIANGLES);
+	else
+		glBegin(GL_LINE_STRIP);
         glColor3us(h->red, h->green, h->blue);
+
+	float sx1, sy1;
 	for (i = 0; i <= segments; i++) {
 		float a = angle1 + delta * (float)i;
-		glVertex2f(sgc.xscale * (cx + cos(a) * rx),
-			(sgc.screen_height - cy * sgc.yscale) + sin(a) * ry * sgc.yscale);
+		float sx2 = sgc.xscale * (cx + cos(a) * rx);
+		float sy2 = (sgc.screen_height - cy * sgc.yscale) + sin(a) * ry * sgc.yscale;
+
+		if (!filled || i>0) {
+			glVertex2f(sx2, sy2);
+			if (filled) {
+				glVertex2f(sx1, sy1);
+				glVertex2f(scx, scy);
+			}
+		}
+		sx1 = sx2;
+		sy1 = sy2;
 	}
 	glEnd();
 #else
@@ -694,9 +712,9 @@ void sng_set_gc(GdkGC *gc)
 	sgc.gc = gc;
 }
 
-void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, float x, float y, float r)
+void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, int filled, float x, float y, float r)
 {
-	sng_scaled_arc(drawable, gc, 0, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
+	sng_scaled_arc(drawable, gc, filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
 }
 
 void sng_device_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)

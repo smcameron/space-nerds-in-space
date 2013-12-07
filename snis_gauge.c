@@ -90,7 +90,7 @@ void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g)
 	}
 
 	sng_set_foreground(g->dial_color);
-	sng_draw_circle(w->window, gc, g->x, g->y, g->r);
+	sng_draw_circle(w->window, gc, 0, g->x, g->y, g->r);
 
 	ai = g->angular_range / g->ndivs;
 	normalize_angle(&ai);

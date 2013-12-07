@@ -2148,7 +2148,7 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 
 	/* draw background overlay */
 	sng_set_foreground(AMBER);
-	sng_draw_circle(w->window, gc, cx, cy, r);
+	sng_draw_circle(w->window, gc, 0, cx, cy, r);
 	for (i=0; i<4; i++) {
 		float angle = i * M_PI / 2.0 + M_PI / 4.0;
 		sng_current_draw_line(w->window, gc, cx + cos(angle)*r, cy - sin(angle)*r, cx + 0.5*cos(angle)*r, cy - 0.5*sin(angle)*r);
@@ -4790,7 +4790,7 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int 
 		snis_draw_line(w->window, gc, x2 - ddx, y2 - ddy, x1, y1);
 		snis_draw_line(w->window, gc, x1, y1, x2 + ddx, y2 + ddy);
 		if (ring)
-			sng_draw_circle(w->window, gc, x, y, 33);
+			sng_draw_circle(w->window, gc, 0, x, y, 33);
 	}
 }
 
@@ -5016,7 +5016,7 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 		dy = y + snis_randn(r * 2) - r; 
 		snis_draw_line(drawable, gc, x, y, dx, dy);
 	}
-	/* sng_draw_circle(drawable, gc, x, y, (int) (SCREEN_WIDTH * 150.0 / XKNOWN_DIM)); */
+	/* sng_draw_circle(drawable, gc, 0, x, y, (int) (SCREEN_WIDTH * 150.0 / XKNOWN_DIM)); */
 }
 
 /* position and dimensions of science scope */
@@ -5095,7 +5095,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	}
 
 	if (selected)
-		sng_draw_circle(w->window, gc, x, y, 10);
+		sng_draw_circle(w->window, gc, 0, x, y, 10);
 	
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
@@ -5216,7 +5216,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 		}
 	}
 	if (selected)
-		sng_draw_circle(w->window, gc, sx, sy, 10);
+		sng_draw_circle(w->window, gc, 0, sx, sy, 10);
 
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
@@ -5331,7 +5331,7 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 {
 	int tx1, ty1, tx2, ty2;
 
-	sng_draw_circle(w->window, gc, x, y, r);
+	sng_draw_circle(w->window, gc, 0, x, y, r);
 	draw_degree_marks_with_labels(w, gc, x, y, r, NANO_FONT);
 	/* draw the ship */
 	snis_draw_arrow(w, gc, x, y, r, heading, 1.0);
@@ -5389,7 +5389,7 @@ static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 
 	sng_set_foreground(c1);
 	for (i = r; i > r / 4; i -= r / 5)
-		sng_draw_circle(w->window, gc, x, y, i);
+		sng_draw_circle(w->window, gc, 0, x, y, i);
 	sng_set_foreground(c2);
 	draw_degree_marks_with_labels(w, gc, x, y, r, NANO_FONT);
 }
@@ -5562,19 +5562,19 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 			case OBJTYPE_ASTEROID:
 			case OBJTYPE_DERELICT:
 				sng_set_foreground(ASTEROID_COLOR);
-				sng_draw_circle(w->window, gc, x, y, r / 30);
+				sng_draw_circle(w->window, gc, 0, x, y, r / 30);
 				break;
 			case OBJTYPE_PLANET:
 				sng_set_foreground(PLANET_COLOR);
-				sng_draw_circle(w->window, gc, x, y, r / 30);
+				sng_draw_circle(w->window, gc, x, 0, y, r / 30);
 				break;
 			case OBJTYPE_STARBASE:
 				sng_set_foreground(STARBASE_COLOR);
-				sng_draw_circle(w->window, gc, x, y, r / 30);
+				sng_draw_circle(w->window, gc, 0, x, y, r / 30);
 				break;
 			case OBJTYPE_WORMHOLE:
 				sng_set_foreground(WORMHOLE_COLOR);
-				sng_draw_circle(w->window, gc, x, y, r / 30);
+				sng_draw_circle(w->window, gc, 0, x, y, r / 30);
 				break;
 			case OBJTYPE_LASER:
 				sng_draw_laser_line(w->window, gc, x, y,
@@ -9310,7 +9310,7 @@ static void show_3d_science(GtkWidget *w)
 /*
 		snis_draw_science_reticule(w, gc, cx, cy, r,
 				o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width)); */
-		sng_draw_circle(w->window, gc, cx, cy, r);
+		sng_draw_circle(w->window, gc, 0, cx, cy, r);
 		draw_all_the_3d_science_guys(w, o, zoom, current_zoom);
 		/* draw_all_the_science_sparks(w, o, zoom);
 		draw_all_the_science_nebulae(w, o, zoom); */
@@ -9676,20 +9676,20 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		break;
 	case OBJTYPE_NEBULA:
 		sng_set_foreground(NEBULA_COLOR);
-		sng_draw_circle(w->window, gc, x, y,
+		sng_draw_circle(w->window, gc, 0, x, y,
 			ur_to_demonsr(o->tsd.nebula.r));
 		break;
 	case OBJTYPE_STARBASE:
 		sng_set_foreground(STARBASE_COLOR);
-		sng_draw_circle(w->window, gc, x, y, 5);
+		sng_draw_circle(w->window, gc, 0, x, y, 5);
 		break;
 	case OBJTYPE_PLANET:
 		sng_set_foreground(PLANET_COLOR);
-		sng_draw_circle(w->window, gc, x, y, 5);
+		sng_draw_circle(w->window, gc, 0, x, y, 5);
 		break;
 	case OBJTYPE_WORMHOLE:
 		sng_set_foreground(WORMHOLE_COLOR);
-		sng_draw_circle(w->window, gc, x, y, 5);
+		sng_draw_circle(w->window, gc, 0, x, y, 5);
 		break;
 	default:
 		sng_set_foreground(WHITE);
@@ -9726,7 +9726,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	if ((o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_STARBASE) &&
 			o->index == demon_ui.captain_of) {
 		sng_set_foreground(RED);
-		sng_draw_circle(w->window, gc, x, y, 10 + (timer % 10));
+		sng_draw_circle(w->window, gc, 0, x, y, 10 + (timer % 10));
 	}
 	
 done_drawing_item:
