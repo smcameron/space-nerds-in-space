@@ -2147,6 +2147,8 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 	int i;
 
 	/* draw background overlay */
+	sng_set_foreground(BLACK);
+	sng_draw_circle(w->window, gc, 1, cx, cy, r);
 	sng_set_foreground(AMBER);
 	sng_draw_circle(w->window, gc, 0, cx, cy, r);
 	for (i=0; i<4; i++) {
@@ -7358,9 +7360,11 @@ static void init_weapons_ui(void)
 			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "CHARGE", sample_phasercharge);
 	gauge_add_needle(weapons.phaser_bank_gauge, sample_phaser_power, RED);
+	gauge_fill_background(weapons.phaser_bank_gauge, BLACK);
 	weapons.phaser_wavelength = gauge_init(520, 550, 45, 10.0, 60.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "WAVE LEN", sample_phaser_wavelength);
+	gauge_fill_background(weapons.phaser_wavelength, BLACK);
 	weapons.wavelen_down_button = snis_button_init(550, 400, 60, 25, "DOWN", WHITE,
 			NANO_FONT, wavelen_down_button_pressed, NULL);
 	weapons.wavelen_up_button = snis_button_init(700, 400, 30, 25, "UP", WHITE,
