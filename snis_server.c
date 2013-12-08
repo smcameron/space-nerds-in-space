@@ -1710,7 +1710,7 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 		double ld = dist3dsqrd(o->x - o->tsd.ship.dox,
 				o->y - o->tsd.ship.doy, o->z - o->tsd.ship.doz);
 		/* give ships some variety in movement */
-		if (((universe_timestamp + o->id) & 0x0ff) == 0 || ld < 100.0 * 100.0) {
+		if (((universe_timestamp + o->id) & 0x3ff) == 0 || ld < 50.0 * 50.0) {
 			union vec3 v, vn;
 
 			v.v.x = patrol->p[d].v.x - o->x;
