@@ -6064,6 +6064,9 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	int first_frame = (timer != last_timer+1);
 	last_timer = timer;
 
+	/* churn the mark tween values */
+	tween_update(sciplane_tween);
+
 	float fovy = 30.0 * M_PI / 180.0;
 	float dist_to_cam_frac = 1.09 / tan(fovy/2.0); /*range + 8% for labels */
 
@@ -6080,6 +6083,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 	/* figure out the location of curr selected target in real space and on sciplane */
 	int selected_guy_popout = 0;
+	float selected_guy_tween = 0;
 	union vec3 selected_pos;
 	union vec3 selected_m0_pos;
 	if (curr_science_guy && curr_science_guy->sdata.science_data_known) {
@@ -6093,6 +6097,8 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		vec3_to_heading_mark(&selected_dir, &dist, &heading, &mark);
 		heading_mark_to_vec3(dist, heading, 0, &selected_m0_pos);
 		vec3_add_self(&selected_m0_pos, &ship_pos);
+
+		tween_get_value(sciplane_tween, curr_science_guy->id, &selected_guy_tween);
 	}
 
 	/* cam orientation is locked with world */
@@ -6135,9 +6141,6 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	union vec3 camera_pos = {{0, 0, cam_range_fraction * range}};
 	quat_rot_vec_self(&camera_pos, &cam_orientation);
 	vec3_add_self(&camera_pos, &camera_lookat);
-
-	/* churn the mark tween values */
-	tween_update(sciplane_tween);
 
 	union vec3 camera_up = {{0,1,0}};
 	quat_rot_vec_self(&camera_up, &cam_orientation);
@@ -6308,13 +6311,23 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			vec3_to_heading_mark(&dir, 0, &heading, &mark);
 
 			float tween = 0;
-			tween_get_value_and_decay(sciplane_tween, go[i].id, &tween);
+			int draw_popout_arc = 0;
+
+			if (go[i].type == OBJTYPE_LASER || go[i].type == OBJTYPE_TORPEDO) {
+				/* set projectile tween value to be the same as the popout if they pass in popout area */
+				tween = selected_guy_tween;
+				draw_popout_arc = 0;
+			} else {
+				/* get tween from bank and draw a popout arc */
+				tween_get_value_and_decay(sciplane_tween, go[i].id, &tween);
+				draw_popout_arc = 1;
+			}
 
 			union vec3 display_pos;
 			heading_mark_to_vec3(dist, heading, mark * tween, &display_pos);
 			vec3_add_self(&display_pos, &ship_pos);
 
-			if ( tween > 0 ) {
+			if ( draw_popout_arc && tween > 0 ) {
 				/* show the flyout arc */
 				sng_set_foreground(DARKTURQUOISE);
 				draw_3d_mark_arc(w, gc, navecx, &ship_pos, dist, heading, mark * tween * 0.9);
