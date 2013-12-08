@@ -7,7 +7,7 @@
 #include "quat.h"
 #include "fleet.h"
 
-#define FLEET_SPACING 100.0f
+#define FLEET_SPACING 200.0f
 #define MAXSHIPSPERFLEET 100
 #define MAXFLEETS 50
 
