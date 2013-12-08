@@ -6171,12 +6171,11 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			color = RED;
 			ind_orientation = o->orientation;
 		} else {
-			color = DARKTURQUOISE;
-			/* temp until gun heading is a quat */
-			quat_init_axis(&ind_orientation,0,1,0,o->tsd.ship.gun_heading);
+			color = CYAN;
+			quat_mul(&ind_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 		}
 
-		/* add gun heading arrow */
+		/* add heading arrow */
 		union vec3 ind_pos = {{range,0,0}};
 		quat_rot_vec_self(&ind_pos, &ind_orientation);
 		vec3_add_self(&ind_pos, &ship_pos);
@@ -6185,7 +6184,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		update_entity_orientation(e, &ind_orientation);
 		set_render_style(e, RENDER_NORMAL);
 
-		/* gun heading arrow tail */
+		/* heading arrow tail */
 		e = add_entity(navecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
 		update_entity_scale(e, range);
 		update_entity_orientation(e, &ind_orientation);
