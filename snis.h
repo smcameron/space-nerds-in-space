@@ -336,6 +336,8 @@ struct ship_data {
 #define MAX_TRACTOR_VELOCITY 10.0
 	uint32_t tractor_beam; 
 	uint8_t overheating_damage_done;
+	union vec3 steering_adjustment;
+	float braking_factor;
 };
 
 struct starbase_data {

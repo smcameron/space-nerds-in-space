@@ -1771,9 +1771,59 @@ static void ai_brain(struct snis_entity *o)
 	}
 }
 
+struct collision_avoidance_context {
+	struct snis_entity *o;
+	double closest_dist2;
+};
+
+/* adjust o->tsd.ship.desired_velocity vector to avoid collisions */
+static void ship_collision_avoidance(void *context, void *entity)
+{
+	struct collision_avoidance_context *ca = context;
+	struct snis_entity *o = ca->o;
+	struct snis_entity *obstacle = entity;
+	double d;
+	float steering_magnitude;
+	const double worrythreshold = 100.0 * 100.0;
+
+	/* hmm, server has no idea about meshes... */
+	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
+
+	/* We only care about the closest one. */
+	if (d > ca->closest_dist2 && ca->closest_dist2 != -1)
+		return;
+
+	ca->closest_dist2 = d;
+	if (d < worrythreshold) { /* not close enough to worry about */
+		o->tsd.ship.steering_adjustment.v.x = 0.0f;
+		o->tsd.ship.steering_adjustment.v.y = 0.0f;
+		o->tsd.ship.steering_adjustment.v.z = 0.0f;
+		o->tsd.ship.braking_factor = 1.0;
+		return;
+	}
+
+	d = sqrt(d);
+	if (d < 1.0)
+		d = 1.0;
+	/* Compute a braking force */
+	if (d < 2.0)
+		o->tsd.ship.braking_factor = 1.0 - 1.0 / 2;
+	else
+		o->tsd.ship.braking_factor = 1.0 - 1.0 / d; 
+
+	/* Compute a steering force */
+	o->tsd.ship.steering_adjustment.v.x = o->x - obstacle->x;
+	o->tsd.ship.steering_adjustment.v.y = o->y - obstacle->y;
+	o->tsd.ship.steering_adjustment.v.z = o->z - obstacle->z;
+	vec3_normalize_self(&o->tsd.ship.steering_adjustment);
+	steering_magnitude = 3000.0 / d;
+	vec3_mul_self(&o->tsd.ship.steering_adjustment, steering_magnitude);
+}
+
 static void ship_move(struct snis_entity *o)
 {
 	int n;
+	struct collision_avoidance_context ca;
 
 	if (o->tsd.ship.nai_entries == 0)
 		ship_figure_out_what_to_do(o);
@@ -1791,6 +1841,11 @@ static void ship_move(struct snis_entity *o)
 	}
 
 	ai_brain(o);
+
+	/* try to avoid collisions by computing steering and braking adjustments */
+	ca.closest_dist2 = -1.0;
+	ca.o = o;
+	space_partition_process(space_partition, o, o->x, o->z, &ca, ship_collision_avoidance);
 
 	/* Adjust velocity towards desired velocity */
 	o->tsd.ship.velocity = o->tsd.ship.velocity +
@@ -2543,6 +2598,10 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	desired_velocity.v.y = destn.v.y * o->tsd.ship.velocity;
 	desired_velocity.v.z = destn.v.z * o->tsd.ship.velocity;
 
+	/* apply braking and steering adjustments */
+	vec3_mul_self(&desired_velocity, o->tsd.ship.braking_factor);
+	vec3_add_self(&desired_velocity, &o->tsd.ship.steering_adjustment);
+
 	/* Make actual velocity move towards desired velocity */
 	o->vx = new_velocity(desired_velocity.v.x, o->vx);
 	o->vy = new_velocity(desired_velocity.v.y, o->vy);
@@ -3191,6 +3250,10 @@ static int add_ship(void)
 	go[i].tsd.ship.lifeform_count = ship_type[go[i].tsd.ship.shiptype].crew_max;
 	memset(&go[i].tsd.ship.damage, 0, sizeof(go[i].tsd.ship.damage));
 	memset(&go[i].tsd.ship.power_data, 0, sizeof(go[i].tsd.ship.power_data));
+	go[i].tsd.ship.braking_factor = 1.0f;
+	go[i].tsd.ship.steering_adjustment.v.x = 0.0;
+	go[i].tsd.ship.steering_adjustment.v.y = 0.0;
+	go[i].tsd.ship.steering_adjustment.v.z = 0.0;
 	return i;
 }
 
