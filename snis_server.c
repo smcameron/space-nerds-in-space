@@ -1799,7 +1799,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 		return;
 
 	ca->closest_dist2 = d;
-	if (d < worrythreshold) { /* not close enough to worry about */
+	if (d > worrythreshold) { /* not close enough to worry about */
 		o->tsd.ship.steering_adjustment.v.x = 0.0f;
 		o->tsd.ship.steering_adjustment.v.y = 0.0f;
 		o->tsd.ship.steering_adjustment.v.z = 0.0f;
