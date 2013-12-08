@@ -6298,8 +6298,12 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 					nebula_factor++;
 				continue;
 			}
-			if (dist2 > range * range)
-				continue; /* not close enough */
+			if (dist2 > range * range) {
+				/* follow selected guy outside bounds */
+				if (!(selected_guy_popout && &go[i] == curr_science_guy)) {
+					continue; /* not close enough */
+				}
+			}
 			dist = sqrt(dist2);
 
 #if 0
