@@ -4887,6 +4887,65 @@ out:
 	return;
 }
 
+static int l_ai_push_patrol(lua_State *l)
+{
+	int i, n, p, np;
+	double oid, x, y, z, npd;
+	struct snis_entity *o;
+
+	pthread_mutex_lock(&universe_mutex);
+	oid = lua_tonumber(lua_state, 1);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto error;
+	o = &go[i];
+
+	npd = lua_tonumber(lua_state, 2);
+	if (npd < 2.0 || npd > 5.0)
+		goto error;
+	np = (int) npd;
+
+	if (o->tsd.ship.nai_entries >= MAX_AI_STACK_ENTRIES)
+		goto error;
+	
+	n = o->tsd.ship.nai_entries;
+	o->tsd.ship.ai[n].ai_mode = AI_MODE_PATROL;
+
+	i = 3;
+	for (p = 0; p < np; p++) {
+		if (lua_isnoneornil(l, i))
+			break;
+		x = lua_tonumber(lua_state, i);
+		i++;
+		if (lua_isnoneornil(l, i))
+			goto error;
+		y = lua_tonumber(lua_state, i);
+		i++;
+		if (lua_isnoneornil(l, i))
+			goto error;
+		z = lua_tonumber(lua_state, i);
+		i++;
+
+		o->tsd.ship.ai[n].u.patrol.p[p].v.x = x; 
+		o->tsd.ship.ai[n].u.patrol.p[p].v.y = y; 
+		o->tsd.ship.ai[n].u.patrol.p[p].v.z = z; 
+
+		if (p >= ARRAY_SIZE(o->tsd.ship.ai[n].u.patrol.p))
+			break;
+	}
+	o->tsd.ship.ai[n].u.patrol.npoints = p;
+	o->tsd.ship.nai_entries++;
+
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, 0.0);
+	return 1;
+
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnil(l);
+	return 1;
+}
+
 static int l_attack_ship(lua_State *l)
 {
 	int i;
@@ -7511,6 +7570,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_player_damage, "set_player_damage");
 	add_lua_callable_fn(l_load_skybox, "load_skybox");
 	add_lua_callable_fn(l_user_coords, "user_coords");
+	add_lua_callable_fn(l_ai_push_patrol, "ai_push_patrol");
 }
 
 static int run_initial_lua_scripts(void)

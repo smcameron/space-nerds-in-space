@@ -145,3 +145,7 @@ load_skybox(ship_id, filenameprefix) -- loads a new skybox composed of six image
 ux,uy,uz = user_coords(x, y, z) -- returns user (player) coordinates given program coordinates.
 	(this really just swaps y and z. ux == x, uy == z, uz == y).
 
+ai_push_patrol(id, nwaypoints, x, y, z, x2, y2, z2, x3, y3, z3, ... )
+	set up a patrol route (up to 5 waypoints) for ship with specified id.
+
+
