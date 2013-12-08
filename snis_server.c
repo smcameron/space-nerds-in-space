@@ -1795,7 +1795,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
 
 	/* We only care about the closest one. */
-	if (d > ca->closest_dist2 && ca->closest_dist2 != -1)
+	if (d > ca->closest_dist2 && ca->closest_dist2 > 0)
 		return;
 
 	ca->closest_dist2 = d;
