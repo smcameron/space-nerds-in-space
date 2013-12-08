@@ -1705,8 +1705,7 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 	double dist2 = dist3dsqrd(o->x - patrol->p[d].v.x,
 				o->y - patrol->p[d].v.y,
 				o->z - patrol->p[d].v.z);
-
-	if (dist2 > 1000.0 * 1000.0) {
+	if (dist2 > 2000.0 * 2000.0) {
 		double ld = dist3dsqrd(o->x - o->tsd.ship.dox,
 				o->y - o->tsd.ship.doy, o->z - o->tsd.ship.doz);
 		/* give ships some variety in movement */
@@ -1717,7 +1716,7 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			v.v.y = patrol->p[d].v.y - o->y;
 			v.v.z = patrol->p[d].v.z - o->z;
 			vec3_normalize(&vn, &v);
-			vec3_mul(&v, &vn, 300.0f);
+			vec3_mul(&v, &vn, 1500.0f);
 			v.v.x += (float) snis_randn(100);
 			v.v.y += (float) snis_randn(100);
 			v.v.z += (float) snis_randn(100);
@@ -1779,6 +1778,7 @@ static void ai_brain(struct snis_entity *o)
 struct collision_avoidance_context {
 	struct snis_entity *o;
 	double closest_dist2;
+	double worrythreshold;
 };
 
 /* adjust o->tsd.ship.desired_velocity vector to avoid collisions */
@@ -1789,7 +1789,6 @@ static void ship_collision_avoidance(void *context, void *entity)
 	struct snis_entity *obstacle = entity;
 	double d;
 	float steering_magnitude;
-	const double worrythreshold = 100.0 * 100.0;
 
 	/* hmm, server has no idea about meshes... */
 	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
@@ -1799,7 +1798,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 		return;
 
 	ca->closest_dist2 = d;
-	if (d > worrythreshold) { /* not close enough to worry about */
+	if (d > ca->worrythreshold) { /* not close enough to worry about */
 		o->tsd.ship.steering_adjustment.v.x = 0.0f;
 		o->tsd.ship.steering_adjustment.v.y = 0.0f;
 		o->tsd.ship.steering_adjustment.v.z = 0.0f;
@@ -1821,7 +1820,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 	o->tsd.ship.steering_adjustment.v.y = o->y - obstacle->y;
 	o->tsd.ship.steering_adjustment.v.z = o->z - obstacle->z;
 	vec3_normalize_self(&o->tsd.ship.steering_adjustment);
-	steering_magnitude = 3000.0 / d;
+	steering_magnitude = 800.0 / d;
 	vec3_mul_self(&o->tsd.ship.steering_adjustment, steering_magnitude);
 }
 
@@ -1850,6 +1849,11 @@ static void ship_move(struct snis_entity *o)
 	/* try to avoid collisions by computing steering and braking adjustments */
 	ca.closest_dist2 = -1.0;
 	ca.o = o;
+	if (o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].ai_mode == AI_MODE_FLEET_LEADER ||
+		o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].ai_mode == AI_MODE_FLEET_MEMBER)
+		ca.worrythreshold = 150.0 * 150.0;
+	else
+		ca.worrythreshold = 400.0 * 400.0;
 	space_partition_process(space_partition, o, o->x, o->z, &ca, ship_collision_avoidance);
 
 	/* Adjust velocity towards desired velocity */
