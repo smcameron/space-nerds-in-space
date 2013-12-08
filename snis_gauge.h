@@ -19,7 +19,7 @@ GLOBAL struct gauge *gauge_init(int x, int y, int r, double r1, double r2,
 			gauge_monitor_function gmf);
 GLOBAL void draw_gauge_needle(GdkDrawable *drawable, GdkGC *gc,
 		gint x, gint y, gint r, double a);
-GLOBAL void gauge_fill_background(struct gauge *g, int bg);
+GLOBAL void gauge_fill_background(struct gauge *g, int bg, float alpha);
 GLOBAL void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g);
 GLOBAL void gauge_free(struct gauge *g);
 

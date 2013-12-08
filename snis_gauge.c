@@ -20,6 +20,7 @@ struct gauge {
 	int ndivs;
 	char title[16]; 
 	int bg_color;
+	float bg_alpha;
 };
 
 void gauge_add_needle(struct gauge *g, gauge_monitor_function sample, int color)
@@ -75,9 +76,10 @@ void draw_gauge_needle(GdkDrawable *drawable, GdkGC *gc,
 	sng_current_draw_line(drawable, gc, x4, y4, x1, y1);
 }
 
-void gauge_fill_background(struct gauge *g, int bg)
+void gauge_fill_background(struct gauge *g, int bg, float alpha)
 {
 	g->bg_color = bg;
+	g->bg_alpha = alpha;
 }
 
 void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g)
@@ -97,7 +99,7 @@ void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g)
 	}
 
 	if (g->bg_color >= 0) {
-		sng_set_foreground(g->bg_color);
+		sng_set_foreground_alpha(g->bg_color, g->bg_alpha);
 		sng_draw_circle(w->window, gc, 1, g->x, g->y, g->r);
 	}
 	sng_set_foreground(g->dial_color);
