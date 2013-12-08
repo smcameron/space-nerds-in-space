@@ -338,9 +338,8 @@ test_matrix:	matrix.c matrix.h
 test-space-partition:	space-part.c space-part.h
 	$(CC) ${MYCFLAGS} -g -DTEST_SPACE_PARTITION -o test-space-partition space-part.c -lm
 
-# something is weird with this one:
-snis_event_callback.o:	snis_event_callback.h snis_event_callback.c
-	$(CC) ${MYCFLAGS} -c snis_event_callback.c
+snis_event_callback.o:	snis_event_callback.c snis_event_callback.h
+	$(Q)$(COMPILE)
 
 ${SSGL}:
 	(cd ssgl ; make )
