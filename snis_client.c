@@ -8425,6 +8425,15 @@ static void show_engineering(GtkWidget *w)
 	snis_slider_set_input(eng_ui.tractor_slider, o->tsd.ship.power_data.tractor.r2/255.0 );
 	snis_slider_set_input(eng_ui.shield_control_slider, o->tsd.ship.power_data.shields.r1/255.0 );
 
+	snis_slider_set_input(eng_ui.shield_coolant_slider, o->tsd.ship.coolant_data.shields.r2/255.0 );
+	snis_slider_set_input(eng_ui.phaserbanks_coolant_slider, o->tsd.ship.coolant_data.phasers.r2/255.0 );
+	snis_slider_set_input(eng_ui.comm_coolant_slider, o->tsd.ship.coolant_data.comms.r2/255.0 );
+	snis_slider_set_input(eng_ui.sensors_coolant_slider, o->tsd.ship.coolant_data.sensors.r2/255.0 );
+	snis_slider_set_input(eng_ui.impulse_coolant_slider, o->tsd.ship.coolant_data.impulse.r2/255.0 );
+	snis_slider_set_input(eng_ui.warp_coolant_slider, o->tsd.ship.coolant_data.warp.r2/255.0 );
+	snis_slider_set_input(eng_ui.maneuvering_coolant_slider, o->tsd.ship.coolant_data.maneuvering.r2/255.0 );
+	snis_slider_set_input(eng_ui.tractor_coolant_slider, o->tsd.ship.coolant_data.tractor.r2/255.0 );
+
 	gx1 = NAV_DATA_X + 10;
 	gy1 = 15;
 	gx2 = NAV_DATA_X + NAV_DATA_W - 10;
