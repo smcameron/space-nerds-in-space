@@ -32,6 +32,8 @@ static struct snis_graph_context {
 	int screen_height;
 	GdkGC *gc;
 	int hue; /* current color, index into huex[] and glhue[] */
+	int alpha_blend;
+	float alpha;
 } sgc;
 
 void sng_fixup_gl_y_coordinate(int screen_height)
@@ -228,11 +230,18 @@ void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 	int segments = (int)((angle2 - angle1)/max_angle_delta) + 1; 
 	float delta = (angle2 - angle1) / segments;
 
+	if (sgc.alpha_blend) {
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glColor4us(h->red, h->green, h->blue, sgc.alpha*65535.0);
+	} else {
+		glColor3us(h->red, h->green, h->blue);
+	}
+
 	if (filled)
 		glBegin(GL_TRIANGLES);
 	else
 		glBegin(GL_LINE_STRIP);
-        glColor3us(h->red, h->green, h->blue);
 
 	float sx1, sy1;
 	for (i = 0; i <= segments; i++) {
@@ -250,6 +259,11 @@ void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 		sx1 = sx2;
 		sy1 = sy2;
 	}
+
+	if (sgc.alpha_blend) {
+		glDisable(GL_BLEND);
+	}
+
 	glEnd();
 #else
 	gdk_draw_arc(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
@@ -699,9 +713,20 @@ void sng_setup_colors(GtkWidget *w)
 	gtk_widget_modify_bg(w, GTK_STATE_NORMAL, &huex[BLACK]);
 }
 
+void sng_set_foreground_alpha(int c, float a)
+{
+	sgc.hue = c;
+	sgc.alpha_blend = 1;
+	sgc.alpha = a;
+#ifdef WITHOUTOPENGL
+	gdk_gc_set_foreground(sgc.gc, &huex[c]);
+#endif
+}
+
 void sng_set_foreground(int c)
 {
 	sgc.hue = c;
+	sgc.alpha_blend = 0;
 #ifdef WITHOUTOPENGL
 	gdk_gc_set_foreground(sgc.gc, &huex[c]);
 #endif
