@@ -21,6 +21,8 @@ module battlestar()
 
 $fn=8;
 
+translate(v = [-8, 0, 0])
+scale(v = [1.3, 1.3, 1.3])
 rotate(a = 90, v = [1, 0, 0])
 	rotate(a = 90, v = [0, 1, 0])
 		translate(v = [-8, 0, 4])
