@@ -44,22 +44,26 @@ rotate(a = -90, v = [1, 0, 0])
 union() {
 fuselage(10);
 rotate(a = -30, v = [0, 1, 0])
-translate(v = [-6, -7, 9])
-flat_cyl(10, 3, 1, 3);
+translate(v = [-5, -7.5, 9])
+flat_cyl(12, 3, 1, 4);
 translate(v = [-12, -7, 10])
 long_sphere(4, 1.5);
 
 translate(v = [9, 8, -1.5])
 rotate(a = 90, v = [0, 1, 0])
-cylinder(h = 14, r1 = 0.5, r2 = 2, center = true);
+cylinder(h = 14, r1 = 0.1, r2 = 1.8, center = true);
 translate(v = [15, 8, -1.5])
-long_sphere(3.5, 1.5);
+long_sphere(3.6, 1.5);
 
 translate(v = [0, 0, -1])
 rotate(a = 90, v = [0, 1, 0])
-cylinder(h = 14, r1 = 3, r2 = 2, center = true);
+difference() {
+	cylinder(h = 14, r1 = 3, r2 = 2, center = true);
+	translate(v = [0, 0, -8])	
+	cylinder(h = 15, r1 = 5.0, r2 = 0.5, center = true);
+}
 
-translate(v = [12, -5, 2])
+translate(v = [12, -5, 2.1])
 long_sphere(6, 1.5);
 }
 
