@@ -72,5 +72,6 @@ module conquerer()
 	}
 }
 
-conquerer();
+translate (v = [-30, 0, 0])
+	conquerer();
 
