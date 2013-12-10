@@ -7,7 +7,6 @@ Too much to list, but here's a list anyway:
 * Engineering screen
     Damage reporting
     Damage repairing
-    Coolant distribution(?)
     make comms power do something
     Some sliders set only a maximum, while others control power usage
 	this is confusing.  Figure something out to make it less confusing.
@@ -19,13 +18,9 @@ Too much to list, but here's a list anyway:
     bridge-to-bridge comm
     take damage into account
 
-* Finish Navigation screen
-  (various improvments.)
-  take damage into account
+* Navigation screen
 
-* Finish weapons screen
-  beam weapon
-  take damage into account
+* Weapons screen
 
 * Science station
   take damage into account
@@ -75,19 +70,15 @@ Too much to list, but here's a list anyway:
 * place stations more carefully relative to one another (not right next
   door to another station.)
 * Need to be able to checkpoint-restart universe state on server side
-* Think about allowing weapons to aim vertically and taking altitude
-  into account for lasers and torpedoes.
+  (how do lua scripts fit into checkpoint restart?)
 * Right now, laser/torpedo collision detection is too easy/sloppy.
-* Consider dead-reckoning laser/torpedo/ship positions client side between
-  server updates.
 * more lua event callbacks, some mission scripts done with lua
   basically, flesh out the lua scripting system.
-
-
-* REAL 3D -- have full control of yaw/pitch/roll, be able to look and
-  fly in any direction, etc. (DONE)
-
-* FIX THE COORDINATE SYSTEMS (DONE)
+* Remove use of "heading" field in snis_entity
+* Make space monster do something interesting
+* Allow to somehow mine asteroids and derelicts for something (fuel?)
+* make tractor beam work again/better.
+* some kind of visual effect for ships that are warping
 
 NICE TO HAVE:
 
