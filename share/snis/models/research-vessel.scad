@@ -47,7 +47,7 @@ module nose_cone()
 			translate(v = [-10, 0, 0])
 			rotate(a = 90, v = [0, 1, 0])
 				cylinder(h = 5, r1 = 10, r2 = 7, center = true);
-			translate(v = [-17.5, u, 0])
+			translate(v = [-17.5, 0, 0])
 				rotate(a = 90, v = [0, 1, 0])
 					cylinder(h = 10, r1 = 3, r2 = 10, center = true);
 			translate(v = [-21.4, 0, 0])
@@ -98,8 +98,6 @@ module tail()
 module fuel_tank()
 {
 	sphere(r = 5.5);
-	translate(v = [12, 0, 0])
-		sphere(r = 5.5);
 }
 
 module whole_ship() {
@@ -116,7 +114,53 @@ module whole_ship() {
 	}
 }
 
+module dish()
+{
+	translate(v = [-5, 35, -4.5])
+	scale(v = [0.5, 0.5, 0.5]) {
+		translate(v = [-10, 0, 0])
+			cube(size = [20, 1, 1], center = true);
+		translate(v = [-20, -35, 0])
+			cube(size = [1, 69, 1], center = true);
+		translate(v = [-20, 0, 0])
+			rotate(v = [1, 0, 0], a = 74)
+			cube(size = [1, 1, 64]);
+		translate(v = [-20, 0, -0.5])
+			rotate(v = [0, 0, 1], a = -20)
+			rotate(v = [1, 0, 0], a = 90)
+			cube(size = [1, 1, 65]);
+		translate(v = [-20, 0, -0.5])
+			cube(size = [4, 5, 5], center = true);
+		difference() {
+			sphere(r = 20);
+			translate(v = [5.1, 0, 0]) {
+				sphere(r = 23.5);
+			}
+			rotate(a = 90, v = [0, 1, 0])
+				cylinder(h = 26, r1 = 50, r2 = 50, center = true);
+		}
+	}
+}
+
+module science_module()
+{
+	translate(v = [41, 0, 0])
+	rotate(v = [0, 1, 0], a = 90) {
+		translate(v = [0, 0, 15])
+		cylinder(h = 5, r1 = 12, r2 = 2, center = true);
+		translate(v = [0, 0, -15])
+		cylinder(h = 5, r1 = 2, r2 = 12, center = true);
+		cylinder(h = 26, r1 = 12, r2 = 12, center = true);
+		rotate(a = 90, v = [0, 1, 0])
+			cylinder(h = 26, r1 = 5, r2 = 5, center = true);
+		rotate(a = 90, v = [1, 0, 0])
+			cylinder(h = 26, r1 = 5, r2 = 5, center = true);
+	}
+}
+
 rotate(a = 180, v = [0, 1, 0])
 rotate(a = -90, v = [1, 0, 0])
 whole_ship();
+dish();
+science_module();
 
