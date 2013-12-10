@@ -8570,6 +8570,7 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 		"PHASER BANKS",
 		"PHOTON WEAPONS",
 		"SHIELD SYSTEM",
+		"TRACTOR SYSTEM",
 	};
 
 	if (!on_damcon_screen(o, &placeholder_system))
@@ -8639,6 +8640,7 @@ static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 	case DAMCON_TYPE_PHASERBANK:
 	case DAMCON_TYPE_TORPEDOSYSTEM:
 	case DAMCON_TYPE_SHIELDSYSTEM:
+	case DAMCON_TYPE_TRACTORSYSTEM:
 		draw_damcon_system(w, o);
 		break;
 	case DAMCON_TYPE_SOCKET:

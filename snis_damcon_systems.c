@@ -14,6 +14,7 @@ static char *damcon_system_names[] = {
 	"SENSOR SYSTEM",
 	"NAVIGATION SYSTEM",
 	"SHIELD SYSTEM",
+	"TRACTOR BEAM SYSTEM",
 };
 
 static char *damcon_part_names[][PARTS_PER_DAMCON_SYSTEM] = {
@@ -65,6 +66,13 @@ static char *damcon_part_names[][PARTS_PER_DAMCON_SYSTEM] = {
 		"photonic charge stabilizer",
 		"phase conjugate baryon reflector",
 		"Tachyonic energy absorbtion matrix", 
+	},
+	{	/* tractor beam system parts */
+		"Van Grinsven field modulator",
+		"Dual stage ion brake",
+		"Graviton induction unit",
+		"Black hole suppressor",
+		"Turbo-gravitaser collimator",
 	},
 };
 
