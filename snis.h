@@ -177,6 +177,9 @@ struct damcon_data;
 #define AI_MODE_FLEET_MEMBER 5
 #define AI_MODE_FLEET_LEADER 6
 
+/* distance more than which fleet ships will warp back to position rather than simply flying */
+#define FLEET_WARP_DISTANCE 5000.0
+
 struct ai_attack_data {
 	int32_t victim_id;
 };
