@@ -648,33 +648,116 @@ static void snis_queue_add_global_sound(uint16_t sound_number)
 static int add_explosion(double x, double y, double z, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type);
 
-static int roll_damage(double weapons_factor, double shield_strength, uint8_t system)
+static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
+			struct damcon_data *d, int damage, int damcon_system)
 {
-	int damage = system + (uint8_t) (weapons_factor *
-				(double) (20 + snis_randn(40)) * (1.2 - shield_strength));
-	if (damage > 255)
-		damage = 255;
-	return damage;
+	int i, n, count;
+	struct snis_damcon_entity *p;
+	int total_damage;
+	int per_part_damage[DAMCON_PARTS_PER_SYSTEM];
+
+	if (!d) /* OBJTYPE_SHIP2 don't have all the systems OBJTYPE_SHIP1 have */
+		return;
+
+	total_damage = damage * DAMCON_PARTS_PER_SYSTEM;
+
+	/* distribute total_damage into per_part_damage[] 
+	 * (unequally, just because it is easy)
+	 */
+	for (i = 0; i < DAMCON_PARTS_PER_SYSTEM - 1; i++) {
+		per_part_damage[i] = snis_randn(total_damage);
+		total_damage -= per_part_damage[i];
+	}
+	per_part_damage[DAMCON_PARTS_PER_SYSTEM - 1] = total_damage;
+
+	/* Now scramble per_part_damage[] so the same system doesn't
+	 * get hammered over and over by inequal distribution above
+	 */
+	for (i = 0; i < DAMCON_PARTS_PER_SYSTEM; i++) {
+		int n, tmp;
+
+		do {
+			n = snis_randn(100) % DAMCON_PARTS_PER_SYSTEM;
+		} while (n == i);
+		tmp = per_part_damage[i];
+		per_part_damage[i] = per_part_damage[n];
+		per_part_damage[n] = tmp;
+	}
+
+	/* distribute the per-part-damage among the parts */
+	count = 0;
+	n = snis_object_pool_highest_object(d->pool);
+	for (i = 0; i < n; i++) {
+		int new_damage;
+		p = &d->o[i];
+		if (p->type != DAMCON_TYPE_PART)
+			continue;
+		if (p->tsd.part.system != damcon_system)
+			continue;
+		new_damage = p->tsd.part.damage + per_part_damage[count];
+		if (new_damage > 255)
+			new_damage = 255;
+		p->tsd.part.damage = new_damage;
+		count++;
+		p->timestamp = universe_timestamp;
+		if (count == DAMCON_PARTS_PER_SYSTEM)
+			break;
+	}
+	return;
 }
 
+static int roll_damage(struct snis_entity *o, struct damcon_data *d, 
+			double weapons_factor, double shield_strength, uint8_t system,
+			int damcon_system)
+{
+	int damage = (uint8_t) (weapons_factor *
+				(double) (20 + snis_randn(40)) * (1.2 - shield_strength));
+	if (damage + system > 255)
+		damage = 255 - system;
+
+	distribute_damage_to_damcon_system_parts(o, d, damage, damcon_system);
+	
+	return damage + system;
+}
+
+static int lookup_bridge_by_shipid(uint32_t shipid);
 static void calculate_torpedo_damage(struct snis_entity *o)
 {
 	double ss;
 	const double twp = TORPEDO_WEAPONS_FACTOR * (o->type == OBJTYPE_SHIP1 ? 0.333 : 1.0);
+	struct damcon_data *d = NULL;
+
+	if (o->type == OBJTYPE_SHIP1) {
+		int bridge = lookup_bridge_by_shipid(o->id);
+
+		if (bridge < 0) {
+			fprintf(stderr, "bug at %s:%d, bridge lookup failed.\n", __FILE__, __LINE__);
+			return;
+		}
+		d = &bridgelist[bridge].damcon;
+	}
 
 	ss = shield_strength(snis_randn(255), o->sdata.shield_strength,
 				o->sdata.shield_width,
 				o->sdata.shield_depth,
 				o->sdata.shield_wavelength);
 
-	o->tsd.ship.damage.shield_damage = roll_damage(twp, ss, o->tsd.ship.damage.shield_damage);
-	o->tsd.ship.damage.impulse_damage = roll_damage(twp, ss, o->tsd.ship.damage.impulse_damage);
-	o->tsd.ship.damage.warp_damage = roll_damage(twp, ss, o->tsd.ship.damage.warp_damage);
-	o->tsd.ship.damage.maneuvering_damage = roll_damage(twp, ss, o->tsd.ship.damage.maneuvering_damage);
-	o->tsd.ship.damage.phaser_banks_damage = roll_damage(twp, ss, o->tsd.ship.damage.phaser_banks_damage);
-	o->tsd.ship.damage.sensors_damage = roll_damage(twp, ss, o->tsd.ship.damage.sensors_damage);
-	o->tsd.ship.damage.comms_damage = roll_damage(twp, ss, o->tsd.ship.damage.comms_damage);
-	o->tsd.ship.damage.tractor_damage = roll_damage(twp, ss, o->tsd.ship.damage.tractor_damage);
+	o->tsd.ship.damage.shield_damage = roll_damage(o, d, twp, ss,
+			o->tsd.ship.damage.shield_damage, DAMCON_TYPE_SHIELDSYSTEM);
+	o->tsd.ship.damage.impulse_damage = roll_damage(o, d, twp, ss,
+			o->tsd.ship.damage.impulse_damage, DAMCON_TYPE_IMPULSE);
+	o->tsd.ship.damage.warp_damage = roll_damage(o, d, twp, ss,
+			o->tsd.ship.damage.warp_damage, DAMCON_TYPE_WARPDRIVE);
+	o->tsd.ship.damage.maneuvering_damage = roll_damage(o, d, twp, ss,
+			o->tsd.ship.damage.maneuvering_damage, DAMCON_TYPE_MANEUVERING);
+	o->tsd.ship.damage.phaser_banks_damage = roll_damage(o, d, twp, ss,
+			o->tsd.ship.damage.phaser_banks_damage, DAMCON_TYPE_PHASERBANK);
+	o->tsd.ship.damage.sensors_damage = roll_damage(o, d, twp, ss,
+			o->tsd.ship.damage.sensors_damage, DAMCON_TYPE_SENSORARRAY);
+	o->tsd.ship.damage.comms_damage = roll_damage(o, d, twp, ss,
+			o->tsd.ship.damage.comms_damage, DAMCON_TYPE_COMMUNICATIONS);
+	o->tsd.ship.damage.tractor_damage = roll_damage(o, d, twp, ss,
+			o->tsd.ship.damage.tractor_damage, DAMCON_TYPE_TRACTORSYSTEM);
 
 	if (o->tsd.ship.damage.shield_damage == 255) { 
 		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
