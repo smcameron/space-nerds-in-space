@@ -324,6 +324,9 @@ struct my_point_t *placeholder_part_spun_points;
 struct my_vect_obj placeholder_part;
 struct my_vect_obj placeholder_part_spun[128];
 
+static struct snis_entity *curr_science_guy = NULL;
+static struct snis_entity *prev_science_guy = NULL;
+
 void to_snis_heading_mark(const union quat *q, double *heading, double *mark)
 {
 	quat_to_heading_mark(q,heading,mark);
@@ -2209,6 +2212,11 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 		sng_set_foreground(ORANGERED);
 		snis_draw_line(w->window, gc, sx, sy - 2, sx, sy + 2);
 		snis_draw_line(w->window, gc, sx - 2, sy, sx + 2, sy);
+
+		if (curr_science_guy == &go[i]) {
+			sng_set_foreground(GREEN);
+			sng_current_draw_rectangle(w->window, gc, 0, sx-2, sy-2, 4, 4);
+		}
 	}
 }
 
@@ -3685,8 +3693,6 @@ static int process_weapons_manual(void)
 	return 0;
 }
 
-static struct snis_entity *curr_science_guy = NULL;
-static struct snis_entity *prev_science_guy = NULL;
 static int process_sci_select_target_packet(void)
 {
 	unsigned char buffer[sizeof(struct snis_sci_select_target_packet)];
