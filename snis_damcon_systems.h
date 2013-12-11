@@ -14,5 +14,6 @@ GLOBAL char *damcon_system_name(uint8_t system);
 GLOBAL char *damcon_tool_name(uint8_t tool);
 GLOBAL char *damcon_damage_name(uint8_t damage);
 
+#undef GLOBAL
 #endif
 
