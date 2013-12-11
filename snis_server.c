@@ -2057,6 +2057,30 @@ static double robot_clawy(struct snis_damcon_entity *o)
 }
 
 static int lookup_by_damcon_id(struct damcon_data *d, int id);
+
+static void damcon_repair_socket_move(struct snis_damcon_entity *o,
+					struct damcon_data *d)
+{
+	int i, id, new_damage;
+	struct snis_damcon_entity *part = NULL;
+
+	id = o->tsd.socket.contents_id;
+	if (id == DAMCON_SOCKET_EMPTY)
+		return;
+	i = lookup_by_damcon_id(d, id);
+	if (i < 0)
+		return;
+	part = &d->o[i];
+
+	new_damage = part->tsd.part.damage - 5;
+	if (new_damage < 0)
+		new_damage = 0;
+	if (part->tsd.part.damage != new_damage) {
+		part->tsd.part.damage = new_damage;
+		part->timestamp = universe_timestamp;
+	}
+}
+
 static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *d)
 {
 	double vx, vy, lastx, lasty, lasth, dv;
@@ -4182,12 +4206,16 @@ static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 {
 	int i, p, px, py;
 	struct snis_damcon_entity *socket;
+	damcon_move_function fn = NULL;
 	int n;
 
-	if (system != DAMCON_TYPE_REPAIR_STATION)
+	if (system != DAMCON_TYPE_REPAIR_STATION) {
 		n = PARTS_PER_DAMCON_SYSTEM;
-	else
+		fn = NULL;
+	} else {
 		n = 2;
+		fn = damcon_repair_socket_move;
+	}
 
 	for (i = 0; i < n; i++) {
 		if (left_side) {
@@ -4197,7 +4225,7 @@ static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 			px = x - dcxo[i] + 210 + 30;	
 			py = y + dcyo[i];	
 		}
-		p = add_generic_damcon_object(d, px, py, DAMCON_TYPE_SOCKET, NULL);
+		p = add_generic_damcon_object(d, px, py, DAMCON_TYPE_SOCKET, fn);
 		d->o[p].timestamp = universe_timestamp + 1;
 		d->o[p].tsd.socket.system = system;
 		d->o[p].tsd.socket.part = i;
