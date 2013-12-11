@@ -4249,7 +4249,7 @@ static void add_damcon_systems(struct damcon_data *d)
 	x = 2 * DAMCONXDIM / 3 - DAMCONXDIM / 2;
 	d->o[i].timestamp = universe_timestamp + 1;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_TRACTORSYSTEM, NULL);
-	add_damcon_sockets(d, x, y, DAMCON_TYPE_TRACTORSYSTEM, 1);
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_TRACTORSYSTEM, 0);
 }
 
 static void add_damcon_parts(struct damcon_data *d)
