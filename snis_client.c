@@ -8580,7 +8580,7 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 	y = damcony_to_screeny(o->y);
 	sng_set_foreground(WHITE);
 	sng_draw_vect_obj(w, gc, &placeholder_system, x, y);
-	sng_abs_xy_draw_string(w, gc, system_label[o->type - 1],
+	sng_abs_xy_draw_string(w, gc, system_label[o->type],
 				NANO_FONT, x + 75, y);
 }
 
@@ -8636,9 +8636,9 @@ static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 	case DAMCON_TYPE_WARPDRIVE:
 	case DAMCON_TYPE_SENSORARRAY:
 	case DAMCON_TYPE_COMMUNICATIONS:
-	case DAMCON_TYPE_NAVIGATION:
+	case DAMCON_TYPE_MANEUVERING:
 	case DAMCON_TYPE_PHASERBANK:
-	case DAMCON_TYPE_TORPEDOSYSTEM:
+	case DAMCON_TYPE_IMPULSE:
 	case DAMCON_TYPE_SHIELDSYSTEM:
 	case DAMCON_TYPE_TRACTORSYSTEM:
 		draw_damcon_system(w, o);

@@ -7,25 +7,25 @@
 #define ARRAYSIZE(x) (sizeof(x) / sizeof(x[0]))
 
 static char *damcon_system_names[] = {
-	"PHASER BANKS",
-	"PHOTON TORPEDO SYSTEM",
-	"WARP DRIVE",
-	"COMMUNICATIONS SYSTEM",
-	"SENSOR SYSTEM",
-	"NAVIGATION SYSTEM",
 	"SHIELD SYSTEM",
+	"IMPULSE DRIVE",
+	"WARP DRIVE",
+	"MANEUVERING",
+	"PHASER BANKS",
+	"SENSOR SYSTEM",
+	"COMMUNICATIONS SYSTEM",
 	"TRACTOR BEAM SYSTEM",
 };
 
 static char *damcon_part_names[][PARTS_PER_DAMCON_SYSTEM] = {
-	{	/* Phaser bank parts */
-		"phased enluxinator",
-		"phase transfer matrix",
-		"annular phase conjugator",
-		"photonic phase tuner",
-		"six channel Rose frequency modulator",
+	{	/* shield system parts */
+		"Von Kurnatowski field generator",
+		"furion reflector matrix",
+		"photonic charge stabilizer",
+		"phase conjugate baryon reflector",
+		"Tachyonic energy absorbtion matrix", 
 	},
-	{	/* photon torpedo parts */
+	{	/* impulse drive parts */
 		"positron emitter tube",
 		"plasma current regulator",
 		"Wilhelm junction",
@@ -39,12 +39,19 @@ static char *damcon_part_names[][PARTS_PER_DAMCON_SYSTEM] = {
 		"Hibbert space multiplexer",
 		"Sagan conundrum resolver",
 	},
-	{	/* communication system parts */
-		"radionic detector coil",
-		"radionic field modulator",
-		"Antenna control module",
-		"Hibbert space furionic amplifier",
-		"furionic field multiplexer",
+	{	/* maneuvering parts */
+		"inertial navigation module",
+		"thruster control module",
+		"Hibbert space transfer computer",
+		"star tracking module",
+		"furion spin gyroscope",
+	},
+	{	/* Phaser bank parts */
+		"phased enluxinator",
+		"phase transfer matrix",
+		"annular phase conjugator",
+		"photonic phase tuner",
+		"six channel Rose frequency modulator",
 	},
 	{	/* sensor system parts */
 		"furion detector array",
@@ -53,19 +60,12 @@ static char *damcon_part_names[][PARTS_PER_DAMCON_SYSTEM] = {
 		"subharmonic omni-stabilizer",
 		"furion-photon transformer ",
 	},
-	{	/* navigation system parts */
-		"inertial navigation module",
-		"thruster control module",
-		"Hibbert space transfer computer",
-		"star tracking module",
-		"furion spin gyroscope",
-	},
-	{	/* shield system parts */
-		"Von Kurnatowski field generator",
-		"furion reflector matrix",
-		"photonic charge stabilizer",
-		"phase conjugate baryon reflector",
-		"Tachyonic energy absorbtion matrix", 
+	{	/* communication system parts */
+		"radionic detector coil",
+		"radionic field modulator",
+		"Antenna control module",
+		"Hibbert space furionic amplifier",
+		"furionic field multiplexer",
 	},
 	{	/* tractor beam system parts */
 		"Van Grinsven field modulator",

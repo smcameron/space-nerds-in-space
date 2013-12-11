@@ -1945,10 +1945,11 @@ static int robot_collision_detect(struct snis_damcon_entity *o,
 			case DAMCON_TYPE_WARPDRIVE:
 			case DAMCON_TYPE_SENSORARRAY:
 			case DAMCON_TYPE_COMMUNICATIONS:
-			case DAMCON_TYPE_NAVIGATION:
 			case DAMCON_TYPE_PHASERBANK:
-			case DAMCON_TYPE_TORPEDOSYSTEM:
+			case DAMCON_TYPE_IMPULSE:
+			case DAMCON_TYPE_MANEUVERING:
 			case DAMCON_TYPE_SHIELDSYSTEM:
+			case DAMCON_TYPE_TRACTORSYSTEM:
 				/* ugh, this is ugly. Ideally, polygon intersection, but... bleah. */
 				if (x + 25 > t->x && x - 25 < t->x + 270 &&
 				    y + 25 > t->y - 90 && y - 25 < t->y + 90)
@@ -4147,16 +4148,16 @@ static void add_damcon_systems(struct damcon_data *d)
 	x = 2 * DAMCONXDIM / 3 - DAMCONXDIM / 2;
 	y = dy - DAMCONYDIM / 2;
 	d->o[i].timestamp = universe_timestamp + 1;
-	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_NAVIGATION, NULL);
-	add_damcon_sockets(d, x, y, DAMCON_TYPE_NAVIGATION, 0);
+	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_MANEUVERING, NULL);
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_MANEUVERING, 0);
 	y += dy;
 	d->o[i].timestamp = universe_timestamp + 1;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_PHASERBANK, NULL);
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_PHASERBANK, 0);
 	y += dy;
 	d->o[i].timestamp = universe_timestamp + 1;
-	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_TORPEDOSYSTEM, NULL);
-	add_damcon_sockets(d, x, y, DAMCON_TYPE_TORPEDOSYSTEM, 0);
+	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_IMPULSE, NULL);
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_IMPULSE, 0);
 	y += dy;
 	x = -DAMCONXDIM / 2;
 	d->o[i].timestamp = universe_timestamp + 1;

@@ -475,17 +475,17 @@ struct snis_damcon_entity;
 typedef void (*damcon_move_function)(struct snis_damcon_entity *o, struct damcon_data *d);
 typedef void (*damcon_draw_function)(void *drawable, struct snis_damcon_entity *o);
 
-#define DAMCON_TYPE_ROBOT 0
-#define DAMCON_TYPE_WARPDRIVE 1
-#define DAMCON_TYPE_SENSORARRAY 2
-#define DAMCON_TYPE_COMMUNICATIONS 3
-#define DAMCON_TYPE_NAVIGATION 4
-#define DAMCON_TYPE_PHASERBANK 5
-#define DAMCON_TYPE_TORPEDOSYSTEM 6
-#define DAMCON_TYPE_SHIELDSYSTEM 7
-#define DAMCON_TYPE_TRACTORSYSTEM 8
+#define DAMCON_TYPE_SHIELDSYSTEM 0
+#define DAMCON_TYPE_IMPULSE 1
+#define DAMCON_TYPE_WARPDRIVE 2
+#define DAMCON_TYPE_MANEUVERING 3
+#define DAMCON_TYPE_PHASERBANK 4
+#define DAMCON_TYPE_SENSORARRAY 5
+#define DAMCON_TYPE_COMMUNICATIONS 6
+#define DAMCON_TYPE_TRACTORSYSTEM 7
 #define DAMCON_TYPE_SOCKET 9
 #define DAMCON_TYPE_PART 10 
+#define DAMCON_TYPE_ROBOT 11 
 
 struct damcon_robot_type_specific_data {
 	uint32_t cargo_id; /* what the robot is carrying */
