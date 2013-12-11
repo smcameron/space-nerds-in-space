@@ -4182,8 +4182,14 @@ static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 {
 	int i, p, px, py;
 	struct snis_damcon_entity *socket;
+	int n;
 
-	for (i = 0; i < PARTS_PER_DAMCON_SYSTEM; i++) {
+	if (system != DAMCON_TYPE_REPAIR_STATION)
+		n = PARTS_PER_DAMCON_SYSTEM;
+	else
+		n = 2;
+
+	for (i = 0; i < n; i++) {
 		if (left_side) {
 			px = x + dcxo[i] + 30;	
 			py = y + dcyo[i];	
@@ -4195,14 +4201,17 @@ static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 		d->o[p].timestamp = universe_timestamp + 1;
 		d->o[p].tsd.socket.system = system;
 		d->o[p].tsd.socket.part = i;
-		socket = &d->o[p];
+		d->o[p].tsd.socket.contents_id = DAMCON_SOCKET_EMPTY;
 
-		p = add_generic_damcon_object(d, px, py, DAMCON_TYPE_PART, NULL);
-		d->o[p].timestamp = universe_timestamp + 1;
-		d->o[p].tsd.part.system = system;
-		d->o[p].tsd.part.part = i;
-		d->o[p].tsd.part.damage = 0;
-		socket->tsd.socket.contents_id = d->o[p].id;
+		if (system != DAMCON_TYPE_REPAIR_STATION) {
+			socket = &d->o[p];
+			p = add_generic_damcon_object(d, px, py, DAMCON_TYPE_PART, NULL);
+			d->o[p].timestamp = universe_timestamp + 1;
+			d->o[p].tsd.part.system = system;
+			d->o[p].tsd.part.part = i;
+			d->o[p].tsd.part.damage = 0;
+			socket->tsd.socket.contents_id = d->o[p].id;
+		}
 	}
 }
 
@@ -4257,6 +4266,7 @@ static void add_damcon_systems(struct damcon_data *d)
 	y += dy;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_REPAIR_STATION, NULL);
 	d->o[i].timestamp = universe_timestamp + 1;
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_REPAIR_STATION, 0);
 }
 
 static void add_damcon_parts(struct damcon_data *d)
