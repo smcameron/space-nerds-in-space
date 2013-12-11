@@ -87,6 +87,7 @@
 #include "joystick.h"
 #include "stacktrace.h"
 #include "snis_keyboard.h"
+#include "snis_damcon_systems.h"
 
 #include "vertex.h"
 #include "triangle.h"
@@ -8562,16 +8563,6 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 {
 	int x, y;
-	static char *system_label[] = {
-		"WARP DRIVE",
-		"SENSOR ARRAY",
-		"COMMUNICATIONS",
-		"NAVIGATION",
-		"PHASER BANKS",
-		"PHOTON WEAPONS",
-		"SHIELD SYSTEM",
-		"TRACTOR SYSTEM",
-	};
 
 	if (!on_damcon_screen(o, &placeholder_system))
 		return;
@@ -8580,7 +8571,7 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 	y = damcony_to_screeny(o->y);
 	sng_set_foreground(WHITE);
 	sng_draw_vect_obj(w, gc, &placeholder_system, x, y);
-	sng_abs_xy_draw_string(w, gc, system_label[o->type],
+	sng_abs_xy_draw_string(w, gc, damcon_system_name(o->type),
 				NANO_FONT, x + 75, y);
 }
 
