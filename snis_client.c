@@ -2282,7 +2282,7 @@ static void damcon_dirkey(int h, int v)
 				OPCODE_REQUEST_ROBOT_THRUST, thrust));
 	}
 	if (h) {
-		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
+		yaw = h > 0 ? YAW_LEFT : YAW_RIGHT;
 		queue_to_server(packed_buffer_new("hb",
 				OPCODE_REQUEST_ROBOT_YAW, yaw));
 	}
