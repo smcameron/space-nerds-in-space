@@ -8597,9 +8597,11 @@ static void draw_damcon_socket_or_part(GtkWidget *w, struct snis_damcon_entity *
 	sng_set_foreground(color);
 	sng_draw_vect_obj(w, gc, &placeholder_socket, x, y);
 	sng_abs_xy_draw_string(w, gc, msg, NANO_FONT, x - 10, y);
+#if 0
 	sng_set_foreground(AMBER);
 	snis_draw_line(w->window, gc, x, y - 20, x, y + 20);
 	snis_draw_line(w->window, gc, x - 20, y, x + 20, y);
+#endif
 }
 
 static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
@@ -8618,13 +8620,24 @@ static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 		return;
 	x = damconx_to_screenx(o->x);
 	y = damcony_to_screeny(o->y);
-	sprintf(msg, "%d %d", o->tsd.socket.system, o->tsd.socket.part);
+	sprintf(msg, "%d %d %d", o->tsd.part.system, o->tsd.part.part, o->tsd.part.damage);
 	sng_set_foreground(YELLOW);
 	sng_draw_vect_obj(w, gc, &placeholder_part_spun[byteangle], x, y);
-	sng_abs_xy_draw_string(w, gc, msg, NANO_FONT, x - 10, y);
-	sng_set_foreground(AMBER);
-	snis_draw_line(w->window, gc, x, y - 20, x, y + 20);
-	snis_draw_line(w->window, gc, x - 20, y, x + 20, y);
+	sng_abs_xy_draw_string(w, gc, msg, NANO_FONT, x - 25, y);
+	if (o->tsd.part.damage < 0.75 * 255.0)
+		sng_set_foreground(GREEN);
+	else if (o->tsd.part.damage < 0.90 * 255.0)
+		sng_set_foreground(YELLOW);
+	else {
+		if ((timer & 0x8) == 0) /* make red bar blink */
+			return;
+		sng_set_foreground(RED);
+	}
+	sng_current_draw_rectangle(w->window, gc, 0,
+			x - 30, y + 10, 60, 6);
+	sng_current_draw_rectangle(w->window, gc, 1,
+			x - 30, y + 10,
+			60.0 * (255 - o->tsd.part.damage) / 255.0, 6);
 }
 
 static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
