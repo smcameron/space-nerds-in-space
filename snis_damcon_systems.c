@@ -15,6 +15,7 @@ static char *damcon_system_names[] = {
 	"SENSOR SYSTEM",
 	"COMMUNICATIONS SYSTEM",
 	"TRACTOR BEAM SYSTEM",
+	"REPAIR STATION",
 };
 
 static char *damcon_part_names[][PARTS_PER_DAMCON_SYSTEM] = {
@@ -73,6 +74,13 @@ static char *damcon_part_names[][PARTS_PER_DAMCON_SYSTEM] = {
 		"Graviton induction unit",
 		"Black hole suppressor",
 		"Turbo-gravitaser collimator",
+	},
+	{	/* repair station parts... special case, no parts. */
+		"RS BUG", /* if you see these in the game, it's a bug. */
+		"RS BUG",
+		"RS BUG",
+		"RS BUG",
+		"RS BUG",
 	},
 };
 

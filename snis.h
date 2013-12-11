@@ -483,6 +483,7 @@ typedef void (*damcon_draw_function)(void *drawable, struct snis_damcon_entity *
 #define DAMCON_TYPE_SENSORARRAY 5
 #define DAMCON_TYPE_COMMUNICATIONS 6
 #define DAMCON_TYPE_TRACTORSYSTEM 7
+#define DAMCON_TYPE_REPAIR_STATION 8
 #define DAMCON_TYPE_SOCKET 9
 #define DAMCON_TYPE_PART 10 
 #define DAMCON_TYPE_ROBOT 11 
@@ -552,7 +553,7 @@ struct damcon_data {
 };
 
 #define DAMCONXDIM 800.0
-#define DAMCONYDIM 1800.0
+#define DAMCONYDIM 2000.0
 
 /* Time after being killed to wait for respawn */
 #define RESPAWN_TIME_SECS 20

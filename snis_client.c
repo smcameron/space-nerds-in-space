@@ -8645,6 +8645,7 @@ static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 	case DAMCON_TYPE_IMPULSE:
 	case DAMCON_TYPE_SHIELDSYSTEM:
 	case DAMCON_TYPE_TRACTORSYSTEM:
+	case DAMCON_TYPE_REPAIR_STATION:
 		draw_damcon_system(w, o);
 		break;
 	case DAMCON_TYPE_SOCKET:
