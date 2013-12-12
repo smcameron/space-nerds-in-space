@@ -2401,21 +2401,28 @@ static void do_tractor_beam(void)
 	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_TRACTORBEAM));
 }
 
+static void robot_gripper_button_pressed(void *x);
 static void do_laser(void)
 {
-	if (displaymode != DISPLAYMODE_WEAPONS)
-		return;
-	if (weapons.manual_mode == WEAPONS_MODE_MANUAL)
-		queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_MANUAL_LASER));
-	else
-		queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_LASER));
+	switch (displaymode) {
+	case DISPLAYMODE_WEAPONS: 
+		if (weapons.manual_mode == WEAPONS_MODE_MANUAL)
+			queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_MANUAL_LASER));
+		else
+			queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_LASER));
+		break;
+	case DISPLAYMODE_DAMCON:
+		robot_gripper_button_pressed(NULL);
+		break;
+	default:
+		break;
+	}
 }
 
 static void robot_backward_button_pressed(void *x);
 static void robot_forward_button_pressed(void *x);
 static void robot_left_button_pressed(void *x);
 static void robot_right_button_pressed(void *x);
-static void robot_gripper_button_pressed(void *x);
 static void robot_auto_button_pressed(void *x);
 static void robot_manual_button_pressed(void *x);
 
