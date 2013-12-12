@@ -18,53 +18,53 @@ static char *damcon_system_names[] = {
 	"REPAIR STATION",
 };
 
-static char *damcon_part_names[][PARTS_PER_DAMCON_SYSTEM] = {
+static char *damcon_part_names[][DAMCON_PARTS_PER_SYSTEM] = {
 	{	/* shield system parts */
 		"Von Kurnatowski field generator",
 		"furion reflector matrix",
 		"photonic charge stabilizer",
-		"phase conjugate baryon reflector",
-		"Tachyonic energy absorbtion matrix", 
+		/* "phase conjugate baryon reflector",
+		"Tachyonic energy absorbtion matrix",  */
 	},
 	{	/* impulse drive parts */
 		"positron emitter tube",
-		"plasma current regulator",
-		"Wilhelm junction",
+		/* "plasma current regulator",
+		"Wilhelm junction", */
 		"antimatter backflash suppressor",
 		"positronic charging coil",
 	},
 	{	/* warp drive parts */
-		"relativistic torque amplifier",
+		/* "relativistic torque amplifier", */
 		"transient wormhole suppressor",
-		"plasma wastegate controller",
+		/* "plasma wastegate controller", */
 		"Hibbert space multiplexer",
 		"Sagan conundrum resolver",
 	},
 	{	/* maneuvering parts */
 		"inertial navigation module",
-		"thruster control module",
+		/* "thruster control module", */
 		"Hibbert space transfer computer",
-		"star tracking module",
+		/* "star tracking module", */
 		"furion spin gyroscope",
 	},
 	{	/* Phaser bank parts */
 		"phased enluxinator",
-		"phase transfer matrix",
+		/* "phase transfer matrix", */
 		"annular phase conjugator",
-		"photonic phase tuner",
-		"six channel Rose frequency modulator",
+		/* "photonic phase tuner", */
+		"six channel Rose frequency modulator", 
 	},
 	{	/* sensor system parts */
 		"furion detector array",
-		"harmonic damper circuit",
-		"harmonic differential amplifier",
+		/* "harmonic damper circuit", */
+		/* "harmonic differential amplifier", */
 		"subharmonic omni-stabilizer",
 		"furion-photon transformer ",
 	},
 	{	/* communication system parts */
 		"radionic detector coil",
-		"radionic field modulator",
-		"Antenna control module",
+		/* "radionic field modulator", */
+		/* "Antenna control module", */
 		"Hibbert space furionic amplifier",
 		"furionic field multiplexer",
 	},
@@ -72,15 +72,15 @@ static char *damcon_part_names[][PARTS_PER_DAMCON_SYSTEM] = {
 		"Van Grinsven field modulator",
 		"Dual stage ion brake",
 		"Graviton induction unit",
-		"Black hole suppressor",
-		"Turbo-gravitaser collimator",
+		/* "Black hole suppressor",
+		"Turbo-gravitaser collimator", */
 	},
 	{	/* repair station parts... special case, no parts. */
 		"RS BUG", /* if you see these in the game, it's a bug. */
 		"RS BUG",
 		"RS BUG",
-		"RS BUG",
-		"RS BUG",
+		/* "RS BUG",
+		"RS BUG", */
 	},
 };
 
@@ -114,7 +114,7 @@ char *damcon_part_name(uint8_t system, uint8_t part)
 {
 	if (system < 0 || system >= ARRAYSIZE(damcon_part_names))
 		return "UNKNOWN";
-	if (part < 0 || part >= PARTS_PER_DAMCON_SYSTEM)
+	if (part < 0 || part >= DAMCON_PARTS_PER_SYSTEM)
 		return "UNKNOWN";
 	return damcon_part_names[system][part];
 }

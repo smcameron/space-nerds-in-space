@@ -7,7 +7,7 @@
 #define GLOBAL
 #endif
 
-#define PARTS_PER_DAMCON_SYSTEM 5
+#define DAMCON_PARTS_PER_SYSTEM 3
 
 GLOBAL char *damcon_part_name(uint8_t system, uint8_t part);
 GLOBAL char *damcon_system_name(uint8_t system);

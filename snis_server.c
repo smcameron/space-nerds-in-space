@@ -4238,7 +4238,7 @@ static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 	int n;
 
 	if (system != DAMCON_TYPE_REPAIR_STATION) {
-		n = PARTS_PER_DAMCON_SYSTEM;
+		n = DAMCON_PARTS_PER_SYSTEM;
 		fn = NULL;
 	} else {
 		n = 2;
