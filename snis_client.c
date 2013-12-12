@@ -4184,7 +4184,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			if (rc)
 				goto protocol_error;
 			break;
-		case OPCODE_OVERHEAT_DAMAGE:
+		case OPCODE_SILENT_UPDATE_DAMAGE:
 			rc = process_ship_damage_packet(0);
 			if (rc)
 				goto protocol_error;

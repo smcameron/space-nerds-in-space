@@ -829,7 +829,7 @@ static void calculate_laser_starbase_damage(struct snis_entity *o, uint8_t wavel
 }
 
 static void send_ship_damage_packet(struct snis_entity *o);
-static void send_overheat_ship_damage_packet(struct snis_entity *o);
+static void send_silent_ship_damage_packet(struct snis_entity *o);
 static int lookup_by_id(uint32_t id);
 
 static struct snis_entity *lookup_entity_by_id(uint32_t id)
@@ -6839,7 +6839,7 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		send_update_power_model_data(c, o);
 		send_update_coolant_model_data(c, o);
 		if (o->tsd.ship.overheating_damage_done)
-			send_overheat_ship_damage_packet(o); /* sends to all clients. */
+			send_silent_ship_damage_packet(o); /* sends to all clients. */
 		break;
 	case OBJTYPE_SHIP2:
 		send_econ_update_ship_packet(c, o);
@@ -7166,9 +7166,9 @@ static void send_ship_damage_packet(struct snis_entity *o)
 	send_generic_ship_damage_packet(o, OPCODE_UPDATE_DAMAGE);
 }
 
-static void send_overheat_ship_damage_packet(struct snis_entity *o)
+static void send_silent_ship_damage_packet(struct snis_entity *o)
 {
-	send_generic_ship_damage_packet(o, OPCODE_OVERHEAT_DAMAGE);
+	send_generic_ship_damage_packet(o, OPCODE_SILENT_UPDATE_DAMAGE);
 }
 
 static void send_comms_packet(char *sender, const char *str)
@@ -7766,7 +7766,7 @@ static void move_damcon_entities_on_bridge(int bridge_number)
 		}
 	}
 	if (changed)
-		send_ship_damage_packet(o);
+		send_silent_ship_damage_packet(o);
 }
 
 static void move_damcon_entities(void)
