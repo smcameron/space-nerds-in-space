@@ -7656,16 +7656,89 @@ static int start_listener_thread(void)
 	return listener_port;
 }
 
+static void count_socket_as_empty(float *damage, int system)
+{
+	/* Empty socket counts as full damage for that part */
+	damage[system] += 255.0f / (float) DAMCON_PARTS_PER_SYSTEM;
+}
+
 static void move_damcon_entities_on_bridge(int bridge_number)
 {
-	int i;
+	int i, j;
 	struct damcon_data *d = &bridgelist[bridge_number].damcon;
+	struct snis_damcon_entity *socket, *part;
+	float damage[8];
+	int nobjs;
+
+	for (i = 0; i < 8; i++)
+		damage[i] = 0.0f;
 
 	if (!d->pool)
 		return;
-	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++)
+
+	nobjs = snis_object_pool_highest_object(d->pool);
+	for (i = 0; i <= nobjs; i++) {
+		int id;
+
 		if (d->o[i].move)
 			d->o[i].move(&d->o[i], d);
+
+		/* As long as we're iterating over all the damcon objects
+		 * We may as well compute cumulative damage
+		 */
+		if (d->o[i].type != DAMCON_TYPE_SOCKET)
+			continue;
+		socket = &d->o[i];
+		if (socket->tsd.socket.system >= 8)
+			continue;
+		if (socket->tsd.socket.system < 0)
+			continue;
+		id = socket->tsd.socket.contents_id;
+		if (id == DAMCON_SOCKET_EMPTY) {
+			count_socket_as_empty(damage, socket->tsd.socket.system);
+			continue;
+		}
+
+		j = lookup_by_damcon_id(d, id);
+		if (j < 0) {
+			printf("j unexpectedly zero at %s:%d\n", __FILE__, __LINE__);
+			continue;
+		}
+		part = &d->o[j];
+
+		/* part is in wrong system? */
+		if (part->tsd.part.system != socket->tsd.socket.system) {
+			count_socket_as_empty(damage, socket->tsd.socket.system);
+			continue;
+		}
+		/* part is in right system, but wrong socket? */
+		if (part->tsd.part.part != socket->tsd.socket.part) {
+			count_socket_as_empty(damage, socket->tsd.socket.system);
+			continue;
+		}
+		damage[part->tsd.part.system] +=
+			(float) part->tsd.part.damage / (float) DAMCON_PARTS_PER_SYSTEM;
+	}
+
+	/* Update ship with damage info */
+	int ship = lookup_by_id(bridgelist[bridge_number].shipid);
+	if (ship < 0) {
+		printf("ship unexpectedly negative at %s:%d\n", __FILE__, __LINE__);
+		return;
+	}
+	struct snis_entity *o = &go[ship];
+
+	BUILD_ASSERT(sizeof(o->tsd.ship.damage) == 8);
+	int changed = 0;
+	for (i = 0; i < 8; i++) {
+		unsigned char *x = (unsigned char *) &o->tsd.ship.damage;
+		if (x[i] != (unsigned char) damage[i]) {
+			x[i] = (unsigned char) damage[i];
+			changed = 1;
+		}
+	}
+	if (changed)
+		send_ship_damage_packet(o);
 }
 
 static void move_damcon_entities(void)
