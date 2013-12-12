@@ -767,11 +767,20 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 
 static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, float power)
 {
-	int i;
+	int b, i;
 	unsigned char *x = (unsigned char *) &o->tsd.ship.damage;
 	double ss;
 	float power_factor = (float) power / 255.0;
 	float damage;
+	float old_damage;
+	struct damcon_data *d;
+
+	if (o->type == OBJTYPE_SHIP1) {
+		b = lookup_bridge_by_shipid(o->id);
+		if (b < 0)
+			fprintf(stderr, "b < 0 at %s:%d\n", __FILE__, __LINE__);
+		d = &bridgelist[b].damcon;
+	}
 
 	ss = shield_strength(wavelength, o->sdata.shield_strength,
 				o->sdata.shield_width,
@@ -785,10 +794,14 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 		if (damage < 0.5)
 			damage = 1.0;
 
+		old_damage = (float) x[i];
 		damage = (int) ((float) x[i] + damage);
 		if (damage > 255.0)
 			damage = 255.0;
 		x[i] = (uint8_t) damage;
+		damage = x[i] - old_damage;
+		if (o->type == OBJTYPE_SHIP1)
+			distribute_damage_to_damcon_system_parts(o, d, (int) damage, i);
 	}
 	if (o->tsd.ship.damage.shield_damage == 255) {
 		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
@@ -2376,10 +2389,16 @@ static void do_temperature_computations(struct snis_entity *o)
 	}
 }
 
-static int calc_overheat_damage(uint8_t *system, uint8_t temperature)
+static int calc_overheat_damage(struct snis_entity *o, struct damcon_data *d,
+				uint8_t *system, uint8_t temperature)
 {
-	float damage, overheat_amount, new_value;
+	float damage, overheat_amount, old_value, new_value;
+	int system_number = system - (unsigned char *) &o->tsd.ship.damage;
 
+	BUILD_ASSERT(sizeof(o->tsd.ship.damage) == 8);
+	if (system_number < 0 || system_number >= 8)
+		fprintf(stderr, "system_number out of range: %d at %s:%d\n",
+			system_number, __FILE__, __LINE__);
 	if (temperature < (uint8_t) (0.9f * 255.0f))
 		return 0; /* temp is ok, no damage */
 
@@ -2390,32 +2409,41 @@ static int calc_overheat_damage(uint8_t *system, uint8_t temperature)
 
 	damage = (float) snis_randn(5) / 100.0f;
 	damage *= overheat_amount; 
-	new_value = (float) *system + 255.0f * damage;
+	old_value = (float) *system;
+	new_value = old_value + 255.0f * damage;
 	if (new_value > 255.0f)
 		new_value = 255.0f;
 	*system = (uint8_t) new_value;
+	damage = (new_value - old_value);
+	distribute_damage_to_damcon_system_parts(o, d, (int) damage, system_number);
 	return 1;
 }
 
 static int do_overheating_damage(struct snis_entity *o)
 {
 	int damage_was_done = 0;
+	struct damcon_data *d;
+	int b;
 
-	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.warp_damage,
+	b = lookup_bridge_by_shipid(o->id);
+	d = &bridgelist[b].damcon;
+	
+
+	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.warp_damage,
 			o->tsd.ship.temperature_data.warp_damage);
-	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.sensors_damage,
+	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.sensors_damage,
 			o->tsd.ship.temperature_data.sensors_damage);
-	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.phaser_banks_damage,
+	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.phaser_banks_damage,
 			o->tsd.ship.temperature_data.phaser_banks_damage);
-	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.maneuvering_damage,
+	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.maneuvering_damage,
 			o->tsd.ship.temperature_data.maneuvering_damage);
-	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.shield_damage,
+	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.shield_damage,
 			o->tsd.ship.temperature_data.shield_damage);
-	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.comms_damage,
+	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.comms_damage,
 			o->tsd.ship.temperature_data.comms_damage);
-	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.impulse_damage,
+	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.impulse_damage,
 			o->tsd.ship.temperature_data.impulse_damage);
-	damage_was_done += calc_overheat_damage(&o->tsd.ship.damage.tractor_damage,
+	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.tractor_damage,
 			o->tsd.ship.temperature_data.tractor_damage);
 	return damage_was_done;
 }
