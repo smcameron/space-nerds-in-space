@@ -6,6 +6,7 @@
 #include "snis_typeface.h"
 #include "snis_graph.h"
 #include "wwviaudio.h"
+#include "mathutils.h"
 
 #define SLIDERS_DEFINE_GLOBALS
 #include "snis_sliders.h"
@@ -23,6 +24,7 @@ struct slider {
 	int font;
 	int colors_reversed;
 	unsigned char timer;
+	unsigned char fuzz;
 };
 
 static int slider_sound = -1;
@@ -55,6 +57,7 @@ struct slider *snis_slider_init(int x, int y, int length, int height, int color,
 	s->colors_reversed = 0;
 	s->timer = 0;
 	s->font = TINY_FONT;
+	s->fuzz = 0;
 	return s;
 }
 
@@ -88,6 +91,14 @@ static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 	int bar_color;
 	int ptr_height = s->height / 2;
 	int ptr_width = s->height / 3;
+	float f;
+
+	if (s->fuzz) {
+		f = (float) ((snis_randn(1000) - 500.0f) * s->fuzz) / 100000.0f;
+		f = f * s->height;
+	} else {
+		f = 0.0f;
+	}
 
 	s->timer++;
 	v = s->sample();
@@ -98,8 +109,11 @@ static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 	sng_set_foreground(s->color);
 	sng_current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->height, s->length);
 	height = s->value * s->length - 1;
+	height += f;
 	if (height < 0)
 		height = 0;
+	if (height > s->length - 1)
+		height = s->length - 1;
 	if (!s->clicked)
 		sng_set_foreground(bar_color);
 	sng_current_draw_rectangle(w->window, gc, 1, s->x + 1, s->y + s->length - height,
@@ -144,6 +158,14 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 		snis_slider_draw_vertical(w, gc, s);
 		return;
 	}
+	float f;
+
+	if (s->fuzz) {
+		f = (float) ((snis_randn(1000) - 500.0f) * s->fuzz) / 100000.0f;
+		f = f * s->height;
+	} else {
+		f = 0.0f;
+	}
 
 	v = s->sample();
 	s->value = (v - s->r1) / (s->r2 - s->r1);
@@ -152,8 +174,11 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 	sng_set_foreground(s->color);
 	sng_current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->length, s->height);
 	width = s->value * s->length - 1;
+	width = width + f;
 	if (width < 0)
 		width = 0;
+	if (width > s->length - 1)
+		width = s->length - 1;
 	if (!s->clicked)
 		sng_set_foreground(bar_color);
 	sng_current_draw_rectangle(w->window, gc, 1, s->x + 1, s->y + 1, width, s->height - 2);
@@ -246,5 +271,10 @@ void snis_slider_set_color_scheme(struct slider *s, int reversed)
 void snis_slider_set_label_font(struct slider *s, int font)
 {
 	s->font = font;
+}
+
+void snis_slider_set_fuzz(struct slider *s, int fuzz)
+{
+	s->fuzz = fuzz & 0x0ff;
 }
 
