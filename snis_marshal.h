@@ -93,6 +93,8 @@ GLOBAL int packed_buffer_append_ds32(struct packed_buffer *pb, double d, int32_t
 GLOBAL double packed_buffer_extract_du32(struct packed_buffer *pb, uint32_t scale);
 GLOBAL double packed_buffer_extract_ds32(struct packed_buffer *pb, int32_t scale);
 GLOBAL int calculate_buffer_size(const char *format);
+GLOBAL int packed_buffer_queue_length(struct packed_buffer_queue *pbq, pthread_mutex_t *mutex);
+GLOBAL int packed_buffer_length(struct packed_buffer *pb);
 
 #undef GLOBAL
 #endif

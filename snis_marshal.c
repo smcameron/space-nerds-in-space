@@ -722,6 +722,25 @@ int packed_buffer_unpack(void * buffer, const char *format, ...)
 	return rc;
 }
 
+int packed_buffer_queue_length(struct packed_buffer_queue *pbq, pthread_mutex_t *mutex)
+{
+	int totalbytes;
+	struct packed_buffer_queue_entry *i;
+
+	/* Count total bytes in buffer queue */
+	lockmutex(mutex);
+	totalbytes = 0;
+	for (i = pbq->head; i; i = i->next)
+		totalbytes += i->buffer->buffer_cursor;
+	unlockmutex(mutex);
+	return totalbytes;
+}
+
+int packed_buffer_length(struct packed_buffer *pb)
+{
+	return pb->buffer_cursor;
+}
+
 #ifdef TEST_MARSHALL
 int main(int argc, char *argv[])
 {
