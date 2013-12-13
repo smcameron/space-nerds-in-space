@@ -8188,6 +8188,8 @@ struct engineering_ui {
 	struct gauge *voltage_gauge;
 	struct gauge *temp_gauge;
 	struct button *damcon_button;
+	struct button *preset1_button;
+	struct button *preset2_button;
 	struct slider *shield_slider;
 	struct slider *shield_coolant_slider;
 	struct slider *maneuvering_slider;
@@ -8229,6 +8231,50 @@ struct engineering_ui {
 static void damcon_button_pressed(void *x)
 {
 	displaymode = DISPLAYMODE_DAMCON;
+}
+
+static void preset1_button_pressed(void *x)
+{
+	/* a "normal" preset, note only one poke has sound to avoid noise */
+	snis_slider_poke_input(eng_ui.shield_slider, 0.95, 1);
+	snis_slider_poke_input(eng_ui.shield_coolant_slider, 1.0, 0);
+	snis_slider_poke_input(eng_ui.maneuvering_slider, 0.95, 0);
+	snis_slider_poke_input(eng_ui.maneuvering_coolant_slider, 1.0, 0);
+	snis_slider_poke_input(eng_ui.warp_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.warp_coolant_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.impulse_slider, 0.95, 0);
+	snis_slider_poke_input(eng_ui.impulse_coolant_slider, 1.0, 0);
+	snis_slider_poke_input(eng_ui.sensors_slider, 0.95, 0);
+	snis_slider_poke_input(eng_ui.sensors_coolant_slider, 1.0, 0);
+	snis_slider_poke_input(eng_ui.comm_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.comm_coolant_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.phaserbanks_slider, 0.95, 0);
+	snis_slider_poke_input(eng_ui.phaserbanks_coolant_slider, 1.0, 0);
+	snis_slider_poke_input(eng_ui.tractor_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.tractor_coolant_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.shield_control_slider, 1.0, 0);
+}
+
+static void preset2_button_pressed(void *x)
+{
+	/* an "all stop" preset, note only one poke has sound to avoid noise */
+	snis_slider_poke_input(eng_ui.shield_slider, 0.0, 1);
+	snis_slider_poke_input(eng_ui.shield_coolant_slider, 0.3, 0);
+	snis_slider_poke_input(eng_ui.maneuvering_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.maneuvering_coolant_slider, 0.3, 0);
+	snis_slider_poke_input(eng_ui.warp_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.warp_coolant_slider, 0.3, 0);
+	snis_slider_poke_input(eng_ui.impulse_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.impulse_coolant_slider, 0.3, 0);
+	snis_slider_poke_input(eng_ui.sensors_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.sensors_coolant_slider, 0.3, 0);
+	snis_slider_poke_input(eng_ui.comm_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.comm_coolant_slider, 0.3, 0);
+	snis_slider_poke_input(eng_ui.phaserbanks_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.phaserbanks_coolant_slider, 0.3, 0);
+	snis_slider_poke_input(eng_ui.tractor_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.tractor_coolant_slider, 0.3, 0);
+	snis_slider_poke_input(eng_ui.shield_control_slider, 0.0, 0);
 }
 
 static void init_engineering_ui(void)
@@ -8273,6 +8319,10 @@ static void init_engineering_ui(void)
 	y = 220;
 	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
 			NANO_FONT, damcon_button_pressed, (void *) 0);
+	eu->preset1_button = snis_button_init(200, y + 30, 25, 25, "1", color,
+			NANO_FONT, preset1_button_pressed, (void *) 0);
+	eu->preset2_button = snis_button_init(240, y + 30, 25, 25, "2", color,
+			NANO_FONT, preset2_button_pressed, (void *) 0);
 	y += yinc;
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR SHIELDS", "0", "100", 0.0, 255.0,
@@ -8368,6 +8418,8 @@ static void init_engineering_ui(void)
 	ui_add_gauge(eu->fuel_gauge, dm);
 	ui_add_gauge(eu->temp_gauge, dm);
 	ui_add_button(eu->damcon_button, dm);
+	ui_add_button(eu->preset1_button, dm);
+	ui_add_button(eu->preset2_button, dm);
 
 	y = 220 + yinc;
 	eu->shield_damage = snis_slider_init(350, y += yinc, 150, sh, color, "SHIELD STATUS", "0", "100",
