@@ -4865,14 +4865,14 @@ static void show_weapons_camera_view(GtkWidget *w)
 	set_render_style(o->entity, RENDER_NORMAL);
 
 	/* Add our turret into the mix */
-	struct entity* turrent_entity = add_entity(ecx, ship_turret_mesh, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z, SHIP_COLOR);
-	update_entity_orientation(turrent_entity, &camera_orientation);
-	set_render_style(turrent_entity, RENDER_NORMAL);
+	struct entity* turret_entity = add_entity(ecx, ship_turret_mesh, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z, SHIP_COLOR);
+	update_entity_orientation(turret_entity, &camera_orientation);
+	set_render_style(turret_entity, RENDER_NORMAL);
 
 	render_entities(w, gc, ecx);
 
 	/* Remove our ship from the scene */
-	remove_entity(ecx, turrent_entity);
+	remove_entity(ecx, turret_entity);
 	remove_entity(ecx, o->entity);
 	o->entity = NULL;
 
