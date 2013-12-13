@@ -61,47 +61,47 @@ union euler {
 void vec3_init(union vec3 *vo, float x, float y, float z);
 
 /* copy vector vi to vo */
-union vec3* vec3_copy(union vec3 *vo, const union vec3 *vi);
+union vec3 *vec3_copy(union vec3 *vo, const union vec3 *vi);
 
 /* vo = v1 + v2, return vo */
-union vec3* vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
+union vec3 *vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
 
 /* v1 = v1 + v2, return v1 */
-union vec3* vec3_add_self(union vec3 *v1, const union vec3 *v2);
+union vec3 *vec3_add_self(union vec3 *v1, const union vec3 *v2);
 
 /* v1 = v1 + (x,y,z), return v1 */
-union vec3* vec3_add_c_self(union vec3 *v1, float x, float y, float z);
+union vec3 *vec3_add_c_self(union vec3 *v1, float x, float y, float z);
 
 /* vo = v1 - v2, return vo */
-union vec3* vec3_sub(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
+union vec3 *vec3_sub(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
 
 /* v1 = v1 - v2, return v1 */
-union vec3* vec3_sub_self(union vec3 *v1, const union vec3 *v2);
+union vec3 *vec3_sub_self(union vec3 *v1, const union vec3 *v2);
         
 /* v1 = v1 - (x,y,z), return v1 */
-union vec3* vec3_sub_c_self(union vec3 *v1, float x, float y, float z);
+union vec3 *vec3_sub_c_self(union vec3 *v1, float x, float y, float z);
 
 /* vo = vi * scalar, return vo */
-union vec3* vec3_mul(union vec3 *vo, const union vec3 *vi, float scalar);
+union vec3 *vec3_mul(union vec3 *vo, const union vec3 *vi, float scalar);
 
 /* vi *= scalar, return vi */
-union vec3* vec3_mul_self(union vec3 *vi, float scalar);
+union vec3 *vec3_mul_self(union vec3 *vi, float scalar);
 
 /* dot product */
 float vec3_dot(const union vec3 *v1, const union vec3 *v2);
 
 /* cross product vo = v1 X v2, return vo */
-union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
+union vec3 *vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
 
 union vec3 *vec3_normalize(union vec3 *vo, const union vec3 *vi);
 
 union vec3 *vec3_normalize_self(union vec3 *vo);
 
 /* vec3 rotate by axis and angle */
-union vec3* vec3_rot_axis(union vec3 *vo, union vec3 *vi, float x, float y, float z, float angle);
+union vec3 *vec3_rot_axis(union vec3 *vo, union vec3 *vi, float x, float y, float z, float angle);
 
 /* vec3 rotate self by axis and angle */
-union vec3* vec3_rot_axis_self(union vec3 *vo, float x, float y, float z, float angle);
+union vec3 *vec3_rot_axis_self(union vec3 *vo, float x, float y, float z, float angle);
 
 double vec3_dist(const union vec3 *v1, const union vec3 *v2);
 double vec3_dist_c(const union vec3 *v1, float x, float y, float z);
