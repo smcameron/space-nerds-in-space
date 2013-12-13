@@ -3320,7 +3320,29 @@ static void init_coolant_model(struct snis_entity *o)
 	power_model_add_device(pm, d);
 }
 
+static void repair_damcon_systems(struct snis_entity *o)
+{
+	int i, n, b;
+	struct damcon_data *d;
+	struct snis_damcon_entity *p;
 
+	if (o->type != OBJTYPE_SHIP1)
+		return;
+
+	b = lookup_bridge_by_shipid(o->id);
+	if (b < 0)
+		return;
+	d = &bridgelist[b].damcon;
+	n = snis_object_pool_highest_object(d->pool);
+	for (i = 0; i <= n; i++) {
+		p = &d->o[i];
+		if (p->type != DAMCON_TYPE_PART)
+			continue;
+		p->tsd.part.damage = 0;
+		p->timestamp = universe_timestamp;
+	}
+}	
+	
 static void init_player(struct snis_entity *o)
 {
 	o->move = player_move;
@@ -3378,6 +3400,7 @@ static void init_player(struct snis_entity *o)
 	memset(&o->tsd.ship.temperature_data, 0, sizeof(o->tsd.ship.temperature_data));
 	init_power_model(o);
 	init_coolant_model(o);
+	repair_damcon_systems(o);
 }
 
 static int add_player(double x, double z, double vx, double vz, double heading)
