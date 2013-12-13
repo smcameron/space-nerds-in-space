@@ -34,6 +34,8 @@
 #define MESH_LINE_STRIP (1<<1)
 #define MESH_LINE_DOTTED (1<<2)
 
+#include <GL/glew.h>
+
 struct mesh_line
 {
 	struct vertex *start;
@@ -50,6 +52,8 @@ struct mesh {
 	struct vertex *v;
 	struct mesh_line *l;
 	float radius;
+
+	void *graph_ptr;
 };
 
 GLOBAL float mesh_compute_radius(struct mesh *m);
@@ -62,6 +66,9 @@ GLOBAL void mesh_add_line_last_2(struct mesh *m, int flag);
 GLOBAL struct mesh *init_circle_mesh(double x, double y, double r, int npoints, double angle);
 GLOBAL struct mesh *init_radar_circle_xz_plane_mesh(double x, double z, double r, int ticks, double tick_radius);
 GLOBAL struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y2, double z2);
+
+GLOBAL void mesh_graph_dev_init(struct mesh *m);
+GLOBAL void mesh_graph_dev_cleanup(struct mesh *m);
 
 #undef GLOBAL
 #endif

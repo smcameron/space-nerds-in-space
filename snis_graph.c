@@ -5,7 +5,7 @@
 #include <gtk/gtk.h>
 #ifndef WITHOUTOPENGL
 #include <gtk/gtkgl.h>
-#include <GL/gl.h>
+#include <GL/glew.h>
 #include <png.h>
 #endif
 
@@ -18,6 +18,7 @@
 #include "bline.h"
 #include "build_bug_on.h"
 #include "mathutils.h"
+#include "graph_dev.h"
 
 #define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY * (NSHADECOLORS + 1) + (NGRADIENTS * NTOTAL_GRADIENT_SHADES))
 GdkColor huex[TOTAL_COLORS]; 
@@ -27,19 +28,57 @@ extern int font_scale[];
 extern int letter_spacing[];
 extern int font_lineheight[];
 
+struct snis_graph_viewport {
+	int x_offset, y_offset, width, height;
+};
+
 static struct snis_graph_context {
 	float xscale, yscale;
 	struct liang_barsky_clip_window c;
-	int screen_height;
+	int extent_width, extent_height; /* size of drawing area used in snis_draw_* functions */
+	int screen_width, screen_height; /* size of screen in pixels */
+	struct snis_graph_viewport vp_3d; /* in extent coords */
 	GdkGC *gc;
 	int hue; /* current color, index into huex[] and glhue[] */
-	int alpha_blend;
-	float alpha;
+
+	int has_scale;
+	int has_viewport;
 } sgc;
 
-void sng_fixup_gl_y_coordinate(int screen_height)
+/* size of the extent we draw to with the drawing commands */
+void sng_set_extent_size(int width, int height)
 {
-	sgc.screen_height = screen_height;
+	sgc.extent_width = width;
+	sgc.extent_height = height;
+}
+
+/* pixel size of the target screen */
+void sng_set_screen_size(int width, int height)
+{
+	sgc.screen_width = width;
+	sgc.screen_height = height;
+	graph_dev_set_screen_size(width, height);
+
+	sgc.xscale = (float)sgc.screen_width / (float)sgc.extent_width;
+	sgc.yscale = (float)sgc.screen_height / (float)sgc.extent_height;
+	graph_dev_set_extent_scale(sgc.xscale, sgc.yscale);
+
+	sgc.has_scale = (sgc.screen_width != sgc.extent_width || sgc.screen_height != sgc.extent_height);
+
+	/* update the viewport in graph_dev as they are in screen coords */
+	graph_dev_set_3d_viewport(sgc.vp_3d.x_offset * sgc.xscale, sgc.vp_3d.y_offset * sgc.yscale,
+					sgc.vp_3d.width * sgc.xscale, sgc.vp_3d.height * sgc.yscale);
+}
+
+void sng_set_3d_viewport(int x_offset, int y_offset, int width, int height)
+{
+	sgc.vp_3d.x_offset = x_offset;
+	sgc.vp_3d.y_offset = y_offset;
+	sgc.vp_3d.width = width;
+	sgc.vp_3d.height = height;
+
+	graph_dev_set_3d_viewport(x_offset * sgc.xscale, y_offset * sgc.yscale,
+					width * sgc.xscale, height * sgc.yscale);
 }
 
 void sng_set_scale(float xscale, float yscale)
@@ -56,28 +95,12 @@ void sng_set_clip_window(int x1, int y1, int x2, int y2)
 	sgc.c.y2 = y2;
 }
 
-static void sng_gl_draw_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
-{
-#ifndef WITHOUTOPENGL
-	GdkColor *h = &huex[sgc.hue];
-
-        glBegin(GL_LINES);
-        glColor3us(h->red, h->green, h->blue);
-        glVertex2i(x1, sgc.screen_height - y1);
-        glVertex2i(x2, sgc.screen_height - y2);
-        glEnd();
-#else
-	gdk_draw_line(drawable, gc, x1, y1, x2, y2);
-#endif
-}
-
 void sng_current_draw_line(GdkDrawable *drawable,
         GdkGC *gc, float x1, float y1, float x2, float y2)
 {
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
-        sng_gl_draw_line(drawable, gc, x1 * sgc.xscale, y1 * sgc.yscale,
-                x2 * sgc.xscale, y2 * sgc.yscale);
+	graph_dev_draw_line(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale);
 }
 
 void sng_current_draw_thick_line(GdkDrawable *drawable,
@@ -100,9 +123,9 @@ void sng_current_draw_thick_line(GdkDrawable *drawable,
 	sy1 = y1 * sgc.yscale;	
 	sy2 = y2 * sgc.yscale;	
 	
-	sng_gl_draw_line(drawable, gc, sx1, sy1, sx2, sy2);
-	sng_gl_draw_line(drawable, gc, sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
-	sng_gl_draw_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
+	graph_dev_draw_line(sx1, sy1, sx2, sy2);
+	graph_dev_draw_line(sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
+	graph_dev_draw_line(sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
 static int clip_rectangle(float *x, float *y, float *width, float *height)
@@ -134,38 +157,12 @@ static int clip_rectangle(float *x, float *y, float *width, float *height)
 	return 1;
 }
 
-static void sng_gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean filled,
-		float x, float y, float width, float height)
-{
-#ifndef WITHOUTOPENGL
-	int x2, y2;
-	GdkColor *h = &huex[sgc.hue];
-
-	x2 = x + width;
-	y2 = y + height;
-	if (filled)
-		glBegin(GL_POLYGON);
-	else
-		glBegin(GL_LINE_STRIP);
-        glColor3us(h->red, h->green, h->blue);
-        glVertex2f(x, sgc.screen_height - y);
-        glVertex2f(x2, sgc.screen_height - y);
-        glVertex2f(x2, sgc.screen_height - y2);
-        glVertex2f(x, sgc.screen_height - y2);
-	if (!filled)
-		glVertex2f(x, sgc.screen_height - y);
-	glEnd();
-#else
-	gdk_draw_rectangle(drawable, gc, filled, x, y, width, height);
-#endif
-}
-
 void sng_current_draw_rectangle(GdkDrawable *drawable,
 	GdkGC *gc, gboolean filled, float x, float y, float width, float height)
 {
 	if (!clip_rectangle(&x, &y, &width, &height))
 		return;
-	sng_gl_draw_rectangle(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
+	graph_dev_draw_rectangle(filled, x * sgc.xscale, y * sgc.yscale,
 		width * sgc.xscale, height * sgc.yscale);
 }
 
@@ -191,84 +188,17 @@ void sng_current_draw_bright_line(GdkDrawable *drawable,
 	sy2 = y2 * sgc.yscale;	
 
 	sng_set_foreground(WHITE);	
-	sng_gl_draw_line(drawable, gc, sx1, sy1, sx2, sy2);
+	graph_dev_draw_line(sx1, sy1, sx2, sy2);
 	sng_set_foreground(color);
-	sng_gl_draw_line(drawable, gc, sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
-	sng_gl_draw_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
+	graph_dev_draw_line(sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
+	graph_dev_draw_line(sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
 void sng_current_draw_arc(GdkDrawable *drawable, GdkGC *gc,
 	gboolean filled, float x, float y, float width, float height, float angle1, float angle2)
 {
-#ifndef WITHOUTOPENGL
-	float max_angle_delta = 2.0 * M_PI / 180.0; /*some ratio to height and width? */
-	float rx = width/2.0;
-	float ry = height/2.0;
-	float cx = x + rx;
-	float cy = y + ry;
-	
-	float scx = sgc.xscale * cx;
-	float scy = sgc.screen_height - cy * sgc.yscale;
-
-	int i;
-	GdkColor *h = &huex[sgc.hue];
-
-	int segments = (int)((angle2 - angle1)/max_angle_delta) + 1; 
-	float delta = (angle2 - angle1) / segments;
-
-	if (sgc.alpha_blend) {
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glColor4us(h->red, h->green, h->blue, sgc.alpha*65535.0);
-	} else {
-		glColor3us(h->red, h->green, h->blue);
-	}
-
-	if (filled)
-		glBegin(GL_TRIANGLES);
-	else
-		glBegin(GL_LINE_STRIP);
-
-	float sx1, sy1;
-	for (i = 0; i <= segments; i++) {
-		float a = angle1 + delta * (float)i;
-		float sx2 = sgc.xscale * (cx + cos(a) * rx);
-		float sy2 = (sgc.screen_height - cy * sgc.yscale) + sin(a) * ry * sgc.yscale;
-
-		if (!filled || i>0) {
-			glVertex2f(sx2, sy2);
-			if (filled) {
-				glVertex2f(sx1, sy1);
-				glVertex2f(scx, scy);
-			}
-		}
-		sx1 = sx2;
-		sy1 = sy2;
-	}
-
-	if (sgc.alpha_blend) {
-		glDisable(GL_BLEND);
-	}
-
-	glEnd();
-#else
-	gdk_draw_arc(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
-			width * sgc.xscale, height * sgc.yscale, angle1*64.0*180.0/M_PI, (angle2-angle1)*64.0*180.0/M_PI);
-#endif
-}
-
-static void sng_gl_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y)
-{
-#ifndef WITHOUTOPENGL
-	GdkColor *h = &huex[sgc.hue];
-
-	glBegin(GL_POINTS);
-        glColor3us(h->red, h->green, h->blue);
-	glVertex2i(x, sgc.screen_height - y);
-	glEnd();
-#else
-	gdk_draw_point(drawable, gc, x, y);
-#endif
+	graph_dev_draw_arc(filled, x * sgc.xscale, y * sgc.yscale, width * sgc.xscale,
+				height * sgc.yscale, angle1, angle2);
 }
 
 void sng_dotted_line_plot_func(int x, int y, void *context)
@@ -278,15 +208,13 @@ void sng_dotted_line_plot_func(int x, int y, void *context)
 	c->i = (c->i + 1) % 10;
 	if (c->i != 0)
 		return;
-	sng_gl_draw_point(c->drawable, c->gc, x, y);
+	graph_dev_draw_point(x, y);
 }
 
 void sng_electric_line_plot_func(int x, int y, void *context)
 {
-	struct sng_dotted_plot_func_context *c = context;
-
 	if (snis_randn(100) < 10)
-		sng_gl_draw_point(c->drawable, c->gc, x, y);
+		graph_dev_draw_point(x, y);
 }
 
 static void sng_bright_electric_line_plot_func(int x, int y, void *context)
@@ -295,7 +223,7 @@ static void sng_bright_electric_line_plot_func(int x, int y, void *context)
 
 	if (snis_randn(100) < 20) {
 		sng_set_foreground(c->i);
-		sng_gl_draw_point(c->drawable, c->gc, x, y);
+		graph_dev_draw_point(x, y);
 	}
 }
 
@@ -506,7 +434,7 @@ void sng_abs_xy_draw_string_with_cursor(GtkWidget *w, GdkGC *gc, char *s,
 
 void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, float x, float y)
 {
-	sng_gl_draw_point(drawable, gc, x * sgc.xscale, y * sgc.yscale);
+	graph_dev_draw_point(x * sgc.xscale, y * sgc.yscale);
 }
 
 /* from http://stackoverflow.com/a/6930407
@@ -681,103 +609,23 @@ void sng_setup_colors(GtkWidget *w)
 void sng_set_foreground_alpha(int c, float a)
 {
 	sgc.hue = c;
-	sgc.alpha_blend = 1;
-	sgc.alpha = a;
-#ifdef WITHOUTOPENGL
-	gdk_gc_set_foreground(sgc.gc, &huex[c]);
-#endif
+	graph_dev_set_color(&huex[c], a);
 }
 
 void sng_set_foreground(int c)
 {
 	sgc.hue = c;
-	sgc.alpha_blend = 0;
-#ifdef WITHOUTOPENGL
-	gdk_gc_set_foreground(sgc.gc, &huex[c]);
-#endif
+	graph_dev_set_color(&huex[c], -1);
 }
 
-void sng_set_gc(GdkGC *gc)
+void sng_set_context(GdkDrawable *drawable, GdkGC *gc)
 {
-	sgc.gc = gc;
+	graph_dev_set_context(drawable, gc);
 }
 
 void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, int filled, float x, float y, float r)
 {
 	sng_current_draw_arc(drawable, gc, filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
-}
-
-void sng_draw_tri_outline(GdkDrawable *drawable, GdkGC *gc,
-			int draw12, float x1, float y1, int draw23, float x2, float y2, int draw31, float x3, float y3)
-{
-	/* nothing to draw */
-	if (!draw12 && !draw23 && !draw31)
-		return;
-
-#ifndef WITHOUTOPENGL
-	/* draw all the edges as a non-filled tri */
-	if (draw12 && draw23 && draw31) {
-		sng_draw_tri(drawable, gc, 0, x1, y1, x2, y2, x3, y3);
-		return;
-	}
-
-	GdkColor *h = &huex[sgc.hue];
-
-	glBegin(GL_LINES);
-	glColor3us(h->red, h->green, h->blue);
-	if (draw12) {
-		glVertex2f(x1 * sgc.xscale, sgc.screen_height - y1 * sgc.yscale);
-		glVertex2f(x2 * sgc.xscale, sgc.screen_height - y2 * sgc.yscale);
-	}
-	if (draw23) {
-		glVertex2f(x2 * sgc.xscale, sgc.screen_height - y2 * sgc.yscale);
-		glVertex2f(x3 * sgc.xscale, sgc.screen_height - y3 * sgc.yscale);
-	}
-	if (draw31) {
-		glVertex2f(x3 * sgc.xscale, sgc.screen_height - y3 * sgc.yscale);
-		glVertex2f(x1 * sgc.xscale, sgc.screen_height - y1 * sgc.yscale);
-	}
-	glEnd();
-#else
-	/* faster than gdk_draw_segments or non-filled gdk_draw_polygon */
-	if (draw12)
-		gdk_draw_line(drawable, gc, x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale);
-	if (draw23)
-		gdk_draw_line(drawable, gc, x2 * sgc.xscale, y2 * sgc.yscale, x3 * sgc.xscale, y3 * sgc.yscale);
-	if (draw31)
-		gdk_draw_line(drawable, gc, x3 * sgc.xscale, y3 * sgc.yscale, x1 * sgc.xscale, y1 * sgc.yscale);
-#endif
-}
-
-void sng_draw_tri(GdkDrawable *drawable, GdkGC *gc, int filled,
-			float x1, float y1, float x2, float y2, float x3, float y3)
-{
-#ifndef WITHOUTOPENGL
-	GdkColor *h = &huex[sgc.hue];
-
-	if (filled)
-		glBegin(GL_TRIANGLES);
-	else
-		glBegin(GL_LINE_STRIP);
-	glColor3us(h->red, h->green, h->blue);
-	glVertex2f(x1 * sgc.xscale, sgc.screen_height - y1 * sgc.yscale);
-	glVertex2f(x2 * sgc.xscale, sgc.screen_height - y2 * sgc.yscale);
-	glVertex2f(x3 * sgc.xscale, sgc.screen_height - y3 * sgc.yscale);
-	if (!filled)
-		glVertex2i(x1 * sgc.xscale, sgc.screen_height - y1 * sgc.yscale);
-	glEnd();
-#else
-	GdkPoint tri[3];
-
-	tri[0].x = x1 * sgc.xscale;
-	tri[0].y = y1 * sgc.yscale;
-	tri[1].x = x2 * sgc.xscale;
-	tri[1].y = y2 * sgc.yscale;
-	tri[2].x = x3 * sgc.xscale;
-	tri[2].y = y3 * sgc.yscale;
-
-	gdk_draw_polygon(drawable, gc, filled, tri, 3);
-#endif
 }
 
 int sng_load_png_texture(const char * filename, int *w, int *h, char *whynot, int whynotlen)

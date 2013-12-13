@@ -40,6 +40,7 @@ void mesh_distort(struct mesh *m, float distortion)
 		m->v[i].z += m->v[i].z * dz;
 	}
 	m->radius = mesh_compute_radius(m);
+	mesh_graph_dev_init(m);
 }
 
 void mesh_derelict(struct mesh *m, float distortion)
@@ -63,6 +64,7 @@ void mesh_derelict(struct mesh *m, float distortion)
 	for (i = 0; i < m->nvertices; i++)
 		m->v[i].x -= m->radius / 2.0;
 	m->radius = mesh_compute_radius(m);
+	mesh_graph_dev_init(m);
 }
 
 void mesh_scale(struct mesh *m, float scale)
@@ -75,6 +77,7 @@ void mesh_scale(struct mesh *m, float scale)
 		m->v[i].z += m->v[i].z * scale;
 	}
 	m->radius = mesh_compute_radius(m);
+	mesh_graph_dev_init(m);
 }
 
 static int lookup_vertex(struct mesh *m, struct vertex *v)
@@ -103,6 +106,7 @@ struct mesh *mesh_duplicate(struct mesh *original)
 	memset(copy->v, 0, sizeof(*copy->v) * copy->nvertices);
 	copy->l = malloc(sizeof(*copy->l) * copy->nlines);
 	memset(copy->l, 0, sizeof(*copy->l) * copy->nlines);
+	copy->graph_ptr = 0;
 
 	for (i = 0; i < original->nvertices; i++)
 		copy->v[i] = original->v[i];
@@ -130,6 +134,8 @@ struct mesh *mesh_duplicate(struct mesh *original)
 		copy->l[i].end = &copy->v[v1];
 	}
 	copy->radius = original->radius;
+
+	mesh_graph_dev_init(copy);
 	return copy;
 }
 
@@ -163,6 +169,7 @@ struct mesh *init_circle_mesh(double x, double z, double r, int npoints, double 
 	my_mesh->v = malloc(sizeof(*my_mesh->v) * (npoints + 1));
 	my_mesh->l = malloc(sizeof(*my_mesh->l) * 1);
 	my_mesh->radius = r;
+	my_mesh->graph_ptr = 0;
 
 	increment = angle / (float) npoints;
 	for (i = 0; i <= npoints; i++) {
@@ -181,6 +188,8 @@ struct mesh *init_circle_mesh(double x, double z, double r, int npoints, double 
 	my_mesh->l[0].start = &my_mesh->v[0];
 	my_mesh->l[0].end = &my_mesh->v[my_mesh->nvertices - 1];
 	my_mesh->l[0].flag = MESH_LINE_STRIP;
+
+	mesh_graph_dev_init(my_mesh);
 	return my_mesh;
 }
 
@@ -197,6 +206,7 @@ struct mesh *init_radar_circle_xz_plane_mesh(double x, double z, double r, int t
 	my_mesh->v = malloc(sizeof(*my_mesh->v) * (360 / 2 + 1 + ticks*2));
 	my_mesh->l = malloc(sizeof(*my_mesh->l) * (1 + ticks));
 	my_mesh->radius = dist3d(x, 0, z) + r;
+	my_mesh->graph_ptr = 0;
 
 	for (i = 0; i <= 360; i += 2) {
 		my_mesh->v[my_mesh->nvertices].x = x + cos(i * M_PI / 180.0) * r;
@@ -216,6 +226,8 @@ struct mesh *init_radar_circle_xz_plane_mesh(double x, double z, double r, int t
 		mesh_add_point(my_mesh, x + c * r, 0, z + s * r);
 		mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
 	}
+
+	mesh_graph_dev_init(my_mesh);
 	return my_mesh;
 }
 
@@ -231,6 +243,7 @@ struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y
 	my_mesh->v = malloc(sizeof(*my_mesh->v) * 2);
 	my_mesh->l = malloc(sizeof(*my_mesh->l) * 1);
 	my_mesh->radius = fmax(dist3d(x1, y1, z1), dist3d(x2, y2, z2));
+	my_mesh->graph_ptr = 0;
 
 	my_mesh->v[0].x = x1;
 	my_mesh->v[0].y = y1;
@@ -243,6 +256,7 @@ struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y
 	my_mesh->l[0].end = &my_mesh->v[1];
 	my_mesh->l[0].flag = 0;
 
+	mesh_graph_dev_init(my_mesh);
 	return my_mesh;
 }
 

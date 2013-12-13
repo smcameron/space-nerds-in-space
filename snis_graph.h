@@ -44,6 +44,8 @@ extern int CYAN;
 #define COLOR_DARKER(c,p) (c-(p*NGRADIENT_SHADES/100))
 #define COLOR_LIGHTER(c, p) (c+(p*NGRADIENT_SHADES/100))
 
+struct my_vect_obj;
+
 struct sng_dotted_plot_func_context {
         GdkDrawable *drawable;
         GdkGC *gc;
@@ -79,17 +81,23 @@ SNG_GLOBAL void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, float x, float 
 SNG_GLOBAL void sng_setup_colors(GtkWidget *w);
 SNG_GLOBAL void sng_set_foreground(int c);
 SNG_GLOBAL void sng_set_foreground_alpha(int c, float a);
-SNG_GLOBAL void sng_set_gc(GdkGC *gc);
+SNG_GLOBAL void sng_set_context(GdkDrawable *drawable, GdkGC *gc);
 SNG_GLOBAL void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, int filled, float x, float y, float r);
 SNG_GLOBAL void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
 			float x1, float y1, float x2, float y2, int color);
 
+/* pixel size of the actual output window */
+SNG_GLOBAL void sng_set_screen_size(int width, int height);
+
+/* size of the extent given to primitive drawing functions */
+SNG_GLOBAL void sng_set_extent_size(int width, int height);
+
+/* clip inside the extent */
 SNG_GLOBAL void sng_set_clip_window(int x1, int y1, int x2, int y2);
-SNG_GLOBAL void sng_fixup_gl_y_coordinate(int screen_height);
-SNG_GLOBAL void sng_draw_tri_outline(GdkDrawable *drawable, GdkGC *gc,
-                        int draw12, float x1, float y1, int draw23, float x2, float y2, int draw31, float x3, float y3);
-SNG_GLOBAL void sng_draw_tri(GdkDrawable *drawable, GdkGC *gc, int filled,
-			float x1, float y1, float x2, float y2, float x3, float y3);
+
+/* offet and scale 3d rendering inside extent bounds */
+SNG_GLOBAL void sng_set_3d_viewport(int x_offset, int y_offset, int width, int height);
+
 SNG_GLOBAL int sng_load_png_texture(const char * filename, int *w, int *h,
                         char *whynot, int whynotlen);
 SNG_GLOBAL void sng_setup_colors(GtkWidget *w);

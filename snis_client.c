@@ -32,7 +32,7 @@
 
 #ifndef WITHOUTOPENGL
 #include <gtk/gtkgl.h>
-#include <GL/gl.h>
+#include <GL/glew.h>
 #include <GL/glu.h>
 #endif
 
@@ -95,6 +95,7 @@
 #include "stl_parser.h"
 #include "entity.h"
 #include "matrix.h"
+#include "graph_dev.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -177,8 +178,6 @@ char *shipname;
 uint32_t my_ship_id = UNKNOWN_ID;
 uint32_t my_ship_oid = UNKNOWN_ID;
 
-float xscale_screen = 1.0;
-float yscale_screen= 1.0;
 int real_screen_width;
 int real_screen_height;
 int warp_limbo_countdown = 0;
@@ -835,7 +834,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, torpedo_mesh, x, y, z, TORPEDO_COLOR);
-		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
+		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
@@ -900,7 +899,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, laserbeam_mesh, x, y, z, LASER_COLOR);
-		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
+		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
@@ -1593,7 +1592,7 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	r = snis_randn(100);
 	if (r < 50 || time < 10) {
 		e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
-		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE);
+		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 	} else if (r < 75) {
 		e = add_entity(ecx, debris_mesh, x, y, z, color);
 	} else {
@@ -4696,6 +4695,7 @@ static void end_2d_gl(void);
 #ifndef WITHOUTOPENGL
 static void begin_3d_gl(struct entity_context *ecx)
 {
+#if 0
 	float near, far, angle_of_view, cx, cy, cz, lx, ly, lz, ux, uy, uz;
 	int xvpixels, yvpixels;
 
@@ -4716,16 +4716,19 @@ static void begin_3d_gl(struct entity_context *ecx)
 	gluLookAt(0, 0, 0, lx, ly, lz, ux, uy, uz); 
 	glMatrixMode(GL_MODELVIEW);
 	/* glDisable(GL_DEPTH_TEST); */
+#endif
 }
 
 static void end_3d_gl(void)
 {
+#if 0
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glPopMatrix();
+#endif
 }
 #endif
 
@@ -4733,7 +4736,7 @@ static void render_skybox(GtkWidget *w, struct entity_context *ecx)
 {
 
 	/* TODO:  Probably there is a better way than creating these every frame */
-
+#if 0
 #ifndef WITHOUTOPENGL
 #define SKYBOXRAD 200.0
 	static const float v[8][3] = {
@@ -4847,6 +4850,7 @@ static void render_skybox(GtkWidget *w, struct entity_context *ecx)
 
 	end_3d_gl();
 	begin_2d_gl();
+#endif
 #endif
 }
 
@@ -4976,8 +4980,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
-	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
-			cos(((timer / 4) % 360) * M_PI / 180));
+	set_lighting(ecx, XKNOWN_DIM/2, YKNOWN_DIM/2, ZKNOWN_DIM/2);
 	sng_set_foreground(GREEN);
 	if (!fake_stars_initialized) {
 		fake_stars_initialized = 1;
@@ -5090,8 +5093,7 @@ static void show_mainscreen(GtkWidget *w)
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
-	set_lighting(ecx, 0, sin(((timer / 4) % 360) * M_PI / 180),
-			cos(((timer / 4) % 360) * M_PI / 180));
+	set_lighting(ecx, XKNOWN_DIM/2, YKNOWN_DIM/2, ZKNOWN_DIM/2);
 	sng_set_foreground(GREEN);
 	if (!fake_stars_initialized) {
 		fake_stars_initialized = 1;
@@ -8042,11 +8044,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 			if (go[i].type == OBJTYPE_TORPEDO) {
 				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, ORANGERED);
-				set_render_style(contact, science_style | RENDER_BRIGHT_LINE);
+				set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 				entity_set_user_data(contact, &go[i]); /* for debug */
 			} else if (go[i].type == OBJTYPE_LASER) {
 				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, LASER_COLOR);
-				set_render_style(contact, science_style | RENDER_BRIGHT_LINE);
+				set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 				entity_set_user_data(contact, &go[i]); /* for debug */
 			} else {
 				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, GREEN);
@@ -9460,8 +9462,10 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	camera_look_at(sciecx, (float) 0, (float) 0, (float) m->radius / 2.0);
 	camera_set_parameters(sciecx, 0.5, 8000.0,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
+	set_lighting(sciecx, -m->radius * 4, 0, m->radius);
 	render_entities(w, gc, sciecx);
 	remove_entity(sciecx, e);
+
 	if (curr_science_guy->type == OBJTYPE_SHIP1 ||
 		curr_science_guy->type == OBJTYPE_SHIP2) {
 		sprintf(buf, "LIFEFORMS: %d", curr_science_guy->tsd.ship.lifeform_count);
@@ -9472,6 +9476,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			sprintf(buf, "LIFEFORMS: 0");
 		}
 	}
+	sng_set_foreground(GREEN);
 	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 250, SCREEN_HEIGHT - 50);
 }
  
@@ -11235,6 +11240,7 @@ static void draw_quit_screen(GtkWidget *w)
 static void begin_2d_gl(void)
 {
 #ifndef WITHOUTOPENGL
+#if 0
 	glDisable(GL_TEXTURE_2D);
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
@@ -11244,17 +11250,20 @@ static void begin_2d_gl(void)
 	glMatrixMode(GL_MODELVIEW);
 	glDisable(GL_DEPTH_TEST);
 #endif
+#endif
 }
 
 static void end_2d_gl(void)
 {
 #ifndef WITHOUTOPENGL
+#if 0
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glPopMatrix();
+#endif
 #endif
 }
 
@@ -11412,12 +11421,12 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	}
 
 end_of_drawing:
+	end_2d_gl();
+
 #ifndef WITHOUTOPENGL
 	gdk_gl_drawable_wait_gdk(gl_drawable);
 	gdk_gl_drawable_wait_gl(gl_drawable);
 #endif
-
-	end_2d_gl();
 
 #ifndef WITHOUTOPENGL
 	/* swap buffer if we're using double-buffering */
@@ -11524,6 +11533,8 @@ static void load_textures(char *filenameprefix)
 }
 #endif
 
+static void init_meshes();
+
 /* call back for configure_event (for window resize) */
 static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 {
@@ -11540,9 +11551,8 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 
 	real_screen_width =  w->allocation.width;
 	real_screen_height =  w->allocation.height;
-	xscale_screen = (float) real_screen_width / (float) SCREEN_WIDTH;
-	yscale_screen = (float) real_screen_height / (float) SCREEN_HEIGHT;
-	sng_set_scale(xscale_screen, yscale_screen);
+	sng_set_screen_size(real_screen_width, real_screen_height);
+
 	gdk_gc_set_clip_origin(gc, 0, 0);
 	cliprect.x = 0;	
 	cliprect.y = 0;	
@@ -11573,13 +11583,25 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 
 	/* Delimits the end of the OpenGL execution. */
 	gdk_gl_drawable_gl_end(gl_drawable);
-	sng_fixup_gl_y_coordinate(real_screen_height);
+
+	static int gl_is_setup = 0;
+	if (!gl_is_setup) {
+		graph_dev_setup();
+		gl_is_setup = 1;
+	}
 
 	if (!textures_loaded) {
 		load_textures(skybox_texture_prefix);
 		textures_loaded = 1;
 	}
 #endif
+
+	static int meshes_loaded = 0;
+	if (!meshes_loaded) {
+		init_meshes();
+		meshes_loaded = 1;
+	}
+
 	return TRUE;
 }
 
@@ -11939,7 +11961,7 @@ static struct mesh *make_derelict_mesh(struct mesh *source)
 	return m;
 }
 
-static void init_meshes(void)
+static void init_meshes()
 {
 	int i;
 	char *d = asset_dir;
@@ -12088,20 +12110,6 @@ static void init_gl(int argc, char *argv[], GtkWidget *drawing_area)
 	if (!gtk_widget_set_gl_capability(drawing_area, gl_config, NULL, TRUE,
 						GDK_GL_RGBA_TYPE))
 		g_assert_not_reached();
-
-#if 0
-	/* only called once in practice */
-	g_signal_connect(drawing_area, "configure-event", G_CALLBACK(main_da), NULL);
-	/* called every time we need to redraw due to becoming visible or being resized */
-	g_signal_connect(drawing_area, "expose-event", G_CALLBACK(expose_cb), NULL);
-#endif
-
-#if 0
-	const gdouble TIMEOUT_PERIOD = 1000 / 60;
-	/* idleCb called every timeoutPeriod */
-	g_timeout_add(TIMEOUT_PERIOD, idle_cb, drawing_area);
-#endif
-	sng_fixup_gl_y_coordinate(SCREEN_HEIGHT);
 #endif
 	
 }
@@ -12230,7 +12238,8 @@ int main(int argc, char *argv[])
 
 	real_screen_width = SCREEN_WIDTH;
 	real_screen_height = SCREEN_HEIGHT;
-	sng_set_scale(xscale_screen, yscale_screen);
+	sng_set_extent_size(SCREEN_WIDTH, SCREEN_HEIGHT);
+	sng_set_screen_size(real_screen_width, real_screen_height);
 
 	gtk_set_locale();
 	gtk_init (&argc, &argv);
@@ -12288,12 +12297,10 @@ int main(int argc, char *argv[])
 	sng_setup_colors(main_da);
 
         gc = gdk_gc_new(GTK_WIDGET(main_da)->window);
-	sng_set_gc(gc);
+	sng_set_context(GTK_WIDGET(main_da)->window, gc);
 	sng_set_foreground(WHITE);
 
 	timer_tag = g_timeout_add(1000 / frame_rate_hz, advance_game, NULL);
-
-	init_meshes();
 
 #ifndef GLIB_VERSION_2_32
 	/* this is only needed in glibc versions before 2.32 */

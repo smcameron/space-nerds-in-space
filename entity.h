@@ -23,6 +23,7 @@
 
 struct entity;
 struct entity_context;
+struct mat44;
 
 typedef void (*entity_fragment_shader_fn)(float x, float y, float z, int cin, int *cout);
 
@@ -48,14 +49,6 @@ GLOBAL void update_entity_shadecolor(struct entity *e, int color);
 GLOBAL void update_entity_fragment_shader(struct entity *e, entity_fragment_shader_fn shader);
 GLOBAL struct mesh *entity_get_mesh(struct entity *e);
 GLOBAL void entity_set_mesh(struct entity *e, struct mesh *m);
-GLOBAL void wireframe_render_entity(GtkWidget *w, GdkGC *gc,
-		struct entity_context *cx, struct entity *e);
-GLOBAL void wireframe_render_point_cloud(GtkWidget *w, GdkGC *gc,
-		struct entity_context *cx, struct entity *e);
-GLOBAL void wireframe_render_point_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
-		struct entity *e);
-GLOBAL void render_entity(GtkWidget *w, GdkGC *gc,
-		struct entity_context *cx, struct entity *e);
 GLOBAL void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx);
 GLOBAL void camera_set_pos(struct entity_context *cx, float x, float y, float z);
 GLOBAL void camera_get_pos(struct entity_context *cx, float *x, float *y, float *z);
@@ -77,7 +70,9 @@ GLOBAL int get_renderer(struct entity_context *cx);
 #define FLATSHADING_RENDERER (1 << 1)
 #define BLACK_TRIS (1 << 2)
 GLOBAL void calculate_camera_transform(struct entity_context *cx);
-GLOBAL struct mat44d get_camera_transform(struct entity_context *cx);
+GLOBAL struct mat44d get_camera_v_transform(struct entity_context *cx);
+GLOBAL struct mat44d get_camera_vp_transform(struct entity_context *cx);
+GLOBAL int transform_vertices(const struct mat44 *matrix, struct vertex *v, int len);
 GLOBAL int transform_point(struct entity_context *cx, float x, float y, float z, float *sx, float *sy);
 GLOBAL int transform_line(struct entity_context *cx, float x1, float y1, float z1,
 	float x2, float y2, float z2, float *sx1, float *sy1, float *sx2, float *sy2);
