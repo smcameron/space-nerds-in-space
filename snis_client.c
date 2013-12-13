@@ -11607,8 +11607,8 @@ void really_quit(void)
 
 static void usage(void)
 {
-	fprintf(stderr, "usage: snis_client lobbyhost starship password\n");
-	fprintf(stderr, "       Example: ./snis_client localhost Enterprise tribbles\n");
+	fprintf(stderr, "usage: snis_client --lobbyhost lobbyhost --starship starshipname --pw password\n");
+	fprintf(stderr, "       Example: ./snis_client --lobbyhost localhost --starship Enterprise --pw tribbles\n");
 	exit(1);
 }
 
@@ -11991,35 +11991,72 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Failed to setenv LANG to '%s'\n",
 			LOCALE_THAT_WORKS);
 
-	if (argc > 1 && argc < 4)
-		usage();
+	displaymode = DISPLAYMODE_NETWORK_SETUP;
 
-	if (argc >= 4) {
-		lobbyhost = argv[1];
-		shipname = argv[2];
-		password = argv[3];
-	} else {
-		displaymode = DISPLAYMODE_NETWORK_SETUP;
-	}
+	/* *Sigh*  why am I too lazy to use getopt,
+	 * but not too lazy for this crap?
+	 */
 
 	role = 0;
-	for (i = 4; i < argc; i++) {
-		if (strcmp(argv[i], "--allroles") == 0)
+	for (i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--lobbyhost") == 0) {
+			if ((i + 1) >= argc)
+				usage();
+			lobbyhost = argv[i + 1];
+			i++;
+			continue;
+		}
+		if (strcmp(argv[i], "--pw") == 0) {
+			if ((i + 1) >= argc)
+				usage();
+			password = argv[i + 1];
+			i++;
+			continue;
+		}
+		if (strcmp(argv[i], "--starship") == 0) {
+			if ((i + 1) >= argc)
+				usage();
+			shipname = argv[i + 1];
+			i++;
+			continue;
+		}
+		if (strcmp(argv[i], "--allroles") == 0) {
 			role |= ROLE_ALL;
-		if (strcmp(argv[i], "--main") == 0)
+			continue;
+		}
+		if (strcmp(argv[i], "--main") == 0) {
 			role |= ROLE_MAIN;
-		if (strcmp(argv[i], "--navigation") == 0)
+			continue;
+		}
+		if (strcmp(argv[i], "--navigation") == 0) {
 			role |= ROLE_NAVIGATION;
-		if (strcmp(argv[i], "--weapons") == 0)
+			continue;
+		}
+		if (strcmp(argv[i], "--weapons") == 0) {
 			role |= ROLE_WEAPONS;
-		if (strcmp(argv[i], "--engineering") == 0)
+			continue;
+		}
+		if (strcmp(argv[i], "--engineering") == 0) {
 			role |= ROLE_ENGINEERING;
-		if (strcmp(argv[i], "--science") == 0)
+			continue;
+		}
+		if (strcmp(argv[i], "--science") == 0) {
 			role |= ROLE_SCIENCE;
-		if (strcmp(argv[i], "--comms") == 0)
+			continue;
+		}
+		if (strcmp(argv[i], "--comms") == 0) {
 			role |= ROLE_COMMS;
-		if (strcmp(argv[i], "--soundserver") == 0)
+			continue;
+		}
+		if (strcmp(argv[i], "--soundserver") == 0) {
 			role |= ROLE_SOUNDSERVER;
+			continue;
+		}
+		if (strcmp(argv[i], "--fullscreen") == 0) {
+			fullscreen = 1;
+			continue;
+		}
+		usage();
 	}
 	if (role == 0)
 		role = ROLE_ALL;
@@ -12158,6 +12195,8 @@ int main(int argc, char *argv[])
 
 	set_default_clip_window();
 
+	if (fullscreen)
+		gtk_window_fullscreen(GTK_WINDOW(window));
 
 	gtk_main ();
         wwviaudio_cancel_all_sounds();
