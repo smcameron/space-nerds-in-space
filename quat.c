@@ -441,6 +441,19 @@ union vec3* vec3_mul_self(union vec3 *vi, float scalar)
 	return vec3_mul(vi, vi, scalar);
 }
 
+union vec3 *vec3_div(union vec3 *vo, const union vec3 *vi, float scalar)
+{
+	vo->vec[0] = vi->vec[0] / scalar;
+	vo->vec[1] = vi->vec[1] / scalar;
+	vo->vec[2] = vi->vec[2] / scalar;
+	return vo;
+}
+
+union vec3 *vec3_div_self(union vec3 *vi, float scalar)
+{
+	return vec3_div(vi, vi, scalar);
+}
+
 float vec3_dot(const union vec3 *v1, const union vec3 *v2)
 {
 	return v1->vec[0] * v2->vec[0] + v1->vec[1] * v2->vec[1] + v1->vec[2] * v2->vec[2];

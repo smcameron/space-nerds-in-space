@@ -87,6 +87,12 @@ union vec3 *vec3_mul(union vec3 *vo, const union vec3 *vi, float scalar);
 /* vi *= scalar, return vi */
 union vec3 *vec3_mul_self(union vec3 *vi, float scalar);
 
+/* vo = vi / scalar, return vo */
+union vec3 *vec3_div(union vec3 *vo, const union vec3 *vi, float scalar);
+
+/* vi /= scalar, return vi */
+union vec3 *vec3_div_self(union vec3 *vi, float scalar);
+
 /* dot product */
 float vec3_dot(const union vec3 *v1, const union vec3 *v2);
 
