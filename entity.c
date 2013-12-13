@@ -836,12 +836,12 @@ Unless otherwise noted, you may use any and all code examples provided herein in
 
 int sphere_in_frustum(struct camera_info *c, float x, float y, float z, float radius )
 {
-   int p;
+	int p;
 
-   for( p = 0; p < 6; p++ )
-      if( c->frustum[p][0] * x + c->frustum[p][1] * y + c->frustum[p][2] * z + c->frustum[p][3] <= -radius )
-         return 0;
-   return 1;
+	for (p = 0; p < 6; p++)
+		if (c->frustum[p][0] * x + c->frustum[p][1] * y + c->frustum[p][2] * z + c->frustum[p][3] <= -radius)
+			return 0;
+	return 1;
 }
 
 /* from http://www.crownandcutlass.com/features/technicaldetails/frustum.html
