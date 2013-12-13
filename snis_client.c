@@ -8608,20 +8608,34 @@ static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
 		draw_damcon_socket_or_part(w, o, WHITE);
 }
 
+
+static struct snis_damcon_entity *damcon_robot_entity = NULL;
 static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 {
 	int x, y;
-	char msg[20];
+	char msg[40];
 	int byteangle = (int) (o->heading * 64.0 / M_PI);
+	int dist = 1000000;
 
 	if (!on_damcon_screen(o, &placeholder_part_spun[byteangle]))
 		return;
 	x = damconx_to_screenx(o->x);
 	y = damcony_to_screeny(o->y);
-	sprintf(msg, "%d %d %d", o->tsd.part.system, o->tsd.part.part, o->tsd.part.damage);
+
+	if (damcon_robot_entity)
+		dist = hypot(o->x - damcon_robot_entity->x,
+				o->y - damcon_robot_entity->y);
+	else
+		dist = 1000000;
+	if (dist < 150)
+		sprintf(msg, "%s",
+			damcon_part_name(o->tsd.part.system, o->tsd.part.part));
+	else
+		strcpy(msg, "");
 	sng_set_foreground(YELLOW);
 	sng_draw_vect_obj(w, gc, &placeholder_part_spun[byteangle], x, y);
-	sng_abs_xy_draw_string(w, gc, msg, NANO_FONT, x - 25, y);
+	sng_center_xy_draw_string(w, gc, msg, NANO_FONT, x,
+			y - 15 - (o->tsd.part.part % 2) * 15);
 	if (o->tsd.part.damage < 0.75 * 255.0)
 		sng_set_foreground(GREEN);
 	else if (o->tsd.part.damage < 0.90 * 255.0)
@@ -8643,6 +8657,7 @@ static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 	switch (o->type) {
 	case DAMCON_TYPE_ROBOT:
 		draw_damcon_robot(w, o);
+		damcon_robot_entity = o;
 		break;
 	case DAMCON_TYPE_WARPDRIVE:
 	case DAMCON_TYPE_SENSORARRAY:
