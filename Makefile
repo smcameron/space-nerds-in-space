@@ -63,7 +63,7 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o \
 		power-model.o quat.o matrix.o snis_event_callback.o space-part.o fleet.o
 
-CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_graph.o \
+CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} shader.o snis_ui_element.o snis_graph.o \
 	snis_client.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	snis_damcon_systems.o mesh.o \
@@ -76,7 +76,7 @@ LIMCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_limited_
 	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o fleet.o
 
 SSGL=ssgl/libssglclient.a
-LIBS=-Lssgl -lssglclient -lrt -lm ${LUALIBS} ${PNGLIBS}
+LIBS=-lGLEW -Lssgl -lssglclient -lrt -lm ${LUALIBS} ${PNGLIBS}
 #
 # NOTE: if you get
 #
@@ -177,6 +177,9 @@ SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} ${SERVEROBJS} ${GTKLDFLAGS} ${LI
 OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 
 all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS}
+
+shader.o : shader.c shader.h
+	$(Q)$(COMPILE)
 
 starbase.stl:	starbase.scad wedge.scad
 	$(Q)$(OPENSCAD)
