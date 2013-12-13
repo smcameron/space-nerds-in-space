@@ -721,7 +721,7 @@ static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
 	/* distribute the per-part-damage among the parts */
 	count = 0;
 	n = snis_object_pool_highest_object(d->pool);
-	for (i = 0; i < n; i++) {
+	for (i = 0; i <= n; i++) {
 		int new_damage;
 		p = &d->o[i];
 		if (p->type != DAMCON_TYPE_PART)
