@@ -5310,8 +5310,9 @@ static int l_set_player_damage(lua_State *l)
 	const double value = luaL_checknumber(l, 3);
 	uint32_t oid = (uint32_t) id;
 	uint8_t bvalue;
-	int i;
+	int i, b, damage_delta;
 	struct snis_entity *o;
+	int system_number;
 
 	i = lookup_by_id(oid);
 	if (i < 0)
@@ -5321,43 +5322,69 @@ static int l_set_player_damage(lua_State *l)
 		goto error;
 	if (value < 0 || value > 255)
 		goto error;
+	b = lookup_bridge_by_shipid(o->id);
 	bvalue = (uint8_t) value;
 	if (strncmp(system, "shield", 6) == 0) {
 		o->tsd.ship.damage.shield_damage = bvalue;
-		goto done;
+		system_number = DAMCON_TYPE_SHIELDSYSTEM;
+		goto distribute_damage;
 	}
 	if (strncmp(system, "impulse", 7) == 0) {
+		damage_delta =
+			(int) bvalue - (int) o->tsd.ship.damage.impulse_damage;
 		o->tsd.ship.damage.impulse_damage = bvalue;
-		goto done;
+		system_number = DAMCON_TYPE_IMPULSE;
+		goto distribute_damage;
 	}
 	if (strncmp(system, "warp", 4) == 0) {
+		damage_delta =
+			(int) bvalue - (int) o->tsd.ship.damage.warp_damage;
 		o->tsd.ship.damage.warp_damage = bvalue;
-		goto done;
+		system_number = DAMCON_TYPE_WARPDRIVE;
+		goto distribute_damage;
 	}
 	if (strncmp(system, "maneuvering", 7) == 0) {
+		damage_delta =
+			(int) bvalue - (int) o->tsd.ship.damage.maneuvering_damage;
 		o->tsd.ship.damage.maneuvering_damage = bvalue;
-		goto done;
+		system_number = DAMCON_TYPE_MANEUVERING;
+		goto distribute_damage;
 	}
 	if (strncmp(system, "phaser", 6) == 0) {
+		damage_delta =
+			(int) bvalue - (int) o->tsd.ship.damage.phaser_banks_damage;
 		o->tsd.ship.damage.phaser_banks_damage = bvalue;
-		goto done;
+		system_number = DAMCON_TYPE_PHASERBANK;
+		goto distribute_damage;
 	}
 	if (strncmp(system, "sensor", 6) == 0) {
+		damage_delta =
+			(int) bvalue - (int) o->tsd.ship.damage.sensors_damage;
 		o->tsd.ship.damage.sensors_damage = bvalue;
-		goto done;
+		system_number = DAMCON_TYPE_SENSORARRAY;
+		goto distribute_damage;
 	}
 	if (strncmp(system, "comms", 5) == 0) {
+		damage_delta =
+			(int) bvalue - (int) o->tsd.ship.damage.comms_damage;
 		o->tsd.ship.damage.comms_damage = bvalue;
-		goto done;
+		system_number = DAMCON_TYPE_COMMUNICATIONS;
+		goto distribute_damage;
 	}
 	if (strncmp(system, "tractor", 7) == 0) {
+		damage_delta =
+			(int) bvalue - (int) o->tsd.ship.damage.tractor_damage;
 		o->tsd.ship.damage.tractor_damage = bvalue;
-		goto done;
+		system_number = DAMCON_TYPE_TRACTORSYSTEM;
+		goto distribute_damage;
 	}
 error:
 	lua_pushnil(lua_state);
 	return 1;
-done:
+distribute_damage:
+	assert(b >= 0 && b < nbridges);
+	distribute_damage_to_damcon_system_parts(o, &bridgelist[b].damcon,
+			damage_delta, system_number);
 	lua_pushnumber(lua_state, 0.0);
 	return 1;
 }
