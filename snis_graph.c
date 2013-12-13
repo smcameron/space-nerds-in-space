@@ -17,6 +17,7 @@
 #include "liang-barsky.h"
 #include "bline.h"
 #include "build_bug_on.h"
+#include "mathutils.h"
 
 #define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY * (NSHADECOLORS + 1) + (NGRADIENTS * NTOTAL_GRADIENT_SHADES))
 GdkColor huex[TOTAL_COLORS]; 
@@ -39,11 +40,6 @@ static struct snis_graph_context {
 void sng_fixup_gl_y_coordinate(int screen_height)
 {
 	sgc.screen_height = screen_height;
-}
-
-static int sng_rand(int n)
-{
-	return rand() % n;
 }
 
 void sng_set_scale(float xscale, float yscale)
@@ -289,7 +285,7 @@ void sng_electric_line_plot_func(int x, int y, void *context)
 {
 	struct sng_dotted_plot_func_context *c = context;
 
-	if (sng_rand(100) < 10)
+	if (snis_randn(100) < 10)
 		sng_gl_draw_point(c->drawable, c->gc, x, y);
 }
 
@@ -297,7 +293,7 @@ static void sng_bright_electric_line_plot_func(int x, int y, void *context)
 {
 	struct sng_dotted_plot_func_context *c = context;
 
-	if (sng_rand(100) < 20) {
+	if (snis_randn(100) < 20) {
 		sng_set_foreground(c->i);
 		sng_gl_draw_point(c->drawable, c->gc, x, y);
 	}
@@ -617,9 +613,9 @@ void sng_setup_colors(GtkWidget *w)
 	for (i = 1; i <= NSHADECOLORS; i++) {
 		int j, r, g, b;
 
-		r = sng_rand(32767); 
-		g = sng_rand(32767); 
-		b = sng_rand(32767); 
+		r = snis_randn(32767); 
+		g = snis_randn(32767); 
+		b = snis_randn(32767); 
 
 		for (j = 0; j < NSHADESOFGRAY / 2; j++) { 
 			int index;
