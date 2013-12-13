@@ -37,6 +37,7 @@
 #include "triangle.h"
 #include "mesh.h"
 #include "matrix.h"
+#include "quat.h"
 
 #define DEFINE_STL_FILE_GLOBALS
 #include "stl_parser.h"
@@ -302,6 +303,76 @@ void process_coplanar_triangles(struct mesh *m, struct vertex_owner* owners)
 	}
 }
 
+void process_vertex_normals(struct mesh *m, float sharp_edge_angle, struct vertex_owner *owners)
+{
+	float cos_sharp_edge_angle = cos(sharp_edge_angle);
+
+	int tri_index, vert_index;
+	for (tri_index = 0; tri_index < m->ntriangles; ++tri_index) {
+		for (vert_index = 0; vert_index < 3; vert_index++) {
+			union vec3 vnormal = { { 0, 0, 0} };
+
+			struct triangle *this_t = &m->t[tri_index];
+			struct vertex *this_v = this_t->v[vert_index];
+			union vec3 this_tnormal = { { this_t->n.x, this_t->n.y, this_t->n.z } };
+
+			struct vertex_owner *start_owner = &owners[this_v - &m->v[0]];
+			if (start_owner) {
+				struct vertex_owner *owner;
+				for (owner = start_owner; owner != NULL; owner = owner->next) {
+					struct triangle *t = owner->t;
+
+					if (!t)
+						continue;
+
+					union vec3 tnormal = { { t->n.x, t->n.y, t->n.z } };
+
+					if (t != this_t) {
+						/* don't include t in vertex normal if angle is greater than sharp angle */
+						if (vec3_dot(&this_tnormal, &tnormal) < cos_sharp_edge_angle)
+							continue;
+					}
+
+					union vec3 v0 = { { t->v[0]->x, t->v[0]->y, t->v[0]->z } };
+					union vec3 v1 = { { t->v[1]->x, t->v[1]->y, t->v[1]->z } };
+					union vec3 v2 = { { t->v[2]->x, t->v[2]->y, t->v[2]->z } };
+
+					union vec3 tv1, tv2;
+
+#if 1
+					/* length of cross product = triangle area * 2 */
+					union vec3 cross_p;
+					vec3_cross(&cross_p, vec3_sub(&tv1, &v1, &v0), vec3_sub(&tv2, &v2, &v0));
+					float area = 0.5 * vec3_magnitude(&cross_p);
+					vec3_mul_self(&tnormal, area);
+#endif
+					/* figure out the angle between this vertex and the other two on the triangle */
+					float angle = 0;
+					if (this_v == t->v[0]) {
+						angle = acos(vec3_dot(vec3_normalize_self(vec3_sub(&tv1, &v0, &v1)),
+								vec3_normalize_self(vec3_sub(&tv2, &v0, &v2))));
+					} else if (this_v == t->v[1]) {
+						angle = acos(vec3_dot(vec3_normalize_self(vec3_sub(&tv1, &v1, &v0)),
+								vec3_normalize_self(vec3_sub(&tv2, &v1, &v2))));
+					} else if (this_v == t->v[2]) {
+						angle = acos(vec3_dot(vec3_normalize_self(vec3_sub(&tv1, &v2, &v0)),
+								vec3_normalize_self(vec3_sub(&tv2, &v2, &v1))));
+					}
+					vec3_mul_self(&tnormal, angle);
+
+					vec3_add_self(&vnormal, &tnormal);
+				}
+			}
+			vec3_normalize_self(&vnormal);
+
+			m->t[tri_index].vnormal[vert_index].x = vnormal.v.x;
+			m->t[tri_index].vnormal[vert_index].y = vnormal.v.y;
+			m->t[tri_index].vnormal[vert_index].z = vnormal.v.z;
+		}
+	}
+
+}
+
 void free_mesh(struct mesh * m)
 {
 	if (!m)
@@ -357,6 +428,7 @@ struct mesh *read_stl_file(char *file)
 	fclose(f);
 	my_mesh->radius = mesh_compute_radius(my_mesh);
 	process_coplanar_triangles(my_mesh, owners);
+	process_vertex_normals(my_mesh, 37.0 * M_PI / 180.0, owners);
 
 	free_vertex_owners(owners, facetcount * 3);
 

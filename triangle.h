@@ -31,6 +31,7 @@
 struct triangle {
 	struct vertex *v[3]; /* three vertices */
 	struct vertex n; /* normal */
+	struct vertex vnormal[3]; /* vertex normal */
 	int flag;
 };
 #endif
