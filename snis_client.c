@@ -8086,14 +8086,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			case OBJTYPE_LASER:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 1.0;
 				update_entity_scale(contact, contact_scale);
-				update_entity_rotation(contact, 0, go[i].heading, 0);
 				draw_contact_offset_and_ring = 0;
 				break;
 			case OBJTYPE_SHIP2:
 			case OBJTYPE_SHIP1:
 				contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
 				update_entity_scale(contact, contact_scale);
-				update_entity_rotation(contact, 0, go[i].heading, 0);
 				break;
 			}
 

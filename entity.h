@@ -39,7 +39,6 @@ GLOBAL void remove_entity(struct entity_context *cx,
 	struct entity *e);
 GLOBAL void remove_all_entity(struct entity_context *cx);
 GLOBAL void update_entity_pos(struct entity *e, float x, float y, float z);
-GLOBAL void update_entity_rotation(struct entity *e, float rx, float ry, float rz);
 GLOBAL void update_entity_orientation(struct entity *e, const union quat *orientation);
 GLOBAL union quat *entity_get_orientation(struct entity *e);
 GLOBAL float entity_get_scale(struct entity *e);

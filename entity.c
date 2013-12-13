@@ -49,7 +49,6 @@
 struct entity {
 	struct mesh *m;
 	float x, y, z; /* world coords */
-	float rx, ry, rz;
 	float sx, sy; /* screen coords */
 	float scale;
 	float dist3dsqrd;
@@ -132,9 +131,6 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].x = x;
 	cx->entity_list[n].y = y;
 	cx->entity_list[n].z = z;
-	cx->entity_list[n].rx = 0;
-	cx->entity_list[n].ry = 0;
-	cx->entity_list[n].rz = 0;
 	cx->entity_list[n].scale = 1.0;
 	cx->entity_list[n].color = color;
 	cx->entity_list[n].render_style = RENDER_NORMAL;
@@ -170,13 +166,6 @@ void update_entity_pos(struct entity *e, float x, float y, float z)
 	e->x = x;
 	e->y = y;
 	e->z = z;
-}
-
-void update_entity_rotation(struct entity *e, float rx, float ry, float rz)
-{
-	e->rx = rx;
-	e->ry = ry;
-	e->rz = rz;
 }
 
 void update_entity_orientation(struct entity *e, const union quat *orientation)
