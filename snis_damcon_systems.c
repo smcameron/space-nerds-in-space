@@ -20,60 +20,60 @@ static char *damcon_system_names[] = {
 
 static char *damcon_part_names[][DAMCON_PARTS_PER_SYSTEM] = {
 	{	/* shield system parts */
-		"Von Kurnatowski field generator",
-		"furion reflector matrix",
-		"photonic charge stabilizer",
-		/* "phase conjugate baryon reflector",
-		"Tachyonic energy absorbtion matrix",  */
+		"VON KURNATOWSKI FIELD GENERATOR",
+		"FURION REFLECTOR MATRIX",
+		"PHOTONIC CHARGE STABILIZER",
+		/* "PHASE CONJUGATE BARYON REFLECTOR",
+		"TACHYONIC ENERGY ABSORPTION MATRIX",  */
 	},
 	{	/* impulse drive parts */
-		"positron emitter tube",
-		/* "plasma current regulator",
-		"Wilhelm junction", */
-		"antimatter backflash suppressor",
-		"positronic charging coil",
+		"POSITRON EMITTER TUBE",
+		/* "PLASMA CURRENT REGULATOR",
+		"WILHELM JUNCTION", */
+		"ANTIMATTER BACKFLASH SUPPRESSOR",
+		"POSITRONIC CHARGING COIL",
 	},
 	{	/* warp drive parts */
-		/* "relativistic torque amplifier", */
-		"transient wormhole suppressor",
-		/* "plasma wastegate controller", */
-		"Hibbert space multiplexer",
-		"Sagan conundrum resolver",
+		/* "RELATIVISTIC TORQUE AMPLIFIER", */
+		"TRANSIENT WORMHOLE SUPPRESSOR",
+		/* "PLASMA WASTEGATE CONTROLLER", */
+		"HIBBERT SPACE MULTIPLEXER",
+		"SAGAN CONUNDRUM RESOLVER",
 	},
 	{	/* maneuvering parts */
-		"inertial navigation module",
-		/* "thruster control module", */
-		"Hibbert space transfer computer",
-		/* "star tracking module", */
-		"furion spin gyroscope",
+		"INERTIAL NAVIGATION MODULE",
+		/* "THRUSTER CONTROL MODULE", */
+		"HIBBERT SPACE TRANSFER COMPUTER",
+		/* "STAR TRACKING MODULE", */
+		"FURION SPIN GYROSCOPE",
 	},
 	{	/* Phaser bank parts */
-		"phased enluxinator",
-		/* "phase transfer matrix", */
-		"annular phase conjugator",
-		/* "photonic phase tuner", */
-		"six channel Rose frequency modulator", 
+		"PHASED ENLUXINATOR",
+		/* "PHASE TRANSFER MATRIX", */
+		"ANNULAR PHASE CONJUGATOR",
+		/* "PHOTONIC PHASE TUNER", */
+		"SIX CHANNEL ROSE FREQUENCY MODULATOR",
 	},
 	{	/* sensor system parts */
-		"furion detector array",
-		/* "harmonic damper circuit", */
-		/* "harmonic differential amplifier", */
-		"subharmonic omni-stabilizer",
-		"furion-photon transformer ",
+		"FURION DETECTOR ARRAY",
+		/* "HARMONIC DAMPER CIRCUIT", */
+		/* "HARMONIC DIFFERENTIAL AMPLIFIER", */
+		"SUBHARMONIC OMNI-STABILIZER",
+		"FURION-PHOTON TRANSFORMER ",
 	},
 	{	/* communication system parts */
-		"radionic detector coil",
-		/* "radionic field modulator", */
-		/* "Antenna control module", */
-		"Hibbert space furionic amplifier",
-		"furionic field multiplexer",
+		"RADIONIC DETECTOR COIL",
+		/* "RADIONIC FIELD MODULATOR", */
+		/* "ANTENNA CONTROL MODULE", */
+		"HIBBERT SPACE FURIONIC AMPLIFIER",
+		"FURIONIC FIELD MULTIPLEXER",
 	},
 	{	/* tractor beam system parts */
-		"Van Grinsven field modulator",
-		"Dual stage ion brake",
-		"Graviton induction unit",
-		/* "Black hole suppressor",
-		"Turbo-gravitaser collimator", */
+		"VAN GRINSVEN FIELD MODULATOR",
+		"DUAL STAGE ION BRAKE",
+		"GRAVITON INDUCTION UNIT",
+		/* "BLACK HOLE SUPPRESSOR",
+		"TURBO-GRAVITASER COLLIMATOR", */
 	},
 	{	/* repair station parts... special case, no parts. */
 		"RS BUG", /* if you see these in the game, it's a bug. */
