@@ -79,6 +79,18 @@
 
 struct network_stats netstats;
 
+#define GATHER_OPCODE_STATS 0
+
+#if GATHER_OPCODE_STATS
+
+static struct opcode_stat {
+	uint16_t opcode;
+	uint64_t count;
+	uint64_t bytes;
+} write_opcode_stats[256];
+
+#endif
+
 struct game_client {
 	int socket;
 	pthread_t read_thread;
@@ -476,12 +488,34 @@ static void wormhole_move(struct snis_entity *o)
 				wormhole_collision_detection);
 }
 
+#if GATHER_OPCODE_STATS
+static void gather_opcode_stats(struct packed_buffer *pb)
+{
+	int length;
+	uint16_t opcode;
+
+	/* assumption, first 2-bytes is opcode. */
+	memcpy(&opcode, pb->buffer, sizeof(opcode));
+	opcode = ((opcode & 0xff) << 8) | ((opcode & 0xff00) >> 8);
+	length = packed_buffer_length(pb);
+	if (opcode < 256) {
+		write_opcode_stats[opcode].opcode = opcode;
+		write_opcode_stats[opcode].count++;
+		write_opcode_stats[opcode].bytes += (uint64_t) length;
+	}
+}
+#else
+#define gather_opcode_stats(x)
+#endif
+
 static inline void pb_queue_to_client(struct game_client *c, struct packed_buffer *pb)
 {
+
 	if (!pb) {
 		stacktrace("snis_server: NULL packed_buffer in pb_queue_to_client()");
 		return;
 	}
+	gather_opcode_stats(pb);
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
@@ -7804,12 +7838,41 @@ static void move_damcon_entities(void)
 		move_damcon_entities_on_bridge(i);
 }
 
+#if GATHER_OPCODE_STATS
+int compare_opcode_stats(const void *a, const void *b)
+{
+	const struct opcode_stat *A = a;
+	const struct opcode_stat *B = b;
+
+	return B->bytes - A->bytes;
+}
+
+static void dump_opcode_stats(struct opcode_stat *data)
+{
+	int i;
+
+	struct opcode_stat s[256];
+
+	if ((universe_timestamp % 50) != 0)
+		return;
+
+	memcpy(s, data, sizeof(s));
+	qsort(s, 256, sizeof(s[0]), compare_opcode_stats);
+
+	for (i = 0; i < 20; i++)
+		printf("%d: %3hu: %llu %llu\n", i, s[i].opcode, s[i].count, s[i].bytes);
+}
+#else
+#define dump_opcode_stats(x)
+#endif
+
 static void move_objects(void)
 {
 	int i;
 
 	pthread_mutex_lock(&universe_mutex);
 	universe_timestamp++;
+	dump_opcode_stats(write_opcode_stats);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (go[i].alive) {
 			go[i].move(&go[i]);
