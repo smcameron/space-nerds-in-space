@@ -125,6 +125,8 @@ static int vertical_controls_inverted = VERTICAL_CONTROLS_NORMAL;
 static volatile int vertical_controls_timer = 0;
 static int display_frame_stats = 0;
 
+static float turret_recoil_amount = 0.0f;
+
 typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nsparks, int time);
 
 explosion_function *explosion = NULL;
@@ -2406,10 +2408,12 @@ static void do_laser(void)
 {
 	switch (displaymode) {
 	case DISPLAYMODE_WEAPONS: 
-		if (weapons.manual_mode == WEAPONS_MODE_MANUAL)
+		if (weapons.manual_mode == WEAPONS_MODE_MANUAL) {
 			queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_MANUAL_LASER));
-		else
+			turret_recoil_amount = 2.0f;
+		} else {
 			queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_LASER));
+		}
 		break;
 	case DISPLAYMODE_DAMCON:
 		robot_gripper_button_pressed(NULL);
@@ -4820,6 +4824,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	struct snis_entity *o;
 	float cx, cy, cz;
 	union quat camera_orientation;
+	union vec3 recoil = { { -1.0f, 0.0f, 0.0f } };
 	char buf[20];
 
 	if (!(o = find_my_ship()))
@@ -4865,7 +4870,13 @@ static void show_weapons_camera_view(GtkWidget *w)
 	set_render_style(o->entity, RENDER_NORMAL);
 
 	/* Add our turret into the mix */
-	struct entity* turret_entity = add_entity(ecx, ship_turret_mesh, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z, SHIP_COLOR);
+	quat_rot_vec_self(&recoil, &camera_orientation);
+	struct entity* turret_entity = add_entity(ecx, ship_turret_mesh,
+				cam_pos.v.x + turret_recoil_amount * recoil.v.x,
+				cam_pos.v.y + turret_recoil_amount * recoil.v.y,
+				cam_pos.v.z + turret_recoil_amount * recoil.v.z,
+				SHIP_COLOR);
+	turret_recoil_amount = turret_recoil_amount * 0.5f;
 	update_entity_orientation(turret_entity, &camera_orientation);
 	set_render_style(turret_entity, RENDER_NORMAL);
 
