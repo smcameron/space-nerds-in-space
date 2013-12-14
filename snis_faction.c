@@ -52,7 +52,7 @@ static int process_hostility(char *line)
 		return -1;
 	}
 	f2 = lookup_faction(b);
-	if (f1 < 0) {
+	if (f2 < 0) {
 		fprintf(stderr, "Bad faction '%s'\n", b);
 		return -1;
 	}
