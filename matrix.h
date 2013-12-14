@@ -40,9 +40,28 @@ struct mat44d {
 	double m[4][4];
 };
 
+struct mat33 {
+	float m[3][3];
+};
+
+struct mat33d {
+	double m[3][3];
+};
+
 struct mat41 {
 	float m[4];
 };
+
+struct mat31 {
+	float m[3];
+};
+
+GLOBAL struct mat33 *mat44_to_mat33_ff(const struct mat44 *src, struct mat33 *output);
+
+GLOBAL struct mat33 *mat33_inverse_transpose_ff(const struct mat33 *src, struct mat33 *output);
+
+GLOBAL void mat33_x_mat31(const struct mat33 *lhs, const struct mat31 *rhs,
+				struct mat31 *output);
 
 GLOBAL void mat44_convert_df(const struct mat44d *src, struct mat44 *output);
 

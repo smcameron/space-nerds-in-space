@@ -25,6 +25,60 @@
 #define DEFINE_MATRIX_GLOBALS
 #include "matrix.h"
 
+struct mat33 *mat44_to_mat33_ff(const struct mat44 *src, struct mat33 *output)
+{
+	int i, j;
+
+	for (i = 0; i < 3; i++)
+		for (j = 0; j < 3; j++)
+			output->m[i][j] = src->m[i][j];
+	return output;
+}
+
+struct mat33 *mat33_inverse_transpose_ff(const struct mat33 *src, struct mat33 *output)
+{
+	float determinant =
+		+ src->m[0][0] * (src->m[1][1] * src->m[2][2] - src->m[1][2] * src->m[2][1])
+		- src->m[0][1] * (src->m[1][0] * src->m[2][2] - src->m[1][2] * src->m[2][0])
+		+ src->m[0][2] * (src->m[1][0] * src->m[2][1] - src->m[1][1] * src->m[2][0]);
+
+	output->m[0][0] = (+(src->m[1][1] * src->m[2][2] - src->m[2][1] * src->m[1][2])) / determinant;
+	output->m[0][1] = (-(src->m[1][0] * src->m[2][2] - src->m[2][0] * src->m[1][2])) / determinant;
+	output->m[0][2] = (+(src->m[1][0] * src->m[2][1] - src->m[2][0] * src->m[1][1])) / determinant;
+	output->m[1][0] = (-(src->m[0][1] * src->m[2][2] - src->m[2][1] * src->m[0][2])) / determinant;
+	output->m[1][1] = (+(src->m[0][0] * src->m[2][2] - src->m[2][0] * src->m[0][2])) / determinant;
+	output->m[1][2] = (-(src->m[0][0] * src->m[2][1] - src->m[2][0] * src->m[0][1])) / determinant;
+	output->m[2][0] = (+(src->m[0][1] * src->m[1][2] - src->m[1][1] * src->m[0][2])) / determinant;
+	output->m[2][1] = (-(src->m[0][0] * src->m[1][2] - src->m[1][0] * src->m[0][2])) / determinant;
+	output->m[2][2] = (+(src->m[0][0] * src->m[1][1] - src->m[1][0] * src->m[0][1])) / determinant;
+	return output;
+}
+
+/* for post muliplication, mat44 must be column major and stored column major order */
+void mat33_x_mat31(const struct mat33 *lhs, const struct mat31 *rhs,
+				struct mat31 *output)
+{
+	/*
+	     lhs         rhs     output
+	     | a b c | | x |   |ax + by + cz|
+	     | d e f | | y | = |dx + ey + fz|
+	     | g h i | | z |   |gx + hy + iz|
+
+	 assumed to be stored in memory like { {a, e, i}, {b, f, j}... }
+	 so, lhs->m[3][2] == g. address like: lhs->[column][row].
+
+	 */
+
+	int row, col;
+
+	for (row = 0; row < 3; row++) {
+		output->m[row] = 0;
+		for (col = 0; col < 3; col++)
+			output->m[row] += lhs->m[col][row] * rhs->m[col];
+	}
+}
+
+
 void mat44_convert_df(const struct mat44d *src, struct mat44 *output)
 {
 	int i, j;
