@@ -11998,7 +11998,7 @@ int main(int argc, char *argv[])
 
 	/* Need this so that fscanf reads floats properly. */
 #define LOCALE_THAT_WORKS "en_US.UTF-8"
-	if (!setenv("LANG", LOCALE_THAT_WORKS, 1))
+	if (setenv("LANG", LOCALE_THAT_WORKS, 1) <  0)
 		fprintf(stderr, "Failed to setenv LANG to '%s'\n",
 			LOCALE_THAT_WORKS);
 
