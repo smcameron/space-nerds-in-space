@@ -2,7 +2,7 @@
 
 # stop any existing processes first
 ./killem.sh
-sleep 1
+sleep 0.25
 
 usage()
 {
@@ -12,23 +12,29 @@ usage()
 	exit 1
 }
 
+shipname="$1"
 if [ "$1" = "" ]
 then
-	usage
+	shipname="spacenerd"	
 fi
 
+password="$2"
 if [ "$2" = "" ]
 then
-	usage
+	password="spacenerd"
 fi
 
 # start the lobby server
 ssgl/ssgl_server
 
+sleep 0.25
+
 ./snis_server localhost SPACENERDS `hostname` localhost &
 
+sleep 0.25
+
 # start the game client and server in quickstart mode
-./snis_client --fullscreen --quickstart --starship "$1" --pw "$2"
+./snis_client --fullscreen --quickstart --starship "$shipname" --pw "$password"
 
 exit $?
 
