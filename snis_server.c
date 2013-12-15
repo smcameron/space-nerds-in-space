@@ -444,6 +444,12 @@ static void asteroid_move(struct snis_entity *o)
 	}
 }
 
+static void cargo_container_move(struct snis_entity *o)
+{
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+	o->timestamp = universe_timestamp;
+}
+
 static void derelict_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
@@ -1049,9 +1055,16 @@ static void attack_your_attacker(struct snis_entity *attackee, struct snis_entit
 static int add_derelict(const char *name, double x, double y, double z,
 			int shiptype, int the_faction);
 
+static int add_cargo_container(double x, double y, double z, double vx, double vy, double vz);
 static int make_derelict(struct snis_entity *o)
 {
-	return add_derelict(o->sdata.name, o->x, o->y, o->z, o->tsd.ship.shiptype, o->sdata.faction);
+	int rc;
+	rc = add_derelict(o->sdata.name, o->x, o->y, o->z, o->tsd.ship.shiptype, o->sdata.faction);
+	(void) add_cargo_container(o->x, o->y, o->z,
+		0.5f * (snis_randn(1000) - 500) / 500.0f,
+		0.5f * (snis_randn(1000) - 500) / 500.0f,
+		0.5f * (snis_randn(1000) - 500) / 500.0f);
+	return rc;
 }
 
 struct potential_victim_info {
@@ -3616,6 +3629,21 @@ static int l_add_spacemonster(lua_State *l)
 	lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
+}
+
+static int add_cargo_container(double x, double y, double z, double vx, double vy, double vz)
+{
+	int i;
+
+	i = add_generic_object(x, y, z, vx, vy, vz, 0, OBJTYPE_CARGO_CONTAINER);
+	if (i < 0)
+		return i;
+	go[i].sdata.shield_strength = 0;
+	go[i].sdata.shield_wavelength = 0;
+	go[i].sdata.shield_width = 0;
+	go[i].sdata.shield_depth = 0;
+	go[i].move = cargo_container_move;
+	return i;
 }
 
 static int add_asteroid(double x, double y, double z, double vx, double vz, double heading)
@@ -6872,6 +6900,8 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_cargo_container_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_derelict_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_planet_packet(struct game_client *c,
@@ -6931,6 +6961,10 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_ASTEROID:
 		send_update_asteroid_packet(c, o);
+		send_update_sdata_packets(c, o);
+		break;
+	case OBJTYPE_CARGO_CONTAINER:
+		send_update_cargo_container_packet(c, o);
 		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_DERELICT:
@@ -7392,6 +7426,18 @@ static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	pb_queue_to_client(c, packed_buffer_new("hwSSSSSS", OPCODE_UPDATE_ASTEROID, o->id,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
+					o->vx, (int32_t) UNIVERSE_DIM,
+					o->vy, (int32_t) UNIVERSE_DIM,
+					o->vz, (int32_t) UNIVERSE_DIM));
+}
+
+static void send_update_cargo_container_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, packed_buffer_new("hwSSSSSS", OPCODE_UPDATE_CARGO_CONTAINER, o->id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,

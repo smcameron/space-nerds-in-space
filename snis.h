@@ -74,6 +74,7 @@
 #define OBJTYPE_LASERBEAM 14
 #define OBJTYPE_DERELICT 15
 #define OBJTYPE_TRACTORBEAM 16
+#define OBJTYPE_CARGO_CONTAINER 17
 
 /* Careful, CURRENT / VOLTAGE ratio is twitchy, keep it in the sweet spot
  * MAX_CURRENT between 5 and 10, MAX_VOLTAGE at 1000000.0.
@@ -382,6 +383,10 @@ struct asteroid_data {
 	union quat rotational_velocity;
 };
 
+struct cargo_containter_data {
+	union quat rotational_velocity;
+};
+
 struct derelict_data {
 	uint8_t shiptype; /* same as snis_entity_science_data subclass */
 };
@@ -425,6 +430,7 @@ union type_specific_data {
 	struct spacemonster_data spacemonster;
 	struct laserbeam_data laserbeam;
 	struct derelict_data derelict;
+	struct cargo_containter_data cargo_container;
 };
 
 struct snis_entity;

@@ -134,6 +134,7 @@
 #define OPCODE_ECON_UPDATE_SHIP_DEBUG_AI 209
 #define OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE 210
 #define OPCODE_TOGGLE_DEMON_SAFE_MODE 211
+#define OPCODE_UPDATE_CARGO_CONTAINER	212
 
 #define OPCODE_NOOP		0xffff
 
@@ -208,6 +209,13 @@ struct update_asteroid_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint32_t x, y, z;
+};
+
+struct update_cargo_container_packet {
+	uint16_t opcode;
+	uint32_t id;
+	uint32_t x, y, z;
+	uint32_t vx, vy, vz;
 };
 
 struct update_wormhole_packet {

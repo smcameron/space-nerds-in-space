@@ -101,6 +101,7 @@
 #define WORMHOLE_COLOR WHITE
 #define PLANET_COLOR GREEN
 #define ASTEROID_COLOR AMBER
+#define CARGO_CONTAINER_COLOR YELLOW 
 #define DERELICT_COLOR BLUE 
 #define PARTICLE_COLOR YELLOW
 #define LASER_COLOR GREEN
@@ -1191,6 +1192,44 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 	return 0;
 }
 
+static int update_cargo_container(uint32_t id, double x, double y, double z,
+				double vx, double vy, double vz)
+{
+	int i;
+	struct entity *e;
+	union quat orientation, xrot, q1, q2, rot;
+	float angular_speed;
+	struct snis_entity *o;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		random_axis_quat(&orientation);
+		e = add_entity(ecx, cargo_container_mesh, x, y, z, CARGO_CONTAINER_COLOR);
+		i = add_generic_object(id, x, y, z, vx, vy, vz,
+				&orientation, OBJTYPE_CARGO_CONTAINER, 1, e);
+		if (i < 0)
+			return i;
+		o = &go[i];
+
+		/* Pick a small rotational velocity around x axis */ 
+		angular_speed = ((float) snis_randn(100) / 10.0 - 5.0) * M_PI / 180.0;
+		quat_init_axis(&xrot, 1.0, 0.0, 0.0, angular_speed);
+		/* transform rotational velocity into random orientation */
+		random_axis_quat(&orientation);
+		quat_mul(&q1, &orientation, &xrot);
+		quat_conj(&q2, &orientation);
+		quat_mul(&rot, &q1, &q2);
+		o->tsd.cargo_container.rotational_velocity = rot;
+	} else {
+		o = &go[i];
+		/* move cargo container */
+		update_generic_object(i, x, y, z, vx, vy, vz, NULL, 1);
+		update_entity_pos(o->entity, x, y, z);
+	}
+	return 0;
+}
+
+
 static int update_derelict(uint32_t id, double x, double y, double z, uint8_t ship_kind)
 {
 	int i, m;
@@ -1420,6 +1459,18 @@ static void spin_asteroid(struct snis_entity *o)
 		update_entity_orientation(o->entity, &orientation);
 }
 
+static void spin_cargo_container(struct snis_entity *o)
+{
+	union quat orientation;
+
+	quat_mul(&orientation, &o->tsd.cargo_container.rotational_velocity, &o->orientation);
+	quat_normalize_self(&orientation);
+	o->orientation = orientation;
+	if (o->entity)
+		update_entity_orientation(o->entity, &orientation);
+}
+
+
 static void move_generic_object(struct snis_entity *o)
 {
 	/* updates are sent every 1/10th of a second */
@@ -1500,6 +1551,9 @@ static void move_objects(void)
 		case OBJTYPE_ASTEROID:
 			move_generic_object(o);
 			spin_asteroid(o);
+		case OBJTYPE_CARGO_CONTAINER:
+			move_generic_object(o);
+			spin_cargo_container(o);
 			break;
 		case OBJTYPE_LASERBEAM:
 		case OBJTYPE_TRACTORBEAM:
@@ -3873,6 +3927,29 @@ static int process_update_asteroid_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_cargo_container_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id;
+	double dx, dy, dz, dvx, dvy, dvz;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_cargo_container_packet) - sizeof(uint16_t));
+	rc = read_and_unpack_buffer(buffer, "wSSSSSS", &id,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy,(int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM,
+			&dvx, (int32_t) UNIVERSE_DIM,
+			&dvy, (int32_t) UNIVERSE_DIM,
+			&dvz, (int32_t) UNIVERSE_DIM);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_cargo_container(id, dx, dy, dz, dvx, dvy, dvz);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+} 
+
 static int process_update_derelict_packet(void)
 {
 	unsigned char buffer[100];
@@ -4082,6 +4159,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_ASTEROID:
 			rc = process_update_asteroid_packet();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_CARGO_CONTAINER:
+			rc = process_update_cargo_container_packet();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -7927,6 +8009,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		case OBJTYPE_PLANET:
 		case OBJTYPE_STARBASE:
 		case OBJTYPE_SHIP2:
+		case OBJTYPE_CARGO_CONTAINER:
 		case OBJTYPE_SHIP1:
 		{
 			struct mesh *m = entity_get_mesh(go[i].entity);
