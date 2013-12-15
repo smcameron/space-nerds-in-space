@@ -124,20 +124,22 @@ module basetanks()
 	basetank(4 * 360 / 5);
 }
 
-union() {
-difference() {
-	mushroom_cap();
-	capholes();
-	rotate(a = 360 / 10, v = [0, 0, 1])
-		capgrooves();
+scale(v = [3.0, 3.0, 3.0]) {
+	union() {
+		difference() {
+			mushroom_cap();
+			capholes();
+			rotate(a = 360 / 10, v = [0, 0, 1])
+			capgrooves();
+		}
+		rotate(a = 360 / 10, v = [0, 0, 1])
+		scale(v = [0.5, 0.5, 0.65])
+			capgrooves();
+		capballs();
+		base_cyl();
+		basetanks();
+		central_shaft();
+		antenna();
+	}
 }
-rotate(a = 360 / 10, v = [0, 0, 1])
-	scale(v = [0.5, 0.5, 0.65])
-		capgrooves();
 
-capballs();
-base_cyl();
-basetanks();
-central_shaft();
-antenna();
-}
