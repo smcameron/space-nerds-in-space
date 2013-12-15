@@ -1,0 +1,34 @@
+#!/bin/sh
+
+# stop any existing processes first
+./killem.sh
+sleep 1
+
+usage()
+{
+	echo "usage: quickstart star-ship-name password" 1>&2
+	echo "example:" 1>&2
+	echo "./quickstart Enterprise tribbles" 1>&2
+	exit 1
+}
+
+if [ "$1" = "" ]
+then
+	usage
+fi
+
+if [ "$2" = "" ]
+then
+	usage
+fi
+
+# start the lobby server
+ssgl/ssgl_server
+
+./snis_server localhost SPACENERDS `hostname` localhost &
+
+# start the game client and server in quickstart mode
+./snis_client --fullscreen --quickstart --starship "$1" --pw "$2"
+
+exit $?
+

@@ -124,7 +124,7 @@
 static int vertical_controls_inverted = VERTICAL_CONTROLS_NORMAL;
 static volatile int vertical_controls_timer = 0;
 static int display_frame_stats = 0;
-
+static int quickstartmode = 0; /* allows auto connecting to first (only) lobby entry */
 static float turret_recoil_amount = 0.0f;
 
 typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nsparks, int time);
@@ -2963,6 +2963,12 @@ static void show_lobbyscreen(GtkWidget *w)
 			displaymode = DISPLAYMODE_CONNECTING;
 			return;
 		}
+
+		if (lobby_selected_server != -1 && quickstartmode) {
+			displaymode = DISPLAYMODE_CONNECTING;
+			return;
+		}
+
 		lobby_selected_server = -1;
 		sprintf(msg, "Connected to lobby on socket %d\n", lobby_socket);
 		sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 30, LINEHEIGHT);
@@ -2980,6 +2986,10 @@ static void show_lobbyscreen(GtkWidget *w)
 					725, LINEHEIGHT);
 			} else
 				sng_set_foreground(WHITE);
+
+			if (quickstartmode) {
+				lobby_selected_server = 0;
+			}
 			 
 			sprintf(msg, "%hu.%hu.%hu.%hu/%hu", x[0], x[1], x[2], x[3], lobby_game_server[i].port);
 			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 30, 100 + i * LINEHEIGHT);
@@ -12010,6 +12020,10 @@ int main(int argc, char *argv[])
 
 	role = 0;
 	for (i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--quickstart") == 0) {
+			quickstartmode = 1;
+			continue;
+		}
 		if (strcmp(argv[i], "--lobbyhost") == 0) {
 			if ((i + 1) >= argc)
 				usage();
@@ -12103,8 +12117,11 @@ int main(int argc, char *argv[])
 	memset(ship_mesh_map, 0, sizeof(*ship_mesh_map) * nshiptypes);
 	memset(derelict_mesh, 0, sizeof(*derelict_mesh) * nshiptypes);
 
-	if (displaymode != DISPLAYMODE_NETWORK_SETUP)
+	if (displaymode != DISPLAYMODE_NETWORK_SETUP || quickstartmode) {
 		connect_to_lobby();
+		if (quickstartmode)
+			displaymode = DISPLAYMODE_LOBBYSCREEN;
+	}
 
 	real_screen_width = SCREEN_WIDTH;
 	real_screen_height = SCREEN_HEIGHT;
