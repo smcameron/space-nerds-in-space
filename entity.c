@@ -237,7 +237,8 @@ static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc,
 
 	x1 = wx_screen(cx, wx);
 	y1 = wy_screen(cx, wy);
-	sng_current_draw_line(w->window, gc, x1, y1, x1 + (snis_randn(10) < 7), y1);
+	sng_set_foreground(GRAY + snis_randn(NSHADESOFGRAY));
+	sng_current_draw_line(w->window, gc, x1, y1, x1 + 1, y1);
 }
 
 void software_render_point(GtkWidget *w, GdkGC *gc,
