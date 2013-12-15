@@ -144,6 +144,7 @@ MODELS=${MD}/freighter.stl \
 	${MD}/scrambler.stl \
 	${MD}/swordfish.stl \
 	${MD}/wombat.stl \
+	${MD}/cargocontainer.stl \
 	${MD}/spaceship_turret.stl
 	
 

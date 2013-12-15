@@ -294,6 +294,7 @@ struct mesh *conqueror_mesh;
 struct mesh *scrambler_mesh;
 struct mesh *swordfish_mesh;
 struct mesh *wombat_mesh;
+struct mesh *cargo_container_mesh;
 
 struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
@@ -11915,6 +11916,7 @@ static void init_meshes(void)
 	laserbeam_mesh = snis_read_stl_file(d, "long-triangular-prism.stl");
 	ship_icon_mesh = snis_read_stl_file(d, "ship-icon.stl");
 	heading_indicator_mesh = snis_read_stl_file(d, "heading_indicator.stl");
+	cargo_container_mesh = snis_read_stl_file(d, "cargocontainer.stl");
 
 	/* Note: these must match defines of SHIPTYPEs in snis.h */
 	ship_mesh_map[0] = cruiser_mesh;
