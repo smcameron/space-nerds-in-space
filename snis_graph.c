@@ -149,7 +149,7 @@ static int clip_rectangle(float *x, float *y, float *width, float *height)
 }
 
 static void sng_gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean filled,
-		int x, int y, int width, int height)
+		float x, float y, float width, float height)
 {
 #ifndef WITHOUTOPENGL
 	int x2, y2;
@@ -162,12 +162,12 @@ static void sng_gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean fil
 	else
 		glBegin(GL_LINE_STRIP);
         glColor3us(h->red, h->green, h->blue);
-        glVertex2i(x, sgc.screen_height - y);
-        glVertex2i(x2, sgc.screen_height - y);
-        glVertex2i(x2, sgc.screen_height - y2);
-        glVertex2i(x, sgc.screen_height - y2);
+        glVertex2f(x, sgc.screen_height - y);
+        glVertex2f(x2, sgc.screen_height - y);
+        glVertex2f(x2, sgc.screen_height - y2);
+        glVertex2f(x, sgc.screen_height - y2);
 	if (!filled)
-        	glVertex2i(x, sgc.screen_height - y);
+		glVertex2f(x, sgc.screen_height - y);
 	glEnd();
 #else
 	gdk_draw_rectangle(drawable, gc, filled, x, y, width, height);
