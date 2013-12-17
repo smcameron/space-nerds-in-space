@@ -198,6 +198,7 @@ int nnebula;
 static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
 static volatile int helpmodeline = 0;
+static volatile float weapons_camera_shake = 0.0f; 
 
 struct client_network_stats {
 	uint64_t bytes_sent;
@@ -2445,6 +2446,7 @@ static void do_torpedo(void)
 	if (o->tsd.ship.torpedoes_loaded <= 0)
 		return;
 	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_TORPEDO));
+	weapons_camera_shake = 1.0f;
 }
 
 static void do_tractor_beam(void)
@@ -2466,6 +2468,7 @@ static void do_laser(void)
 		if (weapons.manual_mode == WEAPONS_MODE_MANUAL) {
 			queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_MANUAL_LASER));
 			turret_recoil_amount = 2.0f;
+			weapons_camera_shake = 0.5f;
 		} else {
 			queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_LASER));
 		}
@@ -4937,6 +4940,15 @@ static void show_weapons_camera_view(GtkWidget *w)
 	union vec3 cam_pos = { {0, 5.2, 0} };
 	quat_rot_vec_self(&cam_pos,&o->orientation);
 	vec3_add_c_self(&cam_pos, cx, cy, cz);
+
+	if (weapons_camera_shake > 0.05) {
+		float ryaw, rpitch;
+
+		ryaw = weapons_camera_shake * ((snis_randn(100) - 50) * 0.025f) * M_PI / 180.0;
+		rpitch = weapons_camera_shake * ((snis_randn(100) - 50) * 0.025f) * M_PI / 180.0;
+		quat_apply_relative_yaw_pitch(&camera_orientation, ryaw, rpitch);
+		weapons_camera_shake = 0.7f * weapons_camera_shake;
+	}
 
 	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	camera_set_orientation(ecx, &camera_orientation);
