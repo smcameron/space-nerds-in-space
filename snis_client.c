@@ -1564,6 +1564,7 @@ static void move_objects(void)
 		case OBJTYPE_ASTEROID:
 			move_generic_object(o);
 			spin_asteroid(o);
+			break;
 		case OBJTYPE_CARGO_CONTAINER:
 			move_generic_object(o);
 			spin_cargo_container(o);
