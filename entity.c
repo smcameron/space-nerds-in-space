@@ -615,17 +615,6 @@ void software_render_entity_triangles(GtkWidget *w, GdkGC *gc, struct entity_con
 	}
 }
 
-void render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct entity *e)
-{
-	if (e->render_style & RENDER_POINT_CLOUD) {
-		software_render_entity_point_cloud(w, gc, cx, e);
-	} else if (e->render_style & RENDER_POINT_LINE) {
-		software_render_entity_lines(w, gc, cx, e);
-	} else {
-		software_render_entity_triangles(w, gc, cx, e);
-	}
-}
-
 static void calculate_model_matricies(float x, float y, float z, union quat* orientation, float scale,
 					struct mat44d *mat_r, struct mat44d *mat_model)
 {
@@ -775,6 +764,27 @@ static int transform_entity(struct entity_context *cx, struct entity *e)
 	}
 	return 0;
 }
+
+void render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct entity *e)
+{
+	transform_entity(cx, e);
+
+	if (e->sx >=0 && e->sy >= 0)
+		e->onscreen = 1;
+
+	switch (e->m->geometry_mode) {
+		case MESH_GEOMETRY_TRIANGLES:
+			software_render_entity_triangles(w, gc, cx, e);
+			break;
+		case MESH_GEOMETRY_LINES:
+			software_render_entity_lines(w, gc, cx, e);
+			break;
+		case MESH_GEOMETRY_POINTS:
+			software_render_entity_point_cloud(w, gc, cx, e);
+			break;
+	}
+}
+
 
 #if defined(__APPLE__)  || defined(__FreeBSD__)
 static int object_depth_compare(void *vcx, const void *a, const void *b)
@@ -1105,11 +1115,6 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 	/* render the sorted entities */
 	for (j = 0; j < cx->nentity_depth; j++) {
 		struct entity *e = &cx->entity_list[cx->entity_depth[j]];
-
-		transform_entity(cx, e);
-
-		if (e->sx >=0 && e->sy >= 0)
-			e->onscreen = 1;
 
 		render_entity(w, gc, cx, e);
 	}

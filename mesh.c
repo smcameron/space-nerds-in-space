@@ -93,6 +93,7 @@ struct mesh *mesh_duplicate(struct mesh *original)
 	int i;
 
 	copy = malloc(sizeof(*copy));
+	copy->geometry_mode = original->geometry_mode;
 	copy->ntriangles = original->ntriangles;
 	copy->nvertices = original->nvertices;
 	copy->nlines = original->nlines;
@@ -154,6 +155,7 @@ struct mesh *init_circle_mesh(double x, double z, double r, int npoints, double 
 	float increment;
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
 
+	my_mesh->geometry_mode = MESH_GEOMETRY_LINES;
 	my_mesh->nvertices = 0;
 	my_mesh->ntriangles = 0;
 	my_mesh->nlines = 1;
@@ -187,6 +189,7 @@ struct mesh *init_radar_circle_xz_plane_mesh(double x, double z, double r, int t
 	int i;
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
 
+	my_mesh->geometry_mode = MESH_GEOMETRY_LINES;
 	my_mesh->nvertices = 0;
 	my_mesh->ntriangles = 0;
 	my_mesh->nlines = 0;
@@ -220,6 +223,7 @@ struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y
 {
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
 
+	my_mesh->geometry_mode = MESH_GEOMETRY_LINES;
 	my_mesh->nvertices = 2;
 	my_mesh->ntriangles = 0;
 	my_mesh->nlines = 1;

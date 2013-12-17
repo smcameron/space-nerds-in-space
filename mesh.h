@@ -27,6 +27,10 @@
 #define GLOBAL extern
 #endif
 
+#define MESH_GEOMETRY_TRIANGLES 0
+#define MESH_GEOMETRY_LINES 1
+#define MESH_GEOMETRY_POINTS 2
+
 #define MESH_LINE_STRIP (1<<1)
 #define MESH_LINE_DOTTED (1<<2)
 
@@ -38,6 +42,7 @@ struct mesh_line
 };
 
 struct mesh {
+	int geometry_mode;
 	int ntriangles;
 	int nvertices;
 	int nlines;

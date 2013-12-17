@@ -86,13 +86,11 @@ GLOBAL int transform_line(struct entity_context *cx, float x1, float y1, float z
 GLOBAL void set_render_style(struct entity *e, int render_style);
 GLOBAL void entity_context_free(struct entity_context *cx);
 #define RENDER_NORMAL 0
-#define RENDER_POINT_CLOUD (1 << 0)
 #define RENDER_WIREFRAME (1 << 1)
 #define RENDER_BRIGHT_LINE (1 << 2)
 #define RENDER_NO_FILL (1 << 3)
 #define RENDER_SPARKLE (1 << 4)
 #define RENDER_ILDA (1 << 5) /* for laser projectors */
-#define RENDER_POINT_LINE (1 << 6)
 GLOBAL void entity_get_screen_coords(struct entity *e, float *x, float *y);
 
 GLOBAL int get_entity_count(struct entity_context *cx);

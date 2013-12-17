@@ -339,6 +339,7 @@ struct mesh *read_stl_file(char *file)
 		return NULL;
 	}
 	my_mesh = malloc(sizeof(*my_mesh));
+	my_mesh->geometry_mode = MESH_GEOMETRY_TRIANGLES;
 	my_mesh->nvertices = 0;
 	my_mesh->ntriangles = 0;
 	my_mesh->nlines = 0;

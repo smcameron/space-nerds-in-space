@@ -936,7 +936,7 @@ static void init_spacemonster_data(struct snis_entity *o, double y)
 		sd->z[i] = o->z;
 		sd->entity[i] = add_entity(ecx, spacemonster_mesh, o->x, 0, o->z,
 						SPACEMONSTER_COLOR);
-		set_render_style(sd->entity[i], RENDER_POINT_CLOUD | RENDER_SPARKLE);
+		set_render_style(sd->entity[i], RENDER_SPARKLE);
 	}
 }
 
@@ -945,6 +945,7 @@ static __attribute__((unused)) struct mesh *init_sector_mesh(int extra_extent)
 	int nlines = (2 * extra_extent + 2) * (2 * extra_extent + 2) * 4;
         struct mesh *my_mesh = malloc(sizeof(*my_mesh));
 
+	my_mesh->geometry_mode = MESH_GEOMETRY_LINES;
 	my_mesh->nvertices = 0;
 	my_mesh->ntriangles = 0;
 	my_mesh->nlines = 0;
@@ -1143,7 +1144,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, spacemonster_mesh, x, 0, z, SPACEMONSTER_COLOR);
-		set_render_style(e, RENDER_POINT_CLOUD | RENDER_SPARKLE);
+		set_render_style(e, RENDER_SPARKLE);
 		i = add_generic_object(id, x, 0, z, 0, 0, 0,
 				&identity_quat, OBJTYPE_SPACEMONSTER, 1, e);
 		if (i < 0)
@@ -1306,7 +1307,7 @@ static int update_wormhole(uint32_t id, double x, double z)
 	if (i < 0) {
 		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
 		e = add_entity(ecx, wormhole_mesh, x, 0, z, WORMHOLE_COLOR);
-		set_render_style(e, RENDER_POINT_CLOUD | RENDER_SPARKLE);
+		set_render_style(e, RENDER_SPARKLE);
 		i = add_generic_object(id, x, 0, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
@@ -6308,7 +6309,6 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 	e = add_entity(navecx, ring_mesh, o->x, o->y, o->z, DARKRED);
 	update_entity_scale(e, range);
-	set_render_style(e, RENDER_POINT_LINE);
 
 	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 0.0f, range * 0.98, RED);
 	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 90.0f * M_PI / 180.0, range * 0.98, DARKGREEN);
@@ -6339,7 +6339,6 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		e = add_entity(navecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
 		update_entity_scale(e, range);
 		update_entity_orientation(e, &ind_orientation);
-		set_render_style(e, RENDER_POINT_LINE);
 	}
 
 	/* heading labels */
@@ -6583,14 +6582,15 @@ static void add_basis_ring(struct entity_context *ecx, float x, float y, float z
 	static struct mesh *ring_mesh = 0;
 	struct entity *e;
 
-	if (!ring_mesh)
+	if (!ring_mesh) {
 		ring_mesh = init_circle_mesh(0, 0, 1, 60, 2.0f * M_PI);
+		ring_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
+	}
 
 	quat_init_axis(&q, ax, ay, az, angle);
 	e = add_entity(ecx, ring_mesh, x, y, z, color);
 	update_entity_scale(e, r);
 	update_entity_orientation(e, &q);
-	set_render_style(e, RENDER_POINT_CLOUD);
 }
 
 static void add_scanner_beam_orange_slice(struct entity_context *ecx,
@@ -6600,8 +6600,10 @@ static void add_scanner_beam_orange_slice(struct entity_context *ecx,
 	struct entity *e;
 	union quat q, q1, q2, q3;
 
-	if (!orange_slice)
+	if (!orange_slice) {
 		orange_slice = init_circle_mesh(0, 0, 1, 60, M_PI); /* half circle in x-z plane */
+		orange_slice->geometry_mode = MESH_GEOMETRY_POINTS;
+	}
 
 	quat_init_axis(&q, 0.0f, 0.0f, 1.0f, -M_PI / 2.0); /* rotate 90 degrees around z axis */
 	quat_init_axis(&q1, 0.0f, 1.0f, 0.0f,
@@ -6612,13 +6614,11 @@ static void add_scanner_beam_orange_slice(struct entity_context *ecx,
 	quat_mul(&q3, &q1, &q);
 	update_entity_orientation(e, &q3);
 	update_entity_scale(e, r);
-	set_render_style(e, RENDER_POINT_CLOUD);
 
 	e = add_entity(sciballecx, orange_slice, o->x, o->y, o->z, color);
 	quat_mul(&q3, &q2, &q);
 	update_entity_orientation(e, &q3);
 	update_entity_scale(e, r);
-	set_render_style(e, RENDER_POINT_CLOUD);
 }
 
 static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, double range, double current_zoom)
@@ -7749,7 +7749,6 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 
 	/* add yaw axis */
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, CYAN);
-	set_render_style(e, RENDER_POINT_LINE);
 	update_entity_fragment_shader(e, trident_ring_fragment_shader);
 
 	/* add pitch1 axis */
@@ -7757,7 +7756,6 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	quat_init_axis(&pitch1_orientation, 1, 0, 0, M_PI/2.0);
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
 	update_entity_orientation(e, &pitch1_orientation);
-	set_render_style(e, RENDER_POINT_LINE);
 	update_entity_fragment_shader(e, trident_ring_fragment_shader);
 
 	/* add pitch2 axis */
@@ -7765,7 +7763,6 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	quat_init_axis(&pitch2_orientation, 0, 0, 1, M_PI/2.0);
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
 	update_entity_orientation(e, &pitch2_orientation);
-	set_render_style(e, RENDER_POINT_LINE);
 	update_entity_fragment_shader(e, trident_ring_fragment_shader);
 
 	/* add absolute straight ahead ind, down z axis with y up to match heading = 0 mark 0 */
@@ -7907,7 +7904,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		e = add_entity(navecx, radar_ring_mesh[i], o->x, o->y, o->z, DARKRED);
 		update_entity_scale(e, screen_radius);
 		update_entity_orientation(e, &o->orientation);
-		set_render_style(e, RENDER_POINT_LINE);
 	}
 
 	for (i=0; i<2; ++i) {
@@ -7941,14 +7937,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		e = add_entity(navecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
 		update_entity_scale(e, screen_radius);
 		update_entity_orientation(e, &ind_orientation);
-		set_render_style(e, RENDER_POINT_LINE);
 	}
 
 	/* ship forward vector */
 	e = add_entity(navecx, forward_line_mesh, o->x, o->y, o->z, WHITE);
 	update_entity_scale(e, screen_radius);
 	update_entity_orientation(e, &o->orientation);
-	set_render_style(e, RENDER_POINT_LINE);
 
 	double sector_size = XKNOWN_DIM / 10.0;
 	if (current_zoom > 100 ) {
@@ -8130,12 +8124,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				e = add_entity(navecx, vline_mesh, contact_pos.v.x, contact_pos.v.y, contact_pos.v.z, DARKRED);
 				update_entity_scale(e, -proj_distance);
 				update_entity_orientation(e, &o->orientation);
-				set_render_style(e, RENDER_POINT_LINE);
 
 				e = add_entity(navecx, ring_mesh, ship_plane_proj.v.x, ship_plane_proj.v.y, ship_plane_proj.v.z, DARKRED);
 				update_entity_scale(e, contact_ring_radius);
 				update_entity_orientation(e, &o->orientation);
-				set_render_style(e, RENDER_POINT_LINE);
 			}
 		}
 	}
@@ -12024,7 +12016,9 @@ static void init_meshes(void)
 	debris2_mesh = snis_read_stl_file(d, "big-flat-tetrahedron.stl");
 	wormhole_mesh = snis_read_stl_file(d, "wormhole.stl");
 	mesh_distort(wormhole_mesh, 0.15);
+	wormhole_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
 	spacemonster_mesh = snis_read_stl_file(d, "spacemonster.stl");
+	spacemonster_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
 	asteroidminer_mesh = snis_read_stl_file(d, "asteroid-miner.stl");
 	spaceship2_mesh = snis_read_stl_file(d, "spaceship2.stl");
 	scout_mesh = snis_read_stl_file(d, "spaceship3.stl");
