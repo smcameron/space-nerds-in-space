@@ -13,7 +13,7 @@ typedef void (*slider_clicked_function)(struct slider *s);
 typedef double (*slider_monitor_function)(void);
 
 
-GLOBAL struct slider *snis_slider_init(int x, int y, int length, int height, int color,
+GLOBAL struct slider *snis_slider_init(float x, float y, float length, float height, int color,
 		char *label, char *l1, char *l2, double r1, double r2,
 		slider_monitor_function gmf, slider_clicked_function clicked);
 

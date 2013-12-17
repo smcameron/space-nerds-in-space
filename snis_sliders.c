@@ -13,7 +13,7 @@
 #undef SLIDERS_DEFINE_GLOBALS
 
 struct slider {
-	int x, y, length, height;
+	float x, y, length, height;
 	int color;
 	double value, input;
 	char label[20], label1[5], label2[5];
@@ -29,7 +29,7 @@ struct slider {
 
 static int slider_sound = -1;
 
-struct slider *snis_slider_init(int x, int y, int length, int height, int color,
+struct slider *snis_slider_init(float x, float y, float length, float height, int color,
 		char *label, char *l1, char *l2, double r1, double r2,
 		slider_monitor_function gmf, slider_clicked_function clicked)
 {
@@ -148,10 +148,10 @@ static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 {
 	double v;
-	int width, tx1;
+	float width, tx1;
 	int bar_color = DARKGREEN;
-	int ptr_height = s->height / 2;
-	int ptr_width = s->height / 3;
+	float ptr_height = s->height / 2.0;
+	float ptr_width = s->height / 3.0;
 
 	s->timer++;
 	if (s->vertical) {
@@ -173,19 +173,19 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 	bar_color = choose_barcolor(s, v);
 	sng_set_foreground(s->color);
 	sng_current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->length, s->height);
-	width = s->value * s->length - 1;
+	width = s->value * (s->length - 2.0);
 	width = width + f;
-	if (width < 0)
+	if (width < 0.0)
 		width = 0;
-	if (width > s->length - 1)
-		width = s->length - 1;
+	if (width > s->length - 2.0)
+		width = s->length - 2.0;
 	if (!s->clicked)
 		sng_set_foreground(bar_color);
-	sng_current_draw_rectangle(w->window, gc, 1, s->x + 1, s->y + 1, width, s->height - 2);
+	sng_current_draw_rectangle(w->window, gc, 1, s->x + 1.0, s->y + 1.0, width, s->height - 2.0);
 	if (!s->clicked)
 		sng_set_foreground(s->color);
 
-	tx1 = (int) (s->input * s->length) + s->x;
+	tx1 = (s->input * s->length) + s->x;
 
 	if (s->clicked) {
 		sng_current_draw_line(w->window, gc, tx1, s->y, tx1 - ptr_width, s->y - ptr_height); 
@@ -200,7 +200,7 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 				tx1 + ptr_width, s->y + s->height + ptr_height); 
 	}
 	sng_abs_xy_draw_string(w, gc, s->label, s->font,
-				s->x + s->length + 5, s->y + 2 * s->height / 3); 
+				s->x + s->length + 5.0, s->y + 2.0 * s->height / 3.0);
 }
 
 double snis_slider_get_value(struct slider *s)
