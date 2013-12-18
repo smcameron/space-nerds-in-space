@@ -15,8 +15,8 @@ my $V = '0.32';
 use Getopt::Long qw(:config no_auto_abbrev);
 
 my $quiet = 0;
-my $tree = 1;
-my $chk_signoff = 1;
+my $tree = 0;
+my $chk_signoff = 0;
 my $chk_patch = 1;
 my $tst_only;
 my $emacs = 0;
@@ -33,7 +33,7 @@ my %ignore_type = ();
 my @ignore = ();
 my $help = 0;
 my $configuration_file = ".checkpatch.conf";
-my $max_line_length = 80;
+my $max_line_length = 120;
 
 sub help {
 	my ($exitcode) = @_;
@@ -3724,8 +3724,8 @@ sub process {
 		print << "EOM";
 $vname has style problems, please review.
 
-If any of these errors are false positives, please report
-them to the maintainer, see CHECKPATCH in MAINTAINERS.
+If any of these errors are false positives, please ignore them
+or fix the script.
 EOM
 	}
 
