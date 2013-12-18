@@ -95,7 +95,7 @@ static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 
 	if (s->fuzz) {
 		f = (float) ((snis_randn(1000) - 500.0f) * s->fuzz) / 100000.0f;
-		f = f * s->height;
+		f = f * s->length;
 	} else {
 		f = 0.0f;
 	}
@@ -162,7 +162,7 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 
 	if (s->fuzz) {
 		f = (float) ((snis_randn(1000) - 500.0f) * s->fuzz) / 100000.0f;
-		f = f * s->height;
+		f = f * s->length;
 	} else {
 		f = 0.0f;
 	}
