@@ -61,7 +61,7 @@ void snis_srand(unsigned seed)
 
 int snis_randn(int n)
 {
-	return n * snis_rand() / SNIS_RAND_MAX;
+	return n * snis_rand() / (SNIS_RAND_MAX + 1);
 }
 
 float snis_random_float(void)
