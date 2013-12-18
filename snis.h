@@ -383,7 +383,7 @@ struct asteroid_data {
 	union quat rotational_velocity;
 };
 
-struct cargo_containter_data {
+struct cargo_container_data {
 	union quat rotational_velocity;
 };
 
@@ -430,7 +430,7 @@ union type_specific_data {
 	struct spacemonster_data spacemonster;
 	struct laserbeam_data laserbeam;
 	struct derelict_data derelict;
-	struct cargo_containter_data cargo_container;
+	struct cargo_container_data cargo_container;
 };
 
 struct snis_entity;
