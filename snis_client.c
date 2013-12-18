@@ -829,6 +829,8 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 {
 	int i;
 	struct entity *e;
+	struct snis_entity *myship;
+
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, torpedo_mesh, x, y, z, TORPEDO_COLOR);
@@ -837,6 +839,9 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 		if (i < 0)
 			return i;
 		go[i].tsd.torpedo.ship_id = ship_id;
+		myship = find_my_ship();
+		if (myship && myship->id == ship_id)
+			weapons_camera_shake = 1.0;
 	} else {
 		update_generic_object(i, x, y, z, vx, vy, vz, &identity_quat, 1); 
 		update_entity_pos(go[i].entity, x, y, z);
@@ -889,6 +894,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 {
 	int i;
 	struct entity *e;
+	struct snis_entity *myship;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -898,6 +904,11 @@ static int update_laser(uint32_t id, double x, double y, double z,
 		if (i < 0)
 			return i;
 		go[i].tsd.laser.ship_id = ship_id;
+		myship = find_my_ship();
+		if (myship && myship->id == ship_id) {
+			weapons_camera_shake = 1.0;
+			turret_recoil_amount = 2.0f;
+		}
 	} else {
 		update_generic_object(i, x, y, z, vx, vy, vz, orientation, 1); 
 	}
@@ -2446,7 +2457,6 @@ static void do_torpedo(void)
 	if (o->tsd.ship.torpedoes_loaded <= 0)
 		return;
 	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_TORPEDO));
-	weapons_camera_shake = 1.0f;
 }
 
 static void do_tractor_beam(void)
@@ -2467,8 +2477,6 @@ static void do_laser(void)
 	case DISPLAYMODE_WEAPONS: 
 		if (weapons.manual_mode == WEAPONS_MODE_MANUAL) {
 			queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_MANUAL_LASER));
-			turret_recoil_amount = 2.0f;
-			weapons_camera_shake = 0.5f;
 		} else {
 			queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_LASER));
 		}
@@ -4922,6 +4930,15 @@ static void show_weapons_camera_view(GtkWidget *w)
 	union quat camera_orientation;
 	union vec3 recoil = { { -1.0f, 0.0f, 0.0f } };
 	char buf[20];
+
+	static int last_timer = 0;
+	int first_frame = (timer != last_timer+1);
+	last_timer = timer;
+
+	if (first_frame) {
+		turret_recoil_amount = 0;
+		weapons_camera_shake = 0;
+	}
 
 	if (!(o = find_my_ship()))
 		return;
