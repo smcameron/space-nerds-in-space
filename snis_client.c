@@ -7647,14 +7647,14 @@ static void init_nav_ui(void)
 	nav_ui.warp_slider = snis_slider_init(590 + x, SCREEN_HEIGHT - 40 + y, 160, 15, AMBER, "",
 				"0", "100", 0.0, 255.0, sample_power_data_warp_current,
 				do_warpdrive);
-	snis_slider_set_fuzz(nav_ui.warp_slider, 35);
+	snis_slider_set_fuzz(nav_ui.warp_slider, 4);
 	nav_ui.navzoom_slider = snis_slider_init(10, 80, 200, 15, AMBER, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_navzoom,
 				do_navzoom);
 	nav_ui.throttle_slider = snis_slider_init(SCREEN_WIDTH - 30 + x, 40, 230, 15,
 				AMBER, "THROTTLE", "1", "10", 0.0, 255.0, sample_power_data_impulse_current,
 				do_throttle);
-	snis_slider_set_fuzz(nav_ui.throttle_slider, 35);
+	snis_slider_set_fuzz(nav_ui.throttle_slider, 4);
 	snis_slider_set_vertical(nav_ui.throttle_slider, 1);
 	nav_ui.warp_gauge = gauge_init(SCREEN_WIDTH - gauge_radius - 40, gauge_radius + 5,
 				gauge_radius, 0.0, 10.0, -120.0 * M_PI / 180.0,
@@ -8431,7 +8431,8 @@ static void init_engineering_ui(void)
 	eu->shield_control_slider = snis_slider_init(540, 270, 160, sh, AMBER, "SHIELDS",
 				"0", "100", 0.0, 255.0, sample_power_data_shields_current,
 				do_shieldadj);
-	snis_slider_set_fuzz(eu->shield_control_slider, 35);
+	/* make shield slider have less fuzz just for variety */
+	snis_slider_set_fuzz(eu->shield_control_slider, 2);
 
 	y = 220;
 	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
@@ -8444,7 +8445,8 @@ static void init_engineering_ui(void)
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR SHIELDS", "0", "100", 0.0, 255.0,
 				sample_power_data_shields_current, do_shields_pwr);
-	snis_slider_set_fuzz(eu->shield_slider, 35);
+	/* make shield slider have less fuzz just for variety */
+	snis_slider_set_fuzz(eu->shield_slider, 2);
 	snis_slider_set_label_font(eu->shield_slider, NANO_FONT);
 	eu->shield_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
@@ -8453,7 +8455,7 @@ static void init_engineering_ui(void)
 	eu->phaserbanks_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR PHASERS", "0", "100", 0.0, 255.0,
 				sample_power_data_phasers_current, do_phaserbanks_pwr);
-	snis_slider_set_fuzz(eu->phaserbanks_slider, 35);
+	snis_slider_set_fuzz(eu->phaserbanks_slider, 4);
 	snis_slider_set_label_font(eu->phaserbanks_slider, NANO_FONT);
 	eu->phaserbanks_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
@@ -8462,7 +8464,7 @@ static void init_engineering_ui(void)
 	eu->comm_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR COMMS", "0", "100", 0.0, 255.0,
 				sample_power_data_comms_current, do_comms_pwr);
-	snis_slider_set_fuzz(eu->comm_slider, 35);
+	snis_slider_set_fuzz(eu->comm_slider, 4);
 	snis_slider_set_label_font(eu->comm_slider, NANO_FONT);
 	eu->comm_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
@@ -8471,7 +8473,8 @@ static void init_engineering_ui(void)
 	eu->sensors_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR SENSORS", "0", "100", 0.0, 255.0,
 				sample_power_data_sensors_current, do_sensors_pwr);
-	snis_slider_set_fuzz(eu->sensors_slider, 35);
+	/* Make sensors slider more fuzzy just for variety */
+	snis_slider_set_fuzz(eu->sensors_slider, 20);
 	snis_slider_set_label_font(eu->sensors_slider, NANO_FONT);
 	eu->sensors_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
@@ -8480,7 +8483,7 @@ static void init_engineering_ui(void)
 	eu->impulse_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR IMPULSE DR", "0", "100", 0.0, 255.0,
 				sample_power_data_impulse_current, do_impulse_pwr);
-	snis_slider_set_fuzz(eu->impulse_slider, 35);
+	snis_slider_set_fuzz(eu->impulse_slider, 4);
 	snis_slider_set_label_font(eu->impulse_slider, NANO_FONT);
 	eu->impulse_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
@@ -8489,7 +8492,7 @@ static void init_engineering_ui(void)
 	eu->warp_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR WARP DR", "0", "100", 0.0, 255.0,
 				sample_power_data_warp_current, do_warp_pwr);
-	snis_slider_set_fuzz(eu->warp_slider, 35);
+	snis_slider_set_fuzz(eu->warp_slider, 4);
 	snis_slider_set_label_font(eu->warp_slider, NANO_FONT);
 	eu->warp_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
@@ -8498,7 +8501,7 @@ static void init_engineering_ui(void)
 	eu->maneuvering_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR MANEUVERING", "0", "100", 0.0, 255.0,
 				sample_power_data_maneuvering_current, do_maneuvering_pwr);
-	snis_slider_set_fuzz(eu->maneuvering_slider, 35);
+	snis_slider_set_fuzz(eu->maneuvering_slider, 4);
 	snis_slider_set_label_font(eu->maneuvering_slider, NANO_FONT);
 	eu->maneuvering_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
@@ -8507,7 +8510,7 @@ static void init_engineering_ui(void)
 	eu->tractor_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR TRACTOR", "0", "100", 0.0, 255.0,
 				sample_power_data_tractor_current, do_tractor_pwr);
-	snis_slider_set_fuzz(eu->tractor_slider, 35);
+	snis_slider_set_fuzz(eu->tractor_slider, 4);
 	snis_slider_set_label_font(eu->tractor_slider, NANO_FONT);
 	eu->tractor_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
@@ -8915,7 +8918,7 @@ static void init_science_ui(void)
 	snis_slider_set_label_font(sci_ui.scizoom, NANO_FONT);
 	sci_ui.scipower = snis_slider_init(350, 50, 300, 12, DARKGREEN, "POWER", "0", "100",
 				0.0, 100.0, sample_sensors_power, NULL);
-	snis_slider_set_fuzz(sci_ui.scipower, 25);
+	snis_slider_set_fuzz(sci_ui.scipower, 4);
 	snis_slider_set_label_font(sci_ui.scipower, NANO_FONT);
 	sci_ui.twod_button = snis_button_init(370, 575, 40, 20, "2D",
 			GREEN, NANO_FONT, sci_twod_pressed, (void *) 0);
