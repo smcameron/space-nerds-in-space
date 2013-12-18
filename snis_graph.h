@@ -108,13 +108,6 @@ SNG_GLOBAL void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, int filled, fl
 SNG_GLOBAL void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
 			float x1, float y1, float x2, float y2, int color);
 
-SNG_GLOBAL int sng_device_x(float x);
-SNG_GLOBAL int sng_device_y(float y);
-SNG_GLOBAL void sng_device_line(GdkDrawable *drawable, GdkGC *gc,
-			int x1, int y1, int x2, int y2);
-SNG_GLOBAL void sng_bright_device_line(GdkDrawable *drawable, GdkGC *gc,
-			int x1, int y1, int x2, int y2, int color);
-
 SNG_GLOBAL void sng_set_clip_window(int x1, int y1, int x2, int y2);
 SNG_GLOBAL void sng_fixup_gl_y_coordinate(int screen_height);
 SNG_GLOBAL void sng_draw_tri_outline(GdkDrawable *drawable, GdkGC *gc,

@@ -60,16 +60,6 @@ void sng_set_clip_window(int x1, int y1, int x2, int y2)
 	sgc.c.y2 = y2;
 }
 
-int sng_device_x(float x)
-{
-	return (int) (x * sgc.xscale);
-}
-
-int sng_device_y(float y)
-{
-	return (int) (y * sgc.yscale);
-}
-
 static void sng_gl_draw_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
 {
 #ifndef WITHOUTOPENGL
@@ -740,35 +730,6 @@ void sng_set_gc(GdkGC *gc)
 void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, int filled, float x, float y, float r)
 {
 	sng_scaled_arc(drawable, gc, filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
-}
-
-void sng_device_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, int x2, int y2)
-{
-	sng_gl_draw_line(drawable, gc, x1, y1, x2, y2);
-}
-
-void sng_bright_device_line(GdkDrawable *drawable,
-       GdkGC *gc, gint x1, gint y1, gint x2, gint y2, int color)
-{
-       int dx, dy;
-
-       if (abs(x1 - x2) > abs(y1 - y2)) {
-	       dx = 0;
-	       dy = 1;
-       } else {
-	       dx = 1;
-	       dy = 0;
-       }
-#if 0
-       if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
-	       return;
-#endif
-
-       sng_set_foreground(WHITE);
-       sng_gl_draw_line(drawable, gc, x1, y1, x2, y2);
-       sng_set_foreground(color);
-       sng_gl_draw_line(drawable, gc, x1 - dx, y1 - dy, x2 - dx, y2 - dy);
-       sng_gl_draw_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
 }
 
 void sng_draw_tri_outline(GdkDrawable *drawable, GdkGC *gc,
