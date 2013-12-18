@@ -44,17 +44,6 @@ extern int CYAN;
 #define COLOR_DARKER(c,p) (c-(p*NGRADIENT_SHADES/100))
 #define COLOR_LIGHTER(c, p) (c+(p*NGRADIENT_SHADES/100))
 
-typedef void line_drawing_function(GdkDrawable *drawable,
-	GdkGC *gc, float x1, float y1, float x2, float y2);
-
-typedef void rectangle_drawing_function(GdkDrawable *drawable,
-        GdkGC *gc, gboolean filled, float x, float y, float width, float height);
-
-typedef void bright_line_drawing_function(GdkDrawable *drawable,
-	 GdkGC *gc, float x1, float y1, float x2, float y2, int color);
-typedef void arc_drawing_function(GdkDrawable *drawable, GdkGC *gc,
-	gboolean filled, float x, float y, float width, float height, float angle1, float angle2);
-
 struct sng_dotted_plot_func_context {
         GdkDrawable *drawable;
         GdkGC *gc;
@@ -62,28 +51,15 @@ struct sng_dotted_plot_func_context {
 };
 
 extern void sng_set_scale(float xscale, float yscale);
-extern void sng_scaled_line(GdkDrawable *drawable, GdkGC *gc, float x1, float y1, float x2, float y2);
-extern void sng_scaled_rectangle(GdkDrawable *drawable,
+
+extern void sng_current_draw_line(GdkDrawable *drawable, GdkGC *gc, float x1, float y1, float x2, float y2);
+extern void sng_current_draw_thick_line(GdkDrawable *drawable, GdkGC *gc, float x1, float y1, float x2, float y2);
+extern void sng_current_draw_rectangle(GdkDrawable *drawable,
 	GdkGC *gc, gboolean filled, float x, float y, float width, float height);
-extern void sng_thick_scaled_line(GdkDrawable *drawable,
-	GdkGC *gc, float x1, float y1, float x2, float y2);
-extern void sng_scaled_bright_line(GdkDrawable *drawable,
+extern void sng_current_draw_bright_line(GdkDrawable *drawable,
 	GdkGC *gc, float x1, float y1, float x2, float y2, int color);
-extern void sng_unscaled_bright_line(GdkDrawable *drawable,
-	GdkGC *gc, float x1, float y1, float x2, float y2, int color);
-extern void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
+extern void sng_current_draw_arc(GdkDrawable *drawable, GdkGC *gc,
 	gboolean filled, float x, float y, float width, float height, float angle1, float angle2);
-
-extern void sng_scaled_rectangle(GdkDrawable *drawable,
-	GdkGC *gc, gboolean filled, float x, float y, float width, float height);
-extern void sng_use_scaled_drawing_functions(void);
-extern void sng_use_unscaled_drawing_functions(void);
-extern void sng_use_thick_lines(void);
-
-SNG_GLOBAL line_drawing_function *sng_current_draw_line;
-SNG_GLOBAL rectangle_drawing_function *sng_current_draw_rectangle;
-SNG_GLOBAL bright_line_drawing_function *sng_current_bright_line;
-SNG_GLOBAL arc_drawing_function *sng_current_draw_arc;
 
 SNG_GLOBAL void sng_dotted_line_plot_func(int x, int y, void *context);
 SNG_GLOBAL void sng_electric_line_plot_func(int x, int y, void *context);

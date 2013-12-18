@@ -75,7 +75,7 @@ static void sng_gl_draw_line(GdkDrawable *drawable, GdkGC *gc, int x1, int y1, i
 #endif
 }
 
-void sng_scaled_line(GdkDrawable *drawable,
+void sng_current_draw_line(GdkDrawable *drawable,
         GdkGC *gc, float x1, float y1, float x2, float y2)
 {
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
@@ -84,7 +84,7 @@ void sng_scaled_line(GdkDrawable *drawable,
                 x2 * sgc.xscale, y2 * sgc.yscale);
 }
 
-void sng_thick_scaled_line(GdkDrawable *drawable,
+void sng_current_draw_thick_line(GdkDrawable *drawable,
 	GdkGC *gc, float x1, float y1, float x2, float y2)
 {
 	float sx1, sy1, sx2, sy2, dx, dy;
@@ -164,7 +164,7 @@ static void sng_gl_draw_rectangle(GdkDrawable *drawable, GdkGC *gc, gboolean fil
 #endif
 }
 
-void sng_scaled_rectangle(GdkDrawable *drawable,
+void sng_current_draw_rectangle(GdkDrawable *drawable,
 	GdkGC *gc, gboolean filled, float x, float y, float width, float height)
 {
 	if (!clip_rectangle(&x, &y, &width, &height))
@@ -173,7 +173,7 @@ void sng_scaled_rectangle(GdkDrawable *drawable,
 		width * sgc.xscale, height * sgc.yscale);
 }
 
-void sng_scaled_bright_line(GdkDrawable *drawable,
+void sng_current_draw_bright_line(GdkDrawable *drawable,
 	GdkGC *gc, float x1, float y1, float x2, float y2, int color)
 {
 	float sx1, sy1, sx2, sy2, dx, dy;
@@ -201,7 +201,7 @@ void sng_scaled_bright_line(GdkDrawable *drawable,
 	sng_gl_draw_line(drawable, gc, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
-void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
+void sng_current_draw_arc(GdkDrawable *drawable, GdkGC *gc,
 	gboolean filled, float x, float y, float width, float height, float angle1, float angle2)
 {
 #ifndef WITHOUTOPENGL
@@ -259,27 +259,6 @@ void sng_scaled_arc(GdkDrawable *drawable, GdkGC *gc,
 	gdk_draw_arc(drawable, gc, filled, x * sgc.xscale, y * sgc.yscale,
 			width * sgc.xscale, height * sgc.yscale, angle1*64.0*180.0/M_PI, (angle2-angle1)*64.0*180.0/M_PI);
 #endif
-}
-
-void sng_use_unscaled_drawing_functions(void)
-{
-	sng_current_draw_line = sng_scaled_line;
-	sng_current_draw_rectangle = sng_scaled_rectangle;
-	sng_current_bright_line = sng_scaled_bright_line;
-	sng_current_draw_arc = sng_scaled_arc;
-}
-
-void sng_use_scaled_drawing_functions(void)
-{
-	sng_current_draw_line = sng_scaled_line;
-	sng_current_draw_rectangle = sng_scaled_rectangle;
-	sng_current_bright_line = sng_scaled_bright_line;
-	sng_current_draw_arc = sng_scaled_arc;
-}
-
-void sng_use_thick_lines(void)
-{
-	sng_current_draw_line = sng_thick_scaled_line;
 }
 
 static void sng_gl_draw_point(GdkDrawable *drawable, GdkGC *gc, int x, int y)
@@ -729,7 +708,7 @@ void sng_set_gc(GdkGC *gc)
 
 void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, int filled, float x, float y, float r)
 {
-	sng_scaled_arc(drawable, gc, filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
+	sng_current_draw_arc(drawable, gc, filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
 }
 
 void sng_draw_tri_outline(GdkDrawable *drawable, GdkGC *gc,

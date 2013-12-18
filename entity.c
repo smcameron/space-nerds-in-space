@@ -413,11 +413,11 @@ static void draw_outline_tri(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
 	if (!st->clipped) {
 		if (e->render_style & RENDER_BRIGHT_LINE) {
 			if (!(st->src->flag & TRIANGLE_0_1_COPLANAR))
-				sng_current_bright_line(w->window, gc, st->x1, st->y1, st->x2, st->y2, e->color);
+				sng_current_draw_bright_line(w->window, gc, st->x1, st->y1, st->x2, st->y2, e->color);
 			if (!(st->src->flag & TRIANGLE_1_2_COPLANAR))
-				sng_current_bright_line(w->window, gc, st->x2, st->y2, st->x3, st->y3, e->color);
+				sng_current_draw_bright_line(w->window, gc, st->x2, st->y2, st->x3, st->y3, e->color);
 			if (!(st->src->flag & TRIANGLE_0_2_COPLANAR))
-				sng_current_bright_line(w->window, gc, st->x3, st->y3, st->x1, st->y1, e->color);
+				sng_current_draw_bright_line(w->window, gc, st->x3, st->y3, st->x1, st->y1, e->color);
 		} else {
 			sng_set_foreground(e->color);
 			sng_draw_tri_outline(w->window, gc,
@@ -478,11 +478,11 @@ static void draw_outline_tri(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
 
 		if (e->render_style & RENDER_BRIGHT_LINE) {
 			if (!e1_clipped && !(st->src->flag & TRIANGLE_0_1_COPLANAR))
-				sng_current_bright_line(w->window, gc, e1_x1, e1_y1, e1_x2, e1_y2, e->color);
+				sng_current_draw_bright_line(w->window, gc, e1_x1, e1_y1, e1_x2, e1_y2, e->color);
 			if (!e2_clipped && !(st->src->flag & TRIANGLE_1_2_COPLANAR))
-				sng_current_bright_line(w->window, gc, e2_x1, e2_y1, e2_x2, e2_y2, e->color);
+				sng_current_draw_bright_line(w->window, gc, e2_x1, e2_y1, e2_x2, e2_y2, e->color);
 			if (!e3_clipped && !(st->src->flag & TRIANGLE_0_2_COPLANAR))
-				sng_current_bright_line(w->window, gc, e3_x1, e3_y1, e3_x2, e3_y2, e->color);
+				sng_current_draw_bright_line(w->window, gc, e3_x1, e3_y1, e3_x2, e3_y2, e->color);
 		} else {
 			sng_set_foreground(e->color);
 			if (!e1_clipped && !(st->src->flag & TRIANGLE_0_1_COPLANAR))

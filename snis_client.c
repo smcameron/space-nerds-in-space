@@ -135,15 +135,16 @@ explosion_function *explosion = NULL;
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
 #define DEFAULT_LINE_STYLE sng_current_draw_line
+#define DEFAULT_THICK_LINE_STYLE sng_current_draw_thick_line
 #define DEFAULT_RECTANGLE_STYLE sng_current_draw_rectangle
-#define DEFAULT_BRIGHT_LINE_STYLE sng_current_bright_line
-#define DEFAULT_DRAW_ARC sng_current_draw_arc
+#define DEFAULT_BRIGHT_LINE_STYLE sng_current_draw_bright_line
+#define DEFAULT_ARC_STYLE sng_current_draw_arc
 
 #define snis_draw_line DEFAULT_LINE_STYLE
+#define snis_draw_thick_line DEFAULT_THICK_LINE_STYLE
 #define snis_draw_rectangle DEFAULT_RECTANGLE_STYLE
 #define snis_bright_line DEFAULT_BRIGHT_LINE_STYLE
-#define snis_draw_arc DEFAULT_DRAW_ARC
-int thicklines = 0;
+#define snis_draw_arc DEFAULT_ARC_STYLE
 int frame_rate_hz = 30;
 int red_alert_mode = 0;
 #define MAX_UPDATETIME_INTERVAL 0.5
@@ -2228,8 +2229,9 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 	sng_draw_circle(w->window, gc, 0, cx, cy, r);
 	for (i=0; i<4; i++) {
 		float angle = i * M_PI / 2.0 + M_PI / 4.0;
-		sng_current_draw_line(w->window, gc, cx + cos(angle)*r, cy - sin(angle)*r, cx + 0.5*cos(angle)*r, cy - 0.5*sin(angle)*r);
-		sng_current_draw_arc(w->window, gc, 0, cx-0.5*r, cy-0.5*r, r, r, angle - M_PI/8.0, angle + M_PI/8.0);
+		snis_draw_line(w->window, gc, cx + cos(angle) * r, cy - sin(angle) * r,
+				cx + 0.5 * cos(angle) * r, cy - 0.5 * sin(angle) * r);
+		snis_draw_arc(w->window, gc, 0, cx-0.5*r, cy-0.5*r, r, r, angle - M_PI/8.0, angle + M_PI/8.0);
 	}
 
 	if ((timer & 0x07) < 4)
@@ -2287,7 +2289,7 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 
 		if (curr_science_guy == &go[i]) {
 			sng_set_foreground(GREEN);
-			sng_current_draw_rectangle(w->window, gc, 0, sx-2, sy-2, 4, 4);
+			snis_draw_rectangle(w->window, gc, 0, sx-2, sy-2, 4, 4);
 		}
 	}
 }
@@ -8838,9 +8840,9 @@ static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 			return;
 		sng_set_foreground(RED);
 	}
-	sng_current_draw_rectangle(w->window, gc, 0,
+	snis_draw_rectangle(w->window, gc, 0,
 			x - 30, y + 10, 60, 6);
-	sng_current_draw_rectangle(w->window, gc, 1,
+	snis_draw_rectangle(w->window, gc, 1,
 			x - 30, y + 10,
 			60.0 * (255 - o->tsd.part.damage) / 255.0, 6);
 }
@@ -8879,7 +8881,7 @@ static void show_damcon(GtkWidget *w)
 	int i;
 
 	sng_set_foreground(AMBER);
-	sng_current_draw_rectangle(w->window, gc, 0,
+	snis_draw_rectangle(w->window, gc, 0,
 		damconscreenx0, damconscreeny0, damconscreenxdim, damconscreenydim);
 
 	/* clip to damcon screen */
@@ -9199,7 +9201,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 	int dy1, dy2, bw, probes, dx, pwr;
 	int initial_noise;
 
-	sng_current_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
+	snis_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 4, x2, 10);
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 2, x2, 10);
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + 3 * (y2 - y1) / 4, x2, 10);
@@ -9316,7 +9318,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		return;
 	x = SCIENCE_DATA_X + 10;
 	y = SCIENCE_DATA_Y + 15;
-	sng_current_draw_rectangle(w->window, gc, 0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
+	snis_draw_rectangle(w->window, gc, 0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
 	sprintf(buffer, "NAME: %s", o ? o->sdata.name : "");
 	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
@@ -10678,7 +10680,7 @@ static void show_warp_effect(GtkWidget *w)
 
 	if (warp_start > 1) {
 		sng_set_foreground(GRAY + warp_start * 25);
-		sng_scaled_rectangle(w->window, gc, 1, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+		snis_draw_rectangle(w->window, gc, 1, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 		warp_start--;
 	}
 
@@ -10695,7 +10697,7 @@ static void show_warp_effect(GtkWidget *w)
 	 */
 	if (warp_limbo_countdown > 0 && warp_limbo_countdown < 10) {
 		sng_set_foreground(GRAY + warp_limbo_countdown * 25);
-		sng_scaled_rectangle(w->window, gc, 1, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+		snis_draw_rectangle(w->window, gc, 1, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 		show_mainscreen(w);
 		return;
 	}
@@ -10715,7 +10717,7 @@ static void show_warp_effect(GtkWidget *w)
 		y = (int) star[i].y;
 		x2 = (int) star[i].lx;
 		y2 = (int) star[i].ly;
-		sng_thick_scaled_line(w->window, gc, x, y, x2, y2);
+		snis_draw_thick_line(w->window, gc, x, y, x2, y2);
 	}
 }
 
@@ -11188,9 +11190,9 @@ static void draw_help_text(GtkWidget *w, char *text)
 static void draw_help_screen(GtkWidget *w)
 {
 	sng_set_foreground(BLACK);
-	sng_scaled_rectangle(w->window, gc, 1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	snis_draw_rectangle(w->window, gc, 1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
 	sng_set_foreground(GREEN);
-	sng_scaled_rectangle(w->window, gc, 0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	snis_draw_rectangle(w->window, gc, 0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
 	if (displaymode < 0 || displaymode >= ARRAYSIZE(help_text)) {
 		draw_help_text(w, "Unknown screen, no help available");
 		return;
@@ -11206,9 +11208,9 @@ static void draw_quit_screen(GtkWidget *w)
 	quittimer++;
 
 	sng_set_foreground(BLACK);
-	sng_scaled_rectangle(w->window, gc, 1, 100, 100, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 200);
+	snis_draw_rectangle(w->window, gc, 1, 100, 100, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 200);
 	sng_set_foreground(RED);
-	sng_scaled_rectangle(w->window, gc, FALSE, 100, 100, SCREEN_WIDTH-200, SCREEN_HEIGHT-200);
+	snis_draw_rectangle(w->window, gc, FALSE, 100, 100, SCREEN_WIDTH-200, SCREEN_HEIGHT-200);
 	sng_set_foreground(WHITE);
 	sng_abs_xy_draw_string(w, gc, "Quit?", BIG_FONT, 300, 280);
 
@@ -11228,7 +11230,7 @@ static void draw_quit_screen(GtkWidget *w)
 
 	if ((quittimer & 0x04)) {
 		sng_set_foreground(WHITE);
-		sng_scaled_rectangle(w->window, gc, FALSE, x, 420, 200, 50);
+		snis_draw_rectangle(w->window, gc, FALSE, x, 420, 200, 50);
 	}
 }
 
@@ -11543,13 +11545,6 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	xscale_screen = (float) real_screen_width / (float) SCREEN_WIDTH;
 	yscale_screen = (float) real_screen_height / (float) SCREEN_HEIGHT;
 	sng_set_scale(xscale_screen, yscale_screen);
-	if (real_screen_width == 800 && real_screen_height == 600) {
-		sng_use_unscaled_drawing_functions();
-	} else {
-		sng_use_scaled_drawing_functions();
-		if (thicklines)
-			sng_use_thick_lines();
-	}
 	gdk_gc_set_clip_origin(gc, 0, 0);
 	cliprect.x = 0;	
 	cliprect.y = 0;	
