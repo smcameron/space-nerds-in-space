@@ -103,6 +103,8 @@ static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 	s->timer++;
 	v = s->sample();
 	s->value = (v - s->r1) / (s->r2 - s->r1);
+	if (s->value == 0)
+		f = 0.0f; /* no fuzz if no power */
 	v = s->sample();
 	ty1 = (int) (s->y + s->length - s->input * s->length);
 	bar_color = choose_barcolor(s, v);
@@ -169,6 +171,8 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 
 	v = s->sample();
 	s->value = (v - s->r1) / (s->r2 - s->r1);
+	if (s->value == 0)
+		f = 0.0f; /* no fuzz if no power */
 	v = s->sample();
 	bar_color = choose_barcolor(s, v);
 	sng_set_foreground(s->color);
