@@ -2295,27 +2295,35 @@ static void do_power_model_computations(struct snis_entity *o)
 #define TRACTOR_POWER_DEVICE 7
 
 	device = power_model_get_device(m, WARP_POWER_DEVICE);
+	power_device_set_damage(device, (float) o->tsd.ship.damage.warp_damage / 255.0f);
 	o->tsd.ship.power_data.warp.i = device_power_byte_form(device);
 
 	device = power_model_get_device(m, SENSORS_POWER_DEVICE);
+	power_device_set_damage(device, (float) o->tsd.ship.damage.sensors_damage / 255.0f);
 	o->tsd.ship.power_data.sensors.i = device_power_byte_form(device);
 
 	device = power_model_get_device(m, PHASERS_POWER_DEVICE);
+	power_device_set_damage(device, (float) o->tsd.ship.damage.phaser_banks_damage / 255.0f);
 	o->tsd.ship.power_data.phasers.i = device_power_byte_form(device);
 
 	device = power_model_get_device(m, MANEUVERING_POWER_DEVICE);
+	power_device_set_damage(device, (float) o->tsd.ship.damage.maneuvering_damage / 255.0f);
 	o->tsd.ship.power_data.maneuvering.i = device_power_byte_form(device);
 
 	device = power_model_get_device(m, SHIELDS_POWER_DEVICE);
+	power_device_set_damage(device, (float) o->tsd.ship.damage.shield_damage / 255.0f);
 	o->tsd.ship.power_data.shields.i = device_power_byte_form(device);
 
 	device = power_model_get_device(m, COMMS_POWER_DEVICE);
+	power_device_set_damage(device, (float) o->tsd.ship.damage.comms_damage / 255.0f);
 	o->tsd.ship.power_data.comms.i = device_power_byte_form(device);
 
 	device = power_model_get_device(m, IMPULSE_POWER_DEVICE);
+	power_device_set_damage(device, (float) o->tsd.ship.damage.impulse_damage / 255.0f);
 	o->tsd.ship.power_data.impulse.i = device_power_byte_form(device);
 
 	device = power_model_get_device(m, TRACTOR_POWER_DEVICE);
+	power_device_set_damage(device, (float) o->tsd.ship.damage.tractor_damage / 255.0f);
 	o->tsd.ship.power_data.tractor.i = device_power_byte_form(device);
 
 	o->tsd.ship.power_data.voltage = (unsigned char)
