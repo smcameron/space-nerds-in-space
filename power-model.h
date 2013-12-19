@@ -70,5 +70,6 @@ float power_model_nominal_voltage(struct power_model *m);
 float power_model_actual_voltage(struct power_model *m);
 void power_model_enable(struct power_model *m);
 void power_model_disable(struct power_model *m);
+void power_device_set_damage(struct power_device *d, float damage);
 
 #endif

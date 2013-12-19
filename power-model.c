@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "power-model.h"
+#include "mathutils.h"
 
 struct power_model;
 
@@ -10,6 +11,7 @@ struct power_device {
 	resistor_sample_fn r1, r2, r3;
 	float or1, or2, or3; /* previous values of resistors */
 	void *cookie;
+	float damage;
 	float i;
 };
 
@@ -38,6 +40,7 @@ struct power_device *new_power_device(void * cookie, resistor_sample_fn r1,
 	d->or3 = 0;
 	d->i = 0;
 	d->cookie = cookie;
+	d->damage = 0.0;
 	return d;
 }
 
@@ -126,7 +129,11 @@ void power_model_compute(struct power_model *m)
 
 float device_current(struct power_device *d)
 {
-	return d->i;
+	float current = d->i * (1.0 - d->damage) -
+		(d->damage * snis_randn(256) / 256.0f) * d->i / 4.0f;
+	if (current < 0.0f)
+		current = 0.0f;
+	return current;
 }
 
 float device_max_current(struct power_device *d)
@@ -173,4 +180,9 @@ void power_model_enable(struct power_model *m)
 void power_model_disable(struct power_model *m)
 {
 	m->enabled = 0;
+}
+
+void power_device_set_damage(struct power_device *d, float damage)
+{
+	d->damage = damage;
 }
