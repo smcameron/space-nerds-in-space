@@ -29,6 +29,7 @@ GLOBAL void snis_slider_poke_input(struct slider *s, double input, int with_soun
 GLOBAL void snis_slider_set_color_scheme(struct slider *s, int reversed);
 GLOBAL void snis_slider_set_label_font(struct slider *s, int font);
 GLOBAL void snis_slider_set_fuzz(struct slider *s, int fuzz);
+GLOBAL int snis_slider_mouse_inside(struct slider *s, int x, int y);
 
 #undef GLOBAL
 #endif

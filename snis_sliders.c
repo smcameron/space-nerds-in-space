@@ -292,3 +292,16 @@ void snis_slider_set_fuzz(struct slider *s, int fuzz)
 	s->fuzz = fuzz & 0x0ff;
 }
 
+static int snis_slider_mouse_inside_vertical(struct slider *s, int x, int y)
+{
+	return !(x < s->x || x > s->x + s->height ||
+		y < s->y - 5 || y > s->y + s->length + 5);
+}
+
+int snis_slider_mouse_inside(struct slider *s, int x, int y)
+{
+	if (s->vertical)
+		return snis_slider_mouse_inside_vertical(s, x, y);
+	return !(x < s->x - 5 || x > s->x + s->length + 5 ||
+		y < s->y || y > s->y + s->height);
+}

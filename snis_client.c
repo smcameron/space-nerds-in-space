@@ -8355,6 +8355,7 @@ struct engineering_ui {
 	struct slider *comms_temperature;
 	struct slider *tractor_temperature;
 
+	int selected_subsystem;
 } eng_ui;
 
 static void damcon_button_pressed(void *x)
@@ -8421,8 +8422,9 @@ static void init_engineering_ui(void)
 	const int sh = 12; /* slider height */
 	const int powersliderlen = 180; 
 	const int coolantsliderlen = 150;
-
 	struct engineering_ui *eu = &eng_ui;
+
+	eu->selected_subsystem = -1;
 	y = 140;
 	eu->amp_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
@@ -8634,6 +8636,49 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->sensors_temperature, dm);
 	ui_add_slider(eu->comms_temperature, dm);
 	ui_add_slider(eu->tractor_temperature, dm);
+}
+
+static void show_engineering_damage_report(GtkWidget *w, int subsystem)
+{
+	struct snis_damcon_entity *o;
+	int i, x, y, count;
+	char msg[50];
+
+	/* in different order on screen... barf. */
+	const int sysmap[] = { 0, 4, 5, 6, 1, 3, 2, 7 };
+
+	if (subsystem < 0 || subsystem >= ARRAYSIZE(sysmap))
+		return;
+
+	y = 200 + sysmap[subsystem] * 40;
+	x = 300;
+
+	sng_set_foreground(BLACK);
+	snis_draw_rectangle(w->window, gc, 1, x - 5, y - 5, 440, 65);
+	sng_set_foreground(AMBER);
+	snis_draw_rectangle(w->window, gc, 0, x - 5, y - 5, 440, 65);
+	count = 0;
+	for (i = 0; i <= snis_object_pool_highest_object(damcon_pool); i++) {
+		o = &dco[i];
+		if (o->type != DAMCON_TYPE_PART)
+			continue;
+		if (o->tsd.part.system != subsystem)
+			continue;
+		if ((float) o->tsd.part.damage > 0.75f * 255.0f)
+			sng_set_foreground(ORANGERED);
+		else if ((float) o->tsd.part.damage > 0.5f * 255.0f)
+			sng_set_foreground(YELLOW);
+		else
+			sng_set_foreground(GREEN);
+		sprintf(msg, "%3.2f%%: %s",
+			(1.0f - (float) o->tsd.part.damage / 255.0f) * 100.0f,
+			damcon_part_name(o->tsd.part.system, o->tsd.part.part));
+		sng_abs_xy_draw_string(w, gc, msg, NANO_FONT, x + 10, y + 10);
+		y = y + 20;
+		count++;
+		if (count >= DAMCON_PARTS_PER_SYSTEM)
+			break;
+	}
 }
 
 static void show_engineering(GtkWidget *w)
@@ -11396,6 +11441,10 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	}
 	ui_element_list_draw(w, gc, uiobjs);
 
+	/* this has to come after ui_element_list_draw() to avoid getting clobbered */
+	if (displaymode == DISPLAYMODE_ENGINEERING)
+		show_engineering_damage_report(w, eng_ui.selected_subsystem);
+
 	if (helpmode)
 		draw_help_screen(w);
 	if (in_the_process_of_quitting)
@@ -11676,6 +11725,7 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 {
 	float pitch, yaw;
 	float smoothx, smoothy;
+	int sx, sy;
 
 	switch (displaymode) {
 	case DISPLAYMODE_DEMON:
@@ -11691,6 +11741,28 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 		pitch = weapons_mousey_to_pitch(smoothy);
 		queue_to_server(packed_buffer_new("hRR", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
 					yaw, pitch));
+		break;
+	case DISPLAYMODE_ENGINEERING:
+		sx = (int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH);
+		sy = (int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT);
+		if (snis_slider_mouse_inside(eng_ui.shield_damage, sx, sy))
+			eng_ui.selected_subsystem = 0;
+		else if (snis_slider_mouse_inside(eng_ui.impulse_damage, sx, sy))
+			eng_ui.selected_subsystem = 1;
+		else if (snis_slider_mouse_inside(eng_ui.warp_damage, sx, sy))
+			eng_ui.selected_subsystem = 2;
+		else if (snis_slider_mouse_inside(eng_ui.maneuvering_damage, sx, sy))
+			eng_ui.selected_subsystem = 3;
+		else if (snis_slider_mouse_inside(eng_ui.phaser_banks_damage, sx, sy))
+			eng_ui.selected_subsystem = 4;
+		else if (snis_slider_mouse_inside(eng_ui.sensors_damage, sx, sy))
+			eng_ui.selected_subsystem = 5;
+		else if (snis_slider_mouse_inside(eng_ui.comms_damage, sx, sy))
+			eng_ui.selected_subsystem = 6;
+		else if (snis_slider_mouse_inside(eng_ui.tractor_damage, sx, sy))
+			eng_ui.selected_subsystem = 7;
+		else
+			eng_ui.selected_subsystem = -1;
 		break;
 	default:
 		break;
