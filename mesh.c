@@ -41,6 +41,7 @@ void mesh_distort(struct mesh *m, float distortion)
 		m->v[i].z += m->v[i].z * dz;
 	}
 	m->radius = mesh_compute_radius(m);
+	mesh_set_flat_shading_vertex_normals(m);
 	mesh_graph_dev_init(m);
 }
 
