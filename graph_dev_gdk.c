@@ -537,7 +537,7 @@ void software_render_entity_triangles(struct entity_context *cx, struct entity *
 
 				cos_theta = vec3_dot(&normal, light_vector);
 				cos_theta = (cos_theta + 1.0) / 2.0;
-				fill_color = (int) fmod((cos_theta * 240.0), 240.0) +
+				fill_color = (int) (cos_theta * 240.0f) +
 						GRAY + (NSHADESOFGRAY * e->shadecolor) + 10;
 			}
 
