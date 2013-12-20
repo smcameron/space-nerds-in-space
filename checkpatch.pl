@@ -2942,8 +2942,8 @@ sub process {
 			    $var !~ /"^(?:Clear|Set|TestClear|TestSet|)Page[A-Z]/ &&
 			    !defined $camelcase{$var}) {
 				$camelcase{$var} = 1;
-				WARN("CAMELCASE",
-				     "Avoid CamelCase: <$var>\n" . $herecurr);
+				# WARN("CAMELCASE",
+				#    "Avoid CamelCase: <$var>\n" . $herecurr);
 			}
 		}
 
