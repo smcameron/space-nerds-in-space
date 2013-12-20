@@ -125,6 +125,9 @@ struct mesh *mesh_duplicate(struct mesh *original)
 		copy->t[i].v[1] = &copy->v[v1];
 		copy->t[i].v[2] = &copy->v[v2];
 		copy->t[i].n = original->t[i].n; 
+		copy->t[i].vnormal[0] = original->t[i].vnormal[0];
+		copy->t[i].vnormal[1] = original->t[i].vnormal[1];
+		copy->t[i].vnormal[2] = original->t[i].vnormal[2];
 	}
 
 	for (i = 0; i < original->nlines; i++) {
