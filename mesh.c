@@ -65,6 +65,7 @@ void mesh_derelict(struct mesh *m, float distortion)
 	for (i = 0; i < m->nvertices; i++)
 		m->v[i].x -= m->radius / 2.0;
 	m->radius = mesh_compute_radius(m);
+	mesh_set_flat_shading_vertex_normals(m);
 	mesh_graph_dev_init(m);
 }
 
