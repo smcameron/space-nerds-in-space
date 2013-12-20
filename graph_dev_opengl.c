@@ -25,6 +25,8 @@ struct mesh_gl_info {
 	/* uses vertex_buffer for data */
 	GLuint triangle_normal_buffer;
 
+	GLuint filled_wireframe_buffer;
+
 	int nwireframe_lines;
 	GLuint wireframe_vertex_buffer;
 	GLuint wireframe_normal_buffer;
@@ -36,6 +38,15 @@ struct mesh_gl_info {
 	/* uses vertex_buffer for data */
 };
 
+struct filled_wireframe_buffer_data {
+	union vec3 position;
+	union vec3 normal;
+	union vec3 tvertex0;
+	union vec3 tvertex1;
+	union vec3 tvertex2;
+	union vec3 edge_mask;
+};
+
 void mesh_graph_dev_cleanup(struct mesh *m)
 {
 	if (m->graph_ptr) {
@@ -43,6 +54,7 @@ void mesh_graph_dev_cleanup(struct mesh *m)
 
 		glDeleteBuffers(1, &ptr->vertex_buffer);
 		glDeleteBuffers(1, &ptr->triangle_normal_buffer);
+		glDeleteBuffers(1, &ptr->filled_wireframe_buffer);
 		glDeleteBuffers(1, &ptr->wireframe_vertex_buffer);
 		glDeleteBuffers(1, &ptr->wireframe_normal_buffer);
 
@@ -66,20 +78,56 @@ void mesh_graph_dev_init(struct mesh *m)
 		GLfloat *g_vertex_buffer_data = malloc(size);
 		GLfloat *g_normal_buffer_data = malloc(size);
 
+		int wf_data_size = sizeof(struct filled_wireframe_buffer_data) * m->ntriangles * 3;
+		struct filled_wireframe_buffer_data *g_filled_wf_buffer_data = malloc(wf_data_size);
+
 		ptr->ntriangles = m->ntriangles;
 		ptr->npoints = m->ntriangles * 3; /* can be rendered as a point cloud too */
 
 		for (i = 0; i < m->ntriangles; i++) {
 			int j = 0;
 			for (j = 0; j < 3; j++) {
-				int index = i * 9 + j * 3;
-				g_vertex_buffer_data[index + 0] = m->t[i].v[j]->x;
-				g_vertex_buffer_data[index + 1] = m->t[i].v[j]->y;
-				g_vertex_buffer_data[index + 2] = m->t[i].v[j]->z;
+				int v_index = i * 9 + j * 3;
+				g_vertex_buffer_data[v_index + 0] = m->t[i].v[j]->x;
+				g_vertex_buffer_data[v_index + 1] = m->t[i].v[j]->y;
+				g_vertex_buffer_data[v_index + 2] = m->t[i].v[j]->z;
 
-				g_normal_buffer_data[index + 0] = m->t[i].vnormal[j].x;
-				g_normal_buffer_data[index + 1] = m->t[i].vnormal[j].y;
-				g_normal_buffer_data[index + 2] = m->t[i].vnormal[j].z;
+				g_normal_buffer_data[v_index + 0] = m->t[i].vnormal[j].x;
+				g_normal_buffer_data[v_index + 1] = m->t[i].vnormal[j].y;
+				g_normal_buffer_data[v_index + 2] = m->t[i].vnormal[j].z;
+
+				int wf_index = i * 3 + j;
+				g_filled_wf_buffer_data[wf_index].position.v.x = m->t[i].v[j]->x;
+				g_filled_wf_buffer_data[wf_index].position.v.y = m->t[i].v[j]->y;
+				g_filled_wf_buffer_data[wf_index].position.v.z = m->t[i].v[j]->z;
+
+				g_filled_wf_buffer_data[wf_index].normal.v.x = m->t[i].vnormal[j].x;
+				g_filled_wf_buffer_data[wf_index].normal.v.y = m->t[i].vnormal[j].y;
+				g_filled_wf_buffer_data[wf_index].normal.v.z = m->t[i].vnormal[j].z;
+
+				g_filled_wf_buffer_data[wf_index].tvertex0.v.x = m->t[i].v[0]->x;
+				g_filled_wf_buffer_data[wf_index].tvertex0.v.y = m->t[i].v[0]->y;
+				g_filled_wf_buffer_data[wf_index].tvertex0.v.z = m->t[i].v[0]->z;
+
+				g_filled_wf_buffer_data[wf_index].tvertex1.v.x = m->t[i].v[1]->x;
+				g_filled_wf_buffer_data[wf_index].tvertex1.v.y = m->t[i].v[1]->y;
+				g_filled_wf_buffer_data[wf_index].tvertex1.v.z = m->t[i].v[1]->z;
+
+				g_filled_wf_buffer_data[wf_index].tvertex2.v.x = m->t[i].v[2]->x;
+				g_filled_wf_buffer_data[wf_index].tvertex2.v.y = m->t[i].v[2]->y;
+				g_filled_wf_buffer_data[wf_index].tvertex2.v.z = m->t[i].v[2]->z;
+
+				g_filled_wf_buffer_data[wf_index].edge_mask.v.x = 0;
+				g_filled_wf_buffer_data[wf_index].edge_mask.v.y = 0;
+				g_filled_wf_buffer_data[wf_index].edge_mask.v.z = 0;
+
+				/* bias the edge distance to make the coplanar edges not draw */
+				if ((j == 1 || j == 2) && (m->t[i].flag & TRIANGLE_1_2_COPLANAR))
+					g_filled_wf_buffer_data[wf_index].edge_mask.v.x = 1000;
+				if ((j == 0 || j == 2) && (m->t[i].flag & TRIANGLE_0_2_COPLANAR))
+					g_filled_wf_buffer_data[wf_index].edge_mask.v.y = 1000;
+				if ((j == 0 || j == 1) && (m->t[i].flag & TRIANGLE_0_1_COPLANAR))
+					g_filled_wf_buffer_data[wf_index].edge_mask.v.z = 1000;
 			}
 		}
 
@@ -90,6 +138,10 @@ void mesh_graph_dev_init(struct mesh *m)
 		glGenBuffers(1, &ptr->triangle_normal_buffer);
 		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_normal_buffer);
 		glBufferData(GL_ARRAY_BUFFER, size, g_normal_buffer_data, GL_STATIC_DRAW);
+
+		glGenBuffers(1, &ptr->filled_wireframe_buffer);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
+		glBufferData(GL_ARRAY_BUFFER, wf_data_size, g_filled_wf_buffer_data, GL_STATIC_DRAW);
 
 		free(g_vertex_buffer_data);
 		free(g_normal_buffer_data);
@@ -243,6 +295,19 @@ struct graph_dev_gl_solid_shader {
 	GLuint colorID;
 };
 
+struct graph_dev_gl_filled_wireframe_shader {
+	GLuint program_id;
+	GLuint viewport_id;
+	GLuint mvp_matrix_id;
+	GLuint position_id;
+	GLuint tvertex0_id;
+	GLuint tvertex1_id;
+	GLuint tvertex2_id;
+	GLuint edge_mask_id;
+	GLuint line_color_id;
+	GLuint triangle_color_id;
+};
+
 struct graph_dev_gl_trans_wireframe_shader {
 	GLuint programID;
 	GLuint mvpMatrixID;
@@ -287,6 +352,7 @@ struct graph_dev_gl_skybox_shader {
 /* store all the shader parameters */
 static struct graph_dev_gl_solid_shader solid_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_shader;
+static struct graph_dev_gl_filled_wireframe_shader filled_wireframe_shader;
 static struct graph_dev_gl_single_color_shader single_color_shader;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
@@ -425,6 +491,92 @@ static void graph_dev_raster_solid_mesh(const struct mat44 *mat_mvp, const struc
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
+}
+
+static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, struct mesh *m,
+	GdkColor *line_color, GdkColor *triangle_color)
+{
+	enable_3d_viewport();
+
+	if (!m->graph_ptr)
+		return;
+
+	struct mesh_gl_info *ptr = m->graph_ptr;
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+
+	glUseProgram(filled_wireframe_shader.program_id);
+
+	glUniform2f(filled_wireframe_shader.viewport_id, sgc.vp_width_3d, sgc.vp_height_3d);
+	glUniformMatrix4fv(filled_wireframe_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+
+	glUniform3f(filled_wireframe_shader.line_color_id, line_color->red/65535.0,
+		line_color->green/65535.0, line_color->blue/65535.0);
+	glUniform3f(filled_wireframe_shader.triangle_color_id, triangle_color->red/65535.0,
+		triangle_color->green/65535.0, triangle_color->blue/65535.0);
+
+	glEnableVertexAttribArray(filled_wireframe_shader.position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
+	glVertexAttribPointer(
+		filled_wireframe_shader.position_id,
+		3,
+		GL_FLOAT,
+		GL_FALSE,
+		sizeof(struct filled_wireframe_buffer_data),
+		(void *)offsetof(struct filled_wireframe_buffer_data, position.v.x)
+	);
+
+	glEnableVertexAttribArray(filled_wireframe_shader.tvertex0_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
+	glVertexAttribPointer(
+		filled_wireframe_shader.tvertex0_id,
+		3,
+		GL_FLOAT,
+		GL_FALSE,
+		sizeof(struct filled_wireframe_buffer_data),
+		(void *)offsetof(struct filled_wireframe_buffer_data, tvertex0.v.x)
+	);
+
+	glEnableVertexAttribArray(filled_wireframe_shader.tvertex1_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
+	glVertexAttribPointer(
+		filled_wireframe_shader.tvertex1_id,
+		3,
+		GL_FLOAT,
+		GL_FALSE,
+		sizeof(struct filled_wireframe_buffer_data),
+		(void *)offsetof(struct filled_wireframe_buffer_data, tvertex1.v.x)
+	);
+
+	glEnableVertexAttribArray(filled_wireframe_shader.tvertex2_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
+	glVertexAttribPointer(
+		filled_wireframe_shader.tvertex2_id,
+		3,
+		GL_FLOAT,
+		GL_FALSE,
+		sizeof(struct filled_wireframe_buffer_data),
+		(void *)offsetof(struct filled_wireframe_buffer_data, tvertex2.v.x)
+	);
+
+	glEnableVertexAttribArray(filled_wireframe_shader.edge_mask_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
+	glVertexAttribPointer(
+		filled_wireframe_shader.edge_mask_id,
+		3,
+		GL_FLOAT,
+		GL_FALSE,
+		sizeof(struct filled_wireframe_buffer_data),
+		(void *)offsetof(struct filled_wireframe_buffer_data, edge_mask.v.x)
+	);
+
+	glDrawArrays(GL_TRIANGLES, 0, ptr->ntriangles*3);
+
+	glDisableVertexAttribArray(filled_wireframe_shader.position_id);
+	glUseProgram(0);
+
+	glDisable(GL_DEPTH_TEST);
 }
 
 static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
@@ -574,11 +726,19 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					|| (e->render_style & RENDER_WIREFRAME);
 
 		if (filled_triangle) {
-			sng_set_foreground(240 + GRAY + (NSHADESOFGRAY * e->shadecolor) + 10);
+			if (cx->camera.renderer & BLACK_TRIS)
+				sng_set_foreground(BLACK);
+			else
+				sng_set_foreground(240 + GRAY + (NSHADESOFGRAY * e->shadecolor) + 10);
 			GdkColor *triangle_color = sgc.hue;
 
-			graph_dev_raster_solid_mesh(mat_mvp, mat_mv, mat_normal,
-				e->m, triangle_color, eye_light_pos);
+			/* outline and filled */
+			if (outline_triangle) {
+				graph_dev_raster_filled_wireframe_mesh(mat_mvp, e->m, line_color, triangle_color);
+			} else {
+				graph_dev_raster_solid_mesh(mat_mvp, mat_mv, mat_normal,
+					e->m, triangle_color, eye_light_pos);
+			}
 		} else if (outline_triangle) {
 			graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
 				mat_normal, e->m, line_color);
@@ -712,6 +872,25 @@ static void setup_solid_shader(struct graph_dev_gl_solid_shader *shader)
 	shader->colorID = glGetUniformLocation(shader->programID, "u_Color");
 }
 
+static void setup_filled_wireframe_shader(struct graph_dev_gl_filled_wireframe_shader *shader)
+{
+	/* Create and compile our GLSL program from the shaders */
+	shader->program_id = load_shaders("share/snis/shader/wireframe_filled.vert",
+		"share/snis/shader/wireframe_filled.frag");
+
+	shader->viewport_id = glGetUniformLocation(shader->program_id, "Viewport");
+	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "ModelViewProjectionMatrix");
+
+	shader->position_id = glGetAttribLocation(shader->program_id, "position");
+	shader->tvertex0_id = glGetAttribLocation(shader->program_id, "tvertex0");
+	shader->tvertex1_id = glGetAttribLocation(shader->program_id, "tvertex1");
+	shader->tvertex2_id = glGetAttribLocation(shader->program_id, "tvertex2");
+	shader->edge_mask_id = glGetAttribLocation(shader->program_id, "edge_mask");
+
+	shader->line_color_id = glGetUniformLocation(shader->program_id, "line_color");
+	shader->triangle_color_id = glGetUniformLocation(shader->program_id, "triangle_color");
+}
+
 static void setup_trans_wireframe_shader(struct graph_dev_gl_trans_wireframe_shader *shader)
 {
 	/* Create and compile our GLSL program from the shaders */
@@ -839,6 +1018,7 @@ int graph_dev_setup()
 
 	setup_solid_shader(&solid_shader);
 	setup_trans_wireframe_shader(&trans_wireframe_shader);
+	setup_filled_wireframe_shader(&filled_wireframe_shader);
 	setup_single_color_shader(&single_color_shader);
 	setup_point_cloud_shader(&point_cloud_shader);
 	setup_skybox_shader(&skybox_shader);
