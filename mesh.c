@@ -6,6 +6,7 @@
 #include "mathutils.h"
 #include "matrix.h"
 #include "math.h"
+#include "quat.h"
 
 #define DEFINE_MESH_GLOBALS 1
 #include "mesh.h"
@@ -258,5 +259,37 @@ struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y
 
 	mesh_graph_dev_init(my_mesh);
 	return my_mesh;
+}
+
+static union vec3 compute_triangle_normal(struct triangle *t)
+{
+	union vec3 v1, v2, cross;
+
+	v1.v.x = t->v[1]->x - t->v[0]->x;
+	v1.v.y = t->v[1]->y - t->v[0]->y;
+	v1.v.z = t->v[1]->z - t->v[0]->z;
+
+	v2.v.x = t->v[2]->x - t->v[1]->x;
+	v2.v.y = t->v[2]->y - t->v[1]->y;
+	v2.v.z = t->v[2]->z - t->v[1]->z;
+
+	vec3_cross(&cross, &v1, &v2);
+	vec3_normalize_self(&cross);
+	return cross;
+}
+
+void mesh_set_flat_shading_vertex_normals(struct mesh *m)
+{
+	int i, j;
+
+	for (i = 0; i < m->ntriangles; i++) {
+		union vec3 normal;
+		normal = compute_triangle_normal(&m->t[i]);
+		m->t[i].n.x = normal.v.x;
+		m->t[i].n.y = normal.v.y;
+		m->t[i].n.z = normal.v.z;
+		for (j = 0; j < 3; j++)
+			m->t[i].vnormal[j] = m->t[i].n;
+	}
 }
 
