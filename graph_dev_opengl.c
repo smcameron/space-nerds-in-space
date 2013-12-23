@@ -268,6 +268,19 @@ struct graph_dev_gl_point_cloud_shader {
 	GLuint colorID;
 };
 
+struct graph_dev_gl_skybox_shader {
+	GLuint program_id;
+	GLuint mvp_id;
+	GLuint vertex_id;
+	GLuint texture_id;
+
+	int nvertices;
+	GLuint vbo_cube_vertices;
+
+	int texture_loaded;
+	GLuint cube_texture_id;
+};
+
 /* only use on high performance graphics card */
 /*#define PER_PIXEL_LIGHT 1*/
 
@@ -276,6 +289,7 @@ static struct graph_dev_gl_solid_shader solid_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_shader;
 static struct graph_dev_gl_single_color_shader single_color_shader;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
+static struct graph_dev_gl_skybox_shader skybox_shader;
 
 static struct graph_dev_gl_context {
 	int screen_x, screen_y;
@@ -744,6 +758,73 @@ static void setup_point_cloud_shader(struct graph_dev_gl_point_cloud_shader *sha
 	shader->colorID = glGetUniformLocation(shader->programID, "u_Color");
 }
 
+static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
+{
+	/* Create and compile our GLSL program from the shaders */
+	shader->program_id = load_shaders("share/snis/shader/skybox.vert",
+		"share/snis/shader/skybox.frag");
+
+	/* Get a handle for our "MVP" uniform */
+	shader->mvp_id = glGetUniformLocation(shader->program_id, "MVP");
+	shader->texture_id = glGetUniformLocation(shader->program_id, "texture");
+
+	/* Get a handle for our buffers */
+	shader->vertex_id = glGetAttribLocation(shader->program_id, "vertex");
+
+	/* cube vertices in triangle strip for vertex buffer object */
+	static const GLfloat cube_vertices[] = {
+		-10.0f,  10.0f, -10.0f,
+		-10.0f, -10.0f, -10.0f,
+		10.0f, -10.0f, -10.0f,
+		10.0f, -10.0f, -10.0f,
+		10.0f,  10.0f, -10.0f,
+		-10.0f,  10.0f, -10.0f,
+
+		-10.0f, -10.0f,  10.0f,
+		-10.0f, -10.0f, -10.0f,
+		-10.0f,  10.0f, -10.0f,
+		-10.0f,  10.0f, -10.0f,
+		-10.0f,  10.0f,  10.0f,
+		-10.0f, -10.0f,  10.0f,
+
+		10.0f, -10.0f, -10.0f,
+		10.0f, -10.0f,  10.0f,
+		10.0f,  10.0f,  10.0f,
+		10.0f,  10.0f,  10.0f,
+		10.0f,  10.0f, -10.0f,
+		10.0f, -10.0f, -10.0f,
+
+		-10.0f, -10.0f,  10.0f,
+		-10.0f,  10.0f,  10.0f,
+		10.0f,  10.0f,  10.0f,
+		10.0f,  10.0f,  10.0f,
+		10.0f, -10.0f,  10.0f,
+		-10.0f, -10.0f,  10.0f,
+
+		-10.0f,  10.0f, -10.0f,
+		10.0f,  10.0f, -10.0f,
+		10.0f,  10.0f,  10.0f,
+		10.0f,  10.0f,  10.0f,
+		-10.0f,  10.0f,  10.0f,
+		-10.0f,  10.0f, -10.0f,
+
+		-10.0f, -10.0f, -10.0f,
+		-10.0f, -10.0f,  10.0f,
+		10.0f, -10.0f, -10.0f,
+		10.0f, -10.0f, -10.0f,
+		-10.0f, -10.0f,  10.0f,
+		10.0f, -10.0f,  10.0f };
+
+	glGenBuffers(1, &shader->vbo_cube_vertices);
+	glBindBuffer(GL_ARRAY_BUFFER, shader->vbo_cube_vertices);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	shader->nvertices = sizeof(cube_vertices)/sizeof(GLfloat);
+
+	shader->texture_loaded = 0;
+}
+
 int graph_dev_setup()
 {
 	if (glewInit() != GLEW_OK) {
@@ -760,7 +841,89 @@ int graph_dev_setup()
 	setup_trans_wireframe_shader(&trans_wireframe_shader);
 	setup_single_color_shader(&single_color_shader);
 	setup_point_cloud_shader(&point_cloud_shader);
+	setup_skybox_shader(&skybox_shader);
 
 	return 0;
+}
+
+void graph_dev_load_skybox_texture(
+	const char *texture_filename_pos_x,
+	const char *texture_filename_neg_x,
+	const char *texture_filename_pos_y,
+	const char *texture_filename_neg_y,
+	const char *texture_filename_pos_z,
+	const char *texture_filename_neg_z)
+{
+	glEnable(GL_TEXTURE_CUBE_MAP);
+
+	if (skybox_shader.texture_loaded) {
+		glDeleteTextures(1, &skybox_shader.cube_texture_id);
+		skybox_shader.texture_loaded = 0;
+	}
+
+	int ntextures = 6;
+
+	static const GLint tex_pos[] = {
+		GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+		GL_TEXTURE_CUBE_MAP_POSITIVE_Y, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+		GL_TEXTURE_CUBE_MAP_POSITIVE_Z, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z };
+	const char *tex_filename[] = {
+		texture_filename_pos_x, texture_filename_neg_x,
+		texture_filename_pos_y, texture_filename_neg_y,
+		texture_filename_pos_z, texture_filename_neg_z };
+
+	glGenTextures(1, &skybox_shader.cube_texture_id);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox_shader.cube_texture_id);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	char whynotz[100];
+	int whynotlen = 100;
+
+	int i;
+	for (i = 0; i < ntextures; i++) {
+		int tw, th;
+		char *image_data = sng_load_png_texture(tex_filename[i], &tw, &th, whynotz, whynotlen);
+		if (image_data) {
+			glTexImage2D(tex_pos[i], 0, GL_RGBA, tw, th, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+			free(image_data);
+		} else {
+			printf("Unable to load skybox texture %d '%s': %s\n", i, tex_filename[i], whynotz);
+		}
+	}
+
+	skybox_shader.texture_loaded = 1;
+
+	glDisable(GL_TEXTURE_CUBE_MAP);
+}
+
+void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp)
+{
+	enable_3d_viewport();
+
+	glEnable(GL_TEXTURE_CUBE_MAP);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+
+	glUseProgram(skybox_shader.program_id);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox_shader.cube_texture_id);
+	glUniform1i(skybox_shader.texture_id, 0);
+
+	glUniformMatrix4fv(skybox_shader.mvp_id, 1, GL_FALSE, &mat_vp->m[0][0]);
+
+	glBindBuffer(GL_ARRAY_BUFFER, skybox_shader.vbo_cube_vertices);
+	glEnableVertexAttribArray(skybox_shader.vertex_id);
+	glVertexAttribPointer(skybox_shader.vertex_id, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glDrawArrays(GL_TRIANGLES, 0, skybox_shader.nvertices);
+
+	glDisableVertexAttribArray(skybox_shader.vertex_id);
+	glDisable(GL_TEXTURE_CUBE_MAP);
+	glUseProgram(0);
 }
 

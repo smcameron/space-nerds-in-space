@@ -48,5 +48,15 @@ extern void graph_dev_draw_point(float x, float y);
 extern void graph_dev_draw_arc(gboolean filled, float x, float y, float width, float height,
 	float angle1, float angle2);
 
+extern void graph_dev_load_skybox_texture(
+	const char *texture_filename_pos_x,
+	const char *texture_filename_neg_x,
+	const char *texture_filename_pos_y,
+	const char *texture_filename_neg_y,
+	const char *texture_filename_pos_z,
+	const char *texture_filename_neg_z);
+
+extern void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp);
+
 #endif
 

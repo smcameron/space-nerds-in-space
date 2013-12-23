@@ -347,6 +347,11 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct en
 	graph_dev_draw_entity(cx, e, camera_light_pos, &mat_mvp, &mat_mv, &mat_normal);
 }
 
+void render_skybox(struct entity_context *cx)
+{
+	graph_dev_draw_skybox(cx, &cx->camera.skybox_vp_matrix);
+}
+
 #if defined(__APPLE__)  || defined(__FreeBSD__)
 static int object_depth_compare(void *vcx, const void *a, const void *b)
 #else

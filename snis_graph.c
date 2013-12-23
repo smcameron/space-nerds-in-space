@@ -628,7 +628,7 @@ void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, int filled, float x, floa
 	sng_current_draw_arc(drawable, gc, filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
 }
 
-int sng_load_png_texture(const char * filename, int *w, int *h, char *whynot, int whynotlen)
+char *sng_load_png_texture(const char *filename, int *w, int *h, char *whynot, int whynotlen)
 {
 #ifndef WITHOUTOPENGL
 	int i, bit_depth, color_type, row_bytes;
@@ -639,13 +639,12 @@ int sng_load_png_texture(const char * filename, int *w, int *h, char *whynot, in
 	png_infop end_info = NULL;
 	png_byte *image_data = NULL;
 	png_bytep *row = NULL;
-	GLuint texture = -1;
 
 	FILE *fp = fopen(filename, "rb");
 	if (!fp) {
 		snprintf(whynot, whynotlen, "Failed to open '%s': %s",
 			filename, strerror(errno));
-		return -1;
+		return 0;
 	}
 
 	fread(header, 1, 8, fp);
@@ -717,15 +716,11 @@ int sng_load_png_texture(const char * filename, int *w, int *h, char *whynot, in
 
 	png_read_image(png_ptr, row);
 
-	glGenTextures(1, &texture);
-	if (texture == -1) {
-		snprintf(whynot, whynotlen, "glGenTextures failed.");
-		goto cleanup;
-	}
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tw, th, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	/* glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tw, th, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data); */
+	free(row);
+	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+	fclose(fp);
+	return (char *)image_data;
 
 cleanup:
 	if (row)
@@ -734,10 +729,9 @@ cleanup:
 		free(image_data);
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
 	fclose(fp);
-	return texture;
 #else
 	snprintf(whynot, whynotlen, "load_png_texture: compiled without opengl support.");
-	return -1;
 #endif
+	return 0;
 }
 

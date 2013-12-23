@@ -254,12 +254,8 @@ ui_element_keypress_function ui_text_input_keypress = (ui_element_keypress_funct
 #define GLuint int
 #endif
 
-GLuint texture[MAXTEXTURES];
-int ntextures = 0;
 char skybox_texture_prefix[255];
-#ifndef WITHOUTOPENGL
 volatile int textures_loaded = 0; /* blech, volatile global. */
-#endif
 
 double sine[361];
 double cosine[361];
@@ -3493,9 +3489,8 @@ static int process_comms_mainscreen()
 	return 0;
 }
 
-#ifndef WITHOUTOPENGL
 static void load_textures(char *filenameprefix);
-#endif
+
 static int process_load_skybox(void)
 {
 	int rc;
@@ -3510,12 +3505,12 @@ static int process_load_skybox(void)
 	rc = snis_readsocket(gameserver_sock, string, length);
 	if (rc != 0)
 		return rc;
-#ifndef WITHOUTOPENGL
+
 	string[100] = '\0';
 	string[length] = '\0';
 	strcpy(skybox_texture_prefix, string);
 	textures_loaded = 0;
-#endif
+
 	return 0;
 }
 
@@ -4690,170 +4685,6 @@ static int newzoom(int current_zoom, int desired_zoom)
 /* far plane is one sectors, which is about max that can be seen on full zoom */
 #define FAR_CAMERA_PLANE (XKNOWN_DIM/10.0)
 
-static void begin_2d_gl(void);
-static void end_2d_gl(void);
-#ifndef WITHOUTOPENGL
-static void begin_3d_gl(struct entity_context *ecx)
-{
-#if 0
-	float near, far, angle_of_view, cx, cy, cz, lx, ly, lz, ux, uy, uz;
-	int xvpixels, yvpixels;
-
-	camera_get_pos(ecx, &cx, &cy, &cz);
-	camera_get_parameters(ecx, &near, &far, &xvpixels, &yvpixels, &angle_of_view);
-	camera_get_look_at(ecx, &lx, &ly, &lz);
-	camera_get_up_direction(ecx, &ux, &uy, &uz);
-	lx -= cx;
-	ly -= cy;
-	lz -= cz;
-
-	glEnable(GL_TEXTURE_2D);
-	glPushMatrix();
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
-	gluPerspective(angle_of_view * 180.0 / M_PI, (float) SCREEN_WIDTH / SCREEN_HEIGHT, near, far);
-	gluLookAt(0, 0, 0, lx, ly, lz, ux, uy, uz); 
-	glMatrixMode(GL_MODELVIEW);
-	/* glDisable(GL_DEPTH_TEST); */
-#endif
-}
-
-static void end_3d_gl(void)
-{
-#if 0
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glPopMatrix();
-#endif
-}
-#endif
-
-static void render_skybox(GtkWidget *w, struct entity_context *ecx)
-{
-
-	/* TODO:  Probably there is a better way than creating these every frame */
-#if 0
-#ifndef WITHOUTOPENGL
-#define SKYBOXRAD 200.0
-	static const float v[8][3] = {
-		{ -SKYBOXRAD, SKYBOXRAD, -SKYBOXRAD },
-		{ SKYBOXRAD, SKYBOXRAD, -SKYBOXRAD },
-		{ SKYBOXRAD, -SKYBOXRAD, -SKYBOXRAD },
-		{ -SKYBOXRAD, -SKYBOXRAD, -SKYBOXRAD },
-		{ -SKYBOXRAD, SKYBOXRAD, SKYBOXRAD },
-		{ SKYBOXRAD, SKYBOXRAD, SKYBOXRAD },
-		{ SKYBOXRAD, -SKYBOXRAD, SKYBOXRAD },
-		{ -SKYBOXRAD, -SKYBOXRAD, SKYBOXRAD },
-	};
-
-	static const float n[6][3] = {
-		{ 0.0, 0.0, 1.0 },
-		{ 1.0, 0.0, 0.0 },
-		{ 0.0, -1.0, 0.0 },
-		{ -1.0, 0.0, 0.0 },
-		{ 0.0, 1.0, 0.0 },
-		{ 0.0, 0.0, -1.0 },
-	};
-
-	end_2d_gl();
-	begin_3d_gl(ecx);
-
-	glColor4ub(255, 255, 255, 255);
-	const static GLfloat light0_position[] = {1.0, 1.0, 1.0, 0.0};
-	glLightfv(GL_LIGHT0, GL_POSITION, light0_position);
-	glEnable(GL_DEPTH_TEST);    
-	/* glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0); */
-	glEnable(GL_TEXTURE_2D);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-	glBindTexture(GL_TEXTURE_2D, texture[2]);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glBegin(GL_QUADS);
-	glNormal3fv(&n[0][0]);
-	glTexCoord2f(1, 0); glVertex3fv(&v[1][0]);
-	glTexCoord2f(0, 0); glVertex3fv(&v[0][0]);
-	glTexCoord2f(0, 1); glVertex3fv(&v[3][0]);
-	glTexCoord2f(1, 1); glVertex3fv(&v[2][0]);
-	glEnd();
-
-	glBindTexture(GL_TEXTURE_2D, texture[1]);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glBegin(GL_QUADS);
-	glNormal3fv(&n[1][0]);
-	glTexCoord2f(1, 0); glVertex3fv(&v[0][0]);
-	glTexCoord2f(1, 1); glVertex3fv(&v[3][0]);
-	glTexCoord2f(0, 1); glVertex3fv(&v[7][0]);
-	glTexCoord2f(0, 0); glVertex3fv(&v[4][0]);
-	glEnd();
-
-	glBindTexture(GL_TEXTURE_2D, texture[4]);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glBegin(GL_QUADS);
-	glNormal3fv(&n[2][0]);
-	glTexCoord2f(0, 0); glVertex3fv(&v[1][0]);
-	glTexCoord2f(1, 0); glVertex3fv(&v[0][0]);
-	glTexCoord2f(1, 1); glVertex3fv(&v[4][0]);
-	glTexCoord2f(0, 1); glVertex3fv(&v[5][0]);
-	glEnd();
-
-	glBindTexture(GL_TEXTURE_2D, texture[3]);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glBegin(GL_QUADS);
-	glNormal3fv(&n[3][0]);
-	glTexCoord2f(1, 0); glVertex3fv(&v[5][0]);
-	glTexCoord2f(0, 0); glVertex3fv(&v[1][0]);
-	glTexCoord2f(0, 1); glVertex3fv(&v[2][0]);
-	glTexCoord2f(1, 1); glVertex3fv(&v[6][0]);
-	glEnd();
-
-	glBindTexture(GL_TEXTURE_2D, texture[5]);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glBegin(GL_QUADS);
-	glNormal3fv(&n[4][0]);
-	glTexCoord2f(0, 0); glVertex3fv(&v[3][0]);
-	glTexCoord2f(1, 0); glVertex3fv(&v[2][0]);
-	glTexCoord2f(1, 1); glVertex3fv(&v[6][0]);
-	glTexCoord2f(0, 1); glVertex3fv(&v[7][0]);
-	glEnd();
-
-
-	glBindTexture(GL_TEXTURE_2D, texture[0]);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glBegin(GL_QUADS);
-	glNormal3fv(&n[5][0]);
-	glTexCoord2f(1, 0); glVertex3fv(&v[4][0]);
-	glTexCoord2f(0, 0); glVertex3fv(&v[5][0]);
-	glTexCoord2f(0, 1); glVertex3fv(&v[6][0]);
-	glTexCoord2f(1, 1); glVertex3fv(&v[7][0]);
-	glEnd();
-
-	glDisable(GL_DEPTH_TEST);    
-	glDisable(GL_LIGHTING);
-	glDisable(GL_LIGHT0);
-
-	end_3d_gl();
-	begin_2d_gl();
-#endif
-#endif
-}
-
 static void show_gunsight(GtkWidget *w)
 {
 	int x1, y1, x2, y2, cx, cy;
@@ -4981,13 +4812,15 @@ static void show_weapons_camera_view(GtkWidget *w)
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
 	set_lighting(ecx, XKNOWN_DIM/2, YKNOWN_DIM/2, ZKNOWN_DIM/2);
+	calculate_camera_transform(ecx);
+
 	sng_set_foreground(GREEN);
 	if (!fake_stars_initialized) {
 		fake_stars_initialized = 1;
 		entity_init_fake_stars(ecx, 2000, 300.0f * 10.0f);
 	}
 
-	render_skybox(w, ecx);
+	render_skybox(ecx);
 
 	pthread_mutex_lock(&universe_mutex);
 
@@ -5094,13 +4927,15 @@ static void show_mainscreen(GtkWidget *w)
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
 	set_lighting(ecx, XKNOWN_DIM/2, YKNOWN_DIM/2, ZKNOWN_DIM/2);
+	calculate_camera_transform(ecx);
+
 	sng_set_foreground(GREEN);
 	if (!fake_stars_initialized) {
 		fake_stars_initialized = 1;
 		entity_init_fake_stars(ecx, 2000, 300.0f * 10.0f);
 	}
 
-	render_skybox(w, ecx);
+	render_skybox(ecx);
 
 	pthread_mutex_lock(&universe_mutex);
 	render_entities(w, gc, ecx);
@@ -11282,36 +11117,6 @@ static void draw_quit_screen(GtkWidget *w)
 	}
 }
 
-static void begin_2d_gl(void)
-{
-#ifndef WITHOUTOPENGL
-#if 0
-	glDisable(GL_TEXTURE_2D);
-	glPushMatrix();
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
-	glOrtho(0.0f, (float) real_screen_width, 0.0f, (float) real_screen_height, -1.0, 1.0);
-	glMatrixMode(GL_MODELVIEW);
-	glDisable(GL_DEPTH_TEST);
-#endif
-#endif
-}
-
-static void end_2d_gl(void)
-{
-#ifndef WITHOUTOPENGL
-#if 0
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glPopMatrix();
-#endif
-#endif
-}
-
 #define FRAME_INDEX_MAX 10
 
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
@@ -11330,12 +11135,12 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (displaymode == DISPLAYMODE_GLMAIN)	
 		return 0;
 
-#ifndef WITHOUTOPENGL
 	if (!textures_loaded) {
 		load_textures(skybox_texture_prefix);
 		textures_loaded = 1;
 	}
 
+#ifndef WITHOUTOPENGL
 	GdkGLContext *gl_context = gtk_widget_get_gl_context(main_da);
 	GdkGLDrawable *gl_drawable = gtk_widget_get_gl_drawable(main_da);
 
@@ -11345,7 +11150,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 #endif
-	begin_2d_gl();
 
 	sng_set_foreground(WHITE);
 	
@@ -11470,7 +11274,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	}
 
 end_of_drawing:
-	end_2d_gl();
 
 #ifndef WITHOUTOPENGL
 	gdk_gl_drawable_wait_gdk(gl_drawable);
@@ -11541,46 +11344,17 @@ gint advance_game(gpointer data)
 	return TRUE;
 }
 
-#ifndef WITHOUTOPENGL
-
-static void free_textures(void)
-{
-	int i;
-
-	for (i = 0; i < ntextures; i++) {
-		glDeleteTextures(1, &texture[i]);
-		texture[i] = 0;
-	}
-	ntextures = 0;
-}
-
-static int load_texture(const char *filename)
-{
-	int rc, texw, texh;
-	char whynot[100];
-	rc = sng_load_png_texture(filename, &texw, &texh, whynot, sizeof(whynot));
-	if (rc < 0) {
-		fprintf(stderr, "texture %s failed to load: %s\n",
-			filename, whynot);
-		return rc;
-	}
-	texture[ntextures++] = rc;
-	return rc;
-}
-
 static void load_textures(char *filenameprefix)
 {
 	int i;
-	char filename[PATH_MAX + 1];
-
-	free_textures();
+	char filename[6][PATH_MAX + 1];
 
 	for (i = 0; i < 6; i++) {
-		sprintf(filename, "%s/textures/%s%d.png", asset_dir, filenameprefix, i);
-		load_texture(filename);
+		sprintf(filename[i], "%s/textures/%s%d.png", asset_dir, filenameprefix, i);
 	}
+
+	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4], filename[5], filename[0], filename[2]);
 }
-#endif
 
 static void init_meshes();
 
@@ -11622,16 +11396,10 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	 */
 	GtkAllocation alloc;
 	gtk_widget_get_allocation(main_da, &alloc);
-	glViewport(0, 0, alloc.width, alloc.height);
-
-	const static GLfloat light0_position[] = {1.0, 1.0, 1.0, 0.0};
-	glLightfv(GL_LIGHT0, GL_POSITION, light0_position);
-	glEnable(GL_DEPTH_TEST);    
-	/* glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);  */
 
 	/* Delimits the end of the OpenGL execution. */
 	gdk_gl_drawable_gl_end(gl_drawable);
+#endif
 
 	static int gl_is_setup = 0;
 	if (!gl_is_setup) {
@@ -11643,7 +11411,6 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 		load_textures(skybox_texture_prefix);
 		textures_loaded = 1;
 	}
-#endif
 
 	static int meshes_loaded = 0;
 	if (!meshes_loaded) {
