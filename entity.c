@@ -608,6 +608,8 @@ void calculate_camera_transform(struct entity_context *cx)
 	/* make the view-perspective matrix, VP = P * V */
 	mat44_product_ddd(&perspective_transform, &cx->camera.camera_v_matrix, &cx->camera.camera_vp_matrix);
 
+	mat44_product_ddf(&perspective_transform, &cameralook_transform, &cx->camera.skybox_vp_matrix);
+
 	/* pull out the frustum planes for entity culling */
 	extract_frustum_planes(&cx->camera);
 }

@@ -47,6 +47,7 @@ struct camera_info {
 	int renderer;
 	struct mat44d camera_v_matrix;
 	struct mat44d camera_vp_matrix;
+	struct mat44 skybox_vp_matrix;
 	float frustum[6][4];
 };
 
