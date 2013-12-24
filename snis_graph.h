@@ -98,8 +98,9 @@ SNG_GLOBAL void sng_set_clip_window(int x1, int y1, int x2, int y2);
 /* offet and scale 3d rendering inside extent bounds */
 SNG_GLOBAL void sng_set_3d_viewport(int x_offset, int y_offset, int width, int height);
 
-SNG_GLOBAL char *sng_load_png_texture(const char *filename, int *w, int *h,
-                        char *whynot, int whynotlen);
+SNG_GLOBAL char *sng_load_png_texture(const char *filename, int flipVertical, int flipHorizontal, int *w, int *h,
+			int *hasAlpha, char *whynot, int whynotlen);
+
 SNG_GLOBAL void sng_setup_colors(GtkWidget *w);
 #undef SNG_GLOBAL
 #endif

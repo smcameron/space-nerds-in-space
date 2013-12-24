@@ -885,10 +885,11 @@ void graph_dev_load_skybox_texture(
 
 	int i;
 	for (i = 0; i < ntextures; i++) {
-		int tw, th;
-		char *image_data = sng_load_png_texture(tex_filename[i], &tw, &th, whynotz, whynotlen);
+		int tw, th, hasAlpha = 0;
+		char *image_data = sng_load_png_texture(tex_filename[i], 0, 1, &tw, &th, &hasAlpha, whynotz, whynotlen);
 		if (image_data) {
-			glTexImage2D(tex_pos[i], 0, GL_RGBA, tw, th, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+			glTexImage2D(tex_pos[i], 0, GL_RGBA, tw, th, 0, (hasAlpha ? GL_RGBA : GL_RGB),
+					GL_UNSIGNED_BYTE, image_data);
 			free(image_data);
 		} else {
 			printf("Unable to load skybox texture %d '%s': %s\n", i, tex_filename[i], whynotz);

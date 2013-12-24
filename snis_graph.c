@@ -628,17 +628,17 @@ void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, int filled, float x, floa
 	sng_current_draw_arc(drawable, gc, filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
 }
 
-char *sng_load_png_texture(const char *filename, int *w, int *h, char *whynot, int whynotlen)
+char *sng_load_png_texture(const char *filename, int flipVertical, int flipHorizontal, int *w, int *h,
+	int *hasAlpha, char *whynot, int whynotlen)
 {
 #ifndef WITHOUTOPENGL
-	int i, bit_depth, color_type, row_bytes;
+	int i, j, bit_depth, color_type, row_bytes, image_data_row_bytes;
 	png_byte header[8];
 	png_uint_32 tw, th;
 	png_structp png_ptr = NULL;
 	png_infop info_ptr = NULL;
 	png_infop end_info = NULL;
 	png_byte *image_data = NULL;
-	png_bytep *row = NULL;
 
 	FILE *fp = fopen(filename, "rb");
 	if (!fp) {
@@ -683,48 +683,75 @@ char *sng_load_png_texture(const char *filename, int *w, int *h, char *whynot, i
 
 	png_init_io(png_ptr, fp);
 	png_set_sig_bytes(png_ptr, 8);
-	png_read_info(png_ptr, info_ptr);
+
+	/*
+	 * PNG_TRANSFORM_STRIP_16 |
+	 * PNG_TRANSFORM_PACKING  forces 8 bit
+	 * PNG_TRANSFORM_EXPAND forces to expand a palette into RGB
+	 */
+	png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_STRIP_16 | PNG_TRANSFORM_PACKING | PNG_TRANSFORM_EXPAND, NULL);
+
 	png_get_IHDR(png_ptr, info_ptr, &tw, &th, &bit_depth, &color_type, NULL, NULL, NULL);
+
+	if (bit_depth != 8) {
+		snprintf(whynot, whynotlen, "load_png_texture only supports 8-bit image channel depth");
+		goto cleanup;
+	}
+
+	if (color_type != PNG_COLOR_TYPE_RGB && color_type != PNG_COLOR_TYPE_RGB_ALPHA) {
+		snprintf(whynot, whynotlen, "load_png_texture only supports RGB and RGBA");
+		goto cleanup;
+	}
 
 	if (w)
 		*w = tw;
 	if (h)
 		*h = th;
+	if (hasAlpha)
+		*hasAlpha = (color_type == PNG_COLOR_TYPE_RGB_ALPHA);
 
-	png_read_update_info(png_ptr, info_ptr);
 	row_bytes = png_get_rowbytes(png_ptr, info_ptr);
+	image_data_row_bytes = row_bytes;
 
 	/* align to 4 byte boundary */
-	if (row_bytes & 0x03)
-		row_bytes += 4 - (row_bytes & 0x03);
+	if (image_data_row_bytes & 0x03)
+		image_data_row_bytes += 4 - (image_data_row_bytes & 0x03);
 
-	image_data = malloc(row_bytes * th * sizeof(png_byte) + 15);
+	png_bytepp row_pointers = png_get_rows(png_ptr, info_ptr);
+
+	image_data = malloc(image_data_row_bytes * th * sizeof(png_byte) + 15);
 	if (!image_data) {
-		snprintf(whynot, whynotlen,
-			"malloc failed in load_png_texture");
-		goto cleanup;
-	}
-
-	row = malloc(th * sizeof(png_bytep));
-	if (!row) {
 		snprintf(whynot, whynotlen, "malloc failed in load_png_texture");
 		goto cleanup;
 	}
 
-	for (i = 0; i < th; i++)
-		row[i] = image_data + i * row_bytes;
+	int bytes_per_pixel = (color_type == PNG_COLOR_TYPE_RGB_ALPHA ? 4 : 3);
 
-	png_read_image(png_ptr, row);
+	for (i = 0; i < th; i++) {
+		png_byte *src_row;
+		png_byte *dest_row = image_data + i * image_data_row_bytes;
 
-	/* glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tw, th, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data); */
-	free(row);
+		if (flipVertical)
+			src_row = row_pointers[th - i - 1];
+		else
+			src_row = row_pointers[i];
+
+		if (flipHorizontal) {
+			for (j = 0; j < tw; j++) {
+				png_byte *src = src_row + bytes_per_pixel * j;
+				png_byte *dest = dest_row + bytes_per_pixel * (tw - j - 1);
+				memcpy(dest, src, bytes_per_pixel);
+			}
+		} else {
+			memcpy(dest_row, src_row, row_bytes);
+		}
+	}
+
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
 	fclose(fp);
 	return (char *)image_data;
 
 cleanup:
-	if (row)
-		free(row);
 	if (image_data)
 		free(image_data);
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
