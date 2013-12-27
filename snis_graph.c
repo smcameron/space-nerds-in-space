@@ -618,6 +618,24 @@ void sng_set_foreground(int c)
 	graph_dev_set_color(&huex[c], -1);
 }
 
+struct sng_color sng_get_foreground()
+{
+	struct sng_color color;
+	color.red = huex[sgc.hue].red / 65535.0;
+	color.green = huex[sgc.hue].green / 65535.0;
+	color.blue = huex[sgc.hue].blue / 65535.0;
+	return color;
+}
+
+struct sng_color sng_get_color(int c)
+{
+	struct sng_color color;
+	color.red = huex[c].red / 65535.0;
+	color.green = huex[c].green / 65535.0;
+	color.blue = huex[c].blue / 65535.0;
+	return color;
+}
+
 void sng_set_context(GdkDrawable *drawable, GdkGC *gc)
 {
 	graph_dev_set_context(drawable, gc);

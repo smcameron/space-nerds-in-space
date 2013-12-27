@@ -52,6 +52,13 @@ struct sng_dotted_plot_func_context {
         int i;
 };
 
+struct sng_color {
+	/* color channel range 0 to 1 */
+	float red;
+	float green;
+	float blue;
+};
+
 extern void sng_set_scale(float xscale, float yscale);
 
 extern void sng_current_draw_line(GdkDrawable *drawable, GdkGC *gc, float x1, float y1, float x2, float y2);
@@ -81,6 +88,8 @@ SNG_GLOBAL void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, float x, float 
 SNG_GLOBAL void sng_setup_colors(GtkWidget *w);
 SNG_GLOBAL void sng_set_foreground(int c);
 SNG_GLOBAL void sng_set_foreground_alpha(int c, float a);
+SNG_GLOBAL struct sng_color sng_get_foreground();
+SNG_GLOBAL struct sng_color sng_get_color(int c);
 SNG_GLOBAL void sng_set_context(GdkDrawable *drawable, GdkGC *gc);
 SNG_GLOBAL void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, int filled, float x, float y, float r);
 SNG_GLOBAL void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
