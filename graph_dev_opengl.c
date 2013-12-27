@@ -869,7 +869,7 @@ void graph_dev_draw_arc(gboolean filled, float x, float y, float width, float he
 	else
 		glBegin(GL_LINE_STRIP);
 
-	float x1, y1;
+	float x1 = 0, y1 = 0;
 	for (i = 0; i <= segments; i++) {
 		float a = angle1 + delta * (float)i;
 		float x2 = cx + cos(a) * rx;
