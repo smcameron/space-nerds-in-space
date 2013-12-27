@@ -16,6 +16,7 @@
 #include "graph_dev.h"
 #include "entity.h"
 #include "entity_private.h"
+#include "material.h"
 
 struct mesh_gl_info {
 	/* common buffer to hold vertex positions */
@@ -346,6 +347,18 @@ struct graph_dev_gl_skybox_shader {
 	GLuint cube_texture_id;
 };
 
+struct graph_dev_gl_color_by_w_shader {
+	GLuint program_id;
+	GLuint mvp_id;
+	GLuint position_id;
+	GLuint near_color_id;
+	GLuint near_w_id;
+	GLuint center_color_id;
+	GLuint center_w_id;
+	GLuint far_color_id;
+	GLuint far_w_id;
+};
+
 /* only use on high performance graphics card */
 /*#define PER_PIXEL_LIGHT 1*/
 
@@ -356,6 +369,7 @@ static struct graph_dev_gl_filled_wireframe_shader filled_wireframe_shader;
 static struct graph_dev_gl_single_color_shader single_color_shader;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
+static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
 
 static struct graph_dev_gl_context {
 	int screen_x, screen_y;
@@ -438,7 +452,7 @@ void graph_dev_set_context(GdkDrawable *drawable, GdkGC *gc)
 }
 
 static void graph_dev_raster_solid_mesh(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
-	const struct mat33 *mat_normal, struct mesh *m, GdkColor *triangle_color, union vec3 *eye_light_pos)
+	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos)
 {
 	enable_3d_viewport();
 
@@ -457,8 +471,8 @@ static void graph_dev_raster_solid_mesh(const struct mat44 *mat_mvp, const struc
 	glUniformMatrix4fv(solid_shader.mvpMatrixID, 1, GL_FALSE, &mat_mvp->m[0][0]);
 	glUniformMatrix3fv(solid_shader.normalMatrixID, 1, GL_FALSE, &mat_normal->m[0][0]);
 
-	glUniform3f(solid_shader.colorID, triangle_color->red/65535.0,
-		triangle_color->green/65535.0, triangle_color->blue/65535.0);
+	glUniform3f(solid_shader.colorID, triangle_color->red,
+		triangle_color->green, triangle_color->blue);
 	glUniform3f(solid_shader.lightPosID, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
 
 	glEnableVertexAttribArray(solid_shader.vertexPositionID);
@@ -494,7 +508,7 @@ static void graph_dev_raster_solid_mesh(const struct mat44 *mat_mvp, const struc
 }
 
 static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, struct mesh *m,
-	GdkColor *line_color, GdkColor *triangle_color)
+	struct sng_color *line_color, struct sng_color *triangle_color)
 {
 	enable_3d_viewport();
 
@@ -511,10 +525,10 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 	glUniform2f(filled_wireframe_shader.viewport_id, sgc.vp_width_3d, sgc.vp_height_3d);
 	glUniformMatrix4fv(filled_wireframe_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 
-	glUniform3f(filled_wireframe_shader.line_color_id, line_color->red/65535.0,
-		line_color->green/65535.0, line_color->blue/65535.0);
-	glUniform3f(filled_wireframe_shader.triangle_color_id, triangle_color->red/65535.0,
-		triangle_color->green/65535.0, triangle_color->blue/65535.0);
+	glUniform3f(filled_wireframe_shader.line_color_id, line_color->red,
+		line_color->green, line_color->blue);
+	glUniform3f(filled_wireframe_shader.triangle_color_id, triangle_color->red,
+		triangle_color->green, triangle_color->blue);
 
 	glEnableVertexAttribArray(filled_wireframe_shader.position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
@@ -580,7 +594,7 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 }
 
 static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
-						const struct mat33 *mat_normal, struct mesh *m, GdkColor *line_color)
+					const struct mat33 *mat_normal, struct mesh *m, struct sng_color *line_color)
 {
 	enable_3d_viewport();
 
@@ -597,8 +611,8 @@ static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, c
 	glUniformMatrix4fv(trans_wireframe_shader.mvMatrixID, 1, GL_FALSE, &mat_mv->m[0][0]);
 	glUniformMatrix4fv(trans_wireframe_shader.mvpMatrixID, 1, GL_FALSE, &mat_mvp->m[0][0]);
 	glUniformMatrix3fv(trans_wireframe_shader.normalMatrixID, 1, GL_FALSE, &mat_normal->m[0][0]);
-	glUniform3f(trans_wireframe_shader.colorID, line_color->red/65535.0,
-		line_color->green/65535.0, line_color->blue/65535.0);
+	glUniform3f(trans_wireframe_shader.colorID, line_color->red,
+		line_color->green, line_color->blue);
 
 	glEnableVertexAttribArray(trans_wireframe_shader.vertexPositionID);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_vertex_buffer);
@@ -631,7 +645,8 @@ static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, c
 	glDisable(GL_DEPTH_TEST);
 }
 
-static void graph_dev_raster_line_mesh(const struct mat44 *mat_mvp, struct mesh *m, GdkColor *line_color)
+static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat_mvp, struct mesh *m,
+					struct sng_color *line_color)
 {
 	enable_3d_viewport();
 
@@ -643,16 +658,45 @@ static void graph_dev_raster_line_mesh(const struct mat44 *mat_mvp, struct mesh 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
-	glUseProgram(single_color_shader.programID);
+	GLuint vertex_position_id;
 
-	glUniformMatrix4fv(single_color_shader.mvpMatrixID, 1, GL_FALSE, &mat_mvp->m[0][0]);
-	glUniform3f(single_color_shader.colorID, line_color->red/65535.0,
-		line_color->green/65535.0, line_color->blue/65535.0);
+	if (e->material_type == MATERIAL_COLOR_BY_W) {
+		struct material_color_by_w *m = e->material_ptr;
 
-	glEnableVertexAttribArray(single_color_shader.vertexPositionID);
+		glUseProgram(color_by_w_shader.program_id);
+
+		glUniformMatrix4fv(color_by_w_shader.mvp_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+
+		struct sng_color near_color = sng_get_color(m->near_color);
+		glUniform3f(color_by_w_shader.near_color_id, near_color.red,
+			near_color.green, near_color.blue);
+		glUniform1f(color_by_w_shader.near_w_id, m->near_w);
+
+		struct sng_color center_color = sng_get_color(m->center_color);
+		glUniform3f(color_by_w_shader.center_color_id, center_color.red,
+			center_color.green, center_color.blue);
+		glUniform1f(color_by_w_shader.center_w_id, m->center_w);
+
+		struct sng_color far_color = sng_get_color(m->far_color);
+		glUniform3f(color_by_w_shader.far_color_id, far_color.red,
+			far_color.green, far_color.blue);
+		glUniform1f(color_by_w_shader.far_w_id, m->far_w);
+
+		vertex_position_id = color_by_w_shader.position_id;
+	} else {
+		glUseProgram(single_color_shader.programID);
+
+		glUniformMatrix4fv(single_color_shader.mvpMatrixID, 1, GL_FALSE, &mat_mvp->m[0][0]);
+		glUniform3f(single_color_shader.colorID, line_color->red,
+			line_color->green, line_color->blue);
+
+		vertex_position_id = single_color_shader.vertexPositionID;
+	}
+
+	glEnableVertexAttribArray(vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
 	glVertexAttribPointer(
-		single_color_shader.vertexPositionID, /* The attribute we want to configure */
+		vertex_position_id, /* The attribute we want to configure */
 		3,                           /* size */
 		GL_FLOAT,                    /* type */
 		GL_FALSE,                    /* normalized? */
@@ -662,14 +706,14 @@ static void graph_dev_raster_line_mesh(const struct mat44 *mat_mvp, struct mesh 
 
 	glDrawArrays(GL_LINES, 0, ptr->nlines*2);
 
-	glDisableVertexAttribArray(single_color_shader.vertexPositionID);
+	glDisableVertexAttribArray(vertex_position_id);
 	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
 }
 
 void graph_dev_raster_point_cloud_mesh(const struct mat44 *mat_mvp, struct mesh *m,
-					GdkColor *point_color, float pointSize)
+					struct sng_color *point_color, float pointSize)
 {
 	enable_3d_viewport();
 
@@ -686,8 +730,8 @@ void graph_dev_raster_point_cloud_mesh(const struct mat44 *mat_mvp, struct mesh 
 
 	glUniformMatrix4fv(point_cloud_shader.mvpMatrixID, 1, GL_FALSE, &mat_mvp->m[0][0]);
 	glUniform1f(point_cloud_shader.pointSizeID, pointSize);
-	glUniform3f(point_cloud_shader.colorID, point_color->red/65535.0,
-		point_color->green/65535.0, point_color->blue/65535.0);
+	glUniform3f(point_cloud_shader.colorID, point_color->red,
+		point_color->green, point_color->blue);
 
 	glEnableVertexAttribArray(point_cloud_shader.vertexPositionID);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
@@ -712,8 +756,7 @@ void graph_dev_raster_point_cloud_mesh(const struct mat44 *mat_mvp, struct mesh 
 void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
 	const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal)
 {
-	sng_set_foreground(e->color);
-	GdkColor *line_color = sgc.hue;
+	struct sng_color line_color = sng_get_color(e->color);
 
 	switch (e->m->geometry_mode) {
 	case MESH_GEOMETRY_TRIANGLES:
@@ -726,31 +769,31 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					|| (e->render_style & RENDER_WIREFRAME);
 
 		if (filled_triangle) {
+			struct sng_color triangle_color;
 			if (cx->camera.renderer & BLACK_TRIS)
-				sng_set_foreground(BLACK);
+				triangle_color = sng_get_color(BLACK);
 			else
-				sng_set_foreground(240 + GRAY + (NSHADESOFGRAY * e->shadecolor) + 10);
-			GdkColor *triangle_color = sgc.hue;
+				triangle_color = sng_get_color(240 + GRAY + (NSHADESOFGRAY * e->shadecolor) + 10);
 
 			/* outline and filled */
 			if (outline_triangle) {
-				graph_dev_raster_filled_wireframe_mesh(mat_mvp, e->m, line_color, triangle_color);
+				graph_dev_raster_filled_wireframe_mesh(mat_mvp, e->m, &line_color, &triangle_color);
 			} else {
 				graph_dev_raster_solid_mesh(mat_mvp, mat_mv, mat_normal,
-					e->m, triangle_color, eye_light_pos);
+					e->m, &triangle_color, eye_light_pos);
 			}
 		} else if (outline_triangle) {
 			graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
-				mat_normal, e->m, line_color);
+				mat_normal, e->m, &line_color);
 		}
 		break;
 	}
 	case MESH_GEOMETRY_LINES:
-		graph_dev_raster_line_mesh(mat_mvp, e->m, line_color);
+		graph_dev_raster_line_mesh(e, mat_mvp, e->m, &line_color);
 		break;
 
 	case MESH_GEOMETRY_POINTS:
-		graph_dev_raster_point_cloud_mesh(mat_mvp, e->m, line_color, 1.0);
+		graph_dev_raster_point_cloud_mesh(mat_mvp, e->m, &line_color, 1.0);
 		break;
 	}
 }
@@ -937,6 +980,26 @@ static void setup_point_cloud_shader(struct graph_dev_gl_point_cloud_shader *sha
 	shader->colorID = glGetUniformLocation(shader->programID, "u_Color");
 }
 
+static void setup_color_by_w_shader(struct graph_dev_gl_color_by_w_shader *shader)
+{
+	/* Create and compile our GLSL program from the shaders */
+	shader->program_id = load_shaders("share/snis/shader/color_by_w.vert",
+		"share/snis/shader/color_by_w.frag");
+
+	/* Get a handle for our "MVP" uniform */
+	shader->mvp_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
+
+	/* Get a handle for our buffers */
+	shader->position_id = glGetAttribLocation(shader->program_id, "a_Position");
+	shader->near_color_id = glGetUniformLocation(shader->program_id, "u_NearColor");
+	shader->near_w_id = glGetUniformLocation(shader->program_id, "u_NearW");
+	shader->center_color_id = glGetUniformLocation(shader->program_id, "u_CenterColor");
+	shader->center_w_id = glGetUniformLocation(shader->program_id, "u_CenterW");
+	shader->far_color_id = glGetUniformLocation(shader->program_id, "u_FarColor");
+	shader->far_w_id = glGetUniformLocation(shader->program_id, "u_FarW");
+}
+
+
 static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 {
 	/* Create and compile our GLSL program from the shaders */
@@ -1021,6 +1084,7 @@ int graph_dev_setup()
 	setup_filled_wireframe_shader(&filled_wireframe_shader);
 	setup_single_color_shader(&single_color_shader);
 	setup_point_cloud_shader(&point_cloud_shader);
+	setup_color_by_w_shader(&color_by_w_shader);
 	setup_skybox_shader(&skybox_shader);
 
 	return 0;
