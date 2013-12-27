@@ -96,6 +96,7 @@
 #include "entity.h"
 #include "matrix.h"
 #include "graph_dev.h"
+#include "material.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -7587,9 +7588,25 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 
 	calculate_camera_transform(tridentecx);
 
+	struct material_color_by_w yaw_material = {
+		COLOR_LIGHTER(CYAN, 100),
+		CYAN,
+		COLOR_DARKER(CYAN, 80),
+		dist_to_cam-1.0,
+		dist_to_cam,
+		dist_to_cam+1.0 };
+	struct material_color_by_w pitch_material = {
+		COLOR_LIGHTER(GREEN, 100),
+		GREEN,
+		COLOR_DARKER(GREEN, 80),
+		dist_to_cam-1.0,
+		dist_to_cam,
+		dist_to_cam+1.0 };
+
 	/* add yaw axis */
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, CYAN);
 	update_entity_fragment_shader(e, trident_ring_fragment_shader);
+	update_entity_material(e, MATERIAL_COLOR_BY_W, &yaw_material);
 
 	/* add pitch1 axis */
 	union quat pitch1_orientation;
@@ -7597,6 +7614,7 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
 	update_entity_orientation(e, &pitch1_orientation);
 	update_entity_fragment_shader(e, trident_ring_fragment_shader);
+	update_entity_material(e, MATERIAL_COLOR_BY_W, &pitch_material);
 
 	/* add pitch2 axis */
 	union quat pitch2_orientation;
@@ -7604,6 +7622,7 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
 	update_entity_orientation(e, &pitch2_orientation);
 	update_entity_fragment_shader(e, trident_ring_fragment_shader);
+	update_entity_material(e, MATERIAL_COLOR_BY_W, &pitch_material);
 
 	/* add absolute straight ahead ind, down z axis with y up to match heading = 0 mark 0 */
 	union quat ind_orientation;
