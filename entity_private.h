@@ -34,6 +34,9 @@ struct entity {
 	int render_style;
 	void *user_data;
 	union quat orientation;
+
+	int material_type;
+	void *material_ptr;
 	entity_fragment_shader_fn fragment_shader;
 };
 

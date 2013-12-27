@@ -68,6 +68,9 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].shadecolor = 0;
 	quat_init_axis(&cx->entity_list[n].orientation, 0, 1, 0, 0);
 	cx->entity_list[n].fragment_shader = 0;
+	cx->entity_list[n].material_type = 0;
+	cx->entity_list[n].material_ptr = 0;
+
 	return &cx->entity_list[n];
 }
 
@@ -121,6 +124,12 @@ void update_entity_color(struct entity *e, int color)
 void update_entity_shadecolor(struct entity *e, int color)
 {
 	e->shadecolor = color;
+}
+
+void update_entity_material(struct entity *e, int material_type, void *material_ptr)
+{
+	e->material_type = material_type;
+	e->material_ptr = material_ptr;
 }
 
 static inline float wx_screen(struct entity_context *cx, float wx)
