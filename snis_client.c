@@ -1170,29 +1170,23 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 {
 	int i, m;
 	struct entity *e;
-	union quat orientation, xrot, q1, q2, rot;
+	union quat orientation;
 	float angular_speed;
 	struct snis_entity *o;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
-		random_axis_quat(&orientation);
+		random_axis_quat(&orientation, snis_randn(360) * M_PI / 180.0);
 		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
 		i = add_generic_object(id, x, y, z, vx, vy, vz,
 				&orientation, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
 		o = &go[i];
-
-		/* Pick a small rotational velocity around x axis */ 
+		/* Pick a small rotational velocity */
 		angular_speed = ((float) snis_randn(100) / 10.0 - 5.0) * M_PI / 180.0;
-		quat_init_axis(&xrot, 1.0, 0.0, 0.0, angular_speed);
-		/* transform rotational velocity into asteroid's orientation */
-		quat_mul(&q1, &orientation, &xrot);
-		quat_conj(&q2, &orientation);
-		quat_mul(&rot, &q1, &q2);
-		o->tsd.asteroid.rotational_velocity = rot;
+		random_axis_quat(&o->tsd.asteroid.rotational_velocity, angular_speed);
 	} else {
 		o = &go[i];
 		/* move asteroid */
@@ -1207,13 +1201,13 @@ static int update_cargo_container(uint32_t id, double x, double y, double z,
 {
 	int i;
 	struct entity *e;
-	union quat orientation, xrot, q1, q2, rot;
+	union quat orientation;
 	float angular_speed;
 	struct snis_entity *o;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		random_axis_quat(&orientation);
+		random_axis_quat(&orientation, (float) snis_randn(360) * M_PI / 180.0f);
 		e = add_entity(ecx, cargo_container_mesh, x, y, z, CARGO_CONTAINER_COLOR);
 		i = add_generic_object(id, x, y, z, vx, vy, vz,
 				&orientation, OBJTYPE_CARGO_CONTAINER, 1, e);
@@ -1221,15 +1215,9 @@ static int update_cargo_container(uint32_t id, double x, double y, double z,
 			return i;
 		o = &go[i];
 
-		/* Pick a small rotational velocity around x axis */ 
+		/* Pick a small rotational velocity */
 		angular_speed = ((float) snis_randn(100) / 10.0 - 5.0) * M_PI / 180.0;
-		quat_init_axis(&xrot, 1.0, 0.0, 0.0, angular_speed);
-		/* transform rotational velocity into random orientation */
-		random_axis_quat(&orientation);
-		quat_mul(&q1, &orientation, &xrot);
-		quat_conj(&q2, &orientation);
-		quat_mul(&rot, &q1, &q2);
-		o->tsd.cargo_container.rotational_velocity = rot;
+		random_axis_quat(&o->tsd.cargo_container.rotational_velocity, angular_speed);
 	} else {
 		o = &go[i];
 		/* move cargo container */
@@ -1581,7 +1569,7 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	int i, r;
 	struct entity *e;
 	float angular_speed;
-	union quat xrot, orientation, rot, q1, q2;
+	union quat orientation;
 
 	i = snis_object_pool_alloc_obj(sparkpool);
 	if (i < 0)
@@ -1603,22 +1591,13 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	spark[i].vx = vx;
 	spark[i].vy = vy;
 	spark[i].vz = vz;
-	/* calculate a small rotational velocity quaternion about x axis */
+	/* calculate a small rotational velocity */
 	angular_speed = ((float) snis_randn(100) / 10.0 - 5.0) * M_PI / 180.0;
-	quat_init_axis(&xrot, 1.0, 0.0, 0.0, angular_speed);
+	random_axis_quat(&spark[i].tsd.spark.rotational_velocity, angular_speed);
 
-	quat_init_axis(&spark[i].tsd.spark.rotational_velocity, 1.0, 0.0, 0.0, angular_speed);
-	random_axis_quat(entity_get_orientation(e));
-
-	/* Set entity to random orientation axis, no rotation */
-	random_axis_quat(&orientation);
+	/* Set entity to random orientation */
+	random_axis_quat(&orientation, snis_randn(360) * M_PI / 180.0f);
 	update_entity_orientation(e, &orientation);
-
-	/* transform rotational velocity quaternion into spark's orientation */
-        quat_mul(&q1, &orientation, &xrot);
-        quat_conj(&q2, &orientation);
-        quat_mul(&rot, &q1, &q2);
-	spark[i].tsd.spark.rotational_velocity = rot;
 	
 	spark[i].type = OBJTYPE_SPARK;
 	spark[i].alive = time + snis_randn(time);

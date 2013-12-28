@@ -188,8 +188,8 @@ void quat_to_rh_rot_matrix_fd(const union quat *q, double *m); /* quat to right 
 
 /* Create a random quaternion */
 void random_quat(union quat *q);
-/* Create a random quaternion axis with zero rotation */
-void random_axis_quat(union quat *q);
+/* Create a random quaternion axis with specified rotation */
+void random_axis_quat(union quat *q, float angle);
 
 /* returns square of the length of a vector */
 float vec3_len2(const union vec3 *v);
