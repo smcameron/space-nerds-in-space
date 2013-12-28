@@ -389,6 +389,7 @@ struct cargo_container_data {
 
 struct derelict_data {
 	uint8_t shiptype; /* same as snis_entity_science_data subclass */
+	union quat rotational_velocity;
 };
 
 struct wormhole_data {

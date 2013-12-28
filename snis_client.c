@@ -1232,7 +1232,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 {
 	int i, m;
 	struct entity *e;
-	union quat orientation;
+	float angular_speed;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -1242,17 +1242,10 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 				&identity_quat, OBJTYPE_DERELICT, 1, e);
 		if (i < 0)
 			return i;
+		angular_speed = ((float) snis_randn(100) / 10.0 - 5.0) * M_PI / 180.0;
+		random_axis_quat(&go[i].tsd.derelict.rotational_velocity, angular_speed);
 	} else {
-		int axis;
-		float angle;
-
-		/* make it spin */
-		angle = (timer % (360 * ((id % 12) + 3))) * M_PI / 180.0;
-		axis = (id % 3);
-		quat_init_axis(&orientation,
-			(axis == 0) * 1.0, (axis == 1) * 1.0, (axis == 2) * 1.0, angle);
-		update_entity_orientation(go[i].entity, &orientation);
-		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, &orientation, 1);
+		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 		update_entity_pos(go[i].entity, x, y, z);
 	}
 	return 0;
@@ -1468,6 +1461,16 @@ static void spin_cargo_container(struct snis_entity *o)
 		update_entity_orientation(o->entity, &orientation);
 }
 
+static void spin_derelict(struct snis_entity *o)
+{
+	union quat orientation;
+
+	quat_mul(&orientation, &o->tsd.derelict.rotational_velocity, &o->orientation);
+	quat_normalize_self(&orientation);
+	o->orientation = orientation;
+	if (o->entity)
+		update_entity_orientation(o->entity, &orientation);
+}
 
 static void move_generic_object(struct snis_entity *o)
 {
@@ -1553,6 +1556,10 @@ static void move_objects(void)
 		case OBJTYPE_CARGO_CONTAINER:
 			move_generic_object(o);
 			spin_cargo_container(o);
+			break;
+		case OBJTYPE_DERELICT:
+			move_generic_object(o);
+			spin_derelict(o);
 			break;
 		case OBJTYPE_LASERBEAM:
 		case OBJTYPE_TRACTORBEAM:
