@@ -1439,37 +1439,30 @@ static void spin_starbase(struct snis_entity *o)
 		update_entity_orientation(o->entity, &orientation);
 }
 
-static void spin_asteroid(struct snis_entity *o)
+static void arbitrary_spin(struct snis_entity *o, union quat *rotational_velocity)
 {
 	union quat orientation;
 
-	quat_mul(&orientation, &o->tsd.asteroid.rotational_velocity, &o->orientation);
+	quat_mul(&orientation, rotational_velocity, &o->orientation);
 	quat_normalize_self(&orientation);
 	o->orientation = orientation;
 	if (o->entity)
 		update_entity_orientation(o->entity, &orientation);
 }
 
-static void spin_cargo_container(struct snis_entity *o)
+static inline void spin_asteroid(struct snis_entity *o)
 {
-	union quat orientation;
-
-	quat_mul(&orientation, &o->tsd.cargo_container.rotational_velocity, &o->orientation);
-	quat_normalize_self(&orientation);
-	o->orientation = orientation;
-	if (o->entity)
-		update_entity_orientation(o->entity, &orientation);
+	arbitrary_spin(o, &o->tsd.asteroid.rotational_velocity);
 }
 
-static void spin_derelict(struct snis_entity *o)
+static inline void spin_cargo_container(struct snis_entity *o)
 {
-	union quat orientation;
+	arbitrary_spin(o, &o->tsd.cargo_container.rotational_velocity);
+}
 
-	quat_mul(&orientation, &o->tsd.derelict.rotational_velocity, &o->orientation);
-	quat_normalize_self(&orientation);
-	o->orientation = orientation;
-	if (o->entity)
-		update_entity_orientation(o->entity, &orientation);
+static inline void spin_derelict(struct snis_entity *o)
+{
+	arbitrary_spin(o, &o->tsd.derelict.rotational_velocity);
 }
 
 static void move_generic_object(struct snis_entity *o)
