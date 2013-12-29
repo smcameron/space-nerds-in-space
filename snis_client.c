@@ -4888,7 +4888,8 @@ static void show_mainscreen(GtkWidget *w)
 	static int current_zoom = 0;
 	float angle_of_view;
 	struct snis_entity *o;
-	union quat camera_orientation;
+	static union quat camera_orientation;
+	union quat desired_cam_orientation;
 	struct entity *e = NULL;
 	static union vec3 cam_pos;
 	union vec3 desired_cam_pos;
@@ -4909,7 +4910,18 @@ static void show_mainscreen(GtkWidget *w)
 				(max_angle_of_view - min_angle_of_view) + min_angle_of_view;
 
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL) {
-		camera_orientation = o->orientation;
+		switch (camera_mode) {
+		case 0:
+			camera_orientation = o->orientation;
+			desired_cam_orientation = camera_orientation;
+			break;
+		case 1:
+		case 2:
+			desired_cam_orientation = o->orientation;
+			quat_nlerp(&camera_orientation, &camera_orientation,
+					&desired_cam_orientation, 0.08);
+			break;
+		}
 	} else {
 		quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 	}
