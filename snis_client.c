@@ -11393,14 +11393,41 @@ gint advance_game(gpointer data)
 
 static void load_textures(char *filenameprefix)
 {
+	/*
+	 * SNIS wants skybox textures in six files named like this:
+	 * blah0.png
+	 * blah1.png
+	 * blah2.png
+	 * blah3.png
+	 * blah4.png
+	 * blah5.png
+         *
+	 * and those images should be laid out like this:
+	 *
+	 *                +------+
+	 *                |  4   |
+	 *                |      |
+	 *  +------+------+------+------+
+	 *  |  0   |  1   |  2   |  3   |
+	 *  |      |      |      |      |
+	 *  +------+------+------+------+
+	 *                |  5   |
+	 *                |      |
+	 *                +------+
+	 *
+	 *  Why?  No reason other than that's how I did it in cosmic-space-boxinator
+	 *  See: https://github.com/smcameron/cosmic-space-boxinator
+	 *
+	 *  Opengl does it a bit differenty, so we have the arbitrariness you see below.
+	 */
 	int i;
 	char filename[6][PATH_MAX + 1];
 
-	for (i = 0; i < 6; i++) {
+	for (i = 0; i < 6; i++)
 		sprintf(filename[i], "%s/textures/%s%d.png", asset_dir, filenameprefix, i);
-	}
 
-	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4], filename[5], filename[0], filename[2]);
+	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4],
+					filename[5], filename[0], filename[2]);
 }
 
 static void init_meshes();
