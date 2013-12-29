@@ -4918,8 +4918,11 @@ static void show_mainscreen(GtkWidget *w)
 		case 1:
 		case 2:
 			desired_cam_orientation = o->orientation;
-			quat_nlerp(&camera_orientation, &camera_orientation,
-					&desired_cam_orientation, 0.08);
+			if (first_frame)
+				camera_orientation = desired_cam_orientation;
+			else
+				quat_nlerp(&camera_orientation, &camera_orientation,
+						&desired_cam_orientation, 0.08);
 			break;
 		}
 	} else {
@@ -4942,7 +4945,11 @@ static void show_mainscreen(GtkWidget *w)
 			desired_cam_pos.v.x = o->x + offset.v.x;
 			desired_cam_pos.v.y = o->y + offset.v.y;
 			desired_cam_pos.v.z = o->z + offset.v.z;
-			vec3_lerp(&cam_pos, &cam_pos, &desired_cam_pos, 0.15);
+
+			if (first_frame)
+				cam_pos = desired_cam_pos;
+			else
+				vec3_lerp(&cam_pos, &cam_pos, &desired_cam_pos, 0.15);
 
 			/* temporarily add ship into scene for camera mode 1 & 2 */
 			e = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
