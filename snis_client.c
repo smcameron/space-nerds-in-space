@@ -200,6 +200,7 @@ static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
 static volatile int helpmodeline = 0;
 static volatile float weapons_camera_shake = 0.0f; 
+static volatile int camera_mode = 0;
 
 struct client_network_stats {
 	uint64_t bytes_sent;
@@ -1865,6 +1866,7 @@ char *keyactionstring[] = {
 	"keysciball_rollright",
 	"key_invert_vertical",
 	"key_toggle_frame_stats",
+	"key_camera_mode",
 };
 
 void init_keymap()
@@ -1916,6 +1918,7 @@ void init_keymap()
 	keymap[GDK_slash] = keysciball_yawright;
 	keymap[GDK_l] = keysciball_pitchdown;
 	keymap[GDK_period] = keysciball_pitchup;
+	keymap[GDK_1] = key_camera_mode;
 
 	keymap[GDK_W] = keyviewmode;
 	keymap[GDK_KEY_plus] = keyzoom;
@@ -2798,6 +2801,11 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			break;
 		}
 		do_laser();
+		break;
+	case key_camera_mode:
+		if (displaymode != DISPLAYMODE_MAINSCREEN)
+			break;
+		camera_mode = (camera_mode + 1) % 3;
 		break;
 	case keyf1:
 		if (!helpmode)
@@ -4879,6 +4887,7 @@ static void show_mainscreen(GtkWidget *w)
 	float angle_of_view;
 	struct snis_entity *o;
 	union quat camera_orientation;
+	struct entity *e = NULL;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -4901,7 +4910,25 @@ static void show_mainscreen(GtkWidget *w)
 		quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 	}
 
-	camera_set_pos(ecx, o->x, o->y, o->z);
+	switch (camera_mode) {
+	case 0: camera_set_pos(ecx, o->x, o->y, o->z);
+		break;
+	case 1:
+	case 2: {
+			union vec3 offset = { { -1.0f, 0.25f, 0.0f } };
+
+			vec3_mul_self(&offset, 200.0f * camera_mode);
+			quat_rot_vec_self(&offset, &camera_orientation);
+			camera_set_pos(ecx, o->x + offset.v.x, o->y + offset.v.y, o->z + offset.v.z);
+
+			/* temporarily add ship into scene for camera mode 1 & 2 */
+			e = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
+					o->x, o->y, o->z, SHIP_COLOR);
+			set_render_style(e, RENDER_NORMAL);
+			update_entity_orientation(e, &o->orientation);
+			break;
+		}
+	}
 	camera_set_orientation(ecx, &camera_orientation);
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
@@ -4919,6 +4946,10 @@ static void show_mainscreen(GtkWidget *w)
 
 	pthread_mutex_lock(&universe_mutex);
 	render_entities(w, gc, ecx);
+
+	/* if we added the ship into the scene, remove it now */
+	if (camera_mode == 1 || camera_mode == 2)
+		remove_entity(ecx, e);
 
 	/* Draw targeting indicator on main screen */
 	if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
