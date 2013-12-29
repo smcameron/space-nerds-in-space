@@ -11811,7 +11811,7 @@ static void init_meshes()
 		int j;
 
 		for (j = 1; j < NASTEROID_SCALES; j++) {
-			float scale = j * 1.5;
+			float scale = j * 3.5;
 			int k = j * NASTEROID_MODELS + i;
 			asteroid_mesh[k] = mesh_duplicate(asteroid_mesh[i]);
 			mesh_scale(asteroid_mesh[k], scale);
