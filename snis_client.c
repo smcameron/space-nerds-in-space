@@ -201,6 +201,7 @@ static volatile int helpmode = 0;
 static volatile int helpmodeline = 0;
 static volatile float weapons_camera_shake = 0.0f; 
 static volatile int camera_mode = 0;
+static volatile int last_camera_mode = 0;
 
 struct client_network_stats {
 	uint64_t bytes_sent;
@@ -2805,6 +2806,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	case key_camera_mode:
 		if (displaymode != DISPLAYMODE_MAINSCREEN)
 			break;
+		last_camera_mode = camera_mode;
 		camera_mode = (camera_mode + 1) % 3;
 		break;
 	case keyf1:
@@ -4888,6 +4890,8 @@ static void show_mainscreen(GtkWidget *w)
 	struct snis_entity *o;
 	union quat camera_orientation;
 	struct entity *e = NULL;
+	static union vec3 cam_pos;
+	union vec3 desired_cam_pos;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -4911,7 +4915,11 @@ static void show_mainscreen(GtkWidget *w)
 	}
 
 	switch (camera_mode) {
-	case 0: camera_set_pos(ecx, o->x, o->y, o->z);
+	case 0:
+		cam_pos.v.x = o->x;
+		cam_pos.v.y = o->y;
+		cam_pos.v.z = o->z;
+		desired_cam_pos = cam_pos;
 		break;
 	case 1:
 	case 2: {
@@ -4919,7 +4927,10 @@ static void show_mainscreen(GtkWidget *w)
 
 			vec3_mul_self(&offset, 200.0f * camera_mode);
 			quat_rot_vec_self(&offset, &camera_orientation);
-			camera_set_pos(ecx, o->x + offset.v.x, o->y + offset.v.y, o->z + offset.v.z);
+			desired_cam_pos.v.x = o->x + offset.v.x;
+			desired_cam_pos.v.y = o->y + offset.v.y;
+			desired_cam_pos.v.z = o->z + offset.v.z;
+			vec3_lerp(&cam_pos, &cam_pos, &desired_cam_pos, 0.15);
 
 			/* temporarily add ship into scene for camera mode 1 & 2 */
 			e = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
@@ -4929,6 +4940,7 @@ static void show_mainscreen(GtkWidget *w)
 			break;
 		}
 	}
+	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	camera_set_orientation(ecx, &camera_orientation);
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
