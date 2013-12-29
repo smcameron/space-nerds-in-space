@@ -1385,7 +1385,7 @@ static double point_to_3d_line_dist(double lx1, double ly1, double lz1,
 
 static int laser_point_collides(double lx1, double ly1, double lz1,
 				double lx2, double ly2, double lz2,
-				double px, double py, double pz)
+				double px, double py, double pz, double tolerance)
 {
 	if (px < lx1 && px < lx2)
 		return 0;
@@ -1399,27 +1399,33 @@ static int laser_point_collides(double lx1, double ly1, double lz1,
 		return 0;
 	if (pz < lz1 && pz < lz2)
 		return 0;
-	return (point_to_3d_line_dist(lx1, ly1, lz1, lx2, ly2, lz2, px, py, pz) < 350.0);
+	return (point_to_3d_line_dist(lx1, ly1, lz1, lx2, ly2, lz2, px, py, pz) < tolerance);
 }
 
 static void laser_collision_detection(void *context, void *entity)
 {
 	struct snis_entity *o = context; /* laser */
 	struct snis_entity *t = entity;  /* target */
+	double tolerance = 350.0;
 
 	if (!t->alive)
 		return;
 	if (t->index == o->index)
 		return;
 	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
-		t->type != OBJTYPE_STARBASE && t->type != OBJTYPE_ASTEROID)
+		t->type != OBJTYPE_STARBASE && t->type != OBJTYPE_ASTEROID &&
+		t->type != OBJTYPE_TORPEDO)
 		return;
 	if (t->id == o->tsd.laser.ship_id)
 		return; /* can't laser yourself. */
 
+	/* make sure torpedoes aren't *too* easy to hit */
+	if (t->type == OBJTYPE_TORPEDO)
+		tolerance = 30.0;
+
 	if (!laser_point_collides(o->x + o->vx, o->y + o->vy, o->z + o->vz,
 				o->x - o->vx, o->y - o->vy, o->z - o->vz,
-				t->x, t->y, t->z))
+				t->x, t->y, t->z, tolerance))
 		return; /* not close enough */
 		
 	/* hit!!!! */
@@ -1437,7 +1443,7 @@ static void laser_collision_detection(void *context, void *entity)
 		attack_your_attacker(t, lookup_entity_by_id(o->tsd.laser.ship_id));
 	}
 
-	if (t->type == OBJTYPE_ASTEROID)
+	if (t->type == OBJTYPE_ASTEROID || t->type == OBJTYPE_TORPEDO)
 		t->alive = 0;
 
 	if (!t->alive) {
