@@ -7541,10 +7541,10 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	set_window_offset(tridentecx, rx-rr*ASPECT_RATIO/2.0, ry-rr/2.0);
 
 	/* figure out the camera positions */
-	union vec3 camera_up = {{0, 1, 0}};
+	union vec3 camera_up = { {0, -1, 0} };
 	quat_rot_vec_self(&camera_up, &cam_orientation);
 
-	union vec3 camera_pos = {{-dist_to_cam, 0, 0}};
+	union vec3 camera_pos = { {dist_to_cam, 0, 0} };
 	quat_rot_vec_self(&camera_pos, &cam_orientation);
 	vec3_add_self(&camera_pos, &center_pos);
 
