@@ -8758,9 +8758,9 @@ static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 	sng_draw_vect_obj(w, gc, &placeholder_part_spun[byteangle], x, y);
 	sng_center_xy_draw_string(w, gc, msg, NANO_FONT, x,
 			y - 15 - (o->tsd.part.part % 2) * 15);
-	if (o->tsd.part.damage < 0.75 * 255.0)
+	if (o->tsd.part.damage < 0.30 * 255.0)
 		sng_set_foreground(GREEN);
-	else if (o->tsd.part.damage < 0.90 * 255.0)
+	else if (o->tsd.part.damage < 0.75 * 255.0)
 		sng_set_foreground(YELLOW);
 	else {
 		if ((timer & 0x8) == 0) /* make red bar blink */
