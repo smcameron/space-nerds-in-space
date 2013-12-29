@@ -35,6 +35,9 @@
 #include "quat.h"
 #include "entity.h"
 #include "entity_private.h"
+#include "material.h"
+
+typedef void (*entity_fragment_shader_fn)(float x, float y, float z, int cin, int *cout);
 
 #define MAX_TRIANGLES_PER_ENTITY 10000
 
@@ -245,11 +248,26 @@ void software_render_entity_point_cloud(struct entity_context *cx, struct entity
 	}
 }
 
+static void color_by_z_fragment_shader(float x, float y, float z, int cin, int *cout)
+{
+	/* shade color so it is darker father away from center and ligher closer */
+	if (z > 0)
+		*cout = cin - (int)(z*0.8 * NGRADIENT_SHADES);
+	else
+		*cout = cin - (int)(z * NGRADIENT_SHADES);
+}
+
 void software_render_entity_lines(struct entity_context *cx, struct entity *e)
 {
 	int i;
 	float x1, y1;
 	float x2, y2;
+
+	entity_fragment_shader_fn fragment_shader = 0;
+	if (e->material_type == MATERIAL_COLOR_BY_W) {
+		/* this is the original method as I am not going to update it to the same logic as the opengl shader */
+		fragment_shader = color_by_z_fragment_shader;
+	}
 
 	sng_set_foreground(e->color);
 	for (i = 0; i < e->m->nlines; i++) {
@@ -278,8 +296,8 @@ void software_render_entity_lines(struct entity_context *cx, struct entity *e)
 						float z2 = v2.wz / v2.ww;
 
 						int frag_color = e->color;
-						if (e->fragment_shader) {
-							e->fragment_shader((x1 + x2) / 2.0, (y1 + y2) / 2.0,
+						if (fragment_shader) {
+							fragment_shader((x1 + x2) / 2.0, (y1 + y2) / 2.0,
 								(z1 + z2) / 2.0, frag_color, &frag_color);
 						}
 						sng_set_foreground(frag_color);

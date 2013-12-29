@@ -25,8 +25,6 @@ struct entity;
 struct entity_context;
 struct mat44;
 
-typedef void (*entity_fragment_shader_fn)(float x, float y, float z, int cin, int *cout);
-
 #ifdef DEFINE_ENTITY_GLOBALS
 #define GLOBAL
 #else
@@ -46,7 +44,6 @@ GLOBAL float entity_get_scale(struct entity *e);
 GLOBAL void update_entity_scale(struct entity *e, float scale);
 GLOBAL void update_entity_color(struct entity *e, int color);
 GLOBAL void update_entity_shadecolor(struct entity *e, int color);
-GLOBAL void update_entity_fragment_shader(struct entity *e, entity_fragment_shader_fn shader);
 GLOBAL struct mesh *entity_get_mesh(struct entity *e);
 GLOBAL void entity_set_mesh(struct entity *e, struct mesh *m);
 GLOBAL void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx);

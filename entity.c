@@ -67,7 +67,6 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].user_data = NULL;
 	cx->entity_list[n].shadecolor = 0;
 	quat_init_axis(&cx->entity_list[n].orientation, 0, 1, 0, 0);
-	cx->entity_list[n].fragment_shader = 0;
 	cx->entity_list[n].material_type = 0;
 	cx->entity_list[n].material_ptr = 0;
 
@@ -87,11 +86,6 @@ void remove_entity(struct entity_context *cx, struct entity *e)
 void remove_all_entity(struct entity_context *cx)
 {
 	snis_object_pool_free_all_objects(cx->entity_pool);
-}
-
-void update_entity_fragment_shader(struct entity *e, entity_fragment_shader_fn shader)
-{
-	e->fragment_shader = shader;
 }
 
 void update_entity_pos(struct entity *e, float x, float y, float z)

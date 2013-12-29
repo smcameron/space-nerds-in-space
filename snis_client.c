@@ -7519,15 +7519,6 @@ static void init_nav_ui(void)
 	nav_ui.details_mode = 1;
 }
 
-static void trident_ring_fragment_shader(float x, float y, float z, int cin, int *cout)
-{
-	/* shade color so it is darker father away from center and ligher closer */
-	if (z<0)
-		*cout = cin + (int)(z*0.8 * NGRADIENT_SHADES);
-	else
-		*cout = cin + (int)(z * NGRADIENT_SHADES);
-}
-
 void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, float rx, float ry, float rr)
 {
 	static struct mesh *xz_ring_mesh = 0;
@@ -7584,7 +7575,6 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 
 	/* add yaw axis */
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, CYAN);
-	update_entity_fragment_shader(e, trident_ring_fragment_shader);
 	update_entity_material(e, MATERIAL_COLOR_BY_W, &yaw_material);
 
 	/* add pitch1 axis */
@@ -7592,7 +7582,6 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	quat_init_axis(&pitch1_orientation, 1, 0, 0, M_PI/2.0);
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
 	update_entity_orientation(e, &pitch1_orientation);
-	update_entity_fragment_shader(e, trident_ring_fragment_shader);
 	update_entity_material(e, MATERIAL_COLOR_BY_W, &pitch_material);
 
 	/* add pitch2 axis */
@@ -7600,7 +7589,6 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	quat_init_axis(&pitch2_orientation, 0, 0, 1, M_PI/2.0);
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
 	update_entity_orientation(e, &pitch2_orientation);
-	update_entity_fragment_shader(e, trident_ring_fragment_shader);
 	update_entity_material(e, MATERIAL_COLOR_BY_W, &pitch_material);
 
 	/* add absolute straight ahead ind, down z axis with y up to match heading = 0 mark 0 */
@@ -7612,7 +7600,6 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	e = add_entity(tridentecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, WHITE);
 	update_entity_orientation(e, &ind_orientation);
 	update_entity_scale(e, 0.1/heading_indicator_mesh->radius);
-	set_render_style(e, RENDER_NORMAL);
 
 	render_entities(w, gc, tridentecx);
 

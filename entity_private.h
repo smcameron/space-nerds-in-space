@@ -37,7 +37,6 @@ struct entity {
 
 	int material_type;
 	void *material_ptr;
-	entity_fragment_shader_fn fragment_shader;
 };
 
 struct camera_info {
