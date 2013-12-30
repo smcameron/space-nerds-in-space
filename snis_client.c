@@ -4787,7 +4787,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 
-	union vec3 cam_pos = { {0, 5.2, 0} };
+	union vec3 cam_pos = { {0, 5.45, 0} };
 	quat_rot_vec_self(&cam_pos,&o->orientation);
 	vec3_add_c_self(&cam_pos, cx, cy, cz);
 
