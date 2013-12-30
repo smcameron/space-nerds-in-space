@@ -492,13 +492,17 @@ static int add_generic_object(uint32_t id, double x, double y, double z,
 		return -1;
 	}
 	memset(&go[i], 0, sizeof(go[i]));
-	go[i].updatetime1 = go[i].updatetime2 = time_now_double();
+	go[i].updatetime2 = time_now_double();
+	go[i].updatetime1 = go[i].updatetime2 - 1.0 / 30.0;
 	go[i].index = i;
 	go[i].id = id;
 	go[i].orientation = go[i].o1 = go[i].o2 = *orientation;
-	go[i].x = go[i].r1.v.x = go[i].r2.v.x = x;
-	go[i].y = go[i].r1.v.y = go[i].r2.v.y = y;
-	go[i].z = go[i].r1.v.z = go[i].r2.v.z = z;
+	go[i].x = go[i].r2.v.x = x;
+	go[i].y = go[i].r2.v.y = y;
+	go[i].z = go[i].r2.v.z = z;
+	go[i].r1.v.x = x - vx / 3.0;
+	go[i].r1.v.y = y - vy / 3.0;
+	go[i].r1.v.z = z - vz / 3.0;
 	go[i].vx = vx;
 	go[i].vz = vz;
 	go[i].heading = quat_to_heading(orientation);
