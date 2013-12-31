@@ -70,6 +70,7 @@ GLOBAL struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, d
 GLOBAL void mesh_graph_dev_init(struct mesh *m);
 GLOBAL void mesh_graph_dev_cleanup(struct mesh *m);
 GLOBAL void mesh_set_flat_shading_vertex_normals(struct mesh *m);
+GLOBAL struct mesh *mesh_fabricate_crossbeam(float length, float radius);
 
 #undef GLOBAL
 #endif

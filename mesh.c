@@ -298,3 +298,124 @@ void mesh_set_flat_shading_vertex_normals(struct mesh *m)
 	}
 }
 
+/* mesh_fabricate_crossbeam fabricates a mesh like so, out of 8 triangles:
+ *          0
+ *         |\
+ *         | \
+ *         |  \
+ *  4______|   \__5
+ *   \     \    \ \
+ *    \     \   |3 \
+ *     \     \  |   \
+ *      \ 1   \ |    \
+ *       \_____\|_____\6
+ *      7   \   |
+ *           \  |
+ *            \ |
+ *             \|
+ *              2
+ * centered on origin, length axis parallel to x axis.
+ * length is the distance betwee 0 and 3, above, and
+ * radius is the distance between the center of the cross
+ * beam and 2,6,7,3 and 0,4,5,1.
+ * 
+ * 8 triangles are needed because we need to prevent backface
+ * culling, so we wind one set of tris one way, and the other,
+ * the other.
+ */
+struct mesh *mesh_fabricate_crossbeam(float length, float radius)
+{
+	struct mesh *m;
+
+	m = malloc(sizeof(*m));
+	if (!m)
+		return m;
+	memset(m, 0, sizeof(*m));
+	m->nvertices = 8;
+	m->ntriangles = 8;
+
+	m->t = malloc(sizeof(*m->t) * m->ntriangles);
+	if (!m->t)
+		goto bail;
+	memset(m->t, 0, sizeof(*m->t) * m->ntriangles);
+	m->v = malloc(sizeof(*m->v) * m->nvertices);
+	if (!m->v)
+		goto bail;
+	memset(m->v, 0, sizeof(*m->v) * m->nvertices);
+	m->l = NULL;
+
+	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+	m->v[0].x = -length / 2.0f;
+	m->v[0].y = radius;
+	m->v[0].z = 0.0f;
+	m->v[1].x = -length / 2.0f;
+	m->v[1].y = -radius;
+	m->v[1].z = 0.0f;
+	m->v[2].x = length / 2.0f;
+	m->v[2].y = -radius;
+	m->v[2].z = 0.0f;
+	m->v[3].x = length / 2.0f;
+	m->v[3].y = radius;
+	m->v[3].z = 0.0f;
+	m->v[4].x = -length / 2.0f;
+	m->v[4].y = 0.0f;
+	m->v[4].z = radius;
+	m->v[5].x = -length / 2.0f;
+	m->v[5].y = 0.0f;
+	m->v[5].z = -radius;
+	m->v[6].x = length / 2.0f;
+	m->v[6].y = 0.0f;
+	m->v[6].z = -radius;
+	m->v[7].x = length / 2.0f;
+	m->v[7].y = 0.0f;
+	m->v[7].z = radius;
+
+	m->t[0].v[0] = &m->v[0];
+	m->t[0].v[1] = &m->v[1];
+	m->t[0].v[2] = &m->v[2];
+
+	m->t[1].v[0] = &m->v[2];
+	m->t[1].v[1] = &m->v[3];
+	m->t[1].v[2] = &m->v[0];
+	
+	m->t[2].v[0] = &m->v[4];
+	m->t[2].v[1] = &m->v[5];
+	m->t[2].v[2] = &m->v[6];
+	
+	m->t[3].v[0] = &m->v[6];
+	m->t[3].v[1] = &m->v[7];
+	m->t[3].v[2] = &m->v[4];
+
+	m->t[4].v[0] = &m->v[2];
+	m->t[4].v[1] = &m->v[1];
+	m->t[4].v[2] = &m->v[0];
+
+	m->t[5].v[0] = &m->v[0];
+	m->t[5].v[1] = &m->v[3];
+	m->t[5].v[2] = &m->v[2];
+	
+	m->t[6].v[0] = &m->v[6];
+	m->t[6].v[1] = &m->v[5];
+	m->t[6].v[2] = &m->v[4];
+	
+	m->t[7].v[0] = &m->v[4];
+	m->t[7].v[1] = &m->v[7];
+	m->t[7].v[2] = &m->v[6];
+
+	mesh_compute_radius(m);
+	mesh_set_flat_shading_vertex_normals(m);
+	mesh_graph_dev_init(m);
+
+	return m;
+
+bail:
+	if (m) {
+		if (m->t)
+			free(m->t);
+		if (m->v)
+			free(m->v);
+		free(m);
+	}
+	return NULL;
+}
+
