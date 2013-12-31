@@ -11000,7 +11000,8 @@ static char *help_text[] = {
 	"  CONTROLS\n\n"
 	"  * USE ARROW KEYS TO TURN SHIP\n\n"
 	"  * W KEY TOGGLES BETWEEN WEAPONS VIEW\n"
-	"    AND MAIN VIEW\n"
+	"    AND MAIN VIEW\n\n"
+	"  * 1 KEY TOGGLES CAMERA VIEW MODES\n"
 	"\nPRESS ESC TO EXIT HELP\n",
 
 	/* Navigation help text */
