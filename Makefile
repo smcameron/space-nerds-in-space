@@ -178,10 +178,13 @@ OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 
 all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS}
 
-graph_dev_opengl.o : graph_dev_opengl.c
+graph_dev_opengl.o : graph_dev_opengl.c shader.h vertex.h triangle.h mathutils.h matrix.h \
+			mesh.h quat.h snis_graph.h graph_dev.h entity.h entity_private.h \
+			material.h
 	$(Q)$(GLEXTCOMPILE)
 
-graph_dev_gdk.o : graph_dev_gdk.c
+graph_dev_gdk.o : graph_dev_gdk.c vertex.h triangle.h mathutils.h matrix.h mesh.h \
+			snis_typeface.h snis_graph.h quat.h entity.h entity_private.h material.h
 	$(Q)$(GTKCOMPILE)
 
 shader.o : shader.c shader.h
@@ -328,7 +331,8 @@ stl_parser.o:	stl_parser.c stl_parser.h vertex.h triangle.h mesh.h
 stl_parser:	stl_parser.o stl_parser.h vertex.h triangle.h mesh.h
 	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} ${GTKCFLAGS} -o stl_parser stl_parser.c matrix.c mesh.c mathutils.c -lm
 
-entity.o:	entity.c entity.h mathutils.h vertex.h triangle.h mesh.h stl_parser.h snis_alloc.h
+entity.o:	entity.c entity.h mathutils.h vertex.h triangle.h mesh.h stl_parser.h \
+		snis_alloc.h entity_private.h
 	$(Q)$(GTKCOMPILE)
 
 names.o:	names.c names.h
