@@ -201,8 +201,7 @@ static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
 static volatile int helpmodeline = 0;
 static volatile float weapons_camera_shake = 0.0f; 
-static volatile int camera_mode = 0;
-static volatile int last_camera_mode = 0;
+static unsigned char camera_mode;
 
 struct client_network_stats {
 	uint64_t bytes_sent;
@@ -2475,6 +2474,14 @@ static void do_torpedo(void)
 	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_TORPEDO));
 }
 
+static void do_mainscreen_camera_mode()
+{
+	if (displaymode != DISPLAYMODE_MAINSCREEN)
+		return;
+	queue_to_server(packed_buffer_new("hb", OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW,
+		(unsigned char) (camera_mode + 1) % 3));
+}
+
 static void do_tractor_beam(void)
 {
 	struct snis_entity *o;
@@ -2837,10 +2844,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		do_laser();
 		break;
 	case key_camera_mode:
-		if (displaymode != DISPLAYMODE_MAINSCREEN)
-			break;
-		last_camera_mode = camera_mode;
-		camera_mode = (camera_mode + 1) % 3;
+		do_mainscreen_camera_mode();
 		break;
 	case keyf1:
 		if (!helpmode)
@@ -3534,6 +3538,21 @@ static int process_load_skybox(void)
 	strcpy(skybox_texture_prefix, string);
 	textures_loaded = 0;
 
+	return 0;
+}
+
+static int process_cycle_mainscreen_point_of_view(void)
+{
+	int rc;
+	unsigned char buffer[10];
+	unsigned char new_mode;
+
+	rc = read_and_unpack_buffer(buffer, "b", &new_mode);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	camera_mode = new_mode % 3;
+	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
 
@@ -4383,6 +4402,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_LOAD_SKYBOX:
 			rc = process_load_skybox();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW:
+			rc = process_cycle_mainscreen_point_of_view();
 			if (rc)
 				goto protocol_error;
 			break;

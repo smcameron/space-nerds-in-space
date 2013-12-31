@@ -5911,6 +5911,22 @@ static int process_robot_auto_manual(struct game_client *c)
 	return 0;
 }
 
+static int process_cycle_mainscreen_point_of_view(struct game_client *c)
+{
+	unsigned char buffer[10];
+	unsigned char new_mode;
+	int rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &new_mode);
+	if (rc)
+		return rc;
+	new_mode = new_mode % 3; /* there are only 3 modes */
+	send_packet_to_all_clients_on_a_bridge(c->shipid,
+			packed_buffer_new("hb", OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW, new_mode),
+			ROLE_MAIN);
+	return 0;
+}
+
 typedef uint8_t (*bytevalue_limit_function)(struct game_client *c, uint8_t value);
 
 static uint8_t no_limit(__attribute__((unused)) struct game_client *c, uint8_t value)
@@ -6835,6 +6851,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_ROBOT_AUTO_MANUAL:
 			rc = process_robot_auto_manual(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW:
+			rc = process_cycle_mainscreen_point_of_view(c);
 			if (rc)
 				goto protocol_error;
 			break;
