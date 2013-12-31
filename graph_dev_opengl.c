@@ -3,13 +3,13 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include <GL/glew.h>
+#include <math.h>
 
 #include "shader.h"
 #include "vertex.h"
 #include "triangle.h"
 #include "mathutils.h"
 #include "matrix.h"
-#include "math.h"
 #include "mesh.h"
 #include "quat.h"
 #include "snis_graph.h"

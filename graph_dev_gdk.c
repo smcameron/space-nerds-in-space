@@ -23,12 +23,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <gtk/gtk.h>
+#include <math.h>
 
 #include "vertex.h"
 #include "triangle.h"
 #include "mathutils.h"
 #include "matrix.h"
-#include "math.h"
 #include "mesh.h"
 #include "snis_typeface.h"
 #include "snis_graph.h"

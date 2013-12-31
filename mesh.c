@@ -1,11 +1,11 @@
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "vertex.h"
 #include "triangle.h"
 #include "mathutils.h"
 #include "matrix.h"
-#include "math.h"
 #include "quat.h"
 
 #define DEFINE_MESH_GLOBALS 1
