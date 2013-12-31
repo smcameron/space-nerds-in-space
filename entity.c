@@ -57,6 +57,7 @@ struct entity *add_entity(struct entity_context *cx,
 	if (n < 0)
 		return NULL;
 
+	cx->entity_list[n].visible = 1;
 	cx->entity_list[n].m = m;
 	cx->entity_list[n].x = x;
 	cx->entity_list[n].y = y;
@@ -118,6 +119,11 @@ void update_entity_color(struct entity *e, int color)
 void update_entity_shadecolor(struct entity *e, int color)
 {
 	e->shadecolor = color;
+}
+
+void update_entity_visibility(struct entity *e, int visible)
+{
+	e->visible = visible;
 }
 
 void update_entity_material(struct entity *e, int material_type, void *material_ptr)
@@ -666,6 +672,9 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 			continue;
 
 		struct entity *e = &cx->entity_list[j];
+
+		if (!e->visible)
+			continue;
 
 		if (e->m == NULL)
 			continue;

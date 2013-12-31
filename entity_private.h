@@ -22,6 +22,7 @@
 #define ENTITY_PRIVATE_H__
 
 struct entity {
+	int visible;
 	struct mesh *m;
 	float x, y, z; /* world coords */
 	float cx, cy, cz; /* camera coords */

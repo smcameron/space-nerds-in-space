@@ -450,6 +450,7 @@ struct snis_entity_science_data {
 };
 	
 struct snis_entity {
+	int nupdates;
 	double updatetime1;
 	double updatetime2;
 	uint32_t index;

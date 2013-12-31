@@ -149,6 +149,7 @@ explosion_function *explosion = NULL;
 #define snis_draw_arc DEFAULT_ARC_STYLE
 int frame_rate_hz = 30;
 int red_alert_mode = 0;
+#define MAX_UPDATETIME_START_PAUSE 0.15
 #define MAX_UPDATETIME_INTERVAL 0.5
 
 char *default_asset_dir = "share/snis";
@@ -492,17 +493,14 @@ static int add_generic_object(uint32_t id, double x, double y, double z,
 		return -1;
 	}
 	memset(&go[i], 0, sizeof(go[i]));
-	go[i].updatetime2 = time_now_double();
-	go[i].updatetime1 = go[i].updatetime2 - 1.0 / 30.0;
+	go[i].nupdates = 1;
+	go[i].updatetime1 = go[i].updatetime2 = time_now_double();
 	go[i].index = i;
 	go[i].id = id;
 	go[i].orientation = go[i].o1 = go[i].o2 = *orientation;
-	go[i].x = go[i].r2.v.x = x;
-	go[i].y = go[i].r2.v.y = y;
-	go[i].z = go[i].r2.v.z = z;
-	go[i].r1.v.x = x - vx / 3.0;
-	go[i].r1.v.y = y - vy / 3.0;
-	go[i].r1.v.z = z - vz / 3.0;
+	go[i].x = go[i].r1.v.x = go[i].r2.v.x = x;
+	go[i].y = go[i].r1.v.y = go[i].r2.v.y = y;
+	go[i].z = go[i].r1.v.z = go[i].r2.v.z = z;
 	go[i].vx = vx;
 	go[i].vz = vz;
 	go[i].heading = quat_to_heading(orientation);
@@ -521,6 +519,7 @@ static void update_generic_object(int index, double x, double y, double z,
 				const union quat *orientation, uint32_t alive)
 {
 	struct snis_entity *o = &go[index];
+	o->nupdates++;
 	o->updatetime1 = o->updatetime2;
 	o->updatetime2 = time_now_double();
 	int update_stale = (o->updatetime2 - o->updatetime1 > MAX_UPDATETIME_INTERVAL);
@@ -1473,6 +1472,20 @@ static inline void spin_derelict(struct snis_entity *o)
 
 static void move_generic_object(struct snis_entity *o)
 {
+	/* can't do any interpolation with only 1 update */
+	if (o->nupdates <= 1) {
+		if (o->entity) {
+			if (time_now_double() - o->updatetime2 < MAX_UPDATETIME_START_PAUSE) {
+				/* hide this entity until we get another update or the start pause has elapsed */
+				update_entity_visibility(o->entity, 0);
+			} else {
+				update_entity_visibility(o->entity, 1);
+				update_entity_pos(o->entity, o->x, o->y, o->z);
+			}
+		}
+		return;
+	}
+
 	/* updates are sent every 1/10th of a second */
 	double delta = o->updatetime2 - o->updatetime1;
 	if ( delta >= 0.000001 ) {
@@ -1486,6 +1499,7 @@ static void move_generic_object(struct snis_entity *o)
 		o->z = interp_position.v.z;
 
 		if (o->entity) {
+			update_entity_visibility(o->entity, 1);
 			update_entity_pos(o->entity, o->x, o->y, o->z);
 		}
 	}
@@ -1493,6 +1507,20 @@ static void move_generic_object(struct snis_entity *o)
 
 static void move_ship(struct snis_entity *o)
 {
+	/* can't do any interpolation with only 1 update */
+	if (o->nupdates <= 1) {
+		if (o->entity) {
+			if (time_now_double() - o->updatetime2 < MAX_UPDATETIME_START_PAUSE) {
+				/* hide this entity until we get another update or the start pause has elapsed */
+				update_entity_visibility(o->entity, 0);
+			} else {
+				update_entity_visibility(o->entity, 1);
+				update_entity_pos(o->entity, o->x, o->y, o->z);
+			}
+		}
+		return;
+	}
+
 	/* updates are sent every 1/10th of a second */
 	double delta = o->updatetime2 - o->updatetime1;
 	if ( delta >= 0.000001 ) {
@@ -1518,6 +1546,7 @@ static void move_ship(struct snis_entity *o)
 		o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity / 3.0;
 
 		if (o->entity) {
+			update_entity_visibility(o->entity, 1);
 			update_entity_pos(o->entity, o->x, o->y, o->z);
 			update_entity_orientation(o->entity, &o->orientation);
 		}
