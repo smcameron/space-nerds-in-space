@@ -504,6 +504,7 @@ static void graph_dev_raster_laser(const struct mat44 *mat_mvp, const struct mat
 	glDepthFunc(GL_LESS);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_BLEND);
 
 	glUseProgram(textured_shader.programID);
 
@@ -561,6 +562,7 @@ static void graph_dev_raster_laser(const struct mat44 *mat_mvp, const struct mat
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_BLEND);
 }
 
 static void graph_dev_raster_solid_mesh(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
