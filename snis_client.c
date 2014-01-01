@@ -12026,8 +12026,11 @@ static void init_meshes()
 	asteroidminer_mesh = snis_read_stl_file(d, "asteroid-miner.stl");
 	spaceship2_mesh = snis_read_stl_file(d, "spaceship2.stl");
 	scout_mesh = snis_read_stl_file(d, "spaceship3.stl");
-	/* laserbeam_mesh = snis_read_stl_file(d, "long-triangular-prism.stl"); */
+#ifndef WITHOUTOPENGL
 	laserbeam_mesh = mesh_fabricate_crossbeam(60.0f, 2.0f);
+#else
+	laserbeam_mesh = snis_read_stl_file(d, "long-triangular-prism.stl");
+#endif
 	ship_icon_mesh = snis_read_stl_file(d, "ship-icon.stl");
 	heading_indicator_mesh = snis_read_stl_file(d, "heading_indicator.stl");
 	cargo_container_mesh = snis_read_stl_file(d, "cargocontainer.stl");
