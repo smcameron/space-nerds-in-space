@@ -1763,7 +1763,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	 * when attacked.
 	 */
 	if (o->sdata.faction != 0 ||
-		(v->type != OBJTYPE_STARBASE && v->type == OBJTYPE_PLANET)) {
+		(v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_PLANET)) {
 
 		if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE &&
 			o->tsd.ship.next_torpedo_time <= universe_timestamp &&
