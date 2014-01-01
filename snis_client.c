@@ -1623,6 +1623,7 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	if (r < 50 || time < 10) {
 		e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
 		update_entity_material(e, MATERIAL_BILLBOARD, &spark_texture);
+		update_entity_scale(e, (float) snis_randn(100) / 25.0f);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 	} else if (r < 75) {
 		e = add_entity(ecx, debris_mesh, x, y, z, color);
