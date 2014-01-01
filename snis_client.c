@@ -301,6 +301,7 @@ struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
 
 static unsigned int green_laser_texture;
+static unsigned int red_laser_texture;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -1074,7 +1075,7 @@ static void update_laserbeam_segments(struct snis_entity *o)
 		ld->z[i] = z1 + (i + lastd) * dz; 
 		update_entity_pos(ld->entity[i], ld->x[i], ld->y[i], ld->z[i]);
 		update_entity_orientation(ld->entity[i], &orientation);
-		update_entity_material(ld->entity[i], MATERIAL_LASER, &green_laser_texture);
+		update_entity_material(ld->entity[i], MATERIAL_LASER, &red_laser_texture);
 	}
 }
 
@@ -11450,12 +11451,12 @@ gint advance_game(gpointer data)
 	return TRUE;
 }
 
-static void load_laserbolt_texture(char *filename)
+static unsigned int load_texture(char *filename)
 {
 	char fname[PATH_MAX + 1];
 
 	sprintf(fname, "%s/textures/%s", asset_dir, filename);
-	green_laser_texture = graph_dev_load_texture(fname);
+	return graph_dev_load_texture(fname);
 }
 
 static void load_skybox_textures(char *filenameprefix)
@@ -11564,7 +11565,8 @@ static void load_textures(void)
 	if (textures_loaded)
 		return;
 	load_skybox_textures(skybox_texture_prefix);
-	load_laserbolt_texture("green-laser-texture.png");
+	green_laser_texture = load_texture("green-laser-texture.png");
+	red_laser_texture = load_texture("red-laser-texture.png");
 	textures_loaded = 1;
 }
 
