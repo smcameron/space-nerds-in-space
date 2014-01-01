@@ -303,6 +303,7 @@ struct mesh **derelict_mesh;
 static unsigned int green_laser_texture;
 static unsigned int red_laser_texture;
 static unsigned int red_torpedo_texture;
+static unsigned int spark_texture;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -1618,6 +1619,7 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	r = snis_randn(100);
 	if (r < 50 || time < 10) {
 		e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
+		update_entity_material(e, MATERIAL_BILLBOARD, &spark_texture);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 	} else if (r < 75) {
 		e = add_entity(ecx, debris_mesh, x, y, z, color);
@@ -11570,6 +11572,7 @@ static void load_textures(void)
 	green_laser_texture = load_texture("green-laser-texture.png");
 	red_laser_texture = load_texture("red-laser-texture.png");
 	red_torpedo_texture = load_texture("red-torpedo-texture.png");
+	spark_texture = load_texture("spark-texture.png");
 	textures_loaded = 1;
 }
 
@@ -12022,7 +12025,11 @@ static void init_meshes()
 	disruptor_mesh = snis_read_stl_file(d, "disruptor.stl");
 	research_vessel_mesh = snis_read_stl_file(d, "research-vessel.stl");
 	battlestar_mesh = snis_read_stl_file(d, "battlestar.stl");
+#ifndef WITHOUTOPENGL
+	particle_mesh = mesh_fabricate_billboard(35.0f, 35.0f);
+#else
 	particle_mesh = snis_read_stl_file(d, "tetrahedron.stl");
+#endif
 	debris_mesh = snis_read_stl_file(d, "flat-tetrahedron.stl");
 	debris2_mesh = snis_read_stl_file(d, "big-flat-tetrahedron.stl");
 	wormhole_mesh = snis_read_stl_file(d, "wormhole.stl");
