@@ -453,6 +453,25 @@ bail:
 	return NULL;
 }
 
+/* mesh_fabricate_billboard() makes a billboard:
+ *          0         1
+ *  +z <---- +-------+   -----> -z
+ *           |\      |
+ *           | \     |
+ *           |  \    |
+ *           |   \   |
+ *           |    \  |
+ *           |     \ |
+ *           |      \|
+ *        3  +-------+ 2
+ *                   |
+ *                   |
+ *                   v
+ *
+ *                  -y
+ *
+ */
+
 struct mesh *mesh_fabricate_billboard(float width, float height)
 {
 	struct mesh *m;
@@ -492,15 +511,15 @@ struct mesh *mesh_fabricate_billboard(float width, float height)
 	m->v[3].y = -height / 2.0f;
 	m->v[3].z = width / 2.0f;
 
-	m->t[0].v[0] = &m->v[0];
+	m->t[0].v[0] = &m->v[2];
 	m->t[0].v[1] = &m->v[1];
-	m->t[0].v[2] = &m->v[2];
-	mesh_set_triangle_texture_coords(m, 0, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+	m->t[0].v[2] = &m->v[0];
+	mesh_set_triangle_texture_coords(m, 0, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f);
 
-	m->t[1].v[0] = &m->v[1];
-	m->t[1].v[1] = &m->v[3];
-	m->t[1].v[2] = &m->v[2];
-	mesh_set_triangle_texture_coords(m, 1, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
+	m->t[1].v[0] = &m->v[2];
+	m->t[1].v[1] = &m->v[0];
+	m->t[1].v[2] = &m->v[3];
+	mesh_set_triangle_texture_coords(m, 1, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
 	mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);
