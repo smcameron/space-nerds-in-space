@@ -1765,7 +1765,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	if (o->sdata.faction != 0 ||
 		(v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_PLANET)) {
 
-		if (snis_randn(1000) < 50 && range <= TORPEDO_RANGE &&
+		if (snis_randn(1000) < 150 && range <= TORPEDO_RANGE &&
 			o->tsd.ship.next_torpedo_time <= universe_timestamp &&
 			o->tsd.ship.torpedoes > 0) {
 			double dist, flight_time, tx, ty, tz, vx, vy, vz;
@@ -1786,7 +1786,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 				ENEMY_TORPEDO_FIRE_INTERVAL;
 			check_for_incoming_fire(v);
 		} else {
-			if (snis_randn(1000) < 150 &&
+			if (snis_randn(1000) < 300 &&
 				o->tsd.ship.next_laser_time <= universe_timestamp) {
 				o->tsd.ship.next_laser_time = universe_timestamp +
 					ENEMY_LASER_FIRE_INTERVAL;

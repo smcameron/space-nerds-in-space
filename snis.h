@@ -331,9 +331,9 @@ struct ship_data {
 	double scibeam_a1, scibeam_a2, scibeam_range; /* used server side to cache sci beam calcs */
 	uint8_t reverse;
 	int32_t next_torpedo_time;
-#define ENEMY_TORPEDO_FIRE_INTERVAL (10 * 30) /* 10 seconds */ 
+#define ENEMY_TORPEDO_FIRE_INTERVAL (4 * 30) /* 4 seconds */ 
 	int32_t next_laser_time;
-#define ENEMY_LASER_FIRE_INTERVAL (5 * 30) /* 5 seconds */ 
+#define ENEMY_LASER_FIRE_INTERVAL (2 * 30) /* 2 seconds */ 
 	uint8_t lifeform_count;
 #define MAX_TRACTOR_DIST 5000.0 /* TODO: tweak this */
 #define TRACTOR_BEAM_IDEAL_DIST 200.0 /* TODO: tweak this */
