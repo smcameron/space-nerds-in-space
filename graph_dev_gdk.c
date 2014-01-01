@@ -891,3 +891,8 @@ void graph_dev_load_skybox_texture(
 	/* no skybox on gdk rendering */
 }
 
+void graph_dev_load_laserbolt_texture(const char *filename)
+{
+	/* no laserbolt texture with gdk rendering */
+}
+

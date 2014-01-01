@@ -56,6 +56,8 @@ extern void graph_dev_load_skybox_texture(
 	const char *texture_filename_pos_z,
 	const char *texture_filename_neg_z);
 
+extern void graph_dev_load_laserbolt_texture(const char *filename);
+
 extern void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp);
 
 #endif

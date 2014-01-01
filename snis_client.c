@@ -901,6 +901,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, laserbeam_mesh, x, y, z, LASER_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
+		update_entity_material(e, MATERIAL_LASER, 0);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
@@ -3516,7 +3517,7 @@ static int process_comms_mainscreen()
 	return 0;
 }
 
-static void load_textures(char *filenameprefix);
+static void load_textures(void);
 
 static int process_load_skybox(void)
 {
@@ -11240,10 +11241,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (displaymode == DISPLAYMODE_GLMAIN)	
 		return 0;
 
-	if (!textures_loaded) {
-		load_textures(skybox_texture_prefix);
-		textures_loaded = 1;
-	}
+	load_textures();
 
 #ifndef WITHOUTOPENGL
 	GdkGLContext *gl_context = gtk_widget_get_gl_context(main_da);
@@ -11449,7 +11447,15 @@ gint advance_game(gpointer data)
 	return TRUE;
 }
 
-static void load_textures(char *filenameprefix)
+static void load_laserbolt_texture(char *filename)
+{
+	char fname[PATH_MAX + 1];
+
+	sprintf(fname, "%s/textures/%s", asset_dir, filename);
+	graph_dev_load_laserbolt_texture(fname);
+}
+
+static void load_skybox_textures(char *filenameprefix)
 {
 	/*
 	 * SNIS wants skybox textures in six files named like this:
@@ -11539,10 +11545,7 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 		gl_is_setup = 1;
 	}
 
-	if (!textures_loaded) {
-		load_textures(skybox_texture_prefix);
-		textures_loaded = 1;
-	}
+	load_textures();
 
 	static int meshes_loaded = 0;
 	if (!meshes_loaded) {
@@ -11551,6 +11554,15 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	}
 
 	return TRUE;
+}
+
+static void load_textures(void)
+{
+	if (textures_loaded)
+		return;
+	load_skybox_textures(skybox_texture_prefix);
+	load_laserbolt_texture("green-laser-texture.png");
+	textures_loaded = 1;
 }
 
 static int main_da_button_press(GtkWidget *w, GdkEventButton *event,

@@ -23,6 +23,7 @@
 
 #define MATERIAL_COLOR 0
 #define MATERIAL_COLOR_BY_W 1
+#define MATERIAL_LASER 2
 
 struct material_color_by_w {
 	int near_color;
@@ -32,6 +33,10 @@ struct material_color_by_w {
 	float near_w;
 	float center_w;
 	float far_w;
+};
+
+struct material_laser {
+	int texture_id;
 };
 
 #endif

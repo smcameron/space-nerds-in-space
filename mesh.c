@@ -109,6 +109,12 @@ struct mesh *mesh_duplicate(struct mesh *original)
 	memset(copy->v, 0, sizeof(*copy->v) * copy->nvertices);
 	copy->l = malloc(sizeof(*copy->l) * copy->nlines);
 	memset(copy->l, 0, sizeof(*copy->l) * copy->nlines);
+	if (original->tex) {
+		copy->tex = malloc(sizeof(*copy->tex) * original->ntriangles * 3);
+		memcpy(copy->tex, original->tex, sizeof(*copy->tex) * original->ntriangles * 3);
+	} else {
+		copy->tex = 0;
+	}
 	copy->graph_ptr = 0;
 
 	for (i = 0; i < original->nvertices; i++)
@@ -174,6 +180,7 @@ struct mesh *init_circle_mesh(double x, double z, double r, int npoints, double 
 	my_mesh->t = 0;
 	my_mesh->v = malloc(sizeof(*my_mesh->v) * (npoints + 1));
 	my_mesh->l = malloc(sizeof(*my_mesh->l) * 1);
+	my_mesh->tex = 0;
 	my_mesh->radius = r;
 	my_mesh->graph_ptr = 0;
 
@@ -212,6 +219,7 @@ struct mesh *init_radar_circle_xz_plane_mesh(double x, double z, double r, int t
 	my_mesh->v = malloc(sizeof(*my_mesh->v) * (360 / 2 + 1 + ticks*2));
 	my_mesh->l = malloc(sizeof(*my_mesh->l) * (1 + ticks));
 	my_mesh->radius = dist3d(x, 0, z) + r;
+	my_mesh->tex = 0;
 	my_mesh->graph_ptr = 0;
 
 	for (i = 0; i <= 360; i += 2) {
@@ -248,6 +256,7 @@ struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y
 	my_mesh->t = 0;
 	my_mesh->v = malloc(sizeof(*my_mesh->v) * 2);
 	my_mesh->l = malloc(sizeof(*my_mesh->l) * 1);
+	my_mesh->tex = 0;
 	my_mesh->radius = fmax(dist3d(x1, y1, z1), dist3d(x2, y2, z2));
 	my_mesh->graph_ptr = 0;
 
@@ -298,6 +307,17 @@ void mesh_set_flat_shading_vertex_normals(struct mesh *m)
 	}
 }
 
+void mesh_set_triangle_texture_coords(struct mesh *m, int triangle,
+	float u1, float v1, float u2, float v2, float u3, float v3)
+{
+	m->tex[triangle * 3 + 0].u = u1;
+	m->tex[triangle * 3 + 0].v = v1;
+	m->tex[triangle * 3 + 1].u = u2;
+	m->tex[triangle * 3 + 1].v = v2;
+	m->tex[triangle * 3 + 2].u = u3;
+	m->tex[triangle * 3 + 2].v = v3;
+}
+
 /* mesh_fabricate_crossbeam fabricates a mesh like so, out of 8 triangles:
  *          0
  *         |\
@@ -342,6 +362,10 @@ struct mesh *mesh_fabricate_crossbeam(float length, float radius)
 	if (!m->v)
 		goto bail;
 	memset(m->v, 0, sizeof(*m->v) * m->nvertices);
+	m->tex = malloc(sizeof(*m->tex) * m->ntriangles * 3);
+	if (!m->tex)
+		goto bail;
+	memset(m->tex, 0, sizeof(*m->tex) * m->ntriangles * 3);
 	m->l = NULL;
 
 	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
@@ -373,34 +397,42 @@ struct mesh *mesh_fabricate_crossbeam(float length, float radius)
 	m->t[0].v[0] = &m->v[0];
 	m->t[0].v[1] = &m->v[1];
 	m->t[0].v[2] = &m->v[2];
+	mesh_set_triangle_texture_coords(m, 0, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
 
 	m->t[1].v[0] = &m->v[2];
 	m->t[1].v[1] = &m->v[3];
 	m->t[1].v[2] = &m->v[0];
+	mesh_set_triangle_texture_coords(m, 1, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 	
 	m->t[2].v[0] = &m->v[4];
 	m->t[2].v[1] = &m->v[5];
 	m->t[2].v[2] = &m->v[6];
+	mesh_set_triangle_texture_coords(m, 2, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
 	
 	m->t[3].v[0] = &m->v[6];
 	m->t[3].v[1] = &m->v[7];
 	m->t[3].v[2] = &m->v[4];
+	mesh_set_triangle_texture_coords(m, 3, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f);
 
 	m->t[4].v[0] = &m->v[2];
 	m->t[4].v[1] = &m->v[1];
 	m->t[4].v[2] = &m->v[0];
+	mesh_set_triangle_texture_coords(m, 4, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f);
 
 	m->t[5].v[0] = &m->v[0];
 	m->t[5].v[1] = &m->v[3];
 	m->t[5].v[2] = &m->v[2];
+	mesh_set_triangle_texture_coords(m, 5, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f);
 	
 	m->t[6].v[0] = &m->v[6];
 	m->t[6].v[1] = &m->v[5];
 	m->t[6].v[2] = &m->v[4];
+	mesh_set_triangle_texture_coords(m, 6, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 	
 	m->t[7].v[0] = &m->v[4];
 	m->t[7].v[1] = &m->v[7];
 	m->t[7].v[2] = &m->v[6];
+	mesh_set_triangle_texture_coords(m, 7, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f);
 
 	mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);

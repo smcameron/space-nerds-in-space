@@ -417,6 +417,7 @@ struct mesh *read_stl_file(char *file)
 	my_mesh->t = malloc(sizeof(*my_mesh->t) * facetcount);
 	my_mesh->v = malloc(sizeof(*my_mesh->v) * facetcount * 3); /* worst case */
 	my_mesh->l = NULL;
+	my_mesh->tex = NULL;
 	my_mesh->graph_ptr = 0;
 
 	struct vertex_owner* owners = alloc_vertex_owners(facetcount * 3);
