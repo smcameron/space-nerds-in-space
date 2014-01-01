@@ -332,7 +332,7 @@ stl_parser:	stl_parser.o stl_parser.h vertex.h triangle.h mesh.h
 	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} ${GTKCFLAGS} -o stl_parser stl_parser.c matrix.c mesh.c mathutils.c -lm
 
 entity.o:	entity.c entity.h mathutils.h vertex.h triangle.h mesh.h stl_parser.h \
-		snis_alloc.h entity_private.h
+		snis_alloc.h entity_private.h material.h
 	$(Q)$(GTKCOMPILE)
 
 names.o:	names.c names.h

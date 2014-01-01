@@ -45,6 +45,7 @@
 #include "snis_graph.h"
 #include "entity_private.h"
 #include "graph_dev.h"
+#include "material.h"
 
 static int clip_line(struct mat41* vtx0, struct mat41* vtx1);
 
@@ -630,6 +631,16 @@ void calculate_camera_transform(struct entity_context *cx)
 
 static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, float radius);
 
+static void billboard_face_camera(struct entity_context *cx, struct entity *e)
+{
+	const struct camera_info *c = &cx->camera;
+	const union vec3 right = { { 1.0f, 0.0f, 0.0f } };
+	const union vec3 up = { { 0.0f, 1.0f, 0.0f } };
+	const union vec3 to_camera = { { c->x - e->x, c->y - e->y, c->z - e->z} };
+
+	quat_from_u2v(&e->orientation, &right, &to_camera, &up);
+}
+
 void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 {
 	int i, j, n;
@@ -683,6 +694,10 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 
 		if (!sphere_in_frustum(c, e->x, e->y, e->z, e->m->radius * fabs(e->scale)))
 			continue;
+
+		/* Make billboards face the camera */
+		if (e->material_type == MATERIAL_BILLBOARD)
+			billboard_face_camera(cx, e);
 
 		e->dist3dsqrd = dist3dsqrd(c->x - e->x, c->y - e->y, c->z - e->z);
 		cx->entity_depth[cx->nentity_depth] = j;
