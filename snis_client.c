@@ -1072,6 +1072,7 @@ static void update_laserbeam_segments(struct snis_entity *o)
 		ld->z[i] = z1 + (i + lastd) * dz; 
 		update_entity_pos(ld->entity[i], ld->x[i], ld->y[i], ld->z[i]);
 		update_entity_orientation(ld->entity[i], &orientation);
+		update_entity_material(ld->entity[i], MATERIAL_LASER, 0);
 	}
 }
 
