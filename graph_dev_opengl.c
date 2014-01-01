@@ -891,7 +891,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 			if (outline_triangle) {
 				graph_dev_raster_filled_wireframe_mesh(mat_mvp, e->m, &line_color, &triangle_color);
 			} else {
-				if (e->material_type == MATERIAL_LASER)
+				if (e->material_type == MATERIAL_LASER ||
+					e->material_type == MATERIAL_BILLBOARD)
 					graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos,
 						*(GLuint *) e->material_ptr);
@@ -900,7 +901,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						e->m, &triangle_color, eye_light_pos);
 			}
 		} else if (outline_triangle) {
-			if (e->material_type == MATERIAL_LASER)
+			if (e->material_type == MATERIAL_LASER ||
+				e->material_type == MATERIAL_BILLBOARD)
 				graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
 					e->m, &line_color, eye_light_pos,
 					*(GLuint *) e->material_ptr);
