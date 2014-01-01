@@ -393,8 +393,6 @@ struct graph_dev_gl_textured_shader {
 	GLuint lightPosID;
 	GLuint colorID;
 	GLuint texture_id; /* param to vertex shader */
-	GLuint texture_number; /* FIXME: this should not be in the shader, actually */
-	int texture_loaded;
 };
 
 /* only use on high performance graphics card */
@@ -490,8 +488,8 @@ void graph_dev_set_context(GdkDrawable *drawable, GdkGC *gc)
 	/* noop */
 }
 
-static void graph_dev_raster_laser(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
-	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos)
+static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
+	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos, GLuint texture_number)
 {
 	enable_3d_viewport();
 
@@ -513,7 +511,7 @@ static void graph_dev_raster_laser(const struct mat44 *mat_mvp, const struct mat
 	glUniformMatrix3fv(textured_shader.normalMatrixID, 1, GL_FALSE, &mat_normal->m[0][0]);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, textured_shader.texture_number);
+	glBindTexture(GL_TEXTURE_2D, texture_number);
 	glUniform1i(skybox_shader.texture_id, 0);
 	glUniform3f(textured_shader.colorID, triangle_color->red,
 		triangle_color->green, triangle_color->blue);
@@ -894,16 +892,18 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				graph_dev_raster_filled_wireframe_mesh(mat_mvp, e->m, &line_color, &triangle_color);
 			} else {
 				if (e->material_type == MATERIAL_LASER)
-					graph_dev_raster_laser(mat_mvp, mat_mv, mat_normal,
-						e->m, &triangle_color, eye_light_pos);
+					graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
+						e->m, &triangle_color, eye_light_pos,
+						*(GLuint *) e->material_ptr);
 				else
 					graph_dev_raster_solid_mesh(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos);
 			}
 		} else if (outline_triangle) {
 			if (e->material_type == MATERIAL_LASER)
-				graph_dev_raster_laser(mat_mvp, mat_mv, mat_normal,
-					e->m, &line_color, eye_light_pos);
+				graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
+					e->m, &line_color, eye_light_pos,
+					*(GLuint *) e->material_ptr);
 			else
 				graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
 					mat_normal, e->m, &line_color);
@@ -1293,15 +1293,19 @@ void graph_dev_load_skybox_texture(
 	glDisable(GL_TEXTURE_CUBE_MAP);
 }
 
-void graph_dev_load_laserbolt_texture(const char *filename)
+/* returning unsigned int instead of GLuint so as not to leak opengl types out
+ * Kind of ugly, but should not be dangerous.
+ */
+unsigned int graph_dev_load_texture(const char *filename)
 {
 	char whynotz[100];
 	int whynotlen = 100;
 	int tw, th, hasAlpha = 1;
+	GLuint texture_number;
 
 	glEnable(GL_TEXTURE_2D);
-	glGenTextures(1, &textured_shader.texture_number);
-	glBindTexture(GL_TEXTURE_2D, textured_shader.texture_number);
+	glGenTextures(1, &texture_number);
+	glBindTexture(GL_TEXTURE_2D, texture_number);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -1316,8 +1320,8 @@ void graph_dev_load_laserbolt_texture(const char *filename)
 	} else {
 		printf("Unable to load laserbolt texture '%s': %s\n", filename, whynotz);
 	}
-	textured_shader.texture_loaded = 1;
 	glDisable(GL_TEXTURE_2D);
+	return (unsigned int) texture_number;
 }
 
 void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp)
