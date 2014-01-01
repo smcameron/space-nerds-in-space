@@ -302,6 +302,7 @@ struct mesh **derelict_mesh;
 
 static unsigned int green_laser_texture;
 static unsigned int red_laser_texture;
+static unsigned int red_torpedo_texture;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -839,6 +840,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, torpedo_mesh, x, y, z, TORPEDO_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
+		update_entity_material(e, MATERIAL_BILLBOARD, &red_torpedo_texture);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
@@ -11567,6 +11569,7 @@ static void load_textures(void)
 	load_skybox_textures(skybox_texture_prefix);
 	green_laser_texture = load_texture("green-laser-texture.png");
 	red_laser_texture = load_texture("red-laser-texture.png");
+	red_torpedo_texture = load_texture("red-torpedo-texture.png");
 	textures_loaded = 1;
 }
 
@@ -11956,7 +11959,11 @@ static void init_meshes()
 
 	ship_mesh = snis_read_stl_file(d, "spaceship.stl");
 	ship_turret_mesh = snis_read_stl_file(d, "spaceship_turret.stl");
+#ifndef WITHOUTOPENGL
+	torpedo_mesh = mesh_fabricate_billboard(50.0f, 50.0f);
+#else
 	torpedo_mesh = snis_read_stl_file(d, "torpedo.stl");
+#endif
 	laser_mesh = snis_read_stl_file(d, "laser.stl");
 
 	for (i = 0; i < NASTEROID_MODELS; i++) {
