@@ -1401,6 +1401,7 @@ static int update_nebula(uint32_t id, double x, double z, double r)
 static void spark_move(struct snis_entity *o)
 {
 	union quat orientation;
+	float scale;
 
 	o->x += o->vx;
 	o->y += o->vy;
@@ -1410,6 +1411,8 @@ static void spark_move(struct snis_entity *o)
 	/* Apply incremental rotation */
 	quat_mul(&orientation, &o->tsd.spark.rotational_velocity, entity_get_orientation(o->entity));
 	update_entity_orientation(o->entity, &orientation);
+	scale = entity_get_scale(o->entity);
+	update_entity_scale(o->entity, scale * 0.95);
 
 	if (o->alive <= 0) {
 		remove_entity(ecx, o->entity);
@@ -12026,7 +12029,7 @@ static void init_meshes()
 	research_vessel_mesh = snis_read_stl_file(d, "research-vessel.stl");
 	battlestar_mesh = snis_read_stl_file(d, "battlestar.stl");
 #ifndef WITHOUTOPENGL
-	particle_mesh = mesh_fabricate_billboard(35.0f, 35.0f);
+	particle_mesh = mesh_fabricate_billboard(50.0f, 50.0f);
 #else
 	particle_mesh = snis_read_stl_file(d, "tetrahedron.stl");
 #endif
