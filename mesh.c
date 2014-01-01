@@ -453,3 +453,71 @@ bail:
 	return NULL;
 }
 
+struct mesh *mesh_fabricate_billboard(float width, float height)
+{
+	struct mesh *m;
+
+	m = malloc(sizeof(*m));
+	if (!m)
+		return m;
+	memset(m, 0, sizeof(*m));
+	m->nvertices = 4;
+	m->ntriangles = 2;
+
+	m->t = malloc(sizeof(*m->t) * m->ntriangles);
+	if (!m->t)
+		goto bail;
+	memset(m->t, 0, sizeof(*m->t) * m->ntriangles);
+	m->v = malloc(sizeof(*m->v) * m->nvertices);
+	if (!m->v)
+		goto bail;
+	memset(m->v, 0, sizeof(*m->v) * m->nvertices);
+	m->tex = malloc(sizeof(*m->tex) * m->ntriangles * 3);
+	if (!m->tex)
+		goto bail;
+	memset(m->tex, 0, sizeof(*m->tex) * m->ntriangles * 3);
+	m->l = NULL;
+
+	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+	m->v[0].x = 0;
+	m->v[0].y = height / 2.0f;
+	m->v[0].z = width / 2.0f;
+	m->v[1].x = 0;
+	m->v[1].y = height / 2.0f;
+	m->v[1].z = -width / 2.0f;
+	m->v[2].x = 0;
+	m->v[2].y = -height / 2.0f;
+	m->v[2].z = -width / 2.0f;
+	m->v[3].x = 0;
+	m->v[3].y = -height / 2.0f;
+	m->v[3].z = width / 2.0f;
+
+	m->t[0].v[0] = &m->v[0];
+	m->t[0].v[1] = &m->v[1];
+	m->t[0].v[2] = &m->v[2];
+	mesh_set_triangle_texture_coords(m, 0, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+
+	m->t[1].v[0] = &m->v[1];
+	m->t[1].v[1] = &m->v[3];
+	m->t[1].v[2] = &m->v[2];
+	mesh_set_triangle_texture_coords(m, 1, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
+
+	mesh_compute_radius(m);
+	mesh_set_flat_shading_vertex_normals(m);
+	mesh_graph_dev_init(m);
+
+	return m;
+
+bail:
+	if (m) {
+		if (m->t)
+			free(m->t);
+		if (m->v)
+			free(m->v);
+		if (m->tex)
+			free(m->tex);
+		free(m);
+	}
+	return NULL;
+}
+
