@@ -446,6 +446,8 @@ bail:
 			free(m->t);
 		if (m->v)
 			free(m->v);
+		if (m->tex)
+			free(m->tex);
 		free(m);
 	}
 	return NULL;
