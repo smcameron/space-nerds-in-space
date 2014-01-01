@@ -514,6 +514,7 @@ static int add_generic_object(uint32_t id, double x, double y, double z,
 	if (entity) {
 		entity_set_user_data(entity, &go[i]);
 		update_entity_orientation(entity, orientation);
+		update_entity_visibility(entity, type == OBJTYPE_LASERBEAM);
 	}
 	return i;
 }
@@ -1486,8 +1487,12 @@ static void move_generic_object(struct snis_entity *o)
 	if (o->nupdates <= 1) {
 		if (o->entity) {
 			if (time_now_double() - o->updatetime2 < MAX_UPDATETIME_START_PAUSE) {
-				/* hide this entity until we get another update or the start pause has elapsed */
-				update_entity_visibility(o->entity, 0);
+				/* hide this entity until we get another update or the start 
+				 * pause has elapsed, unless it's a laserbeam, which don't move */
+				if (o->type != OBJTYPE_LASERBEAM)
+					update_entity_visibility(o->entity, 0);
+				else
+					update_entity_visibility(o->entity, 1);
 			} else {
 				update_entity_visibility(o->entity, 1);
 				update_entity_pos(o->entity, o->x, o->y, o->z);
