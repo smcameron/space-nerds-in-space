@@ -36,7 +36,12 @@ struct material_color_by_w {
 	float far_w;
 };
 
-struct material_laser {
+#define MATERIAL_BILLBOARD_TYPE_SCREEN 0
+#define MATERIAL_BILLBOARD_TYPE_SPHERICAL 1
+#define MATERIAL_BILLBOARD_TYPE_AXIS 2
+
+struct material_billboard {
+	int billboard_type;
 	int texture_id;
 };
 
