@@ -302,8 +302,8 @@ struct mesh **derelict_mesh;
 
 static unsigned int green_laser_texture;
 static unsigned int red_laser_texture;
-static unsigned int red_torpedo_texture;
-static unsigned int spark_texture;
+static struct material_billboard red_torpedo_material;
+static struct material_billboard spark_material;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -841,7 +841,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, torpedo_mesh, x, y, z, TORPEDO_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
-		update_entity_material(e, MATERIAL_BILLBOARD, &red_torpedo_texture);
+		update_entity_material(e, MATERIAL_BILLBOARD, &red_torpedo_material);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
@@ -1622,9 +1622,9 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	r = snis_randn(100);
 	if (r < 50 || time < 10) {
 		e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
-		update_entity_material(e, MATERIAL_BILLBOARD, &spark_texture);
-		update_entity_scale(e, (float) snis_randn(100) / 25.0f);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
+		update_entity_material(e, MATERIAL_BILLBOARD, &spark_material);
+		update_entity_scale(e, (float) snis_randn(100) / 25.0f);
 	} else if (r < 75) {
 		e = add_entity(ecx, debris_mesh, x, y, z, color);
 	} else {
@@ -11573,10 +11573,16 @@ static void load_textures(void)
 	if (textures_loaded)
 		return;
 	load_skybox_textures(skybox_texture_prefix);
+
 	green_laser_texture = load_texture("green-laser-texture.png");
 	red_laser_texture = load_texture("red-laser-texture.png");
-	red_torpedo_texture = load_texture("red-torpedo-texture.png");
-	spark_texture = load_texture("spark-texture.png");
+
+	red_torpedo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	red_torpedo_material.texture_id = load_texture("red-torpedo-texture.png");
+
+	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	spark_material.texture_id = load_texture("spark-texture.png");
+
 	textures_loaded = 1;
 }
 

@@ -489,7 +489,8 @@ void graph_dev_set_context(GdkDrawable *drawable, GdkGC *gc)
 }
 
 static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
-	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos, GLuint texture_number)
+	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color,
+	union vec3 *eye_light_pos, GLuint texture_number)
 {
 	enable_3d_viewport();
 
@@ -880,6 +881,18 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		int outline_triangle = (c->renderer & WIREFRAME_RENDERER)
 					|| (e->render_style & RENDER_WIREFRAME);
 
+		int has_texture = 0;
+		GLuint texture_id = 0;
+		if (e->material_type == MATERIAL_LASER || e->material_type == MATERIAL_BILLBOARD) {
+			has_texture = 1;
+			if (e->material_type == MATERIAL_LASER)
+				texture_id = *(GLuint *) e->material_ptr;
+			else {
+				struct material_billboard *mt = e->material_ptr;
+				texture_id = mt->texture_id;
+			}
+		}
+
 		if (filled_triangle) {
 			struct sng_color triangle_color;
 			if (cx->camera.renderer & BLACK_TRIS)
@@ -891,21 +904,17 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 			if (outline_triangle) {
 				graph_dev_raster_filled_wireframe_mesh(mat_mvp, e->m, &line_color, &triangle_color);
 			} else {
-				if (e->material_type == MATERIAL_LASER ||
-					e->material_type == MATERIAL_BILLBOARD)
+				if (has_texture)
 					graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
-						e->m, &triangle_color, eye_light_pos,
-						*(GLuint *) e->material_ptr);
+						e->m, &triangle_color, eye_light_pos, texture_id);
 				else
 					graph_dev_raster_solid_mesh(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos);
 			}
 		} else if (outline_triangle) {
-			if (e->material_type == MATERIAL_LASER ||
-				e->material_type == MATERIAL_BILLBOARD)
+			if (has_texture)
 				graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
-					e->m, &line_color, eye_light_pos,
-					*(GLuint *) e->material_ptr);
+					e->m, &line_color, eye_light_pos, texture_id);
 			else
 				graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
 					mat_normal, e->m, &line_color);

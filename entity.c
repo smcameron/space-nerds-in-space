@@ -204,8 +204,8 @@ static void ilda_render_triangle(struct entity_context *cx,
 }
 #endif
 
-static void calculate_model_matrices(struct entity_context *cx, float x, float y, float z, union quat *orientation,
-	float scale, struct mat44 *mat_mvp, struct mat44 *mat_mv, struct mat33 *mat_normal)
+static void calculate_model_matrices(struct entity_context *cx, struct entity *e,
+	struct mat44 *mat_mvp, struct mat44 *mat_mv, struct mat33 *mat_normal)
 {
 	struct mat44d *mat_v = &cx->camera.camera_v_matrix;
 	struct mat44d *mat_vp = &cx->camera.camera_vp_matrix;
@@ -220,16 +220,126 @@ static void calculate_model_matrices(struct entity_context *cx, float x, float y
 		{ 1, 0, 0, 0 },
 		{ 0, 1, 0, 0 },
 		{ 0, 0, 1, 0 },
-		{ x, y, z, 1 }}};
-
-	struct mat44d mat_r;
-	quat_to_rh_rot_matrix_fd(orientation, &mat_r.m[0][0]);
+		{ e->x, e->y, e->z, 1 }}};
 
 	struct mat44d mat_s = {{
-		{ scale, 0, 0, 0 },
-		{ 0, scale, 0, 0 },
-		{ 0, 0, scale, 0 },
+		{ e->scale, 0, 0, 0 },
+		{ 0, e->scale, 0, 0 },
+		{ 0, 0, e->scale, 0 },
 		{ 0, 0, 0, 1 }}};
+
+	struct mat44d mat_r = {{
+		{ 1, 0, 0, 0 },
+		{ 0, 1, 0, 0 },
+		{ 0, 0, 1, 0 },
+		{ 0, 0, 0, 1 } } };
+
+	if (e->material_type == MATERIAL_BILLBOARD) {
+		struct material_billboard *m = e->material_ptr;
+
+		switch (m->billboard_type) {
+			/* aligned so that +y axis = camera up and normal parallel with camera look direction */
+			case MATERIAL_BILLBOARD_TYPE_SCREEN:
+			{
+				/* take the corner 3x3 from the view matrix, transpose, and pad back to 4x4 */
+				struct mat33d tm1, tm2;
+				mat44_to_mat33_dd(mat_v, &tm1);
+				mat33_transpose_dd(&tm1, &tm2);
+				mat33_to_mat44_dd(&tm2, &mat_r);
+			}
+			break;
+
+			/* aligned so that +y axis = camera up and normal is pointing to camera position */
+			case MATERIAL_BILLBOARD_TYPE_SPHERICAL:
+			{
+				union vec3 cam_up = { { cx->camera.ux, cx->camera.uy, cx->camera.uz } };
+				union vec3 look = { { cx->camera.x - e->x, cx->camera.y - e->y, cx->camera.z - e->z } };
+				vec3_normalize_self(&look);
+
+				union vec3 right;
+				vec3_cross(&right, &cam_up, &look);
+				vec3_normalize_self(&right);
+
+				union vec3 up;
+				vec3_cross(&up, &look, &right);
+				vec3_normalize_self(&up);
+
+				/* a rotation matrix to align with up, right, and look unit vectors
+				   r.x r.y r.z 0
+				   u.x u.y u.z 0
+				   l.x l.y l.z 0
+				   0   0   0   1 */
+				mat_r.m[0][0] = right.v.x;
+				mat_r.m[0][1] = right.v.y;
+				mat_r.m[0][2] = right.v.z;
+				mat_r.m[0][3] = 0;
+
+				mat_r.m[1][0] = up.v.x;
+				mat_r.m[1][1] = up.v.y;
+				mat_r.m[1][2] = up.v.z;
+				mat_r.m[1][3] = 0;
+
+				mat_r.m[2][0] = look.v.x;
+				mat_r.m[2][1] = look.v.y;
+				mat_r.m[2][2] = look.v.z;
+				mat_r.m[2][3] = 0;
+
+				mat_r.m[3][0] = 0;
+				mat_r.m[3][1] = 0;
+				mat_r.m[3][2] = 0;
+				mat_r.m[3][3] = 1;
+			}
+			break;
+
+			/* aligned so that +y axis = quaternion axis and normal is pointing in direction of camera position */
+			case MATERIAL_BILLBOARD_TYPE_AXIS:
+			{
+				union vec3 look_to_cam = { { cx->camera.x - e->x, cx->camera.y - e->y, cx->camera.z - e->z } };
+				vec3_normalize_self(&look_to_cam);
+
+				union vec3 up = { { 1, 0, 0 } };
+				quat_rot_vec_self(&up, &e->orientation);
+				vec3_normalize_self(&up);
+
+				union vec3 right;
+				vec3_cross(&right, &up, &look_to_cam);
+				vec3_normalize_self(&right);
+
+				union vec3 look;
+				vec3_cross(&look, &right, &up);
+				vec3_normalize_self(&look);
+
+				/* a rotation matrix to align with up, right, and look unit vectors
+				   r.x r.y r.z 0
+				   u.x u.y u.z 0
+				   l.x l.y l.z 0
+				   0   0   0   1 */
+				mat_r.m[0][0] = right.v.x;
+				mat_r.m[0][1] = right.v.y;
+				mat_r.m[0][2] = right.v.z;
+				mat_r.m[0][3] = 0;
+
+				mat_r.m[1][0] = up.v.x;
+				mat_r.m[1][1] = up.v.y;
+				mat_r.m[1][2] = up.v.z;
+				mat_r.m[1][3] = 0;
+
+				mat_r.m[2][0] = look.v.x;
+				mat_r.m[2][1] = look.v.y;
+				mat_r.m[2][2] = look.v.z;
+				mat_r.m[2][3] = 0;
+
+				mat_r.m[3][0] = 0;
+				mat_r.m[3][1] = 0;
+				mat_r.m[3][2] = 0;
+				mat_r.m[3][3] = 1;
+			}
+			break;
+		}
+	} else {
+		/* normal quaternion based rotation */
+		quat_to_rh_rot_matrix_fd(&e->orientation, &mat_r.m[0][0]);
+	}
 
 	struct mat44d mat_t_r;
 	mat44_product_ddd(&mat_t, &mat_r, &mat_t_r);
@@ -351,8 +461,7 @@ void render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct en
 
 	struct mat44 mat_mvp, mat_mv;
 	struct mat33 mat_normal;
-	calculate_model_matrices(cx, e->x, e->y, e->z, &e->orientation, e->scale,
-					&mat_mvp, &mat_mv, &mat_normal);
+	calculate_model_matrices(cx, e, &mat_mvp, &mat_mv, &mat_normal);
 
 	graph_dev_draw_entity(cx, e, camera_light_pos, &mat_mvp, &mat_mv, &mat_normal);
 }
@@ -631,16 +740,6 @@ void calculate_camera_transform(struct entity_context *cx)
 
 static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, float radius);
 
-static void billboard_face_camera(struct entity_context *cx, struct entity *e)
-{
-	const struct camera_info *c = &cx->camera;
-	const union vec3 right = { { 1.0f, 0.0f, 0.0f } };
-	const union vec3 up = { { 0.0f, 1.0f, 0.0f } };
-	const union vec3 to_camera = { { c->x - e->x, c->y - e->y, c->z - e->z} };
-
-	quat_from_u2v(&e->orientation, &right, &to_camera, &up);
-}
-
 void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 {
 	int i, j, n;
@@ -694,10 +793,6 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 
 		if (!sphere_in_frustum(c, e->x, e->y, e->z, e->m->radius * fabs(e->scale)))
 			continue;
-
-		/* Make billboards face the camera */
-		if (e->material_type == MATERIAL_BILLBOARD)
-			billboard_face_camera(cx, e);
 
 		e->dist3dsqrd = dist3dsqrd(c->x - e->x, c->y - e->y, c->z - e->z);
 		cx->entity_depth[cx->nentity_depth] = j;
