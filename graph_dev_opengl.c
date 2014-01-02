@@ -1313,7 +1313,7 @@ unsigned int graph_dev_load_texture(const char *filename)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-	char *image_data = sng_load_png_texture(filename, 0, 1, &tw, &th, &hasAlpha,
+	char *image_data = sng_load_png_texture(filename, 1, 0, &tw, &th, &hasAlpha,
 						whynotz, whynotlen);
 	if (image_data) {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tw, th, 0, (hasAlpha ? GL_RGBA : GL_RGB),
