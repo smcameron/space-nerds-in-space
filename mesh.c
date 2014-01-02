@@ -454,22 +454,21 @@ bail:
 }
 
 /* mesh_fabricate_billboard() makes a billboard:
- *          0         1
- *  +z <---- +-------+   -----> -z
- *           |\      |
- *           | \     |
+ *   quad is centered on 0,0 and texture coords are 0,0 in lower left per opengl convention
+ *               .-- x = 0
+ *    -x <--     V     ---> +x
+ * +y       0         1
+ * ^   (0,1) +-------+ (1,1)
+ * |         |\      |
+ * |         | \     |
  *           |  \    |
- *           |   \   |
+ * y = 0 --> |   \   |
  *           |    \  |
- *           |     \ |
- *           |      \|
- *        3  +-------+ 2
- *                   |
- *                   |
- *                   v
- *
- *                  -y
- *
+ * |         |     \ |
+ * |   (0,0) |      \| (1,0)
+ * v       3 +-------+ 2
+ * -y
+ *          normal = +z
  */
 
 struct mesh *mesh_fabricate_billboard(float width, float height)
@@ -498,30 +497,30 @@ struct mesh *mesh_fabricate_billboard(float width, float height)
 	m->l = NULL;
 
 	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
-	m->v[0].x = 0;
+	m->v[0].x = -width / 2.0f;
 	m->v[0].y = height / 2.0f;
-	m->v[0].z = width / 2.0f;
-	m->v[1].x = 0;
+	m->v[0].z = 0;
+	m->v[1].x = width / 2.0f;
 	m->v[1].y = height / 2.0f;
-	m->v[1].z = -width / 2.0f;
-	m->v[2].x = 0;
+	m->v[1].z = 0;
+	m->v[2].x = width / 2.0f;
 	m->v[2].y = -height / 2.0f;
-	m->v[2].z = -width / 2.0f;
-	m->v[3].x = 0;
+	m->v[2].z = 0;
+	m->v[3].x = -width / 2.0f;
 	m->v[3].y = -height / 2.0f;
-	m->v[3].z = width / 2.0f;
+	m->v[3].z = 0;
 
-	m->t[0].v[0] = &m->v[2];
-	m->t[0].v[1] = &m->v[1];
-	m->t[0].v[2] = &m->v[0];
-	mesh_set_triangle_texture_coords(m, 0, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+	m->t[0].v[0] = &m->v[0];
+	m->t[0].v[1] = &m->v[2];
+	m->t[0].v[2] = &m->v[1];
+	mesh_set_triangle_texture_coords(m, 0, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f);
 
-	m->t[1].v[0] = &m->v[2];
-	m->t[1].v[1] = &m->v[0];
-	m->t[1].v[2] = &m->v[3];
-	mesh_set_triangle_texture_coords(m, 1, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+	m->t[1].v[0] = &m->v[0];
+	m->t[1].v[1] = &m->v[3];
+	m->t[1].v[2] = &m->v[2];
+	mesh_set_triangle_texture_coords(m, 1, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
 
-	mesh_compute_radius(m);
+	m->radius = mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);
 	mesh_graph_dev_init(m);
 
