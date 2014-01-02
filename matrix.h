@@ -58,7 +58,13 @@ struct mat31 {
 
 GLOBAL struct mat33 *mat44_to_mat33_ff(const struct mat44 *src, struct mat33 *output);
 
+GLOBAL struct mat33d *mat44_to_mat33_dd(const struct mat44d *src, struct mat33d *output);
+
+GLOBAL struct mat44d *mat33_to_mat44_dd(const struct mat33d *src, struct mat44d *output);
+
 GLOBAL struct mat33 *mat33_inverse_transpose_ff(const struct mat33 *src, struct mat33 *output);
+
+GLOBAL struct mat33d *mat33_transpose_dd(const struct mat33d *src, struct mat33d *output);
 
 GLOBAL void mat33_x_mat31(const struct mat33 *lhs, const struct mat31 *rhs,
 				struct mat31 *output);

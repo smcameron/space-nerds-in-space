@@ -35,6 +35,46 @@ struct mat33 *mat44_to_mat33_ff(const struct mat44 *src, struct mat33 *output)
 	return output;
 }
 
+struct mat33d *mat44_to_mat33_dd(const struct mat44d *src, struct mat33d *output)
+{
+	int i, j;
+
+	for (i = 0; i < 3; i++)
+		for (j = 0; j < 3; j++)
+			output->m[i][j] = src->m[i][j];
+	return output;
+}
+
+struct mat44d *mat33_to_mat44_dd(const struct mat33d *src, struct mat44d *output)
+{
+	int i, j;
+
+	for (i = 0; i < 3; i++)
+		for (j = 0; j < 3; j++)
+			output->m[i][j] = src->m[i][j];
+
+	output->m[0][3] = 0;
+	output->m[1][3] = 0;
+	output->m[2][3] = 0;
+
+	output->m[3][0] = 0;
+	output->m[3][1] = 0;
+	output->m[3][2] = 0;
+	output->m[3][3] = 1;
+
+	return output;
+}
+
+struct mat33d *mat33_transpose_dd(const struct mat33d *src, struct mat33d *output)
+{
+	int i, j;
+
+	for (i = 0; i < 3; i++)
+		for (j = 0; j < 3; j++)
+			output->m[i][j] = src->m[j][i];
+	return output;
+}
+
 struct mat33 *mat33_inverse_transpose_ff(const struct mat33 *src, struct mat33 *output)
 {
 	float determinant =
