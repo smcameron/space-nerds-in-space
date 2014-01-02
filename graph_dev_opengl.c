@@ -504,6 +504,7 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glUseProgram(textured_shader.programID);
 
