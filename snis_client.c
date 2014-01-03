@@ -300,9 +300,9 @@ struct mesh *cargo_container_mesh;
 struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
 
-static unsigned int green_laser_texture;
-static unsigned int red_laser_texture;
 static struct material_billboard red_torpedo_material;
+static struct material_billboard red_laser_material;
+static struct material_billboard green_laser_material;
 static struct material_billboard spark_material;
 
 struct my_point_t snis_logo_points[] = {
@@ -907,7 +907,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, laserbeam_mesh, x, y, z, LASER_COLOR);
 		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
-		update_entity_material(e, MATERIAL_LASER, &green_laser_texture);
+		update_entity_material(e, MATERIAL_BILLBOARD, &green_laser_material);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
@@ -1078,7 +1078,7 @@ static void update_laserbeam_segments(struct snis_entity *o)
 		ld->z[i] = z1 + (i + lastd) * dz; 
 		update_entity_pos(ld->entity[i], ld->x[i], ld->y[i], ld->z[i]);
 		update_entity_orientation(ld->entity[i], &orientation);
-		update_entity_material(ld->entity[i], MATERIAL_LASER, &red_laser_texture);
+		update_entity_material(ld->entity[i], MATERIAL_BILLBOARD, &red_laser_material);
 	}
 }
 
@@ -11574,8 +11574,10 @@ static void load_textures(void)
 		return;
 	load_skybox_textures(skybox_texture_prefix);
 
-	green_laser_texture = load_texture("green-laser-texture.png");
-	red_laser_texture = load_texture("red-laser-texture.png");
+	green_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
+	green_laser_material.texture_id = load_texture("green-laser-texture.png");
+	red_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
+	red_laser_material.texture_id = load_texture("red-laser-texture.png");
 
 	red_torpedo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	red_torpedo_material.texture_id = load_texture("red-torpedo-texture.png");
@@ -11973,7 +11975,7 @@ static void init_meshes()
 	ship_mesh = snis_read_stl_file(d, "spaceship.stl");
 	ship_turret_mesh = snis_read_stl_file(d, "spaceship_turret.stl");
 #ifndef WITHOUTOPENGL
-	torpedo_mesh = mesh_fabricate_billboard(50.0f, 50.0f);
+	torpedo_mesh = mesh_fabricate_billboard(0, 0, 50.0f, 50.0f);
 #else
 	torpedo_mesh = snis_read_stl_file(d, "torpedo.stl");
 #endif
@@ -12036,7 +12038,7 @@ static void init_meshes()
 	research_vessel_mesh = snis_read_stl_file(d, "research-vessel.stl");
 	battlestar_mesh = snis_read_stl_file(d, "battlestar.stl");
 #ifndef WITHOUTOPENGL
-	particle_mesh = mesh_fabricate_billboard(50.0f, 50.0f);
+	particle_mesh = mesh_fabricate_billboard(0, 0, 50.0f, 50.0f);
 #else
 	particle_mesh = snis_read_stl_file(d, "tetrahedron.stl");
 #endif
@@ -12051,7 +12053,7 @@ static void init_meshes()
 	spaceship2_mesh = snis_read_stl_file(d, "spaceship2.stl");
 	scout_mesh = snis_read_stl_file(d, "spaceship3.stl");
 #ifndef WITHOUTOPENGL
-	laserbeam_mesh = mesh_fabricate_crossbeam(60.0f, 2.0f);
+	laserbeam_mesh = mesh_fabricate_billboard(0, 85, 5, 200);
 #else
 	laserbeam_mesh = snis_read_stl_file(d, "long-triangular-prism.stl");
 #endif

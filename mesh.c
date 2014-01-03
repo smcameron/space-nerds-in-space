@@ -455,14 +455,14 @@ bail:
 
 /* mesh_fabricate_billboard() makes a billboard:
  *   quad is centered on 0,0 and texture coords are 0,0 in lower left per opengl convention
- *               .-- x = 0
+ *               .-- x = cx
  *    -x <--     V     ---> +x
  * +y       0         1
  * ^   (0,1) +-------+ (1,1)
  * |         |\      |
  * |         | \     |
  *           |  \    |
- * y = 0 --> |   \   |
+ * y = cy -> |   \   |
  *           |    \  |
  * |         |     \ |
  * |   (0,0) |      \| (1,0)
@@ -471,7 +471,7 @@ bail:
  *          normal = +z
  */
 
-struct mesh *mesh_fabricate_billboard(float width, float height)
+struct mesh *mesh_fabricate_billboard(float cx, float cy, float width, float height)
 {
 	struct mesh *m;
 
@@ -497,17 +497,17 @@ struct mesh *mesh_fabricate_billboard(float width, float height)
 	m->l = NULL;
 
 	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
-	m->v[0].x = -width / 2.0f;
-	m->v[0].y = height / 2.0f;
+	m->v[0].x = -width / 2.0f + cx;
+	m->v[0].y = height / 2.0f + cy;
 	m->v[0].z = 0;
-	m->v[1].x = width / 2.0f;
-	m->v[1].y = height / 2.0f;
+	m->v[1].x = width / 2.0f + cx;
+	m->v[1].y = height / 2.0f + cy;
 	m->v[1].z = 0;
-	m->v[2].x = width / 2.0f;
-	m->v[2].y = -height / 2.0f;
+	m->v[2].x = width / 2.0f + cx;
+	m->v[2].y = -height / 2.0f + cy;
 	m->v[2].z = 0;
-	m->v[3].x = -width / 2.0f;
-	m->v[3].y = -height / 2.0f;
+	m->v[3].x = -width / 2.0f + cx;
+	m->v[3].y = -height / 2.0f + cy;
 	m->v[3].z = 0;
 
 	m->t[0].v[0] = &m->v[0];
