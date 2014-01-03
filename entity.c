@@ -314,25 +314,36 @@ static void calculate_model_matrices(struct entity_context *cx, struct entity *e
 				   u.x u.y u.z 0
 				   l.x l.y l.z 0
 				   0   0   0   1 */
-				mat_r.m[0][0] = right.v.x;
-				mat_r.m[0][1] = right.v.y;
-				mat_r.m[0][2] = right.v.z;
-				mat_r.m[0][3] = 0;
+				struct mat44d mat_r_y;
+				mat_r_y.m[0][0] = right.v.x;
+				mat_r_y.m[0][1] = right.v.y;
+				mat_r_y.m[0][2] = right.v.z;
+				mat_r_y.m[0][3] = 0;
 
-				mat_r.m[1][0] = up.v.x;
-				mat_r.m[1][1] = up.v.y;
-				mat_r.m[1][2] = up.v.z;
-				mat_r.m[1][3] = 0;
+				mat_r_y.m[1][0] = up.v.x;
+				mat_r_y.m[1][1] = up.v.y;
+				mat_r_y.m[1][2] = up.v.z;
+				mat_r_y.m[1][3] = 0;
 
-				mat_r.m[2][0] = look.v.x;
-				mat_r.m[2][1] = look.v.y;
-				mat_r.m[2][2] = look.v.z;
-				mat_r.m[2][3] = 0;
+				mat_r_y.m[2][0] = look.v.x;
+				mat_r_y.m[2][1] = look.v.y;
+				mat_r_y.m[2][2] = look.v.z;
+				mat_r_y.m[2][3] = 0;
 
-				mat_r.m[3][0] = 0;
-				mat_r.m[3][1] = 0;
-				mat_r.m[3][2] = 0;
-				mat_r.m[3][3] = 1;
+				mat_r_y.m[3][0] = 0;
+				mat_r_y.m[3][1] = 0;
+				mat_r_y.m[3][2] = 0;
+				mat_r_y.m[3][3] = 1;
+
+				/* rotate the model by 90 degrees so +x is up before applying
+				   the billboarding matrix */
+				struct mat44d mat_y_to_x = { {
+					{ 0, 1, 0, 0 },
+					{ -1, 0, 0, 0 },
+					{ 0, 0, 1, 0 },
+					{ 0, 0, 0, 1 } } };
+
+				mat44_product_ddd(&mat_r_y, &mat_y_to_x, &mat_r);
 			}
 			break;
 		}

@@ -12053,7 +12053,7 @@ static void init_meshes()
 	spaceship2_mesh = snis_read_stl_file(d, "spaceship2.stl");
 	scout_mesh = snis_read_stl_file(d, "spaceship3.stl");
 #ifndef WITHOUTOPENGL
-	laserbeam_mesh = mesh_fabricate_billboard(0, 85, 5, 200);
+	laserbeam_mesh = mesh_fabricate_billboard(85, 0, 200, 5);
 #else
 	laserbeam_mesh = snis_read_stl_file(d, "long-triangular-prism.stl");
 #endif
