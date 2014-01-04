@@ -398,11 +398,11 @@ static void check_triangle_vertices(struct mesh *m)
 		struct vertex *v2 = m->t[i].v[2];
 
 		if (v0 == v1)
-			printf("triangle %d, vertices 0 and 1 are welded together %p.\n", i, v0);
+			printf("triangle %d, vertices 0 and 1 are welded together %p.\n", i, (void *)v0);
 		if (v1 == v2)
-			printf("triangle %d, vertices 1 and 2 are welded together %p.\n", i, v1);
+			printf("triangle %d, vertices 1 and 2 are welded together %p.\n", i, (void *)v1);
 		if (v0 == v2)
-			printf("triangle %d, vertices 0 and 2 are welded together %p.\n", i, v0);
+			printf("triangle %d, vertices 0 and 2 are welded together %p.\n", i, (void *)v0);
 	}
 }
 
