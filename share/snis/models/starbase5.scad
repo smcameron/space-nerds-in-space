@@ -3,23 +3,31 @@ $fn=12;
 module spoke(angle)
 {
 	rotate(a = angle, v = [0, 0, 1]) {
-	translate(v = [17, 0, 0])
-	rotate(a = 90, v = [0, 1, 0])
-		rotate(a = 90, v = [0, 0, 1])
-		scale(v = [1, 0.5, 1])
-			cylinder(h = 57, r1 = 3, r2 = 1, center = true);
-	translate(v = [45, 0, 0]) {
+		translate(v = [17, 0, 0])
+			rotate(a = 90, v = [0, 1, 0])
+				rotate(a = 90, v = [0, 0, 1])
+					scale(v = [1, 0.5, 1])
+						cylinder(h = 57, r1 = 3, r2 = 1, center = true);
+		translate(v = [45, 0, 0]) {
 			rotate(a = 90, v = [1, 0, 0]) {
-				cylinder(h = 28, r1 = 4, r2 = 4, center = true);
+				cylinder(h = 28, r1 = 4, r2 = 4, $fn=20, center = true);
 			}
-			translate(v = [0, -14, 0])
+			translate(v = [0, -14, 0]) {
+				rotate(a = 90, v = [1,0,0])
+					translate(v = [0,0,-1])
+						cylinder(h = 2, r1 = 4.5, r2 = 4.5, $fn=20, center = true);
 				sphere(r = 4);
-			translate(v = [0, 14, 0])
-				sphere(r = 4);
-	}
-	translate(v = [-15, 0, 0])
-		scale(v = [1, 1, 1])
-			sphere(r = 5);
+			}
+			translate(v = [0, 14, 0]) {
+				rotate(a = 90, v = [1,0,0])
+					translate(v = [0,0,1])
+						cylinder(h = 2, r1 = 4.5, r2 = 4.5, $fn=20, center = true);
+				sphere(r = 4, $fn=20);
+			}
+		}
+		translate(v = [-15, 0, 0])
+			scale(v = [1, 1, 1])
+				sphere(r = 5);
 	}
 }
 
