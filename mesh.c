@@ -349,6 +349,26 @@ void mesh_set_flat_shading_vertex_normals(struct mesh *m)
 	}
 }
 
+void mesh_set_spherical_vertex_normals(struct mesh *m)
+{
+	int i, j;
+
+	for (i = 0; i < m->ntriangles; i++) {
+		union vec3 normal;
+		normal = compute_triangle_normal(&m->t[i]);
+		m->t[i].n.x = normal.v.x;
+		m->t[i].n.y = normal.v.y;
+		m->t[i].n.z = normal.v.z;
+		for (j = 0; j < 3; j++) {
+			union vec3 normal = { { m->t[i].v[j]->x, m->t[i].v[j]->y, m->t[i].v[j]->z } };
+			vec3_normalize_self(&normal);
+			m->t[i].vnormal[j].x = normal.v.x;
+			m->t[i].vnormal[j].y = normal.v.y;
+			m->t[i].vnormal[j].z = normal.v.z;
+		}
+	}
+}
+
 void mesh_set_triangle_texture_coords(struct mesh *m, int triangle,
 	float u1, float v1, float u2, float v2, float u3, float v3)
 {
@@ -896,7 +916,7 @@ struct mesh *mesh_unit_icosphere(int subdivisions)
 	/* m2 will be over-allocated, duplicating will clean up the overallocation */
 	m3 = mesh_duplicate(m2);
 	mesh_free(m2);
-	mesh_set_flat_shading_vertex_normals(m3);
+	mesh_set_spherical_vertex_normals(m3);
 	return m3;
 }
 
