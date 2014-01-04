@@ -1336,8 +1336,9 @@ static void torpedo_collision_detection(void *context, void *entity)
 
 static void torpedo_move(struct snis_entity *o)
 {
-	o->alive--;
-	if (o->alive <= 0) {
+	if (o->alive)
+		o->alive--;
+	if (o->alive == 0) {
 		delete_from_clients_and_server(o);
 		return;
 	}
@@ -1479,8 +1480,9 @@ static void laser_collision_detection(void *context, void *entity)
 
 static void laser_move(struct snis_entity *o)
 {
-	o->alive--;
-	if (o->alive <= 0) {
+	if (o->alive)
+		o->alive--;
+	if (o->alive == 0) {
 		delete_from_clients_and_server(o);
 		return;
 	}
@@ -3814,8 +3816,9 @@ static void laserbeam_move(struct snis_entity *o)
 	int tid, oid, ttype;
 	struct snis_entity *target, *origin;
 
-	o->alive--;
-	if (o->alive <= 0) {
+	if (o->alive)
+		o->alive--;
+	if (o->alive == 0) {
 		delete_from_clients_and_server(o);
 		return;
 	}
