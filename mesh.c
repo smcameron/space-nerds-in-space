@@ -553,6 +553,26 @@ static void normalize_sphere(struct mesh *m)
 	m->radius = 1.0;
 }
 
+/* TODO: make stl parser use this code. */
+#define VERTEX_MERGING_THRESHOLD (1e-18)
+static struct vertex *lookup_maybe_add_vertex(struct mesh *m, struct vertex *v, int *is_shared)
+{
+	/* Search vertices to see if we already have this one. */
+	int i;
+
+	for (i = 0; i < m->nvertices; i++) {
+		double d = hypot3d(v->x - m->v[i].x, v->y - m->v[i].y, v->z - m->v[i].z);
+		if (d < VERTEX_MERGING_THRESHOLD) {
+			*is_shared = 1;
+			return &m->v[i];
+		}
+	}
+	m->v[m->nvertices] = *v;
+	m->nvertices++;
+	*is_shared = 0;
+	return &m->v[m->nvertices - 1];
+}
+
 /* See: http://blog.andreaskahler.com/2009/06/creating-icosphere-mesh-in-code.html */
 struct mesh *mesh_unit_icosohedron(void)
 {
