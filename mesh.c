@@ -93,28 +93,57 @@ static int lookup_vertex(struct mesh *m, struct vertex *v)
 	return -1;
 }
 
-struct mesh *mesh_duplicate(struct mesh *original)
+static struct mesh *allocate_mesh_for_copy(int ntriangles, int nvertices, int nlines,
+						int with_texture)
 {
 	struct mesh *copy;
-	int i;
 
 	copy = malloc(sizeof(*copy));
+	copy->t = NULL;
+	copy->v = NULL;
+	copy->l = NULL;
+	copy->tex = NULL;
+	if (!copy)
+		goto bail;
+	if (ntriangles) {
+		copy->t = malloc(sizeof(*copy->t) * ntriangles);
+		if (!copy->t)
+			goto bail;
+		memset(copy->t, 0, sizeof(*copy->t) * ntriangles);
+	}
+	if (nvertices) {
+		copy->v = malloc(sizeof(*copy->v) * nvertices);
+		if (!copy->v)
+			goto bail;
+		memset(copy->v, 0, sizeof(*copy->v) * nvertices);
+	}
+	if (nlines) {
+		copy->l = malloc(sizeof(*copy->l) * nlines);
+		if (!copy->l)
+			goto bail;
+		memset(copy->l, 0, sizeof(*copy->l) * copy->nlines);
+	}
+	if (with_texture) {
+		copy->tex = malloc(sizeof(*copy->tex) * ntriangles * 3);
+		if (!copy->tex)
+			goto bail;
+		memset(copy->tex, 0, sizeof(*copy->tex) * ntriangles * 3);
+	}
+	copy->graph_ptr = 0;
+	return copy;
+bail:
+	mesh_free(copy);
+	return NULL;
+}
+
+static void copy_mesh_contents(struct mesh *copy, struct mesh *original)
+{
+	int i;
+
 	copy->geometry_mode = original->geometry_mode;
 	copy->ntriangles = original->ntriangles;
 	copy->nvertices = original->nvertices;
 	copy->nlines = original->nlines;
-	copy->t = malloc(sizeof(*copy->t) * copy->ntriangles);
-	memset(copy->t, 0, sizeof(*copy->t) * copy->ntriangles); 
-	copy->v = malloc(sizeof(*copy->v) * copy->nvertices);
-	memset(copy->v, 0, sizeof(*copy->v) * copy->nvertices);
-	copy->l = malloc(sizeof(*copy->l) * copy->nlines);
-	memset(copy->l, 0, sizeof(*copy->l) * copy->nlines);
-	if (original->tex) {
-		copy->tex = malloc(sizeof(*copy->tex) * original->ntriangles * 3);
-		memcpy(copy->tex, original->tex, sizeof(*copy->tex) * original->ntriangles * 3);
-	} else {
-		copy->tex = 0;
-	}
 	copy->graph_ptr = 0;
 
 	for (i = 0; i < original->nvertices; i++)
@@ -145,9 +174,22 @@ struct mesh *mesh_duplicate(struct mesh *original)
 		copy->l[i].start = &copy->v[v0];
 		copy->l[i].end = &copy->v[v1];
 	}
+	if (original->tex)
+		memcpy(copy->tex, original->tex, sizeof(*copy->tex) * original->ntriangles * 3);
 	copy->radius = original->radius;
 
 	mesh_graph_dev_init(copy);
+}
+
+struct mesh *mesh_duplicate(struct mesh *original)
+{
+	struct mesh *copy;
+
+	copy = allocate_mesh_for_copy(original->ntriangles, original->nvertices,
+					original->nlines, original->tex != NULL);
+	if (!copy)
+		return copy;
+	copy_mesh_contents(copy, original);
 	return copy;
 }
 
