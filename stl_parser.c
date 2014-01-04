@@ -145,7 +145,7 @@ static float dist3d_v(struct vertex *v1, struct vertex *v2)
 
 static int vertex_merge_count;
 
-#define VERTEX_MERGING_THRESHOLD (0.00001)
+#define VERTEX_MERGING_THRESHOLD (1e-18)
 static struct vertex *add_vertex(struct mesh *m, struct vertex *v, int* is_shared)
 {
 	/* Search vertices to see if we already have this one. */
