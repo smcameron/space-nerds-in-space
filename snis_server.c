@@ -1276,7 +1276,8 @@ static void torpedo_collision_detection(void *context, void *entity)
 		return;
 	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
 			t->type != OBJTYPE_STARBASE &&
-			t->type != OBJTYPE_ASTEROID)
+			t->type != OBJTYPE_ASTEROID &&
+			t->type != OBJTYPE_CARGO_CONTAINER)
 		return;
 	if (t->id == o->tsd.torpedo.ship_id)
 		return; /* can't torpedo yourself. */
@@ -1298,8 +1299,9 @@ static void torpedo_collision_detection(void *context, void *entity)
 		calculate_torpedo_damage(t);
 		send_ship_damage_packet(t);
 		attack_your_attacker(t, lookup_entity_by_id(o->tsd.torpedo.ship_id));
-	} else if (t->type == OBJTYPE_ASTEROID) {
-		t->alive = 0;
+	} else if (t->type == OBJTYPE_ASTEROID || t->type == OBJTYPE_CARGO_CONTAINER) {
+		if (t->alive)
+			t->alive--;
 	}
 
 	if (!t->alive) {
@@ -1416,7 +1418,7 @@ static void laser_collision_detection(void *context, void *entity)
 		return;
 	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
 		t->type != OBJTYPE_STARBASE && t->type != OBJTYPE_ASTEROID &&
-		t->type != OBJTYPE_TORPEDO)
+		t->type != OBJTYPE_TORPEDO && t->type != OBJTYPE_CARGO_CONTAINER)
 		return;
 	if (t->id == o->tsd.laser.ship_id)
 		return; /* can't laser yourself. */
@@ -1445,8 +1447,10 @@ static void laser_collision_detection(void *context, void *entity)
 		attack_your_attacker(t, lookup_entity_by_id(o->tsd.laser.ship_id));
 	}
 
-	if (t->type == OBJTYPE_ASTEROID || t->type == OBJTYPE_TORPEDO)
-		t->alive = 0;
+	if (t->type == OBJTYPE_ASTEROID || t->type == OBJTYPE_TORPEDO ||
+		t->type == OBJTYPE_CARGO_CONTAINER)
+		if (t->alive)
+			t->alive--;
 
 	if (!t->alive) {
 		(void) add_explosion(t->x, t->y, t->z, 50, 150, 50, t->type);
@@ -3661,6 +3665,7 @@ static int add_cargo_container(double x, double y, double z, double vx, double v
 	go[i].sdata.shield_width = 0;
 	go[i].sdata.shield_depth = 0;
 	go[i].move = cargo_container_move;
+	go[i].alive = snis_randn(5) + 3;
 	return i;
 }
 
@@ -3678,6 +3683,7 @@ static int add_asteroid(double x, double y, double z, double vx, double vz, doub
 	go[i].move = asteroid_move;
 	go[i].vx = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
 	go[i].vz = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
+	go[i].alive = snis_randn(10) + 5;
 	return i;
 }
 

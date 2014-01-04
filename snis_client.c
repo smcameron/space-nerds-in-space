@@ -2278,7 +2278,8 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 			go[i].type != OBJTYPE_SHIP2 &&
 			go[i].type != OBJTYPE_STARBASE &&
 			go[i].type != OBJTYPE_ASTEROID &&
-			go[i].type != OBJTYPE_SPACEMONSTER)
+			go[i].type != OBJTYPE_SPACEMONSTER &&
+			go[i].type != OBJTYPE_CARGO_CONTAINER)
 		{
 			continue;
 		}
