@@ -267,6 +267,7 @@ struct mesh *torpedo_mesh;
 struct mesh *laser_mesh;
 struct mesh *asteroid_mesh[NASTEROID_MODELS * NASTEROID_SCALES];
 struct mesh *planet_mesh[NPLANET_MODELS];
+struct mesh *icosphere_mesh;
 struct mesh *starbase_mesh[NSTARBASE_MODELS];
 struct mesh *ship_mesh;
 struct mesh *ship_turret_mesh;
@@ -1273,7 +1274,8 @@ static int update_planet(uint32_t id, double x, double y, double z)
 	if (i < 0) {
 		random_quat(&orientation); /* FIXME: make this come out the same on all clients */
 		m = id % NPLANET_MODELS;
-		e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR);
+		/* e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR); */
+		e = add_entity(ecx, icosphere_mesh, x, y, z, PLANET_COLOR);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
@@ -12012,6 +12014,9 @@ static void init_meshes()
 		printf("reading '%s'\n", filename);
 		planet_mesh[i] = snis_read_stl_file(d, filename);
 	}
+
+	icosphere_mesh = mesh_unit_icosphere(4);
+	mesh_scale(icosphere_mesh, 500.0);
 
 	for (i = 0; i < NSTARBASE_MODELS; i++) {
 		char filename[100];
