@@ -25,6 +25,7 @@
 #define MATERIAL_COLOR_BY_W 1
 #define MATERIAL_LASER 2
 #define MATERIAL_BILLBOARD 3
+#define MATERIAL_TEXTURE_MAPPED 4
 
 struct material_color_by_w {
 	int near_color;
@@ -42,6 +43,10 @@ struct material_color_by_w {
 
 struct material_billboard {
 	int billboard_type;
+	int texture_id;
+};
+
+struct material_texture_mapped {
 	int texture_id;
 };
 

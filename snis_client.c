@@ -305,6 +305,7 @@ static struct material_billboard red_torpedo_material;
 static struct material_billboard red_laser_material;
 static struct material_billboard green_laser_material;
 static struct material_billboard spark_material;
+static struct material_texture_mapped planet_material;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -1276,6 +1277,7 @@ static int update_planet(uint32_t id, double x, double y, double z)
 		m = id % NPLANET_MODELS;
 		/* e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR); */
 		e = add_entity(ecx, icosphere_mesh, x, y, z, PLANET_COLOR);
+		update_entity_material(e, MATERIAL_TEXTURE_MAPPED, &planet_material);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
@@ -11588,6 +11590,8 @@ static void load_textures(void)
 	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	spark_material.texture_id = load_texture("spark-texture.png");
 
+	planet_material.texture_id = load_texture("planet-texture.png");
+
 	textures_loaded = 1;
 }
 
@@ -12016,6 +12020,7 @@ static void init_meshes()
 	}
 
 	icosphere_mesh = mesh_unit_icosphere(4);
+	mesh_sphere_uv_map(icosphere_mesh);
 	mesh_scale(icosphere_mesh, 500.0);
 
 	for (i = 0; i < NSTARBASE_MODELS; i++) {

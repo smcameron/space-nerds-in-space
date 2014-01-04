@@ -884,11 +884,13 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 		int has_texture = 0;
 		GLuint texture_id = 0;
-		if (e->material_type == MATERIAL_LASER || e->material_type == MATERIAL_BILLBOARD) {
+		if (e->material_type == MATERIAL_TEXTURE_MAPPED ||
+				e->material_type == MATERIAL_BILLBOARD) {
 			has_texture = 1;
-			if (e->material_type == MATERIAL_LASER)
-				texture_id = *(GLuint *) e->material_ptr;
-			else {
+			if (e->material_type == MATERIAL_TEXTURE_MAPPED) {
+				struct material_texture_mapped *mt = e->material_ptr;
+				texture_id = mt->texture_id;
+			} else {
 				struct material_billboard *mt = e->material_ptr;
 				texture_id = mt->texture_id;
 			}
