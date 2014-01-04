@@ -539,3 +539,181 @@ bail:
 	return NULL;
 }
 
+/* See: http://blog.andreaskahler.com/2009/06/creating-icosphere-mesh-in-code.html */
+struct mesh *mesh_unit_icosohedron(void)
+{
+	const double tau = (1.0 + sqrt(5.0)) / 2.0;
+	const double scale = 1.0 / sqrt(1.0 + tau * tau);
+	struct mesh *m;
+
+	m = malloc(sizeof(*m));
+	if (!m)
+		return m;
+	memset(m, 0, sizeof(*m));
+	m->nvertices = 12;
+	m->ntriangles = 20;
+
+	m->t = malloc(sizeof(*m->t) * m->ntriangles);
+	if (!m->t)
+		goto bail;
+	memset(m->t, 0, sizeof(*m->t) * m->ntriangles);
+	m->v = malloc(sizeof(*m->v) * m->nvertices);
+	if (!m->v)
+		goto bail;
+	memset(m->v, 0, sizeof(*m->v) * m->nvertices);
+	m->tex = 0;
+	/* m->tex = malloc(sizeof(*m->tex) * m->ntriangles * 3);
+	if (!m->tex)
+		goto bail;
+	memset(m->tex, 0, sizeof(*m->tex) * m->ntriangles * 3); */
+	m->l = NULL;
+
+	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+
+	m->v[0].x = scale * -1.0;
+	m->v[0].y = scale * tau;
+	m->v[0].z = scale * 0.0;
+
+	m->v[1].x = scale * 1.0;
+	m->v[1].y = scale * tau;
+	m->v[1].z = scale * 0.0;
+
+	m->v[2].x = scale * -1.0;
+	m->v[2].y = scale * -tau;
+	m->v[2].z = scale * 0.0;
+
+	m->v[3].x = scale * 1.0;
+	m->v[3].y = scale * -tau;
+	m->v[3].z = scale * 0.0;
+
+	m->v[4].x = scale * 0.0;
+	m->v[4].y = scale * -1.0;
+	m->v[4].z = scale * tau;
+
+	m->v[5].x = scale * 0.0;
+	m->v[5].y = scale * 1.0;
+	m->v[5].z = scale * tau;
+
+	m->v[6].x = scale * 0.0;
+	m->v[6].y = scale * -1.0;
+	m->v[6].z = scale * -tau;
+
+	m->v[7].x = scale * 0.0;
+	m->v[7].y = scale * 1.0;
+	m->v[7].z = scale * -tau;
+
+	m->v[8].x = scale * tau;
+	m->v[8].y = scale * 0.0;
+	m->v[8].z = scale * -1.0;
+
+	m->v[9].x = scale * tau;
+	m->v[9].y = scale * 0.0;
+	m->v[9].z = scale * 1.0;
+
+	m->v[10].x = scale * -tau;
+	m->v[10].y = scale * 0.0;
+	m->v[10].z = scale * -1.0;
+
+	m->v[11].x = scale * -tau;
+	m->v[11].y = scale * 0.0;
+	m->v[11].z = scale * 1.0;
+
+	m->t[0].v[0] = &m->v[0];
+	m->t[0].v[1] = &m->v[11];
+	m->t[0].v[2] = &m->v[5];
+
+	m->t[1].v[0] = &m->v[0];
+	m->t[1].v[1] = &m->v[5];
+	m->t[1].v[2] = &m->v[1];
+
+	m->t[2].v[0] = &m->v[0];
+	m->t[2].v[1] = &m->v[1];
+	m->t[2].v[2] = &m->v[7];
+
+	m->t[3].v[0] = &m->v[0];
+	m->t[3].v[1] = &m->v[7];
+	m->t[3].v[2] = &m->v[10];
+
+	m->t[4].v[0] = &m->v[0];
+	m->t[4].v[1] = &m->v[10];
+	m->t[4].v[2] = &m->v[11];
+
+	m->t[5].v[0] = &m->v[1];
+	m->t[5].v[1] = &m->v[5];
+	m->t[5].v[2] = &m->v[9];
+
+	m->t[6].v[0] = &m->v[5];
+	m->t[6].v[1] = &m->v[11];
+	m->t[6].v[2] = &m->v[4];
+
+	m->t[7].v[0] = &m->v[11];
+	m->t[7].v[1] = &m->v[10];
+	m->t[7].v[2] = &m->v[2];
+
+	m->t[8].v[0] = &m->v[10];
+	m->t[8].v[1] = &m->v[7];
+	m->t[8].v[2] = &m->v[6];
+
+	m->t[9].v[0] = &m->v[7];
+	m->t[9].v[1] = &m->v[1];
+	m->t[9].v[2] = &m->v[8];
+
+	m->t[10].v[0] = &m->v[3];
+	m->t[10].v[1] = &m->v[9];
+	m->t[10].v[2] = &m->v[4];
+
+	m->t[11].v[0] = &m->v[3];
+	m->t[11].v[1] = &m->v[4];
+	m->t[11].v[2] = &m->v[2];
+
+	m->t[12].v[0] = &m->v[3];
+	m->t[12].v[1] = &m->v[2];
+	m->t[12].v[2] = &m->v[6];
+
+	m->t[13].v[0] = &m->v[3];
+	m->t[13].v[1] = &m->v[6];
+	m->t[13].v[2] = &m->v[8];
+
+	m->t[14].v[0] = &m->v[3];
+	m->t[14].v[1] = &m->v[8];
+	m->t[14].v[2] = &m->v[9];
+
+	m->t[15].v[0] = &m->v[4];
+	m->t[15].v[1] = &m->v[9];
+	m->t[15].v[2] = &m->v[5];
+
+	m->t[16].v[0] = &m->v[2];
+	m->t[16].v[1] = &m->v[4];
+	m->t[16].v[2] = &m->v[11];
+
+	m->t[17].v[0] = &m->v[6];
+	m->t[17].v[1] = &m->v[2];
+	m->t[17].v[2] = &m->v[10];
+
+	m->t[18].v[0] = &m->v[8];
+	m->t[18].v[1] = &m->v[6];
+	m->t[18].v[2] = &m->v[7];
+
+	m->t[19].v[0] = &m->v[9];
+	m->t[19].v[1] = &m->v[8];
+	m->t[19].v[2] = &m->v[1];
+
+	m->radius = mesh_compute_radius(m);
+	mesh_set_flat_shading_vertex_normals(m);
+	mesh_graph_dev_init(m);
+
+	return m;
+
+bail:
+	if (m) {
+		if (m->t)
+			free(m->t);
+		if (m->v)
+			free(m->v);
+		if (m->tex)
+			free(m->tex);
+		free(m);
+	}
+	return NULL;
+}
+
