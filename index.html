@@ -22,7 +22,22 @@ on freegamedev.net</a> which is something like a development blog.
 <p>The source code is here:
 <a href="https://github.com/smcameron/space-nerds-in-space">Space Nerds In Space github page</a>
 
-If you don't have linux, I have instructions for building a linux live DVD that you can 
+<p><b>Build dependencies</b>
+<ul>
+<li>build-essential
+<li>portaudio19-dev
+<li>libvorbis-dev
+<li>libgtk2.0-dev
+<li>openscad
+<li>libgtkglext1-dev 
+<li>liblua5.2-dev 
+<li>libglew1.5-dev
+</ul>
+
+<p>The above list may be incomplete, and these are the package names on mint 13 / ubuntu,
+so may be different on RPM based systems.
+
+<p>If you don't have linux, I have instructions for building a linux live DVD that you can 
 play the game from without affecting your pre-existing OS install (but no guarantees -- it should
 be ok, but don't come crying to me if this procedure trashes your hard drive.)
 
@@ -86,6 +101,7 @@ Linux Mint 13 ISO can be found here:
     apt-get install openscad
     apt-get install libgtkglext1-dev 
     apt-get install liblua5.2-dev 
+    apt-get install libglew1.5-dev
 
 (hope I didn't miss any packages -- if you find I did, let me know.)
 
