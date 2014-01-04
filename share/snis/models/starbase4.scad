@@ -35,7 +35,7 @@ union()
 		ring(60);
 	translate(v = [0, 0, -13])
 	rotate(a = 45, v = [0, 0, 1])
-		spoke_set(4, 28, 45, 60);
+		spoke_set(4, 27, 45, 59);
 	translate(v = [0, 0, 13])
 	spoke_set(4, 68, -28, 32);
 	rotate(a = 45, v = [0, 0, 1])
