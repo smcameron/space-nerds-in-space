@@ -539,6 +539,20 @@ bail:
 	return NULL;
 }
 
+static void normalize_sphere(struct mesh *m)
+{
+	int i;
+
+	for (i = 0; i < m->nvertices; i++) {
+		union vec3 v = { { m->v[i].x, m->v[i].y, m->v[i].z } };
+		vec3_normalize_self(&v);
+		m->v[i].x = v.v.x;
+		m->v[i].y = v.v.y;
+		m->v[i].y = v.v.y;
+	}
+	m->radius = 1.0;
+}
+
 /* See: http://blog.andreaskahler.com/2009/06/creating-icosphere-mesh-in-code.html */
 struct mesh *mesh_unit_icosohedron(void)
 {
