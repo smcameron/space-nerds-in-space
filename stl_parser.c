@@ -143,6 +143,8 @@ static float dist3d_v(struct vertex *v1, struct vertex *v2)
 		(v1->z - v2->z) * (v1->z - v2->z));
 }
 
+static int vertex_merge_count;
+
 #define VERTEX_MERGING_THRESHOLD (0.00001)
 static struct vertex *add_vertex(struct mesh *m, struct vertex *v, int* is_shared)
 {
@@ -152,6 +154,7 @@ static struct vertex *add_vertex(struct mesh *m, struct vertex *v, int* is_share
 	for (i = 0; i < m->nvertices; i++) {
 		if (dist3d_v(v, &m->v[i]) < VERTEX_MERGING_THRESHOLD) {
 			*is_shared = 1;
+			vertex_merge_count++;
 			return &m->v[i];
 		}
 	}
@@ -384,6 +387,25 @@ void free_mesh(struct mesh * m)
 	free(m);
 }
 
+/* check if any triangle in the mesh contains fewer than 3 vertices */
+static void check_triangle_vertices(struct mesh *m)
+{
+	int i;
+
+	for (i = 0; i < m->ntriangles; i++) {
+		struct vertex *v0 = m->t[i].v[0];
+		struct vertex *v1 = m->t[i].v[1];
+		struct vertex *v2 = m->t[i].v[2];
+
+		if (v0 == v1)
+			printf("triangle %d, vertices 0 and 1 are welded together %p.\n", i, v0);
+		if (v1 == v2)
+			printf("triangle %d, vertices 1 and 2 are welded together %p.\n", i, v1);
+		if (v0 == v2)
+			printf("triangle %d, vertices 0 and 2 are welded together %p.\n", i, v0);
+	}
+}
+
 struct mesh *read_stl_file(char *file)
 {
 	FILE *f;
@@ -430,6 +452,8 @@ struct mesh *read_stl_file(char *file)
 	fclose(f);
 	my_mesh->radius = mesh_compute_radius(my_mesh);
 	process_coplanar_triangles(my_mesh, owners);
+	check_triangle_vertices(my_mesh);
+	printf("vertex_merge_count = %d\n", vertex_merge_count);
 	process_vertex_normals(my_mesh, 37.0 * M_PI / 180.0, owners);
 
 	free_vertex_owners(owners, facetcount * 3);
