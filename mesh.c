@@ -785,3 +785,118 @@ bail:
 	return NULL;
 }
 
+/*
+ * given a triangle a,b,c, create 4 triangles:
+ *
+ *                  a
+ *                 / \
+ *                /   \
+ *              d-------e
+ *              /\     /\
+ *             /  \   /  \
+ *            /    \ /    \
+ *           /      \      \
+ *          b-------f-------c
+ *
+ * a,d,e, e,d,f, d,b,f, and e,f,c
+ *
+ */
+static void subdivide_triangle(struct mesh *m, int tri)
+{
+	struct vertex d, e, f, *pa, *pb, *pc, *pd, *pe, *pf;
+	union vec3 vd, ve, vf;
+	int shared, t;
+
+	pa = m->t[tri].v[0];
+	pb = m->t[tri].v[1];
+	pc = m->t[tri].v[2];
+
+	vd.v.x = (pa->x + pb->x) / 2.0;
+	vd.v.y = (pa->y + pb->y) / 2.0;
+	vd.v.z = (pa->z + pb->z) / 2.0;
+	ve.v.x = (pa->x + pc->x) / 2.0;
+	ve.v.y = (pa->y + pc->y) / 2.0;
+	ve.v.z = (pa->z + pc->z) / 2.0;
+	vf.v.x = (pb->x + pc->x) / 2.0;
+	vf.v.y = (pb->y + pc->y) / 2.0;
+	vf.v.z = (pb->z + pc->z) / 2.0;
+
+	vec3_normalize_self(&vd);
+	vec3_normalize_self(&ve);
+	vec3_normalize_self(&vf);
+
+	d.x = vd.v.x;
+	d.y = vd.v.y;
+	d.z = vd.v.z;
+	e.x = ve.v.x;
+	e.y = ve.v.y;
+	e.z = ve.v.z;
+	f.x = vf.v.x;
+	f.y = vf.v.y;
+	f.z = vf.v.z;
+
+	pd = lookup_maybe_add_vertex(m, &d, &shared);
+	pe = lookup_maybe_add_vertex(m, &e, &shared);
+	pf = lookup_maybe_add_vertex(m, &f, &shared);
+
+	/* replace initial triangle with central triangle, e,d,f */
+	m->t[tri].v[0] = pe;
+	m->t[tri].v[1] = pd;
+	m->t[tri].v[2] = pf;
+
+	/* add 3 surrounding triangles  a,d,e, d,b,f, and e,f,c */
+	t = m->ntriangles;
+	m->t[t].v[0] = pa;
+	m->t[t].v[1] = pd;
+	m->t[t].v[2] = pe;
+	t++;
+	m->t[t].v[0] = pd;
+	m->t[t].v[1] = pb;
+	m->t[t].v[2] = pf;
+	t++;
+	m->t[t].v[0] = pe;
+	m->t[t].v[1] = pf;
+	m->t[t].v[2] = pc;
+	t++;
+	m->ntriangles = t;
+}
+
+static struct mesh *mesh_subdivide_icosphere(struct mesh *m, int subdivisions)
+{
+	struct mesh *m2;
+	int i, ntris = m->ntriangles;
+
+	if (subdivisions == 0)
+		return m;
+
+	/* Allocate space for the new, bigger mesh */
+	m2 = allocate_mesh_for_copy(m->ntriangles * 4, m->nvertices + m->ntriangles * 3, 0, 0);
+	if (!m2)
+		return NULL;
+	copy_mesh_contents(m2, m);
+	mesh_free(m);
+
+	for (i = 0; i < ntris; i++)
+		subdivide_triangle(m2, i);
+	normalize_sphere(m2);
+	return mesh_subdivide_icosphere(m2, subdivisions - 1);
+}
+
+struct mesh *mesh_unit_icosphere(int subdivisions)
+{
+	struct mesh *m = mesh_unit_icosohedron();
+	struct mesh *m2, *m3;
+
+	if (!m)
+		return NULL;
+
+	/* note mesh_subdivide_icosphere will free m */
+	m2 = mesh_subdivide_icosphere(m, subdivisions);
+
+	/* m2 will be over-allocated, duplicating will clean up the overallocation */
+	m3 = mesh_duplicate(m2);
+	mesh_free(m2);
+	mesh_set_flat_shading_vertex_normals(m3);
+	return m3;
+}
+
