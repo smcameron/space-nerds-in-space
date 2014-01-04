@@ -80,6 +80,7 @@ GLOBAL void mesh_set_triangle_texture_coords(struct mesh *m, int triangle,
 	float u1, float v1, float u2, float v2, float u3, float v3);
 GLOBAL struct mesh *mesh_fabricate_billboard(float cx, float cy, float width, float height);
 GLOBAL struct mesh *mesh_unit_icosohedron(void);
+GLOBAL void mesh_free(struct mesh *m);
 
 #undef GLOBAL
 #endif

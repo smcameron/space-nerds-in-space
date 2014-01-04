@@ -318,6 +318,22 @@ void mesh_set_triangle_texture_coords(struct mesh *m, int triangle,
 	m->tex[triangle * 3 + 2].v = v3;
 }
 
+void mesh_free(struct mesh *m)
+{
+	if (!m)
+		return;
+
+	if (m->t)
+		free(m->t);
+	if (m->v)
+		free(m->v);
+	if (m->l)
+		free(m->l);
+	if (m->tex)
+		free(m->tex);
+	free(m);
+}
+
 /* mesh_fabricate_crossbeam fabricates a mesh like so, out of 8 triangles:
  *          0
  *         |\
@@ -441,15 +457,7 @@ struct mesh *mesh_fabricate_crossbeam(float length, float radius)
 	return m;
 
 bail:
-	if (m) {
-		if (m->t)
-			free(m->t);
-		if (m->v)
-			free(m->v);
-		if (m->tex)
-			free(m->tex);
-		free(m);
-	}
+	mesh_free(m);
 	return NULL;
 }
 
@@ -527,15 +535,7 @@ struct mesh *mesh_fabricate_billboard(float cx, float cy, float width, float hei
 	return m;
 
 bail:
-	if (m) {
-		if (m->t)
-			free(m->t);
-		if (m->v)
-			free(m->v);
-		if (m->tex)
-			free(m->tex);
-		free(m);
-	}
+	mesh_free(m);
 	return NULL;
 }
 
@@ -739,15 +739,7 @@ struct mesh *mesh_unit_icosohedron(void)
 	return m;
 
 bail:
-	if (m) {
-		if (m->t)
-			free(m->t);
-		if (m->v)
-			free(m->v);
-		if (m->tex)
-			free(m->tex);
-		free(m);
-	}
+	mesh_free(m);
 	return NULL;
 }
 
