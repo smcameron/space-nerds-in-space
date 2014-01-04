@@ -395,6 +395,19 @@ struct graph_dev_gl_textured_shader {
 	GLuint texture_id; /* param to vertex shader */
 };
 
+struct graph_dev_gl_textured_lit_shader {
+	GLuint programID;
+	GLuint mvpMatrixID;
+	GLuint mvMatrixID;
+	GLuint normalMatrixID;
+	GLuint vertexPositionID;
+	GLuint vertexNormalID;
+	GLuint textureCoordID;
+	GLuint lightPosID;
+	GLuint colorID;
+	GLuint texture_id; /* param to vertex shader */
+};
+
 /* only use on high performance graphics card */
 /*#define PER_PIXEL_LIGHT 1*/
 
@@ -407,6 +420,7 @@ static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
 static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
 static struct graph_dev_gl_textured_shader textured_shader;
+static struct graph_dev_gl_textured_lit_shader textured_lit_shader;
 
 static struct graph_dev_gl_context {
 	int screen_x, screen_y;
@@ -507,6 +521,83 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glUseProgram(textured_shader.programID);
+
+	glUniformMatrix4fv(textured_shader.mvMatrixID, 1, GL_FALSE, &mat_mv->m[0][0]);
+	glUniformMatrix4fv(textured_shader.mvpMatrixID, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix3fv(textured_shader.normalMatrixID, 1, GL_FALSE, &mat_normal->m[0][0]);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture_number);
+	glUniform1i(skybox_shader.texture_id, 0);
+	glUniform3f(textured_shader.colorID, triangle_color->red,
+		triangle_color->green, triangle_color->blue);
+	glUniform3f(textured_shader.lightPosID, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
+
+	glEnableVertexAttribArray(textured_shader.vertexPositionID);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
+	glVertexAttribPointer(
+		textured_shader.vertexPositionID, /* The attribute we want to configure */
+		3,                           /* size */
+		GL_FLOAT,                    /* type */
+		GL_FALSE,                    /* normalized? */
+		0,                           /* stride */
+		(void *)0                    /* array buffer offset */
+	);
+
+	glEnableVertexAttribArray(textured_shader.vertexNormalID);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_normal_buffer);
+	glVertexAttribPointer(
+		textured_shader.vertexNormalID,  /* The attribute we want to configure */
+		3,                            /* size */
+		GL_FLOAT,                     /* type */
+		GL_FALSE,                     /* normalized? */
+		0,                            /* stride */
+		(void *)0                     /* array buffer offset */
+	);
+
+	glEnableVertexAttribArray(textured_shader.textureCoordID);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->texture_coord_buffer);
+	glVertexAttribPointer(
+		textured_shader.textureCoordID,/* The attribute we want to configure */
+		4,                            /* size */
+		GL_FLOAT,                     /* type */
+		GL_TRUE,                     /* normalized? */
+		0,                            /* stride */
+		(void *)0                     /* array buffer offset */
+	);
+
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+
+	glDisableVertexAttribArray(textured_shader.vertexPositionID);
+	glDisableVertexAttribArray(textured_shader.vertexNormalID);
+	glDisableVertexAttribArray(textured_shader.textureCoordID);
+	glUseProgram(0);
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_BLEND);
+}
+
+static void graph_dev_raster_texture_lit(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
+	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color,
+	union vec3 *eye_light_pos, GLuint texture_number)
+{
+	enable_3d_viewport();
+
+	if (!m->graph_ptr)
+		return;
+
+	struct mesh_gl_info *ptr = m->graph_ptr;
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glUseProgram(textured_lit_shader.programID);
 
 	glUniformMatrix4fv(textured_shader.mvMatrixID, 1, GL_FALSE, &mat_mv->m[0][0]);
 	glUniformMatrix4fv(textured_shader.mvpMatrixID, 1, GL_FALSE, &mat_mvp->m[0][0]);
@@ -908,16 +999,24 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				graph_dev_raster_filled_wireframe_mesh(mat_mvp, e->m, &line_color, &triangle_color);
 			} else {
 				if (has_texture)
-					graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
-						e->m, &triangle_color, eye_light_pos, texture_id);
+					if (e->material_type == MATERIAL_TEXTURE_MAPPED)
+						graph_dev_raster_texture_lit(mat_mvp, mat_mv, mat_normal,
+							e->m, &triangle_color, eye_light_pos, texture_id);
+					else
+						graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
+							e->m, &triangle_color, eye_light_pos, texture_id);
 				else
 					graph_dev_raster_solid_mesh(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos);
 			}
 		} else if (outline_triangle) {
 			if (has_texture)
-				graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
-					e->m, &line_color, eye_light_pos, texture_id);
+				if (e->material_type == MATERIAL_TEXTURE_MAPPED)
+					graph_dev_raster_texture_lit(mat_mvp, mat_mv, mat_normal,
+						e->m, &line_color, eye_light_pos, texture_id);
+				else
+					graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
+						e->m, &line_color, eye_light_pos, texture_id);
 			else
 				graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
 					mat_normal, e->m, &line_color);
@@ -1061,6 +1160,26 @@ static void setup_textured_shader(struct graph_dev_gl_textured_shader *shader)
 	shader->programID = load_shaders("share/snis/shader/textured-per-vertex-light.vert",
 		"share/snis/shader/textured-per-vertex-light.frag");
 #endif
+
+	/* Get a handle for our "MVP" uniform */
+	shader->mvpMatrixID = glGetUniformLocation(shader->programID, "u_MVPMatrix");
+	shader->mvMatrixID = glGetUniformLocation(shader->programID, "u_MVMatrix");
+	shader->normalMatrixID = glGetUniformLocation(shader->programID, "u_NormalMatrix");
+	shader->lightPosID = glGetUniformLocation(shader->programID, "u_LightPos");
+	shader->texture_id = glGetUniformLocation(shader->programID, "myTexture");
+
+	/* Get a handle for our buffers */
+	shader->vertexPositionID = glGetAttribLocation(shader->programID, "a_Position");
+	shader->vertexNormalID = glGetAttribLocation(shader->programID, "a_Normal");
+	shader->textureCoordID = glGetAttribLocation(shader->programID, "a_tex_coord");
+	shader->colorID = glGetUniformLocation(shader->programID, "u_Color");
+}
+
+static void setup_textured_lit_shader(struct graph_dev_gl_textured_lit_shader *shader)
+{
+	/* Create and compile our GLSL program from the shaders */
+	shader->programID = load_shaders("share/snis/shader/textured-and-lit-per-vertex.vert",
+		"share/snis/shader/textured-and-lit-per-vertex.frag");
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvpMatrixID = glGetUniformLocation(shader->programID, "u_MVPMatrix");
@@ -1248,6 +1367,7 @@ int graph_dev_setup()
 	setup_color_by_w_shader(&color_by_w_shader);
 	setup_skybox_shader(&skybox_shader);
 	setup_textured_shader(&textured_shader);
+	setup_textured_lit_shader(&textured_lit_shader);
 
 	return 0;
 }
