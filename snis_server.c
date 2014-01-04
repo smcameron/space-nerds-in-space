@@ -1298,7 +1298,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 		calculate_torpedo_damage(t);
 		send_ship_damage_packet(t);
 		attack_your_attacker(t, lookup_entity_by_id(o->tsd.torpedo.ship_id));
-	} else if (t->type == OBJTYPE_ASTEROID && fabs(t->y) < 100.0) {
+	} else if (t->type == OBJTYPE_ASTEROID) {
 		t->alive = 0;
 	}
 
