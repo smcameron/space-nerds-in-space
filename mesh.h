@@ -83,6 +83,7 @@ GLOBAL struct mesh *mesh_unit_icosohedron(void);
 GLOBAL struct mesh *mesh_unit_icosphere(int subdivisions);
 GLOBAL void mesh_free(struct mesh *m);
 GLOBAL void mesh_sphere_uv_map(struct mesh *m);
+GLOBAL void mesh_distort_and_random_uv_map(struct mesh *m, float distortion);
 
 #undef GLOBAL
 #endif

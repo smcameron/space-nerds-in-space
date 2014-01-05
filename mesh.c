@@ -25,7 +25,7 @@ float mesh_compute_radius(struct mesh *m)
 	return max_radius;
 }
 
-void mesh_distort(struct mesh *m, float distortion)
+void mesh_distort_helper(struct mesh *m, float distortion)
 {
 	int i;
 
@@ -42,6 +42,41 @@ void mesh_distort(struct mesh *m, float distortion)
 	}
 	m->radius = mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);
+}
+
+/* This is not very good, but better than nothing. */
+void mesh_random_uv_map(struct mesh *m)
+{
+	int i;
+
+	if (m->tex)
+		free(m->tex);
+	m->tex = malloc(sizeof(*m->tex) * m->ntriangles * 3);
+	if (!m)
+		return;
+	for (i = 0; i < m->ntriangles; i++) {
+		float u1, v1, u2, v2, u3, v3;
+
+		u1 = (float) snis_randn(25) / 100.0f;
+		v1 = (float) snis_randn(25) / 100.0f;
+		u2 = (float) (50.0f + snis_randn(25)) / 100.0f;
+		v2 = (float) snis_randn(25) / 100.0f;
+		u3 = (float) (50.0f + snis_randn(25)) / 100.0f;
+		v3 = (float) (50.0f + snis_randn(25)) / 100.0f;
+		mesh_set_triangle_texture_coords(m, i, u1, v1, u2, v2, u3, v3);
+	}
+}
+
+void mesh_distort(struct mesh *m, float distortion)
+{
+	mesh_distort_helper(m, distortion);
+	mesh_graph_dev_init(m);
+}
+
+void mesh_distort_and_random_uv_map(struct mesh *m, float distortion)
+{
+	mesh_distort_helper(m, distortion);
+	mesh_random_uv_map(m);
 	mesh_graph_dev_init(m);
 }
 

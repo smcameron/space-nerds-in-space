@@ -305,6 +305,7 @@ static struct material_billboard red_laser_material;
 static struct material_billboard green_laser_material;
 static struct material_billboard spark_material;
 static struct material_texture_mapped planet_material[NPLANET_MATERIALS];
+static struct material_texture_mapped asteroid_material;
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -1192,6 +1193,8 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
 		random_axis_quat(&orientation, snis_randn(360) * M_PI / 180.0);
 		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
+		update_entity_material(e, MATERIAL_TEXTURE_MAPPED, &asteroid_material);
+
 		i = add_generic_object(id, x, y, z, vx, vy, vz,
 				&orientation, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
@@ -11595,6 +11598,8 @@ static void load_textures(void)
 	planet_material[2].texture_id = load_texture("planet-texture2.png");
 	planet_material[3].texture_id = load_texture("planet-texture3.png");
 
+	asteroid_material.texture_id = load_texture("asteroid-texture.png");
+
 	textures_loaded = 1;
 }
 
@@ -12000,7 +12005,7 @@ static void init_meshes()
 			sprintf(filename, "asteroid%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
 		asteroid_mesh[i] = snis_read_stl_file(d, filename);
-		mesh_distort(asteroid_mesh[i], 0.10);
+		mesh_distort_and_random_uv_map(asteroid_mesh[i], 0.10);
 	}
 
 	for (i = 0; i < NASTEROID_MODELS; i++) {
