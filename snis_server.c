@@ -1346,6 +1346,8 @@ static void torpedo_move(struct snis_entity *o)
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	space_partition_process(space_partition, o, o->x, o->z, o,
 			torpedo_collision_detection);
+	if (!o->alive)
+		delete_from_clients_and_server(o);
 }
 
 static double __attribute__((unused)) point_to_line_dist(double lx1, double ly1,
@@ -1490,6 +1492,8 @@ static void laser_move(struct snis_entity *o)
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	space_partition_process(space_partition, o, o->x, o->z, o,
 			laser_collision_detection);
+	if (!o->alive)
+		delete_from_clients_and_server(o);
 }
 
 static void send_comms_packet(char *sender, const char *str);
