@@ -267,7 +267,6 @@ struct mesh *torpedo_mesh;
 struct mesh *laser_mesh;
 struct mesh *asteroid_mesh[NASTEROID_MODELS * NASTEROID_SCALES];
 struct mesh *planet_mesh[NPLANET_MODELS];
-struct mesh *icosphere_mesh;
 struct mesh *starbase_mesh[NSTARBASE_MODELS];
 struct mesh *ship_mesh;
 struct mesh *ship_turret_mesh;
@@ -1277,7 +1276,7 @@ static int update_planet(uint32_t id, double x, double y, double z)
 		random_quat(&orientation); /* FIXME: make this come out the same on all clients */
 		m = id % NPLANET_MODELS;
 		/* e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR); */
-		e = add_entity(ecx, icosphere_mesh, x, y, z, PLANET_COLOR);
+		e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR);
 		update_entity_material(e, MATERIAL_TEXTURE_MAPPED, &planet_material[n]);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_PLANET, 1, e);
@@ -12015,17 +12014,13 @@ static void init_meshes()
 		}
 	}
 
+	struct mesh *icosphere = mesh_unit_icosphere(4);
 	for (i = 0; i < NPLANET_MODELS; i++) {
-		char filename[100];
-
-		sprintf(filename, "planet%d.stl", i + 1);
-		printf("reading '%s'\n", filename);
-		planet_mesh[i] = snis_read_stl_file(d, filename);
+		planet_mesh[i] = mesh_duplicate(icosphere);
+		mesh_sphere_uv_map(planet_mesh[i]);
+		mesh_scale(planet_mesh[i], 300.0 + snis_randn(400));
 	}
-
-	icosphere_mesh = mesh_unit_icosphere(4);
-	mesh_sphere_uv_map(icosphere_mesh);
-	mesh_scale(icosphere_mesh, 500.0);
+	mesh_free(icosphere);
 
 	for (i = 0; i < NSTARBASE_MODELS; i++) {
 		char filename[100];
