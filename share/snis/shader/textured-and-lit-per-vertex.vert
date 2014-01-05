@@ -36,11 +36,7 @@ void main()                // The entry point for our vertex shader.
 	float diffuse = max(dot, 0.4);
 
 	// Multiply the color by the illumination level. It will be interpolated across the triangle.
-	//v_Color = vec4(u_Color * diffuse, 1.0);
-	//v_Color = vec4(diffuse, diffuse, diffuse, 1.0);
-	diffuse = 1.0;
 	v_Color = vec4(diffuse, diffuse, diffuse, 1.0);
-	// v_Color = vec4(1.0, 1.0, 1.0, 1.0);
 	v_TexCoord = a_tex_coord.xy;
 
 	// gl_Position is a special variable used to store the final position.
