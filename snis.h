@@ -54,6 +54,7 @@
 #define NDERELICTS 20
 
 #define NPLANET_MODELS 3
+#define NPLANET_MATERIALS 4
 #define NPLANETS 4
 
 #define MAXPLAYERS 10
