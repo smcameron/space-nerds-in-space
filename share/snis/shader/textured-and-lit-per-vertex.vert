@@ -33,7 +33,7 @@ void main()                // The entry point for our vertex shader.
 	dot = (dot + 1.0) / 2.0;
 
 	// give 10% ambient
-	float diffuse = max(dot, 0.4);
+	float diffuse = max(dot, 0.1);
 
 	// Multiply the color by the illumination level. It will be interpolated across the triangle.
 	v_Color = vec4(diffuse, diffuse, diffuse, 1.0);
