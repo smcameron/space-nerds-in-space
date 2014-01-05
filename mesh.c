@@ -899,6 +899,7 @@ static struct mesh *mesh_subdivide_icosphere(struct mesh *m, int subdivisions)
 	for (i = 0; i < ntris; i++)
 		subdivide_triangle(m2, i);
 	normalize_sphere(m2);
+	mesh_set_spherical_vertex_normals(m2);
 	return mesh_subdivide_icosphere(m2, subdivisions - 1);
 }
 
@@ -918,5 +919,37 @@ struct mesh *mesh_unit_icosphere(int subdivisions)
 	mesh_free(m2);
 	mesh_set_spherical_vertex_normals(m3);
 	return m3;
+}
+
+/* this has a known issue mapping vertices of tris that span the "international date line" */
+void mesh_sphere_uv_map(struct mesh *m)
+{
+	float u0, v0, u1, v1, u2, v2;
+	int i;
+
+	if (m->tex)
+		free(m->tex);
+
+	m->tex = malloc(sizeof(*m->tex) * m->ntriangles * 3);
+	if (!m->tex)
+		return;
+
+	for (i = 0; i < m->ntriangles; i++) {
+		struct vertex *vtx0, *vtx1, *vtx2;
+
+		vtx0 = m->t[i].v[0];
+		vtx1 = m->t[i].v[1];
+		vtx2 = m->t[i].v[2];
+
+		u0 = acosf(vtx0->z) / M_PI;
+		v0 = (atan2f(vtx0->y, vtx0->x) + M_PI) / (2.0 * M_PI);
+		u1 = acosf(vtx1->z) / M_PI;
+		v1 = (atan2f(vtx1->y, vtx1->x) + M_PI) / (2.0 * M_PI);
+		u2 = acosf(vtx2->z) / M_PI;
+		v2 = (atan2f(vtx2->y, vtx2->x) + M_PI) / (2.0 * M_PI);
+
+		mesh_set_triangle_texture_coords(m, i, u0, v0, u1, v1, u2, v2);
+	}
+	mesh_graph_dev_init(m);
 }
 

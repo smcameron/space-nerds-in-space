@@ -82,6 +82,7 @@ GLOBAL struct mesh *mesh_fabricate_billboard(float cx, float cy, float width, fl
 GLOBAL struct mesh *mesh_unit_icosohedron(void);
 GLOBAL struct mesh *mesh_unit_icosphere(int subdivisions);
 GLOBAL void mesh_free(struct mesh *m);
+GLOBAL void mesh_sphere_uv_map(struct mesh *m);
 
 #undef GLOBAL
 #endif
