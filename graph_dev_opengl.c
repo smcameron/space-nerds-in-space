@@ -4,6 +4,7 @@
 #include <gtk/gtk.h>
 #include <GL/glew.h>
 #include <math.h>
+#include <assert.h>
 
 #include "shader.h"
 #include "vertex.h"
@@ -47,6 +48,11 @@ struct filled_wireframe_buffer_data {
 	union vec3 tvertex1;
 	union vec3 tvertex2;
 	union vec3 edge_mask;
+};
+
+struct vertex_color_buffer_data {
+	GLfloat position[2];
+	GLubyte color[4];
 };
 
 void mesh_graph_dev_cleanup(struct mesh *m)
@@ -308,6 +314,13 @@ void mesh_graph_dev_init(struct mesh *m)
 	m->graph_ptr = ptr;
 }
 
+struct graph_dev_gl_vertex_color_shader {
+	GLuint program_id;
+	GLuint mvp_matrix_id;
+	GLuint vertex_position_id;
+	GLuint vertex_color_id;
+};
+
 struct graph_dev_gl_solid_shader {
 	GLuint programID;
 	GLuint mvpMatrixID;
@@ -427,12 +440,16 @@ static struct graph_dev_gl_solid_shader solid_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_shader;
 static struct graph_dev_gl_filled_wireframe_shader filled_wireframe_shader;
 static struct graph_dev_gl_single_color_shader single_color_shader;
+static struct graph_dev_gl_vertex_color_shader vertex_color_shader;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
 static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
 static struct graph_dev_gl_textured_shader textured_shader;
 static struct graph_dev_gl_textured_lit_shader textured_lit_shader;
 static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_shader;
+
+#define BUFFERED_VERTICES_2D 2000
+#define VERTEX_BUFFER_2D_SIZE (BUFFERED_VERTICES_2D*sizeof(struct vertex_color_buffer_data))
 
 static struct graph_dev_gl_context {
 	int screen_x, screen_y;
@@ -442,6 +459,12 @@ static struct graph_dev_gl_context {
 
 	int active_vp; /* 0=none, 1=2d, 2=3d */
 	int vp_x_3d, vp_y_3d, vp_width_3d, vp_height_3d;
+	struct mat44 ortho_2d_mvp;
+
+	int nvertex_2d;
+	GLbyte vertex_type_2d[BUFFERED_VERTICES_2D];
+	GLuint vertex_buffer_2d;
+	int vertex_buffer_2d_offset;
 } sgc;
 
 void graph_dev_set_screen_size(int width, int height)
@@ -473,11 +496,25 @@ static void enable_2d_viewport()
 		/* 2d viewport is entire screen */
 		glViewport(0, 0, sgc.screen_x, sgc.screen_y);
 
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0.0f, sgc.screen_x, 0.0f, sgc.screen_y, -1.0, 1.0);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
+		float left = 0, right = sgc.screen_x, bottom = 0, top = sgc.screen_y;
+		float near = -1, far = 1;
+
+		sgc.ortho_2d_mvp.m[0][0] = 2.0 / (right - left);
+		sgc.ortho_2d_mvp.m[0][1] = 0;
+		sgc.ortho_2d_mvp.m[0][2] = 0;
+		sgc.ortho_2d_mvp.m[0][3] = 0;
+		sgc.ortho_2d_mvp.m[1][0] = 0;
+		sgc.ortho_2d_mvp.m[1][1] = 2.0 / (top - bottom);
+		sgc.ortho_2d_mvp.m[1][2] = 0;
+		sgc.ortho_2d_mvp.m[1][3] = 0;
+		sgc.ortho_2d_mvp.m[2][0] = 0;
+		sgc.ortho_2d_mvp.m[2][1] = 0;
+		sgc.ortho_2d_mvp.m[2][2] = -2.0 / (far - near);
+		sgc.ortho_2d_mvp.m[2][3] = 0;
+		sgc.ortho_2d_mvp.m[3][0] = -(right + left) / (right - left);
+		sgc.ortho_2d_mvp.m[3][1] = -(top + bottom) / (top - bottom);
+		sgc.ortho_2d_mvp.m[3][2] = -(far + near) / (far - near);
+		sgc.ortho_2d_mvp.m[3][3] = 1;
 
 		sgc.active_vp = 1;
 	}
@@ -486,12 +523,8 @@ static void enable_2d_viewport()
 static void enable_3d_viewport()
 {
 	if (sgc.active_vp != 2) {
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glMatrixMode(GL_MODELVIEW);
-		glPopMatrix();
-
 		glViewport(sgc.vp_x_3d, sgc.vp_y_3d, sgc.vp_width_3d, sgc.vp_height_3d);
+
 		sgc.active_vp = 2;
 	}
 }
@@ -512,6 +545,120 @@ void graph_dev_set_color(GdkColor *c, float a)
 void graph_dev_set_context(GdkDrawable *drawable, GdkGC *gc)
 {
 	/* noop */
+}
+
+static void draw_vertex_buffer_2d()
+{
+	if (sgc.nvertex_2d > 0) {
+		/* printf("start draw_vertex_buffer_2d %d\n", sgc.nvertex_2d); */
+		enable_2d_viewport();
+
+		glUseProgram(vertex_color_shader.program_id);
+
+		glUniformMatrix4fv(vertex_color_shader.mvp_matrix_id, 1, GL_FALSE, &sgc.ortho_2d_mvp.m[0][0]);
+
+		/* load x,y vertex position */
+		glEnableVertexAttribArray(vertex_color_shader.vertex_position_id);
+		glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
+		glVertexAttribPointer(
+			vertex_color_shader.vertex_position_id,
+			2,
+			GL_FLOAT,
+			GL_FALSE,
+			sizeof(struct vertex_color_buffer_data),
+			(void *)offsetof(struct vertex_color_buffer_data, position[0])
+		);
+
+		/* load the color as as 4 bytes and let opengl normalize them to 0-1 floats */
+		glEnableVertexAttribArray(vertex_color_shader.vertex_color_id);
+		glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
+		glVertexAttribPointer(
+			vertex_color_shader.vertex_color_id,
+			4,
+			GL_UNSIGNED_BYTE,
+			GL_TRUE,
+			sizeof(struct vertex_color_buffer_data),
+			(void *)offsetof(struct vertex_color_buffer_data, color[0])
+		);
+
+		int i;
+		GLint start = 0;
+		GLbyte mode = sgc.vertex_type_2d[0];
+
+		for (i = 0; i < sgc.nvertex_2d; i++) {
+			if (mode != sgc.vertex_type_2d[i]) {
+				GLsizei count;
+
+				/* primitive terminate */
+				if (sgc.vertex_type_2d[i] == -1)
+					count = i - start + 1; /* we include this vertex in draw */
+				else
+					count = i - start;
+
+				assert(mode != GL_LINES || count % 2 == 0);
+				assert(mode != GL_TRIANGLES || count % 3 == 0);
+
+				glDrawArrays(mode, start, count);
+				/* printf("glDrawArrays 1 mode=%d start=%d count=%d\n", mode, start, count); */
+
+				start = start + count;
+				if (start < sgc.nvertex_2d) {
+					mode = sgc.vertex_type_2d[start];
+				}
+			}
+		}
+		if (start < sgc.nvertex_2d) {
+			GLsizei count = sgc.nvertex_2d - start;
+
+			assert(mode != GL_LINES || count % 2 == 0);
+			assert(mode != GL_TRIANGLES || count % 3 == 0);
+
+			glDrawArrays(mode, start, count);
+			/* printf("glDrawArrays 2 mode=%d start=%d count=%d\n", mode, start, i - start); */
+		}
+
+		sgc.nvertex_2d = 0;
+		sgc.vertex_buffer_2d_offset = 0;
+
+		glDisableVertexAttribArray(vertex_color_shader.vertex_position_id);
+		glDisableVertexAttribArray(vertex_color_shader.vertex_color_id);
+		glUseProgram(0);
+
+		/* orphan this buffer so we don't get blocked on these draw commands */
+		glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
+		glBufferData(GL_ARRAY_BUFFER, VERTEX_BUFFER_2D_SIZE, 0, GL_STREAM_DRAW);
+	}
+}
+
+static void make_room_in_vertex_buffer_2d(int nvertices)
+{
+	if (sgc.nvertex_2d + nvertices > BUFFERED_VERTICES_2D) {
+		/* buffer needs to be emptied to fit next batch */
+		draw_vertex_buffer_2d();
+	}
+}
+
+static void add_vertex_2d(float x, float y, GdkColor* color, GLubyte alpha, GLenum mode)
+{
+	struct vertex_color_buffer_data vertex;
+
+	/* setup the vertex and color */
+	vertex.position[0] = x;
+	vertex.position[1] = sgc.screen_y - y;
+
+	vertex.color[0] = color->red >> 8;
+	vertex.color[1] = color->green >> 8;
+	vertex.color[2] = color->blue >> 8;
+	vertex.color[3] = alpha;
+
+	/* transfer into opengl buffer */
+	glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
+	glBufferSubData(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d_offset, sizeof(vertex), &vertex);
+
+	sgc.vertex_type_2d[sgc.nvertex_2d] = mode;
+
+	sgc.nvertex_2d += 1;
+	sgc.vertex_buffer_2d_offset += sizeof(vertex);
 }
 
 static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
@@ -962,8 +1109,8 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 		glUseProgram(single_color_shader.programID);
 
 		glUniformMatrix4fv(single_color_shader.mvpMatrixID, 1, GL_FALSE, &mat_mvp->m[0][0]);
-		glUniform3f(single_color_shader.colorID, line_color->red,
-			line_color->green, line_color->blue);
+		glUniform4f(single_color_shader.colorID, line_color->red,
+			line_color->green, line_color->blue, 1);
 
 		vertex_position_id = single_color_shader.vertexPositionID;
 	}
@@ -1031,6 +1178,8 @@ void graph_dev_raster_point_cloud_mesh(const struct mat44 *mat_mvp, struct mesh 
 void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
 	const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal)
 {
+	draw_vertex_buffer_2d();
+
 	struct sng_color line_color = sng_get_color(e->color);
 
 	switch (e->m->geometry_mode) {
@@ -1113,53 +1262,75 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	}
 }
 
+void graph_dev_start_frame()
+{
+	/* printf("start frame\n"); */
+}
+
+void graph_dev_end_frame()
+{
+	draw_vertex_buffer_2d();
+	/* printf("end frame\n"); */
+}
+
 void graph_dev_draw_line(float x1, float y1, float x2, float y2)
 {
-	enable_2d_viewport();
+	make_room_in_vertex_buffer_2d(2);
 
-	glBegin(GL_LINES);
-	glColor3us(sgc.hue->red, sgc.hue->green, sgc.hue->blue);
-	glVertex2f(x1, sgc.screen_y - y1);
-	glVertex2f(x2, sgc.screen_y - y2);
-	glEnd();
+	add_vertex_2d(x1, y1, sgc.hue, 255, GL_LINES);
+	add_vertex_2d(x2, y2, sgc.hue, 255, GL_LINES);
 }
 
 void graph_dev_draw_rectangle(gboolean filled, float x, float y, float width, float height)
 {
-	enable_2d_viewport();
-
 	int x2, y2;
 
 	x2 = x + width;
 	y2 = y + height;
-	if (filled)
-		glBegin(GL_POLYGON);
-	else
-		glBegin(GL_LINE_STRIP);
-	glColor3us(sgc.hue->red, sgc.hue->green, sgc.hue->blue);
-	glVertex2f(x, sgc.screen_y - y);
-	glVertex2f(x2, sgc.screen_y - y);
-	glVertex2f(x2, sgc.screen_y - y2);
-	glVertex2f(x, sgc.screen_y - y2);
-	if (!filled)
-		glVertex2f(x, sgc.screen_y - y);
-	glEnd();
+
+	if (filled ) {
+		/* filled rectangle with two triangles
+		  0 ------- 1
+		    |\  1 |
+		    | \   |
+		    |  \  |
+		    |   \ |
+		    | 2  \|
+		  2 ------- 3
+		*/
+
+		make_room_in_vertex_buffer_2d(6);
+
+		/* triangle 1 = 0, 3, 1 */
+		add_vertex_2d(x, y, sgc.hue, 255, GL_TRIANGLES);
+		add_vertex_2d(x2, y2, sgc.hue, 255, GL_TRIANGLES);
+		add_vertex_2d(x2, y, sgc.hue, 255, GL_TRIANGLES);
+
+		/* triangle 2 = 0, 3, 2 */
+		add_vertex_2d(x, y, sgc.hue, 255, GL_TRIANGLES);
+		add_vertex_2d(x2, y2, sgc.hue, 255, GL_TRIANGLES);
+		add_vertex_2d(x, y2, sgc.hue, 255, GL_TRIANGLES);
+	} else {
+		/* not filled */
+		make_room_in_vertex_buffer_2d(5);
+
+		add_vertex_2d(x, y, sgc.hue, 255, GL_LINE_STRIP);
+		add_vertex_2d(x2, y, sgc.hue, 255, GL_LINE_STRIP);
+		add_vertex_2d(x2, y2, sgc.hue, 255, GL_LINE_STRIP);
+		add_vertex_2d(x, y2, sgc.hue, 255, GL_LINE_STRIP);
+		add_vertex_2d(x, y, sgc.hue, 255, -1 /* primitive end */);
+	}
 }
 
 void graph_dev_draw_point(float x, float y)
 {
-	enable_2d_viewport();
+	make_room_in_vertex_buffer_2d(1);
 
-	glBegin(GL_POINTS);
-	glColor3us(sgc.hue->red, sgc.hue->green, sgc.hue->blue);
-	glVertex2f(x, sgc.screen_y - y);
-	glEnd();
+	add_vertex_2d(x, y, sgc.hue, 255, GL_POINTS);
 }
 
 void graph_dev_draw_arc(gboolean filled, float x, float y, float width, float height, float angle1, float angle2)
 {
-	enable_2d_viewport();
-
 	float max_angle_delta = 2.0 * M_PI / 180.0; /*some ratio to height and width? */
 	float rx = width/2.0;
 	float ry = height/2.0;
@@ -1171,18 +1342,21 @@ void graph_dev_draw_arc(gboolean filled, float x, float y, float width, float he
 	int segments = (int)((angle2 - angle1) / max_angle_delta) + 1;
 	float delta = (angle2 - angle1) / segments;
 
+	GLubyte alpha = 255;
+
 	if (sgc.alpha_blend) {
+		/* must empty the vertex buffer to draw this primitive with blending */
+		draw_vertex_buffer_2d();
+
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glColor4us(sgc.hue->red, sgc.hue->green, sgc.hue->blue, sgc.alpha*65535.0);
-	} else {
-		glColor3us(sgc.hue->red, sgc.hue->green, sgc.hue->blue);
+		alpha = 255 * sgc.alpha;
 	}
 
 	if (filled)
-		glBegin(GL_TRIANGLES);
+		make_room_in_vertex_buffer_2d(segments * 3);
 	else
-		glBegin(GL_LINE_STRIP);
+		make_room_in_vertex_buffer_2d(segments + 1);
 
 	float x1 = 0, y1 = 0;
 	for (i = 0; i <= segments; i++) {
@@ -1191,20 +1365,24 @@ void graph_dev_draw_arc(gboolean filled, float x, float y, float width, float he
 		float y2 = cy + sin(a) * ry;
 
 		if (!filled || i > 0) {
-			glVertex2f(x2, sgc.screen_y - y2);
 			if (filled) {
-				glVertex2f(x1, sgc.screen_y - y1);
-				glVertex2f(cx, sgc.screen_y - cy);
+				add_vertex_2d(x2, y2, sgc.hue, alpha, GL_TRIANGLES);
+				add_vertex_2d(x1, y1, sgc.hue, alpha, GL_TRIANGLES);
+				add_vertex_2d(cx, cy, sgc.hue, alpha, GL_TRIANGLES);
+			} else {
+				add_vertex_2d(x2, y2, sgc.hue, alpha, (i != segments ? GL_LINE_STRIP : -1));
 			}
 		}
 		x1 = x2;
 		y1 = y2;
 	}
 
-	if (sgc.alpha_blend)
-		glDisable(GL_BLEND);
+	if (sgc.alpha_blend) {
+		/* must draw the vertex buffer to complete the blending */
+		draw_vertex_buffer_2d();
 
-	glEnd();
+		glDisable(GL_BLEND);
+	}
 }
 
 static void setup_solid_shader(struct graph_dev_gl_solid_shader *shader)
@@ -1343,6 +1521,17 @@ static void setup_single_color_shader(struct graph_dev_gl_single_color_shader *s
 	shader->colorID = glGetUniformLocation(shader->programID, "u_Color");
 }
 
+static void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *shader)
+{
+	shader->program_id = load_shaders("share/snis/shader/per_vertex_color.vert",
+		"share/snis/shader/per_vertex_color.frag");
+
+	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
+
+	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
+	shader->vertex_color_id = glGetAttribLocation(shader->program_id, "a_Color");
+}
+
 static void setup_point_cloud_shader(struct graph_dev_gl_point_cloud_shader *shader)
 {
 	/* Create and compile our GLSL program from the shaders */
@@ -1445,6 +1634,16 @@ static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 	shader->texture_loaded = 0;
 }
 
+static void setup_2d()
+{
+	glGenBuffers(1, &sgc.vertex_buffer_2d);
+	glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
+	glBufferData(GL_ARRAY_BUFFER, VERTEX_BUFFER_2D_SIZE, 0, GL_STREAM_DRAW);
+
+	sgc.nvertex_2d = 0;
+	sgc.vertex_buffer_2d_offset = 0;
+}
+
 int graph_dev_setup()
 {
 	if (glewInit() != GLEW_OK) {
@@ -1461,12 +1660,16 @@ int graph_dev_setup()
 	setup_trans_wireframe_shader(&trans_wireframe_shader);
 	setup_filled_wireframe_shader(&filled_wireframe_shader);
 	setup_single_color_shader(&single_color_shader);
+	setup_vertex_color_shader(&vertex_color_shader);
 	setup_point_cloud_shader(&point_cloud_shader);
 	setup_color_by_w_shader(&color_by_w_shader);
 	setup_skybox_shader(&skybox_shader);
 	setup_textured_shader(&textured_shader);
 	setup_textured_lit_shader(&textured_lit_shader);
 	setup_textured_cubemap_lit_shader(&textured_cubemap_lit_shader);
+
+	/* after all the shaders are loaded */
+	setup_2d();
 
 	return 0;
 }
@@ -1578,6 +1781,8 @@ void graph_dev_load_skybox_texture(
 
 void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp)
 {
+	draw_vertex_buffer_2d();
+
 	enable_3d_viewport();
 
 	glEnable(GL_TEXTURE_CUBE_MAP);

@@ -11272,6 +11272,8 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	graph_dev_start_frame();
 #endif
 
 	sng_set_foreground(WHITE);
@@ -11397,6 +11399,8 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	}
 
 end_of_drawing:
+
+	graph_dev_end_frame();
 
 #ifndef WITHOUTOPENGL
 	gdk_gl_drawable_wait_gdk(gl_drawable);

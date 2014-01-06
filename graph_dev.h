@@ -33,6 +33,8 @@ struct mat44;
 struct mat33;
 
 extern int graph_dev_setup();
+extern void graph_dev_start_frame();
+extern void graph_dev_end_frame();
 extern void graph_dev_set_context(GdkDrawable *drawable, GdkGC *gc);
 extern void graph_dev_set_color(GdkColor *c, float a);
 extern void graph_dev_set_screen_size(int width, int height);

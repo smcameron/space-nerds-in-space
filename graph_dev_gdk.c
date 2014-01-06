@@ -104,6 +104,16 @@ int graph_dev_setup()
 	return 0;
 }
 
+void graph_dev_start_frame()
+{
+
+}
+
+void graph_dev_end_frame()
+{
+
+}
+
 void graph_dev_set_context(GdkDrawable *drawable, GdkGC *gc)
 {
 	sgc.drawable = drawable;
