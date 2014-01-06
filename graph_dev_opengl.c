@@ -1569,7 +1569,7 @@ void graph_dev_load_skybox_texture(
 		skybox_shader.texture_loaded = 0;
 	}
 
-	skybox_shader.cube_texture_id = graph_dev_load_cubemap_texture(0, texture_filename_pos_x,
+	skybox_shader.cube_texture_id = graph_dev_load_cubemap_texture(1, texture_filename_pos_x,
 		texture_filename_neg_x, texture_filename_pos_y, texture_filename_neg_y, texture_filename_pos_z,
 		texture_filename_neg_z);
 
