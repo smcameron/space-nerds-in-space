@@ -137,7 +137,8 @@ void quat_rot_vec(union vec3 *vo, const union vec3 *vi, const union quat *q)
 
 void quat_copy(union quat *qo, const union quat *qi)
 {
-	memcpy(qo, qi, sizeof(union quat));
+	if (qo != qi)
+		memcpy(qo, qi, sizeof(union quat));
 }
 
 float quat_len(const union quat *q)
