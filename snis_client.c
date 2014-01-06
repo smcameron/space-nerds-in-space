@@ -11527,16 +11527,16 @@ static void load_skybox_textures(char *filenameprefix)
          *
 	 * and those images should be laid out like this:
 	 *
-	 *  +------+
-	 *  |  4   |
-	 *  |      |
+	 *                +------+
+	 *                |  4   |
+	 *                |      |
 	 *  +------+------+------+------+
 	 *  |  0   |  1   |  2   |  3   |
 	 *  |      |      |      |      |
 	 *  +------+------+------+------+
-	 *  |  5   |
-	 *  |      |
-	 *  +------+
+	 *                |  5   |
+	 *                |      |
+	 *                +------+
 	 *
 	 *  Why?  No reason other than that's how I did it in cosmic-space-boxinator
 	 *  See: https://github.com/smcameron/cosmic-space-boxinator
@@ -12271,7 +12271,7 @@ int main(int argc, char *argv[])
 	if (role == 0)
 		role = ROLE_ALL;
 
-	strcpy(skybox_texture_prefix, "test");
+	strcpy(skybox_texture_prefix, "orange-haze");
 	override_asset_dir();
 
 	memset(&main_screen_text, 0, sizeof(main_screen_text));
