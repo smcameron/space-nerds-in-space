@@ -56,6 +56,15 @@ extern void graph_dev_load_skybox_texture(
 	const char *texture_filename_pos_z,
 	const char *texture_filename_neg_z);
 
+extern unsigned int graph_dev_load_cubemap_texture(
+	int is_inside,
+        const char *texture_filename_pos_x,
+        const char *texture_filename_neg_x,
+        const char *texture_filename_pos_y,
+        const char *texture_filename_neg_y,
+        const char *texture_filename_pos_z,
+        const char *texture_filename_neg_z);
+
 extern unsigned int graph_dev_load_texture(const char *filename);
 
 extern void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp);

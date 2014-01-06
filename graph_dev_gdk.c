@@ -891,6 +891,19 @@ void graph_dev_load_skybox_texture(
 	/* no skybox on gdk rendering */
 }
 
+unsigned int graph_dev_load_cubemap_texture(
+	int is_inside,
+	const char *texture_filename_pos_x,
+	const char *texture_filename_neg_x,
+	const char *texture_filename_pos_y,
+	const char *texture_filename_neg_y,
+	const char *texture_filename_pos_z,
+	const char *texture_filename_neg_z)
+{
+	/* no cubemap texture on gdk rendering */
+	return (unsigned int) -1;
+}
+
 unsigned int graph_dev_load_texture(const char *filename)
 {
 	/* no laserbolt texture with gdk rendering */

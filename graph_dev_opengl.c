@@ -1371,7 +1371,8 @@ int graph_dev_setup()
 	return 0;
 }
 
-void graph_dev_load_skybox_texture(
+unsigned int graph_dev_load_cubemap_texture(
+	int is_inside,
 	const char *texture_filename_pos_x,
 	const char *texture_filename_neg_x,
 	const char *texture_filename_pos_y,
@@ -1380,11 +1381,6 @@ void graph_dev_load_skybox_texture(
 	const char *texture_filename_neg_z)
 {
 	glEnable(GL_TEXTURE_CUBE_MAP);
-
-	if (skybox_shader.texture_loaded) {
-		glDeleteTextures(1, &skybox_shader.cube_texture_id);
-		skybox_shader.texture_loaded = 0;
-	}
 
 	int ntextures = 6;
 
@@ -1397,8 +1393,9 @@ void graph_dev_load_skybox_texture(
 		texture_filename_pos_y, texture_filename_neg_y,
 		texture_filename_pos_z, texture_filename_neg_z };
 
-	glGenTextures(1, &skybox_shader.cube_texture_id);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox_shader.cube_texture_id);
+	GLuint cube_texture_id;
+	glGenTextures(1, &cube_texture_id);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cube_texture_id);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1411,7 +1408,9 @@ void graph_dev_load_skybox_texture(
 	int i;
 	for (i = 0; i < ntextures; i++) {
 		int tw, th, hasAlpha = 0;
-		char *image_data = sng_load_png_texture(tex_filename[i], 0, 1, &tw, &th, &hasAlpha, whynotz, whynotlen);
+		/* do horizontal invert if we are projecting on the inside */
+		char *image_data = sng_load_png_texture(tex_filename[i], 0, is_inside, &tw, &th, &hasAlpha,
+			whynotz, whynotlen);
 		if (image_data) {
 			glTexImage2D(tex_pos[i], 0, GL_RGBA, tw, th, 0, (hasAlpha ? GL_RGBA : GL_RGB),
 					GL_UNSIGNED_BYTE, image_data);
@@ -1421,9 +1420,9 @@ void graph_dev_load_skybox_texture(
 		}
 	}
 
-	skybox_shader.texture_loaded = 1;
-
 	glDisable(GL_TEXTURE_CUBE_MAP);
+
+	return (unsigned int) cube_texture_id;
 }
 
 /* returning unsigned int instead of GLuint so as not to leak opengl types out
@@ -1455,6 +1454,26 @@ unsigned int graph_dev_load_texture(const char *filename)
 	}
 	glDisable(GL_TEXTURE_2D);
 	return (unsigned int) texture_number;
+}
+
+void graph_dev_load_skybox_texture(
+	const char *texture_filename_pos_x,
+	const char *texture_filename_neg_x,
+	const char *texture_filename_pos_y,
+	const char *texture_filename_neg_y,
+	const char *texture_filename_pos_z,
+	const char *texture_filename_neg_z)
+{
+	if (skybox_shader.texture_loaded) {
+		glDeleteTextures(1, &skybox_shader.cube_texture_id);
+		skybox_shader.texture_loaded = 0;
+	}
+
+	skybox_shader.cube_texture_id = graph_dev_load_cubemap_texture(0, texture_filename_pos_x,
+		texture_filename_neg_x, texture_filename_pos_y, texture_filename_neg_y, texture_filename_pos_z,
+		texture_filename_neg_z);
+
+	skybox_shader.texture_loaded = 1;
 }
 
 void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp)
