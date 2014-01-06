@@ -24,6 +24,7 @@
 #include <string.h>
 #define DEFINE_MATRIX_GLOBALS
 #include "matrix.h"
+#include "vec4.h"
 
 struct mat33 *mat44_to_mat33_ff(const struct mat44 *src, struct mat33 *output)
 {
@@ -229,6 +230,32 @@ void mat44_x_mat41_dff(const struct mat44d *lhs, const struct mat41 *rhs,
 	}
 }
 
+/* see mat44_x_mat41 */
+void mat44_x_vec4_dff(const struct mat44d *lhs, const union vec4 *rhs,
+				union vec4 *output)
+{
+	int row, col;
+
+	for (row = 3; row >= 0; row--) {
+		double cell = 0;
+		for (col = 3; col >= 0; col--)
+			cell += lhs->m[col][row] * rhs->vec[col];
+		output->vec[row] = (float)cell;
+	}
+}
+
+/* see mat44_x_mat41 */
+void mat44_x_vec4(const struct mat44 *lhs, const union vec4 *rhs,
+				union vec4 *output)
+{
+	int row, col;
+
+	for (row = 3; row >= 0; row--) {
+		output->vec[row] = 0;
+		for (col = 3; col >= 0; col--)
+			output->vec[row] += lhs->m[col][row] * rhs->vec[col];
+	}
+}
 
 /* for pre muliplication, mat44 must be row major and stored row major order */
 void mat41_x_mat44(const struct mat41 *lhs, const struct mat44 *rhs,

@@ -32,6 +32,8 @@
 #define GLOBAL extern
 #endif
 
+union vec4;
+
 struct mat44 {
 	float m[4][4];
 };
@@ -86,8 +88,14 @@ GLOBAL void mat44_x_mat41(const struct mat44 *lhs, const struct mat41 *rhs,
 GLOBAL void mat44_x_mat41_dff(const struct mat44d *lhs, const struct mat41 *rhs,
 				struct mat41 *output);
 
+GLOBAL void mat44_x_vec4_dff(const struct mat44d *lhs, const union vec4 *rhs,
+				union vec4 *output);
+
 GLOBAL void mat41_x_mat44(const struct mat41 *lhs, const struct mat44 *rhs,
 				struct mat41 *output);
+
+GLOBAL void mat44_x_vec4(const struct mat44 *lhs, const union vec4 *rhs,
+				union vec4 *output);
 
 GLOBAL void mat41_translate(struct mat41 *rhs, float tx, float ty, float tz,
 				struct mat41 *output);

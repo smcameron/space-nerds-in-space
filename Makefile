@@ -61,19 +61,19 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o \
-		power-model.o quat.o matrix.o snis_event_callback.o space-part.o fleet.o
+		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o
 
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} shader.o graph_dev_opengl.o snis_ui_element.o snis_graph.o \
 	snis_client.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	snis_damcon_systems.o mesh.o \
-	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o
+	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o vec4.o
 
 LIMCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} graph_dev_gdk.o snis_ui_element.o snis_limited_graph.o \
 	snis_limited_client.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	snis_damcon_systems.o mesh.o \
-	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o fleet.o
+	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o vec4.o fleet.o
 
 SSGL=ssgl/libssglclient.a
 LIBS=-lGLEW -Lssgl -lssglclient -lrt -lm ${LUALIBS} ${PNGLIBS}
@@ -235,13 +235,13 @@ shield_strength.o:	shield_strength.c shield_strength.h
 snis_server.o:	snis_server.c snis.h snis_packet.h snis_marshal.h sounds.h starbase-comms.h
 	$(Q)$(COMPILE)
 
-snis_client.o:	snis_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h quat.o
+snis_client.o:	snis_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h quat.o vec4.o
 	$(Q)$(GLEXTCOMPILE)
 
 snis_limited_client.c:	snis_client.c
 	cp snis_client.c snis_limited_client.c
 
-snis_limited_client.o:	snis_limited_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h quat.o
+snis_limited_client.o:	snis_limited_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h quat.o vec4.o
 	$(Q)$(LIMCOMPILE)
 
 snis_socket_io.o:	snis_socket_io.c snis_socket_io.h
@@ -342,6 +342,9 @@ space-part.o:	space-part.c space-part.h
 	$(Q)$(COMPILE)
 
 quat.o:	quat.c quat.h
+	$(Q)$(COMPILE)
+
+vec4.o:	vec4.c vec4.h
 	$(Q)$(COMPILE)
 
 fleet.o:	fleet.c fleet.h
