@@ -25,14 +25,10 @@ struct mesh_gl_info {
 
 	int ntriangles;
 	/* uses vertex_buffer for data */
-	GLuint triangle_normal_buffer;
-
-	GLuint filled_wireframe_buffer;
+	GLuint triangle_vertex_buffer;
 
 	int nwireframe_lines;
-	GLuint wireframe_vertex_buffer;
-	GLuint wireframe_normal_buffer;
-	GLuint texture_coord_buffer;
+	GLuint wireframe_lines_vertex_buffer;
 
 	int npoints;
 	/* uses vertex_buffer for data */
@@ -41,13 +37,22 @@ struct mesh_gl_info {
 	/* uses vertex_buffer for data */
 };
 
-struct filled_wireframe_buffer_data {
+struct vertex_buffer_data {
 	union vec3 position;
+};
+
+struct vertex_triangle_buffer_data {
 	union vec3 normal;
 	union vec3 tvertex0;
 	union vec3 tvertex1;
 	union vec3 tvertex2;
-	union vec3 edge_mask;
+	union vec3 wireframe_edge_mask;
+	union vec2 texture_coord;
+};
+
+struct vertex_wireframe_line_buffer_data {
+	union vec3 position;
+	union vec3 normal;
 };
 
 struct vertex_color_buffer_data {
@@ -61,10 +66,8 @@ void mesh_graph_dev_cleanup(struct mesh *m)
 		struct mesh_gl_info *ptr = m->graph_ptr;
 
 		glDeleteBuffers(1, &ptr->vertex_buffer);
-		glDeleteBuffers(1, &ptr->triangle_normal_buffer);
-		glDeleteBuffers(1, &ptr->filled_wireframe_buffer);
-		glDeleteBuffers(1, &ptr->wireframe_vertex_buffer);
-		glDeleteBuffers(1, &ptr->wireframe_normal_buffer);
+		glDeleteBuffers(1, &ptr->triangle_vertex_buffer);
+		glDeleteBuffers(1, &ptr->wireframe_lines_vertex_buffer);
 
 		free(ptr);
 		m->graph_ptr = 0;
@@ -82,17 +85,10 @@ void mesh_graph_dev_init(struct mesh *m)
 	if (m->geometry_mode == MESH_GEOMETRY_TRIANGLES) {
 		/* setup the triangle mesh buffers */
 		int i;
-		size_t size = sizeof(GLfloat) * m->ntriangles * 9;
-		size_t txsize = sizeof(GLfloat) * m->ntriangles * 3 * 4;
-		GLfloat *g_vertex_buffer_data = malloc(size);
-		GLfloat *g_normal_buffer_data = malloc(size);
-		GLfloat *g_texture_coord_data = 0;
-
-		if (m->tex)
-			g_texture_coord_data = malloc(txsize);
-
-		int wf_data_size = sizeof(struct filled_wireframe_buffer_data) * m->ntriangles * 3;
-		struct filled_wireframe_buffer_data *g_filled_wf_buffer_data = malloc(wf_data_size);
+		size_t v_size = sizeof(struct vertex_buffer_data) * m->ntriangles * 3;
+		size_t vt_size = sizeof(struct vertex_triangle_buffer_data) * m->ntriangles * 3;
+		struct vertex_buffer_data *g_v_buffer_data = malloc(v_size);
+		struct vertex_triangle_buffer_data *g_vt_buffer_data = malloc(vt_size);
 
 		ptr->ntriangles = m->ntriangles;
 		ptr->npoints = m->ntriangles * 3; /* can be rendered as a point cloud too */
@@ -100,86 +96,67 @@ void mesh_graph_dev_init(struct mesh *m)
 		for (i = 0; i < m->ntriangles; i++) {
 			int j = 0;
 			for (j = 0; j < 3; j++) {
-				int v_index = i * 9 + j * 3;
-				g_vertex_buffer_data[v_index + 0] = m->t[i].v[j]->x;
-				g_vertex_buffer_data[v_index + 1] = m->t[i].v[j]->y;
-				g_vertex_buffer_data[v_index + 2] = m->t[i].v[j]->z;
+				int v_index = i * 3 + j;
+				g_v_buffer_data[v_index].position.v.x = m->t[i].v[j]->x;
+				g_v_buffer_data[v_index].position.v.y = m->t[i].v[j]->y;
+				g_v_buffer_data[v_index].position.v.z = m->t[i].v[j]->z;
 
-				g_normal_buffer_data[v_index + 0] = m->t[i].vnormal[j].x;
-				g_normal_buffer_data[v_index + 1] = m->t[i].vnormal[j].y;
-				g_normal_buffer_data[v_index + 2] = m->t[i].vnormal[j].z;
+				g_vt_buffer_data[v_index].normal.v.x = m->t[i].vnormal[j].x;
+				g_vt_buffer_data[v_index].normal.v.y = m->t[i].vnormal[j].y;
+				g_vt_buffer_data[v_index].normal.v.z = m->t[i].vnormal[j].z;
 
-				if (m->tex) {
-					int d = i * 12 + j * 4;
-					int s = i * 3 + j;
+				g_vt_buffer_data[v_index].tvertex0.v.x = m->t[i].v[0]->x;
+				g_vt_buffer_data[v_index].tvertex0.v.y = m->t[i].v[0]->y;
+				g_vt_buffer_data[v_index].tvertex0.v.z = m->t[i].v[0]->z;
 
-					g_texture_coord_data[d + 0] = m->tex[s].u;
-					g_texture_coord_data[d + 1] = m->tex[s].v;
-					g_texture_coord_data[d + 2] = 0.0f;
-					g_texture_coord_data[d + 3] = 0.0f;
-				}
+				g_vt_buffer_data[v_index].tvertex1.v.x = m->t[i].v[1]->x;
+				g_vt_buffer_data[v_index].tvertex1.v.y = m->t[i].v[1]->y;
+				g_vt_buffer_data[v_index].tvertex1.v.z = m->t[i].v[1]->z;
 
-				int wf_index = i * 3 + j;
-				g_filled_wf_buffer_data[wf_index].position.v.x = m->t[i].v[j]->x;
-				g_filled_wf_buffer_data[wf_index].position.v.y = m->t[i].v[j]->y;
-				g_filled_wf_buffer_data[wf_index].position.v.z = m->t[i].v[j]->z;
-
-				g_filled_wf_buffer_data[wf_index].normal.v.x = m->t[i].vnormal[j].x;
-				g_filled_wf_buffer_data[wf_index].normal.v.y = m->t[i].vnormal[j].y;
-				g_filled_wf_buffer_data[wf_index].normal.v.z = m->t[i].vnormal[j].z;
-
-				g_filled_wf_buffer_data[wf_index].tvertex0.v.x = m->t[i].v[0]->x;
-				g_filled_wf_buffer_data[wf_index].tvertex0.v.y = m->t[i].v[0]->y;
-				g_filled_wf_buffer_data[wf_index].tvertex0.v.z = m->t[i].v[0]->z;
-
-				g_filled_wf_buffer_data[wf_index].tvertex1.v.x = m->t[i].v[1]->x;
-				g_filled_wf_buffer_data[wf_index].tvertex1.v.y = m->t[i].v[1]->y;
-				g_filled_wf_buffer_data[wf_index].tvertex1.v.z = m->t[i].v[1]->z;
-
-				g_filled_wf_buffer_data[wf_index].tvertex2.v.x = m->t[i].v[2]->x;
-				g_filled_wf_buffer_data[wf_index].tvertex2.v.y = m->t[i].v[2]->y;
-				g_filled_wf_buffer_data[wf_index].tvertex2.v.z = m->t[i].v[2]->z;
-
-				g_filled_wf_buffer_data[wf_index].edge_mask.v.x = 0;
-				g_filled_wf_buffer_data[wf_index].edge_mask.v.y = 0;
-				g_filled_wf_buffer_data[wf_index].edge_mask.v.z = 0;
+				g_vt_buffer_data[v_index].tvertex2.v.x = m->t[i].v[2]->x;
+				g_vt_buffer_data[v_index].tvertex2.v.y = m->t[i].v[2]->y;
+				g_vt_buffer_data[v_index].tvertex2.v.z = m->t[i].v[2]->z;
 
 				/* bias the edge distance to make the coplanar edges not draw */
 				if ((j == 1 || j == 2) && (m->t[i].flag & TRIANGLE_1_2_COPLANAR))
-					g_filled_wf_buffer_data[wf_index].edge_mask.v.x = 1000;
+					g_vt_buffer_data[v_index].wireframe_edge_mask.v.x = 1000;
+				else
+					g_vt_buffer_data[v_index].wireframe_edge_mask.v.x = 0;
+
 				if ((j == 0 || j == 2) && (m->t[i].flag & TRIANGLE_0_2_COPLANAR))
-					g_filled_wf_buffer_data[wf_index].edge_mask.v.y = 1000;
+					g_vt_buffer_data[v_index].wireframe_edge_mask.v.y = 1000;
+				else
+					g_vt_buffer_data[v_index].wireframe_edge_mask.v.y = 0;
+
 				if ((j == 0 || j == 1) && (m->t[i].flag & TRIANGLE_0_1_COPLANAR))
-					g_filled_wf_buffer_data[wf_index].edge_mask.v.z = 1000;
+					g_vt_buffer_data[v_index].wireframe_edge_mask.v.z = 1000;
+				else
+					g_vt_buffer_data[v_index].wireframe_edge_mask.v.z = 0;
+
+				if (m->tex) {
+					g_vt_buffer_data[v_index].texture_coord.v.x = m->tex[v_index].u;
+					g_vt_buffer_data[v_index].texture_coord.v.y = m->tex[v_index].v;
+				} else {
+					g_vt_buffer_data[v_index].texture_coord.v.x = 0;
+					g_vt_buffer_data[v_index].texture_coord.v.y = 0;
+				}
 			}
 		}
 
 		glGenBuffers(1, &ptr->vertex_buffer);
 		glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, size, g_vertex_buffer_data, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, v_size, g_v_buffer_data, GL_STATIC_DRAW);
 
-		glGenBuffers(1, &ptr->triangle_normal_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_normal_buffer);
-		glBufferData(GL_ARRAY_BUFFER, size, g_normal_buffer_data, GL_STATIC_DRAW);
+		glGenBuffers(1, &ptr->triangle_vertex_buffer);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
+		glBufferData(GL_ARRAY_BUFFER, vt_size, g_vt_buffer_data, GL_STATIC_DRAW);
 
-		glGenBuffers(1, &ptr->filled_wireframe_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
-		glBufferData(GL_ARRAY_BUFFER, wf_data_size, g_filled_wf_buffer_data, GL_STATIC_DRAW);
-
-		if (m->tex) {
-			glGenBuffers(1, &ptr->texture_coord_buffer);
-			glBindBuffer(GL_ARRAY_BUFFER, ptr->texture_coord_buffer);
-			glBufferData(GL_ARRAY_BUFFER, txsize, g_texture_coord_data, GL_STATIC_DRAW);
-			free(g_texture_coord_data);
-		}
-
-		free(g_vertex_buffer_data);
-		free(g_normal_buffer_data);
+		free(g_v_buffer_data);
+		free(g_vt_buffer_data);
 
 		/* setup the line buffers used for wireframe */
-		size = sizeof(GLfloat)*m->ntriangles * 3 * 3 * 2;
-		g_vertex_buffer_data = malloc(size);
-		g_normal_buffer_data = malloc(size);
+		size_t wfl_size = sizeof(struct vertex_wireframe_line_buffer_data) * m->ntriangles * 3 * 2;
+		struct vertex_wireframe_line_buffer_data *g_wfl_buffer_data = malloc(wfl_size);
 
 		/* map the edge combinatinos to the triangle coplanar flag */
 		static const int tri_coplaner_flags[3][3] = {
@@ -195,46 +172,43 @@ void mesh_graph_dev_init(struct mesh *m)
 				int j1 = (j0 + 1) % 3;
 
 				if (!(m->t[i].flag & tri_coplaner_flags[j0][j1])) {
-					int index = 6 * ptr->nwireframe_lines;
+					int index = 2 * ptr->nwireframe_lines;
 
 					/* add the line from vertex j0 to j1 */
-					g_vertex_buffer_data[index + 0] = m->t[i].v[j0]->x;
-					g_vertex_buffer_data[index + 1] = m->t[i].v[j0]->y;
-					g_vertex_buffer_data[index + 2] = m->t[i].v[j0]->z;
+					g_wfl_buffer_data[index].position.v.x = m->t[i].v[j0]->x;
+					g_wfl_buffer_data[index].position.v.y = m->t[i].v[j0]->y;
+					g_wfl_buffer_data[index].position.v.z = m->t[i].v[j0]->z;
 
-					g_vertex_buffer_data[index + 3] = m->t[i].v[j1]->x;
-					g_vertex_buffer_data[index + 4] = m->t[i].v[j1]->y;
-					g_vertex_buffer_data[index + 5] = m->t[i].v[j1]->z;
+					g_wfl_buffer_data[index + 1].position.v.x = m->t[i].v[j1]->x;
+					g_wfl_buffer_data[index + 1].position.v.y = m->t[i].v[j1]->y;
+					g_wfl_buffer_data[index + 1].position.v.z = m->t[i].v[j1]->z;
 
 					/* the line normal is the same as the triangle */
-					g_normal_buffer_data[index + 0] = g_normal_buffer_data[index + 3] = m->t[i].n.x;
-					g_normal_buffer_data[index + 1] = g_normal_buffer_data[index + 4] = m->t[i].n.y;
-					g_normal_buffer_data[index + 2] = g_normal_buffer_data[index + 5] = m->t[i].n.z;
+					g_wfl_buffer_data[index].normal.v.x = m->t[i].n.x;
+					g_wfl_buffer_data[index].normal.v.y = m->t[i].n.y;
+					g_wfl_buffer_data[index].normal.v.z = m->t[i].n.z;
+					g_wfl_buffer_data[index + 1].normal.v.x = m->t[i].n.x;
+					g_wfl_buffer_data[index + 1].normal.v.y = m->t[i].n.y;
+					g_wfl_buffer_data[index + 1].normal.v.z = m->t[i].n.z;
 
 					ptr->nwireframe_lines++;
 				}
 			}
 		}
 
-		glGenBuffers(1, &ptr->wireframe_vertex_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 6 * ptr->nwireframe_lines,
-			g_vertex_buffer_data, GL_STATIC_DRAW);
+		glGenBuffers(1, &ptr->wireframe_lines_vertex_buffer);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(struct vertex_wireframe_line_buffer_data) *
+			ptr->nwireframe_lines * 2, g_wfl_buffer_data, GL_STATIC_DRAW);
 
-		glGenBuffers(1, &ptr->wireframe_normal_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_normal_buffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 6 * ptr->nwireframe_lines,
-			g_normal_buffer_data, GL_STATIC_DRAW);
-
-		free(g_vertex_buffer_data);
-		free(g_normal_buffer_data);
+		free(g_wfl_buffer_data);
 	}
 
 	if (m->geometry_mode == MESH_GEOMETRY_LINES) {
 		/* setup the line buffers */
 		int i;
-		size_t size = sizeof(GLfloat) * m->nvertices * 3 * 2;
-		GLfloat *g_vertex_buffer_data = malloc(size);
+		size_t v_size = sizeof(struct vertex_buffer_data) * m->nvertices * 2;
+		struct vertex_buffer_data *g_v_buffer_data = malloc(v_size);
 
 		ptr->nlines = 0;
 
@@ -250,14 +224,14 @@ void mesh_graph_dev_init(struct mesh *m)
 					struct vertex *v2 = vcurr;
 
 					if (v2 != vstart) {
-						int index = 6 * ptr->nlines;
-						g_vertex_buffer_data[index + 0] = v1->x;
-						g_vertex_buffer_data[index + 1] = v1->y;
-						g_vertex_buffer_data[index + 2] = v1->z;
+						int index = ptr->nlines * 2;
+						g_v_buffer_data[index].position.v.x = v1->x;
+						g_v_buffer_data[index].position.v.y = v1->y;
+						g_v_buffer_data[index].position.v.z = v1->z;
 
-						g_vertex_buffer_data[index + 3] = v2->x;
-						g_vertex_buffer_data[index + 4] = v2->y;
-						g_vertex_buffer_data[index + 5] = v2->z;
+						g_v_buffer_data[index + 1].position.v.x = v2->x;
+						g_v_buffer_data[index + 1].position.v.y = v2->y;
+						g_v_buffer_data[index + 1].position.v.z = v2->z;
 
 						ptr->nlines++;
 					}
@@ -267,14 +241,14 @@ void mesh_graph_dev_init(struct mesh *m)
 			} else {
 				/* do dotted e->m->l[i].flag & MESH_LINE_DOTTED) */
 
-				int index = 6 * ptr->nlines;
-				g_vertex_buffer_data[index+0] = vstart->x;
-				g_vertex_buffer_data[index+1] = vstart->y;
-				g_vertex_buffer_data[index+2] = vstart->z;
+				int index = ptr->nlines * 2;
+				g_v_buffer_data[index].position.v.x = vstart->x;
+				g_v_buffer_data[index].position.v.y = vstart->y;
+				g_v_buffer_data[index].position.v.z = vstart->z;
 
-				g_vertex_buffer_data[index+3] = vend->x;
-				g_vertex_buffer_data[index+4] = vend->y;
-				g_vertex_buffer_data[index+5] = vend->z;
+				g_v_buffer_data[index + 1].position.v.x = vend->x;
+				g_v_buffer_data[index + 1].position.v.y = vend->y;
+				g_v_buffer_data[index + 1].position.v.z = vend->z;
 
 				ptr->nlines++;
 			}
@@ -282,33 +256,32 @@ void mesh_graph_dev_init(struct mesh *m)
 
 		glGenBuffers(1, &ptr->vertex_buffer);
 		glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 6 * ptr->nlines, g_vertex_buffer_data, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(struct vertex_buffer_data) * 2 * ptr->nlines, g_v_buffer_data, GL_STATIC_DRAW);
 
 		ptr->npoints = ptr->nlines * 2; /* can be rendered as a point cloud too */
 
-		free(g_vertex_buffer_data);
+		free(g_v_buffer_data);
 	}
 
 	if (m->geometry_mode == MESH_GEOMETRY_POINTS) {
 		/* setup the point buffers */
-		int i;
-		size_t size = sizeof(GLfloat) * m->nvertices * 3;
-		GLfloat *g_vertex_buffer_data = malloc(size);
+		size_t v_size = sizeof(struct vertex_buffer_data) * m->nvertices;
+		struct vertex_buffer_data *g_v_buffer_data = malloc(v_size);
 
 		ptr->npoints = m->nvertices;
 
+		int i;
 		for (i = 0; i < m->nvertices; i++) {
-			int index = i * 3;
-			g_vertex_buffer_data[index + 0] = m->v[i].x;
-			g_vertex_buffer_data[index + 1] = m->v[i].y;
-			g_vertex_buffer_data[index + 2] = m->v[i].z;
+			g_v_buffer_data[i].position.v.x = m->v[i].x;
+			g_v_buffer_data[i].position.v.y = m->v[i].y;
+			g_v_buffer_data[i].position.v.z = m->v[i].z;
 		}
 
 		glGenBuffers(1, &ptr->vertex_buffer);
 		glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, size, g_vertex_buffer_data, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, v_size, g_v_buffer_data, GL_STATIC_DRAW);
 
-		free(g_vertex_buffer_data);
+		free(g_v_buffer_data);
 	}
 
 	m->graph_ptr = ptr;
@@ -699,30 +672,30 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 		3,                           /* size */
 		GL_FLOAT,                    /* type */
 		GL_FALSE,                    /* normalized? */
-		0,                           /* stride */
-		(void *)0                    /* array buffer offset */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
 	);
 
 	glEnableVertexAttribArray(textured_shader.vertexNormalID);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_normal_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
 		textured_shader.vertexNormalID,  /* The attribute we want to configure */
 		3,                            /* size */
 		GL_FLOAT,                     /* type */
 		GL_FALSE,                     /* normalized? */
-		0,                            /* stride */
-		(void *)0                     /* array buffer offset */
+		sizeof(struct vertex_triangle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_triangle_buffer_data, normal.v.x) /* array buffer offset */
 	);
 
 	glEnableVertexAttribArray(textured_shader.textureCoordID);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->texture_coord_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
 		textured_shader.textureCoordID,/* The attribute we want to configure */
-		4,                            /* size */
+		2,                            /* size */
 		GL_FLOAT,                     /* type */
 		GL_TRUE,                     /* normalized? */
-		0,                            /* stride */
-		(void *)0                     /* array buffer offset */
+		sizeof(struct vertex_triangle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x) /* array buffer offset */
 	);
 
 	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
@@ -772,19 +745,19 @@ static void graph_dev_raster_texture_cubemap_lit(const struct mat44 *mat_mvp, co
 		3,                           /* size */
 		GL_FLOAT,                    /* type */
 		GL_FALSE,                    /* normalized? */
-		0,                           /* stride */
-		(void *)0                    /* array buffer offset */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
 	);
 
 	glEnableVertexAttribArray(textured_cubemap_lit_shader.vertexNormalID);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_normal_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
 		textured_cubemap_lit_shader.vertexNormalID,  /* The attribute we want to configure */
 		3,                            /* size */
 		GL_FLOAT,                     /* type */
 		GL_FALSE,                     /* normalized? */
-		0,                            /* stride */
-		(void *)0                     /* array buffer offset */
+		sizeof(struct vertex_triangle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_triangle_buffer_data, normal.v.x) /* array buffer offset */
 	);
 
 	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
@@ -834,30 +807,30 @@ static void graph_dev_raster_texture_lit(const struct mat44 *mat_mvp, const stru
 		3,                           /* size */
 		GL_FLOAT,                    /* type */
 		GL_FALSE,                    /* normalized? */
-		0,                           /* stride */
-		(void *)0                    /* array buffer offset */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
 	);
 
 	glEnableVertexAttribArray(textured_lit_shader.vertexNormalID);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_normal_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
 		textured_lit_shader.vertexNormalID,  /* The attribute we want to configure */
 		3,                            /* size */
 		GL_FLOAT,                     /* type */
 		GL_FALSE,                     /* normalized? */
-		0,                            /* stride */
-		(void *)0                     /* array buffer offset */
+		sizeof(struct vertex_triangle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_triangle_buffer_data, normal.v.x) /* array buffer offset */
 	);
 
 	glEnableVertexAttribArray(textured_lit_shader.textureCoordID);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->texture_coord_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
 		textured_lit_shader.textureCoordID,/* The attribute we want to configure */
-		4,                            /* size */
+		2,                            /* size */
 		GL_FLOAT,                     /* type */
 		GL_TRUE,                     /* normalized? */
-		0,                            /* stride */
-		(void *)0                     /* array buffer offset */
+		sizeof(struct vertex_triangle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x) /* array buffer offset */
 	);
 
 	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
@@ -904,19 +877,19 @@ static void graph_dev_raster_solid_mesh(const struct mat44 *mat_mvp, const struc
 		3,                           /* size */
 		GL_FLOAT,                    /* type */
 		GL_FALSE,                    /* normalized? */
-		0,                           /* stride */
-		(void *)0                    /* array buffer offset */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
 	);
 
 	glEnableVertexAttribArray(solid_shader.vertexNormalID);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_normal_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
 		solid_shader.vertexNormalID,  /* The attribute we want to configure */
 		3,                            /* size */
 		GL_FLOAT,                     /* type */
 		GL_FALSE,                     /* normalized? */
-		0,                            /* stride */
-		(void *)0                     /* array buffer offset */
+		sizeof(struct vertex_triangle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_triangle_buffer_data, normal.v.x) /* array buffer offset */
 	);
 
 	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
@@ -953,58 +926,58 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 		triangle_color->green, triangle_color->blue);
 
 	glEnableVertexAttribArray(filled_wireframe_shader.position_id);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
 	glVertexAttribPointer(
 		filled_wireframe_shader.position_id,
 		3,
 		GL_FLOAT,
 		GL_FALSE,
-		sizeof(struct filled_wireframe_buffer_data),
-		(void *)offsetof(struct filled_wireframe_buffer_data, position.v.x)
+		sizeof(struct vertex_buffer_data),
+		(void *)offsetof(struct vertex_buffer_data, position.v.x)
 	);
 
 	glEnableVertexAttribArray(filled_wireframe_shader.tvertex0_id);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
 		filled_wireframe_shader.tvertex0_id,
 		3,
 		GL_FLOAT,
 		GL_FALSE,
-		sizeof(struct filled_wireframe_buffer_data),
-		(void *)offsetof(struct filled_wireframe_buffer_data, tvertex0.v.x)
+		sizeof(struct vertex_triangle_buffer_data),
+		(void *)offsetof(struct vertex_triangle_buffer_data, tvertex0.v.x)
 	);
 
 	glEnableVertexAttribArray(filled_wireframe_shader.tvertex1_id);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
 		filled_wireframe_shader.tvertex1_id,
 		3,
 		GL_FLOAT,
 		GL_FALSE,
-		sizeof(struct filled_wireframe_buffer_data),
-		(void *)offsetof(struct filled_wireframe_buffer_data, tvertex1.v.x)
+		sizeof(struct vertex_triangle_buffer_data),
+		(void *)offsetof(struct vertex_triangle_buffer_data, tvertex1.v.x)
 	);
 
 	glEnableVertexAttribArray(filled_wireframe_shader.tvertex2_id);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
 		filled_wireframe_shader.tvertex2_id,
 		3,
 		GL_FLOAT,
 		GL_FALSE,
-		sizeof(struct filled_wireframe_buffer_data),
-		(void *)offsetof(struct filled_wireframe_buffer_data, tvertex2.v.x)
+		sizeof(struct vertex_triangle_buffer_data),
+		(void *)offsetof(struct vertex_triangle_buffer_data, tvertex2.v.x)
 	);
 
 	glEnableVertexAttribArray(filled_wireframe_shader.edge_mask_id);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->filled_wireframe_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
 		filled_wireframe_shader.edge_mask_id,
 		3,
 		GL_FLOAT,
 		GL_FALSE,
-		sizeof(struct filled_wireframe_buffer_data),
-		(void *)offsetof(struct filled_wireframe_buffer_data, edge_mask.v.x)
+		sizeof(struct vertex_triangle_buffer_data),
+		(void *)offsetof(struct vertex_triangle_buffer_data, wireframe_edge_mask.v.x)
 	);
 
 	glDrawArrays(GL_TRIANGLES, 0, ptr->ntriangles*3);
@@ -1037,25 +1010,25 @@ static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, c
 		line_color->green, line_color->blue);
 
 	glEnableVertexAttribArray(trans_wireframe_shader.vertexPositionID);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer);
 	glVertexAttribPointer(
 		trans_wireframe_shader.vertexPositionID, /* The attribute we want to configure */
 		3,                           /* size */
 		GL_FLOAT,                    /* type */
 		GL_FALSE,                    /* normalized? */
-		0,                           /* stride */
-		(void *)0                    /* array buffer offset */
+		sizeof(struct vertex_wireframe_line_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_wireframe_line_buffer_data, position.v.x) /* array buffer offset */
 	);
 
 	glEnableVertexAttribArray(trans_wireframe_shader.vertexNormalID);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_normal_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer);
 	glVertexAttribPointer(
 		trans_wireframe_shader.vertexNormalID,    /* The attribute we want to configure */
 		3,                            /* size */
 		GL_FLOAT,                     /* type */
 		GL_FALSE,                     /* normalized? */
-		0,                            /* stride */
-		(void *)0                     /* array buffer offset */
+		sizeof(struct vertex_wireframe_line_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_wireframe_line_buffer_data, normal.v.x) /* array buffer offset */
 	);
 
 	glDrawArrays(GL_LINES, 0, ptr->nwireframe_lines*2);
@@ -1122,8 +1095,8 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 		3,                           /* size */
 		GL_FLOAT,                    /* type */
 		GL_FALSE,                    /* normalized? */
-		0,                           /* stride */
-		(void *)0                    /* array buffer offset */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
 	);
 
 	glDrawArrays(GL_LINES, 0, ptr->nlines*2);
@@ -1162,8 +1135,8 @@ void graph_dev_raster_point_cloud_mesh(const struct mat44 *mat_mvp, struct mesh 
 		3,                           /* size */
 		GL_FLOAT,                    /* type */
 		GL_FALSE,                    /* normalized? */
-		0,                           /* stride */
-		(void *)0                    /* array buffer offset */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
 	);
 
 	glDrawArrays(GL_POINTS, 0, ptr->npoints);
