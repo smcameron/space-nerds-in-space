@@ -37,12 +37,12 @@ union()
 	rotate(a = 45, v = [0, 0, 1])
 		spoke_set(4, 27, 45, 59);
 	translate(v = [0, 0, 13])
-	spoke_set(4, 68, -28, 32);
+	spoke_set(4, 76, -28, 32);
 	rotate(a = 45, v = [0, 0, 1])
 		translate(v = [0, 0, -25])
 			spoke_set(2, 140, 8, 10);
 	translate(v = [0, 0, -85])
-		sphere(r = 10);
+		sphere(r = 10, $fn=20);
 	translate(v = [0, 0, 45])
-		sphere(r = 26);
+		sphere(r = 26, $fn=20);
 }
