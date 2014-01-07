@@ -774,8 +774,7 @@ static void graph_dev_raster_texture_lit(const struct mat44 *mat_mvp, const stru
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture_number);
-	glUniform3f(textured_lit_shader.colorID, triangle_color->red,
-		triangle_color->green, triangle_color->blue);
+	glUniform1i(textured_lit_shader.texture_id, 0);
 	glUniform3f(textured_lit_shader.lightPosID, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
 
 	glEnableVertexAttribArray(textured_lit_shader.vertexPositionID);
