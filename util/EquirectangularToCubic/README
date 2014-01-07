@@ -1,0 +1,22 @@
+Note:  The code in this directory
+
+	Equi2Rect.class
+	Equi2Rect.java
+	EquirectangularToCubic$1.class
+	EquirectangularToCubic.class
+	EquirectangularToCubic$CmdParseState.class
+	EquirectangularToCubic.jar
+	EquirectangularToCubic.java
+	FileListFilter.class
+	ImageTo2DIntArrayExtractor.class
+	ImageTo2DIntArrayExtractor.java
+	Makefile
+	MANIFEST.MF
+
+is a mixture of GPL2 and GPL 3 licensed code (see Equ2rect.java, and 
+EquirectangularToCubic.java) and is not really part of Space Nerds In Space,
+nor needed to build it, we are just aggregating it here for convenience as it
+is useful for creating cube map textures.
+
+Run "make help" to see how to run the program.
+
