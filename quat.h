@@ -18,6 +18,15 @@
 #ifndef __QUAT_H__
 #define __QUAT_H__
 
+/* generic 2d vector */
+union vec2 {
+	struct {
+		float x;
+		float y;
+	} v;
+	float vec[2];
+};
+
 /* generic 3d vector */
 union vec3 {
 	struct {
