@@ -1,11 +1,11 @@
 #version 120
 
 uniform vec3 u_LightPos;       // The position of the light in eye space.
- 
+
 varying vec3 v_Position;       // Interpolated position for this fragment.
 varying vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
 varying vec3 v_Normal;         // Interpolated normal for this fragment.
- 
+
 void main()
 {
 	// Get a lighting direction vector from the light to the vertex.

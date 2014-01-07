@@ -294,7 +294,7 @@ struct graph_dev_gl_vertex_color_shader {
 	GLuint vertex_color_id;
 };
 
-struct graph_dev_gl_solid_shader {
+struct graph_dev_gl_single_color_lit_shader {
 	GLuint program_id;
 	GLuint mvp_matrix_id;
 	GLuint mv_matrix_id;
@@ -400,11 +400,8 @@ struct graph_dev_gl_textured_cubemap_lit_shader {
 	GLuint texture_id; /* param to vertex shader */
 };
 
-/* only use on high performance graphics card */
-/*#define PER_PIXEL_LIGHT 1*/
-
 /* store all the shader parameters */
-static struct graph_dev_gl_solid_shader solid_shader;
+static struct graph_dev_gl_single_color_lit_shader single_color_lit_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_shader;
 static struct graph_dev_gl_filled_wireframe_shader filled_wireframe_shader;
 static struct graph_dev_gl_single_color_shader single_color_shader;
@@ -824,7 +821,7 @@ static void graph_dev_raster_texture_lit(const struct mat44 *mat_mvp, const stru
 	glDisable(GL_BLEND);
 }
 
-static void graph_dev_raster_solid_mesh(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
+static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos)
 {
 	enable_3d_viewport();
@@ -838,20 +835,20 @@ static void graph_dev_raster_solid_mesh(const struct mat44 *mat_mvp, const struc
 	glDepthFunc(GL_LESS);
 	glEnable(GL_CULL_FACE);
 
-	glUseProgram(solid_shader.program_id);
+	glUseProgram(single_color_lit_shader.program_id);
 
-	glUniformMatrix4fv(solid_shader.mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
-	glUniformMatrix4fv(solid_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
-	glUniformMatrix3fv(solid_shader.normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
+	glUniformMatrix4fv(single_color_lit_shader.mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
+	glUniformMatrix4fv(single_color_lit_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix3fv(single_color_lit_shader.normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
 
-	glUniform3f(solid_shader.color_id, triangle_color->red,
+	glUniform3f(single_color_lit_shader.color_id, triangle_color->red,
 		triangle_color->green, triangle_color->blue);
-	glUniform3f(solid_shader.light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
+	glUniform3f(single_color_lit_shader.light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
 
-	glEnableVertexAttribArray(solid_shader.vertex_position_id);
+	glEnableVertexAttribArray(single_color_lit_shader.vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
 	glVertexAttribPointer(
-		solid_shader.vertex_position_id, /* The attribute we want to configure */
+		single_color_lit_shader.vertex_position_id, /* The attribute we want to configure */
 		3,                           /* size */
 		GL_FLOAT,                    /* type */
 		GL_FALSE,                    /* normalized? */
@@ -859,10 +856,10 @@ static void graph_dev_raster_solid_mesh(const struct mat44 *mat_mvp, const struc
 		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
 	);
 
-	glEnableVertexAttribArray(solid_shader.vertex_normal_id);
+	glEnableVertexAttribArray(single_color_lit_shader.vertex_normal_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
-		solid_shader.vertex_normal_id,  /* The attribute we want to configure */
+		single_color_lit_shader.vertex_normal_id,  /* The attribute we want to configure */
 		3,                            /* size */
 		GL_FLOAT,                     /* type */
 		GL_FALSE,                     /* normalized? */
@@ -872,8 +869,8 @@ static void graph_dev_raster_solid_mesh(const struct mat44 *mat_mvp, const struc
 
 	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
 
-	glDisableVertexAttribArray(solid_shader.vertex_position_id);
-	glDisableVertexAttribArray(solid_shader.vertex_normal_id);
+	glDisableVertexAttribArray(single_color_lit_shader.vertex_position_id);
+	glDisableVertexAttribArray(single_color_lit_shader.vertex_normal_id);
 	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
@@ -1188,7 +1185,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						e->m, &triangle_color, eye_light_pos, texture_id);
 
 				else
-					graph_dev_raster_solid_mesh(mat_mvp, mat_mv, mat_normal,
+					graph_dev_raster_single_color_lit(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos);
 			}
 		} else if (outline_triangle) {
@@ -1338,16 +1335,11 @@ void graph_dev_draw_arc(gboolean filled, float x, float y, float width, float he
 	}
 }
 
-static void setup_solid_shader(struct graph_dev_gl_solid_shader *shader)
+static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_shader *shader)
 {
 	/* Create and compile our GLSL program from the shaders */
-#ifdef PER_PIXEL_LIGHT
-	shader->program_id = load_shaders("share/snis/shader/solid_per_pixel_light.vert",
-		"share/snis/shader/solid_per_pixel_light.frag");
-#else
-	shader->program_id = load_shaders("share/snis/shader/solid_per_vertex_light.vert",
-		"share/snis/shader/solid_per_vertex_light.frag");
-#endif
+	shader->program_id = load_shaders("share/snis/shader/single-color-lit-per-vertex.vert",
+		"share/snis/shader/single-color-lit-per-vertex.frag");
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -1599,7 +1591,7 @@ int graph_dev_setup()
 	}
 	printf("Initialized GLEW\n");
 
-	setup_solid_shader(&solid_shader);
+	setup_single_color_lit_shader(&single_color_lit_shader);
 	setup_trans_wireframe_shader(&trans_wireframe_shader);
 	setup_filled_wireframe_shader(&filled_wireframe_shader);
 	setup_single_color_shader(&single_color_shader);
