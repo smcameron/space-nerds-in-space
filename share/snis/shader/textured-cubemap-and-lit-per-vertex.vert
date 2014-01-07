@@ -10,7 +10,7 @@ attribute vec3 a_Position; // Per-vertex position information we will pass in.
 attribute vec3 a_Normal;   // Per-vertex normal information we will pass in.
 
 varying vec3 v_TexCoord;      // This will be passed into the fragment shader.
-varying vec3 v_Color;
+varying vec4 v_Color;
 
 void main()                // The entry point for our vertex shader.
 {
@@ -34,7 +34,7 @@ void main()                // The entry point for our vertex shader.
 	float diffuse = max(dot, 0.1);
 
 	// Multiply the color by the illumination level. It will be interpolated across the triangle.
-	v_Color = vec3(diffuse, diffuse, diffuse);
+	v_Color = vec4(diffuse, diffuse, diffuse, 1.0);
 	v_TexCoord = a_Position;
 
 	// gl_Position is a special variable used to store the final position.
