@@ -28,6 +28,8 @@ struct loaded_texture {
 static int nloaded_textures = 0;
 static struct loaded_texture loaded_textures[MAX_LOADED_TEXTURES];
 
+static int draw_normal_lines = 0;
+
 struct mesh_gl_info {
 	/* common buffer to hold vertex positions */
 	GLuint vertex_buffer;
@@ -35,6 +37,8 @@ struct mesh_gl_info {
 	int ntriangles;
 	/* uses vertex_buffer for data */
 	GLuint triangle_vertex_buffer;
+
+	GLuint triangle_normal_lines_buffer;
 
 	int nwireframe_lines;
 	GLuint wireframe_lines_vertex_buffer;
@@ -77,6 +81,7 @@ void mesh_graph_dev_cleanup(struct mesh *m)
 		glDeleteBuffers(1, &ptr->vertex_buffer);
 		glDeleteBuffers(1, &ptr->triangle_vertex_buffer);
 		glDeleteBuffers(1, &ptr->wireframe_lines_vertex_buffer);
+		glDeleteBuffers(1, &ptr->triangle_normal_lines_buffer);
 
 		free(ptr);
 		m->graph_ptr = 0;
@@ -98,6 +103,10 @@ void mesh_graph_dev_init(struct mesh *m)
 		size_t vt_size = sizeof(struct vertex_triangle_buffer_data) * m->ntriangles * 3;
 		struct vertex_buffer_data *g_v_buffer_data = malloc(v_size);
 		struct vertex_triangle_buffer_data *g_vt_buffer_data = malloc(vt_size);
+
+		int normal_line_length = m->radius / 20.0;
+		size_t nl_size = sizeof(struct vertex_buffer_data) * m->ntriangles * 3 * 2;
+		struct vertex_buffer_data *g_nl_buffer_data = malloc(nl_size);
 
 		ptr->ntriangles = m->ntriangles;
 		ptr->npoints = m->ntriangles * 3; /* can be rendered as a point cloud too */
@@ -149,6 +158,19 @@ void mesh_graph_dev_init(struct mesh *m)
 					g_vt_buffer_data[v_index].texture_coord.v.x = 0;
 					g_vt_buffer_data[v_index].texture_coord.v.y = 0;
 				}
+
+				/* draw a line for each vertex normal */
+				int nl_index = i * 6 + j * 2;
+				g_nl_buffer_data[nl_index].position.v.x = m->t[i].v[j]->x;
+				g_nl_buffer_data[nl_index].position.v.y = m->t[i].v[j]->y;
+				g_nl_buffer_data[nl_index].position.v.z = m->t[i].v[j]->z;
+
+				g_nl_buffer_data[nl_index + 1].position.v.x =
+					m->t[i].v[j]->x + normal_line_length * m->t[i].vnormal[j].x;
+				g_nl_buffer_data[nl_index + 1].position.v.y =
+					m->t[i].v[j]->y + normal_line_length * m->t[i].vnormal[j].y;
+				g_nl_buffer_data[nl_index + 1].position.v.z =
+					m->t[i].v[j]->z + normal_line_length * m->t[i].vnormal[j].z;
 			}
 		}
 
@@ -160,8 +182,13 @@ void mesh_graph_dev_init(struct mesh *m)
 		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 		glBufferData(GL_ARRAY_BUFFER, vt_size, g_vt_buffer_data, GL_STATIC_DRAW);
 
+		glGenBuffers(1, &ptr->triangle_normal_lines_buffer);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_normal_lines_buffer);
+		glBufferData(GL_ARRAY_BUFFER, nl_size, g_nl_buffer_data, GL_STATIC_DRAW);
+
 		free(g_v_buffer_data);
 		free(g_vt_buffer_data);
+		free(g_nl_buffer_data);
 
 		/* setup the line buffers used for wireframe */
 		size_t wfl_size = sizeof(struct vertex_wireframe_line_buffer_data) * m->ntriangles * 3 * 2;
@@ -636,6 +663,35 @@ static void add_vertex_2d(float x, float y, GdkColor* color, GLubyte alpha, GLen
 	sgc.vertex_buffer_2d_offset += sizeof(vertex);
 }
 
+static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh *m, struct mesh_gl_info *ptr)
+{
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+
+	glUseProgram(single_color_shader.program_id);
+
+	glUniformMatrix4fv(single_color_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniform4f(single_color_shader.color_id, 0, 0, 1, 1);
+
+	glEnableVertexAttribArray(single_color_shader.vertex_position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_normal_lines_buffer);
+	glVertexAttribPointer(
+		single_color_shader.vertex_position_id, /* The attribute we want to configure */
+		3,                           /* size */
+		GL_FLOAT,                    /* type */
+		GL_FALSE,                    /* normalized? */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
+	);
+
+	glDrawArrays(GL_LINES, 0, m->ntriangles * 3 * 2);
+
+	glDisableVertexAttribArray(single_color_shader.vertex_position_id);
+	glUseProgram(0);
+
+	glDisable(GL_DEPTH_TEST);
+}
+
 static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, float alpha,
 	union vec3 *eye_light_pos, GLuint texture_number, int do_depth, int do_cullface)
@@ -701,6 +757,10 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 		glDisable(GL_CULL_FACE);
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_BLEND);
+
+	if (draw_normal_lines) {
+		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
+	}
 }
 
 static void graph_dev_raster_texture_cubemap_lit(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
@@ -761,6 +821,10 @@ static void graph_dev_raster_texture_cubemap_lit(const struct mat44 *mat_mvp, co
 	glDisable(GL_TEXTURE_CUBE_MAP);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
+
+	if (draw_normal_lines) {
+		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
+	}
 }
 
 static void graph_dev_raster_texture_lit(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
@@ -836,6 +900,10 @@ static void graph_dev_raster_texture_lit(const struct mat44 *mat_mvp, const stru
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_BLEND);
+
+	if (draw_normal_lines) {
+		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
+	}
 }
 
 static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
@@ -892,6 +960,10 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
+
+	if (draw_normal_lines) {
+		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
+	}
 }
 
 static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, struct mesh *m,
@@ -980,6 +1052,10 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
+
+	if (draw_normal_lines) {
+		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
+	}
 }
 
 static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
@@ -1032,6 +1108,10 @@ static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, c
 	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
+
+	if (draw_normal_lines) {
+		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
+	}
 }
 
 static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat_mvp, struct mesh *m,
