@@ -914,6 +914,7 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
+	glEnable(GL_CULL_FACE);
 
 	glUseProgram(filled_wireframe_shader.program_id);
 
@@ -986,6 +987,7 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
 }
 
 static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
