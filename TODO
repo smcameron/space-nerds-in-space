@@ -5,11 +5,11 @@ Too much to list, but here's a list anyway:
     Music
 
 * Engineering screen
-    Damage reporting
-    Damage repairing
     make comms power do something
     Some sliders set only a maximum, while others control power usage
 	this is confusing.  Figure something out to make it less confusing.
+	(partially done -- fuzzing the power output kind of makes the
+	situation more obvious.)
 
 * Communications screen
     Starbase comm stuff
@@ -54,10 +54,6 @@ Too much to list, but here's a list anyway:
 
 * Damage control screen:
   Make the various components of the systems less generic
-  and have damage distributed around to the components.
-  Allow repairing/replacing of the components.  Am thinking
-  replacing is better than repairing with some limited spares
-  that must be refreshed at starbases.
 
 * Need sound for wormhole travel
 * I think the universe needs to be bigger, you can see too far out
