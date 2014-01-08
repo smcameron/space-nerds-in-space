@@ -296,10 +296,12 @@ struct mesh *scrambler_mesh;
 struct mesh *swordfish_mesh;
 struct mesh *wombat_mesh;
 struct mesh *cargo_container_mesh;
+struct mesh *nebula_mesh;
 
 struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
 
+static struct material_nebula nebula_material;
 static struct material_billboard red_torpedo_material;
 static struct material_billboard red_laser_material;
 static struct material_billboard green_laser_material;
@@ -1388,17 +1390,26 @@ static void delete_nebula_entry(uint32_t id)
 
 static int update_nebula(uint32_t id, double x, double z, double r)
 {
+	double y = 0; /* TODO get y for nebula */
 	int i;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, 0, z, 0.0, 0.0, 0.0,
-					&identity_quat, OBJTYPE_NEBULA, 1, NULL);
+		struct entity *e = add_entity(ecx, nebula_mesh, x, y, z, PLANET_COLOR);
+		update_entity_material(e, MATERIAL_NEBULA, &nebula_material);
+		update_entity_scale(e, r);
+		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
+					&identity_quat, OBJTYPE_NEBULA, 1, e);
 		if (i < 0)
 			return i;
 		add_nebula_entry(go[i].id, x, z, r);
 	} else {
-		update_generic_object(i, x, 0, z, 0.0, 0.0, 0.0, &identity_quat, 1);
+		struct snis_entity *o = &go[i];
+		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, &identity_quat, 1);
+		if (o->entity) {
+			update_entity_pos(o->entity, x, y, z);
+			update_entity_scale(o->entity, r);
+		}
 	}
 	go[i].tsd.nebula.r = r;	
 	go[i].alive = 1;
@@ -11641,6 +11652,14 @@ static void load_textures(void)
 	planet_material[2].texture_id = load_cubemap_textures(0, "planet-texture2-");
 	planet_material[3].texture_id = load_cubemap_textures(0, "planet-texture3-");
 
+	int i;
+	for (i = 0; i < MATERIAL_NEBULA_NPLANES; i++) {
+		char filename[20];
+		sprintf(filename, "nebula%d.png", i);
+		nebula_material.texture_id[i] = load_texture(filename);
+		random_quat(&nebula_material.orientation[i]);
+	}
+
 	asteroid_material.texture_id = load_cubemap_textures(0, "asteroid-texture");
 
 	textures_loaded = 1;
@@ -12118,6 +12137,7 @@ static void init_meshes()
 	ship_icon_mesh = snis_read_stl_file(d, "ship-icon.stl");
 	heading_indicator_mesh = snis_read_stl_file(d, "heading_indicator.stl");
 	cargo_container_mesh = snis_read_stl_file(d, "cargocontainer.stl");
+	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
 
 	/* Note: these must match defines of SHIPTYPEs in snis.h */
 	ship_mesh_map[0] = cruiser_mesh;
