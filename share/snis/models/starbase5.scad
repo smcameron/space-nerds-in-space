@@ -31,36 +31,38 @@ module spoke(angle)
 	}
 }
 
-difference() {
-	union() {
-		cylinder(h = 5, r1 = 30, r2 = 35, center = true);
-		translate(v = [0, 0, 2.5])
-			cylinder(h = 1, r1 = 35, r2 = 35, center = true);
-		translate(v = [0, 0, 5])
-			cylinder(h = 5, r1 = 35, r2 = 30, center = true);
+scale(v = [2.0, 2.0, 2.0]) {
+	difference() {
+		union() {
+			cylinder(h = 5, r1 = 30, r2 = 35, center = true);
+			translate(v = [0, 0, 2.5])
+				cylinder(h = 1, r1 = 35, r2 = 35, center = true);
+			translate(v = [0, 0, 5])
+				cylinder(h = 5, r1 = 35, r2 = 30, center = true);
+		}
+		cylinder(h = 20, r1 = 28, r2 = 28, center = true);
 	}
-	cylinder(h = 20, r1 = 28, r2 = 28, center = true);
-}
 
-cylinder(h = 10, r1 = 7, r2 = 5, center = true);
-translate(v = [0, 0, -9])
-cylinder(h = 10, r1 = 5, r2 = 7, center = true);
-translate(v = [0, 0, 10])
-cylinder(h = 30, r1 = 0.8, r2 = 0.5, center = true);
+	cylinder(h = 10, r1 = 7, r2 = 5, center = true);
+	translate(v = [0, 0, -9])
+	cylinder(h = 10, r1 = 5, r2 = 7, center = true);
+	translate(v = [0, 0, 10])
+	cylinder(h = 30, r1 = 0.8, r2 = 0.5, center = true);
 
-translate(v = [49, 6, 0]) {
-	cube(size = [2, 3, 2]);
-	cube(size = [20, 0.5, 0.5]);
-}
-
-rotate(a = 69, v = [0, 0, 1])
-translate(v = [30, 6, 0]) {
-	rotate(a = 90, v = [0, 1, 0]) {
-	cube(size = [7, 2, 2]);
-	cube(size = [15, 0.5, 0.5]);
+	translate(v = [49, 6, 0]) {
+		cube(size = [2, 3, 2]);
+		cube(size = [20, 0.5, 0.5]);
 	}
-}
 
-spoke(0);
-spoke(360 / 3);
-spoke(-360 / 3);
+	rotate(a = 69, v = [0, 0, 1])
+	translate(v = [30, 6, 0]) {
+		rotate(a = 90, v = [0, 1, 0]) {
+			cube(size = [7, 2, 2]);
+			cube(size = [15, 0.5, 0.5]);
+		}
+	}
+
+	spoke(0);
+	spoke(360 / 3);
+	spoke(-360 / 3);
+}
