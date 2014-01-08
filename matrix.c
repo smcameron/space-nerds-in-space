@@ -24,6 +24,7 @@
 #include <string.h>
 #define DEFINE_MATRIX_GLOBALS
 #include "matrix.h"
+#include "quat.h"
 #include "vec4.h"
 
 struct mat33 *mat44_to_mat33_ff(const struct mat44 *src, struct mat33 *output)
@@ -116,6 +117,19 @@ void mat33_x_mat31(const struct mat33 *lhs, const struct mat31 *rhs,
 		output->m[row] = 0;
 		for (col = 0; col < 3; col++)
 			output->m[row] += lhs->m[col][row] * rhs->m[col];
+	}
+}
+
+/* see mat33_x_mat31 */
+void mat33_x_vec3(const struct mat33 *lhs, const union vec3 *rhs,
+				union vec3 *output)
+{
+	int row, col;
+
+	for (row = 0; row < 3; row++) {
+		output->vec[row] = 0;
+		for (col = 0; col < 3; col++)
+			output->vec[row] += lhs->m[col][row] * rhs->vec[col];
 	}
 }
 

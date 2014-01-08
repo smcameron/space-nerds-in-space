@@ -32,6 +32,7 @@
 #define GLOBAL extern
 #endif
 
+union vec3;
 union vec4;
 
 struct mat44 {
@@ -70,6 +71,9 @@ GLOBAL struct mat33d *mat33_transpose_dd(const struct mat33d *src, struct mat33d
 
 GLOBAL void mat33_x_mat31(const struct mat33 *lhs, const struct mat31 *rhs,
 				struct mat31 *output);
+
+GLOBAL void mat33_x_vec3(const struct mat33 *lhs, const union vec3 *rhs,
+				union vec3 *output);
 
 GLOBAL void mat44_convert_df(const struct mat44d *src, struct mat44 *output);
 
