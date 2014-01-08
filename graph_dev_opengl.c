@@ -372,6 +372,7 @@ struct graph_dev_gl_textured_shader {
 	GLuint program_id;
 	GLuint mvp_matrix_id;
 	GLuint vertex_position_id;
+	GLuint tint_color_id;
 	GLuint texture_coord_id;
 	GLuint texture_id; /* param to vertex shader */
 };
@@ -627,8 +628,8 @@ static void add_vertex_2d(float x, float y, GdkColor* color, GLubyte alpha, GLen
 }
 
 static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
-	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color,
-	union vec3 *eye_light_pos, GLuint texture_number)
+	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, float alpha,
+	union vec3 *eye_light_pos, GLuint texture_number, int do_depth, int do_cullface)
 {
 	enable_3d_viewport();
 
@@ -637,9 +638,12 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 
 	struct mesh_gl_info *ptr = m->graph_ptr;
 
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-	glEnable(GL_CULL_FACE);
+	if (do_depth) {
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LESS);
+	}
+	if (do_cullface)
+		glEnable(GL_CULL_FACE);
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -647,6 +651,8 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 	glUseProgram(textured_shader.program_id);
 
 	glUniformMatrix4fv(textured_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniform4f(textured_shader.tint_color_id, triangle_color->red,
+		triangle_color->green, triangle_color->blue, alpha);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture_number);
@@ -680,8 +686,10 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 	glDisableVertexAttribArray(textured_shader.texture_coord_id);
 	glUseProgram(0);
 
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
+	if (do_depth)
+		glDisable(GL_DEPTH_TEST);
+	if (do_cullface)
+		glDisable(GL_CULL_FACE);
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_BLEND);
 }
@@ -1177,9 +1185,11 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					if (e->material_type == MATERIAL_TEXTURE_MAPPED)
 						graph_dev_raster_texture_lit(mat_mvp, mat_mv, mat_normal,
 							e->m, &triangle_color, eye_light_pos, texture_id);
-					else
+					else {
+						struct sng_color no_tint = { 1, 1, 1 };
 						graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
-							e->m, &triangle_color, eye_light_pos, texture_id);
+							e->m, &no_tint, 1.0, eye_light_pos, texture_id, 1, 1);
+					}
 				else if (has_cubemap_texture)
 					graph_dev_raster_texture_cubemap_lit(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos, texture_id);
@@ -1193,9 +1203,11 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				if (e->material_type == MATERIAL_TEXTURE_MAPPED)
 					graph_dev_raster_texture_lit(mat_mvp, mat_mv, mat_normal,
 						e->m, &line_color, eye_light_pos, texture_id);
-				else
+				else {
+					struct sng_color no_tint = { 1, 1, 1 };
 					graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
-						e->m, &line_color, eye_light_pos, texture_id);
+						e->m, &no_tint, 1.0, eye_light_pos, texture_id, 1, 1);
+				}
 			else
 				graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
 					mat_normal, e->m, &line_color);
@@ -1361,6 +1373,7 @@ static void setup_textured_shader(struct graph_dev_gl_textured_shader *shader)
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
+	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->texture_id = glGetUniformLocation(shader->program_id, "myTexture");
 
 	/* Get a handle for our buffers */
