@@ -13,6 +13,7 @@
 #include "matrix.h"
 #include "mesh.h"
 #include "quat.h"
+#include "vec4.h"
 #include "snis_graph.h"
 #include "graph_dev.h"
 #include "entity.h"
@@ -1133,12 +1134,64 @@ void graph_dev_raster_point_cloud_mesh(const struct mat44 *mat_mvp, struct mesh 
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 }
 
+static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal,
+	struct entity *e, union vec3 *eye_light_pos)
+{
+	struct material_nebula *mt = e->material_ptr;
+
+	/* transform model origin into camera space */
+	union vec4 ent_pos = { { 0.0, 0.0, 0.0, 1.0 } };
+	union vec4 camera_ent_pos_4;
+	mat44_x_vec4(mat_mv, &ent_pos, &camera_ent_pos_4);
+
+	union vec3 camera_pos = { { 0, 0, 0 } };
+	union vec3 camera_ent_pos;
+	vec4_to_vec3(&camera_ent_pos_4, &camera_ent_pos);
+
+	union vec3 camera_ent_vector;
+	vec3_sub(&camera_ent_vector, &camera_pos, &camera_ent_pos);
+	vec3_normalize_self(&camera_ent_vector);
+
+	int i;
+	for (i = 0; i < MATERIAL_NEBULA_NPLANES; i++) {
+		struct mat44 mat_local_r;
+		quat_to_rh_rot_matrix(&mt->orientation[i], &mat_local_r.m[0][0]);
+
+		struct mat44 mat_mvp_local_r;
+		mat44_product(mat_mvp, &mat_local_r, &mat_mvp_local_r);
+
+		struct mat44 mat_mv_local_r;
+		mat44_product(mat_mv, &mat_local_r, &mat_mv_local_r);
+
+		struct mat33 mat_normal_local_r;
+		struct mat33 mat_tmp33;
+		mat33_inverse_transpose_ff(mat44_to_mat33_ff(&mat_mv_local_r, &mat_tmp33), &mat_normal_local_r);
+
+		/* rotate the triangle normal into camera space */
+		union vec3 *ent_normal = (union vec3 *)&e->m->t[0].n.x;
+		union vec3 camera_normal;
+		mat33_x_vec3(&mat_normal_local_r, ent_normal, &camera_normal);
+		vec3_normalize_self(&camera_normal);
+
+		float alpha = fabs(vec3_dot(&camera_normal, &camera_ent_vector));
+		struct sng_color no_tint = { 1, 1, 1 };
+
+		graph_dev_raster_texture(&mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
+			e->m, &no_tint, alpha, eye_light_pos, mt->texture_id[i], 0, 0);
+	}
+}
+
 void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
 	const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal)
 {
 	draw_vertex_buffer_2d();
 
 	struct sng_color line_color = sng_get_color(e->color);
+
+	if (e->material_type == MATERIAL_NEBULA) {
+		graph_dev_draw_nebula(mat_mvp, mat_mv, mat_normal, e, eye_light_pos);
+		return;
+	}
 
 	switch (e->m->geometry_mode) {
 	case MESH_GEOMETRY_TRIANGLES:

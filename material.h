@@ -21,12 +21,16 @@
 #ifndef MATERIAL_H__
 #define MATERIAL_H__
 
+struct mesh;
+union quat;
+
 #define MATERIAL_COLOR 0
 #define MATERIAL_COLOR_BY_W 1
 #define MATERIAL_LASER 2
 #define MATERIAL_BILLBOARD 3
 #define MATERIAL_TEXTURE_MAPPED 4
 #define MATERIAL_TEXTURE_CUBEMAP 5
+#define MATERIAL_NEBULA 6
 
 struct material_color_by_w {
 	int near_color;
@@ -53,6 +57,13 @@ struct material_texture_mapped {
 
 struct material_texture_cubemap {
 	int texture_id;
+};
+
+#define MATERIAL_NEBULA_NPLANES 6
+
+struct material_nebula {
+	int texture_id[MATERIAL_NEBULA_NPLANES];
+	union quat orientation[MATERIAL_NEBULA_NPLANES];
 };
 
 #endif
