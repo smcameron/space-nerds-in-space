@@ -1,6 +1,8 @@
 
-This is some preliminary code for a multiplayer networked spaceship bridge
-simulator game inspired by "Artemis Spaceship Bridge Simulator"
+This is a multiplayer networked spaceship bridge simulator game
+inspired by another game called "Artemis Spaceship Bridge Simulator"
+It's not really close to finished, but it's more or less playable
+at this point.
 
 If you would like to help work on this project, see CONTRIBUTING.md
 
