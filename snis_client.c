@@ -1397,7 +1397,7 @@ static int update_nebula(uint32_t id, double x, double z, double r)
 	if (i < 0) {
 		struct entity *e = add_entity(ecx, nebula_mesh, x, y, z, PLANET_COLOR);
 		update_entity_material(e, MATERIAL_NEBULA, &nebula_material);
-		update_entity_scale(e, r);
+		update_entity_scale(e, r * 2.0);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&identity_quat, OBJTYPE_NEBULA, 1, e);
 		if (i < 0)
@@ -1408,7 +1408,7 @@ static int update_nebula(uint32_t id, double x, double z, double r)
 		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, &identity_quat, 1);
 		if (o->entity) {
 			update_entity_pos(o->entity, x, y, z);
-			update_entity_scale(o->entity, r);
+			update_entity_scale(o->entity, r * 2.0);
 		}
 	}
 	go[i].tsd.nebula.r = r;	
