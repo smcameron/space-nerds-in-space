@@ -8005,10 +8005,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		float contact_scale = 0;
 
 		switch (go[i].type) {
-		case OBJTYPE_WORMHOLE:
 		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_DERELICT:
 			break;
+		case OBJTYPE_WORMHOLE:
 		case OBJTYPE_LASER:
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_ASTEROID:
@@ -8060,6 +8060,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				break;
 			case OBJTYPE_ASTEROID:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 1.0;
+				update_entity_scale(contact, contact_scale);
+				break;
+			case OBJTYPE_WORMHOLE:
+				contact_scale = ((255.0 - current_zoom) / 255.0) * 2.0 + 1.0;
 				update_entity_scale(contact, contact_scale);
 				break;
 			case OBJTYPE_TORPEDO:
