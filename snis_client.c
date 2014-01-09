@@ -4938,6 +4938,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	/* range is the same as max zoom on old weapons */
 	draw_plane_radar(w, o, &camera_orientation, 400, 500, 75, XKNOWN_DIM * 0.02);
 
+#if 0
 	/* Draw targeting indicator on main screen */
 	if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
 		float sx, sy;
@@ -4948,7 +4949,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
 		}
 	}
-
+#endif
 	/* Draw science selector indicator on main screen */
 	if (curr_science_guy) {
 		float sx, sy;
@@ -4956,7 +4957,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 		if (curr_science_guy->alive && curr_science_guy->entity &&
 			entity_onscreen(curr_science_guy->entity)) {
 			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 1);
+			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 0);
 		}
 	}
 
@@ -5078,6 +5079,7 @@ static void show_mainscreen(GtkWidget *w)
 	if (camera_mode == 1 || camera_mode == 2)
 		remove_entity(ecx, e);
 
+#if 0
 	/* Draw targeting indicator on main screen */
 	if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
 		float sx, sy;
@@ -5089,7 +5091,7 @@ static void show_mainscreen(GtkWidget *w)
 			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
 		}
 	}
-
+#endif
 	/* Draw science selector indicator on main screen */
 	if (curr_science_guy) {
 		float sx, sy;
@@ -5097,7 +5099,7 @@ static void show_mainscreen(GtkWidget *w)
 		if (curr_science_guy->alive && curr_science_guy->entity &&
 			entity_onscreen(curr_science_guy->entity)) {
 			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 1);
+			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 0);
 		}
 	}
 
@@ -7789,7 +7791,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	static struct mesh *vline_mesh = 0;
 	static struct mesh *forward_line_mesh = 0;
 	static int current_zoom = 0;
-	struct entity *targeted_entity = NULL;
+	/* struct entity *targeted_entity = NULL; */
 	struct entity *science_entity = NULL;
 
 	if (!ring_mesh) {
@@ -8034,9 +8036,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				entity_set_user_data(contact, &go[i]);
 			}
 			update_entity_orientation(contact, entity_get_orientation(go[i].entity));
-
+#if 0
 			if (o->tsd.ship.ai[0].u.attack.victim_id != -1 && go[i].id == o->tsd.ship.ai[0].u.attack.victim_id)
 				targeted_entity = contact;
+#endif
 			if (curr_science_guy == &go[i])
 				science_entity = contact;
 			break;
@@ -8144,6 +8147,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 #endif
 	}
 
+#if 0
 	/* Draw targeting indicator on 3d nav screen */
 	if (targeted_entity && entity_onscreen(targeted_entity)) {
 		float sx, sy;
@@ -8151,11 +8155,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		entity_get_screen_coords(targeted_entity, &sx, &sy);
 		draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
 	}
+#endif
 	if (science_entity && entity_onscreen(science_entity)) {
 		float sx, sy;
 
 		entity_get_screen_coords(science_entity, &sx, &sy);
-		draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 1);
+		draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 0);
 	}
 
 	pthread_mutex_unlock(&universe_mutex);
