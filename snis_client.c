@@ -4768,8 +4768,13 @@ static int newzoom(int current_zoom, int desired_zoom)
 }
 
 #define NEAR_CAMERA_PLANE 1.0
+#ifndef WITHOUTOPENGL
+/* far plane is the whole universe */
+#define FAR_CAMERA_PLANE (XKNOWN_DIM)
+#else
 /* far plane is one sectors, which is about max that can be seen on full zoom */
 #define FAR_CAMERA_PLANE (XKNOWN_DIM/10.0)
+#endif
 
 static void show_gunsight(GtkWidget *w)
 {
