@@ -40,6 +40,7 @@ extern void graph_dev_set_color(GdkColor *c, float a);
 extern void graph_dev_set_screen_size(int width, int height);
 extern void graph_dev_set_extent_scale(float x_scale, float y_scale);
 extern void graph_dev_set_3d_viewport(int x_offset, int y_offset, int width, int height);
+extern void graph_dev_clear_depth_bit();
 
 extern void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
 	const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal);

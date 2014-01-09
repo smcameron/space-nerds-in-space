@@ -114,6 +114,11 @@ void graph_dev_end_frame()
 
 }
 
+void graph_dev_clear_depth_bit()
+{
+	/* noop as we have no z-depth buffer */
+}
+
 void graph_dev_set_context(GdkDrawable *drawable, GdkGC *gc)
 {
 	sgc.drawable = drawable;

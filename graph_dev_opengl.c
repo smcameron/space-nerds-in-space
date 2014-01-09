@@ -1306,6 +1306,11 @@ void graph_dev_end_frame()
 	/* printf("end frame\n"); */
 }
 
+void graph_dev_clear_depth_bit()
+{
+	glClear(GL_DEPTH_BUFFER_BIT);
+}
+
 void graph_dev_draw_line(float x1, float y1, float x2, float y2)
 {
 	make_room_in_vertex_buffer_2d(2);

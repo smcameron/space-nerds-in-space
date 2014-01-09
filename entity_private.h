@@ -44,7 +44,7 @@ struct camera_info {
 	float x, y, z;		/* position of camera */
 	float lx, ly, lz;	/* where camera is looking */
 	float ux, uy, uz;	/* up vector */
-	float near, far, right, left, top, bottom;
+	float near, far;
 	float angle_of_view;
 	int xvpixels, yvpixels;
 	int renderer;

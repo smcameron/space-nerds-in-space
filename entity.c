@@ -639,8 +639,15 @@ void extract_frustum_planes(struct camera_info *c)
 	c->frustum[5][3] /= t;
 }
 
-void calculate_camera_transform(struct entity_context *cx)
+static void calculate_camera_transform_near_far(struct entity_context *cx, float near, float far)
 {
+	/* based on gluPerspective to find the right, left, top, and bottom */
+	float scale = tan(cx->camera.angle_of_view * 0.5) * near;
+	float right = ((float) cx->camera.xvpixels / (float) cx->camera.yvpixels * scale);
+	float left = -right;
+	float top = scale;
+	float bottom = -top;
+
 	struct mat41 *v; /* camera relative y axis (up/down) */
 	struct mat41 *n; /* camera relative z axis (into view plane) */
 	struct mat41 *u; /* camera relative x axis (left/right) */
@@ -719,22 +726,21 @@ void calculate_camera_transform(struct entity_context *cx)
 	   http://www.scratchapixel.com/lessons/3d-advanced-lessons/perspective-and-orthographic-projection-matrix/opengl-perspective-projection-matrix/
 	*/
 	struct mat44d perspective_transform;
-	perspective_transform.m[0][0] = (2 * cx->camera.near) / (cx->camera.right - cx->camera.left);
+	perspective_transform.m[0][0] = (2 * near) / (right - left);
 	perspective_transform.m[0][1] = 0.0;
 	perspective_transform.m[0][2] = 0.0;
 	perspective_transform.m[0][3] = 0.0;
 	perspective_transform.m[1][0] = 0.0;
-	perspective_transform.m[1][1] = (2.0 * cx->camera.near) / (cx->camera.top - cx->camera.bottom);
+	perspective_transform.m[1][1] = (2.0 * near) / (top - bottom);
 	perspective_transform.m[1][2] = 0.0;
 	perspective_transform.m[1][3] = 0.0;
-	perspective_transform.m[2][0] = (cx->camera.right + cx->camera.left) / (cx->camera.right - cx->camera.left);
-	perspective_transform.m[2][1] = (cx->camera.top + cx->camera.bottom) / (cx->camera.top - cx->camera.bottom);
-	perspective_transform.m[2][2] = -(cx->camera.far + cx->camera.near) / (cx->camera.far - cx->camera.near);
+	perspective_transform.m[2][0] = (right + left) / (right - left);
+	perspective_transform.m[2][1] = (top + bottom) / (top - bottom);
+	perspective_transform.m[2][2] = -(far + near) / (far - near);
 	perspective_transform.m[2][3] = -1.0;
 	perspective_transform.m[3][0] = 0.0;
 	perspective_transform.m[3][1] = 0.0;
-	perspective_transform.m[3][2] = (-2 * cx->camera.far * cx->camera.near) /
-						(cx->camera.far - cx->camera.near);
+	perspective_transform.m[3][2] = (-2 * far * near) / (far - near);
 	perspective_transform.m[3][3] = 0.0;
 
 	/* make the view matrix, V = L * T */
@@ -749,6 +755,12 @@ void calculate_camera_transform(struct entity_context *cx)
 	extract_frustum_planes(&cx->camera);
 }
 
+void calculate_camera_transform(struct entity_context *cx)
+{
+	/* calculate for the entire frustum */
+	calculate_camera_transform_near_far(cx, cx->camera.near, cx->camera.far);
+}
+
 static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, float radius);
 
 void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
@@ -758,70 +770,116 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 
 	sng_set_3d_viewport(cx->window_offset_x, cx->window_offset_y, c->xvpixels, c->yvpixels);
 
-	calculate_camera_transform(cx);
+	/* do the draw in multiple decades depending on the dynamic range of near/far
+
+	   a good rule of thumb is to have far / near < 10000 on 24-bit depth buffer
+
+	   since I can't really figure out how to exactly calculate this I will just punt
+	   and figure that we will not be drawing past near * 10000 * 10000 so it can be done
+	   in two passes */
+	int n_near_far;
+	float near_far[2][2];
+
+	if (cx->camera.far / cx->camera.near < 10000) {
+		n_near_far = 1;
+		near_far[0][0] = cx->camera.near;
+		near_far[0][1] = cx->camera.far;
+	} else {
+		n_near_far = 2;
+		near_far[0][0] = cx->camera.near * 10000;
+		near_far[0][1] = cx->camera.far;
+		near_far[1][0] = cx->camera.near;
+		near_far[1][1] = cx->camera.near * 10000;
+	}
+
+	int pass;
+	for (pass = 0; pass < n_near_far; pass++) {
+		calculate_camera_transform_near_far(cx, near_far[pass][0], near_far[pass][1]);
 
 #ifdef WITH_ILDA_SUPPORT
-	ilda_file_open(cx);
-	ilda_file_newframe(cx);
+		ilda_file_open(cx);
+		ilda_file_newframe(cx);
 #endif
 
-	/* draw fake stars */
-	sng_set_foreground(WHITE);
-	struct mat44 mat_vp;
-	mat44_convert_df(&cx->camera.camera_vp_matrix, &mat_vp);
-	transform_vertices(&mat_vp, &cx->fake_star[0], cx->nfakestars);
+		if (pass == n_near_far - 1) {
+			/* draw fake stars only on the last, closest, near/far */
+			sng_set_foreground(WHITE);
+			struct mat44 mat_vp;
+			mat44_convert_df(&cx->camera.camera_vp_matrix, &mat_vp);
+			transform_vertices(&mat_vp, &cx->fake_star[0], cx->nfakestars);
 
-	for (i = 0; i < cx->nfakestars; i++) {
-		struct vertex *fs = &cx->fake_star[i];
+			for (i = 0; i < cx->nfakestars; i++) {
+				struct vertex *fs = &cx->fake_star[i];
 
-		float dist2 = dist3dsqrd(c->x - fs->x, c->y - fs->y, c->z - fs->z);
+				float dist2 = dist3dsqrd(c->x - fs->x, c->y - fs->y, c->z - fs->z);
 
-		if (!fs->clip)
-			wireframe_render_fake_star(w, gc, cx, fs);
+				if (!fs->clip)
+					wireframe_render_fake_star(w, gc, cx, fs);
 
-		if (dist2 > cx->fakestars_radius * cx->fakestars_radius)
-			reposition_fake_star(cx, fs, cx->fakestars_radius);
+				if (dist2 > cx->fakestars_radius * cx->fakestars_radius)
+					reposition_fake_star(cx, fs, cx->fakestars_radius);
+			}
+		}
+
+		/* find all entities in view frustum and sort them by distance */
+		n = snis_object_pool_highest_object(cx->entity_pool);
+
+		cx->nentity_depth = 0;
+
+		for (j = 0; j <= n; j++) {
+			if (!snis_object_pool_is_allocated(cx->entity_pool, j))
+				continue;
+
+			struct entity *e = &cx->entity_list[j];
+
+			if (!e->visible)
+				continue;
+
+			if (e->m == NULL)
+				continue;
+
+			/* clear on the first pass and accumulate the state */
+			if (pass == 0)
+				e->onscreen = 0;
+
+			if (!sphere_in_frustum(c, e->x, e->y, e->z, e->m->radius * fabs(e->scale)))
+				continue;
+
+			e->dist3dsqrd = dist3dsqrd(c->x - e->x, c->y - e->y, c->z - e->z);
+
+			/* cull objects that are too small to draw based on approx screen size
+			   http://stackoverflow.com/questions/3717226/radius-of-projected-sphere */
+			float approx_pixel_size = c->yvpixels * e->m->radius * e->scale /
+				tan(cx->camera.angle_of_view * 0.5) / sqrt(e->dist3dsqrd);
+			if (approx_pixel_size < 3.0)
+				continue;
+
+			cx->entity_depth[cx->nentity_depth] = j;
+			cx->nentity_depth++;
+		}
+
+		if (cx->nentity_depth > 0) {
+			/* need to reset the depth buffer between passes */
+			if (n_near_far > 1 && pass != 0)
+				graph_dev_clear_depth_bit();
+
+			sort_entity_distances(cx);
+
+			/* find the position of our light in camera space */
+			struct mat41 camera_light_pos;
+			mat44_x_mat41_dff(&cx->camera.camera_v_matrix, &cx->light, &camera_light_pos);
+
+			/* render the sorted entities */
+			for (j = 0; j < cx->nentity_depth; j++) {
+				struct entity *e = &cx->entity_list[cx->entity_depth[j]];
+
+				render_entity(w, gc, cx, e, (union vec3 *)&camera_light_pos.m[0]);
+			}
+		}
 	}
 
-	/* find all entities in view frustum and sort them by distance */
-	n = snis_object_pool_highest_object(cx->entity_pool);
-
-	cx->nentity_depth = 0;
-
-	for (j = 0; j <= n; j++) {
-		if (!snis_object_pool_is_allocated(cx->entity_pool, j))
-			continue;
-
-		struct entity *e = &cx->entity_list[j];
-
-		if (!e->visible)
-			continue;
-
-		if (e->m == NULL)
-			continue;
-
-		e->onscreen = 0;
-
-		if (!sphere_in_frustum(c, e->x, e->y, e->z, e->m->radius * fabs(e->scale)))
-			continue;
-
-		e->dist3dsqrd = dist3dsqrd(c->x - e->x, c->y - e->y, c->z - e->z);
-		cx->entity_depth[cx->nentity_depth] = j;
-		cx->nentity_depth++;
-	}
-
-	sort_entity_distances(cx);
-
-	/* find the position of our light in camera space */
-	struct mat41 camera_light_pos;
-	mat44_x_mat41_dff(&cx->camera.camera_v_matrix, &cx->light, &camera_light_pos);
-
-	/* render the sorted entities */
-	for (j = 0; j < cx->nentity_depth; j++) {
-		struct entity *e = &cx->entity_list[cx->entity_depth[j]];
-
-		render_entity(w, gc, cx, e, (union vec3 *)&camera_light_pos.m[0]);
-	}
+	/* reset the matrices back to the full frustum when done so other transforms can use the whole range */
+	calculate_camera_transform(cx);
 }
 
 void camera_set_pos(struct entity_context *cx, float x, float y, float z)
@@ -874,13 +932,6 @@ void camera_set_parameters(struct entity_context *cx, float near, float far,
 	cx->camera.xvpixels = xvpixels;
 	cx->camera.yvpixels = yvpixels;
 	cx->camera.angle_of_view = angle_of_view;
-
-	/* based on gluPerspective to find the right, left, top, and bottom */
-	float scale = tan(cx->camera.angle_of_view * 0.5) * cx->camera.near;
-	cx->camera.right = ((float) xvpixels / (float) yvpixels * scale);
-	cx->camera.left = -cx->camera.right;
-	cx->camera.top = scale;
-	cx->camera.bottom = -cx->camera.top;
 }
 
 void camera_get_parameters(struct entity_context *cx, float *near, float *far,
