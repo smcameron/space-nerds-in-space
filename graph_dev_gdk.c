@@ -598,6 +598,10 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 {
 	transform_entity(mat_mvp, mat_mv, mat_normal, e);
 
+	/* nebula rendering not supported on gdk */
+	if (e->material_type == MATERIAL_NEBULA)
+		return;
+
 	switch (e->m->geometry_mode) {
 	case MESH_GEOMETRY_TRIANGLES:
 	{
