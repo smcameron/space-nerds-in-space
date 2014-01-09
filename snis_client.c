@@ -11680,6 +11680,8 @@ static void load_textures(void)
 	wormhole_material.texture_id = load_texture("wormhole.png");
 	wormhole_material.do_depth = 0;
 	wormhole_material.do_cullface = 0;
+	wormhole_material.tint = sng_get_color(MAGENTA);
+	wormhole_material.alpha = 0.5;
 
 	textures_loaded = 1;
 }
