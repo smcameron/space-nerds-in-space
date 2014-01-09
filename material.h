@@ -23,6 +23,7 @@
 
 struct mesh;
 union quat;
+struct sng_color;
 
 #define MATERIAL_COLOR 0
 #define MATERIAL_COLOR_BY_W 1
@@ -60,6 +61,8 @@ struct material_texture_mapped_unlit {
 	int do_depth;
 	int do_cullface;
 	int texture_id;
+	float alpha;
+	struct sng_color tint;
 };
 
 struct material_texture_cubemap {
