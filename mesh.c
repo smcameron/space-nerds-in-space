@@ -988,3 +988,51 @@ void mesh_sphere_uv_map(struct mesh *m)
 	mesh_graph_dev_init(m);
 }
 
+static float mesh_calculate_xy_radius(struct mesh *m)
+{
+	float maxy = 0.0f, maxx = 0.0f;
+	int i;
+
+	for (i = 0; i < m->nvertices; i++) {
+		if (fabs(m->v[i].y) > maxy)
+			maxy = fabs(m->v[i].y);
+		if (fabs(m->v[i].x) > maxx)
+			maxx = fabs(m->v[i].x);
+	}
+	if (maxy > maxx)
+		return maxy;
+	return maxx;
+}
+
+void mesh_map_xy_to_uv(struct mesh *m)
+{
+	float u0, v0, u1, v1, u2, v2, r;
+	int i;
+
+	r = mesh_calculate_xy_radius(m);
+	if (m->tex)
+		free(m->tex);
+
+	m->tex = malloc(sizeof(*m->tex) * m->ntriangles * 3);
+	if (!m->tex)
+		return;
+
+	for (i = 0; i < m->ntriangles; i++) {
+		struct vertex *vtx0, *vtx1, *vtx2;
+
+		vtx0 = m->t[i].v[0];
+		vtx1 = m->t[i].v[1];
+		vtx2 = m->t[i].v[2];
+
+		u0 = vtx0->x / (r * 2.0) + 0.5;
+		v0 = vtx0->y / (r * 2.0) + 0.5;
+		u1 = vtx1->x / (r * 2.0) + 0.5;
+		v1 = vtx1->y / (r * 2.0) + 0.5;
+		u2 = vtx2->x / (r * 2.0) + 0.5;
+		v2 = vtx2->y / (r * 2.0) + 0.5;
+
+		mesh_set_triangle_texture_coords(m, i, u0, v0, u1, v1, u2, v2);
+	}
+	mesh_graph_dev_init(m);
+}
+

@@ -31,6 +31,7 @@ union quat;
 #define MATERIAL_TEXTURE_MAPPED 4
 #define MATERIAL_TEXTURE_CUBEMAP 5
 #define MATERIAL_NEBULA 6
+#define MATERIAL_TEXTURE_MAPPED_UNLIT 7
 
 struct material_color_by_w {
 	int near_color;
@@ -52,6 +53,10 @@ struct material_billboard {
 };
 
 struct material_texture_mapped {
+	int texture_id;
+};
+
+struct material_texture_mapped_unlit {
 	int texture_id;
 };
 

@@ -1206,21 +1206,31 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		int has_texture = 0;
 		int has_cubemap_texture = 0;
 		GLuint texture_id = 0;
-		if (e->material_type == MATERIAL_TEXTURE_MAPPED ||
-				e->material_type == MATERIAL_BILLBOARD) {
-			has_texture = 1;
-			if (e->material_type == MATERIAL_TEXTURE_MAPPED) {
+		switch (e->material_type) {
+		case MATERIAL_TEXTURE_MAPPED: {
 				struct material_texture_mapped *mt = e->material_ptr;
 				texture_id = mt->texture_id;
-			} else {
+				has_texture = 1;
+			}
+			break;
+		case MATERIAL_TEXTURE_MAPPED_UNLIT: {
+				struct material_texture_mapped_unlit *mt = e->material_ptr;
+				texture_id = mt->texture_id;
+				has_texture = 1;
+			}
+			break;
+		case MATERIAL_BILLBOARD: {
 				struct material_billboard *mt = e->material_ptr;
 				texture_id = mt->texture_id;
+				has_texture = 1;
 			}
-		}
-		if (e->material_type == MATERIAL_TEXTURE_CUBEMAP) {
-			has_cubemap_texture = 1;
-			struct material_texture_cubemap *mt = e->material_ptr;
-			texture_id = mt->texture_id;
+			break;
+		case MATERIAL_TEXTURE_CUBEMAP: {
+				struct material_texture_cubemap *mt = e->material_ptr;
+				texture_id = mt->texture_id;
+				has_cubemap_texture = 1;
+			}
+			break;
 		}
 
 		if (filled_triangle) {

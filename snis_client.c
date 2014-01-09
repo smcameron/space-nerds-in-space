@@ -308,6 +308,12 @@ static struct material_billboard green_laser_material;
 static struct material_billboard spark_material;
 static struct material_texture_cubemap planet_material[NPLANET_MATERIALS];
 static struct material_texture_cubemap asteroid_material;
+static struct material_texture_mapped_unlit wormhole_material;
+#ifdef WITHOUTOPENGL
+const int wormhole_render_style = RENDER_SPARKLE;
+#else
+const int wormhole_render_style = RENDER_NORMAL;
+#endif
 
 struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
@@ -1306,7 +1312,8 @@ static int update_wormhole(uint32_t id, double x, double z)
 	if (i < 0) {
 		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
 		e = add_entity(ecx, wormhole_mesh, x, 0, z, WORMHOLE_COLOR);
-		set_render_style(e, RENDER_SPARKLE);
+		set_render_style(e, wormhole_render_style);
+		update_entity_material(e, MATERIAL_TEXTURE_MAPPED_UNLIT, &wormhole_material);
 		i = add_generic_object(id, x, 0, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
@@ -1454,7 +1461,7 @@ static void spin_wormhole(struct snis_entity *o)
 {
 	union quat spin, orientation;
 
-	quat_init_axis(&spin, 0.0, 0.0, 1.0, 0.5 * M_PI / 180.0);
+	quat_init_axis(&spin, 0.0, 0.0, 1.0, -0.5 * M_PI / 180.0);
 	quat_mul(&orientation, &spin, &o->orientation);
 	o->orientation = orientation;
 	if (o->entity)
@@ -11661,6 +11668,7 @@ static void load_textures(void)
 	}
 
 	asteroid_material.texture_id = load_cubemap_textures(0, "asteroid-texture");
+	wormhole_material.texture_id = load_texture("wormhole.png");
 
 	textures_loaded = 1;
 }
@@ -12122,8 +12130,13 @@ static void init_meshes()
 	debris_mesh = snis_read_stl_file(d, "flat-tetrahedron.stl");
 	debris2_mesh = snis_read_stl_file(d, "big-flat-tetrahedron.stl");
 	wormhole_mesh = snis_read_stl_file(d, "wormhole.stl");
+	mesh_map_xy_to_uv(wormhole_mesh);
+#ifdef WITHOUTOPENGL
 	mesh_distort(wormhole_mesh, 0.15);
 	wormhole_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
+#else
+	mesh_scale(wormhole_mesh, 3.0f);
+#endif
 	spacemonster_mesh = snis_read_stl_file(d, "spacemonster.stl");
 	spacemonster_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
 	asteroidminer_mesh = snis_read_stl_file(d, "asteroid-miner.stl");
