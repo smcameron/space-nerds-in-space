@@ -26,7 +26,7 @@ module wormhole()
 {
 	difference() {
 		wormhole_solid();
-		translate(v = [0, 0, -1])
+		translate(v = [0, 0, -0.1])
 			wormhole_solid();
 	}
 }

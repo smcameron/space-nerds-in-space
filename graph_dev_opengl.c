@@ -1204,6 +1204,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					|| (e->render_style & RENDER_WIREFRAME);
 
 		int has_texture = 0;
+		int do_depth = 1;
+		int do_cullface = 1;
 		int has_cubemap_texture = 0;
 		GLuint texture_id = 0;
 		switch (e->material_type) {
@@ -1217,6 +1219,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				struct material_texture_mapped_unlit *mt = e->material_ptr;
 				texture_id = mt->texture_id;
 				has_texture = 1;
+				do_depth = mt->do_depth;
+				do_cullface = mt->do_cullface;
 			}
 			break;
 		case MATERIAL_BILLBOARD: {
@@ -1250,8 +1254,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 							e->m, &triangle_color, eye_light_pos, texture_id);
 					else {
 						struct sng_color no_tint = { 1, 1, 1 };
-						graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
-							e->m, &no_tint, 1.0, eye_light_pos, texture_id, 1, 1);
+						graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal, e->m, &no_tint,
+							1.0, eye_light_pos, texture_id, do_depth, do_cullface);
 					}
 				else if (has_cubemap_texture)
 					graph_dev_raster_texture_cubemap_lit(mat_mvp, mat_mv, mat_normal,
@@ -1269,7 +1273,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				else {
 					struct sng_color no_tint = { 1, 1, 1 };
 					graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal,
-						e->m, &no_tint, 1.0, eye_light_pos, texture_id, 1, 1);
+						e->m, &no_tint, 1.0, eye_light_pos, texture_id, do_depth, do_cullface);
 				}
 			else
 				graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,

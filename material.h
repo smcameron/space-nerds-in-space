@@ -57,6 +57,8 @@ struct material_texture_mapped {
 };
 
 struct material_texture_mapped_unlit {
+	int do_depth;
+	int do_cullface;
 	int texture_id;
 };
 

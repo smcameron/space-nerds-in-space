@@ -11673,6 +11673,8 @@ static void load_textures(void)
 
 	asteroid_material.texture_id = load_cubemap_textures(0, "asteroid-texture");
 	wormhole_material.texture_id = load_texture("wormhole.png");
+	wormhole_material.do_depth = 0;
+	wormhole_material.do_cullface = 0;
 
 	textures_loaded = 1;
 }
