@@ -4218,7 +4218,7 @@ static int add_wormhole(double x1, double y1, double z1, double x2, double y2, d
 {
 	int i;
 
-	i = add_generic_object(x1, 0, z1, 0.0, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE);
+	i = add_generic_object(x1, y1, z1, 0.0, 0.0, 0.0, 0.0, OBJTYPE_WORMHOLE);
 	if (i < 0)
 		return i;
 	go[i].move = wormhole_move;
@@ -4258,16 +4258,19 @@ static int l_add_wormhole_pair(lua_State *l)
 static void add_wormholes(void)
 {
 	int i, id1, id2;
-	double x1, z1, x2, z2;
+	double x1, y1, z1, x2, y2, z2;
 
 	for (i = 0; i < NWORMHOLE_PAIRS; i++) {
 		do {
 			x1 = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+			y1 = ((double) snis_randn(1000) - 500) * YKNOWN_DIM / 1000.0;
 			z1 = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
 			x2 = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+			y2 = ((double) snis_randn(1000) - 500) * YKNOWN_DIM / 1000.0;
 			z2 = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
-		} while (hypot(x1 - x2, z1 - z2) < XKNOWN_DIM / 2.0);
-		add_wormhole_pair(&id1, &id2, x1, 0.0, z1, x2, 0.0, z2);
+		} while (dist3dsqrd(x1 - x2, y1 - y2, z1 - z2) <
+				(XKNOWN_DIM / 2.0) * (XKNOWN_DIM / 2.0));
+		add_wormhole_pair(&id1, &id2, x1, y1, z1, x2, y2, z2);
 	}
 }
 
@@ -7521,9 +7524,11 @@ static void send_update_planet_packet(struct game_client *c,
 static void send_update_wormhole_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSS", OPCODE_UPDATE_WORMHOLE,
-					o->id, o->x, (int32_t) UNIVERSE_DIM, o->z,
-					(int32_t) UNIVERSE_DIM));
+	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_WORMHOLE,
+					o->id,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_starbase_packet(struct game_client *c,

@@ -1301,7 +1301,7 @@ static int update_planet(uint32_t id, double x, double y, double z)
 	return 0;
 }
 
-static int update_wormhole(uint32_t id, double x, double z)
+static int update_wormhole(uint32_t id, double x, double y, double z)
 {
 	int i;
 	struct entity *e;
@@ -1311,10 +1311,10 @@ static int update_wormhole(uint32_t id, double x, double z)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
-		e = add_entity(ecx, wormhole_mesh, x, 0, z, WORMHOLE_COLOR);
+		e = add_entity(ecx, wormhole_mesh, x, y, z, WORMHOLE_COLOR);
 		set_render_style(e, wormhole_render_style);
 		update_entity_material(e, MATERIAL_TEXTURE_MAPPED_UNLIT, &wormhole_material);
-		i = add_generic_object(id, x, 0, z, 0.0, 0.0, 0.0,
+		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
 			return i;
@@ -1324,10 +1324,10 @@ static int update_wormhole(uint32_t id, double x, double z)
 		 * and orientation is handled client side via spin_starbase
 		 */
 		o->x = x;
-		o->y = 0;
+		o->y = y;
 		o->z = z;
 		if (o->entity)
-			update_entity_pos(o->entity, x, 0, z);
+			update_entity_pos(o->entity, x, y, z);
 	}
 	return 0;
 }
@@ -4084,16 +4084,18 @@ static int process_update_wormhole_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id;
-	double dx, dz;
+	double dx, dy, dz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_wormhole_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSS", &id,
-			&dx, (int32_t) UNIVERSE_DIM, &dz, (int32_t) UNIVERSE_DIM);
+	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_wormhole(id, dx, dz);
+	rc = update_wormhole(id, dx, dy, dz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
