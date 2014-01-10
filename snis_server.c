@@ -474,13 +474,13 @@ static void wormhole_collision_detection(void *wormhole, void *object)
 	case OBJTYPE_WORMHOLE:
 		return;
 	default:
-		dist2 = ((t->x - o->x) * (t->x - o->x)) +
-			((t->z - o->z) * (t->z - o->z));
+		dist2 = dist3dsqrd(t->x - o->x, t->y - o->y, t->z - o->z);
 		if (dist2 < 30.0 * 30.0) {
 			a = snis_randn(360) * M_PI / 180.0;
 			r = 60.0;
 			set_object_location(t, o->tsd.wormhole.dest_x + cos(a) * r, 
-						t->y, o->tsd.wormhole.dest_z + sin(a) * r);
+						o->tsd.wormhole.dest_y,
+						o->tsd.wormhole.dest_z + sin(a) * r);
 			t->timestamp = universe_timestamp;
 			if (t->type == OBJTYPE_SHIP1)
 				send_wormhole_limbo_packet(t->id, 5 * 30);
@@ -4223,6 +4223,7 @@ static int add_wormhole(double x1, double y1, double z1, double x2, double y2, d
 		return i;
 	go[i].move = wormhole_move;
 	go[i].tsd.wormhole.dest_x = x2;
+	go[i].tsd.wormhole.dest_y = y2;
 	go[i].tsd.wormhole.dest_z = z2;
 	return i;
 }

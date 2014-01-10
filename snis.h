@@ -394,7 +394,7 @@ struct derelict_data {
 };
 
 struct wormhole_data {
-	double dest_x, dest_z;
+	double dest_x, dest_y, dest_z;
 };
 
 #define MAX_SPACEMONSTER_SEGMENTS 20
