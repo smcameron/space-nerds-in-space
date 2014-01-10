@@ -297,6 +297,7 @@ struct mesh *swordfish_mesh;
 struct mesh *wombat_mesh;
 struct mesh *cargo_container_mesh;
 struct mesh *nebula_mesh;
+struct mesh *sun_mesh;
 
 struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
@@ -306,6 +307,7 @@ static struct material_billboard red_torpedo_material;
 static struct material_billboard red_laser_material;
 static struct material_billboard green_laser_material;
 static struct material_billboard spark_material;
+static struct material_billboard sun_material;
 static struct material_texture_cubemap planet_material[NPLANET_MATERIALS];
 static struct material_texture_cubemap asteroid_material;
 static struct material_texture_mapped_unlit wormhole_material;
@@ -4904,7 +4906,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
-	set_lighting(ecx, XKNOWN_DIM/2, YKNOWN_DIM/2, ZKNOWN_DIM/2);
+	set_lighting(ecx, XKNOWN_DIM/2, 0, ZKNOWN_DIM/2);
 	calculate_camera_transform(ecx);
 
 	sng_set_foreground(GREEN);
@@ -5068,7 +5070,7 @@ static void show_mainscreen(GtkWidget *w)
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
-	set_lighting(ecx, XKNOWN_DIM/2, YKNOWN_DIM/2, ZKNOWN_DIM/2);
+	set_lighting(ecx, XKNOWN_DIM/2, 0, ZKNOWN_DIM/2);
 	calculate_camera_transform(ecx);
 
 	sng_set_foreground(GREEN);
@@ -11650,6 +11652,14 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 		meshes_loaded = 1;
 	}
 
+	static int static_exc_loaded = 0;
+	if (!static_exc_loaded) {
+		struct entity *e = add_entity(ecx, sun_mesh, XKNOWN_DIM/2, 0, ZKNOWN_DIM/2, WHITE);
+		update_entity_material(e, MATERIAL_BILLBOARD, &sun_material);
+
+		static_exc_loaded = 1;
+	}
+
 	return TRUE;
 }
 
@@ -11669,6 +11679,9 @@ static void load_textures(void)
 
 	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	spark_material.texture_id = load_texture("spark-texture.png");
+
+	sun_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	sun_material.texture_id = load_texture("sun.png");
 
 	planet_material[0].texture_id = load_cubemap_textures(0, "planet-texture0-");
 	planet_material[1].texture_id = load_cubemap_textures(0, "planet-texture1-");
@@ -12171,6 +12184,7 @@ static void init_meshes()
 	heading_indicator_mesh = snis_read_stl_file(d, "heading_indicator.stl");
 	cargo_container_mesh = snis_read_stl_file(d, "cargocontainer.stl");
 	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
+	sun_mesh = mesh_fabricate_billboard(0, 0, 5000, 5000);
 
 	/* Note: these must match defines of SHIPTYPEs in snis.h */
 	ship_mesh_map[0] = cruiser_mesh;
