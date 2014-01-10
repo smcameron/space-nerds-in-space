@@ -1645,7 +1645,7 @@ static int __attribute__((unused)) in_nebula(double x, double y, double z)
 		n = &go[j];
 		r = n->tsd.nebula.r * n->tsd.nebula.r;
 		dist = dist3dsqrd(x - n->x, y - n->y, z - n->z);
-		if (dist < r * r)
+		if (dist < r)
 			return 1;
 	}
 	return 0;
