@@ -1632,20 +1632,20 @@ static void spacemonster_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
-static int __attribute__((unused)) in_nebula(double x, double z)
+static int __attribute__((unused)) in_nebula(double x, double y, double z)
 {
-	double dist2;
-	int i, j;
 	struct snis_entity *n;
+	double r, dist;
+	int i, j;
 
 	for (i = 0; i < NNEBULA; i++) {
 		j = nebulalist[i];
 		if (j < 0)
 			continue;
 		n = &go[j];
-		/* FIXME make this 3d */
-		dist2 = (x - n->x) * (x - n->x) + (z - n->z) * (z - n->z);
-		if (dist2 < n->tsd.nebula.r * n->tsd.nebula.r)
+		r = n->tsd.nebula.r * n->tsd.nebula.r;
+		dist = dist3dsqrd(x - n->x, y - n->y, z - n->z);
+		if (dist < r * r)
 			return 1;
 	}
 	return 0;
@@ -7538,8 +7538,9 @@ static void send_update_starbase_packet(struct game_client *c,
 static void send_update_nebula_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_NEBULA, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwSSSS", OPCODE_UPDATE_NEBULA, o->id,
 					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					o->tsd.nebula.r, (int32_t) UNIVERSE_DIM));
 }

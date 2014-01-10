@@ -234,7 +234,7 @@ struct update_starbase_packet {
 struct update_nebula_packet {
 	uint16_t opcode;
 	uint32_t id;
-	uint32_t x, y, r;
+	uint32_t x, y, z, r;
 };
 
 struct update_explosion_packet {

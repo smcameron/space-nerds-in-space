@@ -1395,9 +1395,8 @@ static void delete_nebula_entry(uint32_t id)
 		(sizeof(nebulaentry[0]) * (nnebula - i)));
 }
 
-static int update_nebula(uint32_t id, double x, double z, double r)
+static int update_nebula(uint32_t id, double x, double y, double z, double r)
 {
-	double y = 0; /* TODO get y for nebula */
 	int i;
 
 	i = lookup_object_by_id(id);
@@ -4121,18 +4120,19 @@ static int process_update_nebula_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id;
-	double dx, dz, r;
+	double dx, dy, dz, r;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_nebula_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wSSSS", &id,
 			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
 			&r, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_nebula(id, dx, dz, r);
+	rc = update_nebula(id, dx, dy, dz, r);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
