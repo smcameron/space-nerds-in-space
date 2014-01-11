@@ -302,7 +302,8 @@ struct mesh *sun_mesh;
 struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
 
-static struct material_nebula nebula_material;
+#define NNEBULA_MATERIALS 20
+static struct material_nebula nebula_material[NNEBULA_MATERIALS];
 static struct material_billboard red_torpedo_material;
 static struct material_billboard red_laser_material;
 static struct material_billboard green_laser_material;
@@ -1404,7 +1405,8 @@ static int update_nebula(uint32_t id, double x, double y, double z, double r)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		struct entity *e = add_entity(ecx, nebula_mesh, x, y, z, PLANET_COLOR);
-		update_entity_material(e, MATERIAL_NEBULA, &nebula_material);
+		update_entity_material(e, MATERIAL_NEBULA,
+				&nebula_material[snis_randn(NNEBULA_MATERIALS)]);
 		update_entity_scale(e, r * 2.0);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&identity_quat, OBJTYPE_NEBULA, 1, e);
@@ -11692,10 +11694,20 @@ static void load_textures(void)
 	for (i = 0; i < MATERIAL_NEBULA_NPLANES; i++) {
 		char filename[20];
 		sprintf(filename, "nebula%d.png", i);
-		nebula_material.texture_id[i] = load_texture(filename);
-		nebula_material.alpha = 1.0;
-		nebula_material.tint = sng_get_color(WHITE);
-		random_quat(&nebula_material.orientation[i]);
+		nebula_material[0].texture_id[i] = load_texture(filename);
+		nebula_material[0].alpha = 1.0;
+		nebula_material[0].tint = sng_get_color(WHITE);
+		random_quat(&nebula_material[0].orientation[i]);
+	}
+
+	for (i = 1; i < NNEBULA_MATERIALS; i++) {
+		int j;
+		for (j = 0; j < MATERIAL_NEBULA_NPLANES; j++) {
+			nebula_material[i].texture_id[j] = nebula_material[0].texture_id[j];
+			random_quat(&nebula_material[i].orientation[j]);
+		}
+		nebula_material[i].alpha = 1.0;
+		nebula_material[i].tint = sng_get_color(WHITE);
 	}
 
 	asteroid_material.texture_id = load_cubemap_textures(0, "asteroid-texture");
