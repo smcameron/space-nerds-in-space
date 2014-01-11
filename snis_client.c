@@ -12110,7 +12110,7 @@ static void init_meshes()
 			sprintf(filename, "asteroid%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
 		asteroid_mesh[i] = snis_read_stl_file(d, filename);
-		mesh_distort_and_random_uv_map(asteroid_mesh[i], 0.10);
+		mesh_distort(asteroid_mesh[i], 0.10);
 	}
 
 	for (i = 0; i < NASTEROID_MODELS; i++) {
