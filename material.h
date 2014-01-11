@@ -74,6 +74,8 @@ struct material_texture_cubemap {
 struct material_nebula {
 	int texture_id[MATERIAL_NEBULA_NPLANES];
 	union quat orientation[MATERIAL_NEBULA_NPLANES];
+	float alpha;
+	struct sng_color tint;
 };
 
 #endif

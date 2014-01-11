@@ -1173,11 +1173,10 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 		mat33_x_vec3(&mat_normal_local_r, ent_normal, &camera_normal);
 		vec3_normalize_self(&camera_normal);
 
-		float alpha = fabs(vec3_dot(&camera_normal, &camera_ent_vector));
-		struct sng_color no_tint = { 1, 1, 1 };
+		float alpha = fabs(vec3_dot(&camera_normal, &camera_ent_vector)) * mt->alpha;
 
 		graph_dev_raster_texture(&mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
-			e->m, &no_tint, alpha, eye_light_pos, mt->texture_id[i], 0, 0);
+			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, 0);
 	}
 }
 

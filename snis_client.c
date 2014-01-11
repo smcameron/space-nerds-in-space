@@ -11693,6 +11693,8 @@ static void load_textures(void)
 		char filename[20];
 		sprintf(filename, "nebula%d.png", i);
 		nebula_material.texture_id[i] = load_texture(filename);
+		nebula_material.alpha = 1.0;
+		nebula_material.tint = sng_get_color(WHITE);
 		random_quat(&nebula_material.orientation[i]);
 	}
 
