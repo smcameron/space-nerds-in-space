@@ -12127,7 +12127,6 @@ static void init_meshes()
 	struct mesh *icosphere = mesh_unit_icosphere(4);
 	for (i = 0; i < NPLANET_MODELS; i++) {
 		planet_mesh[i] = mesh_duplicate(icosphere);
-		mesh_sphere_uv_map(planet_mesh[i]);
 		mesh_scale(planet_mesh[i], 300.0 + snis_randn(400));
 	}
 	mesh_free(icosphere);
