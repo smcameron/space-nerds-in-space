@@ -4023,17 +4023,28 @@ static void add_starbases(void)
 
 static void add_nebulae(void)
 {
-	int i, j;
-	double x, y, z, r;
+	int i, j, k;
+	double x, y, z, r, dx, dy, dz;
 
-	for (i = 0; i < NNEBULA; i++) {
+	for (i = 0; i < NEBULA_CLUSTERS; i++) {
+		dx = snis_randn(NEBULA_RADIUS * 2) - NEBULA_RADIUS;
+		dy = snis_randn(NEBULA_RADIUS * 2) - NEBULA_RADIUS;
+		dz = snis_randn(NEBULA_RADIUS * 2) - NEBULA_RADIUS;
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
 		y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
 		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
-		r = (double) snis_randn(NEBULA_RADIUS) +
-				(double) MIN_NEBULA_RADIUS;
-		j = add_nebula(x, y, z, 0.0, 0.0, 0.0, r);
-		nebulalist[i] = j;
+		for (j = 0; j < NEBULAS_PER_CLUSTER; j++) {
+			r = (double) snis_randn(NEBULA_RADIUS) +
+					(double) MIN_NEBULA_RADIUS;
+			k = add_nebula(x, y, z, 0.0, 0.0, 0.0, r);
+			x += dx;
+			y += dy;
+			z += dz;
+			dx += snis_randn(NEBULA_RADIUS / 3.0) - NEBULA_RADIUS / 6.0;
+			dy += snis_randn(NEBULA_RADIUS / 3.0) - NEBULA_RADIUS / 6.0;
+			dz += snis_randn(NEBULA_RADIUS / 3.0) - NEBULA_RADIUS / 6.0;
+			nebulalist[i * NEBULAS_PER_CLUSTER + j] = k;
+		}
 	}
 }
 
