@@ -78,4 +78,6 @@ struct material_nebula {
 	struct sng_color tint;
 };
 
+extern int material_nebula_read_from_file(const char *asset_dir, const char *filename, struct material_nebula *mt);
+
 #endif

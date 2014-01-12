@@ -302,7 +302,7 @@ struct mesh *sun_mesh;
 struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
 
-#define NNEBULA_MATERIALS 20
+#define NNEBULA_MATERIALS 5
 static struct material_nebula nebula_material[NNEBULA_MATERIALS];
 static struct material_billboard red_torpedo_material;
 static struct material_billboard red_laser_material;
@@ -11692,23 +11692,11 @@ static void load_textures(void)
 	planet_material[3].texture_id = load_cubemap_textures(0, "planet-texture3-");
 
 	int i;
-	for (i = 0; i < MATERIAL_NEBULA_NPLANES; i++) {
+	for (i = 0; i < NNEBULA_MATERIALS; i++) {
 		char filename[20];
-		sprintf(filename, "nebula%d.png", i);
-		nebula_material[0].texture_id[i] = load_texture(filename);
-		nebula_material[0].alpha = 1.0;
-		nebula_material[0].tint = sng_get_color(WHITE);
-		random_quat(&nebula_material[0].orientation[i]);
-	}
+		sprintf(filename, "nebula%d.mat", i);
 
-	for (i = 1; i < NNEBULA_MATERIALS; i++) {
-		int j;
-		for (j = 0; j < MATERIAL_NEBULA_NPLANES; j++) {
-			nebula_material[i].texture_id[j] = nebula_material[0].texture_id[j];
-			random_quat(&nebula_material[i].orientation[j]);
-		}
-		nebula_material[i].alpha = 1.0;
-		nebula_material[i].tint = sng_get_color(WHITE);
+		material_nebula_read_from_file(asset_dir, filename, &nebula_material[i]);
 	}
 
 	asteroid_material[0].texture_id = load_cubemap_textures(0, "asteroid1-");
