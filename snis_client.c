@@ -310,7 +310,8 @@ static struct material_billboard green_laser_material;
 static struct material_billboard spark_material;
 static struct material_billboard sun_material;
 static struct material_texture_cubemap planet_material[NPLANET_MATERIALS];
-static struct material_texture_cubemap asteroid_material;
+#define NASTEROID_TEXTURES 2
+static struct material_texture_cubemap asteroid_material[NASTEROID_TEXTURES];
 static struct material_texture_mapped_unlit wormhole_material;
 #ifdef WITHOUTOPENGL
 const int wormhole_render_style = RENDER_SPARKLE;
@@ -1204,8 +1205,8 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
 		random_axis_quat(&orientation, snis_randn(360) * M_PI / 180.0);
 		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
-		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP, &asteroid_material);
-
+		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP,
+					&asteroid_material[id % NASTEROID_TEXTURES]);
 		i = add_generic_object(id, x, y, z, vx, vy, vz,
 				&orientation, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
@@ -11710,7 +11711,8 @@ static void load_textures(void)
 		nebula_material[i].tint = sng_get_color(WHITE);
 	}
 
-	asteroid_material.texture_id = load_cubemap_textures(0, "asteroid-texture");
+	asteroid_material[0].texture_id = load_cubemap_textures(0, "asteroid1-");
+	asteroid_material[1].texture_id = load_cubemap_textures(0, "asteroid2-");
 	wormhole_material.texture_id = load_texture("wormhole.png");
 	wormhole_material.do_depth = 0;
 	wormhole_material.do_cullface = 0;
