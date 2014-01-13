@@ -29,6 +29,7 @@ static int nloaded_textures = 0;
 static struct loaded_texture loaded_textures[MAX_LOADED_TEXTURES];
 
 static int draw_normal_lines = 0;
+static int draw_nebula_wireframe = 0;
 
 struct mesh_gl_info {
 	/* common buffer to hold vertex positions */
@@ -1265,7 +1266,14 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 		graph_dev_raster_texture(&mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
 			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, 0);
+
+		if (draw_nebula_wireframe) {
+			struct sng_color line_color = sng_get_color(WHITE);
+			graph_dev_raster_trans_wireframe_mesh(&mat_mvp_local_r, &mat_mv_local_r,
+				&mat_normal_local_r, e->m, &line_color);
+		}
 	}
+
 }
 
 void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
