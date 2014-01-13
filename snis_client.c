@@ -1407,7 +1407,7 @@ static int update_nebula(uint32_t id, double x, double y, double z, double r)
 	if (i < 0) {
 		struct entity *e = add_entity(ecx, nebula_mesh, x, y, z, PLANET_COLOR);
 		update_entity_material(e, MATERIAL_NEBULA,
-				&nebula_material[snis_randn(NNEBULA_MATERIALS)]);
+				&nebula_material[id % NNEBULA_MATERIALS]);
 		update_entity_scale(e, r * 2.0);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&identity_quat, OBJTYPE_NEBULA, 1, e);
