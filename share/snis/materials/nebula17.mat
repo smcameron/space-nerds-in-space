@@ -1,0 +1,14 @@
+texture nebula0.png
+orientation 0.852640 0.258494 -0.036739 0.452588
+texture nebula1.png
+orientation -0.241922 -0.963687 0.095315 0.060789
+texture nebula2.png
+orientation 0.882948 -0.304604 -0.259288 0.245743
+texture nebula3.png
+orientation 0.809017 -0.126485 -0.513059 0.257418
+texture nebula4.png
+orientation 0.819152 0.354903 -0.450507 0.008792
+texture nebula5.png
+orientation -0.857167 -0.130175 0.464321 0.180900
+alpha 1.000000
+tint 1.000000 1.000000 1.000000

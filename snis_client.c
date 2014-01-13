@@ -302,7 +302,7 @@ struct mesh *sun_mesh;
 struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
 
-#define NNEBULA_MATERIALS 5
+#define NNEBULA_MATERIALS 20
 static struct material_nebula nebula_material[NNEBULA_MATERIALS];
 static struct material_billboard red_torpedo_material;
 static struct material_billboard red_laser_material;
