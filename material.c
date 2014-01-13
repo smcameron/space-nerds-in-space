@@ -20,6 +20,7 @@
 */
 
 #include <stdio.h>
+#include <string.h>
 #include <gtk/gtk.h>
 
 #include "quat.h"
@@ -33,6 +34,17 @@ static unsigned int load_texture(const char *asset_dir, char *filename)
 
 	sprintf(fname, "%s/textures/%s", asset_dir, filename);
 	return graph_dev_load_texture(fname);
+}
+
+static const char *gnu_basename(const char *path)
+{
+	char *base = strrchr(path, '/');
+	return base ? base + 1 : path;
+}
+
+static const char *get_texture_filename(unsigned int texture_id)
+{
+	return gnu_basename(graph_dev_get_texture_filename(texture_id));
 }
 
 int material_nebula_read_from_file(const char *asset_dir, const char *filename, struct material_nebula *mt)
@@ -78,6 +90,35 @@ int material_nebula_read_from_file(const char *asset_dir, const char *filename, 
 		fprintf(stderr, "material_nebula: Error reading 'tint' from file '%s'\n", full_filename);
 		return -1;
 	}
+
+	fclose(f);
+
+	return 0;
+}
+
+int material_nebula_write_to_file(const char *asset_dir, const char *filename, struct material_nebula *mt)
+{
+	FILE *f;
+	int i;
+	char full_filename[PATH_MAX + 1];
+
+	sprintf(full_filename, "%s/materials/%s", asset_dir, filename);
+
+	f = fopen(full_filename, "w");
+	if (!f) {
+		fprintf(stderr, "material_nebula: Error opening file '%s' to write\n", full_filename);
+		return -1;
+	}
+
+	for (i = 0; i < MATERIAL_NEBULA_NPLANES; i++) {
+		const char *texture_filename = get_texture_filename(mt->texture_id[i]);
+		fprintf(f, "texture %s\n", texture_filename);
+		fprintf(f, "orientation %f %f %f %f\n", mt->orientation[i].q.q0, mt->orientation[i].q.q1,
+			mt->orientation[i].q.q2, mt->orientation[i].q.q3);
+	}
+
+	fprintf(f, "alpha %f\n", mt->alpha);
+	fprintf(f, "tint %f %f %f\n", mt->tint.red, mt->tint.green, mt->tint.blue);
 
 	fclose(f);
 

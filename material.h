@@ -79,5 +79,6 @@ struct material_nebula {
 };
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename, struct material_nebula *mt);
+extern int material_nebula_write_to_file(const char *asset_dir, const char *filename, struct material_nebula *mt);
 
 #endif
