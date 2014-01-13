@@ -20,6 +20,14 @@
 #include "entity_private.h"
 #include "material.h"
 
+#define MAX_LOADED_TEXTURES 20
+struct loaded_texture {
+	GLuint texture_id;
+	char* filename;
+};
+static int nloaded_textures = 0;
+static struct loaded_texture loaded_textures[MAX_LOADED_TEXTURES];
+
 struct mesh_gl_info {
 	/* common buffer to hold vertex positions */
 	GLuint vertex_buffer;
@@ -1760,6 +1768,18 @@ unsigned int graph_dev_load_texture(const char *filename)
 	int whynotlen = 100;
 	int tw, th, hasAlpha = 1;
 	GLuint texture_number;
+	int i;
+
+	for (i = 0; i < nloaded_textures; i++) {
+		if (strcmp(filename, loaded_textures[i].filename) == 0) {
+			return loaded_textures[i].texture_id;
+		}
+	}
+
+	if (nloaded_textures >= MAX_LOADED_TEXTURES) {
+		printf("Unable to load texture '%s': max of %d textures are already loaded\n", filename, nloaded_textures);
+		return 0;
+	}
 
 	glEnable(GL_TEXTURE_2D);
 	glGenTextures(1, &texture_number);
@@ -1776,9 +1796,14 @@ unsigned int graph_dev_load_texture(const char *filename)
 				GL_UNSIGNED_BYTE, image_data);
 		free(image_data);
 	} else {
-		printf("Unable to load laserbolt texture '%s': %s\n", filename, whynotz);
+		printf("Unable to load texture '%s': %s\n", filename, whynotz);
 	}
 	glDisable(GL_TEXTURE_2D);
+
+	loaded_textures[nloaded_textures].texture_id = texture_number;
+	loaded_textures[nloaded_textures].filename = strdup(filename);
+	nloaded_textures++;
+
 	return (unsigned int) texture_number;
 }
 
