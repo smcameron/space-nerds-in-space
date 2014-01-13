@@ -618,11 +618,13 @@ struct mesh *mesh_fabricate_billboard(float cx, float cy, float width, float hei
 	m->t[0].v[0] = &m->v[0];
 	m->t[0].v[1] = &m->v[2];
 	m->t[0].v[2] = &m->v[1];
+	m->t[0].flag = TRIANGLE_0_1_COPLANAR;
 	mesh_set_triangle_texture_coords(m, 0, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f);
 
 	m->t[1].v[0] = &m->v[0];
 	m->t[1].v[1] = &m->v[3];
 	m->t[1].v[2] = &m->v[2];
+	m->t[1].flag = TRIANGLE_0_2_COPLANAR;
 	mesh_set_triangle_texture_coords(m, 1, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
 
 	m->radius = mesh_compute_radius(m);
