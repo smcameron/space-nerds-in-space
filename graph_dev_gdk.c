@@ -929,3 +929,8 @@ unsigned int graph_dev_load_texture(const char *filename)
 	return (unsigned int) -1;
 }
 
+const char *graph_dev_get_texture_filename(unsigned int texture_id)
+{
+	return "";
+}
+

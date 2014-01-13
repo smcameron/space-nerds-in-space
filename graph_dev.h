@@ -69,7 +69,7 @@ extern unsigned int graph_dev_load_cubemap_texture(
         const char *texture_filename_neg_z);
 
 extern unsigned int graph_dev_load_texture(const char *filename);
-
+extern const char *graph_dev_get_texture_filename(unsigned int);
 extern void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp);
 
 #endif

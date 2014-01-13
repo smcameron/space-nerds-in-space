@@ -1807,6 +1807,17 @@ unsigned int graph_dev_load_texture(const char *filename)
 	return (unsigned int) texture_number;
 }
 
+const char *graph_dev_get_texture_filename(unsigned int texture_id)
+{
+	int i;
+	for (i = 0; i < nloaded_textures; i++) {
+		if (texture_id == loaded_textures[i].texture_id) {
+			return loaded_textures[i].filename;
+		}
+	}
+	return "";
+}
+
 void graph_dev_load_skybox_texture(
 	const char *texture_filename_pos_x,
 	const char *texture_filename_neg_x,
