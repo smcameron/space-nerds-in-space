@@ -934,3 +934,14 @@ const char *graph_dev_get_texture_filename(unsigned int texture_id)
 	return "";
 }
 
+void graph_dev_display_debug_menu_show()
+{
+	/* no debug at this time */
+}
+
+int graph_dev_graph_dev_debug_menu_click(int x, int y)
+{
+	/* return false as we didn't consume the click */
+	return 0;
+}
+

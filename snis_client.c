@@ -2850,7 +2850,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			}
 			return TRUE;
 	case key_toggle_frame_stats:
-			display_frame_stats = !display_frame_stats;
+			display_frame_stats = (display_frame_stats + 1) % 3;
 			return TRUE;
         case keyfullscreen: {
 			if (fullscreen) {
@@ -11418,7 +11418,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (in_the_process_of_quitting)
 		draw_quit_screen(w);
 
-	if (display_frame_stats) {
+	if (display_frame_stats > 0) {
 		float avg_frame_rate=0;
 		float avg_frame_time=0;
 		int i;
@@ -11435,6 +11435,9 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		sng_abs_xy_draw_string(w, gc, stat_buffer, NANO_FONT, 2, 10);
 		sprintf(stat_buffer,"t %0.2f ms", avg_frame_time*1000.0);
 		sng_abs_xy_draw_string(w, gc, stat_buffer, NANO_FONT, 92, 10);
+	}
+	if (display_frame_stats > 1) {
+		graph_dev_display_debug_menu_show();
 	}
 
 end_of_drawing:
@@ -11462,7 +11465,7 @@ end_of_drawing:
 	gdk_gl_drawable_gl_end(gl_drawable);
 #endif
 
-	if (display_frame_stats) {
+	if (display_frame_stats > 0) {
 		double end_time = time_now_double();
 
 		frame_rates[frame_index] = start_time - last_frame_time;
@@ -11727,6 +11730,11 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	__attribute__((unused)) void *unused)
 		
 {
+	if (display_frame_stats) {
+		if (graph_dev_graph_dev_debug_menu_click(event->x, event->y))
+			return TRUE;
+	}
+
 	switch (displaymode) {
 	case DISPLAYMODE_LOBBYSCREEN:
 		lobbylast1clickx = (int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH);

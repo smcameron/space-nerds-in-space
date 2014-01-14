@@ -19,6 +19,7 @@
 #include "entity.h"
 #include "entity_private.h"
 #include "material.h"
+#include "snis_typeface.h"
 
 #define MAX_LOADED_TEXTURES 20
 struct loaded_texture {
@@ -1957,3 +1958,36 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 	glUseProgram(0);
 }
 
+void graph_dev_display_debug_menu_show()
+{
+	sng_set_foreground(BLACK);
+	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 45);
+	sng_set_foreground(WHITE);
+	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 45);
+
+	/* fake GtkWidget until we can purge it from the snis_graph interfaces */
+	GtkWidget w;
+
+	graph_dev_draw_rectangle(0, 15, 35, 15, 15);
+	if (draw_normal_lines)
+		graph_dev_draw_rectangle(1, 17, 37, 11, 11);
+	sng_abs_xy_draw_string(&w, 0, "VERTEX NORMAL LINES", NANO_FONT, 35 / sgc.x_scale, 45 / sgc.y_scale);
+
+	graph_dev_draw_rectangle(0, 15, 55, 15, 15);
+	if (draw_nebula_wireframe)
+		graph_dev_draw_rectangle(1, 17, 57, 11, 11);
+	sng_abs_xy_draw_string(&w, 0, "NEBULA WIREFRAME", NANO_FONT, 35 / sgc.x_scale, 65 / sgc.y_scale);
+}
+
+int graph_dev_graph_dev_debug_menu_click(int x, int y)
+{
+	if (x >= 15 && x <= 35 && y >= 35 && y <= 50) {
+		draw_normal_lines = !draw_normal_lines;
+		return 1;
+	}
+	if (x >= 15 && x <= 55 && y >= 35 && y <= 70) {
+		draw_nebula_wireframe = !draw_nebula_wireframe;
+		return 1;
+	}
+	return 0;
+}
