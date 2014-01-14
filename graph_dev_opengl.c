@@ -456,6 +456,7 @@ static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_shad
 
 static struct graph_dev_gl_context {
 	int screen_x, screen_y;
+	float x_scale, y_scale;
 	GdkColor *hue; /* current color */
 	int alpha_blend;
 	float alpha;
@@ -479,7 +480,8 @@ void graph_dev_set_screen_size(int width, int height)
 
 void graph_dev_set_extent_scale(float x_scale, float y_scale)
 {
-
+	sgc.x_scale = x_scale;
+	sgc.y_scale = y_scale;
 }
 
 void graph_dev_set_3d_viewport(int x_offset, int y_offset, int width, int height)
