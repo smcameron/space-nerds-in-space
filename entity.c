@@ -849,9 +849,9 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 
 			/* cull objects that are too small to draw based on approx screen size
 			   http://stackoverflow.com/questions/3717226/radius-of-projected-sphere */
-			float approx_pixel_size = c->yvpixels * e->m->radius * e->scale /
+			float approx_pixel_size = c->yvpixels * e->m->radius * fabs(e->scale) /
 				tan(cx->camera.angle_of_view * 0.5) / sqrt(e->dist3dsqrd);
-			if (approx_pixel_size < 3.0)
+			if (approx_pixel_size < 2.0)
 				continue;
 
 			cx->entity_depth[cx->nentity_depth] = j;
