@@ -4024,25 +4024,41 @@ static void add_starbases(void)
 static void add_nebulae(void)
 {
 	int i, j, k;
-	double x, y, z, r, dx, dy, dz;
+	double ix, iy, iz, x, y, z, r, factor;
+	union vec3 d;
 
 	for (i = 0; i < NEBULA_CLUSTERS; i++) {
-		dx = snis_randn(NEBULA_RADIUS * 2) - NEBULA_RADIUS;
-		dy = snis_randn(NEBULA_RADIUS * 2) - NEBULA_RADIUS;
-		dz = snis_randn(NEBULA_RADIUS * 2) - NEBULA_RADIUS;
-		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
-		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		random_point_on_sphere(1.0, &d.v.x, &d.v.y, &d.v.z);
+		ix = x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+		iy = y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
+		iz = z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
 		for (j = 0; j < NEBULAS_PER_CLUSTER; j++) {
 			r = (double) snis_randn(NEBULA_RADIUS) +
 					(double) MIN_NEBULA_RADIUS;
 			k = add_nebula(x, y, z, 0.0, 0.0, 0.0, r);
-			x += dx;
-			y += dy;
-			z += dz;
-			dx += snis_randn(NEBULA_RADIUS / 3.0) - NEBULA_RADIUS / 6.0;
-			dy += snis_randn(NEBULA_RADIUS / 3.0) - NEBULA_RADIUS / 6.0;
-			dz += snis_randn(NEBULA_RADIUS / 3.0) - NEBULA_RADIUS / 6.0;
+			factor = 1.2;
+
+			/* every once in awhile, maybe put a gap in between nebula blobs */
+			if (snis_randn(100) < 10)
+				factor += snis_randn(100) / 30.0;
+
+			/* every once in awhile, go back to the nebula center */
+			if (snis_randn(100) < 25) {
+				x = ix;
+				y = iy;
+				z = iz;
+				random_point_on_sphere(1.0, &d.v.x, &d.v.y, &d.v.z);
+			}
+			x += d.v.x * r * factor;
+			y += d.v.y * r * factor;
+			z += d.v.z * r * factor;
+
+			/* perturb direction a bit... */
+			d.v.x += snis_randn(1000) / 3000.0 - (1.0 / 6.0);
+			d.v.y += snis_randn(1000) / 3000.0 - (1.0 / 6.0);
+			d.v.z += snis_randn(1000) / 3000.0 - (1.0 / 6.0);
+			vec3_normalize_self(&d);
+
 			nebulalist[i * NEBULAS_PER_CLUSTER + j] = k;
 		}
 	}
