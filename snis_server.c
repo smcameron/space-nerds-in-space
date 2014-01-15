@@ -4022,17 +4022,35 @@ static void add_starbases(void)
 	}
 }
 
+static int nebula_too_close(double ix[], double iy[], double iz[], int n)
+{
+	int i;
+	const double limit = (XKNOWN_DIM / 4.0) * (XKNOWN_DIM / 4.0);
+
+	for (i = 0; i < n; i++) {
+		const double d = dist3dsqrd(ix[i] - ix[n], iy[i] - iy[n], iz[i] - iz[n]);
+		if (d < limit)
+			return 1; 
+	}
+	return 0;
+}
+
 static void add_nebulae(void)
 {
 	int i, j, k;
-	double ix, iy, iz, x, y, z, r, factor;
+	double ix[NEBULA_CLUSTERS], iy[NEBULA_CLUSTERS], iz[NEBULA_CLUSTERS], x, y, z, r, factor;
 	union vec3 d;
+	int count;
 
 	for (i = 0; i < NEBULA_CLUSTERS; i++) {
 		random_point_on_sphere(1.0, &d.v.x, &d.v.y, &d.v.z);
-		ix = x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		iy = y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
-		iz = z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		count = 0;
+		do {
+			ix[i] = x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+			iy[i] = y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
+			iz[i] = z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+			count++;
+		} while (nebula_too_close(ix, iy, iz, i) && count < 100);
 		for (j = 0; j < NEBULAS_PER_CLUSTER; j++) {
 			r = (double) snis_randn(NEBULA_RADIUS) +
 					(double) MIN_NEBULA_RADIUS;
@@ -4044,10 +4062,10 @@ static void add_nebulae(void)
 				factor += snis_randn(100) / 30.0;
 
 			/* every once in awhile, go back to the nebula center */
-			if (snis_randn(100) < 25) {
-				x = ix;
-				y = iy;
-				z = iz;
+			if (snis_randn(100) < 20) {
+				x = ix[i];
+				y = iy[i];
+				z = iz[i];
 				random_point_on_sphere(1.0, &d.v.x, &d.v.y, &d.v.z);
 			}
 			x += d.v.x * r * factor;
