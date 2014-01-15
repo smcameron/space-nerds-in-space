@@ -4,6 +4,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include "mtwist.h"
 #include "quat.h"
 #include "fleet.h"
 

@@ -37,6 +37,7 @@
 #include "triangle.h"
 #include "mesh.h"
 #include "matrix.h"
+#include "mtwist.h"
 #include "quat.h"
 
 #define DEFINE_STL_FILE_GLOBALS

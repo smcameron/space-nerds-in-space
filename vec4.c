@@ -23,6 +23,7 @@
 #include <math.h>
 #include <string.h>
 #include "vec4.h"
+#include "mtwist.h"
 #include "quat.h"
 
 union vec4 *vec4_init_vec3(union vec4 *vo, const union vec3 *vi, float w)

@@ -4,8 +4,9 @@
 #include <string.h>
 #include <errno.h>
 
-#define DEFINE_FACTION_GLOBALS 1
+#include "mtwist.h"
 #include "quat.h"
+#define DEFINE_FACTION_GLOBALS 1
 #include "snis_faction.h"
 
 #undef DEFINE_FACTION_GLOBALS

@@ -24,6 +24,7 @@
 #include <string.h>
 #define DEFINE_MATRIX_GLOBALS
 #include "matrix.h"
+#include "mtwist.h"
 #include "quat.h"
 #include "vec4.h"
 

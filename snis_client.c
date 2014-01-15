@@ -61,10 +61,10 @@
 #include "snis_ship_type.h"
 #include "snis_faction.h"
 #include "space-part.h"
-#include "quat.h"
-#include "snis.h"
 #include "mtwist.h"
 #include "mathutils.h"
+#include "quat.h"
+#include "snis.h"
 #include "snis_alloc.h"
 #include "my_point.h"
 #include "snis_font.h"
@@ -351,6 +351,27 @@ struct my_vect_obj placeholder_part_spun[128];
 
 static struct snis_entity *curr_science_guy = NULL;
 static struct snis_entity *prev_science_guy = NULL;
+
+#define NRANDOM_ORIENTATIONS 20
+static union quat random_orientation[NRANDOM_ORIENTATIONS];
+#define NRANDOM_SPINS 20
+static union quat random_spin[NRANDOM_SPINS];
+static void initialize_random_orientations_and_spins(void)
+{
+	int i;
+	struct mtwist_state *mt;
+
+	mt = mtwist_init(59377);
+	for (i = 0; i < NRANDOM_ORIENTATIONS; i++) {
+		float angle = mtwist_float(mt) * 2.0 * M_PI;
+		consistent_random_axis_quat(mt, &random_orientation[i], angle);
+	}
+	for (i = 0; i < NRANDOM_SPINS; i++) {
+		float angular_speed = ((float) mtwist_int(mt, 100) / 10.0 - 5.0) * M_PI / 180.0;
+		consistent_random_axis_quat(mt, &random_spin[i], angular_speed);
+	}
+	mtwist_free(mt);
+}
 
 void to_snis_heading_mark(const union quat *q, double *heading, double *mark)
 {
@@ -1198,13 +1219,15 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 	int i, m;
 	struct entity *e;
 	union quat orientation;
-	float angular_speed;
 	struct snis_entity *o;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
+		/* Note, orientation won't be consistent across clients
+		 * due to joining at different times
+		 */
+		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
 		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
-		random_axis_quat(&orientation, snis_randn(360) * M_PI / 180.0);
 		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
 		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP,
 					&asteroid_material[id % NASTEROID_TEXTURES]);
@@ -1213,9 +1236,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 		if (i < 0)
 			return i;
 		o = &go[i];
-		/* Pick a small rotational velocity */
-		angular_speed = ((float) snis_randn(100) / 10.0 - 5.0) * M_PI / 180.0;
-		random_axis_quat(&o->tsd.asteroid.rotational_velocity, angular_speed);
+		o->tsd.asteroid.rotational_velocity = random_spin[id % NRANDOM_SPINS];
 	} else {
 		o = &go[i];
 		/* move asteroid */
@@ -1231,22 +1252,21 @@ static int update_cargo_container(uint32_t id, double x, double y, double z,
 	int i;
 	struct entity *e;
 	union quat orientation;
-	float angular_speed;
 	struct snis_entity *o;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		random_axis_quat(&orientation, (float) snis_randn(360) * M_PI / 180.0f);
+		/* Note, orientation potentially won't be consistent across clients
+		 * due to joining at different times, and may drift out of sync over time.
+		 */
+		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
 		e = add_entity(ecx, cargo_container_mesh, x, y, z, CARGO_CONTAINER_COLOR);
 		i = add_generic_object(id, x, y, z, vx, vy, vz,
 				&orientation, OBJTYPE_CARGO_CONTAINER, 1, e);
 		if (i < 0)
 			return i;
 		o = &go[i];
-
-		/* Pick a small rotational velocity */
-		angular_speed = ((float) snis_randn(100) / 10.0 - 5.0) * M_PI / 180.0;
-		random_axis_quat(&o->tsd.cargo_container.rotational_velocity, angular_speed);
+		o->tsd.cargo_container.rotational_velocity = random_spin[id % NRANDOM_SPINS];
 	} else {
 		o = &go[i];
 		/* move cargo container */
@@ -1261,7 +1281,6 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 {
 	int i, m;
 	struct entity *e;
-	float angular_speed;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -1271,8 +1290,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 				&identity_quat, OBJTYPE_DERELICT, 1, e);
 		if (i < 0)
 			return i;
-		angular_speed = ((float) snis_randn(100) / 10.0 - 5.0) * M_PI / 180.0;
-		random_axis_quat(&go[i].tsd.derelict.rotational_velocity, angular_speed);
+		go[i].tsd.derelict.rotational_velocity = random_spin[id % NRANDOM_SPINS];
 	} else {
 		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 		update_entity_pos(go[i].entity, x, y, z);
@@ -1288,9 +1306,9 @@ static int update_planet(uint32_t id, double x, double y, double z)
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		random_quat(&orientation); /* FIXME: make this come out the same on all clients */
+		/* Orientation should be consistent across clients because planets don't move */
+		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
 		m = id % NPLANET_MODELS;
-		/* e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR); */
 		e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR);
 		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP, &planet_material[id % NPLANET_MATERIALS]);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
@@ -1642,7 +1660,6 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 {
 	int i, r;
 	struct entity *e;
-	float angular_speed;
 	union quat orientation;
 
 	i = snis_object_pool_alloc_obj(sparkpool);
@@ -1668,11 +1685,10 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	spark[i].vy = vy;
 	spark[i].vz = vz;
 	/* calculate a small rotational velocity */
-	angular_speed = ((float) snis_randn(100) / 10.0 - 5.0) * M_PI / 180.0;
-	random_axis_quat(&spark[i].tsd.spark.rotational_velocity, angular_speed);
+	spark[i].tsd.spark.rotational_velocity = random_spin[i % NRANDOM_SPINS];
 
 	/* Set entity to random orientation */
-	random_axis_quat(&orientation, snis_randn(360) * M_PI / 180.0f);
+	orientation = random_orientation[i % NRANDOM_ORIENTATIONS];
 	update_entity_orientation(e, &orientation);
 	
 	spark[i].type = OBJTYPE_SPARK;
@@ -12401,6 +12417,7 @@ int main(int argc, char *argv[])
 	init_keymap();
 	read_keymap_config_file();
 	init_vects();
+	initialize_random_orientations_and_spins();
 #if 0
 	init_player();
 	init_game_state(the_player);

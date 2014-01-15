@@ -19,8 +19,8 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "quat.h"
 #include "mtwist.h"
+#include "quat.h"
 #include "mathutils.h"
 
 static const float ZERO_TOLERANCE = 0.000001f;
@@ -376,6 +376,14 @@ void random_axis_quat(union quat *q, float angle)
 	union vec3 v;
 
 	random_point_on_sphere(1.0, &v.v.x, &v.v.y, &v.v.z);
+	quat_init_axis_v(q, &v, angle);
+}
+
+void consistent_random_axis_quat(struct mtwist_state *mt, union quat *q, float angle)
+{
+	union vec3 v;
+
+	consistent_random_point_on_sphere(mt, 1.0, &v.v.x, &v.v.y, &v.v.z);
 	quat_init_axis_v(q, &v, angle);
 }
 

@@ -23,6 +23,7 @@
 #include <string.h>
 #include <gtk/gtk.h>
 
+#include "mtwist.h"
 #include "quat.h"
 #include "snis_graph.h"
 #include "material.h"
