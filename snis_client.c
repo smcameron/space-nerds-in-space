@@ -268,6 +268,7 @@ struct mesh *torpedo_mesh;
 struct mesh *laser_mesh;
 struct mesh *asteroid_mesh[NASTEROID_MODELS * NASTEROID_SCALES];
 struct mesh *planet_mesh[NPLANET_MODELS];
+struct mesh *planetary_ring[NPLANET_MODELS];
 struct mesh *starbase_mesh[NSTARBASE_MODELS];
 struct mesh *ship_mesh;
 struct mesh *ship_turret_mesh;
@@ -1301,7 +1302,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 static int update_planet(uint32_t id, double x, double y, double z)
 {
 	int i, m;
-	struct entity *e;
+	struct entity *e, *ring;
 	union quat orientation;
 
 	i = lookup_object_by_id(id);
@@ -1310,6 +1311,13 @@ static int update_planet(uint32_t id, double x, double y, double z)
 		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
 		m = id % NPLANET_MODELS;
 		e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR);
+		if ((id % 4) == 0) {
+			/* FIXME: attach rings to planets somehow so when a planet is moved
+			 * on the demon screen, the rings do not get left behind.
+			 */ 
+			ring = add_entity(ecx, planetary_ring[m], x, y, z, PLANET_COLOR);
+			update_entity_orientation(ring, &orientation);
+		}
 		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP, &planet_material[id % NPLANET_MATERIALS]);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_PLANET, 1, e);
@@ -12151,10 +12159,16 @@ static void init_meshes()
 	}
 
 	struct mesh *icosphere = mesh_unit_icosphere(4);
+	struct mesh *ring = mesh_fabricate_planetary_ring(2.0, 3.0);
 	for (i = 0; i < NPLANET_MODELS; i++) {
+		float scale;
 		planet_mesh[i] = mesh_duplicate(icosphere);
-		mesh_scale(planet_mesh[i], 300.0 + snis_randn(400));
+		scale = 300.0 + snis_randn(400);
+		mesh_scale(planet_mesh[i], scale);
+		planetary_ring[i] = mesh_duplicate(ring);
+		mesh_scale(planetary_ring[i], scale);
 	}
+	mesh_free(ring);
 	mesh_free(icosphere);
 
 	for (i = 0; i < NSTARBASE_MODELS; i++) {
