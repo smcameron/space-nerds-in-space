@@ -315,6 +315,7 @@ static struct material_texture_cubemap planet_material[NPLANET_MATERIALS];
 #define NASTEROID_TEXTURES 2
 static struct material_texture_cubemap asteroid_material[NASTEROID_TEXTURES];
 static struct material_texture_mapped_unlit wormhole_material;
+static struct material_texture_mapped_unlit planetary_ring_material;
 #ifdef WITHOUTOPENGL
 const int wormhole_render_style = RENDER_SPARKLE;
 #else
@@ -1316,6 +1317,8 @@ static int update_planet(uint32_t id, double x, double y, double z)
 			 * on the demon screen, the rings do not get left behind.
 			 */ 
 			ring = add_entity(ecx, planetary_ring[m], x, y, z, PLANET_COLOR);
+			update_entity_material(ring, MATERIAL_TEXTURE_MAPPED_UNLIT,
+						&planetary_ring_material);
 			update_entity_orientation(ring, &orientation);
 		}
 		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP, &planet_material[id % NPLANET_MATERIALS]);
@@ -11703,6 +11706,11 @@ static void load_textures(void)
 	green_laser_material.texture_id = load_texture("green-laser-texture.png");
 	red_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
 	red_laser_material.texture_id = load_texture("red-laser-texture.png");
+	planetary_ring_material.texture_id = load_texture("planetary-ring.png");
+	planetary_ring_material.do_depth = 1;
+	planetary_ring_material.do_cullface = 0;
+	planetary_ring_material.tint = sng_get_color(WHITE);
+	planetary_ring_material.alpha = 0.5;
 
 	red_torpedo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	red_torpedo_material.texture_id = load_texture("red-torpedo-texture.png");
