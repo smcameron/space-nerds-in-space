@@ -1284,7 +1284,6 @@ static int update_planet(uint32_t id, double x, double y, double z)
 	int i, m;
 	struct entity *e;
 	union quat orientation;
-	int n = snis_randn(NPLANET_MATERIALS);
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -1292,7 +1291,7 @@ static int update_planet(uint32_t id, double x, double y, double z)
 		m = id % NPLANET_MODELS;
 		/* e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR); */
 		e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR);
-		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP, &planet_material[n]);
+		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP, &planet_material[id % NPLANET_MATERIALS]);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
