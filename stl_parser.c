@@ -313,12 +313,13 @@ void process_vertex_normals(struct mesh *m, float sharp_edge_angle, struct verte
 
 	int tri_index, vert_index;
 	for (tri_index = 0; tri_index < m->ntriangles; ++tri_index) {
+		struct triangle *this_t = &m->t[tri_index];
+		union vec3 this_tnormal = { { this_t->n.x, this_t->n.y, this_t->n.z } };
+
 		for (vert_index = 0; vert_index < 3; vert_index++) {
 			union vec3 vnormal = { { 0, 0, 0} };
 
-			struct triangle *this_t = &m->t[tri_index];
 			struct vertex *this_v = this_t->v[vert_index];
-			union vec3 this_tnormal = { { this_t->n.x, this_t->n.y, this_t->n.z } };
 
 			struct vertex_owner *start_owner = &owners[this_v - &m->v[0]];
 			if (start_owner) {
@@ -351,17 +352,23 @@ void process_vertex_normals(struct mesh *m, float sharp_edge_angle, struct verte
 					vec3_mul_self(&tnormal, area);
 #endif
 					/* figure out the angle between this vertex and the other two on the triangle */
-					float angle = 0;
+					float dot = 0;
 					if (this_v == t->v[0]) {
-						angle = acos(vec3_dot(vec3_normalize_self(vec3_sub(&tv1, &v0, &v1)),
-								vec3_normalize_self(vec3_sub(&tv2, &v0, &v2))));
+						dot = vec3_dot(vec3_normalize_self(vec3_sub(&tv1, &v0, &v1)),
+								vec3_normalize_self(vec3_sub(&tv2, &v0, &v2)));
 					} else if (this_v == t->v[1]) {
-						angle = acos(vec3_dot(vec3_normalize_self(vec3_sub(&tv1, &v1, &v0)),
-								vec3_normalize_self(vec3_sub(&tv2, &v1, &v2))));
+						dot = vec3_dot(vec3_normalize_self(vec3_sub(&tv1, &v1, &v0)),
+								vec3_normalize_self(vec3_sub(&tv2, &v1, &v2)));
 					} else if (this_v == t->v[2]) {
-						angle = acos(vec3_dot(vec3_normalize_self(vec3_sub(&tv1, &v2, &v0)),
-								vec3_normalize_self(vec3_sub(&tv2, &v2, &v1))));
+						dot = vec3_dot(vec3_normalize_self(vec3_sub(&tv1, &v2, &v0)),
+								vec3_normalize_self(vec3_sub(&tv2, &v2, &v1)));
 					}
+					if (dot < 0.0)
+						dot = 0.0;
+					if (dot > 1.0)
+						dot = 1.0;
+					float angle = acos(dot);
+
 					vec3_mul_self(&tnormal, angle);
 
 					vec3_add_self(&vnormal, &tnormal);
