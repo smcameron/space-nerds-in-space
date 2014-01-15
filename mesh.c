@@ -1039,3 +1039,64 @@ void mesh_map_xy_to_uv(struct mesh *m)
 	mesh_graph_dev_init(m);
 }
 
+struct mesh *mesh_fabricate_planetary_ring(float ir, float or)
+{
+	struct mesh *m;
+	int i;
+
+	m = malloc(sizeof(*m));
+	if (!m)
+		return m;
+	memset(m, 0, sizeof(*m));
+	m->nvertices = 100;
+	m->ntriangles = m->nvertices;
+
+	m->t = malloc(sizeof(*m->t) * m->ntriangles);
+	if (!m->t)
+		goto bail;
+	memset(m->t, 0, sizeof(*m->t) * m->ntriangles);
+	m->v = malloc(sizeof(*m->v) * m->nvertices);
+	if (!m->v)
+		goto bail;
+	memset(m->v, 0, sizeof(*m->v) * m->nvertices);
+	m->l = NULL;
+
+	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+
+
+	/* set up vertices */
+	for (i = 0; i < m->nvertices; i += 2) {
+		const float angle = ((2 * M_PI)  * i) / m->nvertices;
+		m->v[i].x = cos(angle) * ir;
+		m->v[i].y = sin(angle) * ir;
+		m->v[i].z = 0.0;
+		m->v[i + 1].x = cos(angle) * or;
+		m->v[i + 1].y = sin(angle) * or;
+		m->v[i + 1].z = 0.0;
+	}
+
+	/* set up triangles */
+	for (i = 0; i < m->nvertices; i += 2) {
+		struct vertex *v1, *v2, *v3, *v4;
+
+		v1 = &m->v[i % m->nvertices];
+		v2 = &m->v[(i + 1) % m->nvertices];
+		v3 = &m->v[(i + 2) % m->nvertices];
+		v4 = &m->v[(i + 3) % m->nvertices];
+		m->t[i].v[0] = v3;
+		m->t[i].v[1] = v2;
+		m->t[i].v[2] = v1;
+		m->t[i + 1].v[0] = v2;
+		m->t[i + 1].v[1] = v3;
+		m->t[i + 1].v[2] = v4;
+		/* FIXME: set coplanar flags */
+	}
+	m->radius = mesh_compute_radius(m);
+	mesh_set_flat_shading_vertex_normals(m);
+	mesh_map_xy_to_uv(m);
+	return m;
+bail:
+	mesh_free(m);
+	return NULL;
+}
+

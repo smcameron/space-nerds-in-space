@@ -85,6 +85,7 @@ GLOBAL void mesh_free(struct mesh *m);
 GLOBAL void mesh_sphere_uv_map(struct mesh *m);
 GLOBAL void mesh_map_xy_to_uv(struct mesh *m);
 GLOBAL void mesh_distort_and_random_uv_map(struct mesh *m, float distortion);
+GLOBAL struct mesh *mesh_fabricate_planetary_ring(float ir, float or);
 
 #undef GLOBAL
 #endif
