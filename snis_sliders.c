@@ -6,6 +6,7 @@
 #include "snis_typeface.h"
 #include "snis_graph.h"
 #include "wwviaudio.h"
+#include "mtwist.h"
 #include "mathutils.h"
 
 #define SLIDERS_DEFINE_GLOBALS

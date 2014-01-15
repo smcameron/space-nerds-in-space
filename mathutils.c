@@ -23,6 +23,8 @@
 #include <stdint.h>
 #include <math.h>
 
+#include "mtwist.h"
+
 #define DEFINE_MATHUTILS_GLOBALS 1
 #include "mathutils.h"
 
@@ -240,6 +242,31 @@ void random_point_on_sphere(float radius, float *x, float *y, float *z)
 	do {
 		x1 = snis_random_float();
 		x2 = snis_random_float();
+		s = x1 * x1 + x2 * x2;
+	} while (s > 1.0f);
+
+	*x = 2.0f * x1 * sqrt(1.0f - s);
+	*y = 2.0f * x2 * sqrt(1.0f - s);
+	*z = fabs(1.0f - 2.0f * s);
+
+	*x *= radius;
+	*y *= radius;
+	*z *= radius;
+}
+
+/*
+ * Pick random point on the surface of sphere of given radius with
+ * uniform distribution (harder than I initially thought).
+ */
+void consistent_random_point_on_sphere(struct mtwist_state *mt,
+				float radius, float *x, float *y, float *z)
+{
+	float x1, x2, s;
+
+	/* The Marsaglia 1972 rejection method */
+	do {
+		x1 = mtwist_float(mt);
+		x2 = mtwist_float(mt);
 		s = x1 * x1 + x2 * x2;
 	} while (s > 1.0f);
 

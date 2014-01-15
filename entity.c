@@ -27,6 +27,7 @@
 #include <gtk/gtk.h>
 #include <stdlib.h>
 
+#include "mtwist.h"
 #include "mathutils.h"
 #include "matrix.h"
 #include "vertex.h"

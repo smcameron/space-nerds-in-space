@@ -63,6 +63,7 @@
 #include "space-part.h"
 #include "quat.h"
 #include "snis.h"
+#include "mtwist.h"
 #include "mathutils.h"
 #include "snis_alloc.h"
 #include "my_point.h"

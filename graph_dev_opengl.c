@@ -9,6 +9,7 @@
 #include "shader.h"
 #include "vertex.h"
 #include "triangle.h"
+#include "mtwist.h"
 #include "mathutils.h"
 #include "matrix.h"
 #include "mesh.h"

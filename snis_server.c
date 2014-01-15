@@ -56,6 +56,7 @@
 #include "quat.h"
 #include "snis.h"
 #include "snis_log.h"
+#include "mtwist.h"
 #include "mathutils.h"
 #include "matrix.h"
 #include "snis_alloc.h"

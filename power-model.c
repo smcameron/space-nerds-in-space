@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mtwist.h"
 #include "power-model.h"
 #include "mathutils.h"
 

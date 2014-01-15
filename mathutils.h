@@ -71,12 +71,13 @@ GLOBAL int circle_from_three_points(double x1, double y1, double x2, double y2, 
 
 /* Return random point on surface of sphere of given radius */
 GLOBAL void random_point_on_sphere(float radius, float *x, float *y, float *z);
+GLOBAL void consistent_random_point_on_sphere(struct mtwist_state *mt,
+				float radius, float *x, float *y, float *z);
 GLOBAL void random_dpoint_on_sphere(float radius, double *x, double *y, double *z);
 
 /* return random point inside sphere of specified radius */
 GLOBAL void random_point_in_sphere(float radius, float *x, float *y, float *z,
                                 float *dist3dsqrd);
-
 /*
  * circle line intersection code adapted from:
  * http://stackoverflow.com/questions/1073336/circle-line-collision-detection

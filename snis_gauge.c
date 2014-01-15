@@ -4,6 +4,7 @@
 #include <gtk/gtk.h>
 
 #define SNIS_GAUGE_GLOBALS
+#include "mtwist.h"
 #include "mathutils.h"
 #include "snis_font.h"
 #include "snis_typeface.h"

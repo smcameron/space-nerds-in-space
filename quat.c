@@ -20,6 +20,7 @@
 #include <stdio.h>
 
 #include "quat.h"
+#include "mtwist.h"
 #include "mathutils.h"
 
 static const float ZERO_TOLERANCE = 0.000001f;

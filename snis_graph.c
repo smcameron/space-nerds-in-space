@@ -17,6 +17,7 @@
 #include "liang-barsky.h"
 #include "bline.h"
 #include "build_bug_on.h"
+#include "mtwist.h"
 #include "mathutils.h"
 #include "graph_dev.h"
 
