@@ -266,7 +266,7 @@ double cosine[361];
 
 struct mesh *torpedo_mesh;
 struct mesh *laser_mesh;
-struct mesh *asteroid_mesh[NASTEROID_MODELS * NASTEROID_SCALES];
+struct mesh *asteroid_mesh[NASTEROID_MODELS];
 struct mesh *planet_mesh[NPLANET_MODELS];
 struct mesh *planetary_ring[NPLANET_MODELS];
 struct mesh *starbase_mesh[NSTARBASE_MODELS];
@@ -1219,7 +1219,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 
 static int update_asteroid(uint32_t id, double x, double y, double z, double vx, double vy, double vz)
 {
-	int i, m;
+	int i, k, m, s;
 	struct entity *e;
 	union quat orientation;
 	struct snis_entity *o;
@@ -1230,8 +1230,11 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 		 * due to joining at different times
 		 */
 		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
-		m = id % (NASTEROID_MODELS * NASTEROID_SCALES);
+		k = id % (NASTEROID_MODELS * NASTEROID_SCALES);
+		m = k % NASTEROID_MODELS;
+		s = k % NASTEROID_SCALES;
 		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
+		update_entity_scale(e, s ? s * 3.5 : 1.0);
 		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP,
 					&asteroid_material[id % NASTEROID_TEXTURES]);
 		i = add_generic_object(id, x, y, z, vx, vy, vz,
@@ -12159,17 +12162,6 @@ static void init_meshes()
 		printf("reading '%s'\n", filename);
 		asteroid_mesh[i] = snis_read_stl_file(d, filename);
 		mesh_distort(asteroid_mesh[i], 0.10);
-	}
-
-	for (i = 0; i < NASTEROID_MODELS; i++) {
-		int j;
-
-		for (j = 1; j < NASTEROID_SCALES; j++) {
-			float scale = j * 3.5;
-			int k = j * NASTEROID_MODELS + i;
-			asteroid_mesh[k] = mesh_duplicate(asteroid_mesh[i]);
-			mesh_scale(asteroid_mesh[k], scale);
-		}
 	}
 
 	struct mesh *icosphere = mesh_unit_icosphere(4);
