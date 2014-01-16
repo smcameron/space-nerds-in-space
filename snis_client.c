@@ -267,8 +267,9 @@ double cosine[361];
 struct mesh *torpedo_mesh;
 struct mesh *laser_mesh;
 struct mesh *asteroid_mesh[NASTEROID_MODELS];
-struct mesh *planet_mesh[NPLANET_MODELS];
-struct mesh *planetary_ring[NPLANET_MODELS];
+struct mesh *sphere_mesh;
+struct mesh *planetary_ring_mesh;
+static float planet_scale[NPLANET_SCALES];
 struct mesh *starbase_mesh[NSTARBASE_MODELS];
 struct mesh *ship_mesh;
 struct mesh *ship_turret_mesh;
@@ -1306,7 +1307,8 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 
 static int update_planet(uint32_t id, double x, double y, double z)
 {
-	int i, m;
+	int i, m, k, s, r;
+	float scale;
 	struct entity *e, *ring;
 	union quat orientation;
 
@@ -1314,18 +1316,24 @@ static int update_planet(uint32_t id, double x, double y, double z)
 	if (i < 0) {
 		/* Orientation should be consistent across clients because planets don't move */
 		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
-		m = id % NPLANET_MODELS;
-		e = add_entity(ecx, planet_mesh[m], x, y, z, PLANET_COLOR);
-		if ((id % 4) == 0) {
+		k = id % (NPLANET_MATERIALS * NPLANET_SCALES * 4);
+		r = ((k % 4) == 0);
+		s = k % NPLANET_SCALES;
+		m = k % NPLANET_MATERIALS;
+		scale = planet_scale[s];
+		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
+		update_entity_scale(e, scale); 
+		if (r) {
 			/* FIXME: attach rings to planets somehow so when a planet is moved
 			 * on the demon screen, the rings do not get left behind.
 			 */ 
-			ring = add_entity(ecx, planetary_ring[m], x, y, z, PLANET_COLOR);
+			ring = add_entity(ecx, planetary_ring_mesh, x, y, z, PLANET_COLOR);
+			update_entity_scale(ring, scale);
 			update_entity_material(ring, MATERIAL_TEXTURE_MAPPED_UNLIT,
 						&planetary_ring_material[(id >> 3) % NPLANETARY_RING_MATERIALS]);
 			update_entity_orientation(ring, &orientation);
 		}
-		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP, &planet_material[id % NPLANET_MATERIALS]);
+		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP, &planet_material[m]);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
@@ -12142,6 +12150,15 @@ static void init_meshes()
 {
 	int i;
 	char *d = asset_dir;
+	struct mtwist_state *mt; 
+
+	mt = mtwist_init(59377);
+	if (!mt) {
+		fprintf(stderr, "out of memory at %s:%d... crash likely.\n",
+				__FILE__, __LINE__);
+		fflush(stderr);
+		return;
+	}
 
 	ship_mesh = snis_read_stl_file(d, "spaceship.stl");
 	ship_turret_mesh = snis_read_stl_file(d, "spaceship_turret.stl");
@@ -12164,18 +12181,10 @@ static void init_meshes()
 		mesh_distort(asteroid_mesh[i], 0.10);
 	}
 
-	struct mesh *icosphere = mesh_unit_icosphere(4);
-	struct mesh *ring = mesh_fabricate_planetary_ring(2.0, 3.0);
-	for (i = 0; i < NPLANET_MODELS; i++) {
-		float scale;
-		planet_mesh[i] = mesh_duplicate(icosphere);
-		scale = 300.0 + snis_randn(400);
-		mesh_scale(planet_mesh[i], scale);
-		planetary_ring[i] = mesh_duplicate(ring);
-		mesh_scale(planetary_ring[i], scale);
-	}
-	mesh_free(ring);
-	mesh_free(icosphere);
+	sphere_mesh = mesh_unit_icosphere(4);
+	planetary_ring_mesh = mesh_fabricate_planetary_ring(2.0, 3.0);
+	for (i = 0; i < NPLANET_SCALES; i++)
+		planet_scale[i] = mtwist_int(mt, 400) + 300.0;	
 
 	for (i = 0; i < NSTARBASE_MODELS; i++) {
 		char filename[100];
@@ -12255,6 +12264,8 @@ static void init_meshes()
 
 	for (i = 0; i < nshiptypes; i++)
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
+
+	mtwist_free(mt);
 }
 
 static void init_vects(void)
