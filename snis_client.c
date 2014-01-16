@@ -8042,7 +8042,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		/* use the distance to the edge and not the center */
 		struct mesh *obj_entity_mesh = entity_get_mesh(go[i].entity);
 		if (obj_entity_mesh) {
-			float obj_radius = obj_entity_mesh->radius * entity_get_scale(go[i].entity);
+			float obj_radius = obj_entity_mesh->radius * fabs(entity_get_scale(go[i].entity));
 			if (dist > obj_radius) {
 				dist -= obj_radius;
 			}
@@ -8055,7 +8055,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			continue;
 
 		struct entity *contact = 0;
-		float contact_scale = 0;
 
 		switch (go[i].type) {
 		case OBJTYPE_EXPLOSION:
@@ -8086,6 +8085,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				set_render_style(contact, science_style);
 				entity_set_user_data(contact, &go[i]);
 			}
+			update_entity_scale(contact, entity_get_scale(go[i].entity));
 			update_entity_orientation(contact, entity_get_orientation(go[i].entity));
 #if 0
 			if (o->tsd.ship.ai[0].u.attack.victim_id != -1 && go[i].id == o->tsd.ship.ai[0].u.attack.victim_id)
@@ -8102,36 +8102,34 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 		if ( contact ) {
 			int draw_contact_offset_and_ring = 1;
+			float contact_scale = 1.0;
 
 			switch (go[i].type) {
 			case OBJTYPE_PLANET:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 0.0 + 1.0;
-				update_entity_scale(contact, contact_scale);
 				break;
 			case OBJTYPE_STARBASE:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 4.0 + 1.0;
-				update_entity_scale(contact, contact_scale);
 				break;
 			case OBJTYPE_ASTEROID:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 1.0;
-				update_entity_scale(contact, contact_scale);
 				break;
 			case OBJTYPE_WORMHOLE:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 2.0 + 1.0;
-				update_entity_scale(contact, contact_scale);
 				break;
 			case OBJTYPE_TORPEDO:
 			case OBJTYPE_LASER:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 1.0;
-				update_entity_scale(contact, contact_scale);
 				draw_contact_offset_and_ring = 0;
 				break;
 			case OBJTYPE_SHIP2:
 			case OBJTYPE_SHIP1:
 				contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
-				update_entity_scale(contact, contact_scale);
 				break;
 			}
+
+			/* update the scale based on current scale */
+			update_entity_scale(contact, entity_get_scale(contact) * contact_scale);
 
 			/* add line from center disk to contact in z axis */
 			if (draw_contact_offset_and_ring) {
@@ -8148,7 +8146,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				proj_distance = vec3_dot(vec3_sub(&temp1, &contact_pos, &ship_pos), &ship_normal);
 				vec3_sub(&ship_plane_proj, &contact_pos, vec3_mul(&temp2, &ship_normal, proj_distance));
 
-				float contact_radius = entity_get_mesh(contact)->radius*entity_get_scale(contact);
+				float contact_radius = entity_get_mesh(contact)->radius * fabs(entity_get_scale(contact));
 				float contact_ring_radius = 0;
 
 				if ( fabs(proj_distance) < contact_radius) {
