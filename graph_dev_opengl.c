@@ -32,6 +32,7 @@ static struct loaded_texture loaded_textures[MAX_LOADED_TEXTURES];
 
 static int draw_normal_lines = 0;
 static int draw_nebula_wireframe = 0;
+static int draw_polygon_as_lines = 0;
 
 struct mesh_gl_info {
 	/* common buffer to hold vertex positions */
@@ -715,6 +716,9 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 
 	if (do_cullface)
 		glEnable(GL_CULL_FACE);
+	if (draw_polygon_as_lines)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -761,6 +765,8 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 	glDepthMask(GL_TRUE);
 	if (do_cullface)
 		glDisable(GL_CULL_FACE);
+	if (draw_polygon_as_lines)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_BLEND);
 
@@ -783,6 +789,8 @@ static void graph_dev_raster_texture_cubemap_lit(const struct mat44 *mat_mvp, co
 	glEnable(GL_TEXTURE_CUBE_MAP);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
+	if (draw_polygon_as_lines)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	glUseProgram(textured_cubemap_lit_shader.program_id);
 
@@ -827,6 +835,8 @@ static void graph_dev_raster_texture_cubemap_lit(const struct mat44 *mat_mvp, co
 	glDisable(GL_TEXTURE_CUBE_MAP);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
+	if (draw_polygon_as_lines)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	if (draw_normal_lines) {
 		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
@@ -850,6 +860,8 @@ static void graph_dev_raster_texture_lit(const struct mat44 *mat_mvp, const stru
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	if (draw_polygon_as_lines)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	glUseProgram(textured_lit_shader.program_id);
 
@@ -906,6 +918,8 @@ static void graph_dev_raster_texture_lit(const struct mat44 *mat_mvp, const stru
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_BLEND);
+	if (draw_polygon_as_lines)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	if (draw_normal_lines) {
 		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
@@ -925,6 +939,8 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glEnable(GL_CULL_FACE);
+	if (draw_polygon_as_lines)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	glUseProgram(single_color_lit_shader.program_id);
 
@@ -966,6 +982,8 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
+	if (draw_polygon_as_lines)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	if (draw_normal_lines) {
 		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
@@ -1973,9 +1991,9 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 void graph_dev_display_debug_menu_show()
 {
 	sng_set_foreground(BLACK);
-	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 45);
+	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 65);
 	sng_set_foreground(WHITE);
-	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 45);
+	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 65);
 
 	/* fake GtkWidget until we can purge it from the snis_graph interfaces */
 	GtkWidget w;
@@ -1989,6 +2007,11 @@ void graph_dev_display_debug_menu_show()
 	if (draw_nebula_wireframe)
 		graph_dev_draw_rectangle(1, 17, 57, 11, 11);
 	sng_abs_xy_draw_string(&w, 0, "NEBULA WIREFRAME", NANO_FONT, 35 / sgc.x_scale, 65 / sgc.y_scale);
+
+	graph_dev_draw_rectangle(0, 15, 75, 15, 15);
+	if (draw_polygon_as_lines)
+		graph_dev_draw_rectangle(1, 17, 77, 11, 11);
+	sng_abs_xy_draw_string(&w, 0, "POLYGON AS LINE", NANO_FONT, 35 / sgc.x_scale, 85 / sgc.y_scale);
 }
 
 int graph_dev_graph_dev_debug_menu_click(int x, int y)
@@ -1999,6 +2022,10 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 	}
 	if (x >= 15 && x <= 55 && y >= 35 && y <= 70) {
 		draw_nebula_wireframe = !draw_nebula_wireframe;
+		return 1;
+	}
+	if (x >= 15 && x <= 75 && y >= 35 && y <= 90) {
+		draw_polygon_as_lines = !draw_polygon_as_lines;
 		return 1;
 	}
 	return 0;
