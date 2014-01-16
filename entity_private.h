@@ -58,8 +58,10 @@ struct entity_context {
 	int maxobjs;
 	struct snis_object_pool *entity_pool;
 	struct entity *entity_list; /* array, [maxobjs] */
-	int nentity_depth;
-	int *entity_depth; /* array [maxobjs] */
+	int nfar_to_near_entity_depth;
+	int *far_to_near_entity_depth; /* array [maxobjs] */
+	int nnear_to_far_entity_depth;
+	int *near_to_far_entity_depth; /* array [maxobjs] */
 	struct camera_info camera;
 	struct vertex *fake_star;
 	int nfakestars; /* = 0; */

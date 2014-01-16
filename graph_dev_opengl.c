@@ -1280,6 +1280,18 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 }
 
+extern int graph_dev_entity_render_order(struct entity_context *cx, struct entity *e)
+{
+	switch (e->material_type) {
+		case MATERIAL_NEBULA:
+                case MATERIAL_TEXTURE_MAPPED:
+                case MATERIAL_TEXTURE_MAPPED_UNLIT:
+                case MATERIAL_BILLBOARD:
+			return GRAPH_DEV_RENDER_FAR_TO_NEAR;
+	}
+	return GRAPH_DEV_RENDER_NEAR_TO_FAR;
+}
+
 void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
 	const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal)
 {

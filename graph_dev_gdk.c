@@ -25,6 +25,7 @@
 #include <gtk/gtk.h>
 #include <math.h>
 
+#include "graph_dev.h"
 #include "vertex.h"
 #include "triangle.h"
 #include "mtwist.h"
@@ -597,6 +598,12 @@ static void transform_entity(const struct mat44 *mat_mvp, const struct mat44 *ma
 		struct mat31 *m2 = (struct mat31 *) &e->m->t[i].n.wx;
 		mat33_x_mat31(mat_normal, m1, m2);
 	}
+}
+
+extern int graph_dev_entity_render_order(struct entity_context *cx, struct entity *e)
+{
+	/* all software rendered entites are rendered far to near */
+	return GRAPH_DEV_RENDER_FAR_TO_NEAR;
 }
 
 void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *camera_light_pos,

@@ -484,9 +484,9 @@ void render_skybox(struct entity_context *cx)
 }
 
 #if defined(__APPLE__)  || defined(__FreeBSD__)
-static int object_depth_compare(void *vcx, const void *a, const void *b)
+static int object_depth_compare_greater(void *vcx, const void *a, const void *b)
 #else
-static int object_depth_compare(const void *a, const void *b, void *vcx)
+static int object_depth_compare_greater(const void *a, const void *b, void *vcx)
 #endif
 {
 	struct entity_context *cx = vcx;
@@ -494,6 +494,23 @@ static int object_depth_compare(const void *a, const void *b, void *vcx)
 	struct entity *B = &cx->entity_list[*(const int *) b];
 
 	if (A->dist3dsqrd < B->dist3dsqrd)
+		return 1;
+	if (A->dist3dsqrd > B->dist3dsqrd)
+		return -1;
+	return 0;
+}
+
+#if defined(__APPLE__)  || defined(__FreeBSD__)
+static int object_depth_compare_less(void *vcx, const void *a, const void *b)
+#else
+static int object_depth_compare_less(const void *a, const void *b, void *vcx)
+#endif
+{
+	struct entity_context *cx = vcx;
+	struct entity *A = &cx->entity_list[*(const int *) a];
+	struct entity *B = &cx->entity_list[*(const int *) b];
+
+	if (A->dist3dsqrd > B->dist3dsqrd)
 		return 1;
 	if (A->dist3dsqrd < B->dist3dsqrd)
 		return -1;
@@ -503,9 +520,15 @@ static int object_depth_compare(const void *a, const void *b, void *vcx)
 static void sort_entity_distances(struct entity_context *cx)
 {
 #if defined(__APPLE__)  || defined(__FreeBSD__)
-	qsort_r(cx->entity_depth, cx->nentity_depth, sizeof(cx->entity_depth[0]), cx, object_depth_compare);
+	qsort_r(cx->far_to_near_entity_depth, cx->nfar_to_near_entity_depth, sizeof(cx->far_to_near_entity_depth[0]),
+		cx, object_depth_compare_greater);
+	qsort_r(cx->near_to_far_entity_depth, cx->nnear_to_far_entity_depth, sizeof(cx->near_to_far_entity_depth[0]),
+		cx, object_depth_compare_less);
 #else
-	qsort_r(cx->entity_depth, cx->nentity_depth, sizeof(cx->entity_depth[0]), object_depth_compare, cx);
+	qsort_r(cx->far_to_near_entity_depth, cx->nfar_to_near_entity_depth, sizeof(cx->far_to_near_entity_depth[0]),
+		object_depth_compare_greater, cx);
+	qsort_r(cx->near_to_far_entity_depth, cx->nnear_to_far_entity_depth, sizeof(cx->near_to_far_entity_depth[0]),
+		object_depth_compare_less, cx);
 #endif
 }
 
@@ -825,7 +848,8 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 		/* find all entities in view frustum and sort them by distance */
 		n = snis_object_pool_highest_object(cx->entity_pool);
 
-		cx->nentity_depth = 0;
+		cx->nnear_to_far_entity_depth = 0;
+		cx->nfar_to_near_entity_depth = 0;
 
 		for (j = 0; j <= n; j++) {
 			if (!snis_object_pool_is_allocated(cx->entity_pool, j))
@@ -855,11 +879,20 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 			if (approx_pixel_size < 2.0)
 				continue;
 
-			cx->entity_depth[cx->nentity_depth] = j;
-			cx->nentity_depth++;
+			int render_order = graph_dev_entity_render_order(cx, e);
+			switch (render_order) {
+				case GRAPH_DEV_RENDER_FAR_TO_NEAR:
+					cx->far_to_near_entity_depth[cx->nfar_to_near_entity_depth] = j;
+					cx->nfar_to_near_entity_depth++;
+					break;
+				case GRAPH_DEV_RENDER_NEAR_TO_FAR:
+					cx->near_to_far_entity_depth[cx->nnear_to_far_entity_depth] = j;
+					cx->nnear_to_far_entity_depth++;
+					break;
+			}
 		}
 
-		if (cx->nentity_depth > 0) {
+		if (cx->nfar_to_near_entity_depth > 0 || cx->nnear_to_far_entity_depth > 0) {
 			/* need to reset the depth buffer between passes */
 			if (n_near_far > 1 && pass != 0)
 				graph_dev_clear_depth_bit();
@@ -871,9 +904,16 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 			mat44_x_mat41_dff(&cx->camera.camera_v_matrix, &cx->light, &camera_light_pos);
 
 			/* render the sorted entities */
-			for (j = 0; j < cx->nentity_depth; j++) {
-				struct entity *e = &cx->entity_list[cx->entity_depth[j]];
 
+			/* near to far first, usually opaque geometry */
+			for (j = 0; j < cx->nnear_to_far_entity_depth; j++) {
+				struct entity *e = &cx->entity_list[cx->near_to_far_entity_depth[j]];
+				render_entity(w, gc, cx, e, (union vec3 *)&camera_light_pos.m[0]);
+			}
+
+			/* then far to near, usually blended geometry and software renderer */
+			for (j = 0; j < cx->nfar_to_near_entity_depth; j++) {
+				struct entity *e = &cx->entity_list[cx->far_to_near_entity_depth[j]];
 				render_entity(w, gc, cx, e, (union vec3 *)&camera_light_pos.m[0]);
 			}
 		}
@@ -954,8 +994,10 @@ struct entity_context *entity_context_new(int maxobjs)
 	memset(cx, 0, sizeof(*cx));
 	cx->entity_list = malloc(sizeof(cx->entity_list[0]) * maxobjs);
 	memset(cx->entity_list, 0, sizeof(cx->entity_list[0]) * maxobjs);
-	cx->entity_depth = malloc(sizeof(cx->entity_depth[0]) * maxobjs);
-	memset(cx->entity_depth, 0, sizeof(cx->entity_depth[0]) * maxobjs);
+	cx->far_to_near_entity_depth = malloc(sizeof(cx->far_to_near_entity_depth[0]) * maxobjs);
+	memset(cx->far_to_near_entity_depth, 0, sizeof(cx->far_to_near_entity_depth[0]) * maxobjs);
+	cx->near_to_far_entity_depth = malloc(sizeof(cx->near_to_far_entity_depth[0]) * maxobjs);
+	memset(cx->near_to_far_entity_depth, 0, sizeof(cx->near_to_far_entity_depth[0]) * maxobjs);
 	snis_object_pool_setup(&cx->entity_pool, maxobjs);
 	cx->maxobjs = maxobjs;
 	set_renderer(cx, FLATSHADING_RENDERER);
@@ -971,7 +1013,8 @@ struct entity_context *entity_context_new(int maxobjs)
 void entity_context_free(struct entity_context *cx)
 {
 	free(cx->entity_list);
-	free(cx->entity_depth);
+	free(cx->far_to_near_entity_depth);
+	free(cx->near_to_far_entity_depth);
 	free(cx);
 }
 

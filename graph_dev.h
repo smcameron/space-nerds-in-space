@@ -42,6 +42,10 @@ extern void graph_dev_set_extent_scale(float x_scale, float y_scale);
 extern void graph_dev_set_3d_viewport(int x_offset, int y_offset, int width, int height);
 extern void graph_dev_clear_depth_bit();
 
+#define GRAPH_DEV_RENDER_FAR_TO_NEAR 0
+#define GRAPH_DEV_RENDER_NEAR_TO_FAR 1
+extern int graph_dev_entity_render_order(struct entity_context *cx, struct entity *e);
+
 extern void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
 	const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal);
 
