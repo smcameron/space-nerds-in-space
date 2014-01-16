@@ -11717,12 +11717,10 @@ static void load_textures(void)
 	red_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
 	red_laser_material.texture_id = load_texture("red-laser-texture.png");
 	planetary_ring_material[0].texture_id = load_texture("planetary-ring.png");
-	planetary_ring_material[0].do_depth = 1;
 	planetary_ring_material[0].do_cullface = 0;
 	planetary_ring_material[0].tint = sng_get_color(WHITE);
 	planetary_ring_material[0].alpha = 0.5;
 	planetary_ring_material[1].texture_id = load_texture("planetary-ring2.png");
-	planetary_ring_material[1].do_depth = 1;
 	planetary_ring_material[1].do_cullface = 0;
 	planetary_ring_material[1].tint = sng_get_color(WHITE);
 	planetary_ring_material[1].alpha = 0.5;
@@ -11752,7 +11750,6 @@ static void load_textures(void)
 	asteroid_material[0].texture_id = load_cubemap_textures(0, "asteroid1-");
 	asteroid_material[1].texture_id = load_cubemap_textures(0, "asteroid2-");
 	wormhole_material.texture_id = load_texture("wormhole.png");
-	wormhole_material.do_depth = 0;
 	wormhole_material.do_cullface = 0;
 	wormhole_material.tint = sng_get_color(MAGENTA);
 	wormhole_material.alpha = 0.5;

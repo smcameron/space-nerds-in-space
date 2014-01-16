@@ -699,7 +699,7 @@ static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh
 
 static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, float alpha,
-	union vec3 *eye_light_pos, GLuint texture_number, int do_depth, int do_cullface)
+	union vec3 *eye_light_pos, GLuint texture_number, int do_cullface)
 {
 	enable_3d_viewport();
 
@@ -708,10 +708,11 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 
 	struct mesh_gl_info *ptr = m->graph_ptr;
 
-	if (do_depth) {
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
-	}
+	/* enable depth test but don't write to depth buffer */
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glDepthMask(GL_FALSE);
+
 	if (do_cullface)
 		glEnable(GL_CULL_FACE);
 	glEnable(GL_TEXTURE_2D);
@@ -756,8 +757,8 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 	glDisableVertexAttribArray(textured_shader.texture_coord_id);
 	glUseProgram(0);
 
-	if (do_depth)
-		glDisable(GL_DEPTH_TEST);
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
 	if (do_cullface)
 		glDisable(GL_CULL_FACE);
 	glDisable(GL_TEXTURE_2D);
@@ -1269,7 +1270,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 		float alpha = fabs(vec3_dot(&camera_normal, &camera_ent_vector)) * mt->alpha;
 
 		graph_dev_raster_texture(&mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
-			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, 0);
+			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0);
 
 		if (draw_nebula_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
@@ -1315,7 +1316,6 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					|| (e->render_style & RENDER_WIREFRAME);
 
 		int has_texture = 0;
-		int do_depth = 1;
 		int do_cullface = 1;
 		int has_cubemap_texture = 0;
 		struct sng_color texture_tint = { 1.0, 1.0, 1.0 };
@@ -1333,7 +1333,6 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				struct material_texture_mapped_unlit *mt = e->material_ptr;
 				texture_id = mt->texture_id;
 				has_texture = 1;
-				do_depth = mt->do_depth;
 				do_cullface = mt->do_cullface;
 				texture_alpha = mt->alpha;
 				texture_tint = mt->tint;
@@ -1371,7 +1370,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					else {
 						graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal, e->m,
 							&texture_tint, texture_alpha, eye_light_pos, texture_id,
-							do_depth, do_cullface);
+							do_cullface);
 					}
 				else if (has_cubemap_texture)
 					graph_dev_raster_texture_cubemap_lit(mat_mvp, mat_mv, mat_normal,
@@ -1388,7 +1387,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						e->m, &line_color, eye_light_pos, texture_id);
 				else {
 					graph_dev_raster_texture(mat_mvp, mat_mv, mat_normal, e->m, &texture_tint,
-						texture_alpha, eye_light_pos, texture_id, do_depth, do_cullface);
+						texture_alpha, eye_light_pos, texture_id, do_cullface);
 				}
 			else
 				graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
