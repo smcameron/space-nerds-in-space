@@ -31,7 +31,7 @@ static int nloaded_textures = 0;
 static struct loaded_texture loaded_textures[MAX_LOADED_TEXTURES];
 
 static int draw_normal_lines = 0;
-static int draw_nebula_wireframe = 0;
+static int draw_billboard_wireframe = 0;
 static int draw_polygon_as_lines = 0;
 
 struct mesh_gl_info {
@@ -1317,7 +1317,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 		graph_dev_raster_texture(&mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
 			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0);
 
-		if (draw_nebula_wireframe) {
+		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
 			graph_dev_raster_trans_wireframe_mesh(&mat_mvp_local_r, &mat_mv_local_r,
 				&mat_normal_local_r, e->m, &line_color, 0);
@@ -1438,6 +1438,11 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
 					mat_normal, e->m, &line_color, 1);
 		}
+
+		if (draw_billboard_wireframe && e->material_type == MATERIAL_BILLBOARD) {
+			struct sng_color white_color = sng_get_color(WHITE);
+			graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
+				mat_normal, e->m, &white_color, 0);
 		}
 		break;
 	}
@@ -2032,9 +2037,9 @@ void graph_dev_display_debug_menu_show()
 	sng_abs_xy_draw_string(&w, 0, "VERTEX NORMAL LINES", NANO_FONT, 35 / sgc.x_scale, 45 / sgc.y_scale);
 
 	graph_dev_draw_rectangle(0, 15, 55, 15, 15);
-	if (draw_nebula_wireframe)
+	if (draw_billboard_wireframe)
 		graph_dev_draw_rectangle(1, 17, 57, 11, 11);
-	sng_abs_xy_draw_string(&w, 0, "NEBULA WIREFRAME", NANO_FONT, 35 / sgc.x_scale, 65 / sgc.y_scale);
+	sng_abs_xy_draw_string(&w, 0, "BILLBOARD WIREFRAME", NANO_FONT, 35 / sgc.x_scale, 65 / sgc.y_scale);
 
 	graph_dev_draw_rectangle(0, 15, 75, 15, 15);
 	if (draw_polygon_as_lines)
@@ -2049,7 +2054,7 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 		return 1;
 	}
 	if (x >= 15 && x <= 55 && y >= 35 && y <= 70) {
-		draw_nebula_wireframe = !draw_nebula_wireframe;
+		draw_billboard_wireframe = !draw_billboard_wireframe;
 		return 1;
 	}
 	if (x >= 15 && x <= 75 && y >= 35 && y <= 90) {
