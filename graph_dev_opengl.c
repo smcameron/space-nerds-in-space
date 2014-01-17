@@ -1083,7 +1083,7 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 }
 
 static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
-					const struct mat33 *mat_normal, struct mesh *m, struct sng_color *line_color)
+		const struct mat33 *mat_normal, struct mesh *m, struct sng_color *line_color, int do_cullface)
 {
 	enable_3d_viewport();
 
@@ -1095,40 +1095,67 @@ static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, c
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
-	glUseProgram(trans_wireframe_shader.program_id);
+	if (do_cullface) {
+		glUseProgram(trans_wireframe_shader.program_id);
 
-	glUniformMatrix4fv(trans_wireframe_shader.mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
-	glUniformMatrix4fv(trans_wireframe_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
-	glUniformMatrix3fv(trans_wireframe_shader.normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
-	glUniform3f(trans_wireframe_shader.color_id, line_color->red,
-		line_color->green, line_color->blue);
+		glUniformMatrix4fv(trans_wireframe_shader.mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
+		glUniformMatrix4fv(trans_wireframe_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+		glUniformMatrix3fv(trans_wireframe_shader.normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
+		glUniform3f(trans_wireframe_shader.color_id, line_color->red,
+			line_color->green, line_color->blue);
 
-	glEnableVertexAttribArray(trans_wireframe_shader.vertex_position_id);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer);
-	glVertexAttribPointer(
-		trans_wireframe_shader.vertex_position_id, /* The attribute we want to configure */
-		3,                           /* size */
-		GL_FLOAT,                    /* type */
-		GL_FALSE,                    /* normalized? */
-		sizeof(struct vertex_wireframe_line_buffer_data), /* stride */
-		(void *)offsetof(struct vertex_wireframe_line_buffer_data, position.v.x) /* array buffer offset */
-	);
+		glEnableVertexAttribArray(trans_wireframe_shader.vertex_position_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer);
+		glVertexAttribPointer(
+			trans_wireframe_shader.vertex_position_id, /* The attribute we want to configure */
+			3,                           /* size */
+			GL_FLOAT,                    /* type */
+			GL_FALSE,                    /* normalized? */
+			sizeof(struct vertex_wireframe_line_buffer_data), /* stride */
+			(void *)offsetof(struct vertex_wireframe_line_buffer_data, position.v.x) /* array buffer offset */
+		);
 
-	glEnableVertexAttribArray(trans_wireframe_shader.vertex_normal_id);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer);
-	glVertexAttribPointer(
-		trans_wireframe_shader.vertex_normal_id,    /* The attribute we want to configure */
-		3,                            /* size */
-		GL_FLOAT,                     /* type */
-		GL_FALSE,                     /* normalized? */
-		sizeof(struct vertex_wireframe_line_buffer_data), /* stride */
-		(void *)offsetof(struct vertex_wireframe_line_buffer_data, normal.v.x) /* array buffer offset */
-	);
+		glEnableVertexAttribArray(trans_wireframe_shader.vertex_normal_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer);
+		glVertexAttribPointer(
+			trans_wireframe_shader.vertex_normal_id,    /* The attribute we want to configure */
+			3,                            /* size */
+			GL_FLOAT,                     /* type */
+			GL_FALSE,                     /* normalized? */
+			sizeof(struct vertex_wireframe_line_buffer_data), /* stride */
+			(void *)offsetof(struct vertex_wireframe_line_buffer_data, normal.v.x) /* array buffer offset */
+		);
+
+	} else {
+		/* don't cullface so just render with single color shader */
+		glUseProgram(single_color_shader.program_id);
+
+		glUniformMatrix4fv(single_color_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+		glUniform4f(single_color_shader.color_id, line_color->red,
+			line_color->green, line_color->blue, 1.0);
+
+		glEnableVertexAttribArray(single_color_shader.vertex_position_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer);
+		glVertexAttribPointer(
+			single_color_shader.vertex_position_id, /* The attribute we want to configure */
+			3,                           /* size */
+			GL_FLOAT,                    /* type */
+			GL_FALSE,                    /* normalized? */
+			sizeof(struct vertex_wireframe_line_buffer_data), /* stride */
+			(void *)offsetof(struct vertex_wireframe_line_buffer_data, position.v.x) /* array buffer offset */
+		);
+	}
+
 
 	glDrawArrays(GL_LINES, 0, ptr->nwireframe_lines*2);
 
-	glDisableVertexAttribArray(trans_wireframe_shader.vertex_position_id);
-	glDisableVertexAttribArray(trans_wireframe_shader.vertex_normal_id);
+	if (do_cullface) {
+		glDisableVertexAttribArray(trans_wireframe_shader.vertex_position_id);
+		glDisableVertexAttribArray(trans_wireframe_shader.vertex_normal_id);
+	} else {
+		glDisableVertexAttribArray(single_color_shader.vertex_position_id);
+	}
+
 	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
@@ -1293,7 +1320,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 		if (draw_nebula_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
 			graph_dev_raster_trans_wireframe_mesh(&mat_mvp_local_r, &mat_mv_local_r,
-				&mat_normal_local_r, e->m, &line_color);
+				&mat_normal_local_r, e->m, &line_color, 0);
 		}
 	}
 
@@ -1409,7 +1436,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				}
 			else
 				graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
-					mat_normal, e->m, &line_color);
+					mat_normal, e->m, &line_color, 1);
+		}
 		}
 		break;
 	}
