@@ -30,5 +30,6 @@
 #define PROXIMITY_ALERT 20
 #define SPACESHIP_CRASH 21
 #define REVERSE_SOUND 22
+#define COMMS_HAIL_SOUND 22
 
 #endif

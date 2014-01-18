@@ -4007,6 +4007,8 @@ static int process_comm_transmission(void)
 	string[length] = '\0';
 	text_window_add_text(comms_ui.tw, string);
 	main_screen_add_text(string);
+	if (strstr(string, ": *** HAILING "))
+		wwviaudio_add_sound(COMMS_HAIL_SOUND);
 	return 0;
 }
 
@@ -12023,6 +12025,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(PROXIMITY_ALERT, d, "proximity-alert.ogg");
 	read_ogg_clip(SPACESHIP_CRASH, d, "spaceship-crash.ogg");
 	read_ogg_clip(REVERSE_SOUND, d, "reverse.ogg");
+	read_ogg_clip(COMMS_HAIL_SOUND, d, "comms-hail.ogg");
 	printf("Done.\n");
 }
 

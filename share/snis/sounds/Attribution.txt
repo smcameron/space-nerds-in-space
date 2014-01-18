@@ -41,3 +41,6 @@ torpedo-loading.ogg (public domain)
 An old elevator you hear a folding door shut, then heard the engine and finally gets to hear the folding door.  **Sound free for all, can download and share**
 Sound created by: Abel Madrona Antón
 
+comms-hail.ogg (public domain)
+Created by Stephen M. Cameron Jan 18, 2014 and donated to the public domain
+
