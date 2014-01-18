@@ -11203,8 +11203,17 @@ static char *help_text[] = {
 
 
 	/* Comms help text */
-	"TO DO\n"
-	"  HELP TEXT FOR COMMS",
+	"COMMUNICATIONS\n"
+	"  CONTROLS\n"
+	"  * ZOOM CONTROLS MAIN SCREEN ZOOM\n"
+	"  * RED ALERT SOUNDS RED ALERT ALARM\n"
+	"  * TOP ROW OF BUTTONS CONTROLS MAIN SCREEN\n"
+	"  COMMANDS\n"
+	"  * COMMANDS ARE PRECEDED BY FORWARD SLASH ->  /\n"
+	"  * /help\n"
+	"  * /channel channel-number - change current channel\n"
+	"  * /hail ship-name - hail ship on current channel\n"
+	"\nPRESS ESC TO EXIT HELP\n",
 
 	/* Demon screen help text */
 	"DEMON\n\n"

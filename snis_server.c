@@ -119,6 +119,7 @@ struct bridge_data {
 	int incoming_fire_detected;
 	int last_incoming_fire_sound_time;
 	double warpx, warpy, warpz;
+	int comms_channel;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -613,6 +614,29 @@ static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packe
 			continue;
 
 		if (!(c->role & roles))
+			continue;
+
+		pbc = packed_buffer_copy(pb);
+		pb_queue_to_client(c, pbc);
+	}
+	packed_buffer_free(pb);
+	client_unlock();
+}
+
+static void send_packet_to_all_bridges_on_channel(uint32_t channel,
+				struct packed_buffer *pb, uint32_t roles)
+{
+	int i;
+
+	client_lock();
+	for (i = 0; i < nclients; i++) {
+		struct packed_buffer *pbc;
+		struct game_client *c = &client[i];
+
+		if (!(c->role & roles))
+			continue;
+
+		if (bridgelist[c->bridge].comms_channel != channel)
 			continue;
 
 		pbc = packed_buffer_copy(pb);
@@ -1497,7 +1521,7 @@ static void laser_move(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 }
 
-static void send_comms_packet(char *sender, const char *str);
+static void send_comms_packet(char *sender, uint32_t channel, const char *str);
 static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 {
 	char buffer[1000];
@@ -1518,7 +1542,7 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 		if (last_space > 28) {
 			strncpy(tmpbuf, start, bytes_so_far);
 			tmpbuf[bytes_so_far] = '\0';
-			send_comms_packet(name, tmpbuf);
+			send_comms_packet(name, 0, tmpbuf);
 			strcpy(name, "-  ");
 			start = &buffer[i];
 			bytes_so_far = 0;
@@ -1527,7 +1551,7 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 	}
 	if (bytes_so_far > 0) {
 		strcpy(tmpbuf, start);
-		send_comms_packet(name, tmpbuf);
+		send_comms_packet(name, 0, tmpbuf);
 	}
 }
 
@@ -3071,11 +3095,11 @@ static void starbase_move(struct snis_entity *o)
 		o->tsd.starbase.last_time_called_for_help = universe_timestamp;
 		// printf("starbase name = '%s'\n", o->tsd.starbase.name);
 		sprintf(buf, "STARBASE %s:", o->sdata.name);
-		send_comms_packet("", buf);
-		send_comms_packet("-  ", starbase_comm_under_attack());
+		send_comms_packet("", 0, buf);
+		send_comms_packet("-  ", 0, starbase_comm_under_attack());
 		coords_to_location_string(o->x, o->z, location, sizeof(location) - 1);
 		sprintf(buf, "LOCATION %s", location);
-		send_comms_packet("-  ", buf);
+		send_comms_packet("-  ", 0, buf);
 	}
 }
 
@@ -5135,28 +5159,28 @@ static void comm_dock_function(struct game_client *c, char *txt)
 	if (dist > STARBASE_DOCKING_DIST) {
 		sprintf(msg, "%s, YOU ARE TOO FAR AWAY (%lf).\n",
 			bridgelist[c->bridge].shipname, dist);
-		send_comms_packet(sb->tsd.starbase.name, msg);
+		send_comms_packet(sb->tsd.starbase.name, 0, msg);
 		return;
 	}
 	if (o->sdata.shield_strength > 15) {
 		sprintf(msg, "%s, YOU MUST LOWER SHIELDS FIRST.\n",
 			bridgelist[c->bridge].shipname);
-		send_comms_packet(sb->tsd.starbase.name, msg);
+		send_comms_packet(sb->tsd.starbase.name, 0, msg);
 		return;
 	}
 	sprintf(msg, "%s, PERMISSION TO DOCK GRANTED.",
 		bridgelist[c->bridge].shipname);
-	send_comms_packet(sb->tsd.starbase.name, msg);
+	send_comms_packet(sb->tsd.starbase.name, 0, msg);
 	sprintf(msg, "%s, WELCOME TO OUR STARBASE, ENJOY YOUR STAY.",
 		bridgelist[c->bridge].shipname);
-	send_comms_packet(sb->tsd.starbase.name, msg);
+	send_comms_packet(sb->tsd.starbase.name, 0, msg);
 	/* TODO make the repair/refuel process a bit less easy */
 	sprintf(msg, "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
 		bridgelist[c->bridge].shipname);
 	init_player(o);
 	send_ship_damage_packet(o);
 	o->timestamp = universe_timestamp;
-	send_comms_packet(sb->tsd.starbase.name, msg);
+	send_comms_packet(sb->tsd.starbase.name, 0, msg);
 	schedule_callback2(event_callback, &callback_schedule,
 			"player-docked-event", (double) c->shipid, sb->id);
 	return;
@@ -5201,6 +5225,110 @@ static void interpret_comms_packet(struct game_client *c, char *txt)
 	}
 }
 
+typedef void (*meta_comms_func)(char *name, struct game_client *c, char *txt);
+
+static void meta_comms_channel(char *name, struct game_client *c, char *txt)
+{
+	int rc;
+	uint32_t newchannel;
+	char msg[100];
+
+	rc = sscanf(txt, "/channel %u\n", &newchannel);
+	if (rc != 1) {
+		sprintf(msg, "INVALID CHANNEL - CURRENT CHANNEL %u",
+				bridgelist[c->bridge].comms_channel);
+		send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
+		return;
+	}
+	sprintf(msg, "TRANSMISSION TERMINATED ON CHANNEL %u",
+			bridgelist[c->bridge].comms_channel);
+	send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
+	bridgelist[c->bridge].comms_channel = newchannel;
+	sprintf(msg, "TX/RX INITIATED ON CHANNEL %u", newchannel);
+	send_comms_packet(name, newchannel, msg);
+}
+
+static void meta_comms_hail(char *name, struct game_client *c, char *txt)
+{
+#define MAX_SHIPS_HAILABLE 10
+	int i, j, k, nnames;
+	char *namelist[MAX_SHIPS_HAILABLE], msg[100];
+	char *duptxt;
+	int nchannels;
+	uint32_t channel[MAX_SHIPS_HAILABLE];
+	char *x;
+
+	duptxt = strdup(txt);
+	printf("meta comms hail %u,%s\n", bridgelist[c->bridge].comms_channel, txt);
+
+	x = strtok(duptxt, " ,");
+	i = 0;
+	while (x && i < ARRAY_SIZE(namelist)) {
+		x = strtok(NULL, " ,");
+		if (x)
+			namelist[i++] = x;
+	}
+	nnames = i;
+
+	nchannels = 0;
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i < nnames; i++) {
+		for (j = 0; j < nbridges; j++) {
+			const char *shipname = (const char *) bridgelist[j].shipname;
+			if (strcmp(shipname, (const char *) namelist[i]) == 0) {
+				int found = 0;
+
+				for (k = 0; k < nchannels; k++)
+					if (bridgelist[j].comms_channel == channel[k]) {
+						found = 1;
+						break;
+					}
+				if (!found) {
+					channel[nchannels] = bridgelist[j].comms_channel;
+					nchannels++;
+					if (nchannels >= MAX_SHIPS_HAILABLE)
+						goto channels_maxxed;
+				}
+			}
+		}
+	}
+channels_maxxed:
+	pthread_mutex_unlock(&universe_mutex);
+
+	for (i = 0; i < nchannels; i++) {
+		sprintf(msg, "*** HAILING ON CHANNEL %u ***", bridgelist[c->bridge].comms_channel);
+		send_comms_packet(name, channel[i], msg);
+	}
+	free(duptxt);
+}
+
+static void meta_comms_error(char *name, struct game_client *c, char *txt)
+{
+	printf("meta comms error %u,%s\n", bridgelist[c->bridge].comms_channel, txt);
+}
+
+static const struct meta_comms_data {
+	char *command;
+	meta_comms_func f;
+} meta_comms[] = {
+	{ "/channel", meta_comms_channel },
+	{ "/hail", meta_comms_hail },
+};
+
+static void process_meta_comms_packet(char *name, struct game_client *c, char *txt)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(meta_comms); i++) {
+		int len = strlen(meta_comms[i].command);
+		if (strncmp(txt, meta_comms[i].command, len) == 0)  {
+			meta_comms[i].f(name, c, txt);
+			return;
+		}
+	}
+	meta_comms_error(name, c, txt);
+}
+
 static int process_comms_transmission(struct game_client *c, int use_real_name)
 {
 	unsigned char buffer[sizeof(struct comms_transmission_packet)];
@@ -5225,7 +5353,11 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 			return 0;
 		sprintf(name, "%s: ", go[i].sdata.name);
 	}
-	send_comms_packet(name, txt);
+	if (txt[0] == '/') {
+		process_meta_comms_packet(name, c, txt);
+		return 0;
+	}
+	send_comms_packet(name, bridgelist[c->bridge].comms_channel, txt);
 	if (use_real_name)
 		interpret_comms_packet(c, txt);
 	return 0;
@@ -5432,10 +5564,10 @@ static int l_comms_transmission(lua_State *l)
 	transmitter = &go[i];
 	switch (transmitter->type) {
 	case OBJTYPE_STARBASE:
-		send_comms_packet(transmitter->tsd.starbase.name, transmission);
+		send_comms_packet(transmitter->tsd.starbase.name, 0, transmission);
 		break;
 	default:
-		send_comms_packet(transmitter->sdata.name, transmission);
+		send_comms_packet(transmitter->sdata.name, 0, transmission);
 		break;
 	}
 error:
@@ -7391,7 +7523,7 @@ static void send_silent_ship_damage_packet(struct snis_entity *o)
 	send_generic_ship_damage_packet(o, OPCODE_SILENT_UPDATE_DAMAGE);
 }
 
-static void send_comms_packet(char *sender, const char *str)
+static void send_comms_packet(char *sender, uint32_t channel, const char *str)
 {
 	struct packed_buffer *pb;
 	char tmpbuf[100];
@@ -7400,7 +7532,10 @@ static void send_comms_packet(char *sender, const char *str)
 	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + 100);
 	packed_buffer_append(pb, "hb", OPCODE_COMMS_TRANSMISSION, (uint8_t) strlen(tmpbuf) + 1);
 	packed_buffer_append_raw(pb, tmpbuf, strlen(tmpbuf) + 1);
-	send_packet_to_all_clients(pb, ROLE_ALL);
+	if (channel == 0)
+		send_packet_to_all_clients(pb, ROLE_ALL);
+	else
+		send_packet_to_all_bridges_on_channel(channel, pb, ROLE_ALL);
 }
 
 static void send_respawn_time(struct game_client *c,
@@ -7696,6 +7831,7 @@ static int add_new_player(struct game_client *c)
 		strcpy((char *) bridgelist[nbridges].shipname, (const char *) app.shipname);
 		strcpy((char *) bridgelist[nbridges].password, (const char *) app.password);
 		bridgelist[nbridges].shipid = c->shipid;
+		bridgelist[nbridges].comms_channel = 0; /* broadcast channel */
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
 	
