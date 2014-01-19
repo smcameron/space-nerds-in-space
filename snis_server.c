@@ -4052,7 +4052,7 @@ static void add_starbases(void)
 					p++;
 				if (p == i + 1) {
 					float dx, dy, dz;
-					random_point_on_sphere(900.0 + snis_randn(200), &dx, &dy, &dz);
+					random_point_on_sphere(1200.0 + snis_randn(500), &dx, &dy, &dz);
 					x = go[j].x + dx;
 					y = go[j].y + dy;
 					z = go[j].z + dz;
