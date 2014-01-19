@@ -555,6 +555,11 @@ void graph_dev_set_context(GdkDrawable *drawable, GdkGC *gc)
 	/* noop */
 }
 
+void graph_dev_setup_colors(GtkWidget *w, GdkColor *huex, int nhuex)
+{
+	/* noop */
+}
+
 static void draw_vertex_buffer_2d()
 {
 	if (sgc.nvertex_2d > 0) {

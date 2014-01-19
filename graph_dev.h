@@ -79,5 +79,7 @@ extern void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 
 extern void graph_dev_display_debug_menu_show();
 extern int graph_dev_graph_dev_debug_menu_click(int x, int y);
 
+extern void graph_dev_setup_colors(GtkWidget *w, GdkColor *huex, int nhuex);
+
 #endif
 

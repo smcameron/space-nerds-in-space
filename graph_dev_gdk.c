@@ -127,6 +127,15 @@ void graph_dev_set_context(GdkDrawable *drawable, GdkGC *gc)
 	sgc.gc = gc;
 }
 
+void graph_dev_setup_colors(GtkWidget *w, GdkColor *huex, int nhuex)
+{
+	int i;
+	for (i = 0; i < nhuex; i++)
+		gdk_colormap_alloc_color(gtk_widget_get_colormap(w),
+				&huex[i], FALSE, FALSE);
+	gtk_widget_modify_bg(w, GTK_STATE_NORMAL, &huex[BLACK]);
+}
+
 void graph_dev_set_color(GdkColor *c, float a)
 {
 	gdk_gc_set_foreground(sgc.gc, c);

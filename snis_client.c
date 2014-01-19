@@ -12505,6 +12505,12 @@ int main(int argc, char *argv[])
 
 	sng_setup_colors(main_da);
 
+#ifndef WITHOUTOPENGL
+	/* must be set or the window will not show */
+	GdkColor black = { 0, 0, 0, 0 };
+	gtk_widget_modify_bg(main_da, GTK_STATE_NORMAL, &black);
+#endif
+
         gc = gdk_gc_new(GTK_WIDGET(main_da)->window);
 	sng_set_context(GTK_WIDGET(main_da)->window, gc);
 	sng_set_foreground(WHITE);

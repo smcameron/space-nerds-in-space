@@ -13,23 +13,20 @@
 #define BLACK 0
 #define WHITE 1
 extern int BLUE;
-#define OLD_BLUE 2
 extern int GREEN;
-#define OLD_GREEN 3
-#define YELLOW 4
-#define RED 5
-#define ORANGE 6
+#define YELLOW 2
+#define RED 3
+#define ORANGE 4
 extern int CYAN;
-#define OLD_CYAN 7
-#define MAGENTA 8
-#define DARKGREEN 9
-#define DARKRED 10
-#define AMBER 11
-#define LIMEGREEN 12
-#define DARKTURQUOISE 13
-#define ORANGERED 14
+#define MAGENTA 5
+#define DARKGREEN 6
+#define DARKRED 7
+#define AMBER 8
+#define LIMEGREEN 9
+#define DARKTURQUOISE 10
+#define ORANGERED 11
 
-#define NCOLORS 15              /* number of "cardinal" colors */
+#define NCOLORS 12              /* number of "cardinal" colors */
 #define NSPARKCOLORS 25         /* 25 shades from yellow to red for the sparks */
 #define NRAINBOWSTEPS (16)
 #define NRAINBOWCOLORS (NRAINBOWSTEPS*3)

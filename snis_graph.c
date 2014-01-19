@@ -518,21 +518,55 @@ void sng_setup_colors(GtkWidget *w)
 
 	BUILD_ASSERT(ARRAY_SIZE(gradient_colors) == NGRADIENTS);
 
-	gdk_color_parse("white", &huex[WHITE]);
-	gdk_color_parse("blue", &huex[OLD_BLUE]);
-	gdk_color_parse("black", &huex[BLACK]);
-	gdk_color_parse("green", &huex[OLD_GREEN]);
-	gdk_color_parse("lime green", &huex[LIMEGREEN]);
-	gdk_color_parse("darkgreen", &huex[DARKGREEN]);
-	gdk_color_parse("yellow", &huex[YELLOW]);
-	gdk_color_parse("red", &huex[RED]);
-	gdk_color_parse("orange", &huex[ORANGE]);
-	gdk_color_parse("cyan", &huex[OLD_CYAN]);
-	gdk_color_parse("MAGENTA", &huex[MAGENTA]);
-	gdk_color_parse("darkred", &huex[DARKRED]);
-	gdk_color_parse("orange", &huex[AMBER]);
-	gdk_color_parse("darkturquoise", &huex[DARKTURQUOISE]);
-	gdk_color_parse("orangered", &huex[ORANGERED]);
+	/* values extracted from gdk_color_parse */
+	huex[WHITE].red = 65535;
+	huex[WHITE].green = 65535;
+	huex[WHITE].blue = 65535;
+
+	huex[BLACK].red = 0;
+	huex[BLACK].green = 0;
+	huex[BLACK].blue = 0;
+
+	huex[LIMEGREEN].red = 12850;
+	huex[LIMEGREEN].green = 52685;
+	huex[LIMEGREEN].blue = 12850;
+
+	huex[DARKGREEN].red = 0;
+	huex[DARKGREEN].green = 25700;
+	huex[DARKGREEN].blue = 0;
+
+	huex[YELLOW].red = 65535;
+	huex[YELLOW].green = 65535;
+	huex[YELLOW].blue = 0;
+
+	huex[RED].red = 65535;
+	huex[RED].green = 0;
+	huex[RED].blue = 0;
+
+	huex[ORANGE].red = 65535;
+	huex[ORANGE].green = 42405;
+	huex[ORANGE].blue = 0;
+
+	huex[MAGENTA].red = 65535;
+	huex[MAGENTA].green = 0;
+	huex[MAGENTA].blue = 65535;
+
+	huex[DARKRED].red = 35723;
+	huex[DARKRED].green = 0;
+	huex[DARKRED].blue = 0;
+
+	huex[AMBER].red = 65535;
+	huex[AMBER].green = 42405;
+	huex[AMBER].blue = 0;
+
+	huex[DARKTURQUOISE].red = 0;
+	huex[DARKTURQUOISE].green = 52942;
+	huex[DARKTURQUOISE].blue = 53713;
+
+	huex[ORANGERED].red = 65535;
+	huex[ORANGERED].green = 17733;
+	huex[ORANGERED].blue = 0;
+
 	for (i = 0; i < NSHADESOFGRAY; i++) {
 		huex[GRAY + i].red = (i * 32767 * 2) / 256;
 		huex[GRAY + i].green = (i * 32767 * 2) / 256;
@@ -601,10 +635,7 @@ void sng_setup_colors(GtkWidget *w)
 		}
 	}
 
-	for (i = 0; i < TOTAL_COLORS; i++)
-                gdk_colormap_alloc_color(gtk_widget_get_colormap(w),
-				&huex[i], FALSE, FALSE);
-	gtk_widget_modify_bg(w, GTK_STATE_NORMAL, &huex[BLACK]);
+	graph_dev_setup_colors(w, huex, TOTAL_COLORS);
 }
 
 void sng_set_foreground_alpha(int c, float a)
