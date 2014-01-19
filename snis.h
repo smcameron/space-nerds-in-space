@@ -57,7 +57,7 @@
 
 #define NPLANET_SCALES 3
 #define NPLANET_MATERIALS 4
-#define NPLANETS 4
+#define NPLANETS 10
 
 #define MAXPLAYERS 10
 
