@@ -150,7 +150,7 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 
 #define MAX_COMMODITIES 100
 
-struct commodity **read_commodities(char *filename, int *ncommodities)
+struct commodity *read_commodities(char *filename, int *ncommodities)
 {
 	FILE *f;
 	char line[1000];
@@ -196,5 +196,5 @@ struct commodity **read_commodities(char *filename, int *ncommodities)
 		}
 	}
 	*ncommodities = n;
-	return (struct commodity **) clist;
+	return clist;
 }

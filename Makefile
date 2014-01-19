@@ -62,7 +62,7 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		snis_faction.o mtwist.o infinite-taunt.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
-		commodities.c
+		commodities.o
 
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} shader.o graph_dev_opengl.o snis_ui_element.o snis_graph.o \
 	snis_client.o snis_font.o snis_text_input.o \

@@ -94,6 +94,45 @@ static struct opcode_stat {
 
 #endif
 
+struct npc_bot_state;
+typedef void (*npc_menu_func)(char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_not_implemented(char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_sign_off(char *npcname, struct npc_bot_state *botstate);
+
+struct npc_menu_item {
+	char *name;
+	struct npc_menu_item *parent_menu;
+	struct npc_menu_item *submenu;
+	npc_menu_func f;
+};
+
+struct npc_bot_state {
+	uint32_t object_id;
+	uint32_t channel;
+	struct npc_menu_item *current_menu;
+};
+
+static struct npc_menu_item arrange_transport_contracts_menu[] = {
+	/* by convention, first element is menu title */
+	{ "TRANSPORT CONTRACT MENU", 0, 0, 0 },
+	{ "BUY CARGO", 0, 0, npc_menu_item_not_implemented },
+	{ "SELL CARGO", 0, 0, npc_menu_item_not_implemented },
+	{ "BOARD PASSENGERS", 0, 0, npc_menu_item_not_implemented },
+	{ "DELIVER PASSENGERS", 0, 0, npc_menu_item_not_implemented },
+	{ 0, 0, 0, 0 }, /* mark end of menu items */
+};
+
+static struct npc_menu_item starbase_main_menu[] = {
+	{ "STARBASE MAIN MENU", 0, 0, 0 },  /* by convention, first element is menu title */
+	{ "REQUEST PERMISSION TO DOCK", 0, 0, npc_menu_item_not_implemented },
+	{ "REQUEST REMOTE FUEL DELIVERY", 0, 0, npc_menu_item_not_implemented },
+	{ "REQUEST TOWING", 0, 0, npc_menu_item_not_implemented },
+	{ "ORDER REPAIRS AND MAINTENANCE", 0, 0, npc_menu_item_not_implemented },
+	{ "ARRANGE TRANSPORT CONTRACTS", 0, arrange_transport_contracts_menu, 0 },
+	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
+	{ 0, 0, 0, 0 }, /* mark end of menu items */
+};
+
 struct game_client {
 	int socket;
 	pthread_t read_thread;
@@ -122,6 +161,7 @@ struct bridge_data {
 	int last_incoming_fire_sound_time;
 	double warpx, warpy, warpz;
 	int comms_channel;
+	struct npc_bot_state npcbot;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -143,7 +183,7 @@ static char *asset_dir;
 static int nebulalist[NNEBULA] = { 0 };
 
 static int ncommodities;
-static struct commodity **commodity;
+static struct commodity *commodity;
 
 static inline void client_lock()
 {
@@ -5328,8 +5368,177 @@ static void meta_comms_channel(char *name, struct game_client *c, char *txt)
 			bridgelist[c->bridge].comms_channel);
 	send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
 	bridgelist[c->bridge].comms_channel = newchannel;
+
+	if (bridgelist[c->bridge].npcbot.channel != newchannel) {
+		/* disconnect npc bot */
+		bridgelist[c->bridge].npcbot.channel = (uint32_t) -1;
+		bridgelist[c->bridge].npcbot.object_id = (uint32_t) -1;
+		bridgelist[c->bridge].npcbot.current_menu = NULL;
+	}
+
 	sprintf(msg, "TX/RX INITIATED ON CHANNEL %u", newchannel);
 	send_comms_packet(name, newchannel, msg);
+}
+
+static uint32_t find_free_channel(void)
+{
+	/* FIXME: this needs to actually find a free channel, not just fail to be unlucky */
+	return snis_randn(100000); /* simplest possible thing that might work. */
+}
+
+void npc_menu_item_not_implemented(char *npcname, struct npc_bot_state *botstate)
+{
+	send_comms_packet(npcname, botstate->channel,
+				"  SORRY, THAT IS NOT IMPLEMENTED");
+}
+
+void npc_menu_item_sign_off(char *npcname, struct npc_bot_state *botstate)
+{
+	send_comms_packet(npcname, botstate->channel,
+				"  IT HAS BEEN A PLEASURE SERVING YOU");
+	send_comms_packet(npcname, botstate->channel,
+				"  ZX81 TERMINATING TRANSMISSION");
+	botstate->channel = (uint32_t) -1;
+	botstate->object_id = (uint32_t) -1;
+	botstate->current_menu = NULL;
+}
+
+static void send_npc_menu(char *npcname,  int bridge)
+{
+	int i;
+	uint32_t channel = bridgelist[bridge].npcbot.channel;
+	struct npc_menu_item *menu = &bridgelist[bridge].npcbot.current_menu[0];
+	char msg[80];
+
+	if (!menu || !menu->name)
+		return;
+
+	send_comms_packet(npcname, channel, "-----------------------------------------------------");
+	sprintf(msg, "     %s", menu->name);
+	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(npcname, channel, "");
+	menu++;
+	i = 1;
+	while (menu->name) {
+		sprintf(msg, "     %d: %s\n", i, menu->name);
+		send_comms_packet(npcname, channel, msg);
+		menu++;
+		i++;
+	};
+	menu = &bridgelist[bridge].npcbot.current_menu[0];
+	if (menu->parent_menu) {
+		sprintf(msg, "     %d: BACK TO %s\n", 0, menu->parent_menu->name);
+		send_comms_packet(npcname, channel, msg);
+	}
+	send_comms_packet(npcname, channel, "");
+	send_comms_packet(npcname, channel, "    MAKE YOUR SELECTION WHEN READY.");
+	send_comms_packet(npcname, channel, "-----------------------------------------------------");
+}
+
+static void starbase_npc_bot(struct snis_entity *o, int bridge, char *name, char *msg)
+{
+	char *n = o->tsd.starbase.name;
+	uint32_t channel = bridgelist[bridge].comms_channel;
+	char m[100];
+	int selection, menu_count, i, rc;
+	struct npc_menu_item *menu = bridgelist[bridge].npcbot.current_menu;
+
+	/* count current menu items */
+	menu_count = -1;
+	if (menu) {
+		menu_count = 0;
+		for (i = 0; menu[i].name; i++)
+			menu_count++;
+	}
+
+	/* See if they have selected some menu item. */
+	rc = sscanf(msg, "%d", &selection);
+	if (rc != 1)
+		selection = -1;
+	if (rc == 1 && (!menu || selection < 0 || selection > menu_count))
+		selection = -1;
+
+	if (selection == 0 && menu->parent_menu) {
+		bridgelist[bridge].npcbot.current_menu = menu->parent_menu;
+		selection = -1;
+	}
+
+	if (selection == -1) {
+		/* struct marketplace_data *mkt = o->tsd.starbase.mkt;  */
+		sprintf(m, "starbase bot received '%s'", msg);
+		send_comms_packet(n, channel, m);
+		send_comms_packet(n, channel, "");
+		sprintf(m,
+			"  WELCOME %s, I AM A MODEL ZX81 SERVICE", name);
+		send_comms_packet(n, channel, m);
+		send_comms_packet(n, channel,
+			"  ROBOT PROGRAMMED TO BE AT YOUR SERVICE");
+		send_comms_packet(n, channel,
+			"  THE FOLLOWING SERVICES ARE AVAILABLE:");
+		send_comms_packet(n, channel, "");
+		send_npc_menu(n, bridge);
+	} else {
+		if (menu[selection].submenu) {
+			menu[selection].submenu->parent_menu = menu;
+			bridgelist[bridge].npcbot.current_menu = menu[selection].submenu;
+			send_comms_packet(n, channel, "");
+			send_npc_menu(n, bridge);
+		} else {
+			if (menu[selection].f)
+				menu[selection].f(n, &bridgelist[bridge].npcbot);
+			else
+				printf("Non fatal bug at %s:%d\n", __FILE__, __LINE__);
+		}
+	}
+}
+
+static void send_to_npcbot(int bridge, char *name, char *msg)
+{
+	int i;
+	struct snis_entity *o;
+	uint32_t id;
+
+	printf("npcbot for bridge %d received msg: '%s' from %s\n",
+		bridge, msg, name);
+	/* TODO: something better than this crap. */
+
+	id = bridgelist[bridge].npcbot.object_id;
+	if (id == (uint32_t) -1)
+		return;
+
+	if (bridgelist[bridge].npcbot.channel == (uint32_t) -1)
+		return;
+
+	i = lookup_by_id(id);
+	if (i < 0)
+		return;
+
+	o = &go[i];
+
+	switch (o->type) {
+	case OBJTYPE_STARBASE:
+		starbase_npc_bot(o, bridge, name, msg);
+		break;
+	default:
+		break;
+	}
+	return;
+}
+
+static void uppercase(char *x)
+{
+	char *i;
+
+	for (i = x; *i; i++)
+		*i = toupper(*i);
+}
+
+static void lowercase(char *x)
+{
+	char *i;
+
+	for (i = x; *i; i++)
+		*i = tolower(*i);
 }
 
 static void meta_comms_hail(char *name, struct game_client *c, char *txt)
@@ -5341,8 +5550,11 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 	int nchannels;
 	uint32_t channel[MAX_SHIPS_HAILABLE];
 	char *x;
+	int switch_channel = 0;
+	uint32_t id = (uint32_t) -1;
 
 	duptxt = strdup(txt);
+	uppercase(duptxt);
 	printf("meta comms hail %u,%s\n", bridgelist[c->bridge].comms_channel, txt);
 
 	x = strtok(duptxt, " ,");
@@ -5358,9 +5570,13 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < nnames; i++) {
 		for (j = 0; j < nbridges; j++) {
-			const char *shipname = (const char *) bridgelist[j].shipname;
+			char *shipname;
+			shipname = strdup((char *) bridgelist[j].shipname);
+			uppercase(shipname);
 			if (strcmp(shipname, (const char *) namelist[i]) == 0) {
 				int found = 0;
+				free(shipname);
+				shipname = NULL;
 
 				for (k = 0; k < nchannels; k++)
 					if (bridgelist[j].comms_channel == channel[k]) {
@@ -5373,15 +5589,59 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 					if (nchannels >= MAX_SHIPS_HAILABLE)
 						goto channels_maxxed;
 				}
+			} else {
+				free(shipname);
+				shipname = NULL;
 			}
 		}
 	}
+
+	/* check for starbases being hailed */
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		char *sbname;
+
+		if (o->type != OBJTYPE_STARBASE)
+			continue;
+
+		sbname = strdup(o->tsd.starbase.name);
+		uppercase(name);
+		for (j = 0; j < nnames; j++) {
+			if (strcmp(sbname, namelist[j]) != 0) {
+				free(sbname);
+				sbname = NULL;
+				continue;
+			}
+			free(sbname);
+			sbname = NULL;
+			nchannels = 1;
+			channel[0] = find_free_channel();
+			switch_channel = 1;
+			id = o->id;
+			goto channels_maxxed;
+		}
+	}
+
 channels_maxxed:
 	pthread_mutex_unlock(&universe_mutex);
 
-	for (i = 0; i < nchannels; i++) {
-		sprintf(msg, "*** HAILING ON CHANNEL %u ***", bridgelist[c->bridge].comms_channel);
-		send_comms_packet(name, channel[i], msg);
+	/* If switching to channel to communicate with a starbase... */
+	if (switch_channel && bridgelist[c->bridge].comms_channel != channel[0]) {
+		sprintf(msg, "TRANSMISSION TERMINATED ON CHANNEL %u",
+				bridgelist[c->bridge].comms_channel);
+		send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
+		bridgelist[c->bridge].comms_channel = channel[0];
+		bridgelist[c->bridge].npcbot.object_id = id;
+		bridgelist[c->bridge].npcbot.channel = channel[0];
+		bridgelist[c->bridge].npcbot.current_menu = starbase_main_menu;
+		sprintf(msg, "TX/RX INITIATED ON CHANNEL %u", channel[0]);
+		send_comms_packet(name, channel[0], msg);
+		send_to_npcbot(c->bridge, name, msg);
+	} else {
+		for (i = 0; i < nchannels; i++) {
+			sprintf(msg, "*** HAILING ON CHANNEL %u ***", bridgelist[c->bridge].comms_channel);
+			send_comms_packet(name, channel[i], msg);
+		}
 	}
 	free(duptxt);
 }
@@ -5403,15 +5663,20 @@ static const struct meta_comms_data {
 static void process_meta_comms_packet(char *name, struct game_client *c, char *txt)
 {
 	int i;
+	char *cmd;
 
+	cmd = strdup(txt);
+	lowercase(cmd);
 	for (i = 0; i < ARRAY_SIZE(meta_comms); i++) {
 		int len = strlen(meta_comms[i].command);
-		if (strncmp(txt, meta_comms[i].command, len) == 0)  {
+		if (strncmp(cmd, meta_comms[i].command, len) == 0)  {
 			meta_comms[i].f(name, c, txt);
+			free(cmd);
 			return;
 		}
 	}
 	meta_comms_error(name, c, txt);
+	free(cmd);
 }
 
 static int process_comms_transmission(struct game_client *c, int use_real_name)
@@ -5443,6 +5708,8 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 		return 0;
 	}
 	send_comms_packet(name, bridgelist[c->bridge].comms_channel, txt);
+	if (bridgelist[c->bridge].npcbot.channel == bridgelist[c->bridge].comms_channel)
+		send_to_npcbot(c->bridge, name, txt);
 	if (use_real_name)
 		interpret_comms_packet(c, txt);
 	return 0;
@@ -7921,6 +8188,8 @@ static int add_new_player(struct game_client *c)
 		strcpy((char *) bridgelist[nbridges].password, (const char *) app.password);
 		bridgelist[nbridges].shipid = c->shipid;
 		bridgelist[nbridges].comms_channel = 0; /* broadcast channel */
+		bridgelist[nbridges].npcbot.channel = (uint32_t) -1;
+		bridgelist[nbridges].npcbot.object_id = (uint32_t) -1;
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
 	

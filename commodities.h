@@ -32,6 +32,6 @@ struct commodity {
 	float tech_adjust;
 };
 
-struct commodity **read_commodities(char *filename, int *ncommodities);
+struct commodity *read_commodities(char *filename, int *ncommodities);
 
 #endif
