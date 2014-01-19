@@ -58,6 +58,7 @@
 #define NPLANET_MATERIALS 4
 #define NPLANETS 10
 #define NBASES (NPLANETS + 3)
+#define COMMODITIES_PER_BASE 10
 
 #define MAXPLAYERS 10
 
@@ -347,11 +348,19 @@ struct ship_data {
 	float braking_factor;
 };
 
+struct marketplace_data {
+	int item;
+	float qty;
+	float refill_rate;
+};
+
 struct starbase_data {
 	uint8_t under_attack;
 	uint32_t last_time_called_for_help;
 	uint8_t lifeform_count;
 	char name[16];
+	struct marketplace_data *mkt;
+	int associated_planet_id;
 };
 
 struct nebula_data {

@@ -74,6 +74,7 @@
 #include "power-model.h"
 #include "snis_event_callback.h"
 #include "fleet.h"
+#include "commodities.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
@@ -140,6 +141,9 @@ static char *default_asset_dir = "share/snis";
 static char *asset_dir;
 
 static int nebulalist[NNEBULA] = { 0 };
+
+static int ncommodities;
+static struct commodity **commodity;
 
 static inline void client_lock()
 {
@@ -3723,8 +3727,27 @@ static int add_asteroid(double x, double y, double z, double vx, double vz, doub
 	return i;
 }
 
+static void init_starbase_market(struct snis_entity *o)
+{
+	int i;
+	struct marketplace_data *mkt = NULL;
+
+	o->tsd.starbase.mkt = NULL;
+	if (ncommodities == 0)
+		return;
+	mkt = malloc(sizeof(*mkt) * COMMODITIES_PER_BASE);
+	o->tsd.starbase.mkt = mkt;
+	if (!mkt)
+		return;
+	for (i = 0; i < COMMODITIES_PER_BASE; i++) {
+		mkt[i].item = snis_randn(ncommodities);
+		mkt[i].qty = snis_randn(100); /* TODO: something better */
+		mkt[i].refill_rate = (float) snis_randn(1000) / 1000.0; /* TODO: something better */
+	}
+}
+
 static int add_starbase(double x, double y, double z,
-			double vx, double vz, double heading, int n)
+			double vx, double vz, double heading, int n, uint32_t assoc_planet_id)
 {
 	int i;
 
@@ -3739,6 +3762,8 @@ static int add_starbase(double x, double y, double z,
 	go[i].tsd.starbase.last_time_called_for_help = 0;
 	go[i].tsd.starbase.under_attack = 0;
 	go[i].tsd.starbase.lifeform_count = snis_randn(100) + 100;
+	go[i].tsd.starbase.associated_planet_id = assoc_planet_id;
+	init_starbase_market(&go[i]);
 	go[i].sdata.shield_strength = 255;
 	/* FIXME, why name stored twice? probably just use sdata.name is best
 	 * but might be because we should know starbase name even if science
@@ -3760,7 +3785,7 @@ static int l_add_starbase(lua_State *l)
 	n = lua_tonumber(lua_state, 4);
 
 	pthread_mutex_lock(&universe_mutex);
-	i  = add_starbase(x, y, z, 0, 0, 0, n);
+	i  = add_starbase(x, y, z, 0, 0, 0, n, -1);
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -4042,6 +4067,7 @@ static void add_starbases(void)
 {
 	int i, j, p, found;
 	double x, y, z;
+	uint32_t assoc_planet_id;
 
 	for (i = 0; i < NBASES; i++) {
 		if (i < NPLANETS) {
@@ -4057,6 +4083,7 @@ static void add_starbases(void)
 					y = go[j].y + dy;
 					z = go[j].z + dz;
 					found = 1;
+					assoc_planet_id = go[j].id;
 					break;
 				}
 			}
@@ -4066,13 +4093,15 @@ static void add_starbases(void)
 				x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
 				y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
 				z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+				assoc_planet_id = (uint32_t) -1;
 			}
 		} else {
 			x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
 			y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
 			z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+				assoc_planet_id = (uint32_t) -1;
 		}
-		add_starbase(x, y, z, 0.0, 0.0, 0.0, i);
+		add_starbase(x, y, z, 0.0, 0.0, 0.0, i, assoc_planet_id);
 	}
 }
 
@@ -6072,7 +6101,7 @@ static int process_create_item(struct game_client *c)
 		i = add_ship();
 		break;
 	case OBJTYPE_STARBASE:
-		i = add_starbase(x, 0, z, 0, 0, 0, snis_randn(100));
+		i = add_starbase(x, 0, z, 0, 0, 0, snis_randn(100), -1);
 		break;
 	case OBJTYPE_PLANET:
 		i = add_planet(x, 0.0, z);
@@ -8427,6 +8456,10 @@ int main(int argc, char *argv[])
 		usage();
 
 	override_asset_dir();
+
+	char commodity_path[PATH_MAX];
+	sprintf(commodity_path, "%s/%s", asset_dir, "commodities.txt");
+	commodity = read_commodities(commodity_path, &ncommodities);
 
 	if (read_ship_types()) {
 		fprintf(stderr, "%s: unable to read ship types\n", argv[0]);
