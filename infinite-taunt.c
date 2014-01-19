@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "mtwist.h"
 #include "infinite-taunt.h"
 
 static char *nothing = "";
@@ -766,203 +767,206 @@ static char *Climate[] = {
 	
 #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
 
-static char *random_word(char *w[], int nwords)
+static char *random_word(struct mtwist_state *mt, char *w[], int nwords)
 {
 	int x;
 
-	x = (int) (((double) rand() / (double) (RAND_MAX)) * nwords);
+	x = (int) (((double) mtwist_next(mt) / (double) (0xffffffff)) * nwords);
 	return w[x];
 }
 
-static char *you(void)
+static char *you(struct mtwist_state *mt)
 {
-	return random_word(You, ARRAYSIZE(You));
+	return random_word(mt, You, ARRAYSIZE(You));
 }
 
-static char *action(void)
+static char *action(struct mtwist_state *mt)
 {
-	return random_word(Action, ARRAYSIZE(Action));
+	return random_word(mt, Action, ARRAYSIZE(Action));
 }
 
-static char *like()
+static char *like(struct mtwist_state *mt)
 {
-	return random_word(Like, ARRAYSIZE(Like));
+	return random_word(mt, Like, ARRAYSIZE(Like));
 }
 
-static char *adjective()
+static char *adjective(struct mtwist_state *mt)
 {
-	return random_word(Adjective, ARRAYSIZE(Adjective));
+	return random_word(mt, Adjective, ARRAYSIZE(Adjective));
 }
 
-static char *beast()
+static char *beast(struct mtwist_state *mt)
 {
-	return random_word(Beast, ARRAYSIZE(Beast));
+	return random_word(mt, Beast, ARRAYSIZE(Beast));
 }
 
-static char *nationality()
+static char *nationality(struct mtwist_state *mt)
 {
-	return random_word(Nationality, ARRAYSIZE(Nationality));
+	return random_word(mt, Nationality, ARRAYSIZE(Nationality));
 }
 
-static char *qnationality()
+static char *qnationality(struct mtwist_state *mt)
 {
 	int x;
-	x = (int) (((double) rand() / (double) (RAND_MAX)) * 1000);
+	x = (int) (((double) mtwist_next(mt) / (double) (0xffffffff)) * 1000);
 	if (x < 100)
-		return nationality();
+		return nationality(mt);
 	else
 		return nothing;
 }
 
-static char *are()
+static char *are(struct mtwist_state *m)
 {
-	return random_word(Are, ARRAYSIZE(Are));
+	return random_word(m, Are, ARRAYSIZE(Are));
 }
 
-static char *bad_thing()
+static char *bad_thing(struct mtwist_state *mt)
 {
-	return random_word(Bad_thing, ARRAYSIZE(Bad_thing));
+	return random_word(mt, Bad_thing, ARRAYSIZE(Bad_thing));
 }
 
-void infinite_taunt0(char *buffer, int buflen)
+void infinite_taunt0(struct mtwist_state *mt, char *buffer, int buflen)
 {
 	snprintf(buffer, buflen, "%s %s %s %s %s",
-			you(), action(), like(), adjective(), beast());
+			you(mt), action(mt), like(mt), adjective(mt), beast(mt));
 }
 
-void infinite_taunt1(char *buffer, int buflen)
+void infinite_taunt1(struct mtwist_state *mt, char *buffer, int buflen)
 {
 	snprintf(buffer, buflen, "%s %s %s %s %s %s",
-			you(), action(), like(), adjective(), nationality(), beast());
+			you(mt), action(mt), like(mt), adjective(mt), nationality(mt), beast(mt));
 }
 
-void infinite_taunt2(char *buffer, int buflen)
+void infinite_taunt2(struct mtwist_state *mt, char *buffer, int buflen)
 {
 	snprintf(buffer, buflen, "%s %s %s %s",
-			you(), are(), adjective(), bad_thing());
+			you(mt), are(mt), adjective(mt), bad_thing(mt));
 }
 
-void infinite_taunt3(char *buffer, int buflen)
+void infinite_taunt3(struct mtwist_state *mt, char *buffer, int buflen)
 {
 	snprintf(buffer, buflen, "%s %s %s %s %s",
-			you(), are(), adjective(), nationality(), bad_thing());
+			you(mt), are(mt), adjective(mt), nationality(mt), bad_thing(mt));
 }
 
-void infinite_taunt(char *buffer, int buflen)
+void infinite_taunt(struct mtwist_state *mt, char *buffer, int buflen)
 {
-	switch(rand() % 4) {
+	switch (mtwist_next(mt) % 4) {
 	case 0:
-		infinite_taunt0(buffer, buflen);
+		infinite_taunt0(mt, buffer, buflen);
 		break;
 	case 1:
-		infinite_taunt1(buffer, buflen);
+		infinite_taunt1(mt, buffer, buflen);
 		break;
 	case 2:
-		infinite_taunt2(buffer, buflen);
+		infinite_taunt2(mt, buffer, buflen);
 		break;
 	case 3:
-		infinite_taunt3(buffer, buflen);
+		infinite_taunt3(mt, buffer, buflen);
 		break;
 	default:
-		infinite_taunt1(buffer, buflen);
+		infinite_taunt1(mt, buffer, buflen);
 		break;
 	}
 }
 
-static char *known_for(void)
+static char *known_for(struct mtwist_state *mt)
 {
-	return random_word(Known_For, ARRAYSIZE(Known_For));
+	return random_word(mt, Known_For, ARRAYSIZE(Known_For));
 }
 
-static char *exceptional(void)
+static char *exceptional(struct mtwist_state *mt)
 {
-	return random_word(Exceptional, ARRAYSIZE(Exceptional));
+	return random_word(mt, Exceptional, ARRAYSIZE(Exceptional));
 }
 
-static char *terrible(void)
+static char *terrible(struct mtwist_state *mt)
 {
-	return random_word(Terrible, ARRAYSIZE(Terrible));
+	return random_word(mt, Terrible, ARRAYSIZE(Terrible));
 }
 
-static char *avoid(void)
+static char *avoid(struct mtwist_state *mt)
 {
-	return random_word(Avoid, ARRAYSIZE(Avoid));
+	return random_word(mt, Avoid, ARRAYSIZE(Avoid));
 }
 
-static char *producing(void)
+static char *producing(struct mtwist_state *mt)
 {
-	return random_word(Producing, ARRAYSIZE(Producing));
+	return random_word(mt, Producing, ARRAYSIZE(Producing));
 }
 
-static char *product(void)
+static char *product(struct mtwist_state *mt)
 {
-	return random_word(Product, ARRAYSIZE(Product));
+	return random_word(mt, Product, ARRAYSIZE(Product));
 }
 
-static char *culture(void)
+static char *culture(struct mtwist_state *mt)
 {
-	return random_word(Culture, ARRAYSIZE(Culture));
+	return random_word(mt, Culture, ARRAYSIZE(Culture));
 }
 
-static char *planet(void)
+static char *planet(struct mtwist_state *mt)
 {
-	return random_word(Planet, ARRAYSIZE(Planet));
+	return random_word(mt, Planet, ARRAYSIZE(Planet));
 }
 
-static char *climate(void)
+static char *climate(struct mtwist_state *mt)
 {
-	return random_word(Climate, ARRAYSIZE(Climate));
+	return random_word(mt, Climate, ARRAYSIZE(Climate));
 }
 
-static char *bring_your(void)
+static char *bring_your(struct mtwist_state *mt)
 {
-	return random_word(Bring_Your, ARRAYSIZE(Bring_Your));
+	return random_word(mt, Bring_Your, ARRAYSIZE(Bring_Your));
 }
 
-static char *traveling_accessory(void)
+static char *traveling_accessory(struct mtwist_state *mt)
 {
-	return random_word(Traveling_Accessory,
+	return random_word(mt, Traveling_Accessory,
 				ARRAYSIZE(Traveling_Accessory));
 }
 
-void planet_description(char *buffer, int buflen)
+void planet_description(struct mtwist_state *mt, char *buffer, int buflen)
 {
 	char do_avoid[100];
 
-	strcpy(do_avoid, avoid());
+	strcpy(do_avoid, avoid(mt));
 	do_avoid[0] = toupper(do_avoid[0]);
 
 	snprintf(buffer, buflen, "This %s %s %s %s %s %s %s and %s %s %s %s. %s the %s %s.  %s %s.\n",
-		climate(), planet(), known_for(), producing(),
-			exceptional(), qnationality(), product(),
-			known_for(), exceptional(), qnationality(),
-			culture(),
-			do_avoid, terrible(), product(),
-			bring_your(), traveling_accessory());
+		climate(mt), planet(mt), known_for(mt), producing(mt),
+			exceptional(mt), qnationality(mt), product(mt),
+			known_for(mt), exceptional(mt), qnationality(mt),
+			culture(mt),
+			do_avoid, terrible(mt), product(mt),
+			bring_your(mt), traveling_accessory(mt));
 }
 
 #ifdef TEST_TAUNT
+#include "mtwist.h"
 #include <sys/time.h>
-static void set_random_seed(void)
+static void set_random_seed(struct mtwist_state **mt)
 {
 	struct timeval tv;
 
 	gettimeofday(&tv, NULL);
-	srand(tv.tv_usec);
+	*mt = mtwist_init(tv.tv_usec);
 }
 
 int main(int argc, char *argv[])
 {
 	int i;
 	char buffer[1000];
+	struct mtwist_state *mt;
 
-	set_random_seed();
+	set_random_seed(&mt);
 
 	for (i = 0; i < 1000; i++) {
 		//infinite_taunt(buffer, sizeof(buffer) - 1);
-		planet_description(buffer, sizeof(buffer) - 1);
+		planet_description(mt, buffer, sizeof(buffer) - 1);
 		printf("%s\n", buffer);
 	}
+	free(mt);
 	return 0;
 }
 #endif

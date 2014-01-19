@@ -285,8 +285,8 @@ starbase-comms.o:	starbase-comms.c starbase-comms.h
 infinite-taunt.o:	infinite-taunt.c infinite-taunt.h
 	$(Q)$(COMPILE)
 
-infinite-taunt:	infinite-taunt.c infinite-taunt.h
-	$(CC) -DTEST_TAUNT -o infinite-taunt ${MYCFLAGS} infinite-taunt.c
+infinite-taunt:	infinite-taunt.c infinite-taunt.h mtwist.o
+	$(CC) -DTEST_TAUNT -o infinite-taunt ${MYCFLAGS} mtwist.o infinite-taunt.c
 
 names:	names.c names.h
 	$(CC) -DTEST_NAMES -o names ${MYCFLAGS} ${GTKCFLAGS} names.c

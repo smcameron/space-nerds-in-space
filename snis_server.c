@@ -48,6 +48,7 @@
 #include <lauxlib.h>
 #include <assert.h>
 
+#include "mtwist.h"
 #include "build_bug_on.h"
 #include "ssgl/ssgl.h"
 #include "snis_ship_type.h"
@@ -1530,8 +1531,12 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 	int last_space = 0;
 	int i, bytes_so_far = 0;
 	char *start = buffer;
+	static struct mtwist_state *mt = NULL;
+
+	if (!mt)
+		mt = mtwist_init(35342);
 	
-	infinite_taunt(buffer, sizeof(buffer) - 1);
+	infinite_taunt(mt, buffer, sizeof(buffer) - 1);
 
 	sprintf(name, "%s: ", alien->sdata.name);
 	for (i = 0; buffer[i]; i++) {
