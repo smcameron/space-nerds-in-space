@@ -4035,13 +4035,38 @@ static int add_torpedo(double x, double y, double z, double vx, double vy, doubl
 
 static void add_starbases(void)
 {
-	int i;
+	int i, j, p, found;
 	double x, y, z;
 
 	for (i = 0; i < NBASES; i++) {
-		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
-		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		if (i < NPLANETS) {
+			p = 0;
+			found = 0;
+			for (j = 0; j <= snis_object_pool_highest_object(pool); j++) {
+				if (go[j].type == OBJTYPE_PLANET)
+					p++;
+				if (p == i + 1) {
+					float dx, dy, dz;
+					random_point_on_sphere(900.0 + snis_randn(200), &dx, &dy, &dz);
+					x = go[j].x + dx;
+					y = go[j].y + dy;
+					z = go[j].z + dz;
+					found = 1;
+					break;
+				}
+			}
+			if (!found)  {
+				/* If we get here, it's a bug... */
+				printf("Nonfatal bug at %s:%d\n", __FILE__, __LINE__);
+				x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+				y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
+				z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+			}
+		} else {
+			x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+			y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
+			z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		}
 		add_starbase(x, y, z, 0.0, 0.0, 0.0, i);
 	}
 }
@@ -4372,10 +4397,10 @@ static void make_universe(void)
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 
 	add_nebulae(); /* do nebula first */
-	add_starbases();
 	add_asteroids();
 	add_derelicts();
 	add_planets();
+	add_starbases();
 	add_wormholes();
 	add_eships();
 	add_spacemonsters();
