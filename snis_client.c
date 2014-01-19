@@ -9575,21 +9575,26 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	sng_set_foreground(GREEN);
 	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, SCREEN_HEIGHT - 50);
 	if (curr_science_guy->type == OBJTYPE_PLANET) {
+		static uint32_t last = 0xffffffff;
 		struct mtwist_state *mt;
-		char planet_desc[500];
+		static char planet_desc[500];
 
 		struct planet_data *p = &curr_science_guy->tsd.planet;
-		mt = mtwist_init(p->description_seed);
+
+		if (p->description_seed != last) {
+			mt = mtwist_init(p->description_seed);
+			planet_description(mt, planet_desc, 500);
+			last = p->description_seed;
+			mtwist_free(mt);
+		}
 		sprintf(buf, "GOVERNMENT: %s", government_name[p->government]);
 		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, SCREEN_HEIGHT - 200);
 		sprintf(buf, "TECH LEVEL: %s", tech_level_name[p->tech_level]);
 		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, SCREEN_HEIGHT - 180);
 		sprintf(buf, "ECONOMY: %s", economy_name[p->economy]);
 		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, SCREEN_HEIGHT - 160);
-		planet_description(mt, planet_desc, 400);
 		/* FIXME: break this into multiple lines */
 		sng_abs_xy_draw_string(w, gc, planet_desc, TINY_FONT, 20, SCREEN_HEIGHT - 90);
-		mtwist_free(mt);
 	}
 }
  
