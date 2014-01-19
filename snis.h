@@ -421,6 +421,47 @@ struct laserbeam_data {
 	struct entity **entity;
 };
 
+/* Cribbed from Oolite */
+static char *economy_name[] = {
+	"Rich Industrial",
+	"Average Industrial",
+	"Poor Industrial",
+	"Mainly Industrial",
+	"Mainly Agricultural",
+	"Rich Agricultural",
+	"Average Agricultural",
+	"Poor Agricultural",
+};
+
+static char *government_name[] = {
+	"Anarchy",
+	"Feudal",
+	"Multi-Governmental",
+	"Dictatorship",
+	"Communist",
+	"Confederacy",
+	"Democracy",
+	"Corporate State",
+};
+
+static char *tech_level_name[] = {
+	"stone age",
+	"bronze age",
+	"iron age",
+	"steel age",
+	"silicon age",
+	"positronic age",
+	"space age",
+	"interstellar age",
+};
+
+struct planet_data {
+	uint32_t description_seed;
+	uint8_t government;
+	uint8_t tech_level;
+	uint8_t economy;
+};
+
 union type_specific_data {
 	struct ship_data ship;
 	struct laser_data laser;
@@ -435,6 +476,7 @@ union type_specific_data {
 	struct laserbeam_data laserbeam;
 	struct derelict_data derelict;
 	struct cargo_container_data cargo_container;
+	struct planet_data planet;
 };
 
 struct snis_entity;

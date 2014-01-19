@@ -62,6 +62,7 @@
 #include "snis_faction.h"
 #include "space-part.h"
 #include "mtwist.h"
+#include "infinite-taunt.h"
 #include "mathutils.h"
 #include "quat.h"
 #include "snis.h"
@@ -1305,7 +1306,8 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 	return 0;
 }
 
-static int update_planet(uint32_t id, double x, double y, double z)
+static int update_planet(uint32_t id, double x, double y, double z, uint8_t government,
+				uint8_t tech_level, uint8_t economy, uint32_t dseed)
 {
 	int i, m, k, s, r;
 	float scale;
@@ -1339,9 +1341,17 @@ static int update_planet(uint32_t id, double x, double y, double z)
 		if (i < 0)
 			return i;
 		update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
+		go[i].tsd.planet.government = government;
+		go[i].tsd.planet.tech_level = tech_level;
+		go[i].tsd.planet.economy = economy;
+		go[i].tsd.planet.description_seed = dseed;
 	} else {
 		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 		update_entity_pos(go[i].entity, x, y, z);
+		go[i].tsd.planet.government = government;
+		go[i].tsd.planet.tech_level = tech_level;
+		go[i].tsd.planet.economy = economy;
+		go[i].tsd.planet.description_seed = dseed;
 	}
 	return 0;
 }
@@ -4111,17 +4121,20 @@ static int process_update_planet_packet(void)
 	unsigned char buffer[100];
 	uint32_t id;
 	double dx, dy, dz;
+	uint8_t government, tech_level, economy;
+	uint32_t dseed;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wSSSwbbb", &id,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
-			&dz, (int32_t) UNIVERSE_DIM);
+			&dz, (int32_t) UNIVERSE_DIM,
+			&dseed, &government, &tech_level, &economy);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_planet(id, dx, dy, dz);
+	rc = update_planet(id, dx, dy, dz, government, tech_level, economy, dseed);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -9560,7 +9573,24 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		}
 	}
 	sng_set_foreground(GREEN);
-	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 250, SCREEN_HEIGHT - 50);
+	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, SCREEN_HEIGHT - 50);
+	if (curr_science_guy->type == OBJTYPE_PLANET) {
+		struct mtwist_state *mt;
+		char planet_desc[500];
+
+		struct planet_data *p = &curr_science_guy->tsd.planet;
+		mt = mtwist_init(p->description_seed);
+		sprintf(buf, "GOVERNMENT: %s", government_name[p->government]);
+		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, SCREEN_HEIGHT - 200);
+		sprintf(buf, "TECH LEVEL: %s", tech_level_name[p->tech_level]);
+		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, SCREEN_HEIGHT - 180);
+		sprintf(buf, "ECONOMY: %s", economy_name[p->economy]);
+		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, SCREEN_HEIGHT - 160);
+		planet_description(mt, planet_desc, 400);
+		/* FIXME: break this into multiple lines */
+		sng_abs_xy_draw_string(w, gc, planet_desc, TINY_FONT, 20, SCREEN_HEIGHT - 90);
+		mtwist_free(mt);
+	}
 }
  
 static void show_science(GtkWidget *w)

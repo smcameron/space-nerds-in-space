@@ -4269,6 +4269,10 @@ static int add_planet(double x, double y, double z)
 	go[i].sdata.shield_width = 0;
 	go[i].sdata.shield_depth = 0;
 	go[i].move = generic_move;
+	go[i].tsd.planet.government = snis_randn(1000) % ARRAY_SIZE(government_name);
+	go[i].tsd.planet.economy = snis_randn(1000) % ARRAY_SIZE(economy_name);
+	go[i].tsd.planet.tech_level = snis_randn(1000) % ARRAY_SIZE(tech_level_name);
+	go[i].tsd.planet.description_seed = snis_rand();
 	return i;
 }
 
@@ -7727,10 +7731,14 @@ static void send_update_derelict_packet(struct game_client *c,
 static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_PLANET, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwSSSwbbb", OPCODE_UPDATE_PLANET, o->id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
-					o->z, (int32_t) UNIVERSE_DIM));
+					o->z, (int32_t) UNIVERSE_DIM,
+					o->tsd.planet.description_seed,
+					o->tsd.planet.government,
+					o->tsd.planet.tech_level,
+					o->tsd.planet.economy));
 }
 
 static void send_update_wormhole_packet(struct game_client *c,

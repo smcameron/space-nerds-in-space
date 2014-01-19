@@ -59,8 +59,8 @@ PNGCFLAGS=`pkg-config --cflags libpng`
 
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
-		snis_faction.o mtwist.o
-SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o infinite-taunt.o \
+		snis_faction.o mtwist.o infinite-taunt.o
+SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o
 
 CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} shader.o graph_dev_opengl.o snis_ui_element.o snis_graph.o \
