@@ -926,7 +926,24 @@ static char *traveling_accessory(struct mtwist_state *mt)
 				ARRAYSIZE(Traveling_Accessory));
 }
 
-void planet_description(struct mtwist_state *mt, char *buffer, int buflen)
+static void break_lines(char *buffer, int line_len)
+{
+	int i, so_far, len;
+
+	if (!line_len)
+		return;
+	len = strlen(buffer);
+	so_far = 0;
+	for (i = 0; i < len; i++) {
+		if (buffer[i] == ' ' && so_far > line_len) {
+			buffer[i] = '\n';
+			so_far = -1;
+		}
+		so_far++;
+	}
+}
+
+void planet_description(struct mtwist_state *mt, char *buffer, int buflen, int line_len)
 {
 	char do_avoid[100];
 
@@ -940,6 +957,7 @@ void planet_description(struct mtwist_state *mt, char *buffer, int buflen)
 			culture(mt),
 			do_avoid, terrible(mt), product(mt),
 			bring_your(mt), traveling_accessory(mt));
+	break_lines(buffer, line_len);
 }
 
 #ifdef TEST_TAUNT
@@ -963,7 +981,7 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < 1000; i++) {
 		//infinite_taunt(buffer, sizeof(buffer) - 1);
-		planet_description(mt, buffer, sizeof(buffer) - 1);
+		planet_description(mt, buffer, sizeof(buffer) - 1, 60);
 		printf("%s\n", buffer);
 	}
 	free(mt);

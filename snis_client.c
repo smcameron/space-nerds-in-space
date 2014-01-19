@@ -9541,6 +9541,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	char buf[100];
 	float angle;
 	union quat orientation;
+	int y;
 
 	if (!curr_science_guy || !curr_science_guy->entity)
 		return;
@@ -9562,6 +9563,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	render_entities(w, gc, sciecx);
 	remove_entity(sciecx, e);
 
+	y = SCREEN_HEIGHT - 180;
 	if (curr_science_guy->type == OBJTYPE_SHIP1 ||
 		curr_science_guy->type == OBJTYPE_SHIP2) {
 		sprintf(buf, "LIFEFORMS: %d", curr_science_guy->tsd.ship.lifeform_count);
@@ -9569,32 +9571,54 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		if (curr_science_guy->type == OBJTYPE_STARBASE) {
 			sprintf(buf, "LIFEFORMS: %d", curr_science_guy->tsd.starbase.lifeform_count);
 		} else {
-			sprintf(buf, "LIFEFORMS: 0");
+			buf[0] = '\0';
 		}
 	}
 	sng_set_foreground(GREEN);
-	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, SCREEN_HEIGHT - 50);
+	if (buf[0])
+		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 10, y);
+	y += 20;
 	if (curr_science_guy->type == OBJTYPE_PLANET) {
 		static uint32_t last = 0xffffffff;
 		struct mtwist_state *mt;
 		static char planet_desc[500];
+		char tmpbuf[60];
+		int i, len, j;
 
 		struct planet_data *p = &curr_science_guy->tsd.planet;
 
 		if (p->description_seed != last) {
 			mt = mtwist_init(p->description_seed);
-			planet_description(mt, planet_desc, 500);
+			planet_description(mt, planet_desc, 500, 40);
 			last = p->description_seed;
 			mtwist_free(mt);
+			for (i = 0; planet_desc[i] != '\0'; i++)
+				planet_desc[i] = toupper(planet_desc[i]);
 		}
 		sprintf(buf, "GOVERNMENT: %s", government_name[p->government]);
-		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, SCREEN_HEIGHT - 200);
+		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 10, y);
+		y += 20;
 		sprintf(buf, "TECH LEVEL: %s", tech_level_name[p->tech_level]);
-		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, SCREEN_HEIGHT - 180);
+		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 10, y);
+		y += 20;
 		sprintf(buf, "ECONOMY: %s", economy_name[p->economy]);
-		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, SCREEN_HEIGHT - 160);
-		/* FIXME: break this into multiple lines */
-		sng_abs_xy_draw_string(w, gc, planet_desc, TINY_FONT, 20, SCREEN_HEIGHT - 90);
+		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 10, y);
+		y += 20;
+
+		/* break planet_desc into multiple lines */
+		len = strlen(planet_desc);
+		j = 0;
+		for (i = 0; i < len; i++) {
+			if (planet_desc[i] == '\n' || planet_desc[i] == '\0') {
+				tmpbuf[j] = '\0';
+				sng_abs_xy_draw_string(w, gc, tmpbuf, NANO_FONT, 10, y);
+				y += 15;
+				j = 0;
+			} else {
+				tmpbuf[j] = planet_desc[i];
+				j++;
+			}
+		}
 	}
 }
  
