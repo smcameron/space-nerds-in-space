@@ -144,8 +144,6 @@ static float dist3d_v(struct vertex *v1, struct vertex *v2)
 		(v1->z - v2->z) * (v1->z - v2->z));
 }
 
-static int vertex_merge_count;
-
 #define VERTEX_MERGING_THRESHOLD (1e-18)
 static struct vertex *add_vertex(struct mesh *m, struct vertex *v, int* is_shared)
 {
@@ -155,7 +153,6 @@ static struct vertex *add_vertex(struct mesh *m, struct vertex *v, int* is_share
 	for (i = 0; i < m->nvertices; i++) {
 		if (dist3d_v(v, &m->v[i]) < VERTEX_MERGING_THRESHOLD) {
 			*is_shared = 1;
-			vertex_merge_count++;
 			return &m->v[i];
 		}
 	}
@@ -461,7 +458,6 @@ struct mesh *read_stl_file(char *file)
 	my_mesh->radius = mesh_compute_radius(my_mesh);
 	process_coplanar_triangles(my_mesh, owners);
 	check_triangle_vertices(my_mesh);
-	printf("vertex_merge_count = %d\n", vertex_merge_count);
 	process_vertex_normals(my_mesh, 37.0 * M_PI / 180.0, owners);
 
 	free_vertex_owners(owners, facetcount * 3);
