@@ -4911,6 +4911,44 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int 
 	}
 }
 
+#define WOMBAT_THRUST_PORTS 5
+
+struct wombat_thrust_entities {
+	struct entity *t[WOMBAT_THRUST_PORTS];
+};
+
+static void add_wombat_thrust_entities(struct entity_context *cx, struct entity *e,
+					struct wombat_thrust_entities *te)
+{
+	const float x_axis_offset = 2.75;
+	static const union vec3 thrust_pos[] = {
+		{ { -17.25, 1, 1 } },
+		{ { -16.5, 1, 5.5 } },
+		{ { -16.5, 1, -3.5 } },
+		{ { -13, 1, 10 } },
+		{ { -13, 1, -8 } } };
+
+	int i;
+	for (i = 0; i < WOMBAT_THRUST_PORTS; i++) {
+		struct entity *t = add_entity(cx, thrust_animation_mesh,
+			thrust_pos[i].v.x - x_axis_offset,
+			thrust_pos[i].v.y, thrust_pos[i].v.z, WHITE);
+		update_entity_material(t, MATERIAL_TEXTURED_PARTICLE, &thrust_material);
+		update_entity_orientation(t, &identity_quat);
+
+		update_entity_parent(t, e);
+		te->t[i] = t;
+	}
+}
+
+static void remove_wombat_thrust_entities(struct entity_context *cx, struct wombat_thrust_entities *te)
+{
+	int i;
+	for (i = 0; i < WOMBAT_THRUST_PORTS; i++)
+		remove_entity(cx, te->t[i]);
+
+}
+
 static void show_weapons_camera_view(GtkWidget *w)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
@@ -5002,9 +5040,13 @@ static void show_weapons_camera_view(GtkWidget *w)
 	update_entity_orientation(turret_entity, &camera_orientation);
 	set_render_style(turret_entity, RENDER_NORMAL);
 
+	struct wombat_thrust_entities te;
+	add_wombat_thrust_entities(ecx, o->entity, &te);
+
 	render_entities(w, gc, ecx);
 
 	/* Remove our ship from the scene */
+	remove_wombat_thrust_entities(ecx, &te);
 	remove_entity(ecx, turret_entity);
 	remove_entity(ecx, o->entity);
 	o->entity = NULL;
@@ -5101,6 +5143,7 @@ static void show_mainscreen(GtkWidget *w)
 
 	struct entity *player_ship = 0;
 	struct entity *player_ship_turret = 0;
+	struct wombat_thrust_entities te;
 
 	switch (camera_mode) {
 	case 0:
@@ -5133,6 +5176,8 @@ static void show_mainscreen(GtkWidget *w)
 			update_entity_orientation(player_ship_turret, &o->tsd.ship.weap_orientation);
 
 			update_entity_parent(player_ship_turret, player_ship);
+
+			add_wombat_thrust_entities(ecx, player_ship, &te);
 			break;
 		}
 	}
@@ -5156,10 +5201,11 @@ static void show_mainscreen(GtkWidget *w)
 	render_entities(w, gc, ecx);
 
 	/* if we added the ship into the scene, remove it now */
-	if (player_ship)
-		remove_entity(ecx, player_ship);
-	if (player_ship_turret)
+	if (player_ship) {
+		remove_wombat_thrust_entities(ecx, &te);
 		remove_entity(ecx, player_ship_turret);
+		remove_entity(ecx, player_ship);
+	}
 
 #if 0
 	/* Draw targeting indicator on main screen */
