@@ -157,7 +157,7 @@ static struct mesh *allocate_mesh_for_copy(int ntriangles, int nvertices, int nl
 		copy->l = malloc(sizeof(*copy->l) * nlines);
 		if (!copy->l)
 			goto bail;
-		memset(copy->l, 0, sizeof(*copy->l) * copy->nlines);
+		memset(copy->l, 0, sizeof(*copy->l) * nlines);
 	}
 	if (with_texture) {
 		copy->tex = malloc(sizeof(*copy->tex) * ntriangles * 3);
