@@ -61,6 +61,7 @@ static void clean_spaces(char *line)
 		s++;
 		d++;
 	}
+	*d = '\0';
 }
 
 static int parse_error(char *filename, char *line, int ln, char *bad_word)
