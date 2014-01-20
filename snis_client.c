@@ -5053,7 +5053,6 @@ static void show_mainscreen(GtkWidget *w)
 	struct snis_entity *o;
 	static union quat camera_orientation;
 	union quat desired_cam_orientation;
-	struct entity *e = NULL;
 	static union vec3 cam_pos;
 	union vec3 desired_cam_pos;
 
@@ -5092,6 +5091,9 @@ static void show_mainscreen(GtkWidget *w)
 		quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 	}
 
+	struct entity *player_ship = 0;
+	struct entity *player_ship_turret = 0;
+
 	switch (camera_mode) {
 	case 0:
 		cam_pos.v.x = o->x;
@@ -5115,10 +5117,14 @@ static void show_mainscreen(GtkWidget *w)
 				vec3_lerp(&cam_pos, &cam_pos, &desired_cam_pos, 0.15);
 
 			/* temporarily add ship into scene for camera mode 1 & 2 */
-			e = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
+			player_ship = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
 					o->x, o->y, o->z, SHIP_COLOR);
-			set_render_style(e, RENDER_NORMAL);
-			update_entity_orientation(e, &o->orientation);
+			update_entity_orientation(player_ship, &o->orientation);
+
+			player_ship_turret = add_entity(ecx, ship_turret_mesh, 0, 5.45, 0, SHIP_COLOR);
+			update_entity_orientation(player_ship_turret, &o->tsd.ship.weap_orientation);
+
+			update_entity_parent(player_ship_turret, player_ship);
 			break;
 		}
 	}
@@ -5142,8 +5148,10 @@ static void show_mainscreen(GtkWidget *w)
 	render_entities(w, gc, ecx);
 
 	/* if we added the ship into the scene, remove it now */
-	if (camera_mode == 1 || camera_mode == 2)
-		remove_entity(ecx, e);
+	if (player_ship)
+		remove_entity(ecx, player_ship);
+	if (player_ship_turret)
+		remove_entity(ecx, player_ship_turret);
 
 #if 0
 	/* Draw targeting indicator on main screen */
