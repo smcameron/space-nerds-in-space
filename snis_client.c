@@ -4945,9 +4945,15 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 
-	union vec3 cam_pos = { {0, 5.45, 0} };
-	quat_rot_vec_self(&cam_pos,&o->orientation);
-	vec3_add_c_self(&cam_pos, cx, cy, cz);
+	union vec3 turret_pos = { {0, 5.45, 0} };
+	quat_rot_vec_self(&turret_pos, &o->orientation);
+	vec3_add_c_self(&turret_pos, cx, cy, cz);
+
+	union vec3 view_offset = { {0, 0.75, 0} };
+	quat_rot_vec_self(&view_offset, &camera_orientation);
+
+	union vec3 cam_pos = turret_pos;
+	vec3_add_self(&cam_pos, &view_offset);
 
 	if (weapons_camera_shake > 0.05) {
 		float ryaw, rpitch;
@@ -4986,9 +4992,9 @@ static void show_weapons_camera_view(GtkWidget *w)
 	/* Add our turret into the mix */
 	quat_rot_vec_self(&recoil, &camera_orientation);
 	struct entity* turret_entity = add_entity(ecx, ship_turret_mesh,
-				cam_pos.v.x + turret_recoil_amount * recoil.v.x,
-				cam_pos.v.y + turret_recoil_amount * recoil.v.y,
-				cam_pos.v.z + turret_recoil_amount * recoil.v.z,
+				turret_pos.v.x + turret_recoil_amount * recoil.v.x,
+				turret_pos.v.y + turret_recoil_amount * recoil.v.y,
+				turret_pos.v.z + turret_recoil_amount * recoil.v.z,
 				SHIP_COLOR);
 	turret_recoil_amount = turret_recoil_amount * 0.5f;
 	update_entity_orientation(turret_entity, &camera_orientation);

@@ -7005,27 +7005,37 @@ static int process_request_manual_laser(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
 	union vec3 forwardvec = { { LASER_VELOCITY, 0.0f, 0.0f } };
-	union vec3 rightvec = { { 0.0f, 0.0f, 10.0f } };
-	union vec3 offset;
+	union vec3 turret_pos = { { 0.0f, 5.75f, 0.0f } };
+	union vec3 barrel_offset = { { 0.0f, 0.0f, 1.4f } };
 	union vec3 velocity;
 	union quat orientation;
 
 	pthread_mutex_lock(&universe_mutex);
 
 	/* Calculate which way weapons is pointed, and velocity of laser. */
+	quat_rot_vec_self(&turret_pos, &ship->orientation);
+
 	quat_mul(&orientation, &ship->orientation, &ship->tsd.ship.weap_orientation);
 	quat_rot_vec(&velocity, &forwardvec, &orientation);
-	quat_rot_vec(&offset, &rightvec, &orientation);
+	quat_rot_vec_self(&barrel_offset, &orientation);
 
 	/* Add ship velocity into laser velocity */
 	velocity.v.x += ship->vx;
 	velocity.v.y += ship->vy;
 	velocity.v.z += ship->vz;
 
-	add_laser(ship->x + offset.v.x, ship->y + offset.v.y, ship->z + offset.v.z,
+	union vec3 right_bolt = { { ship->x, ship->y, ship->z } };
+	vec3_add_self(&right_bolt, &turret_pos);
+	vec3_add_self(&right_bolt, &barrel_offset);
+
+	union vec3 left_bolt = { { ship->x, ship->y, ship->z } };
+	vec3_add_self(&left_bolt, &turret_pos);
+	vec3_sub_self(&left_bolt, &barrel_offset);
+
+	add_laser(right_bolt.v.x, right_bolt.v.y, right_bolt.v.z,
 			velocity.v.x, velocity.v.y, velocity.v.z,
 			&orientation, ship->id);
-	add_laser(ship->x - offset.v.x, ship->y - offset.v.y, ship->z - offset.v.z,
+	add_laser(left_bolt.v.x, left_bolt.v.y, left_bolt.v.z,
 			velocity.v.x, velocity.v.y, velocity.v.z,
 			&orientation, ship->id);
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
