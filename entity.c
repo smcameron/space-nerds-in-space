@@ -853,7 +853,7 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 		near_far[0][0] = cx->camera.near * 10000;
 		near_far[0][1] = cx->camera.far;
 		near_far[1][0] = cx->camera.near;
-		near_far[1][1] = cx->camera.near * 10000;
+		near_far[1][1] = cx->camera.near * 10010; /* render a little farther to cover seam */
 	}
 
 	int pass;
