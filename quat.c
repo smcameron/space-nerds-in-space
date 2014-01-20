@@ -206,6 +206,22 @@ void quat_mul(union quat *o, const union quat *q1, const union quat *q2)
 	o->v.w = -q1->v.x * q2->v.x - q1->v.y * q2->v.y - q1->v.z * q2->v.z + q1->v.w * q2->v.w;
 }
 
+/* q = q * qi */
+void quat_mul_self(union quat *q, const union quat *qi)
+{
+	union quat qo;
+	quat_mul(&qo, q, qi);
+	*q = qo;
+}
+
+/* q = qi * q */
+void quat_mul_self_right(const union quat *qi, union quat *q)
+{
+	union quat qo;
+	quat_mul(&qo, qi, q);
+	*q = qo;
+}
+
 void quat_add(union quat *o, const union quat *q1, const union quat *q2)
 {
 	/* see: http://www.euclideanspace.com/maths/algebra/

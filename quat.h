@@ -171,6 +171,12 @@ void quat_add_self(union quat *o, const union quat *q);
 /* o = q1 * q2 */
 void quat_mul(union quat *o, const union quat *q1, const union quat *q2);
 
+/* q = q * qi */
+void quat_mul_self(union quat *q, const union quat *qi);
+
+/* q = qi * q */
+void quat_mul_self_right(const union quat *qi, union quat *q);
+
 /* normalizes quaternion q and puts result into o */
 void quat_normalize(union quat *qo, const union quat *qi);
 
