@@ -99,6 +99,8 @@ typedef void (*npc_menu_func)(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_not_implemented(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sign_off(char *npcname, struct npc_bot_state *botstate);
 
+typedef void (*npc_special_bot_fn)(struct snis_entity *o, int bridge, char *name, char *msg);
+
 struct npc_menu_item {
 	char *name;
 	struct npc_menu_item *parent_menu;
@@ -110,6 +112,7 @@ struct npc_bot_state {
 	uint32_t object_id;
 	uint32_t channel;
 	struct npc_menu_item *current_menu;
+	npc_special_bot_fn special_bot; /* for special case interactions, non-standard menus, etc. */
 };
 
 static struct npc_menu_item arrange_transport_contracts_menu[] = {
@@ -5374,6 +5377,7 @@ static void meta_comms_channel(char *name, struct game_client *c, char *txt)
 		bridgelist[c->bridge].npcbot.channel = (uint32_t) -1;
 		bridgelist[c->bridge].npcbot.object_id = (uint32_t) -1;
 		bridgelist[c->bridge].npcbot.current_menu = NULL;
+		bridgelist[c->bridge].npcbot.special_bot = NULL;
 	}
 
 	sprintf(msg, "TX/RX INITIATED ON CHANNEL %u", newchannel);
@@ -5515,6 +5519,12 @@ static void send_to_npcbot(int bridge, char *name, char *msg)
 
 	o = &go[i];
 
+	/* if a special bot is active, use that instead. */
+	if (bridgelist[bridge].npcbot.special_bot) {
+		bridgelist[bridge].npcbot.special_bot(o, bridge, name, msg);
+		return;
+	}
+
 	switch (o->type) {
 	case OBJTYPE_STARBASE:
 		starbase_npc_bot(o, bridge, name, msg);
@@ -5634,6 +5644,7 @@ channels_maxxed:
 		bridgelist[c->bridge].npcbot.object_id = id;
 		bridgelist[c->bridge].npcbot.channel = channel[0];
 		bridgelist[c->bridge].npcbot.current_menu = starbase_main_menu;
+		bridgelist[c->bridge].npcbot.special_bot = NULL;
 		sprintf(msg, "TX/RX INITIATED ON CHANNEL %u", channel[0]);
 		send_comms_packet(name, channel[0], msg);
 		send_to_npcbot(c->bridge, name, msg);
