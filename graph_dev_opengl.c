@@ -52,6 +52,10 @@ struct mesh_gl_info {
 
 	int nlines;
 	/* uses vertex_buffer for data */
+
+	int nparticles;
+	GLuint particle_vertex_buffer;
+	GLuint particle_index_buffer;
 };
 
 struct vertex_buffer_data {
@@ -77,6 +81,14 @@ struct vertex_color_buffer_data {
 	GLubyte color[4];
 };
 
+struct vertex_particle_buffer_data {
+	GLubyte multi_one[4];
+	union vec3 start_position;
+	GLubyte start_tint_color[4];
+	union vec3 end_position;
+	GLubyte end_tint_color[4];
+};
+
 void mesh_graph_dev_cleanup(struct mesh *m)
 {
 	if (m->graph_ptr) {
@@ -86,6 +98,8 @@ void mesh_graph_dev_cleanup(struct mesh *m)
 		glDeleteBuffers(1, &ptr->triangle_vertex_buffer);
 		glDeleteBuffers(1, &ptr->wireframe_lines_vertex_buffer);
 		glDeleteBuffers(1, &ptr->triangle_normal_lines_buffer);
+		glDeleteBuffers(1, &ptr->particle_vertex_buffer);
+		glDeleteBuffers(1, &ptr->particle_index_buffer);
 
 		free(ptr);
 		m->graph_ptr = 0;
@@ -244,7 +258,7 @@ void mesh_graph_dev_init(struct mesh *m)
 		free(g_wfl_buffer_data);
 	}
 
-	if (m->geometry_mode == MESH_GEOMETRY_LINES) {
+	if (m->geometry_mode == MESH_GEOMETRY_LINES || m->geometry_mode == MESH_GEOMETRY_PARTICLE_ANIMATION) {
 		/* setup the line buffers */
 		int i;
 		size_t v_size = sizeof(struct vertex_buffer_data) * m->nvertices * 2;
@@ -322,6 +336,131 @@ void mesh_graph_dev_init(struct mesh *m)
 		glBufferData(GL_ARRAY_BUFFER, v_size, g_v_buffer_data, GL_STATIC_DRAW);
 
 		free(g_v_buffer_data);
+	}
+
+	if (m->geometry_mode == MESH_GEOMETRY_PARTICLE_ANIMATION) {
+		ptr->nparticles = m->nvertices / 2;
+
+		size_t v_size = sizeof(struct vertex_particle_buffer_data) * ptr->nparticles * 4;
+		struct vertex_particle_buffer_data *g_v_buffer_data = malloc(v_size);
+
+		size_t i_size = sizeof(GLushort) * ptr->nparticles * 6;
+		GLushort *g_i_buffer_data = malloc(i_size);
+
+		/* two triangles from four vertices
+		   V3 (0,1) +---+ V2 (1,1)
+			    +\  +
+			    + \ +
+			    +  \+
+		   V0 (0,0) +---+ V1 (1,0)
+		*/
+		int i;
+		for (i = 0; i < m->nvertices; i += 2) {
+			int v_index = i * 2;
+
+			GLubyte alpha = (int)(m->l[i / 2].alpha * 255) & 255;
+			GLubyte time_offset = (int)(m->l[i / 2].time_offset * 255) & 255;
+
+			/* texture coord is different for all four vertices */
+			g_v_buffer_data[v_index + 0].multi_one[0] = 0;
+			g_v_buffer_data[v_index + 0].multi_one[1] = 0;
+
+			g_v_buffer_data[v_index + 1].multi_one[0] = 255;
+			g_v_buffer_data[v_index + 1].multi_one[1] = 0;
+
+			g_v_buffer_data[v_index + 2].multi_one[0] = 255;
+			g_v_buffer_data[v_index + 2].multi_one[1] = 255;
+
+			g_v_buffer_data[v_index + 3].multi_one[0] = 0;
+			g_v_buffer_data[v_index + 3].multi_one[1] = 255;
+
+			g_v_buffer_data[v_index + 0].multi_one[2] =
+				g_v_buffer_data[v_index + 1].multi_one[2] =
+				g_v_buffer_data[v_index + 2].multi_one[2] =
+				g_v_buffer_data[v_index + 3].multi_one[2] = time_offset;
+
+			/* the rest of the attributes are the same for all four */
+			g_v_buffer_data[v_index + 0].start_position.v.x =
+				g_v_buffer_data[v_index + 1].start_position.v.x =
+				g_v_buffer_data[v_index + 2].start_position.v.x =
+				g_v_buffer_data[v_index + 3].start_position.v.x = m->v[i].x;
+			g_v_buffer_data[v_index + 0].start_position.v.y =
+				g_v_buffer_data[v_index + 1].start_position.v.y =
+				g_v_buffer_data[v_index + 2].start_position.v.y =
+				g_v_buffer_data[v_index + 3].start_position.v.y = m->v[i].y;
+			g_v_buffer_data[v_index + 0].start_position.v.z =
+				g_v_buffer_data[v_index + 1].start_position.v.z =
+				g_v_buffer_data[v_index + 2].start_position.v.z =
+				g_v_buffer_data[v_index + 3].start_position.v.z = m->v[i].z;
+
+			g_v_buffer_data[v_index + 0].start_tint_color[0] =
+				g_v_buffer_data[v_index + 1].start_tint_color[0] =
+				g_v_buffer_data[v_index + 2].start_tint_color[0] =
+				g_v_buffer_data[v_index + 3].start_tint_color[0] = alpha;
+
+			g_v_buffer_data[v_index + 0].start_tint_color[1] =
+				g_v_buffer_data[v_index + 1].start_tint_color[1] =
+				g_v_buffer_data[v_index + 2].start_tint_color[1] =
+				g_v_buffer_data[v_index + 3].start_tint_color[1] = alpha;
+			g_v_buffer_data[v_index + 0].start_tint_color[2] =
+				g_v_buffer_data[v_index + 1].start_tint_color[2] =
+				g_v_buffer_data[v_index + 2].start_tint_color[2] =
+				g_v_buffer_data[v_index + 3].start_tint_color[2] = alpha;
+			g_v_buffer_data[v_index + 0].start_tint_color[3] =
+				g_v_buffer_data[v_index + 1].start_tint_color[3] =
+				g_v_buffer_data[v_index + 2].start_tint_color[3] =
+				g_v_buffer_data[v_index + 3].start_tint_color[3] = 255;
+
+			g_v_buffer_data[v_index + 0].end_position.v.x =
+				g_v_buffer_data[v_index + 1].end_position.v.x =
+				g_v_buffer_data[v_index + 2].end_position.v.x =
+				g_v_buffer_data[v_index + 3].end_position.v.x = m->v[i + 1].x;
+			g_v_buffer_data[v_index + 0].end_position.v.y =
+				g_v_buffer_data[v_index + 1].end_position.v.y =
+				g_v_buffer_data[v_index + 2].end_position.v.y =
+				g_v_buffer_data[v_index + 3].end_position.v.y = m->v[i + 1].y;
+			g_v_buffer_data[v_index + 0].end_position.v.z =
+				g_v_buffer_data[v_index + 1].end_position.v.z =
+				g_v_buffer_data[v_index + 2].end_position.v.z =
+				g_v_buffer_data[v_index + 3].end_position.v.z = m->v[i + 1].z;
+
+			g_v_buffer_data[v_index + 0].end_tint_color[0] =
+				g_v_buffer_data[v_index + 1].end_tint_color[0] =
+				g_v_buffer_data[v_index + 2].end_tint_color[0] =
+				g_v_buffer_data[v_index + 3].end_tint_color[0] = alpha;
+			g_v_buffer_data[v_index + 0].end_tint_color[1] =
+				g_v_buffer_data[v_index + 1].end_tint_color[1] =
+				g_v_buffer_data[v_index + 2].end_tint_color[1] =
+				g_v_buffer_data[v_index + 3].end_tint_color[1] = alpha;
+			g_v_buffer_data[v_index + 0].end_tint_color[2] =
+				g_v_buffer_data[v_index + 1].end_tint_color[2] =
+				g_v_buffer_data[v_index + 2].end_tint_color[2] =
+				g_v_buffer_data[v_index + 3].end_tint_color[2] = alpha;
+			g_v_buffer_data[v_index + 0].end_tint_color[3] =
+				g_v_buffer_data[v_index + 1].end_tint_color[3] =
+				g_v_buffer_data[v_index + 2].end_tint_color[3] =
+				g_v_buffer_data[v_index + 3].end_tint_color[3] = 255;
+
+			/* setup six indices for our two triangles */
+			int i_index = i * 3;
+			g_i_buffer_data[i_index + 0] = v_index + 0;
+			g_i_buffer_data[i_index + 1] = v_index + 1;
+			g_i_buffer_data[i_index + 2] = v_index + 3;
+			g_i_buffer_data[i_index + 3] = v_index + 1;
+			g_i_buffer_data[i_index + 4] = v_index + 2;
+			g_i_buffer_data[i_index + 5] = v_index + 3;
+		}
+
+		glGenBuffers(1, &ptr->particle_vertex_buffer);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer);
+		glBufferData(GL_ARRAY_BUFFER, v_size, g_v_buffer_data, GL_STATIC_DRAW);
+
+		glGenBuffers(1, &ptr->particle_index_buffer);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ptr->particle_index_buffer);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, i_size, g_i_buffer_data, GL_STATIC_DRAW);
+
+		free(g_v_buffer_data);
+		free(g_i_buffer_data);
 	}
 
 	m->graph_ptr = ptr;
@@ -441,6 +580,21 @@ struct graph_dev_gl_textured_cubemap_lit_shader {
 	GLuint texture_id; /* param to vertex shader */
 };
 
+struct graph_dev_gl_textured_particle_shader {
+	GLuint program_id;
+	GLuint mvp_matrix_id;
+	GLuint camera_up_vec_id;
+	GLuint camera_right_vec_id;
+	GLuint time_id;
+	GLuint radius_id;
+	GLuint multi_one_id;
+	GLuint start_position_id;
+	GLuint start_tint_color_id;
+	GLuint end_position_id;
+	GLuint end_tint_color_id;
+	GLuint texture_id; /* param to vertex shader */
+};
+
 /* store all the shader parameters */
 static struct graph_dev_gl_single_color_lit_shader single_color_lit_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_shader;
@@ -453,6 +607,7 @@ static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
 static struct graph_dev_gl_textured_shader textured_shader;
 static struct graph_dev_gl_textured_lit_shader textured_lit_shader;
 static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_shader;
+static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
 
 #define BUFFERED_VERTICES_2D 2000
 #define VERTEX_BUFFER_2D_SIZE (BUFFERED_VERTICES_2D*sizeof(struct vertex_color_buffer_data))
@@ -1331,13 +1486,152 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 }
 
+extern double time_now_double();
+
+static void graph_dev_raster_particle_animation(const struct entity_context *cx, struct entity *e,
+	const struct mat44 *mat_mvp, const struct mat33 *mat_normal, GLuint texture_number,
+	float particle_radius, float time_base)
+{
+	enable_3d_viewport();
+
+	if (!e->m->graph_ptr)
+		return;
+
+	struct mesh_gl_info *ptr = e->m->graph_ptr;
+
+	/* enable depth test but don't write to depth buffer */
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glDepthMask(GL_FALSE);
+
+	if (draw_polygon_as_lines)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE);
+
+	glUseProgram(textured_particle_shader.program_id);
+
+	glUniformMatrix4fv(textured_particle_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+
+	struct mat33 mat_view_to_model;
+	mat33_transpose(mat_normal, &mat_view_to_model);
+
+	union vec3 camera_up_view = { { 0, 1, 0 } };
+	union vec3 camera_up_model;
+	mat33_x_vec3(&mat_view_to_model, &camera_up_view, &camera_up_model);
+
+	union vec3 camera_right_view = { { 1, 0, 0 } };
+	union vec3 camera_right_model;
+	mat33_x_vec3(&mat_view_to_model, &camera_right_view, &camera_right_model);
+
+	glUniform3f(textured_particle_shader.camera_up_vec_id, camera_up_model.v.x, camera_up_model.v.y,
+		camera_up_model.v.z);
+	glUniform3f(textured_particle_shader.camera_right_vec_id, camera_right_model.v.x, camera_right_model.v.y,
+		camera_right_model.v.z);
+
+	double time_now = time_now_double();
+	double fmoded_time = fmod(time_now, time_base);
+	float anim_time = fmoded_time / time_base;
+	glUniform1f(textured_particle_shader.time_id, anim_time);
+
+	glUniform1f(textured_particle_shader.radius_id, particle_radius);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture_number);
+	glUniform1i(textured_particle_shader.texture_id, 0);
+
+	glEnableVertexAttribArray(textured_particle_shader.multi_one_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer);
+	glVertexAttribPointer(
+		textured_particle_shader.multi_one_id, /* The attribute we want to configure */
+		4,                           /* size */
+		GL_UNSIGNED_BYTE,            /* type */
+		GL_TRUE,                     /* normalized? */
+		sizeof(struct vertex_particle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_particle_buffer_data, multi_one) /* array buffer offset */
+	);
+
+	glEnableVertexAttribArray(textured_particle_shader.start_position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer);
+	glVertexAttribPointer(
+		textured_particle_shader.start_position_id, /* The attribute we want to configure */
+		3,                           /* size */
+		GL_FLOAT,                    /* type */
+		GL_FALSE,                    /* normalized? */
+		sizeof(struct vertex_particle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_particle_buffer_data, start_position.v.x) /* array buffer offset */
+	);
+
+	glEnableVertexAttribArray(textured_particle_shader.start_tint_color_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer);
+	glVertexAttribPointer(
+		textured_particle_shader.start_tint_color_id, /* The attribute we want to configure */
+		4,                           /* size */
+		GL_UNSIGNED_BYTE,            /* type */
+		GL_TRUE,                     /* normalized? */
+		sizeof(struct vertex_particle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_particle_buffer_data, start_tint_color) /* array buffer offset */
+	);
+
+	glEnableVertexAttribArray(textured_particle_shader.end_position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer);
+	glVertexAttribPointer(
+		textured_particle_shader.end_position_id, /* The attribute we want to configure */
+		3,                           /* size */
+		GL_FLOAT,                    /* type */
+		GL_FALSE,                    /* normalized? */
+		sizeof(struct vertex_particle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_particle_buffer_data, end_position.v.x) /* array buffer offset */
+	);
+
+	glEnableVertexAttribArray(textured_particle_shader.end_tint_color_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer);
+	glVertexAttribPointer(
+		textured_particle_shader.end_tint_color_id, /* The attribute we want to configure */
+		4,                           /* size */
+		GL_UNSIGNED_BYTE,            /* type */
+		GL_TRUE,                     /* normalized? */
+		sizeof(struct vertex_particle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_particle_buffer_data, end_tint_color) /* array buffer offset */
+	);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ptr->particle_index_buffer);
+	glDrawElements(GL_TRIANGLES, ptr->nparticles * 6, GL_UNSIGNED_SHORT, NULL);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	glDisableVertexAttribArray(textured_particle_shader.multi_one_id);
+	glDisableVertexAttribArray(textured_particle_shader.start_position_id);
+	glDisableVertexAttribArray(textured_particle_shader.start_tint_color_id);
+	glDisableVertexAttribArray(textured_particle_shader.end_position_id);
+	glDisableVertexAttribArray(textured_particle_shader.end_tint_color_id);
+	glUseProgram(0);
+
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	if (draw_polygon_as_lines)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_BLEND);
+
+	if (draw_billboard_wireframe) {
+		struct sng_color white = sng_get_color(WHITE);
+		graph_dev_raster_line_mesh(e, mat_mvp, e->m, &white);
+
+		struct sng_color red = sng_get_color(RED);
+		graph_dev_raster_point_cloud_mesh(mat_mvp, e->m, &red, 3.0);
+	}
+}
+
 extern int graph_dev_entity_render_order(struct entity_context *cx, struct entity *e)
 {
 	switch (e->material_type) {
-		case MATERIAL_NEBULA:
-                case MATERIAL_TEXTURE_MAPPED:
-                case MATERIAL_TEXTURE_MAPPED_UNLIT:
-                case MATERIAL_BILLBOARD:
+	case MATERIAL_NEBULA:
+	case MATERIAL_TEXTURE_MAPPED:
+	case MATERIAL_TEXTURE_MAPPED_UNLIT:
+	case MATERIAL_BILLBOARD:
+	case MATERIAL_TEXTURED_PARTICLE:
 			return GRAPH_DEV_RENDER_FAR_TO_NEAR;
 	}
 	return GRAPH_DEV_RENDER_NEAR_TO_FAR;
@@ -1457,6 +1751,15 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 	case MESH_GEOMETRY_POINTS:
 		graph_dev_raster_point_cloud_mesh(mat_mvp, e->m, &line_color, 1.0);
+		break;
+
+	case MESH_GEOMETRY_PARTICLE_ANIMATION:
+		if (e->material_type == MATERIAL_TEXTURED_PARTICLE) {
+			struct material_textured_particle *mt = e->material_ptr;
+
+			graph_dev_raster_particle_animation(cx, e, mat_mvp, mat_normal, mt->texture_id, mt->radius,
+				mt->time_base);
+		}
 		break;
 	}
 }
@@ -1824,6 +2127,27 @@ static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 	shader->texture_loaded = 0;
 }
 
+static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle_shader *shader)
+{
+	/* Create and compile our GLSL program from the shaders */
+	shader->program_id = load_shaders("share/snis/shader/textured-particle.vert",
+		"share/snis/shader/textured-particle.frag");
+
+	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
+	shader->camera_up_vec_id = glGetUniformLocation(shader->program_id, "u_CameraUpVec");
+	shader->camera_right_vec_id = glGetUniformLocation(shader->program_id, "u_CameraRightVec");
+	shader->time_id = glGetUniformLocation(shader->program_id, "u_Time");
+	shader->radius_id = glGetUniformLocation(shader->program_id, "u_Radius");
+	shader->texture_id = glGetUniformLocation(shader->program_id, "u_Texture");
+
+	shader->multi_one_id = glGetAttribLocation(shader->program_id, "a_MultiOne");
+	shader->start_position_id = glGetAttribLocation(shader->program_id, "a_StartPosition");
+	shader->start_tint_color_id = glGetAttribLocation(shader->program_id, "a_StartTintColor");
+	shader->end_position_id = glGetAttribLocation(shader->program_id, "a_EndPosition");
+	shader->end_tint_color_id = glGetAttribLocation(shader->program_id, "a_EndTintColor");
+}
+
+
 static void setup_2d()
 {
 	glGenBuffers(1, &sgc.vertex_buffer_2d);
@@ -1857,6 +2181,7 @@ int graph_dev_setup()
 	setup_textured_shader(&textured_shader);
 	setup_textured_lit_shader(&textured_lit_shader);
 	setup_textured_cubemap_lit_shader(&textured_cubemap_lit_shader);
+	setup_textured_particle_shader(&textured_particle_shader);
 
 	/* after all the shaders are loaded */
 	setup_2d();
