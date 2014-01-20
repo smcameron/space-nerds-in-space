@@ -68,6 +68,16 @@ struct mat44d *mat33_to_mat44_dd(const struct mat33d *src, struct mat44d *output
 	return output;
 }
 
+struct mat33 *mat33_transpose(const struct mat33 *src, struct mat33 *output)
+{
+	int i, j;
+
+	for (i = 0; i < 3; i++)
+		for (j = 0; j < 3; j++)
+			output->m[i][j] = src->m[j][i];
+	return output;
+}
+
 struct mat33d *mat33_transpose_dd(const struct mat33d *src, struct mat33d *output)
 {
 	int i, j;
