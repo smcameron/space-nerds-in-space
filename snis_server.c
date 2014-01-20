@@ -5599,22 +5599,6 @@ static void send_to_npcbot(int bridge, char *name, char *msg)
 	return;
 }
 
-static void uppercase(char *x)
-{
-	char *i;
-
-	for (i = x; *i; i++)
-		*i = toupper(*i);
-}
-
-static void lowercase(char *x)
-{
-	char *i;
-
-	for (i = x; *i; i++)
-		*i = tolower(*i);
-}
-
 static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 {
 #define MAX_SHIPS_HAILABLE 10
@@ -5628,8 +5612,6 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 	uint32_t id = (uint32_t) -1;
 
 	duptxt = strdup(txt);
-	uppercase(duptxt);
-	printf("meta comms hail %u,%s\n", bridgelist[c->bridge].comms_channel, txt);
 
 	x = strtok(duptxt, " ,");
 	i = 0;
@@ -5644,13 +5626,9 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < nnames; i++) {
 		for (j = 0; j < nbridges; j++) {
-			char *shipname;
-			shipname = strdup((char *) bridgelist[j].shipname);
-			uppercase(shipname);
-			if (strcmp(shipname, (const char *) namelist[i]) == 0) {
+			char *shipname = (char *) bridgelist[j].shipname;
+			if (strcasecmp(shipname, (const char *) namelist[i]) == 0) {
 				int found = 0;
-				free(shipname);
-				shipname = NULL;
 
 				for (k = 0; k < nchannels; k++)
 					if (bridgelist[j].comms_channel == channel[k]) {
@@ -5663,9 +5641,6 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 					if (nchannels >= MAX_SHIPS_HAILABLE)
 						goto channels_maxxed;
 				}
-			} else {
-				free(shipname);
-				shipname = NULL;
 			}
 		}
 	}
@@ -5673,21 +5648,14 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 	/* check for starbases being hailed */
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
-		char *sbname;
+		char *sbname = o->tsd.starbase.name;
 
 		if (o->type != OBJTYPE_STARBASE)
 			continue;
 
-		sbname = strdup(o->tsd.starbase.name);
-		uppercase(name);
 		for (j = 0; j < nnames; j++) {
-			if (strcmp(sbname, namelist[j]) != 0) {
-				free(sbname);
-				sbname = NULL;
+			if (strcasecmp(sbname, namelist[j]) != 0)
 				continue;
-			}
-			free(sbname);
-			sbname = NULL;
 			nchannels = 1;
 			channel[0] = find_free_channel();
 			switch_channel = 1;
@@ -5738,20 +5706,15 @@ static const struct meta_comms_data {
 static void process_meta_comms_packet(char *name, struct game_client *c, char *txt)
 {
 	int i;
-	char *cmd;
 
-	cmd = strdup(txt);
-	lowercase(cmd);
 	for (i = 0; i < ARRAY_SIZE(meta_comms); i++) {
 		int len = strlen(meta_comms[i].command);
-		if (strncmp(cmd, meta_comms[i].command, len) == 0)  {
+		if (strncasecmp(txt, meta_comms[i].command, len) == 0)  {
 			meta_comms[i].f(name, c, txt);
-			free(cmd);
 			return;
 		}
 	}
 	meta_comms_error(name, c, txt);
-	free(cmd);
 }
 
 static int process_comms_transmission(struct game_client *c, int use_real_name)
