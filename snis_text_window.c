@@ -81,7 +81,7 @@ struct text_window *text_window_init(int x, int y, int w,
 	tw->last_entry = 0;
 	tw->top_line = 0;
 	tw->h = tw->lineheight * tw->visible_lines + 10;
-	tw->font = TINY_FONT;
+	tw->font = NANO_FONT;
 	tw->print_slowly = 1;
 	tw->printing_pos = 0;
 	return tw;
