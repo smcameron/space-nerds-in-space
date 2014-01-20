@@ -5290,6 +5290,27 @@ static void interpret_comms_packet(struct game_client *c, char *txt)
 
 typedef void (*meta_comms_func)(char *name, struct game_client *c, char *txt);
 
+static void meta_comms_help(char *name, struct game_client *c, char *txt)
+{
+	int i;
+	const char *hlptxt[] = {
+		"COMMUNICATIONS",
+		"  CONTROLS",
+		"  * ZOOM CONTROLS MAIN SCREEN ZOOM",
+		"  * RED ALERT SOUNDS RED ALERT ALARM",
+		"  * TOP ROW OF BUTTONS CONTROLS MAIN SCREEN",
+		"  COMMANDS",
+		"  * COMMANDS ARE PRECEDED BY FORWARD SLASH ->  /",
+		"  * /help",
+		"  * /channel channel-number - change current channel",
+		"  * /hail ship-name - hail ship or starbase on current channel",
+		"",
+		0,
+	};
+	for (i = 0; hlptxt[i]; i++)
+		send_comms_packet("", bridgelist[c->bridge].comms_channel, hlptxt[i]);
+}
+
 static void meta_comms_channel(char *name, struct game_client *c, char *txt)
 {
 	int rc;
@@ -5376,6 +5397,7 @@ static const struct meta_comms_data {
 } meta_comms[] = {
 	{ "/channel", meta_comms_channel },
 	{ "/hail", meta_comms_hail },
+	{ "/help", meta_comms_help },
 };
 
 static void process_meta_comms_packet(char *name, struct game_client *c, char *txt)
