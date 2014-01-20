@@ -3773,6 +3773,16 @@ static int add_asteroid(double x, double y, double z, double vx, double vz, doub
 	return i;
 }
 
+static int mkt_item_already_present(struct marketplace_data *mkt, int nitems, int item)
+{
+	int i;
+
+	for (i = 0; i < nitems; i++)
+		if (mkt[i].item == item)
+			return 1;
+	return 0;
+}
+
 static void init_starbase_market(struct snis_entity *o)
 {
 	int i;
@@ -3786,7 +3796,11 @@ static void init_starbase_market(struct snis_entity *o)
 	if (!mkt)
 		return;
 	for (i = 0; i < COMMODITIES_PER_BASE; i++) {
-		mkt[i].item = snis_randn(ncommodities);
+		int item;
+		do {
+			item = snis_randn(ncommodities);
+		} while (mkt_item_already_present(mkt, i, item)); 
+		mkt[i].item = item;
 		mkt[i].qty = snis_randn(100); /* TODO: something better */
 		mkt[i].refill_rate = (float) snis_randn(1000) / 1000.0; /* TODO: something better */
 	}
