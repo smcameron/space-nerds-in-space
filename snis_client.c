@@ -302,6 +302,7 @@ struct mesh *wombat_mesh;
 struct mesh *cargo_container_mesh;
 struct mesh *nebula_mesh;
 struct mesh *sun_mesh;
+struct mesh *thrust_animation_mesh;
 
 struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
@@ -319,6 +320,7 @@ static struct material_texture_cubemap asteroid_material[NASTEROID_TEXTURES];
 static struct material_texture_mapped_unlit wormhole_material;
 #define NPLANETARY_RING_MATERIALS 2
 static struct material_texture_mapped_unlit planetary_ring_material[NPLANETARY_RING_MATERIALS];
+static struct material_textured_particle thrust_material;
 #ifdef WITHOUTOPENGL
 const int wormhole_render_style = RENDER_SPARKLE;
 #else
@@ -11838,6 +11840,10 @@ static void load_textures(void)
 	wormhole_material.tint = sng_get_color(MAGENTA);
 	wormhole_material.alpha = 0.5;
 
+	thrust_material.texture_id = load_texture("thrust.png");
+	thrust_material.radius = 1.5;
+	thrust_material.time_base = 0.1;
+
 	textures_loaded = 1;
 }
 
@@ -12321,6 +12327,7 @@ static void init_meshes()
 	cargo_container_mesh = snis_read_stl_file(d, "cargocontainer.stl");
 	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
 	sun_mesh = mesh_fabricate_billboard(0, 0, 5000, 5000);
+	thrust_animation_mesh = init_thrust_mesh(10, 7, 3, 1);
 
 	/* Note: these must match defines of SHIPTYPEs in snis.h */
 	ship_mesh_map[0] = cruiser_mesh;
