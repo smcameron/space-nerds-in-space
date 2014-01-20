@@ -8365,7 +8365,7 @@ static int add_new_player(struct game_client *c)
 		strcpy((char *) bridgelist[nbridges].shipname, (const char *) app.shipname);
 		strcpy((char *) bridgelist[nbridges].password, (const char *) app.password);
 		bridgelist[nbridges].shipid = c->shipid;
-		bridgelist[nbridges].comms_channel = 0; /* broadcast channel */
+		bridgelist[nbridges].comms_channel = c->shipid;
 		bridgelist[nbridges].npcbot.channel = (uint32_t) -1;
 		bridgelist[nbridges].npcbot.object_id = (uint32_t) -1;
 		c->bridge = nbridges;
