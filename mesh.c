@@ -1103,3 +1103,127 @@ bail:
 	return NULL;
 }
 
+static void __attribute__((unused)) uniform_random_point_in_spehere(float r, float *x, float *y)
+{
+	float a = M_PI * snis_random_float();
+	r = r * sqrt(fabs(snis_random_float()));
+	*x = r * cos(a);
+	*y = r * sin(a);
+}
+
+struct particle {
+	float lifetime;
+	float decay;
+	float xpos, ypos, zpos;
+	float xspeed, yspeed, zspeed;
+	int active;
+	float offset;
+};
+
+static void create_particle(float h, float r1, struct particle *particles, int i)
+{
+	particles[i].offset = fabs(snis_random_float());
+	particles[i].lifetime = fabs(snis_random_float());
+	particles[i].decay = 0.1;
+
+	particles[i].xpos = 0.0;
+	particles[i].ypos = 0.0;
+	particles[i].zpos = 0.0;
+
+	/* uniform_random_point_in_spehere(r1 * 0.1, &particles[i].yspeed, &particles[i].zspeed); */
+	particles[i].xspeed = -fabs(snis_random_float()) * h * 0.1;
+	particles[i].yspeed = 0;
+	particles[i].zspeed = 0;
+
+	particles[i].active = 1;
+}
+
+static void evolve_particle(float h, struct particle *particles, int i)
+{
+	particles[i].lifetime -= particles[i].decay;
+	particles[i].xpos += particles[i].xspeed;
+	particles[i].ypos += particles[i].yspeed;
+	particles[i].zpos += particles[i].zspeed;
+	/* particles[i].yspeed -= fabs(snis_random_float()) * h * 0.2; */
+	/* particles[i].zspeed -= fabs(snis_random_float()) * h * 0.2; */
+}
+
+
+struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2)
+{
+	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
+
+	my_mesh->geometry_mode = MESH_GEOMETRY_PARTICLE_ANIMATION;
+
+	my_mesh->nlines = streaks * 50;
+	my_mesh->nvertices = my_mesh->nlines * 2;
+	my_mesh->ntriangles = 0;
+	my_mesh->t = 0;
+	my_mesh->v = malloc(sizeof(*my_mesh->v) * my_mesh->nvertices);
+	my_mesh->l = malloc(sizeof(*my_mesh->l) * my_mesh->nlines);
+	my_mesh->tex = 0;
+	my_mesh->radius = h;
+	my_mesh->graph_ptr = 0;
+
+	int maxparticle = streaks;
+	struct particle particles[maxparticle];
+	int i;
+	for (i = 0; i < maxparticle; i++)
+		create_particle(h, r1, particles, i);
+
+	int line_index = 0;
+
+	while (1) {
+		int one_is_active = 0;
+		for (i = 0; i < maxparticle; i++) {
+			if (!particles[i].active)
+				continue;
+
+			float x1 = particles[i].xpos;
+			float y1 = particles[i].ypos;
+			float z1 = particles[i].zpos;
+
+			evolve_particle(h, particles, i);
+
+			if (particles[i].lifetime < 0) {
+				particles[i].active = 0;
+				continue;
+			}
+
+			one_is_active = 1;
+			float x2 = particles[i].xpos;
+			float y2 = particles[i].ypos;
+			float z2 = particles[i].zpos;
+
+			int v_index = line_index * 2;
+			my_mesh->v[v_index + 0].x = x1;
+			my_mesh->v[v_index + 0].y = y1;
+			my_mesh->v[v_index + 0].z = z1;
+			my_mesh->v[v_index + 1].x = x2;
+			my_mesh->v[v_index + 1].y = y2;
+			my_mesh->v[v_index + 1].z = z2;
+
+			my_mesh->l[line_index].start = &my_mesh->v[v_index + 0];
+			my_mesh->l[line_index].end = &my_mesh->v[v_index + 1];
+			my_mesh->l[line_index].flag = 0;
+			my_mesh->l[line_index].alpha = particles[i].lifetime;
+			my_mesh->l[line_index].time_offset = particles[i].offset;
+
+			line_index++;
+			if (line_index >= my_mesh->nlines) {
+				one_is_active = 0;
+				break;
+			}
+		}
+		if (!one_is_active)
+			break;
+	}
+
+	my_mesh->nlines = line_index;
+	my_mesh->nvertices = line_index * 2;
+
+	struct mesh *optimized_mesh = mesh_duplicate(my_mesh);
+	mesh_free(my_mesh);
+
+	return optimized_mesh;
+}
