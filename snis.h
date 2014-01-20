@@ -213,6 +213,11 @@ struct ai_stack_entry {
 	union ai_data u;
 };
 
+struct cargo_container_contents {
+	int item;
+	float qty;
+};
+
 struct ship_data {
 	uint32_t torpedoes;
 #define TORPEDO_LIFETIME 40
@@ -346,6 +351,9 @@ struct ship_data {
 	uint8_t overheating_damage_done;
 	union vec3 steering_adjustment;
 	float braking_factor;
+#define MAX_CARGO_BAYS_PER_SHIP 8
+	struct cargo_container_contents cargo[MAX_CARGO_BAYS_PER_SHIP];
+	int ncargo_bays;
 };
 
 struct marketplace_data {
@@ -399,6 +407,7 @@ struct asteroid_data {
 
 struct cargo_container_data {
 	union quat rotational_velocity;
+	struct cargo_container_contents contents;
 };
 
 struct derelict_data {

@@ -3517,6 +3517,11 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.reverse = 0;
 	o->tsd.ship.shiptype = SHIP_CLASS_WOMBAT; 
 	o->tsd.ship.overheating_damage_done = 0;
+	o->tsd.ship.ncargo_bays = 2;
+	o->tsd.ship.cargo[0].item = -1;
+	o->tsd.ship.cargo[0].qty = 0.0f;
+	o->tsd.ship.cargo[1].item = -1;
+	o->tsd.ship.cargo[1].qty = 0.0f;
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
@@ -3582,6 +3587,8 @@ static int add_ship(void)
 	go[i].tsd.ship.steering_adjustment.v.x = 0.0;
 	go[i].tsd.ship.steering_adjustment.v.y = 0.0;
 	go[i].tsd.ship.steering_adjustment.v.z = 0.0;
+	go[i].tsd.ship.ncargo_bays = 0;
+	memset(go[i].tsd.ship.cargo, 0, sizeof(go[i].tsd.ship.cargo));
 	return i;
 }
 
@@ -3754,6 +3761,9 @@ static int add_cargo_container(double x, double y, double z, double vx, double v
 	go[i].sdata.shield_depth = 0;
 	go[i].move = cargo_container_move;
 	go[i].alive = snis_randn(5) + 3;
+	/* TODO: something better for container contents */
+	go[i].tsd.cargo_container.contents.item = snis_randn(ncommodities);
+	go[i].tsd.cargo_container.contents.qty = (float) snis_randn(100);
 	return i;
 }
 
@@ -5368,11 +5378,54 @@ static void meta_comms_help(char *name, struct game_client *c, char *txt)
 		"  * /help",
 		"  * /channel channel-number - change current channel",
 		"  * /hail ship-name - hail ship or starbase on current channel",
+		"  * /inventory - report inventory of ship's cargo hold",
 		"",
 		0,
 	};
 	for (i = 0; hlptxt[i]; i++)
 		send_comms_packet("", bridgelist[c->bridge].comms_channel, hlptxt[i]);
+}
+
+static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
+{
+	int i;
+	int ch = bridgelist[c->bridge].comms_channel;
+	struct snis_entity *ship;
+
+	i = lookup_by_id(bridgelist[c->bridge].shipid);
+	if (i < 0) {
+		printf("Non fatal error in %s at %s:%d\n",
+			__func__, __FILE__, __LINE__);
+		return;
+	}
+	ship = &go[i];
+
+	/* FIXME: sending this on current channel -- should make it private to ship somehow */
+	send_comms_packet(name, ch, " INVENTORY OF HOLD:");
+	send_comms_packet(name, ch, " --------------------------------------");
+	if (ship->tsd.ship.ncargo_bays == 0) {
+		send_comms_packet(name, ch, "   SHIP HAS ZERO CARGO BAYS.");
+		send_comms_packet(name, ch, " --------------------------------------");
+		return;
+	}
+	for (i = 0; i < ship->tsd.ship.ncargo_bays; i++) {
+		char *itemname, *unit;
+		char msg[100];
+		struct cargo_container_contents *ccc = &ship->tsd.ship.cargo[i];
+		float qty;
+
+		if (ccc->item == -1) {
+			sprintf(msg, "    CARGO BAY %d: ** EMPTY **", i);
+			send_comms_packet("", ch, msg);
+		} else {
+			itemname = commodity[ccc->item].name;
+			unit = commodity[ccc->item].unit;
+			qty = ccc->qty;
+			sprintf(msg, "    CARGO BAY %d: %4.0f %s %s", i, qty, unit, itemname);
+			send_comms_packet("", ch, msg);
+		}
+	}
+	send_comms_packet(name, ch, " --------------------------------------");
 }
 
 static void meta_comms_channel(char *name, struct game_client *c, char *txt)
@@ -5776,6 +5829,7 @@ static const struct meta_comms_data {
 } meta_comms[] = {
 	{ "/channel", meta_comms_channel },
 	{ "/hail", meta_comms_hail },
+	{ "/inventory", meta_comms_inventory },
 	{ "/help", meta_comms_help },
 };
 
