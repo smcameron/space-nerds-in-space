@@ -209,6 +209,9 @@ static void copy_mesh_contents(struct mesh *copy, struct mesh *original)
 
 		copy->l[i].start = &copy->v[v0];
 		copy->l[i].end = &copy->v[v1];
+		copy->l[i].flag = original->l[i].flag;
+		copy->l[i].alpha = original->l[i].alpha;
+		copy->l[i].time_offset = original->l[i].time_offset;
 	}
 	if (original->tex)
 		memcpy(copy->tex, original->tex, sizeof(*copy->tex) * original->ntriangles * 3);

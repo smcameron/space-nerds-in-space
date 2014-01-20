@@ -30,6 +30,7 @@
 #define MESH_GEOMETRY_TRIANGLES 0
 #define MESH_GEOMETRY_LINES 1
 #define MESH_GEOMETRY_POINTS 2
+#define MESH_GEOMETRY_PARTICLE_ANIMATION 3
 
 #define MESH_LINE_STRIP (1<<1)
 #define MESH_LINE_DOTTED (1<<2)
@@ -41,6 +42,8 @@ struct mesh_line
 	struct vertex *start;
 	struct vertex *end;
 	int flag;
+	float alpha;
+	float time_offset;
 };
 
 struct texture_coord {
