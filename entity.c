@@ -64,14 +64,19 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].x = x;
 	cx->entity_list[n].y = y;
 	cx->entity_list[n].z = z;
+	vec3_init(&cx->entity_list[n].e_pos, x, y, z);
 	cx->entity_list[n].scale = 1.0;
+	cx->entity_list[n].e_scale = 1.0;
 	cx->entity_list[n].color = color;
 	cx->entity_list[n].render_style = RENDER_NORMAL;
 	cx->entity_list[n].user_data = NULL;
 	cx->entity_list[n].shadecolor = 0;
-	quat_init_axis(&cx->entity_list[n].orientation, 0, 1, 0, 0);
+	cx->entity_list[n].orientation = identity_quat;
+	cx->entity_list[n].e_orientation = identity_quat;
 	cx->entity_list[n].material_type = 0;
 	cx->entity_list[n].material_ptr = 0;
+	cx->entity_list[n].parent = 0;
+	cx->entity_list[n].child_count = 0;
 
 	return &cx->entity_list[n];
 }
@@ -82,6 +87,9 @@ void remove_entity(struct entity_context *cx, struct entity *e)
 
 	if (!e)
 		return;
+	if (e->child_count > 0) {
+		/* TODO delete all children also */
+	}
 	index = e - &cx->entity_list[0];
 	snis_object_pool_free_object(cx->entity_pool, index);
 }
@@ -91,26 +99,35 @@ void remove_all_entity(struct entity_context *cx)
 	snis_object_pool_free_all_objects(cx->entity_pool);
 }
 
+void update_entity_parent(struct entity *child, struct entity *parent)
+{
+	if (child->parent != parent) {
+		if (child->parent)
+			child->parent->child_count--;
+		child->parent = parent;
+		if (parent)
+			parent->child_count++;
+	}
+}
+
 void update_entity_pos(struct entity *e, float x, float y, float z)
 {
-	e->x = x;
-	e->y = y;
-	e->z = z;
+	vec3_init(&e->e_pos, x, y, z);
 }
 
 void update_entity_orientation(struct entity *e, const union quat *orientation)
 {
-	e->orientation = *orientation;
+	e->e_orientation = *orientation;
 }
 
 float entity_get_scale(struct entity *e)
 {
-	return e->scale;
+	return e->e_scale;
 }
 
 void update_entity_scale(struct entity *e, float scale)
 {
-	e->scale = scale;
+	e->e_scale = scale;
 }
 
 void update_entity_color(struct entity *e, int color)
@@ -787,6 +804,29 @@ void calculate_camera_transform(struct entity_context *cx)
 
 static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, float radius);
 
+static void update_entity_child_state(struct entity *e)
+{
+	union vec3 pos = e->e_pos;
+	float scale = e->e_scale;
+	union quat orientation = e->e_orientation;
+
+	struct entity *parent = e->parent;
+	while (parent) {
+		quat_rot_vec_self(&pos, &parent->e_orientation);
+		vec3_add_self(&pos, &parent->e_pos);
+		scale *= parent->e_scale;
+		quat_mul_self_right(&parent->e_orientation, &orientation);
+
+		parent = parent->parent;
+	}
+
+	e->x = pos.v.x;
+	e->y = pos.v.y;
+	e->z = pos.v.z;
+	e->scale = scale;
+	e->orientation = orientation;
+}
+
 void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 {
 	int i, j, n;
@@ -864,8 +904,10 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 				continue;
 
 			/* clear on the first pass and accumulate the state */
-			if (pass == 0)
+			if (pass == 0) {
+				update_entity_child_state(e);
 				e->onscreen = 0;
+			}
 
 			if (!sphere_in_frustum(c, e->x, e->y, e->z, e->m->radius * fabs(e->scale)))
 				continue;
@@ -1132,7 +1174,7 @@ void camera_set_orientation(struct entity_context *cx, union quat *q)
 
 union quat *entity_get_orientation(struct entity *e)
 {
-	return &e->orientation;
+	return &e->e_orientation;
 }
 
 struct mat44d get_camera_v_transform(struct entity_context *cx)

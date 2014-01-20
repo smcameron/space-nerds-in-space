@@ -38,6 +38,12 @@ struct entity {
 
 	int material_type;
 	void *material_ptr;
+
+	union vec3 e_pos;
+	float e_scale;
+	union quat e_orientation;
+	struct entity *parent;
+	int child_count;
 };
 
 struct camera_info {
