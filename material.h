@@ -33,6 +33,7 @@ struct sng_color;
 #define MATERIAL_TEXTURE_CUBEMAP 5
 #define MATERIAL_NEBULA 6
 #define MATERIAL_TEXTURE_MAPPED_UNLIT 7
+#define MATERIAL_TEXTURED_PARTICLE 8
 
 struct material_color_by_w {
 	int near_color;
@@ -79,5 +80,11 @@ struct material_nebula {
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename, struct material_nebula *mt);
 extern int material_nebula_write_to_file(const char *asset_dir, const char *filename, struct material_nebula *mt);
+
+struct material_textured_particle {
+	int texture_id;
+	float radius;
+	float time_base;
+};
 
 #endif
