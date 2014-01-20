@@ -98,7 +98,9 @@ static struct opcode_stat {
 struct npc_bot_state;
 typedef void (*npc_menu_func)(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_not_implemented(char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_buy_cargo(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sign_off(char *npcname, struct npc_bot_state *botstate);
+static void send_to_npcbot(int bridge, char *name, char *msg);
 
 typedef void (*npc_special_bot_fn)(struct snis_entity *o, int bridge, char *name, char *msg);
 
@@ -119,7 +121,7 @@ struct npc_bot_state {
 static struct npc_menu_item arrange_transport_contracts_menu[] = {
 	/* by convention, first element is menu title */
 	{ "TRANSPORT CONTRACT MENU", 0, 0, 0 },
-	{ "BUY CARGO", 0, 0, npc_menu_item_not_implemented },
+	{ "BUY CARGO", 0, 0, npc_menu_item_buy_cargo },
 	{ "SELL CARGO", 0, 0, npc_menu_item_not_implemented },
 	{ "BOARD PASSENGERS", 0, 0, npc_menu_item_not_implemented },
 	{ "DELIVER PASSENGERS", 0, 0, npc_menu_item_not_implemented },
@@ -5408,6 +5410,27 @@ void npc_menu_item_sign_off(char *npcname, struct npc_bot_state *botstate)
 	botstate->current_menu = NULL;
 }
 
+static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge, char *name, char *msg);
+void npc_menu_item_buy_cargo(char *npcname, struct npc_bot_state *botstate)
+{
+	struct bridge_data *b;
+	int i, bridge;
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		printf("nonfatal bug in npc_menu_item_buy_cargo at %s:%d\n", __FILE__, __LINE__);
+		return;
+	}
+
+	/* find our bridge... */
+	b = container_of(botstate, struct bridge_data, npcbot);
+	bridge = b - bridgelist;
+
+	/* poke the special bot to make it say something. */
+	botstate->special_bot = starbase_cargo_buying_npc_bot;
+	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
+}
+
 static void send_npc_menu(char *npcname,  int bridge)
 {
 	int i;
@@ -5438,6 +5461,46 @@ static void send_npc_menu(char *npcname,  int bridge)
 	send_comms_packet(npcname, channel, "");
 	send_comms_packet(npcname, channel, "    MAKE YOUR SELECTION WHEN READY.");
 	send_comms_packet(npcname, channel, "-----------------------------------------------------");
+}
+
+static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge, char *name, char *msg)
+{
+	int i;
+	char m[100];
+	char *n = o->tsd.starbase.name;
+	struct marketplace_data *mkt = o->tsd.starbase.mkt;
+	uint32_t channel = bridgelist[bridge].npcbot.channel;
+	int rc, selection;
+
+	if (!mkt)
+		return;
+	rc = sscanf(msg, "%d", &selection);
+	if (rc != 1)
+		selection = -1;
+	if (selection < 0 || selection > 10)
+		selection = -1;
+
+	if (selection == -1) {
+		send_comms_packet(n, channel, "----------------------------");
+		send_comms_packet(n, channel,
+		"        QTY AVAIL    PRICE    ITEM");
+		for (i = 0; i < COMMODITIES_PER_BASE; i++) {
+			int price, qty;
+
+			/* TODO: do something better with price and qty */
+			price = snis_randn(10000) % 9999;
+			qty = snis_randn(10000) % 9999;
+			char *itemname = commodity[mkt[i].item].name;
+			sprintf(m, "    %d:    %04d %04d  %s\n", i + 1, qty, price, itemname);
+			send_comms_packet(n, channel, m);
+		}
+		send_comms_packet(n, channel, "    0: PREVIOUS MENU");
+		send_comms_packet(n, channel, "----------------------------");
+	}
+	if (selection == 0) {
+		bridgelist[bridge].npcbot.special_bot = NULL; /* deactivate cargo buying bot */
+		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+	}
 }
 
 static void starbase_npc_bot(struct snis_entity *o, int bridge, char *name, char *msg)
