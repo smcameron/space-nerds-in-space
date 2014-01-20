@@ -48,6 +48,7 @@
 #include <lauxlib.h>
 #include <assert.h>
 
+#include "container-of.h"
 #include "mtwist.h"
 #include "build_bug_on.h"
 #include "ssgl/ssgl.h"

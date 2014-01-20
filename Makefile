@@ -236,7 +236,8 @@ wwviaudio.o:    wwviaudio.c wwviaudio.h ogg_to_pcm.h my_point.h Makefile
 shield_strength.o:	shield_strength.c shield_strength.h
 	$(Q)$(COMPILE)
 
-snis_server.o:	snis_server.c snis.h snis_packet.h snis_marshal.h sounds.h starbase-comms.h
+snis_server.o:	snis_server.c snis.h snis_packet.h snis_marshal.h sounds.h starbase-comms.h \
+		container-of.h
 	$(Q)$(COMPILE)
 
 snis_client.o:	snis_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h quat.o vec4.o
