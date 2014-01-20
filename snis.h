@@ -351,6 +351,8 @@ struct ship_data {
 struct marketplace_data {
 	int item;
 	float qty;
+	float bid;
+	float ask;
 	float refill_rate;
 };
 

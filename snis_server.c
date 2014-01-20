@@ -98,6 +98,7 @@ static struct opcode_stat {
 struct npc_bot_state;
 typedef void (*npc_menu_func)(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_not_implemented(char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_travel_advisory(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_buy_cargo(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sign_off(char *npcname, struct npc_bot_state *botstate);
 static void send_to_npcbot(int bridge, char *name, char *msg);
@@ -130,6 +131,7 @@ static struct npc_menu_item arrange_transport_contracts_menu[] = {
 
 static struct npc_menu_item starbase_main_menu[] = {
 	{ "STARBASE MAIN MENU", 0, 0, 0 },  /* by convention, first element is menu title */
+	{ "LOCAL TRAVEL ADVISORY", 0, 0, npc_menu_item_travel_advisory },
 	{ "REQUEST PERMISSION TO DOCK", 0, 0, npc_menu_item_not_implemented },
 	{ "REQUEST REMOTE FUEL DELIVERY", 0, 0, npc_menu_item_not_implemented },
 	{ "REQUEST TOWING", 0, 0, npc_menu_item_not_implemented },
@@ -3803,6 +3805,8 @@ static void init_starbase_market(struct snis_entity *o)
 		mkt[i].item = item;
 		mkt[i].qty = snis_randn(100); /* TODO: something better */
 		mkt[i].refill_rate = (float) snis_randn(1000) / 1000.0; /* TODO: something better */
+		mkt[i].ask = (float) snis_randn(80) + 20;
+		mkt[i].bid = 0.9 * mkt[i].ask;
 	}
 }
 
@@ -5445,6 +5449,65 @@ void npc_menu_item_buy_cargo(char *npcname, struct npc_bot_state *botstate)
 	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
 }
 
+void npc_menu_item_travel_advisory(char *npcname, struct npc_bot_state *botstate)
+{
+	uint32_t plid, ch = botstate->channel;
+	struct snis_entity *sb, *pl = NULL;
+	char *name, msg[100];
+	int i;
+
+	if (ch == (uint32_t) -1)
+		return;
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		printf("nonfatal bug in npc_menu_item_buy_cargo at %s:%d\n", __FILE__, __LINE__);
+		return;
+	}
+	sb = &go[i];
+	plid = sb->tsd.starbase.associated_planet_id;
+	if (plid != (uint32_t) -1) {
+		i = lookup_by_id(plid);
+		if (i >= 0) {
+			pl = &go[i];
+			name = pl->sdata.name;
+		} else {
+			name = sb->tsd.starbase.name;
+		}
+	} else {
+		name = sb->tsd.starbase.name;
+	}
+
+	if (pl) {
+		/* TODO: fill in all this crap */
+		sprintf(msg, " TRAVEL ADVISORY FOR %s", name);
+		send_comms_packet(npcname, ch, msg);
+		send_comms_packet(npcname, ch, "-----------------------------------------------------");
+		sprintf(msg, " WELCOME TO STARBASE %s, IN ORBIT", sb->tsd.starbase.name);
+		send_comms_packet(npcname, ch, msg);
+		sprintf(msg, " AROUND THE BEAUTIFUL PLANET %s.", name);
+		send_comms_packet(npcname, ch, msg);
+		send_comms_packet(npcname, ch, "");
+		send_comms_packet(npcname, ch, " PLANETARY SURFACE TEMP: -15 - 103");
+		send_comms_packet(npcname, ch, " PLANETARY SURFACE WIND SPEED: 0 - 203");
+	} else {
+		sprintf(msg, " TRAVEL ADVISORY FOR STARBASE %s", name);
+		send_comms_packet(npcname, ch, msg);
+		send_comms_packet(npcname, ch, "-----------------------------------------------------");
+		sprintf(msg, " WELCOME TO STARBASE %s, IN DEEP SPACE",
+				sb->tsd.starbase.name);
+		send_comms_packet(npcname, ch, msg);
+		send_comms_packet(npcname, ch, "");
+	}
+	send_comms_packet(npcname, ch, " SPACE WEATHER ADVISORY: ALL CLEAR");
+	send_comms_packet(npcname, ch, "");
+	send_comms_packet(npcname, ch, " TRAVELERS TAKE NOTICE OF PROHIBITED ITEMS:");
+	send_comms_packet(npcname, ch, "    NARCOTICS (EXCEPT JAKK), BIBLES");
+	send_comms_packet(npcname, ch, "");
+	send_comms_packet(npcname, ch, " ENJOY YOUR VISIT!");
+	send_comms_packet(npcname, ch, "-----------------------------------------------------");
+}
+
 static void send_npc_menu(char *npcname,  int bridge)
 {
 	int i;
@@ -5497,18 +5560,19 @@ static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge, cha
 	if (selection == -1) {
 		send_comms_packet(n, channel, "----------------------------");
 		send_comms_packet(n, channel,
-		"        QTY AVAIL    PRICE    ITEM");
+		"   QTY  UNIT ITEM   BID/UNIT     ASK/UNIT    ITEM");
 		for (i = 0; i < COMMODITIES_PER_BASE; i++) {
-			int price, qty;
-
-			/* TODO: do something better with price and qty */
-			price = snis_randn(10000) % 9999;
-			qty = snis_randn(10000) % 9999;
+			float bid, ask, qty;
 			char *itemname = commodity[mkt[i].item].name;
-			sprintf(m, "    %d:    %04d %04d  %s\n", i + 1, qty, price, itemname);
+			char *unit = commodity[mkt[i].item].unit;
+			bid = mkt[i].bid;
+			ask = mkt[i].ask;
+			qty = mkt[i].qty;
+			sprintf(m, " %d: %04.0f %s %s -- $%4.2f  $%4.2f\n",
+				i + 1, qty, unit, itemname, bid, ask);
 			send_comms_packet(n, channel, m);
 		}
-		send_comms_packet(n, channel, "    0: PREVIOUS MENU");
+		send_comms_packet(n, channel, " 0: PREVIOUS MENU");
 		send_comms_packet(n, channel, "----------------------------");
 	}
 	if (selection == 0) {
@@ -5547,8 +5611,6 @@ static void starbase_npc_bot(struct snis_entity *o, int bridge, char *name, char
 
 	if (selection == -1) {
 		/* struct marketplace_data *mkt = o->tsd.starbase.mkt;  */
-		sprintf(m, "starbase bot received '%s'", msg);
-		send_comms_packet(n, channel, m);
 		send_comms_packet(n, channel, "");
 		sprintf(m,
 			"  WELCOME %s, I AM A MODEL ZX81 SERVICE", name);
