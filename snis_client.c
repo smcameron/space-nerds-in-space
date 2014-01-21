@@ -4914,16 +4914,10 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int 
 	}
 }
 
-#define WOMBAT_THRUST_PORTS 5
-
-struct wombat_thrust_entities {
-	struct entity *t[WOMBAT_THRUST_PORTS];
-};
-
-static void add_wombat_thrust_entities(struct entity_context *cx, struct entity *e,
-					struct wombat_thrust_entities *te)
+static void add_wombat_thrust_entities(struct entity_context *cx, struct entity *e)
 {
 	const float x_axis_offset = 2.75;
+	const int nthrust_ports = 5;
 	static const union vec3 thrust_pos[] = {
 		{ { -17.25, 1, 0 } },
 		{ { -16.5, 1, 4.5 } },
@@ -4932,24 +4926,15 @@ static void add_wombat_thrust_entities(struct entity_context *cx, struct entity 
 		{ { -13, 1, -9 } } };
 
 	int i;
-	for (i = 0; i < WOMBAT_THRUST_PORTS; i++) {
+	for (i = 0; i < nthrust_ports; i++) {
 		struct entity *t = add_entity(cx, thrust_animation_mesh,
 			thrust_pos[i].v.x - x_axis_offset,
 			thrust_pos[i].v.y, thrust_pos[i].v.z, WHITE);
 		update_entity_material(t, MATERIAL_TEXTURED_PARTICLE, &thrust_material);
 		update_entity_orientation(t, &identity_quat);
 
-		update_entity_parent(t, e);
-		te->t[i] = t;
+		update_entity_parent(cx, t, e);
 	}
-}
-
-static void remove_wombat_thrust_entities(struct entity_context *cx, struct wombat_thrust_entities *te)
-{
-	int i;
-	for (i = 0; i < WOMBAT_THRUST_PORTS; i++)
-		remove_entity(cx, te->t[i]);
-
 }
 
 static void show_weapons_camera_view(GtkWidget *w)
@@ -5042,13 +5027,11 @@ static void show_weapons_camera_view(GtkWidget *w)
 	update_entity_orientation(turret_entity, &camera_orientation);
 	set_render_style(turret_entity, RENDER_NORMAL);
 
-	struct wombat_thrust_entities te;
-	add_wombat_thrust_entities(ecx, o->entity, &te);
+	add_wombat_thrust_entities(ecx, o->entity);
 
 	render_entities(w, gc, ecx);
 
 	/* Remove our ship from the scene */
-	remove_wombat_thrust_entities(ecx, &te);
 	remove_entity(ecx, turret_entity);
 	remove_entity(ecx, o->entity);
 	o->entity = NULL;
@@ -5143,9 +5126,6 @@ static void show_mainscreen(GtkWidget *w)
 	}
 
 	struct entity *player_ship = 0;
-	struct entity *player_ship_turret = 0;
-	struct entity *player_ship_turret_base = 0;
-	struct wombat_thrust_entities te;
 
 	switch (camera_mode) {
 	case 0:
@@ -5174,15 +5154,15 @@ static void show_mainscreen(GtkWidget *w)
 					o->x, o->y, o->z, SHIP_COLOR);
 			update_entity_orientation(player_ship, &o->orientation);
 
-			player_ship_turret_base = add_entity(ecx, ship_turret_base_mesh, 0, 5.45, 0, SHIP_COLOR);
-			update_entity_orientation(player_ship_turret_base, &identity_quat);
-			update_entity_parent(player_ship_turret_base, player_ship);
+			struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh, 0, 5.45, 0, SHIP_COLOR);
+			update_entity_orientation(turret_base, &identity_quat);
+			update_entity_parent(ecx, turret_base, player_ship);
 
-			player_ship_turret = add_entity(ecx, ship_turret_mesh, 0, 0, 0, SHIP_COLOR);
-			update_entity_orientation(player_ship_turret, &o->tsd.ship.weap_orientation);
-			update_entity_parent(player_ship_turret, player_ship_turret_base);
+			struct entity *turret = add_entity(ecx, ship_turret_mesh, 0, 0, 0, SHIP_COLOR);
+			update_entity_orientation(turret, &o->tsd.ship.weap_orientation);
+			update_entity_parent(ecx, turret, turret_base);
 
-			add_wombat_thrust_entities(ecx, player_ship, &te);
+			add_wombat_thrust_entities(ecx, player_ship);
 			break;
 		}
 	}
@@ -5207,9 +5187,6 @@ static void show_mainscreen(GtkWidget *w)
 
 	/* if we added the ship into the scene, remove it now */
 	if (player_ship) {
-		remove_wombat_thrust_entities(ecx, &te);
-		remove_entity(ecx, player_ship_turret);
-		remove_entity(ecx, player_ship_turret_base);
 		remove_entity(ecx, player_ship);
 	}
 
@@ -7808,8 +7785,8 @@ static void init_nav_ui(void)
 #if 0
 	ui_add_button(nav_ui.details_button, DISPLAYMODE_NAVIGATION);
 #endif
-	navecx = entity_context_new(5000);
-	tridentecx = entity_context_new(10);
+	navecx = entity_context_new(5000, 500);
+	tridentecx = entity_context_new(10, 0);
 	nav_ui.details_mode = 1;
 }
 
@@ -9112,8 +9089,8 @@ static void init_science_ui(void)
 #endif
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE);
-	sciecx = entity_context_new(50);
-	sciballecx = entity_context_new(5000);
+	sciecx = entity_context_new(50, 10);
+	sciballecx = entity_context_new(5000, 500);
 	sciplane_tween = tween_init(500);
 	sci_ui.details_mode = SCI_DETAILS_MODE_SCIPLANE;
 }
@@ -12677,7 +12654,7 @@ int main(int argc, char *argv[])
 	init_demon_ui();
 	init_net_setup_ui();
 	setup_joystick(window);
-	ecx = entity_context_new(5000);
+	ecx = entity_context_new(5000, 500);
 
 	snis_protocol_debugging(1);
 

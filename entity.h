@@ -31,13 +31,13 @@ struct mat44;
 #define GLOBAL extern
 #endif
 
-GLOBAL struct entity_context *entity_context_new(int maxobjs);
+GLOBAL struct entity_context *entity_context_new(int maxobjs, int maxchildren);
 GLOBAL struct entity *add_entity(struct entity_context *cx,
 	struct mesh *m, float x, float y, float z, int color);
 GLOBAL void remove_entity(struct entity_context *cx,
 	struct entity *e);
 GLOBAL void remove_all_entity(struct entity_context *cx);
-GLOBAL void update_entity_parent(struct entity *child, struct entity *parent);
+GLOBAL void update_entity_parent(struct entity_context *cx, struct entity *child, struct entity *parent);
 GLOBAL void update_entity_pos(struct entity *e, float x, float y, float z);
 GLOBAL void update_entity_orientation(struct entity *e, const union quat *orientation);
 GLOBAL union quat *entity_get_orientation(struct entity *e);

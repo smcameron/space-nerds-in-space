@@ -44,6 +44,12 @@ struct entity {
 	union quat e_orientation;
 	struct entity *parent;
 	int child_count;
+	int entity_child_index;
+};
+
+struct entity_child {
+	int child_entity_index;
+	int next_entity_child_index;
 };
 
 struct camera_info {
@@ -64,6 +70,9 @@ struct entity_context {
 	int maxobjs;
 	struct snis_object_pool *entity_pool;
 	struct entity *entity_list; /* array, [maxobjs] */
+	int maxchildren;
+	struct snis_object_pool *entity_child_pool;
+	struct entity_child *entity_child_list; /* array, [maxchildren] */
 	int nfar_to_near_entity_depth;
 	int *far_to_near_entity_depth; /* array [maxobjs] */
 	int nnear_to_far_entity_depth;

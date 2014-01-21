@@ -77,8 +77,29 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].material_ptr = 0;
 	cx->entity_list[n].parent = 0;
 	cx->entity_list[n].child_count = 0;
+	cx->entity_list[n].entity_child_index = -1;
 
 	return &cx->entity_list[n];
+}
+
+static void remove_entity_children(struct entity_context *cx, struct entity *e)
+{
+	int entity_child_index = e->entity_child_index;
+
+	while (entity_child_index >= 0) {
+		struct entity_child *this_ec = &cx->entity_child_list[entity_child_index];
+		struct entity *this_child = &cx->entity_list[this_ec->child_entity_index];
+
+		if (this_child->child_count > 0)
+			remove_entity_children(cx, this_child);
+		snis_object_pool_free_object(cx->entity_pool, this_ec->child_entity_index);
+
+		int next_entity_child_index = this_ec->next_entity_child_index;
+		snis_object_pool_free_object(cx->entity_child_pool, entity_child_index);
+
+		entity_child_index = next_entity_child_index;
+	}
+	e->entity_child_index = -1;
 }
 
 void remove_entity(struct entity_context *cx, struct entity *e)
@@ -87,9 +108,8 @@ void remove_entity(struct entity_context *cx, struct entity *e)
 
 	if (!e)
 		return;
-	if (e->child_count > 0) {
-		/* TODO delete all children also */
-	}
+	if (e->child_count > 0)
+		remove_entity_children(cx, e);
 	index = e - &cx->entity_list[0];
 	snis_object_pool_free_object(cx->entity_pool, index);
 }
@@ -97,16 +117,52 @@ void remove_entity(struct entity_context *cx, struct entity *e)
 void remove_all_entity(struct entity_context *cx)
 {
 	snis_object_pool_free_all_objects(cx->entity_pool);
+	snis_object_pool_free_all_objects(cx->entity_child_pool);
 }
 
-void update_entity_parent(struct entity *child, struct entity *parent)
+void update_entity_parent(struct entity_context *cx, struct entity *child, struct entity *parent)
 {
 	if (child->parent != parent) {
-		if (child->parent)
+		int child_index = child - &cx->entity_list[0];
+
+		if (child->parent) {
+			/* remove this child out of the old parent child_entity_list */
+			int entity_child_index = parent->entity_child_index;
+			struct entity_child *last_ec = 0;
+
+			while (entity_child_index >= 0) {
+				struct entity_child *this_ec = &cx->entity_child_list[entity_child_index];
+				if (this_ec->child_entity_index == child_index) {
+					/* we found the child, fix the list */
+
+					if (!last_ec) /* first link */
+						parent->entity_child_index = this_ec->next_entity_child_index;
+					else
+						last_ec->next_entity_child_index = this_ec->next_entity_child_index;
+
+					snis_object_pool_free_object(cx->entity_child_pool, entity_child_index);
+
+					break; /* found the child, done */
+				}
+				entity_child_index = this_ec->next_entity_child_index;
+				last_ec = this_ec;
+			}
 			child->parent->child_count--;
+		}
+
 		child->parent = parent;
-		if (parent)
+
+		if (parent) {
+			/* add child into new parent child_entity_list */
+			int new_entity_child_index = snis_object_pool_alloc_obj(cx->entity_child_pool);
+			struct entity_child *new_ec = &cx->entity_child_list[new_entity_child_index];
+
+			/* insert entity_child at the front of the list */
+			new_ec->child_entity_index = child_index;
+			new_ec->next_entity_child_index = parent->entity_child_index;
+			parent->entity_child_index = new_entity_child_index;
 			parent->child_count++;
+		}
 	}
 }
 
@@ -1027,7 +1083,7 @@ void camera_get_parameters(struct entity_context *cx, float *near, float *far,
 	*angle_of_view = cx->camera.angle_of_view;
 }
 
-struct entity_context *entity_context_new(int maxobjs)
+struct entity_context *entity_context_new(int maxobjs, int maxchildren)
 {
 	struct entity_context *cx;
 
@@ -1042,6 +1098,10 @@ struct entity_context *entity_context_new(int maxobjs)
 	memset(cx->near_to_far_entity_depth, 0, sizeof(cx->near_to_far_entity_depth[0]) * maxobjs);
 	snis_object_pool_setup(&cx->entity_pool, maxobjs);
 	cx->maxobjs = maxobjs;
+	cx->entity_child_list = malloc(sizeof(cx->entity_child_list[0]) * maxchildren);
+	memset(cx->entity_child_list, 0, sizeof(cx->entity_child_list[0]) * maxchildren);
+	snis_object_pool_setup(&cx->entity_child_pool, maxchildren);
+	cx->maxchildren = maxchildren;
 	set_renderer(cx, FLATSHADING_RENDERER);
 	set_lighting(cx, 0, 0, 0);
 	camera_assign_up_direction(cx, 0.0, 1.0, 0.0);
