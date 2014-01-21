@@ -100,6 +100,7 @@ typedef void (*npc_menu_func)(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_not_implemented(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_travel_advisory(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_buy_cargo(char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_sell_cargo(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sign_off(char *npcname, struct npc_bot_state *botstate);
 static void send_to_npcbot(int bridge, char *name, char *msg);
 
@@ -123,7 +124,7 @@ static struct npc_menu_item arrange_transport_contracts_menu[] = {
 	/* by convention, first element is menu title */
 	{ "TRANSPORT CONTRACT MENU", 0, 0, 0 },
 	{ "BUY CARGO", 0, 0, npc_menu_item_buy_cargo },
-	{ "SELL CARGO", 0, 0, npc_menu_item_not_implemented },
+	{ "SELL CARGO", 0, 0, npc_menu_item_sell_cargo },
 	{ "BOARD PASSENGERS", 0, 0, npc_menu_item_not_implemented },
 	{ "DELIVER PASSENGERS", 0, 0, npc_menu_item_not_implemented },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
@@ -5485,8 +5486,11 @@ void npc_menu_item_sign_off(char *npcname, struct npc_bot_state *botstate)
 	botstate->current_menu = NULL;
 }
 
-static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge, char *name, char *msg);
-void npc_menu_item_buy_cargo(char *npcname, struct npc_bot_state *botstate)
+static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge,
+						char *name, char *msg);
+static void starbase_cargo_selling_npc_bot(struct snis_entity *o, int bridge,
+						char *name, char *msg);
+void npc_menu_item_buysell_cargo(char *npcname, struct npc_bot_state *botstate, int buy)
 {
 	struct bridge_data *b;
 	int i, bridge;
@@ -5502,8 +5506,21 @@ void npc_menu_item_buy_cargo(char *npcname, struct npc_bot_state *botstate)
 	bridge = b - bridgelist;
 
 	/* poke the special bot to make it say something. */
-	botstate->special_bot = starbase_cargo_buying_npc_bot;
+	if (buy)
+		botstate->special_bot = starbase_cargo_buying_npc_bot;
+	else
+		botstate->special_bot = starbase_cargo_selling_npc_bot;
 	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
+}
+
+void npc_menu_item_buy_cargo(char *npcname, struct npc_bot_state *botstate)
+{
+	npc_menu_item_buysell_cargo(npcname, botstate, 1);
+}
+
+void npc_menu_item_sell_cargo(char *npcname, struct npc_bot_state *botstate)
+{
+	npc_menu_item_buysell_cargo(npcname, botstate, 0);
 }
 
 void npc_menu_item_travel_advisory(char *npcname, struct npc_bot_state *botstate)
@@ -5597,7 +5614,8 @@ static void send_npc_menu(char *npcname,  int bridge)
 	send_comms_packet(npcname, channel, "-----------------------------------------------------");
 }
 
-static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge, char *name, char *msg)
+static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int bridge,
+		char *name, char *msg, int buy)
 {
 	int i;
 	char m[100];
@@ -5616,18 +5634,53 @@ static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge, cha
 
 	if (selection == -1) {
 		send_comms_packet(n, channel, "----------------------------");
-		send_comms_packet(n, channel,
-		"   QTY  UNIT ITEM   BID/UNIT     ASK/UNIT    ITEM");
-		for (i = 0; i < COMMODITIES_PER_BASE; i++) {
-			float bid, ask, qty;
-			char *itemname = commodity[mkt[i].item].name;
-			char *unit = commodity[mkt[i].item].unit;
-			bid = mkt[i].bid;
-			ask = mkt[i].ask;
-			qty = mkt[i].qty;
-			sprintf(m, " %d: %04.0f %s %s -- $%4.2f  $%4.2f\n",
-				i + 1, qty, unit, itemname, bid, ask);
-			send_comms_packet(n, channel, m);
+		if (buy) {
+			send_comms_packet(n, channel,
+				"   QTY  UNIT ITEM   BID/UNIT     ASK/UNIT    ITEM");
+			for (i = 0; i < COMMODITIES_PER_BASE; i++) {
+				float bid, ask, qty;
+				char *itemname = commodity[mkt[i].item].name;
+				char *unit = commodity[mkt[i].item].unit;
+				bid = mkt[i].bid;
+				ask = mkt[i].ask;
+				qty = mkt[i].qty;
+				sprintf(m, " %d: %04.0f %s %s -- $%4.2f  $%4.2f\n",
+					i + 1, qty, unit, itemname, bid, ask);
+				send_comms_packet(n, channel, m);
+			}
+		} else {
+			struct snis_entity *ship;
+
+			i = lookup_by_id(bridgelist[bridge].shipid);
+			if (i < 0) {
+				printf("Non-fatal error at %s:%s:%d\n",
+					__FILE__, __func__, __LINE__);
+				return;
+			}
+			ship = &go[i];
+
+			send_comms_packet(n, channel,
+				"   QTY  UNIT ITEM   BID/UNIT     ITEM");
+			int count = 0;
+			for (i = 0; i < ship->tsd.ship.ncargo_bays; i++) {
+				float bid, qty;
+				char *itemname, *unit;
+				int item = ship->tsd.ship.cargo[i].item;
+
+				if (item < 0)
+					continue;
+				itemname = commodity[item].name;
+				unit = commodity[item].unit;
+				qty = ship->tsd.ship.cargo[i].qty;
+				/* FIXME: do better than this. */
+				bid = snis_randn(100) + 5;
+				sprintf(m, " %d: %04.0f %s %s -- $%4.2f",
+					i + 1, qty, unit, itemname, bid);
+				send_comms_packet(n, channel, m);
+				count++;
+			}
+			if (count == 0)
+				send_comms_packet(n, channel, "   ** CARGO HOLD IS EMPTY **");
 		}
 		send_comms_packet(n, channel, " 0: PREVIOUS MENU");
 		send_comms_packet(n, channel, "----------------------------");
@@ -5636,6 +5689,18 @@ static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge, cha
 		bridgelist[bridge].npcbot.special_bot = NULL; /* deactivate cargo buying bot */
 		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
 	}
+}
+
+static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge,
+						char *name, char *msg)
+{
+	starbase_cargo_buyingselling_npc_bot(o, bridge, name, msg, 1);
+}
+
+static void starbase_cargo_selling_npc_bot(struct snis_entity *o, int bridge,
+						char *name, char *msg)
+{
+	starbase_cargo_buyingselling_npc_bot(o, bridge, name, msg, 0);
 }
 
 static void starbase_npc_bot(struct snis_entity *o, int bridge, char *name, char *msg)
