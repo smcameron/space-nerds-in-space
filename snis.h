@@ -234,6 +234,7 @@ struct ship_data {
 #define PATROL_ATTACK_DIST (LASER_RANGE)
 #define LASERBEAM_DURATION 5 
 #define MINIMUM_ATTACK_SPEED 3.0
+#define TRANSPORTER_RANGE 1500.0f
 
 /* Max damage dealt per "hit"
  * laser damage is boosted by increased phaser power and diminished

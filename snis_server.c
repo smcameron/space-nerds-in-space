@@ -5635,7 +5635,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 	struct marketplace_data *mkt = o->tsd.starbase.mkt;
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
 	int rc, selection;
-
+	float range2;
 
 	i = lookup_by_id(bridgelist[bridge].shipid);
 	if (i < 0) {
@@ -5644,6 +5644,8 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 		return;
 	}
 	ship = &go[i];
+
+	range2 = dist3dsqrd(ship->x - o->x, ship->y - o->y, ship->z - o->z);
 
 	if (!mkt)
 		return;
@@ -5660,6 +5662,12 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			int q;
 			char x;
 
+			/* check transporter range */
+			if (range2 > TRANSPORTER_RANGE * TRANSPORTER_RANGE) {
+				send_comms_packet(n, channel,
+					" TRANSACTION NOT POSSIBLE - TRANSPORTER RANGE EXCEEDED");
+				return;
+			}
 			/* check that there is an empty cargo bay.
 			 * FIXME: if you have a cargo bay with 5 Zarkon swords
 			 * and you try to buy 1 more Zarkon sword, you should just
@@ -5723,6 +5731,13 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 		if (strncasecmp("sell ", msg, 5) == 0)  {
 			int q;
 			char x;
+
+			/* check transporter range */
+			if (range2 > TRANSPORTER_RANGE * TRANSPORTER_RANGE) {
+				send_comms_packet(n, channel,
+					" TRANSACTION NOT POSSIBLE - TRANSPORTER RANGE EXCEEDED");
+				return;
+			}
 
 			rc = sscanf(msg + 5, "%d %c", &q, &x);
 			if (rc != 2) {
