@@ -4924,11 +4924,11 @@ static void add_wombat_thrust_entities(struct entity_context *cx, struct entity 
 {
 	const float x_axis_offset = 2.75;
 	static const union vec3 thrust_pos[] = {
-		{ { -17.25, 1, 1 } },
-		{ { -16.5, 1, 5.5 } },
-		{ { -16.5, 1, -3.5 } },
-		{ { -13, 1, 10 } },
-		{ { -13, 1, -8 } } };
+		{ { -17.25, 1, 0 } },
+		{ { -16.5, 1, 4.5 } },
+		{ { -16.5, 1, -4.5 } },
+		{ { -13, 1, 9 } },
+		{ { -13, 1, -9 } } };
 
 	int i;
 	for (i = 0; i < WOMBAT_THRUST_PORTS; i++) {

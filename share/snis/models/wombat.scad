@@ -74,7 +74,7 @@ module wombat()
 			sphere(r = 7.2);
 }
 
-translate(v = [12, 1, 1])
+translate(v = [12, 1, 0])
 	rotate(a = -90, v = [1, 0, 0])
 		rotate(a = 90, v = [0, 1, 0])
 			scale(v = [1.4, 1.8, 1.8])
