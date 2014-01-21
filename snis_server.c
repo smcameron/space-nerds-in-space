@@ -5644,8 +5644,8 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				bid = mkt[i].bid;
 				ask = mkt[i].ask;
 				qty = mkt[i].qty;
-				sprintf(m, " %d: %04.0f %s %s -- $%4.2f  $%4.2f\n",
-					i + 1, qty, unit, itemname, bid, ask);
+				sprintf(m, " %c: %04.0f %s %s -- $%4.2f  $%4.2f\n",
+					i + 'A', qty, unit, itemname, bid, ask);
 				send_comms_packet(n, channel, m);
 			}
 		} else {
@@ -5674,8 +5674,8 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				qty = ship->tsd.ship.cargo[i].qty;
 				/* FIXME: do better than this. */
 				bid = snis_randn(100) + 5;
-				sprintf(m, " %d: %04.0f %s %s -- $%4.2f",
-					i + 1, qty, unit, itemname, bid);
+				sprintf(m, " %c: %04.0f %s %s -- $%4.2f",
+					i + 'A', qty, unit, itemname, bid);
 				send_comms_packet(n, channel, m);
 				count++;
 			}
