@@ -5631,9 +5631,19 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 	int i;
 	char m[100];
 	char *n = o->tsd.starbase.name;
+	struct snis_entity *ship;
 	struct marketplace_data *mkt = o->tsd.starbase.mkt;
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
 	int rc, selection;
+
+
+	i = lookup_by_id(bridgelist[bridge].shipid);
+	if (i < 0) {
+		printf("Non fatal error at %s:%s:%d\n",
+			__FILE__, __func__, __LINE__);
+		return;
+	}
+	ship = &go[i];
 
 	if (!mkt)
 		return;
@@ -5642,6 +5652,88 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 		selection = -1;
 	if (selection < 0 || selection > 10)
 		selection = -1;
+
+	if (buy) {
+		if (strncasecmp("buy ", msg, 4) == 0)  {
+			int empty_bay = -1;
+			float ask;
+			int q;
+			char x;
+
+			/* check that there is an empty cargo bay.
+			 * FIXME: if you have a cargo bay with 5 Zarkon swords
+			 * and you try to buy 1 more Zarkon sword, you should just
+			 * be able to add another Zarkon sword into that bay, but,
+			 * you can't.
+			 */
+			for (i = 0; i < ship->tsd.ship.ncargo_bays; i++) {
+				if (ship->tsd.ship.cargo[i].item == -1) {
+					empty_bay = i;
+					break;
+				}
+			}
+			if (empty_bay == -1) {
+				send_comms_packet(n, channel, " ALL YOUR CARGO BAYS ARE FULL");
+				return;
+			}
+
+			/* decode the buy order */
+			rc = sscanf(msg + 4, "%d %c", &q, &x);
+			if (rc != 2) {
+				send_comms_packet(n, channel, " INVALID BUY ORDER");
+				return;
+			}
+
+			/* check buy order is in range */
+			x = toupper(x);
+			if (x < 'A' || x >= 'A' + COMMODITIES_PER_BASE) {
+				send_comms_packet(n, channel, " INVALID BUY ORDER");
+				return;
+			}
+
+			/* check qty */
+			if (q < 0) {
+				send_comms_packet(n, channel, " INVALID BUY ORDER");
+				return;
+			}
+
+			ask = mkt[x - 'A'].ask;
+			/* check fundage */
+			if (q * ask > ship->tsd.ship.wallet) {
+				send_comms_packet(n, channel, " INSUFFICIENT FUNDS");
+				return;
+			}
+			ship->tsd.ship.wallet -= q * ask;
+			ship->tsd.ship.cargo[empty_bay].item = mkt[x - 'A'].item;
+			ship->tsd.ship.cargo[empty_bay].qty = q;
+			mkt[x - 'A'].qty -= q;
+			sprintf(m, " EXECUTING BUY ORDER %d %c", q, x);
+			send_comms_packet(n, channel, m);
+			return;
+		}
+		if (strncasecmp("sell ", msg, 5) == 0)  {
+			send_comms_packet(n, channel, " INVALID SELL ORDER");
+			return;
+		}
+	} else {
+		if (strncasecmp("buy ", msg, 4) == 0)  {
+			send_comms_packet(n, channel, " INVALID BUY ORDER");
+			return;
+		}
+		if (strncasecmp("sell ", msg, 5) == 0)  {
+			int q;
+			char x;
+
+			rc = sscanf(msg + 5, "%d %c", &q, &x);
+			if (rc != 2) {
+				send_comms_packet(n, channel, " INVALID SELL ORDER");
+				return;
+			}
+			sprintf(m, " SELL ORDER %d %c", q, x);
+			send_comms_packet(n, channel, m);
+			return;
+		}
+	}
 
 	if (selection == -1) {
 		send_comms_packet(n, channel, "----------------------------");
@@ -5660,16 +5752,6 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				send_comms_packet(n, channel, m);
 			}
 		} else {
-			struct snis_entity *ship;
-
-			i = lookup_by_id(bridgelist[bridge].shipid);
-			if (i < 0) {
-				printf("Non-fatal error at %s:%s:%d\n",
-					__FILE__, __func__, __LINE__);
-				return;
-			}
-			ship = &go[i];
-
 			send_comms_packet(n, channel,
 				"   QTY  UNIT ITEM   BID/UNIT     ITEM");
 			int count = 0;
