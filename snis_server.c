@@ -5729,7 +5729,23 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				send_comms_packet(n, channel, " INVALID SELL ORDER");
 				return;
 			}
-			sprintf(m, " SELL ORDER %d %c", q, x);
+			x = toupper(x) - 'A';
+			if (x < 0 || x >= ship->tsd.ship.ncargo_bays) {
+				send_comms_packet(n, channel, " INVALID SELL ORDER");
+				return;
+			}
+			if (q > ship->tsd.ship.cargo[(int) x].qty) {
+				send_comms_packet(n, channel, " INVALID SELL ORDER");
+				return;
+			}
+			ship->tsd.ship.cargo[(int) x].qty -= q;
+			ship->tsd.ship.wallet +=
+				q * o->tsd.starbase.bid_price[ship->tsd.ship.cargo[(int) x].item];
+			if (ship->tsd.ship.cargo[(int) x].qty < 0.1) {
+				ship->tsd.ship.cargo[(int) x].item = -1;
+				ship->tsd.ship.cargo[(int) x].qty = 0.0f;
+			}
+			sprintf(m, " EXECUTING SELL ORDER %d %c", q, x);
 			send_comms_packet(n, channel, m);
 			return;
 		}
