@@ -373,6 +373,7 @@ struct starbase_data {
 	char name[16];
 	struct marketplace_data *mkt;
 	int associated_planet_id;
+	float *bid_price;
 };
 
 struct nebula_data {

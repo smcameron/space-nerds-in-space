@@ -3817,9 +3817,18 @@ static void init_starbase_market(struct snis_entity *o)
 		mkt[i].item = item;
 		mkt[i].qty = snis_randn(100); /* TODO: something better */
 		mkt[i].refill_rate = (float) snis_randn(1000) / 1000.0; /* TODO: something better */
-		mkt[i].ask = (float) snis_randn(80) + 20;
-		mkt[i].bid = 0.9 * mkt[i].ask;
+		mkt[i].bid = o->tsd.starbase.bid_price[item];
+		mkt[i].ask = (float) 1.1 * mkt[i].bid;
 	}
+}
+
+static void fabricate_bid_prices(struct snis_entity *starbase)
+{
+	int i;
+
+	/* FIXME: do something better. */
+	for (i = 0; i < ncommodities; i++)
+		starbase->tsd.starbase.bid_price[i] = (float) (snis_randn(100) + 5);
 }
 
 static int add_starbase(double x, double y, double z,
@@ -3839,8 +3848,10 @@ static int add_starbase(double x, double y, double z,
 	go[i].tsd.starbase.under_attack = 0;
 	go[i].tsd.starbase.lifeform_count = snis_randn(100) + 100;
 	go[i].tsd.starbase.associated_planet_id = assoc_planet_id;
-	init_starbase_market(&go[i]);
 	go[i].sdata.shield_strength = 255;
+	go[i].tsd.starbase.bid_price = malloc(sizeof(go[i].tsd.starbase.bid_price) * ncommodities);
+	fabricate_bid_prices(&go[i]);
+	init_starbase_market(&go[i]);
 	/* FIXME, why name stored twice? probably just use sdata.name is best
 	 * but might be because we should know starbase name even if science
 	 * doesn't scan it.
