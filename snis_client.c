@@ -276,6 +276,7 @@ static float planet_scale[NPLANET_SCALES];
 struct mesh *starbase_mesh[NSTARBASE_MODELS];
 struct mesh *ship_mesh;
 struct mesh *ship_turret_mesh;
+struct mesh *ship_turret_base_mesh;
 struct mesh *freighter_mesh;
 struct mesh *cruiser_mesh;
 struct mesh *tanker_mesh;
@@ -5143,6 +5144,7 @@ static void show_mainscreen(GtkWidget *w)
 
 	struct entity *player_ship = 0;
 	struct entity *player_ship_turret = 0;
+	struct entity *player_ship_turret_base = 0;
 	struct wombat_thrust_entities te;
 
 	switch (camera_mode) {
@@ -5172,10 +5174,13 @@ static void show_mainscreen(GtkWidget *w)
 					o->x, o->y, o->z, SHIP_COLOR);
 			update_entity_orientation(player_ship, &o->orientation);
 
-			player_ship_turret = add_entity(ecx, ship_turret_mesh, 0, 5.45, 0, SHIP_COLOR);
-			update_entity_orientation(player_ship_turret, &o->tsd.ship.weap_orientation);
+			player_ship_turret_base = add_entity(ecx, ship_turret_base_mesh, 0, 5.45, 0, SHIP_COLOR);
+			update_entity_orientation(player_ship_turret_base, &identity_quat);
+			update_entity_parent(player_ship_turret_base, player_ship);
 
-			update_entity_parent(player_ship_turret, player_ship);
+			player_ship_turret = add_entity(ecx, ship_turret_mesh, 0, 0, 0, SHIP_COLOR);
+			update_entity_orientation(player_ship_turret, &o->tsd.ship.weap_orientation);
+			update_entity_parent(player_ship_turret, player_ship_turret_base);
 
 			add_wombat_thrust_entities(ecx, player_ship, &te);
 			break;
@@ -5204,6 +5209,7 @@ static void show_mainscreen(GtkWidget *w)
 	if (player_ship) {
 		remove_wombat_thrust_entities(ecx, &te);
 		remove_entity(ecx, player_ship_turret);
+		remove_entity(ecx, player_ship_turret_base);
 		remove_entity(ecx, player_ship);
 	}
 
@@ -12294,6 +12300,7 @@ static void init_meshes()
 
 	ship_mesh = snis_read_stl_file(d, "spaceship.stl");
 	ship_turret_mesh = snis_read_stl_file(d, "spaceship_turret.stl");
+	ship_turret_base_mesh = snis_read_stl_file(d, "spaceship_turret_base.stl");
 #ifndef WITHOUTOPENGL
 	torpedo_mesh = mesh_fabricate_billboard(0, 0, 50.0f, 50.0f);
 #else

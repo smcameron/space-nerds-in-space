@@ -146,7 +146,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/swordfish.stl \
 	${MD}/wombat.stl \
 	${MD}/cargocontainer.stl \
-	${MD}/spaceship_turret.stl
+	${MD}/spaceship_turret.stl \
+	${MD}/spaceship_turret_base.stl
 	
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${ILDAFLAG}\
