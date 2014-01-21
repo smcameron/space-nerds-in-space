@@ -5489,7 +5489,7 @@ void npc_menu_item_buy_cargo(char *npcname, struct npc_bot_state *botstate)
 
 	i = lookup_by_id(botstate->object_id);
 	if (i < 0) {
-		printf("nonfatal bug in npc_menu_item_buy_cargo at %s:%d\n", __FILE__, __LINE__);
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
 		return;
 	}
 
@@ -5514,7 +5514,7 @@ void npc_menu_item_travel_advisory(char *npcname, struct npc_bot_state *botstate
 
 	i = lookup_by_id(botstate->object_id);
 	if (i < 0) {
-		printf("nonfatal bug in npc_menu_item_buy_cargo at %s:%d\n", __FILE__, __LINE__);
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
 		return;
 	}
 	sb = &go[i];
