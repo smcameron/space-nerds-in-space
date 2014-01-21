@@ -3522,6 +3522,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.cargo[0].qty = 0.0f;
 	o->tsd.ship.cargo[1].item = -1;
 	o->tsd.ship.cargo[1].qty = 0.0f;
+	o->tsd.ship.wallet = INITIAL_WALLET_MONEY;
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
@@ -5391,6 +5392,7 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 	int i;
 	int ch = bridgelist[c->bridge].comms_channel;
 	struct snis_entity *ship;
+	char msg[100];
 
 	i = lookup_by_id(bridgelist[c->bridge].shipid);
 	if (i < 0) {
@@ -5410,7 +5412,6 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 	}
 	for (i = 0; i < ship->tsd.ship.ncargo_bays; i++) {
 		char *itemname, *unit;
-		char msg[100];
 		struct cargo_container_contents *ccc = &ship->tsd.ship.cargo[i];
 		float qty;
 
@@ -5425,6 +5426,9 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 			send_comms_packet("", ch, msg);
 		}
 	}
+	send_comms_packet(name, ch, " --------------------------------------");
+	sprintf(msg, " CASH ON HAND:  $%.2f", ship->tsd.ship.wallet);
+	send_comms_packet(name, ch, msg);
 	send_comms_packet(name, ch, " --------------------------------------");
 }
 

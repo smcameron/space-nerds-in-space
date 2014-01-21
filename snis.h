@@ -354,6 +354,8 @@ struct ship_data {
 #define MAX_CARGO_BAYS_PER_SHIP 8
 	struct cargo_container_contents cargo[MAX_CARGO_BAYS_PER_SHIP];
 	int ncargo_bays;
+#define INITIAL_WALLET_MONEY (2500.0f)
+	float wallet;
 };
 
 struct marketplace_data {
