@@ -39,7 +39,6 @@ static struct snis_graph_context {
 	int extent_width, extent_height; /* size of drawing area used in snis_draw_* functions */
 	int screen_width, screen_height; /* size of screen in pixels */
 	struct snis_graph_viewport vp_3d; /* in extent coords */
-	GdkGC *gc;
 	int hue; /* current color, index into huex[] and glhue[] */
 
 	int has_scale;
@@ -96,16 +95,14 @@ void sng_set_clip_window(int x1, int y1, int x2, int y2)
 	sgc.c.y2 = y2;
 }
 
-void sng_current_draw_line(GdkDrawable *drawable,
-        GdkGC *gc, float x1, float y1, float x2, float y2)
+void sng_current_draw_line(float x1, float y1, float x2, float y2)
 {
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
 	graph_dev_draw_line(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale);
 }
 
-void sng_current_draw_thick_line(GdkDrawable *drawable,
-	GdkGC *gc, float x1, float y1, float x2, float y2)
+void sng_current_draw_thick_line(float x1, float y1, float x2, float y2)
 {
 	float sx1, sy1, sx2, sy2, dx, dy;
 
@@ -158,8 +155,7 @@ static int clip_rectangle(float *x, float *y, float *width, float *height)
 	return 1;
 }
 
-void sng_current_draw_rectangle(GdkDrawable *drawable,
-	GdkGC *gc, gboolean filled, float x, float y, float width, float height)
+void sng_current_draw_rectangle(int filled, float x, float y, float width, float height)
 {
 	if (!clip_rectangle(&x, &y, &width, &height))
 		return;
@@ -167,8 +163,7 @@ void sng_current_draw_rectangle(GdkDrawable *drawable,
 		width * sgc.xscale, height * sgc.yscale);
 }
 
-void sng_current_draw_bright_line(GdkDrawable *drawable,
-	GdkGC *gc, float x1, float y1, float x2, float y2, int color)
+void sng_current_draw_bright_line(float x1, float y1, float x2, float y2, int color)
 {
 	float sx1, sy1, sx2, sy2, dx, dy;
 
@@ -195,8 +190,7 @@ void sng_current_draw_bright_line(GdkDrawable *drawable,
 	graph_dev_draw_line(sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
-void sng_current_draw_arc(GdkDrawable *drawable, GdkGC *gc,
-	gboolean filled, float x, float y, float width, float height, float angle1, float angle2)
+void sng_current_draw_arc(int filled, float x, float y, float width, float height, float angle1, float angle2)
 {
 	graph_dev_draw_arc(filled, x * sgc.xscale, y * sgc.yscale, width * sgc.xscale,
 				height * sgc.yscale, angle1, angle2);
@@ -228,13 +222,10 @@ static void sng_bright_electric_line_plot_func(int x, int y, void *context)
 	}
 }
 
-void sng_draw_dotted_line(GdkDrawable *drawable,
-	GdkGC *gc, float x1, float y1, float x2, float y2)
+void sng_draw_dotted_line(float x1, float y1, float x2, float y2)
 {
 	struct sng_dotted_plot_func_context context;
 
-	context.drawable = drawable;
-	context.gc = gc;
 	context.i = 0;
 
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
@@ -244,13 +235,10 @@ void sng_draw_dotted_line(GdkDrawable *drawable,
 			sng_dotted_line_plot_func, &context);
 }
 
-void sng_draw_electric_line(GdkDrawable *drawable,
-	GdkGC *gc, float x1, float y1, float x2, float y2)
+void sng_draw_electric_line(float x1, float y1, float x2, float y2)
 {
 	struct sng_dotted_plot_func_context context;
 
-	context.drawable = drawable;
-	context.gc = gc;
 	context.i = 0;
 
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
@@ -260,13 +248,10 @@ void sng_draw_electric_line(GdkDrawable *drawable,
 			sng_electric_line_plot_func, &context);
 }
 
-static void sng_draw_bright_white_electric_line(GdkDrawable *drawable,
-	GdkGC *gc, float x1, float y1, float x2, float y2, int color)
+static void sng_draw_bright_white_electric_line(float x1, float y1, float x2, float y2, int color)
 {
 	struct sng_dotted_plot_func_context context;
 
-	context.drawable = drawable;
-	context.gc = gc;
 	context.i = color;
 
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
@@ -276,8 +261,7 @@ static void sng_draw_bright_white_electric_line(GdkDrawable *drawable,
 			sng_bright_electric_line_plot_func, &context);
 }
 
-void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
-	float x1, float y1, float x2, float y2, int color)
+void sng_draw_laser_line(float x1, float y1, float x2, float y2, int color)
 {
 	float dx, dy;
 
@@ -292,13 +276,13 @@ void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
 	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
 		return;
 
-	sng_draw_bright_white_electric_line(drawable, gc, x1, y1, x2, y2, color);
+	sng_draw_bright_white_electric_line(x1, y1, x2, y2, color);
 	sng_set_foreground(color);
-	sng_draw_electric_line(drawable, gc, x1 - dx, y1 - dy, x2 - dx, y2 - dy);
-	sng_draw_electric_line(drawable, gc, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
+	sng_draw_electric_line(x1 - dx, y1 - dy, x2 - dx, y2 - dy);
+	sng_draw_electric_line(x1 + dx, y1 + dy, x2 + dx, y2 + dy);
 }
 
-void sng_draw_vect_obj(GtkWidget *w, GdkGC *gc, struct my_vect_obj *v, float x, float y)
+void sng_draw_vect_obj(struct my_vect_obj *v, float x, float y)
 {
 	int i;
 	float x1, y1, x2, y2;
@@ -310,13 +294,12 @@ void sng_draw_vect_obj(GtkWidget *w, GdkGC *gc, struct my_vect_obj *v, float x, 
 		y1 = y + v->p[i].y;
 		x2 = x + v->p[i + 1].x;
 		y2 = y + v->p[i + 1].y;
-		sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
+		sng_current_draw_line(x1, y1, x2, y2);
 	}
 }
 
 /* Draws a letter in the given font at an absolute x,y coords on the screen. */
-float sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font, 
-		unsigned char letter, float x, float y)
+float sng_abs_xy_draw_letter(struct my_vect_obj **font, unsigned char letter, float x, float y)
 {
 	int i;
 	float x1, y1, x2, y2;
@@ -345,7 +328,7 @@ float sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font,
 			maxx = x2;
 		
 		if (x1 > 0 && x2 > 0)
-			sng_current_draw_line(w->window, gc, x1, y1, x2, y2); 
+			sng_current_draw_line(x1, y1, x2, y2);
 	}
 	diff = fabs(maxx - minx);
 	/* if (diff == 0)
@@ -355,14 +338,14 @@ float sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font,
 
 /* Used for floating labels in the game. */
 /* Draws a string at an absolute x,y position on the screen. */ 
-void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, float x, float y) 
+void sng_abs_xy_draw_string(char *s, int font, float x, float y)
 {
 
 	int i, dx;	
 	float deltax = 0;
 
 	for (i=0;s[i];i++) {
-		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(w, gc, gamefont[font], s[i], x + deltax, y);
+		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font], s[i], x + deltax, y);
 		deltax += dx;
 	}
 }
@@ -393,7 +376,7 @@ void sng_string_bounding_box(char *s, int font, float *bbx1, float *bby1, float 
 
 /* Used for floating labels in the game. */
 /* Draws a string centered at x,y position on the screen. */
-void sng_center_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, float x, float y)
+void sng_center_xy_draw_string(char *s, int font, float x, float y)
 {
 	float bbx1, bby1, bbx2, bby2;
 	sng_string_bounding_box(s, font, &bbx1, &bby1, &bbx2, &bby2);
@@ -405,13 +388,12 @@ void sng_center_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, float
 	float deltax = 0;
 
 	for (i=0;s[i];i++) {
-		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(w, gc, gamefont[font], s[i], ox + deltax, oy);
+		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font], s[i], ox + deltax, oy);
 		deltax += dx;
 	}
 }
 
-void sng_abs_xy_draw_string_with_cursor(GtkWidget *w, GdkGC *gc, char *s,
-			int font, float x, float y, int cursor_pos, int cursor_on) 
+void sng_abs_xy_draw_string_with_cursor(char *s, int font, float x, float y, int cursor_pos, int cursor_on)
 {
 
 	int i;
@@ -419,21 +401,21 @@ void sng_abs_xy_draw_string_with_cursor(GtkWidget *w, GdkGC *gc, char *s,
 	float deltax = 0;
 
 	if (!cursor_on) {
-		sng_abs_xy_draw_string(w, gc, s, font, x, y);
+		sng_abs_xy_draw_string(s, font, x, y);
 		return;
 	}
 
 	for (i = 0; s[i]; i++) {
 		if (i == cursor_pos)
-			sng_abs_xy_draw_letter(w, gc, gamefont[font], '_', x + deltax, y);
-		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(w, gc, gamefont[font], s[i], x + deltax, y);
+			sng_abs_xy_draw_letter(gamefont[font], '_', x + deltax, y);
+		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font], s[i], x + deltax, y);
 		deltax += dx;
 	}
 	if (i == cursor_pos)
-		sng_abs_xy_draw_letter(w, gc, gamefont[font], '_', x + deltax, y);
+		sng_abs_xy_draw_letter(gamefont[font], '_', x + deltax, y);
 }
 
-void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, float x, float y)
+void sng_draw_point(float x, float y)
 {
 	graph_dev_draw_point(x * sgc.xscale, y * sgc.yscale);
 }
@@ -512,7 +494,7 @@ static struct gradient_color gradient_colors[] = {
 	{&CYAN, 180, 1, 1}
 };
 
-void sng_setup_colors(GtkWidget *w)
+void sng_setup_colors(void *gtk_widget)
 {
 	int i;
 
@@ -635,7 +617,7 @@ void sng_setup_colors(GtkWidget *w)
 		}
 	}
 
-	graph_dev_setup_colors(w, huex, TOTAL_COLORS);
+	graph_dev_setup_colors(gtk_widget, huex, TOTAL_COLORS);
 }
 
 void sng_set_foreground_alpha(int c, float a)
@@ -668,14 +650,14 @@ struct sng_color sng_get_color(int c)
 	return color;
 }
 
-void sng_set_context(GdkDrawable *drawable, GdkGC *gc)
+void sng_set_context(void *gdk_drawable, void *gdk_gc)
 {
-	graph_dev_set_context(drawable, gc);
+	graph_dev_set_context(gdk_drawable, gdk_gc);
 }
 
-void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, int filled, float x, float y, float r)
+void sng_draw_circle(int filled, float x, float y, float r)
 {
-	sng_current_draw_arc(drawable, gc, filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
+	sng_current_draw_arc(filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
 }
 
 char *sng_load_png_texture(const char *filename, int flipVertical, int flipHorizontal, int *w, int *h,

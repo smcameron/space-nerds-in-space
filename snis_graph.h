@@ -44,8 +44,6 @@ extern int CYAN;
 struct my_vect_obj;
 
 struct sng_dotted_plot_func_context {
-        GdkDrawable *drawable;
-        GdkGC *gc;
         int i;
 };
 
@@ -58,39 +56,33 @@ struct sng_color {
 
 extern void sng_set_scale(float xscale, float yscale);
 
-extern void sng_current_draw_line(GdkDrawable *drawable, GdkGC *gc, float x1, float y1, float x2, float y2);
-extern void sng_current_draw_thick_line(GdkDrawable *drawable, GdkGC *gc, float x1, float y1, float x2, float y2);
-extern void sng_current_draw_rectangle(GdkDrawable *drawable,
-	GdkGC *gc, gboolean filled, float x, float y, float width, float height);
-extern void sng_current_draw_bright_line(GdkDrawable *drawable,
-	GdkGC *gc, float x1, float y1, float x2, float y2, int color);
-extern void sng_current_draw_arc(GdkDrawable *drawable, GdkGC *gc,
-	gboolean filled, float x, float y, float width, float height, float angle1, float angle2);
+extern void sng_current_draw_line(float x1, float y1, float x2, float y2);
+extern void sng_current_draw_thick_line(float x1, float y1, float x2, float y2);
+extern void sng_current_draw_rectangle(int filled, float x, float y, float width, float height);
+extern void sng_current_draw_bright_line(float x1, float y1, float x2, float y2, int color);
+extern void sng_current_draw_arc(int filled, float x, float y, float width, float height, float angle1, float angle2);
 
 SNG_GLOBAL void sng_dotted_line_plot_func(int x, int y, void *context);
 SNG_GLOBAL void sng_electric_line_plot_func(int x, int y, void *context);
-SNG_GLOBAL void sng_draw_dotted_line(GdkDrawable *drawable,
-	GdkGC *gc, float x1, float y1, float x2, float y2);
-SNG_GLOBAL void sng_draw_electric_line(GdkDrawable *drawable,
-	GdkGC *gc, float x1, float y1, float x2, float y2);
+SNG_GLOBAL void sng_draw_dotted_line(float x1, float y1, float x2, float y2);
+SNG_GLOBAL void sng_draw_electric_line(float x1, float y1, float x2, float y2);
 
-SNG_GLOBAL void sng_draw_vect_obj(GtkWidget *w, GdkGC *gc, struct my_vect_obj *v, float x, float y);
-SNG_GLOBAL float sng_abs_xy_draw_letter(GtkWidget *w, GdkGC *gc, struct my_vect_obj **font, 
+SNG_GLOBAL void sng_draw_vect_obj(struct my_vect_obj *v, float x, float y);
+SNG_GLOBAL float sng_abs_xy_draw_letter(struct my_vect_obj **font,
 		unsigned char letter, float x, float y);
-SNG_GLOBAL void sng_abs_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, float x, float y) ;
-SNG_GLOBAL void sng_abs_xy_draw_string_with_cursor(GtkWidget *w, GdkGC *gc,
+SNG_GLOBAL void sng_abs_xy_draw_string(char *s, int font, float x, float y);
+SNG_GLOBAL void sng_abs_xy_draw_string_with_cursor(
 				char *s, int font, float x, float y, int cursor_pos, int cursor_on) ;
-SNG_GLOBAL void sng_center_xy_draw_string(GtkWidget *w, GdkGC *gc, char *s, int font, float x, float y);
-SNG_GLOBAL void sng_draw_point(GdkDrawable *drawable, GdkGC *gc, float x, float y);
-SNG_GLOBAL void sng_setup_colors(GtkWidget *w);
+SNG_GLOBAL void sng_center_xy_draw_string(char *s, int font, float x, float y);
+SNG_GLOBAL void sng_draw_point(float x, float y);
+SNG_GLOBAL void sng_setup_colors(void *w);
 SNG_GLOBAL void sng_set_foreground(int c);
 SNG_GLOBAL void sng_set_foreground_alpha(int c, float a);
 SNG_GLOBAL struct sng_color sng_get_foreground();
 SNG_GLOBAL struct sng_color sng_get_color(int c);
-SNG_GLOBAL void sng_set_context(GdkDrawable *drawable, GdkGC *gc);
-SNG_GLOBAL void sng_draw_circle(GdkDrawable *drawable, GdkGC *gc, int filled, float x, float y, float r);
-SNG_GLOBAL void sng_draw_laser_line(GdkDrawable *drawable, GdkGC *gc,
-			float x1, float y1, float x2, float y2, int color);
+SNG_GLOBAL void sng_set_context(void *gdk_drawable, void *gdk_gc);
+SNG_GLOBAL void sng_draw_circle(int filled, float x, float y, float r);
+SNG_GLOBAL void sng_draw_laser_line(float x1, float y1, float x2, float y2, int color);
 
 /* pixel size of the actual output window */
 SNG_GLOBAL void sng_set_screen_size(int width, int height);
@@ -107,6 +99,5 @@ SNG_GLOBAL void sng_set_3d_viewport(int x_offset, int y_offset, int width, int h
 SNG_GLOBAL char *sng_load_png_texture(const char *filename, int flipVertical, int flipHorizontal, int *w, int *h,
 			int *hasAlpha, char *whynot, int whynotlen);
 
-SNG_GLOBAL void sng_setup_colors(GtkWidget *w);
 #undef SNG_GLOBAL
 #endif

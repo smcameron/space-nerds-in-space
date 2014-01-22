@@ -112,7 +112,7 @@ static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 	ty1 = (int) (s->y + s->length - s->input * s->length);
 	bar_color = choose_barcolor(s, v);
 	sng_set_foreground(s->color);
-	sng_current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->height, s->length);
+	sng_current_draw_rectangle(0, s->x, s->y, s->height, s->length);
 	height = s->value * s->length - 1;
 	height += f;
 	if (height < 0)
@@ -121,33 +121,23 @@ static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 		height = s->length - 1;
 	if (!s->clicked)
 		sng_set_foreground(bar_color);
-	sng_current_draw_rectangle(w->window, gc, 1, s->x + 1, s->y + s->length - height,
+	sng_current_draw_rectangle(1, s->x + 1, s->y + s->length - height,
 					s->height - 2, height);
 	if (!s->clicked)
 		sng_set_foreground(s->color);
 
 	if (s->clicked) {
-		sng_current_draw_line(w->window, gc,
-			s->x, ty1,
-			s->x - ptr_height, ty1 - ptr_width); 
-		sng_current_draw_line(w->window, gc,
-			s->x - ptr_height, ty1 - ptr_width,
-			s->x - ptr_height, ty1 + ptr_width);
-		sng_current_draw_line(w->window, gc,
-			s->x - ptr_height, ty1 + ptr_width,
-			s->x, ty1);
+		sng_current_draw_line(s->x, ty1, s->x - ptr_height, ty1 - ptr_width);
+		sng_current_draw_line(s->x - ptr_height, ty1 - ptr_width, s->x - ptr_height, ty1 + ptr_width);
+		sng_current_draw_line(s->x - ptr_height, ty1 + ptr_width, s->x, ty1);
 
-		sng_current_draw_line(w->window, gc,
-			s->x + s->height, ty1,
-			s->x + ptr_height + s->height, ty1 - ptr_width); 
-		sng_current_draw_line(w->window, gc,
-			s->x + ptr_height + s->height, ty1 - ptr_width,
+		sng_current_draw_line(s->x + s->height, ty1, s->x + ptr_height + s->height, ty1 - ptr_width);
+		sng_current_draw_line(s->x + ptr_height + s->height, ty1 - ptr_width,
 			s->x + ptr_height + s->height, ty1 + ptr_width);
-		sng_current_draw_line(w->window, gc,
-			s->x + ptr_height + s->height, ty1 + ptr_width,
+		sng_current_draw_line(s->x + ptr_height + s->height, ty1 + ptr_width,
 			s->x + s->height, ty1);
 	}
-	/* sng_abs_xy_draw_string(w, gc, s->label, s->font, s->x + s->length + 5, s->y + 2 * s->height / 3);  */
+	/* sng_abs_xy_draw_string(s->label, s->font, s->x + s->length + 5, s->y + 2 * s->height / 3);  */
 } 
 
 void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
@@ -179,7 +169,7 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 	v = s->sample();
 	bar_color = choose_barcolor(s, v);
 	sng_set_foreground(s->color);
-	sng_current_draw_rectangle(w->window, gc, 0, s->x, s->y, s->length, s->height);
+	sng_current_draw_rectangle(0, s->x, s->y, s->length, s->height);
 	width = s->value * (s->length - 2.0);
 	width = width + f;
 	if (width < 0.0)
@@ -188,25 +178,25 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 		width = s->length - 2.0;
 	if (!s->clicked)
 		sng_set_foreground(bar_color);
-	sng_current_draw_rectangle(w->window, gc, 1, s->x + 1.0, s->y + 1.0, width, s->height - 2.0);
+	sng_current_draw_rectangle(1, s->x + 1.0, s->y + 1.0, width, s->height - 2.0);
 	if (!s->clicked)
 		sng_set_foreground(s->color);
 
 	tx1 = (s->input * s->length) + s->x;
 
 	if (s->clicked) {
-		sng_current_draw_line(w->window, gc, tx1, s->y, tx1 - ptr_width, s->y - ptr_height); 
-		sng_current_draw_line(w->window, gc, tx1, s->y, tx1 + ptr_width, s->y - ptr_height); 
-		sng_current_draw_line(w->window, gc, tx1 - ptr_width, s->y - ptr_height,
+		sng_current_draw_line(tx1, s->y, tx1 - ptr_width, s->y - ptr_height);
+		sng_current_draw_line(tx1, s->y, tx1 + ptr_width, s->y - ptr_height);
+		sng_current_draw_line(tx1 - ptr_width, s->y - ptr_height,
 						tx1 + ptr_width, s->y - ptr_height); 
-		sng_current_draw_line(w->window, gc, tx1, s->y + s->height,
+		sng_current_draw_line(tx1, s->y + s->height,
 				tx1 - ptr_width, s->y + s->height + ptr_height); 
-		sng_current_draw_line(w->window, gc, tx1, s->y + s->height,
+		sng_current_draw_line(tx1, s->y + s->height,
 				tx1 + ptr_width, s->y + s->height + ptr_height); 
-		sng_current_draw_line(w->window, gc, tx1 - ptr_width, s->y + s->height + ptr_height,
+		sng_current_draw_line(tx1 - ptr_width, s->y + s->height + ptr_height,
 				tx1 + ptr_width, s->y + s->height + ptr_height); 
 	}
-	sng_abs_xy_draw_string(w, gc, s->label, s->font,
+	sng_abs_xy_draw_string(s->label, s->font,
 				s->x + s->length + 5.0, s->y + 2.0 * s->height / 3.0);
 }
 

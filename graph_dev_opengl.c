@@ -2358,23 +2358,20 @@ void graph_dev_display_debug_menu_show()
 	sng_set_foreground(WHITE);
 	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 65);
 
-	/* fake GtkWidget until we can purge it from the snis_graph interfaces */
-	GtkWidget w;
-
 	graph_dev_draw_rectangle(0, 15, 35, 15, 15);
 	if (draw_normal_lines)
 		graph_dev_draw_rectangle(1, 17, 37, 11, 11);
-	sng_abs_xy_draw_string(&w, 0, "VERTEX NORMAL LINES", NANO_FONT, 35 / sgc.x_scale, 45 / sgc.y_scale);
+	sng_abs_xy_draw_string("VERTEX NORMAL LINES", NANO_FONT, 35 / sgc.x_scale, 45 / sgc.y_scale);
 
 	graph_dev_draw_rectangle(0, 15, 55, 15, 15);
 	if (draw_billboard_wireframe)
 		graph_dev_draw_rectangle(1, 17, 57, 11, 11);
-	sng_abs_xy_draw_string(&w, 0, "BILLBOARD WIREFRAME", NANO_FONT, 35 / sgc.x_scale, 65 / sgc.y_scale);
+	sng_abs_xy_draw_string("BILLBOARD WIREFRAME", NANO_FONT, 35 / sgc.x_scale, 65 / sgc.y_scale);
 
 	graph_dev_draw_rectangle(0, 15, 75, 15, 15);
 	if (draw_polygon_as_lines)
 		graph_dev_draw_rectangle(1, 17, 77, 11, 11);
-	sng_abs_xy_draw_string(&w, 0, "POLYGON AS LINE", NANO_FONT, 35 / sgc.x_scale, 85 / sgc.y_scale);
+	sng_abs_xy_draw_string("POLYGON AS LINE", NANO_FONT, 35 / sgc.x_scale, 85 / sgc.y_scale);
 }
 
 int graph_dev_graph_dev_debug_menu_click(int x, int y)

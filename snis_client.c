@@ -2332,14 +2332,14 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 
 	/* draw background overlay */
 	sng_set_foreground_alpha(BLACK, 0.75);
-	sng_draw_circle(w->window, gc, 1, cx, cy, r);
+	sng_draw_circle(1, cx, cy, r);
 	sng_set_foreground(AMBER);
-	sng_draw_circle(w->window, gc, 0, cx, cy, r);
+	sng_draw_circle(0, cx, cy, r);
 	for (i=0; i<4; i++) {
 		float angle = i * M_PI / 2.0 + M_PI / 4.0;
-		snis_draw_line(w->window, gc, cx + cos(angle) * r, cy - sin(angle) * r,
+		snis_draw_line(cx + cos(angle) * r, cy - sin(angle) * r,
 				cx + 0.5 * cos(angle) * r, cy - 0.5 * sin(angle) * r);
-		snis_draw_arc(w->window, gc, 0, cx-0.5*r, cy-0.5*r, r, r, angle - M_PI/8.0, angle + M_PI/8.0);
+		snis_draw_arc(0, cx-0.5*r, cy-0.5*r, r, r, angle - M_PI/8.0, angle + M_PI/8.0);
 	}
 
 	if ((timer & 0x07) < 4)
@@ -2393,12 +2393,12 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 		float sy = cy - r * sin(twist) * d * 0.98;
 
 		sng_set_foreground(ORANGERED);
-		snis_draw_line(w->window, gc, sx, sy - 2, sx, sy + 2);
-		snis_draw_line(w->window, gc, sx - 2, sy, sx + 2, sy);
+		snis_draw_line(sx, sy - 2, sx, sy + 2);
+		snis_draw_line(sx - 2, sy, sx + 2, sy);
 
 		if (curr_science_guy == &go[i]) {
 			sng_set_foreground(GREEN);
-			snis_draw_rectangle(w->window, gc, 0, sx-2, sy-2, 4, 4);
+			snis_draw_rectangle(0, sx-2, sy-2, 4, 4);
 		}
 	}
 }
@@ -3082,28 +3082,28 @@ static gint key_release_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 
 static void show_fonttest(GtkWidget *w)
 {
-	sng_abs_xy_draw_string(w, gc, "A B C D E F G H I J K L M", SMALL_FONT, 30, 30); 
-	sng_abs_xy_draw_string(w, gc, "N O P Q R S T U V W X Y Z", SMALL_FONT, 30, 60); 
-	sng_abs_xy_draw_string(w, gc, "a b c d e f g h i j k l m", SMALL_FONT, 30, 90); 
-	sng_abs_xy_draw_string(w, gc, "n o p q r s t u v w x y z", SMALL_FONT, 30, 120); 
-	sng_abs_xy_draw_string(w, gc, "0 1 2 3 4 5 6 7 8 9 ! , .", SMALL_FONT, 30, 150); 
-	sng_abs_xy_draw_string(w, gc, "? | - = * / \\ + ( ) \" ' _", SMALL_FONT, 30, 180); 
+	sng_abs_xy_draw_string("A B C D E F G H I J K L M", SMALL_FONT, 30, 30);
+	sng_abs_xy_draw_string("N O P Q R S T U V W X Y Z", SMALL_FONT, 30, 60);
+	sng_abs_xy_draw_string("a b c d e f g h i j k l m", SMALL_FONT, 30, 90);
+	sng_abs_xy_draw_string("n o p q r s t u v w x y z", SMALL_FONT, 30, 120);
+	sng_abs_xy_draw_string("0 1 2 3 4 5 6 7 8 9 ! , .", SMALL_FONT, 30, 150);
+	sng_abs_xy_draw_string("? | - = * / \\ + ( ) \" ' _", SMALL_FONT, 30, 180);
 
-	sng_abs_xy_draw_string(w, gc, "The Quick Fox Jumps Over The Lazy Brown Dog.", SMALL_FONT, 30, 210); 
-	sng_abs_xy_draw_string(w, gc, "The Quick Fox Jumps Over The Lazy Brown Dog.", BIG_FONT, 30, 280); 
-	sng_abs_xy_draw_string(w, gc, "The Quick Fox Jumps Over The Lazy Brown Dog.", TINY_FONT, 30, 350); 
-	sng_abs_xy_draw_string(w, gc, "The quick fox jumps over the lazy brown dog.", NANO_FONT, 30, 380); 
-	sng_abs_xy_draw_string(w, gc, "THE QUICK FOX JUMPS OVER THE LAZY BROWN DOG.", TINY_FONT, 30, 410); 
-	sng_abs_xy_draw_string(w, gc, "Well now, what have we here?  James Bond!", NANO_FONT, 30, 425); 
-	sng_abs_xy_draw_string(w, gc, "The quick fox jumps over the lazy brown dog.", SMALL_FONT, 30, 450); 
-	sng_abs_xy_draw_string(w, gc, "Copyright (C) 2010 Stephen M. Cameron 0123456789", TINY_FONT, 30, 480); 
+	sng_abs_xy_draw_string("The Quick Fox Jumps Over The Lazy Brown Dog.", SMALL_FONT, 30, 210);
+	sng_abs_xy_draw_string("The Quick Fox Jumps Over The Lazy Brown Dog.", BIG_FONT, 30, 280);
+	sng_abs_xy_draw_string("The Quick Fox Jumps Over The Lazy Brown Dog.", TINY_FONT, 30, 350);
+	sng_abs_xy_draw_string("The quick fox jumps over the lazy brown dog.", NANO_FONT, 30, 380);
+	sng_abs_xy_draw_string("THE QUICK FOX JUMPS OVER THE LAZY BROWN DOG.", TINY_FONT, 30, 410);
+	sng_abs_xy_draw_string("Well now, what have we here?  James Bond!", NANO_FONT, 30, 425);
+	sng_abs_xy_draw_string("The quick fox jumps over the lazy brown dog.", SMALL_FONT, 30, 450);
+	sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron 0123456789", TINY_FONT, 30, 480);
 }
 
 static void show_introscreen(GtkWidget *w)
 {
-	sng_abs_xy_draw_string(w, gc, "Space Nerds", BIG_FONT, 80, 200); 
-	sng_abs_xy_draw_string(w, gc, "In Space", BIG_FONT, 180, 320); 
-	sng_abs_xy_draw_string(w, gc, "Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, 255, 550); 
+	sng_abs_xy_draw_string("Space Nerds", BIG_FONT, 80, 200);
+	sng_abs_xy_draw_string("In Space", BIG_FONT, 180, 320);
+	sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, 255, 550);
 }
 
 int lobbylast1clickx = -1;
@@ -3135,17 +3135,17 @@ static void show_lobbyscreen(GtkWidget *w)
 
 	sng_set_foreground(WHITE);
 	if (lobby_socket == -1) {
-		sng_abs_xy_draw_string(w, gc, "Space Nerds", BIG_FONT, 80, 200); 
-		sng_abs_xy_draw_string(w, gc, "In Space", BIG_FONT, 180, 320); 
-		sng_abs_xy_draw_string(w, gc, "Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, 255, 550); 
+		sng_abs_xy_draw_string("Space Nerds", BIG_FONT, 80, 200);
+		sng_abs_xy_draw_string("In Space", BIG_FONT, 180, 320);
+		sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, 255, 550);
 		if (lobby_count >= MAX_LOBBY_TRIES)
 			sprintf(msg, "Giving up on lobby... tried %d times.",
 				lobby_count);
 		else
 			sprintf(msg, "Connecting to lobby... tried %d times.",
 				lobby_count);
-		sng_abs_xy_draw_string(w, gc, msg, SMALL_FONT, 100, 400);
-		sng_abs_xy_draw_string(w, gc, lobbyerror, NANO_FONT, 100, 430);
+		sng_abs_xy_draw_string(msg, SMALL_FONT, 100, 400);
+		sng_abs_xy_draw_string(lobbyerror, NANO_FONT, 100, 430);
 	} else {
 		if (lobby_selected_server != -1 &&
 			lobbylast1clickx > 200 && lobbylast1clickx < 620 &&
@@ -3161,9 +3161,9 @@ static void show_lobbyscreen(GtkWidget *w)
 
 		lobby_selected_server = -1;
 		sprintf(msg, "Connected to lobby on socket %d\n", lobby_socket);
-		sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 30, LINEHEIGHT);
+		sng_abs_xy_draw_string(msg, TINY_FONT, 30, LINEHEIGHT);
 		sprintf(msg, "Total game servers: %d\n", ngameservers);
-		sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 30, LINEHEIGHT + 20);
+		sng_abs_xy_draw_string(msg, TINY_FONT, 30, LINEHEIGHT + 20);
 		for (i = 0; i < ngameservers; i++) {
 			unsigned char *x = (unsigned char *) 
 				&lobby_game_server[i].ipaddr;
@@ -3172,7 +3172,7 @@ static void show_lobbyscreen(GtkWidget *w)
 				lobbylast1clicky < 100 + (0.5 + i) * LINEHEIGHT) {
 				lobby_selected_server = i;
 				sng_set_foreground(GREEN);
-				snis_draw_rectangle(w->window, gc, 0, 25, 100 + (-0.5 + i) * LINEHEIGHT,
+				snis_draw_rectangle(0, 25, 100 + (-0.5 + i) * LINEHEIGHT,
 					725, LINEHEIGHT);
 			} else
 				sng_set_foreground(WHITE);
@@ -3182,23 +3182,23 @@ static void show_lobbyscreen(GtkWidget *w)
 			}
 			 
 			sprintf(msg, "%hu.%hu.%hu.%hu/%hu", x[0], x[1], x[2], x[3], lobby_game_server[i].port);
-			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 30, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, TINY_FONT, 30, 100 + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].game_instance);
-			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 350, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, TINY_FONT, 350, 100 + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].server_nickname);
-			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 450, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, TINY_FONT, 450, 100 + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].location);
-			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 650, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, TINY_FONT, 650, 100 + i * LINEHEIGHT);
 			sprintf(msg, "%d", lobby_game_server[i].nconnections);
-			sng_abs_xy_draw_string(w, gc, msg, TINY_FONT, 700, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, TINY_FONT, 700, 100 + i * LINEHEIGHT);
 		}
 		if (lobby_selected_server != -1)
 			sng_set_foreground(GREEN);
 		else
 			sng_set_foreground(RED);
 		/* This should be a real button, but I'm too lazy to fix it now. */
-		snis_draw_rectangle(w->window, gc, 0, 250, 520, 300, LINEHEIGHT * 2);
-		sng_abs_xy_draw_string(w, gc, "CONNECT TO SERVER", TINY_FONT, 280, 520 + LINEHEIGHT);
+		snis_draw_rectangle(0, 250, 520, 300, LINEHEIGHT * 2);
+		sng_abs_xy_draw_string("CONNECT TO SERVER", TINY_FONT, 280, 520 + LINEHEIGHT);
 	}
 }
 
@@ -4763,7 +4763,7 @@ static void show_connecting_screen(GtkWidget *w)
 {
 	static int connected_to_gameserver = 0;
 	sng_set_foreground(WHITE);
-	sng_abs_xy_draw_string(w, gc, "CONNECTING TO SERVER...", SMALL_FONT, 100, 300 + LINEHEIGHT);
+	sng_abs_xy_draw_string("CONNECTING TO SERVER...", SMALL_FONT, 100, 300 + LINEHEIGHT);
 	if (!connected_to_gameserver) {
 		connected_to_gameserver = 1;
 		connect_to_gameserver(lobby_selected_server);
@@ -4773,8 +4773,8 @@ static void show_connecting_screen(GtkWidget *w)
 static void show_connected_screen(GtkWidget *w)
 {
 	sng_set_foreground(WHITE);
-	sng_abs_xy_draw_string(w, gc, "CONNECTED TO SERVER", SMALL_FONT, 100, 300 + LINEHEIGHT);
-	sng_abs_xy_draw_string(w, gc, "DOWNLOADING GAME DATA", SMALL_FONT, 100, 300 + LINEHEIGHT * 3);
+	sng_abs_xy_draw_string("CONNECTED TO SERVER", SMALL_FONT, 100, 300 + LINEHEIGHT);
+	sng_abs_xy_draw_string("DOWNLOADING GAME DATA", SMALL_FONT, 100, 300 + LINEHEIGHT * 3);
 }
 
 static void show_common_screen(GtkWidget *w, char *title)
@@ -4790,21 +4790,21 @@ static void show_common_screen(GtkWidget *w, char *title)
 		border_color = BLUE;
 	}
 	sng_set_foreground(title_color);
-	sng_abs_xy_draw_string(w, gc, title, SMALL_FONT, 25, 10 + LINEHEIGHT);
+	sng_abs_xy_draw_string(title, SMALL_FONT, 25, 10 + LINEHEIGHT);
 	sng_set_foreground(border_color);
-	snis_draw_line(w->window, gc, 1, 1, SCREEN_WIDTH, 0);
-	snis_draw_line(w->window, gc, SCREEN_WIDTH - 1, 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
-	snis_draw_line(w->window, gc, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, 1, SCREEN_HEIGHT - 1);
-	snis_draw_line(w->window, gc, 1, 1, 1, SCREEN_HEIGHT - 1);
+	snis_draw_line(1, 1, SCREEN_WIDTH, 0);
+	snis_draw_line(SCREEN_WIDTH - 1, 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+	snis_draw_line(SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, 1, SCREEN_HEIGHT - 1);
+	snis_draw_line(1, 1, 1, SCREEN_HEIGHT - 1);
 
 	if (vertical_controls_timer) {
 		sng_set_foreground(WHITE);
 		vertical_controls_timer--;
 		if (vertical_controls_inverted > 0)
-			sng_center_xy_draw_string(w, gc, "VERTICAL CONTROLS NORMAL",
+			sng_center_xy_draw_string("VERTICAL CONTROLS NORMAL",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 		else
-			sng_center_xy_draw_string(w, gc, "VERTICAL CONTROLS INVERTED",
+			sng_center_xy_draw_string("VERTICAL CONTROLS INVERTED",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 	}
 }
@@ -4857,10 +4857,10 @@ static void show_gunsight(GtkWidget *w)
 	y2 = cy + 50;
 
 	sng_set_foreground(GREEN);
-	snis_draw_line(w->window, gc, x1, cy, x1 + 25, cy);
-	snis_draw_line(w->window, gc, x2 - 25, cy, x2, cy);
-	snis_draw_line(w->window, gc, cx, y1, cx, y1 + 25);
-	snis_draw_line(w->window, gc, cx, y2 - 25, cx, y2);
+	snis_draw_line(x1, cy, x1 + 25, cy);
+	snis_draw_line(x2 - 25, cy, x2, cy);
+	snis_draw_line(cx, y1, cx, y1 + 25);
+	snis_draw_line(cx, y2 - 25, cx, y2);
 }
 
 static void main_screen_add_text(char *msg)
@@ -4880,7 +4880,7 @@ static void draw_main_screen_text(GtkWidget *w, GdkGC *gc)
 
 	sng_set_foreground(GREEN);
 	for (i = 0; i < 4; i++) {
-		sng_abs_xy_draw_string(w, gc, main_screen_text.text[first],
+		sng_abs_xy_draw_string(main_screen_text.text[first],
 				NANO_FONT, 10, SCREEN_HEIGHT - (4 - i) * 18 - 10);
 		first = (first + 1) % 4;
 	}
@@ -4908,12 +4908,12 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int 
 		y1 = y + dy;
 		x2 = x + 2.0 * dx;
 		y2 = y + 2.0 * dy;
-		/* snis_draw_line(w->window, gc, x1, y1, x2, y2); */
-		snis_draw_line(w->window, gc, x2 - ddx, y2 - ddy, x2 + ddx, y2 + ddy);
-		snis_draw_line(w->window, gc, x2 - ddx, y2 - ddy, x1, y1);
-		snis_draw_line(w->window, gc, x1, y1, x2 + ddx, y2 + ddy);
+		/* snis_draw_line(x1, y1, x2, y2); */
+		snis_draw_line(x2 - ddx, y2 - ddy, x2 + ddx, y2 + ddy);
+		snis_draw_line(x2 - ddx, y2 - ddy, x1, y1);
+		snis_draw_line(x1, y1, x2 + ddx, y2 + ddy);
 		if (ring)
-			sng_draw_circle(w->window, gc, 0, x, y, 33);
+			sng_draw_circle(0, x, y, 33);
 	}
 }
 
@@ -5128,7 +5128,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 		sprintf(buf, "TORP: %03d", o->tsd.ship.torpedoes +
 					o->tsd.ship.torpedoes_loading +
 					o->tsd.ship.torpedoes_loaded);
-		sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 570, SCREEN_HEIGHT - 15);
+		sng_abs_xy_draw_string(buf, NANO_FONT, 570, SCREEN_HEIGHT - 15);
 	}
 
 	show_gunsight(w);
@@ -5287,13 +5287,13 @@ static void show_mainscreen(GtkWidget *w)
 		entity_get_screen_coords(e, &sx, &sy);
 		sprintf(buffer, "%3.1f,%6.1f,%6.1f,%6.1f",
 				oo->heading * 180.0 / M_PI, oo->x, oo->y, oo->z);
-		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy);
+		sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy);
 	}
 	{
 		char buffer[100];
 		sprintf(buffer, "%3.1f,%6.1f,%6.1f,%6.1f",
 				o->heading * 180.0 / M_PI, o->x, o->y, o->z);
-		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, 0, 10);
+		sng_abs_xy_draw_string(buffer, NANO_FONT, 0, 10);
 	}
 #endif
 
@@ -5312,9 +5312,9 @@ static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, 
 	for (i = 0; i < 10; i++) {
 		dx = x + snis_randn(r * 2) - r; 
 		dy = y + snis_randn(r * 2) - r; 
-		snis_draw_line(drawable, gc, x, y, dx, dy);
+		snis_draw_line(x, y, dx, dy);
 	}
-	/* sng_draw_circle(drawable, gc, 0, x, y, (int) (SCREEN_WIDTH * 150.0 / XKNOWN_DIM)); */
+	/* sng_draw_circle(0, x, y, (int) (SCREEN_WIDTH * 150.0 / XKNOWN_DIM)); */
 }
 
 /* position and dimensions of science scope */
@@ -5357,7 +5357,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			tx = (int) ((double) x + sin(da) * (double) snis_randn(dr));
 			ty = (int) ((double) y + cos(da) * (double) snis_randn(dr)); 
 
-			sng_draw_point(w->window, gc, tx, ty);
+			sng_draw_point(tx, ty);
 		}
 	} else {
 		switch(o->type) {
@@ -5391,13 +5391,13 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1) {
 			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R / 2, o->heading, 0.3);
 		} else {
-			snis_draw_line(w->window, gc, x - 1, y, x + 1, y);
-			snis_draw_line(w->window, gc, x, y - 1, x, y + 1);
+			snis_draw_line(x - 1, y, x + 1, y);
+			snis_draw_line(x, y - 1, x, y + 1);
 		}
 	}
 
 	if (selected)
-		sng_draw_circle(w->window, gc, 0, x, y, 10);
+		sng_draw_circle(0, x, y, 10);
 	
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
@@ -5435,7 +5435,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			sprintf(buffer, "%s %s\n", "?", o->sdata.name); 
 			break;
 		}
-		sng_abs_xy_draw_string(w, gc, buffer, PICO_FONT, x + 8, y - 8);
+		sng_abs_xy_draw_string(buffer, PICO_FONT, x + 8, y - 8);
 	}
 }
 
@@ -5483,7 +5483,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 			r = hypot(sx - SCIENCE_SCOPE_CX, sy - SCIENCE_SCOPE_CY);
 			if (r >= SCIENCE_SCOPE_R)
 				continue;
-			sng_draw_point(w->window, gc, sx, sy);
+			sng_draw_point(sx, sy);
 		}
 	} else {
 		switch(o->type) {
@@ -5513,12 +5513,12 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 			update_entity_scale(e, scale);
 			update_entity_orientation(e, &o->orientation);
 		} else {
-			snis_draw_line(w->window, gc, *x - 1, *y, *x + 1, *y);
-			snis_draw_line(w->window, gc, *x, *y - 1, *x, *y + 1);
+			snis_draw_line(*x - 1, *y, *x + 1, *y);
+			snis_draw_line(*x, *y - 1, *x, *y + 1);
 		}
 	}
 	if (selected)
-		sng_draw_circle(w->window, gc, 0, sx, sy, 10);
+		sng_draw_circle(0, sx, sy, 10);
 
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
@@ -5556,7 +5556,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 			sprintf(buffer, "%s %s\n", "?", o->sdata.name); 
 			break;
 		}
-		sng_abs_xy_draw_string(w, gc, buffer, PICO_FONT, *x + 8, *y - 8);
+		sng_abs_xy_draw_string(buffer, PICO_FONT, *x + 8, *y - 8);
 	}
 }
 
@@ -5579,7 +5579,7 @@ static void snis_draw_science_spark(GdkDrawable *drawable, GdkGC *gc, gint x, gi
 		tx = x;
 		ty = y;
 #endif
-		sng_draw_point(drawable, gc, tx, ty);
+		sng_draw_point(tx, ty);
 	}
 }
 
@@ -5592,16 +5592,16 @@ static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 #define SHIP_SCALE_DOWN 15.0
 	nx = cos(heading) * scale * r / SHIP_SCALE_DOWN;
 	ny = -sin(heading) * scale * r / SHIP_SCALE_DOWN;
-	snis_draw_line(w->window, gc, x, y, x + nx, y + ny);
+	snis_draw_line(x, y, x + nx, y + ny);
 	tx1 = cos(heading + PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
 	ty1 = -sin(heading + PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
-	snis_draw_line(w->window, gc, x, y, x + tx1, y + ty1);
+	snis_draw_line(x, y, x + tx1, y + ty1);
 	tx2 = cos(heading - PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
 	ty2 = -sin(heading - PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
-	snis_draw_line(w->window, gc, x, y, x + tx2, y + ty2);
-	snis_draw_line(w->window, gc, x + nx, y + ny, x + tx1, y + ty1);
-	snis_draw_line(w->window, gc, x + tx1, y + ty1, x + tx2, y + ty2);
-	snis_draw_line(w->window, gc, x + tx2, y + ty2, x + nx, y + ny);
+	snis_draw_line(x, y, x + tx2, y + ty2);
+	snis_draw_line(x + nx, y + ny, x + tx1, y + ty1);
+	snis_draw_line(x + tx1, y + ty1, x + tx2, y + ty2);
+	snis_draw_line(x + tx2, y + ty2, x + nx, y + ny);
 }
 
 static void draw_degree_marks_with_labels(GtkWidget *w, GdkGC *gc,
@@ -5622,9 +5622,9 @@ static void draw_degree_marks_with_labels(GtkWidget *w, GdkGC *gc,
 		x2 += x;
 		y1 += y;
 		y2 += y;
-		sng_draw_dotted_line(w->window, gc, x1, y1, x2, y2);
+		sng_draw_dotted_line(x1, y1, x2, y2);
 		sprintf(buf, "%d", (90 + i * 10) % 360);
-		sng_center_xy_draw_string(w, gc, buf, font, x3, y3);
+		sng_center_xy_draw_string(buf, font, x3, y3);
 	}
 }
 
@@ -5633,7 +5633,7 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 {
 	int tx1, ty1, tx2, ty2;
 
-	sng_draw_circle(w->window, gc, 0, x, y, r);
+	sng_draw_circle(0, x, y, r);
 	draw_degree_marks_with_labels(w, gc, x, y, r, NANO_FONT);
 	/* draw the ship */
 	snis_draw_arrow(w, gc, x, y, r, heading, 1.0);
@@ -5643,12 +5643,12 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 	tx2 = x + cos(heading - beam_width / 2) * r;
 	ty2 = y - sin(heading - beam_width / 2) * r;
 	sng_set_foreground(GREEN);
-	sng_draw_electric_line(w->window, gc, tx1, ty1, tx2, ty2);
+	sng_draw_electric_line(tx1, ty1, tx2, ty2);
 	tx1 = x + cos(heading + beam_width / 2) * r * 0.05;
 	ty1 = y - sin(heading + beam_width / 2) * r * 0.05;
 	tx2 = x + cos(heading + beam_width / 2) * r;
 	ty2 = y - sin(heading + beam_width / 2) * r;
-	sng_draw_electric_line(w->window, gc, tx1, ty1, tx2, ty2);
+	sng_draw_electric_line(tx1, ty1, tx2, ty2);
 }
 
 static void snis_draw_heading_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
@@ -5661,9 +5661,9 @@ static void snis_draw_heading_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint 
 	tx2 = x + cos(heading) * r;
 	ty2 = y - sin(heading) * r;
 	sng_set_foreground(color);
-	snis_draw_line(w->window, gc, tx1, ty1, tx2, ty2);
+	snis_draw_line(tx1, ty1, tx2, ty2);
 	if (dotted)
-		sng_draw_dotted_line(w->window, gc, x, y, tx2, ty2);
+		sng_draw_dotted_line(x, y, tx2, ty2);
 }
 
 static void snis_draw_headings_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
@@ -5691,7 +5691,7 @@ static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 
 	sng_set_foreground(c1);
 	for (i = r; i > r / 4; i -= r / 5)
-		sng_draw_circle(w->window, gc, 0, x, y, i);
+		sng_draw_circle(0, x, y, i);
 	sng_set_foreground(c2);
 	draw_degree_marks_with_labels(w, gc, x, y, r, NANO_FONT);
 }
@@ -5723,7 +5723,7 @@ static void draw_nebula_noise(GtkWidget *w, int cx, int cy, int r)
 		radius = snis_randn(r);
 		x1 = cos(angle) * radius + cx;
 		y1 = sin(angle) * radius + cy;
-		snis_draw_line(w->window, gc, x1, y1, x1 + 1, y1);
+		snis_draw_line(x1, y1, x1 + 1, y1);
        }
 }
 
@@ -5759,8 +5759,8 @@ static void draw_torpedo_leading_indicator(GtkWidget *w, GdkGC *gc,
 	targx = x + svx * time_to_target;
 	targy = y + svy * time_to_target;
 	sng_set_foreground(ORANGERED);
-	snis_draw_line(w->window, gc, targx - 5, targy, targx + 5, targy);
-	snis_draw_line(w->window, gc, targx, targy - 5, targx, targy + 5);
+	snis_draw_line(targx - 5, targy, targx + 5, targy);
+	snis_draw_line(targx, targy - 5, targx, targy + 5);
 }
 
 static void draw_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *ship,
@@ -5796,7 +5796,7 @@ static void draw_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *ship,
 	ty = (iz2 - ship->z) * (double) r / screen_radius;
 	lx2 = (int) (tx + (double) cx);
 	ly2 = (int) (ty + (double) cy);
-	sng_draw_laser_line(w->window, gc, lx1, ly1, lx2, ly2, color);
+	sng_draw_laser_line(lx1, ly1, lx2, ly2, color);
 }
 
 static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_radar_extent* extent, double screen_radius,
@@ -5864,22 +5864,22 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 			case OBJTYPE_ASTEROID:
 			case OBJTYPE_DERELICT:
 				sng_set_foreground(ASTEROID_COLOR);
-				sng_draw_circle(w->window, gc, 0, x, y, r / 30);
+				sng_draw_circle(0, x, y, r / 30);
 				break;
 			case OBJTYPE_PLANET:
 				sng_set_foreground(PLANET_COLOR);
-				sng_draw_circle(w->window, gc, x, 0, y, r / 30);
+				sng_draw_circle(x, 0, y, r / 30);
 				break;
 			case OBJTYPE_STARBASE:
 				sng_set_foreground(STARBASE_COLOR);
-				sng_draw_circle(w->window, gc, 0, x, y, r / 30);
+				sng_draw_circle(0, x, y, r / 30);
 				break;
 			case OBJTYPE_WORMHOLE:
 				sng_set_foreground(WORMHOLE_COLOR);
-				sng_draw_circle(w->window, gc, 0, x, y, r / 30);
+				sng_draw_circle(0, x, y, r / 30);
 				break;
 			case OBJTYPE_LASER:
-				sng_draw_laser_line(w->window, gc, x, y,
+				sng_draw_laser_line(x, y,
 					x - go[i].vx * (double) r / (2 * screen_radius),
 					y - go[i].vz * (double) r / (2 * screen_radius),
 					NPC_LASER_COLOR);
@@ -5896,7 +5896,7 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 				sng_set_foreground(GREEN);
 				if (go[i].sdata.science_data_known) {
 					sprintf(buffer, "%s", go[i].sdata.name);
-					sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, x + 10, y - 10);
+					sng_abs_xy_draw_string(buffer, NANO_FONT, x + 10, y - 10);
 				}
 #if 0
 				time_to_target = sqrt(dist2) / TORPEDO_VELOCITY;
@@ -5905,8 +5905,8 @@ static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_r
 				targx = x + svx * time_to_target;
 				targy = y + svy * time_to_target;
 				sng_set_foreground(ORANGERED);
-				snis_draw_line(w->window, gc, targx - 5, targy, targx + 5, targy);
-				snis_draw_line(w->window, gc, targx, targy - 5, targx, targy + 5);
+				snis_draw_line(targx - 5, targy, targx + 5, targy);
+				snis_draw_line(targx, targy - 5, targx, targy + 5);
 #endif
 				break;
 			case OBJTYPE_SPACEMONSTER: /* invisible to instruments */
@@ -5966,7 +5966,7 @@ static void draw_science_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *
 			(double) cx, (double) cy, r, &ix1, &iy1, &ix2, &iy2);
 	if (rc < 0)
 		return;
-	sng_draw_laser_line(w->window, gc, (int) tx1, (int) ty1, (int) tx2, (int) ty2, color);
+	sng_draw_laser_line(tx1, ty1, tx2, ty2, color);
 }
 
 static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct snis_entity *o, struct snis_entity *laserbeam, double r)
@@ -5996,7 +5996,7 @@ static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx
 		return;
 	float sx1, sy1, sx2, sy2;
 	if (!transform_line(cx, clip1.v.x, clip1.v.y, clip1.v.z, clip2.v.x, clip2.v.y, clip2.v.z, &sx1, &sy1, &sx2, &sy2)) {
-		sng_draw_laser_line(w->window, gc, sx1, sy1, sx2, sy2, color);
+		sng_draw_laser_line(sx1, sy1, sx2, sy2, color);
 	}
 }
 
@@ -6021,8 +6021,8 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 		ty = (o->sci_coordz - o->z) * (double) r / range;
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
-		snis_draw_line(w->window, gc, x - 5, y, x + 5, y);
-		snis_draw_line(w->window, gc, x, y - 5, x, y + 5);
+		snis_draw_line(x - 5, y, x + 5, y);
+		snis_draw_line(x, y - 5, x, y + 5);
 	}
 
 	/* FIXME this is quite likely wrong */
@@ -6095,7 +6095,7 @@ static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, doubl
 			radius = 1.0 - (radius * radius * radius);
 			radius = radius * SCIENCE_SCOPE_R;
 			radius = radius - ((range / MAX_SCIENCE_SCREEN_RADIUS)  * (snis_randn(50) / 75.0) * r);
-			snis_draw_line(w->window, gc,
+			snis_draw_line(
 				cx + cos(angle) * r,
 				cy + sin(angle) * r,
 				cx + cos(angle) * radius,
@@ -6110,7 +6110,7 @@ static void __attribute__((unused)) snis_draw_3d_dotted_line(GtkWidget *w, GdkGC
 {
 	float sx1, sy1, sx2, sy2;
 	if (!transform_line(cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
-		sng_draw_dotted_line(w->window, gc, sx1, sy1, sx2, sy2);
+		sng_draw_dotted_line(sx1, sy1, sx2, sy2);
 	}
 }
 
@@ -6119,7 +6119,7 @@ static void snis_draw_3d_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx
 {
 	float sx1, sy1, sx2, sy2;
 	if (!transform_line(cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
-		snis_draw_line(w->window, gc, sx1, sy1, sx2, sy2);
+		snis_draw_line(sx1, sy1, sx2, sy2);
 	}
 }
 
@@ -6346,7 +6346,7 @@ static void draw_sciplane_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_conte
 		return;
 	float sx1, sy1, sx2, sy2;
 	if (!transform_line(cx, clip1.v.x, clip1.v.y, clip1.v.z, clip2.v.x, clip2.v.y, clip2.v.z, &sx1, &sy1, &sx2, &sy2)) {
-		sng_draw_laser_line(w->window, gc, sx1, sy1, sx2, sy2, color);
+		sng_draw_laser_line(sx1, sy1, sx2, sy2, color);
 	}
 }
 
@@ -6512,11 +6512,11 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 			float sx1, sy1, sx2, sy2, sx3, sy3;
 			if (!transform_line(navecx, x1, o->y, z1, x2, o->y, z2, &sx1, &sy1, &sx2, &sy2)) {
-				sng_draw_dotted_line(w->window, gc, sx1, sy1, sx2, sy2);
+				sng_draw_dotted_line(sx1, sy1, sx2, sy2);
 			}
 			if (!transform_point(navecx, x3, o->y, z3, &sx3, &sy3)) {
 				sprintf(buf, "%d", (int)math_angle_to_game_angle_degrees(i * 360.0/slices));
-				sng_center_xy_draw_string(w, gc, buf, font, sx3, sy3);
+				sng_center_xy_draw_string(buf, font, sx3, sy3);
 			}
 		}
 	}
@@ -6533,7 +6533,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		tx2 = o->x + cos(heading - beam_width / 2) * range;
 		tz2 = o->z - sin(heading - beam_width / 2) * range;
 		if (!transform_line(navecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2)) {
-			sng_draw_electric_line(w->window, gc, sx1, sy1, sx2, sy2);
+			sng_draw_electric_line(sx1, sy1, sx2, sy2);
 		}
 
 		tx1 = o->x + cos(heading + beam_width / 2) * range * 0.05;
@@ -6541,7 +6541,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		tx2 = o->x + cos(heading + beam_width / 2) * range;
 		tz2 = o->z - sin(heading + beam_width / 2) * range;
 		if (!transform_line(navecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2)) {
-			sng_draw_electric_line(w->window, gc, sx1, sy1, sx2, sy2);
+			sng_draw_electric_line(sx1, sy1, sx2, sy2);
 		}
 	}
 
@@ -6714,7 +6714,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 				float sx1, sy1, sx2, sy2;
 				if (!transform_line(navecx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
-					snis_draw_line(w->window, gc, sx1, sy1, sx2, sy2);
+					snis_draw_line(sx1, sy1, sx2, sy2);
 				}
 			}
 		}
@@ -6822,8 +6822,8 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 		ty = (o->sci_coordz - o->z) * (double) r / range;
 		x = (int) (tx + (double) cx);
 		y = (int) (ty + (double) cy);
-		snis_draw_line(w->window, gc, x - 5, y, x + 5, y);
-		snis_draw_line(w->window, gc, x, y - 5, x, y + 5);
+		snis_draw_line(x - 5, y, x + 5, y);
+		snis_draw_line(x, y - 5, x, y + 5);
 	}
 #endif
 
@@ -6900,7 +6900,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 			radius = 1.0 - (radius * radius * radius);
 			radius = radius * SCIENCE_SCOPE_R;
 			radius = radius - ((range / MAX_SCIENCE_SCREEN_RADIUS)  * (snis_randn(50) / 75.0) * r);
-			snis_draw_line(w->window, gc,
+			snis_draw_line(
 				cx + cos(angle) * r,
 				cy + sin(angle) * r,
 				cx + cos(angle) * radius,
@@ -6946,7 +6946,7 @@ static void draw_all_the_science_nebulae(GtkWidget *w, struct snis_entity *o, do
 			d2 = (cx - sx) * (cx - sx) + (cy - sy) * (cy - sy);
 			if (d2 > SCIENCE_SCOPE_R * SCIENCE_SCOPE_R)
 				continue;
-			sng_draw_point(w->window, gc, sx, sy);
+			sng_draw_point(sx, sy);
 		}
 	}
 }
@@ -7018,8 +7018,8 @@ static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o, struct snis
 		y = (int) (ty + (double) cy);
 
 		sng_set_foreground(WHITE);
-		snis_draw_line(w->window, gc, x - 1, y - 1, x + 1, y + 1);
-		snis_draw_line(w->window, gc, x - 1, y + 1, x + 1, y - 1);
+		snis_draw_line(x - 1, y - 1, x + 1, y + 1);
+		snis_draw_line(x - 1, y + 1, x + 1, y - 1);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -7030,7 +7030,7 @@ static void snis_draw_dotted_hline(GdkDrawable *drawable,
 	int i;
 
 	for (i = x1; i <= x2; i += dots)
-		sng_draw_point(drawable, gc, i, y1);
+		sng_draw_point(i, y1);
 }
 
 static void snis_draw_dotted_vline(GdkDrawable *drawable,
@@ -7040,10 +7040,10 @@ static void snis_draw_dotted_vline(GdkDrawable *drawable,
 
 	if (y2 > y1) {
 		for (i = y1; i <= y2; i += dots)
-			sng_draw_point(drawable, gc, x1, i);
+			sng_draw_point(x1, i);
 	} else { 
 		for (i = y2; i <= y1; i += dots)
-			sng_draw_point(drawable, gc, x1, i);
+			sng_draw_point(x1, i);
 	}
 }
 
@@ -7073,7 +7073,7 @@ static void snis_draw_radar_sector_labels(GtkWidget *w,
 			x1 = (int) (((double) r) / range * (x * xincrement - o->x)) + cx + xoffset;
 			y1 = (int) (((double) r) / range * (y * yincrement - o->z)) + cy + yoffset;
 			snprintf(label, sizeof(label), "%c%d", letters[y], x);
-			sng_abs_xy_draw_string(w, gc, label, NANO_FONT, x1, y1);
+			sng_abs_xy_draw_string(label, NANO_FONT, x1, y1);
 		}
 	}
 }
@@ -7713,15 +7713,15 @@ static void show_death_screen(GtkWidget *w)
 
 	sng_set_foreground(RED);
 	sprintf(buf, "YOUR SHIP");
-	sng_abs_xy_draw_string(w, gc, buf, BIG_FONT, 20, 150);
+	sng_abs_xy_draw_string(buf, BIG_FONT, 20, 150);
 	sprintf(buf, "HAS BEEN");
-	sng_abs_xy_draw_string(w, gc, buf, BIG_FONT, 20, 250);
+	sng_abs_xy_draw_string(buf, BIG_FONT, 20, 250);
 	sprintf(buf, "BLOWN TO");
-	sng_abs_xy_draw_string(w, gc, buf, BIG_FONT, 20, 350);
+	sng_abs_xy_draw_string(buf, BIG_FONT, 20, 350);
 	sprintf(buf, "SMITHEREENS");
-	sng_abs_xy_draw_string(w, gc, buf, BIG_FONT, 20, 450);
+	sng_abs_xy_draw_string(buf, BIG_FONT, 20, 450);
 	sprintf(buf, "RESPAWNING IN %d SECONDS", go[my_ship_oid].respawn_time);
-	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 20, 500);
+	sng_abs_xy_draw_string(buf, TINY_FONT, 20, 500);
 }
 
 static void show_manual_weapons(GtkWidget *w)
@@ -7752,16 +7752,16 @@ static void show_weapons(GtkWidget *w)
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.weapzoom);
 	sprintf(buf, "PHOTON TORPEDOES: %03d", o->tsd.ship.torpedoes);
-	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 250, 15);
+	sng_abs_xy_draw_string(buf, NANO_FONT, 250, 15);
 	sprintf(buf, "TORPEDOES LOADED: %03d", o->tsd.ship.torpedoes_loaded);
-	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 250, 15 + 0.5 * LINEHEIGHT);
+	sng_abs_xy_draw_string(buf, NANO_FONT, 250, 15 + 0.5 * LINEHEIGHT);
 	sprintf(buf, "TORPEDOES LOADING: %03d", o->tsd.ship.torpedoes_loading);
-	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 250, 15 + LINEHEIGHT);
+	sng_abs_xy_draw_string(buf, NANO_FONT, 250, 15 + LINEHEIGHT);
 /*
 	sprintf(buf, "vx: %5.2lf", o->vx);
-	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 600, LINEHEIGHT * 3);
+	sng_abs_xy_draw_string(buf, TINY_FONT, 600, LINEHEIGHT * 3);
 	sprintf(buf, "vy: %5.2lf", o->vy);
-	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 600, LINEHEIGHT * 4);
+	sng_abs_xy_draw_string(buf, TINY_FONT, 600, LINEHEIGHT * 4);
 */
 
 	buttoncolor = RED;
@@ -7996,16 +7996,16 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	const int low_power_threshold = 10;
 	sng_set_foreground(RED);
 	if (o->tsd.ship.power_data.sensors.i < low_power_threshold) {
-		sng_abs_xy_draw_string(w, gc, "LOW SENSOR POWER", NANO_FONT, 320, 65);
+		sng_abs_xy_draw_string("LOW SENSOR POWER", NANO_FONT, 320, 65);
 	}
 	if (o->tsd.ship.power_data.maneuvering.i < low_power_threshold) {
-		sng_abs_xy_draw_string(w, gc, "LOW MANEUVERING POWER", NANO_FONT, 320, 80);
+		sng_abs_xy_draw_string("LOW MANEUVERING POWER", NANO_FONT, 320, 80);
 	}
 	if (o->tsd.ship.power_data.impulse.r2 < low_power_threshold) {
-		sng_abs_xy_draw_string(w, gc, "LOW IMPULSE POWER", NANO_FONT, 320, 95);
+		sng_abs_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, 320, 95);
 	}
 	if (o->tsd.ship.power_data.warp.r2 < low_power_threshold) {
-		sng_abs_xy_draw_string(w, gc, "LOW WARP POWER", NANO_FONT, 610, 228);
+		sng_abs_xy_draw_string("LOW WARP POWER", NANO_FONT, 610, 228);
 	}
 
 	const float min_xknown_pct = 0.001;
@@ -8122,7 +8122,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 			float sx, sy;
 			if (!transform_point(navecx, point.v.x, point.v.y, point.v.z, &sx, &sy)) {
-				sng_draw_point(w->window, gc, sx, sy);
+				sng_draw_point(sx, sy);
 			}
 		}
 	}
@@ -8304,12 +8304,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		entity_get_screen_coords(e, &sx, &sy);
 		if (o->sdata.science_data_known) {
 			sprintf(buffer, "%s", o->sdata.name);
-			sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy - 15);
+			sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
 		}
 #if 0
 		sprintf(buffer, "%3.1f,%6.1f,%6.1f,%6.1f",
 				o->heading * 180.0 / M_PI, o->x, o->y, o->z);
-		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, sx + 10, sy);
+		sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy);
 #endif
 	}
 
@@ -8358,12 +8358,12 @@ static void show_navigation(GtkWidget *w)
 	sectorx = floor(10.0 * o->x / (double) XKNOWN_DIM);
 	sectorz = floor(10.0 * o->z / (double) ZKNOWN_DIM);
 	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf, %5.2lf)", sectorz + 'A', sectorx, o->x, o->y, o->z);
-	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, LINEHEIGHT);
+	sng_abs_xy_draw_string(buf, NANO_FONT, 200, LINEHEIGHT);
 
 	double display_mark;
 	to_snis_heading_mark(&o->orientation, &display_heading, &display_mark);
 	sprintf(buf, "HEADING: %3.1lf MARK: %3.1lf", radians_to_degrees(display_heading), radians_to_degrees(display_mark));
-	sng_abs_xy_draw_string(w, gc, buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
+	sng_abs_xy_draw_string(buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
 
 	quat_to_euler(&ypr, &o->orientation);	
 	
@@ -8807,9 +8807,9 @@ static void show_engineering_damage_report(GtkWidget *w, int subsystem)
 	x = 300;
 
 	sng_set_foreground(BLACK);
-	snis_draw_rectangle(w->window, gc, 1, x - 5, y - 5, 440, 65);
+	snis_draw_rectangle(1, x - 5, y - 5, 440, 65);
 	sng_set_foreground(AMBER);
-	snis_draw_rectangle(w->window, gc, 0, x - 5, y - 5, 440, 65);
+	snis_draw_rectangle(0, x - 5, y - 5, 440, 65);
 	count = 0;
 	for (i = 0; i <= snis_object_pool_highest_object(damcon_pool); i++) {
 		o = &dco[i];
@@ -8826,7 +8826,7 @@ static void show_engineering_damage_report(GtkWidget *w, int subsystem)
 		sprintf(msg, "%3.2f%%: %s",
 			(1.0f - (float) o->tsd.part.damage / 255.0f) * 100.0f,
 			damcon_part_name(o->tsd.part.system, o->tsd.part.part));
-		sng_abs_xy_draw_string(w, gc, msg, NANO_FONT, x + 10, y + 10);
+		sng_abs_xy_draw_string(msg, NANO_FONT, x + 10, y + 10);
 		y = y + 20;
 		count++;
 		if (count >= DAMCON_PARTS_PER_SYSTEM)
@@ -8915,7 +8915,7 @@ static void draw_damcon_arena_borders(GtkWidget *w)
 	y1 = damcony_to_screeny(-DAMCONYDIM / 2.0);
 	if (y1 >= damconscreeny0 &&
 		y1 <= damconscreeny0 + damconscreenydim) {
-		snis_draw_line(w->window, gc, damconscreenx0, y1,
+		snis_draw_line(damconscreenx0, y1,
 				damconscreenx0 + damconscreenxdim, y1);
 	}
 
@@ -8923,7 +8923,7 @@ static void draw_damcon_arena_borders(GtkWidget *w)
 	y1 = damcony_to_screeny(DAMCONYDIM / 2.0);
 	if (y1 >= damconscreeny0 &&
 		y1 <= damconscreeny0  + damconscreenydim) {
-		snis_draw_line(w->window, gc, damconscreenx0, y1,
+		snis_draw_line(damconscreenx0, y1,
 				damconscreenx0 + damconscreenxdim, y1);
 	}
 
@@ -8931,7 +8931,7 @@ static void draw_damcon_arena_borders(GtkWidget *w)
 	x1 = damconx_to_screenx(-DAMCONXDIM / 2.0);
 	if (x1 > damconscreenx0 &&
 		x1 < damconscreenx0 + damconscreenxdim) {
-		snis_draw_line(w->window, gc, x1, damconscreeny0,
+		snis_draw_line(x1, damconscreeny0,
 				x1, damconscreeny0 + damconscreenydim);
 	}
 
@@ -8939,7 +8939,7 @@ static void draw_damcon_arena_borders(GtkWidget *w)
 	x1 = damconx_to_screenx(DAMCONXDIM / 2.0);
 	if (x1 > damconscreenx0 &&
 		x1 < damconscreenx0 + damconscreenxdim) {
-		snis_draw_line(w->window, gc, x1, damconscreeny0,
+		snis_draw_line(x1, damconscreeny0,
 				x1, damconscreeny0 + damconscreenydim);
 	}
 }
@@ -8957,7 +8957,7 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 	x = o->x + damconscreenx0 + damconscreenxdim / 2.0 - *damconscreenx;
 	y = o->y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
 	sng_set_foreground(GREEN);
-	sng_draw_vect_obj(w, gc, &damcon_robot_spun[byteangle], x, y);
+	sng_draw_vect_obj(&damcon_robot_spun[byteangle], x, y);
 }
 
 static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
@@ -8970,8 +8970,8 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 	x = damconx_to_screenx(o->x);
 	y = damcony_to_screeny(o->y);
 	sng_set_foreground(WHITE);
-	sng_draw_vect_obj(w, gc, &placeholder_system, x, y);
-	sng_abs_xy_draw_string(w, gc, damcon_system_name(o->type),
+	sng_draw_vect_obj(&placeholder_system, x, y);
+	sng_abs_xy_draw_string(damcon_system_name(o->type),
 				NANO_FONT, x + 75, y);
 }
 
@@ -8986,12 +8986,12 @@ static void draw_damcon_socket_or_part(GtkWidget *w, struct snis_damcon_entity *
 	y = damcony_to_screeny(o->y);
 	sprintf(msg, "%d %d", o->tsd.socket.system, o->tsd.socket.part);
 	sng_set_foreground(color);
-	sng_draw_vect_obj(w, gc, &placeholder_socket, x, y);
-	sng_abs_xy_draw_string(w, gc, msg, NANO_FONT, x - 10, y);
+	sng_draw_vect_obj(&placeholder_socket, x, y);
+	sng_abs_xy_draw_string(msg, NANO_FONT, x - 10, y);
 #if 0
 	sng_set_foreground(AMBER);
-	snis_draw_line(w->window, gc, x, y - 20, x, y + 20);
-	snis_draw_line(w->window, gc, x - 20, y, x + 20, y);
+	snis_draw_line(x, y - 20, x, y + 20);
+	snis_draw_line(x - 20, y, x + 20, y);
 #endif
 }
 
@@ -9026,8 +9026,8 @@ static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 	else
 		strcpy(msg, "");
 	sng_set_foreground(YELLOW);
-	sng_draw_vect_obj(w, gc, &placeholder_part_spun[byteangle], x, y);
-	sng_center_xy_draw_string(w, gc, msg, NANO_FONT, x,
+	sng_draw_vect_obj(&placeholder_part_spun[byteangle], x, y);
+	sng_center_xy_draw_string(msg, NANO_FONT, x,
 			y - 15 - (o->tsd.part.part % 2) * 15);
 	if (o->tsd.part.damage < 0.30 * 255.0)
 		sng_set_foreground(GREEN);
@@ -9038,10 +9038,8 @@ static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 			return;
 		sng_set_foreground(RED);
 	}
-	snis_draw_rectangle(w->window, gc, 0,
-			x - 30, y + 10, 60, 6);
-	snis_draw_rectangle(w->window, gc, 1,
-			x - 30, y + 10,
+	snis_draw_rectangle(0, x - 30, y + 10, 60, 6);
+	snis_draw_rectangle(1, x - 30, y + 10,
 			60.0 * (255 - o->tsd.part.damage) / 255.0, 6);
 }
 
@@ -9079,8 +9077,7 @@ static void show_damcon(GtkWidget *w)
 	int i;
 
 	sng_set_foreground(AMBER);
-	snis_draw_rectangle(w->window, gc, 0,
-		damconscreenx0, damconscreeny0, damconscreenxdim, damconscreenydim);
+	snis_draw_rectangle(0, damconscreenx0, damconscreeny0, damconscreenxdim, damconscreenydim);
 
 	/* clip to damcon screen */
 	sng_set_clip_window(damconscreenx0, damconscreeny0,
@@ -9399,7 +9396,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 	int dy1, dy2, bw, probes, dx, pwr;
 	int initial_noise;
 
-	snis_draw_rectangle(w->window, gc, 0, x1, y1, (x2 - x1), (y2 - y1));
+	snis_draw_rectangle(0, x1, y1, (x2 - x1), (y2 - y1));
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 4, x2, 10);
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 2, x2, 10);
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + 3 * (y2 - y1) / 4, x2, 10);
@@ -9474,12 +9471,12 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 	}
 skip_data:
 	sng_set_foreground(GREEN);
-	sng_abs_xy_draw_string(w, gc, "10", NANO_FONT, x1, y2 + 10);
-	sng_abs_xy_draw_string(w, gc, "20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 10);
-	sng_abs_xy_draw_string(w, gc, "30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + 10);
-	sng_abs_xy_draw_string(w, gc, "40", NANO_FONT, x1 + 3 * (x2 - x1) / 4 - 10, y2 + 10);
-	sng_abs_xy_draw_string(w, gc, "50", NANO_FONT, x1 + 4 * (x2 - x1) / 4 - 20, y2 + 10);
-	sng_abs_xy_draw_string(w, gc, "Shield Profile (nm)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 30);
+	sng_abs_xy_draw_string("10", NANO_FONT, x1, y2 + 10);
+	sng_abs_xy_draw_string("20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 10);
+	sng_abs_xy_draw_string("30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + 10);
+	sng_abs_xy_draw_string("40", NANO_FONT, x1 + 3 * (x2 - x1) / 4 - 10, y2 + 10);
+	sng_abs_xy_draw_string("50", NANO_FONT, x1 + 4 * (x2 - x1) / 4 - 20, y2 + 10);
+	sng_abs_xy_draw_string("Shield Profile (nm)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 30);
 }
 
 static void draw_science_warp_data(GtkWidget *w, struct snis_entity *ship)
@@ -9497,11 +9494,11 @@ static void draw_science_warp_data(GtkWidget *w, struct snis_entity *ship)
 		bearing = -bearing;
 	else
 		bearing = 360.0 - bearing;
-	sng_abs_xy_draw_string(w, gc, "WARP DATA:", NANO_FONT, 10, SCREEN_HEIGHT - 40);
+	sng_abs_xy_draw_string("WARP DATA:", NANO_FONT, 10, SCREEN_HEIGHT - 40);
 	sprintf(buffer, "BEARING: %3.2lf", bearing);
-	sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 25);
+	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, SCREEN_HEIGHT - 25);
 	sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * hypot(dz, dx) / (XKNOWN_DIM / 2.0));
-	sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
+	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
 }
  
 static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o)
@@ -9516,10 +9513,10 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		return;
 	x = SCIENCE_DATA_X + 10;
 	y = SCIENCE_DATA_Y + 15;
-	snis_draw_rectangle(w->window, gc, 0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
+	snis_draw_rectangle(0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
 	sprintf(buffer, "NAME: %s", o ? o->sdata.name : "");
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 	if (o && (o->type == OBJTYPE_SHIP1 ||
 		o->type == OBJTYPE_SHIP2 ||
 		o->type == OBJTYPE_STARBASE)) {
@@ -9529,7 +9526,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 			o->sdata.faction < nfactions() ?
 				faction_name(o->sdata.faction) : "UNKNOWN" : "UNKNOWN";
 		sprintf(buffer, "ORIG: %s", the_faction);
-		sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 	}
 
 	if (o) {
@@ -9554,28 +9551,28 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		sprintf(buffer, "TYPE:"); 
 	}
 	y += 25;
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o)
 		sprintf(buffer, "X: %0.2lf", o->x);
 	else
 		sprintf(buffer, "X:");
 	y += 25;
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o)
 		sprintf(buffer, "Y: %0.2lf", o->y);
 	else
 		sprintf(buffer, "Y:");
 	y += 25;
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o)
 		sprintf(buffer, "Z: %0.2lf", o->z);
 	else
 		sprintf(buffer, "Z:");
 	y += 25;
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o) { 
 		dx = o->x - go[my_ship_oid].x;
@@ -9597,9 +9594,9 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		sprintf(buffer2, "MARK:");
 	}
 	y += 25;
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 	y += 25;
-	sng_abs_xy_draw_string(w, gc, buffer2, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(buffer2, TINY_FONT, x, y);
 
 	if (o) {
 		range = dist3d(dx, dy, dz);
@@ -9608,7 +9605,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		sprintf(buffer, "RANGE:");
 	}
 	y += 25;
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o) {
 		sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * range / (XKNOWN_DIM / 2.0));
@@ -9616,17 +9613,17 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		sprintf(buffer, "WARP FACTOR:");
 	}
 	y += 25;
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 #if 0
 	sprintf(buffer, "STRENGTH: %hhu", o->sdata.shield_strength);
 	y += 25;
 	sng_abs_xy_draw_string(w, gd, buffer, TINY_FONT, x, y);
 	sprintf(buffer, "WAVELENGTH: %hhu", o->sdata.shield_wavelength);
 	y += 25;
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 	sprintf(buffer, "WIDTH: %hhu", o->sdata.shield_width);
 	y += 25;
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 #endif
 
 	gx1 = x;
@@ -9678,7 +9675,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	}
 	sng_set_foreground(GREEN);
 	if (buf[0])
-		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 	y += 20;
 	if (curr_science_guy->type == OBJTYPE_PLANET) {
 		static uint32_t last = 0xffffffff;
@@ -9698,13 +9695,13 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 				planet_desc[i] = toupper(planet_desc[i]);
 		}
 		sprintf(buf, "GOVERNMENT: %s", government_name[p->government]);
-		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += 20;
 		sprintf(buf, "TECH LEVEL: %s", tech_level_name[p->tech_level]);
-		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += 20;
 		sprintf(buf, "ECONOMY: %s", economy_name[p->economy]);
-		sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += 20;
 
 		/* break planet_desc into multiple lines */
@@ -9713,7 +9710,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		for (i = 0; i < len; i++) {
 			if (planet_desc[i] == '\n' || planet_desc[i] == '\0') {
 				tmpbuf[j] = '\0';
-				sng_abs_xy_draw_string(w, gc, tmpbuf, NANO_FONT, 10, y);
+				sng_abs_xy_draw_string(tmpbuf, NANO_FONT, 10, y);
 				y += 15;
 				j = 0;
 			} else {
@@ -9747,7 +9744,7 @@ static void show_science(GtkWidget *w)
 	normalize_angle(&display_heading);
 	display_heading *= 180.0 / M_PI;
 	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf) HEADING: %3.1lf", o->x, o->y, o->z, display_heading);
-	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 200, LINEHEIGHT * 0.5);
+	sng_abs_xy_draw_string(buf, TINY_FONT, 200, LINEHEIGHT * 0.5);
 #if 0
 	rx = SCIENCE_SCOPE_X;
 	ry = SCIENCE_SCOPE_Y;
@@ -9803,7 +9800,7 @@ static void show_3d_science(GtkWidget *w)
 	normalize_angle(&display_heading);
 	display_heading *= 180.0 / M_PI;
 	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf) HEADING: %3.1lf", o->x, o->y, o->z, display_heading);
-	sng_abs_xy_draw_string(w, gc, buf, TINY_FONT, 200, LINEHEIGHT * 0.5);
+	sng_abs_xy_draw_string(buf, TINY_FONT, 200, LINEHEIGHT * 0.5);
 #if 0
 	rx = SCIENCE_SCOPE_X;
 	ry = SCIENCE_SCOPE_Y;
@@ -9821,7 +9818,7 @@ static void show_3d_science(GtkWidget *w)
 /*
 		snis_draw_science_reticule(w, gc, cx, cy, r,
 				o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width)); */
-		sng_draw_circle(w->window, gc, 0, cx, cy, r);
+		sng_draw_circle(0, cx, cy, r);
 		draw_all_the_3d_science_guys(w, o, zoom, current_zoom);
 		/* draw_all_the_science_sparks(w, o, zoom);
 		draw_all_the_science_nebulae(w, o, zoom); */
@@ -10193,32 +10190,32 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		break;
 	case OBJTYPE_NEBULA:
 		sng_set_foreground(NEBULA_COLOR);
-		sng_draw_circle(w->window, gc, 0, x, y,
+		sng_draw_circle(0, x, y,
 			ur_to_demonsr(o->tsd.nebula.r));
 		break;
 	case OBJTYPE_STARBASE:
 		sng_set_foreground(STARBASE_COLOR);
-		sng_draw_circle(w->window, gc, 0, x, y, 5);
+		sng_draw_circle(0, x, y, 5);
 		break;
 	case OBJTYPE_PLANET:
 		sng_set_foreground(PLANET_COLOR);
-		sng_draw_circle(w->window, gc, 0, x, y, 5);
+		sng_draw_circle(0, x, y, 5);
 		break;
 	case OBJTYPE_WORMHOLE:
 		sng_set_foreground(WORMHOLE_COLOR);
-		sng_draw_circle(w->window, gc, 0, x, y, 5);
+		sng_draw_circle(0, x, y, 5);
 		break;
 	default:
 		sng_set_foreground(WHITE);
 	}
-	snis_draw_line(w->window, gc, x1, y1, x2, y2);
-	snis_draw_line(w->window, gc, x1, y2, x2, y1);
+	snis_draw_line(x1, y1, x2, y2);
+	snis_draw_line(x1, y2, x2, y1);
 	if (demon_id_selected(o->id)) {
 		if (timer & 0x02) {
-			snis_draw_line(w->window, gc, x1 - 6, y1 - 6, x2 + 6, y1 - 6);
-			snis_draw_line(w->window, gc, x1 - 6, y2 + 6, x2 + 6, y2 + 6);
-			snis_draw_line(w->window, gc, x1 - 6, y1 - 6, x1 - 6, y2 + 6);
-			snis_draw_line(w->window, gc, x2 + 6, y1 - 6, x2 + 6, y2 + 6);
+			snis_draw_line(x1 - 6, y1 - 6, x2 + 6, y1 - 6);
+			snis_draw_line(x1 - 6, y2 + 6, x2 + 6, y2 + 6);
+			snis_draw_line(x1 - 6, y1 - 6, x1 - 6, y2 + 6);
+			snis_draw_line(x2 + 6, y1 - 6, x2 + 6, y2 + 6);
 			if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
 				snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
 			}
@@ -10230,26 +10227,26 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	}
 
 	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
-		sng_abs_xy_draw_string(w, gc, o->sdata.name, NANO_FONT,
+		sng_abs_xy_draw_string(o->sdata.name, NANO_FONT,
 					x + xoffset, y + yoffset);
-		sng_abs_xy_draw_string(w, gc, o->ai, NANO_FONT,
+		sng_abs_xy_draw_string(o->ai, NANO_FONT,
 					x + xoffset, y + yoffset + 10);
 	}
 	if (v) {
 		sng_set_foreground(RED);
-		sng_draw_dotted_line(w->window, gc, x, y, vx, vy);
+		sng_draw_dotted_line(x, y, vx, vy);
 	}
 
 	if ((o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_STARBASE) &&
 			o->index == demon_ui.captain_of) {
 		sng_set_foreground(RED);
-		sng_draw_circle(w->window, gc, 0, x, y, 10 + (timer % 10));
+		sng_draw_circle(0, x, y, 10 + (timer % 10));
 	}
 	
 done_drawing_item:
 
 	sng_set_foreground(GREEN);
-	sng_abs_xy_draw_string(w, gc, demon_ui.error_msg, NANO_FONT, 20, 570);
+	sng_abs_xy_draw_string(demon_ui.error_msg, NANO_FONT, 20, 570);
 	return;
 }
 
@@ -10284,9 +10281,9 @@ static void demon_cmd_help(GtkWidget *w)
 		return;
 	for (i = 0; i < ARRAYSIZE(demon_cmd); i++) {
 		sprintf(buffer, "%s", demon_cmd[i].verb);
-		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, 85, i * 18 + 60);
+		sng_abs_xy_draw_string(buffer, NANO_FONT, 85, i * 18 + 60);
 		sprintf(buffer, "%s", demon_cmd[i].help);
-		sng_abs_xy_draw_string(w, gc, buffer, NANO_FONT, 170, i * 18 + 60);
+		sng_abs_xy_draw_string(buffer, NANO_FONT, 170, i * 18 + 60);
 	}
 }
 
@@ -10758,7 +10755,7 @@ static void show_demon_groups(GtkWidget *w)
 	sng_set_foreground(GREEN);
 
 	for (i = 0; i < ndemon_groups; i++)
-		sng_abs_xy_draw_string(w, gc, demon_group[i].name,
+		sng_abs_xy_draw_string(demon_group[i].name,
 			NANO_FONT, SCREEN_WIDTH - 50, i * 18 + 40);
 }
 
@@ -10826,7 +10823,7 @@ static void show_demon(GtkWidget *w)
 			snprintf(label, sizeof(label), "%c%d", letters[y], x);
 			tx = ux_to_demonsx(x * ix);
 			ty = uz_to_demonsy(y * iy);
-			sng_abs_xy_draw_string(w, gc, label, NANO_FONT,
+			sng_abs_xy_draw_string(label, NANO_FONT,
 				tx + xoffset,ty + yoffset);
 		}
 	pthread_mutex_lock(&universe_mutex);
@@ -10841,8 +10838,8 @@ static void show_demon(GtkWidget *w)
 		x = ux_to_demonsx(demon_ui.selectedx);
 		y = uz_to_demonsy(demon_ui.selectedz);
 		sng_set_foreground(BLUE);
-		snis_draw_line(w->window, gc, x - 3, y, x + 3, y);
-		snis_draw_line(w->window, gc, x, y - 3, x, y + 3);
+		snis_draw_line(x - 3, y, x + 3, y);
+		snis_draw_line(x, y - 3, x, y + 3);
 	}
 
 	sng_set_foreground(GREEN);
@@ -10854,7 +10851,7 @@ static void show_demon(GtkWidget *w)
 			(unsigned long long) netstats.bytes_recd, 
 			(unsigned long) netstats.elapsed_seconds,
 			(unsigned long long) (netstats.bytes_recd + netstats.bytes_sent) / netstats.elapsed_seconds);
-	sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 10, SCREEN_HEIGHT - 10); 
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, SCREEN_HEIGHT - 10);
 
 	if (demon_ui.selectmode) {
 		int x1, y1, x2, y2;
@@ -10864,10 +10861,10 @@ static void show_demon(GtkWidget *w)
 		x2 = ux_to_demonsx(demon_ui.ix2);
 		y2 = uz_to_demonsy(demon_ui.iz2);
 		sng_set_foreground(WHITE);
-		sng_draw_dotted_line(w->window, gc, x1, y1, x2, y1);
-		sng_draw_dotted_line(w->window, gc, x1, y2, x2, y2);
-		sng_draw_dotted_line(w->window, gc, x1, y1, x1, y2);
-		sng_draw_dotted_line(w->window, gc, x2, y1, x2, y2);
+		sng_draw_dotted_line(x1, y1, x2, y1);
+		sng_draw_dotted_line(x1, y2, x2, y2);
+		sng_draw_dotted_line(x1, y1, x1, y2);
+		sng_draw_dotted_line(x2, y1, x2, y2);
 	}
 	show_demon_groups(w);
 	demon_cmd_help(w);
@@ -10927,7 +10924,7 @@ static void show_warp_effect(GtkWidget *w)
 
 	if (warp_start > 1) {
 		sng_set_foreground(GRAY + warp_start * 25);
-		snis_draw_rectangle(w->window, gc, 1, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+		snis_draw_rectangle(1, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 		warp_start--;
 	}
 
@@ -10944,7 +10941,7 @@ static void show_warp_effect(GtkWidget *w)
 	 */
 	if (warp_limbo_countdown > 0 && warp_limbo_countdown < 10) {
 		sng_set_foreground(GRAY + warp_limbo_countdown * 25);
-		snis_draw_rectangle(w->window, gc, 1, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+		snis_draw_rectangle(1, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 		show_mainscreen(w);
 		return;
 	}
@@ -10964,7 +10961,7 @@ static void show_warp_effect(GtkWidget *w)
 		y = (int) star[i].y;
 		x2 = (int) star[i].lx;
 		y2 = (int) star[i].ly;
-		snis_draw_thick_line(w->window, gc, x, y, x2, y2);
+		snis_draw_thick_line(x, y, x2, y2);
 	}
 }
 
@@ -10980,7 +10977,7 @@ static void show_warp_hash_screen(GtkWidget *w)
 		// x2 = snis_randn(SCREEN_WIDTH);
 		y1 = snis_randn(SCREEN_HEIGHT + 50);
 		y2 = y1 - 50; // snis_randn(SCREEN_HEIGHT);
-		snis_draw_line(w->window, gc, 0, y1, SCREEN_WIDTH, y2);
+		snis_draw_line(0, y1, SCREEN_WIDTH, y2);
 	}
 }
 
@@ -11218,13 +11215,13 @@ static void show_network_setup(GtkWidget *w)
 {
 	show_common_screen(w, "SPACE NERDS IN SPACE");
 	sng_set_foreground(DARKGREEN);
-	sng_draw_vect_obj(w, gc, &snis_logo, 100, 500);
+	sng_draw_vect_obj(&snis_logo, 100, 500);
 	sng_set_foreground(GREEN);
-	sng_abs_xy_draw_string(w, gc, "NETWORK SETUP", SMALL_FONT, 25, 10 + LINEHEIGHT * 2);
-	sng_abs_xy_draw_string(w, gc, "LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, 25, 130);
-	sng_abs_xy_draw_string(w, gc, "GAME SERVER NICKNAME", TINY_FONT, 25, 280);
-	sng_abs_xy_draw_string(w, gc, "SHIP NAME", TINY_FONT, 20, 470);
-	sng_abs_xy_draw_string(w, gc, "PASSWORD", TINY_FONT, 20, 520);
+	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, 25, 10 + LINEHEIGHT * 2);
+	sng_abs_xy_draw_string("LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, 25, 130);
+	sng_abs_xy_draw_string("GAME SERVER NICKNAME", TINY_FONT, 25, 280);
+	sng_abs_xy_draw_string("SHIP NAME", TINY_FONT, 20, 470);
+	sng_abs_xy_draw_string("PASSWORD", TINY_FONT, 20, 520);
 
 	sanitize_string(net_setup_ui.servername);
 	sanitize_string(net_setup_ui.lobbyname);
@@ -11426,7 +11423,7 @@ static void draw_help_text(GtkWidget *w, char *text)
 		if (text[i] == '\n' || text[i] == '\0') {
 			if (line >= helpmodeline && line < helpmodeline + 20) {
 				buffer[buflen] = '\0';
-				sng_abs_xy_draw_string(w, gc, buffer, TINY_FONT, 60, y);
+				sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
 				y += 19;
 				strcpy(buffer, "");
 				buflen = 0;
@@ -11447,9 +11444,9 @@ static void draw_help_text(GtkWidget *w, char *text)
 static void draw_help_screen(GtkWidget *w)
 {
 	sng_set_foreground(BLACK);
-	snis_draw_rectangle(w->window, gc, 1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	snis_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
 	sng_set_foreground(GREEN);
-	snis_draw_rectangle(w->window, gc, 0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	snis_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
 	if (displaymode < 0 || displaymode >= ARRAYSIZE(help_text)) {
 		draw_help_text(w, "Unknown screen, no help available");
 		return;
@@ -11465,11 +11462,11 @@ static void draw_quit_screen(GtkWidget *w)
 	quittimer++;
 
 	sng_set_foreground(BLACK);
-	snis_draw_rectangle(w->window, gc, 1, 100, 100, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 200);
+	snis_draw_rectangle(1, 100, 100, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 200);
 	sng_set_foreground(RED);
-	snis_draw_rectangle(w->window, gc, FALSE, 100, 100, SCREEN_WIDTH-200, SCREEN_HEIGHT-200);
+	snis_draw_rectangle(FALSE, 100, 100, SCREEN_WIDTH-200, SCREEN_HEIGHT-200);
 	sng_set_foreground(WHITE);
-	sng_abs_xy_draw_string(w, gc, "Quit?", BIG_FONT, 300, 280);
+	sng_abs_xy_draw_string("Quit?", BIG_FONT, 300, 280);
 
 	if (current_quit_selection == 1) {
 		x = 130;
@@ -11478,16 +11475,16 @@ static void draw_quit_screen(GtkWidget *w)
 		x = 480;
 		sng_set_foreground(RED);
 	}
-	sng_abs_xy_draw_string(w, gc, "Quit Now", SMALL_FONT, 150, 450);
+	sng_abs_xy_draw_string("Quit Now", SMALL_FONT, 150, 450);
 	if (current_quit_selection == 0)
 		sng_set_foreground(WHITE);
 	else
 		sng_set_foreground(RED);
-	sng_abs_xy_draw_string(w, gc, "Don't Quit", SMALL_FONT, 500, 450);
+	sng_abs_xy_draw_string("Don't Quit", SMALL_FONT, 500, 450);
 
 	if ((quittimer & 0x04)) {
 		sng_set_foreground(WHITE);
-		snis_draw_rectangle(w->window, gc, FALSE, x, 420, 200, 50);
+		snis_draw_rectangle(FALSE, x, 420, 200, 50);
 	}
 }
 
@@ -11641,9 +11638,9 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		sng_set_foreground(WHITE);
 		char stat_buffer[30];
 		sprintf(stat_buffer,"fps %5.2f", 1.0/avg_frame_rate);
-		sng_abs_xy_draw_string(w, gc, stat_buffer, NANO_FONT, 2, 10);
+		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 2, 10);
 		sprintf(stat_buffer,"t %0.2f ms", avg_frame_time*1000.0);
-		sng_abs_xy_draw_string(w, gc, stat_buffer, NANO_FONT, 92, 10);
+		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 92, 10);
 	}
 	if (display_frame_stats > 1) {
 		graph_dev_display_debug_menu_show();

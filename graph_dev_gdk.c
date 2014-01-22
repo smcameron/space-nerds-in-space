@@ -333,7 +333,7 @@ void software_render_entity_lines(struct entity_context *cx, struct entity *e)
 						float wx2 = wx_screen(x2);
 						float wy2 = wy_screen(y2);
 						if (e->m->l[i].flag & MESH_LINE_DOTTED)
-							sng_draw_dotted_line(sgc.drawable, sgc.gc, sx_extent(wx1),
+							sng_draw_dotted_line(sx_extent(wx1),
 								sy_extent(wy1), sx_extent(wx2), sy_extent(wy2));
 						else
 							graph_dev_draw_line(wx1, wy1, wx2, wy2);
@@ -354,7 +354,7 @@ void software_render_entity_lines(struct entity_context *cx, struct entity *e)
 				x2 = wx_screen(vend->wx / vend->ww);
 				y2 = wy_screen(vend->wy / vend->ww);
 				if (e->m->l[i].flag & MESH_LINE_DOTTED)
-					sng_draw_dotted_line(sgc.drawable, sgc.gc, sx_extent(x1), sy_extent(y1),
+					sng_draw_dotted_line(sx_extent(x1), sy_extent(y1),
 								sx_extent(x2), sy_extent(y2));
 				else
 					graph_dev_draw_line(x1, y1, x2, y2);
@@ -386,13 +386,13 @@ static void draw_triangle_outline(struct entity_context *cx, struct entity *e, s
 	if (!st->clipped) {
 		if (e->render_style & RENDER_BRIGHT_LINE) {
 			if (!(st->src->flag & TRIANGLE_0_1_COPLANAR))
-				sng_current_draw_bright_line(sgc.drawable, sgc.gc, sx_extent(st->x1),
+				sng_current_draw_bright_line(sx_extent(st->x1),
 					sy_extent(st->y1), sx_extent(st->x2), sy_extent(st->y2), e->color);
 			if (!(st->src->flag & TRIANGLE_1_2_COPLANAR))
-				sng_current_draw_bright_line(sgc.drawable, sgc.gc, sx_extent(st->x2),
+				sng_current_draw_bright_line(sx_extent(st->x2),
 					sy_extent(st->y2), sx_extent(st->x3), sy_extent(st->y3), e->color);
 			if (!(st->src->flag & TRIANGLE_0_2_COPLANAR))
-				sng_current_draw_bright_line(sgc.drawable, sgc.gc, sx_extent(st->x3),
+				sng_current_draw_bright_line(sx_extent(st->x3),
 					sy_extent(st->y3), sx_extent(st->x1), sy_extent(st->y1), e->color);
 		} else {
 			sng_set_foreground(e->color);
@@ -454,13 +454,13 @@ static void draw_triangle_outline(struct entity_context *cx, struct entity *e, s
 
 		if (e->render_style & RENDER_BRIGHT_LINE) {
 			if (!e1_clipped && !(st->src->flag & TRIANGLE_0_1_COPLANAR))
-				sng_current_draw_bright_line(sgc.drawable, sgc.gc, sx_extent(e1_x1),
+				sng_current_draw_bright_line(sx_extent(e1_x1),
 					sy_extent(e1_y1), sx_extent(e1_x2), sy_extent(e1_y2), e->color);
 			if (!e2_clipped && !(st->src->flag & TRIANGLE_1_2_COPLANAR))
-				sng_current_draw_bright_line(sgc.drawable, sgc.gc, sx_extent(e2_x1),
+				sng_current_draw_bright_line(sx_extent(e2_x1),
 					sy_extent(e2_y1), sx_extent(e2_x2), sy_extent(e2_y2), e->color);
 			if (!e3_clipped && !(st->src->flag & TRIANGLE_0_2_COPLANAR))
-				sng_current_draw_bright_line(sgc.drawable, sgc.gc, sx_extent(e3_x1),
+				sng_current_draw_bright_line(sx_extent(e3_x1),
 					sy_extent(e3_y1), sx_extent(e3_x2), sy_extent(e3_y2), e->color);
 		} else {
 			sng_set_foreground(e->color);

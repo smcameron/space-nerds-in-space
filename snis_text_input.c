@@ -56,12 +56,12 @@ void snis_text_input_box_draw(GtkWidget *w, GdkGC *gc, struct snis_text_input_bo
 	int cursor_on = t->has_focus && (*t->timer & 0x04);
 
 	sng_set_foreground(t->color);	
-	sng_current_draw_rectangle(w->window, gc, 0, t->x, t->y, t->width, t->height);
+	sng_current_draw_rectangle(0, t->x, t->y, t->width, t->height);
 	if (t->has_focus)
-		sng_current_draw_rectangle(w->window, gc, 0, t->x - 1, t->y - 1,
+		sng_current_draw_rectangle(0, t->x - 1, t->y - 1,
 						t->width + 2, t->height + 2);
 
-	sng_abs_xy_draw_string_with_cursor(w, gc, t->buffer, t->font,
+	sng_abs_xy_draw_string_with_cursor(t->buffer, t->font,
 				t->x + 4, t->y + font_lineheight[t->font],
 				t->cursor_pos, cursor_on);
 }

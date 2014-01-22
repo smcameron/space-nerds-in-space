@@ -231,7 +231,7 @@ static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc,
 	x1 = wx_screen(cx, wx);
 	y1 = wy_screen(cx, wy);
 	sng_set_foreground(GRAY + snis_randn(NSHADESOFGRAY));
-	sng_draw_point(w->window, gc, x1, y1);
+	sng_draw_point(x1, y1);
 }
 
 #ifdef WITH_ILDA_SUPPORT

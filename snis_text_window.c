@@ -94,9 +94,9 @@ void text_window_draw(GtkWidget *w, GdkGC *gc, struct text_window *tw)
 
 	sng_set_foreground(tw->color);
 	/* draw outer rectangle */
-	sng_current_draw_rectangle(w->window, gc, 0, tw->x, tw->y, tw->w, tw->h);
+	sng_current_draw_rectangle(0, tw->x, tw->y, tw->w, tw->h);
 	/* draw scroll bar */
-	sng_current_draw_rectangle(w->window, gc, 0, tw->x + tw->w - 15, tw->y + 5, 10, tw->h - 10);
+	sng_current_draw_rectangle(0, tw->x + tw->w - 15, tw->y + 5, 10, tw->h - 10);
 
 	twec = text_window_entry_count(tw);
 	if (twec == 0) {
@@ -122,10 +122,10 @@ void text_window_draw(GtkWidget *w, GdkGC *gc, struct text_window *tw)
 			thumb_bottom = tw->y + tw->h - 10;
 			
 	}
-	sng_current_draw_rectangle(w->window, gc, 0,
+	sng_current_draw_rectangle(0,
 			tw->x + tw->w - 13, thumb_pos - tw->lineheight / 2,
 			6, tw->lineheight);
-	sng_current_draw_rectangle(w->window, gc, 0,
+	sng_current_draw_rectangle(0,
 			tw->x + tw->w - 11, thumb_top,
 			2, thumb_bottom - thumb_top);
 
@@ -136,7 +136,7 @@ void text_window_draw(GtkWidget *w, GdkGC *gc, struct text_window *tw)
 			int len = strlen(tw->text[i]);
 
 			if (!tw->print_slowly || i != tw->last_entry -1) {
-				sng_abs_xy_draw_string(w, gc, tw->text[i], tw->font, tw->x + 10,
+				sng_abs_xy_draw_string(tw->text[i], tw->font, tw->x + 10,
 						tw->y + j * tw->lineheight + tw->lineheight);
 			} else {
 				char tmpbuf[100];	
@@ -156,7 +156,7 @@ void text_window_draw(GtkWidget *w, GdkGC *gc, struct text_window *tw)
 					if (((*textwindow_timer >> 2) & 0x01) == 0) 
 						strcat(tmpbuf, "_");
 				}
-				sng_abs_xy_draw_string(w, gc, tmpbuf, tw->font, tw->x + 10,
+				sng_abs_xy_draw_string(tmpbuf, tw->font, tw->x + 10,
 						tw->y + j * tw->lineheight + tw->lineheight);
 			}
 			j++;

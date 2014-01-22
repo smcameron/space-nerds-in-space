@@ -50,25 +50,23 @@ struct button *snis_button_init(int x, int y, int width, int height,
 void snis_button_draw(GtkWidget *w, GdkGC *gc, struct button *b)
 {
 	sng_set_foreground(b->color);
-	sng_current_draw_rectangle(w->window, gc, 0, b->x, b->y, b->width, b->height);
+	sng_current_draw_rectangle(0, b->x, b->y, b->width, b->height);
 	if (b->button_press_feedback_counter)
-		sng_current_draw_rectangle(w->window, gc, 0, b->x + 1, b->y + 1,
+		sng_current_draw_rectangle(0, b->x + 1, b->y + 1,
 					b->width - 2, b->height - 2);
 	if (!b->checkbox_value) {
-		sng_abs_xy_draw_string(w, gc, b->label, b->font, b->x + 10, b->y + b->height / 1.7); 
+		sng_abs_xy_draw_string(b->label, b->font, b->x + 10, b->y + b->height / 1.7);
 		if (b->button_press_feedback_counter)
-			sng_abs_xy_draw_string(w, gc, b->label, b->font, b->x + 11, b->y + b->height / 1.7 + 1); 
+			sng_abs_xy_draw_string(b->label, b->font, b->x + 11, b->y + b->height / 1.7 + 1);
 	} else {
-		sng_current_draw_rectangle(w->window, gc, 0, b->x + 5, b->y + 2, 15, 15);
+		sng_current_draw_rectangle(0, b->x + 5, b->y + 2, 15, 15);
 		if (*b->checkbox_value) {
-			sng_current_draw_line(w->window, gc,
-				b->x + 5, b->y + 2, b->x + 5 + 15, b->y + 2 + 15);
-			sng_current_draw_line(w->window, gc,
-				b->x + 5, b->y + 2 + 15, b->x + 5 + 15, b->y + 2);
+			sng_current_draw_line(b->x + 5, b->y + 2, b->x + 5 + 15, b->y + 2 + 15);
+			sng_current_draw_line(b->x + 5, b->y + 2 + 15, b->x + 5 + 15, b->y + 2);
 		}
-		sng_abs_xy_draw_string(w, gc, b->label, b->font, b->x + 30, b->y + b->height / 1.7); 
+		sng_abs_xy_draw_string(b->label, b->font, b->x + 30, b->y + b->height / 1.7);
 		if (b->button_press_feedback_counter)
-			sng_abs_xy_draw_string(w, gc, b->label, b->font,
+			sng_abs_xy_draw_string(b->label, b->font,
 					b->x + 31, b->y + 1 + b->height / 1.7); 
 	}
 	if (b->button_press_feedback_counter)
