@@ -121,14 +121,17 @@ void graph_dev_clear_depth_bit()
 	/* noop as we have no z-depth buffer */
 }
 
-void graph_dev_set_context(GdkDrawable *drawable, GdkGC *gc)
+void graph_dev_set_context(void *gdk_drawable, void *gdk_gc)
 {
-	sgc.drawable = drawable;
-	sgc.gc = gc;
+	sgc.drawable = gdk_drawable;
+	sgc.gc = gdk_gc;
 }
 
-void graph_dev_setup_colors(GtkWidget *w, GdkColor *huex, int nhuex)
+void graph_dev_setup_colors(void *gtk_widget_w, void *gtk_color_huex, int nhuex)
 {
+	GtkWidget *w = gtk_widget_w;
+	GdkColor *huex = gtk_color_huex;
+
 	int i;
 	for (i = 0; i < nhuex; i++)
 		gdk_colormap_alloc_color(gtk_widget_get_colormap(w),
@@ -136,9 +139,9 @@ void graph_dev_setup_colors(GtkWidget *w, GdkColor *huex, int nhuex)
 	gtk_widget_modify_bg(w, GTK_STATE_NORMAL, &huex[BLACK]);
 }
 
-void graph_dev_set_color(GdkColor *c, float a)
+void graph_dev_set_color(void *gtk_color, float a)
 {
-	gdk_gc_set_foreground(sgc.gc, c);
+	gdk_gc_set_foreground(sgc.gc, gtk_color);
 }
 
 void graph_dev_set_screen_size(int width, int height)

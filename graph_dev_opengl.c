@@ -693,9 +693,9 @@ static void enable_3d_viewport()
 }
 
 
-void graph_dev_set_color(GdkColor *c, float a)
+void graph_dev_set_color(void *gdk_color, float a)
 {
-	sgc.hue = c;
+	sgc.hue = gdk_color;
 
 	if (a >= 0) {
 		sgc.alpha_blend = 1;
@@ -705,12 +705,12 @@ void graph_dev_set_color(GdkColor *c, float a)
 	}
 }
 
-void graph_dev_set_context(GdkDrawable *drawable, GdkGC *gc)
+void graph_dev_set_context(void *gdk_drawable, void *gdk_gc)
 {
 	/* noop */
 }
 
-void graph_dev_setup_colors(GtkWidget *w, GdkColor *huex, int nhuex)
+void graph_dev_setup_colors(void *gtk_widget, void *gdk_color_huex, int nhuex)
 {
 	/* noop */
 }
