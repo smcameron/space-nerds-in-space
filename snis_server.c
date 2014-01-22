@@ -2759,15 +2759,28 @@ static void player_collision_detection(void *player, void *object)
 	if (t->index == o->index) /* skip self */
 		return;
 	dist2 = dist3dsqrd(o->x - t->x, o->y - t->y, o->z - t->z);
-	if (t->type == OBJTYPE_PLANET && dist2 < 450.0 * 450.0)  {
-		/* crashed into planet */
-		o->alive = 0;
-		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
-		send_ship_damage_packet(o);
-		snis_queue_add_sound(EXPLOSION_SOUND,
-			ROLE_SOUNDSERVER, o->id);
-		schedule_callback(event_callback, &callback_schedule,
-				"player-death-callback", o->id);
+	if (t->type == OBJTYPE_PLANET && dist2 < 1000.0 * 1000.0) {
+		/* TODO: assign planet radius server side, not client side and make
+		 * these tests based on the planet radius.
+		 */
+		if (dist2 < 450.0 * 450.0)  {
+			/* crashed into planet */
+			o->alive = 0;
+			o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+			send_ship_damage_packet(o);
+			snis_queue_add_sound(EXPLOSION_SOUND,
+					ROLE_SOUNDSERVER, o->id);
+			schedule_callback(event_callback, &callback_schedule,
+					"player-death-callback", o->id);
+		} else if (dist2 < 600.0 * 600.0 && (universe_timestamp & 0x7) == 0) {
+			send_packet_to_all_clients_on_a_bridge(o->id,
+				packed_buffer_new("h", OPCODE_COLLISION_NOTIFICATION),
+					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
+		} else if (dist2 < 750.0 * 750.0 && (universe_timestamp & 0x7) == 0) {
+			send_packet_to_all_clients_on_a_bridge(o->id,
+				packed_buffer_new("h", OPCODE_PROXIMITY_ALERT),
+					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
+		}
 	}
 	if (dist2 < PROXIMITY_DIST2 && (universe_timestamp & 0x7) == 0) {
 		send_packet_to_all_clients_on_a_bridge(o->id, 
