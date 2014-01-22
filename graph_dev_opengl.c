@@ -1757,8 +1757,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		if (e->material_type == MATERIAL_TEXTURED_PARTICLE) {
 			struct material_textured_particle *mt = e->material_ptr;
 
-			graph_dev_raster_particle_animation(cx, e, mat_mvp, mat_normal, mt->texture_id, mt->radius,
-				mt->time_base);
+			graph_dev_raster_particle_animation(cx, e, mat_mvp, mat_normal, mt->texture_id,
+				mt->radius * e->scale, mt->time_base);
 		}
 		break;
 	}
