@@ -796,6 +796,7 @@ static int update_damcon_part(uint32_t id, uint32_t ship_id, uint32_t type,
 	return 0;
 }
 
+static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e, int shiptype);
 
 static int update_econ_ship(uint32_t id, double x, double y, double z,
 			double vx, double vy, double vz,
@@ -808,6 +809,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes], x, y, z, SHIP_COLOR);
+		add_ship_thrust_entities(ecx, e, shiptype);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_SHIP2, alive, e);
 		if (i < 0)
 			return i;
@@ -3301,9 +3303,11 @@ static int process_update_ship_packet(uint16_t opcode)
 	if (i < 0) {
 		if (id == my_ship_id)
 			e = add_entity(ecx, NULL, dx, dy, dz, SHIP_COLOR);
-		else
+		else {
 			e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes],
 					dx, dy, dz, SHIP_COLOR);
+			add_ship_thrust_entities(ecx, e, shiptype);
+		}
 		i = add_generic_object(id, dx, dy, dz, dvx, dvy, dvz, &orientation, type, alive, e);
 		if (i < 0) {
 			rc = i;
