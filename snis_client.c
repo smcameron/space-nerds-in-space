@@ -5086,7 +5086,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	add_ship_thrust_entities(ecx, o->entity, o->tsd.ship.shiptype);
 
-	render_entities(w, gc, ecx);
+	render_entities(ecx);
 
 	/* Remove our ship from the scene */
 	remove_entity(ecx, turret_entity);
@@ -5240,7 +5240,7 @@ static void show_mainscreen(GtkWidget *w)
 	render_skybox(ecx);
 
 	pthread_mutex_lock(&universe_mutex);
-	render_entities(w, gc, ecx);
+	render_entities(ecx);
 
 	/* if we added the ship into the scene, remove it now */
 	if (player_ship) {
@@ -6551,7 +6551,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	update_entity_scale(e, range/300.0);
 	update_entity_orientation(e, &o->orientation);
 
-	render_entities(w, gc, navecx);
+	render_entities(navecx);
 
 	/* draw all the rest onto the 3d scene */
 	{
@@ -6907,7 +6907,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 				cy + sin(angle) * radius);
 		}
 	}
-	render_entities(w, gc, sciballecx);
+	render_entities(sciballecx);
 	remove_all_entity(sciballecx);
 }
 
@@ -7929,7 +7929,7 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	update_entity_orientation(e, &ind_orientation);
 	update_entity_scale(e, 0.1/heading_indicator_mesh->radius);
 
-	render_entities(w, gc, tridentecx);
+	render_entities(tridentecx);
 
 	remove_all_entity(tridentecx);
 }
@@ -8285,7 +8285,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			}
 		}
 	}
-	render_entities(w, gc, navecx);
+	render_entities(navecx);
 
 	draw_orientation_trident(w, gc, o, 75, 175, 100);
 
@@ -9659,7 +9659,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	camera_set_parameters(sciecx, 0.5, 8000.0,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
 	set_lighting(sciecx, -m->radius * 4, 0, m->radius);
-	render_entities(w, gc, sciecx);
+	render_entities(sciecx);
 	remove_entity(sciecx, e);
 
 	y = SCREEN_HEIGHT - 180;

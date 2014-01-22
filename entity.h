@@ -48,7 +48,7 @@ GLOBAL void update_entity_shadecolor(struct entity *e, int color);
 GLOBAL void update_entity_visibility(struct entity *e, int visible);
 GLOBAL struct mesh *entity_get_mesh(struct entity *e);
 GLOBAL void entity_set_mesh(struct entity *e, struct mesh *m);
-GLOBAL void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx);
+GLOBAL void render_entities(struct entity_context *cx);
 GLOBAL void render_skybox(struct entity_context *cx);
 GLOBAL void camera_set_pos(struct entity_context *cx, float x, float y, float z);
 GLOBAL void camera_get_pos(struct entity_context *cx, float *x, float *y, float *z);

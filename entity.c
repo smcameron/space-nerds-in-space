@@ -220,8 +220,7 @@ static inline float wy_screen(struct entity_context *cx, float wy)
 }
 
 
-static void wireframe_render_fake_star(GtkWidget *w, GdkGC *gc,
-	struct entity_context *cx, struct vertex *fs)
+static void wireframe_render_fake_star(struct entity_context *cx, struct vertex *fs)
 {
 	float wx = fs->wx / fs->ww;
 	float wy = fs->wy / fs->ww;
@@ -536,7 +535,7 @@ int transform_point(struct entity_context *cx, float x, float y, float z, float 
 	return 0;
 }
 
-void render_entity(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct entity *e, union vec3 *camera_light_pos)
+static void render_entity(struct entity_context *cx, struct entity *e, union vec3 *camera_light_pos)
 {
 	/* calculate screen coords of entity as a whole */
 	transform_point(cx, e->x, e->y, e->z, &e->sx, &e->sy);
@@ -883,7 +882,7 @@ static void update_entity_child_state(struct entity *e)
 	e->orientation = orientation;
 }
 
-void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
+void render_entities(struct entity_context *cx)
 {
 	int i, j, n;
 	struct camera_info *c = &cx->camera;
@@ -934,7 +933,7 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 				float dist2 = dist3dsqrd(c->x - fs->x, c->y - fs->y, c->z - fs->z);
 
 				if (!fs->clip)
-					wireframe_render_fake_star(w, gc, cx, fs);
+					wireframe_render_fake_star(cx, fs);
 
 				if (dist2 > cx->fakestars_radius * cx->fakestars_radius)
 					reposition_fake_star(cx, fs, cx->fakestars_radius);
@@ -1006,13 +1005,13 @@ void render_entities(GtkWidget *w, GdkGC *gc, struct entity_context *cx)
 			/* near to far first, usually opaque geometry */
 			for (j = 0; j < cx->nnear_to_far_entity_depth; j++) {
 				struct entity *e = &cx->entity_list[cx->near_to_far_entity_depth[j]];
-				render_entity(w, gc, cx, e, (union vec3 *)&camera_light_pos.m[0]);
+				render_entity(cx, e, (union vec3 *)&camera_light_pos.m[0]);
 			}
 
 			/* then far to near, usually blended geometry and software renderer */
 			for (j = 0; j < cx->nfar_to_near_entity_depth; j++) {
 				struct entity *e = &cx->entity_list[cx->far_to_near_entity_depth[j]];
-				render_entity(w, gc, cx, e, (union vec3 *)&camera_light_pos.m[0]);
+				render_entity(cx, e, (union vec3 *)&camera_light_pos.m[0]);
 			}
 		}
 	}
