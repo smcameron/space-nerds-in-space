@@ -81,4 +81,11 @@ rotate(a = 90, v = [0, 1, 0])
 rotate(a = 45, v = [0, 0, 1])
 	swordfish();
 
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-20, 0, 0, 2.3);
+	imposter_thrust(-16.75, 0, 8.5, 1.5);
+	imposter_thrust(-16.75, 0, -8.5, 1.5);
+}
 

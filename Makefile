@@ -148,7 +148,22 @@ MODELS=${MD}/freighter.stl \
 	${MD}/cargocontainer.stl \
 	${MD}/spaceship_turret.stl \
 	${MD}/spaceship_turret_base.stl
-	
+
+MODEL_PARAMS = \
+	${MD}/destroyer.scad_params.h \
+	${MD}/freighter.scad_params.h \
+	${MD}/battlestar.scad_params.h \
+	${MD}/spaceship.scad_params.h \
+	${MD}/asteroid-miner.scad_params.h \
+	${MD}/spaceship2.scad_params.h \
+	${MD}/dragonhawk.scad_params.h \
+	${MD}/skorpio.scad_params.h \
+	${MD}/disruptor.scad_params.h \
+	${MD}/research-vessel.scad_params.h \
+	${MD}/conqueror.scad_params.h \
+	${MD}/scrambler.scad_params.h \
+	${MD}/swordfish.scad_params.h \
+	${MD}/wombat.scad_params.h
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${ILDAFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
@@ -201,6 +216,9 @@ starbase.stl:	starbase.scad wedge.scad
 %.stl:	%.scad
 	$(Q)$(OPENSCAD)
 
+%.scad_params.h: %.scad
+	awk -f extract_scad_params.awk $< > $@
+
 my_point.o:   my_point.c my_point.h Makefile
 	$(Q)$(COMPILE)
 
@@ -241,7 +259,7 @@ snis_server.o:	snis_server.c snis.h snis_packet.h snis_marshal.h sounds.h starba
 		container-of.h
 	$(Q)$(COMPILE)
 
-snis_client.o:	snis_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h quat.o vec4.o
+snis_client.o:	snis_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h quat.o vec4.o $(MODEL_PARAMS)
 	$(Q)$(GLEXTCOMPILE)
 
 snis_limited_client.c:	snis_client.c

@@ -92,3 +92,12 @@ rotate(a = 180, v = [0, 1, 0])
 rotate(a = -90, v = [1, 0, 0])
 ship();
 
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-21, 5, 5, 1);
+	imposter_thrust(-21, 5, -5, 1);
+	imposter_thrust(-21, -5, 5, 1);
+	imposter_thrust(-21, -5, -5, 1);
+}
+

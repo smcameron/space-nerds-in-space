@@ -4913,24 +4913,78 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int 
 	}
 }
 
-static void add_wombat_thrust_entities(struct entity_context *cx, struct entity *e)
+struct thrust_attachment_point {
+	int nports;
+	struct _port {
+		float scale;
+		union vec3 pos;
+	} port[5];
+};
+
+static struct thrust_attachment_point ship_thrust_attachment_points[] = {
+
+	/* cruiser */
+	{ 0 }, /* no exhaust ports */
+	/* destroyer */
+	#include "share/snis/models/destroyer.scad_params.h"
+	,
+	/* freighter */
+	#include "share/snis/models/freighter.scad_params.h"
+	,
+	/* tanker */
+	{ 0 }, /* no exhaust ports */
+	/* transport */
+	{ 0 }, /* no exhaust ports */
+	/* battlestar */
+	#include "share/snis/models/battlestar.scad_params.h"
+	,
+	/* spaceship */
+	#include "share/snis/models/spaceship.scad_params.h"
+	,
+	/* asteroid-miner */
+	#include "share/snis/models/asteroid-miner.scad_params.h"
+	,
+	/* spaceship2 */
+	#include "share/snis/models/spaceship2.scad_params.h"
+	,
+	/* spaceship3 */
+	{ 0 }, /* no exhaust ports */
+	/* dragonhawk */
+	#include "share/snis/models/dragonhawk.scad_params.h"
+	,
+	/* skorpio */
+	#include "share/snis/models/skorpio.scad_params.h"
+	,
+	/* disruptor */
+	#include "share/snis/models/disruptor.scad_params.h"
+	,
+	/* research_vessel */
+	#include "share/snis/models/research-vessel.scad_params.h"
+	,
+	/* conqueror */
+	#include "share/snis/models/conqueror.scad_params.h"
+	,
+	/* scrambler */
+	#include "share/snis/models/scrambler.scad_params.h"
+	,
+	/* swordfish */
+	#include "share/snis/models/swordfish.scad_params.h"
+	,
+	/* wombat */
+	#include "share/snis/models/wombat.scad_params.h"
+};
+
+static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e, int shiptype)
 {
-	const float x_axis_offset = 2.75;
-	const int nthrust_ports = 5;
-	static const union vec3 thrust_pos[] = {
-		{ { -17.25, 1, 0 } },
-		{ { -16.5, 1, 4.5 } },
-		{ { -16.5, 1, -4.5 } },
-		{ { -13, 1, 9 } },
-		{ { -13, 1, -9 } } };
+	struct thrust_attachment_point *ap = &ship_thrust_attachment_points[shiptype];
 
 	int i;
-	for (i = 0; i < nthrust_ports; i++) {
+	for (i = 0; i < ap->nports; i++) {
 		struct entity *t = add_entity(cx, thrust_animation_mesh,
-			thrust_pos[i].v.x - x_axis_offset,
-			thrust_pos[i].v.y, thrust_pos[i].v.z, WHITE);
+			ap->port[i].pos.v.x, ap->port[i].pos.v.y, ap->port[i].pos.v.z, WHITE);
 		update_entity_material(t, MATERIAL_TEXTURED_PARTICLE, &thrust_material);
 		update_entity_orientation(t, &identity_quat);
+		update_entity_scale(t, ap->port[i].scale);
 
 		update_entity_parent(cx, t, e);
 	}
@@ -5026,7 +5080,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	update_entity_orientation(turret_entity, &camera_orientation);
 	set_render_style(turret_entity, RENDER_NORMAL);
 
-	add_wombat_thrust_entities(ecx, o->entity);
+	add_ship_thrust_entities(ecx, o->entity, o->tsd.ship.shiptype);
 
 	render_entities(w, gc, ecx);
 
@@ -5161,7 +5215,7 @@ static void show_mainscreen(GtkWidget *w)
 			update_entity_orientation(turret, &o->tsd.ship.weap_orientation);
 			update_entity_parent(ecx, turret, turret_base);
 
-			add_wombat_thrust_entities(ecx, player_ship);
+			add_ship_thrust_entities(ecx, player_ship, o->tsd.ship.shiptype);
 			break;
 		}
 	}

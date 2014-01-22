@@ -46,3 +46,9 @@ translate(v = [20, -5, -5])
 	}	
 }
 
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-23, -2, 5, 1.2);
+	imposter_thrust(-23, -2, -5, 1.2);
+}

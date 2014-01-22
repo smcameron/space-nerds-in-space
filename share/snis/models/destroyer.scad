@@ -67,3 +67,8 @@ translate(v = [12, -5, 2.1])
 long_sphere(6, 1.5);
 }
 
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-6, -1, 0, 1.75);
+}

@@ -49,3 +49,10 @@ rotate(a = 180, v = [0, 1, 0])
 rotate(a = -90, v = [1, 0, 0])
 main_fuselage();
 
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-33, 0, 10, 1.25);
+	imposter_thrust(-33, 0, -10, 1.25);
+}
+

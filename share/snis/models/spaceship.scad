@@ -115,3 +115,8 @@ rotate(a = 90, v = [0, 1, 0])
 	scale (v = [2.4, 2.4, 4.8])
 		sixth_wedge();
 
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-8, 0, 0, 1.25);
+}

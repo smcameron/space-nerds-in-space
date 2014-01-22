@@ -49,3 +49,10 @@ translate(v = [14, 0, -1.3])
 	scale(v = [1.4, 1, 1])
 	sphere(r = 1.5);
 }
+
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-17, 0, 0, 2);
+}
+

@@ -94,3 +94,9 @@ union() {
 	top_pod();
 	antenna();
 }
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-24, 0, 0, 2.5);
+}
+

@@ -79,3 +79,11 @@ module scrambler()
 rotate(a = 90, v = [1, 0, 0])
 	scale(v = [2.5, 2.5, 2.5])
 		scrambler();
+
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-16, 0, 0, 1.4);
+	imposter_thrust(-16, 0, 8.25, 1.4);
+	imposter_thrust(-16, 0, -8.25, 1.4);
+}

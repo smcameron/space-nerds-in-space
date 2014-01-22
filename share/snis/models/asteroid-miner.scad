@@ -97,3 +97,11 @@ rotate (a = 180, v = [0, 0, 1]) {
 		legset();
 }
 
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-15, 2.5, 0, 1.4);
+	imposter_thrust(-13, 2.5, 5, 1.4);
+	imposter_thrust(-13, 2.5, -5, 1.4);
+}
+

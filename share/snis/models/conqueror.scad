@@ -41,6 +41,13 @@ module main_body()
 	}
 }
 
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-34, 0, 14, 3.4);
+	imposter_thrust(-34, 0, -14, 3.4);
+}
+
 module neck()
 {
 	translate(v = [6.5, 0, 0])

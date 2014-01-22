@@ -80,3 +80,12 @@ translate(v = [12, 1, 0])
 			scale(v = [1.4, 1.8, 1.8])
 				wombat();
 
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-20, 1, 0, 1);
+	imposter_thrust(-19.25, 1, 4.5, 0.91);
+	imposter_thrust(-19.25, 1, -4.5, 0.91);
+	imposter_thrust(-15.75, 1, 9, 0.83);
+	imposter_thrust(-15.75, 1, -9, 0.83);
+}

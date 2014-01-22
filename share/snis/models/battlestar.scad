@@ -28,3 +28,8 @@ rotate(a = 90, v = [1, 0, 0])
 		translate(v = [-8, 0, 4])
 			battlestar();
 
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-12.5, 0, 0, 2);
+}
