@@ -2735,6 +2735,20 @@ static void do_thrust(struct snis_entity *ship)
 		ship->tsd.ship.velocity = ship->tsd.ship.velocity * 0.99;
 }
 
+static void scoop_up_cargo(struct snis_entity *player, struct snis_entity *cargo)
+{
+	int i;
+
+	for (i = 0; i < player->tsd.ship.ncargo_bays; i++)
+		if (player->tsd.ship.cargo[i].item == -1) {
+			/* put it in first empty cargo bay */
+			player->tsd.ship.cargo[i] = cargo->tsd.cargo_container.contents;
+			cargo->alive = 0;
+			delete_from_clients_and_server(cargo);
+			break;
+		}
+}
+
 static void player_collision_detection(void *player, void *object)
 {
 	struct snis_entity *o, *t;
@@ -2759,6 +2773,10 @@ static void player_collision_detection(void *player, void *object)
 	if (t->index == o->index) /* skip self */
 		return;
 	dist2 = dist3dsqrd(o->x - t->x, o->y - t->y, o->z - t->z);
+	if (t->type == OBJTYPE_CARGO_CONTAINER && dist2 < 150.0 * 150.0) {
+			scoop_up_cargo(o, t);
+			return;
+	}
 	if (t->type == OBJTYPE_PLANET && dist2 < 1000.0 * 1000.0) {
 		/* TODO: assign planet radius server side, not client side and make
 		 * these tests based on the planet radius.
