@@ -73,13 +73,13 @@ static int parse_error(char *filename, char *line, int ln, char *bad_word)
 	return -1;
 }
 
-static int parse_float_field(char *filename, char *line, int ln, float *value)
+static int parse_float_field(char *filename, char *line, int ln, float *value, char **saveptr)
 {
 	char *c;
 	char word[100];
 	int rc;
 
-	c = strtok(NULL, ",");
+	c = strtok_r(NULL, ",", saveptr);
 	if (!c)
 		return parse_error(filename, line, ln, NULL);
 	strcpy(word, c);
@@ -100,7 +100,7 @@ static void uppercase(char *w)
 
 static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 {
-	char *x;
+	char *x, *saveptr;
 	char word[100];
 	int rc;
 
@@ -111,7 +111,7 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 		return 1;
 
 	/* Name */
-	x = strtok(line, ",");
+	x = strtok_r(line, ",", &saveptr);
 	if (!x)
 		return parse_error(filename, line, ln, NULL);
 	strcpy(word, x);
@@ -120,7 +120,7 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	strcpy(c->name, word);
 
 	/* unit */
-	x = strtok(NULL, ",");
+	x = strtok_r(NULL, ",", &saveptr);
 	if (!x)
 		return parse_error(filename, line, ln, NULL);
 	strcpy(word, x);
@@ -128,22 +128,22 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	uppercase(word);
 	strcpy(c->unit, word);
 
-	rc = parse_float_field(filename, line, ln, &c->base_price);
+	rc = parse_float_field(filename, line, ln, &c->base_price, &saveptr);
 	if (rc)
 		return rc;
-	rc = parse_float_field(filename, line, ln, &c->volatility);
+	rc = parse_float_field(filename, line, ln, &c->volatility, &saveptr);
 	if (rc)
 		return rc;
-	rc = parse_float_field(filename, line, ln, &c->legality);
+	rc = parse_float_field(filename, line, ln, &c->legality, &saveptr);
 	if (rc)
 		return rc;
-	rc = parse_float_field(filename, line, ln, &c->government_adjust);
+	rc = parse_float_field(filename, line, ln, &c->government_adjust, &saveptr);
 	if (rc)
 		return rc;
-	rc = parse_float_field(filename, line, ln, &c->economy_adjust);
+	rc = parse_float_field(filename, line, ln, &c->economy_adjust, &saveptr);
 	if (rc)
 		return rc;
-	rc = parse_float_field(filename, line, ln, &c->tech_adjust);
+	rc = parse_float_field(filename, line, ln, &c->tech_adjust, &saveptr);
 	if (rc)
 		return rc;
 	return 0;

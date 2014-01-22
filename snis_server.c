@@ -5929,16 +5929,16 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 	char *duptxt;
 	int nchannels;
 	uint32_t channel[MAX_SHIPS_HAILABLE];
-	char *x;
+	char *x, *saveptr;
 	int switch_channel = 0;
 	uint32_t id = (uint32_t) -1;
 
 	duptxt = strdup(txt);
 
-	x = strtok(duptxt, " ,");
+	x = strtok_r(duptxt, " ,", &saveptr);
 	i = 0;
 	while (x && i < ARRAY_SIZE(namelist)) {
-		x = strtok(NULL, " ,");
+		x = strtok_r(NULL, " ,", &saveptr);
 		if (x)
 			namelist[i++] = x;
 	}
