@@ -1331,14 +1331,13 @@ static int update_planet(uint32_t id, double x, double y, double z, uint8_t gove
 		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
 		update_entity_scale(e, scale); 
 		if (r) {
-			/* FIXME: attach rings to planets somehow so when a planet is moved
-			 * on the demon screen, the rings do not get left behind.
-			 */ 
-			ring = add_entity(ecx, planetary_ring_mesh, x, y, z, PLANET_COLOR);
-			update_entity_scale(ring, scale);
+			ring = add_entity(ecx, planetary_ring_mesh, 0, 0, 0, PLANET_COLOR);
 			update_entity_material(ring, MATERIAL_TEXTURE_MAPPED_UNLIT,
 						&planetary_ring_material[(id >> 3) % NPLANETARY_RING_MATERIALS]);
-			update_entity_orientation(ring, &orientation);
+			update_entity_orientation(ring, &identity_quat);
+
+			/* child ring will inherit position and scale from planet */
+			update_entity_parent(ecx, ring, e);
 		}
 		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP, &planet_material[m]);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
