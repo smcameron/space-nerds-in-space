@@ -43,9 +43,9 @@ struct ui_element *ui_element_init(void *element,
 	return e;
 }
 
-void ui_element_draw(GtkWidget *w, GdkGC *gc, struct ui_element *element)
+void ui_element_draw(struct ui_element *element)
 {
-	element->draw(w, gc, element);
+	element->draw(element);
 }
 
 void ui_element_list_add_element(struct ui_element_list **list,
@@ -77,13 +77,12 @@ void ui_element_list_free(struct ui_element_list *list)
 	ui_element_list_free(n);
 }
 
-void ui_element_list_draw(GtkWidget *w, GdkGC *gc,
-					struct ui_element_list *list)
+void ui_element_list_draw(struct ui_element_list *list)
 {
 	for (; list != NULL; list = list->next) {
 		struct ui_element *e = list->element;
 		if (e->draw && e->active_displaymode == *e->displaymode && !e->hidden)
-			e->draw(w, gc, e->element);
+			e->draw(e->element);
 	}
 }
 

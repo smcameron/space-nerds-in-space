@@ -87,7 +87,7 @@ static int choose_barcolor(struct slider *s, double v)
 	return ((s->timer & 0x04) == 0) ? BLACK : RED;
 }
 
-static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
+static void snis_slider_draw_vertical(struct slider *s)
 {
 	double v;
 	int height, ty1;
@@ -140,7 +140,7 @@ static void snis_slider_draw_vertical(GtkWidget *w, GdkGC *gc, struct slider *s)
 	/* sng_abs_xy_draw_string(s->label, s->font, s->x + s->length + 5, s->y + 2 * s->height / 3);  */
 } 
 
-void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
+void snis_slider_draw(struct slider *s)
 {
 	double v;
 	float width, tx1;
@@ -150,7 +150,7 @@ void snis_slider_draw(GtkWidget *w, GdkGC *gc, struct slider *s)
 
 	s->timer++;
 	if (s->vertical) {
-		snis_slider_draw_vertical(w, gc, s);
+		snis_slider_draw_vertical(s);
 		return;
 	}
 	float f;

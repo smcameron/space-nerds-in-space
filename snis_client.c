@@ -11613,7 +11613,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_fonttest(w);
 		break;
 	}
-	ui_element_list_draw(w, gc, uiobjs);
+	ui_element_list_draw(uiobjs);
 
 	/* this has to come after ui_element_list_draw() to avoid getting clobbered */
 	if (displaymode == DISPLAYMODE_ENGINEERING)

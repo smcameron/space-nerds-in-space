@@ -18,7 +18,7 @@ GLOBAL struct snis_text_input_box *snis_text_input_box_init(int x, int y,
 					snis_text_input_box_callback callback,
 					void *cookie);
 
-GLOBAL void snis_text_input_box_draw(GtkWidget *w, GdkGC *gc, struct snis_text_input_box *t);
+GLOBAL void snis_text_input_box_draw(struct snis_text_input_box *t);
 
 GLOBAL void snis_text_input_box_set_focus(struct snis_text_input_box *t, int has_focus);
 GLOBAL int snis_text_input_box_button_press(struct snis_text_input_box *t, int x, int y);

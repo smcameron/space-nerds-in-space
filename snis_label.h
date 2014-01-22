@@ -11,7 +11,7 @@ struct label;
 
 GLOBAL struct label *snis_label_init(int x, int y, char *label,
 					int color, int font);
-GLOBAL void snis_label_draw(GtkWidget *w, GdkGC *gc, struct label *l);
+GLOBAL void snis_label_draw(struct label *l);
 
 GLOBAL void snis_label_set_color(struct label *l, int color);
 

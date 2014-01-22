@@ -51,7 +51,7 @@ struct snis_text_input_box *snis_text_input_box_init(int x, int y,
 	return t;
 }
 
-void snis_text_input_box_draw(GtkWidget *w, GdkGC *gc, struct snis_text_input_box *t)
+void snis_text_input_box_draw(struct snis_text_input_box *t)
 {
 	int cursor_on = t->has_focus && (*t->timer & 0x04);
 

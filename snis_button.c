@@ -47,7 +47,7 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	return b;
 }
 
-void snis_button_draw(GtkWidget *w, GdkGC *gc, struct button *b)
+void snis_button_draw(struct button *b)
 {
 	sng_set_foreground(b->color);
 	sng_current_draw_rectangle(0, b->x, b->y, b->width, b->height);

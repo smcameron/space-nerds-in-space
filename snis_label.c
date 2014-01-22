@@ -31,7 +31,7 @@ struct label *snis_label_init(int x, int y,
 	return l;
 }
 
-void snis_label_draw(GtkWidget *w, GdkGC *gc, struct label *l)
+void snis_label_draw(struct label *l)
 {
 	sng_set_foreground(l->color);
 	sng_abs_xy_draw_string(l->label, l->font, l->x, l->y);

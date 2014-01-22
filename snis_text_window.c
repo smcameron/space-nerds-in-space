@@ -87,7 +87,7 @@ struct text_window *text_window_init(int x, int y, int w,
 	return tw;
 }
 
-void text_window_draw(GtkWidget *w, GdkGC *gc, struct text_window *tw)
+void text_window_draw(struct text_window *tw)
 {
 	int i, j;
 	int thumb_pos, thumb_top, thumb_bottom, twec;

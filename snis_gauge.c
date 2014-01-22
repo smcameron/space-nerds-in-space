@@ -57,8 +57,8 @@ struct gauge *gauge_init(int x, int y, int r, double r1, double r2,
 	return g;
 }
 
-void draw_gauge_needle(GdkDrawable *drawable, GdkGC *gc,
-		gint x, gint y, gint r, double a)
+void draw_gauge_needle(
+		float x, float y, float r, double a)
 {
 	int x1, y1, x2, y2, x3, y3, x4, y4;
 
@@ -83,7 +83,7 @@ void gauge_fill_background(struct gauge *g, int bg, float alpha)
 	g->bg_alpha = alpha;
 }
 
-void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g)
+void gauge_draw(struct gauge *g)
 {
 	int i;
 	double a, ai;
@@ -141,12 +141,12 @@ void gauge_draw(GtkWidget *w, GdkGC *gc, struct gauge *g)
 
 	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
 	sng_set_foreground(g->needle_color);
-	draw_gauge_needle(w->window, gc, g->x, g->y, g->r, a); 
+	draw_gauge_needle(g->x, g->y, g->r, a);
 
 	if (g->sample2) {
 		a = ((g->sample2() - g->r1) / (g->r2 - g->r1)) * g->angular_range + g->start_angle;
 		sng_set_foreground(g->needle_color2);
-		draw_gauge_needle(w->window, gc, g->x, g->y, g->r * 0.8, a); 
+		draw_gauge_needle(g->x, g->y, g->r * 0.8, a);
 	}
 }
 
