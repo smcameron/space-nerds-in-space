@@ -56,6 +56,7 @@ GLuint load_shaders(const char *vertex_file_path, const char *fragment_file_path
 	char *fragmentShaderCode = read_file(fragment_file_path);
 	if (!fragmentShaderCode) {
 		printf("Can't to open fragment shader '%s'\n", fragment_file_path);
+		free(vertexShaderCode);
 		return 0;
 	}
 
@@ -119,6 +120,9 @@ GLuint load_shaders(const char *vertex_file_path, const char *fragment_file_path
 
 	glDeleteShader(vertexShaderID);
 	glDeleteShader(fragmentShaderID);
+
+	free(vertexShaderCode);
+	free(fragmentShaderCode);
 
 	return programID;
 }

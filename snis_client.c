@@ -193,6 +193,8 @@ struct entity_context *navecx;
 struct entity_context *tridentecx;
 struct entity_context *sciballecx;
 
+static int ecx_fake_stars_initialized = 0;
+
 struct nebula_entry {
 	double x, z, r, r2;
 	uint32_t id;
@@ -4953,7 +4955,6 @@ static void show_weapons_camera_view(GtkWidget *w)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
 	const float max_angle_of_view = ANGLE_OF_VIEW * M_PI / 180.0;
-	static int fake_stars_initialized = 0;
 	static int current_zoom = 0;
 	float angle_of_view;
 	struct snis_entity *o;
@@ -5013,8 +5014,8 @@ static void show_weapons_camera_view(GtkWidget *w)
 	calculate_camera_transform(ecx);
 
 	sng_set_foreground(GREEN);
-	if (!fake_stars_initialized) {
-		fake_stars_initialized = 1;
+	if (!ecx_fake_stars_initialized) {
+		ecx_fake_stars_initialized = 1;
 		entity_init_fake_stars(ecx, 2000, 300.0f * 10.0f);
 	}
 
@@ -5097,7 +5098,6 @@ static void show_mainscreen(GtkWidget *w)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
 	const float max_angle_of_view = ANGLE_OF_VIEW * M_PI / 180.0;
-	static int fake_stars_initialized = 0;
 	static int current_zoom = 0;
 	float angle_of_view;
 	struct snis_entity *o;
@@ -5190,8 +5190,8 @@ static void show_mainscreen(GtkWidget *w)
 	calculate_camera_transform(ecx);
 
 	sng_set_foreground(GREEN);
-	if (!fake_stars_initialized) {
-		fake_stars_initialized = 1;
+	if (!ecx_fake_stars_initialized) {
+		ecx_fake_stars_initialized = 1;
 		entity_init_fake_stars(ecx, 2000, 300.0f * 10.0f);
 	}
 

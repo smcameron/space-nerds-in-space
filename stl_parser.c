@@ -184,6 +184,7 @@ static void free_vertex_owners(struct vertex_owner* owners, int vertices) {
 			free(current);
 		}
 	}
+	free(owners);
 }
 
 static void add_vertex_owner(struct triangle *t, struct vertex_owner *owner)

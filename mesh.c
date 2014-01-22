@@ -432,6 +432,7 @@ void mesh_free(struct mesh *m)
 		free(m->l);
 	if (m->tex)
 		free(m->tex);
+	mesh_graph_dev_cleanup(m);
 	free(m);
 }
 
