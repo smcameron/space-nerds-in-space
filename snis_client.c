@@ -11312,7 +11312,7 @@ static char *help_text[] = {
 	"MAIN SCREEN\n\n"
 	"  CONTROLS\n\n"
 	"  * USE ARROW KEYS TO TURN SHIP\n\n"
-	"  * W KEY TOGGLES BETWEEN WEAPONS VIEW\n"
+	"  * SHIFT-W KEY TOGGLES BETWEEN WEAPONS VIEW\n"
 	"    AND MAIN VIEW\n\n"
 	"  * 1 KEY TOGGLES CAMERA VIEW MODES\n"
 	"\nPRESS ESC TO EXIT HELP\n",
@@ -11320,8 +11320,8 @@ static char *help_text[] = {
 	/* Navigation help text */
 	"NAVIGATION\n\n"
 	"  CONTROLS\n\n"
-	"  *   YAW: LEFT/RIGHT, A/D, OR USE MOUSE WHEEL\n"
-	"  * PITCH: UP/DOWN, W/S (CTRL-I INVERTS CONTROLS)\n"
+	"  *   YAW: LEFT/RIGHT, a/d, OR USE MOUSE WHEEL\n"
+	"  * PITCH: UP/DOWN, w/s (CTRL-I INVERTS CONTROLS)\n"
 	"  *  ROLL: Q/E\n"
 	"  * R BUTTON ABOVE THROTTLE REVERSES THRUST\n"
 	"  * USE WARP FOR FAST TRAVEL\n"
