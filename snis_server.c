@@ -5760,15 +5760,19 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			mkt[x - 'A'].qty -= q;
 			sprintf(m, " EXECUTING BUY ORDER %d %c", q, x);
 			send_comms_packet(n, channel, m);
+			snis_queue_add_sound(TRANSPORTER_SOUND,
+					ROLE_SOUNDSERVER, ship->id);
+			send_comms_packet(n, channel,
+				"TRANSPORTER BEAM ACTIVATED - GOODS TRANSFERRED");
 			return;
 		}
 		if (strncasecmp("sell ", msg, 5) == 0)  {
-			send_comms_packet(n, channel, " INVALID SELL ORDER");
+			send_comms_packet(n, channel, " INVALID SELL ORDER (USE THE 'SELL' MENU)");
 			return;
 		}
 	} else {
 		if (strncasecmp("buy ", msg, 4) == 0)  {
-			send_comms_packet(n, channel, " INVALID BUY ORDER");
+			send_comms_packet(n, channel, " INVALID BUY ORDER (USE THE 'BUY' MENU)");
 			return;
 		}
 		if (strncasecmp("sell ", msg, 5) == 0)  {
@@ -5805,6 +5809,10 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			}
 			sprintf(m, " EXECUTING SELL ORDER %d %c", q, x);
 			send_comms_packet(n, channel, m);
+			snis_queue_add_sound(TRANSPORTER_SOUND,
+					ROLE_SOUNDSERVER, ship->id);
+			send_comms_packet(n, channel,
+				"TRANSPORTER BEAM ACTIVATED - GOODS TRANSFERRED");
 			return;
 		}
 	}
