@@ -2745,6 +2745,8 @@ static void scoop_up_cargo(struct snis_entity *player, struct snis_entity *cargo
 			player->tsd.ship.cargo[i] = cargo->tsd.cargo_container.contents;
 			cargo->alive = 0;
 			delete_from_clients_and_server(cargo);
+			snis_queue_add_sound(TRANSPORTER_SOUND,
+					ROLE_SOUNDSERVER, player->id);
 			break;
 		}
 }
