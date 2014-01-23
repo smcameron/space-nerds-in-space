@@ -1360,14 +1360,14 @@ static void torpedo_collision_detection(void *context, void *entity)
 		return;
 	if (t->id == o->tsd.torpedo.ship_id)
 		return; /* can't torpedo yourself. */
-	dist2 = ((t->x - o->x) * (t->x - o->x) +
-		(t->z - o->z) * (t->z - o->z));
+	dist2 = dist3dsqrd(t->x - o->x, t->y - o->y, t->z - o->z);
 
-	if (dist2 > TORPEDO_DETONATE_DIST2)
+	/* FIXME: do planet radius server side */
+	if (t->type == OBJTYPE_PLANET && dist2 < 800.0 * 800.0)
+		o->alive = 0; /* smashed into planet */
+	else if (dist2 > TORPEDO_DETONATE_DIST2)
 		return; /* not close enough */
-
-	/* hit!!!! */
-	o->alive = 0;
+	o->alive = 0; /* hit!!!! */
 
 	if (t->type == OBJTYPE_STARBASE) {
 		t->tsd.starbase.under_attack = 1;
