@@ -9572,6 +9572,24 @@ static void show_3d_science(GtkWidget *w)
 
 static void show_comms(GtkWidget *w)
 {
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return;
+
+	float shield_ind_x_center = 710;
+	float shield_ind_y_center = 495;
+
+	if (o->sdata.shield_strength < 15) {
+		sng_set_foreground(RED);
+		sng_center_xy_draw_string("SHIELDS ARE DOWN", NANO_FONT, shield_ind_x_center, shield_ind_y_center);
+	} else {
+		sng_set_foreground(GREEN);
+		char buf[80];
+		sprintf(buf, "SHIELDS ARE %d%%", (int)(o->sdata.shield_strength / 2.55));
+		sng_center_xy_draw_string(buf, NANO_FONT, shield_ind_x_center, shield_ind_y_center);
+	}
+
 	show_common_screen(w, "COMMS");
 }
 
