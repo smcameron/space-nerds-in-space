@@ -99,6 +99,7 @@ struct npc_bot_state;
 typedef void (*npc_menu_func)(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_not_implemented(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_travel_advisory(char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_request_dock(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_buy_cargo(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sell_cargo(char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sign_off(char *npcname, struct npc_bot_state *botstate);
@@ -133,7 +134,7 @@ static struct npc_menu_item arrange_transport_contracts_menu[] = {
 static struct npc_menu_item starbase_main_menu[] = {
 	{ "STARBASE MAIN MENU", 0, 0, 0 },  /* by convention, first element is menu title */
 	{ "LOCAL TRAVEL ADVISORY", 0, 0, npc_menu_item_travel_advisory },
-	{ "REQUEST PERMISSION TO DOCK", 0, 0, npc_menu_item_not_implemented },
+	{ "REQUEST PERMISSION TO DOCK", 0, 0, npc_menu_item_request_dock },
 	{ "REQUEST REMOTE FUEL DELIVERY", 0, 0, npc_menu_item_not_implemented },
 	{ "REQUEST TOWING", 0, 0, npc_menu_item_not_implemented },
 	{ "ORDER REPAIRS AND MAINTENANCE", 0, 0, npc_menu_item_not_implemented },
@@ -5292,116 +5293,6 @@ static int process_sci_select_coords(struct game_client *c)
 	return 0;
 }
 
-static struct snis_entity *nearest_starbase(struct snis_entity *o)
-{
-	double c, dist2 = -1.0;
-	int i, answer = -1;
-
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (go[i].type != OBJTYPE_STARBASE)
-			continue;
-		c = (o->x - go[i].x) * (o->x - go[i].x) +
-			(o->z - go[i].z) * (o->z - go[i].z);
-		if (dist2 < 0 || c < dist2) {
-			dist2 = c;
-			answer = i;
-		}
-	}
-	if (answer < 0)
-		return NULL;
-	return &go[answer];
-}
-
-static void comm_dock_function(struct game_client *c, char *txt)
-{
-	struct snis_entity *o;
-	struct snis_entity *sb;
-	char msg[100];
-	double dist;
-	int i;
-
-	printf("comm_dock_function called for %s:%s\n",
-		bridgelist[c->bridge].shipname, txt);
-
-	i = lookup_by_id(c->shipid);
-	if (i < 0)
-		return;
-
-	o = &go[i];
-	
-	sb = nearest_starbase(o);
-	if (!sb)
-		return;
-	dist = hypot(sb->x - o->x, sb->z - o->z);
-	if (dist > STARBASE_DOCKING_DIST) {
-		sprintf(msg, "%s, YOU ARE TOO FAR AWAY (%lf).\n",
-			bridgelist[c->bridge].shipname, dist);
-		send_comms_packet(sb->tsd.starbase.name, 0, msg);
-		return;
-	}
-	if (o->sdata.shield_strength > 15) {
-		sprintf(msg, "%s, YOU MUST LOWER SHIELDS FIRST.\n",
-			bridgelist[c->bridge].shipname);
-		send_comms_packet(sb->tsd.starbase.name, 0, msg);
-		return;
-	}
-	sprintf(msg, "%s, PERMISSION TO DOCK GRANTED.",
-		bridgelist[c->bridge].shipname);
-	send_comms_packet(sb->tsd.starbase.name, 0, msg);
-	sprintf(msg, "%s, WELCOME TO OUR STARBASE, ENJOY YOUR STAY.",
-		bridgelist[c->bridge].shipname);
-	send_comms_packet(sb->tsd.starbase.name, 0, msg);
-	/* TODO make the repair/refuel process a bit less easy */
-	sprintf(msg, "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
-		bridgelist[c->bridge].shipname);
-	init_player(o);
-	send_ship_damage_packet(o);
-	o->timestamp = universe_timestamp;
-	send_comms_packet(sb->tsd.starbase.name, 0, msg);
-	schedule_callback2(event_callback, &callback_schedule,
-			"player-docked-event", (double) c->shipid, sb->id);
-	return;
-}
-
-struct comm_word_to_func {
-	char *word;
-	void (*fn)(struct game_client *c, char *txt);
-};
- 
-static struct comm_word_to_func comm_verb[] = {
-	{ "dock", comm_dock_function },
-};
-
-static int lookup_comm_verb(char *w)
-{
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(comm_verb); i++) {
-		if (strcmp(comm_verb[i].word, w) == 0)
-			return i;
-	}
-	return -1;
-}
-
-static void interpret_comms_packet(struct game_client *c, char *txt)
-{
-	char *w, *save_ptr = NULL;
-	int verb;
-
-	printf("Interpreting message from %s: %s\n",
-		bridgelist[c->bridge].shipname, txt);
-
-	w = strtok_r(txt, " ,.;:", &save_ptr);
-	while (w != NULL) {
-		verb = lookup_comm_verb(w);
-		if (verb >= 0) {
-			comm_verb[verb].fn(c, txt);
-			break;
-		}
-		w = strtok_r(NULL, " ,.;:", &save_ptr);
-	}
-}
-
 typedef void (*meta_comms_func)(char *name, struct game_client *c, char *txt);
 
 static void meta_comms_help(char *name, struct game_client *c, char *txt)
@@ -5618,6 +5509,55 @@ void npc_menu_item_travel_advisory(char *npcname, struct npc_bot_state *botstate
 	send_comms_packet(npcname, ch, "");
 	send_comms_packet(npcname, ch, " ENJOY YOUR VISIT!");
 	send_comms_packet(npcname, ch, "-----------------------------------------------------");
+}
+
+void npc_menu_item_request_dock(char *npcname, struct npc_bot_state *botstate)
+{
+	struct snis_entity *o;
+	struct snis_entity *sb;
+	char msg[100];
+	double dist;
+	struct bridge_data *b;
+	int ch = botstate->channel;
+	int i;
+
+	b = container_of(botstate, struct bridge_data, npcbot);
+	printf("npc_menu_item_request_dock called for %s\n", b->shipname);
+
+	i = lookup_by_id(b->shipid);
+	if (i < 0)
+		return;
+	o = &go[i];
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0)
+		return;
+	sb = &go[i];
+	dist = dist3d(sb->x - o->x, sb->y - o->y, sb->z - o->z);
+	if (dist > STARBASE_DOCKING_DIST) {
+		sprintf(msg, "%s, YOU ARE TOO FAR AWAY (%lf).\n", b->shipname, dist);
+		send_comms_packet(npcname, ch, msg);
+		return;
+	}
+	if (o->sdata.shield_strength > 15) {
+		sprintf(msg, "%s, YOU MUST LOWER SHIELDS FIRST.\n", b->shipname);
+		send_comms_packet(npcname, ch, msg);
+		return;
+	}
+	sprintf(msg, "%s, PERMISSION TO DOCK GRANTED.", b->shipname);
+	send_comms_packet(npcname, ch, msg);
+	sprintf(msg, "%s, WELCOME TO OUR STARBASE, ENJOY YOUR STAY.", b->shipname);
+	send_comms_packet(npcname, ch, msg);
+	/* TODO make the repair/refuel process a bit less easy */
+	sprintf(msg, "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
+		b->shipname);
+	init_player(o);
+	send_ship_damage_packet(o);
+	o->timestamp = universe_timestamp;
+	send_comms_packet(npcname, ch, msg);
+	schedule_callback2(event_callback, &callback_schedule,
+			"player-docked-event", (double) o->id, botstate->object_id);
+	return;
 }
 
 static void send_npc_menu(char *npcname,  int bridge)
@@ -6106,8 +6046,6 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 	send_comms_packet(name, bridgelist[c->bridge].comms_channel, txt);
 	if (bridgelist[c->bridge].npcbot.channel == bridgelist[c->bridge].comms_channel)
 		send_to_npcbot(c->bridge, name, txt);
-	if (use_real_name)
-		interpret_comms_packet(c, txt);
 	return 0;
 }
 
