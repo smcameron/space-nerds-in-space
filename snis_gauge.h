@@ -21,5 +21,6 @@ GLOBAL void draw_gauge_needle(float x, float y, float r, double a);
 GLOBAL void gauge_fill_background(struct gauge *g, int bg, float alpha);
 GLOBAL void gauge_draw(struct gauge *g);
 GLOBAL void gauge_free(struct gauge *g);
+GLOBAL void gauge_get_location(struct gauge *g, float *x, float *y, float *r);
 
 #endif

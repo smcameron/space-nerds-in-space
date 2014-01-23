@@ -155,6 +155,14 @@ void gauge_free(struct gauge *g)
 	memset(g, 0, sizeof(*g));
 	free(g);
 }
+
+void gauge_get_location(struct gauge *g, float *x, float *y, float *r)
+{
+	*x = g->x;
+	*y = g->y;
+	*r = g->r;
+}
+
 /*
  * end gauge related functions/types
  */
