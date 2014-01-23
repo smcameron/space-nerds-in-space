@@ -298,3 +298,11 @@ int snis_slider_mouse_inside(struct slider *s, int x, int y)
 	return !(x < s->x - 5 || x > s->x + s->length + 5 ||
 		y < s->y || y > s->y + s->height);
 }
+
+void snis_slider_get_location(struct slider *s, float *x, float *y, float *length, float *height)
+{
+	*x = s->x;
+	*y = s->y;
+	*length = s->length;
+	*height = s->height;
+}
