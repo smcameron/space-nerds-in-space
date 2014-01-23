@@ -6749,8 +6749,7 @@ static int process_create_item(struct game_client *c)
 		 * queue_up_client_updates().  Need a better, more sure way.
 		 */
 		go[i].timestamp = universe_timestamp + 10;
-		go[i].x = x;
-		go[i].z = z;
+		set_object_location(&go[i], x, go[i].y, z);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
