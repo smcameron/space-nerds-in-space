@@ -2313,17 +2313,9 @@ static void request_weapons_manual_pitch_packet(uint8_t pitch)
 }
 
 struct weapons_ui {
-	int manual_mode;
-#define WEAPONS_MODE_NORMAL 0
-#define WEAPONS_MODE_MANUAL 1
-	struct button *fire_torpedo, *load_torpedo, *fire_phaser, *tractor_beam;
 	struct gauge *phaser_bank_gauge;
 	struct gauge *phaser_wavelength;
 	struct slider *wavelen_slider;
-	struct slider *weapzoom_slider;
-	struct button *wavelen_up_button;
-	struct button *wavelen_down_button;
-	struct button *manual_button;
 } weapons;
 
 static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *aim, float cx, float cy, float r, float range)
@@ -2416,22 +2408,13 @@ static void weapons_dirkey(int h, int v)
 	fine = 2 * (timer - last_time > 5);
 	last_time = timer;
 
-	if (weapons.manual_mode == WEAPONS_MODE_MANUAL) {
-		if (h) {
-			yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
-			request_weapons_manual_yaw_packet(yaw);
-		}
-		if (v) {
-			pitch = v < 0 ? PITCH_BACK + fine : PITCH_FORWARD + fine;
-			request_weapons_manual_pitch_packet(pitch);
-		}
-	} else {
-		if (h) {
-			yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
-			request_weapons_yaw_packet(yaw);
-		}
-		if (v)
-			wavelen_updown_button_pressed(-v);
+	if (h) {
+		yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
+		request_weapons_manual_yaw_packet(yaw);
+	}
+	if (v) {
+		pitch = v < 0 ? PITCH_BACK + fine : PITCH_FORWARD + fine;
+		request_weapons_manual_pitch_packet(pitch);
 	}
 }
 
@@ -2580,27 +2563,12 @@ static void do_mainscreen_camera_mode()
 		(unsigned char) (camera_mode + 1) % 3));
 }
 
-static void do_tractor_beam(void)
-{
-	struct snis_entity *o;
-
-	if (displaymode != DISPLAYMODE_WEAPONS)
-		return;
-	if (!(o = find_my_ship()))
-		return;
-	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_TRACTORBEAM));
-}
-
 static void robot_gripper_button_pressed(void *x);
 static void do_laser(void)
 {
 	switch (displaymode) {
 	case DISPLAYMODE_WEAPONS: 
-		if (weapons.manual_mode == WEAPONS_MODE_MANUAL) {
-			queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_MANUAL_LASER));
-		} else {
-			queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_LASER));
-		}
+		queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_MANUAL_LASER));
 		break;
 	case DISPLAYMODE_DAMCON:
 		robot_gripper_button_pressed(NULL);
@@ -2785,16 +2753,7 @@ static void do_zoom(int z)
 
 	switch (displaymode) {
 	case DISPLAYMODE_WEAPONS:
-		if (weapons.manual_mode == WEAPONS_MODE_MANUAL) {
-			wavelen_updown_button_pressed(z);
-		} else {
-			newval = o->tsd.ship.weapzoom + z;
-			if (newval < 0)
-				newval = 0;
-			if (newval > 255)
-				newval = 255;
-			do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_WEAPZOOM);
-		}
+		wavelen_updown_button_pressed(z);
 		break;
 	case DISPLAYMODE_NAVIGATION:
 		newval = o->tsd.ship.navzoom + z;
@@ -3853,74 +3812,6 @@ static int process_nav_details(void)
 	return 0;
 }
 
-static void hide_widget(struct ui_element_list *list, void *widget)
-{
-	struct ui_element *uie;
-
-	uie = widget_to_ui_element(list, widget);
-	ui_element_hide(uie);
-}
-	
-static void unhide_widget(struct ui_element_list *list, void *widget)
-{
-	struct ui_element *uie;
-
-	uie = widget_to_ui_element(list, widget);
-	ui_element_unhide(uie);
-}
-	
-static void hide_weapons_widgets()
-{
-	hide_widget(uiobjs, weapons.fire_torpedo);
-	hide_widget(uiobjs, weapons.load_torpedo);
-	hide_widget(uiobjs, weapons.fire_phaser);
-	hide_widget(uiobjs, weapons.tractor_beam);
-	/* hide_widget(uiobjs, weapons.phaser_bank_gauge); */
-	/* hide_widget(uiobjs, weapons.phaser_wavelength); */
-	/* hide_widget(uiobjs, weapons.wavelen_slider); */
-	hide_widget(uiobjs, weapons.weapzoom_slider);
-	hide_widget(uiobjs, weapons.wavelen_up_button);
-	hide_widget(uiobjs, weapons.wavelen_down_button);
-}
-
-static void unhide_weapons_widgets()
-{
-	unhide_widget(uiobjs, weapons.fire_torpedo);
-	unhide_widget(uiobjs, weapons.load_torpedo);
-	unhide_widget(uiobjs, weapons.fire_phaser);
-	unhide_widget(uiobjs, weapons.tractor_beam);
-	unhide_widget(uiobjs, weapons.phaser_bank_gauge);
-	unhide_widget(uiobjs, weapons.phaser_wavelength);
-	unhide_widget(uiobjs, weapons.wavelen_slider);
-	unhide_widget(uiobjs, weapons.weapzoom_slider);
-	unhide_widget(uiobjs, weapons.wavelen_up_button);
-	unhide_widget(uiobjs, weapons.wavelen_down_button);
-}
-
-static int process_weapons_manual(void)
-{
-	unsigned char buffer[10];
-	uint8_t new_mode;
-	int rc;
-
-	rc = read_and_unpack_buffer(buffer, "b", &new_mode);
-	if (rc != 0)
-		return rc;
-#if 0
-	weapons.manual_mode = new_mode;
-#else
-	weapons.manual_mode = WEAPONS_MODE_MANUAL;
-#endif
-	if (new_mode == WEAPONS_MODE_MANUAL) {
-		snis_button_set_label(weapons.manual_button, "AUTO");
-		hide_weapons_widgets();
-	} else {
-		snis_button_set_label(weapons.manual_button, "MANUAL");
-		unhide_weapons_widgets();
-	}
-	return 0;
-}
-
 static int process_sci_select_target_packet(void)
 {
 	unsigned char buffer[sizeof(struct snis_sci_select_target_packet)];
@@ -4422,11 +4313,6 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_NAV_DETAILS:
 			rc = process_nav_details();
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_WEAPONS_MANUAL:
-			rc = process_weapons_manual();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -5730,22 +5616,6 @@ static void draw_nebula_noise(GtkWidget *w, int cx, int cy, int r)
 struct snis_radar_extent {
 	int rx, ry, rw, rh;
 };
-
-static double radarx_to_ux(struct snis_entity *o,
-		double x, struct snis_radar_extent *extent, double screen_radius)
-{
-	int cx = extent->rx + (extent->rw / 2);
-
-	return screen_radius * (x - cx) / ((double) extent->rh / 2.0) + o->x;
-}
-
-static double radary_to_uz(struct snis_entity *o,
-		double y, struct snis_radar_extent *extent, double screen_radius)
-{
-	int cy = extent->ry + (extent->rh / 2);
-
-	return screen_radius * (y - cy) / ((double) extent->rh / 2.0) + o->z;
-}
 
 static void draw_torpedo_leading_indicator(GtkWidget *w, GdkGC *gc,
 			struct snis_entity *ship, struct snis_entity *target,
@@ -7224,11 +7094,6 @@ static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
 	load_torpedo_button_pressed();
 }
 
-static void tractor_beam_button_pressed(__attribute__((unused)) void *notused)
-{
-	do_tractor_beam();
-}
-
 static void do_adjust_byte_value(uint8_t value,  uint16_t opcode)
 {
 	struct snis_entity *o;
@@ -7242,11 +7107,6 @@ static void do_adjust_slider_value(struct slider *s,  uint16_t opcode)
 {
 	uint8_t value = (uint8_t) (255.0 * snis_slider_get_input(s));
 	do_adjust_byte_value(value, opcode);
-}
-
-static void do_weapzoom(struct slider *s)
-{
-	do_adjust_slider_value(s, OPCODE_REQUEST_WEAPZOOM);
 }
 
 static void do_navzoom(struct slider *s)
@@ -7375,7 +7235,6 @@ DEFINE_SAMPLER_FUNCTION(sample_scizoom, tsd.ship.scizoom, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_fuel, tsd.ship.fuel, UINT32_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phasercharge, tsd.ship.phaser_charge, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 255.0 * 2.0, 10.0)
-DEFINE_SAMPLER_FUNCTION(sample_weapzoom, tsd.ship.weapzoom, 255.0, 0.0)
 DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 255.0, 0.0)
 DEFINE_SAMPLER_FUNCTION(sample_mainzoom, tsd.ship.mainzoom, 255.0, 0.0)
 
@@ -7509,16 +7368,6 @@ static void wavelen_updown_button_pressed(int direction)
 	do_adjust_byte_value(value, OPCODE_REQUEST_LASER_WAVELENGTH);
 }
 
-static void wavelen_up_button_pressed(__attribute__((unused)) void *s)
-{
-	wavelen_updown_button_pressed(1);
-}
-
-static void wavelen_down_button_pressed(__attribute__((unused)) void *s)
-{
-	wavelen_updown_button_pressed(-1);
-}
-
 static double sample_generic_damage_data(int field_offset)
 {
 	uint8_t *field;
@@ -7584,12 +7433,6 @@ static void reverse_button_pressed(__attribute__((unused)) void *s)
 		return;
 	snis_button_set_color(nav_ui.reverse_button, !o->tsd.ship.reverse ? RED : AMBER);
 	do_adjust_byte_value(!o->tsd.ship.reverse,  OPCODE_REQUEST_REVERSE);
-}
-
-static void weapons_manual_button_pressed(void *x)
-{
-	queue_to_server(packed_buffer_new("hb", OPCODE_WEAPONS_MANUAL,
-		(unsigned char) !weapons.manual_mode));
 }
 
 static void ui_add_slider(struct slider *s, int active_displaymode)
@@ -7658,19 +7501,6 @@ static void init_lobby_ui()
 static double sample_phaser_wavelength(void);
 static void init_weapons_ui(void)
 {
-	int y = 440;
-
-	weapons.fire_phaser = snis_button_init(550, y, 200, 25, "FIRE PHASER", RED,
-			TINY_FONT, fire_phaser_button_pressed, NULL);
-	y += 35;
-	weapons.load_torpedo = snis_button_init(550, y, 200, 25, "LOAD TORPEDO", GREEN,
-			TINY_FONT, load_torpedo_button_pressed, NULL);
-	y += 35;
-	weapons.fire_torpedo = snis_button_init(550, y, 200, 25, "FIRE TORPEDO", RED,
-			TINY_FONT, fire_torpedo_button_pressed, NULL);
-	y += 35;
-	weapons.tractor_beam = snis_button_init(550, y, 200, 25, "TRACTOR BEAM", RED,
-			TINY_FONT, tractor_beam_button_pressed, NULL);
 	weapons.phaser_bank_gauge = gauge_init(280, 550, 45, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "CHARGE", sample_phasercharge);
@@ -7680,31 +7510,12 @@ static void init_weapons_ui(void)
 			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "WAVE LEN", sample_phaser_wavelength);
 	gauge_fill_background(weapons.phaser_wavelength, BLACK, 0.75);
-	weapons.wavelen_down_button = snis_button_init(550, 400, 60, 25, "DOWN", WHITE,
-			NANO_FONT, wavelen_down_button_pressed, NULL);
-	weapons.wavelen_up_button = snis_button_init(700, 400, 30, 25, "UP", WHITE,
-			NANO_FONT, wavelen_up_button_pressed, NULL);
 	weapons.wavelen_slider = snis_slider_init(315, 588, 170, 15, AMBER, "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength);
-	weapons.weapzoom_slider = snis_slider_init(5, SCREEN_HEIGHT - 20, 160, 15, AMBER, "ZOOM",
-				"1", "10", 0.0, 100.0, sample_weapzoom,
-				do_weapzoom);
-	weapons.manual_button = snis_button_init(715, 575, 80, 25, "AUTO", WHITE,
-			NANO_FONT, weapons_manual_button_pressed, NULL);
-	ui_add_button(weapons.fire_phaser, DISPLAYMODE_WEAPONS);
-	ui_add_button(weapons.load_torpedo, DISPLAYMODE_WEAPONS);
-	ui_add_button(weapons.fire_torpedo, DISPLAYMODE_WEAPONS);
-	ui_add_button(weapons.tractor_beam, DISPLAYMODE_WEAPONS);
-	ui_add_button(weapons.wavelen_up_button, DISPLAYMODE_WEAPONS);
-	ui_add_button(weapons.wavelen_down_button, DISPLAYMODE_WEAPONS);
-	/* ui_add_button(weapons.manual_button, DISPLAYMODE_WEAPONS); */
 	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS);
-	ui_add_slider(weapons.weapzoom_slider, DISPLAYMODE_WEAPONS);
 	ui_add_gauge(weapons.phaser_bank_gauge, DISPLAYMODE_WEAPONS);
 	ui_add_gauge(weapons.phaser_wavelength, DISPLAYMODE_WEAPONS);
-	weapons.manual_mode = WEAPONS_MODE_MANUAL;
-	hide_weapons_widgets();
 }
 
 static void show_death_screen(GtkWidget *w)
@@ -7727,70 +7538,6 @@ static void show_death_screen(GtkWidget *w)
 static void show_manual_weapons(GtkWidget *w)
 {
 	show_weapons_camera_view(w);
-	show_common_screen(w, "WEAPONS");
-}
-
-static void show_weapons(GtkWidget *w)
-{
-	char buf[100];
-	struct snis_entity *o;
-	int cx, cy;
-	int r;
-	int buttoncolor;
-	double screen_radius;
-	double max_possible_screen_radius;
-	double visible_distance;
-	static int current_zoom = 0;
-
-	sng_set_foreground(GREEN);
-
-	if (!(o = find_my_ship()))
-		return;
-
-	snis_slider_set_input(weapons.wavelen_slider, o->tsd.ship.phaser_wavelength / 255.0 );
-	snis_slider_set_input(weapons.weapzoom_slider, o->tsd.ship.weapzoom / 255.0 );
-
-	current_zoom = newzoom(current_zoom, o->tsd.ship.weapzoom);
-	sprintf(buf, "PHOTON TORPEDOES: %03d", o->tsd.ship.torpedoes);
-	sng_abs_xy_draw_string(buf, NANO_FONT, 250, 15);
-	sprintf(buf, "TORPEDOES LOADED: %03d", o->tsd.ship.torpedoes_loaded);
-	sng_abs_xy_draw_string(buf, NANO_FONT, 250, 15 + 0.5 * LINEHEIGHT);
-	sprintf(buf, "TORPEDOES LOADING: %03d", o->tsd.ship.torpedoes_loading);
-	sng_abs_xy_draw_string(buf, NANO_FONT, 250, 15 + LINEHEIGHT);
-/*
-	sprintf(buf, "vx: %5.2lf", o->vx);
-	sng_abs_xy_draw_string(buf, TINY_FONT, 600, LINEHEIGHT * 3);
-	sprintf(buf, "vy: %5.2lf", o->vy);
-	sng_abs_xy_draw_string(buf, TINY_FONT, 600, LINEHEIGHT * 4);
-*/
-
-	buttoncolor = RED;
-	if (o->tsd.ship.torpedoes > 0 && o->tsd.ship.torpedoes_loading == 0 &&
-		o->tsd.ship.torpedoes_loaded < 2)
-		buttoncolor = GREEN;
-	snis_button_set_color(weapons.load_torpedo, buttoncolor);
-	buttoncolor = RED;
-	if (o->tsd.ship.torpedoes_loaded)
-		buttoncolor = GREEN;
-	snis_button_set_color(weapons.fire_torpedo, buttoncolor);
-
-	static struct snis_radar_extent extent = { 40, 90, 470, 470 };
-	cx = extent.rx + (extent.rw / 2);
-	cy = extent.ry + (extent.rh / 2);
-	r = extent.rh / 2;
-	sng_set_foreground(GREEN);
-	screen_radius = ((((255.0 - current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
-	max_possible_screen_radius = 0.09 * XKNOWN_DIM;
-	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
-	snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
-	snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, current_zoom > 100);
-	sng_set_foreground(BLUE);
-	snis_draw_reticule(w, gc, cx, cy, r, o->tsd.ship.gun_heading, BLUE, BLUE);
-	snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
-	snis_draw_ship_on_reticule(w, gc, cx, cy, r, o);
-
-	draw_all_the_guys(w, o, &extent, screen_radius, visible_distance);
-	draw_all_the_sparks(w, o, &extent, screen_radius);
 	show_common_screen(w, "WEAPONS");
 }
 
@@ -9288,52 +9035,6 @@ static void init_comms_ui(void)
 	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS);
 	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
 	ui_add_slider(comms_ui.mainzoom_slider, DISPLAYMODE_COMMS);
-}
-
-static int weapons_button_press(int x, int y)
-{
-	double ux, uz;
-	static struct snis_radar_extent extent = { 40, 90, 470, 470 };
-	struct snis_entity *o = &go[my_ship_oid];
-	double screen_radius;
-	int i, cx, cy;
-	double dist2, mindist2, sxdist2, rdist2;
-	int minindex;
-
-	screen_radius = ((((255.0 - o->tsd.ship.weapzoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
-	ux = radarx_to_ux(o, x, &extent, screen_radius);
-	uz = radary_to_uz(o, y, &extent, screen_radius);
-
-	minindex = -1;
-	mindist2 = 0;
-	dist2 = 0;
-
-	/* TODO: make sure that click is actually on the radar screen. */
-	cx = extent.rx + (extent.rw / 2);
-	cy = extent.ry + (extent.rh / 2);
-	sxdist2 = (cx - x) * (cx - x) + (cy - y) * (cy - y);
-	rdist2 = (extent.rw / 2) * (extent.rw / 2) +
-		(extent.rh / 2) * (extent.rh / 2);
-	if (sxdist2 > rdist2)
-		return 0;
-
-	pthread_mutex_lock(&universe_mutex);
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (!go[i].alive)
-			continue;
-		dist2 = (ux - go[i].x) * (ux - go[i].x) +
-			(uz - go[i].z) * (uz - go[i].z);
-		/* if (dist2 > 5000.0)
-			continue; */
-		if (minindex == -1 || dist2 < mindist2) {
-			mindist2 = dist2;
-			minindex = i;
-		}
-	}
-	if (minindex >= 0)
-		queue_to_server(packed_buffer_new("hw", OPCODE_WEAP_SELECT_TARGET, go[minindex].id));
-	pthread_mutex_unlock(&universe_mutex);
-	return 0;
 }
 
 #define SCIDIST2 100
@@ -11583,10 +11284,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_navigation(w);
 		break;
 	case DISPLAYMODE_WEAPONS:
-		if (weapons.manual_mode == WEAPONS_MODE_MANUAL)
-			show_manual_weapons(w);
-		else
-			show_weapons(w);
+		show_manual_weapons(w);
 		break;
 	case DISPLAYMODE_ENGINEERING:
 		show_engineering(w);
@@ -11966,17 +11664,11 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 		demon_button_release(event->button, event->x, event->y);
 		break;
 	case DISPLAYMODE_WEAPONS:
-		if (weapons.manual_mode == WEAPONS_MODE_MANUAL) {
-			if (event->button == 1)
-				do_laser();
-			if (event->button == 3) { 
-				do_torpedo();
-				load_torpedo_button_pressed();
-			}
-		} else {
-			/* FIXME: Does this code even work? */
-			weapons_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
-				(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
+		if (event->button == 1)
+			do_laser();
+		if (event->button == 3) {
+			do_torpedo();
+			load_torpedo_button_pressed();
 		}
 		break;
 	default:
@@ -12015,8 +11707,6 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 		break;
 	case DISPLAYMODE_WEAPONS:
 		/* FIXME: throttle this network traffic */
-		if (weapons.manual_mode != WEAPONS_MODE_MANUAL)
-			break;
 		smooth_mousexy(event->x, event->y, &smoothx, &smoothy);
 		yaw = weapons_mousex_to_yaw(smoothx);
 		pitch = weapons_mousey_to_pitch(smoothy);
