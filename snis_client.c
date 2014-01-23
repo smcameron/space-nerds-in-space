@@ -5030,8 +5030,8 @@ static void show_mainscreen(GtkWidget *w)
 	struct snis_entity *o;
 	static union quat camera_orientation;
 	union quat desired_cam_orientation;
-	static union vec3 cam_pos;
-	union vec3 desired_cam_pos;
+	static union vec3 cam_offset;
+	union vec3 cam_pos;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -5069,28 +5069,17 @@ static void show_mainscreen(GtkWidget *w)
 	}
 
 	struct entity *player_ship = 0;
+	union vec3 desired_cam_offset;
 
 	switch (camera_mode) {
 	case 0:
-		cam_pos.v.x = o->x;
-		cam_pos.v.y = o->y;
-		cam_pos.v.z = o->z;
-		desired_cam_pos = cam_pos;
+		vec3_init(&desired_cam_offset, 0, 0, 0);
 		break;
 	case 1:
 	case 2: {
-			union vec3 offset = { { -1.0f, 0.25f, 0.0f } };
-
-			vec3_mul_self(&offset, 200.0f * camera_mode);
-			quat_rot_vec_self(&offset, &camera_orientation);
-			desired_cam_pos.v.x = o->x + offset.v.x;
-			desired_cam_pos.v.y = o->y + offset.v.y;
-			desired_cam_pos.v.z = o->z + offset.v.z;
-
-			if (first_frame)
-				cam_pos = desired_cam_pos;
-			else
-				vec3_lerp(&cam_pos, &cam_pos, &desired_cam_pos, 0.15);
+			union vec3 desired_cam_offset = { { -1.0f, 0.25f, 0.0f } };
+			vec3_mul_self(&desired_cam_offset, 200.0f * camera_mode);
+			quat_rot_vec_self(&desired_cam_offset, &camera_orientation);
 
 			/* temporarily add ship into scene for camera mode 1 & 2 */
 			player_ship = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
@@ -5109,6 +5098,16 @@ static void show_mainscreen(GtkWidget *w)
 			break;
 		}
 	}
+
+	if (first_frame)
+		cam_offset = desired_cam_offset;
+	else
+		vec3_lerp(&cam_offset, &cam_offset, &desired_cam_offset, 0.15);
+
+	cam_pos.v.x = o->x + cam_offset.v.x;
+	cam_pos.v.y = o->y + cam_offset.v.y;
+	cam_pos.v.z = o->z + cam_offset.v.z;
+
 	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	camera_set_orientation(ecx, &camera_orientation);
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
