@@ -603,7 +603,7 @@ static void update_generic_object(int index, double x, double y, double z,
 	}
 	o->alive = alive;
 	if (o->entity) {
-		update_entity_pos(o->entity, x, y, z);
+		update_entity_pos(o->entity, o->x, o->y, o->z);
 		if (orientation)
 			update_entity_orientation(o->entity, &o->orientation);
 	}
@@ -899,7 +899,6 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 			weapons_camera_shake = 1.0;
 	} else {
 		update_generic_object(i, x, y, z, vx, vy, vz, &identity_quat, 1); 
-		update_entity_pos(go[i].entity, x, y, z);
 	}
 	return 0;
 }
@@ -1252,12 +1251,8 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 			return i;
 		o = &go[i];
 		o->tsd.asteroid.rotational_velocity = random_spin[id % NRANDOM_SPINS];
-	} else {
-		o = &go[i];
-		/* move asteroid */
+	} else
 		update_generic_object(i, x, y, z, vx, vy, vz, NULL, 1);
-		update_entity_pos(o->entity, x, y, z);
-	}
 	return 0;
 }
 
@@ -1282,12 +1277,8 @@ static int update_cargo_container(uint32_t id, double x, double y, double z,
 			return i;
 		o = &go[i];
 		o->tsd.cargo_container.rotational_velocity = random_spin[id % NRANDOM_SPINS];
-	} else {
-		o = &go[i];
-		/* move cargo container */
+	} else
 		update_generic_object(i, x, y, z, vx, vy, vz, NULL, 1);
-		update_entity_pos(o->entity, x, y, z);
-	}
 	return 0;
 }
 
@@ -1306,10 +1297,8 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 		if (i < 0)
 			return i;
 		go[i].tsd.derelict.rotational_velocity = random_spin[id % NRANDOM_SPINS];
-	} else {
+	} else
 		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
-		update_entity_pos(go[i].entity, x, y, z);
-	}
 	return 0;
 }
 
@@ -1353,7 +1342,6 @@ static int update_planet(uint32_t id, double x, double y, double z, uint8_t gove
 		go[i].tsd.planet.description_seed = dseed;
 	} else {
 		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
-		update_entity_pos(go[i].entity, x, y, z);
 		go[i].tsd.planet.government = government;
 		go[i].tsd.planet.tech_level = tech_level;
 		go[i].tsd.planet.economy = economy;
@@ -1366,7 +1354,6 @@ static int update_wormhole(uint32_t id, double x, double y, double z)
 {
 	int i;
 	struct entity *e;
-	struct snis_entity *o;
 	union quat orientation;
 
 	i = lookup_object_by_id(id);
@@ -1379,17 +1366,8 @@ static int update_wormhole(uint32_t id, double x, double y, double z)
 					&orientation, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
 			return i;
-	} else {
-		o = &go[i];
-		/* Don't call update_generic_object as it will reset orientation
-		 * and orientation is handled client side via spin_starbase
-		 */
-		o->x = x;
-		o->y = y;
-		o->z = z;
-		if (o->entity)
-			update_entity_pos(o->entity, x, y, z);
-	}
+	} else
+		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 	return 0;
 }
 
@@ -1397,7 +1375,6 @@ static int update_starbase(uint32_t id, double x, double y, double z)
 {
 	int i, m;
 	struct entity *e;
-	struct snis_entity *o;
 	union quat orientation;
 
 	i = lookup_object_by_id(id);
@@ -1409,17 +1386,8 @@ static int update_starbase(uint32_t id, double x, double y, double z)
 					&orientation, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
-	} else {
-		o = &go[i];
-		/* Don't call update_generic_object as it will reset orientation
-		 * and orientation is handled client side via spin_starbase
-		 */
-		o->x = x;
-		o->y = y;
-		o->z = z;
-		if (o->entity)
-			update_entity_pos(o->entity, x, y, z);
-	}	
+	} else
+		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 	return 0;
 }
 
@@ -1473,11 +1441,9 @@ static int update_nebula(uint32_t id, double x, double y, double z, double r)
 		add_nebula_entry(go[i].id, x, z, r);
 	} else {
 		struct snis_entity *o = &go[i];
-		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, &identity_quat, 1);
-		if (o->entity) {
-			update_entity_pos(o->entity, x, y, z);
+		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
+		if (o->entity)
 			update_entity_scale(o->entity, r * 2.0);
-		}
 	}
 	go[i].tsd.nebula.r = r;	
 	go[i].alive = 1;
