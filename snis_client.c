@@ -8608,12 +8608,51 @@ static void show_engineering(GtkWidget *w)
 	snis_slider_set_input(eng_ui.maneuvering_coolant_slider, o->tsd.ship.coolant_data.maneuvering.r2/255.0 );
 	snis_slider_set_input(eng_ui.tractor_coolant_slider, o->tsd.ship.coolant_data.tractor.r2/255.0 );
 
+	/* idiot lights for low power of various systems */
+	const int low_power_threshold = 10;
+
+	float sc_x, sc_y, sc_length, sc_height;
+	snis_slider_get_location(eng_ui.shield_control_slider, &sc_x, &sc_y, &sc_length, &sc_height);
+
+	float sc_x_center = sc_x + sc_length / 2.0;
+	float sc_y_center = sc_y + sc_height / 2.0;
+
+
+	sng_set_foreground(RED);
+	if (o->tsd.ship.power_data.shields.r2 < low_power_threshold) {
+		sng_center_xy_draw_string("LOW SHIELD POWER", NANO_FONT, sc_x_center, sc_y_center);
+	}
+	else if (o->tsd.ship.power_data.shields.i < low_power_threshold) {
+		sng_center_xy_draw_string("SHIELDS ARE OFF", NANO_FONT, sc_x_center, sc_y_center);
+	}
+
+	if (o->tsd.ship.fuel < UINT32_MAX * 0.1) { /* 10% */
+		float fg_x, fg_y, fg_r;
+		gauge_get_location(eng_ui.fuel_gauge, &fg_x, &fg_y, &fg_r);
+
+		float fg_x_center = fg_x;
+		float fg_y_center = fg_y - fg_r * 1.25;
+
+		sng_set_foreground(RED);
+		if (o->tsd.ship.fuel < UINT32_MAX * 0.01) { /* 1% */
+			sng_center_xy_draw_string("OUT Of FUEL", NANO_FONT, fg_x_center, fg_y_center);
+		} else {
+			sng_center_xy_draw_string("LOW FUEL", NANO_FONT, fg_x_center, fg_y_center);
+		}
+	}
+
 	gx1 = NAV_DATA_X + 10;
 	gy1 = 15;
 	gx2 = NAV_DATA_X + NAV_DATA_W - 10;
 	gy2 = NAV_DATA_Y + NAV_DATA_H - 80;
 	sng_set_foreground(AMBER);
 	draw_science_graph(w, o, o, gx1, gy1, gx2, gy2);
+
+	sng_set_foreground(RED);
+	if (o->sdata.shield_strength < 15) {
+		sng_center_xy_draw_string("SHIELDS ARE DOWN", TINY_FONT, (gx1 + gx2) / 2.0, gy1 + (gy2 - gy1) / 3.0);
+	}
+
 	show_common_screen(w, "ENGINEERING");
 }
 
