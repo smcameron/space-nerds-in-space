@@ -2039,6 +2039,9 @@ static void ship_collision_avoidance(void *context, void *entity)
 	double d;
 	float steering_magnitude;
 
+	if (o == obstacle) /* don't avoid oneself */
+		return;
+
 	/* hmm, server has no idea about meshes... */
 	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
 
