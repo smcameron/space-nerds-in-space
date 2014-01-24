@@ -7766,7 +7766,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	int i;
 
 	for (i=0; i<4; ++i) {
-		e = add_entity(navecx, radar_ring_mesh[i], o->x, o->y, o->z, DARKRED);
+		e = add_entity(navecx, radar_ring_mesh[i], o->x - ship_normal.v.x, o->y - ship_normal.v.y,
+			o->z - ship_normal.v.z, DARKRED);
 		update_entity_scale(e, screen_radius);
 		update_entity_orientation(e, &o->orientation);
 	}
