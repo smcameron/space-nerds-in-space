@@ -3000,8 +3000,14 @@ static void player_move(struct snis_entity *o)
 
 	if (o->tsd.ship.damage.shield_damage > 200 && (universe_timestamp % (10 * 5)) == 0)
 		snis_queue_add_sound(HULL_BREACH_IMMINENT, ROLE_SOUNDSERVER, o->id);
-	if (o->tsd.ship.fuel < FUEL_CONSUMPTION_UNIT * 30 * 60 && (universe_timestamp % (20 * 5)) == 15)
+	if (o->tsd.ship.fuel < FUEL_CONSUMPTION_UNIT * 30 * 60 &&
+		(universe_timestamp % (20 * 5)) == 15) {
 		snis_queue_add_sound(FUEL_LEVELS_CRITICAL, ROLE_SOUNDSERVER, o->id);
+
+		/* auto-refuel in safe mode */
+		if (safe_mode)
+			o->tsd.ship.fuel = UINT32_MAX;
+	}
 
 	do_power_model_computations(o);
 	do_coolant_model_computations(o);
