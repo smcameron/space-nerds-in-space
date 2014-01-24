@@ -3514,7 +3514,7 @@ static void repair_damcon_systems(struct snis_entity *o)
 	}
 }	
 	
-static void init_player(struct snis_entity *o)
+static void init_player(struct snis_entity *o, int clear_cargo_bay)
 {
 	o->move = player_move;
 	o->tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
@@ -3566,11 +3566,16 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.shiptype = SHIP_CLASS_WOMBAT; 
 	o->tsd.ship.overheating_damage_done = 0;
 	o->tsd.ship.ncargo_bays = 2;
-	o->tsd.ship.cargo[0].item = -1;
-	o->tsd.ship.cargo[0].qty = 0.0f;
-	o->tsd.ship.cargo[1].item = -1;
-	o->tsd.ship.cargo[1].qty = 0.0f;
-	o->tsd.ship.wallet = INITIAL_WALLET_MONEY;
+	if (clear_cargo_bay) {
+		/* The clear_cargo_bay param is a stopgap until real docking code
+		 * is done.
+		 */
+		o->tsd.ship.cargo[0].item = -1;
+		o->tsd.ship.cargo[0].qty = 0.0f;
+		o->tsd.ship.cargo[1].item = -1;
+		o->tsd.ship.cargo[1].qty = 0.0f;
+		o->tsd.ship.wallet = INITIAL_WALLET_MONEY;
+	}
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
@@ -3587,7 +3592,7 @@ static int add_player(double x, double z, double vx, double vz, double heading)
 	i = add_generic_object(x, 0.0, z, vx, 0.0, vz, heading, OBJTYPE_SHIP1);
 	if (i < 0)
 		return i;
-	init_player(&go[i]);
+	init_player(&go[i], 1);
 	return i;
 }
 
@@ -3599,7 +3604,7 @@ static void respawn_player(struct snis_entity *o)
 	o->vz = 0;
 	o->heading = 3 * M_PI / 2;
 	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
-	init_player(o);
+	init_player(o, 1);
 	o->alive = 1;
 	send_ship_damage_packet(o);
 }
@@ -5554,7 +5559,7 @@ void npc_menu_item_request_dock(char *npcname, struct npc_bot_state *botstate)
 	/* TODO make the repair/refuel process a bit less easy */
 	sprintf(msg, "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
 		b->shipname);
-	init_player(o);
+	init_player(o, 0);
 	send_ship_damage_packet(o);
 	o->timestamp = universe_timestamp;
 	send_comms_packet(npcname, ch, msg);
