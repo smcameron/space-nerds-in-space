@@ -2049,13 +2049,21 @@ static void ship_collision_avoidance(void *context, void *entity)
 	if (o == obstacle) /* don't avoid oneself */
 		return;
 
+	if (o->type == OBJTYPE_SPARK) /* no point trying to avoid */
+		return;
+
 	/* hmm, server has no idea about meshes... */
 	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
+
+	/* Pretend planets and torpedoes are closer than they are since they're scary */
+	if (o->type == OBJTYPE_PLANET)
+		d = d / 3.0;
+	if (o->type == OBJTYPE_TORPEDO)
+		d = d / 6.0;
 
 	/* We only care about the closest one. */
 	if (d > ca->closest_dist2 && ca->closest_dist2 > 0)
 		return;
-
 	ca->closest_dist2 = d;
 	if (d > ca->worrythreshold) { /* not close enough to worry about */
 		o->tsd.ship.steering_adjustment.v.x = 0.0f;
