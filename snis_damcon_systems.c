@@ -1,10 +1,11 @@
 #include <stdint.h>
-
 #define DEFINE_SNIS_DAMCON_SYSTEMS_GLOBALS
 #include "snis_damcon_systems.h"
 #undef DEFINE_SNIS_DAMCON_SYSTEMS_GLOBALS
 
 #define ARRAYSIZE(x) (sizeof(x) / sizeof(x[0]))
+
+#include "build_bug_on.h"
 
 static char *damcon_system_names[] = {
 	"SHIELD SYSTEM",
@@ -16,6 +17,19 @@ static char *damcon_system_names[] = {
 	"COMMUNICATIONS",
 	"TRACTOR BEAM",
 	"REPAIR STATION",
+};
+
+/* base prices of damcon parts... */
+static float damcon_part_price[][DAMCON_PARTS_PER_SYSTEM] = {
+	{ 75.0, 60.0, 90.0, },		/* shield system parts */
+	{ 200.0, 300.0, 450.0, },	/* impulse drive parts */
+	{ 250.0, 349.0, 700.0, },	/* warp drive parts */
+	{ 300.0, 130.0, 79.0, },	/* maneuvering parts */
+	{ 250.0, 302.0, 179.0, },	/* Phaser bank parts */
+	{ 325.0, 269.0, 167.0, },	/* sensor system parts */
+	{ 75.0,	105.0, 211.0, },	/* communication system parts */
+	{ 70.0, 350.0, 102.0, },	/* tractor beam system parts */
+	{ 0.0, 0.0, 0.0, },		/* repair station parts... special case, no parts. */
 };
 
 static char *damcon_part_names[][DAMCON_PARTS_PER_SYSTEM] = {
@@ -112,6 +126,8 @@ static char *damcon_damages[] = {
 
 char *damcon_part_name(uint8_t system, uint8_t part)
 {
+	BUILD_ASSERT(ARRAYSIZE(damcon_system_names) == DAMCON_SYSTEM_COUNT);
+
 	if (system < 0 || system >= ARRAYSIZE(damcon_part_names))
 		return "UNKNOWN";
 	if (part < 0 || part >= DAMCON_PARTS_PER_SYSTEM)
@@ -140,4 +156,8 @@ char *damcon_damage_name(uint8_t damage)
 	return damcon_damages[damage];
 }
 
+float damcon_base_price(int system, int part)
+{
+	return damcon_part_price[system][part];
+}
 

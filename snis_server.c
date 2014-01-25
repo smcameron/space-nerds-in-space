@@ -111,6 +111,8 @@ static void npc_menu_item_sell_cargo(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sign_off(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_buy_parts(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void send_to_npcbot(int bridge, char *name, char *msg);
 
 typedef void (*npc_special_bot_fn)(struct snis_entity *o, int bridge, char *name, char *msg);
@@ -122,11 +124,27 @@ struct npc_menu_item {
 	npc_menu_func f;
 };
 
+/* kinda not happy with the gnarlyness of how this whole menu system works... */
 struct npc_bot_state {
 	uint32_t object_id;
 	uint32_t channel;
+	int parts_menu;
 	struct npc_menu_item *current_menu;
 	npc_special_bot_fn special_bot; /* for special case interactions, non-standard menus, etc. */
+};
+
+static struct npc_menu_item repairs_and_maintenance_menu[] = {
+	/* by convention, first element is menu title */
+	{ "REPAIRS AND MAINTENANCE MENU", 0, 0, 0 },
+	{ "BUY SHIELD SYSTEM PARTS", 0, 0, npc_menu_item_buy_parts },
+	{ "BUY IMPULSE DRIVE PARTS", 0, 0, npc_menu_item_buy_parts },
+	{ "BUY WARP DRIVE PARTS", 0, 0, npc_menu_item_buy_parts },
+	{ "BUY MANEUVERING PARTS", 0, 0, npc_menu_item_buy_parts },
+	{ "BUY PHASER BANKS PARTS", 0, 0, npc_menu_item_buy_parts },
+	{ "BUY SENSORS PARTS", 0, 0, npc_menu_item_buy_parts },
+	{ "BUY COMMUNICATIONS PARTS", 0, 0, npc_menu_item_buy_parts },
+	{ "BUY TRACTOR BEAM PARTS", 0, 0, npc_menu_item_buy_parts },
+	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
 
 static struct npc_menu_item arrange_transport_contracts_menu[] = {
@@ -144,8 +162,8 @@ static struct npc_menu_item starbase_main_menu[] = {
 	{ "LOCAL TRAVEL ADVISORY", 0, 0, npc_menu_item_travel_advisory },
 	{ "REQUEST PERMISSION TO DOCK", 0, 0, npc_menu_item_request_dock },
 	{ "REQUEST REMOTE FUEL DELIVERY", 0, 0, npc_menu_item_not_implemented },
-	{ "REQUEST TOWING", 0, 0, npc_menu_item_not_implemented },
-	{ "ORDER REPAIRS AND MAINTENANCE", 0, 0, npc_menu_item_not_implemented },
+	{ "BUY FUEL", 0, 0, npc_menu_item_not_implemented },
+	{ "REPAIRS AND MAINTENANCE", 0, repairs_and_maintenance_menu, 0 },
 	{ "ARRANGE TRANSPORT CONTRACTS", 0, arrange_transport_contracts_menu, 0 },
 	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
@@ -775,6 +793,25 @@ static void snis_queue_add_global_sound(uint16_t sound_number)
 
 static int add_explosion(double x, double y, double z, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type);
+
+static void instantly_repair_damcon_part(struct damcon_data *d, int system, int part)
+{
+	int i, n = snis_object_pool_highest_object(d->pool);
+	struct snis_damcon_entity *p;
+
+	for (i = 0; i <= n; i++) {
+		p = &d->o[i];
+		if (p->type != DAMCON_TYPE_PART)
+			continue;
+		if (p->tsd.part.system != system)
+			continue;
+		if (p->tsd.part.part != part)
+			continue;
+		p->tsd.part.damage = 0;
+		p->timestamp = universe_timestamp;
+		break;
+	}
+}
 
 static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
 			struct damcon_data *d, int damage, int damcon_system)
@@ -2264,6 +2301,20 @@ static void damcon_repair_socket_move(struct snis_damcon_entity *o,
 	if (i < 0)
 		return;
 	part = &d->o[i];
+
+	if (!safe_mode) {
+		if (part->tsd.part.damage == 255) /* irreparably damaged? */
+			/* TODO: should make some sparks or something here. */
+			return;
+
+		/* if part is badly damaged, there is a chance it could be destroyed */
+		if (part->tsd.part.damage > 190 && snis_randn(100) < 5) {
+			/* TODO: should make some sparks and sound or something here. */
+			part->tsd.part.damage = 255; /* irreparably damaged */
+			part->timestamp = universe_timestamp;
+			return;
+		}
+	}
 
 	new_damage = part->tsd.part.damage - 5;
 	if (new_damage < 0)
@@ -3909,13 +3960,23 @@ static void init_starbase_market(struct snis_entity *o)
 	}
 }
 
-static void fabricate_bid_prices(struct snis_entity *starbase)
+static void fabricate_prices(struct snis_entity *starbase)
 {
-	int i;
+	int i, j;
+	float variation;
 
 	/* FIXME: do something better. */
 	for (i = 0; i < ncommodities; i++)
 		starbase->tsd.starbase.bid_price[i] = (float) (snis_randn(100) + 5);
+	starbase->tsd.starbase.part_price = malloc(sizeof(*starbase->tsd.starbase.part_price) *
+						((DAMCON_SYSTEM_COUNT - 1) * DAMCON_PARTS_PER_SYSTEM));
+	for (i = 0; i < DAMCON_SYSTEM_COUNT - 1; i++) {
+		for (j = 0; j < DAMCON_PARTS_PER_SYSTEM; j++) {
+			variation = 1.0f + (float) (snis_randn(200) - 100) / 1000.0f;
+			starbase->tsd.starbase.part_price[i * DAMCON_PARTS_PER_SYSTEM + j] =
+				damcon_base_price(i, j) * variation;
+		}
+	}
 }
 
 static int add_starbase(double x, double y, double z,
@@ -3937,7 +3998,7 @@ static int add_starbase(double x, double y, double z,
 	go[i].tsd.starbase.associated_planet_id = assoc_planet_id;
 	go[i].sdata.shield_strength = 255;
 	go[i].tsd.starbase.bid_price = malloc(sizeof(go[i].tsd.starbase.bid_price) * ncommodities);
-	fabricate_bid_prices(&go[i]);
+	fabricate_prices(&go[i]);
 	init_starbase_market(&go[i]);
 	/* FIXME, why name stored twice? probably just use sdata.name is best
 	 * but might be because we should know starbase name even if science
@@ -5468,6 +5529,109 @@ void npc_menu_item_sign_off(struct npc_menu_item *item,
 	botstate->channel = (uint32_t) -1;
 	botstate->object_id = (uint32_t) -1;
 	botstate->current_menu = NULL;
+}
+
+static void npc_send_parts_menu(char *npcname, struct npc_bot_state *botstate)
+{
+	int i;
+	char msg[100];
+	struct snis_entity *sb;
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0)
+		return;
+	sb = &go[i];
+
+	send_comms_packet(npcname, botstate->channel, "");
+	sprintf(msg, "  -- BUY %s PARTS --", damcon_system_name(botstate->parts_menu));
+	send_comms_packet(npcname, botstate->channel, msg);
+	for (i = 0; i < DAMCON_PARTS_PER_SYSTEM; i++) {
+		float price = sb->tsd.starbase.part_price[botstate->parts_menu *
+								DAMCON_PARTS_PER_SYSTEM + i];
+		sprintf(msg, "  %c:   $%.2f   %s\n", i + 'A', price,
+				damcon_part_name(botstate->parts_menu, i));
+		send_comms_packet(npcname, botstate->channel, msg);
+	}
+	send_comms_packet(npcname, botstate->channel, "  0:   PREVIOUS MENU");
+	send_comms_packet(npcname, botstate->channel, "");
+}
+
+static void parts_buying_npc_bot(struct snis_entity *o, int bridge,
+		char *name, char *msg)
+{
+	int i, rc, selection;
+	char sel;
+	float range2;
+	char *n = o->tsd.starbase.name;
+	struct snis_entity *ship;
+	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
+	uint32_t channel = botstate->channel;
+	float price;
+
+	i = lookup_by_id(bridgelist[bridge].shipid);
+	if (i < 0) {
+		printf("Non fatal error at %s:%s:%d\n",
+			__FILE__, __func__, __LINE__);
+		return;
+	}
+	ship = &go[i];
+
+	range2 = dist3dsqrd(ship->x - o->x, ship->y - o->y, ship->z - o->z);
+
+	rc = sscanf(msg, "%c", (char *) &sel);
+	if (rc != 1)
+		selection = -1;
+	selection = sel;
+	if (selection == '0') {
+		botstate->special_bot = NULL;
+		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+		return;
+	}
+	selection = toupper(selection);
+	if (selection >= 'A' && selection <= 'A' + DAMCON_PARTS_PER_SYSTEM - 1)
+		selection = selection - 'A';
+	else
+		selection = -1;
+
+	if (selection == -1) {
+		npc_send_parts_menu(name, botstate);
+		return;
+	}
+
+	/* check transporter range */
+	if (range2 > TRANSPORTER_RANGE * TRANSPORTER_RANGE) {
+		send_comms_packet(n, channel,
+			" TRANSACTION NOT POSSIBLE - TRANSPORTER RANGE EXCEEDED");
+		return;
+	}
+	price = o->tsd.starbase.part_price[botstate->parts_menu * DAMCON_PARTS_PER_SYSTEM + selection];
+	if (price > ship->tsd.ship.wallet) {
+		send_comms_packet(n, channel, " INSUFFICIENT FUNDS");
+		return;
+	}
+	ship->tsd.ship.wallet -= price;
+	send_comms_packet(n, channel, " THANK YOU FOR YOUR PURCHASE.");
+	instantly_repair_damcon_part(&bridgelist[bridge].damcon, botstate->parts_menu, selection); /* "buy" the part. */
+}
+
+static void npc_menu_item_buy_parts(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate)
+{
+	struct bridge_data *b;
+	int i, bridge;
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0)
+		return;
+
+	/* find our bridge... */
+	b = container_of(botstate, struct bridge_data, npcbot);
+	bridge = b - bridgelist;
+
+	botstate->parts_menu = (item - &repairs_and_maintenance_menu[0] - 1) %
+				(DAMCON_SYSTEM_COUNT - 1);
+	botstate->special_bot = parts_buying_npc_bot;
+	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
 }
 
 static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge,

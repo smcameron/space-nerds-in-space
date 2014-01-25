@@ -8755,7 +8755,7 @@ static struct snis_damcon_entity *damcon_robot_entity = NULL;
 static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 {
 	int x, y;
-	char msg[40];
+	char msg[80];
 	int byteangle = (int) (o->heading * 64.0 / M_PI);
 	int dist = 1000000;
 
@@ -8770,8 +8770,9 @@ static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 	else
 		dist = 1000000;
 	if (dist < 150)
-		sprintf(msg, "%s",
-			damcon_part_name(o->tsd.part.system, o->tsd.part.part));
+		sprintf(msg, "%s%s",
+			damcon_part_name(o->tsd.part.system, o->tsd.part.part),
+			o->tsd.part.damage == 255 ? " (IRREPARABLY DAMAGED)" : "");
 	else
 		strcpy(msg, "");
 	sng_set_foreground(YELLOW);
