@@ -149,22 +149,6 @@ MODELS=${MD}/freighter.stl \
 	${MD}/spaceship_turret.stl \
 	${MD}/spaceship_turret_base.stl
 
-MODEL_PARAMS = \
-	${MD}/destroyer.scad_params.h \
-	${MD}/freighter.scad_params.h \
-	${MD}/battlestar.scad_params.h \
-	${MD}/spaceship.scad_params.h \
-	${MD}/asteroid-miner.scad_params.h \
-	${MD}/spaceship2.scad_params.h \
-	${MD}/dragonhawk.scad_params.h \
-	${MD}/skorpio.scad_params.h \
-	${MD}/disruptor.scad_params.h \
-	${MD}/research-vessel.scad_params.h \
-	${MD}/conqueror.scad_params.h \
-	${MD}/scrambler.scad_params.h \
-	${MD}/swordfish.scad_params.h \
-	${MD}/wombat.scad_params.h
-
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${ILDAFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
 GTKCFLAGS=$(subst -I,-isystem ,$(shell pkg-config --cflags gtk+-2.0))
@@ -195,19 +179,16 @@ OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 
 all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS}
 
-graph_dev_opengl.o : graph_dev_opengl.c shader.h vertex.h triangle.h mathutils.h matrix.h \
-			mesh.h quat.h snis_graph.h graph_dev.h entity.h entity_private.h \
-			material.h
+graph_dev_opengl.o : graph_dev_opengl.c Makefile
 	$(Q)$(GLEXTCOMPILE)
 
-graph_dev_gdk.o : graph_dev_gdk.c vertex.h triangle.h mathutils.h matrix.h mesh.h \
-			snis_typeface.h snis_graph.h quat.h entity.h entity_private.h material.h
+graph_dev_gdk.o : graph_dev_gdk.c Makefile
 	$(Q)$(GTKCOMPILE)
 
-material.o : material.c material.h
+material.o : material.c Makefile
 	$(Q)$(GTKCOMPILE)
 
-shader.o : shader.c shader.h
+shader.o : shader.c Makefile
 	$(Q)$(COMPILE)
 
 starbase.stl:	starbase.scad wedge.scad
@@ -219,174 +200,166 @@ starbase.stl:	starbase.scad wedge.scad
 %.scad_params.h: %.scad
 	awk -f extract_scad_params.awk $< > $@
 
-my_point.o:   my_point.c my_point.h Makefile
+my_point.o:   my_point.c Makefile
 	$(Q)$(COMPILE)
 
-mesh.o:   mesh.c mesh.h vertex.h Makefile
+mesh.o:   mesh.c Makefile
 	$(Q)$(COMPILE)
 
-power-model.o:   power-model.c power-model.h Makefile
+power-model.o:   power-model.c Makefile
 	$(Q)$(COMPILE)
 
-stacktrace.o:   stacktrace.c stacktrace.h Makefile
+stacktrace.o:   stacktrace.c Makefile
 	$(Q)$(COMPILE)
 
-snis_ship_type.o:   snis_ship_type.c snis_ship_type.h Makefile
+snis_ship_type.o:   snis_ship_type.c Makefile
 	$(Q)$(COMPILE)
 
-snis_faction.o:   snis_faction.c snis_faction.h Makefile
+snis_faction.o:   snis_faction.c Makefile
 	$(Q)$(COMPILE)
 
-liang-barsky.o:   liang-barsky.c liang-barsky.h Makefile
+liang-barsky.o:   liang-barsky.c Makefile
 	$(Q)$(COMPILE)
 
-joystick.o:   joystick.c joystick.h compat.h Makefile 
+joystick.o:   joystick.c Makefile
 	$(Q)$(COMPILE)
 
-ogg_to_pcm.o:   ogg_to_pcm.c ogg_to_pcm.h Makefile
+ogg_to_pcm.o:   ogg_to_pcm.c Makefile
 	$(Q)$(VORBISCOMPILE)
 
-bline.o:	bline.c bline.h
+bline.o:	bline.c Makefile
 	$(Q)$(COMPILE)
 
-wwviaudio.o:    wwviaudio.c wwviaudio.h ogg_to_pcm.h my_point.h Makefile
+wwviaudio.o:    wwviaudio.c Makefile
 	$(Q)$(VORBISCOMPILE)
 
-shield_strength.o:	shield_strength.c shield_strength.h
+shield_strength.o:	shield_strength.c Makefile
 	$(Q)$(COMPILE)
 
-snis_server.o:	snis_server.c snis.h snis_packet.h snis_marshal.h sounds.h starbase-comms.h \
-		container-of.h
+snis_server.o:	snis_server.c Makefile
 	$(Q)$(COMPILE)
 
-snis_client.o:	snis_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h quat.o vec4.o $(MODEL_PARAMS)
+snis_client.o:	snis_client.c Makefile
 	$(Q)$(GLEXTCOMPILE)
 
-snis_limited_client.c:	snis_client.c
+snis_limited_client.c:	snis_client.c Makefile
 	cp snis_client.c snis_limited_client.c
 
-snis_limited_client.o:	snis_limited_client.c snis.h snis_font.h my_point.h snis_packet.h snis_marshal.h sounds.h wwviaudio.h snis-logo.h placeholder-system-points.h vertex.h quat.o vec4.o
+snis_limited_client.o:	snis_limited_client.c Makefile
 	$(Q)$(LIMCOMPILE)
 
-snis_socket_io.o:	snis_socket_io.c snis_socket_io.h
+snis_socket_io.o:	snis_socket_io.c Makefile
 	$(Q)$(COMPILE)
 
-snis_marshal.o:	snis_marshal.c snis_marshal.h
+snis_marshal.o:	snis_marshal.c Makefile
 	$(Q)$(COMPILE)
 
-snis_font.o:	snis_font.c snis_font.h my_point.h
+snis_font.o:	snis_font.c Makefile
 	$(Q)$(COMPILE)
 
-mathutils.o:	mathutils.c mathutils.h
+mathutils.o:	mathutils.c Makefile
 	$(Q)$(COMPILE)
 
-snis_alloc.o:	snis_alloc.c snis_alloc.h
+snis_alloc.o:	snis_alloc.c Makefile
 	$(Q)$(COMPILE)
 
-snis_damcon_systems.o:	snis_damcon_systems.c snis_damcon_systems.h
+snis_damcon_systems.o:	snis_damcon_systems.c Makefile
 	$(Q)$(COMPILE)
 
-# snis_server:	${SERVEROBJS} ${SSGL}
-#	$(CC) ${MYCFLAGS} -o snis_server ${GTKCFLAGS} ${SERVEROBJS} ${GTKLDFLAGS} ${LIBS}
-
-snis_server:	${SERVEROBJS} ${SSGL}
+snis_server:	${SERVEROBJS} ${SSGL} Makefile
 	$(Q)$(SERVERLINK)
 
-snis_client:	${CLIENTOBJS} ${SSGL}
+snis_client:	${CLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(CLIENTLINK)
 
-snis_limited_client:	${LIMCLIENTOBJS} ${SSGL}
+snis_limited_client:	${LIMCLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(LIMCLIENTLINK)
 
-#	$(CC) ${MYCFLAGS} ${SNDFLAGS} -o snis_client ${GTKCFLAGS}  ${CLIENTOBJS} ${GTKLDFLAGS} ${LIBS} ${SNDLIBS}
-
-starbase-comms.o:	starbase-comms.c starbase-comms.h
+starbase-comms.o:	starbase-comms.c Makefile
 	$(Q)$(COMPILE)	
 
-infinite-taunt.o:	infinite-taunt.c infinite-taunt.h
+infinite-taunt.o:	infinite-taunt.c Makefile
 	$(Q)$(COMPILE)
 
-infinite-taunt:	infinite-taunt.c infinite-taunt.h mtwist.o
+infinite-taunt:	infinite-taunt.o Makefile
 	$(CC) -DTEST_TAUNT -o infinite-taunt ${MYCFLAGS} mtwist.o infinite-taunt.c
 
 names:	names.c names.h
 	$(CC) -DTEST_NAMES -o names ${MYCFLAGS} ${GTKCFLAGS} names.c
 
-snis_limited_graph.c:	snis_graph.c
+snis_limited_graph.c:	snis_graph.c Makefile
 	cp snis_graph.c snis_limited_graph.c
 
-snis_limited_graph.o:	snis_limited_graph.c snis_graph.h
+snis_limited_graph.o:	snis_limited_graph.c Makefile
 	$(Q)$(LIMCOMPILE)
 
-snis_graph.o:	snis_graph.c snis_graph.h
+snis_graph.o:	snis_graph.c Makefile
 	$(Q)$(GLEXTCOMPILE)
 
-snis_typeface.o:	snis_typeface.c snis_typeface.h
+snis_typeface.o:	snis_typeface.c Makefile
 	$(Q)$(GTKCOMPILE)
 
-snis_gauge.o:	snis_gauge.c snis_gauge.h snis_graph.h
+snis_gauge.o:	snis_gauge.c Makefile
 	$(Q)$(GTKCOMPILE)
 
-snis_button.o:	snis_button.c snis_button.h snis_graph.h
+snis_button.o:	snis_button.c Makefile
 	$(Q)$(GTKCOMPILE)
 
-snis_label.o:	snis_label.c snis_label.h snis_graph.h
+snis_label.o:	snis_label.c Makefile
 	$(Q)$(GTKCOMPILE)
 
-snis_sliders.o:	snis_sliders.c snis_sliders.h snis_graph.h
+snis_sliders.o:	snis_sliders.c Makefile
 	$(Q)$(GTKCOMPILE)
 
-snis_text_window.o:	snis_text_window.c snis_text_window.h snis_graph.h \
-			snis_font.h snis_typeface.h
+snis_text_window.o:	snis_text_window.c Makefile
 	$(Q)$(GTKCOMPILE)
 
-snis_ui_element.o:	snis_ui_element.c snis_ui_element.h
+snis_ui_element.o:	snis_ui_element.c Makefile
 	$(Q)$(GTKCOMPILE)
 
-snis_text_input.o:	snis_text_input.c snis_text_input.h
+snis_text_input.o:	snis_text_input.c Makefile
 	$(Q)$(GTKCOMPILE)
 
-matrix.o:	matrix.c matrix.h
+matrix.o:	matrix.c Makefile
 	$(Q)$(COMPILE)
 
-stl_parser.o:	stl_parser.c stl_parser.h vertex.h triangle.h mesh.h
+stl_parser.o:	stl_parser.c Makefile
 	$(Q)$(COMPILE)
 
-stl_parser:	stl_parser.o stl_parser.h vertex.h triangle.h mesh.h
-	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} ${GTKCFLAGS} -o stl_parser stl_parser.c matrix.c mesh.c mathutils.c -lm
+stl_parser:	stl_parser.c matrix.o mesh.o mathutils.o quat.o mtwist.o Makefile
+	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} ${GTKCFLAGS} -o stl_parser stl_parser.c matrix.o mesh.o mathutils.o quat.o mtwist.o -lm
 
-entity.o:	entity.c entity.h mathutils.h vertex.h triangle.h mesh.h stl_parser.h \
-		snis_alloc.h entity_private.h material.h
+entity.o:	entity.c Makefile
 	$(Q)$(GTKCOMPILE)
 
-names.o:	names.c names.h
+names.o:	names.c Makefile
 	$(Q)$(COMPILE)
 
-space-part.o:	space-part.c space-part.h
+space-part.o:	space-part.c Makefile
 	$(Q)$(COMPILE)
 
-quat.o:	quat.c quat.h
+quat.o:	quat.c Makefile
 	$(Q)$(COMPILE)
 
-vec4.o:	vec4.c vec4.h
+vec4.o:	vec4.c Makefile
 	$(Q)$(COMPILE)
 
-mtwist.o:	mtwist.c mtwist.h
+mtwist.o:	mtwist.c Makefile
 	$(Q)$(COMPILE)
 
-fleet.o:	fleet.c fleet.h
+fleet.o:	fleet.c Makefile
 	$(Q)$(COMPILE)
 
-commodities.o:	commodities.c commodities.h
+commodities.o:	commodities.c Makefile
 	$(Q)$(COMPILE)
 
-test_matrix:	matrix.c matrix.h
-	$(CC) ${MYCFLAGS} ${GTKCFLAGS} -DTEST_MATRIX -o test_matrix matrix.c -lm
+test-matrix:	matrix.c Makefile
+	$(CC) ${MYCFLAGS} ${GTKCFLAGS} -DTEST_MATRIX -o test-matrix matrix.c -lm
 
-test-space-partition:	space-part.c space-part.h
+test-space-partition:	space-part.c Makefile
 	$(CC) ${MYCFLAGS} -g -DTEST_SPACE_PARTITION -o test-space-partition space-part.c -lm
 
-snis_event_callback.o:	snis_event_callback.c snis_event_callback.h
+snis_event_callback.o:	snis_event_callback.c Makefile
 	$(Q)$(COMPILE)
 
 ${SSGL}:
@@ -396,19 +369,26 @@ mostly-clean:
 	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${SSGL} stl_parser snis_limited_graph.c snis_limited_client.c test-space-partition
 	( cd ssgl; make clean )
 
-test_marshal:	snis_marshal.c snis_marshal.h
-	$(CC) -DTEST_MARSHALL -o test_marshal snis_marshal.c
+test-marshal:	snis_marshal.c stacktrace.o Makefile
+	$(CC) -DTEST_MARSHALL -o test-marshal snis_marshal.c stacktrace.o
 
-test-quat:	test-quat.c quat.o matrix.o mathutils.o
-	gcc -Wall -Wextra --pedantic -o test-quat test-quat.c quat.o matrix.o mathutils.o -lm
+test-quat:	test-quat.c quat.o matrix.o mathutils.o mtwist.o Makefile
+	gcc -Wall -Wextra --pedantic -o test-quat test-quat.c quat.o matrix.o mathutils.o mtwist.o -lm
 
-test-fleet: quat.o fleet.o mathutils.o
+test-fleet: quat.o fleet.o mathutils.o mtwist.o Makefile
 	gcc -DTESTFLEET=1 -c -o test-fleet.o fleet.c
-	gcc -DTESTFLEET=1 -o test-fleet test-fleet.o mathutils.o quat.o -lm
+	gcc -DTESTFLEET=1 -o test-fleet test-fleet.o mathutils.o quat.o mtwist.o -lm
 
-test-mtwist: mtwist.o test-mtwist.c
+test-mtwist: mtwist.o test-mtwist.c Makefile
 	gcc -o test-mtwist mtwist.o test-mtwist.c
+
+test :	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist
 
 clean:	mostly-clean
 	rm -f ${MODELS} test_marshal
+
+Makefile.depend :
+	makedepend -w0 -f- *.c | grep -v /usr > Makefile.depend
+
+include Makefile.depend
 
