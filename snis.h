@@ -54,7 +54,6 @@
 #define MIN_NEBULA_RADIUS 200
 #define NDERELICTS 20
 
-#define NPLANET_SCALES 3
 #define NPLANET_MATERIALS 4
 #define NPLANETS 10
 #define NBASES (NPLANETS + 3)
@@ -487,6 +486,9 @@ struct planet_data {
 	uint8_t government;
 	uint8_t tech_level;
 	uint8_t economy;
+#define MIN_PLANET_RADIUS 800.0f
+#define MAX_PLANET_RADIUS 2000.0f
+	float radius;
 };
 
 union type_specific_data {

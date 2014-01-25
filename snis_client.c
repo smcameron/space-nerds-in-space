@@ -272,7 +272,6 @@ struct mesh *laser_mesh;
 struct mesh *asteroid_mesh[NASTEROID_MODELS];
 struct mesh *sphere_mesh;
 struct mesh *planetary_ring_mesh;
-static float planet_scale[NPLANET_SCALES];
 struct mesh *starbase_mesh[NSTARBASE_MODELS];
 struct mesh *ship_mesh;
 struct mesh *ship_turret_mesh;
@@ -1302,11 +1301,10 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 	return 0;
 }
 
-static int update_planet(uint32_t id, double x, double y, double z, uint8_t government,
+static int update_planet(uint32_t id, double x, double y, double z, double r, uint8_t government,
 				uint8_t tech_level, uint8_t economy, uint32_t dseed)
 {
-	int i, m, k, s, r;
-	float scale;
+	int i, m, k, hasring;
 	struct entity *e, *ring;
 	union quat orientation;
 
@@ -1314,14 +1312,12 @@ static int update_planet(uint32_t id, double x, double y, double z, uint8_t gove
 	if (i < 0) {
 		/* Orientation should be consistent across clients because planets don't move */
 		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
-		k = id % (NPLANET_MATERIALS * NPLANET_SCALES * 4);
-		r = ((k % 4) == 0);
-		s = k % NPLANET_SCALES;
+		k = id % (NPLANET_MATERIALS * 4);
+		hasring = ((k % 4) == 0);
 		m = k % NPLANET_MATERIALS;
-		scale = planet_scale[s];
 		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
-		update_entity_scale(e, scale); 
-		if (r) {
+		update_entity_scale(e, r);
+		if (hasring) {
 			ring = add_entity(ecx, planetary_ring_mesh, 0, 0, 0, PLANET_COLOR);
 			update_entity_material(ring, MATERIAL_TEXTURE_MAPPED_UNLIT,
 						&planetary_ring_material[(id >> 3) % NPLANETARY_RING_MATERIALS]);
@@ -3985,21 +3981,22 @@ static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id;
-	double dx, dy, dz;
+	double dr, dx, dy, dz;
 	uint8_t government, tech_level, economy;
 	uint32_t dseed;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSSwbbb", &id,
+	rc = read_and_unpack_buffer(buffer, "wSSSSwbbb", &id,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
+			&dr, (int32_t) UNIVERSE_DIM,
 			&dseed, &government, &tech_level, &economy);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_planet(id, dx, dy, dz, government, tech_level, economy, dseed);
+	rc = update_planet(id, dx, dy, dz, dr, government, tech_level, economy, dseed);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -12067,8 +12064,6 @@ static void init_meshes()
 
 	sphere_mesh = mesh_unit_icosphere(4);
 	planetary_ring_mesh = mesh_fabricate_planetary_ring(2.0, 3.0);
-	for (i = 0; i < NPLANET_SCALES; i++)
-		planet_scale[i] = mtwist_int(mt, 400) + 300.0;	
 
 	for (i = 0; i < NSTARBASE_MODELS; i++) {
 		char filename[100];

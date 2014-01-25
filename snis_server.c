@@ -1368,8 +1368,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 		return; /* can't torpedo yourself. */
 	dist2 = dist3dsqrd(t->x - o->x, t->y - o->y, t->z - o->z);
 
-	/* FIXME: do planet radius server side */
-	if (t->type == OBJTYPE_PLANET && dist2 < 800.0 * 800.0)
+	if (t->type == OBJTYPE_PLANET && dist2 < t->tsd.planet.radius * t->tsd.planet.radius)
 		o->alive = 0; /* smashed into planet */
 	else if (dist2 > TORPEDO_DETONATE_DIST2)
 		return; /* not close enough */
@@ -2055,9 +2054,13 @@ static void ship_collision_avoidance(void *context, void *entity)
 	/* hmm, server has no idea about meshes... */
 	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
 
-	/* Pretend planets and torpedoes are closer than they are since they're scary */
-	if (o->type == OBJTYPE_PLANET)
-		d = d / 3.0;
+	if (o->type == OBJTYPE_PLANET) {
+		d -= o->tsd.planet.radius;
+		if (d <= 0.0)
+			d = 1.0;
+	}
+
+	/* Pretend torpedoes are closer than they are since they're scary */
 	if (o->type == OBJTYPE_TORPEDO)
 		d = d / 6.0;
 
@@ -2799,10 +2802,8 @@ static void player_collision_detection(void *player, void *object)
 			return;
 	}
 	if (t->type == OBJTYPE_PLANET && dist2 < 1000.0 * 1000.0) {
-		/* TODO: assign planet radius server side, not client side and make
-		 * these tests based on the planet radius.
-		 */
-		if (dist2 < 450.0 * 450.0)  {
+		float planet_dist2 = t->tsd.planet.radius * t->tsd.planet.radius;
+		if (dist2 < planet_dist2)  {
 			/* crashed into planet */
 			o->alive = 0;
 			o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
@@ -2811,11 +2812,11 @@ static void player_collision_detection(void *player, void *object)
 					ROLE_SOUNDSERVER, o->id);
 			schedule_callback(event_callback, &callback_schedule,
 					"player-death-callback", o->id);
-		} else if (dist2 < 600.0 * 600.0 && (universe_timestamp & 0x7) == 0) {
+		} else if (dist2 < planet_dist2 + 50 && (universe_timestamp & 0x7) == 0) {
 			send_packet_to_all_clients_on_a_bridge(o->id,
 				packed_buffer_new("h", OPCODE_COLLISION_NOTIFICATION),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
-		} else if (dist2 < 750.0 * 750.0 && (universe_timestamp & 0x7) == 0) {
+		} else if (dist2 < planet_dist2 + 100.0 && (universe_timestamp & 0x7) == 0) {
 			send_packet_to_all_clients_on_a_bridge(o->id,
 				packed_buffer_new("h", OPCODE_PROXIMITY_ALERT),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
@@ -4238,7 +4239,8 @@ static void add_starbases(void)
 					p++;
 				if (p == i + 1) {
 					float dx, dy, dz;
-					random_point_on_sphere(1200.0 + snis_randn(500), &dx, &dy, &dz);
+					random_point_on_sphere(go[j].tsd.planet.radius + 150.0f +
+							snis_randn(400), &dx, &dy, &dz);
 					x = go[j].x + dx;
 					y = go[j].y + dy;
 					z = go[j].z + dz;
@@ -4440,7 +4442,7 @@ static void add_derelicts(void)
 	}
 }
 
-static int add_planet(double x, double y, double z)
+static int add_planet(double x, double y, double z, float radius)
 {
 	int i;
 
@@ -4462,12 +4464,13 @@ static int add_planet(double x, double y, double z)
 	go[i].tsd.planet.economy = snis_randn(1000) % ARRAY_SIZE(economy_name);
 	go[i].tsd.planet.tech_level = snis_randn(1000) % ARRAY_SIZE(tech_level_name);
 	go[i].tsd.planet.description_seed = snis_rand();
+	go[i].tsd.planet.radius = radius;
 	return i;
 }
 
 static int l_add_planet(lua_State *l)
 {
-	double x, y, z;
+	double x, y, z, r;
 	const char *name;
 	int i;
 
@@ -4475,9 +4478,15 @@ static int l_add_planet(lua_State *l)
 	x = lua_tonumber(lua_state, 2);
 	y = lua_tonumber(lua_state, 3);
 	z = lua_tonumber(lua_state, 4);
+	r = lua_tonumber(lua_state, 5);
+
+	if (r < MIN_PLANET_RADIUS)
+		r = MIN_PLANET_RADIUS;
+	if (r > MAX_PLANET_RADIUS)
+		r = MAX_PLANET_RADIUS;
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_planet(x, y, z);
+	i = add_planet(x, y, z, r);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		lua_pushnumber(lua_state, -1.0);
@@ -4492,7 +4501,7 @@ static int l_add_planet(lua_State *l)
 static void add_planets(void)
 {
 	int i;
-	double x, y, z, cx, cy, cz, a, r;
+	double x, y, z, cx, cy, cz, a, r, radius;
 
 	for (i = 0; i < NPLANETS; i++) {
 		cx = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
@@ -4503,7 +4512,9 @@ static void add_planets(void)
 		x = cx + r * sin(a);
 		z = cz + r * cos(a);
 		y = cy;
-		add_planet(x, y, z);
+		radius = (float) snis_randn(MAX_PLANET_RADIUS - MIN_PLANET_RADIUS) +
+						MIN_PLANET_RADIUS;
+		add_planet(x, y, z, radius);
 	}
 }
 
@@ -6756,7 +6767,9 @@ static int process_create_item(struct game_client *c)
 		i = add_starbase(x, 0, z, 0, 0, 0, snis_randn(100), -1);
 		break;
 	case OBJTYPE_PLANET:
-		i = add_planet(x, 0.0, z);
+		r = (float) snis_randn(MAX_PLANET_RADIUS - MIN_PLANET_RADIUS) +
+					MIN_PLANET_RADIUS;
+		i = add_planet(x, 0.0, z, r);
 		break;
 	case OBJTYPE_NEBULA:
 		r = (double) snis_randn(NEBULA_RADIUS) +
@@ -8416,10 +8429,11 @@ static void send_update_derelict_packet(struct game_client *c,
 static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSSSwbbb", OPCODE_UPDATE_PLANET, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwSSSSwbbb", OPCODE_UPDATE_PLANET, o->id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
+					(double) o->tsd.planet.radius, (int32_t) UNIVERSE_DIM,
 					o->tsd.planet.description_seed,
 					o->tsd.planet.government,
 					o->tsd.planet.tech_level,
