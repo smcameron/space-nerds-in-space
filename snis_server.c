@@ -1841,6 +1841,45 @@ static void check_for_nearby_targets(struct snis_entity *o)
 	}
 }
 
+/* check if a planet is in the way of a shot */
+static int planet_in_the_way(struct snis_entity *origin,
+				struct snis_entity *target)
+{
+	int i;
+	union vec3 ray_origin, ray_direction, sphere_origin;
+	const float radius = 800.0; /* FIXME: nuke this hardcoded crap */
+	float target_dist;
+	float planet_dist;
+
+	ray_origin.v.x = origin->x;
+	ray_origin.v.y = origin->y;
+	ray_origin.v.z = origin->z;
+
+	ray_direction.v.x = target->x - ray_origin.v.x;
+	ray_direction.v.y = target->y - ray_origin.v.y;
+	ray_direction.v.z = target->z - ray_origin.v.z;
+
+	target_dist = vec3_magnitude(&ray_direction);
+	vec3_normalize_self(&ray_direction);
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].type != OBJTYPE_PLANET)
+			continue;
+		sphere_origin.v.x = go[i].x;
+		sphere_origin.v.y = go[i].y;
+		sphere_origin.v.z = go[i].z;
+		if (!ray_intersects_sphere(&ray_origin, &ray_direction,
+						&sphere_origin, radius))
+			continue;
+		planet_dist = dist3d(sphere_origin.v.x - ray_origin.v.x,
+					sphere_origin.v.y - ray_origin.v.y,
+					sphere_origin.v.z - ray_origin.v.z);
+		if (planet_dist < target_dist) /* planet blocks... */
+			return 1;
+	}
+	return 0; /* no planets blocking */
+}
+
 static void ai_attack_mode_brain(struct snis_entity *o)
 {
 	struct snis_entity *v;
@@ -1920,27 +1959,31 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 			double dist, flight_time, tx, ty, tz, vx, vy, vz;
 			/* int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y); */
 
-			dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
-			flight_time = dist / TORPEDO_VELOCITY;
-			tx = v->x + (v->vx * flight_time);
-			tz = v->z + (v->vz * flight_time);
-			ty = v->y + (v->vy * flight_time);
+			if (!planet_in_the_way(o, v)) {
+				dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
+				flight_time = dist / TORPEDO_VELOCITY;
+				tx = v->x + (v->vx * flight_time);
+				tz = v->z + (v->vz * flight_time);
+				ty = v->y + (v->vy * flight_time);
 
-			calculate_torpedo_velocities(o->x, o->y, o->z,
-				tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
+				calculate_torpedo_velocities(o->x, o->y, o->z,
+					tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
 
-			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
-			o->tsd.ship.torpedoes--;
-			o->tsd.ship.next_torpedo_time = universe_timestamp +
-				ENEMY_TORPEDO_FIRE_INTERVAL;
-			check_for_incoming_fire(v);
+				add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
+				o->tsd.ship.torpedoes--;
+				o->tsd.ship.next_torpedo_time = universe_timestamp +
+					ENEMY_TORPEDO_FIRE_INTERVAL;
+				check_for_incoming_fire(v);
+			}
 		} else {
 			if (snis_randn(1000) < 300 &&
 				o->tsd.ship.next_laser_time <= universe_timestamp) {
-				o->tsd.ship.next_laser_time = universe_timestamp +
-					ENEMY_LASER_FIRE_INTERVAL;
-				add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
-				check_for_incoming_fire(v);
+				if (!planet_in_the_way(o, v)) {
+					o->tsd.ship.next_laser_time = universe_timestamp +
+						ENEMY_LASER_FIRE_INTERVAL;
+					add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
+					check_for_incoming_fire(v);
+				}
 			}
 		}
 		if (v->type == OBJTYPE_SHIP1 && snis_randn(1000) < 25)
