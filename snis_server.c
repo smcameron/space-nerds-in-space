@@ -96,13 +96,21 @@ static struct opcode_stat {
 #endif
 
 struct npc_bot_state;
-typedef void (*npc_menu_func)(char *npcname, struct npc_bot_state *botstate);
-static void npc_menu_item_not_implemented(char *npcname, struct npc_bot_state *botstate);
-static void npc_menu_item_travel_advisory(char *npcname, struct npc_bot_state *botstate);
-static void npc_menu_item_request_dock(char *npcname, struct npc_bot_state *botstate);
-static void npc_menu_item_buy_cargo(char *npcname, struct npc_bot_state *botstate);
-static void npc_menu_item_sell_cargo(char *npcname, struct npc_bot_state *botstate);
-static void npc_menu_item_sign_off(char *npcname, struct npc_bot_state *botstate);
+struct npc_menu_item;
+typedef void (*npc_menu_func)(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_not_implemented(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_request_dock(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_buy_cargo(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_sell_cargo(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_sign_off(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void send_to_npcbot(int bridge, char *name, char *msg);
 
 typedef void (*npc_special_bot_fn)(struct snis_entity *o, int bridge, char *name, char *msg);
@@ -5443,13 +5451,15 @@ static uint32_t find_free_channel(void)
 	return snis_randn(100000); /* simplest possible thing that might work. */
 }
 
-void npc_menu_item_not_implemented(char *npcname, struct npc_bot_state *botstate)
+void npc_menu_item_not_implemented(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
 {
 	send_comms_packet(npcname, botstate->channel,
 				"  SORRY, THAT IS NOT IMPLEMENTED");
 }
 
-void npc_menu_item_sign_off(char *npcname, struct npc_bot_state *botstate)
+void npc_menu_item_sign_off(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
 {
 	send_comms_packet(npcname, botstate->channel,
 				"  IT HAS BEEN A PLEASURE SERVING YOU");
@@ -5464,7 +5474,8 @@ static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge,
 						char *name, char *msg);
 static void starbase_cargo_selling_npc_bot(struct snis_entity *o, int bridge,
 						char *name, char *msg);
-void npc_menu_item_buysell_cargo(char *npcname, struct npc_bot_state *botstate, int buy)
+void npc_menu_item_buysell_cargo(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate, int buy)
 {
 	struct bridge_data *b;
 	int i, bridge;
@@ -5487,17 +5498,20 @@ void npc_menu_item_buysell_cargo(char *npcname, struct npc_bot_state *botstate, 
 	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
 }
 
-void npc_menu_item_buy_cargo(char *npcname, struct npc_bot_state *botstate)
+void npc_menu_item_buy_cargo(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
 {
-	npc_menu_item_buysell_cargo(npcname, botstate, 1);
+	npc_menu_item_buysell_cargo(item, npcname, botstate, 1);
 }
 
-void npc_menu_item_sell_cargo(char *npcname, struct npc_bot_state *botstate)
+void npc_menu_item_sell_cargo(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
 {
-	npc_menu_item_buysell_cargo(npcname, botstate, 0);
+	npc_menu_item_buysell_cargo(item, npcname, botstate, 0);
 }
 
-void npc_menu_item_travel_advisory(char *npcname, struct npc_bot_state *botstate)
+void npc_menu_item_travel_advisory(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
 {
 	uint32_t plid, ch = botstate->channel;
 	struct snis_entity *sb, *pl = NULL;
@@ -5556,7 +5570,8 @@ void npc_menu_item_travel_advisory(char *npcname, struct npc_bot_state *botstate
 	send_comms_packet(npcname, ch, "-----------------------------------------------------");
 }
 
-void npc_menu_item_request_dock(char *npcname, struct npc_bot_state *botstate)
+void npc_menu_item_request_dock(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *o;
 	struct snis_entity *sb;
@@ -5895,7 +5910,7 @@ static void starbase_npc_bot(struct snis_entity *o, int bridge, char *name, char
 			send_npc_menu(n, bridge);
 		} else {
 			if (menu[selection].f)
-				menu[selection].f(n, &bridgelist[bridge].npcbot);
+				menu[selection].f(&menu[selection], n, &bridgelist[bridge].npcbot);
 			else
 				printf("Non fatal bug at %s:%d\n", __FILE__, __LINE__);
 		}
