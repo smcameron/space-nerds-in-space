@@ -227,7 +227,7 @@ struct ship_data {
 #define TORPEDO_WEAPONS_FACTOR (3.0)
 #define TORPEDO_DETONATE_DIST2 (150 * 150)
 #define INITIAL_TORPEDO_COUNT 10
-#define LASER_LIFETIME 30
+#define LASER_LIFETIME 15
 #define LASER_VELOCITY (200.0)
 #define LASER_RANGE (LASER_VELOCITY * LASER_LIFETIME)
 #define LASER_DETONATE_DIST2 (100 * 100)
@@ -358,6 +358,9 @@ struct ship_data {
 #define INITIAL_WALLET_MONEY (2500.0f)
 	float wallet;
 };
+
+#define MIN_COMBAT_ATTACK_DIST 200
+#define MAX_COMBAT_ATTACK_DIST LASER_RANGE
 
 struct marketplace_data {
 	int item;

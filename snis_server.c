@@ -1089,7 +1089,8 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 		i = lookup_by_id(attacker->tsd.ship.ai[n - 1].u.attack.victim_id);
 		if (i < 0) {
 			attacker->tsd.ship.ai[n - 1].u.attack.victim_id = victim_id;
-			calculate_attack_vector(attacker, LASER_RANGE, 400);
+			calculate_attack_vector(attacker, MIN_COMBAT_ATTACK_DIST,
+							MAX_COMBAT_ATTACK_DIST);
 			i = lookup_by_id(victim_id);
 			if (i >= 0)
 				buddies_join_the_fight(fleet_number, &go[i], recursion_level);
@@ -1100,7 +1101,8 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 		if (d1 < d2) {
 			/* new attack victim closer than old one. */
 			attacker->tsd.ship.ai[n - 1].u.attack.victim_id = victim_id;
-			calculate_attack_vector(attacker, LASER_RANGE, 400);
+			calculate_attack_vector(attacker, MIN_COMBAT_ATTACK_DIST,
+							MAX_COMBAT_ATTACK_DIST);
 			buddies_join_the_fight(fleet_number, v, recursion_level);
 			return;
 		}
@@ -1109,7 +1111,8 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 		attacker->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
 		attacker->tsd.ship.ai[n].u.attack.victim_id = victim_id;
 		attacker->tsd.ship.nai_entries++;
-		calculate_attack_vector(attacker, LASER_RANGE, 400);
+		calculate_attack_vector(attacker, MIN_COMBAT_ATTACK_DIST,
+						MAX_COMBAT_ATTACK_DIST);
 		i = lookup_by_id(victim_id);
 		if (i >= 0)
 			buddies_join_the_fight(fleet_number, &go[i], recursion_level);
@@ -1321,7 +1324,8 @@ static void __attribute__((unused)) pop_ai_stack(struct snis_entity *o)
 	o->tsd.ship.nai_entries--;
 	n = o->tsd.ship.nai_entries - 1;
 	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
-		calculate_attack_vector(o, LASER_RANGE, 400);
+		calculate_attack_vector(o, MIN_COMBAT_ATTACK_DIST,
+						MAX_COMBAT_ATTACK_DIST);
 }
 
 static void pop_ai_attack_mode(struct snis_entity *o)
@@ -1338,7 +1342,8 @@ static void pop_ai_attack_mode(struct snis_entity *o)
 		o->tsd.ship.nai_entries--;
 	n--;
 	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
-		calculate_attack_vector(o, LASER_RANGE, 400);
+		calculate_attack_vector(o, MIN_COMBAT_ATTACK_DIST,
+						MAX_COMBAT_ATTACK_DIST);
 	return;
 }
 
@@ -1810,7 +1815,8 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 			return;
 		}
 		o->tsd.ship.ai[n].u.attack.victim_id = victim_id;
-		calculate_attack_vector(o, 400, 200);
+		calculate_attack_vector(o, MIN_COMBAT_ATTACK_DIST,
+						MAX_COMBAT_ATTACK_DIST);
 	}
 	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
 	v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
@@ -1848,7 +1854,8 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 			o->tsd.ship.doy = veln.v.y;
 			o->tsd.ship.doz = veln.v.z;
 		} else {
-			calculate_attack_vector(o, 400, 200); /* head back toward target */
+			calculate_attack_vector(o, MIN_COMBAT_ATTACK_DIST,
+							MAX_COMBAT_ATTACK_DIST);
 		}
 	}
 
