@@ -836,3 +836,34 @@ float vec3_magnitude(union vec3 *v)
 	return sqrt(x2 + y2 + z2);
 }
 
+/* See TestRaySphere() in "Real Time Collision Detection", p. 179, by Christer Ericson. */
+int ray_intersects_sphere(const union vec3 *ray_origin,
+				const union vec3 *ray_direction,
+				const union vec3 *sphere_origin,
+				const float radius)
+{
+	union vec3 m;
+	float c, b, disc;
+
+	vec3_sub(&m, ray_origin, sphere_origin);
+	c = vec3_dot(&m, &m) - radius * radius;
+
+	/* If there is definitely at least one real root, there must be an intersection */
+	if (c <= 0.0f)
+		return 1;
+
+	b = vec3_dot(&m, ray_direction);
+
+	/* Early exit if ray origin outside sphere and ray pointing away from sphere */
+	if (b > 0.0f)
+		return 0;
+
+	disc = b * b - c;
+	/* A negative discriminant corresponds to ray missing sphere */
+	if (disc < 0.0f)
+		return 0;
+
+	/* Now ray must hit sphere */
+	return 1;
+}
+

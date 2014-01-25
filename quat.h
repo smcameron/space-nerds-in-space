@@ -248,4 +248,9 @@ void random_point_in_3d_annulus(float r1, float r2, const union vec3 *center, co
 
 float vec3_magnitude(union vec3 *v);
 
+int ray_intersects_sphere(const union vec3 *ray_origin,
+				const union vec3 *ray_direction,
+				const union vec3 *sphere_origin,
+				const float radius);
+
 #endif /* __QUAT_H__ */
