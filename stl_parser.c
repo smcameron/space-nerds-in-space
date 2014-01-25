@@ -524,4 +524,15 @@ int main(int argc, char *argv[])
 	s = NULL;
 	return 0;
 }
+
+void mesh_graph_dev_init(struct mesh *m)
+{
+
+}
+
+void mesh_graph_dev_cleanup(struct mesh *m)
+{
+
+}
+
 #endif

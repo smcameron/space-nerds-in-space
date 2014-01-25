@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "mtwist.h"
 #include "quat.h"
 #include "matrix.h"
 #include "mathutils.h"
