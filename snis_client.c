@@ -5040,7 +5040,7 @@ static void show_mainscreen(GtkWidget *w)
 		break;
 	case 1:
 	case 2: {
-			union vec3 desired_cam_offset = { { -1.0f, 0.25f, 0.0f } };
+			vec3_init(&desired_cam_offset, -1.0f, 0.25f, 0.0f);
 			vec3_mul_self(&desired_cam_offset, 200.0f * camera_mode);
 			quat_rot_vec_self(&desired_cam_offset, &camera_orientation);
 
