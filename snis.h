@@ -488,6 +488,8 @@ struct planet_data {
 	uint8_t economy;
 #define MIN_PLANET_RADIUS 800.0f
 #define MAX_PLANET_RADIUS 2000.0f
+#define PLAYER_PLANET_DIST_TOO_CLOSE (200)
+#define PLAYER_PLANET_DIST_WARN (400)
 	float radius;
 };
 

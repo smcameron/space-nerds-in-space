@@ -2801,9 +2801,13 @@ static void player_collision_detection(void *player, void *object)
 			scoop_up_cargo(o, t);
 			return;
 	}
-	if (t->type == OBJTYPE_PLANET && dist2 < 1000.0 * 1000.0) {
-		float planet_dist2 = t->tsd.planet.radius * t->tsd.planet.radius;
-		if (dist2 < planet_dist2)  {
+	if (t->type == OBJTYPE_PLANET) {
+		const float surface_dist2 = t->tsd.planet.radius * t->tsd.planet.radius;
+		const float warn_dist2 = (t->tsd.planet.radius + PLAYER_PLANET_DIST_WARN) *
+					(t->tsd.planet.radius + PLAYER_PLANET_DIST_WARN);
+		const float too_close2 = (t->tsd.planet.radius + PLAYER_PLANET_DIST_TOO_CLOSE) *
+					(t->tsd.planet.radius + PLAYER_PLANET_DIST_TOO_CLOSE);
+		if (dist2 < surface_dist2)  {
 			/* crashed into planet */
 			o->alive = 0;
 			o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
@@ -2812,15 +2816,16 @@ static void player_collision_detection(void *player, void *object)
 					ROLE_SOUNDSERVER, o->id);
 			schedule_callback(event_callback, &callback_schedule,
 					"player-death-callback", o->id);
-		} else if (dist2 < planet_dist2 + 50 && (universe_timestamp & 0x7) == 0) {
+		} else if (dist2 < too_close2 && (universe_timestamp & 0x7) == 0) {
 			send_packet_to_all_clients_on_a_bridge(o->id,
 				packed_buffer_new("h", OPCODE_COLLISION_NOTIFICATION),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
-		} else if (dist2 < planet_dist2 + 100.0 && (universe_timestamp & 0x7) == 0) {
+		} else if (dist2 < warn_dist2 && (universe_timestamp & 0x7) == 0) {
 			send_packet_to_all_clients_on_a_bridge(o->id,
 				packed_buffer_new("h", OPCODE_PROXIMITY_ALERT),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
 		}
+		return;
 	}
 	if (dist2 < PROXIMITY_DIST2 && (universe_timestamp & 0x7) == 0) {
 		send_packet_to_all_clients_on_a_bridge(o->id, 
@@ -4239,7 +4244,7 @@ static void add_starbases(void)
 					p++;
 				if (p == i + 1) {
 					float dx, dy, dz;
-					random_point_on_sphere(go[j].tsd.planet.radius + 150.0f +
+					random_point_on_sphere(go[j].tsd.planet.radius + 400.0f +
 							snis_randn(400), &dx, &dy, &dz);
 					x = go[j].x + dx;
 					y = go[j].y + dy;
