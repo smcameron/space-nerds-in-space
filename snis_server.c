@@ -9300,6 +9300,21 @@ static int read_factions(void)
 	return 0;
 }
 
+static void set_random_seed(void)
+{
+	char *seed = getenv("SNISRAND");
+	int i, rc;
+
+	if (!seed)
+		return;
+
+	rc = sscanf(seed, "%d", &i);
+	if (rc != 1)
+		return;
+
+	snis_srand((unsigned int) i);
+}
+
 int main(int argc, char *argv[])
 {
 	int port, rc, i;
@@ -9314,6 +9329,7 @@ int main(int argc, char *argv[])
 		usage();
 
 	override_asset_dir();
+	set_random_seed();
 
 	char commodity_path[PATH_MAX];
 	sprintf(commodity_path, "%s/%s", asset_dir, "commodities.txt");

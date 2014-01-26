@@ -1,4 +1,4 @@
-.TH SPACE-NERDS-IN-SPACE "6" "Nov 2012" "snis_server" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "Jan 2014" "snis_server" "Games"
 .SH NAME
 snis_server \- Multi player cooperative star ship bridge simulator (server) 
 .SH SYNOPSIS
@@ -29,6 +29,13 @@ Print the program's version number and exit.
 .PP
 /usr/share/snis/sounds/*.ogg contain the audio data used by the game.
 .PP
+.SH ENVIRONMENT VARIABLES
+.PP
+SNISRAND can be set to a random seed to affect universe generation
+.PP
+SNIS_ASSET_DIR can cause the program to use a different directory to read
+various assets (models, sounds, etc.) from a different directory allowing
+easy substitution of all art assets.   Default is to use share/snis.
 .SH SEE ALSO
 .PP
 snis_client(6), ssgl_server(6) 
