@@ -26,19 +26,6 @@
 
 #include "commodities.h"
 
-#if 0
-struct commodity {
-	char name[40];
-	char unit[40];
-	float base_price;
-	float volatility;
-	float legality;
-	float government_adjust;
-	float economy_adjust;
-	float tech_adjust;
-};
-#endif
-
 static void clean_spaces(char *line)
 {
 	char *s, *d;
@@ -137,13 +124,13 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	rc = parse_float_field(filename, line, ln, &c->legality, &saveptr);
 	if (rc)
 		return rc;
-	rc = parse_float_field(filename, line, ln, &c->government_adjust, &saveptr);
+	rc = parse_float_field(filename, line, ln, &c->econ_sensitivity, &saveptr);
 	if (rc)
 		return rc;
-	rc = parse_float_field(filename, line, ln, &c->economy_adjust, &saveptr);
+	rc = parse_float_field(filename, line, ln, &c->govt_sensitivity, &saveptr);
 	if (rc)
 		return rc;
-	rc = parse_float_field(filename, line, ln, &c->tech_adjust, &saveptr);
+	rc = parse_float_field(filename, line, ln, &c->tech_sensitivity, &saveptr);
 	if (rc)
 		return rc;
 	return 0;
@@ -179,16 +166,6 @@ struct commodity *read_commodities(char *filename, int *ncommodities)
 		case 0:
 			clist[n] = c;
 			n++;
-#if 0
-			printf("%s:%s:%f:%f:%f:%f:%f:%f\n",
-				c.name, c.unit,
-				c.base_price,
-				c.volatility,
-				c.legality,
-				c.government_adjust,
-				c.economy_adjust,
-				c.tech_adjust);
-#endif
 			continue;
 		case 1: /* comment */
 			continue;

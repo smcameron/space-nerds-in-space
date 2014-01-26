@@ -27,9 +27,9 @@ struct commodity {
 	float base_price;
 	float volatility;
 	float legality;
-	float government_adjust;
-	float economy_adjust;
-	float tech_adjust;
+	float econ_sensitivity;
+	float govt_sensitivity;
+	float tech_sensitivity;
 };
 
 struct commodity *read_commodities(char *filename, int *ncommodities);
