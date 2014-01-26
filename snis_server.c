@@ -3167,7 +3167,6 @@ static void player_move(struct snis_entity *o)
 			rpmx, powery, ARRAY_SIZE(rpmx));
 	desired_temp = (uint8_t) table_interp((double) o->tsd.ship.rpm,
 			rpmx, tempy, ARRAY_SIZE(rpmx));
-	desired_rpm = o->tsd.ship.throttle;
 	if (snis_randn(100) < 50) { /* adjust temp slowly, stochastically */
 		diff = 0;
 		if (o->tsd.ship.temp < desired_temp) {
