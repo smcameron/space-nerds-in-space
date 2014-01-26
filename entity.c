@@ -969,12 +969,15 @@ void render_entities(struct entity_context *cx)
 
 			e->dist3dsqrd = dist3dsqrd(c->x - e->x, c->y - e->y, c->z - e->z);
 
-			/* cull objects that are too small to draw based on approx screen size
-			   http://stackoverflow.com/questions/3717226/radius-of-projected-sphere */
-			float approx_pixel_size = c->yvpixels * e->m->radius * fabs(e->scale) /
-				tan(cx->camera.angle_of_view * 0.5) / sqrt(e->dist3dsqrd);
-			if (approx_pixel_size < 2.0)
-				continue;
+			/* only cull stuff that is too small on flat shader */
+			if (c->renderer & FLATSHADING_RENDERER) {
+				/* cull objects that are too small to draw based on approx screen size
+				   http://stackoverflow.com/questions/3717226/radius-of-projected-sphere */
+				float approx_pixel_size = c->yvpixels * e->m->radius * fabs(e->scale) /
+					tan(cx->camera.angle_of_view * 0.5) / sqrt(e->dist3dsqrd);
+				if (approx_pixel_size < 2.0)
+					continue;
+			}
 
 			int render_order = graph_dev_entity_render_order(cx, e);
 			switch (render_order) {

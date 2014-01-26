@@ -7956,6 +7956,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			case OBJTYPE_SHIP1:
 				contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
 				break;
+			case OBJTYPE_CARGO_CONTAINER:
+				contact_scale = ((255.0 - current_zoom) / 255.0) * 20.0 + 1.0;
+				//contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
+				break;
 			}
 
 			/* update the scale based on current scale */
