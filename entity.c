@@ -475,8 +475,8 @@ int transform_line(struct entity_context *cx, float x1, float y1, float z1, floa
 			float *sx1, float *sy1, float *sx2, float *sy2)
 {
 	struct vertex v[2] = {
-		{x1, y1, z1},
-		{x2, y2, z2}};
+		{x1, y1, z1, 1},
+		{x2, y2, z2, 1}};
 
 	/* there is no model transform on a point */
 	struct mat44 mat_vp;
@@ -515,7 +515,7 @@ int transform_line(struct entity_context *cx, float x1, float y1, float z1, floa
 
 int transform_point(struct entity_context *cx, float x, float y, float z, float *sx, float *sy)
 {
-	struct vertex v = {x, y, z};
+	struct vertex v = {x, y, z, 1};
 
 	/* there is no model transform on a point */
 	struct mat44 mat_vp;
@@ -920,9 +920,8 @@ void render_entities(struct entity_context *cx)
 		ilda_file_newframe(cx);
 #endif
 
-		if (pass == n_near_far - 1) {
+		if (cx->nfakestars > 0 && pass == n_near_far - 1) {
 			/* draw fake stars only on the last, closest, near/far */
-			sng_set_foreground(WHITE);
 			struct mat44 mat_vp;
 			mat44_convert_df(&cx->camera.camera_vp_matrix, &mat_vp);
 			transform_vertices(&mat_vp, &cx->fake_star[0], cx->nfakestars);
@@ -1108,6 +1107,7 @@ struct entity_context *entity_context_new(int maxobjs, int maxchildren)
 	set_lighting(cx, 0, 0, 0);
 	camera_assign_up_direction(cx, 0.0, 1.0, 0.0);
 	set_window_offset(cx, 0.0, 0.0);
+	cx->nfakestars = 0;
 #ifdef WITH_ILDA_SUPPORT
 	cx->f = NULL;
 #endif

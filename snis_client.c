@@ -7776,11 +7776,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	camera_assign_up_direction(navecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
 	camera_set_pos(navecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
 	camera_look_at(navecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
-	calculate_camera_transform(navecx);
 
-        set_renderer(navecx, WIREFRAME_RENDERER);
+	set_renderer(navecx, WIREFRAME_RENDERER);
 	camera_set_parameters(navecx, 1.0, camera_pos_len+screen_radius*2,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
+	calculate_camera_transform(navecx);
+
 	int in_nebula = 0;
 	int i;
 
