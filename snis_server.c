@@ -5460,18 +5460,19 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 		float qty;
 
 		if (ccc->item == -1) {
-			sprintf(msg, "    CARGO BAY %d: ** EMPTY **", i);
+			snprintf(msg, sizeof(msg), "    CARGO BAY %d: ** EMPTY **", i);
 			send_comms_packet("", ch, msg);
 		} else {
 			itemname = commodity[ccc->item].name;
 			unit = commodity[ccc->item].unit;
 			qty = ccc->qty;
-			sprintf(msg, "    CARGO BAY %d: %4.0f %s %s", i, qty, unit, itemname);
+			snprintf(msg, sizeof(msg), "    CARGO BAY %d: %4.0f %s %s",
+					i, qty, unit, itemname);
 			send_comms_packet("", ch, msg);
 		}
 	}
 	send_comms_packet(name, ch, " --------------------------------------");
-	sprintf(msg, " CASH ON HAND:  $%.2f", ship->tsd.ship.wallet);
+	snprintf(msg, sizeof(msg), " CASH ON HAND:  $%.2f", ship->tsd.ship.wallet);
 	send_comms_packet(name, ch, msg);
 	send_comms_packet(name, ch, " --------------------------------------");
 }
@@ -5484,12 +5485,12 @@ static void meta_comms_channel(char *name, struct game_client *c, char *txt)
 
 	rc = sscanf(txt, "/channel %u\n", &newchannel);
 	if (rc != 1) {
-		sprintf(msg, "INVALID CHANNEL - CURRENT CHANNEL %u",
+		snprintf(msg, sizeof(msg), "INVALID CHANNEL - CURRENT CHANNEL %u",
 				bridgelist[c->bridge].comms_channel);
 		send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
 		return;
 	}
-	sprintf(msg, "TRANSMISSION TERMINATED ON CHANNEL %u",
+	snprintf(msg, sizeof(msg), "TRANSMISSION TERMINATED ON CHANNEL %u",
 			bridgelist[c->bridge].comms_channel);
 	send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
 	bridgelist[c->bridge].comms_channel = newchannel;
@@ -5502,7 +5503,7 @@ static void meta_comms_channel(char *name, struct game_client *c, char *txt)
 		bridgelist[c->bridge].npcbot.special_bot = NULL;
 	}
 
-	sprintf(msg, "TX/RX INITIATED ON CHANNEL %u", newchannel);
+	snprintf(msg, sizeof(msg), "TX/RX INITIATED ON CHANNEL %u", newchannel);
 	send_comms_packet(name, newchannel, msg);
 }
 
@@ -5543,12 +5544,12 @@ static void npc_send_parts_menu(char *npcname, struct npc_bot_state *botstate)
 	sb = &go[i];
 
 	send_comms_packet(npcname, botstate->channel, "");
-	sprintf(msg, "  -- BUY %s PARTS --", damcon_system_name(botstate->parts_menu));
+	snprintf(msg, sizeof(msg), "  -- BUY %s PARTS --", damcon_system_name(botstate->parts_menu));
 	send_comms_packet(npcname, botstate->channel, msg);
 	for (i = 0; i < DAMCON_PARTS_PER_SYSTEM; i++) {
 		float price = sb->tsd.starbase.part_price[botstate->parts_menu *
 								DAMCON_PARTS_PER_SYSTEM + i];
-		sprintf(msg, "  %c:   $%.2f   %s\n", i + 'A', price,
+		snprintf(msg, sizeof(msg), "  %c:   $%.2f   %s\n", i + 'A', price,
 				damcon_part_name(botstate->parts_menu, i));
 		send_comms_packet(npcname, botstate->channel, msg);
 	}
@@ -5706,21 +5707,21 @@ void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 
 	if (pl) {
 		/* TODO: fill in all this crap */
-		sprintf(msg, " TRAVEL ADVISORY FOR %s", name);
+		snprintf(msg, sizeof(msg), " TRAVEL ADVISORY FOR %s", name);
 		send_comms_packet(npcname, ch, msg);
 		send_comms_packet(npcname, ch, "-----------------------------------------------------");
-		sprintf(msg, " WELCOME TO STARBASE %s, IN ORBIT", sb->tsd.starbase.name);
+		snprintf(msg, sizeof(msg), " WELCOME TO STARBASE %s, IN ORBIT", sb->tsd.starbase.name);
 		send_comms_packet(npcname, ch, msg);
-		sprintf(msg, " AROUND THE BEAUTIFUL PLANET %s.", name);
+		snprintf(msg, sizeof(msg), " AROUND THE BEAUTIFUL PLANET %s.", name);
 		send_comms_packet(npcname, ch, msg);
 		send_comms_packet(npcname, ch, "");
 		send_comms_packet(npcname, ch, " PLANETARY SURFACE TEMP: -15 - 103");
 		send_comms_packet(npcname, ch, " PLANETARY SURFACE WIND SPEED: 0 - 203");
 	} else {
-		sprintf(msg, " TRAVEL ADVISORY FOR STARBASE %s", name);
+		snprintf(msg, sizeof(msg), " TRAVEL ADVISORY FOR STARBASE %s", name);
 		send_comms_packet(npcname, ch, msg);
 		send_comms_packet(npcname, ch, "-----------------------------------------------------");
-		sprintf(msg, " WELCOME TO STARBASE %s, IN DEEP SPACE",
+		snprintf(msg, sizeof(msg), " WELCOME TO STARBASE %s, IN DEEP SPACE",
 				sb->tsd.starbase.name);
 		send_comms_packet(npcname, ch, msg);
 		send_comms_packet(npcname, ch, "");
@@ -5759,21 +5760,21 @@ void npc_menu_item_request_dock(struct npc_menu_item *item,
 	sb = &go[i];
 	dist = dist3d(sb->x - o->x, sb->y - o->y, sb->z - o->z);
 	if (dist > STARBASE_DOCKING_DIST) {
-		sprintf(msg, "%s, YOU ARE TOO FAR AWAY (%lf).\n", b->shipname, dist);
+		snprintf(msg, sizeof(msg), "%s, YOU ARE TOO FAR AWAY (%lf).\n", b->shipname, dist);
 		send_comms_packet(npcname, ch, msg);
 		return;
 	}
 	if (o->sdata.shield_strength > 15) {
-		sprintf(msg, "%s, YOU MUST LOWER SHIELDS FIRST.\n", b->shipname);
+		snprintf(msg, sizeof(msg), "%s, YOU MUST LOWER SHIELDS FIRST.\n", b->shipname);
 		send_comms_packet(npcname, ch, msg);
 		return;
 	}
-	sprintf(msg, "%s, PERMISSION TO DOCK GRANTED.", b->shipname);
+	snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK GRANTED.", b->shipname);
 	send_comms_packet(npcname, ch, msg);
-	sprintf(msg, "%s, WELCOME TO OUR STARBASE, ENJOY YOUR STAY.", b->shipname);
+	snprintf(msg, sizeof(msg), "%s, WELCOME TO OUR STARBASE, ENJOY YOUR STAY.", b->shipname);
 	send_comms_packet(npcname, ch, msg);
 	/* TODO make the repair/refuel process a bit less easy */
-	sprintf(msg, "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
+	snprintf(msg, sizeof(msg), "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
 		b->shipname);
 	init_player(o, 0);
 	send_ship_damage_packet(o);
@@ -5801,14 +5802,14 @@ static void send_npc_menu(char *npcname,  int bridge)
 	menu++;
 	i = 1;
 	while (menu->name) {
-		sprintf(msg, "     %d: %s\n", i, menu->name);
+		snprintf(msg, sizeof(msg), "     %d: %s\n", i, menu->name);
 		send_comms_packet(npcname, channel, msg);
 		menu++;
 		i++;
 	};
 	menu = &bridgelist[bridge].npcbot.current_menu[0];
 	if (menu->parent_menu) {
-		sprintf(msg, "     %d: BACK TO %s\n", 0, menu->parent_menu->name);
+		snprintf(msg, sizeof(msg), "     %d: BACK TO %s\n", 0, menu->parent_menu->name);
 		send_comms_packet(npcname, channel, msg);
 	}
 	send_comms_packet(npcname, channel, "");
@@ -5906,7 +5907,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			ship->tsd.ship.cargo[empty_bay].item = mkt[x - 'A'].item;
 			ship->tsd.ship.cargo[empty_bay].qty = q;
 			mkt[x - 'A'].qty -= q;
-			sprintf(m, " EXECUTING BUY ORDER %d %c", q, x);
+			snprintf(m, sizeof(m), " EXECUTING BUY ORDER %d %c", q, x);
 			send_comms_packet(n, channel, m);
 			snis_queue_add_sound(TRANSPORTER_SOUND,
 					ROLE_SOUNDSERVER, ship->id);
@@ -5955,7 +5956,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				ship->tsd.ship.cargo[(int) x].item = -1;
 				ship->tsd.ship.cargo[(int) x].qty = 0.0f;
 			}
-			sprintf(m, " EXECUTING SELL ORDER %d %c", q, x);
+			snprintf(m, sizeof(m), " EXECUTING SELL ORDER %d %c", q, x);
 			send_comms_packet(n, channel, m);
 			snis_queue_add_sound(TRANSPORTER_SOUND,
 					ROLE_SOUNDSERVER, ship->id);
@@ -5977,7 +5978,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				bid = mkt[i].bid;
 				ask = mkt[i].ask;
 				qty = mkt[i].qty;
-				sprintf(m, " %c: %04.0f %s %s -- $%4.2f  $%4.2f\n",
+				snprintf(m, sizeof(m), " %c: %04.0f %s %s -- $%4.2f  $%4.2f\n",
 					i + 'A', qty, unit, itemname, bid, ask);
 				send_comms_packet(n, channel, m);
 			}
@@ -5997,7 +5998,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				qty = ship->tsd.ship.cargo[i].qty;
 				/* FIXME: do better than this. */
 				bid = snis_randn(100) + 5;
-				sprintf(m, " %c: %04.0f %s %s -- $%4.2f",
+				snprintf(m, sizeof(m), " %c: %04.0f %s %s -- $%4.2f",
 					i + 'A', qty, unit, itemname, bid);
 				send_comms_packet(n, channel, m);
 				count++;
@@ -6057,7 +6058,7 @@ static void starbase_npc_bot(struct snis_entity *o, int bridge, char *name, char
 	if (selection == -1) {
 		/* struct marketplace_data *mkt = o->tsd.starbase.mkt;  */
 		send_comms_packet(n, channel, "");
-		sprintf(m,
+		snprintf(m, sizeof(m),
 			"  WELCOME %s, I AM A MODEL ZX81 SERVICE", name);
 		send_comms_packet(n, channel, m);
 		send_comms_packet(n, channel,
@@ -6190,7 +6191,7 @@ channels_maxxed:
 
 	/* If switching to channel to communicate with a starbase... */
 	if (switch_channel && bridgelist[c->bridge].comms_channel != channel[0]) {
-		sprintf(msg, "TRANSMISSION TERMINATED ON CHANNEL %u",
+		snprintf(msg, sizeof(msg), "TRANSMISSION TERMINATED ON CHANNEL %u",
 				bridgelist[c->bridge].comms_channel);
 		send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
 		bridgelist[c->bridge].comms_channel = channel[0];
@@ -6198,12 +6199,13 @@ channels_maxxed:
 		bridgelist[c->bridge].npcbot.channel = channel[0];
 		bridgelist[c->bridge].npcbot.current_menu = starbase_main_menu;
 		bridgelist[c->bridge].npcbot.special_bot = NULL;
-		sprintf(msg, "TX/RX INITIATED ON CHANNEL %u", channel[0]);
+		snprintf(msg, sizeof(msg), "TX/RX INITIATED ON CHANNEL %u", channel[0]);
 		send_comms_packet(name, channel[0], msg);
 		send_to_npcbot(c->bridge, name, msg);
 	} else {
 		for (i = 0; i < nchannels; i++) {
-			sprintf(msg, "*** HAILING ON CHANNEL %u ***", bridgelist[c->bridge].comms_channel);
+			snprintf(msg, sizeof(msg), "*** HAILING ON CHANNEL %u ***",
+					bridgelist[c->bridge].comms_channel);
 			send_comms_packet(name, channel[i], msg);
 		}
 	}
