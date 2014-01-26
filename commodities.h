@@ -34,4 +34,11 @@ struct commodity {
 
 struct commodity *read_commodities(char *filename, int *ncommodities);
 
+/* economy, tech_level, government will be between 0.0 and 1.0 indicating the
+ * "wealthiness", "techiness", and "government stability" of the planet,
+ * respectively.
+ */
+float commodity_calculate_price(struct commodity *c,
+		float economy, float tech_level, float government);
+
 #endif

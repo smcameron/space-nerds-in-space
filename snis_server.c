@@ -3935,6 +3935,64 @@ static int mkt_item_already_present(struct marketplace_data *mkt, int nitems, in
 	return 0;
 }
 
+static float calculate_commodity_price(struct snis_entity *planet, int item)
+{
+	float economy, tech_level, government;
+#if 0
+	int i;
+	static int test_done = 0;
+	float price;
+
+	if (!test_done) {
+
+		for (i = 0; i < ARRAY_SIZE(economy_name); i++) {
+			economy = 1.0f - (float) i / (float) ARRAY_SIZE(economy_name);
+			tech_level = 0.5f;
+			government = 0.5f;
+			price = commodity_calculate_price(&commodity[item],
+					economy, tech_level, government);
+			printf("economy %d: %.2f %s\n", i, price, commodity[item].name);
+		}
+		for (i = 0; i < ARRAY_SIZE(tech_level_name); i++) {
+			economy = 0.5f;
+			tech_level = 1.0f - (float) i / (float) ARRAY_SIZE(tech_level_name);
+			government = 0.5f;
+			price = commodity_calculate_price(&commodity[item],
+					economy, tech_level, government);
+			printf("tech level %d: %.2f %s\n", i, price, commodity[item].name);
+		}
+		for (i = 0; i < ARRAY_SIZE(government_name); i++) {
+			economy = 0.5f;
+			tech_level = 0.5f;
+			government = 1.0f - (float) i / (float) ARRAY_SIZE(government_name);
+			price = commodity_calculate_price(&commodity[item],
+					economy, tech_level, government);
+			printf("government %d: %.2f %s\n", i, price, commodity[item].name);
+		}
+		test_done = 1;
+	}
+#endif
+
+	/* economy, tech_level, government will be between 0.0 and 1.0 indicating the
+	 * "wealthiness", "techiness", and "government stability" of the planet,
+	 * respectively.
+	 */
+	if (planet) {
+		economy = 1.0f - (float) planet->tsd.planet.economy /
+					(float) ARRAY_SIZE(economy_name);
+		tech_level = 1.0f - (float) planet->tsd.planet.tech_level /
+					(float) ARRAY_SIZE(tech_level_name);
+		government = 1.0f - (float) planet->tsd.planet.government /
+					(float) ARRAY_SIZE(government_name);
+	} else {
+		/* Deep space starbases will be in top 10% of everything, let's say */
+		economy = 1.0 - snis_randn(100) / 1000;
+		tech_level = 1.0 - snis_randn(100) / 1000;
+		government = 1.0 - snis_randn(100) / 1000;
+	}
+	return commodity_calculate_price(&commodity[item], economy, tech_level, government);
+}
+
 static void init_starbase_market(struct snis_entity *o)
 {
 	int i;
@@ -3964,10 +4022,23 @@ static void fabricate_prices(struct snis_entity *starbase)
 {
 	int i, j;
 	float variation;
+	struct snis_entity *planet;
 
-	/* FIXME: do something better. */
+	/* lookup associated planet, if any... */
+	if (starbase->tsd.starbase.associated_planet_id < 0) {
+		planet = NULL;
+	} else {
+		i = lookup_by_id(starbase->tsd.starbase.associated_planet_id);
+		if (i < 0)
+			planet = NULL;
+		else
+			planet = &go[i];
+	}
+
+	/* calculate commodity prices at this starbase based on assoc. planet */
 	for (i = 0; i < ncommodities; i++)
-		starbase->tsd.starbase.bid_price[i] = (float) (snis_randn(100) + 5);
+		starbase->tsd.starbase.bid_price[i] =
+			calculate_commodity_price(planet, i);
 	starbase->tsd.starbase.part_price = malloc(sizeof(*starbase->tsd.starbase.part_price) *
 						((DAMCON_SYSTEM_COUNT - 1) * DAMCON_PARTS_PER_SYSTEM));
 	for (i = 0; i < DAMCON_SYSTEM_COUNT - 1; i++) {

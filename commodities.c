@@ -176,3 +176,26 @@ struct commodity *read_commodities(char *filename, int *ncommodities)
 	*ncommodities = n;
 	return clist;
 }
+
+/* economy, tech_level, government will be between 0.0 and 1.0 indicating the
+ * "wealthiness", "techiness", and "government stability" of the planet,
+ * respectively.
+ */
+float commodity_calculate_price(struct commodity *c,
+		float economy, float tech_level, float government)
+{
+	float econ_price_factor, tech_level_factor, government_factor, price;
+
+	econ_price_factor = 2.0f * (economy - 0.5f) * c->econ_sensitivity;
+	tech_level_factor = 2.0f * (tech_level - 0.5f) * c->tech_sensitivity;
+	government_factor = 2.0f * (government - 0.5f) * c->govt_sensitivity;
+
+	price = c->base_price +
+		c->base_price * econ_price_factor +
+		c->base_price * tech_level_factor +
+		c->base_price * government_factor;
+
+	/* TODO: add some random variability, but not enough to swamp. */
+	return price;
+}
+
