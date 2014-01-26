@@ -801,7 +801,7 @@ void plane_vector_u_and_v_from_normal(union vec3 *u, union vec3 *v, const union 
 
 	/* find a vector we can use for our basis to define v */
 	float dot = vec3_dot(n, &basis);
-	if (fabs(dot) < ZERO_TOLERANCE) {
+	if (fabs(dot) >= 1.0 - ZERO_TOLERANCE) {
 		/* if forward is parallel, we can use up */
 		vec3_init(&basis, 0, 1, 0);
 	}
