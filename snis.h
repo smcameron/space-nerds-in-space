@@ -471,9 +471,9 @@ static char *government_name[] = {
 	"Corporate State",
 };
 
-static char *tech_level_name[] = {
+/* need to think of something better here... */
+__attribute__((unused)) static char *tech_level_name[] = {
 	"stone age",
-	"bronze age",
 	"iron age",
 	"steel age",
 	"silicon age",

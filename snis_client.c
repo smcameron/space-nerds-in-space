@@ -9401,7 +9401,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		sprintf(buf, "GOVERNMENT: %s", government_name[p->government]);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += 20;
-		sprintf(buf, "TECH LEVEL: %s", tech_level_name[p->tech_level]);
+		sprintf(buf, "TECH LEVEL: %d", p->tech_level);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += 20;
 		sprintf(buf, "ECONOMY: %s", economy_name[p->economy]);
