@@ -1302,9 +1302,9 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 }
 
 static int update_planet(uint32_t id, double x, double y, double z, double r, uint8_t government,
-				uint8_t tech_level, uint8_t economy, uint32_t dseed)
+				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring)
 {
-	int i, m, k, hasring;
+	int i, m, k;
 	struct entity *e, *ring;
 	union quat orientation;
 
@@ -1313,7 +1313,6 @@ static int update_planet(uint32_t id, double x, double y, double z, double r, ui
 		/* Orientation should be consistent across clients because planets don't move */
 		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
 		k = id % (NPLANET_MATERIALS * 4);
-		hasring = ((k % 4) == 0);
 		m = k % NPLANET_MATERIALS;
 		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
 		update_entity_scale(e, r);
@@ -3984,6 +3983,7 @@ static int process_update_planet_packet(void)
 	double dr, dx, dy, dz;
 	uint8_t government, tech_level, economy;
 	uint32_t dseed;
+	int hasring;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
@@ -3995,8 +3995,11 @@ static int process_update_planet_packet(void)
 			&dseed, &government, &tech_level, &economy);
 	if (rc != 0)
 		return rc;
+	hasring = (dr < 0);
+	if (hasring)
+		dr = -dr;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_planet(id, dx, dy, dz, dr, government, tech_level, economy, dseed);
+	rc = update_planet(id, dx, dy, dz, dr, government, tech_level, economy, dseed, hasring);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

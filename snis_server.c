@@ -4609,6 +4609,7 @@ static int add_planet(double x, double y, double z, float radius)
 	go[i].tsd.planet.tech_level = snis_randn(1000) % ARRAY_SIZE(tech_level_name);
 	go[i].tsd.planet.description_seed = snis_rand();
 	go[i].tsd.planet.radius = radius;
+	go[i].tsd.planet.ring = snis_randn(100) < 50;
 	return i;
 }
 
@@ -8685,11 +8686,19 @@ static void send_update_derelict_packet(struct game_client *c,
 static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o)
 {
+	double ring;
+
+	/* encode ring presence as negative radius */
+	if (o->tsd.planet.ring)
+		ring = -1.0;
+	else
+		ring = 1.0;
+
 	pb_queue_to_client(c, packed_buffer_new("hwSSSSwbbb", OPCODE_UPDATE_PLANET, o->id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
-					(double) o->tsd.planet.radius, (int32_t) UNIVERSE_DIM,
+					ring * (double) o->tsd.planet.radius, (int32_t) UNIVERSE_DIM,
 					o->tsd.planet.description_seed,
 					o->tsd.planet.government,
 					o->tsd.planet.tech_level,
