@@ -12120,7 +12120,7 @@ static void init_meshes()
 	heading_indicator_mesh = snis_read_stl_file(d, "heading_indicator.stl");
 	cargo_container_mesh = snis_read_stl_file(d, "cargocontainer.stl");
 	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
-	sun_mesh = mesh_fabricate_billboard(0, 0, 5000, 5000);
+	sun_mesh = mesh_fabricate_billboard(0, 0, 30000, 30000);
 	thrust_animation_mesh = init_thrust_mesh(10, 7, 3, 1);
 
 	/* Note: these must match defines of SHIPTYPEs in snis.h */
