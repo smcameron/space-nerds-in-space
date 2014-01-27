@@ -2824,6 +2824,7 @@ static void scoop_up_cargo(struct snis_entity *player, struct snis_entity *cargo
 		if (player->tsd.ship.cargo[i].item == -1) {
 			/* put it in first empty cargo bay */
 			player->tsd.ship.cargo[i] = cargo->tsd.cargo_container.contents;
+			player->tsd.ship.cargo_price_paid[i] = 0.0f;
 			cargo->alive = 0;
 			delete_from_clients_and_server(cargo);
 			snis_queue_add_sound(TRANSPORTER_SOUND,
@@ -5537,8 +5538,8 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 			itemname = commodity[ccc->item].name;
 			unit = commodity[ccc->item].unit;
 			qty = ccc->qty;
-			snprintf(msg, sizeof(msg), "    CARGO BAY %d: %4.0f %s %s",
-					i, qty, unit, itemname);
+			snprintf(msg, sizeof(msg), "    CARGO BAY %d: %4.0f %s %s - PAID $%.2f",
+					i, qty, unit, itemname, ship->tsd.ship.cargo_price_paid[i]);
 			send_comms_packet("", ch, msg);
 		}
 	}
@@ -5898,7 +5899,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 	struct marketplace_data *mkt = o->tsd.starbase.mkt;
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
 	int rc, selection;
-	float range2;
+	float range2, profitloss;
 
 	i = lookup_by_id(bridgelist[bridge].shipid);
 	if (i < 0) {
@@ -5975,6 +5976,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				return;
 			}
 			ship->tsd.ship.wallet -= q * ask;
+			ship->tsd.ship.cargo_price_paid[empty_bay] = ask;
 			ship->tsd.ship.cargo[empty_bay].item = mkt[x - 'A'].item;
 			ship->tsd.ship.cargo[empty_bay].qty = q;
 			mkt[x - 'A'].qty -= q;
@@ -6022,10 +6024,13 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			}
 			ship->tsd.ship.cargo[(int) x].qty -= q;
 			ship->tsd.ship.wallet +=
-				q * o->tsd.starbase.bid_price[ship->tsd.ship.cargo[(int) x].item];
+				q * mkt[ship->tsd.ship.cargo[(int) x].item].bid;
+			profitloss = q * mkt[ship->tsd.ship.cargo[(int) x].item].bid
+					- q * ship->tsd.ship.cargo_price_paid[(int) x];
 			if (ship->tsd.ship.cargo[(int) x].qty < 0.1) {
 				ship->tsd.ship.cargo[(int) x].item = -1;
 				ship->tsd.ship.cargo[(int) x].qty = 0.0f;
+				ship->tsd.ship.cargo_price_paid[(int) x] = 0.0f;
 			}
 			snprintf(m, sizeof(m), " EXECUTING SELL ORDER %d %c", q, x);
 			send_comms_packet(n, channel, m);
@@ -6033,6 +6038,9 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 					ROLE_SOUNDSERVER, ship->id);
 			send_comms_packet(n, channel,
 				"TRANSPORTER BEAM ACTIVATED - GOODS TRANSFERRED");
+			snprintf(m, sizeof(m), " SOLD FOR A %s OF $%.2f",
+				profitloss < 0 ? "LOSS" : "PROFIT", profitloss);
+			send_comms_packet(n, channel, m);
 			return;
 		}
 	}
@@ -6067,10 +6075,10 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				itemname = commodity[item].name;
 				unit = commodity[item].unit;
 				qty = ship->tsd.ship.cargo[i].qty;
-				/* FIXME: do better than this. */
-				bid = snis_randn(100) + 5;
-				snprintf(m, sizeof(m), " %c: %04.0f %s %s -- $%4.2f",
-					i + 'A', qty, unit, itemname, bid);
+				bid = mkt[item].bid;
+				snprintf(m, sizeof(m), " %c: %04.0f %s %s -- $%4.2f (PAID $%.2f)",
+					i + 'A', qty, unit, itemname, bid,
+					ship->tsd.ship.cargo_price_paid[i]);
 				send_comms_packet(n, channel, m);
 				count++;
 			}
