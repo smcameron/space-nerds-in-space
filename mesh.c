@@ -370,6 +370,11 @@ static union vec3 compute_triangle_normal(struct triangle *t)
 
 	vec3_cross(&cross, &v1, &v2);
 	vec3_normalize_self(&cross);
+
+	/* make sure we always have a valid normal */
+	if (isnan(cross.v.x) || isnan(cross.v.y) || isnan(cross.v.z))
+		vec3_init(&cross, 0, 1, 0);
+
 	return cross;
 }
 
