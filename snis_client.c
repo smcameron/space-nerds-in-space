@@ -7724,6 +7724,25 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	const float max_xknown_pct = 0.080;
 
 	float zoom_pct = (255.0 - current_zoom) / 255.0;
+
+	/* 5th order curve fit correction to make each step of zoom the same relative percent
+
+	   The idea is that for each tick of zoom the range will increase by a similar area of the screen,
+	   with just straight calculation of zoom_pct * (max - min) + min each tick is the same range so
+	   at the highest zoom level the change on screen is huge and at the lowest the change is almost nothing.
+
+	   This correction is a numeric solution to balance this such that
+		 per_tick_ratio = ((zoom + i) / 255 * (max - min) + min) / ((zoom + i + 1) / 255 * (max - min) + min)
+	   is near constant for i = 0 to 255
+
+	   This solution is specific to 255 levels of zoom, min=0.001, max=0.080
+	*/
+	zoom_pct = 0.0830099263 * zoom_pct +
+		-0.2213190821 * zoom_pct * zoom_pct +
+		1.5740944991 * zoom_pct * zoom_pct * zoom_pct +
+		-2.1824091103 * zoom_pct * zoom_pct * zoom_pct * zoom_pct +
+		1.7448656221 * zoom_pct * zoom_pct * zoom_pct * zoom_pct * zoom_pct;
+
 	screen_radius = ((zoom_pct * (max_xknown_pct-min_xknown_pct)) + min_xknown_pct) * XKNOWN_DIM;
 	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
 
