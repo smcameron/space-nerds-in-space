@@ -6067,8 +6067,8 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			}
 			ship->tsd.ship.cargo[(int) x].qty -= q;
 			ship->tsd.ship.wallet +=
-				q * mkt[ship->tsd.ship.cargo[(int) x].item].bid;
-			profitloss = q * mkt[ship->tsd.ship.cargo[(int) x].item].bid
+				q * o->tsd.starbase.bid_price[ship->tsd.ship.cargo[(int) x].item];
+			profitloss = q * o->tsd.starbase.bid_price[ship->tsd.ship.cargo[(int) x].item] 
 					- q * ship->tsd.ship.cargo_price_paid[(int) x];
 			if (ship->tsd.ship.cargo[(int) x].qty < 0.1) {
 				ship->tsd.ship.cargo[(int) x].item = -1;
@@ -6118,7 +6118,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				itemname = commodity[item].name;
 				unit = commodity[item].unit;
 				qty = ship->tsd.ship.cargo[i].qty;
-				bid = mkt[item].bid;
+				bid = o->tsd.starbase.bid_price[item];
 				snprintf(m, sizeof(m), " %c: %04.0f %s %s -- $%4.2f (PAID $%.2f)",
 					i + 'A', qty, unit, itemname, bid,
 					ship->tsd.ship.cargo_price_paid[i]);
