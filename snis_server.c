@@ -6007,7 +6007,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			}
 
 			/* check qty */
-			if (q < 0) {
+			if (q <= 0 || q > mkt[x - 'A'].qty) {
 				send_comms_packet(n, channel, " INVALID BUY ORDER");
 				return;
 			}
