@@ -470,7 +470,7 @@ static void get_peer_name(int connection, char *buffer)
 {
 	struct sockaddr_in *peer;
 	struct sockaddr p;
-	unsigned int addrlen;
+	socklen_t addrlen = sizeof(p);
 	int rc;
 
 	peer = (struct sockaddr_in *) &p;
