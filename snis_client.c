@@ -8015,7 +8015,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				update_entity_scale(e, -proj_distance);
 				update_entity_orientation(e, &o->orientation);
 
-				e = add_entity(navecx, ring_mesh, ship_plane_proj.v.x, ship_plane_proj.v.y, ship_plane_proj.v.z, DARKRED);
+				e = add_entity(navecx, ring_mesh, ship_plane_proj.v.x, ship_plane_proj.v.y, ship_plane_proj.v.z, RED);
 				update_entity_scale(e, contact_ring_radius);
 				update_entity_orientation(e, &o->orientation);
 			}
