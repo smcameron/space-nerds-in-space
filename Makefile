@@ -382,6 +382,10 @@ test-fleet: quat.o fleet.o mathutils.o mtwist.o Makefile
 test-mtwist: mtwist.o test-mtwist.c Makefile
 	gcc -o test-mtwist mtwist.o test-mtwist.c
 
+test-commodities:	commodities.o Makefile
+	gcc -DTESTCOMMODITIES=1 -c commodities.c -o test-commodities.o
+	gcc -DTESTCOMMODITIES=1 -o test-commodities test-commodities.o
+
 test :	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist
 
 clean:	mostly-clean

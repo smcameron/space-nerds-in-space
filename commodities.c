@@ -199,3 +199,37 @@ float commodity_calculate_price(struct commodity *c,
 	return price;
 }
 
+#ifdef TESTCOMMODITIES
+
+static void test_price(struct commodity *c, float e, float g, float t)
+{
+	float p;
+
+	p = commodity_calculate_price(c, e, t, g);
+	printf("%s %0.2f %0.2f %0.2f %3.2f\n", c->name, e, t, g, p);
+}
+
+int main(int argc, char *argv[])
+{
+	struct commodity *c;
+	float e, g, t;
+	int i, ncommodities;
+
+	if (argc < 2) {
+		fprintf(stderr, "usage: test-commodities commodities-file\n");
+		return 1;
+	}
+	c = read_commodities(argv[1], &ncommodities);
+	if (!c) {
+		fprintf(stderr, "Failed to read commodities file %s\n", argv[1]);
+		return 1;
+	}
+
+	for (i = 0; i < ncommodities; i++)
+		for (e = -1.0; e <= 1.0; e += 0.1)
+			for (g = -1.0; g <= 1.0; g += 0.1)
+				for (t = -1.0; t <= 1.0; t += 0.1)
+					test_price(&c[i], e, g, t);
+	return 0;
+}
+#endif
