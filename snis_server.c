@@ -4111,7 +4111,7 @@ static int add_starbase(double x, double y, double z,
 	go[i].tsd.starbase.lifeform_count = snis_randn(100) + 100;
 	go[i].tsd.starbase.associated_planet_id = assoc_planet_id;
 	go[i].sdata.shield_strength = 255;
-	go[i].tsd.starbase.bid_price = malloc(sizeof(go[i].tsd.starbase.bid_price) * ncommodities);
+	go[i].tsd.starbase.bid_price = malloc(sizeof(*go[i].tsd.starbase.bid_price) * ncommodities);
 	fabricate_prices(&go[i]);
 	init_starbase_market(&go[i]);
 	/* FIXME, why name stored twice? probably just use sdata.name is best
