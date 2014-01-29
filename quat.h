@@ -55,7 +55,7 @@ union quat {
 	} v;
 	float vec[4];
 };
-
+#define IDENTITY_QUAT_INITIALIZER { { 1.0, 0.0, 0.0, 0.0 } }
 extern const union quat identity_quat;
 
 /* euler angle */

@@ -4954,7 +4954,7 @@ static void show_mainscreen(GtkWidget *w)
 	static int current_zoom = 0;
 	float angle_of_view;
 	struct snis_entity *o;
-	static union quat camera_orientation;
+	static union quat camera_orientation = IDENTITY_QUAT_INITIALIZER;
 	union quat desired_cam_orientation;
 	static union vec3 cam_offset;
 	union vec3 cam_pos;
@@ -5933,7 +5933,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	}
 
 	/* cam orientation is locked with world */
-	static union quat cam_orientation = {{1,0,0,0}};
+	static union quat cam_orientation = IDENTITY_QUAT_INITIALIZER;
 	static union vec3 camera_lookat = {{0,0,0}};
 	static float cam_range_fraction = 0;
 
@@ -7424,7 +7424,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	union vec3 ship_normal = {{0, 1, 0}};
 	quat_rot_vec_self(&ship_normal, &o->orientation);
 
-	static union quat cam_orientation = {{1,0,0,0}};
+	static union quat cam_orientation = IDENTITY_QUAT_INITIALIZER;
 	if (first_frame) {
 		quat_copy(&cam_orientation, &o->orientation);
 	} else {
