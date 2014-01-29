@@ -472,6 +472,401 @@ error:
 	return NULL;
 }
 
+static void clean_spaces(char *line)
+{
+	char *s, *d;
+	int skip_spaces = 1;
+
+	s = line;
+	d = line;
+
+	while (*s) {
+		if ((*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r') && skip_spaces) {
+			s++;
+			continue;
+		}
+		skip_spaces = 0;
+		if (*s == '\t' || *s == '\n' || *s == '\r')
+			*s = ' ';
+		if (*s == ' ')
+			skip_spaces = 1;
+		*d = *s;
+		s++;
+		d++;
+	}
+	*d = '\0';
+}
+
+static void remove_trailing_whitespace(char *s)
+{
+	int len = strlen(s) - 1;
+
+	do {
+		switch (s[len]) {
+		case '\t':
+		case ' ':
+		case '\r':
+		case '\n':
+			s[len] = '\0';
+			len--;
+		default:
+			return;
+		}
+	} while (1);
+}
+
+static void fixup_triangle_vertex_ptrs(struct mesh *m, struct vertex *oldptr, struct vertex *newptr)
+{
+	int i;
+
+	/* when you realloc() m->v, all the pointers in m->t need fixing up. */
+	for (i = 0; i < m->ntriangles; i++) {
+		m->t[i].v[0] = newptr + (m->t[i].v[0] - oldptr);
+		m->t[i].v[1] = newptr + (m->t[i].v[1] - oldptr);
+		m->t[i].v[2] = newptr + (m->t[i].v[2] - oldptr);
+	}
+}
+
+static int obj_add_vertex(struct mesh *m, char *line, int *verts_alloced)
+{
+	int rc;
+	float x, y, z, w;
+	struct vertex *newmem;
+
+	rc = sscanf(line, "v %f %f %f %f", &x, &y, &z, &w);
+	if (rc != 4) {
+		w = 1.0f;
+		rc = sscanf(line, "v %f %f %f", &x, &y, &z);
+		if (rc != 3)
+			return -1;
+	}
+
+	/* Get some more memory for vertices if needed */
+	if (m->nvertices + 1 > *verts_alloced) {
+		struct vertex *oldptr = m->v;
+		*verts_alloced = *verts_alloced + 100;
+		newmem = realloc(m->v, *verts_alloced * sizeof(*m->v));
+		if (!newmem)
+			return -1;
+		m->v = newmem;
+		fixup_triangle_vertex_ptrs(m, oldptr, newmem);
+	}
+
+	m->v[m->nvertices].x = x;
+	m->v[m->nvertices].y = y;
+	m->v[m->nvertices].z = z;
+	m->v[m->nvertices].w = w;
+	m->nvertices++;
+	return 0;
+}
+
+static int obj_add_texture_vertex(struct vertex **vt, char *line,
+				int *nverts_alloced, int *nverts_used)
+{
+	int rc;
+	float u, v, w;
+
+	w = 0.0f;
+	rc = sscanf(line, "vt %f %f %f", &u, &v, &w);
+	if (rc == 3) {
+		fprintf(stderr, "ignoring w component of texture.\n");
+		w = 0.0f;
+	} else {
+		rc = sscanf(line, "vt %f %f", &u, &v);
+		if (rc != 2)
+			return -1;
+	}
+
+	if (*nverts_used >= *nverts_alloced) {
+		struct vertex *newmem;
+
+		*nverts_alloced += 100;
+		newmem = realloc(*vt, *nverts_alloced * sizeof(**vt));
+		if (!newmem)
+			return -1;
+		*vt = newmem;
+	}
+	(*vt)[*nverts_used].x = u;
+	(*vt)[*nverts_used].y = v;
+	(*vt)[*nverts_used].z = 0.0f;
+	(*vt)[*nverts_used].w = w;
+	(*nverts_used)++;
+
+	return 0;
+}
+
+static int obj_add_vertex_normal(struct vertex **vt, char *line,
+					int *nverts_alloced, int *nverts_used)
+{
+	int rc;
+	float x, y, z;
+	union vec3 v;
+
+	rc = sscanf(line, "vn %f %f %f", &x, &y, &z);
+	if (rc == 3)
+		return -1;
+
+	if (*nverts_used >= *nverts_alloced) {
+		struct vertex *newmem;
+
+		*nverts_alloced += 100;
+		newmem = realloc(*vt, *nverts_alloced * sizeof(**vt));
+		if (!newmem)
+			return -1;
+		*vt = newmem;
+	}
+
+	v.v.x = x;
+	v.v.y = y;
+	v.v.z = z;
+	vec3_normalize_self(&v);
+
+	(*vt)[*nverts_used].x = v.v.x;
+	(*vt)[*nverts_used].y = v.v.y;
+	(*vt)[*nverts_used].z = v.v.z;
+	(*vt)[*nverts_used].w = 1.0f;
+	(*nverts_used)++;
+
+	return 0;
+}
+
+static int fixup_vertex_indices(int v[], int n)
+{
+	int i;
+
+	for (i = 0; i < 3; i++) {
+		if (v[i] > 0) { /* convert positive numbers to zero-based array indices */
+			v[i]--;
+		} else {
+			if (v[i] < 0) {/* convert negative numbers to array indices */
+				v[i] = n - v[i];
+			} else {
+				fprintf(stderr, "Face contains illegal vertex 0.\n");
+				return -1;
+			}
+		}
+	}
+	return 0;
+}
+
+static int obj_add_face(struct mesh *m, char *line, int *tris_alloced,
+			struct triangle **ft, int *ft_alloced, int *ft_used,
+			struct vertex *vt, int nvt, struct vertex *vn, int nvn)
+{
+	int rc, v[3], tv[3], nv[3], tmp;
+	int vvalid, tvalid, nvalid;
+
+	vvalid = 0;
+	tvalid = 0;
+	nvalid = 0;
+
+	rc = sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d",
+			&v[0], &tv[0], &nv[0],
+			&v[1], &tv[1], &nv[1],
+			&v[2], &tv[2], &nv[2]);
+	if (rc == 9) {
+		vvalid = 1;
+		tvalid = 1;
+		nvalid = 1;
+		goto process_it;
+	}
+	rc = sscanf(line, "f %d//%d %d//%d %d//%d",
+			&v[0], &nv[0], &v[1], &nv[1], &v[2], &nv[2]);
+	if (rc == 6) {
+		vvalid = 1;
+		nvalid = 1;
+		goto process_it;
+	}
+	rc = sscanf(line, "f %d/%d %d/%d %d/%d",
+			&v[0], &tv[0], &v[1], &tv[1], &v[2], &tv[2]);
+	if (rc == 6) {
+		vvalid = 1;
+		tvalid = 1;
+		goto process_it;
+	}
+	rc = sscanf(line, "f %d %d %d %d", &v[0], &v[1], &v[3], &tmp);
+	if (rc == 4) {
+		fprintf(stderr, "Faces with more than 3 vertices not supported.\n");
+		return -1;
+	}
+	rc = sscanf(line, "f %d %d %d", &v[0], &v[1], &v[3]);
+	if (rc == 3) {
+		vvalid = 1;
+		goto process_it;
+	}
+	return -1;
+
+process_it:
+
+	if (vvalid)
+		if (fixup_vertex_indices(v, m->nvertices))
+			return -1;
+	if (tvalid)
+		if (fixup_vertex_indices(tv, nvt))
+			return -1;
+	if (nvalid)
+		if (fixup_vertex_indices(nv, nvn))
+			return -1;
+
+	if (m->ntriangles + 1 > *tris_alloced) {
+		struct triangle *newmem;
+		struct texture_coord *newtex;
+
+		*tris_alloced += 100;
+		newmem = realloc(m->t, *tris_alloced * sizeof(*m->t));
+		if (!newmem)
+			return -1;
+		m->t = newmem;
+		if (tvalid) {
+			newtex = realloc(m->tex, *tris_alloced * 3 * sizeof(*m->tex));
+			if (!newtex)
+				return -1;
+			m->tex = newtex;
+		}
+	}
+	m->t[m->ntriangles].v[0] = &m->v[v[0]];
+	m->t[m->ntriangles].v[1] = &m->v[v[1]];
+	m->t[m->ntriangles].v[2] = &m->v[v[2]];
+	if (nvalid) {
+		m->t[m->ntriangles].vnormal[0].x = vn[nv[0]].x;
+		m->t[m->ntriangles].vnormal[0].y = vn[nv[0]].y;
+		m->t[m->ntriangles].vnormal[0].z = vn[nv[0]].z;
+		m->t[m->ntriangles].vnormal[1].x = vn[nv[1]].x;
+		m->t[m->ntriangles].vnormal[1].y = vn[nv[1]].y;
+		m->t[m->ntriangles].vnormal[1].z = vn[nv[1]].z;
+		m->t[m->ntriangles].vnormal[2].x = vn[nv[2]].x;
+		m->t[m->ntriangles].vnormal[2].y = vn[nv[2]].y;
+		m->t[m->ntriangles].vnormal[2].z = vn[nv[2]].z;
+	}
+	if (tvalid) {
+		m->tex[m->ntriangles * 3 + 0].u = vt[tv[0]].x;
+		m->tex[m->ntriangles * 3 + 0].v = vt[tv[0]].y;
+		m->tex[m->ntriangles * 3 + 1].u = vt[tv[1]].x;
+		m->tex[m->ntriangles * 3 + 1].v = vt[tv[1]].y;
+		m->tex[m->ntriangles * 3 + 2].u = vt[tv[2]].x;
+		m->tex[m->ntriangles * 3 + 2].v = vt[tv[2]].y;
+	}
+	m->ntriangles++;
+	return 0;
+}
+
+static void compact_mesh_allocations(struct mesh *m)
+{
+	struct vertex *oldptr;
+
+	oldptr = m->v;
+	m->v = realloc(m->v, m->nvertices * sizeof(*m->v));
+	fixup_triangle_vertex_ptrs(m, oldptr, m->v);
+	m->t = realloc(m->t, m->ntriangles * sizeof(*m->t));
+	m->tex = realloc(m->t, 3 * m->ntriangles * sizeof(*m->tex));
+}
+
+struct mesh *read_obj_file(char *filename)
+{
+	FILE *f;
+	char *s;
+	char buffer[500];
+	char line[1000];
+	int continuation;
+	int lineno = 0;
+	int verts_alloced = 0;
+	int tris_alloced = 0;
+	int texture_verts_alloced = 0;
+	int texture_verts_used = 0;
+	int texture_faces_alloced = 0;
+	int texture_faces_used = 0;
+	int normal_verts_alloced = 0;
+	int normal_verts_used = 0;
+	struct mesh *m;
+	struct vertex *vt = NULL;
+	struct vertex *vn = NULL;
+	struct triangle *ft = NULL;
+
+	f = fopen(filename, "r");
+	if (!f)
+		return NULL;
+
+	m = malloc(sizeof(*m));
+	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+	m->nvertices = 0;
+	m->ntriangles = 0;
+	m->nlines = 0;
+	m->t = NULL;
+	m->v = NULL;
+	m->l = NULL;
+	m->tex = NULL;
+	m->graph_ptr = 0;
+
+	continuation = 0;
+	while (!feof(f)) {
+		/* read a line... */
+		do {
+			char *d;
+
+			d = continuation ? d + strlen(d) - 1 : line;
+			s = fgets(buffer, sizeof(buffer), f);
+			if (!s)
+				break;
+			lineno++;
+			if (s[0] == '#') /* skip comments */
+				continue;
+			remove_trailing_whitespace(s);
+			continuation = (s[strlen(s) - 1] == '\\');
+			clean_spaces(s);
+			strcpy(d, s);
+		} while (continuation || s[0] == '#' || strcmp(line, "") == 0);
+
+		if (!s)
+			break;
+
+		/* printf("%d: line = '%s'\n", lineno, line); */
+
+		if (strncmp(line, "v ", 2) == 0) { /* vertex */
+			if (obj_add_vertex(m, line, &verts_alloced))
+				goto flame_out;
+		} else if (strncmp(line, "vt ", 3) == 0) { /* face */
+			if (obj_add_texture_vertex(&vt, line,
+					&texture_verts_alloced, &texture_verts_used))
+				goto flame_out;
+		} else if (strncmp(line, "vn ", 3) == 0) { /* vertex normal */
+			if (obj_add_vertex_normal(&vn, line,
+					&normal_verts_alloced, &normal_verts_used))
+				goto flame_out;
+		} else if (strncmp(line, "f ", 2) == 0) { /* face */
+			if (obj_add_face(m, line, &tris_alloced,
+					&ft, &texture_faces_alloced, &texture_faces_used,
+					vt, texture_verts_used, vn, normal_verts_used))
+				goto flame_out;
+		} else if (strncmp(line, "mtllib ", 2) == 0) { /* group */
+			printf("ignoring material library: %s\n", line);
+		} else if (strncmp(line, "usemtl ", 2) == 0) { /* group */
+			printf("ignoring usemtl: %s\n", line);
+		} else if (strncmp(line, "g ", 2) == 0) { /* group */
+			printf("ignoring group %s\n", line);
+		} else {
+			printf("ignoring unknown data '%d':%s\n", lineno, line);
+		}
+	}
+
+	if (vt)
+		free(vt);
+	if (vn)
+		free(vn);
+	if (ft)
+		free(ft);
+	compact_mesh_allocations(m);
+
+	/* FIXME: need to do coplanar stuff, and normals if they weren't in the file */
+
+	return m;
+
+flame_out:
+	fprintf(stderr, "Error parsing %s:%d: %s\n",
+		filename, lineno, line);
+	free_mesh(m);
+	return NULL;
+}
+
 #ifdef TEST_STL_PARSER 
 
 void print_mesh(struct mesh *m)
@@ -534,5 +929,4 @@ void mesh_graph_dev_cleanup(struct mesh *m)
 {
 
 }
-
 #endif

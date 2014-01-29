@@ -386,6 +386,9 @@ test-commodities:	commodities.o Makefile
 	gcc -DTESTCOMMODITIES=1 -c commodities.c -o test-commodities.o
 	gcc -DTESTCOMMODITIES=1 -o test-commodities test-commodities.o
 
+test-obj-parser:	test-obj-parser.c stl_parser.o mesh.o mtwist.o mathutils.o matrix.o quat.o Makefile
+	gcc -o test-obj-parser stl_parser.o mtwist.o mathutils.o matrix.o mesh.o quat.o -lm test-obj-parser.c
+
 test :	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist
 
 clean:	mostly-clean
