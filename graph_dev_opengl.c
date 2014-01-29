@@ -52,6 +52,7 @@ struct mesh_gl_info {
 
 	int nlines;
 	/* uses vertex_buffer for data */
+	GLuint line_vertex_buffer;
 
 	int nparticles;
 	GLuint particle_vertex_buffer;
@@ -76,6 +77,12 @@ struct vertex_wireframe_line_buffer_data {
 	union vec3 normal;
 };
 
+struct vertex_line_buffer_data {
+	GLubyte multi_one[4];
+	union vec3 line_vertex0;
+	union vec3 line_vertex1;
+};
+
 struct vertex_color_buffer_data {
 	GLfloat position[2];
 	GLubyte color[4];
@@ -98,6 +105,7 @@ void mesh_graph_dev_cleanup(struct mesh *m)
 		glDeleteBuffers(1, &ptr->triangle_vertex_buffer);
 		glDeleteBuffers(1, &ptr->wireframe_lines_vertex_buffer);
 		glDeleteBuffers(1, &ptr->triangle_normal_lines_buffer);
+		glDeleteBuffers(1, &ptr->line_vertex_buffer);
 		glDeleteBuffers(1, &ptr->particle_vertex_buffer);
 		glDeleteBuffers(1, &ptr->particle_index_buffer);
 
@@ -264,6 +272,9 @@ void mesh_graph_dev_init(struct mesh *m)
 		size_t v_size = sizeof(struct vertex_buffer_data) * m->nvertices * 2;
 		struct vertex_buffer_data *g_v_buffer_data = malloc(v_size);
 
+		size_t vl_size = sizeof(struct vertex_line_buffer_data) * m->nvertices * 2;
+		struct vertex_line_buffer_data *g_vl_buffer_data = malloc(vl_size);
+
 		ptr->nlines = 0;
 
 		for (i = 0; i < m->nlines; i++) {
@@ -287,13 +298,30 @@ void mesh_graph_dev_init(struct mesh *m)
 						g_v_buffer_data[index + 1].position.v.y = v2->y;
 						g_v_buffer_data[index + 1].position.v.z = v2->z;
 
+						g_vl_buffer_data[index].multi_one[0] =
+							g_vl_buffer_data[index + 1].multi_one[0] = 0; /* is dotted */
+
+						g_vl_buffer_data[index].line_vertex0.v.x =
+							g_vl_buffer_data[index + 1].line_vertex0.v.x = v1->x;
+						g_vl_buffer_data[index].line_vertex0.v.y =
+							g_vl_buffer_data[index + 1].line_vertex0.v.y = v1->y;
+						g_vl_buffer_data[index].line_vertex0.v.z =
+							g_vl_buffer_data[index + 1].line_vertex0.v.z = v1->z;
+
+						g_vl_buffer_data[index].line_vertex1.v.x =
+							g_vl_buffer_data[index + 1].line_vertex1.v.x = v2->x;
+						g_vl_buffer_data[index].line_vertex1.v.y =
+							g_vl_buffer_data[index + 1].line_vertex1.v.y = v2->y;
+						g_vl_buffer_data[index].line_vertex1.v.z =
+							g_vl_buffer_data[index + 1].line_vertex1.v.z = v2->z;
+
 						ptr->nlines++;
 					}
 					v1 = v2;
 					++vcurr;
 				}
 			} else {
-				/* do dotted e->m->l[i].flag & MESH_LINE_DOTTED) */
+				int is_dotted = m->l[i].flag & MESH_LINE_DOTTED;
 
 				int index = ptr->nlines * 2;
 				g_v_buffer_data[index].position.v.x = vstart->x;
@@ -304,17 +332,41 @@ void mesh_graph_dev_init(struct mesh *m)
 				g_v_buffer_data[index + 1].position.v.y = vend->y;
 				g_v_buffer_data[index + 1].position.v.z = vend->z;
 
+				g_vl_buffer_data[index].multi_one[0] =
+					g_vl_buffer_data[index + 1].multi_one[0] = is_dotted ? 255 : 0;
+
+				g_vl_buffer_data[index].line_vertex0.v.x =
+					g_vl_buffer_data[index + 1].line_vertex0.v.x = vstart->x;
+				g_vl_buffer_data[index].line_vertex0.v.y =
+					g_vl_buffer_data[index + 1].line_vertex0.v.y = vstart->y;
+				g_vl_buffer_data[index].line_vertex0.v.z =
+					g_vl_buffer_data[index + 1].line_vertex0.v.z = vstart->z;
+
+				g_vl_buffer_data[index].line_vertex1.v.x =
+					g_vl_buffer_data[index + 1].line_vertex1.v.x = vend->x;
+				g_vl_buffer_data[index].line_vertex1.v.y =
+					g_vl_buffer_data[index + 1].line_vertex1.v.y = vend->y;
+				g_vl_buffer_data[index].line_vertex1.v.z =
+					g_vl_buffer_data[index + 1].line_vertex1.v.z = vend->z;
+
 				ptr->nlines++;
 			}
 		}
 
 		glGenBuffers(1, &ptr->vertex_buffer);
 		glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(struct vertex_buffer_data) * 2 * ptr->nlines, g_v_buffer_data, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(struct vertex_buffer_data) * 2 * ptr->nlines,
+			g_v_buffer_data, GL_STATIC_DRAW);
+
+		glGenBuffers(1, &ptr->line_vertex_buffer);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->line_vertex_buffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(struct vertex_line_buffer_data) * 2 * ptr->nlines,
+			g_vl_buffer_data, GL_STATIC_DRAW);
 
 		ptr->npoints = ptr->nlines * 2; /* can be rendered as a point cloud too */
 
 		free(g_v_buffer_data);
+		free(g_vl_buffer_data);
 	}
 
 	if (m->geometry_mode == MESH_GEOMETRY_POINTS) {
@@ -514,6 +566,19 @@ struct graph_dev_gl_single_color_shader {
 	GLuint color_id;
 };
 
+struct graph_dev_gl_line_single_color_shader {
+	GLuint program_id;
+	GLuint mvp_matrix_id;
+	GLuint viewport_id;
+	GLuint multi_one_id;
+	GLuint vertex_position_id;
+	GLuint line_vertex0_id;
+	GLuint line_vertex1_id;
+	GLuint dot_size_id;
+	GLuint dot_pitch_id;
+	GLuint line_color_id;
+};
+
 struct graph_dev_gl_point_cloud_shader {
 	GLuint program_id;
 	GLuint mvp_matrix_id;
@@ -600,6 +665,7 @@ static struct graph_dev_gl_single_color_lit_shader single_color_lit_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_shader;
 static struct graph_dev_gl_filled_wireframe_shader filled_wireframe_shader;
 static struct graph_dev_gl_single_color_shader single_color_shader;
+static struct graph_dev_gl_line_single_color_shader line_single_color_shader;
 static struct graph_dev_gl_vertex_color_shader vertex_color_shader;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
@@ -1364,13 +1430,51 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 
 		vertex_position_id = color_by_w_shader.position_id;
 	} else {
-		glUseProgram(single_color_shader.program_id);
+		glUseProgram(line_single_color_shader.program_id);
 
-		glUniformMatrix4fv(single_color_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
-		glUniform4f(single_color_shader.color_id, line_color->red,
-			line_color->green, line_color->blue, 1);
+		glUniformMatrix4fv(line_single_color_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+		glUniform2f(line_single_color_shader.viewport_id, sgc.vp_width_3d, sgc.vp_height_3d);
 
-		vertex_position_id = single_color_shader.vertex_position_id;
+		glUniform1f(line_single_color_shader.dot_size_id, 2.0);
+		glUniform1f(line_single_color_shader.dot_pitch_id, 5.0);
+		glUniform4f(line_single_color_shader.line_color_id, line_color->red, line_color->green,
+			line_color->blue, 1.0);
+
+		vertex_position_id = line_single_color_shader.vertex_position_id;
+
+		glEnableVertexAttribArray(line_single_color_shader.multi_one_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->line_vertex_buffer);
+		glVertexAttribPointer(
+			line_single_color_shader.multi_one_id, /* The attribute we want to configure */
+			4,                           /* size */
+			GL_UNSIGNED_BYTE,            /* type */
+			GL_TRUE,                     /* normalized? */
+			sizeof(struct vertex_line_buffer_data), /* stride */
+			(void *)offsetof(struct vertex_line_buffer_data, multi_one) /* array buffer offset */
+		);
+
+		glEnableVertexAttribArray(line_single_color_shader.line_vertex0_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->line_vertex_buffer);
+		glVertexAttribPointer(
+			line_single_color_shader.line_vertex0_id,
+			3,
+			GL_FLOAT,
+			GL_FALSE,
+			sizeof(struct vertex_line_buffer_data),
+			(void *)offsetof(struct vertex_line_buffer_data, line_vertex0.v.x)
+		);
+
+		glEnableVertexAttribArray(line_single_color_shader.line_vertex1_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->line_vertex_buffer);
+		glVertexAttribPointer(
+			line_single_color_shader.line_vertex1_id,
+			3,
+			GL_FLOAT,
+			GL_FALSE,
+			sizeof(struct vertex_line_buffer_data),
+			(void *)offsetof(struct vertex_line_buffer_data, line_vertex1.v.x)
+	);
+
 	}
 
 	glEnableVertexAttribArray(vertex_position_id);
@@ -1384,9 +1488,14 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
 	);
 
-	glDrawArrays(GL_LINES, 0, ptr->nlines*2);
+	glDrawArrays(GL_LINES, 0, ptr->nlines * 2);
 
 	glDisableVertexAttribArray(vertex_position_id);
+	if (e->material_type != MATERIAL_COLOR_BY_W) {
+		glDisableVertexAttribArray(line_single_color_shader.multi_one_id);
+		glDisableVertexAttribArray(line_single_color_shader.line_vertex0_id);
+		glDisableVertexAttribArray(line_single_color_shader.line_vertex1_id);
+	}
 	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
@@ -2025,6 +2134,24 @@ static void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *s
 	shader->vertex_color_id = glGetAttribLocation(shader->program_id, "a_Color");
 }
 
+static void setup_line_single_color_shader(struct graph_dev_gl_line_single_color_shader *shader)
+{
+	/* Create and compile our GLSL program from the shaders */
+	shader->program_id = load_shaders("share/snis/shader/line-single-color.vert",
+		"share/snis/shader/line-single-color.frag");
+
+	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
+	shader->viewport_id = glGetUniformLocation(shader->program_id, "u_Viewport");
+	shader->dot_size_id = glGetUniformLocation(shader->program_id, "u_DotSize");
+	shader->dot_pitch_id = glGetUniformLocation(shader->program_id, "u_DotPitch");
+	shader->line_color_id = glGetUniformLocation(shader->program_id, "u_LineColor");
+
+	shader->multi_one_id = glGetAttribLocation(shader->program_id, "a_MultiOne");
+	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
+	shader->line_vertex0_id = glGetAttribLocation(shader->program_id, "a_LineVertex0");
+	shader->line_vertex1_id = glGetAttribLocation(shader->program_id, "a_LineVertex1");
+}
+
 static void setup_point_cloud_shader(struct graph_dev_gl_point_cloud_shader *shader)
 {
 	/* Create and compile our GLSL program from the shaders */
@@ -2175,6 +2302,7 @@ int graph_dev_setup()
 	setup_filled_wireframe_shader(&filled_wireframe_shader);
 	setup_single_color_shader(&single_color_shader);
 	setup_vertex_color_shader(&vertex_color_shader);
+	setup_line_single_color_shader(&line_single_color_shader);
 	setup_point_cloud_shader(&point_cloud_shader);
 	setup_color_by_w_shader(&color_by_w_shader);
 	setup_skybox_shader(&skybox_shader);
