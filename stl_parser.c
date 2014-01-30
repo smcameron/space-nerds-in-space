@@ -888,6 +888,8 @@ struct mesh *read_obj_file(char *filename)
 	if (ft)
 		free(ft);
 	compact_mesh_allocations(m);
+	m->radius = mesh_compute_radius(m);
+	check_triangle_vertices(m);
 
 	/* FIXME: need to do coplanar stuff, and normals if they weren't in the file */
 
