@@ -747,6 +747,7 @@ process_it:
 	m->t[m->ntriangles].v[0] = &m->v[v[0]];
 	m->t[m->ntriangles].v[1] = &m->v[v[1]];
 	m->t[m->ntriangles].v[2] = &m->v[v[2]];
+	m->t[m->ntriangles].flag = 0;
 	if (nvalid) {
 		m->t[m->ntriangles].vnormal[0].x = vn[nv[0]].x;
 		m->t[m->ntriangles].vnormal[0].y = vn[nv[0]].y;
