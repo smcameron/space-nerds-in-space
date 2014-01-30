@@ -944,7 +944,6 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -992,7 +991,6 @@ static void graph_dev_raster_texture(const struct mat44 *mat_mvp, const struct m
 		glDisable(GL_CULL_FACE);
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_BLEND);
 
 	if (draw_normal_lines) {
@@ -1011,7 +1009,6 @@ static void graph_dev_raster_texture_cubemap_lit(const struct mat44 *mat_mvp, co
 
 	struct mesh_gl_info *ptr = m->graph_ptr;
 
-	glEnable(GL_TEXTURE_CUBE_MAP);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	if (draw_polygon_as_lines)
@@ -1057,7 +1054,6 @@ static void graph_dev_raster_texture_cubemap_lit(const struct mat44 *mat_mvp, co
 	glDisableVertexAttribArray(textured_cubemap_lit_shader.vertex_normal_id);
 	glUseProgram(0);
 
-	glDisable(GL_TEXTURE_CUBE_MAP);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 	if (draw_polygon_as_lines)
@@ -1082,7 +1078,6 @@ static void graph_dev_raster_texture_lit(const struct mat44 *mat_mvp, const stru
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glEnable(GL_CULL_FACE);
-	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	if (draw_polygon_as_lines)
@@ -1141,7 +1136,6 @@ static void graph_dev_raster_texture_lit(const struct mat44 *mat_mvp, const stru
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
-	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_BLEND);
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -1615,7 +1609,6 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);
 
@@ -1707,7 +1700,6 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ptr->particle_index_buffer);
 	glDrawElements(GL_TRIANGLES, ptr->nparticles * 6, GL_UNSIGNED_SHORT, NULL);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	glDisableVertexAttribArray(textured_particle_shader.multi_one_id);
 	glDisableVertexAttribArray(textured_particle_shader.start_position_id);
@@ -1720,7 +1712,6 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 	glDepthMask(GL_TRUE);
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_BLEND);
 
 	if (draw_billboard_wireframe) {
@@ -2246,7 +2237,6 @@ static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 	glGenBuffers(1, &shader->vbo_cube_vertices);
 	glBindBuffer(GL_ARRAY_BUFFER, shader->vbo_cube_vertices);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	shader->nvertices = sizeof(cube_vertices)/sizeof(GLfloat);
 
@@ -2324,8 +2314,6 @@ unsigned int graph_dev_load_cubemap_texture(
 	const char *texture_filename_pos_z,
 	const char *texture_filename_neg_z)
 {
-	glEnable(GL_TEXTURE_CUBE_MAP);
-
 	int ntextures = 6;
 
 	static const GLint tex_pos[] = {
@@ -2364,8 +2352,6 @@ unsigned int graph_dev_load_cubemap_texture(
 		}
 	}
 
-	glDisable(GL_TEXTURE_CUBE_MAP);
-
 	return (unsigned int) cube_texture_id;
 }
 
@@ -2391,7 +2377,6 @@ unsigned int graph_dev_load_texture(const char *filename)
 		return 0;
 	}
 
-	glEnable(GL_TEXTURE_2D);
 	glGenTextures(1, &texture_number);
 	glBindTexture(GL_TEXTURE_2D, texture_number);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -2408,7 +2393,6 @@ unsigned int graph_dev_load_texture(const char *filename)
 	} else {
 		printf("Unable to load texture '%s': %s\n", filename, whynotz);
 	}
-	glDisable(GL_TEXTURE_2D);
 
 	loaded_textures[nloaded_textures].texture_id = texture_number;
 	loaded_textures[nloaded_textures].filename = strdup(filename);
@@ -2454,7 +2438,6 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 
 	enable_3d_viewport();
 
-	glEnable(GL_TEXTURE_CUBE_MAP);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 
@@ -2473,7 +2456,6 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 	glDrawArrays(GL_TRIANGLES, 0, skybox_shader.nvertices);
 
 	glDisableVertexAttribArray(skybox_shader.vertex_id);
-	glDisable(GL_TEXTURE_CUBE_MAP);
 	glUseProgram(0);
 }
 
