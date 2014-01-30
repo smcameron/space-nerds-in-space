@@ -98,6 +98,7 @@ static int count_facets(char *filename)
 static int read_facet(FILE *f, struct triangle *t, int *linecount)
 {
 	int i, rc;
+	union vec3 v1, v2, v3;
 
 	rc = fscanf(f, " facet normal %f %f %f\n", &t->n.x, &t->n.y, &t->n.z);
 	t->n.w = 1.0;
@@ -120,6 +121,20 @@ static int read_facet(FILE *f, struct triangle *t, int *linecount)
 			fprintf(stderr, "failed reading vertex at line %d\n", *linecount);
 			return -1;
 		}
+	}
+	if (t->n.x == 0.0f && t->n.y == 0.0f && t->n.z == 0.0f) {
+		/* They didn't bother to figure the normal, figure it now. */
+		v1.v.x = t->v[1]->x - t->v[0]->x;
+		v1.v.y = t->v[1]->y - t->v[0]->y;
+		v1.v.z = t->v[1]->z - t->v[0]->z;
+		v2.v.x = t->v[2]->x - t->v[1]->x;
+		v2.v.y = t->v[2]->y - t->v[1]->y;
+		v2.v.z = t->v[2]->z - t->v[1]->z;
+		vec3_cross(&v3, &v1, &v2);
+		vec3_normalize_self(&v3);
+		t->n.x = v3.v.x;
+		t->n.y = v3.v.y;
+		t->n.z = v3.v.z;
 	}
 	rc = fscanf(f, " endloop\n");
 	(*linecount)++;
