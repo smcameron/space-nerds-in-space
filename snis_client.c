@@ -12031,12 +12031,24 @@ static void setup_joystick(GtkWidget *window)
 	}
 }
 
-static struct mesh *snis_read_stl_file(char *directory, char *filename)
+typedef struct mesh * (*model_file_reader_fn)(char *filename);
+
+static struct mesh *snis_read_model(char *directory, char *filename, model_file_reader_fn fn)
 {
 	char path[PATH_MAX];
 
 	sprintf(path, "%s/models/%s", directory, filename);
-	return read_stl_file(path);
+	return fn(path);
+}
+
+static struct mesh *snis_read_stl_file(char *directory, char *filename)
+{
+	return snis_read_model(directory, filename, read_stl_file);
+}
+
+static struct mesh *snis_read_obj_file(char *directory, char *filename)
+{
+	return snis_read_model(directory, filename, read_obj_file);
 }
 
 static struct mesh *make_derelict_mesh(struct mesh *source)
