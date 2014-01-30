@@ -691,8 +691,8 @@ static struct graph_dev_gl_context {
 
 	int nvertex_2d;
 	GLbyte vertex_type_2d[BUFFERED_VERTICES_2D];
+	struct vertex_color_buffer_data vertex_data_2d[BUFFERED_VERTICES_2D];
 	GLuint vertex_buffer_2d;
-	int vertex_buffer_2d_offset;
 } sgc;
 
 void graph_dev_set_screen_size(int width, int height)
@@ -787,6 +787,11 @@ static void draw_vertex_buffer_2d()
 		/* printf("start draw_vertex_buffer_2d %d\n", sgc.nvertex_2d); */
 		enable_2d_viewport();
 
+		/* transfer into opengl buffer */
+		glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sgc.nvertex_2d * sizeof(struct vertex_color_buffer_data),
+			sgc.vertex_data_2d);
+
 		glUseProgram(vertex_color_shader.program_id);
 
 		glUniformMatrix4fv(vertex_color_shader.mvp_matrix_id, 1, GL_FALSE, &sgc.ortho_2d_mvp.m[0][0]);
@@ -852,7 +857,6 @@ static void draw_vertex_buffer_2d()
 		}
 
 		sgc.nvertex_2d = 0;
-		sgc.vertex_buffer_2d_offset = 0;
 
 		glDisableVertexAttribArray(vertex_color_shader.vertex_position_id);
 		glDisableVertexAttribArray(vertex_color_shader.vertex_color_id);
@@ -874,25 +878,20 @@ static void make_room_in_vertex_buffer_2d(int nvertices)
 
 static void add_vertex_2d(float x, float y, GdkColor* color, GLubyte alpha, GLenum mode)
 {
-	struct vertex_color_buffer_data vertex;
+	struct vertex_color_buffer_data *vertex = &sgc.vertex_data_2d[sgc.nvertex_2d];
 
 	/* setup the vertex and color */
-	vertex.position[0] = x;
-	vertex.position[1] = sgc.screen_y - y;
+	vertex->position[0] = x;
+	vertex->position[1] = sgc.screen_y - y;
 
-	vertex.color[0] = color->red >> 8;
-	vertex.color[1] = color->green >> 8;
-	vertex.color[2] = color->blue >> 8;
-	vertex.color[3] = alpha;
-
-	/* transfer into opengl buffer */
-	glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
-	glBufferSubData(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d_offset, sizeof(vertex), &vertex);
+	vertex->color[0] = color->red >> 8;
+	vertex->color[1] = color->green >> 8;
+	vertex->color[2] = color->blue >> 8;
+	vertex->color[3] = alpha;
 
 	sgc.vertex_type_2d[sgc.nvertex_2d] = mode;
 
 	sgc.nvertex_2d += 1;
-	sgc.vertex_buffer_2d_offset += sizeof(vertex);
 }
 
 static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh *m, struct mesh_gl_info *ptr)
@@ -2282,7 +2281,6 @@ static void setup_2d()
 	glBufferData(GL_ARRAY_BUFFER, VERTEX_BUFFER_2D_SIZE, 0, GL_STREAM_DRAW);
 
 	sgc.nvertex_2d = 0;
-	sgc.vertex_buffer_2d_offset = 0;
 }
 
 int graph_dev_setup()
