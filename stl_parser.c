@@ -780,7 +780,7 @@ static void compact_mesh_allocations(struct mesh *m)
 	m->v = realloc(m->v, m->nvertices * sizeof(*m->v));
 	fixup_triangle_vertex_ptrs(m, oldptr, m->v);
 	m->t = realloc(m->t, m->ntriangles * sizeof(*m->t));
-	m->tex = realloc(m->t, 3 * m->ntriangles * sizeof(*m->tex));
+	m->tex = realloc(m->tex, 3 * m->ntriangles * sizeof(*m->tex));
 }
 
 struct mesh *read_obj_file(char *filename)
