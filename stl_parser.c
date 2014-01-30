@@ -893,6 +893,7 @@ struct mesh *read_obj_file(char *filename)
 
 	/* FIXME: need to do coplanar stuff, and normals if they weren't in the file */
 
+	mesh_graph_dev_init(m);
 	return m;
 
 flame_out:
