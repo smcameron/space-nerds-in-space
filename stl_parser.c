@@ -757,6 +757,8 @@ process_it:
 		m->t[m->ntriangles].vnormal[2].x = vn[nv[2]].x;
 		m->t[m->ntriangles].vnormal[2].y = vn[nv[2]].y;
 		m->t[m->ntriangles].vnormal[2].z = vn[nv[2]].z;
+	} else {
+		calculate_triangle_normal(m->t);
 	}
 	if (tvalid) {
 		m->tex[m->ntriangles * 3 + 0].u = vt[tv[0]].x;
