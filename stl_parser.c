@@ -748,6 +748,7 @@ process_it:
 	m->t[m->ntriangles].v[1] = &m->v[v[1]];
 	m->t[m->ntriangles].v[2] = &m->v[v[2]];
 	m->t[m->ntriangles].flag = 0;
+	calculate_triangle_normal(&m->t[m->ntriangles]);
 	if (nvalid) {
 		m->t[m->ntriangles].vnormal[0].x = vn[nv[0]].x;
 		m->t[m->ntriangles].vnormal[0].y = vn[nv[0]].y;
@@ -759,7 +760,16 @@ process_it:
 		m->t[m->ntriangles].vnormal[2].y = vn[nv[2]].y;
 		m->t[m->ntriangles].vnormal[2].z = vn[nv[2]].z;
 	} else {
-		calculate_triangle_normal(m->t);
+		/* just use the triangle face normal for all the vertex normals for now */
+		m->t[m->ntriangles].vnormal[0].x = m->t[m->ntriangles].n.x;
+		m->t[m->ntriangles].vnormal[0].y = m->t[m->ntriangles].n.y;
+		m->t[m->ntriangles].vnormal[0].z = m->t[m->ntriangles].n.z;
+		m->t[m->ntriangles].vnormal[1].x = m->t[m->ntriangles].n.x;
+		m->t[m->ntriangles].vnormal[1].y = m->t[m->ntriangles].n.y;
+		m->t[m->ntriangles].vnormal[1].z = m->t[m->ntriangles].n.z;
+		m->t[m->ntriangles].vnormal[2].x = m->t[m->ntriangles].n.x;
+		m->t[m->ntriangles].vnormal[2].y = m->t[m->ntriangles].n.y;
+		m->t[m->ntriangles].vnormal[2].z = m->t[m->ntriangles].n.z;
 	}
 	if (tvalid) {
 		m->tex[m->ntriangles * 3 + 0].u = vt[tv[0]].x;
