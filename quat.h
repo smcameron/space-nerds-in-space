@@ -26,6 +26,7 @@ union vec2 {
 	} v;
 	float vec[2];
 };
+#define VEC2_INITIALIZER { { 0.0, 0.0 } }
 
 /* generic 3d vector */
 union vec3 {
@@ -36,6 +37,7 @@ union vec3 {
 	} v;
 	float vec[3];
 };
+#define VEC3_INITIALIZER { { 0.0, 0.0, 0.0 } }
 
 /* quaternion */
 union quat {

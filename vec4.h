@@ -33,6 +33,7 @@ union vec4 {
 	} v;
 	float vec[4];
 };
+#define VEC4_INITIALIZER { { 0.0, 0.0, 0.0, 1.0 } }
 
 /* initialize a vec4 from a vec3 plus w component */
 extern union vec4 *vec4_init_vec3(union vec4 *vo, const union vec3 *vi, float w);
