@@ -12031,24 +12031,21 @@ static void setup_joystick(GtkWidget *window)
 	}
 }
 
-typedef struct mesh * (*model_file_reader_fn)(char *filename);
-
-static struct mesh *snis_read_model(char *directory, char *filename, model_file_reader_fn fn)
+static struct mesh *snis_read_model(char *directory, char *filename)
 {
 	char path[PATH_MAX];
+	int l = strlen(filename);
 
 	sprintf(path, "%s/models/%s", directory, filename);
-	return fn(path);
-}
-
-static struct mesh *snis_read_stl_file(char *directory, char *filename)
-{
-	return snis_read_model(directory, filename, read_stl_file);
-}
-
-static struct mesh *snis_read_obj_file(char *directory, char *filename)
-{
-	return snis_read_model(directory, filename, read_obj_file);
+	if (strcasecmp(&filename[l - 3], "obj") == 0)
+		return read_obj_file(path);
+	else if (strcasecmp(&filename[l - 3], "stl") == 0)
+		return read_stl_file(path);
+	else {
+		printf("bad path '%s', filename='%s', filename[l - 3] = '%s'\n",
+			path, filename, &filename[l - 4]);
+		return NULL;
+	}
 }
 
 static struct mesh *make_derelict_mesh(struct mesh *source)
@@ -12073,15 +12070,15 @@ static void init_meshes()
 		return;
 	}
 
-	ship_mesh = snis_read_stl_file(d, "spaceship.stl");
-	ship_turret_mesh = snis_read_stl_file(d, "spaceship_turret.stl");
-	ship_turret_base_mesh = snis_read_stl_file(d, "spaceship_turret_base.stl");
+	ship_mesh = snis_read_model(d, "spaceship.stl");
+	ship_turret_mesh = snis_read_model(d, "spaceship_turret.stl");
+	ship_turret_base_mesh = snis_read_model(d, "spaceship_turret_base.stl");
 #ifndef WITHOUTOPENGL
 	torpedo_mesh = mesh_fabricate_billboard(0, 0, 50.0f, 50.0f);
 #else
-	torpedo_mesh = snis_read_stl_file(d, "torpedo.stl");
+	torpedo_mesh = snis_read_model(d, "torpedo.stl");
 #endif
-	laser_mesh = snis_read_stl_file(d, "laser.stl");
+	laser_mesh = snis_read_model(d, "laser.stl");
 
 	for (i = 0; i < NASTEROID_MODELS; i++) {
 		char filename[100];
@@ -12091,7 +12088,7 @@ static void init_meshes()
 		else
 			sprintf(filename, "asteroid%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
-		asteroid_mesh[i] = snis_read_stl_file(d, filename);
+		asteroid_mesh[i] = snis_read_model(d, filename);
 		mesh_distort(asteroid_mesh[i], 0.10);
 	}
 
@@ -12106,31 +12103,31 @@ static void init_meshes()
 		else
 			sprintf(filename, "starbase%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
-		starbase_mesh[i] = snis_read_stl_file(d, filename);
+		starbase_mesh[i] = snis_read_model(d, filename);
 	}
 
-	freighter_mesh = snis_read_stl_file(d, "freighter.stl");
-	conqueror_mesh = snis_read_stl_file(d, "conqueror.stl");
-	scrambler_mesh = snis_read_stl_file(d, "scrambler.stl");
-	swordfish_mesh = snis_read_stl_file(d, "swordfish.stl");
-	wombat_mesh = snis_read_stl_file(d, "wombat.stl");
-	cruiser_mesh = snis_read_stl_file(d, "cruiser.stl");
-	tanker_mesh = snis_read_stl_file(d, "tanker.stl");
-	destroyer_mesh = snis_read_stl_file(d, "destroyer.stl");
-	transport_mesh = snis_read_stl_file(d, "transport.stl");
-	dragonhawk_mesh = snis_read_stl_file(d, "dragonhawk.stl");
-	skorpio_mesh = snis_read_stl_file(d, "skorpio.stl");
-	disruptor_mesh = snis_read_stl_file(d, "disruptor.stl");
-	research_vessel_mesh = snis_read_stl_file(d, "research-vessel.stl");
-	battlestar_mesh = snis_read_stl_file(d, "battlestar.stl");
+	freighter_mesh = snis_read_model(d, "freighter.stl");
+	conqueror_mesh = snis_read_model(d, "conqueror.stl");
+	scrambler_mesh = snis_read_model(d, "scrambler.stl");
+	swordfish_mesh = snis_read_model(d, "swordfish.stl");
+	wombat_mesh = snis_read_model(d, "wombat.stl");
+	cruiser_mesh = snis_read_model(d, "cruiser.stl");
+	tanker_mesh = snis_read_model(d, "tanker.stl");
+	destroyer_mesh = snis_read_model(d, "destroyer.stl");
+	transport_mesh = snis_read_model(d, "transport.stl");
+	dragonhawk_mesh = snis_read_model(d, "dragonhawk.stl");
+	skorpio_mesh = snis_read_model(d, "skorpio.stl");
+	disruptor_mesh = snis_read_model(d, "disruptor.stl");
+	research_vessel_mesh = snis_read_model(d, "research-vessel.stl");
+	battlestar_mesh = snis_read_model(d, "battlestar.stl");
 #ifndef WITHOUTOPENGL
 	particle_mesh = mesh_fabricate_billboard(0, 0, 50.0f, 50.0f);
 #else
-	particle_mesh = snis_read_stl_file(d, "tetrahedron.stl");
+	particle_mesh = snis_read_model(d, "tetrahedron.stl");
 #endif
-	debris_mesh = snis_read_stl_file(d, "flat-tetrahedron.stl");
-	debris2_mesh = snis_read_stl_file(d, "big-flat-tetrahedron.stl");
-	wormhole_mesh = snis_read_stl_file(d, "wormhole.stl");
+	debris_mesh = snis_read_model(d, "flat-tetrahedron.stl");
+	debris2_mesh = snis_read_model(d, "big-flat-tetrahedron.stl");
+	wormhole_mesh = snis_read_model(d, "wormhole.stl");
 	mesh_map_xy_to_uv(wormhole_mesh);
 #ifdef WITHOUTOPENGL
 	mesh_distort(wormhole_mesh, 0.15);
@@ -12138,19 +12135,19 @@ static void init_meshes()
 #else
 	mesh_scale(wormhole_mesh, 3.0f);
 #endif
-	spacemonster_mesh = snis_read_stl_file(d, "spacemonster.stl");
+	spacemonster_mesh = snis_read_model(d, "spacemonster.stl");
 	spacemonster_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
-	asteroidminer_mesh = snis_read_stl_file(d, "asteroid-miner.stl");
-	spaceship2_mesh = snis_read_stl_file(d, "spaceship2.stl");
-	scout_mesh = snis_read_stl_file(d, "spaceship3.stl");
+	asteroidminer_mesh = snis_read_model(d, "asteroid-miner.stl");
+	spaceship2_mesh = snis_read_model(d, "spaceship2.stl");
+	scout_mesh = snis_read_model(d, "spaceship3.stl");
 #ifndef WITHOUTOPENGL
 	laserbeam_mesh = mesh_fabricate_billboard(85, 0, 200, 5);
 #else
-	laserbeam_mesh = snis_read_stl_file(d, "long-triangular-prism.stl");
+	laserbeam_mesh = snis_read_model(d, "long-triangular-prism.stl");
 #endif
-	ship_icon_mesh = snis_read_stl_file(d, "ship-icon.stl");
-	heading_indicator_mesh = snis_read_stl_file(d, "heading_indicator.stl");
-	cargo_container_mesh = snis_read_stl_file(d, "cargocontainer.stl");
+	ship_icon_mesh = snis_read_model(d, "ship-icon.stl");
+	heading_indicator_mesh = snis_read_model(d, "heading_indicator.stl");
+	cargo_container_mesh = snis_read_model(d, "cargocontainer.stl");
 	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
 	sun_mesh = mesh_fabricate_billboard(0, 0, 30000, 30000);
 	thrust_animation_mesh = init_thrust_mesh(10, 7, 3, 1);
