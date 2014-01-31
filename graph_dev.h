@@ -47,9 +47,9 @@ extern void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, u
 	const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal);
 
 extern void graph_dev_draw_line(float x1, float y1, float x2, float y2);
-extern void graph_dev_draw_rectangle(gboolean filled, float x, float y, float width, float height);
+extern void graph_dev_draw_rectangle(int filled, float x, float y, float width, float height);
 extern void graph_dev_draw_point(float x, float y);
-extern void graph_dev_draw_arc(gboolean filled, float x, float y, float width, float height,
+extern void graph_dev_draw_arc(int filled, float x, float y, float width, float height,
 	float angle1, float angle2);
 
 extern void graph_dev_load_skybox_texture(

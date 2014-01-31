@@ -172,9 +172,9 @@ void graph_dev_draw_line(float x1, float y1, float x2, float y2)
 	gdk_draw_line(sgc.drawable, sgc.gc, x1, y1, x2, y2);
 }
 
-void graph_dev_draw_rectangle(gboolean filled, float x, float y, float width, float height)
+void graph_dev_draw_rectangle(int filled, float x, float y, float width, float height)
 {
-	gdk_draw_rectangle(sgc.drawable, sgc.gc, filled, x, y, width, height);
+	gdk_draw_rectangle(sgc.drawable, sgc.gc, (gboolean) filled, x, y, width, height);
 }
 
 void graph_dev_draw_point(float x, float y)
@@ -182,9 +182,9 @@ void graph_dev_draw_point(float x, float y)
 	gdk_draw_point(sgc.drawable, sgc.gc, x, y);
 }
 
-void graph_dev_draw_arc(gboolean filled, float x, float y, float width, float height, float angle1, float angle2)
+void graph_dev_draw_arc(int filled, float x, float y, float width, float height, float angle1, float angle2)
 {
-	gdk_draw_arc(sgc.drawable, sgc.gc, filled, x, y, width, height,
+	gdk_draw_arc(sgc.drawable, sgc.gc, (gboolean) filled, x, y, width, height,
 			angle1*64.0*180.0/M_PI, (angle2-angle1)*64.0*180.0/M_PI);
 }
 

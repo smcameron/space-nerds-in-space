@@ -1842,7 +1842,7 @@ void graph_dev_draw_line(float x1, float y1, float x2, float y2)
 	add_vertex_2d(x2, y2, sgc.hue, 255, GL_LINES);
 }
 
-void graph_dev_draw_rectangle(gboolean filled, float x, float y, float width, float height)
+void graph_dev_draw_rectangle(int filled, float x, float y, float width, float height)
 {
 	int x2, y2;
 
@@ -1890,7 +1890,7 @@ void graph_dev_draw_point(float x, float y)
 	add_vertex_2d(x, y, sgc.hue, 255, GL_POINTS);
 }
 
-void graph_dev_draw_arc(gboolean filled, float x, float y, float width, float height, float angle1, float angle2)
+void graph_dev_draw_arc(int filled, float x, float y, float width, float height, float angle1, float angle2)
 {
 	float max_angle_delta = 2.0 * M_PI / 180.0; /*some ratio to height and width? */
 	float rx = width/2.0;
