@@ -34,6 +34,7 @@ struct sng_color;
 #define MATERIAL_NEBULA 6
 #define MATERIAL_TEXTURE_MAPPED_UNLIT 7
 #define MATERIAL_TEXTURED_PARTICLE 8
+#define MATERIAL_TEXTURED_PLANET_RING 9
 
 struct material_color_by_w {
 	int near_color;
@@ -60,6 +61,7 @@ struct material_texture_mapped {
 
 struct material_texture_mapped_unlit {
 	int do_cullface;
+	int do_blend;
 	int texture_id;
 	float alpha;
 	struct sng_color tint;
@@ -85,6 +87,12 @@ struct material_textured_particle {
 	int texture_id;
 	float radius;
 	float time_base;
+};
+
+struct material_textured_planet_ring {
+	int texture_id;
+	float alpha;
+	struct sng_color tint;
 };
 
 #endif

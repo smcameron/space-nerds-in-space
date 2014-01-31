@@ -322,12 +322,18 @@ static struct material_texture_cubemap planet_material[NPLANET_MATERIALS];
 static struct material_texture_cubemap asteroid_material[NASTEROID_TEXTURES];
 static struct material_texture_mapped_unlit wormhole_material;
 #define NPLANETARY_RING_MATERIALS 2
-static struct material_texture_mapped_unlit planetary_ring_material[NPLANETARY_RING_MATERIALS];
+static struct material_textured_planet_ring planetary_ring_material[NPLANETARY_RING_MATERIALS];
 static struct material_textured_particle thrust_material;
 #ifdef WITHOUTOPENGL
 const int wormhole_render_style = RENDER_SPARKLE;
+const int torpedo_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
+const int laserbeam_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
+const int spark_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
 #else
 const int wormhole_render_style = RENDER_NORMAL;
+const int torpedo_render_style = RENDER_NORMAL;
+const int laserbeam_render_style = RENDER_NORMAL;
+const int spark_render_style = RENDER_NORMAL;
 #endif
 
 struct my_point_t snis_logo_points[] = {
@@ -888,7 +894,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, torpedo_mesh, x, y, z, TORPEDO_COLOR);
-		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
+		set_render_style(e, torpedo_render_style);
 		update_entity_material(e, MATERIAL_BILLBOARD, &red_torpedo_material);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
@@ -953,7 +959,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, laserbeam_mesh, x, y, z, LASER_COLOR);
-		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
+		set_render_style(e, laserbeam_render_style);
 		update_entity_material(e, MATERIAL_BILLBOARD, &green_laser_material);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
@@ -1319,7 +1325,7 @@ static int update_planet(uint32_t id, double x, double y, double z, double r, ui
 		update_entity_scale(e, r);
 		if (hasring) {
 			ring = add_entity(ecx, planetary_ring_mesh, 0, 0, 0, PLANET_COLOR);
-			update_entity_material(ring, MATERIAL_TEXTURE_MAPPED_UNLIT,
+			update_entity_material(ring, MATERIAL_TEXTURED_PLANET_RING,
 						&planetary_ring_material[(id >> 3) % NPLANETARY_RING_MATERIALS]);
 			update_entity_orientation(ring, &identity_quat);
 
@@ -1669,7 +1675,7 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	r = snis_randn(100);
 	if (r < 50 || time < 10) {
 		e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
-		set_render_style(e, RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
+		set_render_style(e, spark_render_style);
 		update_entity_material(e, MATERIAL_BILLBOARD, &spark_material);
 		update_entity_scale(e, (float) snis_randn(100) / 25.0f);
 	} else if (r < 75) {
@@ -11625,11 +11631,9 @@ static void load_textures(void)
 	red_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
 	red_laser_material.texture_id = load_texture("red-laser-texture.png");
 	planetary_ring_material[0].texture_id = load_texture("planetary-ring.png");
-	planetary_ring_material[0].do_cullface = 0;
 	planetary_ring_material[0].tint = sng_get_color(WHITE);
 	planetary_ring_material[0].alpha = 0.5;
 	planetary_ring_material[1].texture_id = load_texture("planetary-ring2.png");
-	planetary_ring_material[1].do_cullface = 0;
 	planetary_ring_material[1].tint = sng_get_color(WHITE);
 	planetary_ring_material[1].alpha = 0.5;
 
@@ -11659,6 +11663,7 @@ static void load_textures(void)
 	asteroid_material[1].texture_id = load_cubemap_textures(0, "asteroid2-");
 	wormhole_material.texture_id = load_texture("wormhole.png");
 	wormhole_material.do_cullface = 0;
+	wormhole_material.do_blend = 1;
 	wormhole_material.tint = sng_get_color(MAGENTA);
 	wormhole_material.alpha = 0.5;
 
