@@ -78,6 +78,8 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].parent = 0;
 	cx->entity_list[n].child_count = 0;
 	cx->entity_list[n].entity_child_index = -1;
+	if (m && m->material)
+		update_entity_material(&cx->entity_list[n], m->material_type, m->material);
 
 	return &cx->entity_list[n];
 }

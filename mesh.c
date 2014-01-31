@@ -142,6 +142,7 @@ static struct mesh *allocate_mesh_for_copy(int ntriangles, int nvertices, int nl
 	copy->v = NULL;
 	copy->l = NULL;
 	copy->tex = NULL;
+	copy->material = NULL;
 	if (ntriangles) {
 		copy->t = malloc(sizeof(*copy->t) * ntriangles);
 		if (!copy->t)
@@ -217,7 +218,16 @@ static void copy_mesh_contents(struct mesh *copy, struct mesh *original)
 	if (original->tex)
 		memcpy(copy->tex, original->tex, sizeof(*copy->tex) * original->ntriangles * 3);
 	copy->radius = original->radius;
-
+	if (original->material) {
+		/* FIXME: material being void * makes this hazardous.
+		 * we should probably have a union of the material types
+		 * or something instead.
+		 */
+		copy->material = malloc(original->material_size);
+		memcpy(copy->material, original->material, original->material_size);
+		copy->material_type = original->material_type;
+		copy->material_size = original->material_size;
+	}
 	mesh_graph_dev_init(copy);
 }
 
@@ -450,6 +460,8 @@ void mesh_free(struct mesh *m)
 		free(m->l);
 	if (m->tex)
 		free(m->tex);
+	if (m->material)
+		free(m->material);
 	mesh_graph_dev_cleanup(m);
 	free(m);
 }
@@ -1250,3 +1262,12 @@ struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2)
 
 	return optimized_mesh;
 }
+
+void mesh_update_material(struct mesh *m, int material_type, void *material)
+{
+	m->material_type = material_type;
+	if (m->material)
+		free(m->material);
+	m->material = material;
+}
+
