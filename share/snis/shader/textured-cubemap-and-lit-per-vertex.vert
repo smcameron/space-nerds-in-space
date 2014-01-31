@@ -28,7 +28,7 @@ void main()                // The entry point for our vertex shader.
 	float dot = dot(modelViewNormal, lightVector);
 
 	// mimic the original snis software render lighting
-	dot = (dot + 1.0) / 2.0;
+	//dot = (dot + 1.0) / 2.0;
 
 	// give 10% ambient
 	float diffuse = max(dot, 0.1);
