@@ -32,6 +32,7 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include <limits.h>
 
 #include "vertex.h"
 #include "triangle.h"
@@ -40,6 +41,9 @@
 #include "mtwist.h"
 #include "quat.h"
 #include "string-utils.h"
+#include "snis_graph.h"
+#include "graph_dev.h"
+#include "material.h"
 
 #define DEFINE_STL_FILE_GLOBALS
 #include "stl_parser.h"
@@ -755,12 +759,69 @@ static void compact_mesh_allocations(struct mesh *m)
 	m->tex = realloc(m->tex, 3 * m->ntriangles * sizeof(*m->tex));
 }
 
+static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile, int tfilelen)
+{
+	char fname[PATH_MAX];
+	char fname2[PATH_MAX];
+	char texturefile[PATH_MAX];
+	char *dname, *s;
+	char ln[500];
+	FILE *f;
+	int rc;
+
+	if (tfilelen <= 0)
+		return;
+	strcpy(tfile, "");
+
+	dname = dir_name(parentfilename);
+	rc = sscanf(mtllib_line, "mtllib %s", fname);
+	if (rc != 1) {
+		free(dname);
+		fprintf(stderr, "Failed to parse '%s:%s'\n", parentfilename, mtllib_line);
+		return;
+	}
+	snprintf(fname2, sizeof(fname2), "%s/%s", dname, fname);
+	printf("Opening %s\n", fname2);
+	f = fopen(fname2, "r");
+	if (!f) {
+		free(dname);
+		fprintf(stderr, "Failed to open '%s': %s\n", fname2, strerror(errno));
+		return;
+	}
+
+	while (!feof(f)) {
+		s = fgets(ln, sizeof(ln), f);
+		if (!s)
+			goto out;
+		remove_trailing_whitespace(ln);
+		clean_spaces(ln);
+
+		/* FIXME: this is the stupidest thing that might work.
+		 * Ignore everything but map_Kd lines and take the first
+		 * one we find to be the only one.
+		 */
+		if (strncmp(ln, "map_Kd ", 7) == 0) {
+			rc = sscanf(ln, "map_Kd %s", texturefile);
+			if (rc != 1)
+				continue;
+			snprintf(tfile, tfilelen, "%s/%s", dname, texturefile);
+			goto out;
+		}
+	}
+	tfile[0] = '\0';
+out:
+	free(dname);
+	fclose(f);
+	return;
+}
+
 struct mesh *read_obj_file(char *filename)
 {
 	FILE *f;
 	char *s;
 	char buffer[500];
 	char line[1000];
+	char tfile[PATH_MAX];
 	int continuation;
 	int lineno = 0;
 	int verts_alloced = 0;
@@ -831,9 +892,18 @@ struct mesh *read_obj_file(char *filename)
 					&ft, &texture_faces_alloced, &texture_faces_used,
 					vt, texture_verts_used, vn, normal_verts_used))
 				goto flame_out;
-		} else if (strncmp(line, "mtllib ", 2) == 0) { /* group */
-			printf("ignoring material library: %s\n", line);
-		} else if (strncmp(line, "usemtl ", 2) == 0) { /* group */
+		} else if (strncmp(line, "mtllib ", 2) == 0) {
+			printf("parsing material library: %s\n", line);
+			parse_mtllib(filename, line, tfile, sizeof(tfile));
+			if (strcmp(tfile, "") != 0) {
+				struct material_texture_mapped *mtl;
+
+				mtl = malloc(sizeof(*mtl));
+				mtl->texture_id = graph_dev_load_texture(tfile);
+				m->material = mtl;
+				m->material_type = MATERIAL_TEXTURE_MAPPED;
+			}
+		} else if (strncmp(line, "usemtl ", 2) == 0) {
 			printf("ignoring usemtl: %s\n", line);
 		} else if (strncmp(line, "g ", 2) == 0) { /* group */
 			printf("ignoring group %s\n", line);
