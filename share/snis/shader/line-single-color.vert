@@ -1,3 +1,4 @@
+#version 120
 /*
  * Copyright © 2014 Jeremy Van Grinsven
  *
