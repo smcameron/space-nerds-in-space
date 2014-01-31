@@ -59,7 +59,8 @@ PNGCFLAGS=`pkg-config --cflags libpng`
 
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
-		snis_faction.o mtwist.o infinite-taunt.o snis_damcon_systems.o
+		snis_faction.o mtwist.o infinite-taunt.o snis_damcon_systems.o \
+		string-utils.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o
@@ -351,6 +352,9 @@ fleet.o:	fleet.c Makefile
 	$(Q)$(COMPILE)
 
 commodities.o:	commodities.c Makefile
+	$(Q)$(COMPILE)
+
+string-utils.o:	string-utils.c Makefile
 	$(Q)$(COMPILE)
 
 test-matrix:	matrix.c Makefile

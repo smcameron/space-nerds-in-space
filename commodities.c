@@ -25,31 +25,7 @@
 #include <ctype.h>
 
 #include "commodities.h"
-
-static void clean_spaces(char *line)
-{
-	char *s, *d;
-	int skip_spaces = 1;
-
-	s = line;
-	d = line;
-
-	while (*s) {
-		if ((*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r') && skip_spaces) {
-			s++;
-			continue;
-		}
-		skip_spaces = 0;
-		if (*s == '\t' || *s == '\n' || *s == '\r')
-			*s = ' ';
-		if (*s == ' ')
-			skip_spaces = 1;
-		*d = *s;
-		s++;
-		d++;
-	}
-	*d = '\0';
-}
+#include "string-utils.h"
 
 static int parse_error(char *filename, char *line, int ln, char *bad_word)
 {
@@ -75,14 +51,6 @@ static int parse_float_field(char *filename, char *line, int ln, float *value, c
 	if (rc != 1)
 		return parse_error(filename, line, ln, word);
 	return 0;
-}
-
-static void uppercase(char *w)
-{
-	char *i;
-
-	for (i = w; *i; i++)
-		*i = toupper(*i);
 }
 
 static int parse_line(char *filename, char *line, int ln, struct commodity *c)

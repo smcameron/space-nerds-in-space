@@ -58,6 +58,7 @@
 #endif
 
 #include "build_bug_on.h"
+#include "string-utils.h"
 #include "snis_ship_type.h"
 #include "snis_faction.h"
 #include "space-part.h"
@@ -10118,14 +10119,6 @@ static void set_demon_group(int n)
 	for (i = 0; i < count; i++)
 		dg->id[i] = demon_ui.selected_id[i];
 	dg->nids = count;
-}
-
-static void uppercase(char *s)
-{
-	while (*s) {
-		*s = toupper(*s);
-		s++;
-	}
 }
 
 static int construct_demon_command(char *input,
