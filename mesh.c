@@ -135,12 +135,12 @@ static struct mesh *allocate_mesh_for_copy(int ntriangles, int nvertices, int nl
 	struct mesh *copy;
 
 	copy = malloc(sizeof(*copy));
+	if (!copy)
+		goto bail;
 	copy->t = NULL;
 	copy->v = NULL;
 	copy->l = NULL;
 	copy->tex = NULL;
-	if (!copy)
-		goto bail;
 	if (ntriangles) {
 		copy->t = malloc(sizeof(*copy->t) * ntriangles);
 		if (!copy->t)
