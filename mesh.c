@@ -137,6 +137,7 @@ static struct mesh *allocate_mesh_for_copy(int ntriangles, int nvertices, int nl
 	copy = malloc(sizeof(*copy));
 	if (!copy)
 		goto bail;
+	memset(copy, 0, sizeof(*copy));
 	copy->t = NULL;
 	copy->v = NULL;
 	copy->l = NULL;
@@ -254,6 +255,10 @@ struct mesh *init_circle_mesh(double x, double z, double r, int npoints, double 
 	float increment;
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
 
+	if (!my_mesh)
+		return my_mesh;
+	memset(my_mesh, 0, sizeof(*my_mesh));
+
 	my_mesh->geometry_mode = MESH_GEOMETRY_LINES;
 	my_mesh->nvertices = 0;
 	my_mesh->ntriangles = 0;
@@ -292,6 +297,10 @@ struct mesh *init_radar_circle_xz_plane_mesh(double x, double z, double r, int t
 	int i;
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
 
+	if (!my_mesh)
+		return my_mesh;
+	memset(my_mesh, 0, sizeof(*my_mesh));
+
 	my_mesh->geometry_mode = MESH_GEOMETRY_LINES;
 	my_mesh->nvertices = 0;
 	my_mesh->ntriangles = 0;
@@ -329,6 +338,10 @@ struct mesh *init_radar_circle_xz_plane_mesh(double x, double z, double r, int t
 struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y2, double z2)
 {
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
+
+	if (!my_mesh)
+		return my_mesh;
+	memset(my_mesh, 0, sizeof(*my_mesh));
 
 	my_mesh->geometry_mode = MESH_GEOMETRY_LINES;
 	my_mesh->nvertices = 2;
@@ -1158,6 +1171,10 @@ static void evolve_particle(float h, struct particle *particles, int i)
 struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2)
 {
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
+
+	if (!my_mesh)
+		return my_mesh;
+	memset(my_mesh, 0, sizeof(*my_mesh));
 
 	my_mesh->geometry_mode = MESH_GEOMETRY_PARTICLE_ANIMATION;
 
