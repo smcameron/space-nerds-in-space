@@ -306,6 +306,7 @@ struct mesh *cargo_container_mesh;
 struct mesh *nebula_mesh;
 struct mesh *sun_mesh;
 struct mesh *thrust_animation_mesh;
+struct mesh *dreadknight_mesh;
 
 struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
@@ -12114,7 +12115,7 @@ static void init_meshes()
 	freighter_mesh = snis_read_model(d, "freighter.stl");
 	conqueror_mesh = snis_read_model(d, "conqueror.stl");
 	scrambler_mesh = snis_read_model(d, "scrambler.stl");
-	swordfish_mesh = snis_read_model(d, "swordfish.stl");
+	swordfish_mesh = snis_read_model(d, "wombat.stl");
 	wombat_mesh = snis_read_model(d, "wombat.stl");
 	cruiser_mesh = snis_read_model(d, "cruiser.stl");
 	tanker_mesh = snis_read_model(d, "tanker.stl");
@@ -12125,6 +12126,7 @@ static void init_meshes()
 	disruptor_mesh = snis_read_model(d, "disruptor.stl");
 	research_vessel_mesh = snis_read_model(d, "research-vessel.stl");
 	battlestar_mesh = snis_read_model(d, "battlestar.stl");
+	dreadknight_mesh = snis_read_model(d, "dreadknight/dreadknight.obj");
 #ifndef WITHOUTOPENGL
 	particle_mesh = mesh_fabricate_billboard(0, 0, 50.0f, 50.0f);
 #else
@@ -12176,6 +12178,7 @@ static void init_meshes()
 	ship_mesh_map[15] = scrambler_mesh;
 	ship_mesh_map[16] = swordfish_mesh;
 	ship_mesh_map[17] = wombat_mesh;
+	ship_mesh_map[18] = dreadknight_mesh;
 
 	for (i = 0; i < nshiptypes; i++)
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
