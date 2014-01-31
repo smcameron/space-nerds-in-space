@@ -52,3 +52,19 @@ void uppercase(char *w)
 		*i = toupper(*i);
 }
 
+char *dir_name(char *path)
+{
+	char *x;
+	int l;
+
+	x = strdup(path);
+	if (!x)
+		return NULL;
+	l = strlen(x);
+	while (l > 0 && x[l - 1] != '/') {
+		x[l - 1] = '\0';
+		l--;
+	}
+	return x;
+}
+
