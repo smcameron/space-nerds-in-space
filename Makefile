@@ -399,7 +399,10 @@ clean:	mostly-clean
 	rm -f ${MODELS} test_marshal
 
 Makefile.depend :
-	makedepend -w0 -f- *.c | grep -v /usr > Makefile.depend
+	# Do in 2 steps so that on failure we don't get an empty but "up to date"
+	# dependencies file.
+	makedepend -w0 -f- *.c | grep -v /usr > Makefile.depend.tmp
+	mv Makefile.depend.tmp Makefile.depend
 
 include Makefile.depend
 
