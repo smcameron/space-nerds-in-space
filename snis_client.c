@@ -1164,7 +1164,7 @@ static void init_laserbeam_data(struct snis_entity *o)
 		ld->y[i] = o->y;
 		ld->z[i] = 0.0;
 		ld->entity[i] = add_entity(ecx, laserbeam_mesh, o->x, 0, -o->y, color);
-		set_render_style(ld->entity[i], RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
+		set_render_style(ld->entity[i], laserbeam_render_style);
 	}
 	update_laserbeam_segments(o);
 }
