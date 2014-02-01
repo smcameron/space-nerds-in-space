@@ -4819,11 +4819,22 @@ static struct thrust_attachment_point ship_thrust_attachment_points[] = {
 	#include "share/snis/models/wombat.scad_params.h"
 };
 
+static struct thrust_attachment_point *ship_thrust_attachment_point(int shiptype)
+{
+	/* since range of shiptype is determined runtime by reading a file... */
+	if (shiptype < 0 || shiptype >= ARRAYSIZE(ship_thrust_attachment_points))
+		return NULL;
+	return &ship_thrust_attachment_points[shiptype];
+}
+
 static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e, int shiptype)
 {
-	struct thrust_attachment_point *ap = &ship_thrust_attachment_points[shiptype];
-
 	int i;
+	struct thrust_attachment_point *ap = ship_thrust_attachment_point(shiptype);
+
+	if (!ap)
+		return;
+
 	for (i = 0; i < ap->nports; i++) {
 		struct entity *t = add_entity(cx, thrust_animation_mesh,
 			ap->port[i].pos.v.x, ap->port[i].pos.v.y, ap->port[i].pos.v.z, WHITE);
