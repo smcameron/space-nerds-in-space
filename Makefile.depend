@@ -2,6 +2,7 @@
 
 bline.o: bline.h
 commodities.o: commodities.h
+commodities.o: string-utils.h
 entity.o: mtwist.h
 entity.o: mathutils.h
 entity.o: matrix.h
@@ -92,6 +93,7 @@ snis_button.o: snis_typeface.h
 snis_button.o: snis_graph.h
 snis_button.o: snis_button.h
 snis_client.o: build_bug_on.h
+snis_client.o: string-utils.h
 snis_client.o: snis_ship_type.h
 snis_client.o: snis_faction.h
 snis_client.o: space-part.h
@@ -152,6 +154,7 @@ snis_client.o: share/snis/models/scrambler.scad_params.h
 snis_client.o: share/snis/models/swordfish.scad_params.h
 snis_client.o: share/snis/models/wombat.scad_params.h
 snis_damcon_systems.o: snis_damcon_systems.h
+snis_damcon_systems.o: build_bug_on.h
 snis_event_callback.o: snis_event_callback.h
 snis_faction.o: mtwist.h
 snis_faction.o: quat.h
@@ -182,6 +185,7 @@ snis_label.o: snis_typeface.h
 snis_label.o: snis_graph.h
 snis_label.o: snis_label.h
 snis_limited_client.o: build_bug_on.h
+snis_limited_client.o: string-utils.h
 snis_limited_client.o: snis_ship_type.h
 snis_limited_client.o: snis_faction.h
 snis_limited_client.o: space-part.h
@@ -252,12 +256,6 @@ snis_limited_graph.o: mathutils.h
 snis_limited_graph.o: graph_dev.h
 snis_marshal.o: snis_marshal.h
 snis_marshal.o: stacktrace.h
-snis_sdl_client.o: snis_graph.h
-snis_sdl_client.o: graph_dev.h
-snis_sdl_client.o: quat.h
-snis_sdl_client.o: entity.h
-snis_sdl_client.o: mesh.h
-snis_sdl_client.o: stl_parser.h
 snis_server.o: container-of.h
 snis_server.o: mtwist.h
 snis_server.o: build_bug_on.h
@@ -319,8 +317,19 @@ stl_parser.o: mesh.h
 stl_parser.o: matrix.h
 stl_parser.o: mtwist.h
 stl_parser.o: quat.h
+stl_parser.o: string-utils.h
+stl_parser.o: snis_graph.h
+stl_parser.o: graph_dev.h
+stl_parser.o: material.h
 stl_parser.o: stl_parser.h
 test-mtwist.o: mtwist.h
+test-obj-parser.o: mtwist.h
+test-obj-parser.o: quat.h
+test-obj-parser.o: matrix.h
+test-obj-parser.o: mathutils.h
+test-obj-parser.o: mesh.h
+test-obj-parser.o: stl_parser.h
+test-quat.o: mtwist.h
 test-quat.o: quat.h
 test-quat.o: matrix.h
 test-quat.o: mathutils.h
