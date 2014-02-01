@@ -61,3 +61,13 @@ spaceship_turret.scad
 
 ---------------------------------------------------------------------------
 
+The following models are Copyright (c) 2014 Zachary Schultz
+and are released under the terms of the Creative Commons Attribution-ShareAlike
+3.0 unported license (See: CC-BY-SA-3.0.txt in the top level directory)
+
+dreadknight/dreadknight.obj
+dreadknight/dreadknight.mtl
+dreadknight/dreadknight.png
+
+---------------------------------------------------------------------------
+
