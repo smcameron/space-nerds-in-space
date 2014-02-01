@@ -111,9 +111,9 @@ void mesh_scale(struct mesh *m, float scale)
 	int i;
 
 	for (i = 0; i < m->nvertices; i++) {
-		m->v[i].x += m->v[i].x * scale;
-		m->v[i].y += m->v[i].y * scale;
-		m->v[i].z += m->v[i].z * scale;
+		m->v[i].x *= scale;
+		m->v[i].y *= scale;
+		m->v[i].z *= scale;
 	}
 	m->radius = mesh_compute_radius(m);
 	mesh_graph_dev_init(m);
