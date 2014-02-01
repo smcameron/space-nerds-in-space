@@ -1,0 +1,63 @@
+---------------------------------------------------------------------------
+The following OpenSCAD models are Copyright (c) 2013, 2014 Stephen M. Cameron
+and are released under the terms of the Creative Commons Attribution-ShareAlike
+3.0 unported license (See: CC-BY-SA-3.0.txt in the top level directory)
+
+asteroid2.scad
+asteroid3.scad
+asteroid4.scad
+asteroid-miner.scad
+asteroid.scad
+battlestar.scad
+big-flat-tetrahedron.scad
+cargocontainer.scad
+conqueror.scad
+cruiser.scad
+destroyer.scad
+disruptor.scad
+dragonhawk.scad
+flat-tetrahedron.scad
+freighter.scad
+heading_indicator.scad
+imposter_thrust.scad
+laser.scad
+long-triangular-prism.scad
+planet1.scad
+planet2.scad
+planet3.scad
+planet.scad
+research-vessel.scad
+scrambler.scad
+ship-icon.scad
+skorpio.scad
+spacemonster.scad
+spaceship2.scad
+spaceship3.scad
+spaceship.scad
+starbase2.scad
+starbase3.scad
+starbase4.scad
+starbase5.scad
+starbase6.scad
+starbase.scad
+swordfish.scad
+tanker.scad
+tetrahedron.scad
+torpedo.scad
+transport.scad
+wedge.scad
+wombat.scad
+wormhole.scad
+
+---------------------------------------------------------------------------
+
+The following OpenSCAD models are Copyright (c) 2013, 2014 Jeremy Van Grinsven
+and are released under the terms of the Creative Commons Attribution-ShareAlike
+3.0 unported license (See: CC-BY-SA-3.0.txt in the top level directory)
+
+axis.scad
+spaceship_turret_base.scad
+spaceship_turret.scad
+
+---------------------------------------------------------------------------
+
