@@ -902,6 +902,7 @@ struct mesh *read_obj_file(char *filename)
 				mtl->texture_id = graph_dev_load_texture(tfile);
 				m->material = mtl;
 				m->material_type = MATERIAL_TEXTURE_MAPPED;
+				m->material_size = sizeof(struct material_texture_mapped);
 			}
 		} else if (strncmp(line, "usemtl ", 2) == 0) {
 			printf("ignoring usemtl: %s\n", line);
