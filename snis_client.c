@@ -274,39 +274,20 @@ struct mesh *asteroid_mesh[NASTEROID_MODELS];
 struct mesh *sphere_mesh;
 struct mesh *planetary_ring_mesh;
 struct mesh *starbase_mesh[NSTARBASE_MODELS];
-struct mesh *ship_mesh;
 struct mesh *ship_turret_mesh;
 struct mesh *ship_turret_base_mesh;
-struct mesh *freighter_mesh;
-struct mesh *cruiser_mesh;
-struct mesh *tanker_mesh;
-struct mesh *destroyer_mesh;
-struct mesh *transport_mesh;
-struct mesh *dragonhawk_mesh;
-struct mesh *skorpio_mesh;
-struct mesh *disruptor_mesh;
-struct mesh *research_vessel_mesh;
-struct mesh *battlestar_mesh;
 struct mesh *particle_mesh;
 struct mesh *debris_mesh;
 struct mesh *debris2_mesh;
 struct mesh *wormhole_mesh;
 struct mesh *spacemonster_mesh;
-struct mesh *asteroidminer_mesh;
-struct mesh *spaceship2_mesh;
-struct mesh *scout_mesh;
 struct mesh *laserbeam_mesh;
 struct mesh *ship_icon_mesh;
 struct mesh *heading_indicator_mesh;
-struct mesh *conqueror_mesh;
-struct mesh *scrambler_mesh;
-struct mesh *swordfish_mesh;
-struct mesh *wombat_mesh;
 struct mesh *cargo_container_mesh;
 struct mesh *nebula_mesh;
 struct mesh *sun_mesh;
 struct mesh *thrust_animation_mesh;
-struct mesh *dreadknight_mesh;
 
 struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
@@ -7982,11 +7963,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				break;
 			case OBJTYPE_SHIP2:
 			case OBJTYPE_SHIP1:
-				contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
+				contact_scale = ship_mesh_map[SHIP_CLASS_CRUISER]->radius /
+							entity_get_mesh(contact)->radius * ship_scale;
 				break;
 			case OBJTYPE_CARGO_CONTAINER:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 20.0 + 1.0;
-				//contact_scale = cruiser_mesh->radius / entity_get_mesh(contact)->radius * ship_scale;
 				break;
 			}
 
@@ -12076,7 +12057,6 @@ static void init_meshes()
 		return;
 	}
 
-	ship_mesh = snis_read_model(d, "spaceship.stl");
 	ship_turret_mesh = snis_read_model(d, "spaceship_turret.stl");
 	ship_turret_base_mesh = snis_read_model(d, "spaceship_turret_base.stl");
 #ifndef WITHOUTOPENGL
@@ -12112,21 +12092,11 @@ static void init_meshes()
 		starbase_mesh[i] = snis_read_model(d, filename);
 	}
 
-	freighter_mesh = snis_read_model(d, "freighter.stl");
-	conqueror_mesh = snis_read_model(d, "conqueror.stl");
-	scrambler_mesh = snis_read_model(d, "scrambler.stl");
-	swordfish_mesh = snis_read_model(d, "wombat.stl");
-	wombat_mesh = snis_read_model(d, "wombat.stl");
-	cruiser_mesh = snis_read_model(d, "cruiser.stl");
-	tanker_mesh = snis_read_model(d, "tanker.stl");
-	destroyer_mesh = snis_read_model(d, "destroyer.stl");
-	transport_mesh = snis_read_model(d, "transport.stl");
-	dragonhawk_mesh = snis_read_model(d, "dragonhawk.stl");
-	skorpio_mesh = snis_read_model(d, "skorpio.stl");
-	disruptor_mesh = snis_read_model(d, "disruptor.stl");
-	research_vessel_mesh = snis_read_model(d, "research-vessel.stl");
-	battlestar_mesh = snis_read_model(d, "battlestar.stl");
-	dreadknight_mesh = snis_read_model(d, "dreadknight/dreadknight.obj");
+	for (i = 0; i < nshiptypes; i++) {
+		ship_mesh_map[i] = snis_read_model(d, ship_type[i].model_file);
+		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
+	}
+
 #ifndef WITHOUTOPENGL
 	particle_mesh = mesh_fabricate_billboard(0, 0, 50.0f, 50.0f);
 #else
@@ -12144,9 +12114,6 @@ static void init_meshes()
 #endif
 	spacemonster_mesh = snis_read_model(d, "spacemonster.stl");
 	spacemonster_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
-	asteroidminer_mesh = snis_read_model(d, "asteroid-miner.stl");
-	spaceship2_mesh = snis_read_model(d, "spaceship2.stl");
-	scout_mesh = snis_read_model(d, "spaceship3.stl");
 #ifndef WITHOUTOPENGL
 	laserbeam_mesh = mesh_fabricate_billboard(85, 0, 200, 5);
 #else
@@ -12158,30 +12125,6 @@ static void init_meshes()
 	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
 	sun_mesh = mesh_fabricate_billboard(0, 0, 30000, 30000);
 	thrust_animation_mesh = init_thrust_mesh(10, 7, 3, 1);
-
-	/* Note: these must match defines of SHIPTYPEs in snis.h */
-	ship_mesh_map[0] = cruiser_mesh;
-	ship_mesh_map[1] = destroyer_mesh;
-	ship_mesh_map[2] = freighter_mesh;
-	ship_mesh_map[3] = tanker_mesh;
-	ship_mesh_map[4] = transport_mesh;
-	ship_mesh_map[5] = battlestar_mesh;
-	ship_mesh_map[6] = ship_mesh;
-	ship_mesh_map[7] = asteroidminer_mesh;
-	ship_mesh_map[8] = spaceship2_mesh;
-	ship_mesh_map[9] = scout_mesh;
-	ship_mesh_map[10] = dragonhawk_mesh;
-	ship_mesh_map[11] = skorpio_mesh;
-	ship_mesh_map[12] = disruptor_mesh;
-	ship_mesh_map[13] = research_vessel_mesh;
-	ship_mesh_map[14] = conqueror_mesh;
-	ship_mesh_map[15] = scrambler_mesh;
-	ship_mesh_map[16] = swordfish_mesh;
-	ship_mesh_map[17] = wombat_mesh;
-	ship_mesh_map[18] = dreadknight_mesh;
-
-	for (i = 0; i < nshiptypes; i++)
-		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
 
 	mtwist_free(mt);
 }

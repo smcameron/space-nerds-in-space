@@ -2,17 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 
-struct ship_type_entry {
-	char *class;
-	double max_speed;
-	int crew_max;
-};
+#include "snis_ship_type.h"
 
 struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 {
 	FILE *f;
-	char line[255], class[255];
+	char line[255], class[255], model_file[PATH_MAX];
 	double max_speed;
 	int crew_max;
 	char *x;
@@ -43,8 +40,8 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 		if (line[0] == '#') /* skip comment lines */
 			continue;
 
-		scancount = sscanf(line, "%s %d %d\n", class, &integer, &crew_max);
-		if (scancount != 3) {
+		scancount = sscanf(line, "%s %s %d %d\n", class, model_file, &integer, &crew_max);
+		if (scancount != 4) {
 			fprintf(stderr, "Error at line %d in %s: '%s'\n",
 				linecount, filename, line);
 			if (scancount > 0)
@@ -64,13 +61,18 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 				return st;
 			}
 		}
-		st[n].class = malloc(strlen(class) + 1);
+		st[n].class = strdup(class);
 		if (!st[n].class) {
 			fprintf(stderr, "out of memory at %s:%d\n", __FILE__, __LINE__);
 			*count = n;
 			return st;
 		}
-		strcpy(st[n].class, class);
+		st[n].model_file = strdup(model_file);
+		if (!st[n].class) {
+			fprintf(stderr, "out of memory at %s:%d\n", __FILE__, __LINE__);
+			*count = n;
+			return st;
+		}
 		st[n].max_speed = max_speed;
 		st[n].crew_max = crew_max;
 		n++;

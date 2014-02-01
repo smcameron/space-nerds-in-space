@@ -23,6 +23,7 @@
 
 struct ship_type_entry {
 	char *class;
+	char *model_file;
 	double max_speed;
 	int crew_max;
 };
