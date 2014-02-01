@@ -896,13 +896,12 @@ struct mesh *read_obj_file(char *filename)
 			printf("parsing material library: %s\n", line);
 			parse_mtllib(filename, line, tfile, sizeof(tfile));
 			if (strcmp(tfile, "") != 0) {
-				struct material_texture_mapped *mtl;
+				struct material *mtl;
 
 				mtl = malloc(sizeof(*mtl));
-				mtl->texture_id = graph_dev_load_texture(tfile);
+				mtl->type = MATERIAL_TEXTURE_MAPPED;
+				mtl->texture_mapped.texture_id = graph_dev_load_texture(tfile);
 				m->material = mtl;
-				m->material_type = MATERIAL_TEXTURE_MAPPED;
-				m->material_size = sizeof(struct material_texture_mapped);
 			}
 		} else if (strncmp(line, "usemtl ", 2) == 0) {
 			printf("ignoring usemtl: %s\n", line);

@@ -8,6 +8,8 @@
 #include "mathutils.h"
 #include "matrix.h"
 #include "quat.h"
+#include "snis_graph.h"
+#include "material.h"
 
 #define DEFINE_MESH_GLOBALS 1
 #include "mesh.h"
@@ -219,14 +221,8 @@ static void copy_mesh_contents(struct mesh *copy, struct mesh *original)
 		memcpy(copy->tex, original->tex, sizeof(*copy->tex) * original->ntriangles * 3);
 	copy->radius = original->radius;
 	if (original->material) {
-		/* FIXME: material being void * makes this hazardous.
-		 * we should probably have a union of the material types
-		 * or something instead.
-		 */
-		copy->material = malloc(original->material_size);
-		memcpy(copy->material, original->material, original->material_size);
-		copy->material_type = original->material_type;
-		copy->material_size = original->material_size;
+		copy->material = malloc(sizeof(*copy->material));
+		*copy->material = *original->material;
 	}
 	mesh_graph_dev_init(copy);
 }
@@ -1263,9 +1259,8 @@ struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2)
 	return optimized_mesh;
 }
 
-void mesh_update_material(struct mesh *m, int material_type, void *material)
+void mesh_update_material(struct mesh *m, struct material *material)
 {
-	m->material_type = material_type;
 	if (m->material)
 		free(m->material);
 	m->material = material;

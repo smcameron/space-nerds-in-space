@@ -80,9 +80,6 @@ struct material_nebula {
 	struct sng_color tint;
 };
 
-extern int material_nebula_read_from_file(const char *asset_dir, const char *filename, struct material_nebula *mt);
-extern int material_nebula_write_to_file(const char *asset_dir, const char *filename, struct material_nebula *mt);
-
 struct material_textured_particle {
 	int texture_id;
 	float radius;
@@ -94,5 +91,25 @@ struct material_textured_planet_ring {
 	float alpha;
 	struct sng_color tint;
 };
+
+struct material {
+	__extension__ union {
+		struct material_color_by_w color_by_w;
+		struct material_billboard billboard;
+		struct material_texture_mapped texture_mapped;
+		struct material_texture_mapped_unlit texture_mapped_unlit;
+		struct material_texture_cubemap texture_cubemap;
+		struct material_nebula nebula;
+		struct material_textured_particle textured_particle;
+		struct material_textured_planet_ring textured_planet_ring;
+	};
+	int type;
+};
+
+
+extern int material_nebula_read_from_file(const char *asset_dir, const char *filename,
+						struct material *nebula);
+extern int material_nebula_write_to_file(const char *asset_dir, const char *filename,
+						struct material *nebula);
 
 #endif

@@ -60,10 +60,7 @@ struct mesh {
 	struct mesh_line *l;
 	struct texture_coord *tex; /* if not null, contains 3 (u,v)'s per triangle */
 	float radius;
-	void *material; /* for now just one material, should think about that void *. */
-	int material_type;
-	size_t material_size;
-
+	struct material *material; /* for now just one material */
 	void *graph_ptr;
 };
 
@@ -93,7 +90,7 @@ GLOBAL void mesh_map_xy_to_uv(struct mesh *m);
 GLOBAL void mesh_distort_and_random_uv_map(struct mesh *m, float distortion);
 GLOBAL struct mesh *mesh_fabricate_planetary_ring(float ir, float or);
 GLOBAL struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2);
-GLOBAL void mesh_update_material(struct mesh *m, int material_type, void *material);
+GLOBAL void mesh_update_material(struct mesh *m, struct material *material);
 
 #undef GLOBAL
 #endif

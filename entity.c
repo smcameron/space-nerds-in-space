@@ -35,6 +35,8 @@
 #include "mesh.h"
 #include "stl_parser.h"
 #include "quat.h"
+#include "snis_graph.h"
+#include "material.h"
 #include "entity.h"
 #include "mathutils.h"
 
@@ -43,10 +45,8 @@
 #include "snis_typeface.h"
 #include "snis_alloc.h"
 
-#include "snis_graph.h"
 #include "entity_private.h"
 #include "graph_dev.h"
-#include "material.h"
 
 static int clip_line(struct mat41* vtx0, struct mat41* vtx1);
 
@@ -73,13 +73,12 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].shadecolor = 0;
 	cx->entity_list[n].orientation = identity_quat;
 	cx->entity_list[n].e_orientation = identity_quat;
-	cx->entity_list[n].material_type = 0;
 	cx->entity_list[n].material_ptr = 0;
 	cx->entity_list[n].parent = 0;
 	cx->entity_list[n].child_count = 0;
 	cx->entity_list[n].entity_child_index = -1;
 	if (m && m->material)
-		update_entity_material(&cx->entity_list[n], m->material_type, m->material);
+		update_entity_material(&cx->entity_list[n], m->material);
 
 	return &cx->entity_list[n];
 }
@@ -203,9 +202,8 @@ void update_entity_visibility(struct entity *e, int visible)
 	e->visible = visible;
 }
 
-void update_entity_material(struct entity *e, int material_type, void *material_ptr)
+void update_entity_material(struct entity *e, struct material *material_ptr)
 {
-	e->material_type = material_type;
 	e->material_ptr = material_ptr;
 }
 
@@ -309,8 +307,8 @@ static void calculate_model_matrices(struct entity_context *cx, struct entity *e
 		{ 0, 0, 1, 0 },
 		{ 0, 0, 0, 1 } } };
 
-	if (e->material_type == MATERIAL_BILLBOARD) {
-		struct material_billboard *m = e->material_ptr;
+	if (e->material_ptr && e->material_ptr->type == MATERIAL_BILLBOARD) {
+		struct material_billboard *m = &e->material_ptr->billboard;
 
 		switch (m->billboard_type) {
 			/* aligned so that +y axis = camera up and normal parallel with camera look direction */

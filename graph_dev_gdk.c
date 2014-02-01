@@ -35,9 +35,9 @@
 #include "snis_typeface.h"
 #include "snis_graph.h"
 #include "quat.h"
+#include "material.h"
 #include "entity.h"
 #include "entity_private.h"
-#include "material.h"
 
 typedef void (*entity_fragment_shader_fn)(float x, float y, float z, int cin, int *cout);
 
@@ -293,7 +293,7 @@ void software_render_entity_lines(struct entity_context *cx, struct entity *e)
 	float x2, y2;
 
 	entity_fragment_shader_fn fragment_shader = 0;
-	if (e->material_type == MATERIAL_COLOR_BY_W) {
+	if (e->material_ptr && e->material_ptr->type == MATERIAL_COLOR_BY_W) {
 		/* this is the original method as I am not going to update it to the same logic as the opengl shader */
 		fragment_shader = color_by_z_fragment_shader;
 	}
@@ -624,7 +624,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	transform_entity(mat_mvp, mat_mv, mat_normal, e);
 
 	/* nebula rendering not supported on gdk */
-	if (e->material_type == MATERIAL_NEBULA)
+	if (e->material_ptr && e->material_ptr->type == MATERIAL_NEBULA)
 		return;
 
 	switch (e->m->geometry_mode) {

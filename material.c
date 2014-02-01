@@ -48,13 +48,16 @@ static const char *get_texture_filename(unsigned int texture_id)
 	return gnu_basename(graph_dev_get_texture_filename(texture_id));
 }
 
-int material_nebula_read_from_file(const char *asset_dir, const char *filename, struct material_nebula *mt)
+int material_nebula_read_from_file(const char *asset_dir, const char *filename,
+					struct material *nebula)
 {
 	FILE *f;
 	int rc;
 	int i;
 	char full_filename[PATH_MAX + 1];
+	struct material_nebula *mt = &nebula->nebula;
 
+	nebula->type = MATERIAL_NEBULA;
 	sprintf(full_filename, "%s/materials/%s", asset_dir, filename);
 
 	f = fopen(full_filename, "r");
@@ -97,11 +100,13 @@ int material_nebula_read_from_file(const char *asset_dir, const char *filename, 
 	return 0;
 }
 
-int material_nebula_write_to_file(const char *asset_dir, const char *filename, struct material_nebula *mt)
+int material_nebula_write_to_file(const char *asset_dir, const char *filename,
+					struct material *nebula)
 {
 	FILE *f;
 	int i;
 	char full_filename[PATH_MAX + 1];
+	struct material_nebula *mt = &nebula->nebula;
 
 	sprintf(full_filename, "%s/materials/%s", asset_dir, filename);
 

@@ -94,12 +94,12 @@
 
 #include "vertex.h"
 #include "triangle.h"
+#include "material.h"
 #include "mesh.h"
 #include "stl_parser.h"
 #include "entity.h"
 #include "matrix.h"
 #include "graph_dev.h"
-#include "material.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -293,19 +293,19 @@ struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
 
 #define NNEBULA_MATERIALS 20
-static struct material_nebula nebula_material[NNEBULA_MATERIALS];
-static struct material_billboard red_torpedo_material;
-static struct material_billboard red_laser_material;
-static struct material_billboard green_laser_material;
-static struct material_billboard spark_material;
-static struct material_billboard sun_material;
-static struct material_texture_cubemap planet_material[NPLANET_MATERIALS];
+static struct material nebula_material[NNEBULA_MATERIALS];
+static struct material red_torpedo_material;
+static struct material red_laser_material;
+static struct material green_laser_material;
+static struct material spark_material;
+static struct material sun_material;
+static struct material planet_material[NPLANET_MATERIALS];
 #define NASTEROID_TEXTURES 2
-static struct material_texture_cubemap asteroid_material[NASTEROID_TEXTURES];
-static struct material_texture_mapped_unlit wormhole_material;
+static struct material asteroid_material[NASTEROID_TEXTURES];
+static struct material wormhole_material;
 #define NPLANETARY_RING_MATERIALS 2
-static struct material_textured_planet_ring planetary_ring_material[NPLANETARY_RING_MATERIALS];
-static struct material_textured_particle thrust_material;
+static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
+static struct material thrust_material;
 #ifdef WITHOUTOPENGL
 const int wormhole_render_style = RENDER_SPARKLE;
 const int torpedo_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
@@ -877,7 +877,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, torpedo_mesh, x, y, z, TORPEDO_COLOR);
 		set_render_style(e, torpedo_render_style);
-		update_entity_material(e, MATERIAL_BILLBOARD, &red_torpedo_material);
+		update_entity_material(e, &red_torpedo_material);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
@@ -942,7 +942,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, laserbeam_mesh, x, y, z, LASER_COLOR);
 		set_render_style(e, laserbeam_render_style);
-		update_entity_material(e, MATERIAL_BILLBOARD, &green_laser_material);
+		update_entity_material(e, &green_laser_material);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
@@ -1113,7 +1113,7 @@ static void update_laserbeam_segments(struct snis_entity *o)
 		ld->z[i] = z1 + (i + lastd) * dz; 
 		update_entity_pos(ld->entity[i], ld->x[i], ld->y[i], ld->z[i]);
 		update_entity_orientation(ld->entity[i], &orientation);
-		update_entity_material(ld->entity[i], MATERIAL_BILLBOARD, &red_laser_material);
+		update_entity_material(ld->entity[i], &red_laser_material);
 	}
 }
 
@@ -1231,8 +1231,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 		s = k % NASTEROID_SCALES;
 		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
 		update_entity_scale(e, s ? s * 3.5 : 1.0);
-		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP,
-					&asteroid_material[id % NASTEROID_TEXTURES]);
+		update_entity_material(e, &asteroid_material[id % NASTEROID_TEXTURES]);
 		i = add_generic_object(id, x, y, z, vx, vy, vz,
 				&orientation, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
@@ -1307,14 +1306,14 @@ static int update_planet(uint32_t id, double x, double y, double z, double r, ui
 		update_entity_scale(e, r);
 		if (hasring) {
 			ring = add_entity(ecx, planetary_ring_mesh, 0, 0, 0, PLANET_COLOR);
-			update_entity_material(ring, MATERIAL_TEXTURED_PLANET_RING,
-						&planetary_ring_material[(id >> 3) % NPLANETARY_RING_MATERIALS]);
+			update_entity_material(ring, &planetary_ring_material[(id >> 3) %
+						NPLANETARY_RING_MATERIALS]);
 			update_entity_orientation(ring, &identity_quat);
 
 			/* child ring will inherit position and scale from planet */
 			update_entity_parent(ecx, ring, e);
 		}
-		update_entity_material(e, MATERIAL_TEXTURE_CUBEMAP, &planet_material[m]);
+		update_entity_material(e, &planet_material[m]);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
@@ -1345,7 +1344,7 @@ static int update_wormhole(uint32_t id, double x, double y, double z)
 		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
 		e = add_entity(ecx, wormhole_mesh, x, y, z, WORMHOLE_COLOR);
 		set_render_style(e, wormhole_render_style);
-		update_entity_material(e, MATERIAL_TEXTURE_MAPPED_UNLIT, &wormhole_material);
+		update_entity_material(e, &wormhole_material);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
@@ -1415,8 +1414,7 @@ static int update_nebula(uint32_t id, double x, double y, double z, double r)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		struct entity *e = add_entity(ecx, nebula_mesh, x, y, z, PLANET_COLOR);
-		update_entity_material(e, MATERIAL_NEBULA,
-				&nebula_material[id % NNEBULA_MATERIALS]);
+		update_entity_material(e, &nebula_material[id % NNEBULA_MATERIALS]);
 		update_entity_scale(e, r * 2.0);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&identity_quat, OBJTYPE_NEBULA, 1, e);
@@ -1658,7 +1656,7 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	if (r < 50 || time < 10) {
 		e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
 		set_render_style(e, spark_render_style);
-		update_entity_material(e, MATERIAL_BILLBOARD, &spark_material);
+		update_entity_material(e, &spark_material);
 		update_entity_scale(e, (float) snis_randn(100) / 25.0f);
 	} else if (r < 75) {
 		e = add_entity(ecx, debris_mesh, x, y, z, color);
@@ -4838,7 +4836,7 @@ static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e
 	for (i = 0; i < ap->nports; i++) {
 		struct entity *t = add_entity(cx, thrust_animation_mesh,
 			ap->port[i].pos.v.x, ap->port[i].pos.v.y, ap->port[i].pos.v.z, WHITE);
-		update_entity_material(t, MATERIAL_TEXTURED_PARTICLE, &thrust_material);
+		update_entity_material(t, &thrust_material);
 		update_entity_orientation(t, &identity_quat);
 		update_entity_scale(t, ap->port[i].scale);
 
@@ -7598,38 +7596,41 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 
 	calculate_camera_transform(tridentecx);
 
-	struct material_color_by_w yaw_material = {
-		COLOR_LIGHTER(CYAN, 100),
-		CYAN,
-		COLOR_DARKER(CYAN, 80),
-		dist_to_cam-1.0,
-		dist_to_cam,
-		dist_to_cam+1.0 };
-	struct material_color_by_w pitch_material = {
-		COLOR_LIGHTER(GREEN, 100),
-		GREEN,
-		COLOR_DARKER(GREEN, 80),
-		dist_to_cam-1.0,
-		dist_to_cam,
-		dist_to_cam+1.0 };
+	struct material yaw_material = {
+		.color_by_w = { COLOR_LIGHTER(CYAN, 100),
+				CYAN,
+				COLOR_DARKER(CYAN, 80),
+				dist_to_cam - 1.0,
+				dist_to_cam,
+				dist_to_cam + 1.0 },
+		.type = MATERIAL_COLOR_BY_W};
+
+	struct material pitch_material = {
+		.color_by_w = { COLOR_LIGHTER(GREEN, 100),
+				GREEN,
+				COLOR_DARKER(GREEN, 80),
+				dist_to_cam - 1.0,
+				dist_to_cam,
+				dist_to_cam + 1.0 },
+		.type = MATERIAL_COLOR_BY_W };
 
 	/* add yaw axis */
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, CYAN);
-	update_entity_material(e, MATERIAL_COLOR_BY_W, &yaw_material);
+	update_entity_material(e, &yaw_material);
 
 	/* add pitch1 axis */
 	union quat pitch1_orientation;
 	quat_init_axis(&pitch1_orientation, 1, 0, 0, M_PI/2.0);
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
 	update_entity_orientation(e, &pitch1_orientation);
-	update_entity_material(e, MATERIAL_COLOR_BY_W, &pitch_material);
+	update_entity_material(e, &pitch_material);
 
 	/* add pitch2 axis */
 	union quat pitch2_orientation;
 	quat_init_axis(&pitch2_orientation, 0, 0, 1, M_PI/2.0);
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
 	update_entity_orientation(e, &pitch2_orientation);
-	update_entity_material(e, MATERIAL_COLOR_BY_W, &pitch_material);
+	update_entity_material(e, &pitch_material);
 
 	/* add absolute straight ahead ind, down z axis with y up to match heading = 0 mark 0 */
 	union quat ind_orientation;
@@ -11605,7 +11606,7 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	static int static_exc_loaded = 0;
 	if (!static_exc_loaded) {
 		struct entity *e = add_entity(ecx, sun_mesh, XKNOWN_DIM/2, 0, ZKNOWN_DIM/2, WHITE);
-		update_entity_material(e, MATERIAL_BILLBOARD, &sun_material);
+		update_entity_material(e, &sun_material);
 
 		static_exc_loaded = 1;
 	}
@@ -11619,30 +11620,41 @@ static void load_textures(void)
 		return;
 	load_skybox_textures(skybox_texture_prefix);
 
-	green_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
-	green_laser_material.texture_id = load_texture("green-laser-texture.png");
-	red_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
-	red_laser_material.texture_id = load_texture("red-laser-texture.png");
-	planetary_ring_material[0].texture_id = load_texture("planetary-ring.png");
-	planetary_ring_material[0].tint = sng_get_color(WHITE);
-	planetary_ring_material[0].alpha = 0.5;
-	planetary_ring_material[1].texture_id = load_texture("planetary-ring2.png");
-	planetary_ring_material[1].tint = sng_get_color(WHITE);
-	planetary_ring_material[1].alpha = 0.5;
+	green_laser_material.type = MATERIAL_BILLBOARD;
+	green_laser_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
+	green_laser_material.billboard.texture_id = load_texture("green-laser-texture.png");
+	red_laser_material.type = MATERIAL_BILLBOARD;
+	red_laser_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
+	red_laser_material.billboard.texture_id = load_texture("red-laser-texture.png");
+	planetary_ring_material[0].type = MATERIAL_TEXTURED_PLANET_RING;
+	planetary_ring_material[0].textured_planet_ring.texture_id = load_texture("planetary-ring.png");
+	planetary_ring_material[0].textured_planet_ring.tint = sng_get_color(WHITE);
+	planetary_ring_material[0].textured_planet_ring.alpha = 0.5;
+	planetary_ring_material[1].type = MATERIAL_TEXTURED_PLANET_RING;
+	planetary_ring_material[1].textured_planet_ring.texture_id = load_texture("planetary-ring2.png");
+	planetary_ring_material[1].textured_planet_ring.tint = sng_get_color(WHITE);
+	planetary_ring_material[1].textured_planet_ring.alpha = 0.5;
 
-	red_torpedo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	red_torpedo_material.texture_id = load_texture("red-torpedo-texture.png");
+	red_torpedo_material.type = MATERIAL_BILLBOARD;
+	red_torpedo_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	red_torpedo_material.billboard.texture_id = load_texture("red-torpedo-texture.png");
 
-	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	spark_material.texture_id = load_texture("spark-texture.png");
+	spark_material.type = MATERIAL_BILLBOARD;
+	spark_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	spark_material.billboard.texture_id = load_texture("spark-texture.png");
 
-	sun_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	sun_material.texture_id = load_texture("sun.png");
+	sun_material.type = MATERIAL_BILLBOARD;
+	sun_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	sun_material.billboard.texture_id = load_texture("sun.png");
 
-	planet_material[0].texture_id = load_cubemap_textures(0, "planet-texture0-");
-	planet_material[1].texture_id = load_cubemap_textures(0, "planet-texture1-");
-	planet_material[2].texture_id = load_cubemap_textures(0, "planet-texture2-");
-	planet_material[3].texture_id = load_cubemap_textures(0, "planet-texture3-");
+	planet_material[0].type = MATERIAL_TEXTURE_CUBEMAP;
+	planet_material[0].texture_cubemap.texture_id = load_cubemap_textures(0, "planet-texture0-");
+	planet_material[1].type = MATERIAL_TEXTURE_CUBEMAP;
+	planet_material[1].texture_cubemap.texture_id = load_cubemap_textures(0, "planet-texture1-");
+	planet_material[2].type = MATERIAL_TEXTURE_CUBEMAP;
+	planet_material[2].texture_cubemap.texture_id = load_cubemap_textures(0, "planet-texture2-");
+	planet_material[3].type = MATERIAL_TEXTURE_CUBEMAP;
+	planet_material[3].texture_cubemap.texture_id = load_cubemap_textures(0, "planet-texture3-");
 
 	int i;
 	for (i = 0; i < NNEBULA_MATERIALS; i++) {
@@ -11652,17 +11664,21 @@ static void load_textures(void)
 		material_nebula_read_from_file(asset_dir, filename, &nebula_material[i]);
 	}
 
-	asteroid_material[0].texture_id = load_cubemap_textures(0, "asteroid1-");
-	asteroid_material[1].texture_id = load_cubemap_textures(0, "asteroid2-");
-	wormhole_material.texture_id = load_texture("wormhole.png");
-	wormhole_material.do_cullface = 0;
-	wormhole_material.do_blend = 1;
-	wormhole_material.tint = sng_get_color(MAGENTA);
-	wormhole_material.alpha = 0.5;
+	asteroid_material[0].type = MATERIAL_TEXTURE_CUBEMAP;
+	asteroid_material[0].texture_cubemap.texture_id = load_cubemap_textures(0, "asteroid1-");
+	asteroid_material[1].type = MATERIAL_TEXTURE_CUBEMAP;
+	asteroid_material[1].texture_cubemap.texture_id = load_cubemap_textures(0, "asteroid2-");
+	wormhole_material.type = MATERIAL_TEXTURE_MAPPED_UNLIT;
+	wormhole_material.texture_mapped_unlit.texture_id = load_texture("wormhole.png");
+	wormhole_material.texture_mapped_unlit.do_cullface = 0;
+	wormhole_material.texture_mapped_unlit.do_blend = 1;
+	wormhole_material.texture_mapped_unlit.tint = sng_get_color(MAGENTA);
+	wormhole_material.texture_mapped_unlit.alpha = 0.5;
 
-	thrust_material.texture_id = load_texture("thrust.png");
-	thrust_material.radius = 1.5;
-	thrust_material.time_base = 0.1;
+	thrust_material.type = MATERIAL_TEXTURED_PARTICLE;
+	thrust_material.textured_particle.texture_id = load_texture("thrust.png");
+	thrust_material.textured_particle.radius = 1.5;
+	thrust_material.textured_particle.time_base = 0.1;
 
 	textures_loaded = 1;
 }

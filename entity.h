@@ -93,7 +93,6 @@ GLOBAL void entity_set_user_data(struct entity *e, void *user_data);
 GLOBAL void *entity_get_user_data(struct entity *e);
 GLOBAL void set_window_offset(struct entity_context *cx, float x, float y);
 GLOBAL int entity_onscreen(struct entity *e);
-
-GLOBAL void update_entity_material(struct entity *e, int material_type, void *material_ptr);
+GLOBAL void update_entity_material(struct entity *e, struct material *material_ptr);
 
 #endif	

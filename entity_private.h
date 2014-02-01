@@ -36,8 +36,7 @@ struct entity {
 	void *user_data;
 	union quat orientation;
 
-	int material_type;
-	void *material_ptr;
+	struct material *material_ptr;
 
 	union vec3 e_pos;
 	float e_scale;

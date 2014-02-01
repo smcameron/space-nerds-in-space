@@ -17,9 +17,9 @@
 #include "vec4.h"
 #include "snis_graph.h"
 #include "graph_dev.h"
+#include "material.h"
 #include "entity.h"
 #include "entity_private.h"
-#include "material.h"
 #include "snis_typeface.h"
 
 #define MAX_LOADED_TEXTURES 20
@@ -1342,8 +1342,8 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 
 	GLuint vertex_position_id;
 
-	if (e->material_type == MATERIAL_COLOR_BY_W) {
-		struct material_color_by_w *m = e->material_ptr;
+	if (e->material_ptr && e->material_ptr->type == MATERIAL_COLOR_BY_W) {
+		struct material_color_by_w *m = &e->material_ptr->color_by_w;
 
 		glUseProgram(color_by_w_shader.program_id);
 
@@ -1427,7 +1427,7 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 	glDrawArrays(GL_LINES, 0, ptr->nlines * 2);
 
 	glDisableVertexAttribArray(vertex_position_id);
-	if (e->material_type != MATERIAL_COLOR_BY_W) {
+	if (e->material_ptr && e->material_ptr->type != MATERIAL_COLOR_BY_W) {
 		glDisableVertexAttribArray(line_single_color_shader.multi_one_id);
 		glDisableVertexAttribArray(line_single_color_shader.line_vertex0_id);
 		glDisableVertexAttribArray(line_single_color_shader.line_vertex1_id);
@@ -1481,7 +1481,7 @@ void graph_dev_raster_point_cloud_mesh(const struct mat44 *mat_mvp, struct mesh 
 static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal,
 	struct entity *e, union vec3 *eye_light_pos)
 {
-	struct material_nebula *mt = e->material_ptr;
+	struct material_nebula *mt = &e->material_ptr->nebula;
 
 	/* transform model origin into camera space */
 	union vec4 ent_pos = { { 0.0, 0.0, 0.0, 1.0 } };
@@ -1668,7 +1668,10 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 
 extern int graph_dev_entity_render_order(struct entity_context *cx, struct entity *e)
 {
-	switch (e->material_type) {
+	if (!e->material_ptr)
+		return GRAPH_DEV_RENDER_NEAR_TO_FAR;
+
+	switch (e->material_ptr->type) {
 	case MATERIAL_NEBULA:
 	case MATERIAL_TEXTURE_MAPPED:
 	case MATERIAL_TEXTURE_MAPPED_UNLIT:
@@ -1686,7 +1689,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 	struct sng_color line_color = sng_get_color(e->color);
 
-	if (e->material_type == MATERIAL_NEBULA) {
+	if (e->material_ptr && e->material_ptr->type == MATERIAL_NEBULA) {
 		graph_dev_draw_nebula(mat_mvp, mat_mv, mat_normal, e, eye_light_pos);
 		return;
 	}
@@ -1712,43 +1715,47 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		union vec3 eye_sphere_pos = VEC3_INITIALIZER;
 		float sphere_radius = 0;
 
-		switch (e->material_type) {
-		case MATERIAL_TEXTURE_MAPPED: {
+		if (e->material_ptr) {
+			switch (e->material_ptr->type) {
+			case MATERIAL_TEXTURE_MAPPED: {
 				tex_shader = &textured_lit_shader;
 
-				struct material_texture_mapped *mt = e->material_ptr;
+				struct material_texture_mapped *mt = &e->material_ptr->texture_mapped;
 				texture_id = mt->texture_id;
-			}
-			break;
-		case MATERIAL_TEXTURE_MAPPED_UNLIT: {
+				}
+				break;
+			case MATERIAL_TEXTURE_MAPPED_UNLIT: {
 				tex_shader = &textured_shader;
 
-				struct material_texture_mapped_unlit *mt = e->material_ptr;
+				struct material_texture_mapped_unlit *mt =
+						&e->material_ptr->texture_mapped_unlit;
 				texture_id = mt->texture_id;
 				do_cullface = mt->do_cullface;
 				do_blend = mt->do_blend;
 				texture_alpha = mt->alpha;
 				texture_tint = mt->tint;
-			}
-			break;
-		case MATERIAL_BILLBOARD: {
+				}
+				break;
+			case MATERIAL_BILLBOARD: {
 				tex_shader = &textured_shader;
 
-				struct material_billboard *mt = e->material_ptr;
+				struct material_billboard *mt = &e->material_ptr->billboard;
 				texture_id = mt->texture_id;
 				do_blend = 1;
-			}
-			break;
-		case MATERIAL_TEXTURE_CUBEMAP: {
-				struct material_texture_cubemap *mt = e->material_ptr;
+				}
+				break;
+			case MATERIAL_TEXTURE_CUBEMAP: {
+				struct material_texture_cubemap *mt =
+						&e->material_ptr->texture_cubemap;
 				texture_id = mt->texture_id;
 				has_cubemap_texture = 1;
-			}
-			break;
-		case MATERIAL_TEXTURED_PLANET_RING: {
+				}
+				break;
+			case MATERIAL_TEXTURED_PLANET_RING: {
 				tex_shader = &textured_with_sphere_shadow_shader;
 
-				struct material_textured_planet_ring *mt = e->material_ptr;
+				struct material_textured_planet_ring *mt =
+							&e->material_ptr->textured_planet_ring;
 				texture_id = mt->texture_id;
 				texture_alpha = mt->alpha;
 				texture_tint = mt->tint;
@@ -1760,8 +1767,9 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 				/* planet is the size of the ring scale */
 				sphere_radius = e->scale;
+				}
+				break;
 			}
-			break;
 		}
 
 		if (filled_triangle) {
@@ -1792,7 +1800,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				mat_normal, e->m, &line_color, 1);
 		}
 
-		if (draw_billboard_wireframe && e->material_type == MATERIAL_BILLBOARD) {
+		if (draw_billboard_wireframe && e->material_ptr &&
+				e->material_ptr->type == MATERIAL_BILLBOARD) {
 			struct sng_color white_color = sng_get_color(WHITE);
 			graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
 				mat_normal, e->m, &white_color, 0);
@@ -1808,8 +1817,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		break;
 
 	case MESH_GEOMETRY_PARTICLE_ANIMATION:
-		if (e->material_type == MATERIAL_TEXTURED_PARTICLE) {
-			struct material_textured_particle *mt = e->material_ptr;
+		if (e->material_ptr && e->material_ptr->type == MATERIAL_TEXTURED_PARTICLE) {
+			struct material_textured_particle *mt = &e->material_ptr->textured_particle;
 
 			graph_dev_raster_particle_animation(cx, e, mat_mvp, mat_normal, mt->texture_id,
 				mt->radius * e->scale, mt->time_base);
