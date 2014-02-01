@@ -57,6 +57,9 @@ LUACFLAGS:=$(shell pkg-config --cflags lua5.2 || echo '')
 PNGLIBS:=$(shell pkg-config --libs libpng)
 PNGCFLAGS:=$(shell pkg-config --cflags libpng)
 
+SDLLIBS:=$(shell pkg-config sdl --libs)
+SDLCFLAGS:=$(shell pkg-config sdl --cflags)
+
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o mtwist.o infinite-taunt.o snis_damcon_systems.o \
@@ -65,20 +68,18 @@ SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o
 
-CLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} shader.o graph_dev_opengl.o snis_ui_element.o snis_graph.o \
-	snis_client.o snis_font.o snis_text_input.o \
+COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
-	mesh.o material.o \
-	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o vec4.o
+	mesh.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o vec4.o
 
-LIMCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} graph_dev_gdk.o snis_ui_element.o snis_limited_graph.o \
-	snis_limited_client.o snis_font.o snis_text_input.o \
-	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
-	mesh.o material.o \
-	stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o vec4.o fleet.o
+CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o snis_graph.o snis_client.o
+
+LIMCLIENTOBJS=${COMMONCLIENTOBJS} graph_dev_gdk.o snis_limited_graph.o snis_limited_client.o
+
+SDLCLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o snis_graph.o mesh_viewer.o
 
 SSGL=ssgl/libssglclient.a
-LIBS=-lGLEW -Lssgl -lssglclient -lrt -lm ${LUALIBS} ${PNGLIBS}
+LIBS=-lGLEW -lGL -Lssgl -lssglclient -lrt -lm ${LUALIBS} ${PNGLIBS}
 #
 # NOTE: if you get
 #
@@ -98,7 +99,7 @@ LIBS=-lGLEW -Lssgl -lssglclient -lrt -lm ${LUALIBS} ${PNGLIBS}
 #
 
 
-PROGS=snis_server snis_client snis_limited_client
+PROGS=snis_server snis_client snis_limited_client mesh_viewer
 
 # model directory
 MD=share/snis/models
@@ -171,9 +172,11 @@ GTKCOMPILE=$(CC) ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 LIMCOMPILE=$(CC) -DWITHOUTOPENGL=1 ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 GLEXTCOMPILE=$(CC) ${MYCFLAGS} ${GTKCFLAGS} ${GLEXTCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 VORBISCOMPILE=$(CC) ${MYCFLAGS} ${VORBISFLAGS} ${SNDFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
+SDLCOMPILE=$(CC) ${MYCFLAGS} ${SDLCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 
 CLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${GLEXTCFLAGS} ${CLIENTOBJS} ${GTKLDFLAGS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
 LIMCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${LIMCLIENTOBJS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
+SDLCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
 SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} ${SERVEROBJS} ${GTKLDFLAGS} ${LIBS} && $(ECHO) '  LINK' $@
 OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 
@@ -248,6 +251,9 @@ snis_limited_client.c:	snis_client.c Makefile
 snis_limited_client.o:	snis_limited_client.c Makefile
 	$(Q)$(LIMCOMPILE)
 
+mesh_viewer.o:	mesh_viewer.c Makefile
+	$(Q)$(SDLCOMPILE)
+
 snis_socket_io.o:	snis_socket_io.c Makefile
 	$(Q)$(COMPILE)
 
@@ -274,6 +280,9 @@ snis_client:	${CLIENTOBJS} ${SSGL} Makefile
 
 snis_limited_client:	${LIMCLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(LIMCLIENTLINK)
+
+mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile
+	$(Q)$(SDLCLIENTLINK)
 
 starbase-comms.o:	starbase-comms.c Makefile
 	$(Q)$(COMPILE)	

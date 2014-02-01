@@ -76,6 +76,17 @@ mesh.o: quat.h
 mesh.o: snis_graph.h
 mesh.o: material.h
 mesh.o: mesh.h
+mesh_viewer.o: mtwist.h
+mesh_viewer.o: vertex.h
+mesh_viewer.o: snis_graph.h
+mesh_viewer.o: graph_dev.h
+mesh_viewer.o: quat.h
+mesh_viewer.o: material.h
+mesh_viewer.o: entity.h
+mesh_viewer.o: mesh.h
+mesh_viewer.o: stl_parser.h
+mesh_viewer.o: mathutils.h
+mesh_viewer.o: snis_typeface.h
 mtwist.o: mtwist.h
 my_point.o: my_point.h
 names.o: names.h
@@ -89,6 +100,7 @@ quat.o: mathutils.h
 shader.o: shader.h
 shield_strength.o: shield_strength.h
 snis_alloc.o: snis_alloc.h
+snis_alloc.o: stacktrace.h
 snis_button.o: snis_font.h
 snis_button.o: my_point.h
 snis_button.o: snis_typeface.h
@@ -155,6 +167,7 @@ snis_client.o: share/snis/models/conqueror.scad_params.h
 snis_client.o: share/snis/models/scrambler.scad_params.h
 snis_client.o: share/snis/models/swordfish.scad_params.h
 snis_client.o: share/snis/models/wombat.scad_params.h
+snis_client.o: share/snis/models/dreadknight/dreadknight-exhaust-plumes.h
 snis_damcon_systems.o: snis_damcon_systems.h
 snis_damcon_systems.o: build_bug_on.h
 snis_event_callback.o: snis_event_callback.h
@@ -247,6 +260,7 @@ snis_limited_client.o: share/snis/models/conqueror.scad_params.h
 snis_limited_client.o: share/snis/models/scrambler.scad_params.h
 snis_limited_client.o: share/snis/models/swordfish.scad_params.h
 snis_limited_client.o: share/snis/models/wombat.scad_params.h
+snis_limited_client.o: share/snis/models/dreadknight/dreadknight-exhaust-plumes.h
 snis_limited_graph.o: snis_font.h
 snis_limited_graph.o: my_point.h
 snis_limited_graph.o: snis_graph.h
@@ -259,6 +273,7 @@ snis_limited_graph.o: graph_dev.h
 snis_marshal.o: snis_marshal.h
 snis_marshal.o: stacktrace.h
 snis_server.o: container-of.h
+snis_server.o: string-utils.h
 snis_server.o: mtwist.h
 snis_server.o: build_bug_on.h
 snis_server.o: ssgl/ssgl.h
