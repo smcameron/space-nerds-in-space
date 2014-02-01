@@ -393,7 +393,7 @@ test-commodities:	commodities.o Makefile
 test-obj-parser:	test-obj-parser.c stl_parser.o mesh.o mtwist.o mathutils.o matrix.o quat.o Makefile
 	gcc -o test-obj-parser stl_parser.o mtwist.o mathutils.o matrix.o mesh.o quat.o -lm test-obj-parser.c
 
-test :	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist
+test :	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist test-commodities
 
 clean:	mostly-clean
 	rm -f ${MODELS} test_marshal

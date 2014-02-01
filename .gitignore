@@ -8,4 +8,10 @@ snis_server
 snis_limited_client
 snis_limited_client.c
 snis_limited_graph.c
-
+test-fleet
+test-marshal
+test-matrix
+test-mtwist
+test-quat
+test-space-partition
+test-commodities
