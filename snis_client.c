@@ -11257,7 +11257,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (!gdk_gl_drawable_gl_begin(gl_drawable, gl_context))
 		g_assert_not_reached();
 
-	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	graph_dev_start_frame();
@@ -11584,6 +11583,8 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	 */
 	GtkAllocation alloc;
 	gtk_widget_get_allocation(main_da, &alloc);
+
+	glClearColor(0.0, 0.0, 0.0, 0.0);
 
 	/* Delimits the end of the OpenGL execution. */
 	gdk_gl_drawable_gl_end(gl_drawable);

@@ -713,8 +713,6 @@ void graph_dev_set_3d_viewport(int x_offset, int y_offset, int width, int height
 static void enable_2d_viewport()
 {
 	if (sgc.active_vp != 1) {
-		glDisable(GL_DEPTH_TEST);
-
 		/* 2d viewport is entire screen */
 		glViewport(0, 0, sgc.screen_x, sgc.screen_y);
 
@@ -890,7 +888,6 @@ static void add_vertex_2d(float x, float y, GdkColor* color, GLubyte alpha, GLen
 static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh *m, struct mesh_gl_info *ptr)
 {
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
 
 	glUseProgram(single_color_shader.program_id);
 
@@ -1099,7 +1096,6 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 	struct mesh_gl_info *ptr = m->graph_ptr;
 
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
 	glEnable(GL_CULL_FACE);
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -1163,7 +1159,6 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 	struct mesh_gl_info *ptr = m->graph_ptr;
 
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
 	glEnable(GL_CULL_FACE);
 
 	glUseProgram(filled_wireframe_shader.program_id);
@@ -1255,7 +1250,6 @@ static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, c
 	struct mesh_gl_info *ptr = m->graph_ptr;
 
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
 
 	if (do_cullface) {
 		glUseProgram(trans_wireframe_shader.program_id);
@@ -1338,7 +1332,6 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 	struct mesh_gl_info *ptr = m->graph_ptr;
 
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
 
 	GLuint vertex_position_id;
 
@@ -1448,7 +1441,6 @@ void graph_dev_raster_point_cloud_mesh(const struct mat44 *mat_mvp, struct mesh 
 	struct mesh_gl_info *ptr = m->graph_ptr;
 
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
 	glUseProgram(point_cloud_shader.program_id);
@@ -1546,7 +1538,6 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 
 	/* enable depth test but don't write to depth buffer */
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
 	glDepthMask(GL_FALSE);
 
 	if (draw_polygon_as_lines)
@@ -2279,6 +2270,8 @@ int graph_dev_setup()
 		return -1;
 	}
 	printf("Initialized GLEW\n");
+
+	glDepthFunc(GL_LESS);
 
 	setup_single_color_lit_shader(&single_color_lit_shader);
 	setup_trans_wireframe_shader(&trans_wireframe_shader);
