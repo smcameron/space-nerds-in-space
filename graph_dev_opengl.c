@@ -1659,18 +1659,29 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 
 extern int graph_dev_entity_render_order(struct entity_context *cx, struct entity *e)
 {
+	int does_blending = 0;
+
 	if (!e->material_ptr)
 		return GRAPH_DEV_RENDER_NEAR_TO_FAR;
 
 	switch (e->material_ptr->type) {
 	case MATERIAL_NEBULA:
-	case MATERIAL_TEXTURE_MAPPED:
-	case MATERIAL_TEXTURE_MAPPED_UNLIT:
 	case MATERIAL_BILLBOARD:
 	case MATERIAL_TEXTURED_PARTICLE:
-			return GRAPH_DEV_RENDER_FAR_TO_NEAR;
+	case MATERIAL_TEXTURED_PLANET_RING:
+		does_blending = 1;
+		break;
+	case MATERIAL_TEXTURE_MAPPED_UNLIT: {
+			struct material_texture_mapped_unlit *mt = e->material_ptr;
+			does_blending = mt->do_blend;
+		}
+		break;
 	}
-	return GRAPH_DEV_RENDER_NEAR_TO_FAR;
+
+	if (does_blending)
+		return GRAPH_DEV_RENDER_FAR_TO_NEAR;
+	else
+		return GRAPH_DEV_RENDER_NEAR_TO_FAR;
 }
 
 void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
