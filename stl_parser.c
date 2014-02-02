@@ -198,6 +198,17 @@ static struct vertex_owner* alloc_vertex_owners(int vertices) {
 	return owners;
 }
 
+static int shared_owners(struct vertex_owner *owner)
+{
+	if (!owner)
+		return 0;
+	if (!owner->t)
+		return 0;
+	if (!owner->next)
+		return 0;
+	return 1;
+}
+
 static void free_vertex_owners(struct vertex_owner* owners, int vertices) {
 
 	int i;
@@ -815,6 +826,33 @@ out:
 	return;
 }
 
+static struct vertex_owner *mesh_compute_vertex_owners(struct mesh *m)
+{
+	struct vertex_owner *owners = alloc_vertex_owners(m->ntriangles * 3);
+
+	if (!owners)
+		return owners;
+
+	for (int i = 0; i < m->ntriangles; i++) {
+		struct triangle *t = &m->t[i];
+
+		for (int j = 0; j < 3; j++)
+			add_vertex_owner(t, &owners[t->v[j] - &m->v[0]]);
+	}
+	return owners;
+}
+
+static void mesh_compute_shared_vertex_flags(struct mesh *m, struct vertex_owner *owners)
+{
+	for (int i = 0; i < m->ntriangles; i++) {
+		struct triangle *t = &m->t[i];
+
+		for (int j = 0; j < 3; j++)
+			if (shared_owners(&owners[t->v[j] - &m->v[0]]))
+				t->flag |= TRIANGLE_0_SHARED << j;
+	}
+}
+
 struct mesh *read_obj_file(char *filename)
 {
 	FILE *f;
@@ -836,6 +874,7 @@ struct mesh *read_obj_file(char *filename)
 	struct vertex *vt = NULL;
 	struct vertex *vn = NULL;
 	struct triangle *ft = NULL;
+	struct vertex_owner *owners;
 
 	f = fopen(filename, "r");
 	if (!f)
@@ -921,8 +960,12 @@ struct mesh *read_obj_file(char *filename)
 	compact_mesh_allocations(m);
 	m->radius = mesh_compute_radius(m);
 	check_triangle_vertices(m);
-
-	/* FIXME: need to do coplanar stuff, and normals if they weren't in the file */
+	owners = mesh_compute_vertex_owners(m);
+	if (owners) {
+		mesh_compute_shared_vertex_flags(m, owners);
+		process_coplanar_triangles(m, owners);
+		free_vertex_owners(owners, m->ntriangles * 3);
+	}
 
 	mesh_graph_dev_init(m);
 	return m;
