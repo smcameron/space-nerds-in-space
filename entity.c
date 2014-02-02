@@ -123,47 +123,56 @@ void remove_all_entity(struct entity_context *cx)
 
 void update_entity_parent(struct entity_context *cx, struct entity *child, struct entity *parent)
 {
-	if (child->parent != parent) {
-		int child_index = child - &cx->entity_list[0];
+	if (child->parent == parent)
+		return;
 
-		if (child->parent) {
-			/* remove this child out of the old parent child_entity_list */
-			int entity_child_index = parent->entity_child_index;
-			struct entity_child *last_ec = 0;
+	int new_entity_child_index = -1;
+	int child_index = child - &cx->entity_list[0];
 
-			while (entity_child_index >= 0) {
-				struct entity_child *this_ec = &cx->entity_child_list[entity_child_index];
-				if (this_ec->child_entity_index == child_index) {
-					/* we found the child, fix the list */
+	if (parent) {
+		/* preallocate this so that in case we can't get one, at least we don't crash. */
+		new_entity_child_index = snis_object_pool_alloc_obj(cx->entity_child_pool);
+		if (new_entity_child_index < 0) {
+			printf("entity_child_pool exhausted at %s:%d\n", __FILE__, __LINE__);
+			return;
+		}
+	}
 
-					if (!last_ec) /* first link */
-						parent->entity_child_index = this_ec->next_entity_child_index;
-					else
-						last_ec->next_entity_child_index = this_ec->next_entity_child_index;
+	if (child->parent) {
+		/* remove this child out of the old parent child_entity_list */
+		int entity_child_index = parent->entity_child_index;
+		struct entity_child *last_ec = 0;
 
-					snis_object_pool_free_object(cx->entity_child_pool, entity_child_index);
+		while (entity_child_index >= 0) {
+			struct entity_child *this_ec = &cx->entity_child_list[entity_child_index];
+			if (this_ec->child_entity_index == child_index) {
+				/* we found the child, fix the list */
+				if (!last_ec) /* first link */
+					parent->entity_child_index = this_ec->next_entity_child_index;
+				else
+					last_ec->next_entity_child_index = this_ec->next_entity_child_index;
 
-					break; /* found the child, done */
-				}
-				entity_child_index = this_ec->next_entity_child_index;
-				last_ec = this_ec;
+				snis_object_pool_free_object(cx->entity_child_pool, entity_child_index);
+
+				break; /* found the child, done */
 			}
-			child->parent->child_count--;
+			entity_child_index = this_ec->next_entity_child_index;
+			last_ec = this_ec;
 		}
+		child->parent->child_count--;
+	}
 
-		child->parent = parent;
+	child->parent = parent;
 
-		if (parent) {
-			/* add child into new parent child_entity_list */
-			int new_entity_child_index = snis_object_pool_alloc_obj(cx->entity_child_pool);
-			struct entity_child *new_ec = &cx->entity_child_list[new_entity_child_index];
+	if (parent) {
+		/* add child into new parent child_entity_list */
+		struct entity_child *new_ec = &cx->entity_child_list[new_entity_child_index];
 
-			/* insert entity_child at the front of the list */
-			new_ec->child_entity_index = child_index;
-			new_ec->next_entity_child_index = parent->entity_child_index;
-			parent->entity_child_index = new_entity_child_index;
-			parent->child_count++;
-		}
+		/* insert entity_child at the front of the list */
+		new_ec->child_entity_index = child_index;
+		new_ec->next_entity_child_index = parent->entity_child_index;
+		parent->entity_child_index = new_entity_child_index;
+		parent->child_count++;
 	}
 }
 
