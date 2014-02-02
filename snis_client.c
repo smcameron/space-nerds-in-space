@@ -4815,6 +4815,10 @@ static struct thrust_attachment_point ship_thrust_attachment_points[] = {
 	,
 	/* wombat */
 	#include "share/snis/models/wombat.scad_params.h"
+	,
+	/* dreadknight */
+	#include "share/snis/models/dreadknight/dreadknight-exhaust-plumes.h"
+	,
 };
 
 static struct thrust_attachment_point *ship_thrust_attachment_point(int shiptype)
