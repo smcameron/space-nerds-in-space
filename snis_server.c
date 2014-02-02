@@ -1421,6 +1421,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 
 	if (t->type == OBJTYPE_STARBASE) {
 		t->tsd.starbase.under_attack = 1;
+		calculate_laser_starbase_damage(t, snis_randn(255));
 		return;
 	}
 
