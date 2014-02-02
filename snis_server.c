@@ -1392,6 +1392,18 @@ static void pop_ai_attack_mode(struct snis_entity *o)
 	return;
 }
 
+static void add_starbase_attacker(struct snis_entity *starbase, int attacker_id)
+{
+	int n;
+
+	n = starbase->tsd.starbase.nattackers;
+	if (n >= sizeof(starbase->tsd.starbase.attacker))
+		n %= sizeof(starbase->tsd.starbase.attacker);
+	else
+		starbase->tsd.starbase.nattackers++;
+	starbase->tsd.starbase.attacker[n] = attacker_id;
+}
+
 static void torpedo_collision_detection(void *context, void *entity)
 {
 	struct snis_entity *o = context; /* torpedo */
@@ -1421,6 +1433,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 
 	if (t->type == OBJTYPE_STARBASE) {
 		t->tsd.starbase.under_attack = 1;
+		add_starbase_attacker(t, o->tsd.torpedo.ship_id);
 		calculate_laser_starbase_damage(t, snis_randn(255));
 		return;
 	}
@@ -3320,6 +3333,7 @@ static void starbase_move(struct snis_entity *o)
 {
 	char buf[100], location[50];
 	int64_t then, now;
+	int i;
 	/* FIXME, fill this in. */
 
 	then = o->tsd.starbase.last_time_called_for_help;
@@ -3335,6 +3349,48 @@ static void starbase_move(struct snis_entity *o)
 		coords_to_location_string(o->x, o->z, location, sizeof(location) - 1);
 		sprintf(buf, "LOCATION %s", location);
 		send_comms_packet("-  ", 0, buf);
+	}
+
+	for (i = 0; i < o->tsd.starbase.nattackers; i++) {
+		int j;
+		struct snis_entity *a;
+
+		j = lookup_by_id(o->tsd.starbase.attacker[i]);
+		if (j < 0)
+			continue;
+		a = &go[j];
+		if (!a->alive)
+			continue;
+		if (a->type != OBJTYPE_SHIP1 && a->type != OBJTYPE_SHIP2)
+			continue;
+		float dist2 = dist3dsqrd(o->x - a->x, o->y - a->y, o->z - a->z);
+		if (dist2 > TORPEDO_RANGE * TORPEDO_RANGE)
+			continue;
+		if (snis_randn(1000) < STARBASE_FIRE_CHANCE)
+			continue;
+		if (snis_randn(100) < 30 &&
+			o->tsd.starbase.next_torpedo_time <= universe_timestamp) {
+			/* fire torpedo */
+			float dist = sqrt(dist2);
+			double tx, ty, tz, vx, vy, vz;
+			float flight_time = dist / TORPEDO_VELOCITY;
+
+			tx = a->x + (a->vx * flight_time);
+			tz = a->z + (a->vz * flight_time);
+			ty = a->y + (a->vy * flight_time);
+			calculate_torpedo_velocities(o->x, o->y, o->z,
+				tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
+			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
+			o->tsd.starbase.next_torpedo_time = universe_timestamp +
+					STARBASE_TORPEDO_FIRE_INTERVAL;
+		}
+		if (snis_randn(100) < 30 &&
+			o->tsd.starbase.next_laser_time <= universe_timestamp) {
+			/* fire laser */
+			add_laserbeam(o->id, a->id, LASERBEAM_DURATION);
+			o->tsd.starbase.next_laser_time = universe_timestamp +
+					STARBASE_LASER_FIRE_INTERVAL;
+		}
 	}
 }
 
@@ -4257,6 +4313,7 @@ static void laserbeam_move(struct snis_entity *o)
 	
 	if (ttype == OBJTYPE_STARBASE) {
 		target->tsd.starbase.under_attack = 1;
+		add_starbase_attacker(target, o->tsd.laserbeam.origin);
 		calculate_laser_starbase_damage(target, o->tsd.laserbeam.wavelength);
 	}
 

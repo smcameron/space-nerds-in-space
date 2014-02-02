@@ -370,6 +370,7 @@ struct marketplace_data {
 	float refill_rate;
 };
 
+#define STARBASE_FIRE_CHANCE 25 /* ... out of 1000, 10x per sec */
 struct starbase_data {
 	uint8_t under_attack;
 	uint32_t last_time_called_for_help;
@@ -379,6 +380,12 @@ struct starbase_data {
 	int associated_planet_id;
 	float *bid_price;
 	float *part_price;
+	int nattackers;
+	int attacker[5]; /* track up to 5 attackers at once */
+	int32_t next_laser_time;
+	int32_t next_torpedo_time;
+#define STARBASE_LASER_FIRE_INTERVAL (3.2 * 10) /* 3.27 seconds */ 
+#define STARBASE_TORPEDO_FIRE_INTERVAL (2.9 * 10) /* 2.9 seconds */ 
 };
 
 struct nebula_data {
