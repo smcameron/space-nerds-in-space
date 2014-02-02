@@ -56,8 +56,11 @@ struct entity *add_entity(struct entity_context *cx,
 	int n;
 
 	n = snis_object_pool_alloc_obj(cx->entity_pool);
-	if (n < 0)
+	if (n < 0) {
+		printf("Out of entities at %s:%d\n", __FILE__, __LINE__);
+		fflush(stdout);
 		return NULL;
+	}
 
 	cx->entity_list[n].visible = 1;
 	cx->entity_list[n].m = m;
