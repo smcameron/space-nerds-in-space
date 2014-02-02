@@ -1751,6 +1751,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				texture_alpha = mt->alpha;
 				texture_tint = mt->tint;
 				do_blend = 1;
+				do_cullface = 0;
 
 				/* planet is at the center of our mesh */
 				union vec4 sphere_pos = { { 0, 0, 0, 1 } };
