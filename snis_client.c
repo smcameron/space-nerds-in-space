@@ -7556,7 +7556,7 @@ static void init_nav_ui(void)
 #if 0
 	ui_add_button(nav_ui.details_button, DISPLAYMODE_NAVIGATION);
 #endif
-	navecx = entity_context_new(5000, 500);
+	navecx = entity_context_new(5000, 1000);
 	tridentecx = entity_context_new(10, 0);
 	nav_ui.details_mode = 1;
 }
@@ -8926,7 +8926,7 @@ static void init_science_ui(void)
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE);
 	sciecx = entity_context_new(50, 10);
-	sciballecx = entity_context_new(5000, 500);
+	sciballecx = entity_context_new(5000, 1000);
 	sciplane_tween = tween_init(500);
 	sci_ui.details_mode = SCI_DETAILS_MODE_SCIPLANE;
 }
@@ -12430,7 +12430,7 @@ int main(int argc, char *argv[])
 	init_demon_ui();
 	init_net_setup_ui();
 	setup_joystick(window);
-	ecx = entity_context_new(5000, 500);
+	ecx = entity_context_new(5000, 1000);
 
 	snis_protocol_debugging(1);
 
