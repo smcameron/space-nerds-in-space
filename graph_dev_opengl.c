@@ -1672,8 +1672,7 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 		does_blending = 1;
 		break;
 	case MATERIAL_TEXTURE_MAPPED_UNLIT: {
-			struct material_texture_mapped_unlit *mt = e->material_ptr;
-			does_blending = mt->do_blend;
+			does_blending = e->material_ptr->texture_mapped_unlit.do_blend;
 		}
 		break;
 	}
