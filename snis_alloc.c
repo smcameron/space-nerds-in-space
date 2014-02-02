@@ -28,6 +28,8 @@
 #include "snis_alloc.h"
 #undef DEFINE_SNIS_ALLOC_GLOBALS
 
+#include "stacktrace.h"
+
 /* borrowed heavily from Word War vi (wordwarvi.c, http://wordwarvi.sf.net ) */
 
 struct snis_object_pool {
@@ -99,12 +101,17 @@ int snis_object_pool_alloc_obj(struct snis_object_pool *pool)
 			pool->free_obj_bitmap[i] |= (1 << j);
 			answer = (i * 32 + j);	/* return the corresponding array index, if in bounds. */
 			if (answer >= pool->maxobjs)
-				return -1;
+				goto allocation_failure;
 			if (answer > pool->highest_object_number)
 				pool->highest_object_number = answer;
 			return answer;
 		}
 	}
+
+allocation_failure:
+
+	printf("snis_object_pool_alloc_obj allocation failed, pool = %p\n", (void *) pool);
+	stacktrace("snis_object_pool_alloc_obj allocation failed.\n");
 	return -1;
 }
 
