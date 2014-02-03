@@ -1822,7 +1822,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					union vec4 sphere_pos = { { 0, 0, 0, 1 } };
 					mat44_x_vec4_into_vec3(mat_mv, &sphere_pos, &eye_annulus_pos);
 
-					/* ring is the 2x to 3x of the planet scale */
+					/* ring is the 2x to 3x of the planet scale, world space distance
+					   is the same in eye space as the view matrix does not scale */
 					annulus_r1 = e->scale * 2.0;
 					annulus_r2 = e->scale * 3.0;
 				} else {
@@ -1845,7 +1846,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				union vec4 sphere_pos = { { 0, 0, 0, 1 } };
 				mat44_x_vec4_into_vec3(mat_mv, &sphere_pos, &eye_sphere_pos);
 
-				/* planet is the size of the ring scale */
+				/* planet is the size of the ring scale, world space distance
+				   is the same in eye space as the view matrix does not scale */
 				sphere_radius = e->scale;
 				}
 				break;
