@@ -299,12 +299,12 @@ static struct material red_laser_material;
 static struct material green_laser_material;
 static struct material spark_material;
 static struct material sun_material;
-static struct material planet_material[NPLANET_MATERIALS];
+#define NPLANETARY_RING_MATERIALS 2
+static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
+static struct material planet_material[NPLANET_MATERIALS * (NPLANETARY_RING_MATERIALS + 1)];
 #define NASTEROID_TEXTURES 2
 static struct material asteroid_material[NASTEROID_TEXTURES];
 static struct material wormhole_material;
-#define NPLANETARY_RING_MATERIALS 2
-static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
 static struct material thrust_material;
 #ifdef WITHOUTOPENGL
 const int wormhole_render_style = RENDER_SPARKLE;
@@ -1292,7 +1292,7 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 static int update_planet(uint32_t id, double x, double y, double z, double r, uint8_t government,
 				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring)
 {
-	int i, m, k;
+	int i, m;
 	struct entity *e, *ring;
 	union quat orientation;
 
@@ -1300,20 +1300,26 @@ static int update_planet(uint32_t id, double x, double y, double z, double r, ui
 	if (i < 0) {
 		/* Orientation should be consistent across clients because planets don't move */
 		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
-		k = id % (NPLANET_MATERIALS * 4);
-		m = k % NPLANET_MATERIALS;
+
+		/* each planet texture has another version with a variation of the ring materials */
+		int ring_m = id % NPLANETARY_RING_MATERIALS;
+		m = id % NPLANET_MATERIALS + (NPLANET_MATERIALS * (ring_m + 1) * (hasring ? 1 : 0));
+
 		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
 		update_entity_scale(e, r);
+		update_entity_material(e, &planet_material[m]);
+
 		if (hasring) {
 			ring = add_entity(ecx, planetary_ring_mesh, 0, 0, 0, PLANET_COLOR);
-			update_entity_material(ring, &planetary_ring_material[(id >> 3) %
-						NPLANETARY_RING_MATERIALS]);
+			update_entity_material(ring, planet_material[m].textured_planet.ring_material);
+
+			/* ring must have identity_quat orientation relative to planet or ring shadows
+			   on planet will not work correctly */
 			update_entity_orientation(ring, &identity_quat);
 
 			/* child ring will inherit position and scale from planet */
 			update_entity_parent(ecx, ring, e);
 		}
-		update_entity_material(e, &planet_material[m]);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
@@ -11659,8 +11665,16 @@ static void load_textures(void)
 		char filename[25];
 		sprintf(filename, "planet-texture%d-", i);
 
-		planet_material[i].type = MATERIAL_TEXTURE_CUBEMAP;
-		planet_material[i].texture_cubemap.texture_id = load_cubemap_textures(0, filename);
+		planet_material[i].type = MATERIAL_TEXTURED_PLANET;
+		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, filename);
+		planet_material[i].textured_planet.ring_material = 0;
+
+		int k;
+		for (k = 0; k < NPLANETARY_RING_MATERIALS; k++) {
+			int pm_index = (k + 1) * NPLANET_MATERIALS + i;
+			planet_material[pm_index] = planet_material[i];
+			planet_material[pm_index].textured_planet.ring_material = &planetary_ring_material[k];
+		}
 	}
 
 	for (i = 0; i < NNEBULA_MATERIALS; i++) {
