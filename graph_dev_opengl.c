@@ -520,78 +520,78 @@ void mesh_graph_dev_init(struct mesh *m)
 
 struct graph_dev_gl_vertex_color_shader {
 	GLuint program_id;
-	GLuint mvp_matrix_id;
-	GLuint vertex_position_id;
-	GLuint vertex_color_id;
+	GLint mvp_matrix_id;
+	GLint vertex_position_id;
+	GLint vertex_color_id;
 };
 
 struct graph_dev_gl_single_color_lit_shader {
 	GLuint program_id;
-	GLuint mvp_matrix_id;
-	GLuint mv_matrix_id;
-	GLuint normal_matrix_id;
-	GLuint vertex_position_id;
-	GLuint vertex_normal_id;
-	GLuint light_pos_id;
-	GLuint color_id;
+	GLint mvp_matrix_id;
+	GLint mv_matrix_id;
+	GLint normal_matrix_id;
+	GLint vertex_position_id;
+	GLint vertex_normal_id;
+	GLint light_pos_id;
+	GLint color_id;
 };
 
 struct graph_dev_gl_filled_wireframe_shader {
 	GLuint program_id;
-	GLuint viewport_id;
-	GLuint mvp_matrix_id;
-	GLuint position_id;
-	GLuint tvertex0_id;
-	GLuint tvertex1_id;
-	GLuint tvertex2_id;
-	GLuint edge_mask_id;
-	GLuint line_color_id;
-	GLuint triangle_color_id;
+	GLint viewport_id;
+	GLint mvp_matrix_id;
+	GLint position_id;
+	GLint tvertex0_id;
+	GLint tvertex1_id;
+	GLint tvertex2_id;
+	GLint edge_mask_id;
+	GLint line_color_id;
+	GLint triangle_color_id;
 };
 
 struct graph_dev_gl_trans_wireframe_shader {
 	GLuint program_id;
-	GLuint mvp_matrix_id;
-	GLuint mv_matrix_id;
-	GLuint normal_matrix_id;
-	GLuint vertex_position_id;
-	GLuint vertex_normal_id;
-	GLuint color_id;
+	GLint mvp_matrix_id;
+	GLint mv_matrix_id;
+	GLint normal_matrix_id;
+	GLint vertex_position_id;
+	GLint vertex_normal_id;
+	GLint color_id;
 };
 
 struct graph_dev_gl_single_color_shader {
 	GLuint program_id;
-	GLuint mvp_matrix_id;
-	GLuint vertex_position_id;
-	GLuint color_id;
+	GLint mvp_matrix_id;
+	GLint vertex_position_id;
+	GLint color_id;
 };
 
 struct graph_dev_gl_line_single_color_shader {
 	GLuint program_id;
-	GLuint mvp_matrix_id;
-	GLuint viewport_id;
-	GLuint multi_one_id;
-	GLuint vertex_position_id;
-	GLuint line_vertex0_id;
-	GLuint line_vertex1_id;
-	GLuint dot_size_id;
-	GLuint dot_pitch_id;
-	GLuint line_color_id;
+	GLint mvp_matrix_id;
+	GLint viewport_id;
+	GLint multi_one_id;
+	GLint vertex_position_id;
+	GLint line_vertex0_id;
+	GLint line_vertex1_id;
+	GLint dot_size_id;
+	GLint dot_pitch_id;
+	GLint line_color_id;
 };
 
 struct graph_dev_gl_point_cloud_shader {
 	GLuint program_id;
-	GLuint mvp_matrix_id;
-	GLuint vertex_position_id;
-	GLuint point_size_id;
-	GLuint color_id;
+	GLint mvp_matrix_id;
+	GLint vertex_position_id;
+	GLint point_size_id;
+	GLint color_id;
 };
 
 struct graph_dev_gl_skybox_shader {
 	GLuint program_id;
-	GLuint mvp_id;
-	GLuint vertex_id;
-	GLuint texture_id;
+	GLint mvp_id;
+	GLint vertex_id;
+	GLint texture_id;
 
 	int nvertices;
 	GLuint vbo_cube_vertices;
@@ -602,14 +602,14 @@ struct graph_dev_gl_skybox_shader {
 
 struct graph_dev_gl_color_by_w_shader {
 	GLuint program_id;
-	GLuint mvp_id;
-	GLuint position_id;
-	GLuint near_color_id;
-	GLuint near_w_id;
-	GLuint center_color_id;
-	GLuint center_w_id;
-	GLuint far_color_id;
-	GLuint far_w_id;
+	GLint mvp_id;
+	GLint position_id;
+	GLint near_color_id;
+	GLint near_w_id;
+	GLint center_color_id;
+	GLint center_w_id;
+	GLint far_color_id;
+	GLint far_w_id;
 };
 
 struct graph_dev_gl_textured_shader {
@@ -628,28 +628,28 @@ struct graph_dev_gl_textured_shader {
 
 struct graph_dev_gl_textured_cubemap_lit_shader {
 	GLuint program_id;
-	GLuint mvp_matrix_id;
-	GLuint mv_matrix_id;
-	GLuint normal_matrix_id;
-	GLuint vertex_position_id;
-	GLuint vertex_normal_id;
-	GLuint light_pos_id;
-	GLuint texture_id; /* param to vertex shader */
+	GLint mvp_matrix_id;
+	GLint mv_matrix_id;
+	GLint normal_matrix_id;
+	GLint vertex_position_id;
+	GLint vertex_normal_id;
+	GLint light_pos_id;
+	GLint texture_id; /* param to vertex shader */
 };
 
 struct graph_dev_gl_textured_particle_shader {
 	GLuint program_id;
-	GLuint mvp_matrix_id;
-	GLuint camera_up_vec_id;
-	GLuint camera_right_vec_id;
-	GLuint time_id;
-	GLuint radius_id;
-	GLuint multi_one_id;
-	GLuint start_position_id;
-	GLuint start_tint_color_id;
-	GLuint end_position_id;
-	GLuint end_tint_color_id;
-	GLuint texture_id; /* param to vertex shader */
+	GLint mvp_matrix_id;
+	GLint camera_up_vec_id;
+	GLint camera_right_vec_id;
+	GLint time_id;
+	GLint radius_id;
+	GLint multi_one_id;
+	GLint start_position_id;
+	GLint start_tint_color_id;
+	GLint end_position_id;
+	GLint end_tint_color_id;
+	GLint texture_id; /* param to vertex shader */
 };
 
 /* store all the shader parameters */
