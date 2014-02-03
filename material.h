@@ -24,6 +24,7 @@
 struct mesh;
 union quat;
 struct sng_color;
+struct material;
 
 #define MATERIAL_COLOR 0
 #define MATERIAL_COLOR_BY_W 1
@@ -34,7 +35,8 @@ struct sng_color;
 #define MATERIAL_NEBULA 6
 #define MATERIAL_TEXTURE_MAPPED_UNLIT 7
 #define MATERIAL_TEXTURED_PARTICLE 8
-#define MATERIAL_TEXTURED_PLANET_RING 9
+#define MATERIAL_TEXTURED_PLANET 9
+#define MATERIAL_TEXTURED_PLANET_RING 10
 
 struct material_color_by_w {
 	int near_color;
@@ -92,6 +94,11 @@ struct material_textured_planet_ring {
 	struct sng_color tint;
 };
 
+struct material_textured_planet {
+	int texture_id;
+	struct material *ring_material;
+};
+
 struct material {
 	__extension__ union {
 		struct material_color_by_w color_by_w;
@@ -101,6 +108,7 @@ struct material {
 		struct material_texture_cubemap texture_cubemap;
 		struct material_nebula nebula;
 		struct material_textured_particle textured_particle;
+		struct material_textured_planet textured_planet;
 		struct material_textured_planet_ring textured_planet_ring;
 	};
 	int type;
