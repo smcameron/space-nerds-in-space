@@ -11631,14 +11631,6 @@ static void load_textures(void)
 	red_laser_material.type = MATERIAL_BILLBOARD;
 	red_laser_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
 	red_laser_material.billboard.texture_id = load_texture("red-laser-texture.png");
-	planetary_ring_material[0].type = MATERIAL_TEXTURED_PLANET_RING;
-	planetary_ring_material[0].textured_planet_ring.texture_id = load_texture("planetary-ring.png");
-	planetary_ring_material[0].textured_planet_ring.tint = sng_get_color(WHITE);
-	planetary_ring_material[0].textured_planet_ring.alpha = 0.5;
-	planetary_ring_material[1].type = MATERIAL_TEXTURED_PLANET_RING;
-	planetary_ring_material[1].textured_planet_ring.texture_id = load_texture("planetary-ring2.png");
-	planetary_ring_material[1].textured_planet_ring.tint = sng_get_color(WHITE);
-	planetary_ring_material[1].textured_planet_ring.alpha = 0.5;
 
 	red_torpedo_material.type = MATERIAL_BILLBOARD;
 	red_torpedo_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
@@ -11652,16 +11644,25 @@ static void load_textures(void)
 	sun_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	sun_material.billboard.texture_id = load_texture("sun.png");
 
-	planet_material[0].type = MATERIAL_TEXTURE_CUBEMAP;
-	planet_material[0].texture_cubemap.texture_id = load_cubemap_textures(0, "planet-texture0-");
-	planet_material[1].type = MATERIAL_TEXTURE_CUBEMAP;
-	planet_material[1].texture_cubemap.texture_id = load_cubemap_textures(0, "planet-texture1-");
-	planet_material[2].type = MATERIAL_TEXTURE_CUBEMAP;
-	planet_material[2].texture_cubemap.texture_id = load_cubemap_textures(0, "planet-texture2-");
-	planet_material[3].type = MATERIAL_TEXTURE_CUBEMAP;
-	planet_material[3].texture_cubemap.texture_id = load_cubemap_textures(0, "planet-texture3-");
-
 	int i;
+	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) {
+		char filename[25];
+		sprintf(filename, "planetary-ring%d.png", i);
+
+		planetary_ring_material[i].type = MATERIAL_TEXTURED_PLANET_RING;
+		planetary_ring_material[i].textured_planet_ring.texture_id = load_texture(filename);
+		planetary_ring_material[i].textured_planet_ring.tint = sng_get_color(WHITE);
+		planetary_ring_material[i].textured_planet_ring.alpha = 0.5;
+	}
+
+	for (i = 0; i < NPLANET_MATERIALS; i++) {
+		char filename[25];
+		sprintf(filename, "planet-texture%d-", i);
+
+		planet_material[i].type = MATERIAL_TEXTURE_CUBEMAP;
+		planet_material[i].texture_cubemap.texture_id = load_cubemap_textures(0, filename);
+	}
+
 	for (i = 0; i < NNEBULA_MATERIALS; i++) {
 		char filename[20];
 		sprintf(filename, "nebula%d.mat", i);
