@@ -16,7 +16,7 @@ DRAGONHAWK dragonhawk.stl 1200 5
 SKORPIO skorpio.stl 1400 9
 DISRUPTOR disruptor.stl 1000 21
 RESEARCH research-vessel.stl 700 7
-CONQUEROR conqueror.stl 1000 17
+CONQUEROR conqueror/conqueror.obj 1000 17
 SCRAMBLER scrambler.stl 1400 30
 SWORDFISH swordfish.stl 1400 30
 WOMBAT wombat.stl 1400 30
