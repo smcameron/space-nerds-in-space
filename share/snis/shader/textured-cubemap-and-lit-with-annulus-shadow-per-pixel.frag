@@ -74,10 +74,14 @@ void main()
 			vec4 ring_color = u_AnnulusTintColor * texture2D(annulusTexture, vec2(0.5, v));
 
 			/* shade is how much we will shadow based on transparancy, so 1.0=no shadow, 0.0=full */
-			float shade = 1.0 - ring_color.a;
+			float shade = max((1.0 - ring_color.a), 0.1);
 
 			shadow_tint = vec4(shade, shade, shade, 1.0);
 		}
 	}
-	gl_FragColor = shadow_tint * v_TintColor * textureCube(myTexture, v_TexCoord);
+	/* don't double count the shadows and drop below ambient light... */
+	vec4 tmpshade = shadow_tint * v_TintColor;
+	vec4 tmpshade2 = vec4(max(tmpshade.r, 0.1), max(tmpshade.g, 0.1), max(tmpshade.b, 0.1),
+				tmpshade.a);
+	gl_FragColor = tmpshade2 * textureCube(myTexture, v_TexCoord);
 }
