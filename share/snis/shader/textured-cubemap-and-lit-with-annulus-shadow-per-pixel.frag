@@ -24,17 +24,17 @@
 
 uniform samplerCube myTexture;
 uniform sampler2D annulusTexture;
+uniform vec4 u_TintColor;
+uniform vec3 u_LightPos;   // The position of the light in eye space.
 
 uniform vec3 u_AnnulusCenter; // center of disk in eye space
 uniform vec3 u_AnnulusNormal; // disk plane normal in eye space
 uniform vec4 u_AnnulusRadius; // x=inside r, y=inside r^2, z=outside r, w=outside r^2
 uniform vec4 u_AnnulusTintColor;
 
-varying float v_InShadow; // 1 if all vertices are in shadow
-varying vec4 v_TintColor;
-varying vec3 v_TexCoord;
 varying vec3 v_Position;
-varying vec3 v_LightDir;
+varying vec3 v_Normal;
+varying vec3 v_TexCoord;
 
 bool intersect_plane(vec3 plane_normal, vec3 plane_pos, vec3 ray_pos, vec3 ray_dir, out float t)
 {
@@ -59,13 +59,22 @@ bool intersect_disc(vec3 disc_normal, vec3 disc_center, float r_squared, vec3 ra
 	return false;
 }
 
+#define AMBIENT 0.1
+
 void main()
 {
-	vec4 shadow_tint = vec4(1.0);
+	/* Get a lighting direction vector from the light to the vertex. */
+	vec3 light_dir = normalize(u_LightPos - v_Position);
+
+	/* Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
+	   pointing in the same direction then it will get max illumination. */
+	float direct = dot(v_Normal, light_dir);
+
+	float shadow = 1.0;
 
 	float intersect_r_squared;
-	if (v_InShadow < 0.999 && intersect_disc(u_AnnulusNormal, u_AnnulusCenter, u_AnnulusRadius.w /* r3^2 */,
-			v_Position, normalize(v_LightDir), intersect_r_squared))
+	if (direct > AMBIENT && intersect_disc(u_AnnulusNormal, u_AnnulusCenter, u_AnnulusRadius.w /* r3^2 */,
+			v_Position, light_dir, intersect_r_squared))
 	{
 		if (intersect_r_squared > u_AnnulusRadius.y /* r1^2 */ ) {
 			/* figure out a texture coord on the ring that samples from u=0.5, v=1.0 to 0.5 */
@@ -73,15 +82,15 @@ void main()
 
 			vec4 ring_color = u_AnnulusTintColor * texture2D(annulusTexture, vec2(0.5, v));
 
-			/* shade is how much we will shadow based on transparancy, so 1.0=no shadow, 0.0=full */
-			float shade = max((1.0 - ring_color.a), 0.1);
-
-			shadow_tint = vec4(shade, shade, shade, 1.0);
+			/* how much we will shadow based on transparancy, so 1.0=no shadow, 0.0=full */
+			shadow  = 1.0 - ring_color.a;
 		}
 	}
-	/* don't double count the shadows and drop below ambient light... */
-	vec4 tmpshade = shadow_tint * v_TintColor;
-	vec4 tmpshade2 = vec4(max(tmpshade.r, 0.1), max(tmpshade.g, 0.1), max(tmpshade.b, 0.1),
-				tmpshade.a);
-	gl_FragColor = tmpshade2 * textureCube(myTexture, v_TexCoord);
+
+	/* make diffuse light atleast ambient */
+	float diffuse = max(direct * shadow, AMBIENT);
+
+	vec4 tint_color = u_TintColor * vec4(diffuse, diffuse, diffuse, 1.0);
+
+	gl_FragColor = tint_color * textureCube(myTexture, v_TexCoord);
 }
