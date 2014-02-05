@@ -797,7 +797,8 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes], x, y, z, SHIP_COLOR);
-		add_ship_thrust_entities(ecx, e, shiptype);
+		if (e)
+			add_ship_thrust_entities(ecx, e, shiptype);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_SHIP2, alive, e);
 		if (i < 0)
 			return i;
@@ -877,7 +878,8 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, torpedo_mesh, x, y, z, TORPEDO_COLOR);
 		set_render_style(e, torpedo_render_style);
-		update_entity_material(e, &red_torpedo_material);
+		if (e)
+			update_entity_material(e, &red_torpedo_material);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
@@ -941,8 +943,10 @@ static int update_laser(uint32_t id, double x, double y, double z,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, laserbeam_mesh, x, y, z, LASER_COLOR);
-		set_render_style(e, laserbeam_render_style);
-		update_entity_material(e, &green_laser_material);
+		if (e) {
+			set_render_style(e, laserbeam_render_style);
+			update_entity_material(e, &green_laser_material);
+		}
 		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
@@ -979,7 +983,8 @@ static void init_spacemonster_data(struct snis_entity *o, double y)
 		sd->z[i] = o->z;
 		sd->entity[i] = add_entity(ecx, spacemonster_mesh, o->x, 0, o->z,
 						SPACEMONSTER_COLOR);
-		set_render_style(sd->entity[i], RENDER_SPARKLE);
+		if (sd->entity[i])
+			set_render_style(sd->entity[i], RENDER_SPARKLE);
 	}
 }
 
@@ -1051,7 +1056,8 @@ static void free_spacemonster_data(struct snis_entity *o)
 
 	if (sd->entity) {
 		for (i = 0; i < MAX_SPACEMONSTER_SEGMENTS; i++)
-			remove_entity(ecx, sd->entity[i]);
+			if (sd->entity[i])
+				remove_entity(ecx, sd->entity[i]);
 		free(sd->entity);
 		sd->entity = NULL;
 	}
@@ -1075,7 +1081,8 @@ static void update_laserbeam_segments(struct snis_entity *o)
 
 	if (oid < 0 || tid < 0) {
 		for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++)
-			entity_set_mesh(ld->entity[i], NULL);
+			if (ld->entity[i])
+				entity_set_mesh(ld->entity[i], NULL);
 		return;
 	}
 	origin = &go[oid];
@@ -1111,9 +1118,11 @@ static void update_laserbeam_segments(struct snis_entity *o)
 		ld->x[i] = x1 + (i + lastd) * dx;
 		ld->y[i] = y1 + (i + lastd) * dy;
 		ld->z[i] = z1 + (i + lastd) * dz; 
-		update_entity_pos(ld->entity[i], ld->x[i], ld->y[i], ld->z[i]);
-		update_entity_orientation(ld->entity[i], &orientation);
-		update_entity_material(ld->entity[i], &red_laser_material);
+		if (ld->entity[i]) {
+			update_entity_pos(ld->entity[i], ld->x[i], ld->y[i], ld->z[i]);
+			update_entity_orientation(ld->entity[i], &orientation);
+			update_entity_material(ld->entity[i], &red_laser_material);
+		}
 	}
 }
 
@@ -1146,7 +1155,8 @@ static void init_laserbeam_data(struct snis_entity *o)
 		ld->y[i] = o->y;
 		ld->z[i] = 0.0;
 		ld->entity[i] = add_entity(ecx, laserbeam_mesh, o->x, 0, -o->y, color);
-		set_render_style(ld->entity[i], laserbeam_render_style);
+		if (ld->entity[i])
+			set_render_style(ld->entity[i], laserbeam_render_style);
 	}
 	update_laserbeam_segments(o);
 }
@@ -1174,7 +1184,8 @@ static void free_laserbeam_data(struct snis_entity *o)
 
 	if (ld->entity) {
 		for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++)
-			remove_entity(ecx, ld->entity[i]);
+			if (ld->entity[i])
+				remove_entity(ecx, ld->entity[i]);
 		free(ld->entity);
 		ld->entity = NULL;
 	}
@@ -1188,7 +1199,8 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, spacemonster_mesh, x, 0, z, SPACEMONSTER_COLOR);
-		set_render_style(e, RENDER_SPARKLE);
+		if (e)
+			set_render_style(e, RENDER_SPARKLE);
 		i = add_generic_object(id, x, 0, z, 0, 0, 0,
 				&identity_quat, OBJTYPE_SPACEMONSTER, 1, e);
 		if (i < 0)
@@ -1200,7 +1212,8 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 		int n;
 
 		update_generic_object(i, x, 0, z, 0, 0, 0, &identity_quat, 1); 
-		update_entity_pos(go[i].entity, x, y, z);
+		if (go[i].entity)
+			update_entity_pos(go[i].entity, x, y, z);
 		sd = &go[i].tsd.spacemonster;
 		sd->zz = y;
 		n = (sd->front + 1) % MAX_SPACEMONSTER_SEGMENTS;
@@ -1208,7 +1221,8 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 		sd->x[n] = x;
 		sd->y[n] = y;
 		sd->z[n] = z;
-		update_entity_pos(sd->entity[sd->front], x, y, z);
+		if (sd->entity[sd->front])
+			update_entity_pos(sd->entity[sd->front], x, y, z);
 	}
 	return 0;
 }
@@ -1230,8 +1244,10 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 		m = k % NASTEROID_MODELS;
 		s = k % NASTEROID_SCALES;
 		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
-		update_entity_scale(e, s ? s * 3.5 : 1.0);
-		update_entity_material(e, &asteroid_material[id % NASTEROID_TEXTURES]);
+		if (e) {
+			update_entity_scale(e, s ? s * 3.5 : 1.0);
+			update_entity_material(e, &asteroid_material[id % NASTEROID_TEXTURES]);
+		}
 		i = add_generic_object(id, x, y, z, vx, vy, vz,
 				&orientation, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
@@ -1306,25 +1322,31 @@ static int update_planet(uint32_t id, double x, double y, double z, double r, ui
 		m = id % NPLANET_MATERIALS + (NPLANET_MATERIALS * (ring_m + 1) * (hasring ? 1 : 0));
 
 		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
-		update_entity_scale(e, r);
-		update_entity_material(e, &planet_material[m]);
+		if (e) {
+			update_entity_scale(e, r);
+			update_entity_material(e, &planet_material[m]);
+		}
 
 		if (hasring) {
 			ring = add_entity(ecx, planetary_ring_mesh, 0, 0, 0, PLANET_COLOR);
-			update_entity_material(ring, planet_material[m].textured_planet.ring_material);
+			if (ring) {
+				update_entity_material(ring,
+					planet_material[m].textured_planet.ring_material);
 
-			/* ring must have identity_quat orientation relative to planet or ring shadows
-			   on planet will not work correctly */
-			update_entity_orientation(ring, &identity_quat);
+				/* ring must have identity_quat orientation relative to planet
+					or ring shadows on planet will not work correctly */
+				update_entity_orientation(ring, &identity_quat);
 
-			/* child ring will inherit position and scale from planet */
-			update_entity_parent(ecx, ring, e);
+				/* child ring will inherit position and scale from planet */
+				update_entity_parent(ecx, ring, e);
+			}
 		}
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
-		update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
+		if (e)
+			update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
 		go[i].tsd.planet.government = government;
 		go[i].tsd.planet.tech_level = tech_level;
 		go[i].tsd.planet.economy = economy;
@@ -1349,8 +1371,10 @@ static int update_wormhole(uint32_t id, double x, double y, double z)
 	if (i < 0) {
 		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
 		e = add_entity(ecx, wormhole_mesh, x, y, z, WORMHOLE_COLOR);
-		set_render_style(e, wormhole_render_style);
-		update_entity_material(e, &wormhole_material);
+		if (e) {
+			set_render_style(e, wormhole_render_style);
+			update_entity_material(e, &wormhole_material);
+		}
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
@@ -1420,8 +1444,10 @@ static int update_nebula(uint32_t id, double x, double y, double z, double r)
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		struct entity *e = add_entity(ecx, nebula_mesh, x, y, z, PLANET_COLOR);
-		update_entity_material(e, &nebula_material[id % NNEBULA_MATERIALS]);
-		update_entity_scale(e, r * 2.0);
+		if (e) {
+			update_entity_material(e, &nebula_material[id % NNEBULA_MATERIALS]);
+			update_entity_scale(e, r * 2.0);
+		}
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&identity_quat, OBJTYPE_NEBULA, 1, e);
 		if (i < 0)
@@ -1661,9 +1687,11 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	r = snis_randn(100);
 	if (r < 50 || time < 10) {
 		e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
-		set_render_style(e, spark_render_style);
-		update_entity_material(e, &spark_material);
-		update_entity_scale(e, (float) snis_randn(100) / 25.0f);
+		if (e) {
+			set_render_style(e, spark_render_style);
+			update_entity_material(e, &spark_material);
+			update_entity_scale(e, (float) snis_randn(100) / 25.0f);
+		}
 	} else if (r < 75) {
 		e = add_entity(ecx, debris_mesh, x, y, z, color);
 	} else {
@@ -1682,7 +1710,8 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 
 	/* Set entity to random orientation */
 	orientation = random_orientation[i % NRANDOM_ORIENTATIONS];
-	update_entity_orientation(e, &orientation);
+	if (e)
+		update_entity_orientation(e, &orientation);
 	
 	spark[i].type = OBJTYPE_SPARK;
 	spark[i].alive = time + snis_randn(time);
@@ -3219,7 +3248,8 @@ static int process_update_ship_packet(uint16_t opcode)
 		else {
 			e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes],
 					dx, dy, dz, SHIP_COLOR);
-			add_ship_thrust_entities(ecx, e, shiptype);
+			if (e)
+				add_ship_thrust_entities(ecx, e, shiptype);
 		}
 		i = add_generic_object(id, dx, dy, dz, dvx, dvy, dvz, &orientation, type, alive, e);
 		if (i < 0) {
@@ -4846,11 +4876,12 @@ static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e
 	for (i = 0; i < ap->nports; i++) {
 		struct entity *t = add_entity(cx, thrust_animation_mesh,
 			ap->port[i].pos.v.x, ap->port[i].pos.v.y, ap->port[i].pos.v.z, WHITE);
-		update_entity_material(t, &thrust_material);
-		update_entity_orientation(t, &identity_quat);
-		update_entity_scale(t, ap->port[i].scale);
-
-		update_entity_parent(cx, t, e);
+		if (t) {
+			update_entity_material(t, &thrust_material);
+			update_entity_orientation(t, &identity_quat);
+			update_entity_scale(t, ap->port[i].scale);
+			update_entity_parent(cx, t, e);
+		}
 	}
 }
 
@@ -4930,8 +4961,10 @@ static void show_weapons_camera_view(GtkWidget *w)
 	/* Add our ship into the scene (on the mainscreen, it is omitted) */
 	o->entity = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
 				o->x, o->y, o->z, SHIP_COLOR);
-	update_entity_orientation(o->entity, &o->orientation);
-	set_render_style(o->entity, RENDER_NORMAL);
+	if (o->entity) {
+		update_entity_orientation(o->entity, &o->orientation);
+		set_render_style(o->entity, RENDER_NORMAL);
+	}
 
 	/* Add our turret into the mix */
 	quat_rot_vec_self(&recoil, &camera_orientation);
@@ -4941,10 +4974,13 @@ static void show_weapons_camera_view(GtkWidget *w)
 				turret_pos.v.z + turret_recoil_amount * recoil.v.z,
 				SHIP_COLOR);
 	turret_recoil_amount = turret_recoil_amount * 0.5f;
-	update_entity_orientation(turret_entity, &camera_orientation);
-	set_render_style(turret_entity, RENDER_NORMAL);
+	if (turret_entity) {
+		update_entity_orientation(turret_entity, &camera_orientation);
+		set_render_style(turret_entity, RENDER_NORMAL);
+	}
 
-	add_ship_thrust_entities(ecx, o->entity, o->tsd.ship.shiptype);
+	if (o->entity)
+		add_ship_thrust_entities(ecx, o->entity, o->tsd.ship.shiptype);
 
 	render_entities(ecx);
 
@@ -5058,17 +5094,27 @@ static void show_mainscreen(GtkWidget *w)
 			/* temporarily add ship into scene for camera mode 1 & 2 */
 			player_ship = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
 					o->x, o->y, o->z, SHIP_COLOR);
-			update_entity_orientation(player_ship, &o->orientation);
+			if (player_ship)
+				update_entity_orientation(player_ship, &o->orientation);
 
 			struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh, 0, 5.45, 0, SHIP_COLOR);
-			update_entity_orientation(turret_base, &identity_quat);
-			update_entity_parent(ecx, turret_base, player_ship);
+
+			if (turret_base) {
+				update_entity_orientation(turret_base, &identity_quat);
+				if (player_ship)
+					update_entity_parent(ecx, turret_base, player_ship);
+			}
 
 			struct entity *turret = add_entity(ecx, ship_turret_mesh, 0, 0, 0, SHIP_COLOR);
-			update_entity_orientation(turret, &o->tsd.ship.weap_orientation);
-			update_entity_parent(ecx, turret, turret_base);
 
-			add_ship_thrust_entities(ecx, player_ship, o->tsd.ship.shiptype);
+			if (turret) {
+				update_entity_orientation(turret, &o->tsd.ship.weap_orientation);
+				if (turret_base)
+					update_entity_parent(ecx, turret, turret_base);
+			}
+
+			if (player_ship)
+				add_ship_thrust_entities(ecx, player_ship, o->tsd.ship.shiptype);
 			break;
 		}
 	}
@@ -5369,8 +5415,10 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 		}
 		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1) {
 			e = add_entity(sciballecx, ship_icon_mesh, o->x, o->y, o->z, LIMEGREEN);
-			update_entity_scale(e, scale);
-			update_entity_orientation(e, &o->orientation);
+			if (e) {
+				update_entity_scale(e, scale);
+				update_entity_orientation(e, &o->orientation);
+			}
 		} else {
 			snis_draw_line(*x - 1, *y, *x + 1, *y);
 			snis_draw_line(*x, *y - 1, *x, *y + 1);
@@ -6299,7 +6347,8 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	calculate_camera_transform(navecx);
 
 	e = add_entity(navecx, ring_mesh, o->x, o->y, o->z, DARKRED);
-	update_entity_scale(e, range);
+	if (e)
+		update_entity_scale(e, range);
 
 	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 0.0f, range * 0.98, RED);
 	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 90.0f * M_PI / 180.0, range * 0.98, DARKGREEN);
@@ -6322,14 +6371,18 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		quat_rot_vec_self(&ind_pos, &ind_orientation);
 		vec3_add_self(&ind_pos, &ship_pos);
 		e = add_entity(navecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
-		update_entity_scale(e, heading_indicator_mesh->radius*range/100.0);
-		update_entity_orientation(e, &ind_orientation);
-		set_render_style(e, RENDER_NORMAL);
+		if (e) {
+			update_entity_scale(e, heading_indicator_mesh->radius*range/100.0);
+			update_entity_orientation(e, &ind_orientation);
+			set_render_style(e, RENDER_NORMAL);
+		}
 
 		/* heading arrow tail */
 		e = add_entity(navecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
-		update_entity_scale(e, range);
-		update_entity_orientation(e, &ind_orientation);
+		if (e) {
+			update_entity_scale(e, range);
+			update_entity_orientation(e, &ind_orientation);
+		}
 	}
 
 	/* heading labels */
@@ -6390,9 +6443,11 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 	/* add my ship */
 	e = add_entity(navecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, SHIP_COLOR);
-	set_render_style(e, science_style);
-	update_entity_scale(e, range/300.0);
-	update_entity_orientation(e, &o->orientation);
+	if (e) {
+		set_render_style(e, science_style);
+		update_entity_scale(e, range/300.0);
+		update_entity_orientation(e, &o->orientation);
+	}
 
 	render_entities(navecx);
 
@@ -6580,8 +6635,10 @@ static void add_basis_ring(struct entity_context *ecx, float x, float y, float z
 
 	quat_init_axis(&q, ax, ay, az, angle);
 	e = add_entity(ecx, ring_mesh, x, y, z, color);
-	update_entity_scale(e, r);
-	update_entity_orientation(e, &q);
+	if (e) {
+		update_entity_scale(e, r);
+		update_entity_orientation(e, &q);
+	}
 }
 
 static void add_scanner_beam_orange_slice(struct entity_context *ecx,
@@ -6602,14 +6659,18 @@ static void add_scanner_beam_orange_slice(struct entity_context *ecx,
 	quat_init_axis(&q2, 0.0f, 1.0f, 0.0f,
 			o->tsd.ship.sci_heading + o->tsd.ship.sci_beam_width / 2.0 + M_PI / 2.0);
 	e = add_entity(sciballecx, orange_slice, o->x, o->y, o->z, color);
-	quat_mul(&q3, &q1, &q);
-	update_entity_orientation(e, &q3);
-	update_entity_scale(e, r);
+	if (e) {
+		quat_mul(&q3, &q1, &q);
+		update_entity_orientation(e, &q3);
+		update_entity_scale(e, r);
+	}
 
 	e = add_entity(sciballecx, orange_slice, o->x, o->y, o->z, color);
-	quat_mul(&q3, &q2, &q);
-	update_entity_orientation(e, &q3);
-	update_entity_scale(e, r);
+	if (e) {
+		quat_mul(&q3, &q2, &q);
+		update_entity_orientation(e, &q3);
+		update_entity_scale(e, r);
+	}
 }
 
 static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, double range, double current_zoom)
@@ -7626,21 +7687,26 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 
 	/* add yaw axis */
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, CYAN);
-	update_entity_material(e, &yaw_material);
+	if (e)
+		update_entity_material(e, &yaw_material);
 
 	/* add pitch1 axis */
 	union quat pitch1_orientation;
 	quat_init_axis(&pitch1_orientation, 1, 0, 0, M_PI/2.0);
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
-	update_entity_orientation(e, &pitch1_orientation);
-	update_entity_material(e, &pitch_material);
+	if (e) {
+		update_entity_orientation(e, &pitch1_orientation);
+		update_entity_material(e, &pitch_material);
+	}
 
 	/* add pitch2 axis */
 	union quat pitch2_orientation;
 	quat_init_axis(&pitch2_orientation, 0, 0, 1, M_PI/2.0);
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
-	update_entity_orientation(e, &pitch2_orientation);
-	update_entity_material(e, &pitch_material);
+	if (e) {
+		update_entity_orientation(e, &pitch2_orientation);
+		update_entity_material(e, &pitch_material);
+	}
 
 	/* add absolute straight ahead ind, down z axis with y up to match heading = 0 mark 0 */
 	union quat ind_orientation;
@@ -7649,8 +7715,10 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	quat_rot_vec_self(&ind_pos, &ind_orientation);
 	vec3_add_self(&ind_pos, &center_pos);
 	e = add_entity(tridentecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, WHITE);
-	update_entity_orientation(e, &ind_orientation);
-	update_entity_scale(e, 0.1/heading_indicator_mesh->radius);
+	if (e) {
+		update_entity_orientation(e, &ind_orientation);
+		update_entity_scale(e, 0.1/heading_indicator_mesh->radius);
+	}
 
 	render_entities(tridentecx);
 
@@ -7799,8 +7867,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	for (i=0; i<4; ++i) {
 		e = add_entity(navecx, radar_ring_mesh[i], o->x - ship_normal.v.x, o->y - ship_normal.v.y,
 			o->z - ship_normal.v.z, DARKRED);
-		update_entity_scale(e, screen_radius);
-		update_entity_orientation(e, &o->orientation);
+		if (e) {
+			update_entity_scale(e, screen_radius);
+			update_entity_orientation(e, &o->orientation);
+		}
 	}
 
 	for (i=0; i<2; ++i) {
@@ -7826,20 +7896,26 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		quat_rot_vec_self(&ind_pos, &ind_orientation);
 		vec3_add_self(&ind_pos, &ship_pos);
 		e = add_entity(navecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
-		update_entity_scale(e, heading_indicator_mesh->radius*screen_radius/100.0);
-		update_entity_orientation(e, &ind_orientation);
-		set_render_style(e, RENDER_NORMAL);
+		if (e) {
+			update_entity_scale(e, heading_indicator_mesh->radius*screen_radius/100.0);
+			update_entity_orientation(e, &ind_orientation);
+			set_render_style(e, RENDER_NORMAL);
+		}
 
 		/* heading arrow tail */
 		e = add_entity(navecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
-		update_entity_scale(e, screen_radius);
-		update_entity_orientation(e, &ind_orientation);
+		if (e) {
+			update_entity_scale(e, screen_radius);
+			update_entity_orientation(e, &ind_orientation);
+		}
 	}
 
 	/* ship forward vector */
 	e = add_entity(navecx, forward_line_mesh, o->x, o->y, o->z, WHITE);
-	update_entity_scale(e, screen_radius);
-	update_entity_orientation(e, &o->orientation);
+	if (e) {
+		update_entity_scale(e, screen_radius);
+		update_entity_orientation(e, &o->orientation);
+	}
 
 	double sector_size = XKNOWN_DIM / 10.0;
 	if (current_zoom > 100 ) {
@@ -7876,9 +7952,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 	/* add my ship */
 	e = add_entity(navecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, SHIP_COLOR);
-	set_render_style(e, science_style);
-	update_entity_scale(e, ship_scale);
-	update_entity_orientation(e, &o->orientation);
+	if (e) {
+		set_render_style(e, science_style);
+		update_entity_scale(e, ship_scale);
+		update_entity_orientation(e, &o->orientation);
+	}
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		double dist;
@@ -7935,19 +8013,27 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 			if (go[i].type == OBJTYPE_TORPEDO) {
 				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, ORANGERED);
-				set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
-				entity_set_user_data(contact, &go[i]); /* for debug */
+				if (contact) {
+					set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
+					entity_set_user_data(contact, &go[i]); /* for debug */
+				}
 			} else if (go[i].type == OBJTYPE_LASER) {
 				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, LASER_COLOR);
-				set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
-				entity_set_user_data(contact, &go[i]); /* for debug */
+				if (contact) {
+					set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
+					entity_set_user_data(contact, &go[i]); /* for debug */
+				}
 			} else {
 				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, GREEN);
-				set_render_style(contact, science_style);
-				entity_set_user_data(contact, &go[i]);
+				if (contact) {
+					set_render_style(contact, science_style);
+					entity_set_user_data(contact, &go[i]);
+				}
 			}
-			update_entity_scale(contact, entity_get_scale(go[i].entity));
-			update_entity_orientation(contact, entity_get_orientation(go[i].entity));
+			if (contact) {
+				update_entity_scale(contact, entity_get_scale(go[i].entity));
+				update_entity_orientation(contact, entity_get_orientation(go[i].entity));
+		}
 #if 0
 			if (o->tsd.ship.ai[0].u.attack.victim_id != -1 && go[i].id == o->tsd.ship.ai[0].u.attack.victim_id)
 				targeted_entity = contact;
@@ -7994,10 +8080,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			}
 
 			/* update the scale based on current scale */
-			update_entity_scale(contact, entity_get_scale(contact) * contact_scale);
+			if (contact)
+				update_entity_scale(contact, entity_get_scale(contact) * contact_scale);
 
 			/* add line from center disk to contact in z axis */
-			if (draw_contact_offset_and_ring) {
+			if (draw_contact_offset_and_ring && contact) {
 				union vec3 contact_pos = { { go[i].x, go[i].y, go[i].z } };
 				union vec3 ship_plane_proj;
 				float proj_distance = 0;
@@ -8023,13 +8110,19 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 					contact_ring_radius = contact_radius/5.0;
 				}
 
-				e = add_entity(navecx, vline_mesh, contact_pos.v.x, contact_pos.v.y, contact_pos.v.z, DARKRED);
-				update_entity_scale(e, -proj_distance);
-				update_entity_orientation(e, &o->orientation);
+				e = add_entity(navecx, vline_mesh, contact_pos.v.x,
+						contact_pos.v.y, contact_pos.v.z, DARKRED);
+				if (e) {
+					update_entity_scale(e, -proj_distance);
+					update_entity_orientation(e, &o->orientation);
+				}
 
-				e = add_entity(navecx, ring_mesh, ship_plane_proj.v.x, ship_plane_proj.v.y, ship_plane_proj.v.z, RED);
-				update_entity_scale(e, contact_ring_radius);
-				update_entity_orientation(e, &o->orientation);
+				e = add_entity(navecx, ring_mesh, ship_plane_proj.v.x,
+						ship_plane_proj.v.y, ship_plane_proj.v.z, RED);
+				if (e) {
+					update_entity_scale(e, contact_ring_radius);
+					update_entity_orientation(e, &o->orientation);
+				}
 			}
 		}
 	}
@@ -8046,6 +8139,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		struct snis_entity *o;
 
 		e = get_entity(navecx, i);
+		if (!e)
+			continue;
 		o = entity_get_user_data(e);
 		if (!o)
 			continue; 
@@ -9392,7 +9487,8 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	e = add_entity(sciecx, m, 0, 0, 0, GREEN);
 	angle = (M_PI / 180.0) * (timer % 360);
 	quat_init_axis(&orientation, 0.0, 1.0, 0.0, angle);
-	update_entity_orientation(e, &orientation);
+	if (e)
+		update_entity_orientation(e, &orientation);
 #ifdef WITH_ILDA_SUPPORT
 	science_style |= RENDER_ILDA;
 #endif
@@ -9402,7 +9498,8 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
 	set_lighting(sciecx, -m->radius * 4, 0, m->radius);
 	render_entities(sciecx);
-	remove_entity(sciecx, e);
+	if (e)
+		remove_entity(sciecx, e);
 
 	y = SCREEN_HEIGHT - 180;
 	if (curr_science_guy->type == OBJTYPE_SHIP1 ||
@@ -11617,7 +11714,8 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	static int static_exc_loaded = 0;
 	if (!static_exc_loaded) {
 		struct entity *e = add_entity(ecx, sun_mesh, XKNOWN_DIM/2, 0, ZKNOWN_DIM/2, WHITE);
-		update_entity_material(e, &sun_material);
+		if (e)
+			update_entity_material(e, &sun_material);
 
 		static_exc_loaded = 1;
 	}
