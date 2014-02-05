@@ -7747,7 +7747,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *radar_ring_mesh[4] = {0, 0, 0, 0};
 	static struct mesh *heading_ind_line_mesh = 0;
-	static struct mesh *vline_mesh = 0;
+	static struct mesh *vline_mesh_pos = 0;
+	static struct mesh *vline_mesh_neg = 0;
 	static struct mesh *forward_line_mesh = 0;
 	static int current_zoom = 0;
 	/* struct entity *targeted_entity = NULL; */
@@ -7759,7 +7760,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		radar_ring_mesh[1] = init_radar_circle_xz_plane_mesh(0, 0, 0.6, 18, 0.2);
 		radar_ring_mesh[2] = init_radar_circle_xz_plane_mesh(0, 0, 0.8, 18, 0.2);
 		radar_ring_mesh[3] = init_radar_circle_xz_plane_mesh(0, 0, 1.0, 36, 0.2);
-		vline_mesh = init_line_mesh(0, 0, 0, 0, 1, 0);
+		vline_mesh_pos = init_line_mesh(0, 0, 0, 0, 1, 0);
+		vline_mesh_neg = init_line_mesh(0, 0, 0, 0, -1, 0);
 		heading_ind_line_mesh = init_line_mesh(0.7, 0, 0, 1, 0, 0);
 		forward_line_mesh = init_line_mesh(1, 0, 0, 0.5, 0, 0);
 	}
@@ -8110,10 +8112,14 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 					contact_ring_radius = contact_radius/5.0;
 				}
 
-				e = add_entity(navecx, vline_mesh, contact_pos.v.x,
-						contact_pos.v.y, contact_pos.v.z, DARKRED);
+				if (proj_distance > 0)
+					e = add_entity(navecx, vline_mesh_neg, contact_pos.v.x, contact_pos.v.y,
+						contact_pos.v.z, DARKRED);
+				else
+					e = add_entity(navecx, vline_mesh_pos, contact_pos.v.x, contact_pos.v.y,
+						contact_pos.v.z, DARKRED);
 				if (e) {
-					update_entity_scale(e, -proj_distance);
+					update_entity_scale(e, abs(proj_distance));
 					update_entity_orientation(e, &o->orientation);
 				}
 
