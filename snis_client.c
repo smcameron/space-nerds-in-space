@@ -864,9 +864,10 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, torpedo_mesh, x, y, z, TORPEDO_COLOR);
-		set_render_style(e, torpedo_render_style);
-		if (e)
+		if (e) {
+			set_render_style(e, torpedo_render_style);
 			update_entity_material(e, &red_torpedo_material);
+		}
 		i = add_generic_object(id, x, y, z, vx, vy, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
