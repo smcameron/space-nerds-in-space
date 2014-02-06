@@ -265,9 +265,6 @@ ui_element_keypress_function ui_text_input_keypress = (ui_element_keypress_funct
 char skybox_texture_prefix[255];
 volatile int textures_loaded = 0; /* blech, volatile global. */
 
-double sine[361];
-double cosine[361];
-
 struct mesh *torpedo_mesh;
 struct mesh *laser_mesh;
 struct mesh *asteroid_mesh[NASTEROID_MODELS];
@@ -389,16 +386,6 @@ double time_now_double()
 		return 0;
 	}
 	return (double)time.tv_sec + (double)time.tv_usec * .000001;
-}
-
-void init_trig_arrays(void)
-{
-	int i;
-
-	for (i = 0; i <= 360; i++) {
-		sine[i] = sin((double)i * M_PI * 2.0 / 360.0);
-		cosine[i] = cos((double)i * M_PI * 2.0 / 360.0);
-	}
 }
 
 static void set_default_clip_window(void)
@@ -1719,38 +1706,6 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	spark[i].entity = e;
 	return;
 }
-
-#if 0
-void sphere_explode(int x, int y, int ivx, int ivy, int v,
-	int nsparks, int time)
-{
-	int vx, vy;
-	int angle;
-	int shell;
-	int velocity;
-	int delta_angle;
-	float point_dist;
-	int angle_offset;
-
-	angle_offset = snis_randn(360);
-
-	if (nsparks < 30)
-		nsparks = 40;
-	point_dist = v * 2 * M_PI / (nsparks / 4);
-	delta_angle = (int) ((point_dist / (2.0 * M_PI * v)) * 360.0);
-
-	v = v / (1.0 + snis_randn(100) / 100.0);
-	for (shell = 0; shell < 90; shell += 7) {
-		for (angle = 0; angle < 360; angle += delta_angle) {
-			velocity = (int) (cosine[shell] * (double) v);
-			vx = cosine[(angle + angle_offset) % 360] * velocity + ivx;
-			vy = sine[(angle + angle_offset) % 360] * velocity + ivy;
-			add_spark(x, y, vx, vy, time);
-		}
-		delta_angle = (int) ((point_dist / (2.0 * velocity * M_PI)) * 360.0);
-	}
-}
-#endif
 
 static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_t velocity, int time,
 				uint8_t victim_type)
@@ -12538,7 +12493,6 @@ int main(int argc, char *argv[])
 	snis_slider_set_sound(SLIDER_SOUND);
 	text_window_set_chatter_sound(TTY_CHATTER_SOUND);
 	text_window_set_timer(&timer);
-	init_trig_arrays();
 	init_lobby_ui();
 	init_nav_ui();
 	init_engineering_ui();
