@@ -765,6 +765,91 @@ static char *Climate[] = {
 	"temperate",
 };
 	
+static char *Be_advised[] = {
+	"warning,",
+	"be advised,",
+	"let it be known,",
+	"you are advised to",
+	"attention,",
+	"this will be your only warning,",
+	"you are warned to",
+	"Word to the wise,",
+	"you are strongly cautioned to",
+	"Be warned,",
+};
+
+static char *Cease_fire[] = {
+	"cease fire at once",
+	"cease fire",
+	"cease hostilities",
+	"cool your lasers",
+	"suspend fire",
+	"desist hostilities",
+	"chill your lasers",
+	"suspend hostilities at once",
+	"belay fire",
+	"cease firing",
+};
+
+static char *You_will_be[] = {
+	"you will be",
+	"you'll be",
+	"your ship will be",
+	"you and your crew will be",
+	"that garbage scow you call a ship will be",
+	"your hull will be",
+	"what's left of your ship will be",
+	"your tin can of a ship will be",
+	"your ship full of corpses will be",
+	"your rattling hull will be",
+};
+
+static char *Get_lost[] = {
+	"get lost",
+	"get out of here",
+	"leave immediately",
+	"make yourself scarce",
+	"make like a tree and get outta here",
+	"clear the area",
+	"remove yourself at once",
+	"vacate this space immediately",
+	"depart at once",
+	"scram",
+	"get outta here",
+	"bug off",
+	"back off",
+	"retreat immediately",
+	"leave the area at once",
+	"withdraw at once",
+};
+
+static char *Destroyed[] = {
+	"destroyed",
+	"incinerated",
+	"vaporized",
+	"blown out of the sky",
+	"blasted out of the sky",
+	"blasted to embers",
+	"charred to bits",
+	"blown to smithereens",
+	"fried to a crisp",
+	"reduced to smoke",
+	"burned to embers",
+	"sent to meet Zarkon's ghost",
+	"reduced to molten slag",
+	"blasted to cinders",
+	"a fun bit of target practice",
+	"reduced to slag and cinders",
+	"blasted to Nebulon seven",
+	"scorched to ashes",
+	"smoked like a kipper",
+	"regrettably incinerated",
+	"unseasonably warm for a few microseconds",
+	"lit up like a Zarkon wedding party",
+	"having your absorption spectrum rather severely tested",
+	"eating way too many photons for breakfast",
+};
+
 #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 static char *random_word(struct mtwist_state *mt, char *w[], int nwords)
@@ -943,6 +1028,31 @@ static void break_lines(char *buffer, int line_len)
 	}
 }
 
+static char *be_advised(struct mtwist_state *mt)
+{
+	return random_word(mt, Be_advised, ARRAYSIZE(Be_advised));
+}
+
+static char *cease_fire(struct mtwist_state *mt)
+{
+	return random_word(mt, Cease_fire, ARRAYSIZE(Cease_fire));
+}
+
+static char *get_lost(struct mtwist_state *mt)
+{
+	return random_word(mt, Get_lost, ARRAYSIZE(Get_lost));
+}
+
+static char *you_will_be(struct mtwist_state *mt)
+{
+	return random_word(mt, You_will_be, ARRAYSIZE(You_will_be));
+}
+
+static char *destroyed(struct mtwist_state *mt)
+{
+	return random_word(mt, Destroyed, ARRAYSIZE(Destroyed));
+}
+
 void planet_description(struct mtwist_state *mt, char *buffer, int buflen, int line_len)
 {
 	char do_avoid[100];
@@ -959,6 +1069,21 @@ void planet_description(struct mtwist_state *mt, char *buffer, int buflen, int l
 			bring_your(mt), traveling_accessory(mt));
 	break_lines(buffer, line_len);
 }
+
+void starbase_attack_warning(struct mtwist_state *mt, char *buffer,
+			int buflen, int line_len)
+{
+	char do_avoid[100];
+
+	strcpy(do_avoid, avoid(mt));
+	do_avoid[0] = toupper(do_avoid[0]);
+
+	snprintf(buffer, buflen, "%s %s and %s or %s %s\n",
+		be_advised(mt), cease_fire(mt), get_lost(mt), you_will_be(mt),
+		destroyed(mt));
+	break_lines(buffer, line_len);
+}
+
 
 #ifdef TEST_TAUNT
 #include "mtwist.h"
@@ -980,8 +1105,9 @@ int main(int argc, char *argv[])
 	set_random_seed(&mt);
 
 	for (i = 0; i < 1000; i++) {
-		//infinite_taunt(buffer, sizeof(buffer) - 1);
-		planet_description(mt, buffer, sizeof(buffer) - 1, 60);
+		/* infinite_taunt(buffer, sizeof(buffer) - 1); */
+		/* planet_description(mt, buffer, sizeof(buffer) - 1, 60); */
+		starbase_attack_warning(mt, buffer, sizeof(buffer) - 1, 50);
 		printf("%s\n", buffer);
 	}
 	free(mt);

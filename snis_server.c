@@ -49,6 +49,7 @@
 #include <assert.h>
 
 #include "container-of.h"
+#include "string-utils.h"
 #include "mtwist.h"
 #include "build_bug_on.h"
 #include "ssgl/ssgl.h"
@@ -3334,7 +3335,11 @@ static void starbase_move(struct snis_entity *o)
 	char buf[100], location[50];
 	int64_t then, now;
 	int i;
-	/* FIXME, fill this in. */
+	int fired_at_player = 0;
+	static struct mtwist_state *mt = NULL;
+
+	if (!mt)
+		mt = mtwist_init(35342);
 
 	then = o->tsd.starbase.last_time_called_for_help;
 	now = universe_timestamp;
@@ -3383,6 +3388,7 @@ static void starbase_move(struct snis_entity *o)
 			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
 			o->tsd.starbase.next_torpedo_time = universe_timestamp +
 					STARBASE_TORPEDO_FIRE_INTERVAL;
+			fired_at_player = a->type == OBJTYPE_SHIP1;
 		}
 		if (snis_randn(100) < 30 &&
 			o->tsd.starbase.next_laser_time <= universe_timestamp) {
@@ -3390,6 +3396,33 @@ static void starbase_move(struct snis_entity *o)
 			add_laserbeam(o->id, a->id, LASERBEAM_DURATION);
 			o->tsd.starbase.next_laser_time = universe_timestamp +
 					STARBASE_LASER_FIRE_INTERVAL;
+			fired_at_player |= (a->type == OBJTYPE_SHIP1);
+		}
+		if (fired_at_player && snis_randn(100) < 20) {
+			char msg[300];
+			char x[200];
+			char *c, *lastc;
+
+			starbase_attack_warning(mt, x, sizeof(x), 50);
+			uppercase(x);
+
+			c = x;
+			while (c) {
+				lastc = c;
+				c = strchr(c, '\n');
+				if (c) {
+					*c = '\0';
+					if (lastc == x)
+						snprintf(msg, sizeof(msg), ":  %s,  %s", a->sdata.name, lastc);
+					else
+						snprintf(msg, sizeof(msg), ":  %s", lastc);
+					c++;
+					send_comms_packet(o->tsd.starbase.name, 0, msg);
+				} else {
+					snprintf(msg, sizeof(msg), ":  %s", lastc);
+					send_comms_packet(o->tsd.starbase.name, 0, msg);
+				}
+			}
 		}
 	}
 }
