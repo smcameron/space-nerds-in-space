@@ -3727,29 +3727,7 @@ static struct navigation_ui {
 	struct gauge *warp_gauge;
 	struct button *engage_warp_button;
 	struct button *reverse_button;
-	int details_mode;
-	struct button *details_button;
 } nav_ui;
-
-static int process_nav_details(void)
-{
-	unsigned char buffer[10];
-	uint8_t new_details;
-	int rc;
-
-	rc = read_and_unpack_buffer(buffer, "b", &new_details);
-	if (rc != 0)
-		return rc;
-#if 0
-	nav_ui.details_mode = new_details;
-#endif
-	nav_ui.details_mode = 1;
-	if (new_details)
-		snis_button_set_label(nav_ui.details_button, "2D");
-	else
-		snis_button_set_label(nav_ui.details_button, "3D");
-	return 0;
-}
 
 static int process_sci_select_target_packet(void)
 {
@@ -4252,11 +4230,6 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_SCI_DETAILS:
 			rc = process_sci_details();
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_NAV_DETAILS:
-			rc = process_nav_details();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -5499,10 +5472,6 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 	ty2 = y - sin(heading + beam_width / 2) * r;
 	sng_draw_electric_line(tx1, ty1, tx2, ty2);
 }
-
-struct snis_radar_extent {
-	int rx, ry, rw, rh;
-};
 
 /* this science_guy[] array is used for mouse clicking. */
 struct science_data {
@@ -7222,12 +7191,6 @@ static void show_manual_weapons(GtkWidget *w)
 	show_common_screen(w, "WEAPONS");
 }
 
-static void nav_details_pressed(void *x)
-{
-	queue_to_server(packed_buffer_new("hb", OPCODE_NAV_DETAILS,
-		(unsigned char) !nav_ui.details_mode));
-}
-
 static double sample_warpdrive(void);
 static void init_nav_ui(void)
 {
@@ -7263,16 +7226,8 @@ static void init_nav_ui(void)
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION);
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
-
-	nav_ui.details_mode = 0;
-	nav_ui.details_button = snis_button_init(SCREEN_WIDTH - 41, SCREEN_HEIGHT - 41, 40, 25, "2D",
-			RED, NANO_FONT, nav_details_pressed, (void *) 0);
-#if 0
-	ui_add_button(nav_ui.details_button, DISPLAYMODE_NAVIGATION);
-#endif
 	navecx = entity_context_new(5000, 1000);
 	tridentecx = entity_context_new(10, 0);
-	nav_ui.details_mode = 1;
 }
 
 void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, float rx, float ry, float rr)
