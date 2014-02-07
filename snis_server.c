@@ -2780,83 +2780,6 @@ static void calculate_ship_scibeam_info(struct snis_entity *ship)
 	return;
 }
 
-struct auto_select_context {
-	struct snis_entity *self;
-	uint32_t new_victim_id;
-	int found;
-	double minrange2;
-};
-
-static void auto_select_enemy(void *context, void *entity)
-{
-	struct auto_select_context *c = context;
-	struct snis_entity *t = entity;
-	struct snis_entity *o = c->self;
-	const double acceptable_angle = 8.0 * M_PI / 180.0;
-	const double acceptable_range2 = (LASER_RANGE * LASER_RANGE);
-	double angle, range2, a1;
-
-	if (t->alive <= 0)
-		return;
-
-	if (t->id == o->id) /* avoid self selection */
-		return;
-
-	switch (t->type) {
-	case OBJTYPE_SHIP1:
-	case OBJTYPE_SHIP2:
-	case OBJTYPE_ASTEROID:
-	case OBJTYPE_DERELICT:
-	case OBJTYPE_STARBASE: 
-		range2 = hypot2(t->x - o->x, t->z - o->z);
-		if (range2 > acceptable_range2)
-			return;
-		angle = atan2(-(t->z - o->z), t->x - o->x);
-		if (angle < 0.0)
-			angle += 2.0 * M_PI;
-		else if (angle > 2 * M_PI)
-			angle -= 2.0 * M_PI;
-		a1 = o->tsd.ship.gun_heading;
-		if (a1 < 0.0)
-			a1 += 2.0 * M_PI;
-		else if (a1 > 2.0 * M_PI)
-			a1 -= 2.0 * M_PI;
-		
-		angle = (a1 > angle) * (a1 - angle) + (a1 <= angle) * (angle - a1);
-		if (angle > acceptable_angle)
-			return;
-		if (!c->found || range2 < c->minrange2) {
-			c->found = 1;
-			c->minrange2 = range2;
-			c->new_victim_id = t->id;
-		}
-		break;
-	default:
-		break;
-	}
-}
-
-static void auto_select_enemies(struct snis_entity *o)
-{
-	struct auto_select_context asc;
-	int n;
-
-	if (o->tsd.ship.nai_entries == 0)
-		ship_figure_out_what_to_do(o);
-	n = o->tsd.ship.nai_entries - 1;
-
-	if ((universe_timestamp & 0x3) != 0) /* throttle this computation */
-		return;
-
-	asc.self = o;
-	asc.found = 0;
-	asc.minrange2 = UNIVERSE_DIM * 10.0;
-	asc.new_victim_id = -1;
-
-	space_partition_process(space_partition, o, o->x, o->z, &asc, auto_select_enemy);
-	o->tsd.ship.ai[n].u.attack.victim_id = asc.new_victim_id;
-}
-
 static void do_thrust(struct snis_entity *ship)
 {
 	double max_player_velocity =
@@ -3279,7 +3202,6 @@ static void player_move(struct snis_entity *o)
 		}
 	}
 	calculate_ship_scibeam_info(o);
-	auto_select_enemies(o);
 }
 
 static void demon_ship_move(struct snis_entity *o)
