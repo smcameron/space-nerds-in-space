@@ -379,15 +379,6 @@ static inline double to_uheading(double heading)
 	return game_angle_to_math_angle(heading);
 }
 
-double time_now_double()
-{
-	struct timeval time;
-	if (gettimeofday(&time,NULL)){
-		return 0;
-	}
-	return (double)time.tv_sec + (double)time.tv_usec * .000001;
-}
-
 static void set_default_clip_window(void)
 {
 	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);

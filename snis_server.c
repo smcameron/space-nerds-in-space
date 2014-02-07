@@ -4982,15 +4982,6 @@ static void sleep_double(double time)
 	} while (rc == EINTR);
 }
 
-double time_now_double()
-{
-	struct timeval time;
-	if (gettimeofday(&time,NULL)){
-		return 0;
-	}
-	return (double)time.tv_sec + (double)time.tv_usec * .000001;
-}
-
 typedef void (*thrust_function)(struct game_client *c, int thrust);
 
 static void do_demon_thrust(struct snis_entity *o, int thrust)

@@ -30,6 +30,8 @@
 #define GLOBAL
 #endif
 
+GLOBAL double time_now_double();
+
 GLOBAL double degrees_to_radians(double degrees);
 GLOBAL double radians_to_degrees(double radians);
 GLOBAL double hypot2(double x, double y);

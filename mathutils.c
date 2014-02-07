@@ -22,11 +22,20 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
+#include <sys/time.h>
 
 #include "mtwist.h"
 
 #define DEFINE_MATHUTILS_GLOBALS 1
 #include "mathutils.h"
+
+double time_now_double()
+{
+	struct timeval time;
+	if (gettimeofday(&time, NULL))
+		return 0;
+	return (double)time.tv_sec + (double)time.tv_usec * .000001;
+}
 
 double degrees_to_radians(double degrees)
 {
