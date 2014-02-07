@@ -1606,8 +1606,6 @@ static void move_ship(struct snis_entity *o)
 					&o->tsd.ship.weap_o1, &o->tsd.ship.weap_o2, t);
 		}
 
-		o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity / 3.0;
-
 		if (o->entity) {
 			update_entity_visibility(o->entity, 1);
 			update_entity_pos(o->entity, o->x, o->y, o->z);
@@ -3147,7 +3145,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	uint32_t id, alive, torpedoes, power;
 	uint32_t fuel, victim_id;
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
-	double dgheading, dgunyawvel, dsheading, dbeamwidth, dvx, dvy, dvz;
+	double dgunyawvel, dsheading, dbeamwidth, dvx, dvy, dvz;
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
@@ -3171,12 +3169,11 @@ static int process_update_ship_packet(uint16_t opcode)
 				&dvx, (int32_t) UNIVERSE_DIM,
 				&dvy, (int32_t) UNIVERSE_DIM,
 				&dvz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_extract(&pb, "RRRwwRRRR",
+	packed_buffer_extract(&pb, "RRRwwRRR",
 				&dyawvel,
 				&dpitchvel,
 				&drollvel,
 				&torpedoes, &power,
-				&dgheading,
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
@@ -3220,7 +3217,6 @@ static int process_update_ship_packet(uint16_t opcode)
 	o->tsd.ship.roll_velocity = drollvel;
 	o->tsd.ship.torpedoes = torpedoes;
 	o->tsd.ship.power = power;
-	o->tsd.ship.gun_heading = dgheading;
 	o->tsd.ship.gun_yaw_velocity = dgunyawvel;
 	o->tsd.ship.sci_heading = dsheading;
 	o->tsd.ship.sci_beam_width = dbeamwidth;

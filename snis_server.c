@@ -3087,11 +3087,9 @@ static void player_move(struct snis_entity *o)
 	update_player_weap_orientation(o);
 	update_player_position_and_velocity(o);
 	
-	o->tsd.ship.gun_heading += o->tsd.ship.gun_yaw_velocity;
 	o->tsd.ship.sci_heading += o->tsd.ship.sci_yaw_velocity;
 	o->tsd.ship.shields = universe_timestamp % 100;
 
-	normalize_angle(&o->tsd.ship.gun_heading);
 	normalize_angle(&o->tsd.ship.sci_heading);
 	o->timestamp = universe_timestamp;
 
@@ -3665,7 +3663,6 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay)
 	o->tsd.ship.pitch_velocity = 0.0;
 	o->tsd.ship.roll_velocity = 0.0;
 	o->tsd.ship.gun_yaw_velocity = 0.0;
-	o->tsd.ship.gun_heading = M_PI / 2.0;
 	o->tsd.ship.velocity = 0.0;
 	o->tsd.ship.desired_velocity = 0.0;
 	o->tsd.ship.desired_heading = 0.0;
@@ -8628,12 +8625,11 @@ static void send_update_ship_packet(struct game_client *c,
 			o->vx, (int32_t) UNIVERSE_DIM,
 			o->vy, (int32_t) UNIVERSE_DIM,
 			o->vz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRRbbbwbbbbbbbbbbbbwQQQ",
+	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbwQQQ",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
-			o->tsd.ship.gun_heading,
 			o->tsd.ship.gun_yaw_velocity,
 			o->tsd.ship.sci_heading,
 			o->tsd.ship.sci_beam_width,
