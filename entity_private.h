@@ -42,7 +42,6 @@ struct entity {
 	float e_scale;
 	union quat e_orientation;
 	struct entity *parent;
-	int child_count;
 	int entity_child_index;
 };
 

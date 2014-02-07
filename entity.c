@@ -84,7 +84,6 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].e_orientation = identity_quat;
 	cx->entity_list[n].material_ptr = 0;
 	cx->entity_list[n].parent = 0;
-	cx->entity_list[n].child_count = 0;
 	cx->entity_list[n].entity_child_index = -1;
 	if (m && m->material)
 		update_entity_material(&cx->entity_list[n], m->material);
@@ -100,7 +99,7 @@ static void remove_entity_children(struct entity_context *cx, struct entity *e)
 		struct entity_child *this_ec = &cx->entity_child_list[entity_child_index];
 		struct entity *this_child = &cx->entity_list[this_ec->child_entity_index];
 
-		if (this_child->child_count > 0)
+		if (this_child->entity_child_index >= 0)
 			remove_entity_children(cx, this_child);
 		snis_object_pool_free_object(cx->entity_pool, this_ec->child_entity_index);
 
@@ -118,7 +117,7 @@ void remove_entity(struct entity_context *cx, struct entity *e)
 
 	if (!e)
 		return;
-	if (e->child_count > 0)
+	if (e->entity_child_index >= 0)
 		remove_entity_children(cx, e);
 	index = e - &cx->entity_list[0];
 	snis_object_pool_free_object(cx->entity_pool, index);
@@ -168,7 +167,6 @@ void update_entity_parent(struct entity_context *cx, struct entity *child, struc
 			entity_child_index = this_ec->next_entity_child_index;
 			last_ec = this_ec;
 		}
-		child->parent->child_count--;
 	}
 
 	child->parent = parent;
@@ -181,7 +179,6 @@ void update_entity_parent(struct entity_context *cx, struct entity *child, struc
 		new_ec->child_entity_index = child_index;
 		new_ec->next_entity_child_index = parent->entity_child_index;
 		parent->entity_child_index = new_entity_child_index;
-		parent->child_count++;
 	}
 }
 
