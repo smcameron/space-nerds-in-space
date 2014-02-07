@@ -5164,19 +5164,6 @@ static void show_mainscreen(GtkWidget *w)
 	show_common_screen(w, "");	
 }
 
-static void snis_draw_torpedo(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, gint r)
-{
-	int i, dx, dy;
-
-	sng_set_foreground(WHITE);
-	for (i = 0; i < 10; i++) {
-		dx = x + snis_randn(r * 2) - r; 
-		dy = y + snis_randn(r * 2) - r; 
-		snis_draw_line(x, y, dx, dy);
-	}
-	/* sng_draw_circle(0, x, y, (int) (SCREEN_WIDTH * 150.0 / XKNOWN_DIM)); */
-}
-
 /* position and dimensions of science scope */
 #define SCIENCE_SCOPE_X 20
 #define SCIENCE_SCOPE_Y 70 
@@ -5513,268 +5500,9 @@ static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, 
 	sng_draw_electric_line(tx1, ty1, tx2, ty2);
 }
 
-static void snis_draw_heading_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
-			double heading, int color, int dotted)
-{
-	int tx1, ty1, tx2, ty2;
-
-	tx1 = x + cos(heading) * r * 0.85;
-	ty1 = y - sin(heading) * r * 0.85;
-	tx2 = x + cos(heading) * r;
-	ty2 = y - sin(heading) * r;
-	sng_set_foreground(color);
-	snis_draw_line(tx1, ty1, tx2, ty2);
-	if (dotted)
-		sng_draw_dotted_line(x, y, tx2, ty2);
-}
-
-static void snis_draw_headings_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
-		struct snis_entity *o)
-{
-	snis_draw_heading_on_reticule(w, gc, x, y, r, o->heading, RED,
-			displaymode == DISPLAYMODE_NAVIGATION);
-	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.gun_heading,
-			DARKTURQUOISE, displaymode == DISPLAYMODE_WEAPONS);
-	snis_draw_heading_on_reticule(w, gc, x, y, r, o->tsd.ship.sci_heading, GREEN, 0);
-}
-
-static void snis_draw_ship_on_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
-		struct snis_entity *o)
-{
-	sng_set_foreground(CYAN);
-	snis_draw_arrow(w, gc, x, y, r, o->heading, 1.5);
-	snis_draw_arrow(w, gc, x, y, r, o->tsd.ship.gun_heading, 0.75);
-}
-
-static void snis_draw_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
-		double heading, int c1, int c2)
-{
-	int i;
-
-	sng_set_foreground(c1);
-	for (i = r; i > r / 4; i -= r / 5)
-		sng_draw_circle(0, x, y, i);
-	sng_set_foreground(c2);
-	draw_degree_marks_with_labels(w, gc, x, y, r, NANO_FONT);
-}
-
-static int within_nebula(double x, double z)
-{
-	double dist2;
-	int i;
-
-	for (i = 0; i < nnebula; i++) {
-		dist2 = (x - nebulaentry[i].x) *
-			(x - nebulaentry[i].x) +
-			(z - nebulaentry[i].z) *
-			(z - nebulaentry[i].z);
-		if (dist2 < nebulaentry[i].r2)
-			return 1;
-	}
-	return 0;
-}
-
-static void draw_nebula_noise(GtkWidget *w, int cx, int cy, int r)
-{
-	int i, radius, x1, y1;
-	double angle;
-
-	sng_set_foreground(WHITE);
-	for (i = 0; i < 50; i++) {
-		angle = 0.001 * snis_randn(1000) * 2 * M_PI;
-		radius = snis_randn(r);
-		x1 = cos(angle) * radius + cx;
-		y1 = sin(angle) * radius + cy;
-		snis_draw_line(x1, y1, x1 + 1, y1);
-       }
-}
-
 struct snis_radar_extent {
 	int rx, ry, rw, rh;
 };
-
-static void draw_torpedo_leading_indicator(GtkWidget *w, GdkGC *gc,
-			struct snis_entity *ship, struct snis_entity *target,
-			int x, int y, double dist2, int r, double screen_radius)
-{
-	double time_to_target, svx, svy, targx, targy;
-
-	time_to_target = sqrt(dist2) / TORPEDO_VELOCITY;
-	svx = target->vx * (double) r / screen_radius;
-	svy = target->vz * (double) r / screen_radius;
-	targx = x + svx * time_to_target;
-	targy = y + svy * time_to_target;
-	sng_set_foreground(ORANGERED);
-	snis_draw_line(targx - 5, targy, targx + 5, targy);
-	snis_draw_line(targx, targy - 5, targx, targy + 5);
-}
-
-static void draw_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *ship,
-		double x1, double z1, double x2, double z2,
-		struct snis_radar_extent *extent, double screen_radius, int r, int color)
-{
-	double ix1, iz1, ix2, iz2;
-	int cx, cy, tx, ty, lx1, ly1, lx2, ly2;
-	int nintersections;
-
-	nintersections = circle_line_segment_intersection(x1, z1, x2, z2,
-				ship->x, ship->z, screen_radius,
-				&ix1, &iz1, &ix2, &iz2);
-
-	if (nintersections == -1) /* no intersections, all points outside circle */
-		return;
-
-	/* otherwise, 3 cases, but do the same in all of them
-	 * 1. no intersections, all points inside circle
-	 * 2. 1 intersection, 1 point inside circle
-	 * 3. 2 intersections 
-	 *
-	 * in any case, draw a line from *ix1,*iy1 to *ix2,*iy2
-	 * scaling to radar coords first.
-	 */
-	cx = extent->rx + (extent->rw / 2);
-	cy = extent->ry + (extent->rh / 2);
-	tx = (ix1 - ship->x) * (double) r / screen_radius;
-	ty = (iz1 - ship->z) * (double) r / screen_radius;
-	lx1 = (int) (tx + (double) cx);
-	ly1 = (int) (ty + (double) cy);
-	tx = (ix2 - ship->x) * (double) r / screen_radius;
-	ty = (iz2 - ship->z) * (double) r / screen_radius;
-	lx2 = (int) (tx + (double) cx);
-	ly2 = (int) (ty + (double) cy);
-	sng_draw_laser_line(lx1, ly1, lx2, ly2, color);
-}
-
-static void draw_all_the_guys(GtkWidget *w, struct snis_entity *o, struct snis_radar_extent* extent, double screen_radius,
-				double visible_distance)
-{
-	int i, cx, cy, r, in_nebula;
-	char buffer[200];
-
-	visible_distance *= visible_distance;
-	in_nebula = within_nebula(o->x, o->y);
-	cx = extent->rx + (extent->rw / 2);
-	cy = extent->ry + (extent->rh / 2);
-	r = extent->rh / 2;
-	sng_set_foreground(DARKRED);
-
-	/* Draw all the stuff */
-#define NR2 (screen_radius * screen_radius)
-	pthread_mutex_lock(&universe_mutex);
-
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		int x, y;
-		double tx, ty, nx, ny;
-		double dist2;
-
-		if (!go[i].alive)
-			continue;
-
-		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
-			int oid, tid, color;
-			struct snis_entity *shooter = lookup_entity_by_id(go[i].tsd.laserbeam.origin);
-			if (go[i].type == OBJTYPE_TRACTORBEAM) {
-				color = TRACTORBEAM_COLOR;
-			} else {
-				if (shooter && shooter->type == OBJTYPE_SHIP2)
-					color = NPC_LASER_COLOR;
-				else
-					color = PLAYER_LASER_COLOR;
-			}
-
-			oid = lookup_object_by_id(go[i].tsd.laserbeam.origin);
-			tid = lookup_object_by_id(go[i].tsd.laserbeam.target);
-			draw_laserbeam(w, gc, o, go[oid].x, go[oid].z, go[tid].x, go[tid].z,
-					extent, screen_radius, r, color);
-			continue;
-		}
-		nx = in_nebula * (0.01 * snis_randn(100) - 0.5) * 0.1 * screen_radius;
-		ny = in_nebula * (0.01 * snis_randn(100) - 0.5) * 0.1 * screen_radius;
-		dist2 = ((go[i].x - o->x + nx) * (go[i].x - o->x + nx)) +
-			((go[i].z - o->z + ny) * (go[i].z - o->z + ny));
-		if (dist2 > NR2 || dist2 > visible_distance)
-			continue; /* not close enough */
-
-		tx = (go[i].x + nx - o->x) * (double) r / screen_radius;
-		ty = (go[i].z + ny - o->z) * (double) r / screen_radius;
-		x = (int) (tx + (double) cx);
-		y = (int) (ty + (double) cy);
-
-		if (in_nebula && snis_randn(1000) < 850)
-			continue;
-
-		if (go[i].id == my_ship_id)
-			continue; /* skip drawing yourself. */
-		else {
-			switch (go[i].type) {
-			case OBJTYPE_ASTEROID:
-			case OBJTYPE_DERELICT:
-				sng_set_foreground(ASTEROID_COLOR);
-				sng_draw_circle(0, x, y, r / 30);
-				break;
-			case OBJTYPE_PLANET:
-				sng_set_foreground(PLANET_COLOR);
-				sng_draw_circle(x, 0, y, r / 30);
-				break;
-			case OBJTYPE_STARBASE:
-				sng_set_foreground(STARBASE_COLOR);
-				sng_draw_circle(0, x, y, r / 30);
-				break;
-			case OBJTYPE_WORMHOLE:
-				sng_set_foreground(WORMHOLE_COLOR);
-				sng_draw_circle(0, x, y, r / 30);
-				break;
-			case OBJTYPE_LASER:
-				sng_draw_laser_line(x, y,
-					x - go[i].vx * (double) r / (2 * screen_radius),
-					y - go[i].vz * (double) r / (2 * screen_radius),
-					NPC_LASER_COLOR);
-				break;
-			case OBJTYPE_TORPEDO:
-				snis_draw_torpedo(w->window, gc, x, y, r / 30);
-				break;
-			case OBJTYPE_EXPLOSION:
-				break;
-			case OBJTYPE_SHIP2:
-			case OBJTYPE_SHIP1:
-				sng_set_foreground(WHITE);
-				snis_draw_arrow(w, gc, x, y, r, go[i].heading, 0.5);
-				sng_set_foreground(GREEN);
-				if (go[i].sdata.science_data_known) {
-					sprintf(buffer, "%s", go[i].sdata.name);
-					sng_abs_xy_draw_string(buffer, NANO_FONT, x + 10, y - 10);
-				}
-#if 0
-				time_to_target = sqrt(dist2) / TORPEDO_VELOCITY;
-				svx = go[i].vx * (double) r / screen_radius;
-				svy = go[i].vy * (double) r / screen_radius;
-				targx = x + svx * time_to_target;
-				targy = y + svy * time_to_target;
-				sng_set_foreground(ORANGERED);
-				snis_draw_line(targx - 5, targy, targx + 5, targy);
-				snis_draw_line(targx, targy - 5, targx, targy + 5);
-#endif
-				break;
-			case OBJTYPE_SPACEMONSTER: /* invisible to instruments */
-			case OBJTYPE_NEBULA:
-				break;
-			default:
-				sng_set_foreground(WHITE);
-				snis_draw_arrow(w, gc, x, y, r, go[i].heading, 0.5);
-			}
-			if (go[i].id == o->tsd.ship.ai[0].u.attack.victim_id) {
-				draw_targeting_indicator(w, gc, x, y, TARGETING_COLOR, 0);
-				draw_torpedo_leading_indicator(w, gc, o, &go[i],
-								x, y, dist2, r, screen_radius);
-			}
-			if (curr_science_guy == &go[i])
-				draw_targeting_indicator(w, gc, x, y, SCIENCE_SELECT_COLOR, 1);
-		}
-	}
-	pthread_mutex_unlock(&universe_mutex);
-	if (in_nebula)
-		draw_nebula_noise(w, cx, cy, r); 
-}
 
 /* this science_guy[] array is used for mouse clicking. */
 struct science_data {
@@ -6843,42 +6571,6 @@ static void draw_all_the_science_sparks(GtkWidget *w, struct snis_entity *o, dou
 
 		sng_set_foreground(GREEN);
 		snis_draw_science_spark(w->window, gc, x, y, dist);
-	}
-	pthread_mutex_unlock(&universe_mutex);
-}
-
-static void draw_all_the_sparks(GtkWidget *w, struct snis_entity *o, struct snis_radar_extent* extent, double screen_radius)
-{
-	int i, cx, cy, r;
-
-	cx = extent->rx + (extent->rw / 2);
-	cy = extent->ry + (extent->rh / 2);
-	r = extent->rh / 2;
-	sng_set_foreground(DARKRED);
-	/* Draw all the stuff */
-	pthread_mutex_lock(&universe_mutex);
-
-	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++) {
-		int x, y;
-		double tx, ty;
-		double dist2;
-
-		if (!spark[i].alive)
-			continue;
-
-		dist2 = ((spark[i].x - o->x) * (spark[i].x - o->x)) +
-			((spark[i].z - o->z) * (spark[i].z - o->z));
-		if (dist2 > NR2)
-			continue; /* not close enough */
-
-		tx = (spark[i].x - o->x) * (double) r / screen_radius;
-		ty = (spark[i].z - o->z) * (double) r / screen_radius;
-		x = (int) (tx + (double) cx);
-		y = (int) (ty + (double) cy);
-
-		sng_set_foreground(WHITE);
-		snis_draw_line(x - 1, y - 1, x + 1, y + 1);
-		snis_draw_line(x - 1, y + 1, x + 1, y - 1);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -8142,9 +7834,8 @@ static void show_navigation(GtkWidget *w)
 {
 	char buf[100];
 	struct snis_entity *o;
-	int cx, cy;
-	int r, sectorx, sectorz;
-	double screen_radius, max_possible_screen_radius, visible_distance, display_heading;
+	int sectorx, sectorz;
+	double display_heading;
 	static int current_zoom = 0;
 	union euler ypr;
 
@@ -8170,29 +7861,8 @@ static void show_navigation(GtkWidget *w)
 	sng_abs_xy_draw_string(buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
 
 	quat_to_euler(&ypr, &o->orientation);	
-	
-	static struct snis_radar_extent extent = { 40, 90, 470, 470 };
-	cx = extent.rx + (extent.rw / 2);
-	cy = extent.ry + (extent.rh / 2);
-	r = extent.rh / 2;
 	sng_set_foreground(GREEN);
-	screen_radius = ((((255.0 - current_zoom) / 255.0) * 0.08) + 0.01) * XKNOWN_DIM;
-	max_possible_screen_radius = 0.09 * XKNOWN_DIM;
-	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
-        if (!nav_ui.details_mode) {
-		snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, screen_radius);
-		snis_draw_radar_grid(w->window, gc, o, cx, cy, r, screen_radius, current_zoom > 100);
-		sng_set_foreground(DARKRED);
-		snis_draw_reticule(w, gc, cx, cy, r, o->heading, DARKRED, RED);
-		snis_draw_headings_on_reticule(w, gc, cx, cy, r, o);
-		snis_draw_ship_on_reticule(w, gc, cx, cy, r, o);
-
-		draw_all_the_guys(w, o, &extent, screen_radius, visible_distance);
-		draw_all_the_sparks(w, o, &extent, screen_radius);
-        } else {
-                draw_3d_nav_display(w, gc);
-        }
-
+	draw_3d_nav_display(w, gc);
 	show_common_screen(w, "NAV");
 }
 
