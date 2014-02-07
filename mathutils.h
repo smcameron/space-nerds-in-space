@@ -31,6 +31,7 @@
 #endif
 
 GLOBAL double time_now_double();
+GLOBAL void sleep_double(double time);
 
 GLOBAL double degrees_to_radians(double degrees);
 GLOBAL double radians_to_degrees(double radians);

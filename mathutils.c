@@ -23,6 +23,8 @@
 #include <stdint.h>
 #include <math.h>
 #include <sys/time.h>
+#include <errno.h>
+#include <time.h>
 
 #include "mtwist.h"
 
@@ -35,6 +37,27 @@ double time_now_double()
 	if (gettimeofday(&time, NULL))
 		return 0;
 	return (double)time.tv_sec + (double)time.tv_usec * .000001;
+}
+
+void sleep_double(double time)
+{
+	struct timespec t, x;
+	double intpart, fractpart;
+	int rc;
+
+	fractpart = modf(time, &intpart);
+	t.tv_sec = intpart;
+	t.tv_nsec = fractpart * 1000000000;
+
+	do {
+#if defined(__APPLE__) || defined(__FreeBSD__)
+		rc = nanosleep(&t, &x);
+#else
+		rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &t, &x);
+#endif
+		t.tv_sec = x.tv_sec;
+		t.tv_nsec = x.tv_nsec;
+	} while (rc == EINTR);
 }
 
 double degrees_to_radians(double degrees)

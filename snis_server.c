@@ -4961,27 +4961,6 @@ static void populate_damcon_arena(struct damcon_data *d)
 	add_damcon_parts(d);
 }
 
-static void sleep_double(double time)
-{
-	struct timespec t, x;
-	double intpart, fractpart;
-	int rc;
-
-	fractpart = modf(time, &intpart);
-	t.tv_sec = intpart;
-	t.tv_nsec = fractpart * 1000000000;
-
-	do {
-#if defined(__APPLE__) || defined(__FreeBSD__)
-		rc = nanosleep(&t, &x);
-#else
-		rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &t, &x);
-#endif
-		t.tv_sec = x.tv_sec;
-		t.tv_nsec = x.tv_nsec;
-	} while (rc == EINTR);
-}
-
 typedef void (*thrust_function)(struct game_client *c, int thrust);
 
 static void do_demon_thrust(struct snis_entity *o, int thrust)
