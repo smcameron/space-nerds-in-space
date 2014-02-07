@@ -397,6 +397,10 @@ test :	test-matrix test-space-partition test-marshal test-quat test-fleet test-m
 clean:	mostly-clean
 	rm -f ${MODELS} test_marshal
 
+depend :
+	rm -f Makefile.depend
+	$(MAKE) Makefile.depend
+
 Makefile.depend :
 	# Do in 2 steps so that on failure we don't get an empty but "up to date"
 	# dependencies file.
