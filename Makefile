@@ -9,8 +9,8 @@ DATADIR=${PREFIX}/share/space-nerds-in-space
 CC=gcc
 
 ifeq (${WITHAUDIO},yes)
-SNDLIBS=`pkg-config --libs portaudio-2.0 vorbisfile`
-SNDFLAGS=-DWITHAUDIOSUPPORT `pkg-config --cflags portaudio-2.0` -DDATADIR=\"${DATADIR}\"
+SNDLIBS:=$(shell pkg-config --libs portaudio-2.0 vorbisfile)
+SNDFLAGS:=-DWITHAUDIOSUPPORT $(shell pkg-config --cflags portaudio-2.0) -DDATADIR=\"${DATADIR}\"
 OGGOBJ=ogg_to_pcm.o
 SNDOBJS=wwviaudio.o
 else
@@ -51,11 +51,11 @@ endif
 # Arch pkg-config seems to be broken for lua5.2, so we have
 # this "... || echo" hack thing.
 #
-LUALIBS=`pkg-config --libs lua5.2 || echo '-llua'`
-LUACFLAGS=`pkg-config --cflags lua5.2 || echo ''`
+LUALIBS:=$(shell pkg-config --libs lua5.2 || echo '-llua')
+LUACFLAGS:=$(shell pkg-config --cflags lua5.2 || echo '')
 
-PNGLIBS=`pkg-config --libs libpng`
-PNGCFLAGS=`pkg-config --cflags libpng`
+PNGLIBS:=$(shell pkg-config --libs libpng)
+PNGCFLAGS:=$(shell pkg-config --cflags libpng)
 
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
@@ -152,12 +152,11 @@ MODELS=${MD}/freighter.stl \
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${ILDAFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
-GTKCFLAGS=$(subst -I,-isystem ,$(shell pkg-config --cflags gtk+-2.0))
-GLEXTCFLAGS=$(subst -I,-isystem ,$(shell pkg-config --cflags gtkglext-1.0)) ${PNGCFLAGS}
-GTKLDFLAGS=`pkg-config --libs gtk+-2.0` \
-        `pkg-config --libs gthread-2.0`
-GLEXTLDFLAGS=`pkg-config --libs gtkglext-1.0` 
-VORBISFLAGS=$(subst -I,-isystem ,$(shell pkg-config --cflags vorbisfile))
+GTKCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtk+-2.0))
+GLEXTCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtkglext-1.0)) ${PNGCFLAGS}
+GTKLDFLAGS:=$(shell pkg-config --libs gtk+-2.0) $(shell pkg-config --libs gthread-2.0)
+GLEXTLDFLAGS:=$(shell pkg-config --libs gtkglext-1.0)
+VORBISFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags vorbisfile))
 
 ifeq (${V},1)
 Q=
