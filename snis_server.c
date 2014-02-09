@@ -4697,20 +4697,46 @@ static int l_add_planet(lua_State *l)
 	return 1;
 }
 
+static int too_close_to_other_planet(double x, double y, double z, double limit)
+{
+	int i;
+	double mindist = -1.0;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		double dist;
+		if (o->type != OBJTYPE_PLANET)
+			continue;
+		dist = dist3d(o->x - x, o->y - y, o->z - z);
+		if (mindist < 0 || dist < mindist)
+			mindist = dist;
+	}
+	if (mindist < 0)
+		return 0;
+	if (mindist > limit)
+		return 0;
+	return 1;
+}
+
 static void add_planets(void)
 {
 	int i;
-	double x, y, z, cx, cy, cz, a, r, radius;
+	double x, y, z, radius, limit;
+	int count;
 
+	limit = MIN_PLANET_SEPARATION;
 	for (i = 0; i < NPLANETS; i++) {
-		cx = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		cz = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
-		cy = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
-		a = (double) snis_randn(360) * M_PI / 180.0;
-		r = snis_randn(ASTEROID_CLUSTER_RADIUS);
-		x = cx + r * sin(a);
-		z = cz + r * cos(a);
-		y = cy;
+		count = 0;
+		do {
+			x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+			y = ((double) snis_randn(2000) - 1000.0) * YKNOWN_DIM / 1000.0;
+			z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+			count++;
+			if (count > 100)
+				limit *= 0.95;
+		} while (too_close_to_other_planet(x, y, z, limit) && count < 250);
+		if (count >= 250)
+			printf("Minimum planet separation distance not attainable\n");
 		radius = (float) snis_randn(MAX_PLANET_RADIUS - MIN_PLANET_RADIUS) +
 						MIN_PLANET_RADIUS;
 		add_planet(x, y, z, radius);
