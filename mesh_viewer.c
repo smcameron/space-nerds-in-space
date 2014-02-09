@@ -74,8 +74,10 @@ static void handle_key_down(SDL_keysym *keysym)
 }
 
 static int isDragging;
+static int isDraggingLight;
 static union quat last_orientation = IDENTITY_QUAT_INITIALIZER;
 static union quat lobby_orientation = IDENTITY_QUAT_INITIALIZER;
+static union quat light_orientation = IDENTITY_QUAT_INITIALIZER;
 static int lobby_zoom = 255;
 
 struct arc_ball {
@@ -148,7 +150,10 @@ static int main_da_motion_notify(int x, int y)
 		union quat this_quat;
 		quat_from_u2v(&this_quat, &arc_ball.s, &arc_ball.e, 0);
 
-		quat_mul(&lobby_orientation, &this_quat, &last_orientation);
+		if (isDraggingLight)
+			quat_mul(&light_orientation, &this_quat, &last_orientation);
+		else
+			quat_mul(&lobby_orientation, &this_quat, &last_orientation);
 	}
 	return 0;
 }
@@ -158,10 +163,18 @@ static int main_da_button_press(int button, int x, int y)
 	if (button == 3) {
 		/* start drag */
 		isDragging = 1;
-		last_orientation = lobby_orientation;
+
+		SDLMod mod = SDL_GetModState();
+		isDraggingLight = mod & (KMOD_LCTRL | KMOD_RCTRL);
+
+		if (isDraggingLight)
+			last_orientation = light_orientation;
+		else
+			last_orientation = lobby_orientation;
 
 		union vec2 point = { { x, y } };
 		map_to_sphere(real_screen_width, real_screen_height, &point, &arc_ball.s);
+
 	}
 	return 0;
 }
@@ -196,9 +209,11 @@ static int main_da_button_release(int button, int x, int y)
 	}
 
 	if (button == 3) {
-		if (isDragging)
+		if (isDragging) {
 			/* end drag */
 			isDragging = 0;
+			isDraggingLight = 0;
+		}
 	}
 
 	return 1;
@@ -267,7 +282,8 @@ static void process_events()
 }
 
 
-static struct mesh *wombat_mesh;
+static struct mesh *target_mesh;
+static struct mesh *light_mesh;
 
 #define FRAME_INDEX_MAX 10
 
@@ -289,19 +305,33 @@ static void draw_screen()
 	if (!cx)
 		cx = entity_context_new(50, 50);
 
-	float r = wombat_mesh->radius / tan(FOV / 2.0); /* 50% size for middle zoom */
-
+	float r = target_mesh->radius / tan(FOV / 2.0); /* 50% size for middle zoom */
+	float r_cam = r * lobby_zoom / 255.0;
+	
 	camera_set_parameters(cx, 0.1f, 1000.0f, SCREEN_WIDTH, SCREEN_HEIGHT, FOV);
-	camera_set_pos(cx, r * lobby_zoom / 255.0, 0, 0);
+	camera_set_pos(cx, r_cam, 0, 0);
 	camera_look_at(cx, 0, 0, 0);
 	camera_assign_up_direction(cx, 0, 1, 0);
-	set_lighting(cx, r, 0, 0);
+
+	union vec3 light_pos = { { 1.01 * r, 0, 0 } };
+	quat_rot_vec_self(&light_pos, &light_orientation);
+	set_lighting(cx, light_pos.v.x, light_pos.v.y, light_pos.v.z);
 
 	calculate_camera_transform(cx);
 
-	struct entity *e = add_entity(cx, wombat_mesh, 0, 0, 0, WHITE);
-	update_entity_scale(e, 1);
+	struct entity *e = add_entity(cx, target_mesh, 0, 0, 0, WHITE);
 	update_entity_orientation(e, &lobby_orientation);
+
+	if (isDraggingLight) {
+		union vec3 light_dir = { { 0.75 * r_cam, 0, 0 } };
+		quat_rot_vec_self(&light_dir, &light_orientation);
+		sng_set_foreground(WHITE);
+		render_line(cx, light_dir.v.x, light_dir.v.y, light_dir.v.z, 0, 0, 0);
+
+		e = add_entity(cx, light_mesh, light_dir.v.x, light_dir.v.y, light_dir.v.z, WHITE);
+	} else {
+		e = add_entity(cx, light_mesh, light_pos.v.x, light_pos.v.y, light_pos.v.z, WHITE);
+	}
 
 	render_entities(cx);
 
@@ -437,11 +467,20 @@ int main(int argc, char *argv[])
 	sng_set_screen_size(real_screen_width, real_screen_height);
 	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-	wombat_mesh = snis_read_model(argv[1]);
-	if (!wombat_mesh) {
+	target_mesh = snis_read_model(argv[1]);
+	if (!target_mesh) {
 		printf("unable to read model file '%s'\n", argv[1]);
 		exit(-1);
 	}
+
+	light_mesh = mesh_fabricate_billboard(0, 0, 10, 10); //target_mesh->radius / 10.0, target_mesh->radius / 10.0);
+
+	struct material light_material;
+	light_material.type = MATERIAL_BILLBOARD;
+	light_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SCREEN;
+	light_material.billboard.texture_id = graph_dev_load_texture("share/snis/textures/sun.png");
+
+	light_mesh->material = &light_material;
 
 	const double maxTimeBehind = 0.5;
 	double delta = 1.0/(double)FPS;
