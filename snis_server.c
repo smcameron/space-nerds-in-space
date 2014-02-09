@@ -3723,20 +3723,40 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay)
 	repair_damcon_systems(o);
 }
 
-static int add_player(double x, double z, double vx, double vz, double heading)
-{
-	int i;
-
-	i = add_generic_object(x, 0.0, z, vx, 0.0, vz, heading, OBJTYPE_SHIP1);
-	if (i < 0)
-		return i;
-	init_player(&go[i], 1);
-	return i;
-}
-
 static void respawn_player(struct snis_entity *o)
 {
-	set_object_location(o, XKNOWN_DIM * (double) rand() / (double) RAND_MAX,
+	int i, pid, found;
+	double x, y, z, a1, a2, rf;
+
+	/* Find a friendly location to respawn... */
+	found = 0;
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *f = &go[i];
+
+		if (!f->alive || f->type != OBJTYPE_STARBASE ||
+			f->sdata.faction != o->sdata.faction)
+			continue;
+
+		pid = lookup_by_id(f->tsd.starbase.associated_planet_id);
+		if (pid < 0)
+			continue;
+		f = &go[pid];
+
+		/* put player near friendly planet at dist of 2 radii plus a bit. */
+		a1 = snis_randn(360) * M_PI / 180;
+		a2 = snis_randn(360) * M_PI / 180;
+		rf = 2.0 + (double) snis_randn(1000) / 2000.0;
+		x = f->x + cos(a1) * f->tsd.planet.radius * rf;
+		y = f->y + sin(a1) * f->tsd.planet.radius * rf;
+		z = f->z + sin(a2) * f->tsd.planet.radius * rf;
+		set_object_location(o, x, y, z);
+		printf("found!\n");
+		found = 1;
+		break;
+	}
+
+	if (!found) /* It's a lonely universe.  Roll the dice. */
+		set_object_location(o, XKNOWN_DIM * (double) rand() / (double) RAND_MAX,
 				o->y, ZKNOWN_DIM * (double) rand() / (double) RAND_MAX);
 	o->vx = 0;
 	o->vz = 0;
@@ -3744,7 +3764,17 @@ static void respawn_player(struct snis_entity *o)
 	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
 	init_player(o, 1);
 	o->alive = 1;
-	send_ship_damage_packet(o);
+}
+
+static int add_player(double x, double z, double vx, double vz, double heading)
+{
+	int i;
+
+	i = add_generic_object(x, 0.0, z, vx, 0.0, vz, heading, OBJTYPE_SHIP1);
+	if (i < 0)
+		return i;
+	respawn_player(&go[i]);
+	return i;
 }
 
 static int add_ship(void)
@@ -9231,6 +9261,7 @@ static void move_objects(void)
 				respawn_player(&go[i]);
 				schedule_callback(event_callback, &callback_schedule,
 					"player-respawn-event", (double) go[i].id);
+				send_ship_damage_packet(&go[i]);
 			}
 		}
 	}
