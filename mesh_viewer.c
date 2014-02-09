@@ -128,87 +128,60 @@ static void handle_key_down(SDL_keysym *keysym)
 
 }
 
-static int isDragging;
-static int isDraggingLight;
-static union quat last_orientation = IDENTITY_QUAT_INITIALIZER;
+static volatile int isDragging;
+static volatile int isDraggingLight;
+static union quat last_lobby_orientation = IDENTITY_QUAT_INITIALIZER;
+static union quat last_light_orientation = IDENTITY_QUAT_INITIALIZER;
 static union quat lobby_orientation = IDENTITY_QUAT_INITIALIZER;
 static union quat light_orientation = IDENTITY_QUAT_INITIALIZER;
 static int lobby_zoom = 255;
 
-struct arc_ball {
-	union vec3 s;
-	union vec3 e;
-} arc_ball;
-
-/* derived from http://nehe.gamedev.net/tutorial/arcball_rotation/19003/
-==========================================================================
-		    OpenGL Lesson 48:  ArcBall Rotation
-==========================================================================
-
-  Authors Name: Terence J. Grant
-
-  Disclaimer:
-
-  This program may crash your system or run poorly depending on your
-  hardware.  The program and code contained in this archive was scanned
-  for virii and has passed all test before it was put online.  If you
-  use this code in project of your own, send a shout out to the author!
-
-==========================================================================
-			NeHe Productions 1997-2004
-==========================================================================
-*/
-static void map_to_sphere(int width, int height, const union vec2 *new_pt, union vec3 *new_vec)
-{
-	union vec2 temp_pt;
-	float length;
-
-	float adjust_width = 1.0f / ((width - 1.0f) * 0.5f);
-	float adjust_height = 1.0f / ((height - 1.0f) * 0.5f);
-
-	/* Copy paramter into temp point */
-	temp_pt = *new_pt;
-
-	/* Adjust point coords and scale down to range of [-1 ... 1] */
-	temp_pt.v.x = (temp_pt.v.x * adjust_width) - 1.0f;
-	temp_pt.v.y = 1.0f - (temp_pt.v.y * adjust_height);
-
-	/* Compute the square of the length of the vector to the point from the center */
-	length = (temp_pt.v.x * temp_pt.v.x) + (temp_pt.v.y * temp_pt.v.y);
-
-	/* If the point is mapped outside of the sphere... (length > radius squared) */
-	if (length > 1.0f) {
-		float norm;
-
-		/* Compute a normalizing factor (radius / sqrt(length)) */
-		norm = 1.0f / sqrt(length);
-
-		/* Return the "normalized" vector, a point on the sphere */
-		new_vec->v.x = temp_pt.v.x * norm;
-		new_vec->v.y = temp_pt.v.y * norm;
-		new_vec->v.z = 0.0f;
-	} else /* Else it's on the inside */ {
-		/* Return a vector to a point mapped inside the sphere sqrt(radius squared - length) */
-		new_vec->v.x = temp_pt.v.x;
-		new_vec->v.y = temp_pt.v.y;
-		new_vec->v.z = sqrt(1.0f - length);
-	}
-}
-
+#define MOUSE_HISTORY 5
+static volatile float lastx[MOUSE_HISTORY], lasty[MOUSE_HISTORY];
+static volatile int last = -1;
+static volatile int lastcount = 0;
 static int main_da_motion_notify(int x, int y)
 {
-	if (isDragging) {
-		/* update drag */
-		union vec2 point = { { x, y } };
-		map_to_sphere(real_screen_width, real_screen_height, &point, &arc_ball.e);
+	float cx, cy, lx, ly;
+	union vec3 v1, v2;
+	union quat rotation;
 
-		union quat this_quat;
-		quat_from_u2v(&this_quat, &arc_ball.s, &arc_ball.e, 0);
+	if (!isDragging) {
+		lastcount = 0;
+	} else {
+		if (lastcount < MOUSE_HISTORY) {
+			last++;
+			lastx[last % MOUSE_HISTORY] =
+				2.0 * (((float) x / (float) real_screen_width) - 0.5);
+			lasty[last % MOUSE_HISTORY] =
+				2.0 * (((float) y / (float) real_screen_height) - 0.5);
+			lastcount++;
+			return 0;
+		}
+		lastcount++;
+		lx = lastx[(last + 1) % MOUSE_HISTORY];
+		ly = lasty[(last + 1) % MOUSE_HISTORY];
+		last = (last + 1) % MOUSE_HISTORY;
+		cx = 2.0 * (((float) x / (float) real_screen_width) - 0.5);
+		cy = 2.0 * (((float) y / (float) real_screen_height) - 0.5);
+		lastx[last] = cx;
+		lasty[last] = cy;
 
-		if (isDraggingLight)
-			quat_mul(&light_orientation, &this_quat, &last_orientation);
-		else
-			quat_mul(&lobby_orientation, &this_quat, &last_orientation);
+		v1.v.z = 0;
+		v1.v.y = 0;
+		v1.v.x = -1.0;
+		v2.v.z = cx - lx;
+		v2.v.y = cy - ly;
+		v2.v.x = -1.0;
+
+		quat_from_u2v(&rotation, &v1, &v2, 0);
+		if (isDraggingLight) {
+			quat_mul(&light_orientation, &rotation, &last_light_orientation);
+			last_light_orientation = light_orientation;
+		} else {
+			quat_mul(&lobby_orientation, &rotation, &last_lobby_orientation);
+			last_lobby_orientation = lobby_orientation;
+		}
 	}
 	return 0;
 }
@@ -222,14 +195,8 @@ static int main_da_button_press(int button, int x, int y)
 		SDLMod mod = SDL_GetModState();
 		isDraggingLight = mod & (KMOD_LCTRL | KMOD_RCTRL);
 
-		if (isDraggingLight)
-			last_orientation = light_orientation;
-		else
-			last_orientation = lobby_orientation;
-
-		union vec2 point = { { x, y } };
-		map_to_sphere(real_screen_width, real_screen_height, &point, &arc_ball.s);
-
+		last = -1.0f;
+		lastcount = 0;
 	}
 	return 0;
 }
@@ -257,6 +224,8 @@ static int main_da_button_release(int button, int x, int y)
 		main_da_scroll(0);
 		return 1;
 	}
+	last = -1;
+	lastcount = 0;
 
 	if (button == 1 && display_frame_stats) {
 		if (graph_dev_graph_dev_debug_menu_click(x, y))
