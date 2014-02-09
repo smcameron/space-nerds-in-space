@@ -565,6 +565,17 @@ static void render_entity(struct entity_context *cx, struct entity *e, union vec
 	graph_dev_draw_entity(cx, e, camera_light_pos, &mat_mvp, &mat_mv, &mat_normal);
 }
 
+void render_line(struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2)
+{
+	calculate_camera_transform(cx);
+
+	struct mat44 mat_vp, mat_v;
+	mat44_convert_df(&cx->camera.camera_vp_matrix, &mat_vp);
+	mat44_convert_df(&cx->camera.camera_v_matrix, &mat_v);
+
+	graph_dev_draw_3d_line(cx, &mat_vp, &mat_v, x1, y1, z1, x2, y2, z2);
+}
+
 void render_skybox(struct entity_context *cx)
 {
 	graph_dev_draw_skybox(cx, &cx->camera.skybox_vp_matrix);

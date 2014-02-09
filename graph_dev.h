@@ -45,6 +45,8 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 
 extern void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
 	const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal);
+extern void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_vp, const struct mat44 *mat_v,
+	float x1, float y1, float z1, float x2, float y2, float z2);
 
 extern void graph_dev_draw_line(float x1, float y1, float x2, float y2);
 extern void graph_dev_draw_rectangle(int filled, float x, float y, float width, float height);

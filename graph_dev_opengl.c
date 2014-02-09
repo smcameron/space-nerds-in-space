@@ -1911,6 +1911,70 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	}
 }
 
+/* This implementation is ok for drawing a few times, but the performance
+   will really suck as lines per frame goes up */
+void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_vp, const struct mat44 *mat_v,
+	float x1, float y1, float z1, float x2, float y2, float z2)
+{
+	draw_vertex_buffer_2d();
+
+	enable_3d_viewport();
+
+	/* setup fake line entity to render this */
+	struct vertex_buffer_data g_v_buffer_data[2];
+	g_v_buffer_data[0].position.v.x = x1;
+	g_v_buffer_data[0].position.v.y = y1;
+	g_v_buffer_data[0].position.v.z = z1;
+	g_v_buffer_data[1].position.v.x = x2;
+	g_v_buffer_data[1].position.v.y = y2;
+	g_v_buffer_data[1].position.v.z = z2;
+
+	struct vertex_line_buffer_data g_vl_buffer_data[2];
+
+	int is_dotted = 0;
+
+	g_vl_buffer_data[0].multi_one[0] =
+		g_vl_buffer_data[1].multi_one[0] = is_dotted ? 255 : 0;
+
+	g_vl_buffer_data[0].line_vertex0.v.x =
+		g_vl_buffer_data[1].line_vertex0.v.x = x1;
+	g_vl_buffer_data[0].line_vertex0.v.y =
+		g_vl_buffer_data[1].line_vertex0.v.y = y1;
+	g_vl_buffer_data[0].line_vertex0.v.z =
+		g_vl_buffer_data[1].line_vertex0.v.z = z1;
+
+	g_vl_buffer_data[0].line_vertex1.v.x =
+		g_vl_buffer_data[1].line_vertex1.v.x = x2;
+	g_vl_buffer_data[0].line_vertex1.v.y =
+		g_vl_buffer_data[1].line_vertex1.v.y = y2;
+	g_vl_buffer_data[0].line_vertex1.v.z =
+		g_vl_buffer_data[1].line_vertex1.v.z = z2;
+
+	struct mesh_gl_info gl_info;
+	gl_info.nlines = 1;
+
+	glGenBuffers(1, &gl_info.vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, gl_info.vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_v_buffer_data), g_v_buffer_data, GL_STREAM_DRAW);
+
+	glGenBuffers(1, &gl_info.line_vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, gl_info.line_vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vl_buffer_data), g_vl_buffer_data, GL_STATIC_DRAW);
+
+	struct mesh m;
+	m.graph_ptr = &gl_info;
+
+	struct entity e;
+	e.material_ptr = 0;
+	e.m = &m;
+
+	struct sng_color line_color = sng_get_foreground();
+	graph_dev_raster_line_mesh(&e, mat_vp, &m, &line_color);
+
+	glDeleteBuffers(1, &gl_info.vertex_buffer);
+	glDeleteBuffers(1, &gl_info.line_vertex_buffer);
+}
+
 void graph_dev_start_frame()
 {
 	/* printf("start frame\n"); */

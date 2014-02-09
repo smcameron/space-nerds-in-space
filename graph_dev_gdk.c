@@ -653,6 +653,15 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	}
 }
 
+void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_vp, const struct mat44 *mat_v,
+	float x1, float y1, float z1, float x2, float y2, float z2)
+{
+	float sx1, sy1, sx2, sy2;
+	if (!transform_line(cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
+		sng_current_draw_line(sx1, sy1, sx2, sy2);
+	}
+}
+
 /* clipping triangles to frustum taken from
    http://simonstechblog.blogspot.com/2012/04/software-rasterizer-part-2.html
    converted from javascript to c */
