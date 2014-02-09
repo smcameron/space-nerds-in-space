@@ -46,6 +46,57 @@ static struct mesh *snis_read_model(char *filename)
 	}
 }
 
+static char *help_text =
+        "MESH VIEWER\n\n"
+        "  CONTROLS\n\n"
+        "  * MOUSE RIGHT-CLICK DRAG TO ROTATE MODEL\n\n"
+        "  * MOUSE SCROLL WHEEL TO ZOOM\n\n"
+        "  * MOUSE CONTROL-RIGHT-CLICK DRAG TO ROTATE LIGHT\n\n"
+        "  * ESC TO EXIT VIEWER\n\n"
+        "PRESS F1 TO EXIT HELP\n";
+
+static void draw_help_text(const char *text)
+{
+        int line = 0;
+        int i, y = 70;
+        char buffer[256];
+        int buflen = 0;
+	int helpmodeline = 0;
+
+        strcpy(buffer, "");
+
+        i = 0;
+        do {
+                if (text[i] == '\n' || text[i] == '\0') {
+                        if (line >= helpmodeline && line < helpmodeline + 20) {
+                                buffer[buflen] = '\0';
+                                sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
+                                y += 19;
+                                strcpy(buffer, "");
+                                buflen = 0;
+                                line++;
+                                if (text[i] == '\0')
+                                        break;
+                                i++;
+                                continue;
+                        } else {
+                                if (line >= helpmodeline + 20)
+                                        break;
+                        }
+                }
+                buffer[buflen++] = text[i++];
+        } while (1);
+}
+
+static void draw_help_screen()
+{
+        sng_set_foreground(BLACK);
+        sng_current_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+        sng_set_foreground(GREEN);
+        sng_current_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+        draw_help_text(help_text);
+}
+
 static void quit(int code)
 {
 	SDL_Quit();
@@ -53,11 +104,15 @@ static void quit(int code)
 	exit(code);
 }
 
+static int helpmode;
 static SDL_Surface *screen;
 
 static void handle_key_down(SDL_keysym *keysym)
 {
 	switch (keysym->sym) {
+	case SDLK_F1:
+		helpmode = !helpmode;
+		break;
 	case SDLK_ESCAPE:
 		quit(0);
 		break;
@@ -301,6 +356,9 @@ static void draw_screen()
 
 	graph_dev_start_frame();
 
+	sng_set_foreground(WHITE);
+	sng_abs_xy_draw_string("F1 FOR HELP", NANO_FONT, SCREEN_WIDTH - 100, 10);
+
 	static struct entity_context *cx;
 	if (!cx)
 		cx = entity_context_new(50, 50);
@@ -336,6 +394,9 @@ static void draw_screen()
 	render_entities(cx);
 
 	remove_all_entity(cx);
+
+	if (helpmode)
+		draw_help_screen(0);
 
 	if (display_frame_stats > 0) {
 		float avg_frame_rate = 0;
