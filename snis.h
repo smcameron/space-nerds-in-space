@@ -181,6 +181,7 @@ struct damcon_data;
 #define AI_MODE_PATROL 4
 #define AI_MODE_FLEET_MEMBER 5
 #define AI_MODE_FLEET_LEADER 6
+#define AI_MODE_HANGOUT 7
 
 /* distance more than which fleet ships will warp back to position rather than simply flying */
 #define FLEET_WARP_DISTANCE 5000.0
@@ -202,10 +203,15 @@ struct ai_fleet_data {
 	int fleet_position;
 };
 
+struct ai_hangout_data {
+	uint32_t time_to_go;
+};
+
 union ai_data {
 	struct ai_attack_data attack;
 	struct ai_patrol_data patrol;
 	struct ai_fleet_data fleet;
+	struct ai_hangout_data hangout;
 };
 
 struct ai_stack_entry {

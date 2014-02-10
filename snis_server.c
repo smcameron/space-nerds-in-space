@@ -1825,6 +1825,9 @@ static void update_ship_orientation(struct snis_entity *o)
 	union vec3 up = { { 0.0f, 1.0f, 0.0f } };
 	union vec3 current = { { o->vx, o->vy, o->vz } };
 
+	if (fabs(o->vx) < 0.001 && fabs(o->vy) < 0.001 && fabs(o->vz) < 0.001)
+		return;
+
 	quat_from_u2v(&o->orientation, &right, &current, &up);
 }
 
@@ -2091,10 +2094,19 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 
 	if (dist2 < 300.0 * 300.0) {
 		patrol->dest = (patrol->dest + 1) % patrol->npoints;
-		d = patrol->dest;
-		o->tsd.ship.dox = patrol->p[d].v.x;
-		o->tsd.ship.doy = patrol->p[d].v.y;
-		o->tsd.ship.doz = patrol->p[d].v.z;
+		/* hang out here awhile... */
+		n = o->tsd.ship.nai_entries;
+		if (n < MAX_AI_STACK_ENTRIES) {
+			o->tsd.ship.ai[n].ai_mode = AI_MODE_HANGOUT;
+			o->tsd.ship.ai[n].u.hangout.time_to_go = 1000 + snis_randn(1000);
+			o->tsd.ship.desired_velocity = 0;
+			o->tsd.ship.nai_entries++;
+		} else {
+			d = patrol->dest;
+			o->tsd.ship.dox = patrol->p[d].v.x;
+			o->tsd.ship.doy = patrol->p[d].v.y;
+			o->tsd.ship.doz = patrol->p[d].v.z;
+		}
 	}
 	check_for_nearby_targets(o);
 }
@@ -2127,6 +2139,11 @@ static void ai_brain(struct snis_entity *o)
 		break;
 	case AI_MODE_FLEET_MEMBER:
 		ai_fleet_member_mode_brain(o);
+		break;
+	case AI_MODE_HANGOUT:
+		o->tsd.ship.ai[n].u.hangout.time_to_go--;
+		if (o->tsd.ship.ai[n].u.hangout.time_to_go <= 0)
+			pop_ai_stack(o);
 		break;
 	default:
 		break;
@@ -3022,7 +3039,8 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	o->vy = new_velocity(desired_velocity.v.y, o->vy);
 	o->vz = new_velocity(desired_velocity.v.z, o->vz);
 
-	enforce_minimum_attack_speed(&o->vx, &o->vy, &o->vz);
+	if (o->tsd.ship.desired_velocity > 0.0)
+		enforce_minimum_attack_speed(&o->vx, &o->vy, &o->vz);
 
 	/* Move ship */
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
@@ -8523,6 +8541,9 @@ static void send_econ_update_ship_packet(struct game_client *c,
 				break;
 			case AI_MODE_PATROL:
 				ai[i] = 'P';
+				break;
+			case AI_MODE_HANGOUT:
+				ai[i] = 'H';
 				break;
 			default:
 				ai[i] = '?';
