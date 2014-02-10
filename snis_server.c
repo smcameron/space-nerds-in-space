@@ -3293,6 +3293,8 @@ static void starbase_move(struct snis_entity *o)
 			continue;
 		if (snis_randn(1000) < STARBASE_FIRE_CHANCE)
 			continue;
+		if (planet_in_the_way(o, a))
+			continue;
 		if (snis_randn(100) < 30 &&
 			o->tsd.starbase.next_torpedo_time <= universe_timestamp) {
 			/* fire torpedo */
