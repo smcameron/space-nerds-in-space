@@ -335,7 +335,7 @@ static void draw_screen()
 	float r = target_mesh->radius / tan(FOV / 2.0); /* 50% size for middle zoom */
 	float r_cam = r * lobby_zoom / 255.0;
 	
-	camera_set_parameters(cx, 0.1f, 1000.0f, SCREEN_WIDTH, SCREEN_HEIGHT, FOV);
+	camera_set_parameters(cx, 0.1f, r * 2.2, SCREEN_WIDTH, SCREEN_HEIGHT, FOV);
 	camera_set_pos(cx, r_cam, 0, 0);
 	camera_look_at(cx, 0, 0, 0);
 	camera_assign_up_direction(cx, 0, 1, 0);
