@@ -92,6 +92,12 @@ union vec3 *vec3_sub_self(union vec3 *v1, const union vec3 *v2);
 /* v1 = v1 - (x,y,z), return v1 */
 union vec3 *vec3_sub_c_self(union vec3 *v1, float x, float y, float z);
 
+/* Hadamard or component wise product of two vectors, vo = v1 * v2 */
+union vec3 *vec3_cwise_product(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
+
+/* Hadamard or component wise product of two vectors, vo *= vi */
+union vec3 *vec3_cwise_product_self(union vec3 *vo, const union vec3 *vi);
+
 /* vo = vi * scalar, return vo */
 union vec3 *vec3_mul(union vec3 *vo, const union vec3 *vi, float scalar);
 

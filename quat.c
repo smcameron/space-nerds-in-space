@@ -452,6 +452,21 @@ union vec3* vec3_sub_c_self(union vec3 *v1, float x, float y, float z)
 	return v1;
 }
 
+/* Hadamard product or component wise product of two vectors */
+union vec3 *vec3_vec3_cwise_product(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
+{
+	vo->vec[0] = v1->vec[0] * v2->vec[0];
+	vo->vec[1] = v1->vec[1] * v2->vec[1];
+	vo->vec[2] = v1->vec[2] * v2->vec[2];
+	return vo;
+}
+
+union vec3 *vec3_cwise_product_self(union vec3 *vo, const union vec3 *vi)
+{
+	vec3_vec3_cwise_product(vo, vo, vi);
+	return vo;
+}
+
 union vec3* vec3_mul(union vec3 *vo, const union vec3 *vi, float scalar)
 {
 	vo->vec[0] = vi->vec[0] * scalar;
