@@ -155,6 +155,34 @@ void mat44_convert_df(const struct mat44d *src, struct mat44 *output)
 
 }
 
+void mat33_product(const struct mat33 *lhs, const struct mat33 *rhs,
+			struct mat33 *output)
+{
+	int i, j, k;
+
+	for (i = 0; i < 3; i++) {
+		for (j = 0; j < 3; j++) {
+			output->m[i][j] = 0;
+			for (k = 0; k < 3; k++)
+				output->m[i][j] += lhs->m[k][j] * rhs->m[i][k];
+		}
+	}
+}
+
+void mat33_product_ddf(const struct mat33d *lhs, const struct mat33d *rhs, struct mat33 *output)
+{
+	int i, j, k;
+
+	for (i = 0; i < 3; i++) {
+		for (j = 0; j < 3; j++) {
+			double cell = 0;
+			for (k = 0; k < 3; k++)
+				cell += lhs->m[k][j] * rhs->m[i][k];
+			output->m[i][j] = (float)cell;
+		}
+	}
+}
+
 /* Matrices need to be row-major and use row-major memory layout with
  * pre-multiplication 
  *

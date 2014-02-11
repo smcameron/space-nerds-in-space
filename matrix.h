@@ -71,6 +71,10 @@ GLOBAL struct mat33 *mat33_transpose(const struct mat33 *src, struct mat33 *outp
 
 GLOBAL struct mat33d *mat33_transpose_dd(const struct mat33d *src, struct mat33d *output);
 
+GLOBAL void mat33_product(const struct mat33 *lhs, const struct mat33 *rhs, struct mat33 *output);
+
+GLOBAL void mat33_product_ddf(const struct mat33d *lhs, const struct mat33d *rhs, struct mat33 *output);
+
 GLOBAL void mat33_x_mat31(const struct mat33 *lhs, const struct mat31 *rhs,
 				struct mat31 *output);
 
