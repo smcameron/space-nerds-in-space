@@ -74,6 +74,10 @@ void vec3_init(union vec3 *vo, float x, float y, float z);
 /* copy vector vi to vo */
 union vec3 *vec3_copy(union vec3 *vo, const union vec3 *vi);
 
+float vec3_cwise_min(const union vec3 *v);
+
+float vec3_cwise_max(const union vec3 *v);
+
 /* vo = v1 + v2, return vo */
 union vec3 *vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
 

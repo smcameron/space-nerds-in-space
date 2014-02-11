@@ -410,6 +410,16 @@ void vec3_init(union vec3 *vo, float x, float y, float z)
 	vo->v.z = z;
 }
 
+float vec3_cwise_min(const union vec3 *v)
+{
+	return fminf(v->v.x, fminf(v->v.y, v->v.z));
+}
+
+float vec3_cwise_max(const union vec3 *v)
+{
+	return fmaxf(v->v.x, fmaxf(v->v.y, v->v.z));
+}
+
 union vec3* vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
 {
 	vo->vec[0] = v1->vec[0] + v2->vec[0];
