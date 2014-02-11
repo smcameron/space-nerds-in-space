@@ -762,7 +762,7 @@ static int update_damcon_part(uint32_t id, uint32_t ship_id, uint32_t type,
 	return 0;
 }
 
-static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e, int shiptype);
+static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e, int shiptype, int impulse);
 
 static int update_econ_ship(uint32_t id, double x, double y, double z,
 			double vx, double vy, double vz,
@@ -776,7 +776,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 	if (i < 0) {
 		e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes], x, y, z, SHIP_COLOR);
 		if (e)
-			add_ship_thrust_entities(ecx, e, shiptype);
+			add_ship_thrust_entities(ecx, e, shiptype, 36);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_SHIP2, alive, e);
 		if (i < 0)
 			return i;
@@ -3193,7 +3193,7 @@ static int process_update_ship_packet(uint16_t opcode)
 			e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes],
 					dx, dy, dz, SHIP_COLOR);
 			if (e)
-				add_ship_thrust_entities(ecx, e, shiptype);
+				add_ship_thrust_entities(ecx, e, shiptype, 36);
 		}
 		i = add_generic_object(id, dx, dy, dz, dvx, dvy, dvz, &orientation, type, alive, e);
 		if (i < 0) {
@@ -4781,7 +4781,8 @@ static struct thrust_attachment_point *ship_thrust_attachment_point(int shiptype
 	return &ship_thrust_attachment_points[shiptype];
 }
 
-static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e, int shiptype)
+/* size is 0.0 to 1.0 */
+static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e, int shiptype, int impulse)
 {
 	int i;
 	struct thrust_attachment_point *ap = ship_thrust_attachment_point(shiptype);
@@ -4789,13 +4790,18 @@ static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e
 	if (!ap)
 		return;
 
+	/* 180 is about max current with preset and 5x is about right for max size */
+	float thrust_size = clampf(impulse / 36.0, 0.1, 5.0);
+
 	for (i = 0; i < ap->nports; i++) {
 		struct entity *t = add_entity(cx, thrust_animation_mesh,
 			ap->port[i].pos.v.x, ap->port[i].pos.v.y, ap->port[i].pos.v.z, WHITE);
 		if (t) {
 			update_entity_material(t, &thrust_material);
 			update_entity_orientation(t, &identity_quat);
-			update_entity_scale(t, ap->port[i].scale);
+			union vec3 thrust_scale = { { thrust_size, 1.0, 1.0 } };
+			vec3_mul_self(&thrust_scale, ap->port[i].scale);
+			update_entity_non_uniform_scale(t, thrust_scale.v.x, thrust_scale.v.y, thrust_scale.v.z);
 			update_entity_parent(cx, t, e);
 		}
 	}
@@ -4896,7 +4902,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	}
 
 	if (o->entity)
-		add_ship_thrust_entities(ecx, o->entity, o->tsd.ship.shiptype);
+		add_ship_thrust_entities(ecx, o->entity, o->tsd.ship.shiptype, o->tsd.ship.power_data.impulse.i);
 
 	render_entities(ecx);
 
@@ -5030,7 +5036,9 @@ static void show_mainscreen(GtkWidget *w)
 			}
 
 			if (player_ship)
-				add_ship_thrust_entities(ecx, player_ship, o->tsd.ship.shiptype);
+				add_ship_thrust_entities(ecx, player_ship, o->tsd.ship.shiptype,
+					o->tsd.ship.power_data.impulse.i);
+
 			break;
 		}
 	}
