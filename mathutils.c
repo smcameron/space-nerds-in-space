@@ -112,6 +112,16 @@ void normalize_angle(double *angle)
 		*angle += (360.0 * PI / 180.0);
 }
 
+double clamp(double a, double min_val, double max_val)
+{
+	return (a < min_val ? min_val : (a > max_val ? max_val : a));
+}
+
+float clampf(float a, float min_val, float max_val)
+{
+	return (a < min_val ? min_val : (a > max_val ? max_val : a));
+}
+
 double interpolate(double x, double x1, double y1, double x2, double y2)
 {
 	/* return corresponding y on line x1,y1,x2,y2 for value x
