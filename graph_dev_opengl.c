@@ -1824,8 +1824,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 					/* ring is the 2x to 3x of the planet scale, world space distance
 					   is the same in eye space as the view matrix does not scale */
-					annulus_r1 = e->scale * 2.0;
-					annulus_r2 = e->scale * 3.0;
+					annulus_r1 = vec3_cwise_max(&e->scale) * 2.0;
+					annulus_r2 = vec3_cwise_max(&e->scale) * 3.0;
 				} else {
 					cubemap_tex_shader = &textured_cubemap_lit_shader;
 				}
@@ -1848,7 +1848,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 				/* planet is the size of the ring scale, world space distance
 				   is the same in eye space as the view matrix does not scale */
-				sphere_radius = e->scale;
+				sphere_radius = vec3_cwise_max(&e->scale);
 				}
 				break;
 			}
@@ -1905,7 +1905,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 			struct material_textured_particle *mt = &e->material_ptr->textured_particle;
 
 			graph_dev_raster_particle_animation(cx, e, mat_mvp, mat_normal, mt->texture_id,
-				mt->radius * e->scale, mt->time_base);
+				mt->radius * vec3_cwise_min(&e->scale), mt->time_base);
 		}
 		break;
 	}

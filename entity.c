@@ -74,8 +74,8 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].y = y;
 	cx->entity_list[n].z = z;
 	vec3_init(&cx->entity_list[n].e_pos, x, y, z);
-	cx->entity_list[n].scale = 1.0;
-	cx->entity_list[n].e_scale = 1.0;
+	vec3_init(&cx->entity_list[n].scale, 1, 1, 1);
+	vec3_init(&cx->entity_list[n].e_scale, 1, 1, 1);
 	cx->entity_list[n].color = color;
 	cx->entity_list[n].render_style = RENDER_NORMAL;
 	cx->entity_list[n].user_data = NULL;
@@ -194,12 +194,17 @@ void update_entity_orientation(struct entity *e, const union quat *orientation)
 
 float entity_get_scale(struct entity *e)
 {
-	return e->e_scale;
+	return vec3_cwise_max(&e->e_scale);
 }
 
 void update_entity_scale(struct entity *e, float scale)
 {
-	e->e_scale = scale;
+	vec3_init(&e->e_scale, scale, scale, scale);
+}
+
+void update_entity_non_uniform_scale(struct entity *e, float x_scale, float y_scale, float z_scale)
+{
+	vec3_init(&e->e_scale, x_scale, y_scale, z_scale);
 }
 
 void update_entity_color(struct entity *e, int color)
@@ -311,9 +316,9 @@ static void calculate_model_matrices(struct entity_context *cx, struct entity *e
 		{ e->x, e->y, e->z, 1 }}};
 
 	struct mat44d mat_s = {{
-		{ e->scale, 0, 0, 0 },
-		{ 0, e->scale, 0, 0 },
-		{ 0, 0, e->scale, 0 },
+		{ e->scale.v.x, 0, 0, 0 },
+		{ 0, e->scale.v.y, 0, 0 },
+		{ 0, 0, e->scale.v.z, 0 },
 		{ 0, 0, 0, 1 }}};
 
 	struct mat44d mat_r = {{
@@ -888,14 +893,14 @@ static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, f
 static void update_entity_child_state(struct entity *e)
 {
 	union vec3 pos = e->e_pos;
-	float scale = e->e_scale;
+	union vec3 scale = e->e_scale;
 	union quat orientation = e->e_orientation;
 
 	struct entity *parent = e->parent;
 	while (parent) {
 		quat_rot_vec_self(&pos, &parent->e_orientation);
 		vec3_add_self(&pos, &parent->e_pos);
-		scale *= parent->e_scale;
+		vec3_cwise_product_self(&scale, &parent->e_scale);
 		quat_mul_self_right(&parent->e_orientation, &orientation);
 
 		parent = parent->parent;
@@ -989,7 +994,9 @@ void render_entities(struct entity_context *cx)
 				e->onscreen = 0;
 			}
 
-			if (!sphere_in_frustum(c, e->x, e->y, e->z, e->m->radius * fabs(e->scale)))
+			float max_scale = vec3_cwise_max(&e->scale);
+
+			if (!sphere_in_frustum(c, e->x, e->y, e->z, e->m->radius * max_scale))
 				continue;
 
 			e->dist3dsqrd = dist3dsqrd(c->x - e->x, c->y - e->y, c->z - e->z);
@@ -998,7 +1005,7 @@ void render_entities(struct entity_context *cx)
 			if (c->renderer & FLATSHADING_RENDERER) {
 				/* cull objects that are too small to draw based on approx screen size
 				   http://stackoverflow.com/questions/3717226/radius-of-projected-sphere */
-				float approx_pixel_size = c->yvpixels * e->m->radius * fabs(e->scale) /
+				float approx_pixel_size = c->yvpixels * e->m->radius * max_scale /
 					tan(cx->camera.angle_of_view * 0.5) / sqrt(e->dist3dsqrd);
 				if (approx_pixel_size < 2.0)
 					continue;

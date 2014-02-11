@@ -28,7 +28,7 @@ struct entity {
 	float cx, cy, cz; /* camera coords */
 	unsigned char onscreen; /* if screen coords are valid */
 	float sx, sy; /* screen coords */
-	float scale;
+	union vec3 scale;
 	float dist3dsqrd;
 	int color;
 	int shadecolor;
@@ -39,7 +39,7 @@ struct entity {
 	struct material *material_ptr;
 
 	union vec3 e_pos;
-	float e_scale;
+	union vec3 e_scale;
 	union quat e_orientation;
 	struct entity *parent;
 	int entity_child_index;
