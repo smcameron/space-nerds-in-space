@@ -87,5 +87,15 @@ struct entity_context {
 #endif
 };
 
+struct entity_transform {
+	struct mat44d m_no_scale;
+	struct mat44d m;
+	struct mat44 mvp;
+	struct mat44 mv;
+	struct mat33 normal;
+	struct mat44d *vp;
+	struct mat44d *v;
+};
+
 #endif
 

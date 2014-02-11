@@ -297,11 +297,10 @@ static void ilda_render_triangle(struct entity_context *cx,
 }
 #endif
 
-static void calculate_model_matrices(struct entity_context *cx, struct entity *e,
-	struct mat44 *mat_mvp, struct mat44 *mat_mv, struct mat33 *mat_normal)
+static void calculate_model_matrices(struct entity_context *cx, struct entity *e, struct entity_transform *transform)
 {
-	struct mat44d *mat_v = &cx->camera.camera_v_matrix;
-	struct mat44d *mat_vp = &cx->camera.camera_vp_matrix;
+	transform->v = &cx->camera.camera_v_matrix;
+	transform->vp = &cx->camera.camera_vp_matrix;
 
 	/* Model = (T*R)*S
 	   T - translation matrix
@@ -336,7 +335,7 @@ static void calculate_model_matrices(struct entity_context *cx, struct entity *e
 			{
 				/* take the corner 3x3 from the view matrix, transpose, and pad back to 4x4 */
 				struct mat33d tm1, tm2;
-				mat44_to_mat33_dd(mat_v, &tm1);
+				mat44_to_mat33_dd(transform->v, &tm1);
 				mat33_transpose_dd(&tm1, &tm2);
 				mat33_to_mat44_dd(&tm2, &mat_r);
 			}
@@ -445,19 +444,17 @@ static void calculate_model_matrices(struct entity_context *cx, struct entity *e
 		quat_to_rh_rot_matrix_fd(&e->orientation, &mat_r.m[0][0]);
 	}
 
-	struct mat44d mat_t_r;
-	mat44_product_ddd(&mat_t, &mat_r, &mat_t_r);
+	mat44_product_ddd(&mat_t, &mat_r, &transform->m_no_scale);
 
-	struct mat44d mat_m;
-	mat44_product_ddd(&mat_t_r, &mat_s, &mat_m);
+	mat44_product_ddd(&transform->m_no_scale, &mat_s, &transform->m);
 
 	/* calculate the final model-view-proj and model-view matrices */
-	mat44_product_ddf(mat_vp, &mat_m, mat_mvp);
-	mat44_product_ddf(mat_v, &mat_m, mat_mv);
+	mat44_product_ddf(transform->vp, &transform->m, &transform->mvp);
+	mat44_product_ddf(transform->v, &transform->m, &transform->mv);
 
 	/* normal transform is the inverse transpose of the upper left 3x3 of the model-view matrix */
 	struct mat33 mat_tmp33;
-	mat33_inverse_transpose_ff(mat44_to_mat33_ff(mat_mv, &mat_tmp33), mat_normal);
+	mat33_inverse_transpose_ff(mat44_to_mat33_ff(&transform->mv, &mat_tmp33), &transform->normal);
 }
 
 int transform_vertices(const struct mat44 *matrix, struct vertex *v, int len)
@@ -563,11 +560,10 @@ static void render_entity(struct entity_context *cx, struct entity *e, union vec
 	if (e->sx >=0 && e->sy >= 0)
 		e->onscreen = 1;
 
-	struct mat44 mat_mvp, mat_mv;
-	struct mat33 mat_normal;
-	calculate_model_matrices(cx, e, &mat_mvp, &mat_mv, &mat_normal);
+	struct entity_transform transform;
+	calculate_model_matrices(cx, e, &transform);
 
-	graph_dev_draw_entity(cx, e, camera_light_pos, &mat_mvp, &mat_mv, &mat_normal);
+	graph_dev_draw_entity(cx, e, camera_light_pos, &transform);
 }
 
 void render_line(struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2)

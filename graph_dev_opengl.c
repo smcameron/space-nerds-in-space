@@ -1568,7 +1568,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 extern double time_now_double();
 
 static void graph_dev_raster_particle_animation(const struct entity_context *cx, struct entity *e,
-	const struct mat44 *mat_mvp, const struct mat33 *mat_normal, GLuint texture_number,
+	const struct entity_transform *transform, GLuint texture_number,
 	float particle_radius, float time_base)
 {
 	enable_3d_viewport();
@@ -1590,18 +1590,28 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 
 	glUseProgram(textured_particle_shader.program_id);
 
-	glUniformMatrix4fv(textured_particle_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix4fv(textured_particle_shader.mvp_matrix_id, 1, GL_FALSE, &transform->mvp.m[0][0]);
+
+	/* need the transpose of model and view rotation */
+	struct mat33d v_rotation, m_rotation;
+	mat44_to_mat33_dd(transform->v, &v_rotation);
+	mat44_to_mat33_dd(&transform->m_no_scale, &m_rotation);
+
+	struct mat33 mv_rotation;
+	mat33_product_ddf(&v_rotation, &m_rotation, &mv_rotation);
 
 	struct mat33 mat_view_to_model;
-	mat33_transpose(mat_normal, &mat_view_to_model);
+	mat33_transpose(&mv_rotation, &mat_view_to_model);
 
 	union vec3 camera_up_view = { { 0, 1, 0 } };
 	union vec3 camera_up_model;
 	mat33_x_vec3(&mat_view_to_model, &camera_up_view, &camera_up_model);
+	vec3_normalize_self(&camera_up_model);
 
 	union vec3 camera_right_view = { { 1, 0, 0 } };
 	union vec3 camera_right_model;
 	mat33_x_vec3(&mat_view_to_model, &camera_right_view, &camera_right_model);
+	vec3_normalize_self(&camera_right_model);
 
 	glUniform3f(textured_particle_shader.camera_up_vec_id, camera_up_model.v.x, camera_up_model.v.y,
 		camera_up_model.v.z);
@@ -1692,10 +1702,10 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 
 	if (draw_billboard_wireframe) {
 		struct sng_color white = sng_get_color(WHITE);
-		graph_dev_raster_line_mesh(e, mat_mvp, e->m, &white);
+		graph_dev_raster_line_mesh(e, &transform->mvp, e->m, &white);
 
 		struct sng_color red = sng_get_color(RED);
-		graph_dev_raster_point_cloud_mesh(mat_mvp, e->m, &red, 3.0);
+		graph_dev_raster_point_cloud_mesh(&transform->mvp, e->m, &red, 3.0);
 	}
 }
 
@@ -1726,8 +1736,12 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 }
 
 void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
-	const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal)
+	const struct entity_transform *transform)
 {
+	const struct mat44 *mat_mvp = &transform->mvp;
+	const struct mat44 *mat_mv = &transform->mv;
+	const struct mat33 *mat_normal = &transform->normal;
+
 	draw_vertex_buffer_2d();
 
 	struct sng_color line_color = sng_get_color(e->color);
@@ -1904,7 +1918,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		if (e->material_ptr && e->material_ptr->type == MATERIAL_TEXTURED_PARTICLE) {
 			struct material_textured_particle *mt = &e->material_ptr->textured_particle;
 
-			graph_dev_raster_particle_animation(cx, e, mat_mvp, mat_normal, mt->texture_id,
+			graph_dev_raster_particle_animation(cx, e, transform, mt->texture_id,
 				mt->radius * vec3_cwise_min(&e->scale), mt->time_base);
 		}
 		break;

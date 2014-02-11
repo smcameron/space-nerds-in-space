@@ -619,8 +619,12 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 }
 
 void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *camera_light_pos,
-			const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal)
+			const struct entity_transform *transform)
 {
+	const struct mat44 *mat_mvp = &transform->mvp;
+	const struct mat44 *mat_mv = &transform->mv;
+	const struct mat33 *mat_normal = &transform->normal;
+
 	transform_entity(mat_mvp, mat_mv, mat_normal, e);
 
 	/* nebula rendering not supported on gdk */
