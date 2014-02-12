@@ -2012,6 +2012,21 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	check_for_nearby_targets(o);
 }
 
+static void add_warp_effect(double ox, double oy, double oz, double dx, double dy, double dz)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_new("hSSSSSS", OPCODE_ADD_WARP_EFFECT,
+			ox, (uint32_t) UNIVERSE_DIM,
+			oy, (uint32_t) UNIVERSE_DIM,
+			oz, (uint32_t) UNIVERSE_DIM,
+			dx, (uint32_t) UNIVERSE_DIM,
+			dy, (uint32_t) UNIVERSE_DIM,
+			dz, (uint32_t) UNIVERSE_DIM);
+	if (pb)
+		send_packet_to_all_clients(pb, ROLE_ALL);
+}
+
 static void ai_fleet_member_mode_brain(struct snis_entity *o)
 {
 	int i, n = o->tsd.ship.nai_entries - 1;
@@ -2044,6 +2059,8 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 		o->tsd.ship.velocity = leader->tsd.ship.velocity * 1.5;
 	} else if (dist2 > FLEET_WARP_DISTANCE * FLEET_WARP_DISTANCE) {
 		/* If distance is too far, just warp */
+		add_warp_effect(o->x, o->y, o->z,
+			o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 		set_object_location(o, o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 		o->vx = leader->vx;
 		o->vy = leader->vy;
@@ -3211,6 +3228,10 @@ static void player_move(struct snis_entity *o)
 				send_packet_to_all_clients_on_a_bridge(o->id,
 					packed_buffer_new("hh", OPCODE_WARP_LIMBO,
 						(uint16_t) (5 * 30)), ROLE_ALL);
+				add_warp_effect(o->x, o->y, o->z,
+						bridgelist[b].warpx,
+						bridgelist[b].warpy,
+						bridgelist[b].warpz);
 				set_object_location(o, bridgelist[b].warpx,
 							bridgelist[b].warpy,
 							bridgelist[b].warpz);
@@ -5309,6 +5330,8 @@ static int process_demon_move_object(struct game_client *c)
 	if (i < 0 || !go[i].alive)
 		goto out;
 	o = &go[i];
+	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)
+		add_warp_effect(o->x, o->y, o->z, o->x + dx, o->y, o->z + dz);
 	set_object_location(o, o->x + dx, o->y, o->z + dz);
 	o->timestamp = universe_timestamp + 10;
 out:

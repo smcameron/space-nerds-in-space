@@ -79,6 +79,7 @@
 #define OBJTYPE_DERELICT 15
 #define OBJTYPE_TRACTORBEAM 16
 #define OBJTYPE_CARGO_CONTAINER 17
+#define OBJTYPE_WARP_EFFECT 18
 
 /* Careful, CURRENT / VOLTAGE ratio is twitchy, keep it in the sweet spot
  * MAX_CURRENT between 5 and 10, MAX_VOLTAGE at 1000000.0.
@@ -431,6 +432,13 @@ struct cargo_container_data {
 	struct cargo_container_contents contents;
 };
 
+struct warp_effect_data {
+#define WARP_EFFECT_LIFETIME 15
+#define WARP_EFFECT_MAX_SIZE 60
+	float scale;
+	int arriving; /* 1 for arriving, 0 for departing */
+};
+
 struct derelict_data {
 	uint8_t shiptype; /* same as snis_entity_science_data subclass */
 	union quat rotational_velocity;
@@ -524,6 +532,7 @@ union type_specific_data {
 	struct derelict_data derelict;
 	struct cargo_container_data cargo_container;
 	struct planet_data planet;
+	struct warp_effect_data warp_effect;
 };
 
 struct snis_entity;

@@ -295,6 +295,7 @@ static struct material red_torpedo_material;
 static struct material red_laser_material;
 static struct material green_laser_material;
 static struct material spark_material;
+static struct material warp_effect_material;
 static struct material sun_material;
 #define NPLANETARY_RING_MATERIALS 2
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
@@ -1443,6 +1444,23 @@ static int update_nebula(uint32_t id, double x, double y, double z, double r)
 	return 0;
 }
 
+static void warp_effect_move(struct snis_entity *o)
+{
+	float t, scale;
+
+	if (o->entity) {
+		t = (float) (WARP_EFFECT_LIFETIME - o->alive) / (float) WARP_EFFECT_LIFETIME;
+		t = t * M_PI;
+		scale = ((sin(t) + 1.0) / 2.0) * WARP_EFFECT_MAX_SIZE;
+		update_entity_scale(o->entity, scale);
+	}
+	o->alive--;
+	if (o->alive <= 0) {
+		remove_entity(ecx, o->entity);
+		snis_object_pool_free_object(sparkpool, o->index);
+	}
+}
+
 static void spark_move(struct snis_entity *o)
 {
 	union quat orientation;
@@ -1650,6 +1668,35 @@ static void move_objects(void)
 			break;
 		}
 	}
+}
+
+void add_warp_effect(double x, double y, double z, int arriving, int time)
+{
+	int i;
+	struct entity *e;
+
+	i = snis_object_pool_alloc_obj(sparkpool);
+	if (i < 0)
+		return;
+	e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
+	if (e) {
+		set_render_style(e, spark_render_style);
+		update_entity_material(e, &warp_effect_material);
+		update_entity_scale(e, 0.1);
+	}
+	memset(&spark[i], 0, sizeof(spark[i]));
+	spark[i].index = i;
+	spark[i].x = x;
+	spark[i].y = y;
+	spark[i].z = z;
+	spark[i].vx = 0;
+	spark[i].vy = 0;
+	spark[i].vz = 0;
+	spark[i].type = OBJTYPE_WARP_EFFECT;
+	spark[i].alive = time;
+	spark[i].move = warp_effect_move;
+	spark[i].entity = e;
+	return;
 }
 
 void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color)
@@ -3542,6 +3589,26 @@ static int process_cycle_mainscreen_point_of_view(void)
 	return 0;
 }
 
+static int process_add_warp_effect(void)
+{
+	int rc;
+	unsigned char buffer[100];
+	double ox, oy, oz, dx, dy, dz;
+
+	rc = read_and_unpack_buffer(buffer, "SSSSSS",
+			&ox, (int32_t) UNIVERSE_DIM,
+			&oy, (int32_t) UNIVERSE_DIM,
+			&oz, (int32_t) UNIVERSE_DIM,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM);
+	if (rc)
+		return rc;
+	add_warp_effect(ox, oy, oz, 0, WARP_EFFECT_LIFETIME);
+	add_warp_effect(dx, dy, dz, 1, WARP_EFFECT_LIFETIME);
+	return 0;
+}
+
 static int process_proximity_alert()
 {
 	static int last_time = 0;
@@ -4306,6 +4373,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW:
 			rc = process_cycle_mainscreen_point_of_view();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_ADD_WARP_EFFECT:
+			rc = process_add_warp_effect();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -11328,6 +11400,10 @@ static void load_textures(void)
 	spark_material.type = MATERIAL_BILLBOARD;
 	spark_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	spark_material.billboard.texture_id = load_texture("spark-texture.png");
+
+	warp_effect_material.type = MATERIAL_BILLBOARD;
+	warp_effect_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	warp_effect_material.billboard.texture_id = load_texture("warp-effect.png");
 
 	sun_material.type = MATERIAL_BILLBOARD;
 	sun_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
