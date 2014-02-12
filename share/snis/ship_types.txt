@@ -21,3 +21,4 @@ SCRAMBLER scrambler.stl 1400 30
 SWORDFISH swordfish.stl 1400 30
 WOMBAT wombat.stl 1400 30
 DREADKNIGHT dreadknight/dreadknight.obj 1300 25
+VANQUISHER vanquisher.stl 1400 3 

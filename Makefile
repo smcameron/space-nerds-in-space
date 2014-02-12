@@ -149,7 +149,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/wombat.stl \
 	${MD}/cargocontainer.stl \
 	${MD}/spaceship_turret.stl \
-	${MD}/spaceship_turret_base.stl
+	${MD}/spaceship_turret_base.stl \
+	${MD}/vanquisher.stl
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${ILDAFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
