@@ -4160,153 +4160,94 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_UPDATE_SHIP2:
 			/* printf("processing update ship...\n"); */
 			rc = process_update_ship_packet(opcode);
-			if (rc != 0)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_POWER_DATA:
 			rc = process_update_power_data();
-			if (rc != 0)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_COOLANT_DATA:
 			rc = process_update_coolant_data();
-			if (rc != 0)
-				goto protocol_error;
 			break;
 		case OPCODE_ECON_UPDATE_SHIP:
 		case OPCODE_ECON_UPDATE_SHIP_DEBUG_AI:
 			rc = process_update_econ_ship_packet(opcode);
-			if (rc != 0)
-				goto protocol_error;
 			break;
 		case OPCODE_ID_CLIENT_SHIP:
 			rc = process_client_id_packet();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_ASTEROID:
 			rc = process_update_asteroid_packet();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_CARGO_CONTAINER:
 			rc = process_update_cargo_container_packet();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_DERELICT:
 			rc = process_update_derelict_packet();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_PLANET:
 			rc = process_update_planet_packet();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_STARBASE:
 			rc = process_update_starbase_packet();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_WORMHOLE:
 			rc = process_update_wormhole_packet();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_NEBULA:
 			rc = process_update_nebula_packet();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_LASERBEAM:
 			rc = process_update_laserbeam();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_TRACTORBEAM:
 			rc = process_update_tractorbeam();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_EXPLOSION:
 			rc = process_update_explosion_packet();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_LASER:
 			rc = process_update_laser_packet();
-			if (rc != 0)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_TORPEDO:
-			/* printf("processing update ship...\n"); */
 			rc = process_update_torpedo_packet();
-			if (rc != 0)
-				goto protocol_error;
 			break;
 		case OPCODE_WARP_LIMBO:
 			rc = process_warp_limbo_packet();
-			if (rc != 0)
-				goto protocol_error;
 			break;
 		case OPCODE_INITIATE_WARP:
 			process_initiate_warp_packet();
 			break;
 		case OPCODE_WORMHOLE_LIMBO:
 			rc = process_wormhole_limbo_packet();
-			if (rc != 0)
-				goto protocol_error;
 			break;
 		case OPCODE_DELETE_OBJECT:
 			rc = process_delete_object_packet();
-			if (rc != 0)
-				goto protocol_error;
 			break;
 		case OPCODE_PLAY_SOUND:
 			rc = process_play_sound_packet();
-			if (rc != 0)
-				goto protocol_error;
 			break;
 		case OPCODE_SHIP_SDATA:
 			rc = process_ship_sdata_packet();
-			if (rc != 0)
-				goto protocol_error; 
 			break;
 		case OPCODE_ROLE_ONSCREEN:
 			rc = process_role_onscreen_packet();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_SCI_SELECT_TARGET:
 			rc = process_sci_select_target_packet();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_SCI_DETAILS:
 			rc = process_sci_details();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_SCI_SELECT_COORDS:
 			rc = process_sci_select_coords_packet();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_DAMAGE:
 			rc = process_ship_damage_packet(1);
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_SILENT_UPDATE_DAMAGE:
 			rc = process_ship_damage_packet(0);
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_RESPAWN_TIME:
 			rc = process_update_respawn_time();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_PLAYER:
 			break;
@@ -4316,49 +4257,30 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_COMMS_TRANSMISSION:
 			rc = process_comm_transmission();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_NETSTATS:
 			rc = process_update_netstats();
-			if (rc)
-				goto protocol_error;
 			break;
-		
 		case OPCODE_DAMCON_OBJ_UPDATE:
 			rc = process_update_damcon_object();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_DAMCON_SOCKET_UPDATE:
 			rc = process_update_damcon_socket();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_DAMCON_PART_UPDATE:
 			rc = process_update_damcon_part();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_MAINSCREEN_VIEW_MODE:
 			rc = process_mainscreen_view_mode();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_UPDATE_SPACEMONSTER:
 			rc = process_update_spacemonster();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_REQUEST_REDALERT:
 			rc = process_red_alert();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_COMMS_MAINSCREEN:
 			rc = process_comms_mainscreen();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_PROXIMITY_ALERT:
 			process_proximity_alert();
@@ -4368,22 +4290,18 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_LOAD_SKYBOX:
 			rc = process_load_skybox();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW:
 			rc = process_cycle_mainscreen_point_of_view();
-			if (rc)
-				goto protocol_error;
 			break;
 		case OPCODE_ADD_WARP_EFFECT:
 			rc = process_add_warp_effect();
-			if (rc)
-				goto protocol_error;
 			break;
 		default:
 			goto protocol_error;
 		}
+		if (rc) /* protocol error */
+			break;
 	}
 
 protocol_error:
