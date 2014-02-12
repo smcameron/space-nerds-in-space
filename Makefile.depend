@@ -168,6 +168,7 @@ snis_client.o: share/snis/models/scrambler.scad_params.h
 snis_client.o: share/snis/models/swordfish.scad_params.h
 snis_client.o: share/snis/models/wombat.scad_params.h
 snis_client.o: share/snis/models/dreadknight/dreadknight-exhaust-plumes.h
+snis_client.o: share/snis/models/vanquisher.scad_params.h
 snis_damcon_systems.o: snis_damcon_systems.h
 snis_damcon_systems.o: build_bug_on.h
 snis_event_callback.o: snis_event_callback.h
@@ -261,6 +262,7 @@ snis_limited_client.o: share/snis/models/scrambler.scad_params.h
 snis_limited_client.o: share/snis/models/swordfish.scad_params.h
 snis_limited_client.o: share/snis/models/wombat.scad_params.h
 snis_limited_client.o: share/snis/models/dreadknight/dreadknight-exhaust-plumes.h
+snis_limited_client.o: share/snis/models/vanquisher.scad_params.h
 snis_limited_graph.o: snis_font.h
 snis_limited_graph.o: my_point.h
 snis_limited_graph.o: snis_graph.h
