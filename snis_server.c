@@ -3279,7 +3279,7 @@ static void coords_to_location_string(double x, double z, char *buffer, int bufl
 
 	if (sectorx >= 0 && sectorx <= 9 && sectorz >= 0 && sectorz <= 10)
 		snprintf(buffer, buflen, "SECTOR %s %s",
-			military_alphabet[sectorz], military_numerals[sectorx]);
+			military_alphabet[sectorx], military_numerals[sectorz]);
 	else
 		snprintf(buffer, buflen, "(%8.2lf, %8.2lf)", x, z);
 }
