@@ -15,6 +15,7 @@
 #include "stl_parser.h"
 #include "mathutils.h"
 #include "snis_typeface.h"
+#include "opengl_cap.h"
 
 #define FOV (30.0 * M_PI / 180.0)
 #define FPS 60
@@ -47,54 +48,54 @@ static struct mesh *snis_read_model(char *filename)
 }
 
 static char *help_text =
-        "MESH VIEWER\n\n"
-        "  CONTROLS\n\n"
-        "  * MOUSE RIGHT-CLICK DRAG TO ROTATE MODEL\n\n"
-        "  * MOUSE SCROLL WHEEL TO ZOOM\n\n"
-        "  * MOUSE CONTROL-RIGHT-CLICK DRAG TO ROTATE LIGHT\n\n"
-        "  * ESC TO EXIT VIEWER\n\n"
-        "PRESS F1 TO EXIT HELP\n";
+	"MESH VIEWER\n\n"
+	"  CONTROLS\n\n"
+	"  * MOUSE RIGHT-CLICK DRAG TO ROTATE MODEL\n\n"
+	"  * MOUSE SCROLL WHEEL TO ZOOM\n\n"
+	"  * MOUSE CONTROL-RIGHT-CLICK DRAG TO ROTATE LIGHT\n\n"
+	"  * ESC TO EXIT VIEWER\n\n"
+	"PRESS F1 TO EXIT HELP\n";
 
 static void draw_help_text(const char *text)
 {
-        int line = 0;
-        int i, y = 70;
-        char buffer[256];
-        int buflen = 0;
+	int line = 0;
+	int i, y = 70;
+	char buffer[256];
+	int buflen = 0;
 	int helpmodeline = 0;
 
-        strcpy(buffer, "");
+	strcpy(buffer, "");
 
-        i = 0;
-        do {
-                if (text[i] == '\n' || text[i] == '\0') {
-                        if (line >= helpmodeline && line < helpmodeline + 20) {
-                                buffer[buflen] = '\0';
-                                sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
-                                y += 19;
-                                strcpy(buffer, "");
-                                buflen = 0;
-                                line++;
-                                if (text[i] == '\0')
-                                        break;
-                                i++;
-                                continue;
-                        } else {
-                                if (line >= helpmodeline + 20)
-                                        break;
-                        }
-                }
-                buffer[buflen++] = text[i++];
-        } while (1);
+	i = 0;
+	do {
+		if (text[i] == '\n' || text[i] == '\0') {
+			if (line >= helpmodeline && line < helpmodeline + 20) {
+				buffer[buflen] = '\0';
+				sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
+				y += 19;
+				strcpy(buffer, "");
+				buflen = 0;
+				line++;
+				if (text[i] == '\0')
+					break;
+				i++;
+				continue;
+			} else {
+				if (line >= helpmodeline + 20)
+					break;
+			}
+		}
+		buffer[buflen++] = text[i++];
+	} while (1);
 }
 
 static void draw_help_screen()
 {
-        sng_set_foreground(BLACK);
-        sng_current_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
-        sng_set_foreground(GREEN);
-        sng_current_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
-        draw_help_text(help_text);
+	sng_set_foreground(BLACK);
+	sng_current_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	sng_set_foreground(GREEN);
+	sng_current_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	draw_help_text(help_text);
 }
 
 static void quit(int code)
@@ -470,19 +471,78 @@ int main(int argc, char *argv[])
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1); /* vsync */
 
-	/*
-	 * Set the video mode
-	 */
-	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, bpp, SDL_OPENGL | SDL_RESIZABLE);
-	if (screen == 0) {
-		/*
-		 * This could happen for a variety of reasons,
-		 * including DISPLAY not being set, the specified
-		 * resolution not being available, etc.
-		 */
-		fprintf(stderr, "Video mode set failed: %s\n", SDL_GetError());
+	/* make a 1x1 window to check capabilities */
+	SDL_Surface *temp_screen = SDL_SetVideoMode(1, 1, bpp, SDL_OPENGL | SDL_RESIZABLE);
+	if (!temp_screen) {
+		fprintf(stderr, "Video mode set failed on temp window: %s\n", SDL_GetError());
 		quit(1);
+	}
+
+	if (glewInit() != GLEW_OK) {
+		fprintf(stderr, "Failed to initialize GLEW\n");
+		quit(1);
+	}
+
+	/* get the capabilities */
+	int cache_msaa_framebuffer_supported = msaa_framebuffer_supported();
+	int cache_msaa_render_to_fbo_supported = msaa_render_to_fbo_supported();
+	int cache_msaa_max_samples = msaa_max_samples();
+
+	/* clean up the temp gl context, must be a better way */
+	SDL_Quit();
+
+	/* start again so we can get a fresh new gl context for our window */
+	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+		/* Failed, exit. */
+		fprintf(stderr, "Second video initialization failed: %s\n", SDL_GetError());
+		quit(1);
+	}
+
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1); /* vsync */
+
+	printf("msaa_framebuffer_supported=%d\n", cache_msaa_framebuffer_supported);
+	printf("msaa_render_to_fbo_supported=%d\n", cache_msaa_render_to_fbo_supported);
+	printf("msaa_max_samples=%d\n", cache_msaa_max_samples);
+
+	/* try for a msaa framebuffer if supported and we can't do it via render to fbo */
+	if (cache_msaa_render_to_fbo_supported) {
+		printf("Using fbo MSAA\n");
+	} else if (cache_msaa_framebuffer_supported) {
+		/* try for multi sampling stating at the queried max */
+		int multi_samples = cache_msaa_max_samples;
+		do {
+			SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+			SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multi_samples);
+
+			screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, bpp, SDL_OPENGL | SDL_RESIZABLE);
+			if (screen) {
+				printf("Got framebuffer %dxMSAA\n", multi_samples);
+				break;
+			}
+
+			multi_samples >>= 1;
+
+		} while (multi_samples > 0);
+	}
+
+	if (!screen) {
+		/* fall back to non msaa if all the msaa attempts faild */
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
+
+		screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, bpp, SDL_OPENGL | SDL_RESIZABLE);
+		if (!screen) {
+			fprintf(stderr, "Video mode set failed: %s\n", SDL_GetError());
+			quit(1);
+		}
+		printf("No framebuffer MSAA\n");
 	}
 
 	real_screen_width = SCREEN_WIDTH;
