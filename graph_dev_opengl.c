@@ -21,6 +21,7 @@
 #include "entity.h"
 #include "entity_private.h"
 #include "snis_typeface.h"
+#include "opengl_cap.h"
 
 #define MAX_LOADED_TEXTURES 20
 struct loaded_texture {
@@ -33,6 +34,8 @@ static struct loaded_texture loaded_textures[MAX_LOADED_TEXTURES];
 static int draw_normal_lines = 0;
 static int draw_billboard_wireframe = 0;
 static int draw_polygon_as_lines = 0;
+static int draw_msaa_samples = 0;
+static int draw_render_to_texture = 0;
 
 struct mesh_gl_info {
 	/* common buffer to hold vertex positions */
@@ -1989,15 +1992,144 @@ void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_v
 	glDeleteBuffers(1, &gl_info.line_vertex_buffer);
 }
 
+static void print_framebuffer_error()
+{
+	switch (glCheckFramebufferStatus(GL_FRAMEBUFFER)) {
+	case GL_FRAMEBUFFER_COMPLETE:
+		break;
+
+	case GL_FRAMEBUFFER_UNSUPPORTED:
+		printf("FBO Unsupported framebuffer format.\n");
+		break;
+
+	case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+		printf("FBO Missing attachment.\n");
+		break;
+
+	case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+		printf("FBO Duplicate attachment.\n");
+		break;
+
+	case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+		printf("FBO Missing draw buffer.\n");
+		break;
+
+	case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+		printf("FBO Missing read buffer.\n");
+		break;
+
+	case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+		printf("FBO Attached images must have the same number of samples.\n");
+		break;
+
+	default:
+		printf("FBO Fatal error.\n");
+	}
+}
+
+struct fbo_target {
+	GLuint fbo;
+	GLuint color0_texture;
+	GLuint color0_buffer;
+	GLuint depth_buffer;
+	int samples;
+	int width;
+	int height;
+};
+
+static struct fbo_target msaa = { 0 };
+static struct fbo_target render_to_texture = { 0 };
+
 void graph_dev_start_frame()
 {
 	/* printf("start frame\n"); */
+	if (draw_msaa_samples > 0 && msaa.fbo > 0) {
+
+		glEnable(GL_MULTISAMPLE);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, msaa.fbo);
+
+		if (msaa.width != sgc.screen_x || msaa.height != sgc.screen_y || msaa.samples != draw_msaa_samples) {
+			/* need to rebuild the fbo attachments */
+			glBindRenderbuffer(GL_RENDERBUFFER, msaa.color0_buffer);
+			glRenderbufferStorageMultisample(GL_RENDERBUFFER, draw_msaa_samples, GL_RGBA8,
+				sgc.screen_x, sgc.screen_y);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER,
+				msaa.color0_buffer);
+
+			glBindRenderbuffer(GL_RENDERBUFFER, msaa.depth_buffer);
+			glRenderbufferStorageMultisample(GL_RENDERBUFFER, draw_msaa_samples, GL_DEPTH_COMPONENT,
+				sgc.screen_x, sgc.screen_y);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
+				msaa.depth_buffer);
+
+			msaa.width = sgc.screen_x;
+			msaa.height = sgc.screen_y;
+			msaa.samples = draw_msaa_samples;
+
+			GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+			if (status != GL_FRAMEBUFFER_COMPLETE) {
+				print_framebuffer_error();
+			}
+		}
+	} else if (draw_render_to_texture && render_to_texture.fbo > 0) {
+
+		glBindFramebuffer(GL_FRAMEBUFFER, render_to_texture.fbo);
+
+		if (render_to_texture.width != sgc.screen_x || render_to_texture.height != sgc.screen_y) {
+			/* need to rebuild the fbo attachments */
+			glBindTexture(GL_TEXTURE_2D, render_to_texture.color0_texture);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
+				sgc.screen_x, sgc.screen_y, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+				render_to_texture.color0_texture, 0);
+
+			glBindRenderbuffer(GL_RENDERBUFFER, render_to_texture.depth_buffer);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, sgc.screen_x, sgc.screen_y);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
+				render_to_texture.depth_buffer);
+
+			render_to_texture.width = sgc.screen_x;
+			render_to_texture.height = sgc.screen_y;
+
+			GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+			if (status != GL_FRAMEBUFFER_COMPLETE) {
+				print_framebuffer_error();
+			}
+		}
+	} else {
+		/* render direct to back buffer */
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glDrawBuffer(GL_BACK);
+	}
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void graph_dev_end_frame()
 {
-	draw_vertex_buffer_2d();
 	/* printf("end frame\n"); */
+	draw_vertex_buffer_2d();
+
+	if (draw_msaa_samples > 0 && msaa.fbo > 0) {
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, msaa.fbo);
+		glDrawBuffer(GL_BACK);
+		glBlitFramebuffer(0, 0, msaa.width, msaa.height, 0, 0,
+			sgc.screen_x, sgc.screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+		glDisable(GL_MULTISAMPLE);
+
+	} else if (draw_render_to_texture && render_to_texture.fbo > 0) {
+
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, render_to_texture.fbo);
+		glDrawBuffer(GL_BACK);
+		glBlitFramebuffer(0, 0, render_to_texture.width, render_to_texture.height, 0, 0,
+			sgc.screen_x, sgc.screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	}
 }
 
 void graph_dev_clear_depth_bit()
@@ -2478,6 +2610,24 @@ int graph_dev_setup()
 
 	glDepthFunc(GL_LESS);
 
+	if (msaa_render_to_fbo_supported()) {
+		glGenFramebuffers(1, &msaa.fbo);
+		glGenRenderbuffers(1, &msaa.color0_buffer);
+		glGenRenderbuffers(1, &msaa.depth_buffer);
+		msaa.width = 0;
+		msaa.height = 0;
+		msaa.samples = 0;
+	}
+
+	if (fbo_render_to_texture_supported()) {
+		glGenFramebuffers(1, &render_to_texture.fbo);
+		glGenTextures(1, &render_to_texture.color0_texture);
+		glGenRenderbuffers(1, &render_to_texture.depth_buffer);
+		render_to_texture.width = 0;
+		render_to_texture.height = 0;
+		render_to_texture.samples = 0;
+	}
+
 	setup_single_color_lit_shader(&single_color_lit_shader);
 	setup_trans_wireframe_shader(&trans_wireframe_shader);
 	setup_filled_wireframe_shader(&filled_wireframe_shader);
@@ -2656,25 +2806,73 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 
 void graph_dev_display_debug_menu_show()
 {
+	int x, y;
 	sng_set_foreground(BLACK);
-	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 65);
+	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 145);
 	sng_set_foreground(WHITE);
-	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 65);
+	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 145);
 
-	graph_dev_draw_rectangle(0, 15, 35, 15, 15);
+	y = 35;
+	x = 15;
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
 	if (draw_normal_lines)
-		graph_dev_draw_rectangle(1, 17, 37, 11, 11);
-	sng_abs_xy_draw_string("VERTEX NORMAL LINES", NANO_FONT, 35 / sgc.x_scale, 45 / sgc.y_scale);
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string("VERTEX NORMAL LINES", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
 
-	graph_dev_draw_rectangle(0, 15, 55, 15, 15);
+	x = 15;
+	y += 20;
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
 	if (draw_billboard_wireframe)
-		graph_dev_draw_rectangle(1, 17, 57, 11, 11);
-	sng_abs_xy_draw_string("BILLBOARD WIREFRAME", NANO_FONT, 35 / sgc.x_scale, 65 / sgc.y_scale);
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string("BILLBOARD WIREFRAME", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
 
-	graph_dev_draw_rectangle(0, 15, 75, 15, 15);
+	x = 15;
+	y += 20;
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
 	if (draw_polygon_as_lines)
-		graph_dev_draw_rectangle(1, 17, 77, 11, 11);
-	sng_abs_xy_draw_string("POLYGON AS LINE", NANO_FONT, 35 / sgc.x_scale, 85 / sgc.y_scale);
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string("POLYGON AS LINE", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+
+	x = 15;
+	y += 20;
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
+	if (draw_msaa_samples == 0)
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string("NO MSAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+
+	int max_samples = msaa_max_samples();
+	if (max_samples < 2)
+		sng_set_foreground(GRAY75);
+	else
+		sng_set_foreground(WHITE);
+	x = 15;
+	y += 20;
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
+	if (draw_msaa_samples == 2)
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string("2x MSAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+
+	if (max_samples < 4)
+		sng_set_foreground(GRAY75);
+	else
+		sng_set_foreground(WHITE);
+	x = 15;
+	y += 20;
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
+	if (draw_msaa_samples == 4)
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string("4x MSAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+
+	if (draw_msaa_samples > 0)
+		sng_set_foreground(GRAY75);
+	else
+		sng_set_foreground(WHITE);
+	x = 15;
+	y += 20;
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
+	if (draw_render_to_texture)
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string("RENDER TO TEXTURE", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
 }
 
 int graph_dev_graph_dev_debug_menu_click(int x, int y)
@@ -2683,12 +2881,28 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 		draw_normal_lines = !draw_normal_lines;
 		return 1;
 	}
-	if (x >= 15 && x <= 55 && y >= 35 && y <= 70) {
+	if (x >= 15 && x <= 35 && y >= 55 && y <= 70) {
 		draw_billboard_wireframe = !draw_billboard_wireframe;
 		return 1;
 	}
-	if (x >= 15 && x <= 75 && y >= 35 && y <= 90) {
+	if (x >= 15 && x <= 35 && y >= 75 && y <= 90) {
 		draw_polygon_as_lines = !draw_polygon_as_lines;
+		return 1;
+	}
+	if (x >= 15 && x <= 35 && y >= 95 && y <= 110) {
+		draw_msaa_samples = 0;
+		return 1;
+	}
+	if (x >= 15 && x <= 35 && y >= 115 && y <= 130) {
+		draw_msaa_samples = 2;
+		return 1;
+	}
+	if (x >= 15 && x <= 35 && y >= 135 && y <= 150) {
+		draw_msaa_samples = 4;
+		return 1;
+	}
+	if (x >= 15 && x <= 35 && y >= 155 && y <= 170) {
+		draw_render_to_texture = !draw_render_to_texture;
 		return 1;
 	}
 	return 0;

@@ -10939,8 +10939,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (!gdk_gl_drawable_gl_begin(gl_drawable, gl_context))
 		g_assert_not_reached();
 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	graph_dev_start_frame();
 #endif
 
