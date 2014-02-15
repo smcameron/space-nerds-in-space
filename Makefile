@@ -72,11 +72,11 @@ COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	mesh.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o vec4.o
 
-CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o snis_graph.o snis_client.o
+CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o
 
 LIMCLIENTOBJS=${COMMONCLIENTOBJS} graph_dev_gdk.o snis_limited_graph.o snis_limited_client.o
 
-SDLCLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o snis_graph.o mesh_viewer.o
+SDLCLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer.o
 
 SSGL=ssgl/libssglclient.a
 LIBS=-lGLEW -lGL -Lssgl -lssglclient -lrt -lm ${LUALIBS} ${PNGLIBS}
@@ -184,6 +184,9 @@ OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS}
 
 graph_dev_opengl.o : graph_dev_opengl.c Makefile
+	$(Q)$(GLEXTCOMPILE)
+
+opengl_cap.o : opengl_cap.c Makefile
 	$(Q)$(GLEXTCOMPILE)
 
 graph_dev_gdk.o : graph_dev_gdk.c Makefile
