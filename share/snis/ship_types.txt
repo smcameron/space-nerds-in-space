@@ -1,6 +1,6 @@
 # 
 # format is:
-# SHIP TYPENAME model-file max speed crew size
+# SHIP TYPENAME model-file max speed crew size [[axis angle] ...]
 #
 CRUISER cruiser.stl 1000 15
 DESTROYER destroyer.stl 1500 10
@@ -19,6 +19,6 @@ RESEARCH research-vessel.stl 700 7
 CONQUEROR conqueror/conqueror.obj 1000 17
 SCRAMBLER scrambler.stl 1400 30
 SWORDFISH swordfish.stl 1400 30
-WOMBAT wombat/snis3006.obj 1400 30
+WOMBAT wombat/snis3006.obj 1400 30 x -90.0 y 90.0
 DREADKNIGHT dreadknight/dreadknight.obj 1300 25
 VANQUISHER vanquisher.stl 1400 3 

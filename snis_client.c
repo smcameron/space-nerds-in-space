@@ -11869,6 +11869,15 @@ static void init_meshes()
 
 	for (i = 0; i < nshiptypes; i++) {
 		ship_mesh_map[i] = snis_read_model(d, ship_type[i].model_file);
+		for (int j = 0; j < ship_type[i].nrotations; j++) {
+			char axis = ship_type[i].axis[j];
+			union quat q;
+
+			quat_init_axis(&q, (float) ('x' == axis),
+					   (float) ('y' == axis),
+					   (float) ('z' == axis), ship_type[i].angle[j]);
+			mesh_rotate(ship_mesh_map[i], &q);
+		}
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
 	}
 

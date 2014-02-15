@@ -26,6 +26,9 @@ struct ship_type_entry {
 	char *model_file;
 	double max_speed;
 	int crew_max;
+	int nrotations;
+	char axis[3];
+	float angle[3];
 };
 
 struct ship_type_entry *snis_read_ship_types(char *filename, int *count);

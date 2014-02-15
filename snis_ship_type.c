@@ -3,6 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 
 #include "snis_ship_type.h"
 
@@ -13,11 +14,14 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 	double max_speed;
 	int crew_max;
 	char *x;
-	int scancount;
+	int i, scancount;
 	int integer;
 	int linecount = 0, n = 0;
 	int nalloced = 0;
 	struct ship_type_entry *st;
+	int nrots;
+	char axis[3];
+	float rot[3];
 
 	nalloced = 20;
 	st = malloc(sizeof(*st) * nalloced);
@@ -40,6 +44,29 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 		if (line[0] == '#') /* skip comment lines */
 			continue;
 
+		scancount = sscanf(line, "%s %s %d %d %[xyz] %f %[xyz] %f %[xyz] %f\n",
+				class, model_file, &integer, &crew_max,
+				&axis[0], &rot[0],
+				&axis[1], &rot[1],
+				&axis[2], &rot[2]);
+		if (scancount == 10) {
+			nrots = 3;
+			goto done_scanfing_line;
+		}
+		scancount = sscanf(line, "%s %s %d %d %[xyz] %f %[xyz] %f\n",
+				class, model_file, &integer, &crew_max,
+				&axis[0], &rot[0], &axis[1], &rot[1]);
+		if (scancount == 8) {
+			nrots = 2;
+			goto done_scanfing_line;
+		}
+		scancount = sscanf(line, "%s %s %d %d %[xyz] %f\n",
+				class, model_file, &integer, &crew_max,
+				&axis[0], &rot[0]);
+		if (scancount == 6) {
+			nrots = 1;
+			goto done_scanfing_line;
+		}
 		scancount = sscanf(line, "%s %s %d %d\n", class, model_file, &integer, &crew_max);
 		if (scancount != 4) {
 			fprintf(stderr, "Error at line %d in %s: '%s'\n",
@@ -48,6 +75,20 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 				fprintf(stderr, "converted %d items\n", scancount);
 			continue;
 		}
+		nrots = 0;
+
+done_scanfing_line:
+
+		for (i = 0; i < nrots; i++) {
+			if (axis[i] != 'x' && axis[i] != 'y' && axis[i] != 'z') {
+				fprintf(stderr, "Bad axis '%c' at line %d in %s: '%s'\n",
+					axis[i], linecount, filename, line);
+				axis[i] = 'x';
+				rot[i] = 0.0;
+			}
+			rot[i] = rot[i] * M_PI / 180.0;
+		}
+
 		max_speed = (double) integer / 100.0;
 
 		/* exceeded allocated capacity */
@@ -75,6 +116,12 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 		}
 		st[n].max_speed = max_speed;
 		st[n].crew_max = crew_max;
+
+		st[n].nrotations = nrots;
+		for (i = 0; i < nrots; i++) {
+			st[n].axis[i] = axis[i];
+			st[n].angle[i] = rot[i];
+		}
 		n++;
 	}
 	*count = n;
