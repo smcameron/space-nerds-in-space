@@ -3634,8 +3634,10 @@ static int process_add_warp_effect(void)
 			&dz, (int32_t) UNIVERSE_DIM);
 	if (rc)
 		return rc;
+	pthread_mutex_lock(&universe_mutex);
 	add_warp_effect(ox, oy, oz, 0, WARP_EFFECT_LIFETIME);
 	add_warp_effect(dx, dy, dz, 1, WARP_EFFECT_LIFETIME);
+	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
 
