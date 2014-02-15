@@ -8598,9 +8598,35 @@ static void send_econ_update_ship_packet(struct game_client *c,
 			o->vy, (uint32_t) UNIVERSE_DIM,
 			o->vz, (uint32_t) UNIVERSE_DIM,
 			&o->orientation, victim_id, o->tsd.ship.shiptype));
-	if (c->debug_ai)
-		pb_queue_to_client(c, packed_buffer_new("bbbbb",
-				ai[0], ai[1], ai[2], ai[3], ai[4]));
+
+	if (!c->debug_ai)
+		return;
+
+	uint8_t npoints = 0;
+	union vec3 *v = NULL;
+	struct packed_buffer *pb;
+
+	n = o->tsd.ship.nai_entries - 1;
+	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_FLEET_LEADER ||
+		o->tsd.ship.ai[n].ai_mode == AI_MODE_PATROL) {
+		npoints = o->tsd.ship.ai[n].u.patrol.npoints;
+		v = o->tsd.ship.ai[n].u.patrol.p;
+	}
+
+	pb = packed_buffer_allocate(6 + sizeof(uint32_t) * 3 * npoints);
+	if (!pb)
+		return;
+
+	packed_buffer_append(pb, "bbbbbb",
+			ai[0], ai[1], ai[2], ai[3], ai[4], npoints);
+
+	for (i = 0; i < npoints; i++) {
+		packed_buffer_append(pb, "SSS",
+			v[i].v.x, (int32_t) UNIVERSE_DIM,
+			v[i].v.y, (int32_t) UNIVERSE_DIM,
+			v[i].v.z, (int32_t) UNIVERSE_DIM);
+	}
+	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip)

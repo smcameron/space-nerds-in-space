@@ -768,7 +768,8 @@ static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e
 static int update_econ_ship(uint32_t id, double x, double y, double z,
 			double vx, double vy, double vz,
 			union quat *orientation, uint32_t alive, uint32_t victim_id,
-			uint8_t shiptype, uint8_t ai[])
+			uint8_t shiptype, uint8_t ai[],
+			uint8_t npoints, union vec3 *patrol)
 {
 	int i;
 	struct entity *e;
@@ -787,10 +788,18 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 	} else {
 		update_generic_object(i, x, y, z, vx, vy, vz, orientation, alive); 
 	}
+
+	/* Ugh, using ai[0] and ai[1] this way is a pretty putrid hack. */
 	go[i].tsd.ship.ai[0].u.attack.victim_id = (int32_t) victim_id;
 	go[i].tsd.ship.shiptype = shiptype;
 	memcpy(go[i].ai, ai, 5);
 	ai[5] = '\0';
+	go[i].tsd.ship.ai[1].u.patrol.npoints = npoints;
+	if (npoints) {
+		int j;
+		for (j = 0; j < npoints; j++)
+			go[i].tsd.ship.ai[1].u.patrol.p[j] = patrol[j];
+	}
 	return 0;
 }
 
@@ -3397,9 +3406,10 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[100];
 	uint32_t id, alive, victim_id;
-	double dx, dy, dz, dvx, dvy, dvz;
+	double dx, dy, dz, dvx, dvy, dvz, px, py, pz;
 	union quat orientation;
-	uint8_t shiptype, ai[5];
+	uint8_t shiptype, ai[5], npoints;
+	union vec3 patrol[MAX_PATROL_POINTS];
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
@@ -3413,16 +3423,36 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 				&victim_id, &shiptype);
 	if (rc != 0)
 		return rc;
-	if (opcode == OPCODE_ECON_UPDATE_SHIP_DEBUG_AI)
-		rc = read_and_unpack_buffer(buffer, "bbbbb",
-					&ai[0], &ai[1], &ai[2], &ai[3], &ai[4]);
-	else
+	if (opcode != OPCODE_ECON_UPDATE_SHIP_DEBUG_AI) {
 		memset(ai, 0, 5);
+		npoints = 0;
+		goto done;
+	}
+	rc = read_and_unpack_buffer(buffer, "bbbbbb",
+			&ai[0], &ai[1], &ai[2], &ai[3], &ai[4], &npoints);
 	if (rc != 0)
 		return rc;
+
+	if (npoints > MAX_PATROL_POINTS)
+		return -1;
+
+	memset(patrol, 0, sizeof(patrol));
+	for (int i = 0; i < npoints; i++) {
+		rc = read_and_unpack_buffer(buffer + 6 + i * sizeof(uint32_t) * 3, "SSS",
+			&px, (int32_t) UNIVERSE_DIM,
+			&py, (int32_t) UNIVERSE_DIM,
+			&pz, (int32_t) UNIVERSE_DIM);
+		if (rc)
+			return rc;
+		patrol[i].v.x = (float) px;
+		patrol[i].v.y = (float) py;
+		patrol[i].v.z = (float) pz;
+	}
+
+done:
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_econ_ship(id, dx, dy, dz, dvx, dvy, dvz, &orientation, alive, victim_id,
-				shiptype, ai);
+				shiptype, ai, npoints, patrol);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -9569,6 +9599,24 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 	}
 }
 
+static void debug_draw_ship_patrol_route(uint8_t npoints, union vec3 patrol[])
+{
+	union vec3 *v1, *v2;
+	float x1, y1, x2, y2;
+
+	sng_set_foreground(WHITE);
+	for (int i = 1; i <= npoints; i++) {
+		v1 = &patrol[i - 1];
+		v2 = &patrol[i % npoints];
+
+		x1 = (float) ux_to_demonsx((double) v1->v.x);
+		y1 = (float) uz_to_demonsy((double) v1->v.z);
+		x2 = (float) ux_to_demonsx((double) v2->v.x);
+		y2 = (float) uz_to_demonsy((double) v2->v.z);
+		sng_draw_dotted_line(x1, y1, x2, y2);
+	}
+}
+
 static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 {
 	int x, y, x1, y1, x2, y2, vx, vy;
@@ -9652,6 +9700,9 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 				snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
 			}
 		}
+		if (o->type == OBJTYPE_SHIP2 && (timer & 0x04))
+			debug_draw_ship_patrol_route(o->tsd.ship.ai[1].u.patrol.npoints,
+						o->tsd.ship.ai[1].u.patrol.p);
 	} else {
 		if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
 			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
