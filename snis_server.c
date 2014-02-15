@@ -2103,6 +2103,17 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			o->tsd.ship.doy = v.v.y + o->y;
 			o->tsd.ship.doz = v.v.z + o->z;
 		}
+		/* sometimes just warp if it's too far... */
+		if (snis_randn(10000) < 50) {
+			union vec3 v;
+
+			v.v.x = patrol->p[d].v.x - o->x;
+			v.v.y = patrol->p[d].v.y - o->y;
+			v.v.z = patrol->p[d].v.z - o->z;
+			vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
+			add_warp_effect(o->x, o->y, o->z, o->x + v.v.x, o->y + v.v.y, o->z + v.v.x);
+			set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
+		}
 	} else {
 		o->tsd.ship.dox = patrol->p[d].v.x;
 		o->tsd.ship.doy = patrol->p[d].v.y;
