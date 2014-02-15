@@ -91,6 +91,7 @@ GLOBAL void mesh_distort_and_random_uv_map(struct mesh *m, float distortion);
 GLOBAL struct mesh *mesh_fabricate_planetary_ring(float ir, float or);
 GLOBAL struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2);
 GLOBAL void mesh_update_material(struct mesh *m, struct material *material);
+GLOBAL void mesh_rotate(struct mesh *m, union quat *q);
 
 #undef GLOBAL
 #endif

@@ -10,6 +10,7 @@
 #include "quat.h"
 #include "snis_graph.h"
 #include "material.h"
+#include "quat.h"
 
 #define DEFINE_MESH_GLOBALS 1
 #include "mesh.h"
@@ -1264,5 +1265,47 @@ void mesh_update_material(struct mesh *m, struct material *material)
 	if (m->material)
 		free(m->material);
 	m->material = material;
+}
+
+static void vertex_rotate(struct vertex *v, union quat *q)
+{
+	union vec3 vo,  vi = { { v->x, v->y, v->z } };
+
+	quat_rot_vec(&vo, &vi, q);
+	v->x = vo.v.x;
+	v->y = vo.v.y;
+	v->z = vo.v.z;
+}
+
+static void triangle_rotate_normals(struct triangle *t, union quat *q)
+{
+	union vec3 vo;
+	int i;
+
+	union vec3 vi = { { t->n.x, t->n.y, t->n.z } };
+	quat_rot_vec(&vo, &vi, q);
+	t->n.x = vo.v.x;
+	t->n.y = vo.v.y;
+	t->n.z = vo.v.z;
+
+	for (i = 0; i < 3; i++) {
+		union vec3 vi = { { t->vnormal[i].x, t->vnormal[i].y, t->vnormal[i].z } };
+		quat_rot_vec(&vo, &vi, q);
+		t->vnormal[i].x = vo.v.x;
+		t->vnormal[i].y = vo.v.y;
+		t->vnormal[i].z = vo.v.z;
+	}
+}
+
+
+void mesh_rotate(struct mesh *m, union quat *q)
+{
+	int i;
+
+	for (i = 0; i < m->nvertices; i++)
+		vertex_rotate(&m->v[i], q);
+	for (i = 0; i < m->ntriangles; i++)
+		triangle_rotate_normals(&m->t[i], q);
+	mesh_graph_dev_init(m);
 }
 
