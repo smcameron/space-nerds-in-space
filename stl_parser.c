@@ -36,10 +36,10 @@
 
 #include "vertex.h"
 #include "triangle.h"
-#include "mesh.h"
 #include "matrix.h"
 #include "mtwist.h"
 #include "quat.h"
+#include "mesh.h"
 #include "string-utils.h"
 #include "snis_graph.h"
 #include "graph_dev.h"
