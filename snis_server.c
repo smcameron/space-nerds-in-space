@@ -3813,9 +3813,17 @@ static void respawn_player(struct snis_entity *o)
 		break;
 	}
 
-	if (!found) /* It's a lonely universe.  Roll the dice. */
-		set_object_location(o, XKNOWN_DIM * (double) rand() / (double) RAND_MAX,
-				o->y, ZKNOWN_DIM * (double) rand() / (double) RAND_MAX);
+	if (!found) { /* It's a lonely universe.  Roll the dice. */
+		double x, y, z;
+		for (int i = 0; i < 100; i++) {
+			x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
+			y = 0;
+			z = ZKNOWN_DIM * (double) rand() / (double) RAND_MAX;
+			if (dist3d(x - SUNX, y - SUNY, z - SUNZ) > SUN_DIST_LIMIT)
+				break;
+		}
+		set_object_location(o, x, y, z);
+	}
 	o->vx = 0;
 	o->vz = 0;
 	o->heading = 3 * M_PI / 2;
@@ -3840,9 +3848,13 @@ static int add_ship(void)
 	int i;
 	double x, y, z, heading;
 
-	x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-	y = (double) snis_randn(700) - 350;
-	z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+	for (i = 0; i < 100; i++) {
+		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+		y = (double) snis_randn(700) - 350;
+		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		if (dist3d(x - SUNX, y - SUNY, z - SUNZ) > SUN_DIST_LIMIT)
+			break;
+	}
 	heading = degrees_to_radians(0.0 + snis_randn(360)); 
 	i = add_generic_object(x, y, z, 0.0, 0.0, 0.0, heading, OBJTYPE_SHIP2);
 	if (i < 0)
@@ -4785,20 +4797,25 @@ static int l_add_planet(lua_State *l)
 	return 1;
 }
 
-static int too_close_to_other_planet(double x, double y, double z, double limit)
+static int too_close_to_other_planet_or_sun(double x, double y, double z, double limit)
 {
 	int i;
 	double mindist = -1.0;
+	double dist;
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
-		double dist;
 		if (o->type != OBJTYPE_PLANET)
 			continue;
 		dist = dist3d(o->x - x, o->y - y, o->z - z);
 		if (mindist < 0 || dist < mindist)
 			mindist = dist;
 	}
+
+	dist = dist3d(x - SUNX, y - SUNY, z - SUNZ);
+	if (dist < SUN_DIST_LIMIT) /* Too close to sun? */
+		return 1;
+
 	if (mindist < 0)
 		return 0;
 	if (mindist > limit)
@@ -4822,7 +4839,7 @@ static void add_planets(void)
 			count++;
 			if (count > 100)
 				limit *= 0.95;
-		} while (too_close_to_other_planet(x, y, z, limit) && count < 250);
+		} while (too_close_to_other_planet_or_sun(x, y, z, limit) && count < 250);
 		if (count >= 250)
 			printf("Minimum planet separation distance not attainable\n");
 		radius = (float) snis_randn(MAX_PLANET_RADIUS - MIN_PLANET_RADIUS) +
@@ -8977,8 +8994,12 @@ static int add_new_player(struct game_client *c)
 	if (c->bridge == -1) { /* did not find our bridge, have to make a new one. */
 		double x, z;
 
-		x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
-		z = ZKNOWN_DIM * (double) rand() / (double) RAND_MAX;
+		for (int i = 0; i < 100; i++) {
+			x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
+			z = ZKNOWN_DIM * (double) rand() / (double) RAND_MAX;
+			if (dist3d(x - SUNX, 0, z - SUNZ) > SUN_DIST_LIMIT)
+				break;
+		}
 		pthread_mutex_lock(&universe_mutex);
 		c->ship_index = add_player(x, z, 0.0, 0.0, M_PI / 2.0);
 		c->shipid = go[c->ship_index].id;

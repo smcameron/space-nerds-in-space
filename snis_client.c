@@ -4900,7 +4900,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
-	set_lighting(ecx, XKNOWN_DIM/2, 0, ZKNOWN_DIM/2);
+	set_lighting(ecx, SUNX, SUNY, SUNZ);
 	calculate_camera_transform(ecx);
 
 	sng_set_foreground(GREEN);
@@ -5091,7 +5091,7 @@ static void show_mainscreen(GtkWidget *w)
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
-	set_lighting(ecx, XKNOWN_DIM/2, 0, ZKNOWN_DIM/2);
+	set_lighting(ecx, SUNX, SUNY, SUNZ);
 	calculate_camera_transform(ecx);
 
 	sng_set_foreground(GREEN);
@@ -11345,7 +11345,7 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 
 	static int static_exc_loaded = 0;
 	if (!static_exc_loaded) {
-		struct entity *e = add_entity(ecx, sun_mesh, XKNOWN_DIM/2, 0, ZKNOWN_DIM/2, WHITE);
+		struct entity *e = add_entity(ecx, sun_mesh, SUNX, SUNY, SUNZ, WHITE);
 		if (e)
 			update_entity_material(e, &sun_material);
 
