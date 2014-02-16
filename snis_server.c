@@ -2115,6 +2115,10 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
 			/* put timestamp at +(a bit) due to extreme speed seen by client */
 			o->timestamp = universe_timestamp + 6;
+			/* reset destination after warping to prevent backtracking */
+			o->tsd.ship.dox = patrol->p[d].v.x;
+			o->tsd.ship.doy = patrol->p[d].v.y;
+			o->tsd.ship.doz = patrol->p[d].v.z;
 		}
 	} else {
 		o->tsd.ship.dox = patrol->p[d].v.x;
