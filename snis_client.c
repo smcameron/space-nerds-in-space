@@ -9636,7 +9636,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	if (!o->alive)
 		return;
 
-	tardy = (time_now_double() - o->updatetime2 > 10.0);
+	tardy = (time_now_double() - o->updatetime2 > 10.0 && o->type != OBJTYPE_SPARK);
 	x = ux_to_demonsx(o->x);
 	if (x < 0 || x > SCREEN_WIDTH)
 		return;
