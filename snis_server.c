@@ -2113,6 +2113,8 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
 			add_warp_effect(o->x, o->y, o->z, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
 			set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
+			/* put timestamp at +(a bit) due to extreme speed seen by client */
+			o->timestamp = universe_timestamp + 6;
 		}
 	} else {
 		o->tsd.ship.dox = patrol->p[d].v.x;
