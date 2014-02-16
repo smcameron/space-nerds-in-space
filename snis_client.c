@@ -1610,10 +1610,19 @@ static void move_ship(struct snis_entity *o)
 		double t = (currentTime - o->updatetime2) / delta;
 
 		union vec3 interp_position;
-		vec3_lerp(&interp_position, &o->r1, &o->r2, t);
-		o->x = interp_position.v.x;
-		o->y = interp_position.v.y;
-		o->z = interp_position.v.z;
+
+		/* If ship is warping (seen as extreme speed here) do not try interpolating */
+		if (dist3dsqrd(o->r1.v.x - o->r2.v.x, o->r1.v.y - o->r2.v.y, o->r1.v.z - o->r2.v.z) >
+				1000.0 * 1000.0) {
+			o->x = o->r2.v.x;
+			o->y = o->r2.v.y;
+			o->z = o->r2.v.z;
+		} else {
+			vec3_lerp(&interp_position, &o->r1, &o->r2, t);
+			o->x = interp_position.v.x;
+			o->y = interp_position.v.y;
+			o->z = interp_position.v.z;
+		}
 
 		quat_nlerp(&o->orientation, &o->o1, &o->o2, t);
 		o->heading = quat_to_heading(&o->orientation);
