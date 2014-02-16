@@ -1259,9 +1259,7 @@ union vec3 pick_random_patrol_destination(struct snis_entity *ship)
 	union vec3 v;
 	struct snis_entity *o;
 	int i, count;
-	double dx, dy, dz;
 
-	random_dpoint_on_sphere(100.0, &dx, &dy, &dz);
 	/* FIXME: do something better here. */
 	count = 0;
 	while (1) {
@@ -1277,6 +1275,12 @@ union vec3 pick_random_patrol_destination(struct snis_entity *ship)
 		break;
 	}
 	if (count <= 1000) {
+		double dx, dy, dz;
+
+		if (o->type == OBJTYPE_PLANET)
+			random_dpoint_on_sphere(o->tsd.planet.radius * 1.3, &dx, &dy, &dz);
+		else
+			random_dpoint_on_sphere(100.0, &dx, &dy, &dz);
 		v.v.x = o->x + dx;
 		v.v.y = o->y + dy;
 		v.v.z = o->z + dz;
