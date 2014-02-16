@@ -9631,10 +9631,12 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	struct snis_entity *v = NULL;
 	int xoffset = 7;
 	int yoffset = 10;
+	int tardy;
 
 	if (!o->alive)
 		return;
 
+	tardy = (time_now_double() - o->updatetime2 > 10.0);
 	x = ux_to_demonsx(o->x);
 	if (x < 0 || x > SCREEN_WIDTH)
 		return;
@@ -9696,6 +9698,9 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	default:
 		sng_set_foreground(WHITE);
 	}
+	if (tardy)
+		sng_set_foreground(timer & 0x04 ? WHITE : BLACK);
+
 	snis_draw_line(x1, y1, x2, y2);
 	snis_draw_line(x1, y2, x2, y1);
 	if (demon_id_selected(o->id)) {
