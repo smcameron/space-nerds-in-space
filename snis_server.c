@@ -2111,7 +2111,7 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			v.v.y = patrol->p[d].v.y - o->y;
 			v.v.z = patrol->p[d].v.z - o->z;
 			vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
-			add_warp_effect(o->x, o->y, o->z, o->x + v.v.x, o->y + v.v.y, o->z + v.v.x);
+			add_warp_effect(o->x, o->y, o->z, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
 			set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
 		}
 	} else {
