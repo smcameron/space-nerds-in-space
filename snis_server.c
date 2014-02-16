@@ -3082,9 +3082,7 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 
 	/* Move ship */
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
-	space_partition_process(space_partition, o, o->x, o->z, o,
-				player_collision_detection);
-	/* FIXME: player_collision_detection probably wrong */
+	/* FIXME: some kind of collision detection needed here... */
 }
 
 static void update_player_position_and_velocity(struct snis_entity *o)
