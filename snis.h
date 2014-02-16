@@ -226,6 +226,7 @@ struct ai_stack_entry {
 	union ai_data u;
 };
 
+#define CARGO_CONTAINER_LIFETIME (4 * 10 * 60) /* 4 minutes */
 struct cargo_container_contents {
 	int item;
 	float qty;

@@ -528,10 +528,14 @@ static void asteroid_move(struct snis_entity *o)
 	}
 }
 
+static void delete_from_clients_and_server(struct snis_entity *o);
 static void cargo_container_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
+	o->alive--;
+	if (o->alive == 0)
+		delete_from_clients_and_server(o);
 }
 
 static void derelict_move(struct snis_entity *o)
@@ -4122,7 +4126,7 @@ static int add_cargo_container(double x, double y, double z, double vx, double v
 	go[i].sdata.shield_width = 0;
 	go[i].sdata.shield_depth = 0;
 	go[i].move = cargo_container_move;
-	go[i].alive = snis_randn(5) + 3;
+	go[i].alive = CARGO_CONTAINER_LIFETIME;
 	/* TODO: something better for container contents */
 	go[i].tsd.cargo_container.contents.item = snis_randn(ncommodities);
 	go[i].tsd.cargo_container.contents.qty = (float) snis_randn(100);
