@@ -429,6 +429,7 @@ struct netstats_packet {
 	uint16_t opcode;
 	uint64_t bytes_sent;
 	uint64_t bytes_recd;
+	uint32_t nships, nobjects;
 	uint32_t elapsed_seconds;
 };
 

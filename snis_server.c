@@ -2257,6 +2257,7 @@ static void ship_move(struct snis_entity *o)
 	int n;
 	struct collision_avoidance_context ca;
 
+	netstats.nships++;
 	if (o->tsd.ship.nai_entries == 0)
 		ship_figure_out_what_to_do(o);
 
@@ -8478,8 +8479,9 @@ static void queue_netstats(struct game_client *c)
 		return;
 	gettimeofday(&now, NULL);
 	elapsed_seconds = now.tv_sec - netstats.start.tv_sec;
-	pb_queue_to_client(c, packed_buffer_new("hqqw", OPCODE_UPDATE_NETSTATS,
+	pb_queue_to_client(c, packed_buffer_new("hqqwww", OPCODE_UPDATE_NETSTATS,
 					netstats.bytes_sent, netstats.bytes_recd,
+					netstats.nobjects, netstats.nships,
 					elapsed_seconds));
 }
 
@@ -9429,11 +9431,14 @@ static void move_objects(void)
 	int i;
 
 	pthread_mutex_lock(&universe_mutex);
+	netstats.nobjects = 0;
+	netstats.nships = 0;
 	universe_timestamp++;
 	dump_opcode_stats(write_opcode_stats);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (go[i].alive) {
 			go[i].move(&go[i]);
+			netstats.nobjects++;
 		} else {
 			if (go[i].type == OBJTYPE_SHIP1 &&
 				universe_timestamp >= go[i].respawn_time) {

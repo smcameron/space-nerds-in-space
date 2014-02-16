@@ -37,6 +37,7 @@ struct network_stats {
 	uint64_t bytes_sent;
 	uint64_t bytes_recd;
 	struct timeval start;
+	uint32_t nobjects, nships;
 };
 
 /* Functions to read/write from a socket, restarting if EINTR... */
