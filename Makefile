@@ -42,12 +42,6 @@ else
 PROFILEFLAG=
 endif
 
-ifeq (${ILDA},1)
-ILDAFLAG=-DWITH_ILDA_SUPPORT
-else
-ILDAFLAG=
-endif
-
 # Arch pkg-config seems to be broken for lua5.2, so we have
 # this "... || echo" hack thing.
 #
@@ -152,7 +146,7 @@ MODELS=${MD}/freighter.stl \
 	${MD}/spaceship_turret_base.stl \
 	${MD}/vanquisher.stl
 
-MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${ILDAFLAG}\
+MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
 GTKCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtk+-2.0))
 GLEXTCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtkglext-1.0)) ${PNGCFLAGS}

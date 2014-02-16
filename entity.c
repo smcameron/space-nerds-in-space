@@ -253,50 +253,6 @@ static void wireframe_render_fake_star(struct entity_context *cx, struct vertex 
 	sng_draw_point(x1, y1);
 }
 
-#ifdef WITH_ILDA_SUPPORT
-
-static unsigned short to_ildax(struct entity_context *cx, int x)
-{
-	double tx;
-	struct camera_info *c = &cx->camera;
-
-	tx = ((double) x - (double) (c->xvpixels / 2.0)) / (double) c->xvpixels + cx->window_offset_x;
-	tx = tx * (32767 * 2);
-	return (unsigned short) tx;
-}
-
-static unsigned short to_ilday(struct entity_context *cx, int y)
-{
-	double ty;
-	struct camera_info *c = &cx->camera;
-
-	/* note, use of xvpixels rather than yvpixels here is correct. */
-	ty = ((double) y - (double) (c->xvpixels / 2.0)) / (double) c->xvpixels + cx->window_offset_y;
-	ty = ty * (32767 * 2);
-	return (unsigned short) ty;
-}
-
-static void ilda_render_triangle(struct entity_context *cx,
-			int x1, int y1, int x2, int y2, int x3, int y3)
-{
-	unsigned short sx1, sy1, sx2, sy2, sx3, sy3;
-
-	sx1 = to_ildax(cx, x1);
-	sy1 = to_ilday(cx, y1);
-	sx2 = to_ildax(cx, x2);
-	sy2 = to_ilday(cx, y2);
-	sx3 = to_ildax(cx, x3);
-	sy3 = to_ilday(cx, y3);
-
-	if (!cx->f)
-		return;
-	fprintf(cx->f, "  %hd %hd %d\n", sx1, sy1, -1);
-	fprintf(cx->f, "  %hd %hd %d\n", sx2, sy2, 56);
-	fprintf(cx->f, "  %hd %hd %d\n", sx3, sy3, 56);
-	fprintf(cx->f, "  %hd %hd %d\n", sx1, sy1, 56);
-}
-#endif
-
 static void calculate_model_matrices(struct entity_context *cx, struct entity *e, struct entity_transform *transform)
 {
 	transform->v = &cx->camera.camera_v_matrix;
@@ -636,30 +592,6 @@ static inline float sqr(float a)
 	return a * a;
 }
 
-#ifdef WITH_ILDA_SUPPORT
-static void ilda_file_open(struct entity_context *cx)
-{
-	if (cx->f)
-		return;
-
-	cx->f = fopen("/tmp/ilda.txt", "w+");
-	cx->framenumber = 0;
-	return;
-}
-
-static void ilda_file_newframe(struct entity_context *cx)
-{
-	if (!cx->f)
-		return;
-	cx->framenumber++;
-	fprintf(cx->f, "\n#      %d ------------------------------------------\n",
-			cx->framenumber);
-	fprintf(cx->f, "frame xy palette short\n");
-	if ((cx->framenumber % 60) == 0)
-		fflush(cx->f);
-}
-#endif
-
 /* from http://www.crownandcutlass.com/features/technicaldetails/frustum.html
 This page and its contents are Copyright 2000 by Mark Morley
 Unless otherwise noted, you may use any and all code examples provided herein in any way you want. */
@@ -942,11 +874,6 @@ void render_entities(struct entity_context *cx)
 	for (pass = 0; pass < n_near_far; pass++) {
 		calculate_camera_transform_near_far(cx, near_far[pass][0], near_far[pass][1]);
 
-#ifdef WITH_ILDA_SUPPORT
-		ilda_file_open(cx);
-		ilda_file_newframe(cx);
-#endif
-
 		if (cx->nfakestars > 0 && pass == n_near_far - 1) {
 			/* draw fake stars only on the last, closest, near/far */
 			struct mat44 mat_vp;
@@ -1137,9 +1064,6 @@ struct entity_context *entity_context_new(int maxobjs, int maxchildren)
 	camera_assign_up_direction(cx, 0.0, 1.0, 0.0);
 	set_window_offset(cx, 0.0, 0.0);
 	cx->nfakestars = 0;
-#ifdef WITH_ILDA_SUPPORT
-	cx->f = NULL;
-#endif
 	return cx;
 }
 

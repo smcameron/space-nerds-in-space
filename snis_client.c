@@ -9096,9 +9096,6 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	quat_init_axis(&orientation, 0.0, 1.0, 0.0, angle);
 	if (e)
 		update_entity_orientation(e, &orientation);
-#ifdef WITH_ILDA_SUPPORT
-	science_style |= RENDER_ILDA;
-#endif
 	camera_set_pos(sciecx, -m->radius * 4, 20, 0);
 	camera_look_at(sciecx, (float) 0, (float) 0, (float) m->radius / 2.0);
 	camera_set_parameters(sciecx, 0.5, 8000.0,
