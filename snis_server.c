@@ -3111,6 +3111,73 @@ static void update_player_position_and_velocity(struct snis_entity *o)
 				player_collision_detection);
 }
 
+static int calc_sunburn_damage(struct snis_entity *o, struct damcon_data *d,
+				uint8_t *system, uint8_t sunburn)
+{
+	float damage, old_value, new_value;
+	int system_number = system - (unsigned char *) &o->tsd.ship.damage;
+
+	BUILD_ASSERT(sizeof(o->tsd.ship.damage) == 8);
+	if (system_number < 0 || system_number >= 8)
+		fprintf(stderr, "system_number out of range: %d at %s:%d\n",
+			system_number, __FILE__, __LINE__);
+	if (snis_randn(1000) > 10) 
+		return 0; /* lucky, no damage */
+
+	damage = (float) snis_randn(3) / 100.0f;
+	damage *= sunburn; 
+	old_value = (float) *system;
+	new_value = old_value + 255.0f * damage;
+	if (new_value > 255.0f)
+		new_value = 255.0f;
+	*system = (uint8_t) new_value;
+	damage = (new_value - old_value);
+	distribute_damage_to_damcon_system_parts(o, d, (int) damage, system_number);
+	return 1;
+}
+
+static int do_sunburn_damage(struct snis_entity *o)
+{
+	float sundist, sunburn;
+	int damage_was_done = 0;
+	struct damcon_data *d;
+	int b;
+
+	sundist = dist3d(o->x - SUNX, o->y - SUNY, o->z - SUNZ);
+	if (sundist > SUN_DIST_LIMIT) {
+		sunburn = 0.0;
+		return 0;
+	} else {
+		sunburn = 1.0 - sundist / SUN_DIST_LIMIT;
+		if ((universe_timestamp % (50) == 0))
+			snis_queue_add_sound(DANGEROUS_RADIATION, ROLE_SOUNDSERVER, o->id);
+	}
+
+	b = lookup_bridge_by_shipid(o->id);
+	d = &bridgelist[b].damcon;
+	
+	damage_was_done += calc_sunburn_damage(o, d, &o->tsd.ship.damage.sensors_damage,
+			(uint8_t) (sunburn * 255.0));
+	damage_was_done += calc_sunburn_damage(o, d, &o->tsd.ship.damage.shield_damage,
+			(uint8_t) (sunburn * 255.0));
+	damage_was_done += calc_sunburn_damage(o, d, &o->tsd.ship.damage.comms_damage,
+			(uint8_t) (sunburn * 255.0));
+	damage_was_done += calc_sunburn_damage(o, d, &o->tsd.ship.damage.warp_damage,
+			(uint8_t) (sunburn * 255.0));
+
+	/* kill the player if they are too close to the sun for too long */
+	if (damage_was_done && o->tsd.ship.damage.shield_damage == 255) {
+		o->alive = 0;
+		o->tsd.ship.damage.shield_damage = 255;
+		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+		snis_queue_add_sound(EXPLOSION_SOUND,
+				ROLE_SOUNDSERVER, o->id);
+		schedule_callback(event_callback, &callback_schedule,
+			"player-death-callback", o->id);
+	}
+	return damage_was_done;
+}
+		
 static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
@@ -3126,11 +3193,11 @@ static void player_move(struct snis_entity *o)
 		if (safe_mode)
 			o->tsd.ship.fuel = UINT32_MAX;
 	}
-
 	do_power_model_computations(o);
 	do_coolant_model_computations(o);
 	do_temperature_computations(o);
 	o->tsd.ship.overheating_damage_done = do_overheating_damage(o);
+	o->tsd.ship.overheating_damage_done |= do_sunburn_damage(o);
 	if (o->tsd.ship.fuel > FUEL_CONSUMPTION_UNIT) {
 		power_model_enable(o->tsd.ship.power_model);
 		o->tsd.ship.fuel -= (int) (FUEL_CONSUMPTION_UNIT *

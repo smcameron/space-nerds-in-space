@@ -2,6 +2,10 @@ big_explosion.ogg:
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
 COPYRIGHT=2008 by Stephen M. Cameron
 
+dangerous-radiation.ogg: 
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
+COPYRIGHT=2014 by Stephen M. Cameron
+
 bigshotlaser.ogg: 
 Donated by freesound.org user TheHadnot to the Public Domain.
 http://creativecommons.org/publicdomain/zero/1.0/

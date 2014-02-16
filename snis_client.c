@@ -11688,6 +11688,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(REVERSE_SOUND, d, "reverse.ogg");
 	read_ogg_clip(COMMS_HAIL_SOUND, d, "comms-hail.ogg");
 	read_ogg_clip(TRANSPORTER_SOUND, d, "transporter-sound.ogg");
+	read_ogg_clip(DANGEROUS_RADIATION, d, "dangerous-radiation.ogg");
 	printf("Done.\n");
 }
 
