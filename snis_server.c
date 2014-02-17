@@ -8708,9 +8708,14 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	union vec3 *v = NULL;
 	struct packed_buffer *pb;
 
+	/* Find top-most patrol/leader mode on stack, if any */
 	n = o->tsd.ship.nai_entries - 1;
-	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_FLEET_LEADER ||
-		o->tsd.ship.ai[n].ai_mode == AI_MODE_PATROL) {
+	while (n >= 0 && o->tsd.ship.ai[n].ai_mode != AI_MODE_FLEET_LEADER &&
+		o->tsd.ship.ai[n].ai_mode != AI_MODE_PATROL)
+		n--;
+
+	if (n >= 0 && (o->tsd.ship.ai[n].ai_mode == AI_MODE_FLEET_LEADER ||
+		o->tsd.ship.ai[n].ai_mode == AI_MODE_PATROL)) {
 		npoints = o->tsd.ship.ai[n].u.patrol.npoints;
 		v = o->tsd.ship.ai[n].u.patrol.p;
 	}
