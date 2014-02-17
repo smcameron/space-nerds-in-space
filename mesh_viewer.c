@@ -390,6 +390,8 @@ static void draw_screen()
 
 	graph_dev_end_frame();
 
+	glFinish();
+
 	/*
 	 * Swap the buffers. This this tells the driver to
 	 * render the next frame from the contents of the
