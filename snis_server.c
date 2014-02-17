@@ -1975,15 +1975,13 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	if (!firing_range)
 		return;
 
-	double range = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
-
 	/* neutrals do not attack planets or starbases, and only select ships
 	 * when attacked.
 	 */
 	if (o->sdata.faction != 0 ||
 		(v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_PLANET)) {
 
-		if (snis_randn(1000) < 150 && range <= TORPEDO_RANGE &&
+		if (snis_randn(1000) < 150 && vdist <= TORPEDO_RANGE &&
 			o->tsd.ship.next_torpedo_time <= universe_timestamp &&
 			o->tsd.ship.torpedoes > 0) {
 			double dist, flight_time, tx, ty, tz, vx, vy, vz;
