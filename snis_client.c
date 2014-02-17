@@ -769,7 +769,7 @@ static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e
 static int update_econ_ship(uint32_t id, double x, double y, double z,
 			double vx, double vy, double vz,
 			union quat *orientation, uint32_t alive, uint32_t victim_id,
-			uint8_t shiptype, uint8_t ai[],
+			uint8_t shiptype, uint8_t ai[], double threat_level,
 			uint8_t npoints, union vec3 *patrol)
 {
 	int i;
@@ -793,6 +793,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 	/* Ugh, using ai[0] and ai[1] this way is a pretty putrid hack. */
 	go[i].tsd.ship.ai[0].u.attack.victim_id = (int32_t) victim_id;
 	go[i].tsd.ship.shiptype = shiptype;
+	go[i].tsd.ship.threat_level = (float) threat_level;
 	memcpy(go[i].ai, ai, 5);
 	ai[5] = '\0';
 	go[i].tsd.ship.ai[1].u.patrol.npoints = npoints;
@@ -3414,12 +3415,13 @@ static int process_mainscreen_view_mode(void)
 
 static int process_update_econ_ship_packet(uint16_t opcode)
 {
-	unsigned char buffer[100];
+	unsigned char buffer[200];
 	uint32_t id, alive, victim_id;
 	double dx, dy, dz, dvx, dvy, dvz, px, py, pz;
 	union quat orientation;
 	uint8_t shiptype, ai[5], npoints;
 	union vec3 patrol[MAX_PATROL_POINTS];
+	double threat_level;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
@@ -3436,10 +3438,12 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	if (opcode != OPCODE_ECON_UPDATE_SHIP_DEBUG_AI) {
 		memset(ai, 0, 5);
 		npoints = 0;
+		threat_level = 0.0;
 		goto done;
 	}
-	rc = read_and_unpack_buffer(buffer, "bbbbbb",
-			&ai[0], &ai[1], &ai[2], &ai[3], &ai[4], &npoints);
+	rc = read_and_unpack_buffer(buffer, "bbbbbSb",
+			&ai[0], &ai[1], &ai[2], &ai[3], &ai[4],
+			&threat_level, (int32_t) UNIVERSE_DIM, &npoints);
 	if (rc != 0)
 		return rc;
 
@@ -3462,7 +3466,7 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 done:
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_econ_ship(id, dx, dy, dz, dvx, dvy, dvz, &orientation, alive, victim_id,
-				shiptype, ai, npoints, patrol);
+				shiptype, ai, threat_level, npoints, patrol);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -9644,6 +9648,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	int xoffset = 7;
 	int yoffset = 10;
 	int tardy;
+	char buffer[20];
 
 	if (!o->alive)
 		return;
@@ -9735,10 +9740,17 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	}
 
 	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
+		float threat_level, toughness;
 		sng_abs_xy_draw_string(o->sdata.name, NANO_FONT,
 					x + xoffset, y + yoffset);
 		sng_abs_xy_draw_string(o->ai, NANO_FONT,
 					x + xoffset, y + yoffset + 10);
+		if (o->tsd.ship.threat_level != 0.0) {
+			toughness = (255.0 - o->tsd.ship.damage.shield_damage) / 255.0;
+			threat_level = o->tsd.ship.threat_level / (toughness + 0.001);
+			sprintf(buffer, "TL: %.1f", threat_level);
+			sng_abs_xy_draw_string(buffer, NANO_FONT, x + xoffset, y + yoffset + 20);
+		}
 	}
 	if (v) {
 		sng_set_foreground(RED);

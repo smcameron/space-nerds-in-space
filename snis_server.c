@@ -272,7 +272,10 @@ static void dequeue_lua_command(char *cmdbuf, int bufsize)
 	lua_command_queue_head = qe->next;
 	qe->next = NULL;
 	strncpy(cmdbuf, qe->lua_command, bufsize - 1);
+	printf("xxxx1\n"); fflush(stdout);
 	free(qe);
+	fflush(stdout); fflush(stderr);
+	printf("xxxx2\n"); fflush(stdout);
 }
 
 struct timer_event {
@@ -1126,6 +1129,16 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 	fleet_number = find_fleet_number(attacker);
 
 	n = attacker->tsd.ship.nai_entries;
+
+	/* too busy running away... */
+	if (n > 0 && attacker->tsd.ship.ai[n - 1].ai_mode == AI_MODE_FLEE) {
+		i = lookup_by_id(victim_id);
+		if (i < 0)
+			return;
+		buddies_join_the_fight(fleet_number, &go[i], recursion_level);
+		return;
+	}
+
 	if (n > 0 && attacker->tsd.ship.ai[n - 1].ai_mode == AI_MODE_ATTACK) {
 
 		if (attacker->tsd.ship.ai[n - 1].u.attack.victim_id == victim_id)
@@ -1231,13 +1244,19 @@ static void process_potential_victim(void *context, void *entity)
 	if (dist > XKNOWN_DIM / 10.0) /* too far away */
 		return;
 
+	/* nearby friendlies reduce threat level */
+	if (o->sdata.faction == v->sdata.faction)
+		o->tsd.ship.threat_level -= 10000.0 / (dist + 1.0);
+
 	if (hostility < FACTION_HOSTILITY_THRESHOLD)
 		return;
 
 	fightiness = (10000.0 * hostility) / (dist + 1.0);
+	o->tsd.ship.threat_level += fightiness;
 
 	if (v->type == OBJTYPE_SHIP1)
 		fightiness *= 3.0f; /* prioritize hitting player... */
+
 	if (info->victim_id == -1 || fightiness > info->fightiness) {
 		info->victim_id = v->id;
 		info->fightiness = fightiness;
@@ -1252,6 +1271,7 @@ static int find_nearest_victim(struct snis_entity *o)
 	info.victim_id = -1;
 	info.fightiness = -1.0f;
 	info.o = o;
+	o->tsd.ship.threat_level = 0.0;
 
 	space_partition_process(space_partition, o, o->x, o->y, &info,
 				process_potential_victim);
@@ -1366,7 +1386,7 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 	}
 }
 
-static void __attribute__((unused)) pop_ai_stack(struct snis_entity *o)
+static void pop_ai_stack(struct snis_entity *o)
 {
 	int n;
 
@@ -1906,6 +1926,16 @@ static int planet_in_the_way(struct snis_entity *origin,
 	return 0; /* no planets blocking */
 }
 
+static float calculate_threat_level(struct snis_entity *o)
+{
+	float toughness, threat_level;
+
+	(void) find_nearest_victim(o); /* side effect, calc threat level. */
+	toughness = (255.0 - o->tsd.ship.damage.shield_damage) / 255.0;
+	threat_level = o->tsd.ship.threat_level / (toughness + 0.001);
+	return threat_level;
+}
+
 static void ai_attack_mode_brain(struct snis_entity *o)
 {
 	struct snis_entity *v;
@@ -1915,6 +1945,15 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 
 	n = o->tsd.ship.nai_entries - 1;
 	assert(n >= 0);
+
+	/* Don't evaluate this every tick */
+	if ((universe_timestamp & 0x07) == (o->id & 0x07) &&
+			calculate_threat_level(o) > THREAT_LEVEL_FLEE_THRESHOLD) {
+		/* just change current mode to flee (pop + push) */
+		o->tsd.ship.ai[n].ai_mode = AI_MODE_FLEE;
+		o->tsd.ship.ai[n].u.flee.warp_countdown = 10 * (10 + snis_randn(10));
+		return;
+	}
 
 	if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -1) {
 		int victim_id = find_nearest_victim(o);
@@ -2022,6 +2061,66 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	check_for_nearby_targets(o);
 }
 
+struct danger_info {
+	struct snis_entity *me;
+	union vec3 danger, friendly;
+};
+
+static void compute_danger_vectors(void *context, void *entity)
+{
+	struct snis_entity *o = entity;
+	struct danger_info *di = context;
+	float dist;
+
+	if (o == di->me)
+		return;
+
+	dist = dist3d(o->x - di->me->x, o->y - di->me->y, o->z - di->me->z);
+
+	if (dist > XKNOWN_DIM / 10.0) /* too far, no effect */
+		return;
+
+	if (o->sdata.faction == di->me->sdata.faction) {
+		union vec3 f, fn;
+		float factor;
+
+		f.v.x = o->x - di->me->x;
+		f.v.y = o->y - di->me->y;
+		f.v.z = o->z - di->me->z;
+		if (fabs(f.v.x) < 0.01)
+			f.v.x = 0.01;
+		if (fabs(f.v.y) < 0.01)
+			f.v.y = 0.01;
+		if (fabs(f.v.z) < 0.01)
+			f.v.z = 0.01;
+		vec3_normalize(&fn, &f);
+		factor = ((XKNOWN_DIM / 10.0) - dist) / (XKNOWN_DIM / 10.0);
+		vec3_mul(&f, &fn, factor);
+		vec3_add(&fn, &di->friendly, &f);
+		di->friendly = fn;
+	} else {
+		float factor, hostility, fightiness;
+		union vec3 d, dn;
+
+		hostility = faction_hostility(o->sdata.faction, di->me->sdata.faction);
+		fightiness = ((XKNOWN_DIM / 10.0) * hostility) / (dist + 1.0);
+		d.v.x = di->me->x - o->x;
+		d.v.y = di->me->y - o->y;
+		d.v.z = di->me->z - o->z;
+		if (fabs(d.v.x) < 0.01)
+			d.v.x = 0.01;
+		if (fabs(d.v.y) < 0.01)
+			d.v.y = 0.01;
+		if (fabs(d.v.z) < 0.01)
+			d.v.z = 0.01;
+		vec3_normalize(&dn, &d);
+		factor = ((XKNOWN_DIM / 10.0) - dist) / (XKNOWN_DIM / 10.0) * fightiness;
+		vec3_mul(&d, &dn, factor);
+		vec3_add(&dn, &di->danger, &d);
+		di->danger = dn;
+	}
+}
+
 static void add_warp_effect(double ox, double oy, double oz, double dx, double dy, double dz)
 {
 	struct packed_buffer *pb;
@@ -2035,6 +2134,52 @@ static void add_warp_effect(double ox, double oy, double oz, double dx, double d
 			dz, (uint32_t) UNIVERSE_DIM);
 	if (pb)
 		send_packet_to_all_clients(pb, ROLE_ALL);
+}
+
+static void ai_flee_mode_brain(struct snis_entity *o)
+{
+	struct danger_info info;
+	union vec3 thataway;
+	int n;
+
+	n = o->tsd.ship.nai_entries - 1;
+	if (n < 0) {
+		printf("n < 0 at %s:%d\n", __FILE__, __LINE__);
+		return;
+	}
+
+	if ((universe_timestamp & 0x07) == (o->id & 0x07) &&
+		calculate_threat_level(o) < THREAT_LEVEL_FLEE_THRESHOLD * 0.5) {
+		pop_ai_stack(o);
+		return;
+	}
+
+	info.me = o;
+	info.danger.v.x = 0.0;
+	info.danger.v.y = 0.0;
+	info.danger.v.z = 0.0;
+	info.friendly.v.x = 0.0;
+	info.friendly.v.y = 0.0;
+	info.friendly.v.z = 0.0;
+	space_partition_process(space_partition, o, o->x, o->y, &info,
+				compute_danger_vectors);
+	vec3_mul_self(&info.danger, 2.0);
+	vec3_add(&thataway, &info.danger, &info.friendly);
+	vec3_normalize_self(&thataway);
+	vec3_mul_self(&thataway, 4000.0);
+
+	o->tsd.ship.dox = o->x + thataway.v.x;
+	o->tsd.ship.doy = o->y + thataway.v.y;
+	o->tsd.ship.doz = o->z + thataway.v.z;
+	o->tsd.ship.desired_velocity = ship_type[o->tsd.ship.shiptype].max_speed;
+
+	o->tsd.ship.ai[n].u.flee.warp_countdown--;
+	if (o->tsd.ship.ai[n].u.flee.warp_countdown <= 0) {
+		o->tsd.ship.ai[n].u.flee.warp_countdown = 10 * (20 + snis_randn(10));
+		add_warp_effect(o->x, o->y, o->z,
+			o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
+		set_object_location(o, o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
+	}
 }
 
 static void ai_fleet_member_mode_brain(struct snis_entity *o)
@@ -2169,6 +2314,9 @@ static void ai_brain(struct snis_entity *o)
 	switch (o->tsd.ship.ai[n].ai_mode) {
 	case AI_MODE_ATTACK:
 		ai_attack_mode_brain(o);
+		break;
+	case AI_MODE_FLEE:
+		ai_flee_mode_brain(o);
 		break;
 	case AI_MODE_PATROL:
 		ai_patrol_mode_brain(o);
@@ -8667,6 +8815,9 @@ static void send_econ_update_ship_packet(struct game_client *c,
 			case AI_MODE_ATTACK:
 				ai[i] = 'A';
 				break;
+			case AI_MODE_FLEE:
+				ai[i] = 'F';
+				break;
 			case AI_MODE_FLEET_LEADER:
 				ai[i] = 'L';
 				break;
@@ -8718,12 +8869,13 @@ static void send_econ_update_ship_packet(struct game_client *c,
 		v = o->tsd.ship.ai[n].u.patrol.p;
 	}
 
-	pb = packed_buffer_allocate(6 + sizeof(uint32_t) * 3 * npoints);
+	pb = packed_buffer_allocate(6 + sizeof(uint32_t) + sizeof(uint32_t) * 3 * npoints);
 	if (!pb)
 		return;
 
-	packed_buffer_append(pb, "bbbbbb",
-			ai[0], ai[1], ai[2], ai[3], ai[4], npoints);
+	packed_buffer_append(pb, "bbbbbSb",
+			ai[0], ai[1], ai[2], ai[3], ai[4],
+			(double) o->tsd.ship.threat_level, (int32_t) UNIVERSE_DIM, npoints);
 
 	for (i = 0; i < npoints; i++) {
 		packed_buffer_append(pb, "SSS",

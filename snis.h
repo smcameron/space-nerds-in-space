@@ -210,6 +210,10 @@ struct ai_fleet_data {
 	int fleet_position;
 };
 
+struct ai_flee_data {
+	int warp_countdown;
+};
+
 struct ai_hangout_data {
 	uint32_t time_to_go;
 };
@@ -219,6 +223,7 @@ union ai_data {
 	struct ai_patrol_data patrol;
 	struct ai_fleet_data fleet;
 	struct ai_hangout_data hangout;
+	struct ai_flee_data flee;
 };
 
 struct ai_stack_entry {
@@ -371,6 +376,8 @@ struct ship_data {
 	int ncargo_bays;
 #define INITIAL_WALLET_MONEY (2500.0f)
 	float wallet;
+#define THREAT_LEVEL_FLEE_THRESHOLD 50.0 /* arrived at empirically */
+	float threat_level;
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200
