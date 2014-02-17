@@ -375,6 +375,7 @@ struct ship_data {
 
 #define MIN_COMBAT_ATTACK_DIST 200
 #define MAX_COMBAT_ATTACK_DIST LASER_RANGE
+#define ATTACK_MODE_GIVE_UP_DISTANCE ((XKNOWN_DIM / 10.0) * 0.9)
 
 struct marketplace_data {
 	int item;
