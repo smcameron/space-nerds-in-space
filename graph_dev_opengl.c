@@ -560,6 +560,9 @@ struct graph_dev_gl_trans_wireframe_shader {
 	GLint vertex_position_id;
 	GLint vertex_normal_id;
 	GLint color_id;
+
+	GLint clip_sphere_id;
+	GLint clip_sphere_radius_fade_id;
 };
 
 struct graph_dev_gl_single_color_shader {
@@ -664,6 +667,7 @@ struct graph_dev_gl_textured_particle_shader {
 /* store all the shader parameters */
 static struct graph_dev_gl_single_color_lit_shader single_color_lit_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_shader;
+static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_with_clip_sphere_shader;
 static struct graph_dev_gl_filled_wireframe_shader filled_wireframe_shader;
 static struct graph_dev_gl_single_color_shader single_color_shader;
 static struct graph_dev_gl_line_single_color_shader line_single_color_shader;
@@ -1284,8 +1288,11 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 	}
 }
 
-static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
-		const struct mat33 *mat_normal, struct mesh *m, struct sng_color *line_color, int do_cullface)
+static void graph_dev_raster_trans_wireframe_mesh(struct graph_dev_gl_trans_wireframe_shader *shader,
+		const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
+		const struct mat33 *mat_normal, struct mesh *m, struct sng_color *line_color,
+		union vec3 *eye_clip_sphere_pos, float clip_sphere_radius, float clip_sphere_radius_fade,
+		int do_cullface)
 {
 	enable_3d_viewport();
 
@@ -1297,18 +1304,25 @@ static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, c
 	glEnable(GL_DEPTH_TEST);
 
 	if (do_cullface) {
-		glUseProgram(trans_wireframe_shader.program_id);
+		glUseProgram(shader->program_id);
 
-		glUniformMatrix4fv(trans_wireframe_shader.mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
-		glUniformMatrix4fv(trans_wireframe_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
-		glUniformMatrix3fv(trans_wireframe_shader.normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
-		glUniform3f(trans_wireframe_shader.color_id, line_color->red,
+		glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+		glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
+		glUniformMatrix3fv(shader->normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
+		glUniform3f(shader->color_id, line_color->red,
 			line_color->green, line_color->blue);
 
-		glEnableVertexAttribArray(trans_wireframe_shader.vertex_position_id);
+		if (shader->clip_sphere_id >= 0)
+			glUniform4f(shader->clip_sphere_id, eye_clip_sphere_pos->v.x, eye_clip_sphere_pos->v.y,
+				eye_clip_sphere_pos->v.z, clip_sphere_radius);
+
+		if (shader->clip_sphere_radius_fade_id >= 0)
+			glUniform1f(shader->clip_sphere_radius_fade_id, clip_sphere_radius_fade);
+
+		glEnableVertexAttribArray(shader->vertex_position_id);
 		glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer);
 		glVertexAttribPointer(
-			trans_wireframe_shader.vertex_position_id, /* The attribute we want to configure */
+			shader->vertex_position_id, /* The attribute we want to configure */
 			3,                           /* size */
 			GL_FLOAT,                    /* type */
 			GL_FALSE,                    /* normalized? */
@@ -1316,10 +1330,10 @@ static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, c
 			(void *)offsetof(struct vertex_wireframe_line_buffer_data, position.v.x) /* array buffer offset */
 		);
 
-		glEnableVertexAttribArray(trans_wireframe_shader.vertex_normal_id);
+		glEnableVertexAttribArray(shader->vertex_normal_id);
 		glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer);
 		glVertexAttribPointer(
-			trans_wireframe_shader.vertex_normal_id,    /* The attribute we want to configure */
+			shader->vertex_normal_id,    /* The attribute we want to configure */
 			3,                            /* size */
 			GL_FLOAT,                     /* type */
 			GL_FALSE,                     /* normalized? */
@@ -1347,12 +1361,11 @@ static void graph_dev_raster_trans_wireframe_mesh(const struct mat44 *mat_mvp, c
 		);
 	}
 
-
-	glDrawArrays(GL_LINES, 0, ptr->nwireframe_lines*2);
+	glDrawArrays(GL_LINES, 0, ptr->nwireframe_lines * 2);
 
 	if (do_cullface) {
-		glDisableVertexAttribArray(trans_wireframe_shader.vertex_position_id);
-		glDisableVertexAttribArray(trans_wireframe_shader.vertex_normal_id);
+		glDisableVertexAttribArray(shader->vertex_position_id);
+		glDisableVertexAttribArray(shader->vertex_normal_id);
 	} else {
 		glDisableVertexAttribArray(single_color_shader.vertex_position_id);
 	}
@@ -1561,8 +1574,8 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
-			graph_dev_raster_trans_wireframe_mesh(&mat_mvp_local_r, &mat_mv_local_r,
-				&mat_normal_local_r, e->m, &line_color, 0);
+			graph_dev_raster_trans_wireframe_mesh(0, &mat_mvp_local_r, &mat_mv_local_r,
+				&mat_normal_local_r, e->m, &line_color, 0, 0, 0, 0);
 		}
 	}
 
@@ -1785,6 +1798,13 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		struct sng_color annulus_tint_color = { 1.0, 1.0, 1.0 };
 		float annulus_alpha = 1.0;
 
+		struct graph_dev_gl_trans_wireframe_shader *wireframe_trans_shader = &trans_wireframe_shader;
+
+		/* for clipping sphere */
+		union vec3 eye_clip_sphere_pos = VEC3_INITIALIZER;
+		float clip_sphere_radius = 0;
+		float clip_sphere_radius_fade = 0;
+
 		if (e->material_ptr) {
 			switch (e->material_ptr->type) {
 			case MATERIAL_TEXTURE_MAPPED: {
@@ -1868,6 +1888,23 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				sphere_radius = vec3_cwise_max(&e->scale);
 				}
 				break;
+			case MATERIAL_WIREFRAME_SPHERE_CLIP: {
+				wireframe_trans_shader = &trans_wireframe_with_clip_sphere_shader;
+
+				struct material_wireframe_sphere_clip *mt =
+					&e->material_ptr->wireframe_sphere_clip;
+
+				union vec4 clip_sphere_pos;
+				vec4_init_vec3(&clip_sphere_pos, &mt->center->e_pos, 1);
+				mat44_x_vec4_into_vec3_dff(transform->v, &clip_sphere_pos, &eye_clip_sphere_pos);
+
+				union vec4 eye_clip_sphere_pos4;
+				mat44_x_vec4_dff(transform->v, &clip_sphere_pos, &eye_clip_sphere_pos4);
+
+				clip_sphere_radius = e->material_ptr->wireframe_sphere_clip.radius;
+				clip_sphere_radius_fade = e->material_ptr->wireframe_sphere_clip.radius_fade;
+				}
+				break;
 			}
 		}
 
@@ -1897,15 +1934,16 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						e->m, &triangle_color, eye_light_pos);
 			}
 		} else if (outline_triangle) {
-			graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
-				mat_normal, e->m, &line_color, 1);
+			graph_dev_raster_trans_wireframe_mesh(wireframe_trans_shader, mat_mvp, mat_mv,
+				mat_normal, e->m, &line_color, &eye_clip_sphere_pos, clip_sphere_radius,
+				clip_sphere_radius_fade, 1);
 		}
 
 		if (draw_billboard_wireframe && e->material_ptr &&
 				e->material_ptr->type == MATERIAL_BILLBOARD) {
 			struct sng_color white_color = sng_get_color(WHITE);
-			graph_dev_raster_trans_wireframe_mesh(mat_mvp, mat_mv,
-				mat_normal, e->m, &white_color, 0);
+			graph_dev_raster_trans_wireframe_mesh(0, mat_mvp, mat_mv,
+				mat_normal, e->m, &white_color, 0, 0, 0, 0);
 		}
 		break;
 	}
@@ -2405,21 +2443,24 @@ static void setup_filled_wireframe_shader(struct graph_dev_gl_filled_wireframe_s
 	shader->triangle_color_id = glGetUniformLocation(shader->program_id, "triangle_color");
 }
 
-static void setup_trans_wireframe_shader(struct graph_dev_gl_trans_wireframe_shader *shader)
+static void setup_trans_wireframe_shader(const char *basename, struct graph_dev_gl_trans_wireframe_shader *shader)
 {
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders("share/snis/shader/wireframe_transparent.vert",
-		"share/snis/shader/wireframe_transparent.frag");
+	char vert_filename[255];
+	char frag_filename[255];
+	snprintf(vert_filename, sizeof(vert_filename), "share/snis/shader/%s.vert", basename);
+	snprintf(frag_filename, sizeof(frag_filename), "share/snis/shader/%s.frag", basename);
 
-	/* Get a handle for our "MVP" uniform */
+	/* Create and compile our GLSL program from the shaders */
+	shader->program_id = load_shaders(vert_filename, frag_filename);
+
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
 	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
-
-	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
+	shader->clip_sphere_id = glGetUniformLocation(shader->program_id, "u_ClipSphere");
+	shader->clip_sphere_radius_fade_id = glGetUniformLocation(shader->program_id, "u_ClipSphereRadiusFade");
 }
 
 static void setup_single_color_shader(struct graph_dev_gl_single_color_shader *shader)
@@ -2629,7 +2670,8 @@ int graph_dev_setup()
 	}
 
 	setup_single_color_lit_shader(&single_color_lit_shader);
-	setup_trans_wireframe_shader(&trans_wireframe_shader);
+	setup_trans_wireframe_shader("wireframe_transparent", &trans_wireframe_shader);
+	setup_trans_wireframe_shader("wireframe-transparent-sphere-clip", &trans_wireframe_with_clip_sphere_shader);
 	setup_filled_wireframe_shader(&filled_wireframe_shader);
 	setup_single_color_shader(&single_color_shader);
 	setup_vertex_color_shader(&vertex_color_shader);

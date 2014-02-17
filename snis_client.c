@@ -7459,6 +7459,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	screen_radius = ((zoom_pct * (max_xknown_pct-min_xknown_pct)) + min_xknown_pct) * XKNOWN_DIM;
 	visible_distance = (max_possible_screen_radius * o->tsd.ship.power_data.sensors.i) / 255.0;
 
+	const float radius_fadeout_percent = 0.1;
 	float ship_radius = ship_mesh_map[o->tsd.ship.shiptype]->radius;
 	double ship_scale = 1.0 + zoom_pct * (XKNOWN_DIM*max_xknown_pct*0.05/ship_radius); /*5% of radius at max */
 
@@ -7592,6 +7593,14 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		update_entity_orientation(e, &o->orientation);
 	}
 
+	struct material wireframe_material;
+	wireframe_material.type = MATERIAL_WIREFRAME_SPHERE_CLIP;
+	wireframe_material.wireframe_sphere_clip.center = e;
+	wireframe_material.wireframe_sphere_clip.radius = MIN(visible_distance, screen_radius);
+	wireframe_material.wireframe_sphere_clip.radius_fade = radius_fadeout_percent;
+
+	float display_radius = MIN(visible_distance, screen_radius) * (1.0 + radius_fadeout_percent);
+
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		double dist;
 
@@ -7603,7 +7612,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		}
 
 		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
-			draw_3d_laserbeam(w, gc, navecx, o, &go[i], visible_distance);
+			draw_3d_laserbeam(w, gc, navecx, o, &go[i], display_radius);
 			continue;
 		}
 
@@ -7621,7 +7630,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			}
 		}
 
-		if (dist > screen_radius || dist > visible_distance)
+		if (dist > display_radius)
 			continue; /* not close enough */
 
 		if (in_nebula && snis_randn(1000) < 850)
@@ -7688,6 +7697,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			switch (go[i].type) {
 			case OBJTYPE_PLANET:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 0.0 + 1.0;
+				update_entity_material(contact, &wireframe_material);
 				break;
 			case OBJTYPE_STARBASE:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 4.0 + 1.0;

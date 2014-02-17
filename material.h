@@ -25,6 +25,7 @@ struct mesh;
 union quat;
 struct sng_color;
 struct material;
+struct entity;
 
 #define MATERIAL_COLOR 0
 #define MATERIAL_COLOR_BY_W 1
@@ -37,6 +38,7 @@ struct material;
 #define MATERIAL_TEXTURED_PARTICLE 8
 #define MATERIAL_TEXTURED_PLANET 9
 #define MATERIAL_TEXTURED_PLANET_RING 10
+#define MATERIAL_WIREFRAME_SPHERE_CLIP 11
 
 struct material_color_by_w {
 	int near_color;
@@ -99,6 +101,12 @@ struct material_textured_planet {
 	struct material *ring_material;
 };
 
+struct material_wireframe_sphere_clip {
+	struct entity *center;
+	float radius;
+	float radius_fade;
+};
+
 struct material {
 	__extension__ union {
 		struct material_color_by_w color_by_w;
@@ -110,6 +118,7 @@ struct material {
 		struct material_textured_particle textured_particle;
 		struct material_textured_planet textured_planet;
 		struct material_textured_planet_ring textured_planet_ring;
+		struct material_wireframe_sphere_clip wireframe_sphere_clip;
 	};
 	int type;
 };
