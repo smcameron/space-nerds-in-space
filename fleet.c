@@ -225,9 +225,14 @@ void fleet_leave(int32_t id)
 	for (i = 0; i < nfleets; i++) {
 		for (j = 0; j < f[i].nships;) {
 			if (f[i].id[j] == id) {
+					if (f[i].nships == 1) {
+						f[i].nships == 0;
+						return;
+					}
 					memmove(&f[i].id[j], &f[i].id[j + 1],
 						sizeof(f[i].id[j]) * (f[i].nships - 1 - j));
 					f[i].nships--;
+					return;
 			} else {
 				j++;
 			}
