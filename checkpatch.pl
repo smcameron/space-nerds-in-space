@@ -2311,9 +2311,9 @@ sub process {
 		}
 # check for static initialisers.
 		if ($line =~ /\bstatic\s.*=\s*(0|NULL|false)\s*;/) {
-			ERROR("INITIALISED_STATIC",
-			      "do not initialise statics to 0 or NULL\n" .
-				$herecurr);
+			# ERROR("INITIALISED_STATIC",
+			#      "do not initialise statics to 0 or NULL\n" .
+			#	$herecurr);
 		}
 
 # check for static const char * arrays.
