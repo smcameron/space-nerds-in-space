@@ -11897,7 +11897,10 @@ static void init_meshes()
 		for (int j = 0; j < ship_type[i].nrotations; j++) {
 			char axis = ship_type[i].axis[j];
 			union quat q;
-
+			if (axis == 's') { /* scale, not rotate */
+				mesh_scale(ship_mesh_map[i], ship_type[i].angle[j]);
+				continue;
+			}
 			quat_init_axis(&q, (float) ('x' == axis),
 					   (float) ('y' == axis),
 					   (float) ('z' == axis), ship_type[i].angle[j]);

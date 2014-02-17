@@ -20,8 +20,8 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 	int nalloced = 0;
 	struct ship_type_entry *st;
 	int nrots;
-	char axis[3];
-	float rot[3];
+	char axis[4];
+	float rot[4];
 
 	nalloced = 20;
 	st = malloc(sizeof(*st) * nalloced);
@@ -44,7 +44,17 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 		if (line[0] == '#') /* skip comment lines */
 			continue;
 
-		scancount = sscanf(line, "%s %s %d %d %[xyz] %f %[xyz] %f %[xyz] %f\n",
+		scancount = sscanf(line, "%s %s %d %d %[xyzs] %f %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
+				class, model_file, &integer, &crew_max,
+				&axis[0], &rot[0],
+				&axis[1], &rot[1],
+				&axis[2], &rot[2],
+				&axis[3], &rot[3]);
+		if (scancount == 12) {
+			nrots = 4;
+			goto done_scanfing_line;
+		}
+		scancount = sscanf(line, "%s %s %d %d %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
 				class, model_file, &integer, &crew_max,
 				&axis[0], &rot[0],
 				&axis[1], &rot[1],
@@ -53,14 +63,14 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			nrots = 3;
 			goto done_scanfing_line;
 		}
-		scancount = sscanf(line, "%s %s %d %d %[xyz] %f %[xyz] %f\n",
+		scancount = sscanf(line, "%s %s %d %d %[xyzs] %f %[xyzs] %f\n",
 				class, model_file, &integer, &crew_max,
 				&axis[0], &rot[0], &axis[1], &rot[1]);
 		if (scancount == 8) {
 			nrots = 2;
 			goto done_scanfing_line;
 		}
-		scancount = sscanf(line, "%s %s %d %d %[xyz] %f\n",
+		scancount = sscanf(line, "%s %s %d %d %[xyzs] %f\n",
 				class, model_file, &integer, &crew_max,
 				&axis[0], &rot[0]);
 		if (scancount == 6) {
@@ -80,13 +90,14 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 done_scanfing_line:
 
 		for (i = 0; i < nrots; i++) {
-			if (axis[i] != 'x' && axis[i] != 'y' && axis[i] != 'z') {
+			if (axis[i] != 'x' && axis[i] != 'y' && axis[i] != 'z' && axis[i] != 's') {
 				fprintf(stderr, "Bad axis '%c' at line %d in %s: '%s'\n",
 					axis[i], linecount, filename, line);
 				axis[i] = 'x';
 				rot[i] = 0.0;
 			}
-			rot[i] = rot[i] * M_PI / 180.0;
+			if (axis[i] != 's')
+				rot[i] = rot[i] * M_PI / 180.0;
 		}
 
 		max_speed = (double) integer / 100.0;
