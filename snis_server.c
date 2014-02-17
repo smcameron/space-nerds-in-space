@@ -2197,6 +2197,8 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 	i = lookup_by_id(leader_id);
 	if (i == o->id) { /* I'm the leader now */
 		o->tsd.ship.ai[n].ai_mode = AI_MODE_FLEET_LEADER;
+		o->tsd.ship.ai[0].u.fleet.fleet_position = 0;
+		setup_patrol_route(o);
 		return;
 	}
 	leader = &go[i];
