@@ -599,9 +599,6 @@ struct graph_dev_gl_skybox_shader {
 	GLint vertex_id;
 	GLint texture_id;
 
-	int nvertices;
-	GLuint vbo_cube_vertices;
-
 	int texture_loaded;
 	GLuint cube_texture_id;
 };
@@ -681,6 +678,15 @@ static struct graph_dev_gl_textured_shader textured_lit_shader;
 static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_shader;
 static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
+
+struct graph_dev_primitive {
+	int nvertices;
+	GLuint vertex_buffer;
+	GLuint triangle_vertex_buffer;
+};
+
+static struct graph_dev_primitive cubemap_cube;
+static struct graph_dev_primitive textured_unit_quad;
 
 #define BUFFERED_VERTICES_2D 2000
 #define VERTEX_BUFFER_2D_SIZE (BUFFERED_VERTICES_2D*sizeof(struct vertex_color_buffer_data))
@@ -2554,57 +2560,91 @@ static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 	/* Get a handle for our buffers */
 	shader->vertex_id = glGetAttribLocation(shader->program_id, "vertex");
 
-	/* cube vertices in triangle strip for vertex buffer object */
-	static const GLfloat cube_vertices[] = {
-		-10.0f,  10.0f, -10.0f,
-		-10.0f, -10.0f, -10.0f,
-		10.0f, -10.0f, -10.0f,
-		10.0f, -10.0f, -10.0f,
-		10.0f,  10.0f, -10.0f,
-		-10.0f,  10.0f, -10.0f,
-
-		-10.0f, -10.0f,  10.0f,
-		-10.0f, -10.0f, -10.0f,
-		-10.0f,  10.0f, -10.0f,
-		-10.0f,  10.0f, -10.0f,
-		-10.0f,  10.0f,  10.0f,
-		-10.0f, -10.0f,  10.0f,
-
-		10.0f, -10.0f, -10.0f,
-		10.0f, -10.0f,  10.0f,
-		10.0f,  10.0f,  10.0f,
-		10.0f,  10.0f,  10.0f,
-		10.0f,  10.0f, -10.0f,
-		10.0f, -10.0f, -10.0f,
-
-		-10.0f, -10.0f,  10.0f,
-		-10.0f,  10.0f,  10.0f,
-		10.0f,  10.0f,  10.0f,
-		10.0f,  10.0f,  10.0f,
-		10.0f, -10.0f,  10.0f,
-		-10.0f, -10.0f,  10.0f,
-
-		-10.0f,  10.0f, -10.0f,
-		10.0f,  10.0f, -10.0f,
-		10.0f,  10.0f,  10.0f,
-		10.0f,  10.0f,  10.0f,
-		-10.0f,  10.0f,  10.0f,
-		-10.0f,  10.0f, -10.0f,
-
-		-10.0f, -10.0f, -10.0f,
-		-10.0f, -10.0f,  10.0f,
-		10.0f, -10.0f, -10.0f,
-		10.0f, -10.0f, -10.0f,
-		-10.0f, -10.0f,  10.0f,
-		10.0f, -10.0f,  10.0f };
-
-	glGenBuffers(1, &shader->vbo_cube_vertices);
-	glBindBuffer(GL_ARRAY_BUFFER, shader->vbo_cube_vertices);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
-
-	shader->nvertices = sizeof(cube_vertices)/sizeof(GLfloat);
-
 	shader->texture_loaded = 0;
+}
+
+static void setup_cubemap_cube(struct graph_dev_primitive *obj)
+{
+	/* cube vertices in triangle strip for vertex buffer object */
+	static const struct vertex_buffer_data cube_v_data[] = {
+		{ .position = { { -10.0f,  10.0f, -10.0f } } },
+		{ .position = { { -10.0f, -10.0f, -10.0f } } },
+		{ .position = { { 10.0f, -10.0f, -10.0f } } },
+		{ .position = { { 10.0f, -10.0f, -10.0f } } },
+		{ .position = { { 10.0f,  10.0f, -10.0f } } },
+		{ .position = { { -10.0f,  10.0f, -10.0f } } },
+
+		{ .position = { { -10.0f, -10.0f,  10.0f } } },
+		{ .position = { { -10.0f, -10.0f, -10.0f } } },
+		{ .position = { { -10.0f,  10.0f, -10.0f } } },
+		{ .position = { { -10.0f,  10.0f, -10.0f } } },
+		{ .position = { { -10.0f,  10.0f,  10.0f } } },
+		{ .position = { { -10.0f, -10.0f,  10.0f } } },
+
+		{ .position = { { 10.0f, -10.0f, -10.0f } } },
+		{ .position = { { 10.0f, -10.0f,  10.0f } } },
+		{ .position = { { 10.0f,  10.0f,  10.0f } } },
+		{ .position = { { 10.0f,  10.0f,  10.0f } } },
+		{ .position = { { 10.0f,  10.0f, -10.0f } } },
+		{ .position = { { 10.0f, -10.0f, -10.0f } } },
+
+		{ .position = { { -10.0f, -10.0f,  10.0f } } },
+		{ .position = { { -10.0f,  10.0f,  10.0f } } },
+		{ .position = { { 10.0f,  10.0f,  10.0f } } },
+		{ .position = { { 10.0f,  10.0f,  10.0f } } },
+		{ .position = { { 10.0f, -10.0f,  10.0f } } },
+		{ .position = { { -10.0f, -10.0f,  10.0f } } },
+
+		{ .position = { { -10.0f,  10.0f, -10.0f } } },
+		{ .position = { { 10.0f,  10.0f, -10.0f } } },
+		{ .position = { { 10.0f,  10.0f,  10.0f } } },
+		{ .position = { { 10.0f,  10.0f,  10.0f } } },
+		{ .position = { { -10.0f,  10.0f,  10.0f } } },
+		{ .position = { { -10.0f,  10.0f, -10.0f } } },
+
+		{ .position = { { -10.0f, -10.0f, -10.0f } } },
+		{ .position = { { -10.0f, -10.0f,  10.0f } } },
+		{ .position = { { 10.0f, -10.0f, -10.0f } } },
+		{ .position = { { 10.0f, -10.0f, -10.0f } } },
+		{ .position = { { -10.0f, -10.0f,  10.0f } } },
+		{ .position = { { 10.0f, -10.0f,  10.0f } } } };
+
+	glGenBuffers(1, &obj->vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, obj->vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(cube_v_data), cube_v_data, GL_STATIC_DRAW);
+
+	obj->nvertices = sizeof(cube_v_data)/sizeof(struct vertex_buffer_data);
+}
+
+static void setup_textured_unit_quad(struct graph_dev_primitive *obj)
+{
+	static const struct vertex_buffer_data quad_v_data[] = {
+		{ { { -1.0f, -1.0f, 0.0f } } },
+		{ { { 1.0f, 1.0f, 0.0f } } },
+		{ { { -1.0f, 1.0f, 0.0f } } },
+
+		{ { { -1.0f, -1.0f, 0.0f } } },
+		{ { { 1.0f, -1.0f, 0.0f } } },
+		{ { { 1.0f, 1.0f, 0.0f } } } };
+
+	static const struct vertex_triangle_buffer_data quat_vt_data[] = {
+		{ .texture_coord = { { 0.0f, 0.0f } } },
+		{ .texture_coord = { { 1.0f, 1.0f } } },
+		{ .texture_coord = { { 0.0f, 1.0f } } },
+
+		{ .texture_coord = { { 0.0f, 0.0f } } },
+		{ .texture_coord = { { 1.0f, 0.0f } } },
+		{ .texture_coord = { { 1.0f, 1.0f } } } };
+
+	glGenBuffers(1, &obj->vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, obj->vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quad_v_data), quad_v_data, GL_STATIC_DRAW);
+
+	glGenBuffers(1, &obj->triangle_vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, obj->triangle_vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quat_vt_data), quat_vt_data, GL_STATIC_DRAW);
+
+	obj->nvertices = sizeof(quad_v_data)/sizeof(struct vertex_buffer_data);
 }
 
 static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle_shader *shader)
@@ -2685,6 +2725,9 @@ int graph_dev_setup()
 	setup_textured_cubemap_lit_shader(&textured_cubemap_lit_shader);
 	setup_textured_cubemap_lit_with_annulus_shadow_shader(&textured_cubemap_lit_with_annulus_shadow_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
+
+	setup_cubemap_cube(&cubemap_cube);
+	setup_textured_unit_quad(&textured_unit_quad);
 
 	/* after all the shaders are loaded */
 	setup_2d();
@@ -2836,11 +2879,18 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 
 	glUniformMatrix4fv(skybox_shader.mvp_id, 1, GL_FALSE, &mat_vp->m[0][0]);
 
-	glBindBuffer(GL_ARRAY_BUFFER, skybox_shader.vbo_cube_vertices);
 	glEnableVertexAttribArray(skybox_shader.vertex_id);
-	glVertexAttribPointer(skybox_shader.vertex_id, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, cubemap_cube.vertex_buffer);
+	glVertexAttribPointer(
+		skybox_shader.vertex_id, /* The attribute we want to configure */
+		3,                           /* size */
+		GL_FLOAT,                    /* type */
+		GL_FALSE,                    /* normalized? */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
+	);
 
-	glDrawArrays(GL_TRIANGLES, 0, skybox_shader.nvertices);
+	glDrawArrays(GL_TRIANGLES, 0, cubemap_cube.nvertices);
 
 	glDisableVertexAttribArray(skybox_shader.vertex_id);
 	glUseProgram(0);
