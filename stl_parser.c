@@ -48,6 +48,9 @@
 #define DEFINE_STL_FILE_GLOBALS
 #include "stl_parser.h"
 
+/* consider two faces to be smoothed if <37 degrees */
+#define DEFAULT_SHARP_CORNER_ANGLE (37.0 * M_PI / 180.0)
+
 static void stl_error(char *msg, int linecount)
 {
 	fprintf(stderr, "%d: %s\n", linecount, msg);
@@ -498,7 +501,7 @@ struct mesh *read_stl_file(char *file)
 	my_mesh->radius = mesh_compute_radius(my_mesh);
 	process_coplanar_triangles(my_mesh, owners);
 	check_triangle_vertices(my_mesh);
-	process_vertex_normals(my_mesh, 37.0 * M_PI / 180.0, owners);
+	process_vertex_normals(my_mesh, DEFAULT_SHARP_CORNER_ANGLE, owners);
 
 	free_vertex_owners(owners, facetcount * 3);
 
@@ -599,7 +602,7 @@ static int obj_add_vertex_normal(struct vertex **vt, char *line,
 	union vec3 v;
 
 	rc = sscanf(line, "vn %f %f %f", &x, &y, &z);
-	if (rc == 3)
+	if (rc != 3)
 		return -1;
 
 	if (*nverts_used >= *nverts_alloced) {
@@ -964,6 +967,10 @@ struct mesh *read_obj_file(char *filename)
 	if (owners) {
 		mesh_compute_shared_vertex_flags(m, owners);
 		process_coplanar_triangles(m, owners);
+		if (normal_verts_used == 0) {
+			printf("no normals in obj, using default smoothing\n");
+			process_vertex_normals(m, DEFAULT_SHARP_CORNER_ANGLE, owners);
+		}
 		free_vertex_owners(owners, m->ntriangles * 3);
 	}
 
