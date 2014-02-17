@@ -36,6 +36,7 @@ static int draw_billboard_wireframe = 0;
 static int draw_polygon_as_lines = 0;
 static int draw_msaa_samples = 0;
 static int draw_render_to_texture = 0;
+static int draw_fxaa = 0;
 
 struct mesh_gl_info {
 	/* common buffer to hold vertex positions */
@@ -661,6 +662,16 @@ struct graph_dev_gl_textured_particle_shader {
 	GLint texture_id; /* param to vertex shader */
 };
 
+struct graph_dev_gl_fs_effect_shader {
+	GLuint program_id;
+	GLint mvp_matrix_id;
+	GLint vertex_position_id;
+	GLint texture_coord_id;
+	GLint tint_color_id;
+	GLint viewport_id;
+	GLint texture_id;
+};
+
 /* store all the shader parameters */
 static struct graph_dev_gl_single_color_lit_shader single_color_lit_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_shader;
@@ -678,6 +689,7 @@ static struct graph_dev_gl_textured_shader textured_lit_shader;
 static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_shader;
 static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
+static struct graph_dev_gl_fs_effect_shader fs_fxaa_shader;
 
 struct graph_dev_primitive {
 	int nvertices;
@@ -2152,6 +2164,51 @@ void graph_dev_start_frame()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
+static void graph_dev_raster_fs_effect(struct graph_dev_gl_fs_effect_shader *shader, GLuint src_texture_id,
+	const struct sng_color *tint_color, float alpha)
+{
+	static const struct mat44 mat_identity = { { { 1, 0, 0, 0}, { 0, 1, 0, 0 }, { 0, 0, 1, 0}, { 0, 0, 0, 1} } };
+
+	glUseProgram(shader->program_id);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, src_texture_id);
+	glUniform1i(shader->texture_id, 0);
+
+	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_identity.m[0][0]);
+	glUniform2f(shader->viewport_id, sgc.vp_width_3d, sgc.vp_height_3d);
+	glUniform4f(shader->tint_color_id, tint_color->red,
+		tint_color->green, tint_color->blue, alpha);
+
+	glEnableVertexAttribArray(shader->vertex_position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, textured_unit_quad.vertex_buffer);
+	glVertexAttribPointer(
+		shader->vertex_position_id, /* The attribute we want to configure */
+		3,                           /* size */
+		GL_FLOAT,                    /* type */
+		GL_FALSE,                    /* normalized? */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
+	);
+
+	glEnableVertexAttribArray(shader->texture_coord_id);
+	glBindBuffer(GL_ARRAY_BUFFER, textured_unit_quad.triangle_vertex_buffer);
+	glVertexAttribPointer(
+		shader->texture_coord_id,/* The attribute we want to configure */
+		2,                            /* size */
+		GL_FLOAT,                     /* type */
+		GL_TRUE,                     /* normalized? */
+		sizeof(struct vertex_triangle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x) /* array buffer offset */
+	);
+
+	glDrawArrays(GL_TRIANGLES, 0, textured_unit_quad.nvertices);
+
+	glDisableVertexAttribArray(shader->vertex_position_id);
+	glDisableVertexAttribArray(shader->texture_coord_id);
+	glUseProgram(0);
+}
+
 void graph_dev_end_frame()
 {
 	/* printf("end frame\n"); */
@@ -2167,12 +2224,18 @@ void graph_dev_end_frame()
 		glDisable(GL_MULTISAMPLE);
 
 	} else if (draw_render_to_texture && render_to_texture.fbo > 0) {
-
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, render_to_texture.fbo);
 		glDrawBuffer(GL_BACK);
-		glBlitFramebuffer(0, 0, render_to_texture.width, render_to_texture.height, 0, 0,
-			sgc.screen_x, sgc.screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+		if (draw_fxaa) {
+			glViewport(0, 0, sgc.screen_x, sgc.screen_y);
+			static const struct sng_color tint = { 1, 1, 1 };
+			graph_dev_raster_fs_effect(&fs_fxaa_shader, render_to_texture.color0_texture, &tint, 1);
+		} else {
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, render_to_texture.fbo);
+			glBlitFramebuffer(0, 0, render_to_texture.width, render_to_texture.height, 0, 0,
+				sgc.screen_x, sgc.screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+		}
 	}
 }
 
@@ -2667,6 +2730,23 @@ static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle
 	shader->end_tint_color_id = glGetAttribLocation(shader->program_id, "a_EndTintColor");
 }
 
+static void setup_fs_effect_shader(const char *basename, struct graph_dev_gl_fs_effect_shader *shader)
+{
+	/* Create and compile our GLSL program from the shaders */
+	char vert_filename[255];
+	char frag_filename[255];
+	snprintf(vert_filename, sizeof(vert_filename), "share/snis/shader/%s.vert", basename);
+	snprintf(frag_filename, sizeof(vert_filename), "share/snis/shader/%s.frag", basename);
+
+	shader->program_id = load_shaders(vert_filename, frag_filename);
+
+	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
+	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
+	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_tex_coord");
+	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
+	shader->viewport_id = glGetUniformLocation(shader->program_id, "u_Viewport");
+	shader->texture_id = glGetUniformLocation(shader->program_id, "textureSampler");
+}
 
 static void setup_2d()
 {
@@ -2725,6 +2805,7 @@ int graph_dev_setup()
 	setup_textured_cubemap_lit_shader(&textured_cubemap_lit_shader);
 	setup_textured_cubemap_lit_with_annulus_shadow_shader(&textured_cubemap_lit_with_annulus_shadow_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
+	setup_fs_effect_shader("fs-effect-fxaa", &fs_fxaa_shader);
 
 	setup_cubemap_cube(&cubemap_cube);
 	setup_textured_unit_quad(&textured_unit_quad);
@@ -2900,9 +2981,9 @@ void graph_dev_display_debug_menu_show()
 {
 	int x, y;
 	sng_set_foreground(BLACK);
-	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 145);
+	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 165);
 	sng_set_foreground(WHITE);
-	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 145);
+	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 165);
 
 	y = 35;
 	x = 15;
@@ -2965,6 +3046,17 @@ void graph_dev_display_debug_menu_show()
 	if (draw_render_to_texture)
 		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
 	sng_abs_xy_draw_string("RENDER TO TEXTURE", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+
+	if (!draw_render_to_texture)
+		sng_set_foreground(GRAY75);
+	else
+		sng_set_foreground(WHITE);
+	x = 15;
+	y += 20;
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
+	if (draw_fxaa)
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string("FXAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
 }
 
 int graph_dev_graph_dev_debug_menu_click(int x, int y)
@@ -2995,6 +3087,10 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 	}
 	if (x >= 15 && x <= 35 && y >= 155 && y <= 170) {
 		draw_render_to_texture = !draw_render_to_texture;
+		return 1;
+	}
+	if (x >= 15 && x <= 35 && y >= 175 && y <= 190) {
+		draw_fxaa = !draw_fxaa;
 		return 1;
 	}
 	return 0;
