@@ -2427,6 +2427,10 @@ static void ship_move(struct snis_entity *o)
 		break;
 	}
 
+	/* Repair the ship over time */
+	if (o->sdata.shield_strength < 255 && snis_randn(1000) < 7)
+		o->sdata.shield_strength++;
+
 	ai_brain(o);
 
 	/* try to avoid collisions by computing steering and braking adjustments */
