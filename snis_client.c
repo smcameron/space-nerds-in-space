@@ -1586,7 +1586,7 @@ static void spark_move(struct snis_entity *o)
 	quat_mul(&orientation, &o->tsd.spark.rotational_velocity, entity_get_orientation(o->entity));
 	update_entity_orientation(o->entity, &orientation);
 	scale = entity_get_scale(o->entity);
-	update_entity_scale(o->entity, scale * 0.95);
+	update_entity_scale(o->entity, scale * o->tsd.spark.shrink_factor);
 
 	if (o->alive <= 0) {
 		remove_entity(ecx, o->entity);
@@ -1820,7 +1820,7 @@ void add_warp_effect(double x, double y, double z, int arriving, int time)
 }
 
 void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
-		struct material *material)
+		struct material *material, float shrink_factor)
 {
 	int i, r;
 	struct entity *e;
@@ -1850,6 +1850,7 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	spark[i].vx = vx;
 	spark[i].vy = vy;
 	spark[i].vz = vz;
+	spark[i].tsd.spark.shrink_factor = shrink_factor;
 	/* calculate a small rotational velocity */
 	spark[i].tsd.spark.rotational_velocity = random_spin[i % NRANDOM_SPINS];
 
@@ -1895,7 +1896,7 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 		vx = v * cos(angle);
 		vy = v * cos(zangle) / 3.0;
 		vz = v * -sin(angle);
-		add_spark(x, y, z, vx, vy, vz, time, color, &spark_material);
+		add_spark(x, y, z, vx, vy, vz, time, color, &spark_material, 0.95);
 	}
 }
 

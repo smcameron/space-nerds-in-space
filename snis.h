@@ -437,6 +437,7 @@ struct explosion_data {
 
 struct spark_data {
 	union quat rotational_velocity;
+	float shrink_factor;
 };
 
 struct asteroid_data {
