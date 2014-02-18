@@ -1819,7 +1819,8 @@ void add_warp_effect(double x, double y, double z, int arriving, int time)
 	return;
 }
 
-void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color)
+void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
+		struct material *material)
 {
 	int i, r;
 	struct entity *e;
@@ -1833,7 +1834,7 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 		e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
 		if (e) {
 			set_render_style(e, spark_render_style);
-			update_entity_material(e, &spark_material);
+			update_entity_material(e, material);
 			update_entity_scale(e, (float) snis_randn(100) / 25.0f);
 		}
 	} else if (r < 75) {
@@ -1894,7 +1895,7 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 		vx = v * cos(angle);
 		vy = v * cos(zangle) / 3.0;
 		vz = v * -sin(angle);
-		add_spark(x, y, z, vx, vy, vz, time, color);
+		add_spark(x, y, z, vx, vy, vz, time, color, &spark_material);
 	}
 }
 
