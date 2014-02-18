@@ -764,7 +764,85 @@ static int update_damcon_part(uint32_t id, uint32_t ship_id, uint32_t type,
 	return 0;
 }
 
-static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e, int shiptype, int impulse);
+struct thrust_attachment_point {
+	int nports;
+	struct _port {
+		float scale;
+		union vec3 pos;
+	} port[5];
+};
+
+static struct thrust_attachment_point ship_thrust_attachment_points[] = {
+
+	/* cruiser */
+	{ 0 }, /* no exhaust ports */
+	/* destroyer */
+	#include "share/snis/models/destroyer.scad_params.h"
+	,
+	/* freighter */
+	#include "share/snis/models/freighter.scad_params.h"
+	,
+	/* tanker */
+	{ 0 }, /* no exhaust ports */
+	/* transport */
+	{ 0 }, /* no exhaust ports */
+	/* battlestar */
+	#include "share/snis/models/battlestar.scad_params.h"
+	,
+	/* spaceship */
+	#include "share/snis/models/spaceship.scad_params.h"
+	,
+	/* asteroid-miner */
+	#include "share/snis/models/asteroid-miner.scad_params.h"
+	,
+	/* spaceship2 */
+	#include "share/snis/models/spaceship2.scad_params.h"
+	,
+	/* spaceship3 */
+	{ 0 }, /* no exhaust ports */
+	/* dragonhawk */
+	#include "share/snis/models/dragonhawk.scad_params.h"
+	,
+	/* skorpio */
+	#include "share/snis/models/skorpio.scad_params.h"
+	,
+	/* disruptor */
+	#include "share/snis/models/disruptor.scad_params.h"
+	,
+	/* research_vessel */
+	#include "share/snis/models/research-vessel.scad_params.h"
+	,
+	/* conqueror */
+	#include "share/snis/models/conqueror.scad_params.h"
+	,
+	/* scrambler */
+	#include "share/snis/models/scrambler.scad_params.h"
+	,
+	/* swordfish */
+	#include "share/snis/models/swordfish.scad_params.h"
+	,
+	/* wombat */
+	#include "share/snis/models/wombat.scad_params.h"
+	,
+	/* dreadknight */
+	#include "share/snis/models/dreadknight/dreadknight-exhaust-plumes.h"
+	,
+	/* vanquisher */
+	#include "share/snis/models/vanquisher.scad_params.h"
+	,
+};
+
+static struct thrust_attachment_point *ship_thrust_attachment_point(int shiptype)
+{
+	/* since range of shiptype is determined runtime by reading a file... */
+	if (shiptype < 0 || shiptype >= ARRAYSIZE(ship_thrust_attachment_points))
+		return NULL;
+	return &ship_thrust_attachment_points[shiptype];
+}
+
+
+static void add_ship_thrust_entities(struct entity *thrust_entity[], int *nthrust_entities,
+		struct entity_context *cx, struct entity *e, int shiptype, int impulse);
 
 static int update_econ_ship(uint32_t id, double x, double y, double z,
 			double vx, double vy, double vz,
@@ -774,20 +852,42 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 {
 	int i;
 	struct entity *e;
+	struct entity *thrust_entity[MAX_THRUST_PORTS];
+	int nthrust_ports;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes], x, y, z, SHIP_COLOR);
 		if (e)
-			add_ship_thrust_entities(ecx, e, shiptype, 36);
+			add_ship_thrust_entities(thrust_entity, &nthrust_ports, ecx, e, shiptype, 36);
 		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_SHIP2, alive, e);
-		if (i < 0)
+		if (i < 0) {
+			if (e)
+				remove_entity(ecx, e);
 			return i;
+		}
 		go[i].entity = e;
 		if (e)
 			entity_set_user_data(e, &go[i]);
+		memcpy(go[i].tsd.ship.thrust_entity, thrust_entity, sizeof(thrust_entity));
+		go[i].tsd.ship.nthrust_ports = nthrust_ports;
 	} else {
+		int j;
+		float v = sqrt(vx * vx + vy * vy + vz * vz);
+		int throttle = (int) (180.0 * v /
+					(float) ship_type[shiptype].max_speed);
+		float thrust_size = clampf(throttle / 36.0, 0.1, 5.0);
+
 		update_generic_object(i, x, y, z, vx, vy, vz, orientation, alive); 
+
+		for (j = 0; j < go[i].tsd.ship.nthrust_ports; j++) {
+			struct thrust_attachment_point *ap = ship_thrust_attachment_point(shiptype);
+			struct entity *t = go[i].tsd.ship.thrust_entity[j];
+			union vec3 thrust_scale = { { thrust_size, 1.0, 1.0 } };
+			vec3_mul_self(&thrust_scale, ap->port[j].scale);
+			update_entity_non_uniform_scale(t, thrust_scale.v.x,
+							thrust_scale.v.y, thrust_scale.v.z);
+		}
 	}
 
 	/* Ugh, using ai[0] and ai[1] this way is a pretty putrid hack. */
@@ -3260,7 +3360,7 @@ static int process_update_ship_packet(uint16_t opcode)
 			e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes],
 					dx, dy, dz, SHIP_COLOR);
 			if (e)
-				add_ship_thrust_entities(ecx, e, shiptype, 36);
+				add_ship_thrust_entities(NULL, NULL, ecx, e, shiptype, 36);
 		}
 		i = add_generic_object(id, dx, dy, dz, dvx, dvy, dvz, &orientation, type, alive, e);
 		if (i < 0) {
@@ -4745,84 +4845,10 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int 
 	}
 }
 
-struct thrust_attachment_point {
-	int nports;
-	struct _port {
-		float scale;
-		union vec3 pos;
-	} port[5];
-};
-
-static struct thrust_attachment_point ship_thrust_attachment_points[] = {
-
-	/* cruiser */
-	{ 0 }, /* no exhaust ports */
-	/* destroyer */
-	#include "share/snis/models/destroyer.scad_params.h"
-	,
-	/* freighter */
-	#include "share/snis/models/freighter.scad_params.h"
-	,
-	/* tanker */
-	{ 0 }, /* no exhaust ports */
-	/* transport */
-	{ 0 }, /* no exhaust ports */
-	/* battlestar */
-	#include "share/snis/models/battlestar.scad_params.h"
-	,
-	/* spaceship */
-	#include "share/snis/models/spaceship.scad_params.h"
-	,
-	/* asteroid-miner */
-	#include "share/snis/models/asteroid-miner.scad_params.h"
-	,
-	/* spaceship2 */
-	#include "share/snis/models/spaceship2.scad_params.h"
-	,
-	/* spaceship3 */
-	{ 0 }, /* no exhaust ports */
-	/* dragonhawk */
-	#include "share/snis/models/dragonhawk.scad_params.h"
-	,
-	/* skorpio */
-	#include "share/snis/models/skorpio.scad_params.h"
-	,
-	/* disruptor */
-	#include "share/snis/models/disruptor.scad_params.h"
-	,
-	/* research_vessel */
-	#include "share/snis/models/research-vessel.scad_params.h"
-	,
-	/* conqueror */
-	#include "share/snis/models/conqueror.scad_params.h"
-	,
-	/* scrambler */
-	#include "share/snis/models/scrambler.scad_params.h"
-	,
-	/* swordfish */
-	#include "share/snis/models/swordfish.scad_params.h"
-	,
-	/* wombat */
-	#include "share/snis/models/wombat.scad_params.h"
-	,
-	/* dreadknight */
-	#include "share/snis/models/dreadknight/dreadknight-exhaust-plumes.h"
-	,
-	/* vanquisher */
-	#include "share/snis/models/vanquisher.scad_params.h"
-	,
-};
-
-static struct thrust_attachment_point *ship_thrust_attachment_point(int shiptype)
-{
-	/* since range of shiptype is determined runtime by reading a file... */
-	if (shiptype < 0 || shiptype >= ARRAYSIZE(ship_thrust_attachment_points))
-		return NULL;
-	return &ship_thrust_attachment_points[shiptype];
-}
-
 /* size is 0.0 to 1.0 */
-static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e, int shiptype, int impulse)
+static void add_ship_thrust_entities(struct entity *thrust_entity[],
+		int *nthrust_ports, struct entity_context *cx, struct entity *e,
+		int shiptype, int impulse)
 {
 	int i;
 	struct thrust_attachment_point *ap = ship_thrust_attachment_point(shiptype);
@@ -4833,9 +4859,15 @@ static void add_ship_thrust_entities(struct entity_context *cx, struct entity *e
 	/* 180 is about max current with preset and 5x is about right for max size */
 	float thrust_size = clampf(impulse / 36.0, 0.1, 5.0);
 
+	if (nthrust_ports)
+		*nthrust_ports = 0;
 	for (i = 0; i < ap->nports; i++) {
 		struct entity *t = add_entity(cx, thrust_animation_mesh,
 			ap->port[i].pos.v.x, ap->port[i].pos.v.y, ap->port[i].pos.v.z, WHITE);
+		if (thrust_entity) {
+			thrust_entity[i] = t;
+			(*nthrust_ports)++;
+		}
 		if (t) {
 			update_entity_material(t, &thrust_material);
 			update_entity_orientation(t, &identity_quat);
@@ -4942,7 +4974,8 @@ static void show_weapons_camera_view(GtkWidget *w)
 	}
 
 	if (o->entity)
-		add_ship_thrust_entities(ecx, o->entity, o->tsd.ship.shiptype, o->tsd.ship.power_data.impulse.i);
+		add_ship_thrust_entities(NULL, NULL, ecx, o->entity,
+				o->tsd.ship.shiptype, o->tsd.ship.power_data.impulse.i);
 
 	render_entities(ecx);
 
@@ -5076,7 +5109,8 @@ static void show_mainscreen(GtkWidget *w)
 			}
 
 			if (player_ship)
-				add_ship_thrust_entities(ecx, player_ship, o->tsd.ship.shiptype,
+				add_ship_thrust_entities(NULL, NULL, ecx,
+					player_ship, o->tsd.ship.shiptype,
 					o->tsd.ship.power_data.impulse.i);
 
 			break;

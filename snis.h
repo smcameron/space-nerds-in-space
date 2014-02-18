@@ -378,6 +378,9 @@ struct ship_data {
 	float wallet;
 #define THREAT_LEVEL_FLEE_THRESHOLD 50.0 /* arrived at empirically */
 	float threat_level;
+#define MAX_THRUST_PORTS 5
+	int nthrust_ports;
+	struct entity *thrust_entity[MAX_THRUST_PORTS];
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200
