@@ -44,8 +44,8 @@ module main_body()
 use <imposter_thrust.scad>;
 thrust_ports = 0;
 if (thrust_ports) {
-	imposter_thrust(-34, 0, 14, 3.4);
-	imposter_thrust(-34, 0, -14, 3.4);
+	imposter_thrust(-34, 0, 14, 2.0);
+	imposter_thrust(-34, 0, -14, 2.0);
 }
 
 module neck()
