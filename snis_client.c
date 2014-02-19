@@ -1790,37 +1790,8 @@ static void move_objects(void)
 	}
 }
 
-void add_warp_effect(double x, double y, double z, int arriving, int time)
-{
-	int i;
-	struct entity *e;
-
-	i = snis_object_pool_alloc_obj(sparkpool);
-	if (i < 0)
-		return;
-	e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
-	if (e) {
-		set_render_style(e, spark_render_style);
-		update_entity_material(e, &warp_effect_material);
-		update_entity_scale(e, 0.1);
-	}
-	memset(&spark[i], 0, sizeof(spark[i]));
-	spark[i].index = i;
-	spark[i].x = x;
-	spark[i].y = y;
-	spark[i].z = z;
-	spark[i].vx = 0;
-	spark[i].vy = 0;
-	spark[i].vz = 0;
-	spark[i].type = OBJTYPE_WARP_EFFECT;
-	spark[i].alive = time;
-	spark[i].move = warp_effect_move;
-	spark[i].entity = e;
-	return;
-}
-
 void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
-		struct material *material, float shrink_factor, int debris_chance)
+		struct material *material, float shrink_factor, int debris_chance, float scale_factor)
 {
 	int i, r;
 	struct entity *e;
@@ -1835,7 +1806,7 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 		if (e) {
 			set_render_style(e, spark_render_style);
 			update_entity_material(e, material);
-			update_entity_scale(e, (float) snis_randn(100) / 25.0f);
+			update_entity_scale(e, scale_factor * (float) snis_randn(100) / 25.0f);
 		}
 	} else if (r > debris_chance + (100 - debris_chance / 2)) {
 		e = add_entity(ecx, debris_mesh, x, y, z, color);
@@ -1863,6 +1834,47 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	spark[i].alive = time + snis_randn(time);
 	spark[i].move = spark_move;
 	spark[i].entity = e;
+	return;
+}
+
+void add_warp_effect(double x, double y, double z, int arriving, int time, union vec3 *direction)
+{
+	int i;
+	struct entity *e;
+
+	i = snis_object_pool_alloc_obj(sparkpool);
+	if (i < 0)
+		return;
+	e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
+	if (e) {
+		set_render_style(e, spark_render_style);
+		update_entity_material(e, &warp_effect_material);
+		update_entity_scale(e, 0.1);
+	}
+	memset(&spark[i], 0, sizeof(spark[i]));
+	spark[i].index = i;
+	spark[i].x = x;
+	spark[i].y = y;
+	spark[i].z = z;
+	spark[i].vx = 0;
+	spark[i].vy = 0;
+	spark[i].vz = 0;
+	spark[i].type = OBJTYPE_WARP_EFFECT;
+	spark[i].alive = time;
+	spark[i].move = warp_effect_move;
+	spark[i].entity = e;
+
+	if (!arriving) {
+		for (i = 0; i < 50; i++) {
+			union vec3 v;
+			float speed;
+
+			speed = (float) snis_randn(300);
+			vec3_mul(&v, direction, speed);
+			add_spark(x, y, z, v.v.x, v.v.y, v.v.z, time * 3, WHITE,
+				&warp_effect_material, 0.95, 50, 4.0);
+		}
+	}
 	return;
 }
 
@@ -1896,7 +1908,7 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 		vx = v * cos(angle);
 		vy = v * cos(zangle) / 3.0;
 		vz = v * -sin(angle);
-		add_spark(x, y, z, vx, vy, vz, time, color, &spark_material, 0.95, 50);
+		add_spark(x, y, z, vx, vy, vz, time, color, &spark_material, 0.95, 50, 1.0);
 	}
 }
 
@@ -3740,6 +3752,7 @@ static int process_add_warp_effect(void)
 	int rc;
 	unsigned char buffer[100];
 	double ox, oy, oz, dx, dy, dz;
+	union vec3 direction;
 
 	rc = read_and_unpack_buffer(buffer, "SSSSSS",
 			&ox, (int32_t) UNIVERSE_DIM,
@@ -3751,8 +3764,14 @@ static int process_add_warp_effect(void)
 	if (rc)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	add_warp_effect(ox, oy, oz, 0, WARP_EFFECT_LIFETIME);
-	add_warp_effect(dx, dy, dz, 1, WARP_EFFECT_LIFETIME);
+
+	direction.v.x = dx - ox;
+	direction.v.y = dy - oy;
+	direction.v.z = dz - oz;
+	vec3_normalize_self(&direction);
+
+	add_warp_effect(ox, oy, oz, 0, WARP_EFFECT_LIFETIME, &direction);
+	add_warp_effect(dx, dy, dz, 1, WARP_EFFECT_LIFETIME, &direction);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
