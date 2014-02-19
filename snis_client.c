@@ -1842,10 +1842,12 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	return;
 }
 
-void add_warp_effect(double x, double y, double z, int arriving, int time, union vec3 *direction)
+void add_warp_effect(double x, double y, double z, int arriving, int time,
+			union vec3 *direction, float dist)
 {
 	int i;
 	struct entity *e;
+	int max_particle_speed = 300;
 
 	i = snis_object_pool_alloc_obj(sparkpool);
 	if (i < 0)
@@ -1869,13 +1871,15 @@ void add_warp_effect(double x, double y, double z, int arriving, int time, union
 	spark[i].move = warp_effect_move;
 	spark[i].entity = e;
 
+	if (max_particle_speed > dist / (time * 3.0))
+		max_particle_speed = (int) (dist / (time * 3.0));
 	if (!arriving) {
 #define NWARP_DEPARTURE_SPARKS 20
 		for (i = 0; i < NWARP_DEPARTURE_SPARKS; i++) {
 			union vec3 v;
 			float speed;
 
-			speed = (float) snis_randn(300);
+			speed = (float) snis_randn(max_particle_speed);
 			vec3_mul(&v, direction, speed);
 			add_spark(x, y, z, v.v.x, v.v.y, v.v.z, time * 3, WHITE,
 				&warp_effect_material, 0.95, 50, 4.0);
@@ -3758,6 +3762,7 @@ static int process_add_warp_effect(void)
 	int rc;
 	unsigned char buffer[100];
 	double ox, oy, oz, dx, dy, dz;
+	float dist;
 	union vec3 direction;
 
 	rc = read_and_unpack_buffer(buffer, "SSSSSS",
@@ -3774,10 +3779,11 @@ static int process_add_warp_effect(void)
 	direction.v.x = dx - ox;
 	direction.v.y = dy - oy;
 	direction.v.z = dz - oz;
+	dist = vec3_magnitude(&direction);
 	vec3_normalize_self(&direction);
 
-	add_warp_effect(ox, oy, oz, 0, WARP_EFFECT_LIFETIME, &direction);
-	add_warp_effect(dx, dy, dz, 1, WARP_EFFECT_LIFETIME, &direction);
+	add_warp_effect(ox, oy, oz, 0, WARP_EFFECT_LIFETIME, &direction, dist);
+	add_warp_effect(dx, dy, dz, 1, WARP_EFFECT_LIFETIME, &direction, dist);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
