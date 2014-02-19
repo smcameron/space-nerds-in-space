@@ -1870,7 +1870,8 @@ void add_warp_effect(double x, double y, double z, int arriving, int time, union
 	spark[i].entity = e;
 
 	if (!arriving) {
-		for (i = 0; i < 50; i++) {
+#define NWARP_DEPARTURE_SPARKS 20
+		for (i = 0; i < NWARP_DEPARTURE_SPARKS; i++) {
 			union vec3 v;
 			float speed;
 
