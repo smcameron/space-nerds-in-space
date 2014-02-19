@@ -2194,13 +2194,15 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 
 	position = fleet_position_number(f->fleet, o->id);
 	leader_id = fleet_get_leader_id(f->fleet);
-	i = lookup_by_id(leader_id);
-	if (i == o->id) { /* I'm the leader now */
+	if (leader_id == o->id) { /* I'm the leader now */
 		o->tsd.ship.ai[n].ai_mode = AI_MODE_FLEET_LEADER;
 		o->tsd.ship.ai[0].u.fleet.fleet_position = 0;
 		setup_patrol_route(o);
 		return;
 	}
+	i = lookup_by_id(leader_id);
+	if (i < 0)
+		return;
 	leader = &go[i];
 	offset = fleet_position(f->fleet, position, &leader->orientation);
 	o->tsd.ship.dox = offset.v.x + leader->x;
