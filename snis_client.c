@@ -1820,7 +1820,7 @@ void add_warp_effect(double x, double y, double z, int arriving, int time)
 }
 
 void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
-		struct material *material, float shrink_factor)
+		struct material *material, float shrink_factor, int debris_chance)
 {
 	int i, r;
 	struct entity *e;
@@ -1830,14 +1830,14 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	if (i < 0)
 		return;
 	r = snis_randn(100);
-	if (r < 50 || time < 10) {
+	if (r > debris_chance || time < 10) {
 		e = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
 		if (e) {
 			set_render_style(e, spark_render_style);
 			update_entity_material(e, material);
 			update_entity_scale(e, (float) snis_randn(100) / 25.0f);
 		}
-	} else if (r < 75) {
+	} else if (r > debris_chance + (100 - debris_chance / 2)) {
 		e = add_entity(ecx, debris_mesh, x, y, z, color);
 	} else {
 		e = add_entity(ecx, debris2_mesh, x, y, z, color);
@@ -1896,7 +1896,7 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 		vx = v * cos(angle);
 		vy = v * cos(zangle) / 3.0;
 		vz = v * -sin(angle);
-		add_spark(x, y, z, vx, vy, vz, time, color, &spark_material, 0.95);
+		add_spark(x, y, z, vx, vy, vz, time, color, &spark_material, 0.95, 50);
 	}
 }
 
