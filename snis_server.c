@@ -2214,7 +2214,7 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 	if (dist2 > 75.0 * 75.0 && dist2 <= FLEET_WARP_DISTANCE * FLEET_WARP_DISTANCE) {
 		/* catch up if too far away */
 		o->tsd.ship.velocity = leader->tsd.ship.velocity * 1.5;
-	} else if (dist2 > FLEET_WARP_DISTANCE * FLEET_WARP_DISTANCE) {
+	} else if (dist2 > FLEET_WARP_DISTANCE * FLEET_WARP_DISTANCE && snis_randn(100) < 8) {
 		/* If distance is too far, just warp */
 		add_warp_effect(o->x, o->y, o->z,
 			o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
