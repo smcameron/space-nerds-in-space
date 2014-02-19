@@ -1601,8 +1601,9 @@ static void move_sparks(void)
 	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++)
 		if (spark[i].alive) {
 			spark[i].move(&spark[i]);
-			update_entity_pos(spark[i].entity, spark[i].x,
-						spark[i].y, spark[i].z);
+			if (spark[i].entity)
+				update_entity_pos(spark[i].entity, spark[i].x,
+							spark[i].y, spark[i].z);
 		}
 }
 
@@ -1812,6 +1813,10 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 		e = add_entity(ecx, debris_mesh, x, y, z, color);
 	} else {
 		e = add_entity(ecx, debris2_mesh, x, y, z, color);
+	}
+	if (!e) {
+		snis_object_pool_free_object(sparkpool, i);
+		return;
 	}
 	memset(&spark[i], 0, sizeof(spark[i]));
 	spark[i].index = i;
