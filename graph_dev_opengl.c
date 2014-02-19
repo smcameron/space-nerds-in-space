@@ -37,6 +37,7 @@ static int draw_polygon_as_lines = 0;
 static int draw_msaa_samples = 0;
 static int draw_render_to_texture = 0;
 static int draw_fxaa = 0;
+static int draw_smaa = 0;
 
 struct mesh_gl_info {
 	/* common buffer to hold vertex positions */
@@ -669,7 +670,31 @@ struct graph_dev_gl_fs_effect_shader {
 	GLint texture_coord_id;
 	GLint tint_color_id;
 	GLint viewport_id;
-	GLint texture_id;
+	GLint texture0_id;
+	GLint texture1_id;
+	GLint texture2_id;
+};
+
+struct fbo_target {
+	GLuint fbo;
+	GLuint color0_texture;
+	GLuint color0_buffer;
+	GLuint depth_buffer;
+	int samples;
+	int width;
+	int height;
+};
+
+struct graph_dev_smaa_effect {
+	struct fbo_target edge_target;
+	struct fbo_target blend_target;
+
+	struct graph_dev_gl_fs_effect_shader edge_shader;
+	struct graph_dev_gl_fs_effect_shader blend_shader;
+	struct graph_dev_gl_fs_effect_shader neighborhood_shader;
+
+	GLuint area_tex;
+	GLuint search_tex;
 };
 
 /* store all the shader parameters */
@@ -690,6 +715,10 @@ static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_shad
 static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
 static struct graph_dev_gl_fs_effect_shader fs_fxaa_shader;
+static struct graph_dev_smaa_effect smaa_effect;
+
+static struct fbo_target msaa = { 0 };
+static struct fbo_target render_to_texture = { 0 };
 
 struct graph_dev_primitive {
 	int nvertices;
@@ -2083,18 +2112,32 @@ static void print_framebuffer_error()
 	}
 }
 
-struct fbo_target {
-	GLuint fbo;
-	GLuint color0_texture;
-	GLuint color0_buffer;
-	GLuint depth_buffer;
-	int samples;
-	int width;
-	int height;
-};
+static void resize_fbo_if_needed(struct fbo_target *target)
+{
+	if (target->width != sgc.screen_x || target->height != sgc.screen_y) {
+		/* need to resize the fbo attachments */
+		if (target->color0_texture > 0) {
+			glBindTexture(GL_TEXTURE_2D, target->color0_texture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
+				sgc.screen_x, sgc.screen_y, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+		}
 
-static struct fbo_target msaa = { 0 };
-static struct fbo_target render_to_texture = { 0 };
+		if (target->depth_buffer > 0) {
+			glBindRenderbuffer(GL_RENDERBUFFER, target->depth_buffer);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, sgc.screen_x, sgc.screen_y);
+		}
+
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target->fbo);
+
+		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (status != GL_FRAMEBUFFER_COMPLETE) {
+			print_framebuffer_error();
+		}
+
+		target->width = sgc.screen_x;
+		target->height = sgc.screen_y;
+	}
+}
 
 void graph_dev_start_frame()
 {
@@ -2130,31 +2173,9 @@ void graph_dev_start_frame()
 		}
 	} else if (draw_render_to_texture && render_to_texture.fbo > 0) {
 
+		resize_fbo_if_needed(&render_to_texture);
+
 		glBindFramebuffer(GL_FRAMEBUFFER, render_to_texture.fbo);
-
-		if (render_to_texture.width != sgc.screen_x || render_to_texture.height != sgc.screen_y) {
-			/* need to rebuild the fbo attachments */
-			glBindTexture(GL_TEXTURE_2D, render_to_texture.color0_texture);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
-				sgc.screen_x, sgc.screen_y, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-				render_to_texture.color0_texture, 0);
-
-			glBindRenderbuffer(GL_RENDERBUFFER, render_to_texture.depth_buffer);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, sgc.screen_x, sgc.screen_y);
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
-				render_to_texture.depth_buffer);
-
-			render_to_texture.width = sgc.screen_x;
-			render_to_texture.height = sgc.screen_y;
-
-			GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-			if (status != GL_FRAMEBUFFER_COMPLETE) {
-				print_framebuffer_error();
-			}
-		}
 	} else {
 		/* render direct to back buffer */
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -2164,21 +2185,41 @@ void graph_dev_start_frame()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-static void graph_dev_raster_fs_effect(struct graph_dev_gl_fs_effect_shader *shader, GLuint src_texture_id,
-	const struct sng_color *tint_color, float alpha)
+static void graph_dev_raster_fs_effect(struct graph_dev_gl_fs_effect_shader *shader, GLuint texture0_id,
+	GLuint texture1_id, GLuint texture2_id, const struct sng_color *tint_color, float alpha)
 {
 	static const struct mat44 mat_identity = { { { 1, 0, 0, 0}, { 0, 1, 0, 0 }, { 0, 0, 1, 0}, { 0, 0, 0, 1} } };
 
 	glUseProgram(shader->program_id);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, src_texture_id);
-	glUniform1i(shader->texture_id, 0);
+	if (texture0_id > 0) {
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture0_id);
+		if (shader->texture0_id > 0)
+			glUniform1i(shader->texture0_id, 0);
+	}
+
+	if (texture1_id > 0) {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, texture1_id);
+		if (shader->texture1_id > 0)
+			glUniform1i(shader->texture1_id, 1);
+	}
+
+	if (texture2_id > 0) {
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, texture2_id);
+		if (shader->texture2_id > 0)
+			glUniform1i(shader->texture2_id, 2);
+	}
 
 	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_identity.m[0][0]);
-	glUniform2f(shader->viewport_id, sgc.vp_width_3d, sgc.vp_height_3d);
-	glUniform4f(shader->tint_color_id, tint_color->red,
-		tint_color->green, tint_color->blue, alpha);
+	glUniform4f(shader->viewport_id, 1.0 / sgc.screen_x, 1.0 / sgc.screen_y,
+		sgc.screen_x, sgc.screen_y);
+
+	if (shader->tint_color_id > 0)
+		glUniform4f(shader->tint_color_id, tint_color->red,
+			tint_color->green, tint_color->blue, alpha);
 
 	glEnableVertexAttribArray(shader->vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, textured_unit_quad.vertex_buffer);
@@ -2224,14 +2265,43 @@ void graph_dev_end_frame()
 		glDisable(GL_MULTISAMPLE);
 
 	} else if (draw_render_to_texture && render_to_texture.fbo > 0) {
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glDrawBuffer(GL_BACK);
+		glViewport(0, 0, sgc.screen_x, sgc.screen_y);
 
 		if (draw_fxaa) {
-			glViewport(0, 0, sgc.screen_x, sgc.screen_y);
+			/* do fxaa from texture fbo to screen back buffer */
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			glDrawBuffer(GL_BACK);
+
 			static const struct sng_color tint = { 1, 1, 1 };
-			graph_dev_raster_fs_effect(&fs_fxaa_shader, render_to_texture.color0_texture, &tint, 1);
+			graph_dev_raster_fs_effect(&fs_fxaa_shader, render_to_texture.color0_texture, 0, 0, &tint, 1);
+		} else if (draw_smaa) {
+			/* do the multi stage smaa process:
+				render to texture -> edge_fbo -> blend_fbo -> screen back buffer */
+			resize_fbo_if_needed(&smaa_effect.edge_target);
+			resize_fbo_if_needed(&smaa_effect.blend_target);
+
+			/* edge detect pass - render into edge_fbo */
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, smaa_effect.edge_target.fbo);
+			glClear(GL_COLOR_BUFFER_BIT);
+			graph_dev_raster_fs_effect(&smaa_effect.edge_shader, render_to_texture.color0_texture,
+				0, 0, 0, 1);
+
+			/* blend pass - render into blend_fbo */
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, smaa_effect.blend_target.fbo);
+			glClear(GL_COLOR_BUFFER_BIT);
+			graph_dev_raster_fs_effect(&smaa_effect.blend_shader, smaa_effect.edge_target.color0_texture,
+				smaa_effect.area_tex, smaa_effect.search_tex, 0, 1);
+
+			/* eighborhood pass - render to back buffer */
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			glDrawBuffer(GL_BACK);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			graph_dev_raster_fs_effect(&smaa_effect.neighborhood_shader, render_to_texture.color0_texture,
+				smaa_effect.blend_target.color0_texture, 0, 0, 1);
 		} else {
+			/* no effect so just blit the fbo texture to the screen */
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			glDrawBuffer(GL_BACK);
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, render_to_texture.fbo);
 			glBlitFramebuffer(0, 0, render_to_texture.width, render_to_texture.height, 0, 0,
 				sgc.screen_x, sgc.screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
@@ -2745,7 +2815,115 @@ static void setup_fs_effect_shader(const char *basename, struct graph_dev_gl_fs_
 	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_tex_coord");
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->viewport_id = glGetUniformLocation(shader->program_id, "u_Viewport");
-	shader->texture_id = glGetUniformLocation(shader->program_id, "textureSampler");
+	shader->texture0_id = glGetUniformLocation(shader->program_id, "texture0Sampler");
+	shader->texture1_id = glGetUniformLocation(shader->program_id, "texture1Sampler");
+	shader->texture2_id = glGetUniformLocation(shader->program_id, "texture2Sampler");
+}
+
+static void setup_smaa_effect_shader(const char *basename, struct graph_dev_gl_fs_effect_shader *shader)
+{
+	const char *vert_header =
+		"#version 120\n"
+		"#define INCLUDE_VS 1\n";
+	const char *frag_header =
+		"#version 120\n"
+		"#define INCLUDE_FS 1\n";
+
+	char shader_filename[255];
+	snprintf(shader_filename, sizeof(shader_filename), "share/snis/shader/%s.shader", basename);
+
+	const char *filenames[] = {
+		"share/snis/shader/smaa-high.shader",
+		"share/snis/shader/SMAA.hlsl",
+		shader_filename };
+
+	shader->program_id = load_concat_shaders(vert_header, 3, filenames,
+		frag_header, 3, filenames);
+
+	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
+	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
+	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
+	shader->tint_color_id = -1;
+	shader->viewport_id = glGetUniformLocation(shader->program_id, "u_Viewport");
+	shader->texture0_id = -1;
+	shader->texture1_id = -1;
+	shader->texture2_id = -1;
+}
+
+static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
+{
+	struct graph_dev_gl_fs_effect_shader *shader;
+
+	shader = &effect->edge_shader;
+	setup_smaa_effect_shader("smaa-edge", shader);
+	shader->texture0_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
+
+	shader = &effect->blend_shader;
+	setup_smaa_effect_shader("smaa-blend", shader);
+	shader->texture0_id = glGetUniformLocation(shader->program_id, "u_EdgeTex");
+	shader->texture1_id = glGetUniformLocation(shader->program_id, "u_AreaTex");
+	shader->texture2_id = glGetUniformLocation(shader->program_id, "u_SearchTex");
+
+	shader = &effect->neighborhood_shader;
+	setup_smaa_effect_shader("smaa-neighborhood", shader);
+	shader->texture0_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
+	shader->texture1_id = glGetUniformLocation(shader->program_id, "u_BlendTex");
+
+	glGenTextures(1, &effect->edge_target.color0_texture);
+	glBindTexture(GL_TEXTURE_2D, effect->edge_target.color0_texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	effect->edge_target.width = 0;
+	effect->edge_target.height = 0;
+
+	glGenTextures(1, &effect->blend_target.color0_texture);
+	glBindTexture(GL_TEXTURE_2D, effect->blend_target.color0_texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	effect->blend_target.width = 0;
+	effect->blend_target.height = 0;
+
+	/* include file defines sizes and areaTexBytes of the area texture */
+#include "share/snis/textures/AreaTex.h"
+
+	glGenTextures(1, &effect->area_tex);
+	glBindTexture(GL_TEXTURE_2D, effect->area_tex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE8_ALPHA8, (GLsizei)AREATEX_WIDTH, (GLsizei)AREATEX_HEIGHT, 0,
+		GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, areaTexBytes);
+
+	/* include file defines sizes and searchTexBytes of the search texture */
+#include "share/snis/textures/SearchTex.h"
+
+	glGenTextures(1, &effect->search_tex);
+	glBindTexture(GL_TEXTURE_2D, effect->search_tex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, (GLsizei)SEARCHTEX_WIDTH, (GLsizei)SEARCHTEX_HEIGHT, 0,
+		GL_RED, GL_UNSIGNED_BYTE, searchTexBytes);
+
+	GLenum modes[] = { GL_COLOR_ATTACHMENT0 };
+
+	glGenFramebuffers(1, &effect->edge_target.fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, effect->edge_target.fbo);
+	glDrawBuffers(1, modes);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+		effect->edge_target.color0_texture, 0);
+
+	glGenFramebuffers(1, &effect->blend_target.fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, effect->blend_target.fbo);
+	glDrawBuffers(1, modes);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+		effect->blend_target.color0_texture, 0);
 }
 
 static void setup_2d()
@@ -2781,9 +2959,26 @@ int graph_dev_setup()
 	}
 
 	if (fbo_render_to_texture_supported()) {
-		glGenFramebuffers(1, &render_to_texture.fbo);
 		glGenTextures(1, &render_to_texture.color0_texture);
+		glBindTexture(GL_TEXTURE_2D, render_to_texture.color0_texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
 		glGenRenderbuffers(1, &render_to_texture.depth_buffer);
+		glBindRenderbuffer(GL_RENDERBUFFER, render_to_texture.depth_buffer);
+
+		GLenum modes[] = { GL_COLOR_ATTACHMENT0, GL_DEPTH_ATTACHMENT };
+
+		glGenFramebuffers(1, &render_to_texture.fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, render_to_texture.fbo);
+		glDrawBuffers(2, modes);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+			render_to_texture.color0_texture, 0);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
+			render_to_texture.depth_buffer);
+
 		render_to_texture.width = 0;
 		render_to_texture.height = 0;
 		render_to_texture.samples = 0;
@@ -2806,6 +3001,9 @@ int graph_dev_setup()
 	setup_textured_cubemap_lit_with_annulus_shadow_shader(&textured_cubemap_lit_with_annulus_shadow_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
 	setup_fs_effect_shader("fs-effect-fxaa", &fs_fxaa_shader);
+
+	if (fbo_render_to_texture_supported())
+		setup_smaa_effect(&smaa_effect);
 
 	setup_cubemap_cube(&cubemap_cube);
 	setup_textured_unit_quad(&textured_unit_quad);
@@ -2981,9 +3179,9 @@ void graph_dev_display_debug_menu_show()
 {
 	int x, y;
 	sng_set_foreground(BLACK);
-	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 165);
+	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 185);
 	sng_set_foreground(WHITE);
-	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 165);
+	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 185);
 
 	y = 35;
 	x = 15;
@@ -3057,6 +3255,17 @@ void graph_dev_display_debug_menu_show()
 	if (draw_fxaa)
 		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
 	sng_abs_xy_draw_string("FXAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+
+	if (!draw_render_to_texture)
+		sng_set_foreground(GRAY75);
+	else
+		sng_set_foreground(WHITE);
+	x = 15;
+	y += 20;
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
+	if (draw_smaa)
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string("SMAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
 }
 
 int graph_dev_graph_dev_debug_menu_click(int x, int y)
@@ -3091,6 +3300,10 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 	}
 	if (x >= 15 && x <= 35 && y >= 175 && y <= 190) {
 		draw_fxaa = !draw_fxaa;
+		return 1;
+	}
+	if (x >= 15 && x <= 35 && y >= 195 && y <= 210) {
+		draw_smaa = !draw_smaa;
 		return 1;
 	}
 	return 0;

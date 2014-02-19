@@ -1,6 +1,5 @@
-#version 120
 /*
-	Copyright © 2014 Jeremy Van Grinsven
+	Copyright (C) 2014 Jeremy Van Grinsven
 
 	This file is part of Spacenerds In Space.
 
@@ -19,25 +18,34 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-uniform mat4 u_MVPMatrix;
-uniform vec4 u_Viewport;
-uniform vec4 u_TintColor;
+varying vec2 v_TexCoord;
+varying vec2 v_PixCoord;
+varying vec4 v_Offset[3];
 
-attribute vec4 a_Position; // Per-vertex position information we will pass in.
-attribute vec2 a_tex_coord; // Per-vertex texture coord we will pass in.
+#if defined(INCLUDE_VS)
+	uniform mat4 u_MVPMatrix;
 
-// The inverse of the texture dimensions along X and Y
-varying vec2 texcoordOffset;
+	attribute vec4 a_Position;
+	attribute vec2 a_TexCoord;
 
-varying vec4 vertColor;
-varying vec2 vertTexcoord;
+	void main()
+	{
+		SMAABlendingWeightCalculationVS(a_TexCoord, v_PixCoord, v_Offset);
 
-void main(void)
-{
-	texcoordOffset = u_Viewport.xy;
-	vertColor = u_TintColor;
-	vertTexcoord = a_tex_coord;
+		v_TexCoord = a_TexCoord;
+		gl_Position = u_MVPMatrix * a_Position;
+	}
+#endif
 
-	gl_Position = u_MVPMatrix * a_Position;
-}
+#if defined(INCLUDE_FS)
+	uniform sampler2D u_EdgeTex;
+	uniform sampler2D u_AreaTex;
+	uniform sampler2D u_SearchTex;
+
+	void main()
+	{
+		gl_FragColor = SMAABlendingWeightCalculationPS(v_TexCoord, v_PixCoord, v_Offset,
+			u_EdgeTex, u_AreaTex, u_SearchTex, ivec4(0));
+	}
+#endif
 

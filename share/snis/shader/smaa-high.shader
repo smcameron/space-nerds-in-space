@@ -1,6 +1,5 @@
-#version 120
 /*
-	Copyright © 2014 Jeremy Van Grinsven
+	Copyright (C) 2014 Jeremy Van Grinsven
 
 	This file is part of Spacenerds In Space.
 
@@ -19,25 +18,20 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-uniform mat4 u_MVPMatrix;
 uniform vec4 u_Viewport;
-uniform vec4 u_TintColor;
 
-attribute vec4 a_Position; // Per-vertex position information we will pass in.
-attribute vec2 a_tex_coord; // Per-vertex texture coord we will pass in.
+#define SMAA_RT_METRICS u_Viewport
+#define SMAA_PRESET_HIGH
+#define SMAA_GLSL_2
 
-// The inverse of the texture dimensions along X and Y
-varying vec2 texcoordOffset;
+#define SMAA_AREATEX_SELECT(sample) sample.ra
 
-varying vec4 vertColor;
-varying vec2 vertTexcoord;
+#if defined(INCLUDE_VS)
+#define SMAA_INCLUDE_PS 0
+#endif
 
-void main(void)
-{
-	texcoordOffset = u_Viewport.xy;
-	vertColor = u_TintColor;
-	vertTexcoord = a_tex_coord;
+#if defined(INCLUDE_FS)
+#define SMAA_INCLUDE_VS 0
+#endif
 
-	gl_Position = u_MVPMatrix * a_Position;
-}
 

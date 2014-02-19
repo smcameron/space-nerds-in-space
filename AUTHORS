@@ -27,3 +27,16 @@ originally imported.
 OpenGL wireframe shaders by: "Alexandros Frantzis" <alexandros.frantzis@canonical.com>
 Relicensed with permission to GPLv2.
 
+SMAA - SUBPIXEL MORPHOLOGICAL ANTIALIASING
+	Copyright (C) 2013 Jorge Jimenez (jorge@iryoku.com)
+	Copyright (C) 2013 Jose I. Echevarria (joseignacioechevarria@gmail.com)
+	Copyright (C) 2013 Belen Masia (bmasia@unizar.es)
+	Copyright (C) 2013 Fernando Navarro (fernandn@microsoft.com)
+	Copyright (C) 2013 Diego Gutierrez (diegog@unizar.es)
+
+	MIT style license is detailed in the source files:
+		share/snis/shader/SMAA.hlsl
+		share/snis/textures/AreaTex.h
+		share/snis/textures/SearchTex.h
+
+
