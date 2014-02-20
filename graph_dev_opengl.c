@@ -36,7 +36,6 @@ static int draw_billboard_wireframe = 0;
 static int draw_polygon_as_lines = 0;
 static int draw_msaa_samples = 0;
 static int draw_render_to_texture = 0;
-static int draw_fxaa = 0;
 static int draw_smaa = 0;
 
 struct mesh_gl_info {
@@ -714,7 +713,6 @@ static struct graph_dev_gl_textured_shader textured_lit_shader;
 static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_shader;
 static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
-static struct graph_dev_gl_fs_effect_shader fs_fxaa_shader;
 static struct graph_dev_smaa_effect smaa_effect;
 
 static struct fbo_target msaa = { 0 };
@@ -2267,14 +2265,7 @@ void graph_dev_end_frame()
 	} else if (draw_render_to_texture && render_to_texture.fbo > 0) {
 		glViewport(0, 0, sgc.screen_x, sgc.screen_y);
 
-		if (draw_fxaa) {
-			/* do fxaa from texture fbo to screen back buffer */
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			glDrawBuffer(GL_BACK);
-
-			static const struct sng_color tint = { 1, 1, 1 };
-			graph_dev_raster_fs_effect(&fs_fxaa_shader, render_to_texture.color0_texture, 0, 0, &tint, 1);
-		} else if (draw_smaa) {
+		if (draw_smaa) {
 			/* do the multi stage smaa process:
 				render to texture -> edge_fbo -> blend_fbo -> screen back buffer */
 			resize_fbo_if_needed(&smaa_effect.edge_target);
@@ -2800,7 +2791,8 @@ static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle
 	shader->end_tint_color_id = glGetAttribLocation(shader->program_id, "a_EndTintColor");
 }
 
-static void setup_fs_effect_shader(const char *basename, struct graph_dev_gl_fs_effect_shader *shader)
+static void __attribute__((unused)) setup_fs_effect_shader(const char *basename,
+	struct graph_dev_gl_fs_effect_shader *shader)
 {
 	/* Create and compile our GLSL program from the shaders */
 	char vert_filename[255];
@@ -3000,7 +2992,6 @@ int graph_dev_setup()
 	setup_textured_cubemap_lit_shader(&textured_cubemap_lit_shader);
 	setup_textured_cubemap_lit_with_annulus_shadow_shader(&textured_cubemap_lit_with_annulus_shadow_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
-	setup_fs_effect_shader("fs-effect-fxaa", &fs_fxaa_shader);
 
 	if (fbo_render_to_texture_supported())
 		setup_smaa_effect(&smaa_effect);
@@ -3179,9 +3170,9 @@ void graph_dev_display_debug_menu_show()
 {
 	int x, y;
 	sng_set_foreground(BLACK);
-	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 185);
+	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 165);
 	sng_set_foreground(WHITE);
-	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 185);
+	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 165);
 
 	y = 35;
 	x = 15;
@@ -3252,17 +3243,6 @@ void graph_dev_display_debug_menu_show()
 	x = 15;
 	y += 20;
 	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (draw_fxaa)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string("FXAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
-
-	if (!draw_render_to_texture)
-		sng_set_foreground(GRAY75);
-	else
-		sng_set_foreground(WHITE);
-	x = 15;
-	y += 20;
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
 	if (draw_smaa)
 		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
 	sng_abs_xy_draw_string("SMAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
@@ -3299,10 +3279,6 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 		return 1;
 	}
 	if (x >= 15 && x <= 35 && y >= 175 && y <= 190) {
-		draw_fxaa = !draw_fxaa;
-		return 1;
-	}
-	if (x >= 15 && x <= 35 && y >= 195 && y <= 210) {
 		draw_smaa = !draw_smaa;
 		return 1;
 	}
