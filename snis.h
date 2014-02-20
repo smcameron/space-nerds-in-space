@@ -193,6 +193,9 @@ struct damcon_data;
 /* distance more than which fleet ships will warp back to position rather than simply flying */
 #define FLEET_WARP_DISTANCE 5000.0
 
+/* Roughly every 5 minutes, 1 in 10 guys leaves a fleet */
+#define FLEET_LEAVE_CHANCE (10 /* ticks */ * 60 /* secs/min */ * 5 /* mins */ * 10/* guys */)
+
 struct ai_attack_data {
 	int32_t victim_id;
 };

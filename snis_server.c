@@ -2308,6 +2308,24 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 	check_for_nearby_targets(o);
 }
 
+static void maybe_leave_fleet(struct snis_entity *o)
+{
+	int i;
+
+	if (snis_randn(FLEET_LEAVE_CHANCE) != 1)
+		return;
+
+	for (i = 0; i < o->tsd.ship.nai_entries; i++) {
+		if (o->tsd.ship.ai[i].ai_mode == AI_MODE_FLEET_MEMBER) {
+			fleet_leave(o->id);
+			o->tsd.ship.nai_entries = 0;
+			memset(o->tsd.ship.ai, 0, sizeof(o->tsd.ship.ai));
+			ship_figure_out_what_to_do(o);
+			return;
+		}
+	}
+}
+
 static void ai_brain(struct snis_entity *o)
 {
 	int n;
@@ -2344,6 +2362,7 @@ static void ai_brain(struct snis_entity *o)
 		o->tsd.ship.ai[n].u.hangout.time_to_go--;
 		if (o->tsd.ship.ai[n].u.hangout.time_to_go <= 0)
 			pop_ai_stack(o);
+		maybe_leave_fleet(o);
 		break;
 	default:
 		break;
