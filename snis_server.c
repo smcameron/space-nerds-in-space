@@ -4967,23 +4967,6 @@ static int l_add_derelict(lua_State *l)
 	return 1;
 }
 
-
-static void add_derelicts(void)
-{
-	int i;
-	double x, y, z, vx, vy, vz;
-
-	for (i = 0; i < NDERELICTS; i++) {
-		x = (double) snis_randn(1000) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
-		z = (double) snis_randn(1000) * ZKNOWN_DIM / 1000.0;
-		vx = snis_random_float() * 10.0;
-		vy = snis_random_float() * 10.0;
-		vz = snis_random_float() * 10.0;
-		add_derelict(NULL, x, y, z, vx, vy, vz, -1, -1);
-	}
-}
-
 static int add_planet(double x, double y, double z, float radius)
 {
 	int i;
@@ -5181,7 +5164,6 @@ static void make_universe(void)
 
 	add_nebulae(); /* do nebula first */
 	add_asteroids();
-	add_derelicts();
 	add_planets();
 	add_starbases();
 	add_wormholes();
