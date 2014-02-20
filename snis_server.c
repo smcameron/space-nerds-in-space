@@ -1346,7 +1346,6 @@ static void setup_patrol_route(struct snis_entity *o)
 
 static void ship_figure_out_what_to_do(struct snis_entity *o)
 {
-	int n;
 	int fleet_shape;
 
 	if (o->tsd.ship.nai_entries > 0)
@@ -1357,6 +1356,10 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 		setup_patrol_route(o);
 		break;
 	case 2:
+		if (o->sdata.faction == 0) {
+			setup_patrol_route(o);
+			break;
+		}
 		if ((snis_randn(100) % 2) == 0)
 			fleet_shape = FLEET_TRIANGLE;
 		else
@@ -1366,24 +1369,28 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 			o->tsd.ship.ai[0].ai_mode = AI_MODE_FLEET_LEADER;
 			o->tsd.ship.ai[0].u.fleet.fleet = fleet_new(fleet_shape, o->id);
 			o->tsd.ship.ai[0].u.fleet.fleet_position = 0;
-			if (o->sdata.faction == 0)
-				o->sdata.faction = 1;
 		} else {
 			struct snis_entity *leader;
 			int32_t leader_id;
-			int i;
+			int i, j, joined;
 
-			n = snis_randn(5);
-			o->tsd.ship.ai[0].ai_mode = AI_MODE_FLEET_MEMBER;
-			o->tsd.ship.ai[0].u.fleet.fleet = n;
-			o->tsd.ship.ai[0].u.fleet.fleet_position = fleet_join(n, o->id);
-
-			/* keep fleet memebers from fighting each other */
-			/* FIXME: think of something better */
-			leader_id = fleet_get_leader_id(n);
-			i = lookup_by_id(leader_id);
-			leader = &go[i];
-			o->sdata.faction = leader->sdata.faction;
+			joined = 0;
+			for (i = 0; i < 5; i++) {
+				leader_id = fleet_get_leader_id(i);
+				j = lookup_by_id(leader_id);
+				leader = &go[j];
+				/* only join fleet of own faction */
+				if (leader->sdata.faction != o->sdata.faction)
+					continue;
+				o->tsd.ship.ai[0].ai_mode = AI_MODE_FLEET_MEMBER;
+				o->tsd.ship.ai[0].u.fleet.fleet = i;
+				o->tsd.ship.ai[0].u.fleet.fleet_position = fleet_join(i, o->id);
+				joined = 1;
+			}
+			if (!joined) {
+				setup_patrol_route(o);
+				break;
+			}
 		}
 	default:
 		break;
