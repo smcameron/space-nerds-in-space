@@ -431,6 +431,7 @@ struct netstats_packet {
 	uint64_t bytes_recd;
 	uint32_t nships, nobjects;
 	uint32_t elapsed_seconds;
+	uint32_t faction_population[5];
 };
 
 struct comms_transmission_packet {

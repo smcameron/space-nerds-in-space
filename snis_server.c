@@ -83,6 +83,7 @@
 #define MAXCLIENTS 100
 
 struct network_stats netstats;
+int faction_population[5];
 
 #define GATHER_OPCODE_STATS 0
 
@@ -8661,10 +8662,15 @@ static void queue_netstats(struct game_client *c)
 		return;
 	gettimeofday(&now, NULL);
 	elapsed_seconds = now.tv_sec - netstats.start.tv_sec;
-	pb_queue_to_client(c, packed_buffer_new("hqqwww", OPCODE_UPDATE_NETSTATS,
+	pb_queue_to_client(c, packed_buffer_new("hqqwwwwwwww", OPCODE_UPDATE_NETSTATS,
 					netstats.bytes_sent, netstats.bytes_recd,
 					netstats.nobjects, netstats.nships,
-					elapsed_seconds));
+					elapsed_seconds,
+					faction_population[0],
+					faction_population[1],
+					faction_population[2],
+					faction_population[3],
+					faction_population[4]));
 }
 
 static void queue_up_client_damcon_object_update(struct game_client *c,
@@ -9622,6 +9628,7 @@ static void move_objects(void)
 	int i;
 
 	pthread_mutex_lock(&universe_mutex);
+	memset(faction_population, 0, sizeof(faction_population));
 	netstats.nobjects = 0;
 	netstats.nships = 0;
 	universe_timestamp++;
@@ -9629,6 +9636,10 @@ static void move_objects(void)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (go[i].alive) {
 			go[i].move(&go[i]);
+			if (go[i].type == OBJTYPE_SHIP2 &&
+				go[i].sdata.faction < ARRAY_SIZE(faction_population)) {
+				faction_population[go[i].sdata.faction]++;
+			}
 			netstats.nobjects++;
 		} else {
 			if (go[i].type == OBJTYPE_SHIP1 &&

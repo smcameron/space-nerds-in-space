@@ -213,6 +213,7 @@ struct client_network_stats {
 	uint64_t bytes_recd;
 	uint32_t nobjects, nships;
 	uint32_t elapsed_seconds;
+	uint32_t faction_population[5];
 } netstats;
 
 int nframes = 0;
@@ -4027,9 +4028,14 @@ static int process_update_netstats(void)
 	unsigned char buffer[sizeof(struct netstats_packet)];
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "qqwww", &netstats.bytes_sent,
+	rc = read_and_unpack_buffer(buffer, "qqwwwwwwww", &netstats.bytes_sent,
 				&netstats.bytes_recd, &netstats.nobjects,
-				&netstats.nships, &netstats.elapsed_seconds);
+				&netstats.nships, &netstats.elapsed_seconds,
+				&netstats.faction_population[0],
+				&netstats.faction_population[1],
+				&netstats.faction_population[2],
+				&netstats.faction_population[3],
+				&netstats.faction_population[4]);
 	if (rc != 0)
 		return rc;
 	return 0;
@@ -10425,12 +10431,18 @@ static void show_demon(GtkWidget *w)
 	if (netstats.elapsed_seconds == 0)
 		sprintf(buffer, "Waiting for data");
 	else 
-		sprintf(buffer, "TX:%llu RX:%llu T=%lu SECS. BW=%llu B/S SHIPS:%u OBJS:%u",
+		sprintf(buffer,
+			"TX:%llu RX:%llu T=%lu SECS. BW=%llu B/S SHIPS:%u OBJS:%u %u/%u/%u/%u/%u",
 			(unsigned long long) netstats.bytes_sent,
 			(unsigned long long) netstats.bytes_recd, 
 			(unsigned long) netstats.elapsed_seconds,
 			(unsigned long long) (netstats.bytes_recd + netstats.bytes_sent) / netstats.elapsed_seconds,
-			netstats.nships, netstats.nobjects);
+			netstats.nships, netstats.nobjects,
+			netstats.faction_population[0],
+			netstats.faction_population[1],
+			netstats.faction_population[2],
+			netstats.faction_population[3],
+			netstats.faction_population[4]);
 	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
 
 	if (demon_ui.selectmode) {
