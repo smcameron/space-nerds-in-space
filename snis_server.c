@@ -1199,17 +1199,21 @@ static void attack_your_attacker(struct snis_entity *attackee, struct snis_entit
 }
 
 static int add_derelict(const char *name, double x, double y, double z,
-			int shiptype, int the_faction);
+			double vx, double vy, double vz, int shiptype, int the_faction);
 
 static int add_cargo_container(double x, double y, double z, double vx, double vy, double vz);
 static int make_derelict(struct snis_entity *o)
 {
 	int rc;
-	rc = add_derelict(o->sdata.name, o->x, o->y, o->z, o->tsd.ship.shiptype, o->sdata.faction);
+	rc = add_derelict(o->sdata.name, o->x, o->y, o->z,
+				o->vx + snis_random_float() * 2.0,
+				o->vy + snis_random_float() * 2.0,
+				o->vz + snis_random_float() * 2.0,
+				o->tsd.ship.shiptype, o->sdata.faction);
 	(void) add_cargo_container(o->x, o->y, o->z,
-		0.5f * (snis_randn(1000) - 500) / 500.0f,
-		0.5f * (snis_randn(1000) - 500) / 500.0f,
-		0.5f * (snis_randn(1000) - 500) / 500.0f);
+				o->vx + snis_random_float() * 2.0,
+				o->vy + snis_random_float() * 2.0,
+				o->vz + snis_random_float());
 	return rc;
 }
 
@@ -4906,6 +4910,7 @@ static void add_asteroids(void)
 }
 
 static int add_derelict(const char *name, double x, double y, double z,
+			double vx, double vy, double vz,
 			int shiptype, int the_faction)
 {
 	int i;
@@ -4933,14 +4938,15 @@ static int add_derelict(const char *name, double x, double y, double z,
 		v.v.z = z;
 		go[i].sdata.faction = (uint8_t) nearest_faction(v);
 	}
-	go[i].vx = (float) snis_randn(100) / 400.0 * ship_type[0].max_speed;
-	go[i].vz = (float) snis_randn(100) / 400.0 * ship_type[0].max_speed;
+	go[i].vx = vx;
+	go[i].vy = vy;
+	go[i].vz = vz;
 	return i;
 }
 
 static int l_add_derelict(lua_State *l)
 {
-	double x, y, z, shiptype, the_faction;
+	double x, y, z, vx, vy, vz, shiptype, the_faction;
 	const char *name;
 	int i;
 
@@ -4952,7 +4958,10 @@ static int l_add_derelict(lua_State *l)
 	the_faction = lua_tonumber(lua_state, 6);
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_derelict(name, x, y, z, shiptype, the_faction);
+	vx = snis_random_float() * 10.0;
+	vy = snis_random_float() * 10.0;
+	vz = snis_random_float() * 10.0;
+	i = add_derelict(name, x, y, z, vx, vy, vz, shiptype, the_faction);
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -4962,13 +4971,16 @@ static int l_add_derelict(lua_State *l)
 static void add_derelicts(void)
 {
 	int i;
-	double x, y, z;
+	double x, y, z, vx, vy, vz;
 
 	for (i = 0; i < NDERELICTS; i++) {
 		x = (double) snis_randn(1000) * XKNOWN_DIM / 1000.0;
 		y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
 		z = (double) snis_randn(1000) * ZKNOWN_DIM / 1000.0;
-		add_derelict(NULL, x, y, z, -1, -1);
+		vx = snis_random_float() * 10.0;
+		vy = snis_random_float() * 10.0;
+		vz = snis_random_float() * 10.0;
+		add_derelict(NULL, x, y, z, vx, vy, vz, -1, -1);
 	}
 }
 
