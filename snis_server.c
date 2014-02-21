@@ -543,19 +543,40 @@ static void cargo_container_move(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 }
 
+static void derelict_collision_detection(void *derelict, void *object)
+{
+	struct snis_entity *o = object;
+	struct snis_entity *d = derelict;
+	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2)
+		d->alive = 1;
+}
+
 static void derelict_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
 
+	if (o->alive > 1)
+		o->alive--;
+
 	/* Cull distant derelicts so they don't overpopulate the server */
-	if ((universe_timestamp & 0x03f) == (o->id & 0x03f)) { /* throttle computation */
+	if (o->alive == 1 &&
+		(universe_timestamp & 0x03f) == (o->id & 0x03f)) { /* throttle computation */
 		float dist = dist3d(o->x - XKNOWN_DIM / 2.0,
 					o->y - YKNOWN_DIM / 2.0, o->z - ZKNOWN_DIM / 2.0);
 		if (dist > (1.15 * XKNOWN_DIM / 2.0)) {
 			o->alive = 0;
 			delete_from_clients_and_server(o);
+			return;
 		}
+		o->alive = 0; /* assume it is time to die and nobody's nearby */
+		/* check if anybody's nearby ... */
+		space_partition_process(space_partition, o, o->x, o->z, o,
+					derelict_collision_detection);
+	}
+	if (!o->alive) {
+		delete_from_clients_and_server(o);
+		return;
 	}
 }
 
@@ -4981,6 +5002,7 @@ static int add_derelict(const char *name, double x, double y, double z,
 	go[i].vx = vx;
 	go[i].vy = vy;
 	go[i].vz = vz;
+	go[i].alive = 60 * 10; /* 1 minute */
 	return i;
 }
 
