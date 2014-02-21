@@ -22,7 +22,9 @@ uniform vec4 u_Viewport;
 
 #define SMAA_RT_METRICS u_Viewport
 #define SMAA_PRESET_HIGH
+#if !defined(SMAA_GLSL_2) && !defined(SMAA_GLSL_3) && !defined(SMAA_GLSL_4)
 #define SMAA_GLSL_2
+#endif
 
 #define SMAA_AREATEX_SELECT(sample) sample.ra
 

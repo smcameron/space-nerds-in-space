@@ -2847,15 +2847,31 @@ static void __attribute__((unused)) setup_fs_effect_shader(const char *basename,
 
 static void setup_smaa_effect_shader(const char *basename, struct graph_dev_gl_fs_effect_shader *shader)
 {
-	const char *vert_header =
-		"#version 120\n"
-		"#define INCLUDE_VS 1\n";
-	const char *frag_header =
-		"#version 120\n"
-		"#define INCLUDE_FS 1\n";
-
 	char shader_filename[255];
 	snprintf(shader_filename, sizeof(shader_filename), "share/snis/shader/%s.shader", basename);
+
+	const char *vert_header;
+	const char *frag_header;
+	if (GLEW_VERSION_3_0) {
+		vert_header =
+			"#version 130\n"
+			"#define INCLUDE_VS 1\n"
+			"#define SMAA_GLSL_3\n";
+		frag_header =
+			"#version 130\n"
+			"#define INCLUDE_FS 1\n"
+			"#define SMAA_GLSL_3\n";
+	} else {
+		/* fall back to OGL 2.1 */
+		vert_header =
+			"#version 120\n"
+			"#define INCLUDE_VS 1\n"
+			"#define SMAA_GLSL_2\n";
+		frag_header =
+			"#version 120\n"
+			"#define INCLUDE_FS 1\n"
+			"#define SMAA_GLSL_2\n";
+	}
 
 	const char *filenames[] = {
 		"share/snis/shader/smaa-high.shader",
@@ -2971,6 +2987,9 @@ int graph_dev_setup()
 		return -1;
 	}
 	printf("Initialized GLEW\n");
+
+	if (GLEW_VERSION_3_0)
+		printf("OpenGL 3.0 available\n");
 
 	glDepthFunc(GL_LESS);
 
