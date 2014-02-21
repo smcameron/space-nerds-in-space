@@ -592,6 +592,7 @@ struct graph_dev_gl_point_cloud_shader {
 	GLint vertex_position_id;
 	GLint point_size_id;
 	GLint color_id;
+	GLint time_id;
 };
 
 struct graph_dev_gl_skybox_shader {
@@ -705,6 +706,7 @@ static struct graph_dev_gl_single_color_shader single_color_shader;
 static struct graph_dev_gl_line_single_color_shader line_single_color_shader;
 static struct graph_dev_gl_vertex_color_shader vertex_color_shader;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
+static struct graph_dev_gl_point_cloud_shader point_cloud_intensity_noise_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
 static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
 static struct graph_dev_gl_textured_shader textured_shader;
@@ -1533,8 +1535,9 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 	glDisable(GL_DEPTH_TEST);
 }
 
-void graph_dev_raster_point_cloud_mesh(const struct mat44 *mat_mvp, struct mesh *m,
-					struct sng_color *point_color, float pointSize)
+void graph_dev_raster_point_cloud_mesh(struct graph_dev_gl_point_cloud_shader *shader,
+	const struct mat44 *mat_mvp, struct mesh *m, struct sng_color *point_color, float alpha, float pointSize,
+	int do_blend)
 {
 	enable_3d_viewport();
 
@@ -1546,17 +1549,29 @@ void graph_dev_raster_point_cloud_mesh(const struct mat44 *mat_mvp, struct mesh 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
-	glUseProgram(point_cloud_shader.program_id);
+	if (do_blend) {
+		/* enable depth test but don't write to depth buffer */
+		glDepthMask(GL_FALSE);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
 
-	glUniformMatrix4fv(point_cloud_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
-	glUniform1f(point_cloud_shader.point_size_id, pointSize);
-	glUniform3f(point_cloud_shader.color_id, point_color->red,
-		point_color->green, point_color->blue);
+	glUseProgram(shader->program_id);
 
-	glEnableVertexAttribArray(point_cloud_shader.vertex_position_id);
+	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniform1f(shader->point_size_id, pointSize);
+	glUniform4f(shader->color_id, point_color->red,
+		point_color->green, point_color->blue, alpha);
+
+	if (shader->time_id >= 0) {
+		float time = fmod(time_now_double(), 1.0);
+		glUniform1f(shader->time_id, time);
+	}
+
+	glEnableVertexAttribArray(shader->vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
 	glVertexAttribPointer(
-		point_cloud_shader.vertex_position_id, /* The attribute we want to configure */
+		shader->vertex_position_id, /* The attribute we want to configure */
 		3,                           /* size */
 		GL_FLOAT,                    /* type */
 		GL_FALSE,                    /* normalized? */
@@ -1566,11 +1581,15 @@ void graph_dev_raster_point_cloud_mesh(const struct mat44 *mat_mvp, struct mesh 
 
 	glDrawArrays(GL_POINTS, 0, ptr->npoints);
 
-	glDisableVertexAttribArray(point_cloud_shader.vertex_position_id);
+	glDisableVertexAttribArray(shader->vertex_position_id);
 	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+	if (do_blend) {
+		glDepthMask(GL_TRUE);
+		glDisable(GL_BLEND);
+	}
 }
 
 static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat44 *mat_mv, const struct mat33 *mat_normal,
@@ -1625,8 +1644,6 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 	}
 
 }
-
-extern double time_now_double();
 
 static void graph_dev_raster_particle_animation(const struct entity_context *cx, struct entity *e,
 	const struct entity_transform *transform, GLuint texture_number,
@@ -1766,7 +1783,7 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 		graph_dev_raster_line_mesh(e, &transform->mvp, e->m, &white);
 
 		struct sng_color red = sng_get_color(RED);
-		graph_dev_raster_point_cloud_mesh(&transform->mvp, e->m, &red, 3.0);
+		graph_dev_raster_point_cloud_mesh(&point_cloud_shader, &transform->mvp, e->m, &red, 1.0, 3.0, 0);
 	}
 }
 
@@ -1996,10 +2013,21 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		graph_dev_raster_line_mesh(e, mat_mvp, e->m, &line_color);
 		break;
 
-	case MESH_GEOMETRY_POINTS:
-		graph_dev_raster_point_cloud_mesh(mat_mvp, e->m, &line_color, 1.0);
-		break;
+	case MESH_GEOMETRY_POINTS: {
+			int do_blend = 0;
+			float alpha = 1.0;
+			float point_size = 1.0;
+			struct graph_dev_gl_point_cloud_shader *shader;
 
+			if (e->material_ptr && e->material_ptr->type == MATERIAL_POINT_CLOUD_INTENSITY_NOISE)
+				shader = &point_cloud_intensity_noise_shader;
+			else
+				shader = &point_cloud_shader;
+
+			graph_dev_raster_point_cloud_mesh(shader, mat_mvp, e->m, &line_color, alpha, point_size,
+				do_blend);
+		}
+		break;
 	case MESH_GEOMETRY_PARTICLE_ANIMATION:
 		if (e->material_ptr && e->material_ptr->type == MATERIAL_TEXTURED_PARTICLE) {
 			struct material_textured_particle *mt = &e->material_ptr->textured_particle;
@@ -2636,11 +2664,15 @@ static void setup_line_single_color_shader(struct graph_dev_gl_line_single_color
 	shader->line_vertex1_id = glGetAttribLocation(shader->program_id, "a_LineVertex1");
 }
 
-static void setup_point_cloud_shader(struct graph_dev_gl_point_cloud_shader *shader)
+static void setup_point_cloud_shader(const char *basename, struct graph_dev_gl_point_cloud_shader *shader)
 {
+	char vert_filename[255];
+	char frag_filename[255];
+	snprintf(vert_filename, sizeof(vert_filename), "share/snis/shader/%s.vert", basename);
+	snprintf(frag_filename, sizeof(frag_filename), "share/snis/shader/%s.frag", basename);
+
 	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders("share/snis/shader/point_cloud.vert",
-		"share/snis/shader/point_cloud.frag");
+	shader->program_id = load_shaders(vert_filename, frag_filename);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2649,6 +2681,7 @@ static void setup_point_cloud_shader(struct graph_dev_gl_point_cloud_shader *sha
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->point_size_id = glGetUniformLocation(shader->program_id, "u_PointSize");
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
+	shader->time_id = glGetUniformLocation(shader->program_id, "u_Time");
 }
 
 static void setup_color_by_w_shader(struct graph_dev_gl_color_by_w_shader *shader)
@@ -2983,7 +3016,8 @@ int graph_dev_setup()
 	setup_single_color_shader(&single_color_shader);
 	setup_vertex_color_shader(&vertex_color_shader);
 	setup_line_single_color_shader(&line_single_color_shader);
-	setup_point_cloud_shader(&point_cloud_shader);
+	setup_point_cloud_shader("point_cloud", &point_cloud_shader);
+	setup_point_cloud_shader("point_cloud-intensity-noise", &point_cloud_intensity_noise_shader);
 	setup_color_by_w_shader(&color_by_w_shader);
 	setup_skybox_shader(&skybox_shader);
 	setup_textured_shader(&textured_shader);

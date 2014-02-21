@@ -240,19 +240,6 @@ static inline float wy_screen(struct entity_context *cx, float wy)
 }
 
 
-static void wireframe_render_fake_star(struct entity_context *cx, struct vertex *fs)
-{
-	float wx = fs->wx / fs->ww;
-	float wy = fs->wy / fs->ww;
-
-	float x1, y1;
-
-	x1 = wx_screen(cx, wx);
-	y1 = wy_screen(cx, wy);
-	sng_set_foreground(GRAY + snis_randn(NSHADESOFGRAY));
-	sng_draw_point(x1, y1);
-}
-
 static void calculate_model_matrices(struct entity_context *cx, struct entity *e, struct entity_transform *transform)
 {
 	transform->v = &cx->camera.camera_v_matrix;
@@ -848,6 +835,20 @@ void render_entities(struct entity_context *cx)
 
 	sng_set_3d_viewport(cx->window_offset_x, cx->window_offset_y, c->xvpixels, c->yvpixels);
 
+	/* see if the fake stars have wandered outside of our immediate area */
+	if (cx->nfakestars > 0) {
+		float r2 = cx->fakestars_radius * cx->fakestars_radius;
+		for (i = 0; i < cx->nfakestars; i++) {
+			struct vertex *fs = &cx->fake_stars_mesh->v[i];
+
+			float dist2 = dist3dsqrd(c->x - fs->x, c->y - fs->y, c->z - fs->z);
+
+			if (dist2 > r2)
+				reposition_fake_star(cx, fs, cx->fakestars_radius);
+		}
+		mesh_graph_dev_init(cx->fake_stars_mesh);
+	}
+
 	/* do the draw in multiple decades depending on the dynamic range of near/far
 
 	   a good rule of thumb is to have far / near < 10000 on 24-bit depth buffer
@@ -873,25 +874,6 @@ void render_entities(struct entity_context *cx)
 	int pass;
 	for (pass = 0; pass < n_near_far; pass++) {
 		calculate_camera_transform_near_far(cx, near_far[pass][0], near_far[pass][1]);
-
-		if (cx->nfakestars > 0 && pass == n_near_far - 1) {
-			/* draw fake stars only on the last, closest, near/far */
-			struct mat44 mat_vp;
-			mat44_convert_df(&cx->camera.camera_vp_matrix, &mat_vp);
-			transform_vertices(&mat_vp, &cx->fake_star[0], cx->nfakestars);
-
-			for (i = 0; i < cx->nfakestars; i++) {
-				struct vertex *fs = &cx->fake_star[i];
-
-				float dist2 = dist3dsqrd(c->x - fs->x, c->y - fs->y, c->z - fs->z);
-
-				if (!fs->clip)
-					wireframe_render_fake_star(cx, fs);
-
-				if (dist2 > cx->fakestars_radius * cx->fakestars_radius)
-					reposition_fake_star(cx, fs, cx->fakestars_radius);
-			}
-		}
 
 		/* find all entities in view frustum and sort them by distance */
 		n = snis_object_pool_highest_object(cx->entity_pool);
@@ -1090,21 +1072,39 @@ static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, f
 void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius)
 {
 	int i;
+	if (cx->nfakestars > 0)
+		entity_free_fake_stars(cx);
 
-	cx->fake_star = malloc(sizeof(*cx->fake_star) * nstars);
-	memset(cx->fake_star, 0, sizeof(*cx->fake_star) * nstars);
-
-	for (i = 0; i < nstars; i++) {
-		reposition_fake_star(cx, &cx->fake_star[i], radius);
-	}
 	cx->nfakestars = nstars;
 	cx->fakestars_radius = radius;
+
+	cx->fake_stars_mesh = calloc(1, sizeof(*cx->fake_stars_mesh));
+	cx->fake_stars_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
+	cx->fake_stars_mesh->nvertices = nstars;
+	cx->fake_stars_mesh->v = calloc(1, sizeof(*cx->fake_stars_mesh->v) * nstars);
+	/* no good way to calculate this as the origin is always 0,0 and the starts move
+	   in space relative to the camera */
+	cx->fake_stars_mesh->radius = INT_MAX;
+
+	for (i = 0; i < nstars; i++) {
+		reposition_fake_star(cx, &cx->fake_stars_mesh->v[i], radius);
+	}
+	mesh_graph_dev_init(cx->fake_stars_mesh);
+
+	struct material *m = calloc(1, sizeof(*m));
+	m->type = MATERIAL_POINT_CLOUD_INTENSITY_NOISE;
+	cx->fake_stars_mesh->material = m;
+
+	cx->fake_stars = add_entity(cx, cx->fake_stars_mesh, 0, 0, 0, WHITE);
 }
 
 void entity_free_fake_stars(struct entity_context *cx)
 {
 	cx->nfakestars = 0;
-	free(cx->fake_star);
+	remove_entity(cx, cx->fake_stars);
+	cx->fake_stars = 0;
+	mesh_free(cx->fake_stars_mesh);
+	cx->fake_stars_mesh = 0;
 }
 
 void set_renderer(struct entity_context *cx, int renderer)

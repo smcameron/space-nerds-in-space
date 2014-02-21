@@ -39,6 +39,7 @@ struct entity;
 #define MATERIAL_TEXTURED_PLANET 9
 #define MATERIAL_TEXTURED_PLANET_RING 10
 #define MATERIAL_WIREFRAME_SPHERE_CLIP 11
+#define MATERIAL_POINT_CLOUD_INTENSITY_NOISE 12
 
 struct material_color_by_w {
 	int near_color;

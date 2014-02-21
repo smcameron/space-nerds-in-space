@@ -76,7 +76,8 @@ struct entity_context {
 	int nnear_to_far_entity_depth;
 	int *near_to_far_entity_depth; /* array [maxobjs] */
 	struct camera_info camera;
-	struct vertex *fake_star;
+	struct entity *fake_stars;
+	struct mesh *fake_stars_mesh;
 	int nfakestars; /* = 0; */
 	float fakestars_radius;
 	struct mat41 light;
