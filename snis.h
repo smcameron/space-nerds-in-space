@@ -464,6 +464,7 @@ struct warp_effect_data {
 struct derelict_data {
 	uint8_t shiptype; /* same as snis_entity_science_data subclass */
 	union quat rotational_velocity;
+	uint8_t persistent;
 };
 
 struct wormhole_data {

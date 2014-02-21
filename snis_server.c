@@ -556,6 +556,9 @@ static void derelict_move(struct snis_entity *o)
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
 
+	if (o->tsd.derelict.persistent)
+		return;
+
 	if (o->alive > 1)
 		o->alive--;
 
@@ -1232,7 +1235,8 @@ static void attack_your_attacker(struct snis_entity *attackee, struct snis_entit
 }
 
 static int add_derelict(const char *name, double x, double y, double z,
-			double vx, double vy, double vz, int shiptype, int the_faction);
+			double vx, double vy, double vz, int shiptype,
+			int the_faction, int persistent);
 
 static int add_cargo_container(double x, double y, double z, double vx, double vy, double vz);
 static int make_derelict(struct snis_entity *o)
@@ -1242,7 +1246,7 @@ static int make_derelict(struct snis_entity *o)
 				o->vx + snis_random_float() * 2.0,
 				o->vy + snis_random_float() * 2.0,
 				o->vz + snis_random_float() * 2.0,
-				o->tsd.ship.shiptype, o->sdata.faction);
+				o->tsd.ship.shiptype, o->sdata.faction, 0);
 	(void) add_cargo_container(o->x, o->y, o->z,
 				o->vx + snis_random_float() * 2.0,
 				o->vy + snis_random_float() * 2.0,
@@ -4972,7 +4976,7 @@ static void add_asteroids(void)
 
 static int add_derelict(const char *name, double x, double y, double z,
 			double vx, double vy, double vz,
-			int shiptype, int the_faction)
+			int shiptype, int the_faction, int persistent)
 {
 	int i;
 
@@ -5003,6 +5007,7 @@ static int add_derelict(const char *name, double x, double y, double z,
 	go[i].vy = vy;
 	go[i].vz = vz;
 	go[i].alive = 60 * 10; /* 1 minute */
+	go[i].tsd.derelict.persistent = persistent & 0xff;
 	return i;
 }
 
@@ -5023,7 +5028,8 @@ static int l_add_derelict(lua_State *l)
 	vx = snis_random_float() * 10.0;
 	vy = snis_random_float() * 10.0;
 	vz = snis_random_float() * 10.0;
-	i = add_derelict(name, x, y, z, vx, vy, vz, shiptype, the_faction);
+	/* assume lua-added derelicts are part of some scenario, so should be persistent */
+	i = add_derelict(name, x, y, z, vx, vy, vz, shiptype, the_faction, 1);
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
