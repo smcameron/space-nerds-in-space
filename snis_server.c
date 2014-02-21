@@ -83,7 +83,8 @@
 #define MAXCLIENTS 100
 
 struct network_stats netstats;
-int faction_population[5];
+static int faction_population[5];
+static int lowest_faction = 0;
 
 #define GATHER_OPCODE_STATS 0
 
@@ -622,12 +623,12 @@ static void queue_delete_oid(struct game_client *c, uint32_t oid)
 	pb_queue_to_client(c, packed_buffer_new("hw",OPCODE_DELETE_OBJECT, oid));
 }
 
-static int add_ship(void);
+static int add_ship(int faction);
 static void respawn_object(int otype)
 {
 	switch (otype) {
 		case OBJTYPE_SHIP2:
-			add_ship();
+			add_ship(lowest_faction);
 			break;
 		case OBJTYPE_ASTEROID:
 			/* TODO: respawn asteroids */
@@ -4106,7 +4107,7 @@ static int add_player(double x, double z, double vx, double vz, double heading)
 	return i;
 }
 
-static int add_ship(void)
+static int add_ship(int faction)
 {
 	int i;
 	double x, y, z, heading;
@@ -4144,6 +4145,8 @@ static int add_ship(void)
 	go[i].tsd.ship.steering_adjustment.v.z = 0.0;
 	go[i].tsd.ship.ncargo_bays = 0;
 	memset(go[i].tsd.ship.cargo, 0, sizeof(go[i].tsd.ship.cargo));
+	if (faction >= 0 && faction < nfactions())
+		go[i].sdata.faction = faction;
 	return i;
 }
 
@@ -4152,7 +4155,7 @@ static int add_specific_ship(const char *name, double x, double y, double z,
 {
 	int i;
 
-	i = add_ship();
+	i = add_ship(-1);
 	if (i < 0)
 		return i;
 	set_object_location(&go[i], x, y, z);
@@ -4259,7 +4262,7 @@ static int l_add_random_ship(lua_State *l)
 	int i;
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_ship();
+	i = add_ship(-1);
 	lua_pushnumber(lua_state, i >= 0 ? (double) go[i].id : -1.0);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -5168,7 +5171,7 @@ static void add_eships(void)
 	int i;
 
 	for (i = 0; i < NESHIPS; i++)
-		add_ship();
+		add_ship(i % nfactions());
 }
 
 static void add_spacemonsters(void)
@@ -7419,7 +7422,7 @@ static int process_create_item(struct game_client *c)
 	pthread_mutex_lock(&universe_mutex);
 	switch (item_type) {
 	case OBJTYPE_SHIP2:
-		i = add_ship();
+		i = add_ship(-1);
 		break;
 	case OBJTYPE_STARBASE:
 		i = add_starbase(x, 0, z, 0, 0, 0, snis_randn(100), -1);
@@ -9651,6 +9654,9 @@ static void move_objects(void)
 			}
 		}
 	}
+	for (i = 0; i < nfactions(); i++)
+		if (i == 0 || faction_population[lowest_faction] > faction_population[i])
+			lowest_faction = i;
 	move_damcon_entities();
 	pthread_mutex_unlock(&universe_mutex);
 	fire_lua_timers();
