@@ -547,6 +547,16 @@ static void derelict_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
+
+	/* Cull distant derelicts so they don't overpopulate the server */
+	if ((universe_timestamp & 0x03f) == (o->id & 0x03f)) { /* throttle computation */
+		float dist = dist3d(o->x - XKNOWN_DIM / 2.0,
+					o->y - YKNOWN_DIM / 2.0, o->z - ZKNOWN_DIM / 2.0);
+		if (dist > (1.15 * XKNOWN_DIM / 2.0)) {
+			o->alive = 0;
+			delete_from_clients_and_server(o);
+		}
+	}
 }
 
 static void send_wormhole_limbo_packet(int shipid, uint16_t value);
