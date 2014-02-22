@@ -747,6 +747,8 @@ static struct graph_dev_gl_context {
 	GLbyte vertex_type_2d[BUFFERED_VERTICES_2D];
 	struct vertex_color_buffer_data vertex_data_2d[BUFFERED_VERTICES_2D];
 	GLuint vertex_buffer_2d;
+
+	struct mesh_gl_info gl_info_3d_line;
 } sgc;
 
 void graph_dev_set_screen_size(int width, int height)
@@ -2078,19 +2080,16 @@ void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_v
 	g_vl_buffer_data[0].line_vertex1.v.z =
 		g_vl_buffer_data[1].line_vertex1.v.z = z2;
 
-	struct mesh_gl_info gl_info;
-	gl_info.nlines = 1;
+	sgc.gl_info_3d_line.nlines = 1;
 
-	glGenBuffers(1, &gl_info.vertex_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, gl_info.vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, sgc.gl_info_3d_line.vertex_buffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_v_buffer_data), g_v_buffer_data, GL_STREAM_DRAW);
 
-	glGenBuffers(1, &gl_info.line_vertex_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, gl_info.line_vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vl_buffer_data), g_vl_buffer_data, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, sgc.gl_info_3d_line.line_vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vl_buffer_data), g_vl_buffer_data, GL_STREAM_DRAW);
 
 	struct mesh m;
-	m.graph_ptr = &gl_info;
+	m.graph_ptr = &sgc.gl_info_3d_line;
 
 	struct entity e;
 	e.material_ptr = 0;
@@ -2098,9 +2097,6 @@ void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_v
 
 	struct sng_color line_color = sng_get_foreground();
 	graph_dev_raster_line_mesh(&e, mat_vp, &m, &line_color);
-
-	glDeleteBuffers(1, &gl_info.vertex_buffer);
-	glDeleteBuffers(1, &gl_info.line_vertex_buffer);
 }
 
 static void print_framebuffer_error()
@@ -2976,6 +2972,19 @@ static void setup_2d()
 	sgc.nvertex_2d = 0;
 }
 
+static void setup_3d()
+{
+	sgc.gl_info_3d_line.nlines = 0;
+
+	glGenBuffers(1, &sgc.gl_info_3d_line.vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, sgc.gl_info_3d_line.vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STREAM_DRAW);
+
+	glGenBuffers(1, &sgc.gl_info_3d_line.line_vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, sgc.gl_info_3d_line.line_vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STATIC_DRAW);
+}
+
 int graph_dev_setup()
 {
 	if (glewInit() != GLEW_OK) {
@@ -3054,6 +3063,7 @@ int graph_dev_setup()
 
 	/* after all the shaders are loaded */
 	setup_2d();
+	setup_3d();
 
 	return 0;
 }
