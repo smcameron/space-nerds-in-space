@@ -1571,6 +1571,9 @@ static void notify_a_cop(void *context, void *entity)
 	if (cop->type != OBJTYPE_SHIP2)
 		return;
 
+	if (perp->type == OBJTYPE_STARBASE)
+		return;
+
 	if (cop->tsd.ship.ai[0].ai_mode != AI_MODE_COP)
 		return;
 
@@ -2155,6 +2158,8 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	double destx, desty, destz, dx, dy, dz, vdist;
 	int n, firing_range;
 	double maxv;
+	int notacop = 1;
+	int imacop = 0;
 
 	n = o->tsd.ship.nai_entries - 1;
 	assert(n >= 0);
@@ -2227,17 +2232,19 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	if (!firing_range)
 		return;
 
-	if (o->tsd.ship.ai[0].ai_mode != AI_MODE_COP && /* if I'm not a cop */
-		too_many_cops_around(o))
+	notacop = o->tsd.ship.ai[0].ai_mode != AI_MODE_COP;
+	imacop = !notacop;
+
+	if (notacop && too_many_cops_around(o))
 		return;
 
 	/* neutrals do not attack planets or starbases, and only select ships
 	 * when attacked.
 	 */
-	if (o->sdata.faction != 0 ||
+	if ((o->sdata.faction != 0 || imacop) ||
 		(v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_PLANET)) {
 
-		if (snis_randn(1000) < 150 && vdist <= TORPEDO_RANGE &&
+		if (snis_randn(1000) < 150 + imacop * 150 && vdist <= TORPEDO_RANGE &&
 			o->tsd.ship.next_torpedo_time <= universe_timestamp &&
 			o->tsd.ship.torpedoes > 0) {
 			double dist, flight_time, tx, ty, tz, vx, vy, vz;
@@ -2260,7 +2267,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 				check_for_incoming_fire(v);
 			}
 		} else {
-			if (snis_randn(1000) < 300 &&
+			if (snis_randn(1000) < 300 + imacop * 200 &&
 				o->tsd.ship.next_laser_time <= universe_timestamp) {
 				if (!planet_in_the_way(o, v)) {
 					o->tsd.ship.next_laser_time = universe_timestamp +
@@ -2275,7 +2282,8 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	} else {
 		/* FIXME: give neutrals soemthing to do so they don't just sit there */;
 	}
-	check_for_nearby_targets(o);
+	if (notacop)
+		check_for_nearby_targets(o);
 }
 
 struct danger_info {
