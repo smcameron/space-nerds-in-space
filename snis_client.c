@@ -268,6 +268,7 @@ char skybox_texture_prefix[255];
 volatile int textures_loaded = 0; /* blech, volatile global. */
 
 struct mesh *torpedo_mesh;
+struct mesh *torpedo_nav_mesh;
 struct mesh *laser_mesh;
 struct mesh *asteroid_mesh[NASTEROID_MODELS];
 struct mesh *sphere_mesh;
@@ -281,6 +282,7 @@ struct mesh *debris2_mesh;
 struct mesh *wormhole_mesh;
 struct mesh *spacemonster_mesh;
 struct mesh *laserbeam_mesh;
+struct mesh *laserbeam_nav_mesh;
 struct mesh *ship_icon_mesh;
 struct mesh *heading_indicator_mesh;
 struct mesh *cargo_container_mesh;
@@ -7744,13 +7746,14 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			struct mesh *m = entity_get_mesh(go[i].entity);
 
 			if (go[i].type == OBJTYPE_TORPEDO) {
-				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, ORANGERED);
+				contact = add_entity(navecx, torpedo_nav_mesh, go[i].x, go[i].y, go[i].z, ORANGERED);
 				if (contact) {
 					set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 					entity_set_user_data(contact, &go[i]); /* for debug */
 				}
 			} else if (go[i].type == OBJTYPE_LASER) {
-				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, LASER_COLOR);
+				contact = add_entity(navecx, laserbeam_nav_mesh, go[i].x, go[i].y, go[i].z,
+					LASER_COLOR);
 				if (contact) {
 					set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 					entity_set_user_data(contact, &go[i]); /* for debug */
@@ -7765,7 +7768,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			if (contact) {
 				update_entity_scale(contact, entity_get_scale(go[i].entity));
 				update_entity_orientation(contact, entity_get_orientation(go[i].entity));
-		}
+			}
 #if 0
 			if (o->tsd.ship.ai[0].u.attack.victim_id != -1 && go[i].id == o->tsd.ship.ai[0].u.attack.victim_id)
 				targeted_entity = contact;
@@ -11978,10 +11981,11 @@ static void init_meshes()
 
 	ship_turret_mesh = snis_read_model(d, "spaceship_turret.stl");
 	ship_turret_base_mesh = snis_read_model(d, "spaceship_turret_base.stl");
+	torpedo_nav_mesh = snis_read_model(d, "torpedo.stl");
 #ifndef WITHOUTOPENGL
 	torpedo_mesh = mesh_fabricate_billboard(0, 0, 50.0f, 50.0f);
 #else
-	torpedo_mesh = snis_read_model(d, "torpedo.stl");
+	torpedo_mesh = torpedo_nav_mesh;
 #endif
 	laser_mesh = snis_read_model(d, "laser.stl");
 
@@ -12045,10 +12049,11 @@ static void init_meshes()
 #endif
 	spacemonster_mesh = snis_read_model(d, "spacemonster.stl");
 	spacemonster_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
+	laserbeam_nav_mesh = snis_read_model(d, "long-triangular-prism.stl");
 #ifndef WITHOUTOPENGL
 	laserbeam_mesh = mesh_fabricate_billboard(85, 0, 200, 5);
 #else
-	laserbeam_mesh = snis_read_model(d, "long-triangular-prism.stl");
+	laserbeam_mesh = laserbeam_nav_mesh;
 #endif
 	ship_icon_mesh = snis_read_model(d, "ship-icon.stl");
 	heading_indicator_mesh = snis_read_model(d, "heading_indicator.stl");
