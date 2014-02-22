@@ -473,26 +473,8 @@ int main(int argc, char *argv[])
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1); /* vsync */
-
-	/* make a 1x1 window to check capabilities */
-	SDL_Surface *temp_screen = SDL_SetVideoMode(1, 1, bpp, SDL_OPENGL | SDL_RESIZABLE);
-	if (!temp_screen) {
-		fprintf(stderr, "Video mode set failed on temp window: %s\n", SDL_GetError());
-		quit(1);
-	}
-
-	if (glewInit() != GLEW_OK) {
-		fprintf(stderr, "Failed to initialize GLEW\n");
-		quit(1);
-	}
-
-	/* get the capabilities */
-	int cache_msaa_framebuffer_supported = msaa_framebuffer_supported();
-	int cache_msaa_render_to_fbo_supported = msaa_render_to_fbo_supported();
-	int cache_msaa_max_samples = msaa_max_samples();
-
-	/* clean up the temp gl context, must be a better way */
-	SDL_Quit();
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
 
 	/* start again so we can get a fresh new gl context for our window */
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -501,49 +483,10 @@ int main(int argc, char *argv[])
 		quit(1);
 	}
 
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1); /* vsync */
-
-	printf("msaa_framebuffer_supported=%d\n", cache_msaa_framebuffer_supported);
-	printf("msaa_render_to_fbo_supported=%d\n", cache_msaa_render_to_fbo_supported);
-	printf("msaa_max_samples=%d\n", cache_msaa_max_samples);
-
-	/* try for a msaa framebuffer if supported and we can't do it via render to fbo */
-	if (cache_msaa_render_to_fbo_supported) {
-		printf("Using fbo MSAA\n");
-	} else if (cache_msaa_framebuffer_supported) {
-		/* try for multi sampling stating at the queried max */
-		int multi_samples = cache_msaa_max_samples;
-		do {
-			SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-			SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multi_samples);
-
-			screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, bpp, SDL_OPENGL | SDL_RESIZABLE);
-			if (screen) {
-				printf("Got framebuffer %dxMSAA\n", multi_samples);
-				break;
-			}
-
-			multi_samples >>= 1;
-
-		} while (multi_samples > 0);
-	}
-
+	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, bpp, SDL_OPENGL | SDL_RESIZABLE);
 	if (!screen) {
-		/* fall back to non msaa if all the msaa attempts faild */
-		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
-		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
-
-		screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, bpp, SDL_OPENGL | SDL_RESIZABLE);
-		if (!screen) {
-			fprintf(stderr, "Video mode set failed: %s\n", SDL_GetError());
-			quit(1);
-		}
-		printf("No framebuffer MSAA\n");
+		fprintf(stderr, "Video mode set failed: %s\n", SDL_GetError());
+		quit(1);
 	}
 
 	real_screen_width = SCREEN_WIDTH;
