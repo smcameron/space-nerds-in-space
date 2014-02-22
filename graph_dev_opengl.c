@@ -2149,7 +2149,7 @@ static void resize_fbo_if_needed(struct fbo_target *target)
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, sgc.screen_x, sgc.screen_y);
 		}
 
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target->fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, target->fbo);
 
 		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		if (status != GL_FRAMEBUFFER_COMPLETE) {
@@ -2200,8 +2200,7 @@ void graph_dev_start_frame()
 		glBindFramebuffer(GL_FRAMEBUFFER, render_to_texture.fbo);
 	} else {
 		/* render direct to back buffer */
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glDrawBuffer(GL_BACK);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -2278,9 +2277,8 @@ void graph_dev_end_frame()
 	draw_vertex_buffer_2d();
 
 	if (draw_msaa_samples > 0 && msaa.fbo > 0) {
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, msaa.fbo);
-		glDrawBuffer(GL_BACK);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glBlitFramebuffer(0, 0, msaa.width, msaa.height, 0, 0,
 			sgc.screen_x, sgc.screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
@@ -2296,28 +2294,26 @@ void graph_dev_end_frame()
 			resize_fbo_if_needed(&smaa_effect.blend_target);
 
 			/* edge detect pass - render into edge_fbo */
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, smaa_effect.edge_target.fbo);
+			glBindFramebuffer(GL_FRAMEBUFFER, smaa_effect.edge_target.fbo);
 			glClear(GL_COLOR_BUFFER_BIT);
 			graph_dev_raster_fs_effect(&smaa_effect.edge_shader, render_to_texture.color0_texture,
 				0, 0, 0, 1);
 
 			/* blend pass - render into blend_fbo */
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, smaa_effect.blend_target.fbo);
+			glBindFramebuffer(GL_FRAMEBUFFER, smaa_effect.blend_target.fbo);
 			glClear(GL_COLOR_BUFFER_BIT);
 			graph_dev_raster_fs_effect(&smaa_effect.blend_shader, smaa_effect.edge_target.color0_texture,
 				smaa_effect.area_tex, smaa_effect.search_tex, 0, 1);
 
 			/* eighborhood pass - render to back buffer */
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			glDrawBuffer(GL_BACK);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			graph_dev_raster_fs_effect(&smaa_effect.neighborhood_shader, render_to_texture.color0_texture,
 				smaa_effect.blend_target.color0_texture, 0, 0, 1);
 		} else {
 			/* no effect so just blit the fbo texture to the screen */
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			glDrawBuffer(GL_BACK);
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, render_to_texture.fbo);
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 			glBlitFramebuffer(0, 0, render_to_texture.width, render_to_texture.height, 0, 0,
 				sgc.screen_x, sgc.screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 		}
@@ -2948,17 +2944,15 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, (GLsizei)SEARCHTEX_WIDTH, (GLsizei)SEARCHTEX_HEIGHT, 0,
 		GL_RED, GL_UNSIGNED_BYTE, searchTexBytes);
 
-	GLenum modes[] = { GL_COLOR_ATTACHMENT0 };
-
 	glGenFramebuffers(1, &effect->edge_target.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, effect->edge_target.fbo);
-	glDrawBuffers(1, modes);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 		effect->edge_target.color0_texture, 0);
 
 	glGenFramebuffers(1, &effect->blend_target.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, effect->blend_target.fbo);
-	glDrawBuffers(1, modes);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 		effect->blend_target.color0_texture, 0);
 }
@@ -3022,11 +3016,9 @@ int graph_dev_setup()
 		glGenRenderbuffers(1, &render_to_texture.depth_buffer);
 		glBindRenderbuffer(GL_RENDERBUFFER, render_to_texture.depth_buffer);
 
-		GLenum modes[] = { GL_COLOR_ATTACHMENT0, GL_DEPTH_ATTACHMENT };
-
 		glGenFramebuffers(1, &render_to_texture.fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, render_to_texture.fbo);
-		glDrawBuffers(2, modes);
+		glDrawBuffer(GL_COLOR_ATTACHMENT0);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 			render_to_texture.color0_texture, 0);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
