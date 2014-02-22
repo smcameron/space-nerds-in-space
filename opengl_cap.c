@@ -23,9 +23,7 @@
 
 int msaa_framebuffer_supported()
 {
-	GLint sample_buffers;
-	glGetIntegerv(GL_SAMPLE_BUFFERS, &sample_buffers);
-	return GLEW_ARB_multisample && sample_buffers > 0 && msaa_max_samples() > 0;
+	return GLEW_ARB_multisample;
 }
 
 int msaa_render_to_fbo_supported()
@@ -35,8 +33,8 @@ int msaa_render_to_fbo_supported()
 
 int msaa_max_samples()
 {
-	GLint samples;
-	glGetIntegerv(GL_SAMPLES, &samples);
+	GLint samples = 0;
+	glGetIntegerv(GL_MAX_SAMPLES, &samples);
 	return samples;
 }
 
