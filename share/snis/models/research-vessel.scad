@@ -167,10 +167,10 @@ science_module();
 use <imposter_thrust.scad>;
 thrust_ports = 0;
 if (thrust_ports) {
-	imposter_thrust(-40, 0, 0, 2.7);
-	imposter_thrust(-40, 5, 5, 1.7);
-	imposter_thrust(-40, 5, -5, 1.7);
-	imposter_thrust(-40, -5, 5, 1.7);
-	imposter_thrust(-40, -5, -5, 1.7);
+	imposter_thrust(-41, 0, 0, 2.2);
+	imposter_thrust(-41, 5, 5, 1.4);
+	imposter_thrust(-41, 5, -5, 1.4);
+	imposter_thrust(-41, -5, 5, 1.4);
+	imposter_thrust(-41, -5, -5, 1.4);
 }
 
