@@ -1394,7 +1394,7 @@ static int find_nearest_victim(struct snis_entity *o)
 	info.o = o;
 	o->tsd.ship.threat_level = 0.0;
 
-	space_partition_process(space_partition, o, o->x, o->y, &info,
+	space_partition_process(space_partition, o, o->x, o->z, &info,
 				process_potential_victim);
 	return info.victim_id;
 }
@@ -2145,7 +2145,7 @@ static void count_nearby_cops(void *context, void *entity)
 
 static int too_many_cops_around(struct snis_entity *o)
 {
-	space_partition_process(space_partition, o, o->x, o->y, o, count_nearby_cops);
+	space_partition_process(space_partition, o, o->x, o->z, o, count_nearby_cops);
 	return o->tsd.ship.in_secure_area;
 }
 
@@ -2378,7 +2378,7 @@ static void ai_flee_mode_brain(struct snis_entity *o)
 	info.friendly.v.x = 0.0;
 	info.friendly.v.y = 0.0;
 	info.friendly.v.z = 0.0;
-	space_partition_process(space_partition, o, o->x, o->y, &info,
+	space_partition_process(space_partition, o, o->x, o->z, &info,
 				compute_danger_vectors);
 	vec3_mul_self(&info.danger, 2.0);
 	vec3_add(&thataway, &info.danger, &info.friendly);
