@@ -8843,7 +8843,6 @@ static int lookup_bridge(unsigned char *shipname, unsigned char *password)
 {
 	int i;
 
-	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < nbridges; i++) {
 		if (strcmp((const char *) shipname, (const char *) bridgelist[i].shipname) == 0 &&
 			strcmp((const char *) password, (const char *) bridgelist[i].password) == 0) {
@@ -8851,7 +8850,6 @@ static int lookup_bridge(unsigned char *shipname, unsigned char *password)
 			return i;
 		}
 	}
-	pthread_mutex_unlock(&universe_mutex);
 	return -1;
 }
 
@@ -9309,7 +9307,6 @@ static int add_new_player(struct game_client *c)
 			if (dist3d(x - SUNX, 0, z - SUNZ) > SUN_DIST_LIMIT)
 				break;
 		}
-		pthread_mutex_lock(&universe_mutex);
 		c->ship_index = add_player(x, z, 0.0, 0.0, M_PI / 2.0);
 		c->shipid = go[c->ship_index].id;
 		strcpy(go[c->ship_index].sdata.name, (const char * restrict) app.shipname);
@@ -9326,7 +9323,6 @@ static int add_new_player(struct game_client *c)
 		nbridges++;
 		schedule_callback(event_callback, &callback_schedule,
 				"player-respawn-event", (double) c->shipid);
-		pthread_mutex_unlock(&universe_mutex);
 	} else {
 		c->shipid = bridgelist[c->bridge].shipid;
 		c->ship_index = lookup_by_id(c->shipid);
@@ -9362,9 +9358,11 @@ static void service_connection(int connection)
 		return;
 	}
 
+	pthread_mutex_lock(&universe_mutex);
 	client_lock();
 	if (nclients >= MAXCLIENTS) {
 		client_unlock();
+		pthread_mutex_unlock(&universe_mutex);
 		snis_log(SNIS_ERROR, "Too many clients.\n");
 		return;
 	}
@@ -9405,6 +9403,7 @@ static void service_connection(int connection)
 			client_count++;
 	} 
 	client_unlock();
+	pthread_mutex_unlock(&universe_mutex);
 
 	if (client_count == 1)
 		snis_queue_add_global_sound(STARSHIP_JOINED);
