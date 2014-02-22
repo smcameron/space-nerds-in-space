@@ -47,6 +47,8 @@ graph_dev_opengl.o: mtwist.h
 graph_dev_opengl.o: opengl_cap.h
 graph_dev_opengl.o: quat.h
 graph_dev_opengl.o: shader.h
+graph_dev_opengl.o: share/snis/textures/AreaTex.h
+graph_dev_opengl.o: share/snis/textures/SearchTex.h
 graph_dev_opengl.o: snis_graph.h
 graph_dev_opengl.o: snis_typeface.h
 graph_dev_opengl.o: triangle.h
@@ -133,6 +135,7 @@ snis_client.o: share/snis/models/destroyer.scad_params.h
 snis_client.o: share/snis/models/disruptor.scad_params.h
 snis_client.o: share/snis/models/dragonhawk.scad_params.h
 snis_client.o: share/snis/models/dreadknight/dreadknight-exhaust-plumes.h
+snis_client.o: share/snis/models/enforcer.scad_params.h
 snis_client.o: share/snis/models/freighter.scad_params.h
 snis_client.o: share/snis/models/research-vessel.scad_params.h
 snis_client.o: share/snis/models/scrambler.scad_params.h
@@ -227,6 +230,7 @@ snis_limited_client.o: share/snis/models/destroyer.scad_params.h
 snis_limited_client.o: share/snis/models/disruptor.scad_params.h
 snis_limited_client.o: share/snis/models/dragonhawk.scad_params.h
 snis_limited_client.o: share/snis/models/dreadknight/dreadknight-exhaust-plumes.h
+snis_limited_client.o: share/snis/models/enforcer.scad_params.h
 snis_limited_client.o: share/snis/models/freighter.scad_params.h
 snis_limited_client.o: share/snis/models/research-vessel.scad_params.h
 snis_limited_client.o: share/snis/models/scrambler.scad_params.h

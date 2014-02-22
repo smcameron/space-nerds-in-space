@@ -658,11 +658,28 @@ static void queue_delete_oid(struct game_client *c, uint32_t oid)
 }
 
 static int add_ship(int faction);
-static void respawn_object(int otype)
+static void push_cop_mode(struct snis_entity *cop);
+static void respawn_object(struct snis_entity *o)
 {
-	switch (otype) {
+	int i;
+	uint32_t hp;
+
+	switch (o->type) {
 		case OBJTYPE_SHIP2:
-			add_ship(lowest_faction);
+			if (o->tsd.ship.ai[0].ai_mode != AI_MODE_COP)
+				add_ship(lowest_faction);
+			else {
+				/* respawn cops as cops */
+				hp = o->tsd.ship.home_planet;
+				i = add_ship(o->sdata.faction);
+				if (i < 0)
+					break;
+				o = &go[i];
+				o->tsd.ship.home_planet = hp;
+				o->tsd.ship.shiptype = SHIP_CLASS_ENFORCER;
+				push_cop_mode(o);
+				break;
+			}
 			break;
 		case OBJTYPE_ASTEROID:
 			/* TODO: respawn asteroids */
@@ -1149,6 +1166,45 @@ static void calculate_attack_vector(struct snis_entity *o, int mindist, int maxd
 					&o->tsd.ship.doz);
 }
 
+static void push_cop_mode(struct snis_entity *cop)
+{
+	int i, npoints;
+	float orbit_radius;
+	struct snis_entity *p;
+	union quat q;
+	struct ai_cop_data *patrol;
+	union vec3 home_planet;
+
+	cop->tsd.ship.nai_entries = 1;
+	cop->tsd.ship.ai[0].ai_mode = AI_MODE_COP;
+
+	i = lookup_by_id(cop->tsd.ship.home_planet);
+	assert(i >= 0);
+	p = &go[i];
+	home_planet.v.x = p->x;
+	home_planet.v.y = p->y;
+	home_planet.v.z = p->z;
+
+	orbit_radius = (0.01 * (float) snis_randn(100) + 2.0) * p->tsd.planet.radius;
+
+	npoints = MAX_PATROL_POINTS;
+	patrol = &cop->tsd.ship.ai[0].u.cop;
+	patrol->npoints = npoints;
+	patrol->dest = 0;
+
+	random_quat(&q);
+
+	for (i = 0; i < npoints; i++) {
+		float angle = M_PI / 180.0 * i * (360.0 / MAX_PATROL_POINTS);
+		union vec3 v = { { sin(angle) * orbit_radius, cos(angle) * orbit_radius, 0.0 } };
+		quat_rot_vec(&patrol->p[i], &v, &q);
+		vec3_add_self(&patrol->p[i], &home_planet);
+	}
+	cop->tsd.ship.dox = patrol->p[0].v.x;
+	cop->tsd.ship.doy = patrol->p[0].v.y;
+	cop->tsd.ship.doz = patrol->p[0].v.z;
+}
+
 static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, int recursion_level)
 {
 	int n, i;
@@ -1166,9 +1222,14 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 	if (i < 0)
 		return;
 
-	if (attacker->tsd.ship.in_secure_area || go[i].tsd.ship.in_secure_area) {
-		/* TODO: something better */
-		return;
+	if (attacker->tsd.ship.ai[0].ai_mode != AI_MODE_COP) {
+		if (go[i].tsd.ship.ai[0].ai_mode == AI_MODE_COP)
+			return; /* Don't attack the cops */
+
+		if (attacker->tsd.ship.in_secure_area || go[i].tsd.ship.in_secure_area) {
+			/* TODO: something better */
+			return;
+		}
 	}
 
 	fleet_number = find_fleet_number(attacker);
@@ -1265,6 +1326,7 @@ struct potential_victim_info {
 	int victim_id;
 };
 
+static void ship_security_avoidance(void *context, void *entity);
 static void process_potential_victim(void *context, void *entity)
 {
 	struct potential_victim_info *info = context;
@@ -1283,6 +1345,19 @@ static void process_potential_victim(void *context, void *entity)
 
 	if (!v->alive) /* skip the dead guys */
 		return;
+
+	if (v->type == OBJTYPE_SHIP2) {
+		if (v->tsd.ship.ai[0].ai_mode == AI_MODE_COP)
+			return; /* skip cops */
+		if (o->tsd.ship.ai[0].ai_mode != AI_MODE_COP) { /* I'm not a cop... */
+			if (v->tsd.ship.in_secure_area) /* already know secure? */
+				return;
+			space_partition_process(space_partition, v, v->x, v->z, v,
+					ship_security_avoidance);
+			if (v->tsd.ship.in_secure_area) /* check again... */
+				return;
+		}
+	}
 
 	hostility = faction_hostility(o->sdata.faction, v->sdata.faction);
 	dist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
@@ -1486,6 +1561,66 @@ static void add_starbase_attacker(struct snis_entity *starbase, int attacker_id)
 	starbase->tsd.starbase.attacker[n] = attacker_id;
 }
 
+static void notify_a_cop(void *context, void *entity)
+{
+	struct snis_entity *perp = context;
+	struct snis_entity *cop = entity;
+	float dist2;
+	int n;
+
+	if (cop->type != OBJTYPE_SHIP2)
+		return;
+
+	if (cop->tsd.ship.ai[0].ai_mode != AI_MODE_COP)
+		return;
+
+	dist2 = dist3dsqrd(cop->x - perp->x, cop->y - perp->y, cop->z - perp->z);
+	if (dist2 > SECURITY_RADIUS * SECURITY_RADIUS)
+		return;
+
+	/* Farther away from cop, greater chance cop doesn't see... */
+	dist2 = sqrt(dist2) / (float) SECURITY_RADIUS;
+	if (snis_randn(1000) < dist2 * 250)
+		return;
+
+	n = cop->tsd.ship.nai_entries;
+	assert(n > 0);
+	if (n == 1) {
+		push_attack_mode(cop, perp->id, 0);
+		return;
+	}
+	n--;
+	if (cop->tsd.ship.ai[n].ai_mode == AI_MODE_HANGOUT) {
+		pop_ai_stack(cop);
+		push_attack_mode(cop, perp->id, 0);
+	}
+}
+
+static void notify_the_cops(struct snis_entity *weapon)
+{
+	uint32_t perp_id, perp_index;
+	struct snis_entity *perp;
+
+	switch (weapon->type) {
+	case OBJTYPE_TORPEDO:
+		perp_id = weapon->tsd.torpedo.ship_id;
+		break;
+	case OBJTYPE_LASER:
+		perp_id = weapon->tsd.laser.ship_id;
+		break;
+	case OBJTYPE_LASERBEAM:
+		perp_id = weapon->tsd.laserbeam.origin;
+		break;
+	default:
+		return;
+	}
+	perp_index = lookup_by_id(perp_id);
+	if (perp_index < 0)
+		return;
+	perp = &go[perp_index];
+	space_partition_process(space_partition, perp, perp->x, perp->z, perp, notify_a_cop);
+}
+
 static void torpedo_collision_detection(void *context, void *entity)
 {
 	struct snis_entity *o = context; /* torpedo */
@@ -1512,6 +1647,8 @@ static void torpedo_collision_detection(void *context, void *entity)
 	else if (dist2 > TORPEDO_DETONATE_DIST2)
 		return; /* not close enough */
 	o->alive = 0; /* hit!!!! */
+
+	notify_the_cops(o);
 
 	if (t->type == OBJTYPE_STARBASE) {
 		t->tsd.starbase.under_attack = 1;
@@ -1543,8 +1680,8 @@ static void torpedo_collision_detection(void *context, void *entity)
 		if (t->type != OBJTYPE_SHIP1) {
 			if (t->type == OBJTYPE_SHIP2)
 				make_derelict(t);
+			respawn_object(t);
 			delete_from_clients_and_server(t);
-			respawn_object(t->type);
 			
 		} else {
 			snis_queue_add_sound(EXPLOSION_SOUND,
@@ -1662,6 +1799,7 @@ static void laser_collision_detection(void *context, void *entity)
 		
 	/* hit!!!! */
 	o->alive = 0;
+	notify_the_cops(o);
 
 	if (t->type == OBJTYPE_STARBASE) {
 		t->tsd.starbase.under_attack = 1;
@@ -1690,8 +1828,8 @@ static void laser_collision_detection(void *context, void *entity)
 		if (t->type != OBJTYPE_SHIP1) {
 			if (t->type == OBJTYPE_SHIP2)
 				make_derelict(t);
+			respawn_object(t);
 			delete_from_clients_and_server(t);
-			respawn_object(t->type);
 		} else {
 			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, t->id);
 			schedule_callback(event_callback, &callback_schedule,
@@ -1989,6 +2127,28 @@ static float calculate_threat_level(struct snis_entity *o)
 	return threat_level;
 }
 
+static void count_nearby_cops(void *context, void *entity)
+{
+	struct snis_entity *ship = context;
+	struct snis_entity *cop = entity;
+	double dist2;
+
+	if (cop->type != OBJTYPE_SHIP2)
+		return;
+	if (cop->tsd.ship.ai[0].ai_mode != AI_MODE_COP)
+		return;
+
+	dist2 = dist3dsqrd(ship->x - cop->x, ship->y - cop->y, ship->z - cop->z);
+	if (dist2 < SECURITY_RADIUS * SECURITY_RADIUS)
+		ship->tsd.ship.in_secure_area = 1;
+}
+
+static int too_many_cops_around(struct snis_entity *o)
+{
+	space_partition_process(space_partition, o, o->x, o->y, o, count_nearby_cops);
+	return o->tsd.ship.in_secure_area;
+}
+
 static void ai_attack_mode_brain(struct snis_entity *o)
 {
 	struct snis_entity *v;
@@ -2065,6 +2225,10 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	}
 
 	if (!firing_range)
+		return;
+
+	if (o->tsd.ship.ai[0].ai_mode != AI_MODE_COP && /* if I'm not a cop */
+		too_many_cops_around(o))
 		return;
 
 	/* neutrals do not attack planets or starbases, and only select ships
@@ -2357,6 +2521,81 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 	check_for_nearby_targets(o);
 }
 
+static void ai_cop_mode_brain(struct snis_entity *o)
+{
+	int n = o->tsd.ship.nai_entries - 1;
+	struct ai_cop_data *patrol = &o->tsd.ship.ai[n].u.cop;
+	double maxv;
+	int d;
+
+	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
+	o->tsd.ship.desired_velocity = maxv;
+	d = patrol->dest;
+
+	double dist2 = dist3dsqrd(o->x - patrol->p[d].v.x,
+				o->y - patrol->p[d].v.y,
+				o->z - patrol->p[d].v.z);
+	if (dist2 > 2000.0 * 2000.0) {
+		double ld = dist3dsqrd(o->x - o->tsd.ship.dox,
+				o->y - o->tsd.ship.doy, o->z - o->tsd.ship.doz);
+		/* give ships some variety in movement */
+		if (((universe_timestamp + o->id) & 0x3ff) == 0 || ld < 50.0 * 50.0) {
+			union vec3 v, vn;
+
+			v.v.x = patrol->p[d].v.x - o->x;
+			v.v.y = patrol->p[d].v.y - o->y;
+			v.v.z = patrol->p[d].v.z - o->z;
+			vec3_normalize(&vn, &v);
+			vec3_mul(&v, &vn, 1500.0f);
+			v.v.x += (float) snis_randn(100);
+			v.v.y += (float) snis_randn(100);
+			v.v.z += (float) snis_randn(100);
+
+			o->tsd.ship.dox = v.v.x + o->x;
+			o->tsd.ship.doy = v.v.y + o->y;
+			o->tsd.ship.doz = v.v.z + o->z;
+		}
+		/* sometimes just warp if it's too far... */
+		if (snis_randn(10000) < 50) {
+			union vec3 v;
+
+			v.v.x = patrol->p[d].v.x - o->x;
+			v.v.y = patrol->p[d].v.y - o->y;
+			v.v.z = patrol->p[d].v.z - o->z;
+			vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
+			add_warp_effect(o->x, o->y, o->z, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
+			set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
+			/* put timestamp at +(a bit) due to extreme speed seen by client */
+			o->timestamp = universe_timestamp + 6;
+			/* reset destination after warping to prevent backtracking */
+			o->tsd.ship.dox = patrol->p[d].v.x;
+			o->tsd.ship.doy = patrol->p[d].v.y;
+			o->tsd.ship.doz = patrol->p[d].v.z;
+		}
+	} else {
+		o->tsd.ship.dox = patrol->p[d].v.x;
+		o->tsd.ship.doy = patrol->p[d].v.y;
+		o->tsd.ship.doz = patrol->p[d].v.z;
+	}
+
+	if (dist2 < 300.0 * 300.0) {
+		patrol->dest = (patrol->dest + 1) % patrol->npoints;
+		/* hang out here awhile... */
+		n = o->tsd.ship.nai_entries;
+		if (n < MAX_AI_STACK_ENTRIES) {
+			o->tsd.ship.ai[n].ai_mode = AI_MODE_HANGOUT;
+			o->tsd.ship.ai[n].u.hangout.time_to_go = 100 + snis_randn(100);
+			o->tsd.ship.desired_velocity = 0;
+			o->tsd.ship.nai_entries++;
+		} else {
+			d = patrol->dest;
+			o->tsd.ship.dox = patrol->p[d].v.x;
+			o->tsd.ship.doy = patrol->p[d].v.y;
+			o->tsd.ship.doz = patrol->p[d].v.z;
+		}
+	}
+}
+
 static void maybe_leave_fleet(struct snis_entity *o)
 {
 	int i;
@@ -2395,6 +2634,9 @@ static void ai_brain(struct snis_entity *o)
 		break;
 	case AI_MODE_PATROL:
 		ai_patrol_mode_brain(o);
+		break;
+	case AI_MODE_COP:
+		ai_cop_mode_brain(o);
 		break;
 	case AI_MODE_FLEET_LEADER:
 		/* Because fleet leader uses patrol brain, these assumptions need to hold */
@@ -4180,6 +4422,21 @@ static int add_player(double x, double z, double vx, double vz, double heading)
 	return i;
 }
 
+static uint32_t choose_ship_home_planet(void)
+{
+	int i, hp;
+
+	hp = snis_randn(NPLANETS);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].type == OBJTYPE_PLANET) {
+			if (hp <= 0)
+				return go[i].id;
+			hp--;
+		}
+	}
+	return (uint32_t) -1;
+}
+
 static int add_ship(int faction)
 {
 	int i;
@@ -4217,6 +4474,7 @@ static int add_ship(int faction)
 	go[i].tsd.ship.steering_adjustment.v.y = 0.0;
 	go[i].tsd.ship.steering_adjustment.v.z = 0.0;
 	go[i].tsd.ship.ncargo_bays = 0;
+	go[i].tsd.ship.home_planet = choose_ship_home_planet();
 	memset(go[i].tsd.ship.cargo, 0, sizeof(go[i].tsd.ship.cargo));
 	if (faction >= 0 && faction < nfactions())
 		go[i].sdata.faction = faction;
@@ -4706,6 +4964,7 @@ static void laserbeam_move(struct snis_entity *o)
 		target->tsd.starbase.under_attack = 1;
 		add_starbase_attacker(target, o->tsd.laserbeam.origin);
 		calculate_laser_starbase_damage(target, o->tsd.laserbeam.wavelength);
+		notify_the_cops(o);
 	}
 
 	if (ttype == OBJTYPE_SHIP1 || ttype == OBJTYPE_SHIP2) {
@@ -4713,6 +4972,7 @@ static void laserbeam_move(struct snis_entity *o)
 					(float) o->tsd.laserbeam.power);
 		send_ship_damage_packet(target);
 		attack_your_attacker(target, lookup_entity_by_id(o->tsd.laserbeam.origin));
+		notify_the_cops(o);
 	}
 
 	if (ttype == OBJTYPE_ASTEROID)
@@ -4730,8 +4990,8 @@ static void laserbeam_move(struct snis_entity *o)
 		if (ttype != OBJTYPE_SHIP1) {
 			if (ttype == OBJTYPE_SHIP2)
 				make_derelict(target);
+			respawn_object(target);
 			delete_from_clients_and_server(target);
-			respawn_object(ttype);
 		} else {
 			snis_queue_add_sound(EXPLOSION_SOUND,
 						ROLE_SOUNDSERVER, target->id);
@@ -5252,6 +5512,30 @@ static void add_eships(void)
 		add_ship(i % nfactions());
 }
 
+static void add_enforcers_to_planet(struct snis_entity *p)
+{
+	int nenforcers = p->tsd.planet.security * 2;
+	int x;
+
+	for (int i = 0; i < nenforcers; i++) {
+		x = add_ship(p->sdata.faction);
+		if (x < 0)
+			continue;
+		go[x].tsd.ship.shiptype = SHIP_CLASS_ENFORCER;
+		go[x].tsd.ship.home_planet = p->id;
+		push_cop_mode(&go[x]);
+	}
+}
+
+static void add_enforcers()
+{
+	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
+		if (go[i].type == OBJTYPE_PLANET && go[i].tsd.planet.security > 0)
+			add_enforcers_to_planet(&go[i]);
+}
+
 static void add_spacemonsters(void)
 {
 	int i;
@@ -5276,6 +5560,7 @@ static void make_universe(void)
 	add_starbases();
 	add_wormholes();
 	add_eships();
+	add_enforcers();
 	add_spacemonsters();
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -8943,6 +9228,9 @@ static void send_econ_update_ship_packet(struct game_client *c,
 			case AI_MODE_HANGOUT:
 				ai[i] = 'H';
 				break;
+			case AI_MODE_COP:
+				ai[i] = 'C';
+				break;
 			default:
 				ai[i] = '?';
 				break;
@@ -8973,13 +9261,19 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	/* Find top-most patrol/leader mode on stack, if any */
 	n = o->tsd.ship.nai_entries - 1;
 	while (n >= 0 && o->tsd.ship.ai[n].ai_mode != AI_MODE_FLEET_LEADER &&
-		o->tsd.ship.ai[n].ai_mode != AI_MODE_PATROL)
+		o->tsd.ship.ai[n].ai_mode != AI_MODE_PATROL &&
+		o->tsd.ship.ai[n].ai_mode != AI_MODE_COP)
 		n--;
 
 	if (n >= 0 && (o->tsd.ship.ai[n].ai_mode == AI_MODE_FLEET_LEADER ||
 		o->tsd.ship.ai[n].ai_mode == AI_MODE_PATROL)) {
 		npoints = o->tsd.ship.ai[n].u.patrol.npoints;
 		v = o->tsd.ship.ai[n].u.patrol.p;
+	}
+
+	if (n >= 0 && (o->tsd.ship.ai[n].ai_mode == AI_MODE_COP)) {
+		npoints = o->tsd.ship.ai[n].u.cop.npoints;
+		v = o->tsd.ship.ai[n].u.cop.p;
 	}
 
 	pb = packed_buffer_allocate(6 + sizeof(uint32_t) + sizeof(uint32_t) * 3 * npoints);

@@ -831,6 +831,9 @@ static struct thrust_attachment_point ship_thrust_attachment_points[] = {
 	/* vanquisher */
 	#include "share/snis/models/vanquisher.scad_params.h"
 	,
+	/* enforcer */
+	#include "share/snis/models/enforcer.scad_params.h"
+	,
 };
 
 static struct thrust_attachment_point *ship_thrust_attachment_point(int shiptype)
@@ -11821,6 +11824,8 @@ static void read_sound_clips(void)
 	read_ogg_clip(COMMS_HAIL_SOUND, d, "comms-hail.ogg");
 	read_ogg_clip(TRANSPORTER_SOUND, d, "transporter-sound.ogg");
 	read_ogg_clip(DANGEROUS_RADIATION, d, "dangerous-radiation.ogg");
+	read_ogg_clip(ENTERING_SECURE_AREA, d, "entering-high-security-area.ogg");
+	read_ogg_clip(LEAVING_SECURE_AREA, d, "leaving-high-security-area.ogg");
 	printf("Done.\n");
 }
 

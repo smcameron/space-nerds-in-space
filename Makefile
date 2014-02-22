@@ -144,7 +144,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/cargocontainer.stl \
 	${MD}/spaceship_turret.stl \
 	${MD}/spaceship_turret_base.stl \
-	${MD}/vanquisher.stl
+	${MD}/vanquisher.stl \
+	${MD}/enforcer.stl
 
 MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic

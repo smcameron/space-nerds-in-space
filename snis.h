@@ -189,6 +189,7 @@ struct damcon_data;
 #define AI_MODE_FLEET_MEMBER 5
 #define AI_MODE_FLEET_LEADER 6
 #define AI_MODE_HANGOUT 7
+#define AI_MODE_COP 8
 
 /* distance more than which fleet ships will warp back to position rather than simply flying */
 #define FLEET_WARP_DISTANCE 5000.0
@@ -202,6 +203,12 @@ struct ai_attack_data {
 
 struct ai_patrol_data {
 #define MAX_PATROL_POINTS 5
+	uint8_t npoints;
+	uint8_t dest;
+	union vec3 p[MAX_PATROL_POINTS];
+};
+
+struct ai_cop_data {
 	uint8_t npoints;
 	uint8_t dest;
 	union vec3 p[MAX_PATROL_POINTS];
@@ -224,6 +231,7 @@ struct ai_hangout_data {
 union ai_data {
 	struct ai_attack_data attack;
 	struct ai_patrol_data patrol;
+	struct ai_cop_data cop;
 	struct ai_fleet_data fleet;
 	struct ai_hangout_data hangout;
 	struct ai_flee_data flee;
@@ -385,6 +393,7 @@ struct ship_data {
 	int nthrust_ports;
 	struct entity *thrust_entity[MAX_THRUST_PORTS];
 	uint8_t in_secure_area;
+	uint32_t home_planet;
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200

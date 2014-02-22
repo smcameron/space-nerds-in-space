@@ -1084,6 +1084,14 @@ void starbase_attack_warning(struct mtwist_state *mt, char *buffer,
 	break_lines(buffer, line_len);
 }
 
+void cop_attack_warning(struct mtwist_state *mt, char *buffer,
+			int buflen, int line_len)
+{
+	snprintf(buffer, buflen, "%s you are in violation of spacefaring ordinance 773-za"
+			" and %s %s" , be_advised(mt), you_will_be(mt), destroyed(mt));
+	break_lines(buffer, line_len);
+}
+
 
 #ifdef TEST_TAUNT
 #include "mtwist.h"

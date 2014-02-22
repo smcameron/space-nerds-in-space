@@ -22,3 +22,4 @@ SWORDFISH swordfish.stl 1400 30
 WOMBAT wombat/snis3006.obj 1400 30 x -90.0 y 90.0
 DREADKNIGHT dreadknight/dreadknight.obj 1300 25
 VANQUISHER vanquisher.stl 1400 3 
+ENFORCER enforcer.stl 1700 5

@@ -20,6 +20,8 @@
 #define SHIP_CLASS_SWORDFISH 16
 #define SHIP_CLASS_WOMBAT 17
 #define SHIP_CLASS_DREADKNIGHT 18
+#define SHIP_CLASS_VANQUISHER 19
+#define SHIP_CLASS_ENFORCER 20
 
 struct ship_type_entry {
 	char *class;
