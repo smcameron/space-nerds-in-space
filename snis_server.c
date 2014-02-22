@@ -1162,6 +1162,15 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 	if (recursion_level > 2) /* guard against infinite recursion */
 		return;
 
+	i = lookup_by_id(victim_id);
+	if (i < 0)
+		return;
+
+	if (attacker->tsd.ship.in_secure_area || go[i].tsd.ship.in_secure_area) {
+		/* TODO: something better */
+		return;
+	}
+
 	fleet_number = find_fleet_number(attacker);
 
 	n = attacker->tsd.ship.nai_entries;
@@ -1179,10 +1188,6 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 
 		if (attacker->tsd.ship.ai[n - 1].u.attack.victim_id == victim_id)
 			return; /* already attacking this guy */
-
-		i = lookup_by_id(victim_id);
-		if (i < 0)
-			return;
 		v = &go[i];
 		d1 = dist3dsqrd(v->x - attacker->x, v->y - attacker->y, v->z - attacker->z);
 		i = lookup_by_id(attacker->tsd.ship.ai[n - 1].u.attack.victim_id);
@@ -2413,6 +2418,25 @@ static void ai_brain(struct snis_entity *o)
 	}
 }
 
+static void ship_security_avoidance(void *context, void *entity)
+{
+	struct snis_entity *ship = context;
+	struct snis_entity *planet = entity;
+	float dist2;
+
+	if (planet->type != OBJTYPE_PLANET)
+		return;
+
+	if (planet->tsd.planet.security == LOW_SECURITY)
+		return;
+
+	dist2 = dist3dsqrd(ship->x - planet->x, ship->y - planet->y, ship->z - planet->z);
+	if (dist2 < SECURITY_RADIUS * SECURITY_RADIUS)
+		return;
+
+	ship->tsd.ship.in_secure_area = 1;
+}
+
 struct collision_avoidance_context {
 	struct snis_entity *o;
 	double closest_dist2;
@@ -2502,6 +2526,9 @@ static void ship_move(struct snis_entity *o)
 	if (o->sdata.shield_strength < 255 && snis_randn(1000) < 7)
 		o->sdata.shield_strength++;
 
+	/* Check if we are in a secure area */
+	o->tsd.ship.in_secure_area = 0;
+	space_partition_process(space_partition, o, o->x, o->z, o, ship_security_avoidance);
 	ai_brain(o);
 
 	/* try to avoid collisions by computing steering and braking adjustments */
@@ -3133,6 +3160,12 @@ static void player_collision_detection(void *player, void *object)
 					(t->tsd.planet.radius + PLAYER_PLANET_DIST_WARN);
 		const float too_close2 = (t->tsd.planet.radius + PLAYER_PLANET_DIST_TOO_CLOSE) *
 					(t->tsd.planet.radius + PLAYER_PLANET_DIST_TOO_CLOSE);
+
+		/* check security level ... */
+		if (t->tsd.planet.security > o->tsd.ship.in_secure_area &&
+			dist2 < SECURITY_RADIUS * SECURITY_RADIUS)
+			o->tsd.ship.in_secure_area = t->tsd.planet.security;
+
 		if (dist2 < surface_dist2)  {
 			/* crashed into planet */
 			o->alive = 0;
@@ -3318,6 +3351,7 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 static void update_player_position_and_velocity(struct snis_entity *o)
 {
 	union vec3 desired_velocity;
+	uint8_t previous_security;
 
 	/* Apply player's thrust input from power model */
 	do_thrust(o);
@@ -3335,8 +3369,15 @@ static void update_player_position_and_velocity(struct snis_entity *o)
 
 	/* Move ship */
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+
+	previous_security = o->tsd.ship.in_secure_area;
+	o->tsd.ship.in_secure_area = 0;  /* player_collision_detection fills this in. */
 	space_partition_process(space_partition, o, o->x, o->z, o,
 				player_collision_detection);
+	if (o->tsd.ship.in_secure_area == 0 && previous_security > 0)
+		snis_queue_add_sound(LEAVING_SECURE_AREA, ROLE_SOUNDSERVER, o->id);
+	if (o->tsd.ship.in_secure_area > 0 && previous_security == 0)
+		snis_queue_add_sound(ENTERING_SECURE_AREA, ROLE_SOUNDSERVER, o->id);
 }
 
 static int calc_sunburn_damage(struct snis_entity *o, struct damcon_data *d,
@@ -4082,7 +4123,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay)
 
 static void respawn_player(struct snis_entity *o)
 {
-	int i, pid, found;
+	int i, found;
 	double x, y, z, a1, a2, rf;
 
 	/* Find a friendly location to respawn... */
@@ -4090,14 +4131,11 @@ static void respawn_player(struct snis_entity *o)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *f = &go[i];
 
-		if (!f->alive || f->type != OBJTYPE_STARBASE ||
-			f->sdata.faction != o->sdata.faction)
+		if (!f->alive || f->type != OBJTYPE_PLANET)
 			continue;
 
-		pid = lookup_by_id(f->tsd.starbase.associated_planet_id);
-		if (pid < 0)
+		if (f->tsd.planet.security != HIGH_SECURITY)
 			continue;
-		f = &go[pid];
 
 		/* put player near friendly planet at dist of 2 radii plus a bit. */
 		a1 = snis_randn(360) * M_PI / 180;
@@ -5035,7 +5073,7 @@ static int l_add_derelict(lua_State *l)
 	return 1;
 }
 
-static int add_planet(double x, double y, double z, float radius)
+static int add_planet(double x, double y, double z, float radius, uint8_t security)
 {
 	int i;
 
@@ -5059,12 +5097,13 @@ static int add_planet(double x, double y, double z, float radius)
 	go[i].tsd.planet.description_seed = snis_rand();
 	go[i].tsd.planet.radius = radius;
 	go[i].tsd.planet.ring = snis_randn(100) < 50;
+	go[i].tsd.planet.security = security;
 	return i;
 }
 
 static int l_add_planet(lua_State *l)
 {
-	double x, y, z, r;
+	double x, y, z, r, s;
 	const char *name;
 	int i;
 
@@ -5073,6 +5112,7 @@ static int l_add_planet(lua_State *l)
 	y = lua_tonumber(lua_state, 3);
 	z = lua_tonumber(lua_state, 4);
 	r = lua_tonumber(lua_state, 5);
+	s = lua_tonumber(lua_state, 6);
 
 	if (r < MIN_PLANET_RADIUS)
 		r = MIN_PLANET_RADIUS;
@@ -5080,7 +5120,7 @@ static int l_add_planet(lua_State *l)
 		r = MAX_PLANET_RADIUS;
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_planet(x, y, z, r);
+	i = add_planet(x, y, z, r, (uint8_t) s);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		lua_pushnumber(lua_state, -1.0);
@@ -5139,7 +5179,7 @@ static void add_planets(void)
 			printf("Minimum planet separation distance not attainable\n");
 		radius = (float) snis_randn(MAX_PLANET_RADIUS - MIN_PLANET_RADIUS) +
 						MIN_PLANET_RADIUS;
-		add_planet(x, y, z, radius);
+		add_planet(x, y, z, radius, i < 4 ? HIGH_SECURITY : LOW_SECURITY);
 	}
 }
 
@@ -7468,7 +7508,7 @@ static int process_create_item(struct game_client *c)
 	case OBJTYPE_PLANET:
 		r = (float) snis_randn(MAX_PLANET_RADIUS - MIN_PLANET_RADIUS) +
 					MIN_PLANET_RADIUS;
-		i = add_planet(x, 0.0, z, r);
+		i = add_planet(x, 0.0, z, r, 0);
 		break;
 	case OBJTYPE_NEBULA:
 		r = (double) snis_randn(NEBULA_RADIUS) +
@@ -9064,7 +9104,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->vx, (int32_t) UNIVERSE_DIM,
 			o->vy, (int32_t) UNIVERSE_DIM,
 			o->vz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbwQQQ",
+	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbwQQQb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -9081,7 +9121,8 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.reverse, o->tsd.ship.ai[0].u.attack.victim_id,
 			&o->orientation.vec[0],
 			&o->tsd.ship.sciball_orientation.vec[0],
-			&o->tsd.ship.weap_orientation.vec[0]);
+			&o->tsd.ship.weap_orientation.vec[0],
+			o->tsd.ship.in_secure_area);
 	pb_queue_to_client(c, pb);
 }
 
@@ -9172,7 +9213,7 @@ static void send_update_planet_packet(struct game_client *c,
 	else
 		ring = 1.0;
 
-	pb_queue_to_client(c, packed_buffer_new("hwSSSSwbbb", OPCODE_UPDATE_PLANET, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwSSSSwbbbb", OPCODE_UPDATE_PLANET, o->id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
@@ -9180,7 +9221,7 @@ static void send_update_planet_packet(struct game_client *c,
 					o->tsd.planet.description_seed,
 					o->tsd.planet.government,
 					o->tsd.planet.tech_level,
-					o->tsd.planet.economy));
+					o->tsd.planet.economy, o->tsd.planet.security));
 }
 
 static void send_update_wormhole_packet(struct game_client *c,

@@ -39,7 +39,7 @@ starbase_id = add_starbase(10000, 0, 10000, 76);
 print("starbase id", starbase_id);
 
 -- add a planet:
-planet_id = add_planet("NOWWHAT", 50000, 0, 500000);
+planet_id = add_planet("NOWWHAT", 50000, 0, 500000, 0);
 print("planet id = ", planet_id);
 
 -- add a nebula:
@@ -92,6 +92,6 @@ for i = -3, 3 do
 end
 
 sbase_id = add_starbase(72500, 0, 68500, 76);
-p1 = add_planet("NOWWHAT", 72000, 100, 50000);
-p2 = add_planet("NOWWHAT", 68000, -100, 55000);
+p1 = add_planet("NOWWHAT", 72000, 100, 50000, 0);
+p2 = add_planet("NOWWHAT", 68000, -100, 55000, 0);
 

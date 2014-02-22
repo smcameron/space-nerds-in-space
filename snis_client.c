@@ -1398,7 +1398,8 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 }
 
 static int update_planet(uint32_t id, double x, double y, double z, double r, uint8_t government,
-				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring)
+				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring,
+				uint8_t security)
 {
 	int i, m;
 	struct entity *e, *ring;
@@ -1439,17 +1440,14 @@ static int update_planet(uint32_t id, double x, double y, double z, double r, ui
 			return i;
 		if (e)
 			update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
-		go[i].tsd.planet.government = government;
-		go[i].tsd.planet.tech_level = tech_level;
-		go[i].tsd.planet.economy = economy;
-		go[i].tsd.planet.description_seed = dseed;
 	} else {
 		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
-		go[i].tsd.planet.government = government;
-		go[i].tsd.planet.tech_level = tech_level;
-		go[i].tsd.planet.economy = economy;
-		go[i].tsd.planet.description_seed = dseed;
 	}
+	go[i].tsd.planet.government = government;
+	go[i].tsd.planet.tech_level = tech_level;
+	go[i].tsd.planet.economy = economy;
+	go[i].tsd.planet.description_seed = dseed;
+	go[i].tsd.planet.security = security;
 	return 0;
 }
 
@@ -3335,7 +3333,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
-		reverse;
+		reverse, in_secure_area;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -3361,13 +3359,13 @@ static int process_update_ship_packet(uint16_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbwQQQ",
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbwQQQb",
 			&tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &victim_id, &orientation.vec[0],
-			&sciball_orientation.vec[0], &weap_orientation.vec[0]);
+			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -3427,6 +3425,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	o->tsd.ship.weap_o1 = o->tsd.ship.weap_o2;
 	o->tsd.ship.weap_orientation = o->tsd.ship.weap_o1;
 	o->tsd.ship.weap_o2 = weap_orientation;
+	o->tsd.ship.in_secure_area = in_secure_area;
 	if (!o->tsd.ship.reverse && reverse)
 		wwviaudio_add_sound(REVERSE_SOUND);
 	o->tsd.ship.reverse = reverse;
@@ -4178,25 +4177,26 @@ static int process_update_planet_packet(void)
 	unsigned char buffer[100];
 	uint32_t id;
 	double dr, dx, dy, dz;
-	uint8_t government, tech_level, economy;
+	uint8_t government, tech_level, economy, security;
 	uint32_t dseed;
 	int hasring;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSSSwbbb", &id,
+	rc = read_and_unpack_buffer(buffer, "wSSSSwbbbb", &id,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
 			&dr, (int32_t) UNIVERSE_DIM,
-			&dseed, &government, &tech_level, &economy);
+			&dseed, &government, &tech_level, &economy, &security);
 	if (rc != 0)
 		return rc;
 	hasring = (dr < 0);
 	if (hasring)
 		dr = -dr;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_planet(id, dx, dy, dz, dr, government, tech_level, economy, dseed, hasring);
+	rc = update_planet(id, dx, dy, dz, dr, government, tech_level,
+				economy, dseed, hasring, security);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -5059,6 +5059,13 @@ static void show_weapons_camera_view(GtkWidget *w)
 					o->tsd.ship.torpedoes_loading +
 					o->tsd.ship.torpedoes_loaded);
 		sng_abs_xy_draw_string(buf, NANO_FONT, 570, SCREEN_HEIGHT - 15);
+	}
+
+	/* show security indicator */
+	if (o->tsd.ship.in_secure_area && timer & 0x08) {
+		sng_set_foreground(RED);
+		sng_center_xy_draw_string("HIGH SECURITY", NANO_FONT, 400, 500);
+		sng_center_xy_draw_string("AREA", NANO_FONT, 400, 516);
 	}
 
 	show_gunsight(w);
@@ -9203,7 +9210,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	if (e)
 		remove_entity(sciecx, e);
 
-	y = SCREEN_HEIGHT - 180;
+	y = SCREEN_HEIGHT - 200;
 	if (curr_science_guy->type == OBJTYPE_SHIP1 ||
 		curr_science_guy->type == OBJTYPE_SHIP2) {
 		sprintf(buf, "LIFEFORMS: %d", curr_science_guy->tsd.ship.lifeform_count);
@@ -9242,6 +9249,22 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += 20;
 		sprintf(buf, "ECONOMY: %s", economy_name[p->economy]);
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		y += 20;
+		switch (p->security) {
+		case 0:
+			strcpy(buf, "SECURITY: LOW");
+			break;
+		case 1:
+			strcpy(buf, "SECURITY: MEDIUM");
+			break;
+		case 2:
+			strcpy(buf, "SECURITY: HIGH");
+			break;
+		default:
+			strcpy(buf, "SECURITY: UNKNOWN");
+			break;
+		}
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += 20;
 

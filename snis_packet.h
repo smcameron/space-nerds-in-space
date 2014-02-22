@@ -171,6 +171,7 @@ struct update_ship_packet {
 	int32_t orientation[4]; /* int32_t encoded orientation quaternion */
 	int32_t sciball_orientation[4]; /* int32_t encoded orientation quaternion */
 	int32_t weap_orientation[4];
+	uint8_t in_secure_area;
 };
 
 struct ship_sdata_packet {

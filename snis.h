@@ -384,6 +384,7 @@ struct ship_data {
 #define MAX_THRUST_PORTS 5
 	int nthrust_ports;
 	struct entity *thrust_entity[MAX_THRUST_PORTS];
+	uint8_t in_secure_area;
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200
@@ -403,6 +404,7 @@ struct starbase_data {
 	uint8_t under_attack;
 	uint32_t last_time_called_for_help;
 	uint8_t lifeform_count;
+	uint8_t security;
 	char name[16];
 	struct marketplace_data *mkt;
 	int associated_planet_id;
@@ -532,6 +534,11 @@ struct planet_data {
 	uint8_t government;
 	uint8_t tech_level;
 	uint8_t economy;
+#define LOW_SECURITY 0
+#define MEDIUM_SECURITY 1
+#define HIGH_SECURITY 2
+#define SECURITY_RADIUS (XKNOWN_DIM / 30)
+	uint8_t security;
 #define MIN_PLANET_RADIUS 800.0f
 #define MAX_PLANET_RADIUS 2000.0f
 #define PLAYER_PLANET_DIST_TOO_CLOSE (200)

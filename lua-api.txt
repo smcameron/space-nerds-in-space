@@ -78,7 +78,8 @@ id = add_starbase(x, y, z, n) - adds a starbase at location x,y with number n (0
 	the starbase will be named "SB-n"
 	TODO: allow starbases to be named arbitrary strings.
 
-id = add_planet(name, x, y, z, r) - adds planet at x,y,z with specified name and radius,
+id = add_planet(name, x, y, z, r, s) - adds planet at x,y,z with specified name, radius,
+	and security (security: 0 = low, 1 = medium, 2 = high)
 	returns id of planet or -1.0 on failure.   Radius should be between 800 and 2000.
 
 id = add_nebula(name, x, y, z, r) - adds nebula at x,y with specified radius and name,

@@ -56,8 +56,8 @@ for i = 0, 10 do
 end
 
 sbase_id = add_starbase(72500, 0, 68500, 76);
-p1 = add_planet("NOWWHAT", 72000, 100, 50000);
-p2 = add_planet("NOWWHAT", 68000, -100, 55000);
+p1 = add_planet("NOWWHAT", 72000, 100, 50000, 0);
+p2 = add_planet("NOWWHAT", 68000, -100, 55000, 0);
 
 sb2 = add_starbase(x1, y1, z1, 22);
 sb2 = add_starbase(x2, y2, z2, 23);
