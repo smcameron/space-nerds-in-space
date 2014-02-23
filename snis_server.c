@@ -5539,6 +5539,8 @@ static void add_enforcers_to_planet(struct snis_entity *p)
 			continue;
 		go[x].tsd.ship.shiptype = SHIP_CLASS_ENFORCER;
 		go[x].tsd.ship.home_planet = p->id;
+		snprintf(go[x].sdata.name, sizeof(go[i].sdata.name), "POLICE-%02d",
+			snis_randn(100));
 		push_cop_mode(&go[x]);
 	}
 }
