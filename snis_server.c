@@ -1675,7 +1675,8 @@ static void notify_a_cop(void *context, void *entity)
 
 static void notify_the_cops(struct snis_entity *weapon)
 {
-	uint32_t perp_id, perp_index;
+	uint32_t perp_id;
+	int perp_index;
 	struct snis_entity *perp;
 
 	switch (weapon->type) {
