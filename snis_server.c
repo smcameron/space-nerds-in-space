@@ -9261,7 +9261,7 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	else
 		victim_id = o->tsd.ship.ai[n].u.attack.victim_id;
 
-	pb_queue_to_client(c, packed_buffer_new("hwwSSSSSSQwb", opcode,
+	pb_queue_to_client(c, packed_buffer_new("hwhSSSSSSQwb", opcode,
 			o->id, o->alive, o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM, o->z, (int32_t) UNIVERSE_DIM,
 			o->vx, (uint32_t) UNIVERSE_DIM,
@@ -9410,7 +9410,7 @@ static void send_update_ship_packet(struct game_client *c,
 	tloading = tloading | (tloaded << 4);
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
-	packed_buffer_append(pb, "hwwSSSSSS", opcode, o->id, o->alive,
+	packed_buffer_append(pb, "hwhSSSSSS", opcode, o->id, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM,
 			o->vx, (int32_t) UNIVERSE_DIM,

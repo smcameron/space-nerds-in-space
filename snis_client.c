@@ -504,7 +504,7 @@ static double quat_to_heading(const union quat *q)
 
 static int add_generic_object(uint32_t id, double x, double y, double z,
 		double vx, double vy, double vz,
-		const union quat *orientation, int type, uint32_t alive, struct entity *entity)
+		const union quat *orientation, int type, uint16_t alive, struct entity *entity)
 {
 	int i;
 
@@ -537,7 +537,7 @@ static int add_generic_object(uint32_t id, double x, double y, double z,
 
 static void update_generic_object(int index, double x, double y, double z,
 				double vx, double vy, double vz,
-				const union quat *orientation, uint32_t alive)
+				const union quat *orientation, uint16_t alive)
 {
 	struct snis_entity *o = &go[index];
 	o->nupdates++;
@@ -852,7 +852,7 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[], int *nthrus
 
 static int update_econ_ship(uint32_t id, double x, double y, double z,
 			double vx, double vy, double vz,
-			union quat *orientation, uint32_t alive, uint32_t victim_id,
+			union quat *orientation, uint16_t alive, uint32_t victim_id,
 			uint8_t shiptype, uint8_t ai[], double threat_level,
 			uint8_t npoints, union vec3 *patrol)
 {
@@ -3329,7 +3329,8 @@ static int process_update_ship_packet(uint16_t opcode)
 	int i;
 	unsigned char buffer[140];
 	struct packed_buffer pb;
-	uint32_t id, alive, torpedoes, power;
+	uint16_t alive;
+	uint32_t id, torpedoes, power;
 	uint32_t fuel, victim_id;
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
 	double dgunyawvel, dsheading, dbeamwidth, dvx, dvy, dvz;
@@ -3350,7 +3351,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "wwSSSSSS", &id, &alive,
+	packed_buffer_extract(&pb, "whSSSSSS", &id, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
 				&dvx, (int32_t) UNIVERSE_DIM,
@@ -3545,7 +3546,8 @@ static int process_mainscreen_view_mode(void)
 static int process_update_econ_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[200];
-	uint32_t id, alive, victim_id;
+	uint16_t alive;
+	uint32_t id, victim_id;
 	double dx, dy, dz, dvx, dvy, dvz, px, py, pz;
 	union quat orientation;
 	uint8_t shiptype, ai[5], npoints;
@@ -3554,7 +3556,7 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSSSQwb", &id, &alive,
+	rc = read_and_unpack_buffer(buffer, "whSSSSSSQwb", &id, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
 				&dz, (int32_t) UNIVERSE_DIM,
 				&dvx, (uint32_t) UNIVERSE_DIM,

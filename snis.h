@@ -599,7 +599,7 @@ struct snis_entity {
 	double x, y, z;
 	double vx, vy, vz;
 	double heading;
-	uint32_t alive;
+	uint16_t alive;
 	uint32_t type;
 	uint32_t timestamp;
 	uint32_t respawn_time;
