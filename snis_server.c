@@ -10009,8 +10009,17 @@ static void dump_opcode_stats(struct opcode_stat *data)
 	memcpy(s, data, sizeof(s));
 	qsort(s, 256, sizeof(s[0]), compare_opcode_stats);
 
+	printf("\n");
+	printf("%3s  %20s %20s %20s\n",
+		"Op", "Count", "total bytes", "bytes/op");
 	for (i = 0; i < 20; i++)
-		printf("%d: %3hu: %llu %llu\n", i, s[i].opcode, s[i].count, s[i].bytes);
+		if (s[i].count != 0)
+			printf("%3hu: %20llu %20llu %20llu\n",
+				s[i].opcode, s[i].count, s[i].bytes, s[i].bytes / s[i].count);
+		else
+			printf("%3hu: %20llu %20llu %20s\n",
+				s[i].opcode, s[i].count, s[i].bytes, "n/a");
+	printf("\n");
 }
 #else
 #define dump_opcode_stats(x)
