@@ -1573,6 +1573,9 @@ static void notify_a_cop(void *context, void *entity)
 
 	if (perp->type == OBJTYPE_STARBASE)
 		return;
+	
+	if (perp->type == OBJTYPE_SHIP2 && perp->tsd.ship.ai[0].ai_mode == AI_MODE_COP)
+		return;
 
 	if (cop->tsd.ship.ai[0].ai_mode != AI_MODE_COP)
 		return;
