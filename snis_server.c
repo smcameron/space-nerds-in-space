@@ -4398,6 +4398,7 @@ static void respawn_player(struct snis_entity *o)
 		y = f->y + sin(a1) * f->tsd.planet.radius * rf;
 		z = f->z + sin(a2) * f->tsd.planet.radius * rf;
 		set_object_location(o, x, y, z);
+		o->tsd.ship.in_secure_area = 1;
 		printf("found!\n");
 		found = 1;
 		break;
@@ -4413,6 +4414,7 @@ static void respawn_player(struct snis_entity *o)
 				break;
 		}
 		set_object_location(o, x, y, z);
+		o->tsd.ship.in_secure_area = 0;
 	}
 	o->vx = 0;
 	o->vz = 0;
