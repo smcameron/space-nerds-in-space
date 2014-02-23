@@ -6553,8 +6553,11 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 		if (!curr_science_guy && prev_science_guy == &go[i])
 			curr_science_guy = prev_science_guy;
 
-		snis_draw_3d_science_guy(w, gc, &go[i], &x, &y, dist, bw, pwr, range,
-			&go[i] == curr_science_guy, 100.0 * current_zoom / 255.0, nebula_factor);
+		if (dist < range || go[i].type == OBJTYPE_PLANET ||
+					go[i].type == OBJTYPE_NEBULA ||
+					go[i].type == OBJTYPE_STARBASE)
+			snis_draw_3d_science_guy(w, gc, &go[i], &x, &y, dist, bw, pwr, range,
+				&go[i] == curr_science_guy, 100.0 * current_zoom / 255.0, nebula_factor);
 
 		/* cache screen coords for mouse picking */
 		science_guy[nscience_guys].o = &go[i];
@@ -9391,7 +9394,7 @@ static void show_3d_science(GtkWidget *w)
 		snis_draw_science_reticule(w, gc, cx, cy, r,
 				o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width)); */
 		sng_draw_circle(0, cx, cy, r);
-		draw_all_the_3d_science_guys(w, o, zoom, current_zoom);
+		draw_all_the_3d_science_guys(w, o, zoom * 4.0, current_zoom * 4.0);
 		/* draw_all_the_science_sparks(w, o, zoom);
 		draw_all_the_science_nebulae(w, o, zoom); */
 	} else {

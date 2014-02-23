@@ -6127,7 +6127,7 @@ static int save_sdata_bandwidth(void)
 static int should_send_sdata(struct game_client *c, struct snis_entity *ship,
 				struct snis_entity *o)
 {
-	double dist, dist2, angle, range, range2, A1, A2;
+	double dist, dist2, angle, range, range2, range3, A1, A2;
 	int in_beam, bw, pwr, divisor, dr;
 
 	/*
@@ -6144,10 +6144,12 @@ static int should_send_sdata(struct game_client *c, struct snis_entity *ship,
 		return 1;
 
 	range2 = ship->tsd.ship.scibeam_range * ship->tsd.ship.scibeam_range;
+	range3 = 4.0 * ship->tsd.ship.scibeam_range * 4.0 * ship->tsd.ship.scibeam_range;
 	/* distance to target... */
 	dist2 = (o->x - ship->x) * (o->x - ship->x) +
 		(o->z - ship->z) * (o->z - ship->z);
-	if (dist2 > range2) /* too far, no sdata for you. */
+	if ((dist2 > range2 && o->type != OBJTYPE_PLANET && o->type != OBJTYPE_STARBASE) ||
+			(dist2 > range3))  /* too far, no sdata for you. */
 		return 0;
 
 	/* super close? Send it. */
@@ -6169,7 +6171,7 @@ static int should_send_sdata(struct game_client *c, struct snis_entity *ship,
 		dr += 200;
 	}
 #endif
-	if (dr >= 5)
+	if (dr >= 5 && o->type != OBJTYPE_STARBASE && o->type != OBJTYPE_PLANET)
 		return 0;
 
 	/* Is the target in the beam? */
