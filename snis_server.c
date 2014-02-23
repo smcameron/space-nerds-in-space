@@ -187,6 +187,11 @@ struct game_client {
 	uint32_t timestamp;
 	int bridge;
 	int debug_ai;
+#define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
+#if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
+	uint64_t write_sum;
+	uint64_t write_count;
+#endif
 } client[MAXCLIENTS];
 int nclients = 0;
 static pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -8946,6 +8951,13 @@ static void write_queued_updates_to_client(struct game_client *c)
 	/*  packed_buffer_queue_print(&c->client_write_queue); */
 	buffer = packed_buffer_queue_combine(&c->client_write_queue, &c->client_write_queue_mutex);
 	if (buffer->buffer_size > 0) {
+#if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
+		/* Last I checked, average buffer size was in the 14.5kbyte range. */
+		c->write_sum += buffer->buffer_size;
+		c->write_count++;
+		if ((universe_timestamp % 50) == 0)
+			printf("avg = %llu\n", c->write_sum / c->write_count);
+#endif
 		rc = snis_writesocket(c->socket, buffer->buffer, buffer->buffer_size);
 		if (rc != 0) {
 			snis_log(SNIS_ERROR, "writesocket failed, rc= %d, errno = %d(%s)\n", 
