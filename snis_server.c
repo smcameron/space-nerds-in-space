@@ -94,6 +94,7 @@ static struct opcode_stat {
 	uint16_t opcode;
 	uint64_t count;
 	uint64_t bytes;
+	uint64_t count_not_sent;
 } write_opcode_stats[256];
 
 #endif
@@ -637,8 +638,73 @@ static void gather_opcode_stats(struct packed_buffer *pb)
 		write_opcode_stats[opcode].bytes += (uint64_t) length;
 	}
 }
+
+static void gather_opcode_not_sent_stats(struct snis_entity *o)
+{
+	int opcode[4] = { -1, -1, -1, -1 };
+
+	switch (o->type) {
+	case OBJTYPE_SHIP1:
+		opcode[0] = OPCODE_UPDATE_SHIP;
+		opcode[1] = OPCODE_UPDATE_POWER_DATA;
+		opcode[2] = OPCODE_UPDATE_COOLANT_DATA;
+		break;
+	case OBJTYPE_SHIP2:
+		opcode[0] = OPCODE_ECON_UPDATE_SHIP;
+		break;
+	case OBJTYPE_ASTEROID:
+		opcode[0] = OPCODE_UPDATE_ASTEROID;
+		break;
+	case OBJTYPE_CARGO_CONTAINER:
+		opcode[0] = OPCODE_UPDATE_CARGO_CONTAINER;
+		break;
+	case OBJTYPE_DERELICT:
+		opcode[0] = OPCODE_UPDATE_DERELICT;
+		break;
+	case OBJTYPE_PLANET:
+		opcode[0] = OPCODE_UPDATE_PLANET;
+		break;
+	case OBJTYPE_WORMHOLE:
+		opcode[0] = OPCODE_UPDATE_WORMHOLE;
+		break;
+	case OBJTYPE_STARBASE:
+		opcode[0] = OPCODE_UPDATE_STARBASE;
+		break;
+	case OBJTYPE_NEBULA:
+		opcode[0] = OPCODE_UPDATE_NEBULA;
+		break;
+	case OBJTYPE_EXPLOSION:
+		opcode[0] = OPCODE_UPDATE_EXPLOSION;
+		break;
+	case OBJTYPE_DEBRIS:
+		break;
+	case OBJTYPE_SPARK:
+		break;
+	case OBJTYPE_TORPEDO:
+		opcode[0] = OPCODE_UPDATE_TORPEDO;
+		break;
+	case OBJTYPE_LASER:
+		opcode[0] = OPCODE_UPDATE_LASER;
+		break;
+	case OBJTYPE_SPACEMONSTER:
+		opcode[0] = OPCODE_UPDATE_SPACEMONSTER;
+		break;
+	case OBJTYPE_LASERBEAM:
+		opcode[0] = OPCODE_UPDATE_LASERBEAM;
+		break;
+	case OBJTYPE_TRACTORBEAM:
+		opcode[0] = OPCODE_UPDATE_TRACTORBEAM;
+		break;
+	default:
+		break;
+	}
+	for (int i = 0; i < ARRAY_SIZE(opcode); i++)
+		if (opcode[i] > 0)
+			write_opcode_stats[opcode[i]].count_not_sent++;
+}
 #else
 #define gather_opcode_stats(x)
+#define gather_opcode_not_sent_stats(x)
 #endif
 
 static inline void pb_queue_to_client(struct game_client *c, struct packed_buffer *pb)
@@ -6132,10 +6198,18 @@ static void send_update_sdata_packets(struct game_client *c, struct snis_entity 
 	if (i < 0)
 		return;
 	ship = &go[i];
-	if (save_sdata_bandwidth())
+	if (save_sdata_bandwidth()) {
+#if GATHER_OPCODE_STATS
+		write_opcode_stats[OPCODE_SHIP_SDATA].count_not_sent++;
+#endif
 		return;
-	if (!should_send_sdata(c, ship, o))
+	}
+	if (!should_send_sdata(c, ship, o)) {
+#if GATHER_OPCODE_STATS
+		write_opcode_stats[OPCODE_SHIP_SDATA].count_not_sent++;
+#endif
 		return;
+	}
 	pack_and_send_ship_sdata_packet(c, o);
 }
 
@@ -9032,8 +9106,10 @@ static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
 	dx = (ship->x - o->x);
 	dz = (ship->z - o->z);
 	dist = (dx * dx) + (dz * dz);
-	if (dist > threshold && snis_randn(100) < 70)
-	 	return 1;	
+	if (dist > threshold && snis_randn(100) < 70) {
+		gather_opcode_not_sent_stats(o);
+		return 1;
+	}
 	return 0;
 }
 
@@ -10010,12 +10086,14 @@ static void dump_opcode_stats(struct opcode_stat *data)
 	qsort(s, 256, sizeof(s[0]), compare_opcode_stats);
 
 	printf("\n");
-	printf("%3s  %20s %20s %20s\n",
-		"Op", "Count", "total bytes", "bytes/op");
+	printf("%3s  %10s %15s %9s %10s %15s\n",
+		"Op", "Count", "total bytes", "bytes/op", "not sent", "saved bytes");
 	for (i = 0; i < 20; i++)
 		if (s[i].count != 0)
-			printf("%3hu: %20llu %20llu %20llu\n",
-				s[i].opcode, s[i].count, s[i].bytes, s[i].bytes / s[i].count);
+			printf("%3hu: %10llu %15llu %9llu %10llu %15llu\n",
+				s[i].opcode, s[i].count, s[i].bytes, s[i].bytes / s[i].count,
+				s[i].count_not_sent,
+				s[i].count_not_sent * s[i].bytes / s[i].count);
 		else
 			printf("%3hu: %20llu %20llu %20s\n",
 				s[i].opcode, s[i].count, s[i].bytes, "n/a");
