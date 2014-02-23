@@ -7334,8 +7334,8 @@ static int l_attack_ship(lua_State *l)
 	struct snis_entity *attacker;
 
 	pthread_mutex_lock(&universe_mutex);
-	attacker_id = lua_tonumber(lua_state, 1);
-	victim_id = lua_tonumber(lua_state, 2);
+	attacker_id = lua_tonumber(l, 1);
+	victim_id = lua_tonumber(l, 2);
 
 	i = lookup_by_id(attacker_id);
 	if (i < 0)
@@ -7355,11 +7355,11 @@ static int l_attack_ship(lua_State *l)
 	ship_choose_new_attack_victim(attacker);
 
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, 0.0);
+	lua_pushnumber(l, 0.0);
 	return 1;
 error:
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, -1.0);
+	lua_pushnumber(l, -1.0);
 	return 1;
 }
 
@@ -7525,13 +7525,13 @@ static int l_set_player_damage(lua_State *l)
 		goto distribute_damage;
 	}
 error:
-	lua_pushnil(lua_state);
+	lua_pushnil(l);
 	return 1;
 distribute_damage:
 	assert(b >= 0 && b < nbridges);
 	distribute_damage_to_damcon_system_parts(o, &bridgelist[b].damcon,
 			damage_delta, system_number);
-	lua_pushnumber(lua_state, 0.0);
+	lua_pushnumber(l, 0.0);
 	return 1;
 }
 
@@ -7555,10 +7555,10 @@ static int l_load_skybox(lua_State *l)
 	packed_buffer_append(pb, "hb", OPCODE_LOAD_SKYBOX, (uint8_t) strlen(fileprefix) + 1);
 	packed_buffer_append_raw(pb, fileprefix, strlen(fileprefix) + 1);
 	send_packet_to_all_clients_on_a_bridge(o->id, pb, ROLE_MAIN);
-	lua_pushnumber(lua_state, 0.0);
+	lua_pushnumber(l, 0.0);
 	return 1;
 error:
-	lua_pushnil(lua_state);
+	lua_pushnil(l);
 	return 1;
 }
 
@@ -7568,9 +7568,9 @@ static int l_user_coords(lua_State *l)
 	const double y = luaL_checknumber(l, 2);
 	const double z = luaL_checknumber(l, 3);
 
-	lua_pushnumber(lua_state, x);
-	lua_pushnumber(lua_state, z);
-	lua_pushnumber(lua_state, y);
+	lua_pushnumber(l, x);
+	lua_pushnumber(l, z);
+	lua_pushnumber(l, y);
 	return 3;
 }
 
@@ -7622,10 +7622,10 @@ static int l_get_player_damage(lua_State *l)
 		goto done;
 	}
 error:
-	lua_pushnil(lua_state);
+	lua_pushnil(l);
 	return 1;
 done:
-	lua_pushnumber(lua_state, (double) bvalue);
+	lua_pushnumber(l, (double) bvalue);
 	return 1;
 }
 
@@ -7862,7 +7862,7 @@ static int process_toggle_demon_safe_mode(void)
 	return 0;
 }
 
-static int l_clear_all(lua_State *l)
+static int l_clear_all(__attribute__((unused)) lua_State *l)
 {
 	process_demon_clear_all();
 	return 0;
