@@ -9308,7 +9308,7 @@ static void send_econ_update_ship_packet(struct game_client *c,
 			v[i].v.y, (int32_t) UNIVERSE_DIM,
 			v[i].v.z, (int32_t) UNIVERSE_DIM);
 	}
-	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+	pb_queue_to_client(c, pb);
 }
 
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip)
