@@ -1875,8 +1875,11 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 
 	if (!mt)
 		mt = mtwist_init(35342);
-	
-	infinite_taunt(mt, buffer, sizeof(buffer) - 1);
+
+	if (alien->tsd.ship.ai[0].ai_mode == AI_MODE_COP)
+		cop_attack_warning(mt, buffer, sizeof(buffer) - 1, sizeof(buffer) - 1);
+	else
+		infinite_taunt(mt, buffer, sizeof(buffer) - 1);
 
 	sprintf(name, "%s: ", alien->sdata.name);
 	for (i = 0; buffer[i]; i++) {

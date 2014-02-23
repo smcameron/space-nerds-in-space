@@ -1087,8 +1087,8 @@ void starbase_attack_warning(struct mtwist_state *mt, char *buffer,
 void cop_attack_warning(struct mtwist_state *mt, char *buffer,
 			int buflen, int line_len)
 {
-	snprintf(buffer, buflen, "%s you are in violation of spacefaring ordinance 773-za"
-			" and %s %s" , be_advised(mt), you_will_be(mt), destroyed(mt));
+	snprintf(buffer, buflen, "You are in violation of spacefaring ordinance 773-za"
+			" and %s %s" , you_will_be(mt), destroyed(mt));
 	break_lines(buffer, line_len);
 }
 
@@ -1115,7 +1115,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < 1000; i++) {
 		/* infinite_taunt(buffer, sizeof(buffer) - 1); */
 		/* planet_description(mt, buffer, sizeof(buffer) - 1, 60); */
-		starbase_attack_warning(mt, buffer, sizeof(buffer) - 1, 50);
+		cop_attack_warning(mt, buffer, sizeof(buffer) - 1, 50);
 		printf("%s\n", buffer);
 	}
 	free(mt);
