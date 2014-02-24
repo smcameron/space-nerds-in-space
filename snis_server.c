@@ -174,6 +174,7 @@ static struct npc_menu_item starbase_main_menu[] = {
 };
 
 struct game_client {
+	int index;
 	int socket;
 	pthread_t read_thread;
 	pthread_t write_thread;
@@ -431,8 +432,13 @@ int nframes = 0;
 int timer = 0;
 struct timeval start_time, end_time;
 
+struct snis_entity_client_info {
+	uint32_t last_timestamp_sent;
+};
+
 static struct snis_object_pool *pool;
 static struct snis_entity go[MAXGAMEOBJS];
+static struct snis_entity_client_info *go_clients[MAXGAMEOBJS];
 static struct space_partition *space_partition = NULL;
 
 static uint32_t get_new_object_id(void)
@@ -4104,6 +4110,11 @@ static int add_generic_object(double x, double y, double z,
 	go[i].type = type;
 	go[i].timestamp = universe_timestamp + 1;
 	go[i].move = generic_move;
+
+	/* clear out the client update state */
+	if (nclients > 0) {
+		memset(go_clients[i], 0, sizeof(**go_clients) * nclients);
+	}
 
 	switch (type) {
 	case OBJTYPE_SHIP1:
@@ -9204,7 +9215,11 @@ static void queue_up_client_updates(struct game_client *c)
 			snis_randn(100) < 15) {
 			if (too_far_away_to_care(c, &go[i]))
 				continue;
-			queue_up_client_object_update(c, &go[i]);
+
+			if (go[i].timestamp != go_clients[i][c->index].last_timestamp_sent) {
+				queue_up_client_object_update(c, &go[i]);
+				go_clients[i][c->index].last_timestamp_sent = go[i].timestamp;
+			}
 			queue_up_client_object_sdata_update(c, &go[i]);
 			count++;
 		}
@@ -9824,6 +9839,7 @@ static void service_connection(int connection)
 	}
 	i = nclients;
 
+	client[i].index = i;
 	client[i].socket = connection;
 	client[i].timestamp = 0;  /* newborn client, needs everything */
 
@@ -9858,6 +9874,14 @@ static void service_connection(int connection)
 		if (client[j].bridge == bridgenum)
 			client_count++;
 	} 
+
+	/* need to expand each entities client_info and clear this new client */
+	for (j = 0; j < MAXGAMEOBJS; j++) {
+		/* nclients always get bigger, do something smarter here if that changes */
+		go_clients[j] = realloc(go_clients[j], sizeof(**go_clients) * nclients);
+		memset(&go_clients[j][i], 0, sizeof(**go_clients));
+	}
+
 	client_unlock();
 	pthread_mutex_unlock(&universe_mutex);
 
@@ -10391,6 +10415,8 @@ int main(int argc, char *argv[])
 
 	memset(&thirtieth_second, 0, sizeof(thirtieth_second));
 	thirtieth_second.tv_nsec = 33333333; /* 1/30th second */
+
+	memset(&go_clients, 0, sizeof(go_clients));
 
 	space_partition = space_partition_init(40, 40,
 			-UNIVERSE_LIMIT, UNIVERSE_LIMIT,
