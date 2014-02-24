@@ -18,6 +18,8 @@
         along with Spacenerds in Space; if not, write to the Free Software
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+/* Need _GNU_SOURCE for qsort_r, must be defined before any include directives */
+#define _GNU_SOURCE
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -219,6 +221,8 @@ struct client_network_stats {
 int nframes = 0;
 int timer = 0;
 struct timeval start_time, end_time;
+#define UNIVERSE_TICKS_PER_SECOND 10
+static double universe_timestamp_offset = 0;
 
 volatile int done_with_lobby = 0;
 pthread_t lobby_thread; pthread_attr_t lobby_attr;
@@ -387,6 +391,11 @@ static inline double to_uheading(double heading)
 static void set_default_clip_window(void)
 {
 	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+}
+
+static double universe_timestamp()
+{
+	return (time_now_double() - universe_timestamp_offset) * (double)UNIVERSE_TICKS_PER_SECOND;
 }
 
 #define MAX_LOBBY_TRIES 3
@@ -3792,6 +3801,107 @@ static int process_add_warp_effect(void)
 	return 0;
 }
 
+struct universe_timestamp_sample {
+	double offset;
+};
+static int nuniverse_timestamp_samples = 0;
+static struct universe_timestamp_sample universe_timestamp_samples[UPDATE_UNIVERSE_TIMESTAMP_COUNT];
+
+#if defined(__APPLE__)  || defined(__FreeBSD__)
+static int universe_timestamp_sample_compare_less(void *vcx, const void *a, const void *b)
+#else
+static int universe_timestamp_sample_compare_less(const void *a, const void *b, void *vcx)
+#endif
+{
+	const struct universe_timestamp_sample *A = a;
+	const struct universe_timestamp_sample *B = b;
+
+	if (A->offset > B->offset)
+		return 1;
+	if (A->offset < B->offset)
+		return -1;
+	return 0;
+}
+
+static int process_update_universe_timestamp(double update_time)
+{
+	int rc;
+	unsigned char buffer[100];
+	uint8_t code;
+	uint32_t timestamp;
+	double time_delta;
+
+	/* read the timestamp in server ticks and time_delta in seconds */
+	rc = read_and_unpack_buffer(buffer, "hwS", &code, &timestamp, &time_delta, 5);
+	if (rc)
+		return rc;
+
+	pthread_mutex_lock(&universe_mutex);
+
+	if (code == UPDATE_UNIVERSE_TIMESTAMP_START_SAMPLE)
+		nuniverse_timestamp_samples = 0;
+
+	universe_timestamp_samples[nuniverse_timestamp_samples].offset =
+		update_time - (double)timestamp / (double)UNIVERSE_TICKS_PER_SECOND - time_delta;
+
+	printf("update_universe_timestamp i=%d, update_time=%f, timestamp=%d, time_delta=%f offset=%f\n",
+		nuniverse_timestamp_samples, update_time, timestamp, time_delta,
+		universe_timestamp_samples[nuniverse_timestamp_samples].offset);
+	nuniverse_timestamp_samples++;
+
+	if (code == UPDATE_UNIVERSE_TIMESTAMP_END_SAMPLE) {
+		/* sort the samples by offset */
+#if defined(__APPLE__)  || defined(__FreeBSD__)
+		qsort_r(universe_timestamp_samples, nuniverse_timestamp_samples,
+			sizeof(universe_timestamp_samples[0]), 0, universe_timestamp_sample_compare_less);
+#else
+		qsort_r(universe_timestamp_samples, nuniverse_timestamp_samples,
+			sizeof(universe_timestamp_samples[0]), universe_timestamp_sample_compare_less, 0);
+#endif
+		/* get median offset */
+		double median_offset;
+		int mid_index = nuniverse_timestamp_samples / 2;
+		if (nuniverse_timestamp_samples % 2 == 0)
+			median_offset = (universe_timestamp_samples[mid_index - 1].offset +
+				universe_timestamp_samples[mid_index].offset) / 2.0;
+		else
+			median_offset = universe_timestamp_samples[mid_index].offset;
+
+		/* compute standard deviation of the offsets */
+		int i;
+		double mean_square = 0.0;
+		for (i = 0; i < nuniverse_timestamp_samples; i++) {
+			mean_square += (universe_timestamp_samples[i].offset - median_offset) *
+				(universe_timestamp_samples[i].offset - median_offset);
+		}
+		double standard_deviation = sqrt(mean_square / (double)(nuniverse_timestamp_samples - 1));
+
+		/* average offsets within one standard deviation */
+		int nsoffset = 0;
+		double soffset = 0.0;
+		for (i = 0; i < nuniverse_timestamp_samples; i++) {
+			if (fabs(universe_timestamp_samples[i].offset - median_offset) <= standard_deviation) {
+				nsoffset++;
+				soffset += universe_timestamp_samples[i].offset;
+			}
+		}
+
+		double average_offset;
+		if (nsoffset == 0)
+			average_offset = median_offset;
+		else
+			average_offset = soffset / (double)nsoffset;
+
+		universe_timestamp_offset = average_offset;
+
+		printf("calc universe_timestamp median=%f sd=%f n_average=%d average_offset=%f\n", median_offset,
+			standard_deviation, nsoffset, average_offset);
+	}
+
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_proximity_alert()
 {
 	static int last_time = 0;
@@ -4340,6 +4450,10 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 	while (1) {
 		/* printf("Client reading from game server %d bytes...\n", sizeof(opcode)); */
 		rc = snis_readsocket(gameserver_sock, &opcode, sizeof(opcode));
+
+		/* grab time as close to when we got the packet as possible */
+		double update_time = time_now_double();
+
 		/* printf("rc = %d, errno  %s\n", rc, strerror(errno)); */
 		if (rc != 0)
 			goto protocol_error;
@@ -4487,6 +4601,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_ADD_WARP_EFFECT:
 			rc = process_add_warp_effect();
 			break;
+		case OPCODE_UPDATE_UNIVERSE_TIMESTAMP:
+			rc = process_update_universe_timestamp(update_time);
+			break;
 		default:
 			goto protocol_error;
 		}
@@ -4603,6 +4720,8 @@ int role_to_displaymode(uint32_t role)
 	return displaymode;
 }
 
+static void request_universe_timestamp(void);
+
 static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 {
 	int rc;
@@ -4710,6 +4829,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	}
 	printf("started gameserver writer thread\n");
 
+	request_universe_timestamp();
 error:
 	/* FIXME, this isn't right... */
 	freeaddrinfo(gameserverinfo);
@@ -9443,6 +9563,11 @@ static void toggle_demon_ai_debug_mode(void)
 	queue_to_server(packed_buffer_new("h", OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE));
 }
 
+static void request_universe_timestamp(void)
+{
+	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_UNIVERSE_TIMESTAMP));
+}
+
 static void toggle_demon_safe_mode(void)
 {
 	queue_to_server(packed_buffer_new("h", OPCODE_TOGGLE_DEMON_SAFE_MODE));
@@ -11254,10 +11379,12 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 		sng_set_foreground(WHITE);
 		char stat_buffer[30];
-		sprintf(stat_buffer,"fps %5.2f", 1.0/avg_frame_rate);
+		sprintf(stat_buffer, "fps %5.2f", 1.0/avg_frame_rate);
 		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 2, 10);
-		sprintf(stat_buffer,"t %0.2f ms", avg_frame_time*1000.0);
+		sprintf(stat_buffer, "t %0.2f ms", avg_frame_time*1000.0);
 		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 92, 10);
+		sprintf(stat_buffer, "%8.0f", universe_timestamp());
+		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, SCREEN_WIDTH-85, 10);
 	}
 	if (display_frame_stats > 1) {
 		graph_dev_display_debug_menu_show();
@@ -12321,6 +12448,7 @@ int main(int argc, char *argv[])
 	gdk_threads_init();
 
 	gettimeofday(&start_time, NULL);
+	universe_timestamp_offset = time_now_double(); /* until we get real time from server */
 
 	snis_slider_set_sound(SLIDER_SOUND);
 	text_window_set_chatter_sound(TTY_CHATTER_SOUND);

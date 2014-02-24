@@ -193,6 +193,7 @@ struct game_client {
 	int debug_ai;
 	struct snis_entity_client_info *go_clients; /* ptr to array of size MAXGAMEOBJS */
 	uint8_t refcount; /* how many threads currently using this client structure. */
+	int request_universe_timestamp;
 #define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
 #if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
 	uint64_t write_sum;
@@ -359,6 +360,7 @@ static struct timer_event *init_lua_timer(const char *callback,
 }
 
 static uint32_t universe_timestamp = 1;
+static double universe_timestamp_absolute = 0;
 
 /* insert new timer into list, keeping list in sorted order. */
 static double register_lua_timer_callback(const char *callback,
@@ -7939,6 +7941,12 @@ static int process_toggle_demon_ai_debug_mode(struct game_client *c)
 	return 0;
 }
 
+static int process_request_universe_timestamp(struct game_client *c)
+{
+	c->request_universe_timestamp = UPDATE_UNIVERSE_TIMESTAMP_COUNT;
+	return 0;
+}
+
 static int process_toggle_demon_safe_mode(void)
 {
 	safe_mode = !safe_mode;
@@ -8990,6 +8998,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_REQUEST_UNIVERSE_TIMESTAMP:
+			rc = process_request_universe_timestamp(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -9030,6 +9043,13 @@ static void *per_client_read_thread(void /* struct game_client */ *client)
 	return NULL;
 }
 
+static void queue_update_universe_timestamp(struct game_client *c, uint8_t code)
+{
+	/* send the timestamp and time_delta.  time_delta should be 0.0 - 0.1 seconds, marshal as 5 to be safe */
+	pb_prepend_queue_to_client(c, packed_buffer_new("hhwS", OPCODE_UPDATE_UNIVERSE_TIMESTAMP, code,
+		universe_timestamp, time_now_double() - universe_timestamp_absolute, 5));
+}
+
 static void write_queued_updates_to_client(struct game_client *c)
 {
 	/* write queued updates to client */
@@ -9037,6 +9057,25 @@ static void write_queued_updates_to_client(struct game_client *c)
 	uint16_t noop = 0xffff;
 
 	struct packed_buffer *buffer;
+
+	/* timestamp request must be prepended to queue right before it is sent or the timestamp
+	   contained will be stale */
+	if (c->request_universe_timestamp > 0) {
+		uint8_t code = UPDATE_UNIVERSE_TIMESTAMP_SAMPLE;
+
+		/* update code if this is a special sample */
+		switch (c->request_universe_timestamp) {
+		case UPDATE_UNIVERSE_TIMESTAMP_COUNT:
+			code = UPDATE_UNIVERSE_TIMESTAMP_START_SAMPLE;
+			break;
+		case 1:
+			code = UPDATE_UNIVERSE_TIMESTAMP_END_SAMPLE;
+			break;
+		}
+
+		queue_update_universe_timestamp(c, code);
+		c->request_universe_timestamp--;
+	}
 
 	/*  packed_buffer_queue_print(&c->client_write_queue); */
 	buffer = packed_buffer_queue_combine(&c->client_write_queue, &c->client_write_queue_mutex);
@@ -9879,6 +9918,7 @@ static int add_new_player(struct game_client *c)
 		c->ship_index = lookup_by_id(c->shipid);
 	}
 	c->debug_ai = 0;
+	c->request_universe_timestamp = 0;
 	queue_up_client_id(c);
 
 	c->go_clients = malloc(sizeof(*c->go_clients) * MAXGAMEOBJS);
@@ -10262,7 +10302,7 @@ static void dump_opcode_stats(struct opcode_stat *data)
 #define dump_opcode_stats(x)
 #endif
 
-static void move_objects(void)
+static void move_objects(double absolute_time, int discontinuity)
 {
 	int i;
 
@@ -10271,6 +10311,13 @@ static void move_objects(void)
 	netstats.nobjects = 0;
 	netstats.nships = 0;
 	universe_timestamp++;
+	universe_timestamp_absolute = absolute_time;
+
+	if (discontinuity) {
+		for (i = 0; i < nclients; i++)
+			client[i].request_universe_timestamp = UPDATE_UNIVERSE_TIMESTAMP_COUNT;
+	}
+
 	dump_opcode_stats(write_opcode_stats);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (go[i].alive) {
@@ -10542,21 +10589,26 @@ int main(int argc, char *argv[])
 	double delta = 1.0/10.0;
 
 	i = 0;
+	int discontinuity = 0;
 	double currentTime = time_now_double();
 	double nextTime = currentTime + delta;
+	universe_timestamp_absolute = currentTime;
 	while (1) {
 		currentTime = time_now_double();
 
-		if (currentTime - nextTime > maxTimeBehind)
+		if (currentTime - nextTime > maxTimeBehind) {
+			printf("too far behind sec=%f, skipping\n", currentTime - nextTime);
 			nextTime = currentTime;
-
+			discontinuity = 1;
+		}
 		if (currentTime >= nextTime) {
-			nextTime += delta;
-
 			/* if ((i % 30) == 0) printf("Moving objects...i = %d\n", i); */
 			i++;
-			move_objects();
+			move_objects(nextTime, discontinuity);
 			process_lua_commands();
+
+			discontinuity = 0;
+			nextTime += delta;
 		} else {
 			double timeToSleep = nextTime-currentTime;
 			if (timeToSleep > 0)
