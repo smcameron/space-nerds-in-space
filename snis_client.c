@@ -4566,11 +4566,6 @@ static void wakeup_gameserver_writer(void)
 
 static void *gameserver_writer(__attribute__((unused)) void *arg)
 {
-
-        pthread_mutex_init(&to_server_queue_mutex, NULL);
-        pthread_mutex_init(&to_server_queue_event_mutex, NULL);
-        packed_buffer_queue_init(&to_server_queue);
-
 	while (1) {
 		wait_for_serverbound_packets();
 		write_queued_packets_to_server();
@@ -4702,6 +4697,11 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 			rc, strerror(rc), strerror(errno));
 	}
 	printf("started gameserver reader thread\n");
+
+	pthread_mutex_init(&to_server_queue_mutex, NULL);
+	pthread_mutex_init(&to_server_queue_event_mutex, NULL);
+	packed_buffer_queue_init(&to_server_queue);
+
 	printf("starting gameserver writer thread\n");
 	rc = pthread_create(&write_to_gameserver_thread, &gameserver_writer_attr, gameserver_writer, NULL);
 	if (rc) {
