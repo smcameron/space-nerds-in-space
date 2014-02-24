@@ -9034,10 +9034,6 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	switch(o->type) {
 	case OBJTYPE_SHIP1:
 		send_update_ship_packet(c, o, OPCODE_UPDATE_SHIP);
-		send_update_sdata_packets(c, o);
-		/* TODO: remove the next two lines when send_update_sdata_packets does it already */
-		if (o == &go[c->ship_index])
-			pack_and_send_ship_sdata_packet(c, o);
 		if (!o->alive) {
 			send_respawn_time(c, o);
 			o->timestamp = universe_timestamp + 1;
@@ -9049,31 +9045,24 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_SHIP2:
 		send_econ_update_ship_packet(c, o);
-		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_ASTEROID:
 		send_update_asteroid_packet(c, o);
-		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_CARGO_CONTAINER:
 		send_update_cargo_container_packet(c, o);
-		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_DERELICT:
 		send_update_derelict_packet(c, o);
-		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_PLANET:
 		send_update_planet_packet(c, o);
-		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_WORMHOLE:
 		send_update_wormhole_packet(c, o);
-		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_STARBASE:
 		send_update_starbase_packet(c, o);
-		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_NEBULA:
 		send_update_nebula_packet(c, o);
@@ -9087,15 +9076,12 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_TORPEDO:
 		send_update_torpedo_packet(c, o);
-		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_LASER:
 		send_update_laser_packet(c, o);
-		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_SPACEMONSTER:
 		send_update_spacemonster_packet(c, o);
-		send_update_sdata_packets(c, o);
 		break;
 	case OBJTYPE_LASERBEAM:
 		send_update_laserbeam_packet(c, o);
@@ -9108,6 +9094,31 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	}
 }
 
+static void queue_up_client_object_sdata_update(struct game_client *c, struct snis_entity *o)
+{
+	switch (o->type) {
+	case OBJTYPE_SHIP1:
+		send_update_sdata_packets(c, o);
+		/* TODO: remove the next two lines when send_update_sdata_packets does it already */
+		if (o == &go[c->ship_index])
+			pack_and_send_ship_sdata_packet(c, o);
+		break;
+	case OBJTYPE_SHIP2:
+	case OBJTYPE_ASTEROID:
+	case OBJTYPE_CARGO_CONTAINER:
+	case OBJTYPE_DERELICT:
+	case OBJTYPE_PLANET:
+	case OBJTYPE_WORMHOLE:
+	case OBJTYPE_STARBASE:
+	case OBJTYPE_TORPEDO:
+	case OBJTYPE_LASER:
+	case OBJTYPE_SPACEMONSTER:
+		send_update_sdata_packets(c, o);
+		break;
+	default:
+		break;
+	}
+}
 static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
 {
 	struct snis_entity *ship = &go[c->ship_index];
@@ -9194,6 +9205,7 @@ static void queue_up_client_updates(struct game_client *c)
 			if (too_far_away_to_care(c, &go[i]))
 				continue;
 			queue_up_client_object_update(c, &go[i]);
+			queue_up_client_object_sdata_update(c, &go[i]);
 			count++;
 		}
 	}
