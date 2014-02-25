@@ -9045,10 +9045,8 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	switch(o->type) {
 	case OBJTYPE_SHIP1:
 		send_update_ship_packet(c, o, OPCODE_UPDATE_SHIP);
-		if (!o->alive) {
+		if (!o->alive)
 			send_respawn_time(c, o);
-			o->timestamp = universe_timestamp + 1;
-		}
 		send_update_power_model_data(c, o);
 		send_update_coolant_model_data(c, o);
 		if (o->tsd.ship.overheating_damage_done)
@@ -10187,7 +10185,8 @@ static void move_objects(void)
 				schedule_callback(event_callback, &callback_schedule,
 					"player-respawn-event", (double) go[i].id);
 				send_ship_damage_packet(&go[i]);
-			}
+			} else
+				go[i].timestamp = universe_timestamp; /* respawn is counting down */
 		}
 	}
 	for (i = 0; i < nfactions(); i++)
