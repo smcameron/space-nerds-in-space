@@ -438,6 +438,7 @@ struct snis_entity_client_info {
 
 static struct snis_object_pool *pool;
 static struct snis_entity go[MAXGAMEOBJS];
+#define go_index(snis_entity_ptr) ((snis_entity_ptr) - &go[0])
 static struct snis_entity_client_info *go_clients[MAXGAMEOBJS];
 static struct space_partition *space_partition = NULL;
 
@@ -770,7 +771,7 @@ static void respawn_object(struct snis_entity *o)
 static void delete_object(struct snis_entity *o)
 {
 	remove_space_partition_entry(space_partition, &o->partition);
-	snis_object_pool_free_object(pool, o->index);
+	snis_object_pool_free_object(pool, go_index(o));
 	o->id = -1;
 	o->alive = 0;
 }
@@ -1412,7 +1413,7 @@ static void process_potential_victim(void *context, void *entity)
 	double dist;
 	float hostility, fightiness;
 
-	if (o->index == v->index) /* don't victimize self */
+	if (o == v) /* don't victimize self */
 		return;
 
 	/* only victimize players, other ships and starbases */
@@ -1713,7 +1714,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 
 	if (!t->alive)
 		return;
-	if (t->index == o->index)
+	if (t == o)
 		return;
 	if (o->alive >= TORPEDO_LIFETIME - 3)
 		return;
@@ -1863,7 +1864,7 @@ static void laser_collision_detection(void *context, void *entity)
 
 	if (!t->alive)
 		return;
-	if (t->index == o->index)
+	if (t == o)
 		return;
 	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
 		t->type != OBJTYPE_STARBASE && t->type != OBJTYPE_ASTEROID &&
@@ -3481,7 +3482,7 @@ static void player_collision_detection(void *player, void *object)
 	default:
 		break;
 	}
-	if (t->index == o->index) /* skip self */
+	if (t == o) /* skip self */
 		return;
 	dist2 = dist3dsqrd(o->x - t->x, o->y - t->y, o->z - t->z);
 	if (t->type == OBJTYPE_CARGO_CONTAINER && dist2 < 150.0 * 150.0) {
@@ -4100,7 +4101,6 @@ static int add_generic_object(double x, double y, double z,
 		return -1;
 	memset(&go[i], 0, sizeof(go[i]));
 	go[i].id = get_new_object_id();
-	go[i].index = i;
 	go[i].alive = 1;
 	set_object_location(&go[i], x, y, z);
 	go[i].vx = vx;

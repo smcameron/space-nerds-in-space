@@ -489,9 +489,11 @@ static const int damconscreenx0 = 20;
 static const int damconscreeny0 = 80;
 
 static struct snis_entity go[MAXGAMEOBJS];
+#define go_index(snis_entity_ptr) ((snis_entity_ptr) - &go[0])
 static struct snis_damcon_entity dco[MAXDAMCONENTITIES];
 static struct snis_object_pool *sparkpool;
 static struct snis_entity spark[MAXSPARKS];
+#define spark_index(snis_entity_ptr) ((snis_entity_ptr) - &spark[0])
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static double quat_to_heading(const union quat *q)
@@ -516,7 +518,6 @@ static int add_generic_object(uint32_t id, double x, double y, double z,
 	memset(&go[i], 0, sizeof(go[i]));
 	go[i].nupdates = 1;
 	go[i].updatetime1 = go[i].updatetime2 = time_now_double();
-	go[i].index = i;
 	go[i].id = id;
 	go[i].orientation = go[i].o1 = go[i].o2 = *orientation;
 	go[i].x = go[i].r1.v.x = go[i].r2.v.x = x;
@@ -1572,7 +1573,7 @@ static void warp_effect_move(struct snis_entity *o)
 	o->alive--;
 	if (o->alive <= 0) {
 		remove_entity(ecx, o->entity);
-		snis_object_pool_free_object(sparkpool, o->index);
+		snis_object_pool_free_object(sparkpool, spark_index(o));
 	}
 }
 
@@ -1594,7 +1595,7 @@ static void spark_move(struct snis_entity *o)
 
 	if (o->alive <= 0) {
 		remove_entity(ecx, o->entity);
-		snis_object_pool_free_object(sparkpool, o->index);
+		snis_object_pool_free_object(sparkpool, spark_index(o));
 	}
 }
 
@@ -1823,7 +1824,6 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 		return;
 	}
 	memset(&spark[i], 0, sizeof(spark[i]));
-	spark[i].index = i;
 	spark[i].x = x;
 	spark[i].y = y;
 	spark[i].z = z;
@@ -1863,7 +1863,6 @@ void add_warp_effect(double x, double y, double z, int arriving, int time,
 		update_entity_scale(e, 0.1);
 	}
 	memset(&spark[i], 0, sizeof(spark[i]));
-	spark[i].index = i;
 	spark[i].x = x;
 	spark[i].y = y;
 	spark[i].z = z;
@@ -9865,7 +9864,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	}
 
 	if ((o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_STARBASE) &&
-			o->index == demon_ui.captain_of) {
+			go_index(o) == demon_ui.captain_of) {
 		sng_set_foreground(RED);
 		sng_draw_circle(0, x, y, 10 + (timer % 10));
 	}
