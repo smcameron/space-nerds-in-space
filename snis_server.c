@@ -9208,10 +9208,18 @@ static void queue_up_client_updates(struct game_client *c)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
 			i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type); */
-		if (!go[i].alive && i != c->ship_index)
+
+		/* Always send the player's own ship data to the player */
+		if (i == c->ship_index) {
+			queue_up_client_object_update(c, &go[i]);
+			go_clients[i][c->index].last_timestamp_sent = go[i].timestamp;
+			queue_up_client_object_sdata_update(c, &go[i]);
+			count++;
+			continue;
+		}
+		if (!go[i].alive)
 			continue;
 		if (go[i].timestamp > c->timestamp ||
-			i == c->ship_index ||
 			snis_randn(100) < 15) {
 			if (too_far_away_to_care(c, &go[i]))
 				continue;
