@@ -959,7 +959,6 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	else
 		go[i].sdata.science_data_known = 30 * 60; /* unless planet or starbase */
 		
-	go[i].sdata.science_data_requested = 0; /* request is fullfilled */
 	return 0;
 }
 

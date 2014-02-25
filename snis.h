@@ -580,7 +580,6 @@ typedef void (*move_function)(struct snis_entity *o);
 struct snis_entity_science_data {
 	char name[20];
 	uint16_t science_data_known;
-	uint8_t science_data_requested;
 	uint8_t subclass;
 	uint8_t shield_strength;
 	uint8_t shield_wavelength;
