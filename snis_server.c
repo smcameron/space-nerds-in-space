@@ -1064,6 +1064,7 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 			o->tsd.ship.damage.tractor_damage, DAMCON_TYPE_TRACTORSYSTEM);
 
 	if (o->tsd.ship.damage.shield_damage == 255) { 
+		o->timestamp = universe_timestamp;
 		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
 		o->alive = 0;
 	}
@@ -1108,6 +1109,7 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 			distribute_damage_to_damcon_system_parts(o, d, (int) damage, i);
 	}
 	if (o->tsd.ship.damage.shield_damage == 255) {
+		o->timestamp = universe_timestamp;
 		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
 		o->alive = 0;
 	}
@@ -3325,6 +3327,7 @@ static void do_temperature_computations(struct snis_entity *o)
 		o->tsd.ship.damage.warp_damage > 240) {
 		o->alive = 0;
 		o->tsd.ship.damage.shield_damage = 255;
+		o->timestamp = universe_timestamp;
 		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
 		snis_queue_add_sound(EXPLOSION_SOUND,
 				ROLE_SOUNDSERVER, o->id);
@@ -3504,6 +3507,7 @@ static void player_collision_detection(void *player, void *object)
 		if (dist2 < surface_dist2)  {
 			/* crashed into planet */
 			o->alive = 0;
+			o->timestamp = universe_timestamp;
 			o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
 			send_ship_damage_packet(o);
 			snis_queue_add_sound(EXPLOSION_SOUND,
@@ -3773,6 +3777,7 @@ static int do_sunburn_damage(struct snis_entity *o)
 	if (damage_was_done && o->tsd.ship.damage.shield_damage == 255) {
 		o->alive = 0;
 		o->tsd.ship.damage.shield_damage = 255;
+		o->timestamp = universe_timestamp;
 		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
 		snis_queue_add_sound(EXPLOSION_SOUND,
 				ROLE_SOUNDSERVER, o->id);
