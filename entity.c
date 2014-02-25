@@ -69,6 +69,7 @@ struct entity *add_entity(struct entity_context *cx,
 	}
 
 	cx->entity_list[n].visible = 1;
+	cx->entity_list[n].e_visible = 1;
 	cx->entity_list[n].m = m;
 	cx->entity_list[n].x = x;
 	cx->entity_list[n].y = y;
@@ -219,7 +220,7 @@ void update_entity_shadecolor(struct entity *e, int color)
 
 void update_entity_visibility(struct entity *e, int visible)
 {
-	e->visible = visible;
+	e->e_visible = visible;
 }
 
 void update_entity_material(struct entity *e, struct material *material_ptr)
@@ -807,12 +808,14 @@ static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, f
 
 static void update_entity_child_state(struct entity *e)
 {
+	int visible = e->e_visible;
 	union vec3 pos = e->e_pos;
 	union vec3 scale = e->e_scale;
 	union quat orientation = e->e_orientation;
 
 	struct entity *parent = e->parent;
 	while (parent) {
+		visible = visible && parent->e_visible;
 		quat_rot_vec_self(&pos, &parent->e_orientation);
 		vec3_add_self(&pos, &parent->e_pos);
 		vec3_cwise_product_self(&scale, &parent->e_scale);
@@ -821,6 +824,7 @@ static void update_entity_child_state(struct entity *e)
 		parent = parent->parent;
 	}
 
+	e->visible = visible;
 	e->x = pos.v.x;
 	e->y = pos.v.y;
 	e->z = pos.v.z;
@@ -887,9 +891,6 @@ void render_entities(struct entity_context *cx)
 
 			struct entity *e = &cx->entity_list[j];
 
-			if (!e->visible)
-				continue;
-
 			if (e->m == NULL)
 				continue;
 
@@ -898,6 +899,10 @@ void render_entities(struct entity_context *cx)
 				update_entity_child_state(e);
 				e->onscreen = 0;
 			}
+
+			if (!e->visible)
+				continue;
+
 
 			float max_scale = vec3_cwise_max(&e->scale);
 

@@ -38,6 +38,7 @@ struct entity {
 
 	struct material *material_ptr;
 
+	int e_visible;
 	union vec3 e_pos;
 	union vec3 e_scale;
 	union quat e_orientation;
