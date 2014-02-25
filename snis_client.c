@@ -1702,7 +1702,7 @@ static void move_ship(struct snis_entity *o)
 				/* hide this entity until we get another update or the start pause has elapsed */
 				update_entity_visibility(o->entity, 0);
 			} else {
-				update_entity_visibility(o->entity, 1);
+				update_entity_visibility(o->entity, o->alive);
 				update_entity_pos(o->entity, o->x, o->y, o->z);
 			}
 		}
@@ -1741,7 +1741,7 @@ static void move_ship(struct snis_entity *o)
 		}
 
 		if (o->entity) {
-			update_entity_visibility(o->entity, 1);
+			update_entity_visibility(o->entity, o->alive);
 			update_entity_pos(o->entity, o->x, o->y, o->z);
 			update_entity_orientation(o->entity, &o->orientation);
 		}
@@ -1755,7 +1755,7 @@ static void move_objects(void)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 
-		if (!o->alive)
+		if (!snis_object_pool_is_allocated(pool, i))
 			continue;
 		switch (o->type) {
 		case OBJTYPE_SHIP1:

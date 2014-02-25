@@ -9211,7 +9211,7 @@ static void queue_up_client_updates(struct game_client *c)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
 			i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type); */
-		if (!go[i].alive && i != c->ship_index)
+		if (!go[i].alive && go[i].type != OBJTYPE_SHIP1)
 			continue;
 		if (go[i].timestamp > c->timestamp ||
 			i == c->ship_index ||
