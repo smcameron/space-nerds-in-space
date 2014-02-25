@@ -648,7 +648,6 @@ static int add_generic_damcon_object(uint32_t id, uint32_t ship_id, double x, do
 	}
 	o = &dco[i];
 	memset(o, 0, sizeof(*o));
-	o->index = i;
 	o->id = id;
 	o->ship_id = ship_id;
 	update_generic_damcon_object(o, x, y, velocity, heading);

@@ -2954,7 +2954,7 @@ static int robot_collision_detect(struct snis_damcon_entity *o,
 	struct snis_damcon_entity *t;
 
 	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
-		if (i == o->index) /* skip self */
+		if (i == damcon_index(d, o)) /* skip self */
 			continue;
 		t = &d->o[i];
 		switch (d->o[i].type) {

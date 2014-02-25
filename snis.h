@@ -671,7 +671,6 @@ union damcon_type_specific_data {
 };
 
 struct snis_damcon_entity {
-	uint32_t index;
 	uint32_t id;
 	uint32_t ship_id; /* ID of ship this entity is on */
 	double x, y, velocity, heading;
@@ -696,6 +695,7 @@ struct damcon_data {
 	struct snis_damcon_entity o[MAXDAMCONENTITIES];
 	struct snis_damcon_entity *robot; /* pointers into o[] */
 };
+#define damcon_index(data, object) ((object) - &(data)->o[0])
 
 #define DAMCONXDIM 800.0
 #define DAMCONYDIM 2000.0
