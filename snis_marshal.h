@@ -75,7 +75,9 @@ GLOBAL int packed_buffer_append_raw(struct packed_buffer *pb, const char *buffer
 GLOBAL int packed_buffer_extract_raw(struct packed_buffer *pb, char *buffer, unsigned short len);
 GLOBAL struct packed_buffer *packed_buffer_queue_combine(struct packed_buffer_queue *pbqh, pthread_mutex_t *mutex);
 GLOBAL void packed_buffer_queue_add(struct packed_buffer_queue *pbqh, struct packed_buffer *pb,
-                pthread_mutex_t *mutex);
+		pthread_mutex_t *mutex);
+GLOBAL void packed_buffer_queue_prepend(struct packed_buffer_queue *pbqh, struct packed_buffer *pb,
+		pthread_mutex_t *mutex);
 GLOBAL void packed_buffer_queue_init(struct packed_buffer_queue *pbq);
 GLOBAL void packed_buffer_queue_print(struct packed_buffer_queue *pbg);
 GLOBAL struct packed_buffer *packed_buffer_copy(struct packed_buffer *pb);

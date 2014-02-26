@@ -773,6 +773,17 @@ static inline void pb_queue_to_client(struct game_client *c, struct packed_buffe
 	packed_buffer_queue_add(&c->client_write_queue, pb, &c->client_write_queue_mutex);
 }
 
+static inline void pb_prepend_queue_to_client(struct game_client *c, struct packed_buffer *pb)
+{
+
+	if (!pb) {
+		stacktrace("snis_server: NULL packed_buffer in pb_prepend_queue_to_client()");
+		return;
+	}
+	gather_opcode_stats(pb);
+	packed_buffer_queue_prepend(&c->client_write_queue, pb, &c->client_write_queue_mutex);
+}
+
 static void queue_delete_oid(struct game_client *c, uint32_t oid)
 {
 	pb_queue_to_client(c, packed_buffer_new("hw",OPCODE_DELETE_OBJECT, oid));

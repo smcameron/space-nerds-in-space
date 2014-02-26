@@ -347,6 +347,28 @@ void packed_buffer_queue_add(struct packed_buffer_queue *pbq, struct packed_buff
 	return;
 }	
 
+void packed_buffer_queue_prepend(struct packed_buffer_queue *pbq, struct packed_buffer *pb,
+		pthread_mutex_t *mutex)
+{
+	struct packed_buffer_queue_entry *entry;
+
+	entry = malloc(sizeof(*entry));
+	entry->buffer = pb;
+
+	lockmutex(mutex);
+	if (!pbq->head) {
+		entry->next = NULL;
+		pbq->head = entry;
+		pbq->tail = entry;
+		unlockmutex(mutex);
+		return;
+	}
+	entry->next = pbq->head;
+	pbq->head = entry;
+	unlockmutex(mutex);
+	return;
+}
+
 void packed_buffer_queue_init(struct packed_buffer_queue *pbq)
 {
 	pbq->head = NULL;
