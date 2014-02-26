@@ -174,7 +174,6 @@ static struct npc_menu_item starbase_main_menu[] = {
 };
 
 struct game_client {
-	int index;
 	int socket;
 	pthread_t read_thread;
 	pthread_t write_thread;
@@ -195,6 +194,7 @@ struct game_client {
 #endif
 } client[MAXCLIENTS];
 int nclients = 0;
+#define client_index(client_ptr) ((client_ptr) - &client[0])
 static pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct bridge_data {
@@ -9219,9 +9219,9 @@ static void queue_up_client_updates(struct game_client *c)
 			if (too_far_away_to_care(c, &go[i]))
 				continue;
 
-			if (go[i].timestamp != go_clients[i][c->index].last_timestamp_sent) {
+			if (go[i].timestamp != go_clients[i][client_index(c)].last_timestamp_sent) {
 				queue_up_client_object_update(c, &go[i]);
-				go_clients[i][c->index].last_timestamp_sent = go[i].timestamp;
+				go_clients[i][client_index(c)].last_timestamp_sent = go[i].timestamp;
 			}
 			queue_up_client_object_sdata_update(c, &go[i]);
 			count++;
@@ -9842,7 +9842,6 @@ static void service_connection(int connection)
 	}
 	i = nclients;
 
-	client[i].index = i;
 	client[i].socket = connection;
 	client[i].timestamp = 0;  /* newborn client, needs everything */
 
