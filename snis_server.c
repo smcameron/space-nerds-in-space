@@ -192,6 +192,7 @@ struct game_client {
 	int bridge;
 	int debug_ai;
 	struct snis_entity_client_info *go_clients; /* ptr to array of size MAXGAMEOBJS */
+	uint8_t refcount; /* how many threads currently using this client structure. */
 #define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
 #if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
 	uint64_t write_sum;
@@ -244,6 +245,48 @@ static inline void client_lock()
 static inline void client_unlock()
 {
         (void) pthread_mutex_unlock(&client_mutex);
+}
+
+/* remove a client from the client array.  Assumes universe and client
+ * locks held.
+ */
+static void remove_client(int client_index)
+{
+	struct game_client *c;
+
+	assert(client_index >= 0);
+	assert(client_index < nclients);
+
+	c = &client[client_index];
+	if (c->go_clients) {
+		free(c->go_clients);
+		c->go_clients = NULL;
+	}
+	if (client_index == nclients - 1) { /* last in list client, decrement nclients. */
+		while (nclients > 0 && client[nclients - 1].refcount == 0)
+			nclients--;
+		return;
+	}
+	/* Otherwise, we leave a hole marked by refcount == 0 for later reuse.
+	 * we can't (easily) exchange the last item into the hole because the client
+	 * reader and writer threads for the last item have a pointer to it which
+	 * we currently have no way to update.
+	 */
+}
+
+/* assumes universe and client locks are held. */
+static void put_client(struct game_client *c)
+{
+	assert(c->refcount > 0);
+	c->refcount--;
+	if (c->refcount == 0)
+		remove_client(client_index(c));
+}
+
+/* assumes universe and client locks are held. */
+static void get_client(struct game_client *c)
+{
+	c->refcount++;
 }
 
 static lua_State *lua_state = NULL;
@@ -793,7 +836,8 @@ static void snis_queue_delete_object(struct snis_entity *o)
 
 	client_lock();
 	for (i = 0; i < nclients; i++)
-		queue_delete_oid(&client[i], oid);
+		if (client[i].refcount)
+			queue_delete_oid(&client[i], oid);
 	client_unlock();
 }
 
@@ -830,6 +874,9 @@ static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packe
 		struct packed_buffer *pbc;
 		struct game_client *c = &client[i];
 
+		if (!c->refcount)
+			continue;
+
 		if (c->shipid != shipid && shipid != ANY_SHIP_ID)
 			continue;
 
@@ -852,6 +899,9 @@ static void send_packet_to_all_bridges_on_channel(uint32_t channel,
 	for (i = 0; i < nclients; i++) {
 		struct packed_buffer *pbc;
 		struct game_client *c = &client[i];
+
+		if (!c->refcount)
+			continue;
 
 		if (!(c->role & roles))
 			continue;
@@ -885,6 +935,9 @@ static void send_packet_to_requestor_plus_role_on_a_bridge(struct game_client *r
 		struct packed_buffer *pbc;
 		struct game_client *c = &client[i];
 
+		if (!c->refcount)
+			continue;
+
 		if (c->shipid != requestor->shipid)
 			continue;
 
@@ -916,7 +969,7 @@ static void snis_queue_add_sound(uint16_t sound_number, uint32_t roles, uint32_t
 	client_lock();
 	for (i = 0; i < nclients; i++) {
 		c = &client[i];
-		if ((c->role & roles) && c->shipid == shipid)
+		if (c->refcount && (c->role & roles) && c->shipid == shipid)
 			queue_add_sound(c, sound_number);
 	}
 	client_unlock();
@@ -4118,8 +4171,9 @@ static int add_generic_object(double x, double y, double z,
 
 	/* clear out the client update state */
 	for (j = 0; j < nclients; j++)
-		/* gcc produces identical code for this memset as for a straight assignment */
-		memset(&client[j].go_clients[i], 0, sizeof(client[j].go_clients[i]));
+		if (client[j].refcount)
+			/* gcc produces identical code for this memset as for a straight assignment */
+			memset(&client[j].go_clients[i], 0, sizeof(client[j].go_clients[i]));
 
 	switch (type) {
 	case OBJTYPE_SHIP1:
@@ -8949,6 +9003,7 @@ static void *per_client_read_thread(void /* struct game_client */ *client)
 
 	/* Wait for client[] array to get fully updated before proceeding. */
 	client_lock();
+	get_client(c);
 	client_unlock();
 	while (1) {
 		process_instructions_from_client(c);
@@ -8956,6 +9011,11 @@ static void *per_client_read_thread(void /* struct game_client */ *client)
 			break;
 	}
 	log_client_info(SNIS_INFO, c->socket, "client reader thread exiting\n");
+	pthread_mutex_lock(&universe_mutex);
+	client_lock();
+	put_client(c);
+	client_unlock();
+	pthread_mutex_unlock(&universe_mutex);
 	return NULL;
 }
 
@@ -9255,6 +9315,7 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 
 	/* Wait for client[] array to get fully updated before proceeding. */
 	client_lock();
+	get_client(c);
 	client_unlock();
 
 	const double maxTimeBehind = 0.5;
@@ -9285,6 +9346,11 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 		simulate_slow_server(0);
 	}
 	log_client_info(SNIS_INFO, c->socket, "client writer thread exiting.\n");
+	pthread_mutex_lock(&universe_mutex);
+	client_lock();
+	put_client(c);
+	client_unlock();
+	pthread_mutex_unlock(&universe_mutex);
 	return NULL;
 }
 
@@ -9820,6 +9886,7 @@ static void service_connection(int connection)
 {
 	int i, j, rc, flag = 1;
 	int bridgenum, client_count;
+	int thread_count, iterations;
 
 	log_client_info(SNIS_INFO, connection, "snis_server: servicing snis_client connection\n");
         /* get connection moved off the stack so that when the thread needs it,
@@ -9844,7 +9911,13 @@ static void service_connection(int connection)
 		snis_log(SNIS_ERROR, "Too many clients.\n");
 		return;
 	}
-	i = nclients;
+
+	/* Set i to a free slot in client[], or to nclients if none free */
+	for (i = 0; i < nclients; i++)
+		if (client[i].refcount == 0)
+			break;
+	if (i == nclients)
+		nclients++;
 
 	client[i].socket = connection;
 	client[i].timestamp = 0;  /* newborn client, needs everything */
@@ -9860,6 +9933,11 @@ static void service_connection(int connection)
 	pthread_attr_setdetachstate(&client[i].read_attr, PTHREAD_CREATE_DETACHED);
 	pthread_attr_init(&client[i].write_attr);
 	pthread_attr_setdetachstate(&client[i].write_attr, PTHREAD_CREATE_DETACHED);
+
+	/* initialize refcount to 1 to keep client[i] from getting reaped. */
+	client[i].refcount = 1;
+
+	/* create threads... */
         rc = pthread_create(&client[i].read_thread,
 		&client[i].read_attr, per_client_read_thread, (void *) &client[i]);
 	if (rc) {
@@ -9872,12 +9950,10 @@ static void service_connection(int connection)
 		snis_log(SNIS_ERROR, "per client write thread, pthread_create failed: %d %s %s\n",
 			rc, strerror(rc), strerror(errno));
 	}
-	nclients++;
 	client_count = 0;
 	bridgenum = client[i].bridge;
-
 	for (j = 0; j < nclients; j++) {
-		if (client[j].bridge == bridgenum)
+		if (client[j].refcount && client[j].bridge == bridgenum)
 			client_count++;
 	} 
 
@@ -9889,6 +9965,28 @@ static void service_connection(int connection)
 	else
 		snis_queue_add_sound(CREWMEMBER_JOINED, ROLE_ALL,
 					bridgelist[bridgenum].shipid);
+
+	/* Wait for at least one of the threads to prevent premature reaping */
+	iterations = 0;
+	do {
+		pthread_mutex_lock(&universe_mutex);
+		client_lock();
+		thread_count = client[i].refcount;
+		client_unlock();
+		pthread_mutex_unlock(&universe_mutex);
+		if (thread_count < 2)
+			usleep(1000);
+		iterations++;
+		if (iterations > 1000 && (iterations % 1000) == 0)
+			printf("Way too many iterations at %s:%d\n", __FILE__, __LINE__);
+	} while (thread_count < 2);
+
+	/* release this thread's reference */
+	pthread_mutex_lock(&universe_mutex);
+	client_lock();
+	put_client(&client[i]);
+	client_unlock();
+	pthread_mutex_unlock(&universe_mutex);
 
 	snis_log(SNIS_INFO, "bottom of 'service connection'\n");
 }
