@@ -173,6 +173,10 @@ static struct npc_menu_item starbase_main_menu[] = {
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
 
+struct snis_entity_client_info {
+	uint32_t last_timestamp_sent;
+};
+
 struct game_client {
 	int socket;
 	pthread_t read_thread;
@@ -187,6 +191,7 @@ struct game_client {
 	uint32_t timestamp;
 	int bridge;
 	int debug_ai;
+	struct snis_entity_client_info *go_clients; /* ptr to array of size MAXGAMEOBJS */
 #define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
 #if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
 	uint64_t write_sum;
@@ -432,14 +437,9 @@ int nframes = 0;
 int timer = 0;
 struct timeval start_time, end_time;
 
-struct snis_entity_client_info {
-	uint32_t last_timestamp_sent;
-};
-
 static struct snis_object_pool *pool;
 static struct snis_entity go[MAXGAMEOBJS];
 #define go_index(snis_entity_ptr) ((snis_entity_ptr) - &go[0])
-static struct snis_entity_client_info *go_clients[MAXGAMEOBJS];
 static struct space_partition *space_partition = NULL;
 
 static uint32_t get_new_object_id(void)
@@ -4097,7 +4097,7 @@ static void explosion_move(struct snis_entity *o)
 static int add_generic_object(double x, double y, double z,
 				double vx, double vy, double vz, double heading, int type)
 {
-	int i;
+	int i, j;
 	char *n;
 	union vec3 v;
 
@@ -4117,9 +4117,9 @@ static int add_generic_object(double x, double y, double z,
 	go[i].move = generic_move;
 
 	/* clear out the client update state */
-	if (nclients > 0) {
-		memset(go_clients[i], 0, sizeof(**go_clients) * nclients);
-	}
+	for (j = 0; j < nclients; j++)
+		/* gcc produces identical code for this memset as for a straight assignment */
+		memset(&client[j].go_clients[i], 0, sizeof(client[j].go_clients[i]));
 
 	switch (type) {
 	case OBJTYPE_SHIP1:
@@ -9219,9 +9219,9 @@ static void queue_up_client_updates(struct game_client *c)
 			if (too_far_away_to_care(c, &go[i]))
 				continue;
 
-			if (go[i].timestamp != go_clients[i][client_index(c)].last_timestamp_sent) {
+			if (go[i].timestamp != c->go_clients[i].last_timestamp_sent) {
 				queue_up_client_object_update(c, &go[i]);
-				go_clients[i][client_index(c)].last_timestamp_sent = go[i].timestamp;
+				c->go_clients[i].last_timestamp_sent = go[i].timestamp;
 			}
 			queue_up_client_object_sdata_update(c, &go[i]);
 			count++;
@@ -9803,6 +9803,10 @@ static int add_new_player(struct game_client *c)
 	}
 	c->debug_ai = 0;
 	queue_up_client_id(c);
+
+	c->go_clients = malloc(sizeof(*c->go_clients) * MAXGAMEOBJS);
+	memset(c->go_clients, 0, sizeof(*c->go_clients) * MAXGAMEOBJS);
+
 	return 0;
 
 protocol_error:
@@ -9876,13 +9880,6 @@ static void service_connection(int connection)
 		if (client[j].bridge == bridgenum)
 			client_count++;
 	} 
-
-	/* need to expand each entities client_info and clear this new client */
-	for (j = 0; j < MAXGAMEOBJS; j++) {
-		/* nclients always get bigger, do something smarter here if that changes */
-		go_clients[j] = realloc(go_clients[j], sizeof(**go_clients) * nclients);
-		memset(&go_clients[j][i], 0, sizeof(**go_clients));
-	}
 
 	client_unlock();
 	pthread_mutex_unlock(&universe_mutex);
@@ -10418,8 +10415,6 @@ int main(int argc, char *argv[])
 
 	memset(&thirtieth_second, 0, sizeof(thirtieth_second));
 	thirtieth_second.tv_nsec = 33333333; /* 1/30th second */
-
-	memset(&go_clients, 0, sizeof(go_clients));
 
 	space_partition = space_partition_init(40, 40,
 			-UNIVERSE_LIMIT, UNIVERSE_LIMIT,
