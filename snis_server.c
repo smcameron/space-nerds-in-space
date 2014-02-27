@@ -9248,18 +9248,10 @@ static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
 	double dx, dz, dist;
 	const double threshold = (XKNOWN_DIM / 2) * (XKNOWN_DIM / 2);
 
-	/* do not optimize updates for brand new clients, they need everything. */
-	if (c->timestamp == 0)
-		return 0;
-
 	dx = (ship->x - o->x);
 	dz = (ship->z - o->z);
 	dist = (dx * dx) + (dz * dz);
-	if (dist > threshold && snis_randn(100) < 70) {
-		gather_opcode_not_sent_stats(o);
-		return 1;
-	}
-	return 0;
+	return (dist > threshold);
 }
 
 static void queue_netstats(struct game_client *c)
@@ -9309,6 +9301,8 @@ static void queue_up_client_damcon_update(struct game_client *c)
 		queue_up_client_damcon_object_update(c, d, &d->o[i]);
 }
 
+#define GO_TOO_FAR_UPDATE_PER_NTICKS 7
+
 static void queue_up_client_updates(struct game_client *c)
 {
 	int i;
@@ -9317,28 +9311,33 @@ static void queue_up_client_updates(struct game_client *c)
 	count = 0;
 	queue_netstats(c);
 	pthread_mutex_lock(&universe_mutex);
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
-			i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type); */
-		if (!go[i].alive && go[i].type != OBJTYPE_SHIP1)
-			continue;
-		if (go[i].timestamp > c->timestamp ||
-			i == c->ship_index ||
-			snis_randn(100) < 15) {
-			if (too_far_away_to_care(c, &go[i]))
+	if (universe_timestamp != c->timestamp) {
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
+				i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type); */
+			if (!go[i].alive && go[i].type != OBJTYPE_SHIP1)
 				continue;
+
+			if (too_far_away_to_care(c, &go[i]) &&
+				(universe_timestamp + i) % GO_TOO_FAR_UPDATE_PER_NTICKS != 0) {
+
+				gather_opcode_not_sent_stats(o);
+				continue;
+			}
 
 			if (go[i].timestamp != c->go_clients[i].last_timestamp_sent) {
 				queue_up_client_object_update(c, &go[i]);
 				c->go_clients[i].last_timestamp_sent = go[i].timestamp;
+				count++;
 			}
 			queue_up_client_object_sdata_update(c, &go[i]);
-			count++;
 		}
+		queue_up_client_damcon_update(c);
+		/* printf("queued up %d updates for client\n", count); */
+
+		c->timestamp = universe_timestamp;
 	}
-	queue_up_client_damcon_update(c);
 	pthread_mutex_unlock(&universe_mutex);
-	/* printf("queued up %d updates for client\n", count); */
 }
 
 static void queue_up_client_id(struct game_client *c)
@@ -9386,7 +9385,6 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 
 			queue_up_client_updates(c);
 			write_queued_updates_to_client(c);
-			c->timestamp = universe_timestamp;
 		} else {
 			double timeToSleep = nextTime-currentTime;
 			if (timeToSleep > 0)
