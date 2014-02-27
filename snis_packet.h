@@ -152,7 +152,7 @@ struct update_ship_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint16_t alive;
-	uint32_t x, y, z, vx, vy, vz, yawvel, pitchvel, rollvel;
+	uint32_t x, y, z, yawvel, pitchvel, rollvel;
         uint32_t ntorpedoes;
         uint32_t power;
 	uint32_t gunyawvel;
@@ -203,7 +203,7 @@ struct update_econ_ship_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint16_t alive;
-	uint32_t x, y, z, vx, vy, vz;
+	uint32_t x, y, z;
 	union quat orientation;
 	uint8_t shiptype; /* same as ship_sdata_packet subclass */
 };

@@ -86,7 +86,7 @@ struct network_stats netstats;
 static int faction_population[5];
 static int lowest_faction = 0;
 
-#define GATHER_OPCODE_STATS 0
+#define GATHER_OPCODE_STATS 1
 
 #if GATHER_OPCODE_STATS
 
@@ -9498,12 +9498,9 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	else
 		victim_id = o->tsd.ship.ai[n].u.attack.victim_id;
 
-	pb_queue_to_client(c, packed_buffer_new("hwhSSSSSSQwb", opcode,
+	pb_queue_to_client(c, packed_buffer_new("hwhSSSQwb", opcode,
 			o->id, o->alive, o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM, o->z, (int32_t) UNIVERSE_DIM,
-			o->vx, (uint32_t) UNIVERSE_DIM,
-			o->vy, (uint32_t) UNIVERSE_DIM,
-			o->vz, (uint32_t) UNIVERSE_DIM,
 			&o->orientation, victim_id, o->tsd.ship.shiptype));
 
 	if (!c->debug_ai)
@@ -9647,12 +9644,9 @@ static void send_update_ship_packet(struct game_client *c,
 	tloading = tloading | (tloaded << 4);
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
-	packed_buffer_append(pb, "hwhSSSSSS", opcode, o->id, o->alive,
+	packed_buffer_append(pb, "hwhSSS", opcode, o->id, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
-			o->z, (int32_t) UNIVERSE_DIM,
-			o->vx, (int32_t) UNIVERSE_DIM,
-			o->vy, (int32_t) UNIVERSE_DIM,
-			o->vz, (int32_t) UNIVERSE_DIM);
+			o->z, (int32_t) UNIVERSE_DIM);
 	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbwQQQb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
