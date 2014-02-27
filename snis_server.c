@@ -9498,8 +9498,8 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	else
 		victim_id = o->tsd.ship.ai[n].u.attack.victim_id;
 
-	pb_queue_to_client(c, packed_buffer_new("hwhSSSQwb", opcode,
-			o->id, o->alive, o->x, (int32_t) UNIVERSE_DIM,
+	pb_queue_to_client(c, packed_buffer_new("hwwhSSSQwb", opcode,
+			o->id, o->timestamp, o->alive, o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM, o->z, (int32_t) UNIVERSE_DIM,
 			&o->orientation, victim_id, o->tsd.ship.shiptype));
 
@@ -9644,7 +9644,7 @@ static void send_update_ship_packet(struct game_client *c,
 	tloading = tloading | (tloaded << 4);
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
-	packed_buffer_append(pb, "hwhSSS", opcode, o->id, o->alive,
+	packed_buffer_append(pb, "hwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
 	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbwQQQb",
@@ -9713,7 +9713,7 @@ static void send_update_damcon_part_packet(struct game_client *c,
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSSSSSS", OPCODE_UPDATE_ASTEROID, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSSSSS", OPCODE_UPDATE_ASTEROID, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
@@ -9725,7 +9725,7 @@ static void send_update_asteroid_packet(struct game_client *c,
 static void send_update_cargo_container_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_CARGO_CONTAINER, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSS", OPCODE_UPDATE_CARGO_CONTAINER, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM));
@@ -9734,7 +9734,7 @@ static void send_update_cargo_container_packet(struct game_client *c,
 static void send_update_derelict_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSSSb", OPCODE_UPDATE_DERELICT, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSSb", OPCODE_UPDATE_DERELICT, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
@@ -9753,7 +9753,7 @@ static void send_update_planet_packet(struct game_client *c,
 	else
 		ring = 1.0;
 
-	pb_queue_to_client(c, packed_buffer_new("hwSSSSwbbbb", OPCODE_UPDATE_PLANET, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSSSwbbbb", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
@@ -9767,8 +9767,8 @@ static void send_update_planet_packet(struct game_client *c,
 static void send_update_wormhole_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_WORMHOLE,
-					o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSS", OPCODE_UPDATE_WORMHOLE,
+					o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM));
@@ -9777,8 +9777,8 @@ static void send_update_wormhole_packet(struct game_client *c,
 static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_STARBASE,
-					o->id, o->x, (int32_t) UNIVERSE_DIM,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSS", OPCODE_UPDATE_STARBASE,
+					o->id, o->timestamp, o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM));
 }
@@ -9786,7 +9786,7 @@ static void send_update_starbase_packet(struct game_client *c,
 static void send_update_nebula_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSSSS", OPCODE_UPDATE_NEBULA, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSSS", OPCODE_UPDATE_NEBULA, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
@@ -9796,7 +9796,7 @@ static void send_update_nebula_packet(struct game_client *c,
 static void send_update_explosion_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSSShhhb", OPCODE_UPDATE_EXPLOSION, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSShhhb", OPCODE_UPDATE_EXPLOSION, o->id, o->timestamp,
 				o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 				o->z, (int32_t) UNIVERSE_DIM,
 				o->tsd.explosion.nsparks, o->tsd.explosion.velocity,
@@ -9806,7 +9806,7 @@ static void send_update_explosion_packet(struct game_client *c,
 static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwwSSS", OPCODE_UPDATE_TORPEDO, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwwwSSS", OPCODE_UPDATE_TORPEDO, o->id, o->timestamp,
 					o->tsd.torpedo.ship_id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
@@ -9816,8 +9816,8 @@ static void send_update_torpedo_packet(struct game_client *c,
 static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwwSSSQ", OPCODE_UPDATE_LASER,
-					o->id, o->tsd.laser.ship_id,
+	pb_queue_to_client(c, packed_buffer_new("hwwwSSSQ", OPCODE_UPDATE_LASER,
+					o->id, o->timestamp, o->tsd.laser.ship_id,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
@@ -9827,23 +9827,23 @@ static void send_update_laser_packet(struct game_client *c,
 static void send_update_laserbeam_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwww", OPCODE_UPDATE_LASERBEAM,
-					o->id, o->tsd.laserbeam.origin,
+	pb_queue_to_client(c, packed_buffer_new("hwwww", OPCODE_UPDATE_LASERBEAM,
+					o->id, o->timestamp, o->tsd.laserbeam.origin,
 					o->tsd.laserbeam.target));
 }
 
 static void send_update_tractorbeam_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwww", OPCODE_UPDATE_TRACTORBEAM,
-					o->id, o->tsd.laserbeam.origin,
+	pb_queue_to_client(c, packed_buffer_new("hwwww", OPCODE_UPDATE_TRACTORBEAM,
+					o->id, o->timestamp, o->tsd.laserbeam.origin,
 					o->tsd.laserbeam.target));
 }
 
 static void send_update_spacemonster_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("hwSSS", OPCODE_UPDATE_SPACEMONSTER, o->id,
+	pb_queue_to_client(c, packed_buffer_new("hwwSSS", OPCODE_UPDATE_SPACEMONSTER, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					o->tsd.spacemonster.zz, (int32_t) UNIVERSE_DIM));

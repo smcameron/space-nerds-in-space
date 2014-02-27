@@ -151,6 +151,7 @@
 struct update_ship_packet {
 	uint16_t opcode;
 	uint32_t id;
+	uint32_t timestamp;
 	uint16_t alive;
 	uint32_t x, y, z, yawvel, pitchvel, rollvel;
         uint32_t ntorpedoes;
@@ -202,6 +203,7 @@ struct request_ship_sdata_packet {
 struct update_econ_ship_packet {
 	uint16_t opcode;
 	uint32_t id;
+	uint32_t timestamp;
 	uint16_t alive;
 	uint32_t x, y, z;
 	union quat orientation;
@@ -216,36 +218,42 @@ struct client_ship_id_packet {
 struct update_asteroid_packet {
 	uint16_t opcode;
 	uint32_t id;
+	uint32_t timestamp;
 	uint32_t x, y, z;
 };
 
 struct update_cargo_container_packet {
 	uint16_t opcode;
 	uint32_t id;
+	uint32_t timestamp;
 	uint32_t x, y, z;
 };
 
 struct update_wormhole_packet {
 	uint16_t opcode;
 	uint32_t id;
+	uint32_t timestamp;
 	uint32_t x, y;
 };
 
 struct update_starbase_packet {
 	uint16_t opcode;
 	uint32_t id;
+	uint32_t timestamp;
 	uint32_t x, y;
 };
 
 struct update_nebula_packet {
 	uint16_t opcode;
 	uint32_t id;
+	uint32_t timestamp;
 	uint32_t x, y, z, r;
 };
 
 struct update_explosion_packet {
 	uint16_t opcode;
 	uint32_t id;
+	uint32_t timestamp;
 	uint32_t x, y, z;
 	uint16_t nsparks;
 	uint16_t velocity;
@@ -256,6 +264,7 @@ struct update_explosion_packet {
 struct add_laser_packet {
 	uint16_t opcode;
 	uint32_t id;
+	uint32_t timestamp;
 	uint8_t power;
 	uint8_t wavelength;
 	struct packed_double x, y;
@@ -270,6 +279,7 @@ struct delete_object_packet {
 struct update_torpedo_packet {
 	uint16_t opcode;
 	uint32_t id;
+	uint32_t timestamp;
 	uint32_t ship_oid; /* ship torpedo came from */
 	uint32_t x, y, z;
 }; 
@@ -277,6 +287,7 @@ struct update_torpedo_packet {
 struct update_laser_packet {
 	uint16_t opcode;
 	uint32_t id;
+	uint32_t timestamp;
 	uint32_t ship_oid; /* ship laser came from */
 	uint32_t x, y, z;
 	uint32_t orientation[4]; /* encoded orientation quaternion */	
@@ -285,6 +296,7 @@ struct update_laser_packet {
 struct update_spacemonster_packet {
 	uint16_t opcode;
 	uint32_t id;
+	uint32_t timestamp;
 	uint32_t x, y, z;
 };
 

@@ -3342,10 +3342,10 @@ static int process_update_coolant_data(void)
 static int process_update_ship_packet(uint16_t opcode)
 {
 	int i;
-	unsigned char buffer[140];
+	unsigned char buffer[144];
 	struct packed_buffer pb;
 	uint16_t alive;
-	uint32_t id, torpedoes, power;
+	uint32_t id, timestamp, torpedoes, power;
 	uint32_t fuel, victim_id;
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
 	double dgunyawvel, dsheading, dbeamwidth;
@@ -3366,7 +3366,7 @@ static int process_update_ship_packet(uint16_t opcode)
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
-	packed_buffer_extract(&pb, "whSSS", &id, &alive,
+	packed_buffer_extract(&pb, "wwhSSS", &id, &timestamp, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM);
 	packed_buffer_extract(&pb, "RRRwwRRR",
@@ -3559,7 +3559,7 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 {
 	unsigned char buffer[200];
 	uint16_t alive;
-	uint32_t id, victim_id;
+	uint32_t id, timestamp, victim_id;
 	double dx, dy, dz, px, py, pz;
 	union quat orientation;
 	uint8_t shiptype, ai[5], npoints;
@@ -3568,7 +3568,7 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "whSSSQwb", &id, &alive,
+	rc = read_and_unpack_buffer(buffer, "wwhSSSQwb", &id, &timestamp, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
 				&dz, (int32_t) UNIVERSE_DIM,
 				&orientation,
@@ -3614,12 +3614,12 @@ done:
 static int process_update_torpedo_packet(void)
 {
 	unsigned char buffer[100];
-	uint32_t id, ship_id;
+	uint32_t id, timestamp, ship_id;
 	double dx, dy, dz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_torpedo_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &ship_id,
+	rc = read_and_unpack_buffer(buffer, "wwwSSS", &id, &timestamp, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
@@ -3657,13 +3657,13 @@ static int process_wormhole_limbo_packet(void)
 static int process_update_laser_packet(void)
 {
 	unsigned char buffer[100];
-	uint32_t id, ship_id;
+	uint32_t id, timestamp, ship_id;
 	double dx, dy, dz;
 	union quat orientation;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_laser_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSQ", &id, &ship_id,
+	rc = read_and_unpack_buffer(buffer, "wwwSSSQ", &id, &timestamp, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM,
 				&dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
@@ -3679,12 +3679,12 @@ static int process_update_laser_packet(void)
 static int process_update_spacemonster(void)
 {
 	unsigned char buffer[100];
-	uint32_t id;
+	uint32_t id, timestamp;
 	double dx, dy, dz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_spacemonster_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
@@ -4219,12 +4219,12 @@ static int process_ship_damage_packet(int do_damage_limbo)
 static int process_update_asteroid_packet(void)
 {
 	unsigned char buffer[100];
-	uint32_t id;
+	uint32_t id, timestamp;
 	double dx, dy, dz, dvx, dvy, dvz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSSSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
@@ -4242,12 +4242,12 @@ static int process_update_asteroid_packet(void)
 static int process_update_cargo_container_packet(void)
 {
 	unsigned char buffer[100];
-	uint32_t id;
+	uint32_t id, timestamp;
 	double dx, dy, dz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_cargo_container_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM);
@@ -4262,13 +4262,13 @@ static int process_update_cargo_container_packet(void)
 static int process_update_derelict_packet(void)
 {
 	unsigned char buffer[100];
-	uint32_t id;
+	uint32_t id, timestamp;
 	double dx, dy, dz;
 	uint8_t shiptype;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSSb", &id,
+	rc = read_and_unpack_buffer(buffer, "wwSSSb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM, &shiptype);
@@ -4283,7 +4283,7 @@ static int process_update_derelict_packet(void)
 static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
-	uint32_t id;
+	uint32_t id, timestamp;
 	double dr, dx, dy, dz;
 	uint8_t government, tech_level, economy, security;
 	uint32_t dseed;
@@ -4291,7 +4291,7 @@ static int process_update_planet_packet(void)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSSSwbbbb", &id,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
@@ -4312,12 +4312,12 @@ static int process_update_planet_packet(void)
 static int process_update_wormhole_packet(void)
 {
 	unsigned char buffer[100];
-	uint32_t id;
+	uint32_t id, timestamp;
 	double dx, dy, dz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_wormhole_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM);
@@ -4332,12 +4332,12 @@ static int process_update_wormhole_packet(void)
 static int process_update_starbase_packet(void)
 {
 	unsigned char buffer[100];
-	uint32_t id;
+	uint32_t id, timestamp;
 	double dx, dy, dz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_starbase_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, &dz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
@@ -4350,12 +4350,12 @@ static int process_update_starbase_packet(void)
 static int process_update_nebula_packet(void)
 {
 	unsigned char buffer[100];
-	uint32_t id;
+	uint32_t id, timestamp;
 	double dx, dy, dz, r;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_nebula_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wwSSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
@@ -4371,10 +4371,10 @@ static int process_update_nebula_packet(void)
 static int process_update_laserbeam(void)
 {
 	unsigned char buffer[100];
-	uint32_t id, origin, target;
+	uint32_t id, timestamp, origin, target;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "www", &id, &origin, &target);
+	rc = read_and_unpack_buffer(buffer, "wwww", &id, &timestamp, &origin, &target);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
@@ -4386,10 +4386,10 @@ static int process_update_laserbeam(void)
 static int process_update_tractorbeam(void)
 {
 	unsigned char buffer[100];
-	uint32_t id, origin, target;
+	uint32_t id, timestamp, origin, target;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "www", &id, &origin, &target);
+	rc = read_and_unpack_buffer(buffer, "wwww", &id, &timestamp, &origin, &target);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
@@ -4401,14 +4401,14 @@ static int process_update_tractorbeam(void)
 static int process_update_explosion_packet(void)
 {
 	unsigned char buffer[sizeof(struct update_explosion_packet)];
-	uint32_t id;
+	uint32_t id, timestamp;
 	double dx, dy, dz;
 	uint16_t nsparks, velocity, time;
 	uint8_t victim_type;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_explosion_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSShhhb", &id,
+	rc = read_and_unpack_buffer(buffer, "wwSSShhhb", &id, &timestamp,
 		&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 		&dz, (int32_t) UNIVERSE_DIM,
 		&nsparks, &velocity, &time, &victim_type);
