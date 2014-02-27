@@ -1371,8 +1371,7 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 	return 0;
 }
 
-static int update_cargo_container(uint32_t id, double x, double y, double z,
-				double vx, double vy, double vz)
+static int update_cargo_container(uint32_t id, double x, double y, double z)
 {
 	int i;
 	struct entity *e;
@@ -1386,17 +1385,22 @@ static int update_cargo_container(uint32_t id, double x, double y, double z,
 		 */
 		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
 		e = add_entity(ecx, cargo_container_mesh, x, y, z, CARGO_CONTAINER_COLOR);
-		i = add_generic_object(id, x, y, z, vx, vy, vz,
+		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 				&orientation, OBJTYPE_CARGO_CONTAINER, 1, e);
 		if (i < 0)
 			return i;
 		o = &go[i];
 		o->tsd.cargo_container.rotational_velocity = random_spin[id % NRANDOM_SPINS];
-	} else
+	} else {
+		double vx, vy, vz;
+
+		vx = x - go[i].x;
+		vy = y - go[i].y;
+		vz = z - go[i].z;
 		update_generic_object(i, x, y, z, vx, vy, vz, NULL, 1);
+	}
 	return 0;
 }
-
 
 static int update_derelict(uint32_t id, double x, double y, double z, uint8_t ship_kind)
 {
@@ -4247,21 +4251,18 @@ static int process_update_cargo_container_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id;
-	double dx, dy, dz, dvx, dvy, dvz;
+	double dx, dy, dz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_cargo_container_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wSSSSSS", &id,
+	rc = read_and_unpack_buffer(buffer, "wSSS", &id,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
-			&dz, (int32_t) UNIVERSE_DIM,
-			&dvx, (int32_t) UNIVERSE_DIM,
-			&dvy, (int32_t) UNIVERSE_DIM,
-			&dvz, (int32_t) UNIVERSE_DIM);
+			&dz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_cargo_container(id, dx, dy, dz, dvx, dvy, dvz);
+	rc = update_cargo_container(id, dx, dy, dz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

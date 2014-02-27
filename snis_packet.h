@@ -223,7 +223,6 @@ struct update_cargo_container_packet {
 	uint16_t opcode;
 	uint32_t id;
 	uint32_t x, y, z;
-	uint32_t vx, vy, vz;
 };
 
 struct update_wormhole_packet {
