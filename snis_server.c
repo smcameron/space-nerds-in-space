@@ -86,7 +86,7 @@ struct network_stats netstats;
 static int faction_population[5];
 static int lowest_faction = 0;
 
-#define GATHER_OPCODE_STATS 1
+#define GATHER_OPCODE_STATS 0
 
 #if GATHER_OPCODE_STATS
 
