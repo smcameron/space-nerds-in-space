@@ -133,6 +133,8 @@ union vec3 *vec3_rot_axis_self(union vec3 *vo, float x, float y, float z, float 
 double vec3_dist(const union vec3 *v1, const union vec3 *v2);
 double vec3_dist_c(const union vec3 *v1, float x, float y, float z);
 
+float vec3_dist_sqrd(const union vec3 *v1, const union vec3 *v2);
+
 void vec3_print(const char* prefix, const union vec3 *v);
 
 /* init orientation quaternion from measurements */

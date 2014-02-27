@@ -568,6 +568,13 @@ double vec3_dist_c(const union vec3 *v1, float x, float y, float z)
 		(v1->v.z - z)*(v1->v.z - z));
 }
 
+float vec3_dist_sqrd(const union vec3 *v1, const union vec3 *v2)
+{
+	return (v1->v.x - v2->v.x) * (v1->v.x - v2->v.x) +
+		(v1->v.y - v2->v.y) * (v1->v.y - v2->v.y) +
+		(v1->v.z - v2->v.z) * (v1->v.z - v2->v.z);
+}
+
 void vec3_print(const char *prefix, const union vec3 *v)
 {
 	printf("%s%f, %f, %f\n", prefix, v->v.x, v->v.y, v->v.z);
