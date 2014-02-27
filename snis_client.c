@@ -978,8 +978,7 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	return 0;
 }
 
-static int update_torpedo(uint32_t id, double x, double y, double z,
-			double vx, double vy, double vz, uint32_t ship_id)
+static int update_torpedo(uint32_t id, double x, double y, double z, uint32_t ship_id)
 {
 	int i;
 	struct entity *e;
@@ -992,7 +991,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 			set_render_style(e, torpedo_render_style);
 			update_entity_material(e, &red_torpedo_material);
 		}
-		i = add_generic_object(id, x, y, z, vx, vy, vz, &identity_quat, OBJTYPE_TORPEDO, 1, e);
+		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0, &identity_quat, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.torpedo.ship_id = ship_id;
@@ -1000,7 +999,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z,
 		if (myship && myship->id == ship_id)
 			weapons_camera_shake = 1.0;
 	} else {
-		update_generic_object(i, x, y, z, vx, vy, vz, &identity_quat, 1); 
+		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, &identity_quat, 1); 
 	}
 	return 0;
 }
@@ -1045,8 +1044,7 @@ static int update_tractorbeam(uint32_t id, uint32_t origin, uint32_t target)
 
 
 static int update_laser(uint32_t id, double x, double y, double z,
-			double vx, double vy, double vz, union quat *orientation,
-			uint32_t ship_id)
+			union quat *orientation, uint32_t ship_id)
 {
 	int i;
 	struct entity *e;
@@ -1059,7 +1057,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 			set_render_style(e, laserbeam_render_style);
 			update_entity_material(e, &green_laser_material);
 		}
-		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_LASER, 1, e);
+		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.laser.ship_id = ship_id;
@@ -1069,7 +1067,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 			turret_recoil_amount = 2.0f;
 		}
 	} else {
-		update_generic_object(i, x, y, z, vx, vy, vz, orientation, 1); 
+		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, orientation, 1); 
 	}
 	return 0;
 }
@@ -3617,20 +3615,17 @@ static int process_update_torpedo_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, ship_id;
-	double dx, dy, dz, dvx, dvy, dvz;
+	double dx, dy, dz;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_torpedo_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSSS", &id, &ship_id,
+	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
-				&dz, (int32_t) UNIVERSE_DIM,
-				&dvx, (int32_t) UNIVERSE_DIM,
-				&dvy, (int32_t) UNIVERSE_DIM,
-				&dvz, (int32_t) UNIVERSE_DIM);
+				&dz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_torpedo(id, dx, dy, dz, dvx, dvy, dvz, ship_id);
+	rc = update_torpedo(id, dx, dy, dz, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -3663,23 +3658,20 @@ static int process_update_laser_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, ship_id;
-	double dx, dy, dz, dvx, dvy, dvz;
+	double dx, dy, dz;
 	union quat orientation;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_laser_packet) - sizeof(uint16_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSSSQ", &id, &ship_id,
+	rc = read_and_unpack_buffer(buffer, "wwSSSQ", &id, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM,
 				&dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
-				&dvx, (int32_t) UNIVERSE_DIM,
-				&dvy, (int32_t) UNIVERSE_DIM,
-				&dvz, (int32_t) UNIVERSE_DIM,
 				&orientation);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_laser(id, dx, dy, dz, dvx, dvy, dvz, &orientation, ship_id);
+	rc = update_laser(id, dx, dy, dz, &orientation, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
