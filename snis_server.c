@@ -176,6 +176,9 @@ static struct npc_menu_item starbase_main_menu[] = {
 struct snis_entity_client_info {
 	uint32_t last_timestamp_sent;
 };
+struct snis_damcon_entity_client_info {
+	unsigned int last_version_sent;
+};
 
 struct game_client {
 	int socket;
@@ -192,6 +195,7 @@ struct game_client {
 	int bridge;
 	int debug_ai;
 	struct snis_entity_client_info *go_clients; /* ptr to array of size MAXGAMEOBJS */
+	struct snis_damcon_entity_client_info *damcon_data_clients; /* ptr to array of size MAXDAMCONENTITIES */
 	uint8_t refcount; /* how many threads currently using this client structure. */
 	int request_universe_timestamp;
 #define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
@@ -262,6 +266,10 @@ static void remove_client(int client_index)
 	if (c->go_clients) {
 		free(c->go_clients);
 		c->go_clients = NULL;
+	}
+	if (c->damcon_data_clients) {
+		free(c->damcon_data_clients);
+		c->damcon_data_clients = NULL;
 	}
 	if (client_index == nclients - 1) { /* last in list client, decrement nclients. */
 		while (nclients > 0 && client[nclients - 1].refcount == 0)
@@ -1010,7 +1018,7 @@ static void instantly_repair_damcon_part(struct damcon_data *d, int system, int 
 		if (p->tsd.part.part != part)
 			continue;
 		p->tsd.part.damage = 0;
-		p->timestamp = universe_timestamp;
+		p->version++;
 		break;
 	}
 }
@@ -1066,7 +1074,7 @@ static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
 			new_damage = 255;
 		p->tsd.part.damage = new_damage;
 		count++;
-		p->timestamp = universe_timestamp;
+		p->version++;
 		if (count == DAMCON_PARTS_PER_SYSTEM)
 			break;
 	}
@@ -3081,7 +3089,7 @@ static void damcon_repair_socket_move(struct snis_damcon_entity *o,
 		if (part->tsd.part.damage > 190 && snis_randn(100) < 5) {
 			/* TODO: should make some sparks and sound or something here. */
 			part->tsd.part.damage = 255; /* irreparably damaged */
-			part->timestamp = universe_timestamp;
+			part->version++;
 			return;
 		}
 	}
@@ -3091,7 +3099,7 @@ static void damcon_repair_socket_move(struct snis_damcon_entity *o,
 		new_damage = 0;
 	if (part->tsd.part.damage != new_damage) {
 		part->tsd.part.damage = new_damage;
-		part->timestamp = universe_timestamp;
+		part->version++;
 	}
 }
 
@@ -3216,12 +3224,12 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 	}
 
 
-	if (fabs(lastx - o->x) > 0.05 ||
-		fabs(lasty - o->y) > 0.05 ||
-		fabs(lasth - o->heading) > 0.05) {
-		o->timestamp = universe_timestamp;
+	if (fabs(lastx - o->x) > 0.00001 ||
+		fabs(lasty - o->y) > 0.00001 ||
+		fabs(lasth - o->heading) > 0.00001) {
+		o->version++;
 		if (cargo)
-			cargo->timestamp = universe_timestamp;
+			cargo->version++;
 	}
 
 	/* TODO: collision detection */
@@ -4455,7 +4463,7 @@ static void repair_damcon_systems(struct snis_entity *o)
 		if (p->type != DAMCON_TYPE_PART)
 			continue;
 		p->tsd.part.damage = 0;
-		p->timestamp = universe_timestamp;
+		p->version++;
 	}
 }	
 	
@@ -5738,7 +5746,7 @@ static void make_universe(void)
 static int add_generic_damcon_object(struct damcon_data *d, int x, int y,
 				uint32_t type, damcon_move_function move_fn)
 {
-	int i;
+	int i, j;
 	struct snis_damcon_entity *o;
 
 	i = snis_object_pool_alloc_obj(d->pool); 	 
@@ -5751,9 +5759,14 @@ static int add_generic_damcon_object(struct damcon_data *d, int x, int y,
 	o->id = get_new_object_id();
 	o->velocity = 0;
 	o->heading = 0;
-	o->timestamp = universe_timestamp;
+	o->version = 1;
 	o->type = type; 
 	o->move = move_fn;
+
+	/* clear out the client update state */
+	for (j = 0; j < nclients; j++)
+		if (client[j].refcount && d->bridge == client[j].bridge)
+			memset(&client[j].damcon_data_clients[i], 0, sizeof(client[j].damcon_data_clients[i]));
 	return i;
 }
 
@@ -5797,7 +5810,7 @@ static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 			py = y + dcyo[i];	
 		}
 		p = add_generic_damcon_object(d, px, py, DAMCON_TYPE_SOCKET, fn);
-		d->o[p].timestamp = universe_timestamp + 1;
+		d->o[p].version++;
 		d->o[p].tsd.socket.system = system;
 		d->o[p].tsd.socket.part = i;
 		d->o[p].tsd.socket.contents_id = DAMCON_SOCKET_EMPTY;
@@ -5805,7 +5818,7 @@ static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 		if (system != DAMCON_TYPE_REPAIR_STATION) {
 			socket = &d->o[p];
 			p = add_generic_damcon_object(d, px, py, DAMCON_TYPE_PART, NULL);
-			d->o[p].timestamp = universe_timestamp + 1;
+			d->o[p].version++;
 			d->o[p].tsd.part.system = system;
 			d->o[p].tsd.part.part = i;
 			d->o[p].tsd.part.damage = 0;
@@ -5827,44 +5840,44 @@ static void add_damcon_systems(struct damcon_data *d)
 	dy = DAMCONYDIM / 6;
 	y = dy - DAMCONYDIM / 2;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_WARPDRIVE, NULL);
-	d->o[i].timestamp = universe_timestamp + 1;
+	d->o[i].version++;
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_WARPDRIVE, 1);
 	y += dy;
 
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_SENSORARRAY, NULL);
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_SENSORARRAY, 1);
 	y += dy;
-	d->o[i].timestamp = universe_timestamp + 1;
+	d->o[i].version++;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_COMMUNICATIONS, NULL);
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_COMMUNICATIONS, 1);
 	x = 2 * DAMCONXDIM / 3 - DAMCONXDIM / 2;
 	y = dy - DAMCONYDIM / 2;
-	d->o[i].timestamp = universe_timestamp + 1;
+	d->o[i].version++;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_MANEUVERING, NULL);
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_MANEUVERING, 0);
 	y += dy;
-	d->o[i].timestamp = universe_timestamp + 1;
+	d->o[i].version++;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_PHASERBANK, NULL);
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_PHASERBANK, 0);
 	y += dy;
-	d->o[i].timestamp = universe_timestamp + 1;
+	d->o[i].version++;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_IMPULSE, NULL);
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_IMPULSE, 0);
 	y += dy;
 	x = -DAMCONXDIM / 2;
-	d->o[i].timestamp = universe_timestamp + 1;
+	d->o[i].version++;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_SHIELDSYSTEM, NULL);
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_SHIELDSYSTEM, 1);
 	x = 2 * DAMCONXDIM / 3 - DAMCONXDIM / 2;
-	d->o[i].timestamp = universe_timestamp + 1;
+	d->o[i].version++;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_TRACTORSYSTEM, NULL);
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_TRACTORSYSTEM, 0);
-	d->o[i].timestamp = universe_timestamp + 1;
+	d->o[i].version++;
 
 	x = -DAMCONXDIM / 6;
 	y += dy;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_REPAIR_STATION, NULL);
-	d->o[i].timestamp = universe_timestamp + 1;
+	d->o[i].version++;
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_REPAIR_STATION, 0);
 }
 
@@ -7721,21 +7734,22 @@ static void do_robot_drop(struct damcon_data *d)
 	if (c >= 0) {
 		cargo = &d->o[c];
 		d->robot->tsd.robot.cargo_id = ROBOT_CARGO_EMPTY;
-		cargo->timestamp = universe_timestamp + 1;
-		d->robot->timestamp= universe_timestamp + 1;
+		cargo->version++;
+		d->robot->version++;
 
 		/* find nearest socket... */
 		found_socket = -1;
 		for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
 			if (d->o[i].type != DAMCON_TYPE_SOCKET)
 				continue;
+			if (d->o[i].tsd.socket.contents_id != DAMCON_SOCKET_EMPTY)
+				continue;
 			dist2 = (cargo->x - d->o[i].x) * (cargo->x - d->o[i].x) + 
 				(cargo->y - d->o[i].y) * (cargo->y - d->o[i].y);
 
 			if (mindist < 0 || mindist > dist2) {
 				mindist = dist2;
-				if (dist2 < (ROBOT_MAX_GRIP_DIST2) &&
-						d->o[i].tsd.socket.contents_id == DAMCON_SOCKET_EMPTY)
+				if (dist2 < (ROBOT_MAX_GRIP_DIST2))
 					found_socket = i;
 			}
 		}
@@ -7745,7 +7759,7 @@ static void do_robot_drop(struct damcon_data *d)
 			cargo->y = d->o[found_socket].y;
 			cargo->heading = 0;
 			d->o[found_socket].tsd.socket.contents_id = cargo->id;
-			d->o[found_socket].timestamp = universe_timestamp + 1;
+			d->o[found_socket].version++;
 		}
 	}
 }
@@ -7780,9 +7794,10 @@ static void do_robot_pickup(struct damcon_data *d)
 
 	item = &d->o[found];
 	d->robot->tsd.robot.cargo_id = item->id;
+	d->robot->version++;
 	item->x = clawx;
 	item->y = clawy;
-	item->timestamp = universe_timestamp + 1;
+	item->version++;
 
 	/* See if any socket thinks it has this item, if so, remove it. */
 	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
@@ -7791,7 +7806,7 @@ static void do_robot_pickup(struct damcon_data *d)
 			continue;
 		if (socket->tsd.socket.contents_id == item->id) {
 			socket->tsd.socket.contents_id = DAMCON_SOCKET_EMPTY;
-			socket->timestamp = universe_timestamp + 1;
+			socket->version++;
 			break;
 		}
 	}
@@ -8043,7 +8058,7 @@ static int process_robot_auto_manual(struct game_client *c)
 	new_mode = !!new_mode;
 	d = &bridgelist[c->bridge].damcon;
 	d->robot->tsd.robot.autonomous_mode = new_mode;
-	d->robot->timestamp = universe_timestamp + 1;
+	d->robot->version++;
 	return 0;
 }
 
@@ -9274,7 +9289,7 @@ static void queue_netstats(struct game_client *c)
 static void queue_up_client_damcon_object_update(struct game_client *c,
 			struct damcon_data *d, struct snis_damcon_entity *o)
 {
-	if (o->timestamp > c->timestamp) {
+	if (o->version != c->damcon_data_clients[damcon_index(d, o)].last_version_sent) {
 		switch(o->type) {
 		case DAMCON_TYPE_PART:
 			send_update_damcon_part_packet(c, o);
@@ -9286,6 +9301,7 @@ static void queue_up_client_damcon_object_update(struct game_client *c,
 			send_update_damcon_obj_packet(c, o);
 			break;
 		}
+		c->damcon_data_clients[damcon_index(d, o)].last_version_sent = o->version;
 	}
 }
 
@@ -9885,6 +9901,7 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].comms_channel = c->shipid;
 		bridgelist[nbridges].npcbot.channel = (uint32_t) -1;
 		bridgelist[nbridges].npcbot.object_id = (uint32_t) -1;
+		bridgelist[nbridges].damcon.bridge = nbridges;
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
 	
@@ -9901,6 +9918,8 @@ static int add_new_player(struct game_client *c)
 
 	c->go_clients = malloc(sizeof(*c->go_clients) * MAXGAMEOBJS);
 	memset(c->go_clients, 0, sizeof(*c->go_clients) * MAXGAMEOBJS);
+	c->damcon_data_clients = malloc(sizeof(*c->damcon_data_clients) * MAXDAMCONENTITIES);
+	memset(c->damcon_data_clients, 0, sizeof(*c->damcon_data_clients) * MAXDAMCONENTITIES);
 
 	return 0;
 

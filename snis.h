@@ -681,7 +681,7 @@ struct snis_damcon_entity {
 #define MAX_ROBOT_ACCELERATION 3.5
 #define DAMCON_WALL_DIST (50)
 	uint32_t type;
-	uint32_t timestamp;
+	unsigned int version;
 	union damcon_type_specific_data tsd;
 	damcon_move_function move;
 	void *drawing_data;
@@ -690,6 +690,7 @@ struct snis_damcon_entity {
 #define ROBOT_MAX_GRIP_DIST2 (40.0 * 40.0)
 
 struct damcon_data {
+	int bridge;
 	struct snis_object_pool *pool;	
 	struct snis_damcon_entity o[MAXDAMCONENTITIES];
 	struct snis_damcon_entity *robot; /* pointers into o[] */
