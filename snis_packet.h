@@ -138,7 +138,7 @@
 #define OPCODE_REQUEST_UNIVERSE_TIMESTAMP	214
 #define OPCODE_UPDATE_UNIVERSE_TIMESTAMP	215
 
-#define OPCODE_NOOP		0xffff
+#define OPCODE_NOOP		0xff
 
 #define UPDATE_UNIVERSE_TIMESTAMP_COUNT 5
 #define UPDATE_UNIVERSE_TIMESTAMP_START_SAMPLE 1
@@ -149,7 +149,7 @@
 
 #pragma pack(1)
 struct update_ship_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
 	uint16_t alive;
@@ -183,7 +183,7 @@ struct update_ship_packet {
 };
 
 struct ship_sdata_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint8_t subclass; /* freighter, destroyer, etc. */
 	uint8_t shield_strength;
@@ -196,12 +196,12 @@ struct ship_sdata_packet {
 };
 
 struct request_ship_sdata_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 };
 
 struct update_econ_ship_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
 	uint16_t alive;
@@ -211,47 +211,47 @@ struct update_econ_ship_packet {
 };
 
 struct client_ship_id_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t shipid;
 };
 
 struct update_asteroid_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t x, y, z;
 };
 
 struct update_cargo_container_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t x, y, z;
 };
 
 struct update_wormhole_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t x, y;
 };
 
 struct update_starbase_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t x, y;
 };
 
 struct update_nebula_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t x, y, z, r;
 };
 
 struct update_explosion_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t x, y, z;
@@ -262,7 +262,7 @@ struct update_explosion_packet {
 };
 
 struct add_laser_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
 	uint8_t power;
@@ -272,12 +272,12 @@ struct add_laser_packet {
 };
 
 struct delete_object_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 };
 
 struct update_torpedo_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t ship_oid; /* ship torpedo came from */
@@ -285,7 +285,7 @@ struct update_torpedo_packet {
 }; 
 
 struct update_laser_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t ship_oid; /* ship laser came from */
@@ -294,24 +294,24 @@ struct update_laser_packet {
 }; 
 
 struct update_spacemonster_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t x, y, z;
 };
 
 struct request_torpedo_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 };
 
 struct request_throttle_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint8_t throttle;
 };
 
 struct request_yaw_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint8_t direction;
 #define YAW_LEFT 0
 #define YAW_RIGHT 1
@@ -328,7 +328,7 @@ struct request_yaw_packet {
 };
 
 struct request_thrust_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint8_t direction;
 #define THRUST_FORWARDS 1
 #define THRUST_BACKWARDS 2
@@ -363,19 +363,19 @@ struct request_thrust_packet {
 #define ROLE_ALL		(0xffffffff)
 
 struct add_player_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t role;
 	unsigned char shipname[20];
 	unsigned char password[20];
 };
 
 struct ack_player_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint8_t allowed;
 };
 
 struct pos_ship_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	struct packed_double x, y;
 	struct packed_double vx, vy;
@@ -383,7 +383,7 @@ struct pos_ship_packet {
 };
 
 struct pos_starbase_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	struct packed_double x, y;
 	struct packed_double vx, vy;
@@ -391,40 +391,40 @@ struct pos_starbase_packet {
 };
 
 struct pos_laser_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	struct packed_double x, y;
 };
 
 struct pos_torpedo_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	struct packed_double x, y;
 }; 
 
 struct play_sound_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint16_t sound_number;
 };
 
 struct role_onscreen_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint8_t role;
 };
 
 struct snis_sci_select_target_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t target_id;
 };
 
 struct snis_sci_select_coords_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t x;
 	uint32_t y;
 };
 
 struct ship_damage_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 /* this must match struct ship_damage_data exactly, and be endian neutral */
 	uint8_t shields;
@@ -438,12 +438,12 @@ struct ship_damage_packet {
 };
 
 struct respawn_time_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint8_t seconds;
 };
 
 struct netstats_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint64_t bytes_sent;
 	uint64_t bytes_recd;
 	uint32_t nships, nobjects;
@@ -452,24 +452,24 @@ struct netstats_packet {
 };
 
 struct comms_transmission_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint8_t length;
 	uint32_t id;
 };
 
 struct lua_script_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint8_t length;
 };
 
 struct warp_limbo_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint16_t limbo_time;
 };
 
 #define MAX_DEMON_CMD_IDS 100
 struct demon_cmd_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint8_t demon_cmd;
 #define DEMON_CMD_ATTACK 1
 	uint32_t x, y;	
@@ -479,7 +479,7 @@ struct demon_cmd_packet {
 };
 
 struct damcon_obj_update_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t ship_id;
 	uint32_t type;
@@ -488,7 +488,7 @@ struct damcon_obj_update_packet {
 };
 
 struct damcon_socket_update_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t ship_id;
 	uint32_t type;
@@ -498,7 +498,7 @@ struct damcon_socket_update_packet {
 };
 
 struct damcon_part_update_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t ship_id;
 	uint32_t type;
@@ -510,17 +510,17 @@ struct damcon_part_update_packet {
 };
 
 struct request_robot_gripper_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 };
 
 struct demon_move_object_packet {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t id;
 	uint32_t x, y;
 };
 
 struct request_mainscreen_view_change {
-	uint16_t opcode;
+	uint8_t opcode;
 	uint32_t heading_delta;
 	uint8_t view_mode;
 #define MAINSCREEN_VIEW_MODE_NORMAL 0

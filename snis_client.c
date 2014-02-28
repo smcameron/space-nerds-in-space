@@ -2302,33 +2302,33 @@ static void queue_to_server(struct packed_buffer *pb)
 
 static void request_sci_select_target(uint32_t id)
 {
-	queue_to_server(packed_buffer_new("hw", OPCODE_SCI_SELECT_TARGET, id));
+	queue_to_server(packed_buffer_new("bw", OPCODE_SCI_SELECT_TARGET, id));
 }
 
 static void request_sci_select_coords(double ux, double uy)
 {
-	queue_to_server(packed_buffer_new("hSS", OPCODE_SCI_SELECT_COORDS,
+	queue_to_server(packed_buffer_new("bSS", OPCODE_SCI_SELECT_COORDS,
 			ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM));
 }
 
 static void request_navigation_yaw_packet(uint8_t yaw)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_YAW, yaw));
+	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_YAW, yaw));
 }
 
 static void request_navigation_thrust_packet(uint8_t thrust)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_THRUST, thrust));
+	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_THRUST, thrust));
 }
 
 static void request_navigation_pitch_packet(uint8_t pitch)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_PITCH, pitch));
+	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_PITCH, pitch));
 }
 
 static void request_navigation_roll_packet(uint8_t roll)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_ROLL, roll));
+	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_ROLL, roll));
 }
 
 static void navigation_dirkey(int h, int v, int r)
@@ -2359,12 +2359,12 @@ static void navigation_dirkey(int h, int v, int r)
 
 static void request_demon_yaw_packet(uint32_t oid, uint8_t yaw)
 {
-	queue_to_server(packed_buffer_new("hwb", OPCODE_DEMON_YAW, oid, yaw));
+	queue_to_server(packed_buffer_new("bwb", OPCODE_DEMON_YAW, oid, yaw));
 }
 
 static void request_demon_thrust_packet(uint32_t oid, uint8_t thrust)
 {
-	queue_to_server(packed_buffer_new("hwb",
+	queue_to_server(packed_buffer_new("bwb",
 				OPCODE_DEMON_THRUST, oid, thrust));
 }
 
@@ -2437,17 +2437,17 @@ static void demon_dirkey(int h, int v)
 
 static void request_weapons_yaw_packet(uint8_t yaw)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_GUNYAW, yaw));
+	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_GUNYAW, yaw));
 }
 
 static void request_weapons_manual_yaw_packet(uint8_t yaw)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_MANUAL_GUNYAW, yaw));
+	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_MANUAL_GUNYAW, yaw));
 }
 
 static void request_weapons_manual_pitch_packet(uint8_t pitch)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_MANUAL_GUNPITCH, pitch));
+	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_MANUAL_GUNPITCH, pitch));
 }
 
 struct weapons_ui {
@@ -2564,12 +2564,12 @@ static void science_dirkey(int h, int v)
 		return;
 	if (v) {
 		yaw = v < 0 ? YAW_LEFT : YAW_RIGHT;
-		queue_to_server(packed_buffer_new("hb",
+		queue_to_server(packed_buffer_new("bb",
 				OPCODE_REQUEST_SCIBEAMWIDTH, yaw));
 	}
 	if (h) {
 		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
-		queue_to_server(packed_buffer_new("hb",
+		queue_to_server(packed_buffer_new("bb",
 				OPCODE_REQUEST_SCIYAW, yaw));
 	}
 }
@@ -2582,12 +2582,12 @@ static void damcon_dirkey(int h, int v)
 		return;
 	if (v) {
 		thrust = v < 0 ? THRUST_BACKWARDS : THRUST_FORWARDS;
-		queue_to_server(packed_buffer_new("hb",
+		queue_to_server(packed_buffer_new("bb",
 				OPCODE_REQUEST_ROBOT_THRUST, thrust));
 	}
 	if (h) {
 		yaw = h > 0 ? YAW_LEFT : YAW_RIGHT;
-		queue_to_server(packed_buffer_new("hb",
+		queue_to_server(packed_buffer_new("bb",
 				OPCODE_REQUEST_ROBOT_YAW, yaw));
 	}
 	wakeup_gameserver_writer();
@@ -2595,7 +2595,7 @@ static void damcon_dirkey(int h, int v)
 
 static void do_onscreen(uint8_t mode)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_ROLE_ONSCREEN, mode));
+	queue_to_server(packed_buffer_new("bb", OPCODE_ROLE_ONSCREEN, mode));
 }
 
 static void do_view_mode_change()
@@ -2609,7 +2609,7 @@ static void do_view_mode_change()
 		new_mode = MAINSCREEN_VIEW_MODE_WEAPONS;
 	else
 		new_mode = MAINSCREEN_VIEW_MODE_NORMAL;
-	queue_to_server(packed_buffer_new("hRb", OPCODE_MAINSCREEN_VIEW_MODE,
+	queue_to_server(packed_buffer_new("bRb", OPCODE_MAINSCREEN_VIEW_MODE,
 				0.0, new_mode));
 }
 
@@ -2660,17 +2660,17 @@ static void do_sciball_dirkey(int h, int v, int r)
 				return;
 			if (v) {
 				value = v < 0 ? YAW_LEFT : YAW_RIGHT;
-				queue_to_server(packed_buffer_new("hb",
+				queue_to_server(packed_buffer_new("bb",
 						OPCODE_REQUEST_SCIBALL_PITCH, value));
 			}
 			if (h) {
 				value = h < 0 ? YAW_LEFT : YAW_RIGHT;
-				queue_to_server(packed_buffer_new("hb",
+				queue_to_server(packed_buffer_new("bb",
 						OPCODE_REQUEST_SCIBALL_YAW, value));
 			}
 			if (r) {
 				value = r < 0 ? YAW_LEFT : YAW_RIGHT;
-				queue_to_server(packed_buffer_new("hb",
+				queue_to_server(packed_buffer_new("bb",
 						OPCODE_REQUEST_SCIBALL_ROLL, value));
 			}
 			break;
@@ -2690,14 +2690,14 @@ static void do_torpedo(void)
 		return;
 	if (o->tsd.ship.torpedoes_loaded <= 0)
 		return;
-	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_TORPEDO));
+	queue_to_server(packed_buffer_new("b", OPCODE_REQUEST_TORPEDO));
 }
 
 static void do_mainscreen_camera_mode()
 {
 	if (displaymode != DISPLAYMODE_MAINSCREEN)
 		return;
-	queue_to_server(packed_buffer_new("hb", OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW,
+	queue_to_server(packed_buffer_new("bb", OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW,
 		(unsigned char) (camera_mode + 1) % 3));
 }
 
@@ -2706,7 +2706,7 @@ static void do_laser(void)
 {
 	switch (displaymode) {
 	case DISPLAYMODE_WEAPONS: 
-		queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_MANUAL_LASER));
+		queue_to_server(packed_buffer_new("b", OPCODE_REQUEST_MANUAL_LASER));
 		break;
 	case DISPLAYMODE_DAMCON:
 		robot_gripper_button_pressed(NULL);
@@ -2880,7 +2880,7 @@ nav_check_y_stick:
 	}
 }
 
-static void do_adjust_byte_value(uint8_t value,  uint16_t opcode);
+static void do_adjust_byte_value(uint8_t value,  uint8_t opcode);
 static void do_zoom(int z)
 {
 	int newval;
@@ -3339,7 +3339,7 @@ static int process_update_coolant_data(void)
 	return rc;
 }
 
-static int process_update_ship_packet(uint16_t opcode)
+static int process_update_ship_packet(uint8_t opcode)
 {
 	int i;
 	unsigned char buffer[144];
@@ -3360,8 +3360,8 @@ static int process_update_ship_packet(uint16_t opcode)
 	struct entity *e;
 	struct snis_entity *o;
 
-	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - sizeof(uint8_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct update_ship_packet) - sizeof(uint8_t));
 	/* printf("process_update_ship_packet, snis_readsocket returned %d\n", rc); */
 	if (rc != 0)
 		return rc;
@@ -3472,7 +3472,7 @@ static int read_and_unpack_buffer(unsigned char *buffer, char *format, ...)
 
 static int process_update_damcon_object(void)
 {
-	unsigned char buffer[sizeof(struct damcon_obj_update_packet) - sizeof(uint16_t)];
+	unsigned char buffer[sizeof(struct damcon_obj_update_packet) - sizeof(uint8_t)];
 	uint32_t id, ship_id, type;
 	double x, y, velocity, heading;
 	uint8_t autonomous_mode;
@@ -3495,7 +3495,7 @@ static int process_update_damcon_object(void)
 
 static int process_update_damcon_socket(void)
 {
-	unsigned char buffer[sizeof(struct damcon_socket_update_packet) - sizeof(uint16_t)];
+	unsigned char buffer[sizeof(struct damcon_socket_update_packet) - sizeof(uint8_t)];
 	uint32_t id, ship_id, type, contents_id;
 	double x, y;
 	uint8_t system, part;
@@ -3516,7 +3516,7 @@ static int process_update_damcon_socket(void)
 
 static int process_update_damcon_part(void)
 {
-	unsigned char buffer[sizeof(struct damcon_part_update_packet) - sizeof(uint16_t)];
+	unsigned char buffer[sizeof(struct damcon_part_update_packet) - sizeof(uint8_t)];
 	uint32_t id, ship_id, type;
 	double x, y, heading;
 	uint8_t system, part, damage;
@@ -3539,7 +3539,7 @@ static int process_update_damcon_part(void)
 static int process_mainscreen_view_mode(void)
 {
 	unsigned char buffer[sizeof(struct request_mainscreen_view_change) -
-					sizeof(uint16_t)];
+					sizeof(uint8_t)];
 	struct snis_entity *o;
 	uint8_t view_mode;
 	double view_angle;
@@ -3555,7 +3555,7 @@ static int process_mainscreen_view_mode(void)
 	return 0;
 }
 
-static int process_update_econ_ship_packet(uint16_t opcode)
+static int process_update_econ_ship_packet(uint8_t opcode)
 {
 	unsigned char buffer[200];
 	uint16_t alive;
@@ -3567,7 +3567,7 @@ static int process_update_econ_ship_packet(uint16_t opcode)
 	double threat_level;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwhSSSQwb", &id, &timestamp, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
 				&dz, (int32_t) UNIVERSE_DIM,
@@ -3618,7 +3618,7 @@ static int process_update_torpedo_packet(void)
 	double dx, dy, dz;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_torpedo_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_torpedo_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwwSSS", &id, &timestamp, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM);
@@ -3662,7 +3662,7 @@ static int process_update_laser_packet(void)
 	union quat orientation;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_laser_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_laser_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwwSSSQ", &id, &timestamp, &ship_id,
 				&dx, (int32_t) UNIVERSE_DIM,
 				&dy, (int32_t) UNIVERSE_DIM,
@@ -3683,7 +3683,7 @@ static int process_update_spacemonster(void)
 	double dx, dy, dz;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_spacemonster_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_spacemonster_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM);
@@ -3945,7 +3945,7 @@ static int process_delete_object_packet(void)
 	uint32_t id;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct delete_object_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct delete_object_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "w", &id);
 	if (rc != 0)
 		return rc;
@@ -3962,7 +3962,7 @@ static int process_play_sound_packet(void)
 	uint16_t sound_number;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct play_sound_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct play_sound_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "h", &sound_number);
 	if (rc != 0)
 		return rc;
@@ -3979,8 +3979,8 @@ static int process_ship_sdata_packet(void)
 	int rc;
 	char name[NAMESIZE];
 
-	assert(sizeof(buffer) > sizeof(struct ship_sdata_packet) - sizeof(uint16_t));
-	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct ship_sdata_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct ship_sdata_packet) - sizeof(uint8_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct ship_sdata_packet) - sizeof(uint8_t));
 	if (rc != 0)
 		return rc;
 	packed_buffer_unpack(buffer, "wbbbbbbbr",&id, &subclass, &shstrength, &shwavelength,
@@ -4198,7 +4198,7 @@ static int process_ship_damage_packet(int do_damage_limbo)
 	struct ship_damage_data damage;
 
 	rc = snis_readsocket(gameserver_sock, buffer,
-			sizeof(struct ship_damage_packet) - sizeof(uint16_t));
+			sizeof(struct ship_damage_packet) - sizeof(uint8_t));
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
@@ -4223,7 +4223,7 @@ static int process_update_asteroid_packet(void)
 	double dx, dy, dz, dvx, dvy, dvz;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwSSSSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
@@ -4246,7 +4246,7 @@ static int process_update_cargo_container_packet(void)
 	double dx, dy, dz;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_cargo_container_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_cargo_container_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
@@ -4267,7 +4267,7 @@ static int process_update_derelict_packet(void)
 	uint8_t shiptype;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwSSSb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
@@ -4290,7 +4290,7 @@ static int process_update_planet_packet(void)
 	int hasring;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
@@ -4316,7 +4316,7 @@ static int process_update_wormhole_packet(void)
 	double dx, dy, dz;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_wormhole_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_wormhole_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
@@ -4336,7 +4336,7 @@ static int process_update_starbase_packet(void)
 	double dx, dy, dz;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_starbase_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_starbase_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, &dz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
@@ -4354,7 +4354,7 @@ static int process_update_nebula_packet(void)
 	double dx, dy, dz, r;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_nebula_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_nebula_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwSSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
@@ -4407,7 +4407,7 @@ static int process_update_explosion_packet(void)
 	uint8_t victim_type;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_explosion_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct update_explosion_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwSSShhhb", &id, &timestamp,
 		&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 		&dz, (int32_t) UNIVERSE_DIM,
@@ -4426,7 +4426,7 @@ static int process_client_id_packet(void)
 	uint32_t id;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct client_ship_id_packet) - sizeof(uint16_t));
+	assert(sizeof(buffer) > sizeof(struct client_ship_id_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "w", &id);
 	if (rc)
 		return rc;
@@ -4437,11 +4437,13 @@ static int process_client_id_packet(void)
 
 static void *gameserver_reader(__attribute__((unused)) void *arg)
 {
-	uint16_t opcode;
+	uint8_t last_opcode;
+	uint8_t opcode = 0xff;
 	int rc;
 
 	printf("gameserver reader thread\n");
 	while (1) {
+		last_opcode = opcode;
 		/* printf("Client reading from game server %d bytes...\n", sizeof(opcode)); */
 		rc = snis_readsocket(gameserver_sock, &opcode, sizeof(opcode));
 
@@ -4451,8 +4453,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		/* printf("rc = %d, errno  %s\n", rc, strerror(errno)); */
 		if (rc != 0)
 			goto protocol_error;
-		opcode = ntohs(opcode);
-		/* printf("got opcode %hd\n", opcode); */
+		/* printf("got opcode %hhu\n", opcode); */
 		switch (opcode)	{
 		case OPCODE_UPDATE_SHIP:
 		case OPCODE_UPDATE_SHIP2:
@@ -4608,6 +4609,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 protocol_error:
 	printf("Protocol error in gameserver reader, opcode = %hu\n", opcode);
 	snis_print_last_buffer(gameserver_sock);	
+	printf("last opcode was %hhu\n", last_opcode);
 	close(gameserver_sock);
 	gameserver_sock = -1;
 	return NULL;
@@ -4784,7 +4786,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	 * but, this works.
 	 */
 	memset(&app, 0, sizeof(app));
-	app.opcode = htons(OPCODE_UPDATE_PLAYER);
+	app.opcode = OPCODE_UPDATE_PLAYER;
 	app.role = htonl(role);
 	strncpy((char *) app.shipname, shipname, 19);
 	strncpy((char *) app.password, password, 19);
@@ -6967,7 +6969,7 @@ static void load_torpedo_button_pressed()
 		return;
 	if (o->tsd.ship.torpedoes_loading != 0)
 		return;
-	queue_to_server(packed_buffer_new("h", OPCODE_LOAD_TORPEDO));
+	queue_to_server(packed_buffer_new("b", OPCODE_LOAD_TORPEDO));
 }
 
 static void fire_phaser_button_pressed(__attribute__((unused)) void *notused)
@@ -6981,16 +6983,16 @@ static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
 	load_torpedo_button_pressed();
 }
 
-static void do_adjust_byte_value(uint8_t value,  uint16_t opcode)
+static void do_adjust_byte_value(uint8_t value,  uint8_t opcode)
 {
 	struct snis_entity *o;
 
 	if (!(o = find_my_ship()))
 		return;
-	queue_to_server(packed_buffer_new("hwb", opcode, o->id, value));
+	queue_to_server(packed_buffer_new("bwb", opcode, o->id, value));
 }
 
-static void do_adjust_slider_value(struct slider *s,  uint16_t opcode)
+static void do_adjust_slider_value(struct slider *s,  uint8_t opcode)
 {
 	uint8_t value = (uint8_t) (255.0 * snis_slider_get_input(s));
 	do_adjust_byte_value(value, opcode);
@@ -8096,17 +8098,17 @@ static void robot_right_button_pressed(void *x)
 
 static void robot_gripper_button_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_ROBOT_GRIPPER));
+	queue_to_server(packed_buffer_new("b", OPCODE_REQUEST_ROBOT_GRIPPER));
 }
 
 static void robot_auto_button_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_ROBOT_AUTO_MANUAL, 1));
+	queue_to_server(packed_buffer_new("bb", OPCODE_ROBOT_AUTO_MANUAL, 1));
 }
 
 static void robot_manual_button_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_ROBOT_AUTO_MANUAL, 0));
+	queue_to_server(packed_buffer_new("bb", OPCODE_ROBOT_AUTO_MANUAL, 0));
 }
 
 static void init_damcon_ui(void)
@@ -8813,25 +8815,25 @@ static void show_damcon(GtkWidget *w)
 
 static void sci_details_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_SCI_DETAILS,
+	queue_to_server(packed_buffer_new("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_DETAILS));
 }
 
 static void sci_twod_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_SCI_DETAILS,
+	queue_to_server(packed_buffer_new("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_TWOD));
 }
 
 static void sci_threed_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_SCI_DETAILS,
+	queue_to_server(packed_buffer_new("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_THREED));
 }
 
 static void sci_sciplane_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("hb", OPCODE_SCI_DETAILS,
+	queue_to_server(packed_buffer_new("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_SCIPLANE));
 }
 
@@ -8896,7 +8898,7 @@ static void comms_screen_red_alert_pressed(void *x)
 	unsigned char new_alert_mode;
 
 	new_alert_mode = (red_alert_mode == 0);	
-	queue_to_server(packed_buffer_new("hb", OPCODE_REQUEST_REDALERT, new_alert_mode));
+	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_REDALERT, new_alert_mode));
 }
 
 static void comms_main_screen_pressed(void *x)
@@ -8904,16 +8906,16 @@ static void comms_main_screen_pressed(void *x)
 	unsigned char new_comms_mode;
 
 	new_comms_mode = (main_screen_text.comms_on_mainscreen == 0);	
-	queue_to_server(packed_buffer_new("hb", OPCODE_COMMS_MAINSCREEN, new_comms_mode));
+	queue_to_server(packed_buffer_new("bb", OPCODE_COMMS_MAINSCREEN, new_comms_mode));
 }
 
-static void send_comms_packet_to_server(char *msg, uint16_t opcode, uint32_t id)
+static void send_comms_packet_to_server(char *msg, uint8_t opcode, uint32_t id)
 {
 	struct packed_buffer *pb;
 	uint8_t len = strlen(msg);
 
 	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + len);
-	packed_buffer_append(pb, "hbw", opcode, len, id);
+	packed_buffer_append(pb, "bbw", opcode, len, id);
 	packed_buffer_append_raw(pb, msg, (unsigned short) len);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
@@ -8925,7 +8927,7 @@ static void send_lua_script_packet_to_server(char *script)
 	uint8_t len = strlen(script);
 
 	pb = packed_buffer_allocate(sizeof(struct lua_script_packet) + len);
-	packed_buffer_append(pb, "hb", OPCODE_EXEC_LUA_SCRIPT, len);
+	packed_buffer_append(pb, "bb", OPCODE_EXEC_LUA_SCRIPT, len);
 	packed_buffer_append_raw(pb, script, (unsigned short) len);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
@@ -9549,22 +9551,22 @@ static void send_demon_comms_packet_to_server(char *msg)
 
 static void send_demon_clear_all_packet_to_server(void)
 {
-	queue_to_server(packed_buffer_new("h", OPCODE_DEMON_CLEAR_ALL));
+	queue_to_server(packed_buffer_new("b", OPCODE_DEMON_CLEAR_ALL));
 }
 
 static void toggle_demon_ai_debug_mode(void)
 {
-	queue_to_server(packed_buffer_new("h", OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE));
+	queue_to_server(packed_buffer_new("b", OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE));
 }
 
 static void request_universe_timestamp(void)
 {
-	queue_to_server(packed_buffer_new("h", OPCODE_REQUEST_UNIVERSE_TIMESTAMP));
+	queue_to_server(packed_buffer_new("b", OPCODE_REQUEST_UNIVERSE_TIMESTAMP));
 }
 
 static void toggle_demon_safe_mode(void)
 {
-	queue_to_server(packed_buffer_new("h", OPCODE_TOGGLE_DEMON_SAFE_MODE));
+	queue_to_server(packed_buffer_new("b", OPCODE_TOGGLE_DEMON_SAFE_MODE));
 }
 
 
@@ -9637,14 +9639,14 @@ static void demon_select(uint32_t id)
 		int index = lookup_object_by_id(id);
 
 		if (demon_ui.captain_of != -1) {
-			queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_DISPOSSESS,
+			queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_DISPOSSESS,
 				go[demon_ui.captain_of].id));
 				demon_ui.captain_of = -1;
 		}
 		if (index >= 0 && (go[index].type == OBJTYPE_SHIP2 ||
 			go[index].type == OBJTYPE_STARBASE)) {
 			demon_ui.captain_of = lookup_object_by_id(id);
-			queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_POSSESS,
+			queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_POSSESS,
 				go[demon_ui.captain_of].id));
 		}
 	}
@@ -9656,7 +9658,7 @@ static void demon_deselect(uint32_t id)
 	for (i = 0; i < demon_ui.nselected; i++) {
 		if (demon_ui.selected_id[i] == id) {
 			if (demon_ui.captain_of == id && id != -1) {
-				queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_DISPOSSESS,
+				queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_DISPOSSESS,
 					go[demon_ui.captain_of].id));
 				demon_ui.captain_of = -1;
 			}
@@ -9724,7 +9726,7 @@ static void demon_button_create_item(gdouble x, gdouble y)
 		default:
 			return;
 	}
-	queue_to_server(packed_buffer_new("hbSS", OPCODE_CREATE_ITEM, item_type,
+	queue_to_server(packed_buffer_new("bbSS", OPCODE_CREATE_ITEM, item_type,
 			ux, (int32_t) UNIVERSE_DIM, uz, (int32_t) UNIVERSE_DIM));
 }
 
@@ -9823,7 +9825,7 @@ static void demon_button2_release(int button, gdouble x, gdouble y)
 	
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < demon_ui.nselected; i++) {
-		queue_to_server(packed_buffer_new("hwSS",
+		queue_to_server(packed_buffer_new("bwSS",
 				OPCODE_DEMON_MOVE_OBJECT,
 				demon_ui.selected_id[i],
 				dx, (int32_t) UNIVERSE_DIM,
@@ -10198,7 +10200,7 @@ static int construct_demon_command(char *input,
 			idcount = demon_group[g].nids + demon_group[g2].nids;
 			pb = packed_buffer_allocate(sizeof(struct demon_cmd_packet)
 							+ (idcount - 1) * sizeof(uint32_t));
-			packed_buffer_append(pb, "hbwwbb", OPCODE_DEMON_COMMAND, DEMON_CMD_ATTACK, 0, 0,
+			packed_buffer_append(pb, "bbwwbb", OPCODE_DEMON_COMMAND, DEMON_CMD_ATTACK, 0, 0,
 						demon_group[g].nids, demon_group[g2].nids);
 
 			printf("sending attack cmd\n");
@@ -10376,7 +10378,7 @@ static void demon_delete_button_pressed(void *x)
 
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < demon_ui.nselected; i++) {
-		queue_to_server(packed_buffer_new("hw",
+		queue_to_server(packed_buffer_new("bw",
 				OPCODE_DELETE_OBJECT, demon_ui.selected_id[i]));
 	}
 	pthread_mutex_unlock(&universe_mutex);
@@ -10393,7 +10395,7 @@ static void demon_torpedo_button_pressed(void *x)
 		return;
 	if (go[demon_ui.captain_of].type != OBJTYPE_SHIP2)
 		return;
-	queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_FIRE_TORPEDO,
+	queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_FIRE_TORPEDO,
 				go[demon_ui.captain_of].id));
 }
 
@@ -10403,7 +10405,7 @@ static void demon_phaser_button_pressed(void *x)
 		return;
 	if (go[demon_ui.captain_of].type != OBJTYPE_SHIP2)
 		return;
-	queue_to_server(packed_buffer_new("hw", OPCODE_DEMON_FIRE_PHASER,
+	queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_FIRE_PHASER,
 				go[demon_ui.captain_of].id));
 }
 
@@ -11780,7 +11782,7 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 		smooth_mousexy(event->x, event->y, &smoothx, &smoothy);
 		yaw = weapons_mousex_to_yaw(smoothx);
 		pitch = weapons_mousey_to_pitch(smoothy);
-		queue_to_server(packed_buffer_new("hRR", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
+		queue_to_server(packed_buffer_new("bRR", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
 					yaw, pitch));
 		break;
 	case DISPLAYMODE_ENGINEERING:
