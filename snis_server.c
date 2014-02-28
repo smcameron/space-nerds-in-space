@@ -9321,7 +9321,7 @@ static void queue_up_client_updates(struct game_client *c)
 			if (too_far_away_to_care(c, &go[i]) &&
 				(universe_timestamp + i) % GO_TOO_FAR_UPDATE_PER_NTICKS != 0) {
 
-				gather_opcode_not_sent_stats(o);
+				gather_opcode_not_sent_stats(&go[i]);
 				continue;
 			}
 
