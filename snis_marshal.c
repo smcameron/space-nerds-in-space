@@ -286,8 +286,6 @@ struct packed_buffer *packed_buffer_queue_combine(struct packed_buffer_queue *pb
 	uint32_t totalbytes;
 	unsigned char *buf;
 
-	answer = malloc(sizeof(*answer));
-
 	/* Count total bytes in buffer queue */
 	lockmutex(mutex);
 	totalbytes = 0;
@@ -296,11 +294,10 @@ struct packed_buffer *packed_buffer_queue_combine(struct packed_buffer_queue *pb
 
 	if (totalbytes == 0) {
 		unlockmutex(mutex);
-		answer->buffer = NULL;
-		answer->buffer_size = 0;
-		answer->buffer_cursor = 0;
-		return answer;	
+		return NULL;
 	}
+
+	answer = malloc(sizeof(*answer));
 
 	/* allocate a big buffer to hold the combined buffers... */	
 	buf = malloc(totalbytes);

@@ -4638,8 +4638,9 @@ static void write_queued_packets_to_server(void)
 
 	pthread_mutex_lock(&to_server_queue_event_mutex);
 	buffer = packed_buffer_queue_combine(&to_server_queue, &to_server_queue_mutex);
-	if (buffer->buffer_size > 0) {
+	if (buffer) {
 		rc = snis_writesocket(gameserver_sock, buffer->buffer, buffer->buffer_size);
+		packed_buffer_free(buffer);
 		if (rc) {
 			printf("Failed to write to gameserver\n");
 			goto badserver;
@@ -4647,7 +4648,6 @@ static void write_queued_packets_to_server(void)
 	} else {
 		printf("Hmm, gameserver_writer awakened, but nothing to write.\n");
 	}
-	packed_buffer_free(buffer);
 	if (have_packets_for_server)
 		have_packets_for_server = 0;
 	pthread_mutex_unlock(&to_server_queue_event_mutex);

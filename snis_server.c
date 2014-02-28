@@ -9085,7 +9085,7 @@ static void write_queued_updates_to_client(struct game_client *c)
 
 	/*  packed_buffer_queue_print(&c->client_write_queue); */
 	buffer = packed_buffer_queue_combine(&c->client_write_queue, &c->client_write_queue_mutex);
-	if (buffer->buffer_size > 0) {
+	if (buffer) {
 #if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
 		/* Last I checked, average buffer size was in the 14.5kbyte range. */
 		c->write_sum += buffer->buffer_size;
@@ -9094,6 +9094,7 @@ static void write_queued_updates_to_client(struct game_client *c)
 			printf("avg = %llu\n", c->write_sum / c->write_count);
 #endif
 		rc = snis_writesocket(c->socket, buffer->buffer, buffer->buffer_size);
+		packed_buffer_free(buffer);
 		if (rc != 0) {
 			snis_log(SNIS_ERROR, "writesocket failed, rc= %d, errno = %d(%s)\n", 
 				rc, errno, strerror(errno));
@@ -9108,7 +9109,6 @@ static void write_queued_updates_to_client(struct game_client *c)
 			goto badclient;
 		}
 	}
-	packed_buffer_free(buffer);
 	return;
 
 badclient:
