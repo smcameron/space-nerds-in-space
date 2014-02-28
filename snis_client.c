@@ -3829,7 +3829,7 @@ static int process_update_universe_timestamp(double update_time)
 	double time_delta;
 
 	/* read the timestamp in server ticks and time_delta in seconds */
-	rc = read_and_unpack_buffer(buffer, "hwS", &code, &timestamp, &time_delta, 5);
+	rc = read_and_unpack_buffer(buffer, "bwS", &code, &timestamp, &time_delta, 5);
 	if (rc)
 		return rc;
 

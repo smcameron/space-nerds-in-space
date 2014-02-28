@@ -9046,7 +9046,7 @@ static void *per_client_read_thread(void /* struct game_client */ *client)
 static void queue_update_universe_timestamp(struct game_client *c, uint8_t code)
 {
 	/* send the timestamp and time_delta.  time_delta should be 0.0 - 0.1 seconds, marshal as 5 to be safe */
-	pb_prepend_queue_to_client(c, packed_buffer_new("hhwS", OPCODE_UPDATE_UNIVERSE_TIMESTAMP, code,
+	pb_prepend_queue_to_client(c, packed_buffer_new("hbwS", OPCODE_UPDATE_UNIVERSE_TIMESTAMP, code,
 		universe_timestamp, time_now_double() - universe_timestamp_absolute, 5));
 }
 
