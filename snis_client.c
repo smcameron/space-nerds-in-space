@@ -1506,7 +1506,7 @@ static int update_starbase(uint32_t id, double x, double y, double z)
 	if (i < 0) {
 		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
 		m = id % NSTARBASE_MODELS;
-		e = add_entity(ecx, starbase_mesh[m], x, 0, z, STARBASE_COLOR);
+		e = add_entity(ecx, starbase_mesh[m], x, y, z, STARBASE_COLOR);
 		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
