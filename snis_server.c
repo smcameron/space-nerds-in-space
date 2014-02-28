@@ -685,15 +685,12 @@ static void gather_opcode_stats(struct packed_buffer *pb)
 	int length;
 	uint8_t opcode;
 
-	/* assumption, first 2-bytes is opcode. */
+	/* assumption, first byte is opcode. */
 	memcpy(&opcode, pb->buffer, sizeof(opcode));
-	opcode = ((opcode & 0xff) << 8) | ((opcode & 0xff00) >> 8);
 	length = packed_buffer_length(pb);
-	if (opcode < 256) {
-		write_opcode_stats[opcode].opcode = opcode;
-		write_opcode_stats[opcode].count++;
-		write_opcode_stats[opcode].bytes += (uint64_t) length;
-	}
+	write_opcode_stats[opcode].opcode = opcode;
+	write_opcode_stats[opcode].count++;
+	write_opcode_stats[opcode].bytes += (uint64_t) length;
 }
 
 static void gather_opcode_not_sent_stats(struct snis_entity *o)
