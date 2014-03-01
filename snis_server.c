@@ -2393,8 +2393,10 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	notacop = o->tsd.ship.ai[0].ai_mode != AI_MODE_COP;
 	imacop = !notacop;
 
-	if (notacop && too_many_cops_around(o))
+	if (notacop && too_many_cops_around(o)) {
+		pop_ai_stack(o); /* forget about attacking... do something else */
 		return;
+	}
 
 	/* neutrals do not attack planets or starbases, and only select ships
 	 * when attacked.
