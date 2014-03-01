@@ -9577,7 +9577,7 @@ static int ux_to_demonsx(double ux)
 
 static int uz_to_demonsy(double uz)
 {
-	return ((uz - demon_ui.uy1) / (demon_ui.uy2 - demon_ui.uy1)) * SCREEN_HEIGHT;
+	return ((uz - demon_ui.uy1) / (demon_ui.uy2 - demon_ui.uy1)) * SCREEN_HEIGHT * ASPECT_RATIO;
 }
 
 static int ur_to_demonsr(double ur)
@@ -9592,7 +9592,7 @@ static double demon_mousex_to_ux(double x)
 
 static double demon_mousey_to_uz(double y)
 {
-	return demon_ui.uy1 + (y / real_screen_height) * (demon_ui.uy2 - demon_ui.uy1);
+	return demon_ui.uy1 + (y / real_screen_height) * (demon_ui.uy2 - demon_ui.uy1) / ASPECT_RATIO;
 }
 
 static double weapons_mousex_to_yaw(double x)
