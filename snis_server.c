@@ -2655,8 +2655,6 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
 			add_warp_effect(o->x, o->y, o->z, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
 			set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
-			/* put timestamp at +(a bit) due to extreme speed seen by client */
-			o->timestamp = universe_timestamp + 6;
 			/* reset destination after warping to prevent backtracking */
 			o->tsd.ship.dox = patrol->p[d].v.x;
 			o->tsd.ship.doy = patrol->p[d].v.y;
@@ -2731,8 +2729,6 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 			vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
 			add_warp_effect(o->x, o->y, o->z, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
 			set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
-			/* put timestamp at +(a bit) due to extreme speed seen by client */
-			o->timestamp = universe_timestamp + 6;
 			/* reset destination after warping to prevent backtracking */
 			o->tsd.ship.dox = patrol->p[d].v.x;
 			o->tsd.ship.doy = patrol->p[d].v.y;
@@ -4184,7 +4180,7 @@ static int add_generic_object(double x, double y, double z,
 	go[i].vz = vz;
 	go[i].heading = heading;
 	go[i].type = type;
-	go[i].timestamp = universe_timestamp + 1;
+	go[i].timestamp = universe_timestamp;
 	go[i].move = generic_move;
 
 	/* clear out the client update state */
@@ -6169,7 +6165,7 @@ static int process_demon_move_object(struct game_client *c)
 	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)
 		add_warp_effect(o->x, o->y, o->z, o->x + dx, o->y, o->z + dz);
 	set_object_location(o, o->x + dx, o->y, o->z + dz);
-	o->timestamp = universe_timestamp + 10;
+	o->timestamp = universe_timestamp;
 out:
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
@@ -8007,14 +8003,8 @@ static int process_create_item(struct game_client *c)
 	default:
 		break;
 	}
-	if (i >= 0) {
-		/* FIXME, the + 10 here is an awful hack to (mostly) get around
-		 * the "too far away to care" bandwidth saving optimization in
-		 * queue_up_client_updates().  Need a better, more sure way.
-		 */
-		go[i].timestamp = universe_timestamp + 10;
+	if (i >= 0)
 		set_object_location(&go[i], x, go[i].y, z);
-	}
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
