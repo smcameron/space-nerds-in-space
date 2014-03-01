@@ -6464,11 +6464,29 @@ static void meta_comms_help(char *name, struct game_client *c, char *txt)
 		"  * /eject cargo-bay-number - eject cargo",
 		"  * /hail ship-name - hail ship or starbase on current channel",
 		"  * /inventory - report inventory of ship's cargo hold",
+		"  * /about - informatoin about the game",
 		"",
 		0,
 	};
 	for (i = 0; hlptxt[i]; i++)
 		send_comms_packet("", bridgelist[c->bridge].comms_channel, hlptxt[i]);
+}
+
+static void meta_comms_about(char *name, struct game_client *c, char *txt)
+{
+	int i;
+	const char *abouttxt[] = {
+		"Space Nerds In Space is free software",
+		"Source code can be found here:",
+		"https://github.com/smcameron/space-nerds-in-space",
+		"--------------------------",
+		0,
+	};
+	send_comms_packet("", bridgelist[c->bridge].comms_channel, "--------------------------");
+	send_comms_packet("", bridgelist[c->bridge].comms_channel, "SPACE NERDS IN SPACE");
+	send_comms_packet("", bridgelist[c->bridge].comms_channel, "--------------------------");
+	for (i = 0; abouttxt[i]; i++)
+		send_comms_packet("", bridgelist[c->bridge].comms_channel, abouttxt[i]);
 }
 
 static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
@@ -7330,6 +7348,7 @@ static const struct meta_comms_data {
 	{ "/hail", meta_comms_hail },
 	{ "/inventory", meta_comms_inventory },
 	{ "/eject", meta_comms_eject },
+	{ "/about", meta_comms_about },
 	{ "/help", meta_comms_help },
 };
 
