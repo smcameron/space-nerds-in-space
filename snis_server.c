@@ -2674,7 +2674,7 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 		n = o->tsd.ship.nai_entries;
 		if (n < MAX_AI_STACK_ENTRIES) {
 			o->tsd.ship.ai[n].ai_mode = AI_MODE_HANGOUT;
-			o->tsd.ship.ai[n].u.hangout.time_to_go = 1000 + snis_randn(1000);
+			o->tsd.ship.ai[n].u.hangout.time_to_go = 100 + snis_randn(100);
 			o->tsd.ship.desired_velocity = 0;
 			o->tsd.ship.nai_entries++;
 		} else {
