@@ -2813,8 +2813,14 @@ static void ai_brain(struct snis_entity *o)
 		break;
 	case AI_MODE_HANGOUT:
 		o->tsd.ship.ai[n].u.hangout.time_to_go--;
-		if (o->tsd.ship.ai[n].u.hangout.time_to_go <= 0)
+		if (o->tsd.ship.ai[n].u.hangout.time_to_go <= 0) {
 			pop_ai_stack(o);
+			return;
+		}
+		o->vx *= 0.8;
+		o->vy *= 0.8;
+		o->vz *= 0.8;
+		o->tsd.ship.desired_velocity = 0.0;
 		maybe_leave_fleet(o);
 		break;
 	default:
@@ -2948,7 +2954,7 @@ static void ship_move(struct snis_entity *o)
 	/* Adjust velocity towards desired velocity */
 	o->tsd.ship.velocity = o->tsd.ship.velocity +
 			(o->tsd.ship.desired_velocity - o->tsd.ship.velocity) * 0.1;
-	if (fabs(o->tsd.ship.velocity - o->tsd.ship.desired_velocity) < 1.0)
+	if (fabs(o->tsd.ship.velocity - o->tsd.ship.desired_velocity) < 0.1)
 		o->tsd.ship.velocity = o->tsd.ship.desired_velocity;
 
 	update_ship_position_and_velocity(o);
@@ -3677,37 +3683,20 @@ static float new_velocity(float desired_velocity, float current_velocity)
 	return current_velocity + (delta / 20.0);
 }
 
-static void enforce_minimum_attack_speed(double *vx, double *vy, double *vz)
-{
-	double v = dist3d(*vx, *vy, *vz);
-
-	if (v < 0.000001) /* Avoid NaNs when close to stopped */
-		return;
-
-	if (v >= MINIMUM_ATTACK_SPEED)
-		return;
-
-	union vec3 veln, vel = { { (float) *vx, (float) *vy, (float) *vz } };
-	vec3_normalize(&veln, &vel);
-	vec3_mul(&vel, &veln, MINIMUM_ATTACK_SPEED);
-	*vx = (double) vel.v.x;
-	*vy = (double) vel.v.y;
-	*vy = (double) vel.v.y;
-}
-
 static void update_ship_position_and_velocity(struct snis_entity *o)
 {
 	union vec3 desired_velocity;
 	union vec3 dest, destn;
 	struct snis_entity *v;
-	int n;
+	int n, mode;
 
 	if (o->tsd.ship.nai_entries == 0)
 		ship_figure_out_what_to_do(o);
 	n = o->tsd.ship.nai_entries - 1;
+	mode = o->tsd.ship.ai[n].ai_mode;
 
 	/* FIXME: need a better way to do this. */
-	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK) {
+	if (mode == AI_MODE_ATTACK) {
 		v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
 		if (v) {
 			dest.v.x = v->x + o->tsd.ship.dox - o->x;
@@ -3741,17 +3730,31 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	vec3_mul_self(&desired_velocity, o->tsd.ship.braking_factor);
 	vec3_add_self(&desired_velocity, &o->tsd.ship.steering_adjustment);
 
-	/* Make actual velocity move towards desired velocity */
+	union vec3 curvel = { { o->vx, o->vy, o->vz } };
+	float dot = vec3_dot(&curvel, &desired_velocity);
+	if (o->tsd.ship.velocity < MINIMUM_TURN_SPEED &&
+		dot < cos(M_PI * MAX_SLOW_TURN_ANGLE / 180.0 && mode != AI_MODE_HANGOUT)) {
+		/* Currently moving too slow and trying to turn too much, just go straight */
+		union vec3 rightvec;
+		rightvec.v.x = MINIMUM_TURN_SPEED * 1.05;
+		rightvec.v.y = 0.0;
+		rightvec.v.z = 0.0;
+		quat_rot_vec(&desired_velocity, &rightvec, &o->orientation);
+	}
 	o->vx = new_velocity(desired_velocity.v.x, o->vx);
 	o->vy = new_velocity(desired_velocity.v.y, o->vy);
 	o->vz = new_velocity(desired_velocity.v.z, o->vz);
 
-	if (o->tsd.ship.desired_velocity > 0.0)
-		enforce_minimum_attack_speed(&o->vx, &o->vy, &o->vz);
-
 	/* Move ship */
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	/* FIXME: some kind of collision detection needed here... */
+
+	if (mode == AI_MODE_HANGOUT) {
+		o->vx *= 0.8;
+		o->vy *= 0.8;
+		o->vz *= 0.8;
+		o->tsd.ship.desired_velocity = 0;
+	}
 }
 
 static void update_player_position_and_velocity(struct snis_entity *o)

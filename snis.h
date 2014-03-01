@@ -264,6 +264,8 @@ struct ship_data {
 #define PATROL_ATTACK_DIST (LASER_RANGE)
 #define LASERBEAM_DURATION 5 
 #define MINIMUM_ATTACK_SPEED 3.0
+#define MINIMUM_TURN_SPEED 5.0
+#define MAX_SLOW_TURN_ANGLE 2 /* degrees */
 #define TRANSPORTER_RANGE 1500.0f
 
 /* Max damage dealt per "hit"
