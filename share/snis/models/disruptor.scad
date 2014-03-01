@@ -97,6 +97,6 @@ union() {
 use <imposter_thrust.scad>;
 thrust_ports = 0;
 if (thrust_ports) {
-	imposter_thrust(-26, 0, 0, 2.2);
+	imposter_thrust(-30, 0, 0, 2.0);
 }
 
