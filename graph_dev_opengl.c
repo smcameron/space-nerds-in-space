@@ -715,10 +715,12 @@ static struct graph_dev_gl_textured_shader textured_lit_shader;
 static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_shader;
 static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
+static struct graph_dev_gl_fs_effect_shader fs_copy_shader;
 static struct graph_dev_smaa_effect smaa_effect;
 
 static struct fbo_target msaa = { 0 };
 static struct fbo_target render_to_texture = { 0 };
+static struct fbo_target render_target_2d = { 0 };
 
 struct graph_dev_primitive {
 	int nvertices;
@@ -738,9 +740,11 @@ static struct graph_dev_gl_context {
 	GdkColor *hue; /* current color */
 	int alpha_blend;
 	float alpha;
+	GLuint fbo_current;
 
 	int active_vp; /* 0=none, 1=2d, 2=3d */
 	int vp_x_3d, vp_y_3d, vp_width_3d, vp_height_3d;
+	GLuint fbo_2d;
 	struct mat44 ortho_2d_mvp;
 
 	int nvertex_2d;
@@ -749,7 +753,70 @@ static struct graph_dev_gl_context {
 	GLuint vertex_buffer_2d;
 
 	struct mesh_gl_info gl_info_3d_line;
+	GLuint fbo_3d;
 } sgc;
+
+static void print_framebuffer_error()
+{
+	switch (glCheckFramebufferStatus(GL_FRAMEBUFFER)) {
+	case GL_FRAMEBUFFER_COMPLETE:
+		break;
+
+	case GL_FRAMEBUFFER_UNSUPPORTED:
+		printf("FBO Unsupported framebuffer format.\n");
+		break;
+
+	case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+		printf("FBO Missing attachment.\n");
+		break;
+
+	case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+		printf("FBO Duplicate attachment.\n");
+		break;
+
+	case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+		printf("FBO Missing draw buffer.\n");
+		break;
+
+	case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+		printf("FBO Missing read buffer.\n");
+		break;
+
+	case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+		printf("FBO Attached images must have the same number of samples.\n");
+		break;
+
+	default:
+		printf("FBO Fatal error.\n");
+	}
+}
+
+static void resize_fbo_if_needed(struct fbo_target *target)
+{
+	if (target->width != sgc.screen_x || target->height != sgc.screen_y) {
+		/* need to resize the fbo attachments */
+		if (target->color0_texture > 0) {
+			glBindTexture(GL_TEXTURE_2D, target->color0_texture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
+				sgc.screen_x, sgc.screen_y, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+		}
+
+		if (target->depth_buffer > 0) {
+			glBindRenderbuffer(GL_RENDERBUFFER, target->depth_buffer);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, sgc.screen_x, sgc.screen_y);
+		}
+
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target->fbo);
+
+		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (status != GL_FRAMEBUFFER_COMPLETE) {
+			print_framebuffer_error();
+		}
+
+		target->width = sgc.screen_x;
+		target->height = sgc.screen_y;
+	}
+}
 
 void graph_dev_set_screen_size(int width, int height)
 {
@@ -799,6 +866,17 @@ static void enable_2d_viewport()
 		sgc.ortho_2d_mvp.m[3][2] = -(far + near) / (far - near);
 		sgc.ortho_2d_mvp.m[3][3] = 1;
 
+		if (sgc.fbo_2d > 0) {
+			if (sgc.fbo_current != sgc.fbo_2d) {
+				glBindFramebuffer(GL_FRAMEBUFFER, sgc.fbo_2d);
+				sgc.fbo_current = sgc.fbo_2d;
+			}
+		} else if (sgc.fbo_current != 0) {
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glDrawBuffer(GL_BACK);
+			sgc.fbo_current = 0;
+		}
+
 		sgc.active_vp = 1;
 	}
 }
@@ -807,6 +885,17 @@ static void enable_3d_viewport()
 {
 	if (sgc.active_vp != 2) {
 		glViewport(sgc.vp_x_3d, sgc.vp_y_3d, sgc.vp_width_3d, sgc.vp_height_3d);
+
+		if (sgc.fbo_3d > 0) {
+			if (sgc.fbo_current != sgc.fbo_3d) {
+				glBindFramebuffer(GL_FRAMEBUFFER, sgc.fbo_3d);
+				sgc.fbo_current = sgc.fbo_3d;
+			}
+		} else if (sgc.fbo_current != 0) {
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glDrawBuffer(GL_BACK);
+			sgc.fbo_current = 0;
+		}
 
 		sgc.active_vp = 2;
 	}
@@ -2099,76 +2188,26 @@ void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_v
 	graph_dev_raster_line_mesh(&e, mat_vp, &m, &line_color);
 }
 
-static void print_framebuffer_error()
-{
-	switch (glCheckFramebufferStatus(GL_FRAMEBUFFER)) {
-	case GL_FRAMEBUFFER_COMPLETE:
-		break;
-
-	case GL_FRAMEBUFFER_UNSUPPORTED:
-		printf("FBO Unsupported framebuffer format.\n");
-		break;
-
-	case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-		printf("FBO Missing attachment.\n");
-		break;
-
-	case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-		printf("FBO Duplicate attachment.\n");
-		break;
-
-	case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-		printf("FBO Missing draw buffer.\n");
-		break;
-
-	case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-		printf("FBO Missing read buffer.\n");
-		break;
-
-	case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-		printf("FBO Attached images must have the same number of samples.\n");
-		break;
-
-	default:
-		printf("FBO Fatal error.\n");
-	}
-}
-
-static void resize_fbo_if_needed(struct fbo_target *target)
-{
-	if (target->width != sgc.screen_x || target->height != sgc.screen_y) {
-		/* need to resize the fbo attachments */
-		if (target->color0_texture > 0) {
-			glBindTexture(GL_TEXTURE_2D, target->color0_texture);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
-				sgc.screen_x, sgc.screen_y, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-		}
-
-		if (target->depth_buffer > 0) {
-			glBindRenderbuffer(GL_RENDERBUFFER, target->depth_buffer);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, sgc.screen_x, sgc.screen_y);
-		}
-
-		glBindFramebuffer(GL_FRAMEBUFFER, target->fbo);
-
-		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-		if (status != GL_FRAMEBUFFER_COMPLETE) {
-			print_framebuffer_error();
-		}
-
-		target->width = sgc.screen_x;
-		target->height = sgc.screen_y;
-	}
-}
-
 void graph_dev_start_frame()
 {
-	/* printf("start frame\n"); */
+	/* reset viewport to whole screen */
+	sgc.active_vp = 0;
+	glViewport(0, 0, sgc.screen_x, sgc.screen_y);
+
+	if (draw_render_to_texture && render_target_2d.fbo > 0) {
+		resize_fbo_if_needed(&render_target_2d);
+		sgc.fbo_2d = render_target_2d.fbo;
+		glBindFramebuffer(GL_FRAMEBUFFER, render_target_2d.fbo);
+		glClear(GL_COLOR_BUFFER_BIT);
+	} else
+		sgc.fbo_2d = 0;
+
 	if (draw_msaa_samples > 0 && msaa.fbo > 0) {
 
 		glEnable(GL_MULTISAMPLE);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, msaa.fbo);
+		sgc.fbo_3d = msaa.fbo;
 
 		if (msaa.width != sgc.screen_x || msaa.height != sgc.screen_y || msaa.samples != draw_msaa_samples) {
 			/* need to rebuild the fbo attachments */
@@ -2193,17 +2232,22 @@ void graph_dev_start_frame()
 				print_framebuffer_error();
 			}
 		}
+
 	} else if (draw_render_to_texture && render_to_texture.fbo > 0) {
 
 		resize_fbo_if_needed(&render_to_texture);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, render_to_texture.fbo);
+		sgc.fbo_3d = render_to_texture.fbo;
 	} else {
 		/* render direct to back buffer */
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		sgc.fbo_3d = 0;
 	}
 
+	/* clear the bound 3d buffer */
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	sgc.fbo_current = sgc.fbo_3d;
 }
 
 static void graph_dev_raster_fs_effect(struct graph_dev_gl_fs_effect_shader *shader, GLuint texture0_id,
@@ -2213,21 +2257,21 @@ static void graph_dev_raster_fs_effect(struct graph_dev_gl_fs_effect_shader *sha
 
 	glUseProgram(shader->program_id);
 
-	if (texture0_id > 0) {
+	if (texture0_id >= 0) {
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture0_id);
 		if (shader->texture0_id > 0)
 			glUniform1i(shader->texture0_id, 0);
 	}
 
-	if (texture1_id > 0) {
+	if (texture1_id >= 0) {
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, texture1_id);
 		if (shader->texture1_id > 0)
 			glUniform1i(shader->texture1_id, 1);
 	}
 
-	if (texture2_id > 0) {
+	if (texture2_id >= 0) {
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, texture2_id);
 		if (shader->texture2_id > 0)
@@ -2276,7 +2320,10 @@ void graph_dev_end_frame()
 	/* printf("end frame\n"); */
 	draw_vertex_buffer_2d();
 
-	if (draw_msaa_samples > 0 && msaa.fbo > 0) {
+	/* reset viewport to whole screen for final effects */
+	glViewport(0, 0, sgc.screen_x, sgc.screen_y);
+
+	if (sgc.fbo_3d == msaa.fbo) {
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, msaa.fbo);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glBlitFramebuffer(0, 0, msaa.width, msaa.height, 0, 0,
@@ -2284,8 +2331,7 @@ void graph_dev_end_frame()
 
 		glDisable(GL_MULTISAMPLE);
 
-	} else if (draw_render_to_texture && render_to_texture.fbo > 0) {
-		glViewport(0, 0, sgc.screen_x, sgc.screen_y);
+	} else if (sgc.fbo_3d == render_to_texture.fbo) {
 
 		if (draw_smaa) {
 			/* do the multi stage smaa process:
@@ -2318,6 +2364,19 @@ void graph_dev_end_frame()
 				sgc.screen_x, sgc.screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 		}
 	}
+	if (sgc.fbo_2d == render_target_2d.fbo) {
+		/* alpha blend copy 2d fbo onto back buffer */
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glDrawBuffer(GL_BACK);
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		static const struct sng_color tint = { 1, 1, 1 };
+		graph_dev_raster_fs_effect(&fs_copy_shader, render_target_2d.color0_texture, 0, 0, &tint, 1);
+		glDisable(GL_BLEND);
+	}
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 }
 
 void graph_dev_clear_depth_bit()
@@ -2829,7 +2888,7 @@ static void __attribute__((unused)) setup_fs_effect_shader(const char *basename,
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_tex_coord");
+	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->viewport_id = glGetUniformLocation(shader->program_id, "u_Viewport");
 	shader->texture0_id = glGetUniformLocation(shader->program_id, "texture0Sampler");
@@ -2908,8 +2967,6 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	effect->edge_target.width = 0;
-	effect->edge_target.height = 0;
 
 	glGenTextures(1, &effect->blend_target.color0_texture);
 	glBindTexture(GL_TEXTURE_2D, effect->blend_target.color0_texture);
@@ -2917,8 +2974,6 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	effect->blend_target.width = 0;
-	effect->blend_target.height = 0;
 
 	/* include file defines sizes and areaTexBytes of the area texture */
 #include "share/snis/textures/AreaTex.h"
@@ -2959,11 +3014,29 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 
 static void setup_2d()
 {
+	memset(&render_target_2d, sizeof(render_target_2d), 0);
+
 	glGenBuffers(1, &sgc.vertex_buffer_2d);
 	glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
 	glBufferData(GL_ARRAY_BUFFER, VERTEX_BUFFER_2D_SIZE, 0, GL_STREAM_DRAW);
 
 	sgc.nvertex_2d = 0;
+
+	/* render 2d to seperate fbo if supported */
+	if (fbo_render_to_texture_supported()) {
+		glGenTextures(1, &render_target_2d.color0_texture);
+		glBindTexture(GL_TEXTURE_2D, render_target_2d.color0_texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		glGenFramebuffers(1, &render_target_2d.fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, render_target_2d.fbo);
+		glDrawBuffer(GL_COLOR_ATTACHMENT0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+			render_target_2d.color0_texture, 0);
+	}
 }
 
 static void setup_3d()
@@ -2995,6 +3068,10 @@ int graph_dev_setup()
 		printf("OpenGL 3.0 available\n");
 
 	glDepthFunc(GL_LESS);
+
+	memset(&msaa, sizeof(msaa), 0);
+	memset(&render_to_texture, sizeof(render_to_texture), 0);
+	memset(&smaa_effect, sizeof(smaa_effect), 0);
 
 	if (msaa_render_to_fbo_supported()) {
 		glGenFramebuffers(1, &msaa.fbo);
@@ -3046,6 +3123,7 @@ int graph_dev_setup()
 	setup_textured_cubemap_lit_shader(&textured_cubemap_lit_shader);
 	setup_textured_cubemap_lit_with_annulus_shadow_shader(&textured_cubemap_lit_with_annulus_shadow_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
+	setup_fs_effect_shader("fs-effect-copy", &fs_copy_shader);
 
 	if (fbo_render_to_texture_supported())
 		setup_smaa_effect(&smaa_effect);
