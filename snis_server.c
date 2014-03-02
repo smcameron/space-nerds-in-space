@@ -1455,7 +1455,8 @@ static int add_derelict(const char *name, double x, double y, double z,
 			double vx, double vy, double vz, int shiptype,
 			int the_faction, int persistent);
 
-static int add_cargo_container(double x, double y, double z, double vx, double vy, double vz);
+static int add_cargo_container(double x, double y, double z, double vx, double vy, double vz,
+				int item, float qty);
 static int make_derelict(struct snis_entity *o)
 {
 	int rc;
@@ -1467,7 +1468,7 @@ static int make_derelict(struct snis_entity *o)
 	(void) add_cargo_container(o->x, o->y, o->z,
 				o->vx + snis_random_float() * 2.0,
 				o->vy + snis_random_float() * 2.0,
-				o->vz + snis_random_float());
+				o->vz + snis_random_float(), -1, 0.0);
 	return rc;
 }
 
@@ -4814,7 +4815,8 @@ static int l_add_spacemonster(lua_State *l)
 	return 1;
 }
 
-static int add_cargo_container(double x, double y, double z, double vx, double vy, double vz)
+static int add_cargo_container(double x, double y, double z, double vx, double vy, double vz,
+			int item, float qty)
 {
 	int i;
 
@@ -4827,9 +4829,13 @@ static int add_cargo_container(double x, double y, double z, double vx, double v
 	go[i].sdata.shield_depth = 0;
 	go[i].move = cargo_container_move;
 	go[i].alive = CARGO_CONTAINER_LIFETIME;
-	/* TODO: something better for container contents */
-	go[i].tsd.cargo_container.contents.item = snis_randn(ncommodities);
-	go[i].tsd.cargo_container.contents.qty = (float) snis_randn(100);
+	if (item < 0) {
+		/* TODO: something better for container contents */
+		item = snis_randn(ncommodities);
+		qty = (float) snis_randn(100);
+	}
+	go[i].tsd.cargo_container.contents.item = item;
+	go[i].tsd.cargo_container.contents.qty = qty;
 	return i;
 }
 
@@ -6447,6 +6453,7 @@ static void meta_comms_help(char *name, struct game_client *c, char *txt)
 		"  * COMMANDS ARE PRECEDED BY FORWARD SLASH ->  /",
 		"  * /help",
 		"  * /channel channel-number - change current channel",
+		"  * /eject cargo-bay-number - eject cargo",
 		"  * /hail ship-name - hail ship or starbase on current channel",
 		"  * /inventory - report inventory of ship's cargo hold",
 		"",
@@ -6530,6 +6537,64 @@ static void meta_comms_channel(char *name, struct game_client *c, char *txt)
 
 	snprintf(msg, sizeof(msg), "TX/RX INITIATED ON CHANNEL %u", newchannel);
 	send_comms_packet(name, newchannel, msg);
+}
+
+static void meta_comms_eject(char *name, struct game_client *c, char *txt)
+{
+	int i, cargobay, rc, item;
+	float qty;
+	char msg[100];
+	struct snis_entity *ship;
+	const union vec3 up = { { 0.0f, 1.0f, 0.0f } };
+	union vec3 container_loc, container_vel;
+
+	i = lookup_by_id(c->shipid);
+	if (i < 0)
+		return;
+	ship = &go[i];
+
+	rc = sscanf(txt, "/eject %d\n", &cargobay);
+	if (rc != 1)
+		goto invalid_cargo_bay;
+	if (cargobay < 0 || cargobay >= ship->tsd.ship.ncargo_bays)
+		goto invalid_cargo_bay;
+	if (ship->tsd.ship.cargo[cargobay].item == -1 ||
+			ship->tsd.ship.cargo[cargobay].qty <= 0.0)
+		goto empty_cargo_bay;
+	item = ship->tsd.ship.cargo[cargobay].item;
+	qty = ship->tsd.ship.cargo[cargobay].qty;
+	ship->tsd.ship.cargo[cargobay].item = -1;
+	ship->tsd.ship.cargo[cargobay].qty = 0.0f;
+	ship->tsd.ship.cargo_price_paid[cargobay] = 0.0f;
+
+	quat_rot_vec(&container_loc, &up, &ship->orientation);
+	vec3_mul_self(&container_loc, 160.0);
+	quat_rot_vec(&container_vel, &up, &ship->orientation);
+	vec3_mul_self(&container_vel, 5.0);
+
+	container_vel.v.x += ship->vx;
+	container_vel.v.y += ship->vy;
+	container_vel.v.z += ship->vz;
+	container_loc.v.x += ship->x;
+	container_loc.v.y += ship->y;
+	container_loc.v.z += ship->z;
+
+	(void) add_cargo_container(container_loc.v.x, container_loc.v.y, container_loc.v.z,
+				container_vel.v.x, container_vel.v.y, container_vel.v.z,
+				item, qty);
+	snprintf(msg, sizeof(msg), "CARGO BAY %d EJECTED", cargobay);
+	send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
+	return;
+
+invalid_cargo_bay:
+	snprintf(msg, sizeof(msg), "INVALID CARGO BAY");
+	send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
+	return;
+
+empty_cargo_bay:
+	snprintf(msg, sizeof(msg), "EMPTY CARGO BAY");
+	send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
+	return;
 }
 
 static uint32_t find_free_channel(void)
@@ -7256,6 +7321,7 @@ static const struct meta_comms_data {
 	{ "/channel", meta_comms_channel },
 	{ "/hail", meta_comms_hail },
 	{ "/inventory", meta_comms_inventory },
+	{ "/eject", meta_comms_eject },
 	{ "/help", meta_comms_help },
 };
 
