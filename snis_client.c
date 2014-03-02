@@ -154,7 +154,7 @@ explosion_function *explosion = NULL;
 #define snis_draw_arc DEFAULT_ARC_STYLE
 int frame_rate_hz = 30;
 int red_alert_mode = 0;
-#define MAX_UPDATETIME_START_PAUSE 0.15
+#define MAX_UPDATETIME_START_PAUSE 1.5
 #define MAX_UPDATETIME_INTERVAL 0.5
 
 #ifndef PREFIX
@@ -533,13 +533,20 @@ static int add_generic_object(uint32_t id, double x, double y, double z,
 		return -1;
 	}
 	memset(&go[i], 0, sizeof(go[i]));
-	go[i].nupdates = 1;
-	go[i].updatetime1 = go[i].updatetime2 = time_now_double();
 	go[i].id = id;
-	go[i].orientation = go[i].o1 = go[i].o2 = *orientation;
-	go[i].x = go[i].r1.v.x = go[i].r2.v.x = x;
-	go[i].y = go[i].r1.v.y = go[i].r2.v.y = y;
-	go[i].z = go[i].r1.v.z = go[i].r2.v.z = z;
+	go[i].nupdates = 1;
+	go[i].updatetime[0] = universe_timestamp();
+	go[i].o[0] = *orientation;
+	go[i].r[0].v.x = x;
+	go[i].r[0].v.y = y;
+	go[i].r[0].v.z = z;
+
+	/* entity move will update this */
+	go[i].x = 0;
+	go[i].y = 0;
+	go[i].z = 0;
+	go[i].orientation = identity_quat;
+
 	go[i].vx = vx;
 	go[i].vz = vz;
 	go[i].heading = quat_to_heading(orientation);
@@ -547,8 +554,9 @@ static int add_generic_object(uint32_t id, double x, double y, double z,
 	go[i].alive = alive;
 	go[i].entity = entity;
 	if (entity) {
+		/* not visible until first interpolation */
+		update_entity_visibility(entity, 0);
 		entity_set_user_data(entity, &go[i]);
-		update_entity_orientation(entity, orientation);
 	}
 	return i;
 }
@@ -558,44 +566,32 @@ static void update_generic_object(int index, double x, double y, double z,
 				const union quat *orientation, uint16_t alive)
 {
 	struct snis_entity *o = &go[index];
-	o->nupdates++;
-	o->updatetime1 = o->updatetime2;
-	o->updatetime2 = time_now_double();
-	int update_stale = (o->updatetime2 - o->updatetime1 > MAX_UPDATETIME_INTERVAL);
-	if (update_stale) {
-		o->updatetime1 = o->updatetime2;
-		o->x = o->r1.v.x = o->r2.v.x = x;
-		o->y = o->r1.v.y = o->r2.v.y = y;
-		o->z = o->r1.v.z = o->r2.v.z = z;
-	} else {
-		o->r1 = o->r2;
-		o->x = o->r1.v.x;
-		o->y = o->r1.v.y;
-		o->z = o->r1.v.z;
-		o->r2.v.x = x;
-		o->r2.v.y = y;
-		o->r2.v.z = z;
+
+	/* shift old updates to make room for this one */
+	int i;
+	for (i = SNIS_ENTITY_NUPDATE_HISTORY - 1; i >= 1; i--) {
+		o->updatetime[i] = o->updatetime[i-1];
+		o->r[i] = o->r[i-1];
+		o->o[i] = o->o[i-1];
 	}
+
+	/* update the history and leave current for move_objects to take care of */
+	o->nupdates++;
+	o->updatetime[0] = universe_timestamp();
+	o->r[0].v.x = x;
+	o->r[0].v.y = y;
+	o->r[0].v.z = z;
+	if (orientation)
+		o->o[0] = *orientation;
+
 	o->vx = vx;
 	o->vy = vy;
 	o->vz = vz;
 	o->heading = 0;
-	if (orientation) {
-		if (update_stale) {
-			o->orientation = o->o1 = o->o2 = *orientation;
-		} else {
-			o->o1 = o->o2;
-			o->orientation = o->o1;
-			o->o2 = *orientation;
-		}
-		o->heading = quat_to_heading(&o->orientation);
-	}
+	if (orientation)
+		o->heading = quat_to_heading(orientation);
+
 	o->alive = alive;
-	if (o->entity) {
-		update_entity_pos(o->entity, o->x, o->y, o->z);
-		if (orientation)
-			update_entity_orientation(o->entity, &o->orientation);
-	}
 }
 
 static int lookup_object_by_id(uint32_t id)
@@ -1684,99 +1680,187 @@ static inline void spin_derelict(struct snis_entity *o)
 	arbitrary_spin(o, &o->tsd.derelict.rotational_velocity);
 }
 
-static void move_generic_object(struct snis_entity *o)
+typedef void(*interpolate_update_func)(struct snis_entity *o, int visible, int from_index, int to_index, float t);
+
+static void interpolate_generic_object(struct snis_entity *o, int visible, int from_index, int to_index, float t)
 {
-	/* can't do any interpolation with only 1 update */
-	if (o->nupdates <= 1) {
-		if (o->entity) {
-			if (time_now_double() - o->updatetime2 < MAX_UPDATETIME_START_PAUSE) {
-				/* hide this entity until we get another update or the start pause has elapsed */
-				update_entity_visibility(o->entity, 0);
-			} else {
-				update_entity_visibility(o->entity, 1);
-				update_entity_pos(o->entity, o->x, o->y, o->z);
-			}
-		}
-		return;
-	}
+#ifdef INTERP_DEBUG
+	printf("  interpolate_pos_generic_object: from=%d to=%d update_delta=%f, t=%f\n", from_index,
+		to_index, o->updatetime[to_index] - o->updatetime[from_index], t);
+#endif
 
-	/* updates are sent every 1/10th of a second */
-	double delta = o->updatetime2 - o->updatetime1;
-	if ( delta >= 0.000001 ) {
-		double currentTime = time_now_double();
-		double t = (currentTime - o->updatetime2) / delta;
-
+	if (from_index == to_index) {
+		o->x = o->r[to_index].v.x;
+		o->y = o->r[to_index].v.y;
+		o->z = o->r[to_index].v.z;
+	} else {
 		union vec3 interp_position;
-		vec3_lerp(&interp_position, &o->r1, &o->r2, t);
+		vec3_lerp(&interp_position, &o->r[from_index], &o->r[to_index], t);
 		o->x = interp_position.v.x;
 		o->y = interp_position.v.y;
 		o->z = interp_position.v.z;
+	}
 
-		if (o->entity) {
-			update_entity_visibility(o->entity, 1);
-			update_entity_pos(o->entity, o->x, o->y, o->z);
-		}
+	if (o->entity) {
+		update_entity_visibility(o->entity, visible);
+		update_entity_pos(o->entity, o->x, o->y, o->z);
 	}
 }
 
-static void move_ship(struct snis_entity *o)
+static void interpolate_orientated_object(struct snis_entity *o, int visible, int from_index, int to_index, float t)
 {
-	/* can't do any interpolation with only 1 update */
-	if (o->nupdates <= 1) {
-		if (o->entity) {
-			if (time_now_double() - o->updatetime2 < MAX_UPDATETIME_START_PAUSE) {
-				/* hide this entity until we get another update or the start pause has elapsed */
-				update_entity_visibility(o->entity, 0);
-			} else {
-				update_entity_visibility(o->entity, o->alive);
-				update_entity_pos(o->entity, o->x, o->y, o->z);
-			}
+#ifdef INTERP_DEBUG
+	printf("  interpolate_orientated_generic_object: from=%d to=%d update_delta=%f, t=%f\n", from_index, to_index,
+		o->updatetime[to_index] - o->updatetime[from_index], t);
+#endif
+
+	if (from_index == to_index) {
+		o->x = o->r[to_index].v.x;
+		o->y = o->r[to_index].v.y;
+		o->z = o->r[to_index].v.z;
+		o->orientation = o->o[to_index];
+		if (o->type == OBJTYPE_SHIP1) {
+			o->tsd.ship.sciball_orientation = o->tsd.ship.sciball_o[to_index];
+			o->tsd.ship.weap_orientation = o->tsd.ship.weap_o[to_index];
 		}
-		return;
-	}
-
-	/* updates are sent every 1/10th of a second */
-	double delta = o->updatetime2 - o->updatetime1;
-	if ( delta >= 0.000001 ) {
-		double currentTime = time_now_double();
-		double t = (currentTime - o->updatetime2) / delta;
-
-		union vec3 interp_position;
-
+	} else {
 		/* If ship is warping (seen as extreme speed here) do not try interpolating */
-		if (dist3dsqrd(o->r1.v.x - o->r2.v.x, o->r1.v.y - o->r2.v.y, o->r1.v.z - o->r2.v.z) >
-				1000.0 * 1000.0) {
-			o->x = o->r2.v.x;
-			o->y = o->r2.v.y;
-			o->z = o->r2.v.z;
+		if (vec3_dist_sqrd(&o->r[from_index], &o->r[to_index]) > 1000.0 * 1000.0) {
+			o->x = o->r[from_index].v.x;
+			o->y = o->r[from_index].v.y;
+			o->z = o->r[from_index].v.z;
 		} else {
-			vec3_lerp(&interp_position, &o->r1, &o->r2, t);
+			union vec3 interp_position;
+
+			vec3_lerp(&interp_position, &o->r[from_index], &o->r[to_index], t);
 			o->x = interp_position.v.x;
 			o->y = interp_position.v.y;
 			o->z = interp_position.v.z;
 		}
 
-		quat_nlerp(&o->orientation, &o->o1, &o->o2, t);
+		quat_nlerp(&o->orientation, &o->o[from_index], &o->o[to_index], t);
 		o->heading = quat_to_heading(&o->orientation);
 
 		if (o->type == OBJTYPE_SHIP1) {
 			quat_nlerp(&o->tsd.ship.sciball_orientation,
-					&o->tsd.ship.sciball_o1, &o->tsd.ship.sciball_o2, t);
+					&o->tsd.ship.sciball_o[from_index], &o->tsd.ship.sciball_o[to_index], t);
 			quat_nlerp(&o->tsd.ship.weap_orientation,
-					&o->tsd.ship.weap_o1, &o->tsd.ship.weap_o2, t);
-		}
-
-		if (o->entity) {
-			update_entity_visibility(o->entity, o->alive);
-			update_entity_pos(o->entity, o->x, o->y, o->z);
-			update_entity_orientation(o->entity, &o->orientation);
+					&o->tsd.ship.weap_o[from_index], &o->tsd.ship.weap_o[to_index], t);
 		}
 	}
+
+	if (o->entity) {
+		update_entity_visibility(o->entity, visible);
+		update_entity_pos(o->entity, o->x, o->y, o->z);
+		update_entity_orientation(o->entity, &o->orientation);
+	}
+}
+
+static void move_object(double timestamp, struct snis_entity *o, interpolate_update_func interp_func)
+{
+	int nupdates = MIN(SNIS_ENTITY_NUPDATE_HISTORY, o->nupdates);
+	int visible = (o->alive > 0); /* default visibility */
+
+	/* interpolate to a point in the past */
+	double rendering_offset = 1.5;
+	double target_time = timestamp - rendering_offset;
+
+	/* can't do any interpolation with only 1 update, hide until we assume no more updates are coming  */
+	if (nupdates <= 1) {
+		/* hide this entity until we get another update or the start pause has elapsed */
+		visible = visible && (timestamp - o->updatetime[0] > rendering_offset);
+
+#ifdef INTERP_DEBUG
+		printf("move_object: not enough updates\n");
+		if (visible)
+			printf("  showing anyways as update is old\n");
+#endif
+		interp_func(o, visible, 0, 0, 0);
+		return;
+	}
+
+	/* search in updates to find a "from" index that is in the past and a "to" index that is in the figure */
+	int from_index = -1;
+	int to_index = -1;
+
+	int i;
+	for (i = 0; i < nupdates; i++) {
+		if (o->updatetime[i] <= target_time) {
+			/* found the first older update */
+			from_index = i;
+			to_index = i - 1;
+			break;
+		}
+	}
+
+	if (from_index < 0) {
+		/* all updates are newer, set hidden at oldest update */
+#ifdef INTERP_DEBUG
+		printf("move_object: all updates newer time=%f so hiding, oldest_update_delta=%f\n", target_time,
+			o->updatetime[nupdates-1] - target_time);
+#endif
+		/* hide until time catches up to the oldtest update */
+		interp_func(o, 0, nupdates-1, nupdates-1, 0);
+		return;
+	}
+
+	if (to_index < 0) {
+		/* all updates are older, maybe interp interp into future */
+		from_index = 1;
+		to_index = 0;
+
+		/* if we are not too far out of date interpolate into the future */
+		if (target_time - o->updatetime[to_index] > rendering_offset / 2.0) {
+#ifdef INTERP_DEBUG
+			printf("move_object: first update too old to interp into future, newest_update_delta=%f\n",
+				target_time - o->updatetime[to_index]);
+#endif
+			interp_func(o, visible, to_index, to_index, 0);
+			return;
+		}
+
+		/* make sure the last update before this isn't too old */
+		if (o->updatetime[to_index] - o->updatetime[from_index] > rendering_offset) {
+#ifdef INTERP_DEBUG
+			printf("move_object: second update to far from first to interp into future, diff=%f\n",
+				o->updatetime[to_index] - o->updatetime[from_index]);
+#endif
+			interp_func(o, visible, to_index, to_index, 0);
+			return;
+		}
+
+#ifdef INTERP_DEBUG
+		printf("move_object: first update is older so try into future\n");
+#endif
+		/* t calculation logic will generate a t>1 which will interp into the future */
+	}
+
+	/* make sure the last update before this isn't too old */
+	if (o->updatetime[to_index] - o->updatetime[from_index] > rendering_offset) {
+#ifdef INTERP_DEBUG
+		printf("move_object: updates to far apart to interp, diff=%f\n",
+			o->updatetime[to_index] - o->updatetime[from_index]);
+#endif
+		/* since "to" is in the future we need to wait for that time to be at "to" */
+		interp_func(o, visible, from_index, from_index, 0);
+		return;
+	}
+
+#ifdef INTERP_DEBUG
+	printf("move_object: target_time=%f\n", target_time);
+#endif
+
+	/* calculate where to interpolate to between from and to */
+	double t = (target_time - o->updatetime[from_index]) /
+			(o->updatetime[to_index] - o->updatetime[from_index]);
+
+	interp_func(o, visible, from_index, to_index, t);
 }
 
 static void move_objects(void)
 {
 	int i;
+	double timestamp = universe_timestamp();
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
@@ -1786,33 +1870,38 @@ static void move_objects(void)
 		switch (o->type) {
 		case OBJTYPE_SHIP1:
 		case OBJTYPE_SHIP2:
-			move_ship(o);
+			move_object(timestamp, o, &interpolate_orientated_object);
 			break;
 		case OBJTYPE_WORMHOLE:
+			move_object(timestamp, o, &interpolate_generic_object);
 			spin_wormhole(o);
 			break;
 		case OBJTYPE_STARBASE:
+			move_object(timestamp, o, &interpolate_generic_object);
 			spin_starbase(o);
 			break;
 		case OBJTYPE_LASER:
 		case OBJTYPE_TORPEDO:
-			move_generic_object(o);
+			move_object(timestamp, o, &interpolate_orientated_object);
 			break;
 		case OBJTYPE_ASTEROID:
-			move_generic_object(o);
+			move_object(timestamp, o, &interpolate_generic_object);
 			spin_asteroid(o);
 			break;
 		case OBJTYPE_CARGO_CONTAINER:
-			move_generic_object(o);
+			move_object(timestamp, o, &interpolate_generic_object);
 			spin_cargo_container(o);
 			break;
 		case OBJTYPE_DERELICT:
-			move_generic_object(o);
+			move_object(timestamp, o, &interpolate_generic_object);
 			spin_derelict(o);
 			break;
 		case OBJTYPE_LASERBEAM:
 		case OBJTYPE_TRACTORBEAM:
 			o->move(o);
+			break;
+		case OBJTYPE_PLANET:
+			move_object(timestamp, o, &interpolate_orientated_object);
 			break;
 		default:
 			break;
@@ -3445,13 +3534,17 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.phaser_wavelength = phaser_wavelength;
 	o->tsd.ship.damcon = NULL;
 	o->tsd.ship.shiptype = shiptype;
-	o->tsd.ship.sciball_o1 = o->tsd.ship.sciball_o2;
-	o->tsd.ship.sciball_orientation = o->tsd.ship.sciball_o1;
-	o->tsd.ship.sciball_o2 = sciball_orientation;
-	o->tsd.ship.weap_o1 = o->tsd.ship.weap_o2;
-	o->tsd.ship.weap_orientation = o->tsd.ship.weap_o1;
-	o->tsd.ship.weap_o2 = weap_orientation;
 	o->tsd.ship.in_secure_area = in_secure_area;
+
+	/* shift old updates to make room for this one */
+	int j;
+	for (j = SNIS_ENTITY_NUPDATE_HISTORY - 1; j >= 1; j--) {
+		o->tsd.ship.sciball_o[j] = o->tsd.ship.sciball_o[j-1];
+		o->tsd.ship.weap_o[j] = o->tsd.ship.weap_o[j-1];
+	}
+	o->tsd.ship.sciball_o[0] = sciball_orientation;
+	o->tsd.ship.weap_o[0] = weap_orientation;
+
 	if (!o->tsd.ship.reverse && reverse)
 		wwviaudio_add_sound(REVERSE_SOUND);
 	o->tsd.ship.reverse = reverse;
@@ -9886,7 +9979,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	if (!o->alive)
 		return;
 
-	tardy = (time_now_double() - o->updatetime2 > 10.0 && o->type != OBJTYPE_SPARK);
+	tardy = (o->nupdates > 0 && universe_timestamp() - o->updatetime[0] > 50.0 && o->type != OBJTYPE_SPARK);
 	x = ux_to_demonsx(o->x);
 	if (x < 0 || x > SCREEN_WIDTH)
 		return;

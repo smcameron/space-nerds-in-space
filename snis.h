@@ -87,6 +87,8 @@
 #define OBJTYPE_CARGO_CONTAINER 17
 #define OBJTYPE_WARP_EFFECT 18
 
+#define SNIS_ENTITY_NUPDATE_HISTORY 4
+
 /* Careful, CURRENT / VOLTAGE ratio is twitchy, keep it in the sweet spot
  * MAX_CURRENT between 5 and 10, MAX_VOLTAGE at 1000000.0.
  */	
@@ -329,9 +331,9 @@ struct ship_data {
 	double sci_beam_width;
 	double sci_yaw_velocity;
 	union quat sciball_orientation;
-	union quat sciball_o1, sciball_o2;
+	union quat sciball_o[SNIS_ENTITY_NUPDATE_HISTORY];
 	double sciball_yawvel, sciball_pitchvel, sciball_rollvel;
-	union quat weap_orientation, weap_o1, weap_o2;
+	union quat weap_orientation, weap_o[SNIS_ENTITY_NUPDATE_HISTORY];
 	double weap_yawvel, weap_pitchvel; /* no roll for weapons */
 	uint8_t torpedoes_loaded;
 	uint8_t torpedoes_loading;
@@ -589,13 +591,12 @@ struct snis_entity_science_data {
 	uint8_t shield_depth;
 	uint8_t faction;
 };
-	
+
 struct snis_entity {
 	int nupdates;
-	double updatetime1;
-	double updatetime2;
+	double updatetime[SNIS_ENTITY_NUPDATE_HISTORY];
 	uint32_t id;
-	union vec3 r1, r2;
+	union vec3 r[SNIS_ENTITY_NUPDATE_HISTORY];
 	double x, y, z;
 	double vx, vy, vz;
 	double heading;
@@ -610,7 +611,7 @@ struct snis_entity {
 	double sci_coordz;
 	struct entity *entity;
 	struct space_partition_entry partition;
-	union quat o1, o2;
+	union quat o[SNIS_ENTITY_NUPDATE_HISTORY];
 	union quat orientation;
 	char ai[6];
 };
