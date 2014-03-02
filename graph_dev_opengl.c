@@ -40,15 +40,6 @@ static int draw_smaa = 0;
 static const char *default_shader_directory = "share/snis/shader";
 static char *shader_directory = NULL;
 
-__attribute__((constructor)) void graph_dev_constructor(void)
-{
-	/* Need this constructor nonsense because the compiler won't let me do:
-	 * static char *shader_directory = default_shader_directory;
-	 * at top level without a warning because "const" is slightly insane.
-	 */
-	shader_directory = (char *) default_shader_directory;
-}
-
 struct mesh_gl_info {
 	/* common buffer to hold vertex positions */
 	GLuint vertex_buffer;
@@ -3080,7 +3071,9 @@ int graph_dev_setup(const char *shader_dir)
 		if (shader_directory && shader_directory != default_shader_directory)
 			free(shader_directory);
 		shader_directory = strdup(shader_dir);
-	} /* otherwise shader_directory already initialized by graph_dev_constructor */
+	} else {
+		shader_directory = (char *) default_shader_directory;
+	}
 
 	glDepthFunc(GL_LESS);
 
