@@ -9056,7 +9056,7 @@ static void queue_update_universe_timestamp(struct game_client *c, uint8_t code)
 		universe_timestamp, time_now_double() - universe_timestamp_absolute, 5));
 }
 
-static void write_queued_updates_to_client(struct game_client *c)
+static void write_queued_updates_to_client(struct game_client *c, uint8_t over_clock, uint8_t *no_write_count)
 {
 	/* write queued updates to client */
 	int rc;
@@ -9100,7 +9100,8 @@ static void write_queued_updates_to_client(struct game_client *c)
 				rc, errno, strerror(errno));
 			goto badclient;
 		}
-	} else {
+		*no_write_count = 0;
+	} else if (*no_write_count > over_clock) {
 		/* no-op, just so we know if client is still there */
 		rc = snis_writesocket(c->socket, &noop, sizeof(noop));
 		if (rc != 0) {
@@ -9108,7 +9109,9 @@ static void write_queued_updates_to_client(struct game_client *c)
 				rc, errno, strerror(errno));
 			goto badclient;
 		}
-	}
+		*no_write_count = 0;
+	} else
+		(*no_write_count)++;
 	return;
 
 badclient:
@@ -9317,9 +9320,9 @@ static void queue_up_client_updates(struct game_client *c)
 	int count;
 
 	count = 0;
-	queue_netstats(c);
 	pthread_mutex_lock(&universe_mutex);
 	if (universe_timestamp != c->timestamp) {
+		queue_netstats(c);
 		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 			/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
 				i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type); */
@@ -9374,9 +9377,11 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 	get_client(c);
 	client_unlock();
 
+	const uint8_t over_clock = 4;
 	const double maxTimeBehind = 0.5;
-	double delta = 1.0/10.0;
+	double delta = 1.0/10.0/(double)over_clock;
 
+	uint8_t no_write_count = 0;
 	double currentTime = time_now_double();
 	double nextTime = currentTime + delta;
 	while (1) {
@@ -9389,10 +9394,10 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 			nextTime = currentTime;
 
 		if (currentTime >= nextTime) {
-			nextTime += delta;
-
 			queue_up_client_updates(c);
-			write_queued_updates_to_client(c);
+			write_queued_updates_to_client(c, over_clock, &no_write_count);
+
+			nextTime += delta;
 		} else {
 			double timeToSleep = nextTime-currentTime;
 			if (timeToSleep > 0)
