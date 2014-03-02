@@ -1,45 +1,53 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
 
 #include <GL/glew.h>
 
 #include "shader.h"
 
-static char *read_file(const char *filename)
+static char *read_file(const char *shader_directory, const char *filename)
 {
+	char fname[PATH_MAX];
 	char *buffer = NULL;
 	int string_size, read_size;
-	FILE *handler = fopen(filename, "r");
+	FILE *handler;
 
-	if (handler) {
-		/* seek the last byte of the file */
-		fseek(handler, 0, SEEK_END);
-		/* offset from the first to the last byte, or in other words, filesize */
-		string_size = ftell(handler);
-		/* go back to the start of the file */
-		rewind(handler);
+	if (shader_directory)
+		snprintf(fname, sizeof(fname), "%s/%s", shader_directory, filename);
+	else
+		strcpy(fname, filename);
 
-		/* allocate a string that can hold it all */
-		buffer = (char *) malloc(sizeof(char) * (string_size + 1));
-		/* read it all in one operation */
-		read_size = fread(buffer, sizeof(char), string_size, handler);
-		/* fread doesnt set it so put a \0 in the last position
-		   and buffer is now officialy a string */
-		buffer[string_size] = '\0';
+	handler = fopen(fname, "r");
+	if (!handler)
+		return NULL;
 
-		if (string_size != read_size) {
-			/* something went wrong, throw away the memory and set
-			   the buffer to NULL */
-			free(buffer);
-			buffer = NULL;
-		}
+	/* seek the last byte of the file */
+	fseek(handler, 0, SEEK_END);
+	/* offset from the first to the last byte, or in other words, filesize */
+	string_size = ftell(handler);
+	/* go back to the start of the file */
+	rewind(handler);
+
+	/* allocate a string that can hold it all */
+	buffer = (char *) malloc(sizeof(char) * (string_size + 1));
+	/* read it all in one operation */
+	read_size = fread(buffer, sizeof(char), string_size, handler);
+	/* fread doesnt set it so put a \0 in the last position
+	   and buffer is now officialy a string */
+	buffer[string_size] = '\0';
+
+	if (string_size != read_size) {
+		/* something went wrong, throw away the memory and set
+		   the buffer to NULL */
+		free(buffer);
+		buffer = NULL;
 	}
-
 	return buffer;
 }
 
-GLuint load_concat_shaders(
+GLuint load_concat_shaders(const char *shader_directory,
 	const char *vertex_header, int nvertex_files, const char *vertex_file_path[],
 	const char *fragment_header, int nfragment_files, const char *fragment_file_path[])
 {
@@ -66,7 +74,7 @@ GLuint load_concat_shaders(
 	}
 
 	for (i = 0; i < nvertex_files; i++) {
-		char *file_shader_code = read_file(vertex_file_path[i]);
+		char *file_shader_code = read_file(shader_directory, vertex_file_path[i]);
 		if (!file_shader_code) {
 			printf("Can't open vertex shader '%s'\n", vertex_file_path[i]);
 			goto cleanup;
@@ -85,7 +93,7 @@ GLuint load_concat_shaders(
 	}
 
 	for (i = 0; i < nfragment_files; i++) {
-		char *file_shader_code = read_file(fragment_file_path[i]);
+		char *file_shader_code = read_file(shader_directory, fragment_file_path[i]);
 		if (!file_shader_code) {
 			printf("Can't open fragment shader '%s'\n", fragment_file_path[i]);
 			goto cleanup;
@@ -190,8 +198,10 @@ cleanup:
 	return program_id;
 }
 
-GLuint load_shaders(const char *vertex_file_path, const char *fragment_file_path)
+GLuint load_shaders(const char *shader_directory,
+		const char *vertex_file_path, const char *fragment_file_path)
 {
-	return load_concat_shaders(0, 1, &vertex_file_path, 0, 1, &fragment_file_path);
+	return load_concat_shaders(shader_directory, 0, 1, &vertex_file_path,
+					0, 1, &fragment_file_path);
 }
 

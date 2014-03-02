@@ -495,7 +495,7 @@ int main(int argc, char *argv[])
 	sng_setup_colors(0);
 
 	snis_typefaces_init();
-	graph_dev_setup();
+	graph_dev_setup("share/snis/shader");
 
 	sng_set_extent_size(SCREEN_WIDTH, SCREEN_HEIGHT);
 	sng_set_screen_size(real_screen_width, real_screen_height);

@@ -101,7 +101,7 @@ void mesh_graph_dev_cleanup(struct mesh *m)
 */
 }
 
-int graph_dev_setup()
+int graph_dev_setup(__attribute__((unused)) const char *shader_dir)
 {
 	return 0;
 }

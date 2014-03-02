@@ -11655,7 +11655,9 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 
 	static int gl_is_setup = 0;
 	if (!gl_is_setup) {
-		graph_dev_setup();
+		char shader_dir[PATH_MAX];
+		snprintf(shader_dir, sizeof(shader_dir), "%s/%s", asset_dir, "shader");
+		graph_dev_setup(shader_dir);
 		gl_is_setup = 1;
 	}
 

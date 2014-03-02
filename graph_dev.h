@@ -30,7 +30,7 @@ union vec3;
 struct mat44;
 struct mat33;
 
-extern int graph_dev_setup();
+extern int graph_dev_setup(const char *shader_dir);
 extern void graph_dev_start_frame();
 extern void graph_dev_end_frame();
 extern void graph_dev_set_context(void *gdk_drawable, void *gdk_gc);
