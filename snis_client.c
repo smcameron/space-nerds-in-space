@@ -157,7 +157,14 @@ int red_alert_mode = 0;
 #define MAX_UPDATETIME_START_PAUSE 0.15
 #define MAX_UPDATETIME_INTERVAL 0.5
 
-char *default_asset_dir = "share/snis";
+#ifndef PREFIX
+#define PREFIX .
+#warn "PREFIX defaulted to ."
+#endif
+
+#define STRPREFIX(x) #x
+
+char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
 char *asset_dir;
 
 typedef void (*joystick_button_fn)(void *x);
@@ -10796,7 +10803,7 @@ static void start_lobbyserver_button_pressed()
 
 	snisbindir = getenv("SNISBINDIR");
 	if (!snisbindir)
-		snisbindir = "./ssgl";
+		snisbindir = STRPREFIX(PREFIX);
 
 	/* test that snisbindir is actually a directory. */
 	rc = stat(snisbindir, &statbuf);
@@ -10859,7 +10866,7 @@ static void start_gameserver_button_pressed()
 
 	snisbindir = getenv("SNISBINDIR");
 	if (!snisbindir)
-		snisbindir = ".";
+		snisbindir = STRPREFIX(PREFIX);
 
 	memset(command, 0, sizeof(command));
 	snprintf(command, 200, "%s/snis_server %s SNIS '%s' . &",

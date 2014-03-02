@@ -3,8 +3,215 @@
 WITHAUDIO=yes
 # WITHAUDIO=no
 
-PREFIX=/usr
-DATADIR=${PREFIX}/share/space-nerds-in-space
+PREFIX=/usr/local
+DATADIR=${PREFIX}/share/snis
+CONFIGFILEDIR=${DATADIR}
+CONFIGSRCDIR=share/snis
+CONFIGFILES=${CONFIGSRCDIR}/commodities.txt \
+	${CONFIGSRCDIR}/factions.txt \
+	${CONFIGSRCDIR}/ship_types.txt
+
+MODELSRCDIR=share/snis/models
+MODELDIR=${DATADIR}/models
+SOUNDDIR=${DATADIR}/sounds
+SOUNDSRCDIR=share/snis/sounds
+SOUNDFILES=${SOUNDSRCDIR}/Attribution.txt \
+	${SOUNDSRCDIR}/big_explosion.ogg \
+	${SOUNDSRCDIR}/bigshotlaser.ogg \
+	${SOUNDSRCDIR}/changescreen.ogg \
+	${SOUNDSRCDIR}/comms-hail.ogg \
+	${SOUNDSRCDIR}/crewmember-has-joined.ogg \
+	${SOUNDSRCDIR}/dangerous-radiation.ogg \
+	${SOUNDSRCDIR}/entering-high-security-area.ogg \
+	${SOUNDSRCDIR}/flak_gun_sound.ogg \
+	${SOUNDSRCDIR}/fuel-levels-critical.ogg \
+	${SOUNDSRCDIR}/incoming-fire-detected.ogg \
+	${SOUNDSRCDIR}/laser-fail.ogg \
+	${SOUNDSRCDIR}/leaving-high-security-area.ogg \
+	${SOUNDSRCDIR}/new-starship.ogg \
+	${SOUNDSRCDIR}/offscreen.ogg \
+	${SOUNDSRCDIR}/onscreen.ogg \
+	${SOUNDSRCDIR}/proximity-alert.ogg \
+	${SOUNDSRCDIR}/red-alert.ogg \
+	${SOUNDSRCDIR}/reverse.ogg \
+	${SOUNDSRCDIR}/science-data-acquired.ogg \
+	${SOUNDSRCDIR}/science-probe.ogg \
+	${SOUNDSRCDIR}/short-warpdrive.ogg \
+	${SOUNDSRCDIR}/slider-noise.ogg \
+	${SOUNDSRCDIR}/spaceship-crash.ogg \
+	${SOUNDSRCDIR}/torpedo-loading.ogg \
+	${SOUNDSRCDIR}/transporter-sound.ogg \
+	${SOUNDSRCDIR}/tty-chatter.ogg \
+	${SOUNDSRCDIR}/warning-hull-breach-imminent.ogg \
+	${SOUNDSRCDIR}/warpdrive.ogg
+TEXTUREDIR=${DATADIR}/textures
+TEXTURESRCDIR=share/snis/textures
+TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
+	${TEXTURESRCDIR}/asteroid1-0.png \
+	${TEXTURESRCDIR}/asteroid1-1.png \
+	${TEXTURESRCDIR}/asteroid1-2.png \
+	${TEXTURESRCDIR}/asteroid1-3.png \
+	${TEXTURESRCDIR}/asteroid1-4.png \
+	${TEXTURESRCDIR}/asteroid1-5.png \
+	${TEXTURESRCDIR}/asteroid2-0.png \
+	${TEXTURESRCDIR}/asteroid2-1.png \
+	${TEXTURESRCDIR}/asteroid2-2.png \
+	${TEXTURESRCDIR}/asteroid2-3.png \
+	${TEXTURESRCDIR}/asteroid2-4.png \
+	${TEXTURESRCDIR}/asteroid2-5.png \
+	${TEXTURESRCDIR}/Attribution.txt \
+	${TEXTURESRCDIR}/green-laser-texture.png \
+	${TEXTURESRCDIR}/image0.png \
+	${TEXTURESRCDIR}/image1.png \
+	${TEXTURESRCDIR}/image2.png \
+	${TEXTURESRCDIR}/image3.png \
+	${TEXTURESRCDIR}/image4.png \
+	${TEXTURESRCDIR}/image5.png \
+	${TEXTURESRCDIR}/nebula0.png \
+	${TEXTURESRCDIR}/nebula1.png \
+	${TEXTURESRCDIR}/nebula2.png \
+	${TEXTURESRCDIR}/nebula3.png \
+	${TEXTURESRCDIR}/nebula4.png \
+	${TEXTURESRCDIR}/nebula5.png \
+	${TEXTURESRCDIR}/orange-haze0.png \
+	${TEXTURESRCDIR}/orange-haze1.png \
+	${TEXTURESRCDIR}/orange-haze2.png \
+	${TEXTURESRCDIR}/orange-haze3.png \
+	${TEXTURESRCDIR}/orange-haze4.png \
+	${TEXTURESRCDIR}/orange-haze5.png \
+	${TEXTURESRCDIR}/planetary-ring0.png \
+	${TEXTURESRCDIR}/planetary-ring1.png \
+	${TEXTURESRCDIR}/planet-texture0-0.png \
+	${TEXTURESRCDIR}/planet-texture0-1.png \
+	${TEXTURESRCDIR}/planet-texture0-2.png \
+	${TEXTURESRCDIR}/planet-texture0-3.png \
+	${TEXTURESRCDIR}/planet-texture0-4.png \
+	${TEXTURESRCDIR}/planet-texture0-5.png \
+	${TEXTURESRCDIR}/planet-texture0.png \
+	${TEXTURESRCDIR}/planet-texture1-0.png \
+	${TEXTURESRCDIR}/planet-texture1-1.png \
+	${TEXTURESRCDIR}/planet-texture1-2.png \
+	${TEXTURESRCDIR}/planet-texture1-3.png \
+	${TEXTURESRCDIR}/planet-texture1-4.png \
+	${TEXTURESRCDIR}/planet-texture1-5.png \
+	${TEXTURESRCDIR}/planet-texture1.png \
+	${TEXTURESRCDIR}/planet-texture2-0.png \
+	${TEXTURESRCDIR}/planet-texture2-1.png \
+	${TEXTURESRCDIR}/planet-texture2-2.png \
+	${TEXTURESRCDIR}/planet-texture2-3.png \
+	${TEXTURESRCDIR}/planet-texture2-4.png \
+	${TEXTURESRCDIR}/planet-texture2-5.png \
+	${TEXTURESRCDIR}/planet-texture2.png \
+	${TEXTURESRCDIR}/planet-texture3-0.png \
+	${TEXTURESRCDIR}/planet-texture3-1.png \
+	${TEXTURESRCDIR}/planet-texture3-2.png \
+	${TEXTURESRCDIR}/planet-texture3-3.png \
+	${TEXTURESRCDIR}/planet-texture3-4.png \
+	${TEXTURESRCDIR}/planet-texture3-5.png \
+	${TEXTURESRCDIR}/planet-texture3.png \
+	${TEXTURESRCDIR}/planet-texture4-0.png \
+	${TEXTURESRCDIR}/planet-texture4-1.png \
+	${TEXTURESRCDIR}/planet-texture4-2.png \
+	${TEXTURESRCDIR}/planet-texture4-3.png \
+	${TEXTURESRCDIR}/planet-texture4-4.png \
+	${TEXTURESRCDIR}/planet-texture4-5.png \
+	${TEXTURESRCDIR}/red-laser-texture.png \
+	${TEXTURESRCDIR}/red-torpedo-texture.png \
+	${TEXTURESRCDIR}/SearchTex.h \
+	${TEXTURESRCDIR}/space-blue-plasma.png \
+	${TEXTURESRCDIR}/spark-texture.png \
+	${TEXTURESRCDIR}/sun.png \
+	${TEXTURESRCDIR}/test0.png \
+	${TEXTURESRCDIR}/test1.png \
+	${TEXTURESRCDIR}/test2.png \
+	${TEXTURESRCDIR}/test3.png \
+	${TEXTURESRCDIR}/test4.png \
+	${TEXTURESRCDIR}/test5.png \
+	${TEXTURESRCDIR}/thrust.png \
+	${TEXTURESRCDIR}/warp-effect.png \
+	${TEXTURESRCDIR}/wormhole.png
+
+LUASCRIPTDIR=${DATADIR}/luascripts
+LUASRCDIR=share/snis/luascripts
+LUASCRIPTS=${LUASRCDIR}/CLEAR_ALL.LUA \
+	${LUASRCDIR}/COLLISION.LUA \
+	${LUASRCDIR}/HELLO.LUA \
+	${LUASRCDIR}/initialize.lua \
+	${LUASRCDIR}/SILLY-SPACE-BATTLE.LUA \
+	${LUASRCDIR}/TRAINING-MISSION-1.LUA \
+	${LUASRCDIR}/TRAINING-MISSION-2.LUA
+MATERIALDIR=${DATADIR}/materials
+MATERIALSRCDIR=share/snis/materials
+MATERIALFILES=${MATERIALSRCDIR}/nebula0.mat \
+	${MATERIALSRCDIR}/nebula10.mat \
+	${MATERIALSRCDIR}/nebula11.mat \
+	${MATERIALSRCDIR}/nebula12.mat \
+	${MATERIALSRCDIR}/nebula13.mat \
+	${MATERIALSRCDIR}/nebula14.mat \
+	${MATERIALSRCDIR}/nebula15.mat \
+	${MATERIALSRCDIR}/nebula16.mat \
+	${MATERIALSRCDIR}/nebula17.mat \
+	${MATERIALSRCDIR}/nebula18.mat \
+	${MATERIALSRCDIR}/nebula19.mat \
+	${MATERIALSRCDIR}/nebula1.mat \
+	${MATERIALSRCDIR}/nebula2.mat \
+	${MATERIALSRCDIR}/nebula3.mat \
+	${MATERIALSRCDIR}/nebula4.mat \
+	${MATERIALSRCDIR}/nebula5.mat \
+	${MATERIALSRCDIR}/nebula6.mat \
+	${MATERIALSRCDIR}/nebula7.mat \
+	${MATERIALSRCDIR}/nebula8.mat \
+	${MATERIALSRCDIR}/nebula9.mat
+
+SHADERDIR=${PREFIX}/share/snis/shader
+SHADERSRCDIR=share/snis/shader
+SHADERS=${SHADERSRCDIR}/color_by_w.frag \
+	${SHADERSRCDIR}/color_by_w.vert \
+	${SHADERSRCDIR}/fs-effect-copy.frag \
+	${SHADERSRCDIR}/fs-effect-copy.vert \
+	${SHADERSRCDIR}/line-single-color.frag \
+	${SHADERSRCDIR}/line-single-color.vert \
+	${SHADERSRCDIR}/per_vertex_color.frag \
+	${SHADERSRCDIR}/per_vertex_color.vert \
+	${SHADERSRCDIR}/point_cloud.frag \
+	${SHADERSRCDIR}/point_cloud-intensity-noise.frag \
+	${SHADERSRCDIR}/point_cloud-intensity-noise.vert \
+	${SHADERSRCDIR}/point_cloud.vert \
+	${SHADERSRCDIR}/single_color.frag \
+	${SHADERSRCDIR}/single-color-lit-per-pixel.frag \
+	${SHADERSRCDIR}/single-color-lit-per-pixel.vert \
+	${SHADERSRCDIR}/single-color-lit-per-vertex.frag \
+	${SHADERSRCDIR}/single-color-lit-per-vertex.vert \
+	${SHADERSRCDIR}/single_color.vert \
+	${SHADERSRCDIR}/skybox.frag \
+	${SHADERSRCDIR}/skybox.vert \
+	${SHADERSRCDIR}/smaa-blend.shader \
+	${SHADERSRCDIR}/smaa-edge.shader \
+	${SHADERSRCDIR}/smaa-high.shader \
+	${SHADERSRCDIR}/SMAA.hlsl \
+	${SHADERSRCDIR}/smaa-neighborhood.shader \
+	${SHADERSRCDIR}/textured-and-lit-per-vertex.frag \
+	${SHADERSRCDIR}/textured-and-lit-per-vertex.vert \
+	${SHADERSRCDIR}/textured-cubemap-and-lit-per-vertex.frag \
+	${SHADERSRCDIR}/textured-cubemap-and-lit-per-vertex.vert \
+	${SHADERSRCDIR}/textured-cubemap-and-lit-with-annulus-shadow-per-pixel.frag \
+	${SHADERSRCDIR}/textured-cubemap-and-lit-with-annulus-shadow-per-pixel.vert \
+	${SHADERSRCDIR}/textured.frag \
+	${SHADERSRCDIR}/textured-particle.frag \
+	${SHADERSRCDIR}/textured-particle.vert \
+	${SHADERSRCDIR}/textured.vert \
+	${SHADERSRCDIR}/textured-with-sphere-shadow-per-pixel.frag \
+	${SHADERSRCDIR}/textured-with-sphere-shadow-per-pixel.vert \
+	${SHADERSRCDIR}/wireframe_filled.frag \
+	${SHADERSRCDIR}/wireframe_filled.vert \
+	${SHADERSRCDIR}/wireframe_transparent.frag \
+	${SHADERSRCDIR}/wireframe-transparent-sphere-clip.frag \
+	${SHADERSRCDIR}/wireframe-transparent-sphere-clip.vert \
+	${SHADERSRCDIR}/wireframe_transparent.vert
+
+MANSRCDIR=.
+MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz
+MANDIR=${PREFIX}/share/man/man6
 
 CC=gcc
 
@@ -147,7 +354,7 @@ MODELS=${MD}/freighter.stl \
 	${MD}/vanquisher.stl \
 	${MD}/enforcer.stl
 
-MYCFLAGS=${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
+MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
 GTKCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtk+-2.0))
 GLEXTCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtkglext-1.0)) ${PNGCFLAGS}
@@ -401,6 +608,59 @@ test-obj-parser:	test-obj-parser.c stl_parser.o mesh.o mtwist.o mathutils.o matr
 	gcc -o test-obj-parser stl_parser.o mtwist.o mathutils.o matrix.o mesh.o quat.o -lm test-obj-parser.c
 
 test :	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist test-commodities
+
+snis_client.6.gz:	snis_client.6
+	gzip -9 - < snis_client.6 > snis_client.6.gz
+
+snis_server.6.gz:	snis_server.6
+	gzip -9 - < snis_server.6 > snis_server.6.gz
+
+install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
+		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${MANPAGES} ${SSGL}
+	mkdir -p ${PREFIX}/bin
+	cp ${PROGS} ${PREFIX}/bin
+	cp ssgl/ssgl_server ${PREFIX}/bin
+	for x in ${PROGS} ; do \
+		chmod +x ${PREFIX}/bin/$$x ; \
+	done
+	for d in ${MATERIALDIR} ${LUASCRIPTDIR} ${SHADERDIR} ${SOUNDDIR} \
+		${TEXTUREDIR} ${MODELDIR}/wombat ${MODELDIR}/dreadknight \
+		${MODELDIR}/conqueror ${SHADERDIR} ; do \
+		mkdir -p $$d ; \
+	done
+	cp ${CONFIGFILES} ${CONFIGFILEDIR}
+	cp ${SOUNDFILES} ${SOUNDDIR}
+	cp ${TEXTUREFILES} ${TEXTUREDIR}
+	cp ${LUASCRIPTS} ${LUASCRIPTDIR}
+	cp ${MATERIALFILES} ${MATERIALDIR}
+	cp ${MODELS} ${MODELDIR}
+	cp ${MODELSRCDIR}/conqueror/conqueror.mtl  ${MODELDIR}/conqueror
+	cp ${MODELSRCDIR}/conqueror/conqueror.obj  ${MODELDIR}/conqueror
+	cp ${MODELSRCDIR}/conqueror/conqueror.png  ${MODELDIR}/conqueror
+	cp ${MODELSRCDIR}/wombat/snis3006lights.png ${MODELDIR}/wombat
+	cp ${MODELSRCDIR}/wombat/snis3006.mtl ${MODELDIR}/wombat
+	cp ${MODELSRCDIR}/wombat/snis3006.obj ${MODELDIR}/wombat
+	cp ${MODELSRCDIR}/wombat/snis3006.png ${MODELDIR}/wombat
+	cp ${MODELSRCDIR}/dreadknight/dreadknight-exhaust-plumes.h ${MODELDIR}/dreadknight
+	cp ${MODELSRCDIR}/dreadknight/dreadknight.mtl ${MODELDIR}/dreadknight
+	cp ${MODELSRCDIR}/dreadknight/dreadknight.obj ${MODELDIR}/dreadknight
+	cp ${MODELSRCDIR}/dreadknight/dreadknight.png ${MODELDIR}/dreadknight
+	cp ${SHADERS} ${SHADERDIR}
+	mkdir -p ${MANDIR}
+	cp ${MANPAGES} ${MANDIR}
+
+uninstall:
+	if [ ! -d "${PREFIX}" ] ; then \
+		echo "PREFIX is not a directory." 1>&2 ;\
+		exit 1 ;\
+	fi
+	for x in ${PROGS} ; do \
+		rm -f ${PREFIX}/bin/$$x ; \
+	done
+	rm -f ${PREFIX}/bin/ssgl_server
+	rm -fr ${PREFIX}/share/snis
+	rm -f ${MANDIR}/snis_client.6.gz ${MANDIR}/snis_client.6
+	rm -f ${MANDIR}/snis_server.6.gz ${MANDIR}/snis_server.6
 
 clean:	mostly-clean
 	rm -f ${MODELS} test_marshal
