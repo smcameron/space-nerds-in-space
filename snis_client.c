@@ -162,7 +162,8 @@ int red_alert_mode = 0;
 #warn "PREFIX defaulted to ."
 #endif
 
-#define STRPREFIX(x) #x
+#define STRPREFIX(s) str(s)
+#define str(s) #s
 
 char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
 char *asset_dir;
