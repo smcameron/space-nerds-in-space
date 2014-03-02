@@ -10791,6 +10791,8 @@ static void start_lobbyserver_button_pressed()
 	char cmd[PATH_MAX];
 	struct stat statbuf;
 	int rc;
+	pid_t child;
+	const char errorstr[] = "Failed to exec ssgl_server.\n";
 
 	snisbindir = getenv("SNISBINDIR");
 	if (!snisbindir)
@@ -10808,10 +10810,24 @@ static void start_lobbyserver_button_pressed()
 	}
 
 	printf("start lobby server button pressed.\n");
-	/* I should probably do this with fork and exec, or clone, not system */
-	snprintf(cmd, sizeof(cmd), "%s/ssgl_server &", snisbindir);
-	if (system(cmd) < 0)
-		printf("Failed to exec lobby server process.\n");
+	snprintf(cmd, sizeof(cmd), "%s/ssgl_server", snisbindir);
+
+	child = fork();
+	if (child < 0) {
+		fprintf(stderr, "Failed to fork lobby server process: %s\n", strerror(errno));
+		return;
+	}
+	if (child == 0) { /* This is the child process */
+		execl(cmd, "ssgl_server", NULL);
+		/*
+		 * if execl returns at all, there was an error, and btw, be careful, very
+		 * limited stuff that we can safely call, similar to limitations of signal
+		 * handlers.  E.g. fprintf is not safe to call here, and exit(3) is not safe,
+		 * but write(2) and _exit(2) are ok.
+		 */
+		write(2, errorstr, sizeof(errorstr));
+		_exit(-1);
+	}
 }
 
 static void sanitize_string(char *s)
@@ -10829,6 +10845,8 @@ static void start_gameserver_button_pressed()
 {
 	char command[PATH_MAX];
 	char *snisbindir;
+	pid_t child;
+	const char errorstr[] = "Failed to exec snis_server.\n";
 
 	/* FIXME this is probably not too cool. */
 	sanitize_string(net_setup_ui.servername);
@@ -10847,8 +10865,25 @@ static void start_gameserver_button_pressed()
 	snprintf(command, 200, "%s/snis_server %s SNIS '%s' . &",
 			snisbindir, net_setup_ui.lobbyname, net_setup_ui.servername);
 	printf("start game server button pressed.\n");
-	if (system(command) < 0)
-		printf("Failed to exec game server process.\n");
+
+	snprintf(command, sizeof(command), "%s/snis_server", snisbindir);
+	child = fork();
+	if (child < 0) {
+		fprintf(stderr, "Failed to fork SNIS game server process: %s\n", strerror(errno));
+		return;
+	}
+	if (child == 0) { /* This is the child process */
+		execl(command, "snis_server", net_setup_ui.lobbyname, "SNIS",
+				net_setup_ui.servername, ".", NULL);
+		/*
+		 * if execl returns at all, there was an error, and btw, be careful, very
+		 * limited stuff that we can safely call, similar to limitations of signal
+		 * handlers.  E.g. fprintf is not safe to call here, and exit(3) is not safe,
+		 * but write(2) and _exit(2) are ok.
+		 */
+		write(2, errorstr, sizeof(errorstr));
+		_exit(-1);
+	}
 }
 
 static void connect_to_lobby_button_pressed()
