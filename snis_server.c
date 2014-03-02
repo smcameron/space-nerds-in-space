@@ -234,8 +234,16 @@ int nshiptypes;
 
 static int safe_mode = 0; /* prevents enemies from attacking if set */
 
-static char *default_asset_dir = "share/snis";
-static char *asset_dir;
+#ifndef PREFIX
+#define PREFIX .
+#warn "PREFIX defaulted to ."
+#endif
+
+#define STRPREFIX(s) str(s)
+#define str(s) #s
+
+char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
+char *asset_dir;
 
 static int nebulalist[NNEBULA] = { 0 };
 

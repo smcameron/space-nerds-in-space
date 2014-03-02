@@ -10889,6 +10889,7 @@ static void password_entered()
 static void start_lobbyserver_button_pressed()
 {
 	char *snisbindir;
+	char bindir[PATH_MAX];
 	char cmd[PATH_MAX];
 	struct stat statbuf;
 	int rc;
@@ -10896,13 +10897,17 @@ static void start_lobbyserver_button_pressed()
 	const char errorstr[] = "Failed to exec ssgl_server.\n";
 
 	snisbindir = getenv("SNISBINDIR");
-	if (!snisbindir)
+	if (!snisbindir) {
 		snisbindir = STRPREFIX(PREFIX);
+		snprintf(bindir, sizeof(bindir), "%s/bin", snisbindir);
+	} else {
+		strcpy(bindir, snisbindir);
+	}
 
 	/* test that snisbindir is actually a directory. */
-	rc = stat(snisbindir, &statbuf);
+	rc = stat(bindir, &statbuf);
 	if (rc < 0) {
-		fprintf(stderr, "Cannot stat %s: %s\n", snisbindir, strerror(errno));
+		fprintf(stderr, "Cannot stat %s: %s\n", bindir, strerror(errno));
 		return;
 	}
 	if (!S_ISDIR(statbuf.st_mode)) {
@@ -10911,7 +10916,7 @@ static void start_lobbyserver_button_pressed()
 	}
 
 	printf("start lobby server button pressed.\n");
-	snprintf(cmd, sizeof(cmd), "%s/ssgl_server", snisbindir);
+	snprintf(cmd, sizeof(cmd), "%s/ssgl_server", bindir);
 
 	child = fork();
 	if (child < 0) {
@@ -10919,7 +10924,9 @@ static void start_lobbyserver_button_pressed()
 		return;
 	}
 	if (child == 0) { /* This is the child process */
-		execl(cmd, "ssgl_server", NULL);
+		printf("execl'ing %s\n", cmd);
+		fflush(stdout);
+		execl(cmd,  "ssgl_server", NULL);
 		/*
 		 * if execl returns at all, there was an error, and btw, be careful, very
 		 * limited stuff that we can safely call, similar to limitations of signal
@@ -10944,7 +10951,7 @@ static void sanitize_string(char *s)
 
 static void start_gameserver_button_pressed()
 {
-	char command[PATH_MAX];
+	char command[PATH_MAX], bindir[PATH_MAX];
 	char *snisbindir;
 	pid_t child;
 	const char errorstr[] = "Failed to exec snis_server.\n";
@@ -10959,15 +10966,19 @@ static void start_gameserver_button_pressed()
 		return;
 
 	snisbindir = getenv("SNISBINDIR");
-	if (!snisbindir)
+	if (!snisbindir) {
 		snisbindir = STRPREFIX(PREFIX);
+		snprintf(bindir, sizeof(bindir), "%s/bin", snisbindir);
+	} else {
+		strcpy(bindir, snisbindir);
+	}
 
 	memset(command, 0, sizeof(command));
 	snprintf(command, 200, "%s/snis_server %s SNIS '%s' . &",
-			snisbindir, net_setup_ui.lobbyname, net_setup_ui.servername);
+			bindir, net_setup_ui.lobbyname, net_setup_ui.servername);
 	printf("start game server button pressed.\n");
 
-	snprintf(command, sizeof(command), "%s/snis_server", snisbindir);
+	snprintf(command, sizeof(command), "%s/snis_server", bindir);
 	child = fork();
 	if (child < 0) {
 		fprintf(stderr, "Failed to fork SNIS game server process: %s\n", strerror(errno));
