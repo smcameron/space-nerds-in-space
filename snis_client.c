@@ -61,6 +61,7 @@
 
 #include "build_bug_on.h"
 #include "string-utils.h"
+#include "snis_version.h"
 #include "snis_ship_type.h"
 #include "snis_faction.h"
 #include "space-part.h"
@@ -12431,6 +12432,10 @@ int main(int argc, char *argv[])
 
 	role = 0;
 	for (i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--version") == 0) {
+			printf("snis_client v. %s\n", SNIS_VERSION);
+			continue;
+		}
 		if (strcmp(argv[i], "--quickstart") == 0) {
 			quickstartmode = 1;
 			continue;

@@ -53,6 +53,7 @@
 #include "mtwist.h"
 #include "build_bug_on.h"
 #include "ssgl/ssgl.h"
+#include "snis_version.h"
 #include "snis_ship_type.h"
 #include "snis_faction.h"
 #include "space-part.h"
@@ -6475,6 +6476,7 @@ static void meta_comms_help(char *name, struct game_client *c, char *txt)
 static void meta_comms_about(char *name, struct game_client *c, char *txt)
 {
 	int i;
+	char version[100];
 	const char *abouttxt[] = {
 		"Space Nerds In Space is free software",
 		"Source code can be found here:",
@@ -6482,8 +6484,9 @@ static void meta_comms_about(char *name, struct game_client *c, char *txt)
 		"--------------------------",
 		0,
 	};
+	snprintf(version, sizeof(version), "SPACE NERDS IN SPACE v. %s", SNIS_VERSION);
 	send_comms_packet("", bridgelist[c->bridge].comms_channel, "--------------------------");
-	send_comms_packet("", bridgelist[c->bridge].comms_channel, "SPACE NERDS IN SPACE");
+	send_comms_packet("", bridgelist[c->bridge].comms_channel, version);
 	send_comms_packet("", bridgelist[c->bridge].comms_channel, "--------------------------");
 	for (i = 0; abouttxt[i]; i++)
 		send_comms_packet("", bridgelist[c->bridge].comms_channel, abouttxt[i]);

@@ -166,6 +166,7 @@ snis_client.o: snis_text_input.h
 snis_client.o: snis_text_window.h
 snis_client.o: snis_typeface.h
 snis_client.o: snis_ui_element.h
+snis_client.o: snis_version.h
 snis_client.o: sounds.h
 snis_client.o: space-part.h
 snis_client.o: ssgl/ssgl.h
@@ -303,6 +304,7 @@ snis_server.o: snis_marshal.h
 snis_server.o: snis_packet.h
 snis_server.o: snis_ship_type.h
 snis_server.o: snis_socket_io.h
+snis_server.o: snis_version.h
 snis_server.o: sounds.h
 snis_server.o: space-part.h
 snis_server.o: ssgl/ssgl.h
