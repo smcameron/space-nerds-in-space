@@ -10787,9 +10787,30 @@ static void password_entered()
 
 static void start_lobbyserver_button_pressed()
 {
+	char *snisbindir;
+	char cmd[PATH_MAX];
+	struct stat statbuf;
+	int rc;
+
+	snisbindir = getenv("SNISBINDIR");
+	if (!snisbindir)
+		snisbindir = "./ssgl";
+
+	/* test that snisbindir is actually a directory. */
+	rc = stat(snisbindir, &statbuf);
+	if (rc < 0) {
+		fprintf(stderr, "Cannot stat %s: %s\n", snisbindir, strerror(errno));
+		return;
+	}
+	if (!S_ISDIR(statbuf.st_mode)) {
+		fprintf(stderr, "%s is not a directory.\n", snisbindir);
+		return;
+	}
+
 	printf("start lobby server button pressed.\n");
 	/* I should probably do this with fork and exec, or clone, not system */
-	if (system("./ssgl/ssgl_server &") < 0)
+	snprintf(cmd, sizeof(cmd), "%s/ssgl_server &", snisbindir);
+	if (system(cmd) < 0)
 		printf("Failed to exec lobby server process.\n");
 }
 
@@ -10806,7 +10827,8 @@ static void sanitize_string(char *s)
 
 static void start_gameserver_button_pressed()
 {
-	char command[220];
+	char command[PATH_MAX];
+	char *snisbindir;
 
 	/* FIXME this is probably not too cool. */
 	sanitize_string(net_setup_ui.servername);
@@ -10817,9 +10839,13 @@ static void start_gameserver_button_pressed()
 		strcmp(net_setup_ui.lobbyname, "") == 0)
 		return;
 
+	snisbindir = getenv("SNISBINDIR");
+	if (!snisbindir)
+		snisbindir = ".";
+
 	memset(command, 0, sizeof(command));
-	snprintf(command, 200, "./snis_server %s SNIS '%s' . &",
-			net_setup_ui.lobbyname, net_setup_ui.servername);
+	snprintf(command, 200, "%s/snis_server %s SNIS '%s' . &",
+			snisbindir, net_setup_ui.lobbyname, net_setup_ui.servername);
 	printf("start game server button pressed.\n");
 	if (system(command) < 0)
 		printf("Failed to exec game server process.\n");
