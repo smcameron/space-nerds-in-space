@@ -6486,14 +6486,16 @@ static void meta_comms_about(char *name, struct game_client *c, char *txt)
 		"--------------------------",
 		0,
 	};
-	snprintf(version, sizeof(version), "SPACE NERDS IN SPACE CLIENT v. %s", SNIS_VERSION);
 	send_comms_packet("", bridgelist[c->bridge].comms_channel, "--------------------------");
+	snprintf(version, sizeof(version), "SPACE NERDS IN SPACE CLIENT:");
 	send_comms_packet("", bridgelist[c->bridge].comms_channel, version);
 	if (c->build_info[0])
 		send_comms_packet("", bridgelist[c->bridge].comms_channel, c->build_info[0]);
+	else
+		send_comms_packet("", bridgelist[c->bridge].comms_channel, "UNKNOWN SNIS CLIENT");
 	if (c->build_info[1])
 		send_comms_packet("", bridgelist[c->bridge].comms_channel, c->build_info[1]);
-	snprintf(version, sizeof(version), "SPACE NERDS IN SPACE SERVER v. %s", SNIS_VERSION);
+	snprintf(version, sizeof(version), "SPACE NERDS IN SPACE SERVER:");
 	send_comms_packet("", bridgelist[c->bridge].comms_channel, version);
 	send_comms_packet("", bridgelist[c->bridge].comms_channel, BUILD_INFO_STRING1);
 	send_comms_packet("", bridgelist[c->bridge].comms_channel, BUILD_INFO_STRING2);

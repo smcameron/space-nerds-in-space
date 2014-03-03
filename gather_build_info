@@ -47,9 +47,9 @@ fi
 cat << EOF
 #ifndef __BUILD_INFO
 #define __BUILD_INFO
-/* This file is machine generated */
 
-#define BUILD_INFO_STRING1 "$endianness $machine $os"
+/* This file is machine generated */
+#define BUILD_INFO_STRING1 "v. " SNIS_VERSION " - $endianness $machine $os"
 #define BUILD_INFO_STRING2 "$today $git_hash $diffsummary"
 
 #endif
