@@ -16,6 +16,7 @@
 #include "mathutils.h"
 #include "snis_typeface.h"
 #include "opengl_cap.h"
+#include "build_info.h"
 
 #define FOV (30.0 * M_PI / 180.0)
 #define FPS 60

@@ -78,6 +78,7 @@
 #include "snis_event_callback.h"
 #include "fleet.h"
 #include "commodities.h"
+#include "build_info.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000

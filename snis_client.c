@@ -94,6 +94,7 @@
 #include "stacktrace.h"
 #include "snis_keyboard.h"
 #include "snis_damcon_systems.h"
+#include "build_info.h"
 
 #include "vertex.h"
 #include "triangle.h"

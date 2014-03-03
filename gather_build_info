@@ -1,0 +1,55 @@
+#!/bin/sh
+
+machine=$(uname -m) > /dev/null 2>&1
+if [ "$?" != "0" ]
+then
+	machine="unknown-machine"
+fi
+
+os=$(uname -o) > /dev/null 2>&1
+if [ "$?" != "0" ]
+then
+	os="unknown-os"
+fi
+
+diffcount="0"
+git_hash=$(git rev-parse HEAD) > /dev/null 2>&1
+if [ "$?" != "0" ]
+then
+	git_hash="unknown-git-hash"
+else
+	diffcount=$(git diff 2>&1 | wc -c)
+	if [ "$?" != "0" ]
+	then
+		diffcount='?'
+	fi
+fi
+
+if [ "$diffcount" = "0" ]
+then
+	diffsummary=""
+else
+	diffsummary="+ $diffcount"
+fi
+
+today=$(date '+%Y-%m-%d %H:%M:%S')
+if [ "$?" != "0" ]
+then
+	today="unknown"
+fi
+
+endianness=$(./check-endianness)
+if [ "$?" != "0" ]
+then
+	endianness="unknown-wordsize unknown-endianness"
+fi
+
+cat << EOF
+#ifndef __BUILD_INFO
+#define __BUILD_INFO
+/* This file is machine generated */
+
+#define BUILD_INFO_STRING "$endianness $machine $os $today $git_hash $diffsummary"
+
+#endif
+EOF

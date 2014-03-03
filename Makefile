@@ -445,19 +445,19 @@ wwviaudio.o:    wwviaudio.c Makefile
 shield_strength.o:	shield_strength.c Makefile
 	$(Q)$(COMPILE)
 
-snis_server.o:	snis_server.c Makefile
+snis_server.o:	snis_server.c Makefile build_info.h
 	$(Q)$(COMPILE)
 
-snis_client.o:	snis_client.c Makefile
+snis_client.o:	snis_client.c Makefile build_info.h
 	$(Q)$(GLEXTCOMPILE)
 
 snis_limited_client.c:	snis_client.c Makefile
 	cp snis_client.c snis_limited_client.c
 
-snis_limited_client.o:	snis_limited_client.c Makefile
+snis_limited_client.o:	snis_limited_client.c Makefile build_info.h
 	$(Q)$(LIMCOMPILE)
 
-mesh_viewer.o:	mesh_viewer.c Makefile
+mesh_viewer.o:	mesh_viewer.c Makefile build_info.h
 	$(Q)$(SDLCOMPILE)
 
 snis_socket_io.o:	snis_socket_io.c Makefile
@@ -674,6 +674,11 @@ Makefile.depend :
 	# dependencies file.
 	makedepend -w0 -f- *.c | grep -v /usr | sort > Makefile.depend.tmp
 	mv Makefile.depend.tmp Makefile.depend
+
+.FORCE:
+
+build_info.h:	.FORCE
+	./gather_build_info > build_info.h
 
 include Makefile.depend
 
