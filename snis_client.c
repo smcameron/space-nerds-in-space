@@ -4821,6 +4821,20 @@ int role_to_displaymode(uint32_t role)
 
 static void request_universe_timestamp(void);
 
+static void send_build_info_to_server(void)
+{
+	char *buildinfo1 = BUILD_INFO_STRING1;
+	char *buildinfo2 = BUILD_INFO_STRING2;
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(strlen(buildinfo1) + strlen(buildinfo2) + 20);
+	packed_buffer_append(pb, "bbw", OPCODE_UPDATE_BUILD_INFO, 0, strlen(buildinfo1) + 1);
+	packed_buffer_append_raw(pb, buildinfo1, (unsigned short) strlen(buildinfo1) + 1);
+	packed_buffer_append(pb, "bbw", OPCODE_UPDATE_BUILD_INFO, 1, strlen(buildinfo2) + 1);
+	packed_buffer_append_raw(pb, buildinfo2, (unsigned short) strlen(buildinfo2) + 1);
+	queue_to_server(pb);
+}
+
 static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 {
 	int rc;
@@ -4929,9 +4943,11 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	printf("started gameserver writer thread\n");
 
 	request_universe_timestamp();
+	send_build_info_to_server();
 error:
 	/* FIXME, this isn't right... */
 	freeaddrinfo(gameserverinfo);
+
 	return NULL;
 }
 
@@ -4946,6 +4962,7 @@ void connect_to_gameserver(int selected_server)
 		fprintf(stderr, "Failed to create thread to connect to gameserver: %d '%s', '%s'\n",
 			rc, strerror(rc), strerror(errno));
 	}
+
 	return;
 }
 

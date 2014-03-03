@@ -675,9 +675,12 @@ Makefile.depend :
 	makedepend -w0 -f- *.c | grep -v /usr | sort > Makefile.depend.tmp
 	mv Makefile.depend.tmp Makefile.depend
 
+check-endianness:	check-endianness.c
+	gcc -o check-endianness check-endianness.c
+
 .FORCE:
 
-build_info.h:	.FORCE
+build_info.h:	.FORCE check-endianness
 	./gather_build_info > build_info.h
 
 include Makefile.depend

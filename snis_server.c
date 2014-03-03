@@ -200,6 +200,7 @@ struct game_client {
 	struct snis_damcon_entity_client_info *damcon_data_clients; /* ptr to array of size MAXDAMCONENTITIES */
 	uint8_t refcount; /* how many threads currently using this client structure. */
 	int request_universe_timestamp;
+	char *build_info[2];
 #define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
 #if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
 	uint64_t write_sum;
@@ -6488,6 +6489,10 @@ static void meta_comms_about(char *name, struct game_client *c, char *txt)
 	snprintf(version, sizeof(version), "SPACE NERDS IN SPACE v. %s", SNIS_VERSION);
 	send_comms_packet("", bridgelist[c->bridge].comms_channel, "--------------------------");
 	send_comms_packet("", bridgelist[c->bridge].comms_channel, version);
+	if (c->build_info[0])
+		send_comms_packet("", bridgelist[c->bridge].comms_channel, c->build_info[0]);
+	if (c->build_info[1])
+		send_comms_packet("", bridgelist[c->bridge].comms_channel, c->build_info[1]);
 	send_comms_packet("", bridgelist[c->bridge].comms_channel, "--------------------------");
 	for (i = 0; abouttxt[i]; i++)
 		send_comms_packet("", bridgelist[c->bridge].comms_channel, abouttxt[i]);
@@ -8057,6 +8062,30 @@ static int process_request_universe_timestamp(struct game_client *c)
 	return 0;
 }
 
+static int process_build_info(struct game_client *c)
+{
+	unsigned char buffer[256], data[256];
+	uint32_t buflen = 255;
+	uint8_t x;
+	int rc;
+
+	memset(buffer, 0, sizeof(buffer));
+	memset(data, 0, sizeof(data));
+	rc = read_and_unpack_buffer(c, buffer, "bw", &x, &buflen);
+	if (rc != 0)
+		return rc;
+	if (x != 0 && x != 1)
+		return -1;
+	rc = snis_readsocket(c->socket, data, buflen);
+	if (rc != 0)
+		return rc;
+	data[255] = '\0';
+	if (c->build_info[x])
+		free(c->build_info[x]);
+	c->build_info[x] = strdup((char *) data);
+	return 0;
+}
+
 static int process_toggle_demon_safe_mode(void)
 {
 	safe_mode = !safe_mode;
@@ -9103,6 +9132,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_UNIVERSE_TIMESTAMP:
 			rc = process_request_universe_timestamp(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_BUILD_INFO:
+			rc = process_build_info(c);
 			if (rc)
 				goto protocol_error;
 			break;
