@@ -6465,7 +6465,7 @@ static void meta_comms_help(char *name, struct game_client *c, char *txt)
 		"  * /eject cargo-bay-number - eject cargo",
 		"  * /hail ship-name - hail ship or starbase on current channel",
 		"  * /inventory - report inventory of ship's cargo hold",
-		"  * /about - informatoin about the game",
+		"  * /about - information about the game",
 		"",
 		0,
 	};
