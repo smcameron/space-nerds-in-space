@@ -8024,10 +8024,11 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			int draw_contact_offset_and_ring = 1;
 			float contact_scale = 1.0;
 
+			update_entity_material(contact, &wireframe_material);
+
 			switch (go[i].type) {
 			case OBJTYPE_PLANET:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 0.0 + 1.0;
-				update_entity_material(contact, &wireframe_material);
 				break;
 			case OBJTYPE_STARBASE:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 4.0 + 1.0;
