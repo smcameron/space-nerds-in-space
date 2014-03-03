@@ -50,7 +50,7 @@ cat << EOF
 /* This file is machine generated */
 
 #define BUILD_INFO_STRING1 "$endianness $machine $os"
-#define BUILD_INFO_STRING2 "$today\n$git_hash $diffsummary"
+#define BUILD_INFO_STRING2 "$today $git_hash $diffsummary"
 
 #endif
 EOF
