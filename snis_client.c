@@ -7923,7 +7923,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	}
 
 	struct material wireframe_material;
-	wireframe_material.type = MATERIAL_WIREFRAME_SPHERE_CLIP;
+	material_init_wireframe_sphere_clip(&wireframe_material);
 	wireframe_material.wireframe_sphere_clip.center = e;
 	wireframe_material.wireframe_sphere_clip.radius = MIN(visible_distance, screen_radius);
 	wireframe_material.wireframe_sphere_clip.radius_fade = radius_fadeout_percent;
@@ -11819,26 +11819,27 @@ static void load_textures(void)
 		return;
 	load_skybox_textures(skybox_texture_prefix);
 
-	green_laser_material.type = MATERIAL_BILLBOARD;
+	material_init_billboard(&green_laser_material);
 	green_laser_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
 	green_laser_material.billboard.texture_id = load_texture("green-laser-texture.png");
-	red_laser_material.type = MATERIAL_BILLBOARD;
+
+	material_init_billboard(&red_laser_material);
 	red_laser_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
 	red_laser_material.billboard.texture_id = load_texture("red-laser-texture.png");
 
-	red_torpedo_material.type = MATERIAL_BILLBOARD;
+	material_init_billboard(&red_torpedo_material);
 	red_torpedo_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	red_torpedo_material.billboard.texture_id = load_texture("red-torpedo-texture.png");
 
-	spark_material.type = MATERIAL_BILLBOARD;
+	material_init_billboard(&spark_material);
 	spark_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	spark_material.billboard.texture_id = load_texture("spark-texture.png");
 
-	warp_effect_material.type = MATERIAL_BILLBOARD;
+	material_init_billboard(&warp_effect_material);
 	warp_effect_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	warp_effect_material.billboard.texture_id = load_texture("warp-effect.png");
 
-	sun_material.type = MATERIAL_BILLBOARD;
+	material_init_billboard(&sun_material);
 	sun_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	sun_material.billboard.texture_id = load_texture("sun.png");
 
@@ -11847,9 +11848,8 @@ static void load_textures(void)
 		char filename[25];
 		sprintf(filename, "planetary-ring%d.png", i);
 
-		planetary_ring_material[i].type = MATERIAL_TEXTURED_PLANET_RING;
+		material_init_textured_planet_ring(&planetary_ring_material[i]);
 		planetary_ring_material[i].textured_planet_ring.texture_id = load_texture(filename);
-		planetary_ring_material[i].textured_planet_ring.tint = sng_get_color(WHITE);
 		planetary_ring_material[i].textured_planet_ring.alpha = 0.5;
 	}
 
@@ -11857,7 +11857,7 @@ static void load_textures(void)
 		char filename[25];
 		sprintf(filename, "planet-texture%d-", i);
 
-		planet_material[i].type = MATERIAL_TEXTURED_PLANET;
+		material_init_textured_planet(&planet_material[i]);
 		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, filename);
 		planet_material[i].textured_planet.ring_material = 0;
 
@@ -11876,18 +11876,19 @@ static void load_textures(void)
 		material_nebula_read_from_file(asset_dir, filename, &nebula_material[i]);
 	}
 
-	asteroid_material[0].type = MATERIAL_TEXTURE_CUBEMAP;
+	material_init_texture_cubemap(&asteroid_material[0]);
 	asteroid_material[0].texture_cubemap.texture_id = load_cubemap_textures(0, "asteroid1-");
-	asteroid_material[1].type = MATERIAL_TEXTURE_CUBEMAP;
+	material_init_texture_cubemap(&asteroid_material[1]);
 	asteroid_material[1].texture_cubemap.texture_id = load_cubemap_textures(0, "asteroid2-");
-	wormhole_material.type = MATERIAL_TEXTURE_MAPPED_UNLIT;
+
+	material_init_texture_mapped_unlit(&wormhole_material);
 	wormhole_material.texture_mapped_unlit.texture_id = load_texture("wormhole.png");
 	wormhole_material.texture_mapped_unlit.do_cullface = 0;
 	wormhole_material.texture_mapped_unlit.do_blend = 1;
 	wormhole_material.texture_mapped_unlit.tint = sng_get_color(MAGENTA);
 	wormhole_material.texture_mapped_unlit.alpha = 0.5;
 
-	thrust_material.type = MATERIAL_TEXTURED_PARTICLE;
+	material_init_textured_particle(&thrust_material);
 	thrust_material.textured_particle.texture_id = load_texture("thrust.png");
 	thrust_material.textured_particle.radius = 1.5;
 	thrust_material.textured_particle.time_base = 0.1;

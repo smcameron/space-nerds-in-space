@@ -131,3 +131,74 @@ int material_nebula_write_to_file(const char *asset_dir, const char *filename,
 	return 0;
 }
 
+void material_init_billboard(struct material *m)
+{
+	m->type = MATERIAL_BILLBOARD;
+	m->billboard.texture_id = 0;
+	m->billboard.billboard_type = 0;
+}
+
+void material_init_texture_mapped(struct material *m)
+{
+	m->type = MATERIAL_TEXTURE_MAPPED;
+	m->texture_mapped.texture_id = 0;
+}
+
+void material_init_texture_mapped_unlit(struct material *m)
+{
+	m->type = MATERIAL_TEXTURE_MAPPED_UNLIT;
+	m->texture_mapped_unlit.texture_id = 0;
+	m->texture_mapped_unlit.do_cullface = 1;
+	m->texture_mapped_unlit.do_blend = 0;
+	m->texture_mapped_unlit.alpha = 1.0;
+	m->texture_mapped_unlit.tint = sng_get_color(WHITE);
+}
+
+void material_init_texture_cubemap(struct material *m)
+{
+	m->type = MATERIAL_TEXTURE_CUBEMAP;
+	m->texture_cubemap.texture_id = 0;
+}
+
+void material_init_nebula(struct material *m)
+{
+	m->type = MATERIAL_NEBULA;
+	int i;
+	for (i = 0; i < MATERIAL_NEBULA_NPLANES; i++) {
+		m->nebula.texture_id[i] = 0;
+		m->nebula.orientation[i] = identity_quat;
+	}
+	m->nebula.alpha = 1.0;
+	m->nebula.tint = sng_get_color(WHITE);
+}
+
+void material_init_textured_particle(struct material *m)
+{
+	m->type = MATERIAL_TEXTURED_PARTICLE;
+	m->textured_particle.texture_id = 0;
+	m->textured_particle.radius = 1.0;
+	m->textured_particle.time_base = 1.0;
+}
+
+void material_init_textured_planet(struct material *m)
+{
+	m->type = MATERIAL_TEXTURED_PLANET;
+	m->textured_planet.texture_id = 0;
+	m->textured_planet.ring_material = 0;
+}
+
+void material_init_textured_planet_ring(struct material *m)
+{
+	m->type = MATERIAL_TEXTURED_PLANET_RING;
+	m->textured_planet_ring.texture_id = 0;
+	m->textured_planet_ring.alpha = 1.0;
+	m->textured_planet_ring.tint = sng_get_color(WHITE);
+}
+
+void material_init_wireframe_sphere_clip(struct material *m)
+{
+	m->type = MATERIAL_WIREFRAME_SPHERE_CLIP;
+	m->wireframe_sphere_clip.center = 0;
+	m->wireframe_sphere_clip.radius = 0;
+	m->wireframe_sphere_clip.radius_fade = 0;
+}

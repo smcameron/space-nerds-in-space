@@ -56,8 +56,8 @@ struct material_color_by_w {
 #define MATERIAL_BILLBOARD_TYPE_AXIS 2
 
 struct material_billboard {
-	int billboard_type;
 	int texture_id;
+	int billboard_type;
 };
 
 struct material_texture_mapped {
@@ -65,9 +65,9 @@ struct material_texture_mapped {
 };
 
 struct material_texture_mapped_unlit {
+	int texture_id;
 	int do_cullface;
 	int do_blend;
-	int texture_id;
 	float alpha;
 	struct sng_color tint;
 };
@@ -123,6 +123,16 @@ struct material {
 	};
 	int type;
 };
+
+extern void material_init_billboard(struct material *m);
+extern void material_init_texture_mapped(struct material *m);
+extern void material_init_texture_mapped_unlit(struct material *m);
+extern void material_init_texture_cubemap(struct material *m);
+extern void material_init_nebula(struct material *m);
+extern void material_init_textured_particle(struct material *m);
+extern void material_init_textured_planet(struct material *m);
+extern void material_init_textured_planet_ring(struct material *m);
+extern void material_init_wireframe_sphere_clip(struct material *m);
 
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename,
