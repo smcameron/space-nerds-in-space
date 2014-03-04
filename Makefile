@@ -3,7 +3,7 @@
 WITHAUDIO=yes
 # WITHAUDIO=no
 
-PREFIX=/usr/local
+PREFIX=.
 DATADIR=${PREFIX}/share/snis
 CONFIGFILEDIR=${DATADIR}
 CONFIGSRCDIR=share/snis
@@ -617,6 +617,17 @@ snis_server.6.gz:	snis_server.6
 
 install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${MANPAGES} ${SSGL}
+	@# First check that PREFIX is sane, and esp. that it's not pointed at source
+	@touch ${PREFIX}/.canary-in-the-coal-mine.canary
+	@if [ -f .canary-in-the-coal-mine.canary ] ; then \
+		echo 1>&2 ; \
+		echo "PREFIX is ${PREFIX} -- cannot install here" 1>&2 ; \
+		echo "Try: make PREFIX=/usr/local ; make PREFIX=/usr/local install" 1>&2  ; \
+		echo 1>&2 ; \
+		rm -f .canary-in-the-coal-mine.canary ; \
+		exit 1 ; \
+	fi
+	@ rm -f .canary-in-the-coal-mine.canary
 	mkdir -p ${PREFIX}/bin
 	cp ${PROGS} ${PREFIX}/bin
 	cp ssgl/ssgl_server ${PREFIX}/bin
@@ -650,6 +661,17 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 	cp ${MANPAGES} ${MANDIR}
 
 uninstall:
+	@# check that PREFIX is sane
+	@touch ${PREFIX}/.canary-in-the-coal-mine.canary
+	@if [ -f .canary-in-the-coal-mine.canary ] ; then \
+		echo 1>&2 ; \
+		echo "PREFIX is ${PREFIX} -- cannot uninstall here" 1>&2 ; \
+		echo "Try: make PREFIX=/usr/local uninstall" 1>&2  ; \
+		echo 1>&2 ; \
+		rm -f .canary-in-the-coal-mine.canary ; \
+		exit 1 ; \
+	fi
+	@rm -f ${PREFIX}/.canary-in-the-coal-mine.canary
 	if [ ! -d "${PREFIX}" ] ; then \
 		echo "PREFIX is not a directory." 1>&2 ;\
 		exit 1 ;\
