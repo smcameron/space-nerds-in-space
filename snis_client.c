@@ -12432,6 +12432,17 @@ static void init_gl(int argc, char *argv[], GtkWidget *drawing_area)
 	
 }
 
+static void prevent_zombies(void)
+{
+	struct sigaction sa;
+
+	sa.sa_handler = SIG_IGN;
+	sa.sa_flags = SA_NOCLDWAIT;
+	if (sigaction(SIGCHLD, &sa, NULL) != 0)
+		fprintf(stderr, "Failed to ignore SIGCHLD, beware of zombies: %s\n",
+				strerror(errno));
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
@@ -12533,6 +12544,7 @@ int main(int argc, char *argv[])
 	damconscreeny = NULL;
 
 	ignore_sigpipe();
+	prevent_zombies();
 
 	setup_sound();
 	if (read_ship_types()) {
