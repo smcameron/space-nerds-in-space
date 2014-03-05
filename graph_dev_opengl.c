@@ -758,6 +758,8 @@ static struct graph_dev_gl_context {
 	GLuint fbo_3d;
 	int texture_unit_active;
 	GLuint texture_unit_bind[4];
+	GLenum src_blend_func;
+	GLenum dest_blend_func;
 } sgc;
 
 #define BIND_TEXTURE(tex_unit, tex_type, tex_id) \
@@ -770,6 +772,15 @@ static struct graph_dev_gl_context {
 		if (sgc.texture_unit_bind[tex_offset] != tex_id) { \
 			glBindTexture(tex_type, tex_id); \
 			sgc.texture_unit_bind[tex_offset] = tex_id; \
+		} \
+	} while (0)
+
+#define BLEND_FUNC(src_blend, dest_blend) \
+	do { \
+		if (sgc.src_blend_func != src_blend || sgc.dest_blend_func != dest_blend) { \
+			glBlendFunc(src_blend, dest_blend); \
+			sgc.src_blend_func = src_blend; \
+			sgc.dest_blend_func = dest_blend; \
 		} \
 	} while (0)
 
@@ -1105,7 +1116,7 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		/* enable depth test but don't write to depth buffer */
 		glDepthMask(GL_FALSE);
 		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
 
 	glUseProgram(shader->program_id);
@@ -1655,7 +1666,7 @@ void graph_dev_raster_point_cloud_mesh(struct graph_dev_gl_point_cloud_shader *s
 		/* enable depth test but don't write to depth buffer */
 		glDepthMask(GL_FALSE);
 		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
 
 	glUseProgram(shader->program_id);
@@ -1766,7 +1777,7 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE);
+	BLEND_FUNC(GL_ONE, GL_ONE);
 
 	glUseProgram(textured_particle_shader.program_id);
 
@@ -2370,7 +2381,7 @@ void graph_dev_end_frame()
 		glDrawBuffer(GL_BACK);
 
 		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		static const struct sng_color tint = { 1, 1, 1 };
 		graph_dev_raster_fs_effect(&fs_copy_shader, render_target_2d.color0_texture, 0, 0, &tint, 1);
 		glDisable(GL_BLEND);
@@ -2460,7 +2471,7 @@ void graph_dev_draw_arc(int filled, float x, float y, float width, float height,
 		draw_vertex_buffer_2d();
 
 		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		alpha = 255 * sgc.alpha;
 	}
 
@@ -3084,8 +3095,10 @@ static void setup_3d()
 	glBindBuffer(GL_ARRAY_BUFFER, sgc.gl_info_3d_line.line_vertex_buffer);
 	glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STATIC_DRAW);
 
-	sgc.texture_unit_active = -1;
+	sgc.texture_unit_active = 0;
 	memset(sgc.texture_unit_bind, 0, sizeof(sgc.texture_unit_bind));
+	sgc.src_blend_func = GL_ONE;
+	sgc.dest_blend_func = GL_ZERO;
 }
 
 int graph_dev_setup(const char *shader_dir)
