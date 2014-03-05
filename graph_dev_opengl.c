@@ -1111,7 +1111,6 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	glUseProgram(shader->program_id);
 
 	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture_number);
-	glUniform1i(shader->texture_id, 0);
 
 	if (shader->light_pos_id >= 0)
 		glUniform3f(shader->light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
@@ -1209,11 +1208,9 @@ static void graph_dev_raster_texture_cubemap_lit(struct graph_dev_gl_textured_cu
 	glUseProgram(shader->program_id);
 
 	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, texture_number);
-	glUniform1i(shader->texture_id, 0);
 
 	if (shader->annulus_texture_id >= 0) {
 		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, annulus_texture_number);
-		glUniform1i(shader->annulus_texture_id, 1);
 	}
 
 	glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
@@ -1809,7 +1806,6 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 	glUniform1f(textured_particle_shader.radius_id, particle_radius);
 
 	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture_number);
-	glUniform1i(textured_particle_shader.texture_id, 0);
 
 	glEnableVertexAttribArray(textured_particle_shader.multi_one_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer);
@@ -2272,17 +2268,14 @@ static void graph_dev_raster_fs_effect(struct graph_dev_gl_fs_effect_shader *sha
 
 	if (texture0_id > 0 && shader->texture0_id >= 0) {
 		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture0_id);
-		glUniform1i(shader->texture0_id, 0);
 	}
 
 	if (texture1_id > 0 && shader->texture1_id >= 0) {
 		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, texture1_id);
-		glUniform1i(shader->texture1_id, 1);
 	}
 
 	if (texture2_id > 0 && shader->texture2_id >= 0) {
 		BIND_TEXTURE(GL_TEXTURE2, GL_TEXTURE_2D, texture2_id);
-		glUniform1i(shader->texture2_id, 2);
 	}
 
 	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_identity.m[0][0]);
@@ -2526,11 +2519,13 @@ static void setup_textured_shader(struct graph_dev_gl_textured_shader *shader)
 {
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, "textured.vert", "textured.frag");
+	glUseProgram(shader->program_id);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->texture_id = glGetUniformLocation(shader->program_id, "myTexture");
+	glUniform1i(shader->texture_id, 0);
 
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
@@ -2549,11 +2544,13 @@ static void setup_textured_with_sphere_shadow_shader(struct graph_dev_gl_texture
 	shader->program_id = load_shaders(shader_directory,
 				"textured-with-sphere-shadow-per-pixel.vert",
 				"textured-with-sphere-shadow-per-pixel.frag");
+	glUseProgram(shader->program_id);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->texture_id = glGetUniformLocation(shader->program_id, "myTexture");
+	glUniform1i(shader->texture_id, 0);
 
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
@@ -2573,6 +2570,7 @@ static void setup_textured_lit_shader(struct graph_dev_gl_textured_shader *shade
 	shader->program_id = load_shaders(shader_directory,
 					"textured-and-lit-per-vertex.vert",
 					"textured-and-lit-per-vertex.frag");
+	glUseProgram(shader->program_id);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2580,6 +2578,7 @@ static void setup_textured_lit_shader(struct graph_dev_gl_textured_shader *shade
 	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
 	shader->texture_id = glGetUniformLocation(shader->program_id, "myTexture");
+	glUniform1i(shader->texture_id, 0);
 
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
@@ -2596,6 +2595,7 @@ static void setup_textured_cubemap_lit_shader(struct graph_dev_gl_textured_cubem
 	shader->program_id = load_shaders(shader_directory,
 				"textured-cubemap-and-lit-per-vertex.vert",
 				"textured-cubemap-and-lit-per-vertex.frag");
+	glUseProgram(shader->program_id);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2603,6 +2603,7 @@ static void setup_textured_cubemap_lit_shader(struct graph_dev_gl_textured_cubem
 	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
 	shader->texture_id = glGetUniformLocation(shader->program_id, "myTexture");
+	glUniform1i(shader->texture_id, 0);
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 
 	/* Get a handle for our buffers */
@@ -2623,6 +2624,7 @@ static void setup_textured_cubemap_lit_with_annulus_shadow_shader(
 	shader->program_id = load_shaders(shader_directory,
 		"textured-cubemap-and-lit-with-annulus-shadow-per-pixel.vert",
 		"textured-cubemap-and-lit-with-annulus-shadow-per-pixel.frag");
+	glUseProgram(shader->program_id);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2630,6 +2632,7 @@ static void setup_textured_cubemap_lit_with_annulus_shadow_shader(
 	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
 	shader->texture_id = glGetUniformLocation(shader->program_id, "myTexture");
+	glUniform1i(shader->texture_id, 0);
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 
 	/* Get a handle for our buffers */
@@ -2637,6 +2640,7 @@ static void setup_textured_cubemap_lit_with_annulus_shadow_shader(
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
 
 	shader->annulus_texture_id = glGetUniformLocation(shader->program_id, "annulusTexture");
+	glUniform1i(shader->annulus_texture_id, 1);
 	shader->annulus_center_id = glGetUniformLocation(shader->program_id, "u_AnnulusCenter");
 	shader->annulus_normal_id = glGetUniformLocation(shader->program_id, "u_AnnulusNormal");
 	shader->annulus_radius_id = glGetUniformLocation(shader->program_id, "u_AnnulusRadius");
@@ -2768,10 +2772,12 @@ static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 {
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, "skybox.vert", "skybox.frag");
+	glUseProgram(shader->program_id);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_id = glGetUniformLocation(shader->program_id, "MVP");
 	shader->texture_id = glGetUniformLocation(shader->program_id, "texture");
+	glUniform1i(shader->texture_id, 0);
 
 	/* Get a handle for our buffers */
 	shader->vertex_id = glGetAttribLocation(shader->program_id, "vertex");
@@ -2868,6 +2874,7 @@ static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 				"textured-particle.vert", "textured-particle.frag");
+	glUseProgram(shader->program_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->camera_up_vec_id = glGetUniformLocation(shader->program_id, "u_CameraUpVec");
@@ -2875,12 +2882,14 @@ static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle
 	shader->time_id = glGetUniformLocation(shader->program_id, "u_Time");
 	shader->radius_id = glGetUniformLocation(shader->program_id, "u_Radius");
 	shader->texture_id = glGetUniformLocation(shader->program_id, "u_Texture");
+	glUniform1i(shader->texture_id, 0);
 
 	shader->multi_one_id = glGetAttribLocation(shader->program_id, "a_MultiOne");
 	shader->start_position_id = glGetAttribLocation(shader->program_id, "a_StartPosition");
 	shader->start_tint_color_id = glGetAttribLocation(shader->program_id, "a_StartTintColor");
 	shader->end_position_id = glGetAttribLocation(shader->program_id, "a_EndPosition");
 	shader->end_tint_color_id = glGetAttribLocation(shader->program_id, "a_EndTintColor");
+
 }
 
 static void __attribute__((unused)) setup_fs_effect_shader(const char *basename,
@@ -2893,6 +2902,7 @@ static void __attribute__((unused)) setup_fs_effect_shader(const char *basename,
 	snprintf(frag_filename, sizeof(vert_filename), "%s.frag", basename);
 
 	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename);
+	glUseProgram(shader->program_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
@@ -2900,8 +2910,14 @@ static void __attribute__((unused)) setup_fs_effect_shader(const char *basename,
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->viewport_id = glGetUniformLocation(shader->program_id, "u_Viewport");
 	shader->texture0_id = glGetUniformLocation(shader->program_id, "texture0Sampler");
+	if (shader->texture0_id >= 0)
+		glUniform1i(shader->texture0_id, 0);
 	shader->texture1_id = glGetUniformLocation(shader->program_id, "texture1Sampler");
+	if (shader->texture1_id >= 0)
+		glUniform1i(shader->texture1_id, 1);
 	shader->texture2_id = glGetUniformLocation(shader->program_id, "texture2Sampler");
+	if (shader->texture2_id >= 0)
+		glUniform1i(shader->texture2_id, 2);
 }
 
 static void setup_smaa_effect_shader(const char *basename, struct graph_dev_gl_fs_effect_shader *shader)
@@ -2953,18 +2969,30 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 
 	shader = &effect->edge_shader;
 	setup_smaa_effect_shader("smaa-edge", shader);
+
+	glUseProgram(shader->program_id);
 	shader->texture0_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
+	glUniform1i(shader->texture0_id, 0);
 
 	shader = &effect->blend_shader;
 	setup_smaa_effect_shader("smaa-blend", shader);
+
+	glUseProgram(shader->program_id);
 	shader->texture0_id = glGetUniformLocation(shader->program_id, "u_EdgeTex");
+	glUniform1i(shader->texture0_id, 0);
 	shader->texture1_id = glGetUniformLocation(shader->program_id, "u_AreaTex");
+	glUniform1i(shader->texture1_id, 1);
 	shader->texture2_id = glGetUniformLocation(shader->program_id, "u_SearchTex");
+	glUniform1i(shader->texture2_id, 2);
 
 	shader = &effect->neighborhood_shader;
 	setup_smaa_effect_shader("smaa-neighborhood", shader);
+
+	glUseProgram(shader->program_id);
 	shader->texture0_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
+	glUniform1i(shader->texture0_id, 0);
 	shader->texture1_id = glGetUniformLocation(shader->program_id, "u_BlendTex");
+	glUniform1i(shader->texture1_id, 1);
 
 	glGenTextures(1, &effect->edge_target.color0_texture);
 	glBindTexture(GL_TEXTURE_2D, effect->edge_target.color0_texture);
@@ -3293,7 +3321,6 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 	glUseProgram(skybox_shader.program_id);
 
 	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, skybox_shader.cube_texture_id);
-	glUniform1i(skybox_shader.texture_id, 0);
 
 	glUniformMatrix4fv(skybox_shader.mvp_id, 1, GL_FALSE, &mat_vp->m[0][0]);
 
