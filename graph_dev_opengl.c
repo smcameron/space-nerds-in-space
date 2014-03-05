@@ -756,7 +756,22 @@ static struct graph_dev_gl_context {
 
 	struct mesh_gl_info gl_info_3d_line;
 	GLuint fbo_3d;
+	int texture_unit_active;
+	GLuint texture_unit_bind[4];
 } sgc;
+
+#define BIND_TEXTURE(tex_unit, tex_type, tex_id) \
+	do { \
+		int tex_offset = tex_unit - GL_TEXTURE0; \
+		if (sgc.texture_unit_active != tex_offset) { \
+			glActiveTexture(tex_unit); \
+			sgc.texture_unit_active = tex_offset; \
+		} \
+		if (sgc.texture_unit_bind[tex_offset] != tex_id) { \
+			glBindTexture(tex_type, tex_id); \
+			sgc.texture_unit_bind[tex_offset] = tex_id; \
+		} \
+	} while (0)
 
 static void print_framebuffer_error()
 {
@@ -1095,8 +1110,7 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 
 	glUseProgram(shader->program_id);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture_number);
+	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture_number);
 	glUniform1i(shader->texture_id, 0);
 
 	if (shader->light_pos_id >= 0)
@@ -1194,13 +1208,11 @@ static void graph_dev_raster_texture_cubemap_lit(struct graph_dev_gl_textured_cu
 
 	glUseProgram(shader->program_id);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, texture_number);
+	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, texture_number);
 	glUniform1i(shader->texture_id, 0);
 
 	if (shader->annulus_texture_id >= 0) {
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, annulus_texture_number);
+		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, annulus_texture_number);
 		glUniform1i(shader->annulus_texture_id, 1);
 	}
 
@@ -1796,8 +1808,7 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 
 	glUniform1f(textured_particle_shader.radius_id, particle_radius);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture_number);
+	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture_number);
 	glUniform1i(textured_particle_shader.texture_id, 0);
 
 	glEnableVertexAttribArray(textured_particle_shader.multi_one_id);
@@ -2259,25 +2270,19 @@ static void graph_dev_raster_fs_effect(struct graph_dev_gl_fs_effect_shader *sha
 
 	glUseProgram(shader->program_id);
 
-	if (texture0_id >= 0) {
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture0_id);
-		if (shader->texture0_id > 0)
-			glUniform1i(shader->texture0_id, 0);
+	if (texture0_id > 0 && shader->texture0_id >= 0) {
+		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture0_id);
+		glUniform1i(shader->texture0_id, 0);
 	}
 
-	if (texture1_id >= 0) {
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, texture1_id);
-		if (shader->texture1_id > 0)
-			glUniform1i(shader->texture1_id, 1);
+	if (texture1_id > 0 && shader->texture1_id >= 0) {
+		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, texture1_id);
+		glUniform1i(shader->texture1_id, 1);
 	}
 
-	if (texture2_id >= 0) {
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, texture2_id);
-		if (shader->texture2_id > 0)
-			glUniform1i(shader->texture2_id, 2);
+	if (texture2_id > 0 && shader->texture2_id >= 0) {
+		BIND_TEXTURE(GL_TEXTURE2, GL_TEXTURE_2D, texture2_id);
+		glUniform1i(shader->texture2_id, 2);
 	}
 
 	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_identity.m[0][0]);
@@ -3050,6 +3055,9 @@ static void setup_3d()
 	glGenBuffers(1, &sgc.gl_info_3d_line.line_vertex_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, sgc.gl_info_3d_line.line_vertex_buffer);
 	glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STATIC_DRAW);
+
+	sgc.texture_unit_active = -1;
+	memset(sgc.texture_unit_bind, 0, sizeof(sgc.texture_unit_bind));
 }
 
 int graph_dev_setup(const char *shader_dir)
@@ -3284,8 +3292,7 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 
 	glUseProgram(skybox_shader.program_id);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox_shader.cube_texture_id);
+	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, skybox_shader.cube_texture_id);
 	glUniform1i(skybox_shader.texture_id, 0);
 
 	glUniformMatrix4fv(skybox_shader.mvp_id, 1, GL_FALSE, &mat_vp->m[0][0]);
