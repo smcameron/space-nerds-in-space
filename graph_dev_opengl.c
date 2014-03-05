@@ -760,6 +760,8 @@ static struct graph_dev_gl_context {
 	GLuint texture_unit_bind[4];
 	GLenum src_blend_func;
 	GLenum dest_blend_func;
+	GLint vp_x, vp_y;
+	GLsizei vp_width, vp_height;
 } sgc;
 
 #define BIND_TEXTURE(tex_unit, tex_type, tex_id) \
@@ -781,6 +783,17 @@ static struct graph_dev_gl_context {
 			glBlendFunc(src_blend, dest_blend); \
 			sgc.src_blend_func = src_blend; \
 			sgc.dest_blend_func = dest_blend; \
+		} \
+	} while (0)
+
+#define VIEWPORT(x, y, width, height) \
+	do { \
+		if (sgc.vp_x != x || sgc.vp_y != y || sgc.vp_width != width || sgc.vp_height != height) { \
+			glViewport(x, y, width, height); \
+			sgc.vp_x = x; \
+			sgc.vp_y = y; \
+			sgc.vp_width = width; \
+			sgc.vp_height = height; \
 		} \
 	} while (0)
 
@@ -872,7 +885,7 @@ static void enable_2d_viewport()
 {
 	if (sgc.active_vp != 1) {
 		/* 2d viewport is entire screen */
-		glViewport(0, 0, sgc.screen_x, sgc.screen_y);
+		VIEWPORT(0, 0, sgc.screen_x, sgc.screen_y);
 
 		float left = 0, right = sgc.screen_x, bottom = 0, top = sgc.screen_y;
 		float near = -1, far = 1;
@@ -912,7 +925,7 @@ static void enable_2d_viewport()
 static void enable_3d_viewport()
 {
 	if (sgc.active_vp != 2) {
-		glViewport(sgc.vp_x_3d, sgc.vp_y_3d, sgc.vp_width_3d, sgc.vp_height_3d);
+		VIEWPORT(sgc.vp_x_3d, sgc.vp_y_3d, sgc.vp_width_3d, sgc.vp_height_3d);
 
 		if (sgc.fbo_3d > 0) {
 			if (sgc.fbo_current != sgc.fbo_3d) {
@@ -2212,7 +2225,7 @@ void graph_dev_start_frame()
 {
 	/* reset viewport to whole screen */
 	sgc.active_vp = 0;
-	glViewport(0, 0, sgc.screen_x, sgc.screen_y);
+	VIEWPORT(0, 0, sgc.screen_x, sgc.screen_y);
 
 	if (draw_render_to_texture && render_target_2d.fbo > 0) {
 		resize_fbo_if_needed(&render_target_2d);
@@ -2332,7 +2345,7 @@ void graph_dev_end_frame()
 	draw_vertex_buffer_2d();
 
 	/* reset viewport to whole screen for final effects */
-	glViewport(0, 0, sgc.screen_x, sgc.screen_y);
+	VIEWPORT(0, 0, sgc.screen_x, sgc.screen_y);
 
 	if (sgc.fbo_3d == msaa.fbo) {
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, msaa.fbo);
@@ -3099,6 +3112,10 @@ static void setup_3d()
 	memset(sgc.texture_unit_bind, 0, sizeof(sgc.texture_unit_bind));
 	sgc.src_blend_func = GL_ONE;
 	sgc.dest_blend_func = GL_ZERO;
+	sgc.vp_x = 0;
+	sgc.vp_y = 0;
+	sgc.vp_width = 0;
+	sgc.vp_height = 0;
 }
 
 int graph_dev_setup(const char *shader_dir)
