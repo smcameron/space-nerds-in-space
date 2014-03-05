@@ -2347,7 +2347,7 @@ void graph_dev_end_frame()
 	/* reset viewport to whole screen for final effects */
 	VIEWPORT(0, 0, sgc.screen_x, sgc.screen_y);
 
-	if (sgc.fbo_3d == msaa.fbo) {
+	if (msaa.fbo != 0 && sgc.fbo_3d == msaa.fbo) {
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, msaa.fbo);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glBlitFramebuffer(0, 0, msaa.width, msaa.height, 0, 0,
@@ -2355,7 +2355,7 @@ void graph_dev_end_frame()
 
 		glDisable(GL_MULTISAMPLE);
 
-	} else if (sgc.fbo_3d == render_to_texture.fbo) {
+	} else if (render_to_texture.fbo != 0 && sgc.fbo_3d == render_to_texture.fbo) {
 
 		if (draw_smaa) {
 			/* do the multi stage smaa process:
@@ -2388,7 +2388,7 @@ void graph_dev_end_frame()
 				sgc.screen_x, sgc.screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 		}
 	}
-	if (sgc.fbo_2d == render_target_2d.fbo) {
+	if (render_target_2d.fbo != 0 && sgc.fbo_2d == render_target_2d.fbo) {
 		/* alpha blend copy 2d fbo onto back buffer */
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glDrawBuffer(GL_BACK);
