@@ -679,7 +679,11 @@ char *sng_load_png_texture(const char *filename, int flipVertical, int flipHoriz
 		return 0;
 	}
 
-	fread(header, 1, 8, fp);
+	if (fread(header, 1, 8, fp) != 8) {
+		snprintf(whynot, whynotlen, "Failed to read 8 byte header from '%s'\n",
+				filename);
+		goto cleanup;
+	}
 	if (png_sig_cmp(header, 0, 8)) {
 		snprintf(whynot, whynotlen, "'%s' isn't a png file.",
 			filename);
