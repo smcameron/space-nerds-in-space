@@ -437,8 +437,14 @@ int main(int argc, char *argv[])
 	struct sockaddr_in remote_addr;
 	socklen_t remote_addr_len;
 	int on;
+	const char daemon_failed[] = "daemon(3) failed, exiting.\n";
 
-	daemon(1, 0);
+	if (daemon(1, 0) != 0) {
+		if (write(2, daemon_failed, sizeof(daemon_failed)) != sizeof(daemon_failed))
+			_exit(-2);
+		else
+			_exit(-1);
+	}
 
 	if (ssgl_open_logfile("SSGL_LOGFILE"))
 		return 0;
