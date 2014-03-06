@@ -120,13 +120,27 @@ void mesh_graph_dev_cleanup(struct mesh *m)
 	}
 }
 
+/* load/reload an array buffer using stream draw if it is being overwritten */
+#define LOAD_BUFFER(buffer_type, buffer_id, buffer_size, buffer_data) \
+	do { \
+		GLenum usage; \
+		if ((buffer_id) == 0) { \
+			usage = GL_STATIC_DRAW; \
+			glGenBuffers(1, &(buffer_id)); \
+		} else \
+			usage = GL_STREAM_DRAW; \
+		glBindBuffer((buffer_type), (buffer_id)); \
+		glBufferData((buffer_type), (buffer_size), (buffer_data), usage); \
+	} while (0)
+
 void mesh_graph_dev_init(struct mesh *m)
 {
-	if (m->graph_ptr)
-		mesh_graph_dev_cleanup(m);
-
-	struct mesh_gl_info *ptr = malloc(sizeof(struct mesh_gl_info));
-	memset(ptr, 0, sizeof(*ptr));
+	struct mesh_gl_info *ptr = m->graph_ptr;
+	if (!ptr) {
+		ptr = malloc(sizeof(struct mesh_gl_info));
+		memset(ptr, 0, sizeof(*ptr));
+		m->graph_ptr = ptr;
+	}
 
 	if (m->geometry_mode == MESH_GEOMETRY_TRIANGLES) {
 		/* setup the triangle mesh buffers */
@@ -206,17 +220,9 @@ void mesh_graph_dev_init(struct mesh *m)
 			}
 		}
 
-		glGenBuffers(1, &ptr->vertex_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, v_size, g_v_buffer_data, GL_STATIC_DRAW);
-
-		glGenBuffers(1, &ptr->triangle_vertex_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, vt_size, g_vt_buffer_data, GL_STATIC_DRAW);
-
-		glGenBuffers(1, &ptr->triangle_normal_lines_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_normal_lines_buffer);
-		glBufferData(GL_ARRAY_BUFFER, nl_size, g_nl_buffer_data, GL_STATIC_DRAW);
+		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->vertex_buffer, v_size, g_v_buffer_data);
+		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer, vt_size, g_vt_buffer_data);
+		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_normal_lines_buffer, nl_size, g_nl_buffer_data);
 
 		free(g_v_buffer_data);
 		free(g_vt_buffer_data);
@@ -264,10 +270,9 @@ void mesh_graph_dev_init(struct mesh *m)
 			}
 		}
 
-		glGenBuffers(1, &ptr->wireframe_lines_vertex_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(struct vertex_wireframe_line_buffer_data) *
-			ptr->nwireframe_lines * 2, g_wfl_buffer_data, GL_STATIC_DRAW);
+		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer,
+			sizeof(struct vertex_wireframe_line_buffer_data) * ptr->nwireframe_lines * 2,
+			g_wfl_buffer_data);
 
 		free(g_wfl_buffer_data);
 	}
@@ -359,15 +364,10 @@ void mesh_graph_dev_init(struct mesh *m)
 			}
 		}
 
-		glGenBuffers(1, &ptr->vertex_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(struct vertex_buffer_data) * 2 * ptr->nlines,
-			g_v_buffer_data, GL_STATIC_DRAW);
-
-		glGenBuffers(1, &ptr->line_vertex_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, ptr->line_vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(struct vertex_line_buffer_data) * 2 * ptr->nlines,
-			g_vl_buffer_data, GL_STATIC_DRAW);
+		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->vertex_buffer, sizeof(struct vertex_buffer_data) * 2 * ptr->nlines,
+			g_v_buffer_data);
+		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->line_vertex_buffer,
+			sizeof(struct vertex_line_buffer_data) * 2 * ptr->nlines, g_vl_buffer_data);
 
 		ptr->npoints = ptr->nlines * 2; /* can be rendered as a point cloud too */
 
@@ -389,9 +389,7 @@ void mesh_graph_dev_init(struct mesh *m)
 			g_v_buffer_data[i].position.v.z = m->v[i].z;
 		}
 
-		glGenBuffers(1, &ptr->vertex_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, v_size, g_v_buffer_data, GL_STATIC_DRAW);
+		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->vertex_buffer, v_size, g_v_buffer_data);
 
 		free(g_v_buffer_data);
 	}
@@ -509,19 +507,12 @@ void mesh_graph_dev_init(struct mesh *m)
 			g_i_buffer_data[i_index + 5] = v_index + 3;
 		}
 
-		glGenBuffers(1, &ptr->particle_vertex_buffer);
-		glBindBuffer(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, v_size, g_v_buffer_data, GL_STATIC_DRAW);
-
-		glGenBuffers(1, &ptr->particle_index_buffer);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ptr->particle_index_buffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, i_size, g_i_buffer_data, GL_STATIC_DRAW);
+		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer, v_size, g_v_buffer_data);
+		LOAD_BUFFER(GL_ELEMENT_ARRAY_BUFFER, ptr->particle_index_buffer, i_size, g_i_buffer_data);
 
 		free(g_v_buffer_data);
 		free(g_i_buffer_data);
 	}
-
-	m->graph_ptr = ptr;
 }
 
 struct graph_dev_gl_vertex_color_shader {
