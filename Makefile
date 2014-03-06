@@ -301,6 +301,7 @@ LIBS=-lGLEW -lGL -Lssgl -lssglclient -lrt -lm ${LUALIBS} ${PNGLIBS}
 
 
 PROGS=snis_server snis_client snis_limited_client mesh_viewer
+BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client
 
 # model directory
 MD=share/snis/models
@@ -383,7 +384,7 @@ SDLCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} 
 SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} ${SERVEROBJS} ${GTKLDFLAGS} ${LIBS} && $(ECHO) '  LINK' $@
 OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 
-all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS}
+all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS}
 
 graph_dev_opengl.o : graph_dev_opengl.c Makefile
 	$(Q)$(GLEXTCOMPILE)
@@ -486,6 +487,24 @@ snis_client:	${CLIENTOBJS} ${SSGL} Makefile
 
 snis_limited_client:	${LIMCLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(LIMCLIENTLINK)
+
+ssgl/ssgl_server:	${SSGL}
+
+bin/snis_client:	snis_client
+	@mkdir -p bin
+	@cp snis_client bin
+
+bin/snis_server:	snis_server
+	@mkdir -p bin
+	@cp snis_server bin
+
+bin/snis_limited_client:	snis_limited_client
+	@mkdir -p bin
+	@cp snis_limited_client bin
+
+bin/ssgl_server:	ssgl/ssgl_server
+	@mkdir -p bin
+	@cp ssgl/ssgl_server bin
 
 mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(SDLCLIENTLINK)
