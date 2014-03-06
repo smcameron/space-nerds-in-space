@@ -1160,13 +1160,14 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 	float power_factor = (float) power / 255.0;
 	float damage;
 	float old_damage;
-	struct damcon_data *d;
+	struct damcon_data *d = NULL;
 
 	if (o->type == OBJTYPE_SHIP1) {
 		b = lookup_bridge_by_shipid(o->id);
 		if (b < 0)
 			fprintf(stderr, "b < 0 at %s:%d\n", __FILE__, __LINE__);
-		d = &bridgelist[b].damcon;
+		else
+			d = &bridgelist[b].damcon;
 	}
 
 	ss = shield_strength(wavelength, o->sdata.shield_strength,
