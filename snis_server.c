@@ -9600,14 +9600,14 @@ static void send_econ_update_ship_packet(struct game_client *c,
 {
 	int n;
 	int32_t victim_id;
-	uint8_t ai[5];
+	uint8_t ai[MAX_AI_STACK_ENTRIES];
 	int i;
 	uint8_t opcode = OPCODE_ECON_UPDATE_SHIP;
 
 	if (c->debug_ai) {
 		opcode = OPCODE_ECON_UPDATE_SHIP_DEBUG_AI; 
-		memset(ai, 0, 5);
-		for (i = 0; i < o->tsd.ship.nai_entries; i++) {
+		memset(ai, 0, MAX_AI_STACK_ENTRIES);
+		for (i = 0; i < o->tsd.ship.nai_entries && i < MAX_AI_STACK_ENTRIES; i++) {
 			switch (o->tsd.ship.ai[i].ai_mode) {
 			case AI_MODE_IDLE:
 				ai[i] = 'I';
@@ -9679,6 +9679,7 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	if (!pb)
 		return;
 
+	BUILD_ASSERT(MAX_AI_STACK_ENTRIES == 5);
 	packed_buffer_append(pb, "bbbbbSb",
 			ai[0], ai[1], ai[2], ai[3], ai[4],
 			(double) o->tsd.ship.threat_level, (int32_t) UNIVERSE_DIM, npoints);

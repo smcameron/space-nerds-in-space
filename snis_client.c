@@ -922,8 +922,10 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 	go[i].tsd.ship.ai[0].u.attack.victim_id = (int32_t) victim_id;
 	go[i].tsd.ship.shiptype = shiptype;
 	go[i].tsd.ship.threat_level = (float) threat_level;
-	memcpy(go[i].ai, ai, 5);
-	ai[5] = '\0';
+	memcpy(go[i].ai, ai, MAX_AI_STACK_ENTRIES);
+	ai[MAX_AI_STACK_ENTRIES - 1] = '\0';
+	if (npoints > MAX_AI_STACK_ENTRIES)
+		npoints = MAX_AI_STACK_ENTRIES;
 	go[i].tsd.ship.ai[1].u.patrol.npoints = npoints;
 	if (npoints) {
 		int j;
@@ -3665,7 +3667,7 @@ static int process_update_econ_ship_packet(uint8_t opcode)
 	uint32_t id, timestamp, victim_id;
 	double dx, dy, dz, px, py, pz;
 	union quat orientation;
-	uint8_t shiptype, ai[5], npoints;
+	uint8_t shiptype, ai[MAX_AI_STACK_ENTRIES], npoints;
 	union vec3 patrol[MAX_PATROL_POINTS];
 	double threat_level;
 	int rc;
@@ -3684,6 +3686,7 @@ static int process_update_econ_ship_packet(uint8_t opcode)
 		threat_level = 0.0;
 		goto done;
 	}
+	BUILD_ASSERT(MAX_AI_STACK_ENTRIES == 5);
 	rc = read_and_unpack_buffer(buffer, "bbbbbSb",
 			&ai[0], &ai[1], &ai[2], &ai[3], &ai[4],
 			&threat_level, (int32_t) UNIVERSE_DIM, &npoints);
