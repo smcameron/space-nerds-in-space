@@ -3071,7 +3071,7 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 
 static void setup_2d()
 {
-	memset(&render_target_2d, sizeof(render_target_2d), 0);
+	memset(&render_target_2d, 0, sizeof(render_target_2d));
 
 	glGenBuffers(1, &sgc.vertex_buffer_2d);
 	glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
@@ -3143,9 +3143,9 @@ int graph_dev_setup(const char *shader_dir)
 
 	glDepthFunc(GL_LESS);
 
-	memset(&msaa, sizeof(msaa), 0);
-	memset(&render_to_texture, sizeof(render_to_texture), 0);
-	memset(&smaa_effect, sizeof(smaa_effect), 0);
+	memset(&msaa, 0, sizeof(msaa));
+	memset(&render_to_texture, 0, sizeof(render_to_texture));
+	memset(&smaa_effect, 0, sizeof(smaa_effect));
 
 	if (msaa_render_to_fbo_supported()) {
 		glGenFramebuffers(1, &msaa.fbo);
