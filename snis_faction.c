@@ -164,7 +164,7 @@ int nearest_faction(union vec3 v)
 {
 	int i;
 	double len;
-	int winner;
+	int winner = 0;
 	union vec3 distv;
 
 	for (i = 0; i < nfactions(); i++) {
