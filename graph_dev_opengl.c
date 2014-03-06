@@ -3242,8 +3242,8 @@ unsigned int graph_dev_load_cubemap_texture(
 		char *image_data = sng_load_png_texture(tex_filename[i], 0, is_inside, &tw, &th, &hasAlpha,
 			whynotz, whynotlen);
 		if (image_data) {
-			glTexImage2D(tex_pos[i], 0, GL_RGBA, tw, th, 0, (hasAlpha ? GL_RGBA : GL_RGB),
-					GL_UNSIGNED_BYTE, image_data);
+			glTexImage2D(tex_pos[i], 0, (hasAlpha ? GL_RGBA8 : GL_RGB8), tw, th, 0,
+					(hasAlpha ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
 			free(image_data);
 		} else {
 			printf("Unable to load skybox texture %d '%s': %s\n", i, tex_filename[i], whynotz);
@@ -3285,8 +3285,8 @@ unsigned int graph_dev_load_texture(const char *filename)
 	char *image_data = sng_load_png_texture(filename, 1, 0, &tw, &th, &hasAlpha,
 						whynotz, whynotlen);
 	if (image_data) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tw, th, 0, (hasAlpha ? GL_RGBA : GL_RGB),
-				GL_UNSIGNED_BYTE, image_data);
+		glTexImage2D(GL_TEXTURE_2D, 0, (hasAlpha ? GL_RGBA8 : GL_RGB8), tw, th, 0,
+				(hasAlpha ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
 		free(image_data);
 	} else {
 		printf("Unable to load texture '%s': %s\n", filename, whynotz);
