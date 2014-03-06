@@ -10954,10 +10954,14 @@ static void start_lobbyserver_button_pressed()
 		 * if execl returns at all, there was an error, and btw, be careful, very
 		 * limited stuff that we can safely call, similar to limitations of signal
 		 * handlers.  E.g. fprintf is not safe to call here, and exit(3) is not safe,
-		 * but write(2) and _exit(2) are ok.
+		 * but write(2) and _exit(2) are ok.   Compiler with -O3 warns if I ignore
+		 * return value of write(2) though there's not much I can do with it.
+		 * Casting return value to void does not prevent the warning.
 		 */
-		write(2, errorstr, sizeof(errorstr));
-		_exit(-1);
+		if (write(2, errorstr, sizeof(errorstr)) != sizeof(errorstr))
+			_exit(-2);
+		else
+			_exit(-1);
 	}
 }
 
@@ -11014,10 +11018,14 @@ static void start_gameserver_button_pressed()
 		 * if execl returns at all, there was an error, and btw, be careful, very
 		 * limited stuff that we can safely call, similar to limitations of signal
 		 * handlers.  E.g. fprintf is not safe to call here, and exit(3) is not safe,
-		 * but write(2) and _exit(2) are ok.
+		 * but write(2) and _exit(2) are ok.   Compiler with -O3 warns if I ignore
+		 * return value of write(2) though there's not much I can do with it.
+		 * Casting return value to void does not prevent the warning.
 		 */
-		write(2, errorstr, sizeof(errorstr));
-		_exit(-1);
+		if (write(2, errorstr, sizeof(errorstr)) != sizeof(errorstr))
+			_exit(-2);
+		else
+			_exit(-1);
 	}
 }
 
