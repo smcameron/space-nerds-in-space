@@ -7676,6 +7676,8 @@ static int l_set_player_damage(lua_State *l)
 	b = lookup_bridge_by_shipid(o->id);
 	bvalue = (uint8_t) value;
 	if (strncmp(system, "shield", 6) == 0) {
+		damage_delta =
+			(int) bvalue - (int) o->tsd.ship.damage.shield_damage;
 		o->tsd.ship.damage.shield_damage = bvalue;
 		system_number = DAMCON_TYPE_SHIELDSYSTEM;
 		goto distribute_damage;
