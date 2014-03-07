@@ -613,32 +613,36 @@ struct graph_dev_gl_color_by_w_shader {
 struct graph_dev_gl_textured_shader {
 	GLuint program_id;
 	GLint mvp_matrix_id;
+	GLint mv_matrix_id;
+	GLint normal_matrix_id;
 	GLint vertex_position_id;
+	GLint vertex_normal_id;
 	GLint tint_color_id;
 	GLint texture_coord_id;
-	GLint texture_id;
-	GLint sphere_id;
-	GLint mv_matrix_id;
+	GLint texture_2d_id;
+	GLint texture_cubemap_id;
 	GLint light_pos_id;
-	GLint normal_matrix_id;
-	GLint vertex_normal_id;
+
+	GLint shadow_sphere_id;
+
+	GLint shadow_annulus_texture_id;
+	GLint shadow_annulus_center_id;
+	GLint shadow_annulus_normal_id;
+	GLint shadow_annulus_radius_id;
+	GLint shadow_annulus_tint_color_id;
 };
 
-struct graph_dev_gl_textured_cubemap_lit_shader {
-	GLuint program_id;
-	GLint mvp_matrix_id;
-	GLint mv_matrix_id;
-	GLint normal_matrix_id;
-	GLint vertex_position_id;
-	GLint vertex_normal_id;
-	GLint light_pos_id;
-	GLint tint_color_id;
-	GLint texture_id;
-	GLint annulus_texture_id;
-	GLint annulus_center_id;
-	GLint annulus_normal_id;
-	GLint annulus_radius_id;
-	GLint annulus_tint_color_id;
+struct shadow_sphere_data {
+	union vec3 eye_pos;
+	float r;
+};
+
+struct shadow_annulus_data {
+	GLuint texture_id;
+	union vec3 eye_pos;
+	float r1, r2;
+	struct sng_color tint_color;
+	float alpha;
 };
 
 struct graph_dev_gl_textured_particle_shader {
@@ -705,8 +709,8 @@ static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
 static struct graph_dev_gl_textured_shader textured_shader;
 static struct graph_dev_gl_textured_shader textured_with_sphere_shadow_shader;
 static struct graph_dev_gl_textured_shader textured_lit_shader;
-static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_shader;
-static struct graph_dev_gl_textured_cubemap_lit_shader textured_cubemap_lit_with_annulus_shadow_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_lit_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
 static struct graph_dev_gl_fs_effect_shader fs_copy_shader;
 static struct graph_dev_smaa_effect smaa_effect;
@@ -1100,7 +1104,8 @@ static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh
 static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader, const struct mat44 *mat_mvp,
 	const struct mat44 *mat_mv, const struct mat33 *mat_normal, struct mesh *m,
 	struct sng_color *triangle_color, float alpha, union vec3 *eye_light_pos, GLuint texture_number,
-	union vec3 *eye_sphere_pos, float sphere_radius, int do_cullface, int do_blend)
+	struct shadow_sphere_data *shadow_sphere, struct shadow_annulus_data *shadow_annulus,
+	int do_cullface, int do_blend)
 {
 	enable_3d_viewport();
 
@@ -1125,14 +1130,13 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 
 	glUseProgram(shader->program_id);
 
-	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture_number);
+	if (shader->texture_2d_id >= 0)
+		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture_number);
+	else if (shader->texture_cubemap_id >= 0)
+		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, texture_number);
 
 	if (shader->light_pos_id >= 0)
 		glUniform3f(shader->light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
-
-	if (shader->sphere_id >= 0)
-		glUniform4f(shader->sphere_id, eye_sphere_pos->v.x, eye_sphere_pos->v.y, eye_sphere_pos->v.z,
-			sphere_radius * sphere_radius);
 
 	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 	if (shader->mv_matrix_id >= 0)
@@ -1142,6 +1146,35 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 
 	glUniform4f(shader->tint_color_id, triangle_color->red,
 		triangle_color->green, triangle_color->blue, alpha);
+
+	/* shadow sphere */
+	if (shader->shadow_sphere_id >= 0)
+		glUniform4f(shader->shadow_sphere_id, shadow_sphere->eye_pos.v.x, shadow_sphere->eye_pos.v.y,
+			shadow_sphere->eye_pos.v.z, shadow_sphere->r * shadow_sphere->r);
+
+	/* shadow annulus */
+	if (shader->shadow_annulus_texture_id >= 0) {
+		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, shadow_annulus->texture_id);
+
+		glUniform4f(shader->shadow_annulus_tint_color_id, shadow_annulus->tint_color.red,
+			shadow_annulus->tint_color.green, shadow_annulus->tint_color.blue, shadow_annulus->alpha);
+		glUniform3f(shader->shadow_annulus_center_id, shadow_annulus->eye_pos.v.x,
+			shadow_annulus->eye_pos.v.y, shadow_annulus->eye_pos.v.z);
+
+		/* this only works if the ring has an identity quat for its child orientation */
+		/* ring disc is in x/y plane, so z is normal */
+		union vec3 annulus_normal = { { 0, 0, 1 } };
+		union vec3 eye_annulus_normal;
+		mat33_x_vec3(mat_normal, &annulus_normal, &eye_annulus_normal);
+		vec3_normalize_self(&eye_annulus_normal);
+
+		glUniform3f(shader->shadow_annulus_normal_id, eye_annulus_normal.v.x,
+			eye_annulus_normal.v.y, eye_annulus_normal.v.z);
+
+		glUniform4f(shader->shadow_annulus_radius_id,
+			shadow_annulus->r1, shadow_annulus->r1 * shadow_annulus->r1,
+			shadow_annulus->r2, shadow_annulus->r2 * shadow_annulus->r2);
+	}
 
 	glEnableVertexAttribArray(shader->vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
@@ -1155,10 +1188,10 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	);
 
 	if (shader->vertex_normal_id >= 0) {
-		glEnableVertexAttribArray(textured_lit_shader.vertex_normal_id);
+		glEnableVertexAttribArray(shader->vertex_normal_id);
 		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 		glVertexAttribPointer(
-			textured_lit_shader.vertex_normal_id,  /* The attribute we want to configure */
+			shader->vertex_normal_id,  /* The attribute we want to configure */
 			3,                            /* size */
 			GL_FLOAT,                     /* type */
 			GL_FALSE,                     /* normalized? */
@@ -1167,23 +1200,21 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		);
 	}
 
-	glEnableVertexAttribArray(shader->texture_coord_id);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
-	glVertexAttribPointer(
-		shader->texture_coord_id,/* The attribute we want to configure */
-		2,                            /* size */
-		GL_FLOAT,                     /* type */
-		GL_TRUE,                     /* normalized? */
-		sizeof(struct vertex_triangle_buffer_data), /* stride */
-		(void *)offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x) /* array buffer offset */
-	);
+	if (shader->texture_coord_id >= 0) {
+		glEnableVertexAttribArray(shader->texture_coord_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
+		glVertexAttribPointer(shader->texture_coord_id, 2, GL_FLOAT, GL_TRUE,
+			sizeof(struct vertex_triangle_buffer_data),
+			(void *)offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x));
+	}
 
 	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
 
 	glDisableVertexAttribArray(shader->vertex_position_id);
 	if (shader->vertex_normal_id >= 0)
 		glDisableVertexAttribArray(shader->vertex_normal_id);
-	glDisableVertexAttribArray(shader->texture_coord_id);
+	if (shader->texture_coord_id >= 0)
+		glDisableVertexAttribArray(shader->texture_coord_id);
 	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
@@ -1195,103 +1226,6 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		glDepthMask(GL_TRUE);
 		glDisable(GL_BLEND);
 	}
-
-	if (draw_normal_lines) {
-		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
-	}
-}
-
-static void graph_dev_raster_texture_cubemap_lit(struct graph_dev_gl_textured_cubemap_lit_shader *shader,
-	const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
-	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *tint_color,
-	union vec3 *eye_light_pos, GLuint texture_number,
-	union vec3 *eye_annulus_center, float annulus_r1, float annulus_r2, GLuint annulus_texture_number,
-	struct sng_color *annulus_tint_color, float annulus_alpha)
-{
-	enable_3d_viewport();
-
-	if (!m->graph_ptr)
-		return;
-
-	struct mesh_gl_info *ptr = m->graph_ptr;
-
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	if (draw_polygon_as_lines)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	glUseProgram(shader->program_id);
-
-	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, texture_number);
-
-	if (shader->annulus_texture_id >= 0) {
-		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, annulus_texture_number);
-	}
-
-	glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
-	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
-	glUniformMatrix3fv(shader->normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
-
-	glUniform3f(shader->light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y,
-		eye_light_pos->v.z);
-
-	glUniform4f(shader->tint_color_id, tint_color->red,
-		tint_color->green, tint_color->blue, 1.0);
-
-	if (shader->annulus_tint_color_id >= 0)
-		glUniform4f(shader->annulus_tint_color_id, annulus_tint_color->red,
-			annulus_tint_color->green, annulus_tint_color->blue, annulus_alpha);
-	if (shader->annulus_center_id >= 0)
-		glUniform3f(shader->annulus_center_id, eye_annulus_center->v.x,
-			eye_annulus_center->v.y, eye_annulus_center->v.z);
-	if (shader->annulus_normal_id >= 0) {
-		/* this only works if the ring has an identity quat for its child orientation */
-
-		/* ring disc is in x/y plane, so z is normal */
-		union vec3 annulus_normal = { { 0, 0, 1 } };
-		union vec3 eye_annulus_normal;
-		mat33_x_vec3(mat_normal, &annulus_normal, &eye_annulus_normal);
-		vec3_normalize_self(&eye_annulus_normal);
-
-		glUniform3f(shader->annulus_normal_id, eye_annulus_normal.v.x,
-			eye_annulus_normal.v.y, eye_annulus_normal.v.z);
-	}
-	if (shader->annulus_radius_id >= 0)
-		glUniform4f(shader->annulus_radius_id, annulus_r1, annulus_r1 * annulus_r1,
-			annulus_r2, annulus_r2 * annulus_r2);
-
-	glEnableVertexAttribArray(shader->vertex_position_id);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
-	glVertexAttribPointer(
-		shader->vertex_position_id, /* The attribute we want to configure */
-		3,                           /* size */
-		GL_FLOAT,                    /* type */
-		GL_FALSE,                    /* normalized? */
-		sizeof(struct vertex_buffer_data), /* stride */
-		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
-	);
-
-	glEnableVertexAttribArray(shader->vertex_normal_id);
-	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
-	glVertexAttribPointer(
-		shader->vertex_normal_id,  /* The attribute we want to configure */
-		3,                            /* size */
-		GL_FLOAT,                     /* type */
-		GL_FALSE,                     /* normalized? */
-		sizeof(struct vertex_triangle_buffer_data), /* stride */
-		(void *)offsetof(struct vertex_triangle_buffer_data, normal.v.x) /* array buffer offset */
-	);
-
-	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
-
-	glDisableVertexAttribArray(shader->vertex_position_id);
-	glDisableVertexAttribArray(shader->vertex_normal_id);
-	glUseProgram(0);
-
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-	if (draw_polygon_as_lines)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	if (draw_normal_lines) {
 		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
@@ -1955,7 +1889,6 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					|| (e->render_style & RENDER_WIREFRAME);
 
 		struct graph_dev_gl_textured_shader *tex_shader = 0;
-		struct graph_dev_gl_textured_cubemap_lit_shader *cubemap_tex_shader = 0;
 
 		int do_cullface = 1;
 		int do_blend = 0;
@@ -1964,16 +1897,18 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		GLuint texture_id = 0;
 
 		/* for sphere shadows */
-		union vec3 eye_sphere_pos = VEC3_INITIALIZER;
-		float sphere_radius = 0;
+		struct shadow_sphere_data shadow_sphere;
+		vec3_init(&shadow_sphere.eye_pos, 0, 0, 0);
+		shadow_sphere.r = 0;
 
 		/* for annulus shadows */
-		GLuint annulus_texture_id = 0;
-		union vec3 eye_annulus_pos = VEC3_INITIALIZER;
-		float annulus_r1 = 0;
-		float annulus_r2 = 0;
-		struct sng_color annulus_tint_color = { 1.0, 1.0, 1.0 };
-		float annulus_alpha = 1.0;
+		struct shadow_annulus_data shadow_annulus;
+		shadow_annulus.texture_id = 0;
+		vec3_init(&shadow_annulus.eye_pos, 0, 0, 0);
+		shadow_annulus.r1 = 0;
+		shadow_annulus.r2 = 0;
+		shadow_annulus.tint_color = sng_get_color(WHITE);
+		shadow_annulus.alpha = 1.0;
 
 		struct graph_dev_gl_trans_wireframe_shader *wireframe_trans_shader = &trans_wireframe_shader;
 
@@ -2012,7 +1947,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				}
 				break;
 			case MATERIAL_TEXTURE_CUBEMAP: {
-				cubemap_tex_shader = &textured_cubemap_lit_shader;
+				tex_shader = &textured_cubemap_lit_shader;
 
 				struct material_texture_cubemap *mt = &e->material_ptr->texture_cubemap;
 				texture_id = mt->texture_id;
@@ -2023,25 +1958,25 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				texture_id = mt->texture_id;
 
 				if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
-					cubemap_tex_shader = &textured_cubemap_lit_with_annulus_shadow_shader;
+					tex_shader = &textured_cubemap_lit_with_annulus_shadow_shader;
 
 					struct material_textured_planet_ring *ring_mt =
 						&mt->ring_material->textured_planet_ring;
 
-					annulus_texture_id = ring_mt->texture_id;
-					annulus_tint_color = ring_mt->tint;
-					annulus_alpha = ring_mt->alpha;
+					shadow_annulus.texture_id = ring_mt->texture_id;
+					shadow_annulus.tint_color = ring_mt->tint;
+					shadow_annulus.alpha = ring_mt->alpha;
 
 					/* ring is at the center of our mesh */
 					union vec4 sphere_pos = { { 0, 0, 0, 1 } };
-					mat44_x_vec4_into_vec3(mat_mv, &sphere_pos, &eye_annulus_pos);
+					mat44_x_vec4_into_vec3(mat_mv, &sphere_pos, &shadow_annulus.eye_pos);
 
 					/* ring is the 2x to 3x of the planet scale, world space distance
 					   is the same in eye space as the view matrix does not scale */
-					annulus_r1 = vec3_cwise_max(&e->scale) * 2.0;
-					annulus_r2 = vec3_cwise_max(&e->scale) * 3.0;
+					shadow_annulus.r1 = vec3_cwise_max(&e->scale) * 2.0;
+					shadow_annulus.r2 = vec3_cwise_max(&e->scale) * 3.0;
 				} else {
-					cubemap_tex_shader = &textured_cubemap_lit_shader;
+					tex_shader = &textured_cubemap_lit_shader;
 				}
 				}
 				break;
@@ -2058,11 +1993,11 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 				/* planet is at the center of our mesh */
 				union vec4 sphere_pos = { { 0, 0, 0, 1 } };
-				mat44_x_vec4_into_vec3(mat_mv, &sphere_pos, &eye_sphere_pos);
+				mat44_x_vec4_into_vec3(mat_mv, &sphere_pos, &shadow_sphere.eye_pos);
 
 				/* planet is the size of the ring scale, world space distance
 				   is the same in eye space as the view matrix does not scale */
-				sphere_radius = vec3_cwise_max(&e->scale);
+				shadow_sphere.r = vec3_cwise_max(&e->scale);
 				}
 				break;
 			case MATERIAL_WIREFRAME_SPHERE_CLIP: {
@@ -2099,13 +2034,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				if (tex_shader)
 					graph_dev_raster_texture(tex_shader, mat_mvp, mat_mv, mat_normal, e->m,
 						&texture_tint, texture_alpha, eye_light_pos, texture_id,
-						&eye_sphere_pos, sphere_radius, do_cullface, do_blend);
-				else if (cubemap_tex_shader)
-					graph_dev_raster_texture_cubemap_lit(cubemap_tex_shader, mat_mvp, mat_mv,
-						mat_normal, e->m, &texture_tint, eye_light_pos, texture_id,
-						&eye_annulus_pos, annulus_r1, annulus_r2, annulus_texture_id,
-						&annulus_tint_color, annulus_alpha);
-
+						&shadow_sphere, &shadow_annulus, do_cullface, do_blend);
 				else
 					graph_dev_raster_single_color_lit(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos);
@@ -2530,61 +2459,47 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
 }
 
-static void setup_textured_shader(struct graph_dev_gl_textured_shader *shader)
+static void setup_textured_shader(const char *basename, struct graph_dev_gl_textured_shader *shader)
 {
+	/* set all attributes to -1 */
+	memset(shader, 0xff, sizeof(*shader));
+
+	char vert_filename[PATH_MAX];
+	char frag_filename[PATH_MAX];
+	snprintf(vert_filename, sizeof(vert_filename), "%s.vert", basename);
+	snprintf(frag_filename, sizeof(frag_filename), "%s.frag", basename);
+
 	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory, "textured.vert", "textured.frag");
+	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename);
 	glUseProgram(shader->program_id);
 
-	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
-	shader->texture_id = glGetUniformLocation(shader->program_id, "myTexture");
-	glUniform1i(shader->texture_id, 0);
-
-	/* Get a handle for our buffers */
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_tex_coord");
-
-	shader->mv_matrix_id = -1;
-	shader->sphere_id = -1;
-	shader->light_pos_id = -1;
-	shader->normal_matrix_id = -1;
-	shader->vertex_normal_id = -1;
-}
-
-static void setup_textured_with_sphere_shadow_shader(struct graph_dev_gl_textured_shader *shader)
-{
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory,
-				"textured-with-sphere-shadow-per-pixel.vert",
-				"textured-with-sphere-shadow-per-pixel.frag");
-	glUseProgram(shader->program_id);
-
-	/* Get a handle for our "MVP" uniform */
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
-	shader->texture_id = glGetUniformLocation(shader->program_id, "myTexture");
-	glUniform1i(shader->texture_id, 0);
-
-	/* Get a handle for our buffers */
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_tex_coord");
-
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
-	shader->sphere_id = glGetUniformLocation(shader->program_id, "u_Sphere");
+	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
+	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
+	shader->texture_2d_id = glGetUniformLocation(shader->program_id, "myTexture");
+	glUniform1i(shader->texture_2d_id, 0);
 
-	shader->normal_matrix_id = -1;
-	shader->vertex_normal_id = -1;
+	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
+	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
+	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_tex_coord");
+
+	shader->shadow_sphere_id = glGetUniformLocation(shader->program_id, "u_Sphere");
 }
 
-static void setup_textured_lit_shader(struct graph_dev_gl_textured_shader *shader)
+static void setup_textured_cubemap_shader(const char *basename, struct graph_dev_gl_textured_shader *shader)
 {
+	/* set all attributes to -1 */
+	memset(shader, 0xff, sizeof(*shader));
+
+	char vert_filename[PATH_MAX];
+	char frag_filename[PATH_MAX];
+	snprintf(vert_filename, sizeof(vert_filename), "%s.vert", basename);
+	snprintf(frag_filename, sizeof(frag_filename), "%s.frag", basename);
+
 	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory,
-					"textured-and-lit-per-vertex.vert",
-					"textured-and-lit-per-vertex.frag");
+	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename);
 	glUseProgram(shader->program_id);
 
 	/* Get a handle for our "MVP" uniform */
@@ -2592,74 +2507,20 @@ static void setup_textured_lit_shader(struct graph_dev_gl_textured_shader *shade
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
 	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
-	shader->texture_id = glGetUniformLocation(shader->program_id, "myTexture");
-	glUniform1i(shader->texture_id, 0);
-
-	/* Get a handle for our buffers */
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
-	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_tex_coord");
-	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
-
-	shader->sphere_id = -1;
-}
-
-static void setup_textured_cubemap_lit_shader(struct graph_dev_gl_textured_cubemap_lit_shader *shader)
-{
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory,
-				"textured-cubemap-and-lit-per-vertex.vert",
-				"textured-cubemap-and-lit-per-vertex.frag");
-	glUseProgram(shader->program_id);
-
-	/* Get a handle for our "MVP" uniform */
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
-	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
-	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
-	shader->texture_id = glGetUniformLocation(shader->program_id, "myTexture");
-	glUniform1i(shader->texture_id, 0);
+	shader->texture_cubemap_id = glGetUniformLocation(shader->program_id, "myTexture");
+	glUniform1i(shader->texture_cubemap_id, 0);
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
 
-	shader->annulus_texture_id = -1;
-	shader->annulus_center_id = -1;
-	shader->annulus_normal_id = -1;
-	shader->annulus_radius_id = -1;
-	shader->annulus_tint_color_id = -1;
-}
-
-static void setup_textured_cubemap_lit_with_annulus_shadow_shader(
-	struct graph_dev_gl_textured_cubemap_lit_shader *shader)
-{
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory,
-		"textured-cubemap-and-lit-with-annulus-shadow-per-pixel.vert",
-		"textured-cubemap-and-lit-with-annulus-shadow-per-pixel.frag");
-	glUseProgram(shader->program_id);
-
-	/* Get a handle for our "MVP" uniform */
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
-	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
-	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
-	shader->texture_id = glGetUniformLocation(shader->program_id, "myTexture");
-	glUniform1i(shader->texture_id, 0);
-	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
-
-	/* Get a handle for our buffers */
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
-
-	shader->annulus_texture_id = glGetUniformLocation(shader->program_id, "annulusTexture");
-	glUniform1i(shader->annulus_texture_id, 1);
-	shader->annulus_center_id = glGetUniformLocation(shader->program_id, "u_AnnulusCenter");
-	shader->annulus_normal_id = glGetUniformLocation(shader->program_id, "u_AnnulusNormal");
-	shader->annulus_radius_id = glGetUniformLocation(shader->program_id, "u_AnnulusRadius");
-	shader->annulus_tint_color_id = glGetUniformLocation(shader->program_id, "u_AnnulusTintColor");
+	shader->shadow_annulus_texture_id = glGetUniformLocation(shader->program_id, "annulusTexture");
+	glUniform1i(shader->shadow_annulus_texture_id, 1);
+	shader->shadow_annulus_center_id = glGetUniformLocation(shader->program_id, "u_AnnulusCenter");
+	shader->shadow_annulus_normal_id = glGetUniformLocation(shader->program_id, "u_AnnulusNormal");
+	shader->shadow_annulus_radius_id = glGetUniformLocation(shader->program_id, "u_AnnulusRadius");
+	shader->shadow_annulus_tint_color_id = glGetUniformLocation(shader->program_id, "u_AnnulusTintColor");
 }
 
 static void setup_filled_wireframe_shader(struct graph_dev_gl_filled_wireframe_shader *shader)
@@ -3182,11 +3043,12 @@ int graph_dev_setup(const char *shader_dir)
 	setup_point_cloud_shader("point_cloud-intensity-noise", &point_cloud_intensity_noise_shader);
 	setup_color_by_w_shader(&color_by_w_shader);
 	setup_skybox_shader(&skybox_shader);
-	setup_textured_shader(&textured_shader);
-	setup_textured_with_sphere_shadow_shader(&textured_with_sphere_shadow_shader);
-	setup_textured_lit_shader(&textured_lit_shader);
-	setup_textured_cubemap_lit_shader(&textured_cubemap_lit_shader);
-	setup_textured_cubemap_lit_with_annulus_shadow_shader(&textured_cubemap_lit_with_annulus_shadow_shader);
+	setup_textured_shader("textured", &textured_shader);
+	setup_textured_shader("textured-with-sphere-shadow-per-pixel", &textured_with_sphere_shadow_shader);
+	setup_textured_shader("textured-and-lit-per-vertex", &textured_lit_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-vertex", &textured_cubemap_lit_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel",
+		&textured_cubemap_lit_with_annulus_shadow_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
 	setup_fs_effect_shader("fs-effect-copy", &fs_copy_shader);
 
