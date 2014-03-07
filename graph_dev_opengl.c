@@ -632,6 +632,12 @@ struct graph_dev_gl_textured_shader {
 	GLint shadow_annulus_tint_color_id;
 };
 
+struct clip_sphere_data {
+	union vec3 eye_pos;
+	float r;
+	float radius_fade;
+};
+
 struct shadow_sphere_data {
 	union vec3 eye_pos;
 	float r;
@@ -1389,8 +1395,7 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 static void graph_dev_raster_trans_wireframe_mesh(struct graph_dev_gl_trans_wireframe_shader *shader,
 		const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 		const struct mat33 *mat_normal, struct mesh *m, struct sng_color *line_color,
-		union vec3 *eye_clip_sphere_pos, float clip_sphere_radius, float clip_sphere_radius_fade,
-		int do_cullface)
+		struct clip_sphere_data *clip_sphere, int do_cullface)
 {
 	enable_3d_viewport();
 
@@ -1410,12 +1415,12 @@ static void graph_dev_raster_trans_wireframe_mesh(struct graph_dev_gl_trans_wire
 		glUniform3f(shader->color_id, line_color->red,
 			line_color->green, line_color->blue);
 
-		if (shader->clip_sphere_id >= 0)
-			glUniform4f(shader->clip_sphere_id, eye_clip_sphere_pos->v.x, eye_clip_sphere_pos->v.y,
-				eye_clip_sphere_pos->v.z, clip_sphere_radius);
+		if (shader->clip_sphere_id >= 0) {
+			glUniform4f(shader->clip_sphere_id, clip_sphere->eye_pos.v.x, clip_sphere->eye_pos.v.y,
+				clip_sphere->eye_pos.v.z, clip_sphere->r);
 
-		if (shader->clip_sphere_radius_fade_id >= 0)
-			glUniform1f(shader->clip_sphere_radius_fade_id, clip_sphere_radius_fade);
+			glUniform1f(shader->clip_sphere_radius_fade_id, clip_sphere->radius_fade);
+		}
 
 		glEnableVertexAttribArray(shader->vertex_position_id);
 		glBindBuffer(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer);
@@ -1690,7 +1695,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
 			graph_dev_raster_trans_wireframe_mesh(0, &mat_mvp_local_r, &mat_mv_local_r,
-				&mat_normal_local_r, e->m, &line_color, 0, 0, 0, 0);
+				&mat_normal_local_r, e->m, &line_color, 0, 0);
 		}
 	}
 
@@ -1913,9 +1918,10 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		struct graph_dev_gl_trans_wireframe_shader *wireframe_trans_shader = &trans_wireframe_shader;
 
 		/* for clipping sphere */
-		union vec3 eye_clip_sphere_pos = VEC3_INITIALIZER;
-		float clip_sphere_radius = 0;
-		float clip_sphere_radius_fade = 0;
+		struct clip_sphere_data clip_sphere;
+		vec3_init(&clip_sphere.eye_pos, 0, 0, 0);
+		clip_sphere.r = 0;
+		clip_sphere.radius_fade = 0;
 
 		if (e->material_ptr) {
 			switch (e->material_ptr->type) {
@@ -2008,13 +2014,10 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 				union vec4 clip_sphere_pos;
 				vec4_init_vec3(&clip_sphere_pos, &mt->center->e_pos, 1);
-				mat44_x_vec4_into_vec3_dff(transform->v, &clip_sphere_pos, &eye_clip_sphere_pos);
+				mat44_x_vec4_into_vec3_dff(transform->v, &clip_sphere_pos, &clip_sphere.eye_pos);
 
-				union vec4 eye_clip_sphere_pos4;
-				mat44_x_vec4_dff(transform->v, &clip_sphere_pos, &eye_clip_sphere_pos4);
-
-				clip_sphere_radius = e->material_ptr->wireframe_sphere_clip.radius;
-				clip_sphere_radius_fade = e->material_ptr->wireframe_sphere_clip.radius_fade;
+				clip_sphere.r = e->material_ptr->wireframe_sphere_clip.radius;
+				clip_sphere.radius_fade = e->material_ptr->wireframe_sphere_clip.radius_fade;
 				}
 				break;
 			}
@@ -2041,15 +2044,14 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 			}
 		} else if (outline_triangle) {
 			graph_dev_raster_trans_wireframe_mesh(wireframe_trans_shader, mat_mvp, mat_mv,
-				mat_normal, e->m, &line_color, &eye_clip_sphere_pos, clip_sphere_radius,
-				clip_sphere_radius_fade, 1);
+				mat_normal, e->m, &line_color, &clip_sphere, 1);
 		}
 
 		if (draw_billboard_wireframe && e->material_ptr &&
 				e->material_ptr->type == MATERIAL_BILLBOARD) {
 			struct sng_color white_color = sng_get_color(WHITE);
 			graph_dev_raster_trans_wireframe_mesh(0, mat_mvp, mat_mv,
-				mat_normal, e->m, &white_color, 0, 0, 0, 0);
+				mat_normal, e->m, &white_color, 0, 0);
 		}
 		break;
 	}
