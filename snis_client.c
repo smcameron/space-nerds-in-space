@@ -873,7 +873,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 	int i;
 	struct entity *e;
 	struct entity *thrust_entity[MAX_THRUST_PORTS];
-	int nthrust_ports;
+	int nthrust_ports = 0;
 	double vx, vy, vz;
 
 	i = lookup_object_by_id(id);
