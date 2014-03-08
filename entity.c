@@ -270,10 +270,8 @@ static void calculate_model_matrices(struct entity_context *cx, struct entity *e
 		{ 0, 0, 1, 0 },
 		{ 0, 0, 0, 1 } } };
 
-	if (e->material_ptr && e->material_ptr->type == MATERIAL_BILLBOARD) {
-		struct material_billboard *m = &e->material_ptr->billboard;
-
-		switch (m->billboard_type) {
+	if (e->material_ptr && e->material_ptr->billboard_type != MATERIAL_BILLBOARD_TYPE_NONE) {
+		switch (e->material_ptr->billboard_type) {
 			/* aligned so that +y axis = camera up and normal parallel with camera look direction */
 			case MATERIAL_BILLBOARD_TYPE_SCREEN:
 			{

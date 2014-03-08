@@ -30,7 +30,6 @@ struct entity;
 #define MATERIAL_COLOR 0
 #define MATERIAL_COLOR_BY_W 1
 #define MATERIAL_LASER 2
-#define MATERIAL_BILLBOARD 3
 #define MATERIAL_TEXTURE_MAPPED 4
 #define MATERIAL_TEXTURE_CUBEMAP 5
 #define MATERIAL_NEBULA 6
@@ -41,6 +40,11 @@ struct entity;
 #define MATERIAL_WIREFRAME_SPHERE_CLIP 11
 #define MATERIAL_POINT_CLOUD_INTENSITY_NOISE 12
 
+#define MATERIAL_BILLBOARD_TYPE_NONE 0
+#define MATERIAL_BILLBOARD_TYPE_SCREEN 1
+#define MATERIAL_BILLBOARD_TYPE_SPHERICAL 2
+#define MATERIAL_BILLBOARD_TYPE_AXIS 3
+
 struct material_color_by_w {
 	int near_color;
 	int center_color;
@@ -49,15 +53,6 @@ struct material_color_by_w {
 	float near_w;
 	float center_w;
 	float far_w;
-};
-
-#define MATERIAL_BILLBOARD_TYPE_SCREEN 0
-#define MATERIAL_BILLBOARD_TYPE_SPHERICAL 1
-#define MATERIAL_BILLBOARD_TYPE_AXIS 2
-
-struct material_billboard {
-	int texture_id;
-	int billboard_type;
 };
 
 struct material_texture_mapped {
@@ -111,7 +106,6 @@ struct material_wireframe_sphere_clip {
 struct material {
 	__extension__ union {
 		struct material_color_by_w color_by_w;
-		struct material_billboard billboard;
 		struct material_texture_mapped texture_mapped;
 		struct material_texture_mapped_unlit texture_mapped_unlit;
 		struct material_texture_cubemap texture_cubemap;
@@ -122,9 +116,9 @@ struct material {
 		struct material_wireframe_sphere_clip wireframe_sphere_clip;
 	};
 	int type;
+	int billboard_type;
 };
 
-extern void material_init_billboard(struct material *m);
 extern void material_init_texture_mapped(struct material *m);
 extern void material_init_texture_mapped_unlit(struct material *m);
 extern void material_init_texture_cubemap(struct material *m);
@@ -133,7 +127,6 @@ extern void material_init_textured_particle(struct material *m);
 extern void material_init_textured_planet(struct material *m);
 extern void material_init_textured_planet_ring(struct material *m);
 extern void material_init_wireframe_sphere_clip(struct material *m);
-
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 						struct material *nebula);

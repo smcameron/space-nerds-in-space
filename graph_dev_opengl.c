@@ -1850,7 +1850,6 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 
 	switch (e->material_ptr->type) {
 	case MATERIAL_NEBULA:
-	case MATERIAL_BILLBOARD:
 	case MATERIAL_TEXTURED_PARTICLE:
 	case MATERIAL_TEXTURED_PLANET_RING:
 		does_blending = 1;
@@ -1942,14 +1941,6 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				do_blend = mt->do_blend;
 				texture_alpha = mt->alpha;
 				texture_tint = mt->tint;
-				}
-				break;
-			case MATERIAL_BILLBOARD: {
-				tex_shader = &textured_shader;
-
-				struct material_billboard *mt = &e->material_ptr->billboard;
-				texture_id = mt->texture_id;
-				do_blend = 1;
 				}
 				break;
 			case MATERIAL_TEXTURE_CUBEMAP: {
@@ -2048,7 +2039,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		}
 
 		if (draw_billboard_wireframe && e->material_ptr &&
-				e->material_ptr->type == MATERIAL_BILLBOARD) {
+				e->material_ptr->billboard_type != MATERIAL_BILLBOARD_TYPE_NONE) {
 			struct sng_color white_color = sng_get_color(WHITE);
 			graph_dev_raster_trans_wireframe_mesh(0, mat_mvp, mat_mv,
 				mat_normal, e->m, &white_color, 0, 0);

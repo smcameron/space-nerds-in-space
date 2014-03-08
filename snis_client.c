@@ -7638,7 +7638,8 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 				dist_to_cam - 1.0,
 				dist_to_cam,
 				dist_to_cam + 1.0 },
-		.type = MATERIAL_COLOR_BY_W};
+		.type = MATERIAL_COLOR_BY_W,
+		.billboard_type = MATERIAL_BILLBOARD_TYPE_NONE };
 
 	struct material pitch_material = {
 		.color_by_w = { COLOR_LIGHTER(GREEN, 100),
@@ -7647,7 +7648,8 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 				dist_to_cam - 1.0,
 				dist_to_cam,
 				dist_to_cam + 1.0 },
-		.type = MATERIAL_COLOR_BY_W };
+		.type = MATERIAL_COLOR_BY_W,
+		.billboard_type = MATERIAL_BILLBOARD_TYPE_NONE };
 
 	/* add yaw axis */
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, CYAN);
@@ -11830,29 +11832,35 @@ static void load_textures(void)
 		return;
 	load_skybox_textures(skybox_texture_prefix);
 
-	material_init_billboard(&green_laser_material);
-	green_laser_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
-	green_laser_material.billboard.texture_id = load_texture("green-laser-texture.png");
+	material_init_texture_mapped_unlit(&green_laser_material);
+	green_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
+	green_laser_material.texture_mapped_unlit.texture_id = load_texture("green-laser-texture.png");
+	green_laser_material.texture_mapped_unlit.do_blend = 1;
 
-	material_init_billboard(&red_laser_material);
-	red_laser_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
-	red_laser_material.billboard.texture_id = load_texture("red-laser-texture.png");
+	material_init_texture_mapped_unlit(&red_laser_material);
+	red_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
+	red_laser_material.texture_mapped_unlit.texture_id = load_texture("red-laser-texture.png");
+	red_laser_material.texture_mapped_unlit.do_blend = 1;
 
-	material_init_billboard(&red_torpedo_material);
-	red_torpedo_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	red_torpedo_material.billboard.texture_id = load_texture("red-torpedo-texture.png");
+	material_init_texture_mapped_unlit(&red_torpedo_material);
+	red_torpedo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	red_torpedo_material.texture_mapped_unlit.texture_id = load_texture("red-torpedo-texture.png");
+	red_torpedo_material.texture_mapped_unlit.do_blend = 1;
 
-	material_init_billboard(&spark_material);
-	spark_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	spark_material.billboard.texture_id = load_texture("spark-texture.png");
+	material_init_texture_mapped_unlit(&spark_material);
+	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	spark_material.texture_mapped_unlit.texture_id = load_texture("spark-texture.png");
+	spark_material.texture_mapped_unlit.do_blend = 1;
 
-	material_init_billboard(&warp_effect_material);
-	warp_effect_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	warp_effect_material.billboard.texture_id = load_texture("warp-effect.png");
+	material_init_texture_mapped_unlit(&warp_effect_material);
+	warp_effect_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	warp_effect_material.texture_mapped_unlit.texture_id = load_texture("warp-effect.png");
+	warp_effect_material.texture_mapped_unlit.do_blend = 1;
 
-	material_init_billboard(&sun_material);
-	sun_material.billboard.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	sun_material.billboard.texture_id = load_texture("sun.png");
+	material_init_texture_mapped_unlit(&sun_material);
+	sun_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	sun_material.texture_mapped_unlit.texture_id = load_texture("sun.png");
+	sun_material.texture_mapped_unlit.do_blend = 1;
 
 	int i;
 	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) {
