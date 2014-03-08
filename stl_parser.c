@@ -941,7 +941,7 @@ struct mesh *read_obj_file(char *filename)
 				struct material *mtl;
 
 				mtl = malloc(sizeof(*mtl));
-				mtl->type = MATERIAL_TEXTURE_MAPPED;
+				material_init_texture_mapped(mtl);
 				mtl->texture_mapped.texture_id = graph_dev_load_texture(tfile);
 				m->material = mtl;
 			}

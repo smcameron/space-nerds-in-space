@@ -511,9 +511,10 @@ int main(int argc, char *argv[])
 	light_mesh = mesh_fabricate_billboard(0, 0, 10, 10); //target_mesh->radius / 10.0, target_mesh->radius / 10.0);
 
 	struct material light_material;
-	light_material.type = MATERIAL_TEXTURE_MAPPED_UNLIT;
+	material_init_texture_mapped_unlit(&light_material);
 	light_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SCREEN;
 	light_material.texture_mapped_unlit.texture_id = graph_dev_load_texture("share/snis/textures/sun.png");
+	light_material.texture_mapped_unlit.do_blend = 1;
 
 	light_mesh->material = &light_material;
 
