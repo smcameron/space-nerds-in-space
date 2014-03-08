@@ -155,6 +155,10 @@ void material_init_texture_cubemap(struct material *m)
 	m->type = MATERIAL_TEXTURE_CUBEMAP;
 	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
 	m->texture_cubemap.texture_id = 0;
+	m->texture_cubemap.do_cullface = 1;
+	m->texture_cubemap.do_blend = 0;
+	m->texture_cubemap.alpha = 1.0;
+	m->texture_cubemap.tint = sng_get_color(WHITE);
 }
 
 void material_init_nebula(struct material *m)

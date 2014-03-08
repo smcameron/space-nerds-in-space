@@ -1854,9 +1854,11 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 	case MATERIAL_TEXTURED_PLANET_RING:
 		does_blending = 1;
 		break;
-	case MATERIAL_TEXTURE_MAPPED_UNLIT: {
-			does_blending = e->material_ptr->texture_mapped_unlit.do_blend;
-		}
+	case MATERIAL_TEXTURE_MAPPED_UNLIT:
+		does_blending = e->material_ptr->texture_mapped_unlit.do_blend;
+		break;
+	case MATERIAL_TEXTURE_CUBEMAP:
+		does_blending = e->material_ptr->texture_cubemap.do_blend;
 		break;
 	}
 
@@ -1948,6 +1950,10 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 				struct material_texture_cubemap *mt = &e->material_ptr->texture_cubemap;
 				texture_id = mt->texture_id;
+				do_cullface = mt->do_cullface;
+				do_blend = mt->do_blend;
+				texture_alpha = mt->alpha;
+				texture_tint = mt->tint;
 				}
 				break;
 			case MATERIAL_TEXTURED_PLANET: {

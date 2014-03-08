@@ -69,6 +69,10 @@ struct material_texture_mapped_unlit {
 
 struct material_texture_cubemap {
 	int texture_id;
+	int do_cullface;
+	int do_blend;
+	float alpha;
+	struct sng_color tint;
 };
 
 #define MATERIAL_NEBULA_NPLANES 6
