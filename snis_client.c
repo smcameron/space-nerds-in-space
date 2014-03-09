@@ -1991,8 +1991,8 @@ void add_warp_effect(double x, double y, double z, int arriving, int time,
 	spark[i].move = warp_effect_move;
 	spark[i].entity = e;
 
-	if (max_particle_speed > dist / (time * 3.0))
-		max_particle_speed = (int) (dist / (time * 3.0));
+	if (max_particle_speed > dist / (time * 6.0))
+		max_particle_speed = (int) (dist / (time * 6.0));
 	if (!arriving) {
 #define NWARP_DEPARTURE_SPARKS 20
 		for (i = 0; i < NWARP_DEPARTURE_SPARKS; i++) {
