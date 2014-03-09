@@ -51,6 +51,16 @@ struct entity_child {
 	int next_entity_child_index;
 };
 
+struct frustum {
+	float near, far;
+	float top, bottom, left, right;
+	struct mat44d v_matrix;
+	struct mat44d vp_matrix;
+	struct mat44d p_matrix;
+	struct mat44 vp_matrix_no_translate;
+	float planes[6][4];
+};
+
 struct camera_info {
 	float x, y, z;		/* position of camera */
 	float lx, ly, lz;	/* where camera is looking */
@@ -59,10 +69,7 @@ struct camera_info {
 	float angle_of_view;
 	int xvpixels, yvpixels;
 	int renderer;
-	struct mat44d camera_v_matrix;
-	struct mat44d camera_vp_matrix;
-	struct mat44 skybox_vp_matrix;
-	float frustum[6][4];
+	struct frustum frustum;
 };
 
 struct entity_context {

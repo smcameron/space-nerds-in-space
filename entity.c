@@ -241,10 +241,11 @@ static inline float wy_screen(struct entity_context *cx, float wy)
 }
 
 
-static void calculate_model_matrices(struct entity_context *cx, struct entity *e, struct entity_transform *transform)
+static void calculate_model_matrices(struct camera_info *c, struct frustum *f, struct entity *e,
+	struct entity_transform *transform)
 {
-	transform->v = &cx->camera.camera_v_matrix;
-	transform->vp = &cx->camera.camera_vp_matrix;
+	transform->v = &f->v_matrix;
+	transform->vp = &f->vp_matrix;
 
 	/* Model = (T*R)*S
 	   T - translation matrix
@@ -286,8 +287,8 @@ static void calculate_model_matrices(struct entity_context *cx, struct entity *e
 			/* aligned so that +y axis = camera up and normal is pointing to camera position */
 			case MATERIAL_BILLBOARD_TYPE_SPHERICAL:
 			{
-				union vec3 cam_up = { { cx->camera.ux, cx->camera.uy, cx->camera.uz } };
-				union vec3 look = { { cx->camera.x - e->x, cx->camera.y - e->y, cx->camera.z - e->z } };
+				union vec3 cam_up = { { c->ux, c->uy, c->uz } };
+				union vec3 look = { { c->x - e->x, c->y - e->y, c->z - e->z } };
 				vec3_normalize_self(&look);
 
 				union vec3 right;
@@ -328,7 +329,7 @@ static void calculate_model_matrices(struct entity_context *cx, struct entity *e
 			/* aligned so that +y axis = quaternion axis and normal is pointing in direction of camera position */
 			case MATERIAL_BILLBOARD_TYPE_AXIS:
 			{
-				union vec3 look_to_cam = { { cx->camera.x - e->x, cx->camera.y - e->y, cx->camera.z - e->z } };
+				union vec3 look_to_cam = { { c->x - e->x, c->y - e->y, c->z - e->z } };
 				vec3_normalize_self(&look_to_cam);
 
 				union vec3 up = { { 1, 0, 0 } };
@@ -439,7 +440,7 @@ int transform_line(struct entity_context *cx, float x1, float y1, float z1, floa
 
 	/* there is no model transform on a point */
 	struct mat44 mat_vp;
-	mat44_convert_df(&cx->camera.camera_vp_matrix, &mat_vp);
+	mat44_convert_df(&cx->camera.frustum.vp_matrix, &mat_vp);
 
 	if (transform_vertices(&mat_vp, &v[0], 2)) {
 		/* both ends outside frustum */
@@ -472,13 +473,14 @@ int transform_line(struct entity_context *cx, float x1, float y1, float z1, floa
 
 }
 
-int transform_point(struct entity_context *cx, float x, float y, float z, float *sx, float *sy)
+static int transform_point_in_frustum(struct entity_context *cx, struct frustum *f,
+	float x, float y, float z, float *sx, float *sy)
 {
 	struct vertex v = {x, y, z, 1};
 
 	/* there is no model transform on a point */
 	struct mat44 mat_vp;
-	mat44_convert_df(&cx->camera.camera_vp_matrix, &mat_vp);
+	mat44_convert_df(&f->vp_matrix, &mat_vp);
 
 	if (transform_vertices(&mat_vp, &v, 1)) {
 		*sx = -1;
@@ -494,16 +496,21 @@ int transform_point(struct entity_context *cx, float x, float y, float z, float 
 	return 0;
 }
 
-static void render_entity(struct entity_context *cx, struct entity *e, union vec3 *camera_light_pos)
+int transform_point(struct entity_context *cx, float x, float y, float z, float *sx, float *sy)
+{
+	return transform_point_in_frustum(cx, &cx->camera.frustum, x, y, z, sx, sy);
+}
+
+static void render_entity(struct entity_context *cx, struct frustum *f, struct entity *e, union vec3 *camera_light_pos)
 {
 	/* calculate screen coords of entity as a whole */
-	transform_point(cx, e->x, e->y, e->z, &e->sx, &e->sy);
+	transform_point_in_frustum(cx, f, e->x, e->y, e->z, &e->sx, &e->sy);
 
 	if (e->sx >=0 && e->sy >= 0)
 		e->onscreen = 1;
 
 	struct entity_transform transform;
-	calculate_model_matrices(cx, e, &transform);
+	calculate_model_matrices(&cx->camera, f, e, &transform);
 
 	graph_dev_draw_entity(cx, e, camera_light_pos, &transform);
 }
@@ -513,15 +520,15 @@ void render_line(struct entity_context *cx, float x1, float y1, float z1, float 
 	calculate_camera_transform(cx);
 
 	struct mat44 mat_vp, mat_v;
-	mat44_convert_df(&cx->camera.camera_vp_matrix, &mat_vp);
-	mat44_convert_df(&cx->camera.camera_v_matrix, &mat_v);
+	mat44_convert_df(&cx->camera.frustum.vp_matrix, &mat_vp);
+	mat44_convert_df(&cx->camera.frustum.v_matrix, &mat_v);
 
 	graph_dev_draw_3d_line(cx, &mat_vp, &mat_v, x1, y1, z1, x2, y2, z2);
 }
 
 void render_skybox(struct entity_context *cx)
 {
-	graph_dev_draw_skybox(cx, &cx->camera.skybox_vp_matrix);
+	graph_dev_draw_skybox(cx, &cx->camera.frustum.vp_matrix_no_translate);
 }
 
 #if defined(__APPLE__)  || defined(__FreeBSD__)
@@ -582,12 +589,12 @@ static inline float sqr(float a)
 This page and its contents are Copyright 2000 by Mark Morley
 Unless otherwise noted, you may use any and all code examples provided herein in any way you want. */
 
-int sphere_in_frustum(struct camera_info *c, float x, float y, float z, float radius )
+int sphere_in_frustum(struct frustum *f, float x, float y, float z, float radius)
 {
 	int p;
 
 	for (p = 0; p < 6; p++)
-		if (c->frustum[p][0] * x + c->frustum[p][1] * y + c->frustum[p][2] * z + c->frustum[p][3] <= -radius)
+		if (f->planes[p][0] * x + f->planes[p][1] * y + f->planes[p][2] * z + f->planes[p][3] <= -radius)
 			return 0;
 	return 1;
 }
@@ -596,114 +603,117 @@ int sphere_in_frustum(struct camera_info *c, float x, float y, float z, float ra
 This page and its contents are Copyright 2000 by Mark Morley
 Unless otherwise noted, you may use any and all code examples provided herein in any way you want. */
 
-void extract_frustum_planes(struct camera_info *c)
+static void extract_frustum_planes(struct frustum *f)
 {
-	const double *clip = &c->camera_vp_matrix.m[0][0];
+	const double *clip = &f->vp_matrix.m[0][0];
 	float t;
 
 	/* Extract the numbers for the RIGHT plane */
-	c->frustum[0][0] = clip[ 3] - clip[ 0];
-	c->frustum[0][1] = clip[ 7] - clip[ 4];
-	c->frustum[0][2] = clip[11] - clip[ 8];
-	c->frustum[0][3] = clip[15] - clip[12];
+	f->planes[0][0] = clip[3] - clip[0];
+	f->planes[0][1] = clip[7] - clip[4];
+	f->planes[0][2] = clip[11] - clip[8];
+	f->planes[0][3] = clip[15] - clip[12];
 
 	/* Normalize the result */
-	t = dist3d( c->frustum[0][0], c->frustum[0][1], c->frustum[0][2] );
-	c->frustum[0][0] /= t;
-	c->frustum[0][1] /= t;
-	c->frustum[0][2] /= t;
-	c->frustum[0][3] /= t;
+	t = dist3d(f->planes[0][0], f->planes[0][1], f->planes[0][2]);
+	f->planes[0][0] /= t;
+	f->planes[0][1] /= t;
+	f->planes[0][2] /= t;
+	f->planes[0][3] /= t;
 
 	/* Extract the numbers for the LEFT plane */
-	c->frustum[1][0] = clip[ 3] + clip[ 0];
-	c->frustum[1][1] = clip[ 7] + clip[ 4];
-	c->frustum[1][2] = clip[11] + clip[ 8];
-	c->frustum[1][3] = clip[15] + clip[12];
+	f->planes[1][0] = clip[3] + clip[0];
+	f->planes[1][1] = clip[7] + clip[4];
+	f->planes[1][2] = clip[11] + clip[8];
+	f->planes[1][3] = clip[15] + clip[12];
 
 	/* Normalize the result */
-	t = dist3d( c->frustum[1][0], c->frustum[1][1], c->frustum[1][2] );
-	c->frustum[1][0] /= t;
-	c->frustum[1][1] /= t;
-	c->frustum[1][2] /= t;
-	c->frustum[1][3] /= t;
+	t = dist3d(f->planes[1][0], f->planes[1][1], f->planes[1][2]);
+	f->planes[1][0] /= t;
+	f->planes[1][1] /= t;
+	f->planes[1][2] /= t;
+	f->planes[1][3] /= t;
 
 	/* Extract the BOTTOM plane */
-	c->frustum[2][0] = clip[ 3] + clip[ 1];
-	c->frustum[2][1] = clip[ 7] + clip[ 5];
-	c->frustum[2][2] = clip[11] + clip[ 9];
-	c->frustum[2][3] = clip[15] + clip[13];
+	f->planes[2][0] = clip[3] + clip[1];
+	f->planes[2][1] = clip[7] + clip[5];
+	f->planes[2][2] = clip[11] + clip[9];
+	f->planes[2][3] = clip[15] + clip[13];
 
 	/* Normalize the result */
-	t = dist3d( c->frustum[2][0], c->frustum[2][1], c->frustum[2][2] );
-	c->frustum[2][0] /= t;
-	c->frustum[2][1] /= t;
-	c->frustum[2][2] /= t;
-	c->frustum[2][3] /= t;
+	t = dist3d(f->planes[2][0], f->planes[2][1], f->planes[2][2]);
+	f->planes[2][0] /= t;
+	f->planes[2][1] /= t;
+	f->planes[2][2] /= t;
+	f->planes[2][3] /= t;
 
 	/* Extract the TOP plane */
-	c->frustum[3][0] = clip[ 3] - clip[ 1];
-	c->frustum[3][1] = clip[ 7] - clip[ 5];
-	c->frustum[3][2] = clip[11] - clip[ 9];
-	c->frustum[3][3] = clip[15] - clip[13];
+	f->planes[3][0] = clip[3] - clip[1];
+	f->planes[3][1] = clip[7] - clip[5];
+	f->planes[3][2] = clip[11] - clip[9];
+	f->planes[3][3] = clip[15] - clip[13];
 
 	/* Normalize the result */
-	t = dist3d( c->frustum[3][0], c->frustum[3][1], c->frustum[3][2] );
-	c->frustum[3][0] /= t;
-	c->frustum[3][1] /= t;
-	c->frustum[3][2] /= t;
-	c->frustum[3][3] /= t;
+	t = dist3d(f->planes[3][0], f->planes[3][1], f->planes[3][2]);
+	f->planes[3][0] /= t;
+	f->planes[3][1] /= t;
+	f->planes[3][2] /= t;
+	f->planes[3][3] /= t;
 
 	/* Extract the FAR plane */
-	c->frustum[4][0] = clip[ 3] - clip[ 2];
-	c->frustum[4][1] = clip[ 7] - clip[ 6];
-	c->frustum[4][2] = clip[11] - clip[10];
-	c->frustum[4][3] = clip[15] - clip[14];
+	f->planes[4][0] = clip[3] - clip[2];
+	f->planes[4][1] = clip[7] - clip[6];
+	f->planes[4][2] = clip[11] - clip[10];
+	f->planes[4][3] = clip[15] - clip[14];
 
 	/* Normalize the result */
-	t = dist3d( c->frustum[4][0], c->frustum[4][1], c->frustum[4][2] );
-	c->frustum[4][0] /= t;
-	c->frustum[4][1] /= t;
-	c->frustum[4][2] /= t;
-	c->frustum[4][3] /= t;
+	t = dist3d(f->planes[4][0], f->planes[4][1], f->planes[4][2]);
+	f->planes[4][0] /= t;
+	f->planes[4][1] /= t;
+	f->planes[4][2] /= t;
+	f->planes[4][3] /= t;
 
 	/* Extract the NEAR plane */
-	c->frustum[5][0] = clip[ 3] + clip[ 2];
-	c->frustum[5][1] = clip[ 7] + clip[ 6];
-	c->frustum[5][2] = clip[11] + clip[10];
-	c->frustum[5][3] = clip[15] + clip[14];
+	f->planes[5][0] = clip[3] + clip[2];
+	f->planes[5][1] = clip[7] + clip[6];
+	f->planes[5][2] = clip[11] + clip[10];
+	f->planes[5][3] = clip[15] + clip[14];
 
 	/* Normalize the result */
-	t = dist3d( c->frustum[5][0], c->frustum[5][1], c->frustum[5][2] );
-	c->frustum[5][0] /= t;
-	c->frustum[5][1] /= t;
-	c->frustum[5][2] /= t;
-	c->frustum[5][3] /= t;
+	t = dist3d(f->planes[5][0], f->planes[5][1], f->planes[5][2]);
+	f->planes[5][0] /= t;
+	f->planes[5][1] /= t;
+	f->planes[5][2] /= t;
+	f->planes[5][3] /= t;
 }
 
-static void calculate_camera_transform_near_far(struct entity_context *cx, float near, float far)
+static void calculate_camera_transform_near_far(struct camera_info *c, struct frustum *f, float near, float far)
 {
+	f->near = near;
+	f->far = far;
+
 	/* based on gluPerspective to find the right, left, top, and bottom */
-	float scale = tan(cx->camera.angle_of_view * 0.5) * near;
-	float right = ((float) cx->camera.xvpixels / (float) cx->camera.yvpixels * scale);
-	float left = -right;
-	float top = scale;
-	float bottom = -top;
+	float scale = tan(c->angle_of_view * 0.5) * f->near;
+	f->right = ((float) c->xvpixels / (float) c->yvpixels * scale);
+	f->left = -f->right;
+	f->top = scale;
+	f->bottom = -f->top;
 
 	struct mat41 *v; /* camera relative y axis (up/down) */
 	struct mat41 *n; /* camera relative z axis (into view plane) */
 	struct mat41 *u; /* camera relative x axis (left/right) */
 
 	struct mat41 up;
-	up.m[0] = cx->camera.ux;
-	up.m[1] = cx->camera.uy;
-	up.m[2] = cx->camera.uz;
+	up.m[0] = c->ux;
+	up.m[1] = c->uy;
+	up.m[2] = c->uz;
 	up.m[3] = 1;
 
 	/* Translate to camera position... */
-	struct mat44d cameratrans_transform = {{{1, 0, 0, 0},
-						{0, 1, 0, 0},
-						{0, 0, 1, 0},
-						{-cx->camera.x, -cx->camera.y, -cx->camera.z, 1}}};
+	struct mat44d cameratrans_transform = { { { 1, 0, 0, 0 },
+						  { 0, 1, 0, 0 },
+						  { 0, 0, 1, 0 },
+						  { -c->x, -c->y, -c->z, 1} } };
 
 	/* Calculate camera rotation based on look direction ...
 	   http://ksimek.github.io/2012/08/22/extrinsic/ 'The "Look-At" Camera'
@@ -718,9 +728,9 @@ static void calculate_camera_transform_near_far(struct entity_context *cx, float
 	  snis u = s
 	  snis v = u' */
 	struct mat41 look_direction;
-	look_direction.m[0] = (cx->camera.lx - cx->camera.x);
-	look_direction.m[1] = (cx->camera.ly - cx->camera.y);
-	look_direction.m[2] = (cx->camera.lz - cx->camera.z);
+	look_direction.m[0] = (c->lx - c->x);
+	look_direction.m[1] = (c->ly - c->y);
+	look_direction.m[2] = (c->lz - c->z);
 	look_direction.m[3] = 1.0;
 	normalize_vector(&look_direction, &look_direction);
 	n = &look_direction;
@@ -767,39 +777,43 @@ static void calculate_camera_transform_near_far(struct entity_context *cx, float
 	   http://www.scratchapixel.com/lessons/3d-advanced-lessons/perspective-and-orthographic-projection-matrix/opengl-perspective-projection-matrix/
 	*/
 	struct mat44d perspective_transform;
-	perspective_transform.m[0][0] = (2 * near) / (right - left);
+	perspective_transform.m[0][0] = (2 * f->near) / (f->right - f->left);
 	perspective_transform.m[0][1] = 0.0;
 	perspective_transform.m[0][2] = 0.0;
 	perspective_transform.m[0][3] = 0.0;
 	perspective_transform.m[1][0] = 0.0;
-	perspective_transform.m[1][1] = (2.0 * near) / (top - bottom);
+	perspective_transform.m[1][1] = (2.0 * f->near) / (f->top - f->bottom);
 	perspective_transform.m[1][2] = 0.0;
 	perspective_transform.m[1][3] = 0.0;
-	perspective_transform.m[2][0] = (right + left) / (right - left);
-	perspective_transform.m[2][1] = (top + bottom) / (top - bottom);
-	perspective_transform.m[2][2] = -(far + near) / (far - near);
+	perspective_transform.m[2][0] = (f->right + f->left) / (f->right - f->left);
+	perspective_transform.m[2][1] = (f->top + f->bottom) / (f->top - f->bottom);
+	perspective_transform.m[2][2] = -(f->far + f->near) / (f->far - f->near);
 	perspective_transform.m[2][3] = -1.0;
 	perspective_transform.m[3][0] = 0.0;
 	perspective_transform.m[3][1] = 0.0;
-	perspective_transform.m[3][2] = (-2 * far * near) / (far - near);
+	perspective_transform.m[3][2] = (-2 * f->far * f->near) / (f->far - f->near);
 	perspective_transform.m[3][3] = 0.0;
 
+	/* save perspective */
+	f->p_matrix = perspective_transform;
+
 	/* make the view matrix, V = L * T */
-	mat44_product_ddd(&cameralook_transform, &cameratrans_transform, &cx->camera.camera_v_matrix);
+	mat44_product_ddd(&cameralook_transform, &cameratrans_transform, &f->v_matrix);
 
 	/* make the view-perspective matrix, VP = P * V */
-	mat44_product_ddd(&perspective_transform, &cx->camera.camera_v_matrix, &cx->camera.camera_vp_matrix);
+	mat44_product_ddd(&perspective_transform, &f->v_matrix, &f->vp_matrix);
 
-	mat44_product_ddf(&perspective_transform, &cameralook_transform, &cx->camera.skybox_vp_matrix);
+	/* save vp matrix without any camera translation */
+	mat44_product_ddf(&perspective_transform, &cameralook_transform, &f->vp_matrix_no_translate);
 
 	/* pull out the frustum planes for entity culling */
-	extract_frustum_planes(&cx->camera);
+	extract_frustum_planes(f);
 }
 
 void calculate_camera_transform(struct entity_context *cx)
 {
 	/* calculate for the entire frustum */
-	calculate_camera_transform_near_far(cx, cx->camera.near, cx->camera.far);
+	calculate_camera_transform_near_far(&cx->camera, &cx->camera.frustum, cx->camera.near, cx->camera.far);
 }
 
 static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, float radius);
@@ -837,6 +851,8 @@ void render_entities(struct entity_context *cx)
 
 	sng_set_3d_viewport(cx->window_offset_x, cx->window_offset_y, c->xvpixels, c->yvpixels);
 
+	calculate_camera_transform(cx);
+
 	/* see if the fake stars have wandered outside of our immediate area */
 	if (cx->nfakestars > 0) {
 		float r2 = cx->fakestars_radius * cx->fakestars_radius;
@@ -858,24 +874,24 @@ void render_entities(struct entity_context *cx)
 	   since I can't really figure out how to exactly calculate this I will just punt
 	   and figure that we will not be drawing past near * 10000 * 10000 so it can be done
 	   in two passes */
-	int n_near_far;
-	float near_far[2][2];
+	int n_passes;
+	struct frustum rendering_pass[2];
 
 	if (cx->camera.far / cx->camera.near < 10000) {
-		n_near_far = 1;
-		near_far[0][0] = cx->camera.near;
-		near_far[0][1] = cx->camera.far;
+		n_passes = 1;
+		rendering_pass[0] = c->frustum;
 	} else {
-		n_near_far = 2;
-		near_far[0][0] = cx->camera.near * 10000;
-		near_far[0][1] = cx->camera.far;
-		near_far[1][0] = cx->camera.near;
-		near_far[1][1] = cx->camera.near * 10010; /* render a little farther to cover seam */
+		n_passes = 2;
+		calculate_camera_transform_near_far(&cx->camera, &rendering_pass[0],
+			cx->camera.near * 10000, cx->camera.far);
+		calculate_camera_transform_near_far(&cx->camera, &rendering_pass[1],
+			cx->camera.near, cx->camera.near * 10010); /* render a little farther to cover seam */
 	}
 
 	int pass;
-	for (pass = 0; pass < n_near_far; pass++) {
-		calculate_camera_transform_near_far(cx, near_far[pass][0], near_far[pass][1]);
+	for (pass = 0; pass < n_passes; pass++) {
+
+		struct frustum *f = &rendering_pass[pass];
 
 		/* find all entities in view frustum and sort them by distance */
 		n = snis_object_pool_highest_object(cx->entity_pool);
@@ -904,7 +920,7 @@ void render_entities(struct entity_context *cx)
 
 			float max_scale = vec3_cwise_max(&e->scale);
 
-			if (!sphere_in_frustum(c, e->x, e->y, e->z, e->m->radius * max_scale))
+			if (!sphere_in_frustum(f, e->x, e->y, e->z, e->m->radius * max_scale))
 				continue;
 
 			e->dist3dsqrd = dist3dsqrd(c->x - e->x, c->y - e->y, c->z - e->z);
@@ -934,33 +950,30 @@ void render_entities(struct entity_context *cx)
 
 		if (cx->nfar_to_near_entity_depth > 0 || cx->nnear_to_far_entity_depth > 0) {
 			/* need to reset the depth buffer between passes */
-			if (n_near_far > 1 && pass != 0)
+			if (n_passes > 1 && pass != 0)
 				graph_dev_clear_depth_bit();
 
 			sort_entity_distances(cx);
 
 			/* find the position of our light in camera space */
 			struct mat41 camera_light_pos;
-			mat44_x_mat41_dff(&cx->camera.camera_v_matrix, &cx->light, &camera_light_pos);
+			mat44_x_mat41_dff(&f->v_matrix, &cx->light, &camera_light_pos);
 
 			/* render the sorted entities */
 
 			/* near to far first, usually opaque geometry */
 			for (j = 0; j < cx->nnear_to_far_entity_depth; j++) {
 				struct entity *e = &cx->entity_list[cx->near_to_far_entity_depth[j]];
-				render_entity(cx, e, (union vec3 *)&camera_light_pos.m[0]);
+				render_entity(cx, f, e, (union vec3 *)&camera_light_pos.m[0]);
 			}
 
 			/* then far to near, usually blended geometry and software renderer */
 			for (j = 0; j < cx->nfar_to_near_entity_depth; j++) {
 				struct entity *e = &cx->entity_list[cx->far_to_near_entity_depth[j]];
-				render_entity(cx, e, (union vec3 *)&camera_light_pos.m[0]);
+				render_entity(cx, f, e, (union vec3 *)&camera_light_pos.m[0]);
 			}
 		}
 	}
-
-	/* reset the matrices back to the full frustum when done so other transforms can use the whole range */
-	calculate_camera_transform(cx);
 }
 
 void camera_set_pos(struct entity_context *cx, float x, float y, float z)
@@ -1197,12 +1210,12 @@ union quat *entity_get_orientation(struct entity *e)
 
 struct mat44d get_camera_v_transform(struct entity_context *cx)
 {
-	return cx->camera.camera_v_matrix;
+	return cx->camera.frustum.v_matrix;
 }
 
 struct mat44d get_camera_vp_transform(struct entity_context *cx)
 {
-	return cx->camera.camera_vp_matrix;
+	return cx->camera.frustum.vp_matrix;
 }
 
 void set_window_offset(struct entity_context *cx, float x, float y)
