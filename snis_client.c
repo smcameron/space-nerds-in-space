@@ -523,7 +523,7 @@ static double quat_to_heading(const union quat *q)
 	return atan2(-v.v.z, v.v.x);
 }
 
-static int add_generic_object(uint32_t id, double x, double y, double z,
+static int add_generic_object(uint32_t id, uint32_t timestamp, double x, double y, double z,
 		double vx, double vy, double vz,
 		const union quat *orientation, int type, uint16_t alive, struct entity *entity)
 {
@@ -534,10 +534,13 @@ static int add_generic_object(uint32_t id, double x, double y, double z,
 		printf("snis_object_pool_alloc_obj failed\n");
 		return -1;
 	}
+
+	double t = (timestamp == 0) ? universe_timestamp() : (double)timestamp;
+
 	memset(&go[i], 0, sizeof(go[i]));
 	go[i].id = id;
 	go[i].nupdates = 1;
-	go[i].updatetime[0] = universe_timestamp();
+	go[i].updatetime[0] = t;
 	go[i].o[0] = *orientation;
 	go[i].r[0].v.x = x;
 	go[i].r[0].v.y = y;
@@ -563,7 +566,7 @@ static int add_generic_object(uint32_t id, double x, double y, double z,
 	return i;
 }
 
-static void update_generic_object(int index, double x, double y, double z,
+static void update_generic_object(int index, uint32_t timestamp, double x, double y, double z,
 				double vx, double vy, double vz,
 				const union quat *orientation, uint16_t alive)
 {
@@ -577,9 +580,11 @@ static void update_generic_object(int index, double x, double y, double z,
 		o->o[i] = o->o[i-1];
 	}
 
+	double t = (timestamp == 0) ? universe_timestamp() : (double)timestamp;
+
 	/* update the history and leave current for move_objects to take care of */
 	o->nupdates++;
-	o->updatetime[0] = universe_timestamp();
+	o->updatetime[0] = t;
 	o->r[0].v.x = x;
 	o->r[0].v.y = y;
 	o->r[0].v.z = z;
@@ -865,7 +870,7 @@ static struct thrust_attachment_point *ship_thrust_attachment_point(int shiptype
 static void add_ship_thrust_entities(struct entity *thrust_entity[], int *nthrust_entities,
 		struct entity_context *cx, struct entity *e, int shiptype, int impulse);
 
-static int update_econ_ship(uint32_t id, double x, double y, double z,
+static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y, double z,
 			union quat *orientation, uint16_t alive, uint32_t victim_id,
 			uint8_t shiptype, uint8_t ai[], double threat_level,
 			uint8_t npoints, union vec3 *patrol)
@@ -884,7 +889,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 		vx = 0.0;
 		vy = 0.0;
 		vz = 0.0;
-		i = add_generic_object(id, x, y, z, vx, vy, vz, orientation, OBJTYPE_SHIP2, alive, e);
+		i = add_generic_object(id, timestamp, x, y, z, vx, vy, vz, orientation, OBJTYPE_SHIP2, alive, e);
 		if (i < 0) {
 			if (e)
 				remove_entity(ecx, e);
@@ -906,7 +911,7 @@ static int update_econ_ship(uint32_t id, double x, double y, double z,
 					(float) ship_type[shiptype].max_speed);
 		float thrust_size = clampf(throttle / 36.0, 0.1, 5.0);
 
-		update_generic_object(i, x, y, z, vx, vy, vz, orientation, alive); 
+		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, orientation, alive);
 
 		for (j = 0; j < go[i].tsd.ship.nthrust_ports; j++) {
 			struct thrust_attachment_point *ap = ship_thrust_attachment_point(shiptype);
@@ -986,7 +991,7 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	return 0;
 }
 
-static int update_torpedo(uint32_t id, double x, double y, double z, uint32_t ship_id)
+static int update_torpedo(uint32_t id, uint32_t timestamp, double x, double y, double z, uint32_t ship_id)
 {
 	int i;
 	struct entity *e;
@@ -999,7 +1004,7 @@ static int update_torpedo(uint32_t id, double x, double y, double z, uint32_t sh
 			set_render_style(e, torpedo_render_style);
 			update_entity_material(e, &red_torpedo_material);
 		}
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0, &identity_quat, OBJTYPE_TORPEDO, 1, e);
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, &identity_quat, OBJTYPE_TORPEDO, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.torpedo.ship_id = ship_id;
@@ -1007,20 +1012,20 @@ static int update_torpedo(uint32_t id, double x, double y, double z, uint32_t sh
 		if (myship && myship->id == ship_id)
 			weapons_camera_shake = 1.0;
 	} else {
-		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, &identity_quat, 1); 
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, &identity_quat, 1);
 	}
 	return 0;
 }
 
 static void init_laserbeam_data(struct snis_entity *o);
 static void update_laserbeam_segments(struct snis_entity *o);
-static int update_laserbeam(uint32_t id, uint32_t origin, uint32_t target)
+static int update_laserbeam(uint32_t id, uint32_t timestamp, uint32_t origin, uint32_t target)
 {
 	int i;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, 0, 0, 0, 0, 0, 0,
+		i = add_generic_object(id, timestamp, 0, 0, 0, 0, 0, 0,
 			&identity_quat, OBJTYPE_LASERBEAM, 1, NULL);
 		if (i < 0)
 			return i;
@@ -1032,13 +1037,13 @@ static int update_laserbeam(uint32_t id, uint32_t origin, uint32_t target)
 	return 0;
 }
 
-static int update_tractorbeam(uint32_t id, uint32_t origin, uint32_t target)
+static int update_tractorbeam(uint32_t id, uint32_t timestamp, uint32_t origin, uint32_t target)
 {
 	int i;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, 0, 0, 0, 0, 0, 0,
+		i = add_generic_object(id, timestamp, 0, 0, 0, 0, 0, 0,
 				&identity_quat, OBJTYPE_TRACTORBEAM, 1, NULL);
 		if (i < 0)
 			return i;
@@ -1051,7 +1056,7 @@ static int update_tractorbeam(uint32_t id, uint32_t origin, uint32_t target)
 }
 
 
-static int update_laser(uint32_t id, double x, double y, double z,
+static int update_laser(uint32_t id, uint32_t timestamp, double x, double y, double z,
 			union quat *orientation, uint32_t ship_id)
 {
 	int i;
@@ -1065,7 +1070,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 			set_render_style(e, laserbeam_render_style);
 			update_entity_material(e, &green_laser_material);
 		}
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_LASER, 1, e);
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.laser.ship_id = ship_id;
@@ -1075,7 +1080,7 @@ static int update_laser(uint32_t id, double x, double y, double z,
 			turret_recoil_amount = 2.0f;
 		}
 	} else {
-		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, orientation, 1); 
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
 	}
 	return 0;
 }
@@ -1309,7 +1314,7 @@ static void free_laserbeam_data(struct snis_entity *o)
 	}
 }
 
-static int update_spacemonster(uint32_t id, double x, double y, double z)
+static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double y, double z)
 {
 	int i;
 	struct entity *e;
@@ -1319,7 +1324,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 		e = add_entity(ecx, spacemonster_mesh, x, 0, z, SPACEMONSTER_COLOR);
 		if (e)
 			set_render_style(e, RENDER_SPARKLE);
-		i = add_generic_object(id, x, 0, z, 0, 0, 0,
+		i = add_generic_object(id, timestamp, x, 0, z, 0, 0, 0,
 				&identity_quat, OBJTYPE_SPACEMONSTER, 1, e);
 		if (i < 0)
 			return i;
@@ -1329,7 +1334,7 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 		struct spacemonster_data *sd;
 		int n;
 
-		update_generic_object(i, x, 0, z, 0, 0, 0, &identity_quat, 1); 
+		update_generic_object(i, timestamp, x, 0, z, 0, 0, 0, &identity_quat, 1);
 		if (go[i].entity)
 			update_entity_pos(go[i].entity, x, y, z);
 		sd = &go[i].tsd.spacemonster;
@@ -1345,7 +1350,8 @@ static int update_spacemonster(uint32_t id, double x, double y, double z)
 	return 0;
 }
 
-static int update_asteroid(uint32_t id, double x, double y, double z, double vx, double vy, double vz)
+static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, double z,
+	double vx, double vy, double vz)
 {
 	int i, k, m, s;
 	struct entity *e;
@@ -1366,18 +1372,18 @@ static int update_asteroid(uint32_t id, double x, double y, double z, double vx,
 			update_entity_scale(e, s ? s * 3.5 : 1.0);
 			update_entity_material(e, &asteroid_material[id % NASTEROID_TEXTURES]);
 		}
-		i = add_generic_object(id, x, y, z, vx, vy, vz,
+		i = add_generic_object(id, timestamp, x, y, z, vx, vy, vz,
 				&orientation, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
 		o = &go[i];
 		o->tsd.asteroid.rotational_velocity = random_spin[id % NRANDOM_SPINS];
 	} else
-		update_generic_object(i, x, y, z, vx, vy, vz, NULL, 1);
+		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, NULL, 1);
 	return 0;
 }
 
-static int update_cargo_container(uint32_t id, double x, double y, double z)
+static int update_cargo_container(uint32_t id, uint32_t timestamp, double x, double y, double z)
 {
 	int i;
 	struct entity *e;
@@ -1391,7 +1397,7 @@ static int update_cargo_container(uint32_t id, double x, double y, double z)
 		 */
 		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
 		e = add_entity(ecx, cargo_container_mesh, x, y, z, CARGO_CONTAINER_COLOR);
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
 				&orientation, OBJTYPE_CARGO_CONTAINER, 1, e);
 		if (i < 0)
 			return i;
@@ -1403,12 +1409,12 @@ static int update_cargo_container(uint32_t id, double x, double y, double z)
 		vx = x - go[i].x;
 		vy = y - go[i].y;
 		vz = z - go[i].z;
-		update_generic_object(i, x, y, z, vx, vy, vz, NULL, 1);
+		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, NULL, 1);
 	}
 	return 0;
 }
 
-static int update_derelict(uint32_t id, double x, double y, double z, uint8_t ship_kind)
+static int update_derelict(uint32_t id, uint32_t timestamp, double x, double y, double z, uint8_t ship_kind)
 {
 	int i, m;
 	struct entity *e;
@@ -1417,17 +1423,17 @@ static int update_derelict(uint32_t id, double x, double y, double z, uint8_t sh
 	if (i < 0) {
 		m = ship_kind % nshiptypes;
 		e = add_entity(ecx, derelict_mesh[m], x, y, z, SHIP_COLOR);
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
 				&identity_quat, OBJTYPE_DERELICT, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.derelict.rotational_velocity = random_spin[id % NRANDOM_SPINS];
 	} else
-		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 	return 0;
 }
 
-static int update_planet(uint32_t id, double x, double y, double z, double r, uint8_t government,
+static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, double z, double r, uint8_t government,
 				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring,
 				uint8_t security)
 {
@@ -1464,14 +1470,14 @@ static int update_planet(uint32_t id, double x, double y, double z, double r, ui
 				update_entity_parent(ecx, ring, e);
 			}
 		}
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
 		if (e)
 			update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
 	} else {
-		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 	}
 	go[i].tsd.planet.government = government;
 	go[i].tsd.planet.tech_level = tech_level;
@@ -1481,7 +1487,7 @@ static int update_planet(uint32_t id, double x, double y, double z, double r, ui
 	return 0;
 }
 
-static int update_wormhole(uint32_t id, double x, double y, double z)
+static int update_wormhole(uint32_t id, uint32_t timestamp, double x, double y, double z)
 {
 	int i;
 	struct entity *e;
@@ -1495,16 +1501,16 @@ static int update_wormhole(uint32_t id, double x, double y, double z)
 			set_render_style(e, wormhole_render_style);
 			update_entity_material(e, &wormhole_material);
 		}
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_WORMHOLE, 1, e);
 		if (i < 0)
 			return i;
 	} else
-		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 	return 0;
 }
 
-static int update_starbase(uint32_t id, double x, double y, double z)
+static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, double z)
 {
 	int i, m;
 	struct entity *e;
@@ -1515,12 +1521,12 @@ static int update_starbase(uint32_t id, double x, double y, double z)
 		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
 		m = id % NSTARBASE_MODELS;
 		e = add_entity(ecx, starbase_mesh[m], x, y, z, STARBASE_COLOR);
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
 	} else
-		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 	return 0;
 }
 
@@ -1557,7 +1563,7 @@ static void delete_nebula_entry(uint32_t id)
 		(sizeof(nebulaentry[0]) * (nnebula - i)));
 }
 
-static int update_nebula(uint32_t id, double x, double y, double z, double r)
+static int update_nebula(uint32_t id, uint32_t timestamp, double x, double y, double z, double r)
 {
 	int i;
 
@@ -1568,14 +1574,14 @@ static int update_nebula(uint32_t id, double x, double y, double z, double r)
 			update_entity_material(e, &nebula_material[id % NNEBULA_MATERIALS]);
 			update_entity_scale(e, r * 2.0);
 		}
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
 					&identity_quat, OBJTYPE_NEBULA, 1, e);
 		if (i < 0)
 			return i;
 		add_nebula_entry(go[i].id, x, z, r);
 	} else {
 		struct snis_entity *o = &go[i];
-		update_generic_object(i, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 		if (o->entity)
 			update_entity_scale(o->entity, r * 2.0);
 	}
@@ -2042,13 +2048,13 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 	}
 }
 
-static int update_explosion(uint32_t id, double x, double y, double z,
+static int update_explosion(uint32_t id, uint32_t timestamp, double x, double y, double z,
 		uint16_t nsparks, uint16_t velocity, uint16_t time, uint8_t victim_type)
 {
 	int i;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		i = add_generic_object(id, x, y, z, 0.0, 0.0, 0.0,
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
 					&identity_quat, OBJTYPE_EXPLOSION, 1, NULL);
 		if (i < 0)
 			return i;
@@ -3504,13 +3510,13 @@ static int process_update_ship_packet(uint8_t opcode)
 			if (e)
 				add_ship_thrust_entities(NULL, NULL, ecx, e, shiptype, 36);
 		}
-		i = add_generic_object(id, dx, dy, dz, 0.0, 0.0, 0.0, &orientation, type, alive, e);
+		i = add_generic_object(id, timestamp, dx, dy, dz, 0.0, 0.0, 0.0, &orientation, type, alive, e);
 		if (i < 0) {
 			rc = i;
 			goto out;
 		}
 	} else {
-		update_generic_object(i, dx, dy, dz, 0.0, 0.0, 0.0, &orientation, alive);
+		update_generic_object(i, timestamp, dx, dy, dz, 0.0, 0.0, 0.0, &orientation, alive);
 	}
 	o = &go[i];
 	o->tsd.ship.yaw_velocity = dyawvel;
@@ -3711,7 +3717,7 @@ static int process_update_econ_ship_packet(uint8_t opcode)
 
 done:
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_econ_ship(id, dx, dy, dz, &orientation, alive, victim_id,
+	rc = update_econ_ship(id, timestamp, dx, dy, dz, &orientation, alive, victim_id,
 				shiptype, ai, threat_level, npoints, patrol);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
@@ -3731,7 +3737,7 @@ static int process_update_torpedo_packet(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_torpedo(id, dx, dy, dz, ship_id);
+	rc = update_torpedo(id, timestamp, dx, dy, dz, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -3777,7 +3783,7 @@ static int process_update_laser_packet(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_laser(id, dx, dy, dz, &orientation, ship_id);
+	rc = update_laser(id, timestamp, dx, dy, dz, &orientation, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -3796,7 +3802,7 @@ static int process_update_spacemonster(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_spacemonster(id, dx, dy, dz);
+	rc = update_spacemonster(id, timestamp, dx, dy, dz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }
@@ -4340,7 +4346,7 @@ static int process_update_asteroid_packet(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_asteroid(id, dx, dy, dz, dvx, dvy, dvz);
+	rc = update_asteroid(id, timestamp, dx, dy, dz, dvx, dvy, dvz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -4360,7 +4366,7 @@ static int process_update_cargo_container_packet(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_cargo_container(id, dx, dy, dz);
+	rc = update_cargo_container(id, timestamp, dx, dy, dz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -4381,7 +4387,7 @@ static int process_update_derelict_packet(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_derelict(id, dx, dy, dz, shiptype);
+	rc = update_derelict(id, timestamp, dx, dy, dz, shiptype);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -4409,7 +4415,7 @@ static int process_update_planet_packet(void)
 	if (hasring)
 		dr = -dr;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_planet(id, dx, dy, dz, dr, government, tech_level,
+	rc = update_planet(id, timestamp, dx, dy, dz, dr, government, tech_level,
 				economy, dseed, hasring, security);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
@@ -4430,7 +4436,7 @@ static int process_update_wormhole_packet(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_wormhole(id, dx, dy, dz);
+	rc = update_wormhole(id, timestamp, dx, dy, dz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -4448,7 +4454,7 @@ static int process_update_starbase_packet(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_starbase(id, dx, dy, dz);
+	rc = update_starbase(id, timestamp, dx, dy, dz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -4469,7 +4475,7 @@ static int process_update_nebula_packet(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_nebula(id, dx, dy, dz, r);
+	rc = update_nebula(id, timestamp, dx, dy, dz, r);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -4484,7 +4490,7 @@ static int process_update_laserbeam(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_laserbeam(id, origin, target);
+	rc = update_laserbeam(id, timestamp, origin, target);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -4499,7 +4505,7 @@ static int process_update_tractorbeam(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_tractorbeam(id, origin, target);
+	rc = update_tractorbeam(id, timestamp, origin, target);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -4521,7 +4527,7 @@ static int process_update_explosion_packet(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_explosion(id, dx, dy, dz, nsparks, velocity, time, victim_type);
+	rc = update_explosion(id, timestamp, dx, dy, dz, nsparks, velocity, time, victim_type);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }
