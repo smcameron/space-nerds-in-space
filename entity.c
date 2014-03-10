@@ -203,6 +203,13 @@ void update_entity_scale(struct entity *e, float scale)
 	vec3_init(&e->e_scale, scale, scale, scale);
 }
 
+void entity_get_non_uniform_scale(struct entity *e, float *x_scale, float *y_scale, float *z_scale)
+{
+	*x_scale = e->e_scale.v.x;
+	*y_scale = e->e_scale.v.y;
+	*z_scale = e->e_scale.v.z;
+}
+
 void update_entity_non_uniform_scale(struct entity *e, float x_scale, float y_scale, float z_scale)
 {
 	vec3_init(&e->e_scale, x_scale, y_scale, z_scale);
