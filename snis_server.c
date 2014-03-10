@@ -4179,6 +4179,8 @@ static void explosion_move(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 }
 
+static void queue_up_to_clients_that_care(struct snis_entity *o);
+
 static int add_generic_object(double x, double y, double z,
 				double vx, double vy, double vz, double heading, int type)
 {
@@ -5117,6 +5119,7 @@ static int add_laser(double x, double y, double z,
 		union vec3 to = { { vx, vy, vz } };
 		quat_from_u2v(&go[i].orientation, &from, &to, NULL);
 	}
+	queue_up_to_clients_that_care(&go[i]);
 	return i;
 }
 
