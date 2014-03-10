@@ -9491,6 +9491,25 @@ static void queue_up_client_updates(struct game_client *c)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static void queue_up_to_clients_that_care(struct snis_entity *o)
+{
+	int i;
+	for (i = 0; i < nclients; i++) {
+		struct game_client *c = &client[i];
+
+		if (!c->refcount)
+			continue;
+
+		if (too_far_away_to_care(c, o))
+			return;
+
+		if (o->timestamp != c->go_clients[go_index(o)].last_timestamp_sent) {
+			queue_up_client_object_update(c, o);
+			c->go_clients[go_index(o)].last_timestamp_sent = o->timestamp;
+		}
+	}
+}
+
 static void queue_up_client_id(struct game_client *c)
 {
 	/* tell the client what his ship id is. */
