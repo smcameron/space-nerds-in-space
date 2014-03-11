@@ -4160,6 +4160,7 @@ static struct science_ui {
 	struct button *threed_button;
 	struct button *sciplane_button;
 	struct button *twod_button;
+	struct button *tractor_button;
 } sci_ui;
 
 static int process_sci_details(void)
@@ -8969,6 +8970,13 @@ static void sci_sciplane_pressed(void *x)
 		(unsigned char) SCI_DETAILS_MODE_SCIPLANE));
 }
 
+static void sci_tractor_pressed(void *x)
+{
+	uint32_t id = curr_science_guy ? curr_science_guy->id : (uint32_t) 0xffffffff;
+
+	queue_to_server(packed_buffer_new("bw", OPCODE_REQUEST_TRACTORBEAM, id));
+}
+
 static void init_science_ui(void)
 {
 	sci_ui.scizoom = snis_slider_init(350, 35, 300, 12, DARKGREEN, "RANGE", "0", "100",
@@ -8980,11 +8988,13 @@ static void init_science_ui(void)
 	snis_slider_set_label_font(sci_ui.scipower, NANO_FONT);
 	sci_ui.twod_button = snis_button_init(370, 575, 40, 20, "2D",
 			GREEN, NANO_FONT, sci_twod_pressed, (void *) 0);
-	sci_ui.sciplane_button = snis_button_init(615, 575, 40, 20, "SRS",
+	sci_ui.tractor_button = snis_button_init(530, 575, 85, 20, "TRACTOR",
+			GREEN, NANO_FONT, sci_tractor_pressed, (void *) 0);
+	sci_ui.sciplane_button = snis_button_init(620, 575, 40, 20, "SRS",
 			GREEN, NANO_FONT, sci_sciplane_pressed, (void *) 0);
-	sci_ui.threed_button = snis_button_init(660, 575, 40, 20, "LRS",
+	sci_ui.threed_button = snis_button_init(665, 575, 40, 20, "LRS",
 			GREEN, NANO_FONT, sci_threed_pressed, (void *) 0);
-	sci_ui.details_button = snis_button_init(705, 575, 75, 20, "DETAILS",
+	sci_ui.details_button = snis_button_init(710, 575, 75, 20, "DETAILS",
 			GREEN, NANO_FONT, sci_details_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
@@ -8992,6 +9002,7 @@ static void init_science_ui(void)
 #if 0
 	ui_add_button(sci_ui.twod_button, DISPLAYMODE_SCIENCE);
 #endif
+	ui_add_button(sci_ui.tractor_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE);
 	sciecx = entity_context_new(50, 10);

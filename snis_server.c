@@ -8709,40 +8709,35 @@ laserfail:
 #endif
 }
 
-
-
-
 static int process_request_tractor_beam(struct game_client *c)
 {
+	unsigned char buffer[10];
 	struct snis_entity *tb, *ship = &go[c->ship_index];
-	int tid, i;
+	uint32_t oid;
+	int rc, i;
 
+	rc = read_and_unpack_buffer(c, buffer, "w", &oid);
+	if (rc)
+		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	if (ship->tsd.ship.ai[0].u.attack.victim_id < 0 && ship->tsd.ship.tractor_beam == -1)
+	if (oid == (uint32_t) 0xffffffff) /* turn off tractor beam */
+		goto turn_off_tractorbeam;
+	i = lookup_by_id(oid);
+	if (i < 0)
 		goto tractorfail;
 
-	if (ship->tsd.ship.tractor_beam != -1) {
-		/* turn off the tractor beam */
-		i = lookup_by_id(ship->tsd.ship.tractor_beam);
-		if (i < 0) {
-			/* thing we were tractoring died. */
-			ship->tsd.ship.tractor_beam = -1;
-			pthread_mutex_unlock(&universe_mutex);
-			return 0;
-		}
-		tb = &go[i];
-		delete_from_clients_and_server(tb);
-		ship->tsd.ship.tractor_beam = -1;
-		pthread_mutex_unlock(&universe_mutex);
-		return 0;
-	}
+	if (ship->tsd.ship.tractor_beam != -1)
+		goto turn_off_tractorbeam;
 
-	tid = ship->tsd.ship.ai[0].u.attack.victim_id;
 	/* TODO: check tractor beam energy here */
 	if (0) 
 		goto tractorfail;
 
-	add_tractorbeam(ship, tid, 30);
+	/* TODO check tractor distance here */
+	if (0)
+		goto tractorfail;
+
+	add_tractorbeam(ship, oid, 30);
 	/* TODO: tractor beam sound here. */
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
@@ -8752,8 +8747,21 @@ tractorfail:
 	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
-}
 
+turn_off_tractorbeam:
+	i = lookup_by_id(ship->tsd.ship.tractor_beam);
+	if (i < 0) {
+		/* thing we were tractoring died. */
+		ship->tsd.ship.tractor_beam = -1;
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	tb = &go[i];
+	delete_from_clients_and_server(tb);
+	ship->tsd.ship.tractor_beam = -1;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
 
 static int process_demon_fire_phaser(struct game_client *c)
 {
