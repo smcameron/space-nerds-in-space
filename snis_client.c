@@ -1946,6 +1946,7 @@ static void move_objects(void)
 			o->move(o);
 			break;
 		case OBJTYPE_PLANET:
+		case OBJTYPE_NEBULA:
 			move_object(timestamp, o, &interpolate_orientated_object);
 			break;
 		default:
