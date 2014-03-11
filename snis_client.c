@@ -311,6 +311,7 @@ struct mesh **derelict_mesh;
 static struct material nebula_material[NNEBULA_MATERIALS];
 static struct material red_torpedo_material;
 static struct material red_laser_material;
+static struct material blue_tractor_material;
 static struct material green_laser_material;
 static struct material spark_material;
 static struct material warp_effect_material;
@@ -1052,7 +1053,7 @@ static int update_tractorbeam(uint32_t id, uint32_t timestamp, uint32_t origin, 
 			return i;
 		go[i].tsd.laserbeam.origin = origin;
 		go[i].tsd.laserbeam.target = target;
-		go[i].tsd.laserbeam.material = &red_laser_material;
+		go[i].tsd.laserbeam.material = &blue_tractor_material;
 		init_laserbeam_data(&go[i]);
 		go[i].move = update_laserbeam_segments;
 	} /* nothing to do */
@@ -11896,6 +11897,11 @@ static void load_textures(void)
 	red_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
 	red_laser_material.texture_mapped_unlit.texture_id = load_texture("red-laser-texture.png");
 	red_laser_material.texture_mapped_unlit.do_blend = 1;
+
+	material_init_texture_mapped_unlit(&blue_tractor_material);
+	blue_tractor_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
+	blue_tractor_material.texture_mapped_unlit.texture_id = load_texture("blue-tractor-texture.png");
+	blue_tractor_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&red_torpedo_material);
 	red_torpedo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
