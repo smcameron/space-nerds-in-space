@@ -23,7 +23,6 @@ Too much to list, but here's a list anyway:
 * Weapons screen
 
 * Science station
-  take damage into account
 
 * Setup screen
   Try to make it more intuitive for people who are seeing it for
@@ -35,6 +34,7 @@ Too much to list, but here's a list anyway:
 * computer-controlled-ships
   loads of AI improvements and basic functionality 
   remains to be done.
+  Avoid going inside/through planets.
 
 * starbase behavior
   improve docking with starbase
@@ -44,7 +44,6 @@ Too much to list, but here's a list anyway:
 * 3D out the window view
   Fade distant objects to black
   Represent nebulas somehow
-  finish conversion to opengl
 
 * comms screen:
   need to be able to communicate with starbases -- request
@@ -54,17 +53,15 @@ Too much to list, but here's a list anyway:
 
 * Damage control screen:
   Make the various components of the systems less generic
+  Make damage control a bit less useless
 
 * Need sound for wormhole travel
 * I think the universe needs to be bigger, you can see too far out
   the main screen relative to the instruments, size of the universe.
   Or else maybe some kind of fog.
-* How to represent nebulae on the main screen?
 * joystick support for weapons and nav, and maybe others.
 * allow mining of asteroids, asteroid mining bots or something
 * trading of stuff mined from asteroids at stations.
-* place stations more carefully relative to one another (not right next
-  door to another station.)
 * Need to be able to checkpoint-restart universe state on server side
   (how do lua scripts fit into checkpoint restart?)
 * Right now, laser/torpedo collision detection is too easy/sloppy.
@@ -72,9 +69,9 @@ Too much to list, but here's a list anyway:
   basically, flesh out the lua scripting system.
 * Remove use of "heading" field in snis_entity
 * Make space monster do something interesting
+* Make space monster work again 
 * Allow to somehow mine asteroids and derelicts for something (fuel?)
 * make tractor beam work again/better.
-* some kind of visual effect for ships that are warping
 
 NICE TO HAVE:
 
