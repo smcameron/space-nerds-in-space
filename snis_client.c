@@ -8980,11 +8980,11 @@ static void init_science_ui(void)
 	snis_slider_set_label_font(sci_ui.scipower, NANO_FONT);
 	sci_ui.twod_button = snis_button_init(370, 575, 40, 20, "2D",
 			GREEN, NANO_FONT, sci_twod_pressed, (void *) 0);
-	sci_ui.sciplane_button = snis_button_init(410, 575, 40, 20, "3DP",
+	sci_ui.sciplane_button = snis_button_init(615, 575, 40, 20, "SRS",
 			GREEN, NANO_FONT, sci_sciplane_pressed, (void *) 0);
-	sci_ui.threed_button = snis_button_init(450, 575, 40, 20, "3DB",
+	sci_ui.threed_button = snis_button_init(660, 575, 40, 20, "LRS",
 			GREEN, NANO_FONT, sci_threed_pressed, (void *) 0);
-	sci_ui.details_button = snis_button_init(490, 575, 75, 20, "DETAILS",
+	sci_ui.details_button = snis_button_init(705, 575, 75, 20, "DETAILS",
 			GREEN, NANO_FONT, sci_details_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
