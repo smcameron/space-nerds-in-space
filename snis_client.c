@@ -1033,6 +1033,7 @@ static int update_laserbeam(uint32_t id, uint32_t timestamp, uint32_t origin, ui
 			return i;
 		go[i].tsd.laserbeam.origin = origin;
 		go[i].tsd.laserbeam.target = target;
+		go[i].tsd.laserbeam.material = &red_laser_material;
 		init_laserbeam_data(&go[i]);
 		go[i].move = update_laserbeam_segments;
 	} /* nothing to do */
@@ -1051,6 +1052,7 @@ static int update_tractorbeam(uint32_t id, uint32_t timestamp, uint32_t origin, 
 			return i;
 		go[i].tsd.laserbeam.origin = origin;
 		go[i].tsd.laserbeam.target = target;
+		go[i].tsd.laserbeam.material = &red_laser_material;
 		init_laserbeam_data(&go[i]);
 		go[i].move = update_laserbeam_segments;
 	} /* nothing to do */
@@ -1246,7 +1248,7 @@ static void update_laserbeam_segments(struct snis_entity *o)
 		if (ld->entity[i]) {
 			update_entity_pos(ld->entity[i], ld->x[i], ld->y[i], ld->z[i]);
 			update_entity_orientation(ld->entity[i], &orientation);
-			update_entity_material(ld->entity[i], &red_laser_material);
+			update_entity_material(ld->entity[i], o->tsd.laserbeam.material);
 		}
 	}
 }

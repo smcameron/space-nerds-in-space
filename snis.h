@@ -506,6 +506,7 @@ struct laserbeam_data {
 	uint8_t power;
 	uint8_t wavelength;
 	struct entity **entity;
+	struct material *material;
 };
 
 /* Cribbed from Oolite */
