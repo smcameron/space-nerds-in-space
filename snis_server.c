@@ -8709,10 +8709,27 @@ laserfail:
 #endif
 }
 
+static void turn_off_tractorbeam(struct snis_entity *ship)
+{
+	int i;
+	struct snis_entity *tb;
+
+	/* universe lock must be held already. */
+	i = lookup_by_id(ship->tsd.ship.tractor_beam);
+	if (i < 0) {
+		/* thing we were tractoring died. */
+		ship->tsd.ship.tractor_beam = -1;
+		return;
+	}
+	tb = &go[i];
+	delete_from_clients_and_server(tb);
+	ship->tsd.ship.tractor_beam = -1;
+}
+
 static int process_request_tractor_beam(struct game_client *c)
 {
 	unsigned char buffer[10];
-	struct snis_entity *tb, *ship = &go[c->ship_index];
+	struct snis_entity *ship = &go[c->ship_index];
 	uint32_t oid;
 	int rc, i;
 
@@ -8720,14 +8737,18 @@ static int process_request_tractor_beam(struct game_client *c)
 	if (rc)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	if (oid == (uint32_t) 0xffffffff) /* turn off tractor beam */
-		goto turn_off_tractorbeam;
+	if (oid == (uint32_t) 0xffffffff) { /* nothing selected, turn off tractor beam */
+		turn_off_tractorbeam(ship);
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
 	i = lookup_by_id(oid);
 	if (i < 0)
 		goto tractorfail;
 
+	/* If something is already tractored, turn off beam... */
 	if (ship->tsd.ship.tractor_beam != -1)
-		goto turn_off_tractorbeam;
+		turn_off_tractorbeam(ship);
 
 	/* TODO: check tractor beam energy here */
 	if (0) 
@@ -8745,20 +8766,6 @@ static int process_request_tractor_beam(struct game_client *c)
 tractorfail:
 	/* TODO: make special tractor failure sound */
 	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
-	pthread_mutex_unlock(&universe_mutex);
-	return 0;
-
-turn_off_tractorbeam:
-	i = lookup_by_id(ship->tsd.ship.tractor_beam);
-	if (i < 0) {
-		/* thing we were tractoring died. */
-		ship->tsd.ship.tractor_beam = -1;
-		pthread_mutex_unlock(&universe_mutex);
-		return 0;
-	}
-	tb = &go[i];
-	delete_from_clients_and_server(tb);
-	ship->tsd.ship.tractor_beam = -1;
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
