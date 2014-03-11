@@ -594,6 +594,7 @@ struct snis_entity_science_data {
 
 struct snis_entity {
 	int nupdates;
+	union vec3 birth_r;
 	double updatetime[SNIS_ENTITY_NUPDATE_HISTORY];
 	uint32_t id;
 	union vec3 r[SNIS_ENTITY_NUPDATE_HISTORY];

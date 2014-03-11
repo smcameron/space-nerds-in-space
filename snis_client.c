@@ -546,6 +546,8 @@ static int add_generic_object(uint32_t id, uint32_t timestamp, double x, double 
 	go[i].r[0].v.y = y;
 	go[i].r[0].v.z = z;
 
+	go[i].birth_r = go[i].r[0];
+
 	/* entity move will update this */
 	go[i].x = 0;
 	go[i].y = 0;
