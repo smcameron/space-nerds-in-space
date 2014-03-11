@@ -1692,9 +1692,11 @@ static inline void spin_derelict(struct snis_entity *o)
 	arbitrary_spin(o, &o->tsd.derelict.rotational_velocity);
 }
 
-typedef void(*interpolate_update_func)(struct snis_entity *o, int visible, int from_index, int to_index, float t);
+typedef void(*interpolate_update_func)(double timestamp, struct snis_entity *o, int visible,
+	int from_index, int to_index, float t);
 
-static void interpolate_generic_object(struct snis_entity *o, int visible, int from_index, int to_index, float t)
+static void interpolate_generic_object(double timestamp, struct snis_entity *o, int visible,
+	int from_index, int to_index, float t)
 {
 #ifdef INTERP_DEBUG
 	printf("  interpolate_pos_generic_object: from=%d to=%d update_delta=%f, t=%f\n", from_index,
@@ -1719,7 +1721,8 @@ static void interpolate_generic_object(struct snis_entity *o, int visible, int f
 	}
 }
 
-static void interpolate_orientated_object(struct snis_entity *o, int visible, int from_index, int to_index, float t)
+static void interpolate_orientated_object(double timestamp, struct snis_entity *o,
+	int visible, int from_index, int to_index, float t)
 {
 #ifdef INTERP_DEBUG
 	printf("  interpolate_orientated_generic_object: from=%d to=%d update_delta=%f, t=%f\n", from_index, to_index,
@@ -1768,6 +1771,34 @@ static void interpolate_orientated_object(struct snis_entity *o, int visible, in
 	}
 }
 
+static void interpolate_laser(double timestamp, struct snis_entity *o, int visible,
+	int from_index, int to_index, float t)
+{
+	/* do the standard interpolation */
+	interpolate_orientated_object(timestamp, o, visible, from_index, to_index, t);
+
+	/* set the scaling based on the object age */
+	if (!o->entity)
+		return;
+
+	struct mesh *m = entity_get_mesh(o->entity);
+	if (!m)
+		return;
+
+	/* find out how far the laser has traveled */
+	union vec3 pos = { { o->x, o->y, o->z } };
+	vec3_sub_self(&pos, &o->birth_r);
+	float dist = vec3_magnitude(&pos);
+
+	/* laser bolts are forced to 1.0 scale so we can shrink x to distance traveled */
+	float length_scale = clampf(dist / m->radius, 0.0, 1.0);
+	update_entity_non_uniform_scale(o->entity, length_scale, 1.0, 1.0);
+
+#ifdef INTERP_DEBUG
+	printf("  interpolate_laser: dist=%f length_scale=%f\n", dist, length_scale);
+#endif
+}
+
 static void move_object(double timestamp, struct snis_entity *o, interpolate_update_func interp_func)
 {
 	int nupdates = MIN(SNIS_ENTITY_NUPDATE_HISTORY, o->nupdates);
@@ -1787,7 +1818,7 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 		if (visible)
 			printf("  showing anyways as update is old\n");
 #endif
-		interp_func(o, visible, 0, 0, 0);
+		interp_func(timestamp, o, visible, 0, 0, 0);
 		return;
 	}
 
@@ -1812,7 +1843,7 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 			o->updatetime[nupdates-1] - target_time);
 #endif
 		/* hide until time catches up to the oldtest update */
-		interp_func(o, 0, nupdates-1, nupdates-1, 0);
+		interp_func(timestamp, o, 0, nupdates-1, nupdates-1, 0);
 		return;
 	}
 
@@ -1827,7 +1858,7 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 			printf("move_object: first update too old to interp into future, newest_update_delta=%f\n",
 				target_time - o->updatetime[to_index]);
 #endif
-			interp_func(o, visible, to_index, to_index, 0);
+			interp_func(timestamp, o, visible, to_index, to_index, 0);
 			return;
 		}
 
@@ -1837,7 +1868,7 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 			printf("move_object: second update to far from first to interp into future, diff=%f\n",
 				o->updatetime[to_index] - o->updatetime[from_index]);
 #endif
-			interp_func(o, visible, to_index, to_index, 0);
+			interp_func(timestamp, o, visible, to_index, to_index, 0);
 			return;
 		}
 
@@ -1854,7 +1885,7 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 			o->updatetime[to_index] - o->updatetime[from_index]);
 #endif
 		/* since "to" is in the future we need to wait for that time to be at "to" */
-		interp_func(o, visible, from_index, from_index, 0);
+		interp_func(timestamp, o, visible, from_index, from_index, 0);
 		return;
 	}
 
@@ -1866,7 +1897,7 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 	double t = (target_time - o->updatetime[from_index]) /
 			(o->updatetime[to_index] - o->updatetime[from_index]);
 
-	interp_func(o, visible, from_index, to_index, t);
+	interp_func(timestamp, o, visible, from_index, to_index, t);
 }
 
 static void move_objects(void)
@@ -1893,6 +1924,8 @@ static void move_objects(void)
 			spin_starbase(o);
 			break;
 		case OBJTYPE_LASER:
+			move_object(timestamp, o, &interpolate_laser);
+			break;
 		case OBJTYPE_TORPEDO:
 			move_object(timestamp, o, &interpolate_orientated_object);
 			break;
@@ -12410,7 +12443,7 @@ static void init_meshes()
 	spacemonster_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
 	laserbeam_nav_mesh = snis_read_model(d, "long-triangular-prism.stl");
 #ifndef WITHOUTOPENGL
-	laserbeam_mesh = mesh_fabricate_billboard(85, 0, 200, 5);
+	laserbeam_mesh = mesh_fabricate_billboard(0, 0, 200, 5);
 #else
 	laserbeam_mesh = laserbeam_nav_mesh;
 #endif
