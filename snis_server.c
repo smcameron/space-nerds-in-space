@@ -8663,7 +8663,8 @@ static int process_request_manual_laser(struct game_client *c)
 	struct snis_entity *ship = &go[c->ship_index];
 	union vec3 forwardvec = { { LASER_VELOCITY, 0.0f, 0.0f } };
 	union vec3 turret_pos = { { 0.0f, 5.45, 0.0f } };
-	union vec3 barrel_offset = { { 0.0f, 0.0f, 1.4f } };
+	union vec3 barrel_r_offset = { { 4.0f, 0.0f, 1.4f } };
+	union vec3 barrel_l_offset = { { 4.0f, 0.0f, -1.4f } };
 	union vec3 velocity;
 	union quat orientation;
 
@@ -8674,7 +8675,8 @@ static int process_request_manual_laser(struct game_client *c)
 
 	quat_mul(&orientation, &ship->orientation, &ship->tsd.ship.weap_orientation);
 	quat_rot_vec(&velocity, &forwardvec, &orientation);
-	quat_rot_vec_self(&barrel_offset, &orientation);
+	quat_rot_vec_self(&barrel_r_offset, &orientation);
+	quat_rot_vec_self(&barrel_l_offset, &orientation);
 
 	/* Add ship velocity into laser velocity */
 	velocity.v.x += ship->vx;
@@ -8683,11 +8685,11 @@ static int process_request_manual_laser(struct game_client *c)
 
 	union vec3 right_bolt = { { ship->x, ship->y, ship->z } };
 	vec3_add_self(&right_bolt, &turret_pos);
-	vec3_add_self(&right_bolt, &barrel_offset);
+	vec3_add_self(&right_bolt, &barrel_r_offset);
 
 	union vec3 left_bolt = { { ship->x, ship->y, ship->z } };
 	vec3_add_self(&left_bolt, &turret_pos);
-	vec3_sub_self(&left_bolt, &barrel_offset);
+	vec3_add_self(&left_bolt, &barrel_l_offset);
 
 	if (ship->tsd.ship.phaser_charge > 0) {
 		add_laser(right_bolt.v.x, right_bolt.v.y, right_bolt.v.z,
