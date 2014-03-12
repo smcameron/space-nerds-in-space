@@ -10013,8 +10013,8 @@ static void send_update_torpedo_packet(struct game_client *c,
 static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("bwwwSSSQ", OPCODE_UPDATE_LASER,
-					o->id, o->timestamp, o->tsd.laser.ship_id,
+	pb_queue_to_client(c, packed_buffer_new("bwwwbSSSQ", OPCODE_UPDATE_LASER,
+					o->id, o->timestamp, o->tsd.laser.ship_id, o->tsd.laser.power,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,

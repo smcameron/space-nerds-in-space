@@ -1055,7 +1055,7 @@ static int update_tractorbeam(uint32_t id, uint32_t timestamp, uint32_t origin, 
 }
 
 
-static int update_laser(uint32_t id, uint32_t timestamp, double x, double y, double z,
+static int update_laser(uint32_t id, uint32_t timestamp, uint8_t power, double x, double y, double z,
 			union quat *orientation, uint32_t ship_id)
 {
 	int i;
@@ -1073,6 +1073,7 @@ static int update_laser(uint32_t id, uint32_t timestamp, double x, double y, dou
 		if (i < 0)
 			return i;
 		go[i].tsd.laser.ship_id = ship_id;
+		go[i].tsd.laser.power = power;
 		myship = find_my_ship();
 		if (myship && myship->id == ship_id) {
 			weapons_camera_shake = 1.0;
@@ -3769,12 +3770,13 @@ static int process_update_laser_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, timestamp, ship_id;
+	uint8_t power;
 	double dx, dy, dz;
 	union quat orientation;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_laser_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwwSSSQ", &id, &timestamp, &ship_id,
+	rc = read_and_unpack_buffer(buffer, "wwwbSSSQ", &id, &timestamp, &ship_id, &power,
 				&dx, (int32_t) UNIVERSE_DIM,
 				&dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
@@ -3782,7 +3784,7 @@ static int process_update_laser_packet(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_laser(id, timestamp, dx, dy, dz, &orientation, ship_id);
+	rc = update_laser(id, timestamp, power, dx, dy, dz, &orientation, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
