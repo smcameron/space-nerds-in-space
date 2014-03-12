@@ -290,6 +290,7 @@ struct mesh *debris2_mesh;
 struct mesh *wormhole_mesh;
 struct mesh *spacemonster_mesh;
 struct mesh *laserbeam_mesh;
+struct mesh *phaser_mesh;
 struct mesh *laserbeam_nav_mesh;
 struct mesh *ship_icon_mesh;
 struct mesh *heading_indicator_mesh;
@@ -306,7 +307,7 @@ static struct material nebula_material[NNEBULA_MATERIALS];
 static struct material red_torpedo_material;
 static struct material red_laser_material;
 static struct material blue_tractor_material;
-static struct material green_laser_material;
+static struct material green_phaser_material;
 static struct material spark_material;
 static struct material warp_effect_material;
 static struct material sun_material;
@@ -1064,10 +1065,10 @@ static int update_laser(uint32_t id, uint32_t timestamp, uint8_t power, double x
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, laserbeam_mesh, x, y, z, LASER_COLOR);
+		e = add_entity(ecx, phaser_mesh, x, y, z, LASER_COLOR);
 		if (e) {
 			set_render_style(e, laserbeam_render_style);
-			update_entity_material(e, &green_laser_material);
+			update_entity_material(e, &green_phaser_material);
 		}
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
@@ -1754,9 +1755,11 @@ static void interpolate_laser(double timestamp, struct snis_entity *o, int visib
 	vec3_sub_self(&pos, &o->birth_r);
 	float dist = vec3_magnitude(&pos);
 
+	float radius_scale = fmaxf(0.5, o->tsd.laser.power / 255.0);
+
 	/* laser bolts are forced to 1.0 scale so we can shrink x to distance traveled */
 	float length_scale = clampf(dist / m->radius, 0.0, 1.0);
-	update_entity_non_uniform_scale(o->entity, length_scale, 1.0, 1.0);
+	update_entity_non_uniform_scale(o->entity, length_scale, radius_scale, radius_scale);
 
 #ifdef INTERP_DEBUG
 	printf("  interpolate_laser: dist=%f length_scale=%f\n", dist, length_scale);
@@ -11348,10 +11351,10 @@ static void load_textures(void)
 		return;
 	load_skybox_textures(skybox_texture_prefix);
 
-	material_init_texture_mapped_unlit(&green_laser_material);
-	green_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
-	green_laser_material.texture_mapped_unlit.texture_id = load_texture("green-laser-texture.png");
-	green_laser_material.texture_mapped_unlit.do_blend = 1;
+	material_init_textured_particle(&green_phaser_material);
+	green_phaser_material.textured_particle.texture_id = load_texture("green-burst.png");
+	green_phaser_material.textured_particle.radius = 0.75;
+	green_phaser_material.textured_particle.time_base = 0.25;
 
 	material_init_texture_mapped_unlit(&red_laser_material);
 	red_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
@@ -11913,8 +11916,10 @@ static void init_meshes()
 	laserbeam_nav_mesh = snis_read_model(d, "long-triangular-prism.stl");
 #ifndef WITHOUTOPENGL
 	laserbeam_mesh = mesh_fabricate_billboard(0, 0, 200, 5);
+	phaser_mesh = init_burst_rod_mesh(1000, LASER_VELOCITY * 2 / 3, 0.5, 0.5);
 #else
 	laserbeam_mesh = laserbeam_nav_mesh;
+	phaser_mesh = laserbeam_nav_mesh;
 #endif
 	ship_icon_mesh = snis_read_model(d, "ship-icon.stl");
 	heading_indicator_mesh = snis_read_model(d, "heading_indicator.stl");

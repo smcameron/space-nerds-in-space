@@ -1260,6 +1260,53 @@ struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2)
 	return optimized_mesh;
 }
 
+struct mesh *init_burst_rod_mesh(int streaks, double h, double r1, double r2)
+{
+	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
+
+	if (!my_mesh)
+		return my_mesh;
+	memset(my_mesh, 0, sizeof(*my_mesh));
+
+	my_mesh->geometry_mode = MESH_GEOMETRY_PARTICLE_ANIMATION;
+
+	my_mesh->nlines = streaks;
+	my_mesh->nvertices = my_mesh->nlines * 2;
+	my_mesh->ntriangles = 0;
+	my_mesh->t = 0;
+	my_mesh->v = malloc(sizeof(*my_mesh->v) * my_mesh->nvertices);
+	my_mesh->l = malloc(sizeof(*my_mesh->l) * my_mesh->nlines);
+	my_mesh->tex = 0;
+	my_mesh->radius = fmax(sqrt(h * h / 4.0 + r1 * r1), sqrt(h * h / 4.0 + r2 * r2));
+	my_mesh->graph_ptr = 0;
+
+	int line_index;
+	for (line_index = 0; line_index < streaks; line_index++) {
+
+		float p = fabs(snis_random_float());
+		float pr = p * (r2 - r1) + r1;
+		float ph = p * h - h / 2.0;
+		float pa = fabs(snis_random_float()) * 2.0 * M_PI;
+
+		int v_index = line_index * 2;
+		my_mesh->v[v_index + 0].x = ph;
+		my_mesh->v[v_index + 0].y = 0;
+		my_mesh->v[v_index + 0].z = 0;
+		my_mesh->v[v_index + 1].x = ph;
+		my_mesh->v[v_index + 1].y = sin(pa) * pr;
+		my_mesh->v[v_index + 1].z = cos(pa) * pr;
+
+		my_mesh->l[line_index].start = &my_mesh->v[v_index + 0];
+		my_mesh->l[line_index].end = &my_mesh->v[v_index + 1];
+		my_mesh->l[line_index].flag = 0;
+		my_mesh->l[line_index].alpha = 1.0;
+		my_mesh->l[line_index].time_offset = fabs(snis_random_float());
+	}
+
+	mesh_graph_dev_init(my_mesh);
+	return my_mesh;
+}
+
 void mesh_update_material(struct mesh *m, struct material *material)
 {
 	if (m->material)
