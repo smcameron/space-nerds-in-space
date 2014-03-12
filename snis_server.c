@@ -8747,8 +8747,17 @@ static int process_request_tractor_beam(struct game_client *c)
 		goto tractorfail;
 
 	/* If something is already tractored, turn off beam... */
-	if (ship->tsd.ship.tractor_beam != -1)
+	if (ship->tsd.ship.tractor_beam != -1) {
+		i = lookup_by_id(ship->tsd.ship.tractor_beam);
+		if (i >= 0 && oid == go[i].tsd.laserbeam.target) {
+			/* if same thing selected, turn off beam and we're done */
+			turn_off_tractorbeam(ship);
+			pthread_mutex_unlock(&universe_mutex);
+			return 0;
+		}
+		/* otherwise turn beam off then back on to newly selected item */
 		turn_off_tractorbeam(ship);
+	}
 
 	/* TODO: check tractor beam energy here */
 	if (0) 
