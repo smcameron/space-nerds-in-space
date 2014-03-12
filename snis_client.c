@@ -208,12 +208,6 @@ struct entity_context *sciballecx;
 
 static int ecx_fake_stars_initialized = 0;
 
-struct nebula_entry {
-	double x, z, r, r2;
-	uint32_t id;
-} nebulaentry[NNEBULA];
-int nnebula;
-
 static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
 static volatile int helpmodeline = 0;
@@ -1535,39 +1529,6 @@ static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, 
 	return 0;
 }
 
-static void add_nebula_entry(uint32_t id, double x, double z, double r)
-{
-	if (nnebula >= NNEBULA) {
-		printf("Bug at %s:%d\n", __FILE__, __LINE__);
-		return;
-	}
-	nebulaentry[nnebula].id = id;
-	nebulaentry[nnebula].x = x;
-	nebulaentry[nnebula].z = z;
-	nebulaentry[nnebula].r2 = r * r;
-	nebulaentry[nnebula].r = r;
-	nnebula++;
-}
-
-static void delete_nebula_entry(uint32_t id)
-{
-	int i;
-
-	for (i = 0; i < nnebula; i++) {
-		if (nebulaentry[i].id == id)
-			break;
-	}
-	if (i >= nnebula)
-		return;
-
-	nnebula--;
-	if (i == nnebula - 1) {
-		return;
-	}
-	memmove(&nebulaentry[i], &nebulaentry[i + 1],
-		(sizeof(nebulaentry[0]) * (nnebula - i)));
-}
-
 static int update_nebula(uint32_t id, uint32_t timestamp, double x, double y, double z, double r)
 {
 	int i;
@@ -1583,7 +1544,6 @@ static int update_nebula(uint32_t id, uint32_t timestamp, double x, double y, do
 					&identity_quat, OBJTYPE_NEBULA, 1, e);
 		if (i < 0)
 			return i;
-		add_nebula_entry(go[i].id, x, z, r);
 	} else {
 		struct snis_entity *o = &go[i];
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
@@ -4083,8 +4043,6 @@ static void delete_object(uint32_t id)
 	go[i].entity = NULL;
 	free_spacemonster_data(&go[i]);
 	free_laserbeam_data(&go[i]);
-	if (go[i].type == OBJTYPE_NEBULA)
-		delete_nebula_entry(go[i].id);
 	go[i].id = -1;
 	snis_object_pool_free_object(pool, i);
 }
@@ -4189,7 +4147,6 @@ static int process_role_onscreen_packet(void)
 
 static struct science_ui {
 	int details_mode;
-#define SCI_DETAILS_MODE_TWOD 0
 #define SCI_DETAILS_MODE_THREED 1
 #define SCI_DETAILS_MODE_DETAILS 2
 #define SCI_DETAILS_MODE_SCIPLANE 3
@@ -4198,7 +4155,6 @@ static struct science_ui {
 	struct button *details_button;
 	struct button *threed_button;
 	struct button *sciplane_button;
-	struct button *twod_button;
 	struct button *tractor_button;
 } sci_ui;
 
@@ -4211,7 +4167,7 @@ static int process_sci_details(void)
 	rc = read_and_unpack_buffer(buffer, "b", &new_details);
 	if (rc != 0)
 		return rc;
-	if (new_details == SCI_DETAILS_MODE_TWOD)
+	if (new_details == 0)
 		new_details = SCI_DETAILS_MODE_SCIPLANE;
 	sci_ui.details_mode = new_details;
 	return 0;
@@ -5788,28 +5744,6 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 }
 
 
-static void snis_draw_science_spark(GdkDrawable *drawable, GdkGC *gc, gint x, gint y, double dist)
-{
-	int i;
-
-	double da;
-	int dr;
-	double tx, ty;
-
-	dr = (int) dist / (XKNOWN_DIM / 100.0);
-	for (i = 0; i < 20; i++) {
-		da = snis_randn(360) * M_PI / 180.0;
-#if 1
-		tx = (int) ((double) x + sin(da) * (double) snis_randn(dr));
-		ty = (int) ((double) y + cos(da) * (double) snis_randn(dr)); 
-#else
-		tx = x;
-		ty = y;
-#endif
-		sng_draw_point(tx, ty);
-	}
-}
-
 static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 		double heading, double scale)
 {
@@ -5831,53 +5765,6 @@ static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 	snis_draw_line(x + tx2, y + ty2, x + nx, y + ny);
 }
 
-static void draw_degree_marks_with_labels(GtkWidget *w, GdkGC *gc,
-		gint x, gint y, gint r, int font)
-{
-	char buf[10];
-	int i;
-
-	for (i = 0; i < 36; i++) { /* 10 degree increments */
-		int x3, y3;
-		int x1 = (int) (cos((10.0 * i) * M_PI / 180.0) * r);
-		int y1 = (int) (sin((10.0 * i) * M_PI / 180.0) * r);
-		int x2 = x1 * 0.25;
-		int y2 = y1 * 0.25;
-		x3 = x1 * 1.08 + x;
-		y3 = y1 * 1.08 + y;
-		x1 += x;
-		x2 += x;
-		y1 += y;
-		y2 += y;
-		sng_draw_dotted_line(x1, y1, x2, y2);
-		sprintf(buf, "%d", (90 + i * 10) % 360);
-		sng_center_xy_draw_string(buf, font, x3, y3);
-	}
-}
-
-static void snis_draw_science_reticule(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
-		double heading, double beam_width)
-{
-	int tx1, ty1, tx2, ty2;
-
-	sng_draw_circle(0, x, y, r);
-	draw_degree_marks_with_labels(w, gc, x, y, r, NANO_FONT);
-	/* draw the ship */
-	snis_draw_arrow(w, gc, x, y, r, heading, 1.0);
-
-	tx1 = x + cos(heading - beam_width / 2) * r * 0.05;
-	ty1 = y - sin(heading - beam_width / 2) * r * 0.05;
-	tx2 = x + cos(heading - beam_width / 2) * r;
-	ty2 = y - sin(heading - beam_width / 2) * r;
-	sng_set_foreground(GREEN);
-	sng_draw_electric_line(tx1, ty1, tx2, ty2);
-	tx1 = x + cos(heading + beam_width / 2) * r * 0.05;
-	ty1 = y - sin(heading + beam_width / 2) * r * 0.05;
-	tx2 = x + cos(heading + beam_width / 2) * r;
-	ty2 = y - sin(heading + beam_width / 2) * r;
-	sng_draw_electric_line(tx1, ty1, tx2, ty2);
-}
-
 /* this science_guy[] array is used for mouse clicking. */
 struct science_data {
 	int sx, sy; /* screen coords on scope */
@@ -5885,37 +5772,6 @@ struct science_data {
 };
 static struct science_data science_guy[MAXGAMEOBJS] = { {0}, };
 static int nscience_guys = 0;
-
-static void draw_science_laserbeam(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
-		struct snis_entity *laserbeam, int cx, int cy, double r, double range)
-{
-	double tx1, ty1, tx2, ty2, ix1, iy1, ix2, iy2;
-	int rc, color;
-
-	struct snis_entity *shooter, *shootee;
-
-	shooter = lookup_entity_by_id(laserbeam->tsd.laserbeam.origin);
-	if (!shooter)
-		return;
-	shootee = lookup_entity_by_id(laserbeam->tsd.laserbeam.target);
-	if (!shootee)
-		return;
-
-	if (shooter->type == OBJTYPE_SHIP2)
-		color = NPC_LASER_COLOR;
-	else
-		color = PLAYER_LASER_COLOR;
-	tx1 = ((shooter->x - o->x) * (double) r / range) + (double) cx;
-	ty1 = ((shooter->z - o->z) * (double) r / range) + (double) cy;
-	tx2 = ((shootee->x - o->x) * (double) r / range) + (double) cx;
-	ty2 = ((shootee->z - o->z) * (double) r / range) + (double) cy;
-
-	rc = circle_line_segment_intersection(tx1, ty1, tx2, ty2,
-			(double) cx, (double) cy, r, &ix1, &iy1, &ix2, &iy2);
-	if (rc < 0)
-		return;
-	sng_draw_laser_line(tx1, ty1, tx2, ty2, color);
-}
 
 static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct snis_entity *o, struct snis_entity *laserbeam, double r)
 {
@@ -5945,110 +5801,6 @@ static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx
 	float sx1, sy1, sx2, sy2;
 	if (!transform_line(cx, clip1.v.x, clip1.v.y, clip1.v.z, clip2.v.x, clip2.v.y, clip2.v.z, &sx1, &sy1, &sx2, &sy2)) {
 		sng_draw_laser_line(sx1, sy1, sx2, sy2, color);
-	}
-}
-
-
-static void draw_all_the_science_guys(GtkWidget *w, struct snis_entity *o, double range)
-{
-	int i, x, y, cx, cy, r, bw, pwr;
-	double tx, ty, dist2, dist;
-	int selected_guy_still_visible = 0;
-	int nebula_factor = 0;
-
-	cx = SCIENCE_SCOPE_CX;
-	cy = SCIENCE_SCOPE_CY;
-	r = SCIENCE_SCOPE_R;
-	pwr = o->tsd.ship.power_data.sensors.i;
-	/* Draw all the stuff */
-
-	/* Draw selected coordinate */
-	dist = hypot(o->x - o->sci_coordx, o->z - o->sci_coordz);
-	if (dist < range) {
-		tx = (o->sci_coordx - o->x) * (double) r / range;
-		ty = (o->sci_coordz - o->z) * (double) r / range;
-		x = (int) (tx + (double) cx);
-		y = (int) (ty + (double) cy);
-		snis_draw_line(x - 5, y, x + 5, y);
-		snis_draw_line(x, y - 5, x, y + 5);
-	}
-
-	/* FIXME this is quite likely wrong */
-        tx = sin(o->tsd.ship.sci_heading) * range;
-        ty = -cos(o->tsd.ship.sci_heading) * range;
-
-	sng_set_foreground(GREEN);
-	pthread_mutex_lock(&universe_mutex);
-	nscience_guys = 0;
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (!go[i].alive)
-			continue;
-
-		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
-			draw_science_laserbeam(w, gc, o, &go[i], cx, cy, r, range);
-			continue;
-		}
-
-		dist2 = ((go[i].x - o->x) * (go[i].x - o->x)) +
-			((go[i].z - o->z) * (go[i].z - o->z));
-		if (go[i].type == OBJTYPE_NEBULA) {
-			if (dist2 < go[i].tsd.nebula.r * go[i].tsd.nebula.r)
-				nebula_factor++;
-			continue;
-		}
-		if (dist2 > range * range)
-			continue; /* not close enough */
-		dist = sqrt(dist2);
-
-#if 0
-		if (within_nebula(go[i].x, go[i].y))
-			continue;
-#endif
-
-		tx = (go[i].x - o->x) * (double) r / range;
-		ty = (go[i].z - o->z) * (double) r / range;
-		x = (int) (tx + (double) cx);
-		y = (int) (ty + (double) cy);
-
-		if (go[i].id == my_ship_id)
-			continue; /* skip drawing yourself. */
-		bw = o->tsd.ship.sci_beam_width * 180.0 / M_PI;
-
-		/* If we moved the beam off our guy, and back on, select him again. */
-		if (!curr_science_guy && prev_science_guy == &go[i])
-			curr_science_guy = prev_science_guy;
-
-		snis_draw_science_guy(w, gc, &go[i], x, y, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor);
-
-		/* cache screen coords for mouse picking */
-		science_guy[nscience_guys].o = &go[i];
-		science_guy[nscience_guys].sx = x;
-		science_guy[nscience_guys].sy = y;
-		if (&go[i] == curr_science_guy)
-			selected_guy_still_visible = 1;
-		nscience_guys++;
-	}
-	if (!selected_guy_still_visible && curr_science_guy) {
-		prev_science_guy = curr_science_guy;
-		curr_science_guy = NULL;
-	}
-	pthread_mutex_unlock(&universe_mutex);
-	if (nebula_factor) {
-		for (i = 0; i < 300; i++) {
-			double angle;
-			double radius;
-
-			angle = 360.0 * ((double) snis_randn(10000) / 10000.0) * M_PI / 180.0;
-			radius = (snis_randn(1000) / 1000.0) / 2.0;
-			radius = 1.0 - (radius * radius * radius);
-			radius = radius * SCIENCE_SCOPE_R;
-			radius = radius - ((range / MAX_SCIENCE_SCREEN_RADIUS)  * (snis_randn(50) / 75.0) * r);
-			snis_draw_line(
-				cx + cos(angle) * r,
-				cy + sin(angle) * r,
-				cx + cos(angle) * radius,
-				cy + sin(angle) * radius);
-		}
 	}
 }
 
@@ -6875,83 +6627,6 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 	remove_all_entity(sciballecx);
 }
 
-
-static void draw_all_the_science_nebulae(GtkWidget *w, struct snis_entity *o, double range)
-{
-	int i, j;
-	double dist2, dist, range2;
-	double a, r, x, y, d2;
-	int sx, sy, cx, cy;
-
-	cx = SCIENCE_SCOPE_CX;	
-	cy = SCIENCE_SCOPE_CY;	
-
-	sng_set_foreground(GREEN);
-	range2 = range * range;
-	for (i = 0; i < nnebula; i++) {
-		dist2 = (o->x - nebulaentry[i].x) *
-			(o->x - nebulaentry[i].x) +
-			(o->z - nebulaentry[i].z) *
-			(o->z - nebulaentry[i].z);
-		dist = sqrt(dist2);
-		if (dist - nebulaentry[i].r > range)
-			continue;
-		for (j = 0; j < 80; j++) {
-			a = snis_randn(360) * M_PI / 180.0;
-			r = snis_randn((int) nebulaentry[i].r + 200);
-			x = nebulaentry[i].x + r * cos(a);
-			y = nebulaentry[i].z + r * -sin(a);
-			d2 = (x - o->x) * (x - o->x) +
-				(y - o->z) * (y - o->z);
-			if (d2 > range2)
-				continue;
-			sx = (x - o->x) * (double) SCIENCE_SCOPE_R / range + cx;
-			sy = (y - o->z) * (double) SCIENCE_SCOPE_R / range + cy;
-			d2 = (cx - sx) * (cx - sx) + (cy - sy) * (cy - sy);
-			if (d2 > SCIENCE_SCOPE_R * SCIENCE_SCOPE_R)
-				continue;
-			sng_draw_point(sx, sy);
-		}
-	}
-}
-
-static void draw_all_the_science_sparks(GtkWidget *w, struct snis_entity *o, double range)
-{
-	int i, cx, cy, r;
-
-	cx = SCIENCE_SCOPE_CX;	
-	cy = SCIENCE_SCOPE_CY;	
-	r = SCIENCE_SCOPE_R;
-	sng_set_foreground(DARKRED);
-	/* Draw all the stuff */
-	pthread_mutex_lock(&universe_mutex);
-
-	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++) {
-		int x, y;
-		double tx, ty;
-		double dist2, dist;
-
-		if (!spark[i].alive)
-			continue;
-
-		dist2 = ((spark[i].x - o->x) * (spark[i].x - o->x)) +
-			((spark[i].z - o->z) * (spark[i].z - o->z));
-		if (dist2 > range * range)
-			continue; /* not close enough */
-		dist = sqrt(dist2);
-	
-
-		tx = (spark[i].x - o->x) * (double) r / range;
-		ty = (spark[i].z - o->z) * (double) r / range;
-		x = (int) (tx + (double) cx);
-		y = (int) (ty + (double) cy);
-
-		sng_set_foreground(GREEN);
-		snis_draw_science_spark(w->window, gc, x, y, dist);
-	}
-	pthread_mutex_unlock(&universe_mutex);
-}
-
 static void snis_draw_dotted_hline(GdkDrawable *drawable,
          GdkGC *gc, int x1, int y1, int x2, int dots)
 {
@@ -6972,157 +6647,6 @@ static void snis_draw_dotted_vline(GdkDrawable *drawable,
 	} else { 
 		for (i = y2; i <= y1; i += dots)
 			sng_draw_point(x1, i);
-	}
-}
-
-static void snis_draw_radar_sector_labels(GtkWidget *w,
-         GdkGC *gc, struct snis_entity *o, int cx, int cy, int r, double range)
-{
-	/* FIXME, this algorithm is really fricken dumb. */
-	int x, y;
-	double xincrement = (XKNOWN_DIM / 10.0);
-	double yincrement = (ZKNOWN_DIM / 10.0);
-	int x1, y1;
-	const char *letters = "ABCDEFGHIJK";
-	char label[10];
-	int xoffset = 7;
-	int yoffset = 10;
-
-	for (x = 0; x < 10; x++) {
-		if ((x * xincrement) <= (o->x - range * 0.9))
-			continue;
-		if ((x * xincrement) >= (o->x + range * 0.9))
-			continue;
-		for (y = 0; y < 10; y++) {
-			if ((y * yincrement) <= (o->z - range * 0.9))
-				continue;
-			if ((y * yincrement) >= (o->z + range * 0.9))
-				continue;
-			x1 = (int) (((double) r) / range * (x * xincrement - o->x)) + cx + xoffset;
-			y1 = (int) (((double) r) / range * (y * yincrement - o->z)) + cy + yoffset;
-			snprintf(label, sizeof(label), "%c%d", letters[y], x);
-			sng_abs_xy_draw_string(label, NANO_FONT, x1, y1);
-		}
-	}
-}
-
-static void snis_draw_radar_grid(GdkDrawable *drawable,
-         GdkGC *gc, struct snis_entity *o, int cx, int cy, int r, double range, int small_grids)
-{
-	/* FIXME, this algorithm is really fricken dumb. */
-	int x, y;
-	double increment = (XKNOWN_DIM / 10.0);
-	double lx1, ly1, lx2, ly2;
-	int x1, y1, x2, y2; 
-	int xlow, xhigh, ylow, yhigh;
-	double range2 = (range * range);
-
-	xlow = (int) ((double) r / range * (0 -o->x)) + cx;
-	xhigh = (int) ((double) r / range * (XKNOWN_DIM - o->x)) + cx;
-	ylow = (int) (((double) r) / range * (0.0 - o->z)) + cy;
-	yhigh = (int) (((double) r) / range * (ZKNOWN_DIM - o->z)) + cy;
-	/* vertical lines */
-	increment = (XKNOWN_DIM / 10.0);
-	for (x = 0; x <= 10; x++) {
-		if ((x * increment) <= (o->x - range))
-			continue;
-		if ((x * increment) >= (o->x + range))
-			continue;
-		/* find y intersections with radar circle by pyth. theorem. */
-		lx1 = x * increment - o->x;
-		ly1 = sqrt((range2 - (lx1 * lx1)));
-		ly2 = -ly1;
-
-		x1 = (int) (((double) r) / range * lx1) + cx;
-		y1 = (int) (((double) r) / range * ly1) + cy;
-		y2 = (int) (((double) r) / range * ly2) + cy;
-
-		if (y1 < ylow)
-			y1 = ylow;
-		if (y1 > yhigh)
-			y1 = yhigh;
-		if (y2 < ylow)
-			y2 = ylow;
-		if (y2 > yhigh)
-			y2 = yhigh;
-		snis_draw_dotted_vline(drawable, gc, x1, y2, y1, 5);
-	}
-	/* horizontal lines */
-	increment = (ZKNOWN_DIM / 10.0);
-	for (y = 0; y <= 10; y++) {
-		if ((y * increment) <= (o->z - range))
-			continue;
-		if ((y * increment) >= (o->z + range))
-			continue;
-		/* find x intersections with radar circle by pyth. theorem. */
-		ly1 = y * increment - o->z;
-		lx1 = sqrt((range2 - (ly1 * ly1)));
-		lx2 = -lx1;
-		y1 = (int) (((double) r) / range * ly1) + cy;
-		x1 = (int) (((double) r) / range * lx1) + cx;
-		x2 = (int) (((double) r) / range * lx2) + cx;
-		if (x1 < xlow)
-			x1 = xlow;
-		if (x1 > xhigh)
-			x1 = xhigh;
-		if (x2 < xlow)
-			x2 = xlow;
-		if (x2 > xhigh)
-			x2 = xhigh;
-		snis_draw_dotted_hline(drawable, gc, x2, y1, x1, 5);
-	}
-
-	if (!small_grids)
-		return;
-
-	increment = (XKNOWN_DIM / 100.0);
-	/* vertical lines */
-	for (x = 0; x <= 100; x++) {
-		if ((x * increment) <= (o->x - range))
-			continue;
-		if ((x * increment) >= (o->x + range))
-			continue;
-		/* find y intersections with radar circle by pyth. theorem. */
-		lx1 = x * increment - o->x;
-		ly1 = sqrt((range2 - (lx1 * lx1)));
-		ly2 = -ly1;
-
-		x1 = (int) (((double) r) / range * lx1) + cx;
-		y1 = (int) (((double) r) / range * ly1) + cy;
-		y2 = (int) (((double) r) / range * ly2) + cy;
-		if (y1 < ylow)
-			y1 = ylow;
-		if (y1 > yhigh)
-			y1 = yhigh;
-		if (y2 < ylow)
-			y2 = ylow;
-		if (y2 > yhigh)
-			y2 = yhigh;
-		snis_draw_dotted_vline(drawable, gc, x1, y2, y1, 10);
-	}
-	/* horizontal lines */
-	increment = (ZKNOWN_DIM / 100.0);
-	for (y = 0; y <= 100; y++) {
-		if ((y * increment) <= (o->z - range))
-			continue;
-		if ((y * increment) >= (o->z + range))
-			continue;
-		/* find x intersections with radar circle by pyth. theorem. */
-		ly1 = y * increment - o->z;
-		lx1 = sqrt((range2 - (ly1 * ly1)));
-		lx2 = -lx1;
-		y1 = (int) (((double) r) / range * ly1) + cy;
-		x1 = (int) (((double) r) / range * lx1) + cx;
-		x2 = (int) (((double) r) / range * lx2) + cx;
-		if (x1 < xlow)
-			x1 = xlow;
-		if (x1 > xhigh)
-			x1 = xhigh;
-		if (x2 < xlow)
-			x2 = xlow;
-		if (x2 > xhigh)
-			x2 = xhigh;
-		snis_draw_dotted_hline(drawable, gc, x2, y1, x1, 10);
 	}
 }
 
@@ -8991,12 +8515,6 @@ static void sci_details_pressed(void *x)
 		(unsigned char) SCI_DETAILS_MODE_DETAILS));
 }
 
-static void sci_twod_pressed(void *x)
-{
-	queue_to_server(packed_buffer_new("bb", OPCODE_SCI_DETAILS,
-		(unsigned char) SCI_DETAILS_MODE_TWOD));
-}
-
 static void sci_threed_pressed(void *x)
 {
 	queue_to_server(packed_buffer_new("bb", OPCODE_SCI_DETAILS,
@@ -9025,8 +8543,6 @@ static void init_science_ui(void)
 				0.0, 100.0, sample_sensors_power, NULL);
 	snis_slider_set_fuzz(sci_ui.scipower, 7);
 	snis_slider_set_label_font(sci_ui.scipower, NANO_FONT);
-	sci_ui.twod_button = snis_button_init(370, 575, 40, 20, "2D",
-			GREEN, NANO_FONT, sci_twod_pressed, (void *) 0);
 	sci_ui.tractor_button = snis_button_init(530, 575, 85, 20, "TRACTOR",
 			GREEN, NANO_FONT, sci_tractor_pressed, (void *) 0);
 	sci_ui.sciplane_button = snis_button_init(620, 575, 40, 20, "SRS",
@@ -9038,9 +8554,6 @@ static void init_science_ui(void)
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
-#if 0
-	ui_add_button(sci_ui.twod_button, DISPLAYMODE_SCIENCE);
-#endif
 	ui_add_button(sci_ui.tractor_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE);
@@ -9334,28 +8847,6 @@ skip_data:
 	sng_abs_xy_draw_string("Shield Profile (nm)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 30);
 }
 
-static void draw_science_warp_data(GtkWidget *w, struct snis_entity *ship)
-{
-	double bearing, dx, dz;
-	char buffer[40];
-
-	if (!ship)
-		return;
-	sng_set_foreground(GREEN);
-	dx = ship->x - ship->sci_coordx;
-	dz = ship->z - ship->sci_coordz;
-	bearing = atan2(dx, dz) * 180 / M_PI;
-	if (bearing < 0)
-		bearing = -bearing;
-	else
-		bearing = 360.0 - bearing;
-	sng_abs_xy_draw_string("WARP DATA:", NANO_FONT, 10, SCREEN_HEIGHT - 40);
-	sprintf(buffer, "BEARING: %3.2lf", bearing);
-	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, SCREEN_HEIGHT - 25);
-	sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * hypot(dz, dx) / (XKNOWN_DIM / 2.0));
-	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
-}
- 
 static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o)
 {
 	char buffer[40];
@@ -9593,12 +9084,10 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
  
 static void show_science(GtkWidget *w)
 {
-	int /* rx, ry, rw, rh, */ cx, cy, r;
 	struct snis_entity *o;
 	char buf[80];
 	double zoom;
 	static int current_zoom = 0;
-	double display_heading;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -9610,35 +9099,12 @@ static void show_science(GtkWidget *w)
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 	sng_set_foreground(GREEN);
-	display_heading = to_uheading(o->tsd.ship.sci_heading);
-	normalize_angle(&display_heading);
-	display_heading *= 180.0 / M_PI;
-	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf) HEADING: %3.1lf", o->x, o->y, o->z, display_heading);
+	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf)", o->x, o->y, o->z);
 	sng_abs_xy_draw_string(buf, TINY_FONT, 200, LINEHEIGHT * 0.5);
-#if 0
-	rx = SCIENCE_SCOPE_X;
-	ry = SCIENCE_SCOPE_Y;
-	rw = SCIENCE_SCOPE_W;
-	rh = SCIENCE_SCOPE_H;
-#endif
-	cx = SCIENCE_SCOPE_CX;
-	cy = SCIENCE_SCOPE_CY;
-	r = SCIENCE_SCOPE_R;
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
 	sng_set_foreground(DARKGREEN);
-	if (sci_ui.details_mode == SCI_DETAILS_MODE_TWOD) {
-		snis_draw_radar_sector_labels(w, gc, o, cx, cy, r, zoom);
-		snis_draw_radar_grid(w->window, gc, o, cx, cy, r, zoom, current_zoom < 50);
-		sng_set_foreground(DARKRED);
-		snis_draw_science_reticule(w, gc, cx, cy, r,
-				o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width));
-		draw_all_the_science_guys(w, o, zoom);
-		draw_all_the_science_sparks(w, o, zoom);
-		draw_all_the_science_nebulae(w, o, zoom);
-		draw_science_data(w, o, curr_science_guy);
-		draw_science_warp_data(w, o);
-	} else if (sci_ui.details_mode == SCI_DETAILS_MODE_SCIPLANE) {
+	if (sci_ui.details_mode == SCI_DETAILS_MODE_SCIPLANE) {
 		draw_sciplane_display(w, o, zoom);
 	} else {
 		draw_science_details(w, gc);
@@ -9654,7 +9120,6 @@ static void show_3d_science(GtkWidget *w)
 	char buf[80];
 	double zoom;
 	static int current_zoom = 0;
-	double display_heading;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -9666,17 +9131,8 @@ static void show_3d_science(GtkWidget *w)
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 	sng_set_foreground(CYAN);
-	display_heading = to_uheading(o->tsd.ship.sci_heading);
-	normalize_angle(&display_heading);
-	display_heading *= 180.0 / M_PI;
-	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf) HEADING: %3.1lf", o->x, o->y, o->z, display_heading);
+	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf)", o->x, o->y, o->z);
 	sng_abs_xy_draw_string(buf, TINY_FONT, 200, LINEHEIGHT * 0.5);
-#if 0
-	rx = SCIENCE_SCOPE_X;
-	ry = SCIENCE_SCOPE_Y;
-	rw = SCIENCE_SCOPE_W;
-	rh = SCIENCE_SCOPE_H;
-#endif
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
 	r = SCIENCE_SCOPE_R;
@@ -9685,13 +9141,8 @@ static void show_3d_science(GtkWidget *w)
 	sng_set_foreground(DARKGREEN);
 	if (sci_ui.details_mode == SCI_DETAILS_MODE_THREED) {
 		sng_set_foreground(DARKRED);
-/*
-		snis_draw_science_reticule(w, gc, cx, cy, r,
-				o->tsd.ship.sci_heading, fabs(o->tsd.ship.sci_beam_width)); */
 		sng_draw_circle(0, cx, cy, r);
 		draw_all_the_3d_science_guys(w, o, zoom * 4.0, current_zoom * 4.0);
-		/* draw_all_the_science_sparks(w, o, zoom);
-		draw_all_the_science_nebulae(w, o, zoom); */
 	} else {
 		draw_science_details(w, gc);
 	}
