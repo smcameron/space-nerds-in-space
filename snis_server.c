@@ -5110,7 +5110,6 @@ static int add_laser(double x, double y, double z,
 	go[i].tsd.laser.ship_id = ship_id;
 	s = lookup_by_id(ship_id);
 	go[i].tsd.laser.power = go[s].tsd.ship.phaser_charge;
-	go[s].tsd.ship.phaser_charge = 0;
 	go[i].tsd.laser.wavelength = go[s].tsd.ship.phaser_wavelength;
 	if (orientation) {
 		go[i].orientation = *orientation;
@@ -8690,12 +8689,16 @@ static int process_request_manual_laser(struct game_client *c)
 	vec3_add_self(&left_bolt, &turret_pos);
 	vec3_sub_self(&left_bolt, &barrel_offset);
 
-	add_laser(right_bolt.v.x, right_bolt.v.y, right_bolt.v.z,
-			velocity.v.x, velocity.v.y, velocity.v.z,
-			&orientation, ship->id);
-	add_laser(left_bolt.v.x, left_bolt.v.y, left_bolt.v.z,
-			velocity.v.x, velocity.v.y, velocity.v.z,
-			&orientation, ship->id);
+	if (ship->tsd.ship.phaser_charge > 0) {
+		add_laser(right_bolt.v.x, right_bolt.v.y, right_bolt.v.z,
+				velocity.v.x, velocity.v.y, velocity.v.z,
+				&orientation, ship->id);
+		add_laser(left_bolt.v.x, left_bolt.v.y, left_bolt.v.z,
+				velocity.v.x, velocity.v.y, velocity.v.z,
+				&orientation, ship->id);
+		ship->tsd.ship.phaser_charge = 0;
+	}
+
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
@@ -8803,6 +8806,7 @@ static int process_demon_fire_phaser(struct game_client *c)
 	vx = LASER_VELOCITY * cos(o->heading);
 	vz = LASER_VELOCITY * -sin(o->heading);
 	add_laser(o->x, 0.0, o->z, vx, 0.0, vz, NULL, o->id);
+	o->tsd.ship.phaser_charge = 0;
 out:
 	pthread_mutex_unlock(&universe_mutex);
 
