@@ -5308,6 +5308,13 @@ static void show_weapons_camera_view(GtkWidget *w)
 		sng_abs_xy_draw_string(buf, NANO_FONT, 570, SCREEN_HEIGHT - 15);
 	}
 
+	/* idiot lights for low power */
+	const int low_power_threshold = 10;
+	sng_set_foreground(RED);
+	if (o->tsd.ship.power_data.phasers.i < low_power_threshold) {
+		sng_abs_xy_draw_string("LOW PHASER POWER", NANO_FONT, 320, 65);
+	}
+
 	/* show security indicator */
 	if (o->tsd.ship.in_secure_area && timer & 0x08) {
 		sng_set_foreground(RED);
