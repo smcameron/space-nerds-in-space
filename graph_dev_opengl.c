@@ -2463,13 +2463,20 @@ static void setup_textured_shader(const char *basename, struct graph_dev_gl_text
 	/* set all attributes to -1 */
 	memset(shader, 0xff, sizeof(*shader));
 
-	char vert_filename[PATH_MAX];
-	char frag_filename[PATH_MAX];
-	snprintf(vert_filename, sizeof(vert_filename), "%s.vert", basename);
-	snprintf(frag_filename, sizeof(frag_filename), "%s.frag", basename);
+	const char *vert_header =
+		"#version 120\n"
+		"#define INCLUDE_VS 1\n";
+	const char *frag_header =
+		"#version 120\n"
+		"#define INCLUDE_FS 1\n";
 
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename);
+	char shader_filename[PATH_MAX];
+	snprintf(shader_filename, sizeof(shader_filename), "%s.shader", basename);
+
+	const char *filenames[] = { shader_filename };
+
+	shader->program_id = load_concat_shaders(shader_directory,
+				vert_header, 1, filenames, frag_header, 1, filenames);
 	glUseProgram(shader->program_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2477,12 +2484,12 @@ static void setup_textured_shader(const char *basename, struct graph_dev_gl_text
 	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
-	shader->texture_2d_id = glGetUniformLocation(shader->program_id, "myTexture");
+	shader->texture_2d_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
 	glUniform1i(shader->texture_2d_id, 0);
 
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
-	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_tex_coord");
+	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
 
 	shader->shadow_sphere_id = glGetUniformLocation(shader->program_id, "u_Sphere");
 }
@@ -2492,13 +2499,20 @@ static void setup_textured_cubemap_shader(const char *basename, struct graph_dev
 	/* set all attributes to -1 */
 	memset(shader, 0xff, sizeof(*shader));
 
-	char vert_filename[PATH_MAX];
-	char frag_filename[PATH_MAX];
-	snprintf(vert_filename, sizeof(vert_filename), "%s.vert", basename);
-	snprintf(frag_filename, sizeof(frag_filename), "%s.frag", basename);
+	const char *vert_header =
+		"#version 120\n"
+		"#define INCLUDE_VS 1\n";
+	const char *frag_header =
+		"#version 120\n"
+		"#define INCLUDE_FS 1\n";
 
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename);
+	char shader_filename[PATH_MAX];
+	snprintf(shader_filename, sizeof(shader_filename), "%s.shader", basename);
+
+	const char *filenames[] = { shader_filename };
+
+	shader->program_id = load_concat_shaders(shader_directory,
+				vert_header, 1, filenames, frag_header, 1, filenames);
 	glUseProgram(shader->program_id);
 
 	/* Get a handle for our "MVP" uniform */
@@ -2506,7 +2520,7 @@ static void setup_textured_cubemap_shader(const char *basename, struct graph_dev
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
 	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
-	shader->texture_cubemap_id = glGetUniformLocation(shader->program_id, "myTexture");
+	shader->texture_cubemap_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
 	glUniform1i(shader->texture_cubemap_id, 0);
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 
@@ -2514,7 +2528,7 @@ static void setup_textured_cubemap_shader(const char *basename, struct graph_dev
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
 
-	shader->shadow_annulus_texture_id = glGetUniformLocation(shader->program_id, "annulusTexture");
+	shader->shadow_annulus_texture_id = glGetUniformLocation(shader->program_id, "u_AnnulusAlbedoTex");
 	glUniform1i(shader->shadow_annulus_texture_id, 1);
 	shader->shadow_annulus_center_id = glGetUniformLocation(shader->program_id, "u_AnnulusCenter");
 	shader->shadow_annulus_normal_id = glGetUniformLocation(shader->program_id, "u_AnnulusNormal");
