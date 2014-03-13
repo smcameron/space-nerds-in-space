@@ -1867,6 +1867,27 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 	interp_func(timestamp, o, visible, from_index, to_index, t);
 }
 
+void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
+		struct material *material, float shrink_factor, int debris_chance, float scale_factor);
+
+/* make badly damaged ships "catch on fire" */
+static void ship_emit_sparks(struct snis_entity *o)
+{
+	double vx, vy, vz;
+
+	if (o->type == OBJTYPE_SHIP1)
+		return;
+
+	if (o->tsd.ship.damage.shield_damage < 200)
+		return;
+
+	vx = (double) snis_randn(50) / 20.0;
+	vy = (double) snis_randn(50) / 20.0;
+	vz = (double) snis_randn(50) / 20.0;
+
+	add_spark(o->x, o->y, o->z, vx, vy, vz, 5, YELLOW, &spark_material, 0.95, 0.0, 0.25);
+}
+
 static void move_objects(void)
 {
 	int i;
@@ -1881,6 +1902,7 @@ static void move_objects(void)
 		case OBJTYPE_SHIP1:
 		case OBJTYPE_SHIP2:
 			move_object(timestamp, o, &interpolate_orientated_object);
+			ship_emit_sparks(o);
 			break;
 		case OBJTYPE_WORMHOLE:
 			move_object(timestamp, o, &interpolate_generic_object);
