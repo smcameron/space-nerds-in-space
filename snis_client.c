@@ -10945,6 +10945,12 @@ static void draw_help_screen(GtkWidget *w)
 	draw_help_text(w, help_text[displaymode]);
 }
 
+#define QUIT_BUTTON_WIDTH 200
+#define QUIT_BUTTON_HEIGHT 50
+#define QUIT_BUTTON_X 130
+#define QUIT_BUTTON_Y 420
+#define NOQUIT_BUTTON_X 480
+
 static void draw_quit_screen(GtkWidget *w)
 {
 	int x;
@@ -10960,10 +10966,10 @@ static void draw_quit_screen(GtkWidget *w)
 	sng_abs_xy_draw_string("Quit?", BIG_FONT, 300, 280);
 
 	if (current_quit_selection == 1) {
-		x = 130;
+		x = QUIT_BUTTON_X;
 		sng_set_foreground(WHITE);
 	} else {
-		x = 480;
+		x = NOQUIT_BUTTON_X;
 		sng_set_foreground(RED);
 	}
 	sng_abs_xy_draw_string("Quit Now", SMALL_FONT, 150, 450);
@@ -10975,7 +10981,8 @@ static void draw_quit_screen(GtkWidget *w)
 
 	if ((quittimer & 0x04)) {
 		sng_set_foreground(WHITE);
-		snis_draw_rectangle(FALSE, x, 420, 200, 50);
+		snis_draw_rectangle(FALSE, x, QUIT_BUTTON_Y,
+			QUIT_BUTTON_WIDTH, QUIT_BUTTON_HEIGHT);
 	}
 }
 
@@ -11481,6 +11488,22 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	if (display_frame_stats) {
 		if (graph_dev_graph_dev_debug_menu_click(event->x, event->y))
 			return TRUE;
+	}
+
+	if (in_the_process_of_quitting) {
+		int sx = (int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH);
+		int sy = (int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT);
+		if (sx > QUIT_BUTTON_X && sx < QUIT_BUTTON_X + QUIT_BUTTON_WIDTH &&
+			sy > QUIT_BUTTON_Y && sy < QUIT_BUTTON_Y + QUIT_BUTTON_HEIGHT) {
+			final_quit_selection = 1;
+			in_the_process_of_quitting = 1;
+		}
+		if (sx > NOQUIT_BUTTON_X && sx < NOQUIT_BUTTON_X + QUIT_BUTTON_WIDTH &&
+			sy > QUIT_BUTTON_Y && sy < QUIT_BUTTON_Y + QUIT_BUTTON_HEIGHT) {
+			final_quit_selection = 0;
+			in_the_process_of_quitting = 0;
+		}
+		return TRUE;
 	}
 
 	switch (displaymode) {
