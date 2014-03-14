@@ -8669,6 +8669,10 @@ static int process_request_manual_laser(struct game_client *c)
 	union quat orientation;
 
 	pthread_mutex_lock(&universe_mutex);
+	if (ship->tsd.ship.phaser_charge <= 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
 
 	/* Calculate which way weapons is pointed, and velocity of laser. */
 	quat_rot_vec_self(&turret_pos, &ship->orientation);
@@ -8691,16 +8695,13 @@ static int process_request_manual_laser(struct game_client *c)
 	vec3_add_self(&left_bolt, &turret_pos);
 	vec3_add_self(&left_bolt, &barrel_l_offset);
 
-	if (ship->tsd.ship.phaser_charge > 0) {
-		add_laser(right_bolt.v.x, right_bolt.v.y, right_bolt.v.z,
-				velocity.v.x, velocity.v.y, velocity.v.z,
-				&orientation, ship->id);
-		add_laser(left_bolt.v.x, left_bolt.v.y, left_bolt.v.z,
-				velocity.v.x, velocity.v.y, velocity.v.z,
-				&orientation, ship->id);
-		ship->tsd.ship.phaser_charge = 0;
-	}
-
+	add_laser(right_bolt.v.x, right_bolt.v.y, right_bolt.v.z,
+			velocity.v.x, velocity.v.y, velocity.v.z,
+			&orientation, ship->id);
+	add_laser(left_bolt.v.x, left_bolt.v.y, left_bolt.v.z,
+			velocity.v.x, velocity.v.y, velocity.v.z,
+			&orientation, ship->id);
+	ship->tsd.ship.phaser_charge = 0;
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
