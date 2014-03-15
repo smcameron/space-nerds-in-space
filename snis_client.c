@@ -5231,7 +5231,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 
-	union vec3 turret_pos = { {0, 5.45, 0} };
+	union vec3 turret_pos = { {-4, 5.45, 0} };
 	quat_rot_vec_self(&turret_pos, &o->orientation);
 	vec3_add_c_self(&turret_pos, cx, cy, cz);
 
@@ -5423,7 +5423,7 @@ static void show_mainscreen(GtkWidget *w)
 			if (player_ship)
 				update_entity_orientation(player_ship, &o->orientation);
 
-			struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh, 0, 5.45, 0, SHIP_COLOR);
+			struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh, -4, 5.45, 0, SHIP_COLOR);
 
 			if (turret_base) {
 				update_entity_orientation(turret_base, &identity_quat);

@@ -8664,7 +8664,7 @@ static int process_request_manual_laser(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
 	union vec3 forwardvec = { { LASER_VELOCITY, 0.0f, 0.0f } };
-	union vec3 turret_pos = { { 0.0f, 5.45, 0.0f } };
+	union vec3 turret_pos = { { -4.0f, 5.45, 0.0f } };
 	union vec3 barrel_r_offset = { { 4.0f, 0.0f, 1.4f } };
 	union vec3 barrel_l_offset = { { 4.0f, 0.0f, -1.4f } };
 	union vec3 velocity;
