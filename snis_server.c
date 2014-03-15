@@ -3111,7 +3111,7 @@ static void damcon_repair_socket_move(struct snis_damcon_entity *o,
 		}
 	}
 
-	new_damage = part->tsd.part.damage - 5;
+	new_damage = part->tsd.part.damage - 8;
 	if (new_damage < 0)
 		new_damage = 0;
 	if (part->tsd.part.damage != new_damage) {
