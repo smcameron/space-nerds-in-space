@@ -7872,6 +7872,8 @@ static void do_robot_drop(struct damcon_data *d)
 			cargo->heading = 0;
 			d->o[found_socket].tsd.socket.contents_id = cargo->id;
 			d->o[found_socket].version++;
+			snis_queue_add_sound(ROBOT_INSERT_COMPONENT,
+				ROLE_SOUNDSERVER | ROLE_DAMCON, bridgelist[d->bridge].shipid);
 		}
 	}
 }
@@ -7919,6 +7921,8 @@ static void do_robot_pickup(struct damcon_data *d)
 		if (socket->tsd.socket.contents_id == item->id) {
 			socket->tsd.socket.contents_id = DAMCON_SOCKET_EMPTY;
 			socket->version++;
+			snis_queue_add_sound(ROBOT_REMOVE_COMPONENT,
+				ROLE_SOUNDSERVER | ROLE_DAMCON, bridgelist[d->bridge].shipid);
 			break;
 		}
 	}

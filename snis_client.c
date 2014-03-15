@@ -11744,6 +11744,8 @@ static void read_sound_clips(void)
 	read_ogg_clip(DANGEROUS_RADIATION, d, "dangerous-radiation.ogg");
 	read_ogg_clip(ENTERING_SECURE_AREA, d, "entering-high-security-area.ogg");
 	read_ogg_clip(LEAVING_SECURE_AREA, d, "leaving-high-security-area.ogg");
+	read_ogg_clip(ROBOT_INSERT_COMPONENT, d, "robot-insert-component.ogg");
+	read_ogg_clip(ROBOT_REMOVE_COMPONENT, d, "robot-remove-component.ogg");
 	printf("Done.\n");
 }
 
