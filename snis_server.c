@@ -3146,7 +3146,7 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 
 	o->tsd.robot.desired_heading += o->tsd.robot.yaw_velocity;
 	normalize_angle(&o->tsd.robot.desired_heading);
-	damp_yaw_velocity(&o->tsd.robot.yaw_velocity, YAW_DAMPING);
+	damp_yaw_velocity(&o->tsd.robot.yaw_velocity, YAW_DAMPING * 0.9);
 
 	normalize_angle(&o->heading);
 	if (o->heading != o->tsd.robot.desired_heading) {
@@ -3162,7 +3162,7 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 		}
 
 		/* Slower you're going, quicker you can turn */
-		max_heading_change = (MAX_ROBOT_VELOCITY / fabs(o->velocity)) * 4.0 * M_PI / 180.0; 
+		max_heading_change = (MAX_ROBOT_VELOCITY / fabs(o->velocity)) * 6.0 * M_PI / 180.0; 
 		if (fabs(diff) > max_heading_change)
 			diff = max_heading_change * diff / fabs(diff);
 
