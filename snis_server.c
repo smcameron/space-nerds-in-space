@@ -4495,7 +4495,6 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay)
 	o->tsd.ship.gun_yaw_velocity = 0.0;
 	o->tsd.ship.velocity = 0.0;
 	o->tsd.ship.desired_velocity = 0.0;
-	o->tsd.ship.desired_heading = 0.0;
 	o->tsd.ship.sci_beam_width = MAX_SCI_BW_YAW_VELOCITY;
 	o->tsd.ship.fuel = UINT32_MAX;
 	o->tsd.ship.rpm = 0;
@@ -4653,7 +4652,6 @@ static int add_ship(int faction)
 	go[i].tsd.ship.pitch_velocity = 0.0;
 	go[i].tsd.ship.roll_velocity = 0.0;
 	go[i].tsd.ship.desired_velocity = 0;
-	go[i].tsd.ship.desired_heading = 0;
 	go[i].tsd.ship.velocity = 0;
 	go[i].tsd.ship.shiptype = snis_randn(nshiptypes);
 	go[i].tsd.ship.nai_entries = 0;
