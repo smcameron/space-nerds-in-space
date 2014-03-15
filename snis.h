@@ -338,7 +338,7 @@ struct ship_data {
 	uint8_t torpedoes_loading;
 	uint16_t torpedo_load_time;
 	uint8_t phaser_bank_charge;
-#define FUEL_DURATION (5.0) /* minutes */
+#define FUEL_DURATION (10.0) /* minutes */
 #define FUEL_UNITS (FUEL_DURATION * 60.0 * 30.0)
 #define FUEL_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / FUEL_UNITS))
 	uint32_t fuel;
