@@ -1881,6 +1881,11 @@ static void ship_emit_sparks(struct snis_entity *o)
 	if (o->tsd.ship.damage.shield_damage < 200)
 		return;
 
+	if (o->tsd.ship.flames_timer <= 0)
+		return;
+
+	o->tsd.ship.flames_timer--;
+
 	vx = (double) snis_randn(50) / 20.0;
 	vy = (double) snis_randn(50) / 20.0;
 	vz = (double) snis_randn(50) / 20.0;
@@ -4345,6 +4350,7 @@ static int process_ship_damage_packet(int do_damage_limbo)
 	packed_buffer_extract_raw(&pb, (char *) &damage, sizeof(damage));
 	pthread_mutex_lock(&universe_mutex);
 	go[i].tsd.ship.damage = damage;
+	go[i].tsd.ship.flames_timer = 15 * 30; /* 15 secs of possible flames */
 	pthread_mutex_unlock(&universe_mutex);
 	if (id == my_ship_id && do_damage_limbo) 
 		damage_limbo_countdown = 2;

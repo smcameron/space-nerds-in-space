@@ -398,6 +398,7 @@ struct ship_data {
 	struct entity *thrust_entity[MAX_THRUST_PORTS];
 	uint8_t in_secure_area;
 	uint32_t home_planet;
+	int flames_timer;
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200
