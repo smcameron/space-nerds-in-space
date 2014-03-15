@@ -34,7 +34,7 @@
 #define SUNX (XKNOWN_DIM / 2.0)
 #define SUNY (0.0)
 #define SUNZ (ZKNOWN_DIM / 2.0)
-#define SUN_DIST_LIMIT (XKNOWN_DIM / 10.0)
+#define SUN_DIST_LIMIT (XKNOWN_DIM / 20.0)
 
 #define PROXIMITY_DIST2 (400.0 * 400.0)
 #define CRASH_DIST2 (70.0 * 70.0)
