@@ -29,4 +29,6 @@ extern int msaa_max_samples();
 
 extern int fbo_render_to_texture_supported();
 
+extern int framebuffer_srgb_supported();
+
 #endif
