@@ -2952,6 +2952,8 @@ static void ship_collision_avoidance(void *context, void *entity)
 	o->tsd.ship.steering_adjustment.v.z = o->z - obstacle->z;
 	vec3_normalize_self(&o->tsd.ship.steering_adjustment);
 	steering_magnitude = 800.0 / d;
+	if (steering_magnitude > 10.0)
+		steering_magnitude = 10.0;
 	vec3_mul_self(&o->tsd.ship.steering_adjustment, steering_magnitude);
 }
 
