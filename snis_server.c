@@ -5331,7 +5331,7 @@ static void add_starbases(void)
 					p++;
 				if (p == i + 1) {
 					float dx, dy, dz;
-					random_point_on_sphere(go[j].tsd.planet.radius + 400.0f +
+					random_point_on_sphere(go[j].tsd.planet.radius * 1.3 + 400.0f +
 							snis_randn(400), &dx, &dy, &dz);
 					x = go[j].x + dx;
 					y = go[j].y + dy;
