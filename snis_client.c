@@ -1485,6 +1485,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	go[i].tsd.planet.economy = economy;
 	go[i].tsd.planet.description_seed = dseed;
 	go[i].tsd.planet.security = security;
+	go[i].tsd.planet.radius = r;
 	return 0;
 }
 
