@@ -9542,7 +9542,7 @@ static void debug_draw_ship_patrol_route(uint8_t npoints, union vec3 patrol[])
 
 static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 {
-	int x, y, x1, y1, x2, y2, vx, vy;
+	int x, y, x1, y1, x2, y2, vx, vy, r;
 	struct snis_entity *v = NULL;
 	int xoffset = 7;
 	int yoffset = 10;
@@ -9605,7 +9605,8 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		break;
 	case OBJTYPE_PLANET:
 		sng_set_foreground(PLANET_COLOR);
-		sng_draw_circle(0, x, y, 5);
+		r = ur_to_demonsr(o->tsd.planet.radius);
+		sng_draw_circle(0, x, y, r > 5 ? r : 5);
 		break;
 	case OBJTYPE_WORMHOLE:
 		sng_set_foreground(WORMHOLE_COLOR);
