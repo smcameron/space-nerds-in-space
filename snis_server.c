@@ -2473,6 +2473,9 @@ static void compute_danger_vectors(void *context, void *entity)
 	if (o == di->me)
 		return;
 
+	if (o->type != OBJTYPE_STARBASE && o->type != OBJTYPE_SHIP2)
+		return;
+
 	dist = dist3d(o->x - di->me->x, o->y - di->me->y, o->z - di->me->z);
 
 	if (dist > XKNOWN_DIM / 10.0) /* too far, no effect */
