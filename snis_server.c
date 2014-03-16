@@ -2912,6 +2912,10 @@ static void ship_collision_avoidance(void *context, void *entity)
 	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
 
 	if (obstacle->type == OBJTYPE_PLANET) {
+		if (d < obstacle->tsd.planet.radius * obstacle->tsd.planet.radius) {
+			o->alive = 0;
+			return;
+		}
 		d -= (obstacle->tsd.planet.radius * 1.2 * obstacle->tsd.planet.radius * 1.2);
 		if (d <= 0.0)
 			d = 1.0;
@@ -2990,6 +2994,12 @@ static void ship_move(struct snis_entity *o)
 	else
 		ca.worrythreshold = 400.0 * 400.0;
 	space_partition_process(space_partition, o, o->x, o->z, &ca, ship_collision_avoidance);
+	if (!o->alive) {
+		(void) add_explosion(o->x, o->y, o->z, 50, 150, 50, o->type);
+		respawn_object(o);
+		delete_from_clients_and_server(o);
+		return;
+	}
 
 	/* Adjust velocity towards desired velocity */
 	o->tsd.ship.velocity = o->tsd.ship.velocity +
