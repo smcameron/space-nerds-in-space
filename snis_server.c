@@ -2912,7 +2912,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
 
 	if (obstacle->type == OBJTYPE_PLANET) {
-		d -= obstacle->tsd.planet.radius * 1.2;
+		d -= (obstacle->tsd.planet.radius * 1.2 * obstacle->tsd.planet.radius * 1.2);
 		if (d <= 0.0)
 			d = 1.0;
 	}
