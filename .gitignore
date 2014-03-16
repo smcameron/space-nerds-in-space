@@ -16,3 +16,6 @@ test-quat
 test-space-partition
 test-commodities
 mesh_viewer
+bin
+build_info.h
+check-endianness
