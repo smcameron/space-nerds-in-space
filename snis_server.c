@@ -2880,20 +2880,20 @@ static void ship_collision_avoidance(void *context, void *entity)
 	if (o == obstacle) /* don't avoid oneself */
 		return;
 
-	if (o->type == OBJTYPE_SPARK) /* no point trying to avoid */
+	if (obstacle->type == OBJTYPE_SPARK) /* no point trying to avoid */
 		return;
 
 	/* hmm, server has no idea about meshes... */
 	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
 
-	if (o->type == OBJTYPE_PLANET) {
-		d -= o->tsd.planet.radius;
+	if (obstacle->type == OBJTYPE_PLANET) {
+		d -= obstacle->tsd.planet.radius * 1.2;
 		if (d <= 0.0)
 			d = 1.0;
 	}
 
 	/* Pretend torpedoes are closer than they are since they're scary */
-	if (o->type == OBJTYPE_TORPEDO)
+	if (obstacle->type == OBJTYPE_TORPEDO)
 		d = d / 6.0;
 
 	/* We only care about the closest one. */
