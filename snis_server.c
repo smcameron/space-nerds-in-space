@@ -2629,6 +2629,25 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 	}
 }
 
+static int inside_planet(float x, float y, float z)
+{
+	int i;
+	float d2;
+	struct snis_entity *o;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		o = &go[i];
+		if (o->type == OBJTYPE_PLANET && o->alive) {
+			d2 =	(x - o->x) * (x - o->x) +
+				(y - o->y) * (y - o->y) +
+				(z - o->z) * (z - o->z);
+			if (d2 < (o->tsd.planet.radius * o->tsd.planet.radius) * 1.05)
+				return 1;
+		}
+	}
+	return 0;
+}
+
 static void ai_patrol_mode_brain(struct snis_entity *o)
 {
 	int n = o->tsd.ship.nai_entries - 1;
@@ -2671,12 +2690,15 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			v.v.y = patrol->p[d].v.y - o->y;
 			v.v.z = patrol->p[d].v.z - o->z;
 			vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
-			add_warp_effect(o->x, o->y, o->z, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
-			set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
-			/* reset destination after warping to prevent backtracking */
-			o->tsd.ship.dox = patrol->p[d].v.x;
-			o->tsd.ship.doy = patrol->p[d].v.y;
-			o->tsd.ship.doz = patrol->p[d].v.z;
+			if (!inside_planet(v.v.x, v.v.y, v.v.z)) {
+				add_warp_effect(o->x, o->y, o->z,
+					o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
+				set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
+				/* reset destination after warping to prevent backtracking */
+				o->tsd.ship.dox = patrol->p[d].v.x;
+				o->tsd.ship.doy = patrol->p[d].v.y;
+				o->tsd.ship.doz = patrol->p[d].v.z;
+			}
 		}
 	} else {
 		o->tsd.ship.dox = patrol->p[d].v.x;
