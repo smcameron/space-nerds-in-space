@@ -31,4 +31,6 @@ extern int fbo_render_to_texture_supported();
 
 extern int framebuffer_srgb_supported();
 
+extern int texture_srgb_supported();
+
 #endif

@@ -59,3 +59,9 @@ int framebuffer_srgb_supported()
 	return boolmode;
 }
 
+int texture_srgb_supported()
+{
+	return GLEW_EXT_texture_sRGB;
+}
+
+

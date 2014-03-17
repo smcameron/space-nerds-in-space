@@ -3001,6 +3001,9 @@ int graph_dev_setup(const char *shader_dir)
 	if (framebuffer_srgb_supported())
 		printf("sRGB framebuffer supported\n");
 
+	if (texture_srgb_supported())
+		printf("sRGB texture supported\n");
+
 	if (shader_dir) {
 		if (shader_directory && shader_directory != default_shader_directory)
 			free(shader_directory);
