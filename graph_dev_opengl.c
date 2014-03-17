@@ -3083,7 +3083,7 @@ int graph_dev_setup(const char *shader_dir)
 	setup_textured_shader("textured", &textured_shader);
 	setup_textured_shader("textured-with-sphere-shadow-per-pixel", &textured_with_sphere_shadow_shader);
 	setup_textured_shader("textured-and-lit-per-pixel", &textured_lit_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-vertex", &textured_cubemap_lit_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", &textured_cubemap_lit_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel",
 		&textured_cubemap_lit_with_annulus_shadow_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
