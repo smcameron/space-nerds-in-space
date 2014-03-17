@@ -2791,16 +2791,24 @@ static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle
 
 }
 
-static void __attribute__((unused)) setup_fs_effect_shader(const char *basename,
+static void setup_fs_effect_shader(const char *basename,
 	struct graph_dev_gl_fs_effect_shader *shader)
 {
-	/* Create and compile our GLSL program from the shaders */
-	char vert_filename[PATH_MAX];
-	char frag_filename[PATH_MAX];
-	snprintf(vert_filename, sizeof(vert_filename), "%s.vert", basename);
-	snprintf(frag_filename, sizeof(vert_filename), "%s.frag", basename);
+	const char *vert_header =
+		"#version 120\n"
+		"#define INCLUDE_VS 1\n";
+	const char *frag_header =
+		"#version 120\n"
+		"#define INCLUDE_FS 1\n";
 
-	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename);
+	/* Create and compile our GLSL program from the shaders */
+	char shader_filename[255];
+	snprintf(shader_filename, sizeof(shader_filename), "%s.shader", basename);
+
+	const char *filenames[] = { shader_filename };
+
+	shader->program_id = load_concat_shaders(shader_directory, vert_header, 1, filenames,
+		frag_header, 1, filenames);
 	glUseProgram(shader->program_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");

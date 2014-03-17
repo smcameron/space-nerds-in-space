@@ -1,4 +1,3 @@
-#version 120
 /*
 	Copyright © 2014 Jeremy Van Grinsven
 
@@ -19,13 +18,29 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-uniform sampler2D texture0Sampler;
-uniform vec4 u_TintColor;
-
 varying vec2 v_TexCoord;
 
-void main() {
-	vec4 tex_color = texture2D(texture0Sampler, v_TexCoord);
+#ifdef INCLUDE_VS
+	uniform mat4 u_MVPMatrix;
 
-	gl_FragColor = u_TintColor * tex_color;
-}
+	attribute vec4 a_Position;
+	attribute vec2 a_TexCoord;
+
+	void main(void)
+	{
+		v_TexCoord = a_TexCoord;
+		gl_Position = u_MVPMatrix * a_Position;
+	}
+#endif
+
+#ifdef INCLUDE_FS
+	uniform sampler2D texture0Sampler;
+	uniform vec4 u_TintColor;
+
+	void main() {
+		vec4 tex_color = texture2D(texture0Sampler, v_TexCoord);
+
+		gl_FragColor = u_TintColor * tex_color;
+	}
+#endif
+
