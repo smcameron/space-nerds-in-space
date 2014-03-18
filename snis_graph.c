@@ -660,8 +660,8 @@ void sng_draw_circle(int filled, float x, float y, float r)
 	sng_current_draw_arc(filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
 }
 
-char *sng_load_png_texture(const char *filename, int flipVertical, int flipHorizontal, int *w, int *h,
-	int *hasAlpha, char *whynot, int whynotlen)
+char *sng_load_png_texture(const char *filename, int flipVertical, int flipHorizontal, int pre_multiply_alpha,
+	int *w, int *h, int *hasAlpha, char *whynot, int whynotlen)
 {
 #ifndef WITHOUTOPENGL
 	int i, j, bit_depth, color_type, row_bytes, image_data_row_bytes;
@@ -743,8 +743,9 @@ char *sng_load_png_texture(const char *filename, int flipVertical, int flipHoriz
 		*w = tw;
 	if (h)
 		*h = th;
+	int has_alpha = (color_type == PNG_COLOR_TYPE_RGB_ALPHA);
 	if (hasAlpha)
-		*hasAlpha = (color_type == PNG_COLOR_TYPE_RGB_ALPHA);
+		*hasAlpha = has_alpha;
 
 	row_bytes = png_get_rowbytes(png_ptr, info_ptr);
 	image_data_row_bytes = row_bytes;
@@ -780,6 +781,16 @@ char *sng_load_png_texture(const char *filename, int flipVertical, int flipHoriz
 			}
 		} else {
 			memcpy(dest_row, src_row, row_bytes);
+		}
+
+		if (has_alpha && pre_multiply_alpha) {
+			for (j = 0; j < tw; j++) {
+				png_byte *pixel = dest_row + bytes_per_pixel * j;
+				float alpha = pixel[3] / 255.0;
+				pixel[0] = pixel[0] * alpha;
+				pixel[1] = pixel[1] * alpha;
+				pixel[2] = pixel[2] * alpha;
+			}
 		}
 	}
 

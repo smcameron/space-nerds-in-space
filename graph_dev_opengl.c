@@ -1141,7 +1141,7 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		/* enable depth test but don't write to depth buffer */
 		glDepthMask(GL_FALSE);
 		glEnable(GL_BLEND);
-		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	}
 
 	glUseProgram(shader->program_id);
@@ -1619,7 +1619,7 @@ void graph_dev_raster_point_cloud_mesh(struct graph_dev_gl_point_cloud_shader *s
 		/* enable depth test but don't write to depth buffer */
 		glDepthMask(GL_FALSE);
 		glEnable(GL_BLEND);
-		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	}
 
 	glUseProgram(shader->program_id);
@@ -3118,7 +3118,7 @@ static void load_cubemap_texture_id(
 	for (i = 0; i < NCUBEMAP_TEXTURES; i++) {
 		int tw, th, hasAlpha = 0;
 		/* do horizontal invert if we are projecting on the inside */
-		char *image_data = sng_load_png_texture(tex_filenames[i], 0, is_inside, &tw, &th, &hasAlpha,
+		char *image_data = sng_load_png_texture(tex_filenames[i], 0, is_inside, 1, &tw, &th, &hasAlpha,
 			whynotz, whynotlen);
 		if (image_data) {
 			glTexImage2D(tex_pos[i], 0, (hasAlpha ? GL_RGBA8 : GL_RGB8), tw, th, 0,
@@ -3200,7 +3200,7 @@ static void load_texture_id(GLuint texture_number, const char *filename)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-	char *image_data = sng_load_png_texture(filename, 1, 0, &tw, &th, &hasAlpha,
+	char *image_data = sng_load_png_texture(filename, 1, 0, 1, &tw, &th, &hasAlpha,
 						whynotz, whynotlen);
 	if (image_data) {
 		glTexImage2D(GL_TEXTURE_2D, 0, (hasAlpha ? GL_RGBA8 : GL_RGB8), tw, th, 0,
