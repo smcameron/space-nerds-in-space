@@ -732,7 +732,7 @@ static struct graph_dev_gl_fs_effect_shader fs_copy_shader;
 static struct graph_dev_smaa_effect smaa_effect;
 
 static struct fbo_target msaa = { 0 };
-static struct fbo_target render_to_texture = { 0 };
+static struct fbo_target post_target0 = { 0 };
 static struct fbo_target render_target_2d = { 0 };
 
 struct graph_dev_primitive {
@@ -2195,12 +2195,12 @@ void graph_dev_start_frame()
 			}
 		}
 
-	} else if (draw_render_to_texture && render_to_texture.fbo > 0) {
+	} else if (draw_render_to_texture && post_target0.fbo > 0) {
 
-		resize_fbo_if_needed(&render_to_texture);
+		resize_fbo_if_needed(&post_target0);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, render_to_texture.fbo);
-		sgc.fbo_3d = render_to_texture.fbo;
+		glBindFramebuffer(GL_FRAMEBUFFER, post_target0.fbo);
+		sgc.fbo_3d = post_target0.fbo;
 	} else {
 		/* render direct to back buffer */
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -2284,7 +2284,7 @@ void graph_dev_end_frame()
 
 		glDisable(GL_MULTISAMPLE);
 
-	} else if (render_to_texture.fbo != 0 && sgc.fbo_3d == render_to_texture.fbo) {
+	} else if (post_target0.fbo != 0 && sgc.fbo_3d == post_target0.fbo) {
 
 		if (draw_smaa) {
 			/* do the multi stage smaa process:
@@ -2295,7 +2295,7 @@ void graph_dev_end_frame()
 			/* edge detect pass - render into edge_fbo */
 			glBindFramebuffer(GL_FRAMEBUFFER, smaa_effect.edge_target.fbo);
 			glClear(GL_COLOR_BUFFER_BIT);
-			graph_dev_raster_fs_effect(&smaa_effect.edge_shader, render_to_texture.color0_texture,
+			graph_dev_raster_fs_effect(&smaa_effect.edge_shader, post_target0.color0_texture,
 				0, 0, 0, 1);
 
 			/* blend pass - render into blend_fbo */
@@ -2307,13 +2307,13 @@ void graph_dev_end_frame()
 			/* eighborhood pass - render to back buffer */
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			graph_dev_raster_fs_effect(&smaa_effect.neighborhood_shader, render_to_texture.color0_texture,
+			graph_dev_raster_fs_effect(&smaa_effect.neighborhood_shader, post_target0.color0_texture,
 				smaa_effect.blend_target.color0_texture, 0, 0, 1);
 		} else {
 			/* no effect so just blit the fbo texture to the screen */
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, render_to_texture.fbo);
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, post_target0.fbo);
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			glBlitFramebuffer(0, 0, render_to_texture.width, render_to_texture.height, 0, 0,
+			glBlitFramebuffer(0, 0, post_target0.width, post_target0.height, 0, 0,
 				sgc.screen_x, sgc.screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 		}
 	}
@@ -3033,7 +3033,7 @@ int graph_dev_setup(const char *shader_dir)
 	glDepthFunc(GL_LESS);
 
 	memset(&msaa, 0, sizeof(msaa));
-	memset(&render_to_texture, 0, sizeof(render_to_texture));
+	memset(&post_target0, 0, sizeof(post_target0));
 	memset(&smaa_effect, 0, sizeof(smaa_effect));
 
 	if (msaa_render_to_fbo_supported()) {
@@ -3046,27 +3046,27 @@ int graph_dev_setup(const char *shader_dir)
 	}
 
 	if (fbo_render_to_texture_supported()) {
-		glGenTextures(1, &render_to_texture.color0_texture);
-		glBindTexture(GL_TEXTURE_2D, render_to_texture.color0_texture);
+		glGenTextures(1, &post_target0.color0_texture);
+		glBindTexture(GL_TEXTURE_2D, post_target0.color0_texture);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		glGenRenderbuffers(1, &render_to_texture.depth_buffer);
-		glBindRenderbuffer(GL_RENDERBUFFER, render_to_texture.depth_buffer);
+		glGenRenderbuffers(1, &post_target0.depth_buffer);
+		glBindRenderbuffer(GL_RENDERBUFFER, post_target0.depth_buffer);
 
-		glGenFramebuffers(1, &render_to_texture.fbo);
-		glBindFramebuffer(GL_FRAMEBUFFER, render_to_texture.fbo);
+		glGenFramebuffers(1, &post_target0.fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, post_target0.fbo);
 		glDrawBuffer(GL_COLOR_ATTACHMENT0);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-			render_to_texture.color0_texture, 0);
+			post_target0.color0_texture, 0);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
-			render_to_texture.depth_buffer);
+			post_target0.depth_buffer);
 
-		render_to_texture.width = 0;
-		render_to_texture.height = 0;
-		render_to_texture.samples = 0;
+		post_target0.width = 0;
+		post_target0.height = 0;
+		post_target0.samples = 0;
 	}
 
 	setup_single_color_lit_shader(&single_color_lit_shader);
