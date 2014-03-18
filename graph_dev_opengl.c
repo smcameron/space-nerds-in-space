@@ -3094,6 +3094,42 @@ int graph_dev_setup(const char *shader_dir)
 	return 0;
 }
 
+static void load_cubemap_texture_id(
+	GLuint cube_texture_id,
+	int is_inside,
+	const char **tex_filenames)
+{
+	static const GLint tex_pos[] = {
+		GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+		GL_TEXTURE_CUBE_MAP_POSITIVE_Y, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+		GL_TEXTURE_CUBE_MAP_POSITIVE_Z, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z };
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cube_texture_id);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	char whynotz[100];
+	int whynotlen = 100;
+
+	int i;
+	for (i = 0; i < NCUBEMAP_TEXTURES; i++) {
+		int tw, th, hasAlpha = 0;
+		/* do horizontal invert if we are projecting on the inside */
+		char *image_data = sng_load_png_texture(tex_filenames[i], 0, is_inside, &tw, &th, &hasAlpha,
+			whynotz, whynotlen);
+		if (image_data) {
+			glTexImage2D(tex_pos[i], 0, (hasAlpha ? GL_RGBA8 : GL_RGB8), tw, th, 0,
+					(hasAlpha ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
+			free(image_data);
+		} else {
+			printf("Unable to load cubemap texture %d '%s': %s\n", i, tex_filenames[i], whynotz);
+		}
+	}
+}
+
 unsigned int graph_dev_load_cubemap_texture(
 	int is_inside,
 	const char *texture_filename_pos_x,
@@ -3103,11 +3139,7 @@ unsigned int graph_dev_load_cubemap_texture(
 	const char *texture_filename_pos_z,
 	const char *texture_filename_neg_z)
 {
-	static const GLint tex_pos[] = {
-		GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-		GL_TEXTURE_CUBE_MAP_POSITIVE_Y, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-		GL_TEXTURE_CUBE_MAP_POSITIVE_Z, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z };
-	const char *tex_filename[] = {
+	const char *tex_filenames[] = {
 		texture_filename_pos_x, texture_filename_neg_x,
 		texture_filename_pos_y, texture_filename_neg_y,
 		texture_filename_pos_z, texture_filename_neg_z };
@@ -3117,7 +3149,7 @@ unsigned int graph_dev_load_cubemap_texture(
 		if (loaded_cubemap_textures[i].is_inside == is_inside) {
 			int match = 1;
 			for (j = 0; j < NCUBEMAP_TEXTURES; j++) {
-				if (strcmp(tex_filename[j], loaded_cubemap_textures[i].filename[j]) != 0) {
+				if (strcmp(tex_filenames[j], loaded_cubemap_textures[i].filename[j]) != 0) {
 					match = 0;
 					break;
 				}
@@ -3135,62 +3167,33 @@ unsigned int graph_dev_load_cubemap_texture(
 
 	GLuint cube_texture_id;
 	glGenTextures(1, &cube_texture_id);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cube_texture_id);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-	char whynotz[100];
-	int whynotlen = 100;
-
-	for (i = 0; i < NCUBEMAP_TEXTURES; i++) {
-		int tw, th, hasAlpha = 0;
-		/* do horizontal invert if we are projecting on the inside */
-		char *image_data = sng_load_png_texture(tex_filename[i], 0, is_inside, &tw, &th, &hasAlpha,
-			whynotz, whynotlen);
-		if (image_data) {
-			glTexImage2D(tex_pos[i], 0, (hasAlpha ? GL_RGBA8 : GL_RGB8), tw, th, 0,
-					(hasAlpha ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
-			free(image_data);
-		} else {
-			printf("Unable to load cubemap texture %d '%s': %s\n", i, tex_filename[i], whynotz);
-		}
-	}
+	load_cubemap_texture_id(cube_texture_id, is_inside, tex_filenames);
 
 	loaded_cubemap_textures[nloaded_cubemap_textures].texture_id = cube_texture_id;
 	loaded_cubemap_textures[nloaded_cubemap_textures].is_inside = is_inside;
 	for (i = 0; i < NCUBEMAP_TEXTURES; i++)
-		loaded_cubemap_textures[nloaded_cubemap_textures].filename[i] = strdup(tex_filename[i]);
+		loaded_cubemap_textures[nloaded_cubemap_textures].filename[i] = strdup(tex_filenames[i]);
 	nloaded_cubemap_textures++;
 
 	return (unsigned int) cube_texture_id;
 }
 
-/* returning unsigned int instead of GLuint so as not to leak opengl types out
- * Kind of ugly, but should not be dangerous.
- */
-unsigned int graph_dev_load_texture(const char *filename)
+void graph_dev_reload_cubemap_textures()
+{
+	int i;
+	for (i = 0; i < nloaded_cubemap_textures; i++) {
+		load_cubemap_texture_id(loaded_cubemap_textures[i].texture_id,
+			loaded_cubemap_textures[i].is_inside, (const char **)loaded_cubemap_textures[i].filename);
+	}
+}
+
+static void load_texture_id(GLuint texture_number, const char *filename)
 {
 	char whynotz[100];
 	int whynotlen = 100;
 	int tw, th, hasAlpha = 1;
-	GLuint texture_number;
-	int i;
 
-	for (i = 0; i < nloaded_textures; i++) {
-		if (strcmp(filename, loaded_textures[i].filename) == 0) {
-			return loaded_textures[i].texture_id;
-		}
-	}
-
-	if (nloaded_textures >= MAX_LOADED_TEXTURES) {
-		printf("Unable to load texture '%s': max of %d textures are already loaded\n", filename, nloaded_textures);
-		return 0;
-	}
-
-	glGenTextures(1, &texture_number);
 	glBindTexture(GL_TEXTURE_2D, texture_number);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -3206,6 +3209,31 @@ unsigned int graph_dev_load_texture(const char *filename)
 	} else {
 		printf("Unable to load texture '%s': %s\n", filename, whynotz);
 	}
+}
+
+
+/* returning unsigned int instead of GLuint so as not to leak opengl types out
+ * Kind of ugly, but should not be dangerous.
+ */
+unsigned int graph_dev_load_texture(const char *filename)
+{
+	int i;
+	for (i = 0; i < nloaded_textures; i++) {
+		if (strcmp(filename, loaded_textures[i].filename) == 0) {
+			return loaded_textures[i].texture_id;
+		}
+	}
+
+	if (nloaded_textures >= MAX_LOADED_TEXTURES) {
+		printf("Unable to load texture '%s': max of %d textures are already loaded\n",
+			filename, nloaded_textures);
+		return 0;
+	}
+
+	GLuint texture_number;
+	glGenTextures(1, &texture_number);
+
+	load_texture_id(texture_number, filename);
 
 	loaded_textures[nloaded_textures].texture_id = texture_number;
 	loaded_textures[nloaded_textures].filename = strdup(filename);
@@ -3223,6 +3251,14 @@ const char *graph_dev_get_texture_filename(unsigned int texture_id)
 		}
 	}
 	return "";
+}
+
+void graph_dev_reload_textures()
+{
+	int i;
+	for (i = 0; i < nloaded_textures; i++) {
+		load_texture_id(loaded_textures[i].texture_id, loaded_textures[i].filename);
+	}
 }
 
 void graph_dev_load_skybox_texture(
