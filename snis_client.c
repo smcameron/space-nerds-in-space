@@ -1610,52 +1610,62 @@ static void move_sparks(void)
 		}
 }
 
-static void spin_wormhole(struct snis_entity *o)
+static void spin_wormhole(double timestamp, struct snis_entity *o)
 {
-	union quat spin, orientation;
+	/* -0.5 degree per frame */
+	float a = -0.5 * M_PI / 180.0;
 
-	quat_init_axis(&spin, 0.0, 0.0, 1.0, -0.5 * M_PI / 180.0);
-	quat_mul(&orientation, &spin, &o->orientation);
-	o->orientation = orientation;
+	/* current rotation is universe timestamp * rotation per timestamp
+	   rotational_velocity is frame_rate_hz and universe is 1/10 sec */
+	a = a * (float)frame_rate_hz / 10.0 * timestamp;
+
+	quat_init_axis(&o->orientation, 0.0, 0.0, 1.0, a);
 	if (o->entity)
-		update_entity_orientation(o->entity, &orientation);
+		update_entity_orientation(o->entity, &o->orientation);
 }
 
-static void spin_starbase(struct snis_entity *o)
+static void spin_starbase(double timestamp, struct snis_entity *o)
 {
-	union quat spin, orientation;
+	/* 0.5 degree per frame */
+	float a = 0.5 * M_PI / 180.0;
 
-	quat_init_axis(&spin, 0.0, 0.0, 1.0, 0.5 * M_PI / 180.0);
-	quat_mul(&orientation, &spin, &o->orientation);
-	o->orientation = orientation;
+	/* current rotation is universe timestamp * rotation per timestamp
+	   rotational_velocity is frame_rate_hz and universe is 1/10 sec */
+	a = a * (float)frame_rate_hz / 10.0 * timestamp;
+
+	quat_init_axis(&o->orientation, 0.0, 0.0, 1.0, a);
 	if (o->entity)
-		update_entity_orientation(o->entity, &orientation);
+		update_entity_orientation(o->entity, &o->orientation);
 }
 
-static void arbitrary_spin(struct snis_entity *o, union quat *rotational_velocity)
+static void arbitrary_spin(double timestamp, struct snis_entity *o, union quat *rotational_velocity)
 {
-	union quat orientation;
+	/* reduce to axis and angle */
+	float x, y, z, a;
+	quat_to_axis(rotational_velocity, &x, &y, &z, &a);
 
-	quat_mul(&orientation, rotational_velocity, &o->orientation);
-	quat_normalize_self(&orientation);
-	o->orientation = orientation;
+	/* current rotation is universe timestamp * rotation per timestamp
+	   rotational_velocity is frame_rate_hz and universe is 1/10 sec */
+	a = a * (float)frame_rate_hz / 10.0 * timestamp;
+
+	quat_init_axis(&o->orientation, x, y, z, a);
 	if (o->entity)
-		update_entity_orientation(o->entity, &orientation);
+		update_entity_orientation(o->entity, &o->orientation);
 }
 
-static inline void spin_asteroid(struct snis_entity *o)
+static inline void spin_asteroid(double timestamp, struct snis_entity *o)
 {
-	arbitrary_spin(o, &o->tsd.asteroid.rotational_velocity);
+	arbitrary_spin(timestamp, o, &o->tsd.asteroid.rotational_velocity);
 }
 
-static inline void spin_cargo_container(struct snis_entity *o)
+static inline void spin_cargo_container(double timestamp, struct snis_entity *o)
 {
-	arbitrary_spin(o, &o->tsd.cargo_container.rotational_velocity);
+	arbitrary_spin(timestamp, o, &o->tsd.cargo_container.rotational_velocity);
 }
 
-static inline void spin_derelict(struct snis_entity *o)
+static inline void spin_derelict(double timestamp, struct snis_entity *o)
 {
-	arbitrary_spin(o, &o->tsd.derelict.rotational_velocity);
+	arbitrary_spin(timestamp, o, &o->tsd.derelict.rotational_velocity);
 }
 
 typedef void(*interpolate_update_func)(double timestamp, struct snis_entity *o, int visible,
@@ -1912,11 +1922,11 @@ static void move_objects(void)
 			break;
 		case OBJTYPE_WORMHOLE:
 			move_object(timestamp, o, &interpolate_generic_object);
-			spin_wormhole(o);
+			spin_wormhole(timestamp, o);
 			break;
 		case OBJTYPE_STARBASE:
 			move_object(timestamp, o, &interpolate_generic_object);
-			spin_starbase(o);
+			spin_starbase(timestamp, o);
 			break;
 		case OBJTYPE_LASER:
 			move_object(timestamp, o, &interpolate_laser);
@@ -1926,15 +1936,15 @@ static void move_objects(void)
 			break;
 		case OBJTYPE_ASTEROID:
 			move_object(timestamp, o, &interpolate_generic_object);
-			spin_asteroid(o);
+			spin_asteroid(timestamp, o);
 			break;
 		case OBJTYPE_CARGO_CONTAINER:
 			move_object(timestamp, o, &interpolate_generic_object);
-			spin_cargo_container(o);
+			spin_cargo_container(timestamp, o);
 			break;
 		case OBJTYPE_DERELICT:
 			move_object(timestamp, o, &interpolate_generic_object);
-			spin_derelict(o);
+			spin_derelict(timestamp, o);
 			break;
 		case OBJTYPE_LASERBEAM:
 		case OBJTYPE_TRACTORBEAM:
