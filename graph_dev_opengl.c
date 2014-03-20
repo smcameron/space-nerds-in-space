@@ -3422,11 +3422,13 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 		return 1;
 	}
 	if (x >= 15 && x <= 35 && y >= 115 && y <= 130) {
-		draw_msaa_samples = 2;
+		if (msaa_max_samples() >= 2)
+			draw_msaa_samples = 2;
 		return 1;
 	}
 	if (x >= 15 && x <= 35 && y >= 135 && y <= 150) {
-		draw_msaa_samples = 4;
+		if (msaa_max_samples() >= 4)
+			draw_msaa_samples = 4;
 		return 1;
 	}
 	if (x >= 15 && x <= 35 && y >= 155 && y <= 170) {
