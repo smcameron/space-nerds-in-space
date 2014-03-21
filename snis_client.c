@@ -11938,6 +11938,8 @@ static void init_meshes()
 
 		if (i == 0)
 			sprintf(filename, "starbase.stl");
+		else if (i == 1)
+			sprintf(filename, "starbase%d/starbase%d.obj", i + 1, i + 1);
 		else
 			sprintf(filename, "starbase%d.stl", i + 1);
 		printf("reading '%s'\n", filename);

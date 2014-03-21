@@ -32,7 +32,7 @@ static int nloaded_textures = 0;
 static struct loaded_texture loaded_textures[MAX_LOADED_TEXTURES];
 
 #define NCUBEMAP_TEXTURES 6
-#define MAX_LOADED_CUBEMAP_TEXTURES 20
+#define MAX_LOADED_CUBEMAP_TEXTURES 40
 struct loaded_cubemap_texture {
 	GLuint texture_id;
 	int is_inside;
