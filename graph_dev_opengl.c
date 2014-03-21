@@ -47,6 +47,8 @@ static int draw_polygon_as_lines = 0;
 static int draw_msaa_samples = 0;
 static int draw_render_to_texture = 0;
 static int draw_smaa = 0;
+static int draw_smaa_edge = 0;
+static int draw_smaa_blend = 0;
 static const char *default_shader_directory = "share/snis/shader";
 static char *shader_directory = NULL;
 
@@ -733,6 +735,7 @@ static struct graph_dev_smaa_effect smaa_effect;
 
 static struct fbo_target msaa = { 0 };
 static struct fbo_target post_target0 = { 0 };
+static struct fbo_target post_target1 = { 0 };
 static struct fbo_target render_target_2d = { 0 };
 
 struct graph_dev_primitive {
@@ -2150,6 +2153,66 @@ void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_v
 	graph_dev_raster_line_mesh(&e, mat_vp, &m, &line_color);
 }
 
+static void graph_dev_raster_fs_effect(struct graph_dev_gl_fs_effect_shader *shader, GLuint texture0_id,
+	GLuint texture1_id, GLuint texture2_id, const struct sng_color *tint_color, float alpha)
+{
+	static const struct mat44 mat_identity = { { { 1, 0, 0, 0}, { 0, 1, 0, 0 }, { 0, 0, 1, 0}, { 0, 0, 0, 1} } };
+
+	glUseProgram(shader->program_id);
+
+	if (texture0_id > 0 && shader->texture0_id >= 0) {
+		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture0_id);
+	}
+
+	if (texture1_id > 0 && shader->texture1_id >= 0) {
+		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, texture1_id);
+	}
+
+	if (texture2_id > 0 && shader->texture2_id >= 0) {
+		BIND_TEXTURE(GL_TEXTURE2, GL_TEXTURE_2D, texture2_id);
+	}
+
+	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_identity.m[0][0]);
+	glUniform4f(shader->viewport_id, 1.0 / sgc.screen_x, 1.0 / sgc.screen_y,
+		sgc.screen_x, sgc.screen_y);
+
+	if (shader->tint_color_id > 0) {
+		if (tint_color)
+			glUniform4f(shader->tint_color_id, tint_color->red,
+				tint_color->green, tint_color->blue, alpha);
+		else
+			glUniform4f(shader->tint_color_id, 1, 1, 1, 1);
+	}
+
+	glEnableVertexAttribArray(shader->vertex_position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, textured_unit_quad.vertex_buffer);
+	glVertexAttribPointer(
+		shader->vertex_position_id, /* The attribute we want to configure */
+		3,                           /* size */
+		GL_FLOAT,                    /* type */
+		GL_FALSE,                    /* normalized? */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
+	);
+
+	glEnableVertexAttribArray(shader->texture_coord_id);
+	glBindBuffer(GL_ARRAY_BUFFER, textured_unit_quad.triangle_vertex_buffer);
+	glVertexAttribPointer(
+		shader->texture_coord_id,/* The attribute we want to configure */
+		2,                            /* size */
+		GL_FLOAT,                     /* type */
+		GL_TRUE,                     /* normalized? */
+		sizeof(struct vertex_triangle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x) /* array buffer offset */
+	);
+
+	glDrawArrays(GL_TRIANGLES, 0, textured_unit_quad.nvertices);
+
+	glDisableVertexAttribArray(shader->vertex_position_id);
+	glDisableVertexAttribArray(shader->texture_coord_id);
+	glUseProgram(0);
+}
+
 void graph_dev_start_frame()
 {
 	/* reset viewport to whole screen */
@@ -2212,62 +2275,6 @@ void graph_dev_start_frame()
 	sgc.fbo_current = sgc.fbo_3d;
 }
 
-static void graph_dev_raster_fs_effect(struct graph_dev_gl_fs_effect_shader *shader, GLuint texture0_id,
-	GLuint texture1_id, GLuint texture2_id, const struct sng_color *tint_color, float alpha)
-{
-	static const struct mat44 mat_identity = { { { 1, 0, 0, 0}, { 0, 1, 0, 0 }, { 0, 0, 1, 0}, { 0, 0, 0, 1} } };
-
-	glUseProgram(shader->program_id);
-
-	if (texture0_id > 0 && shader->texture0_id >= 0) {
-		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture0_id);
-	}
-
-	if (texture1_id > 0 && shader->texture1_id >= 0) {
-		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, texture1_id);
-	}
-
-	if (texture2_id > 0 && shader->texture2_id >= 0) {
-		BIND_TEXTURE(GL_TEXTURE2, GL_TEXTURE_2D, texture2_id);
-	}
-
-	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_identity.m[0][0]);
-	glUniform4f(shader->viewport_id, 1.0 / sgc.screen_x, 1.0 / sgc.screen_y,
-		sgc.screen_x, sgc.screen_y);
-
-	if (shader->tint_color_id > 0)
-		glUniform4f(shader->tint_color_id, tint_color->red,
-			tint_color->green, tint_color->blue, alpha);
-
-	glEnableVertexAttribArray(shader->vertex_position_id);
-	glBindBuffer(GL_ARRAY_BUFFER, textured_unit_quad.vertex_buffer);
-	glVertexAttribPointer(
-		shader->vertex_position_id, /* The attribute we want to configure */
-		3,                           /* size */
-		GL_FLOAT,                    /* type */
-		GL_FALSE,                    /* normalized? */
-		sizeof(struct vertex_buffer_data), /* stride */
-		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
-	);
-
-	glEnableVertexAttribArray(shader->texture_coord_id);
-	glBindBuffer(GL_ARRAY_BUFFER, textured_unit_quad.triangle_vertex_buffer);
-	glVertexAttribPointer(
-		shader->texture_coord_id,/* The attribute we want to configure */
-		2,                            /* size */
-		GL_FLOAT,                     /* type */
-		GL_TRUE,                     /* normalized? */
-		sizeof(struct vertex_triangle_buffer_data), /* stride */
-		(void *)offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x) /* array buffer offset */
-	);
-
-	glDrawArrays(GL_TRIANGLES, 0, textured_unit_quad.nvertices);
-
-	glDisableVertexAttribArray(shader->vertex_position_id);
-	glDisableVertexAttribArray(shader->texture_coord_id);
-	glUseProgram(0);
-}
-
 void graph_dev_end_frame()
 {
 	/* printf("end frame\n"); */
@@ -2285,12 +2292,14 @@ void graph_dev_end_frame()
 		glDisable(GL_MULTISAMPLE);
 
 	} else if (post_target0.fbo != 0 && sgc.fbo_3d == post_target0.fbo) {
+		GLuint result_texture;
 
 		if (draw_smaa) {
 			/* do the multi stage smaa process:
 				render to texture -> edge_fbo -> blend_fbo -> screen back buffer */
 			resize_fbo_if_needed(&smaa_effect.edge_target);
 			resize_fbo_if_needed(&smaa_effect.blend_target);
+			resize_fbo_if_needed(&post_target1);
 
 			/* edge detect pass - render into edge_fbo */
 			glBindFramebuffer(GL_FRAMEBUFFER, smaa_effect.edge_target.fbo);
@@ -2305,31 +2314,34 @@ void graph_dev_end_frame()
 				smaa_effect.area_tex, smaa_effect.search_tex, 0, 1);
 
 			/* eighborhood pass - render to back buffer */
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glBindFramebuffer(GL_FRAMEBUFFER, post_target1.fbo);
+			glClear(GL_COLOR_BUFFER_BIT);
 			graph_dev_raster_fs_effect(&smaa_effect.neighborhood_shader, post_target0.color0_texture,
 				smaa_effect.blend_target.color0_texture, 0, 0, 1);
+
+			if (draw_smaa_edge)
+				result_texture = smaa_effect.edge_target.color0_texture;
+			else if (draw_smaa_blend)
+				result_texture = smaa_effect.blend_target.color0_texture;
+			else
+				result_texture = post_target1.color0_texture;
 		} else {
-			/* no effect so just blit the fbo texture to the screen */
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, post_target0.fbo);
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			glBlitFramebuffer(0, 0, post_target0.width, post_target0.height, 0, 0,
-				sgc.screen_x, sgc.screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+			result_texture = post_target0.color0_texture;
 		}
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		graph_dev_raster_fs_effect(&fs_copy_shader, result_texture, 0, 0, 0, 1);
 	}
+
 	if (render_target_2d.fbo != 0 && sgc.fbo_2d == render_target_2d.fbo) {
 		/* alpha blend copy 2d fbo onto back buffer */
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glDrawBuffer(GL_BACK);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		glEnable(GL_BLEND);
 		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		static const struct sng_color tint = { 1, 1, 1 };
-		graph_dev_raster_fs_effect(&fs_copy_shader, render_target_2d.color0_texture, 0, 0, &tint, 1);
+		graph_dev_raster_fs_effect(&fs_copy_shader, render_target_2d.color0_texture, 0, 0, 0, 1);
 		glDisable(GL_BLEND);
 	}
-
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 }
 
 void graph_dev_clear_depth_bit()
@@ -3034,6 +3046,7 @@ int graph_dev_setup(const char *shader_dir)
 
 	memset(&msaa, 0, sizeof(msaa));
 	memset(&post_target0, 0, sizeof(post_target0));
+	memset(&post_target1, 0, sizeof(post_target1));
 	memset(&smaa_effect, 0, sizeof(smaa_effect));
 
 	if (msaa_render_to_fbo_supported()) {
@@ -3064,9 +3077,18 @@ int graph_dev_setup(const char *shader_dir)
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
 			post_target0.depth_buffer);
 
-		post_target0.width = 0;
-		post_target0.height = 0;
-		post_target0.samples = 0;
+		glGenTextures(1, &post_target1.color0_texture);
+		glBindTexture(GL_TEXTURE_2D, post_target1.color0_texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		glGenFramebuffers(1, &post_target1.fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, post_target1.fbo);
+		glDrawBuffer(GL_COLOR_ATTACHMENT0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+			post_target1.color0_texture, 0);
 	}
 
 	setup_single_color_lit_shader(&single_color_lit_shader);
@@ -3325,9 +3347,9 @@ void graph_dev_display_debug_menu_show()
 {
 	int x, y;
 	sng_set_foreground(BLACK);
-	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 165);
+	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 225);
 	sng_set_foreground(WHITE);
-	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 165);
+	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 225);
 
 	y = 35;
 	x = 15;
@@ -3401,6 +3423,28 @@ void graph_dev_display_debug_menu_show()
 	if (draw_smaa)
 		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
 	sng_abs_xy_draw_string("SMAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+
+	if (!draw_smaa)
+		sng_set_foreground(GRAY75);
+	else
+		sng_set_foreground(WHITE);
+	x = 15;
+	y += 20;
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
+	if (draw_smaa_edge)
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string("SMAA DEBUG EDGE", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+
+	if (!draw_smaa)
+		sng_set_foreground(GRAY75);
+	else
+		sng_set_foreground(WHITE);
+	x = 15;
+	y += 20;
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
+	if (draw_smaa_blend)
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string("SMAA DEBUG BLEND", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
 }
 
 int graph_dev_graph_dev_debug_menu_click(int x, int y)
@@ -3437,6 +3481,16 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 	}
 	if (x >= 15 && x <= 35 && y >= 175 && y <= 190) {
 		draw_smaa = !draw_smaa;
+		return 1;
+	}
+	if (x >= 15 && x <= 35 && y >= 195 && y <= 210) {
+		draw_smaa_edge = !draw_smaa_edge;
+		draw_smaa_blend = 0;
+		return 1;
+	}
+	if (x >= 15 && x <= 35 && y >= 215 && y <= 230) {
+		draw_smaa_blend = !draw_smaa_blend;
+		draw_smaa_edge = 0;
 		return 1;
 	}
 	return 0;
