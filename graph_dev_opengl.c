@@ -23,7 +23,7 @@
 #include "snis_typeface.h"
 #include "opengl_cap.h"
 
-#define MAX_LOADED_TEXTURES 20
+#define MAX_LOADED_TEXTURES 40
 struct loaded_texture {
 	GLuint texture_id;
 	char *filename;
