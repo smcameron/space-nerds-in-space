@@ -68,9 +68,13 @@ varying vec3 v_TexCoord;
 		/* make diffuse light atleast ambient */
 		float diffuse = max(AMBIENT, direct);
 
-		vec4 tint_color = vec4(u_TintColor.rgb * diffuse, u_TintColor.a);
+		gl_FragColor = textureCube(u_AlbedoTex, v_TexCoord);
 
-		gl_FragColor = tint_color * textureCube(u_AlbedoTex, v_TexCoord);
+		gl_FragColor.rgb *= diffuse;
+
+		/* tint with alpha pre multiply */
+		gl_FragColor.rgb *= u_TintColor.rgb;
+		gl_FragColor *= u_TintColor.a;
 	}
 #endif
 

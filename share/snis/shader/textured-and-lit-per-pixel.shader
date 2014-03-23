@@ -89,7 +89,7 @@ varying vec3 v_Normal;
 		#endif
 
 		// albedo from texture
-		vec4 albedo = TEX_READ(u_AlbedoTex, uv) * u_TintColor;
+		vec4 albedo = TEX_READ(u_AlbedoTex, uv);
 
 		// diffuse is light dot normal
 		float diffuse = max(AMBIENT, dot(normal, light_dir));
@@ -108,6 +108,10 @@ varying vec3 v_Normal;
 		#endif
 
 		gl_FragColor = clamp(vec4(color, albedo.a), 0.0, 1.0);
+
+		/* tint with alpha pre multiply */
+		gl_FragColor.rgb *= u_TintColor.rgb;
+		gl_FragColor *= u_TintColor.a;
 	}
 #endif
 

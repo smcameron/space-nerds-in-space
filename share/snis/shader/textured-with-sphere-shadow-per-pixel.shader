@@ -77,7 +77,11 @@ varying vec3 v_LightDir;
 		if (sphere_ray_intersect(u_Sphere, v_Position, normalize(v_LightDir)))
 			shadow_tint = vec4(0.4,0.4,0.4,1.0);
 
-		gl_FragColor = shadow_tint * v_TintColor * texture2D(u_AlbedoTex, v_TexCoord);
+		gl_FragColor = shadow_tint * texture2D(u_AlbedoTex, v_TexCoord);
+
+		/* tint with alpha pre multiply */
+		gl_FragColor.rgb *= v_TintColor.rgb;
+		gl_FragColor *= v_TintColor.a;
 	}
 #endif
 

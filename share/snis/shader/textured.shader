@@ -22,7 +22,11 @@ varying vec2 v_TexCoord;      // This will be passed into the fragment shader.
 
 	void main()
 	{
-		gl_FragColor = v_TintColor * texture2D(u_AlbedoTex, v_TexCoord);
+		gl_FragColor = texture2D(u_AlbedoTex, v_TexCoord);
+
+		/* tint with alpha pre multiply */
+		gl_FragColor.rgb *= v_TintColor.rgb;
+		gl_FragColor *= v_TintColor.a;
 	}
 #endif
 
