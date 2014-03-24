@@ -632,6 +632,7 @@ struct graph_dev_gl_textured_shader {
 	GLint tint_color_id;
 	GLint texture_coord_id;
 	GLint texture_2d_id;
+	GLint emit_texture_2d_id;
 	GLint texture_cubemap_id;
 	GLint light_pos_id;
 
@@ -727,6 +728,7 @@ static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
 static struct graph_dev_gl_textured_shader textured_shader;
 static struct graph_dev_gl_textured_shader textured_with_sphere_shadow_shader;
 static struct graph_dev_gl_textured_shader textured_lit_shader;
+static struct graph_dev_gl_textured_shader textured_lit_emit_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
@@ -1123,8 +1125,8 @@ static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh
 static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader, const struct mat44 *mat_mvp,
 	const struct mat44 *mat_mv, const struct mat33 *mat_normal, struct mesh *m,
 	struct sng_color *triangle_color, float alpha, union vec3 *eye_light_pos, GLuint texture_number,
-	struct shadow_sphere_data *shadow_sphere, struct shadow_annulus_data *shadow_annulus,
-	int do_cullface, int do_blend)
+	GLuint emit_texture_number, struct shadow_sphere_data *shadow_sphere,
+	struct shadow_annulus_data *shadow_annulus, int do_cullface, int do_blend)
 {
 	enable_3d_viewport();
 
@@ -1153,6 +1155,9 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture_number);
 	else if (shader->texture_cubemap_id >= 0)
 		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, texture_number);
+
+	if (shader->emit_texture_2d_id >= 0)
+		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, emit_texture_number);
 
 	if (shader->light_pos_id >= 0)
 		glUniform3f(shader->light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
@@ -1703,7 +1708,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 		float alpha = fabs(vec3_dot(&camera_normal, &camera_ent_vector)) * mt->alpha;
 
 		graph_dev_raster_texture(&textured_shader, &mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
-			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, 0, 0, 1);
+			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, 0, 0, 0, 1);
 
 		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
@@ -1914,6 +1919,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		struct sng_color texture_tint = { 1.0, 1.0, 1.0 };
 		float texture_alpha = 1.0;
 		GLuint texture_id = 0;
+		GLuint emit_texture_id = 0;
 
 		/* for sphere shadows */
 		struct shadow_sphere_data shadow_sphere;
@@ -1944,6 +1950,12 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 				struct material_texture_mapped *mt = &e->material_ptr->texture_mapped;
 				texture_id = mt->texture_id;
+				emit_texture_id = mt->emit_texture_id;
+
+				if (emit_texture_id > 0)
+					tex_shader = &textured_lit_emit_shader;
+				else
+					tex_shader = &textured_lit_shader;
 				}
 				break;
 			case MATERIAL_TEXTURE_MAPPED_UNLIT: {
@@ -2047,7 +2059,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				if (tex_shader)
 					graph_dev_raster_texture(tex_shader, mat_mvp, mat_mv, mat_normal, e->m,
 						&texture_tint, texture_alpha, eye_light_pos, texture_id,
-						&shadow_sphere, &shadow_annulus, do_cullface, do_blend);
+						emit_texture_id, &shadow_sphere, &shadow_annulus, do_cullface,
+						do_blend);
 				else
 					graph_dev_raster_single_color_lit(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos);
@@ -2480,17 +2493,16 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
 }
 
-static void setup_textured_shader(const char *basename, struct graph_dev_gl_textured_shader *shader)
+static void setup_textured_shader(const char *basename, const char *defines,
+	struct graph_dev_gl_textured_shader *shader)
 {
 	/* set all attributes to -1 */
 	memset(shader, 0xff, sizeof(*shader));
 
-	const char *vert_header =
-		"#version 120\n"
-		"#define INCLUDE_VS 1\n";
-	const char *frag_header =
-		"#version 120\n"
-		"#define INCLUDE_FS 1\n";
+	char vert_header[512];
+	snprintf(vert_header, sizeof(vert_header), "#version 120\n#define INCLUDE_VS 1\n%s\n", defines);
+	char frag_header[512];
+	snprintf(frag_header, sizeof(frag_header), "#version 120\n#define INCLUDE_FS 1\n%s\n", defines);
 
 	char shader_filename[PATH_MAX];
 	snprintf(shader_filename, sizeof(shader_filename), "%s.shader", basename);
@@ -2508,6 +2520,9 @@ static void setup_textured_shader(const char *basename, struct graph_dev_gl_text
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
 	shader->texture_2d_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
 	glUniform1i(shader->texture_2d_id, 0);
+	shader->emit_texture_2d_id = glGetUniformLocation(shader->program_id, "u_EmitTex");
+	if (shader->emit_texture_2d_id >= 0)
+		glUniform1i(shader->emit_texture_2d_id, 1);
 
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
@@ -3102,9 +3117,10 @@ int graph_dev_setup(const char *shader_dir)
 	setup_point_cloud_shader("point_cloud-intensity-noise", &point_cloud_intensity_noise_shader);
 	setup_color_by_w_shader(&color_by_w_shader);
 	setup_skybox_shader(&skybox_shader);
-	setup_textured_shader("textured", &textured_shader);
-	setup_textured_shader("textured-with-sphere-shadow-per-pixel", &textured_with_sphere_shadow_shader);
-	setup_textured_shader("textured-and-lit-per-pixel", &textured_lit_shader);
+	setup_textured_shader("textured", "", &textured_shader);
+	setup_textured_shader("textured-with-sphere-shadow-per-pixel", "", &textured_with_sphere_shadow_shader);
+	setup_textured_shader("textured-and-lit-per-pixel", "", &textured_lit_shader);
+	setup_textured_shader("textured-and-lit-per-pixel", "#define USE_EMIT_MAP", &textured_lit_emit_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", &textured_cubemap_lit_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel",
 		&textured_cubemap_lit_with_annulus_shadow_shader);

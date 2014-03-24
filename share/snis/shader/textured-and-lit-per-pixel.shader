@@ -22,7 +22,6 @@ varying vec3 v_Normal;
 #endif
 
 #if defined(INCLUDE_VS)
-
 	uniform mat4 u_MVPMatrix;
 	uniform mat4 u_MVMatrix;
 	uniform mat3 u_NormalMatrix;
@@ -71,6 +70,9 @@ varying vec3 v_Normal;
 			vec3 u_SpecularColor = vec3(1);
 		#endif
 	#endif
+	#ifdef USE_EMIT_MAP
+		uniform TEX_SAMPLER u_EmitTex;
+	#endif
 
 	void main()
 	{
@@ -97,6 +99,9 @@ varying vec3 v_Normal;
 		// base diffuse color
 		vec3 color = albedo.rgb * u_LightColor * diffuse;
 
+		#ifdef USE_EMIT_MAP
+			color = max(color, TEX_READ(u_EmitTex, uv).rgb);
+		#endif
 		#ifdef USE_SPECULAR
 			// blinn phong half vector specular
 			vec3 view_dir = normalize(-v_Position);

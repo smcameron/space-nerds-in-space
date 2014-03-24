@@ -57,6 +57,7 @@ struct material_color_by_w {
 
 struct material_texture_mapped {
 	int texture_id;
+	int emit_texture_id;
 };
 
 struct material_texture_mapped_unlit {

@@ -773,7 +773,7 @@ static void compact_mesh_allocations(struct mesh *m)
 	m->tex = realloc(m->tex, 3 * m->ntriangles * sizeof(*m->tex));
 }
 
-static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile, int tfilelen)
+static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile, int tfilelen, char *efile, int efilelen)
 {
 	char fname[PATH_MAX];
 	char fname2[PATH_MAX];
@@ -803,6 +803,9 @@ static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile, i
 		return;
 	}
 
+	tfile[0] = '\0';
+	efile[0] = '\0';
+
 	while (!feof(f)) {
 		s = fgets(ln, sizeof(ln), f);
 		if (!s)
@@ -814,15 +817,19 @@ static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile, i
 		 * Ignore everything but map_Kd lines and take the first
 		 * one we find to be the only one.
 		 */
-		if (strncmp(ln, "map_Kd ", 7) == 0) {
+		if (!tfile[0] && strncmp(ln, "map_Kd ", 7) == 0) {
 			rc = sscanf(ln, "map_Kd %s", texturefile);
 			if (rc != 1)
 				continue;
 			snprintf(tfile, tfilelen, "%s/%s", dname, texturefile);
-			goto out;
+		}
+		if (!efile[0] && strncmp(ln, "map_Ke ", 7) == 0) {
+			rc = sscanf(ln, "map_Ke %s", texturefile);
+			if (rc != 1)
+				continue;
+			snprintf(efile, efilelen, "%s/%s", dname, texturefile);
 		}
 	}
-	tfile[0] = '\0';
 out:
 	free(dname);
 	fclose(f);
@@ -863,6 +870,7 @@ struct mesh *read_obj_file(char *filename)
 	char buffer[500];
 	char line[1000];
 	char tfile[PATH_MAX];
+	char efile[PATH_MAX];
 	int continuation;
 	int lineno = 0;
 	int verts_alloced = 0;
@@ -936,13 +944,15 @@ struct mesh *read_obj_file(char *filename)
 				goto flame_out;
 		} else if (strncmp(line, "mtllib ", 2) == 0) {
 			printf("parsing material library: %s\n", line);
-			parse_mtllib(filename, line, tfile, sizeof(tfile));
+			parse_mtllib(filename, line, tfile, sizeof(tfile), efile, sizeof(efile));
 			if (strcmp(tfile, "") != 0) {
 				struct material *mtl;
 
 				mtl = malloc(sizeof(*mtl));
 				material_init_texture_mapped(mtl);
 				mtl->texture_mapped.texture_id = graph_dev_load_texture(tfile);
+				if (strcmp(efile, "") != 0)
+					mtl->texture_mapped.emit_texture_id = graph_dev_load_texture(efile);
 				m->material = mtl;
 			}
 		} else if (strncmp(line, "usemtl ", 2) == 0) {
