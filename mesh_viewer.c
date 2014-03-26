@@ -521,6 +521,7 @@ int main(int argc, char *argv[])
 	const double maxTimeBehind = 0.5;
 	double delta = 1.0/(double)FPS;
 
+	unsigned long frame = 0;
 	double currentTime = time_now_double();
 	double nextTime = currentTime + delta;
 	while (1) {
@@ -536,6 +537,10 @@ int main(int argc, char *argv[])
 			process_events();
 			/* Draw the screen. */
 			draw_screen();
+
+			if (frame % FPS == 0)
+				graph_dev_reload_changed_textures();
+			frame++;
 		} else {
 			double timeToSleep = nextTime-currentTime;
 			if (timeToSleep > 0)

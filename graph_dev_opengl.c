@@ -5,6 +5,7 @@
 #include <GL/glew.h>
 #include <math.h>
 #include <assert.h>
+#include <sys/stat.h>
 
 #include "shader.h"
 #include "vertex.h"
@@ -23,10 +24,13 @@
 #include "snis_typeface.h"
 #include "opengl_cap.h"
 
+#define TEX_RELOAD_DELAY 1.0
 #define MAX_LOADED_TEXTURES 40
 struct loaded_texture {
 	GLuint texture_id;
 	char *filename;
+	time_t mtime;
+	double last_mtime_change;
 };
 static int nloaded_textures = 0;
 static struct loaded_texture loaded_textures[MAX_LOADED_TEXTURES];
@@ -3225,6 +3229,14 @@ unsigned int graph_dev_load_cubemap_texture(
 	return (unsigned int) cube_texture_id;
 }
 
+static time_t get_file_modify_time(const char *filename)
+{
+	struct stat s;
+	if (stat(filename, &s) != 0)
+		return 0;
+	return s.st_mtime;
+}
+
 void graph_dev_reload_cubemap_textures()
 {
 	int i;
@@ -3283,6 +3295,9 @@ unsigned int graph_dev_load_texture(const char *filename)
 
 	loaded_textures[nloaded_textures].texture_id = texture_number;
 	loaded_textures[nloaded_textures].filename = strdup(filename);
+	loaded_textures[nloaded_textures].mtime = get_file_modify_time(filename);
+	loaded_textures[nloaded_textures].last_mtime_change = 0;
+
 	nloaded_textures++;
 
 	return (unsigned int) texture_number;
@@ -3304,6 +3319,23 @@ void graph_dev_reload_textures()
 	int i;
 	for (i = 0; i < nloaded_textures; i++) {
 		load_texture_id(loaded_textures[i].texture_id, loaded_textures[i].filename);
+	}
+}
+
+void graph_dev_reload_changed_textures()
+{
+	int i;
+	for (i = 0; i < nloaded_textures; i++) {
+		time_t mtime = get_file_modify_time(loaded_textures[i].filename);
+		if (loaded_textures[i].mtime != mtime) {
+			loaded_textures[i].mtime = mtime;
+			loaded_textures[i].last_mtime_change = time_now_double();
+		} else if (loaded_textures[i].last_mtime_change > 0 &&
+			time_now_double() - loaded_textures[i].last_mtime_change >= TEX_RELOAD_DELAY) {
+			printf("reloading texture '%s'\n", loaded_textures[i].filename);
+			load_texture_id(loaded_textures[i].texture_id, loaded_textures[i].filename);
+			loaded_textures[i].last_mtime_change = 0;
+		}
 	}
 }
 
