@@ -11937,7 +11937,7 @@ static void init_meshes()
 		char filename[100];
 
 		if (i == 0)
-			sprintf(filename, "starbase.stl");
+			sprintf(filename, "starbase/starbase.obj");
 		else if (i == 1)
 			sprintf(filename, "starbase%d/starbase%d.obj", i + 1, i + 1);
 		else
