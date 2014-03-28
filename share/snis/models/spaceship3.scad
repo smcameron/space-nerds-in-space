@@ -61,5 +61,6 @@ module spacefarer()
 }
 rotate(a = 180, v = [0, 1, 0])
 rotate(a = -90, v = [1, 0, 0])
-spacefarer();
+scale(v = [2, 2, 2])
+	spacefarer();
 
