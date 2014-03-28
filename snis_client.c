@@ -11990,7 +11990,7 @@ static void init_meshes()
 #endif
 	ship_icon_mesh = snis_read_model(d, "ship-icon.stl");
 	heading_indicator_mesh = snis_read_model(d, "heading_indicator.stl");
-	cargo_container_mesh = snis_read_model(d, "cargocontainer.stl");
+	cargo_container_mesh = snis_read_model(d, "cargocontainer/cargocontainer.obj");
 	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
 	sun_mesh = mesh_fabricate_billboard(0, 0, 30000, 30000);
 	thrust_animation_mesh = init_thrust_mesh(10, 7, 3, 1);
