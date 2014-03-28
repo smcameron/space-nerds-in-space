@@ -137,6 +137,8 @@ static int display_frame_stats = 0;
 static int quickstartmode = 0; /* allows auto connecting to first (only) lobby entry */
 static float turret_recoil_amount = 0.0f;
 
+static int mtwist_seed = 59377;
+
 typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nsparks, int time);
 
 explosion_function *explosion = NULL;
@@ -371,7 +373,7 @@ static void initialize_random_orientations_and_spins(void)
 	int i;
 	struct mtwist_state *mt;
 
-	mt = mtwist_init(59377);
+	mt = mtwist_init(mtwist_seed);
 	for (i = 0; i < NRANDOM_ORIENTATIONS; i++) {
 		float angle = mtwist_float(mt) * 2.0 * M_PI;
 		consistent_random_axis_quat(mt, &random_orientation[i], angle);
@@ -11900,7 +11902,7 @@ static void init_meshes()
 	char *d = asset_dir;
 	struct mtwist_state *mt; 
 
-	mt = mtwist_init(59377);
+	mt = mtwist_init(mtwist_seed);
 	if (!mt) {
 		fprintf(stderr, "out of memory at %s:%d... crash likely.\n",
 				__FILE__, __LINE__);
@@ -12056,6 +12058,23 @@ static void prevent_zombies(void)
 				strerror(errno));
 }
 
+static void set_random_seed(void)
+{
+	char *seed = getenv("SNISRAND");
+	int i, rc;
+
+	if (!seed)
+		return;
+
+	rc = sscanf(seed, "%d", &i);
+	if (rc != 1)
+		return;
+
+	snis_srand((unsigned int) i);
+	srand(i);
+	mtwist_seed = (uint32_t) i;
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
@@ -12066,6 +12085,8 @@ int main(int argc, char *argv[])
 	if (setenv("LANG", LOCALE_THAT_WORKS, 1) <  0)
 		fprintf(stderr, "Failed to setenv LANG to '%s'\n",
 			LOCALE_THAT_WORKS);
+
+	set_random_seed();
 
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
 

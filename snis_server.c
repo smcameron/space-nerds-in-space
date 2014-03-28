@@ -83,6 +83,8 @@
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
 
+static uint32_t mtwist_seed = 35342;
+
 struct network_stats netstats;
 static int faction_population[5];
 static int lowest_faction = 0;
@@ -2041,7 +2043,7 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 	static struct mtwist_state *mt = NULL;
 
 	if (!mt)
-		mt = mtwist_init(35342);
+		mt = mtwist_init(mtwist_seed);
 
 	if (alien->tsd.ship.ai[0].ai_mode == AI_MODE_COP)
 		cop_attack_warning(mt, buffer, sizeof(buffer) - 1, sizeof(buffer) - 1);
@@ -4116,7 +4118,7 @@ static void starbase_move(struct snis_entity *o)
 	static struct mtwist_state *mt = NULL;
 
 	if (!mt)
-		mt = mtwist_init(35342);
+		mt = mtwist_init(mtwist_seed);
 
 	then = o->tsd.starbase.last_time_called_for_help;
 	now = universe_timestamp;
@@ -10763,6 +10765,8 @@ static void set_random_seed(void)
 		return;
 
 	snis_srand((unsigned int) i);
+	srand(i);
+	mtwist_seed = (uint32_t) i;
 }
 
 int main(int argc, char *argv[])
