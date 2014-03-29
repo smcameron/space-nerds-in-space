@@ -113,9 +113,11 @@ struct vertex_color_buffer_data {
 struct vertex_particle_buffer_data {
 	GLubyte multi_one[4];
 	union vec3 start_position;
-	GLubyte start_tint_color[4];
+	GLubyte start_tint_color[3];
+	GLubyte start_apm[2];
 	union vec3 end_position;
-	GLubyte end_tint_color[4];
+	GLubyte end_tint_color[3];
+	GLubyte end_apm[2];
 };
 
 void mesh_graph_dev_cleanup(struct mesh *m)
@@ -430,7 +432,11 @@ void mesh_graph_dev_init(struct mesh *m)
 		for (i = 0; i < m->nvertices; i += 2) {
 			int v_index = i * 2;
 
-			GLubyte alpha = (int)(m->l[i / 2].alpha * 255) & 255;
+			GLubyte tint_red = (int)(m->l[i / 2].tint_color.red * 255) & 255;
+			GLubyte tint_green = (int)(m->l[i / 2].tint_color.green * 255) & 255;
+			GLubyte tint_blue = (int)(m->l[i / 2].tint_color.blue * 255) & 255;
+			GLubyte additivity = (int)(m->l[i / 2].additivity * 255) & 255;
+			GLubyte opacity = (int)(m->l[i / 2].opacity * 255) & 255;
 			GLubyte time_offset = (int)(m->l[i / 2].time_offset * 255) & 255;
 
 			/* texture coord is different for all four vertices */
@@ -468,20 +474,24 @@ void mesh_graph_dev_init(struct mesh *m)
 			g_v_buffer_data[v_index + 0].start_tint_color[0] =
 				g_v_buffer_data[v_index + 1].start_tint_color[0] =
 				g_v_buffer_data[v_index + 2].start_tint_color[0] =
-				g_v_buffer_data[v_index + 3].start_tint_color[0] = alpha;
-
+				g_v_buffer_data[v_index + 3].start_tint_color[0] = tint_red;
 			g_v_buffer_data[v_index + 0].start_tint_color[1] =
 				g_v_buffer_data[v_index + 1].start_tint_color[1] =
 				g_v_buffer_data[v_index + 2].start_tint_color[1] =
-				g_v_buffer_data[v_index + 3].start_tint_color[1] = alpha;
+				g_v_buffer_data[v_index + 3].start_tint_color[1] = tint_green;
 			g_v_buffer_data[v_index + 0].start_tint_color[2] =
 				g_v_buffer_data[v_index + 1].start_tint_color[2] =
 				g_v_buffer_data[v_index + 2].start_tint_color[2] =
-				g_v_buffer_data[v_index + 3].start_tint_color[2] = alpha;
-			g_v_buffer_data[v_index + 0].start_tint_color[3] =
-				g_v_buffer_data[v_index + 1].start_tint_color[3] =
-				g_v_buffer_data[v_index + 2].start_tint_color[3] =
-				g_v_buffer_data[v_index + 3].start_tint_color[3] = 255;
+				g_v_buffer_data[v_index + 3].start_tint_color[2] = tint_blue;
+
+			g_v_buffer_data[v_index + 0].start_apm[0] =
+				g_v_buffer_data[v_index + 1].start_apm[0] =
+				g_v_buffer_data[v_index + 2].start_apm[0] =
+				g_v_buffer_data[v_index + 3].start_apm[0] = additivity;
+			g_v_buffer_data[v_index + 0].start_apm[1] =
+				g_v_buffer_data[v_index + 1].start_apm[1] =
+				g_v_buffer_data[v_index + 2].start_apm[1] =
+				g_v_buffer_data[v_index + 3].start_apm[1] = opacity;
 
 			g_v_buffer_data[v_index + 0].end_position.v.x =
 				g_v_buffer_data[v_index + 1].end_position.v.x =
@@ -499,19 +509,24 @@ void mesh_graph_dev_init(struct mesh *m)
 			g_v_buffer_data[v_index + 0].end_tint_color[0] =
 				g_v_buffer_data[v_index + 1].end_tint_color[0] =
 				g_v_buffer_data[v_index + 2].end_tint_color[0] =
-				g_v_buffer_data[v_index + 3].end_tint_color[0] = alpha;
+				g_v_buffer_data[v_index + 3].end_tint_color[0] = tint_red;
 			g_v_buffer_data[v_index + 0].end_tint_color[1] =
 				g_v_buffer_data[v_index + 1].end_tint_color[1] =
 				g_v_buffer_data[v_index + 2].end_tint_color[1] =
-				g_v_buffer_data[v_index + 3].end_tint_color[1] = alpha;
+				g_v_buffer_data[v_index + 3].end_tint_color[1] = tint_green;
 			g_v_buffer_data[v_index + 0].end_tint_color[2] =
 				g_v_buffer_data[v_index + 1].end_tint_color[2] =
 				g_v_buffer_data[v_index + 2].end_tint_color[2] =
-				g_v_buffer_data[v_index + 3].end_tint_color[2] = alpha;
-			g_v_buffer_data[v_index + 0].end_tint_color[3] =
-				g_v_buffer_data[v_index + 1].end_tint_color[3] =
-				g_v_buffer_data[v_index + 2].end_tint_color[3] =
-				g_v_buffer_data[v_index + 3].end_tint_color[3] = 255;
+				g_v_buffer_data[v_index + 3].end_tint_color[2] = tint_blue;
+
+			g_v_buffer_data[v_index + 0].end_apm[0] =
+				g_v_buffer_data[v_index + 1].end_apm[0] =
+				g_v_buffer_data[v_index + 2].end_apm[0] =
+				g_v_buffer_data[v_index + 3].end_apm[0] = additivity;
+			g_v_buffer_data[v_index + 0].end_apm[1] =
+				g_v_buffer_data[v_index + 1].end_apm[1] =
+				g_v_buffer_data[v_index + 2].end_apm[1] =
+				g_v_buffer_data[v_index + 3].end_apm[1] = opacity;
 
 			/* setup six indices for our two triangles */
 			int i_index = i * 3;
@@ -678,8 +693,10 @@ struct graph_dev_gl_textured_particle_shader {
 	GLint multi_one_id;
 	GLint start_position_id;
 	GLint start_tint_color_id;
+	GLint start_apm_id;
 	GLint end_position_id;
 	GLint end_tint_color_id;
+	GLint end_apm_id;
 	GLint texture_id; /* param to vertex shader */
 };
 
@@ -1742,7 +1759,7 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	glEnable(GL_BLEND);
-	BLEND_FUNC(GL_ONE, GL_ONE);
+	BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 	glUseProgram(textured_particle_shader.program_id);
 
@@ -1809,11 +1826,22 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer);
 	glVertexAttribPointer(
 		textured_particle_shader.start_tint_color_id, /* The attribute we want to configure */
-		4,                           /* size */
+		3,                           /* size */
 		GL_UNSIGNED_BYTE,            /* type */
 		GL_TRUE,                     /* normalized? */
 		sizeof(struct vertex_particle_buffer_data), /* stride */
 		(void *)offsetof(struct vertex_particle_buffer_data, start_tint_color) /* array buffer offset */
+	);
+
+	glEnableVertexAttribArray(textured_particle_shader.start_apm_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer);
+	glVertexAttribPointer(
+		textured_particle_shader.start_apm_id, /* The attribute we want to configure */
+		2,                           /* size */
+		GL_UNSIGNED_BYTE,            /* type */
+		GL_TRUE,                     /* normalized? */
+		sizeof(struct vertex_particle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_particle_buffer_data, start_apm) /* array buffer offset */
 	);
 
 	glEnableVertexAttribArray(textured_particle_shader.end_position_id);
@@ -1831,11 +1859,22 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer);
 	glVertexAttribPointer(
 		textured_particle_shader.end_tint_color_id, /* The attribute we want to configure */
-		4,                           /* size */
+		3,                           /* size */
 		GL_UNSIGNED_BYTE,            /* type */
 		GL_TRUE,                     /* normalized? */
 		sizeof(struct vertex_particle_buffer_data), /* stride */
 		(void *)offsetof(struct vertex_particle_buffer_data, end_tint_color) /* array buffer offset */
+	);
+
+	glEnableVertexAttribArray(textured_particle_shader.end_apm_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer);
+	glVertexAttribPointer(
+		textured_particle_shader.end_apm_id, /* The attribute we want to configure */
+		2,                           /* size */
+		GL_UNSIGNED_BYTE,            /* type */
+		GL_TRUE,                     /* normalized? */
+		sizeof(struct vertex_particle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_particle_buffer_data, end_apm) /* array buffer offset */
 	);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ptr->particle_index_buffer);
@@ -1844,8 +1883,10 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 	glDisableVertexAttribArray(textured_particle_shader.multi_one_id);
 	glDisableVertexAttribArray(textured_particle_shader.start_position_id);
 	glDisableVertexAttribArray(textured_particle_shader.start_tint_color_id);
+	glDisableVertexAttribArray(textured_particle_shader.start_apm_id);
 	glDisableVertexAttribArray(textured_particle_shader.end_position_id);
 	glDisableVertexAttribArray(textured_particle_shader.end_tint_color_id);
+	glDisableVertexAttribArray(textured_particle_shader.end_apm_id);
 	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
@@ -2811,15 +2852,16 @@ static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle
 	shader->camera_right_vec_id = glGetUniformLocation(shader->program_id, "u_CameraRightVec");
 	shader->time_id = glGetUniformLocation(shader->program_id, "u_Time");
 	shader->radius_id = glGetUniformLocation(shader->program_id, "u_Radius");
-	shader->texture_id = glGetUniformLocation(shader->program_id, "u_Texture");
+	shader->texture_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
 	glUniform1i(shader->texture_id, 0);
 
 	shader->multi_one_id = glGetAttribLocation(shader->program_id, "a_MultiOne");
 	shader->start_position_id = glGetAttribLocation(shader->program_id, "a_StartPosition");
 	shader->start_tint_color_id = glGetAttribLocation(shader->program_id, "a_StartTintColor");
+	shader->start_apm_id = glGetAttribLocation(shader->program_id, "a_StartAPM");
 	shader->end_position_id = glGetAttribLocation(shader->program_id, "a_EndPosition");
 	shader->end_tint_color_id = glGetAttribLocation(shader->program_id, "a_EndTintColor");
-
+	shader->end_apm_id = glGetAttribLocation(shader->program_id, "a_StartAPM");
 }
 
 static void setup_fs_effect_shader(const char *basename,

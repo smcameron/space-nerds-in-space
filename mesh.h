@@ -35,6 +35,7 @@
 #define MESH_LINE_STRIP (1<<1)
 #define MESH_LINE_DOTTED (1<<2)
 
+#include "snis_graph.h"
 #include <GL/glew.h>
 
 struct mesh_line
@@ -42,7 +43,9 @@ struct mesh_line
 	struct vertex *start;
 	struct vertex *end;
 	int flag;
-	float alpha;
+	float additivity;
+	float opacity;
+	struct sng_color tint_color;
 	float time_offset;
 };
 

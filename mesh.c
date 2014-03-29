@@ -215,7 +215,9 @@ static void copy_mesh_contents(struct mesh *copy, struct mesh *original)
 		copy->l[i].start = &copy->v[v0];
 		copy->l[i].end = &copy->v[v1];
 		copy->l[i].flag = original->l[i].flag;
-		copy->l[i].alpha = original->l[i].alpha;
+		copy->l[i].additivity = original->l[i].additivity;
+		copy->l[i].opacity = original->l[i].opacity;
+		copy->l[i].tint_color = original->l[i].tint_color;
 		copy->l[i].time_offset = original->l[i].time_offset;
 	}
 	if (original->tex)
@@ -1238,7 +1240,11 @@ struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2)
 			my_mesh->l[line_index].start = &my_mesh->v[v_index + 0];
 			my_mesh->l[line_index].end = &my_mesh->v[v_index + 1];
 			my_mesh->l[line_index].flag = 0;
-			my_mesh->l[line_index].alpha = particles[i].lifetime;
+			my_mesh->l[line_index].additivity = 1.0;
+			my_mesh->l[line_index].opacity = particles[i].lifetime;
+			my_mesh->l[line_index].tint_color.red = 1.0;
+			my_mesh->l[line_index].tint_color.green = 1.0;
+			my_mesh->l[line_index].tint_color.blue = 1.0;
 			my_mesh->l[line_index].time_offset = particles[i].offset;
 
 			line_index++;
@@ -1299,7 +1305,11 @@ struct mesh *init_burst_rod_mesh(int streaks, double h, double r1, double r2)
 		my_mesh->l[line_index].start = &my_mesh->v[v_index + 0];
 		my_mesh->l[line_index].end = &my_mesh->v[v_index + 1];
 		my_mesh->l[line_index].flag = 0;
-		my_mesh->l[line_index].alpha = 1.0;
+		my_mesh->l[line_index].additivity = 1.0;
+		my_mesh->l[line_index].opacity = 1.0;
+		my_mesh->l[line_index].tint_color.red = 1.0;
+		my_mesh->l[line_index].tint_color.green = 1.0;
+		my_mesh->l[line_index].tint_color.blue = 1.0;
 		my_mesh->l[line_index].time_offset = fabs(snis_random_float());
 	}
 
