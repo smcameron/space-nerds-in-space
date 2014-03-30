@@ -85,7 +85,8 @@ function we_have_a_winner(base)
 	comms_transmission(base, ": CONGRATULATIONS, " .. player_name);
 	comms_transmission(base, ": YOU HAVE COMPLETED THE RACE COURSE,");
 	comms_transmission(base, ": AND THIS TRAINING MISSION.");
-	comms_transmission(base, ": TOTAL ELAPSED TIME: ", os.time() - start_time, " SECONDS");
+	comms_transmission(base, string.format("%s %5.2f %s",
+				": TOTAL ELAPSED TIME: ", os.time() - start_time, " SECONDS"));
 end
 
 -- called whenever the player docks at a starbase
