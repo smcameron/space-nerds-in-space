@@ -57,7 +57,6 @@
 #include "snis_ship_type.h"
 #include "snis_faction.h"
 #include "space-part.h"
-#include "mtwist.h"
 #include "quat.h"
 #include "snis.h"
 #include "snis_log.h"
