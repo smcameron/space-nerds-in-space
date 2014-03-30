@@ -10,10 +10,10 @@ clear_all();
 start_time = 0;
 
 -- make 4 starbases in a big rectangle
-sb1 = add_starbase(100.0, 0, 100.0, 1);
-sb2 = add_starbase(50000.0, 0, 100.0, 2);
-sb3 = add_starbase(50000.0, 0, 70000.0, 3);
-sb4 = add_starbase(100.0, 0, 70000.0, 4);
+sb1 = add_starbase(1000.0, 10000, 1000.0, 1);
+sb2 = add_starbase(150000.0, -2000, 100.0, 2);
+sb3 = add_starbase(190000.0, 10000, 70000.0, 3);
+sb4 = add_starbase(100.0, -2500, 90000.0, 4);
 
 -- get the names of the starbases.
 sb1_name = get_object_name(sb1);
