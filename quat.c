@@ -899,3 +899,36 @@ int ray_intersects_sphere(const union vec3 *ray_origin,
 	return 1;
 }
 
+/* See "Real Time Collision Detection", by Christer Ericson, p. 224 */
+int moving_spheres_intersection(union vec3 s1, float r1, union vec3 v1,
+				union vec3 s2, float r2, union vec3 v2,
+				float time_horizon, float *time)
+{
+	union vec3 s, v;
+	float r, c, t;
+
+	vec3_sub(&s, &s2, &s1); /* vector between sphere centers */
+	vec3_sub(&v, &v2, &v1); /* relative velocity of s2 wrt stationary s1 */
+	r = r1 + r2;
+	c = vec3_dot(&s, &s) - r * r;
+	if (c < 0.0f) {
+		*time = 0.0f; /* already touching */
+		return 1;
+	}
+	float a = vec3_dot(&v, &v);
+	if (a < ZERO_TOLERANCE)
+		return 0; /* spheres not moving relative to each other */
+	float b = vec3_dot(&v, &s);
+	if (b >= 0.0f)
+		return 0; /* spheres not moving towards each other */
+	float d = b * b - a * c;
+	if (d < 0.0f)
+		return 0; /* No real-valued root, spheres do not intersect */
+	t = (-b - sqrtf(d)) / a;
+	if (time_horizon < 0 || t < time_horizon) {
+		*time = t;
+		return 1;
+	}
+	return 0;
+}
+
