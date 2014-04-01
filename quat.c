@@ -900,15 +900,15 @@ int ray_intersects_sphere(const union vec3 *ray_origin,
 }
 
 /* See "Real Time Collision Detection", by Christer Ericson, p. 224 */
-int moving_spheres_intersection(union vec3 s1, float r1, union vec3 v1,
-				union vec3 s2, float r2, union vec3 v2,
+int moving_spheres_intersection(union vec3 *s1, float r1, union vec3 *v1,
+				union vec3 *s2, float r2, union vec3 *v2,
 				float time_horizon, float *time)
 {
 	union vec3 s, v;
 	float r, c, t;
 
-	vec3_sub(&s, &s2, &s1); /* vector between sphere centers */
-	vec3_sub(&v, &v2, &v1); /* relative velocity of s2 wrt stationary s1 */
+	vec3_sub(&s, s2, s1); /* vector between sphere centers */
+	vec3_sub(&v, v2, v1); /* relative velocity of s2 wrt stationary s1 */
 	r = r1 + r2;
 	c = vec3_dot(&s, &s) - r * r;
 	if (c < 0.0f) {

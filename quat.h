@@ -273,8 +273,8 @@ int ray_intersects_sphere(const union vec3 *ray_origin,
  * if *time >= time_horizon && time_horizon >= 0 and there is an intersection,
  * then *time is filled in, otherwise, *time is not touched.
  */
-int moving_spheres_intersection(union vec3 s1, float r1, union vec3 v1,
-				union vec3 s2, float r2, union vec3 v2,
+int moving_spheres_intersection(union vec3 *s1, float r1, union vec3 *v1,
+				union vec3 *s2, float r2, union vec3 *v2,
 				float time_horizon, float *time);
 
 #endif /* __QUAT_H__ */
