@@ -1105,7 +1105,7 @@ void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius)
 	cx->fake_stars_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
 	cx->fake_stars_mesh->nvertices = nstars;
 	cx->fake_stars_mesh->v = calloc(1, sizeof(*cx->fake_stars_mesh->v) * nstars);
-	/* no good way to calculate this as the origin is always 0,0 and the starts move
+	/* no good way to calculate this as the origin is always 0,0 and the stars move
 	   in space relative to the camera */
 	cx->fake_stars_mesh->radius = INT_MAX;
 
@@ -1114,11 +1114,9 @@ void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius)
 	}
 	mesh_graph_dev_init(cx->fake_stars_mesh);
 
-	struct material *m = calloc(1, sizeof(*m));
-	m->type = MATERIAL_POINT_CLOUD_INTENSITY_NOISE;
-	cx->fake_stars_mesh->material = m;
+	cx->fake_stars_mesh->material = 0;
 
-	cx->fake_stars = add_entity(cx, cx->fake_stars_mesh, 0, 0, 0, WHITE);
+	cx->fake_stars = add_entity(cx, cx->fake_stars_mesh, 0, 0, 0, GRAY75);
 }
 
 void entity_free_fake_stars(struct entity_context *cx)
