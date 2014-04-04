@@ -15,7 +15,7 @@ SPACEFARER spaceship3.stl 900 5
 DRAGONHAWK dragonhawk.stl 1200 5
 SKORPIO skorpio.stl 1400 9
 DISRUPTOR disruptor/disruptor.obj 1000 21
-RESEARCH research-vessel.stl 700 7
+RESEARCH research-vessel/research-vessel.obj 700 7
 CONQUEROR conqueror/conqueror.obj 1000 17
 SCRAMBLER scrambler.stl 1400 30
 SWORDFISH swordfish.stl 1400 30
