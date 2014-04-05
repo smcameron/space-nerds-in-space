@@ -1346,3 +1346,13 @@ static int clip_line(struct mat41* vtx0, struct mat41* vtx1)
 	return 0;
 }
 
+float entity_get_alpha(struct entity *e)
+{
+	return e->alpha;
+}
+
+void entity_update_alpha(struct entity *e, float alpha)
+{
+	e->alpha = alpha;
+}
+

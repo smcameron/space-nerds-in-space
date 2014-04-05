@@ -32,6 +32,7 @@ struct entity {
 	float dist3dsqrd;
 	int color;
 	int shadecolor;
+	float alpha;
 	int render_style;
 	void *user_data;
 	union quat orientation;
