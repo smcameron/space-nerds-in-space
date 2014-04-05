@@ -43,7 +43,8 @@ SOUNDFILES=${SOUNDSRCDIR}/Attribution.txt \
 	${SOUNDSRCDIR}/transporter-sound.ogg \
 	${SOUNDSRCDIR}/tty-chatter.ogg \
 	${SOUNDSRCDIR}/warning-hull-breach-imminent.ogg \
-	${SOUNDSRCDIR}/warpdrive.ogg
+	${SOUNDSRCDIR}/warpdrive.ogg \
+	${SOUNDSRCDIR}/robot-insert-component.ogg
 TEXTUREDIR=${DATADIR}/textures
 TEXTURESRCDIR=share/snis/textures
 TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
@@ -129,7 +130,9 @@ TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
 	${TEXTURESRCDIR}/test5.png \
 	${TEXTURESRCDIR}/thrust.png \
 	${TEXTURESRCDIR}/warp-effect.png \
-	${TEXTURESRCDIR}/wormhole.png
+	${TEXTURESRCDIR}/wormhole.png \
+	${TEXTURESRCDIR}/green-burst.png \
+	${TEXTURESRCDIR}/blue-tractor-texture.png
 
 LUASCRIPTDIR=${DATADIR}/luascripts
 LUASRCDIR=share/snis/luascripts
@@ -167,8 +170,7 @@ SHADERDIR=${PREFIX}/share/snis/shader
 SHADERSRCDIR=share/snis/shader
 SHADERS=${SHADERSRCDIR}/color_by_w.frag \
 	${SHADERSRCDIR}/color_by_w.vert \
-	${SHADERSRCDIR}/fs-effect-copy.frag \
-	${SHADERSRCDIR}/fs-effect-copy.vert \
+	${SHADERSRCDIR}/fs-effect-copy.shader \
 	${SHADERSRCDIR}/line-single-color.frag \
 	${SHADERSRCDIR}/line-single-color.vert \
 	${SHADERSRCDIR}/per_vertex_color.frag \
@@ -190,18 +192,15 @@ SHADERS=${SHADERSRCDIR}/color_by_w.frag \
 	${SHADERSRCDIR}/smaa-high.shader \
 	${SHADERSRCDIR}/SMAA.hlsl \
 	${SHADERSRCDIR}/smaa-neighborhood.shader \
-	${SHADERSRCDIR}/textured-and-lit-per-vertex.frag \
-	${SHADERSRCDIR}/textured-and-lit-per-vertex.vert \
-	${SHADERSRCDIR}/textured-cubemap-and-lit-per-vertex.frag \
-	${SHADERSRCDIR}/textured-cubemap-and-lit-per-vertex.vert \
-	${SHADERSRCDIR}/textured-cubemap-and-lit-with-annulus-shadow-per-pixel.frag \
-	${SHADERSRCDIR}/textured-cubemap-and-lit-with-annulus-shadow-per-pixel.vert \
-	${SHADERSRCDIR}/textured.frag \
+	${SHADERSRCDIR}/textured-and-lit-per-pixel.shader \
+	${SHADERSRCDIR}/textured-and-lit-per-vertex.shader \
+	${SHADERSRCDIR}/textured-cubemap-and-lit-per-pixel.shader \
+	${SHADERSRCDIR}/textured-cubemap-and-lit-per-vertex.shader \
+	${SHADERSRCDIR}/textured-cubemap-and-lit-with-annulus-shadow-per-pixel.shader \
 	${SHADERSRCDIR}/textured-particle.frag \
 	${SHADERSRCDIR}/textured-particle.vert \
-	${SHADERSRCDIR}/textured.vert \
-	${SHADERSRCDIR}/textured-with-sphere-shadow-per-pixel.frag \
-	${SHADERSRCDIR}/textured-with-sphere-shadow-per-pixel.vert \
+	${SHADERSRCDIR}/textured.shader \
+	${SHADERSRCDIR}/textured-with-sphere-shadow-per-pixel.shader \
 	${SHADERSRCDIR}/wireframe_filled.frag \
 	${SHADERSRCDIR}/wireframe_filled.vert \
 	${SHADERSRCDIR}/wireframe_transparent.frag \
@@ -310,7 +309,6 @@ MODELS=${MD}/freighter.stl \
 	${MD}/laser.stl \
 	${MD}/planet.stl \
 	${MD}/spaceship.stl \
-	${MD}/starbase.stl \
 	${MD}/torpedo.stl \
 	${MD}/tanker.stl \
 	${MD}/destroyer.stl \
@@ -325,7 +323,6 @@ MODELS=${MD}/freighter.stl \
 	${MD}/asteroid3.stl \
 	${MD}/asteroid4.stl \
 	${MD}/wormhole.stl \
-	${MD}/starbase2.stl \
 	${MD}/starbase3.stl \
 	${MD}/starbase4.stl \
 	${MD}/starbase5.stl \
@@ -339,21 +336,16 @@ MODELS=${MD}/freighter.stl \
 	${MD}/planet3.stl \
 	${MD}/dragonhawk.stl \
 	${MD}/skorpio.stl \
-	${MD}/disruptor.stl \
-	${MD}/research-vessel.stl \
 	${MD}/long-triangular-prism.stl \
 	${MD}/ship-icon.stl \
 	${MD}/heading_indicator.stl \
 	${MD}/axis.stl \
-	${MD}/conqueror.stl \
 	${MD}/scrambler.stl \
 	${MD}/swordfish.stl \
 	${MD}/wombat.stl \
-	${MD}/cargocontainer.stl \
 	${MD}/spaceship_turret.stl \
 	${MD}/spaceship_turret_base.stl \
-	${MD}/vanquisher.stl \
-	${MD}/enforcer.stl
+	${MD}/vanquisher.stl
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
@@ -400,9 +392,6 @@ material.o : material.c Makefile
 
 shader.o : shader.c Makefile
 	$(Q)$(COMPILE)
-
-starbase.stl:	starbase.scad wedge.scad
-	$(Q)$(OPENSCAD)
 
 %.stl:	%.scad
 	$(Q)$(OPENSCAD)
@@ -656,8 +645,7 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		chmod +x ${PREFIX}/bin/$$x ; \
 	done
 	for d in ${MATERIALDIR} ${LUASCRIPTDIR} ${SHADERDIR} ${SOUNDDIR} \
-		${TEXTUREDIR} ${MODELDIR}/wombat ${MODELDIR}/dreadknight \
-		${MODELDIR}/conqueror ${SHADERDIR} ; do \
+		${TEXTUREDIR} ${MODELDIR}/wombat ${SHADERDIR} ; do \
 		mkdir -p $$d ; \
 	done
 	cp ${CONFIGFILES} ${CONFIGFILEDIR}
@@ -666,17 +654,16 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 	cp ${LUASCRIPTS} ${LUASCRIPTDIR}
 	cp ${MATERIALFILES} ${MATERIALDIR}
 	cp ${MODELS} ${MODELDIR}
-	cp ${MODELSRCDIR}/conqueror/conqueror.mtl  ${MODELDIR}/conqueror
-	cp ${MODELSRCDIR}/conqueror/conqueror.obj  ${MODELDIR}/conqueror
-	cp ${MODELSRCDIR}/conqueror/conqueror.png  ${MODELDIR}/conqueror
+	for d in dreadknight disruptor conqueror enforcer starbase starbase2 cargocontainer research-vessel ; do \
+		mkdir -p ${MODELDIR}/$$d ; \
+		cp ${MODELSRCDIR}/$$d/$$d.mtl ${MODELDIR}/$$d ; \
+		cp ${MODELSRCDIR}/$$d/$$d.obj ${MODELDIR}/$$d ; \
+		cp ${MODELSRCDIR}/$$d/$$d.png ${MODELDIR}/$$d ; \
+	done
 	cp ${MODELSRCDIR}/wombat/snis3006lights.png ${MODELDIR}/wombat
 	cp ${MODELSRCDIR}/wombat/snis3006.mtl ${MODELDIR}/wombat
 	cp ${MODELSRCDIR}/wombat/snis3006.obj ${MODELDIR}/wombat
 	cp ${MODELSRCDIR}/wombat/snis3006.png ${MODELDIR}/wombat
-	cp ${MODELSRCDIR}/dreadknight/dreadknight-exhaust-plumes.h ${MODELDIR}/dreadknight
-	cp ${MODELSRCDIR}/dreadknight/dreadknight.mtl ${MODELDIR}/dreadknight
-	cp ${MODELSRCDIR}/dreadknight/dreadknight.obj ${MODELDIR}/dreadknight
-	cp ${MODELSRCDIR}/dreadknight/dreadknight.png ${MODELDIR}/dreadknight
 	cp ${SHADERS} ${SHADERDIR}
 	mkdir -p ${MANDIR}
 	cp ${MANPAGES} ${MANDIR}
