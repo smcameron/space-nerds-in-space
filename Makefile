@@ -196,6 +196,7 @@ SHADERS=${SHADERSRCDIR}/color_by_w.frag \
 	${SHADERSRCDIR}/textured-and-lit-per-vertex.shader \
 	${SHADERSRCDIR}/textured-cubemap-and-lit-per-pixel.shader \
 	${SHADERSRCDIR}/textured-cubemap-and-lit-per-vertex.shader \
+	${SHADERSRCDIR}/textured-cubemap-shield-per-pixel.shader \
 	${SHADERSRCDIR}/textured-cubemap-and-lit-with-annulus-shadow-per-pixel.shader \
 	${SHADERSRCDIR}/textured-particle.frag \
 	${SHADERSRCDIR}/textured-particle.vert \

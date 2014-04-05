@@ -39,6 +39,7 @@ struct entity;
 #define MATERIAL_TEXTURED_PLANET_RING 10
 #define MATERIAL_WIREFRAME_SPHERE_CLIP 11
 #define MATERIAL_POINT_CLOUD_INTENSITY_NOISE 12
+#define MATERIAL_TEXTURED_SHIELD 13
 
 #define MATERIAL_BILLBOARD_TYPE_NONE 0
 #define MATERIAL_BILLBOARD_TYPE_SCREEN 1
@@ -102,6 +103,10 @@ struct material_textured_planet {
 	struct material *ring_material;
 };
 
+struct material_textured_shield {
+	int texture_id;
+};
+
 struct material_wireframe_sphere_clip {
 	struct entity *center;
 	float radius;
@@ -117,6 +122,7 @@ struct material {
 		struct material_nebula nebula;
 		struct material_textured_particle textured_particle;
 		struct material_textured_planet textured_planet;
+		struct material_textured_shield textured_shield;
 		struct material_textured_planet_ring textured_planet_ring;
 		struct material_wireframe_sphere_clip wireframe_sphere_clip;
 	};
@@ -130,6 +136,7 @@ extern void material_init_texture_cubemap(struct material *m);
 extern void material_init_nebula(struct material *m);
 extern void material_init_textured_particle(struct material *m);
 extern void material_init_textured_planet(struct material *m);
+extern void material_init_textured_shield(struct material *m);
 extern void material_init_textured_planet_ring(struct material *m);
 extern void material_init_wireframe_sphere_clip(struct material *m);
 

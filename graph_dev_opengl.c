@@ -751,6 +751,7 @@ static struct graph_dev_gl_textured_shader textured_with_sphere_shadow_shader;
 static struct graph_dev_gl_textured_shader textured_lit_shader;
 static struct graph_dev_gl_textured_shader textured_lit_emit_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_shield_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
 static struct graph_dev_gl_fs_effect_shader fs_copy_shader;
@@ -1915,6 +1916,7 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 	case MATERIAL_NEBULA:
 	case MATERIAL_TEXTURED_PARTICLE:
 	case MATERIAL_TEXTURED_PLANET_RING:
+	case MATERIAL_TEXTURED_SHIELD:
 		does_blending = 1;
 		break;
 	case MATERIAL_TEXTURE_MAPPED_UNLIT:
@@ -2024,6 +2026,15 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				do_blend = mt->do_blend;
 				texture_alpha = mt->alpha;
 				texture_tint = mt->tint;
+				}
+				break;
+			case MATERIAL_TEXTURED_SHIELD: {
+				struct material_textured_shield *mt = &e->material_ptr->textured_shield;
+				texture_id = mt->texture_id;
+				tex_shader = &textured_cubemap_shield_shader;
+				do_blend = 1;
+				texture_alpha = entity_get_alpha(e);
+				do_cullface = 0;
 				}
 				break;
 			case MATERIAL_TEXTURED_PLANET: {
@@ -3168,6 +3179,7 @@ int graph_dev_setup(const char *shader_dir)
 	setup_textured_shader("textured-and-lit-per-pixel", "", &textured_lit_shader);
 	setup_textured_shader("textured-and-lit-per-pixel", "#define USE_EMIT_MAP", &textured_lit_emit_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", &textured_cubemap_lit_shader);
+	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", &textured_cubemap_shield_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel",
 		&textured_cubemap_lit_with_annulus_shadow_shader);
 	setup_textured_particle_shader(&textured_particle_shader);

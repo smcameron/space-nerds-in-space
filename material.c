@@ -192,6 +192,13 @@ void material_init_textured_planet(struct material *m)
 	m->textured_planet.ring_material = 0;
 }
 
+void material_init_textured_shield(struct material *m)
+{
+	m->type = MATERIAL_TEXTURED_SHIELD;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
+	m->textured_shield.texture_id = 0;
+}
+
 void material_init_textured_planet_ring(struct material *m)
 {
 	m->type = MATERIAL_TEXTURED_PLANET_RING;

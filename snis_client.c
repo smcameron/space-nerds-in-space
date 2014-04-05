@@ -316,6 +316,7 @@ static struct material sun_material;
 #define NPLANETARY_RING_MATERIALS 2
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
 static struct material planet_material[NPLANET_MATERIALS * (NPLANETARY_RING_MATERIALS + 1)];
+static struct material shield_material;
 #define NASTEROID_TEXTURES 2
 static struct material asteroid_material[NASTEROID_TEXTURES];
 static struct material wormhole_material;
@@ -1577,6 +1578,19 @@ static void warp_effect_move(struct snis_entity *o)
 	}
 }
 
+static void shield_effect_move(struct snis_entity *o)
+{
+	o->x += o->vx;
+	o->y += o->vy;
+	o->z += o->vz;
+	o->alive--;
+	entity_update_alpha(o->entity, entity_get_alpha(o->entity) * 0.8);
+	if (o->alive <= 0) {
+		remove_entity(ecx, o->entity);
+		snis_object_pool_free_object(sparkpool, spark_index(o));
+	}
+}
+
 static void spark_move(struct snis_entity *o)
 {
 	union quat orientation;
@@ -2054,6 +2068,40 @@ void add_warp_effect(double x, double y, double z, int arriving, int time,
 	}
 	return;
 }
+
+void add_shield_effect(double x, double y, double z,
+			double vx, double vy, double vz,
+			double radius, union quat *orientation)
+{
+	int i;
+	struct entity *e;
+
+	i = snis_object_pool_alloc_obj(sparkpool);
+	if (i < 0)
+		return;
+	e = add_entity(ecx, sphere_mesh, x, y, z, PARTICLE_COLOR);
+	if (e) {
+		set_render_style(e, RENDER_NORMAL);
+		update_entity_material(e, &shield_material);
+		update_entity_scale(e, radius);
+		update_entity_orientation(e, orientation);
+		update_entity_visibility(e, 1);
+		entity_update_alpha(e, 0.3);
+	}
+	memset(&spark[i], 0, sizeof(spark[i]));
+	spark[i].x = x;
+	spark[i].y = y;
+	spark[i].z = z;
+	spark[i].vx = vx;
+	spark[i].vy = vx;
+	spark[i].vz = vx;
+	spark[i].type = OBJTYPE_SHIELD_EFFECT;
+	spark[i].alive = SHIELD_EFFECT_LIFETIME * 10;
+	spark[i].move = shield_effect_move;
+	spark[i].entity = e;
+	return;
+}
+
 
 static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_t velocity, int time,
 				uint8_t victim_type)
@@ -3977,6 +4025,39 @@ static int universe_timestamp_sample_compare_less(const void *a, const void *b, 
 static void do_whatever_detonate_does(uint32_t id, double x, double y, double z,
 					uint32_t time, double fractional_time)
 {
+	int i;
+	struct snis_entity *o;
+	float radius;
+	union quat orientation;
+	union vec3 u, v;
+
+	i = lookup_object_by_id(id);
+	if (i < 0)
+		return;
+	o = &go[i];
+	switch (o->type) {
+	case OBJTYPE_SHIP1:
+	case OBJTYPE_SHIP2:
+		radius = 1.25f * ship_mesh_map[o->tsd.ship.shiptype]->radius;
+		break;
+	case OBJTYPE_STARBASE: {
+			radius = 1.25 * entity_get_mesh(o->entity)->radius;
+		}
+	default:
+		return;
+	}
+
+	u.v.x = 0.0f;
+	u.v.y = 0.0f;
+	u.v.z = 0.0f;
+
+	v.v.x = (float) (x - o->x);
+	v.v.y = (float) (y - o->y);
+	v.v.z = (float) (z - o->z);
+
+	quat_from_u2v(&orientation, &u, &v, NULL);
+
+	add_shield_effect(o->x, o->y, o->z, o->vx, o->vy, o->vz, radius, &orientation);
 }
 
 static int process_detonate(void)
@@ -11490,6 +11571,9 @@ static void load_textures(void)
 			planet_material[pm_index].textured_planet.ring_material = &planetary_ring_material[k];
 		}
 	}
+
+	material_init_textured_shield(&shield_material);
+	shield_material.textured_shield.texture_id = load_cubemap_textures(0, "shield-effect-");
 
 	for (i = 0; i < NNEBULA_MATERIALS; i++) {
 		char filename[20];
