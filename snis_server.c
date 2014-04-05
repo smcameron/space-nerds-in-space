@@ -1219,6 +1219,8 @@ static void calculate_laser_starbase_damage(struct snis_entity *o, uint8_t wavel
 }
 
 static void send_ship_damage_packet(struct snis_entity *o);
+static void send_detonate_packet(struct snis_entity *o, double x, double y, double z,
+				uint32_t time, double fractional_time);
 static void send_silent_ship_damage_packet(struct snis_entity *o);
 static int lookup_by_id(uint32_t id);
 
@@ -1793,16 +1795,47 @@ static void notify_the_cops(struct snis_entity *weapon)
 	space_partition_process(space_partition, perp, perp->x, perp->z, perp, notify_a_cop);
 }
 
+static int projectile_collides(double x1, double y1, double z1,
+				double vx1, double vy1, double vz1, double r1,
+				double x2, double y2, double z2,
+				double vx2, double vy2, double vz2, double r2,
+				float *time)
+{
+	union vec3 s1, s2, v1, v2;
+
+	s2.v.x = (float) (x2 - x1);
+	s2.v.y = (float) (y2 - y1);
+	s2.v.z = (float) (z2 - z1);
+	v2.v.x = (float) vx2;
+	v2.v.y = (float) vy2;
+	v2.v.z = (float) vz2;
+
+	s1.v.x = 0.0f;
+	s1.v.y = 0.0f;
+	s1.v.z = 0.0f;
+	v1.v.x = (float) vx1;
+	v1.v.y = (float) vy1;
+	v1.v.z = (float) vz1;
+
+	return moving_spheres_intersection(&s1, (float) r1, &v1, &s2, (float) r2, &v2, 1.0f, time);
+}
+
 static void torpedo_collision_detection(void *context, void *entity)
 {
-	struct snis_entity *o = context; /* torpedo */
 	struct snis_entity *t = entity;  /* target */
-	double dist2;
+	struct snis_entity *o = context;
+	float delta_t;
+	double tolerance = 350.0;
+	double dist2, ix, iy, iz;
+	uint32_t impact_time;
+	double impact_fractional_time;
 
 	if (!t->alive)
 		return;
 	if (t == o)
 		return;
+
+	/* What's the -3 about? */
 	if (o->alive >= TORPEDO_LIFETIME - 3)
 		return;
 	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
@@ -1818,7 +1851,26 @@ static void torpedo_collision_detection(void *context, void *entity)
 		o->alive = 0; /* smashed into planet */
 	else if (dist2 > TORPEDO_DETONATE_DIST2)
 		return; /* not close enough */
+
+	/* make sure torpedoes aren't *too* easy to hit */
+	if (t->type == OBJTYPE_TORPEDO)
+		tolerance = 30.0;
+
+	if (!projectile_collides(o->x, o->y, o->z, o->vx, o->vy, o->vz, 0.5 * tolerance,
+				t->x, t->y, t->z, t->vx, t->vy, t->vz, 0.5 * tolerance, &delta_t))
+		return;
+
 	o->alive = 0; /* hit!!!! */
+
+	/* calculate impact point */
+	ix = o->x + o->vx * delta_t;
+	iy = o->y + o->vy * delta_t;
+	iz = o->z + o->vz * delta_t;
+	/* not sure this time stuff is quite correct, may need universe_absolute_time
+	 * as part of the calculation of impact_fractional_time
+	 */
+	impact_time = universe_timestamp;
+	impact_fractional_time = (double) delta_t;
 
 	notify_the_cops(o);
 
@@ -1826,12 +1878,14 @@ static void torpedo_collision_detection(void *context, void *entity)
 		t->tsd.starbase.under_attack = 1;
 		add_starbase_attacker(t, o->tsd.torpedo.ship_id);
 		calculate_laser_starbase_damage(t, snis_randn(255));
+		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
 		return;
 	}
 
 	if (t->type == OBJTYPE_SHIP1 || t->type == OBJTYPE_SHIP2) {
 		calculate_torpedo_damage(t);
 		send_ship_damage_packet(t);
+		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
 		attack_your_attacker(t, lookup_entity_by_id(o->tsd.torpedo.ship_id));
 	} else if (t->type == OBJTYPE_ASTEROID || t->type == OBJTYPE_CARGO_CONTAINER) {
 		if (t->alive)
@@ -1945,9 +1999,12 @@ static int laser_point_collides(double lx1, double ly1, double lz1,
 
 static void laser_collision_detection(void *context, void *entity)
 {
-	struct snis_entity *o = context; /* laser */
+	struct snis_entity *o = context;
 	struct snis_entity *t = entity;  /* target */
 	double tolerance = 350.0;
+	double ix, iy, iz, impact_fractional_time;
+	uint32_t impact_time;
+	float delta_t;
 
 	if (!t->alive)
 		return;
@@ -1968,6 +2025,20 @@ static void laser_collision_detection(void *context, void *entity)
 				o->x - o->vx, o->y - o->vy, o->z - o->vz,
 				t->x, t->y, t->z, tolerance))
 		return; /* not close enough */
+
+	if (!projectile_collides(o->x, o->y, o->z, o->vx, o->vy, o->vz, 0.5 * tolerance,
+				t->x, t->y, t->z, t->vx, t->vy, t->vz, 0.5 * tolerance, &delta_t))
+		return;
+
+	/* Calculate impact point */
+	ix = o->x + o->vx * delta_t;
+	iy = o->y + o->vy * delta_t;
+	iz = o->z + o->vz * delta_t;
+	/* not sure this time stuff is quite correct, may need universe_absolute_time
+	 * as part of the calculation of impact_fractional_time
+	 */
+	impact_time = universe_timestamp;
+	impact_fractional_time = (double) delta_t;
 		
 	/* hit!!!! */
 	o->alive = 0;
@@ -1975,6 +2046,8 @@ static void laser_collision_detection(void *context, void *entity)
 
 	if (t->type == OBJTYPE_STARBASE) {
 		t->tsd.starbase.under_attack = 1;
+		/* FIXME: looks like lasers do not harm starbases... seems wrong */
+		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
 		return;
 	}
 
@@ -1983,6 +2056,7 @@ static void laser_collision_detection(void *context, void *entity)
 			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST);
 		send_ship_damage_packet(t);
 		attack_your_attacker(t, lookup_entity_by_id(o->tsd.laser.ship_id));
+		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
 	}
 
 	if (t->type == OBJTYPE_ASTEROID || t->type == OBJTYPE_TORPEDO ||
@@ -9809,6 +9883,21 @@ static void send_generic_ship_damage_packet(struct snis_entity *o, uint8_t opcod
 	packed_buffer_append(pb, "bwr", opcode, o->id,
 		(char *) &o->tsd.ship.damage, sizeof(o->tsd.ship.damage));
 	send_packet_to_all_clients(pb, ROLE_ALL);
+}
+
+static void send_detonate_packet(struct snis_entity *o, double x, double y, double z,
+				uint32_t time, double fractional_time)
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_new("bwSSSwU", OPCODE_DETONATE,
+			o->id,
+			x, (int32_t) UNIVERSE_DIM,
+			y, (int32_t) UNIVERSE_DIM,
+			z, (int32_t) UNIVERSE_DIM,
+			time, fractional_time, (uint32_t) 5);
+	if (pb)
+		send_packet_to_all_clients(pb, ROLE_ALL);
 }
 
 static void send_ship_damage_packet(struct snis_entity *o)

@@ -3974,6 +3974,33 @@ static int universe_timestamp_sample_compare_less(const void *a, const void *b, 
 	return 0;
 }
 
+static void do_whatever_detonate_does(uint32_t id, double x, double y, double z,
+					uint32_t time, double fractional_time)
+{
+}
+
+static int process_detonate(void)
+{
+	unsigned char buffer[100];
+	int rc;
+	uint32_t id, time;
+	double x, y, z, fractional_time;
+
+	rc = read_and_unpack_buffer(buffer, "wSSSwU",
+			&id,
+			&x, (int32_t) UNIVERSE_DIM,
+			&y, (int32_t) UNIVERSE_DIM,
+			&z, (int32_t) UNIVERSE_DIM,
+			&time,
+			&fractional_time, (uint32_t) 5);
+	if (rc)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	do_whatever_detonate_does(id, x, y, z, time, fractional_time);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_update_universe_timestamp(double update_time)
 {
 	int rc;
@@ -4750,6 +4777,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_UNIVERSE_TIMESTAMP:
 			rc = process_update_universe_timestamp(update_time);
+			break;
+		case OPCODE_DETONATE:
+			rc = process_detonate();
+			if (rc)
+				goto protocol_error;
 			break;
 		default:
 			goto protocol_error;
