@@ -1584,7 +1584,7 @@ static void shield_effect_move(struct snis_entity *o)
 	o->y += o->vy;
 	o->z += o->vz;
 	o->alive--;
-	entity_update_alpha(o->entity, entity_get_alpha(o->entity) * 0.8);
+	entity_update_alpha(o->entity, entity_get_alpha(o->entity) * 0.9);
 	if (o->alive <= 0) {
 		remove_entity(ecx, o->entity);
 		snis_object_pool_free_object(sparkpool, spark_index(o));
@@ -2086,7 +2086,7 @@ void add_shield_effect(double x, double y, double z,
 		update_entity_scale(e, radius);
 		update_entity_orientation(e, orientation);
 		update_entity_visibility(e, 1);
-		entity_update_alpha(e, 0.3);
+		entity_update_alpha(e, 0.7);
 	}
 	memset(&spark[i], 0, sizeof(spark[i]));
 	spark[i].x = x;
@@ -2096,7 +2096,7 @@ void add_shield_effect(double x, double y, double z,
 	spark[i].vy = vx;
 	spark[i].vz = vx;
 	spark[i].type = OBJTYPE_SHIELD_EFFECT;
-	spark[i].alive = SHIELD_EFFECT_LIFETIME * 10;
+	spark[i].alive = SHIELD_EFFECT_LIFETIME;
 	spark[i].move = shield_effect_move;
 	spark[i].entity = e;
 	return;
