@@ -4040,14 +4040,14 @@ static void do_whatever_detonate_does(uint32_t id, double x, double y, double z,
 	case OBJTYPE_SHIP2:
 		radius = 1.25f * ship_mesh_map[o->tsd.ship.shiptype]->radius;
 		break;
-	case OBJTYPE_STARBASE: {
-			radius = 1.25 * entity_get_mesh(o->entity)->radius;
-		}
+	case OBJTYPE_STARBASE:
+		radius = 1.25 * entity_get_mesh(o->entity)->radius;
+		break;
 	default:
 		return;
 	}
 
-	u.v.x = 0.0f;
+	u.v.x = 1.0f;
 	u.v.y = 0.0f;
 	u.v.z = 0.0f;
 
