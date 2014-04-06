@@ -5379,7 +5379,8 @@ static void tractorbeam_move(struct snis_entity *o)
 
 static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
 {
-	int i, s;
+	int i, s, ti, oi;
+	struct snis_entity *o, *t;
 
 	i = add_generic_object(0, 0, 0, 0, 0, 0, 0, OBJTYPE_LASERBEAM);
 	if (i < 0)
@@ -5393,6 +5394,27 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
 	go[i].tsd.laserbeam.power = go[s].tsd.ship.phaser_charge;
 	go[s].tsd.ship.phaser_charge = 0;
 	go[i].tsd.laserbeam.wavelength = go[s].tsd.ship.phaser_wavelength;
+	ti = lookup_by_id(target);
+	if (ti < 0)
+		return i;
+	oi = lookup_by_id(origin);
+	if (oi < 0)
+		return i;
+	o = &go[oi];
+	t = &go[ti];
+	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 && t->type != OBJTYPE_STARBASE)
+		return i;
+
+	union vec3 impact_point;
+
+	impact_point.v.x = (float) (t->x - o->x);
+	impact_point.v.y = (float) (t->y - o->y);
+	impact_point.v.z = (float) (t->z - o->z);
+	vec3_normalize_self(&impact_point);
+	vec3_mul_self(&impact_point, 100.0); /* server doesn't know radius */
+
+	send_detonate_packet(t, t->x - impact_point.v.x,
+			t->y - impact_point.v.y, t->z - impact_point.v.z, 0, 0.0);
 	return i;
 }
 
