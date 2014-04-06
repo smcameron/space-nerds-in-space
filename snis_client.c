@@ -1586,17 +1586,19 @@ static void spark_move(struct snis_entity *o)
 	o->y += o->vy;
 	o->z += o->vz;
 	o->alive--;
+	if (o->alive <= 0) {
+		remove_entity(ecx, o->entity);
+		o->entity = NULL;
+		snis_object_pool_free_object(sparkpool, spark_index(o));
+		return;
+	}
 
 	/* Apply incremental rotation */
 	quat_mul(&orientation, &o->tsd.spark.rotational_velocity, entity_get_orientation(o->entity));
 	update_entity_orientation(o->entity, &orientation);
 	scale = entity_get_scale(o->entity);
 	update_entity_scale(o->entity, scale * o->tsd.spark.shrink_factor);
-
-	if (o->alive <= 0) {
-		remove_entity(ecx, o->entity);
-		snis_object_pool_free_object(sparkpool, spark_index(o));
-	}
+	update_entity_pos(o->entity, o->x, o->y, o->z);
 }
 
 static void move_sparks(void)
@@ -1604,12 +1606,8 @@ static void move_sparks(void)
 	int i;
 
 	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++)
-		if (spark[i].alive) {
+		if (spark[i].alive)
 			spark[i].move(&spark[i]);
-			if (spark[i].entity)
-				update_entity_pos(spark[i].entity, spark[i].x,
-							spark[i].y, spark[i].z);
-		}
 }
 
 static void spin_wormhole(double timestamp, struct snis_entity *o)
