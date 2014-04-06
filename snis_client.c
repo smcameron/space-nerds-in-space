@@ -4047,9 +4047,9 @@ static void do_whatever_detonate_does(uint32_t id, double x, double y, double z,
 		return;
 	}
 
-	u.v.x = 1.0f;
+	u.v.x = 0.0f;
 	u.v.y = 0.0f;
-	u.v.z = 0.0f;
+	u.v.z = 1.0f;
 
 	v.v.x = (float) (x - o->x);
 	v.v.y = (float) (y - o->y);
