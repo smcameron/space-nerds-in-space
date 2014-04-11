@@ -26,6 +26,8 @@
 struct ship_type_entry {
 	char *class;
 	char *model_file;
+	double toughness;
+	uint8_t max_shield_strength;
 	double max_speed;
 	int crew_max;
 	int nrotations;

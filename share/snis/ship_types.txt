@@ -1,25 +1,25 @@
 # 
 # format is:
-# SHIP TYPENAME model-file max speed crew size [[axis angle] ...]
+# SHIP TYPENAME model-file toughness max-speed crew-size [[axis angle] ...]
 #
-CRUISER cruiser.stl 1000 15
-DESTROYER destroyer.stl 1500 10
-FREIGHTER freighter.stl 800 10
-TANKER tanker.stl 750 10
-TRANSPORT transport.stl 900 200
-BATTLESTAR battlestar.stl 1100 75
-STARSHIP spaceship.stl 800 10
-MINER asteroid-miner.stl 1150 3
-SCIENCE spaceship2.stl 750 7
-SPACEFARER spaceship3.stl 900 5
-DRAGONHAWK dragonhawk.stl 1200 5
-SKORPIO skorpio.stl 1400 9
-DISRUPTOR disruptor/disruptor.obj 1000 21
-RESEARCH research-vessel/research-vessel.obj 700 7
-CONQUEROR conqueror/conqueror.obj 1000 17
-SCRAMBLER scrambler.stl 1400 30
-SWORDFISH swordfish.stl 1400 30
-WOMBAT wombat/snis3006.obj 1400 30 x -90.0 y 90.0
-DREADKNIGHT dreadknight/dreadknight.obj 1300 25
-VANQUISHER vanquisher.stl 1400 3 
-ENFORCER enforcer/enforcer.obj 2700 5
+CRUISER cruiser.stl 0.5 1000 15
+DESTROYER destroyer.stl 0.7 1500 10
+FREIGHTER freighter.stl 0.2 800 10
+TANKER tanker.stl 0.2 750 10
+TRANSPORT transport.stl 0.4 900 200
+BATTLESTAR battlestar.stl 0.8 1100 75
+STARSHIP spaceship.stl 0.5 800 10
+MINER asteroid-miner.stl 0.1 1150 3
+SCIENCE spaceship2.stl 0.9 750 7
+SPACEFARER spaceship3.stl 0.6 900 5
+DRAGONHAWK dragonhawk.stl 0.3 1200 5
+SKORPIO skorpio.stl 0.3 1400 9
+DISRUPTOR disruptor/disruptor.obj 0.9 1000 21
+RESEARCH research-vessel/research-vessel.obj 0.15 700 7
+CONQUEROR conqueror/conqueror.obj 0.7 1000 17
+SCRAMBLER scrambler.stl 0.3 1400 30
+SWORDFISH swordfish.stl 0.2 1400 30
+WOMBAT wombat/snis3006.obj 0.95 1400 30 x -90.0 y 90.0
+DREADKNIGHT dreadknight/dreadknight.obj 0.7 1300 25
+VANQUISHER vanquisher.stl 0.3 1400 3
+ENFORCER enforcer/enforcer.obj 0.98 2700 5

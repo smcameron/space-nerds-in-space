@@ -3054,7 +3054,8 @@ static void ship_move(struct snis_entity *o)
 	}
 
 	/* Repair the ship over time */
-	if (o->sdata.shield_strength < 255 && snis_randn(1000) < 7)
+	const int st = o->tsd.ship.shiptype;
+	if (o->sdata.shield_strength < ship_type[st].max_shield_strength && snis_randn(1000) < 7)
 		o->sdata.shield_strength++;
 
 	/* Check if we are in a secure area */
@@ -4744,6 +4745,7 @@ static int add_ship(int faction)
 {
 	int i;
 	double x, y, z, heading;
+	int st;
 
 	for (i = 0; i < 100; i++) {
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
@@ -4765,7 +4767,9 @@ static int add_ship(int faction)
 	go[i].tsd.ship.roll_velocity = 0.0;
 	go[i].tsd.ship.desired_velocity = 0;
 	go[i].tsd.ship.velocity = 0;
-	go[i].tsd.ship.shiptype = snis_randn(nshiptypes);
+	st = snis_randn(nshiptypes);
+	go[i].tsd.ship.shiptype = st;
+	go[i].sdata.shield_strength = ship_type[st].max_shield_strength;
 	go[i].tsd.ship.nai_entries = 0;
 	memset(go[i].tsd.ship.ai, 0, sizeof(go[i].tsd.ship.ai));
 	go[i].tsd.ship.lifeform_count = ship_type[go[i].tsd.ship.shiptype].crew_max;
