@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "mtwist.h"
 #include "vertex.h"
@@ -314,6 +315,8 @@ static void process_events()
 
 static struct mesh *target_mesh;
 static struct mesh *light_mesh;
+static struct material planet_material;
+static int planet_mode = 0;
 
 #define FRAME_INDEX_MAX 10
 
@@ -352,6 +355,8 @@ static void draw_screen()
 	calculate_camera_transform(cx);
 
 	struct entity *e = add_entity(cx, target_mesh, 0, 0, 0, WHITE);
+	if (planet_mode)
+		update_entity_material(e, &planet_material);
 	update_entity_orientation(e, &lobby_orientation);
 
 	if (isDraggingLight) {
@@ -419,20 +424,70 @@ static void draw_screen()
 	}
 }
 
+static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
+{
+	/*
+	 * SNIS wants skybox textures in six files named like this:
+	 * blah0.png
+	 * blah1.png
+	 * blah2.png
+	 * blah3.png
+	 * blah4.png
+	 * blah5.png
+	 *
+	 * and those images should be laid out like this:
+	 *
+	 *  +------+
+	 *  |  4   |
+	 *  |      |
+	 *  +------+------+------+------+
+	 *  |  0   |  1   |  2   |  3   |
+	 *  |      |      |      |      |
+	 *  +------+------+------+------+
+	 *  |  5   |
+	 *  |      |
+	 *  +------+
+	 *
+	 *  Why?  No reason other than that's how I did it in cosmic-space-boxinator
+	 *  See: https://github.com/smcameron/cosmic-space-boxinator
+	 *
+	 *  Opengl does it a bit differenty, so we have the arbitrariness you see below.
+	 */
+	int i;
+	char filename[6][PATH_MAX + 1];
+
+	for (i = 0; i < 6; i++)
+		sprintf(filename[i], "%s/textures/%s%d.png", "share/snis", filenameprefix, i);
+
+	return graph_dev_load_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
+					filename[5], filename[0], filename[2]);
+}
+
+__attribute__((noreturn)) void usage(char *program)
+{
+	fprintf(stderr, "Usage: %s [ <mesh_file> | -p <planet-texture> ]\n", program);
+	exit(-1);
+}
+
 int main(int argc, char *argv[])
 {
-	char *filename, *program;
+	char *filename, *program, *planetname;
 	struct stat statbuf;
 
-	if (argc < 2) {
-		printf("%s <mesh_file>\n", argv[0]);
-		exit(-1);
+	program = argc >= 0 ? argv[0] : "mesh_viewer";
+
+	if (argc < 2)
+		usage(program);
+
+	filename = argv[1];
+	if (strncmp(filename, "-p", 2) == 0) {
+		planet_mode = 1;
+		if (argc < 3)
+			usage(program);
+		planetname = argv[2];
 	}
 
-	program = argv[0];
-	filename = argv[1];
-
-	if (stat(filename, &statbuf) != 0) {
+	if (!planet_mode && stat(filename, &statbuf) != 0) {
 		fprintf(stderr, "%s: %s: %s\n", program, filename, strerror(errno));
 		exit(1);
 	}
@@ -517,7 +572,14 @@ int main(int argc, char *argv[])
 	sng_set_screen_size(real_screen_width, real_screen_height);
 	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-	target_mesh = snis_read_model(filename);
+	if (planet_mode) {
+		target_mesh = mesh_unit_icosphere(4);
+		material_init_textured_planet(&planet_material);
+		planet_material.textured_planet.texture_id = load_cubemap_textures(0, planetname);
+		planet_material.textured_planet.ring_material = 0;
+	} else {
+		target_mesh = snis_read_model(filename);
+	}
 	if (!target_mesh) {
 		printf("unable to read model file '%s'\n", filename);
 		exit(-1);
