@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <errno.h>
 
 #include "mtwist.h"
 #include "vertex.h"
@@ -417,9 +421,20 @@ static void draw_screen()
 
 int main(int argc, char *argv[])
 {
+	char *filename, *program;
+	struct stat statbuf;
+
 	if (argc < 2) {
 		printf("%s <mesh_file>\n", argv[0]);
 		exit(-1);
+	}
+
+	program = argv[0];
+	filename = argv[1];
+
+	if (stat(filename, &statbuf) != 0) {
+		fprintf(stderr, "%s: %s: %s\n", program, filename, strerror(errno));
+		exit(1);
 	}
 
 	/* Information about the current video settings. */
@@ -502,9 +517,9 @@ int main(int argc, char *argv[])
 	sng_set_screen_size(real_screen_width, real_screen_height);
 	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-	target_mesh = snis_read_model(argv[1]);
+	target_mesh = snis_read_model(filename);
 	if (!target_mesh) {
-		printf("unable to read model file '%s'\n", argv[1]);
+		printf("unable to read model file '%s'\n", filename);
 		exit(-1);
 	}
 
