@@ -337,7 +337,7 @@ static void draw_screen()
 	if (!cx)
 		cx = entity_context_new(50, 50);
 
-	float r = target_mesh->radius / tan(FOV / 2.0); /* 50% size for middle zoom */
+	float r = target_mesh->radius / tan(FOV / 3.0); /* 50% size for middle zoom */
 	float r_cam = r * lobby_zoom / 255.0;
 	
 	camera_set_parameters(cx, 0.1f, r * 2.2, SCREEN_WIDTH, SCREEN_HEIGHT, FOV);
