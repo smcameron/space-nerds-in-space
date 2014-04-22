@@ -377,6 +377,10 @@ SDLCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} 
 SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} ${SERVEROBJS} ${GTKLDFLAGS} ${LIBS} && $(ECHO) '  LINK' $@
 OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 
+GGOBJS=mtwist.o mathutils.o
+GGLIBS=-lm -lrt
+GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} && $(ECHO) '  LINK' $@
+
 all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS}
 
 graph_dev_opengl.o : graph_dev_opengl.c Makefile
@@ -451,6 +455,9 @@ snis_limited_client.o:	snis_limited_client.c Makefile build_info.h
 mesh_viewer.o:	mesh_viewer.c Makefile build_info.h
 	$(Q)$(SDLCOMPILE)
 
+gaseous-giganticus.o:	gaseous-giganticus.c Makefile build_info.h
+	$(Q)$(COMPILE)
+
 snis_socket_io.o:	snis_socket_io.c Makefile
 	$(Q)$(COMPILE)
 
@@ -499,6 +506,9 @@ bin/ssgl_server:	ssgl/ssgl_server
 
 mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(SDLCLIENTLINK)
+
+gaseous-giganticus:	gaseous-giganticus.o Makefile
+	$(Q)$(GGLINK)
 
 starbase-comms.o:	starbase-comms.c Makefile
 	$(Q)$(COMPILE)	
