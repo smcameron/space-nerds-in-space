@@ -24,6 +24,7 @@
 #include <math.h>
 #include <time.h>
 #include <errno.h>
+#include <limits.h>
 
 #include <png.h>
 
@@ -45,6 +46,8 @@ static const float velocity_factor = 10.0;
 
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha;
+static unsigned char *output_image[6];
+static int image_save_period = 50;
 
 /* velocity field for 6 faces of a cubemap */
 static struct velocity_field {
@@ -80,6 +83,27 @@ static struct color combine_color(struct color *oc, struct color *c)
 	nc.b = alphablendcolor(oc->b, oc->a, c->b, c->a) / nc.a;
 	nc.g = alphablendcolor(oc->g, oc->a, c->g, c->a) / nc.a;
 	return nc;
+}
+
+static void paint_particle(int face, int i, int j, struct color *c)
+{
+	unsigned char *pixel;
+	int p;
+	struct color oc, nc;
+
+	p = j * DIM + i;
+	pixel = &output_image[face][p * 4];
+
+	/* FIXME, this is inefficient */
+	oc.r = (float) pixel[0] / 255.0f;
+	oc.g = (float) pixel[1] / 255.0f;
+	oc.b = (float) pixel[2] / 255.0f;
+	oc.a = 1.0;
+	nc = combine_color(&oc, c);
+	pixel[0] = (unsigned char) (255.0f * nc.r);
+	pixel[1] = (unsigned char) (255.0f * nc.g);
+	pixel[2] = (unsigned char) (255.0f * nc.b);
+	pixel[3] = 255;
 }
 
 /* convert from cubemap coords to cartesian coords on surface of sphere */
@@ -309,8 +333,16 @@ static void move_particles(struct particle p[], const int nparticles,
 		move_particle(&p[i], vf);
 }
 
-static void update_image(struct particle p[], const int nparticles)
+static void update_output_images(struct particle p[], const int nparticles)
 {
+	int i;
+	struct fij fij;
+
+	for (i = 0; i < nparticles; i++) {
+		fij = xyz_to_fij(&p[i].pos);
+		p[i].c.a = 1.0;
+		paint_particle(fij.f, fij.i, fij.j, &p[i].c);
+	}
 }
 
 /* Copied and modified from snis_graph.c sng_load_png_texture(), see snis_graph.c */
@@ -460,6 +492,73 @@ cleanup:
 	return 0;
 }
 
+static int write_png_image(const char *filename, unsigned char *pixels, int w, int h, int has_alpha)
+{
+	png_structp png_ptr;
+	png_infop info_ptr;
+	png_byte **row;
+	int x, y, rc, colordepth = 8;
+	int bytes_per_pixel = has_alpha ? 4 : 3;
+	FILE *f;
+
+	f = fopen(filename, "w");
+	if (!f) {
+		fprintf(stderr, "fopen: %s:%s\n", filename, strerror(errno));
+		return -1;
+	}
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (!png_ptr)
+		goto cleanup1;
+	info_ptr = png_create_info_struct(png_ptr);
+	if (!info_ptr)
+		goto cleanup2;
+	if (setjmp(png_jmpbuf(png_ptr))) /* oh libpng, you're old as dirt, aren't you. */
+		goto cleanup2;
+
+	png_set_IHDR(png_ptr, info_ptr, w, h, colordepth,
+			has_alpha ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB,
+			PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
+			PNG_FILTER_TYPE_DEFAULT);
+
+	row = png_malloc(png_ptr, h * sizeof(*row));
+	for (y = 0; y < h; y++) {
+		row[y] = png_malloc(png_ptr, w * bytes_per_pixel);
+		for (x = 0; x < w; x++) {
+			unsigned char *src = (unsigned char *)
+				&pixels[y * w * bytes_per_pixel + x * bytes_per_pixel];
+			unsigned char *dest = (unsigned char *)
+				&row[y][x * bytes_per_pixel];
+			memcpy(dest, src, bytes_per_pixel);
+		}
+	}
+
+	png_init_io(png_ptr, f);
+	png_set_rows(png_ptr, info_ptr, row);
+	png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
+
+	for (y = 0; y < h; y++)
+		png_free(png_ptr, row[y]);
+	png_free(png_ptr, row);
+	rc = 0;
+cleanup2:
+	png_destroy_write_struct(&png_ptr, &info_ptr);
+cleanup1:
+	fclose(f);
+	return rc;
+}
+
+static void save_output_images(void)
+{
+	int i;
+	char fname[PATH_MAX];
+
+	for (i = 0; i < 6; i++) {
+		sprintf(fname, "tmpg-%d.png", i);
+		if (write_png_image(fname, output_image[i], DIM, DIM, 1))
+			fprintf(stderr, "Failed to write %s\n", fname);
+	}
+}
+
 static char *load_image(const char *filename, int *w, int *h, int *a)
 {
 	char *i;
@@ -473,10 +572,22 @@ static char *load_image(const char *filename, int *w, int *h, int *a)
 	return i;
 }
 
+void allocate_output_images(void)
+{
+	int i;
+
+	for (i = 0; i < 6; i++) {
+		output_image[i] = malloc(4 * DIM * DIM);
+		memset(output_image[i], 0, 4 * DIM * DIM);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int i;
 
+	printf("Allocating output image space\n");
+	allocate_output_images();
 	printf("Loading image\n");
 	start_image = load_image("gas.png", &start_image_width, &start_image_height,
 					&start_image_has_alpha);
@@ -484,12 +595,20 @@ int main(int argc, char *argv[])
 	init_particles(particle, NPARTICLES);
 	printf("Initializing velocity field\n");
 	update_velocity_field(&vf, noise_scale, 0.0);
+	printf("Running simulation\n");
 
 	for (i = 0; i < niterations; i++) {
-		printf("Iteration: %d\n", i);
+		if ((i % 50) == 0)
+			printf("\n%5d / %5d ", i, niterations);
+		else
+			printf(".");
+		fflush(stdout);
 		move_particles(particle, NPARTICLES, &vf);
-		update_image(particle, NPARTICLES);
+		update_output_images(particle, NPARTICLES);
+		if ((i % image_save_period) == 0)
+			save_output_images();
 	}
+	printf("\n%5d / %5d\n", i, niterations);
 	return 0;
 }
 
