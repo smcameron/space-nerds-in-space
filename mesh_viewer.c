@@ -457,7 +457,7 @@ static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
 	char filename[6][PATH_MAX + 1];
 
 	for (i = 0; i < 6; i++)
-		sprintf(filename[i], "%s/textures/%s%d.png", "share/snis", filenameprefix, i);
+		sprintf(filename[i], "%s/%s%d.png", ".", filenameprefix, i);
 
 	return graph_dev_load_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
 					filename[5], filename[0], filename[2]);

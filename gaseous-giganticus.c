@@ -47,7 +47,7 @@ static const float velocity_factor = 1.0;
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha;
 static unsigned char *output_image[6];
-static int image_save_period = 50;
+static int image_save_period = 5;
 
 /* velocity field for 6 faces of a cubemap */
 static struct velocity_field {
@@ -91,9 +91,24 @@ static void paint_particle(int face, int i, int j, struct color *c)
 	int p;
 	struct color oc, nc;
 
+	if (i < 0 || i > 1023 || j < 0 || j > 1023)
+		printf("i, j = %d, %d!!!!!1\n", i, j); 
 	p = j * DIM + i;
 	pixel = &output_image[face][p * 4];
+	pixel[0] = (unsigned char) (255.0f * c->r);
+	pixel[1] = (unsigned char) (255.0f * c->g);
+	pixel[2] = (unsigned char) (255.0f * c->b);
 
+#if 0
+	if (i == j) {
+		pixel[0] = (unsigned char) 255;
+		pixel[1] = (unsigned char) 0;
+		pixel[2] = (unsigned char) 0;
+	}	
+#endif
+	pixel[3] = 255;
+	return;
+#if 0
 	/* FIXME, this is inefficient */
 	oc.r = (float) pixel[0] / 255.0f;
 	oc.g = (float) pixel[1] / 255.0f;
@@ -104,6 +119,7 @@ static void paint_particle(int face, int i, int j, struct color *c)
 	pixel[1] = (unsigned char) (255.0f * nc.g);
 	pixel[2] = (unsigned char) (255.0f * nc.b);
 	pixel[3] = 255;
+#endif
 }
 
 /* convert from cubemap coords to cartesian coords on surface of sphere */
@@ -177,6 +193,8 @@ static struct fij xyz_to_fij(const union vec3 *p)
 			} else {
 				f = 0;
 				i = (int) ((t.v.x / d) * FDIM * 0.5 + 0.5 * FDIM);
+				if (i < 0 || i > 1023)
+					printf("i = %d!!!!!!!!!!!!!!!!\n", i);
 			}
 		}
 		j = (int) ((-t.v.y / d) * FDIM * 0.5 + 0.5 * FDIM);
@@ -227,21 +245,44 @@ static void init_particles(struct particle p[], const int nparticles)
 	struct fij fij;
 
 	for (int i = 0; i < nparticles; i++) {
-		random_point_on_sphere(1.0f, &x, &y, &z);
+		random_point_on_sphere(10000.0f, &x, &y, &z);
 		p[i].pos.v.x = x;
 		p[i].pos.v.y = y;
 		p[i].pos.v.z = z;
 		fij = xyz_to_fij(&p[i].pos);
-		xo = start_image_width * 0.25 * (float) fij.i / (float) DIM;
-		yo = start_image_height * (1.0 / 3.0) * (float) fij.j / (float) DIM;
+#if 0
+		xo = (float) start_image_width * 0.25 * (float) fij.i / (float) DIM;
+		yo = (float) start_image_height * (1.0 / 3.0) * (float) fij.j / (float) DIM;
 		x = (float) start_image_width * face_to_xdim_multiplier[fij.f] + xo;
 		y = (float) start_image_height * face_to_ydim_multiplier[fij.f] + yo;
 		pn = (int) (y * (float) start_image_width + x);
-		pixel = (unsigned char *) &start_image[pn * bytes_per_pixel];
-		p[i].c.r = (float) pixel[0] / 255.0f;
-		p[i].c.g = (float) pixel[1] / 255.0f;
-		p[i].c.b = (float) pixel[2] / 255.0f;
+#else
+		if (fij.i < 0 || fij.i > DIM || fij.j < 0 || fij.j > DIM) {
+			printf("BAD fij: %d,%d\n", fij.i, fij.j);
+		}
+		xo = ((float) start_image_width * (float) fij.i) / (float) DIM;
+		yo = ((float) start_image_height * (float) fij.j) / (float) DIM;	
+		//pn = (int) ((int) yo * ((int) start_image_width + xo));
+		xo = (start_image_width * fij.i) / DIM;
+		yo = (start_image_height * fij.j) / DIM;	
+		xo = fij.i;
+		yo = fij.j;
+		//pn = (int) yo * start_image_height * 4 + (int) (xo * 4);
+		pn = (int) yo * start_image_width * 3 + (int) (xo * 3);
+		//pn = (pn & ~0x03);
+#endif
+		//pixel = (unsigned char *) &start_image[pn * bytes_per_pixel];
+		pixel = (unsigned char *) &start_image[pn];
+		p[i].c.r = ((float) pixel[0]) / 255.0f;
+		p[i].c.g = ((float) pixel[1]) / 255.0f;
+		p[i].c.b = ((float) pixel[2]) / 255.0f;
+		if (fij.i == fij.j) {
+			p[i].c.r = 0.0f;
+			p[i].c.g = 0.0f;
+			p[i].c.b = 1.0f;
+		}
 		p[i].c.a = start_image_has_alpha ? (float) pixel[3] / 255.0 : 1.0;
+		p[i].c.a = 1.0; //start_image_has_alpha ? (float) pixel[3] / 255.0 : 1.0;
 	}
 }
 
@@ -333,6 +374,7 @@ static void update_velocity_field(struct velocity_field *vf, float noise_scale, 
 				ng = noise_gradient(v, w * noise_scale, noise_scale);
 				c = curl2(v, ng);
 				vec3_mul(&vf->v[f][i][j], &c, velocity_factor);
+				//vec3_mul(&vf->v[f][i][j], &c, 0.0f);
 			}
 		}
 	}
@@ -538,7 +580,7 @@ static int write_png_image(const char *filename, unsigned char *pixels, int w, i
 	if (setjmp(png_jmpbuf(png_ptr))) /* oh libpng, you're old as dirt, aren't you. */
 		goto cleanup2;
 
-	png_set_IHDR(png_ptr, info_ptr, w, h, colordepth,
+	png_set_IHDR(png_ptr, info_ptr, (size_t) w, (size_t) h, colordepth,
 			has_alpha ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB,
 			PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
 			PNG_FILTER_TYPE_DEFAULT);
@@ -547,17 +589,17 @@ static int write_png_image(const char *filename, unsigned char *pixels, int w, i
 	for (y = 0; y < h; y++) {
 		row[y] = png_malloc(png_ptr, w * bytes_per_pixel);
 		for (x = 0; x < w; x++) {
+			unsigned char *r = (unsigned char *) row[y];
 			unsigned char *src = (unsigned char *)
 				&pixels[y * w * bytes_per_pixel + x * bytes_per_pixel];
-			unsigned char *dest = (unsigned char *)
-				&row[y][x * bytes_per_pixel];
+			unsigned char *dest = &r[x * bytes_per_pixel];
 			memcpy(dest, src, bytes_per_pixel);
 		}
 	}
 
 	png_init_io(png_ptr, f);
 	png_set_rows(png_ptr, info_ptr, row);
-	png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
+	png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_PACKING, NULL);
 
 	for (y = 0; y < h; y++)
 		png_free(png_ptr, row[y]);
@@ -601,6 +643,7 @@ void allocate_output_images(void)
 
 	for (i = 0; i < 6; i++) {
 		output_image[i] = malloc(4 * DIM * DIM);
+		printf("output_image %d = %p\n", i, output_image[i]);
 		memset(output_image[i], 0, 4 * DIM * DIM);
 	}
 }
@@ -608,12 +651,31 @@ void allocate_output_images(void)
 int main(int argc, char *argv[])
 {
 	int i;
+	union vec3 test = { { 0, 0, 0 } };
+	struct fij fij;
+
+
+	for (i = 0; i < 1000; i++) {
+		test.v.x = ((float) i - 500.0f) / 500.0f;
+		test.v.y = 0;
+		test.v.z = 1.0;
+		fij = xyz_to_fij(&test);
+		printf("%f,%f,%f -> %d,%d,%d\n", test.v.x, test.v.y, test.v.z, fij.f, fij.i, fij.j);
+	}
+
+	fij = xyz_to_fij(&test);
+	printf("fij = %d %d %d\n", fij.f, fij.i, fij.j);
 
 	printf("Allocating output image space\n");
 	allocate_output_images();
 	printf("Loading image\n");
+	start_image_has_alpha = 0;
 	start_image = load_image("gas.png", &start_image_width, &start_image_height,
 					&start_image_has_alpha);
+	
+	write_png_image("blah.png", start_image, start_image_width,
+			start_image_height, start_image_has_alpha);
+	printf("w,h = %d,%d\n", start_image_width, start_image_height);
 	printf("Initializing particles\n");
 	init_particles(particle, NPARTICLES);
 	printf("Initializing velocity field\n");
