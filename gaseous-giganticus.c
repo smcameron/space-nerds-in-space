@@ -19,8 +19,13 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <time.h>
+#include <errno.h>
+
+#include <png.h>
 
 #include "mtwist.h"
 #include "mathutils.h"
@@ -37,6 +42,9 @@
 static const int niterations = 1000;
 static const float noise_scale = 10.0;
 static const float velocity_factor = 10.0;
+
+static char *start_image;
+static int start_image_width, start_image_height, start_image_has_alpha;
 
 /* velocity field for 6 faces of a cubemap */
 static struct velocity_field {
@@ -181,18 +189,35 @@ static struct fij xyz_to_fij(const union vec3 *p)
 	return answer;
 }
 
+static const float face_to_xdim_multiplier[] = { 0.25, 0.5, 0.75, 0.0, 0.25, 0.25 };
+static const float face_to_ydim_multiplier[] = { 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0,
+						0.0, 2.0 / 3.0 };
+
 /* place particles randomly on the surface of a sphere */
 static void init_particles(struct particle p[], const int nparticles)
 {
-	float x, y, z;
+	float x, y, z, xo, yo;
+	const int bytes_per_pixel = start_image_has_alpha ? 4 : 3;
+	unsigned char *pixel;
+	int pn;
+	struct fij fij;
+
 	for (int i = 0; i < nparticles; i++) {
-		random_point_on_sphere(1.0, &x, &y, &z);
+		random_point_on_sphere(1.0f, &x, &y, &z);
 		p[i].pos.v.x = x;
 		p[i].pos.v.y = y;
 		p[i].pos.v.z = z;
-		p[i].c.r = 1.0;
-		p[i].c.g = 1.0;
-		p[i].c.b = 1.0;
+		fij = xyz_to_fij(&p[i].pos);
+		xo = start_image_width * 0.25 * (float) fij.i / (float) DIM;
+		yo = start_image_height * (1.0 / 3.0) * (float) fij.j / (float) DIM;
+		x = (float) start_image_width * face_to_xdim_multiplier[fij.f] + xo;
+		y = (float) start_image_height * face_to_ydim_multiplier[fij.f] + yo;
+		pn = (int) (y * (float) start_image_width + x);
+		pixel = (unsigned char *) &start_image[pn * bytes_per_pixel];
+		p[i].c.r = (float) pixel[0] / 255.0f;
+		p[i].c.g = (float) pixel[1] / 255.0f;
+		p[i].c.b = (float) pixel[2] / 255.0f;
+		p[i].c.a = start_image_has_alpha ? (float) pixel[3] / 255.0 : 1.0;
 	}
 }
 
@@ -288,10 +313,173 @@ static void update_image(struct particle p[], const int nparticles)
 {
 }
 
+/* Copied and modified from snis_graph.c sng_load_png_texture(), see snis_graph.c */
+char *load_png_image(const char *filename, int flipVertical, int flipHorizontal,
+	int pre_multiply_alpha,
+	int *w, int *h, int *hasAlpha, char *whynot, int whynotlen)
+{
+	int i, j, bit_depth, color_type, row_bytes, image_data_row_bytes;
+	png_byte header[8];
+	png_uint_32 tw, th;
+	png_structp png_ptr = NULL;
+	png_infop info_ptr = NULL;
+	png_infop end_info = NULL;
+	png_byte *image_data = NULL;
+
+	FILE *fp = fopen(filename, "rb");
+	if (!fp) {
+		snprintf(whynot, whynotlen, "Failed to open '%s': %s",
+			filename, strerror(errno));
+		return 0;
+	}
+
+	if (fread(header, 1, 8, fp) != 8) {
+		snprintf(whynot, whynotlen, "Failed to read 8 byte header from '%s'\n",
+				filename);
+		goto cleanup;
+	}
+	if (png_sig_cmp(header, 0, 8)) {
+		snprintf(whynot, whynotlen, "'%s' isn't a png file.",
+			filename);
+		goto cleanup;
+	}
+
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,
+							NULL, NULL, NULL);
+	if (!png_ptr) {
+		snprintf(whynot, whynotlen,
+			"png_create_read_struct() returned NULL");
+		goto cleanup;
+	}
+
+	info_ptr = png_create_info_struct(png_ptr);
+	if (!info_ptr) {
+		snprintf(whynot, whynotlen,
+			"png_create_info_struct() returned NULL");
+		goto cleanup;
+	}
+
+	end_info = png_create_info_struct(png_ptr);
+	if (!end_info) {
+		snprintf(whynot, whynotlen,
+			"2nd png_create_info_struct() returned NULL");
+		goto cleanup;
+	}
+
+	if (setjmp(png_jmpbuf(png_ptr))) {
+		snprintf(whynot, whynotlen, "libpng encounted an error");
+		goto cleanup;
+	}
+
+	png_init_io(png_ptr, fp);
+	png_set_sig_bytes(png_ptr, 8);
+
+	/*
+	 * PNG_TRANSFORM_STRIP_16 |
+	 * PNG_TRANSFORM_PACKING  forces 8 bit
+	 * PNG_TRANSFORM_EXPAND forces to expand a palette into RGB
+	 */
+	png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_STRIP_16 | PNG_TRANSFORM_PACKING | PNG_TRANSFORM_EXPAND, NULL);
+
+	png_get_IHDR(png_ptr, info_ptr, &tw, &th, &bit_depth, &color_type, NULL, NULL, NULL);
+
+	if (bit_depth != 8) {
+		snprintf(whynot, whynotlen, "load_png_texture only supports 8-bit image channel depth");
+		goto cleanup;
+	}
+
+	if (color_type != PNG_COLOR_TYPE_RGB && color_type != PNG_COLOR_TYPE_RGB_ALPHA) {
+		snprintf(whynot, whynotlen, "load_png_texture only supports RGB and RGBA");
+		goto cleanup;
+	}
+
+	if (w)
+		*w = tw;
+	if (h)
+		*h = th;
+	int has_alpha = (color_type == PNG_COLOR_TYPE_RGB_ALPHA);
+	if (hasAlpha)
+		*hasAlpha = has_alpha;
+
+	row_bytes = png_get_rowbytes(png_ptr, info_ptr);
+	image_data_row_bytes = row_bytes;
+
+	/* align to 4 byte boundary */
+	if (image_data_row_bytes & 0x03)
+		image_data_row_bytes += 4 - (image_data_row_bytes & 0x03);
+
+	png_bytepp row_pointers = png_get_rows(png_ptr, info_ptr);
+
+	image_data = malloc(image_data_row_bytes * th * sizeof(png_byte) + 15);
+	if (!image_data) {
+		snprintf(whynot, whynotlen, "malloc failed in load_png_texture");
+		goto cleanup;
+	}
+
+	int bytes_per_pixel = (color_type == PNG_COLOR_TYPE_RGB_ALPHA ? 4 : 3);
+
+	for (i = 0; i < th; i++) {
+		png_byte *src_row;
+		png_byte *dest_row = image_data + i * image_data_row_bytes;
+
+		if (flipVertical)
+			src_row = row_pointers[th - i - 1];
+		else
+			src_row = row_pointers[i];
+
+		if (flipHorizontal) {
+			for (j = 0; j < tw; j++) {
+				png_byte *src = src_row + bytes_per_pixel * j;
+				png_byte *dest = dest_row + bytes_per_pixel * (tw - j - 1);
+				memcpy(dest, src, bytes_per_pixel);
+			}
+		} else {
+			memcpy(dest_row, src_row, row_bytes);
+		}
+
+		if (has_alpha && pre_multiply_alpha) {
+			for (j = 0; j < tw; j++) {
+				png_byte *pixel = dest_row + bytes_per_pixel * j;
+				float alpha = pixel[3] / 255.0;
+				pixel[0] = pixel[0] * alpha;
+				pixel[1] = pixel[1] * alpha;
+				pixel[2] = pixel[2] * alpha;
+			}
+		}
+	}
+
+	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+	fclose(fp);
+	return (char *) image_data;
+
+cleanup:
+	if (image_data)
+		free(image_data);
+	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+	fclose(fp);
+	return 0;
+}
+
+static char *load_image(const char *filename, int *w, int *h, int *a)
+{
+	char *i;
+	char msg[100];
+
+	i = load_png_image(filename, 0, 0, 0, w, h, a, msg, sizeof(msg));
+	if (!i) {
+		fprintf(stderr, "%s: cannot load image: %s\n", filename, msg);
+		exit(1);
+	}
+	return i;
+}
+
 int main(int argc, char *argv[])
 {
 	int i;
 
+	printf("Loading image\n");
+	start_image = load_image("gas.png", &start_image_width, &start_image_height,
+					&start_image_has_alpha);
 	printf("Initializing particles\n");
 	init_particles(particle, NPARTICLES);
 	printf("Initializing velocity field\n");

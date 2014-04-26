@@ -378,7 +378,7 @@ SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} ${SERVEROBJS} ${GTKLDFLAGS} ${LI
 OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 
 GGOBJS=mtwist.o mathutils.o simplexnoise1234.o quat.o
-GGLIBS=-lm -lrt
+GGLIBS=-lm -lrt -lpng
 GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} && $(ECHO) '  LINK' $@
 
 all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS}
