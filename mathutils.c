@@ -289,7 +289,7 @@ void random_point_on_sphere(float radius, float *x, float *y, float *z)
 
 	*x = 2.0f * x1 * sqrt(1.0f - s);
 	*y = 2.0f * x2 * sqrt(1.0f - s);
-	*z = fabs(1.0f - 2.0f * s);
+	*z = 1.0f - 2.0f * s;
 
 	*x *= radius;
 	*y *= radius;
