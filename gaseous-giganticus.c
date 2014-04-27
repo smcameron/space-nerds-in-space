@@ -41,8 +41,8 @@
 #define YDIM DIM
 
 static const int niterations = 1000;
-static const float noise_scale = 10.0;
-static const float velocity_factor = 10.0;
+static const float noise_scale = 3000.0;
+static const float velocity_factor = 1.0;
 
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha;
