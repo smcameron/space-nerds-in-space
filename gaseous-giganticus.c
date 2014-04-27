@@ -95,20 +95,14 @@ static void paint_particle(int face, int i, int j, struct color *c)
 		printf("i, j = %d, %d!!!!!1\n", i, j); 
 	p = j * DIM + i;
 	pixel = &output_image[face][p * 4];
+#if 0
 	pixel[0] = (unsigned char) (255.0f * c->r);
 	pixel[1] = (unsigned char) (255.0f * c->g);
 	pixel[2] = (unsigned char) (255.0f * c->b);
 
-#if 0
-	if (i == j) {
-		pixel[0] = (unsigned char) 255;
-		pixel[1] = (unsigned char) 0;
-		pixel[2] = (unsigned char) 0;
-	}	
-#endif
 	pixel[3] = 255;
 	return;
-#if 0
+#else
 	/* FIXME, this is inefficient */
 	oc.r = (float) pixel[0] / 255.0f;
 	oc.g = (float) pixel[1] / 255.0f;
