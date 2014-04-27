@@ -33,7 +33,7 @@
 #include "quat.h"
 #include "simplexnoise1234.h"
 
-#define NPARTICLES 8000000
+#define NPARTICLES 800000
 
 #define DIM 1024
 #define FDIM ((float) (DIM - 1))
@@ -41,13 +41,13 @@
 #define YDIM DIM
 
 static const int niterations = 1000;
-static const float noise_scale = 3000.0;
+static const float noise_scale = 2000.0;
 static const float velocity_factor = 1.0;
 
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha;
 static unsigned char *output_image[6];
-static int image_save_period = 5;
+static int image_save_period = 3;
 
 /* velocity field for 6 faces of a cubemap */
 static struct velocity_field {
@@ -239,7 +239,7 @@ static void init_particles(struct particle p[], const int nparticles)
 	struct fij fij;
 
 	for (int i = 0; i < nparticles; i++) {
-		random_point_on_sphere(10000.0f, &x, &y, &z);
+		random_point_on_sphere((float) XDIM / 2.0f, &x, &y, &z);
 		p[i].pos.v.x = x;
 		p[i].pos.v.y = y;
 		p[i].pos.v.z = z;
@@ -294,9 +294,9 @@ static union vec3 noise_gradient(union vec3 position, float w, float noise_scale
 	union vec3 g;
 	float dx, dy, dz;
 
-	dx = noise_scale * (1.0f / (float) DIM);
-	dy = noise_scale * (1.0f / (float) DIM);
-	dz = noise_scale * (1.0f / (float) DIM);
+	dx = noise_scale * (0.5f / (float) DIM);
+	dy = noise_scale * (0.5f / (float) DIM);
+	dz = noise_scale * (0.5f / (float) DIM);
 
 	g.v.x = fbmnoise4(position.v.x + dx, position.v.y, position.v.z, w) -
 		fbmnoise4(position.v.x - dx, position.v.y, position.v.z, w);
@@ -311,11 +311,15 @@ static union vec3 curl2(union vec3 pos, union vec3 noise_gradient)
 {
 	union vec3 p1, p2, proj_ng, axis, rotated_ng;
 	union quat rotation;
-	float m1, m2;
+	float m1, m2, nm;
 
+	nm = vec3_magnitude(&noise_gradient);
 	/* project noise gradient onto sphere surface */
 	vec3_add(&p1, &pos, &noise_gradient);
 	m1 = vec3_magnitude(&pos);
+
+	if (nm > 0.25 * m1)
+		printf("large noise gradient relative to position\n");
 	m2 = vec3_magnitude(&p1);
 	vec3_normalize_self(&p1);
 	vec3_mul_self(&p1, m1);
@@ -323,7 +327,7 @@ static union vec3 curl2(union vec3 pos, union vec3 noise_gradient)
 
 	/* rotate projected noise gradient 90 degrees about pos. */
 	vec3_normalize(&axis, &pos);
-	if (m1 > m2) 
+	if (m1 < m2) 
 		quat_init_axis_v(&rotation, &axis, M_PI / 2.0);
 	else
 		quat_init_axis_v(&rotation, &axis, 3.0 * M_PI / 2.0);
