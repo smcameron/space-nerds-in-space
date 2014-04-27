@@ -33,7 +33,7 @@
 #include "quat.h"
 #include "simplexnoise1234.h"
 
-#define NPARTICLES 1000000
+#define NPARTICLES 8000000
 
 #define DIM 1024
 #define FDIM ((float) (DIM - 1))
