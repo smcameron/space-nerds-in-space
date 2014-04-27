@@ -267,16 +267,18 @@ static union vec3 noise_gradient(union vec3 position, float w, float noise_scale
 /* compute the curl of the given noise gradient at the given position */
 static union vec3 curl(union vec3 pos, union vec3 noise_gradient)
 {
-	union quat rot;
+	union quat rot, unrot;
 	union vec3 unrotated_ng, rotated_ng;
 	union vec3 straight_up = { { 0.0f, 1.0f, 0.0f } };
 
 	/* calculate quaternion to rotate from point on sphere to straight up. */
 	quat_from_u2v(&rot, &pos, &straight_up, &straight_up);
 
+	/* calculate quaternion to unrotate from straight up to point on sphere */
+	quat_from_u2v(&unrot, &straight_up, &pos, &straight_up);
+
 	/* Rotate noise gradient to top of sphere */
 	quat_rot_vec(&rotated_ng, &noise_gradient, &rot);
-
 
 	/* Now we can turn rotated_ng 90 degrees by swapping x and z (using y as tmp) */
 	rotated_ng.v.y = rotated_ng.v.z;
@@ -286,11 +288,8 @@ static union vec3 curl(union vec3 pos, union vec3 noise_gradient)
 	/* Now we can project rotated noise gradient into x-z plane by zeroing y component. */
 	rotated_ng.v.y = 0.0f;
 
-	/* Now unrotate projected, 90-degree rotated noise gradient (swap quaternion axis) */
-	rot.v.x = -rot.v.x;
-	rot.v.y = -rot.v.y;
-	rot.v.z = -rot.v.z;
-	quat_rot_vec(&unrotated_ng, &rotated_ng, &rot);
+	/* Now unrotate projected, 90-degree rotated noise gradient */
+	quat_rot_vec(&unrotated_ng, &rotated_ng, &unrot);
 
 	/* and we're done */
 	return unrotated_ng;
