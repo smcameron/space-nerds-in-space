@@ -268,16 +268,22 @@ static union vec3 curl2(union vec3 pos, union vec3 noise_gradient)
 {
 	union vec3 p1, p2, proj_ng, axis, rotated_ng;
 	union quat rotation;
+	float m1, m2;
 
 	/* project noise gradient onto sphere surface */
 	vec3_add(&p1, &pos, &noise_gradient);
+	m1 = vec3_magnitude(&pos);
+	m2 = vec3_magnitude(&p1);
 	vec3_normalize_self(&p1);
-	vec3_mul_self(&p1, vec3_magnitude(&pos));
+	vec3_mul_self(&p1, m1);
 	vec3_sub(&proj_ng, &p1, &pos);
 
 	/* rotate projected noise gradient 90 degrees about pos. */
 	vec3_normalize(&axis, &pos);
-	quat_init_axis_v(&rotation, &axis, M_PI / 2.0);
+	if (m1 > m2) 
+		quat_init_axis_v(&rotation, &axis, M_PI / 2.0);
+	else
+		quat_init_axis_v(&rotation, &axis, 3.0 * M_PI / 2.0);
 	quat_rot_vec(&rotated_ng, &proj_ng, &rotation);
 	return rotated_ng;
 }
