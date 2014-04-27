@@ -280,6 +280,14 @@ static void init_particles(struct particle p[], const int nparticles)
 	}
 }
 
+static float fbmnoise4(float x, float y, float z, float w)
+{
+	return snoise4(x, y, z, w) +
+		0.5 * snoise4(2.0f * x, 2.0f * y, 2.0f * z, 2.0f * w) +
+		0.25 * snoise4(4.0f * x, 4.0f * y, 4.0f * z, 4.0f * w) +
+		0.125 * snoise4(8.0f * x, 8.0f * y, 8.0f * z, 8.0f * w);
+}
+
 /* compute the noise gradient at the given point on the surface of a sphere */
 static union vec3 noise_gradient(union vec3 position, float w, float noise_scale)
 {
@@ -290,12 +298,12 @@ static union vec3 noise_gradient(union vec3 position, float w, float noise_scale
 	dy = noise_scale * (1.0f / (float) DIM);
 	dz = noise_scale * (1.0f / (float) DIM);
 
-	g.v.x = snoise4(position.v.x + dx, position.v.y, position.v.z, w) -
-		snoise4(position.v.x - dx, position.v.y, position.v.z, w);
-	g.v.y = snoise4(position.v.x, position.v.y + dy, position.v.z, w) -
-		snoise4(position.v.x, position.v.y - dy, position.v.z, w);
-	g.v.z = snoise4(position.v.x, position.v.y, position.v.z + dz, w) -
-		snoise4(position.v.x, position.v.y, position.v.z - dz, w);
+	g.v.x = fbmnoise4(position.v.x + dx, position.v.y, position.v.z, w) -
+		fbmnoise4(position.v.x - dx, position.v.y, position.v.z, w);
+	g.v.y = fbmnoise4(position.v.x, position.v.y + dy, position.v.z, w) -
+		fbmnoise4(position.v.x, position.v.y - dy, position.v.z, w);
+	g.v.z = fbmnoise4(position.v.x, position.v.y, position.v.z + dz, w) -
+		fbmnoise4(position.v.x, position.v.y, position.v.z - dz, w);
 	return g;
 }
 
