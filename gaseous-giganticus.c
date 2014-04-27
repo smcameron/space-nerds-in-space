@@ -85,6 +85,35 @@ static struct color combine_color(struct color *oc, struct color *c)
 	return nc;
 }
 
+static void fade_out_background(void)
+{
+	int p, i, j, f;
+	struct color oc, c, nc;
+	unsigned char *pixel;
+
+	c.r = 0;
+	c.g = 0;
+	c.b = 0;
+	c.a = 0.02;
+
+	for (f = 0; f < 6; f++) {
+		for (i = 0; i < DIM; i++) {
+			for (j = 0; j < DIM; j++) {
+				p = j * DIM + i;
+				pixel = &output_image[f][p * 4];
+				oc.r = (float) pixel[0] / 255.0f;
+				oc.g = (float) pixel[1] / 255.0f;
+				oc.b = (float) pixel[2] / 255.0f;
+				oc.a = 1.0;
+				nc = combine_color(&oc, &c);
+				pixel[0] = (unsigned char) (255.0f * nc.r);
+				pixel[1] = (unsigned char) (255.0f * nc.g);
+				pixel[2] = (unsigned char) (255.0f * nc.b);
+			}
+		}
+	}
+}
+
 static void paint_particle(int face, int i, int j, struct color *c)
 {
 	unsigned char *pixel;
@@ -409,6 +438,7 @@ static void update_output_images(struct particle p[], const int nparticles)
 	int i;
 	struct fij fij;
 
+	fade_out_background();
 	for (i = 0; i < nparticles; i++) {
 		fij = xyz_to_fij(&p[i].pos);
 		p[i].c.a = 1.0;
