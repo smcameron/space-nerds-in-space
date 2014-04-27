@@ -264,6 +264,24 @@ static union vec3 noise_gradient(union vec3 position, float w, float noise_scale
 	return g;
 }
 
+static union vec3 curl2(union vec3 pos, union vec3 noise_gradient)
+{
+	union vec3 p1, p2, proj_ng, axis, rotated_ng;
+	union quat rotation;
+
+	/* project noise gradient onto sphere surface */
+	vec3_add(&p1, &pos, &noise_gradient);
+	vec3_normalize_self(&p1);
+	vec3_mul_self(&p1, vec3_magnitude(&pos));
+	vec3_sub(&proj_ng, &p1, &pos);
+
+	/* rotate projected noise gradient 90 degrees about pos. */
+	vec3_normalize(&axis, &pos);
+	quat_init_axis_v(&rotation, &axis, M_PI / 2.0);
+	quat_rot_vec(&rotated_ng, &proj_ng, &rotation);
+	return rotated_ng;
+}
+
 /* compute the curl of the given noise gradient at the given position */
 static union vec3 curl(union vec3 pos, union vec3 noise_gradient)
 {
@@ -307,7 +325,7 @@ static void update_velocity_field(struct velocity_field *vf, float noise_scale, 
 				v = fij_to_xyz(f, i, j);
 				vec3_mul_self(&v, noise_scale);
 				ng = noise_gradient(v, w * noise_scale, noise_scale);
-				c = curl(v, ng);
+				c = curl2(v, ng);
 				vec3_mul(&vf->v[f][i][j], &c, velocity_factor);
 			}
 		}
