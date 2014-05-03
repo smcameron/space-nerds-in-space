@@ -36,7 +36,7 @@
 #define NPARTICLES 1000000
 
 #define DIM 1024
-#define FDIM ((float) (DIM - 1))
+#define FDIM ((float) (DIM))
 #define XDIM DIM
 #define YDIM DIM
 
