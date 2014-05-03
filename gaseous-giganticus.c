@@ -33,7 +33,7 @@
 #include "quat.h"
 #include "simplexnoise1234.h"
 
-#define NPARTICLES 1000000
+#define NPARTICLES 8000000
 
 #define DIM 1024
 #define FDIM ((float) (DIM))
@@ -41,8 +41,10 @@
 #define YDIM DIM
 
 static const int niterations = 1000;
-static const float noise_scale = 1.0;
-static const float velocity_factor = 420.0;
+static const float noise_scale = 1.3;
+static const float velocity_factor = 800.0;
+static const float num_bands = 7.0f;
+static const float band_speed_factor = 0.9f;
 
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha, start_image_bytes_per_row;
@@ -392,12 +394,25 @@ static void update_velocity_field(struct velocity_field *vf, float noise_scale, 
 	for (f = 0; f < 6; f++) {
 		for (i = 0; i < XDIM; i++) {
 			for (j = 0; j < YDIM; j++) {
+				float band_speed, angle;
+				union vec3 ov, bv;
+
 				v = fij_to_xyz(f, i, j);
+				ov = v;
 				vec3_mul_self(&v, noise_scale);
 				ng = noise_gradient(v, w * noise_scale, noise_scale);
 				c = curl2(v, ng);
 				vec3_mul(&vf->v[f][i][j], &c, velocity_factor);
-				//vec3_mul(&vf->v[f][i][j], &c, 0.0f);
+
+				/* calculate counter rotating band influence */
+				angle = asinf(ov.v.y);
+				band_speed = cosf(angle * num_bands) * band_speed_factor;
+				bv.v.x = ov.v.z; 
+				bv.v.z = -ov.v.x; 
+				bv.v.y = 0; 
+				vec3_normalize_self(&bv);
+				vec3_mul_self(&bv, band_speed);
+				vec3_add_self(&vf->v[f][i][j], &bv);
 			}
 		}
 	}
