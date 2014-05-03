@@ -45,7 +45,7 @@ static const float noise_scale = 2.0;
 static const float velocity_factor = 80.0;
 
 static char *start_image;
-static int start_image_width, start_image_height, start_image_has_alpha;
+static int start_image_width, start_image_height, start_image_has_alpha, start_image_bytes_per_row;
 static unsigned char *output_image[6];
 static int image_save_period = 3;
 
@@ -264,7 +264,7 @@ static void init_particles(struct particle p[], const int nparticles)
 	float x, y, z, xo, yo;
 	const int bytes_per_pixel = start_image_has_alpha ? 4 : 3;
 	unsigned char *pixel;
-	int pn;
+	int pn, px, py;
 	struct fij fij;
 
 	for (int i = 0; i < nparticles; i++) {
@@ -273,39 +273,21 @@ static void init_particles(struct particle p[], const int nparticles)
 		p[i].pos.v.y = y;
 		p[i].pos.v.z = z;
 		fij = xyz_to_fij(&p[i].pos);
-#if 0
-		xo = (float) start_image_width * 0.25 * (float) fij.i / (float) DIM;
-		yo = (float) start_image_height * (1.0 / 3.0) * (float) fij.j / (float) DIM;
-		x = (float) start_image_width * face_to_xdim_multiplier[fij.f] + xo;
-		y = (float) start_image_height * face_to_ydim_multiplier[fij.f] + yo;
-		pn = (int) (y * (float) start_image_width + x);
-#else
 		if (fij.i < 0 || fij.i > DIM || fij.j < 0 || fij.j > DIM) {
 			printf("BAD fij: %d,%d\n", fij.i, fij.j);
 		}
-		xo = ((float) start_image_width * (float) fij.i) / (float) DIM;
-		yo = ((float) start_image_height * (float) fij.j) / (float) DIM;	
-		//pn = (int) ((int) yo * ((int) start_image_width + xo));
-		xo = (start_image_width * fij.i) / DIM;
-		yo = (start_image_height * fij.j) / DIM;	
-		xo = fij.i;
-		yo = fij.j;
-		//pn = (int) yo * start_image_height * 4 + (int) (xo * 4);
-		pn = (int) yo * start_image_width * 3 + (int) (xo * 3);
-		//pn = (pn & ~0x03);
-#endif
-		//pixel = (unsigned char *) &start_image[pn * bytes_per_pixel];
+		xo = XDIM * face_to_xdim_multiplier[fij.f] + fij.i / 4.0;
+		yo = YDIM * face_to_ydim_multiplier[fij.f] + fij.j / 4.0;
+		xo = xo / (float) XDIM;
+		yo = yo / (float) YDIM;
+		px = ((int) (xo * start_image_width)) * 3;
+		py = (((int) (yo * start_image_height)) * start_image_bytes_per_row);
+		pn = py + px;
+		//printf("x,y = %d, %d, pn = %d\n", px, py, pn);
 		pixel = (unsigned char *) &start_image[pn];
 		p[i].c.r = ((float) pixel[0]) / 255.0f;
 		p[i].c.g = ((float) pixel[1]) / 255.0f;
 		p[i].c.b = ((float) pixel[2]) / 255.0f;
-#if 0
-		if (fij.i == fij.j) {
-			p[i].c.r = 0.0f;
-			p[i].c.g = 0.0f;
-			p[i].c.b = 1.0f;
-		}
-#endif
 		p[i].c.a = start_image_has_alpha ? (float) pixel[3] / 255.0 : 1.0;
 		p[i].c.a = 1.0; //start_image_has_alpha ? (float) pixel[3] / 255.0 : 1.0;
 	}
@@ -666,16 +648,21 @@ static void save_output_images(void)
 	}
 }
 
-static char *load_image(const char *filename, int *w, int *h, int *a)
+static char *load_image(const char *filename, int *w, int *h, int *a, int *bytes_per_row)
 {
 	char *i;
 	char msg[100];
+	int x, y;
 
 	i = load_png_image(filename, 0, 0, 0, w, h, a, msg, sizeof(msg));
 	if (!i) {
 		fprintf(stderr, "%s: cannot load image: %s\n", filename, msg);
 		exit(1);
 	}
+	*bytes_per_row = *w * 3;
+	/* align to 4 byte boundary */
+	if (*bytes_per_row & 0x03)
+		*bytes_per_row += 4 - (*bytes_per_row & 0x03);
 	return i;
 }
 
@@ -713,11 +700,12 @@ int main(int argc, char *argv[])
 	printf("Loading image\n");
 	start_image_has_alpha = 0;
 	start_image = load_image("gas.png", &start_image_width, &start_image_height,
-					&start_image_has_alpha);
+					&start_image_has_alpha, &start_image_bytes_per_row);
 	
 	write_png_image("blah.png", start_image, start_image_width,
 			start_image_height, start_image_has_alpha);
-	printf("w,h = %d,%d\n", start_image_width, start_image_height);
+	printf("w,h,bpr = %d,%d,%d\n", start_image_width, start_image_height,
+					start_image_bytes_per_row);
 	printf("Initializing particles\n");
 	init_particles(particle, NPARTICLES);
 	printf("Initializing velocity field\n");
