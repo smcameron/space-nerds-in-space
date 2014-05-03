@@ -41,8 +41,8 @@
 #define YDIM DIM
 
 static const int niterations = 1000;
-static const float noise_scale = 1000.0;
-static const float velocity_factor = 1.0;
+static const float noise_scale = 2.0;
+static const float velocity_factor = 80.0;
 
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha;
@@ -154,31 +154,31 @@ static union vec3 fij_to_xyz(int f, int i, int j)
 	case 0:
 		answer.v.x = (float) (i - XDIM / 2) / (float) XDIM;
 		answer.v.y = -(float) (j - YDIM / 2) / (float) YDIM;
-		answer.v.z = (float) DIM / 2.0f;
+		answer.v.z = 0.5;
 		break;
 	case 1:
-		answer.v.x = (float) DIM / 2.0f;
+		answer.v.x = 0.5;
 		answer.v.y = -(float) (j - YDIM / 2) / (float) YDIM;
 		answer.v.z = -(float) (i - XDIM / 2) / (float) XDIM;
 		break;
 	case 2:
 		answer.v.x = -(float) (i - XDIM / 2) / (float) XDIM;
 		answer.v.y = -(float) (j - YDIM / 2) / (float) YDIM;
-		answer.v.z = -(float) DIM / 2.0f;
+		answer.v.z = -0.5;
 		break;
 	case 3:
-		answer.v.x = -(float) DIM / 2.0f;
+		answer.v.x = -0.5;
 		answer.v.y = -(float) (j - YDIM / 2) / (float) YDIM;
 		answer.v.z = (float) (i - XDIM / 2) / (float) XDIM;
 		break;
 	case 4:
 		answer.v.x = (float) (i - XDIM / 2) / (float) XDIM;
-		answer.v.y = (float) (float) YDIM / 2.0f;
+		answer.v.y = 0.5;
 		answer.v.z = (float) (j - YDIM / 2) / (float) YDIM;
 		break;
 	case 5:
 		answer.v.x = (float) (i - XDIM / 2) / (float) XDIM;
-		answer.v.y = -(float) (float) YDIM / 2.0f;
+		answer.v.y = -0.5;
 		answer.v.z = -(float) (j - YDIM / 2) / (float) YDIM;
 		break;
 	}
