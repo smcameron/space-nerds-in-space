@@ -400,7 +400,9 @@ static void update_velocity_field(struct velocity_field *vf, float noise_scale, 
 				vec3_add_self(&vf->v[f][i][j], &bv);
 			}
 		}
+		printf(" %d", f); fflush(stdout);
 	}
+	printf("\n");
 }
 
 /* move a particle according to velocity field at its current location */
@@ -723,7 +725,6 @@ void allocate_output_images(void)
 
 	for (i = 0; i < 6; i++) {
 		output_image[i] = malloc(4 * DIM * DIM);
-		printf("output_image %d = %p\n", i, output_image[i]);
 		memset(output_image[i], 0, 4 * DIM * DIM);
 	}
 }
@@ -744,8 +745,6 @@ static void wait_for_movement_threads(struct movement_thread_info ti[], int nthr
 int main(int argc, char *argv[])
 {
 	int i, t;
-	union vec3 test = { { 0, 0, 0 } };
-	struct fij fij;
 	struct movement_thread_info *ti;
 	const int nparticles = NPARTICLES;
 	int tparticles = nparticles / nthreads;
@@ -760,31 +759,21 @@ int main(int argc, char *argv[])
 	t = nthreads - 1;
 	ti[t].last_particle = NPARTICLES - 1;
 
-	for (i = 0; i < 1000; i++) {
-		test.v.x = ((float) i - 500.0f) / 500.0f;
-		test.v.y = 0;
-		test.v.z = 1.0;
-		fij = xyz_to_fij(&test);
-		printf("%f,%f,%f -> %d,%d,%d\n", test.v.x, test.v.y, test.v.z, fij.f, fij.i, fij.j);
-	}
-
-	fij = xyz_to_fij(&test);
-	printf("fij = %d %d %d\n", fij.f, fij.i, fij.j);
-
 	printf("Allocating output image space\n");
 	allocate_output_images();
 	printf("Loading image\n");
 	start_image_has_alpha = 0;
 	start_image = load_image("gas.png", &start_image_width, &start_image_height,
 					&start_image_has_alpha, &start_image_bytes_per_row);
-	
+#if 0	
 	write_png_image("blah.png", (unsigned char *) start_image, start_image_width,
 			start_image_height, start_image_has_alpha);
-	printf("w,h,bpr = %d,%d,%d\n", start_image_width, start_image_height,
-					start_image_bytes_per_row);
-	printf("Initializing particles\n");
+#endif
+	printf("width, height, bytes per row = %d,%d,%d\n",
+			start_image_width, start_image_height, start_image_bytes_per_row);
+	printf("Initializing %d particles\n", NPARTICLES);
 	init_particles(particle, NPARTICLES);
-	printf("Initializing velocity field\n");
+	printf("Initializing velocity field");
 	update_velocity_field(&vf, noise_scale, w_offset);
 	printf("Running simulation\n");
 
