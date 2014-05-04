@@ -45,6 +45,7 @@ static const float noise_scale = 1.9;
 static const float velocity_factor = 1400.0;
 static const float num_bands = 6.0f;
 static const float band_speed_factor = 1.9f;
+static const float left_right_fudge = 0.995;
 
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha, start_image_bytes_per_row;
@@ -346,7 +347,7 @@ static union vec3 curl2(union vec3 pos, union vec3 noise_gradient)
 
 	/* rotate projected noise gradient 90 degrees about pos. */
 	vec3_normalize(&axis, &pos);
-	if (m1 < m2 * 0.95) 
+	if (m1 < m2 * left_right_fudge) 
 		quat_init_axis_v(&rotation, &axis, M_PI / 2.0);
 	else
 		quat_init_axis_v(&rotation, &axis, 3.0 * M_PI / 2.0);
