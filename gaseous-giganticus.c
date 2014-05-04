@@ -66,6 +66,8 @@ struct color {
 	float r, g, b, a;
 };
 
+struct color darkest_color;
+
 /* face, i, j -- coords on a cube map */
 struct fij {
 	int f, i, j;
@@ -101,16 +103,11 @@ static struct color combine_color(struct color *oc, struct color *c)
 	return nc;
 }
 
-static void fade_out_background(int f)
+static void fade_out_background(int f, struct color *c)
 {
 	int p, i, j;
-	struct color oc, c, nc;
+	struct color oc, nc;
 	unsigned char *pixel;
-
-	c.r = 0;
-	c.g = 0;
-	c.b = 0;
-	c.a = 0.01;
 
 	for (i = 0; i < DIM; i++) {
 		for (j = 0; j < DIM; j++) {
@@ -120,7 +117,7 @@ static void fade_out_background(int f)
 			oc.g = (float) pixel[1] / 255.0f;
 			oc.b = (float) pixel[2] / 255.0f;
 			oc.a = 1.0;
-			nc = combine_color(&oc, &c);
+			nc = combine_color(&oc, c);
 			pixel[0] = (unsigned char) (255.0f * nc.r);
 			pixel[1] = (unsigned char) (255.0f * nc.g);
 			pixel[2] = (unsigned char) (255.0f * nc.b);
@@ -452,7 +449,7 @@ static void *update_output_image_thread_fn(void *info)
 	struct particle *p = t->p;
 	int i;
 
-	fade_out_background(t->face);
+	fade_out_background(t->face, &darkest_color);
 	for (i = 0; i < t->nparticles; i++) {
 		if (p[i].fij.f != t->face)
 			continue;
@@ -702,6 +699,30 @@ static void save_output_images(void)
 	fflush(stdout);
 }
 
+static void find_darkest_pixel(unsigned char *image, int w, int h,
+				struct color *darkest_color, int bpr)
+{
+	int x, y, n;
+	float r, g, b, min;
+
+	min = 3.0f;
+	for (x = 0; x < w; x++) {
+		for (y = 0; y < h; y++) {
+			n = y * bpr + x * 3;
+			r = (float) image[n + 0] / 255.0f;
+			g = (float) image[n + 1] / 255.0f;
+			b = (float) image[n + 2] / 255.0f;
+			if (r + g + b < min) {
+				darkest_color->r = r;
+				darkest_color->g = g;
+				darkest_color->b = b;
+				min = r + g + b;
+			}
+		}
+	}
+	darkest_color->a = 0.01;
+}
+
 static char *load_image(const char *filename, int *w, int *h, int *a, int *bytes_per_row)
 {
 	char *i;
@@ -716,6 +737,7 @@ static char *load_image(const char *filename, int *w, int *h, int *a, int *bytes
 	/* align to 4 byte boundary */
 	if (*bytes_per_row & 0x03)
 		*bytes_per_row += 4 - (*bytes_per_row & 0x03);
+	find_darkest_pixel((unsigned char *) i, *w, *h, &darkest_color, *bytes_per_row);
 	return i;
 }
 
