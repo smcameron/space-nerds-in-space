@@ -134,8 +134,13 @@ static void paint_particle(int face, int i, int j, struct color *c)
 	int p;
 	struct color oc, nc;
 
-	if (i < 0 || i > 1023 || j < 0 || j > 1023)
-		printf("i, j = %d, %d!!!!!1\n", i, j); 
+	if (i < 0 || i > 1023 || j < 0 || j > 1023) {
+		/* FIXME: We get a handful of these, don't know why.
+		 * Some are 1024, some seem to be -MAXINT
+		 */
+		/* printf("i, j = %d, %d!!!!!1\n", i, j);  */
+		return;
+	}
 	p = j * DIM + i;
 	pixel = &output_image[face][p * 4];
 #if 0
@@ -230,8 +235,11 @@ static struct fij xyz_to_fij(const union vec3 *p)
 			} else {
 				f = 0;
 				i = (int) ((t.v.x / d) * FDIM * 0.5 + 0.5 * FDIM);
+#if 0
+				/* FIXME: we get this sometimes, not sure why. */
 				if (i < 0 || i > 1023)
 					printf("i = %d!!!!!!!!!!!!!!!!\n", i);
+#endif
 			}
 		}
 		j = (int) ((-t.v.y / d) * FDIM * 0.5 + 0.5 * FDIM);
