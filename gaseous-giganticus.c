@@ -41,16 +41,16 @@
 #define YDIM DIM
 
 static const int niterations = 1000;
-static const float noise_scale = 1.3;
-static const float velocity_factor = 800.0;
-static const float num_bands = 7.0f;
-static const float band_speed_factor = 0.9f;
+static const float noise_scale = 1.9;
+static const float velocity_factor = 1400.0;
+static const float num_bands = 6.0f;
+static const float band_speed_factor = 1.9f;
 
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha, start_image_bytes_per_row;
 static unsigned char *output_image[6];
 static int image_save_period = 3;
-static float w_offset = 100.0;
+static float w_offset = 0.0;
 
 /* velocity field for 6 faces of a cubemap */
 static struct velocity_field {
