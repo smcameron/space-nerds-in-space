@@ -50,6 +50,7 @@ static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha, start_image_bytes_per_row;
 static unsigned char *output_image[6];
 static int image_save_period = 3;
+static float w_offset = 100.0;
 
 /* velocity field for 6 faces of a cubemap */
 static struct velocity_field {
@@ -724,7 +725,7 @@ int main(int argc, char *argv[])
 	printf("Initializing particles\n");
 	init_particles(particle, NPARTICLES);
 	printf("Initializing velocity field\n");
-	update_velocity_field(&vf, noise_scale, 0.0);
+	update_velocity_field(&vf, noise_scale, w_offset);
 	printf("Running simulation\n");
 
 	for (i = 0; i < niterations; i++) {
