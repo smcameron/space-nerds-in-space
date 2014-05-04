@@ -25,6 +25,7 @@
 #include <time.h>
 #include <errno.h>
 #include <limits.h>
+#include <pthread.h>
 
 #include <png.h>
 
@@ -34,6 +35,8 @@
 #include "simplexnoise1234.h"
 
 #define NPARTICLES 8000000
+
+static int nthreads = 4;
 
 #define DIM 1024
 #define FDIM ((float) (DIM))
@@ -72,6 +75,13 @@ static struct particle {
 	union vec3 pos;
 	struct color c;
 } particle[NPARTICLES];
+
+struct thread_info {
+	int first_particle, last_particle;
+	pthread_t thread;
+	struct particle *p; /* ptr to particle[], above */
+	struct velocity_field *vf; /* ptr to vf, above. */
+};
 
 static float alphablendcolor(float underchannel, float underalpha, float overchannel, float overalpha)
 {
@@ -431,11 +441,25 @@ static void move_particle(struct particle *p, struct velocity_field *vf)
 	vec3_mul_self(&p->pos, (float) XDIM / 2.0f);
 }
 
-static void move_particles(struct particle p[], const int nparticles,
+static void *move_particles_thread_fn(void *info)
+{
+	struct thread_info *thr = info;
+
+	for (int i = thr->first_particle; i <= thr->last_particle; i++)
+		move_particle(&thr->p[i], thr->vf);
+	return NULL;
+}
+
+static void move_particles(struct particle p[], struct thread_info *thr,
 			struct velocity_field *vf)
 {
-	for (int i = 0; i < nparticles; i++)
-		move_particle(&p[i], vf);
+	int rc;
+
+	thr->vf = vf;
+	thr->p = p;
+	rc = pthread_create(&thr->thread, NULL, move_particles_thread_fn, thr);
+	if (rc)
+		fprintf(stderr, "pthread_create failed: %s\n", strerror(errno));
 }
 
 static void update_output_images(struct particle p[], const int nparticles)
@@ -694,12 +718,36 @@ void allocate_output_images(void)
 	}
 }
 
-int main(int argc, char *argv[])
+static void wait_for_movement_threads(struct thread_info ti[], int nthreads)
 {
 	int i;
+	void *status;
+
+	for (i = 0; i < nthreads; i++) {
+		int rc = pthread_join(ti[i].thread, &status);
+		if (rc)
+			fprintf(stderr, "pthread_join failed: %s\n", strerror(errno));
+	}
+}
+
+int main(int argc, char *argv[])
+{
+	int i, t;
 	union vec3 test = { { 0, 0, 0 } };
 	struct fij fij;
+	struct thread_info *ti;
+	const int nparticles = NPARTICLES;
+	int tparticles = nparticles / nthreads;
 
+	ti = malloc(sizeof(*ti) * nthreads);
+
+	for (t = 0; t < nthreads; t++) {
+		ti[t].first_particle = t * tparticles;
+		ti[t].last_particle = (t + 1) * tparticles - 1;
+	}
+	/* last thread picks up extra (nparticles - (nthreads * tparticles)) */
+	t = nthreads - 1;
+	ti[t].last_particle = NPARTICLES - 1;
 
 	for (i = 0; i < 1000; i++) {
 		test.v.x = ((float) i - 500.0f) / 500.0f;
@@ -735,8 +783,11 @@ int main(int argc, char *argv[])
 		else
 			printf(".");
 		fflush(stdout);
-		move_particles(particle, NPARTICLES, &vf);
-		update_output_images(particle, NPARTICLES);
+
+		for (t = 0; t < nthreads; t++)
+			move_particles(particle, &ti[t], &vf);
+		wait_for_movement_threads(ti, nthreads);
+		update_output_images(particle, nparticles);
 		if ((i % image_save_period) == 0)
 			save_output_images();
 	}
