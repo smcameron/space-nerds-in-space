@@ -696,6 +696,8 @@ static void save_output_images(void)
 		if (write_png_image(fname, output_image[i], DIM, DIM, 1))
 			fprintf(stderr, "Failed to write %s\n", fname);
 	}
+	printf("o");
+	fflush(stdout);
 }
 
 static char *load_image(const char *filename, int *w, int *h, int *a, int *bytes_per_row)
