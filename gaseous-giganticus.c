@@ -284,7 +284,7 @@ static const float face_to_ydim_multiplier[] = { 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0
 static void init_particles(struct particle p[], const int nparticles)
 {
 	float x, y, z, xo, yo;
-	const int bytes_per_pixel = start_image_has_alpha ? 4 : 3;
+	/* const int bytes_per_pixel = start_image_has_alpha ? 4 : 3; */
 	unsigned char *pixel;
 	int pn, px, py;
 	struct fij fij;
@@ -344,18 +344,14 @@ static union vec3 noise_gradient(union vec3 position, float w, float noise_scale
 
 static union vec3 curl2(union vec3 pos, union vec3 noise_gradient)
 {
-	union vec3 p1, p2, proj_ng, axis, rotated_ng;
+	union vec3 p1, proj_ng, axis, rotated_ng;
 	union quat rotation;
 	float m1, m2, nm;
-	float dotp;
 
 	nm = vec3_magnitude(&noise_gradient);
 	/* project noise gradient onto sphere surface */
 	vec3_add(&p1, &pos, &noise_gradient);
 	m1 = vec3_magnitude(&pos);
-
-	dotp = vec3_dot(&pos, &noise_gradient);
-
 	if (nm > 0.25 * m1)
 		printf("large noise gradient relative to position\n");
 	m2 = vec3_magnitude(&p1);
@@ -372,37 +368,6 @@ static union vec3 curl2(union vec3 pos, union vec3 noise_gradient)
 	
 	quat_rot_vec(&rotated_ng, &proj_ng, &rotation);
 	return rotated_ng;
-}
-
-/* compute the curl of the given noise gradient at the given position */
-static union vec3 curl(union vec3 pos, union vec3 noise_gradient)
-{
-	union quat rot, unrot;
-	union vec3 unrotated_ng, rotated_ng;
-	union vec3 straight_up = { { 0.0f, 1.0f, 0.0f } };
-
-	/* calculate quaternion to rotate from point on sphere to straight up. */
-	quat_from_u2v(&rot, &pos, &straight_up, &straight_up);
-
-	/* calculate quaternion to unrotate from straight up to point on sphere */
-	quat_from_u2v(&unrot, &straight_up, &pos, &straight_up);
-
-	/* Rotate noise gradient to top of sphere */
-	quat_rot_vec(&rotated_ng, &noise_gradient, &rot);
-
-	/* Now we can turn rotated_ng 90 degrees by swapping x and z (using y as tmp) */
-	rotated_ng.v.y = rotated_ng.v.z;
-	rotated_ng.v.z = rotated_ng.v.x;
-	rotated_ng.v.x = rotated_ng.v.y;
-
-	/* Now we can project rotated noise gradient into x-z plane by zeroing y component. */
-	rotated_ng.v.y = 0.0f;
-
-	/* Now unrotate projected, 90-degree rotated noise gradient */
-	quat_rot_vec(&unrotated_ng, &rotated_ng, &unrot);
-
-	/* and we're done */
-	return unrotated_ng;
 }
 
 /* compute velocity field for all cells in cubemap.  It is scaled curl of gradient of noise field */
@@ -737,7 +702,6 @@ static char *load_image(const char *filename, int *w, int *h, int *a, int *bytes
 {
 	char *i;
 	char msg[100];
-	int x, y;
 
 	i = load_png_image(filename, 0, 0, 0, w, h, a, msg, sizeof(msg));
 	if (!i) {
@@ -812,7 +776,7 @@ int main(int argc, char *argv[])
 	start_image = load_image("gas.png", &start_image_width, &start_image_height,
 					&start_image_has_alpha, &start_image_bytes_per_row);
 	
-	write_png_image("blah.png", start_image, start_image_width,
+	write_png_image("blah.png", (unsigned char *) start_image, start_image_width,
 			start_image_height, start_image_has_alpha);
 	printf("w,h,bpr = %d,%d,%d\n", start_image_width, start_image_height,
 					start_image_bytes_per_row);
