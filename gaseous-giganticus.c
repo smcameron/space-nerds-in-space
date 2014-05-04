@@ -36,7 +36,8 @@
 
 #define NPARTICLES 8000000
 
-static int nthreads = 4;
+static const int nthreads = 4;
+static const int image_threads = 6; /* for 6 faces of cubemap, don't change this */
 
 #define DIM 1024
 #define FDIM ((float) (DIM))
@@ -53,7 +54,7 @@ static const float left_right_fudge = 0.995;
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha, start_image_bytes_per_row;
 static unsigned char *output_image[6];
-static int image_save_period = 3;
+static int image_save_period = 20;
 static float w_offset = 0.0;
 
 /* velocity field for 6 faces of a cubemap */
@@ -74,9 +75,10 @@ struct fij {
 static struct particle {
 	union vec3 pos;
 	struct color c;
+	struct fij fij;
 } particle[NPARTICLES];
 
-struct thread_info {
+struct movement_thread_info {
 	int first_particle, last_particle;
 	pthread_t thread;
 	struct particle *p; /* ptr to particle[], above */
@@ -99,9 +101,9 @@ static struct color combine_color(struct color *oc, struct color *c)
 	return nc;
 }
 
-static void fade_out_background(void)
+static void fade_out_background(int f)
 {
-	int p, i, j, f;
+	int p, i, j;
 	struct color oc, c, nc;
 	unsigned char *pixel;
 
@@ -110,20 +112,18 @@ static void fade_out_background(void)
 	c.b = 0;
 	c.a = 0.01;
 
-	for (f = 0; f < 6; f++) {
-		for (i = 0; i < DIM; i++) {
-			for (j = 0; j < DIM; j++) {
-				p = j * DIM + i;
-				pixel = &output_image[f][p * 4];
-				oc.r = (float) pixel[0] / 255.0f;
-				oc.g = (float) pixel[1] / 255.0f;
-				oc.b = (float) pixel[2] / 255.0f;
-				oc.a = 1.0;
-				nc = combine_color(&oc, &c);
-				pixel[0] = (unsigned char) (255.0f * nc.r);
-				pixel[1] = (unsigned char) (255.0f * nc.g);
-				pixel[2] = (unsigned char) (255.0f * nc.b);
-			}
+	for (i = 0; i < DIM; i++) {
+		for (j = 0; j < DIM; j++) {
+			p = j * DIM + i;
+			pixel = &output_image[f][p * 4];
+			oc.r = (float) pixel[0] / 255.0f;
+			oc.g = (float) pixel[1] / 255.0f;
+			oc.b = (float) pixel[2] / 255.0f;
+			oc.a = 1.0;
+			nc = combine_color(&oc, &c);
+			pixel[0] = (unsigned char) (255.0f * nc.r);
+			pixel[1] = (unsigned char) (255.0f * nc.g);
+			pixel[2] = (unsigned char) (255.0f * nc.b);
 		}
 	}
 }
@@ -436,6 +436,7 @@ static void move_particle(struct particle *p, struct velocity_field *vf)
 	struct fij fij;
 
 	fij = xyz_to_fij(&p->pos);
+	p->fij = fij;
 	vec3_add_self(&p->pos, &vf->v[fij.f][fij.i][fij.j]);
 	vec3_normalize_self(&p->pos);
 	vec3_mul_self(&p->pos, (float) XDIM / 2.0f);
@@ -443,14 +444,14 @@ static void move_particle(struct particle *p, struct velocity_field *vf)
 
 static void *move_particles_thread_fn(void *info)
 {
-	struct thread_info *thr = info;
+	struct movement_thread_info *thr = info;
 
 	for (int i = thr->first_particle; i <= thr->last_particle; i++)
 		move_particle(&thr->p[i], thr->vf);
 	return NULL;
 }
 
-static void move_particles(struct particle p[], struct thread_info *thr,
+static void move_particles(struct particle p[], struct movement_thread_info *thr,
 			struct velocity_field *vf)
 {
 	int rc;
@@ -459,19 +460,54 @@ static void move_particles(struct particle p[], struct thread_info *thr,
 	thr->p = p;
 	rc = pthread_create(&thr->thread, NULL, move_particles_thread_fn, thr);
 	if (rc)
-		fprintf(stderr, "pthread_create failed: %s\n", strerror(errno));
+		fprintf(stderr, "%s: pthread_create failed: %s\n",
+				__func__, strerror(errno));
 }
 
-static void update_output_images(struct particle p[], const int nparticles)
-{
-	int i;
-	struct fij fij;
+struct image_thread_info {
+	pthread_t thread;
+	struct particle *p;
+	int face;
+	int nparticles;
+};
 
-	fade_out_background();
-	for (i = 0; i < nparticles; i++) {
-		fij = xyz_to_fij(&p[i].pos);
+static void *update_output_image_thread_fn(void *info)
+{
+	struct image_thread_info *t = info;
+	struct particle *p = t->p;
+	int i;
+
+	fade_out_background(t->face);
+	for (i = 0; i < t->nparticles; i++) {
+		if (p[i].fij.f != t->face)
+			continue;
 		p[i].c.a = 1.0;
-		paint_particle(fij.f, fij.i, fij.j, &p[i].c);
+		paint_particle(t->face, p[i].fij.i, p[i].fij.j, &p[i].c);
+	}
+	return NULL;
+}
+
+static void update_output_images(int image_threads, struct particle p[], const int nparticles)
+{
+	struct image_thread_info t[image_threads];
+	int i, rc;
+	void *status;
+
+	for (i = 0; i < image_threads; i++) {
+		t[i].face = i;
+		t[i].p = p;
+		t[i].nparticles = nparticles;
+		rc = pthread_create(&t[i].thread, NULL, update_output_image_thread_fn, &t[i]);
+		if (rc)
+			fprintf(stderr, "%s: pthread_create failed: %s\n",
+					__func__, strerror(errno));
+	}
+
+	for (i = 0; i < image_threads; i++) {
+		int rc = pthread_join(t[i].thread, &status);
+		if (rc)
+			fprintf(stderr, "%s: pthread_join failed: %s\n",
+					__func__, strerror(errno));
 	}
 }
 
@@ -718,7 +754,7 @@ void allocate_output_images(void)
 	}
 }
 
-static void wait_for_movement_threads(struct thread_info ti[], int nthreads)
+static void wait_for_movement_threads(struct movement_thread_info ti[], int nthreads)
 {
 	int i;
 	void *status;
@@ -726,7 +762,8 @@ static void wait_for_movement_threads(struct thread_info ti[], int nthreads)
 	for (i = 0; i < nthreads; i++) {
 		int rc = pthread_join(ti[i].thread, &status);
 		if (rc)
-			fprintf(stderr, "pthread_join failed: %s\n", strerror(errno));
+			fprintf(stderr, "%s: pthread_join failed: %s\n",
+					__func__, strerror(errno));
 	}
 }
 
@@ -735,7 +772,7 @@ int main(int argc, char *argv[])
 	int i, t;
 	union vec3 test = { { 0, 0, 0 } };
 	struct fij fij;
-	struct thread_info *ti;
+	struct movement_thread_info *ti;
 	const int nparticles = NPARTICLES;
 	int tparticles = nparticles / nthreads;
 
@@ -787,7 +824,7 @@ int main(int argc, char *argv[])
 		for (t = 0; t < nthreads; t++)
 			move_particles(particle, &ti[t], &vf);
 		wait_for_movement_threads(ti, nthreads);
-		update_output_images(particle, nparticles);
+		update_output_images(image_threads, particle, nparticles);
 		if ((i % image_save_period) == 0)
 			save_output_images();
 	}
