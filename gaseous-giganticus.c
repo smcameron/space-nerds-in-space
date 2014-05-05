@@ -367,39 +367,71 @@ static union vec3 curl2(union vec3 pos, union vec3 noise_gradient)
 	return rotated_ng;
 }
 
+struct velocity_field_thread_info {
+	pthread_t thread;
+	int f; /* face */
+	float w;
+	struct velocity_field *vf;
+};
+
+static void *update_velocity_field_thread_fn(void *info)
+{
+	struct velocity_field_thread_info *t = info;
+	int f = t->f;
+	float w = t->w;
+	struct velocity_field *vf = t->vf;
+
+	int i, j;
+	union vec3 v, c, ng;
+
+	for (i = 0; i < XDIM; i++) {
+		for (j = 0; j < YDIM; j++) {
+			float band_speed, angle;
+			union vec3 ov, bv;
+
+			v = fij_to_xyz(f, i, j);
+			ov = v;
+			vec3_mul_self(&v, noise_scale);
+			ng = noise_gradient(v, w * noise_scale, noise_scale);
+			c = curl2(v, ng);
+			vec3_mul(&vf->v[f][i][j], &c, velocity_factor);
+
+			/* calculate counter rotating band influence */
+			angle = asinf(ov.v.y);
+			band_speed = cosf(angle * num_bands) * band_speed_factor;
+			bv.v.x = ov.v.z;
+			bv.v.z = -ov.v.x;
+			bv.v.y = 0;
+			vec3_normalize_self(&bv);
+			vec3_mul_self(&bv, band_speed);
+			vec3_add_self(&vf->v[f][i][j], &bv);
+		}
+	}
+	return NULL;
+}
+
 /* compute velocity field for all cells in cubemap.  It is scaled curl of gradient of noise field */
 static void update_velocity_field(struct velocity_field *vf, float noise_scale, float w)
 {
-	int f, i, j;
-	union vec3 v, c, ng;
+	struct velocity_field_thread_info t[6];
+	void *status;
+	int f, rc;
 
 	for (f = 0; f < 6; f++) {
-		for (i = 0; i < XDIM; i++) {
-			for (j = 0; j < YDIM; j++) {
-				float band_speed, angle;
-				union vec3 ov, bv;
-
-				v = fij_to_xyz(f, i, j);
-				ov = v;
-				vec3_mul_self(&v, noise_scale);
-				ng = noise_gradient(v, w * noise_scale, noise_scale);
-				c = curl2(v, ng);
-				vec3_mul(&vf->v[f][i][j], &c, velocity_factor);
-
-				/* calculate counter rotating band influence */
-				angle = asinf(ov.v.y);
-				band_speed = cosf(angle * num_bands) * band_speed_factor;
-				bv.v.x = ov.v.z; 
-				bv.v.z = -ov.v.x; 
-				bv.v.y = 0; 
-				vec3_normalize_self(&bv);
-				vec3_mul_self(&bv, band_speed);
-				vec3_add_self(&vf->v[f][i][j], &bv);
-			}
-		}
-		printf(" %d", f); fflush(stdout);
+		t[f].f = f;
+		t[f].w = w;
+		t[f].vf = vf;
+		rc = pthread_create(&t[f].thread, NULL, update_velocity_field_thread_fn, &t[f]);
+		if (rc)
+			fprintf(stderr, "%s: pthread_create failed: %s\n",
+					__func__, strerror(errno));
 	}
-	printf("\n");
+	for (f = 0; f < 6; f++) {
+		int rc = pthread_join(t[f].thread, &status);
+		if (rc)
+			fprintf(stderr, "%s: pthread_join failed: %s\n",
+					__func__, strerror(errno));
+	}
 }
 
 /* move a particle according to velocity field at its current location */
@@ -793,11 +825,11 @@ int main(int argc, char *argv[])
 #endif
 	printf("width, height, bytes per row = %d,%d,%d\n",
 			start_image_width, start_image_height, start_image_bytes_per_row);
-	printf("Initializing %d particles\n", NPARTICLES);
+	printf("Initializing %d particles", NPARTICLES); fflush(stdout);
 	init_particles(particle, NPARTICLES);
-	printf("Initializing velocity field");
+	printf("\nInitializing velocity field"); fflush(stdout);
 	update_velocity_field(&vf, noise_scale, w_offset);
-	printf("Running simulation\n");
+	printf("\nRunning simulation\n");
 
 	for (i = 0; i < niterations; i++) {
 		if ((i % 50) == 0)
