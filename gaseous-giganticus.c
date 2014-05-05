@@ -36,7 +36,7 @@
 
 #define NPARTICLES 8000000
 
-static const int nthreads = 4;
+static int nthreads = 4;
 static const int image_threads = 6; /* for 6 faces of cubemap, don't change this */
 
 #define DIM 1024
@@ -816,6 +816,12 @@ int main(int argc, char *argv[])
 	int i, t;
 	struct movement_thread_info *ti;
 	const int nparticles = NPARTICLES;
+
+	int num_online_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+	if (num_online_cpus > 0)
+		nthreads = num_online_cpus;
+	printf("Using %d threads for particle motion\n", nthreads);
+
 	int tparticles = nparticles / nthreads;
 
 	ti = malloc(sizeof(*ti) * nthreads);
