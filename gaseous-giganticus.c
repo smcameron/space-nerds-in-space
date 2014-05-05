@@ -270,6 +270,21 @@ static struct fij xyz_to_fij(const union vec3 *p)
 	answer.f = f;
 	answer.i = i;
 	answer.j = j;
+
+	/* FIXME: some other problem makes these checks necessary for now. */
+	if (answer.f < 0)
+		answer.f = 0;
+	else if (answer.f > 5)
+		answer.f = 5;
+	if (answer.i < 0)
+		answer.i = 0;
+	else if (answer.i >= DIM)
+		answer.i = DIM - 1;
+	if (answer.j < 0)
+		answer.j = 0;
+	else if (answer.j >= DIM)
+		answer.j = DIM - 1;
+
 	return answer;
 }
 
