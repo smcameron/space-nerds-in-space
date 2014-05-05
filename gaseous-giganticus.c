@@ -20,12 +20,14 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <math.h>
 #include <time.h>
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
+#include <getopt.h>
 
 #include <png.h>
 
@@ -38,6 +40,10 @@
 
 static int nthreads = 4;
 static const int image_threads = 6; /* for 6 faces of cubemap, don't change this */
+static char *default_output_file_prefix = "gasgiant-";
+static char *default_input_file = "gasgiant-input.png";
+static char *output_file_prefix;
+static char *input_file;
 
 #define DIM 1024
 #define FDIM ((float) (DIM))
@@ -738,7 +744,7 @@ static void save_output_images(void)
 	char fname[PATH_MAX];
 
 	for (i = 0; i < 6; i++) {
-		sprintf(fname, "tmpg-%d.png", i);
+		sprintf(fname, "%s%d.png", output_file_prefix, i);
 		if (write_png_image(fname, output_image[i], DIM, DIM, 1))
 			fprintf(stderr, "Failed to write %s\n", fname);
 	}
@@ -811,11 +817,57 @@ static void wait_for_movement_threads(struct movement_thread_info ti[], int nthr
 	}
 }
 
+
+static struct option long_options[] = {
+	{ "input", required_argument, NULL, 'i' },
+	{ "output", required_argument, NULL, 'o' },
+	{ "w-offset", required_argument, NULL, 'w' },
+	{ 0, 0, 0, 0 },
+};
+
+static void process_options(int argc, char *argv[])
+{
+	int c;
+	float tmpw;
+
+	output_file_prefix = default_output_file_prefix;
+	input_file = default_input_file;
+
+	while (1) {
+		int option_index;
+		c = getopt_long(argc, argv, "i:o:w:", long_options, &option_index);
+		if (c == -1)
+			break;
+		switch (c) {
+		case 'i':
+			input_file = optarg;
+			break;
+		case 'o':
+			output_file_prefix = optarg;
+			break;
+		case 'w':
+			if (sscanf(optarg, "%f", &tmpw) == 1) {
+				w_offset = tmpw;
+			} else {
+				fprintf(stderr, "Bad w-offset option '%s'\n", optarg);
+				exit(1);
+			}
+			break;
+		default:
+			fprintf(stderr, "unknown option '%s'\n", argv[option_index]);
+			exit(1);
+		}
+	}
+	return;
+}
+
 int main(int argc, char *argv[])
 {
 	int i, t;
 	struct movement_thread_info *ti;
 	const int nparticles = NPARTICLES;
+
+	process_options(argc, argv);
 
 	int num_online_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	if (num_online_cpus > 0)
@@ -838,7 +890,7 @@ int main(int argc, char *argv[])
 	allocate_output_images();
 	printf("Loading image\n");
 	start_image_has_alpha = 0;
-	start_image = load_image("gas.png", &start_image_width, &start_image_height,
+	start_image = load_image(input_file, &start_image_width, &start_image_height,
 					&start_image_has_alpha, &start_image_bytes_per_row);
 #if 0	
 	write_png_image("blah.png", (unsigned char *) start_image, start_image_width,
