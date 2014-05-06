@@ -171,40 +171,40 @@ static void paint_particle(int face, int i, int j, struct color *c)
 }
 
 /* convert from cubemap coords to cartesian coords on surface of sphere */
-static union vec3 fij_to_xyz(int f, int i, int j)
+static union vec3 fij_to_xyz(int f, int i, int j, const int dim)
 {
 	union vec3 answer;
 
 	switch (f) {
 	case 0:
-		answer.v.x = (float) (i - XDIM / 2) / (float) XDIM;
-		answer.v.y = -(float) (j - YDIM / 2) / (float) YDIM;
+		answer.v.x = (float) (i - dim / 2) / (float) dim;
+		answer.v.y = -(float) (j - dim / 2) / (float) dim;
 		answer.v.z = 0.5;
 		break;
 	case 1:
 		answer.v.x = 0.5;
-		answer.v.y = -(float) (j - YDIM / 2) / (float) YDIM;
-		answer.v.z = -(float) (i - XDIM / 2) / (float) XDIM;
+		answer.v.y = -(float) (j - dim / 2) / (float) dim;
+		answer.v.z = -(float) (i - dim / 2) / (float) dim;
 		break;
 	case 2:
-		answer.v.x = -(float) (i - XDIM / 2) / (float) XDIM;
-		answer.v.y = -(float) (j - YDIM / 2) / (float) YDIM;
+		answer.v.x = -(float) (i - dim / 2) / (float) dim;
+		answer.v.y = -(float) (j - dim / 2) / (float) dim;
 		answer.v.z = -0.5;
 		break;
 	case 3:
 		answer.v.x = -0.5;
-		answer.v.y = -(float) (j - YDIM / 2) / (float) YDIM;
-		answer.v.z = (float) (i - XDIM / 2) / (float) XDIM;
+		answer.v.y = -(float) (j - dim / 2) / (float) dim;
+		answer.v.z = (float) (i - dim / 2) / (float) dim;
 		break;
 	case 4:
-		answer.v.x = (float) (i - XDIM / 2) / (float) XDIM;
+		answer.v.x = (float) (i - dim / 2) / (float) dim;
 		answer.v.y = 0.5;
-		answer.v.z = (float) (j - YDIM / 2) / (float) YDIM;
+		answer.v.z = (float) (j - dim / 2) / (float) dim;
 		break;
 	case 5:
-		answer.v.x = (float) (i - XDIM / 2) / (float) XDIM;
+		answer.v.x = (float) (i - dim / 2) / (float) dim;
 		answer.v.y = -0.5;
-		answer.v.z = -(float) (j - YDIM / 2) / (float) YDIM;
+		answer.v.z = -(float) (j - dim / 2) / (float) dim;
 		break;
 	}
 	vec3_normalize_self(&answer);
@@ -212,12 +212,13 @@ static union vec3 fij_to_xyz(int f, int i, int j)
 }
 
 /* convert from cartesian coords on surface of a sphere to cubemap coords */
-static struct fij xyz_to_fij(const union vec3 *p)
+static struct fij xyz_to_fij(const union vec3 *p, const int dim)
 {
 	struct fij answer;
 	union vec3 t;
 	int f, i, j;
 	float d;
+	const float fdim = (float) dim;
 
 	vec3_normalize(&t, p);
 
@@ -227,20 +228,20 @@ static struct fij xyz_to_fij(const union vec3 *p)
 			d = fabs(t.v.x);
 			if (t.v.x < 0) {
 				f = 3;
-				i = (int) ((t.v.z / d) * FDIM * 0.5 + 0.5 * (float) FDIM);
+				i = (int) ((t.v.z / d) * fdim * 0.5 + 0.5 * (float) fdim);
 			} else {
 				f = 1;
-				i = (int) ((-t.v.z / d)  * FDIM * 0.5 + 0.5 * FDIM);
+				i = (int) ((-t.v.z / d)  * fdim * 0.5 + 0.5 * fdim);
 			}
 		} else {
 			/* z is longest leg */
 			d = fabs(t.v.z);
 			if (t.v.z < 0) {
 				f = 2;
-				i = (int) ((-t.v.x / d) * FDIM * 0.5 + 0.5 * FDIM);
+				i = (int) ((-t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
 			} else {
 				f = 0;
-				i = (int) ((t.v.x / d) * FDIM * 0.5 + 0.5 * FDIM);
+				i = (int) ((t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
 #if 0
 				/* FIXME: we get this sometimes, not sure why. */
 				if (i < 0 || i > 1023)
@@ -248,7 +249,7 @@ static struct fij xyz_to_fij(const union vec3 *p)
 #endif
 			}
 		}
-		j = (int) ((-t.v.y / d) * FDIM * 0.5 + 0.5 * FDIM);
+		j = (int) ((-t.v.y / d) * fdim * 0.5 + 0.5 * fdim);
 	} else {
 		/* x is not longest leg, y or z must be. */
 		if (fabs(t.v.y) > fabs(t.v.z)) {
@@ -256,23 +257,23 @@ static struct fij xyz_to_fij(const union vec3 *p)
 			d = fabs(t.v.y);
 			if (t.v.y < 0) {
 				f = 5;
-				j = (int) ((-t.v.z / d) * FDIM * 0.5 + 0.5 * FDIM);
+				j = (int) ((-t.v.z / d) * fdim * 0.5 + 0.5 * fdim);
 			} else {
 				f = 4;
-				j = (int) ((t.v.z / d) * FDIM * 0.5 + 0.5 * FDIM);
+				j = (int) ((t.v.z / d) * fdim * 0.5 + 0.5 * fdim);
 			}
-			i = (int) ((t.v.x / d) * FDIM * 0.5 + 0.5 * FDIM);
+			i = (int) ((t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
 		} else {
 			/* z is longest leg */
 			d = fabs(t.v.z);
 			if (t.v.z < 0) {
 				f = 2;
-				i = (int) ((-t.v.x / d) * FDIM * 0.5 + 0.5 * FDIM);
+				i = (int) ((-t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
 			} else {
 				f = 0;
-				i = (int) ((t.v.x / d) * FDIM * 0.5 + 0.5 * FDIM);
+				i = (int) ((t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
 			}
-			j = (int) ((-t.v.y / d) * FDIM * 0.5 + 0.5 * FDIM);
+			j = (int) ((-t.v.y / d) * fdim * 0.5 + 0.5 * fdim);
 		}
 	}
 
@@ -287,12 +288,12 @@ static struct fij xyz_to_fij(const union vec3 *p)
 		answer.f = 5;
 	if (answer.i < 0)
 		answer.i = 0;
-	else if (answer.i >= DIM)
-		answer.i = DIM - 1;
+	else if (answer.i >= dim)
+		answer.i = dim - 1;
 	if (answer.j < 0)
 		answer.j = 0;
-	else if (answer.j >= DIM)
-		answer.j = DIM - 1;
+	else if (answer.j >= dim)
+		answer.j = dim - 1;
 
 	return answer;
 }
@@ -315,7 +316,7 @@ static void init_particles(struct particle p[], const int nparticles)
 		p[i].pos.v.x = x;
 		p[i].pos.v.y = y;
 		p[i].pos.v.z = z;
-		fij = xyz_to_fij(&p[i].pos);
+		fij = xyz_to_fij(&p[i].pos, DIM);
 		if (fij.i < 0 || fij.i > DIM || fij.j < 0 || fij.j > DIM) {
 			printf("BAD fij: %d,%d\n", fij.i, fij.j);
 		}
@@ -413,7 +414,7 @@ static void *update_velocity_field_thread_fn(void *info)
 			float band_speed, angle;
 			union vec3 ov, bv;
 
-			v = fij_to_xyz(f, i, j);
+			v = fij_to_xyz(f, i, j, DIM);
 			ov = v;
 			vec3_mul_self(&v, noise_scale);
 			ng = noise_gradient(v, w * noise_scale, noise_scale);
@@ -463,7 +464,7 @@ static void move_particle(struct particle *p, struct velocity_field *vf)
 {
 	struct fij fij;
 
-	fij = xyz_to_fij(&p->pos);
+	fij = xyz_to_fij(&p->pos, DIM);
 	p->fij = fij;
 	vec3_add_self(&p->pos, &vf->v[fij.f][fij.i][fij.j]);
 	vec3_normalize_self(&p->pos);
