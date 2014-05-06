@@ -54,7 +54,7 @@ static int nofade = 0;
 static const int niterations = 1000;
 static const float noise_scale = 1.9;
 static const float velocity_factor = 1400.0;
-static const float num_bands = 6.0f;
+static float num_bands = 6.0f;
 static const float band_speed_factor = 1.9f;
 static const float left_right_fudge = 0.995;
 
@@ -828,6 +828,7 @@ static void wait_for_movement_threads(struct movement_thread_info ti[], int nthr
 
 
 static struct option long_options[] = {
+	{ "bands", required_argument, NULL, 'b' },
 	{ "input", required_argument, NULL, 'i' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "w-offset", required_argument, NULL, 'w' },
@@ -839,17 +840,25 @@ static struct option long_options[] = {
 static void process_options(int argc, char *argv[])
 {
 	int c;
-	float tmpw;
+	float tmpw, tmpbands;
 
 	output_file_prefix = default_output_file_prefix;
 	input_file = default_input_file;
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "hi:no:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "b:hi:no:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
+		case 'b':
+			if (sscanf(optarg, "%f", &tmpbands) == 1) {
+				num_bands = tmpbands;
+			} else {
+				fprintf(stderr, "Bad w-offset option '%s'\n", optarg);
+				exit(1);
+			}
+			break;
 		case 'h':
 			use_hot_pink = 1;
 			break;
