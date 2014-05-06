@@ -44,6 +44,7 @@ static char *default_output_file_prefix = "gasgiant-";
 static char *default_input_file = "gasgiant-input.png";
 static char *output_file_prefix;
 static char *input_file;
+static int nofade = 0;
 
 #define DIM 1024
 #define FDIM ((float) (DIM))
@@ -504,7 +505,8 @@ static void *update_output_image_thread_fn(void *info)
 	struct particle *p = t->p;
 	int i;
 
-	fade_out_background(t->face, &darkest_color);
+	if (!nofade)
+		fade_out_background(t->face, &darkest_color);
 	for (i = 0; i < t->nparticles; i++) {
 		if (p[i].fij.f != t->face)
 			continue;
@@ -830,6 +832,7 @@ static struct option long_options[] = {
 	{ "output", required_argument, NULL, 'o' },
 	{ "w-offset", required_argument, NULL, 'w' },
 	{ "hot-pink", no_argument, NULL, 'h' },
+	{ "no-fade", no_argument, NULL, 'n' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -843,7 +846,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "hi:o:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "hi:no:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -852,6 +855,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'i':
 			input_file = optarg;
+			break;
+		case 'n':
+			nofade = 1;
 			break;
 		case 'o':
 			output_file_prefix = optarg;
