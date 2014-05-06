@@ -73,6 +73,8 @@ struct color {
 };
 
 struct color darkest_color;
+const struct color hot_pink = { 1.0f, 0.07843f, 0.57647f, 0.01 };
+static int use_hot_pink = 0;
 
 /* face, i, j -- coords on a cube map */
 struct fij {
@@ -758,6 +760,11 @@ static void find_darkest_pixel(unsigned char *image, int w, int h,
 	int x, y, n;
 	float r, g, b, min;
 
+	if (use_hot_pink) {
+		*darkest_color = hot_pink;
+		return;
+	}
+
 	min = 3.0f;
 	for (x = 0; x < w; x++) {
 		for (y = 0; y < h; y++) {
@@ -822,6 +829,7 @@ static struct option long_options[] = {
 	{ "input", required_argument, NULL, 'i' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "w-offset", required_argument, NULL, 'w' },
+	{ "hot-pink", no_argument, NULL, 'h' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -835,10 +843,13 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "i:o:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "hi:o:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
+		case 'h':
+			use_hot_pink = 1;
+			break;
 		case 'i':
 			input_file = optarg;
 			break;
