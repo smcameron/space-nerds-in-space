@@ -46,16 +46,17 @@ static char *output_file_prefix;
 static char *input_file;
 static int nofade = 0;
 
-#define DIM 1024
+#define DIM 1024 /* dimensions of cube map face images */
+#define VFDIM 2048 /* dimension of velocity field. (2 * DIM) is reasonable */
 #define FDIM ((float) (DIM))
 #define XDIM DIM
 #define YDIM DIM
 
 static const int niterations = 1000;
-static const float noise_scale = 1.9;
-static const float velocity_factor = 1400.0;
+static const float noise_scale = 2.6;
+static const float velocity_factor = 1200.0;
 static float num_bands = 6.0f;
-static const float band_speed_factor = 1.9f;
+static const float band_speed_factor = 2.9f;
 static const float left_right_fudge = 0.995;
 
 static char *start_image;
@@ -66,7 +67,7 @@ static float w_offset = 0.0;
 
 /* velocity field for 6 faces of a cubemap */
 static struct velocity_field {
-	union vec3 v[6][XDIM][YDIM];
+	union vec3 v[6][VFDIM][VFDIM];
 } vf;
 
 struct color {
@@ -409,12 +410,12 @@ static void *update_velocity_field_thread_fn(void *info)
 	int i, j;
 	union vec3 v, c, ng;
 
-	for (i = 0; i < XDIM; i++) {
-		for (j = 0; j < YDIM; j++) {
+	for (i = 0; i < VFDIM; i++) {
+		for (j = 0; j < VFDIM; j++) {
 			float band_speed, angle;
 			union vec3 ov, bv;
 
-			v = fij_to_xyz(f, i, j, DIM);
+			v = fij_to_xyz(f, i, j, VFDIM);
 			ov = v;
 			vec3_mul_self(&v, noise_scale);
 			ng = noise_gradient(v, w * noise_scale, noise_scale);
@@ -464,11 +465,11 @@ static void move_particle(struct particle *p, struct velocity_field *vf)
 {
 	struct fij fij;
 
-	fij = xyz_to_fij(&p->pos, DIM);
-	p->fij = fij;
+	fij = xyz_to_fij(&p->pos, VFDIM);
+	p->fij = xyz_to_fij(&p->pos, DIM);
 	vec3_add_self(&p->pos, &vf->v[fij.f][fij.i][fij.j]);
 	vec3_normalize_self(&p->pos);
-	vec3_mul_self(&p->pos, (float) XDIM / 2.0f);
+	vec3_mul_self(&p->pos, (float) VFDIM / 2.0f);
 }
 
 static void *move_particles_thread_fn(void *info)
