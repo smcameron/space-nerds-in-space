@@ -840,10 +840,21 @@ static struct option long_options[] = {
 	{ 0, 0, 0, 0 },
 };
 
+static void process_float_option(char *option_name, char *option_value, float *value)
+{
+	float tmpf;
+
+	if (sscanf(option_value, "%f", &tmpf) == 1) {
+		*value = tmpf;
+	} else {
+		fprintf(stderr, "Bad %s option '%s'\n", option_name, option_value);
+		exit(1);
+	}
+}
+
 static void process_options(int argc, char *argv[])
 {
 	int c;
-	float tmpw, tmpbands;
 
 	output_file_prefix = default_output_file_prefix;
 	input_file = default_input_file;
@@ -855,12 +866,7 @@ static void process_options(int argc, char *argv[])
 			break;
 		switch (c) {
 		case 'b':
-			if (sscanf(optarg, "%f", &tmpbands) == 1) {
-				num_bands = tmpbands;
-			} else {
-				fprintf(stderr, "Bad w-offset option '%s'\n", optarg);
-				exit(1);
-			}
+			process_float_option("num-bands", optarg, &num_bands);
 			break;
 		case 'h':
 			use_hot_pink = 1;
@@ -875,20 +881,10 @@ static void process_options(int argc, char *argv[])
 			output_file_prefix = optarg;
 			break;
 		case 'w':
-			if (sscanf(optarg, "%f", &tmpw) == 1) {
-				w_offset = tmpw;
-			} else {
-				fprintf(stderr, "Bad w-offset option '%s'\n", optarg);
-				exit(1);
-			}
+			process_float_option("w-offset", optarg, &w_offset);
 			break;
 		case 'v':
-			if (sscanf(optarg, "%f", &tmpw) == 1) {
-				velocity_factor = tmpw;
-			} else {
-				fprintf(stderr, "Bad velocity-factor option '%s'\n", optarg);
-				exit(1);
-			}
+			process_float_option("velocity-factor", optarg, &velocity_factor);
 			break;
 		default:
 			fprintf(stderr, "unknown option '%s'\n", argv[option_index]);
