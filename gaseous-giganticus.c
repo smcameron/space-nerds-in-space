@@ -54,7 +54,7 @@ static int nofade = 0;
 
 static const int niterations = 1000;
 static const float noise_scale = 2.6;
-static const float velocity_factor = 1200.0;
+static float velocity_factor = 1200.0;
 static float num_bands = 6.0f;
 static const float band_speed_factor = 2.9f;
 static const float left_right_fudge = 0.995;
@@ -836,6 +836,7 @@ static struct option long_options[] = {
 	{ "w-offset", required_argument, NULL, 'w' },
 	{ "hot-pink", no_argument, NULL, 'h' },
 	{ "no-fade", no_argument, NULL, 'n' },
+	{ "velocity-factor", required_argument, NULL, 'v' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -849,7 +850,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "b:hi:no:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "b:hi:no:v:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -878,6 +879,14 @@ static void process_options(int argc, char *argv[])
 				w_offset = tmpw;
 			} else {
 				fprintf(stderr, "Bad w-offset option '%s'\n", optarg);
+				exit(1);
+			}
+			break;
+		case 'v':
+			if (sscanf(optarg, "%f", &tmpw) == 1) {
+				velocity_factor = tmpw;
+			} else {
+				fprintf(stderr, "Bad velocity-factor option '%s'\n", optarg);
 				exit(1);
 			}
 			break;
