@@ -828,6 +828,32 @@ static void wait_for_movement_threads(struct movement_thread_info ti[], int nthr
 	}
 }
 
+static void usage(void)
+{
+	fprintf(stderr, "usage: gaseous-giganticus [-b bands] [-i inputfile] [-o outputfile]\n");
+	fprintf(stderr, "       [-w w-offset] [-h] [-n] [-v velocity factor] [-B band-vel-factor]\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "   -b, --bands : Number of counter rotating bands.  Default is 6.0\n");
+	fprintf(stderr, "   -i, --input : Input image filename.  Must be RGB png file.\n");
+	fprintf(stderr, "   -o, --output : Output image filename template.\n");
+	fprintf(stderr, "               Example: 'out-' will produces 6 output files\n");
+	fprintf(stderr, "               out-0.png, out-1.png, ..., out-5.png\n");
+	fprintf(stderr, "   -w, --w-offset: w dimension offset in 4D simplex noise field\n");
+	fprintf(stderr, "                   Use -w to avoid (or obtain) repetitive results.\n");
+	fprintf(stderr, "   -h, --hot-pink: Gradually fade pixels to hot pink.  This will allow\n");
+	fprintf(stderr, "                   divergences in the velocity field to be clearly seen,\n");
+	fprintf(stderr, "                   as pixels that contain no particles wil not be painted\n");
+	fprintf(stderr, "                   and will become hot pink.\n");
+	fprintf(stderr, "   -n, --no-fade:  Do not fade the image at all, divergences will be hidden\n");
+	fprintf(stderr, "   -v, --velocity-factor: Multiply velocity field by this number when\n");
+	fprintf(stderr, "                   moving particles.  Default is 1200.0\n");
+	fprintf(stderr, "   -B, --band-vel-factor: Multiply band velocity by this number when\n");
+	fprintf(stderr, "                   computing velocity field.  Default is 2.9\n");
+	fprintf(stderr, "\n");
+	exit(1);
+}
+
 static struct option long_options[] = {
 	{ "bands", required_argument, NULL, 'b' },
 	{ "input", required_argument, NULL, 'i' },
@@ -848,7 +874,7 @@ static void process_float_option(char *option_name, char *option_value, float *v
 		*value = tmpf;
 	} else {
 		fprintf(stderr, "Bad %s option '%s'\n", option_name, option_value);
-		exit(1);
+		usage();
 	}
 }
 
@@ -891,7 +917,7 @@ static void process_options(int argc, char *argv[])
 			break;
 		default:
 			fprintf(stderr, "unknown option '%s'\n", argv[option_index]);
-			exit(1);
+			usage();
 		}
 	}
 	return;
