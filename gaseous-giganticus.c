@@ -56,7 +56,7 @@ static const int niterations = 1000;
 static const float noise_scale = 2.6;
 static float velocity_factor = 1200.0;
 static float num_bands = 6.0f;
-static const float band_speed_factor = 2.9f;
+static float band_speed_factor = 2.9f;
 static const float left_right_fudge = 0.995;
 
 static char *start_image;
@@ -828,7 +828,6 @@ static void wait_for_movement_threads(struct movement_thread_info ti[], int nthr
 	}
 }
 
-
 static struct option long_options[] = {
 	{ "bands", required_argument, NULL, 'b' },
 	{ "input", required_argument, NULL, 'i' },
@@ -837,6 +836,7 @@ static struct option long_options[] = {
 	{ "hot-pink", no_argument, NULL, 'h' },
 	{ "no-fade", no_argument, NULL, 'n' },
 	{ "velocity-factor", required_argument, NULL, 'v' },
+	{ "band-vel-factor", required_argument, NULL, 'B' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -861,10 +861,13 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "b:hi:no:v:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:hi:no:v:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
+		case 'B':
+			process_float_option("band-vel-factor", optarg, &band_speed_factor);
+			break;
 		case 'b':
 			process_float_option("num-bands", optarg, &num_bands);
 			break;
