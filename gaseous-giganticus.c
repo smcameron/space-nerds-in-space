@@ -39,6 +39,7 @@
 #define NPARTICLES 8000000
 
 static int nthreads = 4;
+static int user_threads = -1;
 static const int image_threads = 6; /* for 6 faces of cubemap, don't change this */
 static char *default_output_file_prefix = "gasgiant-";
 static char *default_input_file = "gasgiant-input.png";
@@ -850,6 +851,8 @@ static void usage(void)
 	fprintf(stderr, "                   moving particles.  Default is 1200.0\n");
 	fprintf(stderr, "   -B, --band-vel-factor: Multiply band velocity by this number when\n");
 	fprintf(stderr, "                   computing velocity field.  Default is 2.9\n");
+	fprintf(stderr, "   -t, --threads: Use the specified number of CPU threads up to the\n");
+	fprintf(stderr, "                   number of online CPUs\n");
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -863,6 +866,7 @@ static struct option long_options[] = {
 	{ "no-fade", no_argument, NULL, 'n' },
 	{ "velocity-factor", required_argument, NULL, 'v' },
 	{ "band-vel-factor", required_argument, NULL, 'B' },
+	{ "threads", required_argument, NULL, 't' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -878,6 +882,18 @@ static void process_float_option(char *option_name, char *option_value, float *v
 	}
 }
 
+static void process_int_option(char *option_name, char *option_value, int *value)
+{
+	int tmp;
+
+	if (sscanf(option_value, "%d", &tmp) == 1) {
+		*value = tmp;
+	} else {
+		fprintf(stderr, "Bad %s option '%s'\n", option_name, option_value);
+		usage();
+	}
+}
+
 static void process_options(int argc, char *argv[])
 {
 	int c;
@@ -887,7 +903,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:hi:no:v:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:hi:no:t:v:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -908,6 +924,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'o':
 			output_file_prefix = optarg;
+			break;
+		case 't':
+			process_int_option("threads", optarg, &user_threads);
 			break;
 		case 'w':
 			process_float_option("w-offset", optarg, &w_offset);
@@ -934,6 +953,8 @@ int main(int argc, char *argv[])
 	int num_online_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	if (num_online_cpus > 0)
 		nthreads = num_online_cpus;
+	if (user_threads > 0 && user_threads < num_online_cpus)
+		nthreads = user_threads;
 	printf("Using %d threads for particle motion\n", nthreads);
 
 	int tparticles = nparticles / nthreads;
