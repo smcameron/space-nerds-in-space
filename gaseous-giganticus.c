@@ -53,7 +53,7 @@ static int nofade = 0;
 #define XDIM DIM
 #define YDIM DIM
 
-static const int niterations = 1000;
+static int niterations = 1000;
 static const float noise_scale = 2.6;
 static float velocity_factor = 1200.0;
 static float num_bands = 6.0f;
@@ -836,6 +836,8 @@ static void usage(void)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "   -b, --bands : Number of counter rotating bands.  Default is 6.0\n");
+	fprintf(stderr, "   -c, --count : Number of iterations to run the simulation.\n");
+	fprintf(stderr, "                 Default is 1000\n");
 	fprintf(stderr, "   -i, --input : Input image filename.  Must be RGB png file.\n");
 	fprintf(stderr, "   -o, --output : Output image filename template.\n");
 	fprintf(stderr, "               Example: 'out-' will produces 6 output files\n");
@@ -859,6 +861,7 @@ static void usage(void)
 
 static struct option long_options[] = {
 	{ "bands", required_argument, NULL, 'b' },
+	{ "count", required_argument, NULL, 'c' },
 	{ "input", required_argument, NULL, 'i' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "w-offset", required_argument, NULL, 'w' },
@@ -903,7 +906,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:hi:no:t:v:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:c:hi:no:t:v:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -913,6 +916,8 @@ static void process_options(int argc, char *argv[])
 		case 'b':
 			process_float_option("num-bands", optarg, &num_bands);
 			break;
+		case 'c':
+			process_int_option("count", optarg, &niterations);
 		case 'h':
 			use_hot_pink = 1;
 			break;
