@@ -952,6 +952,7 @@ int main(int argc, char *argv[])
 	int i, t;
 	struct movement_thread_info *ti;
 	const int nparticles = NPARTICLES;
+	int last_imaged_iteration = -1;
 
 	process_options(argc, argv);
 
@@ -1003,10 +1004,14 @@ int main(int argc, char *argv[])
 			move_particles(particle, &ti[t], &vf);
 		wait_for_movement_threads(ti, nthreads);
 		update_output_images(image_threads, particle, nparticles);
-		if ((i % image_save_period) == 0)
+		if ((i % image_save_period) == 0) {
 			save_output_images();
+			last_imaged_iteration = i;
+		}
 	}
-	printf("\n%5d / %5d\n", i, niterations);
+	if (last_imaged_iteration != i - 1)
+		save_output_images();
+	printf("\n%5d / %5d -- done.\n", i, niterations);
 	return 0;
 }
 
