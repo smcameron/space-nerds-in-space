@@ -1,0 +1,90 @@
+.TH GASEOUS-GIGANGICUS 1 "May 2014" "Space-Nerds-In-Space" "User Commands"
+
+.SH NAME
+gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet 
+.SH SYNOPSIS
+.B gaseous-giganticus 
+[ -b bands ]
+[ -c count ]
+[ -i input-file ]
+[ -o output-file-template ]
+[ -w w-offset ]
+[ -h ]
+[ -n ]
+[ -v velocity-factor ]
+[ -B band-velocity-factor ]
+[ -t thread-count ]
+
+.SH DESCRIPTION
+.I  gaseous-giganticus
+From a given input image, produces 6 images forming a cube map
+for a gas giant planet.  
+.PP
+It works as follows.  6 square arrays
+are arranged in a cube.  The cube is positioned within a 4 dimensional
+Simplex noise field.   For each element in each of the 6 arrays, the
+gradient in 3 dimensions is taken, forming a 3D vector.  The curl 
+of this gradient field relative to the surface of a sphere enclosing the
+cube is taken.  That is, each gradient vector is projected onto
+the surface of a sphere enclosing the cube.  Depending on whether the
+original gradient vector was "uphill" or "downhill" relative to the
+surface of the sphere (pointing more away from or towards the center
+of the sphere) the gradient vector is turned 90 degrees left or right,
+respectively, within the plane tangent to the surface of the sphere
+at that point.  This will produce a non-divergent velocity field which
+can be used as a kind of fake incompressible fluid flow simulation.
+Then, the velocity field is modified to add counter rotating bands.
+.PP
+Next, regions of the input image are mapped to the faces of the cube
+(which is mapped to a sphere) Particles are randomly distributed onto
+the surface of the sphere, and they are colored according to the
+color of the image at the corresponding mapped location.  Then, the
+particles are moved according to the velocity field.  At each iteration
+the particles are projected into 6 images according to their position.
+Also each image is very slightly faded towards the darkest color present
+in the input image at each iteration -- this has the effect that the moving
+particles leave fading trails on the images.  With enough particles the
+fading trails are not visible, except in the small cracks where some small
+divergences remain (this last may be due to some bug in the program.)
+.SH OPTIONS
+.TP
+-b, --bands 
+Number of counter rotating bands.  Default is 6.0
+.TP
+-c, --count
+Number of iterations to run the simulation.  Default is 1000
+.TP
+-i, --input
+Input image filename.  Must be RGB png file.
+.TP
+-o, --output
+Output image filename template.  Example: 'out-' will
+produces 6 output files, out-0.png, out-1.png, ..., out-5.png
+.TP
+-w, --w-offset
+w dimension offset in 4D simplex noise field Use -w to avoid (or obtain)
+repetitive results.
+.TP
+-h, --hot-pink
+Gradually fade pixels to hot pink.  This will allow
+divergences in the velocity field to be clearly seen,
+as pixels that contain no particles will not be painted
+and will become hot pink.
+.TP
+-n, --no-fade
+Do not fade the image at all, divergences will be hidden
+.TP
+-v, --velocity-factor: 
+Multiply velocity field by this number when
+moving particles.  Default is 1200.0
+.TP
+-B, --band-vel-factor:
+Multiply band velocity by this number when
+computing velocity field.  Default is 2.9
+.TP
+-t, --threads
+Use the specified number of CPU threads up to the
+number of online CPUs.  Default is number of online CPUs.
+.SH "SEE ALSO"
+snis_client, snis_server
+
