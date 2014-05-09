@@ -14,6 +14,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -p particle-count ]
 [ -w w-offset ]
 [ -v velocity-factor ]
+[ -V ]
 [ -t thread-count ]
 
 .SH DESCRIPTION
@@ -85,6 +86,9 @@ moving particles.  Default is 1200.0
 -B, --band-vel-factor:
 Multiply band velocity by this number when
 computing velocity field.  Default is 2.9
+.TP
+-V, --vertical-bands
+Make bands rotate around the X axis instead of Y axis
 .TP
 -t, --threads
 Use the specified number of CPU threads up to the

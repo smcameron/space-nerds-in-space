@@ -59,6 +59,7 @@ static const float noise_scale = 2.6;
 static float velocity_factor = 1200.0;
 static float num_bands = 6.0f;
 static float band_speed_factor = 2.9f;
+static int vertical_bands = 0;
 static const float left_right_fudge = 0.995;
 
 static char *start_image;
@@ -441,11 +442,19 @@ static void *update_velocity_field_thread_fn(void *info)
 			vec3_mul(&vf->v[f][i][j], &c, velocity_factor);
 
 			/* calculate counter rotating band influence */
-			angle = asinf(ov.v.y);
-			band_speed = cosf(angle * num_bands) * band_speed_factor;
-			bv.v.x = ov.v.z;
-			bv.v.z = -ov.v.x;
-			bv.v.y = 0;
+			if (vertical_bands) {
+				angle = asinf(ov.v.x);
+				band_speed = cosf(angle * num_bands) * band_speed_factor;
+				bv.v.z = -ov.v.y;
+				bv.v.y = ov.v.z;
+				bv.v.x = 0;
+			} else {
+				angle = asinf(ov.v.y);
+				band_speed = cosf(angle * num_bands) * band_speed_factor;
+				bv.v.x = ov.v.z;
+				bv.v.z = -ov.v.x;
+				bv.v.y = 0;
+			}
 			vec3_normalize_self(&bv);
 			vec3_mul_self(&bv, band_speed);
 			vec3_add_self(&vf->v[f][i][j], &bv);
@@ -885,6 +894,7 @@ static struct option long_options[] = {
 	{ "hot-pink", no_argument, NULL, 'h' },
 	{ "no-fade", no_argument, NULL, 'n' },
 	{ "velocity-factor", required_argument, NULL, 'v' },
+	{ "vertical-bands", required_argument, NULL, 'V' },
 	{ "band-vel-factor", required_argument, NULL, 'B' },
 	{ "threads", required_argument, NULL, 't' },
 	{ "particles", required_argument, NULL, 'p' },
@@ -924,7 +934,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:hi:no:p:t:v:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:c:hi:no:p:t:Vv:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -960,6 +970,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'v':
 			process_float_option("velocity-factor", optarg, &velocity_factor);
+			break;
+		case 'V':
+			vertical_bands = 1;
 			break;
 		default:
 			fprintf(stderr, "unknown option '%s'\n", argv[option_index]);
