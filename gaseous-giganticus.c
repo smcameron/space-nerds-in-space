@@ -99,6 +99,18 @@ struct movement_thread_info {
 	struct velocity_field *vf; /* ptr to vf, above. */
 };
 
+union cast {
+	double d;
+	long l;
+};
+
+static inline int float2int(double d)
+{
+	volatile union cast c;
+	c.d = d + 6755399441055744.0;
+	return c.l;
+}
+
 static float alphablendcolor(float underchannel, float underalpha, float overchannel, float overalpha)
 {
 	return overchannel * overalpha + underchannel * underalpha * (1.0 - overalpha);
@@ -130,9 +142,9 @@ static void fade_out_background(int f, struct color *c)
 			oc.b = (float) pixel[2] / 255.0f;
 			oc.a = 1.0;
 			nc = combine_color(&oc, c);
-			pixel[0] = (unsigned char) (255.0f * nc.r);
-			pixel[1] = (unsigned char) (255.0f * nc.g);
-			pixel[2] = (unsigned char) (255.0f * nc.b);
+			pixel[0] = float2int(255.0f * nc.r) & 0xff;
+			pixel[1] = float2int(255.0f * nc.g) & 0xff;
+			pixel[2] = float2int(255.0f * nc.b) & 0xff;
 		}
 	}
 }
@@ -166,9 +178,9 @@ static void paint_particle(int face, int i, int j, struct color *c)
 	oc.b = (float) pixel[2] / 255.0f;
 	oc.a = 1.0;
 	nc = combine_color(&oc, c);
-	pixel[0] = (unsigned char) (255.0f * nc.r);
-	pixel[1] = (unsigned char) (255.0f * nc.g);
-	pixel[2] = (unsigned char) (255.0f * nc.b);
+	pixel[0] = float2int(255.0f * nc.r) & 0xff;
+	pixel[1] = float2int(255.0f * nc.g) & 0xff;
+	pixel[2] = float2int(255.0f * nc.b) & 0xff;
 	pixel[3] = 255;
 #endif
 }
@@ -231,20 +243,20 @@ static struct fij xyz_to_fij(const union vec3 *p, const int dim)
 			d = fabs(t.v.x);
 			if (t.v.x < 0) {
 				f = 3;
-				i = (int) ((t.v.z / d) * fdim * 0.5 + 0.5 * (float) fdim);
+				i = float2int((t.v.z / d) * fdim * 0.5 + 0.5 * (float) fdim);
 			} else {
 				f = 1;
-				i = (int) ((-t.v.z / d)  * fdim * 0.5 + 0.5 * fdim);
+				i = float2int((-t.v.z / d)  * fdim * 0.5 + 0.5 * fdim);
 			}
 		} else {
 			/* z is longest leg */
 			d = fabs(t.v.z);
 			if (t.v.z < 0) {
 				f = 2;
-				i = (int) ((-t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
+				i = float2int((-t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
 			} else {
 				f = 0;
-				i = (int) ((t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
+				i = float2int((t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
 #if 0
 				/* FIXME: we get this sometimes, not sure why. */
 				if (i < 0 || i > 1023)
@@ -252,7 +264,7 @@ static struct fij xyz_to_fij(const union vec3 *p, const int dim)
 #endif
 			}
 		}
-		j = (int) ((-t.v.y / d) * fdim * 0.5 + 0.5 * fdim);
+		j = float2int((-t.v.y / d) * fdim * 0.5 + 0.5 * fdim);
 	} else {
 		/* x is not longest leg, y or z must be. */
 		if (fabs(t.v.y) > fabs(t.v.z)) {
@@ -260,23 +272,23 @@ static struct fij xyz_to_fij(const union vec3 *p, const int dim)
 			d = fabs(t.v.y);
 			if (t.v.y < 0) {
 				f = 5;
-				j = (int) ((-t.v.z / d) * fdim * 0.5 + 0.5 * fdim);
+				j = float2int((-t.v.z / d) * fdim * 0.5 + 0.5 * fdim);
 			} else {
 				f = 4;
-				j = (int) ((t.v.z / d) * fdim * 0.5 + 0.5 * fdim);
+				j = float2int((t.v.z / d) * fdim * 0.5 + 0.5 * fdim);
 			}
-			i = (int) ((t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
+			i = float2int((t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
 		} else {
 			/* z is longest leg */
 			d = fabs(t.v.z);
 			if (t.v.z < 0) {
 				f = 2;
-				i = (int) ((-t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
+				i = float2int((-t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
 			} else {
 				f = 0;
-				i = (int) ((t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
+				i = float2int((t.v.x / d) * fdim * 0.5 + 0.5 * fdim);
 			}
-			j = (int) ((-t.v.y / d) * fdim * 0.5 + 0.5 * fdim);
+			j = float2int((-t.v.y / d) * fdim * 0.5 + 0.5 * fdim);
 		}
 	}
 
