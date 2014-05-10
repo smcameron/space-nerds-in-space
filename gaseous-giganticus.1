@@ -5,14 +5,15 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 .SH SYNOPSIS
 .B gaseous-giganticus 
 [ -b bands ]
-[ -c count ]
-[ -i input-file ]
-[ -o output-file-template ]
-[ -w w-offset ]
-[ -h ]
-[ -n ]
-[ -v velocity-factor ]
 [ -B band-velocity-factor ]
+[ -c count ]
+[ -h ]
+[ -i input-file ]
+[ -n ]
+[ -o output-file-template ]
+[ -p particle-count ]
+[ -w w-offset ]
+[ -v velocity-factor ]
 [ -t thread-count ]
 
 .SH DESCRIPTION
@@ -73,6 +74,9 @@ and will become hot pink.
 .TP
 -n, --no-fade
 Do not fade the image at all, divergences will be hidden
+.TP
+-p, --particle-count
+Use specified number of particles.  Default is 8000000.
 .TP
 -v, --velocity-factor: 
 Multiply velocity field by this number when

@@ -37,6 +37,7 @@
 #include "simplexnoise1234.h"
 
 #define NPARTICLES 8000000
+static int particle_count = NPARTICLES;
 
 static int nthreads = 4;
 static int user_threads = -1;
@@ -89,7 +90,7 @@ static struct particle {
 	union vec3 pos;
 	struct color c;
 	struct fij fij;
-} particle[NPARTICLES];
+} *particle;
 
 struct movement_thread_info {
 	int first_particle, last_particle;
@@ -305,13 +306,17 @@ static const float face_to_ydim_multiplier[] = { 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0
 						0.0, 2.0 / 3.0 };
 
 /* place particles randomly on the surface of a sphere */
-static void init_particles(struct particle p[], const int nparticles)
+static void init_particles(struct particle **pp, const int nparticles)
 {
 	float x, y, z, xo, yo;
 	/* const int bytes_per_pixel = start_image_has_alpha ? 4 : 3; */
 	unsigned char *pixel;
 	int pn, px, py;
 	struct fij fij;
+	struct particle *p;
+
+	*pp = malloc(sizeof(**pp) * nparticles);
+	p = *pp;
 
 	for (int i = 0; i < nparticles; i++) {
 		random_point_on_sphere((float) XDIM / 2.0f, &x, &y, &z);
@@ -482,7 +487,7 @@ static void *move_particles_thread_fn(void *info)
 	return NULL;
 }
 
-static void move_particles(struct particle p[], struct movement_thread_info *thr,
+static void move_particles(struct particle *p, struct movement_thread_info *thr,
 			struct velocity_field *vf)
 {
 	int rc;
@@ -870,6 +875,7 @@ static struct option long_options[] = {
 	{ "velocity-factor", required_argument, NULL, 'v' },
 	{ "band-vel-factor", required_argument, NULL, 'B' },
 	{ "threads", required_argument, NULL, 't' },
+	{ "particles", required_argument, NULL, 'p' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -906,7 +912,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:hi:no:t:v:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:c:hi:no:p:t:v:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -930,6 +936,9 @@ static void process_options(int argc, char *argv[])
 		case 'o':
 			output_file_prefix = optarg;
 			break;
+		case 'p':
+			process_int_option("particles", optarg, &particle_count);
+			break;
 		case 't':
 			process_int_option("threads", optarg, &user_threads);
 			break;
@@ -951,8 +960,8 @@ int main(int argc, char *argv[])
 {
 	int i, t;
 	struct movement_thread_info *ti;
-	const int nparticles = NPARTICLES;
 	int last_imaged_iteration = -1;
+	particle_count = NPARTICLES;
 
 	process_options(argc, argv);
 
@@ -963,7 +972,7 @@ int main(int argc, char *argv[])
 		nthreads = user_threads;
 	printf("Using %d threads for particle motion\n", nthreads);
 
-	int tparticles = nparticles / nthreads;
+	int tparticles = particle_count / nthreads;
 
 	ti = malloc(sizeof(*ti) * nthreads);
 
@@ -971,9 +980,9 @@ int main(int argc, char *argv[])
 		ti[t].first_particle = t * tparticles;
 		ti[t].last_particle = (t + 1) * tparticles - 1;
 	}
-	/* last thread picks up extra (nparticles - (nthreads * tparticles)) */
+	/* last thread picks up extra (particle_count - (nthreads * tparticles)) */
 	t = nthreads - 1;
-	ti[t].last_particle = NPARTICLES - 1;
+	ti[t].last_particle = particle_count - 1;
 
 	printf("Allocating output image space\n");
 	allocate_output_images();
@@ -987,8 +996,8 @@ int main(int argc, char *argv[])
 #endif
 	printf("width, height, bytes per row = %d,%d,%d\n",
 			start_image_width, start_image_height, start_image_bytes_per_row);
-	printf("Initializing %d particles", NPARTICLES); fflush(stdout);
-	init_particles(particle, NPARTICLES);
+	printf("Initializing %d particles", particle_count); fflush(stdout);
+	init_particles(&particle, particle_count);
 	printf("\nInitializing velocity field"); fflush(stdout);
 	update_velocity_field(&vf, noise_scale, w_offset);
 	printf("\nRunning simulation\n");
@@ -1003,7 +1012,7 @@ int main(int argc, char *argv[])
 		for (t = 0; t < nthreads; t++)
 			move_particles(particle, &ti[t], &vf);
 		wait_for_movement_threads(ti, nthreads);
-		update_output_images(image_threads, particle, nparticles);
+		update_output_images(image_threads, particle, particle_count);
 		if ((i % image_save_period) == 0) {
 			save_output_images();
 			last_imaged_iteration = i;
