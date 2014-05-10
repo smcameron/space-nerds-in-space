@@ -47,6 +47,7 @@ static char *default_input_file = "gasgiant-input.png";
 static char *output_file_prefix;
 static char *input_file;
 static int nofade = 0;
+static int stripe = 0;
 
 #define DIM 1024 /* dimensions of cube map face images */
 #define VFDIM 2048 /* dimension of velocity field. (2 * DIM) is reasonable */
@@ -336,18 +337,30 @@ static void init_particles(struct particle **pp, const int nparticles)
 		p[i].pos.v.x = x;
 		p[i].pos.v.y = y;
 		p[i].pos.v.z = z;
-		fij = xyz_to_fij(&p[i].pos, DIM);
-		if (fij.i < 0 || fij.i > DIM || fij.j < 0 || fij.j > DIM) {
-			printf("BAD fij: %d,%d\n", fij.i, fij.j);
+		if (!stripe) {
+			fij = xyz_to_fij(&p[i].pos, DIM);
+			if (fij.i < 0 || fij.i > DIM || fij.j < 0 || fij.j > DIM) {
+				printf("BAD fij: %d,%d\n", fij.i, fij.j);
+			}
+			xo = XDIM * face_to_xdim_multiplier[fij.f] + fij.i / 4.0;
+			yo = YDIM * face_to_ydim_multiplier[fij.f] + fij.j / 4.0;
+			xo = xo / (float) XDIM;
+			yo = yo / (float) YDIM;
+			px = ((int) (xo * start_image_width)) * 3;
+			py = (((int) (yo * start_image_height)) * start_image_bytes_per_row);
+			//printf("x,y = %d, %d, pn = %d\n", px, py, pn);
+		} else {
+			if (vertical_bands)
+				yo = (x + (float) DIM / 2.0) / (float) DIM;
+			else
+				yo = (y + (float) DIM / 2.0) / (float) DIM;
+			xo = 0.5; 
+			px = ((int) (xo * start_image_width)) * 3;
+			py = (((int) (yo * start_image_height)) * start_image_bytes_per_row);
+			//printf("xo = %f, yo=%f, px = %d, py = %d\n", xo, yo, px, py);
 		}
-		xo = XDIM * face_to_xdim_multiplier[fij.f] + fij.i / 4.0;
-		yo = YDIM * face_to_ydim_multiplier[fij.f] + fij.j / 4.0;
-		xo = xo / (float) XDIM;
-		yo = yo / (float) YDIM;
-		px = ((int) (xo * start_image_width)) * 3;
-		py = (((int) (yo * start_image_height)) * start_image_bytes_per_row);
 		pn = py + px;
-		//printf("x,y = %d, %d, pn = %d\n", px, py, pn);
+		//printf("pn = %d\n", pn);
 		pixel = (unsigned char *) &start_image[pn];
 		p[i].c.r = ((float) pixel[0]) / 255.0f;
 		p[i].c.g = ((float) pixel[1]) / 255.0f;
@@ -877,8 +890,11 @@ static void usage(void)
 	fprintf(stderr, "   -n, --no-fade:  Do not fade the image at all, divergences will be hidden\n");
 	fprintf(stderr, "   -v, --velocity-factor: Multiply velocity field by this number when\n");
 	fprintf(stderr, "                   moving particles.  Default is 1200.0\n");
+	fprintf(stderr, "   -V, --vertical-bands:  Make bands rotate around X axis instead of Y\n");
+	fprintf(stderr, "                          Also affects --stripe option\n");
 	fprintf(stderr, "   -B, --band-vel-factor: Multiply band velocity by this number when\n");
 	fprintf(stderr, "                   computing velocity field.  Default is 2.9\n");
+	fprintf(stderr, "   -s, --stripe: Begin with stripes from a vertical strip of input image\n");
 	fprintf(stderr, "   -t, --threads: Use the specified number of CPU threads up to the\n");
 	fprintf(stderr, "                   number of online CPUs\n");
 	fprintf(stderr, "\n");
@@ -896,6 +912,7 @@ static struct option long_options[] = {
 	{ "velocity-factor", required_argument, NULL, 'v' },
 	{ "vertical-bands", required_argument, NULL, 'V' },
 	{ "band-vel-factor", required_argument, NULL, 'B' },
+	{ "stripe", no_argument, NULL, 's' },
 	{ "threads", required_argument, NULL, 't' },
 	{ "particles", required_argument, NULL, 'p' },
 	{ 0, 0, 0, 0 },
@@ -934,7 +951,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:hi:no:p:t:Vv:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:c:hi:no:p:st:Vv:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -961,6 +978,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'p':
 			process_int_option("particles", optarg, &particle_count);
+			break;
+		case 's':
+			stripe = 1;
 			break;
 		case 't':
 			process_int_option("threads", optarg, &user_threads);

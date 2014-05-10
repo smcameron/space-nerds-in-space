@@ -12,10 +12,11 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -n ]
 [ -o output-file-template ]
 [ -p particle-count ]
-[ -w w-offset ]
+[ -s stripe ]
+[ -t thread-count ]
 [ -v velocity-factor ]
 [ -V ]
-[ -t thread-count ]
+[ -w w-offset ]
 
 .SH DESCRIPTION
 .I  gaseous-giganticus
@@ -89,6 +90,11 @@ computing velocity field.  Default is 2.9
 .TP
 -V, --vertical-bands
 Make bands rotate around the X axis instead of Y axis
+.TP
+-s, --stripe
+Instead of using the whole image, use a vertical strip of the image (center) and
+initialize particle colors to begin the simulation with stripes.  -V option affects
+the orientation of the stripes.
 .TP
 -t, --threads
 Use the specified number of CPU threads up to the
