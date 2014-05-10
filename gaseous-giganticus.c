@@ -351,7 +351,7 @@ static void init_particles(struct particle **pp, const int nparticles)
 			//printf("x,y = %d, %d, pn = %d\n", px, py, pn);
 		} else {
 			if (vertical_bands)
-				yo = (x + (float) DIM / 2.0) / (float) DIM;
+				yo = (z + (float) DIM / 2.0) / (float) DIM;
 			else
 				yo = (y + (float) DIM / 2.0) / (float) DIM;
 			xo = 0.5; 
@@ -456,11 +456,11 @@ static void *update_velocity_field_thread_fn(void *info)
 
 			/* calculate counter rotating band influence */
 			if (vertical_bands) {
-				angle = asinf(ov.v.x);
+				angle = asinf(ov.v.z);
 				band_speed = cosf(angle * num_bands) * band_speed_factor;
-				bv.v.z = -ov.v.y;
-				bv.v.y = ov.v.z;
-				bv.v.x = 0;
+				bv.v.x = -ov.v.y;
+				bv.v.y = ov.v.x;
+				bv.v.z = 0;
 			} else {
 				angle = asinf(ov.v.y);
 				band_speed = cosf(angle * num_bands) * band_speed_factor;
