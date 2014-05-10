@@ -924,6 +924,7 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'c':
 			process_int_option("count", optarg, &niterations);
+			break;
 		case 'h':
 			use_hot_pink = 1;
 			break;
