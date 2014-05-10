@@ -983,3 +983,8 @@ void graph_dev_reload_changed_textures()
 	/* noop */
 }
 
+void graph_dev_reload_changed_cubemap_textures()
+{
+	/* noop */
+}
+

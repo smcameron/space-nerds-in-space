@@ -615,8 +615,10 @@ int main(int argc, char *argv[])
 			/* Draw the screen. */
 			draw_screen();
 
-			if (frame % FPS == 0)
+			if (frame % FPS == 0) {
 				graph_dev_reload_changed_textures();
+				graph_dev_reload_changed_cubemap_textures();
+			}
 			frame++;
 		} else {
 			double timeToSleep = nextTime-currentTime;

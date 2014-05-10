@@ -25,6 +25,7 @@
 #include "opengl_cap.h"
 
 #define TEX_RELOAD_DELAY 1.0
+#define CUBEMAP_TEX_RELOAD_DELAY 3.0
 #define MAX_LOADED_TEXTURES 40
 struct loaded_texture {
 	GLuint texture_id;
@@ -41,6 +42,8 @@ struct loaded_cubemap_texture {
 	GLuint texture_id;
 	int is_inside;
 	char *filename[NCUBEMAP_TEXTURES];
+	time_t mtime;
+	double last_mtime_change;
 };
 static int nloaded_cubemap_textures = 0;
 static struct loaded_cubemap_texture loaded_cubemap_textures[MAX_LOADED_CUBEMAP_TEXTURES];
@@ -3389,6 +3392,27 @@ void graph_dev_reload_changed_textures()
 			printf("reloading texture '%s'\n", loaded_textures[i].filename);
 			load_texture_id(loaded_textures[i].texture_id, loaded_textures[i].filename);
 			loaded_textures[i].last_mtime_change = 0;
+		}
+	}
+}
+
+void graph_dev_reload_changed_cubemap_textures()
+{
+	int i;
+	for (i = 0; i < nloaded_cubemap_textures; i++) {
+		time_t mtime = get_file_modify_time(loaded_cubemap_textures[i].filename[5]);
+		if (loaded_cubemap_textures[i].mtime != mtime) {
+			loaded_cubemap_textures[i].mtime = mtime;
+			loaded_cubemap_textures[i].last_mtime_change = time_now_double();
+		} else if (loaded_cubemap_textures[i].last_mtime_change > 0 &&
+			time_now_double() - loaded_cubemap_textures[i].last_mtime_change >=
+					CUBEMAP_TEX_RELOAD_DELAY) {
+			printf("reloading cubemap texture '%s'\n",
+				loaded_cubemap_textures[i].filename[0]);
+			load_cubemap_texture_id(loaded_cubemap_textures[i].texture_id,
+					loaded_cubemap_textures[i].is_inside,
+					(const char **)loaded_cubemap_textures[i].filename);
+			loaded_cubemap_textures[i].last_mtime_change = 0;
 		}
 	}
 }
