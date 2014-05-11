@@ -445,7 +445,7 @@ static union vec3 curl2(union vec3 pos, union vec3 noise_gradient)
 
 	/* rotate projected noise gradient 90 degrees about pos. */
 	vec3_normalize(&axis, &pos);
-	if (m1 < m2 * left_right_fudge) 
+	if (m1 < m2 * left_right_fudge) /* rotate left or right if uphill or downhill */
 		quat_init_axis_v(&rotation, &axis, M_PI / 2.0);
 	else
 		quat_init_axis_v(&rotation, &axis, 3.0 * M_PI / 2.0);
@@ -461,6 +461,7 @@ struct velocity_field_thread_info {
 	struct velocity_field *vf;
 };
 
+/* Update 1 face of the 6 velocity maps (1 face for each side of the cubemap) */ 
 static void *update_velocity_field_thread_fn(void *info)
 {
 	struct velocity_field_thread_info *t = info;
