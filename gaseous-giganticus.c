@@ -48,6 +48,8 @@ static char *output_file_prefix;
 static char *input_file;
 static int nofade = 0;
 static int stripe = 0;
+static int use_wstep = 0;
+static float wstep = 0.0f;
 
 #define DIM 1024 /* dimensions of cube map face images */
 #define VFDIM 2048 /* dimension of velocity field. (2 * DIM) is reasonable */
@@ -897,6 +899,8 @@ static void usage(void)
 	fprintf(stderr, "   -s, --stripe: Begin with stripes from a vertical strip of input image\n");
 	fprintf(stderr, "   -t, --threads: Use the specified number of CPU threads up to the\n");
 	fprintf(stderr, "                   number of online CPUs\n");
+	fprintf(stderr, "   -W, --wstep: w coordinate of noise field is incremented by specified\n");
+	fprintf(stderr, "                amount periodically and velocity field is recalculated\n");
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -915,6 +919,7 @@ static struct option long_options[] = {
 	{ "stripe", no_argument, NULL, 's' },
 	{ "threads", required_argument, NULL, 't' },
 	{ "particles", required_argument, NULL, 'p' },
+	{ "wstep", required_argument, NULL, 'W' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -951,7 +956,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:hi:no:p:st:Vv:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:c:hi:no:p:st:Vv:w:W:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -993,6 +998,10 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'V':
 			vertical_bands = 1;
+			break;
+		case 'W':
+			process_float_option("wstep", optarg, &wstep);
+			use_wstep = 1;
 			break;
 		default:
 			fprintf(stderr, "unknown option '%s'\n", argv[option_index]);
@@ -1062,6 +1071,11 @@ int main(int argc, char *argv[])
 		if ((i % image_save_period) == 0) {
 			save_output_images();
 			last_imaged_iteration = i;
+			if (use_wstep) {
+				printf("\nUpdating velocity field"); fflush(stdout);
+				w_offset += wstep;
+				update_velocity_field(&vf, noise_scale, w_offset);
+			}
 		}
 	}
 	if (last_imaged_iteration != i - 1)

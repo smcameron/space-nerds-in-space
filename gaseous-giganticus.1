@@ -17,6 +17,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -v velocity-factor ]
 [ -V ]
 [ -w w-offset ]
+[ -W wstep ]
 
 .SH DESCRIPTION
 .I  gaseous-giganticus
@@ -67,6 +68,10 @@ produces 6 output files, out-0.png, out-1.png, ..., out-5.png
 -w, --w-offset
 w dimension offset in 4D simplex noise field Use -w to avoid (or obtain)
 repetitive results.
+.TP
+-W, --wstep amount
+w offset is periodically adjusted by specified amount and velocity field
+is periodically recalculated.
 .TP
 -h, --hot-pink
 Gradually fade pixels to hot pink.  This will allow
