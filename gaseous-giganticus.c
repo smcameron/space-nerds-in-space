@@ -48,6 +48,7 @@ static char *output_file_prefix;
 static char *input_file;
 static int nofade = 0;
 static int stripe = 0;
+static int sinusoidal = 0;
 static int use_wstep = 0;
 static float wstep = 0.0f;
 
@@ -339,7 +340,7 @@ static void init_particles(struct particle **pp, const int nparticles)
 		p[i].pos.v.x = x;
 		p[i].pos.v.y = y;
 		p[i].pos.v.z = z;
-		if (!stripe) {
+		if (!stripe && !sinusoidal) {
 			fij = xyz_to_fij(&p[i].pos, DIM);
 			if (fij.i < 0 || fij.i > DIM || fij.j < 0 || fij.j > DIM) {
 				printf("BAD fij: %d,%d\n", fij.i, fij.j);
@@ -351,7 +352,7 @@ static void init_particles(struct particle **pp, const int nparticles)
 			px = ((int) (xo * start_image_width)) * 3;
 			py = (((int) (yo * start_image_height)) * start_image_bytes_per_row);
 			//printf("x,y = %d, %d, pn = %d\n", px, py, pn);
-		} else {
+		} else if (stripe) {
 			if (vertical_bands)
 				yo = (z + (float) DIM / 2.0) / (float) DIM;
 			else
@@ -360,6 +361,32 @@ static void init_particles(struct particle **pp, const int nparticles)
 			px = ((int) (xo * start_image_width)) * 3;
 			py = (((int) (yo * start_image_height)) * start_image_bytes_per_row);
 			//printf("xo = %f, yo=%f, px = %d, py = %d\n", xo, yo, px, py);
+		} else { /* sinusoidal */
+			if (!vertical_bands) {
+				float abs_cos_lat, longitude, latitude, x1, x2;
+
+				latitude = asinf(y / ((float) DIM / 2.0f));
+				yo = ((latitude + 0.5 * M_PI) / M_PI);
+				abs_cos_lat = fabs(cosf(latitude));
+				x2 = abs_cos_lat * 0.5 + 0.5;
+				x1 = -abs_cos_lat * 0.5 + 0.5;
+				longitude = atan2f(z, x);
+				xo = (cos(longitude) * abs_cos_lat * 0.5f) * (x2 - x1) + 0.5f;
+				px = ((int) (xo * start_image_width)) * 3;
+				py = (((int) (yo * start_image_height)) * start_image_bytes_per_row);
+			} else {
+				float abs_cos_lat, longitude, latitude, x1, x2;
+
+				latitude = asinf(z / ((float) DIM / 2.0f));
+				yo = ((latitude + 0.5 * M_PI) / M_PI);
+				abs_cos_lat = fabs(cosf(latitude));
+				x2 = abs_cos_lat * 0.5 + 0.5;
+				x1 = -abs_cos_lat * 0.5 + 0.5;
+				longitude = atan2f(y, x);
+				xo = (cos(longitude) * abs_cos_lat * 0.5f) * (x2 - x1) + 0.5f;
+				px = ((int) (xo * start_image_width)) * 3;
+				py = (((int) (yo * start_image_height)) * start_image_bytes_per_row);
+			}
 		}
 		pn = py + px;
 		//printf("pn = %d\n", pn);
@@ -897,6 +924,8 @@ static void usage(void)
 	fprintf(stderr, "   -B, --band-vel-factor: Multiply band velocity by this number when\n");
 	fprintf(stderr, "                   computing velocity field.  Default is 2.9\n");
 	fprintf(stderr, "   -s, --stripe: Begin with stripes from a vertical strip of input image\n");
+	fprintf(stderr, "   -S, --sinusoidal: Use sinusoidal projection for input image\n");
+	fprintf(stderr, "                 Note: --stripe and --sinusoidal are mutually exclusive\n");
 	fprintf(stderr, "   -t, --threads: Use the specified number of CPU threads up to the\n");
 	fprintf(stderr, "                   number of online CPUs\n");
 	fprintf(stderr, "   -W, --wstep: w coordinate of noise field is incremented by specified\n");
@@ -917,6 +946,7 @@ static struct option long_options[] = {
 	{ "vertical-bands", required_argument, NULL, 'V' },
 	{ "band-vel-factor", required_argument, NULL, 'B' },
 	{ "stripe", no_argument, NULL, 's' },
+	{ "sinusoidal", no_argument, NULL, 'S' },
 	{ "threads", required_argument, NULL, 't' },
 	{ "particles", required_argument, NULL, 'p' },
 	{ "wstep", required_argument, NULL, 'W' },
@@ -956,7 +986,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:hi:no:p:st:Vv:w:W:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:c:hi:no:p:sSt:Vv:w:W:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -985,7 +1015,20 @@ static void process_options(int argc, char *argv[])
 			process_int_option("particles", optarg, &particle_count);
 			break;
 		case 's':
+			if (sinusoidal) {
+				fprintf(stderr,
+					"Sinusoidal and stripe options are mutually exclusive.\n");
+				exit(1);
+			}
 			stripe = 1;
+			break;
+		case 'S':
+			if (stripe) {
+				fprintf(stderr,
+					"Sinusoidal and stripe options are mutually exclusive.\n");
+				exit(1);
+			}
+			sinusoidal = 1;
 			break;
 		case 't':
 			process_int_option("threads", optarg, &user_threads);
