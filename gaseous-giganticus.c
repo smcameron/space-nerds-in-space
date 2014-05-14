@@ -59,7 +59,8 @@ static float wstep = 0.0f;
 #define YDIM DIM
 
 static int niterations = 1000;
-static const float noise_scale = 2.6;
+static const float default_noise_scale = 2.6;
+static float noise_scale;
 static float velocity_factor = 1200.0;
 static float num_bands = 6.0f;
 static float band_speed_factor = 2.9f;
@@ -931,6 +932,7 @@ static void usage(void)
 	fprintf(stderr, "                   number of online CPUs\n");
 	fprintf(stderr, "   -W, --wstep: w coordinate of noise field is incremented by specified\n");
 	fprintf(stderr, "                amount periodically and velocity field is recalculated\n");
+	fprintf(stderr, "   -z, --noise-scale: default is %f\n", default_noise_scale);
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -951,6 +953,7 @@ static struct option long_options[] = {
 	{ "threads", required_argument, NULL, 't' },
 	{ "particles", required_argument, NULL, 'p' },
 	{ "wstep", required_argument, NULL, 'W' },
+	{ "noise-scale", required_argument, NULL, 'z' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -987,7 +990,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:hi:no:p:sSt:Vv:w:W:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:c:hi:no:p:sSt:Vv:w:W:z:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -1047,6 +1050,9 @@ static void process_options(int argc, char *argv[])
 			process_float_option("wstep", optarg, &wstep);
 			use_wstep = 1;
 			break;
+		case 'z':
+			process_float_option("noise-scale", optarg, &noise_scale);
+			break;
 		default:
 			fprintf(stderr, "unknown option '%s'\n", argv[option_index]);
 			usage();
@@ -1061,6 +1067,8 @@ int main(int argc, char *argv[])
 	struct movement_thread_info *ti;
 	int last_imaged_iteration = -1;
 	particle_count = NPARTICLES;
+
+	noise_scale = default_noise_scale;
 
 	process_options(argc, argv);
 

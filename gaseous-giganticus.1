@@ -18,6 +18,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -V ]
 [ -w w-offset ]
 [ -W wstep ]
+[ -z noise-scale ]
 
 .SH DESCRIPTION
 .I  gaseous-giganticus
@@ -108,6 +109,11 @@ Use sinusoidal projection of input image for initial coloring of particles.
 -t, --threads
 Use the specified number of CPU threads up to the
 number of online CPUs.  Default is number of online CPUs.
+.TP
+-z, --noise-scale noisescale
+Use the specified noise scale value.  Default is 2.6  This controls the
+amount of the Simplex noise field that is sampled.  Smaller values will
+give bigger whorls, larger values will give smaller whorls.
 .SH "SEE ALSO"
 snis_client, snis_server
 
