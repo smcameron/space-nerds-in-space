@@ -491,22 +491,24 @@ static void *update_velocity_field_thread_fn(void *info)
 			vec3_mul(&vf->v[f][i][j], &c, velocity_factor);
 
 			/* calculate counter rotating band influence */
-			if (vertical_bands) {
-				angle = asinf(ov.v.z);
-				band_speed = cosf(angle * num_bands) * band_speed_factor;
-				bv.v.x = -ov.v.y;
-				bv.v.y = ov.v.x;
-				bv.v.z = 0;
-			} else {
-				angle = asinf(ov.v.y);
-				band_speed = cosf(angle * num_bands) * band_speed_factor;
-				bv.v.x = ov.v.z;
-				bv.v.z = -ov.v.x;
-				bv.v.y = 0;
+			if (num_bands != 0) {
+				if (vertical_bands) {
+					angle = asinf(ov.v.z);
+					band_speed = cosf(angle * num_bands) * band_speed_factor;
+					bv.v.x = -ov.v.y;
+					bv.v.y = ov.v.x;
+					bv.v.z = 0;
+				} else {
+					angle = asinf(ov.v.y);
+					band_speed = cosf(angle * num_bands) * band_speed_factor;
+					bv.v.x = ov.v.z;
+					bv.v.z = -ov.v.x;
+					bv.v.y = 0;
+				}
+				vec3_normalize_self(&bv);
+				vec3_mul_self(&bv, band_speed);
+				vec3_add_self(&vf->v[f][i][j], &bv);
 			}
-			vec3_normalize_self(&bv);
-			vec3_mul_self(&bv, band_speed);
-			vec3_add_self(&vf->v[f][i][j], &bv);
 		}
 	}
 	return NULL;
