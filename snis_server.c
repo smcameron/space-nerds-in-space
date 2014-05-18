@@ -4598,6 +4598,8 @@ static void repair_damcon_systems(struct snis_entity *o)
 	
 static void init_player(struct snis_entity *o, int clear_cargo_bay)
 {
+	int i;
+
 	o->move = player_move;
 	o->tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
 	o->tsd.ship.shields = 100.0;
@@ -4645,15 +4647,15 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay)
 	o->tsd.ship.reverse = 0;
 	o->tsd.ship.shiptype = SHIP_CLASS_WOMBAT; 
 	o->tsd.ship.overheating_damage_done = 0;
-	o->tsd.ship.ncargo_bays = 2;
+	o->tsd.ship.ncargo_bays = 8;
 	if (clear_cargo_bay) {
 		/* The clear_cargo_bay param is a stopgap until real docking code
 		 * is done.
 		 */
-		o->tsd.ship.cargo[0].item = -1;
-		o->tsd.ship.cargo[0].qty = 0.0f;
-		o->tsd.ship.cargo[1].item = -1;
-		o->tsd.ship.cargo[1].qty = 0.0f;
+		for (i = 0; i < o->tsd.ship.ncargo_bays; i++) {
+			o->tsd.ship.cargo[i].item = -1;
+			o->tsd.ship.cargo[i].qty = 0.0f;
+		}
 		o->tsd.ship.wallet = INITIAL_WALLET_MONEY;
 	}
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
