@@ -7,6 +7,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -b bands ]
 [ -B band-velocity-factor ]
 [ -c count ]
+[ -f fbm-falloff ]
 [ -h ]
 [ -i input-file ]
 [ -n ]
@@ -73,6 +74,13 @@ repetitive results.
 -W, --wstep amount
 w offset is periodically adjusted by specified amount and velocity field
 is periodically recalculated.
+.TP
+-f, --fbm-falloff value
+Successively higher octaves of fractal Brownian motion noise are multiplied
+by this value.  Default is 0.5.   So for example, the lowest octave of noise
+is multiplied by 1.0, the 2nd octave by 0.5, the 3rd by 0.25, and the fourth
+(last) by 0.125.  If fbm-falloff is specfied as 0.4, then the lowest octave
+is multiplied by 1.0, the next by 0.4, the next by 0.16 and the last by 0.064.
 .TP
 -h, --hot-pink
 Gradually fade pixels to hot pink.  This will allow

@@ -51,6 +51,7 @@ static int stripe = 0;
 static int sinusoidal = 0;
 static int use_wstep = 0;
 static float wstep = 0.0f;
+static float fbm_falloff = 0.5;
 
 #define DIM 1024 /* dimensions of cube map face images */
 #define VFDIM 2048 /* dimension of velocity field. (2 * DIM) is reasonable */
@@ -400,30 +401,33 @@ static void init_particles(struct particle **pp, const int nparticles)
 	}
 }
 
-static float fbmnoise4(float x, float y, float z, float w)
+static inline float fbmnoise4(float x, float y, float z, float w, const float fbm_falloff)
 {
-	return snoise4(x, y, z, w) +
-		0.5 * snoise4(2.0f * x, 2.0f * y, 2.0f * z, 2.0f * w) +
-		0.25 * snoise4(4.0f * x, 4.0f * y, 4.0f * z, 4.0f * w) +
-		0.125 * snoise4(8.0f * x, 8.0f * y, 8.0f * z, 8.0f * w);
+	const float f1 = fbm_falloff;
+	const float f2 = fbm_falloff * fbm_falloff;
+	const float f3 = fbm_falloff * fbm_falloff * fbm_falloff;
+
+	return 1.0 * snoise4(x, y, z, w) +
+		f1 * snoise4(2.0f * x, 2.0f * y, 2.0f * z, 2.0f * w) +
+		f2 * fbm_falloff * snoise4(4.0f * x, 4.0f * y, 4.0f * z, 4.0f * w) +
+		f3 * snoise4(8.0f * x, 8.0f * y, 8.0f * z, 8.0f * w);
 }
 
 /* compute the noise gradient at the given point on the surface of a sphere */
-static union vec3 noise_gradient(union vec3 position, float w, float noise_scale)
+static union vec3 noise_gradient(union vec3 position, float w, float noise_scale,
+				const float fbm_falloff)
 {
 	union vec3 g;
-	float dx, dy, dz;
+	const float dx = noise_scale * (0.05f / (float) DIM);
+	const float dy = noise_scale * (0.05f / (float) DIM);
+	const float dz = noise_scale * (0.05f / (float) DIM);
 
-	dx = noise_scale * (0.05f / (float) DIM);
-	dy = noise_scale * (0.05f / (float) DIM);
-	dz = noise_scale * (0.05f / (float) DIM);
-
-	g.v.x = fbmnoise4(position.v.x + dx, position.v.y, position.v.z, w) -
-		fbmnoise4(position.v.x - dx, position.v.y, position.v.z, w);
-	g.v.y = fbmnoise4(position.v.x, position.v.y + dy, position.v.z, w) -
-		fbmnoise4(position.v.x, position.v.y - dy, position.v.z, w);
-	g.v.z = fbmnoise4(position.v.x, position.v.y, position.v.z + dz, w) -
-		fbmnoise4(position.v.x, position.v.y, position.v.z - dz, w);
+	g.v.x = fbmnoise4(position.v.x + dx, position.v.y, position.v.z, w, fbm_falloff) -
+		fbmnoise4(position.v.x - dx, position.v.y, position.v.z, w, fbm_falloff);
+	g.v.y = fbmnoise4(position.v.x, position.v.y + dy, position.v.z, w, fbm_falloff) -
+		fbmnoise4(position.v.x, position.v.y - dy, position.v.z, w, fbm_falloff);
+	g.v.z = fbmnoise4(position.v.x, position.v.y, position.v.z + dz, w, fbm_falloff) -
+		fbmnoise4(position.v.x, position.v.y, position.v.z - dz, w, fbm_falloff);
 	return g;
 }
 
@@ -469,6 +473,7 @@ static void *update_velocity_field_thread_fn(void *info)
 	int f = t->f;
 	float w = t->w;
 	struct velocity_field *vf = t->vf;
+	const float fbmf = fbm_falloff;
 
 	int i, j;
 	union vec3 v, c, ng;
@@ -481,7 +486,7 @@ static void *update_velocity_field_thread_fn(void *info)
 			v = fij_to_xyz(f, i, j, VFDIM);
 			ov = v;
 			vec3_mul_self(&v, noise_scale);
-			ng = noise_gradient(v, w * noise_scale, noise_scale);
+			ng = noise_gradient(v, w * noise_scale, noise_scale, fbmf);
 			c = curl2(v, ng);
 			vec3_mul(&vf->v[f][i][j], &c, velocity_factor);
 
@@ -943,6 +948,7 @@ static struct option long_options[] = {
 	{ "input", required_argument, NULL, 'i' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "w-offset", required_argument, NULL, 'w' },
+	{ "fbm-falloff", required_argument, NULL, 'f' },
 	{ "hot-pink", no_argument, NULL, 'h' },
 	{ "no-fade", no_argument, NULL, 'n' },
 	{ "velocity-factor", required_argument, NULL, 'v' },
@@ -990,7 +996,8 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:hi:no:p:sSt:Vv:w:W:z:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:c:f:hi:no:p:sSt:Vv:w:W:z:",
+				long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -1002,6 +1009,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'c':
 			process_int_option("count", optarg, &niterations);
+			break;
+		case 'f':
+			process_float_option("fbm-falloff", optarg, &fbm_falloff);
 			break;
 		case 'h':
 			use_hot_pink = 1;
