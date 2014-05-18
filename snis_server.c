@@ -2758,7 +2758,7 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			o->tsd.ship.doz = v.v.z + o->z;
 		}
 		/* sometimes just warp if it's too far... */
-		if (snis_randn(10000) < 50) {
+		if (snis_randn(10000) < ship_type[o->tsd.ship.shiptype].warpchance) {
 			union vec3 v;
 
 			v.v.x = patrol->p[d].v.x - o->x;

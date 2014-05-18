@@ -13,6 +13,7 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 	FILE *f;
 	char line[255], class[255], model_file[PATH_MAX];
 	double toughness, max_speed;
+	int warpchance;
 	int crew_max;
 	char *x;
 	int i, scancount;
@@ -23,6 +24,7 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 	int nrots;
 	char axis[4];
 	float rot[4];
+	int expected_count;
 
 	nalloced = 30;
 	st = malloc(sizeof(*st) * nalloced);
@@ -45,42 +47,47 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 		if (line[0] == '#') /* skip comment lines */
 			continue;
 
-		scancount = sscanf(line, "%s %s %lf %d %d %[xyzs] %f %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
-				class, model_file, &toughness, &integer, &crew_max,
+		scancount = sscanf(line, "%s %s %lf %d %d %d %[xyzs] %f %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
+				class, model_file, &toughness, &integer, &warpchance, &crew_max,
 				&axis[0], &rot[0],
 				&axis[1], &rot[1],
 				&axis[2], &rot[2],
 				&axis[3], &rot[3]);
-		if (scancount == 13) {
+		expected_count = 14;
+		if (scancount == expected_count) {
 			nrots = 4;
 			goto done_scanfing_line;
 		}
-		scancount = sscanf(line, "%s %s %lf %d %d %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
-				class, model_file, &toughness, &integer, &crew_max,
+		expected_count -= 2;
+		scancount = sscanf(line, "%s %s %lf %d %d %d %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
+				class, model_file, &toughness, &integer, &warpchance, &crew_max,
 				&axis[0], &rot[0],
 				&axis[1], &rot[1],
 				&axis[2], &rot[2]);
-		if (scancount == 11) {
+		if (scancount == expected_count) {
 			nrots = 3;
 			goto done_scanfing_line;
 		}
-		scancount = sscanf(line, "%s %s %lf %d %d %[xyzs] %f %[xyzs] %f\n",
-				class, model_file, &toughness, &integer, &crew_max,
+		expected_count -= 2;
+		scancount = sscanf(line, "%s %s %lf %d %d %d %[xyzs] %f %[xyzs] %f\n",
+				class, model_file, &toughness, &integer, &warpchance, &crew_max,
 				&axis[0], &rot[0], &axis[1], &rot[1]);
-		if (scancount == 9) {
+		if (scancount == expected_count) {
 			nrots = 2;
 			goto done_scanfing_line;
 		}
-		scancount = sscanf(line, "%s %s %lf %d %d %[xyzs] %f\n",
-				class, model_file, &toughness, &integer, &crew_max,
+		expected_count -= 2;
+		scancount = sscanf(line, "%s %s %lf %d %d %d %[xyzs] %f\n",
+				class, model_file, &toughness, &integer, &warpchance, &crew_max,
 				&axis[0], &rot[0]);
-		if (scancount == 7) {
+		if (scancount == expected_count) {
 			nrots = 1;
 			goto done_scanfing_line;
 		}
-		scancount = sscanf(line, "%s %s %lf %d %d\n", class, model_file,
-					&toughness, &integer, &crew_max);
-		if (scancount != 5) {
+		expected_count -= 2;
+		scancount = sscanf(line, "%s %s %lf %d %d %d\n", class, model_file,
+					&toughness, &integer, &warpchance, &crew_max);
+		if (scancount != expected_count) {
 			fprintf(stderr, "Error at line %d in %s: '%s'\n",
 				linecount, filename, line);
 			if (scancount > 0)
@@ -141,6 +148,7 @@ done_scanfing_line:
 		st[n].max_shield_strength =
 			(uint8_t) (255.0f * ((st[n].toughness * 0.8f) + 0.2f));
 		st[n].max_speed = max_speed;
+		st[n].warpchance = warpchance;
 		st[n].crew_max = crew_max;
 
 		st[n].nrotations = nrots;
