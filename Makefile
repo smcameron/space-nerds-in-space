@@ -377,6 +377,10 @@ SDLCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} 
 SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} ${SERVEROBJS} ${GTKLDFLAGS} ${LIBS} && $(ECHO) '  LINK' $@
 OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 
+ELOBJS=mtwist.o mathutils.o quat.o
+ELLIBS=-lm -lrt -lpng
+ELLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} earthlike.o ${ELOBJS} ${ELLIBS} && $(ECHO) '  LINK' $@
+
 GGOBJS=mtwist.o mathutils.o simplexnoise1234.o quat.o
 GGLIBS=-lm -lrt -lpng
 GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} && $(ECHO) '  LINK' $@
@@ -461,6 +465,9 @@ simplexnoise1234.o:	simplexnoise1234.c Makefile build_info.h
 gaseous-giganticus.o:	gaseous-giganticus.c ${GGOBJS} Makefile build_info.h
 	$(Q)$(COMPILE)
 
+earthlike.o:	earthlike.c
+	$(Q)$(COMPILE)
+
 snis_socket_io.o:	snis_socket_io.c Makefile
 	$(Q)$(COMPILE)
 
@@ -512,6 +519,9 @@ mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile
 
 gaseous-giganticus:	gaseous-giganticus.o ${GGOBJS} Makefile
 	$(Q)$(GGLINK)
+
+earthlike:	earthlike.o ${ELOBJS} Makefile
+	$(Q)$(ELLINK)
 
 starbase-comms.o:	starbase-comms.c Makefile
 	$(Q)$(COMPILE)	
