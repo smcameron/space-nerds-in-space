@@ -10,6 +10,14 @@
 #include "mathutils.h"
 #include "quat.h"
 
+#define MAXBUMPS 100000
+
+static struct bump {
+	union vec3 p;
+	float r, h;
+} bumplist[MAXBUMPS];
+static int totalbumps = 0;
+
 #define DIM 1024
 static int bumps = 0;
 static unsigned char *output_image[6];
@@ -67,7 +75,7 @@ static void initialize_vertices(void)
 				vertex[f][i][j] = fij_to_xyz(f, i, j, DIM);
 }
 
-static void distort_vertex(union vec3 *v, float d, const float r, float h)
+static inline void distort_vertex(union vec3 *v, float d, const float r, float h)
 {
 	union vec3 distortion;
 
@@ -78,28 +86,49 @@ static void distort_vertex(union vec3 *v, float d, const float r, float h)
 	vec3_add_self(v, &distortion);
 }
 
-static void add_bump(union vec3 pos, const float r, float h)
+static void render_all_bumps(void)
 {
-	int f, i, j;
-	union vec3 p;
-	const float rr = r * r;
+	int f, i, j, k;
+	union vec3 p, *p2;
 	float d2, d;
+	struct bump *b;
 
 	for (f = 0; f < 6; f++) {
 		for (i = 0; i < DIM; i++) {
 			for (j = 0; j < DIM; j++) {
 				p = fij_to_xyz(f, i, j, DIM);
-				d2 = vec3_dist_sqrd(&p, &pos); 
-				if (d2 > rr)
-					continue;
-				d = sqrtf(d2);
-				distort_vertex(&vertex[f][i][j], d, r, h);
+				for (k = 0; k < totalbumps; k++) {
+					b = &bumplist[k];
+					p2 = &b->p;
+					d2 = (p.v.x - p2->v.x) * (p.v.x - p2->v.x) +
+						(p.v.y - p2->v.y) * (p.v.y - p2->v.y) +
+						(p.v.z - p2->v.z) * (p.v.z - p2->v.z);
+					if (d2 > b->r * b->r)
+						continue;
+					d = sqrtf(d2);
+					distort_vertex(&vertex[f][i][j], d, b->r, b->h);
+				}
 			}
 		}
+		printf("f"); fflush(stdout);
 	}
 	bumps++;
 }
 
+static void add_bump(union vec3 p, float r, float h)
+{
+	struct bump *b;
+
+	if (totalbumps >= MAXBUMPS)
+		return;
+
+	b = &bumplist[totalbumps];
+	b->p = p;
+	b->r = r;
+	b->h = h;
+	totalbumps++;
+}
+	
 static void recursive_add_bump(union vec3 pos, float r, float h,
 				float shrink, float rlimit)
 {
@@ -268,6 +297,8 @@ int main(int argc, char *argv[])
 	initialize_vertices();
 	find_min_max_height(&min, &max);
 	add_bumps(10);
+	printf("total bumps = %d\n", totalbumps);
+	render_all_bumps();
 	find_min_max_height(&min, &max);
 	printf("%d bumps added. min h = %f, max h = %f\n", bumps, min, max);
 	paint_height_maps(min, max);
