@@ -189,7 +189,7 @@ static void add_bumps(const int nbumps)
 		float r = 0.5 * (snis_random_float() + 1.0f) * 0.9;
 
 		random_point_on_sphere(1.0, &p.v.x, &p.v.y, &p.v.z);
-		recursive_add_bump(p, r, 0.04, 0.52, 0.02);
+		recursive_add_bump(p, r, 0.04, 0.52, 0.01);
 		printf(".");
 		fflush(stdout);
 	}
@@ -243,9 +243,15 @@ static void paint_height_maps(float min, float max)
 				r = vec3_magnitude(&vertex[f][i][j]);
 				r = (r - min) / (max - min);
 				c = (unsigned char) (r * 255.0f);
-				output_image[f][p + 0] = c;
-				output_image[f][p + 1] = c;
-				output_image[f][p + 2] = c;
+				if (r > 0.10) {
+					output_image[f][p + 0] = c;
+					output_image[f][p + 1] = c;
+					output_image[f][p + 2] = c;
+				} else {
+					output_image[f][p + 0] = 20;
+					output_image[f][p + 1] = 100;
+					output_image[f][p + 2] = 200;
+				}
 				output_image[f][p + 3] = 255;
 			}
 		}
