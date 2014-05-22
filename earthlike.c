@@ -12,10 +12,16 @@
 #include "quat.h"
 
 #define MAXBUMPS 100000
+#define SEALEVEL 0.08
+#define RADII (3.0f)
 
 static struct bump {
 	union vec3 p;
 	float r, h;
+	union quat texelq;
+	int tx, ty; /* origin of texel region in sample data */
+	int tr; /* radius of texel region in sample data */
+	float ts; /* scaling factor to get from 3d dist to texel dist */
 } bumplist[MAXBUMPS];
 static int totalbumps = 0;
 
@@ -23,6 +29,8 @@ static int totalbumps = 0;
 static unsigned char *output_image[6];
 static union vec3 vertex[6][DIM][DIM];
 static const char *output_file_prefix = "heightmap";
+static char *sampledata;
+static int samplew, sampleh, samplea, sample_bytes_per_row;
 
 /* convert from cubemap coords to cartesian coords on surface of sphere */
 static union vec3 fij_to_xyz(int f, int i, int j, const int dim)
@@ -75,14 +83,29 @@ static void initialize_vertices(void)
 				vertex[f][i][j] = fij_to_xyz(f, i, j, DIM);
 }
 
-static inline void distort_vertex(union vec3 *v, float d, const float r, float h)
+static inline void distort_vertex(union vec3 *v, float d, struct bump *b)
 {
 	union vec3 distortion;
+	union vec3 texelv;
+	const float r = b->r;
+	const float h = b->h;
+	float m;
+	int x, y, p;
+	unsigned char *c;
 
 	float nr = 0.5 * (cos(M_PI * d / r) + 1.0f) * h;
 
 	vec3_normalize(&distortion, v);
-	vec3_mul_self(&distortion, nr);
+	quat_rot_vec(&texelv, &distortion, &b->texelq);
+	vec3_mul_self(&texelv, b->ts);
+	x = (int) texelv.v.x + b->tx;
+	y = (int) texelv.v.y + b->ty;
+	if (x < 0 || x > samplew || y < 0 || y > sampleh)
+		printf("out of range (%d, %d)\n", x, y);
+	p = y * sample_bytes_per_row + x * 3;
+	c = (unsigned char *) &sampledata[p]; 
+	m = (float) *c / 255.0f;
+	vec3_mul_self(&distortion, nr * m);
 	vec3_add_self(v, &distortion);
 }
 
@@ -117,7 +140,7 @@ static void *render_bumps_on_face_fn(void *info)
 				if (d2 > b->r * b->r)
 					continue;
 				d = sqrtf(d2);
-				distort_vertex(&vertex[f][i][j], d, b->r, b->h);
+				distort_vertex(&vertex[f][i][j], d, b);
 			}
 		}
 	}
@@ -148,6 +171,8 @@ static void render_all_bumps(void)
 static void add_bump(union vec3 p, float r, float h)
 {
 	struct bump *b;
+	const union vec3 right_at_ya = { { 0.0f, 0.0f, 1.0f } };
+	const union vec3 up = { { 0.0f, 1.0f, 0.0f } };
 
 	if (totalbumps >= MAXBUMPS)
 		return;
@@ -156,6 +181,15 @@ static void add_bump(union vec3 p, float r, float h)
 	b->p = p;
 	b->r = r;
 	b->h = h;
+	b->tx = (int) ((float) samplew / RADII + 0.5 * snis_random_float() *
+			(RADII - 2.0f) / RADII * (float) samplew);
+	b->ty = (int) ((float) sampleh / RADII + 0.5 * snis_random_float() *
+			(RADII - 2.0f) / RADII * (float) sampleh);
+	if (samplew < sampleh)
+		b->ts = samplew / RADII;
+	else
+		b->ts = sampleh / RADII;
+	quat_from_u2v(&b->texelq, &p, &right_at_ya, &up);
 	totalbumps++;
 }
 	
@@ -186,7 +220,7 @@ static void add_bumps(const int nbumps)
 
 	for (i = 0; i < nbumps; i++) {
 		union vec3 p;
-		float r = 0.5 * (snis_random_float() + 1.0f) * 0.9;
+		float r = 0.5 * (snis_random_float() + 1.0f) * 0.4;
 
 		random_point_on_sphere(1.0, &p.v.x, &p.v.y, &p.v.z);
 		recursive_add_bump(p, r, 0.04, 0.52, 0.01);
@@ -243,7 +277,7 @@ static void paint_height_maps(float min, float max)
 				r = vec3_magnitude(&vertex[f][i][j]);
 				r = (r - min) / (max - min);
 				c = (unsigned char) (r * 255.0f);
-				if (r > 0.10) {
+				if (r > SEALEVEL) {
 					output_image[f][p + 0] = c;
 					output_image[f][p + 1] = c;
 					output_image[f][p + 2] = c;
@@ -313,6 +347,170 @@ cleanup1:
 	return rc;
 }
 
+/* Copied and modified from snis_graph.c sng_load_png_texture(), see snis_graph.c */
+char *load_png_image(const char *filename, int flipVertical, int flipHorizontal,
+	int pre_multiply_alpha,
+	int *w, int *h, int *hasAlpha, char *whynot, int whynotlen)
+{
+	int i, j, bit_depth, color_type, row_bytes, image_data_row_bytes;
+	png_byte header[8];
+	png_uint_32 tw, th;
+	png_structp png_ptr = NULL;
+	png_infop info_ptr = NULL;
+	png_infop end_info = NULL;
+	png_byte *image_data = NULL;
+
+	FILE *fp = fopen(filename, "rb");
+	if (!fp) {
+		snprintf(whynot, whynotlen, "Failed to open '%s': %s",
+			filename, strerror(errno));
+		return 0;
+	}
+
+	if (fread(header, 1, 8, fp) != 8) {
+		snprintf(whynot, whynotlen, "Failed to read 8 byte header from '%s'\n",
+				filename);
+		goto cleanup;
+	}
+	if (png_sig_cmp(header, 0, 8)) {
+		snprintf(whynot, whynotlen, "'%s' isn't a png file.",
+			filename);
+		goto cleanup;
+	}
+
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,
+							NULL, NULL, NULL);
+	if (!png_ptr) {
+		snprintf(whynot, whynotlen,
+			"png_create_read_struct() returned NULL");
+		goto cleanup;
+	}
+
+	info_ptr = png_create_info_struct(png_ptr);
+	if (!info_ptr) {
+		snprintf(whynot, whynotlen,
+			"png_create_info_struct() returned NULL");
+		goto cleanup;
+	}
+
+	end_info = png_create_info_struct(png_ptr);
+	if (!end_info) {
+		snprintf(whynot, whynotlen,
+			"2nd png_create_info_struct() returned NULL");
+		goto cleanup;
+	}
+
+	if (setjmp(png_jmpbuf(png_ptr))) {
+		snprintf(whynot, whynotlen, "libpng encounted an error");
+		goto cleanup;
+	}
+
+	png_init_io(png_ptr, fp);
+	png_set_sig_bytes(png_ptr, 8);
+
+	/*
+	 * PNG_TRANSFORM_STRIP_16 |
+	 * PNG_TRANSFORM_PACKING  forces 8 bit
+	 * PNG_TRANSFORM_EXPAND forces to expand a palette into RGB
+	 */
+	png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_STRIP_16 | PNG_TRANSFORM_PACKING | PNG_TRANSFORM_EXPAND, NULL);
+
+	png_get_IHDR(png_ptr, info_ptr, &tw, &th, &bit_depth, &color_type, NULL, NULL, NULL);
+
+	if (bit_depth != 8) {
+		snprintf(whynot, whynotlen, "load_png_texture only supports 8-bit image channel depth");
+		goto cleanup;
+	}
+
+	if (color_type != PNG_COLOR_TYPE_RGB && color_type != PNG_COLOR_TYPE_RGB_ALPHA) {
+		snprintf(whynot, whynotlen, "load_png_texture only supports RGB and RGBA");
+		goto cleanup;
+	}
+
+	if (w)
+		*w = tw;
+	if (h)
+		*h = th;
+	int has_alpha = (color_type == PNG_COLOR_TYPE_RGB_ALPHA);
+	if (hasAlpha)
+		*hasAlpha = has_alpha;
+
+	row_bytes = png_get_rowbytes(png_ptr, info_ptr);
+	image_data_row_bytes = row_bytes;
+
+	/* align to 4 byte boundary */
+	if (image_data_row_bytes & 0x03)
+		image_data_row_bytes += 4 - (image_data_row_bytes & 0x03);
+
+	png_bytepp row_pointers = png_get_rows(png_ptr, info_ptr);
+
+	image_data = malloc(image_data_row_bytes * th * sizeof(png_byte) + 15);
+	if (!image_data) {
+		snprintf(whynot, whynotlen, "malloc failed in load_png_texture");
+		goto cleanup;
+	}
+
+	int bytes_per_pixel = (color_type == PNG_COLOR_TYPE_RGB_ALPHA ? 4 : 3);
+
+	for (i = 0; i < th; i++) {
+		png_byte *src_row;
+		png_byte *dest_row = image_data + i * image_data_row_bytes;
+
+		if (flipVertical)
+			src_row = row_pointers[th - i - 1];
+		else
+			src_row = row_pointers[i];
+
+		if (flipHorizontal) {
+			for (j = 0; j < tw; j++) {
+				png_byte *src = src_row + bytes_per_pixel * j;
+				png_byte *dest = dest_row + bytes_per_pixel * (tw - j - 1);
+				memcpy(dest, src, bytes_per_pixel);
+			}
+		} else {
+			memcpy(dest_row, src_row, row_bytes);
+		}
+
+		if (has_alpha && pre_multiply_alpha) {
+			for (j = 0; j < tw; j++) {
+				png_byte *pixel = dest_row + bytes_per_pixel * j;
+				float alpha = pixel[3] / 255.0;
+				pixel[0] = pixel[0] * alpha;
+				pixel[1] = pixel[1] * alpha;
+				pixel[2] = pixel[2] * alpha;
+			}
+		}
+	}
+
+	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+	fclose(fp);
+	return (char *) image_data;
+
+cleanup:
+	if (image_data)
+		free(image_data);
+	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+	fclose(fp);
+	return 0;
+}
+
+static char *load_image(const char *filename, int *w, int *h, int *a, int *bytes_per_row)
+{
+	char *i;
+	char msg[100];
+
+	i = load_png_image(filename, 0, 0, 0, w, h, a, msg, sizeof(msg));
+	if (!i) {
+		fprintf(stderr, "%s: cannot load image: %s\n", filename, msg);
+		exit(1);
+	}
+	*bytes_per_row = *w * 3;
+	/* align to 4 byte boundary */
+	if (*bytes_per_row & 0x03)
+		*bytes_per_row += 4 - (*bytes_per_row & 0x03);
+	return i;
+}
+
 static void save_output_images(void)
 {
 	int i;
@@ -331,6 +529,8 @@ int main(int argc, char *argv[])
 {
 	float min, max;
 
+	sampledata = load_image("heightdata.png", &samplew, &sampleh, &samplea,
+					&sample_bytes_per_row);
 	allocate_output_images();
 	initialize_vertices();
 	find_min_max_height(&min, &max);
