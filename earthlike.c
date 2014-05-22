@@ -5,6 +5,7 @@
 #include <png.h>
 #include <errno.h>
 #include <limits.h>
+#include <pthread.h>
 
 #include "mtwist.h"
 #include "mathutils.h"
@@ -19,7 +20,6 @@ static struct bump {
 static int totalbumps = 0;
 
 #define DIM 1024
-static int bumps = 0;
 static unsigned char *output_image[6];
 static union vec3 vertex[6][DIM][DIM];
 static const char *output_file_prefix = "heightmap";
@@ -86,33 +86,63 @@ static inline void distort_vertex(union vec3 *v, float d, const float r, float h
 	vec3_add_self(v, &distortion);
 }
 
-static void render_all_bumps(void)
+struct thread_info {
+	pthread_t thread;
+	int f;
+};
+
+static void *render_bumps_on_face_fn(void *info)
 {
 	int f, i, j, k;
 	union vec3 p, *p2;
 	float d2, d;
 	struct bump *b;
+	struct thread_info *t = info;
 
-	for (f = 0; f < 6; f++) {
-		for (i = 0; i < DIM; i++) {
-			for (j = 0; j < DIM; j++) {
-				p = fij_to_xyz(f, i, j, DIM);
-				for (k = 0; k < totalbumps; k++) {
-					b = &bumplist[k];
-					p2 = &b->p;
-					d2 = (p.v.x - p2->v.x) * (p.v.x - p2->v.x) +
-						(p.v.y - p2->v.y) * (p.v.y - p2->v.y) +
-						(p.v.z - p2->v.z) * (p.v.z - p2->v.z);
-					if (d2 > b->r * b->r)
-						continue;
-					d = sqrtf(d2);
-					distort_vertex(&vertex[f][i][j], d, b->r, b->h);
-				}
+	f = t->f; 
+
+	for (i = 0; i < DIM; i++) {
+		if (i % (DIM / 8) == 0) {
+			printf("%d", f);
+			fflush(stdout);
+		}
+		for (j = 0; j < DIM; j++) {
+			p = fij_to_xyz(f, i, j, DIM);
+			for (k = 0; k < totalbumps; k++) {
+				b = &bumplist[k];
+				p2 = &b->p;
+				d2 = (p.v.x - p2->v.x) * (p.v.x - p2->v.x) +
+					(p.v.y - p2->v.y) * (p.v.y - p2->v.y) +
+					(p.v.z - p2->v.z) * (p.v.z - p2->v.z);
+				if (d2 > b->r * b->r)
+					continue;
+				d = sqrtf(d2);
+				distort_vertex(&vertex[f][i][j], d, b->r, b->h);
 			}
 		}
-		printf("f"); fflush(stdout);
 	}
-	bumps++;
+	return NULL;
+}
+
+static void render_all_bumps(void)
+{
+	int rc, f;
+	void *status;
+	struct thread_info t[6];
+
+	for (f = 0; f < 6; f++) {
+		t[f].f = f;
+		rc = pthread_create(&t[f].thread, NULL, render_bumps_on_face_fn, &t[f]);
+		if (rc)
+			fprintf(stderr, "%s: pthread_create failed: %s\n",
+					__func__, strerror(errno));
+	}
+	for (f = 0; f < 6; f++) {
+		int rc = pthread_join(t[f].thread, &status);
+		if (rc)
+			fprintf(stderr, "%s: pthread_join failed: %s\n",
+				__func__, strerror(errno));
+	}
 }
 
 static void add_bump(union vec3 p, float r, float h)
@@ -132,7 +162,8 @@ static void add_bump(union vec3 p, float r, float h)
 static void recursive_add_bump(union vec3 pos, float r, float h,
 				float shrink, float rlimit)
 {
-	const int nbumps = 5;
+	const int nbumps = 3;
+	float hoffset;
 
 	add_bump(pos, r, h);
 	if (r * shrink < rlimit)
@@ -144,7 +175,8 @@ static void recursive_add_bump(union vec3 pos, float r, float h,
 		d.v.z = snis_random_float() * r;
 		vec3_add_self(&d, &pos);
 		vec3_normalize_self(&d);
-		recursive_add_bump(d, r * shrink, h * shrink, shrink, rlimit);
+		hoffset = snis_random_float() * h * shrink * 0.5;
+		recursive_add_bump(d, r * shrink, h * shrink * 0.5 + hoffset, shrink, rlimit);
 	}
 }
 
@@ -154,10 +186,10 @@ static void add_bumps(const int nbumps)
 
 	for (i = 0; i < nbumps; i++) {
 		union vec3 p;
-		float r = 0.5 * (snis_random_float() + 1.0f) * 0.5;
+		float r = 0.5 * (snis_random_float() + 1.0f) * 0.9;
 
 		random_point_on_sphere(1.0, &p.v.x, &p.v.y, &p.v.z);
-		recursive_add_bump(p, r, 0.02, 0.5, 0.02);
+		recursive_add_bump(p, r, 0.04, 0.52, 0.02);
 		printf(".");
 		fflush(stdout);
 	}
@@ -296,11 +328,11 @@ int main(int argc, char *argv[])
 	allocate_output_images();
 	initialize_vertices();
 	find_min_max_height(&min, &max);
-	add_bumps(10);
+	add_bumps(40);
 	printf("total bumps = %d\n", totalbumps);
 	render_all_bumps();
 	find_min_max_height(&min, &max);
-	printf("%d bumps added. min h = %f, max h = %f\n", bumps, min, max);
+	printf("min h = %f, max h = %f\n", min, max);
 	paint_height_maps(min, max);
 	save_output_images();
 	return 0;
