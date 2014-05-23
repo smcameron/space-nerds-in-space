@@ -27,8 +27,11 @@ static int totalbumps = 0;
 
 #define DIM 1024
 static unsigned char *output_image[6];
+static unsigned char *normal_image[6];
 static union vec3 vertex[6][DIM][DIM];
+static union vec3 normal[6][DIM][DIM];
 static const char *output_file_prefix = "heightmap";
+static const char *normal_file_prefix = "normalmap";
 static char *sampledata;
 static int samplew, sampleh, samplea, sample_bytes_per_row;
 
@@ -223,7 +226,7 @@ static void add_bumps(const int nbumps)
 		float r = 0.5 * (snis_random_float() + 1.0f) * 0.4;
 
 		random_point_on_sphere(1.0, &p.v.x, &p.v.y, &p.v.z);
-		recursive_add_bump(p, r, 0.04, 0.52, 0.01);
+		recursive_add_bump(p, r, 0.08, 0.52, 0.01);
 		printf(".");
 		fflush(stdout);
 	}
@@ -261,6 +264,10 @@ void allocate_output_images(void)
 		output_image[i] = malloc(4 * DIM * DIM);
 		memset(output_image[i], 0, 4 * DIM * DIM);
 	}
+	for (i = 0; i < 6; i++) {
+		normal_image[i] = malloc(4 * DIM * DIM);
+		memset(normal_image[i], 0, 4 * DIM * DIM);
+	}
 }
 
 static void paint_height_maps(float min, float max)
@@ -270,7 +277,7 @@ static void paint_height_maps(float min, float max)
 	unsigned char c;
 	int p;
 
-	for (f = 0; f <6; f++) {
+	for (f = 0; f < 6; f++) {
 		for (i = 0; i < DIM; i++) {
 			for (j = 0; j < DIM; j++) {
 				p = (j * DIM + i) * 4; 
@@ -291,6 +298,38 @@ static void paint_height_maps(float min, float max)
 		}
 	}
 }
+
+static void paint_normal_maps(float min, float max)
+{
+	int f, i, j;
+	float rad; 
+	char red, green, blue;
+	int p;
+
+	for (f = 0; f < 6; f++) {
+		for (i = 0; i < DIM; i++) {
+			for (j = 0; j < DIM; j++) {
+				p = (j * DIM + i) * 4; 
+				rad = vec3_magnitude(&vertex[f][i][j]);
+				rad = (rad - min) / (max - min);
+				if (rad > SEALEVEL) {
+					red = normal[f][i][j].v.x * 255;
+					green = normal[f][i][j].v.y * 255;
+					blue = normal[f][i][j].v.z * 255;
+					normal_image[f][p + 0] = red;
+					normal_image[f][p + 1] = green;
+					normal_image[f][p + 2] = blue;
+				} else {
+					normal_image[f][p + 0] = 127;
+					normal_image[f][p + 1] = 127;
+					normal_image[f][p + 2] = 255;
+				}
+				normal_image[f][p + 3] = 255;
+			}
+		}
+	}
+}
+
 
 static int write_png_image(const char *filename, unsigned char *pixels, int w, int h, int has_alpha)
 {
@@ -511,18 +550,73 @@ static char *load_image(const char *filename, int *w, int *h, int *a, int *bytes
 	return i;
 }
 
-static void save_output_images(void)
+static void save_images(const char *prefix, unsigned char *image[])
 {
 	int i;
 	char fname[PATH_MAX];
 
 	for (i = 0; i < 6; i++) {
-		sprintf(fname, "%s%d.png", output_file_prefix, i);
-		if (write_png_image(fname, output_image[i], DIM, DIM, 1))
+		sprintf(fname, "%s%d.png", prefix, i);
+		if (write_png_image(fname, image[i], DIM, DIM, 1))
 			fprintf(stderr, "Failed to write %s\n", fname);
 	}
 	printf("o");
 	fflush(stdout);
+}
+
+static void save_output_images(void)
+{
+	save_images(output_file_prefix, output_image);
+}
+
+static void save_normal_maps(void)
+{
+	save_images(normal_file_prefix, normal_image);
+}
+
+static void calculate_normal(int f, int i, int j)
+{
+	int i1, i2, j1, j2;
+	int p1, p2, dzdx, dzdy;
+	union vec3 n;
+
+	i1 = i - 1;
+	if (i1 < 0)
+		i1 = i;
+	i2 = i + 1;
+	if (i2 >= DIM)
+		i2 = i;
+	j1 = j - 1;
+	if (j1 < 0)
+		j1 = j;
+	j2 = j + 1;
+	if (j2 >= DIM)
+		j2 = j;
+
+	p1 = (j * DIM + i1) * 4; 
+	p2 = (j * DIM + i2) * 4; 
+	dzdx = (int) output_image[f][p1] - (int) output_image[f][p2];
+	p1 = (j1 * DIM + i) * 4; 
+	p2 = (j2 * DIM + i) * 4; 
+	dzdy = (int) output_image[f][p2] - (int) output_image[f][p1];
+	n.v.x = (float) dzdx / 127.0f + 0.5;
+	n.v.y = (float) dzdy / 127.0f + 0.5;
+	n.v.z = 1.0f;
+	normal[f][i][j] = n;
+}
+
+static void calculate_normals(void)
+{
+	int f, i, j;
+
+	printf("calculating normals\n");
+	for (f = 0; f < 6; f++) {
+		for (i = 0; i < DIM; i++) {
+			for (j = 0; j < DIM; j++) {
+				calculate_normal(f, i, j);
+			}
+		}
+	}
 }
 
 int main(int argc, char *argv[])
@@ -534,13 +628,16 @@ int main(int argc, char *argv[])
 	allocate_output_images();
 	initialize_vertices();
 	find_min_max_height(&min, &max);
-	add_bumps(40);
+	add_bumps(80);
 	printf("total bumps = %d\n", totalbumps);
 	render_all_bumps();
 	find_min_max_height(&min, &max);
 	printf("min h = %f, max h = %f\n", min, max);
 	paint_height_maps(min, max);
+	calculate_normals();
+	paint_normal_maps(min, max);
 	save_output_images();
+	save_normal_maps();
 	return 0;
 }
 
