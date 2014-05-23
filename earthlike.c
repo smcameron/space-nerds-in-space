@@ -10,6 +10,7 @@
 #include "mtwist.h"
 #include "mathutils.h"
 #include "quat.h"
+#include "simplexnoise1234.h"
 
 #define MAXBUMPS 100000
 #define SEALEVEL 0.08
@@ -28,12 +29,30 @@ static int totalbumps = 0;
 #define DIM 1024
 static unsigned char *output_image[6];
 static unsigned char *normal_image[6];
+static unsigned char *land, *water;
+static int landw, landh, landa, landbpr;
+static int waterw, waterh, watera, waterbpr; 
 static union vec3 vertex[6][DIM][DIM];
 static union vec3 normal[6][DIM][DIM];
+static float noise[6][DIM][DIM];
 static const char *output_file_prefix = "heightmap";
 static const char *normal_file_prefix = "normalmap";
 static char *sampledata;
 static int samplew, sampleh, samplea, sample_bytes_per_row;
+static float minn, maxn; /* min and max noise values encountered */
+
+static inline float fbmnoise4(float x, float y, float z)
+{
+	const float fbm_falloff = 0.5;
+	const float f1 = fbm_falloff;
+	const float f2 = fbm_falloff * fbm_falloff;
+	const float f3 = fbm_falloff * fbm_falloff * fbm_falloff;
+
+	return 1.0 * snoise4(x, y, z, 1.0) +
+		f1 * snoise4(2.0f * x, 2.0f * y, 2.0f * z, 1.0) +
+		f2 * fbm_falloff * snoise4(4.0f * x, 4.0f * y, 4.0f * z, 1.0) +
+		f3 * snoise4(8.0f * x, 8.0f * y, 8.0f * z, 1.0);
+}
 
 /* convert from cubemap coords to cartesian coords on surface of sphere */
 static union vec3 fij_to_xyz(int f, int i, int j, const int dim)
@@ -82,8 +101,21 @@ static void initialize_vertices(void)
 
 	for (f = 0; f < 6; f++)
 		for (i = 0; i < DIM; i++)
-			for (j = 0; j < DIM; j++)
-				vertex[f][i][j] = fij_to_xyz(f, i, j, DIM);
+			for (j = 0; j < DIM; j++) {
+				const union vec3 v = fij_to_xyz(f, i, j, DIM);
+				vertex[f][i][j] = v;
+				noise[f][i][j] = fbmnoise4(v.v.x, v.v.y, v.v.z);
+				if (f == 0 && i == 0 && j == 0) {
+					minn = noise[0][0][0];
+					maxn = noise[0][0][0];
+				} else {
+					if (noise[f][i][j] < minn)
+						minn = noise[f][i][j];
+					if (noise[f][i][j] > maxn)
+						maxn = noise[f][i][j];
+				}
+			}
+	printf("maxn = %f, minn = %f\n", maxn, minn);
 }
 
 static inline void distort_vertex(union vec3 *v, float d, struct bump *b)
@@ -207,9 +239,9 @@ static void recursive_add_bump(union vec3 pos, float r, float h,
 		return;
 	for (int i = 0; i < nbumps; i++) {
 		union vec3 d;
-		d.v.x = snis_random_float() * r;
-		d.v.y = snis_random_float() * r;
-		d.v.z = snis_random_float() * r;
+		d.v.x = snis_random_float() * r * 1.8;
+		d.v.y = snis_random_float() * r * 1.8;
+		d.v.z = snis_random_float() * r * 1.8;
 		vec3_add_self(&d, &pos);
 		vec3_normalize_self(&d);
 		hoffset = snis_random_float() * h * shrink * 0.5;
@@ -226,7 +258,7 @@ static void add_bumps(const int nbumps)
 		float r = 0.5 * (snis_random_float() + 1.0f) * 0.4;
 
 		random_point_on_sphere(1.0, &p.v.x, &p.v.y, &p.v.z);
-		recursive_add_bump(p, r, 0.08, 0.52, 0.01);
+		recursive_add_bump(p, r, 0.10, 0.55, 0.01);
 		printf(".");
 		fflush(stdout);
 	}
@@ -284,20 +316,60 @@ static void paint_height_maps(float min, float max)
 				r = vec3_magnitude(&vertex[f][i][j]);
 				r = (r - min) / (max - min);
 				c = (unsigned char) (r * 255.0f);
-				if (r > SEALEVEL) {
-					output_image[f][p + 0] = c;
-					output_image[f][p + 1] = c;
-					output_image[f][p + 2] = c;
-				} else {
-					output_image[f][p + 0] = 20;
-					output_image[f][p + 1] = 100;
-					output_image[f][p + 2] = 200;
-				}
+				output_image[f][p + 0] = c;
+				output_image[f][p + 1] = c;
+				output_image[f][p + 2] = c;
 				output_image[f][p + 3] = 255;
 			}
 		}
 	}
 }
+
+static void color_output(int f, int p, float r, float n)
+{
+	float y;
+	int colorindex;
+
+
+	if (r > SEALEVEL) {
+		y = r / (1.0 - SEALEVEL);
+		colorindex = (int) (y * landh);
+		colorindex = colorindex * landbpr;
+		colorindex = colorindex + 3 * (int) (n * landw);
+		output_image[f][p + 0] = land[colorindex + 0];
+		output_image[f][p + 1] = land[colorindex + 1];
+		output_image[f][p + 2] = land[colorindex + 2];
+		return;
+	}
+	y = r / SEALEVEL;
+	colorindex = (int) (y * waterh);
+	colorindex = colorindex * waterbpr;
+	colorindex = colorindex + 3 * (int) (n * waterw);
+	output_image[f][p + 0] = water[colorindex + 0];
+	output_image[f][p + 1] = water[colorindex + 1];
+	output_image[f][p + 2] = water[colorindex + 2];
+	return;
+}
+
+static void paint_terrain_colors(float min, float max)
+{
+	int f, i, j;
+	float r, n; 
+	int p;
+
+	for (f = 0; f < 6; f++) {
+		for (i = 0; i < DIM; i++) {
+			for (j = 0; j < DIM; j++) {
+				p = (j * DIM + i) * 4; 
+				r = vec3_magnitude(&vertex[f][i][j]);
+				r = (r - min) / (max - min);
+				n = (noise[f][i][j] - minn) / (maxn - minn);
+				color_output(f, p, r, n);
+			}
+		}
+	}
+}
+
 
 static void paint_normal_maps(float min, float max)
 {
@@ -625,10 +697,12 @@ int main(int argc, char *argv[])
 
 	sampledata = load_image("heightdata.png", &samplew, &sampleh, &samplea,
 					&sample_bytes_per_row);
+	land = load_image("land.png", &landw, &landh, &landa, &landbpr);
+	water = load_image("water.png", &waterw, &waterh, &watera, &waterbpr);
 	allocate_output_images();
 	initialize_vertices();
 	find_min_max_height(&min, &max);
-	add_bumps(80);
+	add_bumps(60);
 	printf("total bumps = %d\n", totalbumps);
 	render_all_bumps();
 	find_min_max_height(&min, &max);
@@ -636,6 +710,8 @@ int main(int argc, char *argv[])
 	paint_height_maps(min, max);
 	calculate_normals();
 	paint_normal_maps(min, max);
+	printf("painting terrain colors\n");
+	paint_terrain_colors(min, max);
 	save_output_images();
 	save_normal_maps();
 	return 0;
