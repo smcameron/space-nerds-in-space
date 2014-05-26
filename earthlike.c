@@ -213,7 +213,7 @@ static void recursive_add_bump(union vec3 pos, float r, float h,
 		vec3_add_self(&d, &pos);
 		vec3_normalize_self(&d);
 		hoffset = snis_random_float() * h * shrink * 0.5;
-		recursive_add_bump(d, r * shrink, h * shrink * 0.5 + hoffset, shrink, rlimit);
+		recursive_add_bump(d, r * shrink, h * (shrink + 0.5 * (1.0 - shrink)) + hoffset, shrink, rlimit);
 	}
 }
 
