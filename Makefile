@@ -635,7 +635,11 @@ test-mtwist: mtwist.o test-mtwist.c Makefile
 	gcc -o test-mtwist mtwist.o test-mtwist.c
 
 snis-device-io.o:	snis-device-io.h snis-device-io.c Makefile
-	gcc -Wall -Wextra --pedantic -c snis-device-io.c
+	gcc -Wall -Wextra --pedantic -pthread -c snis-device-io.c
+
+device-io-sample-1:	device-io-sample-1.c snis-device-io.o
+	gcc -Wall -Wextra --pedantic -pthread -o device-io-sample-1 snis-device-io.o \
+			device-io-sample-1.c
 
 test-commodities:	commodities.o Makefile
 	gcc -DTESTCOMMODITIES=1 -c commodities.c -o test-commodities.o
