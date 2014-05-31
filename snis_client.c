@@ -179,6 +179,8 @@ int joystick_fd = -1;
 int joystickx, joysticky;
 
 static int physical_io_socket = -1;
+static pthread_t physical_io_thread;
+static pthread_attr_t physical_io_thread_attr;
 
 GtkWidget *window;
 GdkGC *gc = NULL;               /* our graphics context. */
@@ -11963,10 +11965,39 @@ static void check_for_screensaver(void)
 	/* impractical) */
 }
 
+static void *monitor_physical_io_devices(__attribute__((unused)) void *arg)
+{
+	socklen_t len;
+	int i, bytecount;
+	struct sockaddr_un client_addr;
+
+#define PHYS_IO_BUF_SIZE (sizeof(unsigned short) * 2)
+	char buf[PHYS_IO_BUF_SIZE];
+
+	for (;;) {
+		len = sizeof(client_addr);
+		bytecount = recvfrom(physical_io_socket, buf, sizeof(buf), 0,
+				(struct sockaddr *) &client_addr, &len);
+		if (bytecount < 0) {
+			fprintf(stderr, "recvfrom returned %d (%s) in %s\n",
+				bytecount, strerror(errno), __func__); 
+			fprintf(stderr, "Physical io device monitor thread exiting\n");
+			return NULL;
+		}
+		fprintf(stderr, "phys io monitor recvd %d bytes\n", bytecount);
+		for (i = 0; i < bytecount; i++) {
+			fprintf(stderr, "%02hhu ", buf[i]);
+		}
+		fprintf(stderr, "\n");
+	}
+	return NULL;
+}
+
 static void setup_physical_io_socket(void)
 {
 #ifdef __linux
 	struct sockaddr_un addr;
+	int rc;
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
@@ -11992,6 +12023,15 @@ static void setup_physical_io_socket(void)
 		fprintf(stderr, "Perhaps another snis_client process is running.\n");
 		/* FIXME: is this how to deal with the socket at this point? */
 		physical_io_socket = -1;
+	} else {
+		rc = pthread_create(&physical_io_thread, &physical_io_thread_attr,
+			monitor_physical_io_devices, NULL);
+		if (rc) {
+			fprintf(stderr, "Failed to create physical device monitor thread.\n");
+			fprintf(stderr, "Physical input devices will not work.\n");
+			close(physical_io_socket);
+			physical_io_socket = -1;
+		}
 	}
 #endif
 }
