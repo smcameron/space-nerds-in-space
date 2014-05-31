@@ -96,6 +96,7 @@
 #include "snis_keyboard.h"
 #include "snis_damcon_systems.h"
 #include "build_info.h"
+#include "snis-device-io.h"
 
 #include "vertex.h"
 #include "triangle.h"
@@ -11965,11 +11966,85 @@ static void check_for_screensaver(void)
 	/* impractical) */
 }
 
+
+static void process_physical_device_io(unsigned short opcode, unsigned short value)
+{
+	double d;
+
+	d = (double) value / (double) ((unsigned short) 0xFFFF);
+
+	gdk_threads_enter();
+	switch (opcode) {
+	case DEVIO_OPCODE_ENG_PWR_SHIELDS:
+		snis_slider_poke_input(eng_ui.shield_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_PWR_PHASERS:
+		snis_slider_poke_input(eng_ui.phaserbanks_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_PWR_COMMS	:
+		snis_slider_poke_input(eng_ui.comm_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_PWR_SENSORS:
+		snis_slider_poke_input(eng_ui.sensors_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_PWR_IMPULSE:
+		snis_slider_poke_input(eng_ui.impulse_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_PWR_WARP:
+		snis_slider_poke_input(eng_ui.warp_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_PWR_MANEUVERING:
+		snis_slider_poke_input(eng_ui.maneuvering_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_PWR_TRACTOR:
+		snis_slider_poke_input(eng_ui.tractor_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_COOL_SHIELDS:
+		snis_slider_poke_input(eng_ui.shield_coolant_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_COOL_PHASERS:
+		snis_slider_poke_input(eng_ui.phaserbanks_coolant_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_COOL_COMMS:
+		snis_slider_poke_input(eng_ui.comm_coolant_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_COOL_SENSORS:
+		snis_slider_poke_input(eng_ui.sensors_coolant_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_COOL_IMPULSE:
+		snis_slider_poke_input(eng_ui.impulse_coolant_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_COOL_WARP:
+		snis_slider_poke_input(eng_ui.warp_coolant_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_COOL_MANEUVERING:
+		snis_slider_poke_input(eng_ui.maneuvering_coolant_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_COOL_TRACTOR:
+		snis_slider_poke_input(eng_ui.tractor_coolant_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_SHIELD_LEVEL:
+		snis_slider_poke_input(eng_ui.shield_control_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_PRESET1_BUTTON:
+		preset1_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_ENG_PRESET2_BUTTON:
+		preset2_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_ENG_DAMAGE_CTRL:
+		damcon_button_pressed((void *) 0);
+		break;
+	}
+	gdk_threads_leave();
+}
+
 static void *monitor_physical_io_devices(__attribute__((unused)) void *arg)
 {
 	socklen_t len;
-	int i, bytecount;
+	int bytecount;
 	struct sockaddr_un client_addr;
+	unsigned short opcode, value;
 
 #define PHYS_IO_BUF_SIZE (sizeof(unsigned short) * 2)
 	char buf[PHYS_IO_BUF_SIZE];
@@ -11984,11 +12059,20 @@ static void *monitor_physical_io_devices(__attribute__((unused)) void *arg)
 			fprintf(stderr, "Physical io device monitor thread exiting\n");
 			return NULL;
 		}
+#if 0
 		fprintf(stderr, "phys io monitor recvd %d bytes\n", bytecount);
-		for (i = 0; i < bytecount; i++) {
+		for (int i = 0; i < bytecount; i++) {
 			fprintf(stderr, "%02hhu ", buf[i]);
 		}
 		fprintf(stderr, "\n");
+#endif
+		if (bytecount != sizeof(unsigned short) * 2) {
+			fprintf(stderr, "unexpected bytecount from physical device\n");
+			return NULL;
+		}
+		memcpy(&opcode, &buf[0], sizeof(opcode));
+		memcpy(&value, &buf[2], sizeof(value));
+		process_physical_device_io(ntohs(opcode), ntohs(value));
 	}
 	return NULL;
 }

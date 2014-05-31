@@ -634,6 +634,9 @@ test-fleet: quat.o fleet.o mathutils.o mtwist.o Makefile
 test-mtwist: mtwist.o test-mtwist.c Makefile
 	gcc -o test-mtwist mtwist.o test-mtwist.c
 
+snis-device-io.o:	snis-device-io.h snis-device-io.c Makefile
+	gcc -Wall -Wextra --pedantic -c snis-device-io.c
+
 test-commodities:	commodities.o Makefile
 	gcc -DTESTCOMMODITIES=1 -c commodities.c -o test-commodities.o
 	gcc -DTESTCOMMODITIES=1 -o test-commodities test-commodities.o
