@@ -12068,6 +12068,27 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_NAV_THROTTLE:
 		snis_slider_poke_input(nav_ui.throttle_slider, d, 1);
 		break;
+	case DEVIO_OPCODE_WEAPONS_YAW_LEFT:
+		weapons_dirkey(-1, 0);
+		break;
+	case DEVIO_OPCODE_WEAPONS_YAW_RIGHT:
+		weapons_dirkey(1, 0);
+		break;
+	case DEVIO_OPCODE_WEAPONS_PITCH_UP:
+		weapons_dirkey(0, -1);
+		break;
+	case DEVIO_OPCODE_WEAPONS_PITCH_DOWN:
+		weapons_dirkey(0, 1);
+		break;
+	case DEVIO_OPCODE_WEAPONS_FIRE_PHASERS:
+		fire_phaser_button_pressed(NULL);
+		break;
+	case DEVIO_OPCODE_WEAPONS_FIRE_TORPEDO:
+		fire_torpedo_button_pressed(NULL);
+		break;
+	case DEVIO_OPCODE_WEAPONS_WAVELENGTH:
+		snis_slider_poke_input(weapons.wavelen_slider, d, 1);
+		break;
 	}
 	gdk_threads_leave();
 }

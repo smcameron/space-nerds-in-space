@@ -56,6 +56,15 @@
 #define DEVIO_OPCODE_NAV_WARP_ENGAGE		109
 #define DEVIO_OPCODE_NAV_THROTTLE		110
 
+/* everything you can do on the weapons screen */
+#define DEVIO_OPCODE_WEAPONS_YAW_LEFT		200
+#define DEVIO_OPCODE_WEAPONS_YAW_RIGHT		201
+#define DEVIO_OPCODE_WEAPONS_PITCH_UP		202
+#define DEVIO_OPCODE_WEAPONS_PITCH_DOWN		203
+#define DEVIO_OPCODE_WEAPONS_FIRE_PHASERS	204
+#define DEVIO_OPCODE_WEAPONS_FIRE_TORPEDO	205
+#define DEVIO_OPCODE_WEAPONS_WAVELENGTH		206
+
 struct snis_device_io_connection;
 int snis_device_io_setup(struct snis_device_io_connection **c);
 int snis_device_io_send(struct snis_device_io_connection *c,
