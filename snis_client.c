@@ -12113,6 +12113,21 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_DMGCTRL_ENGINEERING:
 		main_engineering_button_pressed((void *) 0);
 		break;
+	case DEVIO_OPCODE_SCIENCE_RANGE:
+		snis_slider_poke_input(sci_ui.scizoom, d, 1);
+		break;
+	case DEVIO_OPCODE_SCIENCE_TRACTOR:
+		sci_tractor_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_SCIENCE_SRS:
+		sci_sciplane_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_SCIENCE_LRS:
+		sci_threed_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_SCIENCE_DETAILS:
+		sci_details_pressed((void *) 0);
+		break;
 	}
 	gdk_threads_leave();
 }

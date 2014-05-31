@@ -75,6 +75,13 @@
 #define DEVIO_OPCODE_DMGCTRL_MANUAL		306
 #define DEVIO_OPCODE_DMGCTRL_ENGINEERING	307
 
+/* everything you can do on the science screen */
+#define DEVIO_OPCODE_SCIENCE_RANGE		400
+#define DEVIO_OPCODE_SCIENCE_TRACTOR		401
+#define DEVIO_OPCODE_SCIENCE_SRS		402
+#define DEVIO_OPCODE_SCIENCE_LRS		403
+#define DEVIO_OPCODE_SCIENCE_DETAILS		404
+
 struct snis_device_io_connection;
 int snis_device_io_setup(struct snis_device_io_connection **c);
 int snis_device_io_send(struct snis_device_io_connection *c,
