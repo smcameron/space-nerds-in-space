@@ -82,6 +82,19 @@
 #define DEVIO_OPCODE_SCIENCE_LRS		403
 #define DEVIO_OPCODE_SCIENCE_DETAILS		404
 
+/* everything you can do on the comms screen */
+#define DEVIO_OPCODE_COMMS_COMMS_ONSCREEN	500
+#define DEVIO_OPCODE_COMMS_NAV_ONSCREEN		501
+#define DEVIO_OPCODE_COMMS_WEAP_ONSCREEN	502
+#define DEVIO_OPCODE_COMMS_ENG_ONSCREEN		503
+#define DEVIO_OPCODE_COMMS_DAMCON_ONSCREEN	504
+#define DEVIO_OPCODE_COMMS_SCI_ONSCREEN		505
+#define DEVIO_OPCODE_COMMS_MAIN_ONSCREEN	506
+#define DEVIO_OPCODE_COMMS_TRANSMIT		507
+#define DEVIO_OPCODE_COMMS_RED_ALERT		508
+#define DEVIO_OPCODE_COMMS_MAINSCREEN_COMMS	509
+#define DEVIO_OPCODE_COMMS_MAINZOOM		510
+
 struct snis_device_io_connection;
 int snis_device_io_setup(struct snis_device_io_connection **c);
 int snis_device_io_send(struct snis_device_io_connection *c,

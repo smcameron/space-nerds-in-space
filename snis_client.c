@@ -12128,6 +12128,39 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_SCIENCE_DETAILS:
 		sci_details_pressed((void *) 0);
 		break;
+	case DEVIO_OPCODE_COMMS_COMMS_ONSCREEN:
+		comms_screen_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_COMMS_NAV_ONSCREEN:
+		comms_screen_button_pressed((void *) 1);
+		break;
+	case DEVIO_OPCODE_COMMS_WEAP_ONSCREEN:
+		comms_screen_button_pressed((void *) 2);
+		break;
+	case DEVIO_OPCODE_COMMS_ENG_ONSCREEN:
+		comms_screen_button_pressed((void *) 3);
+		break;
+	case DEVIO_OPCODE_COMMS_DAMCON_ONSCREEN:
+		comms_screen_button_pressed((void *) 4);
+		break;
+	case DEVIO_OPCODE_COMMS_SCI_ONSCREEN:
+		comms_screen_button_pressed((void *) 5);
+		break;
+	case DEVIO_OPCODE_COMMS_MAIN_ONSCREEN:
+		comms_screen_button_pressed((void *) 7);
+		break;
+	case DEVIO_OPCODE_COMMS_TRANSMIT:
+		comms_transmit_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_COMMS_RED_ALERT:
+		comms_screen_red_alert_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_COMMS_MAINSCREEN_COMMS:
+		comms_main_screen_pressed((void *) 8);
+		break;
+	case DEVIO_OPCODE_COMMS_MAINZOOM:
+		snis_slider_poke_input(comms_ui.mainzoom_slider, d, 1);
+		break;
 	}
 	gdk_threads_leave();
 }
