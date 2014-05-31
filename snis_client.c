@@ -49,6 +49,7 @@
 #include <math.h>
 #include <errno.h>
 #include <pthread.h>
+#include <sys/un.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <assert.h>
@@ -176,6 +177,8 @@ typedef void (*joystick_button_fn)(void *x);
 char joystick_device[PATH_MAX+1];
 int joystick_fd = -1;
 int joystickx, joysticky;
+
+static int physical_io_socket = -1;
 
 GtkWidget *window;
 GdkGC *gc = NULL;               /* our graphics context. */
@@ -3074,6 +3077,11 @@ nav_check_y_stick:
 	default:
 		break;
 	}
+}
+
+static void deal_with_physical_io_devices()
+{
+	/* FIXME: fill this in. */
 }
 
 static void do_adjust_byte_value(uint8_t value,  uint8_t opcode);
@@ -11318,6 +11326,7 @@ gint advance_game(gpointer data)
 
 	deal_with_joystick();
 	deal_with_keyboard();
+	deal_with_physical_io_devices();
 
 	if (in_the_process_of_quitting) {
 		gdk_threads_enter();
@@ -11954,6 +11963,39 @@ static void check_for_screensaver(void)
 	/* impractical) */
 }
 
+static void setup_physical_io_socket(void)
+{
+#ifdef __linux
+	struct sockaddr_un addr;
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+
+	/* Note: addr.sun_path[0] is set to 0 by above memset.  Setting the
+	 * name starting at addr.sun_path[1], below -- after the initial 0 byte --
+	 * is a convention to set up a name in the linux-specific abstract socket
+	 * name space.  See "The Linux Programming Interface", by Michael Kerrisk,
+	 * Ch. 57, p. 1175-1176.  To get this to work on non-linux, we'll need
+	 * to do something else.
+	 */
+	strncpy(&addr.sun_path[1], "snis-phys-io", sizeof(addr.sun_path) - 2);
+
+	physical_io_socket = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if (physical_io_socket == -1) {
+		fprintf(stderr,
+			"Failed creating physical io socket, physical input devices will not work.\n");
+		return;
+	}
+	if (bind(physical_io_socket, (struct sockaddr *) &addr,
+			sizeof(struct sockaddr_un)) == -1) {
+		fprintf(stderr, "Failed to bind to linux abstrack socket address 'snis-phys-io'.\n");
+		fprintf(stderr, "Perhaps another snis_client process is running.\n");
+		/* FIXME: is this how to deal with the socket at this point? */
+		physical_io_socket = -1;
+	}
+#endif
+}
+
 static void setup_joystick(GtkWidget *window)
 {
 	strcpy(joystick_device, JOYSTICK_DEVNAME);
@@ -12418,6 +12460,7 @@ int main(int argc, char *argv[])
 	init_demon_ui();
 	init_net_setup_ui();
 	setup_joystick(window);
+	setup_physical_io_socket();
 	ecx = entity_context_new(5000, 1000);
 
 	snis_protocol_debugging(1);
