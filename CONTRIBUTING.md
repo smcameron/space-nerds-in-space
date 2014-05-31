@@ -60,6 +60,16 @@ Adding new features
 
 If you want to add a new feature to the ship, it is esp. important to make sure you do all the meaningful actions server side, and only make requests of the server from the client side, and do rendering client side.
 
+Custom hardware device controls
+-------------------------------
+
+Maybe you want to build a physical starship bridge with toggle switches and dials
+and sliders and buttons and flight yokes and other various gizmos and doodads to
+control the game?   Have a look at snis-device-io.h and snis-device-io.c and
+device-io-sample-1.c.  All you have to do is write a little program to monitor
+and gather inputs from your hardware devices however you like, then feed them
+to snis_client via the couple of functions in snis-device-io.o.
+
 Coding Style
 ------------
 
