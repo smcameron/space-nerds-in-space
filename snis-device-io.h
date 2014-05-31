@@ -43,6 +43,19 @@
 #define DEVIO_OPCODE_ENG_PRESET2_BUTTON		18
 #define DEVIO_OPCODE_ENG_DAMAGE_CTRL		19
 
+/* everything you can do on the nav screen */
+#define DEVIO_OPCODE_NAV_YAW_LEFT		100
+#define DEVIO_OPCODE_NAV_YAW_RIGHT		101
+#define DEVIO_OPCODE_NAV_PITCH_DOWN		102
+#define DEVIO_OPCODE_NAV_PITCH_UP		103
+#define DEVIO_OPCODE_NAV_ROLL_LEFT		104
+#define DEVIO_OPCODE_NAV_ROLL_RIGHT		105
+#define DEVIO_OPCODE_NAV_REVERSE		106
+#define DEVIO_OPCODE_NAV_ZOOM			107
+#define DEVIO_OPCODE_NAV_WARP_POWER		108
+#define DEVIO_OPCODE_NAV_WARP_ENGAGE		109
+#define DEVIO_OPCODE_NAV_THROTTLE		110
+
 struct snis_device_io_connection;
 int snis_device_io_setup(struct snis_device_io_connection **c);
 int snis_device_io_send(struct snis_device_io_connection *c,

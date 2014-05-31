@@ -12035,6 +12035,39 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_ENG_DAMAGE_CTRL:
 		damcon_button_pressed((void *) 0);
 		break;
+	case DEVIO_OPCODE_NAV_YAW_LEFT:
+		navigation_dirkey(-1, 0, 0);
+		break;
+	case DEVIO_OPCODE_NAV_YAW_RIGHT:
+		navigation_dirkey(1, 0, 0);
+		break;
+	case DEVIO_OPCODE_NAV_PITCH_DOWN:
+		navigation_dirkey(0, 1, 0);
+		break;
+	case DEVIO_OPCODE_NAV_PITCH_UP:
+		navigation_dirkey(0, -1, 0);
+		break;
+	case DEVIO_OPCODE_NAV_ROLL_LEFT:
+		navigation_dirkey(0, 0, -1);
+		break;
+	case DEVIO_OPCODE_NAV_ROLL_RIGHT:
+		navigation_dirkey(0, 0, 1);
+		break;
+	case DEVIO_OPCODE_NAV_REVERSE:
+		reverse_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_NAV_ZOOM:
+		snis_slider_poke_input(nav_ui.navzoom_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_NAV_WARP_POWER:
+		snis_slider_poke_input(nav_ui.warp_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_NAV_WARP_ENGAGE:
+		engage_warp_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_NAV_THROTTLE:
+		snis_slider_poke_input(nav_ui.throttle_slider, d, 1);
+		break;
 	}
 	gdk_threads_leave();
 }
