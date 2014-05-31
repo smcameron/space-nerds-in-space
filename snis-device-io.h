@@ -65,6 +65,16 @@
 #define DEVIO_OPCODE_WEAPONS_FIRE_TORPEDO	205
 #define DEVIO_OPCODE_WEAPONS_WAVELENGTH		206
 
+/* everything you can do on the damage control screen */
+#define DEVIO_OPCODE_DMGCTRL_LEFT		300
+#define DEVIO_OPCODE_DMGCTRL_RIGHT		301
+#define DEVIO_OPCODE_DMGCTRL_FORWARD		302
+#define DEVIO_OPCODE_DMGCTRL_BACKWARD		303
+#define DEVIO_OPCODE_DMGCTRL_GRIPPER		304
+#define DEVIO_OPCODE_DMGCTRL_AUTO		305
+#define DEVIO_OPCODE_DMGCTRL_MANUAL		306
+#define DEVIO_OPCODE_DMGCTRL_ENGINEERING	307
+
 struct snis_device_io_connection;
 int snis_device_io_setup(struct snis_device_io_connection **c);
 int snis_device_io_send(struct snis_device_io_connection *c,

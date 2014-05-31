@@ -12089,6 +12089,30 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_WEAPONS_WAVELENGTH:
 		snis_slider_poke_input(weapons.wavelen_slider, d, 1);
 		break;
+	case DEVIO_OPCODE_DMGCTRL_LEFT:
+		robot_left_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_DMGCTRL_RIGHT:
+		robot_right_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_DMGCTRL_FORWARD:
+		robot_forward_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_DMGCTRL_BACKWARD:
+		robot_backward_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_DMGCTRL_GRIPPER:
+		robot_gripper_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_DMGCTRL_AUTO:
+		robot_auto_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_DMGCTRL_MANUAL:
+		robot_manual_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_DMGCTRL_ENGINEERING:
+		main_engineering_button_pressed((void *) 0);
+		break;
 	}
 	gdk_threads_leave();
 }
