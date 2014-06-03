@@ -52,6 +52,7 @@ static int sinusoidal = 0;
 static int use_wstep = 0;
 static float wstep = 0.0f;
 static float fbm_falloff = 0.5;
+static int cloudmode = 0;
 
 #define DIM 1024 /* dimensions of cube map face images */
 #define VFDIM 2048 /* dimension of velocity field. (2 * DIM) is reasonable */
@@ -144,17 +145,24 @@ static void fade_out_background(int f, struct color *c)
 		for (j = 0; j < DIM; j++) {
 			p = j * DIM + i;
 			pixel = &output_image[f][p * 4];
-			oc.r = (float) pixel[0] / 255.0f;
-			oc.g = (float) pixel[1] / 255.0f;
-			oc.b = (float) pixel[2] / 255.0f;
-			oc.a = 1.0;
-			nc = combine_color(&oc, c);
-			pixel[0] = float2int(255.0f * nc.r) & 0xff;
-			pixel[1] = float2int(255.0f * nc.g) & 0xff;
-			pixel[2] = float2int(255.0f * nc.b) & 0xff;
+			if (!cloudmode) {
+				oc.r = (float) pixel[0] / 255.0f;
+				oc.g = (float) pixel[1] / 255.0f;
+				oc.b = (float) pixel[2] / 255.0f;
+				oc.a = 1.0;
+				nc = combine_color(&oc, c);
+				pixel[0] = float2int(255.0f * nc.r) & 0xff;
+				pixel[1] = float2int(255.0f * nc.g) & 0xff;
+				pixel[2] = float2int(255.0f * nc.b) & 0xff;
+			} else {
+				pixel[3] = float2int((float) pixel[3] * 0.9);
+			}
 		}
 	}
 }
+
+static union vec3 fij_to_xyz(int f, int i, int j, const int dim);
+static inline float fbmnoise4(float x, float y, float z, float w, const float fbm_falloff);
 
 static void paint_particle(int face, int i, int j, struct color *c)
 {
@@ -185,10 +193,44 @@ static void paint_particle(int face, int i, int j, struct color *c)
 	oc.b = (float) pixel[2] / 255.0f;
 	oc.a = 1.0;
 	nc = combine_color(&oc, c);
-	pixel[0] = float2int(255.0f * nc.r) & 0xff;
-	pixel[1] = float2int(255.0f * nc.g) & 0xff;
-	pixel[2] = float2int(255.0f * nc.b) & 0xff;
-	pixel[3] = 255;
+	if (!cloudmode) {
+		pixel[0] = float2int(255.0f * nc.r) & 0xff;
+		pixel[1] = float2int(255.0f * nc.g) & 0xff;
+		pixel[2] = float2int(255.0f * nc.b) & 0xff;
+		pixel[3] = 255;
+	} else {
+		union vec3 v;
+		float n, m;
+		v = fij_to_xyz(face, i, j, DIM);
+		vec3_normalize_self(&v);
+		vec3_mul_self(&v, 3.6 * noise_scale);
+		n = fbmnoise4(v.v.x, v.v.y, v.v.z, (w_offset + 10.0) * 3.33f, 0.5);
+		if (n > 0.5f)
+			n = n * (1.0 + n - 0.5);
+		if (n < 0.0f)
+			n = n * (1.0 + n + 0.25);
+		if (n > 0.666f)
+			n = 0.666f;
+		else if (n < -0.333f)
+			n = -0.333f;
+
+		// else if (n < -1.0f)
+			//n = -1.0f;
+		// n = 0.5f * (n + 1.0f);
+		n = n + 0.334f;
+		m = (nc.r + nc.g + nc.b) / 3.0f;
+#if 0
+		pixel[0] = float2int(255.0f * m) & 0xff;
+		//pixel[0] = 255;
+		pixel[1] = pixel[0];
+		pixel[2] = pixel[0];
+		pixel[3] = float2int(n * (float) pixel[0]) & 0xff;
+#endif
+		pixel[0] = 255;
+		pixel[1] = 255;
+		pixel[2] = 255;
+		pixel[3] = float2int(255.0f * m * n) & 0xff;
+	}
 #endif
 }
 
@@ -862,7 +904,10 @@ static void find_darkest_pixel(unsigned char *image, int w, int h,
 			}
 		}
 	}
-	darkest_color->a = 0.01;
+	if (!cloudmode)
+		darkest_color->a = 0.01;
+	else
+		darkest_color->a = 0.5;
 }
 
 static char *load_image(const char *filename, int *w, int *h, int *a, int *bytes_per_row)
@@ -915,6 +960,7 @@ static void usage(void)
 	fprintf(stderr, "   -b, --bands : Number of counter rotating bands.  Default is 6.0\n");
 	fprintf(stderr, "   -c, --count : Number of iterations to run the simulation.\n");
 	fprintf(stderr, "                 Default is 1000\n");
+	fprintf(stderr, "   -C, --cloudmode: modulate image output by to produce clouds\n");
 	fprintf(stderr, "   -i, --input : Input image filename.  Must be RGB png file.\n");
 	fprintf(stderr, "   -o, --output : Output image filename template.\n");
 	fprintf(stderr, "               Example: 'out-' will produces 6 output files\n");
@@ -947,6 +993,7 @@ static void usage(void)
 static struct option long_options[] = {
 	{ "bands", required_argument, NULL, 'b' },
 	{ "count", required_argument, NULL, 'c' },
+	{ "cloudmode", required_argument, NULL, 'C' },
 	{ "input", required_argument, NULL, 'i' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "w-offset", required_argument, NULL, 'w' },
@@ -998,7 +1045,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:f:hi:no:p:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "B:b:c:Cf:hi:no:p:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1011,6 +1058,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'c':
 			process_int_option("count", optarg, &niterations);
+			break;
+		case 'C':
+			cloudmode = 1;
 			break;
 		case 'f':
 			process_float_option("fbm-falloff", optarg, &fbm_falloff);
