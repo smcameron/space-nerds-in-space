@@ -735,6 +735,7 @@ static void usage(void)
 	fprintf(stderr, "   -S, seed : set initial random seed.  Default is 31415\n");
 	fprintf(stderr, "   -w, water : png file containing water color data to sample for oceans\n");
 	fprintf(stderr, "\n");
+	exit(1);
 }
 
 static void process_float_option(char *option_name, char *option_value, float *value)
