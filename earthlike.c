@@ -14,8 +14,8 @@
 #include "simplexnoise1234.h"
 
 #define MAXBUMPS 100000
-#define SEALEVEL 0.08
 #define RADII (3.0f)
+static float sealevel = 0.08;
 
 static char *landfile = "land.png";
 static char *waterfile = "water.png";
@@ -341,8 +341,8 @@ static void color_output(int f, int p, float r, float n)
 	int colorindex;
 
 
-	if (r > SEALEVEL) {
-		y = r / (1.0 - SEALEVEL);
+	if (r > sealevel) {
+		y = r / (1.0 - sealevel);
 		colorindex = (int) (y * landh);
 		colorindex = colorindex * landbpr;
 		colorindex = colorindex + 3 * (int) (n * landw);
@@ -351,7 +351,7 @@ static void color_output(int f, int p, float r, float n)
 		output_image[f][p + 2] = land[colorindex + 2];
 		return;
 	}
-	y = r / SEALEVEL;
+	y = r / sealevel;
 	colorindex = (int) (y * waterh);
 	colorindex = colorindex * waterbpr;
 	colorindex = colorindex + 3 * (int) (n * waterw);
@@ -394,7 +394,7 @@ static void paint_normal_maps(float min, float max)
 				p = (j * DIM + i) * 4; 
 				rad = vec3_magnitude(&vertex[f][i][j]);
 				rad = (rad - min) / (max - min);
-				if (rad > SEALEVEL) {
+				if (rad > sealevel) {
 					red = normal[f][i][j].v.x * 255;
 					green = normal[f][i][j].v.y * 255;
 					blue = normal[f][i][j].v.z * 255;
@@ -706,6 +706,7 @@ static struct option long_options[] = {
 	{ "height", required_argument, NULL, 'h' },
 	{ "ibumps", required_argument, NULL, 'i' },
 	{ "land", required_argument, NULL, 'l' },
+	{ "oceanlevel", required_argument, NULL, 'O' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "normal", required_argument, NULL, 'n' },
 	{ "rlimit", required_argument, NULL, 'r' },
@@ -726,6 +727,7 @@ static void usage(void)
 	fprintf(stderr, "   -l, land : png file containing land color data to sample for terrain\n");
 	fprintf(stderr, "   -n, normal : filename prefix for normal map images, default is 'normalmap'\n");
 	fprintf(stderr, "   -o, output : filename prefix for output images, default is 'heightmap'\n");
+	fprintf(stderr, "   -O, oceanlevel : set sealevel, default is 0.08\n");
 	fprintf(stderr, "   -r, rlimit : limit to how small bumps may get before stopping recursion\n");
 	fprintf(stderr, "                default rlimit is 0.01\n");
 	fprintf(stderr, "   -s, scatter : float amount to scatter bumps, default = 1.8 * radius\n");
@@ -764,7 +766,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "b:hi:n:o:k:lr:s:S:w", long_options, &option_index);
+		c = getopt_long(argc, argv, "b:hi:n:o:k:lo:r:s:S:w", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -789,6 +791,8 @@ static void process_options(int argc, char *argv[])
 		case 'l':
 			landfile = optarg;
 			break;
+		case 'O':
+			process_float_option("oceanlevel", optarg, &sealevel);
 		case 'r':
 			process_float_option("rlimit", optarg, &rlimit);
 			break;
