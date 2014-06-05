@@ -714,6 +714,7 @@ static struct option long_options[] = {
 	{ "scatter", required_argument, NULL, 's' },
 	{ "shrink", required_argument, NULL, 'k' },
 	{ "water", required_argument, NULL, 'w' },
+	{ 0 },
 };
 
 static void usage(void)
@@ -806,7 +807,7 @@ static void process_options(int argc, char *argv[])
 			waterfile = optarg;
 			break;
 		default:
-			fprintf(stderr, "Unknown option '%s'\n", argv[option_index]);
+			fprintf(stderr, "Unknown option.\n");
 			usage();
 		}
 	}
