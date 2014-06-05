@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
+#include <getopt.h>
 
 #include "mtwist.h"
 #include "mathutils.h"
@@ -15,6 +16,16 @@
 #define MAXBUMPS 100000
 #define SEALEVEL 0.08
 #define RADII (3.0f)
+
+static char *landfile = "land.png";
+static char *waterfile = "water.png";
+static char *heightfile = "heightdata.png";
+static int nbumps = 3;
+static float scatterfactor = 1.8f;
+static float rlimit = 0.01;
+static int random_seed = 31415;
+static float shrink_factor = 0.55;
+static int initial_bumps = 60;
 
 static struct bump {
 	union vec3 p;
@@ -35,8 +46,8 @@ static int waterw, waterh, watera, waterbpr;
 static union vec3 vertex[6][DIM][DIM];
 static union vec3 normal[6][DIM][DIM];
 static float noise[6][DIM][DIM];
-static const char *output_file_prefix = "heightmap";
-static const char *normal_file_prefix = "normalmap";
+static char *output_file_prefix = "heightmap";
+static char *normal_file_prefix = "normalmap";
 static char *sampledata;
 static int samplew, sampleh, samplea, sample_bytes_per_row;
 static float minn, maxn; /* min and max noise values encountered */
@@ -231,7 +242,6 @@ static void add_bump(union vec3 p, float r, float h)
 static void recursive_add_bump(union vec3 pos, float r, float h,
 				float shrink, float rlimit)
 {
-	const int nbumps = 3;
 	float hoffset;
 
 	add_bump(pos, r, h);
@@ -239,9 +249,9 @@ static void recursive_add_bump(union vec3 pos, float r, float h,
 		return;
 	for (int i = 0; i < nbumps; i++) {
 		union vec3 d;
-		d.v.x = snis_random_float() * r * 1.8;
-		d.v.y = snis_random_float() * r * 1.8;
-		d.v.z = snis_random_float() * r * 1.8;
+		d.v.x = snis_random_float() * r * scatterfactor;
+		d.v.y = snis_random_float() * r * scatterfactor;
+		d.v.z = snis_random_float() * r * scatterfactor;
 		vec3_add_self(&d, &pos);
 		vec3_normalize_self(&d);
 		hoffset = snis_random_float() * h * shrink * 0.5;
@@ -258,7 +268,7 @@ static void add_bumps(const int nbumps)
 		float r = 0.5 * (snis_random_float() + 1.0f) * 0.4;
 
 		random_point_on_sphere(1.0, &p.v.x, &p.v.y, &p.v.z);
-		recursive_add_bump(p, r, 0.10, 0.55, 0.01);
+		recursive_add_bump(p, r, 0.10, shrink_factor, rlimit);
 		printf(".");
 		fflush(stdout);
 	}
@@ -691,18 +701,128 @@ static void calculate_normals(void)
 	}
 }
 
+static struct option long_options[] = {
+	{ "bumps", required_argument, NULL, 'b' },
+	{ "height", required_argument, NULL, 'h' },
+	{ "ibumps", required_argument, NULL, 'i' },
+	{ "land", required_argument, NULL, 'l' },
+	{ "output", required_argument, NULL, 'o' },
+	{ "normal", required_argument, NULL, 'n' },
+	{ "rlimit", required_argument, NULL, 'r' },
+	{ "seed", required_argument, NULL, 'S' },
+	{ "scatter", required_argument, NULL, 's' },
+	{ "shrink", required_argument, NULL, 'k' },
+	{ "water", required_argument, NULL, 'w' },
+};
+
+static void usage(void)
+{
+	fprintf(stderr, "usage: earthlike [ -h heightdata.png ] [ -l land.png ] [ -w water.png ]\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "   -b, bumps : number of bumps in recursive bump placement, default = 3\n");
+	fprintf(stderr, "   -h, height : png file containing height map data to sample for terrain\n");
+	fprintf(stderr, "   -k, shrink : factor to shrink each recursive iteration.  Default is 0.55\n");
+	fprintf(stderr, "   -l, land : png file containing land color data to sample for terrain\n");
+	fprintf(stderr, "   -n, normal : filename prefix for normal map images, default is 'normalmap'\n");
+	fprintf(stderr, "   -o, output : filename prefix for output images, default is 'heightmap'\n");
+	fprintf(stderr, "   -r, rlimit : limit to how small bumps may get before stopping recursion\n");
+	fprintf(stderr, "                default rlimit is 0.01\n");
+	fprintf(stderr, "   -s, scatter : float amount to scatter bumps, default = 1.8 * radius\n");
+	fprintf(stderr, "   -S, seed : set initial random seed.  Default is 31415\n");
+	fprintf(stderr, "   -w, water : png file containing water color data to sample for oceans\n");
+	fprintf(stderr, "\n");
+}
+
+static void process_float_option(char *option_name, char *option_value, float *value)
+{
+	float tmpf;
+
+	if (sscanf(option_value, "%f", &tmpf) == 1) {
+		*value = tmpf;
+	} else {
+		fprintf(stderr, "Bad %s option '%s'\n", option_name, option_value);
+		usage();
+	}
+}
+
+static void process_int_option(char *option_name, char *option_value, int *value)
+{
+	int tmp;
+
+	if (sscanf(option_value, "%d", &tmp) == 1) {
+		*value = tmp;
+	} else {
+		fprintf(stderr, "Bad %s option '%s'\n", option_name, option_value);
+		usage();
+	}
+}
+
+static void process_options(int argc, char *argv[])
+{
+	int c;
+
+	while (1) {
+		int option_index;
+		c = getopt_long(argc, argv, "b:hi:n:o:k:lr:s:S:w", long_options, &option_index);
+		if (c == -1)
+			break;
+		switch (c) {
+		case 'b':
+			process_int_option("bumps", optarg, &nbumps);
+			break;
+		case 'h':
+			heightfile = optarg;
+			break;
+		case 'i':
+			process_int_option("ibumps", optarg, &initial_bumps);
+			break;
+		case 'n':
+			normal_file_prefix = optarg;
+			break;
+		case 'o':
+			output_file_prefix = optarg;
+			break;
+		case 'k':
+			process_float_option("shrink", optarg, &shrink_factor);
+			break;
+		case 'l':
+			landfile = optarg;
+			break;
+		case 'r':
+			process_float_option("rlimit", optarg, &rlimit);
+			break;
+		case 's':
+			process_float_option("scatterfactor", optarg, &scatterfactor);
+			break;
+		case 'S':
+			process_int_option("seed", optarg, &random_seed);
+			break;
+		case 'w':
+			waterfile = optarg;
+			break;
+		default:
+			fprintf(stderr, "Unknown option '%s'\n", argv[option_index]);
+			usage();
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	float min, max;
 
-	sampledata = load_image("heightdata.png", &samplew, &sampleh, &samplea,
+	process_options(argc, argv);
+
+	snis_srand((unsigned int) random_seed);
+	sampledata = load_image(heightfile, &samplew, &sampleh, &samplea,
 					&sample_bytes_per_row);
-	land = load_image("land.png", &landw, &landh, &landa, &landbpr);
-	water = load_image("water.png", &waterw, &waterh, &watera, &waterbpr);
+	land = load_image(landfile, &landw, &landh, &landa, &landbpr);
+	water = load_image(waterfile, &waterw, &waterh, &watera, &waterbpr);
 	allocate_output_images();
 	initialize_vertices();
 	find_min_max_height(&min, &max);
-	add_bumps(60);
+	add_bumps(initial_bumps);
 	printf("total bumps = %d\n", totalbumps);
 	render_all_bumps();
 	find_min_max_height(&min, &max);
