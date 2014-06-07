@@ -768,7 +768,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "b:h:i:n:O:k:lo:r:s:S:w", long_options, &option_index);
+		c = getopt_long(argc, argv, "b:h:i:n:O:k:l:o:r:s:S:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
