@@ -795,6 +795,7 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'O':
 			process_float_option("oceanlevel", optarg, &sealevel);
+			break;
 		case 'r':
 			process_float_option("rlimit", optarg, &rlimit);
 			break;
