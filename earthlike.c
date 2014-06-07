@@ -14,6 +14,7 @@
 #include "simplexnoise1234.h"
 
 #define MAXBUMPS 100000
+#define MAXCRATERS 1000
 #define RADII (3.0f)
 static float sealevel = 0.08;
 
@@ -21,6 +22,7 @@ static char *landfile = "land.png";
 static char *waterfile = "water.png";
 static char *heightfile = "heightdata.png";
 static int nbumps = 3;
+static int ncraters = 0;
 static float scatterfactor = 1.8f;
 static float rlimit = 0.01;
 static int random_seed = 31415;
@@ -34,7 +36,7 @@ static struct bump {
 	int tx, ty; /* origin of texel region in sample data */
 	int tr; /* radius of texel region in sample data */
 	float ts; /* scaling factor to get from 3d dist to texel dist */
-} bumplist[MAXBUMPS];
+} bumplist[MAXBUMPS], craterlist[MAXCRATERS];
 static int totalbumps = 0;
 
 #define DIM 1024
@@ -51,6 +53,7 @@ static char *normal_file_prefix = "normalmap";
 static char *sampledata;
 static int samplew, sampleh, samplea, sample_bytes_per_row;
 static float minn, maxn; /* min and max noise values encountered */
+static float crater_min_height, crater_max_height;
 
 static inline float fbmnoise4(float x, float y, float z)
 {
@@ -155,6 +158,54 @@ static inline void distort_vertex(union vec3 *v, float d, struct bump *b)
 	vec3_add_self(v, &distortion);
 }
 
+static inline void crater_vertex(union vec3 *v, float d, struct bump *b)
+{
+	union vec3 distortion;
+	const float r = b->r;
+	const float r1 = b->r * 0.80;
+	const float r2 = b->r * 0.75;
+
+	vec3_normalize(&distortion, v);
+	if (d <= r2) { /* Central part of crater, just flatten it. */
+		vec3_mul(v, &distortion, crater_min_height);
+		return;
+	}
+	if (d <= r1) { /* Inner crater wall... */
+		const float p = (d - r2) / (r1 - r2);
+		const float a = p * M_PI;
+		const float h = (0.5f - 0.5f * cosf(a)) * b->h;
+		const float oh = vec3_magnitude(v);
+		float m;
+		//const float m = p * (vec3_magnitude(v) - 1.0f) + h;
+		//printf("h = %f\n", 1.0f + h);
+		//if (1.0f + h < oh)
+		if (crater_min_height + h < oh)
+			m = oh;
+		else
+			m = crater_min_height + h;
+		vec3_mul(v, &distortion, m);
+		return;
+	}
+	if (d <= r) {
+		/* Outer crater wall */
+		const float p = (d - r1) / (r - r1);
+		const float a = p * M_PI;
+		const float h = (0.5f + 0.5 * cosf(a)) * b->h;
+		//const float m = p * (vec3_magnitude(v) - 1.0f) + h;
+		const float oh = vec3_magnitude(v);
+		float m;
+		//printf("oh = %f, h = %f\n", oh, h);
+		//m = h;
+		m = h;
+		if (crater_min_height + h < oh)
+			m = oh;
+		else
+			m = crater_min_height + h;
+		vec3_mul(v, &distortion, m);
+		return;
+	}
+}
+
 struct thread_info {
 	pthread_t thread;
 	int f;
@@ -195,6 +246,39 @@ static void *render_bumps_on_face_fn(void *info)
 	return NULL;
 }
 
+static void *render_craters_on_face_fn(void *info)
+{
+	int f, i, j, k;
+	union vec3 p, *p2;
+	float d2, d;
+	struct bump *b;
+	struct thread_info *t = info;
+
+	f = t->f;
+
+	for (i = 0; i < DIM; i++) {
+		if (i % (DIM / 8) == 0) {
+			printf("%d", f);
+			fflush(stdout);
+		}
+		for (j = 0; j < DIM; j++) {
+			p = fij_to_xyz(f, i, j, DIM);
+			for (k = 0; k < ncraters; k++) {
+				b = &craterlist[k];
+				p2 = &b->p;
+				d2 = (p.v.x - p2->v.x) * (p.v.x - p2->v.x) +
+					(p.v.y - p2->v.y) * (p.v.y - p2->v.y) +
+					(p.v.z - p2->v.z) * (p.v.z - p2->v.z);
+				if (d2 > b->r * b->r)
+					continue;
+				d = sqrtf(d2);
+				crater_vertex(&vertex[f][i][j], d, b);
+			}
+		}
+	}
+	return NULL;
+}
+
 static void multithread_face_render(render_on_face_fn render)
 {
 	int rc, f;
@@ -218,7 +302,16 @@ static void multithread_face_render(render_on_face_fn render)
 
 static void render_all_bumps(void)
 {
-	multithread_face_render(render_bumps_on_face_fn);
+	if (totalbumps > 0)
+		multithread_face_render(render_bumps_on_face_fn);
+}
+
+static void render_all_craters(float min, float max)
+{
+	crater_min_height = min;
+	crater_max_height = max;
+	if (ncraters > 0)
+		multithread_face_render(render_craters_on_face_fn);
 }
 
 static void add_bump(union vec3 p, float r, float h)
@@ -245,7 +338,28 @@ static void add_bump(union vec3 p, float r, float h)
 	quat_from_u2v(&b->texelq, &p, &right_at_ya, &up);
 	totalbumps++;
 }
-	
+
+static void add_crater(int i, union vec3 p, float r, float h)
+{
+	struct bump *b;
+	const union vec3 right_at_ya = { { 0.0f, 0.0f, 1.0f } };
+	const union vec3 up = { { 0.0f, 1.0f, 0.0f } };
+
+	b = &craterlist[i];
+	b->p = p;
+	b->r = r;
+	b->h = h;
+	b->tx = (int) ((float) samplew / RADII + 0.5 * snis_random_float() *
+			(RADII - 2.0f) / RADII * (float) samplew);
+	b->ty = (int) ((float) sampleh / RADII + 0.5 * snis_random_float() *
+			(RADII - 2.0f) / RADII * (float) sampleh);
+	if (samplew < sampleh)
+		b->ts = samplew / RADII;
+	else
+		b->ts = sampleh / RADII;
+	quat_from_u2v(&b->texelq, &p, &right_at_ya, &up);
+}
+
 static void recursive_add_bump(union vec3 pos, float r, float h,
 				float shrink, float rlimit)
 {
@@ -278,6 +392,20 @@ static void add_bumps(const int nbumps)
 		recursive_add_bump(p, r, 0.10, shrink_factor, rlimit);
 		printf(".");
 		fflush(stdout);
+	}
+}
+
+static void add_craters(const int nc)
+{
+	int i;
+
+	for (i = 0; i < nc; i++) {
+		float r = 0.5 * (snis_random_float() + 1.0f);
+		float r2 = 0.5 * (snis_random_float() + 1.0f);
+		r = r * r2 * 0.1;
+		union vec3 p;
+		random_point_on_sphere(1.0, &p.v.x, &p.v.y, &p.v.z);
+		add_crater(i, p, r, 0.005f);
 	}
 }
 
@@ -710,6 +838,7 @@ static void calculate_normals(void)
 
 static struct option long_options[] = {
 	{ "bumps", required_argument, NULL, 'b' },
+	{ "craters", required_argument, NULL, 'c' },
 	{ "height", required_argument, NULL, 'h' },
 	{ "ibumps", required_argument, NULL, 'i' },
 	{ "land", required_argument, NULL, 'l' },
@@ -730,6 +859,7 @@ static void usage(void)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "   -b, bumps : number of bumps in recursive bump placement, default = 3\n");
+	fprintf(stderr, "   -c, craters : number of craters to add.\n");
 	fprintf(stderr, "   -h, height : png file containing height map data to sample for terrain\n");
 	fprintf(stderr, "   -k, shrink : factor to shrink each recursive iteration.  Default is 0.55\n");
 	fprintf(stderr, "   -l, land : png file containing land color data to sample for terrain\n");
@@ -775,12 +905,19 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "b:h:i:n:O:k:l:o:r:s:S:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "b:c:h:i:n:O:k:l:o:r:s:S:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
 		case 'b':
 			process_int_option("bumps", optarg, &nbumps);
+			break;
+		case 'c':
+			process_int_option("craters", optarg, &ncraters);
+			if (ncraters < 0)
+				ncraters = 0;
+			if (ncraters > MAXCRATERS)
+				ncraters = MAXCRATERS;
 			break;
 		case 'h':
 			heightfile = optarg;
@@ -837,8 +974,10 @@ int main(int argc, char *argv[])
 	initialize_vertices();
 	find_min_max_height(&min, &max);
 	add_bumps(initial_bumps);
+	add_craters(ncraters);
 	printf("total bumps = %d\n", totalbumps);
 	render_all_bumps();
+	render_all_craters(min, max);
 	find_min_max_height(&min, &max);
 	printf("min h = %f, max h = %f\n", min, max);
 	paint_height_maps(min, max);
