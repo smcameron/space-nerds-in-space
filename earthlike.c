@@ -160,6 +160,8 @@ struct thread_info {
 	int f;
 };
 
+typedef void *(*render_on_face_fn)(void *info);
+
 static void *render_bumps_on_face_fn(void *info)
 {
 	int f, i, j, k;
@@ -193,7 +195,7 @@ static void *render_bumps_on_face_fn(void *info)
 	return NULL;
 }
 
-static void render_all_bumps(void)
+static void multithread_face_render(render_on_face_fn render)
 {
 	int rc, f;
 	void *status;
@@ -201,7 +203,7 @@ static void render_all_bumps(void)
 
 	for (f = 0; f < 6; f++) {
 		t[f].f = f;
-		rc = pthread_create(&t[f].thread, NULL, render_bumps_on_face_fn, &t[f]);
+		rc = pthread_create(&t[f].thread, NULL, render, &t[f]);
 		if (rc)
 			fprintf(stderr, "%s: pthread_create failed: %s\n",
 					__func__, strerror(errno));
@@ -212,6 +214,11 @@ static void render_all_bumps(void)
 			fprintf(stderr, "%s: pthread_join failed: %s\n",
 				__func__, strerror(errno));
 	}
+}
+
+static void render_all_bumps(void)
+{
+	multithread_face_render(render_bumps_on_face_fn);
 }
 
 static void add_bump(union vec3 p, float r, float h)
