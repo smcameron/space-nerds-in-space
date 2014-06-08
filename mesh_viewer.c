@@ -32,6 +32,8 @@
 
 static int real_screen_width;
 static int real_screen_height;
+static int wireframe = 0;
+static int oldwireframe = 0;
 
 static int display_frame_stats = 1;
 
@@ -129,6 +131,9 @@ static void handle_key_down(SDL_keysym *keysym)
 	case SDLK_PAUSE:
 		display_frame_stats = (display_frame_stats + 1) % 3;
 		break;
+	case SDLK_r:
+		oldwireframe = wireframe;
+		wireframe = !wireframe;
 	default:
 		break;
 	}
@@ -339,6 +344,14 @@ static void draw_screen()
 	static struct entity_context *cx;
 	if (!cx)
 		cx = entity_context_new(50, 50);
+
+	if (wireframe != oldwireframe) {
+		oldwireframe = wireframe;
+		if (wireframe)
+			set_renderer(cx, WIREFRAME_RENDERER | BLACK_TRIS);
+		else
+			set_renderer(cx, FLATSHADING_RENDERER);
+	}
 
 	float r = target_mesh->radius / tan(FOV / 3.0); /* 50% size for middle zoom */
 	float r_cam = r * lobby_zoom / 255.0;
