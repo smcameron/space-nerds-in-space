@@ -24,7 +24,7 @@ static char *heightfile = "heightdata.png";
 static int nbumps = 3;
 static int ncraters = 0;
 static float scatterfactor = 1.8f;
-static float rlimit = 0.01;
+static float rlimit = 0.005;
 static int random_seed = 31415;
 static float shrink_factor = 0.55;
 static int initial_bumps = 60;
@@ -867,7 +867,7 @@ static void usage(void)
 	fprintf(stderr, "   -o, output : filename prefix for output images, default is 'heightmap'\n");
 	fprintf(stderr, "   -O, oceanlevel : set sealevel, default is 0.08\n");
 	fprintf(stderr, "   -r, rlimit : limit to how small bumps may get before stopping recursion\n");
-	fprintf(stderr, "                default rlimit is 0.01\n");
+	fprintf(stderr, "                default rlimit is 0.005\n");
 	fprintf(stderr, "   -s, scatter : float amount to scatter bumps, default = 1.8 * radius\n");
 	fprintf(stderr, "   -S, seed : set initial random seed.  Default is 31415\n");
 	fprintf(stderr, "   -w, water : png file containing water color data to sample for oceans\n");
