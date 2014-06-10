@@ -477,7 +477,7 @@ static void color_output(int f, int p, float r, float n)
 
 
 	if (r > sealevel) {
-		y = r / (1.0 - sealevel);
+		y = (r - sealevel) / (1.0 - sealevel);
 		colorindex = (int) (y * landh);
 		colorindex = colorindex * landbpr;
 		colorindex = colorindex + 3 * (int) (n * landw);
