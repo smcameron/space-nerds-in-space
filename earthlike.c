@@ -233,9 +233,16 @@ static void *render_bumps_on_face_fn(void *info)
 			for (k = 0; k < totalbumps; k++) {
 				b = &bumplist[k];
 				p2 = &b->p;
-				d2 = (p.v.x - p2->v.x) * (p.v.x - p2->v.x) +
-					(p.v.y - p2->v.y) * (p.v.y - p2->v.y) +
-					(p.v.z - p2->v.z) * (p.v.z - p2->v.z);
+				float dx = fabs(p.v.x - p2->v.x);
+				if (dx > b->r)
+					continue;
+				float dy = fabs(p.v.y - p2->v.y);
+				if (dy > b->r)
+					continue;
+				float dz = fabs(p.v.z - p2->v.z);
+				if (dz > b->r)
+					continue;
+				d2 = dx * dx + dy * dy + dz * dz;
 				if (d2 > b->r * b->r)
 					continue;
 				d = sqrtf(d2);
@@ -266,9 +273,16 @@ static void *render_craters_on_face_fn(void *info)
 			for (k = 0; k < ncraters; k++) {
 				b = &craterlist[k];
 				p2 = &b->p;
-				d2 = (p.v.x - p2->v.x) * (p.v.x - p2->v.x) +
-					(p.v.y - p2->v.y) * (p.v.y - p2->v.y) +
-					(p.v.z - p2->v.z) * (p.v.z - p2->v.z);
+				float dx = fabs(p.v.x - p2->v.x);
+				if (dx > b->r)
+					continue;
+				float dy = fabs(p.v.y - p2->v.y);
+				if (dy > b->r)
+					continue;
+				float dz = fabs(p.v.z - p2->v.z);
+				if (dz > b->r)
+					continue;
+				d2 = dx * dx + dy * dy + dz * dz;
 				if (d2 > b->r * b->r)
 					continue;
 				d = sqrtf(d2);
