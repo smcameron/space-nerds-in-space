@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  
+  <!--[if lt IE 9]>
+  <script src="../lib/html5shim.js"></script>
+  <![endif]-->  
+  
+  <!-- These are some core styles the slideshow app requires -->
+  <link rel="stylesheet" href="../lib/styles.css" />
+  
+  <!-- These are the styles you'll add to make the slides look great -->
+  <link rel="stylesheet" href="css/styles.css" />
+  
+  <title>Procedurally Generating Earthlike Planets</title>
+</head>
+<body>
+  <header>
+    <h1>Procedurally Generating Earthlike Planets</h1>
+    <nav>
+      <ul>
+        <li><button id="prev-btn" title="Previous slide">Previous Slide</button></li>
+        <li><span id="slide-number"></span>/<span id="slide-total"></span></li>
+        <li><button id="next-btn" title="Next Slide">Next Slide</button></li>
+      </ul>
+    </nav>
+  </header>
+  <div id="deck">
+    
+    <!-- Begin slides -->
+    <section>
+      <hgroup>
+        <h1>Procedural Generation of Earth-like Planets</h1>
+	<p>Use arrow keys to navigate slideshow, and press F11 for fullscreen
+        <p><img src="http://i.imgur.com/ndGZCnm.png">
+      </hgroup>
+    </section>
+
+<section>
+<hgroup>
+<h1>Output: 
+<h2>six images for use as cube map
+<h2>six images representing normal map
+<p align=center>
+<table border="2">
+<tr>
+<td> </td>
+<td> </td>
+<td><p align=center>.<img src="small-heightmap4.png"></td>
+<td> </td>
+<td> </td>
+<td> </td>
+<td> </td>
+<td> </td>
+</tr>
+<tr>
+<td><p align=center><img src="small-heightmap0.png"></td>
+<td> </td>
+<td><p align=center><img src="small-heightmap1.png"></td>
+<td> </td>
+<td><p align=center><img src="small-heightmap2.png"></td>
+<td> </td>
+<td><p align=center><img src="small-heightmap3.png"></td>
+<td> </td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td><p align=center><img src="small-heightmap5.png"></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>.</td>
+<td>.</td>
+<td>.</td>
+<td>.</td>
+<td>.</td>
+<td>.</td>
+<td>.</td>
+<td>.</td>
+</tr>
+</table>
+</hgroup>
+</section>
+
+    <section>
+    <hgroup>
+    <h1>Data Representation</h1>
+    <h2>Sphere is represented as 6 square arrays of 3d vectors
+    <h2>Imagine a cube overinflated until it is a sphere.
+    <h2>Each element in the array contains a 3d vector that represents the terrain elevation at a particular point on the sphere.
+    <p><align=center><img src="cubemap.png">
+    </hgroup>
+    </section>
+
+    <section>
+      <hgroup>
+        <h1>Recursively add "bumps"</h1>
+        <h2>Start with sphere represented by 6 square arrays of normalized vectors</h2>
+        <h2>Choose radius and location for bump (<a href="http://mathworld.wolfram.com/SpherePointPicking.html">Marsaglia 1972 rejection method</a>)</h2>
+	<h2>Use 0.5 + 0.5 * cosine(x) as bump profile, where x is distance
+from bump center scaled into range 0 - Pi</h2>
+	<h2>vector lengths representing elevation are adjusted to make the bumps
+	<p align=center><img src="cosine.png"></p>
+	<p align=center>0.5 + 0.5 * cos(x) in the range of -Pi to Pi</p>
+      </hgroup>
+    </section>
+    <section>
+      <hgroup>
+        <h1>Bumps are recursively added</h1>
+        <h2>Each bump has smaller "sub-bumps" distributed around it, likely overlapping</h2>
+        <h2>The "sub-bumps" have sub-sub-bumps, and so on.</h2>
+	<p align=center><img src="recursive-bump.png">
+      </hgroup>
+    </section>
+
+<section>
+<hgroup>
+<h1>Modulate bumps with real terrain data...
+<p align=center><img src="heightdata.png">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Modulate bumps with real terrain data...
+<h2>Each bump has a vector defining its position on the surface of the sphere
+<h2>Compute quaternion to rotate bump to "front and center"
+<h2>For each point within the "bump", apply this quaternion
+<h2>Then the (x,y) components can be used directly (after scaling and offsetting)
+to index terrain data.
+<p align=center><table>
+<tr><td>
+<p align=center><img src="rotate-sphere.gif">
+</td>
+<td>
+<p align=center><img src="terrain-sample.png">
+</td>
+</tr>
+</table></p>
+<h2>Since 0.5 + 0.5 * cos(x) approaches zero at the edges of the "bump",
+repeatedly applying such modulated terrain fades things together nicely.
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Next, craters are optionally added.
+<h2>Similar to "bumps" except:
+<h2>Different profile
+<h2>No terrain sampling
+<h2>Still needs some work.
+<p align=center><img src="crater-profile.png">
+<p align=center>Abusing cosine some more
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Next, heightmap data is painted into 6 temporary images
+<p align=center><img src="height-map-tmp.png">
+<h2>Height is scaled into the range 0 - 255, and RGB channels
+are set to height.  This produces grayscale images where intensity
+is proportional to altitude.
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>From the heightmap, normal map images can be calculated.
+<p align=center><img src="calculating-normals.png">
+<h2>From adjacent pixels, (brightness == height) calculate dh/dx and dh/dy.
+<h2>From dh/dx and dh/dy, calculate the normal vector:
+<pre>
+        x = dh/dx / 127.0f + 0.5;
+        y = dh/dy / 127.0f + 0.5;
+        z = 1.0f;
+</pre>
+<h2>Note: if you want oceans, just check height against an arbitrarily
+chosen "sea level" and if below sea level, the normal is simply set to
+be straight out from the center of the planet.
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Convert normal vectors into images
+<h2>Encode each vector's x,y,z component into a pixel's red, green, and blue channels, respectively
+<pre>
+	red = normal.x * 255;
+	green = normal.y * 255;
+	blue = normal.z * 255;
+</pre>
+<p align=center><img src="normalmap-example.png">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Next, real image colors need to be computed.
+<h2>Simply mapping altitude to colors directly is unsatisfactory
+<h2>For each vertex, an fBm noise value is calculated
+<h2>Using altitude for one axis, and this fBm noise value for the 2nd
+axis, we can index into 2D source images for land and water for above
+and below sea-level cases, respectively.
+<p align=center><img src="terrain-color.png"
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>This gets us something like this:
+<p align=center><img src="earthlike-sample.png">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>What about clouds?
+<h2>Clouds are hard
+<h2>fBm noise, simplex noise, Perlin noise by themselves are not satisfactory
+<h2>Need to look into Worley noise
+<h2>How to generate something like what is below?  I have no good idea.
+<p align=center><img src="difficult-clouds.jpg">  
+</hgroup>
+</section>
+
+<section>
+<h1>Clouds.... let's cheat
+<h2>Sample NASA cloud image directly
+<h2>After modifying to black and white, boosting contrast, and treating intensity as opacity
+<h2>Modify gaseous-giganticus to have a "cloud mode"
+<h2>Cloud mode samples the provided cloud image much as the "bumps" sample the terrain data
+<h2>Combines with perlin noise
+<p align=center><img src="cloud-world.png">
+<hgroup>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Composite cloud images with terrain images, et voila!
+<p align=center><img src="cloudy-earthlike.png">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Using no sea-level, craters, and different terrain sample images, we
+can make moon-like planets:
+<p align=center><img src="moonlike.png">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Some craters...
+<p align=center><img src="cratered-normal-map.png">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Links:
+<ul>
+<li> <a href="https://github.com/smcameron/space-nerds-in-space">https://github.com/smcameron/space-nerds-in-space</a>
+</ul>
+</hgroup>
+</section>
+
+
+
+    <!-- /End slides -->
+    
+  </div>
+  <!-- /deck -->
+  <script src="../lib/jquery-1.5.2.min.js"></script>
+  <script src="../lib/jquery.jswipe-0.1.2.js"></script>  
+  <script src="../lib/htmlSlides.js"></script>
+  <script>
+    //Do our business when the DOM is ready for us
+    $(function() {
+      
+      //You can trigger Javascript based on the slide number like this:
+      $('html').bind('newSlide', function(e, id) { 
+        switch(id) {
+          case 2:
+            console.log('This is the second slide.');;
+            break;
+          case 3:
+            console.log('Hello, third slide.');
+            break;
+        }
+      });
+
+      //One little option: hideToolbar (boolean; default = false)
+      htmlSlides.init({ hideToolbar: true });
+      
+    });
+  </script>
+  </body>
+</html>
