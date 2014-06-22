@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <pthread.h>
 #include <getopt.h>
+#include <locale.h>
 
 #include "mtwist.h"
 #include "mathutils.h"
@@ -977,6 +978,7 @@ int main(int argc, char *argv[])
 {
 	float min, max;
 
+	setlocale(LC_ALL, "");
 	process_options(argc, argv);
 
 	snis_srand((unsigned int) random_seed);

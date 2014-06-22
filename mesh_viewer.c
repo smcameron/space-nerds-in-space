@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <limits.h>
+#include <locale.h>
 
 #include "mtwist.h"
 #include "vertex.h"
@@ -487,6 +488,7 @@ int main(int argc, char *argv[])
 	char *filename, *program, *planetname;
 	struct stat statbuf;
 
+	setlocale(LC_ALL, "");
 	program = argc >= 0 ? argv[0] : "mesh_viewer";
 
 	if (argc < 2)

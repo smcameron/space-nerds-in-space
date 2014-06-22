@@ -26,6 +26,7 @@
 #include <inttypes.h>
 #include <ctype.h>
 #include <sys/types.h>
+#include <locale.h>
 #if !defined(__APPLE__) && !defined(__FreeBSD__)
 /* Apple gets what it needs for malloc from stdlib.h */
 #include <malloc.h>
@@ -12481,17 +12482,22 @@ static void set_random_seed(void)
 	mtwist_seed = (uint32_t) i;
 }
 
-int main(int argc, char *argv[])
+static void take_your_locale_and_shove_it(void)
 {
-	GtkWidget *vbox;
-	int i;
-
 	/* Need this so that fscanf reads floats properly. */
 #define LOCALE_THAT_WORKS "en_US.UTF-8"
 	if (setenv("LANG", LOCALE_THAT_WORKS, 1) <  0)
 		fprintf(stderr, "Failed to setenv LANG to '%s'\n",
 			LOCALE_THAT_WORKS);
+	setlocale(LC_ALL, "");
+}
 
+int main(int argc, char *argv[])
+{
+	GtkWidget *vbox;
+	int i;
+
+	take_your_locale_and_shove_it();
 	set_random_seed();
 
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
@@ -12615,7 +12621,7 @@ int main(int argc, char *argv[])
 	sng_set_extent_size(SCREEN_WIDTH, SCREEN_HEIGHT);
 	sng_set_screen_size(real_screen_width, real_screen_height);
 
-	gtk_set_locale();
+	/* gtk_set_locale();  The setlocale() above takes care of this. */
 	gtk_init (&argc, &argv);
 
 	init_keymap();

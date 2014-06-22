@@ -28,6 +28,7 @@
 #include <limits.h>
 #include <pthread.h>
 #include <getopt.h>
+#include <locale.h>
 
 #include <png.h>
 
@@ -1130,6 +1131,7 @@ int main(int argc, char *argv[])
 	int last_imaged_iteration = -1;
 	particle_count = NPARTICLES;
 
+	setlocale(LC_ALL, "");
 	noise_scale = default_noise_scale;
 
 	process_options(argc, argv);

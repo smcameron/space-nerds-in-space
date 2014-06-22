@@ -47,6 +47,7 @@
 #include <lualib.h>
 #include <lauxlib.h>
 #include <assert.h>
+#include <locale.h>
 
 #include "container-of.h"
 #include "string-utils.h"
@@ -10886,16 +10887,22 @@ static void set_random_seed(void)
 	mtwist_seed = (uint32_t) i;
 }
 
-int main(int argc, char *argv[])
+static void take_your_locale_and_shove_it(void)
 {
-	int port, rc, i;
-	struct timespec thirtieth_second;
-
 	/* need this so that fscanf can read floats properly */
 #define LOCALE_THAT_WORKS "en_US.UTF-8"
 	if (setenv("LANG", LOCALE_THAT_WORKS, 1) < 0)
 		fprintf(stderr, "Failed to setenv LANG to '%s'\n",
 				LOCALE_THAT_WORKS);
+	setlocale(LC_ALL, "");
+}
+
+int main(int argc, char *argv[])
+{
+	int port, rc, i;
+	struct timespec thirtieth_second;
+
+	take_your_locale_and_shove_it();
 	if (argc < 5) 
 		usage();
 
