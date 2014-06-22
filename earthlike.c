@@ -978,7 +978,7 @@ int main(int argc, char *argv[])
 {
 	float min, max;
 
-	setlocale(LC_ALL, "");
+	setlocale(LC_ALL, "C");
 	process_options(argc, argv);
 
 	snis_srand((unsigned int) random_seed);

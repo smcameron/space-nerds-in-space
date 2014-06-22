@@ -488,7 +488,7 @@ int main(int argc, char *argv[])
 	char *filename, *program, *planetname;
 	struct stat statbuf;
 
-	setlocale(LC_ALL, "");
+	setlocale(LC_ALL, "C");
 	program = argc >= 0 ? argv[0] : "mesh_viewer";
 
 	if (argc < 2)

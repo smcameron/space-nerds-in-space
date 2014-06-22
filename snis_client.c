@@ -12485,11 +12485,11 @@ static void set_random_seed(void)
 static void take_your_locale_and_shove_it(void)
 {
 	/* Need this so that fscanf reads floats properly. */
-#define LOCALE_THAT_WORKS "en_US.UTF-8"
+#define LOCALE_THAT_WORKS "C"
 	if (setenv("LANG", LOCALE_THAT_WORKS, 1) <  0)
 		fprintf(stderr, "Failed to setenv LANG to '%s'\n",
 			LOCALE_THAT_WORKS);
-	setlocale(LC_ALL, "");
+	setlocale(LC_ALL, "C");
 }
 
 int main(int argc, char *argv[])
