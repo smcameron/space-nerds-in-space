@@ -3,6 +3,10 @@ bline.o: bline.h
 commodities.o: commodities.h
 commodities.o: string-utils.h
 # DO NOT DELETE
+earthlike.o: mathutils.h
+earthlike.o: mtwist.h
+earthlike.o: quat.h
+earthlike.o: simplexnoise1234.h
 entity.o: entity.h
 entity.o: entity_private.h
 entity.o: graph_dev.h
@@ -23,6 +27,10 @@ entity.o: vertex.h
 fleet.o: fleet.h
 fleet.o: mtwist.h
 fleet.o: quat.h
+gaseous-giganticus.o: mathutils.h
+gaseous-giganticus.o: mtwist.h
+gaseous-giganticus.o: quat.h
+gaseous-giganticus.o: simplexnoise1234.h
 graph_dev_gdk.o: entity.h
 graph_dev_gdk.o: entity_private.h
 graph_dev_gdk.o: graph_dev.h
@@ -79,6 +87,7 @@ mesh.o: quat.h
 mesh.o: snis_graph.h
 mesh.o: triangle.h
 mesh.o: vertex.h
+mesh_viewer.o: build_info.h
 mesh_viewer.o: entity.h
 mesh_viewer.o: graph_dev.h
 mesh_viewer.o: material.h
@@ -104,6 +113,7 @@ quat.o: mtwist.h
 quat.o: quat.h
 shader.o: shader.h
 shield_strength.o: shield_strength.h
+simplexnoise1234.o: simplexnoise1234.h
 snis_alloc.o: snis_alloc.h
 snis_alloc.o: stacktrace.h
 snis_button.o: my_point.h
@@ -113,6 +123,7 @@ snis_button.o: snis_graph.h
 snis_button.o: snis_typeface.h
 snis_client.o: bline.h
 snis_client.o: build_bug_on.h
+snis_client.o: build_info.h
 snis_client.o: damcon-robot-points.h
 snis_client.o: entity.h
 snis_client.o: graph_dev.h
@@ -143,6 +154,7 @@ snis_client.o: share/snis/models/skorpio.scad_params.h
 snis_client.o: share/snis/models/spaceship2.scad_params.h
 snis_client.o: share/snis/models/spaceship.scad_params.h
 snis_client.o: share/snis/models/swordfish.scad_params.h
+snis_client.o: share/snis/models/tanker.scad_params.h
 snis_client.o: share/snis/models/vanquisher.scad_params.h
 snis_client.o: share/snis/models/wombat.scad_params.h
 snis_client.o: shield_strength.h
@@ -209,6 +221,7 @@ snis_label.o: snis_label.h
 snis_label.o: snis_typeface.h
 snis_limited_client.o: bline.h
 snis_limited_client.o: build_bug_on.h
+snis_limited_client.o: build_info.h
 snis_limited_client.o: damcon-robot-points.h
 snis_limited_client.o: entity.h
 snis_limited_client.o: graph_dev.h
@@ -239,6 +252,7 @@ snis_limited_client.o: share/snis/models/skorpio.scad_params.h
 snis_limited_client.o: share/snis/models/spaceship2.scad_params.h
 snis_limited_client.o: share/snis/models/spaceship.scad_params.h
 snis_limited_client.o: share/snis/models/swordfish.scad_params.h
+snis_limited_client.o: share/snis/models/tanker.scad_params.h
 snis_limited_client.o: share/snis/models/vanquisher.scad_params.h
 snis_limited_client.o: share/snis/models/wombat.scad_params.h
 snis_limited_client.o: shield_strength.h
@@ -262,6 +276,7 @@ snis_limited_client.o: snis_text_input.h
 snis_limited_client.o: snis_text_window.h
 snis_limited_client.o: snis_typeface.h
 snis_limited_client.o: snis_ui_element.h
+snis_limited_client.o: snis_version.h
 snis_limited_client.o: sounds.h
 snis_limited_client.o: space-part.h
 snis_limited_client.o: ssgl/ssgl.h
@@ -283,6 +298,7 @@ snis_limited_graph.o: snis_graph.h
 snis_marshal.o: snis_marshal.h
 snis_marshal.o: stacktrace.h
 snis_server.o: build_bug_on.h
+snis_server.o: build_info.h
 snis_server.o: commodities.h
 snis_server.o: container-of.h
 snis_server.o: fleet.h
@@ -357,6 +373,7 @@ test-obj-parser.o: matrix.h
 test-obj-parser.o: mesh.h
 test-obj-parser.o: mtwist.h
 test-obj-parser.o: quat.h
+test-obj-parser.o: snis_graph.h
 test-obj-parser.o: stl_parser.h
 test-quat.o: mathutils.h
 test-quat.o: matrix.h

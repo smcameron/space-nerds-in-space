@@ -814,7 +814,8 @@ static struct thrust_attachment_point ship_thrust_attachment_points[] = {
 	#include "share/snis/models/freighter.scad_params.h"
 	,
 	/* tanker */
-	{ 0 }, /* no exhaust ports */
+	#include "share/snis/models/tanker.scad_params.h"
+	,
 	/* transport */
 	{ 0 }, /* no exhaust ports */
 	/* battlestar */
