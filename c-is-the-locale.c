@@ -48,8 +48,9 @@ char *setlocale(__attribute__((unused)) int category,
 		if (msg) {
 			fprintf(stderr, "Failed to override setlocale(): %s\n", msg);
 			fflush(stderr);
+			real_setlocale = NULL;
+			return the_only_locale;
 		}
-		return the_only_locale;
 	}
 	/* C is the locale, and the locale shall be C */
 	return real_setlocale(LC_ALL, "C");
