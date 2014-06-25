@@ -12283,17 +12283,28 @@ static struct mesh *snis_read_model(char *directory, char *filename)
 {
 	char path[PATH_MAX];
 	int l = strlen(filename);
+	struct mesh *m;
 
 	sprintf(path, "%s/models/%s", directory, filename);
 	if (strcasecmp(&filename[l - 3], "obj") == 0)
-		return read_obj_file(path);
+		m = read_obj_file(path);
 	else if (strcasecmp(&filename[l - 3], "stl") == 0)
-		return read_stl_file(path);
+		m = read_stl_file(path);
 	else {
 		printf("bad path '%s', filename='%s', filename[l - 3] = '%s'\n",
 			path, filename, &filename[l - 4]);
-		return NULL;
+		m = NULL;
 	}
+	if (!m) {
+		printf("Failed to read model from file '%s'\n", path);
+		printf("Assume form of . . . A SPHERICAL COW!\n");
+		m = mesh_unit_icosphere(3);
+		if (!m)
+			printf("...or possibly a spherical cow dump!\n");
+		else
+			mesh_scale(m, 20.0f);
+	}
+	return m;
 }
 
 static struct mesh *make_derelict_mesh(struct mesh *source)
