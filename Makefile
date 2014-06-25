@@ -264,7 +264,7 @@ SDLCFLAGS:=$(shell pkg-config sdl --cflags)
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o mtwist.o infinite-taunt.o snis_damcon_systems.o \
-		string-utils.o
+		string-utils.o c-is-the-locale.o
 SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o
@@ -596,6 +596,9 @@ mtwist.o:	mtwist.c Makefile
 	$(Q)$(COMPILE)
 
 fleet.o:	fleet.c Makefile
+	$(Q)$(COMPILE)
+
+c-is-the-locale.o:	c-is-the-locale.c
 	$(Q)$(COMPILE)
 
 commodities.o:	commodities.c Makefile
