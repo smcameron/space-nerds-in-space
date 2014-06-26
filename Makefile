@@ -280,7 +280,7 @@ LIMCLIENTOBJS=${COMMONCLIENTOBJS} graph_dev_gdk.o snis_limited_graph.o snis_limi
 SDLCLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer.o
 
 SSGL=ssgl/libssglclient.a
-LIBS=-lGLEW -lGL -Lssgl -lssglclient -lrt -lm ${LUALIBS} ${PNGLIBS}
+LIBS=-lGLEW -lGL -Lssgl -lssglclient -lrt -ldl -lm ${LUALIBS} ${PNGLIBS}
 #
 # NOTE: if you get
 #
