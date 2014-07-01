@@ -221,6 +221,7 @@ static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
 static volatile int helpmodeline = 0;
 static volatile float weapons_camera_shake = 0.0f; 
+static volatile float main_camera_shake = 0.0f;
 static unsigned char camera_mode;
 
 struct client_network_stats {
@@ -4484,8 +4485,10 @@ static int process_ship_damage_packet(int do_damage_limbo)
 	go[i].tsd.ship.damage = damage;
 	go[i].tsd.ship.flames_timer = 15 * 30; /* 15 secs of possible flames */
 	pthread_mutex_unlock(&universe_mutex);
-	if (id == my_ship_id && do_damage_limbo) 
+	if (id == my_ship_id && do_damage_limbo) {
 		damage_limbo_countdown = 2;
+		main_camera_shake = 1.0;
+	}
 	return 0;
 }
 
@@ -5589,6 +5592,15 @@ static void show_mainscreen(GtkWidget *w)
 		cam_offset = desired_cam_offset;
 	else
 		vec3_lerp(&cam_offset, &cam_offset, &desired_cam_offset, 0.15);
+
+	if (main_camera_shake > 0.05) {
+		float ryaw, rpitch;
+
+		ryaw = main_camera_shake * ((snis_randn(100) - 50) * 0.025f) * M_PI / 180.0;
+		rpitch = main_camera_shake * ((snis_randn(100) - 50) * 0.025f) * M_PI / 180.0;
+		quat_apply_relative_yaw_pitch(&camera_orientation, ryaw, rpitch);
+		main_camera_shake = 0.7f * main_camera_shake;
+	}
 
 	cam_pos.v.x = o->x + cam_offset.v.x;
 	cam_pos.v.y = o->y + cam_offset.v.y;
