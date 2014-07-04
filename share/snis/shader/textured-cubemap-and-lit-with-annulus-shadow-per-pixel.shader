@@ -84,7 +84,9 @@ varying vec3 v_TexCoord;
 		return false;
 	}
 
+#if !defined(AMBIENT)
 	#define AMBIENT 0.1
+#endif
 
 	void main()
 	{

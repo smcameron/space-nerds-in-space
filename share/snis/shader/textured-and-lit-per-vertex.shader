@@ -12,6 +12,10 @@ varying vec2 v_TexCoord;
 	attribute vec3 a_Normal;   // Per-vertex normal information we will pass in.
 	attribute vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
 
+#if !defined(AMBIENT)
+#define AMBIENT 0.1
+#endif
+
 	void main()
 	{
 		// Transform the vertex into eye space.
@@ -25,7 +29,7 @@ varying vec2 v_TexCoord;
 
 		// Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
 		// pointing in the same direction then it will get max illumination.
-		float diffuse = max(0.1, dot(normal, light_dir));
+		float diffuse = max(AMBIENT, dot(normal, light_dir));
 
 		// Multiply the color by the illumination level. It will be interpolated across the triangle.
 		v_LightColor = vec3(diffuse);

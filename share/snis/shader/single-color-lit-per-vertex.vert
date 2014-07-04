@@ -12,6 +12,10 @@ attribute vec3 a_Normal;   // Per-vertex normal information we will pass in.
 
 varying vec3 v_Color;      // This will be passed into the fragment shader.
 
+#if !defined(AMBIENT)
+#define AMBIENT 0.1
+#endif
+
 void main()                // The entry point for our vertex shader.
 {
 	// Transform the vertex into eye space.
@@ -30,8 +34,8 @@ void main()                // The entry point for our vertex shader.
 	// mimic the original snis software render lighting
 	/* dot = (dot + 1.0) / 2.0; */
 
-	// give 10% ambient
-	float diffuse = max(dot, 0.1);
+	// ambient
+	float diffuse = max(dot, AMBIENT);
 
 	// Multiply the color by the illumination level. It will be interpolated across the triangle.
 	v_Color = u_Color * diffuse;

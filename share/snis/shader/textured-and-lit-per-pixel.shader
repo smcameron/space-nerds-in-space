@@ -1,7 +1,9 @@
 
 #define USE_SPECULAR 1
 
+#if !defined(AMBIENT)
 #define AMBIENT 0.1
+#endif
 
 #ifdef USE_CUBEMAP
 	#define TEX_SAMPLER samplerCube

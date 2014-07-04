@@ -21,7 +21,9 @@
 		Jeremy Van Grinsven
 */
 
+#if !defined(AMBIENT)
 #define AMBIENT 0.1
+#endif
 
 varying vec3 v_Position;
 varying vec3 v_Normal;

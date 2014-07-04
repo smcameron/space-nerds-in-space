@@ -2,6 +2,10 @@
 varying vec3 v_TexCoord;
 varying vec3 v_LightColor;
 
+#if !defined(AMBIENT)
+#define AMBIENT 0.1
+#endif
+
 #if defined(INCLUDE_VS)
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
 	uniform mat4 u_MVMatrix;   // A constant representing the combined model/view matrix.
@@ -24,7 +28,7 @@ varying vec3 v_LightColor;
 
 		// Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
 		// pointing in the same direction then it will get max illumination.
-		float diffuse = max(0.1, dot(normal, light_dir));
+		float diffuse = max(AMBIENT, dot(normal, light_dir));
 
 		// Multiply the color by the illumination level. It will be interpolated across the triangle.
 		v_LightColor = vec3(diffuse);

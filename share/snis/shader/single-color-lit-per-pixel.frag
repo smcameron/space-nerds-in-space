@@ -6,6 +6,10 @@ varying vec3 v_Position;       // Interpolated position for this fragment.
 varying vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
 varying vec3 v_Normal;         // Interpolated normal for this fragment.
 
+#if !defined(AMBIENT)
+#define AMBIENT 0.1
+#endif
+
 void main()
 {
 	// Get a lighting direction vector from the light to the vertex.
@@ -18,8 +22,8 @@ void main()
 	// mimic the original snis software render lighting
 	dot = (dot + 1.0) / 2.0;
 
-	// give 10% ambient light
-	float diffuse = max(dot, 0.1);
+	// ambient light
+	float diffuse = max(dot, AMBIENT);
 
 	// Multiply the color by the diffuse illumination level to get final output color.
 	gl_FragColor = vec4(v_Color * diffuse, 1.0);
