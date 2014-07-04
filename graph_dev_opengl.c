@@ -2538,7 +2538,7 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 				"single-color-lit-per-vertex.vert",
-				"single-color-lit-per-vertex.frag");
+				"single-color-lit-per-vertex.frag", NULL);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2636,7 +2636,7 @@ static void setup_filled_wireframe_shader(struct graph_dev_gl_filled_wireframe_s
 {
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
-					"wireframe_filled.vert", "wireframe_filled.frag");
+					"wireframe_filled.vert", "wireframe_filled.frag", NULL);
 
 	shader->viewport_id = glGetUniformLocation(shader->program_id, "Viewport");
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "ModelViewProjectionMatrix");
@@ -2659,7 +2659,7 @@ static void setup_trans_wireframe_shader(const char *basename, struct graph_dev_
 	snprintf(frag_filename, sizeof(frag_filename), "%s.frag", basename);
 
 	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename);
+	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename, NULL);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
@@ -2675,7 +2675,7 @@ static void setup_single_color_shader(struct graph_dev_gl_single_color_shader *s
 {
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
-				"single_color.vert", "single_color.frag");
+				"single_color.vert", "single_color.frag", NULL);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2688,7 +2688,7 @@ static void setup_single_color_shader(struct graph_dev_gl_single_color_shader *s
 static void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *shader)
 {
 	shader->program_id = load_shaders(shader_directory,
-				"per_vertex_color.vert", "per_vertex_color.frag");
+				"per_vertex_color.vert", "per_vertex_color.frag", NULL);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 
@@ -2700,7 +2700,7 @@ static void setup_line_single_color_shader(struct graph_dev_gl_line_single_color
 {
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
-				"line-single-color.vert", "line-single-color.frag");
+				"line-single-color.vert", "line-single-color.frag", NULL);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->viewport_id = glGetUniformLocation(shader->program_id, "u_Viewport");
@@ -2722,7 +2722,7 @@ static void setup_point_cloud_shader(const char *basename, struct graph_dev_gl_p
 	snprintf(frag_filename, sizeof(frag_filename), "%s.frag", basename);
 
 	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename);
+	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename, NULL);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2737,7 +2737,7 @@ static void setup_point_cloud_shader(const char *basename, struct graph_dev_gl_p
 static void setup_color_by_w_shader(struct graph_dev_gl_color_by_w_shader *shader)
 {
 	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory, "color_by_w.vert", "color_by_w.frag");
+	shader->program_id = load_shaders(shader_directory, "color_by_w.vert", "color_by_w.frag", NULL);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2756,7 +2756,7 @@ static void setup_color_by_w_shader(struct graph_dev_gl_color_by_w_shader *shade
 static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 {
 	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory, "skybox.vert", "skybox.frag");
+	shader->program_id = load_shaders(shader_directory, "skybox.vert", "skybox.frag", NULL);
 	glUseProgram(shader->program_id);
 
 	/* Get a handle for our "MVP" uniform */
@@ -2858,7 +2858,7 @@ static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle
 {
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
-				"textured-particle.vert", "textured-particle.frag");
+				"textured-particle.vert", "textured-particle.frag", NULL);
 	glUseProgram(shader->program_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");

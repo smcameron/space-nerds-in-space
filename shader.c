@@ -199,9 +199,10 @@ cleanup:
 }
 
 GLuint load_shaders(const char *shader_directory,
-		const char *vertex_file_path, const char *fragment_file_path)
+		const char *vertex_file_path, const char *fragment_file_path,
+		const char *defines)
 {
-	return load_concat_shaders(shader_directory, 0, 1, &vertex_file_path,
-					0, 1, &fragment_file_path);
+	return load_concat_shaders(shader_directory, defines, 1, &vertex_file_path,
+					defines, 1, &fragment_file_path);
 }
 
