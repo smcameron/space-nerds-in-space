@@ -1448,7 +1448,7 @@ static int update_derelict(uint32_t id, uint32_t timestamp, double x, double y, 
 
 static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, double z, double r, uint8_t government,
 				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring,
-				uint8_t security)
+				uint8_t security, uint16_t contraband)
 {
 	int i, m;
 	struct entity *e, *ring;
@@ -1498,6 +1498,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	go[i].tsd.planet.description_seed = dseed;
 	go[i].tsd.planet.security = security;
 	go[i].tsd.planet.radius = r;
+	go[i].tsd.planet.contraband = contraband;
 	return 0;
 }
 
@@ -4564,15 +4565,17 @@ static int process_update_planet_packet(void)
 	uint8_t government, tech_level, economy, security;
 	uint32_t dseed;
 	int hasring;
+	uint16_t contraband;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbbh", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
 			&dr, (int32_t) UNIVERSE_DIM,
-			&dseed, &government, &tech_level, &economy, &security);
+			&dseed, &government, &tech_level, &economy, &security,
+			&contraband);
 	if (rc != 0)
 		return rc;
 	hasring = (dr < 0);
@@ -4580,7 +4583,7 @@ static int process_update_planet_packet(void)
 		dr = -dr;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_planet(id, timestamp, dx, dy, dz, dr, government, tech_level,
-				economy, dseed, hasring, security);
+				economy, dseed, hasring, security, contraband);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

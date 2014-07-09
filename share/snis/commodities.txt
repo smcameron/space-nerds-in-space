@@ -12,17 +12,17 @@
 dubious metaphors, volumes, 3.0, 0.2, 1.0, 0.3, 0.1, -0.2
 spicy curry, barrels, 10.0, 0.2, 1.0, 0.2, 0.0, 0.0
 spiritual hogwash, pamphlets, 10.0, 0.2, 1.0, 0.2, 0.3, 0.0
-negative entropy, casks, 10.0, 0.2, 1.0, 0.2, 0.0, 0.2
+negative entropy, casks, 10.0, 0.2, 0.1, 0.2, 0.0, 0.2
 ethical theories, manifestos, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0
 wine, casks, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0
-racy novellas, tons, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0
+racy novellas, tons, 10.0, 0.2, 0.2, 0.2, 0.2, 0.0
 mysterious nostrums, vials, 10.0, 0.2, 1.0, 0.1, 0.0, -0.1
 accurate horoscopes, rolls, 10.0, 0.2, 1.0, 0.2, 0.05, -0.1
 cylindric diamacron, cylinders, 10.0, 0.2, 1.0, 0.3, 0.1, 0.05
-jakk, kilograms, 10.0, 0.2, 1.0, 0.3, 0.2, 0.0
+jakk, kilograms, 10.0, 0.2, 0.2, 0.3, 0.2, 0.0
 complicated art, flights, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2
 tax returns, manila folders, 10.0, 0.2, 1.0, 0.1, 0.2, 0.0
-suspect philosophical theories, monographs, 10.0, 0.2, 1.0, 0.1, 0.2, 0.0
+suspect philosophical theories, monographs, 10.0, 0.2, 0.2, 0.1, 0.2, 0.0
 teakettles, crates, 10.0, 0.2, 1.0, 0.0, 0.0, -0.1
 legal documents, volumes, 10.0, 0.2, 1.0, 0.1, 0.1, 0.1
 recreational drugs, kilos, 10.0, 0.2, 1.0, 0.3, 0.3, 0.0
@@ -57,13 +57,13 @@ scrap metal, tons, 10.0, 0.2, 1.0, 0.3, 0.0, 0.2
 iron ore, tons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0
 thorium ore, tons, 10.0, 0.2, 1.0, 0.2, 0.0, 0.2
 bauxite, tons, 10.0, 0.2, 1.0, 0.2, 0.0, 0.2
-skittlebrau, kegs, 10.0, 0.2, 1.0, 0.2, 0.1, 0.0
+skittlebrau, kegs, 10.0, 0.2, 0.2, 0.2, 0.1, 0.0
 peanuts, pkgs, 10.0, 0.2, 1.0, 0.02, 0.0, 0.04
 beer, kegs, 10.0, 0.2, 1.0, 0.2, 0.0, 0.1
 Champagne, bottles, 10.0, 0.2, 1.0, 0.2, 0.2, 0.1
 vodka, bottles, 10.0, 0.2, 1.0, 0.1, 0.2, 0.1
 whiskey, barrels, 10.0, 0.2, 1.0, 0.3, 0.1, 0.1
-distilling equipment, tons, 10.0, 0.2, 1.0, 0.1, 0.3, 0.2
+distilling equipment, tons, 10.0, 0.2, 0.2, 0.1, 0.3, 0.2
 textiles, tons, 10.0, 0.2, 1.0, 0.05, 0.05, 0.05
 dried pasta, tons, 10.0, 0.2, 1.0, 0.05, 0.00, 0.05
 beeves, sides, 10.0, 0.2, 1.0, 0.2, 0.0, 0.05
@@ -80,4 +80,4 @@ duunmelons, bushels, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05
 betelberries, bushels, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05
 pharmaceuticals, kilograms, 10.0, 0.2, 1.0, 0.2, 0.2, 0.2
 coffins, units, 10.0, 0.2, 1.0, 0.03, 0.0, 0.03
-laser pistols, units, 10.0, 0.2, 1.0, 0.1, 0.1, 0.1
+laser pistols, units, 10.0, 0.2, 0.2, 0.1, 0.1, 0.1

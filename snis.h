@@ -562,6 +562,7 @@ struct planet_data {
 #define PLAYER_PLANET_DIST_WARN (400)
 	float radius;
 	uint8_t ring;
+	uint16_t contraband;
 };
 
 union type_specific_data {

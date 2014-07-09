@@ -253,6 +253,7 @@ char *asset_dir;
 static int nebulalist[NNEBULA] = { 0 };
 
 static int ncommodities;
+static int ncontraband;
 static struct commodity *commodity;
 
 static inline void client_lock()
@@ -5669,6 +5670,24 @@ static int l_add_derelict(lua_State *l)
 	return 1;
 }
 
+static int choose_contraband(void)
+{
+	int i, n, c;
+
+	n = snis_randn(ncontraband);
+	c = 0;
+
+	/* find the nth possible contraband item */
+	for (i = 0; i < ncommodities; i++) {
+		if (commodity[i].legality < 1.0) {
+			if (n == c)
+				return i;
+			c++;
+		}
+	}
+	return -1;
+}
+
 static int add_planet(double x, double y, double z, float radius, uint8_t security)
 {
 	int i;
@@ -5694,6 +5713,7 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].tsd.planet.radius = radius;
 	go[i].tsd.planet.ring = snis_randn(100) < 50;
 	go[i].tsd.planet.security = security;
+	go[i].tsd.planet.contraband = choose_contraband();
 	return i;
 }
 
@@ -6955,6 +6975,7 @@ void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 	struct snis_entity *sb, *pl = NULL;
 	char *name, msg[100];
 	int i;
+	uint16_t contraband = -1;
 
 	if (ch == (uint32_t) -1)
 		return;
@@ -6971,6 +6992,7 @@ void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 		if (i >= 0) {
 			pl = &go[i];
 			name = pl->sdata.name;
+			contraband = pl->tsd.planet.contraband;
 		} else {
 			name = sb->tsd.starbase.name;
 		}
@@ -7001,8 +7023,11 @@ void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 	}
 	send_comms_packet(npcname, ch, " SPACE WEATHER ADVISORY: ALL CLEAR");
 	send_comms_packet(npcname, ch, "");
-	send_comms_packet(npcname, ch, " TRAVELERS TAKE NOTICE OF PROHIBITED ITEMS:");
-	send_comms_packet(npcname, ch, "    NARCOTICS (EXCEPT JAKK), BIBLES");
+	if (contraband >= 0) {
+		send_comms_packet(npcname, ch, " TRAVELERS TAKE NOTICE OF PROHIBITED ITEMS:");
+		snprintf(msg, sizeof(msg), "    %s", commodity[contraband].name);
+		send_comms_packet(npcname, ch, msg);
+	}
 	send_comms_packet(npcname, ch, "");
 	send_comms_packet(npcname, ch, " ENJOY YOUR VISIT!");
 	send_comms_packet(npcname, ch, "-----------------------------------------------------");
@@ -10115,7 +10140,7 @@ static void send_update_planet_packet(struct game_client *c,
 	else
 		ring = 1.0;
 
-	pb_queue_to_client(c, packed_buffer_new("bwwSSSSwbbbb", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSSwbbbbh", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
@@ -10123,7 +10148,9 @@ static void send_update_planet_packet(struct game_client *c,
 					o->tsd.planet.description_seed,
 					o->tsd.planet.government,
 					o->tsd.planet.tech_level,
-					o->tsd.planet.economy, o->tsd.planet.security));
+					o->tsd.planet.economy,
+					o->tsd.planet.security,
+					o->tsd.planet.contraband));
 }
 
 static void send_update_wormhole_packet(struct game_client *c,
@@ -10912,6 +10939,12 @@ int main(int argc, char *argv[])
 	char commodity_path[PATH_MAX];
 	sprintf(commodity_path, "%s/%s", asset_dir, "commodities.txt");
 	commodity = read_commodities(commodity_path, &ncommodities);
+
+	/* count possible contraband items */
+	ncontraband = 0;
+	for (i = 0; i < ncommodities; i++)
+		if (commodity[i].legality < 1.0)
+			ncontraband++;
 
 	if (read_ship_types()) {
 		fprintf(stderr, "%s: unable to read ship types\n", argv[0]);
