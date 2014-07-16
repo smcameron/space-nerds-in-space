@@ -70,9 +70,9 @@ clear_all() -- this clears the entire universe except for human controlled ships
 id = add_random_ship() -- adds a random ship to the universe in a random location
 	returns the "id" of the ship.  If adding ship failed, -1.0 is returned.
 
-id = add_ship(name, x, y, z, type, faction) -- adds a ship to the universe of the 
-	specified type and faction at the specified locations.  If adding ship
-	failed, -1.0 is returned.
+id = add_ship(name, x, y, z, type, faction, auto_respawn) -- adds a ship to the
+        universe of the specified type and faction at the specified locations.  If
+        adding ship failed, -1.0 is returned.
 
 id = add_starbase(x, y, z, n) - adds a starbase at location x,y with number n (0 <= n <= 99).
 	the starbase will be named "SB-n"

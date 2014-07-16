@@ -31,7 +31,7 @@ print("random ship id = ");
 print(random_ship_id);
 
 -- add a specific ship to the universe in a specific location
-specific_ship_id = add_ship("REVENGE", 0, 0, 0, DRAGONHAWK, vekkazi);
+specific_ship_id = add_ship("REVENGE", 0, 0, 0, DRAGONHAWK, vekkazi, 0);
 print("specific ship id = ", specific_ship_id);
 
 -- add a starbases:
@@ -82,10 +82,10 @@ for i = -3, 3 do
 	for j = -3, 3 do
 		id1 = add_ship("a", 80000 + j * 100,
 				j * 100 + math.random() * 25.0,
-				68000 - i * 100, 13 * math.random(), vekkazi);
+				68000 - i * 100, 13 * math.random(), vekkazi, 0);
 		id2 = add_ship("a", 60000 + j * 100,
 				j * 100 + math.random() * 25.0,
-				68000 - i * 100, 13 * math.random(), zarkon);
+				68000 - i * 100, 13 * math.random(), zarkon, 0);
 		attack_ship(id1, id2);
 		attack_ship(id2, id1);
 	end

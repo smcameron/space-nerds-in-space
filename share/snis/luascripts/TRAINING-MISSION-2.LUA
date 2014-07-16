@@ -38,12 +38,12 @@ function spring_the_trap()
 	trap_sprung = 1;
 	x, y, z = get_object_location(player_ids[1]);
 
-	badguy1 = add_ship("MERCILESS", x + 5000, 25, z + 4000, disruptor, zarkon); 
-	badguy2 = add_ship("SCOURGE", x - 5500, 15, z + 5000, disruptor, zarkon); 
-	badguy3 = add_ship("RESISTANCE", x - 7000, 25, z + 2000, disruptor, zarkon); 
-	badguy4 = add_ship("FEARLESS", x - 5000, 25, z + 4500, disruptor, zarkon); 
-	badguy5 = add_ship("ZHARK", x + 5300, 25, z + 6000, battlestar, zarkon); 
-	badguy6 = add_ship("XANUU", x - 3000, 25, z + 4000, battlestar, zarkon); 
+	badguy1 = add_ship("MERCILESS", x + 5000, 25, z + 4000, disruptor, zarkon, 0); 
+	badguy2 = add_ship("SCOURGE", x - 5500, 15, z + 5000, disruptor, zarkon, 0); 
+	badguy3 = add_ship("RESISTANCE", x - 7000, 25, z + 2000, disruptor, zarkon, 0); 
+	badguy4 = add_ship("FEARLESS", x - 5000, 25, z + 4500, disruptor, zarkon, 0); 
+	badguy5 = add_ship("ZHARK", x + 5300, 25, z + 6000, battlestar, zarkon, 0); 
+	badguy6 = add_ship("XANUU", x - 3000, 25, z + 4000, battlestar, zarkon, 0); 
 
 	attack_ship(badguy1, player_ids[1]);
 	attack_ship(badguy2, player_ids[1]);
@@ -59,12 +59,12 @@ function spring_second_trap()
 	trap_sprung = 1;
 	x, y, z = get_object_location(player_ids[1]);
 
-	badguy1 = add_ship("KHUBHI", x - 5000, 25, z - 4000, disruptor, zarkon); 
-	badguy2 = add_ship("BIZHONI", x - 3500, 15, z - 4100, disruptor, zarkon); 
-	badguy3 = add_ship("RHO", x - 7000, 25, z - 2000, disruptor, zarkon); 
-	badguy4 = add_ship("DAAR", x - 2700, 25, z - 4200, disruptor, zarkon); 
-	badguy5 = add_ship("ZUURHI", x + 1300, 25, z - 6000, battlestar, zarkon); 
-	badguy6 = add_ship("KHONRAD", x - 1000, 25, z - 4000, battlestar, zarkon); 
+	badguy1 = add_ship("KHUBHI", x - 5000, 25, z - 4000, disruptor, zarkon, 0); 
+	badguy2 = add_ship("BIZHONI", x - 3500, 15, z - 4100, disruptor, zarkon, 0); 
+	badguy3 = add_ship("RHO", x - 7000, 25, z - 2000, disruptor, zarkon, 0); 
+	badguy4 = add_ship("DAAR", x - 2700, 25, z - 4200, disruptor, zarkon, 0); 
+	badguy5 = add_ship("ZUURHI", x + 1300, 25, z - 6000, battlestar, zarkon, 0); 
+	badguy6 = add_ship("KHONRAD", x - 1000, 25, z - 4000, battlestar, zarkon, 0); 
 
 	attack_ship(badguy1, player_ids[1]);
 	attack_ship(badguy2, player_ids[1]);

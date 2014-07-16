@@ -810,7 +810,7 @@ static void queue_delete_oid(struct game_client *c, uint32_t oid)
 	pb_queue_to_client(c, packed_buffer_new("bw", OPCODE_DELETE_OBJECT, oid));
 }
 
-static int add_ship(int faction);
+static int add_ship(int faction, int auto_respawn);
 static void push_cop_mode(struct snis_entity *cop);
 static void respawn_object(struct snis_entity *o)
 {
@@ -819,12 +819,14 @@ static void respawn_object(struct snis_entity *o)
 
 	switch (o->type) {
 		case OBJTYPE_SHIP2:
+			if (!o->tsd.ship.auto_respawn)
+				break;
 			if (o->tsd.ship.ai[0].ai_mode != AI_MODE_COP)
-				add_ship(lowest_faction);
+				add_ship(lowest_faction, 1);
 			else {
 				/* respawn cops as cops */
 				hp = o->tsd.ship.home_planet;
-				i = add_ship(o->sdata.faction);
+				i = add_ship(o->sdata.faction, 1);
 				if (i < 0)
 					break;
 				o = &go[i];
@@ -4745,7 +4747,7 @@ static uint32_t choose_ship_home_planet(void)
 	return (uint32_t) -1;
 }
 
-static int add_ship(int faction)
+static int add_ship(int faction, int auto_respawn)
 {
 	int i;
 	double x, y, z, heading;
@@ -4785,6 +4787,7 @@ static int add_ship(int faction)
 	go[i].tsd.ship.steering_adjustment.v.z = 0.0;
 	go[i].tsd.ship.ncargo_bays = 0;
 	go[i].tsd.ship.home_planet = choose_ship_home_planet();
+	go[i].tsd.ship.auto_respawn = (uint8_t) auto_respawn;
 	memset(go[i].tsd.ship.cargo, 0, sizeof(go[i].tsd.ship.cargo));
 	if (faction >= 0 && faction < nfactions())
 		go[i].sdata.faction = faction;
@@ -4792,11 +4795,11 @@ static int add_ship(int faction)
 }
 
 static int add_specific_ship(const char *name, double x, double y, double z,
-			uint8_t shiptype, uint8_t the_faction)
+			uint8_t shiptype, uint8_t the_faction, int auto_respawn)
 {
 	int i;
 
-	i = add_ship(-1);
+	i = add_ship(-1, auto_respawn);
 	if (i < 0)
 		return i;
 	set_object_location(&go[i], x, y, z);
@@ -4809,9 +4812,9 @@ static int add_specific_ship(const char *name, double x, double y, double z,
 static int l_add_ship(lua_State *l)
 {
 	const char *name;
-	double x, y, z;
+	double x, y, z, ar;
 	double shiptype, the_faction;
-	int i;
+	int i, auto_respawn;
 
 	name = lua_tostring(lua_state, 1);
 	x = lua_tonumber(lua_state, 2);
@@ -4819,6 +4822,8 @@ static int l_add_ship(lua_State *l)
 	z = lua_tonumber(lua_state, 4);
 	shiptype = lua_tonumber(lua_state, 5);
 	the_faction = lua_tonumber(lua_state, 6);
+	ar = lua_tonumber(lua_state, 7);
+	auto_respawn = (ar > 0.999);
 
 	if (shiptype < 0 || shiptype > nshiptypes - 1) {
 		lua_pushnumber(lua_state, -1.0);
@@ -4828,7 +4833,7 @@ static int l_add_ship(lua_State *l)
 	pthread_mutex_lock(&universe_mutex);
 	i = add_specific_ship(name, x, y, z,
 		(uint8_t) shiptype % nshiptypes,
-		(uint8_t) the_faction % nfactions());
+		(uint8_t) the_faction % nfactions(), auto_respawn);
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -4903,7 +4908,7 @@ static int l_add_random_ship(lua_State *l)
 	int i;
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_ship(-1);
+	i = add_ship(-1, 1);
 	lua_pushnumber(lua_state, i >= 0 ? (double) go[i].id : -1.0);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -5865,7 +5870,7 @@ static void add_eships(void)
 	int i;
 
 	for (i = 0; i < NESHIPS; i++)
-		add_ship(i % nfactions());
+		add_ship(i % nfactions(), 1);
 }
 
 static void add_enforcers_to_planet(struct snis_entity *p)
@@ -5874,7 +5879,7 @@ static void add_enforcers_to_planet(struct snis_entity *p)
 	int x;
 
 	for (int i = 0; i < nenforcers; i++) {
-		x = add_ship(p->sdata.faction);
+		x = add_ship(p->sdata.faction, 1);
 		if (x < 0)
 			continue;
 		go[x].tsd.ship.shiptype = SHIP_CLASS_ENFORCER;
@@ -8292,7 +8297,7 @@ static int process_create_item(struct game_client *c)
 	pthread_mutex_lock(&universe_mutex);
 	switch (item_type) {
 	case OBJTYPE_SHIP2:
-		i = add_ship(-1);
+		i = add_ship(-1, 1);
 		break;
 	case OBJTYPE_STARBASE:
 		i = add_starbase(x, 0, z, 0, 0, 0, snis_randn(100), -1);

@@ -47,7 +47,7 @@ if (player_ids[1]) then
 end
 
 for i = 0, 10 do
-	id1 = add_ship("a", x1 + i * 100, y1 + i * 100, z1, DISRUPTOR, vekkazi);
+	id1 = add_ship("a", x1 + i * 100, y1 + i * 100, z1, DISRUPTOR, vekkazi, 1);
 	if (i % 2) == 0 then
 		ai_push_patrol(id1, 3, x2, y2, z2, x3, y3, z3, x1, y1, z1, nil);
 	else
