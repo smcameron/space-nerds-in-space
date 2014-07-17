@@ -2419,7 +2419,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	double maxv;
 	int notacop = 1;
 	int imacop = 0;
-	double range;
+	double extra_range;
 
 	n = o->tsd.ship.nai_entries - 1;
 	assert(n >= 0);
@@ -2466,10 +2466,10 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		pop_ai_attack_mode(o);
 		return;
 	}
-	range = LASER_RANGE;
+	extra_range = 0.0;
 	if (v->type == OBJTYPE_PLANET)
-		range += v->tsd.planet.radius;
-	firing_range = (vdist <= range);
+		extra_range = v->tsd.planet.radius;
+	firing_range = (vdist <= LASER_RANGE + extra_range);
 	o->tsd.ship.desired_velocity = maxv;
 
 	/* Close enough to destination? */
@@ -2510,13 +2510,13 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	if ((o->sdata.faction != 0 || imacop) ||
 		(v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_PLANET)) {
 
-		if (snis_randn(1000) < 150 + imacop * 150 && vdist <= TORPEDO_RANGE &&
+		if (snis_randn(1000) < 150 + imacop * 150 && vdist <= TORPEDO_RANGE + extra_range &&
 			o->tsd.ship.next_torpedo_time <= universe_timestamp &&
 			o->tsd.ship.torpedoes > 0) {
 			double dist, flight_time, tx, ty, tz, vx, vy, vz;
 			/* int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y); */
 
-			if (!planet_in_the_way(o, v)) {
+			if (v->type == OBJTYPE_PLANET || !planet_in_the_way(o, v)) {
 				dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
 				flight_time = dist / TORPEDO_VELOCITY;
 				tx = v->x + (v->vx * flight_time);
@@ -2535,7 +2535,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		} else {
 			if (snis_randn(1000) < 300 + imacop * 200 &&
 				o->tsd.ship.next_laser_time <= universe_timestamp) {
-				if (!planet_in_the_way(o, v)) {
+				if (v->type == OBJTYPE_PLANET || !planet_in_the_way(o, v)) {
 					o->tsd.ship.next_laser_time = universe_timestamp +
 						ENEMY_LASER_FIRE_INTERVAL;
 					add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
