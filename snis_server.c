@@ -2459,7 +2459,8 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	dy = desty - o->y;
 	dz = destz - o->z;
 	vdist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
-	if (vdist > ATTACK_MODE_GIVE_UP_DISTANCE) {
+	if (vdist > ATTACK_MODE_GIVE_UP_DISTANCE &&
+		v->type != OBJTYPE_PLANET && v->type != OBJTYPE_STARBASE) {
 		pop_ai_attack_mode(o);
 		return;
 	}
