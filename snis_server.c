@@ -1328,6 +1328,14 @@ static void calculate_attack_vector(struct snis_entity *o, int mindist, int maxd
  	 * o->tsd.ship.dox,doy,doz are set to offsets from victim location to aim at.
 	 * mindist and maxdist are the min and max dist for the offset.
 	 */
+	int victim_id = o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].u.attack.victim_id;
+	int i = lookup_by_id(victim_id);
+
+	/* If it's a planet, adjust mindist, maxdist */
+	if (i >= 0 && go[i].type == OBJTYPE_PLANET) {
+		mindist += go[i].tsd.planet.radius;
+		maxdist += go[i].tsd.planet.radius;
+	}
 
 	/* FIXME: do something smarter/better */
 	random_dpoint_on_sphere(snis_randn(maxdist - mindist) + mindist,
