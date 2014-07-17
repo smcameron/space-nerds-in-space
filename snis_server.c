@@ -1853,7 +1853,8 @@ static void torpedo_collision_detection(void *context, void *entity)
 	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
 			t->type != OBJTYPE_STARBASE &&
 			t->type != OBJTYPE_ASTEROID &&
-			t->type != OBJTYPE_CARGO_CONTAINER)
+			t->type != OBJTYPE_CARGO_CONTAINER &&
+			t->type != OBJTYPE_PLANET)
 		return;
 	if (t->id == o->tsd.torpedo.ship_id)
 		return; /* can't torpedo yourself. */
