@@ -7652,6 +7652,35 @@ out:
 	return;
 }
 
+static int l_ai_push_attack(lua_State *l)
+{
+	int i;
+	double oid;
+	struct snis_entity *o, *v;
+
+	pthread_mutex_lock(&universe_mutex);
+	oid = lua_tonumber(lua_state, 1);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto error;
+	o = &go[i];
+	oid = lua_tonumber(lua_state, 2);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto error;
+	v = &go[i];
+
+	push_attack_mode(o, v->id, 0);
+
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, 0.0);
+	return 1;
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnil(l);
+	return 1;
+}
+
 static int l_ai_push_patrol(lua_State *l)
 {
 	int i, n, p, np;
@@ -10823,6 +10852,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_load_skybox, "load_skybox");
 	add_lua_callable_fn(l_user_coords, "user_coords");
 	add_lua_callable_fn(l_ai_push_patrol, "ai_push_patrol");
+	add_lua_callable_fn(l_ai_push_attack, "ai_push_attack");
 }
 
 static int run_initial_lua_scripts(void)

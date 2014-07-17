@@ -149,4 +149,6 @@ ux,uy,uz = user_coords(x, y, z) -- returns user (player) coordinates given progr
 ai_push_patrol(id, nwaypoints, x, y, z, x2, y2, z2, x3, y3, z3, ... )
 	set up a patrol route (up to 5 waypoints) for ship with specified id.
 
+ai_push_attack(attacker_id, victim_id)
+	make a ship attack something else
 
