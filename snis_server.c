@@ -2418,6 +2418,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	double maxv;
 	int notacop = 1;
 	int imacop = 0;
+	double range;
 
 	n = o->tsd.ship.nai_entries - 1;
 	assert(n >= 0);
@@ -2464,7 +2465,10 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		pop_ai_attack_mode(o);
 		return;
 	}
-	firing_range = (vdist <= LASER_RANGE);
+	range = LASER_RANGE;
+	if (v->type == OBJTYPE_PLANET)
+		range += v->tsd.planet.radius;
+	firing_range = (vdist <= range);
 	o->tsd.ship.desired_velocity = maxv;
 
 	/* Close enough to destination? */
