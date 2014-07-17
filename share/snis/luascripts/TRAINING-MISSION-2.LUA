@@ -45,12 +45,12 @@ function spring_the_trap()
 	badguy5 = add_ship("ZHARK", x + 5300, 25, z + 6000, battlestar, zarkon, 0); 
 	badguy6 = add_ship("XANUU", x - 3000, 25, z + 4000, battlestar, zarkon, 0); 
 
-	attack_ship(badguy1, player_ids[1]);
-	attack_ship(badguy2, player_ids[1]);
-	attack_ship(badguy3, player_ids[1]);
-	attack_ship(badguy4, player_ids[1]);
-	attack_ship(badguy5, player_ids[1]);
-	attack_ship(badguy6, player_ids[1]);
+	ai_push_attack(badguy1, player_ids[1]);
+	ai_push_attack(badguy2, player_ids[1]);
+	ai_push_attack(badguy3, player_ids[1]);
+	ai_push_attack(badguy4, player_ids[1]);
+	ai_push_attack(badguy5, player_ids[1]);
+	ai_push_attack(badguy6, player_ids[1]);
 end
 
 function spring_second_trap()
@@ -66,12 +66,12 @@ function spring_second_trap()
 	badguy5 = add_ship("ZUURHI", x + 1300, 25, z - 6000, battlestar, zarkon, 0); 
 	badguy6 = add_ship("KHONRAD", x - 1000, 25, z - 4000, battlestar, zarkon, 0); 
 
-	attack_ship(badguy1, player_ids[1]);
-	attack_ship(badguy2, player_ids[1]);
-	attack_ship(badguy3, player_ids[1]);
-	attack_ship(badguy4, player_ids[1]);
-	attack_ship(badguy5, player_ids[1]);
-	attack_ship(badguy6, player_ids[1]);
+	ai_push_attack(badguy1, player_ids[1]);
+	ai_push_attack(badguy2, player_ids[1]);
+	ai_push_attack(badguy3, player_ids[1]);
+	ai_push_attack(badguy4, player_ids[1]);
+	ai_push_attack(badguy5, player_ids[1]);
+	ai_push_attack(badguy6, player_ids[1]);
 end
 
 function distancexyz(dx, dy, dz)

@@ -76,7 +76,7 @@ end
 if (player_ids[2]) then
 	move_object(player_ids[2], 25000, 0, 25000);
 end
-attack_ship(specific_ship_id, player_ids[1]);
+ai_push_attack(specific_ship_id, player_ids[1]);
 
 for i = -3, 3 do
 	for j = -3, 3 do
@@ -86,8 +86,8 @@ for i = -3, 3 do
 		id2 = add_ship("a", 60000 + j * 100,
 				j * 100 + math.random() * 25.0,
 				68000 - i * 100, 13 * math.random(), zarkon, 0);
-		attack_ship(id1, id2);
-		attack_ship(id2, id1);
+		ai_push_attack(id1, id2);
+		ai_push_attack(id2, id1);
 	end
 end
 

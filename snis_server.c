@@ -7746,42 +7746,6 @@ error:
 	return 1;
 }
 
-static int l_attack_ship(lua_State *l)
-{
-	int i;
-	double attacker_id, victim_id;
-	struct snis_entity *attacker;
-
-	pthread_mutex_lock(&universe_mutex);
-	attacker_id = lua_tonumber(l, 1);
-	victim_id = lua_tonumber(l, 2);
-
-	i = lookup_by_id(attacker_id);
-	if (i < 0)
-		goto error;
-	attacker = &go[i];
-		
-	i = lookup_by_id(victim_id);
-	if (i < 0)
-		goto error;
-
-	attacker->tsd.ship.cmd_data.command = DEMON_CMD_ATTACK;
-	attacker->tsd.ship.cmd_data.x = 0;
-	attacker->tsd.ship.cmd_data.z = 0;
-	attacker->tsd.ship.cmd_data.nids1 = 0;
-	attacker->tsd.ship.cmd_data.nids2 = 1;
-	attacker->tsd.ship.cmd_data.id[0] = victim_id;	
-	ship_choose_new_attack_victim(attacker);
-
-	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(l, 0.0);
-	return 1;
-error:
-	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(l, -1.0);
-	return 1;
-}
-
 static double register_lua_callback(const char *event, const char *callback)
 {
 
@@ -10848,7 +10812,6 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_player_ship_ids, "get_player_ship_ids");
 	add_lua_callable_fn(l_get_object_location, "get_object_location");
 	add_lua_callable_fn(l_move_object, "move_object");
-	add_lua_callable_fn(l_attack_ship, "attack_ship");
 	add_lua_callable_fn(l_register_callback, "register_callback");
 	add_lua_callable_fn(l_register_timer_callback, "register_timer_callback");
 	add_lua_callable_fn(l_comms_transmission, "comms_transmission");
