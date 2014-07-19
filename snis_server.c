@@ -1860,9 +1860,12 @@ static void torpedo_collision_detection(void *context, void *entity)
 		return; /* can't torpedo yourself. */
 	dist2 = dist3dsqrd(t->x - o->x, t->y - o->y, t->z - o->z);
 
-	if (t->type == OBJTYPE_PLANET && dist2 < t->tsd.planet.radius * t->tsd.planet.radius)
+	if (t->type == OBJTYPE_PLANET && dist2 < t->tsd.planet.radius * t->tsd.planet.radius) {
 		o->alive = 0; /* smashed into planet */
-	else if (dist2 > TORPEDO_DETONATE_DIST2)
+		schedule_callback2(event_callback, &callback_schedule,
+				"object-hit-event", (double) t->id,
+				(double) o->tsd.torpedo.ship_id);
+	} else if (dist2 > TORPEDO_DETONATE_DIST2)
 		return; /* not close enough */
 
 	/* make sure torpedoes aren't *too* easy to hit */
@@ -1874,6 +1877,8 @@ static void torpedo_collision_detection(void *context, void *entity)
 		return;
 
 	o->alive = 0; /* hit!!!! */
+	schedule_callback2(event_callback, &callback_schedule,
+				"object-hit-event", t->id, (double) o->tsd.torpedo.ship_id);
 
 	/* calculate impact point */
 	ix = o->x + o->vx * delta_t;
@@ -2056,6 +2061,8 @@ static void laser_collision_detection(void *context, void *entity)
 	/* hit!!!! */
 	o->alive = 0;
 	notify_the_cops(o);
+	schedule_callback2(event_callback, &callback_schedule,
+				"object-hit-event", t->id, o->tsd.laser.ship_id);
 
 	if (t->type == OBJTYPE_STARBASE) {
 		t->tsd.starbase.under_attack = 1;
@@ -5282,6 +5289,9 @@ static void laserbeam_move(struct snis_entity *o)
 		return;
 	}
 
+	schedule_callback2(event_callback, &callback_schedule,
+				"object-hit-event", o->tsd.laserbeam.target,
+				o->tsd.laserbeam.origin);
 	/* if target or shooter is dead, stop firing */
 	if (!go[tid].alive || !go[oid].alive) {
 		if (!go[tid].alive)

@@ -60,6 +60,9 @@ EVENT TYPES in snis:
 		debris, sparks, laserbeams, torpedoes, explosion objects, tractor beams.
 		Only the "important" object deaths are reported.
 		(see delete_from_clients_and_server() in snis_server.c)
+	"object-hit-event"
+		arguments: object id of the thing that was hit by laser or torpedo
+		object id of the thing that fired the laser or torpedo
 
 Functions which you may call from lua: 
 
