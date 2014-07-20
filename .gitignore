@@ -19,3 +19,5 @@ mesh_viewer
 bin
 build_info.h
 check-endianness
+snis_client.6.gz
+snis_server.6.gz
