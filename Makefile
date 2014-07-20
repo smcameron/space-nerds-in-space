@@ -523,6 +523,8 @@ bin/ssgl_server:	ssgl/ssgl_server
 
 mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(SDLCLIENTLINK)
+	@mkdir -p bin
+	@cp mesh_viewer bin
 
 gaseous-giganticus:	gaseous-giganticus.o ${GGOBJS} Makefile
 	$(Q)$(GGLINK)
@@ -669,6 +671,7 @@ snis_server.6.gz:	snis_server.6
 install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${MANPAGES} ${SSGL}
 	@# First check that PREFIX is sane, and esp. that it's not pointed at source
+	@mkdir -p ${DESTDIR}/${PREFIX}
 	@touch ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
 	@if [ -f .canary-in-the-coal-mine.canary ] ; then \
 		echo 1>&2 ; \
@@ -682,7 +685,7 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 	mkdir -p ${DESTDIR}/${PREFIX}/bin
 	${INSTALL} -m 755 ssgl/ssgl_server ${DESTDIR}/${PREFIX}/bin
 	for x in ${PROGS} ; do \
-		${INSTALL} -m 755 ${DESTDIR}/${PREFIX}/bin/$$x \
+		${INSTALL} -m 755 bin/$$x \
 				${DESTDIR}/${PREFIX}/bin; \
 	done
 	for d in ${MATERIALDIR} ${LUASCRIPTDIR} ${SHADERDIR} ${SOUNDDIR} \
