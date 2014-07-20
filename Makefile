@@ -3,8 +3,10 @@
 WITHAUDIO=yes
 # WITHAUDIO=no
 
+INSTALL=install
+DESTDIR=.
 PREFIX=.
-DATADIR=${PREFIX}/share/snis
+DATADIR=${DESTDIR}/${PREFIX}/share/snis
 CONFIGFILEDIR=${DATADIR}
 CONFIGSRCDIR=share/snis
 CONFIGFILES=${CONFIGSRCDIR}/commodities.txt \
@@ -166,7 +168,7 @@ MATERIALFILES=${MATERIALSRCDIR}/nebula0.mat \
 	${MATERIALSRCDIR}/nebula8.mat \
 	${MATERIALSRCDIR}/nebula9.mat
 
-SHADERDIR=${PREFIX}/share/snis/shader
+SHADERDIR=${DESTDIR}/${PREFIX}/share/snis/shader
 SHADERSRCDIR=share/snis/shader
 SHADERS=${SHADERSRCDIR}/color_by_w.frag \
 	${SHADERSRCDIR}/color_by_w.vert \
@@ -211,9 +213,9 @@ SHADERS=${SHADERSRCDIR}/color_by_w.frag \
 
 MANSRCDIR=.
 MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz
-MANDIR=${PREFIX}/share/man/man6
+MANDIR=${DESTDIR}/${PREFIX}/share/man/man6
 
-DESKTOPDIR=${PREFIX}/share/applications
+DESKTOPDIR=${DESTDIR}/${PREFIX}/share/applications
 DESKTOPSRCDIR=.
 DESKTOPFILES=${DESKTOPSRCDIR}/snis.desktop
 UPDATE_DESKTOP=update-desktop-database ${DESKTOPDIR} || :
@@ -667,70 +669,70 @@ snis_server.6.gz:	snis_server.6
 install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${MANPAGES} ${SSGL}
 	@# First check that PREFIX is sane, and esp. that it's not pointed at source
-	@touch ${PREFIX}/.canary-in-the-coal-mine.canary
+	@touch ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
 	@if [ -f .canary-in-the-coal-mine.canary ] ; then \
 		echo 1>&2 ; \
-		echo "PREFIX is ${PREFIX} -- cannot install here" 1>&2 ; \
+		echo "DESTDIR/PREFIX is ${DESTDIR}/${PREFIX} -- cannot install here" 1>&2 ; \
 		echo "Try: make PREFIX=/usr/local ; make PREFIX=/usr/local install" 1>&2  ; \
 		echo 1>&2 ; \
 		rm -f .canary-in-the-coal-mine.canary ; \
 		exit 1 ; \
 	fi
 	@ rm -f .canary-in-the-coal-mine.canary
-	mkdir -p ${PREFIX}/bin
-	cp ${PROGS} ${PREFIX}/bin
-	cp ssgl/ssgl_server ${PREFIX}/bin
+	mkdir -p ${DESTDIR}/${PREFIX}/bin
+	${INSTALL} -m 755 ssgl/ssgl_server ${DESTDIR}/${PREFIX}/bin
 	for x in ${PROGS} ; do \
-		chmod +x ${PREFIX}/bin/$$x ; \
+		${INSTALL} -m 755 ${DESTDIR}/${PREFIX}/bin/$$x \
+				${DESTDIR}/${PREFIX}/bin; \
 	done
 	for d in ${MATERIALDIR} ${LUASCRIPTDIR} ${SHADERDIR} ${SOUNDDIR} \
 		${TEXTUREDIR} ${MODELDIR}/wombat ${SHADERDIR} ; do \
 		mkdir -p $$d ; \
 	done
-	cp ${CONFIGFILES} ${CONFIGFILEDIR}
-	cp ${SOUNDFILES} ${SOUNDDIR}
-	cp ${TEXTUREFILES} ${TEXTUREDIR}
-	cp ${LUASCRIPTS} ${LUASCRIPTDIR}
-	cp ${MATERIALFILES} ${MATERIALDIR}
-	cp ${MODELS} ${MODELDIR}
+	${INSTALL} -m 644 ${CONFIGFILES} ${CONFIGFILEDIR}
+	${INSTALL} -m 644 ${SOUNDFILES} ${SOUNDDIR}
+	${INSTALL} -m 644 ${TEXTUREFILES} ${TEXTUREDIR}
+	${INSTALL} -m 644  ${LUASCRIPTS} ${LUASCRIPTDIR}
+	${INSTALL} -m 644  ${MATERIALFILES} ${MATERIALDIR}
+	${INSTALL} -m 644  ${MODELS} ${MODELDIR}
 	for d in dreadknight disruptor conqueror enforcer starbase starbase2 cargocontainer research-vessel ; do \
 		mkdir -p ${MODELDIR}/$$d ; \
-		cp ${MODELSRCDIR}/$$d/$$d.mtl ${MODELDIR}/$$d ; \
+		${INSTALL} -m 644 ${MODELSRCDIR}/$$d/$$d.mtl ${MODELDIR}/$$d ; \
 		cp ${MODELSRCDIR}/$$d/$$d.obj ${MODELDIR}/$$d ; \
 		cp ${MODELSRCDIR}/$$d/$$d.png ${MODELDIR}/$$d ; \
 	done
-	cp ${MODELSRCDIR}/wombat/snis3006lights.png ${MODELDIR}/wombat
-	cp ${MODELSRCDIR}/wombat/snis3006.mtl ${MODELDIR}/wombat
-	cp ${MODELSRCDIR}/wombat/snis3006.obj ${MODELDIR}/wombat
-	cp ${MODELSRCDIR}/wombat/snis3006.png ${MODELDIR}/wombat
-	cp ${SHADERS} ${SHADERDIR}
+	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006lights.png ${MODELDIR}/wombat
+	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.mtl ${MODELDIR}/wombat
+	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.obj ${MODELDIR}/wombat
+	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.png ${MODELDIR}/wombat
+	${INSTALL} -m 644 ${SHADERS} ${SHADERDIR}
 	mkdir -p ${MANDIR}
-	cp ${MANPAGES} ${MANDIR}
+	${INSTALL} -m 644 ${MANPAGES} ${MANDIR}
 	mkdir -p ${DESKTOPDIR}
-	cp ${DESKTOPFILES} ${DESKTOPDIR}
+	${INSTALL} -m 644 ${DESKTOPFILES} ${DESKTOPDIR}
 	${UPDATE_DESKTOP}
 
 uninstall:
 	@# check that PREFIX is sane
-	@touch ${PREFIX}/.canary-in-the-coal-mine.canary
+	@touch ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
 	@if [ -f .canary-in-the-coal-mine.canary ] ; then \
 		echo 1>&2 ; \
-		echo "PREFIX is ${PREFIX} -- cannot uninstall here" 1>&2 ; \
+		echo "DESTDIR/PREFIX is ${DESTDIR}/${PREFIX} -- cannot uninstall here" 1>&2 ; \
 		echo "Try: make PREFIX=/usr/local uninstall" 1>&2  ; \
 		echo 1>&2 ; \
 		rm -f .canary-in-the-coal-mine.canary ; \
 		exit 1 ; \
 	fi
-	@rm -f ${PREFIX}/.canary-in-the-coal-mine.canary
-	if [ ! -d "${PREFIX}" ] ; then \
-		echo "PREFIX is not a directory." 1>&2 ;\
+	@rm -f ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
+	if [ ! -d "${DESTDIR}/${PREFIX}" ] ; then \
+		echo "DESTDIR/PREFIX is not a directory." 1>&2 ;\
 		exit 1 ;\
 	fi
 	for x in ${PROGS} ; do \
-		rm -f ${PREFIX}/bin/$$x ; \
+		rm -f ${DESTDIR}/${PREFIX}/bin/$$x ; \
 	done
-	rm -f ${PREFIX}/bin/ssgl_server
-	rm -fr ${PREFIX}/share/snis
+	rm -f ${DESTDIR}/${PREFIX}/bin/ssgl_server
+	rm -fr ${DESTDIR}/${PREFIX}/share/snis
 	rm -f ${MANDIR}/snis_client.6.gz ${MANDIR}/snis_client.6
 	rm -f ${MANDIR}/snis_server.6.gz ${MANDIR}/snis_server.6
 	rm -f ${DESKTOPDIR}/snis.desktop
