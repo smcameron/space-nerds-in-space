@@ -213,6 +213,11 @@ MANSRCDIR=.
 MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz
 MANDIR=${PREFIX}/share/man/man6
 
+DESKTOPDIR=${PREFIX}/share/applications
+DESKTOPSRCDIR=.
+DESKTOPFILES=${DESKTOPSRCDIR}/snis.desktop
+UPDATE_DESKTOP=update-desktop-database ${DESKTOPDIR} || :
+
 CC=gcc
 
 ifeq (${WITHAUDIO},yes)
@@ -701,6 +706,9 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 	cp ${SHADERS} ${SHADERDIR}
 	mkdir -p ${MANDIR}
 	cp ${MANPAGES} ${MANDIR}
+	mkdir -p ${DESKTOPDIR}
+	cp ${DESKTOPFILES} ${DESKTOPDIR}
+	${UPDATE_DESKTOP}
 
 uninstall:
 	@# check that PREFIX is sane
@@ -725,6 +733,8 @@ uninstall:
 	rm -fr ${PREFIX}/share/snis
 	rm -f ${MANDIR}/snis_client.6.gz ${MANDIR}/snis_client.6
 	rm -f ${MANDIR}/snis_server.6.gz ${MANDIR}/snis_server.6
+	rm -f ${DESKTOPDIR}/snis.desktop
+	${UPDATE_DESKTOP}
 
 clean:	mostly-clean
 	rm -f ${MODELS} test_marshal
