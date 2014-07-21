@@ -34,7 +34,8 @@ Too much to list, but here's a list anyway:
 * computer-controlled-ships
   loads of AI improvements and basic functionality 
   remains to be done.
-  Avoid going inside/through planets.
+  Avoid going inside/through planets.  This is mostly done
+  though I still see a ship crash into a planet every once it a blue moon
 
 * starbase behavior
   improve docking with starbase
@@ -43,11 +44,10 @@ Too much to list, but here's a list anyway:
 
 * 3D out the window view
   Fade distant objects to black
-  Represent nebulas somehow
 
 * comms screen:
   need to be able to communicate with starbases -- request
-  various things of the starbase. 
+  various things of the starbase.   Partially done, but still needs work.
   intercept chatter between enemy ships
   ??? need to figure out what the hell the comms screen is good for.
 
@@ -64,7 +64,6 @@ Too much to list, but here's a list anyway:
 * trading of stuff mined from asteroids at stations.
 * Need to be able to checkpoint-restart universe state on server side
   (how do lua scripts fit into checkpoint restart?)
-* Right now, laser/torpedo collision detection is too easy/sloppy.
 * more lua event callbacks, some mission scripts done with lua
   basically, flesh out the lua scripting system.
 * Remove use of "heading" field in snis_entity
@@ -72,6 +71,14 @@ Too much to list, but here's a list anyway:
 * Make space monster work again 
 * Allow to somehow mine asteroids and derelicts for something (fuel?)
 * make tractor beam work again/better.
+* Currently, number keypad doesn't work for numbers.  It should work.
+
+LOBBY
+* Allow multi-homed snis_server to work.  Currently only one ip addr is known
+  to the lobby, so if machines are coming from multiple interfaces, it doesn't
+  really work. 
+* Allow lobbyless operation, user configurable port for snis_server, and client
+  able to connect to user configureable ip and port.
 
 NICE TO HAVE:
 
