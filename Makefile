@@ -288,6 +288,7 @@ SDLCLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_
 
 SSGL=ssgl/libssglclient.a
 LIBS=-lGLEW -lGL -Lssgl -lssglclient -lrt -ldl -lm ${LUALIBS} ${PNGLIBS}
+SERVERLIBS=-Lssgl -lssglclient -lrt -ldl -lm ${LUALIBS}
 #
 # NOTE: if you get
 #
@@ -381,7 +382,7 @@ SDLCOMPILE=$(CC) ${MYCFLAGS} ${SDLCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 CLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${GLEXTCFLAGS} ${CLIENTOBJS} ${GTKLDFLAGS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
 LIMCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${LIMCLIENTOBJS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
 SDLCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
-SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} ${SERVEROBJS} ${GTKLDFLAGS} ${LIBS} && $(ECHO) '  LINK' $@
+SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} && $(ECHO) '  LINK' $@
 OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 
 ELOBJS=mtwist.o mathutils.o quat.o simplexnoise1234.o
