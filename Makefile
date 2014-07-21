@@ -678,10 +678,10 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		echo "DESTDIR/PREFIX is ${DESTDIR}/${PREFIX} -- cannot install here" 1>&2 ; \
 		echo "Try: make PREFIX=/usr/local ; make PREFIX=/usr/local install" 1>&2  ; \
 		echo 1>&2 ; \
-		rm -f .canary-in-the-coal-mine.canary ; \
+		rm -f ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary ; \
 		exit 1 ; \
 	fi
-	@ rm -f .canary-in-the-coal-mine.canary
+	@ rm -f ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
 	mkdir -p ${DESTDIR}/${PREFIX}/bin
 	${INSTALL} -m 755 ssgl/ssgl_server ${DESTDIR}/${PREFIX}/bin
 	for x in ${PROGS} ; do \
@@ -723,7 +723,7 @@ uninstall:
 		echo "DESTDIR/PREFIX is ${DESTDIR}/${PREFIX} -- cannot uninstall here" 1>&2 ; \
 		echo "Try: make PREFIX=/usr/local uninstall" 1>&2  ; \
 		echo 1>&2 ; \
-		rm -f .canary-in-the-coal-mine.canary ; \
+		rm -f ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary ; \
 		exit 1 ; \
 	fi
 	@rm -f ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
