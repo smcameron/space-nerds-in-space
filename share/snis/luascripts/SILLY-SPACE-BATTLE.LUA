@@ -44,6 +44,7 @@ print("planet id = ", planet_id);
 
 -- add a nebula:
 nebula_id = add_nebula("IMPENETRABLE", 100000, 0, 70000, 10000);
+nebula_id = add_nebula("IMPENETRABLE", 70000, 0, 40000, 13000);
 print("nebula id = ", nebula_id);
 
 -- add a spacemonster:
@@ -69,9 +70,24 @@ for i, v in pairs(player_ids) do
 	end
 end
 
+px = 70000;
+py = 0;
+pz = 70000;
+
+function add_asteroids()
+	for i = 1, 200 do
+		dx = px + math.random(20000) - 15000;
+		dy = py + math.random(20000) - 10000;
+		dz = pz + math.random(20000) - 10000;
+		add_asteroid(dx, dy, dz);
+	end
+end
+
+add_asteroids();
+
 if (player_ids[1]) then
-	load_skybox(player_ids[1], "orange-haze");
-	move_object(player_ids[1], 70000, 0, 70000);
+	-- load_skybox(player_ids[1], "orange-haze");
+	move_object(player_ids[1], px, py, pz);
 end
 if (player_ids[2]) then
 	move_object(player_ids[2], 25000, 0, 25000);
@@ -80,18 +96,18 @@ ai_push_attack(specific_ship_id, player_ids[1]);
 
 for i = -3, 3 do
 	for j = -3, 3 do
-		id1 = add_ship("a", 80000 + j * 100,
-				j * 100 + math.random() * 25.0,
-				68000 - i * 100, 13 * math.random(), vekkazi, 0);
-		id2 = add_ship("a", 60000 + j * 100,
-				j * 100 + math.random() * 25.0,
-				68000 - i * 100, 13 * math.random(), zarkon, 0);
+		id1 = add_ship("a", px + 10000 + j * 100,
+				py - 500 + j * 100 + math.random() * 25.0,
+				pz - 8000 - i * 100, 13 * math.random(), vekkazi, 0);
+		id2 = add_ship("a", px - 10000 + j * 100,
+				py + 500 + j * 100 + math.random() * 25.0,
+				pz + 8000 - i * 100, 13 * math.random(), zarkon, 0);
 		ai_push_attack(id1, id2);
 		ai_push_attack(id2, id1);
 	end
 end
 
-sbase_id = add_starbase(72500, 0, 68500, 76);
-p1 = add_planet("NOWWHAT", 72000, 100, 50000, 0);
-p2 = add_planet("NOWWHAT", 68000, -100, 55000, 0);
+sbase_id = add_starbase(px + 2500, py, pz - 2500, 76);
+p1 = add_planet("NOWWHAT", px - 6000, 900, pz - 20000, 0);
+p2 = add_planet("NOWWHAT", px + 6000, -700, pz - 50000, 0);
 
