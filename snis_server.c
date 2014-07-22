@@ -4924,6 +4924,24 @@ static int l_move_object(lua_State *l)
 	return 0;
 }
 
+static int l_delete_object(lua_State *l)
+{
+	int i;
+	double id;
+
+	id = lua_tonumber(lua_state, 1);
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id((uint32_t) id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	delete_from_clients_and_server(&go[i]);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int l_add_random_ship(lua_State *l)
 {
 	int i;
@@ -10822,6 +10840,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_player_ship_ids, "get_player_ship_ids");
 	add_lua_callable_fn(l_get_object_location, "get_object_location");
 	add_lua_callable_fn(l_move_object, "move_object");
+	add_lua_callable_fn(l_delete_object, "delete_object");
 	add_lua_callable_fn(l_register_callback, "register_callback");
 	add_lua_callable_fn(l_register_timer_callback, "register_timer_callback");
 	add_lua_callable_fn(l_comms_transmission, "comms_transmission");

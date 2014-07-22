@@ -115,6 +115,8 @@ x,y,z = get_object_location(object_id); -- x,y,z location coordinates of specifi
 
 move_object(object_id, x, y, z); -- move object to x, y, z location.
 
+delete_object(object_id) -- delete the specified object from the universe
+
 comms_transmission(object_id, transmission); -- causes the object to transmit the
 	specified transmission via comms.
 
