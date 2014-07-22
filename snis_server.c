@@ -4860,6 +4860,23 @@ static int l_add_ship(lua_State *l)
 	return 1;
 }
 
+static int add_asteroid(double x, double y, double z, double vx, double vz, double heading);
+static int l_add_asteroid(lua_State *l)
+{
+	double x, y, z;
+	int i;
+
+	x = lua_tonumber(lua_state, 1);
+	y = lua_tonumber(lua_state, 2);
+	z = lua_tonumber(lua_state, 3);
+
+	pthread_mutex_lock(&universe_mutex);
+	i = add_asteroid(x, y, z, 0.0, 0.0, 0.0);
+	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 1;
+}
+
 static int l_get_player_ship_ids(lua_State *l)
 {
 	int i, index;
@@ -10831,6 +10848,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_clear_all, "clear_all");
 	add_lua_callable_fn(l_add_random_ship, "add_random_ship");
 	add_lua_callable_fn(l_add_ship, "add_ship");
+	add_lua_callable_fn(l_add_asteroid, "add_asteroid");
 	add_lua_callable_fn(l_add_starbase, "add_starbase");
 	add_lua_callable_fn(l_add_planet, "add_planet");
 	add_lua_callable_fn(l_add_nebula, "add_nebula");
