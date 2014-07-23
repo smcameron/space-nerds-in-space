@@ -2141,7 +2141,7 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 		zangle = ((double) snis_randn(360) * M_PI / 180.0);
 		v = snis_randn(velocity * 2) - velocity;
 		vx = v * cos(angle);
-		vy = v * cos(zangle) / 3.0;
+		vy = v * cos(zangle);
 		vz = v * -sin(angle);
 		add_spark(x, y, z, vx, vy, vz, time, color, &spark_material, 0.95, 50, 1.0);
 	}
