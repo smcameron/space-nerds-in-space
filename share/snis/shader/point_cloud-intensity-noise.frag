@@ -1,4 +1,3 @@
-#version 120
 
 varying vec4 v_Color;
 

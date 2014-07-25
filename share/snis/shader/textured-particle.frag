@@ -1,4 +1,3 @@
-#version 120
 
 uniform sampler2D u_AlbedoTex;
 

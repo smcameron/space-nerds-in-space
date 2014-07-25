@@ -1,4 +1,3 @@
-#version 120
 
 varying vec3 v_Color;      // Per-vertex color information
 

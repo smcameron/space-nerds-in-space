@@ -1,4 +1,3 @@
-#version 120
 
 uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
 

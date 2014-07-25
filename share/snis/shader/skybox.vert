@@ -1,4 +1,3 @@
-#version 120
 
 uniform mat4 MVP;
 

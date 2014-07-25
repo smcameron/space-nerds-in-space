@@ -1,4 +1,3 @@
-#version 120
 
 uniform vec3 u_LightPos;       // The position of the light in eye space.
 

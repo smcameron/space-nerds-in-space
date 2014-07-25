@@ -1,4 +1,3 @@
-#version 120
 
 uniform vec4 u_Color;      // Per-object color information we will pass in.
 

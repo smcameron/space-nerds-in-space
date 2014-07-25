@@ -24,8 +24,11 @@
 #include "snis_typeface.h"
 #include "opengl_cap.h"
 
+#define OPENGL_VERSION_STRING "#version 120\n"
 #define AMBIENT_LIGHT_DEFINE "#define AMBIENT 0.05\n"
-#define UNIVERSAL_SHADER_DEFINES AMBIENT_LIGHT_DEFINE
+#define UNIVERSAL_SHADER_HEADER \
+	OPENGL_VERSION_STRING \
+	AMBIENT_LIGHT_DEFINE
 
 #define TEX_RELOAD_DELAY 1.0
 #define CUBEMAP_TEX_RELOAD_DELAY 3.0
@@ -2568,7 +2571,7 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	shader->program_id = load_shaders(shader_directory,
 				"single-color-lit-per-vertex.vert",
 				"single-color-lit-per-vertex.frag",
-				UNIVERSAL_SHADER_DEFINES);
+				UNIVERSAL_SHADER_HEADER);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2589,9 +2592,9 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	memset(shader, 0xff, sizeof(*shader));
 
 	char vert_header[512];
-	snprintf(vert_header, sizeof(vert_header), "#version 120\n#define INCLUDE_VS 1\n%s\n", defines);
+	snprintf(vert_header, sizeof(vert_header), "%s\n#define INCLUDE_VS 1\n", defines);
 	char frag_header[512];
-	snprintf(frag_header, sizeof(frag_header), "#version 120\n#define INCLUDE_FS 1\n%s\n", defines);
+	snprintf(frag_header, sizeof(frag_header), "%s\n#define INCLUDE_FS 1\n", defines);
 
 	char shader_filename[PATH_MAX];
 	snprintf(shader_filename, sizeof(shader_filename), "%s.shader", basename);
@@ -2633,13 +2636,11 @@ static void setup_textured_cubemap_shader(const char *basename, struct graph_dev
 	memset(shader, 0xff, sizeof(*shader));
 
 	const char *vert_header =
-		"#version 120\n"
-		"#define INCLUDE_VS 1\n"
-		UNIVERSAL_SHADER_DEFINES;
+		UNIVERSAL_SHADER_HEADER
+		"#define INCLUDE_VS 1\n";
 	const char *frag_header =
-		"#version 120\n"
-		"#define INCLUDE_FS 1\n"
-		UNIVERSAL_SHADER_DEFINES;
+		UNIVERSAL_SHADER_HEADER
+		"#define INCLUDE_FS 1\n";
 
 	char shader_filename[PATH_MAX];
 	snprintf(shader_filename, sizeof(shader_filename), "%s.shader", basename);
@@ -2685,7 +2686,7 @@ static void setup_filled_wireframe_shader(struct graph_dev_gl_filled_wireframe_s
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 					"wireframe_filled.vert", "wireframe_filled.frag",
-					UNIVERSAL_SHADER_DEFINES);
+					UNIVERSAL_SHADER_HEADER);
 
 	shader->viewport_id = glGetUniformLocation(shader->program_id, "Viewport");
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "ModelViewProjectionMatrix");
@@ -2709,7 +2710,7 @@ static void setup_trans_wireframe_shader(const char *basename, struct graph_dev_
 
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename,
-						UNIVERSAL_SHADER_DEFINES);
+						UNIVERSAL_SHADER_HEADER);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
@@ -2726,7 +2727,7 @@ static void setup_single_color_shader(struct graph_dev_gl_single_color_shader *s
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 				"single_color.vert", "single_color.frag",
-				UNIVERSAL_SHADER_DEFINES);
+				UNIVERSAL_SHADER_HEADER);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2740,7 +2741,7 @@ static void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *s
 {
 	shader->program_id = load_shaders(shader_directory,
 				"per_vertex_color.vert", "per_vertex_color.frag",
-				UNIVERSAL_SHADER_DEFINES);
+				UNIVERSAL_SHADER_HEADER);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 
@@ -2753,7 +2754,7 @@ static void setup_line_single_color_shader(struct graph_dev_gl_line_single_color
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 				"line-single-color.vert", "line-single-color.frag",
-				UNIVERSAL_SHADER_DEFINES);
+				UNIVERSAL_SHADER_HEADER);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->viewport_id = glGetUniformLocation(shader->program_id, "u_Viewport");
@@ -2776,7 +2777,7 @@ static void setup_point_cloud_shader(const char *basename, struct graph_dev_gl_p
 
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename,
-				UNIVERSAL_SHADER_DEFINES);
+				UNIVERSAL_SHADER_HEADER);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2792,7 +2793,7 @@ static void setup_color_by_w_shader(struct graph_dev_gl_color_by_w_shader *shade
 {
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, "color_by_w.vert", "color_by_w.frag",
-					UNIVERSAL_SHADER_DEFINES);
+					UNIVERSAL_SHADER_HEADER);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -2812,7 +2813,7 @@ static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 {
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, "skybox.vert", "skybox.frag",
-						UNIVERSAL_SHADER_DEFINES);
+						UNIVERSAL_SHADER_HEADER);
 	glUseProgram(shader->program_id);
 
 	/* Get a handle for our "MVP" uniform */
@@ -2915,7 +2916,7 @@ static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 				"textured-particle.vert", "textured-particle.frag",
-				UNIVERSAL_SHADER_DEFINES);
+				UNIVERSAL_SHADER_HEADER);
 	glUseProgram(shader->program_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -3234,11 +3235,11 @@ int graph_dev_setup(const char *shader_dir)
 	setup_point_cloud_shader("point_cloud-intensity-noise", &point_cloud_intensity_noise_shader);
 	setup_color_by_w_shader(&color_by_w_shader);
 	setup_skybox_shader(&skybox_shader);
-	setup_textured_shader("textured", UNIVERSAL_SHADER_DEFINES, &textured_shader);
-	setup_textured_shader("textured-with-sphere-shadow-per-pixel", UNIVERSAL_SHADER_DEFINES,
+	setup_textured_shader("textured", UNIVERSAL_SHADER_HEADER, &textured_shader);
+	setup_textured_shader("textured-with-sphere-shadow-per-pixel", UNIVERSAL_SHADER_HEADER,
 				&textured_with_sphere_shadow_shader);
-	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_DEFINES, &textured_lit_shader);
-	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_DEFINES "#define USE_EMIT_MAP",
+	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER, &textured_lit_shader);
+	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER "#define USE_EMIT_MAP",
 				&textured_lit_emit_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", &textured_cubemap_lit_shader);
 	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", &textured_cubemap_shield_shader);
