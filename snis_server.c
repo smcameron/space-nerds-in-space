@@ -2550,7 +2550,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 				}
 			}
 		}
-		if (v->type == OBJTYPE_SHIP1 && snis_randn(1000) < 25)
+		if (v->type == OBJTYPE_SHIP1 && snis_randn(10000) < 50)
 			taunt_player(o, v);
 	} else {
 		/* FIXME: give neutrals soemthing to do so they don't just sit there */;
