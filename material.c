@@ -205,6 +205,7 @@ void material_init_textured_planet_ring(struct material *m)
 	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
 	m->textured_planet_ring.texture_id = 0;
 	m->textured_planet_ring.alpha = 1.0;
+	m->textured_planet_ring.texture_v = 0.0f;
 	m->textured_planet_ring.tint = sng_get_color(WHITE);
 }
 

@@ -1040,6 +1040,42 @@ static float mesh_calculate_xy_radius(struct mesh *m)
 	return maxx;
 }
 
+static int outside_edge_of_ring(struct vertex *v, float r)
+{
+	float R = v->x * v->x + v->y * v->y;
+	return R >= (r * r) * 0.95;
+}
+
+static void mesh_uv_map_planetary_ring(struct mesh *m)
+{
+	float u0, u1, u2, r;
+	int i;
+
+	r = mesh_calculate_xy_radius(m);
+	if (m->tex)
+		free(m->tex);
+
+	m->tex = malloc(sizeof(*m->tex) * m->ntriangles * 3);
+	if (!m->tex)
+		return;
+
+	for (i = 0; i < m->ntriangles; i++) {
+		struct vertex *vtx0, *vtx1, *vtx2;
+
+		vtx0 = m->t[i].v[0];
+		vtx1 = m->t[i].v[1];
+		vtx2 = m->t[i].v[2];
+
+		/* v will be a per-instance constant passed as uniform to the shader */
+		u0 = (float) outside_edge_of_ring(vtx0, r);
+		u1 = (float) outside_edge_of_ring(vtx1, r);
+		u2 = (float) outside_edge_of_ring(vtx2, r);
+
+		mesh_set_triangle_texture_coords(m, i, u0, 0.0f, u1, 0.0f, u2, 0.0f);
+	}
+	mesh_graph_dev_init(m);
+}
+
 void mesh_map_xy_to_uv(struct mesh *m)
 {
 	float u0, v0, u1, v1, u2, v2, r;
@@ -1126,7 +1162,7 @@ struct mesh *mesh_fabricate_planetary_ring(float ir, float or)
 	}
 	m->radius = mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);
-	mesh_map_xy_to_uv(m);
+	mesh_uv_map_planetary_ring(m);
 	return m;
 bail:
 	mesh_free(m);

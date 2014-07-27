@@ -59,6 +59,7 @@ varying vec3 v_TexCoord;
 	uniform vec3 u_AnnulusNormal; // disk plane normal in eye space
 	uniform vec4 u_AnnulusRadius; // x=inside r, y=inside r^2, z=outside r, w=outside r^2
 	uniform vec4 u_AnnulusTintColor;
+	uniform float u_ring_texture_v;
 
 	bool intersect_plane(vec3 plane_normal, vec3 plane_pos, vec3 ray_pos, vec3 ray_dir, out float t)
 	{
@@ -92,6 +93,7 @@ varying vec3 v_TexCoord;
 	{
 		/* Get a lighting direction vector from the light to the vertex. */
 		vec3 light_dir = normalize(u_LightPos - v_Position);
+		float ir = sqrt(u_AnnulusRadius.y);
 
 		/* Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
 		   pointing in the same direction then it will get max illumination. */
@@ -104,10 +106,11 @@ varying vec3 v_TexCoord;
 				v_Position, light_dir, intersect_r_squared))
 		{
 			if (intersect_r_squared > u_AnnulusRadius.y /* r1^2 */ ) {
-				/* figure out a texture coord on the ring that samples from u=0.5, v=1.0 to 0.5 */
-				float v = (sqrt(intersect_r_squared) / u_AnnulusRadius.z + 1.0) / 2.0;
+				/* figure out a texture coord on the ring that samples from u=0 to 1, v is given */
+				float u = (sqrt(intersect_r_squared) - ir) /
+						(u_AnnulusRadius.z - ir);
 
-				vec4 ring_color = u_AnnulusTintColor * texture2D(u_AnnulusAlbedoTex, vec2(0.5, v));
+				vec4 ring_color = u_AnnulusTintColor * texture2D(u_AnnulusAlbedoTex, vec2(u, u_ring_texture_v));
 
 				/* how much we will shadow based on transparancy, so 1.0=no shadow, 0.0=full */
 				shadow  = 1.0 - ring_color.a;

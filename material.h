@@ -95,6 +95,7 @@ struct material_textured_particle {
 struct material_textured_planet_ring {
 	int texture_id;
 	float alpha;
+	float texture_v;
 	struct sng_color tint;
 };
 

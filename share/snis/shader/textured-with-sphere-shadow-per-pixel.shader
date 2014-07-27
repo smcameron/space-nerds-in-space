@@ -31,6 +31,7 @@ varying vec3 v_LightDir;
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
 	uniform vec4 u_TintColor;
 	uniform vec3 u_LightPos; // light position in eye space
+	uniform float u_ring_texture_v; // v coord in ring texture
 
 	attribute vec4 a_Position; // Per-vertex position information we will pass in.
 	attribute vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
@@ -42,6 +43,7 @@ varying vec3 v_LightDir;
 
 		v_TintColor = u_TintColor;
 		v_TexCoord = a_TexCoord;
+		v_TexCoord.y = u_ring_texture_v;
 		gl_Position = u_MVPMatrix * a_Position;
 
 	}

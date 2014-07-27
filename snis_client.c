@@ -321,7 +321,8 @@ static struct material green_phaser_material;
 static struct material spark_material;
 static struct material warp_effect_material;
 static struct material sun_material;
-#define NPLANETARY_RING_MATERIALS 2
+#define NPLANETARY_RING_MATERIALS 256
+static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
 static struct material planet_material[NPLANET_MATERIALS * (NPLANETARY_RING_MATERIALS + 1)];
 static struct material shield_material;
@@ -11576,13 +11577,27 @@ static void load_textures(void)
 	sun_material.texture_mapped_unlit.do_blend = 1;
 
 	int i;
+	planetary_ring_texture_id = load_texture("planetary-ring0.png");
 	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) {
-		char filename[25];
-		sprintf(filename, "planetary-ring%d.png", i);
-
 		material_init_textured_planet_ring(&planetary_ring_material[i]);
-		planetary_ring_material[i].textured_planet_ring.texture_id = load_texture(filename);
+		planetary_ring_material[i].textured_planet_ring.texture_id = planetary_ring_texture_id;
 		planetary_ring_material[i].textured_planet_ring.alpha = 0.5;
+		planetary_ring_material[i].textured_planet_ring.texture_v = (float) i / 256.0f;
+	}
+
+	/* Because of the way that planet rings are chosen based on object id
+	 * and because of the way planets are generated and object ids are handed
+	 * out we want to scramble the order of 
+	 * planetary_ring_material[i].textured_planet_ring.texture_v
+	 * so that consecutively generated planets will not have rings that are
+	 * too similar.
+	 */
+	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) {
+		int n = snis_randn(256 * 100) % 256;
+		float x = planetary_ring_material[n].textured_planet_ring.texture_v;
+		planetary_ring_material[n].textured_planet_ring.texture_v =
+			planetary_ring_material[i].textured_planet_ring.texture_v;
+		planetary_ring_material[i].textured_planet_ring.texture_v = x;
 	}
 
 	for (i = 0; i < NPLANET_MATERIALS; i++) {

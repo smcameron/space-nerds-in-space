@@ -668,6 +668,8 @@ struct graph_dev_gl_textured_shader {
 	GLint shadow_annulus_normal_id;
 	GLint shadow_annulus_radius_id;
 	GLint shadow_annulus_tint_color_id;
+
+	GLint ring_texture_v_id;
 };
 
 struct clip_sphere_data {
@@ -1154,7 +1156,8 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	const struct mat44 *mat_mv, const struct mat33 *mat_normal, struct mesh *m,
 	struct sng_color *triangle_color, float alpha, union vec3 *eye_light_pos, GLuint texture_number,
 	GLuint emit_texture_number, struct shadow_sphere_data *shadow_sphere,
-	struct shadow_annulus_data *shadow_annulus, int do_cullface, int do_blend)
+	struct shadow_annulus_data *shadow_annulus, int do_cullface, int do_blend,
+	float ring_texture_v)
 {
 	enable_3d_viewport();
 
@@ -1198,6 +1201,10 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 
 	glUniform4f(shader->tint_color_id, triangle_color->red,
 		triangle_color->green, triangle_color->blue, alpha);
+
+	/* Ring texture v value */
+	if (shader->ring_texture_v_id >= 0)
+		glUniform1f(shader->ring_texture_v_id, ring_texture_v);
 
 	/* shadow sphere */
 	if (shader->shadow_sphere_id >= 0)
@@ -1736,7 +1743,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 		float alpha = fabs(vec3_dot(&camera_normal, &camera_ent_vector)) * mt->alpha;
 
 		graph_dev_raster_texture(&textured_shader, &mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
-			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, 0, 0, 0, 1);
+			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, 0, 0, 0, 1, 0.0f);
 
 		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
@@ -1945,6 +1952,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	const struct mat44 *mat_mvp = &transform->mvp;
 	const struct mat44 *mat_mv = &transform->mv;
 	const struct mat33 *mat_normal = &transform->normal;
+	float ring_texture_v = 0.0f;
 
 	draw_vertex_buffer_2d();
 
@@ -2052,6 +2060,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 					struct material_textured_planet_ring *ring_mt =
 						&mt->ring_material->textured_planet_ring;
+					ring_texture_v = ring_mt->texture_v;
 
 					shadow_annulus.texture_id = ring_mt->texture_id;
 					shadow_annulus.tint_color = ring_mt->tint;
@@ -2080,6 +2089,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				texture_tint = mt->tint;
 				do_blend = 1;
 				do_cullface = 0;
+				ring_texture_v = mt->texture_v;
 
 				/* planet is at the center of our mesh */
 				union vec4 sphere_pos = { { 0, 0, 0, 1 } };
@@ -2122,7 +2132,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					graph_dev_raster_texture(tex_shader, mat_mvp, mat_mv, mat_normal, e->m,
 						&texture_tint, texture_alpha, eye_light_pos, texture_id,
 						emit_texture_id, &shadow_sphere, &shadow_annulus, do_cullface,
-						do_blend);
+						do_blend, ring_texture_v);
 				else
 					graph_dev_raster_single_color_lit(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos);
@@ -2586,6 +2596,9 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->emit_texture_2d_id = glGetUniformLocation(shader->program_id, "u_EmitTex");
 	if (shader->emit_texture_2d_id >= 0)
 		glUniform1i(shader->emit_texture_2d_id, 1);
+	shader->ring_texture_v_id = glGetUniformLocation(shader->program_id, "u_ring_texture_v");
+	if (shader->ring_texture_v_id >= 0)
+		glUniform1f(shader->ring_texture_v_id, 0.25);
 
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
@@ -2625,6 +2638,9 @@ static void setup_textured_cubemap_shader(const char *basename, struct graph_dev
 	shader->texture_cubemap_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
 	glUniform1i(shader->texture_cubemap_id, 0);
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
+	shader->ring_texture_v_id = glGetUniformLocation(shader->program_id, "u_ring_texture_v");
+	if (shader->ring_texture_v_id >= 0)
+		glUniform1f(shader->ring_texture_v_id, 0.25);
 
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
