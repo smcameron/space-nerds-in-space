@@ -11583,6 +11583,11 @@ static void load_textures(void)
 		planetary_ring_material[i].textured_planet_ring.texture_id = planetary_ring_texture_id;
 		planetary_ring_material[i].textured_planet_ring.alpha = 0.5;
 		planetary_ring_material[i].textured_planet_ring.texture_v = (float) i / 256.0f;
+		planetary_ring_material[i].textured_planet_ring.inner_radius =
+					MIN_RING_RADIUS +
+					2.0f * fabs(snis_random_float() * snis_random_float());
+		if (planetary_ring_material[i].textured_planet_ring.inner_radius < MIN_RING_RADIUS)
+			planetary_ring_material[i].textured_planet_ring.inner_radius = MIN_RING_RADIUS;
 	}
 
 	/* Because of the way that planet rings are chosen based on object id
@@ -12382,7 +12387,7 @@ static void init_meshes()
 	}
 
 	sphere_mesh = mesh_unit_icosphere(4);
-	planetary_ring_mesh = mesh_fabricate_planetary_ring(2.0, 3.0);
+	planetary_ring_mesh = mesh_fabricate_planetary_ring(1.0, 4.0);
 
 	for (i = 0; i < NSTARBASE_MODELS; i++) {
 		char filename[100];
