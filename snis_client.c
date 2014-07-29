@@ -11588,6 +11588,12 @@ static void load_textures(void)
 					2.0f * fabs(snis_random_float() * snis_random_float());
 		if (planetary_ring_material[i].textured_planet_ring.inner_radius < MIN_RING_RADIUS)
 			planetary_ring_material[i].textured_planet_ring.inner_radius = MIN_RING_RADIUS;
+		planetary_ring_material[i].textured_planet_ring.outer_radius =
+			planetary_ring_material[i].textured_planet_ring.inner_radius +
+				fabs(snis_random_float()) * (MAX_RING_RADIUS + 0.5 -
+				planetary_ring_material[i].textured_planet_ring.inner_radius);
+		if (planetary_ring_material[i].textured_planet_ring.outer_radius > MAX_RING_RADIUS)
+			planetary_ring_material[i].textured_planet_ring.outer_radius = MAX_RING_RADIUS;
 	}
 
 	/* Because of the way that planet rings are chosen based on object id

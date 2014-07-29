@@ -671,6 +671,7 @@ struct graph_dev_gl_textured_shader {
 
 	GLint ring_texture_v_id;
 	GLint ring_inner_radius_id;
+	GLint ring_outer_radius_id;
 };
 
 struct clip_sphere_data {
@@ -1158,7 +1159,7 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	struct sng_color *triangle_color, float alpha, union vec3 *eye_light_pos, GLuint texture_number,
 	GLuint emit_texture_number, struct shadow_sphere_data *shadow_sphere,
 	struct shadow_annulus_data *shadow_annulus, int do_cullface, int do_blend,
-	float ring_texture_v, float ring_inner_radius)
+	float ring_texture_v, float ring_inner_radius, float ring_outer_radius)
 {
 	enable_3d_viewport();
 
@@ -1208,6 +1209,8 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		glUniform1f(shader->ring_texture_v_id, ring_texture_v);
 	if (shader->ring_inner_radius_id >= 0)
 		glUniform1f(shader->ring_inner_radius_id, ring_inner_radius);
+	if (shader->ring_outer_radius_id >= 0)
+		glUniform1f(shader->ring_outer_radius_id, ring_outer_radius);
 
 	/* shadow sphere */
 	if (shader->shadow_sphere_id >= 0)
@@ -1747,7 +1750,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 		graph_dev_raster_texture(&textured_shader, &mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
 			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, 0, 0, 0, 1, 0.0f,
-				2.0f);
+				2.0f, 4.0f);
 
 		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
@@ -1958,6 +1961,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	const struct mat33 *mat_normal = &transform->normal;
 	float ring_texture_v = 0.0f;
 	float ring_inner_radius = 1.0f;
+	float ring_outer_radius = 4.0f;
 
 	draw_vertex_buffer_2d();
 
@@ -2067,6 +2071,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						&mt->ring_material->textured_planet_ring;
 					ring_texture_v = ring_mt->texture_v;
 					ring_inner_radius = ring_mt->inner_radius;
+					ring_outer_radius = ring_mt->outer_radius;
 
 					shadow_annulus.texture_id = ring_mt->texture_id;
 					shadow_annulus.tint_color = ring_mt->tint;
@@ -2080,7 +2085,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					   is the same in eye space as the view matrix does not scale */
 					shadow_annulus.r1 = vec3_cwise_max(&e->scale) *
 									ring_inner_radius;
-					shadow_annulus.r2 = vec3_cwise_max(&e->scale) * 4.0;
+					shadow_annulus.r2 = vec3_cwise_max(&e->scale) *
+									ring_outer_radius;
 				} else {
 					tex_shader = &textured_cubemap_lit_shader;
 				}
@@ -2098,6 +2104,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				do_cullface = 0;
 				ring_texture_v = mt->texture_v;
 				ring_inner_radius = mt->inner_radius;
+				ring_outer_radius = mt->outer_radius;
 
 				/* planet is at the center of our mesh */
 				union vec4 sphere_pos = { { 0, 0, 0, 1 } };
@@ -2140,7 +2147,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					graph_dev_raster_texture(tex_shader, mat_mvp, mat_mv, mat_normal, e->m,
 						&texture_tint, texture_alpha, eye_light_pos, texture_id,
 						emit_texture_id, &shadow_sphere, &shadow_annulus, do_cullface,
-						do_blend, ring_texture_v, ring_inner_radius);
+						do_blend, ring_texture_v,
+						ring_inner_radius, ring_outer_radius);
 				else
 					graph_dev_raster_single_color_lit(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos);
@@ -2608,6 +2616,9 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->ring_inner_radius_id = glGetUniformLocation(shader->program_id, "u_ring_inner_radius");
 	if (shader->ring_inner_radius_id >= 0)
 		glUniform1f(shader->ring_inner_radius_id, 2.0);
+	shader->ring_outer_radius_id = glGetUniformLocation(shader->program_id, "u_ring_outer_radius");
+	if (shader->ring_outer_radius_id >= 0)
+		glUniform1f(shader->ring_outer_radius_id, 2.0);
 
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
@@ -2653,6 +2664,9 @@ static void setup_textured_cubemap_shader(const char *basename, struct graph_dev
 	shader->ring_inner_radius_id = glGetUniformLocation(shader->program_id, "u_ring_inner_radius");
 	if (shader->ring_inner_radius_id >= 0)
 		glUniform1f(shader->ring_inner_radius_id, 2.0);
+	shader->ring_outer_radius_id = glGetUniformLocation(shader->program_id, "u_ring_outer_radius");
+	if (shader->ring_outer_radius_id >= 0)
+		glUniform1f(shader->ring_outer_radius_id, 2.0);
 
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");

@@ -53,6 +53,7 @@ varying vec3 v_LightDir;
 	uniform sampler2D u_AlbedoTex;
 	uniform vec4 u_Sphere; /* eye space occluding sphere, x,y,z = center, w = radius^2 */
 	uniform float u_ring_inner_radius;
+	uniform float u_ring_outer_radius;
 
 	bool sphere_ray_intersect(in vec4 sphere, in vec3 ray_pos, in vec3 ray_dir)
 	{
@@ -82,13 +83,11 @@ varying vec3 v_LightDir;
 			shadow_tint = vec4(0.4,0.4,0.4,1.0);
 
 		/*
-		 * 4.0 is MAX_RING_RADIUS, 1.0 is MIN_RING_RADIUS,
-		 * see: ../../../material.h
+		 * 1.0 is MIN_RING_RADIUS, * see: ../../../material.h
 		 */
 		txcoord = v_TexCoord;
-		txcoord.x = max(0.0f, (4.0 * v_TexCoord.x - u_ring_inner_radius + 1.0) /
-						(4.0 - u_ring_inner_radius));
-
+		txcoord.x = max(0.0f, (u_ring_outer_radius * v_TexCoord.x - u_ring_inner_radius + 1.0) /
+						(u_ring_outer_radius - u_ring_inner_radius));
 		gl_FragColor = shadow_tint * texture2D(u_AlbedoTex, txcoord);
 
 		/* tint with alpha pre multiply */

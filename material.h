@@ -99,6 +99,7 @@ struct material_textured_planet_ring {
 #define MAX_RING_RADIUS 4.0f
 #define MIN_RING_RADIUS 1.0f
 	float inner_radius;
+	float outer_radius;
 	struct sng_color tint;
 };
 
