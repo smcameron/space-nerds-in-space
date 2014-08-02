@@ -39,7 +39,7 @@ starbase_id = add_starbase(10000, 0, 10000, 76);
 print("starbase id", starbase_id);
 
 -- add a planet:
-planet_id = add_planet("NOWWHAT", 50000, 0, 500000, 0);
+planet_id = add_planet("NOWWHAT", 50000, 0, 500000, 5000);
 print("planet id = ", planet_id);
 
 -- add a nebula:
@@ -87,7 +87,7 @@ add_asteroids();
 
 if (player_ids[1]) then
 	-- load_skybox(player_ids[1], "orange-haze");
-	move_object(player_ids[1], px, py, pz);
+	move_object(player_ids[1], px + 12000, py, pz + 12000);
 end
 if (player_ids[2]) then
 	move_object(player_ids[2], 25000, 0, 25000);
@@ -108,6 +108,6 @@ for i = -3, 3 do
 end
 
 sbase_id = add_starbase(px + 2500, py, pz - 2500, 76);
-p1 = add_planet("NOWWHAT", px - 6000, 900, pz - 20000, 0);
-p2 = add_planet("NOWWHAT", px + 6000, -700, pz - 50000, 0);
+--p1 = add_planet("NOWWHAT", px - 19000, 300, pz - 50000, 4000);
+p2 = add_planet("NOWWHAT", px - 6000, -700, pz - 50000, 8000);
 

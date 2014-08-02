@@ -24,7 +24,7 @@
 #define SNIS_PROTOCOL_VERSION "SNIS001"
 
 /* dimensions of the "known" universe */
-#define XKNOWN_DIM 300000.0
+#define XKNOWN_DIM 600000.0
 #define YKNOWN_DIM (XKNOWN_DIM * 0.2) /* i guess... */
 #define ZKNOWN_DIM (XKNOWN_DIM)  /* square universe */
 
@@ -555,10 +555,10 @@ struct planet_data {
 #define LOW_SECURITY 0
 #define MEDIUM_SECURITY 1
 #define HIGH_SECURITY 2
-#define SECURITY_RADIUS (XKNOWN_DIM / 30)
 	uint8_t security;
 #define MIN_PLANET_RADIUS 800.0f
-#define MAX_PLANET_RADIUS 2000.0f
+#define MAX_PLANET_RADIUS 7000.0f
+#define SECURITY_RADIUS (MAX_PLANET_RADIUS * 1.5)
 #define PLAYER_PLANET_DIST_TOO_CLOSE (200)
 #define PLAYER_PLANET_DIST_WARN (400)
 	float radius;
