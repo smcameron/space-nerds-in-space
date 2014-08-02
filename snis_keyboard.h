@@ -41,7 +41,9 @@ enum keyaction {
 		key_invert_vertical = 36,
 		key_toggle_frame_stats = 37,
 		key_camera_mode = 38,
-#define NKEYSTATES 39 
+		key_page_up = 39,
+		key_page_down = 40,
+#define NKEYSTATES 41
 };
 
 struct keyboard_state {

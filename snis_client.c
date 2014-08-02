@@ -2342,6 +2342,8 @@ char *keyactionstring[] = {
 	"key_invert_vertical",
 	"key_toggle_frame_stats",
 	"key_camera_mode",
+	"key_page_up",
+	"key_page_down",
 };
 
 void init_keymap()
@@ -2414,6 +2416,9 @@ void init_keymap()
 	ffkeymap[GDK_F10 & 0x00ff] = keyf10;
 
 	ffkeymap[GDK_F11 & 0x00ff] = keyfullscreen;
+
+	ffkeymap[GDK_Page_Down & 0x00ff] = key_page_down;
+	ffkeymap[GDK_Page_Up & 0x00ff] = key_page_up;
 }
 
 static int remapkey(char *keyname, char *actionname)
@@ -2820,6 +2825,8 @@ static void do_view_mode_change()
 				0.0, new_mode));
 }
 
+static void comms_dirkey(int h, int v);
+
 static void do_dirkey(int h, int v, int r)
 {
 	v = v * vertical_controls_inverted;
@@ -2848,6 +2855,9 @@ static void do_dirkey(int h, int v, int r)
 			break;
 		case DISPLAYMODE_DEMON:
 			demon_dirkey(h, v);
+			break;
+		case DISPLAYMODE_COMMS:
+			comms_dirkey(h, v);
 			break;
 		default:
 			break;
@@ -3126,6 +3136,9 @@ static void do_zoom(int z)
 	}
 }
 
+static void do_pageup(void);
+static void do_pagedown(void);
+
 static void deal_with_keyboard()
 {
 	int h, v, z, r;
@@ -3157,6 +3170,10 @@ static void deal_with_keyboard()
 		r = -1;
 	if (h || v || r)
 		do_dirkey(h, v, r);
+	if (kbstate.pressed[key_page_up])
+		do_pageup();
+	if (kbstate.pressed[key_page_down])
+		do_pagedown();
 
 	if (kbstate.pressed[keyzoom])
 		z = 10;
@@ -4442,6 +4459,42 @@ struct comms_ui {
 	struct slider *mainzoom_slider;
 	char input[100];
 } comms_ui;
+
+static void comms_dirkey(int h, int v)
+{
+	/* note: No point making round trip to server and fanning out
+	 * scrolling requests to all comms clients because the comms
+	 * clients are not guaranteed to have identical text window
+	 * buffer contents due to late joiners, etc.  So just scroll
+	 * locally on the client.  Breaks my "onscreen" paradigm here.
+	 */
+	if (v < 0)
+		text_window_scroll_up(comms_ui.tw);
+	else if (v > 0)
+		text_window_scroll_down(comms_ui.tw);
+}
+
+static void do_pageup(void)
+{
+	switch (displaymode) {
+	case DISPLAYMODE_COMMS:
+		text_window_page_up(comms_ui.tw);
+		break;
+	default:
+		break;
+	}
+}
+
+static void do_pagedown(void)
+{
+	switch (displaymode) {
+	case DISPLAYMODE_COMMS:
+		text_window_page_down(comms_ui.tw);
+		break;
+	default:
+		break;
+	}
+}
 
 static void main_screen_add_text(char *msg);
 static int process_comm_transmission(void)
@@ -8871,7 +8924,7 @@ static void init_comms_ui(void)
 	y = SCREEN_HEIGHT - 60;
 	comms_ui.mainscreen_comms = snis_button_init(x, y, 120, 25, "MAIN SCREEN", GREEN,
 			NANO_FONT, comms_main_screen_pressed, (void *) 8);
-	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20, 40, 20, GREEN);
+	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20, 300, 20, GREEN);
 	comms_ui.comms_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
 					comms_ui.input, 50, &timer,
 					comms_input_entered, NULL);

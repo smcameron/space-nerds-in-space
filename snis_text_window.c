@@ -45,7 +45,7 @@ void text_window_add_text(struct text_window *tw, char *text)
 	if (tw->last_entry == tw->first_entry)
 		tw->first_entry = (tw->first_entry + 1) % tw->total_lines;
 	if (tw->visible_lines > text_window_entry_count(tw))
-		tw->top_line = tw->last_entry - text_window_entry_count(tw); 
+		tw->top_line = tw->last_entry - text_window_entry_count(tw) + 1;
 	else
 		tw->top_line = tw->last_entry - tw->visible_lines; 
 	if (tw->top_line < 0)
@@ -161,6 +161,14 @@ void text_window_draw(struct text_window *tw)
 			}
 			j++;
 	}
+#if 0
+	{
+		char tmpbuf[100];
+		sprintf(tmpbuf, "FE %d, LE %d, TOP %d, VIS %d\n",
+			tw->first_entry, tw->last_entry, tw->top_line, tw->visible_lines);
+		sng_abs_xy_draw_string(tmpbuf, tw->font, tw->x, tw->y - tw->lineheight);
+	}
+#endif
 }
 
 void text_window_set_timer(volatile int *timer)
@@ -171,5 +179,54 @@ void text_window_set_timer(volatile int *timer)
 void text_window_set_chatter_sound(int chatter_sound)
 {
 	tty_chatter_sound = chatter_sound;
+}
+
+void text_window_scroll_down(struct text_window *tw)
+{
+	int top_line;
+	int last_top_line = tw->last_entry - tw->visible_lines;
+
+	if (text_window_entry_count(tw) < tw->visible_lines)
+		return;
+
+	if (last_top_line < 0)
+		last_top_line += tw->total_lines;
+
+	top_line = tw->top_line;
+	if (top_line == last_top_line)
+		return;
+	top_line++;
+	if (top_line == tw->total_lines)
+		top_line = 0;
+	tw->top_line = top_line;
+}
+
+void text_window_scroll_up(struct text_window *tw)
+{
+	int top_line;
+
+	top_line = tw->top_line;
+	if (top_line == tw->first_entry)
+		return;
+	top_line--;
+	if (top_line < 0)
+		top_line = tw->total_lines - 1;
+	tw->top_line = top_line;
+}
+
+void text_window_page_up(struct text_window *tw)
+{
+	int i;
+
+	for (i = 0; i < tw->visible_lines; i++)
+		text_window_scroll_up(tw);
+}
+
+void text_window_page_down(struct text_window *tw)
+{
+	int i;
+
+	for (i = 0; i < tw->visible_lines; i++)
+		text_window_scroll_down(tw);
 }
 
