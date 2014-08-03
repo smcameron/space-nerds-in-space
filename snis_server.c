@@ -4621,12 +4621,17 @@ static void repair_damcon_systems(struct snis_entity *o)
 	}
 }	
 	
-static void init_player(struct snis_entity *o, int clear_cargo_bay)
+static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charges)
 {
 	int i;
-
+	float money = 0.0;
+#define TORPEDO_UNIT_COST 50.0f
+#define SHIELD_UNIT_COST 5.0f;
+#define FUEL_UNIT_COST (1500.0f / (float) UINT32_MAX)
 	o->move = player_move;
+	money += (INITIAL_TORPEDO_COUNT - o->tsd.ship.torpedoes) * TORPEDO_UNIT_COST;
 	o->tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
+	money += (100.0 - o->tsd.ship.shields) * SHIELD_UNIT_COST;
 	o->tsd.ship.shields = 100.0;
 	o->tsd.ship.power = 100.0;
 	o->tsd.ship.yaw_velocity = 0.0;
@@ -4636,6 +4641,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay)
 	o->tsd.ship.velocity = 0.0;
 	o->tsd.ship.desired_velocity = 0.0;
 	o->tsd.ship.sci_beam_width = MAX_SCI_BW_YAW_VELOCITY;
+	money += (float) (UINT32_MAX - o->tsd.ship.fuel) * FUEL_UNIT_COST;
 	o->tsd.ship.fuel = UINT32_MAX;
 	o->tsd.ship.rpm = 0;
 	o->tsd.ship.temp = 0;
@@ -4690,6 +4696,10 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay)
 	init_power_model(o);
 	init_coolant_model(o);
 	repair_damcon_systems(o);
+	if (charges) {
+		o->tsd.ship.wallet -= money;
+		*charges = money;
+	}
 }
 
 static void respawn_player(struct snis_entity *o)
@@ -4738,7 +4748,7 @@ static void respawn_player(struct snis_entity *o)
 	o->vz = 0;
 	o->heading = 3 * M_PI / 2;
 	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
-	init_player(o, 1);
+	init_player(o, 1, NULL);
 	o->alive = 1;
 }
 
@@ -7107,6 +7117,7 @@ void npc_menu_item_request_dock(struct npc_menu_item *item,
 	struct bridge_data *b;
 	int ch = botstate->channel;
 	int i;
+	float charges;
 
 	b = container_of(botstate, struct bridge_data, npcbot);
 	printf("npc_menu_item_request_dock called for %s\n", b->shipname);
@@ -7138,9 +7149,12 @@ void npc_menu_item_request_dock(struct npc_menu_item *item,
 	/* TODO make the repair/refuel process a bit less easy */
 	snprintf(msg, sizeof(msg), "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
 		b->shipname);
-	init_player(o, 0);
+	init_player(o, 0, &charges);
 	send_ship_damage_packet(o);
 	o->timestamp = universe_timestamp;
+	send_comms_packet(npcname, ch, msg);
+	snprintf(msg, sizeof(msg), "%s, YOUR ACCOUNT HAS BEEN BILLED $%5.2f\n",
+		b->shipname, charges);
 	send_comms_packet(npcname, ch, msg);
 	schedule_callback2(event_callback, &callback_schedule,
 			"player-docked-event", (double) o->id, botstate->object_id);
