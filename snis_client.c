@@ -12459,6 +12459,7 @@ static void init_meshes()
 			sprintf(filename, "starbase%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
 		starbase_mesh[i] = snis_read_model(d, filename);
+		mesh_scale(starbase_mesh[i], 2.0f);
 	}
 
 	for (i = 0; i < nshiptypes; i++) {
