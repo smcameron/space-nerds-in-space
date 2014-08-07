@@ -8862,6 +8862,18 @@ static void send_comms_packet_to_server(char *msg, uint8_t opcode, uint32_t id)
 	wakeup_gameserver_writer();
 }
 
+static void send_enscript_packet_to_server(char *filename)
+{
+	struct packed_buffer *pb;
+	uint8_t len = strlen(filename);
+
+	pb = packed_buffer_allocate(sizeof(struct lua_enscript_packet) + len);
+	packed_buffer_append(pb, "bb", OPCODE_ENSCRIPT, len);
+	packed_buffer_append_raw(pb, filename, (unsigned short) len);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
 static void send_lua_script_packet_to_server(char *script)
 {
 	struct packed_buffer *pb;
@@ -9892,6 +9904,7 @@ static struct demon_cmd_def {
 	{ "AIDEBUG", "TOGGLES AI DEBUGGING INFO" },
 	{ "SAFEMODE", "TOGGLES SAFE MODE (prevents enemies from attacking)" },
 	{ "HELP", "PRINT THIS HELP INFORMATION" },
+	{ "ENSCRIPT", "SAVE (PARTIALLY) UNIVERSE STATE TO LUA SCRIPT" },
 };
 static int demon_help_mode = 0;
 #define DEMON_CMD_DELIM " ,"
@@ -10151,6 +10164,9 @@ static int construct_demon_command(char *input,
 		case 11: toggle_demon_safe_mode();
 			break;
 		case 12: demon_help_mode = 1; 
+			break;
+		case 13:
+			send_enscript_packet_to_server(saveptr);
 			break;
 		default: /* unknown */
 			sprintf(errmsg, "Unknown ver number %d\n", v);

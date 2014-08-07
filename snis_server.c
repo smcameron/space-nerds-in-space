@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -7684,6 +7685,202 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 	return 0;
 }
 
+static void enscript_prologue(FILE *f)
+{
+	fprintf(f, "\n");
+}
+
+static void enscript_player(FILE *f, struct snis_entity *o, int player)
+{
+	if (player == 1)
+		fprintf(f, "player_ids = get_player_ship_ids();\n\n");
+	fprintf(f, "-- set player %d location\n", player);
+	fprintf(f, "if (player_ids[%d]) then\n", player);
+	fprintf(f, "	move_object(player_ids[%d], %lf, %lf, %lf);\n",
+			player, o->x, o->y, o->z);
+	fprintf(f, "end\n\n");
+}
+
+static void enscript_ship(FILE *f, struct snis_entity *o, int ship)
+{
+	if (ship == 1)
+		fprintf(f, "ship = {};\n");
+	fprintf(f, "ship[%d] = add_ship(\"%s\", %lf, %lf, %lf, %d, %d, %hhd);\n",
+			 ship, o->sdata.name, o->x, o->y, o->z,
+			o->tsd.ship.shiptype, o->sdata.faction,
+			o->tsd.ship.auto_respawn);
+}
+
+static void enscript_asteroid(FILE *f, struct snis_entity *o, int asteroid)
+{
+	if (asteroid == 1)
+		fprintf(f, "asteroid = {};\n");
+	fprintf(f, "asteroid[%d] = add_asteroid(%lf, %lf, %lf);\n",
+				asteroid, o->x, o->y, o->z);
+}
+
+static void enscript_starbase(FILE *f, struct snis_entity *o, int starbase)
+{
+	if (starbase == 1)
+		fprintf(f, "starbase = {};\n");
+	fprintf(f, "starbase[%d] = add_starbase(%lf, %lf, %lf, %d);\n",
+			starbase, o->x, o->y, o->z, starbase - 1);
+}
+
+static void enscript_nebula(FILE *f, struct snis_entity *o, int nebula)
+{
+	if (nebula == 1)
+		fprintf(f, "nebula = {};\n");
+	fprintf(f, "nebula[%d] = add_nebula(\"%s\", %lf, %lf, %lf, %lf);\n",
+		nebula, o->sdata.name, o->x, o->y, o->z, o->tsd.nebula.r);
+}
+
+static void enscript_wormhole(FILE *f, struct snis_entity *o, int wormhole)
+{
+	if (wormhole == 1)
+		fprintf(f, "wormhole = {};\n");
+	fprintf(f, "-- FIXME enscript wormhole %d\n", wormhole);
+}
+
+static void enscript_spacemonster(FILE *f, struct snis_entity *o, int spacemonster)
+{
+	if (spacemonster == 1)
+		fprintf(f, "spacemonster = {};\n");
+	fprintf(f, "spacemonster[%d] = add_spacemonster(\"%s\", %lf, %lf, %lf);\n",
+		spacemonster, o->sdata.name, o->x, o->y, o->z);
+}
+
+static void enscript_planet(FILE *f, struct snis_entity *o, int planet)
+{
+	if (planet == 1)
+		fprintf(f, "planet = {};\n");
+	fprintf(f, "planet[%d] = add_planet(\"%s\", %lf, %lf, %lf, %lf, %hhd);\n",
+			planet, o->sdata.name, o->x, o->y, o->z,
+			o->tsd.planet.radius, o->tsd.planet.security);
+}
+
+static void enscript_derelict(FILE *f, struct snis_entity *o, int derelict)
+{
+	if (derelict == 1)
+		fprintf(f, "derelict = {};\n");
+	fprintf(f, "derelict[%d] = add_derelict(\"%s\", %lf, %lf, %lf, %d, %d);\n",
+			derelict, o->sdata.name, o->x, o->y, o->z,
+			o->tsd.derelict.shiptype, o->sdata.faction);
+}
+
+static void enscript_cargo_container(FILE *f, struct snis_entity *o, int cargo_container)
+{
+	if (cargo_container == 1)
+		fprintf(f, "cargo_container = {};\n");
+	fprintf(f, "cargo_container[%d] = add_cargo_container(%lf, %lf, %lf, %lf, %lf, %lf);\n",
+			cargo_container, o->x, o->y, o->z, o->vx, o->vy, o->vz);
+}
+
+static void partially_enscript_game_state(FILE *f)
+{
+	int i;
+	int player = 0;
+	int ship = 0;
+	int asteroid = 0;
+	int starbase = 0;
+	int nebula = 0;
+	int wormhole = 0;
+	int spacemonster = 0;
+	int planet = 0;
+	int derelict = 0;
+	int cargo_container = 0;
+
+	enscript_prologue(f);
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		if (!o->alive)
+			continue;
+		switch (go[i].type) {
+		case OBJTYPE_SHIP1:
+			enscript_player(f, o, ++player);
+			break;
+		case OBJTYPE_SHIP2:
+			enscript_ship(f, o, ++ship);
+			break;
+		case OBJTYPE_ASTEROID:
+			enscript_asteroid(f, o, ++asteroid);
+			break;
+		case OBJTYPE_STARBASE:
+			enscript_starbase(f, o, ++starbase);
+			break;
+		case OBJTYPE_NEBULA:
+			enscript_nebula(f, o, ++nebula);
+			break;
+		case OBJTYPE_WORMHOLE:
+			enscript_wormhole(f, o, ++wormhole);
+			break;
+		case OBJTYPE_SPACEMONSTER:
+			enscript_spacemonster(f, o, ++spacemonster);
+			break;
+		case OBJTYPE_PLANET:
+			enscript_planet(f, o, ++planet);
+			break;
+		case OBJTYPE_DERELICT:
+			enscript_derelict(f, o, ++derelict);
+			break;
+		case OBJTYPE_CARGO_CONTAINER:
+			enscript_cargo_container(f, o, ++cargo_container);
+			break;
+		case OBJTYPE_TRACTORBEAM:
+		case OBJTYPE_LASERBEAM:
+		case OBJTYPE_WARP_EFFECT:
+		case OBJTYPE_SHIELD_EFFECT:
+		case OBJTYPE_DEBRIS:
+		case OBJTYPE_SPARK:
+		case OBJTYPE_TORPEDO:
+		case OBJTYPE_LASER:
+		case OBJTYPE_EXPLOSION:
+		default:
+			break;
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
+static int process_enscript_command(struct game_client *c)
+{
+	unsigned char buffer[sizeof(struct lua_script_packet)];
+	char txt[256];
+	int fd, rc;
+	uint8_t len;
+	char scriptname[PATH_MAX];
+	FILE *f;
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &len);
+	if (rc)
+		return rc;
+	rc = snis_readsocket(c->socket, txt, len);
+	if (rc)
+		return rc;
+	txt[len] = '\0';
+
+#define LUASCRIPTDIR "share/snis/luascripts"
+	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", LUASCRIPTDIR, txt);
+
+	/* Open the file only if it doesn't already exist.
+	 * Using a combo of open + fdopen here rather than just fopen
+	 * to guarantee file doesn't already exist in a race free way.
+	 */
+	fd = open(scriptname, O_CREAT | O_WRONLY, 0644);
+	if (fd < 0) /* FIXME: we fail silently here. */
+		return 0;
+
+	/* let's do buffered i/o for this */
+	f = fdopen(fd, "w");
+	if (!f) /* FIXME: we fail silently here. */
+		return 0;
+
+	partially_enscript_game_state(f);
+	fclose(f); /* close() not needed, fclose() is enough. */
+	return 0;
+}
+
 static int process_exec_lua_script(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct lua_script_packet)];
@@ -9426,6 +9623,10 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_ENSCRIPT:
+			process_enscript_command(c);
+			if (rc)
+				goto protocol_error;
 		case OPCODE_ROBOT_AUTO_MANUAL:
 			rc = process_robot_auto_manual(c);
 			if (rc)

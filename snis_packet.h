@@ -139,6 +139,7 @@
 #define OPCODE_UPDATE_UNIVERSE_TIMESTAMP	215
 #define OPCODE_UPDATE_BUILD_INFO		216
 #define OPCODE_DETONATE				217
+#define OPCODE_ENSCRIPT				218
 
 #define OPCODE_NOOP		0xff
 
@@ -460,6 +461,11 @@ struct comms_transmission_packet {
 };
 
 struct lua_script_packet {
+	uint8_t opcode;
+	uint8_t length;
+};
+
+struct lua_enscript_packet {
 	uint8_t opcode;
 	uint8_t length;
 };
