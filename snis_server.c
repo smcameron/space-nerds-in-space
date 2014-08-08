@@ -4887,6 +4887,30 @@ static int l_add_asteroid(lua_State *l)
 	return 1;
 }
 
+static int l_add_cargo_container(lua_State *l)
+{
+	double x, y, z, vx, vy, vz;
+	int i;
+
+	x = lua_tonumber(lua_state, 1);
+	y = lua_tonumber(lua_state, 2);
+	z = lua_tonumber(lua_state, 3);
+	vx = lua_tonumber(lua_state, 4);
+	vy = lua_tonumber(lua_state, 5);
+	vz = lua_tonumber(lua_state, 6);
+
+	pthread_mutex_lock(&universe_mutex);
+	i = add_cargo_container(x, y, z, vx, vy, vz, -1, 0);
+	if (i < 0) {
+		lua_pushnil(lua_state);
+		pthread_mutex_unlock(&universe_mutex);
+		return 1;
+	}
+	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 1;
+}
+
 static int l_get_player_ship_ids(lua_State *l)
 {
 	int i, index;
@@ -10883,6 +10907,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_user_coords, "user_coords");
 	add_lua_callable_fn(l_ai_push_patrol, "ai_push_patrol");
 	add_lua_callable_fn(l_ai_push_attack, "ai_push_attack");
+	add_lua_callable_fn(l_add_cargo_container, "add_cargo_container");
 }
 
 static int run_initial_lua_scripts(void)

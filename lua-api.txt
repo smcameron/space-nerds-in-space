@@ -80,6 +80,9 @@ id = add_ship(name, x, y, z, type, faction, auto_respawn) -- adds a ship to the
 id = add_asterod(x, y, z) -- adds an asteroid at the specified location
 	(it will orbit around the center of the universe)
 
+id = add_cargo_container(x, y, z, vx, vy, vz) -- adds a cargo container at specified
+	location and velocity
+
 id = add_starbase(x, y, z, n) - adds a starbase at location x,y with number n (0 <= n <= 99).
 	the starbase will be named "SB-n"
 	TODO: allow starbases to be named arbitrary strings.
