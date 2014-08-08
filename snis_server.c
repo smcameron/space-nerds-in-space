@@ -7862,6 +7862,9 @@ static int process_enscript_command(struct game_client *c)
 		return rc;
 	txt[len] = '\0';
 
+	if (!lua_enscript_enabled)
+		return 0;
+
 	/* TODO: Send this client side instead of storing server side. */
 #define LUASCRIPTDIR "share/snis/luascripts"
 	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", LUASCRIPTDIR, txt);
@@ -9627,8 +9630,7 @@ static void process_instructions_from_client(struct game_client *c)
 				goto protocol_error;
 			break;
 		case OPCODE_ENSCRIPT:
-			if (lua_enscript_enabled)
-				process_enscript_command(c);
+			rc = process_enscript_command(c);
 			if (rc)
 				goto protocol_error;
 		case OPCODE_ROBOT_AUTO_MANUAL:
