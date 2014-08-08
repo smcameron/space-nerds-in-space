@@ -36,7 +36,7 @@ ps aux | grep 'snis_server' | grep -v grep > /dev/null 2>&1
 if [ "$?" != "0" ]
 then
 	echo "Starting SNIS server"
-	./snis_server localhost SPACENERDS `hostname` localhost &
+	./snis_server localhost SPACENERDS `hostname` localhost --enable-enscript &
 	sleep 0.25
 else
 	echo "SNIS server already running."

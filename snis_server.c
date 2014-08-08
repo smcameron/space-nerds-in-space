@@ -87,6 +87,8 @@
 
 static uint32_t mtwist_seed = 35342;
 
+static int lua_enscript_enabled = 0;
+
 struct network_stats netstats;
 static int faction_population[5];
 static int lowest_faction = 0;
@@ -7860,6 +7862,7 @@ static int process_enscript_command(struct game_client *c)
 		return rc;
 	txt[len] = '\0';
 
+	/* TODO: Send this client side instead of storing server side. */
 #define LUASCRIPTDIR "share/snis/luascripts"
 	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", LUASCRIPTDIR, txt);
 
@@ -9624,7 +9627,8 @@ static void process_instructions_from_client(struct game_client *c)
 				goto protocol_error;
 			break;
 		case OPCODE_ENSCRIPT:
-			process_enscript_command(c);
+			if (lua_enscript_enabled)
+				process_enscript_command(c);
 			if (rc)
 				goto protocol_error;
 		case OPCODE_ROBOT_AUTO_MANUAL:
@@ -11231,6 +11235,14 @@ int main(int argc, char *argv[])
 	take_your_locale_and_shove_it();
 	if (argc < 5) 
 		usage();
+
+	if (argc >= 6) {
+		if (strcmp(argv[5], "--enable-enscript") == 0) {
+			lua_enscript_enabled = 1;
+			fprintf(stderr, "WARNING: lua enscript enabled!\n");
+			fprintf(stderr, "THIS PERMITS USERS TO CREATE FILES ON THE SERVER\n");
+		}
+	}
 
 	override_asset_dir();
 	set_random_seed();

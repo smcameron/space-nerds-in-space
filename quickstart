@@ -29,7 +29,7 @@ ssgl/ssgl_server
 
 sleep 0.25
 
-./snis_server localhost SPACENERDS `hostname` localhost &
+./snis_server localhost SPACENERDS `hostname` localhost --enable-enscript &
 
 sleep 0.25
 
