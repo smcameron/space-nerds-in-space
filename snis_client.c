@@ -12458,7 +12458,9 @@ static void init_meshes()
 			sprintf(filename, "asteroid%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
 		asteroid_mesh[i] = snis_read_model(d, filename);
-		mesh_distort(asteroid_mesh[i], 0.10);
+		mesh_distort(asteroid_mesh[i], 0.05);
+		mesh_set_average_vertex_normals(asteroid_mesh[i]);
+		mesh_graph_dev_init(asteroid_mesh[i]);
 	}
 
 	sphere_mesh = mesh_unit_icosphere(4);
