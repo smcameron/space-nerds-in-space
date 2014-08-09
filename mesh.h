@@ -82,6 +82,7 @@ GLOBAL void mesh_graph_dev_init(struct mesh *m);
 GLOBAL void mesh_graph_dev_cleanup(struct mesh *m);
 GLOBAL void mesh_set_flat_shading_vertex_normals(struct mesh *m);
 GLOBAL void mesh_set_spherical_vertex_normals(struct mesh *m);
+GLOBAL void mesh_set_average_vertex_normals(struct mesh *m);
 GLOBAL struct mesh *mesh_fabricate_crossbeam(float length, float radius);
 GLOBAL void mesh_set_triangle_texture_coords(struct mesh *m, int triangle,
 	float u1, float v1, float u2, float v2, float u3, float v3);

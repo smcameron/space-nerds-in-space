@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 
 #include "vertex.h"
 #include "triangle.h"
@@ -433,6 +434,73 @@ void mesh_set_spherical_vertex_normals(struct mesh *m)
 			m->t[i].vnormal[j].z = normal.v.z;
 		}
 	}
+}
+
+static int find_vertex(struct vertex *haystack[], struct vertex *needle, int nitems)
+{
+	int i;
+
+	for (i = 0; i < nitems; i++)
+		if (haystack[i] == needle)
+			return i;
+	return -1;
+}
+
+void mesh_set_average_vertex_normals(struct mesh *m)
+{
+	int i, j, k;
+	struct vertex *vn, **v;
+
+	v = malloc(sizeof(*v) * m->nvertices);
+	vn = malloc(sizeof(*vn) * m->nvertices);
+
+	/* Use w as a counter of how many triangles use a vertex, init to 0 */
+	for (i = 0; i < m->nvertices; i++)
+		m->v[i].w = 0.0;
+	k = 0;
+	for (i = 0; i < m->ntriangles; i++) {
+		union vec3 normal;
+		normal = compute_triangle_normal(&m->t[i]);
+		m->t[i].n.x = normal.v.x;
+		m->t[i].n.y = normal.v.y;
+		m->t[i].n.z = normal.v.z;
+		for (j = 0; j < 3; j++) {
+			/* First time we've encountered this vertex? */
+			if (m->t[i].v[j]->w < 0.5) {
+				v[k] = m->t[i].v[j];
+				vn[k].x = normal.v.x;
+				vn[k].y = normal.v.y;
+				vn[k].z = normal.v.z;
+				vn[k].w = 1.0;
+				m->t[i].v[j]->w = 1.0;
+				k++;
+			} else {
+				int fv = find_vertex(v, m->t[i].v[j], m->nvertices);
+				assert(fv >= 0);
+				vn[fv].x += normal.v.x;
+				vn[fv].y += normal.v.y;
+				vn[fv].z += normal.v.z;
+				vn[fv].w += 1.0;
+				m->t[i].v[j]->w += 1.0;
+			}
+		}
+	}
+	for (i = 0; i < m->ntriangles; i++) {
+		for (j = 0; j < 3; j++) {
+			k = find_vertex(v, m->t[i].v[j], m->nvertices);
+			assert(k >= 0);
+			/* Average the normals... */
+			m->t[i].vnormal[j].x = vn[k].x / m->t[i].v[j]->w;
+			m->t[i].vnormal[j].y = vn[k].y / m->t[i].v[j]->w;
+			m->t[i].vnormal[j].z = vn[k].z / m->t[i].v[j]->w;
+		}
+	}
+
+	/* set w's back to 1.0 */
+	for (i = 0; i < m->nvertices; i++)
+		m->v[i].w = 1.0;
+	free(vn);
+	free(v);
 }
 
 void mesh_set_triangle_texture_coords(struct mesh *m, int triangle,
