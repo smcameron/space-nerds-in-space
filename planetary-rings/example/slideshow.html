@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  
+  <!--[if lt IE 9]>
+  <script src="../lib/html5shim.js"></script>
+  <![endif]-->  
+  
+  <!-- These are some core styles the slideshow app requires -->
+  <link rel="stylesheet" href="../lib/styles.css" />
+  
+  <!-- These are the styles you'll add to make the slides look great -->
+  <link rel="stylesheet" href="css/styles.css" />
+  
+  <title>Planetary Rings in Space Nerds In Space</title>
+</head>
+<body>
+  <header>
+    <h1>Planetary Rings in Space Nerds In Space</h1>
+    <nav>
+      <ul>
+        <li><button id="prev-btn" title="Previous slide">Previous Slide</button></li>
+        <li><span id="slide-number"></span>/<span id="slide-total"></span></li>
+        <li><button id="next-btn" title="Next Slide">Next Slide</button></li>
+      </ul>
+    </nav>
+  </header>
+  <div id="deck">
+    
+    <!-- Begin slides -->
+    <section>
+      <hgroup>
+        <h1>Planetary Rings in Space Nerds In Space</h1>
+        <p><img src="images/planetary-rings-1.jpg">
+      </hgroup>
+    </section>
+
+<section>
+<hgroup>
+<h1>Ring Geometry<h1>
+<h2>Triangles arranged in an annulus</h2>
+<p><img src="images/planetary-ring-geometry.jpg">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Ring Geometry 2</h1>
+<h2>Triangles arranged in an annulus</h2>
+<p><img src="images/planetary-ring-geometry-2.jpg">
+</hgroup>
+</section>
+
+    <section>
+    <hgroup>
+    <h1>Initial u-v Mapping</h1>
+    <h2>For each vertex of each triangle:
+    <h2>v is set to 0.0
+    <h2>if the vertex is on the outside edge of the ring, u is set to 1.0;
+    <h2>if the vertex is NOT on the outside edge of the ring, u is set to 0.0;
+    <h2>These values are modified later
+    </hgroup>
+    </section>
+
+<section>
+<hgroup>
+<h1>Texture:
+<h2><img src="images/texture.png">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Texture Features:
+<h2>* Fades to transparent on left and right edges
+<h2>* has areas of varying transparency with transparency
+linked to original pixel brightness
+<h2>* brighter areas more opaque, darker areas more transparent
+<h2><img src="images/texture.png">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Procedurally Customizing Rings
+<h2>* For each ring, inner and outer radii are chosen
+<h2>* Range is between 1.0 and 3.0 * planet radius
+<h2>* Minimum difference between inner and outer radii
+<h2>* These values do not affect the ring geometary, they
+are instead used to modify the u-v mapping.
+<h2>* For texture mapping, v is chosen to be a constant
+(to replace the 0.0) between 0 and 256, essentially choosing
+a row of pixels from the texture.
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Ring Vertex Shader 
+<h2>* uniform texture 'v' replacement value passed in (uniform for our purposes
+here means the value is constant for the entire ring).  This is what chooses
+the row of pixels from the texture that we will use.
+<h2>* Texture coordinate passed in (the u,v mapping coords for the vertex).
+<h2>* Y coordinate of texture is modified to have the value of uniform v value
+passed in.  (Will be passed on to fragment shader so modified).
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Ring Fragment Shader
+<h2>* uniform (constant) inner and outer ring radii are passed in
+<h2>* Texture coordinate (with y coord modified already) passed in
+<h2>* Texture x coordinate is modified to account for inner and outer
+ring radius.
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Ring Fragment Shader: Calculating texture x coordinate
+<h2>* x coordinate will be come into the shader with a value between 0.0 and 1.0
+<h2>* Will be 0.0 at the inner edge of the ring geometry 
+<h2>* Will be 1.0 at the outer edge of the ring geometry
+<h2>* Recall that ring geometry does not match inner and outer ring
+radii
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Ring Fragment Shader: Calculating texture x coordinate
+<p align=center><img src="images/diagram.jpg">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Ring Fragment Shader: Calculating texture x coordinate
+<h2> newx = max(0.0, (outer_r * x - inner_r + 1.0) / (outer_r - inner_r))
+<h2> (This made sense to me at the time...  and seems to work.)
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Casting Shadow of Planet Onto Ring (vertex shader)
+<h2>* Light position passed in as uniform to vertex shader
+<h2>* uniform v texture coord passed into vertex shader
+<h2>* Varying Light direction and position are calculated in vertex shader
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Casting Shadow of Planet Onto Ring (fragment shader)
+<h2>* uniform planet sphere passed in as vec4 (x,y,z and w = radius.)
+<h2>* uniform inner and outer radius of ring passed in .
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Casting Shadow of Planet Onto Ring (fragment shader)
+<h2>* Ray is cast from each fragment towards light testing for
+intersection with planet.  If it intersects, ring is shaded.
+</hgroup>
+</section>
+
+
+<section>
+<hgroup>
+<h1>Casting Shadow of Ring Onto Planet (vertex shader)
+<h2>Using a cubemap for the planet texture
+<h2>Nothing special in vertex shader for shadows
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Casting Shadow of Ring Onto Planet (fragment shader)
+<h2>* light position passed in as a uniform
+<h2>* Ring center, normal vector, radius (inside and outside)
+and texture v passed in as uniforms
+<h2>* Ray cast from fragment to light and intersection (if any)
+with ring is calculated.
+<h2>* Distance of interesection from center is scaled and offset
+to compute ring texture coordinate. 
+<h2>* Alpha value of ring texture element is used to shade
+fragment color.
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+</hgroup>
+</section>
+
+
+
+    <!-- /End slides -->
+    
+  </div>
+  <!-- /deck -->
+  <script src="../lib/jquery-1.5.2.min.js"></script>
+  <script src="../lib/jquery.jswipe-0.1.2.js"></script>  
+  <script src="../lib/htmlSlides.js"></script>
+  <script>
+    //Do our business when the DOM is ready for us
+    $(function() {
+      
+      //You can trigger Javascript based on the slide number like this:
+      $('html').bind('newSlide', function(e, id) { 
+        switch(id) {
+          case 2:
+            console.log('This is the second slide.');;
+            break;
+          case 3:
+            console.log('Hello, third slide.');
+            break;
+        }
+      });
+
+      //One little option: hideToolbar (boolean; default = false)
+      htmlSlides.init({ hideToolbar: true });
+      
+    });
+  </script>
+  </body>
+</html>
