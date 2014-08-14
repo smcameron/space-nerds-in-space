@@ -9495,11 +9495,6 @@ static int uz_to_demonsy(double uz)
 	return uz_to_usersy(uz, demon_ui.uy1, demon_ui.uy2);
 }
 
-static int ur_to_demonsr(double ur)
-{
-	return ur_to_usersr(ur, demon_ui.ux1, demon_ui.ux2);
-}
-
 static double demon_mousex_to_ux(double x)
 {
 	return user_mousex_to_ux(x, demon_ui.ux1, demon_ui.ux2);
@@ -9763,7 +9758,8 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 	}
 }
 
-static void debug_draw_ship_patrol_route(uint8_t npoints, union vec3 patrol[])
+static void debug_draw_ship_patrol_route(uint8_t npoints, union vec3 patrol[],
+	float ux1, float uy1, float ux2, float uy2)
 {
 	union vec3 *v1, *v2;
 	float x1, y1, x2, y2;
@@ -9773,15 +9769,16 @@ static void debug_draw_ship_patrol_route(uint8_t npoints, union vec3 patrol[])
 		v1 = &patrol[i - 1];
 		v2 = &patrol[i % npoints];
 
-		x1 = (float) ux_to_demonsx((double) v1->v.x);
-		y1 = (float) uz_to_demonsy((double) v1->v.z);
-		x2 = (float) ux_to_demonsx((double) v2->v.x);
-		y2 = (float) uz_to_demonsy((double) v2->v.z);
+		x1 = (float) ux_to_usersx((double) v1->v.x, ux1, ux2);
+		y1 = (float) uz_to_usersy((double) v1->v.z, uy1, uy2);
+		x2 = (float) ux_to_usersx((double) v2->v.x, ux1, ux2);
+		y2 = (float) uz_to_usersy((double) v2->v.z, uy1, uy2);
 		sng_draw_dotted_line(x1, y1, x2, y2);
 	}
 }
 
-static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
+static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
+			float ux1, float uy1, float ux2, float uy2)
 {
 	int x, y, x1, y1, x2, y2, vx, vy, r;
 	struct snis_entity *v = NULL;
@@ -9794,10 +9791,10 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		return;
 
 	tardy = (o->nupdates > 0 && universe_timestamp() - o->updatetime[0] > 50.0 && o->type != OBJTYPE_SPARK);
-	x = ux_to_demonsx(o->x);
+	x = ux_to_usersx(o->x, ux1, ux2);
 	if (x < 0 || x > SCREEN_WIDTH)
 		return;
-	y = uz_to_demonsy(o->z);
+	y = uz_to_usersy(o->z, uy1, uy2);
 	if (y < 0 || y > SCREEN_HEIGHT)
 		return;
 	x1 = x - 1;
@@ -9824,8 +9821,8 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 			int vi = lookup_object_by_id(o->tsd.ship.ai[0].u.attack.victim_id);
 			if (vi >= 0) {	
 				v = &go[vi];
-				vx = ux_to_demonsx(v->x);
-				vy = uz_to_demonsy(v->z);
+				vx = ux_to_usersx(v->x, ux1, ux2);
+				vy = uz_to_usersy(v->z, uy1, uy2);
 			}
 		}
 		break;
@@ -9838,7 +9835,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 	case OBJTYPE_NEBULA:
 		sng_set_foreground(NEBULA_COLOR);
 		sng_draw_circle(0, x, y,
-			ur_to_demonsr(o->tsd.nebula.r));
+			ur_to_usersr(o->tsd.nebula.r, ux1, ux2));
 		break;
 	case OBJTYPE_STARBASE:
 		sng_set_foreground(STARBASE_COLOR);
@@ -9846,7 +9843,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		break;
 	case OBJTYPE_PLANET:
 		sng_set_foreground(PLANET_COLOR);
-		r = ur_to_demonsr(o->tsd.planet.radius);
+		r = ur_to_usersr(o->tsd.planet.radius, ux1, ux2);
 		sng_draw_circle(0, x, y, r > 5 ? r : 5);
 		break;
 	case OBJTYPE_WORMHOLE:
@@ -9873,7 +9870,8 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o)
 		}
 		if (o->type == OBJTYPE_SHIP2 && (timer & 0x04))
 			debug_draw_ship_patrol_route(o->tsd.ship.ai[1].u.patrol.npoints,
-						o->tsd.ship.ai[1].u.patrol.p);
+						o->tsd.ship.ai[1].u.patrol.p,
+						ux1, uy1, ux2, uy2);
 	} else {
 		if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
 			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
@@ -10509,9 +10507,11 @@ static void show_demon(GtkWidget *w)
 	pthread_mutex_lock(&universe_mutex);
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
-		debug_draw_object(w, &go[i]);
+		debug_draw_object(w, &go[i], demon_ui.ux1, demon_ui.uy1,
+					demon_ui.ux2, demon_ui.uy2);
 	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++)
-		debug_draw_object(w, &spark[i]);
+		debug_draw_object(w, &spark[i], demon_ui.ux1, demon_ui.uy1,
+					demon_ui.ux2, demon_ui.uy2);
 	pthread_mutex_unlock(&universe_mutex);
 	draw_2d_small_cross(ux_to_usersx(demon_ui.selectedx, demon_ui.ux1, demon_ui.ux2),
 				uz_to_usersy(demon_ui.selectedz, demon_ui.uy1, demon_ui.uy2), BLUE, 1);
