@@ -10485,9 +10485,18 @@ static void show_2d_universe_grid(GtkWidget *w, float x1, float y1, float x2, fl
 		}
 }
 
+static void draw_2d_small_cross(float x, float y, int color, int blink)
+{
+	if (!blink || timer & 0x02) {
+		sng_set_foreground(color);
+		snis_draw_line(x - 3, y, x + 3, y);
+		snis_draw_line(x, y - 3, x, y + 3);
+	}
+}
+
 static void show_demon(GtkWidget *w)
 {
-	int x, y, i;
+	int i;
 	char buffer[100];
 
 	if (go[my_ship_oid].alive > 0)
@@ -10504,15 +10513,8 @@ static void show_demon(GtkWidget *w)
 	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++)
 		debug_draw_object(w, &spark[i]);
 	pthread_mutex_unlock(&universe_mutex);
-
-	if (timer & 0x02) {
-		x = ux_to_demonsx(demon_ui.selectedx);
-		y = uz_to_demonsy(demon_ui.selectedz);
-		sng_set_foreground(BLUE);
-		snis_draw_line(x - 3, y, x + 3, y);
-		snis_draw_line(x, y - 3, x, y + 3);
-	}
-
+	draw_2d_small_cross(ux_to_usersx(demon_ui.selectedx, demon_ui.ux1, demon_ui.ux2),
+				uz_to_usersy(demon_ui.selectedz, demon_ui.uy1, demon_ui.uy2), BLUE, 1);
 	sng_set_foreground(GREEN);
 	if (netstats.elapsed_seconds == 0)
 		sprintf(buffer, "Waiting for data");
