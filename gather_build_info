@@ -9,7 +9,14 @@ fi
 os=$(uname -o) > /dev/null 2>&1
 if [ "$?" != "0" ]
 then
-	os="unknown-os"
+	# check for mac OSX (this could probably be done better)
+	uname -a | grep '^Darwin ' > /dev/null 2>&1
+	if [ "$?" = "0" ]
+	then
+		os="Darwin"
+	else
+		os="unknown-os"
+	fi
 fi
 
 diffcount="0"
