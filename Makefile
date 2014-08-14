@@ -3,6 +3,9 @@
 WITHAUDIO=yes
 # WITHAUDIO=no
 
+# use "make OSX=1" for mac
+OSX=0
+
 INSTALL=install
 DESTDIR=.
 PREFIX=.
@@ -256,11 +259,17 @@ else
 PROFILEFLAG=
 endif
 
+ifeq (${OSX},0)
 # Arch pkg-config seems to be broken for lua5.2, so we have
 # this "... || echo" hack thing.
 #
 LUALIBS:=$(shell pkg-config --libs lua5.2 || echo '-llua')
 LUACFLAGS:=$(shell pkg-config --cflags lua5.2 || echo '')
+else
+# OSX needs to do it this way (what is the point of pkgconfig if they all do it differently?)
+LUALIBS:=$(shell pkg-config --libs lua)
+LUACFLAGS:=$(shell pkg-config --cflags lua)
+endif
 
 PNGLIBS:=$(shell pkg-config --libs libpng)
 PNGCFLAGS:=$(shell pkg-config --cflags libpng)
