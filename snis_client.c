@@ -10422,34 +10422,28 @@ static void show_demon_groups(GtkWidget *w)
 			NANO_FONT, SCREEN_WIDTH - 50, i * 18 + 40);
 }
 
-static void show_demon(GtkWidget *w)
+static void show_2d_universe_grid(GtkWidget *w, float x1, float y1, float x2, float y2)
 {
-	int x, y, i;
+	int x, y;
 	double ix, iy;
-	const char *letters = "ABCDEFGHIJK";
 	char label[10];
 	int xoffset = 7;
 	int yoffset = 10;
-	char buffer[100];
-
-	if (go[my_ship_oid].alive > 0)
-		sng_set_foreground(GREEN);
-	else
-		sng_set_foreground(RED);
+	const char *letters = "ABCDEFGHIJK";
 
 	ix = XKNOWN_DIM / 10.0;
 	for (x = 0; x <= 10; x++) {
 		int sx1, sy1, sy2;
 
-		sx1 = ux_to_demonsx(ix * x);
+		sx1 = ux_to_usersx(ix * x, x1, x2);
 		if (sx1 < 0 || sx1 > SCREEN_WIDTH)
 			continue;
-		sy1 = uz_to_demonsy(0.0);
+		sy1 = uz_to_usersy(0.0, y1, y2);
 		if (sy1 < 0)
 			sy1 = 0;
 		if (sy1 > SCREEN_HEIGHT)
 			continue;
-		sy2 = uz_to_demonsy(ZKNOWN_DIM);
+		sy2 = uz_to_usersy(ZKNOWN_DIM, y1, y2);
 		if (sy2 > SCREEN_HEIGHT)
 			sy2 = SCREEN_HEIGHT;
 		if (sy2 < 0)
@@ -10461,15 +10455,15 @@ static void show_demon(GtkWidget *w)
 	for (y = 0; y <= 10; y++) {
 		int sx1, sy1, sx2;
 
-		sy1 = uz_to_demonsy(iy * y);
+		sy1 = uz_to_usersy(iy * y, y1, y2);
 		if (sy1 < 0 || sy1 > SCREEN_HEIGHT)
 			continue;
-		sx1 = ux_to_demonsx(0.0);
+		sx1 = ux_to_usersx(0.0, x1, x2);
 		if (sx1 < 0)
 			sx1 = 0;
 		if (sx1 > SCREEN_WIDTH)
 			continue;
-		sx2 = ux_to_demonsx(XKNOWN_DIM);
+		sx2 = ux_to_usersx(XKNOWN_DIM, x1, x2);
 		if (sx2 > SCREEN_WIDTH)
 			sx2 = SCREEN_WIDTH;
 		if (sx2 < 0)
@@ -10484,11 +10478,25 @@ static void show_demon(GtkWidget *w)
 			int tx, ty;
 
 			snprintf(label, sizeof(label), "%c%d", letters[y], x);
-			tx = ux_to_demonsx(x * ix);
-			ty = uz_to_demonsy(y * iy);
+			tx = ux_to_usersx(x * ix, x1, x2);
+			ty = uz_to_usersy(y * iy, y1, y2);
 			sng_abs_xy_draw_string(label, NANO_FONT,
 				tx + xoffset,ty + yoffset);
 		}
+}
+
+static void show_demon(GtkWidget *w)
+{
+	int x, y, i;
+	char buffer[100];
+
+	if (go[my_ship_oid].alive > 0)
+		sng_set_foreground(GREEN);
+	else
+		sng_set_foreground(RED);
+
+	show_2d_universe_grid(w, demon_ui.ux1, demon_ui.uy1, demon_ui.ux2, demon_ui.uy2);
+
 	pthread_mutex_lock(&universe_mutex);
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
