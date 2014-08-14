@@ -9930,20 +9930,25 @@ static struct demon_cmd_def {
 static int demon_help_mode = 0;
 #define DEMON_CMD_DELIM " ,"
 
-static void demon_cmd_help(GtkWidget *w)
+static void show_cmd_help(GtkWidget *w, struct demon_cmd_def cmd[], int nitems)
 {
 	int i;
 	char buffer[100];
 
 	sng_set_foreground(WHITE);
-	if (!demon_help_mode)
-		return;
-	for (i = 0; i < ARRAYSIZE(demon_cmd); i++) {
-		sprintf(buffer, "%s", demon_cmd[i].verb);
+	for (i = 0; i < nitems; i++) {
+		sprintf(buffer, "%s", cmd[i].verb);
 		sng_abs_xy_draw_string(buffer, NANO_FONT, 85, i * 18 + 60);
-		sprintf(buffer, "%s", demon_cmd[i].help);
+		sprintf(buffer, "%s", cmd[i].help);
 		sng_abs_xy_draw_string(buffer, NANO_FONT, 170, i * 18 + 60);
 	}
+}
+
+static void demon_cmd_help(GtkWidget *w)
+{
+	if (!demon_help_mode)
+		return;
+	show_cmd_help(w, demon_cmd, ARRAYSIZE(demon_cmd));
 }
 
 static struct demon_group {
