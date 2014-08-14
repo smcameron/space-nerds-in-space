@@ -10358,28 +10358,34 @@ static void init_demon_ui()
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
 }
 
-static void calculate_new_demon_zoom(int direction, gdouble x, gdouble y)
+static void calculate_new_2d_zoom(int direction, gdouble x, gdouble y, double zoom_amount,
+	float *ux1, float *uy1, float *ux2, float *uy2)
 {
 	double nx1, nx2, ny1, ny2, mux, muy;
-	const double zoom_amount = 0.05;
 	double zoom_factor;
 
 	if (direction == GDK_SCROLL_UP)
 		zoom_factor = 1.0 - zoom_amount;
 	else
 		zoom_factor = 1.0 + zoom_amount;
-	mux = x * (demon_ui.ux2 - demon_ui.ux1) / (double) real_screen_width;
-	muy = y * (demon_ui.uy2 - demon_ui.uy1) / (double) real_screen_height;
-	mux += demon_ui.ux1;
-	muy += demon_ui.uy1;
-	nx1 = mux - zoom_factor * (mux - demon_ui.ux1);
-	ny1 = muy - zoom_factor * (muy - demon_ui.uy1);
-	nx2 = nx1 + zoom_factor * (demon_ui.ux2 - demon_ui.ux1);
-	ny2 = ny1 + zoom_factor * (demon_ui.uy2 - demon_ui.uy1);
-	demon_ui.ux1 = nx1;
-	demon_ui.uy1 = ny1;
-	demon_ui.ux2 = nx2;
-	demon_ui.uy2 = ny2;
+	mux = x * (*ux2 - *ux1) / (double) real_screen_width;
+	muy = y * (*uy2 - *uy1) / (double) real_screen_height;
+	mux += *ux1;
+	muy += *uy1;
+	nx1 = mux - zoom_factor * (mux - *ux1);
+	ny1 = muy - zoom_factor * (muy - *uy1);
+	nx2 = nx1 + zoom_factor * (*ux2 - *ux1);
+	ny2 = ny1 + zoom_factor * (*uy2 - *uy1);
+	*ux1 = nx1;
+	*uy1 = ny1;
+	*ux2 = nx2;
+	*uy2 = ny2;
+}
+
+static void calculate_new_demon_zoom(int direction, gdouble x, gdouble y)
+{
+	calculate_new_2d_zoom(direction, x, y, 0.05,
+			&demon_ui.ux1, &demon_ui.uy1, &demon_ui.ux2, &demon_ui.uy2);
 }
 
 static void show_demon_groups(GtkWidget *w)
