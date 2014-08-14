@@ -7447,23 +7447,23 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 
 	calculate_camera_transform(tridentecx);
 
-	struct material yaw_material = {
+	struct material yaw_material = { {
 		.color_by_w = { COLOR_LIGHTER(CYAN, 100),
 				CYAN,
 				COLOR_DARKER(CYAN, 80),
 				dist_to_cam - 1.0,
 				dist_to_cam,
-				dist_to_cam + 1.0 },
+				dist_to_cam + 1.0 } },
 		.type = MATERIAL_COLOR_BY_W,
 		.billboard_type = MATERIAL_BILLBOARD_TYPE_NONE };
 
-	struct material pitch_material = {
+	struct material pitch_material = { {
 		.color_by_w = { COLOR_LIGHTER(GREEN, 100),
 				GREEN,
 				COLOR_DARKER(GREEN, 80),
 				dist_to_cam - 1.0,
 				dist_to_cam,
-				dist_to_cam + 1.0 },
+				dist_to_cam + 1.0 } },
 		.type = MATERIAL_COLOR_BY_W,
 		.billboard_type = MATERIAL_BILLBOARD_TYPE_NONE };
 
