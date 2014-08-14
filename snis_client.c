@@ -9460,30 +9460,54 @@ static void toggle_demon_safe_mode(void)
 	queue_to_server(packed_buffer_new("b", OPCODE_TOGGLE_DEMON_SAFE_MODE));
 }
 
+static int ux_to_usersx(double ux, float x1, float x2)
+{
+	return ((ux - x1) / (x2 - x1)) * SCREEN_WIDTH;
+}
+
+static int uz_to_usersy(double uz, float y1, float y2)
+{
+	return ((uz - y1) / (y2 - y1)) * SCREEN_HEIGHT * ASPECT_RATIO;
+}
+
+static int ur_to_usersr(double ur, float x1, float x2)
+{
+	return (ur * SCREEN_WIDTH) / (x2 - x1);
+}
+
+static double user_mousex_to_ux(double x, float x1, float x2)
+{
+	return x1 + (x / real_screen_width) * (x2 - x1);
+}
+
+static double user_mousey_to_uz(double y, float y1, float y2)
+{
+	return y1 + (y / real_screen_height) * (y2 - y1) / ASPECT_RATIO;
+}
 
 static int ux_to_demonsx(double ux)
 {
-	return ((ux - demon_ui.ux1) / (demon_ui.ux2 - demon_ui.ux1)) * SCREEN_WIDTH;
+	return ux_to_usersx(ux, demon_ui.ux1, demon_ui.ux2);
 }
 
 static int uz_to_demonsy(double uz)
 {
-	return ((uz - demon_ui.uy1) / (demon_ui.uy2 - demon_ui.uy1)) * SCREEN_HEIGHT * ASPECT_RATIO;
+	return uz_to_usersy(uz, demon_ui.uy1, demon_ui.uy2);
 }
 
 static int ur_to_demonsr(double ur)
 {
-	return ((ur * SCREEN_WIDTH) / (demon_ui.ux2 - demon_ui.ux1));
+	return ur_to_usersr(ur, demon_ui.ux1, demon_ui.ux2);
 }
 
 static double demon_mousex_to_ux(double x)
 {
-	return demon_ui.ux1 + (x / real_screen_width) * (demon_ui.ux2 - demon_ui.ux1);
+	return user_mousex_to_ux(x, demon_ui.ux1, demon_ui.ux2);
 }
 
 static double demon_mousey_to_uz(double y)
 {
-	return demon_ui.uy1 + (y / real_screen_height) * (demon_ui.uy2 - demon_ui.uy1) / ASPECT_RATIO;
+	return user_mousey_to_uz(y, demon_ui.uy1, demon_ui.uy2);
 }
 
 static double weapons_mousex_to_yaw(double x)
