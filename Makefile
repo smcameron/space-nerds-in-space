@@ -277,6 +277,9 @@ PNGCFLAGS:=$(shell pkg-config --cflags libpng)
 SDLLIBS:=$(shell pkg-config sdl --libs)
 SDLCFLAGS:=$(shell pkg-config sdl --cflags)
 
+GLEWLIBS:=$(shell pkg-config --libs-only-l glew)
+GLEWCFLAGS:=$(shell pkg-config --cflags glew)
+
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o mtwist.o infinite-taunt.o snis_damcon_systems.o \
@@ -296,7 +299,7 @@ LIMCLIENTOBJS=${COMMONCLIENTOBJS} graph_dev_gdk.o snis_limited_graph.o snis_limi
 SDLCLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer.o
 
 SSGL=ssgl/libssglclient.a
-LIBS=-lGLEW -lGL -Lssgl -lssglclient -lrt -ldl -lm ${LUALIBS} ${PNGLIBS}
+LIBS=-lGL -Lssgl -lssglclient -ldl -lm ${LUALIBS} ${PNGLIBS} ${GLEWLIBS}
 SERVERLIBS=-Lssgl -lssglclient -lrt -ldl -lm ${LUALIBS}
 #
 # NOTE: if you get
@@ -386,7 +389,7 @@ GTKCOMPILE=$(CC) ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 LIMCOMPILE=$(CC) -DWITHOUTOPENGL=1 ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 GLEXTCOMPILE=$(CC) ${MYCFLAGS} ${GTKCFLAGS} ${GLEXTCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 VORBISCOMPILE=$(CC) ${MYCFLAGS} ${VORBISFLAGS} ${SNDFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
-SDLCOMPILE=$(CC) ${MYCFLAGS} ${SDLCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
+SDLCOMPILE=$(CC) ${MYCFLAGS} ${SDLCFLAGS} ${GLEWCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 
 CLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${GLEXTCFLAGS} ${CLIENTOBJS} ${GTKLDFLAGS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
 LIMCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${LIMCLIENTOBJS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
