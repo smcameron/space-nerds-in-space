@@ -6,6 +6,12 @@ WITHAUDIO=yes
 # use "make OSX=1" for mac
 OSX=0
 
+ifeq (${OSX},0)
+LRTLIB=-lrt
+else
+LRTLIB=
+endif
+
 INSTALL=install
 DESTDIR=.
 PREFIX=.
@@ -300,7 +306,7 @@ SDLCLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_
 
 SSGL=ssgl/libssglclient.a
 LIBS=-lGL -Lssgl -lssglclient -ldl -lm ${LUALIBS} ${PNGLIBS} ${GLEWLIBS}
-SERVERLIBS=-Lssgl -lssglclient -lrt -ldl -lm ${LUALIBS}
+SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS}
 #
 # NOTE: if you get
 #
@@ -398,11 +404,11 @@ SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} && $(ECHO) '  LIN
 OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 
 ELOBJS=mtwist.o mathutils.o quat.o simplexnoise1234.o
-ELLIBS=-lm -lrt -lpng
+ELLIBS=-lm ${LRTLIB} -lpng
 ELLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} earthlike.o ${ELOBJS} ${ELLIBS} && $(ECHO) '  LINK' $@
 
 GGOBJS=mtwist.o mathutils.o simplexnoise1234.o quat.o
-GGLIBS=-lm -lrt -lpng
+GGLIBS=-lm ${LRTLIB} -lpng
 GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} && $(ECHO) '  LINK' $@
 
 all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS}

@@ -49,11 +49,19 @@ Q=@
 ECHO=echo
 endif
 
+OSX=0
+
+ifeq (${OSX},1)
+LINKFLAGS=
+LRTFLAGS=
+else
 LINKFLAGS=-lrt
+LRTFLAGS=-lrt
+endif
 
 COMPILE=$(CC) ${MYCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 
-MYCFLAGS=${DEBUGFLAG} ${OPTIMIZEFLAG} --pedantic -Wall ${STOP_ON_WARN} -pthread -lrt
+MYCFLAGS=${DEBUGFLAG} ${OPTIMIZEFLAG} --pedantic -Wall ${STOP_ON_WARN} -pthread ${LRTFLAGS} 
 
 SERVEROBJS=ssgl_sanitize.o ssgl_sleep.o \
 	ssgl_socket_io.o ssgl_log.o
