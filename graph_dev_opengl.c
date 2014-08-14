@@ -3148,6 +3148,8 @@ static void setup_3d()
 
 int graph_dev_setup(const char *shader_dir)
 {
+	glewExperimental = GL_TRUE; /* OSX apparently needs glewExperimental */
+
 	if (glewInit() != GLEW_OK) {
 		fprintf(stderr, "Failed to initialize GLEW\n");
 		return -1;
