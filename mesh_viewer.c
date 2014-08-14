@@ -1,5 +1,9 @@
 
+#ifdef __APPLE__
+#include <SDL.h>
+#else
 #include <SDL/SDL.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
