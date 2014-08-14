@@ -4,6 +4,14 @@
 ./killem.sh
 sleep 0.25
 
+uname -a | grep '^Darwin ' > /dev/null 2>&1
+if [ "$?" = "0" ]
+then
+	OSX="1"	
+else
+	OSX=0
+fi
+
 usage()
 {
 	echo "usage: quickstart star-ship-name password" 1>&2
@@ -34,7 +42,13 @@ sleep 0.25
 sleep 0.25
 
 # start the game client and server in quickstart mode
-./snis_client --fullscreen --quickstart --starship "$shipname" --pw "$password"
+if [ "$OSX" = "1" ]
+then
+	# do not use fullscreen on mac OSX (why?)
+	./snis_client --quickstart --starship "$shipname" --pw "$password"
+else
+	./snis_client --fullscreen --quickstart --starship "$shipname" --pw "$password"
+fi
 
 exit $?
 
