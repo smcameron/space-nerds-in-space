@@ -22,7 +22,7 @@ FACTIONS in snis:
 
         0 "Neutral",
         1 "Wallunni",
-        2 "Gordouni",
+        2 "Schaazbaut",
         3 "Zarkon",
         4 "Vekkazi",
 

@@ -246,7 +246,7 @@ static char *Nationality[] = {
 	"Purkrani",
 	"Furtian",
 	"Barkonian",
-	"Gordouni",
+	"Schaazbaut",
 	"Albonian",
 	"Neruvian",
 	"Skonkulan",

@@ -3,7 +3,7 @@
 
 neutral =  0;
 wallunni = 1;
-gordouni = 2;
+schaazbaut = 2;
 zarkon = 3;
 vekkazi = 4;
 
