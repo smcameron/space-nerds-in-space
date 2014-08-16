@@ -8171,6 +8171,28 @@ error:
 	return 1;
 }
 
+static int l_set_faction(lua_State *l)
+{
+	const double id = luaL_checknumber(l, 1);
+	const double faction = luaL_checknumber(l, 2);
+
+	int i, f;
+
+	f = ((int) faction) % nfactions();
+	i = lookup_by_id((int) id);
+	if (i < 0)
+		goto error;
+	go[i].sdata.faction = f;
+	if (go[i].type == OBJTYPE_SHIP2) /* clear ship ai stack */
+		go[i].tsd.ship.nai_entries = 0;
+	go[i].timestamp = universe_timestamp;
+	lua_pushnumber(l, 0.0);
+	return 1;
+error:
+	lua_pushnil(l);
+	return 1;
+}
+
 static int l_set_player_damage(lua_State *l)
 {
 	const double id = luaL_checknumber(l, 1);
@@ -11168,6 +11190,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_ai_push_patrol, "ai_push_patrol");
 	add_lua_callable_fn(l_ai_push_attack, "ai_push_attack");
 	add_lua_callable_fn(l_add_cargo_container, "add_cargo_container");
+	add_lua_callable_fn(l_set_faction, "set_faction");
 }
 
 static int run_initial_lua_scripts(void)
