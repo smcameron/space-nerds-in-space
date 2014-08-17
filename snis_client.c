@@ -9717,7 +9717,6 @@ static void demon_button3_release(int button, gdouble x, gdouble y)
 			demon_ui.selectedx = demon_mousex_to_ux(ox);
 			demon_ui.selectedz = demon_mousey_to_uz(oy);
 		}
-		pthread_mutex_unlock(&universe_mutex);
 	}
 }
 
