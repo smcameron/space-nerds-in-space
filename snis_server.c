@@ -878,6 +878,53 @@ static void snis_queue_delete_object(struct snis_entity *o)
 	client_unlock();
 }
 
+static void remove_ship_victim(struct snis_entity *ship, uint32_t victim_id)
+{
+	int i;
+
+	for (i = 0; i < ship->tsd.ship.nai_entries; i++) {
+		if (ship->tsd.ship.ai[i].ai_mode == AI_MODE_ATTACK) {
+			if (ship->tsd.ship.ai[i].u.attack.victim_id == victim_id)
+				ship->tsd.ship.ai[i].u.attack.victim_id = -2;
+		}
+	}
+}
+
+static void remove_starbase_victim(struct snis_entity *starbase, uint32_t victim_id)
+{
+	int i, j;
+
+	for (i = 0; i < starbase->tsd.starbase.nattackers;) {
+		if (starbase->tsd.starbase.attacker[i] == victim_id) {
+			for (j = i; j < starbase->tsd.starbase.nattackers - 1; j++) {
+				starbase->tsd.starbase.attacker[j] = starbase->tsd.starbase.attacker[j + 1];
+			}
+			starbase->tsd.starbase.nattackers--;
+			continue;
+		}
+		i++;
+	}
+}
+
+static void remove_from_attack_lists(uint32_t victim_id)
+{
+	int i;
+	const int n = snis_object_pool_highest_object(pool);
+
+	for (i = 0; i <= n; i++) {
+		switch (go[i].type) {
+		case OBJTYPE_SHIP2:
+			remove_ship_victim(&go[i], victim_id);
+			break;
+		case OBJTYPE_STARBASE:
+			remove_starbase_victim(&go[i], victim_id);
+			break;
+		default:
+			continue;
+		}
+	}
+}
+
 static void delete_from_clients_and_server(struct snis_entity *o)
 {
 	snis_queue_delete_object(o);
@@ -898,6 +945,7 @@ static void delete_from_clients_and_server(struct snis_entity *o)
 
 	if (o->type == OBJTYPE_SHIP2)
 		fleet_leave(o->id); /* leave any fleets ship might be a member of */
+	remove_from_attack_lists(o->id);
 	delete_object(o);
 }
 
@@ -2440,6 +2488,11 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		/* just change current mode to flee (pop + push) */
 		o->tsd.ship.ai[n].ai_mode = AI_MODE_FLEE;
 		o->tsd.ship.ai[n].u.flee.warp_countdown = 10 * (10 + snis_randn(10));
+		return;
+	}
+
+	if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -2) {
+		pop_ai_attack_mode(o);
 		return;
 	}
 
