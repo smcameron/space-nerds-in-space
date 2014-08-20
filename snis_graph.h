@@ -77,6 +77,7 @@ SNG_GLOBAL void sng_abs_xy_draw_string(char *s, int font, float x, float y);
 SNG_GLOBAL void sng_abs_xy_draw_string_with_cursor(
 				char *s, int font, float x, float y, int cursor_pos, int cursor_on) ;
 SNG_GLOBAL void sng_center_xy_draw_string(char *s, int font, float x, float y);
+SNG_GLOBAL void sng_string_bounding_box(char *s, int font, float *bbx1, float *bby1, float *bbx2, float *bby2);
 SNG_GLOBAL void sng_draw_point(float x, float y);
 SNG_GLOBAL void sng_setup_colors(void *w);
 SNG_GLOBAL void sng_set_foreground(int c);
