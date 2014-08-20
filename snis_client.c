@@ -7281,21 +7281,21 @@ static void ui_add_button(struct button *b, int active_displaymode)
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
-static void ui_hide_widget(void *widget)
+static void __attribute__((unused)) ui_hide_widget(void *widget)
 {
 	struct ui_element *uie;
 
-	uie = widget_to_ui_element(&uiobjs, widget);
+	uie = widget_to_ui_element(uiobjs, widget);
 	if (!uie)
 		return;
 	ui_element_hide(uie);
 }
 
-static void ui_unhide_widget(void *widget)
+static void __attribute__((unused)) ui_unhide_widget(void *widget)
 {
 	struct ui_element *uie;
 
-	uie = widget_to_ui_element(&uiobjs, widget);
+	uie = widget_to_ui_element(uiobjs, widget);
 	if (!uie)
 		return;
 	ui_element_unhide(uie);
