@@ -9796,6 +9796,21 @@ static void debug_draw_ship_patrol_route(uint8_t npoints, union vec3 patrol[],
 	}
 }
 
+static void draw_selection_marker(int x1, int y1, int x2, int y2, int offset)
+{
+	const int w = 3;
+	offset += (4 - ((timer >> 1) % 4));
+
+	snis_draw_line(x1 - offset, y1 - offset, x1 - offset + w, y1 - offset);
+	snis_draw_line(x1 - offset, y1 - offset, x1 - offset, y1 - offset + w);
+	snis_draw_line(x2 + offset, y1 - offset, x2 + offset - w, y1 - offset);
+	snis_draw_line(x2 + offset, y1 - offset, x2 + offset, y1 - offset + w);
+	snis_draw_line(x1 - offset, y2 + offset - w, x1 - offset, y2 + offset);
+	snis_draw_line(x1 - offset, y2 + offset, x1 - offset + w, y2 + offset);
+	snis_draw_line(x2 + offset, y2 + offset - w, x2 + offset, y2 + offset);
+	snis_draw_line(x2 + offset - w, y2 + offset, x2 + offset, y2 + offset);
+}
+
 static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 			float ux1, float uy1, float ux2, float uy2)
 {
@@ -9878,14 +9893,9 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 	snis_draw_line(x1, y1, x2, y2);
 	snis_draw_line(x1, y2, x2, y1);
 	if (demon_id_selected(o->id)) {
-		if (timer & 0x02) {
-			snis_draw_line(x1 - 6, y1 - 6, x2 + 6, y1 - 6);
-			snis_draw_line(x1 - 6, y2 + 6, x2 + 6, y2 + 6);
-			snis_draw_line(x1 - 6, y1 - 6, x1 - 6, y2 + 6);
-			snis_draw_line(x2 + 6, y1 - 6, x2 + 6, y2 + 6);
-			if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
-				snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
-			}
+		draw_selection_marker(x1, y1, x2, y2, 6);
+		if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
+			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
 		}
 		if (o->type == OBJTYPE_SHIP2 && (timer & 0x04))
 			debug_draw_ship_patrol_route(o->tsd.ship.ai[1].u.patrol.npoints,
