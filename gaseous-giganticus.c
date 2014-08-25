@@ -452,7 +452,7 @@ static inline float fbmnoise4(float x, float y, float z, float w, const float fb
 
 	return 1.0 * snoise4(x, y, z, w) +
 		f1 * snoise4(2.0f * x, 2.0f * y, 2.0f * z, 2.0f * w) +
-		f2 * fbm_falloff * snoise4(4.0f * x, 4.0f * y, 4.0f * z, 4.0f * w) +
+		f2 * snoise4(4.0f * x, 4.0f * y, 4.0f * z, 4.0f * w) +
 		f3 * snoise4(8.0f * x, 8.0f * y, 8.0f * z, 8.0f * w);
 }
 
