@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  
+  <!--[if lt IE 9]>
+  <script src="./lib/html5shim.js"></script>
+  <![endif]-->  
+  
+  <!-- These are some core styles the slideshow app requires -->
+  <link rel="stylesheet" href="./lib/styles.css" />
+  
+  <!-- These are the styles you'll add to make the slides look great -->
+  <link rel="stylesheet" href="css/styles.css" />
+  
+  <title>Procedural Gas Giant Planet Textures</title>
+</head>
+<body>
+  <header>
+    <h1>Procedural Gas Giant Planet Textures</h1>
+    <nav>
+      <ul>
+        <li><button id="prev-btn" title="Previous slide">Previous Slide</button></li>
+        <li><span id="slide-number"></span>/<span id="slide-total"></span></li>
+        <li><button id="next-btn" title="Next Slide">Next Slide</button></li>
+      </ul>
+    </nav>
+  </header>
+  <div id="deck">
+    
+    <!-- Begin slides -->
+    <section>
+      <hgroup>
+        <h2>(Use arrow keys to navigate slides, F11 for fullscreen)</h2>
+        <h1>Procedural Gas Giant Planet Textures</h1>
+	<p align=center>Stephen M. Cameron
+	<p align=center><img src="jupiter-image.jpg">
+	<p align=center><em>Not Procedurally Generated (NASA photo)</em>
+      </hgroup>
+    </section>
+
+<section>
+<hgroup>
+<h1>So You're Making a Space Game...
+<h2>You're gonna need some planets
+<h2><img src="spacescene.jpg" width=800 height=600>
+<h2>First attempts...  Try Crazy Things Like..
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Photoshopping Marble Floor Tiles
+<table border=5>
+<tr>
+<td>
+<img src="floortile3.jpg" width=500, height=500>
+</td>
+<td>
+  --->
+</td>
+<td>
+<h2><img src="floor-tile-planet1.jpg" width=700, height=500>
+</td>
+</tr>
+</table>
+<hr> . . . which almost works.
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Photoshopping Marble Floor Tiles
+<h2>1.  Crop so it's 2x as wide as it is tall
+<h2>2.  Make seamless (gimp: Filters/Render/Map/Make Seamless)
+<h2>3.  Run through an Equirectangular to Cubic transformation 
+<table>
+<tr>
+<td>
+Step 1.
+</td>
+<td>
+<img src="floortile3.jpg", width=500, height=250
+</td>
+<td>
+Step 2.
+</td>
+<td>
+<img src="seamless-ft.jpg" width = 500, height=250>
+</td>
+</tr>
+</table>
+<table>
+<tr>
+<td>
+<img src="empty.jpg" width=200 height=200>
+</td>
+<td>
+<img src="cubic_seamless-ft/seamless-ft-4.jpg" width=200 height=200>
+</td>
+<td>
+<img src="empty.jpg" width=200 height=200>
+</td>
+<td>
+<img src="empty.jpg" width=200 height=200>
+</td>
+</tr>
+<tr>
+<td>
+<img src="cubic_seamless-ft/seamless-ft-3.jpg" width=200 height=200>
+</td>
+<td>
+<img src="cubic_seamless-ft/seamless-ft-0.jpg" width=200 height=200>
+</td>
+<td>
+<img src="cubic_seamless-ft/seamless-ft-1.jpg" width=200 height=200>
+</td>
+<td>
+<img src="cubic_seamless-ft/seamless-ft-2.jpg" width=200 height=200>
+</td>
+</tr>
+<tr>
+<td>
+<img src="empty.jpg" width=200 height=200>
+</td>
+<td>
+<img src="cubic_seamless-ft/seamless-ft-5.jpg" width=200 height=200>
+</td>
+<td>
+<img src="empty.jpg" width=200 height=200>
+</td>
+<td>
+<img src="empty.jpg" width=200 height=200>
+</td>
+</tr>
+</table>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Problems with Photoshopping Marble Floor Tiles
+<h2>1. Pinching at the poles (mitigate via more hand photoshopping)
+<h2><img src="floortile-planet-pinching.jpg" width=800 height=600>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Problems with Photoshopping Marble Floor Tiles
+<h2>2. Time consuming manual process (mitigate somewhat with ImageMagick, etc.)
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Problems with Photoshopping Marble Floor Tiles
+<h2>3. Just look at these photos of Jupiter from NASA.
+<table>
+<tr>
+<td>
+<img src="j1.jpg" height=500 width=500>
+</td>
+<td>
+<img src="j2.jpg" height=500 width=500>
+</td>
+<td>
+<img src="j3.jpg" height=500 width=500>
+</td>
+</tr>
+</table>
+<h2>Hmm.  My stupid floor tiles just don't really measure up, do they?
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Computational Fluid Dynamics All the Things!
+<h2><a href="https://www.youtube.com/watch?v=OM0l2YPVMf8">Like this youtube video</a>.
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Computational Fluid Dynamics All the Things!
+<h2>Oh man, that's hard.  Like, <em>really</em> hard...
+<h2>Can we cheat?
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Computational Fluid Dynamics All the Things!
+<h2>Yes we can.
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Computational Fluid Dynamics All the Things!
+<h2><a href="http://www.cs.ubc.ca/~rbridson/">Robert Bridson</a> shows us how to cheat
+<h2><img src="robert-bridson.jpg">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curl Noise for Procedural Fluid Flow
+<h2><a href="http://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph2007-curlnoise.pdf"><img src="curl-noise-fluid-flow.jpg"></a>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curl Noise for Procedural Fluid Flow
+<h2>In mathematical lingo, the summary of this paper is:
+<h2>Take the curl of the gradient of a noise field to produce
+a chaotic but divergence free velocity field.
+<h2>Huh?
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curl Noise for Procedural Fluid Flow
+<h2>Consider a 2D Perlin (or Simplex) noise field.
+<h2>Put in x and y, get out a noise value between 0.0 and 1.0;
+<h2>Imagine it as a height field:
+<h2>h = f(x, y); where f() is the noise function.
+<h2><img src="perlin-noise-height-field.JPG">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curl Noise for Procedural Fluid Flow
+<h2>Now we can compute the gradient of the noise field wrt x and y.
+<h2>That is, compute a 2D vector field where at each point the vectors
+point in the direction of "most downhill" -- the direction a marble would
+roll if released at that (x,y) position in the height field.  The magnitude
+of the vector is related to the slope of the hill, the steeper it is, the
+larger the magnitude.
+<h2>That field of vectors that all point in the direction of "downhill" is
+the <em>gradient of the noise field</em>.
+<h2><img src="noise-gradient.JPG">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curl Noise for Procedural Fluid Flow
+<h2>* Now take the "curl" of the gradient to find the velocity field.
+<h2>* <em>Bunch of scary vector math that ultimately boils down to...</em>
+<h2><p align=center><img src="eqn-2.jpg", width=1200 height=150>
+<h2>* You can visualize this as rotating all the noise gradient
+vectors about the vertical (z) axis clockwise by 90 degrees.
+<h2>* This can be accomplished by swapping x and y and then negating
+the y component.
+<h2>* v(x,y) is the velocity field, think of it as an array of vectors, indexed by x and y,
+which gives you the velocity at coordinates x and y.
+<h2>* Delta-Psi is the change in the noise value over some small region around x and y.
+<h2>* Delta-x and delta-y define the small region over which the noise is sampled.
+<h2>* To summarize, at each point (x,y) the velocity (vx, vy) is (delta-noise/delta-y, -delta-noise/delta-x), or, (vx, vy) is (slope-of-noise-in-y, -slope-of-noise-in-x).
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curl Noise for Procedural Fluid Flow
+<h2>Visualizing this process...
+<h2><p align=center><img src="curl-noise.gif" width=800, height=600>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curl Noise for Procedural Fluid Flow
+<h2>How do we use this information in a program to make something useful?
+<h2>Consider a 2D program first:
+<h2>* Create a large 2D array for the velocity field, constructed as described previously
+<h2>* Create a particle system to interact with the velocity field
+<h2>* Each particle has a position (x,y) within the field, and a color (RGB).
+<h2>* At each clock tick of the simulation each particle moves according
+to the velocity field at its current location.
+<h2>* Choose a method of initially coloring the particles 
+(e.g. map an image to the velocity field.)
+<h2>* Dump a large number of particles into such a simulation at random locations
+<h2>* Periodically, create an image based on the color and location
+of the particles.
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curly Vortex
+<h2><a href="https://github.com/smcameron/curly-vortex">Curly Vortex</a> is such
+a program, written in the <a href="http://processing.org">Processing language</a>
+<h2> * It takes an image as input
+<h2> * Computes a velocity field
+<h2> * dumps in a bunch of particles initially colored according to input image
+<h2> * Lets particles move around according to velocity field
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curly Vortex
+<h2><a href="https://github.com/smcameron/curly-vortex/blob/master/curlyvortex/curlyvortex.pde#L88-130">Computing the velocity field</a>
+<h2>*BTW: you can link to ranges of lines of code (e.g.: 5 - 10) on github by appending e.g.: '#L5-10', cool!
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curly Vortex
+<h2><a href="https://github.com/smcameron/curly-vortex/blob/master/curlyvortex/curlyvortex.pde#L178-216">Moving and drawing the particles</a>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curly-Vortex output:
+<h1><img src="abstract.jpg">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curly-Vortex output:
+<h1><img src="cv01.jpg" width=1353 height=692>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curly-Vortex output:
+<h1><img src="cv02.jpg" width=1353 height=692>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Curly-Vortex output:
+<h1><img src="cv06.jpg" width=1353 height=692>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Extending Curly Vortex to 3 dimensions
+<h2>Attempted to bolt together 6 instances forming 6 faces of a cube map
+<h2>Particles leaving one face re-entered adjoining faces
+<h2>Discontinuities in the Velocity Field!  Slime in the Ice Machine!
+<h2>Due to using different axes in the noise field for calculating the
+velocity field of each face
+<h2><img src="hard-edges.jpg">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Instead, really do it in 3D proper
+<h2>* Particles exist on the surface of a sphere (have x,y,z + color)
+<h2>* velocity and gradient fields are in cubemapped arrays
+<h2>* Noise gradient is calculated relative to surface of sphere
+<h2>* velocity field is computed by rotating noise gradient 90 degrees and scaling
+<h2>* Rotation direction depends on if gradient is uphill or downhill (away from or towards sphere center)
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Gaseous Giganticus
+<h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/gaseous-giganticus.c">Gaseous-Giganticus is such a program</a>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Gaseous Giganticus - Computing the 6 velocity fields
+<h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/gaseous-giganticus.c#L512-558">Code to compute velocity fields</a>
+<h2>Multithreaded -- 1 thread per cube face (I got tired of waiting).
+<h2>velocity field contained in arrays corresponding to 6 faces of a cube representing velocities on surface of a sphere (like cube mapping)
+<h2><img src="cubemap.jpg" width = 500 height=500>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Gaseous Giganticus - Computing the noise gradient 
+<h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/gaseous-giganticus.c#L460-475">Code to compute noise gradient</a>
+<h2>6 noise values on 3 axes are sampled in the immediate vicinity of the point of interest
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Gaseous Giganticus - Computing the 6 velocity fields
+<h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/gaseous-giganticus.c#L477-503">Code to compute velocity from noise gradient </a>
+<h2><img src="curl2-calculation.jpg">
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Gaseous Giganticus - Particle motion 
+<h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/gaseous-giganticus.c#L584-594">Code for particle motion</a>
+<h2>Particle position determines velocity field array element.
+<h2>New particle position is old position plus velocity field array element.
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Sample Gaseous Giganticus output
+<h2><img src="20-bands-ns-0.8-velocity-factor-1800.jpg">
+<p align=center>20 bands, noise-scale 0.8 velocity factor 1800
+<h2>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Sample Gaseous Giganticus output
+<h2><img src="20-bands-ns-1.8-velocity-factor-1800.jpg">
+<p align=center>20 bands, noise-scale 1.8 velocity factor 1800
+<h2>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Sample Gaseous Giganticus output
+<h2><img src="20-bands-ns-2.8-velocity-factor-1800.jpg">
+<p align=center>20 bands, noise-scale 2.8 velocity factor 1800
+<h2>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Sample Gaseous Giganticus output
+<h2><img src="20-bands-ns-3.8-velocity-factor-1800.jpg">
+<p align=center>20 bands, noise-scale 3.8 velocity factor 1800
+<h2>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Sample Gaseous Giganticus output
+<h2><img src="20-bands-ns-7.0-velocity-factor-1800.jpg">
+<p align=center>20 bands, noise-scale 7.0 velocity factor 1800
+<h2>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Sample Gaseous Giganticus output
+<h2><img src="30-bands-ns-3.8-velocity-factor-400.jpg">
+<p align=center>30 bands, noise-scale 3.8 velocity factor 400
+<h2>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Sample Gaseous Giganticus output
+<h2><img src="0-bands-ns-2.8-velocity-factor-800.jpg">
+<p align=center>0 bands, noise-scale 2.8 velocity factor 800
+<h2>
+</hgroup>
+</section>
+
+
+<section>
+<hgroup>
+<h1>Sample Gaseous Giganticus output
+<h2><table>
+<tr>
+<td>
+<img src="30-bands-ns-3.8-vf-500-limestone.jpg">
+</td>
+<td>
+---
+</td>
+<td>
+<td><img src="limestone-slice.jpg">
+</td
+</tr>
+</table>
+<p align=center>30 bands, noise-scale 3.8 velocity factor 500
+<h2>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Sample Gaseous Giganticus output
+<h2><table>
+<tr>
+<td>
+<img src="15-bands-ns-2.4-vf-600-sunset-slice.jpg">
+</td>
+<td>
+---
+</td>
+<td>
+<td><img src="sunset-slice.jpg" height=600 width=75>
+</td
+</tr>
+</table>
+<p align=center>15 bands, noise-scale 2.4 velocity factor 600
+<h2>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Sample Gaseous Giganticus output
+<h2><table>
+<tr>
+<td>
+<img src="20-bands-ns-2.8-vf-800-jup1.jpg">
+</td>
+<td>
+---
+</td>
+<td>
+<td><img src="jup1.jpg" height=600 width=75>
+</td
+</tr>
+</table>
+<p align=center>20 bands, noise-scale 2.8 velocity factor 800
+<h2>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Sample Gaseous Giganticus output
+<h2><table>
+<tr>
+<td>
+<img src="17-bands-ns-2.4-vf-1200-cir2.jpg">
+</td>
+<td>
+---
+</td>
+<td>
+<td><img src="cir2.jpg" height=600 width=75>
+</td
+</tr>
+</table>
+<p align=center>20 bands, noise-scale 2.8 velocity factor 800
+<h2>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Sample Gaseous Giganticus output
+<h2><table>
+<tr>
+<td>
+<img src="25-bands-ns-3.8-vf-500-bluegreen.jpg">
+</td>
+<td>
+---
+</td>
+<td>
+<td><img src="bluegreen-slice.jpg" height=600 width=75>
+</td
+</tr>
+</table>
+<p align=center>20 bands, noise-scale 2.8 velocity factor 800
+<h2>
+</hgroup>
+</section>
+
+<section>
+<hgroup>
+<h1>Links
+<h2><ul>
+<li>My github account: <a href="https://github.com/smcameron">https://github.com/smcameron</a>
+<li>Curly Vortex source: <a href="https://github.com/smcameron/curly-vortex">https://github.com/smcameron/curly-vortex</a>
+<li>Gaseous-Giganticus source: <a href="https://github.com/smcameron/space-nerds-in-space">https://github.com/smcameron/space-nerds-in-space</a> (gaseous-giganticus is a program residing within the Space Nerds In Space codebase).
+<li><a href="http://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph2007-curlnoise.pdf">Curl Noise for Procedural Fluid Flow</a> by Robert Bridson, et al. (pdf)
+</ul>
+<hgroup>
+</section>
+    <!-- /End slides -->
+    
+  </div>
+  <!-- /deck -->
+  <script src="./lib/jquery-1.5.2.min.js"></script>
+  <script src="./lib/jquery.jswipe-0.1.2.js"></script>  
+  <script src="./lib/htmlSlides.js"></script>
+  <script>
+    //Do our business when the DOM is ready for us
+    $(function() {
+      
+      //You can trigger Javascript based on the slide number like this:
+      $('html').bind('newSlide', function(e, id) { 
+        switch(id) {
+          case 2:
+            console.log('This is the second slide.');;
+            break;
+          case 3:
+            console.log('Hello, third slide.');
+            break;
+        }
+      });
+
+      //One little option: hideToolbar (boolean; default = false)
+      htmlSlides.init({ hideToolbar: true });
+      
+    });
+  </script>
+  </body>
+</html>
