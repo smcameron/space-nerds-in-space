@@ -2804,6 +2804,25 @@ static int inside_planet(float x, float y, float z)
 	return 0;
 }
 
+static void ai_add_ship_movement_variety(struct snis_entity *o,
+			float destx, float desty, float destz, float fractional_distance)
+{
+	union vec3 v, vn;
+
+	v.v.x = destx - o->x;
+	v.v.y = desty - o->y;
+	v.v.z = destz - o->z;
+	vec3_normalize(&vn, &v);
+	vec3_mul(&v, &vn, fractional_distance);
+	v.v.x += (float) snis_randn((int) (fractional_distance / 15.0f));
+	v.v.y += (float) snis_randn((int) (fractional_distance / 15.0f));
+	v.v.z += (float) snis_randn((int) (fractional_distance / 15.0f));
+
+	o->tsd.ship.dox = v.v.x + o->x;
+	o->tsd.ship.doy = v.v.y + o->y;
+	o->tsd.ship.doz = v.v.z + o->z;
+}
+
 static void ai_patrol_mode_brain(struct snis_entity *o)
 {
 	int n = o->tsd.ship.nai_entries - 1;
@@ -2822,22 +2841,9 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 		double ld = dist3dsqrd(o->x - o->tsd.ship.dox,
 				o->y - o->tsd.ship.doy, o->z - o->tsd.ship.doz);
 		/* give ships some variety in movement */
-		if (((universe_timestamp + o->id) & 0x3ff) == 0 || ld < 50.0 * 50.0) {
-			union vec3 v, vn;
-
-			v.v.x = patrol->p[d].v.x - o->x;
-			v.v.y = patrol->p[d].v.y - o->y;
-			v.v.z = patrol->p[d].v.z - o->z;
-			vec3_normalize(&vn, &v);
-			vec3_mul(&v, &vn, 1500.0f);
-			v.v.x += (float) snis_randn(100);
-			v.v.y += (float) snis_randn(100);
-			v.v.z += (float) snis_randn(100);
-
-			o->tsd.ship.dox = v.v.x + o->x;
-			o->tsd.ship.doy = v.v.y + o->y;
-			o->tsd.ship.doz = v.v.z + o->z;
-		}
+		if (((universe_timestamp + o->id) & 0x3ff) == 0 || ld < 50.0 * 50.0)
+			ai_add_ship_movement_variety(o, patrol->p[d].v.x, patrol->p[d].v.y,
+							patrol->p[d].v.z, 1500.0f);
 		/* sometimes just warp if it's too far... */
 		if (snis_randn(10000) < ship_type[o->tsd.ship.shiptype].warpchance) {
 			union vec3 v;
@@ -2899,22 +2905,9 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 		double ld = dist3dsqrd(o->x - o->tsd.ship.dox,
 				o->y - o->tsd.ship.doy, o->z - o->tsd.ship.doz);
 		/* give ships some variety in movement */
-		if (((universe_timestamp + o->id) & 0x3ff) == 0 || ld < 50.0 * 50.0) {
-			union vec3 v, vn;
-
-			v.v.x = patrol->p[d].v.x - o->x;
-			v.v.y = patrol->p[d].v.y - o->y;
-			v.v.z = patrol->p[d].v.z - o->z;
-			vec3_normalize(&vn, &v);
-			vec3_mul(&v, &vn, 1500.0f);
-			v.v.x += (float) snis_randn(100);
-			v.v.y += (float) snis_randn(100);
-			v.v.z += (float) snis_randn(100);
-
-			o->tsd.ship.dox = v.v.x + o->x;
-			o->tsd.ship.doy = v.v.y + o->y;
-			o->tsd.ship.doz = v.v.z + o->z;
-		}
+		if (((universe_timestamp + o->id) & 0x3ff) == 0 || ld < 50.0 * 50.0)
+			ai_add_ship_movement_variety(o, patrol->p[d].v.x, patrol->p[d].v.y,
+							patrol->p[d].v.z, 1500.0f);
 		/* sometimes just warp if it's too far... */
 		if (snis_randn(10000) < 50) {
 			union vec3 v;
