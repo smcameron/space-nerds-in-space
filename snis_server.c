@@ -2842,36 +2842,39 @@ static void ai_ship_warp_to(struct snis_entity *o, float destx, float desty, flo
 	}
 }
 
-static void ai_patrol_mode_brain(struct snis_entity *o)
+static float ai_ship_travel_towards(struct snis_entity *o,
+		float destx, float desty, float destz)
 {
-	int n = o->tsd.ship.nai_entries - 1;
-	struct ai_patrol_data *patrol = &o->tsd.ship.ai[n].u.patrol;
-	double maxv;
-	int d;
-
-	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
+	double maxv = ship_type[o->tsd.ship.shiptype].max_speed;
 	o->tsd.ship.desired_velocity = maxv;
-	d = patrol->dest;
 
-	double dist2 = dist3dsqrd(o->x - patrol->p[d].v.x,
-				o->y - patrol->p[d].v.y,
-				o->z - patrol->p[d].v.z);
+	double dist2 = dist3dsqrd(o->x - destx, o->y - desty, o->z - destz);
 	if (dist2 > 2000.0 * 2000.0) {
 		double ld = dist3dsqrd(o->x - o->tsd.ship.dox,
 				o->y - o->tsd.ship.doy, o->z - o->tsd.ship.doz);
 		/* give ships some variety in movement */
 		if (((universe_timestamp + o->id) & 0x3ff) == 0 || ld < 50.0 * 50.0)
-			ai_add_ship_movement_variety(o, patrol->p[d].v.x, patrol->p[d].v.y,
-							patrol->p[d].v.z, 1500.0f);
+			ai_add_ship_movement_variety(o, destx, desty, destz, 1500.0f);
 		/* sometimes just warp if it's too far... */
 		if (snis_randn(10000) < ship_type[o->tsd.ship.shiptype].warpchance)
-			ai_ship_warp_to(o, patrol->p[d].v.x,
-					patrol->p[d].v.y, patrol->p[d].v.z);
+			ai_ship_warp_to(o, destx, desty, destz);
 	} else {
-		o->tsd.ship.dox = patrol->p[d].v.x;
-		o->tsd.ship.doy = patrol->p[d].v.y;
-		o->tsd.ship.doz = patrol->p[d].v.z;
+		o->tsd.ship.dox = destx;
+		o->tsd.ship.doy = desty;
+		o->tsd.ship.doz = destz;
 	}
+	return dist2;
+}
+
+static void ai_patrol_mode_brain(struct snis_entity *o)
+{
+	int n = o->tsd.ship.nai_entries - 1;
+	struct ai_patrol_data *patrol = &o->tsd.ship.ai[n].u.patrol;
+	int d;
+
+	d = patrol->dest;
+	double dist2 = ai_ship_travel_towards(o,
+			patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
 
 	if (dist2 < 300.0 * 300.0) {
 		patrol->dest = (patrol->dest + 1) % patrol->npoints;
@@ -2896,32 +2899,12 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 {
 	int n = o->tsd.ship.nai_entries - 1;
 	struct ai_cop_data *patrol = &o->tsd.ship.ai[n].u.cop;
-	double maxv;
 	int d;
 
-	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
-	o->tsd.ship.desired_velocity = maxv;
 	d = patrol->dest;
 
-	double dist2 = dist3dsqrd(o->x - patrol->p[d].v.x,
-				o->y - patrol->p[d].v.y,
-				o->z - patrol->p[d].v.z);
-	if (dist2 > 2000.0 * 2000.0) {
-		double ld = dist3dsqrd(o->x - o->tsd.ship.dox,
-				o->y - o->tsd.ship.doy, o->z - o->tsd.ship.doz);
-		/* give ships some variety in movement */
-		if (((universe_timestamp + o->id) & 0x3ff) == 0 || ld < 50.0 * 50.0)
-			ai_add_ship_movement_variety(o, patrol->p[d].v.x, patrol->p[d].v.y,
-							patrol->p[d].v.z, 1500.0f);
-		/* sometimes just warp if it's too far... */
-		if (snis_randn(10000) < 50)
-			ai_ship_warp_to(o, patrol->p[d].v.x,
-						patrol->p[d].v.y, patrol->p[d].v.z);
-	} else {
-		o->tsd.ship.dox = patrol->p[d].v.x;
-		o->tsd.ship.doy = patrol->p[d].v.y;
-		o->tsd.ship.doz = patrol->p[d].v.z;
-	}
+	double dist2 = ai_ship_travel_towards(o,
+				patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
 
 	if (dist2 < 300.0 * 300.0) {
 		patrol->dest = (patrol->dest + 1) % patrol->npoints;

@@ -22,4 +22,4 @@ SWORDFISH swordfish.stl 0.2 1400 15 30
 WOMBAT wombat/snis3006.obj 0.95 1400 50 30 x -90.0 y 90.0
 DREADKNIGHT dreadknight/dreadknight.obj 0.7 1300 30 25
 VANQUISHER vanquisher.stl 0.3 1400 60 3
-ENFORCER enforcer/enforcer.obj 0.98 2700 20 5
+ENFORCER enforcer/enforcer.obj 0.98 2700 50 5
