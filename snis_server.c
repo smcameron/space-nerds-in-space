@@ -2823,6 +2823,25 @@ static void ai_add_ship_movement_variety(struct snis_entity *o,
 	o->tsd.ship.doz = v.v.z + o->z;
 }
 
+static void ai_ship_warp_to(struct snis_entity *o, float destx, float desty, float destz)
+{
+	union vec3 v;
+
+	v.v.x = destx - o->x;
+	v.v.y = desty - o->y;
+	v.v.z = destz - o->z;
+	vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
+	if (!inside_planet(v.v.x, v.v.y, v.v.z)) {
+		add_warp_effect(o->x, o->y, o->z,
+			o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
+		set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
+		/* reset destination after warping to prevent backtracking */
+		o->tsd.ship.dox = destx;
+		o->tsd.ship.doy = desty;
+		o->tsd.ship.doz = destz;
+	}
+}
+
 static void ai_patrol_mode_brain(struct snis_entity *o)
 {
 	int n = o->tsd.ship.nai_entries - 1;
@@ -2845,23 +2864,9 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			ai_add_ship_movement_variety(o, patrol->p[d].v.x, patrol->p[d].v.y,
 							patrol->p[d].v.z, 1500.0f);
 		/* sometimes just warp if it's too far... */
-		if (snis_randn(10000) < ship_type[o->tsd.ship.shiptype].warpchance) {
-			union vec3 v;
-
-			v.v.x = patrol->p[d].v.x - o->x;
-			v.v.y = patrol->p[d].v.y - o->y;
-			v.v.z = patrol->p[d].v.z - o->z;
-			vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
-			if (!inside_planet(v.v.x, v.v.y, v.v.z)) {
-				add_warp_effect(o->x, o->y, o->z,
-					o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
-				set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
-				/* reset destination after warping to prevent backtracking */
-				o->tsd.ship.dox = patrol->p[d].v.x;
-				o->tsd.ship.doy = patrol->p[d].v.y;
-				o->tsd.ship.doz = patrol->p[d].v.z;
-			}
-		}
+		if (snis_randn(10000) < ship_type[o->tsd.ship.shiptype].warpchance)
+			ai_ship_warp_to(o, patrol->p[d].v.x,
+					patrol->p[d].v.y, patrol->p[d].v.z);
 	} else {
 		o->tsd.ship.dox = patrol->p[d].v.x;
 		o->tsd.ship.doy = patrol->p[d].v.y;
@@ -2909,20 +2914,9 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 			ai_add_ship_movement_variety(o, patrol->p[d].v.x, patrol->p[d].v.y,
 							patrol->p[d].v.z, 1500.0f);
 		/* sometimes just warp if it's too far... */
-		if (snis_randn(10000) < 50) {
-			union vec3 v;
-
-			v.v.x = patrol->p[d].v.x - o->x;
-			v.v.y = patrol->p[d].v.y - o->y;
-			v.v.z = patrol->p[d].v.z - o->z;
-			vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
-			add_warp_effect(o->x, o->y, o->z, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
-			set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
-			/* reset destination after warping to prevent backtracking */
-			o->tsd.ship.dox = patrol->p[d].v.x;
-			o->tsd.ship.doy = patrol->p[d].v.y;
-			o->tsd.ship.doz = patrol->p[d].v.z;
-		}
+		if (snis_randn(10000) < 50)
+			ai_ship_warp_to(o, patrol->p[d].v.x,
+						patrol->p[d].v.y, patrol->p[d].v.z);
 	} else {
 		o->tsd.ship.dox = patrol->p[d].v.x;
 		o->tsd.ship.doy = patrol->p[d].v.y;
