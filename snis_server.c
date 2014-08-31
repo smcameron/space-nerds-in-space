@@ -1784,8 +1784,8 @@ static void add_starbase_attacker(struct snis_entity *starbase, int attacker_id)
 	int n;
 
 	n = starbase->tsd.starbase.nattackers;
-	if (n >= sizeof(starbase->tsd.starbase.attacker))
-		n %= sizeof(starbase->tsd.starbase.attacker);
+	if (n >= ARRAY_SIZE(starbase->tsd.starbase.attacker))
+		n %= ARRAY_SIZE(starbase->tsd.starbase.attacker);
 	else
 		starbase->tsd.starbase.nattackers++;
 	starbase->tsd.starbase.attacker[n] = attacker_id;
