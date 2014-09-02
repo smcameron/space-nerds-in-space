@@ -1117,7 +1117,9 @@ static void process_options(int argc, char *argv[])
 			process_float_option("noise-scale", optarg, &noise_scale);
 			break;
 		default:
-			fprintf(stderr, "unknown option '%s'\n", argv[option_index]);
+			fprintf(stderr, "unknown option '%s'\n",
+				option_index >= 0 && option_index < argc &&
+				argv[option_index] ? argv[option_index] : "(none)");
 			usage();
 		}
 	}
