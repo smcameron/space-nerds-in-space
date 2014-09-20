@@ -12,7 +12,9 @@
 #include "mtwist.h"
 #include "mathutils.h"
 #include "quat.h"
-#include "simplexnoise1234.h"
+#include "open-simplex-noise.h"
+
+static struct osn_context *ctx;
 
 #define MAXBUMPS 100000
 #define MAXCRATERS 1000
@@ -63,10 +65,10 @@ static inline float fbmnoise4(float x, float y, float z)
 	const float f2 = fbm_falloff * fbm_falloff;
 	const float f3 = fbm_falloff * fbm_falloff * fbm_falloff;
 
-	return 1.0 * snoise4(x, y, z, 1.0) +
-		f1 * snoise4(2.0f * x, 2.0f * y, 2.0f * z, 1.0) +
-		f2 * fbm_falloff * snoise4(4.0f * x, 4.0f * y, 4.0f * z, 1.0) +
-		f3 * snoise4(8.0f * x, 8.0f * y, 8.0f * z, 1.0);
+	return 1.0 * open_simplex_noise4(ctx, x, y, z, 1.0) +
+		f1 * open_simplex_noise4(ctx, 2.0f * x, 2.0f * y, 2.0f * z, 1.0) +
+		f2 * open_simplex_noise4(ctx, 4.0f * x, 4.0f * y, 4.0f * z, 1.0) +
+		f3 * open_simplex_noise4(ctx, 8.0f * x, 8.0f * y, 8.0f * z, 1.0);
 }
 
 /* convert from cubemap coords to cartesian coords on surface of sphere */
@@ -982,6 +984,7 @@ int main(int argc, char *argv[])
 	process_options(argc, argv);
 
 	snis_srand((unsigned int) random_seed);
+	open_simplex_noise(random_seed, &ctx);
 	sampledata = load_image(heightfile, &samplew, &sampleh, &samplea,
 					&sample_bytes_per_row);
 	land = load_image(landfile, &landw, &landh, &landa, &landbpr);

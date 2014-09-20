@@ -35,7 +35,9 @@
 #include "mtwist.h"
 #include "mathutils.h"
 #include "quat.h"
-#include "simplexnoise1234.h"
+#include "open-simplex-noise.h"
+
+static struct osn_context *ctx;
 
 #define NPARTICLES 8000000
 static int particle_count = NPARTICLES;
@@ -450,10 +452,10 @@ static inline float fbmnoise4(float x, float y, float z, float w, const float fb
 	const float f2 = fbm_falloff * fbm_falloff;
 	const float f3 = fbm_falloff * fbm_falloff * fbm_falloff;
 
-	return 1.0 * snoise4(x, y, z, w) +
-		f1 * snoise4(2.0f * x, 2.0f * y, 2.0f * z, 2.0f * w) +
-		f2 * snoise4(4.0f * x, 4.0f * y, 4.0f * z, 4.0f * w) +
-		f3 * snoise4(8.0f * x, 8.0f * y, 8.0f * z, 8.0f * w);
+	return 1.0 * open_simplex_noise4(ctx, x, y, z, w) +
+		f1 * open_simplex_noise4(ctx, 2.0f * x, 2.0f * y, 2.0f * z, 2.0f * w) +
+		f2 * open_simplex_noise4(ctx, 4.0f * x, 4.0f * y, 4.0f * z, 4.0f * w) +
+		f3 * open_simplex_noise4(ctx, 8.0f * x, 8.0f * y, 8.0f * z, 8.0f * w);
 }
 
 /* compute the noise gradient at the given point on the surface of a sphere */
@@ -966,7 +968,7 @@ static void usage(void)
 	fprintf(stderr, "   -o, --output : Output image filename template.\n");
 	fprintf(stderr, "               Example: 'out-' will produces 6 output files\n");
 	fprintf(stderr, "               out-0.png, out-1.png, ..., out-5.png\n");
-	fprintf(stderr, "   -w, --w-offset: w dimension offset in 4D simplex noise field\n");
+	fprintf(stderr, "   -w, --w-offset: w dimension offset in 4D open simplex noise field\n");
 	fprintf(stderr, "                   Use -w to avoid (or obtain) repetitive results.\n");
 	fprintf(stderr, "   -h, --hot-pink: Gradually fade pixels to hot pink.  This will allow\n");
 	fprintf(stderr, "                   divergences in the velocity field to be clearly seen,\n");
@@ -1136,6 +1138,8 @@ int main(int argc, char *argv[])
 	struct movement_thread_info *ti;
 	int last_imaged_iteration = -1;
 	particle_count = NPARTICLES;
+
+	open_simplex_noise(3141592, &ctx);
 
 	setlocale(LC_ALL, "");
 	noise_scale = default_noise_scale;

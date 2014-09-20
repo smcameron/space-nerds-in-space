@@ -403,11 +403,11 @@ SDLCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} 
 SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} && $(ECHO) '  LINK' $@
 OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 
-ELOBJS=mtwist.o mathutils.o quat.o simplexnoise1234.o
+ELOBJS=mtwist.o mathutils.o quat.o open-simplex-noise.o
 ELLIBS=-lm ${LRTLIB} -lpng
 ELLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} earthlike.o ${ELOBJS} ${ELLIBS} && $(ECHO) '  LINK' $@
 
-GGOBJS=mtwist.o mathutils.o simplexnoise1234.o quat.o
+GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o
 GGLIBS=-lm ${LRTLIB} -lpng
 GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} && $(ECHO) '  LINK' $@
 
@@ -485,7 +485,10 @@ snis_limited_client.o:	snis_limited_client.c Makefile build_info.h
 mesh_viewer.o:	mesh_viewer.c Makefile build_info.h
 	$(Q)$(SDLCOMPILE)
 
-simplexnoise1234.o:	simplexnoise1234.c Makefile build_info.h
+# simplexnoise1234.o:	simplexnoise1234.c Makefile build_info.h
+#	$(Q)$(COMPILE)
+
+open-simplex-noise.o:	open-simplex-noise.c Makefile build_info.h
 	$(Q)$(COMPILE)
 
 gaseous-giganticus.o:	gaseous-giganticus.c ${GGOBJS} Makefile build_info.h
