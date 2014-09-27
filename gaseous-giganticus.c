@@ -1000,6 +1000,7 @@ static struct option long_options[] = {
 	{ "w-offset", required_argument, NULL, 'w' },
 	{ "fbm-falloff", required_argument, NULL, 'f' },
 	{ "hot-pink", no_argument, NULL, 'h' },
+	{ "help", no_argument, NULL, 'H' },
 	{ "no-fade", no_argument, NULL, 'n' },
 	{ "velocity-factor", required_argument, NULL, 'v' },
 	{ "vertical-bands", required_argument, NULL, 'V' },
@@ -1046,7 +1047,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:Cf:hi:no:p:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "B:b:c:Cf:hHi:no:p:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1068,6 +1069,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'h':
 			use_hot_pink = 1;
+			break;
+		case 'H':
+			usage(); /* does not return */
 			break;
 		case 'i':
 			input_file = optarg;

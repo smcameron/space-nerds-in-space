@@ -10,6 +10,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -C ]
 [ -f fbm-falloff ]
 [ -h ]
+[ -H ]
 [ -i input-file ]
 [ -n ]
 [ -o output-file-template ]
@@ -91,6 +92,9 @@ Gradually fade pixels to hot pink.  This will allow
 divergences in the velocity field to be clearly seen,
 as pixels that contain no particles will not be painted
 and will become hot pink.
+.TP
+-H, --help
+Print a help message and exit.
 .TP
 -n, --no-fade
 Do not fade the image at all, divergences will be hidden
