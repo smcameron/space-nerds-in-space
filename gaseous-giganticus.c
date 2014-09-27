@@ -1118,7 +1118,7 @@ static void process_options(int argc, char *argv[])
 			break;
 		default:
 			fprintf(stderr, "unknown option '%s'\n",
-				option_index >= 0 && option_index - 1 < argc &&
+				option_index > 0 && option_index - 1 < argc &&
 				argv[option_index - 1] ? argv[option_index - 1] : "(none)");
 			usage();
 		}
