@@ -1006,6 +1006,7 @@ int main(int argc, char *argv[])
 	paint_terrain_colors(min, max);
 	save_output_images();
 	save_normal_maps();
+	open_simplex_noise_free(ctx);
 	return 0;
 }
 

@@ -204,6 +204,21 @@ int open_simplex_noise(int64_t seed, struct osn_context **ctx)
 	}
 	return 0;
 }
+
+void open_simplex_noise_free(struct osn_context *ctx)
+{
+	if (!ctx)
+		return;
+	if (ctx->perm) {
+		free(ctx->perm);
+		ctx->perm = NULL;	
+	}
+	if (ctx->permGradIndex3D) {
+		free(ctx->permGradIndex3D);
+		ctx->permGradIndex3D = NULL;
+	}
+	free(ctx);
+}
 	
 /* 2D OpenSimplex (Simplectic) Noise. */
 double open_simplex_noise2(struct osn_context *ctx, double x, double y) 

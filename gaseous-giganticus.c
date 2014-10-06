@@ -1207,6 +1207,7 @@ int main(int argc, char *argv[])
 	if (last_imaged_iteration != i - 1)
 		save_output_images();
 	printf("\n%5d / %5d -- done.\n", i, niterations);
+	open_simplex_noise_free(ctx);
 	return 0;
 }
 
