@@ -23,10 +23,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
-#if !defined(__APPLE__) && !defined(__FreeBSD__)
-/* Apple gets what it needs for malloc from stdlib.h */
-#include <malloc.h>
-#endif
 
 #include <vorbis/vorbisfile.h>
 

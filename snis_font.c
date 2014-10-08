@@ -20,10 +20,6 @@
  */
 
 #include <stdlib.h>
-#if !defined(__APPLE__) && !defined(__FreeBSD__)
-/* Apple gets what it needs for malloc from stdlib.h */
-#include <malloc.h>
-#endif
 #include <string.h>
 
 #define SNIS_FONT_DEFINE_GLOBALS

@@ -27,10 +27,6 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <locale.h>
-#if !defined(__APPLE__) && !defined(__FreeBSD__)
-/* Apple gets what it needs for malloc from stdlib.h */
-#include <malloc.h>
-#endif
 #include <gtk/gtk.h>
 
 #ifndef WITHOUTOPENGL

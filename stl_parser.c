@@ -25,10 +25,6 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include <fcntl.h>
-#if !defined(__APPLE__) && !defined(__FreeBSD__)
-/* Apple gets what it needs for malloc from stdlib.h */
-#include <malloc.h>
-#endif
 #include <string.h>
 #include <errno.h>
 #include <math.h>

@@ -19,7 +19,7 @@
 
  */
 
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define SNIS_FONT_DEFINE_GLOBALS
