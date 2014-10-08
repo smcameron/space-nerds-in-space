@@ -42,13 +42,7 @@ sleep 0.25
 sleep 0.25
 
 # start the game client and server in quickstart mode
-if [ "$OSX" = "1" ]
-then
-	# do not use fullscreen on mac OSX (why?)
-	./snis_client --quickstart --starship "$shipname" --pw "$password"
-else
-	./snis_client --fullscreen --quickstart --starship "$shipname" --pw "$password"
-fi
+./snis_client --fullscreen --quickstart --starship "$shipname" --pw "$password"
 
 exit $?
 
