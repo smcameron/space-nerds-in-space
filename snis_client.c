@@ -11501,8 +11501,8 @@ gint advance_game(gpointer data)
 
 	gdk_threads_enter();
 	gtk_widget_queue_draw(main_da);
-	move_sparks();
 	pthread_mutex_lock(&universe_mutex);
+	move_sparks();
 	move_objects();
 	pthread_mutex_unlock(&universe_mutex);
 	nframes++;
