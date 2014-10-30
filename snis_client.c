@@ -923,10 +923,12 @@ static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y,
 		for (j = 0; j < go[i].tsd.ship.nthrust_ports; j++) {
 			struct thrust_attachment_point *ap = ship_thrust_attachment_point(shiptype);
 			struct entity *t = go[i].tsd.ship.thrust_entity[j];
-			union vec3 thrust_scale = { { thrust_size, 1.0, 1.0 } };
-			vec3_mul_self(&thrust_scale, ap->port[j].scale);
-			update_entity_non_uniform_scale(t, thrust_scale.v.x,
+			if (t) {
+				union vec3 thrust_scale = { { thrust_size, 1.0, 1.0 } };
+				vec3_mul_self(&thrust_scale, ap->port[j].scale);
+				update_entity_non_uniform_scale(t, thrust_scale.v.x,
 							thrust_scale.v.y, thrust_scale.v.z);
+			}
 		}
 	}
 
