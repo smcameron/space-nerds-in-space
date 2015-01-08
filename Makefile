@@ -677,7 +677,7 @@ device-io-sample-1:	device-io-sample-1.c snis-device-io.o
 
 test-commodities:	commodities.o Makefile
 	gcc -DTESTCOMMODITIES=1 -c commodities.c -o test-commodities.o
-	gcc -DTESTCOMMODITIES=1 -o test-commodities test-commodities.o
+	gcc -DTESTCOMMODITIES=1 -o test-commodities string-utils.o test-commodities.o
 
 test-obj-parser:	test-obj-parser.c stl_parser.o mesh.o mtwist.o mathutils.o matrix.o quat.o Makefile
 	gcc -o test-obj-parser stl_parser.o mtwist.o mathutils.o matrix.o mesh.o quat.o -lm test-obj-parser.c
