@@ -417,6 +417,8 @@ GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGL
 
 all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS}
 
+build:	all
+
 graph_dev_opengl.o : graph_dev_opengl.c Makefile
 	$(Q)$(GLEXTCOMPILE)
 

@@ -1,0 +1,9 @@
+?package(space-nerds-in-space):needs="X11" section="Games/Simulation"\
+  title="Space Nerds in Space - game lobby" command="/usr/bin/ssgl_server"
+
+?package(space-nerds-in-space):needs="X11" section="Games/Simulation"\
+  title="Space Nerds in Space - game server" command="/usr/bin/snis_server"
+
+?package(space-nerds-in-space):needs="X11" section="Games/Simulation"\
+  title="Space Nerds in Space - client" command="/usr/bin/snis_client"
+

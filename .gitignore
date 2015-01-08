@@ -21,3 +21,9 @@ build_info.h
 check-endianness
 snis_client.6.gz
 snis_server.6.gz
+debian/snis.debhelper.log
+debian/snis.postinst.debhelper
+debian/snis.postrm.debhelper
+debian/snis.substvars
+debian/snis
+debian/files
