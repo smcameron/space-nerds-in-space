@@ -13,11 +13,13 @@ LRTLIB=
 endif
 
 INSTALL=install
+
 DESTDIR=.
-PREFIX=.
+PREFIX?=.
+
 DATADIR=${DESTDIR}/${PREFIX}/share/snis
 CONFIGFILEDIR=${DATADIR}
-CONFIGSRCDIR=share/snis
+CONFIGSRCDIR=./share/snis
 CONFIGFILES=${CONFIGSRCDIR}/commodities.txt \
 	${CONFIGSRCDIR}/factions.txt \
 	${CONFIGSRCDIR}/ship_types.txt
@@ -682,7 +684,8 @@ test-commodities:	commodities.o Makefile
 test-obj-parser:	test-obj-parser.c stl_parser.o mesh.o mtwist.o mathutils.o matrix.o quat.o Makefile
 	gcc -o test-obj-parser stl_parser.o mtwist.o mathutils.o matrix.o mesh.o quat.o -lm test-obj-parser.c
 
-test :	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist test-commodities
+test:	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist test-commodities
+	/bin/true	# Prevent make from running "gcc test.o".
 
 snis_client.6.gz:	snis_client.6
 	gzip -9 - < snis_client.6 > snis_client.6.gz
@@ -766,7 +769,7 @@ uninstall:
 clean:	mostly-clean
 	rm -f ${MODELS} test_marshal
 
-depend :
+depend:
 	rm -f Makefile.depend
 	$(MAKE) Makefile.depend
 
