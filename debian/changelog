@@ -1,0 +1,448 @@
+snis (0.20150108) UNRELEASED; urgency=low
+
+  * first commit
+  * initial add
+  * add forgotten *.h files
+  * add gitignore file
+  * Server now tells client which ship is actually his
+  * rename "helm" to "navigation"
+  * Fixed all compiler warnings
+  * Do not set up the object pool twice, once will suffice
+  * remove some debug code
+  * Fix lotsa bugs.  remove some debug code.
+  * Make navigation radar reticule look cooler
+  * Now planets are added into the universe
+  * Added starbases
+  * Factor out snis_draw_reticule function
+  * Made navigation window indicate current heading graphically
+  * Improve the navigation screen
+  * Make enemy ships move according to their heading (given wacky screen coord system).
+  * Don't draw planets and starbases as ships, but as circles.
+  * Add a rotating radar beam to the navigation screen
+  * Set TCP_NODELAY socket option
+  * Ignore SIGPIPE
+  * add player_move function
+  * Add some preliminary code for handling arrow keys
+  * Updated readme
+  * Updated readme
+  * updated readme
+  * Fill out the guts of the client side thread to write to the game server.
+  * Added u8 marshalling functions
+  * Ship is now steerable.
+  * Now ship is drivable.
+  * Removed debug code
+  * Fixed bug that ship id was not in bridgelist
+  * added TODO
+  * multiple starships in the same game is working now.
+  * Now you can specify the lobbyhost
+  * Fixed ssgl server to use a trick to get real ip addr
+  * factor out draw_all_the_guys function
+  * Make weapons screen do something (now you can aim the gun.)
+  * Now you can shoot torpedoes
+  * Make direction indicators a little more visible
+  * Silenced a bunch of debug code
+  * Added bunch of stuff to the TODO file
+  * Prevent switching screens prior to connecting
+  * Once connected, go right to the main screen.
+  * Close connection to lobby server when it is no longer needed.
+  * Set lobby_socket to -1 when disconnecting from the lobby
+  * Fix bug when pressing up/down key on weapons screen.
+  * Fixed a couple bugs in snis_object_pool_free_object
+  * Now torpedoes do not live forever
+  * Cross off "delete objects on clients" from list -- done!
+  * Removed a stray semicolon
+  * Now you can kill things with the torpedoes
+  * Prevent IP addr/port from overlapping other fields
+  * Made things a little easier to hit with the torpedoes
+  * Now when you shoot things with torpedoes, they explode
+  * Remove extraneous printf
+  * fix a bug in torpedo movement and limit torpedoes to hitting ships
+  * Make torpedoes hit easier
+  * make the nav screen show a larger area, and remove duplicate defines related to navscreen size
+  * Draw torpedoes smaller
+  * Make the gun yaw faster and damp quicker than the ship as a whole
+  * Change OBJTYPE_SHIP1 from 0 to 9.
+  * Added audio code
+  * Now firing torpedoes and killing an enemy make sounds.
+  * Make it so you can't torpedo yourself.
+  * Increase torpedo detonation radius to 150
+  * Make ships move slower, and make them wrap at the edge of the universe
+  * Factor out normalize coords function
+  * normalize coords after movement for player, and for torpedoes.
+  * Move normalize_coords function so that the thing actually compiles.
+  * Remove the annoying radar beam from the nav and weapons screen.
+  * Removed some debug code
+  * Make universe dimensions have the same aspect ratio as the screen
+  * Draw grid lines in the radar screens
+  * Make grid lines dotted instead of solid
+  * Add a bresenham's line drawing algorithm with a plotting hook
+  * Add sector labels on the radar screens
+  * Fixed x offset of sector labels
+  * Fix scaling of the grid lines
+  * Add grid lines and sector labels to the debug screen
+  * Improved the movement of enemy ships
+  * Print the heading next to each ship on the radar screens
+  * factor out normalize_angle function
+  * Add some functions to draw gauges and add a shields gauge to engineering screen
+  * Add an energy gauge to the engineering screen
+  * Make gauges scale correctly
+  * Changed border around screens from white to blue
+  * Make sparks die out gradually, not all at once.
+  * Print torpedo count on weapons screen
+  * Add a slider UI element
+  * Add energy slider
+  * Fixed slider handle so it shows the correct value
+  * Moved labels on sliders a bit
+  * Now sliders respond to mouse clicking
+  * Added button UI element
+  * Now you can fire torpedoes via gui button
+  * Set socket option TCP_NODELAY on socket from client to game server too.
+  * Fixed a locking issue with transmitting packets to server
+  * Add some stuff to the engineering screen (still not really functional though.)
+  * Add context pointer to bresenham's line drawing function
+  * Fixed prototype of plotting function
+  * Added dotted line function
+  * Added beginnings of Science screen
+  * Now science screen displays various entities
+  * Now you can swing the science beam around
+  * Removed annoying message about serving clients
+  * Now science beam angle is adjustable
+  * Increase max science beam width to 85 degrees
+  * Draw science beam boundaries with "electric" lines.
+  * initialize science beam width to something sensible
+  * Now the science beam actually works right.
+  * Separate enemy ship type from player ship type
+  * Add an economical ship update packet type
+  * Randomly drop updates of ships that are "too far" away
+  * Give each ship a randomly generated (but hopefully sorta pronouncable) name.
+  * client gets science data on demand now
+  * send science request responses to all clients on a bridge
+  * Make client forget science data after awhile
+  * show ship names on weapons and nav screens
+  * factor out packed_buffer_init
+  * factor out weapons ui stuff
+  * Now you have to "load" torpedoes before firing them
+  * make ship names uppercase
+  * add phaser bank gauge
+  * Make throttle on engineering screen sorta work
+  * Added interpolation functions
+  * Made lots more of the engineering screen work
+  * Worked on a bunch more stuff on the engineering screen
+  * deleted some unneeded ifdef'ed out code
+  * Work on colors of engineering screen
+  * Make temperature influence power output
+  * give computer controlled ships a bit more detail
+  * Make universe bigger
+  * make science screen zoomable
+  * make science screen zoomable via mouse scroll wheel
+  * more renaming "helm" to "navigation"
+  * Start adding warp drive stuff
+  * Fix displaymode of buttons
+  * fix some problems with warp drive code
+  * Add roles so each client can be limited to particular roles
+  * check for control key
+  * Allow clients to push screen to main screen (a la Picard's "On Screen!" command.)
+  * fix initialization of engineering UI
+  * clean up more ui initialization stuff
+  * Added sound server role and allow sounds to be directed to particular roles and ship ids.
+  * Added the beginnings of man pages for snis_server, snis_client, and ssgl_server
+  * updated TODO
+  * Add defines for science scope location
+  * Allow selecting of blips on science scope with mouse
+  * Draw some science data for selected blips
+  * Add shield strength, wavelength and width to science data and report it
+  * begin to graph shield data on science screen
+  * incorporate shield width and wavelength into shield graph
+  * Add labels to science graph, and some vertical lines, and randomize the wavelength a bit.
+  * Make selecting of targets of science scope go through server process
+  * Reverse the polarity of mousewheel zooming on science scope
+  * Add numbers to the gauges
+  * Remove old unused navigation code
+  * Added degree markings to weapons and nav screens
+  * Make enemy ships pick victims and surround them.
+  * Allow science screen to zoom in more
+  * Show torpedos better on the science screen
+  * Start working on damage related stuff
+  * update todo file
+  * add phasers
+  * refine phaser collision detection
+  * Make the needles on the gauges look better
+  * Factor out draw_gauge_needle() function
+  * Add phaser wavelength slider
+  * Do not make a big explosion on every phaser/torpedo hit, just on kills.
+  * Fix up shield strength calculations
+  * Work on appearance of science graph
+  * make asteroids have no shields
+  * Add "depth" to shields (magnitude of shield flaw)
+  * Make shield weakness have potentially more than one period of cosine waviness
+  * tinker with appearance of science graph
+  * Fix a bug in slider_draw() function
+  * Work on weapons screen, mainly on adjustment of phaser wavelength controls
+  * Make science screen drop selection when out of beam
+  * Make science screen assist with warp settings
+  * Fix hypot() bugs (hypot() already does the sqrt().)
+  * make rhs of science screen not completely disappear when tracked guy goes off-beam
+  * Factor out the code for packing doubles
+  * More cleanup of the code for packing doubles
+  * Use signed values for passing coords across the network
+  * Rename [XY]UNIVERSE_DIMENSION to [XY]KNOWN_DIM
+  * Expand visitable universe beyond the "known" universe
+  * Do not draw any grid lines outside the "known" universe
+  * Add warp adjustment buttons to nav screen
+  * augment gauge with additional needle
+  * Add limit function to bytevalue adjustor functions
+  * make warp gauge show available power
+  * Fix problems with warp drive controls
+  * limit phaser charge based on allocated power
+  * more engineering screen improvements
+  * improve button drawing
+  * More work on navigation screen
+  * factor out science warp data drawing
+  * Add graph of our ship's shields to the nav screen
+  * make nav screen report shield data cleanly
+  * fix horizontal grid lines (were incorrect at left and bottom edges of known universe)
+  * Report last successful packet in server on protocol error
+  * Add shield slider to nav screen
+  * Send each player ship their own science data periodically
+  * make sensors affected by power allocation
+  * Make science graph affected by power allocation
+  * do not draw noise outside science scope boundaries
+  * Add variable argument marshalling functions packed_buffer_append() and packed_buffer_extract()
+  * Use variable argument marshalling functions for laser update packets
+  * use variable argument marshalling functions for science data packets
+  * use variable argument marshalling functions for ship update packets
+  * Use variable argument marshalling functions for more stuff
+  * use variable argument marshalling functions for yet more stuff
+  * Use variable argument marshalling functions for even more stuff
+  * Added new sound for phasers
+  * Fix a couple of compiler warnings
+  * Add -Werror back to Makefile
+  * Make display mode values match role values
+  * Do not switch to a displaymode for which you do not have the role
+  * sanity check displaymode value on server side
+  * Make ships move around a bit more
+  * Fix heading value in econ ship update packet transfer
+  * Pass around the GtkWidget rather than the GtkDrawable in some places
+  * Make ships move a bit slower
+  * When the player's ship dies let them know that they died, and then respawn after awhile.
+  * Add a respawn timer so players know that they are going to respawn and when
+  * Make shields defend more or less as they are supposed to
+  * Don't assume damage values are in consecutive bytes in damage calcs.
+  * update todo
+  * make laser damage depend on laser wavelength
+  * Make enemies shoot phasers
+  * Work on enemy behavior
+  * make enemy ship phaserbanks recharge over time
+  * make shields subject to damage
+  * Make weapons a bit more powerful
+  * Allow marshalling of u64s.
+  * Allow collecting of network stats
+  * Report server network stats on client exit
+  * Make debug screen work again
+  * Show server net stats on debug screen
+  * make death screen red
+  * do not show death screen on debug screen
+  * Add "onscreen" and "offscreen" sound effects.
+  * Added change screen sound effect
+  * fix bug with offscreen sound
+  * Added slider clicking noise
+  * Work on comms screen -- add a kind of scrolling textbox
+  * More work on comms screen -- allow communications packets to be sent
+  * Add scroll bar to text window and general bugfixing of text window
+  * Now starbases will radio for help when under attack
+  * Work on formatting of comms transmissions
+  * get rid of test text in text window
+  * Make last line of comms readout print slowly
+  * Add a blinking cursor to comms screen readout.
+  * Add a little variety to starbase comm transmissions
+  * Make phaser collision detection work a little better
+  * Make aliens taunt players with gibberish
+  * improve taunts (maybe).
+  * Make a sound when science target is selected
+  * Make science screen make periodic science probe noise
+  * Add tty-chatter sound to comms screen
+  * Allow comms screen(s) to control the "main" screen(s)
+  * Use correct starbase names
+  * work on formatting of insults
+  * make starbases report locations a little more entertainingly
+  * work on name generator
+  * add position info to nav screen
+  * Make torpedo count look slightly better on weapons screen
+  * Fix some wrong compiler attributes
+  * Begin factoring out graphics stuff into snis_graph.[ch]
+  * Use scaled line drawing function from snis_graph.[ch]
+  * Move thick scaled line drawing function to snis_graph.[ch]
+  * Move bright scaled line drawing function to snis_graph.[ch]
+  * Move unscaled bright line, scaled arc, and scaled rectangle drawing functions to snis_graph.[ch]
+  * Move current_draw_line global func ptr variable into snis_graph.[ch]
+  * Move current draw rectangle global func ptr var to snis_graph.[ch]
+  * add current bright line function ptr var to snis_graph.[ch]
+  * move current draw arc func ptr var to snis_graph.[ch]
+  * Make window config (size) change use snis_graph functions to change scaling factors
+  * Move dotted and electric line drawing functions to snis_graph.[ch]
+  * Move letter and string drawing functions to snis_graph.[ch]
+  * Use the letter and string drawing functions from snis_graph.[ch]
+  * Move point drawing functions to snis_graph.[ch]
+  * Move color related functions to snis_graph.[ch]
+  * Move circle drawing function to snis_graph.[ch]
+  * Add snis_typeface.[ch]
+  * Use new typeface stuff
+  * Add snis_gauge.[ch]
+  * Factor out the gauge code
+  * Factor out button module
+  * Use new button module
+  * Factor out sliders module
+  * Use new sliders module
+  * Factor out text window module
+  * Use new text window module
+  * Fix mis-named snis_slider_draw (was named slider_draw).
+  * Add a per-slider button press function
+  * Add a generalized ui element module
+  * Use generalized ui module for sliders.
+  * Add per button button press function
+  * Use generalized ui modules for button list
+  * Use generalized ui module for gauge lists
+  * Remove slider-list and displaymode related code from slider ui code
+  * Remove list and displaymode related code from button ui code
+  * Use generalized ui module for text windows
+  * remove list and displaymode related code from text window code
+  * Add sng_draw_laser_line function (not yet used for anything)
+  * Verify client protocol version before taking client_lock() when client connects
+  * Use uint32_t instead of uint16_t for ship ids
+  * add lineheight function to font module
+  * add lineheight array to typeface module
+  * add focus setting infrastructure to general ui element code
+  * Allow cursor to be drawn inside strings
+  * Add text input box ui element
+  * Allow ui elements to register keystroke handlers
+  * Allow text to by typed into text input boxes
+  * Allow backspace to work in text input boxes
+  * Allow left/right arrow keys to work in text input boxes
+  * Make text insert instead of overwrite in text input box
+  * Make delete button work with text input boxes
+  * Add a new network setup UI screen in case no params are passed on cmdline to client
+  * Make starting lobby process from new network setup UI work
+  * Fixup gnome key screwups for old versions of gnome
+  * Allow game server process to run on a different host than lobby server process
+  * Make starting game server from client network setup ui work
+  * Make connecting to lobby from client network setup ui work
+  * bugfix: do not free uninitialized pointer
+  * Allow text input box to be zeroed out
+  * Add transmit button to comms screen
+  * Make comms transmissions actually transmit
+  * Fix a bug with checking argument usage that caused early client abort
+  * Fixed a bug that checking the debug screen too early caused a divide by zero
+  * Now occasionally insults the father, as well as the mother of your hatchlings.
+  * Fix bug that broke second ship connecting to server
+  * Fixed a bunch more object ID vs. object index screwups
+  * Fix orientation problem with ships
+  * Add checkbox buttons
+  * Allow buttons to have null button press callback functions
+  * Add checkbox buttons for roles to initial client network setup screen
+  * Enforce prereqs for gameserver and lobby connect
+  * Add sound server role checkbox to net setup screen
+  * rearrange network setup screen
+  * Add visual button press feedback
+  * Add some matrix math code
+  * add stl file parsing code
+  * Eliminate duplicate vertices during stl file parsing
+  * Add some maxtrix transformations to the matrix math code
+  * Start adding some 3d entity code to do some kind of software renderer
+  * Start incorporating 3d entity pointers into the current game code for 3d renderer
+  * Add openSCAD models and corresponding stl files
+  * Make game client code read in the stl model files
+  * Very early work on 3d wireframe renderer (still doesn't do anything yet.)
+  * add prototypes for camera positioning and orienting functions
+  * Add matrix transform appending functions
+  * Add vector normalizing function
+  * fix matrix function names
+  * Work on camera related functions
+  * take first stab at camera and viewport transform functions
+  * fix problem in render triangle
+  * try to make wireframe renderer actually draw
+  * normalize final transform
+  * Add cross product function that I had failed to commit previously
+  * Fix bug with look_direction calculation
+  * first commit
+  * initial add
+  * add forgotten *.h files
+  * add gitignore file
+  * Server now tells client which ship is actually his
+  * rename "helm" to "navigation"
+  * Fixed all compiler warnings
+  * Do not set up the object pool twice, once will suffice
+  * remove some debug code
+  * Fix lotsa bugs.  remove some debug code.
+  * Make navigation radar reticule look cooler
+  * Now planets are added into the universe
+  * Added starbases
+  * Factor out snis_draw_reticule function
+  * Made navigation window indicate current heading graphically
+  * Improve the navigation screen
+  * Make enemy ships move according to their heading (given wacky screen coord system).
+  * Don't draw planets and starbases as ships, but as circles.
+  * Add a rotating radar beam to the navigation screen
+  * Set TCP_NODELAY socket option
+  * Ignore SIGPIPE
+  * add player_move function
+  * Add some preliminary code for handling arrow keys
+  * Updated readme
+  * Updated readme
+  * updated readme
+  * Fill out the guts of the client side thread to write to the game server.
+  * Added u8 marshalling functions
+  * Ship is now steerable.
+  * Now ship is drivable.
+  * Removed debug code
+  * Fixed bug that ship id was not in bridgelist
+  * added TODO
+  * multiple starships in the same game is working now.
+  * Now you can specify the lobbyhost
+  * Fixed ssgl server to use a trick to get real ip addr
+  * factor out draw_all_the_guys function
+  * Make weapons screen do something (now you can aim the gun.)
+  * Now you can shoot torpedoes
+  * Make direction indicators a little more visible
+  * Silenced a bunch of debug code
+  * Added bunch of stuff to the TODO file
+  * Prevent switching screens prior to connecting
+  * Once connected, go right to the main screen.
+  * Close connection to lobby server when it is no longer needed.
+  * Set lobby_socket to -1 when disconnecting from the lobby
+  * Fix bug when pressing up/down key on weapons screen.
+  * Fixed a couple bugs in snis_object_pool_free_object
+  * Now torpedoes do not live forever
+  * Cross off "delete objects on clients" from list -- done!
+  * Removed a stray semicolon
+  * Now you can kill things with the torpedoes
+  * Prevent IP addr/port from overlapping other fields
+  * Made things a little easier to hit with the torpedoes
+  * Now when you shoot things with torpedoes, they explode
+  * Remove extraneous printf
+  * fix a bug in torpedo movement and limit torpedoes to hitting ships
+  * Make torpedoes hit easier
+  * make the nav screen show a larger area, and remove duplicate defines related to navscreen size
+  * Draw torpedoes smaller
+  * Make the gun yaw faster and damp quicker than the ship as a whole
+  * Change OBJTYPE_SHIP1 from 0 to 9.
+  * Added audio code
+  * Now firing torpedoes and killing an enemy make sounds.
+  * Make it so you can't torpedo yourself.
+  * Increase torpedo detonation radius to 150
+  * Make ships move slower, and make them wrap at the edge of the universe
+  * Factor out normalize coords function
+  * normalize coords after movement for player, and for torpedoes.
+  * Move normalize_coords function so that the thing actually compiles.
+  * Remove the annoying radar beam from the nav and weapons screen.
+  * Removed some debug code
+  * Make universe dimensions have the same aspect ratio as the screen
+  * Draw grid lines in the radar screens
+  * Make grid lines dotted instead of solid
+  * Add a bresenham's line drawing algorithm with a plotting hook
+  * Add sector labels on the radar screens
+  * Fixed x offset of sector labels
+  * Fix scaling of the grid lines
+  * Add grid lines and sector labels to the debug screen
+  * Improved the movement of enemy ships
+
+ -- Stephen M. Cameron <stephenmcameron@gmail.com>  Thu, 08 Jan 2015 11:06:20 +0100

@@ -12001,7 +12001,9 @@ static void override_asset_dir(void)
 	asset_dir = default_asset_dir;
 	d = getenv("SNIS_ASSET_DIR");
 	if (!d)
+		printf("Assets will be loaded from %s (default)\n", default_asset_dir);
 		return;
+	printf("Assets will be loaded from %s (overriden)\n", d);
 	asset_dir = d;
 }
 

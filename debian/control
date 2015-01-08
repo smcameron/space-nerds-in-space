@@ -1,0 +1,35 @@
+Source: snis
+Section: games
+Priority: optional
+Maintainer: Iván Sánchez Ortega <ivan@sanchezortega.es>
+Build-Depends: debhelper (>= 9), build-essential, 
+ portaudio19-dev, 
+ libvorbis-dev,
+ libgtk2.0-dev,
+ openscad,
+ libgtkglext1-dev, 
+ liblua5.2-dev,
+ libglew-dev (>= 1.10.0-3),
+ libsdl1.2-dev
+Standards-Version: 3.9.5
+Homepage: http://smcameron.github.io/space-nerds-in-space
+Vcs-Git: https://github.com/smcameron/space-nerds-in-space.git
+Vcs-Browser: https://github.com/smcameron/space-nerds-in-space
+
+Package: snis
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, 
+ libportaudio2, libportaudiocpp0,
+ libvorbis0a, libvorbisfile3, 
+ libgtk2.0-0,
+ libgtkglext1,
+ liblua5.2-0,
+ libglew1.10,
+ libsdl1.2debian
+Description: Multi-player networked spaceship bridge simulator
+ This is a multiplayer networked spaceship bridge simulator game
+ inspired by another game called "Artemis Spaceship Bridge Simulator"
+ It's not really close to finished, but it's more or less playable
+ at this point.
+
+

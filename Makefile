@@ -13,19 +13,23 @@ LRTLIB=
 endif
 
 INSTALL=install
+
 DESTDIR=.
-PREFIX=.
+PREFIX?=.
+
 DATADIR=${DESTDIR}/${PREFIX}/share/snis
 CONFIGFILEDIR=${DATADIR}
-CONFIGSRCDIR=share/snis
+CONFIGSRCDIR=./share/snis
 CONFIGFILES=${CONFIGSRCDIR}/commodities.txt \
 	${CONFIGSRCDIR}/factions.txt \
 	${CONFIGSRCDIR}/ship_types.txt
 
-MODELSRCDIR=share/snis/models
+ASSETSSRCDIR=share/snis
+	
+MODELSRCDIR=${ASSETSSRCDIR}/models
 MODELDIR=${DATADIR}/models
 SOUNDDIR=${DATADIR}/sounds
-SOUNDSRCDIR=share/snis/sounds
+SOUNDSRCDIR=${ASSETSSRCDIR}/sounds
 SOUNDFILES=${SOUNDSRCDIR}/Attribution.txt \
 	${SOUNDSRCDIR}/big_explosion.ogg \
 	${SOUNDSRCDIR}/bigshotlaser.ogg \
@@ -57,7 +61,7 @@ SOUNDFILES=${SOUNDSRCDIR}/Attribution.txt \
 	${SOUNDSRCDIR}/warpdrive.ogg \
 	${SOUNDSRCDIR}/robot-insert-component.ogg
 TEXTUREDIR=${DATADIR}/textures
-TEXTURESRCDIR=share/snis/textures
+TEXTURESRCDIR=${ASSETSSRCDIR}/textures
 TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
 	${TEXTURESRCDIR}/asteroid1-0.png \
 	${TEXTURESRCDIR}/asteroid1-1.png \
@@ -146,7 +150,7 @@ TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
 	${TEXTURESRCDIR}/blue-tractor-texture.png
 
 LUASCRIPTDIR=${DATADIR}/luascripts
-LUASRCDIR=share/snis/luascripts
+LUASRCDIR=${ASSETSSRCDIR}/luascripts
 LUASCRIPTS=${LUASRCDIR}/CLEAR_ALL.LUA \
 	${LUASRCDIR}/COLLISION.LUA \
 	${LUASRCDIR}/HELLO.LUA \
@@ -155,7 +159,7 @@ LUASCRIPTS=${LUASRCDIR}/CLEAR_ALL.LUA \
 	${LUASRCDIR}/TRAINING-MISSION-1.LUA \
 	${LUASRCDIR}/TRAINING-MISSION-2.LUA
 MATERIALDIR=${DATADIR}/materials
-MATERIALSRCDIR=share/snis/materials
+MATERIALSRCDIR=${ASSETSSRCDIR}/materials
 MATERIALFILES=${MATERIALSRCDIR}/nebula0.mat \
 	${MATERIALSRCDIR}/nebula10.mat \
 	${MATERIALSRCDIR}/nebula11.mat \
@@ -178,7 +182,7 @@ MATERIALFILES=${MATERIALSRCDIR}/nebula0.mat \
 	${MATERIALSRCDIR}/nebula9.mat
 
 SHADERDIR=${DESTDIR}/${PREFIX}/share/snis/shader
-SHADERSRCDIR=share/snis/shader
+SHADERSRCDIR=${ASSETSSRCDIR}/shader
 SHADERS=${SHADERSRCDIR}/color_by_w.frag \
 	${SHADERSRCDIR}/color_by_w.vert \
 	${SHADERSRCDIR}/fs-effect-copy.shader \
@@ -330,7 +334,7 @@ PROGS=snis_server snis_client snis_limited_client mesh_viewer
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client
 
 # model directory
-MD=share/snis/models
+MD=${ASSETSSRCDIR}/models
 
 MODELS=${MD}/freighter.stl \
 	${MD}/laser.stl \
@@ -412,6 +416,8 @@ GGLIBS=-lm ${LRTLIB} -lpng
 GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} && $(ECHO) '  LINK' $@
 
 all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS}
+
+build:	all
 
 graph_dev_opengl.o : graph_dev_opengl.c Makefile
 	$(Q)$(GLEXTCOMPILE)
@@ -682,7 +688,8 @@ test-commodities:	commodities.o Makefile
 test-obj-parser:	test-obj-parser.c stl_parser.o mesh.o mtwist.o mathutils.o matrix.o quat.o Makefile
 	gcc -o test-obj-parser stl_parser.o mtwist.o mathutils.o matrix.o mesh.o quat.o -lm test-obj-parser.c
 
-test :	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist test-commodities
+test:	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist test-commodities
+	/bin/true	# Prevent make from running "gcc test.o".
 
 snis_client.6.gz:	snis_client.6
 	gzip -9 - < snis_client.6 > snis_client.6.gz
@@ -766,7 +773,7 @@ uninstall:
 clean:	mostly-clean
 	rm -f ${MODELS} test_marshal
 
-depend :
+depend:
 	rm -f Makefile.depend
 	$(MAKE) Makefile.depend
 
