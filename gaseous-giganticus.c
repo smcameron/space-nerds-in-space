@@ -477,29 +477,25 @@ static union vec3 noise_gradient(union vec3 position, float w, float noise_scale
 	return g;
 }
 
-static union vec3 curl2(union vec3 pos, union vec3 noise_gradient)
+static union vec3 curl2(union vec3 pos, union vec3 normalized_pos,
+			const float pos_magnitude, union vec3 noise_gradient)
 {
-	union vec3 p1, proj_ng, axis, rotated_ng;
+	union vec3 pos_plus_noise, proj_ng, rotated_ng;
 	union quat rotation;
-	float m1, m2, nm;
+	float m2;
 
-	nm = vec3_magnitude(&noise_gradient);
 	/* project noise gradient onto sphere surface */
-	vec3_add(&p1, &pos, &noise_gradient);
-	m1 = vec3_magnitude(&pos);
-	if (nm > 0.25 * m1)
-		printf("large noise gradient relative to position\n");
-	m2 = vec3_magnitude(&p1);
-	vec3_normalize_self(&p1);
-	vec3_mul_self(&p1, m1);
-	vec3_sub(&proj_ng, &p1, &pos);
+	vec3_add(&pos_plus_noise, &pos, &noise_gradient);
+	m2 = vec3_magnitude(&pos_plus_noise);
+	vec3_normalize_self(&pos_plus_noise);
+	vec3_mul_self(&pos_plus_noise, pos_magnitude);
+	vec3_sub(&proj_ng, &pos_plus_noise, &pos);
 
 	/* rotate projected noise gradient 90 degrees about pos. */
-	vec3_normalize(&axis, &pos);
-	if (m1 < m2 * left_right_fudge) /* rotate left or right if uphill or downhill */
-		quat_init_axis_v(&rotation, &axis, M_PI / 2.0);
+	if (pos_magnitude < m2 * left_right_fudge) /* rotate left or right if uphill or downhill */
+		quat_init_axis_v(&rotation, &normalized_pos, M_PI / 2.0);
 	else
-		quat_init_axis_v(&rotation, &axis, 3.0 * M_PI / 2.0);
+		quat_init_axis_v(&rotation, &normalized_pos, 3.0 * M_PI / 2.0);
 	
 	quat_rot_vec(&rotated_ng, &proj_ng, &rotation);
 	return rotated_ng;
@@ -533,7 +529,7 @@ static void *update_velocity_field_thread_fn(void *info)
 			ov = v;
 			vec3_mul_self(&v, noise_scale);
 			ng = noise_gradient(v, w * noise_scale, noise_scale, fbmf);
-			c = curl2(v, ng);
+			c = curl2(v, ov, noise_scale, ng);
 			vec3_mul(&vf->v[f][i][j], &c, velocity_factor);
 
 			/* calculate counter rotating band influence */
