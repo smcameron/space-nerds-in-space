@@ -29,6 +29,7 @@
 #include <pthread.h>
 #include <getopt.h>
 #include <locale.h>
+#include <sys/time.h>
 
 #include <png.h>
 
@@ -1138,6 +1139,14 @@ int main(int argc, char *argv[])
 	struct movement_thread_info *ti;
 	int last_imaged_iteration = -1;
 	particle_count = NPARTICLES;
+	struct timeval movebegin, moveend, move_elapsed;
+	struct timeval imagebegin, imageend, image_elapsed;
+	struct timeval vfbegin, vfend;
+
+	move_elapsed.tv_sec = 0;
+	move_elapsed.tv_usec = 0;
+	image_elapsed.tv_sec = 0;
+	image_elapsed.tv_usec = 0;
 
 	open_simplex_noise(3141592, &ctx);
 
@@ -1180,20 +1189,30 @@ int main(int argc, char *argv[])
 	printf("Initializing %d particles", particle_count); fflush(stdout);
 	init_particles(&particle, particle_count);
 	printf("\nInitializing velocity field"); fflush(stdout);
+	gettimeofday(&vfbegin, NULL);
 	update_velocity_field(&vf, noise_scale, w_offset);
-	printf("\nRunning simulation\n");
+	gettimeofday(&vfend, NULL);
+	printf("\nvelocity field computed in %lu seconds, running simulation\n",
+		vfend.tv_sec - vfbegin.tv_sec);
 
 	for (i = 0; i < niterations; i++) {
 		if ((i % 50) == 0)
-			printf("\n%5d / %5d ", i, niterations);
+			printf(" m:%lus i:%lus\n%5d / %5d ",
+				move_elapsed.tv_sec, image_elapsed.tv_sec, i, niterations);
 		else
 			printf(".");
 		fflush(stdout);
 
+		gettimeofday(&movebegin, NULL);
 		for (t = 0; t < nthreads; t++)
 			move_particles(particle, &ti[t], &vf);
 		wait_for_movement_threads(ti, nthreads);
+		gettimeofday(&moveend, NULL);
+		move_elapsed.tv_sec += moveend.tv_sec - movebegin.tv_sec;
+		imagebegin = moveend;
 		update_output_images(image_threads, particle, particle_count);
+		gettimeofday(&imageend, NULL);
+		image_elapsed.tv_sec += imageend.tv_sec - imagebegin.tv_sec;
 		if ((i % image_save_period) == 0) {
 			save_output_images();
 			last_imaged_iteration = i;
