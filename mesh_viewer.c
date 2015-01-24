@@ -39,6 +39,9 @@ static int real_screen_width;
 static int real_screen_height;
 static int wireframe = 0;
 static int oldwireframe = 0;
+static int autospin_initialized = 0;
+static int autospin = 0;
+union quat autorotation; 
 
 static int display_frame_stats = 1;
 
@@ -139,6 +142,10 @@ static void handle_key_down(SDL_keysym *keysym)
 	case SDLK_r:
 		oldwireframe = wireframe;
 		wireframe = !wireframe;
+		break;
+	case SDLK_s:
+		autospin = !autospin;
+		break;
 	default:
 		break;
 	}
@@ -198,9 +205,19 @@ static int main_da_motion_notify(int x, int y)
 		} else {
 			quat_mul(&lobby_orientation, &rotation, &last_lobby_orientation);
 			last_lobby_orientation = lobby_orientation;
+			autorotation = rotation;
+			autospin_initialized = 1;
 		}
 	}
 	return 0;
+}
+
+void do_autospin(void)
+{
+	if (!autospin || !autospin_initialized)
+		return;
+	quat_mul(&lobby_orientation, &autorotation, &last_lobby_orientation);
+	last_lobby_orientation = lobby_orientation;
 }
 
 static int main_da_button_press(int button, int x, int y)
@@ -631,6 +648,7 @@ int main(int argc, char *argv[])
 
 			/* Process incoming events. */
 			process_events();
+			do_autospin();
 			/* Draw the screen. */
 			draw_screen();
 
