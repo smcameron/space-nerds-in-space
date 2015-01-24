@@ -71,7 +71,6 @@ static float velocity_factor = 1200.0;
 static float num_bands = 6.0f;
 static float band_speed_factor = 2.9f;
 static int vertical_bands = 0;
-static const float left_right_fudge = 0.995;
 
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha, start_image_bytes_per_row;
@@ -482,21 +481,15 @@ static union vec3 curl2(union vec3 pos, union vec3 normalized_pos,
 {
 	union vec3 pos_plus_noise, proj_ng, rotated_ng;
 	union quat rotation;
-	float m2;
 
 	/* project noise gradient onto sphere surface */
 	vec3_add(&pos_plus_noise, &pos, &noise_gradient);
-	m2 = vec3_magnitude(&pos_plus_noise);
 	vec3_normalize_self(&pos_plus_noise);
 	vec3_mul_self(&pos_plus_noise, pos_magnitude);
 	vec3_sub(&proj_ng, &pos_plus_noise, &pos);
 
 	/* rotate projected noise gradient 90 degrees about pos. */
-	if (pos_magnitude < m2 * left_right_fudge) /* rotate left or right if uphill or downhill */
-		quat_init_axis_v(&rotation, &normalized_pos, M_PI / 2.0);
-	else
-		quat_init_axis_v(&rotation, &normalized_pos, 3.0 * M_PI / 2.0);
-	
+	quat_init_axis_v(&rotation, &normalized_pos, M_PI / 2.0);
 	quat_rot_vec(&rotated_ng, &proj_ng, &rotation);
 	return rotated_ng;
 }
