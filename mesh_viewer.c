@@ -205,7 +205,9 @@ static int main_da_motion_notify(int x, int y)
 		} else {
 			quat_mul(&lobby_orientation, &rotation, &last_lobby_orientation);
 			last_lobby_orientation = lobby_orientation;
-			autorotation = rotation;
+			v2.v.z /= 3.0;
+			v2.v.y /= 3.0;
+			quat_from_u2v(&autorotation, &v1, &v2, 0);
 			autospin_initialized = 1;
 		}
 	}
