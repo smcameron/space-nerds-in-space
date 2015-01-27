@@ -12536,7 +12536,7 @@ static void init_meshes()
 	}
 
 	sphere_mesh = mesh_unit_icosphere(4);
-	planetary_ring_mesh = mesh_fabricate_planetary_ring(1.0, 4.0);
+	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS);
 
 	for (i = 0; i < NSTARBASE_MODELS; i++) {
 		char filename[100];
