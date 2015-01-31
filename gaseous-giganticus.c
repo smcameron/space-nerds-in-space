@@ -384,6 +384,7 @@ static void init_particles(struct particle **pp, const int nparticles)
 	struct fij fij;
 	struct particle *p;
 
+	printf("Initializing %d particles", nparticles); fflush(stdout);
 	*pp = malloc(sizeof(**pp) * nparticles);
 	p = *pp;
 
@@ -449,6 +450,7 @@ static void init_particles(struct particle **pp, const int nparticles)
 		p[i].c.a = start_image_has_alpha ? (float) pixel[3] / 255.0 : 1.0;
 		p[i].c.a = 1.0; //start_image_has_alpha ? (float) pixel[3] / 255.0 : 1.0;
 	}
+	printf("\n");
 }
 
 static inline float fbmnoise4(float x, float y, float z, float w, const float fbm_falloff)
@@ -1282,9 +1284,7 @@ int main(int argc, char *argv[])
 #endif
 	printf("width, height, bytes per row = %d,%d,%d\n",
 			start_image_width, start_image_height, start_image_bytes_per_row);
-	printf("Initializing %d particles", particle_count); fflush(stdout);
 	init_particles(&particle, particle_count);
-	printf("\n");
 	if (restore_velocity_field(vf_dump_file, &vf))
 		update_velocity_field(&vf, noise_scale, w_offset);
 	dump_velocity_field(vf_dump_file, &vf);
