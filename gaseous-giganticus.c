@@ -578,6 +578,19 @@ static void update_velocity_field(struct velocity_field *vf, float noise_scale, 
 	}
 }
 
+static void check_vf_dumpfile(void)
+{
+	struct stat statbuf;
+
+	if (!vf_dumpfile)
+		return;
+
+	rc = stat(vf_dumpfile, &statbuf);
+	if (rc == 0 && !restore_vf_data) /* file exists... */
+		printf("File %s already exists, velocity field will not be dumped.\n",
+				vf_dumpfile);
+}
+
 static void dump_velocity_field(char *filename, struct velocity_field *vf)
 {
 	int fd;
@@ -588,9 +601,9 @@ static void dump_velocity_field(char *filename, struct velocity_field *vf)
 		return;
 
 	printf("\n"); fflush(stdout);
-	fd = open(filename, O_RDWR | O_TRUNC | O_CREAT, 0644);
+	fd = open(filename, O_RDWR | O_CREAT | O_EXCL, 0644);
 	if (fd < 0) {
-		fprintf(stderr, "Cannot open '%s' for writing/truncating: %s. Velocity field not dumped.\n",
+		fprintf(stderr, "Cannot create '%s': %s. Velocity field not dumped.\n",
 			filename, strerror(errno));
 		return;
 	}
@@ -1230,6 +1243,8 @@ int main(int argc, char *argv[])
 	noise_scale = default_noise_scale;
 
 	process_options(argc, argv);
+
+	check_vf_dumpfile();
 
 	int num_online_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	if (num_online_cpus > 0)
