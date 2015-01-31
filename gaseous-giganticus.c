@@ -560,7 +560,9 @@ static void update_velocity_field(struct velocity_field *vf, float noise_scale, 
 	struct velocity_field_thread_info t[6];
 	void *status;
 	int f, rc;
+	struct timeval vfbegin, vfend;
 
+	gettimeofday(&vfbegin, NULL);
 	printf("Calculating velocity field"); fflush(stdout);
 	for (f = 0; f < 6; f++) {
 		t[f].f = f;
@@ -577,6 +579,9 @@ static void update_velocity_field(struct velocity_field *vf, float noise_scale, 
 			fprintf(stderr, "%s: pthread_join failed: %s\n",
 					__func__, strerror(errno));
 	}
+	gettimeofday(&vfend, NULL);
+	printf("\nvelocity field computed in %lu seconds, running simulation\n",
+		vfend.tv_sec - vfbegin.tv_sec);
 }
 
 static void check_vf_dump_file(char *filename)
@@ -1231,7 +1236,6 @@ int main(int argc, char *argv[])
 	particle_count = NPARTICLES;
 	struct timeval movebegin, moveend, move_elapsed;
 	struct timeval imagebegin, imageend, image_elapsed;
-	struct timeval vfbegin, vfend;
 
 	move_elapsed.tv_sec = 0;
 	move_elapsed.tv_usec = 0;
@@ -1281,13 +1285,9 @@ int main(int argc, char *argv[])
 	printf("Initializing %d particles", particle_count); fflush(stdout);
 	init_particles(&particle, particle_count);
 	printf("\n");
-	gettimeofday(&vfbegin, NULL);
 	if (restore_velocity_field(vf_dump_file, &vf))
 		update_velocity_field(&vf, noise_scale, w_offset);
 	dump_velocity_field(vf_dump_file, &vf);
-	gettimeofday(&vfend, NULL);
-	printf("\nvelocity field computed in %lu seconds, running simulation\n",
-		vfend.tv_sec - vfbegin.tv_sec);
 
 	for (i = 0; i < niterations; i++) {
 		if ((i % 50) == 0)
