@@ -52,6 +52,7 @@ static const int image_threads = 6; /* for 6 faces of cubemap, don't change this
 static char *default_output_file_prefix = "gasgiant-";
 static char *default_input_file = "gasgiant-input.png";
 static char *vf_dump_file = NULL;
+static int restore_vf_data = 0;
 static char *output_file_prefix;
 static char *input_file;
 static int nofade = 0;
@@ -583,7 +584,7 @@ static void dump_velocity_field(char *filename, struct velocity_field *vf)
 	int bytes_left = (int) sizeof(*vf);
 	int bytes_written = 0;
 
-	if (!filename)
+	if (!filename || restore_vf_data)
 		return;
 
 	printf("\n"); fflush(stdout);
@@ -610,6 +611,43 @@ static void dump_velocity_field(char *filename, struct velocity_field *vf)
 	} while (bytes_left > 0);
 	close(fd);
 	printf("Velocity field dumped to %s\n", filename);
+}
+
+static int restore_velocity_field(char *filename, struct velocity_field *vf)
+{
+	int fd;
+	int bytes_left = (int) sizeof(*vf);
+	int bytes_read = 0;
+
+	if (!filename || !restore_vf_data)
+		return -1;
+
+	printf("\n"); fflush(stdout);
+	fd = open(filename, O_RDONLY);
+	if (fd < 0) {
+		fprintf(stderr, "Cannot open '%s' for reading: %s\n",
+			filename, strerror(errno));
+		return -1;
+	}
+
+	/* FIXME: this is quick and dirty, not endian clean, etc. */
+	do {
+		unsigned char *x = (unsigned char *) vf;
+		int rc = read(fd, &x[bytes_read], bytes_left);
+		if (rc < 0 && errno == EINTR)
+			continue;
+		if (rc < 0) {
+			fprintf(stderr, "Error reading '%s': %s\n", filename, strerror(errno));
+			fprintf(stderr, "Velocity field restoration failed.\n");
+			close(fd);
+			return -1;
+		}
+		bytes_read += rc;
+		bytes_left -= rc;
+	} while (bytes_left > 0);
+	close(fd);
+	printf("Velocity field restored from %s\n", filename);
+	return 0;
 }
 
 /* move a particle according to velocity field at its current location */
@@ -1037,6 +1075,7 @@ static struct option long_options[] = {
 	{ "velocity-factor", required_argument, NULL, 'v' },
 	{ "vertical-bands", required_argument, NULL, 'V' },
 	{ "band-vel-factor", required_argument, NULL, 'B' },
+	{ "restore-velocity-field", required_argument, NULL, 'r' },
 	{ "stripe", no_argument, NULL, 's' },
 	{ "sinusoidal", no_argument, NULL, 'S' },
 	{ "threads", required_argument, NULL, 't' },
@@ -1079,7 +1118,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:Cd:f:hHi:no:p:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "B:b:c:Cd:f:hHi:no:p:r:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1098,6 +1137,11 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'd':
 			vf_dump_file = optarg;
+			restore_vf_data = 0;
+			break;
+		case 'r':
+			vf_dump_file = optarg;
+			restore_vf_data = 1;
 			break;
 		case 'f':
 			process_float_option("fbm-falloff", optarg, &fbm_falloff);
@@ -1222,7 +1266,8 @@ int main(int argc, char *argv[])
 	init_particles(&particle, particle_count);
 	printf("\nInitializing velocity field"); fflush(stdout);
 	gettimeofday(&vfbegin, NULL);
-	update_velocity_field(&vf, noise_scale, w_offset);
+	if (restore_velocity_field(vf_dump_file, &vf))
+		update_velocity_field(&vf, noise_scale, w_offset);
 	dump_velocity_field(vf_dump_file, &vf);
 	gettimeofday(&vfend, NULL);
 	printf("\nvelocity field computed in %lu seconds, running simulation\n",

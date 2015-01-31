@@ -16,6 +16,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -n ]
 [ -o output-file-template ]
 [ -p particle-count ]
+[ -r velocity-field-dumpfile ]
 [ -s stripe ]
 [ -t thread-count ]
 [ -v velocity-factor ]
@@ -116,6 +117,11 @@ computing velocity field.  Default is 2.9
 .TP
 -V, --vertical-bands
 Make bands rotate around the X axis instead of Y axis
+.TP
+-r, --restore-velocity-field
+Restore the velocity field data from a file created previously via the -d option
+instead of calculating it from scratch.  This can save a lot of time if you are
+happy with the fluid flows, but are experimenting with different input images.
 .TP
 -s, --stripe
 Instead of using the whole image, use a vertical strip of the image (center) and
