@@ -561,6 +561,7 @@ static void update_velocity_field(struct velocity_field *vf, float noise_scale, 
 	void *status;
 	int f, rc;
 
+	printf("Calculating velocity field"); fflush(stdout);
 	for (f = 0; f < 6; f++) {
 		t[f].f = f;
 		t[f].w = w;
@@ -578,17 +579,17 @@ static void update_velocity_field(struct velocity_field *vf, float noise_scale, 
 	}
 }
 
-static void check_vf_dumpfile(void)
+static void check_vf_dump_file(char *filename)
 {
 	struct stat statbuf;
 
-	if (!vf_dumpfile)
+	if (!filename)
 		return;
 
-	rc = stat(vf_dumpfile, &statbuf);
+	int rc = stat(filename, &statbuf);
 	if (rc == 0 && !restore_vf_data) /* file exists... */
 		printf("File %s already exists, velocity field will not be dumped.\n",
-				vf_dumpfile);
+				filename);
 }
 
 static void dump_velocity_field(char *filename, struct velocity_field *vf)
@@ -1244,7 +1245,7 @@ int main(int argc, char *argv[])
 
 	process_options(argc, argv);
 
-	check_vf_dumpfile();
+	check_vf_dump_file(vf_dump_file);
 
 	int num_online_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	if (num_online_cpus > 0)
@@ -1279,7 +1280,7 @@ int main(int argc, char *argv[])
 			start_image_width, start_image_height, start_image_bytes_per_row);
 	printf("Initializing %d particles", particle_count); fflush(stdout);
 	init_particles(&particle, particle_count);
-	printf("\nInitializing velocity field"); fflush(stdout);
+	printf("\n");
 	gettimeofday(&vfbegin, NULL);
 	if (restore_velocity_field(vf_dump_file, &vf))
 		update_velocity_field(&vf, noise_scale, w_offset);
