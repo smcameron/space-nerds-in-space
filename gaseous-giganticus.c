@@ -20,6 +20,9 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
@@ -48,6 +51,7 @@ static int user_threads = -1;
 static const int image_threads = 6; /* for 6 faces of cubemap, don't change this */
 static char *default_output_file_prefix = "gasgiant-";
 static char *default_input_file = "gasgiant-input.png";
+static char *vf_dump_file = NULL;
 static char *output_file_prefix;
 static char *input_file;
 static int nofade = 0;
@@ -573,6 +577,41 @@ static void update_velocity_field(struct velocity_field *vf, float noise_scale, 
 	}
 }
 
+static void dump_velocity_field(char *filename, struct velocity_field *vf)
+{
+	int fd;
+	int bytes_left = (int) sizeof(*vf);
+	int bytes_written = 0;
+
+	if (!filename)
+		return;
+
+	printf("\n"); fflush(stdout);
+	fd = open(filename, O_RDWR | O_TRUNC | O_CREAT, 0644);
+	if (fd < 0) {
+		fprintf(stderr, "Cannot open '%s' for writing/truncating: %s. Velocity field not dumped.\n",
+			filename, strerror(errno));
+		return;
+	}
+
+	/* FIXME: this is quick and dirty, not endian clean, etc. */
+	do {
+		unsigned char *x = (unsigned char *) vf;
+		int rc = write(fd, &x[bytes_written], bytes_left);
+		if (rc < 0 && errno == EINTR)
+			continue;
+		if (rc < 0) {
+			fprintf(stderr, "Error writing to '%s': %s\n", filename, strerror(errno));
+			fprintf(stderr, "Velocity field dump failed.\n");
+			break;
+		}
+		bytes_written += rc;
+		bytes_left -= rc;
+	} while (bytes_left > 0);
+	close(fd);
+	printf("Velocity field dumped to %s\n", filename);
+}
+
 /* move a particle according to velocity field at its current location */
 static void move_particle(struct particle *p, struct velocity_field *vf)
 {
@@ -987,6 +1026,7 @@ static struct option long_options[] = {
 	{ "bands", required_argument, NULL, 'b' },
 	{ "count", required_argument, NULL, 'c' },
 	{ "cloudmode", required_argument, NULL, 'C' },
+	{ "dump-velocity-field", required_argument, NULL, 'd' },
 	{ "input", required_argument, NULL, 'i' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "w-offset", required_argument, NULL, 'w' },
@@ -1039,7 +1079,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:Cf:hHi:no:p:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "B:b:c:Cd:f:hHi:no:p:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1055,6 +1095,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'C':
 			cloudmode = 1;
+			break;
+		case 'd':
+			vf_dump_file = optarg;
 			break;
 		case 'f':
 			process_float_option("fbm-falloff", optarg, &fbm_falloff);
@@ -1180,6 +1223,7 @@ int main(int argc, char *argv[])
 	printf("\nInitializing velocity field"); fflush(stdout);
 	gettimeofday(&vfbegin, NULL);
 	update_velocity_field(&vf, noise_scale, w_offset);
+	dump_velocity_field(vf_dump_file, &vf);
 	gettimeofday(&vfend, NULL);
 	printf("\nvelocity field computed in %lu seconds, running simulation\n",
 		vfend.tv_sec - vfbegin.tv_sec);

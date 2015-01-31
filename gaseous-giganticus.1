@@ -8,6 +8,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -B band-velocity-factor ]
 [ -c count ]
 [ -C ]
+[ -d velocity-field-dumpfile ]
 [ -f fbm-falloff ]
 [ -h ]
 [ -H ]
@@ -64,6 +65,9 @@ Number of iterations to run the simulation.  Default is 1000
 .TP
 -C, --cloudmode
 modulate output images to produce clouds
+.TP
+-d, --dump-velocity-field
+Dump out velocity field data to the specified file after initial calculation.
 .TP
 -i, --input
 Input image filename.  Must be RGB png file.
