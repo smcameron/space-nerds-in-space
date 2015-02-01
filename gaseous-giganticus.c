@@ -557,7 +557,7 @@ static void *update_velocity_field_thread_fn(void *info)
 }
 
 /* compute velocity field for all cells in cubemap.  It is scaled curl of gradient of noise field */
-static void update_velocity_field(struct velocity_field *vf, float noise_scale, float w)
+static void update_velocity_field(struct velocity_field *vf, float noise_scale, float w, int *use_wstep)
 {
 	struct velocity_field_thread_info t[6];
 	void *status;
@@ -584,6 +584,8 @@ static void update_velocity_field(struct velocity_field *vf, float noise_scale, 
 	gettimeofday(&vfend, NULL);
 	printf("\nvelocity field computed in %lu seconds, running simulation\n",
 		vfend.tv_sec - vfbegin.tv_sec);
+	if (*use_wstep)
+		(*use_wstep)++;
 }
 
 static void check_vf_dump_file(char *filename)
@@ -599,20 +601,29 @@ static void check_vf_dump_file(char *filename)
 				filename);
 }
 
-static void dump_velocity_field(char *filename, struct velocity_field *vf)
+static void dump_velocity_field(char *filename_template, struct velocity_field *vf, int use_wstep)
 {
 	int fd;
 	int bytes_left = (int) sizeof(*vf);
 	int bytes_written = 0;
+	char *filename = NULL;
 
-	if (!filename || restore_vf_data)
+	if (!filename_template || restore_vf_data)
 		return;
 
 	printf("\n"); fflush(stdout);
+
+	if (!use_wstep) {
+		filename = strdup(filename_template);
+	} else {
+		filename = malloc(strlen(filename_template) + 100);
+		sprintf(filename, "%s-%d", filename_template, use_wstep);
+	}
 	fd = open(filename, O_RDWR | O_CREAT | O_EXCL, 0644);
 	if (fd < 0) {
 		fprintf(stderr, "Cannot create '%s': %s. Velocity field not dumped.\n",
 			filename, strerror(errno));
+		free(filename);
 		return;
 	}
 
@@ -632,6 +643,7 @@ static void dump_velocity_field(char *filename, struct velocity_field *vf)
 	} while (bytes_left > 0);
 	close(fd);
 	printf("Velocity field dumped to %s\n", filename);
+	free(filename);
 }
 
 static int restore_velocity_field(char *filename, struct velocity_field *vf)
@@ -1286,8 +1298,8 @@ int main(int argc, char *argv[])
 			start_image_width, start_image_height, start_image_bytes_per_row);
 	init_particles(&particle, particle_count);
 	if (restore_velocity_field(vf_dump_file, &vf))
-		update_velocity_field(&vf, noise_scale, w_offset);
-	dump_velocity_field(vf_dump_file, &vf);
+		update_velocity_field(&vf, noise_scale, w_offset, &use_wstep);
+	dump_velocity_field(vf_dump_file, &vf, use_wstep);
 
 	for (i = 0; i < niterations; i++) {
 		if ((i % 50) == 0)
@@ -1310,10 +1322,10 @@ int main(int argc, char *argv[])
 		if ((i % image_save_period) == 0) {
 			save_output_images();
 			last_imaged_iteration = i;
-			if (use_wstep) {
-				printf("\nUpdating velocity field"); fflush(stdout);
+			if (use_wstep && (i % (image_save_period * 10)) == 0) {
 				w_offset += wstep;
-				update_velocity_field(&vf, noise_scale, w_offset);
+				update_velocity_field(&vf, noise_scale, w_offset, &use_wstep);
+				dump_velocity_field(vf_dump_file, &vf, use_wstep);
 			}
 		}
 	}
