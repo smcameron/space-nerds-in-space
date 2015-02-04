@@ -60,7 +60,12 @@ static int stripe = 0;
 static int sinusoidal = 0;
 static int use_wstep = 0;
 static float wstep = 0.0f;
-static float fbm_falloff = 0.5;
+#define FBM_DEFAULT_FALLOFF (0.5)
+static float fbm_falloff = FBM_DEFAULT_FALLOFF; 
+static float ff0 = 1.0;
+static float ff1 = FBM_DEFAULT_FALLOFF;
+static float ff2 = FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF;
+static float ff3 = FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF;
 static int cloudmode = 0;
 
 #define DIM 1024 /* dimensions of cube map face images */
@@ -170,7 +175,7 @@ static void fade_out_background(int f, struct color *c)
 }
 
 static union vec3 fij_to_xyz(int f, int i, int j, const int dim);
-static inline float fbmnoise4(float x, float y, float z, float w, const float fbm_falloff);
+static inline float fbmnoise4(float x, float y, float z, float w);
 
 static void paint_particle(int face, int i, int j, struct color *c)
 {
@@ -212,7 +217,7 @@ static void paint_particle(int face, int i, int j, struct color *c)
 		v = fij_to_xyz(face, i, j, DIM);
 		vec3_normalize_self(&v);
 		vec3_mul_self(&v, 3.6 * noise_scale);
-		n = fbmnoise4(v.v.x, v.v.y, v.v.z, (w_offset + 10.0) * 3.33f, 0.5);
+		n = fbmnoise4(v.v.x, v.v.y, v.v.z, (w_offset + 10.0) * 3.33f);
 		if (n > 0.5f)
 			n = n * (1.0 + n - 0.5);
 		if (n < 0.0f)
@@ -453,33 +458,28 @@ static void init_particles(struct particle **pp, const int nparticles)
 	printf("\n");
 }
 
-static inline float fbmnoise4(float x, float y, float z, float w, const float fbm_falloff)
+static inline float fbmnoise4(float x, float y, float z, float w)
 {
-	const float f1 = fbm_falloff;
-	const float f2 = fbm_falloff * fbm_falloff;
-	const float f3 = fbm_falloff * fbm_falloff * fbm_falloff;
-
-	return 1.0 * open_simplex_noise4(ctx, x, y, z, w) +
-		f1 * open_simplex_noise4(ctx, 2.0f * x, 2.0f * y, 2.0f * z, 2.0f * w) +
-		f2 * open_simplex_noise4(ctx, 4.0f * x, 4.0f * y, 4.0f * z, 4.0f * w) +
-		f3 * open_simplex_noise4(ctx, 8.0f * x, 8.0f * y, 8.0f * z, 8.0f * w);
+	return	ff0 * open_simplex_noise4(ctx, x, y, z, w) +
+		ff1 * open_simplex_noise4(ctx, 2.0f * x, 2.0f * y, 2.0f * z, 2.0f * w) +
+		ff2 * open_simplex_noise4(ctx, 4.0f * x, 4.0f * y, 4.0f * z, 4.0f * w) +
+		ff3 * open_simplex_noise4(ctx, 8.0f * x, 8.0f * y, 8.0f * z, 8.0f * w);
 }
 
 /* compute the noise gradient at the given point on the surface of a sphere */
-static union vec3 noise_gradient(union vec3 position, float w, float noise_scale,
-				const float fbm_falloff)
+static union vec3 noise_gradient(union vec3 position, float w, float noise_scale)
 {
 	union vec3 g;
 	const float dx = noise_scale * (0.05f / (float) DIM);
 	const float dy = noise_scale * (0.05f / (float) DIM);
 	const float dz = noise_scale * (0.05f / (float) DIM);
 
-	g.v.x = fbmnoise4(position.v.x + dx, position.v.y, position.v.z, w, fbm_falloff) -
-		fbmnoise4(position.v.x - dx, position.v.y, position.v.z, w, fbm_falloff);
-	g.v.y = fbmnoise4(position.v.x, position.v.y + dy, position.v.z, w, fbm_falloff) -
-		fbmnoise4(position.v.x, position.v.y - dy, position.v.z, w, fbm_falloff);
-	g.v.z = fbmnoise4(position.v.x, position.v.y, position.v.z + dz, w, fbm_falloff) -
-		fbmnoise4(position.v.x, position.v.y, position.v.z - dz, w, fbm_falloff);
+	g.v.x = fbmnoise4(position.v.x + dx, position.v.y, position.v.z, w) -
+		fbmnoise4(position.v.x - dx, position.v.y, position.v.z, w);
+	g.v.y = fbmnoise4(position.v.x, position.v.y + dy, position.v.z, w) -
+		fbmnoise4(position.v.x, position.v.y - dy, position.v.z, w);
+	g.v.z = fbmnoise4(position.v.x, position.v.y, position.v.z + dz, w) -
+		fbmnoise4(position.v.x, position.v.y, position.v.z - dz, w);
 	return g;
 }
 
@@ -515,7 +515,6 @@ static void *update_velocity_field_thread_fn(void *info)
 	int f = t->f;
 	float w = t->w;
 	struct velocity_field *vf = t->vf;
-	const float fbmf = fbm_falloff;
 
 	int i, j;
 	union vec3 v, c, ng;
@@ -528,7 +527,7 @@ static void *update_velocity_field_thread_fn(void *info)
 			v = fij_to_xyz(f, i, j, VFDIM);
 			ov = v;
 			vec3_mul_self(&v, noise_scale);
-			ng = noise_gradient(v, w * noise_scale, noise_scale, fbmf);
+			ng = noise_gradient(v, w * noise_scale, noise_scale);
 			c = curl2(v, ov, noise_scale, ng);
 			vec3_mul(&vf->v[f][i][j], &c, velocity_factor);
 
@@ -1178,6 +1177,10 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'f':
 			process_float_option("fbm-falloff", optarg, &fbm_falloff);
+			ff0 = 1.0;
+			ff1 = fbm_falloff;
+			ff2 = ff1 * fbm_falloff;
+			ff3 = ff2 * fbm_falloff;
 			break;
 		case 'h':
 			use_hot_pink = 1;
