@@ -13,6 +13,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -h ]
 [ -H ]
 [ -i input-file ]
+[ -I image-save-period ]
 [ -n ]
 [ -o output-file-template ]
 [ -p particle-count ]
@@ -73,6 +74,10 @@ Dump out velocity field data to the specified file after initial calculation.
 .TP
 -i, --input
 Input image filename.  Must be RGB png file.
+.TP
+-I, --image-save-period
+Interval of simulation iterations after which to output images.  Default is to
+output images every 20 iterations of the simulation.
 .TP
 -o, --output
 Output image filename template.  Example: 'out-' will

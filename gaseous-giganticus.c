@@ -1064,6 +1064,8 @@ static void usage(void)
 	fprintf(stderr, "                 Default is 1000\n");
 	fprintf(stderr, "   -C, --cloudmode: modulate image output by to produce clouds\n");
 	fprintf(stderr, "   -i, --input : Input image filename.  Must be RGB png file.\n");
+	fprintf(stderr, "   -I, --image-save-period: Interval of simulation iterations after which\n");
+	fprintf(stderr, "         to output images.  Default is every 20 iterations\n");
 	fprintf(stderr, "   -o, --output : Output image filename template.\n");
 	fprintf(stderr, "               Example: 'out-' will produces 6 output files\n");
 	fprintf(stderr, "               out-0.png, out-1.png, ..., out-5.png\n");
@@ -1107,6 +1109,7 @@ static struct option long_options[] = {
 	{ "cloudmode", required_argument, NULL, 'C' },
 	{ "dump-velocity-field", required_argument, NULL, 'd' },
 	{ "input", required_argument, NULL, 'i' },
+	{ "image-save-period", required_argument, NULL, 'I' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "w-offset", required_argument, NULL, 'w' },
 	{ "fbm-falloff", required_argument, NULL, 'f' },
@@ -1160,7 +1163,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:Cd:f:hHi:no:p:Pr:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "B:b:c:Cd:f:hHi:I:no:p:Pr:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1200,6 +1203,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'i':
 			input_file = optarg;
+			break;
+		case 'I':
+			process_int_option("image-save-period", optarg, &image_save_period);
 			break;
 		case 'n':
 			nofade = 1;
