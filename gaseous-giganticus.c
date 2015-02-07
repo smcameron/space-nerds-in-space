@@ -80,7 +80,7 @@ static float noise_scale;
 static float velocity_factor = 1200.0;
 static float num_bands = 6.0f;
 static float band_speed_factor = 2.9f;
-static int vertical_bands = 0;
+static int vertical_bands = 1;
 
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha, start_image_bytes_per_row;
@@ -1076,8 +1076,8 @@ static void usage(void)
 	fprintf(stderr, "   -n, --no-fade:  Do not fade the image at all, divergences will be hidden\n");
 	fprintf(stderr, "   -v, --velocity-factor: Multiply velocity field by this number when\n");
 	fprintf(stderr, "                   moving particles.  Default is 1200.0\n");
-	fprintf(stderr, "   -V, --vertical-bands:  Make bands rotate around X axis instead of Y\n");
-	fprintf(stderr, "                          Also affects --stripe option\n");
+	fprintf(stderr, "   -V, --vertical-bands:  Make bands rotate around Y axis instead of X\n");
+	fprintf(stderr, "                          Also affects --stripe option.\n");
 	fprintf(stderr, "   -B, --band-vel-factor: Multiply band velocity by this number when\n");
 	fprintf(stderr, "                   computing velocity field.  Default is 2.9\n");
 	fprintf(stderr, "   -s, --stripe: Begin with stripes from a vertical strip of input image\n");
@@ -1232,7 +1232,7 @@ static void process_options(int argc, char *argv[])
 			process_float_option("velocity-factor", optarg, &velocity_factor);
 			break;
 		case 'V':
-			vertical_bands = 1;
+			vertical_bands = 0;
 			break;
 		case 'W':
 			process_float_option("wstep", optarg, &wstep);

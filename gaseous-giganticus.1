@@ -116,7 +116,7 @@ Multiply band velocity by this number when
 computing velocity field.  Default is 2.9
 .TP
 -V, --vertical-bands
-Make bands rotate around the X axis instead of Y axis
+Make bands rotate around the Y axis instead of X axis
 .TP
 -r, --restore-velocity-field
 Restore the velocity field data from a file created previously via the -d option
@@ -143,7 +143,7 @@ give bigger whorls, larger values will give smaller whorls.
 .SH "EXAMPLES"
 .TP
 .DI
-	./gaseous-giganticus -V --sinusoidal --noise-scale 2.8 --velocity-factor 800 -i ~/image.png -w 809.1 --bands 10
+	./gaseous-giganticus --sinusoidal --noise-scale 2.8 --velocity-factor 800 -i ~/image.png -w 809.1 --bands 10
 .DE
 .SH "SEE ALSO"
 snis_client, snis_server
