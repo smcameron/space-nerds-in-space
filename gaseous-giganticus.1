@@ -25,6 +25,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -V ]
 [ -w w-offset ]
 [ -W wstep ]
+[ --wstep_period period ]
 [ -z noise-scale ]
 
 .SH DESCRIPTION
@@ -90,6 +91,11 @@ repetitive results.
 -W, --wstep amount
 w offset is periodically adjusted by specified amount and velocity field
 is periodically recalculated.
+.TP
+--wstep-period period
+Number of simulation iterations to run between updating the w value of the
+four-dimensional noise field and recalulating the velocity field.  Default is
+10.  Has no effect if --wstep is not specified. 
 .TP
 -f, --fbm-falloff value
 Successively higher octaves of fractal Brownian motion noise are multiplied

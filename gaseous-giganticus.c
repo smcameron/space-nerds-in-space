@@ -59,6 +59,7 @@ static int nofade = 0;
 static int stripe = 0;
 static int sinusoidal = 1;
 static int use_wstep = 0;
+static int wstep_period = 10;
 static float wstep = 0.0f;
 #define FBM_DEFAULT_FALLOFF (0.5)
 static float fbm_falloff = FBM_DEFAULT_FALLOFF; 
@@ -1126,6 +1127,7 @@ static struct option long_options[] = {
 	{ "particles", required_argument, NULL, 'p' },
 	{ "plainmap", required_argument, NULL, 'P' },
 	{ "wstep", required_argument, NULL, 'W' },
+	{ "wstep-period", required_argument, NULL, 'q' },
 	{ "noise-scale", required_argument, NULL, 'z' },
 	{ 0, 0, 0, 0 },
 };
@@ -1244,6 +1246,9 @@ static void process_options(int argc, char *argv[])
 			process_float_option("wstep", optarg, &wstep);
 			use_wstep = 1;
 			break;
+		case 'q': /* running out of letters, so, 'q'. */
+			process_int_option("wstep-period", optarg, &wstep_period);
+			break;
 		case 'z':
 			process_float_option("noise-scale", optarg, &noise_scale);
 			break;
@@ -1337,11 +1342,11 @@ int main(int argc, char *argv[])
 		if ((i % image_save_period) == 0) {
 			save_output_images();
 			last_imaged_iteration = i;
-			if (use_wstep && (i % (image_save_period * 10)) == 0) {
-				w_offset += wstep;
-				update_velocity_field(&vf, noise_scale, w_offset, &use_wstep);
-				dump_velocity_field(vf_dump_file, &vf, use_wstep);
-			}
+		}
+		if (use_wstep && (i % wstep_period == 0)) {
+			w_offset += wstep;
+			update_velocity_field(&vf, noise_scale, w_offset, &use_wstep);
+			dump_velocity_field(vf_dump_file, &vf, use_wstep);
 		}
 	}
 	if (last_imaged_iteration != i - 1)
