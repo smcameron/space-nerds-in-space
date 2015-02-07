@@ -1065,6 +1065,7 @@ static void usage(void)
 	fprintf(stderr, "   -c, --count : Number of iterations to run the simulation.\n");
 	fprintf(stderr, "                 Default is 1000\n");
 	fprintf(stderr, "   -C, --cloudmode: modulate image output by to produce clouds\n");
+	fprintf(stderr, "   -f, --fbm-falloff: Use specified falloff for FBM noise.  Default is 0.5\n");
 	fprintf(stderr, "   -F, --vfdim: Set size of velocity field.  Default:2048. Min: 16. Max: 2048\n");
 	fprintf(stderr, "   -i, --input : Input image filename.  Must be RGB png file.\n");
 	fprintf(stderr, "   -I, --image-save-period: Interval of simulation iterations after which\n");
