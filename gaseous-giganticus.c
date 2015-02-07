@@ -57,7 +57,7 @@ static char *output_file_prefix;
 static char *input_file;
 static int nofade = 0;
 static int stripe = 0;
-static int sinusoidal = 0;
+static int sinusoidal = 1;
 static int use_wstep = 0;
 static float wstep = 0.0f;
 #define FBM_DEFAULT_FALLOFF (0.5)
@@ -1073,6 +1073,8 @@ static void usage(void)
 	fprintf(stderr, "                   divergences in the velocity field to be clearly seen,\n");
 	fprintf(stderr, "                   as pixels that contain no particles wil not be painted\n");
 	fprintf(stderr, "                   and will become hot pink.\n");
+	fprintf(stderr, "   -P, --plainmap  Do not use sinusoidal image mapping, instead repeat image\n");
+	fprintf(stderr, "                   on six sides of a cubemap.\n");
 	fprintf(stderr, "   -n, --no-fade:  Do not fade the image at all, divergences will be hidden\n");
 	fprintf(stderr, "   -v, --velocity-factor: Multiply velocity field by this number when\n");
 	fprintf(stderr, "                   moving particles.  Default is 1200.0\n");
@@ -1082,6 +1084,7 @@ static void usage(void)
 	fprintf(stderr, "                   computing velocity field.  Default is 2.9\n");
 	fprintf(stderr, "   -s, --stripe: Begin with stripes from a vertical strip of input image\n");
 	fprintf(stderr, "   -S, --sinusoidal: Use sinusoidal projection for input image\n");
+	fprintf(stderr, "                 Note: sinusoidal is the default projection.\n");
 	fprintf(stderr, "                 Note: --stripe and --sinusoidal are mutually exclusive\n");
 	fprintf(stderr, "   -t, --threads: Use the specified number of CPU threads up to the\n");
 	fprintf(stderr, "                   number of online CPUs\n");
@@ -1118,6 +1121,7 @@ static struct option long_options[] = {
 	{ "sinusoidal", no_argument, NULL, 'S' },
 	{ "threads", required_argument, NULL, 't' },
 	{ "particles", required_argument, NULL, 'p' },
+	{ "plainmap", required_argument, NULL, 'P' },
 	{ "wstep", required_argument, NULL, 'W' },
 	{ "noise-scale", required_argument, NULL, 'z' },
 	{ 0, 0, 0, 0 },
@@ -1156,7 +1160,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:Cd:f:hHi:no:p:r:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "B:b:c:Cd:f:hHi:no:p:Pr:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1206,21 +1210,17 @@ static void process_options(int argc, char *argv[])
 		case 'p':
 			process_int_option("particles", optarg, &particle_count);
 			break;
+		case 'P': /* plain mapping of image to 6 sides of cubemap */
+			stripe = 0;
+			sinusoidal = 0;
+			break;
 		case 's':
-			if (sinusoidal) {
-				fprintf(stderr,
-					"Sinusoidal and stripe options are mutually exclusive.\n");
-				exit(1);
-			}
 			stripe = 1;
+			sinusoidal = 0;
 			break;
 		case 'S':
-			if (stripe) {
-				fprintf(stderr,
-					"Sinusoidal and stripe options are mutually exclusive.\n");
-				exit(1);
-			}
 			sinusoidal = 1;
+			stripe = 0;
 			break;
 		case 't':
 			process_int_option("threads", optarg, &user_threads);
