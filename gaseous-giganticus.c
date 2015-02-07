@@ -71,6 +71,7 @@ static int cloudmode = 0;
 
 #define DIM 1024 /* dimensions of cube map face images */
 #define VFDIM 2048 /* dimension of velocity field. (2 * DIM) is reasonable */
+static int vfdim = VFDIM;
 #define FDIM ((float) (DIM))
 #define XDIM DIM
 #define YDIM DIM
@@ -520,12 +521,12 @@ static void *update_velocity_field_thread_fn(void *info)
 	int i, j;
 	union vec3 v, c, ng;
 
-	for (i = 0; i < VFDIM; i++) {
-		for (j = 0; j < VFDIM; j++) {
+	for (i = 0; i < vfdim; i++) {
+		for (j = 0; j < vfdim; j++) {
 			float band_speed, angle;
 			union vec3 ov, bv;
 
-			v = fij_to_xyz(f, i, j, VFDIM);
+			v = fij_to_xyz(f, i, j, vfdim);
 			ov = v;
 			vec3_mul_self(&v, noise_scale);
 			ng = noise_gradient(v, w * noise_scale, noise_scale);
@@ -688,11 +689,11 @@ static void move_particle(struct particle *p, struct velocity_field *vf)
 {
 	struct fij fij;
 
-	fij = xyz_to_fij(&p->pos, VFDIM);
+	fij = xyz_to_fij(&p->pos, vfdim);
 	p->fij = xyz_to_fij(&p->pos, DIM);
 	vec3_add_self(&p->pos, &vf->v[fij.f][fij.i][fij.j]);
 	vec3_normalize_self(&p->pos);
-	vec3_mul_self(&p->pos, (float) VFDIM / 2.0f);
+	vec3_mul_self(&p->pos, (float) vfdim / 2.0f);
 }
 
 static void *move_particles_thread_fn(void *info)
@@ -1064,6 +1065,7 @@ static void usage(void)
 	fprintf(stderr, "   -c, --count : Number of iterations to run the simulation.\n");
 	fprintf(stderr, "                 Default is 1000\n");
 	fprintf(stderr, "   -C, --cloudmode: modulate image output by to produce clouds\n");
+	fprintf(stderr, "   -F, --vfdim: Set size of velocity field.  Default:2048. Min: 16. Max: 2048\n");
 	fprintf(stderr, "   -i, --input : Input image filename.  Must be RGB png file.\n");
 	fprintf(stderr, "   -I, --image-save-period: Interval of simulation iterations after which\n");
 	fprintf(stderr, "         to output images.  Default is every 20 iterations\n");
@@ -1126,6 +1128,7 @@ static struct option long_options[] = {
 	{ "threads", required_argument, NULL, 't' },
 	{ "particles", required_argument, NULL, 'p' },
 	{ "plainmap", required_argument, NULL, 'P' },
+	{ "vfdim", required_argument, NULL, 'F' },
 	{ "wstep", required_argument, NULL, 'W' },
 	{ "wstep-period", required_argument, NULL, 'q' },
 	{ "noise-scale", required_argument, NULL, 'z' },
@@ -1165,7 +1168,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:Cd:f:hHi:I:no:p:Pr:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "B:b:c:Cd:f:F:hHi:I:no:p:Pr:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1196,6 +1199,17 @@ static void process_options(int argc, char *argv[])
 			ff1 = fbm_falloff;
 			ff2 = ff1 * fbm_falloff;
 			ff3 = ff2 * fbm_falloff;
+			break;
+		case 'F':
+			process_int_option("vfdim", optarg, &vfdim);
+			if (vfdim < 16) {
+				vfdim = 16;
+				fprintf(stderr, "Bad value of vfdim specified, using 16.\n");
+			}
+			if (vfdim > 2048) {
+				vfdim = 2048;
+				fprintf(stderr, "Bad value of vfdim specified, using 2048.\n");
+			}
 			break;
 		case 'h':
 			use_hot_pink = 1;
@@ -1259,6 +1273,11 @@ static void process_options(int argc, char *argv[])
 			usage();
 		}
 	}
+
+	/* Scale so that vfdim doesn't change the effect of these */
+	band_speed_factor = ((float) vfdim / 2048.0) * band_speed_factor;
+	velocity_factor = ((float) vfdim / 2048.0) * velocity_factor;
+
 	return;
 }
 

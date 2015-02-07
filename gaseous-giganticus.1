@@ -10,6 +10,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -C ]
 [ -d velocity-field-dumpfile ]
 [ -f fbm-falloff ]
+[ -F velocity-field-dimension ]
 [ -h ]
 [ -H ]
 [ -i input-file ]
@@ -103,6 +104,13 @@ by this value.  Default is 0.5.   So for example, the lowest octave of noise
 is multiplied by 1.0, the 2nd octave by 0.5, the 3rd by 0.25, and the fourth
 (last) by 0.125.  If fbm-falloff is specfied as 0.4, then the lowest octave
 is multiplied by 1.0, the next by 0.4, the next by 0.16 and the last by 0.064.
+.TP
+-F, --vfdim
+Set the velocity field dimension.  Default is 2048, yielding a velocity field
+that is 6x2048x2048, which is quite large and can take considerable amount of
+time to calculate.  Smaller values can produce quicker, but lower quality results
+which can be useful for getting a quick preview.  Values below 128 will produce
+rather strange results.  Minimum value is 16, maximum is 2048.
 .TP
 -h, --hot-pink
 Gradually fade pixels to hot pink.  This will allow
