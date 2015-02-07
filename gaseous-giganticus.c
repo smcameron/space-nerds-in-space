@@ -1078,6 +1078,7 @@ static void usage(void)
 	fprintf(stderr, "                   divergences in the velocity field to be clearly seen,\n");
 	fprintf(stderr, "                   as pixels that contain no particles wil not be painted\n");
 	fprintf(stderr, "                   and will become hot pink.\n");
+	fprintf(stderr, "   -p, --particles: Use specified number of particles. Default is 8000000.\n");
 	fprintf(stderr, "   -P, --plainmap  Do not use sinusoidal image mapping, instead repeat image\n");
 	fprintf(stderr, "                   on six sides of a cubemap.\n");
 	fprintf(stderr, "   -n, --no-fade:  Do not fade the image at all, divergences will be hidden\n");
