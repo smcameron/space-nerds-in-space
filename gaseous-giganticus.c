@@ -409,7 +409,7 @@ static void init_particles(struct particle **pp, const int nparticles)
 				printf("BAD fij: %d,%d\n", fij.i, fij.j);
 			}
 			xo = XDIM * face_to_xdim_multiplier[fij.f] + fij.i / 4.0;
-			yo = YDIM * face_to_ydim_multiplier[fij.f] + fij.j / 4.0;
+			yo = YDIM * face_to_ydim_multiplier[fij.f] + fij.j / 3.0;
 			xo = xo / (float) XDIM;
 			yo = yo / (float) YDIM;
 			px = ((int) (xo * start_image_width)) * 3;
