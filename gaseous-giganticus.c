@@ -84,6 +84,8 @@ static float velocity_factor = 1200.0;
 static float num_bands = 6.0f;
 static float band_speed_factor = 2.9f;
 static int vertical_bands = 1;
+static float opacity = 1.0;
+static float opacity_limit = 0.2;
 
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha, start_image_bytes_per_row;
@@ -726,6 +728,7 @@ struct image_thread_info {
 	int nparticles;
 };
 
+
 static void *update_output_image_thread_fn(void *info)
 {
 	struct image_thread_info *t = info;
@@ -737,7 +740,7 @@ static void *update_output_image_thread_fn(void *info)
 	for (i = 0; i < t->nparticles; i++) {
 		if (p[i].fij.f != t->face)
 			continue;
-		p[i].c.a = 1.0;
+		p[i].c.a = opacity;
 		paint_particle(t->face, p[i].fij.i, p[i].fij.j, &p[i].c);
 	}
 	return NULL;
@@ -765,6 +768,8 @@ static void update_output_images(int image_threads, struct particle p[], const i
 			fprintf(stderr, "%s: pthread_join failed: %s\n",
 					__func__, strerror(errno));
 	}
+	if (opacity > opacity_limit)
+		opacity = 0.95 * opacity;
 }
 
 /* Copied and modified from snis_graph.c sng_load_png_texture(), see snis_graph.c */
@@ -1078,6 +1083,8 @@ static void usage(void)
 	fprintf(stderr, "   -o, --output : Output image filename template.\n");
 	fprintf(stderr, "               Example: 'out-' will produces 6 output files\n");
 	fprintf(stderr, "               out-0.png, out-1.png, ..., out-5.png\n");
+	fprintf(stderr, "   -O, --opacity: Specify minimum opacity of particles between 0 and 1.\n");
+	fprintf(stderr, "                  default is 0.2\n");
 	fprintf(stderr, "   -w, --w-offset: w dimension offset in 4D open simplex noise field\n");
 	fprintf(stderr, "                   Use -w to avoid (or obtain) repetitive results.\n");
 	fprintf(stderr, "   -h, --hot-pink: Gradually fade pixels to hot pink.  This will allow\n");
@@ -1121,6 +1128,7 @@ static struct option long_options[] = {
 	{ "input", required_argument, NULL, 'i' },
 	{ "image-save-period", required_argument, NULL, 'I' },
 	{ "output", required_argument, NULL, 'o' },
+	{ "opacity", required_argument, NULL, 'O' },
 	{ "w-offset", required_argument, NULL, 'w' },
 	{ "fbm-falloff", required_argument, NULL, 'f' },
 	{ "hot-pink", no_argument, NULL, 'h' },
@@ -1176,7 +1184,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:Cd:f:F:hHi:I:nm:o:p:Pr:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "B:b:c:Cd:f:F:hHi:I:nm:o:O:p:Pr:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1239,6 +1247,13 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'o':
 			output_file_prefix = optarg;
+			break;
+		case 'O':
+			process_float_option("opacity", optarg, &opacity_limit);
+			if (opacity_limit < 0.0)
+				opacity_limit = 0.0;
+			if (opacity_limit > 1.0)
+				opacity_limit = 1.0;
 			break;
 		case 'p':
 			process_int_option("particles", optarg, &particle_count);

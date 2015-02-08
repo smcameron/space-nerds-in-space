@@ -18,6 +18,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -m speed-multiplier ]
 [ -n ]
 [ -o output-file-template ]
+[ -O opacity ]
 [ -p particle-count ]
 [ -P ]
 [ -r velocity-field-dumpfile ]
@@ -90,6 +91,10 @@ values for them.
 -o, --output
 Output image filename template.  Example: 'out-' will
 produces 6 output files, out-0.png, out-1.png, ..., out-5.png
+.TP
+-O, --opacity
+Specifies lower bound on particle opacity between 0.0 (transparent) and 1.0 (opaque).
+Default is 0.2.
 .TP
 -w, --w-offset
 w dimension offset in 4D simplex noise field Use -w to avoid (or obtain)
