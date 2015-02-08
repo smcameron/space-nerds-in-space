@@ -15,6 +15,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -H ]
 [ -i input-file ]
 [ -I image-save-period ]
+[ -m speed-multiplier ]
 [ -n ]
 [ -o output-file-template ]
 [ -p particle-count ]
@@ -80,6 +81,11 @@ Input image filename.  Must be RGB png file.
 -I, --image-save-period
 Interval of simulation iterations after which to output images.  Default is to
 output images every 20 iterations of the simulation.
+.TP
+-m, --speed-multiplier
+Multiply band_speed_factor and velocity factor by this number.  It is a single
+multiplier to affect both which is a bit easier than setting individual absolute
+values for them.
 .TP
 -o, --output
 Output image filename template.  Example: 'out-' will

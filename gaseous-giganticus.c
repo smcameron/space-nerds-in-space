@@ -79,6 +79,7 @@ static int vfdim = VFDIM;
 static int niterations = 1000;
 static const float default_noise_scale = 2.6;
 static float noise_scale;
+static float speed_multiplier = 1.0;
 static float velocity_factor = 1200.0;
 static float num_bands = 6.0f;
 static float band_speed_factor = 2.9f;
@@ -1070,6 +1071,10 @@ static void usage(void)
 	fprintf(stderr, "   -i, --input : Input image filename.  Must be RGB png file.\n");
 	fprintf(stderr, "   -I, --image-save-period: Interval of simulation iterations after which\n");
 	fprintf(stderr, "         to output images.  Default is every 20 iterations\n");
+	fprintf(stderr, "   -m, --speed-multiplier:  band_speed_factor and velocity_factor are\n");
+	fprintf(stderr, "         by this number.  It is a single option to affect both by a\n");
+	fprintf(stderr, "         multiplier which is a bit easier than setting an absolute value\n");
+	fprintf(stderr, "         for them individually.\n");
 	fprintf(stderr, "   -o, --output : Output image filename template.\n");
 	fprintf(stderr, "               Example: 'out-' will produces 6 output files\n");
 	fprintf(stderr, "               out-0.png, out-1.png, ..., out-5.png\n");
@@ -1130,6 +1135,7 @@ static struct option long_options[] = {
 	{ "threads", required_argument, NULL, 't' },
 	{ "particles", required_argument, NULL, 'p' },
 	{ "plainmap", required_argument, NULL, 'P' },
+	{ "speed-multiplier", required_argument, NULL, 'm' },
 	{ "vfdim", required_argument, NULL, 'F' },
 	{ "wstep", required_argument, NULL, 'W' },
 	{ "wstep-period", required_argument, NULL, 'q' },
@@ -1170,7 +1176,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:Cd:f:F:hHi:I:no:p:Pr:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "B:b:c:Cd:f:F:hHi:I:nm:o:p:Pr:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1225,6 +1231,9 @@ static void process_options(int argc, char *argv[])
 		case 'I':
 			process_int_option("image-save-period", optarg, &image_save_period);
 			break;
+		case 'm':
+			process_float_option("speed-multiplier", optarg, &speed_multiplier);
+			break;
 		case 'n':
 			nofade = 1;
 			break;
@@ -1277,8 +1286,8 @@ static void process_options(int argc, char *argv[])
 	}
 
 	/* Scale so that vfdim doesn't change the effect of these */
-	band_speed_factor = ((float) vfdim / 2048.0) * band_speed_factor;
-	velocity_factor = ((float) vfdim / 2048.0) * velocity_factor;
+	band_speed_factor = ((float) vfdim / 2048.0) * band_speed_factor * speed_multiplier;
+	velocity_factor = ((float) vfdim / 2048.0) * velocity_factor * speed_multiplier;
 
 	return;
 }
