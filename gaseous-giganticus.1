@@ -4,6 +4,7 @@
 gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet 
 .SH SYNOPSIS
 .B gaseous-giganticus 
+[ -a pole-attenuation ]
 [ -b bands ]
 [ -B band-velocity-factor ]
 [ -c count ]
@@ -63,6 +64,16 @@ particles leave fading trails on the images.  With enough particles the
 fading trails are not visible, except in the small cracks where some small
 divergences remain (this last may be due to some bug in the program.)
 .SH OPTIONS
+.TP
+-a, --pole-attenuation
+Attenuates band velocity near poles.  Without attenuation (value = 0.0f)
+velocity of bands near poles is the same as velocity at the equator.  Due
+to shorter distance around band near poles, this means the bands "spin"
+faster.  Attenuating with a value of 1.0 means that the band velocity will
+be adjusted to constant angular velocity.  A value of 0.8 means it will be
+adjusted 80% towards constant angular velocity but will be 20% towards
+constant linear velocity.  Lower attenuation means poles have higher angular
+velocity (spin faster).  Default is 0.5.  Max is 1.0, min is 0.0.
 .TP
 -b, --bands 
 Number of counter rotating bands.  Default is 6.0

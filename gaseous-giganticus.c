@@ -86,6 +86,7 @@ static float band_speed_factor = 2.9f;
 static int vertical_bands = 1;
 static float opacity = 1.0;
 static float opacity_limit = 0.2;
+static float pole_attenuation = 0.5;
 
 static char *start_image;
 static int start_image_width, start_image_height, start_image_has_alpha, start_image_bytes_per_row;
@@ -540,13 +541,17 @@ static void *update_velocity_field_thread_fn(void *info)
 			if (num_bands != 0) {
 				if (vertical_bands) {
 					angle = asinf(ov.v.z);
-					band_speed = cosf(angle * num_bands) * band_speed_factor;
+					band_speed = ((1 - pole_attenuation) + pole_attenuation *
+						cosf(angle)) *
+						cosf(angle * num_bands) * band_speed_factor;
 					bv.v.x = -ov.v.y;
 					bv.v.y = ov.v.x;
 					bv.v.z = 0;
 				} else {
 					angle = asinf(ov.v.y);
-					band_speed = cosf(angle * num_bands) * band_speed_factor;
+					band_speed = ((1 - pole_attenuation) + pole_attenuation *
+						cosf(angle)) *
+						cosf(angle * num_bands) * band_speed_factor;
 					bv.v.x = ov.v.z;
 					bv.v.z = -ov.v.x;
 					bv.v.y = 0;
@@ -1067,6 +1072,10 @@ static void usage(void)
 	fprintf(stderr, "       [-w w-offset] [-h] [-n] [-v velocity factor] [-B band-vel-factor]\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "   -a, --pole-attenuation: attenuate band velocity near poles.  If\n");
+	fprintf(stderr, "                 attenuation is zero, band velocity at poles will be\n");
+	fprintf(stderr, "                 relatively high due to short distance around band.\n");
+	fprintf(stderr, "                 Default is 0.5. Min is 0.0, max is 1.0.\n");
 	fprintf(stderr, "   -b, --bands : Number of counter rotating bands.  Default is 6.0\n");
 	fprintf(stderr, "   -c, --count : Number of iterations to run the simulation.\n");
 	fprintf(stderr, "                 Default is 1000\n");
@@ -1121,6 +1130,7 @@ static void usage(void)
 }
 
 static struct option long_options[] = {
+	{ "pole-attenuation", required_argument, NULL, 'a' },
 	{ "bands", required_argument, NULL, 'b' },
 	{ "count", required_argument, NULL, 'c' },
 	{ "cloudmode", required_argument, NULL, 'C' },
@@ -1184,11 +1194,18 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:Cd:f:F:hHi:I:nm:o:O:p:Pr:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "a:B:b:c:Cd:f:F:hHi:I:nm:o:O:p:Pr:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
+		case 'a':
+			process_float_option("pole-attenuation", optarg, &pole_attenuation);
+			if (pole_attenuation < 0.0f)
+				pole_attenuation = 0.0f;
+			if (pole_attenuation > 1.0f)
+				pole_attenuation = 1.0f;
+			break;
 		case 'B':
 			process_float_option("band-vel-factor", optarg, &band_speed_factor);
 			break;
