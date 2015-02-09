@@ -63,9 +63,30 @@ d) Connect the clients to the lobby, and then from there connect to the
 2) press function keys f1,f2,f3,f4,f5,f6, etc. on each client to switch between
    the roles that station fulfills.
 
-That's about all the instructions I have for now.
+------
+INSTRUCTIONS FOR BUILDING DEBIAN PACKAGE
+
+(These instructions are from Iván Sánchez Ortega. I have not tried them myself. -- steve):
+
+	How to build the Debian package by yourself, short version:
+
+	  sudo apt-get install dpkg-dev debhelper devscripts
+	  cd /place/where/you/cloned/space-nerds-in-space
+	  dpkg-buildpackage
+
+	If something is wrong (e.g. missing build dependency), look at the output of
+	dpkg-buildpackage. If the build is successful, the .deb will be located at
+	/place/where/you/cloned/space-nerds-in-space/../snis-version.deb
+
+	In order to get the Git commit messages into the Debian changelog (and bump
+	versions), look at git-buildpackage and git-dch
+
+*Note: I have doubts that just essentially dumping "git log --oneline" output into
+       the Debian changelog is really the right thing to do, though I might
+       be wrong. -- steve
 
 ------
+That's about all the instructions I have for now.
 
 Logfiles:  by default, /dev/null is used as a log file.
 
