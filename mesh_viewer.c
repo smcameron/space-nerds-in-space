@@ -508,7 +508,7 @@ __attribute__((noreturn)) void usage(char *program)
 
 int main(int argc, char *argv[])
 {
-	char *filename, *program, *planetname;
+	char *filename, *program, *planetname = NULL;
 	struct stat statbuf;
 
 	setlocale(LC_ALL, "C");
