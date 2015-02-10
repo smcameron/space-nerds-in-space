@@ -1,0 +1,87 @@
+#!/bin/sh
+#
+# This is a script to cut up an all-in-one cubemap into 6 images
+# like space-nerds-in-space expects
+#
+
+filename="$1"
+fileinfo=$(file "$1")
+
+INFO=$(echo "$fileinfo" | awk -F: '{ print $2; }')
+FORMAT=$(echo $INFO | awk -F, '{ print $1; }')
+DIMENSIONS=$(echo $INFO | awk -F, '{ print $2; }')
+COLORINFO=$(echo $INFO | awk -F, '{ print $3; }')
+INTERLACED=$(echo $INFO | awk -F, '{ print $4; }')
+
+errors_found=0
+
+echo "$FORMAT" | grep 'PNG image data' > /dev/null
+if [ "$?" != "0" ]
+then
+	echo "$filename"": PNG image data is required, but data is $FORMAT" 1>&2
+	errors_found=1
+fi
+
+echo "$DIMENSIONS" | grep '[0-9][0-9]* x [0-9][0-9]*' > /dev/null
+if [ "$?" != "0" ]
+then
+	echo "$filename"": Malformed dimensions: $DIMENSIONS" 1>&2
+	errors_found=1
+fi
+XDIM=$(echo $DIMENSIONS | sed -e 's/^ *//' | awk '{ print $1; }')
+YDIM=$(echo $DIMENSIONS | sed -e 's/^ *//' | awk '{ print $3; }')
+
+echo "$COLORINFO" | grep '8[-]bit[/]color RGB$' > /dev/null
+if [ "$?" != "0" ]
+then
+	echo "$filename"": 8-bit/color RGB required, but file is $COLORINFO" 1>&2
+	errors_found=1
+fi
+
+echo "$INTERLACED" | grep 'non[-]interlaced' > /dev/null
+if [ "$?" != "0" ]
+then
+	echo "$filename"": non-interlaced file required, but format is $INTERLACED" 1>&2
+	errors_found=1
+fi
+
+if [ "$errors_found" != "0" ]
+then
+	exit 1
+fi
+
+# echo "FORMAT=$FORMAT"
+# echo "COLORINFO=$COLORINFO"
+# echo "INTERLACED=$INTERLACED"
+# echo "XDIM=$XDIM"
+# echo "YDIM=$YDIM"
+
+X0=0
+X1=$(expr $XDIM / 4)
+X2=$(expr $X1 \* 2)
+X3=$(expr $X1 \* 3)
+X4=$(expr $X1 \* 4)
+
+Y0=0
+Y1=$(expr $YDIM / 3)
+Y2=$(expr $Y1 \* 2)
+Y3=$(expr $Y1 \* 3)
+
+# echo X1=$X1
+# echo X2=$X2
+# echo X3=$X3
+# echo X4=$X4
+
+# echo Y1=$Y1
+# echo Y2=$Y2
+# echo Y3=$Y3
+
+fname=$(basename $filename .png)
+
+convert "$filename" -crop "$X1"x"$Y1"+"$X1"+0 +repage "$fname"-4.png
+convert "$filename" -crop "$X1"x"$Y1"+0+"$Y1" +repage "$fname"-0.png
+convert "$filename" -crop "$X1"x"$Y1"+"$X1"+"$Y1" +repage "$fname"-1.png
+convert "$filename" -crop "$X1"x"$Y1"+"$X2"+"$Y1" +repage "$fname"-2.png
+convert "$filename" -crop "$X1"x"$Y1"+"$X3"+"$Y1" +repage "$fname"-3.png
+convert "$filename" -crop "$X1"x"$Y1"+"$X1"+"$Y2" +repage "$fname"-5.png
+
