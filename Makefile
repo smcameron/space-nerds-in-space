@@ -300,7 +300,8 @@ SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o \
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
-	mesh.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o quat.o vec4.o
+	mesh.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
+	quat.o vec4.o thrust_attachment.o
 
 CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o
 
@@ -439,6 +440,9 @@ shader.o : shader.c Makefile
 
 %.scad_params.h: %.scad
 	awk -f extract_scad_params.awk $< > $@
+
+thrust_attachment.o:	thrust_attachment.c thrust_attachment.h Makefile
+	$(Q)$(COMPILE)
 
 my_point.o:   my_point.c Makefile
 	$(Q)$(COMPILE)

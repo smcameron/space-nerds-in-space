@@ -94,6 +94,7 @@
 #include "snis_damcon_systems.h"
 #include "build_info.h"
 #include "snis-device-io.h"
+#include "thrust_attachment.h"
 
 #include "vertex.h"
 #include "triangle.h"
@@ -793,86 +794,89 @@ static int update_damcon_part(uint32_t id, uint32_t ship_id, uint32_t type,
 	return 0;
 }
 
-struct thrust_attachment_point {
-	int nports;
-	struct _port {
-		float scale;
-		union vec3 pos;
-	} port[5];
-};
+static struct thrust_attachment_point **ship_thrust_attachment_points = NULL;
 
-static struct thrust_attachment_point ship_thrust_attachment_points[] = {
+static void allocate_ship_thrust_attachment_points(int n)
+{
+	if (ship_thrust_attachment_points)
+		return;
+	ship_thrust_attachment_points =
+		malloc(sizeof(*ship_thrust_attachment_points) * n);
+	memset(ship_thrust_attachment_points, 0,
+			sizeof(*ship_thrust_attachment_points) * n);
+}
 
-	/* cruiser */
-	{ 0 }, /* no exhaust ports */
-	/* destroyer */
-	#include "share/snis/models/destroyer.scad_params.h"
-	,
-	/* freighter */
-	#include "share/snis/models/freighter.scad_params.h"
-	,
-	/* tanker */
-	#include "share/snis/models/tanker.scad_params.h"
-	,
-	/* transport */
-	{ 0 }, /* no exhaust ports */
-	/* battlestar */
-	#include "share/snis/models/battlestar.scad_params.h"
-	,
-	/* spaceship */
-	#include "share/snis/models/spaceship.scad_params.h"
-	,
-	/* asteroid-miner */
-	#include "share/snis/models/asteroid-miner.scad_params.h"
-	,
-	/* spaceship2 */
-	#include "share/snis/models/spaceship2.scad_params.h"
-	,
-	/* spaceship3 */
-	{ 0 }, /* no exhaust ports */
-	/* dragonhawk */
-	#include "share/snis/models/dragonhawk.scad_params.h"
-	,
-	/* skorpio */
-	#include "share/snis/models/skorpio.scad_params.h"
-	,
-	/* disruptor */
-	#include "share/snis/models/disruptor.scad_params.h"
-	,
-	/* research_vessel */
-	#include "share/snis/models/research-vessel.scad_params.h"
-	,
-	/* conqueror */
-	#include "share/snis/models/conqueror.scad_params.h"
-	,
-	/* scrambler */
-	#include "share/snis/models/scrambler.scad_params.h"
-	,
-	/* swordfish */
-	#include "share/snis/models/swordfish.scad_params.h"
-	,
-	/* wombat */
-	#include "share/snis/models/wombat.scad_params.h"
-	,
-	/* dreadknight */
-	#include "share/snis/models/dreadknight/dreadknight-exhaust-plumes.h"
-	,
-	/* vanquisher */
-	#include "share/snis/models/vanquisher.scad_params.h"
-	,
-	/* enforcer */
-	#include "share/snis/models/enforcer.scad_params.h"
-	,
-};
+static void read_thrust_attachment_points(char *dir, char *model_path, int shiptype,
+			struct thrust_attachment_point **ap)
+{
+	char path[PATH_MAX + 1];
+	int i;
+	int total_len;
+
+	if (strcmp(ship_type[shiptype].thrust_attachment_file, "!") == 0) {
+		/* intentionally no exhaust ports */
+		*ap = NULL;
+		return;
+	}
+
+	if (strcmp(ship_type[shiptype].thrust_attachment_file, "-") == 0) {
+		/* Default location, construct the path to *.scad_params.h file
+		 * From the model file.
+		 */
+		total_len = strlen(dir) + strlen(model_path) +
+				strlen("scad_params.h") + strlen("/models/") + 2;
+		if (total_len >= PATH_MAX) {
+			fprintf(stderr, "path '%s' is too long.\n", model_path);
+			*ap = NULL;
+			return;
+		}
+		snprintf(path, PATH_MAX, "%s/models/%s", dir, model_path);
+		i = strlen(path);
+		while (i >= 0 && path[i] != '.') {
+			path[i] = '\0';
+			i--;
+		}
+		if (i < 0) {
+			fprintf(stderr, "Bad path model path %s\n", model_path);
+			*ap = NULL;
+			return;
+		}
+		strcat(path, "scad_params.h");
+	} else {
+		/* Specialized location of exhaust ports file */
+		total_len = strlen(dir) + strlen(model_path) +
+			strlen(ship_type[shiptype].thrust_attachment_file) + strlen("/models/") + 10;
+		if (total_len >= PATH_MAX) {
+			fprintf(stderr, "path '%s/%s' is too long.\n",
+					dir, ship_type[shiptype].thrust_attachment_file);
+			*ap = NULL;
+			return;
+		}
+		snprintf(path, PATH_MAX, "%s/models/%s", dir, model_path);
+		i = strlen(path);
+		while (i >= 0 && path[i] != '/') {
+			path[i] = '\0';
+			i--;
+		}
+		if (i < 0) {
+			fprintf(stderr, "Bad path model path %s\n", model_path);
+			*ap = NULL;
+			return;
+		}
+		strcat(path, ship_type[shiptype].thrust_attachment_file);
+	}
+	/* now read the scad_params.h file. */
+	*ap = read_thrust_attachments(path);
+	return;
+}
 
 static struct thrust_attachment_point *ship_thrust_attachment_point(int shiptype)
 {
 	/* since range of shiptype is determined runtime by reading a file... */
-	if (shiptype < 0 || shiptype >= ARRAYSIZE(ship_thrust_attachment_points))
+	if (shiptype < 0 || shiptype >= nshiptypes)
 		return NULL;
-	return &ship_thrust_attachment_points[shiptype];
+	return ship_thrust_attachment_points[shiptype];
 }
-
 
 static void add_ship_thrust_entities(struct entity *thrust_entity[], int *nthrust_entities,
 		struct entity_context *cx, struct entity *e, int shiptype, int impulse);
@@ -12554,8 +12558,11 @@ static void init_meshes()
 		mesh_scale(starbase_mesh[i], 2.0f);
 	}
 
+	allocate_ship_thrust_attachment_points(nshiptypes);
 	for (i = 0; i < nshiptypes; i++) {
 		ship_mesh_map[i] = snis_read_model(d, ship_type[i].model_file);
+		read_thrust_attachment_points(d, ship_type[i].model_file, i,
+						&ship_thrust_attachment_points[i]);
 		for (int j = 0; j < ship_type[i].nrotations; j++) {
 			char axis = ship_type[i].axis[j];
 			union quat q;
