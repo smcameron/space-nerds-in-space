@@ -18,6 +18,8 @@
 #ifndef __QUAT_H__
 #define __QUAT_H__
 
+#include "mtwist.h"
+
 /* generic 2d vector */
 union vec2 {
 	struct {
