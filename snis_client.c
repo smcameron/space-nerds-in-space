@@ -125,8 +125,8 @@
 
 #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
 
-#define SCREEN_WIDTH 800        /* window width, in pixels */
-#define SCREEN_HEIGHT 600       /* window height, in pixels */
+static int SCREEN_WIDTH = 800; // 1366;        /* window width, in pixels */
+static int SCREEN_HEIGHT = 600; // 768;       /* window height, in pixels */
 #define ASPECT_RATIO (SCREEN_WIDTH/(float)SCREEN_HEIGHT)
 
 #define VERTICAL_CONTROLS_INVERTED -1
@@ -186,6 +186,7 @@ GdkGC *gc = NULL;               /* our graphics context. */
 GtkWidget *main_da;             /* main drawing area. */
 gint timer_tag;  
 int fullscreen = 0;
+int fixed_aspect_ratio = 0;
 int in_the_process_of_quitting = 0;
 int current_quit_selection = 0;
 int final_quit_selection = 0;
@@ -12822,13 +12823,21 @@ int main(int argc, char *argv[])
 			displaymode = DISPLAYMODE_LOBBYSCREEN;
 	}
 
-	real_screen_width = SCREEN_WIDTH;
-	real_screen_height = SCREEN_HEIGHT;
-	sng_set_extent_size(SCREEN_WIDTH, SCREEN_HEIGHT);
-	sng_set_screen_size(real_screen_width, real_screen_height);
-
 	/* gtk_set_locale();  The setlocale() above takes care of this. */
 	gtk_init (&argc, &argv);
+	{
+		GdkScreen *s;
+
+		s = gdk_screen_get_default();
+		if (s) {
+			SCREEN_WIDTH = gdk_screen_get_width(s);
+			SCREEN_HEIGHT = gdk_screen_get_height(s);
+		}
+		real_screen_width = SCREEN_WIDTH;
+		real_screen_height = SCREEN_HEIGHT;
+		sng_set_extent_size(SCREEN_WIDTH, SCREEN_HEIGHT);
+		sng_set_screen_size(real_screen_width, real_screen_height);
+	}
 
 	init_keymap();
 	read_keymap_config_file();

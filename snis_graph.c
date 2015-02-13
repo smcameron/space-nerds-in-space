@@ -61,10 +61,18 @@ void sng_set_screen_size(int width, int height)
 
 	sgc.xscale = (float)sgc.screen_width / (float)sgc.extent_width;
 	sgc.yscale = (float)sgc.screen_height / (float)sgc.extent_height;
+
+	/* sgc.has_scale = (sgc.screen_width != sgc.extent_width || sgc.screen_height != sgc.extent_height); */
+
+	
+	/* hack in fixed aspect ratio for now */
+	if (sgc.yscale < sgc.xscale)
+		sgc.xscale = sgc.yscale;
+	else
+		sgc.yscale = sgc.xscale;
+
+	sgc.has_scale = 1;
 	graph_dev_set_extent_scale(sgc.xscale, sgc.yscale);
-
-	sgc.has_scale = (sgc.screen_width != sgc.extent_width || sgc.screen_height != sgc.extent_height);
-
 	/* update the viewport in graph_dev as they are in screen coords */
 	graph_dev_set_3d_viewport(sgc.vp_3d.x_offset * sgc.xscale, sgc.vp_3d.y_offset * sgc.yscale,
 					sgc.vp_3d.width * sgc.xscale, sgc.vp_3d.height * sgc.yscale);
