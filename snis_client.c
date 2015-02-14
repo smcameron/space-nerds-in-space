@@ -11334,11 +11334,11 @@ static void draw_help_screen(GtkWidget *w)
 	draw_help_text(w, help_text[displaymode]);
 }
 
-#define QUIT_BUTTON_WIDTH 200
-#define QUIT_BUTTON_HEIGHT 50
-#define QUIT_BUTTON_X 130
-#define QUIT_BUTTON_Y 420
-#define NOQUIT_BUTTON_X 480
+#define QUIT_BUTTON_WIDTH (200 * SCREEN_WIDTH / 800)
+#define QUIT_BUTTON_HEIGHT (50 * SCREEN_HEIGHT / 600)
+#define QUIT_BUTTON_X (130 * SCREEN_WIDTH / 800)
+#define QUIT_BUTTON_Y (420 * SCREEN_HEIGHT / 600)
+#define NOQUIT_BUTTON_X (480 * SCREEN_WIDTH / 800)
 
 static void draw_quit_screen(GtkWidget *w)
 {
@@ -11348,11 +11348,13 @@ static void draw_quit_screen(GtkWidget *w)
 	quittimer++;
 
 	sng_set_foreground(BLACK);
-	snis_draw_rectangle(1, 100, 100, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 200);
+	snis_draw_rectangle(1, txx(100), txy(100),
+			SCREEN_WIDTH - txx(200), SCREEN_HEIGHT - txy(200));
 	sng_set_foreground(RED);
-	snis_draw_rectangle(FALSE, 100, 100, SCREEN_WIDTH-200, SCREEN_HEIGHT-200);
+	snis_draw_rectangle(FALSE, txx(100), txy(100),
+			SCREEN_WIDTH - txx(200), SCREEN_HEIGHT - txy(200));
 	sng_set_foreground(WHITE);
-	sng_abs_xy_draw_string("Quit?", BIG_FONT, 300, 280);
+	sng_abs_xy_draw_string("Quit?", BIG_FONT, txx(300), txy(280));
 
 	if (current_quit_selection == 1) {
 		x = QUIT_BUTTON_X;
@@ -11361,12 +11363,12 @@ static void draw_quit_screen(GtkWidget *w)
 		x = NOQUIT_BUTTON_X;
 		sng_set_foreground(RED);
 	}
-	sng_abs_xy_draw_string("Quit Now", SMALL_FONT, 150, 450);
+	sng_abs_xy_draw_string("Quit Now", SMALL_FONT, txx(150), txy(450));
 	if (current_quit_selection == 0)
 		sng_set_foreground(WHITE);
 	else
 		sng_set_foreground(RED);
-	sng_abs_xy_draw_string("Don't Quit", SMALL_FONT, 500, 450);
+	sng_abs_xy_draw_string("Don't Quit", SMALL_FONT, txx(500), txy(450));
 
 	if ((quittimer & 0x04)) {
 		sng_set_foreground(WHITE);
