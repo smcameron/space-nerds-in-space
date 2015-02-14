@@ -12850,7 +12850,14 @@ int main(int argc, char *argv[])
 
 	snis_typefaces_init();
 
-	window = gtk_window_new (GTK_WINDOW_TOPLEVEL);		
+	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	{
+		/* clamp window aspect ratio to constant */
+		GdkGeometry geom;
+		geom.min_aspect = (gdouble) SCREEN_WIDTH / (gdouble) SCREEN_HEIGHT;
+		geom.max_aspect = geom.min_aspect;
+		gtk_window_set_geometry_hints(GTK_WINDOW(window), NULL, &geom, GDK_HINT_ASPECT);
+	}
 	gtk_container_set_border_width (GTK_CONTAINER (window), 0);
 	vbox = gtk_vbox_new(FALSE, 0);
         main_da = gtk_drawing_area_new();
