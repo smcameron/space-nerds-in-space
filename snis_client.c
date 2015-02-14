@@ -4367,6 +4367,7 @@ static struct navigation_ui {
 	struct gauge *warp_gauge;
 	struct button *engage_warp_button;
 	struct button *reverse_button;
+	int gauge_radius;
 } nav_ui;
 
 static int process_sci_select_target_packet(void)
@@ -7395,13 +7396,14 @@ static void show_manual_weapons(GtkWidget *w)
 static double sample_warpdrive(void);
 static void init_nav_ui(void)
 {
-	int x, y, gauge_radius;
+	int x;
 
 	x = 0;
-	y = -340;
-	gauge_radius = 80;
+	nav_ui.gauge_radius = 80;
 	
-	nav_ui.warp_slider = snis_slider_init(590 + x, SCREEN_HEIGHT - 40 + y, 160, 15, AMBER, "",
+	nav_ui.warp_slider = snis_slider_init(SCREEN_WIDTH - 2 * nav_ui.gauge_radius - 40,
+				2 * nav_ui.gauge_radius + 10,
+				160, 15, AMBER, "",
 				"0", "100", 0.0, 255.0, sample_power_data_warp_current,
 				do_warpdrive);
 	snis_slider_set_fuzz(nav_ui.warp_slider, 3);
@@ -7413,12 +7415,15 @@ static void init_nav_ui(void)
 				do_throttle);
 	snis_slider_set_fuzz(nav_ui.throttle_slider, 3);
 	snis_slider_set_vertical(nav_ui.throttle_slider, 1);
-	nav_ui.warp_gauge = gauge_init(SCREEN_WIDTH - gauge_radius - 40, gauge_radius + 5,
-				gauge_radius, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	nav_ui.warp_gauge = gauge_init(SCREEN_WIDTH - nav_ui.gauge_radius - 40,
+				nav_ui.gauge_radius + 5,
+				nav_ui.gauge_radius, 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 				10, "WARP", sample_warpdrive);
-	nav_ui.engage_warp_button = snis_button_init(620 + x, 520 + y, 125, 25, "ENGAGE WARP", AMBER,
-				NANO_FONT, engage_warp_button_pressed, NULL);
+	nav_ui.engage_warp_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
+					nav_ui.gauge_radius * 2 + 80,
+					125, 25, "ENGAGE WARP", AMBER,
+					NANO_FONT, engage_warp_button_pressed, NULL);
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", AMBER,
 			NANO_FONT, reverse_button_pressed, NULL);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
@@ -7594,16 +7599,18 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	const int low_power_threshold = 10;
 	sng_set_foreground(RED);
 	if (o->tsd.ship.power_data.sensors.i < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW SENSOR POWER", NANO_FONT, 320, 65);
+		sng_abs_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2 + 20, 65);
 	}
 	if (o->tsd.ship.power_data.maneuvering.i < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW MANEUVERING POWER", NANO_FONT, 320, 80);
+		sng_abs_xy_draw_string("LOW MANEUVERING POWER", NANO_FONT, SCREEN_WIDTH / 2  + 20, 80);
 	}
 	if (o->tsd.ship.power_data.impulse.r2 < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, 320, 95);
+		sng_abs_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, SCREEN_WIDTH / 2 + 20, 95);
 	}
 	if (o->tsd.ship.power_data.warp.r2 < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW WARP POWER", NANO_FONT, 610, 228);
+		sng_abs_xy_draw_string("LOW WARP POWER", NANO_FONT,
+				SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 35,
+				nav_ui.gauge_radius * 2 + 20);
 	}
 
 	const float min_xknown_pct = 0.001;
