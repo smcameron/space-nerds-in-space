@@ -5503,7 +5503,8 @@ static void show_weapons_camera_view(GtkWidget *w)
 	o->entity = NULL;
 
 	/* range is the same as max zoom on old weapons */
-	draw_plane_radar(w, o, &camera_orientation, 400, 500, 75, XKNOWN_DIM * 0.02);
+	draw_plane_radar(w, o, &camera_orientation, 0.5 * SCREEN_WIDTH, 0.8333 * SCREEN_HEIGHT,
+				0.125 * SCREEN_HEIGHT, XKNOWN_DIM * 0.02);
 
 #if 0
 	/* Draw targeting indicator on main screen */
@@ -5537,21 +5538,25 @@ static void show_weapons_camera_view(GtkWidget *w)
 		sprintf(buf, "TORP: %03d", o->tsd.ship.torpedoes +
 					o->tsd.ship.torpedoes_loading +
 					o->tsd.ship.torpedoes_loaded);
-		sng_abs_xy_draw_string(buf, NANO_FONT, 570, SCREEN_HEIGHT - 15);
+		sng_abs_xy_draw_string(buf, NANO_FONT, 570 * SCREEN_WIDTH / 800,
+					SCREEN_HEIGHT - 15 * SCREEN_HEIGHT / 600);
 	}
 
 	/* idiot lights for low power */
 	const int low_power_threshold = 10;
 	sng_set_foreground(RED);
 	if (o->tsd.ship.power_data.phasers.i < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW PHASER POWER", NANO_FONT, 320, 65);
+		sng_center_xy_draw_string("LOW PHASER POWER", NANO_FONT,
+				0.5 * SCREEN_WIDTH, 65 * SCREEN_HEIGHT / 600);
 	}
 
 	/* show security indicator */
 	if (o->tsd.ship.in_secure_area && timer & 0x08) {
 		sng_set_foreground(RED);
-		sng_center_xy_draw_string("HIGH SECURITY", NANO_FONT, 400, 500);
-		sng_center_xy_draw_string("AREA", NANO_FONT, 400, 516);
+		sng_center_xy_draw_string("HIGH SECURITY", NANO_FONT,
+			0.5 * SCREEN_WIDTH, 5 * SCREEN_HEIGHT / 6);
+		sng_center_xy_draw_string("AREA", NANO_FONT, 0.5 * SCREEN_WIDTH,
+				516 * SCREEN_HEIGHT / 600);
 	}
 
 	show_gunsight(w);
@@ -7353,16 +7358,24 @@ static void init_lobby_ui()
 static double sample_phaser_wavelength(void);
 static void init_weapons_ui(void)
 {
-	weapons.phaser_bank_gauge = gauge_init(280, 550, 45, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	const int phx = 0.35 * SCREEN_WIDTH;
+	const int phy = 0.91666 * SCREEN_HEIGHT;
+	const int r = 0.075 * SCREEN_HEIGHT;
+	const int wlx = SCREEN_WIDTH - phx;
+	const int wlsx = 0.39375 * SCREEN_WIDTH; 
+	const int wlsy = 0.98 * SCREEN_HEIGHT;
+	const int wlsw = 0.2125 * SCREEN_WIDTH;
+	const int wlsh = 0.025 * SCREEN_HEIGHT;
+	weapons.phaser_bank_gauge = gauge_init(phx, phy, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "CHARGE", sample_phasercharge);
 	gauge_add_needle(weapons.phaser_bank_gauge, sample_phaser_power, RED);
 	gauge_fill_background(weapons.phaser_bank_gauge, BLACK, 0.75);
-	weapons.phaser_wavelength = gauge_init(520, 550, 45, 10.0, 60.0, -120.0 * M_PI / 180.0,
+	weapons.phaser_wavelength = gauge_init(wlx, phy, r, 10.0, 60.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
 			10, "WAVE LEN", sample_phaser_wavelength);
 	gauge_fill_background(weapons.phaser_wavelength, BLACK, 0.75);
-	weapons.wavelen_slider = snis_slider_init(315, 588, 170, 15, AMBER, "",
+	weapons.wavelen_slider = snis_slider_init(wlsx, wlsy, wlsw, wlsh, AMBER, "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength);
 	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS);
