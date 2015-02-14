@@ -8160,6 +8160,7 @@ struct engineering_ui {
 	struct slider *tractor_temperature;
 
 	int selected_subsystem;
+	int gauge_radius;
 } eng_ui;
 
 static void damcon_button_pressed(void *x)
@@ -8213,23 +8214,27 @@ static void preset2_button_pressed(void *x)
 
 static void init_engineering_ui(void)
 {
-	int y;
-	int r = 59;
-	int x = r * 1.1;
-	int xinc = (2.0 * r) * 1.1;
-	int yinc = 38; 
+	int x, y, r, xinc, yinc;
 	int dm = DISPLAYMODE_ENGINEERING;
 	int color = AMBER;
 	const int ccolor = COLOR_LIGHTER(BLUE, 25); /* coolant color */
 	const int tcolor = AMBER; /* temperature color */
 	const int coolant_inc = 19;
-	const int sh = 12; /* slider height */
-	const int powersliderlen = 180; 
-	const int coolantsliderlen = 150;
+	const int sh = 0.02 * SCREEN_HEIGHT; /* slider height */
+	const int sw = 0.1875 * SCREEN_WIDTH; /* slider width */
+	const int powersliderlen = 0.225 * SCREEN_WIDTH;
+	const int coolantsliderlen = 0.1875 * SCREEN_WIDTH;
+	const int s2x = 0.4375 * SCREEN_WIDTH; /* x start of 2nd bank of sliders */
 	struct engineering_ui *eu = &eng_ui;
 
+	r = SCREEN_WIDTH / 14;
+	eng_ui.gauge_radius = r;
+	y = r * 1.5;
+	x = r * 1.1;
+	xinc = (2.0 * r) * 1.1;
+	yinc = 0.07 * SCREEN_HEIGHT;
+
 	eu->selected_subsystem = -1;
-	y = 140;
 	eu->amp_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "AMPS", sample_power_model_current);
@@ -8246,13 +8251,18 @@ static void init_engineering_ui(void)
 			120.0 * 2.0 * M_PI / 180.0, RED, color,
 			10, "FUEL", sample_fuel);
 
-	eu->shield_control_slider = snis_slider_init(540, 270, 160, sh, AMBER, "SHIELDS",
+	int gx1 = SCREEN_WIDTH - eng_ui.gauge_radius * 5;
+	int gy1 = SCREEN_HEIGHT * 0.02;
+	int gx2 = SCREEN_WIDTH * 0.90;
+	int gy2 = gy1 + eng_ui.gauge_radius * 2.5;
+	eu->shield_control_slider = snis_slider_init(gx1, gy2 + sh * 3,
+				gx2 - gx1, sh, AMBER, "SHIELDS",
 				"0", "100", 0.0, 255.0, sample_power_data_shields_current,
 				do_shieldadj);
 	/* make shield slider have less fuzz just for variety */
 	snis_slider_set_fuzz(eu->shield_control_slider, 1);
 
-	y = 220;
+	y = eng_ui.gauge_radius * 2.5;
 	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
 			NANO_FONT, damcon_button_pressed, (void *) 0);
 	eu->preset1_button = snis_button_init(200, y + 30, 25, 25, "1", color,
@@ -8360,66 +8370,67 @@ static void init_engineering_ui(void)
 	ui_add_button(eu->preset2_button, dm);
 
 	y = 220 + yinc;
-	eu->shield_damage = snis_slider_init(350, y += yinc, 150, sh, color, "SHIELD STATUS", "0", "100",
+	y = eng_ui.gauge_radius * 2.5 + yinc;
+	eu->shield_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "SHIELD STATUS", "0", "100",
 				0.0, 100.0, sample_shield_damage, NULL);
 	snis_slider_set_label_font(eu->shield_damage, NANO_FONT);
-	eu->shield_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+	eu->shield_temperature = snis_slider_init(s2x, y + coolant_inc, sw, sh, tcolor,
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_shield_temperature, NULL);
 	snis_slider_set_label_font(eu->shield_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->shield_temperature, 1);	
-	eu->phaser_banks_damage = snis_slider_init(350, y += yinc, 150, sh, color, "PHASER STATUS", "0", "100",
+	eu->phaser_banks_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "PHASER STATUS", "0", "100",
 				0.0, 100.0, sample_phaser_banks_damage, NULL);
 	snis_slider_set_label_font(eu->phaser_banks_damage, NANO_FONT);
-	eu->phaser_banks_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+	eu->phaser_banks_temperature = snis_slider_init(s2x, y + coolant_inc, sw, sh, tcolor,
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_phaser_banks_temperature, NULL);
 	snis_slider_set_label_font(eu->phaser_banks_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->phaser_banks_temperature, 1);	
-	eu->comms_damage = snis_slider_init(350, y += yinc, 150, sh, color, "COMMS STATUS", "0", "100",
+	eu->comms_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "COMMS STATUS", "0", "100",
 				0.0, 100.0, sample_comms_damage, NULL);
 	snis_slider_set_label_font(eu->comms_damage, NANO_FONT);
-	eu->comms_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+	eu->comms_temperature = snis_slider_init(s2x, y + coolant_inc, sw, sh, tcolor,
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_comms_temperature, NULL);
 	snis_slider_set_label_font(eu->comms_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->comms_temperature, 1);	
-	eu->sensors_damage = snis_slider_init(350, y += yinc, 150, sh, color, "SENSORS STATUS", "0", "100",
+	eu->sensors_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "SENSORS STATUS", "0", "100",
 				0.0, 100.0, sample_sensors_damage, NULL);
 	snis_slider_set_label_font(eu->sensors_damage, NANO_FONT);
-	eu->sensors_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+	eu->sensors_temperature = snis_slider_init(s2x, y + coolant_inc, sw, sh, tcolor,
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_sensors_temperature, NULL);
 	snis_slider_set_label_font(eu->sensors_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->sensors_temperature, 1);	
-	eu->impulse_damage = snis_slider_init(350, y += yinc, 150, sh, color, "IMPULSE STATUS", "0", "100",
+	eu->impulse_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "IMPULSE STATUS", "0", "100",
 				0.0, 100.0, sample_impulse_damage, NULL);
 	snis_slider_set_label_font(eu->impulse_damage, NANO_FONT);
-	eu->impulse_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+	eu->impulse_temperature = snis_slider_init(s2x, y + coolant_inc, sw, sh, tcolor,
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_impulse_temperature, NULL);
 	snis_slider_set_label_font(eu->impulse_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->impulse_temperature, 1);	
-	eu->warp_damage = snis_slider_init(350, y += yinc, 150, sh, color, "WARP STATUS", "0", "100",
+	eu->warp_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "WARP STATUS", "0", "100",
 				0.0, 100.0, sample_warp_damage, NULL);
 	snis_slider_set_label_font(eu->warp_damage, NANO_FONT);
-	eu->warp_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+	eu->warp_temperature = snis_slider_init(s2x, y + coolant_inc, sw, sh, tcolor,
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_warp_temperature, NULL);
 	snis_slider_set_label_font(eu->warp_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->warp_temperature, 1);	
-	eu->maneuvering_damage = snis_slider_init(350, y += yinc, 150, sh, color, "MANEUVERING STATUS", "0", "100",
+	eu->maneuvering_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "MANEUVERING STATUS", "0", "100",
 				0.0, 100.0, sample_maneuvering_damage, NULL);
 	snis_slider_set_label_font(eu->maneuvering_damage, NANO_FONT);
-	eu->maneuvering_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+	eu->maneuvering_temperature = snis_slider_init(s2x, y + coolant_inc, sw, sh, tcolor,
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_maneuvering_temperature, NULL);
 	snis_slider_set_label_font(eu->maneuvering_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->maneuvering_temperature, 1);	
-	eu->tractor_damage = snis_slider_init(350, y += yinc, 150, sh, color, "TRACTOR STATUS", "0", "100",
+	eu->tractor_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "TRACTOR STATUS", "0", "100",
 				0.0, 100.0, sample_tractor_damage, NULL);
 	snis_slider_set_label_font(eu->tractor_damage, NANO_FONT);
-	eu->tractor_temperature = snis_slider_init(350, y + coolant_inc, 150, sh, tcolor,
+	eu->tractor_temperature = snis_slider_init(s2x, y + coolant_inc, sw, sh, tcolor,
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_tractor_temperature, NULL);
 	snis_slider_set_label_font(eu->tractor_temperature, NANO_FONT);
@@ -8454,13 +8465,13 @@ static void show_engineering_damage_report(GtkWidget *w, int subsystem)
 	if (subsystem < 0 || subsystem >= ARRAYSIZE(sysmap))
 		return;
 
-	y = 200 + sysmap[subsystem] * 40;
-	x = 300;
+	y = 0.3333 * SCREEN_HEIGHT + sysmap[subsystem] * 0.06666 * SCREEN_HEIGHT;
+	x = 0.375 * SCREEN_WIDTH;
 
 	sng_set_foreground(BLACK);
-	snis_draw_rectangle(1, x - 5, y - 5, 440, 65);
+	snis_draw_rectangle(1, x - 5, y - 5, 0.55 * SCREEN_WIDTH, 0.10833 * SCREEN_HEIGHT);
 	sng_set_foreground(AMBER);
-	snis_draw_rectangle(0, x - 5, y - 5, 440, 65);
+	snis_draw_rectangle(0, x - 5, y - 5, 0.55 * SCREEN_WIDTH, 0.10833 * SCREEN_HEIGHT);
 	count = 0;
 	for (i = 0; i <= snis_object_pool_highest_object(damcon_pool); i++) {
 		o = &dco[i];
@@ -8545,10 +8556,10 @@ static void show_engineering(GtkWidget *w)
 		}
 	}
 
-	gx1 = NAV_DATA_X + 10;
-	gy1 = 15;
-	gx2 = NAV_DATA_X + NAV_DATA_W - 10;
-	gy2 = NAV_DATA_Y + NAV_DATA_H - 80;
+	gx1 = SCREEN_WIDTH - eng_ui.gauge_radius * 5;
+	gy1 = SCREEN_HEIGHT * 0.02;
+	gx2 = SCREEN_WIDTH * 0.98;
+	gy2 = gy1 + eng_ui.gauge_radius * 2.5;
 	sng_set_foreground(AMBER);
 	draw_science_graph(w, o, o, gx1, gy1, gx2, gy2);
 
