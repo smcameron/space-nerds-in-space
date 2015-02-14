@@ -5754,9 +5754,9 @@ static void show_mainscreen(GtkWidget *w)
 }
 
 /* position and dimensions of science scope */
-#define SCIENCE_SCOPE_X 20
-#define SCIENCE_SCOPE_Y 70 
-#define SCIENCE_SCOPE_W 500
+#define SCIENCE_SCOPE_X (20 * SCREEN_WIDTH / 800)
+#define SCIENCE_SCOPE_Y (70 * SCREEN_HEIGHT / 600)
+#define SCIENCE_SCOPE_W (500 * SCREEN_HEIGHT / 600)
 #define SCIENCE_SCOPE_H SCIENCE_SCOPE_W
 #define SCIENCE_SCOPE_R (SCIENCE_SCOPE_H / 2)
 #define SCIENCE_SCOPE_CX (SCIENCE_SCOPE_X + SCIENCE_SCOPE_R)
@@ -8836,20 +8836,49 @@ static void sci_tractor_pressed(void *x)
 
 static void init_science_ui(void)
 {
-	sci_ui.scizoom = snis_slider_init(350, 35, 300, 12, DARKGREEN, "RANGE", "0", "100",
+	const int szx = (350 * SCREEN_WIDTH) / 800;
+	const int szy = 35 * SCREEN_HEIGHT / 600;
+	const int szw = 300 * SCREEN_WIDTH / 800;
+	const int szh = 12 * SCREEN_WIDTH / 800;
+
+	const int spx = szx;
+	const int spy = 50 * SCREEN_HEIGHT / 600;
+
+	const int trbx = 530 * SCREEN_WIDTH / 800;
+	const int trby = 575 * SCREEN_HEIGHT / 600;
+	const int trbw = 85 * SCREEN_WIDTH / 800;
+	const int trbh = 20 * SCREEN_HEIGHT / 600;
+
+	const int scpx = 620 * SCREEN_WIDTH / 800;
+	const int scpy = trby;
+	const int scpw = 40 * SCREEN_WIDTH / 800; 
+	const int scph = trbh;
+
+	const int thdx = 665 * SCREEN_WIDTH / 800;  
+	const int thdy = trby;  
+	const int thdw = 40 * SCREEN_WIDTH / 800;
+	const int thdh = trbh;
+
+	const int detx = 710 * SCREEN_WIDTH / 800;
+	const int dety = trby;
+	const int detw = 75 * SCREEN_WIDTH / 800;
+	const int deth = trbh;
+	
+
+	sci_ui.scizoom = snis_slider_init(szx, szy, szw, szh, DARKGREEN, "RANGE", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom);
 	snis_slider_set_label_font(sci_ui.scizoom, NANO_FONT);
-	sci_ui.scipower = snis_slider_init(350, 50, 300, 12, DARKGREEN, "POWER", "0", "100",
+	sci_ui.scipower = snis_slider_init(spx, spy, szw, szh, DARKGREEN, "POWER", "0", "100",
 				0.0, 100.0, sample_sensors_power, NULL);
 	snis_slider_set_fuzz(sci_ui.scipower, 7);
 	snis_slider_set_label_font(sci_ui.scipower, NANO_FONT);
-	sci_ui.tractor_button = snis_button_init(530, 575, 85, 20, "TRACTOR",
+	sci_ui.tractor_button = snis_button_init(trbx, trby, trbw, trbh, "TRACTOR",
 			GREEN, NANO_FONT, sci_tractor_pressed, (void *) 0);
-	sci_ui.sciplane_button = snis_button_init(620, 575, 40, 20, "SRS",
+	sci_ui.sciplane_button = snis_button_init(scpx, scpy, scpw, scph, "SRS",
 			GREEN, NANO_FONT, sci_sciplane_pressed, (void *) 0);
-	sci_ui.threed_button = snis_button_init(665, 575, 40, 20, "LRS",
+	sci_ui.threed_button = snis_button_init(thdx, thdy, thdw, thdh, "LRS",
 			GREEN, NANO_FONT, sci_threed_pressed, (void *) 0);
-	sci_ui.details_button = snis_button_init(710, 575, 75, 20, "DETAILS",
+	sci_ui.details_button = snis_button_init(detx, dety, detw, deth, "DETAILS",
 			GREEN, NANO_FONT, sci_details_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
@@ -9063,10 +9092,10 @@ static int science_button_press(int x, int y)
 	return 0;
 }
 
-#define SCIENCE_DATA_X (SCIENCE_SCOPE_X + SCIENCE_SCOPE_W + 20)
+#define SCIENCE_DATA_X (SCIENCE_SCOPE_X + SCIENCE_SCOPE_W + 80 * SCREEN_WIDTH / 800)
 #define SCIENCE_DATA_Y (SCIENCE_SCOPE_Y + 0)
-#define SCIENCE_DATA_W (SCREEN_WIDTH - 20 - SCIENCE_DATA_X)
-#define SCIENCE_DATA_H (SCREEN_HEIGHT - 40 - SCIENCE_DATA_Y)
+#define SCIENCE_DATA_W (SCREEN_WIDTH - (20 * SCREEN_WIDTH / 800) - SCIENCE_DATA_X)
+#define SCIENCE_DATA_H (SCREEN_HEIGHT - (40 * SCREEN_HEIGHT / 600) - SCIENCE_DATA_Y)
 
 static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o,
 		int x1, int y1, int x2, int y2)
@@ -9163,14 +9192,16 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 {
 	char buffer[40];
 	char buffer2[40];
-	int x, y, gx1, gy1, gx2, gy2;
+	int x, y, gx1, gy1, gx2, gy2, yinc;
 	double dx, dy, dz, range;
 	char *the_faction;
 
+	yinc = 25 * SCREEN_HEIGHT / 600;
+
 	if (!ship)
 		return;
-	x = SCIENCE_DATA_X + 10;
-	y = SCIENCE_DATA_Y + 15;
+	x = SCIENCE_DATA_X + 10 * SCREEN_WIDTH / 800;
+	y = SCIENCE_DATA_Y + 15 * SCREEN_HEIGHT / 600;
 	snis_draw_rectangle(0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
 	sprintf(buffer, "NAME: %s", o ? o->sdata.name : "");
@@ -9208,28 +9239,28 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	} else  {
 		sprintf(buffer, "TYPE:"); 
 	}
-	y += 25;
+	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o)
 		sprintf(buffer, "X: %0.2lf", o->x);
 	else
 		sprintf(buffer, "X:");
-	y += 25;
+	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o)
 		sprintf(buffer, "Y: %0.2lf", o->y);
 	else
 		sprintf(buffer, "Y:");
-	y += 25;
+	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o)
 		sprintf(buffer, "Z: %0.2lf", o->z);
 	else
 		sprintf(buffer, "Z:");
-	y += 25;
+	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o) { 
@@ -9251,9 +9282,9 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		sprintf(buffer,  "BEARING:");
 		sprintf(buffer2, "MARK:");
 	}
-	y += 25;
+	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
-	y += 25;
+	y += yinc;
 	sng_abs_xy_draw_string(buffer2, TINY_FONT, x, y);
 
 	if (o) {
@@ -9262,7 +9293,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	} else {
 		sprintf(buffer, "RANGE:");
 	}
-	y += 25;
+	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o) {
@@ -9270,24 +9301,24 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	} else {
 		sprintf(buffer, "WARP FACTOR:");
 	}
-	y += 25;
+	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 #if 0
 	sprintf(buffer, "STRENGTH: %hhu", o->sdata.shield_strength);
-	y += 25;
+	y += yinc;
 	sng_abs_xy_draw_string(w, gd, buffer, TINY_FONT, x, y);
 	sprintf(buffer, "WAVELENGTH: %hhu", o->sdata.shield_wavelength);
-	y += 25;
+	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 	sprintf(buffer, "WIDTH: %hhu", o->sdata.shield_width);
-	y += 25;
+	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 #endif
 
 	gx1 = x;
-	gy1 = y + 20;
-	gx2 = SCIENCE_DATA_X + SCIENCE_DATA_W - 10;
-	gy2 = SCIENCE_DATA_Y + SCIENCE_DATA_H - 40;
+	gy1 = y + 20 * SCREEN_HEIGHT / 600;
+	gx2 = SCIENCE_DATA_X + SCIENCE_DATA_W - 10 * SCREEN_WIDTH / 800;
+	gy2 = SCIENCE_DATA_Y + SCIENCE_DATA_H - 40 * SCREEN_HEIGHT / 600;
 	draw_science_graph(w, ship, o, gx1, gy1, gx2, gy2);
 }
 
@@ -9298,7 +9329,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	char buf[100];
 	float angle;
 	union quat orientation;
-	int y;
+	int y, yinc = 20 * SCREEN_HEIGHT / 600;
 
 	if (!curr_science_guy || !curr_science_guy->entity)
 		return;
@@ -9319,7 +9350,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	if (e)
 		remove_entity(sciecx, e);
 
-	y = SCREEN_HEIGHT - 200;
+	y = SCREEN_HEIGHT - 200 * SCREEN_HEIGHT / 600;
 	if (curr_science_guy->type == OBJTYPE_SHIP1 ||
 		curr_science_guy->type == OBJTYPE_SHIP2) {
 		sprintf(buf, "LIFEFORMS: %d", curr_science_guy->tsd.ship.lifeform_count);
@@ -9333,7 +9364,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	sng_set_foreground(GREEN);
 	if (buf[0])
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
-	y += 20;
+	y += yinc;
 	if (curr_science_guy->type == OBJTYPE_PLANET) {
 		static uint32_t last = 0xffffffff;
 		struct mtwist_state *mt;
@@ -9353,13 +9384,13 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		}
 		sprintf(buf, "GOVERNMENT: %s", government_name[p->government]);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
-		y += 20;
+		y += yinc;
 		sprintf(buf, "TECH LEVEL: %d", p->tech_level);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
-		y += 20;
+		y += yinc;
 		sprintf(buf, "ECONOMY: %s", economy_name[p->economy]);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
-		y += 20;
+		y += yinc;
 		switch (p->security) {
 		case 0:
 			strcpy(buf, "SECURITY: LOW");
@@ -9375,7 +9406,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			break;
 		}
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
-		y += 20;
+		y += yinc;
 
 		/* break planet_desc into multiple lines */
 		len = strlen(planet_desc);
@@ -9384,7 +9415,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			if (planet_desc[i] == '\n' || planet_desc[i] == '\0') {
 				tmpbuf[j] = '\0';
 				sng_abs_xy_draw_string(tmpbuf, NANO_FONT, 10, y);
-				y += 15;
+				y += 15 * SCREEN_HEIGHT / 600;
 				j = 0;
 			} else {
 				tmpbuf[j] = planet_desc[i];
@@ -9412,7 +9443,7 @@ static void show_science(GtkWidget *w)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 	sng_set_foreground(GREEN);
 	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf)", o->x, o->y, o->z);
-	sng_abs_xy_draw_string(buf, TINY_FONT, 200, LINEHEIGHT * 0.5);
+	sng_abs_xy_draw_string(buf, TINY_FONT, 0.25 * SCREEN_WIDTH, LINEHEIGHT * 0.5);
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
 	sng_set_foreground(DARKGREEN);
