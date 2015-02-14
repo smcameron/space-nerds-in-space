@@ -3434,9 +3434,9 @@ static void show_fonttest(GtkWidget *w)
 
 static void show_introscreen(GtkWidget *w)
 {
-	sng_abs_xy_draw_string("Space Nerds", BIG_FONT, 80, 200);
-	sng_abs_xy_draw_string("In Space", BIG_FONT, 180, 320);
-	sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, 255, 550);
+	sng_abs_xy_draw_string("Space Nerds", BIG_FONT, txx(80), txy(200));
+	sng_abs_xy_draw_string("In Space", BIG_FONT, txx(180), txy(320));
+	sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, txx(255), txy(550));
 }
 
 int lobbylast1clickx = -1;
@@ -3468,21 +3468,22 @@ static void show_lobbyscreen(GtkWidget *w)
 
 	sng_set_foreground(WHITE);
 	if (lobby_socket == -1) {
-		sng_abs_xy_draw_string("Space Nerds", BIG_FONT, 80, 200);
-		sng_abs_xy_draw_string("In Space", BIG_FONT, 180, 320);
-		sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, 255, 550);
+		sng_abs_xy_draw_string("Space Nerds", BIG_FONT, txx(80), txy(200));
+		sng_abs_xy_draw_string("In Space", BIG_FONT, txx(180), txy(320));
+		sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron", NANO_FONT,
+			txx(255), txy(550));
 		if (lobby_count >= MAX_LOBBY_TRIES)
 			sprintf(msg, "Giving up on lobby... tried %d times.",
 				lobby_count);
 		else
 			sprintf(msg, "Connecting to lobby... tried %d times.",
 				lobby_count);
-		sng_abs_xy_draw_string(msg, SMALL_FONT, 100, 400);
-		sng_abs_xy_draw_string(lobbyerror, NANO_FONT, 100, 430);
+		sng_abs_xy_draw_string(msg, SMALL_FONT, txx(100), txy(400));
+		sng_abs_xy_draw_string(lobbyerror, NANO_FONT, txx(100), txy(430));
 	} else {
 		if (lobby_selected_server != -1 &&
-			lobbylast1clickx > 200 && lobbylast1clickx < 620 &&
-			lobbylast1clicky > 520 && lobbylast1clicky < 520 + LINEHEIGHT * 2) {
+			lobbylast1clickx > txx(200) && lobbylast1clickx < txx(620) &&
+			lobbylast1clicky > txy(520) && lobbylast1clicky < txy(520) + LINEHEIGHT * 2) {
 			displaymode = DISPLAYMODE_CONNECTING;
 			return;
 		}
@@ -3494,19 +3495,19 @@ static void show_lobbyscreen(GtkWidget *w)
 
 		lobby_selected_server = -1;
 		sprintf(msg, "Connected to lobby on socket %d\n", lobby_socket);
-		sng_abs_xy_draw_string(msg, TINY_FONT, 30, LINEHEIGHT);
+		sng_abs_xy_draw_string(msg, TINY_FONT, txx(30), LINEHEIGHT);
 		sprintf(msg, "Total game servers: %d\n", ngameservers);
-		sng_abs_xy_draw_string(msg, TINY_FONT, 30, LINEHEIGHT + 20);
+		sng_abs_xy_draw_string(msg, TINY_FONT, txx(30), LINEHEIGHT + txy(20));
 		for (i = 0; i < ngameservers; i++) {
 			unsigned char *x = (unsigned char *) 
 				&lobby_game_server[i].ipaddr;
-			if (lobbylast1clickx > 30 && lobbylast1clickx < 700 &&
-				lobbylast1clicky > 100 + (-0.5 + i) * LINEHEIGHT &&
-				lobbylast1clicky < 100 + (0.5 + i) * LINEHEIGHT) {
+			if (lobbylast1clickx > txx(30) && lobbylast1clickx < txx(700) &&
+				lobbylast1clicky > txy(100) + (-0.5 + i) * LINEHEIGHT &&
+				lobbylast1clicky < txy(100) + (0.5 + i) * LINEHEIGHT) {
 				lobby_selected_server = i;
 				sng_set_foreground(GREEN);
-				snis_draw_rectangle(0, 25, 100 + (-0.5 + i) * LINEHEIGHT,
-					725, LINEHEIGHT);
+				snis_draw_rectangle(0, txx(25), txy(100) + (-0.5 + i) * LINEHEIGHT,
+					txx(725), LINEHEIGHT);
 			} else
 				sng_set_foreground(WHITE);
 
@@ -3515,23 +3516,23 @@ static void show_lobbyscreen(GtkWidget *w)
 			}
 			 
 			sprintf(msg, "%hu.%hu.%hu.%hu/%hu", x[0], x[1], x[2], x[3], lobby_game_server[i].port);
-			sng_abs_xy_draw_string(msg, TINY_FONT, 30, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, TINY_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].game_instance);
-			sng_abs_xy_draw_string(msg, TINY_FONT, 350, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, TINY_FONT, txx(350), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].server_nickname);
-			sng_abs_xy_draw_string(msg, TINY_FONT, 450, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, TINY_FONT, txx(450), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].location);
-			sng_abs_xy_draw_string(msg, TINY_FONT, 650, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, TINY_FONT, txx(650), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%d", lobby_game_server[i].nconnections);
-			sng_abs_xy_draw_string(msg, TINY_FONT, 700, 100 + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, TINY_FONT, txx(700), txy(100) + i * LINEHEIGHT);
 		}
 		if (lobby_selected_server != -1)
 			sng_set_foreground(GREEN);
 		else
 			sng_set_foreground(RED);
 		/* This should be a real button, but I'm too lazy to fix it now. */
-		snis_draw_rectangle(0, 250, 520, 300, LINEHEIGHT * 2);
-		sng_abs_xy_draw_string("CONNECT TO SERVER", TINY_FONT, 280, 520 + LINEHEIGHT);
+		snis_draw_rectangle(0, txx(250), txy(520), txx(300), LINEHEIGHT * 2);
+		sng_abs_xy_draw_string("CONNECT TO SERVER", TINY_FONT, txx(280), txy(520) + LINEHEIGHT);
 	}
 }
 
@@ -5213,7 +5214,7 @@ static void show_connecting_screen(GtkWidget *w)
 {
 	static int connected_to_gameserver = 0;
 	sng_set_foreground(WHITE);
-	sng_abs_xy_draw_string("CONNECTING TO SERVER...", SMALL_FONT, 100, 300 + LINEHEIGHT);
+	sng_abs_xy_draw_string("CONNECTING TO SERVER...", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
 	if (!connected_to_gameserver) {
 		connected_to_gameserver = 1;
 		connect_to_gameserver(lobby_selected_server);
@@ -5223,8 +5224,8 @@ static void show_connecting_screen(GtkWidget *w)
 static void show_connected_screen(GtkWidget *w)
 {
 	sng_set_foreground(WHITE);
-	sng_abs_xy_draw_string("CONNECTED TO SERVER", SMALL_FONT, 100, 300 + LINEHEIGHT);
-	sng_abs_xy_draw_string("DOWNLOADING GAME DATA", SMALL_FONT, 100, 300 + LINEHEIGHT * 3);
+	sng_abs_xy_draw_string("CONNECTED TO SERVER", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
+	sng_abs_xy_draw_string("DOWNLOADING GAME DATA", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT * 3);
 }
 
 static void show_common_screen(GtkWidget *w, char *title)
@@ -5240,7 +5241,7 @@ static void show_common_screen(GtkWidget *w, char *title)
 		border_color = BLUE;
 	}
 	sng_set_foreground(title_color);
-	sng_abs_xy_draw_string(title, SMALL_FONT, 25, 10 + LINEHEIGHT);
+	sng_abs_xy_draw_string(title, SMALL_FONT, txx(25), txy(LINEHEIGHT));
 	sng_set_foreground(border_color);
 	snis_draw_line(1, 1, SCREEN_WIDTH, 0);
 	snis_draw_line(SCREEN_WIDTH - 1, 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
@@ -10996,7 +10997,7 @@ static struct button *init_net_role_button(int x, int *y, char *txt, int *value)
 	b = snis_button_init(x, *y, 225, 23, txt, GREEN,
 			NANO_FONT, NULL, NULL);
 	snis_button_checkbox(b, value);
-	*y = *y + 23;
+	*y = *y + txy(23);
 	return b;
 }
 
@@ -11006,8 +11007,8 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 {
 	int x, y;
 
-	x = 520;
-	y = 345;
+	x = txx(520);
+	y = txy(345);
 
 	nsu->role_main_v = 0;
 	nsu->role_nav_v = 1;
@@ -11042,42 +11043,44 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 static void ui_add_text_input_box(struct snis_text_input_box *t, int active_displaymode);
 static void init_net_setup_ui(void)
 {
-	int y = 10 + LINEHEIGHT * 3;
+	int y = txy(10) + txy(LINEHEIGHT * 3);
+	int yinc = txy(50);
+	int left = txx(20);
 
 	memset(net_setup_ui.lobbyname, 0, sizeof(net_setup_ui.lobbyname));
 	strcpy(net_setup_ui.lobbyname, "localhost");
 	strcpy(net_setup_ui.servername, "");
-	y += 50;
+	y += yinc;
 	net_setup_ui.lobbyservername =
-		snis_text_input_box_init(20, y, 30, 750, GREEN, TINY_FONT,
+		snis_text_input_box_init(left, y, txy(30), txx(750), GREEN, TINY_FONT,
 					net_setup_ui.lobbyname, 50, &timer,
 					lobby_hostname_entered, NULL);
-	y += 50;
+	y += yinc;
 	net_setup_ui.start_lobbyserver =	
-		snis_button_init(20, y, 300, 25, "START LOBBY SERVER", GREEN,
+		snis_button_init(left, y, txx(300), txy(25), "START LOBBY SERVER", GREEN,
 			TINY_FONT, start_lobbyserver_button_pressed, NULL);
-	y += 100;
+	y += yinc * 2;
 	net_setup_ui.gameservername =
-		snis_text_input_box_init(20, y, 30, 750, GREEN, TINY_FONT,
+		snis_text_input_box_init(left, y, txy(30), txx(750), GREEN, TINY_FONT,
 					net_setup_ui.servername, 50, &timer,
 					gameserver_hostname_entered, NULL);
-	y += 50;
+	y += yinc;
 	net_setup_ui.start_gameserver = 
-		snis_button_init(20, y, 300, 25, "START GAME SERVER", RED,
+		snis_button_init(left, y, txx(300), txy(25), "START GAME SERVER", RED,
 			TINY_FONT, start_gameserver_button_pressed, NULL);
-	y += 100;
+	y += yinc * 2;
 	net_setup_ui.shipname_box =
-		snis_text_input_box_init(150, y, 30, 250, GREEN, TINY_FONT,
+		snis_text_input_box_init(150, y, txy(30), txx(250), GREEN, TINY_FONT,
 					net_setup_ui.shipname, 50, &timer,
 					shipname_entered, NULL);
-	y += 50;
+	y += yinc;
 	net_setup_ui.password_box =
-		snis_text_input_box_init(150, y, 30, 250, GREEN, TINY_FONT,
+		snis_text_input_box_init(150, y, txy(30), txx(250), GREEN, TINY_FONT,
 					net_setup_ui.password, 50, &timer,
 					password_entered, NULL);
-	y += 50;
+	y += yinc;
 	net_setup_ui.connect_to_lobby = 
-		snis_button_init(20, y, 300, 25, "CONNECT TO LOBBY", RED,
+		snis_button_init(left, y, txx(300), txy(25), "CONNECT TO LOBBY", RED,
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
 	init_net_role_buttons(&net_setup_ui);
 	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP);
@@ -11095,13 +11098,13 @@ static void show_network_setup(GtkWidget *w)
 {
 	show_common_screen(w, "SPACE NERDS IN SPACE");
 	sng_set_foreground(DARKGREEN);
-	sng_draw_vect_obj(&snis_logo, 100, 500);
+	sng_draw_vect_obj(&snis_logo, txx(100), txy(500));
 	sng_set_foreground(GREEN);
-	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, 25, 10 + LINEHEIGHT * 2);
-	sng_abs_xy_draw_string("LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, 25, 130);
-	sng_abs_xy_draw_string("GAME SERVER NICKNAME", TINY_FONT, 25, 280);
-	sng_abs_xy_draw_string("SHIP NAME", TINY_FONT, 20, 470);
-	sng_abs_xy_draw_string("PASSWORD", TINY_FONT, 20, 520);
+	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10) + LINEHEIGHT * 2);
+	sng_abs_xy_draw_string("LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, txx(25), txy(130));
+	sng_abs_xy_draw_string("GAME SERVER NICKNAME", TINY_FONT, txx(25), txy(280));
+	sng_abs_xy_draw_string("SHIP NAME", TINY_FONT, txx(20), txy(470));
+	sng_abs_xy_draw_string("PASSWORD", TINY_FONT, txx(20), txy(520));
 
 	sanitize_string(net_setup_ui.servername);
 	sanitize_string(net_setup_ui.lobbyname);
