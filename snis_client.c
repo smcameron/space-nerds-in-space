@@ -8994,45 +8994,50 @@ static void comms_input_entered()
 
 static void init_comms_ui(void)
 {
-	int x = 200;
-	int y = 20;
+	int x = txx(200);
+	int y = txy(20);
+	int bw = txx(75);
+	int bh = txy(25);
 
-	comms_ui.comms_onscreen_button = snis_button_init(x, y, 75, 25, "COMMS", GREEN,
+	comms_ui.comms_onscreen_button = snis_button_init(x, y, bw, bh, "COMMS", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 0);
-	x += 75;
-	comms_ui.nav_onscreen_button = snis_button_init(x, y, 75, 25, "NAV", GREEN,
+	x += bw;
+	comms_ui.nav_onscreen_button = snis_button_init(x, y, bw, bh, "NAV", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 1);
-	x += 75;
-	comms_ui.weap_onscreen_button = snis_button_init(x, y, 75, 25, "WEAP", GREEN,
+	x += bw;
+	comms_ui.weap_onscreen_button = snis_button_init(x, y, bw, bh, "WEAP", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 2);
-	x += 75;
-	comms_ui.eng_onscreen_button = snis_button_init(x, y, 75, 25, "ENG", GREEN,
+	x += bw;
+	comms_ui.eng_onscreen_button = snis_button_init(x, y, bw, bh, "ENG", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 3);
-	x += 75;
-	comms_ui.damcon_onscreen_button = snis_button_init(x, y, 75, 25, "DAMCON", GREEN,
+	x += bw;
+	comms_ui.damcon_onscreen_button = snis_button_init(x, y, bw, bh, "DAMCON", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 4);
-	x += 75;
-	comms_ui.sci_onscreen_button = snis_button_init(x, y, 75, 25, "SCI", GREEN,
+	x += bw;
+	comms_ui.sci_onscreen_button = snis_button_init(x, y, bw, bh, "SCI", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 5);
-	x += 75;
-	comms_ui.main_onscreen_button = snis_button_init(x, y, 75, 25, "MAIN", GREEN,
+	x += bw;
+	comms_ui.main_onscreen_button = snis_button_init(x, y, bw, bh, "MAIN", GREEN,
 			NANO_FONT, comms_screen_button_pressed, (void *) 7);
-	x = SCREEN_WIDTH - 150;
-	y = SCREEN_HEIGHT - 90;
-	comms_ui.red_alert_button = snis_button_init(x, y, 120, 25, "RED ALERT", RED,
+	x = SCREEN_WIDTH - txx(150);
+	y = SCREEN_HEIGHT - txy(90);
+	comms_ui.red_alert_button = snis_button_init(x, y, 120, bh, "RED ALERT", RED,
 			NANO_FONT, comms_screen_red_alert_pressed, (void *) 6);
 	y = SCREEN_HEIGHT - 60;
-	comms_ui.mainscreen_comms = snis_button_init(x, y, 120, 25, "MAIN SCREEN", GREEN,
+	comms_ui.mainscreen_comms = snis_button_init(x, y, txx(120), bh, "MAIN SCREEN", GREEN,
 			NANO_FONT, comms_main_screen_pressed, (void *) 8);
-	comms_ui.tw = text_window_init(10, 70, SCREEN_WIDTH - 20, 300, 20, GREEN);
-	comms_ui.comms_input = snis_text_input_box_init(10, 520, 30, 550, GREEN, TINY_FONT,
+	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 20, GREEN);
+	comms_ui.comms_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
+					GREEN, TINY_FONT,
 					comms_ui.input, 50, &timer,
 					comms_input_entered, NULL);
 	snis_text_input_box_set_return(comms_ui.comms_input,
 					comms_transmit_button_pressed);
-	comms_ui.comms_transmit_button = snis_button_init(10, 550, 160, 30, "TRANSMIT", GREEN,
+	comms_ui.comms_transmit_button = snis_button_init(txx(10), txy(550), txx(160), txy(30),
+			"TRANSMIT", GREEN,
 			TINY_FONT, comms_transmit_button_pressed, NULL);
-	comms_ui.mainzoom_slider = snis_slider_init(180, 560, 380, 15, GREEN, "ZOOM",
+	comms_ui.mainzoom_slider = snis_slider_init(txx(180), txy(560), txx(380), txy(15),
+				GREEN, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_mainzoom,
 				do_mainzoom);
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
@@ -9506,8 +9511,8 @@ static void show_comms(GtkWidget *w)
 	if (!(o = find_my_ship()))
 		return;
 
-	float shield_ind_x_center = 710;
-	float shield_ind_y_center = 495;
+	float shield_ind_x_center = txx(710);
+	float shield_ind_y_center = txy(495);
 
 	if (o->sdata.shield_strength < 15) {
 		sng_set_foreground(RED);
