@@ -129,6 +129,10 @@ static int SCREEN_WIDTH = 800; // 1366;        /* window width, in pixels */
 static int SCREEN_HEIGHT = 600; // 768;       /* window height, in pixels */
 #define ASPECT_RATIO (SCREEN_WIDTH/(float)SCREEN_HEIGHT)
 
+/* helper function to transform from 800x600 original coord system */
+static inline int txx(int x) { return x * SCREEN_WIDTH / 800; }
+static inline int txy(int y) { return y * SCREEN_HEIGHT / 600; }
+
 #define VERTICAL_CONTROLS_INVERTED -1
 #define VERTICAL_CONTROLS_NORMAL 1
 static int vertical_controls_inverted = VERTICAL_CONTROLS_NORMAL;
@@ -508,10 +512,10 @@ static void connect_to_lobby()
 static struct snis_object_pool *pool;
 static struct snis_object_pool *damcon_pool;
 static double *damconscreenx, *damconscreeny;
-static const int damconscreenxdim = 600;
-static const int damconscreenydim = 500;
-static const int damconscreenx0 = 20;
-static const int damconscreeny0 = 80;
+static int damconscreenxdim = 600;
+static int damconscreenydim = 500;
+static int damconscreenx0 = 20;
+static int damconscreeny0 = 80;
 
 static struct snis_entity go[MAXGAMEOBJS];
 #define go_index(snis_entity_ptr) ((snis_entity_ptr) - &go[0])
@@ -8098,23 +8102,24 @@ static void robot_manual_button_pressed(void *x)
 
 static void init_damcon_ui(void)
 {
-	damcon_ui.engineering_button = snis_button_init(630, 550, 140, 25, "ENGINEERING", AMBER,
+	damcon_ui.engineering_button = snis_button_init(txx(630), txy(550), txx(140), txy(25),
+			"ENGINEERING", AMBER,
 			NANO_FONT, main_engineering_button_pressed, (void *) 0);
-	damcon_ui.robot_controls = snis_label_init(630, 30, "ROBOT CONTROLS", AMBER, NANO_FONT);
+	damcon_ui.robot_controls = snis_label_init(txx(630), txy(30), "ROBOT CONTROLS", AMBER, NANO_FONT);
 	
-	damcon_ui.robot_forward_button = snis_button_init(650, 60, 90, 25, "FORWARD", AMBER, NANO_FONT,
-							robot_forward_button_pressed, (void *) 0);
-	damcon_ui.robot_left_button = snis_button_init(630, 100, 25, 25, "L", AMBER, NANO_FONT,
-							robot_left_button_pressed, (void *) 0);
-	damcon_ui.robot_right_button = snis_button_init(740, 100, 25, 25, "R", AMBER, NANO_FONT,
-							robot_right_button_pressed, (void *) 0);
-	damcon_ui.robot_backward_button = snis_button_init(650, 140, 90, 25, "BACKWARD", AMBER, NANO_FONT,
+	damcon_ui.robot_forward_button = snis_button_init(txx(650), txy(60), txx(90), txy(25),
+			"FORWARD", AMBER, NANO_FONT, robot_forward_button_pressed, (void *) 0);
+	damcon_ui.robot_left_button = snis_button_init(txx(630), txy(100), txx(25), txy(25),
+			"L", AMBER, NANO_FONT, robot_left_button_pressed, (void *) 0);
+	damcon_ui.robot_right_button = snis_button_init(txx(740), txy(100), txx(25), txy(25),
+			"R", AMBER, NANO_FONT, robot_right_button_pressed, (void *) 0);
+	damcon_ui.robot_backward_button = snis_button_init(txx(650), txy(140), txx(90), txy(25), "BACKWARD", AMBER, NANO_FONT,
 							robot_backward_button_pressed, (void *) 0);
-	damcon_ui.robot_gripper_button = snis_button_init(650, 180, 90, 25, "GRIPPER", AMBER, NANO_FONT,
+	damcon_ui.robot_gripper_button = snis_button_init(txx(650), txy(180), txx(90), txy(25), "GRIPPER", AMBER, NANO_FONT,
 							robot_gripper_button_pressed, (void *) 0);
-	damcon_ui.robot_auto_button = snis_button_init(400, 30, 90, 25, "AUTO", AMBER, NANO_FONT,
-							robot_auto_button_pressed, (void *) 0);
-	damcon_ui.robot_manual_button = snis_button_init(500, 30, 90, 25, "MANUAL", WHITE, NANO_FONT,
+	damcon_ui.robot_auto_button = snis_button_init(txx(400), txy(30), txx(90), txy(25),
+				"AUTO", AMBER, NANO_FONT, robot_auto_button_pressed, (void *) 0);
+	damcon_ui.robot_manual_button = snis_button_init(txx(500), txy(30), txx(90), txy(25), "MANUAL", WHITE, NANO_FONT,
 							robot_manual_button_pressed, (void *) 0);
 
 	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON);
@@ -12897,6 +12902,11 @@ int main(int argc, char *argv[])
 		}
 		real_screen_width = SCREEN_WIDTH;
 		real_screen_height = SCREEN_HEIGHT;
+
+		damconscreenxdim = 600 * SCREEN_WIDTH / 800;
+		damconscreenydim = 500 * SCREEN_HEIGHT / 600;
+		damconscreenx0 = 20 * SCREEN_WIDTH / 800;
+		damconscreeny0 = 80 * SCREEN_HEIGHT / 600;
 		sng_set_extent_size(SCREEN_WIDTH, SCREEN_HEIGHT);
 		sng_set_screen_size(real_screen_width, real_screen_height);
 	}
