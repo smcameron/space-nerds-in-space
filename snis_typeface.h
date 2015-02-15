@@ -8,11 +8,11 @@
 #define PICO_FONT 4
 
 /* sizes of the fonts... in arbitrary units */
-#define BIG_FONT_SCALE 14 
-#define SMALL_FONT_SCALE 5 
-#define TINY_FONT_SCALE 3 
-#define NANO_FONT_SCALE 2 
-#define PICO_FONT_SCALE 1 
+#define BIG_FONT_SCALE 12.0 
+#define SMALL_FONT_SCALE 4.5 
+#define TINY_FONT_SCALE 2.7 
+#define NANO_FONT_SCALE 1.7 
+#define PICO_FONT_SCALE 1.4
 
 /* spacing of letters between the fonts, pixels */
 #define BIG_LETTER_SPACING (10)
@@ -23,7 +23,7 @@
 
 /* for getting at the font scales and letter spacings, given  only font numbers */
 #ifdef SNIS_TYPEFACE_DECLARE_GLOBALS
-int font_scale[] = { BIG_FONT_SCALE, SMALL_FONT_SCALE, TINY_FONT_SCALE, NANO_FONT_SCALE, PICO_FONT_SCALE };
+float font_scale[] = { BIG_FONT_SCALE, SMALL_FONT_SCALE, TINY_FONT_SCALE, NANO_FONT_SCALE, PICO_FONT_SCALE };
 int letter_spacing[] = { BIG_LETTER_SPACING, SMALL_LETTER_SPACING, TINY_LETTER_SPACING, NANO_LETTER_SPACING, PICO_LETTER_SPACING };
 int font_lineheight[sizeof(font_scale) / sizeof(font_scale[0])];
 /* There are 4 home-made "fonts" in the game, all the same "typeface", but 
@@ -37,5 +37,6 @@ extern struct my_vect_obj **gamefont[];
 #endif
 
 void snis_typefaces_init(void);
+void snis_typefaces_init_with_scaling(float xscale, float yscale);
 
 #endif

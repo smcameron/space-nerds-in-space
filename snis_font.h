@@ -29,8 +29,8 @@
 #define GLOBAL extern
 #endif
 
-GLOBAL int snis_make_font(struct my_vect_obj ***font, int xscale, int yscale);
-GLOBAL int snis_font_lineheight(int yscale);
+GLOBAL int snis_make_font(struct my_vect_obj ***font, float xscale, float yscale);
+GLOBAL int snis_font_lineheight(float yscale);
 
 #undef GLOBAL
 #endif

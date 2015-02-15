@@ -202,9 +202,10 @@ static struct my_point_t decode_glyph[] = {
  * the game, while also scaling it by some amount.  It is used in making
  * a particular font size
  */
-static struct my_vect_obj *prerender_glyph(stroke_t g[], int xscale, int yscale)
+static struct my_vect_obj *prerender_glyph(stroke_t g[], float xscale, float yscale)
 {
-	int i, x, y;
+	int i;
+	float x, y;
 	int npoints = 0;
 	struct my_point_t scratch[100];
 	struct my_vect_obj *v;
@@ -230,8 +231,8 @@ static struct my_vect_obj *prerender_glyph(stroke_t g[], int xscale, int yscale)
 			if (i==0 || y < bby1) bby1=y;
 			if (i==0 || y > bby2) bby2=y;
 		}
-		scratch[npoints].x = x;
-		scratch[npoints].y = y;
+		scratch[npoints].x = (int) x;
+		scratch[npoints].y = (int) y;
 		npoints++;
 	}
 
@@ -253,7 +254,7 @@ static struct my_vect_obj *prerender_glyph(stroke_t g[], int xscale, int yscale)
  * prescaled sets of line segments that the drawing routines know
  * how to draw.
  */
-int snis_make_font(struct my_vect_obj ***font, int xscale, int yscale) 
+int snis_make_font(struct my_vect_obj ***font, float xscale, float yscale) 
 {
 	struct my_vect_obj **v;
 
@@ -361,8 +362,8 @@ int snis_make_font(struct my_vect_obj ***font, int xscale, int yscale)
 	return 0;
 }
 
-int snis_font_lineheight(int yscale)
+int snis_font_lineheight(float yscale)
 {
-	return (decode_glyph[30].y - decode_glyph[0].y) * yscale + 2;
+	return (int) ((decode_glyph[30].y - decode_glyph[0].y) * yscale + 2);
 }
 

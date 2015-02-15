@@ -12941,8 +12941,6 @@ int main(int argc, char *argv[])
 	init_game_state(the_player);
 #endif
 
-	snis_typefaces_init();
-
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	{
 		/* clamp window aspect ratio to constant */
@@ -12951,6 +12949,10 @@ int main(int argc, char *argv[])
 		geom.max_aspect = geom.min_aspect;
 		gtk_window_set_geometry_hints(GTK_WINDOW(window), NULL, &geom, GDK_HINT_ASPECT);
 	}
+
+	/* These scalings are arbitrary, just played with it until it looked "good." */
+	snis_typefaces_init_with_scaling((float) SCREEN_WIDTH / 1050.0, (float) SCREEN_HEIGHT / 500.0);
+
 	gtk_container_set_border_width (GTK_CONTAINER (window), 0);
 	vbox = gtk_vbox_new(FALSE, 0);
         main_da = gtk_drawing_area_new();
