@@ -1470,3 +1470,73 @@ void mesh_rotate(struct mesh *m, union quat *q)
 	mesh_graph_dev_init(m);
 }
 
+/* fabricate a tube of length h, radius r, with nfaces, parallel to x axis */
+struct mesh *mesh_tube(float h, float r, float nfaces)
+{
+	struct mesh *m;
+	int ntris = nfaces * 2;
+	int nvertices = nfaces * 2;
+	int i, j;
+	float angle, da;
+
+	float l = h / 2.0;
+
+	m = allocate_mesh_for_copy(ntris, nvertices, 0, 1);
+	if (!m)
+		return m;
+
+	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+	da = 2 * M_PI / (float) nfaces;
+	for (i = 0; i < nvertices; i += 2) {
+		m->v[i].x = -l;
+		m->v[i].y = r * cos(angle);
+		m->v[i].z = r * -sin(angle);
+		m->v[i + 1].x = l;
+		m->v[i + 1].y = m->v[i].y;
+		m->v[i + 1].z = m->v[i].z;
+		angle += da;
+	}
+	m->nvertices = nvertices;
+
+	for (i = 0; i < ntris; i += 2) {
+		m->t[i].v[2] = &m->v[i % nvertices];
+		m->t[i].v[1] = &m->v[(i + 1) % nvertices];
+		m->t[i].v[0] = &m->v[(i + 2) % nvertices];
+
+		m->t[i + 1].v[2] = &m->v[(i + 2) % nvertices];
+		m->t[i + 1].v[1] = &m->v[(i + 1) % nvertices];
+		m->t[i + 1].v[0] = &m->v[(i + 3) % nvertices];
+	}
+	m->ntriangles = ntris;
+
+	for (i = 0; i < ntris; i++) {
+		union vec3 normal;
+		normal = compute_triangle_normal(&m->t[i]);
+		m->t[i].n.x = normal.v.x;
+		m->t[i].n.y = normal.v.y;
+		m->t[i].n.z = normal.v.z;
+		for (j = 0; j < 3; j++) {
+			union vec3 normal = { { 0, -m->t[i].v[j]->y, -m->t[i].v[j]->z } };
+			vec3_normalize_self(&normal);
+			m->t[i].vnormal[j].x = normal.v.x;
+			m->t[i].vnormal[j].y = normal.v.y;
+			m->t[i].vnormal[j].z = normal.v.z;
+		}
+	}
+	mesh_set_flat_shading_vertex_normals(m);
+	for (i = 0; i < ntris; i += 2) {
+		mesh_set_triangle_texture_coords(m, i,
+			0.0, (float) ((int) ((i + 2) / 2)) * 1.0 / (float) nfaces,
+			1.0, (float) ((int) (i / 2)) / (float) nfaces,
+			0.0, (float) ((int) (i / 2)) / (float) nfaces);
+		mesh_set_triangle_texture_coords(m, i + 1,
+			1.0, (float) ((int) ((i + 2) / 2)) / (float) nfaces,
+			1.0, (float) ((int) (i / 2)) / (float) nfaces,
+			0.0, (float) ((int) ((i + 2) / 2)) / (float) nfaces);
+	}
+	m->nlines = 0;
+	m->radius = mesh_compute_radius(m);
+	mesh_graph_dev_init(m);
+	return m;
+}
+
