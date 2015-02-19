@@ -310,6 +310,9 @@ struct mesh *cargo_container_mesh;
 struct mesh *nebula_mesh;
 struct mesh *sun_mesh;
 struct mesh *thrust_animation_mesh;
+static struct mesh *warp_tunnel_mesh;
+static struct entity *warp_tunnel = NULL;
+static union vec3 warp_tunnel_direction;
 
 struct mesh **ship_mesh_map;
 struct mesh **derelict_mesh;
@@ -328,6 +331,7 @@ static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
 static struct material planet_material[NPLANET_MATERIALS * (NPLANETARY_RING_MATERIALS + 1)];
 static struct material shield_material;
+static struct material warp_tunnel_material;
 #define NASTEROID_TEXTURES 2
 static struct material asteroid_material[NASTEROID_TEXTURES];
 static struct material wormhole_material;
@@ -1747,19 +1751,16 @@ static void interpolate_orientated_object(double timestamp, struct snis_entity *
 			o->tsd.ship.weap_orientation = o->tsd.ship.weap_o[to_index];
 		}
 	} else {
-		/* If ship is warping (seen as extreme speed here) do not try interpolating */
-		if (vec3_dist_sqrd(&o->r[from_index], &o->r[to_index]) > 1000.0 * 1000.0) {
-			o->x = o->r[from_index].v.x;
-			o->y = o->r[from_index].v.y;
-			o->z = o->r[from_index].v.z;
-		} else {
-			union vec3 interp_position;
+		/* We used to check for extreme speed here and not interpolate in that
+		 * case, but the new warp tunnel means interpolating extreme speed is
+		 * now what we actually want.
+		 */
+		union vec3 interp_position;
 
-			vec3_lerp(&interp_position, &o->r[from_index], &o->r[to_index], t);
-			o->x = interp_position.v.x;
-			o->y = interp_position.v.y;
-			o->z = interp_position.v.z;
-		}
+		vec3_lerp(&interp_position, &o->r[from_index], &o->r[to_index], t);
+		o->x = interp_position.v.x;
+		o->y = interp_position.v.y;
+		o->z = interp_position.v.z;
 
 		quat_nlerp(&o->orientation, &o->o[from_index], &o->o[to_index], t);
 		o->heading = quat_to_heading(&o->orientation);
@@ -4036,6 +4037,8 @@ static int process_add_warp_effect(void)
 	direction.v.z = dz - oz;
 	dist = vec3_magnitude(&direction);
 	vec3_normalize_self(&direction);
+	if (oid == my_ship_id)
+		warp_tunnel_direction = direction;
 
 	add_warp_effect(ox, oy, oz, 0, WARP_EFFECT_LIFETIME, &direction, dist);
 	add_warp_effect(dx, dy, dz, 1, WARP_EFFECT_LIFETIME, &direction, dist);
@@ -5404,6 +5407,55 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[],
 	}
 }
 
+static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunnel)
+{
+	static int first_time = 1;
+	static union vec3 lastp;
+	union vec3 p = { { o->x, o->y, o->z } };
+	union vec3 v;
+	float m;
+	static float max = 0;
+	const float max_alpha = 0.4;
+
+	if (first_time) {
+		lastp = p;
+		first_time = 0;
+		return;
+	}
+
+	vec3_sub(&v, &p, &lastp);
+	m = vec3_magnitude(&v);
+	if (m > max)
+		max = m;
+	lastp = p;
+
+	if (m < MAX_PLAYER_VELOCITY * 1.5 && *warp_tunnel != NULL) {
+		remove_entity(ecx, *warp_tunnel);
+		*warp_tunnel = NULL;
+		return;
+	}
+
+	if (m > MAX_PLAYER_VELOCITY * 1.5) {
+		if (m > 2500)
+			m = 2500;
+		float new_alpha = max_alpha * ((m - MAX_PLAYER_VELOCITY * 1.5) /
+						(2500 - MAX_PLAYER_VELOCITY * 1.5));
+		if (*warp_tunnel == NULL) {
+			union vec3 down_x_axis = { { 1, 0, 0 } };
+			union vec3 up = { {0, 1, 0} };
+			union quat orientation;
+			vec3_normalize_self(&v);
+			quat_from_u2v(&orientation, &down_x_axis, &warp_tunnel_direction, &up);
+			*warp_tunnel = add_entity(ecx, warp_tunnel_mesh, o->x, o->y, o->z, SHIP_COLOR);
+			update_entity_material(*warp_tunnel, &warp_tunnel_material);
+			update_entity_orientation(*warp_tunnel, &orientation);
+		}
+		entity_update_alpha(*warp_tunnel, new_alpha);
+		warp_tunnel_material.texture_mapped_unlit.alpha = new_alpha;
+	}
+}
+
+
 static void show_weapons_camera_view(GtkWidget *w)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
@@ -5427,6 +5479,8 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	if (!(o = find_my_ship()))
 		return;
+
+	update_warp_tunnel(o, &warp_tunnel);
 
 	/* current_zoom = newzoom(current_zoom, o->tsd.ship.mainzoom); */
 	current_zoom = 0;
@@ -5584,6 +5638,8 @@ static void show_mainscreen(GtkWidget *w)
 
 	if (!(o = find_my_ship()))
 		return;
+
+	update_warp_tunnel(o, &warp_tunnel);
 
 	static int last_timer = 0;
 	int first_frame = (timer != last_timer+1);
@@ -10703,71 +10759,6 @@ void init_warp_star(struct warp_star *star)
 	star->ly = star->y;
 }
 
-static void show_warp_effect(GtkWidget *w)
-{
-#define WARP_STARS 1000
-	static int initialized = 0;
-	static struct warp_star star[WARP_STARS];
-	static int warp_start = 0;
-	int x, y, x2, y2, i;
-	if (!initialized) {
-		for (i = 0; i < WARP_STARS; i++) {
-			init_warp_star(&star[i]);
-		}		
-		initialized = 1;
-	}
-
-	/* Flash the screen white, rapidly fading to black
-	 * at beginning of warp animation. This is to disguise
-	 * the fact that the warp stars don't match the stars
-	 * on the screen at the start of warp
-	 */
-	if (warp_start == 0)
-		warp_start = 10;
-
-	if (warp_start > 1) {
-		sng_set_foreground(GRAY + warp_start * 25);
-		snis_draw_rectangle(1, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-		warp_start--;
-	}
-
-	if (warp_limbo_countdown == 1) {
-		warp_start = 0;
-	}
-
-	/* Flash the screen white, rapidly fading to black
-	 * at end of warp animation. This is to disguise
-	 * the fact that the warp stars don't match the stars
-	 * or anything else on the screen at the end of warp.
-	 * But also show the mainscreen on top of the fading
-	 * to sort of "fade in" the final view.
-	 */
-	if (warp_limbo_countdown > 0 && warp_limbo_countdown < 10) {
-		sng_set_foreground(GRAY + warp_limbo_countdown * 25);
-		snis_draw_rectangle(1, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-		show_mainscreen(w);
-		return;
-	}
-
-	sng_set_foreground(WHITE);
-	for (i = 0; i < WARP_STARS; i++) {
-		star[i].lx = star[i].x;
-		star[i].x += star[i].vx;
-		star[i].ly = star[i].y;
-		star[i].y += star[i].vy;
-		if (star[i].x < 0 || star[i].x > SCREEN_WIDTH ||
-			star[i].y < 0 || star[i].y > SCREEN_HEIGHT)
-			init_warp_star(&star[i]);
-		star[i].vx *= 1.2;
-		star[i].vy *= 1.2;
-		x = (int) star[i].x;
-		y = (int) star[i].y;
-		x2 = (int) star[i].lx;
-		y2 = (int) star[i].ly;
-		snis_draw_thick_line(x, y, x2, y2);
-	}
-}
-
 static void show_warp_hash_screen(GtkWidget *w)
 {
 	int i;
@@ -10787,7 +10778,9 @@ static void show_warp_hash_screen(GtkWidget *w)
 static void show_warp_limbo_screen(GtkWidget *w)
 {
 	if (displaymode == DISPLAYMODE_MAINSCREEN)
-		show_warp_effect(w);
+		show_mainscreen(w);
+	else if (displaymode == DISPLAYMODE_WEAPONS)
+		show_manual_weapons(w);
 	else
 		show_warp_hash_screen(w);
 }
@@ -11890,6 +11883,12 @@ static void load_textures(void)
 	thrust_material.textured_particle.radius = 1.5;
 	thrust_material.textured_particle.time_base = 0.1;
 
+	material_init_texture_mapped_unlit(&warp_tunnel_material);
+	warp_tunnel_material.texture_mapped_unlit.texture_id = load_texture("warp-tunnel.png");
+	warp_tunnel_material.texture_mapped_unlit.do_cullface = 0;
+	warp_tunnel_material.texture_mapped_unlit.do_blend = 1;
+	warp_tunnel_material.texture_mapped_unlit.alpha = 0.25;
+
 	textures_loaded = 1;
 }
 
@@ -12633,6 +12632,7 @@ static void init_meshes()
 	}
 
 	sphere_mesh = mesh_unit_icosphere(4);
+	warp_tunnel_mesh = mesh_tube(XKNOWN_DIM, 450.0, 20);
 	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS);
 
 	for (i = 0; i < NSTARBASE_MODELS; i++) {

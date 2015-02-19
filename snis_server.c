@@ -225,6 +225,8 @@ struct bridge_data {
 	int incoming_fire_detected;
 	int last_incoming_fire_sound_time;
 	double warpx, warpy, warpz;
+	union vec3 warpv;
+	int warptimeleft;
 	int comms_channel;
 	struct npc_bot_state npcbot;
 } bridgelist[MAXCLIENTS];
@@ -4175,14 +4177,33 @@ static void player_move(struct snis_entity *o)
 				send_packet_to_all_clients_on_a_bridge(o->id,
 					packed_buffer_new("bh", OPCODE_WARP_LIMBO,
 						(uint16_t) (5 * 30)), ROLE_ALL);
-				add_warp_effect(o->id, o->x, o->y, o->z,
+				bridgelist[b].warpv.v.x = (bridgelist[b].warpx - o->x) / 50.0;
+				bridgelist[b].warpv.v.y = (bridgelist[b].warpy - o->y) / 50.0;
+				bridgelist[b].warpv.v.z = (bridgelist[b].warpz - o->z) / 50.0;
+				bridgelist[b].warptimeleft = 50;
+				add_warp_effect(o->id, o->x + snis_randn(100) - 50,
+						o->y + snis_randn(100) - 50,
+						o->z + snis_randn(100 - 50),
 						bridgelist[b].warpx,
 						bridgelist[b].warpy,
 						bridgelist[b].warpz);
-				set_object_location(o, bridgelist[b].warpx,
-							bridgelist[b].warpy,
-							bridgelist[b].warpz);
 			}
+		}
+	}
+	int b = lookup_bridge_by_shipid(o->id);
+	if (bridgelist[b].warptimeleft > 0) {
+		float angle = (2.0 * M_PI / 50.0) * (float) bridgelist[b].warptimeleft;
+
+		/* 2.0 below determined empirically.  I am lazy. :) */
+		o->vx = bridgelist[b].warpv.v.x * 2.0 * (1.0 - cos(angle)) * 0.5;
+		o->vy = bridgelist[b].warpv.v.y * 2.0 * (1.0 - cos(angle)) * 0.5;
+		o->vz = bridgelist[b].warpv.v.z * 2.0 * (1.0 - cos(angle)) * 0.5;
+		o->timestamp = universe_timestamp;
+		bridgelist[b].warptimeleft--;
+		if (bridgelist[b].warptimeleft == 0) {
+			o->vx = 0;
+			o->vy = 0;
+			o->vz = 0;
 		}
 	}
 	calculate_ship_scibeam_info(o);
