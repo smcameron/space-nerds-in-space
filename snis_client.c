@@ -4014,11 +4014,13 @@ static int process_add_warp_effect(void)
 {
 	int rc;
 	unsigned char buffer[100];
+	uint32_t oid;
 	double ox, oy, oz, dx, dy, dz;
 	float dist;
 	union vec3 direction;
 
-	rc = read_and_unpack_buffer(buffer, "SSSSSS",
+	rc = read_and_unpack_buffer(buffer, "wSSSSSS",
+			&oid,
 			&ox, (int32_t) UNIVERSE_DIM,
 			&oy, (int32_t) UNIVERSE_DIM,
 			&oz, (int32_t) UNIVERSE_DIM,

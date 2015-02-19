@@ -2678,11 +2678,12 @@ static void compute_danger_vectors(void *context, void *entity)
 	}
 }
 
-static void add_warp_effect(double ox, double oy, double oz, double dx, double dy, double dz)
+static void add_warp_effect(uint32_t oid, double ox, double oy, double oz, double dx, double dy, double dz)
 {
 	struct packed_buffer *pb;
 
-	pb = packed_buffer_new("bSSSSSS", OPCODE_ADD_WARP_EFFECT,
+	pb = packed_buffer_new("bwSSSSSS", OPCODE_ADD_WARP_EFFECT,
+			oid,
 			ox, (uint32_t) UNIVERSE_DIM,
 			oy, (uint32_t) UNIVERSE_DIM,
 			oz, (uint32_t) UNIVERSE_DIM,
@@ -2733,7 +2734,7 @@ static void ai_flee_mode_brain(struct snis_entity *o)
 	o->tsd.ship.ai[n].u.flee.warp_countdown--;
 	if (o->tsd.ship.ai[n].u.flee.warp_countdown <= 0) {
 		o->tsd.ship.ai[n].u.flee.warp_countdown = 10 * (20 + snis_randn(10));
-		add_warp_effect(o->x, o->y, o->z,
+		add_warp_effect(o->id, o->x, o->y, o->z,
 			o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 		set_object_location(o, o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 	}
@@ -2775,7 +2776,7 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 		o->tsd.ship.velocity = leader->tsd.ship.velocity * 1.5;
 	} else if (dist2 > FLEET_WARP_DISTANCE * FLEET_WARP_DISTANCE && snis_randn(100) < 8) {
 		/* If distance is too far, just warp */
-		add_warp_effect(o->x, o->y, o->z,
+		add_warp_effect(o->id, o->x, o->y, o->z,
 			o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 		set_object_location(o, o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 		o->vx = leader->vx;
@@ -2832,7 +2833,7 @@ static void ai_ship_warp_to(struct snis_entity *o, float destx, float desty, flo
 	v.v.z = destz - o->z;
 	vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
 	if (!inside_planet(v.v.x, v.v.y, v.v.z)) {
-		add_warp_effect(o->x, o->y, o->z,
+		add_warp_effect(o->id, o->x, o->y, o->z,
 			o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
 		set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
 		/* reset destination after warping to prevent backtracking */
@@ -4174,7 +4175,7 @@ static void player_move(struct snis_entity *o)
 				send_packet_to_all_clients_on_a_bridge(o->id,
 					packed_buffer_new("bh", OPCODE_WARP_LIMBO,
 						(uint16_t) (5 * 30)), ROLE_ALL);
-				add_warp_effect(o->x, o->y, o->z,
+				add_warp_effect(o->id, o->x, o->y, o->z,
 						bridgelist[b].warpx,
 						bridgelist[b].warpy,
 						bridgelist[b].warpz);
@@ -6471,7 +6472,7 @@ static int process_demon_move_object(struct game_client *c)
 		goto out;
 	o = &go[i];
 	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)
-		add_warp_effect(o->x, o->y, o->z, o->x + dx, o->y, o->z + dz);
+		add_warp_effect(o->id, o->x, o->y, o->z, o->x + dx, o->y, o->z + dz);
 	set_object_location(o, o->x + dx, o->y, o->z + dz);
 	o->timestamp = universe_timestamp;
 out:
