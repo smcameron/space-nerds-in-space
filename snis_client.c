@@ -4013,12 +4013,13 @@ static int process_cycle_mainscreen_point_of_view(void)
 
 static int process_add_warp_effect(void)
 {
-	int rc;
+	int i, rc, skip_source_effect = 0;
 	unsigned char buffer[100];
 	uint32_t oid;
 	double ox, oy, oz, dx, dy, dz;
 	float dist;
 	union vec3 direction;
+	struct snis_entity *o;
 
 	rc = read_and_unpack_buffer(buffer, "wSSSSSS",
 			&oid,
@@ -4037,10 +4038,18 @@ static int process_add_warp_effect(void)
 	direction.v.z = dz - oz;
 	dist = vec3_magnitude(&direction);
 	vec3_normalize_self(&direction);
-	if (oid == my_ship_id)
+	if (oid == my_ship_id) {
 		warp_tunnel_direction = direction;
-
-	add_warp_effect(ox, oy, oz, 0, WARP_EFFECT_LIFETIME, &direction, dist);
+		i = lookup_object_by_id(oid);
+		if (i >= 0) {
+			o = &go[i];
+			if (fabs(ox - o->x) + fabs(oy - o->y) + fabs(oz - o->z) <
+				MAX_PLAYER_VELOCITY * 2.0f)
+				skip_source_effect = 1;
+		}
+	}
+	if (!skip_source_effect)
+		add_warp_effect(ox, oy, oz, 0, WARP_EFFECT_LIFETIME, &direction, dist);
 	add_warp_effect(dx, dy, dz, 1, WARP_EFFECT_LIFETIME, &direction, dist);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
