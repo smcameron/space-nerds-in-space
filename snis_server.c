@@ -4181,9 +4181,7 @@ static void player_move(struct snis_entity *o)
 				bridgelist[b].warpv.v.y = (bridgelist[b].warpy - o->y) / 50.0;
 				bridgelist[b].warpv.v.z = (bridgelist[b].warpz - o->z) / 50.0;
 				bridgelist[b].warptimeleft = 50;
-				add_warp_effect(o->id, o->x + snis_randn(100) - 50,
-						o->y + snis_randn(100) - 50,
-						o->z + snis_randn(100 - 50),
+				add_warp_effect(o->id, o->x, o->y, o->z,
 						bridgelist[b].warpx,
 						bridgelist[b].warpy,
 						bridgelist[b].warpz);
