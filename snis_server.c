@@ -4752,7 +4752,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 
 static void respawn_player(struct snis_entity *o)
 {
-	int i, found;
+	int b, i, found;
 	double x, y, z, a1, a2, rf;
 
 	/* Find a friendly location to respawn... */
@@ -4792,6 +4792,10 @@ static void respawn_player(struct snis_entity *o)
 		set_object_location(o, x, y, z);
 		o->tsd.ship.in_secure_area = 0;
 	}
+	/* Stop any warp that might be in progress */
+	b = lookup_bridge_by_shipid(o->id);
+	if (b >= 0)
+		bridgelist[b].warptimeleft = 0;
 	o->vx = 0;
 	o->vy = 0;
 	o->vz = 0;
