@@ -4793,6 +4793,7 @@ static void respawn_player(struct snis_entity *o)
 		o->tsd.ship.in_secure_area = 0;
 	}
 	o->vx = 0;
+	o->vy = 0;
 	o->vz = 0;
 	o->heading = 3 * M_PI / 2;
 	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
