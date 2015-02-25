@@ -10786,12 +10786,16 @@ static void show_warp_hash_screen(GtkWidget *w)
 
 static void show_warp_limbo_screen(GtkWidget *w)
 {
-	if (displaymode == DISPLAYMODE_MAINSCREEN)
+	if (displaymode == DISPLAYMODE_MAINSCREEN) {
 		show_mainscreen(w);
-	else if (displaymode == DISPLAYMODE_WEAPONS)
-		show_manual_weapons(w);
-	else
-		show_warp_hash_screen(w);
+	} else {
+		if (displaymode == DISPLAYMODE_WEAPONS) {
+			show_manual_weapons(w);
+			ui_element_list_draw(uiobjs);
+		} else {
+			show_warp_hash_screen(w);
+		}
+	}
 }
 
 struct network_setup_ui {
