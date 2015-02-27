@@ -2598,6 +2598,7 @@ static struct demon_ui {
 	struct button *demon_ship_button;
 	struct button *demon_starbase_button;
 	struct button *demon_planet_button;
+	struct button *demon_asteroid_button;
 	struct button *demon_nebula_button;
 	struct button *demon_spacemonster_button;
 	struct button *demon_captain_button;
@@ -2617,11 +2618,12 @@ static struct demon_ui {
 #define DEMON_BUTTON_SHIPMODE 1
 #define DEMON_BUTTON_STARBASEMODE 2
 #define DEMON_BUTTON_PLANETMODE 3
-#define DEMON_BUTTON_NEBULAMODE 4
-#define DEMON_BUTTON_SPACEMONSTERMODE 5
-#define DEMON_BUTTON_DELETE 6
-#define DEMON_BUTTON_SELECTNONE 7
-#define DEMON_BUTTON_CAPTAINMODE 8
+#define DEMON_BUTTON_ASTEROIDMODE 4
+#define DEMON_BUTTON_NEBULAMODE 5
+#define DEMON_BUTTON_SPACEMONSTERMODE 6
+#define DEMON_BUTTON_DELETE 7
+#define DEMON_BUTTON_SELECTNONE 8
+#define DEMON_BUTTON_CAPTAINMODE 9
 
 } demon_ui;
 
@@ -9790,6 +9792,9 @@ static void demon_button_create_item(gdouble x, gdouble y)
 		case DEMON_BUTTON_PLANETMODE:
 			item_type = OBJTYPE_PLANET;
 			break;
+		case DEMON_BUTTON_ASTEROIDMODE:
+			item_type = OBJTYPE_ASTEROID;
+			break;
 		case DEMON_BUTTON_NEBULAMODE:
 			item_type = OBJTYPE_NEBULA;
 			break;
@@ -10420,6 +10425,8 @@ static void set_demon_button_colors()
 		demon_ui.buttonmode == DEMON_BUTTON_STARBASEMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_planet_button,
 		demon_ui.buttonmode == DEMON_BUTTON_PLANETMODE ? selected : deselected);
+	snis_button_set_color(demon_ui.demon_asteroid_button,
+		demon_ui.buttonmode == DEMON_BUTTON_ASTEROIDMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_nebula_button,
 		demon_ui.buttonmode == DEMON_BUTTON_NEBULAMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_spacemonster_button,
@@ -10450,6 +10457,11 @@ static void demon_starbase_button_pressed(void *x)
 static void demon_planet_button_pressed(void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_PLANETMODE);
+}
+
+static void demon_asteroid_button_pressed(void *x)
+{
+	demon_modebutton_pressed(DEMON_BUTTON_ASTEROIDMODE);
 }
 
 static void demon_nebula_button_pressed(void *x)
@@ -10540,6 +10552,9 @@ static void init_demon_ui()
 	demon_ui.demon_planet_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"PLANET", GREEN,
 			NANO_FONT, demon_planet_button_pressed, NULL);
+	demon_ui.demon_asteroid_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
+			"ASTEROID", GREEN,
+			NANO_FONT, demon_asteroid_button_pressed, NULL);
 	demon_ui.demon_nebula_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"NEBULA", GREEN,
 			NANO_FONT, demon_nebula_button_pressed, NULL);
@@ -10564,6 +10579,7 @@ static void init_demon_ui()
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_starbase_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_planet_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_asteroid_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_nebula_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_spacemonster_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_delete_button, DISPLAYMODE_DEMON);

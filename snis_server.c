@@ -8670,6 +8670,9 @@ static int process_create_item(struct game_client *c)
 					MIN_PLANET_RADIUS;
 		i = add_planet(x, 0.0, z, r, 0);
 		break;
+	case OBJTYPE_ASTEROID:
+		i = add_asteroid(x, 0.0, z, 0.0, 0.0, 0.0);
+		break;
 	case OBJTYPE_NEBULA:
 		r = (double) snis_randn(NEBULA_RADIUS) +
 				(double) MIN_NEBULA_RADIUS;
