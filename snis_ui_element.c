@@ -1,7 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <gtk/gtk.h>
-#include <gdk/gdkkeysyms.h>
 
 #define DEFINE_UI_ELEMENT_GLOBALS
 #include "snis_ui_element.h"
@@ -293,15 +291,16 @@ static void advance_focus(struct ui_element_list *list)
 	}
 }
 
-void ui_element_list_keypress(struct ui_element_list *list, GdkEventKey *event)
+int ui_element_list_keypress(struct ui_element_list *list, SDL_Event *event)
 {
 	struct ui_element_list *i;
 
-	if (event->type == GDK_KEY_PRESS && (event->keyval & ~0x7f) != 0) {
-		switch (event->keyval) {
-		case GDK_KEY_Tab:
+	if (event->type == SDL_KEYDOWN) {
+		switch (event->key.keysym.sym) {
+		case SDLK_TAB:
+		case SDLK_KP_TAB:
 			advance_focus(list);
-			return;
+			return 1;
 		default:
 			break;
 		}
@@ -316,12 +315,12 @@ void ui_element_list_keypress(struct ui_element_list *list, GdkEventKey *event)
 			continue;
 		if (i->element->hidden)
 			continue;
-		i->element->keypress_fn(i->element->element, event);
-		break;
+		return i->element->keypress_fn(i->element->element, event);
 	}
+	return 0;
 }
 
-void ui_element_list_keyrelease(struct ui_element_list *list, GdkEventKey *event)
+int ui_element_list_keyrelease(struct ui_element_list *list, SDL_Event *event)
 {
 	struct ui_element_list *i;
 
@@ -334,8 +333,22 @@ void ui_element_list_keyrelease(struct ui_element_list *list, GdkEventKey *event
 			continue;
 		if (!i->element->hidden)
 			continue;
-		i->element->keyrelease_fn(i->element->element, event);
+		return i->element->keyrelease_fn(i->element->element, event);
 		break;
+	}
+	return 0;
+}
+
+int ui_element_list_event(struct ui_element_list *list, SDL_Event *event)
+{
+	switch (event->type) {
+	case SDL_KEYDOWN:
+	case SDL_TEXTINPUT:
+		return ui_element_list_keypress(list, event);
+	case SDL_KEYUP:
+		return ui_element_list_keyrelease(list, event);
+	default:
+		return 0;
 	}
 }
 
