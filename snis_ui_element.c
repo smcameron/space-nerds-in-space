@@ -150,21 +150,24 @@ void ui_element_set_tooltip(struct ui_element *element, char *tooltip)
 
 void ui_set_focus(struct ui_element_list *list, struct ui_element *e, int has_focus)
 {
+	if (!e)
+		return;
 	if (!e->set_focus)
+		return;
+	if (e->has_focus)
 		return;
 
 	for (; list != NULL; list = list->next) {
 		if (!list->element->set_focus)
 			continue;
-		if (list->element == e) {
-			e->set_focus(e->element, has_focus);
-			e->has_focus = has_focus;
-		} else if (list->element->active_displaymode == e->active_displaymode) {
+		if (list->element->active_displaymode == e->active_displaymode) {
 			/* clear focus of other ui elements in the same displaymode */
 			list->element->set_focus(list->element->element, 0);
 			list->element->has_focus = 0;
 		}
 	}
+	e->set_focus(e->element, 1);
+	e->has_focus = 1;
 }
 
 void ui_element_list_button_release(struct ui_element_list *list, int x, int y)
