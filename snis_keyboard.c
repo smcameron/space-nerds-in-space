@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
-#include <gdk/gdkevents.h>
-#include <gdk/gdkkeysyms.h>
+#include <limits.h>
+#include <SDL.h>
 
 #include "arraysize.h"
 #include "snis_keyboard.h"
@@ -28,142 +28,101 @@ const char *displaymode_name[] = {
 };
 
 struct keyname_value_entry keyname_value_map[] = {
-	{ "a", GDK_a },
-	{ "b", GDK_b },
-	{ "c", GDK_c },
-	{ "d", GDK_d },
-	{ "e", GDK_e },
-	{ "f", GDK_f },
-	{ "g", GDK_g },
-	{ "h", GDK_h },
-	{ "i", GDK_i },
-	{ "j", GDK_j },
-	{ "k", GDK_k },
-	{ "l", GDK_l },
-	{ "m", GDK_m },
-	{ "n", GDK_n },
-	{ "o", GDK_o },
-	{ "p", GDK_p },
-	{ "q", GDK_q },
-	{ "r", GDK_r },
-	{ "s", GDK_s },
-	{ "t", GDK_t },
-	{ "u", GDK_u },
-	{ "v", GDK_v },
-	{ "w", GDK_w },
-	{ "x", GDK_x },
-	{ "y", GDK_y },
-	{ "z", GDK_z },
-	{ "A", GDK_A },
-	{ "B", GDK_B },
-	{ "C", GDK_C },
-	{ "D", GDK_D },
-	{ "E", GDK_E },
-	{ "F", GDK_F },
-	{ "G", GDK_G },
-	{ "H", GDK_H },
-	{ "I", GDK_I },
-	{ "J", GDK_J },
-	{ "K", GDK_K },
-	{ "L", GDK_L },
-	{ "M", GDK_M },
-	{ "N", GDK_N },
-	{ "O", GDK_O },
-	{ "P", GDK_P },
-	{ "Q", GDK_Q },
-	{ "R", GDK_R },
-	{ "S", GDK_S },
-	{ "T", GDK_T },
-	{ "U", GDK_U },
-	{ "V", GDK_V },
-	{ "W", GDK_W },
-	{ "X", GDK_X },
-	{ "Y", GDK_Y },
-	{ "Z", GDK_Z },
-	{ "0", GDK_0 },
-	{ "1", GDK_1 },
-	{ "2", GDK_2 },
-	{ "3", GDK_3 },
-	{ "4", GDK_4 },
-	{ "5", GDK_5 },
-	{ "6", GDK_6 },
-	{ "7", GDK_7 },
-	{ "8", GDK_8 },
-	{ "9", GDK_9 },
-	{ "-", GDK_minus },
-	{ "+", GDK_plus },
-	{ "=", GDK_equal },
-	{ "?", GDK_question },
-	{ ".", GDK_period },
-	{ ",", GDK_comma },
-	{ "<", GDK_less },
-	{ ">", GDK_greater },
-	{ ":", GDK_colon },
-	{ ";", GDK_semicolon },
-	{ "@", GDK_at },
-	{ "*", GDK_asterisk },
-	{ "$", GDK_dollar },
-	{ "%", GDK_percent },
-	{ "&", GDK_ampersand },
-	{ "'", GDK_apostrophe },
-	{ "(", GDK_parenleft },
-	{ ")", GDK_parenright },
-	{ "space", GDK_space },
-	{ "enter", GDK_Return },
-	{ "return", GDK_Return },
-	{ "backspace", GDK_BackSpace },
-	{ "delete", GDK_Delete },
-	{ "pause", GDK_Pause },
-	{ "scrolllock", GDK_Scroll_Lock },
-	{ "escape", GDK_Escape },
-	{ "sysreq", GDK_Sys_Req },
-	{ "left", GDK_Left },
-	{ "right", GDK_Right },
-	{ "up", GDK_Up },
-	{ "down", GDK_Down },
-	{ "kp_home", GDK_KP_Home },
-	{ "kp_pgdn", GDK_KP_Page_Down },
-	{ "kp_pgup", GDK_KP_Page_Up },
-	{ "kp_down", GDK_KP_Down },
-	{ "kp_up", GDK_KP_Up },
-	{ "kp_left", GDK_KP_Left },
-	{ "kp_right", GDK_KP_Right },
-	{ "kp_end", GDK_KP_End },
-	{ "kp_delete", GDK_KP_Delete },
-	{ "kp_insert", GDK_KP_Insert },
-	{ "home", GDK_Home },
-	{ "down", GDK_Down },
-	{ "up", GDK_Up },
-	{ "left", GDK_Left },
-	{ "right", GDK_Right },
-	{ "end", GDK_End },
-	{ "delete", GDK_Delete },
-	{ "insert", GDK_Insert },
-	{ "kp_0", GDK_KP_0 },
-	{ "kp_1", GDK_KP_1 },
-	{ "kp_2", GDK_KP_2 },
-	{ "kp_3", GDK_KP_3 },
-	{ "kp_4", GDK_KP_4 },
-	{ "kp_5", GDK_KP_5 },
-	{ "kp_6", GDK_KP_6 },
-	{ "kp_7", GDK_KP_7 },
-	{ "kp_8", GDK_KP_8 },
-	{ "kp_9", GDK_KP_9 },
-	{ "f1", GDK_F1 },
-	{ "f2", GDK_F2 },
-	{ "f3", GDK_F3 },
-	{ "f4", GDK_F4 },
-	{ "f5", GDK_F5 },
-	{ "f6", GDK_F6 },
-	{ "f7", GDK_F7 },
-	{ "f8", GDK_F8 },
-	{ "f9", GDK_F9 },
-	{ "f10", GDK_F10 },
-	{ "f11", GDK_F11 },
-	{ "f12", GDK_F12 },
-	{ "tilde", GDK_KEY_asciitilde },
-	{ "quoteright", GDK_KEY_quoteright },
-	{ "quoteleft", GDK_KEY_quoteleft },
+	{ "a", SDLK_a },
+	{ "b", SDLK_b },
+	{ "c", SDLK_c },
+	{ "d", SDLK_d },
+	{ "e", SDLK_e },
+	{ "f", SDLK_f },
+	{ "g", SDLK_g },
+	{ "h", SDLK_h },
+	{ "i", SDLK_i },
+	{ "j", SDLK_j },
+	{ "k", SDLK_k },
+	{ "l", SDLK_l },
+	{ "m", SDLK_m },
+	{ "n", SDLK_n },
+	{ "o", SDLK_o },
+	{ "p", SDLK_p },
+	{ "q", SDLK_q },
+	{ "r", SDLK_r },
+	{ "s", SDLK_s },
+	{ "t", SDLK_t },
+	{ "u", SDLK_u },
+	{ "v", SDLK_v },
+	{ "w", SDLK_w },
+	{ "x", SDLK_x },
+	{ "y", SDLK_y },
+	{ "z", SDLK_z },
+	{ "0", SDLK_0 },
+	{ "1", SDLK_1 },
+	{ "2", SDLK_2 },
+	{ "3", SDLK_3 },
+	{ "4", SDLK_4 },
+	{ "5", SDLK_5 },
+	{ "6", SDLK_6 },
+	{ "7", SDLK_7 },
+	{ "8", SDLK_8 },
+	{ "9", SDLK_9 },
+	{ "-", SDLK_MINUS },
+	{ "+", SDLK_PLUS },
+	{ "=", SDLK_EQUALS },
+	{ "?", SDLK_QUESTION },
+	{ ".", SDLK_PERIOD },
+	{ ",", SDLK_COMMA },
+	{ "<", SDLK_LESS },
+	{ ">", SDLK_GREATER },
+	{ ":", SDLK_COLON },
+	{ ";", SDLK_SEMICOLON },
+	{ "@", SDLK_AT },
+	{ "*", SDLK_ASTERISK },
+	{ "$", SDLK_DOLLAR },
+	{ "%", SDLK_PERCENT },
+	{ "&", SDLK_AMPERSAND },
+	{ "'", SDLK_QUOTE },
+	{ "(", SDLK_LEFTPAREN },
+	{ ")", SDLK_RIGHTPAREN },
+	{ "space", SDLK_SPACE },
+	{ "enter", SDLK_RETURN },
+	{ "return", SDLK_RETURN },
+	{ "backspace", SDLK_BACKSPACE },
+	{ "delete", SDLK_DELETE },
+	{ "pause", SDLK_PAUSE },
+	{ "scrolllock", SDLK_SCROLLLOCK },
+	{ "escape", SDLK_ESCAPE },
+	{ "sysreq", SDLK_SYSREQ },
+	{ "left", SDLK_LEFT },
+	{ "right", SDLK_RIGHT },
+	{ "up", SDLK_UP },
+	{ "down", SDLK_DOWN },
+	{ "home", SDLK_HOME },
+	{ "end", SDLK_END },
+	{ "delete", SDLK_DELETE },
+	{ "insert", SDLK_INSERT },
+	{ "kp_0", SDLK_KP_0 },
+	{ "kp_1", SDLK_KP_1 },
+	{ "kp_2", SDLK_KP_2 },
+	{ "kp_3", SDLK_KP_3 },
+	{ "kp_4", SDLK_KP_4 },
+	{ "kp_5", SDLK_KP_5 },
+	{ "kp_6", SDLK_KP_6 },
+	{ "kp_7", SDLK_KP_7 },
+	{ "kp_8", SDLK_KP_8 },
+	{ "kp_9", SDLK_KP_9 },
+	{ "f1", SDLK_F1 },
+	{ "f2", SDLK_F2 },
+	{ "f3", SDLK_F3 },
+	{ "f4", SDLK_F4 },
+	{ "f5", SDLK_F5 },
+	{ "f6", SDLK_F6 },
+	{ "f7", SDLK_F7 },
+	{ "f8", SDLK_F8 },
+	{ "f9", SDLK_F9 },
+	{ "f10", SDLK_F10 },
+	{ "f11", SDLK_F11 },
+	{ "f12", SDLK_F12 },
+	{ "quoteright", SDLK_QUOTE },
+	{ "quoteleft", SDLK_BACKQUOTE },
 };
 
 enum keyaction keymap[DISPLAYMODE_COUNT][256];
@@ -222,6 +181,10 @@ static void mapkey(int displaymodes, unsigned int keysym, enum keyaction key)
 {
 	int i;
 
+	if (keysym >= 256) {
+		fprintf(stderr, "We got a problem keysym is %u\n", keysym);
+		return;
+	}
 	for (i = 0; i < DISPLAYMODE_COUNT; i++) {
 		if (displaymodes & (0x1 << i))
 			keymap[i][keysym] = key; /* map key on this station */
@@ -259,112 +222,111 @@ void init_keymap(void)
 
 	zero_keymaps();
 
-	mapkey(all & ~comms, GDK_j, keydown);
-	ffmapkey(all, GDK_Down, keydown);
+	mapkey(all & ~comms, SDLK_j, keydown);
+	ffmapkey(all, SDLK_DOWN, keydown);
 
-	mapkey(all & ~comms, GDK_k, keyup);
-	ffmapkey(all, GDK_Up, keyup);
+	mapkey(all & ~comms, SDLK_k, keyup);
+	ffmapkey(all, SDLK_UP, keyup);
 
-	mapkey(all, GDK_l, keyright);
-	ffmapkey(all, GDK_Right, keyright);
-	mapkey(all, GDK_period, keyright);
-	mapkey(all, GDK_greater, keyright);
+	mapkey(all, SDLK_l, keyright);
+	ffmapkey(all, SDLK_RIGHT, keyright);
+	mapkey(all, SDLK_PERIOD, keyright);
+	mapkey(all, SDLK_GREATER, keyright);
 
-	mapkey(all, GDK_h, keyleft);
-	ffmapkey(all, GDK_Left, keyleft);
-	mapkey(all, GDK_comma, keyleft);
-	mapkey(all, GDK_less, keyleft);
-	mapkey(nav | mainscreen, GDK_q, keyrollleft);
-	mapkey(nav | mainscreen, GDK_e, keyrollright);
-	mapkey(mainscreen, GDK_c, key_toggle_credits);
-	mapkey(mainscreen, GDK_x, key_toggle_external_camera);
-	mapkey(all, GDK_M, key_toggle_watermark);
-	mapkey(weap, GDK_m, key_mouse_mode);
-	mapkey(weap, GDK_n, key_weap_fire_missile);
-	mapkey(all, GDK_space, key_space);
-	mapkey(weap, GDK_space, keyphaser);
-	mapkey(damcon, GDK_space, key_robot_gripper);
-	mapkey(weap, GDK_z, keytorpedo);
+	mapkey(all, SDLK_h, keyleft);
+	ffmapkey(all, SDLK_LEFT, keyleft);
+	mapkey(all, SDLK_COMMA, keyleft);
+	mapkey(all, SDLK_LESS, keyleft);
+	mapkey(nav | mainscreen, SDLK_q, keyrollleft);
+	mapkey(nav | mainscreen, SDLK_e, keyrollright);
+	mapkey(mainscreen, SDLK_c, key_toggle_credits);
+	mapkey(mainscreen, SDLK_x, key_toggle_external_camera);
+	mapkey(all, SDLK_m, key_toggle_watermark);
+	mapkey(weap, SDLK_m, key_mouse_mode);
+	mapkey(weap, SDLK_n, key_weap_fire_missile);
+	mapkey(all, SDLK_SPACE, key_space);
+	mapkey(weap, SDLK_SPACE, keyphaser);
+	mapkey(damcon, SDLK_SPACE, key_robot_gripper);
+	mapkey(weap, SDLK_z, keytorpedo);
 
-	mapkey(all, GDK_b, keytransform); /* wtf is this? */
-	mapkey(demon, GDK_x, keythrust);
-	mapkey(mainscreen | weap, GDK_r, keyrenderswitch);
+	mapkey(all, SDLK_b, keytransform); /* wtf is this? */
+	mapkey(demon, SDLK_x, keythrust);
+	mapkey(mainscreen | weap, SDLK_r, keyrenderswitch);
 
-	ffmapkey(all, GDK_F1, keypausehelp);
-	ffmapkey(all, GDK_Escape, keyquit);
+	ffmapkey(all, SDLK_F1, keypausehelp);
+	mapkey(all, SDLK_ESCAPE, keyquit);
 
-	mapkey(all, GDK_O, keyonscreen);
-	mapkey(all, GDK_o, keyonscreen);
-	mapkey(nav | mainscreen | weap | damcon, GDK_w, keyup);
-	mapkey(nav | mainscreen | weap | damcon, GDK_a, keyleft);
-	mapkey(nav | mainscreen | weap | damcon, GDK_s, keydown);
-	mapkey(nav | mainscreen | weap | damcon, GDK_d, keyright);
-	ffmapkey(nav | mainscreen | weap | damcon, GDK_KP_Up, keyup);
-	ffmapkey(nav | mainscreen | weap | damcon, GDK_KP_Down, keydown);
-	ffmapkey(nav | mainscreen | weap | damcon, GDK_KP_Left, keyleft);
-	ffmapkey(nav | mainscreen | weap | damcon, GDK_KP_Right, keyright);
-	ffmapkey(nav | mainscreen | weap, GDK_KP_Home, keyrollleft);
-	ffmapkey(nav | mainscreen | weap, GDK_KP_Page_Up, keyrollright);
+	mapkey(all, SDLK_o, keyonscreen);
+	mapkey(nav | mainscreen | weap | damcon, SDLK_w, keyup);
+	mapkey(nav | mainscreen | weap | damcon, SDLK_a, keyleft);
+	mapkey(nav | mainscreen | weap | damcon, SDLK_s, keydown);
+	mapkey(nav | mainscreen | weap | damcon, SDLK_d, keyright);
+	ffmapkey(nav | mainscreen | weap | damcon, SDLK_UP, keyup);
+	ffmapkey(nav | mainscreen | weap | damcon, SDLK_DOWN, keydown);
+	ffmapkey(nav | mainscreen | weap | damcon, SDLK_LEFT, keyleft);
+	ffmapkey(nav | mainscreen | weap | damcon, SDLK_RIGHT, keyright);
+	ffmapkey(nav | mainscreen | weap, SDLK_HOME, keyrollleft);
+	ffmapkey(nav | mainscreen | weap, SDLK_PAGEUP, keyrollright);
 
-	mapkey(nav | mainscreen | weap, GDK_i, key_invert_vertical);
-	ffmapkey(all, GDK_KEY_Pause, key_toggle_frame_stats);
-	mapkey(weap | mainscreen, GDK_f, key_toggle_space_dust);
+	mapkey(nav | mainscreen | weap, SDLK_i, key_invert_vertical);
+	ffmapkey(all, SDLK_PAUSE, key_toggle_frame_stats);
+	mapkey(weap | mainscreen, SDLK_f, key_toggle_space_dust);
 
-	mapkey(sci, GDK_k, keysciball_rollleft);
-	ffmapkey(sci, GDK_KP_Home, keysciball_rollleft);
-	mapkey(sci, GDK_semicolon, keysciball_rollright);
-	ffmapkey(sci, GDK_KP_Page_Up, keysciball_rollright);
-	mapkey(sci, GDK_comma, keysciball_yawleft);
-	ffmapkey(sci, GDK_KP_Left, keysciball_yawleft);
-	mapkey(sci, GDK_slash, keysciball_yawright);
-	ffmapkey(sci, GDK_KP_Right, keysciball_yawright);
-	mapkey(sci, GDK_l, keysciball_pitchdown);
-	ffmapkey(sci, GDK_KP_Up, keysciball_pitchdown);
-	mapkey(sci, GDK_period, keysciball_pitchup);
-	ffmapkey(sci, GDK_KP_Down, keysciball_pitchup);
-	mapkey(nav | mainscreen, GDK_KEY_quoteleft, key_camera_mode);
-	mapkey(demon, GDK_KEY_quoteleft, key_demon_console);
+	mapkey(sci, SDLK_k, keysciball_rollleft);
+	ffmapkey(sci, SDLK_HOME, keysciball_rollleft);
+	mapkey(sci, SDLK_SEMICOLON, keysciball_rollright);
+	ffmapkey(sci, SDLK_PAGEUP, keysciball_rollright);
+	mapkey(sci, SDLK_COMMA, keysciball_yawleft);
+	ffmapkey(sci, SDLK_KP_4, keysciball_yawleft);
+	mapkey(sci, SDLK_SLASH, keysciball_yawright);
+	ffmapkey(sci, SDLK_KP_6, keysciball_yawright);
+	mapkey(sci, SDLK_l, keysciball_pitchdown);
+	ffmapkey(sci, SDLK_KP_8, keysciball_pitchdown);
+	mapkey(sci, SDLK_PERIOD, keysciball_pitchup);
+	ffmapkey(sci, SDLK_KP_2, keysciball_pitchup);
+	mapkey(nav | mainscreen, SDLK_BACKQUOTE, key_camera_mode);
+	mapkey(demon, SDLK_BACKQUOTE, key_demon_console);
 
-	mapkey(nav | mainscreen | weap, GDK_W, keyviewmode);
-	mapkey(nav | mainscreen | sci, GDK_KEY_plus, keyzoom);
-	mapkey(nav | mainscreen | sci, GDK_KEY_equal, keyzoom);
-	mapkey(nav | mainscreen | sci, GDK_KEY_minus, keyunzoom);
-	mapkey(sci, GDK_KEY_m, key_sci_mining_bot);
-	mapkey(sci, GDK_KEY_t, key_sci_tractor_beam);
-	mapkey(sci, GDK_KEY_l, key_sci_lrs); /* interferes with pitchdown */
-	mapkey(sci, GDK_KEY_s, key_sci_srs);
-	mapkey(sci, GDK_KEY_w, key_sci_waypoints);
-	mapkey(sci, GDK_KEY_d, key_sci_details);
+	mapkey(nav | mainscreen | weap, SDLK_w, keyviewmode);
+	mapkey(nav | mainscreen | sci, SDLK_PLUS, keyzoom);
+	mapkey(nav | mainscreen | sci, SDLK_EQUALS, keyzoom);
+	mapkey(nav | mainscreen | sci, SDLK_MINUS, keyunzoom);
+	mapkey(sci, SDLK_m, key_sci_mining_bot);
+	mapkey(sci, SDLK_t, key_sci_tractor_beam);
+	mapkey(sci, SDLK_l, key_sci_lrs); /* interferes with pitchdown */
+	mapkey(sci, SDLK_s, key_sci_srs);
+	mapkey(sci, SDLK_w, key_sci_waypoints);
+	mapkey(sci, SDLK_d, key_sci_details);
 
-	ffmapkey(nav | mainscreen | sci, GDK_KEY_KP_Add, keyzoom);
-	ffmapkey(nav | mainscreen | sci, GDK_KEY_KP_Subtract, keyunzoom);
-	ffmapkey(all, GDK_F1, keyf1);
-	ffmapkey(all, GDK_F2, keyf2);
-	ffmapkey(all, GDK_F3, keyf3);
-	ffmapkey(all, GDK_F4, keyf4);
-	ffmapkey(all, GDK_F5, keyf5);
-	ffmapkey(all, GDK_F6, keyf6);
-	ffmapkey(all, GDK_F7, keyf7);
-	ffmapkey(all, GDK_F8, keyf8);
-	ffmapkey(all, GDK_F9, keyf9);
-	ffmapkey(all, GDK_F10, keyf10);
+	ffmapkey(nav | mainscreen | sci, SDLK_PLUS, keyzoom);
+	ffmapkey(nav | mainscreen | sci, SDLK_MINUS, keyunzoom);
+	ffmapkey(all, SDLK_F1, keyf1);
+	ffmapkey(all, SDLK_F2, keyf2);
+	ffmapkey(all, SDLK_F3, keyf3);
+	ffmapkey(all, SDLK_F4, keyf4);
+	ffmapkey(all, SDLK_F5, keyf5);
+	ffmapkey(all, SDLK_F6, keyf6);
+	ffmapkey(all, SDLK_F7, keyf7);
+	ffmapkey(all, SDLK_F8, keyf8);
+	ffmapkey(all, SDLK_F9, keyf9);
+	ffmapkey(all, SDLK_F10, keyf10);
 
-	ffmapkey(all, GDK_F11, keyfullscreen);
-	ffmapkey(all, GDK_Page_Down, key_page_down);
-	ffmapkey(all, GDK_Page_Up, key_page_up);
+	ffmapkey(all, SDLK_F11, keyfullscreen);
+	ffmapkey(all, SDLK_PAGEDOWN, key_page_down);
+	ffmapkey(all, SDLK_PAGEUP, key_page_up);
 
-	mapkey(eng, GDK_1, key_eng_preset_1);
-	mapkey(eng, GDK_2, key_eng_preset_2);
-	mapkey(eng, GDK_3, key_eng_preset_3);
-	mapkey(eng, GDK_4, key_eng_preset_4);
-	mapkey(eng, GDK_5, key_eng_preset_5);
-	mapkey(eng, GDK_6, key_eng_preset_6);
-	ffmapkey(eng, GDK_KP_1, key_eng_preset_1);
-	ffmapkey(eng, GDK_KP_2, key_eng_preset_2);
-	ffmapkey(eng, GDK_KP_3, key_eng_preset_3);
-	ffmapkey(eng, GDK_KP_4, key_eng_preset_4);
-	ffmapkey(eng, GDK_KP_5, key_eng_preset_5);
-	ffmapkey(eng, GDK_KP_6, key_eng_preset_6);
+	mapkey(eng, SDLK_1, key_eng_preset_1);
+	mapkey(eng, SDLK_2, key_eng_preset_2);
+	mapkey(eng, SDLK_3, key_eng_preset_3);
+	mapkey(eng, SDLK_4, key_eng_preset_4);
+	mapkey(eng, SDLK_5, key_eng_preset_5);
+	mapkey(eng, SDLK_6, key_eng_preset_6);
+	ffmapkey(eng, SDLK_KP_1, key_eng_preset_1);
+	ffmapkey(eng, SDLK_KP_2, key_eng_preset_2);
+	ffmapkey(eng, SDLK_KP_3, key_eng_preset_3);
+	ffmapkey(eng, SDLK_KP_4, key_eng_preset_4);
+	ffmapkey(eng, SDLK_KP_5, key_eng_preset_5);
+	ffmapkey(eng, SDLK_KP_6, key_eng_preset_6);
 }
 
 int remapkey(char *stations, char *keyname, char *actionname)

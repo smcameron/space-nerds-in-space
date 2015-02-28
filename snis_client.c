@@ -27,21 +27,12 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <locale.h>
-#include <gtk/gtk.h>
-
-#ifndef WITHOUTOPENGL
-#include <gtk/gtkgl.h>
-#include <GL/glew.h>
-#endif
-
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <gdk/gdkevents.h>
-#include <gdk/gdkkeysyms.h>
 #include <math.h>
 #include <errno.h>
 #include <pthread.h>
@@ -52,8 +43,15 @@
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 #include <getopt.h>
+#include <signal.h>
+#ifdef __APPLE__
+#include <SDL2.h>
+#else
 #include <fenv.h>
+#include <SDL2/SDL.h>
+#endif
 
+#include "opengl_cap.h"
 #include "arraysize.h"
 #include "build_bug_on.h"
 #include "string-utils.h"
@@ -262,10 +260,6 @@ static pthread_cond_t text_to_speech_cond = PTHREAD_COND_INITIALIZER;
 static int text_to_speech_thread_time_to_quit = 0;
 static float text_to_speech_volume = 0.33;
 
-static GtkWidget *window;
-static GdkGC *gc = NULL;               /* our graphics context. */
-static GtkWidget *main_da;             /* main drawing area. */
-static gint timer_tag;
 static int fullscreen = 0;
 static int in_the_process_of_quitting = 0;
 static int current_quit_selection = 0;
@@ -2787,7 +2781,7 @@ static void interpolate_laser(double timestamp, struct snis_entity *o, int visib
 
 static void move_object(double timestamp, struct snis_entity *o, interpolate_update_func interp_func)
 {
-	int nupdates = MIN(SNIS_ENTITY_NUPDATE_HISTORY, o->nupdates);
+	int nupdates = imin(SNIS_ENTITY_NUPDATE_HISTORY, o->nupdates);
 	int visible = (o->alive > 0); /* default visibility */
 
 	/* interpolate to a point in the past */
@@ -3744,7 +3738,7 @@ static struct weapons_ui {
 	struct button *custom_button;
 } weapons;
 
-static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *aim, float cx, float cy, float r, float range)
+static void draw_plane_radar(struct snis_entity *o, union quat *aim, float cx, float cy, float r, float range)
 {
 	int i;
 
@@ -4496,25 +4490,20 @@ static void release_talking_stick(void)
 	pthread_mutex_unlock(&voip_mutex);
 }
 
-static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
+static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 {
 	enum keyaction ka;
 
-	ui_element_list_keypress(uiobjs, event);
-        if ((event->keyval & 0xff00) == 0) 
-		ka = keymap[displaymode][event->keyval];
-        else
-		ka = ffkeymap[displaymode][event->keyval & 0x00ff];
+	if (keysym->sym >= SDLK_SCANCODE_MASK)
+		ka = ffkeymap[displaymode][keysym->sym & 0xff];
+	else
+		ka = keymap[displaymode][keysym->sym];
 	if (ka > 0 && ka < NKEYSTATES)
 		kbstate.pressed[ka] = 1;
 
-	if (event->keyval == GDK_Control_R ||
-		event->keyval == GDK_Control_L) {
-		control_key_pressed = 1;
-		return TRUE;
-	}
+	int control_key_pressed = keysym->mod & KMOD_CTRL;
 
-	if (event->keyval == GDK_F12) {
+	if (keysym->sym == SDLK_F12) {
 		pthread_mutex_lock(&voip_mutex);
 			if (!have_talking_stick) {
 				pthread_mutex_unlock(&voip_mutex);
@@ -4566,11 +4555,11 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			return TRUE;
         case keyfullscreen: {
 			if (fullscreen) {
-				gtk_window_unfullscreen(GTK_WINDOW(window));
+				/* SDL TODO gtk_window_unfullscreen(GTK_WINDOW(window)); */
 				fullscreen = 0;
 				/* configure_event takes care of resizing drawing area, etc. */
 			} else {
-				gtk_window_fullscreen(GTK_WINDOW(window));
+				/* SDL TODO gtk_window_fullscreen(GTK_WINDOW(window)); */
 				fullscreen = 1;
 				/* configure_event takes care of resizing drawing area, etc. */
 			}
@@ -4754,26 +4743,18 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	return FALSE;
 }
 
-static gint key_release_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
+static int key_release_cb(SDL_Window *window, SDL_Keysym *keysym)
 {
 	enum keyaction ka;
 
-
-	ui_element_list_keyrelease(uiobjs, event);
-	if (event->keyval == GDK_Control_R ||
-		event->keyval == GDK_Control_L) {
-		control_key_pressed = 0;
-		return TRUE;
-	}
-
-        if ((event->keyval & 0xff00) == 0)
-		ka = keymap[displaymode][event->keyval];
+	if (keysym->sym >= SDLK_SCANCODE_MASK)
+		ka = ffkeymap[displaymode][keysym->sym & 0x00ff];
         else
-		ka = ffkeymap[displaymode][event->keyval & 0x00ff];
+		ka = keymap[displaymode][keysym->sym];
 	if (ka > 0 && ka < NKEYSTATES)
 		kbstate.pressed[ka] = 0;
 
-	if (event->keyval == GDK_F12) {
+	if (keysym->sym == SDLK_F12) {
 		voice_chat_stop_recording();
 		/* We release even if we don't have, snis_server will know the real deal. */
 		release_talking_stick();
@@ -4786,7 +4767,7 @@ static gint key_release_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 /**********************************/
 
 
-static void show_fonttest(GtkWidget *w)
+static void show_fonttest(void)
 {
 	sng_abs_xy_draw_string("A B C D E F G H I J K L M", SMALL_FONT, 30, 30);
 	sng_abs_xy_draw_string("N O P Q R S T U V W X Y Z", SMALL_FONT, 30, 60);
@@ -4805,7 +4786,7 @@ static void show_fonttest(GtkWidget *w)
 	sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron 0123456789", TINY_FONT, 30, 480);
 }
 
-static void show_introscreen(GtkWidget *w)
+static void show_introscreen(void)
 {
 	sng_abs_xy_draw_string("Space Nerds", BIG_FONT, txx(80), txy(200));
 	sng_abs_xy_draw_string("In Space", BIG_FONT, txx(180), txy(320));
@@ -4879,7 +4860,7 @@ static void ui_set_widget_tooltip(void *widget, char *tooltip)
 	ui_element_set_tooltip(uie, tooltip);
 }
 
-static void show_common_screen(GtkWidget *w, char *title);
+static void show_common_screen(char *title);
 
 static void show_rotating_wombat(void)
 {
@@ -4939,14 +4920,14 @@ static void we_lost_snis_server(void)
 	synchronous_update_lobby_info(); /* lobby info might be old, so let's update it. */
 }
 
-static void show_lobbyscreen(GtkWidget *w)
+static void show_lobbyscreen(void)
 {
 	char msg[100];
 	int i, protocol_mismatch;
 #define STARTLINE 100
 #define LINEHEIGHT 30
 
-	show_common_screen(w, "");
+	show_common_screen("");
 	show_rotating_wombat();
 	sng_set_foreground(UI_COLOR(lobby_connecting));
 	if (lobby_socket == -1 && switched_server2 == -1) {
@@ -8578,7 +8559,7 @@ static int connect_to_gameserver(int selected_server)
 	return 0;
 }
 
-static void show_connecting_screen(GtkWidget *w)
+static void show_connecting_screen(void)
 {
 	if (strcmp(connecting_to_server_msg, "") == 0)
 		strncpy(connecting_to_server_msg, "CONNECTING TO SERVER...",
@@ -8591,14 +8572,14 @@ static void show_connecting_screen(GtkWidget *w)
 	}
 }
 
-static void show_connected_screen(GtkWidget *w)
+static void show_connected_screen(void)
 {
 	sng_set_foreground(UI_COLOR(lobby_connecting));
 	sng_abs_xy_draw_string("CONNECTED TO SERVER", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
 	sng_abs_xy_draw_string("DOWNLOADING GAME DATA", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT * 3);
 }
 
-static void show_info_message(GtkWidget *w, char *msg)
+static void show_info_message(char *msg)
 {
 	sng_set_foreground(UI_COLOR(lobby_connecting));
 	sng_abs_xy_draw_string(msg, SMALL_FONT, txx(100), txy(300) + LINEHEIGHT * 3);
@@ -8728,7 +8709,7 @@ static void textscreen_menu_button_pressed(void *button_ptr_ptr)
 }
 
 static void ui_add_button(struct button *b, int active_displaymode, char *tooltip);
-static void show_textscreen(GtkWidget *w)
+static void show_textscreen(void)
 {
 	int i;
 	static struct button *dismiss_button = NULL;
@@ -8834,7 +8815,7 @@ static void show_watermark(void)
 static int blue_rectangle = 1; /* tweakable via console */
 static int station_label = 1; /* tweakable via console */
 
-static void show_common_screen(GtkWidget *w, char *title)
+static void show_common_screen(char *title)
 {
 	int title_color;
 	int border_color;
@@ -8927,7 +8908,7 @@ static void show_common_screen(GtkWidget *w, char *title)
 		}
 	}
 	if (textscreen_timer > 0 || user_defined_menu_active)
-		show_textscreen(w);
+		show_textscreen();
 	if (watermark_active)
 		show_watermark();
 
@@ -8990,7 +8971,7 @@ static int newzoom(int current_zoom, int desired_zoom)
 #define FAR_CAMERA_PLANE (XKNOWN_DIM/10.0)
 #endif
 
-static void show_gunsight(GtkWidget *w)
+static void show_gunsight(void)
 {
 	int x1, y1, x2, y2, cx, cy;
 
@@ -9014,7 +8995,7 @@ static void main_screen_add_text(char *msg)
 	strncpy(main_screen_text.text[main_screen_text.last], msg, 99);
 }
 
-static void draw_main_screen_text(GtkWidget *w, GdkGC *gc)
+static void draw_main_screen_text(void)
 {
 	int first, i;
 	const int comms_lines = MAINSCREEN_COMMS_LINES;
@@ -9032,7 +9013,7 @@ static void draw_main_screen_text(GtkWidget *w, GdkGC *gc)
 	}
 }
 
-static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int color,
+static void draw_targeting_indicator(int x, int y, int color,
 					int ring, float scale, float ratio)
 {
 	int i;
@@ -9323,7 +9304,7 @@ static void adjust_weapons_azimuth_angle(union quat *cam_orientation)
 	quat_mul_self(cam_orientation, &az);
 }
 
-static void show_weapons_camera_view(GtkWidget *w)
+static void show_weapons_camera_view(void)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
 	const float max_angle_of_view = ANGLE_OF_VIEW * M_PI / 180.0;
@@ -9463,12 +9444,12 @@ static void show_weapons_camera_view(GtkWidget *w)
 			 */
 			if (dist < TORPEDO_VELOCITY * TORPEDO_LIFETIME) {
 				char msg[20];
-				draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_in_range), 0, 0.5, 1.5f);
+				draw_targeting_indicator(sx, sy, UI_COLOR(weap_in_range), 0, 0.5, 1.5f);
 				snprintf(msg, sizeof(msg), "%.0f", dist);
 				sng_set_foreground(UI_COLOR(weap_in_range));
 				sng_abs_xy_draw_string(msg, PICO_FONT, sx + txx(10), sy);
 			} else {
-				draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_targeting), 0, 0.5, 1.5f);
+				draw_targeting_indicator(sx, sy, UI_COLOR(weap_targeting), 0, 0.5, 1.5f);
 			}
 		}
 	}
@@ -9483,7 +9464,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	/* range is the same as max zoom on old weapons */
 	if (weapons_azimuth_angle == 0.0) {
-		draw_plane_radar(w, o, &camera_orientation, 0.5 * SCREEN_WIDTH, 0.8333 * SCREEN_HEIGHT,
+		draw_plane_radar(o, &camera_orientation, 0.5 * SCREEN_WIDTH, 0.8333 * SCREEN_HEIGHT,
 					0.125 * SCREEN_HEIGHT, XKNOWN_DIM * 0.02);
 
 		/* Draw science selector indicator on main screen */
@@ -9493,7 +9474,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 			if (curr_science_guy->alive && curr_science_guy->entity &&
 				entity_onscreen(curr_science_guy->entity)) {
 				entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-				draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_sci_selection), 0, 1.0f, 2.0f);
+				draw_targeting_indicator(sx, sy, UI_COLOR(weap_sci_selection), 0, 1.0f, 2.0f);
 			}
 		}
 
@@ -9529,7 +9510,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 					516 * SCREEN_HEIGHT / 600);
 		}
 
-		show_gunsight(w);
+		show_gunsight();
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -9628,7 +9609,7 @@ static void update_external_camera_position_and_orientation(struct snis_entity *
 	*cam_pos = external_camera_position;
 }
 
-static void draw_nav_main_idiot_lights(GtkWidget *w, GdkGC *gc, struct snis_entity *ship, int color)
+static void draw_nav_main_idiot_lights(struct snis_entity *ship, int color)
 {
 	/* idiot lights for low power of various systems */
 	sng_set_foreground(UI_COLOR(nav_warning));
@@ -9658,7 +9639,7 @@ static void adjust_main_view_azimuth_angle(union quat *cam_orientation)
 	quat_mul_self(cam_orientation, &az);
 }
 
-static void show_mainscreen(GtkWidget *w)
+static void show_mainscreen(void)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
 	const float max_angle_of_view = ANGLE_OF_VIEW * M_PI / 180.0;
@@ -9807,7 +9788,7 @@ static void show_mainscreen(GtkWidget *w)
 		if (curr_science_guy->alive && curr_science_guy->entity &&
 			entity_onscreen(curr_science_guy->entity)) {
 			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(main_sci_selection), 0, 1.0f, 2.0f);
+			draw_targeting_indicator(sx, sy, UI_COLOR(main_sci_selection), 0, 1.0f, 2.0f);
 		}
 	}
 
@@ -9818,15 +9799,15 @@ static void show_mainscreen(GtkWidget *w)
 	}
 
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
-		show_gunsight(w);
+		show_gunsight();
 	if (vp == o)
-		draw_main_screen_text(w, gc);
-	draw_nav_main_idiot_lights(w, gc, o, UI_COLOR(main_warning));
+		draw_main_screen_text();
+	draw_nav_main_idiot_lights(o, UI_COLOR(main_warning));
 	pthread_mutex_unlock(&universe_mutex);
 	if (vp == o)
-		show_common_screen(w, "");
+		show_common_screen("");
 	else
-		show_common_screen(w, "REMOTE CAMERA FEED");
+		show_common_screen("REMOTE CAMERA FEED");
 }
 
 /* position and dimensions of science scope */
@@ -9838,9 +9819,8 @@ static void show_mainscreen(GtkWidget *w)
 #define SCIENCE_SCOPE_CX (SCIENCE_SCOPE_X + SCIENCE_SCOPE_R)
 #define SCIENCE_SCOPE_CY (SCIENCE_SCOPE_Y + SCIENCE_SCOPE_R)
 
-static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
-		double heading, double scale);
-static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
+static void snis_draw_arrow(int x, int y, int r, double heading, double scale);
+static void snis_draw_science_guy(struct snis_entity *o,
 					float x, float y, double dist, int bw, int pwr,
 					double range, int selected,
 					int nebula_factor)
@@ -9913,7 +9893,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			sng_set_foreground(UI_COLOR(sci_ball_default_blip));
 		}
 		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1) {
-			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R / 2, o->heading, 0.3);
+			snis_draw_arrow(x, y, SCIENCE_SCOPE_R / 2, o->heading, 0.3);
 		} else if (o->type == OBJTYPE_PLANET) {
 			sng_draw_circle(0, x, y, 20);
 		} else {
@@ -9991,8 +9971,8 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	}
 }
 
-static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
-					gint *x, gint *y, double dist, int bw, int pwr,
+static void snis_draw_3d_science_guy(struct snis_entity *o,
+					int *x, int *y, double dist, int bw, int pwr,
 					double range, int selected, double scale,
 					int nebula_factor)
 {
@@ -10130,8 +10110,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 }
 
 
-static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
-		double heading, double scale)
+static void snis_draw_arrow(int x, int y, int r, double heading, double scale)
 {
 	int nx, ny, tx1, ty1, tx2, ty2;
 
@@ -10229,7 +10208,7 @@ static void populate_science_pull_down_menu(void)
 	}
 }
 
-static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct snis_entity *o, struct snis_entity *laserbeam, double r)
+static void draw_3d_laserbeam(struct entity_context *cx, struct snis_entity *o, struct snis_entity *laserbeam, double r)
 {
 	int rc;
 	struct snis_entity *shooter, *shootee;
@@ -10272,7 +10251,7 @@ static void snis_draw_3d_dotted_line(struct entity_context *cx,
 		sng_draw_dotted_line(sx1, sy1, sx2, sy2);
 }
 
-static void snis_draw_3d_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
+static void snis_draw_3d_line(struct entity_context *cx,
 				float x1, float y1, float z1, float x2, float y2, float z2 )
 {
 	float sx1, sy1, sx2, sy2;
@@ -10303,8 +10282,7 @@ static void snis_draw_3d_moving_line(struct entity_context *cx,
 	v2.v.y += y1;
 	v2.v.z += z1;
 	if (a < b)
-		snis_draw_3d_line(NULL, NULL, instrumentecx,
-			v1.v.x, v1.v.y, v1.v.z, v2.v.x, v2.v.y, v2.v.z);
+		snis_draw_3d_line(instrumentecx, v1.v.x, v1.v.y, v1.v.z, v2.v.x, v2.v.y, v2.v.z);
 }
 
 static void snis_draw_3d_string(struct entity_context *cx, char *string, int font, float x, float y, float z)
@@ -10316,7 +10294,7 @@ static void snis_draw_3d_string(struct entity_context *cx, char *string, int fon
 		sng_abs_xy_draw_string(string, font, sx, sy);
 }
 
-static void draw_3d_mark_arc(GtkWidget *w, GdkGC *gc, struct entity_context *ecx,
+static void draw_3d_mark_arc(struct entity_context *ecx,
 			const union vec3 *center, float r, float heading, float mark)
 {
 	/* break arc into max 5 degree segments */
@@ -10330,7 +10308,7 @@ static void draw_3d_mark_arc(GtkWidget *w, GdkGC *gc, struct entity_context *ecx
 		vec3_add_self(&p2, center);
 
 		if (i != 0) {
-			snis_draw_3d_line(w, gc, ecx, p1.v.x, p1.v.y, p1.v.z, p2.v.x, p2.v.y, p2.v.z);
+			snis_draw_3d_line(ecx, p1.v.x, p1.v.y, p1.v.z, p2.v.x, p2.v.y, p2.v.z);
 		}
 		p1 = p2;
 	}
@@ -10466,7 +10444,8 @@ static void tween_add_or_update(struct tween_map *map, char active, uint32_t id,
 
 static struct tween_map *sciplane_tween = 0;
 
-static void draw_sciplane_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct snis_entity *o, struct snis_entity *laserbeam, double r)
+static void draw_sciplane_laserbeam(struct entity_context *cx, struct snis_entity *o,
+					struct snis_entity *laserbeam, double r)
 {
 	int i, rc, color;
 	struct snis_entity *shooter=0, *shootee=0;
@@ -10626,7 +10605,7 @@ static int science_tooltip_text(struct science_data *sd, char *buffer, int bufle
 
 static void draw_tooltip(int mousex, int mousey, char *tooltip);
 
-static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double range)
+static void draw_sciplane_display(struct snis_entity *o, double range)
 {
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *heading_ind_line_mesh = 0;
@@ -10950,14 +10929,14 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			if ( draw_popout_arc && tween > 0 ) {
 				/* show the flyout arc */
 				sng_set_foreground(UI_COLOR(sci_plane_popout_arc));
-				draw_3d_mark_arc(w, gc, instrumentecx, &ship_pos, dist, heading, mark * tween * 0.9);
+				draw_3d_mark_arc(instrumentecx, &ship_pos, dist, heading, mark * tween * 0.9);
 			}
 
 			float sx, sy;
 			if (!transform_point(instrumentecx, display_pos.v.x, display_pos.v.y, display_pos.v.z,
 						&sx, &sy)) {
 				if (go[i].id != my_ship_id) /* We already drew ourself */
-					snis_draw_science_guy(w, gc, &go[i], sx, sy, dist, bw, pwr, range,
+					snis_draw_science_guy(&go[i], sx, sy, dist, bw, pwr, range,
 								&go[i] == curr_science_guy, nebula_factor);
 			}
 
@@ -11047,7 +11026,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 			if (draw_popout_arc && tween > 0) { /* show the flyout arc */
 				sng_set_foreground(UI_COLOR(sci_plane_popout_arc));
-				draw_3d_mark_arc(w, gc, instrumentecx, &ship_pos, dist, heading, mark * tween * 0.9);
+				draw_3d_mark_arc(instrumentecx, &ship_pos, dist, heading, mark * tween * 0.9);
 			}
 
 			float sx, sy;
@@ -11112,7 +11091,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 		/* draw in the laserbeams */
 		for (i = 0; i < nlaserbeams; i++) {
-			draw_sciplane_laserbeam(w, gc, instrumentecx, o, laserbeams[i], range);
+			draw_sciplane_laserbeam(instrumentecx, o, laserbeams[i], range);
 		}
 
 		pthread_mutex_unlock(&universe_mutex);
@@ -11244,7 +11223,7 @@ static void draw_science_3d_waypoints(struct snis_entity *o, double range, float
 	}
 }
 
-static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, double range, double current_zoom)
+static void draw_all_the_3d_science_guys(struct snis_entity *o, double range, double current_zoom)
 {
 	int i, x, y, cx, cy, r, bw, pwr;
 	double tx, ty, dist2, dist;
@@ -11303,11 +11282,11 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 		vec3_mul_self(&vy, screen_radius * 0.8);
 		vec3_mul_self(&vz, screen_radius * 0.8);
 		sng_set_foreground(UI_COLOR(sci_ball_player));
-		snis_draw_3d_line(w, gc, sciballecx, o->x - vx.v.x, o->y - vx.v.y, o->z - vx.v.z,
+		snis_draw_3d_line(sciballecx, o->x - vx.v.x, o->y - vx.v.y, o->z - vx.v.z,
 							o->x + vx.v.x, o->y + vx.v.y, o->z + vx.v.z);
-		snis_draw_3d_line(w, gc, sciballecx, o->x - vy.v.x, o->y - vy.v.y, o->z - vy.v.z,
+		snis_draw_3d_line(sciballecx, o->x - vy.v.x, o->y - vy.v.y, o->z - vy.v.z,
 							o->x + vy.v.x, o->y + vy.v.y, o->z + vy.v.z);
-		snis_draw_3d_line(w, gc, sciballecx, o->x - vz.v.x, o->y - vz.v.y, o->z - vz.v.z,
+		snis_draw_3d_line(sciballecx, o->x - vz.v.x, o->y - vz.v.y, o->z - vz.v.z,
 							o->x + vz.v.x, o->y + vz.v.y, o->z + vz.v.z);
 
 		e = add_entity(sciballecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z,
@@ -11383,7 +11362,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 					go[i].type == OBJTYPE_WARPGATE ||
 					go[i].type == OBJTYPE_STARBASE ||
 					go[i].type == OBJTYPE_BLACK_HOLE)
-			snis_draw_3d_science_guy(w, gc, &go[i], &x, &y, dist, bw, pwr, range,
+			snis_draw_3d_science_guy(&go[i], &x, &y, dist, bw, pwr, range,
 				&go[i] == curr_science_guy, 100.0 * current_zoom / 255.0, nebula_factor);
 
 		/* cache screen coords for mouse picking */
@@ -11436,8 +11415,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 	remove_all_entity(sciballecx);
 }
 
-static void snis_draw_dotted_hline(GdkDrawable *drawable,
-         GdkGC *gc, int x1, int y1, int x2, int dots)
+static void snis_draw_dotted_hline(int x1, int y1, int x2, int dots)
 {
 	int i;
 
@@ -11445,8 +11423,7 @@ static void snis_draw_dotted_hline(GdkDrawable *drawable,
 		sng_draw_point(i, y1);
 }
 
-static void snis_draw_dotted_vline(GdkDrawable *drawable,
-         GdkGC *gc, int x1, int y1, int y2, int dots)
+static void snis_draw_dotted_vline(int x1, int y1, int y2, int dots)
 {
 	int i;
 
@@ -12155,7 +12132,7 @@ static void init_weapons_ui(void)
 	ui_add_button(weapons.custom_button, DISPLAYMODE_WEAPONS, "CUSTOM BUTTON");
 }
 
-static void show_death_screen(GtkWidget *w)
+static void show_death_screen(void)
 {
 	char buf[100];
 
@@ -12188,7 +12165,7 @@ static void show_death_screen(GtkWidget *w)
 	}
 }
 
-static void show_rts_loss_screen(GtkWidget *w)
+static void show_rts_loss_screen(void)
 {
 	char buf[100];
 
@@ -12199,7 +12176,7 @@ static void show_rts_loss_screen(GtkWidget *w)
 	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
 }
 
-static void show_rts_win_screen(GtkWidget *w)
+static void show_rts_win_screen(void)
 {
 	char buf[100];
 
@@ -12210,52 +12187,63 @@ static void show_rts_win_screen(GtkWidget *w)
 	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
 }
 
-void set_cursor(GtkWidget *window, int cursor_type)
+void set_cursor(int cursor_type)
 {
+	/* SDL TODO */
+#if 0
 	GdkCursor *cursor;
 	cursor = gdk_cursor_new(cursor_type);
 	gdk_window_set_cursor(window->window, cursor);
 	gdk_cursor_destroy(cursor);
+#endif
 }
 
-void set_cross_cursor(GtkWidget *window)
+void set_cross_cursor(void)
 {
-	set_cursor(window, GDK_CROSS);
+	/* SDL TOTO set_cursor(GDK_CROSS); */
 }
 
-void set_normal_cursor(GtkWidget *window)
+void set_normal_cursor(void)
 {
-	set_cursor(window, GDK_ARROW);
+	/* SDL TODO set_cursor(window, GDK_ARROW); */
 }
 
-static void maybe_grab_or_ungrab_mouse(GtkWidget *w, GdkEventMask event_mask)
+static void maybe_grab_or_ungrab_mouse()
 {
 	/* If we are not on the weapons screen, free the mouse if not already free. */
 	if (displaymode != DISPLAYMODE_WEAPONS) {
 		if (current_mouse_ui_mode != MOUSE_MODE_FREE_MOUSE) {
 			current_mouse_ui_mode = MOUSE_MODE_FREE_MOUSE;
-			(void) gdk_pointer_ungrab(GDK_CURRENT_TIME); /* free the mouse */
-			set_normal_cursor(w);
+#if 0
+/* TODO SDL */		(void) gdk_pointer_ungrab(GDK_CURRENT_TIME); /* free the mouse */
+#endif
+			set_normal_cursor();
 		}
 		return;
 	}
 	if (desired_mouse_ui_mode == current_mouse_ui_mode)
 		return;
 	if (desired_mouse_ui_mode == MOUSE_MODE_CAPTURED_MOUSE) { /* capture the mouse */
+#if 0
+		/* TODO SDL */
 		(void) gdk_pointer_grab(gtk_widget_get_window(w), FALSE, event_mask,
 					NULL, NULL, GDK_CURRENT_TIME);
-		set_cross_cursor(w);
+#endif
+		set_cross_cursor();
 	} else {
+#if 0
+		/* TODO SDL */
 		(void) gdk_pointer_ungrab(GDK_CURRENT_TIME); /* free the mouse */
-		set_normal_cursor(w);
+#endif
+		set_normal_cursor();
 	}
 	current_mouse_ui_mode = desired_mouse_ui_mode;
 }
 
-static void show_manual_weapons(GtkWidget *w)
+static void show_manual_weapons(void)
 {
-	show_weapons_camera_view(w);
-	show_common_screen(w, "WEAPONS");
+	show_weapons_camera_view();
+	show_common_screen("WEAPONS");
 }
 
 static void send_natural_language_request_to_server(char *msg);
@@ -12525,7 +12513,7 @@ static void draw_roll_rate_indicator(struct snis_entity *o, float rx, float ry, 
 	sng_abs_xy_draw_string(buffer, PICO_FONT, ix + rr * 0.4, ry - rr * 1.25);
 }
 
-static void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, float rx, float ry, float rr)
+static void draw_orientation_trident(struct snis_entity *o, float rx, float ry, float rr)
 {
 	static struct mesh *xz_ring_mesh = 0;
 	int relative_mode = o->tsd.ship.trident;
@@ -12669,10 +12657,10 @@ static void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity
 #define NAV_DATA_W ((SCREEN_WIDTH - 5) - NAV_DATA_X)
 #define NAV_DATA_H 270 
 
-static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o,
+static void draw_science_graph(struct snis_entity *ship, struct snis_entity *o,
 		int x1, int y1, int x2, int y2);
 
-static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
+static void draw_3d_nav_starmap(void)
 {
 	int i, j, k, our_ss = -1;
 	double ox, oy, oz;
@@ -12790,7 +12778,7 @@ static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
 				sng_set_foreground(UI_COLOR(starmap_warp_lane));
 			else
 				sng_set_foreground(UI_COLOR(starmap_far_warp_lane));
-			snis_draw_3d_line(w, gc, instrumentecx, x1, y1, z1, x2, y2, z2);
+			snis_draw_3d_line(instrumentecx, x1, y1, z1, x2, y2, z2);
 		}
 	}
 
@@ -12941,7 +12929,7 @@ static void draw_attitude_indicator_mark_ring(struct snis_entity *player_ship,
 	}
 }
 
-static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
+static void draw_attitude_indicator_reticles(struct snis_entity *o,
 			union vec3 *ship_normal, float screen_radius)
 {
 	int i, m;
@@ -13060,7 +13048,7 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 		 * Instead, we just change the color of the nearest tick mark (above).
 		 */
 		if (i >= 0) { /* Skip special case when i == -5 */
-			snis_draw_3d_line(w, gc, instrumentecx,
+			snis_draw_3d_line(instrumentecx,
 					v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
 			if (draw_numbers && dot >= 0)
 				snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
@@ -13078,7 +13066,7 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 			v4.v.y += o->y - ship_normal->v.y;
 			v4.v.z += o->z - ship_normal->v.z;
 
-			snis_draw_3d_line(w, gc, instrumentecx,
+			snis_draw_3d_line(instrumentecx,
 				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
 			if (draw_numbers && dot > 0)
 				snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
@@ -13107,7 +13095,7 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 			snprintf(buffer, sizeof(buffer), "%d", (360 + 90 - i) % 360);
 		else
 			snprintf(buffer, sizeof(buffer), "%d", (int) (360 + 90 - 180.0 * angle / M_PI) % 360);
-		snis_draw_3d_line(w, gc, instrumentecx,
+		snis_draw_3d_line(instrumentecx,
 				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
 		if (draw_numbers && dot >= 0)
 			snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
@@ -13159,7 +13147,7 @@ static void sci_nav_add_tentacles(struct entity_context *ctx, struct snis_entity
 	}
 }
 
-static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
+static void draw_3d_nav_display(void)
 {
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *radar_ring_mesh[8] = { 0 };
@@ -13306,7 +13294,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	int in_nebula = 0;
 	int i;
 
-	draw_attitude_indicator_reticles(w, gc, o, &ship_normal, screen_radius);
+	draw_attitude_indicator_reticles(o, &ship_normal, screen_radius);
 	for (i = 0; i < radar_ring_count; ++i) {
 		e = add_entity(instrumentecx, radar_ring_mesh[i], o->x - ship_normal.v.x, o->y - ship_normal.v.y,
 			o->z - ship_normal.v.z, UI_COLOR(nav_ring));
@@ -13462,10 +13450,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	struct material wireframe_material;
 	material_init_wireframe_sphere_clip(&wireframe_material);
 	wireframe_material.wireframe_sphere_clip.center = e;
-	wireframe_material.wireframe_sphere_clip.radius = MIN(visible_distance, screen_radius);
+	wireframe_material.wireframe_sphere_clip.radius = fmin(visible_distance, screen_radius);
 	wireframe_material.wireframe_sphere_clip.radius_fade = radius_fadeout_percent;
 
-	float display_radius = MIN(visible_distance, screen_radius) * (1.0 + radius_fadeout_percent);
+	float display_radius = fmin(visible_distance, screen_radius) * (1.0 + radius_fadeout_percent);
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (!go[i].alive)
@@ -13473,7 +13461,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		if (go[i].id == my_ship_id)
 			continue;
 		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
-			draw_3d_laserbeam(w, gc, instrumentecx, o, &go[i], display_radius);
+			draw_3d_laserbeam(instrumentecx, o, &go[i], display_radius);
 			continue;
 		}
 		if (!go[i].entity)
@@ -13732,14 +13720,14 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		float sx, sy;
 
 		entity_get_screen_coords(targeted_entity, &sx, &sy);
-		draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0, 1.0f, 2.0f);
+		draw_targeting_indicator(sx, sy, TARGETING_COLOR, 0, 1.0f, 2.0f);
 	}
 #endif
 	if (science_entity && entity_onscreen(science_entity)) {
 		float sx, sy;
 
 		entity_get_screen_coords(science_entity, &sx, &sy);
-		draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(nav_science_select), 0, 1.0f, 2.0f);
+		draw_targeting_indicator(sx, sy, UI_COLOR(nav_science_select), 0, 1.0f, 2.0f);
 	}
 
 	/* Draw warp field error indicator */
@@ -13764,7 +13752,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 }
 
-static void show_navigation(GtkWidget *w)
+static void show_navigation(void)
 {
 	char buf[100];
 	struct snis_entity *o;
@@ -13807,18 +13795,18 @@ static void show_navigation(GtkWidget *w)
 
 	quat_to_euler(&ypr, &o->orientation);	
 	sng_set_foreground(UI_COLOR(nav_text));
-	draw_nav_main_idiot_lights(w, gc, o, UI_COLOR(nav_warning));
-	draw_orientation_trident(w, gc, o, txx(31), txy(111), txx(31));
+	draw_nav_main_idiot_lights(o, UI_COLOR(nav_warning));
+	draw_orientation_trident(o, txx(31), txy(111), txx(31));
 	switch (o->tsd.ship.nav_mode) {
 	case NAV_MODE_STARMAP:
-		draw_3d_nav_starmap(w, gc);
+		draw_3d_nav_starmap();
 		break;
 	case NAV_MODE_NORMAL:
 	default:
-		draw_3d_nav_display(w, gc);
+		draw_3d_nav_display();
 		break;
 	}
-	show_common_screen(w, "NAV");
+	show_common_screen("NAV");
 }
 
 static void main_engineering_button_pressed(void *x)
@@ -14484,7 +14472,7 @@ static void draw_tooltip(int mousex, int mousey, char *tooltip)
 	sng_abs_xy_draw_string(tooltip, PICO_FONT, x + txx(3), y + txy(12));
 }
 
-static void show_engineering_damage_report(GtkWidget *w, int subsystem)
+static void show_engineering_damage_report(int subsystem)
 {
 	struct snis_damcon_entity *o;
 	int i, x, y, count;
@@ -14541,7 +14529,7 @@ static int engineering_warnings_active()
 		snis_slider_alarm_triggered(eng_ui.lifesupport_damage);
 }
 
-static void show_engineering(GtkWidget *w)
+static void show_engineering(void)
 {
 	struct snis_entity *o;
 	int gx1, gy1, gx2, gy2;
@@ -14649,7 +14637,7 @@ static void show_engineering(GtkWidget *w)
 	gx2 = SCREEN_WIDTH * 0.98;
 	gy2 = gy1 + eng_ui.gauge_radius * 2.5;
 	sng_set_foreground(UI_COLOR(eng_science_graph));
-	draw_science_graph(w, o, o, gx1, gy1, gx2, gy2);
+	draw_science_graph(o, o, gx1, gy1, gx2, gy2);
 
 	if (o->sdata.shield_strength < 15) {
 		sng_set_foreground(UI_COLOR(eng_warning));
@@ -14681,7 +14669,7 @@ static void show_engineering(GtkWidget *w)
 		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(350), txy(192) + font_lineheight[PICO_FONT]);
 	}
 
-	show_common_screen(w, "ENGINEERING");
+	show_common_screen("ENGINEERING");
 }
 
 #if 0
@@ -14732,7 +14720,7 @@ static int on_damcon_screen(struct snis_damcon_entity *o, struct my_vect_obj *v)
 	return 1;
 }
 
-static void draw_damcon_arena_borders(GtkWidget *w)
+static void draw_damcon_arena_borders(void)
 {
 	int y1, x1;
 
@@ -14770,7 +14758,7 @@ static void draw_damcon_arena_borders(GtkWidget *w)
 	}
 }
 
-static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
+static void draw_damcon_robot(struct snis_damcon_entity *o)
 {
 	int x, y;
 	int byteangle = (int) (o->heading * 128.0 / M_PI);
@@ -14781,7 +14769,7 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 	sng_draw_vect_obj(&damcon_robot_spun[byteangle], x, y);
 }
 
-static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
+static void draw_damcon_system(struct snis_damcon_entity *o)
 {
 	int x, y;
 
@@ -14796,7 +14784,7 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 				NANO_FONT, x + 75, y);
 }
 
-static void draw_damcon_socket_or_part(GtkWidget *w, struct snis_damcon_entity *o, int color)
+static void draw_damcon_socket_or_part(struct snis_damcon_entity *o, int color)
 {
 	int x, y;
 	char msg[20];
@@ -14811,15 +14799,15 @@ static void draw_damcon_socket_or_part(GtkWidget *w, struct snis_damcon_entity *
 	sng_abs_xy_draw_string(msg, NANO_FONT, x - 10, y);
 }
 
-static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
+static void draw_damcon_socket(struct snis_damcon_entity *o)
 {
 	if (o->tsd.socket.contents_id == DAMCON_SOCKET_EMPTY)
-		draw_damcon_socket_or_part(w, o, UI_COLOR(damcon_socket));
+		draw_damcon_socket_or_part(o, UI_COLOR(damcon_socket));
 }
 
 
 static struct snis_damcon_entity *damcon_robot_entity = NULL;
-static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
+static void draw_damcon_part(struct snis_damcon_entity *o)
 {
 	int x, y;
 	char msg[80];
@@ -14860,7 +14848,7 @@ static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 			60.0 * (255 - o->tsd.part.damage) / 255.0, 6);
 }
 
-static void draw_damcon_waypoint(GtkWidget *w, struct snis_damcon_entity *o)
+static void draw_damcon_waypoint(struct snis_damcon_entity *o)
 {
 	int x, y;
 
@@ -14870,11 +14858,11 @@ static void draw_damcon_waypoint(GtkWidget *w, struct snis_damcon_entity *o)
 	snis_draw_rectangle(0, x - 4, y - 4, 8, 8);
 }
 
-static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
+static void draw_damcon_object(struct snis_damcon_entity *o)
 {
 	switch (o->type) {
 	case DAMCON_TYPE_ROBOT:
-		draw_damcon_robot(w, o);
+		draw_damcon_robot(o);
 		damcon_robot_entity = o;
 		break;
 	case DAMCON_TYPE_WARPDRIVE:
@@ -14887,23 +14875,23 @@ static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 	case DAMCON_TYPE_TRACTORSYSTEM:
 	case DAMCON_TYPE_LIFESUPPORTSYSTEM:
 	case DAMCON_TYPE_REPAIR_STATION:
-		draw_damcon_system(w, o);
+		draw_damcon_system(o);
 		break;
 	case DAMCON_TYPE_SOCKET:
-		draw_damcon_socket(w, o);
+		draw_damcon_socket(o);
 		break;
 	case DAMCON_TYPE_PART:
-		draw_damcon_part(w, o);
+		draw_damcon_part(o);
 		break;
 	case DAMCON_TYPE_WAYPOINT:
-		draw_damcon_waypoint(w, o);
+		draw_damcon_waypoint(o);
 		break;
 	default:
 		break;
 	}
 }
 
-static void show_damcon(GtkWidget *w)
+static void show_damcon(void)
 {
 	int i;
 
@@ -14917,12 +14905,12 @@ static void show_damcon(GtkWidget *w)
 
 	/* draw all the stuff on the damcon screen */
 	for (i = 0; i <= snis_object_pool_highest_object(damcon_pool); i++)
-		draw_damcon_object(w, &dco[i]);
-	draw_damcon_arena_borders(w);
+		draw_damcon_object(&dco[i]);
+	draw_damcon_arena_borders();
 
 	/* restore clipping back to whole window */
 	set_default_clip_window();
-	show_common_screen(w, "DAMAGE CONTROL");
+	show_common_screen("DAMAGE CONTROL");
 }
 
 static void sci_details_pressed(void *x)
@@ -16261,7 +16249,7 @@ static void science_button_release(int button, int x, int y)
 #define SCIENCE_DATA_W (SCREEN_WIDTH - (20 * SCREEN_WIDTH / 800) - SCIENCE_DATA_X)
 #define SCIENCE_DATA_H (SCREEN_HEIGHT - (40 * SCREEN_HEIGHT / 600) - SCIENCE_DATA_Y)
 
-static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o,
+static void draw_science_graph(struct snis_entity *ship, struct snis_entity *o,
 		int x1, int y1, int x2, int y2)
 {
 	int i, x;
@@ -16271,16 +16259,16 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 
 	sng_set_foreground(UI_COLOR(science_graph_grid));
 	snis_draw_rectangle(0, x1, y1, (x2 - x1), (y2 - y1));
-	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 4, x2, 10);
-	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 2, x2, 10);
-	snis_draw_dotted_hline(w->window, gc, x1, y1 + 3 * (y2 - y1) / 4, x2, 10);
+	snis_draw_dotted_hline(x1, y1 + (y2 - y1) / 4, x2, 10);
+	snis_draw_dotted_hline(x1, y1 + (y2 - y1) / 2, x2, 10);
+	snis_draw_dotted_hline(x1, y1 + 3 * (y2 - y1) / 4, x2, 10);
 
 	x = x1 + (x2 - x1) / 4; 
-	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
+	snis_draw_dotted_vline(x, y1, y2, 10);
 	x += (x2 - x1) / 4; 
-	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
+	snis_draw_dotted_vline(x, y1, y2, 10);
 	x += (x2 - x1) / 4; 
-	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
+	snis_draw_dotted_vline(x, y1, y2, 10);
 	
 	if (o) {
 		if (o != ship) {
@@ -16340,7 +16328,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 			if (x > x2)
 				sx = x2;
 
-			snis_draw_dotted_vline(w->window, gc, sx, sy1, sy2, 4);
+			snis_draw_dotted_vline(sx, sy1, sy2, 4);
 		}
 	}
 skip_data:
@@ -16353,7 +16341,7 @@ skip_data:
 	sng_abs_xy_draw_string("SHIELD PROFILE (NM)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + txy(20));
 }
 
-static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o, int waypoint_index)
+static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, int waypoint_index)
 {
 	char buffer[40];
 	char buffer2[40];
@@ -16597,7 +16585,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	gy1 = y + 20 * SCREEN_HEIGHT / 600;
 	gx2 = SCIENCE_DATA_X + SCIENCE_DATA_W - 10 * SCREEN_WIDTH / 800;
 	gy2 = SCIENCE_DATA_Y + SCIENCE_DATA_H - 40 * SCREEN_HEIGHT / 600;
-	draw_science_graph(w, ship, o, gx1, gy1, gx2, gy2);
+	draw_science_graph(ship, o, gx1, gy1, gx2, gy2);
 
 	if (o && o->sdata.science_text) {
 		sng_set_foreground(UI_COLOR(science_annotation));
@@ -16605,7 +16593,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	}
 }
 
-static void draw_science_waypoints(GtkWidget *w)
+static void draw_science_waypoints(void)
 {
 	char buffer[100];
 	int i;
@@ -16655,8 +16643,7 @@ static void draw_science_waypoints(GtkWidget *w)
 	snis_draw_rectangle(0, txx(5), txy(70), txx(760), txy(480));
 }
 
-static void science_details_draw_atmosphere_data(GtkWidget *w, GdkGC *gc,
-				struct planetary_atmosphere_profile *atm)
+static void science_details_draw_atmosphere_data(struct planetary_atmosphere_profile *atm)
 {
 	int i;
 	int y, yinc = 20 * SCREEN_HEIGHT / 600;
@@ -16689,7 +16676,7 @@ static void science_details_draw_atmosphere_data(GtkWidget *w, GdkGC *gc,
 	}
 }
 
-static void draw_science_details(GtkWidget *w, GdkGC *gc)
+static void draw_science_details(void)
 {
 	struct entity *e = NULL;
 	struct mesh *m;
@@ -16781,7 +16768,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		struct planetary_atmosphere_profile *atm =
 			planetary_atmosphere_by_index(curr_science_guy->tsd.planet.atmosphere_type);
 
-		science_details_draw_atmosphere_data(w, gc, atm);
+		science_details_draw_atmosphere_data(atm);
 
 		struct planet_data *p = &curr_science_guy->tsd.planet;
 
@@ -16932,7 +16919,7 @@ static void draw_science_location_indicator(struct snis_entity *o)
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(555), txy(10));
 }
  
-static void show_3d_science(GtkWidget *w, struct snis_entity *o, int current_zoom)
+static void show_3d_science(struct snis_entity *o, int current_zoom)
 {
 	int cx, cy, r;
 	double zoom;
@@ -16944,10 +16931,10 @@ static void show_3d_science(GtkWidget *w, struct snis_entity *o, int current_zoo
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
 	sng_set_foreground(UI_COLOR(sci_ball_ring));
 	sng_draw_circle(0, cx, cy, r);
-	draw_all_the_3d_science_guys(w, o, zoom * 4.0, current_zoom * 4.0);
+	draw_all_the_3d_science_guys(o, zoom * 4.0, current_zoom * 4.0);
 }
 
-static void show_science(GtkWidget *w)
+static void show_science(void)
 {
 	struct snis_entity *o;
 	double zoom;
@@ -16967,21 +16954,21 @@ static void show_science(GtkWidget *w)
 	sng_set_foreground(DARKGREEN); /* zzzz check this */
 	switch (sci_ui.details_mode) {
 	case SCI_DETAILS_MODE_SCIPLANE:
-		draw_sciplane_display(w, o, zoom);
+		draw_sciplane_display(o, zoom);
 		break;
 	case SCI_DETAILS_MODE_WAYPOINTS:
-		draw_science_waypoints(w);
+		draw_science_waypoints();
 		break;
 	case SCI_DETAILS_MODE_DETAILS:
-		draw_science_details(w, gc);
-		draw_science_data(w, o, curr_science_guy, curr_science_waypoint);
+		draw_science_details();
+		draw_science_data(o, curr_science_guy, curr_science_waypoint);
 		break;
 	case SCI_DETAILS_MODE_THREED:
-		show_3d_science(w, o, current_zoom);
-		draw_science_data(w, o, curr_science_guy, curr_science_waypoint);
+		show_3d_science(o, current_zoom);
+		draw_science_data(o, curr_science_guy, curr_science_waypoint);
 		break;
 	default: /* shouldn't happen */
-		draw_science_data(w, o, curr_science_guy, curr_science_waypoint);
+		draw_science_data(o, curr_science_guy, curr_science_waypoint);
 		break;
 	}
 	if (o->tsd.ship.power_data.sensors.i < idiot_light_threshold && (timer & 0x08)) {
@@ -17000,7 +16987,7 @@ static void show_science(GtkWidget *w)
 		sci_ui.low_tractor_power_timer--;
 	}
 	populate_science_pull_down_menu();
-	show_common_screen(w, "SCIENCE");
+	show_common_screen("SCIENCE");
 }
 
 static void update_comms_ui_visibility(struct snis_entity *o)
@@ -17139,7 +17126,7 @@ static void show_comms_cryptanalysis(struct snis_entity *o)
 	}
 }
 
-static void show_comms(GtkWidget *w)
+static void show_comms(void)
 {
 	struct snis_entity *o;
 	char current_date[32], comms_buffer[100];
@@ -17223,7 +17210,7 @@ static void show_comms(GtkWidget *w)
 		sng_set_foreground(UI_COLOR(common_red_alert));
 		sng_center_xy_draw_string("MISSILE LOCK DETECTED", SMALL_FONT, txx(400), txy(150));
 	}
-	show_common_screen(w, "COMMS");
+	show_common_screen("COMMS");
 }
 
 static void send_demon_comms_packet_to_server(char *msg)
@@ -17401,7 +17388,7 @@ static void demon_select_none(void)
 	demon_ui.nselected = 0;
 }
 
-static void demon_button_press(int button, gdouble x, gdouble y)
+static void demon_button_press(int button, double x, double y)
 {
 	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
 	if (demon_ui.use_3d) {
@@ -17437,7 +17424,7 @@ static inline int between(double a, double b, double v)
 	return ((a <= v && v <= b) || (b <= v && v <= a));
 }
 
-static void demon_button_create_item(gdouble x, gdouble y, gdouble z)
+static void demon_button_create_item(double x, double y, double z)
 {
 	double ux, uy, uz;
 	uint8_t item_type, data1, data2;
@@ -17521,21 +17508,21 @@ static void demon_select_and_act(double sx1, double sy1,
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void demon_button2_release_3d(int button, gdouble x, gdouble y)
+static void demon_button2_release_3d(int button, double x, double y)
 {
 	demon_ui.release_mousex = x;
 	demon_ui.release_mousey = y;
 	demon_ui.button2_released = 1;
 }
 
-static void demon_button3_release_3d(int button, gdouble x, gdouble y)
+static void demon_button3_release_3d(int button, double x, double y)
 {
 	demon_ui.release_mousex = x;
 	demon_ui.release_mousey = y;
 	demon_ui.button3_released = 1;
 }
 
-static void demon_button3_release(int button, gdouble x, gdouble y)
+static void demon_button3_release(int button, double x, double y)
 {
 	int nselected;
 	double ox, oy;
@@ -17581,7 +17568,7 @@ static void demon_button3_release(int button, gdouble x, gdouble y)
 	}
 }
 
-static void demon_button2_release(int button, gdouble x, gdouble y)
+static void demon_button2_release(int button, double x, double y)
 {
 	int i;
 	double dx, dy, dz;
@@ -17608,7 +17595,7 @@ static void demon_button2_release(int button, gdouble x, gdouble y)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void demon_button_release(int button, gdouble x, gdouble y)
+static void demon_button_release(int button, double x, double y)
 {
 	if (demon_ui.use_3d) {
 		switch (button) {
@@ -17637,7 +17624,7 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 	}
 }
 
-static void do_damcon_button_release(int button, gdouble x, gdouble y)
+static void do_damcon_button_release(int button, double x, double y)
 {
 	switch (button) {
 	case 3:
@@ -17685,7 +17672,7 @@ static void draw_selection_marker(int x1, int y1, int x2, int y2, int offset, ui
 	sng_abs_xy_draw_string(oidstr, PICO_FONT, x1 + 8, y1 - 8);
 }
 
-static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
+static void debug_draw_object(struct snis_entity *o,
 			float ux1, float uy1, float ux2, float uy2)
 {
 	int x, y, x1, y1, x2, y2, vx, vy, r;
@@ -17768,7 +17755,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 		break;
 	case OBJTYPE_SPACEMONSTER:
 		sng_set_foreground(UI_COLOR(demon_spacemonster));
-		snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
+		snis_draw_arrow(x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
 		sng_abs_xy_draw_string("M", PICO_FONT,
 			x - cos(o->heading) * txx(8), y + sin(o->heading) * txy(8));
 		break;
@@ -17783,7 +17770,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 	if (demon_id_selected(o->id)) {
 		draw_selection_marker(x1, y1, x2, y2, 6, o->id);
 		if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
-			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
+			snis_draw_arrow(x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
 		}
 		if (o->type == OBJTYPE_SHIP2 && (timer & 0x04))
 			debug_draw_ship_patrol_route(o->tsd.ship.ai[1].u.patrol.npoints,
@@ -17791,7 +17778,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 						ux1, uy1, ux2, uy2);
 	} else {
 		if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
-			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
+			snis_draw_arrow(x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
 		}
 	}
 
@@ -17870,7 +17857,7 @@ static struct demon_cmd_def {
 static int demon_help_mode = 0;
 #define DEMON_CMD_DELIM " ,"
 
-static void show_cmd_help(GtkWidget *w, struct demon_cmd_def cmd[], int nitems)
+static void show_cmd_help(struct demon_cmd_def cmd[], int nitems)
 {
 	int i;
 	char buffer[100];
@@ -17896,11 +17883,11 @@ static void add_demon_cmd_help_to_console(struct demon_cmd_def cmd[], int nitems
 	}
 }
 
-static void demon_cmd_help(GtkWidget *w)
+static void demon_cmd_help(void)
 {
 	if (!demon_help_mode)
 		return;
-	show_cmd_help(w, demon_cmd, ARRAYSIZE(demon_cmd));
+	show_cmd_help(demon_cmd, ARRAYSIZE(demon_cmd));
 }
 
 static struct demon_group {
@@ -19139,16 +19126,21 @@ static void init_demon_ui()
 	snis_debug_dump_set_label("CLIENT");
 }
 
-static void calculate_new_2d_zoom(int direction, gdouble x, gdouble y, double zoom_amount,
+static void calculate_new_2d_zoom(int direction, double x, double y, double zoom_amount,
 	float *ux1, float *uy1, float *ux2, float *uy2)
 {
 	double nx1, nx2, ny1, ny2, mux, muy;
 	double zoom_factor;
 
+#if 0
+	/* TODO SDL */
 	if (direction == GDK_SCROLL_UP)
 		zoom_factor = 1.0 - zoom_amount;
 	else
 		zoom_factor = 1.0 + zoom_amount;
+#else
+	zoom_factor = 1.0;
+#endif
 	mux = x * (*ux2 - *ux1) / (double) real_screen_width;
 	muy = y * (*uy2 - *uy1) / (double) real_screen_height;
 	mux += *ux1;
@@ -19163,13 +19155,13 @@ static void calculate_new_2d_zoom(int direction, gdouble x, gdouble y, double zo
 	*uy2 = ny2;
 }
 
-static void calculate_new_demon_zoom(int direction, gdouble x, gdouble y)
+static void calculate_new_demon_zoom(int direction, double x, double y)
 {
 	calculate_new_2d_zoom(direction, x, y, 0.05,
 			&demon_ui.ux1, &demon_ui.uy1, &demon_ui.ux2, &demon_ui.uy2);
 }
 
-static void demon_3d_scroll(int direction, gdouble x, gdouble y)
+static void demon_3d_scroll(int direction, double x, double y)
 {
 	union vec3 delta = { { 0 } };
 	float scroll_factor;
@@ -19177,12 +19169,17 @@ static void demon_3d_scroll(int direction, gdouble x, gdouble y)
 	scroll_factor = (demon_ui.exaggerated_scale * XKNOWN_DIM * 0.02) +
 			(1.0 - demon_ui.exaggerated_scale) * XKNOWN_DIM * 0.001;
 
+#if 0
 	delta.v.x = direction == GDK_SCROLL_UP ? scroll_factor : -scroll_factor;
+#else
+	/* TODO SDL */
+	delta.v.x = scroll_factor;
+#endif
 	quat_rot_vec_self(&delta, &demon_ui.camera_orientation);
 	vec3_add(&demon_ui.desired_camera_pos, &demon_ui.camera_pos, &delta);
 }
 
-static void show_demon_groups(GtkWidget *w)
+static void show_demon_groups(void)
 {
 	int i;
 	sng_set_foreground(UI_COLOR(demon_group_text));
@@ -19192,7 +19189,7 @@ static void show_demon_groups(GtkWidget *w)
 			NANO_FONT, SCREEN_WIDTH - 50, i * 18 + 40);
 }
 
-static void show_2d_universe_grid(GtkWidget *w, float x1, float y1, float x2, float y2)
+static void show_2d_universe_grid(float x1, float y1, float x2, float y2)
 {
 	int x, y;
 	double ix, iy;
@@ -19218,7 +19215,7 @@ static void show_2d_universe_grid(GtkWidget *w, float x1, float y1, float x2, fl
 			sy2 = SCREEN_HEIGHT;
 		if (sy2 < 0)
 			continue;
-		snis_draw_dotted_vline(w->window, gc, sx1, sy1, sy2, 5);
+		snis_draw_dotted_vline(sx1, sy1, sy2, 5);
 	}
 
 	iy = ZKNOWN_DIM / 10.0;
@@ -19238,7 +19235,7 @@ static void show_2d_universe_grid(GtkWidget *w, float x1, float y1, float x2, fl
 			sx2 = SCREEN_WIDTH;
 		if (sx2 < 0)
 			continue;
-		snis_draw_dotted_hline(w->window, gc, sx1, sy1, sx2, 5);
+		snis_draw_dotted_hline(sx1, sy1, sx2, 5);
 	}
 
 	ix = XKNOWN_DIM / 10;
@@ -19264,7 +19261,7 @@ static void draw_2d_small_cross(float x, float y, int color, int blink)
 	}
 }
 
-static void show_demon_2d(GtkWidget *w)
+static void show_demon_2d(void)
 {
 	int i;
 	char buffer[100];
@@ -19279,15 +19276,15 @@ static void show_demon_2d(GtkWidget *w)
 	else
 		sng_set_foreground(UI_COLOR(demon_default_dead));
 
-	show_2d_universe_grid(w, demon_ui.ux1, demon_ui.uy1, demon_ui.ux2, demon_ui.uy2);
+	show_2d_universe_grid(demon_ui.ux1, demon_ui.uy1, demon_ui.ux2, demon_ui.uy2);
 
 	pthread_mutex_lock(&universe_mutex);
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
-		debug_draw_object(w, &go[i], demon_ui.ux1, demon_ui.uy1,
+		debug_draw_object(&go[i], demon_ui.ux1, demon_ui.uy1,
 					demon_ui.ux2, demon_ui.uy2);
 	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++)
-		debug_draw_object(w, &spark[i], demon_ui.ux1, demon_ui.uy1,
+		debug_draw_object(&spark[i], demon_ui.ux1, demon_ui.uy1,
 					demon_ui.ux2, demon_ui.uy2);
 	pthread_mutex_unlock(&universe_mutex);
 	draw_2d_small_cross(ux_to_usersx(demon_ui.selectedx, demon_ui.ux1, demon_ui.ux2),
@@ -19324,8 +19321,8 @@ static void show_demon_2d(GtkWidget *w)
 		sng_draw_dotted_line(x1, y1, x1, y2);
 		sng_draw_dotted_line(x2, y1, x2, y2);
 	}
-	show_demon_groups(w);
-	demon_cmd_help(w);
+	show_demon_groups();
+	demon_cmd_help();
 }
 
 static void demon_draw_ship_patrol_route(int npoints, union vec3 p[])
@@ -19339,7 +19336,7 @@ static void demon_draw_ship_patrol_route(int npoints, union vec3 p[])
 	}
 }
 
-static void show_demon_3d(GtkWidget *w)
+static void show_demon_3d(void)
 {
 	char buffer[100];
 	int i, j, k;
@@ -19861,12 +19858,12 @@ static void show_demon_3d(GtkWidget *w)
 			netstats.faction_population[4]);
 	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
 
-	show_demon_groups(w);
-	demon_cmd_help(w);
+	show_demon_groups();
+	demon_cmd_help();
 	remove_all_entity(instrumentecx);
 }
 
-static void show_demon_console(GtkWidget *w)
+static void show_demon_console(void)
 {
 	if (demon_ui.console_active)
 		ui_unhide_widget(demon_ui.console);
@@ -19874,13 +19871,13 @@ static void show_demon_console(GtkWidget *w)
 		ui_hide_widget(demon_ui.console);
 }
 
-static void show_demon(GtkWidget *w)
+static void show_demon(void)
 {
 	char label[100];
 	if (demon_ui.use_3d)
-		show_demon_3d(w);
+		show_demon_3d();
 	else
-		show_demon_2d(w);
+		show_demon_2d();
 	if (demon_ui.captain_of != -1) {
 		sng_set_foreground(WHITE);
 		sng_center_xy_draw_string("CAPTAIN MODE", SMALL_FONT, SCREEN_WIDTH / 2, txy(20));
@@ -19896,11 +19893,11 @@ static void show_demon(GtkWidget *w)
 	else
 		snprintf(label, sizeof(label), "FACTION = RANDOM");
 	sng_abs_xy_draw_string(label, PICO_FONT, SCREEN_WIDTH - txx(100), txy(40));
-	show_demon_console(w);
-	show_common_screen(w, "DEMON");
+	show_demon_console();
+	show_common_screen("DEMON");
 }
 
-static void show_warp_hash_screen(GtkWidget *w)
+static void show_warp_hash_screen(void)
 {
 	int i;
 	int y1, y2;
@@ -19916,17 +19913,17 @@ static void show_warp_hash_screen(GtkWidget *w)
 	}
 }
 
-static void show_warp_limbo_screen(GtkWidget *w)
+static void show_warp_limbo_screen(void)
 {
 	if (displaymode == DISPLAYMODE_MAINSCREEN) {
-		show_mainscreen(w);
+		show_mainscreen();
 	} else {
 		if (displaymode == DISPLAYMODE_WEAPONS) {
-			show_manual_weapons(w);
+			show_manual_weapons();
 			ui_element_list_draw(uiobjs);
 			ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
 		} else {
-			show_warp_hash_screen(w);
+			show_warp_hash_screen();
 		}
 	}
 }
@@ -20361,11 +20358,11 @@ static void init_net_setup_ui(void)
 	ui_hide_widget(net_setup_ui.lobbyport);
 } 
 
-static void show_network_setup(GtkWidget *w)
+static void show_network_setup(void)
 {
 	char button_label[100];
 
-	show_common_screen(w, "SPACE NERDS IN SPACE");
+	show_common_screen("SPACE NERDS IN SPACE");
 	show_rotating_wombat();
 
 	sng_set_foreground(UI_COLOR(network_setup_text));
@@ -20427,8 +20424,9 @@ static void make_science_forget_stuff(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
+static int main_da_scroll(int direction)
 {
+#if 0
 	struct _GdkEventScroll *e = (struct _GdkEventScroll *) event;
 	struct snis_entity *o;
 	int16_t newval = 0;
@@ -20493,6 +20491,9 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 	default:
 		return 0;
 	}
+#else
+	/* SDL TODO */
+#endif
 	return 0;
 }
 
@@ -20722,7 +20723,7 @@ static char *help_text[] = {
 	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 };
 
-static void draw_help_text(GtkWidget *w, char *text)
+static void draw_help_text(char *text)
 {
 	int line = 0;
 	int i, y = 70;
@@ -20754,7 +20755,7 @@ static void draw_help_text(GtkWidget *w, char *text)
 	} while (1);
 }
 
-static void draw_help_screen(GtkWidget *w)
+static void draw_help_screen(void)
 {
 	sng_set_foreground(BLACK);
 	snis_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
@@ -20763,10 +20764,10 @@ static void draw_help_screen(GtkWidget *w)
 	if (displaymode < 0 || displaymode >= ARRAYSIZE(help_text)) {
 		char msg[100];
 		snprintf(msg, sizeof(msg), "\nUNKNOWN SCREEN %d, NO HELP AVAILABLE\n", displaymode);
-		draw_help_text(w, msg);
+		draw_help_text(msg);
 		return;
 	}
-	draw_help_text(w, help_text[displaymode]);
+	draw_help_text(help_text[displaymode]);
 }
 
 #define QUIT_BUTTON_WIDTH (200 * SCREEN_WIDTH / 800)
@@ -20775,7 +20776,7 @@ static void draw_help_screen(GtkWidget *w)
 #define QUIT_BUTTON_Y (420 * SCREEN_HEIGHT / 600)
 #define NOQUIT_BUTTON_X (480 * SCREEN_WIDTH / 800)
 
-static void draw_quit_screen(GtkWidget *w)
+static void draw_quit_screen(void)
 {
 	int x;
 	static int quittimer = 0;
@@ -20854,7 +20855,7 @@ static void maybe_reload_shaders(void)
 	reload_shaders = 0;
 }
 
-static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
+static int main_da_expose(SDL_Window *window)
 {
 	static double last_frame_time = 0;
 	static int how_long_to_wait = -1; /* 4 seconds */
@@ -20864,6 +20865,9 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	int player_lost_rts;
 	int player_won_rts;
 	int i;
+#if 0
+	/* Not needed with SDL */
+
 	/* If main_da_configure has not been called when gc != null, then return immediately.
 	 * Otherwise, OpenGL will not have been initialized and snis_client will segfault because
 	 * the OpenGL functions won't have been properly initialized. da_configured will be set
@@ -20872,7 +20876,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (!da_configured) {
 		return 0;
 	}
-
+#endif
 	double start_time = time_now_double();
 
 	struct snis_entity *o;
@@ -20880,17 +20884,10 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	make_science_forget_stuff();
 
 	maybe_reload_shaders();
+
 	load_textures();
 
-#ifndef WITHOUTOPENGL
-	GdkGLContext *gl_context = gtk_widget_get_gl_context(main_da);
-	GdkGLDrawable *gl_drawable = gtk_widget_get_gl_drawable(main_da);
-
-	if (!gdk_gl_drawable_gl_begin(gl_drawable, gl_context))
-		g_assert_not_reached();
-
 	graph_dev_start_frame();
-#endif
 
 	sng_set_foreground(WHITE);
 	
@@ -20899,14 +20896,14 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (warp_limbo_countdown) {
 		warp_limbo_countdown--;
 		if (in_the_process_of_quitting)
-			draw_quit_screen(w);
-		show_warp_limbo_screen(w);
+			draw_quit_screen();
+		show_warp_limbo_screen();
 		goto end_of_drawing;
 	} else if (damage_limbo_countdown) {
-		show_warp_hash_screen(w);
+		show_warp_hash_screen();
 		damage_limbo_countdown--;
 		if (in_the_process_of_quitting)
-			draw_quit_screen(w);
+			draw_quit_screen();
 		goto end_of_drawing;
 	}
 
@@ -20924,18 +20921,18 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 				snprintf(msg, sizeof(msg) - 1,
 						"ERROR: CANNOT FIND POINTER TO PLAYER SHIP, SORRY!");
 			}
-			show_info_message(w, msg);
+			show_info_message(msg);
 			if (in_the_process_of_quitting)
-				draw_quit_screen(w);
+				draw_quit_screen();
 			goto end_of_drawing;
 		} else {
 			how_long_to_wait = frame_rate_hz * 4; /* 4 seconds */
 		}
 		if (o->alive == 0 && displaymode != DISPLAYMODE_DEMON) {
 			red_alert_mode = 0;
-			show_death_screen(w);
+			show_death_screen();
 			if (in_the_process_of_quitting)
-				draw_quit_screen(w);
+				draw_quit_screen();
 			goto end_of_drawing;
 		}
 		if (global_rts_mode) {
@@ -20952,65 +20949,62 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 			if (player_lost_rts)
 				player_won_rts = 0;
 			if (player_lost_rts) {
-				show_rts_loss_screen(w);
+				show_rts_loss_screen();
 				goto end_of_drawing;
 			} else if (player_won_rts) {
-				show_rts_win_screen(w);
+				show_rts_win_screen();
 				goto end_of_drawing;
 			}
 		}
 	}
-	maybe_grab_or_ungrab_mouse(w, GDK_BUTTON_PRESS_MASK |
-					GDK_BUTTON_RELEASE_MASK |
-					GDK_BUTTON3_MOTION_MASK |
-					GDK_POINTER_MOTION_MASK);
+	maybe_grab_or_ungrab_mouse();
 	switch (displaymode) {
 	case DISPLAYMODE_FONTTEST:
-		show_fonttest(w);
+		show_fonttest();
 		break;
 	case DISPLAYMODE_INTROSCREEN:
-		show_introscreen(w);
+		show_introscreen();
 		break;
 	case DISPLAYMODE_LOBBYSCREEN:
-		show_lobbyscreen(w);
+		show_lobbyscreen();
 		break;
 	case DISPLAYMODE_CONNECTING:
-		show_connecting_screen(w);
+		show_connecting_screen();
 		break;
 	case DISPLAYMODE_CONNECTED:
-		show_connected_screen(w);
+		show_connected_screen();
 		break;
 	case DISPLAYMODE_MAINSCREEN:
-		show_mainscreen(w);
+		show_mainscreen();
 		break;
 	case DISPLAYMODE_NAVIGATION:
 		if (main_nav_hybrid)
-			show_mainscreen(w);
-		show_navigation(w);
+			show_mainscreen();
+		show_navigation();
 		break;
 	case DISPLAYMODE_WEAPONS:
-		show_manual_weapons(w);
+		show_manual_weapons();
 		break;
 	case DISPLAYMODE_ENGINEERING:
-		show_engineering(w);
+		show_engineering();
 		break;
 	case DISPLAYMODE_SCIENCE:
-		show_science(w);
+		show_science();
 		break;
 	case DISPLAYMODE_COMMS:
-		show_comms(w);
+		show_comms();
 		break;
 	case DISPLAYMODE_DEMON:
-		show_demon(w);
+		show_demon();
 		break;
 	case DISPLAYMODE_DAMCON:
-		show_damcon(w);
+		show_damcon();
 		break;
 	case DISPLAYMODE_NETWORK_SETUP:
-		show_network_setup(w);
+		show_network_setup();
 		break;
 	default:
-		show_fonttest(w);
+		show_fonttest();
 		break;
 	}
 	ui_element_list_draw(uiobjs);
@@ -21018,39 +21012,20 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 	/* this has to come after ui_element_list_draw() to avoid getting clobbered */
 	if (displaymode == DISPLAYMODE_ENGINEERING)
-		show_engineering_damage_report(w, eng_ui.selected_subsystem);
+		show_engineering_damage_report(eng_ui.selected_subsystem);
 
 	if (helpmode)
-		draw_help_screen(w);
+		draw_help_screen();
 	if (in_the_process_of_quitting)
-		draw_quit_screen(w);
+		draw_quit_screen();
 
 	do_display_frame_stats(frame_rates, frame_times, FRAME_INDEX_MAX);
 
 end_of_drawing:
 
 	graph_dev_end_frame();
-
-#ifndef WITHOUTOPENGL
-	gdk_gl_drawable_wait_gdk(gl_drawable);
-	gdk_gl_drawable_wait_gl(gl_drawable);
-#endif
-
-#ifndef WITHOUTOPENGL
-	/* swap buffer if we're using double-buffering */
-	if (gdk_gl_drawable_is_double_buffered(gl_drawable))     
-		gdk_gl_drawable_swap_buffers(gl_drawable); 
-	else {
-		/* All programs should call glFlush whenever 
-		 * they count on having all of their previously 
-		 * issued commands completed.
-		 */
-		glFlush();
-	}
-
-	/* Delimits the end of the OpenGL execution. */
-	gdk_gl_drawable_gl_end(gl_drawable);
-#endif
+	glFinish();
+	SDL_GL_SwapWindow(window);
 
 	double end_time = time_now_double();
 
@@ -21166,7 +21141,7 @@ static void adjust_tonemapping_gain(void)
 	graph_dev_set_tonemapping_gain(tonemapping_gain);
 }
 
-gint advance_game(gpointer data)
+int advance_game(void)
 {
 	int time_to_switch_servers;
 	static int skip = 0;
@@ -21204,16 +21179,9 @@ gint advance_game(gpointer data)
 	adjust_audio_dynamic_range_compression();
 	adjust_tonemapping_gain();
 
-	if (in_the_process_of_quitting) {
-		gdk_threads_enter();
-		gtk_widget_queue_draw(main_da);
-		gdk_threads_leave();
-		if (final_quit_selection)
-			really_quit();
-	}
+	if (in_the_process_of_quitting)
+		return TRUE;
 
-	gdk_threads_enter();
-	gtk_widget_queue_draw(main_da);
 	pthread_mutex_lock(&universe_mutex);
 	move_sparks();
 	move_objects();
@@ -21221,12 +21189,6 @@ gint advance_game(gpointer data)
 	notify_server_of_displaymode_change();
 	pthread_mutex_unlock(&universe_mutex);
 	nframes++;
-
-	GtkAllocation alloc;
-	gtk_widget_get_allocation(main_da, &alloc);
-	gdk_window_invalidate_rect(gtk_widget_get_root_window(main_da), &alloc, FALSE);
-
-	gdk_threads_leave();
 
 	/* Check if it's time to switch servers */
 	pthread_mutex_lock(&to_server_queue_event_mutex);
@@ -21384,49 +21346,10 @@ static void set_planetary_lightning_material_uv_coords(void)
 static void init_meshes();
 
 /* call back for configure_event (for window resize) */
-static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
+static int main_da_configure(SDL_Window *window)
 {
-	GdkRectangle cliprect;
-
-	/* first time through, gc is null, because gc can't be set without */
-	/* a window, but, the window isn't there yet until it's shown, but */
-	/* the show generates a configure... chicken and egg.  And we can't */
-	/* proceed without gc != NULL...  but, it's ok, because 1st time thru */
-	/* we already sort of know the drawing area/window size. */
-
-	if (gc == NULL)
-		return TRUE;
-
-	real_screen_width =  w->allocation.width;
-	real_screen_height =  w->allocation.height;
+	SDL_GL_GetDrawableSize(window, &real_screen_width, &real_screen_height);
 	sng_set_screen_size(real_screen_width, real_screen_height);
-
-	gdk_gc_set_clip_origin(gc, 0, 0);
-	cliprect.x = 0;	
-	cliprect.y = 0;	
-	cliprect.width = real_screen_width;	
-	cliprect.height = real_screen_height;	
-	gdk_gc_set_clip_rectangle(gc, &cliprect);
-
-#ifndef WITHOUTOPENGL
-	GdkGLContext *gl_context = gtk_widget_get_gl_context(main_da);
-	GdkGLDrawable *gl_drawable = gtk_widget_get_gl_drawable(main_da);
-
-	/* Delimits the begining of the OpenGL execution. */
-	if (!gdk_gl_drawable_gl_begin(gl_drawable, gl_context))
-		g_assert_not_reached();
-
-	/* specify the lower left corner of our viewport, as well as width/height
-	 * of the viewport
-	 */
-	GtkAllocation alloc;
-	gtk_widget_get_allocation(main_da, &alloc);
-
-	glClearColor(0.0, 0.0, 0.0, 0.0);
-
-	/* Delimits the end of the OpenGL execution. */
-	gdk_gl_drawable_gl_end(gl_drawable);
-#endif
 
 	static int gl_is_setup = 0;
 	if (!gl_is_setup) {
@@ -21826,8 +21749,7 @@ static void load_textures(void)
 #endif
 }
 
-static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
-	__attribute__((unused)) void *unused)
+static int main_da_button_press(SDL_MouseButtonEvent *event)
 {
 	if (event->button < 1 || event->button > 3)
 		return TRUE;
@@ -21848,9 +21770,7 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 	return TRUE;
 }
 
-static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
-	__attribute__((unused)) void *unused)
-		
+static int main_da_button_release(SDL_MouseButtonEvent *event)
 {
 	if (event->button < 1 || event->button > 3)
 		return TRUE;
@@ -21939,9 +21859,10 @@ static int mouse_button_held(int button)
 	return TRUE;
 }
 
-static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
-	__attribute__((unused)) void *unused)
+static int main_da_motion_notify(void)
 {
+#if 0
+	/* SDL TODO */
 	float pitch, yaw;
 	float smoothx, smoothy;
 	int sx, sy;
@@ -22040,30 +21961,8 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 	default:
 		break;
 	}
+#endif
 	return TRUE;
-}
-
-static gboolean delete_event(GtkWidget *widget, 
-	GdkEvent *event, gpointer data)
-{
-    /* If you return FALSE in the "delete_event" signal handler,
-     * GTK will emit the "destroy" signal. Returning TRUE means
-     * you don't want the window to be destroyed.
-     * This is useful for popping up 'are you sure you want to quit?'
-     * type dialogs. */
-
-    /* Change TRUE to FALSE and the main window will be destroyed with
-     * a "delete_event". */
-    gettimeofday(&end_time, NULL);
-    printf("%d frames / %d seconds, %g frames/sec\n", 
-		nframes, (int) (end_time.tv_sec - start_time.tv_sec),
-		(0.0 + nframes) / (0.0 + end_time.tv_sec - start_time.tv_sec));
-    return FALSE;
-}
-
-static void destroy(GtkWidget *widget, gpointer data)
-{
-    gtk_main_quit ();
 }
 
 static void really_quit(void)
@@ -22345,7 +22244,6 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 
 	d = (double) value / (double) ((unsigned short) 0xFFFF);
 
-	gdk_threads_enter();
 	switch (opcode) {
 	case DEVIO_OPCODE_ENG_PWR_SHIELDS:
 		snis_slider_poke_input(eng_ui.shield_slider, d, 1);
@@ -22588,7 +22486,6 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		snis_slider_poke_input(comms_ui.mainzoom_slider, d, 1);
 		break;
 	}
-	gdk_threads_leave();
 }
 
 static void *monitor_physical_io_devices(__attribute__((unused)) void *arg)
@@ -22744,7 +22641,7 @@ static void setup_demon_fifo(void)
 				send_demon_text_command);
 }
 
-static void setup_joysticks(GtkWidget *window)
+static void setup_joysticks(void)
 {
 	int rc, i;
 	char *joystick_name[MAX_JOYSTICKS];
@@ -22757,7 +22654,7 @@ static void setup_joysticks(GtkWidget *window)
 	for (i = 0; i < njoysticks; i++) {
 		joystick_name[i] = strdup(joysticks_found[i].name);
 		snprintf(joystick_device[i], PATH_MAX, "/dev/input/by-id/%s", joysticks_found[i].name);
-		joystick_fd[i] = open_joystick(joystick_device[i], window->window);
+		joystick_fd[i] = open_joystick(joystick_device[i], NULL);
 		if (joystick_fd[i] < 0) {
 			printf("Cannot open joystick %d (%s): %s. Ignoring.\n",
 				i, joystick_device[i], strerror(errno));
@@ -23039,24 +22936,6 @@ static void init_vects(void)
 	}
 }
 
-static void init_gl(int argc, char *argv[], GtkWidget *drawing_area)
-{
-#ifndef WITHOUTOPENGL
-	gtk_gl_init(&argc, &argv);
-
-	/* prepare GL */
-	GdkGLConfig *gl_config = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGBA |
-				       GDK_GL_MODE_DEPTH | GDK_GL_MODE_DOUBLE);
-	if (!gl_config)
-		g_assert_not_reached();
-
-	if (!gtk_widget_set_gl_capability(drawing_area, gl_config, NULL, TRUE,
-						GDK_GL_RGBA_TYPE))
-		g_assert_not_reached();
-#endif
-	
-}
-
 static void prevent_zombies(void)
 {
 	struct sigaction sa;
@@ -23095,9 +22974,16 @@ static void take_your_locale_and_shove_it(void)
 	setlocale(LC_ALL, "C");
 }
 
-static void figure_aspect_ratio(int requested_x, int requested_y,
+static void figure_aspect_ratio(SDL_Window *window, int requested_x, int requested_y,
 				int *x, int *y)
 {
+	SDL_GL_GetDrawableSize(window, &real_screen_width, &real_screen_height);
+	*x = real_screen_width;
+	*y = real_screen_height;
+	screen_offset_x = 0;
+	screen_offset_y = 0;
+#if 0
+	/* SDL TODO */
 	int sw, sh, monitors;
 	GdkScreen *s;
 	GdkRectangle bounds;
@@ -23143,6 +23029,7 @@ static void figure_aspect_ratio(int requested_x, int requested_y,
 			*x = sw;
 		}
 	}
+#endif
 }
 
 static void init_colors(void)
@@ -23159,7 +23046,7 @@ static void init_colors(void)
 			return;
 		}
 	}
-	sng_setup_colors(main_da, color_file);
+	sng_setup_colors(NULL, color_file);
 }
 
 static void check_lobby_serverhost_options()
@@ -23356,13 +23243,16 @@ static void setup_ship_mesh_maps(void)
 	memset(derelict_mesh, 0, sizeof(*derelict_mesh) * nshiptypes);
 }
 
-static void setup_screen_parameters(void)
+static void setup_screen_parameters(SDL_Window *window)
 {
+#if 0
+	TODO SDL
 	GdkScreen *s;
 
 	s = gdk_screen_get_default();
 	if (s)
-		figure_aspect_ratio(requested_aspect_x, requested_aspect_y,
+#endif
+		figure_aspect_ratio(window, requested_aspect_x, requested_aspect_y,
 					&SCREEN_WIDTH, &SCREEN_HEIGHT);
 	if (requested_aspect_x >= 0 || requested_aspect_y >= 0)
 		fullscreen = 0; /* can't request aspect ratio AND fullscreen */
@@ -23377,7 +23267,8 @@ static void setup_screen_parameters(void)
 	sng_set_screen_size(real_screen_width, real_screen_height);
 }
 
-static void setup_window_geometry(GtkWidget *window)
+#if 0
+static void setup_window_geometry(SDL_Window *window)
 {
 	/* clamp window aspect ratio to constant */
 	GdkGeometry geom;
@@ -23428,6 +23319,7 @@ static void setup_gtk_window_and_drawing_area(GtkWidget **window, GtkWidget **vb
 
 	gtk_window_set_default_size(GTK_WINDOW(*window), real_screen_width, real_screen_height);
 }
+#endif
 
 static void lobby_chosen(void *x)
 {
@@ -23512,11 +23404,61 @@ static char *stl_parser_asset_replacer(char *path)
 	return replacement_asset_lookup(path, &replacement_assets);
 }
 
+static void process_events(SDL_Window *window)
+{
+	/* Our SDL event placeholder. */
+	SDL_Event event;
+
+	/* Grab all the events off the queue. */
+	while (SDL_PollEvent(&event)) {
+
+		if (ui_element_list_event(uiobjs, &event))
+			break;
+
+		switch (event.type) {
+		case SDL_KEYDOWN:
+			key_press_cb(window, &event.key.keysym);
+			break;
+		case SDL_KEYUP:
+			key_release_cb(window, &event.key.keysym);
+			break;
+		case SDL_QUIT:
+			/* Handle quit requests (like Ctrl-c). */
+			in_the_process_of_quitting = 1;
+			final_quit_selection = 1;
+			break;
+
+		case SDL_WINDOWEVENT: {
+				switch (event.window.event) {
+				case SDL_WINDOWEVENT_RESIZED:
+					SDL_GL_GetDrawableSize(window, &real_screen_width, &real_screen_height);
+					sng_set_screen_size(real_screen_width, real_screen_height);
+					break;
+				}
+			}
+			break;
+
+		case SDL_MOUSEBUTTONDOWN:
+			main_da_button_press(&event.button);
+			break;
+		case SDL_MOUSEBUTTONUP:
+			main_da_button_release(&event.button);
+			break;
+		case SDL_MOUSEMOTION:
+			/* TODO SDL2 main_da_motion_notify(event.motion.x, event.motion.y); */
+			break;
+		case SDL_MOUSEWHEEL:
+			if (event.wheel.y < 0)
+				main_da_scroll(1);
+			else
+				main_da_scroll(0);
+			break;
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
-	GtkWidget *vbox;
-	int i;
-
 	refuse_to_run_as_root("snis_client");
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
 
@@ -23571,40 +23513,43 @@ int main(int argc, char *argv[])
 	docking_port_info = read_docking_port_info(starbase_metadata, nstarbase_models,
 							STARBASE_SCALE_FACTOR);
 	maybe_connect_to_lobby();
-	gtk_init(&argc, &argv);
-	setup_screen_parameters();
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+		fprintf(stderr, "Unable to initialize SDL:  %s\n", SDL_GetError());
+		return 1;
+	}
+	atexit(SDL_Quit);
 	init_keymap();
 	read_keymap_config_file();
-	setup_gtk_window_and_drawing_area(&window, &vbox, &main_da);
-	init_gl(argc, argv, main_da);
-        gtk_widget_show (vbox);
-        gtk_widget_show (main_da);
-        gtk_widget_show (window);
 
-	init_colors();
-
-#ifndef WITHOUTOPENGL
-	/* must be set or the window will not show */
-	GdkColor black = { 0, 0, 0, 0 };
-	gtk_widget_modify_bg(main_da, GTK_STATE_NORMAL, &black);
-#endif
-
-        gc = gdk_gc_new(GTK_WIDGET(main_da)->window);
+#if 0
 	sng_set_context(GTK_WIDGET(main_da)->window, gc);
-	sng_set_foreground(WHITE);
-
-	timer_tag = g_timeout_add(1000 / max_frame_rate_hz, advance_game, NULL);
-
-#ifndef GLIB_VERSION_2_32
-	/* this is only needed in glibc versions before 2.32 */
-
-	/* Apparently (some versions of?) portaudio calls g_thread_init(). */
-	/* It may only be called once, and subsequent calls abort, so */
-	/* only call it if the thread system is not already initialized. */
-	if (!g_thread_supported ())
-		g_thread_init(NULL);
 #endif
-	gdk_threads_init();
+
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
+	/* SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16); */
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
+
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+	SDL_Window *window = SDL_CreateWindow("SNIS",
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+		720, 576, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+	if (!window) {
+		fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
+		exit(1);
+	}
+	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+	(void) gl_context;
+	setup_screen_parameters(window);
+	init_colors();
+	sng_set_foreground(WHITE);
+	snis_typefaces_init_with_scaling((float) SCREEN_WIDTH / 1050.0, (float) SCREEN_HEIGHT / 500.0);
 
 	gettimeofday(&start_time, NULL);
 	universe_timestamp_offset = time_now_double(); /* until we get real time from server */
@@ -23621,7 +23566,7 @@ int main(int argc, char *argv[])
 	init_comms_ui();
 	init_demon_ui();
 	init_net_setup_ui();
-	setup_joysticks(window);
+	setup_joysticks();
 	setup_physical_io_socket();
 	setup_natural_language_fifo();
 	setup_demon_fifo();
@@ -23636,13 +23581,52 @@ int main(int argc, char *argv[])
 
 	set_default_clip_window();
 
+#if 0
+	/* TODO SDL */
 	if (fullscreen)
 		gtk_window_fullscreen(GTK_WINDOW(window));
+#endif
+	main_da_configure(window);
 
-	gtk_main ();
-        wwviaudio_cancel_all_sounds();
-        wwviaudio_stop_portaudio();
-	for (i = 0; i < njoysticks; i++)
-		close_joystick(joystick_fd[i]);
+	const double maxTimeBehind = 0.5;
+	double delta[2] = { 1.0 / 30.0, 1.0 / 60.0 };
+
+	double currentTime = time_now_double();
+	double nextTime = currentTime + delta[use_60_fps];
+	while (1) {
+		currentTime = time_now_double();
+
+		if (currentTime - nextTime > maxTimeBehind)
+			nextTime = currentTime;
+
+		if (currentTime >= nextTime) {
+			nextTime += delta[use_60_fps];
+
+			process_events(window);
+
+			advance_game();
+
+			/* Draw the screen. */
+			main_da_expose(window);
+
+#if 0
+			/* TODO: Do this via inotify */
+			if (nframes % (use_60_fps ? 60 : 30) == 0) {
+				graph_dev_reload_changed_textures();
+				graph_dev_reload_changed_cubemap_textures();
+			}
+#endif
+			nframes++;
+
+			if (final_quit_selection)
+				break;
+		} else {
+			double timeToSleep = nextTime - currentTime;
+			if (timeToSleep > 0)
+				sleep_double(timeToSleep);
+		}
+	}
+
+	really_quit();
 	return 0;
 }

@@ -21,6 +21,8 @@
 #ifndef INCLUDE_opengl_cap_h
 #define INCLUDE_opengl_cap_h
 
+#include <GL/glew.h>
+
 extern int msaa_framebuffer_supported();
 
 extern int msaa_render_to_fbo_supported();
