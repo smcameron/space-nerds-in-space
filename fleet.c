@@ -9,8 +9,8 @@
 #include "fleet.h"
 
 #define FLEET_SPACING 200.0f
-#define MAXSHIPSPERFLEET 100
-#define MAXFLEETS 50
+#define MAXSHIPSPERFLEET 10
+#define MAXFLEETS 10
 
 struct fleet {
 	int nships;
@@ -204,6 +204,11 @@ int fleet_count(void)
 {
 	return nfleets;
 }
+
+int max_fleets(void)
+{
+	return MAXFLEETS;
+} 
 
 int fleet_members(int fleet_number)
 {

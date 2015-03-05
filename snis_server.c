@@ -1714,7 +1714,7 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 		else
 			fleet_shape = FLEET_SQUARE;
 		setup_patrol_route(o);
-		if (fleet_count() < 5) {
+		if (fleet_count() < max_fleets()) {
 			o->tsd.ship.ai[0].ai_mode = AI_MODE_FLEET_LEADER;
 			o->tsd.ship.ai[0].u.fleet.fleet = fleet_new(fleet_shape, o->id);
 			o->tsd.ship.ai[0].u.fleet.fleet_position = 0;
@@ -1724,16 +1724,20 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 			int i, j, joined;
 
 			joined = 0;
-			for (i = 0; i < 5; i++) {
+			for (i = 0; i < max_fleets(); i++) {
+				int fleet_pos;
 				leader_id = fleet_get_leader_id(i);
 				j = lookup_by_id(leader_id);
 				leader = &go[j];
 				/* only join fleet of own faction */
 				if (leader->sdata.faction != o->sdata.faction)
 					continue;
+				fleet_pos = fleet_join(i, o->id);
+				if (fleet_pos < 0)
+					continue;
 				o->tsd.ship.ai[0].ai_mode = AI_MODE_FLEET_MEMBER;
 				o->tsd.ship.ai[0].u.fleet.fleet = i;
-				o->tsd.ship.ai[0].u.fleet.fleet_position = fleet_join(i, o->id);
+				o->tsd.ship.ai[0].u.fleet.fleet_position = fleet_pos;
 				joined = 1;
 			}
 			if (!joined) {
