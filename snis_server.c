@@ -3268,20 +3268,6 @@ static void damcon_repair_socket_move(struct snis_damcon_entity *o,
 		return;
 	part = &d->o[i];
 
-	if (!safe_mode) {
-		if (part->tsd.part.damage == 255) /* irreparably damaged? */
-			/* TODO: should make some sparks or something here. */
-			return;
-
-		/* if part is badly damaged, there is a chance it could be destroyed */
-		if (part->tsd.part.damage > 190 && snis_randn(100) < 5) {
-			/* TODO: should make some sparks and sound or something here. */
-			part->tsd.part.damage = 255; /* irreparably damaged */
-			part->version++;
-			return;
-		}
-	}
-
 	new_damage = part->tsd.part.damage - 8;
 	if (new_damage < 0)
 		new_damage = 0;
@@ -3403,11 +3389,24 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 		
 		i = lookup_by_damcon_id(d, o->tsd.robot.cargo_id);
 		if (i >= 0) {
+			int new_damage;
+
 			cargo = &d->o[i];
 			cargo->x = clawx;
 			cargo->y = clawy;
 			cargo->heading = o->tsd.robot.desired_heading + M_PI;
 			normalize_angle(&cargo->heading);
+
+			/* If part is lightly damaged, the robot can repair in place */
+			if (cargo->tsd.part.damage < 200) {
+				new_damage = cargo->tsd.part.damage - 8;
+				if (new_damage < 0)
+					new_damage = 0;
+				if (cargo->tsd.part.damage != new_damage) {
+					cargo->tsd.part.damage = new_damage;
+					cargo->version++;
+				}
+			}
 		}
 	}
 

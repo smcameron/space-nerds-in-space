@@ -8812,7 +8812,7 @@ static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 	if (dist < 150)
 		sprintf(msg, "%s%s",
 			damcon_part_name(o->tsd.part.system, o->tsd.part.part),
-			o->tsd.part.damage == 255 ? " (IRREPARABLY DAMAGED)" : "");
+			o->tsd.part.damage == 255 ? " (BADLY DAMAGED)" : "");
 	else
 		strcpy(msg, "");
 	sng_set_foreground(YELLOW);
