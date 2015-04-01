@@ -1557,7 +1557,28 @@ static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, 
 	return 0;
 }
 
-static int update_nebula(uint32_t id, uint32_t timestamp, double x, double y, double z, double r)
+static void nebula_move(struct snis_entity *o)
+{
+	union quat q;
+	float x, y, z, a;
+	double ts = universe_timestamp();
+	float r;
+	float angle = (M_PI / 180.0) * ((unsigned int) (o->tsd.nebula.phase_angle * ts *
+			o->tsd.nebula.phase_speed) % 360);
+	r = sin(angle) * o->tsd.nebula.r * 0.2 + o->tsd.nebula.r;
+	if (o->entity) {
+		quat_to_axis(&o->tsd.nebula.angular_velocity, &x, &y, &z, &a);
+		a = a + angle;
+		quat_init_axis(&q, x, y, z, a);
+		quat_mul_self(&q, &o->tsd.nebula.angular_velocity);
+		update_entity_scale(o->entity, r * 2.0);
+		update_entity_orientation(o->entity, &q);
+	}
+}
+
+static int update_nebula(uint32_t id, uint32_t timestamp, double x, double y, double z, double r,
+			union quat *angular_velocity, union quat *unrotated_orientation,
+			double phase_angle, double phase_speed)
 {
 	int i;
 
@@ -1572,6 +1593,10 @@ static int update_nebula(uint32_t id, uint32_t timestamp, double x, double y, do
 					&identity_quat, OBJTYPE_NEBULA, 1, e);
 		if (i < 0)
 			return i;
+		go[i].tsd.nebula.angular_velocity = *angular_velocity;
+		go[i].tsd.nebula.unrotated_orientation = *unrotated_orientation;
+		go[i].tsd.nebula.phase_angle = phase_angle;
+		go[i].tsd.nebula.phase_speed = phase_speed;
 	} else {
 		struct snis_entity *o = &go[i];
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
@@ -1580,6 +1605,7 @@ static int update_nebula(uint32_t id, uint32_t timestamp, double x, double y, do
 	}
 	go[i].tsd.nebula.r = r;	
 	go[i].alive = 1;
+	go[i].move = nebula_move;
 	return 0;
 }
 
@@ -1983,8 +2009,12 @@ static void move_objects(void)
 		case OBJTYPE_TRACTORBEAM:
 			o->move(o);
 			break;
-		case OBJTYPE_PLANET:
 		case OBJTYPE_NEBULA:
+			/* move_object(timestamp, o, &interpolate_orientated_object); */
+			move_object(timestamp, o, &interpolate_generic_object);
+			o->move(o);
+			break;
+		case OBJTYPE_PLANET:
 			move_object(timestamp, o, &interpolate_orientated_object);
 			break;
 		default:
@@ -4710,18 +4740,22 @@ static int process_update_nebula_packet(void)
 	unsigned char buffer[100];
 	uint32_t id, timestamp;
 	double dx, dy, dz, r;
+	union quat av, uo;
+	double phase_angle, phase_speed;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_nebula_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSS", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSQQSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
-			&r, (int32_t) UNIVERSE_DIM);
+			&r, (int32_t) UNIVERSE_DIM,
+			&av, &uo, &phase_angle, (int32_t) 360,
+			&phase_speed, (int32_t) 100);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_nebula(id, timestamp, dx, dy, dz, r);
+	rc = update_nebula(id, timestamp, dx, dy, dz, r, &av, &uo, phase_angle, phase_speed);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

@@ -437,6 +437,10 @@ struct starbase_data {
 
 struct nebula_data {
 	double r;
+	union quat angular_velocity;
+	union quat unrotated_orientation;
+	double phase_angle;
+	double phase_speed;
 };
 
 struct laser_data {
