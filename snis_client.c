@@ -1567,7 +1567,10 @@ static void nebula_move(struct snis_entity *o)
 			o->tsd.nebula.phase_speed) % 360);
 	r = sin(angle) * o->tsd.nebula.r * 0.2 + o->tsd.nebula.r;
 	if (o->entity) {
-		quat_to_axis(&o->tsd.nebula.angular_velocity, &x, &y, &z, &a);
+		x = o->tsd.nebula.avx;
+		y = o->tsd.nebula.avy;
+		z = o->tsd.nebula.avz;
+		a = o->tsd.nebula.ava;
 		a = a + angle;
 		quat_init_axis(&q, x, y, z, a);
 		quat_mul_self(&q, &o->tsd.nebula.unrotated_orientation);
@@ -1577,7 +1580,8 @@ static void nebula_move(struct snis_entity *o)
 }
 
 static int update_nebula(uint32_t id, uint32_t timestamp, double x, double y, double z, double r,
-			union quat *angular_velocity, union quat *unrotated_orientation,
+			float avx, float avy, float avz, float ava,
+			union quat *unrotated_orientation,
 			double phase_angle, double phase_speed)
 {
 	int i;
@@ -1593,7 +1597,10 @@ static int update_nebula(uint32_t id, uint32_t timestamp, double x, double y, do
 					&identity_quat, OBJTYPE_NEBULA, 1, e);
 		if (i < 0)
 			return i;
-		go[i].tsd.nebula.angular_velocity = *angular_velocity;
+		go[i].tsd.nebula.avx = avx;
+		go[i].tsd.nebula.avy = avy;
+		go[i].tsd.nebula.avz = avz;
+		go[i].tsd.nebula.ava = ava;
 		go[i].tsd.nebula.unrotated_orientation = *unrotated_orientation;
 		go[i].tsd.nebula.phase_angle = phase_angle;
 		go[i].tsd.nebula.phase_speed = phase_speed;
@@ -4741,6 +4748,7 @@ static int process_update_nebula_packet(void)
 	uint32_t id, timestamp;
 	double dx, dy, dz, r;
 	union quat av, uo;
+	float avx, avy, avz, ava;
 	double phase_angle, phase_speed;
 	int rc;
 
@@ -4754,8 +4762,10 @@ static int process_update_nebula_packet(void)
 			&phase_speed, (int32_t) 100);
 	if (rc != 0)
 		return rc;
+	quat_to_axis(&av, &avx, &avy, &avz, &ava);
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_nebula(id, timestamp, dx, dy, dz, r, &av, &uo, phase_angle, phase_speed);
+	rc = update_nebula(id, timestamp, dx, dy, dz, r, avx, avy, avz, ava,
+				&uo, phase_angle, phase_speed);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

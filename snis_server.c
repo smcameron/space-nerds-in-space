@@ -5315,6 +5315,7 @@ static int add_nebula(double x, double y, double z,
 {
 	int i;
 	float av;
+	union quat angvel;
 
 	i = add_generic_object(x, y, z, vx, 0.0, vz, heading, OBJTYPE_NEBULA);
 	if (i < 0)
@@ -5323,7 +5324,10 @@ static int add_nebula(double x, double y, double z,
 	go[i].type = OBJTYPE_NEBULA;
 	go[i].tsd.nebula.r = r;
 	av = ((float) snis_randn(1000)) / 10000.0f - 0.05;
-	random_axis_quat(&go[i].tsd.nebula.angular_velocity, av * M_PI / 180);
+	random_axis_quat(&angvel, av * M_PI / 180);
+	quat_to_axis(&angvel,
+			&go[i].tsd.nebula.avx, &go[i].tsd.nebula.avy, &go[i].tsd.nebula.avz,
+			&go[i].tsd.nebula.ava);
 	random_axis_quat(&go[i].tsd.nebula.unrotated_orientation, snis_randn(360) * M_PI / 180.0);
 	go[i].tsd.nebula.phase_angle = 4.0 * (float) snis_randn(100) / 50.0f - 1.0;
 	go[i].tsd.nebula.phase_speed = snis_randn(1000) / 1000.0 - 0.5;
@@ -10559,12 +10563,16 @@ static void send_update_starbase_packet(struct game_client *c,
 static void send_update_nebula_packet(struct game_client *c,
 	struct snis_entity *o)
 {
+	union quat q;
+
+	quat_init_axis(&q, o->tsd.nebula.avx, o->tsd.nebula.avy, o->tsd.nebula.avz,
+			o->tsd.nebula.ava);
 	pb_queue_to_client(c, packed_buffer_new("bwwSSSSQQSS", OPCODE_UPDATE_NEBULA, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					o->tsd.nebula.r, (int32_t) UNIVERSE_DIM,
-					&o->tsd.nebula.angular_velocity,
+					&q,
 					&o->tsd.nebula.unrotated_orientation,
 					o->tsd.nebula.phase_angle, (int32_t) 360,
 					o->tsd.nebula.phase_speed, (int32_t) 100));

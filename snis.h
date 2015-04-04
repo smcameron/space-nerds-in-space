@@ -437,7 +437,12 @@ struct starbase_data {
 
 struct nebula_data {
 	double r;
-	union quat angular_velocity;
+	/* avx,avy,avz and ava are components of angular velocity quaternion.
+	 * We storethem decomposed into x,y,z,a because we only ever change a
+	 * and this saves us decomposing the quaternion every time we need to
+	 * change a.
+	 */
+	float avx, avy, avz, ava;
 	union quat unrotated_orientation;
 	double phase_angle;
 	double phase_speed;
