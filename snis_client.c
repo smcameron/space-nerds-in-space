@@ -1570,7 +1570,7 @@ static void nebula_move(struct snis_entity *o)
 		quat_to_axis(&o->tsd.nebula.angular_velocity, &x, &y, &z, &a);
 		a = a + angle;
 		quat_init_axis(&q, x, y, z, a);
-		quat_mul_self(&q, &o->tsd.nebula.angular_velocity);
+		quat_mul_self(&q, &o->tsd.nebula.unrotated_orientation);
 		update_entity_scale(o->entity, r * 2.0);
 		update_entity_orientation(o->entity, &q);
 	}
