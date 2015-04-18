@@ -1,4 +1,4 @@
-.TH SPACE-NERDS-IN-SPACE "6" "Nov 2012" "snis_client" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "Apr 2015" "snis_client" "Games"
 .SH NAME
 snis_client \- Multi player cooperative star ship bridge simulator (client) 
 .SH SYNOPSIS
@@ -20,27 +20,43 @@ on a ship establishes a ship name and password, subsequent clients join the ship
 created with the wrong name/password.)
 .SH Options:
 .TP
-\fB\--main\fR
-Request this client process support the MAIN SCREEN role.
-.PP
-\fB\--navigation\fR
-Request this client process support the NAVIGATION role.
-.PP
-\fB\--science\fR
-Request this client process support the SCIENCE role.
-.PP
-\fB\--weapons\fR
-Request this client process support the WEAPONS role.
-.PP
-\fB\--debug\fR
-Request this client process support the DEBUG role.
-.PP
-\fB\--soundserver\fR
-Request this client process support the SOUNDSERVER role.
-.PP
+\fB--aspect-ratio x,y\fR
+Specify a requested aspect ratio.  By default, the window manager is queried
+to determine the display dimensions, and the aspect ratio is made to match.
+Other arbitrary aspect ratios may be specified.  This may be desirable if
+you have a display that is significantly different from the display the game
+was designed on (16:9).  Common aspect ratios (circa 2015) are 5:4, 4:3, 16:10
+and 16:9 (according to wikipedia). The values specified for x and y must be
+integers greater than zero and must be separatedy by a comma or a colon.  Specifying
+and aspect ratio will disable the --fullscreen option.  Note: You may experience
+some problems with widget and text placement with aspect ratios significantly
+different than 16:9.
+.TP
 \fB\--comms\fR
 Request this client process support the COMMS (communication) role.
-.PP
+.TP
+\fB\--debug\fR
+Request this client process support the DEBUG role.
+.TP
+\fB\--fullscreen\fR
+Use the full display, with no window borders.  This option is ignored
+if the --aspect-ratio option is also specified.
+.TP
+\fB\--main\fR
+Request this client process support the MAIN SCREEN role.
+.TP
+\fB\--navigation\fR
+Request this client process support the NAVIGATION role.
+.TP
+\fB\--science\fR
+Request this client process support the SCIENCE role.
+.TP
+\fB\--soundserver\fR
+Request this client process support the SOUNDSERVER role.
+.TP
+\fB\--weapons\fR
+Request this client process support the WEAPONS role.
+.TP
 \fB\--version\fR
 Print the program's version number and exit.
 .SH ENVIRONMENT VARIABLES

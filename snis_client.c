@@ -128,6 +128,8 @@
 static int SCREEN_WIDTH = 800; // 1366;        /* window width, in pixels */
 static int SCREEN_HEIGHT = 600; // 768;       /* window height, in pixels */
 #define ASPECT_RATIO (SCREEN_WIDTH/(float)SCREEN_HEIGHT)
+static int requested_aspect_x = -1;
+static int requested_aspect_y = -1;
 
 /* helper function to transform from 800x600 original coord system */
 static inline int txx(int x) { return x * SCREEN_WIDTH / 800; }
@@ -190,7 +192,6 @@ GdkGC *gc = NULL;               /* our graphics context. */
 GtkWidget *main_da;             /* main drawing area. */
 gint timer_tag;  
 int fullscreen = 0;
-int fixed_aspect_ratio = 0;
 int in_the_process_of_quitting = 0;
 int current_quit_selection = 0;
 int final_quit_selection = 0;
@@ -12154,7 +12155,8 @@ void really_quit(void)
 
 static void usage(void)
 {
-	fprintf(stderr, "usage: snis_client --lobbyhost lobbyhost --starship starshipname --pw password\n");
+	fprintf(stderr, "usage: snis_client [--aspect-ratio x,y] --lobbyhost lobbyhost \\\n"
+			"                    --starship starshipname --pw password\n");
 	fprintf(stderr, "       Example: ./snis_client --lobbyhost localhost --starship Enterprise --pw tribbles\n");
 	exit(1);
 }
@@ -12868,6 +12870,47 @@ static void take_your_locale_and_shove_it(void)
 	setlocale(LC_ALL, "C");
 }
 
+static void figure_aspect_ratio(int requested_x, int requested_y,
+				int *x, int *y)
+{
+	int sw, sh;
+	GdkScreen *s;
+
+	s = gdk_screen_get_default();
+	if (!s)
+		return;
+
+	sw = gdk_screen_get_width(s);
+	sh = gdk_screen_get_height(s);
+
+	if (requested_x <= 0 || requested_y <= 0) {
+		*x = sw;
+		*y = sh;
+		return;
+	}
+
+	/*
+	 * The requested long axis gets full screen dimension in that axis,
+	 * and the other axis gets adjusted.  If that makes the other
+	 * axis exceed screen dimensions, then further adjustments are made.
+	 */
+	if (requested_x > requested_y) {
+		*x = sw;
+		*y = (int) ((double) sw * (double) requested_y / (double) requested_x);
+		if (*y > sh) {
+			*y = sh;
+			*x = (int) ((double) sh * (double) requested_x / (double) requested_y);
+		}
+	} else {
+		*y = sh;
+		*x = (int) ((double) sh * (double) requested_x / (double) requested_y);
+		if (*x > sw) {
+			*y = (int) ((double) sw * (double) requested_y / (double) requested_x);
+			*x = sw;
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
@@ -12949,6 +12992,19 @@ int main(int argc, char *argv[])
 			fullscreen = 1;
 			continue;
 		}
+		if (strcmp(argv[i], "--aspect-ratio") == 0) {
+			int rc, x, y;
+			printf("argc = %d, i = %d\n", argc, i);
+			if (i + 1 >= argc)
+				usage();
+			rc = sscanf(argv[i + 1], "%d%*[,:]%d", &x, &y);
+			if (rc != 2)
+				usage();
+			requested_aspect_x = x;
+			requested_aspect_y = y;
+			i++;
+			continue;
+		}
 		usage();
 	}
 	if (role == 0)
@@ -12998,10 +13054,11 @@ int main(int argc, char *argv[])
 		GdkScreen *s;
 
 		s = gdk_screen_get_default();
-		if (s) {
-			SCREEN_WIDTH = gdk_screen_get_width(s);
-			SCREEN_HEIGHT = gdk_screen_get_height(s);
-		}
+		if (s)
+			figure_aspect_ratio(requested_aspect_x, requested_aspect_y,
+						&SCREEN_WIDTH, &SCREEN_HEIGHT);
+		if (requested_aspect_x >= 0 || requested_aspect_y >= 0)
+			fullscreen = 0; /* can't request aspect ratio AND fullscreen */
 		real_screen_width = SCREEN_WIDTH;
 		real_screen_height = SCREEN_HEIGHT;
 
