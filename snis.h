@@ -573,6 +573,7 @@ struct planet_data {
 	float radius;
 	uint8_t ring;
 	uint16_t contraband;
+	struct entity *atmosphere;
 };
 
 union type_specific_data {

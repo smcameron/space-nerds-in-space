@@ -337,6 +337,8 @@ static struct material warp_tunnel_material;
 static struct material asteroid_material[NASTEROID_TEXTURES];
 static struct material wormhole_material;
 static struct material thrust_material;
+static struct material atmosphere_material;
+
 #ifdef WITHOUTOPENGL
 const int wormhole_render_style = RENDER_SPARKLE;
 const int torpedo_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
@@ -1464,7 +1466,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 				uint8_t security, uint16_t contraband)
 {
 	int i, m;
-	struct entity *e, *ring;
+	struct entity *e, *atm, *ring;
 	union quat orientation;
 
 	i = lookup_object_by_id(id);
@@ -1480,6 +1482,14 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 		if (e) {
 			update_entity_scale(e, r);
 			update_entity_material(e, &planet_material[m]);
+		}
+
+		atm = add_entity(ecx, sphere_mesh, x, y, z, WHITE);
+		go[i].tsd.planet.atmosphere = atm;
+		if (atm) {
+			update_entity_scale(atm, r * 1.03);
+			update_entity_material(atm, &atmosphere_material);
+			update_entity_visibility(atm, 1);
 		}
 
 		if (hasring) {
@@ -11935,6 +11945,7 @@ static void load_textures(void)
 			planet_material[pm_index].textured_planet.ring_material = &planetary_ring_material[k];
 		}
 	}
+	material_init_atmosphere(&atmosphere_material);
 
 	material_init_textured_shield(&shield_material);
 	shield_material.textured_shield.texture_id = load_cubemap_textures(0, "shield-effect-");
