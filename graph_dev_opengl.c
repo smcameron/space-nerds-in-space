@@ -573,6 +573,17 @@ struct graph_dev_gl_single_color_lit_shader {
 	GLint color_id;
 };
 
+struct graph_dev_gl_atmosphere_shader {
+	GLuint program_id;
+	GLint mvp_matrix_id;
+	GLint mv_matrix_id;
+	GLint normal_matrix_id;
+	GLint vertex_position_id;
+	GLint vertex_normal_id;
+	GLint light_pos_id;
+	GLint color_id;
+};
+
 struct graph_dev_gl_filled_wireframe_shader {
 	GLuint program_id;
 	GLint viewport_id;
@@ -749,6 +760,7 @@ struct graph_dev_smaa_effect {
 
 /* store all the shader parameters */
 static struct graph_dev_gl_single_color_lit_shader single_color_lit_shader;
+static struct graph_dev_gl_atmosphere_shader atmosphere_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_with_clip_sphere_shader;
 static struct graph_dev_gl_filled_wireframe_shader filled_wireframe_shader;
@@ -1351,6 +1363,75 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 
 	glDisableVertexAttribArray(single_color_lit_shader.vertex_position_id);
 	glDisableVertexAttribArray(single_color_lit_shader.vertex_normal_id);
+	glUseProgram(0);
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	if (draw_polygon_as_lines)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	if (draw_normal_lines) {
+		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
+	}
+}
+
+static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
+	const struct mat33 *mat_normal,
+	struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos)
+{
+	enable_3d_viewport();
+
+	if (!m->graph_ptr)
+		return;
+
+	struct mesh_gl_info *ptr = m->graph_ptr;
+
+	/* enable depth test but don't write to depth buffer */
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	if (draw_polygon_as_lines)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	glUseProgram(atmosphere_shader.program_id);
+
+	glUniformMatrix4fv(atmosphere_shader.mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
+	glUniformMatrix4fv(atmosphere_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix3fv(atmosphere_shader.normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
+
+	glUniform3f(atmosphere_shader.color_id, triangle_color->red,
+		triangle_color->green, triangle_color->blue);
+	glUniform3f(atmosphere_shader.light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
+
+	glEnableVertexAttribArray(atmosphere_shader.vertex_position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
+	glVertexAttribPointer(
+		atmosphere_shader.vertex_position_id, /* The attribute we want to configure */
+		3,                           /* size */
+		GL_FLOAT,                    /* type */
+		GL_FALSE,                    /* normalized? */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
+	);
+
+	glEnableVertexAttribArray(atmosphere_shader.vertex_normal_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
+	glVertexAttribPointer(
+		atmosphere_shader.vertex_normal_id,  /* The attribute we want to configure */
+		3,                            /* size */
+		GL_FLOAT,                     /* type */
+		GL_FALSE,                     /* normalized? */
+		sizeof(struct vertex_triangle_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_triangle_buffer_data, normal.v.x) /* array buffer offset */
+	);
+
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+
+	glDisableVertexAttribArray(atmosphere_shader.vertex_position_id);
+	glDisableVertexAttribArray(atmosphere_shader.vertex_normal_id);
 	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
@@ -1987,6 +2068,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 		struct graph_dev_gl_textured_shader *tex_shader = 0;
 
+		int atmosphere = 0;
 		int do_cullface = 1;
 		int do_blend = 0;
 		struct sng_color texture_tint = { 1.0, 1.0, 1.0 };
@@ -2043,6 +2125,12 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				texture_tint = mt->tint;
 				}
 				break;
+			case MATERIAL_ATMOSPHERE: {
+				do_blend = 1;
+				texture_alpha = 0.5;
+				atmosphere = 1;
+				break;
+				}
 			case MATERIAL_TEXTURE_CUBEMAP: {
 				tex_shader = &textured_cubemap_lit_shader;
 
@@ -2152,6 +2240,9 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						emit_texture_id, &shadow_sphere, &shadow_annulus, do_cullface,
 						do_blend, ring_texture_v,
 						ring_inner_radius, ring_outer_radius);
+				else if (atmosphere)
+					graph_dev_raster_atmosphere(mat_mvp, mat_mv, mat_normal,
+						e->m, &triangle_color, eye_light_pos);
 				else
 					graph_dev_raster_single_color_lit(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos);
@@ -2571,6 +2662,25 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	shader->program_id = load_shaders(shader_directory,
 				"single-color-lit-per-vertex.vert",
 				"single-color-lit-per-vertex.frag",
+				UNIVERSAL_SHADER_HEADER);
+
+	/* Get a handle for our "MVP" uniform */
+	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
+	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
+	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
+	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
+
+	/* Get a handle for our buffers */
+	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
+	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
+	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
+}
+
+static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shader)
+{
+	/* Create and compile our GLSL program from the shaders */
+	shader->program_id = load_shaders(shader_directory,
+				"atmosphere.vert", "atmosphere.frag",
 				UNIVERSAL_SHADER_HEADER);
 
 	/* Get a handle for our "MVP" uniform */
@@ -3227,6 +3337,7 @@ int graph_dev_setup(const char *shader_dir)
 	}
 
 	setup_single_color_lit_shader(&single_color_lit_shader);
+	setup_atmosphere_shader(&atmosphere_shader);
 	setup_trans_wireframe_shader("wireframe_transparent", &trans_wireframe_shader);
 	setup_trans_wireframe_shader("wireframe-transparent-sphere-clip", &trans_wireframe_with_clip_sphere_shader);
 	setup_filled_wireframe_shader(&filled_wireframe_shader);

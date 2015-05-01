@@ -41,6 +41,7 @@ static int wireframe = 0;
 static int oldwireframe = 0;
 static int autospin_initialized = 0;
 static int autospin = 0;
+static int draw_atmosphere = 1;
 union quat autorotation; 
 
 static int display_frame_stats = 1;
@@ -145,6 +146,9 @@ static void handle_key_down(SDL_keysym *keysym)
 		break;
 	case SDLK_s:
 		autospin = !autospin;
+		break;
+	case SDLK_a:
+		draw_atmosphere = !draw_atmosphere;
 		break;
 	default:
 		break;
@@ -343,8 +347,10 @@ static void process_events()
 
 
 static struct mesh *target_mesh;
+static struct mesh *atmosphere_mesh;
 static struct mesh *light_mesh;
 static struct material planet_material;
+static struct material atmosphere_material;
 static int planet_mode = 0;
 
 #define FRAME_INDEX_MAX 10
@@ -392,12 +398,19 @@ static void draw_screen()
 	calculate_camera_transform(cx);
 
 	struct entity *e = add_entity(cx, target_mesh, 0, 0, 0, WHITE);
-	if (planet_mode)
+	struct entity *ae = NULL;
+	if (planet_mode) {
 		update_entity_material(e, &planet_material);
+		if (draw_atmosphere) {
+			ae = add_entity(cx, atmosphere_mesh, 0, 0, 0, WHITE);
+			update_entity_scale(ae, 1.03);
+			update_entity_material(ae, &atmosphere_material);
+		}
+	}
 	update_entity_orientation(e, &lobby_orientation);
 
 	if (isDraggingLight) {
-		union vec3 light_dir = { { 0.75 * r_cam, 0, 0 } };
+		union vec3 light_dir = { { 10.75 * r_cam, 0, 0 } };
 		quat_rot_vec_self(&light_dir, &light_orientation);
 		sng_set_foreground(WHITE);
 		render_line(cx, light_dir.v.x, light_dir.v.y, light_dir.v.z, 0, 0, 0);
@@ -612,11 +625,14 @@ int main(int argc, char *argv[])
 
 	if (planet_mode) {
 		target_mesh = mesh_unit_icosphere(4);
+		atmosphere_mesh = mesh_unit_icosphere(4);
 		material_init_textured_planet(&planet_material);
 		planet_material.textured_planet.texture_id = load_cubemap_textures(0, planetname);
 		planet_material.textured_planet.ring_material = 0;
+		material_init_atmosphere(&atmosphere_material);
 	} else {
 		target_mesh = snis_read_model(filename);
+		atmosphere_mesh = NULL;
 	}
 	if (!target_mesh) {
 		printf("unable to read model file '%s'\n", filename);
