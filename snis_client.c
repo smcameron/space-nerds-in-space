@@ -1484,13 +1484,6 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 			update_entity_material(e, &planet_material[m]);
 		}
 
-		atm = add_entity(ecx, sphere_mesh, x, y, z, WHITE);
-		go[i].tsd.planet.atmosphere = atm;
-		if (atm) {
-			update_entity_scale(atm, r * 1.03);
-			update_entity_material(atm, &atmosphere_material);
-			update_entity_visibility(atm, 1);
-		}
 
 		if (hasring) {
 			ring = add_entity(ecx, planetary_ring_mesh, 0, 0, 0, PLANET_COLOR);
@@ -1510,6 +1503,13 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
+		atm = add_entity(ecx, sphere_mesh, x, y, z, WHITE);
+		go[i].tsd.planet.atmosphere = atm;
+		if (atm) {
+			update_entity_scale(atm, r * 1.03);
+			update_entity_material(atm, &atmosphere_material);
+			update_entity_visibility(atm, 1);
+		}
 		if (e)
 			update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
 	} else {
@@ -4295,6 +4295,13 @@ static void delete_object(uint32_t id)
 	if (i < 0)
 		return;
 	go[i].alive = 0;
+	if (go[i].type == OBJTYPE_PLANET && go[i].tsd.planet.atmosphere) {
+		/* If the atmosphere entity can be a child of the planet,
+		 * we don't need this
+		 */
+		remove_entity(ecx, go[i].tsd.planet.atmosphere);
+		go[i].tsd.planet.atmosphere = NULL;
+	}
 	remove_entity(ecx, go[i].entity);
 	go[i].entity = NULL;
 	free_spacemonster_data(&go[i]);
