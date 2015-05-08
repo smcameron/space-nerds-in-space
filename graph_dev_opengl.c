@@ -1392,7 +1392,7 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 	BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+	glDisable(GL_CULL_FACE);
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
