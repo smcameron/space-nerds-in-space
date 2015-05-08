@@ -5876,6 +5876,15 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].tsd.planet.ring = snis_randn(100) < 50;
 	go[i].tsd.planet.security = security;
 	go[i].tsd.planet.contraband = choose_contraband();
+
+	/* If we wish each planet to have a different color and size atmosphere
+	 * this is where that would happen.
+	 */
+	go[i].tsd.planet.atmosphere_r = (uint8_t) (255.0 * 0.6);
+	go[i].tsd.planet.atmosphere_g = (uint8_t) (255.0 * 0.6);
+	go[i].tsd.planet.atmosphere_b = (uint8_t) (255.0 * 1.0);
+	go[i].tsd.planet.atmosphere_scale = 1.03;
+
 	return i;
 }
 
@@ -10528,7 +10537,7 @@ static void send_update_planet_packet(struct game_client *c,
 	else
 		ring = 1.0;
 
-	pb_queue_to_client(c, packed_buffer_new("bwwSSSSwbbbbh", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSSwbbbbhbbbS", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
@@ -10538,7 +10547,11 @@ static void send_update_planet_packet(struct game_client *c,
 					o->tsd.planet.tech_level,
 					o->tsd.planet.economy,
 					o->tsd.planet.security,
-					o->tsd.planet.contraband));
+					o->tsd.planet.contraband,
+					o->tsd.planet.atmosphere_r,
+					o->tsd.planet.atmosphere_g,
+					o->tsd.planet.atmosphere_b,
+					o->tsd.planet.atmosphere_scale, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_wormhole_packet(struct game_client *c,

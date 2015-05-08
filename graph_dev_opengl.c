@@ -2046,6 +2046,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	float ring_texture_v = 0.0f;
 	float ring_inner_radius = 1.0f;
 	float ring_outer_radius = 4.0f;
+	struct sng_color atmosphere_color;
 
 	draw_vertex_buffer_2d();
 
@@ -2129,6 +2130,9 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				do_blend = 1;
 				texture_alpha = 0.5;
 				atmosphere = 1;
+				atmosphere_color.red = e->material_ptr->atmosphere.r;
+				atmosphere_color.green = e->material_ptr->atmosphere.g;
+				atmosphere_color.blue = e->material_ptr->atmosphere.b;
 				break;
 				}
 			case MATERIAL_TEXTURE_CUBEMAP: {
@@ -2242,7 +2246,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						ring_inner_radius, ring_outer_radius);
 				else if (atmosphere)
 					graph_dev_raster_atmosphere(mat_mvp, mat_mv, mat_normal,
-						e->m, &triangle_color, eye_light_pos);
+						e->m, &atmosphere_color, eye_light_pos);
 				else
 					graph_dev_raster_single_color_lit(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos);

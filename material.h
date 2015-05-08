@@ -114,7 +114,7 @@ struct material_textured_shield {
 };
 
 struct material_atmosphere {
-	struct material *ring_material;
+	float r, g, b, scale;
 };
 
 struct material_wireframe_sphere_clip {

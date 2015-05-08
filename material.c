@@ -203,7 +203,10 @@ void material_init_atmosphere(struct material *m)
 {
 	m->type = MATERIAL_ATMOSPHERE;
 	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
-	m->atmosphere.ring_material = 0;
+	m->atmosphere.r = 0.6f;
+	m->atmosphere.g = 0.6f;
+	m->atmosphere.b = 1.0f;
+	m->atmosphere.scale = 1.03f;
 }
 
 void material_init_textured_planet_ring(struct material *m)

@@ -1463,7 +1463,11 @@ static int update_derelict(uint32_t id, uint32_t timestamp, double x, double y, 
 
 static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, double z, double r, uint8_t government,
 				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring,
-				uint8_t security, uint16_t contraband)
+				uint8_t security, uint16_t contraband,
+				uint8_t atm_r,
+				uint8_t atm_g,
+				uint8_t atm_b,
+				double atm_scale)
 {
 	int i, m;
 	struct entity *e, *atm, *ring;
@@ -1506,8 +1510,13 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 		atm = add_entity(ecx, sphere_mesh, 0.0f, 0.0f, 0.0f, WHITE);
 		go[i].tsd.planet.atmosphere = atm;
 		if (atm) {
-			update_entity_scale(atm, 1.03);
-			update_entity_material(atm, &atmosphere_material);
+			update_entity_scale(atm, atm_scale);
+			material_init_atmosphere(&go[i].tsd.planet.atm_material);
+			go[i].tsd.planet.atm_material.atmosphere.r = (float) atm_r / 255.0f;
+			go[i].tsd.planet.atm_material.atmosphere.g = (float) atm_g / 255.0f;
+			go[i].tsd.planet.atm_material.atmosphere.b = (float) atm_b / 255.0f;
+			go[i].tsd.planet.atm_material.atmosphere.scale = (float) atm_scale;
+			update_entity_material(atm, &go[i].tsd.planet.atm_material);
 			update_entity_visibility(atm, 1);
 			update_entity_parent(ecx, atm, e);
 		}
@@ -1523,6 +1532,10 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	go[i].tsd.planet.security = security;
 	go[i].tsd.planet.radius = r;
 	go[i].tsd.planet.contraband = contraband;
+	go[i].tsd.planet.atmosphere_r = atm_r;
+	go[i].tsd.planet.atmosphere_g = atm_g;
+	go[i].tsd.planet.atmosphere_b = atm_b;
+	go[i].tsd.planet.atmosphere_scale = atm_scale;
 	return 0;
 }
 
@@ -4689,21 +4702,21 @@ static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, timestamp;
-	double dr, dx, dy, dz;
-	uint8_t government, tech_level, economy, security;
+	double dr, dx, dy, dz, atm_scale;
+	uint8_t government, tech_level, economy, security, atm_r, atm_g, atm_b;
 	uint32_t dseed;
 	int hasring;
 	uint16_t contraband;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbbh", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbbhbbbS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
 			&dr, (int32_t) UNIVERSE_DIM,
 			&dseed, &government, &tech_level, &economy, &security,
-			&contraband);
+			&contraband, &atm_r, &atm_b, &atm_g, &atm_scale, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	hasring = (dr < 0);
@@ -4711,7 +4724,8 @@ static int process_update_planet_packet(void)
 		dr = -dr;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_planet(id, timestamp, dx, dy, dz, dr, government, tech_level,
-				economy, dseed, hasring, security, contraband);
+				economy, dseed, hasring, security, contraband,
+				atm_r, atm_b, atm_g, atm_scale);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

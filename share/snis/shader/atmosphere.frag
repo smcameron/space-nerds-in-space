@@ -32,9 +32,7 @@ void main()
 	float attenuation = min((1.0 - eyedot), 0.25);
 	attenuation = 15.0 * attenuation * attenuation;
 
-	vec3 xColor = vec3(0.6, 0.6, 1.0); // kinda blue-ish
-
-	gl_FragColor = 2.1 * vec4(xColor * attenuation * lightdot * eyedot2 * 0.7,
+	gl_FragColor = 2.1 * vec4(v_Color * attenuation * lightdot * eyedot2 * 0.7,
 					attenuation * lightdot * eyedot2 * 0.7);
 }
 

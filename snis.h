@@ -21,6 +21,9 @@
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include "mesh.h"
+#include "material.h"
+
 #define SNIS_PROTOCOL_VERSION "SNIS001"
 
 /* dimensions of the "known" universe */
@@ -572,8 +575,11 @@ struct planet_data {
 #define PLAYER_PLANET_DIST_WARN (400)
 	float radius;
 	uint8_t ring;
+	uint8_t atmosphere_r, atmosphere_g, atmosphere_b;
+	double atmosphere_scale;
 	uint16_t contraband;
 	struct entity *atmosphere;
+	struct material atm_material;
 };
 
 union type_specific_data {
