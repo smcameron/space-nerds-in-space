@@ -222,7 +222,6 @@ static int ecx_fake_stars_initialized = 0;
 
 static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
-static volatile int helpmodeline = 0;
 static volatile float weapons_camera_shake = 0.0f; 
 static volatile float main_camera_shake = 0.0f;
 static unsigned char camera_mode;
@@ -3343,8 +3342,6 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		do_mainscreen_camera_mode();
 		break;
 	case keyf1:
-		if (!helpmode)
-			helpmodeline = 0;
 		helpmode = 1;
 		break;
 	case keyf2:
@@ -11404,7 +11401,7 @@ static void draw_help_text(GtkWidget *w, char *text)
 	i = 0;
 	do {
 		if (text[i] == '\n' || text[i] == '\0') {
-			if (line >= helpmodeline && line < helpmodeline + 20) {
+			if (line >= 0 && line < 20) {
 				buffer[buflen] = '\0';
 				sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
 				y += 19;
@@ -11416,7 +11413,7 @@ static void draw_help_text(GtkWidget *w, char *text)
 				i++;
 				continue;
 			} else {
-				if (line >= helpmodeline + 20)
+				if (line >= 20)
 					break;
 			}
 		}
