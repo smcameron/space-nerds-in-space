@@ -329,7 +329,9 @@ static struct material sun_material;
 #define NPLANETARY_RING_MATERIALS 256
 static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
-static struct material planet_material[NPLANET_MATERIALS * (NPLANETARY_RING_MATERIALS + 1)];
+static struct material *planet_material;
+static char **planet_material_filename = NULL;
+int nplanet_materials = -1;
 static struct material shield_material;
 static struct material warp_tunnel_material;
 #define NASTEROID_TEXTURES 2
@@ -1479,7 +1481,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 
 		/* each planet texture has another version with a variation of the ring materials */
 		int ring_m = id % NPLANETARY_RING_MATERIALS;
-		m = id % NPLANET_MATERIALS + (NPLANET_MATERIALS * (ring_m + 1) * (hasring ? 1 : 0));
+		m = id % nplanet_materials + (nplanet_materials * (ring_m + 1) * (hasring ? 1 : 0));
 
 		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
 		if (e) {
@@ -11866,6 +11868,73 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	return TRUE;
 }
 
+static int read_planet_material_metadata(int *nplanet_materials)
+{
+	FILE *f;
+	char path[PATH_MAX], fname[PATH_MAX], planet_type[PATH_MAX], line[256];
+	char *s;
+	int rc, lineno, np, pc;
+
+	printf("Reading planet texture specifications...");
+	fflush(stdout);
+	sprintf(path, "%s/%s", asset_dir, "planet_materials.txt");
+	f = fopen(path, "r");
+	if (!f) {
+		fprintf(stderr, "open: %s: %s\n", path, strerror(errno));
+		return -1;
+	}
+
+	np = -1;
+	pc = 0;
+	lineno = 0;
+	while (!feof(f)) {
+		s = fgets(line, 256, f);
+		if (!s)
+			break;
+		s = trim_whitespace(s);
+		lineno++;
+		if (strcmp(s, "") == 0)
+			continue;
+		if (s[0] == '#') /* comment? */
+			continue;
+		rc = sscanf(s, "planet texture count: %d", &np);
+		if (rc == 1) {
+			if (*nplanet_materials != -1) {
+				fprintf(stderr, "%s:%d: duplicate planet texture count\n",
+					path, lineno);
+				goto bailout;
+			}
+			*nplanet_materials = np;
+			planet_material = malloc(sizeof(planet_material[0]) * np *
+						(NPLANETARY_RING_MATERIALS + 1));
+			memset(planet_material, 0, sizeof(planet_material[0]) * np *
+						(NPLANETARY_RING_MATERIALS + 1));
+			planet_material_filename = malloc(sizeof(planet_material_filename[0]) * np);
+			memset(planet_material_filename, 0, sizeof(planet_material_filename[0]) * np);
+			continue;
+		}
+		/* planet_type is not really used now, but is intended to allow distinguishing
+		 * different types of planet textures (e.g. earth-like, mars-like, gas-giants)
+		 */
+		rc = sscanf(s, "%s %s", fname, planet_type);
+		if (rc != 2) {
+			fprintf(stderr, "%s:%d bad planet texture specification\n",
+					path, lineno);
+			goto bailout;
+		}
+		planet_material_filename[pc++] = strdup(fname);
+	}
+	fclose(f);
+	printf("done\n");
+	fflush(stdout);
+	return 0;
+bailout:
+	fclose(f);
+	free(planet_material);
+	planet_material = NULL;
+	return -1;
+}
+
 static void load_textures(void)
 {
 	if (textures_loaded)
@@ -11942,9 +12011,9 @@ static void load_textures(void)
 		planetary_ring_material[i].textured_planet_ring.texture_v = x;
 	}
 
-	for (i = 0; i < NPLANET_MATERIALS; i++) {
+	for (i = 0; i < nplanet_materials; i++) {
 		char filename[25];
-		sprintf(filename, "planet-texture%d-", i);
+		sprintf(filename, "%s", planet_material_filename[i]);
 
 		material_init_textured_planet(&planet_material[i]);
 		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, filename);
@@ -11952,7 +12021,7 @@ static void load_textures(void)
 
 		int k;
 		for (k = 0; k < NPLANETARY_RING_MATERIALS; k++) {
-			int pm_index = (k + 1) * NPLANET_MATERIALS + i;
+			int pm_index = (k + 1) * nplanet_materials + i;
 			planet_material[pm_index] = planet_material[i];
 			planet_material[pm_index].textured_planet.ring_material = &planetary_ring_material[k];
 		}
@@ -13097,6 +13166,8 @@ int main(int argc, char *argv[])
 	read_keymap_config_file();
 	init_vects();
 	initialize_random_orientations_and_spins();
+	if (read_planet_material_metadata(&nplanet_materials))
+		exit(1);
 #if 0
 	init_player();
 	init_game_state(the_player);
