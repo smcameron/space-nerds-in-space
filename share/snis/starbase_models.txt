@@ -1,0 +1,11 @@
+#
+# List of starbase model assets within models/ subdir
+#
+starbase model count: 6
+
+starbase/starbase.obj
+starbase2/starbase2.obj
+starbase3.stl
+starbase4.stl
+starbase5.stl
+starbase6.stl

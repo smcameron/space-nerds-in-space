@@ -293,7 +293,9 @@ struct mesh *laser_mesh;
 struct mesh *asteroid_mesh[NASTEROID_MODELS];
 struct mesh *sphere_mesh;
 struct mesh *planetary_ring_mesh;
-struct mesh *starbase_mesh[NSTARBASE_MODELS];
+struct mesh **starbase_mesh;
+static int nstarbase_models = -1;
+static char **starbase_model_filename;
 struct mesh *ship_turret_mesh;
 struct mesh *ship_turret_base_mesh;
 struct mesh *particle_mesh;
@@ -1572,7 +1574,7 @@ static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
-		m = id % NSTARBASE_MODELS;
+		m = id % nstarbase_models;
 		e = add_entity(ecx, starbase_mesh[m], x, y, z, STARBASE_COLOR);
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_STARBASE, 1, e);
@@ -11958,6 +11960,87 @@ bailout:
 	return -1;
 }
 
+static int read_starbase_model_metadata(int *nstarbase_models)
+{
+	FILE *f;
+	char path[PATH_MAX], fname[PATH_MAX], line[256];
+	char *s;
+	int rc, lineno, np, pc;
+	const int max_starbase_models = 100;
+
+	printf("Reading starbase model specifications...");
+	fflush(stdout);
+	sprintf(path, "%s/%s", asset_dir, "starbase_models.txt");
+	f = fopen(path, "r");
+	if (!f) {
+		fprintf(stderr, "open: %s: %s\n", path, strerror(errno));
+		return -1;
+	}
+
+	np = -1;
+	pc = 0;
+	lineno = 0;
+	while (!feof(f)) {
+		s = fgets(line, 256, f);
+		if (!s)
+			break;
+		s = trim_whitespace(s);
+		lineno++;
+		if (strcmp(s, "") == 0)
+			continue;
+		if (s[0] == '#') /* comment? */
+			continue;
+		rc = sscanf(s, "starbase model count: %d", &np);
+		if (rc == 1) {
+			if (*nstarbase_models != -1) {
+				fprintf(stderr, "%s:%d: duplicate starbase model count\n",
+					path, lineno);
+				goto bailout;
+			}
+			if (np > max_starbase_models) {
+				fprintf(stderr,
+					"Too many starbase models (%d), capping to %d\n",
+					np, max_starbase_models);
+				np = max_starbase_models;
+			}
+			*nstarbase_models = np;
+			starbase_model_filename = malloc(sizeof(starbase_model_filename[0]) * np);
+			memset(starbase_model_filename, 0, sizeof(starbase_model_filename[0]) * np);
+			starbase_mesh = malloc(sizeof(*starbase_mesh) * np);
+			memset(starbase_mesh, 0, sizeof(*starbase_mesh) * np);
+			continue;
+		}
+		rc = sscanf(s, "%s", fname);
+		if (rc != 1) {
+			fprintf(stderr, "%s:%d bad starbase model specification\n",
+					path, lineno);
+			goto bailout;
+		}
+		starbase_model_filename[pc++] = strdup(fname);
+		if (pc > max_starbase_models)
+			break;
+	}
+	fclose(f);
+	printf("done\n");
+	fflush(stdout);
+	return 0;
+bailout:
+	fclose(f);
+	if (starbase_model_filename) {
+		int i;
+		for (i = 0; i < pc; i++) {
+			if (starbase_model_filename[i]) {
+				free(starbase_model_filename[i]);
+				starbase_model_filename[i] = NULL;
+			}
+		}
+		free(starbase_model_filename);
+		starbase_model_filename = NULL;
+	}
+	return -1;
+}
+
+
 static void load_textures(void)
 {
 	if (textures_loaded)
@@ -12831,15 +12914,16 @@ static void init_meshes()
 	warp_tunnel_mesh = mesh_tube(XKNOWN_DIM, 450.0, 20);
 	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS);
 
-	for (i = 0; i < NSTARBASE_MODELS; i++) {
-		char filename[100];
-
+	for (i = 0; i < nstarbase_models; i++) {
+		char *filename = starbase_model_filename[i];
+#if 0
 		if (i == 0)
 			sprintf(filename, "starbase/starbase.obj");
 		else if (i == 1)
 			sprintf(filename, "starbase%d/starbase%d.obj", i + 1, i + 1);
 		else
 			sprintf(filename, "starbase%d.stl", i + 1);
+#endif
 		printf("reading '%s'\n", filename);
 		starbase_mesh[i] = snis_read_model(d, filename);
 		mesh_scale(starbase_mesh[i], 2.0f);
@@ -13190,6 +13274,8 @@ int main(int argc, char *argv[])
 	init_vects();
 	initialize_random_orientations_and_spins();
 	if (read_planet_material_metadata(&nplanet_materials))
+		exit(1);
+	if (read_starbase_model_metadata(&nstarbase_models))
 		exit(1);
 #if 0
 	init_player();
