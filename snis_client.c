@@ -11874,6 +11874,7 @@ static int read_planet_material_metadata(int *nplanet_materials)
 	char path[PATH_MAX], fname[PATH_MAX], planet_type[PATH_MAX], line[256];
 	char *s;
 	int rc, lineno, np, pc;
+	const int max_planet_textures = 100;
 
 	printf("Reading planet texture specifications...");
 	fflush(stdout);
@@ -11904,6 +11905,12 @@ static int read_planet_material_metadata(int *nplanet_materials)
 					path, lineno);
 				goto bailout;
 			}
+			if (np > max_planet_textures) {
+				fprintf(stderr,
+					"Too many planet textures (%d), capping to %d\n",
+					np, max_planet_textures);
+				np = max_planet_textures;
+			}
 			*nplanet_materials = np;
 			planet_material = malloc(sizeof(planet_material[0]) * np *
 						(NPLANETARY_RING_MATERIALS + 1));
@@ -11923,6 +11930,8 @@ static int read_planet_material_metadata(int *nplanet_materials)
 			goto bailout;
 		}
 		planet_material_filename[pc++] = strdup(fname);
+		if (pc > max_planet_textures)
+			break;
 	}
 	fclose(f);
 	printf("done\n");
