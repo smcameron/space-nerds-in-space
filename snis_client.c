@@ -329,7 +329,7 @@ static struct material sun_material;
 #define NPLANETARY_RING_MATERIALS 256
 static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
-static struct material *planet_material;
+static struct material *planet_material = NULL;
 static char **planet_material_filename = NULL;
 int nplanet_materials = -1;
 static struct material shield_material;
@@ -11939,7 +11939,21 @@ static int read_planet_material_metadata(int *nplanet_materials)
 	return 0;
 bailout:
 	fclose(f);
-	free(planet_material);
+	if (planet_material) {
+		free(planet_material);
+		planet_material = NULL;
+	}
+	if (planet_material_filename) {
+		int i;
+		for (i = 0; i < pc; i++) {
+			if (planet_material_filename[i]) {
+				free(planet_material_filename[i]);
+				planet_material_filename[i] = NULL;
+			}
+		}
+		free(planet_material_filename);
+		planet_material_filename = NULL;
+	}
 	planet_material = NULL;
 	return -1;
 }
