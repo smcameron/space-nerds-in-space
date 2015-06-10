@@ -118,55 +118,6 @@ struct power_model_data {
 	uint8_t voltage;
 };
 
-/*
-#define SHIP_CLASS_CRUISER 0
-#define SHIP_CLASS_DESTROYER 1
-#define SHIP_CLASS_FREIGHTER 2
-#define SHIP_CLASS_TANKER 3
-#define SHIP_CLASS_TRANSPORT 4
-#define SHIP_CLASS_BATTLESTAR 5
-#define SHIP_CLASS_STARSHIP 6
-#define SHIP_CLASS_ASTEROIDMINER 7
-#define SHIP_CLASS_SCIENCE 8
-#define SHIP_CLASS_SCOUT 9
-#define SHIP_CLASS_DRAGONHAWK 10 
-#define SHIP_CLASS_SKORPIO 11 
-#define SHIP_CLASS_DISRUPTOR 12 
-#define SHIP_CLASS_RESEARCH_VESSEL 13 
-#define SHIP_CLASS_CONQUERER 14 
-#define SHIP_CLASS_SCRAMBLER 15 
-#define SHIP_CLASS_SWORDFISH 16
-#define SHIP_CLASS_WOMBAT 17
-
-struct ship_type_entry {
-	char *class;
-	double max_speed;
-	int crew_max;
-} *ship_type;
-[] = {
-	{ "CRUISER", 10.0, 15 },
-	{ "DESTROYER", 15.0, 10 },
-	{ "FREIGHTER", 8.0, 10 },
-	{ "TANKER", 7.5, 10 },
-	{ "TRANSPORT", 9.0, 200 },
-	{ "BATTLESTAR", 11.0, 75 },
-	{ "STARSHIP", 8.0, 10 },
-	{ "MINER", 11.5, 3 },
-	{ "SCIENCE", 7.5, 7 },
-	{ "SPACEFARER", 9.0, 5 },
-	{ "DRAGONHAWK", 12.0, 5 },
-	{ "SKORPIO", 14.0, 9 },
-	{ "DISRUPTOR", 10.0, 21 },
-	{ "RESEARCH", 7.0, 7 },
-	{ "CONQUEROR", 10.0, 17 },
-	{ "SCRAMBLER", 14.0, 30 },
-	{ "SWORDFISH", 14.0, 30 },
-	{ "WOMBAT", 14.0, 30 },
-};
-*/
-
-#define NSHIPTYPES ARRAYSIZE(ship_type)
-
 struct ship_damage_data {
 	uint8_t shield_damage;
 	uint8_t impulse_damage;
