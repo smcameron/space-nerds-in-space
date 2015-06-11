@@ -6,6 +6,47 @@ at this point.
 
 If you would like to help work on this project, see CONTRIBUTING.md
 
+-----------------------------------------
+IF YOU ARE IN A HURRY TO TRY OUT THE GAME
+
+Step 1: run "./quickstart".
+
+The "quickstart" script will start both a client process with all stations enabled
+and server process on a single computer.  This is generally how I run the game when
+developing as it is the easiest.   It may take awhile to start up depending on how
+fast your computer is.  Once the game starts up (you should see a space scene), use
+the function keys "F1", "F2", etc. to switch between the various stations on your client.
+
+Step 2.  Press F4, then turn on power to systems in the ship
+
+Initially, your ship has no power, all systems are turned off.  So press F4 to go to
+the Engineering station and click with the mouse on the square with a "1" in it.
+This button is "preset 1" and it will turn on power to almost all of the systems on
+the ship.  You can also adjust the sliders for power and coolant to each system
+individually if you want, but for now, Preset 1 gets things going quickly.
+
+Step 3. Press F2, then give it some gas
+
+Once you've powered up the ship's systems, press F2 to go to the Navigation station.
+Click on the throttle slider on the upper right hand to give the ship's engines some
+gas and get things moving.  From here, you can use the arrow keys (or AWSD keys) to
+yaw the ship left and right, pitch it up and down. Additionally Q and E roll left and
+right, respectively.
+
+Step 4.  Press F8 and look out the main viewscreen
+
+Press F8 to go to the main viewscreen.  The keys to control the ship's movement
+also work on this screen just as they do on the navigation screen.
+
+Step 5.  Press F3 and Fire the weapons.
+
+Press F3 to go to the weapons screen.  The arrow keys or the mouse control where
+the guns point.  Left and right mouse buttons fire phasers and torpedoes.  Do not
+anger the local law enforcement.
+-----------------------------------------
+
+Longer more technical instructions for multi-compuuer setup follow.
+
 There are three parts.
 
 The first part, ssgl (super simple game lobby) is licensed under the MIT
