@@ -9,6 +9,29 @@ If you would like to help work on this project, see CONTRIBUTING.md
 -----------------------------------------
 IF YOU ARE IN A HURRY TO TRY OUT THE GAME
 
+Step 0: Build the game from source. (or alternately, see instructions
+         for building debian package, way down below)
+
+     0.1: Install needed prerequisites
+
+	apt-get install build-essential
+	apt-get install portaudio19-dev
+	apt-get install libvorbis-dev
+	apt-get install libgtk2.0-dev
+	apt-get install git
+	apt-get install stgit
+	apt-get install openscad
+		(or get it from http://www.openscad.org/downloads.html)
+	apt-get install libgtkglext1-dev
+	apt-get install liblua5.2-dev
+	apt-get install libglew1.5-dev
+
+     0.2: Download the game source and build it.
+	git clone https://github.ocm/smcameron/space-nerds-in-space.git
+	cd space-nerds-in-space
+	make
+	(wait for it to compile... Openscad might take its sweet time.)
+
 Step 1: run "./quickstart".
 
 The "quickstart" script will start both a client process with all stations enabled
@@ -45,7 +68,7 @@ the guns point.  Left and right mouse buttons fire phasers and torpedoes.  Do no
 anger the local law enforcement.
 -----------------------------------------
 
-Longer more technical instructions for multi-compuuer setup follow.
+Longer more technical instructions for multi-computuer setup follow:
 
 There are three parts.
 
