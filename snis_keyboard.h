@@ -43,7 +43,8 @@ enum keyaction {
 		key_camera_mode = 38,
 		key_page_up = 39,
 		key_page_down = 40,
-#define NKEYSTATES 41
+		key_toggle_space_dust = 41,
+#define NKEYSTATES 42
 };
 
 struct keyboard_state {

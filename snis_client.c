@@ -219,6 +219,8 @@ struct entity_context *tridentecx;
 struct entity_context *sciballecx;
 
 static int ecx_fake_stars_initialized = 0;
+static int nfake_stars = 2000;
+static volatile int fake_stars_timer = 0;
 
 static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
@@ -2417,6 +2419,7 @@ char *keyactionstring[] = {
 	"key_camera_mode",
 	"key_page_up",
 	"key_page_down",
+	"key_toggle_space_dust",
 };
 
 void init_keymap()
@@ -2461,6 +2464,7 @@ void init_keymap()
 
 	keymap[GDK_i] = key_invert_vertical;
 	ffkeymap[GDK_KEY_Pause & 0x00ff] = key_toggle_frame_stats;
+	keymap[GDK_s] = key_toggle_space_dust;
 
 	keymap[GDK_k] = keysciball_rollleft;
 	keymap[GDK_semicolon] = keysciball_rollright;
@@ -3305,6 +3309,14 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 				vertical_controls_timer = FRAME_RATE_HZ;
 			}
 			return TRUE;
+	case key_toggle_space_dust:
+			if (nfake_stars == 0)
+				nfake_stars = 2000;
+			else
+				nfake_stars = 0;
+			ecx_fake_stars_initialized = 0;
+			fake_stars_timer = FRAME_RATE_HZ;
+			break;
 	case key_toggle_frame_stats:
 			display_frame_stats = (display_frame_stats + 1) % 3;
 			return TRUE;
@@ -5345,6 +5357,16 @@ static void show_common_screen(GtkWidget *w, char *title)
 			sng_center_xy_draw_string("VERTICAL CONTROLS INVERTED",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 	}
+	if (fake_stars_timer) {
+		sng_set_foreground(WHITE);
+		fake_stars_timer--;
+		if (nfake_stars > 0)
+			sng_center_xy_draw_string("SPACE DUST ENABLED",
+					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+		else
+			sng_center_xy_draw_string("SPACE DUST DISABLED",
+					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+	}
 }
 
 #define ANGLE_OF_VIEW (45)
@@ -5605,7 +5627,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	sng_set_foreground(GREEN);
 	if (!ecx_fake_stars_initialized) {
 		ecx_fake_stars_initialized = 1;
-		entity_init_fake_stars(ecx, 2000, 300.0f * 10.0f);
+		entity_init_fake_stars(ecx, nfake_stars, 300.0f * 10.0f);
 	}
 
 	render_skybox(ecx);
@@ -5828,7 +5850,7 @@ static void show_mainscreen(GtkWidget *w)
 	sng_set_foreground(GREEN);
 	if (!ecx_fake_stars_initialized) {
 		ecx_fake_stars_initialized = 1;
-		entity_init_fake_stars(ecx, 2000, 300.0f * 10.0f);
+		entity_init_fake_stars(ecx, nfake_stars, 300.0f * 10.0f);
 	}
 
 	render_skybox(ecx);
@@ -11298,6 +11320,7 @@ static char *help_text[] = {
 	"    AND MAIN VIEW\n\n"
 	"  * 1 KEY TOGGLES CAMERA VIEW MODES\n"
 	"  * CTRL-I INVERTS VERTICAL KEYBOARD CONTROLS\n"
+	"  * CTRL-S TOGGLES SPACE DUST EFFECT\n"
 	"\nPRESS ESC TO EXIT HELP\n",
 
 	/* Navigation help text */
@@ -11325,6 +11348,7 @@ static char *help_text[] = {
 	"  * MATCH PHASER WAVELENGTH TO WEAKNESSES\n"
 	"    IN ENEMY SHIELDS\n"
 	"  * CTRL-I INVERTS VERTICAL KEYBOARD CONTROLS\n"
+	"  * CTRL-S TOGGLES SPACE DUST EFFECT\n"
 	"\nPRESS ESC TO EXIT HELP\n",
 
 	/* Engineering help text */
