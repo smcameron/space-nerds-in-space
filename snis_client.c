@@ -3310,13 +3310,15 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			}
 			return TRUE;
 	case key_toggle_space_dust:
-			if (nfake_stars == 0)
-				nfake_stars = 2000;
-			else
-				nfake_stars = 0;
-			ecx_fake_stars_initialized = 0;
-			fake_stars_timer = FRAME_RATE_HZ;
-			break;
+			if (control_key_pressed) {
+				if (nfake_stars == 0)
+					nfake_stars = 2000;
+				else
+					nfake_stars = 0;
+				ecx_fake_stars_initialized = 0;
+				fake_stars_timer = FRAME_RATE_HZ;
+			}
+			return TRUE;
 	case key_toggle_frame_stats:
 			display_frame_stats = (display_frame_stats + 1) % 3;
 			return TRUE;
