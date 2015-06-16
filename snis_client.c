@@ -3344,8 +3344,10 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 				current_quit_selection = 0;
 			break;
 	case keytorpedo:
-		do_torpedo();
-		load_torpedo_button_pressed();
+		if (displaymode == DISPLAYMODE_WEAPONS) {
+			do_torpedo();
+			load_torpedo_button_pressed();
+		}
 		break;
 	case keyphaser:
 		if (in_the_process_of_quitting) {
