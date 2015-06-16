@@ -9659,13 +9659,9 @@ static void show_3d_science(GtkWidget *w)
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
 	sng_set_foreground(DARKGREEN);
-	if (sci_ui.details_mode == SCI_DETAILS_MODE_THREED) {
-		sng_set_foreground(DARKRED);
-		sng_draw_circle(0, cx, cy, r);
-		draw_all_the_3d_science_guys(w, o, zoom * 4.0, current_zoom * 4.0);
-	} else {
-		draw_science_details(w, gc);
-	}
+	sng_set_foreground(DARKRED);
+	sng_draw_circle(0, cx, cy, r);
+	draw_all_the_3d_science_guys(w, o, zoom * 4.0, current_zoom * 4.0);
 	draw_science_data(w, o, curr_science_guy);
 	show_common_screen(w, "SCIENCE");
 }
