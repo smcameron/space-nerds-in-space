@@ -16,7 +16,7 @@ use Getopt::Long qw(:config no_auto_abbrev);
 
 my $quiet = 0;
 my $tree = 0;
-my $chk_signoff = 0;
+my $chk_signoff = 1;
 my $chk_patch = 1;
 my $tst_only;
 my $emacs = 0;
@@ -1610,10 +1610,10 @@ sub process {
 				WARN("BAD_SIGN_OFF",
 				     "Non-standard signature: $sign_off\n" . $herecurr);
 			}
-			if (defined $space_before && $space_before ne "") {
-				WARN("BAD_SIGN_OFF",
-				     "Do not use whitespace before $ucfirst_sign_off\n" . $herecurr);
-			}
+			# if (defined $space_before && $space_before ne "") {
+			#	WARN("BAD_SIGN_OFF",
+			#	     "Do not use whitespace before $ucfirst_sign_off\n" . $herecurr);
+			# }
 			if ($sign_off =~ /-by:$/i && $sign_off ne $ucfirst_sign_off) {
 				WARN("BAD_SIGN_OFF",
 				     "'$ucfirst_sign_off' is the preferred signature form\n" . $herecurr);
@@ -3681,7 +3681,7 @@ sub process {
 	}
 	if ($is_patch && $chk_signoff && $signoff == 0) {
 		ERROR("MISSING_SIGN_OFF",
-		      "Missing Signed-off-by: line(s)\n");
+		      "Missing Signed-off-by: line(s).  See CONTRIBUTING.md\n");
 	}
 
 	print report_dump();
