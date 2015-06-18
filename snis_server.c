@@ -6700,6 +6700,19 @@ static int process_sci_details(struct game_client *c)
 	return 0;
 }
 
+static int process_sci_align_to_ship(struct game_client *c)
+{
+	if (c->ship_index < 0)
+		return 0;
+	/* Snap sciball orientation to ship orientation */
+	struct snis_entity *o = &go[c->ship_index];
+	pthread_mutex_lock(&universe_mutex);
+	o->tsd.ship.sciball_orientation = o->orientation;
+	o->timestamp = universe_timestamp;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 /* This is for mouse control of weapons */
 static int process_request_weapons_yaw_pitch(struct game_client *c)
 {
@@ -9647,6 +9660,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_SCI_DETAILS:
 			rc = process_sci_details(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_SCI_ALIGN_TO_SHIP:
+			rc = process_sci_align_to_ship(c);
 			if (rc)
 				goto protocol_error;
 			break;

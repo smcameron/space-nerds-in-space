@@ -4443,7 +4443,11 @@ static struct science_ui {
 	struct button *threed_button;
 	struct button *sciplane_button;
 	struct button *tractor_button;
+	struct button *align_to_ship_button;
 } sci_ui;
+
+static void ui_hide_widget(void *widget);
+static void ui_unhide_widget(void *widget);
 
 static int process_sci_details(void)
 {
@@ -4457,6 +4461,10 @@ static int process_sci_details(void)
 	if (new_details == 0)
 		new_details = SCI_DETAILS_MODE_SCIPLANE;
 	sci_ui.details_mode = new_details;
+	if (new_details == SCI_DETAILS_MODE_THREED)
+		ui_unhide_widget(sci_ui.align_to_ship_button);
+	else
+		ui_hide_widget(sci_ui.align_to_ship_button);
 	return 0;
 }
 
@@ -7461,7 +7469,7 @@ static void ui_add_button(struct button *b, int active_displaymode)
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
-static void __attribute__((unused)) ui_hide_widget(void *widget)
+static void ui_hide_widget(void *widget)
 {
 	struct ui_element *uie;
 
@@ -7471,7 +7479,7 @@ static void __attribute__((unused)) ui_hide_widget(void *widget)
 	ui_element_hide(uie);
 }
 
-static void __attribute__((unused)) ui_unhide_widget(void *widget)
+static void ui_unhide_widget(void *widget)
 {
 	struct ui_element *uie;
 
@@ -8987,6 +8995,11 @@ static void sci_details_pressed(void *x)
 		(unsigned char) SCI_DETAILS_MODE_DETAILS));
 }
 
+static void sci_align_to_ship_pressed(void *x)
+{
+	queue_to_server(packed_buffer_new("b", OPCODE_SCI_ALIGN_TO_SHIP));
+}
+
 static void sci_threed_pressed(void *x)
 {
 	queue_to_server(packed_buffer_new("bb", OPCODE_SCI_DETAILS,
@@ -9035,6 +9048,11 @@ static void init_science_ui(void)
 	const int dety = trby;
 	const int detw = 75 * SCREEN_WIDTH / 800;
 	const int deth = trbh;
+
+	const int atsx = 10 * SCREEN_WIDTH / 800;
+	const int atsy = trby;
+	const int atsw = 75 * SCREEN_WIDTH / 800;
+	const int atsh = trbh;
 	
 
 	sci_ui.scizoom = snis_slider_init(szx, szy, szw, szh, DARKGREEN, "RANGE", "0", "100",
@@ -9052,12 +9070,16 @@ static void init_science_ui(void)
 			GREEN, NANO_FONT, sci_threed_pressed, (void *) 0);
 	sci_ui.details_button = snis_button_init(detx, dety, detw, deth, "DETAILS",
 			GREEN, NANO_FONT, sci_details_pressed, (void *) 0);
+	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
+			GREEN, NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.tractor_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE);
+	ui_add_button(sci_ui.align_to_ship_button, DISPLAYMODE_SCIENCE);
+	ui_hide_widget(sci_ui.align_to_ship_button);
 	sciecx = entity_context_new(50, 10);
 	sciballecx = entity_context_new(5000, 1000);
 	sciplane_tween = tween_init(500);
@@ -12709,6 +12731,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		break;
 	case DEVIO_OPCODE_SCIENCE_SRS:
 		sci_sciplane_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_SCIENCE_ALIGN_TO_SHIP:
+		sci_align_to_ship_pressed((void *) 0);
 		break;
 	case DEVIO_OPCODE_SCIENCE_LRS:
 		sci_threed_pressed((void *) 0);
