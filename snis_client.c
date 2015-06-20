@@ -3968,9 +3968,19 @@ static int process_warp_limbo_packet(void)
 	return 0;
 } 
 
-static void process_initiate_warp_packet()
+static int process_initiate_warp_packet()
 {
-	wwviaudio_add_sound(WARPDRIVE_SOUND);
+	unsigned char buffer[10], enough_oomph;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "b", &enough_oomph);
+	if (rc != 0)
+		return rc;
+	if (enough_oomph)
+		wwviaudio_add_sound(WARPDRIVE_SOUND);
+	else
+		wwviaudio_add_sound(WARP_DRIVE_FUMBLE);
+	return 0;
 }
 
 static int process_wormhole_limbo_packet(void)
@@ -4966,7 +4976,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			rc = process_warp_limbo_packet();
 			break;
 		case OPCODE_INITIATE_WARP:
-			process_initiate_warp_packet();
+			rc = process_initiate_warp_packet();
 			break;
 		case OPCODE_WORMHOLE_LIMBO:
 			rc = process_wormhole_limbo_packet();
@@ -12496,6 +12506,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(LEAVING_SECURE_AREA, d, "leaving-high-security-area.ogg");
 	read_ogg_clip(ROBOT_INSERT_COMPONENT, d, "robot-insert-component.ogg");
 	read_ogg_clip(ROBOT_REMOVE_COMPONENT, d, "robot-remove-component.ogg");
+	read_ogg_clip(WARP_DRIVE_FUMBLE, d, "warp-drive-fumble.ogg");
 	printf("Done.\n");
 }
 

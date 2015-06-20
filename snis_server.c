@@ -8906,10 +8906,11 @@ static int process_request_laser_wavelength(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.phaser_wavelength), no_limit); 
 }
 
-static void send_initiate_warp_packet(struct game_client *c)
+static void send_initiate_warp_packet(struct game_client *c, int enough_oomph)
 {
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
-			packed_buffer_new("b", OPCODE_INITIATE_WARP),
+			packed_buffer_new("bb", OPCODE_INITIATE_WARP,
+					(unsigned char) enough_oomph),
 			ROLE_ALL);
 }
 
@@ -8930,6 +8931,7 @@ static int process_engage_warp(struct game_client *c)
 	struct snis_entity *o;
 	const union vec3 rightvec = { { 1.0f, 0.0f, 0.0f, } };
 	union vec3 warpvec;
+	int enough_oomph;
 
 	rc = read_and_unpack_buffer(c, buffer, "wb", &id, &v);
 	if (rc)
@@ -8954,14 +8956,17 @@ static int process_engage_warp(struct game_client *c)
 		pthread_mutex_unlock(&universe_mutex);
 		return 0;
 	}
-	wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
-	quat_rot_vec(&warpvec, &rightvec, &o->orientation);
-	bridgelist[b].warpx = o->x + wfactor * warpvec.v.x;
-	bridgelist[b].warpy = o->y + wfactor * warpvec.v.y;
-	bridgelist[b].warpz = o->z + wfactor * warpvec.v.z;
-	o->tsd.ship.warp_time = 85; /* 8.5 seconds */
+	enough_oomph = ((double) o->tsd.ship.warpdrive / 255.0) > 0.075;
+	if (enough_oomph) {
+		wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
+		quat_rot_vec(&warpvec, &rightvec, &o->orientation);
+		bridgelist[b].warpx = o->x + wfactor * warpvec.v.x;
+		bridgelist[b].warpy = o->y + wfactor * warpvec.v.y;
+		bridgelist[b].warpz = o->z + wfactor * warpvec.v.z;
+		o->tsd.ship.warp_time = 85; /* 8.5 seconds */
+	}
 	pthread_mutex_unlock(&universe_mutex);
-	send_initiate_warp_packet(c);
+	send_initiate_warp_packet(c, enough_oomph);
 	return 0;
 }
 
