@@ -8,6 +8,7 @@
 #include "wwviaudio.h"
 #include "mtwist.h"
 #include "mathutils.h"
+#include "ui_colors.h"
 
 #define SLIDERS_DEFINE_GLOBALS
 #include "snis_sliders.h"
@@ -70,21 +71,21 @@ void snis_slider_set_vertical(struct slider *s, int v)
 static int choose_barcolor(struct slider *s, double v)
 {
 	if (s->clicked)
-		return DARKGREEN;
+		return UI_COLOR(slider_good);
 	if (!s->colors_reversed) {
 		if (v <= 15.0)
-			return ((s->timer & 0x04) == 0) ? BLACK : RED;
+			return ((s->timer & 0x04) == 0) ? UI_COLOR(slider_black) : UI_COLOR(slider_warning);
 		if (v <= 40.0)
-			return RED;
+			return UI_COLOR(slider_warning);
 		if (v <= 75.0)
-			return AMBER; 
-		return DARKGREEN;
+			return UI_COLOR(slider_caution);
+		return UI_COLOR(slider_good);
 	}
 	if (v < 75.0)
-		return DARKGREEN;
+		return UI_COLOR(slider_good);
 	if (v < 90.0)
-		return AMBER;
-	return ((s->timer & 0x04) == 0) ? BLACK : RED;
+		return UI_COLOR(slider_caution);
+	return ((s->timer & 0x04) == 0) ? UI_COLOR(slider_black) : UI_COLOR(slider_warning);
 }
 
 static void snis_slider_draw_vertical(struct slider *s)
@@ -144,7 +145,7 @@ void snis_slider_draw(struct slider *s)
 {
 	double v;
 	float width, tx1;
-	int bar_color = DARKGREEN;
+	int bar_color = UI_COLOR(slider_good);
 	float ptr_height = s->height / 2.0;
 	float ptr_width = s->height / 3.0;
 

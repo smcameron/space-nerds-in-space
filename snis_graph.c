@@ -20,6 +20,7 @@
 #include "mtwist.h"
 #include "mathutils.h"
 #include "graph_dev.h"
+#include "ui_colors.h"
 
 #define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY * (NSHADECOLORS + 1) + (NGRADIENTS * NTOTAL_GRADIENT_SHADES))
 GdkColor huex[TOTAL_COLORS]; 
@@ -624,6 +625,10 @@ void sng_setup_colors(void *gtk_widget)
 			grad_index++;
 		}
 	}
+
+	fixup_ui_color(BLUE_FIXUP, BLUE);
+	fixup_ui_color(GREEN_FIXUP, GREEN);
+	fixup_ui_color(CYAN_FIXUP, CYAN);
 
 	graph_dev_setup_colors(gtk_widget, huex, TOTAL_COLORS);
 }

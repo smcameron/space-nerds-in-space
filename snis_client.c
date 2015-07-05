@@ -104,6 +104,7 @@
 #include "entity.h"
 #include "matrix.h"
 #include "graph_dev.h"
+#include "ui_colors.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -2754,7 +2755,7 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 	/* draw background overlay */
 	sng_set_foreground_alpha(BLACK, 0.75);
 	sng_draw_circle(1, cx, cy, r);
-	sng_set_foreground(AMBER);
+	sng_set_foreground(UI_COLOR(weap_radar));
 	sng_draw_circle(0, cx, cy, r);
 	for (i=0; i<4; i++) {
 		float angle = i * M_PI / 2.0 + M_PI / 4.0;
@@ -2813,12 +2814,12 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 		float sx = cx + r * cos(twist) * d * 0.98;
 		float sy = cy - r * sin(twist) * d * 0.98;
 
-		sng_set_foreground(ORANGERED);
+		sng_set_foreground(UI_COLOR(weap_radar_blip));
 		snis_draw_line(sx, sy - 2, sx, sy + 2);
 		snis_draw_line(sx - 2, sy, sx + 2, sy);
 
 		if (curr_science_guy == &go[i]) {
-			sng_set_foreground(GREEN);
+			sng_set_foreground(UI_COLOR(weap_sci_selection));
 			snis_draw_rectangle(0, sx-2, sy-2, 4, 4);
 		}
 	}
@@ -3548,7 +3549,7 @@ static void show_lobbyscreen(GtkWidget *w)
 #define STARTLINE 100
 #define LINEHEIGHT 30
 
-	sng_set_foreground(WHITE);
+	sng_set_foreground(UI_COLOR(lobby_connecting));
 	if (lobby_socket == -1) {
 		sng_abs_xy_draw_string("Space Nerds", BIG_FONT, txx(80), txy(200));
 		sng_abs_xy_draw_string("In Space", BIG_FONT, txx(180), txy(320));
@@ -3587,11 +3588,11 @@ static void show_lobbyscreen(GtkWidget *w)
 				lobbylast1clicky > txy(100) + (-0.5 + i) * LINEHEIGHT &&
 				lobbylast1clicky < txy(100) + (0.5 + i) * LINEHEIGHT) {
 				lobby_selected_server = i;
-				sng_set_foreground(GREEN);
+				sng_set_foreground(UI_COLOR(lobby_selected_server));
 				snis_draw_rectangle(0, txx(25), txy(100) + (-0.5 + i) * LINEHEIGHT,
 					txx(725), LINEHEIGHT);
 			} else
-				sng_set_foreground(WHITE);
+				sng_set_foreground(UI_COLOR(lobby_connecting));
 
 			if (quickstartmode) {
 				lobby_selected_server = 0;
@@ -3609,9 +3610,9 @@ static void show_lobbyscreen(GtkWidget *w)
 			sng_abs_xy_draw_string(msg, TINY_FONT, txx(700), txy(100) + i * LINEHEIGHT);
 		}
 		if (lobby_selected_server != -1)
-			sng_set_foreground(GREEN);
+			sng_set_foreground(UI_COLOR(lobby_connect_ok));
 		else
-			sng_set_foreground(RED);
+			sng_set_foreground(UI_COLOR(lobby_connect_not_ok));
 		/* This should be a real button, but I'm too lazy to fix it now. */
 		snis_draw_rectangle(0, txx(250), txy(520), txx(300), LINEHEIGHT * 2);
 		sng_abs_xy_draw_string("CONNECT TO SERVER", TINY_FONT, txx(280), txy(520) + LINEHEIGHT);
@@ -5355,11 +5356,11 @@ static void show_common_screen(GtkWidget *w, char *title)
 	int border_color;
 
 	if (red_alert_mode) {
-		title_color = RED;
-		border_color = RED;
+		title_color = UI_COLOR(common_red_alert);
+		border_color = UI_COLOR(common_red_alert);
 	} else {
-		title_color = GREEN;
-		border_color = BLUE;
+		title_color = UI_COLOR(common_text);
+		border_color = UI_COLOR(common_border);
 	}
 	sng_set_foreground(title_color);
 	sng_abs_xy_draw_string(title, SMALL_FONT, txx(25), txy(LINEHEIGHT));
@@ -5438,7 +5439,7 @@ static void show_gunsight(GtkWidget *w)
 	y1 = cy - 50;
 	y2 = cy + 50;
 
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(weap_gunsight));
 	snis_draw_line(x1, cy, x1 + 25, cy);
 	snis_draw_line(x2 - 25, cy, x2, cy);
 	snis_draw_line(cx, y1, cx, y1 + 25);
@@ -5460,7 +5461,7 @@ static void draw_main_screen_text(GtkWidget *w, GdkGC *gc)
 
 	first = (main_screen_text.last + 1) % 4;;
 
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(main_text));
 	for (i = 0; i < 4; i++) {
 		sng_abs_xy_draw_string(main_screen_text.text[first],
 				NANO_FONT, 10, SCREEN_HEIGHT - (4 - i) * 18 - 10);
@@ -5719,9 +5720,9 @@ static void show_weapons_camera_view(GtkWidget *w)
 	/* show torpedo count */
 	if (!o->tsd.ship.torpedoes_loading || (timer & 0x4)) {
 		if (o->tsd.ship.torpedoes_loading)
-			sng_set_foreground(RED);
+			sng_set_foreground(UI_COLOR(weap_torpedoes_loading));
 		else
-			sng_set_foreground(AMBER);
+			sng_set_foreground(UI_COLOR(weap_torpedoes_loaded));
 		sprintf(buf, "TORP: %03d", o->tsd.ship.torpedoes +
 					o->tsd.ship.torpedoes_loading +
 					o->tsd.ship.torpedoes_loaded);
@@ -5731,7 +5732,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	/* idiot lights for low power */
 	const int low_power_threshold = 10;
-	sng_set_foreground(RED);
+	sng_set_foreground(UI_COLOR(weap_warning));
 	if (o->tsd.ship.power_data.phasers.i < low_power_threshold) {
 		sng_center_xy_draw_string("LOW PHASER POWER", NANO_FONT,
 				0.5 * SCREEN_WIDTH, 65 * SCREEN_HEIGHT / 600);
@@ -5739,7 +5740,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	/* show security indicator */
 	if (o->tsd.ship.in_secure_area && timer & 0x08) {
-		sng_set_foreground(RED);
+		sng_set_foreground(UI_COLOR(weap_warning));
 		sng_center_xy_draw_string("HIGH SECURITY", NANO_FONT,
 			0.5 * SCREEN_WIDTH, 5 * SCREEN_HEIGHT / 6);
 		sng_center_xy_draw_string("AREA", NANO_FONT, 0.5 * SCREEN_WIDTH,
@@ -5905,7 +5906,7 @@ static void show_mainscreen(GtkWidget *w)
 		if (curr_science_guy->alive && curr_science_guy->entity &&
 			entity_onscreen(curr_science_guy->entity)) {
 			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 0);
+			draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(main_sci_selection), 0);
 		}
 	}
 
@@ -6095,7 +6096,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 	r = hypot(sx - SCIENCE_SCOPE_CX, sy - SCIENCE_SCOPE_CY);
 	if (r >= SCIENCE_SCOPE_R)
 		return;
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(sci_ball_default_blip));
 	if (!o->sdata.science_data_known) {
 		for (i = 0; i < 10; i++) {
 			da = snis_randn(360) * M_PI / 180.0;
@@ -6114,27 +6115,27 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 		switch(o->type) {
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_SHIP1:
-			sng_set_foreground(LIMEGREEN);
+			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			break;
 		case OBJTYPE_STARBASE:
-			sng_set_foreground(WHITE);
+			sng_set_foreground(UI_COLOR(sci_ball_starbase));
 			break;
 		case OBJTYPE_ASTEROID:
 		case OBJTYPE_DERELICT:
-			sng_set_foreground(AMBER);
+			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
 			break;
 		case OBJTYPE_PLANET:
-			sng_set_foreground(BLUE);
+			sng_set_foreground(UI_COLOR(sci_ball_planet));
 			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_SPARK:
 		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_LASER:
 		default:
-			sng_set_foreground(LIMEGREEN);
+			sng_set_foreground(UI_COLOR(sci_ball_energy));
 		}
 		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1) {
-			e = add_entity(sciballecx, ship_icon_mesh, o->x, o->y, o->z, LIMEGREEN);
+			e = add_entity(sciballecx, ship_icon_mesh, o->x, o->y, o->z, UI_COLOR(sci_ball_ship));
 			if (e) {
 				update_entity_scale(e, scale);
 				update_entity_orientation(e, &o->orientation);
@@ -6151,35 +6152,35 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 		switch (o->type) {
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_SHIP1:
-			sng_set_foreground(LIMEGREEN);
+			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			sprintf(buffer, "%s %s\n", o->sdata.name,
 				ship_type[o->sdata.subclass].class); 
 			break;
 		case OBJTYPE_STARBASE:
-			sng_set_foreground(WHITE);
+			sng_set_foreground(UI_COLOR(sci_ball_starbase));
 			sprintf(buffer, "%s %s\n", "SB",  o->sdata.name); 
 			break;
 		case OBJTYPE_ASTEROID:
-			sng_set_foreground(AMBER);
+			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
 			sprintf(buffer, "%s %s\n", "A",  o->sdata.name); 
 			break;
 		case OBJTYPE_DERELICT:
-			sng_set_foreground(AMBER);
+			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
 			sprintf(buffer, "%s %s\n", "A",  "???"); 
 			break;
 		case OBJTYPE_PLANET:
-			sng_set_foreground(BLUE);
+			sng_set_foreground(UI_COLOR(sci_ball_planet));
 			sprintf(buffer, "%s %s\n", "P",  o->sdata.name); 
 			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_SPARK:
 		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_LASER:
-			sng_set_foreground(LIMEGREEN);
+			sng_set_foreground(UI_COLOR(sci_ball_energy));
 			strcpy(buffer, "");
 			break;
 		default:
-			sng_set_foreground(GREEN);
+			sng_set_foreground(UI_COLOR(sci_ball_default_blip));
 			sprintf(buffer, "%s %s\n", "?", o->sdata.name); 
 			break;
 		}
@@ -6452,9 +6453,9 @@ static void draw_sciplane_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_conte
 	}
 
 	if (shooter->type == OBJTYPE_SHIP2)
-		color = NPC_LASER_COLOR;
+		color = UI_COLOR(sci_plane_npc_laser);
 	else
-		color = PLAYER_LASER_COLOR;
+		color = UI_COLOR(sci_plane_player_laser);
 
 
 	/* figure out where in 3d space the ends show up on sciplane */
@@ -6599,23 +6600,26 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	set_window_offset(navecx, 0, 0);
 	calculate_camera_transform(navecx);
 
-	e = add_entity(navecx, ring_mesh, o->x, o->y, o->z, DARKRED);
+	e = add_entity(navecx, ring_mesh, o->x, o->y, o->z, UI_COLOR(sci_plane_ring));
 	if (e)
 		update_entity_scale(e, range);
 
-	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 0.0f, range * 0.98, RED);
-	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 90.0f * M_PI / 180.0, range * 0.98, DARKGREEN);
-	add_basis_ring(navecx, o->x, o->y, o->z, 0.0f, 0.0f, 1.0f, 90.0f * M_PI / 180.0, range * 0.98, BLUE);
+	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 0.0f, range * 0.98,
+							UI_COLOR(sci_basis_ring_1));
+	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 90.0f * M_PI / 180.0, range * 0.98,
+							UI_COLOR(sci_basis_ring_2));
+	add_basis_ring(navecx, o->x, o->y, o->z, 0.0f, 0.0f, 1.0f, 90.0f * M_PI / 180.0, range * 0.98,
+							UI_COLOR(sci_basis_ring_3));
 
 	int i;
 	for (i=0; i<2; ++i) {
 		int color;
 		union quat ind_orientation;
 		if (i==0) {
-			color = RED;
+			color = UI_COLOR(sci_plane_ship_vector);
 			ind_orientation = o->orientation;
 		} else {
-			color = CYAN;
+			color = UI_COLOR(sci_plane_weapon_vector);
 			quat_mul(&ind_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 		}
 
@@ -6675,7 +6679,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		float tx1, tz1, tx2, tz2, sx1, sy1, sx2, sy2;
 		float heading = o->tsd.ship.sci_heading;
 		float beam_width = fabs(o->tsd.ship.sci_beam_width);
-		sng_set_foreground(LIMEGREEN);
+		sng_set_foreground(UI_COLOR(sci_plane_beam));
 
 		tx1 = o->x + cos(heading - beam_width / 2) * range * 0.05;
 		tz1 = o->z - sin(heading - beam_width / 2) * range * 0.05;
@@ -6695,7 +6699,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	}
 
 	/* add my ship */
-	e = add_entity(navecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, SHIP_COLOR);
+	e = add_entity(navecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, UI_COLOR(sci_plane_self));
 	if (e) {
 		set_render_style(e, science_style);
 		update_entity_scale(e, range/300.0);
@@ -6716,7 +6720,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 		bw = o->tsd.ship.sci_beam_width * 180.0 / M_PI;
 
-		sng_set_foreground(GREEN);
+		sng_set_foreground(UI_COLOR(sci_plane_default));
 		pthread_mutex_lock(&universe_mutex);
 
 		static int nlaserbeams = 0;
@@ -6781,7 +6785,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 			if ( draw_popout_arc && tween > 0 ) {
 				/* show the flyout arc */
-				sng_set_foreground(DARKTURQUOISE);
+				sng_set_foreground(UI_COLOR(sci_plane_popout_arc));
 				draw_3d_mark_arc(w, gc, navecx, &ship_pos, dist, heading, mark * tween * 0.9);
 			}
 
@@ -6956,14 +6960,14 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 	/* Add basis rings */
 	for (i = 1; i <= 3; i++) {
 		add_basis_ring(sciballecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 0.0f,
-					screen_radius * (float) i / 3.0f, RED);
+					screen_radius * (float) i / 3.0f, UI_COLOR(sci_basis_ring_1));
 		add_basis_ring(sciballecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 90.0f * M_PI / 180.0,
-					screen_radius * (float) i / 3.0f, DARKGREEN);
+					screen_radius * (float) i / 3.0f, UI_COLOR(sci_basis_ring_2));
 		add_basis_ring(sciballecx, o->x, o->y, o->z, 0.0f, 0.0f, 1.0f, 90.0f * M_PI / 180.0,
-					screen_radius * (float) i / 3.0f, BLUE);
+					screen_radius * (float) i / 3.0f, UI_COLOR(sci_basis_ring_3));
 	}
 
-	add_scanner_beam_orange_slice(sciballecx, o, screen_radius, AMBER);
+	add_scanner_beam_orange_slice(sciballecx, o, screen_radius, UI_COLOR(sci_ball_beam));
 
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
@@ -6988,7 +6992,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
         tx = sin(o->tsd.ship.sci_heading) * range;
         ty = -cos(o->tsd.ship.sci_heading) * range;
 
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(sci_ball_default_blip));
 	pthread_mutex_lock(&universe_mutex);
 	nscience_guys = 0;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
@@ -7556,15 +7560,15 @@ static void init_weapons_ui(void)
 	const int wlsw = 0.2125 * SCREEN_WIDTH;
 	const int wlsh = 0.025 * SCREEN_HEIGHT;
 	weapons.phaser_bank_gauge = gauge_init(phx, phy, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "CHARGE", sample_phasercharge);
-	gauge_add_needle(weapons.phaser_bank_gauge, sample_phaser_power, RED);
+	gauge_add_needle(weapons.phaser_bank_gauge, sample_phaser_power, UI_COLOR(weap_gauge_needle));
 	gauge_fill_background(weapons.phaser_bank_gauge, BLACK, 0.75);
 	weapons.phaser_wavelength = gauge_init(wlx, phy, r, 10.0, 60.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "WAVE LEN", sample_phaser_wavelength);
 	gauge_fill_background(weapons.phaser_wavelength, BLACK, 0.75);
-	weapons.wavelen_slider = snis_slider_init(wlsx, wlsy, wlsw, wlsh, AMBER, "",
+	weapons.wavelen_slider = snis_slider_init(wlsx, wlsy, wlsw, wlsh, UI_COLOR(weap_slider), "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength);
 	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS);
@@ -7599,34 +7603,37 @@ static double sample_warpdrive(void);
 static void init_nav_ui(void)
 {
 	int x;
+	const int gauge_color = UI_COLOR(nav_gauge);
+	const int needle_color = UI_COLOR(nav_gauge_needle);
+	const int button_color = UI_COLOR(nav_button);
 
 	x = 0;
 	nav_ui.gauge_radius = 80;
 	
 	nav_ui.warp_slider = snis_slider_init(SCREEN_WIDTH - 2 * nav_ui.gauge_radius - 40,
 				2 * nav_ui.gauge_radius + 10,
-				160, 15, AMBER, "",
+				160, 15, UI_COLOR(nav_slider), "",
 				"0", "100", 0.0, 255.0, sample_power_data_warp_current,
 				do_warpdrive);
 	snis_slider_set_fuzz(nav_ui.warp_slider, 3);
-	nav_ui.navzoom_slider = snis_slider_init(10, 80, 200, 15, AMBER, "ZOOM",
+	nav_ui.navzoom_slider = snis_slider_init(10, 80, 200, 15, UI_COLOR(nav_slider), "ZOOM",
 				"1", "10", 0.0, 100.0, sample_navzoom,
 				do_navzoom);
 	nav_ui.throttle_slider = snis_slider_init(SCREEN_WIDTH - 30 + x, 40, 230, 15,
-				AMBER, "THROTTLE", "1", "10", 0.0, 255.0, sample_power_data_impulse_current,
-				do_throttle);
+				UI_COLOR(nav_slider), "THROTTLE", "1", "10", 0.0, 255.0,
+				sample_power_data_impulse_current, do_throttle);
 	snis_slider_set_fuzz(nav_ui.throttle_slider, 3);
 	snis_slider_set_vertical(nav_ui.throttle_slider, 1);
 	nav_ui.warp_gauge = gauge_init(SCREEN_WIDTH - nav_ui.gauge_radius - 40,
 				nav_ui.gauge_radius + 5,
 				nav_ui.gauge_radius, 0.0, 10.0, -120.0 * M_PI / 180.0,
-				120.0 * 2.0 * M_PI / 180.0, RED, AMBER,
+				120.0 * 2.0 * M_PI / 180.0, needle_color, gauge_color,
 				10, "WARP", sample_warpdrive);
 	nav_ui.engage_warp_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
 					nav_ui.gauge_radius * 2 + 80,
-					125, 25, "ENGAGE WARP", AMBER,
+					125, 25, "ENGAGE WARP", button_color,
 					NANO_FONT, engage_warp_button_pressed, NULL);
-	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", AMBER,
+	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", button_color,
 			NANO_FONT, reverse_button_pressed, NULL);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
@@ -7799,7 +7806,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 	/* idiot lights for low power of various systems */
 	const int low_power_threshold = 10;
-	sng_set_foreground(RED);
+	sng_set_foreground(UI_COLOR(nav_warning));
 	if (o->tsd.ship.power_data.sensors.i < low_power_threshold) {
 		sng_abs_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2 + 20, 65);
 	}
@@ -7883,7 +7890,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 	for (i=0; i<4; ++i) {
 		e = add_entity(navecx, radar_ring_mesh[i], o->x - ship_normal.v.x, o->y - ship_normal.v.y,
-			o->z - ship_normal.v.z, DARKRED);
+			o->z - ship_normal.v.z, UI_COLOR(nav_ring));
 		if (e) {
 			update_entity_scale(e, screen_radius);
 			update_entity_orientation(e, &o->orientation);
@@ -7891,7 +7898,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	}
 
 	for (i=0; i<2; ++i) {
-		int color = (i==0) ? CYAN : GREEN;
+		int color = (i == 0) ? UI_COLOR(nav_weapon_vector) : UI_COLOR(nav_science_vector);
 
 		union quat ind_orientation;
 		if (i == 0)
@@ -7928,7 +7935,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	}
 
 	/* ship forward vector */
-	e = add_entity(navecx, forward_line_mesh, o->x, o->y, o->z, WHITE);
+	e = add_entity(navecx, forward_line_mesh, o->x, o->y, o->z, UI_COLOR(nav_forward_vector));
 	if (e) {
 		update_entity_scale(e, screen_radius);
 		update_entity_orientation(e, &o->orientation);
@@ -7952,7 +7959,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		int specs = 500 * (screen_radius * screen_radius -
 				visible_distance * visible_distance) / (screen_radius * screen_radius);
 
-		sng_set_foreground(GRAY+192);
+		sng_set_foreground(UI_COLOR(nav_static) < 0 ? GRAY + 192 : UI_COLOR(nav_static));
 		for (i=0; i<specs; i++) {
 			union vec3 point;
 			random_point_in_3d_annulus(visible_distance, screen_radius, &ship_pos, &u, &v, &point);
@@ -7968,7 +7975,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	pthread_mutex_lock(&universe_mutex);
 
 	/* add my ship */
-	e = add_entity(navecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, SHIP_COLOR);
+	e = add_entity(navecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, UI_COLOR(nav_self));
 	if (e) {
 		set_render_style(e, science_style);
 		update_entity_scale(e, ship_scale);
@@ -8037,20 +8044,21 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			struct mesh *m = entity_get_mesh(go[i].entity);
 
 			if (go[i].type == OBJTYPE_TORPEDO) {
-				contact = add_entity(navecx, torpedo_nav_mesh, go[i].x, go[i].y, go[i].z, ORANGERED);
+				contact = add_entity(navecx, torpedo_nav_mesh, go[i].x, go[i].y, go[i].z,
+							UI_COLOR(nav_torpedo));
 				if (contact) {
 					set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 					entity_set_user_data(contact, &go[i]); /* for debug */
 				}
 			} else if (go[i].type == OBJTYPE_LASER) {
 				contact = add_entity(navecx, laserbeam_nav_mesh, go[i].x, go[i].y, go[i].z,
-					LASER_COLOR);
+					UI_COLOR(nav_laser));
 				if (contact) {
 					set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 					entity_set_user_data(contact, &go[i]); /* for debug */
 				}
 			} else {
-				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, GREEN);
+				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, UI_COLOR(nav_entity));
 				if (contact) {
 					set_render_style(contact, science_style);
 					entity_set_user_data(contact, &go[i]);
@@ -8140,17 +8148,17 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 				if (proj_distance > 0)
 					e = add_entity(navecx, vline_mesh_neg, contact_pos.v.x, contact_pos.v.y,
-						contact_pos.v.z, DARKRED);
+						contact_pos.v.z, UI_COLOR(nav_ring));
 				else
 					e = add_entity(navecx, vline_mesh_pos, contact_pos.v.x, contact_pos.v.y,
-						contact_pos.v.z, DARKRED);
+						contact_pos.v.z, UI_COLOR(nav_ring));
 				if (e) {
 					update_entity_scale(e, abs(proj_distance));
 					update_entity_orientation(e, &o->orientation);
 				}
 
 				e = add_entity(navecx, ring_mesh, ship_plane_proj.v.x,
-						ship_plane_proj.v.y, ship_plane_proj.v.z, RED);
+						ship_plane_proj.v.y, ship_plane_proj.v.z, UI_COLOR(nav_projected_ring));
 				if (e) {
 					update_entity_scale(e, contact_ring_radius);
 					update_entity_orientation(e, &o->orientation);
@@ -8163,7 +8171,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	draw_orientation_trident(w, gc, o, 75, 175, 100);
 
 	/* Draw labels on ships... */
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(nav_entity_label));
 	for (i = 0; i <= get_entity_count(navecx); i++) {
 		float sx, sy;
 		char buffer[100];
@@ -8201,7 +8209,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		float sx, sy;
 
 		entity_get_screen_coords(science_entity, &sx, &sy);
-		draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 0);
+		draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(nav_science_select), 0);
 	}
 
 	pthread_mutex_unlock(&universe_mutex);
@@ -8218,7 +8226,7 @@ static void show_navigation(GtkWidget *w)
 	static int current_zoom = 0;
 	union euler ypr;
 
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(nav_text));
 
 	if (!(o = find_my_ship()))
 		return;
@@ -8226,7 +8234,8 @@ static void show_navigation(GtkWidget *w)
 	snis_slider_set_input(nav_ui.warp_slider, o->tsd.ship.power_data.warp.r1/255.0 );
 	snis_slider_set_input(nav_ui.navzoom_slider, o->tsd.ship.navzoom/255.0 );
 	snis_slider_set_input(nav_ui.throttle_slider, o->tsd.ship.power_data.impulse.r1/255.0 );
-	snis_button_set_color(nav_ui.reverse_button, o->tsd.ship.reverse ? RED : AMBER);
+	snis_button_set_color(nav_ui.reverse_button, o->tsd.ship.reverse ?
+				UI_COLOR(nav_reverse_button) : UI_COLOR(nav_button));
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
 	sectorx = floor(10.0 * o->x / (double) XKNOWN_DIM);
@@ -8240,7 +8249,7 @@ static void show_navigation(GtkWidget *w)
 	sng_abs_xy_draw_string(buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
 
 	quat_to_euler(&ypr, &o->orientation);	
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(nav_text));
 	draw_3d_nav_display(w, gc);
 	show_common_screen(w, "NAV");
 }
@@ -8288,23 +8297,26 @@ static void robot_manual_button_pressed(void *x)
 static void init_damcon_ui(void)
 {
 	damcon_ui.engineering_button = snis_button_init(txx(630), txy(550), txx(140), txy(25),
-			"ENGINEERING", AMBER,
+			"ENGINEERING", UI_COLOR(damcon_button),
 			NANO_FONT, main_engineering_button_pressed, (void *) 0);
-	damcon_ui.robot_controls = snis_label_init(txx(630), txy(30), "ROBOT CONTROLS", AMBER, NANO_FONT);
-	
+	damcon_ui.robot_controls = snis_label_init(txx(630), txy(30), "ROBOT CONTROLS",
+							UI_COLOR(damcon_button), NANO_FONT);
 	damcon_ui.robot_forward_button = snis_button_init(txx(650), txy(60), txx(90), txy(25),
-			"FORWARD", AMBER, NANO_FONT, robot_forward_button_pressed, (void *) 0);
+			"FORWARD", UI_COLOR(damcon_button), NANO_FONT, robot_forward_button_pressed, (void *) 0);
 	damcon_ui.robot_left_button = snis_button_init(txx(630), txy(100), txx(25), txy(25),
-			"L", AMBER, NANO_FONT, robot_left_button_pressed, (void *) 0);
+			"L", UI_COLOR(damcon_button), NANO_FONT, robot_left_button_pressed, (void *) 0);
 	damcon_ui.robot_right_button = snis_button_init(txx(740), txy(100), txx(25), txy(25),
-			"R", AMBER, NANO_FONT, robot_right_button_pressed, (void *) 0);
-	damcon_ui.robot_backward_button = snis_button_init(txx(650), txy(140), txx(90), txy(25), "BACKWARD", AMBER, NANO_FONT,
+			"R", UI_COLOR(damcon_button), NANO_FONT, robot_right_button_pressed, (void *) 0);
+	damcon_ui.robot_backward_button = snis_button_init(txx(650), txy(140), txx(90), txy(25), "BACKWARD",
+							UI_COLOR(damcon_button), NANO_FONT,
 							robot_backward_button_pressed, (void *) 0);
-	damcon_ui.robot_gripper_button = snis_button_init(txx(650), txy(180), txx(90), txy(25), "GRIPPER", AMBER, NANO_FONT,
+	damcon_ui.robot_gripper_button = snis_button_init(txx(650), txy(180), txx(90), txy(25), "GRIPPER",
+							UI_COLOR(damcon_button), NANO_FONT,
 							robot_gripper_button_pressed, (void *) 0);
 	damcon_ui.robot_auto_button = snis_button_init(txx(400), txy(30), txx(90), txy(25),
-				"AUTO", AMBER, NANO_FONT, robot_auto_button_pressed, (void *) 0);
-	damcon_ui.robot_manual_button = snis_button_init(txx(500), txy(30), txx(90), txy(25), "MANUAL", WHITE, NANO_FONT,
+				"AUTO", UI_COLOR(damcon_button), NANO_FONT, robot_auto_button_pressed, (void *) 0);
+	damcon_ui.robot_manual_button = snis_button_init(txx(500), txy(30), txx(90), txy(25), "MANUAL",
+							UI_COLOR(damcon_manual_button), NANO_FONT,
 							robot_manual_button_pressed, (void *) 0);
 
 	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON);
@@ -8419,9 +8431,9 @@ static void init_engineering_ui(void)
 {
 	int x, y, r, xinc, yinc;
 	int dm = DISPLAYMODE_ENGINEERING;
-	int color = AMBER;
+	int color = UI_COLOR(eng_gauge);
 	const int ccolor = COLOR_LIGHTER(BLUE, 25); /* coolant color */
-	const int tcolor = AMBER; /* temperature color */
+	const int tcolor = UI_COLOR(eng_temperature); /* temperature color */
 	const int coolant_inc = 19;
 	const int sh = 0.02 * SCREEN_HEIGHT; /* slider height */
 	const int sw = 0.1875 * SCREEN_WIDTH; /* slider width */
@@ -8439,19 +8451,19 @@ static void init_engineering_ui(void)
 
 	eu->selected_subsystem = -1;
 	eu->amp_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, color,
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(eng_gauge_needle), color,
 			10, "AMPS", sample_power_model_current);
 	x += xinc;
 	eu->voltage_gauge = gauge_init(x, y, r, 0.0, 200.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, color,
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(eng_gauge_needle), color,
 			10, "VOLTS", sample_power_model_voltage);
 	x += xinc;
 	eu->temp_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, color,
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(eng_gauge_needle), color,
 			10, "TEMP", sample_temp);
 	x += xinc;
 	eu->fuel_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, RED, color,
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(eng_gauge_needle), color,
 			10, "FUEL", sample_fuel);
 
 	int gx1 = SCREEN_WIDTH - eng_ui.gauge_radius * 5;
@@ -8459,13 +8471,14 @@ static void init_engineering_ui(void)
 	int gx2 = SCREEN_WIDTH * 0.90;
 	int gy2 = gy1 + eng_ui.gauge_radius * 2.5;
 	eu->shield_control_slider = snis_slider_init(gx1, gy2 + sh * 3,
-				gx2 - gx1, sh, AMBER, "SHIELDS",
+				gx2 - gx1, sh, UI_COLOR(eng_power_meter), "SHIELDS",
 				"0", "100", 0.0, 255.0, sample_power_data_shields_current,
 				do_shieldadj);
 	/* make shield slider have less fuzz just for variety */
 	snis_slider_set_fuzz(eu->shield_control_slider, 1);
 
 	y = eng_ui.gauge_radius * 2.5;
+	color = UI_COLOR(eng_button);
 	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
 			NANO_FONT, damcon_button_pressed, (void *) 0);
 	eu->preset1_button = snis_button_init(200, y + 30, 25, 25, "1", color,
@@ -8477,6 +8490,7 @@ static void init_engineering_ui(void)
 				"PWR SHIELDS", "0", "100", 0.0, 255.0,
 				sample_power_data_shields_current, do_shields_pwr);
 	/* make shield slider have less fuzz just for variety */
+	color = UI_COLOR(eng_power_meter);
 	snis_slider_set_fuzz(eu->shield_slider, 1);
 	snis_slider_set_label_font(eu->shield_slider, NANO_FONT);
 	eu->shield_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
@@ -8673,7 +8687,7 @@ static void show_engineering_damage_report(GtkWidget *w, int subsystem)
 
 	sng_set_foreground(BLACK);
 	snis_draw_rectangle(1, x - 5, y - 5, 0.55 * SCREEN_WIDTH, 0.10833 * SCREEN_HEIGHT);
-	sng_set_foreground(AMBER);
+	sng_set_foreground(UI_COLOR(eng_temperature));
 	snis_draw_rectangle(0, x - 5, y - 5, 0.55 * SCREEN_WIDTH, 0.10833 * SCREEN_HEIGHT);
 	count = 0;
 	for (i = 0; i <= snis_object_pool_highest_object(damcon_pool); i++) {
@@ -8683,11 +8697,11 @@ static void show_engineering_damage_report(GtkWidget *w, int subsystem)
 		if (o->tsd.part.system != subsystem)
 			continue;
 		if ((float) o->tsd.part.damage > 0.75f * 255.0f)
-			sng_set_foreground(ORANGERED);
+			sng_set_foreground(UI_COLOR(eng_warning_status));
 		else if ((float) o->tsd.part.damage > 0.5f * 255.0f)
-			sng_set_foreground(YELLOW);
+			sng_set_foreground(UI_COLOR(eng_caution_status));
 		else
-			sng_set_foreground(GREEN);
+			sng_set_foreground(UI_COLOR(eng_good_status));
 		sprintf(msg, "%3.2f%%: %s",
 			(1.0f - (float) o->tsd.part.damage / 255.0f) * 100.0f,
 			damcon_part_name(o->tsd.part.system, o->tsd.part.part));
@@ -8736,7 +8750,7 @@ static void show_engineering(GtkWidget *w)
 	float sc_y_center = sc_y + sc_height / 2.0;
 
 
-	sng_set_foreground(RED);
+	sng_set_foreground(UI_COLOR(eng_warning));
 	if (o->tsd.ship.power_data.shields.r2 < low_power_threshold) {
 		sng_center_xy_draw_string("LOW SHIELD POWER", NANO_FONT, sc_x_center, sc_y_center);
 	}
@@ -8751,7 +8765,7 @@ static void show_engineering(GtkWidget *w)
 		float fg_x_center = fg_x;
 		float fg_y_center = fg_y - fg_r * 1.25;
 
-		sng_set_foreground(RED);
+		sng_set_foreground(UI_COLOR(eng_warning));
 		if (o->tsd.ship.fuel < UINT32_MAX * 0.01) { /* 1% */
 			sng_center_xy_draw_string("OUT Of FUEL", NANO_FONT, fg_x_center, fg_y_center);
 		} else {
@@ -8763,11 +8777,11 @@ static void show_engineering(GtkWidget *w)
 	gy1 = SCREEN_HEIGHT * 0.02;
 	gx2 = SCREEN_WIDTH * 0.98;
 	gy2 = gy1 + eng_ui.gauge_radius * 2.5;
-	sng_set_foreground(AMBER);
+	sng_set_foreground(UI_COLOR(eng_science_graph));
 	draw_science_graph(w, o, o, gx1, gy1, gx2, gy2);
 
-	sng_set_foreground(RED);
 	if (o->sdata.shield_strength < 15) {
+		sng_set_foreground(UI_COLOR(eng_warning));
 		sng_center_xy_draw_string("SHIELDS ARE DOWN", TINY_FONT, (gx1 + gx2) / 2.0, gy1 + (gy2 - gy1) / 3.0);
 	}
 
@@ -8814,7 +8828,7 @@ static void draw_damcon_arena_borders(GtkWidget *w)
 {
 	int y1, x1;
 
-	sng_set_foreground(RED);
+	sng_set_foreground(UI_COLOR(damcon_arena_border));
 	/* top border */
 	y1 = damcony_to_screeny(-DAMCONYDIM / 2.0);
 	if (y1 >= damconscreeny0 &&
@@ -8860,7 +8874,7 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 
 	x = o->x + damconscreenx0 + damconscreenxdim / 2.0 - *damconscreenx;
 	y = o->y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(damcon_robot));
 	sng_draw_vect_obj(&damcon_robot_spun[byteangle], x, y);
 }
 
@@ -8873,7 +8887,7 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 	
 	x = damconx_to_screenx(o->x);
 	y = damcony_to_screeny(o->y);
-	sng_set_foreground(WHITE);
+	sng_set_foreground(UI_COLOR(damcon_system));
 	sng_draw_vect_obj(&placeholder_system, x, y);
 	sng_abs_xy_draw_string(damcon_system_name(o->type),
 				NANO_FONT, x + 75, y);
@@ -8902,7 +8916,7 @@ static void draw_damcon_socket_or_part(GtkWidget *w, struct snis_damcon_entity *
 static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
 {
 	if (o->tsd.socket.contents_id == DAMCON_SOCKET_EMPTY)
-		draw_damcon_socket_or_part(w, o, WHITE);
+		draw_damcon_socket_or_part(w, o, UI_COLOR(damcon_socket));
 }
 
 
@@ -8930,18 +8944,18 @@ static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 			o->tsd.part.damage == 255 ? " (BADLY DAMAGED)" : "");
 	else
 		strcpy(msg, "");
-	sng_set_foreground(YELLOW);
+	sng_set_foreground(UI_COLOR(damcon_part));
 	sng_draw_vect_obj(&placeholder_part_spun[byteangle], x, y);
 	sng_center_xy_draw_string(msg, NANO_FONT, x,
 			y - 15 - (o->tsd.part.part % 2) * 15);
 	if (o->tsd.part.damage < 0.30 * 255.0)
-		sng_set_foreground(GREEN);
+		sng_set_foreground(UI_COLOR(damcon_good));
 	else if (o->tsd.part.damage < 0.75 * 255.0)
-		sng_set_foreground(YELLOW);
+		sng_set_foreground(UI_COLOR(damcon_caution));
 	else {
 		if ((timer & 0x8) == 0) /* make red bar blink */
 			return;
-		sng_set_foreground(RED);
+		sng_set_foreground(UI_COLOR(damcon_warning));
 	}
 	snis_draw_rectangle(0, x - 30, y + 10, 60, 6);
 	snis_draw_rectangle(1, x - 30, y + 10,
@@ -8981,7 +8995,7 @@ static void show_damcon(GtkWidget *w)
 {
 	int i;
 
-	sng_set_foreground(AMBER);
+	sng_set_foreground(UI_COLOR(damcon_wall));
 	snis_draw_rectangle(0, damconscreenx0, damconscreeny0, damconscreenxdim, damconscreenydim);
 
 	/* clip to damcon screen */
@@ -9197,35 +9211,38 @@ static void init_comms_ui(void)
 	int y = txy(20);
 	int bw = txx(75);
 	int bh = txy(25);
+	const int button_color = UI_COLOR(comms_button);
+	const int text_color = UI_COLOR(comms_text);
+	const int red_alert_color = UI_COLOR(comms_red_alert);
 
-	comms_ui.comms_onscreen_button = snis_button_init(x, y, bw, bh, "COMMS", GREEN,
+	comms_ui.comms_onscreen_button = snis_button_init(x, y, bw, bh, "COMMS", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 0);
 	x += bw;
-	comms_ui.nav_onscreen_button = snis_button_init(x, y, bw, bh, "NAV", GREEN,
+	comms_ui.nav_onscreen_button = snis_button_init(x, y, bw, bh, "NAV", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 1);
 	x += bw;
-	comms_ui.weap_onscreen_button = snis_button_init(x, y, bw, bh, "WEAP", GREEN,
+	comms_ui.weap_onscreen_button = snis_button_init(x, y, bw, bh, "WEAP", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 2);
 	x += bw;
-	comms_ui.eng_onscreen_button = snis_button_init(x, y, bw, bh, "ENG", GREEN,
+	comms_ui.eng_onscreen_button = snis_button_init(x, y, bw, bh, "ENG", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 3);
 	x += bw;
-	comms_ui.damcon_onscreen_button = snis_button_init(x, y, bw, bh, "DAMCON", GREEN,
+	comms_ui.damcon_onscreen_button = snis_button_init(x, y, bw, bh, "DAMCON", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 4);
 	x += bw;
-	comms_ui.sci_onscreen_button = snis_button_init(x, y, bw, bh, "SCI", GREEN,
+	comms_ui.sci_onscreen_button = snis_button_init(x, y, bw, bh, "SCI", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 5);
 	x += bw;
-	comms_ui.main_onscreen_button = snis_button_init(x, y, bw, bh, "MAIN", GREEN,
+	comms_ui.main_onscreen_button = snis_button_init(x, y, bw, bh, "MAIN", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 7);
 	x = SCREEN_WIDTH - txx(150);
 	y = SCREEN_HEIGHT - txy(90);
-	comms_ui.red_alert_button = snis_button_init(x, y, 120, bh, "RED ALERT", RED,
+	comms_ui.red_alert_button = snis_button_init(x, y, 120, bh, "RED ALERT", red_alert_color,
 			NANO_FONT, comms_screen_red_alert_pressed, (void *) 6);
 	y = SCREEN_HEIGHT - 60;
-	comms_ui.mainscreen_comms = snis_button_init(x, y, txx(120), bh, "MAIN SCREEN", GREEN,
+	comms_ui.mainscreen_comms = snis_button_init(x, y, txx(120), bh, "MAIN SCREEN", button_color,
 			NANO_FONT, comms_main_screen_pressed, (void *) 8);
-	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 20, GREEN);
+	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 20, text_color);
 	comms_ui.comms_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
 					GREEN, TINY_FONT,
 					comms_ui.input, 50, &timer,
@@ -9337,9 +9354,9 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 			pwr = 255; /* never any trouble scanning our own ship */
 		}
 
-		sng_set_foreground(LIMEGREEN);
+		sng_set_foreground(UI_COLOR(science_graph_plot_strong));
 		if (o->sdata.shield_strength < 64) {
-			sng_set_foreground(RED);
+			sng_set_foreground(UI_COLOR(science_graph_plot_weak));
 			if ((timer & 0x07) < 4)
 				goto skip_data;
 		}
@@ -9388,7 +9405,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 		}
 	}
 skip_data:
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(science_data_label));
 	sng_abs_xy_draw_string("10", NANO_FONT, x1, y2 + 10);
 	sng_abs_xy_draw_string("20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 10);
 	sng_abs_xy_draw_string("30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + 10);
@@ -9650,12 +9667,12 @@ static void show_science(GtkWidget *w)
 
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(sci_coords));
 	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf)", o->x, o->y, o->z);
 	sng_abs_xy_draw_string(buf, TINY_FONT, 0.25 * SCREEN_WIDTH, LINEHEIGHT * 0.5);
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
-	sng_set_foreground(DARKGREEN);
+	sng_set_foreground(DARKGREEN); /* zzzz check this */
 	if (sci_ui.details_mode == SCI_DETAILS_MODE_SCIPLANE) {
 		draw_sciplane_display(w, o, zoom);
 	} else {
@@ -9682,7 +9699,7 @@ static void show_3d_science(GtkWidget *w)
 
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
-	sng_set_foreground(CYAN);
+	sng_set_foreground(UI_COLOR(sci_coords));
 	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf)", o->x, o->y, o->z);
 	sng_abs_xy_draw_string(buf, TINY_FONT, 200, LINEHEIGHT * 0.5);
 	cx = SCIENCE_SCOPE_CX;
@@ -9690,8 +9707,7 @@ static void show_3d_science(GtkWidget *w)
 	r = SCIENCE_SCOPE_R;
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
-	sng_set_foreground(DARKGREEN);
-	sng_set_foreground(DARKRED);
+	sng_set_foreground(UI_COLOR(sci_ball_ring));
 	sng_draw_circle(0, cx, cy, r);
 	draw_all_the_3d_science_guys(w, o, zoom * 4.0, current_zoom * 4.0);
 	draw_science_data(w, o, curr_science_guy);
@@ -9710,10 +9726,10 @@ static void show_comms(GtkWidget *w)
 	float shield_ind_y_center = txy(495);
 
 	if (o->sdata.shield_strength < 15) {
-		sng_set_foreground(RED);
+		sng_set_foreground(UI_COLOR(comms_warning));
 		sng_center_xy_draw_string("SHIELDS ARE DOWN", NANO_FONT, shield_ind_x_center, shield_ind_y_center);
 	} else {
-		sng_set_foreground(GREEN);
+		sng_set_foreground(UI_COLOR(comms_good_status));
 		char buf[80];
 		sprintf(buf, "SHIELDS ARE %d%%", (int)(o->sdata.shield_strength / 2.55));
 		sng_center_xy_draw_string(buf, NANO_FONT, shield_ind_x_center, shield_ind_y_center);
@@ -10134,31 +10150,31 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 		}
 		break;
 	case OBJTYPE_ASTEROID:
-		sng_set_foreground(ASTEROID_COLOR);
+		sng_set_foreground(UI_COLOR(demon_asteroid));
 		break;
 	case OBJTYPE_DERELICT:
-		sng_set_foreground(DERELICT_COLOR);
+		sng_set_foreground(UI_COLOR(demon_derelict));
 		break;
 	case OBJTYPE_NEBULA:
-		sng_set_foreground(NEBULA_COLOR);
+		sng_set_foreground(UI_COLOR(demon_nebula));
 		sng_draw_circle(0, x, y,
 			ur_to_usersr(o->tsd.nebula.r, ux1, ux2));
 		break;
 	case OBJTYPE_STARBASE:
-		sng_set_foreground(STARBASE_COLOR);
+		sng_set_foreground(UI_COLOR(demon_starbase));
 		sng_draw_circle(0, x, y, 5);
 		break;
 	case OBJTYPE_PLANET:
-		sng_set_foreground(PLANET_COLOR);
+		sng_set_foreground(UI_COLOR(demon_planet));
 		r = ur_to_usersr(o->tsd.planet.radius, ux1, ux2);
 		sng_draw_circle(0, x, y, r > 5 ? r : 5);
 		break;
 	case OBJTYPE_WORMHOLE:
-		sng_set_foreground(WORMHOLE_COLOR);
+		sng_set_foreground(UI_COLOR(demon_wormhole));
 		sng_draw_circle(0, x, y, 5);
 		break;
 	default:
-		sng_set_foreground(WHITE);
+		sng_set_foreground(UI_COLOR(demon_default));
 	}
 	if (tardy)
 		sng_set_foreground(timer & 0x04 ? WHITE : BLACK);
@@ -10194,7 +10210,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 		}
 	}
 	if (v) {
-		sng_set_foreground(RED);
+		sng_set_foreground(UI_COLOR(demon_victim_vector));
 		sng_draw_dotted_line(x, y, vx, vy);
 	}
 
@@ -10206,7 +10222,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 	
 done_drawing_item:
 
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(demon_default));
 	sng_abs_xy_draw_string(demon_ui.error_msg, NANO_FONT, 20, 570);
 	return;
 }
@@ -10748,7 +10764,7 @@ static void calculate_new_demon_zoom(int direction, gdouble x, gdouble y)
 static void show_demon_groups(GtkWidget *w)
 {
 	int i;
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(demon_group_text));
 
 	for (i = 0; i < ndemon_groups; i++)
 		sng_abs_xy_draw_string(demon_group[i].name,
@@ -10833,9 +10849,9 @@ static void show_demon(GtkWidget *w)
 	char buffer[100];
 
 	if (go[my_ship_oid].alive > 0)
-		sng_set_foreground(GREEN);
+		sng_set_foreground(UI_COLOR(demon_default));
 	else
-		sng_set_foreground(RED);
+		sng_set_foreground(UI_COLOR(demon_default_dead));
 
 	show_2d_universe_grid(w, demon_ui.ux1, demon_ui.uy1, demon_ui.ux2, demon_ui.uy2);
 
@@ -10849,8 +10865,9 @@ static void show_demon(GtkWidget *w)
 					demon_ui.ux2, demon_ui.uy2);
 	pthread_mutex_unlock(&universe_mutex);
 	draw_2d_small_cross(ux_to_usersx(demon_ui.selectedx, demon_ui.ux1, demon_ui.ux2),
-				uz_to_usersy(demon_ui.selectedz, demon_ui.uy1, demon_ui.uy2), BLUE, 1);
-	sng_set_foreground(GREEN);
+				uz_to_usersy(demon_ui.selectedz, demon_ui.uy1, demon_ui.uy2),
+				UI_COLOR(demon_cross), 1);
+	sng_set_foreground(UI_COLOR(demon_default));
 	if (netstats.elapsed_seconds == 0)
 		sprintf(buffer, "Waiting for data");
 	else 
@@ -10875,7 +10892,7 @@ static void show_demon(GtkWidget *w)
 		y1 = uz_to_demonsy(demon_ui.iz);
 		x2 = ux_to_demonsx(demon_ui.ix2);
 		y2 = uz_to_demonsy(demon_ui.iz2);
-		sng_set_foreground(WHITE);
+		sng_set_foreground(UI_COLOR(demon_selection_box));
 		sng_draw_dotted_line(x1, y1, x2, y1);
 		sng_draw_dotted_line(x1, y2, x2, y2);
 		sng_draw_dotted_line(x1, y1, x1, y2);
@@ -10920,7 +10937,7 @@ static void show_warp_hash_screen(GtkWidget *w)
 	int i;
 	int y1, y2;
 
-	sng_set_foreground(WHITE);
+	sng_set_foreground(UI_COLOR(warp_hash));
 
 	for (i = 0; i < 100; i++) {
 		// x1 = snis_randn(SCREEN_WIDTH);
@@ -11252,9 +11269,9 @@ static void init_net_setup_ui(void)
 static void show_network_setup(GtkWidget *w)
 {
 	show_common_screen(w, "SPACE NERDS IN SPACE");
-	sng_set_foreground(DARKGREEN);
+	sng_set_foreground(UI_COLOR(network_setup_logo));
 	sng_draw_vect_obj(&snis_logo, txx(100), txy(500));
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(network_setup_text));
 	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10) + LINEHEIGHT * 2);
 	sng_abs_xy_draw_string("LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, txx(25), txy(130));
 	sng_abs_xy_draw_string("GAME SERVER NICKNAME", TINY_FONT, txx(25), txy(280));
@@ -11265,16 +11282,16 @@ static void show_network_setup(GtkWidget *w)
 	sanitize_string(net_setup_ui.lobbyname);
 	if (strcmp(net_setup_ui.servername, "") != 0 &&
 		strcmp(net_setup_ui.lobbyname, "") != 0)
-		snis_button_set_color(net_setup_ui.start_gameserver, GREEN);
+		snis_button_set_color(net_setup_ui.start_gameserver, UI_COLOR(network_setup_active));
 	else
-		snis_button_set_color(net_setup_ui.start_gameserver, RED);
+		snis_button_set_color(net_setup_ui.start_gameserver, UI_COLOR(network_setup_inactive));
 
 	if (strcmp(net_setup_ui.lobbyname, "") != 0 &&
 		strcmp(net_setup_ui.shipname, "") != 0 &&
 		strcmp(net_setup_ui.password, "") != 0)
-		snis_button_set_color(net_setup_ui.connect_to_lobby, GREEN);
+		snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_active));
 	else
-		snis_button_set_color(net_setup_ui.connect_to_lobby, RED);
+		snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_inactive));
 }
 
 static void make_science_forget_stuff(void)

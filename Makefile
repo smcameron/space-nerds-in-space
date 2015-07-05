@@ -301,7 +301,7 @@ SERVEROBJS=${COMMONOBJS} snis_server.o names.o starbase-comms.o \
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	mesh.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
-	quat.o vec4.o thrust_attachment.o
+	quat.o vec4.o thrust_attachment.o ui_colors.o
 
 CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o
 
@@ -444,6 +444,9 @@ shader.o : shader.c Makefile
 thrust_attachment.o:	thrust_attachment.c thrust_attachment.h Makefile
 	$(Q)$(COMPILE)
 
+ui_colors.o:	ui_colors.c ui_colors.h snis_graph.h Makefile
+	$(Q)$(COMPILE)
+
 my_point.o:   my_point.c Makefile
 	$(Q)$(COMPILE)
 
@@ -483,10 +486,10 @@ shield_strength.o:	shield_strength.c Makefile
 snis_server.o:	snis_server.c Makefile build_info.h
 	$(Q)$(COMPILE)
 
-snis_client.o:	snis_client.c Makefile build_info.h
+snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h
 	$(Q)$(GLEXTCOMPILE)
 
-snis_limited_client.c:	snis_client.c Makefile
+snis_limited_client.c:	snis_client.c Makefile build_info.h ui_colors.h
 	cp snis_client.c snis_limited_client.c
 
 snis_limited_client.o:	snis_limited_client.c Makefile build_info.h
@@ -597,7 +600,7 @@ snis_button.o:	snis_button.c Makefile
 snis_label.o:	snis_label.c Makefile
 	$(Q)$(GTKCOMPILE)
 
-snis_sliders.o:	snis_sliders.c Makefile
+snis_sliders.o:	snis_sliders.c snis_sliders.h ui_colors.h Makefile
 	$(Q)$(GTKCOMPILE)
 
 snis_text_window.o:	snis_text_window.c Makefile
