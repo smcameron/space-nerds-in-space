@@ -718,8 +718,8 @@ static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
 {
 	int i;
 	struct snis_damcon_entity *o;
-	const int selected = WHITE;
-	const int deselected = AMBER;
+	const int selected = UI_COLOR(damcon_selected_button);
+	const int deselected = UI_COLOR(damcon_button);
 
 	i = lookup_damcon_object_by_id(id);
 	if (i < 0) {
@@ -5335,7 +5335,7 @@ void connect_to_gameserver(int selected_server)
 static void show_connecting_screen(GtkWidget *w)
 {
 	static int connected_to_gameserver = 0;
-	sng_set_foreground(WHITE);
+	sng_set_foreground(UI_COLOR(lobby_connecting));
 	sng_abs_xy_draw_string("CONNECTING TO SERVER...", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
 	if (!connected_to_gameserver) {
 		connected_to_gameserver = 1;
@@ -5345,7 +5345,7 @@ static void show_connecting_screen(GtkWidget *w)
 
 static void show_connected_screen(GtkWidget *w)
 {
-	sng_set_foreground(WHITE);
+	sng_set_foreground(UI_COLOR(lobby_connecting));
 	sng_abs_xy_draw_string("CONNECTED TO SERVER", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
 	sng_abs_xy_draw_string("DOWNLOADING GAME DATA", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT * 3);
 }
@@ -5371,7 +5371,7 @@ static void show_common_screen(GtkWidget *w, char *title)
 	snis_draw_line(1, 1, 1, SCREEN_HEIGHT - 1);
 
 	if (vertical_controls_timer) {
-		sng_set_foreground(WHITE);
+		sng_set_foreground(UI_COLOR(special_options));
 		vertical_controls_timer--;
 		if (vertical_controls_inverted > 0)
 			sng_center_xy_draw_string("VERTICAL CONTROLS NORMAL",
@@ -5381,7 +5381,7 @@ static void show_common_screen(GtkWidget *w, char *title)
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 	}
 	if (fake_stars_timer) {
-		sng_set_foreground(WHITE);
+		sng_set_foreground(UI_COLOR(special_options));
 		fake_stars_timer--;
 		if (nfake_stars > 0)
 			sng_center_xy_draw_string("SPACE DUST ENABLED",
@@ -5976,7 +5976,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		dr += 200;
 	}
 
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(sci_ball_default_blip));
 	if (!o->sdata.science_data_known) {
 		for (i = 0; i < 10; i++) {
 			da = snis_randn(360) * M_PI / 180.0;
@@ -5989,30 +5989,30 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		switch(o->type) {
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_SHIP1:
-			sng_set_foreground(LIMEGREEN);
+			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			break;
 		case OBJTYPE_STARBASE:
-			sng_set_foreground(WHITE);
+			sng_set_foreground(UI_COLOR(sci_ball_starbase));
 			break;
 		case OBJTYPE_ASTEROID:
-			sng_set_foreground(AMBER);
+			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
 			break;
 		case OBJTYPE_DERELICT:
-			sng_set_foreground(ORANGERED);
+			sng_set_foreground(UI_COLOR(sci_ball_derelict));
 			break;
 		case OBJTYPE_PLANET:
-			sng_set_foreground(BLUE);
+			sng_set_foreground(UI_COLOR(sci_ball_planet));
 			break;
 		case OBJTYPE_TORPEDO:
-			sng_set_foreground(ORANGERED);
+			sng_set_foreground(UI_COLOR(sci_ball_energy));
 			break;
 		case OBJTYPE_LASER:
-			sng_set_foreground(LASER_COLOR);
+			sng_set_foreground(UI_COLOR(sci_ball_energy));
 			break;
 		case OBJTYPE_SPARK:
 		case OBJTYPE_EXPLOSION:
 		default:
-			sng_set_foreground(LIMEGREEN);
+			sng_set_foreground(UI_COLOR(sci_ball_default_blip));
 		}
 		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1) {
 			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R / 2, o->heading, 0.3);
@@ -6029,35 +6029,35 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		switch (o->type) {
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_SHIP1:
-			sng_set_foreground(LIMEGREEN);
+			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			sprintf(buffer, "%s %s\n", o->sdata.name,
 					ship_type[o->sdata.subclass].class); 
 			break;
 		case OBJTYPE_STARBASE:
-			sng_set_foreground(WHITE);
+			sng_set_foreground(UI_COLOR(sci_ball_starbase));
 			sprintf(buffer, "%s %s\n", "SB",  o->sdata.name); 
 			break;
 		case OBJTYPE_ASTEROID:
-			sng_set_foreground(AMBER);
+			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
 			sprintf(buffer, "%s %s\n", "A",  o->sdata.name); 
 			break;
 		case OBJTYPE_DERELICT:
-			sng_set_foreground(ORANGERED);
+			sng_set_foreground(UI_COLOR(sci_ball_derelict));
 			sprintf(buffer, "%s %s\n", "D",  "???"); 
 			break;
 		case OBJTYPE_PLANET:
-			sng_set_foreground(BLUE);
+			sng_set_foreground(UI_COLOR(sci_ball_planet));
 			sprintf(buffer, "%s %s\n", "P",  o->sdata.name); 
 			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_SPARK:
 		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_LASER:
-			sng_set_foreground(LIMEGREEN);
+			sng_set_foreground(UI_COLOR(sci_ball_energy));
 			strcpy(buffer, "");
 			break;
 		default:
-			sng_set_foreground(GREEN);
+			sng_set_foreground(UI_COLOR(sci_ball_default_blip));
 			sprintf(buffer, "%s %s\n", "?", o->sdata.name); 
 			break;
 		}
@@ -7461,7 +7461,8 @@ static void reverse_button_pressed(__attribute__((unused)) void *s)
 
 	if (!(o = find_my_ship()))
 		return;
-	snis_button_set_color(nav_ui.reverse_button, !o->tsd.ship.reverse ? RED : AMBER);
+	snis_button_set_color(nav_ui.reverse_button, !o->tsd.ship.reverse ?
+			UI_COLOR(nav_reverse_button) : UI_COLOR(nav_button));
 	do_adjust_byte_value(!o->tsd.ship.reverse,  OPCODE_REQUEST_REVERSE);
 }
 
@@ -7544,7 +7545,7 @@ static void ui_add_text_input_box(struct snis_text_input_box *t, int active_disp
 static void init_lobby_ui()
 {
 	lobby_ui.lobby_cancel_button = snis_button_init(650, 520, 100, LINEHEIGHT * 2,
-			"CANCEL", GREEN, NANO_FONT, lobby_cancel_button_pressed, NULL);
+			"CANCEL", UI_COLOR(lobby_cancel), NANO_FONT, lobby_cancel_button_pressed, NULL);
 	ui_add_button(lobby_ui.lobby_cancel_button, DISPLAYMODE_LOBBYSCREEN);
 }
 
@@ -7580,7 +7581,7 @@ static void show_death_screen(GtkWidget *w)
 {
 	char buf[100];
 
-	sng_set_foreground(RED);
+	sng_set_foreground(UI_COLOR(death_text));
 	sprintf(buf, "YOUR SHIP");
 	sng_abs_xy_draw_string(buf, BIG_FONT, 20, 150);
 	sprintf(buf, "HAS BEEN");
@@ -8316,7 +8317,7 @@ static void init_damcon_ui(void)
 	damcon_ui.robot_auto_button = snis_button_init(txx(400), txy(30), txx(90), txy(25),
 				"AUTO", UI_COLOR(damcon_button), NANO_FONT, robot_auto_button_pressed, (void *) 0);
 	damcon_ui.robot_manual_button = snis_button_init(txx(500), txy(30), txx(90), txy(25), "MANUAL",
-							UI_COLOR(damcon_manual_button), NANO_FONT,
+							UI_COLOR(damcon_selected_button), NANO_FONT,
 							robot_manual_button_pressed, (void *) 0);
 
 	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON);
@@ -9079,23 +9080,23 @@ static void init_science_ui(void)
 	const int atsh = trbh;
 	
 
-	sci_ui.scizoom = snis_slider_init(szx, szy, szw, szh, DARKGREEN, "RANGE", "0", "100",
+	sci_ui.scizoom = snis_slider_init(szx, szy, szw, szh, UI_COLOR(sci_slider), "RANGE", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom);
 	snis_slider_set_label_font(sci_ui.scizoom, NANO_FONT);
-	sci_ui.scipower = snis_slider_init(spx, spy, szw, szh, DARKGREEN, "POWER", "0", "100",
+	sci_ui.scipower = snis_slider_init(spx, spy, szw, szh, UI_COLOR(sci_slider), "POWER", "0", "100",
 				0.0, 100.0, sample_sensors_power, NULL);
 	snis_slider_set_fuzz(sci_ui.scipower, 7);
 	snis_slider_set_label_font(sci_ui.scipower, NANO_FONT);
 	sci_ui.tractor_button = snis_button_init(trbx, trby, trbw, trbh, "TRACTOR",
-			GREEN, NANO_FONT, sci_tractor_pressed, (void *) 0);
+			UI_COLOR(sci_button), NANO_FONT, sci_tractor_pressed, (void *) 0);
 	sci_ui.sciplane_button = snis_button_init(scpx, scpy, scpw, scph, "SRS",
-			GREEN, NANO_FONT, sci_sciplane_pressed, (void *) 0);
+			UI_COLOR(sci_button), NANO_FONT, sci_sciplane_pressed, (void *) 0);
 	sci_ui.threed_button = snis_button_init(thdx, thdy, thdw, thdh, "LRS",
-			GREEN, NANO_FONT, sci_threed_pressed, (void *) 0);
+			UI_COLOR(sci_button), NANO_FONT, sci_threed_pressed, (void *) 0);
 	sci_ui.details_button = snis_button_init(detx, dety, detw, deth, "DETAILS",
-			GREEN, NANO_FONT, sci_details_pressed, (void *) 0);
+			UI_COLOR(sci_button), NANO_FONT, sci_details_pressed, (void *) 0);
 	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
-			GREEN, NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
+			UI_COLOR(sci_button), NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
@@ -9212,6 +9213,7 @@ static void init_comms_ui(void)
 	int bw = txx(75);
 	int bh = txy(25);
 	const int button_color = UI_COLOR(comms_button);
+	const int slider_color = UI_COLOR(comms_slider);
 	const int text_color = UI_COLOR(comms_text);
 	const int red_alert_color = UI_COLOR(comms_red_alert);
 
@@ -9244,7 +9246,7 @@ static void init_comms_ui(void)
 			NANO_FONT, comms_main_screen_pressed, (void *) 8);
 	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 20, text_color);
 	comms_ui.comms_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
-					GREEN, TINY_FONT,
+					text_color, TINY_FONT,
 					comms_ui.input, 50, &timer,
 					comms_input_entered, NULL);
 	snis_text_input_box_set_return(comms_ui.comms_input,
@@ -9253,7 +9255,7 @@ static void init_comms_ui(void)
 			"TRANSMIT", GREEN,
 			TINY_FONT, comms_transmit_button_pressed, NULL);
 	comms_ui.mainzoom_slider = snis_slider_init(txx(180), txy(560), txx(380), txy(15),
-				GREEN, "ZOOM",
+				slider_color, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_mainzoom,
 				do_mainzoom);
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
@@ -9562,7 +9564,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 
 	set_renderer(sciecx, WIREFRAME_RENDERER | BLACK_TRIS);
 	m = entity_get_mesh(curr_science_guy->entity);
-	e = add_entity(sciecx, m, 0, 0, 0, GREEN);
+	e = add_entity(sciecx, m, 0, 0, 0, UI_COLOR(sci_wireframe));
 	angle = (M_PI / 180.0) * (timer % 360);
 	quat_init_axis(&orientation, 0.0, 1.0, 0.0, angle);
 	if (e)
@@ -9587,7 +9589,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			buf[0] = '\0';
 		}
 	}
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(sci_details_text));
 	if (buf[0])
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 	y += yinc;
@@ -10072,7 +10074,7 @@ static void debug_draw_ship_patrol_route(uint8_t npoints, union vec3 patrol[],
 	union vec3 *v1, *v2;
 	float x1, y1, x2, y2;
 
-	sng_set_foreground(WHITE);
+	sng_set_foreground(UI_COLOR(demon_patrol_route));
 	for (int i = 1; i <= npoints; i++) {
 		v1 = &patrol[i - 1];
 		v2 = &patrol[i % npoints];
@@ -10127,7 +10129,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
-		sng_set_foreground(RED);
+		sng_set_foreground(UI_COLOR(demon_self));
 		if ((timer & 0x02) && !demon_id_selected(o->id))
 			goto done_drawing_item;
 		break;
@@ -10216,7 +10218,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 
 	if ((o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_STARBASE) &&
 			go_index(o) == demon_ui.captain_of) {
-		sng_set_foreground(RED);
+		sng_set_foreground(UI_COLOR(demon_starbase));
 		sng_draw_circle(0, x, y, 10 + (timer % 10));
 	}
 	
@@ -10254,7 +10256,7 @@ static void show_cmd_help(GtkWidget *w, struct demon_cmd_def cmd[], int nitems)
 	int i;
 	char buffer[100];
 
-	sng_set_foreground(WHITE);
+	sng_set_foreground(UI_COLOR(help_text));
 	for (i = 0; i < nitems; i++) {
 		sprintf(buffer, "%s", cmd[i].verb);
 		sng_abs_xy_draw_string(buffer, NANO_FONT, 85, i * 18 + 60);
@@ -10557,8 +10559,8 @@ static void demon_exec_button_pressed(void *x)
 
 static void set_demon_button_colors()
 {
-	const int selected = WHITE;
-	const int deselected = GREEN;
+	const int selected = UI_COLOR(demon_selected_button);
+	const int deselected = UI_COLOR(demon_deselected_button);
 
 	snis_button_set_color(demon_ui.demon_ship_button,
 		demon_ui.buttonmode == DEMON_BUTTON_SHIPMODE ? selected : deselected);
@@ -10673,48 +10675,49 @@ static void init_demon_ui()
 	strcpy(demon_ui.error_msg, "");
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
 	demon_ui.demon_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
-					GREEN, TINY_FONT,
+					UI_COLOR(demon_input), TINY_FONT,
 					demon_ui.input, 50, &timer, NULL, NULL);
 	snis_text_input_box_set_return(demon_ui.demon_input,
 					demon_exec_button_pressed); 
 	demon_ui.demon_exec_button = snis_button_init(txx(570), txy(520), txx(160), txy(30),
-			"EXECUTE", GREEN,
+			"EXECUTE", UI_COLOR(demon_input),
 			TINY_FONT, demon_exec_button_pressed, NULL);
 	x = txx(3);
 	y = txy(60);
 	dy = txy(25);
 	n = 0;
 	demon_ui.demon_ship_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
-			"SHIP", GREEN,
+			"SHIP", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_ship_button_pressed, NULL);
 	demon_ui.demon_starbase_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
-			"STARBASE", GREEN,
+			"STARBASE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_starbase_button_pressed, NULL);
 	demon_ui.demon_planet_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
-			"PLANET", GREEN,
+			"PLANET", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_planet_button_pressed, NULL);
 	demon_ui.demon_asteroid_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
-			"ASTEROID", GREEN,
+			"ASTEROID", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_asteroid_button_pressed, NULL);
 	demon_ui.demon_nebula_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
-			"NEBULA", GREEN,
+			"NEBULA", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_nebula_button_pressed, NULL);
 	demon_ui.demon_spacemonster_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
-			"MONSTER", GREEN,
+			"MONSTER", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_spacemonster_button_pressed, NULL);
-	demon_ui.demon_captain_button = snis_button_init(x, y + dy * n++, txx(70), txy(20), "CAPTAIN", GREEN,
+	demon_ui.demon_captain_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
+			"CAPTAIN", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_captain_button_pressed, NULL);
 	demon_ui.demon_delete_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
-			"DELETE", GREEN,
+			"DELETE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_delete_button_pressed, NULL);
 	demon_ui.demon_select_none_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
-			"SELECT NONE", GREEN,
+			"SELECT NONE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_select_none_button_pressed, NULL);
 	demon_ui.demon_torpedo_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
-			"TORPEDO", GREEN,
+			"TORPEDO", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_torpedo_button_pressed, NULL);
 	demon_ui.demon_phaser_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
-			"PHASER", GREEN,
+			"PHASER", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_phaser_button_pressed, NULL);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
@@ -11166,7 +11169,7 @@ static void connect_to_lobby_button_pressed()
 static struct button *init_net_role_button(int x, int *y, char *txt, int *value)
 {
 	struct button *b;
-	b = snis_button_init(x, *y, 225, 23, txt, GREEN,
+	b = snis_button_init(x, *y, 225, 23, txt, UI_COLOR(network_setup_role),
 			NANO_FONT, NULL, NULL);
 	snis_button_checkbox(b, value);
 	*y = *y + txy(23);
@@ -11218,41 +11221,45 @@ static void init_net_setup_ui(void)
 	int y = txy(10) + txy(LINEHEIGHT * 3);
 	int yinc = txy(50);
 	int left = txx(20);
+	int input_color = UI_COLOR(network_setup_input);
+	int active_button_color = UI_COLOR(network_setup_active);
+	int inactive_button_color = UI_COLOR(network_setup_inactive);
 
 	memset(net_setup_ui.lobbyname, 0, sizeof(net_setup_ui.lobbyname));
 	strcpy(net_setup_ui.lobbyname, "localhost");
 	strcpy(net_setup_ui.servername, "");
 	y += yinc;
 	net_setup_ui.lobbyservername =
-		snis_text_input_box_init(left, y, txy(30), txx(750), GREEN, TINY_FONT,
+		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
 					net_setup_ui.lobbyname, 50, &timer,
 					lobby_hostname_entered, NULL);
 	y += yinc;
 	net_setup_ui.start_lobbyserver =	
-		snis_button_init(left, y, txx(300), txy(25), "START LOBBY SERVER", GREEN,
-			TINY_FONT, start_lobbyserver_button_pressed, NULL);
+		snis_button_init(left, y, txx(300), txy(25), "START LOBBY SERVER",
+			active_button_color, TINY_FONT, start_lobbyserver_button_pressed, NULL);
 	y += yinc * 2;
 	net_setup_ui.gameservername =
-		snis_text_input_box_init(left, y, txy(30), txx(750), GREEN, TINY_FONT,
+		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
 					net_setup_ui.servername, 50, &timer,
 					gameserver_hostname_entered, NULL);
 	y += yinc;
 	net_setup_ui.start_gameserver = 
-		snis_button_init(left, y, txx(300), txy(25), "START GAME SERVER", RED,
+		snis_button_init(left, y, txx(300), txy(25), "START GAME SERVER",
+			inactive_button_color,
 			TINY_FONT, start_gameserver_button_pressed, NULL);
 	y += yinc * 2;
 	net_setup_ui.shipname_box =
-		snis_text_input_box_init(150, y, txy(30), txx(250), GREEN, TINY_FONT,
+		snis_text_input_box_init(150, y, txy(30), txx(250), input_color, TINY_FONT,
 					net_setup_ui.shipname, 50, &timer,
 					shipname_entered, NULL);
 	y += yinc;
 	net_setup_ui.password_box =
-		snis_text_input_box_init(150, y, txy(30), txx(250), GREEN, TINY_FONT,
+		snis_text_input_box_init(150, y, txy(30), txx(250), input_color, TINY_FONT,
 					net_setup_ui.password, 50, &timer,
 					password_entered, NULL);
 	y += yinc;
 	net_setup_ui.connect_to_lobby = 
-		snis_button_init(left, y, txx(300), txy(25), "CONNECT TO LOBBY", RED,
+		snis_button_init(left, y, txx(300), txy(25), "CONNECT TO LOBBY", inactive_button_color,
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
 	init_net_role_buttons(&net_setup_ui);
 	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP);
@@ -11507,7 +11514,7 @@ static void draw_help_screen(GtkWidget *w)
 {
 	sng_set_foreground(BLACK);
 	snis_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
-	sng_set_foreground(GREEN);
+	sng_set_foreground(UI_COLOR(help_text));
 	snis_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
 	if (displaymode < 0 || displaymode >= ARRAYSIZE(help_text)) {
 		draw_help_text(w, "Unknown screen, no help available");

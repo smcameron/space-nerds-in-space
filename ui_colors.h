@@ -63,11 +63,14 @@ struct ui_color_map {
 	struct ui_color_entry lobby_selected_server;
 	struct ui_color_entry lobby_connect_ok;
 	struct ui_color_entry lobby_connect_not_ok;
+	struct ui_color_entry lobby_cancel;
 
 	struct ui_color_entry network_setup_text;
 	struct ui_color_entry network_setup_logo;
 	struct ui_color_entry network_setup_active;
 	struct ui_color_entry network_setup_inactive;
+	struct ui_color_entry network_setup_input;
+	struct ui_color_entry network_setup_role;
 
 	struct ui_color_entry nav_gauge;
 	struct ui_color_entry nav_gauge_needle;
@@ -126,18 +129,21 @@ struct ui_color_map {
 	struct ui_color_entry damcon_warning;
 	struct ui_color_entry damcon_wall;
 	struct ui_color_entry damcon_button;
-	struct ui_color_entry damcon_manual_button;
+	struct ui_color_entry damcon_selected_button;
 
 	struct ui_color_entry sci_plane_ring;
 	struct ui_color_entry sci_basis_ring_1;
 	struct ui_color_entry sci_basis_ring_2;
 	struct ui_color_entry sci_basis_ring_3;
 	struct ui_color_entry sci_coords;
+	struct ui_color_entry sci_button;
+	struct ui_color_entry sci_slider;
 	struct ui_color_entry sci_ball_ring;
 	struct ui_color_entry sci_ball_beam;
 	struct ui_color_entry sci_ball_default_blip;
 	struct ui_color_entry sci_ball_ship;
 	struct ui_color_entry sci_ball_asteroid;
+	struct ui_color_entry sci_ball_derelict;
 	struct ui_color_entry sci_ball_planet;
 	struct ui_color_entry sci_ball_starbase;
 	struct ui_color_entry sci_ball_energy;
@@ -149,8 +155,11 @@ struct ui_color_map {
 	struct ui_color_entry sci_plane_popout_arc;
 	struct ui_color_entry sci_plane_npc_laser;
 	struct ui_color_entry sci_plane_player_laser;
+	struct ui_color_entry sci_wireframe;
+	struct ui_color_entry sci_details_text;
 
 	struct ui_color_entry comms_button;
+	struct ui_color_entry comms_slider;
 	struct ui_color_entry comms_text;
 	struct ui_color_entry comms_red_alert;
 	struct ui_color_entry comms_warning;
@@ -171,6 +180,16 @@ struct ui_color_map {
 	struct ui_color_entry demon_victim_vector;
 	struct ui_color_entry demon_cross;
 	struct ui_color_entry demon_selection_box;
+	struct ui_color_entry demon_patrol_route;
+	struct ui_color_entry demon_selected_button;
+	struct ui_color_entry demon_deselected_button;
+	struct ui_color_entry demon_self;
+	struct ui_color_entry demon_input;
+
+	struct ui_color_entry death_text;
+
+	struct ui_color_entry special_options;
+	struct ui_color_entry help_text;
 
 	struct ui_color_entry warp_hash;
 	struct ui_color_entry last_color;
@@ -199,11 +218,14 @@ struct ui_color_map_accessor {
 	.u.map.lobby_selected_server	= { GREEN_FIXUP,	"lobby-selected-server" },
 	.u.map.lobby_connect_ok		= { GREEN_FIXUP,	"lobby-connect-ok" },
 	.u.map.lobby_connect_not_ok	= { RED,		"lobby-connect-not-ok" },
+	.u.map.lobby_cancel		= { WHITE,		"lobby-cancel" },
 
 	.u.map.network_setup_text	= { GREEN_FIXUP,	"network-setup-text" },
 	.u.map.network_setup_logo	= { DARKGREEN,		"network-setup-logo" },
 	.u.map.network_setup_active	= { GREEN_FIXUP,	"network-setup-active" },
 	.u.map.network_setup_inactive	= { RED,		"network-setup-inactive" },
+	.u.map.network_setup_input	= { GREEN_FIXUP,	"network-setup-input" },
+	.u.map.network_setup_role	= { GREEN_FIXUP,	"network-setup-role" },
 
 	.u.map.nav_gauge		= { AMBER,		"nav-gauge" },
 	.u.map.nav_gauge_needle		= { RED,		"nav-gauge-needle" },
@@ -262,18 +284,21 @@ struct ui_color_map_accessor {
 	.u.map.damcon_warning		= { RED,		"damcon-warning" },
 	.u.map.damcon_wall		= { AMBER,		"damcon-wall" },
 	.u.map.damcon_button		= { AMBER,		"damcon-button" },
-	.u.map.damcon_manual_button	= { WHITE,		"damcon-manual-button" },
+	.u.map.damcon_selected_button	= { WHITE,		"damcon-selected-button" },
 
 	.u.map.sci_plane_ring		= { DARKRED,		"sci-plane-ring" },
 	.u.map.sci_basis_ring_1		= { RED,		"sci-basis-ring-1" },
 	.u.map.sci_basis_ring_2		= { DARKGREEN,		"sci-basis-ring-2" },
 	.u.map.sci_basis_ring_3		= { BLUE_FIXUP,		"sci-basis-ring-3" },
 	.u.map.sci_coords		= { CYAN_FIXUP,		"sci-coords" },
+	.u.map.sci_button		= { GREEN_FIXUP,	"sci-button" },
+	.u.map.sci_slider		= { DARKGREEN,		"sci-slider" },
 	.u.map.sci_ball_ring		= { DARKRED,		"sci-ball-ring" },
 	.u.map.sci_ball_beam		= { AMBER,		"sci-ball-beam" },
 	.u.map.sci_ball_default_blip	= { GREEN_FIXUP,	"sci-ball-default-blip" },
 	.u.map.sci_ball_ship		= { LIMEGREEN,		"sci-ball-ship" },
 	.u.map.sci_ball_asteroid	= { AMBER,		"sci-ball-asteroid" },
+	.u.map.sci_ball_derelict	= { ORANGERED,		"sci-ball-derelict" },
 	.u.map.sci_ball_planet		= { BLUE_FIXUP,		"sci-ball-planet" },
 	.u.map.sci_ball_starbase	= { WHITE,		"sci-ball-starbase" },
 	.u.map.sci_ball_energy		= { LIMEGREEN,		"sci-ball-energy" },
@@ -285,8 +310,11 @@ struct ui_color_map_accessor {
 	.u.map.sci_plane_popout_arc	= { DARKTURQUOISE,	"sci-plane-popout-arc" },
 	.u.map.sci_plane_npc_laser	= { ORANGERED,		"sci-plane-npc-laser" },
 	.u.map.sci_plane_player_laser	= { LIMEGREEN,		"sci-plane-player-laser" },
+	.u.map.sci_wireframe		= { GREEN_FIXUP,	"sci-wireframe" },
+	.u.map.sci_details_text		= { GREEN_FIXUP,	"sci-details-text" },
 
 	.u.map.comms_button		= { GREEN_FIXUP,	"comms-button" },
+	.u.map.comms_slider		= { GREEN_FIXUP,	"comms-slider" },
 	.u.map.comms_text		= { GREEN_FIXUP,	"comms-button" },
 	.u.map.comms_red_alert		= { RED,		"comms-red-alert" },
 	.u.map.comms_warning		= { RED,		"comms-warning" },
@@ -307,6 +335,16 @@ struct ui_color_map_accessor {
 	.u.map.demon_victim_vector	= { RED,		"demon-victim-vector" },
 	.u.map.demon_cross		= { BLUE_FIXUP,		"demon-cross" },
 	.u.map.demon_selection_box	= { WHITE,		"demon-selection-box" },
+	.u.map.demon_patrol_route	= { WHITE,		"demon-patrol-route" },
+	.u.map.demon_selected_button	= { WHITE,		"demon-selected-button" },
+	.u.map.demon_deselected_button	= { GREEN_FIXUP,	"demon-deselected-button" },
+	.u.map.demon_self		= { RED,		"demon-self" },
+	.u.map.demon_input		= { GREEN_FIXUP,	"demon-input" },
+
+	.u.map.death_text		= { RED,		"death-text" },
+
+	.u.map.special_options		= { WHITE,		"special-options" },
+	.u.map.help_text		= { WHITE,		"help-text" },
 
 	.u.map.warp_hash		= { WHITE,		"warp-hash" },
 
