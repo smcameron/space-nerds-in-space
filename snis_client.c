@@ -13199,6 +13199,13 @@ static void figure_aspect_ratio(int requested_x, int requested_y,
 	}
 }
 
+static void init_colors(void)
+{
+	char color_file[1000];
+	sprintf(color_file, "%s/%s", asset_dir, "user_colors.cfg");
+	sng_setup_colors(main_da, color_file);
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
@@ -13422,7 +13429,7 @@ int main(int argc, char *argv[])
         gtk_widget_show (main_da);
         gtk_widget_show (window);
 
-	sng_setup_colors(main_da);
+	init_colors();
 
 #ifndef WITHOUTOPENGL
 	/* must be set or the window will not show */

@@ -3,6 +3,9 @@
 #include <errno.h>
 #include <string.h>
 #include <gtk/gtk.h>
+#include <inttypes.h>
+#include <errno.h>
+#include <string.h>
 #ifndef WITHOUTOPENGL
 #include <gtk/gtkgl.h>
 #include <GL/glew.h>
@@ -21,9 +24,17 @@
 #include "mathutils.h"
 #include "graph_dev.h"
 #include "ui_colors.h"
+#include "string-utils.h"
 
-#define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY * (NSHADECOLORS + 1) + (NGRADIENTS * NTOTAL_GRADIENT_SHADES))
-GdkColor huex[TOTAL_COLORS]; 
+#define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY * (NSHADECOLORS + 1) + \
+	(NGRADIENTS * NTOTAL_GRADIENT_SHADES) + MAX_USER_COLORS)
+GdkColor huex[TOTAL_COLORS];
+
+/* first index of user colors: Note this will break if user colors
+ * aren't at the end of the huex array
+ */
+#define USER_COLOR ((sizeof(huex) / sizeof(huex[0])) - MAX_USER_COLORS)
+int nuser_colors;
 
 extern struct my_vect_obj **gamefont[];
 extern int font_scale[];
@@ -503,7 +514,159 @@ static struct gradient_color gradient_colors[] = {
 	{&CYAN, 180, 1, 1}
 };
 
-void sng_setup_colors(void *gtk_widget)
+int sng_add_user_color(uint8_t r, uint8_t g, uint8_t b)
+{
+	/* Check and see if color is already known */
+	int i;
+	uint16_t r2, g2, b2;
+	r2 = r << 8;
+	g2 = g << 8;
+	b2 = b << 8;
+
+	for (i = 0; i < TOTAL_COLORS; i++) {
+		if (huex[i].red == r2 &&
+			huex[i].green == g2 &&
+			huex[i].blue == b2) {
+			return i;
+		}
+	}
+
+	/* color is not known, need to try to add it. */
+	if (MAX_USER_COLORS - nuser_colors <= 0)
+		return -1; /* no room to add it */
+
+	/* add it */
+	i = USER_COLOR + nuser_colors;
+	huex[i].red = (uint16_t) r2;
+	huex[i].green = (uint16_t) g2;
+	huex[i].blue = (uint16_t) b2;
+	nuser_colors++;
+	return nuser_colors - 1 + USER_COLOR;
+}
+
+static struct user_color_entry {
+	char name[20];
+	int index;
+} *user_color;
+static int nuser_color_entries;
+
+static int lookup_user_color(char *colorname)
+{
+	int i;
+
+	for (i = 0; i < nuser_color_entries; i++)
+		if (strcmp(user_color[i].name, colorname) == 0)
+			return user_color[i].index;
+	return -1;
+}
+
+static int parse_user_color_line(char *filename, char *line, int ln,
+					struct user_color_entry *e)
+{
+	int rc;
+	unsigned int r, g, b;
+	char name[100], ui_component[100], colorname[100];
+
+	if (line[0] == '#')
+		return 1; /* comment */
+
+	clean_spaces(line);
+	remove_trailing_whitespace(line);
+
+	if (strcmp(line, "") == 0)
+		return 1; /* comment (blank line) */
+
+	memset(name, 0, sizeof(name));
+	rc = sscanf(line, "color %[^	 ] #%02x%02x%02x",
+			name, &r, &g, &b);
+	if (rc == 4) {
+		name[19] = '\0';
+		memcpy(e->name, name, 20);
+		e->index = sng_add_user_color(r, g, b);
+		if (e->index < 0) {
+			fprintf(stderr, "%s:%d Failed to add user color '%s'\n",
+				filename, ln, name);
+			return -1;
+		}
+		return 0;
+	} else {
+		rc = sscanf(line, "%[^	 ] #%02x%02x%02x",
+				ui_component, &r, &g, &b);
+		if (rc == 4) {
+			e->index = sng_add_user_color(r, g, b);
+			if (e->index < 0) {
+				fprintf(stderr, "%s:%d Failed to modify ui component color '%s'\n",
+					filename, ln, line);
+				return -1;
+			}
+			modify_ui_color(ui_component, e->index);
+			return 0;
+		} else {
+			rc = sscanf(line, "%[^	 ] %[^	 ]",
+				ui_component, colorname);
+			if (rc == 2) {
+				e->index = lookup_user_color(colorname);
+				if (e->index < 0) {
+					fprintf(stderr,
+						"%s:%d Failed to modify ui component color '%s'\n",
+						filename, ln, line);
+					return -1;
+				}
+				modify_ui_color(ui_component, e->index);
+				return 0;
+			}
+		}
+	}
+	fprintf(stderr, "%s:%d: Syntax error: '%s'\n", filename, ln, line);
+	return -1;
+}
+
+static void sng_read_user_colors(char *filename)
+{
+	FILE *f;
+	char line[1000], *l;
+	int rc, ln = 0;
+	struct user_color_entry entry;
+
+	if (!filename)
+		return;
+
+	user_color = malloc(sizeof(*user_color) * MAX_USER_COLORS);
+	memset(user_color, 0, sizeof(*user_color) * MAX_USER_COLORS);
+
+	f = fopen(filename, "r");
+	if (!f) {
+		fprintf(stderr, "Cannot open %s: %s\n", filename, strerror(errno));
+		goto bailout;
+	}
+	while (!feof(f)) {
+		l = fgets(line, 1000, f);
+		if (!l)
+			break;
+		line[strlen(line) - 1] = '\0';
+		ln++;
+		rc = parse_user_color_line(filename, line, ln, &entry);
+		switch (rc) {
+		case 0:
+			user_color[nuser_color_entries] = entry;
+			nuser_color_entries++;
+			continue;
+		case 1: /* comment */
+			continue;
+		case -1:
+			goto bailout;
+		}
+	}
+
+bailout:
+	if (f)
+		fclose(f);
+	if (user_color)
+		free(user_color);
+	return;
+}
+
+void sng_setup_colors(void *gtk_widget, char *user_color_file)
 {
 	int i;
 
@@ -625,6 +788,8 @@ void sng_setup_colors(void *gtk_widget)
 			grad_index++;
 		}
 	}
+
+	sng_read_user_colors(user_color_file);
 
 	fixup_ui_color(BLUE_FIXUP, BLUE);
 	fixup_ui_color(GREEN_FIXUP, GREEN);

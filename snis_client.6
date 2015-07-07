@@ -120,7 +120,39 @@ specify the corresponding keys:
 .DE
 
 .PP
-/usr/share/snis/sounds/*.ogg contain the audio data used by the game.
+$SNIS_ASSET_DIR/user_colors.cfg allows customizing of the colors of nearlly all UI
+elements.  The file contains comments describing its format. In brief, there are
+three types of lines.  A comment is a line beginning with a '#' or containing only
+whitespace, and is ignored.  A 'color' line begins with the word 'color', which is
+followed by a user supplied name (eg: 'purple') then a space, then a color definition
+which is a '#' followed by 2 hex digits for each of red, green and blue, so, for
+example:
+.br
+.DI
+
+color purple #ff00ff
+
+.DE
+.PP
+Finally, lines to change the colors of ui-components are of the form:
+.br
+.DI
+
+ui-component color
+
+.DE
+where 'ui-component' is a 'magic word' identifying one of the ui components
+(see comments in $SNIS_ASSET_DIR/user_colors.cfg) and color is either a word
+defined in a prior 'color' line, or else a color specification of the form
+#rrggbb where r, g, and b are hex digits.  For example:
+.br
+.DI
+
+nav-button purple
+.br
+nav-slider #00ff00
+
+.DE
 .PP
 .SH SEE ALSO
 snis_server(6), ssgl_server(6)

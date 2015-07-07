@@ -614,7 +614,7 @@ int main(int argc, char *argv[])
 	real_screen_width = SCREEN_WIDTH;
 	real_screen_height = SCREEN_HEIGHT;
 
-	sng_setup_colors(0);
+	sng_setup_colors(0, NULL);
 
 	snis_typefaces_init();
 	graph_dev_setup("share/snis/shader");

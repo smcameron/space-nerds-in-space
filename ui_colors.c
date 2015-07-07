@@ -35,18 +35,26 @@ void fixup_ui_color(int old_color, int new_color)
 	int i;
 	int count = 0;
 
-	fprintf(stderr, "Fixing up %d to %d\n", old_color, new_color);
 	/* Kind of hacky, we just tromp through memory clobbering ints on the
 	 * presumption that a struct full of ints will be virtually contiguous
 	 */
 	for (i = 0; i < ARRAY_SIZE(ui_color.u.entry); i++) {
 		struct ui_color_entry *e = &ui_color.u.entry[i];
 		if (e->index == old_color) {
-			fprintf(stderr, "fixed up %s: %d -> %d\n", e->name, old_color, new_color);
 			e->index = new_color;
 			count++;
 		}
 	}
-	fprintf(stderr, "fixed up %d instances of %d to %d\n", count, old_color, new_color);
+}
+
+void modify_ui_color(char *ui_component, int new_color)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(ui_color.u.entry); i++) {
+		struct ui_color_entry *e = &ui_color.u.entry[i];
+		if (strcmp(e->name, ui_component) == 0)
+			e->index = new_color;
+	}
 }
 

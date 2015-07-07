@@ -354,6 +354,7 @@ struct ui_color_map_accessor {
 ;
 
 extern void fixup_ui_color(int old_color, int new_color);
+extern void modify_ui_color(char *ui_component, int new_color);
 
 #undef GLOBAL
 #endif

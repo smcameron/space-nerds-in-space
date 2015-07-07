@@ -1,6 +1,8 @@
 #ifndef SNIS_GRAPH_H__
 #define SNIS_GRAPH_H__
 
+#include <inttypes.h>
+
 #ifdef SNIS_GRAPH_DECLARE_GLOBALS
 #define SNG_GLOBAL
 #define INIT(y) = y
@@ -40,6 +42,8 @@ extern int CYAN;
 #define NGRADIENTS 3
 #define NGRADIENT_SHADES 16
 #define NTOTAL_GRADIENT_SHADES (NGRADIENT_SHADES*2 + 1)
+#define MAX_USER_COLORS 100
+extern int nuser_colors;
 
 #define COLOR_DARKER(c,p) (c-(p*NGRADIENT_SHADES/100))
 #define COLOR_LIGHTER(c, p) (c+(p*NGRADIENT_SHADES/100))
@@ -79,7 +83,7 @@ SNG_GLOBAL void sng_abs_xy_draw_string_with_cursor(
 SNG_GLOBAL void sng_center_xy_draw_string(char *s, int font, float x, float y);
 SNG_GLOBAL void sng_string_bounding_box(char *s, int font, float *bbx1, float *bby1, float *bbx2, float *bby2);
 SNG_GLOBAL void sng_draw_point(float x, float y);
-SNG_GLOBAL void sng_setup_colors(void *w);
+SNG_GLOBAL void sng_setup_colors(void *w, char *user_color_file);
 SNG_GLOBAL void sng_set_foreground(int c);
 SNG_GLOBAL void sng_set_foreground_alpha(int c, float a);
 SNG_GLOBAL struct sng_color sng_get_foreground();
@@ -102,6 +106,8 @@ SNG_GLOBAL void sng_set_3d_viewport(int x_offset, int y_offset, int width, int h
 
 SNG_GLOBAL char *sng_load_png_texture(const char *filename, int flipVertical, int flipHorizontal,
 	int pre_multiply_alpha, int *w, int *h, int *hasAlpha, char *whynot, int whynotlen);
+
+SNG_GLOBAL int add_user_color(uint8_t r, uint8_t g, uint8_t b);
 
 #undef SNG_GLOBAL
 #endif
