@@ -7652,6 +7652,8 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	if (!xz_ring_mesh) {
 		xz_ring_mesh = init_circle_mesh(0, 0, 1, 40, 2.0*M_PI);
 	}
+	struct material wireframe_material;
+	material_init_wireframe_sphere_clip(&wireframe_material);
 
 	struct entity *e;
 
@@ -7738,6 +7740,13 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	if (e) {
 		update_entity_orientation(e, &ind_orientation);
 		update_entity_scale(e, 0.1/heading_indicator_mesh->radius);
+	}
+
+	e = add_entity(tridentecx, ship_mesh_map[o->tsd.ship.shiptype],
+			center_pos.v.x, center_pos.v.y, center_pos.v.z, UI_COLOR(nav_self));
+	if (e) {
+		update_entity_orientation(e, &o->orientation);
+		update_entity_scale(e, 0.07 / heading_indicator_mesh->radius);
 	}
 
 	render_entities(tridentecx);
