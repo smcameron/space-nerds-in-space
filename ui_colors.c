@@ -20,6 +20,7 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define DEFINE_UI_COLORS_GLOBALS 1
 #include "ui_colors.h"
