@@ -8863,6 +8863,29 @@ static int process_request_reverse(struct game_client *c)
 	return 0;
 }
 
+static int process_nav_trident_mode(struct game_client *c)
+{
+	unsigned char buffer[10];
+	int i, rc;
+	uint32_t id;
+	uint8_t v;
+
+	rc = read_and_unpack_buffer(c, buffer, "wb", &id, &v);
+	if (rc)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->ship_index)
+		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
+	go[i].tsd.ship.trident = !!v;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_request_throttle(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity,
@@ -9626,6 +9649,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_REVERSE:
 			rc = process_request_reverse(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_NAV_TRIDENT_MODE:
+			rc = process_nav_trident_mode(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -10454,7 +10482,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbwQQQb",
+	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbbwQQQb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -10468,7 +10496,8 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
 			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
 			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype,
-			o->tsd.ship.reverse, o->tsd.ship.ai[0].u.attack.victim_id,
+			o->tsd.ship.reverse, o->tsd.ship.trident,
+			o->tsd.ship.ai[0].u.attack.victim_id,
 			&o->orientation.vec[0],
 			&o->tsd.ship.sciball_orientation.vec[0],
 			&o->tsd.ship.weap_orientation.vec[0],

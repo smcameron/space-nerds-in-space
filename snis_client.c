@@ -3659,6 +3659,17 @@ static int process_update_coolant_data(void)
 	return rc;
 }
 
+static struct navigation_ui {
+	struct slider *warp_slider;
+	struct slider *navzoom_slider;
+	struct slider *throttle_slider;
+	struct gauge *warp_gauge;
+	struct button *engage_warp_button;
+	struct button *reverse_button;
+	struct button *trident_button;
+	int gauge_radius;
+} nav_ui;
+
 static int process_update_ship_packet(uint8_t opcode)
 {
 	int i;
@@ -3674,7 +3685,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
-		reverse, in_secure_area;
+		reverse, trident, in_secure_area;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -3697,12 +3708,12 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbwQQQb",
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbbwQQQb",
 			&tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
-			&reverse, &victim_id, &orientation.vec[0],
+			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
@@ -3771,6 +3782,8 @@ static int process_update_ship_packet(uint8_t opcode)
 	if (!o->tsd.ship.reverse && reverse)
 		wwviaudio_add_sound(REVERSE_SOUND);
 	o->tsd.ship.reverse = reverse;
+	o->tsd.ship.trident = trident;
+	snis_button_set_label(nav_ui.trident_button, trident ? "ABSOLUTE" : "RELATIVE");
 	o->tsd.ship.ai[0].u.attack.victim_id = victim_id;
 	rc = 0;
 out:
@@ -4478,16 +4491,6 @@ static int process_sci_details(void)
 		ui_hide_widget(sci_ui.align_to_ship_button);
 	return 0;
 }
-
-static struct navigation_ui {
-	struct slider *warp_slider;
-	struct slider *navzoom_slider;
-	struct slider *throttle_slider;
-	struct gauge *warp_gauge;
-	struct button *engage_warp_button;
-	struct button *reverse_button;
-	int gauge_radius;
-} nav_ui;
 
 static int process_sci_select_target_packet(void)
 {
@@ -7466,6 +7469,14 @@ static void reverse_button_pressed(__attribute__((unused)) void *s)
 	do_adjust_byte_value(!o->tsd.ship.reverse,  OPCODE_REQUEST_REVERSE);
 }
 
+static void trident_button_pressed(__attribute__((unused)) void *s)
+{
+	struct snis_entity *o;
+	if (!(o = find_my_ship()))
+		return;
+	do_adjust_byte_value(!o->tsd.ship.trident,  OPCODE_NAV_TRIDENT_MODE);
+}
+
 static void ui_add_slider(struct slider *s, int active_displaymode)
 {
 	struct ui_element *uie;
@@ -7636,11 +7647,14 @@ static void init_nav_ui(void)
 					NANO_FONT, engage_warp_button_pressed, NULL);
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", button_color,
 			NANO_FONT, reverse_button_pressed, NULL);
+	nav_ui.trident_button = snis_button_init(30, 228, 92, 20, "RELATIVE", button_color,
+			NANO_FONT, trident_button_pressed, NULL);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION);
+	ui_add_button(nav_ui.trident_button, DISPLAYMODE_NAVIGATION);
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
 	navecx = entity_context_new(5000, 1000);
 	tridentecx = entity_context_new(10, 0);
@@ -7649,6 +7663,8 @@ static void init_nav_ui(void)
 void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, float rx, float ry, float rr)
 {
 	static struct mesh *xz_ring_mesh = 0;
+	int absolute_mode = o->tsd.ship.trident;
+
 	if (!xz_ring_mesh) {
 		xz_ring_mesh = init_circle_mesh(0, 0, 1, 40, 2.0*M_PI);
 	}
@@ -7656,8 +7672,13 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	material_init_wireframe_sphere_clip(&wireframe_material);
 
 	struct entity *e;
+	union quat cam_orientation;
 
-	union quat cam_orientation = o->orientation;
+	if (absolute_mode)
+		quat_init_axis(&cam_orientation, 0, 1, 0, 0);
+	else
+		cam_orientation = o->orientation;
+
 	union vec3 center_pos = {{0, 0, 0}};
 
 	/* given field of view angle, calculate how far away to show a radius 1.0 sphere */
@@ -7671,14 +7692,17 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 
 	/* figure out the camera positions */
 	union vec3 camera_up = { {0, 1, 0} };
-	quat_rot_vec_self(&camera_up, &cam_orientation);
+	if (!absolute_mode)
+		quat_rot_vec_self(&camera_up, &cam_orientation);
 
 	union vec3 camera_pos = { {-dist_to_cam, 0, 0} };
-	quat_rot_vec_self(&camera_pos, &cam_orientation);
+	if (!absolute_mode)
+		quat_rot_vec_self(&camera_pos, &cam_orientation);
 	vec3_add_self(&camera_pos, &center_pos);
 
 	union vec3 camera_lookat = {{0, 0, 0}};
-	quat_rot_vec_self(&camera_lookat, &cam_orientation);
+	if (!absolute_mode)
+		quat_rot_vec_self(&camera_lookat, &cam_orientation);
 	vec3_add_self(&camera_lookat, &center_pos);
 
 	camera_assign_up_direction(tridentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);

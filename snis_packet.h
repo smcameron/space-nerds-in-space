@@ -141,6 +141,7 @@
 #define OPCODE_DETONATE				217
 #define OPCODE_ENSCRIPT				218
 #define OPCODE_SCI_ALIGN_TO_SHIP		219
+#define OPCODE_NAV_TRIDENT_MODE			220
 
 #define OPCODE_NOOP		0xff
 
@@ -179,6 +180,7 @@ struct update_ship_packet {
 	uint8_t phaser_wavelength;
 	uint8_t shiptype; /* same as ship_sdata_packet subclass */
 	uint8_t reverse;
+	uint8_t trident;
 	uint32_t victim_id;
 	int32_t orientation[4]; /* int32_t encoded orientation quaternion */
 	int32_t sciball_orientation[4]; /* int32_t encoded orientation quaternion */
