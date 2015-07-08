@@ -7731,27 +7731,37 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 		.type = MATERIAL_COLOR_BY_W,
 		.billboard_type = MATERIAL_BILLBOARD_TYPE_NONE };
 
+	struct material roll_material = { {
+		.color_by_w = { COLOR_LIGHTER(BLUE, 100),
+				BLUE,
+				COLOR_DARKER(BLUE, 80),
+				dist_to_cam - 1.0,
+				dist_to_cam,
+				dist_to_cam + 1.0 } },
+		.type = MATERIAL_COLOR_BY_W,
+		.billboard_type = MATERIAL_BILLBOARD_TYPE_NONE };
+
 	/* add yaw axis */
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, CYAN);
 	if (e)
 		update_entity_material(e, &yaw_material);
 
 	/* add pitch1 axis */
-	union quat pitch1_orientation;
-	quat_init_axis(&pitch1_orientation, 1, 0, 0, M_PI/2.0);
+	union quat pitch_orientation;
+	quat_init_axis(&pitch_orientation, 1, 0, 0, M_PI/2.0);
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
 	if (e) {
-		update_entity_orientation(e, &pitch1_orientation);
+		update_entity_orientation(e, &pitch_orientation);
 		update_entity_material(e, &pitch_material);
 	}
 
-	/* add pitch2 axis */
-	union quat pitch2_orientation;
-	quat_init_axis(&pitch2_orientation, 0, 0, 1, M_PI/2.0);
+	/* add roll axis */
+	union quat roll_orientation;
+	quat_init_axis(&roll_orientation, 0, 0, 1, M_PI/2.0);
 	e = add_entity(tridentecx, xz_ring_mesh, center_pos.v.x, center_pos.v.y, center_pos.v.z, GREEN);
 	if (e) {
-		update_entity_orientation(e, &pitch2_orientation);
-		update_entity_material(e, &pitch_material);
+		update_entity_orientation(e, &roll_orientation);
+		update_entity_material(e, &roll_material);
 	}
 
 	/* add absolute straight ahead ind, down z axis with y up to match heading = 0 mark 0 */
@@ -7767,7 +7777,7 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	}
 
 	e = add_entity(tridentecx, ship_mesh_map[o->tsd.ship.shiptype],
-			center_pos.v.x, center_pos.v.y, center_pos.v.z, UI_COLOR(nav_self));
+			center_pos.v.x, center_pos.v.y, center_pos.v.z, UI_COLOR(nav_trident_ship));
 	if (e) {
 		update_entity_orientation(e, &o->orientation);
 		update_entity_scale(e, 0.07 / heading_indicator_mesh->radius);

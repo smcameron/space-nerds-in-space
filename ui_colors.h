@@ -91,6 +91,7 @@ struct ui_color_map {
 	struct ui_color_entry nav_science_vector;
 	struct ui_color_entry nav_entity_label;
 	struct ui_color_entry nav_science_select;
+	struct ui_color_entry nav_trident_ship;
 
 	struct ui_color_entry weap_radar;
 	struct ui_color_entry weap_gauge;
@@ -246,6 +247,7 @@ struct ui_color_map_accessor {
 	.u.map.nav_science_vector	= { GREEN_FIXUP,	"nav-science-vector" },
 	.u.map.nav_entity_label		= { GREEN_FIXUP,	"nav-entity-label" },
 	.u.map.nav_science_select	= { GREEN_FIXUP,	"nav-science-select" },
+	.u.map.nav_trident_ship		= { AMBER,		"nav-trident-ship" },
 
 	.u.map.weap_radar		= { AMBER,		"weap-radar" },
 	.u.map.weap_gauge		= { AMBER,		"weap-gauge" },
