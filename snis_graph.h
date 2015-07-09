@@ -42,7 +42,7 @@ extern int CYAN;
 #define NGRADIENTS 3
 #define NGRADIENT_SHADES 16
 #define NTOTAL_GRADIENT_SHADES (NGRADIENT_SHADES*2 + 1)
-#define MAX_USER_COLORS 100
+#define MAX_USER_COLORS 200
 extern int nuser_colors;
 
 #define COLOR_DARKER(c,p) (c-(p*NGRADIENT_SHADES/100))

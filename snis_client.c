@@ -6646,6 +6646,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	}
 
 	/* heading labels */
+	sng_set_foreground(UI_COLOR(sci_details_text));
 	{
 		int font = NANO_FONT;
 		char buf[10];
@@ -9295,7 +9296,7 @@ static void init_comms_ui(void)
 	snis_text_input_box_set_return(comms_ui.comms_input,
 					comms_transmit_button_pressed);
 	comms_ui.comms_transmit_button = snis_button_init(txx(10), txy(550), txx(160), txy(30),
-			"TRANSMIT", GREEN,
+			"TRANSMIT", button_color,
 			TINY_FONT, comms_transmit_button_pressed, NULL);
 	comms_ui.mainzoom_slider = snis_slider_init(txx(180), txy(560), txx(380), txy(15),
 				slider_color, "ZOOM",
