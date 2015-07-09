@@ -653,8 +653,8 @@ static void sng_read_user_colors(char *filename)
 			continue;
 		case 1: /* comment */
 			continue;
-		case -1:
-			goto bailout;
+		case -1: /* error of some kind */
+			continue;
 		}
 	}
 
