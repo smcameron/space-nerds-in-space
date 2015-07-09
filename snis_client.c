@@ -13245,8 +13245,18 @@ static void figure_aspect_ratio(int requested_x, int requested_y,
 
 static void init_colors(void)
 {
-	char color_file[1000];
-	sprintf(color_file, "%s/%s", asset_dir, "user_colors.cfg");
+	char color_file[PATH_MAX];
+	char *alternate = getenv("SNIS_COLORS");
+	if (alternate && strlen(alternate) + strlen(asset_dir) < PATH_MAX - 3) {
+		sprintf(color_file, "%s/%s", asset_dir, alternate);
+	} else {
+		if (strlen(asset_dir) + strlen("user_colors.cfg") < PATH_MAX - 3)
+			sprintf(color_file, "%s/%s", asset_dir, "user_colors.cfg");
+		else {
+			fprintf(stderr, "Path to color config file too long, skipping.\n");
+			return;
+		}
+	}
 	sng_setup_colors(main_da, color_file);
 }
 

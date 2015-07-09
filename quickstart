@@ -51,7 +51,7 @@ ASPECT_RATIO="" # unspecified, figure it out from window manager
 # ASPECT_RATIO="--aspect-ratio 16:9"
 
 # start the game client and server in quickstart mode
-./snis_client $ASPECT_RATIO --fullscreen --quickstart --starship "$shipname" --pw "$password"
+./snis_client $ASPECT_RATIO --fullscreen --quickstart --starship "$shipname" --pw "$password" $@
 
 exit $?
 

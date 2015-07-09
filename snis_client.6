@@ -62,6 +62,10 @@ Print the program's version number and exit.
 .SH ENVIRONMENT VARIABLES
 SNIS_ASSET_DIR if set controls the directory from which sounds and 3D models
 are read.  By default, "share/snis" is used.
+.PP
+SNIS_COLORS if set, the file $SNIS_ASSET_DIR/$SNIS_COLORS is read to obtain
+color information instead of reading the default file of $SNIS_ASSET_DIR/user_colors.cfg
+.PP
 .SH FILES
 .PP
 $SNIS_ASSET_DIR/sounds/*.ogg, various audio files used by the game.
