@@ -8531,11 +8531,11 @@ static void init_engineering_ui(void)
 	eu->preset2_button = snis_button_init(240, y + 30, 25, 25, "2", color,
 			NANO_FONT, preset2_button_pressed, (void *) 0);
 	y += yinc;
+	color = UI_COLOR(eng_power_meter);
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR SHIELDS", "0", "100", 0.0, 255.0,
 				sample_power_data_shields_current, do_shields_pwr);
 	/* make shield slider have less fuzz just for variety */
-	color = UI_COLOR(eng_power_meter);
 	snis_slider_set_fuzz(eu->shield_slider, 1);
 	snis_slider_set_label_font(eu->shield_slider, NANO_FONT);
 	eu->shield_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
