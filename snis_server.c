@@ -3720,10 +3720,13 @@ static void scoop_up_cargo(struct snis_entity *player, struct snis_entity *cargo
 	int i;
 
 	for (i = 0; i < player->tsd.ship.ncargo_bays; i++)
-		if (player->tsd.ship.cargo[i].item == -1) {
+		if (player->tsd.ship.cargo[i].contents.item == -1) {
 			/* put it in first empty cargo bay */
-			player->tsd.ship.cargo[i] = cargo->tsd.cargo_container.contents;
-			player->tsd.ship.cargo_price_paid[i] = 0.0f;
+			player->tsd.ship.cargo[i].contents = cargo->tsd.cargo_container.contents;
+			player->tsd.ship.cargo[i].paid = 0.0f;
+			player->tsd.ship.cargo[i].origin = -1;
+			player->tsd.ship.cargo[i].dest = -1;
+			player->tsd.ship.cargo[i].due_date = -1;
 			cargo->alive = 0;
 			delete_from_clients_and_server(cargo);
 			snis_queue_add_sound(TRANSPORTER_SOUND,
@@ -4751,8 +4754,12 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 		 * is done.
 		 */
 		for (i = 0; i < o->tsd.ship.ncargo_bays; i++) {
-			o->tsd.ship.cargo[i].item = -1;
-			o->tsd.ship.cargo[i].qty = 0.0f;
+			o->tsd.ship.cargo[i].contents.item = -1;
+			o->tsd.ship.cargo[i].contents.qty = 0.0f;
+			o->tsd.ship.cargo[i].paid = 0.0;
+			o->tsd.ship.cargo[i].origin = -1;
+			o->tsd.ship.cargo[i].dest = -1;
+			o->tsd.ship.cargo[i].due_date = -1;
 		}
 		o->tsd.ship.wallet = INITIAL_WALLET_MONEY;
 	}
@@ -6868,6 +6875,38 @@ static void meta_comms_about(char *name, struct game_client *c, char *txt)
 		send_comms_packet("", bridgelist[c->bridge].comms_channel, abouttxt[i]);
 }
 
+static void get_location_name(int id, char *buffer, int bufsize)
+{
+	int i;
+
+	if (id == -1) {
+		snprintf(buffer, bufsize, "N/A");
+		return;
+	}
+	i = lookup_by_id(id);
+	if (i < 0) {
+		snprintf(buffer, bufsize, "N/A");
+		return;
+	}
+	snprintf(buffer, bufsize, "%s", go[i].sdata.name);
+}
+
+static void format_date(char *buf, int bufsize, double date)
+{
+	buf[bufsize - 1] = '\0';
+	snprintf(buf, bufsize, "%-8.1f", FICTIONAL_DATE(date));
+}
+
+static void format_due_date(char *buf, int bufsize, double date)
+{
+	buf[bufsize - 1] = '\0';
+	if (date < 0) {
+		snprintf(buf, bufsize, "N/A");
+		return;
+	}
+	format_date(buf, bufsize, date);
+}
+
 static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 {
 	int i;
@@ -6893,18 +6932,26 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 	}
 	for (i = 0; i < ship->tsd.ship.ncargo_bays; i++) {
 		char *itemname, *unit;
-		struct cargo_container_contents *ccc = &ship->tsd.ship.cargo[i];
+		struct cargo_container_contents *ccc = &ship->tsd.ship.cargo[i].contents;
 		float qty;
+		char origin[20], dest[20];
 
 		if (ccc->item == -1) {
 			snprintf(msg, sizeof(msg), "    CARGO BAY %d: ** EMPTY **", i);
 			send_comms_packet("", ch, msg);
 		} else {
+			char due_date[20];
 			itemname = commodity[ccc->item].name;
 			unit = commodity[ccc->item].unit;
 			qty = ccc->qty;
-			snprintf(msg, sizeof(msg), "    CARGO BAY %d: %4.0f %s %s - PAID $%.2f",
-					i, qty, unit, itemname, ship->tsd.ship.cargo_price_paid[i]);
+			get_location_name(ship->tsd.ship.cargo[i].origin, origin, sizeof(origin));
+			get_location_name(ship->tsd.ship.cargo[i].dest, dest, sizeof(dest));
+			format_due_date(due_date, sizeof(due_date), (double)
+				ship->tsd.ship.cargo[i].due_date);
+			snprintf(msg, sizeof(msg),
+				"    CARGO BAY %d: %4.0f %s %s - PAID $%.2f ORIG %10s DEST %10s DUE %s",
+					i, qty, unit, itemname, ship->tsd.ship.cargo[i].paid,
+					origin, dest, due_date);
 			send_comms_packet("", ch, msg);
 		}
 	}
@@ -6963,14 +7010,17 @@ static void meta_comms_eject(char *name, struct game_client *c, char *txt)
 		goto invalid_cargo_bay;
 	if (cargobay < 0 || cargobay >= ship->tsd.ship.ncargo_bays)
 		goto invalid_cargo_bay;
-	if (ship->tsd.ship.cargo[cargobay].item == -1 ||
-			ship->tsd.ship.cargo[cargobay].qty <= 0.0)
+	if (ship->tsd.ship.cargo[cargobay].contents.item == -1 ||
+			ship->tsd.ship.cargo[cargobay].contents.qty <= 0.0)
 		goto empty_cargo_bay;
-	item = ship->tsd.ship.cargo[cargobay].item;
-	qty = ship->tsd.ship.cargo[cargobay].qty;
-	ship->tsd.ship.cargo[cargobay].item = -1;
-	ship->tsd.ship.cargo[cargobay].qty = 0.0f;
-	ship->tsd.ship.cargo_price_paid[cargobay] = 0.0f;
+	item = ship->tsd.ship.cargo[cargobay].contents.item;
+	qty = ship->tsd.ship.cargo[cargobay].contents.qty;
+	ship->tsd.ship.cargo[cargobay].contents.item = -1;
+	ship->tsd.ship.cargo[cargobay].contents.qty = 0.0f;
+	ship->tsd.ship.cargo[cargobay].paid = 0.0f;
+	ship->tsd.ship.cargo[cargobay].origin = -1;
+	ship->tsd.ship.cargo[cargobay].dest = -1;
+	ship->tsd.ship.cargo[cargobay].due_date = -1;
 
 	quat_rot_vec(&container_loc, &up, &ship->orientation);
 	vec3_mul_self(&container_loc, 160.0);
@@ -7371,7 +7421,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			 * you can't.
 			 */
 			for (i = 0; i < ship->tsd.ship.ncargo_bays; i++) {
-				if (ship->tsd.ship.cargo[i].item == -1) {
+				if (ship->tsd.ship.cargo[i].contents.item == -1) {
 					empty_bay = i;
 					break;
 				}
@@ -7408,9 +7458,12 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				return;
 			}
 			ship->tsd.ship.wallet -= q * ask;
-			ship->tsd.ship.cargo_price_paid[empty_bay] = ask;
-			ship->tsd.ship.cargo[empty_bay].item = mkt[x - 'A'].item;
-			ship->tsd.ship.cargo[empty_bay].qty = q;
+			ship->tsd.ship.cargo[empty_bay].paid = ask;
+			ship->tsd.ship.cargo[empty_bay].contents.item = mkt[x - 'A'].item;
+			ship->tsd.ship.cargo[empty_bay].contents.qty = q;
+			ship->tsd.ship.cargo[empty_bay].origin = o->tsd.starbase.associated_planet_id;
+			ship->tsd.ship.cargo[empty_bay].dest = -1;
+			ship->tsd.ship.cargo[empty_bay].due_date = -1;
 			mkt[x - 'A'].qty -= q;
 			snprintf(m, sizeof(m), " EXECUTING BUY ORDER %d %c", q, x);
 			send_comms_packet(n, channel, m);
@@ -7450,19 +7503,22 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				send_comms_packet(n, channel, " INVALID SELL ORDER");
 				return;
 			}
-			if (q > ship->tsd.ship.cargo[(int) x].qty) {
+			if (q > ship->tsd.ship.cargo[(int) x].contents.qty) {
 				send_comms_packet(n, channel, " INVALID SELL ORDER");
 				return;
 			}
-			ship->tsd.ship.cargo[(int) x].qty -= q;
+			ship->tsd.ship.cargo[(int) x].contents.qty -= q;
 			ship->tsd.ship.wallet +=
-				q * o->tsd.starbase.bid_price[ship->tsd.ship.cargo[(int) x].item];
-			profitloss = q * o->tsd.starbase.bid_price[ship->tsd.ship.cargo[(int) x].item] 
-					- q * ship->tsd.ship.cargo_price_paid[(int) x];
-			if (ship->tsd.ship.cargo[(int) x].qty < 0.1) {
-				ship->tsd.ship.cargo[(int) x].item = -1;
-				ship->tsd.ship.cargo[(int) x].qty = 0.0f;
-				ship->tsd.ship.cargo_price_paid[(int) x] = 0.0f;
+				q * o->tsd.starbase.bid_price[ship->tsd.ship.cargo[(int) x].contents.item];
+			profitloss = q * o->tsd.starbase.bid_price[ship->tsd.ship.cargo[(int) x].contents.item]
+					- q * ship->tsd.ship.cargo[(int) x].paid;
+			if (ship->tsd.ship.cargo[(int) x].contents.qty < 0.1) {
+				ship->tsd.ship.cargo[(int) x].contents.item = -1;
+				ship->tsd.ship.cargo[(int) x].contents.qty = 0.0f;
+				ship->tsd.ship.cargo[(int) x].paid = 0.0f;
+				ship->tsd.ship.cargo[(int) x].origin = -1;
+				ship->tsd.ship.cargo[(int) x].dest = -1;
+				ship->tsd.ship.cargo[(int) x].due_date = -1;
 			}
 			snprintf(m, sizeof(m), " EXECUTING SELL ORDER %d %c", q, x);
 			send_comms_packet(n, channel, m);
@@ -7500,17 +7556,17 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			for (i = 0; i < ship->tsd.ship.ncargo_bays; i++) {
 				float bid, qty;
 				char *itemname, *unit;
-				int item = ship->tsd.ship.cargo[i].item;
+				int item = ship->tsd.ship.cargo[i].contents.item;
 
 				if (item < 0)
 					continue;
 				itemname = commodity[item].name;
 				unit = commodity[item].unit;
-				qty = ship->tsd.ship.cargo[i].qty;
+				qty = ship->tsd.ship.cargo[i].contents.qty;
 				bid = o->tsd.starbase.bid_price[item];
 				snprintf(m, sizeof(m), " %c: %04.0f %s %s -- $%4.2f (PAID $%.2f)",
 					i + 'A', qty, unit, itemname, bid,
-					ship->tsd.ship.cargo_price_paid[i]);
+					ship->tsd.ship.cargo[i].paid);
 				send_comms_packet(n, channel, m);
 				count++;
 			}

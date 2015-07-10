@@ -205,6 +205,14 @@ struct cargo_container_contents {
 	float qty;
 };
 
+
+struct cargo_bay_info {
+	struct cargo_container_contents contents;
+	float paid;
+	int origin, dest;
+	int due_date;
+};
+
 #define ATMOSPHERE_DAMAGE_FACTOR (0.1)
 
 struct ship_data {
@@ -343,8 +351,8 @@ struct ship_data {
 	union vec3 steering_adjustment;
 	float braking_factor;
 #define MAX_CARGO_BAYS_PER_SHIP 8
-	struct cargo_container_contents cargo[MAX_CARGO_BAYS_PER_SHIP];
-	float cargo_price_paid[MAX_CARGO_BAYS_PER_SHIP];
+	/* struct cargo_container_contents cargo[MAX_CARGO_BAYS_PER_SHIP]; */
+	struct cargo_bay_info cargo[MAX_CARGO_BAYS_PER_SHIP];
 	int ncargo_bays;
 #define INITIAL_WALLET_MONEY (2500.0f)
 	float wallet;
