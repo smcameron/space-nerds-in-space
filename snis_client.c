@@ -890,7 +890,7 @@ static void read_thrust_attachment_points(char *dir, char *model_path, int shipt
 		strcat(path, ship_type[shiptype].thrust_attachment_file);
 	}
 	/* now read the scad_params.h file. */
-	*ap = read_thrust_attachments(path);
+	*ap = read_thrust_attachments(path, SHIP_MESH_SCALE);
 	return;
 }
 
@@ -5629,11 +5629,13 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 
-	union vec3 turret_pos = { {-4, 5.45, 0} };
+	union vec3 turret_pos = {
+		{ -4 * SHIP_MESH_SCALE, 5.45 * SHIP_MESH_SCALE, 0 * SHIP_MESH_SCALE },
+	};
 	quat_rot_vec_self(&turret_pos, &o->orientation);
 	vec3_add_c_self(&turret_pos, cx, cy, cz);
 
-	union vec3 view_offset = { {0, 0.75, 0} };
+	union vec3 view_offset = { {0, 0.75 * SHIP_MESH_SCALE, 0} };
 	quat_rot_vec_self(&view_offset, &camera_orientation);
 
 	union vec3 cam_pos = turret_pos;
@@ -5650,7 +5652,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	camera_set_orientation(ecx, &camera_orientation);
-	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
+	camera_set_parameters(ecx, NEAR_CAMERA_PLANE * SHIP_MESH_SCALE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
 	set_lighting(ecx, SUNX, SUNY, SUNZ);
@@ -5678,10 +5680,10 @@ static void show_weapons_camera_view(GtkWidget *w)
 	/* Add our turret into the mix */
 	quat_rot_vec_self(&recoil, &camera_orientation);
 	struct entity* turret_entity = add_entity(ecx, ship_turret_mesh,
-				turret_pos.v.x + turret_recoil_amount * recoil.v.x,
-				turret_pos.v.y + turret_recoil_amount * recoil.v.y,
-				turret_pos.v.z + turret_recoil_amount * recoil.v.z,
-				SHIP_COLOR);
+			turret_pos.v.x + turret_recoil_amount * recoil.v.x * SHIP_MESH_SCALE,
+			turret_pos.v.y + turret_recoil_amount * recoil.v.y * SHIP_MESH_SCALE,
+			turret_pos.v.z + turret_recoil_amount * recoil.v.z * SHIP_MESH_SCALE,
+			SHIP_COLOR);
 	turret_recoil_amount = turret_recoil_amount * 0.5f;
 	if (turret_entity) {
 		update_entity_orientation(turret_entity, &camera_orientation);
@@ -5819,7 +5821,8 @@ static void show_mainscreen(GtkWidget *w)
 	case 1:
 	case 2: {
 			vec3_init(&desired_cam_offset, -1.0f, 0.25f, 0.0f);
-			vec3_mul_self(&desired_cam_offset, 200.0f * camera_mode);
+			vec3_mul_self(&desired_cam_offset,
+					200.0f * camera_mode * SHIP_MESH_SCALE);
 			quat_rot_vec_self(&desired_cam_offset, &camera_orientation);
 
 			/* temporarily add ship into scene for camera mode 1 & 2 */
@@ -5828,7 +5831,9 @@ static void show_mainscreen(GtkWidget *w)
 			if (player_ship)
 				update_entity_orientation(player_ship, &o->orientation);
 
-			struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh, -4, 5.45, 0, SHIP_COLOR);
+			struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh,
+				-4 * SHIP_MESH_SCALE, 5.45 * SHIP_MESH_SCALE, 0 * SHIP_MESH_SCALE,
+				SHIP_COLOR);
 
 			if (turret_base) {
 				update_entity_orientation(turret_base, &identity_quat);
@@ -13031,6 +13036,8 @@ static void init_meshes()
 
 	ship_turret_mesh = snis_read_model(d, "spaceship_turret.stl");
 	ship_turret_base_mesh = snis_read_model(d, "spaceship_turret_base.stl");
+	mesh_scale(ship_turret_mesh, SHIP_MESH_SCALE);
+	mesh_scale(ship_turret_base_mesh, SHIP_MESH_SCALE);
 	torpedo_nav_mesh = snis_read_model(d, "torpedo.stl");
 #ifndef WITHOUTOPENGL
 	torpedo_mesh = mesh_fabricate_billboard(0, 0, 50.0f, 50.0f);
@@ -13089,6 +13096,7 @@ static void init_meshes()
 					   (float) ('z' == axis), ship_type[i].angle[j]);
 			mesh_rotate(ship_mesh_map[i], &q);
 		}
+		mesh_scale(ship_mesh_map[i], SHIP_MESH_SCALE);
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
 	}
 

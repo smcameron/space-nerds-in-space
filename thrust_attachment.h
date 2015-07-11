@@ -11,6 +11,6 @@ struct thrust_attachment_point {
 	} port[5];
 };
 
-struct thrust_attachment_point *read_thrust_attachments(char *filename);
+struct thrust_attachment_point *read_thrust_attachments(char *filename, float scaling_factor);
 
 #endif

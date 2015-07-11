@@ -1,6 +1,8 @@
 #ifndef SNIS_SHIP_TYPE_H__
 #define  SNIS_SHIP_TYPE_H__
 
+#define SHIP_MESH_SCALE (0.5)
+
 #define SHIP_CLASS_CRUISER 0
 #define SHIP_CLASS_DESTROYER 1
 #define SHIP_CLASS_FREIGHTER 2

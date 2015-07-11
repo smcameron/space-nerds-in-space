@@ -5,7 +5,7 @@
 
 #include "thrust_attachment.h"
 
-struct thrust_attachment_point *read_thrust_attachments(char *filename)
+struct thrust_attachment_point *read_thrust_attachments(char *filename, float scaling_factor)
 {
 	FILE *f;
 	struct thrust_attachment_point *answer = NULL;
@@ -62,8 +62,9 @@ struct thrust_attachment_point *read_thrust_attachments(char *filename)
 			fprintf(stderr, "(sorry this file format is so persnickety)\n");
 			goto error_out;
 		}
-		answer->port[i].scale = scale;
+		answer->port[i].scale = scale * scaling_factor;
 		vec3_init(&answer->port[i].pos, x, y, z);
+		vec3_mul_self(&answer->port[i].pos, scaling_factor);
 	}
 	answer->nports = n;
 	return answer;
