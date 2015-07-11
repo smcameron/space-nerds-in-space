@@ -3788,7 +3788,7 @@ static void player_collision_detection(void *player, void *object)
 			calculate_atmosphere_damage(o);
 			send_ship_damage_packet(o);
 			send_packet_to_all_clients_on_a_bridge(o->id,
-				packed_buffer_new("b", OPCODE_COLLISION_NOTIFICATION),
+				packed_buffer_new("b", OPCODE_ATMOSPHERIC_FRICTION),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
 		} else if (dist2 < warn_dist2 && (universe_timestamp & 0x7) == 0) {
 			(void) add_explosion(o->x + o->vx * 2, o->y + o->vy * 2, o->z + o->vz * 2,
@@ -3796,7 +3796,7 @@ static void player_collision_detection(void *player, void *object)
 			calculate_atmosphere_damage(o);
 			send_ship_damage_packet(o);
 			send_packet_to_all_clients_on_a_bridge(o->id,
-				packed_buffer_new("b", OPCODE_PROXIMITY_ALERT),
+				packed_buffer_new("b", OPCODE_ATMOSPHERIC_FRICTION),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
 		}
 		return;
