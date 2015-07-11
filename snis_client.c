@@ -1409,7 +1409,7 @@ static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, 
 		s = k % NASTEROID_SCALES;
 		e = add_entity(ecx, asteroid_mesh[m], x, y, z, ASTEROID_COLOR);
 		if (e) {
-			update_entity_scale(e, s ? s * 3.5 : 1.0);
+			update_entity_scale(e, s ? s * 10 : 3.0);
 			update_entity_material(e, &asteroid_material[id % NASTEROID_TEXTURES]);
 		}
 		i = add_generic_object(id, timestamp, x, y, z, vx, vy, vz,
