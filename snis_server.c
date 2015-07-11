@@ -4395,6 +4395,10 @@ static int add_generic_object(double x, double y, double z,
 	int i, j;
 	char *n;
 	union vec3 v;
+	static struct mtwist_state *mt = NULL;
+
+	if (!mt)
+		mt = mtwist_init(mtwist_seed);
 
 	i = snis_object_pool_alloc_obj(pool); 	 
 	if (i < 0)
@@ -4424,7 +4428,7 @@ static int add_generic_object(double x, double y, double z,
 	case OBJTYPE_STARBASE:
 	case OBJTYPE_DERELICT:
 	case OBJTYPE_PLANET:
-		n = random_name();
+		n = random_name(mt);
 		strncpy(go[i].sdata.name, n, sizeof(go[i].sdata.name) - 1);
 		free(n);
 		break;

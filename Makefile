@@ -576,8 +576,8 @@ infinite-taunt.o:	infinite-taunt.c Makefile
 infinite-taunt:	infinite-taunt.o Makefile
 	$(CC) -DTEST_TAUNT -o infinite-taunt ${MYCFLAGS} mtwist.o infinite-taunt.c
 
-names:	names.c names.h
-	$(CC) -DTEST_NAMES -o names ${MYCFLAGS} ${GTKCFLAGS} names.c
+names:	names.c names.h mtwist.o
+	$(CC) -DTEST_NAMES -o names ${MYCFLAGS} ${GTKCFLAGS} mtwist.o names.c
 
 snis_limited_graph.c:	snis_graph.c Makefile
 	cp snis_graph.c snis_limited_graph.c
