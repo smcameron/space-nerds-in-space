@@ -5,6 +5,7 @@
 
 #include "mtwist.h"
 #include "infinite-taunt.h"
+#include "names.h"
 
 static char *nothing = "";
 
@@ -850,6 +851,64 @@ static char *Destroyed[] = {
 	"eating way too many photons for breakfast",
 };
 
+static char *Title[] = {
+	"MR",
+	"MS",
+	"MRS",
+	"DR.",
+	"CAPT",
+	"CORPORAL",
+	"PVT",
+	"GENERAL",
+	"ASTRONOMER",
+	"PRINCE",
+	"PRINCESS",
+	"DUKE",
+	"PRINCIPAL",
+	"PHAROAH",
+	"ADMIRAL",
+	"CHANCELLOR",
+	"COUNT",
+	"MARQUIS",
+	"BARON",
+	"SULTAN",
+	"HIGHMAN",
+	"COMMANDER",
+	"COLONEL",
+	"JAGGER",
+	"MORKMAN",
+	"ASTRONAUT",
+	"SKYMAN",
+	"SURVEYOR",
+	"REVEREND",
+	"PRIESTESS",
+	"HOJON",
+	"KUKE",
+	"ARBER",
+	"ZEGO",
+	"KANTER",
+	"POLITIKKER",
+	"YEZPER",
+	"QUONON",
+	"CAVANOR",
+	"PREFECT",
+	"WEZBON",
+	"GOZON",
+	"ZABRONI",
+};
+
+static char *PostNominalLetters[] = {
+	", DDS",
+	", PhD",
+	", JD",
+	", Esq",
+	", Sc",
+	", JJZ",
+	", AQN",
+	", SN",
+	", MX",
+};
+
 #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 static char *random_word(struct mtwist_state *mt, char *w[], int nwords)
@@ -1053,6 +1112,19 @@ static char *destroyed(struct mtwist_state *mt)
 	return random_word(mt, Destroyed, ARRAYSIZE(Destroyed));
 }
 
+static char *character_title(struct mtwist_state *mt)
+{
+	return random_word(mt, Title, ARRAYSIZE(Title));
+}
+
+static char *post_nominal_letters(struct mtwist_state *mt)
+{
+	static char *nothing = "";
+	if (mtwist_int(mt, 100) < 85)
+		return nothing; 
+	return random_word(mt, PostNominalLetters, ARRAYSIZE(PostNominalLetters));
+}
+
 void planet_description(struct mtwist_state *mt, char *buffer, int buflen, int line_len)
 {
 	char do_avoid[100];
@@ -1092,6 +1164,54 @@ void cop_attack_warning(struct mtwist_state *mt, char *buffer,
 	break_lines(buffer, line_len);
 }
 
+int random_initial(struct mtwist_state *mt)
+{
+	return 'A' + mtwist_int(mt, 26);
+}
+
+void character_name(struct mtwist_state *mt, char *buffer,
+			int buflen, int line_len)
+{
+	switch (mtwist_int(mt, 8)) {
+	case 0:
+		snprintf(buffer, buflen, "%s %s %s %s%s", character_title(mt),
+				random_name(mt), random_name(mt), random_name(mt),
+				post_nominal_letters(mt));
+		break;
+	case 1:
+		snprintf(buffer, buflen, "%s %c. %c. %s%s", character_title(mt),
+				random_initial(mt), random_initial(mt), random_name(mt),
+				post_nominal_letters(mt));
+		break;
+	case 2:
+	case 3:
+		snprintf(buffer, buflen, "%s %c. %s %s%s", character_title(mt),
+				random_initial(mt), random_name(mt), random_name(mt),
+				post_nominal_letters(mt));
+		break;
+	case 4:
+		snprintf(buffer, buflen, "%s %c. %s%s", character_title(mt),
+				random_initial(mt), random_name(mt),
+				post_nominal_letters(mt));
+		break;
+	case 5:
+		snprintf(buffer, buflen, "%s %s%s", character_title(mt),
+				random_name(mt),
+				post_nominal_letters(mt));
+		break;
+	case 6:
+		snprintf(buffer, buflen, "%s %s %s%s", character_title(mt),
+				random_name(mt), random_name(mt),
+				post_nominal_letters(mt));
+		break;
+	case 7:
+	default:
+		snprintf(buffer, buflen, "%s %c. %c. %s%s", character_title(mt),
+				random_initial(mt), random_initial(mt), random_name(mt),
+				post_nominal_letters(mt));
+		break;
+	}
+}
 
 #ifdef TEST_TAUNT
 #include "mtwist.h"
@@ -1115,7 +1235,8 @@ int main(int argc, char *argv[])
 	for (i = 0; i < 1000; i++) {
 		/* infinite_taunt(buffer, sizeof(buffer) - 1); */
 		/* planet_description(mt, buffer, sizeof(buffer) - 1, 60); */
-		cop_attack_warning(mt, buffer, sizeof(buffer) - 1, 50);
+		/* cop_attack_warning(mt, buffer, sizeof(buffer) - 1, 50); */
+		character_name(mt, buffer, sizeof(buffer) - 1, 50);
 		printf("%s\n", buffer);
 	}
 	free(mt);
