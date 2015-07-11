@@ -431,6 +431,12 @@ static double universe_timestamp()
 	return (time_now_double() - universe_timestamp_offset) * (double)UNIVERSE_TICKS_PER_SECOND;
 }
 
+static void format_date(char *buf, int bufsize, double date)
+{
+	buf[bufsize - 1] = '\0';
+	snprintf(buf, bufsize, "%-8.1f", FICTIONAL_DATE(date));
+}
+
 #define MAX_LOBBY_TRIES 3
 static void *connect_to_lobby_thread(__attribute__((unused)) void *arg)
 {
@@ -9764,6 +9770,7 @@ static void show_3d_science(GtkWidget *w)
 static void show_comms(GtkWidget *w)
 {
 	struct snis_entity *o;
+	char current_date[32], comms_clock[16];
 
 	if (!(o = find_my_ship()))
 		return;
@@ -9780,7 +9787,10 @@ static void show_comms(GtkWidget *w)
 		sprintf(buf, "SHIELDS ARE %d%%", (int)(o->sdata.shield_strength / 2.55));
 		sng_center_xy_draw_string(buf, NANO_FONT, shield_ind_x_center, shield_ind_y_center);
 	}
-
+	sng_set_foreground(UI_COLOR(comms_text));
+	format_date(current_date, sizeof(comms_clock), universe_timestamp());
+	sprintf(comms_clock, "TIME: %s", current_date);
+	sng_abs_xy_draw_string(comms_clock, TINY_FONT, txx(25), txy(55));
 	show_common_screen(w, "COMMS");
 }
 

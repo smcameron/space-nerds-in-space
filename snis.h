@@ -679,4 +679,7 @@ struct damcon_data {
 /* Time after being killed to wait for respawn */
 #define RESPAWN_TIME_SECS 20
 
+#define FICTIONAL_CLOCK_START (4273.0)
+#define FICTIONAL_DATE(timestamp) (FICTIONAL_CLOCK_START + (timestamp) / 1000.0)
+
 #endif
