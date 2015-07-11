@@ -205,6 +205,8 @@ struct cargo_container_contents {
 	float qty;
 };
 
+#define ATMOSPHERE_DAMAGE_FACTOR (0.1)
+
 struct ship_data {
 	uint32_t torpedoes;
 #define TORPEDO_LIFETIME 40

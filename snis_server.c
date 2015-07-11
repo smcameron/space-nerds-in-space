@@ -1165,7 +1165,7 @@ static int roll_damage(struct snis_entity *o, struct damcon_data *d,
 }
 
 static int lookup_bridge_by_shipid(uint32_t shipid);
-static void calculate_torpedo_damage(struct snis_entity *o)
+static void calculate_torpedolike_damage(struct snis_entity *o, double weapons_factor)
 {
 	double ss;
 	const double twp = TORPEDO_WEAPONS_FACTOR * (o->type == OBJTYPE_SHIP1 ? 0.333 : 1.0);
@@ -1208,6 +1208,16 @@ static void calculate_torpedo_damage(struct snis_entity *o)
 		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
 		o->alive = 0;
 	}
+}
+
+static void calculate_torpedo_damage(struct snis_entity *o)
+{
+	calculate_torpedolike_damage(o, TORPEDO_WEAPONS_FACTOR);
+}
+
+static void calculate_atmosphere_damage(struct snis_entity *o)
+{
+	calculate_torpedolike_damage(o, ATMOSPHERE_DAMAGE_FACTOR);
 }
 
 static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, float power)
@@ -3773,10 +3783,18 @@ static void player_collision_detection(void *player, void *object)
 			schedule_callback(event_callback, &callback_schedule,
 					"player-death-callback", o->id);
 		} else if (dist2 < too_close2 && (universe_timestamp & 0x7) == 0) {
+			(void) add_explosion(o->x + o->vx * 2, o->y + o->vy * 2, o->z + o->vz * 2,
+				20, 10, 50, OBJTYPE_SPARK);
+			calculate_atmosphere_damage(o);
+			send_ship_damage_packet(o);
 			send_packet_to_all_clients_on_a_bridge(o->id,
 				packed_buffer_new("b", OPCODE_COLLISION_NOTIFICATION),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
 		} else if (dist2 < warn_dist2 && (universe_timestamp & 0x7) == 0) {
+			(void) add_explosion(o->x + o->vx * 2, o->y + o->vy * 2, o->z + o->vz * 2,
+				5, 5, 50, OBJTYPE_SPARK);
+			calculate_atmosphere_damage(o);
+			send_ship_damage_packet(o);
 			send_packet_to_all_clients_on_a_bridge(o->id,
 				packed_buffer_new("b", OPCODE_PROXIMITY_ALERT),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);

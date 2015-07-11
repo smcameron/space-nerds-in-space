@@ -2200,13 +2200,18 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 				uint8_t victim_type)
 {
 	double zangle, angle, v, vx, vy, vz;
-	int i, color;
+	int i, debris_chance, color;
 
+	debris_chance = 50;
 	switch (victim_type) {
 	case OBJTYPE_SHIP1:
 	case OBJTYPE_SHIP2:
 	case OBJTYPE_DERELICT:
 		color = SHIP_COLOR;
+		break;
+	case OBJTYPE_SPARK:
+		color = SHIP_COLOR;
+		debris_chance = 0;
 		break;
 	case OBJTYPE_ASTEROID:
 		color = ASTEROID_COLOR;
@@ -2226,7 +2231,7 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 		vx = v * cos(angle);
 		vy = v * cos(zangle);
 		vz = v * -sin(angle);
-		add_spark(x, y, z, vx, vy, vz, time, color, &spark_material, 0.95, 50, 1.0);
+		add_spark(x, y, z, vx, vy, vz, time, color, &spark_material, 0.95, debris_chance, 1.0);
 	}
 }
 
