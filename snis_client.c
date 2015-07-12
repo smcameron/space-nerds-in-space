@@ -1574,23 +1574,23 @@ static int update_wormhole(uint32_t id, uint32_t timestamp, double x, double y, 
 	return 0;
 }
 
-static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, double z)
+static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, double z,
+	union quat *orientation)
 {
 	int i, m;
 	struct entity *e;
-	union quat orientation;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		quat_init_axis(&orientation, 1.0, 0.0, 0.0, 0.0);
 		m = id % nstarbase_models;
 		e = add_entity(ecx, starbase_mesh[m], x, y, z, STARBASE_COLOR);
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
-					&orientation, OBJTYPE_STARBASE, 1, e);
+					orientation, OBJTYPE_STARBASE, 1, e);
 		if (i < 0)
 			return i;
-	} else
-		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
+	} else {
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
+	}
 	return 0;
 }
 
@@ -1720,20 +1720,6 @@ static void spin_wormhole(double timestamp, struct snis_entity *o)
 {
 	/* -0.5 degree per frame */
 	float a = -0.5 * M_PI / 180.0;
-
-	/* current rotation is universe timestamp * rotation per timestamp
-	   rotational_velocity is frame_rate_hz and universe is 1/10 sec */
-	a = a * (float)frame_rate_hz / 10.0 * timestamp;
-
-	quat_init_axis(&o->orientation, 0.0, 0.0, 1.0, a);
-	if (o->entity)
-		update_entity_orientation(o->entity, &o->orientation);
-}
-
-static void spin_starbase(double timestamp, struct snis_entity *o)
-{
-	/* 0.5 degree per frame */
-	float a = 0.5 * M_PI / 180.0;
 
 	/* current rotation is universe timestamp * rotation per timestamp
 	   rotational_velocity is frame_rate_hz and universe is 1/10 sec */
@@ -2028,8 +2014,7 @@ static void move_objects(void)
 			spin_wormhole(timestamp, o);
 			break;
 		case OBJTYPE_STARBASE:
-			move_object(timestamp, o, &interpolate_generic_object);
-			spin_starbase(timestamp, o);
+			move_object(timestamp, o, &interpolate_orientated_object);
 			break;
 		case OBJTYPE_LASER:
 			move_object(timestamp, o, &interpolate_laser);
@@ -4815,15 +4800,18 @@ static int process_update_starbase_packet(void)
 	unsigned char buffer[100];
 	uint32_t id, timestamp;
 	double dx, dy, dz;
+	union quat orientation;
 	int rc;
 
-	assert(sizeof(buffer) > sizeof(struct update_starbase_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
-			&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, &dz, (int32_t) UNIVERSE_DIM);
+	rc = read_and_unpack_buffer(buffer, "wwSSSQ", &id, &timestamp,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM,
+			&orientation);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_starbase(id, timestamp, dx, dy, dz);
+	rc = update_starbase(id, timestamp, dx, dy, dz, &orientation);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

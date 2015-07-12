@@ -4279,6 +4279,14 @@ static void nebula_move(struct snis_entity *o)
 	return;
 }
 
+static void spin_starbase(struct snis_entity *o)
+{
+	/* 15 degrees per second */
+	float a = ((universe_timestamp % 240) * 1.5) * M_PI / 180.0;
+	quat_init_axis(&o->orientation, 0.0, 0.0, 1.0, a);
+	o->timestamp = universe_timestamp;
+}
+
 static void starbase_move(struct snis_entity *o)
 {
 	char buf[100], location[50];
@@ -4290,6 +4298,7 @@ static void starbase_move(struct snis_entity *o)
 	if (!mt)
 		mt = mtwist_init(mtwist_seed);
 
+	spin_starbase(o);
 	then = o->tsd.starbase.last_time_called_for_help;
 	now = universe_timestamp;
 	if (o->tsd.starbase.under_attack &&
@@ -10697,10 +10706,12 @@ static void send_update_wormhole_packet(struct game_client *c,
 static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("bwwSSS", OPCODE_UPDATE_STARBASE,
-					o->id, o->timestamp, o->x, (int32_t) UNIVERSE_DIM,
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSQ", OPCODE_UPDATE_STARBASE,
+					o->id, o->timestamp,
+					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
-					o->z, (int32_t) UNIVERSE_DIM));
+					o->z, (int32_t) UNIVERSE_DIM,
+					&o->orientation));
 }
 
 static void send_update_nebula_packet(struct game_client *c,
