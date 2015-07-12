@@ -143,6 +143,9 @@
 #define OPCODE_SCI_ALIGN_TO_SHIP		219
 #define OPCODE_NAV_TRIDENT_MODE			220
 #define OPCODE_ATMOSPHERIC_FRICTION		221
+#define OPCODE_UPDATE_DOCKING_PORT		222
+#define OPCODE_DOCKING_MAGNETS			223
+
 
 #define OPCODE_NOOP		0xff
 
@@ -187,6 +190,7 @@ struct update_ship_packet {
 	int32_t sciball_orientation[4]; /* int32_t encoded orientation quaternion */
 	int32_t weap_orientation[4];
 	uint8_t in_secure_area;
+	uint8_t docking_magnets;
 };
 
 struct ship_sdata_packet {

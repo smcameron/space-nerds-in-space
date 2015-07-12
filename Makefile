@@ -296,12 +296,12 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
-		commodities.o
+		commodities.o docking_port.o
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	mesh.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
-	quat.o vec4.o thrust_attachment.o ui_colors.o
+	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o
 
 CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o
 
@@ -377,7 +377,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/wombat.stl \
 	${MD}/spaceship_turret.stl \
 	${MD}/spaceship_turret_base.stl \
-	${MD}/vanquisher.stl
+	${MD}/vanquisher.stl \
+	${MD}/docking_port.stl
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
@@ -441,7 +442,13 @@ shader.o : shader.c Makefile
 %.scad_params.h: %.scad
 	awk -f extract_scad_params.awk $< > $@
 
+%.docking_ports.h: %.scad
+	awk -f extract_docking_ports.awk $< > $@
+
 thrust_attachment.o:	thrust_attachment.c thrust_attachment.h Makefile
+	$(Q)$(COMPILE)
+
+docking_port.o:	docking_port.c docking_port.h Makefile
 	$(Q)$(COMPILE)
 
 ui_colors.o:	ui_colors.c ui_colors.h snis_graph.h Makefile

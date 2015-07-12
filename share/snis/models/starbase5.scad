@@ -66,3 +66,10 @@ scale(v = [2.0, 2.0, 2.0]) {
 	spoke(360 / 3);
 	spoke(-360 / 3);
 }
+
+use <imposter_docking_port.scad>;
+docking_ports = 0;
+if (docking_ports) {
+	docking_port(90, -37, 0, 0, 0, 1, 90, 0.3);
+}
+

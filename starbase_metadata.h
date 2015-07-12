@@ -21,8 +21,13 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+struct starbase_file_metadata {
+	char *model_file;
+	char *docking_port_file;
+};
+
 int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase_models,
-				char ***starbase_model_filename);
+			struct starbase_file_metadata **starbase_metadata);
 
 #endif
 

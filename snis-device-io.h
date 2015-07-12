@@ -55,6 +55,7 @@
 #define DEVIO_OPCODE_NAV_WARP_POWER		108
 #define DEVIO_OPCODE_NAV_WARP_ENGAGE		109
 #define DEVIO_OPCODE_NAV_THROTTLE		110
+#define DEVIO_OPCODE_NAV_DOCKING_MAGNETS	111
 
 /* everything you can do on the weapons screen */
 #define DEVIO_OPCODE_WEAPONS_YAW_LEFT		200

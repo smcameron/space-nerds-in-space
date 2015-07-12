@@ -23,6 +23,7 @@
 
 #include "mesh.h"
 #include "material.h"
+#include "docking_port.h"
 
 #define SNIS_PROTOCOL_VERSION "SNIS001"
 
@@ -88,6 +89,7 @@
 #define OBJTYPE_CARGO_CONTAINER 17
 #define OBJTYPE_WARP_EFFECT 18
 #define OBJTYPE_SHIELD_EFFECT 19
+#define OBJTYPE_DOCKING_PORT 20
 
 #define SHIELD_EFFECT_LIFETIME 30
 
@@ -365,6 +367,7 @@ struct ship_data {
 	uint8_t auto_respawn;
 	uint32_t home_planet;
 	int flames_timer;
+	uint8_t docking_magnets;
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200
@@ -380,6 +383,7 @@ struct marketplace_data {
 };
 
 #define STARBASE_FIRE_CHANCE 25 /* ... out of 1000, 10x per sec */
+#define STARBASE_SCALE_FACTOR (2.0)
 struct starbase_data {
 	uint8_t under_attack;
 	uint32_t last_time_called_for_help;
@@ -396,6 +400,7 @@ struct starbase_data {
 	int32_t next_torpedo_time;
 #define STARBASE_LASER_FIRE_INTERVAL (3.2 * 10) /* 3.27 seconds */ 
 #define STARBASE_TORPEDO_FIRE_INTERVAL (2.9 * 10) /* 2.9 seconds */ 
+	int32_t docking_port[MAX_DOCKING_PORTS];
 };
 
 struct nebula_data {
@@ -450,6 +455,13 @@ struct warp_effect_data {
 #define WARP_EFFECT_MAX_SIZE 60
 	float scale;
 	int arriving; /* 1 for arriving, 0 for departing */
+};
+
+struct docking_port_data {
+	uint32_t parent;
+	uint32_t docked_guy;
+	uint8_t portnumber;
+	uint8_t model;
 };
 
 struct derelict_data {
@@ -558,6 +570,7 @@ union type_specific_data {
 	struct cargo_container_data cargo_container;
 	struct planet_data planet;
 	struct warp_effect_data warp_effect;
+	struct docking_port_data docking_port;
 };
 
 struct snis_entity;

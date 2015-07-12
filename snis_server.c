@@ -79,7 +79,9 @@
 #include "snis_event_callback.h"
 #include "fleet.h"
 #include "commodities.h"
+#include "docking_port.h"
 #include "build_info.h"
+#include "starbase_metadata.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
@@ -92,6 +94,10 @@ static int lua_enscript_enabled = 0;
 struct network_stats netstats;
 static int faction_population[5];
 static int lowest_faction = 0;
+
+static int nstarbase_models;
+static struct starbase_file_metadata *starbase_metadata;
+static struct docking_port_attachment_point **docking_port_info;
 
 #define GATHER_OPCODE_STATS 0
 
@@ -3763,6 +3769,12 @@ static void player_collision_detection(void *player, void *object)
 			scoop_up_cargo(o, t);
 			return;
 	}
+	if (t->type == OBJTYPE_DOCKING_PORT && dist2 < 50.0 * 50.0 &&
+		o->tsd.ship.docking_magnets) {
+		/* Dock... */
+		t->tsd.docking_port.docked_guy = o->id;
+		/* Make docking sound */
+	}
 	if (t->type == OBJTYPE_PLANET) {
 		const float surface_dist2 = t->tsd.planet.radius * t->tsd.planet.radius;
 		const float warn_dist2 = (t->tsd.planet.radius + PLAYER_PLANET_DIST_WARN) *
@@ -4287,6 +4299,51 @@ static void spin_starbase(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
+static void docking_port_move(struct snis_entity *o)
+{
+	int i;
+	struct snis_entity *docker;
+	union vec3 offset = { { -25, 0, 0 } };
+
+	if (o->tsd.docking_port.docked_guy == (uint32_t) -1)
+		return;
+	i = lookup_by_id(o->tsd.docking_port.docked_guy);
+	if (i < 0)
+		return;
+	quat_rot_vec_self(&offset, &o->orientation);
+	docker = &go[i];
+	if (!docker->tsd.ship.docking_magnets)
+		o->tsd.docking_port.docked_guy = (uint32_t) -1;
+	docker->orientation = o->orientation;
+	set_object_location(docker, o->x + offset.v.x, o->y + offset.v.y, o->z + offset.v.z);
+	docker->timestamp = universe_timestamp;
+}
+
+static void starbase_update_docking_ports(struct snis_entity *o)
+{
+	int i, d, model;
+	struct snis_entity *port;
+	union vec3 pos;
+
+	model = o->id % nstarbase_models;
+
+	if (!docking_port_info[model])
+		return;
+
+	for (i = 0; i < docking_port_info[model]->nports; i++) {
+		d = lookup_by_id(o->tsd.starbase.docking_port[i]);
+		if (d < 0)
+			continue;
+		port = &go[d];
+		pos = docking_port_info[model]->port[i].pos;
+		quat_rot_vec_self(&pos, &o->orientation);
+		quat_mul(&port->orientation, &o->orientation,
+			 &docking_port_info[model]->port[i].orientation);
+		set_object_location(port, pos.v.x + o->x, pos.v.y + o->y, pos.v.z + o->z);
+		port->timestamp = universe_timestamp;
+	}
+}
+
 static void starbase_move(struct snis_entity *o)
 {
 	char buf[100], location[50];
@@ -4299,6 +4356,7 @@ static void starbase_move(struct snis_entity *o)
 		mt = mtwist_init(mtwist_seed);
 
 	spin_starbase(o);
+	starbase_update_docking_ports(o);
 	then = o->tsd.starbase.last_time_called_for_help;
 	now = universe_timestamp;
 	if (o->tsd.starbase.under_attack &&
@@ -5301,10 +5359,73 @@ static void fabricate_prices(struct snis_entity *starbase)
 	}
 }
 
+static int add_docking_port(int parent_id, int portnumber)
+{
+	int i, p, model;
+	struct snis_entity *parent;
+	struct docking_port_attachment_point *dp;
+	union vec3 pos;
+	union quat orientation;
+
+	printf("Adding docking port\n");
+	/* Find the thing we're adding a docking port to */
+	p = lookup_by_id(parent_id);
+	if (p < 0) {
+		fprintf(stderr, "zzz failed to find parent id\n");
+		return -1;
+	}
+	parent = &go[p];
+
+	/* Check if this is the sort of thing which can have a docking port */
+	switch (parent->type) {
+	case OBJTYPE_STARBASE:
+		break;
+	default:
+		fprintf(stderr, "zzz parent->type is wrong\n");
+		return -1;
+	}
+
+	/* Get the relevent docking port info for this thing */
+	model = p % nstarbase_models;
+	dp = docking_port_info[model];
+	if (!dp) {
+		fprintf(stderr, "zzz no docking port info for this model\n");
+		return -1;
+	}
+
+	if (portnumber >= dp->nports) { /* validate the docking port number */
+		fprintf(stderr, "zzz bad port number %d >= %d\n",
+			portnumber, dp->nports);
+		return -1;
+	}
+
+	pos.v.x = parent->x;
+	pos.v.y = parent->y;
+	pos.v.z = parent->z;
+	vec3_add_self(&pos, &dp[model].port[portnumber].pos);
+	quat_mul(&orientation, &parent->orientation, &dp[model].port[portnumber].orientation);
+
+	i = add_generic_object(pos.v.x, pos.v.y, pos.v.z, parent->vx, parent->vy, parent->vz,
+			parent->heading, OBJTYPE_DOCKING_PORT);
+	if (i < 0) {
+		fprintf(stderr, "zzz failed to add docking port\n");
+		return i;
+	}
+	go[i].move = docking_port_move;
+	go[i].type = OBJTYPE_DOCKING_PORT;
+	go[i].tsd.docking_port.parent = parent_id;
+	go[i].tsd.docking_port.model = model;
+	go[i].tsd.docking_port.portnumber = portnumber;
+	go[i].tsd.docking_port.docked_guy = (uint32_t) -1;
+	go[i].timestamp = universe_timestamp;
+	printf("added docking port %u\n", go[i].id);
+	return i;
+}
+
 static int add_starbase(double x, double y, double z,
 			double vx, double vz, double heading, int n, uint32_t assoc_planet_id)
 {
-	int i;
+	int i, j, model;
 
 	i = add_generic_object(x, y, z, vx, 0.0, vz, heading, OBJTYPE_STARBASE);
 	if (i < 0)
@@ -5328,6 +5449,21 @@ static int add_starbase(double x, double y, double z,
 	 */
 	sprintf(go[i].tsd.starbase.name, "SB-%02d", n);
 	sprintf(go[i].sdata.name, "SB-%02d", n);
+
+	model = go[i].id % nstarbase_models;
+	if (docking_port_info[model]) {
+		for (j = 0; j < docking_port_info[model]->nports; j++) {
+			int dpi = add_docking_port(go[i].id, j);
+			if (dpi >= 0) {
+				fprintf(stderr, "zzz set go[%d].docking_port[%d] to %u\n",
+					i, j, go[dpi].id);
+				go[i].tsd.starbase.docking_port[j] = go[dpi].id;
+				if (go[dpi].type != OBJTYPE_DOCKING_PORT) {
+					fprintf(stderr, "zzz port is wrongzzz\n");
+				}
+			}
+		}
+	}
 	return i;
 }
 
@@ -9031,6 +9167,30 @@ static void send_wormhole_limbo_packet(int shipid, uint16_t value)
 			ROLE_ALL);
 }
 
+static int process_docking_magnets(struct game_client *c)
+{
+	unsigned char buffer[10];
+	uint32_t id;
+	uint8_t __attribute__((unused)) v;
+	int i;
+
+	int rc = read_and_unpack_buffer(c, buffer, "wb", &id, &v);
+	if (rc)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->ship_index)
+		snis_log(SNIS_ERROR, "i != ship index at %s:%t\n", __FILE__, __LINE__);
+	go[i].tsd.ship.docking_magnets = !go[i].tsd.ship.docking_magnets;
+	go[i].timestamp = universe_timestamp;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_engage_warp(struct game_client *c)
 {
 	unsigned char buffer[10];
@@ -9599,6 +9759,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_DOCKING_MAGNETS:
+			rc = process_docking_magnets(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		case OPCODE_REQUEST_LASER_WAVELENGTH:
 			rc = process_request_laser_wavelength(c);
 			if (rc)
@@ -10004,6 +10169,8 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_docking_port_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_cargo_container_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_derelict_packet(struct game_client *c,
@@ -10098,6 +10265,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_TRACTORBEAM:
 		send_update_tractorbeam_packet(c, o);
+		break;
+	case OBJTYPE_DOCKING_PORT:
+		send_update_docking_port_packet(c, o);
 		break;
 	default:
 		break;
@@ -10569,7 +10739,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbbwQQQb",
+	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbbwQQQbb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -10588,7 +10758,8 @@ static void send_update_ship_packet(struct game_client *c,
 			&o->orientation.vec[0],
 			&o->tsd.ship.sciball_orientation.vec[0],
 			&o->tsd.ship.weap_orientation.vec[0],
-			o->tsd.ship.in_secure_area);
+			o->tsd.ship.in_secure_area,
+			o->tsd.ship.docking_magnets);
 	pb_queue_to_client(c, pb);
 }
 
@@ -10777,6 +10948,23 @@ static void send_update_tractorbeam_packet(struct game_client *c,
 	pb_queue_to_client(c, packed_buffer_new("bwwww", OPCODE_UPDATE_TRACTORBEAM,
 					o->id, o->timestamp, o->tsd.laserbeam.origin,
 					o->tsd.laserbeam.target));
+}
+
+static void send_update_docking_port_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	double scale;
+	int model = o->tsd.docking_port.model;
+	int port = o->tsd.docking_port.portnumber;
+
+	scale = docking_port_info[model]->port[port].scale;
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSSQ", OPCODE_UPDATE_DOCKING_PORT,
+					o->id, o->timestamp,
+					scale, (int32_t) 1000,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
+					&o->orientation));
 }
 
 static void send_update_spacemonster_packet(struct game_client *c,
@@ -11478,6 +11666,21 @@ static void take_your_locale_and_shove_it(void)
 	setlocale(LC_ALL, "C");
 }
 
+static struct docking_port_attachment_point **read_docking_port_info(
+		struct starbase_file_metadata starbase_metadata[], int n)
+{
+	int i;
+	struct docking_port_attachment_point **d = malloc(sizeof(*d) * n);
+	memset(d, 0, sizeof(*d) * n);
+	for (i = 0; i < n; i++) {
+		if (!starbase_metadata[i].docking_port_file)
+			continue;
+		d[i] = read_docking_port_attachments(starbase_metadata[i].docking_port_file,
+				STARBASE_SCALE_FACTOR);
+	}
+	return d;
+}
+
 int main(int argc, char *argv[])
 {
 	int port, rc, i;
@@ -11515,6 +11718,13 @@ int main(int argc, char *argv[])
 
 	if (read_factions())
 		return -1;
+
+	if (read_starbase_model_metadata(asset_dir, "starbase_models.txt",
+		&nstarbase_models, &starbase_metadata)) {
+		fprintf(stderr, "Failed reading starbase model metadata\n");
+		return -1;
+	}
+	docking_port_info = read_docking_port_info(starbase_metadata, nstarbase_models);
 
 	open_log_file();
 

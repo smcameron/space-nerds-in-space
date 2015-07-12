@@ -5,7 +5,7 @@
 
 struct thrust_attachment_point {
 	int nports;
-	struct _port {
+	struct thrust_attachment_port {
 		float scale;
 		union vec3 pos;
 	} port[5];

@@ -1,11 +1,18 @@
 #
 # List of starbase model assets within models/ subdir
 #
+# Format of each line is:
+# starbase-model-file docking-port-file
+# if the docking-port-file is '!', then there is no dockng port file
+# if the docking-port-file is '-', then the docking port file has the
+# standard name, for blah.stl will be blah.docking_port.h
+#
+
 starbase model count: 6
 
-starbase/starbase.obj
-starbase2/starbase2.obj
-starbase3.stl
-starbase4.stl
-starbase5.stl
-starbase6.stl
+starbase/starbase.obj !
+starbase2/starbase2.obj !
+starbase3.stl !
+starbase4.stl !
+starbase5.stl -
+starbase6.stl !

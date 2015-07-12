@@ -299,7 +299,7 @@ struct mesh *sphere_mesh;
 struct mesh *planetary_ring_mesh;
 struct mesh **starbase_mesh;
 static int nstarbase_models = -1;
-static char **starbase_model_filename;
+static struct starbase_file_metadata *starbase_metadata;
 struct mesh *ship_turret_mesh;
 struct mesh *ship_turret_base_mesh;
 struct mesh *particle_mesh;
@@ -316,6 +316,7 @@ struct mesh *cargo_container_mesh;
 struct mesh *nebula_mesh;
 struct mesh *sun_mesh;
 struct mesh *thrust_animation_mesh;
+struct mesh *docking_port_mesh;
 static struct mesh *warp_tunnel_mesh;
 static struct entity *warp_tunnel = NULL;
 static union vec3 warp_tunnel_direction;
@@ -1391,6 +1392,26 @@ static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double
 	return 0;
 }
 
+static int update_docking_port(uint32_t id, uint32_t timestamp, double scale,
+		double x, double y, double z, union quat *orientation)
+{
+	int i;
+	struct entity *e;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		e = add_entity(ecx, docking_port_mesh, x, y, z, SHIP_COLOR);
+		if (e)
+			update_entity_scale(e, scale);
+		i = add_generic_object(id, timestamp, x, y, z, 0, 0, 0,
+				orientation, OBJTYPE_DOCKING_PORT, 1, e);
+		if (i < 0)
+			return i;
+	} else
+		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, orientation, 1);
+	return 0;
+}
+
 static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, double z,
 	double vx, double vy, double vz)
 {
@@ -2015,6 +2036,7 @@ static void move_objects(void)
 			spin_wormhole(timestamp, o);
 			break;
 		case OBJTYPE_STARBASE:
+		case OBJTYPE_DOCKING_PORT:
 			move_object(timestamp, o, &interpolate_orientated_object);
 			break;
 		case OBJTYPE_LASER:
@@ -3647,6 +3669,7 @@ static struct navigation_ui {
 	struct slider *throttle_slider;
 	struct gauge *warp_gauge;
 	struct button *engage_warp_button;
+	struct button *docking_magnets_button;
 	struct button *reverse_button;
 	struct button *trident_button;
 	int gauge_radius;
@@ -3667,7 +3690,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
-		reverse, trident, in_secure_area;
+		reverse, trident, in_secure_area, docking_magnets;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -3690,13 +3713,14 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbbwQQQb",
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbbwQQQbb",
 			&tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
-			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area);
+			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
+			&docking_magnets);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -3751,6 +3775,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.damcon = NULL;
 	o->tsd.ship.shiptype = shiptype;
 	o->tsd.ship.in_secure_area = in_secure_area;
+	o->tsd.ship.docking_magnets = docking_magnets;
 
 	/* shift old updates to make room for this one */
 	int j;
@@ -4665,6 +4690,28 @@ static int process_ship_damage_packet(int do_damage_limbo)
 	return 0;
 }
 
+static int process_update_docking_port_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id, timestamp;
+	double dx, dy, dz, scale;
+	union quat orientation;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "wwSSSSQ", &id, &timestamp,
+			&scale, (int32_t) 1000,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM,
+			&orientation);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_docking_port(id, timestamp, scale, dx, dy, dz, &orientation);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+}
+
 static int process_update_asteroid_packet(void)
 {
 	unsigned char buffer[100];
@@ -4899,12 +4946,15 @@ static int process_client_id_packet(void)
 
 static void *gameserver_reader(__attribute__((unused)) void *arg)
 {
-	uint8_t last_opcode;
+	static uint32_t successful_opcodes;
+	uint8_t previous_opcode;
+	uint8_t last_opcode = 0x00;
 	uint8_t opcode = 0xff;
-	int rc;
+	int rc = 0;
 
 	printf("gameserver reader thread\n");
 	while (1) {
+		previous_opcode = last_opcode;
 		last_opcode = opcode;
 		/* printf("Client reading from game server %d bytes...\n", sizeof(opcode)); */
 		rc = snis_readsocket(gameserver_sock, &opcode, sizeof(opcode));
@@ -4912,9 +4962,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		/* grab time as close to when we got the packet as possible */
 		double update_time = time_now_double();
 
-		/* printf("rc = %d, errno  %s\n", rc, strerror(errno)); */
-		if (rc != 0)
+		if (rc != 0) {
+			fprintf(stderr, "snis_readsocket returns %d, errno  %s\n",
+				rc, strerror(errno));
 			goto protocol_error;
+		}
 		/* printf("got opcode %hhu\n", opcode); */
 		switch (opcode)	{
 		case OPCODE_UPDATE_SHIP:
@@ -4937,6 +4989,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_ASTEROID:
 			rc = process_update_asteroid_packet();
+			break;
+		case OPCODE_UPDATE_DOCKING_PORT:
+			rc = process_update_docking_port_packet();
 			break;
 		case OPCODE_UPDATE_CARGO_CONTAINER:
 			rc = process_update_cargo_container_packet();
@@ -5074,12 +5129,14 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		}
 		if (rc) /* protocol error */
 			break;
+		successful_opcodes++;
 	}
 
 protocol_error:
 	printf("Protocol error in gameserver reader, opcode = %hu\n", opcode);
 	snis_print_last_buffer(gameserver_sock);	
-	printf("last opcode was %hhu\n", last_opcode);
+	printf("last opcode was %hhu, before that %hhu\n", last_opcode, previous_opcode);
+	printf("total successful opcodes = %u\n", successful_opcodes);
 	close(gameserver_sock);
 	gameserver_sock = -1;
 	return NULL;
@@ -7462,6 +7519,11 @@ static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
 	do_adjust_byte_value(0,  OPCODE_ENGAGE_WARP);
 }
 
+static void docking_magnets_button_pressed(__attribute__((unused)) void *cookie)
+{
+	do_adjust_byte_value(0,  OPCODE_DOCKING_MAGNETS);
+}
+
 static void reverse_button_pressed(__attribute__((unused)) void *s)
 {
 	struct snis_entity *o;
@@ -7647,8 +7709,12 @@ static void init_nav_ui(void)
 				10, "WARP", sample_warpdrive);
 	nav_ui.engage_warp_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
 					nav_ui.gauge_radius * 2 + 80,
-					125, 25, "ENGAGE WARP", button_color,
+					150, 25, "ENGAGE WARP", button_color,
 					NANO_FONT, engage_warp_button_pressed, NULL);
+	nav_ui.docking_magnets_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
+					nav_ui.gauge_radius * 2 + 120,
+					150, 25, "DOCKING MAGNETS", button_color,
+					NANO_FONT, docking_magnets_button_pressed, NULL);
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", button_color,
 			NANO_FONT, reverse_button_pressed, NULL);
 	nav_ui.trident_button = snis_button_init(30, 228, 92, 20, "RELATIVE", button_color,
@@ -7657,6 +7723,7 @@ static void init_nav_ui(void)
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
+	ui_add_button(nav_ui.docking_magnets_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.trident_button, DISPLAYMODE_NAVIGATION);
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
@@ -8295,6 +8362,9 @@ static void show_navigation(GtkWidget *w)
 	to_snis_heading_mark(&o->orientation, &display_heading, &display_mark);
 	sprintf(buf, "HEADING: %3.1lf MARK: %3.1lf", radians_to_degrees(display_heading), radians_to_degrees(display_mark));
 	sng_abs_xy_draw_string(buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
+
+	sprintf(buf, o->tsd.ship.docking_magnets ? "DOCKING MAGNETS ENGAGED" : "DOCKING MAGNETS OFF");
+	sng_abs_xy_draw_string(buf, NANO_FONT, 200, 2.0 * LINEHEIGHT);
 
 	quat_to_euler(&ypr, &o->orientation);	
 	sng_set_foreground(UI_COLOR(nav_text));
@@ -12688,6 +12758,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_NAV_WARP_ENGAGE:
 		engage_warp_button_pressed((void *) 0);
 		break;
+	case DEVIO_OPCODE_NAV_DOCKING_MAGNETS:
+		docking_magnets_button_pressed((void *) 0);
+		break;
 	case DEVIO_OPCODE_NAV_THROTTLE:
 		snis_slider_poke_input(nav_ui.throttle_slider, d, 1);
 		break;
@@ -12984,7 +13057,7 @@ static void init_meshes()
 	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS);
 
 	for (i = 0; i < nstarbase_models; i++) {
-		char *filename = starbase_model_filename[i];
+		char *filename = starbase_metadata[i].model_file;
 #if 0
 		if (i == 0)
 			sprintf(filename, "starbase/starbase.obj");
@@ -12993,9 +13066,9 @@ static void init_meshes()
 		else
 			sprintf(filename, "starbase%d.stl", i + 1);
 #endif
-		printf("reading '%s'\n", filename);
+		printf("reading starbase model %d of %d '%s'\n", i + 1, nstarbase_models, filename);
 		starbase_mesh[i] = snis_read_model(d, filename);
-		mesh_scale(starbase_mesh[i], 2.0f);
+		mesh_scale(starbase_mesh[i], STARBASE_SCALE_FACTOR);
 	}
 
 	allocate_ship_thrust_attachment_points(nshiptypes);
@@ -13047,6 +13120,7 @@ static void init_meshes()
 	ship_icon_mesh = snis_read_model(d, "ship-icon.stl");
 	heading_indicator_mesh = snis_read_model(d, "heading_indicator.stl");
 	cargo_container_mesh = snis_read_model(d, "cargocontainer/cargocontainer.obj");
+	docking_port_mesh = snis_read_model(d, "docking_port.stl");
 	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
 	sun_mesh = mesh_fabricate_billboard(0, 0, 30000, 30000);
 	thrust_animation_mesh = init_thrust_mesh(10, 7, 3, 1);
@@ -13360,11 +13434,15 @@ int main(int argc, char *argv[])
 	read_keymap_config_file();
 	init_vects();
 	initialize_random_orientations_and_spins();
-	if (read_planet_material_metadata(&nplanet_materials))
+	if (read_planet_material_metadata(&nplanet_materials)) {
+		fprintf(stderr, "Failed reading planet material metadata\n");
 		exit(1);
+	}
 	if (read_starbase_model_metadata(asset_dir, "starbase_models.txt",
-			&nstarbase_models, &starbase_model_filename))
+			&nstarbase_models, &starbase_metadata)) {
+		fprintf(stderr, "Failed reading starbase model metadata\n");
 		exit(1);
+	}
 	starbase_mesh = allocate_starbase_mesh_ptrs(nstarbase_models);
 #if 0
 	init_player();

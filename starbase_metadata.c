@@ -28,15 +28,16 @@
 #include "string-utils.h"
 
 int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase_models,
-		char ***starbase_model_filename)
+		struct starbase_file_metadata **starbase_metadata)
 {
 	FILE *f;
-	char path[PATH_MAX], fname[PATH_MAX], line[256];
+	char path[PATH_MAX], model_file[PATH_MAX], docking_port_file[PATH_MAX], line[256];
 	char *s;
-	int rc, lineno, np, pc;
+	int i, total_len, rc, lineno, np, pc;
 	const int max_starbase_models = 100;
 
 	printf("Reading starbase model specifications...");
+	*nstarbase_models = -1;
 	fflush(stdout);
 	sprintf(path, "%s/%s", asset_dir, filename);
 	f = fopen(path, "r");
@@ -72,18 +73,72 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 				np = max_starbase_models;
 			}
 			*nstarbase_models = np;
-			*starbase_model_filename = malloc(sizeof((*starbase_model_filename)[0]) * np);
-			memset(*starbase_model_filename, 0,
-				sizeof((*starbase_model_filename)[0]) * np);
+			*starbase_metadata = malloc(sizeof(**starbase_metadata) * np);
+			memset(*starbase_metadata, 0,
+				sizeof(**starbase_metadata) * np);
 			continue;
 		}
-		rc = sscanf(s, "%s", fname);
-		if (rc != 1) {
+		rc = sscanf(s, "%s %s", model_file, docking_port_file);
+		if (rc != 2) {
 			fprintf(stderr, "%s:%d bad starbase model specification\n",
 					path, lineno);
 			goto bailout;
 		}
-		(*starbase_model_filename)[pc++] = strdup(fname);
+		(*starbase_metadata)[pc].model_file = strdup(model_file);
+
+		if (strcmp(docking_port_file, "!") == 0) {
+			(*starbase_metadata)[pc].docking_port_file = NULL;
+				/* docking port file deliberately omitted */
+			pc++;
+			continue;
+		}
+		if (strcmp(docking_port_file, "-") == 0) {
+			/* Default location, construct the path to *.docking_ports.h file
+			 * From the model file.
+			 */
+			total_len = strlen(asset_dir) + strlen(model_file) +
+				strlen("docking_ports.h") + strlen("/models/") + 2;
+			if (total_len >= PATH_MAX) {
+				fprintf(stderr, "path '%s' is too long.\n", model_file);
+				(*starbase_metadata)[pc].docking_port_file = NULL;
+				goto bailout;
+			}
+			snprintf(path, PATH_MAX, "%s/models/%s", asset_dir, model_file);
+			i = strlen(path);
+			while (i >= 0 && path[i] != '.') {
+				path[i] = '\0';
+				i--;
+			}
+			if (i < 0) {
+				fprintf(stderr, "Bad path model path %s\n", model_file);
+				(*starbase_metadata)[pc].docking_port_file = NULL;
+				goto bailout;
+			}
+			strcat(path, "docking_ports.h");
+		} else {
+			/* Specialized location of docking ports file */
+			total_len = strlen(asset_dir) + strlen(model_file) +
+				strlen(docking_port_file) + strlen("/models/") + 10;
+			if (total_len >= PATH_MAX) {
+				fprintf(stderr, "path '%s/models/%s' is too long.\n",
+						asset_dir, docking_port_file);
+				(*starbase_metadata)[pc].docking_port_file = NULL;
+				goto bailout;
+			}
+			snprintf(path, PATH_MAX, "%s/models/%s", asset_dir, model_file);
+			i = strlen(path);
+			while (i >= 0 && path[i] != '/') {
+				path[i] = '\0';
+				i--;
+			}
+			if (i < 0) {
+				fprintf(stderr, "Bad path model path %s\n", model_file);
+				(*starbase_metadata)[pc].docking_port_file = NULL;
+				goto bailout;
+			}
+			strcat(path, docking_port_file);
+		}
+		(*starbase_metadata)[pc++].docking_port_file = strdup(path);
 		if (pc > max_starbase_models)
 			break;
 	}
@@ -93,16 +148,20 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 	return 0;
 bailout:
 	fclose(f);
-	if (*starbase_model_filename) {
+	if (*starbase_metadata) {
 		int i;
 		for (i = 0; i < pc; i++) {
-			if ((*starbase_model_filename)[i]) {
-				free((*starbase_model_filename)[i]);
-				(*starbase_model_filename)[i] = NULL;
+			if ((*starbase_metadata)[i].model_file) {
+				free((*starbase_metadata)[i].model_file);
+				(*starbase_metadata)[i].model_file = NULL;
+			}
+			if ((*starbase_metadata)[i].docking_port_file) {
+				free((*starbase_metadata)[i].docking_port_file);
+				(*starbase_metadata)[i].docking_port_file = NULL;
 			}
 		}
-		free(*starbase_model_filename);
-		*starbase_model_filename = NULL;
+		free(*starbase_metadata);
+		*starbase_metadata = NULL;
 	}
 	return -1;
 }

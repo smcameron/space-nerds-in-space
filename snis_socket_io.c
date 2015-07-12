@@ -39,7 +39,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "snis_socket_io.h"
 
 #define MAX_DEBUGGABLE_SOCKETS 100
-static int protocol_debugging_enabled = 0;
+static int protocol_debugging_enabled = 1;
 struct debug_buf {
 		int len;
 		unsigned char buf[100];
@@ -63,8 +63,10 @@ int snis_readsocket(int fd, void *buffer, int buflen)
 	do {
 		rc = recv(fd, c, len, 0);
 		/*printf("recv returned %d, errno = %s\n", rc, strerror(errno)); */
-		if (rc == 0) /* other side closed conn */
+		if (rc == 0) { /* other side closed conn */
+			fprintf(stderr, "readscoket other side closed conn\n");
 			return -1;
+		}
 		if (rc == len) {
 			if (netstats)
 				netstats->bytes_recd += rc;
