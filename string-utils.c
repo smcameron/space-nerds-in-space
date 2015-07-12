@@ -68,3 +68,18 @@ char *dir_name(char *path)
 	return x;
 }
 
+char *trim_whitespace(char *s)
+{
+	char *x, *z;
+
+	for (x = s; *x == ' ' || *x == '\t'; x++)
+		;
+	z = x + (strlen(x) - 1);
+
+	while (z >= x && (*z == ' ' ||  *z == '\t' || *z == '\n')) {
+		*z = '\0';
+		z--;
+	}
+	return x;
+}
+

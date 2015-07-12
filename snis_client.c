@@ -2521,21 +2521,6 @@ static int remapkey(char *keyname, char *actionname)
 	return 1;
 }
 
-char *trim_whitespace(char *s)
-{
-	char *x, *z;
-
-	for (x = s; *x == ' ' || *x == '\t'; x++)
-		;
-	z = x + (strlen(x) - 1);
-
-	while (z >= x && (*z == ' ' ||  *z == '\t' || *z == '\n')) {
-		*z = '\0';
-		z--;
-	}
-	return x;
-}
-
 static void read_keymap_config_file(void)
 {
 	FILE *f;
