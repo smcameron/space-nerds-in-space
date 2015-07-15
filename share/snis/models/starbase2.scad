@@ -25,3 +25,10 @@ union() {
 	}
 }
 
+use <imposter_docking_port.scad>;
+docking_ports = true;
+if (docking_ports) {
+        docking_port2(90, -37, 0, 0, 0, 1, 90, 0.3);
+        docking_port2(-90, 37, 0, 0, 0, 1, -90, 0.3);
+}
+

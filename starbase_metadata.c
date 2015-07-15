@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <limits.h>
 
+#include "docking_port.h"
 #include "starbase_metadata.h"
 #include "string-utils.h"
 
@@ -164,5 +165,26 @@ bailout:
 		*starbase_metadata = NULL;
 	}
 	return -1;
+}
+
+struct docking_port_attachment_point **read_docking_port_info(
+		struct starbase_file_metadata starbase_metadata[], int n,
+		float starbase_scale_factor)
+{
+	int i;
+	struct docking_port_attachment_point **d = malloc(sizeof(*d) * n);
+	memset(d, 0, sizeof(*d) * n);
+	for (i = 0; i < n; i++) {
+		if (!starbase_metadata[i].docking_port_file)
+			continue;
+		d[i] = read_docking_port_attachments(starbase_metadata[i].docking_port_file,
+				starbase_scale_factor);
+		fprintf(stderr, "dpi[%d] = %p, {", i, (void *) d[i]);
+		if (d[i])
+			fprintf(stderr, "nports = %d }\n", d[i]->nports);
+		else
+			fprintf(stderr, "null\n");
+	}
+	return d;
 }
 

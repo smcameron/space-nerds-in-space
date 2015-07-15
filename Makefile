@@ -244,6 +244,8 @@ ${MODELSRCDIR}/skorpio.scad_params.h \
 ${MODELSRCDIR}/spaceship.scad_params.h \
 ${MODELSRCDIR}/troopship.scad_params.h
 
+DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
+${MODELSRCDIR}/starbase5.docking_ports.h
 
 MANSRCDIR=.
 MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz
@@ -399,7 +401,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/spaceship_turret.stl \
 	${MD}/spaceship_turret_base.stl \
 	${MD}/vanquisher.stl \
-	${MD}/docking_port.stl
+	${MD}/docking_port.stl \
+	${MD}/docking_port2.stl
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
@@ -438,7 +441,7 @@ GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o
 GGLIBS=-lm ${LRTLIB} -lpng
 GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} && $(ECHO) '  LINK' $@
 
-all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS} ${SCAD_PARAMS_FILES}
+all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES}
 
 build:	all
 

@@ -21,6 +21,8 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include "docking_port.h"
+
 struct starbase_file_metadata {
 	char *model_file;
 	char *docking_port_file;
@@ -28,6 +30,10 @@ struct starbase_file_metadata {
 
 int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase_models,
 			struct starbase_file_metadata **starbase_metadata);
+
+struct docking_port_attachment_point **read_docking_port_info(
+		struct starbase_file_metadata starbase_metadata[], int n,
+		float starbase_scale_factor);
 
 #endif
 

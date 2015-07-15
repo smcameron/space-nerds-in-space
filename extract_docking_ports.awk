@@ -2,7 +2,10 @@ BEGIN {
 	n = 0
 }
 
-/docking_port\(/ {
+/docking_port\(/ { model[n] = 0 }
+/docking_port2\(/ { model[n] = 1 }
+
+/docking_port[2]*\(/ {
 	split($0,a,"[(),]")
 	dpos[n] = a[2] ", " a[3] ", " a[4]
 	drot[n] = a[5] ", " a[6] ", " a[7] ", " a[8]
@@ -16,7 +19,7 @@ END {
 	} else {
 		print "{ " n ", {"
 		for (i = 0; i < n; i++) {
-			print "  { " dscale[i] ", { { " dpos[i] " }, { " drot[i] " } } },"
+			print "  { " model[i], dscale[i] ", { { " dpos[i] " }, { " drot[i] " } } },"
 		}
 		print "} }"
 	}

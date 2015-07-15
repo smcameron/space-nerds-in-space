@@ -24,6 +24,7 @@
 #include "mesh.h"
 #include "material.h"
 #include "docking_port.h"
+#include "space-part.h"
 
 #define SNIS_PROTOCOL_VERSION "SNIS001"
 
@@ -461,7 +462,7 @@ struct docking_port_data {
 	uint32_t parent;
 	uint32_t docked_guy;
 	uint8_t portnumber;
-	uint8_t model;
+	uint8_t model; /* which starbase model */
 };
 
 struct derelict_data {

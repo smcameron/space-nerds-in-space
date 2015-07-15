@@ -301,6 +301,7 @@ struct mesh *planetary_ring_mesh;
 struct mesh **starbase_mesh;
 static int nstarbase_models = -1;
 static struct starbase_file_metadata *starbase_metadata;
+static struct docking_port_attachment_point **docking_port_info;
 struct mesh *ship_turret_mesh;
 struct mesh *ship_turret_base_mesh;
 struct mesh *particle_mesh;
@@ -317,7 +318,8 @@ struct mesh *cargo_container_mesh;
 struct mesh *nebula_mesh;
 struct mesh *sun_mesh;
 struct mesh *thrust_animation_mesh;
-struct mesh *docking_port_mesh;
+#define NDOCKING_PORT_STYLES 2
+struct mesh *docking_port_mesh[NDOCKING_PORT_STYLES];
 static struct mesh *warp_tunnel_mesh;
 static struct entity *warp_tunnel = NULL;
 static union vec3 warp_tunnel_direction;
@@ -1394,14 +1396,26 @@ static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double
 }
 
 static int update_docking_port(uint32_t id, uint32_t timestamp, double scale,
-		double x, double y, double z, union quat *orientation)
+		double x, double y, double z, union quat *orientation, uint8_t model)
 {
 	int i;
 	struct entity *e;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, docking_port_mesh, x, y, z, SHIP_COLOR);
+		if (model < 0) {
+			fprintf(stderr, "Bad model number %d at %s:%d\n",
+			model, __FILE__, __LINE__);
+			model = -model;
+		}
+		if (model >= nstarbase_models) {
+			fprintf(stderr, "Bad model number %d at %s:%d\n",
+			model, __FILE__, __LINE__);
+			model = model % nstarbase_models;
+		}
+		int docking_port_model = docking_port_info[model]->docking_port_model;
+		docking_port_model %= NDOCKING_PORT_STYLES;
+		e = add_entity(ecx, docking_port_mesh[docking_port_model], x, y, z, SHIP_COLOR);
 		if (e)
 			update_entity_scale(e, scale);
 		i = add_generic_object(id, timestamp, x, y, z, 0, 0, 0,
@@ -1410,6 +1424,7 @@ static int update_docking_port(uint32_t id, uint32_t timestamp, double scale,
 			return i;
 	} else
 		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, orientation, 1);
+	go[i].tsd.docking_port.model = model;
 	return 0;
 }
 
@@ -4698,17 +4713,18 @@ static int process_update_docking_port_packet(void)
 	double dx, dy, dz, scale;
 	union quat orientation;
 	int rc;
+	uint8_t model;
 
-	rc = read_and_unpack_buffer(buffer, "wwSSSSQ", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSQb", &id, &timestamp,
 			&scale, (int32_t) 1000,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
-			&orientation);
+			&orientation, &model);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_docking_port(id, timestamp, scale, dx, dy, dz, &orientation);
+	rc = update_docking_port(id, timestamp, scale, dx, dy, dz, &orientation, model);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }
@@ -13121,7 +13137,8 @@ static void init_meshes()
 	ship_icon_mesh = snis_read_model(d, "ship-icon.stl");
 	heading_indicator_mesh = snis_read_model(d, "heading_indicator.stl");
 	cargo_container_mesh = snis_read_model(d, "cargocontainer/cargocontainer.obj");
-	docking_port_mesh = snis_read_model(d, "docking_port.stl");
+	docking_port_mesh[0] = snis_read_model(d, "docking_port.stl");
+	docking_port_mesh[1] = snis_read_model(d, "docking_port2.stl");
 	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
 	sun_mesh = mesh_fabricate_billboard(0, 0, 30000, 30000);
 	thrust_animation_mesh = init_thrust_mesh(10, 7, 3, 1);
@@ -13445,6 +13462,9 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	starbase_mesh = allocate_starbase_mesh_ptrs(nstarbase_models);
+	docking_port_info = read_docking_port_info(starbase_metadata, nstarbase_models,
+							STARBASE_SCALE_FACTOR);
+
 #if 0
 	init_player();
 	init_game_state(the_player);

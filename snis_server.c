@@ -10959,13 +10959,14 @@ static void send_update_docking_port_packet(struct game_client *c,
 	int port = o->tsd.docking_port.portnumber;
 
 	scale = docking_port_info[model]->port[port].scale;
-	pb_queue_to_client(c, packed_buffer_new("bwwSSSSQ", OPCODE_UPDATE_DOCKING_PORT,
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSSQb", OPCODE_UPDATE_DOCKING_PORT,
 					o->id, o->timestamp,
 					scale, (int32_t) 1000,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
-					&o->orientation));
+					&o->orientation,
+					o->tsd.docking_port.model));
 }
 
 static void send_update_spacemonster_packet(struct game_client *c,
@@ -11667,6 +11668,7 @@ static void take_your_locale_and_shove_it(void)
 	setlocale(LC_ALL, "C");
 }
 
+#if 0
 static struct docking_port_attachment_point **read_docking_port_info(
 		struct starbase_file_metadata starbase_metadata[], int n)
 {
@@ -11681,6 +11683,7 @@ static struct docking_port_attachment_point **read_docking_port_info(
 	}
 	return d;
 }
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -11725,7 +11728,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Failed reading starbase model metadata\n");
 		return -1;
 	}
-	docking_port_info = read_docking_port_info(starbase_metadata, nstarbase_models);
+	docking_port_info = read_docking_port_info(starbase_metadata, nstarbase_models,
+					STARBASE_SCALE_FACTOR);
 
 	open_log_file();
 
