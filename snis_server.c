@@ -5386,7 +5386,7 @@ static int add_docking_port(int parent_id, int portnumber)
 	}
 
 	/* Get the relevent docking port info for this thing */
-	model = p % nstarbase_models;
+	model = parent_id % nstarbase_models;
 	dp = docking_port_info[model];
 	if (!dp) {
 		fprintf(stderr, "zzz no docking port info for this model\n");
