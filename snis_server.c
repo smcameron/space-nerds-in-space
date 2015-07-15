@@ -3742,6 +3742,138 @@ static void scoop_up_cargo(struct snis_entity *player, struct snis_entity *cargo
 		}
 }
 
+static void revoke_docking_permission(struct snis_entity *docking_port, uint32_t player_id)
+{
+	struct snis_entity *starbase;
+	int i, model;
+
+	i = lookup_by_id(docking_port->tsd.docking_port.parent);
+	if (i < 0)
+		return;
+	starbase = &go[i];
+	model = starbase->id % nstarbase_models;
+	for (i = 0; i < docking_port_info[model]->nports; i++) {
+		if (starbase->tsd.starbase.expected_docker[i] == player_id) {
+			starbase->tsd.starbase.expected_docker[i] = -1;
+			starbase->tsd.starbase.expected_docker_timer[i] = 0;
+		}
+	}
+}
+
+static int starbase_grant_docker_permission(struct snis_entity *starbase,
+						uint32_t docker, struct bridge_data *b,
+						char *npcname, int channel)
+{
+	/* check if permission is already granted.... */
+	int model = starbase->id % nstarbase_models;
+	char msg[100];
+	int i;
+
+	for (i = 0; i < docking_port_info[model]->nports; i++) {
+		if (starbase->tsd.starbase.expected_docker[i] == docker &&
+			starbase->tsd.starbase.expected_docker_timer[i] > 0) {
+			starbase->tsd.starbase.expected_docker_timer[i] = STARBASE_DOCK_TIME;
+			/* transmit re-granting of docking permission */
+			snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK RE-GRANTED.", b->shipname);
+			send_comms_packet(npcname, channel, msg);
+			return 1;
+		}
+	}
+	/* See if there are any empty slots */
+	for (i = 0; i < docking_port_info[model]->nports; i++) {
+		if (starbase->tsd.starbase.expected_docker_timer[i] == 0) {
+			starbase->tsd.starbase.expected_docker[i] = docker;
+			starbase->tsd.starbase.expected_docker_timer[i] = STARBASE_DOCK_TIME;
+			/* transmit granting of docking permission */
+			snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK GRANTED.", b->shipname);
+			send_comms_packet(npcname, channel, msg);
+			return 1;
+		}
+	}
+	snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK DENIED.", b->shipname);
+	send_comms_packet(npcname, channel, msg);
+	return 0;
+}
+
+static int starbase_expecting_docker(struct snis_entity *starbase, uint32_t docker)
+{
+	int model = starbase->id % nstarbase_models;
+	int i;
+
+	for (i = 0; i < docking_port_info[model]->nports; i++) {
+		if (starbase->tsd.starbase.expected_docker[i] == docker &&
+			starbase->tsd.starbase.expected_docker_timer[i] > 0)
+			return 1;
+	}
+	return 0;
+}
+
+static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charges);
+void do_docking_action(struct snis_entity *ship, struct snis_entity *starbase,
+			struct bridge_data *b, char *npcname)
+{
+	char msg[100];
+	float charges;
+	int channel = b->npcbot.channel;
+
+	snprintf(msg, sizeof(msg), "%s, WELCOME TO OUR STARBASE, ENJOY YOUR STAY.", b->shipname);
+	send_comms_packet(npcname, channel, msg);
+	/* TODO make the repair/refuel process a bit less easy */
+	snprintf(msg, sizeof(msg), "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
+		b->shipname);
+	init_player(ship, 0, &charges);
+	send_ship_damage_packet(ship);
+	ship->timestamp = universe_timestamp;
+	send_comms_packet(npcname, channel, msg);
+	snprintf(msg, sizeof(msg), "%s, YOUR ACCOUNT HAS BEEN BILLED $%5.2f\n",
+		b->shipname, charges);
+	send_comms_packet(npcname, channel, msg);
+	schedule_callback2(event_callback, &callback_schedule,
+			"player-docked-event", (double) ship->id, starbase->id);
+}
+
+static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
+						struct snis_entity *player)
+{
+	char msg[100];
+	char *npcname;
+	int channel;
+	struct bridge_data *bridge;
+
+	if (docking_port->tsd.docking_port.docked_guy == player->id) /* already docked? */
+		return;
+
+	int b = lookup_bridge_by_shipid(player->id);
+	if (b < 0 || b >= nbridges) {
+		/* player has no bridge??? */
+		fprintf(stderr, "BUG: %s:%d player ship has no bridge\n", __FILE__, __LINE__);
+		return;
+	}
+	bridge = &bridgelist[b];
+	channel = bridge->npcbot.channel;
+	int sb_index = lookup_by_id(docking_port->tsd.docking_port.parent);
+	if (sb_index < 0)
+		return; /* docking port not connected to anything... shouldn't happen. */
+	struct snis_entity *sb = &go[sb_index];
+
+	/* Dock... */
+	npcname = sb->tsd.starbase.name;
+	if (!starbase_expecting_docker(sb, player->id)) {
+		snprintf(msg, sizeof(msg), "%s, YOU ARE NOT CLEARED TO DOCK\n",
+			bridge->shipname);
+		send_comms_packet(npcname, channel, msg);
+		return;
+	}
+	if (docking_port->tsd.docking_port.docked_guy == -1) {
+		docking_port->tsd.docking_port.docked_guy = player->id;
+		do_docking_action(player, sb, bridge, npcname);
+	} else {
+		snprintf(msg, sizeof(msg), "%s, YOU ARE NOT CLEARED FOR DOCKING\n",
+			bridge->shipname);
+		send_comms_packet(npcname, channel, msg);
+	}
+}
+
 static void player_collision_detection(void *player, void *object)
 {
 	struct snis_entity *o, *t;
@@ -3772,9 +3904,7 @@ static void player_collision_detection(void *player, void *object)
 	}
 	if (t->type == OBJTYPE_DOCKING_PORT && dist2 < 50.0 * 50.0 &&
 		o->tsd.ship.docking_magnets) {
-		/* Dock... */
-		t->tsd.docking_port.docked_guy = o->id;
-		/* Make docking sound */
+		player_attempt_dock_with_starbase(t, o);
 	}
 	if (t->type == OBJTYPE_PLANET) {
 		const float surface_dist2 = t->tsd.planet.radius * t->tsd.planet.radius;
@@ -4315,8 +4445,10 @@ static void docking_port_move(struct snis_entity *o)
 		return;
 	quat_rot_vec_self(&offset, &o->orientation);
 	docker = &go[i];
-	if (!docker->tsd.ship.docking_magnets)
+	if (!docker->tsd.ship.docking_magnets) {
 		o->tsd.docking_port.docked_guy = (uint32_t) -1;
+		revoke_docking_permission(o, docker->id);
+	}
 	quat_slerp(&new_orientation, &docker->orientation, &o->orientation, 0.1);
 	docker->orientation = new_orientation;
 	ox = docker->x;
@@ -4378,7 +4510,7 @@ static void starbase_move(struct snis_entity *o)
 {
 	char buf[100], location[50];
 	int64_t then, now;
-	int i;
+	int i, j, model;
 	int fired_at_player = 0;
 	static struct mtwist_state *mt = NULL;
 
@@ -4471,6 +4603,29 @@ static void starbase_move(struct snis_entity *o)
 					send_comms_packet(o->tsd.starbase.name, 0, msg);
 				}
 			}
+		}
+	}
+
+	/* expire the expected dockers */
+	model = o->id % nstarbase_models;
+	if (docking_port_info[model]) {
+		for (j = 0; j < docking_port_info[model]->nports; j++) {
+			int id = o->tsd.starbase.expected_docker[j];
+			if (id == -1)
+				continue;
+			if (o->tsd.starbase.expected_docker_timer[j] > 0)
+				o->tsd.starbase.expected_docker_timer[j]--;
+			if (o->tsd.starbase.expected_docker_timer[j] > 0)
+				continue;
+			char msg[100];
+			/* TODO: make this safe */
+			int bn = lookup_bridge_by_shipid(id);
+			if (bn < 0)
+				continue;
+			struct bridge_data *b = &bridgelist[bn];
+			o->tsd.starbase.expected_docker[j] = -1;
+			snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK EXPIRED.", b->shipname);
+			send_comms_packet(o->tsd.starbase.name, b->npcbot.channel, msg);
 		}
 	}
 }
@@ -5492,6 +5647,8 @@ static int add_starbase(double x, double y, double z,
 						model, j);
 				}
 			}
+			go[i].tsd.starbase.expected_docker[j] = -1;
+			go[i].tsd.starbase.expected_docker_timer[j] = 0;
 		}
 	}
 	return i;
@@ -7465,7 +7622,7 @@ void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 }
 
 void npc_menu_item_request_dock(struct npc_menu_item *item,
-					char *npcname, struct npc_bot_state *botstate)
+				char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *o;
 	struct snis_entity *sb;
@@ -7474,7 +7631,6 @@ void npc_menu_item_request_dock(struct npc_menu_item *item,
 	struct bridge_data *b;
 	int ch = botstate->channel;
 	int i;
-	float charges;
 
 	b = container_of(botstate, struct bridge_data, npcbot);
 	printf("npc_menu_item_request_dock called for %s\n", b->shipname);
@@ -7489,7 +7645,7 @@ void npc_menu_item_request_dock(struct npc_menu_item *item,
 		return;
 	sb = &go[i];
 	dist = dist3d(sb->x - o->x, sb->y - o->y, sb->z - o->z);
-	if (dist > STARBASE_DOCKING_DIST) {
+	if (dist > STARBASE_DOCKING_PERM_DIST) {
 		snprintf(msg, sizeof(msg), "%s, YOU ARE TOO FAR AWAY (%lf).\n", b->shipname, dist);
 		send_comms_packet(npcname, ch, msg);
 		return;
@@ -7499,23 +7655,7 @@ void npc_menu_item_request_dock(struct npc_menu_item *item,
 		send_comms_packet(npcname, ch, msg);
 		return;
 	}
-	snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK GRANTED.", b->shipname);
-	send_comms_packet(npcname, ch, msg);
-	snprintf(msg, sizeof(msg), "%s, WELCOME TO OUR STARBASE, ENJOY YOUR STAY.", b->shipname);
-	send_comms_packet(npcname, ch, msg);
-	/* TODO make the repair/refuel process a bit less easy */
-	snprintf(msg, sizeof(msg), "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
-		b->shipname);
-	init_player(o, 0, &charges);
-	send_ship_damage_packet(o);
-	o->timestamp = universe_timestamp;
-	send_comms_packet(npcname, ch, msg);
-	snprintf(msg, sizeof(msg), "%s, YOUR ACCOUNT HAS BEEN BILLED $%5.2f\n",
-		b->shipname, charges);
-	send_comms_packet(npcname, ch, msg);
-	schedule_callback2(event_callback, &callback_schedule,
-			"player-docked-event", (double) o->id, botstate->object_id);
-	return;
+	starbase_grant_docker_permission(sb, o->id, b, npcname, ch);
 }
 
 static void send_npc_menu(char *npcname,  int bridge)

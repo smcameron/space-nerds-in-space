@@ -47,7 +47,7 @@
 #define MAXGAMEOBJS 5000
 #define MAXSPARKS 5000
 
-#define STARBASE_DOCKING_DIST 600
+#define STARBASE_DOCKING_PERM_DIST 5000
 #define NASTEROID_MODELS 4
 #define NASTEROID_SCALES 3
 #define NASTEROIDS 200
@@ -385,6 +385,7 @@ struct marketplace_data {
 
 #define STARBASE_FIRE_CHANCE 25 /* ... out of 1000, 10x per sec */
 #define STARBASE_SCALE_FACTOR (2.0)
+#define STARBASE_DOCK_TIME (1200) /* 2 minutes */
 struct starbase_data {
 	uint8_t under_attack;
 	uint32_t last_time_called_for_help;
@@ -402,6 +403,8 @@ struct starbase_data {
 #define STARBASE_LASER_FIRE_INTERVAL (3.2 * 10) /* 3.27 seconds */ 
 #define STARBASE_TORPEDO_FIRE_INTERVAL (2.9 * 10) /* 2.9 seconds */ 
 	int32_t docking_port[MAX_DOCKING_PORTS];
+	int32_t expected_docker[MAX_DOCKING_PORTS];
+	int32_t expected_docker_timer[MAX_DOCKING_PORTS];
 };
 
 struct nebula_data {
