@@ -61,6 +61,7 @@
 #include "space-part.h"
 #include "quat.h"
 #include "snis.h"
+#include "snis-culture.h"
 #include "snis_log.h"
 #include "mathutils.h"
 #include "matrix.h"

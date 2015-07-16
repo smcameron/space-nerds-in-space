@@ -68,6 +68,7 @@
 #include "mathutils.h"
 #include "quat.h"
 #include "snis.h"
+#include "snis-culture.h"
 #include "snis_alloc.h"
 #include "my_point.h"
 #include "snis_font.h"

@@ -497,40 +497,6 @@ struct laserbeam_data {
 	struct material *material;
 };
 
-/* Cribbed from Oolite */
-static char *economy_name[] = {
-	"Rich Industrial",
-	"Average Industrial",
-	"Poor Industrial",
-	"Mainly Industrial",
-	"Mainly Agricultural",
-	"Rich Agricultural",
-	"Average Agricultural",
-	"Poor Agricultural",
-};
-
-static char *government_name[] = {
-	"Anarchy",
-	"Feudal",
-	"Multi-Governmental",
-	"Dictatorship",
-	"Communist",
-	"Confederacy",
-	"Democracy",
-	"Corporate State",
-};
-
-/* need to think of something better here... */
-__attribute__((unused)) static char *tech_level_name[] = {
-	"stone age",
-	"iron age",
-	"steel age",
-	"silicon age",
-	"positronic age",
-	"space age",
-	"interstellar age",
-};
-
 struct planet_data {
 	uint32_t description_seed;
 	uint8_t government;
