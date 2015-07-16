@@ -224,6 +224,27 @@ SHADERS=${SHADERSRCDIR}/color_by_w.frag \
 	${SHADERSRCDIR}/wireframe-transparent-sphere-clip.vert \
 	${SHADERSRCDIR}/wireframe_transparent.vert
 
+SCAD_PARAMS_FILES=${MODELSRCDIR}/disruptor.scad_params.h \
+${MODELSRCDIR}/enforcer.scad_params.h \
+${MODELSRCDIR}/starbase5.scad_params.h \
+${MODELSRCDIR}/research-vessel.scad_params.h \
+${MODELSRCDIR}/conqueror.scad_params.h \
+${MODELSRCDIR}/asteroid-miner.scad_params.h \
+${MODELSRCDIR}/battlestar.scad_params.h \
+${MODELSRCDIR}/wombat.scad_params.h \
+${MODELSRCDIR}/destroyer.scad_params.h \
+${MODELSRCDIR}/dragonhawk.scad_params.h \
+${MODELSRCDIR}/tanker.scad_params.h \
+${MODELSRCDIR}/swordfish.scad_params.h \
+${MODELSRCDIR}/vanquisher.scad_params.h \
+${MODELSRCDIR}/freighter.scad_params.h \
+${MODELSRCDIR}/scrambler.scad_params.h \
+${MODELSRCDIR}/spaceship2.scad_params.h \
+${MODELSRCDIR}/skorpio.scad_params.h \
+${MODELSRCDIR}/spaceship.scad_params.h \
+${MODELSRCDIR}/troopship.scad_params.h
+
+
 MANSRCDIR=.
 MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz
 MANDIR=${DESTDIR}/${PREFIX}/share/man/man6
@@ -417,7 +438,7 @@ GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o
 GGLIBS=-lm ${LRTLIB} -lpng
 GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} && $(ECHO) '  LINK' $@
 
-all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS}
+all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS} ${SCAD_PARAMS_FILES}
 
 build:	all
 
