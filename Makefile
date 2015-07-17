@@ -245,7 +245,8 @@ ${MODELSRCDIR}/spaceship.scad_params.h \
 ${MODELSRCDIR}/troopship.scad_params.h
 
 DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
-${MODELSRCDIR}/starbase5.docking_ports.h
+${MODELSRCDIR}/starbase5.docking_ports.h \
+${MODELSRCDIR}/starbase.docking_ports.h
 
 MANSRCDIR=.
 MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz

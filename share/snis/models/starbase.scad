@@ -71,3 +71,11 @@ union() {
 	spokes();
 }
 
+use <imposter_docking_port.scad>;
+docking_ports = 1;
+if (docking_ports) {
+	docking_port3(32, 0, -5, 0, 1, 0, -90, 2);
+	docking_port3(-16, -27, -5, 0, 1, 0, -90, 2);
+	docking_port3(-16, 27, -5, 0, 1, 0, -90, 2);
+}
+

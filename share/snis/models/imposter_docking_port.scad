@@ -34,3 +34,13 @@ module docking_port2(x, y, z, rx, ry, rz, angle, scale) {
 	}
 }
 
+module docking_port3(x, y, z, rx, ry, rz, angle, scale) {
+	translate([x,y,z]) {
+		scale(v = [scale, scale, scale]) {
+			rotate(v = [rx, ry, rz], a = angle) {
+				cylinder(h = sqrt(2) * 1, r1 = 1, r2 = 0, center = true, $fn = 3);
+			}
+		}
+	}
+}
+

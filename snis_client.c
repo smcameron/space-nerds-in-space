@@ -318,7 +318,7 @@ struct mesh *cargo_container_mesh;
 struct mesh *nebula_mesh;
 struct mesh *sun_mesh;
 struct mesh *thrust_animation_mesh;
-#define NDOCKING_PORT_STYLES 2
+#define NDOCKING_PORT_STYLES 3
 struct mesh *docking_port_mesh[NDOCKING_PORT_STYLES];
 static struct mesh *warp_tunnel_mesh;
 static struct entity *warp_tunnel = NULL;
@@ -13139,6 +13139,7 @@ static void init_meshes()
 	cargo_container_mesh = snis_read_model(d, "cargocontainer/cargocontainer.obj");
 	docking_port_mesh[0] = snis_read_model(d, "docking_port.stl");
 	docking_port_mesh[1] = snis_read_model(d, "docking_port2.stl");
+	docking_port_mesh[2] = snis_read_model(d, "tetrahedron.stl");
 	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
 	sun_mesh = mesh_fabricate_billboard(0, 0, 30000, 30000);
 	thrust_animation_mesh = init_thrust_mesh(10, 7, 3, 1);
