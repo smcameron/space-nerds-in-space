@@ -68,8 +68,10 @@ scale(v = [2.0, 2.0, 2.0]) {
 }
 
 use <imposter_docking_port.scad>;
-docking_ports = 0;
+docking_ports = false;
 if (docking_ports) {
 	docking_port(90, -37, 0, 0, 0, 1, 90, 0.3);
+	docking_port(-13, 97, 0, 0, 0, 1, 210, 0.3);
+	docking_port(-77, -60, 0, 0, 0, 1, -30, 0.3);
 }
 
