@@ -46,3 +46,14 @@ union()
 	translate(v = [0, 0, 45])
 		sphere(r = 26, $fn=20);
 }
+
+
+use <imposter_docking_port.scad>;
+docking_ports = false;
+if (docking_ports) {
+	docking_port(-75, 0, 0, 0, 0, 1, 0, 0.3);
+	docking_port(75, 0, 0, 0, 0, 1, 180, 0.3);
+	docking_port(0, 75, 0, 0, 0, 1, -90, 0.3);
+	docking_port(0, -75, 0, 0, 0, 1, 90, 0.3);
+}
+

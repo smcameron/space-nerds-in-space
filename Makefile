@@ -246,6 +246,7 @@ ${MODELSRCDIR}/troopship.scad_params.h
 
 DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
 ${MODELSRCDIR}/starbase3.docking_ports.h \
+${MODELSRCDIR}/starbase4.docking_ports.h \
 ${MODELSRCDIR}/starbase5.docking_ports.h \
 ${MODELSRCDIR}/starbase.docking_ports.h
 
