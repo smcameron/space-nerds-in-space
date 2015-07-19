@@ -5372,7 +5372,7 @@ static int add_docking_port(int parent_id, int portnumber)
 	/* Find the thing we're adding a docking port to */
 	p = lookup_by_id(parent_id);
 	if (p < 0) {
-		fprintf(stderr, "zzz failed to find parent id\n");
+		fprintf(stderr, "Failed to find docking port's parent id\n");
 		return -1;
 	}
 	parent = &go[p];
@@ -5382,7 +5382,7 @@ static int add_docking_port(int parent_id, int portnumber)
 	case OBJTYPE_STARBASE:
 		break;
 	default:
-		fprintf(stderr, "zzz parent->type is wrong\n");
+		fprintf(stderr, "docking port parent->type is wrong\n");
 		return -1;
 	}
 
@@ -5390,12 +5390,12 @@ static int add_docking_port(int parent_id, int portnumber)
 	model = parent_id % nstarbase_models;
 	dp = docking_port_info[model];
 	if (!dp) {
-		fprintf(stderr, "zzz no docking port info for this model\n");
+		fprintf(stderr, "no docking port info for this model: %d\n", model);
 		return -1;
 	}
 
 	if (portnumber >= dp->nports) { /* validate the docking port number */
-		fprintf(stderr, "zzz bad port number %d >= %d\n",
+		fprintf(stderr, "bad docking port number %d >= %d\n",
 			portnumber, dp->nports);
 		return -1;
 	}
@@ -5409,7 +5409,7 @@ static int add_docking_port(int parent_id, int portnumber)
 	i = add_generic_object(pos.v.x, pos.v.y, pos.v.z, parent->vx, parent->vy, parent->vz,
 			parent->heading, OBJTYPE_DOCKING_PORT);
 	if (i < 0) {
-		fprintf(stderr, "zzz failed to add docking port\n");
+		fprintf(stderr, "Failed to add docking port\n");
 		return i;
 	}
 	go[i].move = docking_port_move;
@@ -5456,11 +5456,11 @@ static int add_starbase(double x, double y, double z,
 		for (j = 0; j < docking_port_info[model]->nports; j++) {
 			int dpi = add_docking_port(go[i].id, j);
 			if (dpi >= 0) {
-				fprintf(stderr, "zzz set go[%d].docking_port[%d] to %u\n",
-					i, j, go[dpi].id);
 				go[i].tsd.starbase.docking_port[j] = go[dpi].id;
 				if (go[dpi].type != OBJTYPE_DOCKING_PORT) {
-					fprintf(stderr, "zzz port is wrongzzz\n");
+					fprintf(stderr,
+						"docking port is wrong type model=%d, port = %d\n",
+						model, j);
 				}
 			}
 		}
