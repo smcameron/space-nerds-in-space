@@ -15,4 +15,4 @@ starbase2/starbase2.obj ../starbase2.docking_ports.h
 starbase3.stl -
 starbase4.stl -
 starbase5.stl -
-starbase6.stl !
+starbase6.stl -

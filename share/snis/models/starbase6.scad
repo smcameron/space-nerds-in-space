@@ -143,3 +143,12 @@ scale(v = [3.0, 3.0, 3.0]) {
 	}
 }
 
+use <imposter_docking_port.scad>;
+docking_ports = false;
+if (docking_ports) {
+	docking_port(-62, 0, -21, 0, 0, 1, 0, 0.2);
+	docking_port(62, 0, -21, 0, 0, 1, 180, 0.2);
+	docking_port(0, 62, -21, 0, 0, 1, -90, 0.2);
+	docking_port(0, -62, -21, 0, 0, 1, 90, 0.2);
+}
+
