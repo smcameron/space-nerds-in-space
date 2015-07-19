@@ -1,5 +1,5 @@
 
-$fn = 8;
+$fn = 16;
 
 module end() {
 	scale(v = [4, 4, 4])
@@ -36,4 +36,30 @@ rotate(a = 180, v = [0, 0, 1])
 
 scale(v = [0.1, 0.1, 1])
 	sphere(r = 90);
-cube(size = [5, 80, 5], center = true);
+cube(size = [5, 180, 5], center = true);
+
+module pod()
+{
+	cylinder(h = 60, r1 = 10, r2 = 10, center = true);
+	translate(v = [0, 0, 30])
+		sphere(r = 10);
+	translate(v = [0, 0, -30])
+		sphere(r = 10);
+}
+
+translate(v = [0, 90, 0])
+	rotate(v = [0, 1, 0], a = 90)
+		pod();
+
+translate(v = [0, -90, 0])
+	rotate(v = [0, 1, 0], a = 90)
+		pod();
+
+
+use <imposter_docking_port.scad>;
+docking_ports = true;
+if (docking_ports) {
+	docking_port2( 50,  90, 0, 0, 1, 0,  180, 0.3);
+	docking_port2(-50, -90, 0, 0, 1, 0,  0, 0.3);
+}
+
