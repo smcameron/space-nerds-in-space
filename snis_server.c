@@ -4305,6 +4305,8 @@ static void docking_port_move(struct snis_entity *o)
 	int i;
 	struct snis_entity *docker;
 	union vec3 offset = { { -25, 0, 0 } };
+	union quat new_orientation;
+	double ox, oy, oz, dx, dy, dz;
 
 	if (o->tsd.docking_port.docked_guy == (uint32_t) -1)
 		return;
@@ -4315,8 +4317,35 @@ static void docking_port_move(struct snis_entity *o)
 	docker = &go[i];
 	if (!docker->tsd.ship.docking_magnets)
 		o->tsd.docking_port.docked_guy = (uint32_t) -1;
-	docker->orientation = o->orientation;
-	set_object_location(docker, o->x + offset.v.x, o->y + offset.v.y, o->z + offset.v.z);
+	quat_slerp(&new_orientation, &docker->orientation, &o->orientation, 0.1);
+	docker->orientation = new_orientation;
+	ox = docker->x;
+	oy = docker->y;
+	oz = docker->z;
+
+	dx = o->x + offset.v.x - docker->x;
+	dy = o->y + offset.v.y - docker->y;
+	dz = o->z + offset.v.z - docker->z;
+
+	/* damp motion a bit instead of just snapping. */
+	dx *= 0.2;
+	dy *= 0.2;
+	dz *= 0.2;
+
+	set_object_location(docker, docker->x + dx, docker->y + dy, docker->z + dz);
+
+	/* set velocity in accord with the movement we just did */
+	if (docker->tsd.ship.docking_magnets) {
+		docker->vx = docker->x - ox;
+		docker->vy = docker->y - oy;
+		docker->vz = docker->z - oz;
+	} else {
+		/* if undocking, don't damp motion */
+		docker->vx = (docker->x - ox) * 5.0;
+		docker->vy = (docker->y - oy) * 5.0;
+		docker->vz = (docker->z - oz) * 5.0;
+	}
+
 	docker->timestamp = universe_timestamp;
 }
 
