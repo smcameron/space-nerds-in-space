@@ -13,6 +13,7 @@ LRTLIB=
 endif
 
 INSTALL=install
+AWK=awk
 
 DESTDIR=.
 PREFIX?=.
@@ -435,6 +436,8 @@ LIMCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${LIMCLIENTOBJS} 
 SDLCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
 SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} && $(ECHO) '  LINK' $@
 OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
+EXTRACTSCADPARAMS=$(AWK) -f extract_scad_params.awk $< > $@ && $(ECHO) '  EXTRACT THRUST ATTACHMENTS' $@
+EXTRACTDOCKINGPORTS=$(AWK) -f extract_docking_ports.awk $< > $@ && $(ECHO) '  EXTRACT DOCKING PORTS' $@
 
 ELOBJS=mtwist.o mathutils.o quat.o open-simplex-noise.o
 ELLIBS=-lm ${LRTLIB} -lpng
@@ -467,10 +470,10 @@ shader.o : shader.c Makefile
 	$(Q)$(OPENSCAD)
 
 %.scad_params.h: %.scad
-	awk -f extract_scad_params.awk $< > $@
+	$(Q)$(EXTRACTSCADPARAMS)
 
 %.docking_ports.h: %.scad
-	awk -f extract_docking_ports.awk $< > $@
+	$(Q)$(EXTRACTDOCKINGPORTS)
 
 thrust_attachment.o:	thrust_attachment.c thrust_attachment.h Makefile
 	$(Q)$(COMPILE)
