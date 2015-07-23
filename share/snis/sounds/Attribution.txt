@@ -2,6 +2,10 @@ atmospheric-friction.ogg:
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/license/by-sa/3.0/
 COPYRIGHT=2015 by Stephen M. Cameron
 
+docking-sound.ogg:
+COPYRIGHT=2015 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
 big_explosion.ogg: 
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
 COPYRIGHT=2008 by Stephen M. Cameron

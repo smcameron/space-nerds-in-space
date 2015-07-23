@@ -12596,6 +12596,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(ROBOT_REMOVE_COMPONENT, d, "robot-remove-component.ogg");
 	read_ogg_clip(WARP_DRIVE_FUMBLE, d, "warp-drive-fumble.ogg");
 	read_ogg_clip(ATMOSPHERIC_FRICTION, d, "atmospheric-friction.ogg");
+	read_ogg_clip(DOCKING_SOUND, d, "docking-sound.ogg");
 	printf("Done.\n");
 }
 

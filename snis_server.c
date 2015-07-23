@@ -3824,6 +3824,7 @@ void do_docking_action(struct snis_entity *ship, struct snis_entity *starbase,
 	init_player(ship, 0, &charges);
 	send_ship_damage_packet(ship);
 	ship->timestamp = universe_timestamp;
+	snis_queue_add_sound(DOCKING_SOUND, ROLE_ALL, ship->id);
 	send_comms_packet(npcname, channel, msg);
 	snprintf(msg, sizeof(msg), "%s, YOUR ACCOUNT HAS BEEN BILLED $%5.2f\n",
 		b->shipname, charges);
