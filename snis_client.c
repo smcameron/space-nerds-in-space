@@ -11530,11 +11530,13 @@ static char *help_text[] = {
 	"  * USE THROTTLE SLIDER TO SET THROTTLE\n"
 	"  * CTRL-I INVERTS VERTICAL KEYBOARD CONTROLS\n"
 	"  * TO DOCK:  HAVE COMMS HAIL STARBASE AND\n"
-	"    REQUEST PERMISSION TO DOCK.  YOU MUST BE\n"
-	"    NEARBY WITH SHIELDS LOWERED. WITH PERMISSION\n"
-	"    GRANTED, ENGAGE DOCKING MAGNETS AND APPROACH\n"
-	"    DOCKING PORTS.  TO UNDOCK, DISENGAGE DOCKING\n"
-	"    MAGNETS."
+	"        REQUEST PERMISSION TO DOCK.  YOU MUST BE\n"
+	"        NEARBY WITH SHIELDS LOWERED. WITH PERMISSION\n"
+	"        GRANTED, ENGAGE DOCKING MAGNETS AND APPROACH\n"
+	"        DOCKING PORTS.  PERMISSION WINDOW IS 3 MINUTES.\n"
+	"  * TO UNDOCK, DISENGAGE DOCKING MAGNETS.\n"
+	"        DOCKING PERMISSION IS REVOKED UPON UNDOCKING\n"
+	"        AND MUST BE REQUESTED AGAIN TO RE-DOCK.\n\n"
 	"\nPRESS ESC TO EXIT HELP\n",
 
 	/* Weapons help text */
@@ -11637,7 +11639,7 @@ static void draw_help_text(GtkWidget *w, char *text)
 			if (line >= 0 && line < 20) {
 				buffer[buflen] = '\0';
 				sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
-				y += 19;
+				y += 25;
 				strcpy(buffer, "");
 				buflen = 0;
 				line++;
