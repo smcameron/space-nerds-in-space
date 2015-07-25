@@ -4439,6 +4439,8 @@ static void docking_port_move(struct snis_entity *o)
 	union vec3 offset = { { -25, 0, 0 } };
 	union quat new_orientation;
 	double ox, oy, oz, dx, dy, dz;
+	const float motion_damping_factor = 0.1;
+	const float slerp_rate = 0.05;
 
 	if (o->tsd.docking_port.docked_guy == (uint32_t) -1)
 		return;
@@ -4451,7 +4453,7 @@ static void docking_port_move(struct snis_entity *o)
 		o->tsd.docking_port.docked_guy = (uint32_t) -1;
 		revoke_docking_permission(o, docker->id);
 	}
-	quat_slerp(&new_orientation, &docker->orientation, &o->orientation, 0.1);
+	quat_slerp(&new_orientation, &docker->orientation, &o->orientation, slerp_rate);
 	docker->orientation = new_orientation;
 	ox = docker->x;
 	oy = docker->y;
@@ -4462,9 +4464,9 @@ static void docking_port_move(struct snis_entity *o)
 	dz = o->z + offset.v.z - docker->z;
 
 	/* damp motion a bit instead of just snapping. */
-	dx *= 0.2;
-	dy *= 0.2;
-	dz *= 0.2;
+	dx *= motion_damping_factor;
+	dy *= motion_damping_factor;
+	dz *= motion_damping_factor;
 
 	set_object_location(docker, docker->x + dx, docker->y + dy, docker->z + dz);
 
@@ -4475,9 +4477,9 @@ static void docking_port_move(struct snis_entity *o)
 		docker->vz = docker->z - oz;
 	} else {
 		/* if undocking, don't damp motion */
-		docker->vx = (docker->x - ox) * 5.0;
-		docker->vy = (docker->y - oy) * 5.0;
-		docker->vz = (docker->z - oz) * 5.0;
+		docker->vx = (docker->x - ox) / motion_damping_factor;
+		docker->vy = (docker->y - oy) / motion_damping_factor;
+		docker->vz = (docker->z - oz) / motion_damping_factor;
 	}
 
 	docker->timestamp = universe_timestamp;
