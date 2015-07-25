@@ -230,6 +230,7 @@ static volatile int helpmode = 0;
 static volatile float weapons_camera_shake = 0.0f; 
 static volatile float main_camera_shake = 0.0f;
 static unsigned char camera_mode;
+static unsigned char nav_camera_mode;
 
 struct client_network_stats {
 	uint64_t bytes_sent;
@@ -3018,6 +3019,14 @@ static void do_mainscreen_camera_mode()
 		(unsigned char) (camera_mode + 1) % 3));
 }
 
+static void do_nav_camera_mode()
+{
+	if (displaymode != DISPLAYMODE_NAVIGATION)
+		return;
+	queue_to_server(packed_buffer_new("bb", OPCODE_CYCLE_NAV_POINT_OF_VIEW,
+		(unsigned char) (nav_camera_mode + 1) % 4));
+}
+
 static void robot_gripper_button_pressed(void *x);
 static void do_laser(void)
 {
@@ -3380,7 +3389,10 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		do_laser();
 		break;
 	case key_camera_mode:
-		do_mainscreen_camera_mode();
+		if (displaymode == DISPLAYMODE_MAINSCREEN)
+			do_mainscreen_camera_mode();
+		else if (displaymode == DISPLAYMODE_NAVIGATION)
+			do_nav_camera_mode();
 		break;
 	case keyf1:
 		helpmode = 1;
@@ -4124,7 +4136,7 @@ static int process_load_skybox(void)
 	return 0;
 }
 
-static int process_cycle_mainscreen_point_of_view(void)
+static int process_cycle_camera_point_of_view(unsigned char *camera_mode)
 {
 	int rc;
 	unsigned char buffer[10];
@@ -4134,7 +4146,7 @@ static int process_cycle_mainscreen_point_of_view(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	camera_mode = new_mode % 3;
+	*camera_mode = new_mode % 4;
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -5128,7 +5140,10 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			rc = process_load_skybox();
 			break;
 		case OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW:
-			rc = process_cycle_mainscreen_point_of_view();
+			rc = process_cycle_camera_point_of_view(&camera_mode);
+			break;
+		case OPCODE_CYCLE_NAV_POINT_OF_VIEW:
+			rc = process_cycle_camera_point_of_view(&nav_camera_mode);
 			break;
 		case OPCODE_ADD_WARP_EFFECT:
 			rc = process_add_warp_effect();
@@ -7998,8 +8013,31 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	union vec3 camera_up = {{0,1,0}};
 	quat_rot_vec_self(&camera_up, &cam_orientation);
 
+	static float nav_camera_pos_factor = 1.0;
+	float new_nav_camera_pos_factor;
+	switch (nav_camera_mode) {
+	case 0:
+		new_nav_camera_pos_factor = 1.0;
+		break;
+	case 1:
+		new_nav_camera_pos_factor = 0.5;
+		break;
+	case 2:
+		new_nav_camera_pos_factor = 0.25;
+		break;
+	case 3:
+		new_nav_camera_pos_factor = 0.125;
+		break;
+	default:
+		new_nav_camera_pos_factor = 1.0;
+		break;
+	}
+	float camera_pos_delta = 0.3 * (new_nav_camera_pos_factor - nav_camera_pos_factor);
+	nav_camera_pos_factor += camera_pos_delta;
+
 	/* rotate camera to be behind my ship */
-	union vec3 camera_pos = {{ -screen_radius * 1.85, screen_radius * 0.85, 0}};
+	union vec3 camera_pos = { { -screen_radius * 1.85 * nav_camera_pos_factor,
+				screen_radius * 0.85 * nav_camera_pos_factor, 0 } };
 	float camera_pos_len = vec3_magnitude(&camera_pos);
 	quat_rot_vec_self(&camera_pos, &cam_orientation);
 	vec3_add_self(&camera_pos, &ship_pos);

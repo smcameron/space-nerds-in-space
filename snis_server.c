@@ -9166,7 +9166,7 @@ static int process_robot_auto_manual(struct game_client *c)
 	return 0;
 }
 
-static int process_cycle_mainscreen_point_of_view(struct game_client *c)
+static int process_cycle_camera_point_of_view(struct game_client *c, uint8_t opcode, uint8_t roles, int camera_modes)
 {
 	unsigned char buffer[10];
 	unsigned char new_mode;
@@ -9175,10 +9175,9 @@ static int process_cycle_mainscreen_point_of_view(struct game_client *c)
 	rc = read_and_unpack_buffer(c, buffer, "b", &new_mode);
 	if (rc)
 		return rc;
-	new_mode = new_mode % 3; /* there are only 3 modes */
+	new_mode = new_mode % camera_modes;
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
-			packed_buffer_new("bb", OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW, new_mode),
-			ROLE_MAIN);
+			packed_buffer_new("bb", opcode, new_mode), roles);
 	return 0;
 }
 
@@ -10212,7 +10211,12 @@ static void process_instructions_from_client(struct game_client *c)
 				goto protocol_error;
 			break;
 		case OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW:
-			rc = process_cycle_mainscreen_point_of_view(c);
+			rc = process_cycle_camera_point_of_view(c, opcode, ROLE_MAIN, 3);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_CYCLE_NAV_POINT_OF_VIEW:
+			rc = process_cycle_camera_point_of_view(c, opcode, ROLE_NAVIGATION, 4);
 			if (rc)
 				goto protocol_error;
 			break;
