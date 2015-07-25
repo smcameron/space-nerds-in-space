@@ -4425,8 +4425,9 @@ static void nebula_move(struct snis_entity *o)
 
 static void spin_starbase(struct snis_entity *o)
 {
-	/* 15 degrees per second */
-	float a = ((universe_timestamp % 240) * 1.5) * M_PI / 180.0;
+	/* ticks per sec * 10ths degree per circle / 10ths_deg_per_sec = ticks per circle */
+	int ticks_per_circle = 10 * 3600 / o->tsd.starbase.spin_rate_10ths_deg_per_sec;
+	float a = M_PI * 2.0 * (universe_timestamp % ticks_per_circle) / (float) ticks_per_circle;
 	quat_init_axis(&o->orientation, 0.0, 0.0, 1.0, a);
 	o->timestamp = universe_timestamp;
 }
@@ -5626,6 +5627,7 @@ static int add_starbase(double x, double y, double z,
 	go[i].tsd.starbase.lifeform_count = snis_randn(100) + 100;
 	go[i].tsd.starbase.associated_planet_id = assoc_planet_id;
 	go[i].sdata.shield_strength = 255;
+	go[i].tsd.starbase.spin_rate_10ths_deg_per_sec = snis_randn(130) + 20;
 	go[i].tsd.starbase.bid_price = malloc(sizeof(*go[i].tsd.starbase.bid_price) * ncommodities);
 	fabricate_prices(&go[i]);
 	init_starbase_market(&go[i]);

@@ -405,6 +405,7 @@ struct starbase_data {
 	int32_t docking_port[MAX_DOCKING_PORTS];
 	int32_t expected_docker[MAX_DOCKING_PORTS];
 	int32_t expected_docker_timer[MAX_DOCKING_PORTS];
+	int32_t spin_rate_10ths_deg_per_sec;
 };
 
 struct nebula_data {
