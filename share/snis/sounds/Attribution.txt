@@ -56,3 +56,28 @@ Sound created by: Abel Madrona Antón
 comms-hail.ogg (public domain)
 Created by Stephen M. Cameron Jan 18, 2014 and donated to the public domain
 
+docking-system-engaged.ogg
+COPYRIGHT=2015 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+docking-system-disengaged.ogg
+COPYRIGHT=2015 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+permission-to-dock-granted.ogg
+COPYRIGHT=2015 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+permission-to-dock-denied.ogg
+COPYRIGHT=2015 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+permission-to-dock-has-expired.ogg
+COPYRIGHT=2015 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+welcome-to-starbase.ogg
+COPYRIGHT=2015 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+

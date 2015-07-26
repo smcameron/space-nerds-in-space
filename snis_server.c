@@ -236,6 +236,7 @@ struct bridge_data {
 	int warptimeleft;
 	int comms_channel;
 	struct npc_bot_state npcbot;
+	int last_docking_permission_denied_time;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -3760,6 +3761,14 @@ static void revoke_docking_permission(struct snis_entity *docking_port, uint32_t
 	}
 }
 
+static int rate_limit_docking_permission_denied(struct bridge_data *b)
+{
+	if (universe_timestamp - b->last_docking_permission_denied_time < 150)
+		return 0;
+	b->last_docking_permission_denied_time = universe_timestamp;
+	return 1;
+}
+
 static int starbase_grant_docker_permission(struct snis_entity *starbase,
 						uint32_t docker, struct bridge_data *b,
 						char *npcname, int channel)
@@ -3776,6 +3785,7 @@ static int starbase_grant_docker_permission(struct snis_entity *starbase,
 			/* transmit re-granting of docking permission */
 			snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK RE-GRANTED.", b->shipname);
 			send_comms_packet(npcname, channel, msg);
+			snis_queue_add_sound(PERMISSION_TO_DOCK_GRANTED, ROLE_NAVIGATION, b->shipid);
 			return 1;
 		}
 	}
@@ -3787,11 +3797,15 @@ static int starbase_grant_docker_permission(struct snis_entity *starbase,
 			/* transmit granting of docking permission */
 			snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK GRANTED.", b->shipname);
 			send_comms_packet(npcname, channel, msg);
+			snis_queue_add_sound(PERMISSION_TO_DOCK_GRANTED, ROLE_NAVIGATION, b->shipid);
 			return 1;
 		}
 	}
-	snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK DENIED.", b->shipname);
-	send_comms_packet(npcname, channel, msg);
+	if (rate_limit_docking_permission_denied(b)) {
+		snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK DENIED.", b->shipname);
+		send_comms_packet(npcname, channel, msg);
+		snis_queue_add_sound(PERMISSION_TO_DOCK_DENIED, ROLE_NAVIGATION, b->shipid);
+	}
 	return 0;
 }
 
@@ -3825,6 +3839,7 @@ void do_docking_action(struct snis_entity *ship, struct snis_entity *starbase,
 	send_ship_damage_packet(ship);
 	ship->timestamp = universe_timestamp;
 	snis_queue_add_sound(DOCKING_SOUND, ROLE_ALL, ship->id);
+	snis_queue_add_sound(WELCOME_TO_STARBASE, ROLE_NAVIGATION, ship->id);
 	send_comms_packet(npcname, channel, msg);
 	snprintf(msg, sizeof(msg), "%s, YOUR ACCOUNT HAS BEEN BILLED $%5.2f\n",
 		b->shipname, charges);
@@ -3860,18 +3875,24 @@ static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
 	/* Dock... */
 	npcname = sb->tsd.starbase.name;
 	if (!starbase_expecting_docker(sb, player->id)) {
-		snprintf(msg, sizeof(msg), "%s, YOU ARE NOT CLEARED TO DOCK\n",
-			bridge->shipname);
-		send_comms_packet(npcname, channel, msg);
+		if (rate_limit_docking_permission_denied(bridge)) {
+			snprintf(msg, sizeof(msg), "%s, YOU ARE NOT CLEARED TO DOCK\n",
+				bridge->shipname);
+			send_comms_packet(npcname, channel, msg);
+			snis_queue_add_sound(PERMISSION_TO_DOCK_DENIED, ROLE_NAVIGATION, bridge->shipid);
+		}
 		return;
 	}
 	if (docking_port->tsd.docking_port.docked_guy == -1) {
 		docking_port->tsd.docking_port.docked_guy = player->id;
 		do_docking_action(player, sb, bridge, npcname);
 	} else {
-		snprintf(msg, sizeof(msg), "%s, YOU ARE NOT CLEARED FOR DOCKING\n",
-			bridge->shipname);
-		send_comms_packet(npcname, channel, msg);
+		if (rate_limit_docking_permission_denied(bridge)) {
+			snprintf(msg, sizeof(msg), "%s, YOU ARE NOT CLEARED FOR DOCKING\n",
+				bridge->shipname);
+			send_comms_packet(npcname, channel, msg);
+			snis_queue_add_sound(PERMISSION_TO_DOCK_DENIED, ROLE_NAVIGATION, bridge->shipid);
+		}
 	}
 }
 
@@ -4630,6 +4651,7 @@ static void starbase_move(struct snis_entity *o)
 			o->tsd.starbase.expected_docker[j] = -1;
 			snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK EXPIRED.", b->shipname);
 			send_comms_packet(o->tsd.starbase.name, b->npcbot.channel, msg);
+			snis_queue_add_sound(PERMISSION_TO_DOCK_EXPIRED, ROLE_NAVIGATION, b->shipid);
 		}
 	}
 }
@@ -9347,6 +9369,7 @@ static int process_docking_magnets(struct game_client *c)
 	uint32_t id;
 	uint8_t __attribute__((unused)) v;
 	int i;
+	int sound;
 
 	int rc = read_and_unpack_buffer(c, buffer, "wb", &id, &v);
 	if (rc)
@@ -9361,7 +9384,9 @@ static int process_docking_magnets(struct game_client *c)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%t\n", __FILE__, __LINE__);
 	go[i].tsd.ship.docking_magnets = !go[i].tsd.ship.docking_magnets;
 	go[i].timestamp = universe_timestamp;
+	sound = go[i].tsd.ship.docking_magnets ? DOCKING_SYSTEM_ENGAGED : DOCKING_SYSTEM_DISENGAGED;
 	pthread_mutex_unlock(&universe_mutex);
+	snis_queue_add_sound(sound, ROLE_NAVIGATION, c->shipid);
 	return 0;
 }
 

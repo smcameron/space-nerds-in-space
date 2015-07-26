@@ -12643,6 +12643,12 @@ static void read_sound_clips(void)
 	read_ogg_clip(WARP_DRIVE_FUMBLE, d, "warp-drive-fumble.ogg");
 	read_ogg_clip(ATMOSPHERIC_FRICTION, d, "atmospheric-friction.ogg");
 	read_ogg_clip(DOCKING_SOUND, d, "docking-sound.ogg");
+	read_ogg_clip(DOCKING_SYSTEM_ENGAGED, d, "docking-system-engaged.ogg");
+	read_ogg_clip(DOCKING_SYSTEM_DISENGAGED, d, "docking-system-disengaged.ogg");
+	read_ogg_clip(PERMISSION_TO_DOCK_GRANTED, d, "permission-to-dock-granted.ogg");
+	read_ogg_clip(PERMISSION_TO_DOCK_DENIED, d, "permission-to-dock-denied.ogg");
+	read_ogg_clip(PERMISSION_TO_DOCK_EXPIRED, d, "permission-to-dock-expired.ogg");
+	read_ogg_clip(WELCOME_TO_STARBASE, d, "welcome-to-starbase.ogg");
 	printf("Done.\n");
 }
 
