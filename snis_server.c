@@ -99,6 +99,8 @@ static int lowest_faction = 0;
 static int nstarbase_models;
 static struct starbase_file_metadata *starbase_metadata;
 static struct docking_port_attachment_point **docking_port_info;
+static struct passenger_data passenger[MAX_PASSENGERS];
+static int npassengers;
 
 #define GATHER_OPCODE_STATS 0
 
@@ -126,6 +128,12 @@ static void npc_menu_item_request_dock(struct npc_menu_item *item,
 static void npc_menu_item_buy_cargo(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sell_cargo(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_board_passengers(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sign_off(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
@@ -170,8 +178,9 @@ static struct npc_menu_item arrange_transport_contracts_menu[] = {
 	{ "TRANSPORT CONTRACT MENU", 0, 0, 0 },
 	{ "BUY CARGO", 0, 0, npc_menu_item_buy_cargo },
 	{ "SELL CARGO", 0, 0, npc_menu_item_sell_cargo },
-	{ "BOARD PASSENGERS", 0, 0, npc_menu_item_not_implemented },
-	{ "DELIVER PASSENGERS", 0, 0, npc_menu_item_not_implemented },
+	{ "BOARD PASSENGERS", 0, 0, npc_menu_item_board_passengers },
+	{ "DISEMBARK PASSENGERS", 0, 0, npc_menu_item_disembark_passengers },
+	{ "EJECT PASSENGERS", 0, 0, npc_menu_item_eject_passengers },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
 
@@ -5031,6 +5040,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.shiptype = SHIP_CLASS_WOMBAT; 
 	o->tsd.ship.overheating_damage_done = 0;
 	o->tsd.ship.ncargo_bays = 8;
+	o->tsd.ship.passenger_berths = 2;
 	if (clear_cargo_bay) {
 		/* The clear_cargo_bay param is a stopgap until real docking code
 		 * is done.
@@ -6466,6 +6476,81 @@ static void add_spacemonsters(void)
 	}
 }
 
+static uint32_t nth_starbase(int n)
+{
+	int nstarbases = 0;
+	int i;
+
+	do {
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			if (go[i].type == OBJTYPE_STARBASE) {
+				nstarbases++;
+				if (nstarbases - 1 == n)
+					return go[i].id;
+			}
+		}
+		n = n % nstarbases;
+		nstarbases = 0;
+	} while (1);
+}
+
+static int compute_fare(uint32_t src, uint32_t dest)
+{
+	union vec3 travel;
+	int i;
+	struct snis_entity *s, *d;
+	const int default_fare = 350;
+	const int min_fare = 150;
+	int fare_noise = snis_randn(40);
+
+	i = lookup_by_id(src);
+	if (i < 0)
+		return default_fare + fare_noise;
+	s = &go[i];
+	i = lookup_by_id(dest);
+	if (i < 0)
+		return default_fare + fare_noise;
+	d = &go[i];
+	travel.v.x = d->x - s->x;
+	travel.v.y = d->y - s->y;
+	travel.v.z = d->z - s->z;
+	return (int) (fare_noise + min_fare + (vec3_magnitude(&travel) * 2170.0 / XKNOWN_DIM));
+}
+
+static void update_passenger(int i, int nstarbases)
+{
+	static struct mtwist_state *mt = NULL;
+	if (!mt)
+		mt = mtwist_init(mtwist_seed);
+	character_name(mt, passenger[i].name,  sizeof(passenger[i].name) - 1);
+	passenger[i].location = nth_starbase(snis_randn(nstarbases));
+	do {
+		passenger[i].destination = nth_starbase(snis_randn(nstarbases));
+	} while (passenger[i].destination == passenger[i].location);
+	passenger[i].fare = compute_fare(passenger[i].location, passenger[i].destination);
+}
+
+static int count_starbases(void)
+{
+	int i, nstarbases = 0;
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].type == OBJTYPE_STARBASE)
+			nstarbases++;
+	}
+	return nstarbases;
+}
+
+static void add_passengers(void)
+{
+	int i;
+	int nstarbases;
+
+	nstarbases = count_starbases();
+	for (i = 0; i < MAX_PASSENGERS; i++)
+		update_passenger(i, nstarbases);
+	npassengers = MAX_PASSENGERS;
+}
+
 static void make_universe(void)
 {
 	pthread_mutex_lock(&universe_mutex);
@@ -6479,6 +6564,7 @@ static void make_universe(void)
 	add_eships();
 	add_enforcers();
 	add_spacemonsters();
+	add_passengers();
 	pthread_mutex_unlock(&universe_mutex);
 }
 
@@ -7201,6 +7287,7 @@ static void meta_comms_help(char *name, struct game_client *c, char *txt)
 		"  * /eject cargo-bay-number - eject cargo",
 		"  * /hail ship-name - hail ship or starbase on current channel",
 		"  * /inventory - report inventory of ship's cargo hold",
+		"  * /passengers - report list of passengers",
 		"  * /about - information about the game",
 		"",
 		0,
@@ -7276,6 +7363,7 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 	int ch = bridgelist[c->bridge].comms_channel;
 	struct snis_entity *ship;
 	char msg[100];
+	int passenger_count = 0;
 
 	i = lookup_by_id(bridgelist[c->bridge].shipid);
 	if (i < 0) {
@@ -7286,6 +7374,22 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 	ship = &go[i];
 
 	/* FIXME: sending this on current channel -- should make it private to ship somehow */
+	send_comms_packet(name, ch, " PASSENGER LIST:");
+	for (i = 0; i < npassengers; i++) {
+		if (passenger[i].location == ship->id) {
+			int x = lookup_by_id(passenger[i].destination);
+			snprintf(msg, sizeof(msg), "%2d. FARE %4d DEST: %10s NAME: %30s\n",
+					passenger_count + 1, passenger[i].fare,
+					x < 0 ? "UNKNOWN" : go[x].tsd.starbase.name,
+					passenger[i].name);
+			send_comms_packet(name, ch, msg);
+			passenger_count++;
+		}
+	}
+	snprintf(msg, sizeof(msg), "  %d PASSENGERS ABOARD\n", passenger_count);
+	send_comms_packet(name, ch, msg);
+	if (strncasecmp(txt, "/passengers", 11) == 0)
+		return;
 	send_comms_packet(name, ch, " INVENTORY OF HOLD:");
 	send_comms_packet(name, ch, " --------------------------------------");
 	if (ship->tsd.ship.ncargo_bays == 0) {
@@ -7301,7 +7405,7 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 
 		if (ccc->item == -1) {
 			snprintf(msg, sizeof(msg), "    CARGO BAY %d: ** EMPTY **", i);
-			send_comms_packet("", ch, msg);
+			send_comms_packet(name, ch, msg);
 		} else {
 			char due_date[20];
 			itemname = commodity[ccc->item].name;
@@ -7315,7 +7419,7 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 				"    CARGO BAY %d: %4.0f %s %s - PAID $%.2f ORIG %10s DEST %10s DUE %s",
 					i, qty, unit, itemname, ship->tsd.ship.cargo[i].paid,
 					origin, dest, due_date);
-			send_comms_packet("", ch, msg);
+			send_comms_packet(name, ch, msg);
 		}
 	}
 	send_comms_packet(name, ch, " --------------------------------------");
@@ -7434,7 +7538,7 @@ void npc_menu_item_sign_off(struct npc_menu_item *item,
 	send_comms_packet(npcname, botstate->channel,
 				"  IT HAS BEEN A PLEASURE SERVING YOU");
 	send_comms_packet(npcname, botstate->channel,
-				"  ZX81 TERMINATING TRANSMISSION");
+				"  ZX81 SERVICE ROBOT TERMINATING TRANSMISSION");
 	botstate->channel = (uint32_t) -1;
 	botstate->object_id = (uint32_t) -1;
 	botstate->current_menu = NULL;
@@ -7571,6 +7675,25 @@ void npc_menu_item_buysell_cargo(struct npc_menu_item *item,
 	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
 }
 
+static int ship_is_docked(uint32_t ship_id, struct snis_entity *starbase)
+{
+	int i;
+	int model = starbase->id % nstarbase_models;
+
+	for (i = 0; i < docking_port_info[model]->nports; i++) {
+		struct snis_entity *docking_port;
+		int dpi = lookup_by_id(starbase->tsd.starbase.docking_port[i]);
+		if (dpi < 0)
+			continue;
+		docking_port = &go[dpi];
+		if (docking_port->tsd.docking_port.docked_guy == ship_id) {
+			return 1;
+			break;
+		}
+	}
+	return 0;
+}
+
 void npc_menu_item_buy_cargo(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
@@ -7581,6 +7704,196 @@ void npc_menu_item_sell_cargo(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	npc_menu_item_buysell_cargo(item, npcname, botstate, 0);
+}
+
+static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int bridge,
+						char *name, char *command)
+{
+	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
+	uint32_t ch = botstate->channel;
+	char msg[100];
+	char *npcname = sb->tsd.starbase.name;
+	int player_is_docked, count, i, rc, selection;
+	int already_aboard = 0;
+	struct snis_entity *ship;
+
+	i = lookup_by_id(bridgelist[bridge].shipid);
+	if (i < 0) {
+		fprintf(stderr, "BUG: can't find ship id at %s:%d\n", __FILE__, __LINE__);
+		return;
+	}
+	ship = &go[i];
+
+	/* Count passengers already aboard */
+	for (i = 0; i < npassengers; i++)
+		if (passenger[i].location == ship->id)
+			already_aboard++;
+
+	if (strcmp(command, "") == 0 || strcmp(command, "?") == 0) {
+		snprintf(msg, sizeof(msg), " TRAVELERS SEEKING PASSAGE\n");
+		send_comms_packet(npcname, ch, msg);
+
+		count = 0;
+		for (i = 0; i < npassengers; i++) {
+			if (passenger[i].location == sb->id) {
+				int d = lookup_by_id(passenger[i].destination);
+				char *dest = d < 0 ? "unknown" : go[d].tsd.starbase.name;
+				count++;
+				snprintf(msg, sizeof(msg), "  %2d: DEST: %12s  FARE: $%5d  NAME: %s\n",
+					count, dest, passenger[i].fare, passenger[i].name);
+				send_comms_packet(npcname, ch, msg);
+			}
+		}
+		if (count == 0)
+			send_comms_packet(npcname, ch, " NO PASSENGERS AVAILABLE");
+		send_comms_packet(npcname, ch, "\n");
+		send_comms_packet(npcname, ch, " 0. PREVIOUS MENU\n");
+		return;
+	}
+
+	/* Check if player is currently docked here */
+	player_is_docked = ship_is_docked(bridgelist[bridge].shipid, sb);
+	rc = sscanf(command, "%d", &selection);
+	if (rc != 1) {
+		send_comms_packet(npcname, ch, " HUH? TRY AGAIN\n");
+		return;
+	}
+	if (selection == 0) {
+		botstate->special_bot = NULL;
+		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+		return;
+	}
+	if (selection < 1) {
+		send_comms_packet(npcname, ch, " BAD SELECTION, TRY AGAIN\n");
+		return;
+	}
+
+	if (!player_is_docked) {
+		send_comms_packet(npcname, ch, " YOU MUST BE DOCKED TO BOARD PASSENGERS\n");
+		return;
+	}
+	if (already_aboard >= ship->tsd.ship.passenger_berths) {
+		send_comms_packet(npcname, ch, " ALL OF YOUR PASSENGER BERTHS ARE BOOKED\n");
+		return;
+	}
+	count = 0;
+	if (already_aboard < ship->tsd.ship.passenger_berths) {
+		for (i = 0; i < npassengers; i++) {
+			if (passenger[i].location == sb->id) {
+				count++;
+				if (count == selection) {
+					sprintf(msg, " BOARDING PASSENGER %s\n", passenger[i].name);
+					send_comms_packet(npcname, ch, msg);
+					passenger[i].location = bridgelist[bridge].shipid;
+					break;
+				}
+			}
+		}
+	}
+	if (count != selection) {
+		send_comms_packet(npcname, ch, " UNKNOWN SELECTION, TRY AGAIN\n");
+		return;
+	}
+}
+
+void npc_menu_item_eject_passengers(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
+{
+	struct snis_entity *sb, *ship;
+	int ch = botstate->channel;
+	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
+	char msg[100];
+	int nstarbases = count_starbases();
+	int i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		return;
+	}
+	sb = &go[i];
+	i = lookup_by_id(b->shipid);
+	if (i < 0) {
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		return;
+	}
+	ship = &go[i];
+
+	if (!ship_is_docked(b->shipid, sb)) {
+		send_comms_packet(npcname, ch, " YOU MUST BE DOCKED TO DISEMBARK PASSENGERS\n");
+		return;
+	}
+	for (i = 0; i < npassengers; i++) {
+		if (passenger[i].location == b->shipid && passenger[i].destination == sb->id) {
+			snprintf(msg, sizeof(msg), "  PASSENGER %s DISEMBARKED\n",
+					passenger[i].name);
+			send_comms_packet(npcname, ch, msg);
+			ship->tsd.ship.wallet += passenger[i].fare;
+			/* passenger disembarks, ceases to be a passenger, replace with new one */
+			update_passenger(i, nstarbases);
+			continue;
+		}
+		if (passenger[i].location == b->shipid) {
+			snprintf(msg, sizeof(msg), "  PASSENGER %s EJECTED\n",
+					passenger[i].name);
+			send_comms_packet(npcname, ch, msg);
+			/* Player is fined for ejecting passengers */
+			ship->tsd.ship.wallet -= passenger[i].fare;
+			/* passenger ejected, ceases to be a passenger, replace with new one */
+			update_passenger(i, nstarbases);
+		}
+	}
+}
+
+void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
+{
+	struct snis_entity *sb, *ship;
+	int ch = botstate->channel;
+	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
+	char msg[100];
+	int nstarbases = count_starbases();
+	int i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		return;
+	}
+	sb = &go[i];
+	i = lookup_by_id(b->shipid);
+	if (i < 0) {
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		return;
+	}
+	ship = &go[i];
+
+	if (!ship_is_docked(b->shipid, sb)) {
+		send_comms_packet(npcname, ch, " YOU MUST BE DOCKED TO DISEMBARK PASSENGERS\n");
+		return;
+	}
+	for (i = 0; i < npassengers; i++) {
+		if (passenger[i].location == b->shipid && passenger[i].destination == sb->id) {
+			snprintf(msg, sizeof(msg), "  PASSENGER %s DISEMBARKED\n",
+					passenger[i].name);
+			send_comms_packet(npcname, ch, msg);
+			ship->tsd.ship.wallet += passenger[i].fare;
+			/* passenger disembarks, ceases to be a passenger, replace with new one */
+			update_passenger(i, nstarbases);
+		}
+	}
+}
+
+void npc_menu_item_board_passengers(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
+{
+	struct snis_entity *sb;
+	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
+	int bridge = b - bridgelist;
+	int i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		return;
+	}
+	sb = &go[i];
+	botstate->special_bot = starbase_passenger_boarding_npc_bot;
+	botstate->special_bot(sb, bridge, (char *) b->shipname, "");
 }
 
 void npc_menu_item_travel_advisory(struct npc_menu_item *item,
@@ -8137,6 +8450,8 @@ static const struct meta_comms_data {
 	{ "/channel", meta_comms_channel },
 	{ "/hail", meta_comms_hail },
 	{ "/inventory", meta_comms_inventory },
+	{ "/manifest", meta_comms_inventory },
+	{ "/passengers", meta_comms_inventory },
 	{ "/eject", meta_comms_eject },
 	{ "/about", meta_comms_about },
 	{ "/help", meta_comms_help },

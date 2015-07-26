@@ -369,6 +369,7 @@ struct ship_data {
 	uint32_t home_planet;
 	int flames_timer;
 	uint8_t docking_magnets;
+	uint8_t passenger_berths;
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200
@@ -675,5 +676,12 @@ struct damcon_data {
 
 #define FICTIONAL_CLOCK_START (4273.0)
 #define FICTIONAL_DATE(timestamp) (FICTIONAL_CLOCK_START + (timestamp) / 1000.0)
+
+#define MAX_PASSENGERS (NBASES * 5)
+struct passenger_data {
+	char name[50];
+	uint32_t location, destination;
+	uint32_t fare;
+};
 
 #endif
