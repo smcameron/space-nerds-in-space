@@ -1170,7 +1170,7 @@ int random_initial(struct mtwist_state *mt)
 }
 
 void character_name(struct mtwist_state *mt, char *buffer,
-			int buflen, int line_len)
+			int buflen)
 {
 	switch (mtwist_int(mt, 8)) {
 	case 0:
@@ -1236,7 +1236,7 @@ int main(int argc, char *argv[])
 		/* infinite_taunt(buffer, sizeof(buffer) - 1); */
 		/* planet_description(mt, buffer, sizeof(buffer) - 1, 60); */
 		/* cop_attack_warning(mt, buffer, sizeof(buffer) - 1, 50); */
-		character_name(mt, buffer, sizeof(buffer) - 1, 50);
+		character_name(mt, buffer, sizeof(buffer) - 1);
 		printf("%s\n", buffer);
 	}
 	free(mt);
