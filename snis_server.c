@@ -5437,9 +5437,16 @@ static int add_cargo_container(double x, double y, double z, double vx, double v
 	return i;
 }
 
+static void normalize_percentage(uint8_t *v, int total)
+{
+	float fraction = (float) *v / (float) total;
+	*v = (uint8_t) (fraction * 255.0);
+}
+
 static int add_asteroid(double x, double y, double z, double vx, double vz, double heading)
 {
-	int i;
+	int i, n, v;
+	int total;
 
 	i = add_generic_object(x, y, z, vx, 0.0, vz, heading, OBJTYPE_ASTEROID);
 	if (i < 0)
@@ -5452,6 +5459,23 @@ static int add_asteroid(double x, double y, double z, double vx, double vz, doub
 	go[i].vx = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
 	go[i].vz = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
 	go[i].alive = snis_randn(10) + 5;
+
+	/* FIXME: make these distributions better */
+	total = 0;
+	n = 256; v = snis_randn(200) + 10; total += v;
+	go[i].tsd.asteroid.carbon = v;
+	n = n - v; v = snis_randn(n); total += v;
+	go[i].tsd.asteroid.silicates = v;
+	n = n - v; v = snis_randn(n); total += v;
+	go[i].tsd.asteroid.nickeliron = v;
+	n = n - v; v = snis_randn(n); total += v;
+	go[i].tsd.asteroid.preciousmetals = v;
+
+	normalize_percentage(&go[i].tsd.asteroid.carbon, total);
+	normalize_percentage(&go[i].tsd.asteroid.silicates, total);
+	normalize_percentage(&go[i].tsd.asteroid.nickeliron, total);
+	normalize_percentage(&go[i].tsd.asteroid.preciousmetals, total);
+
 	return i;
 }
 
@@ -11326,13 +11350,17 @@ static void send_update_damcon_part_packet(struct game_client *c,
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("bwwSSSSSS", OPCODE_UPDATE_ASTEROID, o->id, o->timestamp,
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSSSSbbbb", OPCODE_UPDATE_ASTEROID, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					o->vx, (int32_t) UNIVERSE_DIM,
 					o->vy, (int32_t) UNIVERSE_DIM,
-					o->vz, (int32_t) UNIVERSE_DIM));
+					o->vz, (int32_t) UNIVERSE_DIM,
+					o->tsd.asteroid.carbon,
+					o->tsd.asteroid.nickeliron,
+					o->tsd.asteroid.silicates,
+					o->tsd.asteroid.preciousmetals));
 }
 
 static void send_update_cargo_container_packet(struct game_client *c,

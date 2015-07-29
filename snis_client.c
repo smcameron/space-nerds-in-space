@@ -1430,7 +1430,8 @@ static int update_docking_port(uint32_t id, uint32_t timestamp, double scale,
 }
 
 static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, double z,
-	double vx, double vy, double vz)
+	double vx, double vy, double vz,
+	uint8_t carbon, uint8_t nickeliron, uint8_t silicates, uint8_t preciousmetals)
 {
 	int i, k, m, s;
 	struct entity *e;
@@ -1459,6 +1460,10 @@ static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, 
 		o->tsd.asteroid.rotational_velocity = random_spin[id % NRANDOM_SPINS];
 	} else
 		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, NULL, 1);
+	o->tsd.asteroid.carbon = carbon;
+	o->tsd.asteroid.nickeliron = nickeliron;
+	o->tsd.asteroid.silicates = silicates;
+	o->tsd.asteroid.preciousmetals = preciousmetals;
 	return 0;
 }
 
@@ -4747,19 +4752,22 @@ static int process_update_asteroid_packet(void)
 	uint32_t id, timestamp;
 	double dx, dy, dz, dvx, dvy, dvz;
 	int rc;
+	uint8_t carbon, nickeliron, silicates, preciousmetals;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSSS", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSSSbbbb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
 			&dvx, (int32_t) UNIVERSE_DIM,
 			&dvy, (int32_t) UNIVERSE_DIM,
-			&dvz, (int32_t) UNIVERSE_DIM);
+			&dvz, (int32_t) UNIVERSE_DIM,
+			&carbon, &nickeliron, &silicates, &preciousmetals);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_asteroid(id, timestamp, dx, dy, dz, dvx, dvy, dvz);
+	rc = update_asteroid(id, timestamp, dx, dy, dz, dvx, dvy, dvz,
+				carbon, nickeliron, silicates, preciousmetals);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -9822,6 +9830,21 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 				j++;
 			}
 		}
+	}
+	if (curr_science_guy->type == OBJTYPE_ASTEROID) {
+		struct asteroid_data *a = &curr_science_guy->tsd.asteroid;
+		sprintf(buf, "%3.0f%% CARBONACEOUS", 100.0 * a->carbon / 255.0);
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		y += yinc;
+		sprintf(buf, "%3.0f%% SILICATES", 100.0 * a->silicates / 255.0);
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		y += yinc;
+		sprintf(buf, "%3.0f%% NICKEL/IRON", 100.0 * a->nickeliron / 255.0);
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		y += yinc;
+		sprintf(buf, "%3.0f%% PRECIOUS METALS", 100.0 * a->preciousmetals / 255.0);
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		y += yinc;
 	}
 }
  
