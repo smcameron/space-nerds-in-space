@@ -88,7 +88,7 @@
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
 
-static uint32_t mtwist_seed = 35342;
+static uint32_t mtwist_seed = COMMON_MTWIST_SEED;
 
 static int lua_enscript_enabled = 0;
 

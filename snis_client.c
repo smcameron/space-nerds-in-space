@@ -146,7 +146,7 @@ static int display_frame_stats = 0;
 static int quickstartmode = 0; /* allows auto connecting to first (only) lobby entry */
 static float turret_recoil_amount = 0.0f;
 
-static int mtwist_seed = 59377;
+static int mtwist_seed = COMMON_MTWIST_SEED;
 
 typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nsparks, int time);
 

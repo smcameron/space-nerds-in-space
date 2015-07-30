@@ -27,7 +27,7 @@
 #include "space-part.h"
 
 #define SNIS_PROTOCOL_VERSION "SNIS001"
-
+#define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
 #define YKNOWN_DIM (XKNOWN_DIM * 0.2) /* i guess... */
