@@ -5214,6 +5214,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.overheating_damage_done = 0;
 	o->tsd.ship.ncargo_bays = 8;
 	o->tsd.ship.passenger_berths = 2;
+	o->tsd.ship.mining_bots = 1;
 	if (clear_cargo_bay) {
 		/* The clear_cargo_bay param is a stopgap until real docking code
 		 * is done.
@@ -5367,6 +5368,26 @@ static int add_ship(int faction, int auto_respawn)
 	if (faction >= 0 && faction < nfactions())
 		go[i].sdata.faction = faction;
 	return i;
+}
+
+static int add_mining_bot(struct snis_entity *parent_ship, uint32_t asteroid_id)
+{
+	int rc;
+
+	rc = add_ship(parent_ship->sdata.faction, 0);
+	/* TODO may want to make a special model just for the mining bot */
+	if (rc < 0)
+		return rc;
+	parent_ship->tsd.ship.mining_bots--; /* maybe we want miningbots to live in cargo hold? */
+	go[rc].tsd.ship.shiptype = SHIP_CLASS_ASTEROIDMINER;
+	push_mining_bot_mode(&go[rc], parent_ship->id, asteroid_id);
+
+	/* TODO make this better: */
+	go[rc].x = parent_ship->x + 30;
+	go[rc].y = parent_ship->y + 30;
+	go[rc].z = parent_ship->z + 30;
+
+	return rc;
 }
 
 static int add_specific_ship(const char *name, double x, double y, double z,
@@ -10348,6 +10369,42 @@ tractorfail:
 	return 0;
 }
 
+static int process_request_mining_bot(struct game_client *c)
+{
+	unsigned char buffer[10];
+	struct snis_entity *ship = &go[c->ship_index];
+	uint32_t oid;
+	int rc, i;
+
+	rc = read_and_unpack_buffer(c, buffer, "w", &oid);
+	if (rc)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	if (oid == (uint32_t) 0xffffffff) /* nothing selected */
+		goto miningbotfail;
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto miningbotfail;
+	if (ship->tsd.ship.mining_bots <= 0) /* no bots left */
+		goto miningbotfail;
+	if (go[oid].type != OBJTYPE_ASTEROID)
+		goto miningbotfail;
+
+	i = add_mining_bot(ship, oid);
+	if (i < 0)
+		goto miningbotfail;
+	/* TODO: tractor beam sound here. */
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+
+miningbotfail:
+	/* TODO: make special miningbot failure sound */
+	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+
 static int process_demon_fire_phaser(struct game_client *c)
 {
 	struct snis_entity *o;
@@ -10396,6 +10453,9 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_TRACTORBEAM:
 			process_request_tractor_beam(c);
+			break;
+		case OPCODE_REQUEST_MINING_BOT:
+			process_request_mining_bot(c);
 			break;
 		case OPCODE_DEMON_FIRE_TORPEDO:
 			process_demon_fire_torpedo(c);

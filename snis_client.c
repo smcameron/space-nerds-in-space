@@ -4490,6 +4490,7 @@ static struct science_ui {
 	struct button *sciplane_button;
 	struct button *tractor_button;
 	struct button *align_to_ship_button;
+	struct button *launch_mining_bot_button;
 } sci_ui;
 
 static void ui_hide_widget(void *widget);
@@ -9192,8 +9193,13 @@ static void sci_sciplane_pressed(void *x)
 static void sci_tractor_pressed(void *x)
 {
 	uint32_t id = curr_science_guy ? curr_science_guy->id : (uint32_t) 0xffffffff;
-
 	queue_to_server(packed_buffer_new("bw", OPCODE_REQUEST_TRACTORBEAM, id));
+}
+
+static void sci_mining_bot_pressed(void *x)
+{
+	uint32_t id = curr_science_guy ? curr_science_guy->id : (uint32_t) 0xffffffff;
+	queue_to_server(packed_buffer_new("bw", OPCODE_REQUEST_MINING_BOT, id));
 }
 
 static void init_science_ui(void)
@@ -9205,6 +9211,11 @@ static void init_science_ui(void)
 
 	const int spx = szx;
 	const int spy = 50 * SCREEN_HEIGHT / 600;
+
+	const int mbbx = 420 * SCREEN_WIDTH / 800;
+	const int mbby = 575 * SCREEN_HEIGHT / 600;
+	const int mbbw = 95 * SCREEN_WIDTH / 800;
+	const int mbbh = 20 * SCREEN_HEIGHT / 600;
 
 	const int trbx = 530 * SCREEN_WIDTH / 800;
 	const int trby = 575 * SCREEN_HEIGHT / 600;
@@ -9239,6 +9250,8 @@ static void init_science_ui(void)
 				0.0, 100.0, sample_sensors_power, NULL);
 	snis_slider_set_fuzz(sci_ui.scipower, 7);
 	snis_slider_set_label_font(sci_ui.scipower, NANO_FONT);
+	sci_ui.launch_mining_bot_button = snis_button_init(mbbx, mbby, mbbw, mbbh, "MINING BOT",
+			UI_COLOR(sci_button), NANO_FONT, sci_mining_bot_pressed, (void *) 0);
 	sci_ui.tractor_button = snis_button_init(trbx, trby, trbw, trbh, "TRACTOR",
 			UI_COLOR(sci_button), NANO_FONT, sci_tractor_pressed, (void *) 0);
 	sci_ui.sciplane_button = snis_button_init(scpx, scpy, scpw, scph, "SRS",
@@ -9252,6 +9265,7 @@ static void init_science_ui(void)
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
+	ui_add_button(sci_ui.launch_mining_bot_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.tractor_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE);
@@ -12880,6 +12894,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_SCIENCE_TRACTOR:
 		sci_tractor_pressed((void *) 0);
 		break;
+	case DEVIO_OPCODE_SCIENCE_LAUNCH_MINING_BOT:
+		sci_mining_bot_pressed((void *) 0);
+		break;
 	case DEVIO_OPCODE_SCIENCE_SRS:
 		sci_sciplane_pressed((void *) 0);
 		break;
@@ -13115,6 +13132,7 @@ static void init_meshes()
 		mesh_distort(asteroid_mesh[i], 0.05);
 		mesh_set_average_vertex_normals(asteroid_mesh[i]);
 		mesh_graph_dev_init(asteroid_mesh[i]);
+		printf("zzz radius %d = %f\n", i, mesh_compute_radius(asteroid_mesh[i]));
 	}
 
 	sphere_mesh = mesh_unit_icosphere(4);

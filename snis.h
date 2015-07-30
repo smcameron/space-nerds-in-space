@@ -387,6 +387,7 @@ struct ship_data {
 	int flames_timer;
 	uint8_t docking_magnets;
 	uint8_t passenger_berths;
+	uint8_t mining_bots;
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200
