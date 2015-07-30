@@ -320,7 +320,7 @@ GLEWCFLAGS:=$(shell pkg-config --cflags glew)
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o mtwist.o names.o infinite-taunt.o snis_damcon_systems.o \
-		string-utils.o c-is-the-locale.o starbase_metadata.o
+		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o docking_port.o
@@ -674,6 +674,9 @@ quat.o:	quat.c Makefile
 	$(Q)$(COMPILE)
 
 vec4.o:	vec4.c Makefile
+	$(Q)$(COMPILE)
+
+arbitrary_spin.o:	arbitrary_spin.c arbitrary_spin.h Makefile
 	$(Q)$(COMPILE)
 
 mtwist.o:	mtwist.c Makefile

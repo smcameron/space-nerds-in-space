@@ -67,6 +67,7 @@
 #include "infinite-taunt.h"
 #include "mathutils.h"
 #include "quat.h"
+#include "arbitrary_spin.h"
 #include "snis.h"
 #include "snis-culture.h"
 #include "snis_alloc.h"
@@ -394,27 +395,6 @@ struct my_vect_obj placeholder_part_spun[128];
 
 static struct snis_entity *curr_science_guy = NULL;
 static struct snis_entity *prev_science_guy = NULL;
-
-#define NRANDOM_ORIENTATIONS 20
-static union quat random_orientation[NRANDOM_ORIENTATIONS];
-#define NRANDOM_SPINS 20
-static union quat random_spin[NRANDOM_SPINS];
-static void initialize_random_orientations_and_spins(void)
-{
-	int i;
-	struct mtwist_state *mt;
-
-	mt = mtwist_init(mtwist_seed);
-	for (i = 0; i < NRANDOM_ORIENTATIONS; i++) {
-		float angle = mtwist_float(mt) * 2.0 * M_PI;
-		consistent_random_axis_quat(mt, &random_orientation[i], angle);
-	}
-	for (i = 0; i < NRANDOM_SPINS; i++) {
-		float angular_speed = ((float) mtwist_int(mt, 100) / 10.0 - 5.0) * M_PI / 180.0;
-		consistent_random_axis_quat(mt, &random_spin[i], angular_speed);
-	}
-	mtwist_free(mt);
-}
 
 void to_snis_heading_mark(const union quat *q, double *heading, double *mark)
 {
@@ -1776,15 +1756,7 @@ static void spin_wormhole(double timestamp, struct snis_entity *o)
 
 static void arbitrary_spin(double timestamp, struct snis_entity *o, union quat *rotational_velocity)
 {
-	/* reduce to axis and angle */
-	float x, y, z, a;
-	quat_to_axis(rotational_velocity, &x, &y, &z, &a);
-
-	/* current rotation is universe timestamp * rotation per timestamp
-	   rotational_velocity is frame_rate_hz and universe is 1/10 sec */
-	a = a * (float)frame_rate_hz / 10.0 * timestamp;
-
-	quat_init_axis(&o->orientation, x, y, z, a);
+	compute_arbitrary_spin(frame_rate_hz, timestamp, &o->orientation, rotational_velocity);
 	if (o->entity)
 		update_entity_orientation(o->entity, &o->orientation);
 }
@@ -13528,7 +13500,7 @@ int main(int argc, char *argv[])
 	init_keymap();
 	read_keymap_config_file();
 	init_vects();
-	initialize_random_orientations_and_spins();
+	initialize_random_orientations_and_spins(COMMON_MTWIST_SEED);
 	if (read_planet_material_metadata(&nplanet_materials)) {
 		fprintf(stderr, "Failed reading planet material metadata\n");
 		exit(1);
