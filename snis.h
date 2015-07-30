@@ -150,6 +150,7 @@ struct damcon_data;
 #define AI_MODE_FLEET_LEADER 6
 #define AI_MODE_HANGOUT 7
 #define AI_MODE_COP 8
+#define AI_MODE_MINING_BOT 9
 
 /* distance more than which fleet ships will warp back to position rather than simply flying */
 #define FLEET_WARP_DISTANCE 5000.0
@@ -188,6 +189,21 @@ struct ai_hangout_data {
 	uint32_t time_to_go;
 };
 
+struct ai_mining_bot_data {
+	uint32_t parent_ship;
+	uint32_t asteroid;
+	uint16_t countdown;
+	uint8_t mode;
+#define MINING_MODE_APPROACH_ASTEROID 0
+#define MINING_MODE_LAND_ON_ASTEROID 1
+#define MINING_MODE_MINE 2
+#define MINING_MODE_RETURN_TO_PARENT 3
+	uint8_t gold;
+	uint8_t platinum;
+	uint8_t germanium;
+	uint8_t uranium;
+};
+
 union ai_data {
 	struct ai_attack_data attack;
 	struct ai_patrol_data patrol;
@@ -195,6 +211,7 @@ union ai_data {
 	struct ai_fleet_data fleet;
 	struct ai_hangout_data hangout;
 	struct ai_flee_data flee;
+	struct ai_mining_bot_data mining_bot;
 };
 
 struct ai_stack_entry {

@@ -1561,6 +1561,25 @@ static void attack_your_attacker(struct snis_entity *attackee, struct snis_entit
 	push_attack_mode(attackee, attacker->id, 0);
 }
 
+static void push_mining_bot_mode(struct snis_entity *miner, uint32_t parent_ship_id,
+					uint32_t asteroid_id)
+{
+	int i = lookup_by_id(asteroid_id);
+	if (i < 0)
+		return;
+	int n = miner->tsd.ship.nai_entries;
+	if (n >= MAX_AI_STACK_ENTRIES)
+		return;
+	miner->tsd.ship.nai_entries++;
+	miner->tsd.ship.ai[n].ai_mode = AI_MODE_MINING_BOT;
+	miner->tsd.ship.ai[n].u.mining_bot.asteroid = asteroid_id;
+	miner->tsd.ship.ai[n].u.mining_bot.parent_ship = parent_ship_id;
+	miner->tsd.ship.ai[n].u.mining_bot.mode = MINING_MODE_APPROACH_ASTEROID;
+	miner->tsd.ship.dox = go[i].x;
+	miner->tsd.ship.doy = go[i].y;
+	miner->tsd.ship.doz = go[i].z;
+}
+
 static int add_derelict(const char *name, double x, double y, double z,
 			double vx, double vy, double vz, int shiptype,
 			int the_faction, int persistent);
@@ -2903,6 +2922,154 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 	return dist2;
 }
 
+static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_mining_bot_data *ai)
+{
+	int i;
+	struct snis_entity *parent;
+
+	i = lookup_by_id(ai->parent_ship);
+	if (i < 0) {
+		/* parent ship gone... */
+		/* TODO figure out what to do here. */
+		ai->mode = MINING_MODE_RETURN_TO_PARENT;
+		fprintf(stderr, "mining bot's parent is gone unexpectedly\n");
+		return;
+	}
+	parent = &go[i];
+	o->tsd.ship.dox = parent->x;
+	o->tsd.ship.doy = parent->y;
+	o->tsd.ship.doz = parent->z;
+
+	double dist2 = ai_ship_travel_towards(o, parent->x, parent->y, parent->z);
+	if (dist2 < 300.0 * 300.0) {
+		/* TODO, fix this up to dock with the ship or something. */
+		ai->mode = MINING_MODE_APPROACH_ASTEROID;
+	}
+}
+
+static float estimate_asteroid_radius(uint32_t id)
+{
+	int k, s;
+	k = id % (NASTEROID_MODELS * NASTEROID_SCALES);
+	s = k % NASTEROID_SCALES;
+	return s ? (float) s * 10.0 * 25.0 : 3.0 * 25.0;
+}
+
+static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mining_bot_data *ai)
+{
+	int i;
+	struct snis_entity *asteroid;
+	float threshold;
+	float my_speed = dist3d(o->vx, o->vy, o->vz);
+
+	i = lookup_by_id(ai->asteroid);
+	if (i < 0) {
+		/* asteroid got blown up maybe */
+		ai->mode = MINING_MODE_RETURN_TO_PARENT;
+		return;
+	}
+	asteroid = &go[i];
+	float distance = dist3d(o->x - asteroid->x, o->y - asteroid->y, o->z - asteroid->z);
+	threshold = 2.0 * estimate_asteroid_radius(asteroid->id);
+	if (my_speed < 0.1) {
+		o->tsd.ship.dox = asteroid->x;
+		o->tsd.ship.doy = asteroid->y;
+		o->tsd.ship.doz = asteroid->z;
+	} else {
+		float time_to_travel = distance / my_speed;
+		o->tsd.ship.dox = asteroid->x + asteroid->vx * time_to_travel;
+		o->tsd.ship.doy = asteroid->y + asteroid->vy * time_to_travel;
+		o->tsd.ship.doz = asteroid->z + asteroid->vz * time_to_travel;
+	}
+	double dist2 = ai_ship_travel_towards(o, asteroid->x, asteroid->y, asteroid->z);
+	if (dist2 < threshold * threshold)
+		ai->mode = MINING_MODE_LAND_ON_ASTEROID;
+}
+
+static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_mining_bot_data *ai)
+{
+	struct snis_entity *asteroid;
+	float radius;
+	union vec3 offset = { { 1.0f, 0.0f, 0.0f } };
+	union quat new_orientation;
+	const float slerp_rate = 0.05;
+	float dx, dy, dz;
+
+	int i = lookup_by_id(ai->asteroid);
+	if (i < 0) {
+		/* asteroid got blown up maybe */
+		ai->mode = MINING_MODE_RETURN_TO_PARENT;
+		return;
+	}
+	asteroid = &go[i];
+	radius = estimate_asteroid_radius(asteroid->id);
+	vec3_mul_self(&offset, radius);
+	quat_rot_vec_self(&offset, &asteroid->orientation);
+
+	/* TODO: fix this up -- slerp orientation, slowly maneuver to landing spot, etc. */
+	dx = asteroid->x + offset.v.x - o->x;
+	dy = asteroid->y + offset.v.y - o->y;
+	dz = asteroid->z + offset.v.z - o->z;
+
+	o->x += 0.1 * dx;
+	o->y += 0.1 * dy;
+	o->z += 0.1 * dz;
+
+	quat_slerp(&new_orientation, &o->orientation, &asteroid->orientation, slerp_rate);
+	o->orientation = new_orientation;
+	o->timestamp = universe_timestamp;
+	ai->countdown = 1200; /* two minutes */
+}
+
+static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining_bot_data *ai)
+{
+	struct snis_entity *asteroid;
+	int i = lookup_by_id(ai->asteroid);
+	if (i < 0) {
+		/* asteroid got blown up maybe */
+		ai->mode = MINING_MODE_RETURN_TO_PARENT;
+		return;
+	}
+	asteroid = &go[i];
+	/* TODO fix this up to keep ship landed on asteroid */
+	o->x = asteroid->x + 30;
+	o->y = asteroid->y + 30;
+	o->z = asteroid->z + 30;
+
+	/* TODO something better here that depends on composition of asteroid */
+	ai->countdown--;
+	if (ai->countdown != 0)
+		return;
+
+	ai->mode = MINING_MODE_RETURN_TO_PARENT;
+}
+
+static void ai_mining_mode_brain(struct snis_entity *o)
+{
+	int n = o->tsd.ship.nai_entries - 1;
+	struct ai_mining_bot_data *mining_bot = &o->tsd.ship.ai[n].u.mining_bot;
+
+	switch (mining_bot->mode) {
+	case MINING_MODE_APPROACH_ASTEROID:
+		ai_mining_mode_approach_asteroid(o, mining_bot);
+		break;
+	case MINING_MODE_LAND_ON_ASTEROID:
+		ai_mining_mode_land_on_asteroid(o, mining_bot);
+		break;
+	case MINING_MODE_MINE:
+		ai_mining_mode_mine_asteroid(o, mining_bot);
+		break;
+	case MINING_MODE_RETURN_TO_PARENT:
+		ai_mining_mode_return_to_parent(o, mining_bot);
+		break;
+	default:
+		fprintf(stderr, "unexpected default value of mining ai mode; %hhu\n",
+			mining_bot->mode);
+		break;
+	}
+
+}
+
 static void ai_patrol_mode_brain(struct snis_entity *o)
 {
 	int n = o->tsd.ship.nai_entries - 1;
@@ -3025,6 +3192,9 @@ static void ai_brain(struct snis_entity *o)
 		o->vz *= 0.8;
 		o->tsd.ship.desired_velocity = 0.0;
 		maybe_leave_fleet(o);
+		break;
+	case AI_MODE_MINING_BOT:
+		ai_mining_mode_brain(o);
 		break;
 	default:
 		break;
