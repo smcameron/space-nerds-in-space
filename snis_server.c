@@ -60,6 +60,7 @@
 #include "snis_faction.h"
 #include "space-part.h"
 #include "quat.h"
+#include "arbitrary_spin.h"
 #include "snis.h"
 #include "snis-culture.h"
 #include "snis_log.h"
@@ -633,6 +634,8 @@ static void asteroid_move(struct snis_entity *o)
 		o->vy = dir.v.y;
 		o->vz = dir.v.z;
 	}
+	compute_arbitrary_spin(30, universe_timestamp, &o->orientation,
+				&o->tsd.asteroid.rotational_velocity);
 }
 
 static void delete_from_clients_and_server(struct snis_entity *o);
@@ -5459,6 +5462,8 @@ static int add_asteroid(double x, double y, double z, double vx, double vz, doub
 	go[i].vx = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
 	go[i].vz = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
 	go[i].alive = snis_randn(10) + 5;
+	go[i].orientation = random_spin[go[i].id % NRANDOM_ORIENTATIONS];
+	go[i].tsd.asteroid.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
 
 	/* FIXME: make these distributions better */
 	total = 0;
@@ -6577,6 +6582,7 @@ static void add_passengers(void)
 
 static void make_universe(void)
 {
+	initialize_random_orientations_and_spins(COMMON_MTWIST_SEED);
 	pthread_mutex_lock(&universe_mutex);
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 
