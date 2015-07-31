@@ -9,6 +9,16 @@
 #        float govt_sensitivity; range: 0 - 1, how sensitive price is to govt. stability
 #        float tech_sensitivity; range: 0 - 1, how sensitive price is to tech level
 #
+# Note, first 4 must match mining-bot in snis.h
+#
+gold ore, tons, 1.0, 0.2, 1.0, 0.3, 0.2, 0.2
+platinum ore, tons, 1.0, 0.2, 1.0, 0.3, 0.2, 0.2
+germanium ore, tons, 1.0, 0.2, 1.0, 0.3, 0.2, 0.2
+uranium ore, tons, 1.0, 0.2, 1.0, 0.3, 0.2, 0.2
+gold, grams, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2
+platinum, grams, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2
+germanium, kilograms, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2
+uranium, grams.0, 0.2, 1.0, 0.3, 0.2, 0.2
 dubious metaphors, volumes, 3.0, 0.2, 1.0, 0.3, 0.1, -0.2
 spicy curry, barrels, 10.0, 0.2, 1.0, 0.2, 0.0, 0.0
 spiritual hogwash, pamphlets, 10.0, 0.2, 1.0, 0.2, 0.3, 0.0
@@ -51,8 +61,6 @@ Frozen biscuit dough, barrels, 10.0, 0.2, 1.0, 0.0, 0.0, 0.1
 Chippos, bags, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0
 Ethanol, kegs, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0
 tobacco, cartons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0
-gold, tons, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2
-platinum, tons, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2
 scrap metal, tons, 10.0, 0.2, 1.0, 0.3, 0.0, 0.2
 iron ore, tons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0
 thorium ore, tons, 10.0, 0.2, 1.0, 0.2, 0.0, 0.2
