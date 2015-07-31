@@ -140,6 +140,8 @@ static void npc_menu_item_sign_off(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_buy_parts(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void send_to_npcbot(int bridge, char *name, char *msg);
 
 typedef void (*npc_special_bot_fn)(struct snis_entity *o, int bridge, char *name, char *msg);
@@ -196,6 +198,15 @@ static struct npc_menu_item starbase_main_menu[] = {
 	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
+
+static struct npc_menu_item mining_bot_main_menu[] = {
+	{ "MINING BOT MAIN MENU", 0, 0, 0 },  /* by convention, first element is menu title */
+	{ "STATUS REPORT", 0, 0, npc_menu_item_mining_bot_status_report },
+	{ "RETURN TO SHIP", 0, 0, npc_menu_item_not_implemented },
+	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
+	{ 0, 0, 0, 0 }, /* mark end of menu items */
+};
+
 
 struct snis_entity_client_info {
 	uint32_t last_timestamp_sent;
@@ -5429,14 +5440,19 @@ static int add_ship(int faction, int auto_respawn)
 static int add_mining_bot(struct snis_entity *parent_ship, uint32_t asteroid_id)
 {
 	int rc;
+	struct snis_entity *o;
 
 	rc = add_ship(parent_ship->sdata.faction, 0);
 	/* TODO may want to make a special model just for the mining bot */
 	if (rc < 0)
 		return rc;
+	o = &go[rc];
 	parent_ship->tsd.ship.mining_bots--; /* maybe we want miningbots to live in cargo hold? */
-	go[rc].tsd.ship.shiptype = SHIP_CLASS_ASTEROIDMINER;
-	push_mining_bot_mode(&go[rc], parent_ship->id, asteroid_id);
+	o->tsd.ship.shiptype = SHIP_CLASS_ASTEROIDMINER;
+	push_mining_bot_mode(o, parent_ship->id, asteroid_id);
+	snprintf(o->sdata.name, sizeof(o->sdata.name), "%s-MINER-%02d",
+		parent_ship->sdata.name, parent_ship->tsd.ship.mining_bots);
+	snprintf(o->sdata.name, sizeof(o->sdata.name), "MNR-%05d", o->id);
 
 	/* TODO make this better: */
 	go[rc].x = parent_ship->x + 30;
@@ -7952,6 +7968,99 @@ void npc_menu_item_buysell_cargo(struct npc_menu_item *item,
 	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
 }
 
+static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate)
+{
+	struct bridge_data *b;
+	int i, bridge;
+	uint32_t channel = botstate->channel;
+	float gold, platinum, germanium, uranium, total;
+	struct snis_entity *miner, *asteroid, *parent;
+	struct ai_mining_bot_data *ai;
+	float dist, dist_to_parent;
+	char msg[100];
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0)
+		return;
+	miner = &go[i];
+	ai = &miner->tsd.ship.ai[0].u.mining_bot;
+	i = lookup_by_id(ai->asteroid);
+	if (i >= 0) {
+		asteroid = &go[i];
+		dist = dist3d(asteroid->x - miner->x, asteroid->y - miner->y, asteroid->z - miner->z);
+	} else {
+		asteroid = NULL;
+		dist = -1.0;
+	}
+
+	i = lookup_by_id(ai->parent_ship);
+	if (i < 0) {
+		parent = NULL;
+		dist_to_parent = -1;
+	} else {
+		parent = &go[i];
+		dist_to_parent =
+			dist3d(parent->x - miner->x, parent->y - miner->y, parent->z - miner->z);
+	}
+	/* find our bridge... */
+	b = container_of(botstate, struct bridge_data, npcbot);
+	bridge = b - bridgelist;
+
+	total = 0.0;
+	gold = 0.0;
+	platinum = 0.0;
+	germanium = 0.0;
+	uranium = 0.0;
+
+	gold = ai->gold;
+	platinum = ai->platinum;
+	germanium = ai->germanium;
+	uranium = ai->uranium;
+	total = gold + platinum + germanium + uranium;
+	send_comms_packet(npcname, channel, "--- BEGIN STATUS REPORT ---");
+	switch (ai->mode) {
+	case MINING_MODE_APPROACH_ASTEROID:
+		sprintf(msg, "APPROACHING %s, DISTANCE: %f\n",
+			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
+		send_comms_packet(npcname, channel, msg);
+		break;
+	case MINING_MODE_LAND_ON_ASTEROID:
+		sprintf(msg, "RENDEZVOUS WITH %s, ALTITUDE: %f\n",
+			asteroid ? asteroid->sdata.name : "UNKNOWN", dist * 0.3);
+		send_comms_packet(npcname, channel, msg);
+		break;
+	case MINING_MODE_MINE:
+		sprintf(msg, "MINING ON %s\n",
+			asteroid ? asteroid->sdata.name : "UNKNOWN");
+		send_comms_packet(npcname, channel, msg);
+		break;
+	case MINING_MODE_RETURN_TO_PARENT:
+		sprintf(msg, "RETURNING FROM %s\n",
+			asteroid ? asteroid->sdata.name : "UNKNOWN");
+		send_comms_packet(npcname, channel, msg);
+		sprintf(msg, "DISTANCE TO %s: %f\n",
+			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
+		break;
+	}
+	sprintf(msg, "DISTANCE TO %s: %f\n",
+		parent ? parent->sdata.name : "MOTHER SHIP", dist_to_parent);
+	send_comms_packet(npcname, channel, msg);
+	sprintf(msg, "ORE COLLECTED: %f TONS\n", 2.0 * total / (255.0 * 4.0));
+	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(npcname, channel, "ORE COMPOSITION:");
+	sprintf(msg, "GOLD: %2f%%\n", gold / total);
+	send_comms_packet(npcname, channel, msg);
+	sprintf(msg, "PLATINUM: %2f%%\n", platinum / total);
+	send_comms_packet(npcname, channel, msg);
+	sprintf(msg, "GERMANIUM: %2f%%\n", germanium / total);
+	send_comms_packet(npcname, channel, msg);
+	sprintf(msg, "URANIUM: %2f%%\n", uranium / total);
+	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(npcname, channel, "FUEL: UNKNOWN");
+	send_comms_packet(npcname, channel, "--- END STATUS REPORT ---");
+}
+
 static int ship_is_docked(uint32_t ship_id, struct snis_entity *starbase)
 {
 	int i;
@@ -8530,7 +8639,7 @@ static void starbase_cargo_selling_npc_bot(struct snis_entity *o, int bridge,
 	starbase_cargo_buyingselling_npc_bot(o, bridge, name, msg, 0);
 }
 
-static void starbase_npc_bot(struct snis_entity *o, int bridge, char *name, char *msg)
+static void generic_npc_bot(struct snis_entity *o, int bridge, char *name, char *msg)
 {
 	char *n = o->tsd.starbase.name;
 	uint32_t channel = bridgelist[bridge].comms_channel;
@@ -8559,7 +8668,7 @@ static void starbase_npc_bot(struct snis_entity *o, int bridge, char *name, char
 	}
 
 	if (selection == -1) {
-		/* struct marketplace_data *mkt = o->tsd.starbase.mkt;  */
+		/* TODO: make this welcome message customizable per npc bot */
 		send_comms_packet(n, channel, "");
 		snprintf(m, sizeof(m),
 			"  WELCOME %s, I AM A MODEL ZX81 SERVICE", name);
@@ -8616,7 +8725,14 @@ static void send_to_npcbot(int bridge, char *name, char *msg)
 
 	switch (o->type) {
 	case OBJTYPE_STARBASE:
-		starbase_npc_bot(o, bridge, name, msg);
+		bridgelist[bridge].npcbot.current_menu = starbase_main_menu;
+		generic_npc_bot(o, bridge, name, msg);
+		break;
+	case OBJTYPE_SHIP2:
+		if (o->tsd.ship.ai[0].ai_mode != AI_MODE_MINING_BOT)
+			break;
+		bridgelist[bridge].npcbot.current_menu = mining_bot_main_menu;
+		generic_npc_bot(o, bridge, name, msg);
 		break;
 	default:
 		break;
@@ -8673,12 +8789,18 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 	/* check for starbases being hailed */
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
-		char *sbname = o->tsd.starbase.name;
+		char *sbname = NULL;
 
-		if (o->type != OBJTYPE_STARBASE)
+		if (o->type == OBJTYPE_STARBASE)
+			sbname = o->tsd.starbase.name;
+		else if (o->type == OBJTYPE_SHIP2 && o->tsd.ship.ai[0].ai_mode == AI_MODE_MINING_BOT)
+			sbname = o->sdata.name;
+		if (!sbname)
 			continue;
 
 		for (j = 0; j < nnames; j++) {
+			printf("comparing '%s' to '%s'\n",
+				sbname, namelist[j]);
 			if (strcasecmp(sbname, namelist[j]) != 0)
 				continue;
 			nchannels = 1;
