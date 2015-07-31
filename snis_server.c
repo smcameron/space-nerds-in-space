@@ -2983,8 +2983,10 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 		o->tsd.ship.doz = asteroid->z + asteroid->vz * time_to_travel;
 	}
 	double dist2 = ai_ship_travel_towards(o, asteroid->x, asteroid->y, asteroid->z);
-	if (dist2 < threshold * threshold)
+	if (dist2 < threshold * threshold) {
 		ai->mode = MINING_MODE_LAND_ON_ASTEROID;
+		ai->countdown = 100;
+	}
 }
 
 static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_mining_bot_data *ai)
@@ -3004,7 +3006,8 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 		return;
 	}
 	asteroid = &go[i];
-	radius = estimate_asteroid_radius(asteroid->id);
+	radius = estimate_asteroid_radius(asteroid->id) *
+			(1.0 - 0.2 * ai->countdown / 200.0);
 	vec3_mul_self(&offset, radius);
 	n = o->tsd.ship.nai_entries - 1;
 	quat_rot_vec_self(&offset, &o->tsd.ship.ai[n].u.mining_bot.orbital_orientation);
@@ -3022,12 +3025,31 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 	quat_slerp(&new_orientation, &o->orientation, &asteroid->orientation, slerp_rate);
 	o->orientation = new_orientation;
 	o->timestamp = universe_timestamp;
-	ai->countdown = 1200; /* two minutes */
+	ai->countdown--;
+	if (ai->countdown == 0) {
+		ai->mode = MINING_MODE_MINE;
+		ai->countdown = 200;
+	}
+}
+
+static void update_mineral_amount(uint8_t *mineral, int amount)
+{
+	if (*mineral + amount > 255)
+		*mineral = 255;
+	else
+		*mineral += amount;
 }
 
 static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining_bot_data *ai)
 {
 	struct snis_entity *asteroid;
+	float radius;
+	union vec3 offset = { { 1.0f, 0.0f, 0.0f } };
+	union quat new_orientation;
+	const float slerp_rate = 0.05;
+	float dx, dy, dz;
+	int n;
+
 	int i = lookup_by_id(ai->asteroid);
 	if (i < 0) {
 		/* asteroid got blown up maybe */
@@ -3035,16 +3057,46 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 		return;
 	}
 	asteroid = &go[i];
+	radius = estimate_asteroid_radius(asteroid->id) * 0.8;
+	vec3_mul_self(&offset, radius);
+	n = o->tsd.ship.nai_entries - 1;
+	quat_rot_vec_self(&offset, &o->tsd.ship.ai[n].u.mining_bot.orbital_orientation);
+	quat_rot_vec_self(&offset, &asteroid->orientation);
+
 	/* TODO fix this up to keep ship landed on asteroid */
-	o->x = asteroid->x + 30;
-	o->y = asteroid->y + 30;
-	o->z = asteroid->z + 30;
+	dx = asteroid->x + offset.v.x - o->x;
+	dy = asteroid->y + offset.v.y - o->y;
+	dz = asteroid->z + offset.v.z - o->z;
+
+	o->x += 0.1 * dx;
+	o->y += 0.1 * dy;
+	o->z += 0.1 * dz;
+
+	quat_slerp(&new_orientation, &o->orientation, &asteroid->orientation, slerp_rate);
+	o->orientation = new_orientation;
+	o->timestamp = universe_timestamp;
 
 	/* TODO something better here that depends on composition of asteroid */
 	ai->countdown--;
+
+	if (snis_randn(1000) < 20) {
+		int total = (int) ((float) snis_randn(100) *
+			(float) asteroid->tsd.asteroid.preciousmetals / 255.0);
+		int n;
+
+		n = snis_randn(total); total -= n;
+		update_mineral_amount(&ai->germanium, n);
+		n = snis_randn(total); total -= n;
+		update_mineral_amount(&ai->gold, n);
+		n = snis_randn(total); total -= n;
+		update_mineral_amount(&ai->platinum, n);
+		n = snis_randn(total); total -= n;
+		update_mineral_amount(&ai->uranium, n);
+		n = snis_randn(total); total -= n;
+	}
+
 	if (ai->countdown != 0)
 		return;
-
 	ai->mode = MINING_MODE_RETURN_TO_PARENT;
 }
 
