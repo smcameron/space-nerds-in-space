@@ -1575,6 +1575,7 @@ static void push_mining_bot_mode(struct snis_entity *miner, uint32_t parent_ship
 	miner->tsd.ship.ai[n].u.mining_bot.asteroid = asteroid_id;
 	miner->tsd.ship.ai[n].u.mining_bot.parent_ship = parent_ship_id;
 	miner->tsd.ship.ai[n].u.mining_bot.mode = MINING_MODE_APPROACH_ASTEROID;
+	random_quat(&miner->tsd.ship.ai[n].u.mining_bot.orbital_orientation);
 	miner->tsd.ship.dox = go[i].x;
 	miner->tsd.ship.doy = go[i].y;
 	miner->tsd.ship.doz = go[i].z;
@@ -2994,6 +2995,7 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 	union quat new_orientation;
 	const float slerp_rate = 0.05;
 	float dx, dy, dz;
+	int n;
 
 	int i = lookup_by_id(ai->asteroid);
 	if (i < 0) {
@@ -3004,6 +3006,8 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 	asteroid = &go[i];
 	radius = estimate_asteroid_radius(asteroid->id);
 	vec3_mul_self(&offset, radius);
+	n = o->tsd.ship.nai_entries - 1;
+	quat_rot_vec_self(&offset, &o->tsd.ship.ai[n].u.mining_bot.orbital_orientation);
 	quat_rot_vec_self(&offset, &asteroid->orientation);
 
 	/* TODO: fix this up -- slerp orientation, slowly maneuver to landing spot, etc. */

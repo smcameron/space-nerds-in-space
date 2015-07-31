@@ -190,6 +190,7 @@ struct ai_hangout_data {
 };
 
 struct ai_mining_bot_data {
+	union quat orbital_orientation;
 	uint32_t parent_ship;
 	uint32_t asteroid;
 	uint16_t countdown;
