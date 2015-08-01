@@ -13,7 +13,7 @@ TANKER tanker.stl - 0.2 750 5 10
 TRANSPORT transport.stl ! 0.4 900 10 200
 BATTLESTAR battlestar.stl - 0.8 1100 25 75
 STARSHIP spaceship.stl - 0.5 800 40 10
-MINER asteroid-miner.stl - 0.1 1150 2 3
+MINER asteroid-miner.stl - 0.1 2250 2 3
 SCIENCE spaceship2.stl - 0.9 750 5 7
 SPACEFARER spaceship3.stl ! 0.6 900 35 5
 DRAGONHAWK dragonhawk.stl - 0.3 1200 20 5

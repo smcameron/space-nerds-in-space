@@ -2944,13 +2944,16 @@ static void mining_bot_unload_one_ore(struct snis_entity *bot,
 
 	/* Find cargo bay already containing some of this ore... */
 	for (i = 0; i < parent->tsd.ship.ncargo_bays; i++)
-		if (parent->tsd.ship.cargo[i].contents.item == commodity_index)
+		if (parent->tsd.ship.cargo[i].contents.item == commodity_index) {
 			cargo_bay = i;
-	/* or, find an empty cargo bay */
-	if (cargo_bay < 0) {
+			break;
+		}
+	if (cargo_bay < 0) { /* or, find an empty cargo bay */
 		for (i = 0; i < parent->tsd.ship.ncargo_bays; i++)
-			if (parent->tsd.ship.cargo[i].contents.item == -1)
+			if (parent->tsd.ship.cargo[i].contents.item == -1) {
 				cargo_bay = i;
+				break;
+			}
 	}
 	if (cargo_bay < 0) { /* No room in cargo bays, just dump it */
 		*ore = 0;
