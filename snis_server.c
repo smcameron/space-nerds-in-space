@@ -2934,6 +2934,59 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 	return dist2;
 }
 
+static void mining_bot_unload_one_ore(struct snis_entity *bot,
+					struct snis_entity *parent,
+					struct ai_mining_bot_data *ai,
+					uint8_t *ore, int commodity_index)
+{
+	int i, cargo_bay = -1;
+	float quantity;
+
+	/* Find cargo bay already containing some of this ore... */
+	for (i = 0; i < parent->tsd.ship.ncargo_bays; i++)
+		if (parent->tsd.ship.cargo[i].contents.item == commodity_index)
+			cargo_bay = i;
+	/* or, find an empty cargo bay */
+	if (cargo_bay < 0) {
+		for (i = 0; i < parent->tsd.ship.ncargo_bays; i++)
+			if (parent->tsd.ship.cargo[i].contents.item == -1)
+				cargo_bay = i;
+	}
+	if (cargo_bay < 0) { /* No room in cargo bays, just dump it */
+		*ore = 0;
+		return;
+	}
+	quantity = ((float) *ore / 255.0);
+	if (parent->tsd.ship.cargo[cargo_bay].contents.item == -1) {
+		parent->tsd.ship.cargo[cargo_bay].contents.item = commodity_index;
+		parent->tsd.ship.cargo[cargo_bay].contents.qty = quantity; 
+	} else {
+		parent->tsd.ship.cargo[cargo_bay].contents.qty += quantity; 
+	}
+	parent->tsd.ship.cargo[cargo_bay].paid = 0.0;
+	parent->tsd.ship.cargo[cargo_bay].origin = ai->asteroid;
+	parent->tsd.ship.cargo[cargo_bay].dest = -1;
+	parent->tsd.ship.cargo[cargo_bay].due_date = -1;
+}
+
+static void mining_bot_unload_ores(struct snis_entity *bot, 
+					struct snis_entity *parent,
+					struct ai_mining_bot_data *ai)
+{
+	if (!bot || !parent)
+		return;
+
+#define GOLD 0
+#define PLATINUM 1
+#define GERMANIUM 2
+#define URANIUM 3
+
+	mining_bot_unload_one_ore(bot, parent, ai, &ai->gold, GOLD);
+	mining_bot_unload_one_ore(bot, parent, ai, &ai->platinum, PLATINUM);
+	mining_bot_unload_one_ore(bot, parent, ai, &ai->germanium, GERMANIUM);
+	mining_bot_unload_one_ore(bot, parent, ai, &ai->uranium, URANIUM);
+}
+
 static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_mining_bot_data *ai)
 {
 	int i;
@@ -2955,6 +3008,7 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 	double dist2 = ai_ship_travel_towards(o, parent->x, parent->y, parent->z);
 	if (dist2 < 300.0 * 300.0) {
 		/* TODO, fix this up to dock with the ship or something. */
+		mining_bot_unload_ores(o, parent, ai);
 		ai->mode = MINING_MODE_APPROACH_ASTEROID;
 	}
 }
@@ -8021,12 +8075,12 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 	send_comms_packet(npcname, channel, "--- BEGIN STATUS REPORT ---");
 	switch (ai->mode) {
 	case MINING_MODE_APPROACH_ASTEROID:
-		sprintf(msg, "APPROACHING %s, DISTANCE: %f\n",
+		sprintf(msg, "RENDEZVOUS WITH %s, DISTANCE: %f\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
 		send_comms_packet(npcname, channel, msg);
 		break;
 	case MINING_MODE_LAND_ON_ASTEROID:
-		sprintf(msg, "RENDEZVOUS WITH %s, ALTITUDE: %f\n",
+		sprintf(msg, "DESCENT ONTO %s, ALTITUDE: %f\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist * 0.3);
 		send_comms_packet(npcname, channel, msg);
 		break;
