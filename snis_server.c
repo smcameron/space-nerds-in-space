@@ -3143,11 +3143,11 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 {
 	struct snis_entity *asteroid;
 	float radius;
-	union vec3 offset = { { 1.0f, 0.0f, 0.0f } };
+	union vec3 sparks_offset, offset = { { 1.0f, 0.0f, 0.0f } };
 	union quat new_orientation;
 	const float slerp_rate = 0.05;
 	float dx, dy, dz;
-	int n;
+	int n, chance;
 
 	int i = lookup_by_id(ai->asteroid);
 	if (i < 0) {
@@ -3183,8 +3183,8 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 
 	/* TODO something better here that depends on composition of asteroid */
 	ai->countdown--;
-
-	if (snis_randn(1000) < 20) {
+	chance = snis_randn(1000);
+	if (chance < 20) {
 		int total = (int) ((float) snis_randn(100) *
 			(float) asteroid->tsd.asteroid.preciousmetals / 255.0);
 		int n;
@@ -3198,6 +3198,13 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 		n = snis_randn(total); total -= n;
 		update_mineral_amount(&ai->uranium, n);
 		n = snis_randn(total); total -= n;
+	}
+	if (chance < 50) {
+		vec3_mul(&sparks_offset, &offset, 0.7);
+		(void) add_explosion(asteroid->x + sparks_offset.v.x,
+					asteroid->y + sparks_offset.v.y,
+					asteroid->z + sparks_offset.v.z,
+					 20, 20, 15, OBJTYPE_ASTEROID);
 	}
 
 	if (ai->countdown != 0)
