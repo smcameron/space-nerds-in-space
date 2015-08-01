@@ -199,6 +199,7 @@ struct ai_mining_bot_data {
 #define MINING_MODE_LAND_ON_ASTEROID 1
 #define MINING_MODE_MINE 2
 #define MINING_MODE_RETURN_TO_PARENT 3
+#define MINING_MODE_STANDBY_TO_TRANSPORT_ORE 4
 	uint8_t gold;
 	uint8_t platinum;
 	uint8_t germanium;

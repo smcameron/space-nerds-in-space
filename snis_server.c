@@ -142,6 +142,8 @@ static void npc_menu_item_buy_parts(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_mining_bot_transport_ores(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void send_to_npcbot(int bridge, char *name, char *msg);
 
 typedef void (*npc_special_bot_fn)(struct snis_entity *o, int bridge, char *name, char *msg);
@@ -203,6 +205,7 @@ static struct npc_menu_item mining_bot_main_menu[] = {
 	{ "MINING BOT MAIN MENU", 0, 0, 0 },  /* by convention, first element is menu title */
 	{ "STATUS REPORT", 0, 0, npc_menu_item_mining_bot_status_report },
 	{ "RETURN TO SHIP", 0, 0, npc_menu_item_not_implemented },
+	{ "TRANSPORT ORES TO CARGO BAYS", 0, 0, npc_menu_item_mining_bot_transport_ores },
 	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
@@ -3004,15 +3007,18 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 		return;
 	}
 	parent = &go[i];
+
 	o->tsd.ship.dox = parent->x;
 	o->tsd.ship.doy = parent->y;
 	o->tsd.ship.doz = parent->z;
 
 	double dist2 = ai_ship_travel_towards(o, parent->x, parent->y, parent->z);
-	if (dist2 < 300.0 * 300.0) {
-		/* TODO, fix this up to dock with the ship or something. */
-		mining_bot_unload_ores(o, parent, ai);
-		ai->mode = MINING_MODE_APPROACH_ASTEROID;
+	if (dist2 < 300.0 * 300.0 && ai->mode == MINING_MODE_RETURN_TO_PARENT) {
+		int b = lookup_bridge_by_shipid(parent->id);
+		if (b >= 0)
+			send_comms_packet(o->sdata.name, bridgelist[b].npcbot.channel,
+				" -- STANDING BY FOR TRANSPORT OF ORES --");
+		ai->mode = MINING_MODE_STANDBY_TO_TRANSPORT_ORE;
 	}
 }
 
@@ -3184,6 +3190,9 @@ static void ai_mining_mode_brain(struct snis_entity *o)
 		ai_mining_mode_mine_asteroid(o, mining_bot);
 		break;
 	case MINING_MODE_RETURN_TO_PARENT:
+		ai_mining_mode_return_to_parent(o, mining_bot);
+		break;
+	case MINING_MODE_STANDBY_TO_TRANSPORT_ORE:
 		ai_mining_mode_return_to_parent(o, mining_bot);
 		break;
 	default:
@@ -8025,6 +8034,37 @@ void npc_menu_item_buysell_cargo(struct npc_menu_item *item,
 	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
 }
 
+static void npc_menu_item_mining_bot_transport_ores(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate)
+{
+	int i;
+	uint32_t channel = botstate->channel;
+	struct snis_entity *miner, *parent;
+	struct ai_mining_bot_data *ai;
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0)
+		return;
+	miner = &go[i];
+	ai = &miner->tsd.ship.ai[0].u.mining_bot;
+	i = lookup_by_id(ai->parent_ship);
+	if (i < 0)
+		parent = NULL;
+	else
+		parent = &go[i];
+	if (ai->mode != MINING_MODE_STANDBY_TO_TRANSPORT_ORE) {
+		send_comms_packet(npcname, channel,
+			"UNABLE TO OBTAIN COHERENT TRANSPORTER BEAM LOCK");
+	} else {
+		send_comms_packet(npcname, channel, "--- TRANSPORTING ORES ---");
+		mining_bot_unload_ores(miner, parent, ai);
+		send_comms_packet(npcname, channel, "--- ORES TRANSPORTED ---");
+		send_comms_packet(npcname, channel,
+			"COMMENCING RENDEZVOUS WITH TARGET ASTEROID");
+		ai->mode = MINING_MODE_APPROACH_ASTEROID;
+	}
+}
+
 static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
@@ -8098,6 +8138,16 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 		send_comms_packet(npcname, channel, msg);
 		sprintf(msg, "DISTANCE TO %s: %f\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
+		send_comms_packet(npcname, channel, msg);
+		break;
+	case MINING_MODE_STANDBY_TO_TRANSPORT_ORE:
+		sprintf(msg, "STANDING BY TO TRANSPORT ORES\n");
+		send_comms_packet(npcname, channel, msg);
+		sprintf(msg, "DISTANCE TO %s: %f\n",
+			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
+		send_comms_packet(npcname, channel, msg);
+		break;
+	default:
 		break;
 	}
 	sprintf(msg, "DISTANCE TO %s: %f\n",
