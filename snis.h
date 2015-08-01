@@ -200,6 +200,7 @@ struct ai_mining_bot_data {
 #define MINING_MODE_MINE 2
 #define MINING_MODE_RETURN_TO_PARENT 3
 #define MINING_MODE_STANDBY_TO_TRANSPORT_ORE 4
+#define MINING_MODE_STOW_BOT 5
 	uint8_t gold;
 	uint8_t platinum;
 	uint8_t germanium;

@@ -144,6 +144,8 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_mining_bot_transport_ores(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_mining_bot_stow(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void send_to_npcbot(int bridge, char *name, char *msg);
 
 typedef void (*npc_special_bot_fn)(struct snis_entity *o, int bridge, char *name, char *msg);
@@ -204,8 +206,9 @@ static struct npc_menu_item starbase_main_menu[] = {
 static struct npc_menu_item mining_bot_main_menu[] = {
 	{ "MINING BOT MAIN MENU", 0, 0, 0 },  /* by convention, first element is menu title */
 	{ "STATUS REPORT", 0, 0, npc_menu_item_mining_bot_status_report },
-	{ "RETURN TO SHIP", 0, 0, npc_menu_item_not_implemented },
+	{ "RETURN TO SHIP", 0, 0, npc_menu_item_mining_bot_stow },
 	{ "TRANSPORT ORES TO CARGO BAYS", 0, 0, npc_menu_item_mining_bot_transport_ores },
+	{ "STOW MINING BOT", 0, 0, npc_menu_item_mining_bot_stow },
 	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
@@ -2995,7 +2998,7 @@ static void mining_bot_unload_ores(struct snis_entity *bot,
 
 static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_mining_bot_data *ai)
 {
-	int i;
+	int i, b, channel;
 	struct snis_entity *parent;
 
 	i = lookup_by_id(ai->parent_ship);
@@ -3014,11 +3017,26 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 
 	double dist2 = ai_ship_travel_towards(o, parent->x, parent->y, parent->z);
 	if (dist2 < 300.0 * 300.0 && ai->mode == MINING_MODE_RETURN_TO_PARENT) {
-		int b = lookup_bridge_by_shipid(parent->id);
+		b = lookup_bridge_by_shipid(parent->id);
 		if (b >= 0)
 			send_comms_packet(o->sdata.name, bridgelist[b].npcbot.channel,
 				" -- STANDING BY FOR TRANSPORT OF ORES --");
 		ai->mode = MINING_MODE_STANDBY_TO_TRANSPORT_ORE;
+	}
+	if (dist2 < 300.0 * 300.0 && ai->mode == MINING_MODE_STOW_BOT) {
+		b = lookup_bridge_by_shipid(ai->parent_ship);
+		if (b >= 0) {
+			channel = bridgelist[b].npcbot.channel;
+			send_comms_packet(o->sdata.name, channel, "--- TRANSPORTING ORES ---");
+			send_comms_packet(o->sdata.name, channel, "--- ORES TRANSPORTED ---");
+			send_comms_packet(o->sdata.name, bridgelist[b].npcbot.channel,
+				" MINING BOT STOWING AND SHUTTING DOWN");
+			bridgelist[b].npcbot.current_menu = NULL;
+			bridgelist[b].npcbot.special_bot = NULL;
+		}
+		mining_bot_unload_ores(o, parent, ai);
+		delete_from_clients_and_server(o);
+		parent->tsd.ship.mining_bots = 1;
 	}
 }
 
@@ -3237,8 +3255,7 @@ static void ai_mining_mode_brain(struct snis_entity *o)
 		ai_mining_mode_mine_asteroid(o, mining_bot);
 		break;
 	case MINING_MODE_RETURN_TO_PARENT:
-		ai_mining_mode_return_to_parent(o, mining_bot);
-		break;
+	case MINING_MODE_STOW_BOT:
 	case MINING_MODE_STANDBY_TO_TRANSPORT_ORE:
 		ai_mining_mode_return_to_parent(o, mining_bot);
 		break;
@@ -8123,6 +8140,29 @@ static void npc_menu_item_mining_bot_transport_ores(struct npc_menu_item *item,
 	}
 }
 
+static void npc_menu_item_mining_bot_stow(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate)
+{
+	uint32_t channel = botstate->channel;
+	struct ai_mining_bot_data *ai;
+	struct snis_entity *miner;
+	int i;
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0)
+		return;
+	miner = &go[i];
+	ai = &miner->tsd.ship.ai[0].u.mining_bot;
+	if (strcmp(item->name, "STOW MINING BOT") == 0) {
+		ai->mode = MINING_MODE_STOW_BOT;
+	} else if (strcmp(item->name, "RETURN TO SHIP") == 0) {
+		if (ai->mode != MINING_MODE_STOW_BOT) {
+			ai->mode = MINING_MODE_RETURN_TO_PARENT;
+		}
+	}
+	send_comms_packet(npcname, channel, " RETURNING TO SHIP");
+}
+
 static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
@@ -8191,6 +8231,7 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 		send_comms_packet(npcname, channel, msg);
 		break;
 	case MINING_MODE_RETURN_TO_PARENT:
+	case MINING_MODE_STOW_BOT:
 		sprintf(msg, "RETURNING FROM %s\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN");
 		send_comms_packet(npcname, channel, msg);
