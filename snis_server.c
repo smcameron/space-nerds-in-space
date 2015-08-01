@@ -2962,7 +2962,7 @@ static void mining_bot_unload_one_ore(struct snis_entity *bot,
 		*ore = 0;
 		return;
 	}
-	quantity = ((float) *ore / 255.0);
+	quantity = ((float) *ore / 255.0) * 10;
 	if (parent->tsd.ship.cargo[cargo_bay].contents.item == -1) {
 		parent->tsd.ship.cargo[cargo_bay].contents.item = commodity_index;
 		parent->tsd.ship.cargo[cargo_bay].contents.qty = quantity; 
@@ -3127,7 +3127,7 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 				"COMMENCING MINING OPERATION");
 		}
 		ai->mode = MINING_MODE_MINE;
-		ai->countdown = 200;
+		ai->countdown = 400;
 	}
 }
 
