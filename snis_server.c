@@ -3036,10 +3036,17 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 	struct snis_entity *asteroid;
 	float threshold;
 	float my_speed = dist3d(o->vx, o->vy, o->vz);
+	int b;
 
 	i = lookup_by_id(ai->asteroid);
 	if (i < 0) {
 		/* asteroid got blown up maybe */
+		b = lookup_bridge_by_shipid(ai->parent_ship);
+		if (b >= 0) {
+			int channel = bridgelist[b].npcbot.channel;
+			send_comms_packet(o->sdata.name, channel,
+				"TARGET ASTEROID LOST -- RETURNING TO SHIP");
+		}
 		ai->mode = MINING_MODE_RETURN_TO_PARENT;
 		return;
 	}
@@ -3058,6 +3065,12 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 	}
 	double dist2 = ai_ship_travel_towards(o, asteroid->x, asteroid->y, asteroid->z);
 	if (dist2 < threshold * threshold) {
+		b = lookup_bridge_by_shipid(ai->parent_ship);
+		if (b >= 0) {
+			int channel = bridgelist[b].npcbot.channel;
+			send_comms_packet(o->sdata.name, channel,
+				"COMMENCING ORBITAL INJECTION BURN");
+		}
 		ai->mode = MINING_MODE_LAND_ON_ASTEROID;
 		ai->countdown = 100;
 	}
@@ -3076,6 +3089,12 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 	int i = lookup_by_id(ai->asteroid);
 	if (i < 0) {
 		/* asteroid got blown up maybe */
+		int b = lookup_bridge_by_shipid(ai->parent_ship);
+		if (b >= 0) {
+			int channel = bridgelist[b].npcbot.channel;
+			send_comms_packet(o->sdata.name, channel,
+				"TARGET ASTEROID LOST -- RETURNING TO SHIP");
+		}
 		ai->mode = MINING_MODE_RETURN_TO_PARENT;
 		return;
 	}
@@ -3101,6 +3120,12 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 	o->timestamp = universe_timestamp;
 	ai->countdown--;
 	if (ai->countdown == 0) {
+		int b = lookup_bridge_by_shipid(ai->parent_ship);
+		if (b >= 0) {
+			int channel = bridgelist[b].npcbot.channel;
+			send_comms_packet(o->sdata.name, channel,
+				"COMMENCING MINING OPERATION");
+		}
 		ai->mode = MINING_MODE_MINE;
 		ai->countdown = 200;
 	}
@@ -3127,6 +3152,12 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 	int i = lookup_by_id(ai->asteroid);
 	if (i < 0) {
 		/* asteroid got blown up maybe */
+		int b = lookup_bridge_by_shipid(ai->parent_ship);
+		if (b >= 0) {
+			int channel = bridgelist[b].npcbot.channel;
+			send_comms_packet(o->sdata.name, channel,
+				"TARGET ASTEROID LOST -- RETURNING TO SHIP");
+		}
 		ai->mode = MINING_MODE_RETURN_TO_PARENT;
 		return;
 	}
@@ -3171,6 +3202,12 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 
 	if (ai->countdown != 0)
 		return;
+	int b = lookup_bridge_by_shipid(ai->parent_ship);
+	if (b >= 0) {
+		int channel = bridgelist[b].npcbot.channel;
+		send_comms_packet(o->sdata.name, channel,
+			"MINING OPERATION COMPLETE -- RETURNING TO SHIP");
+	}
 	ai->mode = MINING_MODE_RETURN_TO_PARENT;
 }
 
@@ -3200,7 +3237,6 @@ static void ai_mining_mode_brain(struct snis_entity *o)
 			mining_bot->mode);
 		break;
 	}
-
 }
 
 static void ai_patrol_mode_brain(struct snis_entity *o)
