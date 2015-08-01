@@ -3139,6 +3139,8 @@ static void update_mineral_amount(uint8_t *mineral, int amount)
 		*mineral += amount;
 }
 
+static int add_mining_laserbeam(uint32_t origin, uint32_t target, int alive);
+
 static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining_bot_data *ai)
 {
 	struct snis_entity *asteroid;
@@ -3199,7 +3201,8 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 		update_mineral_amount(&ai->uranium, n);
 		n = snis_randn(total); total -= n;
 	}
-	if (chance < 50) {
+	if (chance < 80) {
+		add_mining_laserbeam(o->id, asteroid->id, MINING_LASER_DURATION);
 		vec3_mul(&sparks_offset, &offset, 0.7);
 		(void) add_explosion(asteroid->x + sparks_offset.v.x,
 					asteroid->y + sparks_offset.v.y,
@@ -6209,6 +6212,8 @@ static void laserbeam_move(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 		return;
 	}
+	if (o->tsd.laserbeam.mining_laser) /* don't deal damage from mining laser */
+		return;
 
 	/* only deal laser damage every other tick */
 	if (universe_timestamp & 0x01)
@@ -6363,6 +6368,7 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
 	go[i].tsd.laserbeam.power = go[s].tsd.ship.phaser_charge;
 	go[s].tsd.ship.phaser_charge = 0;
 	go[i].tsd.laserbeam.wavelength = go[s].tsd.ship.phaser_wavelength;
+	go[i].tsd.laserbeam.mining_laser = 0;
 	ti = lookup_by_id(target);
 	if (ti < 0)
 		return i;
@@ -6384,6 +6390,15 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
 
 	send_detonate_packet(t, t->x - impact_point.v.x,
 			t->y - impact_point.v.y, t->z - impact_point.v.z, 0, 0.0);
+	return i;
+}
+
+static int add_mining_laserbeam(uint32_t origin, uint32_t target, int alive)
+{
+	int i;
+	i = add_laserbeam(origin, target, alive);
+	if (i >= 0)
+		go[i].tsd.laserbeam.mining_laser = 1;
 	return i;
 }
 

@@ -252,6 +252,7 @@ struct ship_data {
 #define LASER_DETONATE_DIST2 (100 * 100)
 #define PATROL_ATTACK_DIST (LASER_RANGE)
 #define LASERBEAM_DURATION 5 
+#define MINING_LASER_DURATION 2 
 #define MINIMUM_ATTACK_SPEED 3.0
 #define MINIMUM_TURN_SPEED 5.0
 #define MAX_SLOW_TURN_ANGLE 2 /* degrees */
@@ -525,6 +526,7 @@ struct laserbeam_data {
 	uint8_t wavelength;
 	struct entity **entity;
 	struct material *material;
+	uint8_t mining_laser;
 };
 
 struct planet_data {
