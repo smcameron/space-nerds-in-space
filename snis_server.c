@@ -5449,6 +5449,10 @@ static void respawn_player(struct snis_entity *o)
 {
 	int b, i, found;
 	double x, y, z, a1, a2, rf;
+	char mining_bot_name[20];
+	static struct mtwist_state *mt = NULL;
+	if (!mt)
+		mt = mtwist_init(mtwist_seed);
 
 	/* Find a friendly location to respawn... */
 	found = 0;
@@ -5495,8 +5499,10 @@ static void respawn_player(struct snis_entity *o)
 	o->vy = 0;
 	o->vz = 0;
 	o->heading = 3 * M_PI / 2;
+	memset(mining_bot_name, 0, sizeof(mining_bot_name));
+	robot_name(mt, mining_bot_name, sizeof(mining_bot_name));
 	snprintf(o->tsd.ship.mining_bot_name, sizeof(o->tsd.ship.mining_bot_name),
-			"MNR-%05d", o->id);
+			"MNR-%s", mining_bot_name);
 	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
 	init_player(o, 1, NULL);
 	o->alive = 1;
