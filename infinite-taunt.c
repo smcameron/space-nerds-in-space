@@ -1213,6 +1213,39 @@ void character_name(struct mtwist_state *mt, char *buffer,
 	}
 }
 
+static char random_letter(struct mtwist_state *mt)
+{
+	int x = mtwist_next(mt) % 26 + 'A';
+	return (char) x;
+}
+
+static char random_digit(struct mtwist_state *mt)
+{
+	int x = mtwist_next(mt) % 10 + '0';
+	return (char) x;
+}
+
+void robot_name(struct mtwist_state *mt, char *buffer, int buflen)
+{
+	static char *robot_patterns[] = { "LNLN", "LNLL", "LNNL", "LLNL", "LLNN", "LNNN" };
+	char *pattern = random_word(mt, robot_patterns, ARRAYSIZE(robot_patterns));
+	int i;
+	char name[20];
+
+	memset(name, 0, sizeof(name));
+	for (i = 0; pattern[i]; i++) {
+		switch (pattern[i]) {
+		case 'L':
+			name[i] = random_letter(mt);
+			break;
+		case 'N':
+			name[i] = random_digit(mt);
+			break;
+		}
+	}
+	strncpy(buffer, name, buflen);
+}
+
 #ifdef TEST_TAUNT
 #include "mtwist.h"
 #include <sys/time.h>
@@ -1236,7 +1269,8 @@ int main(int argc, char *argv[])
 		/* infinite_taunt(buffer, sizeof(buffer) - 1); */
 		/* planet_description(mt, buffer, sizeof(buffer) - 1, 60); */
 		/* cop_attack_warning(mt, buffer, sizeof(buffer) - 1, 50); */
-		character_name(mt, buffer, sizeof(buffer) - 1);
+		/* character_name(mt, buffer, sizeof(buffer) - 1); */
+		robot_name(mt, buffer, sizeof(buffer) - 1);
 		printf("%s\n", buffer);
 	}
 	free(mt);
