@@ -2994,6 +2994,7 @@ static void mining_bot_unload_ores(struct snis_entity *bot,
 	mining_bot_unload_one_ore(bot, parent, ai, &ai->platinum, PLATINUM);
 	mining_bot_unload_one_ore(bot, parent, ai, &ai->germanium, GERMANIUM);
 	mining_bot_unload_one_ore(bot, parent, ai, &ai->uranium, URANIUM);
+	snis_queue_add_sound(TRANSPORTER_SOUND, ROLE_SOUNDSERVER, parent->id);
 }
 
 static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_mining_bot_data *ai)
