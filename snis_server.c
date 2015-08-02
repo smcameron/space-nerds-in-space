@@ -3000,6 +3000,7 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 {
 	int i, b, channel;
 	struct snis_entity *parent;
+	union vec3 offset = { { -50, -50, 0 } };
 
 	i = lookup_by_id(ai->parent_ship);
 	if (i < 0) {
@@ -3010,10 +3011,11 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 		return;
 	}
 	parent = &go[i];
+	quat_rot_vec_self(&offset, &parent->orientation);
 
-	o->tsd.ship.dox = parent->x;
-	o->tsd.ship.doy = parent->y;
-	o->tsd.ship.doz = parent->z;
+	o->tsd.ship.dox = parent->x + offset.v.x;
+	o->tsd.ship.doy = parent->y + offset.v.y;
+	o->tsd.ship.doz = parent->z + offset.v.z;
 
 	double dist2 = ai_ship_travel_towards(o, parent->x, parent->y, parent->z);
 	if (dist2 < 300.0 * 300.0 && ai->mode == MINING_MODE_RETURN_TO_PARENT) {
