@@ -5495,6 +5495,8 @@ static void respawn_player(struct snis_entity *o)
 	o->vy = 0;
 	o->vz = 0;
 	o->heading = 3 * M_PI / 2;
+	snprintf(o->tsd.ship.mining_bot_name, sizeof(o->tsd.ship.mining_bot_name),
+			"MNR-%05d", o->id);
 	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
 	init_player(o, 1, NULL);
 	o->alive = 1;
@@ -5588,7 +5590,8 @@ static int add_mining_bot(struct snis_entity *parent_ship, uint32_t asteroid_id)
 	push_mining_bot_mode(o, parent_ship->id, asteroid_id);
 	snprintf(o->sdata.name, sizeof(o->sdata.name), "%s-MINER-%02d",
 		parent_ship->sdata.name, parent_ship->tsd.ship.mining_bots);
-	snprintf(o->sdata.name, sizeof(o->sdata.name), "MNR-%05d", o->id);
+	memset(o->sdata.name, 0, sizeof(o->sdata.name));
+	strncpy(o->sdata.name, parent_ship->tsd.ship.mining_bot_name, sizeof(o->sdata.name));
 
 	/* TODO make this better: */
 	go[rc].x = parent_ship->x + 30;
