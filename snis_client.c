@@ -12658,6 +12658,9 @@ static void read_sound_clips(void)
 	read_ogg_clip(PERMISSION_TO_DOCK_DENIED, d, "permission-to-dock-denied.ogg");
 	read_ogg_clip(PERMISSION_TO_DOCK_EXPIRED, d, "permission-to-dock-expired.ogg");
 	read_ogg_clip(WELCOME_TO_STARBASE, d, "welcome-to-starbase.ogg");
+	read_ogg_clip(MINING_BOT_DEPLOYED, d, "mining-bot-deployed.ogg");
+	read_ogg_clip(MINING_BOT_STOWED, d, "mining-bot-stowed.ogg");
+	read_ogg_clip(MINING_BOT_STANDING_BY, d, "mining-bot-standing-by.ogg");
 	printf("Done.\n");
 }
 

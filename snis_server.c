@@ -3022,6 +3022,9 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 			send_comms_packet(o->sdata.name, bridgelist[b].npcbot.channel,
 				" -- STANDING BY FOR TRANSPORT OF ORES --");
 		ai->mode = MINING_MODE_STANDBY_TO_TRANSPORT_ORE;
+		snis_queue_add_sound(MINING_BOT_STANDING_BY,
+				ROLE_COMMS | ROLE_SOUNDSERVER | ROLE_SCIENCE, parent->id);
+
 	}
 	if (dist2 < 300.0 * 300.0 && ai->mode == MINING_MODE_STOW_BOT) {
 		b = lookup_bridge_by_shipid(ai->parent_ship);
@@ -3036,6 +3039,8 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 		}
 		mining_bot_unload_ores(o, parent, ai);
 		delete_from_clients_and_server(o);
+		snis_queue_add_sound(MINING_BOT_STOWED,
+			ROLE_SOUNDSERVER | ROLE_COMMS | ROLE_SCIENCE, parent->id);
 		parent->tsd.ship.mining_bots = 1;
 	}
 }
@@ -10777,7 +10782,8 @@ static int process_request_mining_bot(struct game_client *c)
 	i = add_mining_bot(ship, oid);
 	if (i < 0)
 		goto miningbotfail;
-	/* TODO: tractor beam sound here. */
+	snis_queue_add_sound(MINING_BOT_DEPLOYED,
+				ROLE_COMMS | ROLE_SOUNDSERVER | ROLE_SCIENCE, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 

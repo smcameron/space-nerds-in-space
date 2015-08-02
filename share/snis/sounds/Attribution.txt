@@ -2,6 +2,18 @@ atmospheric-friction.ogg:
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/license/by-sa/3.0/
 COPYRIGHT=2015 by Stephen M. Cameron
 
+mining-bot-deployed.ogg:
+COPYRIGHT=2015 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+mining-bot-standing-by.ogg:
+COPYRIGHT=2015 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+mining-bot-stowed.ogg:
+COPYRIGHT=2015 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
 docking-sound.ogg:
 COPYRIGHT=2015 by Stephen M. Cameron
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
