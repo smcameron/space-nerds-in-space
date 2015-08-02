@@ -146,6 +146,8 @@ static void npc_menu_item_mining_bot_transport_ores(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_mining_bot_stow(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void send_to_npcbot(int bridge, char *name, char *msg);
 
 typedef void (*npc_special_bot_fn)(struct snis_entity *o, int bridge, char *name, char *msg);
@@ -209,6 +211,7 @@ static struct npc_menu_item mining_bot_main_menu[] = {
 	{ "RETURN TO SHIP", 0, 0, npc_menu_item_mining_bot_stow },
 	{ "TRANSPORT ORES TO CARGO BAYS", 0, 0, npc_menu_item_mining_bot_transport_ores },
 	{ "STOW MINING BOT", 0, 0, npc_menu_item_mining_bot_stow },
+	{ "RETARGET MINING BOT", 0, 0, npc_menu_item_mining_bot_retarget },
 	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
@@ -264,6 +267,7 @@ struct bridge_data {
 	int comms_channel;
 	struct npc_bot_state npcbot;
 	int last_docking_permission_denied_time;
+	uint32_t science_selection;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -7679,6 +7683,8 @@ static int process_sci_select_target(struct game_client *c)
 	send_packet_to_all_clients_on_a_bridge(c->shipid, 
 			packed_buffer_new("bw", OPCODE_SCI_SELECT_TARGET, id),
 			ROLE_SCIENCE);
+	/* remember sci selection for retargeting mining bot */
+	bridgelist[c->bridge].science_selection = id;
 	return 0;
 }
 
@@ -8178,6 +8184,43 @@ static void npc_menu_item_mining_bot_stow(struct npc_menu_item *item,
 		}
 	}
 	send_comms_packet(npcname, channel, " RETURNING TO SHIP");
+}
+
+static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate)
+{
+	int i;
+	struct bridge_data *b;
+	uint32_t channel = botstate->channel;
+	struct ai_mining_bot_data *ai;
+	char msg[60];
+	struct snis_entity *miner, *asteroid;
+	float dist;
+
+	/* find our bridge... */
+	b = container_of(botstate, struct bridge_data, npcbot);
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0)
+		return;
+	miner = &go[i];
+	ai = &miner->tsd.ship.ai[0].u.mining_bot;
+
+	i = lookup_by_id(b->science_selection);
+	if (i < 0) {
+		send_comms_packet(npcname, channel, " NO DESTINATION TARGETED");
+		return;
+	}
+	asteroid = &go[i];
+	if (asteroid->type != OBJTYPE_ASTEROID) {
+		send_comms_packet(npcname, channel, " SELECTED DESTINATION UNMINABLE");
+		return;
+	}
+	ai->asteroid = b->science_selection;
+	dist = dist3d(asteroid->x - miner->x, asteroid->y - miner->y, asteroid->z - miner->z);
+	sprintf(msg, " RETARGETED TO %s, DISTANCE: %f",
+			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
+	send_comms_packet(npcname, channel, msg);
 }
 
 static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
