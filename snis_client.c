@@ -1438,8 +1438,10 @@ static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, 
 			return i;
 		o = &go[i];
 		o->tsd.asteroid.rotational_velocity = random_spin[id % NRANDOM_SPINS];
-	} else
+	} else {
+		o = &go[i];
 		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, NULL, 1);
+	}
 	o->tsd.asteroid.carbon = carbon;
 	o->tsd.asteroid.nickeliron = nickeliron;
 	o->tsd.asteroid.silicates = silicates;
