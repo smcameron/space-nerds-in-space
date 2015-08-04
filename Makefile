@@ -23,6 +23,7 @@ CONFIGFILEDIR=${DATADIR}
 CONFIGSRCDIR=./share/snis
 CONFIGFILES=${CONFIGSRCDIR}/commodities.txt \
 	${CONFIGSRCDIR}/factions.txt \
+	${CONFIGSRCDIR}/planet_materials.txt \
 	${CONFIGSRCDIR}/ship_types.txt
 
 ASSETSSRCDIR=share/snis
@@ -32,24 +33,36 @@ MODELDIR=${DATADIR}/models
 SOUNDDIR=${DATADIR}/sounds
 SOUNDSRCDIR=${ASSETSSRCDIR}/sounds
 SOUNDFILES=${SOUNDSRCDIR}/Attribution.txt \
+	${SOUNDSRCDIR}/atmospheric-friction.ogg \
 	${SOUNDSRCDIR}/big_explosion.ogg \
 	${SOUNDSRCDIR}/bigshotlaser.ogg \
 	${SOUNDSRCDIR}/changescreen.ogg \
 	${SOUNDSRCDIR}/comms-hail.ogg \
 	${SOUNDSRCDIR}/crewmember-has-joined.ogg \
 	${SOUNDSRCDIR}/dangerous-radiation.ogg \
+	${SOUNDSRCDIR}/docking-sound.ogg \
+	${SOUNDSRCDIR}/docking-system-disengaged.ogg \
+	${SOUNDSRCDIR}/docking-system-engaged.ogg \
 	${SOUNDSRCDIR}/entering-high-security-area.ogg \
 	${SOUNDSRCDIR}/flak_gun_sound.ogg \
 	${SOUNDSRCDIR}/fuel-levels-critical.ogg \
 	${SOUNDSRCDIR}/incoming-fire-detected.ogg \
 	${SOUNDSRCDIR}/laser-fail.ogg \
 	${SOUNDSRCDIR}/leaving-high-security-area.ogg \
+	${SOUNDSRCDIR}/mining-bot-deployed.ogg \
+	${SOUNDSRCDIR}/mining-bot-standing-by.ogg \
+	${SOUNDSRCDIR}/mining-bot-stowed.ogg \
 	${SOUNDSRCDIR}/new-starship.ogg \
 	${SOUNDSRCDIR}/offscreen.ogg \
 	${SOUNDSRCDIR}/onscreen.ogg \
+	${SOUNDSRCDIR}/permission-to-dock-denied.ogg \
+	${SOUNDSRCDIR}/permission-to-dock-has-expired.ogg \
+	${SOUNDSRCDIR}/permission-to-dock-granted.ogg \
 	${SOUNDSRCDIR}/proximity-alert.ogg \
 	${SOUNDSRCDIR}/red-alert.ogg \
 	${SOUNDSRCDIR}/reverse.ogg \
+	${SOUNDSRCDIR}/robot-insert-component.ogg \
+	${SOUNDSRCDIR}/robot-remove-component.ogg \
 	${SOUNDSRCDIR}/science-data-acquired.ogg \
 	${SOUNDSRCDIR}/science-probe.ogg \
 	${SOUNDSRCDIR}/short-warpdrive.ogg \
@@ -59,8 +72,9 @@ SOUNDFILES=${SOUNDSRCDIR}/Attribution.txt \
 	${SOUNDSRCDIR}/transporter-sound.ogg \
 	${SOUNDSRCDIR}/tty-chatter.ogg \
 	${SOUNDSRCDIR}/warning-hull-breach-imminent.ogg \
+	${SOUNDSRCDIR}/warp-drive-fumble.ogg \
 	${SOUNDSRCDIR}/warpdrive.ogg \
-	${SOUNDSRCDIR}/robot-insert-component.ogg
+	${SOUNDSRCDIR}/welcome-to-starbase.ogg
 TEXTUREDIR=${DATADIR}/textures
 TEXTURESRCDIR=${ASSETSSRCDIR}/textures
 TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
