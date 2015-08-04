@@ -24,7 +24,8 @@ CONFIGSRCDIR=./share/snis
 CONFIGFILES=${CONFIGSRCDIR}/commodities.txt \
 	${CONFIGSRCDIR}/factions.txt \
 	${CONFIGSRCDIR}/planet_materials.txt \
-	${CONFIGSRCDIR}/ship_types.txt
+	${CONFIGSRCDIR}/ship_types.txt \
+	${CONFIGSRCDIR}/starbase_models.txt
 
 ASSETSSRCDIR=share/snis
 	
