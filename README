@@ -27,7 +27,7 @@ Step 0: Build the game from source. (or alternately, see instructions
 	apt-get install libglew1.5-dev
 
      0.2: Download the game source and build it.
-	git clone https://github.ocm/smcameron/space-nerds-in-space.git
+	git clone https://github.com/smcameron/space-nerds-in-space.git
 	cd space-nerds-in-space
 	make
 	(wait for it to compile... Openscad might take its sweet time.)
