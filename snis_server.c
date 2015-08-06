@@ -4290,6 +4290,7 @@ static void player_collision_detection(void *player, void *object)
 {
 	struct snis_entity *o, *t;
 	double dist2;
+	double proximity_dist2, crash_dist2;
 
 	o = player;
 	t = object;
@@ -4359,11 +4360,17 @@ static void player_collision_detection(void *player, void *object)
 		}
 		return;
 	}
-	if (dist2 < PROXIMITY_DIST2 && (universe_timestamp & 0x7) == 0) {
+	proximity_dist2 = PROXIMITY_DIST2;
+	crash_dist2 = CRASH_DIST2;
+	if (t->type == OBJTYPE_STARBASE) {
+		proximity_dist2 *= STARBASE_SCALE_FACTOR;
+		crash_dist2 *= STARBASE_SCALE_FACTOR;
+	}
+	if (dist2 < proximity_dist2 && (universe_timestamp & 0x7) == 0) {
 		send_packet_to_all_clients_on_a_bridge(o->id, 
 			packed_buffer_new("b", OPCODE_PROXIMITY_ALERT),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
-		if (dist2 < CRASH_DIST2) {
+		if (dist2 < crash_dist2) {
 			send_packet_to_all_clients_on_a_bridge(o->id, 
 				packed_buffer_new("b", OPCODE_COLLISION_NOTIFICATION),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
