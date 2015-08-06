@@ -84,6 +84,7 @@
 #include "docking_port.h"
 #include "build_info.h"
 #include "starbase_metadata.h"
+#include "elastic_collision.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
@@ -4286,6 +4287,53 @@ static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
 	}
 }
 
+static void do_collision_impulse(struct snis_entity *player, struct snis_entity *object)
+{
+	union vec3 p1, p2, v1, v2, vo1, vo2;
+	float m1, m2, r1, r2;
+	const float energy_transmission_factor = 0.7;
+
+	m1 = 10;
+	m2 = 20;
+	r1 = 10;
+	r2 = 10;
+
+	p1.v.x = player->x;
+	p1.v.y = player->y;
+	p1.v.z = player->z;
+
+	v1.v.x = player->vx;
+	v1.v.y = player->vy;
+	v1.v.z = player->vz;
+
+	p2.v.x = object->x;
+	p2.v.y = object->y;
+	p2.v.z = object->z;
+
+	v2.v.x = object->vx;
+	v2.v.y = object->vy;
+	v2.v.z = object->vz;
+
+	elastic_collision(m1, &p1, &v1, r1, m2, &p2, &v2, r2,
+				energy_transmission_factor, &vo1, &vo2);
+
+	player->vx = vo1.v.x;
+	player->vy = vo1.v.y;
+	player->vz = vo1.v.z;
+
+	object->vx = vo2.v.x;
+	object->vy = vo2.v.y;
+	object->vz = vo2.v.z;
+
+	/* Give ship some random small rotational velocity */
+	const float maxrv = 15.0;
+	player->tsd.ship.yaw_velocity = 0.01 * (maxrv * snis_randn(100) - maxrv * 0.5) * M_PI / 180.0;
+	player->tsd.ship.pitch_velocity = 0.01 * (maxrv * snis_randn(100) - maxrv * 0.5) * M_PI / 180.0;
+	player->tsd.ship.roll_velocity = 0.01 * (maxrv * snis_randn(100) - maxrv * 0.5) * M_PI / 180.0;
+
+	player->tsd.ship.nav_damping_suppression = 1.0;
+}
+
 static void player_collision_detection(void *player, void *object)
 {
 	struct snis_entity *o, *t;
@@ -4366,7 +4414,8 @@ static void player_collision_detection(void *player, void *object)
 		proximity_dist2 *= STARBASE_SCALE_FACTOR;
 		crash_dist2 *= STARBASE_SCALE_FACTOR;
 	}
-	if (dist2 < proximity_dist2 && (universe_timestamp & 0x7) == 0) {
+	if (t->type != OBJTYPE_DOCKING_PORT && dist2 < proximity_dist2 && (universe_timestamp & 0x7) == 0) {
+		do_collision_impulse(o, t);
 		send_packet_to_all_clients_on_a_bridge(o->id, 
 			packed_buffer_new("b", OPCODE_PROXIMITY_ALERT),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
@@ -4629,6 +4678,7 @@ static void player_move(struct snis_entity *o)
 {
 	int desired_rpm, desired_temp, diff;
 	int phaser_chargerate, current_phaserbank;
+	float orientation_damping, velocity_damping;
 
 	if (o->tsd.ship.damage.shield_damage > 200 && (universe_timestamp % (10 * 5)) == 0)
 		snis_queue_add_sound(HULL_BREACH_IMMINENT, ROLE_SOUNDSERVER, o->id);
@@ -4663,9 +4713,11 @@ static void player_move(struct snis_entity *o)
 	normalize_angle(&o->tsd.ship.sci_heading);
 	o->timestamp = universe_timestamp;
 
-	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, YAW_DAMPING);
-	damp_yaw_velocity(&o->tsd.ship.pitch_velocity, PITCH_DAMPING);
-	damp_yaw_velocity(&o->tsd.ship.roll_velocity, ROLL_DAMPING);
+	orientation_damping = PLAYER_ORIENTATION_DAMPING +
+			(0.98 - PLAYER_ORIENTATION_DAMPING) * o->tsd.ship.nav_damping_suppression;
+	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, orientation_damping);
+	damp_yaw_velocity(&o->tsd.ship.pitch_velocity, orientation_damping);
+	damp_yaw_velocity(&o->tsd.ship.roll_velocity, orientation_damping);
 	damp_yaw_velocity(&o->tsd.ship.gun_yaw_velocity, GUN_YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.sci_yaw_velocity, SCI_YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.sciball_yawvel, YAW_DAMPING);
@@ -4675,10 +4727,17 @@ static void player_move(struct snis_entity *o)
 	damp_yaw_velocity(&o->tsd.ship.weap_pitchvel, PITCH_DAMPING);
 
 	/* Damp velocity */
-	if (fabs(o->tsd.ship.velocity) < MIN_PLAYER_VELOCITY)
+	velocity_damping = PLAYER_VELOCITY_DAMPING +
+		(1.0 - PLAYER_VELOCITY_DAMPING) * o->tsd.ship.nav_damping_suppression;
+
+	if (fabs(o->tsd.ship.velocity) < MIN_PLAYER_VELOCITY &&
+			o->tsd.ship.nav_damping_suppression < 0.05)
 		o->tsd.ship.velocity = 0.0;
 	else
-		o->tsd.ship.velocity *= PLAYER_VELOCITY_DAMPING;
+		o->tsd.ship.velocity *= velocity_damping;
+
+	/* decay the damping suppression over time */
+	o->tsd.ship.nav_damping_suppression *= DAMPING_SUPPRESSION_DECAY;
 
 	/* check to see if any torpedoes have finished loading */
 	if (o->tsd.ship.torpedo_load_time > 0) {
@@ -5430,6 +5489,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.ncargo_bays = 8;
 	o->tsd.ship.passenger_berths = 2;
 	o->tsd.ship.mining_bots = 1;
+	o->tsd.ship.nav_damping_suppression = 0.0;
 	if (clear_cargo_bay) {
 		/* The clear_cargo_bay param is a stopgap until real docking code
 		 * is done.

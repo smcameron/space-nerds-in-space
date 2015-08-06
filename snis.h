@@ -286,6 +286,8 @@ struct ship_data {
 #define PLAYER_VELOCITY_INCREMENT (1.0)
 	double yaw_velocity, pitch_velocity, roll_velocity;
 	double desired_velocity;
+#define PLAYER_ORIENTATION_DAMPING (0.85)
+#define DAMPING_SUPPRESSION_DECAY (0.98)
 #define MAX_YAW_VELOCITY (5 * PI / 180.0)
 #define YAW_INCREMENT (1 * PI / 180.0)
 #define YAW_INCREMENT_FINE (0.2 * PI / 180.0)
@@ -393,6 +395,7 @@ struct ship_data {
 	uint8_t passenger_berths;
 	uint8_t mining_bots;
 	char mining_bot_name[20];
+	float nav_damping_suppression;
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200

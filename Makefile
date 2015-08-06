@@ -338,7 +338,7 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
-		commodities.o docking_port.o
+		commodities.o docking_port.o elastic_collision.o
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
