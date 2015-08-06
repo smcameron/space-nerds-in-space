@@ -697,6 +697,9 @@ arbitrary_spin.o:	arbitrary_spin.c arbitrary_spin.h Makefile
 mtwist.o:	mtwist.c Makefile
 	$(Q)$(COMPILE)
 
+elastic_collision.o:	elastic_collision.c elastic_collision.h Makefile
+	$(Q)$(COMPILE)
+
 fleet.o:	fleet.c Makefile
 	$(Q)$(COMPILE)
 
