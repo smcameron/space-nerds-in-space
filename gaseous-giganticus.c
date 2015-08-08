@@ -189,7 +189,7 @@ static void paint_particle(int face, int i, int j, struct color *c)
 	int p;
 	struct color oc, nc;
 
-	if (i < 0 || i > 1023 || j < 0 || j > 1023) {
+	if (i < 0 || i > DIM - 1 || j < 0 || j > DIM - 1) {
 		/* FIXME: We get a handful of these, don't know why.
 		 * Some are 1024, some seem to be -MAXINT
 		 */
