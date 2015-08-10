@@ -2480,7 +2480,7 @@ void init_keymap()
 
 	keymap[GDK_i] = key_invert_vertical;
 	ffkeymap[GDK_KEY_Pause & 0x00ff] = key_toggle_frame_stats;
-	keymap[GDK_s] = key_toggle_space_dust;
+	keymap[GDK_f] = key_toggle_space_dust;
 
 	keymap[GDK_k] = keysciball_rollleft;
 	keymap[GDK_semicolon] = keysciball_rollright;
@@ -3319,14 +3319,12 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			}
 			return TRUE;
 	case key_toggle_space_dust:
-			if (control_key_pressed) {
-				if (nfake_stars == 0)
-					nfake_stars = 2000;
-				else
-					nfake_stars = 0;
-				ecx_fake_stars_initialized = 0;
-				fake_stars_timer = FRAME_RATE_HZ;
-			}
+			if (nfake_stars == 0)
+				nfake_stars = 2000;
+			else
+				nfake_stars = 0;
+			ecx_fake_stars_initialized = 0;
+			fake_stars_timer = FRAME_RATE_HZ;
 			return TRUE;
 	case key_toggle_frame_stats:
 			display_frame_stats = (display_frame_stats + 1) % 3;
@@ -11563,7 +11561,7 @@ static char *help_text[] = {
 	"    AND MAIN VIEW\n\n"
 	"  * 1 KEY TOGGLES CAMERA VIEW MODES\n"
 	"  * CTRL-I INVERTS VERTICAL KEYBOARD CONTROLS\n"
-	"  * CTRL-S TOGGLES SPACE DUST EFFECT\n"
+	"  * 'f' TOGGLES SPACE DUST EFFECT\n"
 	"\nPRESS ESC TO EXIT HELP\n",
 
 	/* Navigation help text */
