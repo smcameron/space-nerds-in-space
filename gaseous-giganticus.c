@@ -93,6 +93,7 @@ static int start_image_width, start_image_height, start_image_has_alpha, start_i
 static unsigned char *output_image[6];
 static int image_save_period = 20;
 static float w_offset = 0.0;
+static int random_mode;
 
 /* velocity field for 6 faces of a cubemap */
 static struct velocity_field {
@@ -1148,6 +1149,7 @@ static struct option long_options[] = {
 	{ "vertical-bands", required_argument, NULL, 'V' },
 	{ "band-vel-factor", required_argument, NULL, 'B' },
 	{ "restore-velocity-field", required_argument, NULL, 'r' },
+	{ "random", no_argument, NULL, 'R' },
 	{ "stripe", no_argument, NULL, 's' },
 	{ "sinusoidal", no_argument, NULL, 'S' },
 	{ "threads", required_argument, NULL, 't' },
@@ -1185,6 +1187,36 @@ static void process_int_option(char *option_name, char *option_value, int *value
 	}
 }
 
+static void set_automatic_options(int random_mode)
+{
+	struct timeval tv;
+
+	if (!random_mode)
+		return;
+
+	/* set Sinusoidal mode */
+	sinusoidal = 1;
+	stripe = 0;
+	/* set horizontal bands */
+	vertical_bands = 0;
+	gettimeofday(&tv, NULL);
+	srand(tv.tv_usec);
+	noise_scale = ((float) rand() / (float) RAND_MAX) * 3.0 + 1.0;
+	velocity_factor = ((float) rand() / (float) RAND_MAX) * 1500.0 + 500.0;
+	band_speed_factor = ((float) rand() / (float) RAND_MAX) * 3.0;
+	num_bands = ((float) rand() / (float) RAND_MAX) * 10.0 + 5.0;
+	w_offset = ((float) rand() / (float) RAND_MAX) * 300.0;
+
+	printf("\n");
+	printf("Auto parameters:\n");
+	printf("  --noise-scale %f\n", noise_scale);
+	printf("  --velocity-factor %f\n", velocity_factor);
+	printf("  --band-vel-factor %f\n", band_speed_factor);
+	printf("  --num_bands %f\n", num_bands);
+	printf("  --w-offset %f\n", w_offset);
+	printf("\n");
+}
+
 static void process_options(int argc, char *argv[])
 {
 	int c;
@@ -1194,7 +1226,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "a:B:b:c:Cd:f:F:hHi:I:nm:o:O:p:Pr:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "a:B:b:c:Cd:f:F:hHi:I:nm:o:O:p:PRr:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1225,6 +1257,9 @@ static void process_options(int argc, char *argv[])
 		case 'r':
 			vf_dump_file = optarg;
 			restore_vf_data = 1;
+			break;
+		case 'R':
+			random_mode = 1;
 			break;
 		case 'f':
 			process_float_option("fbm-falloff", optarg, &fbm_falloff);
@@ -1344,6 +1379,7 @@ int main(int argc, char *argv[])
 	noise_scale = default_noise_scale;
 
 	process_options(argc, argv);
+	set_automatic_options(random_mode);
 
 	check_vf_dump_file(vf_dump_file);
 

@@ -1,4 +1,4 @@
-.TH GASEOUS-GIGANGICUS 1 "May 2014" "Space-Nerds-In-Space" "User Commands"
+.TH GASEOUS-GIGANGICUS 1 "Aug 2015" "Space-Nerds-In-Space" "User Commands"
 
 .SH NAME
 gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet 
@@ -23,6 +23,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -p particle-count ]
 [ -P ]
 [ -r velocity-field-dumpfile ]
+[ -R ]
 [ -s stripe ]
 [ -t thread-count ]
 [ -v velocity-factor ]
@@ -170,6 +171,10 @@ Make bands rotate around the Y axis instead of X axis
 Restore the velocity field data from a file created previously via the -d option
 instead of calculating it from scratch.  This can save a lot of time if you are
 happy with the fluid flows, but are experimenting with different input images.
+.TP
+-R, --random
+Random values are used for bands, band-vel-factor, velocity-factor, noise-scale, and w-offset.
+-S and -V options are also set.
 .TP
 -s, --stripe
 Instead of using the whole image, use a vertical strip of the image (center) and
