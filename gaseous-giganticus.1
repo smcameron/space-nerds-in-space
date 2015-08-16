@@ -16,6 +16,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -H ]
 [ -i input-file ]
 [ -I image-save-period ]
+[ -l ]
 [ -m speed-multiplier ]
 [ -n ]
 [ -o output-file-template ]
@@ -94,6 +95,11 @@ Input image filename.  Must be RGB png file.
 -I, --image-save-period
 Interval of simulation iterations after which to output images.  Default is to
 output images every 20 iterations of the simulation.
+.TP
+-l, --large-pixels
+Use 3x3 pixels for particles instead of single pixel particles.  The allows getting away
+with fewer particles and thus speeds up the process, however it will leave visible artifacts
+at cubemap face boundaries so it is really only suitable for previewing.
 .TP
 -m, --speed-multiplier
 Multiply band_speed_factor and velocity factor by this number.  It is a single

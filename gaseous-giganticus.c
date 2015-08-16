@@ -94,6 +94,7 @@ static unsigned char *output_image[6];
 static int image_save_period = 20;
 static float w_offset = 0.0;
 static int random_mode;
+static int large_pixels = 0;
 
 /* velocity field for 6 faces of a cubemap */
 static struct velocity_field {
@@ -734,12 +735,14 @@ struct image_thread_info {
 	int nparticles;
 };
 
+static const int xo[] = { 1, 1, 0, -1, -1, -1, 0, 1 };
+static const int yo[] = { 0, 1, 1, 1, 0, -1, -1, -1 };
 
 static void *update_output_image_thread_fn(void *info)
 {
 	struct image_thread_info *t = info;
 	struct particle *p = t->p;
-	int i;
+	int i, j;
 
 	if (!nofade)
 		fade_out_background(t->face, &darkest_color);
@@ -748,6 +751,10 @@ static void *update_output_image_thread_fn(void *info)
 			continue;
 		p[i].c.a = opacity;
 		paint_particle(t->face, p[i].fij.i, p[i].fij.j, &p[i].c);
+		if (large_pixels) {
+			for (j = 0; j < 8; j++)
+				paint_particle(t->face, p[i].fij.i + xo[j], p[i].fij.j + yo[j], &p[i].c);
+		}
 	}
 	return NULL;
 }
@@ -1101,6 +1108,9 @@ static void usage(void)
 	fprintf(stderr, "                   divergences in the velocity field to be clearly seen,\n");
 	fprintf(stderr, "                   as pixels that contain no particles wil not be painted\n");
 	fprintf(stderr, "                   and will become hot pink.\n");
+	fprintf(stderr, "   -l, --large-pixels: particles are 3x3 pixels instead of 1 pixel.  Allows\n");
+	fprintf(stderr, "                       for fewer particles and thus faster rendering, but this\n");
+	fprintf(stderr, "                       WILL leave visible artifacts at cubemap face boundaries.\n");
 	fprintf(stderr, "   -p, --particles: Use specified number of particles. Default is 8000000.\n");
 	fprintf(stderr, "   -P, --plainmap  Do not use sinusoidal image mapping, instead repeat image\n");
 	fprintf(stderr, "                   on six sides of a cubemap.\n");
@@ -1138,6 +1148,7 @@ static struct option long_options[] = {
 	{ "dump-velocity-field", required_argument, NULL, 'd' },
 	{ "input", required_argument, NULL, 'i' },
 	{ "image-save-period", required_argument, NULL, 'I' },
+	{ "large-pixels", no_argument, NULL, 'l' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "opacity", required_argument, NULL, 'O' },
 	{ "w-offset", required_argument, NULL, 'w' },
@@ -1226,7 +1237,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "a:B:b:c:Cd:f:F:hHi:I:nm:o:O:p:PRr:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "a:B:b:c:Cd:f:F:hHi:I:lnm:o:O:p:PRr:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1296,6 +1307,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'n':
 			nofade = 1;
+			break;
+		case 'l':
+			large_pixels = 1;
 			break;
 		case 'o':
 			output_file_prefix = optarg;
