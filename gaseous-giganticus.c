@@ -161,8 +161,8 @@ static void fade_out_background(int f, struct color *c)
 	struct color oc, nc;
 	unsigned char *pixel;
 
-	for (i = 0; i < DIM; i++) {
-		for (j = 0; j < DIM; j++) {
+	for (j = 0; j < DIM; j++) {
+		for (i = 0; i < DIM; i++) {
 			p = j * DIM + i;
 			pixel = &output_image[f][p * 4];
 			if (!cloudmode) {
