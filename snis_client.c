@@ -5198,8 +5198,9 @@ badserver:
 	 * to write, but server is disconnected... no place to put our buffer.
 	 * What happens next is probably "nothing good."
 	 */
-	printf("client baling on server...\n");
+	printf("client bailing on server...\n");
 	packed_buffer_free(buffer);
+	pthread_mutex_unlock(&to_server_queue_event_mutex);
 	shutdown(gameserver_sock, SHUT_RDWR);
 	close(gameserver_sock);
 	gameserver_sock = -1;
