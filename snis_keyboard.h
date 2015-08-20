@@ -51,5 +51,23 @@ struct keyboard_state {
 	int pressed[NKEYSTATES];
 };
 
+struct keyname_value_entry {
+	char *name;
+	unsigned int value;
+};
+
+extern struct keyname_value_entry keyname_value_map[];
+
+extern enum keyaction keymap[256];
+extern enum keyaction ffkeymap[256];
+extern unsigned char *keycharmap[256];
+extern struct keyboard_state kbstate;
+
+extern char *keyactionstring[];
+
+extern void init_keymap();
+extern int remapkey(char *keyname, char *actionname);
+extern void read_keymap_config_file(void);
+
 #endif
 
