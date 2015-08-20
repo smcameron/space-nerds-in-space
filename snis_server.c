@@ -7947,6 +7947,12 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 		}
 	}
 	send_comms_packet(name, ch, " --------------------------------------");
+	if (ship->tsd.ship.mining_bots > 0) {
+		snprintf(msg, sizeof(msg), " %d MINING BOT%s DOCKED AND STOWED.",
+			ship->tsd.ship.mining_bots,
+			ship->tsd.ship.mining_bots == 1 ? "" : "S");
+		send_comms_packet(name, ch, msg);
+	}
 	snprintf(msg, sizeof(msg), " CASH ON HAND:  $%.2f", ship->tsd.ship.wallet);
 	send_comms_packet(name, ch, msg);
 	send_comms_packet(name, ch, " --------------------------------------");
