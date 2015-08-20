@@ -50,6 +50,7 @@
 #include <assert.h>
 #include <locale.h>
 
+#include "arraysize.h"
 #include "container-of.h"
 #include "string-utils.h"
 #include "mtwist.h"
@@ -86,7 +87,6 @@
 #include "starbase_metadata.h"
 #include "elastic_collision.h"
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
 
@@ -821,7 +821,7 @@ static void gather_opcode_not_sent_stats(struct snis_entity *o)
 	default:
 		break;
 	}
-	for (int i = 0; i < ARRAY_SIZE(opcode); i++)
+	for (int i = 0; i < ARRAYSIZE(opcode); i++)
 		if (opcode[i] > 0)
 			write_opcode_stats[opcode[i]].count_not_sent++;
 }
@@ -1862,8 +1862,8 @@ static void add_starbase_attacker(struct snis_entity *starbase, int attacker_id)
 	int n;
 
 	n = starbase->tsd.starbase.nattackers;
-	if (n >= ARRAY_SIZE(starbase->tsd.starbase.attacker))
-		n %= ARRAY_SIZE(starbase->tsd.starbase.attacker);
+	if (n >= ARRAYSIZE(starbase->tsd.starbase.attacker))
+		n %= ARRAYSIZE(starbase->tsd.starbase.attacker);
 	else
 		starbase->tsd.starbase.nattackers++;
 	starbase->tsd.starbase.attacker[n] = attacker_id;
@@ -4773,9 +4773,9 @@ static void player_move(struct snis_entity *o)
 		}
 	}
 	o->tsd.ship.power = table_interp((double) o->tsd.ship.rpm,
-			rpmx, powery, ARRAY_SIZE(rpmx));
+			rpmx, powery, ARRAYSIZE(rpmx));
 	desired_temp = (uint8_t) table_interp((double) o->tsd.ship.rpm,
-			rpmx, tempy, ARRAY_SIZE(rpmx));
+			rpmx, tempy, ARRAYSIZE(rpmx));
 	if (snis_randn(100) < 50) { /* adjust temp slowly, stochastically */
 		diff = 0;
 		if (o->tsd.ship.temp < desired_temp) {
@@ -4788,7 +4788,7 @@ static void player_move(struct snis_entity *o)
 		o->tsd.ship.temp += diff;
 	}
 	o->tsd.ship.power *= table_interp((double) o->tsd.ship.temp,
-			rpmx, powertempy, ARRAY_SIZE(powertempy));
+			rpmx, powertempy, ARRAYSIZE(powertempy));
 
 	/* Update shield strength */
 	if (o->sdata.shield_strength < o->tsd.ship.power_data.shields.i)
@@ -5984,26 +5984,26 @@ static float calculate_commodity_price(struct snis_entity *planet, int item)
 
 	if (!test_done) {
 
-		for (i = 0; i < ARRAY_SIZE(economy_name); i++) {
-			economy = 1.0f - (float) i / (float) ARRAY_SIZE(economy_name);
+		for (i = 0; i < ARRAYSIZE(economy_name); i++) {
+			economy = 1.0f - (float) i / (float) ARRAYSIZE(economy_name);
 			tech_level = 0.5f;
 			government = 0.5f;
 			price = commodity_calculate_price(&commodity[item],
 					economy, tech_level, government);
 			printf("economy %d: %.2f %s\n", i, price, commodity[item].name);
 		}
-		for (i = 0; i < ARRAY_SIZE(tech_level_name); i++) {
+		for (i = 0; i < ARRAYSIZE(tech_level_name); i++) {
 			economy = 0.5f;
-			tech_level = 1.0f - (float) i / (float) ARRAY_SIZE(tech_level_name);
+			tech_level = 1.0f - (float) i / (float) ARRAYSIZE(tech_level_name);
 			government = 0.5f;
 			price = commodity_calculate_price(&commodity[item],
 					economy, tech_level, government);
 			printf("tech level %d: %.2f %s\n", i, price, commodity[item].name);
 		}
-		for (i = 0; i < ARRAY_SIZE(government_name); i++) {
+		for (i = 0; i < ARRAYSIZE(government_name); i++) {
 			economy = 0.5f;
 			tech_level = 0.5f;
-			government = 1.0f - (float) i / (float) ARRAY_SIZE(government_name);
+			government = 1.0f - (float) i / (float) ARRAYSIZE(government_name);
 			price = commodity_calculate_price(&commodity[item],
 					economy, tech_level, government);
 			printf("government %d: %.2f %s\n", i, price, commodity[item].name);
@@ -6018,11 +6018,11 @@ static float calculate_commodity_price(struct snis_entity *planet, int item)
 	 */
 	if (planet) {
 		economy = 1.0f - (float) planet->tsd.planet.economy /
-					(float) ARRAY_SIZE(economy_name);
+					(float) ARRAYSIZE(economy_name);
 		tech_level = 1.0f - (float) planet->tsd.planet.tech_level /
-					(float) ARRAY_SIZE(tech_level_name);
+					(float) ARRAYSIZE(tech_level_name);
 		government = 1.0f - (float) planet->tsd.planet.government /
-					(float) ARRAY_SIZE(government_name);
+					(float) ARRAYSIZE(government_name);
 	} else {
 		/* Deep space starbases will be in top 10% of everything, let's say */
 		economy = 1.0 - snis_randn(100) / 1000;
@@ -6787,9 +6787,9 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].sdata.shield_width = 0;
 	go[i].sdata.shield_depth = 0;
 	go[i].move = generic_move;
-	go[i].tsd.planet.government = snis_randn(1000) % ARRAY_SIZE(government_name);
-	go[i].tsd.planet.economy = snis_randn(1000) % ARRAY_SIZE(economy_name);
-	go[i].tsd.planet.tech_level = snis_randn(1000) % ARRAY_SIZE(tech_level_name);
+	go[i].tsd.planet.government = snis_randn(1000) % ARRAYSIZE(government_name);
+	go[i].tsd.planet.economy = snis_randn(1000) % ARRAYSIZE(economy_name);
+	go[i].tsd.planet.tech_level = snis_randn(1000) % ARRAYSIZE(tech_level_name);
 	go[i].tsd.planet.description_seed = snis_rand();
 	go[i].tsd.planet.radius = radius;
 	go[i].tsd.planet.ring = snis_randn(100) < 50;
@@ -9095,7 +9095,7 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 
 	x = strtok_r(duptxt, " ,", &saveptr);
 	i = 0;
-	while (x && i < ARRAY_SIZE(namelist)) {
+	while (x && i < ARRAYSIZE(namelist)) {
 		x = strtok_r(NULL, " ,", &saveptr);
 		if (x)
 			namelist[i++] = x;
@@ -9199,7 +9199,7 @@ static void process_meta_comms_packet(char *name, struct game_client *c, char *t
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(meta_comms); i++) {
+	for (i = 0; i < ARRAYSIZE(meta_comms); i++) {
 		int len = strlen(meta_comms[i].command);
 		if (strncasecmp(txt, meta_comms[i].command, len) == 0)  {
 			meta_comms[i].f(name, c, txt);
@@ -9572,7 +9572,7 @@ static int l_ai_push_patrol(lua_State *l)
 		o->tsd.ship.ai[n].u.patrol.p[p].v.y = y; 
 		o->tsd.ship.ai[n].u.patrol.p[p].v.z = z; 
 
-		if (p >= ARRAY_SIZE(o->tsd.ship.ai[n].u.patrol.p))
+		if (p >= ARRAYSIZE(o->tsd.ship.ai[n].u.patrol.p))
 			break;
 	}
 	o->tsd.ship.ai[n].u.patrol.npoints = p;
@@ -12739,7 +12739,7 @@ static void move_objects(double absolute_time, int discontinuity)
 		if (go[i].alive) {
 			go[i].move(&go[i]);
 			if (go[i].type == OBJTYPE_SHIP2 &&
-				go[i].sdata.faction < ARRAY_SIZE(faction_population)) {
+				go[i].sdata.faction < ARRAYSIZE(faction_population)) {
 				faction_population[go[i].sdata.faction]++;
 			}
 			netstats.nobjects++;

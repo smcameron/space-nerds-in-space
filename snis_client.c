@@ -57,6 +57,7 @@
 #include <netinet/in.h>
 #endif
 
+#include "arraysize.h"
 #include "build_bug_on.h"
 #include "string-utils.h"
 #include "snis_version.h"
@@ -126,8 +127,6 @@
 #define SPACEMONSTER_COLOR GREEN
 #define NEBULA_COLOR MAGENTA
 #define TRACTORBEAM_COLOR BLUE
-
-#define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 static int SCREEN_WIDTH = 800; // 1366;        /* window width, in pixels */
 static int SCREEN_HEIGHT = 600; // 768;       /* window height, in pixels */
@@ -3161,7 +3160,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			};
 		if (displaymode != DISPLAYMODE_MAINSCREEN)
 			break;
-		r = (r + 1) % ARRAY_SIZE(valid_combos);
+		r = (r + 1) % ARRAYSIZE(valid_combos);
 		set_renderer(ecx, valid_combos[r]);
 		break;
 		}

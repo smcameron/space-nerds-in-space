@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "arraysize.h"
 #include "mtwist.h"
 #include "infinite-taunt.h"
 #include "names.h"
@@ -908,8 +909,6 @@ static char *PostNominalLetters[] = {
 	", SN",
 	", MX",
 };
-
-#define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 static char *random_word(struct mtwist_state *mt, char *w[], int nwords)
 {

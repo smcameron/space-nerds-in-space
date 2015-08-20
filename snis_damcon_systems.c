@@ -3,8 +3,7 @@
 #include "snis_damcon_systems.h"
 #undef DEFINE_SNIS_DAMCON_SYSTEMS_GLOBALS
 
-#define ARRAYSIZE(x) (sizeof(x) / sizeof(x[0]))
-
+#include "arraysize.h"
 #include "build_bug_on.h"
 
 static char *damcon_system_names[] = {

@@ -1,7 +1,7 @@
-#include "starbase-comms.h"
-#include "stdlib.h"
+#include <stdlib.h>
 
-#define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
+#include "arraysize.h"
+#include "starbase-comms.h"
 
 static char *under_attack[] = {
 	"WE ARE UNDER ATTACK",

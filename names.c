@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "arraysize.h"
 #include "names.h"
 #include "mtwist.h"
 
@@ -28,8 +29,6 @@ static char *pattern[] = {
 	"cvv",
 	"cvcvv",
 };
-
-#define ARRAYSIZE(x) (sizeof(x) / (sizeof(x[0])))
 
 static void append_stuff(struct mtwist_state *mt, char *s, char *a[], int asize)
 {

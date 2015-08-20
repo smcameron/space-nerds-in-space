@@ -12,6 +12,7 @@
 #include <png.h>
 #endif
 
+#include "arraysize.h"
 #include "snis_font.h"
 #define SNIS_GRAPH_DECLARE_GLOBALS
 #include "snis_graph.h"
@@ -670,7 +671,7 @@ void sng_setup_colors(void *gtk_widget, char *user_color_file)
 {
 	int i;
 
-	BUILD_ASSERT(ARRAY_SIZE(gradient_colors) == NGRADIENTS);
+	BUILD_ASSERT(ARRAYSIZE(gradient_colors) == NGRADIENTS);
 
 	/* values extracted from gdk_color_parse */
 	huex[WHITE].red = 65535;

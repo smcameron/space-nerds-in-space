@@ -3,13 +3,11 @@
 #include <gdk/gdkevents.h>
 #include <gdk/gdkkeysyms.h>
 
+#include "arraysize.h"
 #include "snis_keyboard.h"
 #include "build_bug_on.h"
 #include "string-utils.h"
 
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(x) (sizeof((x)) / sizeof((x)[0]))
-#endif
 
 struct keyname_value_entry keyname_value_map[] = {
 	{ "a", GDK_a },
@@ -254,13 +252,13 @@ int remapkey(char *keyname, char *actionname)
 	unsigned int j;
 	int index;
 
-	BUILD_ASSERT(ARRAY_SIZE(keyactionstring) == NKEYSTATES);
+	BUILD_ASSERT(ARRAYSIZE(keyactionstring) == NKEYSTATES);
 
 	for (i = keynone; i <= NKEYSTATES; i++) {
 		if (strcmp(keyactionstring[i], actionname) != 0)
 			continue;
 
-		for (j = 0; j < ARRAY_SIZE(keyname_value_map); j++) {
+		for (j = 0; j < ARRAYSIZE(keyname_value_map); j++) {
 			if (strcmp(keyname_value_map[j].name, keyname) == 0) {
 				if ((keyname_value_map[j].value & 0xff00) != 0) {
 					index = keyname_value_map[j].value & 0x00ff;
