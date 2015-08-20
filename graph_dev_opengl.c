@@ -3650,166 +3650,91 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 	glUseProgram(0);
 }
 
+static void debug_menu_draw_item(char *item, int itemnumber, int grayed, int checked)
+{
+	int x = 15;
+	int y = 35 + itemnumber * 20;
+
+	if (grayed)
+		sng_set_foreground(GRAY75);
+	else
+		sng_set_foreground(WHITE);
+
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
+	if (checked)
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string(item, NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+}
+
 void graph_dev_display_debug_menu_show()
 {
-	int x, y;
 	sng_set_foreground(BLACK);
 	graph_dev_draw_rectangle(1, 10, 30, 250 * sgc.x_scale, 225);
 	sng_set_foreground(WHITE);
 	graph_dev_draw_rectangle(0, 10, 30, 250 * sgc.x_scale, 225);
 
-	y = 35;
-	x = 15;
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (draw_normal_lines)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string("VERTEX NORMAL LINES", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
-
-	x = 15;
-	y += 20;
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (draw_billboard_wireframe)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string("BILLBOARD WIREFRAME", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
-
-	x = 15;
-	y += 20;
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (draw_polygon_as_lines)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string("POLYGON AS LINE", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
-
-	x = 15;
-	y += 20;
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (draw_msaa_samples == 0)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string("NO MSAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+	debug_menu_draw_item("VERTEX NORMAL LINES", 0, 0, draw_normal_lines);
+	debug_menu_draw_item("BILLBOARD WIREFRAME", 1, 0, draw_billboard_wireframe);
+	debug_menu_draw_item("POLYGON AS LINE", 2, 0, draw_polygon_as_lines);
+	debug_menu_draw_item("NO MSAA", 3, 0, draw_msaa_samples == 0);
 
 	int max_samples = msaa_max_samples();
-	if (max_samples < 2)
-		sng_set_foreground(GRAY75);
-	else
-		sng_set_foreground(WHITE);
-	x = 15;
-	y += 20;
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (draw_msaa_samples == 2)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string("2x MSAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+	debug_menu_draw_item("2x MSAA", 4, max_samples < 2, draw_msaa_samples == 2);
+	debug_menu_draw_item("4x MSAA", 5, max_samples < 4, draw_msaa_samples == 4);
+	debug_menu_draw_item("RENDER TO TEXTURE", 6, draw_msaa_samples > 0, draw_render_to_texture);
+	debug_menu_draw_item("SMAA", 7, !draw_render_to_texture,
+									draw_smaa);
+	debug_menu_draw_item("SMAA DEBUG EDGE", 8, !draw_smaa, draw_smaa_edge);
+	debug_menu_draw_item("SMAA DEBUG BLEND", 9, !draw_smaa, draw_smaa_blend);
+	debug_menu_draw_item("PLANETARY ATMOSPHERES", 10, 0, draw_atmospheres);
+}
 
-	if (max_samples < 4)
-		sng_set_foreground(GRAY75);
-	else
-		sng_set_foreground(WHITE);
-	x = 15;
-	y += 20;
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (draw_msaa_samples == 4)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string("4x MSAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
-
-	if (draw_msaa_samples > 0)
-		sng_set_foreground(GRAY75);
-	else
-		sng_set_foreground(WHITE);
-	x = 15;
-	y += 20;
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (draw_render_to_texture)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string("RENDER TO TEXTURE", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
-
-	if (!draw_render_to_texture)
-		sng_set_foreground(GRAY75);
-	else
-		sng_set_foreground(WHITE);
-	x = 15;
-	y += 20;
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (draw_smaa)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string("SMAA", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
-
-	if (!draw_smaa)
-		sng_set_foreground(GRAY75);
-	else
-		sng_set_foreground(WHITE);
-	x = 15;
-	y += 20;
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (draw_smaa_edge)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string("SMAA DEBUG EDGE", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
-
-	if (!draw_smaa)
-		sng_set_foreground(GRAY75);
-	else
-		sng_set_foreground(WHITE);
-	x = 15;
-	y += 20;
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (draw_smaa_blend)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string("SMAA DEBUG BLEND", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
-	x = 15;
-	y += 20;
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (draw_atmospheres)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string("PLANETARY ATMOSPHERES", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+static int selected_debug_item_checkbox(int n, int x, int y, int *toggle)
+{
+	if (x > 15 && x < 35 && y >= 35 + n * 20 && y <= 50 + n * 20) {
+		if (toggle)
+			*toggle = !*toggle;
+		return 1;
+	}
+	return 0;
 }
 
 int graph_dev_graph_dev_debug_menu_click(int x, int y)
 {
-	if (x >= 15 && x <= 35 && y >= 35 && y <= 50) {
-		draw_normal_lines = !draw_normal_lines;
+	if (selected_debug_item_checkbox(0, x, y, &draw_normal_lines))
 		return 1;
-	}
-	if (x >= 15 && x <= 35 && y >= 55 && y <= 70) {
-		draw_billboard_wireframe = !draw_billboard_wireframe;
+	if (selected_debug_item_checkbox(1, x, y, &draw_billboard_wireframe))
 		return 1;
-	}
-	if (x >= 15 && x <= 35 && y >= 75 && y <= 90) {
-		draw_polygon_as_lines = !draw_polygon_as_lines;
+	if (selected_debug_item_checkbox(2, x, y, &draw_polygon_as_lines))
 		return 1;
-	}
-	if (x >= 15 && x <= 35 && y >= 95 && y <= 110) {
+	if (selected_debug_item_checkbox(3, x, y, NULL)) {
 		draw_msaa_samples = 0;
 		return 1;
 	}
-	if (x >= 15 && x <= 35 && y >= 115 && y <= 130) {
+	if (selected_debug_item_checkbox(4, x, y, NULL)) {
 		if (msaa_max_samples() >= 2)
 			draw_msaa_samples = 2;
 		return 1;
 	}
-	if (x >= 15 && x <= 35 && y >= 135 && y <= 150) {
+	if (selected_debug_item_checkbox(5, x, y, NULL)) {
 		if (msaa_max_samples() >= 4)
 			draw_msaa_samples = 4;
 		return 1;
 	}
-	if (x >= 15 && x <= 35 && y >= 155 && y <= 170) {
-		draw_render_to_texture = !draw_render_to_texture;
+	if (selected_debug_item_checkbox(6, x, y, &draw_render_to_texture))
 		return 1;
-	}
-	if (x >= 15 && x <= 35 && y >= 175 && y <= 190) {
-		draw_smaa = !draw_smaa;
+	if (selected_debug_item_checkbox(7, x, y, &draw_smaa))
 		return 1;
-	}
-	if (x >= 15 && x <= 35 && y >= 195 && y <= 210) {
-		draw_smaa_edge = !draw_smaa_edge;
+	if (selected_debug_item_checkbox(8, x, y, &draw_smaa_edge)) {
 		draw_smaa_blend = 0;
 		return 1;
 	}
-	if (x >= 15 && x <= 35 && y >= 215 && y <= 230) {
-		draw_smaa_blend = !draw_smaa_blend;
+	if (selected_debug_item_checkbox(9, x, y, &draw_smaa_blend)) {
 		draw_smaa_edge = 0;
 		return 1;
 	}
-	if (x >= 15 && x <= 35 && y >= 235 && y <= 250) {
-		draw_atmospheres = !draw_atmospheres;
+	if (selected_debug_item_checkbox(10, x, y, &draw_atmospheres))
 		return 1;
-	}
 	return 0;
 }
 
