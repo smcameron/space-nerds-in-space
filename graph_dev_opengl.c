@@ -62,6 +62,7 @@ static int draw_render_to_texture = 0;
 static int draw_smaa = 0;
 static int draw_smaa_edge = 0;
 static int draw_smaa_blend = 0;
+static int draw_atmospheres = 1;
 static const char *default_shader_directory = "share/snis/shader";
 static char *shader_directory = NULL;
 
@@ -1380,6 +1381,9 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 	struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos)
 {
 	enable_3d_viewport();
+
+	if (!draw_atmospheres)
+		return;
 
 	if (!m->graph_ptr)
 		return;
@@ -3650,9 +3654,9 @@ void graph_dev_display_debug_menu_show()
 {
 	int x, y;
 	sng_set_foreground(BLACK);
-	graph_dev_draw_rectangle(1, 10, 30, 200 * sgc.x_scale, 225);
+	graph_dev_draw_rectangle(1, 10, 30, 250 * sgc.x_scale, 225);
 	sng_set_foreground(WHITE);
-	graph_dev_draw_rectangle(0, 10, 30, 200 * sgc.x_scale, 225);
+	graph_dev_draw_rectangle(0, 10, 30, 250 * sgc.x_scale, 225);
 
 	y = 35;
 	x = 15;
@@ -3748,6 +3752,12 @@ void graph_dev_display_debug_menu_show()
 	if (draw_smaa_blend)
 		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
 	sng_abs_xy_draw_string("SMAA DEBUG BLEND", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+	x = 15;
+	y += 20;
+	graph_dev_draw_rectangle(0, x, y, 15, 15);
+	if (draw_atmospheres)
+		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string("PLANETARY ATMOSPHERES", NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
 }
 
 int graph_dev_graph_dev_debug_menu_click(int x, int y)
@@ -3794,6 +3804,10 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 	if (x >= 15 && x <= 35 && y >= 215 && y <= 230) {
 		draw_smaa_blend = !draw_smaa_blend;
 		draw_smaa_edge = 0;
+		return 1;
+	}
+	if (x >= 15 && x <= 35 && y >= 235 && y <= 250) {
+		draw_atmospheres = !draw_atmospheres;
 		return 1;
 	}
 	return 0;
