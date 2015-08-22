@@ -3011,6 +3011,8 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			}
 			return TRUE;
 	case key_toggle_space_dust:
+			if (displaymode != DISPLAYMODE_MAINSCREEN)
+				break;
 			if (nfake_stars == 0)
 				nfake_stars = 2000;
 			else
