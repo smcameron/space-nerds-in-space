@@ -5611,6 +5611,10 @@ static int add_ship(int faction, int auto_respawn)
 	int i;
 	double x, y, z, heading;
 	int st;
+	static struct mtwist_state *mt = NULL;
+
+	if (!mt)
+		mt = mtwist_init(mtwist_seed);
 
 	for (i = 0; i < 100; i++) {
 		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
@@ -5650,6 +5654,8 @@ static int add_ship(int faction, int auto_respawn)
 	memset(go[i].tsd.ship.cargo, 0, sizeof(go[i].tsd.ship.cargo));
 	if (faction >= 0 && faction < nfactions())
 		go[i].sdata.faction = faction;
+	ship_name(mt, go[i].sdata.name, sizeof(go[i].sdata.name));
+	uppercase(go[i].sdata.name);
 	return i;
 }
 

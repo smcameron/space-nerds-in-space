@@ -7,5 +7,6 @@ extern void starbase_attack_warning(struct mtwist_state *mt, char *buffer, int b
 extern void cop_attack_warning(struct mtwist_state *mt, char *buffer, int buflen, int line_len);
 extern void character_name(struct mtwist_state *mt, char *buffer, int buflen);
 extern void robot_name(struct mtwist_state *mt, char *buffer, int buflen);
+extern void ship_name(struct mtwist_state *mt, char *buffer, int buflen);
 
 #endif 
