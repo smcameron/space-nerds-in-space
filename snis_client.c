@@ -4644,6 +4644,7 @@ static int process_client_id_packet(void)
 	if (rc)
 		return rc;
 	my_ship_id = id;
+	my_ship_oid = UNKNOWN_ID;
 	printf("SET MY SHIP ID to %u\n", my_ship_id);
 	return 0;
 }
