@@ -33,9 +33,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "ssgl.h"
 
+int lsssglmode = 0;
+char *programname = "ssgl_gameclient_example";
+
 static void usage()
 {
-	fprintf(stderr, "ssgl_gameclient_example gametype\n");
+	fprintf(stderr, "%s: usage:\n   %s [lobby-hostname] [gametypefilter]\n", programname);
+	fprintf(stderr, "      if lobby-hostname is omitted, localhost is used\n");
+	fprintf(stderr, "      if gametypefilter is omitted, '*' is used.\n");
 	exit(1);
 }
 
@@ -44,19 +49,44 @@ int main(int argc, char *argv[])
 	struct ssgl_game_server *game_server = NULL;
 	struct ssgl_client_filter filter;
 	int game_server_count, rc, i;
+	char *hostname, *gametype;
 	int sock;
 
-	if (argc < 3)
-		usage();
+	if (strlen(argv[0]) >= 6) {
+		char *cmd = argv[0] + strlen(argv[0]) - 6;
+		if (strcmp(cmd, "lsssgl") == 0) {
+			lsssglmode = 1;
+			programname = "lsssgl";
+		}
+	}
 
-	sock = ssgl_gameclient_connect_to_lobby(argv[1]);
+	if (argc < 1)
+		usage();
+	if (strcmp(argv[1], "help") == 0 ||
+		strcmp(argv[1], "-help") == 0 ||
+		strcmp(argv[1], "--help") == 0)
+		usage();
+	if (argc == 1) {
+		hostname = "localhost";
+		gametype = "*";
+	}
+	if (argc == 2) {
+		hostname = argv[1];
+		gametype = "*";
+	}
+	if (argc >= 3) {
+		hostname = argv[1];
+		gametype = argv[3];
+	}
+
+	sock = ssgl_gameclient_connect_to_lobby(hostname);
 	if (sock < 0) {
 		fprintf(stderr, "ssgl_connect_to_lobby failed: %s\n", strerror(errno));
 		exit(1);
 	}
 
-	strncpy(filter.game_type, argv[2], sizeof(filter.game_type)-1);
-	printf("filtering games of type '%s'\n", filter.game_type);
+	strncpy(filter.game_type, gametype, sizeof(filter.game_type)-1);
+	printf("filtering games of type '%s' on host '%s'\n", filter.game_type, hostname);
 	do {
 		rc = ssgl_recv_game_servers(sock, &game_server, &game_server_count, &filter);
 		if (rc) {
@@ -80,8 +110,9 @@ int main(int argc, char *argv[])
 		printf("\n");	
 		if (game_server_count > 0)
 			free(game_server);
-		ssgl_sleep(5);  /* just a thread safe sleep. */
-	} while (1);
+		if (!lsssglmode)
+			ssgl_sleep(5);  /* just a thread safe sleep. */
+	} while (!lsssglmode);
 	return 0;
 }
 

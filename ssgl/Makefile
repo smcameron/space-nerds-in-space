@@ -92,7 +92,7 @@ SRCS = ssgl_connect_to_lobby.c \
 
 TXTFILES = AUTHORS COPYING LICENSE README
 
-all:	ssgl_server ssgl_gameclient_example ssgl_gameserver_example
+all:	ssgl_server ssgl_gameclient_example ssgl_gameserver_example lsssgl
 
 libssglclient.a:	${ARCHIVEOBJS}
 	$(Q)$(ARCHIVE)
@@ -136,6 +136,9 @@ ssgl_gameserver_example.o:	ssgl_gameserver_example.c ssgl.h libssglclient.a
 ssgl_gameclient_example:	ssgl_gameclient_example.o
 	$(Q)$(LINKCLIENT)
 
+lsssgl:	ssgl_gameclient_example
+	cp ssgl_gameclient_example lsssgl
+
 ssgl_gameserver_example:	ssgl_gameserver_example.o
 	$(Q)$(LINKCLIENT)
 
@@ -147,4 +150,5 @@ tarball: ${SRCS} ${TXTFILES} Makefile
 	rm -fr ./ssgl-${VERSION}
 
 clean:
-	rm -fr *.o ssgl_server ssgl_gameclient_example ssgl_gameserver_example libssglclient.a ssgl-${VERSION}.tar.gz
+	rm -fr *.o ssgl_server ssgl_gameclient_example ssgl_gameserver_example libssglclient.a ssgl-${VERSION}.tar.gz lsssgl
+
