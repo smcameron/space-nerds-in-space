@@ -13061,7 +13061,6 @@ int main(int argc, char *argv[])
 	const double maxTimeBehind = 0.5;
 	double delta = 1.0/10.0;
 
-	i = 0;
 	int discontinuity = 0;
 	double currentTime = time_now_double();
 	double nextTime = currentTime + delta;
@@ -13075,8 +13074,6 @@ int main(int argc, char *argv[])
 			discontinuity = 1;
 		}
 		if (currentTime >= nextTime) {
-			/* if ((i % 30) == 0) printf("Moving objects...i = %d\n", i); */
-			i++;
 			move_objects(nextTime, discontinuity);
 			process_lua_commands();
 
