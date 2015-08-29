@@ -276,6 +276,7 @@ static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t listener_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t listener_started;
 int listener_port = -1;
+static int default_snis_server_port = -1; /* -1 means choose a random port */
 pthread_t lobbythread;
 char *lobbyserver = NULL;
 static int snis_log_level = 2;
@@ -12478,17 +12479,34 @@ static void *listener_thread(__attribute__((unused)) void * unused)
 	struct addrinfo *result, *rp;
 	int s;
 	char portstr[20];
+	char *snis_server_port_var;
 
         snis_log(SNIS_INFO, "snis_server starting\n");
+	snis_server_port_var = getenv("SNISSERVERPORT");
+	default_snis_server_port = -1;
+	if (snis_server_port_var != NULL) {
+		int rc, value;
+		rc = sscanf(snis_server_port_var, "%d", &value);
+		if (rc == 1) {
+			default_snis_server_port = value & 0x0ffff;
+			printf("snis_server: Using SNISSERVERPORT value %d\n",
+				default_snis_server_port);
+		}
+	}
 
-	/* Bind "rendezvous" socket to a random port to listen for connections. */
+	/* Bind "rendezvous" socket to a random port to listen for connections.
+	 * unless SNISSERVERPORT is defined, in which case, try to use that.
+	 */
 	while (1) {
 
 		/* 
 		 * choose a random port in the "Dynamic and/or Private" range
 		 * see http://www.iana.org/assignments/port-numbers
 		 */
-		port = snis_randn(65335 - 49152) + 49151;
+		if (default_snis_server_port == -1)
+			port = snis_randn(65335 - 49152) + 49151;
+		else
+			port = default_snis_server_port;
 		snis_log(SNIS_INFO, "Trying port %d\n", port);
 		sprintf(portstr, "%d", port);
 		memset(&hints, 0, sizeof(struct addrinfo));

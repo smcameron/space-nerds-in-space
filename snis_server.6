@@ -33,6 +33,11 @@ Print the program's version number and exit.
 .PP
 SNISRAND can be set to a random seed to affect universe generation
 .PP
+SNISSERVERPORT can be used to control the port on which snis_server listens
+for new connections.  If not set, a random port number is used which clients
+discover via ssgl_server.  If set, the given port number is used (and clients
+still discover it via ssgl_server.)
+.PP
 SNIS_ASSET_DIR can cause the program to use a different directory to read
 various assets (models, sounds, etc.) from a different directory allowing
 easy substitution of all art assets.   Default is to use share/snis.
