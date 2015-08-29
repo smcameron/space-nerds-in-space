@@ -48,8 +48,23 @@ Request this client process support the MAIN SCREEN role.
 \fB\--navigation\fR
 Request this client process support the NAVIGATION role.
 .TP
+\fB\--nolobby\fR
+Do not use the lobby server.  This option requires that the
+--serverport and --serverhost options be used and that the --lobbyhost
+option is not used.
+.TP
 \fB\--science\fR
 Request this client process support the SCIENCE role.
+.TP
+\fB\--serverhost\fR
+Specify the hostname of the server to contact.  This option requires
+the --nolobby and --serverport options are also used, and requires that
+the --lobbyhost option is not used.
+.TP
+\fB\--serverport\fR
+Specify the portnumber of the snis_server process.  This option requires
+the --nolobby and --serverhost options are also used, and requires that
+the --lobbyhost option is not used.
 .TP
 \fB\--soundserver\fR
 Request this client process support the SOUNDSERVER role.

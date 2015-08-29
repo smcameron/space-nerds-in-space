@@ -38,6 +38,11 @@ for new connections.  If not set, a random port number is used which clients
 discover via ssgl_server.  If set, the given port number is used (and clients
 still discover it via ssgl_server.)
 .PP
+SNISSERVERNOLOBBY if this is defined the server will not attempt to connect to
+the lobby server process "ssgl_server".  Generally SNISSERVERPORT should be used
+when SNISSERVERNOLOBBY is used (otherwise you'll have to figure out which port
+snis_server is using via e.g. examining output of "netstat -na").
+.PP
 SNIS_ASSET_DIR can cause the program to use a different directory to read
 various assets (models, sounds, etc.) from a different directory allowing
 easy substitution of all art assets.   Default is to use share/snis.

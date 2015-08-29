@@ -34,7 +34,7 @@ Step 0: Build the game from source. (or alternately, see instructions
 	make
 	(wait for it to compile... Openscad might take its sweet time.)
 
-Step 1: run "./quickstart".
+Step 1: run "./quickstart" or "./nolobby-quickstart".
 
 The "quickstart" script will start both a client process with all stations enabled
 and server process on a single computer.  This is generally how I run the game when
@@ -70,7 +70,7 @@ the guns point.  Left and right mouse buttons fire phasers and torpedoes.  Do no
 anger the local law enforcement.
 -----------------------------------------
 
-Longer more technical instructions for multi-computuer setup follow:
+Longer more technical instructions for multi-computer setup follow:
 
 There are three parts.
 
@@ -128,6 +128,34 @@ d) Connect the clients to the lobby, and then from there connect to the
 
 2) press function keys f1,f2,f3,f4,f5,f6, etc. on each client to switch between
    the roles that station fulfills.
+
+------
+
+How to run the game without a lobby server (without ssgl_server).  This may
+be useful for getting through firewalls, etc., not that I expect the game plays
+very well over the internet -- it is a LAN game, fundamentally.
+
+Starting the server:
+export SNISSERVERNOLOBBY=1
+export SNISSERVERPORT=12345 # or whatever port number you want to use
+./snis_server a b c d
+
+Note, you still have to give snis_server 4 arguments -- all pertaining to the lobby
+server, but since SNISSERVERNOLOBBY is set, it won't do anything with those args.
+(I should clean up the argument handling of snis_server some day.)
+
+Starting the clients:
+export SERVERPORT=12345 # or whatever port number you chose above
+export SERVERHOST=X.X.X.X # put the IP address where your snis_server is running here
+./snis_client $ASPECT_RATIO --nolobby --serverport 12345 --serverhost "$SERVERHOST" --fullscreen --starship "$shipname" --pw "$password"
+
+Note that "localhost", 127.0.0.1, etc generally will not work for the SERVERHOST.
+This is because the game attempts to figure out which interface an internet bound
+packet would exit, and listens on *that* interface for incoming connections and
+not on *all* interfaces.  127.0.0.1 is on the loopback interface, and internet bound
+packets do not exit on the looback interface, so the game does not listen for connections
+on 127.0.0.1.  So if you're running the server on the same host as the client, you need
+to set SERVERHOST to the real IP address of the host (e.g. examine output of "ifconfig -a")
 
 ------
 INSTRUCTIONS FOR BUILDING DEBIAN PACKAGE

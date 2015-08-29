@@ -263,6 +263,9 @@ int gameserver_sock = -1;
 int lobby_count = 0;
 char lobbyerror[200];
 char *lobbyhost = "localhost";
+static char *serverhost = NULL;
+static int serverport = -1;
+static int avoid_lobby = 0;
 struct ssgl_game_server lobby_game_server[100];
 int ngameservers = 0;
 
@@ -4979,12 +4982,18 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 #endif
 	char portstr[50];
 	char hoststr[50];
-	unsigned char *x = (unsigned char *) &lobby_game_server[lobby_selected_server].ipaddr;
+	unsigned char *x;
 	struct add_player_packet app;
 	int flag = 1;
 
-	sprintf(portstr, "%d", ntohs(lobby_game_server[lobby_selected_server].port));
-	sprintf(hoststr, "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
+	if (avoid_lobby) {
+		strcpy(hoststr, serverhost);
+		sprintf(portstr, "%d", serverport);
+	} else {
+		x = (unsigned char *) &lobby_game_server[lobby_selected_server].ipaddr;
+		sprintf(portstr, "%d", ntohs(lobby_game_server[lobby_selected_server].port));
+		sprintf(hoststr, "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
+	}
 	printf("connecting to %s/%s\n", hoststr, portstr);
 
 	memset(&hints, 0, sizeof hints);
@@ -4992,8 +5001,11 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV | AI_NUMERICHOST;
 	rc = getaddrinfo(hoststr, portstr, &hints, &gameserverinfo);
-	if (rc)
+	if (rc) {
+		fprintf(stderr, "snis_client: Failed looking up %s:%s: %s\n",
+			hoststr, portstr, gai_strerror(rc));
 		goto error;
+	}
 
 	for (i = gameserverinfo; i != NULL; i = i->ai_next) {
 		if (i->ai_family == AF_INET) {
@@ -5084,7 +5096,7 @@ error:
 	return NULL;
 }
 
-void connect_to_gameserver(int selected_server)
+int connect_to_gameserver(int selected_server)
 {
 	int rc;
 
@@ -5092,11 +5104,11 @@ void connect_to_gameserver(int selected_server)
         pthread_attr_setdetachstate(&gameserver_connect_attr, PTHREAD_CREATE_DETACHED);
 	rc = pthread_create(&gameserver_connect_thread, &gameserver_connect_attr, connect_to_gameserver_thread, NULL);
 	if (rc) {
-		fprintf(stderr, "Failed to create thread to connect to gameserver: %d '%s', '%s'\n",
-			rc, strerror(rc), strerror(errno));
+		fprintf(stderr, "%s: Failed to create thread to connect to gameserver:%d '%s', '%s'\n",
+			"snis_client", rc, strerror(rc), strerror(errno));
+		return -1;
 	}
-
-	return;
+	return 0;
 }
 
 static void show_connecting_screen(GtkWidget *w)
@@ -5106,7 +5118,7 @@ static void show_connecting_screen(GtkWidget *w)
 	sng_abs_xy_draw_string("CONNECTING TO SERVER...", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
 	if (!connected_to_gameserver) {
 		connected_to_gameserver = 1;
-		connect_to_gameserver(lobby_selected_server);
+		(void) connect_to_gameserver(lobby_selected_server);
 	}
 }
 
@@ -12255,7 +12267,11 @@ static void usage(void)
 {
 	fprintf(stderr, "usage: snis_client [--aspect-ratio x,y] --lobbyhost lobbyhost \\\n"
 			"                    --starship starshipname --pw password\n");
+	fprintf(stderr, "       snis_client [--aspect-ratio x,y] --nolobby\\\n"
+			"                    --serverhost serverhost --serverport serverport\\\n"
+			"                    --starship starshipname --pw password\n");
 	fprintf(stderr, "       Example: ./snis_client --lobbyhost localhost --starship Enterprise --pw tribbles\n");
+	fprintf(stderr, "Note: serverhost and serverport are mutually exclusive with lobbyhost\n");
 	exit(1);
 }
 
@@ -13055,6 +13071,36 @@ static void init_colors(void)
 	sng_setup_colors(main_da, color_file);
 }
 
+static void check_lobby_serverhost_options()
+{
+	if (serverport != -1) {
+		if (serverport < 0 || serverport > 0x0ffff) {
+			fprintf(stderr, "snis_client: Bad serverport %d\n", serverport);
+			usage();
+		}
+		if (strcmp(lobbyhost, "localhost") != 0) {
+			fprintf(stderr,
+				"snis_client: lobbyhost and serverport are incompatible options\n");
+			usage();
+		}
+		if (serverhost == NULL && !avoid_lobby) {
+			fprintf(stderr,
+				"snis_client: serverhost requires --nolobby option as well\n");
+			usage();
+		}
+		if (!avoid_lobby) {
+			fprintf(stderr,
+				"snis_client: serverport requires --nolobby option as well\n");
+			usage();
+		}
+		if (serverhost == NULL) {
+			fprintf(stderr,
+				"snis_client: serverport option requires serverhost option as well\n");
+			usage();
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
@@ -13083,6 +13129,32 @@ int main(int argc, char *argv[])
 			if ((i + 1) >= argc)
 				usage();
 			lobbyhost = argv[i + 1];
+			i++;
+			continue;
+		}
+		if (strcmp(argv[i], "--nolobby") == 0) {
+			avoid_lobby = 1;
+			continue;
+		}
+		if (strcmp(argv[i], "--serverhost") == 0) {
+			if ((i + 1) >= argc)
+				usage();
+			serverhost = argv[i + 1];
+			i++;
+			continue;
+		}
+		if (strcmp(argv[i], "--serverport") == 0) {
+			int rc, value;
+			char *portstr;
+
+			if ((i + 1) >= argc)
+				usage();
+			portstr = argv[i + 1];
+			rc = sscanf(portstr, "%d", &value);
+			if (rc == 1)
+				serverport = value;
+			else
+				usage();
 			i++;
 			continue;
 		}
@@ -13149,10 +13221,14 @@ int main(int argc, char *argv[])
 			i++;
 			continue;
 		}
+		fprintf(stderr, "Bad argument: %s\n", argv[i]);
 		usage();
 	}
 	if (role == 0)
 		role = ROLE_ALL;
+
+	printf("serverport = %d\n", serverport);
+	check_lobby_serverhost_options();
 
 	strcpy(skybox_texture_prefix, "orange-haze");
 	override_asset_dir();
@@ -13186,10 +13262,16 @@ int main(int argc, char *argv[])
 	memset(ship_mesh_map, 0, sizeof(*ship_mesh_map) * nshiptypes);
 	memset(derelict_mesh, 0, sizeof(*derelict_mesh) * nshiptypes);
 
-	if (displaymode != DISPLAYMODE_NETWORK_SETUP || quickstartmode) {
-		connect_to_lobby();
-		if (quickstartmode)
-			displaymode = DISPLAYMODE_LOBBYSCREEN;
+	if (avoid_lobby) {
+		done_with_lobby = 1;
+		lobby_socket = -1;
+		displaymode = DISPLAYMODE_CONNECTING;
+	} else {
+		if (displaymode != DISPLAYMODE_NETWORK_SETUP || quickstartmode) {
+			connect_to_lobby();
+			if (quickstartmode)
+				displaymode = DISPLAYMODE_LOBBYSCREEN;
+		}
 	}
 
 	/* gtk_set_locale();  The setlocale() above takes care of this. */

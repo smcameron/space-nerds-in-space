@@ -1,0 +1,76 @@
+#!/bin/sh
+
+SERVERHOST="$1"
+if [ "$SERVERHOST" = "" ]
+then
+	echo "usage: nolobby ip-address-of-snis-server" 1>&2
+	exit 1
+fi
+shift;
+
+if [ "$SERVERHOST" = "localhost" -o "$SERVERHOST" = "127.0.0.1" ]
+then
+	echo "Using localhost or 127.0.0.1 for the IP address will not work." 1>&2
+	echo "Use your real IP address." 1>&2
+	exit 1
+fi
+
+# stop any existing processes first
+./killem.sh
+sleep 0.25
+
+uname -a | grep '^Darwin ' > /dev/null 2>&1
+if [ "$?" = "0" ]
+then
+	OSX="1"
+else
+	OSX=0
+fi
+
+usage()
+{
+	echo "usage: quickstart star-ship-name password" 1>&2
+	echo "example:" 1>&2
+	echo "./quickstart Enterprise tribbles" 1>&2
+	exit 1
+}
+
+shipname="$1"
+if [ "$1" = "" ]
+then
+	shipname="spacenerd"
+fi
+
+password="$2"
+if [ "$2" = "" ]
+then
+	password="spacenerd"
+fi
+
+# start the lobby server
+# ssgl/ssgl_server
+
+# sleep 0.25
+
+export SNISRAND=12345
+export SNISSERVERPORT=12345
+export SNISSERVERNOLOBBY=1
+./snis_server localhost SPACENERDS `hostname` localhost --enable-enscript &
+
+sleep 2.50
+
+# Some common aspect ratios.  Note: the game was designed on a machine
+# with a 16:9 aspect ratio.  Other aspect ratios may have some UI issues.
+#
+ASPECT_RATIO="" # unspecified, figure it out from window manager
+# ASPECT_RATIO="--aspect-ratio 5:4"
+# ASPECT_RATIO="--aspect-ratio 4:3"
+# ASPECT_RATIO="--aspect-ratio 16:10"
+# ASPECT_RATIO="--aspect-ratio 16:9"
+
+# start the game client and server in nolobby mode
+echo ./snis_client $ASPECT_RATIO --nolobby --serverport 12345 --serverhost "$SERVERHOST" --fullscreen --starship "$shipname" --pw "$password" $@
+
+./snis_client $ASPECT_RATIO --nolobby --serverport 12345 --serverhost "$SERVERHOST" --fullscreen --starship "$shipname" --pw "$password" $@
+exit $?
+

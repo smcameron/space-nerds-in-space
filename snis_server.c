@@ -13074,7 +13074,10 @@ int main(int argc, char *argv[])
 
 	ignore_sigpipe();	
 	snis_collect_netstats(&netstats);
-	register_with_game_lobby(argv[1], port, argv[2], argv[1], argv[3]);
+	if (getenv("SNISSERVERNOLOBBY") == NULL)
+		register_with_game_lobby(argv[1], port, argv[2], argv[1], argv[3]);
+	else
+		printf("snis_server: Skipping lobby registration\n");
 
 	const double maxTimeBehind = 0.5;
 	double delta = 1.0/10.0;
