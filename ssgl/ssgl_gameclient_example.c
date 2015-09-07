@@ -90,21 +90,22 @@ int main(int argc, char *argv[])
 	}
 
 	strncpy(filter.game_type, gametype, sizeof(filter.game_type)-1);
-	printf("filtering games of type '%s' on host '%s'\n", filter.game_type, hostname);
+	printf("Filtering games of type '%s' on host '%s'\n", filter.game_type, hostname);
 	do {
 		rc = ssgl_recv_game_servers(sock, &game_server, &game_server_count, &filter);
 		if (rc) {
 			fprintf(stderr, "ssgl_recv_game_servers failed: %s\n", strerror(errno));
 			break;
 		}
-		printf("IP addr/port       %15s %20s %15s %20s\n",
-			"Game Type", "Instance/Map", "Server Nickname", "Location");
-		printf("---------------------------------------------------------------------\n");	
+		printf("%20s %15s %20s %15s %20s\n",
+			"IP addr/port", "Game Type", "Instance/Map", "Server Nickname", "Location");
+		printf("-----------------------------------------------------------------------------------------------\n");
 		for (i = 0; i < game_server_count; i++) {
 			unsigned char *x = (unsigned char *) &game_server[i].ipaddr;
-			printf("%d.%d.%d.%d/%d %15s %20s %15s %20s\n",
-				x[0], x[1], x[2], x[3],
-				ntohs(game_server[i].port),
+			char ipaddr_and_port[100];
+			sprintf(ipaddr_and_port, "%d.%d.%d.%d/%d", x[0], x[1], x[2], x[3],
+					ntohs(game_server[i].port));
+			printf("%20s %15s %20s %15s %20s\n", ipaddr_and_port,
 				game_server[i].game_type,
 				game_server[i].game_instance,
 				game_server[i].server_nickname,
