@@ -27,6 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stdio.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <errno.h>
 #include <string.h>
@@ -64,7 +65,7 @@ int snis_readsocket(int fd, void *buffer, int buflen)
 		rc = recv(fd, c, len, 0);
 		/*printf("recv returned %d, errno = %s\n", rc, strerror(errno)); */
 		if (rc == 0) { /* other side closed conn */
-			fprintf(stderr, "readscoket other side closed conn\n");
+			fprintf(stderr, "pid(%d): readsocket other side closed conn\n", getpid());
 			return -1;
 		}
 		if (rc == len) {
