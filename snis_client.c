@@ -563,8 +563,6 @@ static int add_generic_object(uint32_t id, uint32_t timestamp, double x, double 
 	go[i].r[0].v.y = y;
 	go[i].r[0].v.z = z;
 
-	go[i].birth_r = go[i].r[0];
-
 	/* entity move will update this */
 	go[i].x = 0;
 	go[i].y = 0;
@@ -1100,6 +1098,7 @@ static int update_laser(uint32_t id, uint32_t timestamp, uint8_t power, double x
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_LASER, 1, e);
 		if (i < 0)
 			return i;
+		go[i].tsd.laser.birth_r = go[i].r[0];
 		go[i].tsd.laser.ship_id = ship_id;
 		go[i].tsd.laser.power = power;
 		myship = find_my_ship();
@@ -1872,7 +1871,7 @@ static void interpolate_laser(double timestamp, struct snis_entity *o, int visib
 
 	/* find out how far the laser has traveled */
 	union vec3 pos = { { o->x, o->y, o->z } };
-	vec3_sub_self(&pos, &o->birth_r);
+	vec3_sub_self(&pos, &o->tsd.laser.birth_r);
 	float dist = vec3_magnitude(&pos);
 
 	float radius_scale = fmaxf(0.5, o->tsd.laser.power / 255.0);
