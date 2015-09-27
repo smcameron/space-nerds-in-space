@@ -804,6 +804,11 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		cp ${MODELSRCDIR}/$$d/$$d.obj ${MODELDIR}/$$d ; \
 		cp ${MODELSRCDIR}/$$d/$$d.png ${MODELDIR}/$$d ; \
 	done
+	${INSTALL} -m 644 ${DOCKING_PORT_FILES} ${MODELDIR}
+	for d in starbase starbase2 ; do \
+		mkdir -p ${MODELDIR}/$$d ; \
+		mv ${MODELDIR}/$$d.docking_ports.h ${MODELDIR}/$$d/$$d.docking_ports.h ; \
+	done
 	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006lights.png ${MODELDIR}/wombat
 	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.mtl ${MODELDIR}/wombat
 	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.obj ${MODELDIR}/wombat
