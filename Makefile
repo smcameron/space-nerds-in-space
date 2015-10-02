@@ -25,7 +25,8 @@ CONFIGFILES=${CONFIGSRCDIR}/commodities.txt \
 	${CONFIGSRCDIR}/factions.txt \
 	${CONFIGSRCDIR}/planet_materials.txt \
 	${CONFIGSRCDIR}/ship_types.txt \
-	${CONFIGSRCDIR}/starbase_models.txt
+	${CONFIGSRCDIR}/starbase_models.txt \
+	${CONFIGSRCDIR}/user_colors.cfg
 
 ASSETSSRCDIR=share/snis
 	
@@ -150,6 +151,12 @@ TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
 	${TEXTURESRCDIR}/red-laser-texture.png \
 	${TEXTURESRCDIR}/red-torpedo-texture.png \
 	${TEXTURESRCDIR}/SearchTex.h \
+	${TEXTURESRCDIR}/shield-effect-0.png \
+	${TEXTURESRCDIR}/shield-effect-1.png \
+	${TEXTURESRCDIR}/shield-effect-2.png \
+	${TEXTURESRCDIR}/shield-effect-3.png \
+	${TEXTURESRCDIR}/shield-effect-4.png \
+	${TEXTURESRCDIR}/shield-effect-5.png \
 	${TEXTURESRCDIR}/space-blue-plasma.png \
 	${TEXTURESRCDIR}/spark-texture.png \
 	${TEXTURESRCDIR}/sun.png \
@@ -161,6 +168,7 @@ TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
 	${TEXTURESRCDIR}/test5.png \
 	${TEXTURESRCDIR}/thrust.png \
 	${TEXTURESRCDIR}/warp-effect.png \
+	${TEXTURESRCDIR}/warp-tunnel.png \
 	${TEXTURESRCDIR}/wormhole.png \
 	${TEXTURESRCDIR}/green-burst.png \
 	${TEXTURESRCDIR}/blue-tractor-texture.png
@@ -199,7 +207,9 @@ MATERIALFILES=${MATERIALSRCDIR}/nebula0.mat \
 
 SHADERDIR=${DESTDIR}/${PREFIX}/share/snis/shader
 SHADERSRCDIR=${ASSETSSRCDIR}/shader
-SHADERS=${SHADERSRCDIR}/color_by_w.frag \
+SHADERS=${SHADERSRCDIR}/atmosphere.frag \
+	${SHADERSRCDIR}/atmosphere.vert \
+	${SHADERSRCDIR}/color_by_w.frag \
 	${SHADERSRCDIR}/color_by_w.vert \
 	${SHADERSRCDIR}/fs-effect-copy.shader \
 	${SHADERSRCDIR}/line-single-color.frag \
@@ -241,30 +251,30 @@ SHADERS=${SHADERSRCDIR}/color_by_w.frag \
 	${SHADERSRCDIR}/wireframe_transparent.vert
 
 SCAD_PARAMS_FILES=${MODELSRCDIR}/disruptor.scad_params.h \
-${MODELSRCDIR}/enforcer.scad_params.h \
-${MODELSRCDIR}/starbase5.scad_params.h \
-${MODELSRCDIR}/research-vessel.scad_params.h \
-${MODELSRCDIR}/conqueror.scad_params.h \
-${MODELSRCDIR}/asteroid-miner.scad_params.h \
-${MODELSRCDIR}/battlestar.scad_params.h \
-${MODELSRCDIR}/wombat.scad_params.h \
-${MODELSRCDIR}/destroyer.scad_params.h \
-${MODELSRCDIR}/dragonhawk.scad_params.h \
-${MODELSRCDIR}/tanker.scad_params.h \
-${MODELSRCDIR}/swordfish.scad_params.h \
-${MODELSRCDIR}/vanquisher.scad_params.h \
-${MODELSRCDIR}/freighter.scad_params.h \
-${MODELSRCDIR}/scrambler.scad_params.h \
-${MODELSRCDIR}/spaceship2.scad_params.h \
-${MODELSRCDIR}/skorpio.scad_params.h \
-${MODELSRCDIR}/spaceship.scad_params.h
+	${MODELSRCDIR}/enforcer.scad_params.h \
+	${MODELSRCDIR}/starbase5.scad_params.h \
+	${MODELSRCDIR}/research-vessel.scad_params.h \
+	${MODELSRCDIR}/conqueror.scad_params.h \
+	${MODELSRCDIR}/asteroid-miner.scad_params.h \
+	${MODELSRCDIR}/battlestar.scad_params.h \
+	${MODELSRCDIR}/wombat.scad_params.h \
+	${MODELSRCDIR}/destroyer.scad_params.h \
+	${MODELSRCDIR}/dragonhawk.scad_params.h \
+	${MODELSRCDIR}/tanker.scad_params.h \
+	${MODELSRCDIR}/swordfish.scad_params.h \
+	${MODELSRCDIR}/vanquisher.scad_params.h \
+	${MODELSRCDIR}/freighter.scad_params.h \
+	${MODELSRCDIR}/scrambler.scad_params.h \
+	${MODELSRCDIR}/spaceship2.scad_params.h \
+	${MODELSRCDIR}/skorpio.scad_params.h \
+	${MODELSRCDIR}/spaceship.scad_params.h
 
 DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
-${MODELSRCDIR}/starbase3.docking_ports.h \
-${MODELSRCDIR}/starbase4.docking_ports.h \
-${MODELSRCDIR}/starbase5.docking_ports.h \
-${MODELSRCDIR}/starbase6.docking_ports.h \
-${MODELSRCDIR}/starbase.docking_ports.h
+	${MODELSRCDIR}/starbase3.docking_ports.h \
+	${MODELSRCDIR}/starbase4.docking_ports.h \
+	${MODELSRCDIR}/starbase5.docking_ports.h \
+	${MODELSRCDIR}/starbase6.docking_ports.h \
+	${MODELSRCDIR}/starbase.docking_ports.h
 
 MANSRCDIR=.
 MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz
@@ -804,15 +814,13 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		cp ${MODELSRCDIR}/$$d/$$d.obj ${MODELDIR}/$$d ; \
 		cp ${MODELSRCDIR}/$$d/$$d.png ${MODELDIR}/$$d ; \
 	done
-	${INSTALL} -m 644 ${DOCKING_PORT_FILES} ${MODELDIR}
-	for d in starbase starbase2 ; do \
-		mkdir -p ${MODELDIR}/$$d ; \
-		mv ${MODELDIR}/$$d.docking_ports.h ${MODELDIR}/$$d/$$d.docking_ports.h ; \
-	done
+	${INSTALL} -m 644 ${MODELSRCDIR}/dreadknight/dreadknight-exhaust-plumes.h ${MODELDIR}/dreadknight
 	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006lights.png ${MODELDIR}/wombat
 	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.mtl ${MODELDIR}/wombat
 	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.obj ${MODELDIR}/wombat
 	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.png ${MODELDIR}/wombat
+	${INSTALL} -m 644 ${DOCKING_PORT_FILES} ${MODELDIR}
+	${INSTALL} -m 644 ${SCAD_PARAMS_FILES} ${MODELDIR}
 	${INSTALL} -m 644 ${SHADERS} ${SHADERDIR}
 	mkdir -p ${MANDIR}
 	${INSTALL} -m 644 ${MANPAGES} ${MANDIR}
@@ -868,4 +876,3 @@ build_info.h:	.FORCE check-endianness
 	./gather_build_info > build_info.h
 
 include Makefile.depend
-
