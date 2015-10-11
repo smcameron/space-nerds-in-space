@@ -2050,7 +2050,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	float ring_texture_v = 0.0f;
 	float ring_inner_radius = 1.0f;
 	float ring_outer_radius = 4.0f;
-	struct sng_color atmosphere_color;
+	struct sng_color atmosphere_color = { 0 };
 
 	draw_vertex_buffer_2d();
 
