@@ -179,11 +179,6 @@ struct docking_port_attachment_point **read_docking_port_info(
 			continue;
 		d[i] = read_docking_port_attachments(starbase_metadata[i].docking_port_file,
 				starbase_scale_factor);
-		fprintf(stderr, "dpi[%d] = %p, {", i, (void *) d[i]);
-		if (d[i])
-			fprintf(stderr, "nports = %d }\n", d[i]->nports);
-		else
-			fprintf(stderr, "null\n");
 	}
 	return d;
 }

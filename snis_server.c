@@ -6104,7 +6104,6 @@ static int add_docking_port(int parent_id, int portnumber)
 	union vec3 pos;
 	union quat orientation;
 
-	printf("Adding docking port\n");
 	/* Find the thing we're adding a docking port to */
 	p = lookup_by_id(parent_id);
 	if (p < 0) {
@@ -6155,7 +6154,6 @@ static int add_docking_port(int parent_id, int portnumber)
 	go[i].tsd.docking_port.portnumber = portnumber;
 	go[i].tsd.docking_port.docked_guy = (uint32_t) -1;
 	go[i].timestamp = universe_timestamp;
-	printf("added docking port %u\n", go[i].id);
 	return i;
 }
 
