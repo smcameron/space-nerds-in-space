@@ -38,7 +38,8 @@ char *programname = "ssgl_gameclient_example";
 
 static void usage()
 {
-	fprintf(stderr, "%s: usage:\n   %s [lobby-hostname] [gametypefilter]\n", programname);
+	fprintf(stderr, "%s: usage:\n   %s [lobby-hostname] [gametypefilter]\n",
+		programname, programname);
 	fprintf(stderr, "      if lobby-hostname is omitted, localhost is used\n");
 	fprintf(stderr, "      if gametypefilter is omitted, '*' is used.\n");
 	exit(1);
