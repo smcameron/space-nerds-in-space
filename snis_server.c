@@ -8304,8 +8304,7 @@ static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
-	struct bridge_data *b;
-	int i, bridge;
+	int i;
 	uint32_t channel = botstate->channel;
 	float gold, platinum, germanium, uranium, total;
 	struct snis_entity *miner, *asteroid, *parent;
@@ -8336,9 +8335,6 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 		dist_to_parent =
 			dist3d(parent->x - miner->x, parent->y - miner->y, parent->z - miner->z);
 	}
-	/* find our bridge... */
-	b = container_of(botstate, struct bridge_data, npcbot);
-	bridge = b - bridgelist;
 
 	total = 0.0;
 	gold = 0.0;
