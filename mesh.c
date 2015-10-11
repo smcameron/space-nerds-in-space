@@ -1487,6 +1487,7 @@ struct mesh *mesh_tube(float h, float r, float nfaces)
 
 	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
 	da = 2 * M_PI / (float) nfaces;
+	angle = 0.0;
 	for (i = 0; i < nvertices; i += 2) {
 		m->v[i].x = -l;
 		m->v[i].y = r * cos(angle);
