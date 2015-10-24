@@ -22,5 +22,5 @@
 */
 #include <png.h>
 
-int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w, int h, int has_alpha);
+int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w, int h, int has_alpha, int invert);
 #endif

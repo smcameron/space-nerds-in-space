@@ -23,7 +23,7 @@
 
 #include <png.h>
 
-int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w, int h, int has_alpha)
+int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w, int h, int has_alpha, int invert)
 {
 	png_structp png_ptr;
 	png_infop info_ptr;
@@ -52,14 +52,27 @@ int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w
 			PNG_FILTER_TYPE_DEFAULT);
 
 	row = png_malloc(png_ptr, h * sizeof(*row));
-	for (y = 0; y < h; y++) {
-		row[y] = png_malloc(png_ptr, w * bytes_per_pixel);
-		for (x = 0; x < w; x++) {
-			unsigned char *r = (unsigned char *) row[y];
-			unsigned char *src = (unsigned char *)
-				&pixels[y * w * bytes_per_pixel + x * bytes_per_pixel];
-			unsigned char *dest = &r[x * bytes_per_pixel];
-			memcpy(dest, src, bytes_per_pixel);
+	if (!invert) {
+		for (y = 0; y < h; y++) {
+			row[y] = png_malloc(png_ptr, w * bytes_per_pixel);
+			for (x = 0; x < w; x++) {
+				unsigned char *r = (unsigned char *) row[y];
+				unsigned char *src = (unsigned char *)
+					&pixels[y * w * bytes_per_pixel + x * bytes_per_pixel];
+				unsigned char *dest = &r[x * bytes_per_pixel];
+				memcpy(dest, src, bytes_per_pixel);
+			}
+		}
+	} else {
+		for (y = 0; y < h; y++) {
+			row[h - y - 1] = png_malloc(png_ptr, w * bytes_per_pixel);
+			for (x = 0; x < w; x++) {
+				unsigned char *r = (unsigned char *) row[h - y - 1];
+				unsigned char *src = (unsigned char *)
+					&pixels[y * w * bytes_per_pixel + x * bytes_per_pixel];
+				unsigned char *dest = &r[x * bytes_per_pixel];
+				memcpy(dest, src, bytes_per_pixel);
+			}
 		}
 	}
 

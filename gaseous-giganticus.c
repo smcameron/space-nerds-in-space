@@ -938,7 +938,7 @@ static void save_output_images(void)
 
 	for (i = 0; i < 6; i++) {
 		sprintf(fname, "%s%d.png", output_file_prefix, i);
-		if (png_utils_write_png_image(fname, output_image[i], DIM, DIM, 1))
+		if (png_utils_write_png_image(fname, output_image[i], DIM, DIM, 1, 0))
 			fprintf(stderr, "Failed to write %s\n", fname);
 	}
 	printf("o");
