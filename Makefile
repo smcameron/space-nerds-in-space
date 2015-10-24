@@ -468,7 +468,7 @@ ELOBJS=mtwist.o mathutils.o quat.o open-simplex-noise.o
 ELLIBS=-lm ${LRTLIB} -lpng
 ELLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} earthlike.o ${ELOBJS} ${ELLIBS} && $(ECHO) '  LINK' $@
 
-GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o
+GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o png_utils.o
 GGLIBS=-lm ${LRTLIB} -lpng
 GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} && $(ECHO) '  LINK' $@
 
@@ -714,6 +714,9 @@ elastic_collision.o:	elastic_collision.c elastic_collision.h Makefile
 	$(Q)$(COMPILE)
 
 fleet.o:	fleet.c Makefile
+	$(Q)$(COMPILE)
+
+png_utils.o:	png_utils.c png_utils.h Makefile
 	$(Q)$(COMPILE)
 
 c-is-the-locale.o:	c-is-the-locale.c
