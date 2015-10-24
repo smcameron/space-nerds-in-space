@@ -544,6 +544,13 @@ int main(int argc, char *argv[])
 	if (argc < 2)
 		usage(program);
 
+	/* TODO: should really used getoptlong here... */
+	if (strcmp(argv[1], "--help") == 0 ||
+		strcmp(argv[1], "-help") == 0 ||
+		strcmp(argv[1], "help") == 0 ||
+		strcmp(argv[1], "-h") == 0)
+		usage(program);
+
 	filename = argv[1];
 	if (strncmp(filename, "-p", 2) == 0) {
 		planet_mode = 1;
