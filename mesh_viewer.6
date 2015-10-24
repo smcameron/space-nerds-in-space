@@ -1,0 +1,46 @@
+.TH SPACE-NERDS-IN-SPACE "6" "Oct 2015" "mesh_viewer" "Games"
+.SH NAME
+mesh_viewer \- a utility for viewing models for "Space Nerds In Space."
+.SH SYNOPSIS
+.B mesh_viewer [ -p ] filename
+.SH DESCRIPTION
+.\" Add any additional description here
+.warn 511
+.PP
+mesh_viewer is a tool for viewing models for the game "Space Nerds In Space."  It can read STL files and a subset of OBJ files, and can also be used with the -p option to view a sphere with a cube mapped texture applied.
+.SH Options:
+.TP
+\fB\-p\fR
+Invoke "planet" mode.  In this case, the filename is actually a partial filename,
+and six png files are expected to exist with the given partial filename with the
+digits 0-5 and ".png" appended.  So for example, if you give the partial filename
+"jupiter", then the program will look for "jupiter0.png", "jupiter1.png", "jupiter2.png",
+"jupiter3.png", "jupiter4.png", and "jupiter5.png".  These 6 files should be square
+PNG images representing 6 faces of a cube to be mapped onto a sphere.  No sphere model
+is required.  The "-p" option will cause mesh_viewer to generate its own sphere
+model.
+.SH BASIC OPERATION
+.TP
+Drag with the right mouse button pressed to rotate the model.  Drag with the right mouse button pressed and the CTRL key pressed to rotate the light source.  Use the mouse wheel to zoom in and out on the model.
+.SH KEYS
+.TP
+The 'a' key toggles atmosphere rendering on and off (planet mode only).
+.TP
+The 's' key toggles auto-spin on and off.  When enabled, autospin will cause the model to continue smoothly spinning in the direction it is rotated with the mouse.
+.TP
+The 'n' key enables autospin for 10 frames of animation then turns it off.  This is useful for capturing screenshots from which to create animated gifs.
+.TP
+The ESC key exits mesh_viewer.
+.SH
+EXAMPLES
+.TP
+Here are some sample invocations of mesh viewer:
+  ./mesh_viewer -p share/snis/textures/planet-texture0-
+  ./mesh_viewer share/snis/models/wombat/snis3006.obj
+  ./mesh_viewer share/snis/models/starbase5.stl
+.SH SEE ALSO
+.PP
+snis_client(6), ssgl_server(6), snis_server(6)
+.SH AUTHOR
+mesh_viewer was Written by Jeremy Van Grinsven
+.br
