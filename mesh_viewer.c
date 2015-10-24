@@ -41,7 +41,9 @@ static int wireframe = 0;
 static int oldwireframe = 0;
 static int autospin_initialized = 0;
 static int autospin = 0;
+static int autospin_stop_frame = -1;
 static int draw_atmosphere = 1;
+static int frame_counter = 0;
 union quat autorotation; 
 
 static int display_frame_stats = 1;
@@ -71,6 +73,9 @@ static char *help_text =
 	"  * MOUSE SCROLL WHEEL TO ZOOM\n\n"
 	"  * MOUSE CONTROL-RIGHT-CLICK DRAG TO ROTATE LIGHT\n\n"
 	"  * ESC TO EXIT VIEWER\n\n"
+	"  * 'a' to toggle atmosphere rendering (planet mode only)\n\n"
+	"  * 's' to toggle auto-spin mode\n\n"
+	"  * 'n' to turn auto-spin on for 10 frames\n\n"
 	"PRESS F1 TO EXIT HELP\n";
 
 static void draw_help_text(const char *text)
@@ -139,6 +144,10 @@ static void handle_key_down(SDL_keysym *keysym)
 		break;
 	case SDLK_PAUSE:
 		display_frame_stats = (display_frame_stats + 1) % 3;
+		break;
+	case SDLK_n:
+		autospin = 1;
+		autospin_stop_frame = frame_counter + 10;
 		break;
 	case SDLK_r:
 		oldwireframe = wireframe;
@@ -471,6 +480,11 @@ static void draw_screen()
 		frame_times[frame_index] = end_time - start_time;
 		frame_index = (frame_index + 1) % FRAME_INDEX_MAX;
 		last_frame_time = start_time;
+	}
+	frame_counter++;
+	if (frame_counter == autospin_stop_frame) {
+		autospin_stop_frame = -1;
+		autospin = 0;
 	}
 }
 
