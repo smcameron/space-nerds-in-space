@@ -76,6 +76,8 @@ static char *help_text =
 	"  * 'a' to toggle atmosphere rendering (planet mode only)\n\n"
 	"  * 's' to toggle auto-spin mode\n\n"
 	"  * 'n' to turn auto-spin on for 10 frames\n\n"
+	"  * '+' speed up rate of spin\n\n"
+	"  * '-' slow down rate of spin\n\n"
 	"PRESS F1 TO EXIT HELP\n";
 
 static void draw_help_text(const char *text)
@@ -130,6 +132,15 @@ static void quit(int code)
 static int helpmode;
 static SDL_Surface *screen;
 
+static void adjust_spinning(float speed_factor)
+{
+	float x, y, z, a;
+
+	quat_to_axis(&autorotation, &x, &y, &z, &a);
+	a = a * speed_factor;
+	quat_init_axis(&autorotation, x, y, z, a);
+}
+
 static void handle_key_down(SDL_keysym *keysym)
 {
 	switch (keysym->sym) {
@@ -158,6 +169,14 @@ static void handle_key_down(SDL_keysym *keysym)
 		break;
 	case SDLK_a:
 		draw_atmosphere = !draw_atmosphere;
+		break;
+	case SDLK_MINUS:
+	case SDLK_KP_MINUS:
+		adjust_spinning(0.9);
+		break;
+	case SDLK_PLUS:
+	case SDLK_KP_PLUS:
+		adjust_spinning(1.1);
 		break;
 	default:
 		break;
