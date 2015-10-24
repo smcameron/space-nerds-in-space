@@ -83,5 +83,8 @@ extern int graph_dev_graph_dev_debug_menu_click(int x, int y);
 
 extern void graph_dev_setup_colors(void *gtk_widget, void *gdk_color_huex, int nhuex);
 
+/* graph_dev_grab_framebuffer only implemented for opengl backend */
+extern void graph_dev_grab_framebuffer(unsigned char **buffer, int *width, int *height);
+
 #endif
 

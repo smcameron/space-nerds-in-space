@@ -27,6 +27,7 @@
 #include "snis_typeface.h"
 #include "opengl_cap.h"
 #include "build_info.h"
+#include "png_utils.h"
 
 #define FOV (30.0 * M_PI / 180.0)
 #define FPS 60
@@ -44,6 +45,8 @@ static int autospin = 0;
 static int autospin_stop_frame = -1;
 static int draw_atmosphere = 1;
 static int frame_counter = 0;
+static int periodic_snapshots = 0;
+static int snapshot_number = 0;
 union quat autorotation; 
 
 static int display_frame_stats = 1;
@@ -74,6 +77,8 @@ static char *help_text =
 	"  * MOUSE CONTROL-RIGHT-CLICK DRAG TO ROTATE LIGHT\n\n"
 	"  * ESC TO EXIT VIEWER\n\n"
 	"  * 'a' to toggle atmosphere rendering (planet mode only)\n\n"
+	"  * 'p' to take a snapshot\n\n"
+	"  * 'f' to toggle periodic snapshots\n\n"
 	"  * 's' to toggle auto-spin mode\n\n"
 	"  * 'n' to turn auto-spin on for 10 frames\n\n"
 	"  * '+' speed up rate of spin\n\n"
@@ -141,6 +146,33 @@ static void adjust_spinning(float speed_factor)
 	quat_init_axis(&autorotation, x, y, z, a);
 }
 
+static void take_picture(char *filename)
+{
+	unsigned char *buffer;
+	int width, height;
+	graph_dev_grab_framebuffer(&buffer, &width, &height);
+	printf("Saved snapshot: %s %dx%d\n", filename, width, height);
+	png_utils_write_png_image(filename, buffer, width, height, 0, 1);
+	free(buffer);
+}
+
+static void take_snapshot(void)
+{
+	char filename[100];
+	sprintf(filename, "mesh-viewer-snapshot-%05d.png", snapshot_number);
+	snapshot_number++;
+	take_picture(filename);
+}
+
+static void take_periodic_snapshot(void)
+{
+	if (!periodic_snapshots)
+		return;
+	if ((frame_counter % 10) != 0)
+		return;
+	take_snapshot();
+}
+
 static void handle_key_down(SDL_keysym *keysym)
 {
 	switch (keysym->sym) {
@@ -169,6 +201,12 @@ static void handle_key_down(SDL_keysym *keysym)
 		break;
 	case SDLK_a:
 		draw_atmosphere = !draw_atmosphere;
+		break;
+	case SDLK_f:
+		periodic_snapshots = !periodic_snapshots;
+		break;
+	case SDLK_p:
+		take_snapshot();
 		break;
 	case SDLK_MINUS:
 	case SDLK_KP_MINUS:
@@ -500,6 +538,7 @@ static void draw_screen()
 		frame_index = (frame_index + 1) % FRAME_INDEX_MAX;
 		last_frame_time = start_time;
 	}
+	take_periodic_snapshot();
 	frame_counter++;
 	if (frame_counter == autospin_stop_frame) {
 		autospin_stop_frame = -1;

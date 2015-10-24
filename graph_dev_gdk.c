@@ -988,3 +988,10 @@ void graph_dev_reload_changed_cubemap_textures()
 	/* noop */
 }
 
+void graph_dev_grab_framebuffer(__attribute__((unused)) unsigned char **buffer,
+				__attribute__((unused)) int *width,
+				__attribute__((unused)) int *height)
+{
+	/* noop */
+}
+
