@@ -133,6 +133,8 @@ static int SCREEN_HEIGHT = 600; // 768;       /* window height, in pixels */
 #define ASPECT_RATIO (SCREEN_WIDTH/(float)SCREEN_HEIGHT)
 static int requested_aspect_x = -1;
 static int requested_aspect_y = -1;
+static int screen_offset_x = 0;
+static int screen_offset_y = 0;
 
 /* helper function to transform from 800x600 original coord system */
 static inline int txx(int x) { return x * SCREEN_WIDTH / 800; }
@@ -265,6 +267,7 @@ char lobbyerror[200];
 char *lobbyhost = "localhost";
 static char *serverhost = NULL;
 static int serverport = -1;
+static int monitorid = -1;
 static int avoid_lobby = 0;
 struct ssgl_game_server lobby_game_server[100];
 int ngameservers = 0;
@@ -13015,15 +13018,24 @@ static void take_your_locale_and_shove_it(void)
 static void figure_aspect_ratio(int requested_x, int requested_y,
 				int *x, int *y)
 {
-	int sw, sh;
+	int sw, sh, monitors;
 	GdkScreen *s;
+	GdkRectangle bounds;
 
 	s = gdk_screen_get_default();
 	if (!s)
 		return;
 
-	sw = gdk_screen_get_width(s);
-	sh = gdk_screen_get_height(s);
+	monitors = gdk_screen_get_n_monitors(s);
+	if (monitorid == -1 || monitorid >= monitors)
+		monitorid = gdk_screen_get_primary_monitor(s);
+
+	gdk_screen_get_monitor_geometry(s, monitorid, &bounds);
+	sw = bounds.width;
+	sh = bounds.height;
+	screen_offset_x = bounds.x;
+	screen_offset_y = bounds.y;
+
 
 	if (requested_x <= 0 || requested_y <= 0) {
 		*x = sw;
@@ -13139,6 +13151,21 @@ int main(int argc, char *argv[])
 			if ((i + 1) >= argc)
 				usage();
 			serverhost = argv[i + 1];
+			i++;
+			continue;
+		}
+		if (strcmp(argv[i], "--monitor") == 0) {
+			int rc, value;
+			char *monitorstr;
+
+			if ((i + 1) >= argc)
+				usage();
+			monitorstr = argv[i + 1];
+			rc = sscanf(monitorstr, "%d", &value);
+			if (rc == 1)
+				monitorid = value;
+			else
+				usage();
 			i++;
 			continue;
 		}
@@ -13331,7 +13358,8 @@ int main(int argc, char *argv[])
 
 	gtk_container_set_border_width (GTK_CONTAINER (window), 0);
 	vbox = gtk_vbox_new(FALSE, 0);
-        main_da = gtk_drawing_area_new();
+	gtk_window_move(GTK_WINDOW(window), screen_offset_x, screen_offset_y);
+	main_da = gtk_drawing_area_new();
 
 	g_signal_connect (G_OBJECT (window), "delete_event",
 		G_CALLBACK (delete_event), NULL);
