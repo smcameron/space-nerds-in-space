@@ -12267,9 +12267,9 @@ void really_quit(void)
 
 static void usage(void)
 {
-	fprintf(stderr, "usage: snis_client [--aspect-ratio x,y] --lobbyhost lobbyhost \\\n"
+	fprintf(stderr, "usage: snis_client [--aspect-ratio x,y] [--monitor m ] --lobbyhost lobbyhost \\\n"
 			"                    --starship starshipname --pw password\n");
-	fprintf(stderr, "       snis_client [--aspect-ratio x,y] --nolobby\\\n"
+	fprintf(stderr, "       snis_client [--aspect-ratio x,y] [--monitor m ] --nolobby\\\n"
 			"                    --serverhost serverhost --serverport serverport\\\n"
 			"                    --starship starshipname --pw password\n");
 	fprintf(stderr, "       Example: ./snis_client --lobbyhost localhost --starship Enterprise --pw tribbles\n");
