@@ -31,6 +31,7 @@ static float rlimit = 0.005;
 static int random_seed = 31415;
 static float shrink_factor = 0.55;
 static int initial_bumps = 60;
+static float initial_bump_size = 0.4;
 
 static struct bump {
 	union vec3 p;
@@ -403,7 +404,7 @@ static void add_bumps(const int nbumps)
 
 	for (i = 0; i < nbumps; i++) {
 		union vec3 p;
-		float r = 0.5 * (snis_random_float() + 1.0f) * 0.4;
+		float r = 0.5 * (snis_random_float() + 1.0f) * initial_bump_size;
 
 		random_point_on_sphere(1.0, &p.v.x, &p.v.y, &p.v.z);
 		recursive_add_bump(p, r, 0.10, shrink_factor, rlimit);
@@ -855,6 +856,7 @@ static void calculate_normals(void)
 
 static struct option long_options[] = {
 	{ "bumps", required_argument, NULL, 'b' },
+	{ "initialbumps", required_argument, NULL, 'B' },
 	{ "craters", required_argument, NULL, 'c' },
 	{ "height", required_argument, NULL, 'h' },
 	{ "ibumps", required_argument, NULL, 'i' },
@@ -867,6 +869,7 @@ static struct option long_options[] = {
 	{ "scatter", required_argument, NULL, 's' },
 	{ "shrink", required_argument, NULL, 'k' },
 	{ "water", required_argument, NULL, 'w' },
+	{ "bumpsize", required_argument, NULL, 'z'},
 	{ 0 },
 };
 
@@ -876,6 +879,7 @@ static void usage(void)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "   -b, bumps : number of bumps in recursive bump placement, default = 3\n");
+	fprintf(stderr, "   -B, initialbumps: number of bumps in initial pass.  default = 60\n");
 	fprintf(stderr, "   -c, craters : number of craters to add.\n");
 	fprintf(stderr, "   -h, height : png file containing height map data to sample for terrain\n");
 	fprintf(stderr, "   -k, shrink : factor to shrink each recursive iteration.  Default is 0.55\n");
@@ -888,6 +892,7 @@ static void usage(void)
 	fprintf(stderr, "   -s, scatter : float amount to scatter bumps, default = 1.8 * radius\n");
 	fprintf(stderr, "   -S, seed : set initial random seed.  Default is 31415\n");
 	fprintf(stderr, "   -w, water : png file containing water color data to sample for oceans\n");
+	fprintf(stderr, "   -z, bumpsize: initial bump size.  default = 0.4\n");
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -922,12 +927,15 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "b:c:h:i:n:O:k:l:o:r:s:S:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:c:h:i:n:O:k:l:o:r:s:S:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
 		case 'b':
 			process_int_option("bumps", optarg, &nbumps);
+			break;
+		case 'B':
+			process_int_option("initialbumps", optarg, &initial_bumps);
 			break;
 		case 'c':
 			process_int_option("craters", optarg, &ncraters);
@@ -968,6 +976,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'w':
 			waterfile = optarg;
+			break;
+		case 'z':
+			process_float_option("bumpsize", optarg, &initial_bump_size);
 			break;
 		default:
 			fprintf(stderr, "Unknown option.\n");
