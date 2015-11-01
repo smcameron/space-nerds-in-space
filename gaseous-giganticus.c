@@ -68,6 +68,7 @@ static float ff1 = FBM_DEFAULT_FALLOFF;
 static float ff2 = FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF;
 static float ff3 = FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF;
 static int cloudmode = 0;
+static float fade_rate = -1.0;
 
 #define DIM 1024 /* dimensions of cube map face images */
 #define VFDIM 2048 /* dimension of velocity field. (2 * DIM) is reasonable */
@@ -989,6 +990,8 @@ static void find_darkest_pixel(unsigned char *image, int w, int h,
 		darkest_color->a = 0.01;
 	else
 		darkest_color->a = 0.5;
+	if (fade_rate > 0)
+		darkest_color->a = fade_rate;
 }
 
 static char *load_image(const char *filename, int *w, int *h, int *a, int *bytes_per_row)
@@ -1043,6 +1046,8 @@ static void usage(void)
 	fprintf(stderr, "                 relatively high due to short distance around band.\n");
 	fprintf(stderr, "                 Default is 0.5. Min is 0.0, max is 1.0.\n");
 	fprintf(stderr, "   -b, --bands : Number of counter rotating bands.  Default is 6.0\n");
+	fprintf(stderr, "   -d, --dump-velocity-field : dump velocity field data to specified file\n");
+	fprintf(stderr, "   -D, --faderate : Rate at which particles fade, default = 0.01\n");
 	fprintf(stderr, "   -c, --count : Number of iterations to run the simulation.\n");
 	fprintf(stderr, "                 Default is 1000\n");
 	fprintf(stderr, "   -C, --cloudmode: modulate image output by to produce clouds\n");
@@ -1105,6 +1110,7 @@ static struct option long_options[] = {
 	{ "count", required_argument, NULL, 'c' },
 	{ "cloudmode", required_argument, NULL, 'C' },
 	{ "dump-velocity-field", required_argument, NULL, 'd' },
+	{ "faderate", required_argument, NULL, 'D' },
 	{ "input", required_argument, NULL, 'i' },
 	{ "image-save-period", required_argument, NULL, 'I' },
 	{ "cubemap", required_argument, NULL, 'k' },
@@ -1197,7 +1203,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "a:B:b:c:Cd:f:F:hHi:k:I:lnm:o:O:p:PRr:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "a:B:b:c:Cd:D:f:F:hHi:k:I:lnm:o:O:p:PRr:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1224,6 +1230,9 @@ static void process_options(int argc, char *argv[])
 		case 'd':
 			vf_dump_file = optarg;
 			restore_vf_data = 0;
+			break;
+		case 'D':
+			process_float_option("faderate", optarg, &fade_rate);
 			break;
 		case 'r':
 			vf_dump_file = optarg;

@@ -6,6 +6,8 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 .B gaseous-giganticus 
 [ -a pole-attenuation ]
 [ -b bands ]
+[ -d velocity-field-data-file ]
+[ -D fade-rate ]
 [ -B band-velocity-factor ]
 [ -c count ]
 [ -C ]
@@ -88,6 +90,9 @@ modulate output images to produce clouds
 .TP
 -d, --dump-velocity-field
 Dump out velocity field data to the specified file after initial calculation.
+.TP
+-D, --fade-rate
+Particle fade rate.  Default is 0.01
 .TP
 -i, --input
 Input image filename.  Must be RGB png file.
