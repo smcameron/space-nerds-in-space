@@ -31,7 +31,7 @@
 	AMBIENT_LIGHT_DEFINE
 
 #define TEX_RELOAD_DELAY 1.0
-#define CUBEMAP_TEX_RELOAD_DELAY 3.0
+#define CUBEMAP_TEX_RELOAD_DELAY 10.0
 #define MAX_LOADED_TEXTURES 40
 struct loaded_texture {
 	GLuint texture_id;
