@@ -54,6 +54,7 @@ static char *vf_dump_file = NULL;
 static int restore_vf_data = 0;
 static char *output_file_prefix;
 static char *input_file;
+static char *cubemap_prefix = NULL;
 static int nofade = 0;
 static int stripe = 0;
 static int sinusoidal = 1;
@@ -88,6 +89,7 @@ static float opacity_limit = 0.2;
 static float pole_attenuation = 0.5;
 
 static char *start_image;
+static char *cubemap_image[6] = { 0 };
 static int start_image_width, start_image_height, start_image_has_alpha, start_image_bytes_per_row;
 static unsigned char *output_image[6];
 static int image_save_period = 20;
@@ -393,7 +395,7 @@ static void init_particles(struct particle **pp, const int nparticles)
 	/* const int bytes_per_pixel = start_image_has_alpha ? 4 : 3; */
 	unsigned char *pixel;
 	int pn, px, py;
-	struct fij fij;
+	struct fij fij = { 0, 0, 0 };
 	struct particle *p;
 
 	printf("Initializing %d particles", nparticles); fflush(stdout);
@@ -405,7 +407,16 @@ static void init_particles(struct particle **pp, const int nparticles)
 		p[i].pos.v.x = x;
 		p[i].pos.v.y = y;
 		p[i].pos.v.z = z;
-		if (!stripe && !sinusoidal) {
+		if (cubemap_prefix) {
+			fij = xyz_to_fij(&p[i].pos, DIM);
+			if (fij.i < 0 || fij.i > DIM || fij.j < 0 || fij.j > DIM) {
+				printf("BAD fij: %d,%d\n", fij.i, fij.j);
+			}
+			xo = fij.i * start_image_width / (float) XDIM;
+			yo = fij.j * start_image_height / (float) YDIM;
+			px = ((int) xo) * 3;
+			py = ((int) yo) * start_image_bytes_per_row;
+		} else if (!stripe && !sinusoidal) {
 			fij = xyz_to_fij(&p[i].pos, DIM);
 			if (fij.i < 0 || fij.i > DIM || fij.j < 0 || fij.j > DIM) {
 				printf("BAD fij: %d,%d\n", fij.i, fij.j);
@@ -455,7 +466,10 @@ static void init_particles(struct particle **pp, const int nparticles)
 		}
 		pn = py + px;
 		//printf("pn = %d\n", pn);
-		pixel = (unsigned char *) &start_image[pn];
+		if (!cubemap_prefix)
+			pixel = (unsigned char *) &start_image[pn];
+		else
+			pixel = (unsigned char *) &cubemap_image[fij.f][pn];
 		p[i].c.r = ((float) pixel[0]) / 255.0f;
 		p[i].c.g = ((float) pixel[1]) / 255.0f;
 		p[i].c.b = ((float) pixel[2]) / 255.0f;
@@ -1052,6 +1066,7 @@ static void usage(void)
 	fprintf(stderr, "                   divergences in the velocity field to be clearly seen,\n");
 	fprintf(stderr, "                   as pixels that contain no particles wil not be painted\n");
 	fprintf(stderr, "                   and will become hot pink.\n");
+	fprintf(stderr, "   -k, --cubemap: input 6 cubemap images to initialize particle color\n");
 	fprintf(stderr, "   -l, --large-pixels: particles are 3x3 pixels instead of 1 pixel.  Allows\n");
 	fprintf(stderr, "                       for fewer particles and thus faster rendering, but this\n");
 	fprintf(stderr, "                       WILL leave visible artifacts at cubemap face boundaries.\n");
@@ -1092,6 +1107,7 @@ static struct option long_options[] = {
 	{ "dump-velocity-field", required_argument, NULL, 'd' },
 	{ "input", required_argument, NULL, 'i' },
 	{ "image-save-period", required_argument, NULL, 'I' },
+	{ "cubemap", required_argument, NULL, 'k' },
 	{ "large-pixels", no_argument, NULL, 'l' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "opacity", required_argument, NULL, 'O' },
@@ -1181,7 +1197,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "a:B:b:c:Cd:f:F:hHi:I:lnm:o:O:p:PRr:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "a:B:b:c:Cd:f:F:hHi:k:I:lnm:o:O:p:PRr:sSt:Vv:w:W:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1245,6 +1261,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'I':
 			process_int_option("image-save-period", optarg, &image_save_period);
+			break;
+		case 'k':
+			cubemap_prefix = optarg;
 			break;
 		case 'm':
 			process_float_option("speed-multiplier", optarg, &speed_multiplier);
@@ -1317,6 +1336,18 @@ static void process_options(int argc, char *argv[])
 	return;
 }
 
+static void load_cubemap_images(const char *prefix)
+{
+	char filename[PATH_MAX];
+	int i;
+
+	for (i = 0; i < 6; i++) {
+		sprintf(filename, "%s%d.png", prefix, i);
+		cubemap_image[i] = load_image(filename, &start_image_width, &start_image_height,
+						&start_image_has_alpha, &start_image_bytes_per_row);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int i, t;
@@ -1362,10 +1393,15 @@ int main(int argc, char *argv[])
 
 	printf("Allocating output image space\n");
 	allocate_output_images();
-	printf("Loading image\n");
 	start_image_has_alpha = 0;
-	start_image = load_image(input_file, &start_image_width, &start_image_height,
-					&start_image_has_alpha, &start_image_bytes_per_row);
+	if (cubemap_prefix) {
+		printf("Loading cubemap images\n");
+		load_cubemap_images(cubemap_prefix);
+	} else {
+		printf("Loading image\n");
+		start_image = load_image(input_file, &start_image_width, &start_image_height,
+						&start_image_has_alpha, &start_image_bytes_per_row);
+	}
 #if 0	
 	write_png_image("blah.png", (unsigned char *) start_image, start_image_width,
 			start_image_height, start_image_has_alpha);
