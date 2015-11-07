@@ -1,4 +1,4 @@
-.TH GASEOUS-GIGANGICUS 1 "Aug 2015" "Space-Nerds-In-Space" "User Commands"
+.TH GASEOUS-GIGANGICUS 1 "Nov 2015" "Space-Nerds-In-Space" "User Commands"
 
 .SH NAME
 gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet 
@@ -204,12 +204,40 @@ number of online CPUs.  Default is number of online CPUs.
 -z, --noise-scale noisescale
 Use the specified noise scale value.  Default is 2.6  This controls the
 amount of the Simplex noise field that is sampled.  Smaller values will
-give bigger whorls, larger values will give smaller whorls.
+give bigger whorls, larger values will give smaller whorls.  To give you
+an idea of the range of values, see http://smcameron.github.io/space-nerds-in-space/gaseous-giganticus-noise-scale.html
+I will attempt to describe the results of various scales below (descriptions of sizes are
+approximate because I just eyeballed them.)
+
+.DS
+ 0.12 Slightly wavy velocity field with features larger
+      than the sphere.
+ 0.25 Wavy velocity field with features slightly smaller
+      than the sphere.
+ 0.50 Wavy velocity field with whorls about 1/4th the
+      diameter of the sphere.
+ 0.75 Lots more whorls about 1/8th the diameter of the sphere.
+ 1.00 Lots of whorls about 1/12th the diameter of the sphere.
+ 1.25 Whorls are smaller still.
+ 1.50 Whorls are maybe 1/20th the diameter of a sphere.
+ 1.75 Even smaller whorls.
+ 2.00 Smaller still.
+ 3.00 Whorls are starting to get chaotically small,
+      maybe 1/40th diameter of sphere. j
+ 6.00 Whorls are no longer primary feature instead
+      sort blobby regions form.  As the noise scale
+      gets higher, the blobby features get smaller.
+.DE
+
 .SH "EXAMPLES"
 .TP
+
 .DI
-	./gaseous-giganticus --noise-scale 2.8 --velocity-factor 800 -i ~/image.png -w 809.1 --bands 10
+  ./gaseous-giganticus -V --sinusoidal --noise-scale 2.5 \\
+        --velocity-factor 1300 --bands 10 \\
+        -i input-image.png -o output-image-prefix
 .DE
+
 .SH "SEE ALSO"
 snis_client, snis_server
 
