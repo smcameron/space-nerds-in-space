@@ -1,0 +1,146 @@
+
+This file describes how to generate earthlike planet cubemap textures.
+
+1.  Generate terrain textures:
+
+    For this step you need three input files:
+
+    A. Heightmap data.  You can use heightdata.png, but you can also use your own
+       source of heightmap data.  This should be PNG image data, 8-bit/color RGB, non-interlaced
+       where the intensity corresponds to the altitude.
+
+       Some good stuff is available here, as tif files:
+       http://visibleearth.nasa.gov/view.php?id=73934
+
+    B. "land" color data.  For this you can use land.png or you can make your own land
+       color data.  The image should be PNG image data, 804, 8-bit/color RGB, non-interlaced.
+       The top of the image correspondes to the land at sea level, and the bottom of the image
+       corresponds to land at the highest elevations of your terrain.  The horizontal axis
+       is indexed by the earthlike.c via a noise function, and provides variety and reduces
+       the typical "rings" you get if you use only elevation as a color selector.
+
+    C. "water" color data.  For this you can use water.png, or you can make your own
+       water color data.  The top of the image corresponds to the deepest water and the
+       bottom of the file corresponds to where the edge of the water meets the land.
+       The horizontal axis is indexed by noise function.
+
+    To generate the terrain:
+
+      ./earthlike -B 25 -h heightdata.png -l land.png -w water.png -o yourplanet -S 31415 --bumpsize 0.5
+
+    -B 25 telss the program to start with 25 "bumps" which are each up to 0.5 in radius.
+    --bumpsize 0.5 controls the initial size of the "bumps"
+    -S 31415 is just a random seed (you can change it to whatever number you like to get
+       different results)
+    (Run "earthlike --help" to see a summary of options.)
+
+    The earthlike program will (eventually) produce 6 cubemap images of terrain:
+
+      yourplanet0.png
+      yourplanet1.png
+      yourplanet2.png
+      yourplanet3.png
+      yourplanet4.png
+      yourplanet5.png
+
+    These are usable as-is, but you would probably prefer to have some clouds.
+    You can view what this looks like by running mesh_viewer:
+
+      mesh_viewer -p yourplanet
+
+2. Generate cloud cubemap textures:
+
+   For this, you again need three inputs.
+
+   The idea is we are going to use earthlike, but
+   instead of providing it with terrain elevation data, we are going to provide it with satellite
+   cloud imagery which it will treat as elevation data.  So the first thing to do is get some
+   cloud imagery.  Go to images.google.com, and type in "satellite clouds", then click on
+   "Search Tools" and select "Size" -> "Large".  Then find a picture of some clouds you like.
+
+   Then open up the cloud image in the gimp.  Desaturate the image (make it shades of gray) and then
+   use the Colors->Curves option to boost the contrast, esp. make the non-cloud areas black, and
+   make the white areas be white, but don't just blow all the highlights completely out.
+
+   Export this as a png image (remove any alpha channel if necessary.)
+   This will be your "heightmap data" for earthlike.
+
+   For the "water" color data, just make a completely black square in the gimp and save it
+   as a .png file.
+
+   For the "land" color data, you'll want to make a gradient from black to white, with black
+   at the top, and white at the bottom.  The gradient should be totally white by about 1/3rd
+   of the height of the image, so black at the top fading to white as you go down the image
+   reaching totally white by about 1/3rd down.
+
+   Then run earthlike:
+
+     ./earthlike -B 200 -b 1 -l cloud-gradient.png -w black-square.png -h ~/satellite-clouds.png \
+		   -S 77573 --bumpsize 0.6 -o your-clouds
+
+   This will produce 6 cubemap images.  You can view them with mesh_viewer:
+
+     mesh_viewer -p your-clouds
+
+3. Swirl the clouds
+
+   Those clouds might be ok, but you might find that they aren't swirly enough.  So we can swirl
+   them a bit with gaseous giganticus.
+
+   First we have to remove the alpha channel though.  There is a script to do that,
+   util/remove_alpha_cubemap.
+
+     util/remove_alpha_cubemap your-clouds
+
+   This will produce six new images:
+
+     your-clouds-rgb-0.png
+     your-clouds-rgb-1.png
+     your-clouds-rgb-2.png
+     your-clouds-rgb-3.png
+     your-clouds-rgb-4.png
+     your-clouds-rgb-5.png
+
+  Then, run gaseous-giganticus to swirl the clouds for a bit:
+
+    ./gaseous-giganticus -k your-clouds-rgb- -V --noise-scale 0.4 \
+		--velocity-factor 5000 -B 0.45 --bands 3 -o swirly-clouds
+
+  Once gaseous-giganticus produces the first set of images, you can watch its
+  progress with mesh viewer while it runs.
+
+    mesh_viewer -p swirly-clouds
+
+  Once satisfied with the looks of things (which may take awhile) you can stop gaseous-giganticus
+  between image production cycles (i.e. between the times that it prints 'o').
+
+4. Composite the cloud cubemaps with the terrain cubemaps.
+
+   The cloud cubemaps created so far are black and white.  To composite them with the terrain cubemaps
+   we construct an image with the right alpha mask.  One way to do this is to use the cloud images as
+   an alphamask on a totally white image.  There is a program util/mask_clouds to do this.
+
+     util/mask_clouds swirly-clouds
+
+   This will produce 6 new images:
+
+     swirly-clouds-masked0.png
+     swirly-clouds-masked1.png
+     swirly-clouds-masked2.png
+     swirly-clouds-masked3.png
+     swirly-clouds-masked4.png
+     swirly-clouds-masked5.png
+
+   These can then be composited with the terrain images:
+
+     ./composite-clouds yourplanet swirly-clouds-masked
+
+   This will produce the final 6 cubemap images:
+
+     yourplanet-with-clouds-0.png
+     yourplanet-with-clouds-1.png
+     yourplanet-with-clouds-2.png
+     yourplanet-with-clouds-3.png
+     yourplanet-with-clouds-4.png
+     yourplanet-with-clouds-5.png
+
