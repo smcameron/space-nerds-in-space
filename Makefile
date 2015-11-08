@@ -383,7 +383,7 @@ SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS}
 #
 
 
-PROGS=snis_server snis_client snis_limited_client mesh_viewer
+PROGS=snis_server snis_client snis_limited_client mesh_viewer util/mask_clouds
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client
 
 # model directory
@@ -467,6 +467,9 @@ EXTRACTDOCKINGPORTS=$(AWK) -f extract_docking_ports.awk $< > $@ && $(ECHO) '  EX
 ELOBJS=mtwist.o mathutils.o quat.o open-simplex-noise.o
 ELLIBS=-lm ${LRTLIB} -lpng
 ELLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} earthlike.o ${ELOBJS} ${ELLIBS} && $(ECHO) '  LINK' $@
+MCLIBS=-lm ${LRTLIB} -lpng
+MCOBJS=png_utils.o
+MCLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} util/mask_clouds.o ${MCOBJS} ${MCLIBS} && $(ECHO) '  LINK' $@
 
 GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o png_utils.o
 GGLIBS=-lm ${LRTLIB} -lpng
@@ -575,6 +578,9 @@ gaseous-giganticus.o:	gaseous-giganticus.c ${GGOBJS} Makefile build_info.h
 earthlike.o:	earthlike.c
 	$(Q)$(COMPILE)
 
+util/mask_clouds.o:	util/mask_clouds.c
+	$(Q)$(COMPILE)
+
 snis_socket_io.o:	snis_socket_io.c Makefile
 	$(Q)$(COMPILE)
 
@@ -631,6 +637,9 @@ gaseous-giganticus:	gaseous-giganticus.o ${GGOBJS} Makefile
 
 earthlike:	earthlike.o ${ELOBJS} Makefile
 	$(Q)$(ELLINK)
+
+util/mask_clouds:	util/mask_clouds.o ${ELOBJS} Makefile
+	$(Q)$(MCLINK)
 
 starbase-comms.o:	starbase-comms.c Makefile
 	$(Q)$(COMPILE)	
