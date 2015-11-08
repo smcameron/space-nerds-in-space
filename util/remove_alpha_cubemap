@@ -1,0 +1,9 @@
+#!/bin/sh
+
+inputfile="$1"
+
+for x in `seq 0 5`
+do
+	convert "$inputfile""$x".png -alpha off "$inputfile"-rgb-"$x".png
+done
+
