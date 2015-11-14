@@ -46,14 +46,16 @@ static int totalbumps = 0;
 #define DIM 1024
 static unsigned char *output_image[6];
 static unsigned char *normal_image[6];
+static unsigned char *heightmap_image[6];
 static unsigned char *land, *water;
 static int landw, landh, landa, landbpr;
 static int waterw, waterh, watera, waterbpr; 
 static union vec3 vertex[6][DIM][DIM];
 static union vec3 normal[6][DIM][DIM];
 static float noise[6][DIM][DIM];
-static char *output_file_prefix = "heightmap";
+static char *output_file_prefix = "terrainmap";
 static char *normal_file_prefix = "normalmap";
+static char *heightmap_file_prefix = "heightmap";
 static char *sampledata;
 static int samplew, sampleh, samplea, sample_bytes_per_row;
 static float minn, maxn; /* min and max noise values encountered */
@@ -463,6 +465,10 @@ void allocate_output_images(void)
 		normal_image[i] = malloc(4 * DIM * DIM);
 		memset(normal_image[i], 0, 4 * DIM * DIM);
 	}
+	for (i = 0; i < 6; i++) {
+		heightmap_image[i] = malloc(4 * DIM * DIM);
+		memset(heightmap_image[i], 0, 4 * DIM * DIM);
+	}
 }
 
 static void paint_height_maps(float min, float max)
@@ -534,7 +540,7 @@ static void paint_terrain_colors(float min, float max)
 }
 
 
-static void paint_normal_maps(float min, float max)
+static void paint_normal_and_height_maps(float min, float max)
 {
 	int f, i, j;
 	float rad; 
@@ -547,6 +553,10 @@ static void paint_normal_maps(float min, float max)
 				p = (j * DIM + i) * 4; 
 				rad = vec3_magnitude(&vertex[f][i][j]);
 				rad = (rad - min) / (max - min);
+				heightmap_image[f][p + 0] = (unsigned char) (255.0 * rad);
+				heightmap_image[f][p + 1] = (unsigned char) (255.0 * rad);
+				heightmap_image[f][p + 2] = (unsigned char) (255.0 * rad);
+				heightmap_image[f][p + 3] = 255;
 				if (rad > sealevel) {
 					red = normal[f][i][j].v.x * 255;
 					green = normal[f][i][j].v.y * 255;
@@ -809,6 +819,11 @@ static void save_normal_maps(void)
 	save_images(normal_file_prefix, normal_image);
 }
 
+static void save_height_maps(void)
+{
+	save_images(heightmap_file_prefix, heightmap_image);
+}
+
 static void calculate_normal(int f, int i, int j)
 {
 	int i1, i2, j1, j2;
@@ -859,6 +874,7 @@ static struct option long_options[] = {
 	{ "initialbumps", required_argument, NULL, 'B' },
 	{ "craters", required_argument, NULL, 'c' },
 	{ "height", required_argument, NULL, 'h' },
+	{ "heightmap-output", required_argument, NULL, 'H' },
 	{ "ibumps", required_argument, NULL, 'i' },
 	{ "land", required_argument, NULL, 'l' },
 	{ "oceanlevel", required_argument, NULL, 'O' },
@@ -882,6 +898,7 @@ static void usage(void)
 	fprintf(stderr, "   -B, initialbumps: number of bumps in initial pass.  default = 60\n");
 	fprintf(stderr, "   -c, craters : number of craters to add.\n");
 	fprintf(stderr, "   -h, height : png file containing height map data to sample for terrain\n");
+	fprintf(stderr, "   -H, heightmap-output : prefix of filename for height map output data\n");
 	fprintf(stderr, "   -k, shrink : factor to shrink each recursive iteration.  Default is 0.55\n");
 	fprintf(stderr, "   -l, land : png file containing land color data to sample for terrain\n");
 	fprintf(stderr, "   -n, normal : filename prefix for normal map images, default is 'normalmap'\n");
@@ -927,7 +944,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:h:i:n:O:k:l:o:r:s:S:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:c:H:h:i:n:O:k:l:o:r:s:S:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -946,6 +963,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'h':
 			heightfile = optarg;
+			break;
+		case 'H':
+			heightmap_file_prefix = optarg;
 			break;
 		case 'i':
 			process_int_option("ibumps", optarg, &initial_bumps);
@@ -1012,11 +1032,12 @@ int main(int argc, char *argv[])
 	printf("min h = %f, max h = %f\n", min, max);
 	paint_height_maps(min, max);
 	calculate_normals();
-	paint_normal_maps(min, max);
+	paint_normal_and_height_maps(min, max);
 	printf("painting terrain colors\n");
 	paint_terrain_colors(min, max);
 	save_output_images();
 	save_normal_maps();
+	save_height_maps();
 	open_simplex_noise_free(ctx);
 	return 0;
 }
