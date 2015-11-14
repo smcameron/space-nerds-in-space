@@ -277,7 +277,8 @@ DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
 	${MODELSRCDIR}/starbase.docking_ports.h
 
 MANSRCDIR=.
-MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz
+MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz \
+	${MANSRCDIR}/earthlike.1.gz ${MANSRCDIR}/gaseous-giganticus.1
 MANDIR=${DESTDIR}/${PREFIX}/share/man/man6
 
 DESKTOPDIR=${DESTDIR}/${PREFIX}/share/applications
@@ -790,6 +791,12 @@ snis_client.6.gz:	snis_client.6
 snis_server.6.gz:	snis_server.6
 	gzip -9 - < snis_server.6 > snis_server.6.gz
 
+earthlike.1.gz:	earthlike.1
+	gzip -9 - < earthlike.6 > earthlike.6.gz
+
+gaseous-giganticus.1.gz:	gaseous-giganticus.1
+	gzip -9 - < gaseous-giganticus.6 > gaseous-giganticus.6.gz
+
 install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${MANPAGES} ${SSGL}
 	@# First check that PREFIX is sane, and esp. that it's not pointed at source
@@ -863,6 +870,8 @@ uninstall:
 	rm -fr ${DESTDIR}/${PREFIX}/share/snis
 	rm -f ${MANDIR}/snis_client.6.gz ${MANDIR}/snis_client.6
 	rm -f ${MANDIR}/snis_server.6.gz ${MANDIR}/snis_server.6
+	rm -f ${MANDIR}/earthlike.1.gz ${MANDIR}/earthlike.1
+	rm -f ${MANDIR}/gaseous-giganticus.1.gz ${MANDIR}/gaseous-giganticus.1
 	rm -f ${DESKTOPDIR}/snis.desktop
 	${UPDATE_DESKTOP}
 

@@ -1,0 +1,103 @@
+.TH EARTHLIKE 1 "Nov 2015" "Space-Nerds-In-Space" "User Commands"
+
+.SH NAME
+earthlike \- make 6 images forming a cube map for an earth-like planet
+.SH SYNOPSIS
+.B earthlike
+[ -b bumps ]
+[ -B initialbumps ]
+[ -c craters ]
+[ -h input-heightmap-data.png ]
+[ -H output-heightmap-prefix ]
+[ -k shrink-factor ]
+[ -l input-land-colors.png ]
+[ -n normal-map-output-prefix ]
+[ -o terrain-output-prefix ]
+[ -O oceanlevel ]
+[ -r recursion-limit ]
+[ -s bump-scatter-factor ]
+[ -S random-seed ]
+[ -w input-water-colors.png ]
+[ -z initial-bumpsize ]
+
+.SH DESCRIPTION
+.I  earthlike
+From a given set of land-color, water-color, and heightmap input image
+data, produces 6 images forming a cube map texture for an earth-like
+planet.
+.PP
+It works as follows.  6 square arrays
+of vectors representing heights are arranged in an over inflated cube.
+A number of initial "bumps" are applied.  Each "bump" deforms the vector
+field from it's initial sphere by making a "pimple" on the surface.  This
+pimple is modulated by heightfield data sampled from a random portion
+of the input heightmap data provided via the -h flag. This is repeated
+over and over.  For each bump, smaller bumps are recursively added in
+the same vicinity until the bumps become "too small" at which point the
+recursion stops.  Once this process is complete, the vector field now
+represents a sphere which has been deformed into something like terrain.
+The altitude and sampled value of a 3d noise function are used to index
+into the provide land-color and water-color images to determine a set of
+output images forming terrain cubemap.  Additionally, heightmap and normal
+map cubemaps are output.
+.PP
+.SH OPTIONS
+.TP
+-b, --bumps
+Number of smaller bumps to recursively add to each bump.  Default is 3.
+.TP
+-B, --initialbumps
+Number of initial bumps to add.  Default is 60.
+.TP
+-h, --height
+Name of file containing input heightmap data.  This should be an
+8-bit/color RGB, non-interlaced PNG image file.
+.TP
+-H, --heightmap-output
+Prefix for name of 6 output heightmap png image files.
+.TP
+-k, --shrink
+Factor by which to shrink "sub-bumps" relative to "bumps" in the recursive bump-adding
+algorithm. Default value is 0.55.
+.TP
+-l, --land
+Name of land color png input file. This should be an
+8-bit/color RGB, non-interlaced PNG image.
+.TP
+-n, --normal
+Name of prefix to use for filenames of output normal map images.
+.TP
+-o, --output
+Name of prefix to use for filenames of output terrain images.
+.TP
+-O, --oceanlevel
+Value to use to determine sealevel.  Default is 0.08.
+.TP
+-r, --rlimit
+Recursion limit specified as the smallest radius a bump is allowed to be
+before the recursion is terminated.  Default is 0.005.
+.TP
+-s, --scatter
+Bump scatter factor as a fraction of the radius of the bump.  Default is 1.5.
+-S, --seed
+Random seed to use.  Default is 31415.
+-w, --water
+Name of input file to use for water colors, shoudlbe an 8-bit/color RGB, non-interlaced PNG image file.
+-z, --bumpsize
+radius of initial bumps expressed as a multiplying factor of the planet radius.  Default value
+is 0.04.
+
+.SH "EXAMPLES"
+.TP
+
+.DI
+  Here are some examples:
+
+  earthlike -B 25 -h heightdata.png -l land.png -w water.png -o yourplanet -S 31415 --bumpsize 0.5
+
+  earthlike -B 200 -b 1 -l cloud-gradient.png -w black-square.png -h ~/satellite-clouds.png -S 77573 --bumpsize 0.6 -o your-clouds
+.DE
+
+.SH "SEE ALSO"
+snis_client, snis_server, gaseous-giganticus, howto-generate-earthlike-planets.txt
+
