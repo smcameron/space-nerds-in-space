@@ -228,7 +228,8 @@ static union quat last_lobby_orientation = IDENTITY_QUAT_INITIALIZER;
 static union quat last_light_orientation = IDENTITY_QUAT_INITIALIZER;
 static union quat lobby_orientation = IDENTITY_QUAT_INITIALIZER;
 static union quat light_orientation = IDENTITY_QUAT_INITIALIZER;
-static int lobby_zoom = 255;
+static float desired_lobby_zoom = 255;
+static float lobby_zoom = 255;
 
 #define MOUSE_HISTORY 5
 static volatile float lastx[MOUSE_HISTORY], lasty[MOUSE_HISTORY];
@@ -310,14 +311,14 @@ static int main_da_button_press(int button, int x, int y)
 static int main_da_scroll(int direction)
 {
 	if (direction)
-		lobby_zoom += 10;
+		desired_lobby_zoom = lobby_zoom + 10;
 	else
-		lobby_zoom -= 10;
+		desired_lobby_zoom = lobby_zoom - 10;
 
-	if (lobby_zoom < 0)
-		lobby_zoom = 0;
-	if (lobby_zoom > 255)
-		lobby_zoom = 255;
+	if (desired_lobby_zoom < 0)
+		desired_lobby_zoom = 0;
+	if (desired_lobby_zoom > 255)
+		desired_lobby_zoom = 255;
 	return 1;
 }
 
@@ -449,6 +450,9 @@ static void draw_screen()
 			set_renderer(cx, FLATSHADING_RENDERER);
 	}
 
+	if (lobby_zoom != desired_lobby_zoom) {
+		lobby_zoom += 0.1 * (desired_lobby_zoom - lobby_zoom);
+	}
 	float r = target_mesh->radius / tan(FOV / 3.0); /* 50% size for middle zoom */
 	float r_cam = r * lobby_zoom / 255.0;
 	
