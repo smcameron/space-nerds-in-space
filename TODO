@@ -88,4 +88,6 @@ NICE TO HAVE:
   realism.   Also, have planets orbiting stars, stations orbiting planets, etc,
   instead of what we have now, which is just stuff randomly sprinkled around.
 
+* Allow multiple server processes and travel between them via warp gates.
+* Make art assets live on server and be transmitted to clients on demand.
 
