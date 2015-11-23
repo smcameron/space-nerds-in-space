@@ -792,7 +792,7 @@ snis_server.6.gz:	snis_server.6
 	gzip -9 - < snis_server.6 > snis_server.6.gz
 
 earthlike.1.gz:	earthlike.1
-	gzip -9 - < earthlike.6 > earthlike.6.gz
+	gzip -9 - < earthlike.1 > earthlike.1.gz
 
 gaseous-giganticus.1.gz:	gaseous-giganticus.1
 	gzip -9 - < gaseous-giganticus.6 > gaseous-giganticus.6.gz
