@@ -384,8 +384,9 @@ SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS}
 #
 
 
-PROGS=snis_server snis_client snis_limited_client mesh_viewer util/mask_clouds
-BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/mask_clouds
+PROGS=snis_server snis_client snis_limited_client mesh_viewer
+BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client
+UTILPROGS=util/mask_clouds
 
 # model directory
 MD=${ASSETSSRCDIR}/models
@@ -476,7 +477,7 @@ GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o png_utils.o
 GGLIBS=-lm ${LRTLIB} -lpng
 GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} && $(ECHO) '  LINK' $@
 
-all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES}
+all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES} ${UTILPROGS}
 
 build:	all
 
@@ -627,10 +628,6 @@ bin/snis_limited_client:	snis_limited_client
 bin/ssgl_server:	ssgl/ssgl_server
 	@mkdir -p bin
 	@cp ssgl/ssgl_server bin
-
-bin/mask_clouds:	util/mask_clouds
-	@mkdir -p bin
-	@cp util/mask_clouds bin
 
 mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(SDLCLIENTLINK)
