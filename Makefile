@@ -385,7 +385,7 @@ SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS}
 
 
 PROGS=snis_server snis_client snis_limited_client mesh_viewer util/mask_clouds
-BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client
+BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/mask_clouds
 
 # model directory
 MD=${ASSETSSRCDIR}/models
@@ -627,6 +627,10 @@ bin/snis_limited_client:	snis_limited_client
 bin/ssgl_server:	ssgl/ssgl_server
 	@mkdir -p bin
 	@cp ssgl/ssgl_server bin
+
+bin/mask_clouds:	util/mask_clouds
+	@mkdir -p bin
+	@cp util/mask_clouds bin
 
 mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(SDLCLIENTLINK)
