@@ -95,11 +95,15 @@ Dump out velocity field data to the specified file after initial calculation.
 Particle fade rate.  Default is 0.01
 .TP
 -i, --input
-Input image filename.  Must be RGB png file.
+Input image filename.  Must be RGB or RGBA png file.
 .TP
 -I, --image-save-period
 Interval of simulation iterations after which to output images.  Default is to
 output images every 20 iterations of the simulation.
+.TP
+-k, --cubemap
+Prefix of 6 cubemap RGB or RGBA png images to which '[x].png' is appended
+with [x] taking on the values 0 through 5.
 .TP
 -l, --large-pixels
 Use 3x3 pixels for particles instead of single pixel particles.  The allows getting away

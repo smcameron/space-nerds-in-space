@@ -393,7 +393,7 @@ static const float face_to_ydim_multiplier[] = { 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0
 static void init_particles(struct particle **pp, const int nparticles)
 {
 	float x, y, z, xo, yo;
-	/* const int bytes_per_pixel = start_image_has_alpha ? 4 : 3; */
+	const int bytes_per_pixel = start_image_has_alpha ? 4 : 3;
 	unsigned char *pixel;
 	int pn, px, py;
 	struct fij fij = { 0, 0, 0 };
@@ -415,18 +415,23 @@ static void init_particles(struct particle **pp, const int nparticles)
 			}
 			xo = fij.i * start_image_width / (float) XDIM;
 			yo = fij.j * start_image_height / (float) YDIM;
-			px = ((int) xo) * 3;
+			px = ((int) xo) * bytes_per_pixel;
 			py = ((int) yo) * start_image_bytes_per_row;
 		} else if (!stripe && !sinusoidal) {
 			fij = xyz_to_fij(&p[i].pos, DIM);
 			if (fij.i < 0 || fij.i > DIM || fij.j < 0 || fij.j > DIM) {
 				printf("BAD fij: %d,%d\n", fij.i, fij.j);
 			}
+			/* The divide by 4.0 or 3.0 below is there because the faces are laid out like:
+			 *   #
+			 *  ####   (3 high, and 4 wide.)
+			 *   #
+			 */
 			xo = XDIM * face_to_xdim_multiplier[fij.f] + fij.i / 4.0;
 			yo = YDIM * face_to_ydim_multiplier[fij.f] + fij.j / 3.0;
 			xo = xo / (float) XDIM;
 			yo = yo / (float) YDIM;
-			px = ((int) (xo * start_image_width)) * 3;
+			px = ((int) (xo * start_image_width)) * bytes_per_pixel;
 			py = (((int) (yo * start_image_height)) * start_image_bytes_per_row);
 			//printf("x,y = %d, %d, pn = %d\n", px, py, pn);
 		} else if (stripe) {
@@ -435,7 +440,7 @@ static void init_particles(struct particle **pp, const int nparticles)
 			else
 				yo = (y + (float) DIM / 2.0) / (float) DIM;
 			xo = 0.5; 
-			px = ((int) (xo * start_image_width)) * 3;
+			px = ((int) (xo * start_image_width)) * bytes_per_pixel;
 			py = (((int) (yo * start_image_height)) * start_image_bytes_per_row);
 			//printf("xo = %f, yo=%f, px = %d, py = %d\n", xo, yo, px, py);
 		} else { /* sinusoidal */
@@ -449,7 +454,7 @@ static void init_particles(struct particle **pp, const int nparticles)
 				x1 = -abs_cos_lat * 0.5 + 0.5;
 				longitude = atan2f(z, x);
 				xo = (cos(longitude) * abs_cos_lat * 0.5f) * (x2 - x1) + 0.5f;
-				px = ((int) (xo * start_image_width)) * 3;
+				px = ((int) (xo * start_image_width)) * bytes_per_pixel;
 				py = (((int) (yo * start_image_height)) * start_image_bytes_per_row);
 			} else {
 				float abs_cos_lat, longitude, latitude, x1, x2;
@@ -461,7 +466,7 @@ static void init_particles(struct particle **pp, const int nparticles)
 				x1 = -abs_cos_lat * 0.5 + 0.5;
 				longitude = atan2f(y, x);
 				xo = (cos(longitude) * abs_cos_lat * 0.5f) * (x2 - x1) + 0.5f;
-				px = ((int) (xo * start_image_width)) * 3;
+				px = ((int) (xo * start_image_width)) * bytes_per_pixel;
 				py = (((int) (yo * start_image_height)) * start_image_bytes_per_row);
 			}
 		}
@@ -857,7 +862,7 @@ static char *load_image(const char *filename, int *w, int *h, int *a, int *bytes
 		fprintf(stderr, "%s: cannot load image: %s\n", filename, msg);
 		exit(1);
 	}
-	*bytes_per_row = *w * 3;
+	*bytes_per_row = *w * (3 + !!(*a));
 	/* align to 4 byte boundary */
 	if (*bytes_per_row & 0x03)
 		*bytes_per_row += 4 - (*bytes_per_row & 0x03);
@@ -906,7 +911,7 @@ static void usage(void)
 	fprintf(stderr, "   -C, --cloudmode: modulate image output by to produce clouds\n");
 	fprintf(stderr, "   -f, --fbm-falloff: Use specified falloff for FBM noise.  Default is 0.5\n");
 	fprintf(stderr, "   -F, --vfdim: Set size of velocity field.  Default:2048. Min: 16. Max: 2048\n");
-	fprintf(stderr, "   -i, --input : Input image filename.  Must be RGB png file.\n");
+	fprintf(stderr, "   -i, --input : Input image filename.  Must be RGB or RGBA png file.\n");
 	fprintf(stderr, "   -I, --image-save-period: Interval of simulation iterations after which\n");
 	fprintf(stderr, "         to output images.  Default is every 20 iterations\n");
 	fprintf(stderr, "   -m, --speed-multiplier:  band_speed_factor and velocity_factor are\n");
@@ -924,7 +929,7 @@ static void usage(void)
 	fprintf(stderr, "                   divergences in the velocity field to be clearly seen,\n");
 	fprintf(stderr, "                   as pixels that contain no particles wil not be painted\n");
 	fprintf(stderr, "                   and will become hot pink.\n");
-	fprintf(stderr, "   -k, --cubemap: input 6 cubemap images to initialize particle color\n");
+	fprintf(stderr, "   -k, --cubemap: input 6 RGB or RGBA png cubemap images to initialize particle color\n");
 	fprintf(stderr, "   -l, --large-pixels: particles are 3x3 pixels instead of 1 pixel.  Allows\n");
 	fprintf(stderr, "                       for fewer particles and thus faster rendering, but this\n");
 	fprintf(stderr, "                       WILL leave visible artifacts at cubemap face boundaries.\n");
