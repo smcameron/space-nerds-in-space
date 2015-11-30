@@ -135,6 +135,15 @@ union cast {
 	long l;
 };
 
+#define MAXVORTICES 200
+static struct vortex {
+	union vec3 p;
+	union quat q, reverseq;
+	float r;
+	float angular_vel;
+} vort[MAXVORTICES];
+static int nvortices = 0;
+
 static inline int float2int(double d)
 {
 	volatile union cast c;
@@ -543,7 +552,7 @@ static void *update_velocity_field_thread_fn(void *info)
 	float w = t->w;
 	struct velocity_field *vf = t->vf;
 
-	int i, j;
+	int i, j, vortex;
 	union vec3 v, c, ng;
 
 	for (i = 0; i < vfdim; i++) {
@@ -580,6 +589,32 @@ static void *update_velocity_field_thread_fn(void *info)
 				vec3_normalize_self(&bv);
 				vec3_mul_self(&bv, band_speed);
 				vec3_add_self(&vf->v[f][i][j], &bv);
+			}
+
+			/* Calculate artificial vortex influence. */
+			for (vortex = 0; vortex < nvortices; vortex++) {
+				union vec3 diff;
+				union vec3 p2d, vortex_vel, rotated_vortex_vel;
+				float dist;
+				struct vortex *vor = &vort[vortex];
+				vec3_sub(&diff, &vor->p, &ov);
+				dist = vec3_magnitude(&diff);
+				if (dist > vor->r)
+					continue; /* This vortex's influence is zero. */
+				/* rotate this postition to front and center */
+				quat_rot_vec(&p2d, &ov, &vor->q);
+
+				/* do a 2d rotation about z axis by at most 5 degrees */
+				float angle = (vor->angular_vel  * M_PI / 180.0) * sin(M_PI * dist / vor->r);
+				float nx = p2d.v.x * cos(angle) - p2d.v.y * sin(angle);
+				float ny = p2d.v.x * sin(angle) + p2d.v.y * cos(angle);
+				vortex_vel.v.x = XDIM * (nx - p2d.v.x);
+				vortex_vel.v.y = XDIM * (ny - p2d.v.y);
+				vortex_vel.v.z = 0.0f;
+
+				/* Now rotate the velocity back from front and center and add contribution */
+				quat_rot_vec(&rotated_vortex_vel, &vortex_vel, &vor->reverseq);
+				vec3_add_self(&vf->v[f][i][j], &rotated_vortex_vel);
 			}
 		}
 	}
@@ -951,6 +986,7 @@ static void usage(void)
 	fprintf(stderr, "                   number of online CPUs\n");
 	fprintf(stderr, "   -W, --wstep: w coordinate of noise field is incremented by specified\n");
 	fprintf(stderr, "                amount periodically and velocity field is recalculated\n");
+	fprintf(stderr, "   -x, --vortices: how many artificial circular vortices to add into the v-field\n");
 	fprintf(stderr, "   -z, --noise-scale: default is %f\n", default_noise_scale);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Example:\n");
@@ -994,6 +1030,7 @@ static struct option long_options[] = {
 	{ "vfdim", required_argument, NULL, 'F' },
 	{ "wstep", required_argument, NULL, 'W' },
 	{ "wstep-period", required_argument, NULL, 'q' },
+	{ "vortices", required_argument, NULL, 'x' },
 	{ "noise-scale", required_argument, NULL, 'z' },
 	{ 0, 0, 0, 0 },
 };
@@ -1061,7 +1098,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "a:B:b:c:Cd:D:f:F:hHi:k:I:lnm:o:O:p:PRr:sSt:Vv:w:W:z:",
+		c = getopt_long(argc, argv, "a:B:b:c:Cd:D:f:F:hHi:k:I:lnm:o:O:p:PRr:sSt:Vv:w:W:x:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1185,6 +1222,13 @@ static void process_options(int argc, char *argv[])
 		case 'q': /* running out of letters, so, 'q'. */
 			process_int_option("wstep-period", optarg, &wstep_period);
 			break;
+		case 'x':
+			process_int_option("vortices", optarg, &nvortices);
+			if (nvortices > MAXVORTICES) {
+				nvortices = MAXVORTICES;
+				fprintf(stderr, "Requested %d vortices, maximum is %d\n", nvortices, MAXVORTICES);
+			}
+			break;
 		case 'z':
 			process_float_option("noise-scale", optarg, &noise_scale);
 			break;
@@ -1215,6 +1259,58 @@ static void load_cubemap_images(const char *prefix)
 	}
 }
 
+static void create_vortex(int i)
+{
+	float x, y, z;
+	const union vec3 right_at_ya = { { 0.0f, 0.0f, 1.0f } };
+	const union vec3 up = { { 0.0f, 1.0f, 0.0f } };
+	float angle, band_speed;
+
+	random_point_on_sphere(1.0, &x, &y, &z);
+	vort[i].p.v.x = x;
+	vort[i].p.v.y = y;
+	vort[i].p.v.z = z;
+	vort[i].r = 0.007 + 0.06 * ((float) rand() / (float) RAND_MAX);
+
+	if (num_bands > 0) {
+		/* I don't think this is actually correct.  I think
+		 * I need to sample the velocity field around the vortex
+		 * to determine the already present rotation and make the
+		 * vortex rotate in the same direction... this doesn't
+		 * quite do that.  And the velocity field is not built yet
+		 * when this gets called (that might be change-able though.).
+		 *
+		 * A better method might be to pre-sample the noise field, then
+		 * disturb the sampled noise gradient to make the vortices prior to
+		 * constructing the velocity field.
+		 */
+		angle = asinf(vort[i].p.v.z);
+		band_speed = ((1 - pole_attenuation) + pole_attenuation *
+			cosf(angle)) *
+			cosf(angle * num_bands) * band_speed_factor;
+		if (band_speed > 0.0)
+			vort[i].angular_vel = 5.0;
+		else
+			vort[i].angular_vel = -5.0;
+	} else {
+		/* This will be right half the time :/ */
+		if (rand() > (RAND_MAX >> 1))
+			vort[i].angular_vel = 5.0;
+		else
+			vort[i].angular_vel = -5.0;
+	}
+	quat_from_u2v(&vort[i].q, &vort[i].p, &right_at_ya, &up);
+	quat_from_u2v(&vort[i].reverseq, &right_at_ya, &vort[i].p, &up);
+}
+
+static void create_vortices()
+{
+	int i;
+
+	for (i = 0; i < nvortices; i++)
+		create_vortex(i);
+}
+
 int main(int argc, char *argv[])
 {
 	int i, t;
@@ -1235,6 +1331,7 @@ int main(int argc, char *argv[])
 	noise_scale = default_noise_scale;
 
 	process_options(argc, argv);
+	create_vortices();
 	set_automatic_options(random_mode);
 
 	check_vf_dump_file(vf_dump_file);

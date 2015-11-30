@@ -34,6 +34,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -w w-offset ]
 [ -W wstep ]
 [ --wstep_period period ]
+[ -x number-of-vortices ]
 [ -z noise-scale ]
 
 .SH DESCRIPTION
@@ -204,6 +205,10 @@ Sinusoidal is the default image projection.
 -t, --threads
 Use the specified number of CPU threads up to the
 number of online CPUs.  Default is number of online CPUs.
+.TP
+-x, --vortices
+the number of artificial circular vortices to add into the velocity field.
+Default is zero.
 .TP
 -z, --noise-scale noisescale
 Use the specified noise scale value.  Default is 2.6  This controls the
