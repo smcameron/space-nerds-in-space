@@ -539,6 +539,12 @@ static union vec3 curl2(union vec3 pos, union vec3 normalized_pos,
 	return rotated_ng;
 }
 
+static float calculate_band_speed(float latitude)
+{
+	return ((1 - pole_attenuation) + pole_attenuation *
+		cosf(latitude)) * cosf(latitude * num_bands) * band_speed_factor;
+}
+
 struct velocity_field_thread_info {
 	pthread_t thread;
 	int f; /* face */
@@ -573,17 +579,13 @@ static void *update_velocity_field_thread_fn(void *info)
 			if (num_bands != 0) {
 				if (vertical_bands) {
 					angle = asinf(ov.v.z);
-					band_speed = ((1 - pole_attenuation) + pole_attenuation *
-						cosf(angle)) *
-						cosf(angle * num_bands) * band_speed_factor;
+					band_speed = calculate_band_speed(angle);
 					bv.v.x = -ov.v.y;
 					bv.v.y = ov.v.x;
 					bv.v.z = 0;
 				} else {
 					angle = asinf(ov.v.y);
-					band_speed = ((1 - pole_attenuation) + pole_attenuation *
-						cosf(angle)) *
-						cosf(angle * num_bands) * band_speed_factor;
+					band_speed = calculate_band_speed(angle);
 					bv.v.x = ov.v.z;
 					bv.v.z = -ov.v.x;
 					bv.v.y = 0;
@@ -1312,9 +1314,7 @@ static void create_vortex(int i)
 		 * constructing the velocity field.
 		 */
 		angle = asinf(vort[i].p.v.z);
-		band_speed = ((1 - pole_attenuation) + pole_attenuation *
-			cosf(angle)) *
-			cosf(angle * num_bands) * band_speed_factor;
+		band_speed = calculate_band_speed(angle);
 		if (band_speed > 0.0)
 			vort[i].angular_vel = 5.0;
 		else
