@@ -1,4 +1,4 @@
-.TH GASEOUS-GIGANGICUS 1 "Nov 2015" "Space-Nerds-In-Space" "User Commands"
+.TH GASEOUS-GIGANGICUS 1 "Dec 2015" "Space-Nerds-In-Space" "User Commands"
 
 .SH NAME
 gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet 
@@ -35,6 +35,8 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -W wstep ]
 [ --wstep_period period ]
 [ -x number-of-vortices ]
+[ --vortex-size size ]
+[ --vortex-size-variance variance ]
 [ -z noise-scale ]
 
 .SH DESCRIPTION
@@ -206,6 +208,15 @@ Sinusoidal is the default image projection.
 Use the specified number of CPU threads up to the
 number of online CPUs.  Default is number of online CPUs.
 .TP
+--vortex-size size
+Make vortices (see --vortices option below) of the specified size which is expressed
+as a fraction of the planet radius.  The default is 0.037, so the vortices produced will
+have a radius which is around 0.037 times the radius of the planet.
+.TP
+--vortex-size-variance variance
+This allows the vortex-size to vary by plus or minus the specified variance which is
+expressed as a fraction of the planet radius.  The default value is 0.03. 
+.TP
 -x, --vortices
 the number of artificial circular vortices to add into the velocity field.
 Default is zero.
@@ -232,7 +243,7 @@ approximate because I just eyeballed them.)
  1.75 Even smaller whorls.
  2.00 Smaller still.
  3.00 Whorls are starting to get chaotically small,
-      maybe 1/40th diameter of sphere. j
+      maybe 1/40th diameter of sphere.
  6.00 Whorls are no longer primary feature instead
       sort blobby regions form.  As the noise scale
       gets higher, the blobby features get smaller.
@@ -243,7 +254,8 @@ approximate because I just eyeballed them.)
 
 .DI
   ./gaseous-giganticus -V --sinusoidal --noise-scale 2.5 \\
-        --velocity-factor 1300 --bands 10 \\
+        --velocity-factor 1300 --bands 10 --vortices 100 \\
+	--vortex-size 0.04 --vortex-size-variance 0.02 \\
         -i input-image.png -o output-image-prefix
 .DE
 

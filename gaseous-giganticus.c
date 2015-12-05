@@ -143,6 +143,8 @@ static struct vortex {
 	float angular_vel;
 } vort[MAXVORTICES];
 static int nvortices = 0;
+static float vortex_size = 0.037;
+static float vortex_size_variance =  0.03;
 
 static inline int float2int(double d)
 {
@@ -987,6 +989,8 @@ static void usage(void)
 	fprintf(stderr, "   -W, --wstep: w coordinate of noise field is incremented by specified\n");
 	fprintf(stderr, "                amount periodically and velocity field is recalculated\n");
 	fprintf(stderr, "   -x, --vortices: how many artificial circular vortices to add into the v-field\n");
+	fprintf(stderr, "   --vortex-size: radius of vortices as a fraction of planet radius. Default 0.037\n");
+	fprintf(stderr, "   --vortex-size-variance: Range of vortex sizes, default is plus or minus 0.03\n");
 	fprintf(stderr, "   -z, --noise-scale: default is %f\n", default_noise_scale);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Example:\n");
@@ -997,6 +1001,9 @@ static void usage(void)
 	fprintf(stderr, "\n");
 	exit(1);
 }
+
+#define VORTEX_SIZE_OPTION 1000
+#define VORTEX_SIZE_VARIANCE_OPTION 1001
 
 static struct option long_options[] = {
 	{ "pole-attenuation", required_argument, NULL, 'a' },
@@ -1031,6 +1038,8 @@ static struct option long_options[] = {
 	{ "wstep", required_argument, NULL, 'W' },
 	{ "wstep-period", required_argument, NULL, 'q' },
 	{ "vortices", required_argument, NULL, 'x' },
+	{ "vortex-size", required_argument, NULL, VORTEX_SIZE_OPTION },
+	{ "vortex-size-variance", required_argument, NULL, VORTEX_SIZE_VARIANCE_OPTION },
 	{ "noise-scale", required_argument, NULL, 'z' },
 	{ 0, 0, 0, 0 },
 };
@@ -1232,6 +1241,12 @@ static void process_options(int argc, char *argv[])
 		case 'z':
 			process_float_option("noise-scale", optarg, &noise_scale);
 			break;
+		case VORTEX_SIZE_OPTION:
+			process_float_option("vortex-size", optarg, &vortex_size);
+			break;
+		case VORTEX_SIZE_VARIANCE_OPTION:
+			process_float_option("vortex-size", optarg, &vortex_size_variance);
+			break;
 		default:
 			fprintf(stderr, "unknown option '%s'\n",
 				option_index > 0 && option_index - 1 < argc &&
@@ -1259,6 +1274,18 @@ static void load_cubemap_images(const char *prefix)
 	}
 }
 
+/* Return a value between -1.0 and 1.0 with a bias towards zero.
+ * Not a normal distribution, but sorta close enough for our purposes.
+ */
+static float random_squared(void)
+{
+	float x, y;
+
+	x = (2.0f * (float) rand() / (float) RAND_MAX) - 1.0f;
+	y = (2.0f * (float) rand() / (float) RAND_MAX) - 1.0f;
+	return x * y;
+}
+
 static void create_vortex(int i)
 {
 	float x, y, z;
@@ -1270,7 +1297,7 @@ static void create_vortex(int i)
 	vort[i].p.v.x = x;
 	vort[i].p.v.y = y;
 	vort[i].p.v.z = z;
-	vort[i].r = 0.007 + 0.06 * ((float) rand() / (float) RAND_MAX);
+	vort[i].r = vortex_size + random_squared() * vortex_size_variance;
 
 	if (num_bands > 0) {
 		/* I don't think this is actually correct.  I think
