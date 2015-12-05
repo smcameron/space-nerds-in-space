@@ -35,6 +35,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -W wstep ]
 [ --wstep_period period ]
 [ -x number-of-vortices ]
+[ --vortex-band-threshold threshold ]
 [ --vortex-size size ]
 [ --vortex-size-variance variance ]
 [ -z noise-scale ]
@@ -208,14 +209,26 @@ Sinusoidal is the default image projection.
 Use the specified number of CPU threads up to the
 number of online CPUs.  Default is number of online CPUs.
 .TP
+--vortex-band-threshold
+This option works in conjunction with the --bands option.  The --bands option specifies how
+many counter-rotating bands encircle the planet.  If you imagine traversing from the north
+pole to the south pole of the planet along a line of longitude, the velocity perpendicular
+to the line of longitude varies smoothly, in a sine wave fashion, between -1 and +1, with
+-1 and +1 being the regions of fastest movement, and 0 being no movement.  The
+--vortex-band-threshold option specifies the maximum band velocity at which vortices may
+be placed.  The default value is 0.4.  The effect is that vortices are forced to form
+only in regions of low band velocity -- in other words, between the counter rotating bands
+rather than in the middle of the counter rotating bands.  The range of this parameter is
+clamped between 0.05 and 1.0;  If --bands is 0, then --vortex-band-threshold has no effect.
+.TP
 --vortex-size size
 Make vortices (see --vortices option below) of the specified size which is expressed
-as a fraction of the planet radius.  The default is 0.037, so the vortices produced will
+as a fraction of the planet radius.  The default is 0.04, so the vortices produced will
 have a radius which is around 0.037 times the radius of the planet.
 .TP
 --vortex-size-variance variance
 This allows the vortex-size to vary by plus or minus the specified variance which is
-expressed as a fraction of the planet radius.  The default value is 0.03. 
+expressed as a fraction of the planet radius.  The default value is 0.02.
 .TP
 -x, --vortices
 the number of artificial circular vortices to add into the velocity field.

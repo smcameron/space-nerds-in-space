@@ -143,8 +143,9 @@ static struct vortex {
 	float angular_vel;
 } vort[MAXVORTICES];
 static int nvortices = 0;
-static float vortex_size = 0.037;
-static float vortex_size_variance =  0.03;
+static float vortex_size = 0.04;
+static float vortex_size_variance =  0.02;
+static float vortex_band_threshold = 0.2;
 
 static inline int float2int(double d)
 {
@@ -991,8 +992,9 @@ static void usage(void)
 	fprintf(stderr, "   -W, --wstep: w coordinate of noise field is incremented by specified\n");
 	fprintf(stderr, "                amount periodically and velocity field is recalculated\n");
 	fprintf(stderr, "   -x, --vortices: how many artificial circular vortices to add into the v-field\n");
-	fprintf(stderr, "   --vortex-size: radius of vortices as a fraction of planet radius. Default 0.037\n");
-	fprintf(stderr, "   --vortex-size-variance: Range of vortex sizes, default is plus or minus 0.03\n");
+	fprintf(stderr, "   --vortex-band-threshold: controls distribution of vortices (see man page)\n");
+	fprintf(stderr, "   --vortex-size: radius of vortices as a fraction of planet radius. Default 0.04\n");
+	fprintf(stderr, "   --vortex-size-variance: Range of vortex sizes, default is plus or minus 0.02\n");
 	fprintf(stderr, "   -z, --noise-scale: default is %f\n", default_noise_scale);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Example:\n");
@@ -1006,6 +1008,7 @@ static void usage(void)
 
 #define VORTEX_SIZE_OPTION 1000
 #define VORTEX_SIZE_VARIANCE_OPTION 1001
+#define VORTEX_BAND_THRESHOLD_OPTION 1002
 
 static struct option long_options[] = {
 	{ "pole-attenuation", required_argument, NULL, 'a' },
@@ -1040,6 +1043,7 @@ static struct option long_options[] = {
 	{ "wstep", required_argument, NULL, 'W' },
 	{ "wstep-period", required_argument, NULL, 'q' },
 	{ "vortices", required_argument, NULL, 'x' },
+	{ "vortex-band-threshold", required_argument, NULL, VORTEX_BAND_THRESHOLD_OPTION },
 	{ "vortex-size", required_argument, NULL, VORTEX_SIZE_OPTION },
 	{ "vortex-size-variance", required_argument, NULL, VORTEX_SIZE_VARIANCE_OPTION },
 	{ "noise-scale", required_argument, NULL, 'z' },
@@ -1249,6 +1253,13 @@ static void process_options(int argc, char *argv[])
 		case VORTEX_SIZE_VARIANCE_OPTION:
 			process_float_option("vortex-size", optarg, &vortex_size_variance);
 			break;
+		case VORTEX_BAND_THRESHOLD_OPTION:
+			process_float_option("vortex-band-threshold", optarg, &vortex_band_threshold);
+			if (vortex_band_threshold < 0.05)
+				vortex_band_threshold = 0.05;
+			if (vortex_band_threshold > 1.0)
+				vortex_band_threshold = 1.0;
+			break;
 		default:
 			fprintf(stderr, "unknown option '%s'\n",
 				option_index > 0 && option_index - 1 < argc &&
@@ -1290,16 +1301,10 @@ static float random_squared(void)
 
 static void create_vortex(int i)
 {
-	float x, y, z;
 	const union vec3 right_at_ya = { { 0.0f, 0.0f, 1.0f } };
 	const union vec3 up = { { 0.0f, 1.0f, 0.0f } };
 	float angle, band_speed;
 
-	random_point_on_sphere(1.0, &x, &y, &z);
-	vort[i].p.v.x = x;
-	vort[i].p.v.y = y;
-	vort[i].p.v.z = z;
-	vort[i].r = vortex_size + random_squared() * vortex_size_variance;
 
 	if (num_bands > 0) {
 		/* I don't think this is actually correct.  I think
@@ -1313,13 +1318,23 @@ static void create_vortex(int i)
 		 * disturb the sampled noise gradient to make the vortices prior to
 		 * constructing the velocity field.
 		 */
-		angle = asinf(vort[i].p.v.z);
-		band_speed = calculate_band_speed(angle);
+		do {
+			random_point_on_sphere(1.0, &vort[i].p.v.x, &vort[i].p.v.y, &vort[i].p.v.z);
+			vort[i].r = vortex_size + random_squared() * vortex_size_variance;
+			if (vertical_bands)
+				angle = asinf(vort[i].p.v.z);
+			else
+				angle = asinf(vort[i].p.v.y);
+			band_speed = calculate_band_speed(angle);
+		} while (fabs(band_speed) > vortex_band_threshold * band_speed_factor &&
+			fabs(angle) > 15.0 * M_PI / 180.0); /* exclude vortice within 15 deg of poles */
 		if (band_speed > 0.0)
 			vort[i].angular_vel = 2.5;
 		else
 			vort[i].angular_vel = -2.5;
 	} else {
+		random_point_on_sphere(1.0, &vort[i].p.v.x, &vort[i].p.v.y, &vort[i].p.v.z);
+		vort[i].r = vortex_size + random_squared() * vortex_size_variance;
 		/* This will be right half the time :/ */
 		if (rand() > (RAND_MAX >> 1))
 			vort[i].angular_vel = 2.5;
