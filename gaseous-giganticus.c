@@ -1316,15 +1316,15 @@ static void create_vortex(int i)
 		angle = asinf(vort[i].p.v.z);
 		band_speed = calculate_band_speed(angle);
 		if (band_speed > 0.0)
-			vort[i].angular_vel = 5.0;
+			vort[i].angular_vel = 2.5;
 		else
-			vort[i].angular_vel = -5.0;
+			vort[i].angular_vel = -2.5;
 	} else {
 		/* This will be right half the time :/ */
 		if (rand() > (RAND_MAX >> 1))
-			vort[i].angular_vel = 5.0;
+			vort[i].angular_vel = 2.5;
 		else
-			vort[i].angular_vel = -5.0;
+			vort[i].angular_vel = -2.5;
 	}
 	quat_from_u2v(&vort[i].q, &vort[i].p, &right_at_ya, &up);
 	quat_from_u2v(&vort[i].reverseq, &right_at_ya, &vort[i].p, &up);
