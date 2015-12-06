@@ -1,0 +1,13 @@
+# Locations of assets for "default" solar system
+
+planet texture count: 5
+planet texture: ../../textures/planet-texture0-  gas-giant
+planet texture: ../../textures/planet-texture1-  gas-giant
+planet texture: ../../textures/planet-texture2-  gas-giant
+planet texture: ../../textures/planet-texture3-  gas-giant
+planet texture: ../../textures/planet-texture4-  earth-like
+
+sun texture: ../../textures/sun.png
+
+skybox texture: ../../textures/orange-haze
+

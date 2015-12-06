@@ -98,6 +98,7 @@
 #include "snis-device-io.h"
 #include "thrust_attachment.h"
 #include "starbase_metadata.h"
+#include "solarsystem_config.h"
 
 #include "vertex.h"
 #include "triangle.h"
@@ -347,8 +348,11 @@ static struct material sun_material;
 static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
 static struct material *planet_material = NULL;
-static char **planet_material_filename = NULL;
-int nplanet_materials = -1;
+static struct solarsystem_asset_spec *solarsystem_assets = NULL;
+#define DEFAULT_SOLAR_SYSTEM "default"
+static char *solarsystem_name = DEFAULT_SOLAR_SYSTEM;
+/* static char **planet_material_filename = NULL; */
+/* int nplanet_materials = -1; */
 static struct material shield_material;
 static struct material warp_tunnel_material;
 #define NASTEROID_TEXTURES 2
@@ -1522,7 +1526,8 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 
 		/* each planet texture has another version with a variation of the ring materials */
 		int ring_m = id % NPLANETARY_RING_MATERIALS;
-		m = id % nplanet_materials + (nplanet_materials * (ring_m + 1) * (hasring ? 1 : 0));
+		const int np = solarsystem_assets->nplanet_textures;
+		m = id % np + (np * (ring_m + 1) * (hasring ? 1 : 0));
 
 		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
 		if (e) {
@@ -3806,7 +3811,9 @@ static int process_load_skybox(void)
 
 	string[100] = '\0';
 	string[length] = '\0';
-	strcpy(skybox_texture_prefix, string);
+	if (solarsystem_assets->skybox_prefix)
+		free(solarsystem_assets->skybox_prefix);
+	solarsystem_assets->skybox_prefix = strdup(string);
 	per_solarsystem_textures_loaded = 0;
 
 	return 0;
@@ -11700,7 +11707,7 @@ static unsigned int load_texture(char *filename)
 {
 	char fname[PATH_MAX + 1];
 
-	sprintf(fname, "%s/textures/%s", asset_dir, filename);
+	sprintf(fname, "%s/%s", asset_dir, filename);
 	return graph_dev_load_texture(fname);
 }
 
@@ -11737,7 +11744,7 @@ static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
 	char filename[6][PATH_MAX + 1];
 
 	for (i = 0; i < 6; i++)
-		sprintf(filename[i], "%s/textures/%s%d.png", asset_dir, filenameprefix, i);
+		sprintf(filename[i], "%s/%s%d.png", asset_dir, filenameprefix, i);
 
 	return graph_dev_load_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
 					filename[5], filename[0], filename[2]);
@@ -11776,7 +11783,7 @@ static void load_skybox_textures(char *filenameprefix)
 	char filename[6][PATH_MAX + 1];
 
 	for (i = 0; i < 6; i++)
-		sprintf(filename[i], "%s/textures/%s%d.png", asset_dir, filenameprefix, i);
+		sprintf(filename[i], "%s/%s%d.png", asset_dir, filenameprefix, i);
 
 	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4],
 					filename[5], filename[0], filename[2]);
@@ -11857,94 +11864,25 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	return TRUE;
 }
 
-static int read_planet_material_metadata(int *nplanet_materials)
+static int read_solarsystem_config(const char *solarsystem_name)
 {
-	FILE *f;
-	char path[PATH_MAX], fname[PATH_MAX], planet_type[PATH_MAX], line[256];
-	char *s;
-	int rc, lineno, np, pc;
-	const int max_planet_textures = 100;
+	char path[PATH_MAX];
 
-	printf("Reading planet texture specifications...");
+	printf("Reading solarsystem specifications...");
 	fflush(stdout);
-	sprintf(path, "%s/%s", asset_dir, "planet_materials.txt");
-	f = fopen(path, "r");
-	if (!f) {
-		fprintf(stderr, "open: %s: %s\n", path, strerror(errno));
+	sprintf(path, "%s/solarsystems/%s/assets.txt", asset_dir, solarsystem_name);
+	if (solarsystem_assets)
+		solarsystem_asset_spec_free(solarsystem_assets);
+	solarsystem_assets = solarsystem_asset_spec_read(path);
+	if (!solarsystem_assets)
 		return -1;
-	}
-
-	np = -1;
-	pc = 0;
-	lineno = 0;
-	while (!feof(f)) {
-		s = fgets(line, 256, f);
-		if (!s)
-			break;
-		s = trim_whitespace(s);
-		lineno++;
-		if (strcmp(s, "") == 0)
-			continue;
-		if (s[0] == '#') /* comment? */
-			continue;
-		rc = sscanf(s, "planet texture count: %d", &np);
-		if (rc == 1) {
-			if (*nplanet_materials != -1) {
-				fprintf(stderr, "%s:%d: duplicate planet texture count\n",
-					path, lineno);
-				goto bailout;
-			}
-			if (np > max_planet_textures) {
-				fprintf(stderr,
-					"Too many planet textures (%d), capping to %d\n",
-					np, max_planet_textures);
-				np = max_planet_textures;
-			}
-			*nplanet_materials = np;
-			planet_material = malloc(sizeof(planet_material[0]) * np *
-						(NPLANETARY_RING_MATERIALS + 1));
-			memset(planet_material, 0, sizeof(planet_material[0]) * np *
-						(NPLANETARY_RING_MATERIALS + 1));
-			planet_material_filename = malloc(sizeof(planet_material_filename[0]) * np);
-			memset(planet_material_filename, 0, sizeof(planet_material_filename[0]) * np);
-			continue;
-		}
-		/* planet_type is not really used now, but is intended to allow distinguishing
-		 * different types of planet textures (e.g. earth-like, mars-like, gas-giants)
-		 */
-		rc = sscanf(s, "%s %s", fname, planet_type);
-		if (rc != 2) {
-			fprintf(stderr, "%s:%d bad planet texture specification\n",
-					path, lineno);
-			goto bailout;
-		}
-		planet_material_filename[pc++] = strdup(fname);
-		if (pc > max_planet_textures)
-			break;
-	}
-	fclose(f);
+	planet_material = malloc(sizeof(planet_material[0]) *
+				solarsystem_assets->nplanet_textures * (NPLANETARY_RING_MATERIALS + 1));
+	memset(planet_material, 0, sizeof(planet_material[0]) *
+		solarsystem_assets->nplanet_textures * (NPLANETARY_RING_MATERIALS + 1));
 	printf("done\n");
 	fflush(stdout);
 	return 0;
-bailout:
-	fclose(f);
-	if (planet_material) {
-		free(planet_material);
-		planet_material = NULL;
-	}
-	if (planet_material_filename) {
-		int i;
-		for (i = 0; i < pc; i++) {
-			if (planet_material_filename[i]) {
-				free(planet_material_filename[i]);
-				planet_material_filename[i] = NULL;
-			}
-		}
-		free(planet_material_filename);
-		planet_material_filename = NULL;
-	}
-	planet_material = NULL;
-	return -1;
 }
 
 static struct mesh **allocate_starbase_mesh_ptrs(int nstarbase_meshes)
@@ -11960,37 +11898,37 @@ static void load_static_textures(void)
 		return;
 
 	material_init_textured_particle(&green_phaser_material);
-	green_phaser_material.textured_particle.texture_id = load_texture("green-burst.png");
+	green_phaser_material.textured_particle.texture_id = load_texture("textures/green-burst.png");
 	green_phaser_material.textured_particle.radius = 0.75;
 	green_phaser_material.textured_particle.time_base = 0.25;
 
 	material_init_texture_mapped_unlit(&red_laser_material);
 	red_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
-	red_laser_material.texture_mapped_unlit.texture_id = load_texture("red-laser-texture.png");
+	red_laser_material.texture_mapped_unlit.texture_id = load_texture("textures/red-laser-texture.png");
 	red_laser_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&blue_tractor_material);
 	blue_tractor_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
-	blue_tractor_material.texture_mapped_unlit.texture_id = load_texture("blue-tractor-texture.png");
+	blue_tractor_material.texture_mapped_unlit.texture_id = load_texture("textures/blue-tractor-texture.png");
 	blue_tractor_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&red_torpedo_material);
 	red_torpedo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	red_torpedo_material.texture_mapped_unlit.texture_id = load_texture("red-torpedo-texture.png");
+	red_torpedo_material.texture_mapped_unlit.texture_id = load_texture("textures/red-torpedo-texture.png");
 	red_torpedo_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&spark_material);
 	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	spark_material.texture_mapped_unlit.texture_id = load_texture("spark-texture.png");
+	spark_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
 	spark_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&warp_effect_material);
 	warp_effect_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	warp_effect_material.texture_mapped_unlit.texture_id = load_texture("warp-effect.png");
+	warp_effect_material.texture_mapped_unlit.texture_id = load_texture("textures/warp-effect.png");
 	warp_effect_material.texture_mapped_unlit.do_blend = 1;
 
 	int i;
-	planetary_ring_texture_id = load_texture("planetary-ring0.png");
+	planetary_ring_texture_id = load_texture("textures/planetary-ring0.png");
 	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) {
 		material_init_textured_planet_ring(&planetary_ring_material[i]);
 		planetary_ring_material[i].textured_planet_ring.texture_id = planetary_ring_texture_id;
@@ -12026,7 +11964,7 @@ static void load_static_textures(void)
 	material_init_atmosphere(&atmosphere_material);
 
 	material_init_textured_shield(&shield_material);
-	shield_material.textured_shield.texture_id = load_cubemap_textures(0, "shield-effect-");
+	shield_material.textured_shield.texture_id = load_cubemap_textures(0, "textures/shield-effect-");
 
 	for (i = 0; i < NNEBULA_MATERIALS; i++) {
 		char filename[20];
@@ -12036,24 +11974,24 @@ static void load_static_textures(void)
 	}
 
 	material_init_texture_cubemap(&asteroid_material[0]);
-	asteroid_material[0].texture_cubemap.texture_id = load_cubemap_textures(0, "asteroid1-");
+	asteroid_material[0].texture_cubemap.texture_id = load_cubemap_textures(0, "textures/asteroid1-");
 	material_init_texture_cubemap(&asteroid_material[1]);
-	asteroid_material[1].texture_cubemap.texture_id = load_cubemap_textures(0, "asteroid2-");
+	asteroid_material[1].texture_cubemap.texture_id = load_cubemap_textures(0, "textures/asteroid2-");
 
 	material_init_texture_mapped_unlit(&wormhole_material);
-	wormhole_material.texture_mapped_unlit.texture_id = load_texture("wormhole.png");
+	wormhole_material.texture_mapped_unlit.texture_id = load_texture("textures/wormhole.png");
 	wormhole_material.texture_mapped_unlit.do_cullface = 0;
 	wormhole_material.texture_mapped_unlit.do_blend = 1;
 	wormhole_material.texture_mapped_unlit.tint = sng_get_color(MAGENTA);
 	wormhole_material.texture_mapped_unlit.alpha = 0.5;
 
 	material_init_textured_particle(&thrust_material);
-	thrust_material.textured_particle.texture_id = load_texture("thrust.png");
+	thrust_material.textured_particle.texture_id = load_texture("textures/thrust.png");
 	thrust_material.textured_particle.radius = 1.5;
 	thrust_material.textured_particle.time_base = 0.1;
 
 	material_init_texture_mapped_unlit(&warp_tunnel_material);
-	warp_tunnel_material.texture_mapped_unlit.texture_id = load_texture("warp-tunnel.png");
+	warp_tunnel_material.texture_mapped_unlit.texture_id = load_texture("textures/warp-tunnel.png");
 	warp_tunnel_material.texture_mapped_unlit.do_cullface = 0;
 	warp_tunnel_material.texture_mapped_unlit.do_blend = 1;
 	warp_tunnel_material.texture_mapped_unlit.alpha = 0.25;
@@ -12064,27 +12002,28 @@ static void load_static_textures(void)
 static void load_per_solarsystem_textures()
 {
 	int i;
+	char path[PATH_MAX];
 
 	if (per_solarsystem_textures_loaded)
 		return;
-	load_skybox_textures(skybox_texture_prefix);
+	sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->skybox_prefix);
+	load_skybox_textures(path);
 
 	material_init_texture_mapped_unlit(&sun_material);
 	sun_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	sun_material.texture_mapped_unlit.texture_id = load_texture("sun.png");
+	sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->sun_texture);
+	sun_material.texture_mapped_unlit.texture_id = load_texture(path);
 	sun_material.texture_mapped_unlit.do_blend = 1;
 
-	for (i = 0; i < nplanet_materials; i++) {
-		char filename[25];
-		sprintf(filename, "%s", planet_material_filename[i]);
-
+	for (i = 0; i < solarsystem_assets->nplanet_textures; i++) {
+		sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->planet_texture[i]);
 		material_init_textured_planet(&planet_material[i]);
-		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, filename);
+		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, path);
 		planet_material[i].textured_planet.ring_material = 0;
 
 		int k;
 		for (k = 0; k < NPLANETARY_RING_MATERIALS; k++) {
-			int pm_index = (k + 1) * nplanet_materials + i;
+			int pm_index = (k + 1) * solarsystem_assets->nplanet_textures + i;
 			planet_material[pm_index] = planet_material[i];
 			planet_material[pm_index].textured_planet.ring_material = &planetary_ring_material[k];
 		}
@@ -13270,7 +13209,7 @@ int main(int argc, char *argv[])
 	printf("serverport = %d\n", serverport);
 	check_lobby_serverhost_options();
 
-	strcpy(skybox_texture_prefix, "orange-haze");
+	strcpy(skybox_texture_prefix, "textures/orange-haze");
 	override_asset_dir();
 
 	memset(&main_screen_text, 0, sizeof(main_screen_text));
@@ -13340,8 +13279,8 @@ int main(int argc, char *argv[])
 	read_keymap_config_file();
 	init_vects();
 	initialize_random_orientations_and_spins(COMMON_MTWIST_SEED);
-	if (read_planet_material_metadata(&nplanet_materials)) {
-		fprintf(stderr, "Failed reading planet material metadata\n");
+	if (read_solarsystem_config(solarsystem_name)) {
+		fprintf(stderr, "Failed reading solarsystem metadata\n");
 		exit(1);
 	}
 	if (read_starbase_model_metadata(asset_dir, "starbase_models.txt",
