@@ -83,3 +83,8 @@ char *trim_whitespace(char *s)
 	return x;
 }
 
+int has_prefix(char *prefix, char *str)
+{
+	return strncmp(prefix, str, strlen(prefix)) == 0;
+}
+
