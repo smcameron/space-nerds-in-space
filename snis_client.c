@@ -296,7 +296,8 @@ ui_element_keypress_function ui_text_input_keypress = (ui_element_keypress_funct
 #endif
 
 char skybox_texture_prefix[255];
-volatile int textures_loaded = 0; /* blech, volatile global. */
+volatile int static_textures_loaded = 0; /* blech, volatile global. */
+volatile int per_solarsystem_textures_loaded = 0;
 
 struct mesh *torpedo_mesh;
 struct mesh *torpedo_nav_mesh;
@@ -3806,7 +3807,7 @@ static int process_load_skybox(void)
 	string[100] = '\0';
 	string[length] = '\0';
 	strcpy(skybox_texture_prefix, string);
-	textures_loaded = 0;
+	per_solarsystem_textures_loaded = 0;
 
 	return 0;
 }
@@ -11953,11 +11954,10 @@ static struct mesh **allocate_starbase_mesh_ptrs(int nstarbase_meshes)
 	return m;
 }
 
-static void load_textures(void)
+static void load_static_textures(void)
 {
-	if (textures_loaded)
+	if (static_textures_loaded)
 		return;
-	load_skybox_textures(skybox_texture_prefix);
 
 	material_init_textured_particle(&green_phaser_material);
 	green_phaser_material.textured_particle.texture_id = load_texture("green-burst.png");
@@ -11989,11 +11989,6 @@ static void load_textures(void)
 	warp_effect_material.texture_mapped_unlit.texture_id = load_texture("warp-effect.png");
 	warp_effect_material.texture_mapped_unlit.do_blend = 1;
 
-	material_init_texture_mapped_unlit(&sun_material);
-	sun_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	sun_material.texture_mapped_unlit.texture_id = load_texture("sun.png");
-	sun_material.texture_mapped_unlit.do_blend = 1;
-
 	int i;
 	planetary_ring_texture_id = load_texture("planetary-ring0.png");
 	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) {
@@ -12013,7 +12008,6 @@ static void load_textures(void)
 		if (planetary_ring_material[i].textured_planet_ring.outer_radius > MAX_RING_RADIUS)
 			planetary_ring_material[i].textured_planet_ring.outer_radius = MAX_RING_RADIUS;
 	}
-
 	/* Because of the way that planet rings are chosen based on object id
 	 * and because of the way planets are generated and object ids are handed
 	 * out we want to scramble the order of 
@@ -12029,21 +12023,6 @@ static void load_textures(void)
 		planetary_ring_material[i].textured_planet_ring.texture_v = x;
 	}
 
-	for (i = 0; i < nplanet_materials; i++) {
-		char filename[25];
-		sprintf(filename, "%s", planet_material_filename[i]);
-
-		material_init_textured_planet(&planet_material[i]);
-		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, filename);
-		planet_material[i].textured_planet.ring_material = 0;
-
-		int k;
-		for (k = 0; k < NPLANETARY_RING_MATERIALS; k++) {
-			int pm_index = (k + 1) * nplanet_materials + i;
-			planet_material[pm_index] = planet_material[i];
-			planet_material[pm_index].textured_planet.ring_material = &planetary_ring_material[k];
-		}
-	}
 	material_init_atmosphere(&atmosphere_material);
 
 	material_init_textured_shield(&shield_material);
@@ -12079,7 +12058,44 @@ static void load_textures(void)
 	warp_tunnel_material.texture_mapped_unlit.do_blend = 1;
 	warp_tunnel_material.texture_mapped_unlit.alpha = 0.25;
 
-	textures_loaded = 1;
+	static_textures_loaded = 1;
+}
+
+static void load_per_solarsystem_textures()
+{
+	int i;
+
+	if (per_solarsystem_textures_loaded)
+		return;
+	load_skybox_textures(skybox_texture_prefix);
+
+	material_init_texture_mapped_unlit(&sun_material);
+	sun_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	sun_material.texture_mapped_unlit.texture_id = load_texture("sun.png");
+	sun_material.texture_mapped_unlit.do_blend = 1;
+
+	for (i = 0; i < nplanet_materials; i++) {
+		char filename[25];
+		sprintf(filename, "%s", planet_material_filename[i]);
+
+		material_init_textured_planet(&planet_material[i]);
+		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, filename);
+		planet_material[i].textured_planet.ring_material = 0;
+
+		int k;
+		for (k = 0; k < NPLANETARY_RING_MATERIALS; k++) {
+			int pm_index = (k + 1) * nplanet_materials + i;
+			planet_material[pm_index] = planet_material[i];
+			planet_material[pm_index].textured_planet.ring_material = &planetary_ring_material[k];
+		}
+	}
+	per_solarsystem_textures_loaded = 1;
+}
+
+static void load_textures(void)
+{
+	load_static_textures();
+	load_per_solarsystem_textures();
 }
 
 static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
