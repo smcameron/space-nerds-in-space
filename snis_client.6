@@ -72,6 +72,10 @@ Specify the portnumber of the snis_server process.  This option requires
 the --nolobby and --serverhost options are also used, and requires that
 the --lobbyhost option is not used.
 .TP
+\fB\--solarsystem solarsystem\fR
+Load the specified solarsystem assets instead of the default assets.  These
+are defined by $SNIS_ASSET_DIR/solarsystems/*/assets.txt
+.TP
 \fB\--soundserver\fR
 Request this client process support the SOUNDSERVER role.
 .TP
@@ -92,6 +96,8 @@ color information instead of reading the default file of $SNIS_ASSET_DIR/user_co
 $SNIS_ASSET_DIR/sounds/*.ogg, various audio files used by the game.
 .PP
 $SNIS_ASSET_DIR/models/*.stl, various 3D models used by the game.
+.PP
+$SNIS_ASSET_DIR/solarsystems/*/assets.txt, per-solarsystem art assets.
 .PP
 /dev/input/js0, the joystick device node.
 .PP

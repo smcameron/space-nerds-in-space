@@ -12221,9 +12221,9 @@ void really_quit(void)
 static void usage(void)
 {
 	fprintf(stderr, "usage: snis_client [--aspect-ratio x,y] [--monitor m ] --lobbyhost lobbyhost \\\n"
-			"                    --starship starshipname --pw password\n");
-	fprintf(stderr, "       snis_client [--aspect-ratio x,y] [--monitor m ] --nolobby\\\n"
-			"                    --serverhost serverhost --serverport serverport\\\n"
+			"                   [ --solarsystem solarsystem ] --starship starshipname --pw password\n");
+	fprintf(stderr, "       snis_client [--aspect-ratio x,y] [--monitor m ] [ --solarsystem solarsystem ]\\\n"
+			"                    --nolobby --serverhost serverhost --serverport serverport\\\n"
 			"                    --starship starshipname --pw password\n");
 	fprintf(stderr, "       Example: ./snis_client --lobbyhost localhost --starship Enterprise --pw tribbles\n");
 	fprintf(stderr, "Note: serverhost and serverport are mutually exclusive with lobbyhost\n");
@@ -13197,6 +13197,13 @@ int main(int argc, char *argv[])
 				usage();
 			requested_aspect_x = x;
 			requested_aspect_y = y;
+			i++;
+			continue;
+		}
+		if (strcmp(argv[i], "--solarsystem") == 0) {
+			if (i + 1 >= argc)
+				usage();
+			solarsystem_name = argv[i + 1];
 			i++;
 			continue;
 		}
