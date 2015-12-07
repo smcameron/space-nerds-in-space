@@ -27,6 +27,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __SSGL_H__
 #define __SSGL_H__
 
+#include <pthread.h>
+
 #define GAMELOBBY_SERVICE_NUMBER 2914
 #define GAMELOBBY_SERVICE_NAME "gamelobby"
 #define GAMELOBBY_SERVICE_NUMBER_AS_STRING "2914"
