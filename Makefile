@@ -614,7 +614,7 @@ snis_limited_client:	${LIMCLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(LIMCLIENTLINK)
 
 ssgl/ssgl_server:
-	(cd ssgl ; make )
+	(cd ssgl ; ${MAKE} )
 
 bin/snis_client:	snis_client
 	@mkdir -p bin
@@ -752,12 +752,12 @@ snis_event_callback.o:	snis_event_callback.c Makefile
 	$(Q)$(COMPILE)
 
 ${SSGL}:
-	(cd ssgl ; make )
+	(cd ssgl ; ${MAKE} )
 
 mostly-clean:
 	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${SDLCLIENTOBJS} ${PROGS} ${SSGL} \
 	${BINPROGS} stl_parser snis_limited_graph.c snis_limited_client.c test-space-partition
-	( cd ssgl; make clean )
+	( cd ssgl; ${MAKE} clean )
 
 test-marshal:	snis_marshal.c stacktrace.o Makefile
 	$(CC) -DTEST_MARSHALL -o test-marshal snis_marshal.c stacktrace.o
