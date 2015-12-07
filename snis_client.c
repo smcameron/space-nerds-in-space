@@ -49,12 +49,8 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <assert.h>
-#if !defined(__APPLE__) && !defined(__FreeBSD__)
-#include <linux/tcp.h>
-#else
 #include <netinet/tcp.h>
 #include <netinet/in.h>
-#endif
 
 #include "arraysize.h"
 #include "build_bug_on.h"

@@ -36,11 +36,7 @@
 #include <time.h>
 #include <ctype.h>
 #include <math.h>
-#if !defined(__APPLE__) && !defined(__FreeBSD__)
-#include <linux/tcp.h>
-#else
 #include <netinet/tcp.h>
-#endif
 #include <stddef.h>
 #include <stdarg.h>
 #include <limits.h>
