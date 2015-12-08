@@ -60,45 +60,45 @@ then
 	# 4 --> 1  (rotated 90 degrees clockwise)
 	# 5 --> 3  (rotated 90 degrees clockwise)
 	#
-	convert "$prefix"0.png -rotate 90 tmp-"$prefix"0.png
-	mv tmp-"$prefix"0.png "$prefix"0.png
-	convert "$prefix"2.png -rotate 270 tmp-"$prefix"2.png
-	mv tmp-"$prefix"2.png "$prefix"2.png
-	convert "$prefix"1.png -rotate 90 tmp-"$prefix"5.png
+	convert "$prefix"0.png -rotate 90 "$prefix"0-tmp.png
+	mv "$prefix"0-tmp.png "$prefix"0.png
+	convert "$prefix"2.png -rotate 270 "$prefix"2-tmp.png
+	mv "$prefix"2-tmp.png "$prefix"2.png
+	convert "$prefix"1.png -rotate 90 "$prefix"5-tmp.png
 	convert "$prefix"4.png -rotate 90 "$prefix"1.png
 	convert "$prefix"3.png -rotate 90 "$prefix"4.png
 	convert "$prefix"5.png -rotate 90 "$prefix"3.png
-	mv tmp-"$prefix"5.png "$prefix"5.png
+	mv "$prefix"5-tmp.png "$prefix"5.png
 	exit 0
 fi
 
 if [ "$axis" = "y" ]
 then
 	# turn clockwise around y axis
-	convert "$prefix"4.png -rotate 90 tmp-"$prefix"4.png
-	mv tmp-"$prefix"4.png "$prefix"4.png
-	convert "$prefix"5.png -rotate 90 tmp-"$prefix"5.png
-	mv tmp-"$prefix"5.png "$prefix"5.png
-	mv "$prefix"0.png tmp-"$prefix"0.png
+	convert "$prefix"4.png -rotate 90 "$prefix"4-tmp.png
+	mv "$prefix"4-tmp.png "$prefix"4.png
+	convert "$prefix"5.png -rotate 90 "$prefix"5-tmp.png
+	mv "$prefix"5-tmp.png "$prefix"5.png
+	mv "$prefix"0.png "$prefix"0-tmp.png
 	mv "$prefix"3.png "$prefix"0.png
 	mv "$prefix"2.png "$prefix"3.png
 	mv "$prefix"1.png "$prefix"2.png
-	mv tmp-"$prefix"0.png "$prefix"1.png
+	mv "$prefix"0-tmp.png "$prefix"1.png
 	exit 0
 fi
 
 if [ "$axis" = "x" ]
 then
 	# turn clockwise around x axis
-	mv "$prefix"0.png tmp-"$prefix"0.png
+	mv "$prefix"0.png "$prefix"0-tmp.png
 	mv "$prefix"5.png "$prefix"0.png
 	convert "$prefix"2.png -rotate 180 "$prefix"5.png
 	convert "$prefix"4.png -rotate 180 "$prefix"2.png
-	mv tmp-"$prefix"0.png "$prefix"4.png
-	convert "$prefix"3.png -rotate 270 tmp-"$prefix"3.png
-	mv tmp-"$prefix"3.png "$prefix"3.png
-	convert "$prefix"1.png -rotate 90 tmp-"$prefix"1.png
-	mv tmp-"$prefix"1.png "$prefix"1.png
+	mv "$prefix"0-tmp.png "$prefix"4.png
+	convert "$prefix"3.png -rotate 270 "$prefix"3-tmp.png
+	mv "$prefix"3-tmp.png "$prefix"3.png
+	convert "$prefix"1.png -rotate 90 "$prefix"1-tmp.png
+	mv "$prefix"1-tmp.png "$prefix"1.png
 	exit 0
 fi
 
