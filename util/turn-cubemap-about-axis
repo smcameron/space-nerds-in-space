@@ -1,0 +1,104 @@
+#!/bin/sh
+#
+# this script rotates 6 cube map images clockwise 90 degrees
+# around the x, y, or z axis
+#
+# If you have 6 images making a cubemap:
+#
+# myfile0.png
+# myfile1.png
+# myfile2.png
+# myfile3.png
+# myfile4.png
+# myfile5.png
+#
+# To rotate clockwise 90 around x axis:
+#
+# $ turn-cubemap-about-axis x myfile
+#
+#  +------+
+#  |  4   |
+#  |      |
+#  +------+------+------+------+
+#  |  0   |  1   |  2   |  3   |
+#  |      |      |      |      |
+#  +------+------+------+------+
+#  |  5   |
+#  |      |
+#  +------+
+#
+
+usage()
+{
+	echo "usage: turn-cubemap-about-axis axis prefix" 1>&2
+	echo "       where axis is x,y, or z" 1>&2
+	exit 1
+}
+
+axis="$1"
+prefix="$2"
+
+if [ "$axis" = "" ]
+then
+	usage
+fi
+
+if [ "$axis" != "x" -a "$axis" != "y" -a "$axis" != "z" ]
+then
+	usage
+fi
+
+if [ "$axis" = "z" ]
+then
+	# to turn clockwise around z axis:
+	#
+	# to turn clockwise around z axis:
+	# 0 --> 0  (rotated 90 degrees clockwise)
+	# 1 --> 5  (rotated 90 degrees clockwise)
+	# 2 --> 2  (rotated 90 degrees counterclockwise)
+	# 3 --> 4  (rotated 90 degrees clockwise)
+	# 4 --> 1  (rotated 90 degrees clockwise)
+	# 5 --> 3  (rotated 90 degrees clockwise)
+	#
+	convert "$prefix"0.png -rotate 90 tmp-"$prefix"0.png
+	mv tmp-"$prefix"0.png "$prefix"0.png
+	convert "$prefix"2.png -rotate 270 tmp-"$prefix"2.png
+	mv tmp-"$prefix"2.png "$prefix"2.png
+	convert "$prefix"1.png -rotate 90 tmp-"$prefix"5.png
+	convert "$prefix"4.png -rotate 90 "$prefix"1.png
+	convert "$prefix"3.png -rotate 90 "$prefix"4.png
+	convert "$prefix"5.png -rotate 90 "$prefix"3.png
+	mv tmp-"$prefix"5.png "$prefix"5.png
+	exit 0
+fi
+
+if [ "$axis" = "y" ]
+then
+	# turn clockwise around y axis
+	convert "$prefix"4.png -rotate 90 tmp-"$prefix"4.png
+	mv tmp-"$prefix"4.png "$prefix"4.png
+	convert "$prefix"5.png -rotate 90 tmp-"$prefix"5.png
+	mv tmp-"$prefix"5.png "$prefix"5.png
+	mv "$prefix"0.png tmp-"$prefix"0.png
+	mv "$prefix"3.png "$prefix"0.png
+	mv "$prefix"2.png "$prefix"3.png
+	mv "$prefix"1.png "$prefix"2.png
+	mv tmp-"$prefix"0.png "$prefix"1.png
+	exit 0
+fi
+
+if [ "$axis" = "x" ]
+then
+	# turn clockwise around x axis
+	mv "$prefix"0.png tmp-"$prefix"0.png
+	mv "$prefix"5.png "$prefix"0.png
+	convert "$prefix"2.png -rotate 180 "$prefix"5.png
+	convert "$prefix"4.png -rotate 180 "$prefix"2.png
+	mv tmp-"$prefix"0.png "$prefix"4.png
+	convert "$prefix"3.png -rotate 270 tmp-"$prefix"3.png
+	mv tmp-"$prefix"3.png "$prefix"3.png
+	convert "$prefix"1.png -rotate 90 tmp-"$prefix"1.png
+	mv tmp-"$prefix"1.png "$prefix"1.png
+	exit 0
+fi
+
