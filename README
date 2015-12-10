@@ -173,7 +173,9 @@ INSTRUCTIONS FOR BUILDING DEBIAN PACKAGE
 	/place/where/you/cloned/space-nerds-in-space/../snis-version.deb
 
 	In order to get the Git commit messages into the Debian changelog (and bump
-	versions), look at git-buildpackage and git-dch
+	versions), look at git-buildpackage and git-dch. A handy command that will dump
+	the commit hash in shorthand, with the subject content, is:
+	`git log --pretty=format:"  * %h %s"`
 
 *Note: I have doubts that just essentially dumping "git log --oneline" output into
        the Debian changelog is really the right thing to do, though I might
