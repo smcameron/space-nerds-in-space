@@ -23,10 +23,12 @@ CONFIGFILEDIR=${DATADIR}
 CONFIGSRCDIR=./share/snis
 CONFIGFILES=${CONFIGSRCDIR}/commodities.txt \
 	${CONFIGSRCDIR}/factions.txt \
-	${CONFIGSRCDIR}/planet_materials.txt \
 	${CONFIGSRCDIR}/ship_types.txt \
 	${CONFIGSRCDIR}/starbase_models.txt \
 	${CONFIGSRCDIR}/user_colors.cfg
+SOLARSYSTEMSRCDIR=${CONFIGSRCDIR}/solarsystems
+SOLARSYSTEMDIR=${DATADIR}/solarsystems
+SOLARSYSTEMFILES=${SOLARSYSTEMSRCDIR}/default/assets.txt
 
 ASSETSSRCDIR=share/snis
 	
@@ -802,7 +804,8 @@ gaseous-giganticus.1.gz:	gaseous-giganticus.1
 	gzip -9 - < gaseous-giganticus.6 > gaseous-giganticus.6.gz
 
 install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
-		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${MANPAGES} ${SSGL}
+		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${MANPAGES} ${SSGL} \
+		${SOLARSYSTEMFILES}
 	@# First check that PREFIX is sane, and esp. that it's not pointed at source
 	@mkdir -p ${DESTDIR}/${PREFIX}
 	@touch ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
@@ -831,6 +834,8 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 	${INSTALL} -m 644  ${LUASCRIPTS} ${LUASCRIPTDIR}
 	${INSTALL} -m 644  ${MATERIALFILES} ${MATERIALDIR}
 	${INSTALL} -m 644  ${MODELS} ${MODELDIR}
+	mkdir -p ${SOLARSYSTEMDIR}/default
+	${INSTALL} -m 644 ${SOLARSYSTEMSRCDIR}/default/assets.txt ${SOLARSYSTEMDIR}/default
 	for d in dreadknight disruptor conqueror enforcer starbase starbase2 cargocontainer research-vessel ; do \
 		mkdir -p ${MODELDIR}/$$d ; \
 		${INSTALL} -m 644 ${MODELSRCDIR}/$$d/$$d.mtl ${MODELDIR}/$$d ; \
