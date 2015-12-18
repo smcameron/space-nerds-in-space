@@ -263,7 +263,7 @@ static int update_bridge(struct starsystem_info *ss)
 {
 	unsigned char pwdhash[20];
 	int i, rc;
-	unsigned char buffer[144];
+	unsigned char buffer[200], name[20];
 	struct packed_buffer pb;
 	uint16_t alive;
 	uint32_t torpedoes, power;
@@ -273,7 +273,8 @@ static int update_bridge(struct starsystem_info *ss)
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
-		reverse, trident, in_secure_area, docking_magnets;
+		reverse, trident, in_secure_area, docking_magnets, shield_strength,
+		shield_wavelength, shield_width, shield_depth, faction;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	struct snis_entity *o;
@@ -283,7 +284,7 @@ static int update_bridge(struct starsystem_info *ss)
 	if (rc != 0)
 		return rc;
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - 9);
-	rc = snis_readsocket(ss->socket, buffer, sizeof(struct update_ship_packet) - 9);
+	rc = snis_readsocket(ss->socket, buffer, sizeof(struct update_ship_packet) - 9 + 25);
 	if (rc != 0)
 		return rc;
 	i = lookup_ship_by_hash(pwdhash);
@@ -311,6 +312,8 @@ static int update_bridge(struct starsystem_info *ss)
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
 			&docking_magnets, (uint32_t *) &iwallet);
+	packed_buffer_extract(&pb, "bbbbbr", &shield_strength, &shield_wavelength, &shield_width, &shield_depth,
+			&faction, name, (int) sizeof(name));
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);
@@ -353,6 +356,12 @@ static int update_bridge(struct starsystem_info *ss)
 	o->tsd.ship.in_secure_area = in_secure_area;
 	o->tsd.ship.docking_magnets = docking_magnets;
 	o->tsd.ship.wallet = (float) iwallet / 100.0f;
+	o->sdata.shield_strength = shield_strength;
+	o->sdata.shield_wavelength = shield_wavelength;
+	o->sdata.shield_width = shield_width;
+	o->sdata.shield_depth = shield_depth;
+	o->sdata.faction = faction;
+	memcpy(o->sdata.name, name, sizeof(o->sdata.name));
 
 	/* shift old updates to make room for this one */
 	int j;

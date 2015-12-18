@@ -13413,7 +13413,7 @@ static void update_multiverse(struct snis_entity *o)
 		return;
 	}
 
-	pb = packed_buffer_allocate(25 + sizeof(struct update_ship_packet));
+	pb = packed_buffer_allocate(50 + sizeof(struct update_ship_packet));
 	packed_buffer_append(pb, "br", SNISMV_OPCODE_UPDATE_BRIDGE,
 				bridgelist[bridge].pwdhash, (uint16_t) 20);
 
@@ -13451,6 +13451,9 @@ static void update_multiverse(struct snis_entity *o)
 			o->tsd.ship.in_secure_area,
 			o->tsd.ship.docking_magnets,
 			(uint32_t) iwallet);
+	packed_buffer_append(pb, "bbbbbr",
+		o->sdata.shield_strength, o->sdata.shield_wavelength, o->sdata.shield_width, o->sdata.shield_depth,
+		o->sdata.faction, o->sdata.name, (unsigned short) sizeof(o->sdata.name));
 	queue_to_multiverse(multiverse_server, pb);
 }
 
