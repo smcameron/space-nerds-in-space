@@ -23,6 +23,7 @@
 struct key_value_specification {
 	char *key;
 	char type;
+	int address_index;
 	int address_offset;
 	int size;
 };
@@ -51,7 +52,7 @@ static char *strdup_to_newline(const char *input)
 	return copy;
 }
 
-static int parse_string(const char *strvalue, struct key_value_specification *k, void *base_address)
+static int parse_string(const char *strvalue, struct key_value_specification *k, void *base_address[])
 {
 	int i, len;
 	for (i = 0; strvalue[i] == ' ' && strvalue[i] != '\n' && strvalue[i] != '\0';)
@@ -59,17 +60,17 @@ static int parse_string(const char *strvalue, struct key_value_specification *k,
 	len = strlen(&strvalue[i]);
 	if (len > k->size - 1)
 		len = k->size - 1;
-	char *str = (char *) base_address + k->address_offset;
+	char *str = (char *) base_address[k->address_index] + k->address_offset;
 	memset(str, 0, k->size);
 	memcpy(str, &strvalue[i], len);
 	return 0;
 }
 
 #define PARSE_INT(sign, size, format) \
-static int parse_##sign##size(const char *strvalue, struct key_value_specification *k, void *base_address) \
+static int parse_##sign##size(const char *strvalue, struct key_value_specification *k, void *base_address[]) \
 { \
 	int rc; \
-	sign ## size ## _t *ptr = (sign ## size ## _t *) ((unsigned char *) base_address + \
+	sign ## size ## _t *ptr = (sign ## size ## _t *) ((unsigned char *) base_address[k->address_index] + \
 					k->address_offset); \
 	rc = sscanf(strvalue, format, ptr); \
 	return (rc != 1); \
@@ -86,39 +87,39 @@ PARSE_INT(int, 32, "%*[ ]%d")	/* parse_int32 defined here */
  * and I couldn't figure out how to get ("%" PRId64) and ("%" PRIu64) to go through the macro.
  * No worries, they're tiny anyhow.
  */
-static int parse_uint64(const char *strvalue, struct key_value_specification *k, void *base_address)
+static int parse_uint64(const char *strvalue, struct key_value_specification *k, void *base_address[])
 {
 	int rc;
-	uint64_t *ptr = (uint64_t *) ((unsigned char *) base_address + k->address_offset);
+	uint64_t *ptr = (uint64_t *) ((unsigned char *) base_address[k->address_index] + k->address_offset);
 	rc = sscanf(strvalue, "%*[ ]%llu", (unsigned long long *) ptr);
 	return (rc != 1);
 }
 
-static int parse_int64(const char *strvalue, struct key_value_specification *k, void *base_address)
+static int parse_int64(const char *strvalue, struct key_value_specification *k, void *base_address[])
 {
 	int rc;
-	int64_t *ptr = (int64_t *) ((unsigned char *) base_address + k->address_offset);
+	int64_t *ptr = (int64_t *) ((unsigned char *) base_address[k->address_index] + k->address_offset);
 	rc = sscanf(strvalue, "%*[ ]%lld", (signed long long *) ptr);
 	return (rc != 1);
 }
 
-static int parse_double(const char *strvalue, struct key_value_specification *k, void *base_address)
+static int parse_double(const char *strvalue, struct key_value_specification *k, void *base_address[])
 {
 	int rc;
-	double *ptr = (double *) ((unsigned char *) base_address + k->address_offset);
+	double *ptr = (double *) ((unsigned char *) base_address[k->address_index] + k->address_offset);
 	rc = sscanf(strvalue, "%*[ ]%lf", ptr);
 	return (rc != 1);
 }
 
-static int parse_float(const char *strvalue, struct key_value_specification *k, void *base_address)
+static int parse_float(const char *strvalue, struct key_value_specification *k, void *base_address[])
 {
 	int rc;
-	float *ptr = (float *) ((unsigned char *) base_address + k->address_offset);
+	float *ptr = (float *) ((unsigned char *) base_address[k->address_index] + k->address_offset);
 	rc = sscanf(strvalue, "%*[ ]%f", ptr);
 	return (rc != 1);
 }
 
-static int key_value_parse_line_with_key(struct key_value_specification *k, char *line, void *base_address)
+static int key_value_parse_line_with_key(struct key_value_specification *k, char *line, void *base_address[])
 {
 	char *valuestr;
 	int rc, len, klen;
@@ -177,7 +178,7 @@ static int key_value_parse_line_with_key(struct key_value_specification *k, char
 	return rc;
 }
 
-int key_value_parse_line(const struct key_value_specification *kvs, const char *line, void *base_address)
+int key_value_parse_line(const struct key_value_specification *kvs, const char *line, void *base_address[])
 {
 	struct key_value_specification *k;
 	int rc;
@@ -197,7 +198,7 @@ int key_value_parse_line(const struct key_value_specification *kvs, const char *
 	return 0;
 }
 
-int key_value_parse_lines(const struct key_value_specification *kvs, const char *lines, void *base_address)
+int key_value_parse_lines(const struct key_value_specification *kvs, const char *lines, void *base_address[])
 {
 	char *p = (char *) lines;
 	int rc;
@@ -231,31 +232,42 @@ struct test_struct {
 	float floatdata;
 };
 
-#define KVS_U8FIELD(x) { #x, KVS_UINT8, offsetof(struct test_struct, x), sizeof(((struct test_struct *)0)->x), }
-#define KVS_U16FIELD(x) { #x, KVS_UINT16, offsetof(struct test_struct, x), sizeof(((struct test_struct *)0)->x), }
-#define KVS_U32FIELD(x) { #x, KVS_UINT32, offsetof(struct test_struct, x), sizeof(((struct test_struct *)0)->x), }
-#define KVS_U64FIELD(x) { #x, KVS_UINT32, offsetof(struct test_struct, x), sizeof(((struct test_struct *)0)->x), }
-#define KVS_I8FIELD(x) { #x, KVS_INT8, offsetof(struct test_struct, x), sizeof(((struct test_struct *)0)->x), }
-#define KVS_I16FIELD(x) { #x, KVS_INT16, offsetof(struct test_struct, x), sizeof(((struct test_struct *)0)->x), }
-#define KVS_I32FIELD(x) { #x, KVS_INT32, offsetof(struct test_struct, x), sizeof(((struct test_struct *)0)->x), }
-#define KVS_I64FIELD(x) { #x, KVS_INT32, offsetof(struct test_struct, x), sizeof(((struct test_struct *)0)->x), }
-#define KVS_FLOATFIELD(x) { #x, KVS_FLOAT, offsetof(struct test_struct, x), sizeof(((struct test_struct *)0)->x), }
-#define KVS_DOUBLEFIELD(x) { #x, KVS_DOUBLE, offsetof(struct test_struct, x), sizeof(((struct test_struct *)0)->x), }
-#define KVS_STRINGFIELD(x) { #x, KVS_STRING, offsetof(struct test_struct, x), sizeof(((struct test_struct *)0)->x), }
+struct test_struct2 {
+	float xyz;
+	double abc[2];
+	char blah[100];
+};
+
+#define KVS_U8FIELD(x, i, s) { #x, KVS_UINT8, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
+#define KVS_U16FIELD(x, i, s) { #x, KVS_UINT16, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
+#define KVS_U32FIELD(x, i, s) { #x, KVS_UINT32, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
+#define KVS_U64FIELD(x, i, s) { #x, KVS_UINT32, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
+#define KVS_I8FIELD(x, i, s) { #x, KVS_INT8, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
+#define KVS_I16FIELD(x, i, s) { #x, KVS_INT16, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
+#define KVS_I32FIELD(x, i, s) { #x, KVS_INT32, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
+#define KVS_I64FIELD(x, i, s) { #x, KVS_INT32, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
+#define KVS_FLOATFIELD(x, i, s) { #x, KVS_FLOAT, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
+#define KVS_DOUBLEFIELD(x, i, s) { #x, KVS_DOUBLE, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
+#define KVS_STRINGFIELD(x, i, s) { #x, KVS_STRING, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
 
 struct key_value_specification test_kvs[] = {
-	KVS_U8FIELD(u8),
-	KVS_U16FIELD(u16),
-	KVS_U32FIELD(u32),
-	KVS_U64FIELD(u64),
-	KVS_I8FIELD(i8),
-	KVS_I16FIELD(i16),
-	KVS_I32FIELD(i32),
-	KVS_I64FIELD(i64),
-	KVS_FLOATFIELD(floatdata),
-	KVS_DOUBLEFIELD(doubledata),
-	KVS_STRINGFIELD(some_data),
-	{ 0, 0, 0, 0 },
+	KVS_U8FIELD(u8, 0, test_struct),
+	KVS_U16FIELD(u16, 0, test_struct),
+	KVS_U32FIELD(u32, 0, test_struct),
+	KVS_U64FIELD(u64, 0, test_struct),
+	KVS_I8FIELD(i8, 0, test_struct),
+	KVS_I16FIELD(i16, 0, test_struct),
+	KVS_I32FIELD(i32, 0, test_struct),
+	KVS_I64FIELD(i64, 0, test_struct),
+	KVS_FLOATFIELD(floatdata, 0, test_struct),
+	KVS_DOUBLEFIELD(doubledata, 0, test_struct),
+	KVS_STRINGFIELD(some_data, 0, test_struct),
+	KVS_FLOATFIELD(floatdata, 0, test_struct),
+	KVS_FLOATFIELD(xyz, 1, test_struct2),
+	KVS_DOUBLEFIELD(abc[0], 1, test_struct2),
+	KVS_DOUBLEFIELD(abc[1], 1, test_struct2),
+	KVS_STRINGFIELD(blah, 1, test_struct2),
+	{ 0 },
 };
 
 #define CHECK(condition) \
@@ -270,6 +282,7 @@ int main(int argc, char *argv[])
 {
 	int rc;
 	struct test_struct data;
+	struct test_struct2 data2;
 	const char *lines =
 		"u8: 5\n"
 		"u16: 10\n"
@@ -277,14 +290,20 @@ int main(int argc, char *argv[])
 		"u64: 20\n"
 		"i8: 45\n"
 		"i16: 410\n"
+		"xyz: 1.2345\n"
+		"abc[0]: 7.8910\n"
+		"abc[1]: 2.222\n"
+		"blah: blah blah blah\n"
 		"i32: 415\n"
 		"i64: 420\n"
 		"some_data: this is a test\n"
 		"doubledata: 3.1415927\n"
 		"floatdata: 6.66666";
 
+	void *base_address[] = { &data, &data2 };
+
 	memset(&data, 0, sizeof(data));
-	rc = key_value_parse_lines(test_kvs, lines, &data);
+	rc = key_value_parse_lines(test_kvs, lines, base_address);
 	CHECK(data.u8 == 5);
 	CHECK(data.u16 == 10);
 	CHECK(data.u32 == 15);
@@ -295,7 +314,11 @@ int main(int argc, char *argv[])
 	CHECK(data.i64 == 420);
 	CHECK(fabs(data.floatdata - 6.66666) < 0.0001);
 	CHECK(abs(data.doubledata - 3.1415927) < 0.0001);
+	CHECK(abs(data2.xyz - 1.2345) < 0.0001);
+	CHECK(fabs(data2.abc[0] - 7.8910) < 0.0001);
+	CHECK(fabs(data2.abc[1] - 2.222) < 0.0001);
 	CHECK(strcmp("this is a test", data.some_data) == 0);
+	CHECK(strcmp("blah blah blah", data2.blah) == 0);
 	CHECK(rc == 0);
 	printf("test_key_value_parser: all tests pass.\n");
 	return 0;
