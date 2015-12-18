@@ -19,6 +19,7 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#define _GNU_SOURCE
 #include "snis_server_tracker.h"
 
 #include <stdio.h>
@@ -210,6 +211,7 @@ struct server_tracker *server_tracker_start(char *lobbyhost,
 		free(st);
 		return NULL;
 	}
+	pthread_setname_np(st->thread, "sniss-srvtrack");
 	return st;
 }
 

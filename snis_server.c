@@ -13051,12 +13051,14 @@ static void service_connection(int connection)
 		snis_log(SNIS_ERROR, "per client read thread, pthread_create failed: %d %s %s\n",
 			rc, strerror(rc), strerror(errno));
 	}
+	pthread_setname_np(client[i].read_thread, "sniss-reader");
         rc = pthread_create(&client[i].write_thread,
 		&client[i].write_attr, per_client_write_thread, (void *) &client[i]);
 	if (rc) {
 		snis_log(SNIS_ERROR, "per client write thread, pthread_create failed: %d %s %s\n",
 			rc, strerror(rc), strerror(errno));
 	}
+	pthread_setname_np(client[i].write_thread, "sniss-writer");
 	client_count = 0;
 	bridgenum = client[i].bridge;
 	for (j = 0; j < nclients; j++) {
@@ -13238,6 +13240,7 @@ static int start_listener_thread(void)
 		snis_log(SNIS_ERROR, "Failed to create listener thread, pthread_create: %d %s %s\n",
 				rc, strerror(rc), strerror(errno));
 	}
+	pthread_setname_np(thread, "sniss-listener");
 
 	/* Wait for the listener thread to become ready... */
 	pthread_cond_wait(&listener_started, &listener_mutex);
@@ -16531,6 +16534,7 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 		fprintf(stderr, "snis_server: Failed to create multiverse reader thread: %d '%s', '%s'\n",
 			rc, strerror(rc), strerror(errno));
 	}
+	pthread_setname_np(msi->read_thread, "sniss-mvrdr");
 	fprintf(stderr, "snis_server: started multiverse reader thread\n");
 	fprintf(stderr, "snis_server: starting multiverse writer thread\n");
 	rc = pthread_create(&msi->write_thread, &msi->write_attr, multiverse_writer, msi);
@@ -16538,6 +16542,7 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 		fprintf(stderr, "snis_server: Failed to create multiverse writer thread: %d '%s', '%s'\n",
 			rc, strerror(rc), strerror(errno));
 	}
+	pthread_setname_np(msi->write_thread, "sniss-mvwrtr");
 	fprintf(stderr, "snis_server: started multiverse writer thread\n");
 	freeaddrinfo(mvserverinfo);
 	return;

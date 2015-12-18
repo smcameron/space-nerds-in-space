@@ -27,7 +27,7 @@ way of ssgl_server) and periodically sends player ship information which is
 persisted in a simple database by snis_multiverse.
 
 *****************************************************************************/
-
+#define _GNU_SOURCE
 #include "snis_multiverse.h"
 
 #include <stdio.h>
@@ -551,12 +551,14 @@ static void service_connection(int connection)
 		snis_log(SNIS_ERROR, "per client read thread, pthread_create failed: %d %s %s\n",
 			rc, strerror(rc), strerror(errno));
 	}
+	pthread_setname_np(starsystem[i].read_thread, "snismv-rdr");
 	rc = pthread_create(&starsystem[i].write_thread,
 		&starsystem[i].write_attr, starsystem_write_thread, (void *) &starsystem[i]);
 	if (rc) {
 		snis_log(SNIS_ERROR, "per client write thread, pthread_create failed: %d %s %s\n",
 			rc, strerror(rc), strerror(errno));
 	}
+	pthread_setname_np(starsystem[i].write_thread, "snismv-wrtr");
 	pthread_mutex_unlock(&service_mutex);
 	fprintf(stderr, "snis_multiverse: zzz 8\n");
 
@@ -720,6 +722,7 @@ static int start_listener_thread(void)
 		snis_log(SNIS_ERROR, "snis_multiverse: Failed to create listener thread, pthread_create: %d %s %s\n",
 				rc, strerror(rc), strerror(errno));
 	}
+	pthread_setname_np(thread, "snismv-listen");
 
 	/* Wait for the listener thread to become ready... */
 	pthread_cond_wait(&listener_started, &listener_mutex);
