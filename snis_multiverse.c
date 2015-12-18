@@ -44,6 +44,7 @@ persisted in a simple database by snis_multiverse.
 #include <errno.h>
 #include <pthread.h>
 #include <assert.h>
+#include <stdarg.h>
 
 #include "snis_marshal.h"
 #include "quat.h"
@@ -52,6 +53,7 @@ persisted in a simple database by snis_multiverse.
 #include "snis_socket_io.h"
 #include "snis.h"
 #include "mathutils.h"
+#include "snis_hash.h"
 
 static pthread_mutex_t listener_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t listener_started;
@@ -206,9 +208,51 @@ static int lookup_bridge(void)
 	return 0;
 }
 
-static int update_bridge(void)
+/* TODO: this is very similar to snis_server's version of same function */
+static int __attribute__((unused)) read_and_unpack_buffer(struct starsystem_info *ss, unsigned char *buffer, char *format, ...)
 {
-	return 0;
+	va_list ap;
+	struct packed_buffer pb;
+	int rc, size = calculate_buffer_size(format);
+
+	rc = snis_readsocket(ss->socket, buffer, size);
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, size);
+	va_start(ap, format);
+	rc = packed_buffer_extract_va(&pb, format, ap);
+	va_end(ap);
+	return rc;
+}
+
+static int read_and_unpack_fixed_size_buffer(struct starsystem_info *ss,
+			unsigned char *buffer, int size, char *format, ...)
+{
+	va_list ap;
+	struct packed_buffer pb;
+	int rc;
+	fprintf(stderr, "KKKKKKKKKKKK size = %d\n", size);
+
+	rc = snis_readsocket(ss->socket, buffer, size);
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, size);
+	va_start(ap, format);
+	fprintf(stderr, "KKKKKKKK format = '%s'\n", format);
+	rc = packed_buffer_extract_va(&pb, format, ap);
+	va_end(ap);
+	return rc;
+}
+
+static int update_bridge(struct starsystem_info *ss)
+{
+	unsigned char buffer[100];
+	unsigned char pwdhash[20];
+	int rc;
+
+	rc = read_and_unpack_fixed_size_buffer(ss, buffer, 20, "r", pwdhash, (uint16_t) 20);
+	/* TODO store away this info... */
+	return rc;
 }
 
 static void process_instructions_from_snis_server(struct starsystem_info *ss)
@@ -228,7 +272,7 @@ static void process_instructions_from_snis_server(struct starsystem_info *ss)
 			goto bad_client;
 		break;
 	case SNISMV_OPCODE_UPDATE_BRIDGE:
-		rc = update_bridge();
+		rc = update_bridge(ss);
 		if (rc)
 			goto bad_client;
 		break;

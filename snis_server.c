@@ -89,6 +89,7 @@
 #include "snis_nl.h"
 #include "snis_server_tracker.h"
 #include "snis_multiverse.h"
+#include "snis_hash.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -298,6 +299,7 @@ struct bridge_data {
 	uint32_t science_selection;
 	int current_displaymode;
 	struct ssgl_game_server warp_gate_ticket;
+	unsigned char pwdhash[20];
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -12949,6 +12951,8 @@ static int add_new_player(struct game_client *c)
 		c->shipid = bridgelist[c->bridge].shipid;
 		c->ship_index = lookup_by_id(c->shipid);
 	}
+	snis_sha1_hash(bridgelist[c->bridge].shipname, bridgelist[c->bridge].password,
+			bridgelist[c->bridge].pwdhash);
 	c->debug_ai = 0;
 	c->request_universe_timestamp = 0;
 	queue_up_client_id(c);
@@ -13368,16 +13372,22 @@ static void queue_to_multiverse(struct multiverse_server_info *msi, struct packe
 static void update_multiverse(struct snis_entity *o)
 {
 	struct packed_buffer *pb;
+	int bridge;
 
 	if (!multiverse_server)
 		return;
 
-	pb = packed_buffer_allocate(20);
-	packed_buffer_append(pb, "b", SNISMV_OPCODE_UPDATE_BRIDGE);
+	bridge = lookup_bridge_by_shipid(o->id);
+	if (bridge < 0) {
+		fprintf(stderr, "snis_server: did not find bridge for %d: %s:%d\n",
+				o->id, __FILE__, __LINE__);
+		return;
+	}
 
-	pthread_mutex_lock(&multiverse_server->queue_mutex);
+	pb = packed_buffer_allocate(25);
+	packed_buffer_append(pb, "br", SNISMV_OPCODE_UPDATE_BRIDGE,
+				bridgelist[bridge].pwdhash, (uint16_t) 20);
 	queue_to_multiverse(multiverse_server, pb);
-	pthread_mutex_unlock(&multiverse_server->queue_mutex);
 }
 
 static void move_objects(double absolute_time, int discontinuity)
@@ -13405,6 +13415,10 @@ static void move_objects(double absolute_time, int discontinuity)
 				go[i].sdata.faction < ARRAYSIZE(faction_population)) {
 				faction_population[go[i].sdata.faction]++;
 			}
+			if (go[i].type == OBJTYPE_SHIP1)  {
+				if (universe_timestamp >= multiverse_update_time)
+					update_multiverse(&go[i]);
+			}
 			netstats.nobjects++;
 		} else {
 			if (go[i].type == OBJTYPE_SHIP1)  {
@@ -13416,8 +13430,6 @@ static void move_objects(double absolute_time, int discontinuity)
 				} else {
 					go[i].timestamp = universe_timestamp; /* respawn is counting down */
 				}
-				if (universe_timestamp >= multiverse_update_time)
-					update_multiverse(&go[i]);
 			}
 		}
 	}

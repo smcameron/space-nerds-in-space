@@ -348,12 +348,14 @@ GLEWCFLAGS:=$(shell pkg-config --cflags glew)
 COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o mtwist.o names.o infinite-taunt.o snis_damcon_systems.o \
-		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o
+		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
+		snis_hash.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
 		snis_server_tracker.o
-MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o
+MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
+		snis_hash.o
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
@@ -367,9 +369,10 @@ LIMCLIENTOBJS=${COMMONCLIENTOBJS} graph_dev_gdk.o snis_limited_graph.o snis_limi
 SDLCLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer.o png_utils.o
 
 SSGL=ssgl/libssglclient.a
-LIBS=-lGL -Lssgl -lssglclient -ldl -lm ${LUALIBS} ${PNGLIBS} ${GLEWLIBS}
-SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS}
+LIBS=-lGL -Lssgl -lssglclient -ldl -lm ${LUALIBS} ${PNGLIBS} ${GLEWLIBS} -lcrypto -lssl
+SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS} -lcrypto -lssl
 MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm
+MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lcrypto -lssl
 #
 # NOTE: if you get
 #
@@ -782,6 +785,9 @@ test-space-partition:	space-part.c Makefile
 	$(CC) ${MYCFLAGS} -g -DTEST_SPACE_PARTITION -o test-space-partition space-part.c -lm
 
 snis_event_callback.o:	snis_event_callback.c Makefile
+	$(Q)$(COMPILE)
+
+snis_hash.o:	snis_hash.c snis_hash.h Makefile
 	$(Q)$(COMPILE)
 
 snis_nl.o:	snis_nl.c snis_nl.h Makefile
