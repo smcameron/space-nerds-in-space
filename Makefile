@@ -778,6 +778,13 @@ commodities.o:	commodities.c Makefile
 string-utils.o:	string-utils.c Makefile
 	$(Q)$(COMPILE)
 
+key_value_parser.o:	key_value_parser.c key_value_parser.h Makefile
+	$(Q)$(COMPILE)
+
+test_key_value_parser:	key_value_parser.c key_value_parser.h Makefile
+	$(CC) ${MYCFLAGS} -DTEST_KEY_VALUE_PARSER -o test_key_value_parser key_value_parser.c
+	./test_key_value_parser
+
 test-matrix:	matrix.c Makefile
 	$(CC) ${MYCFLAGS} ${GTKCFLAGS} -DTEST_MATRIX -o test-matrix matrix.c -lm
 
