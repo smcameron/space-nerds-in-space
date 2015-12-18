@@ -351,7 +351,8 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
-		commodities.o docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o
+		commodities.o docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
+		snis_server_tracker.o
 MULTIVERSEOBJS=snis_multiverse.o
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
@@ -569,6 +570,9 @@ snis_server.o:	snis_server.c Makefile build_info.h
 	$(Q)$(COMPILE)
 
 snis_multiverse.o:	snis_multiverse.c Makefile build_info.h
+	$(Q)$(COMPILE)
+
+snis_server_tracker.o:	snis_server_tracker.c snis_server_tracker.h ssgl/ssgl.h Makefile
 	$(Q)$(COMPILE)
 
 snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h

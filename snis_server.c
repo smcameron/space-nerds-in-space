@@ -86,6 +86,7 @@
 #include "starbase_metadata.h"
 #include "elastic_collision.h"
 #include "snis_nl.h"
+#include "snis_server_tracker.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -280,6 +281,7 @@ int listener_port = -1;
 static int default_snis_server_port = -1; /* -1 means choose a random port */
 pthread_t lobbythread;
 char *lobbyserver = NULL;
+static struct server_tracker *server_tracker;
 static int snis_log_level = 2;
 static struct ship_type_entry *ship_type;
 int nshiptypes;
@@ -12077,6 +12079,7 @@ static void queue_up_client_damcon_update(struct game_client *c)
 
 static void queue_up_client_switch_server(struct game_client *c)
 {
+	return;
 	pb_queue_to_client(c, packed_buffer_new("b", OPCODE_SWITCH_SERVER));
 }
 
@@ -15997,10 +16000,13 @@ int main(int argc, char *argv[])
 
 	ignore_sigpipe();	
 	snis_collect_netstats(&netstats);
-	if (getenv("SNISSERVERNOLOBBY") == NULL)
+	if (getenv("SNISSERVERNOLOBBY") == NULL) {
 		register_with_game_lobby(argv[1], port, argv[2], argv[1], argv[3]);
-	else
+		server_tracker = server_tracker_start(argv[1]);
+	} else {
 		printf("snis_server: Skipping lobby registration\n");
+		server_tracker = NULL;
+	}
 
 	const double maxTimeBehind = 0.5;
 	double delta = 1.0/10.0;
