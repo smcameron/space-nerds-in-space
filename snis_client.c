@@ -700,6 +700,12 @@ static void update_generic_damcon_object(struct snis_damcon_entity *o,
 	o->heading = heading;
 }
 
+static void clear_damcon_pool()
+{
+	snis_object_pool_free_all_objects(damcon_pool);
+	memset(dco, 0, sizeof(dco));
+}
+
 static int add_generic_damcon_object(uint32_t id, uint32_t ship_id, double x, double y,
 			double velocity, double heading)
 {
@@ -5098,6 +5104,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			stop_gameserver_writer_thread();
 			/* FIXME: when this ^^^ returns, to_server_queue_event_mutex is held */
 			delete_all_objects();
+			clear_damcon_pool();
 			printf("snis_client: writer thread left\n");
 			printf("**** lobby_selected_server = %d\n", lobby_selected_server);
 			switched_server = 1; /* TODO : something better */
