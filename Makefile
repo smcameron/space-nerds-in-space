@@ -352,6 +352,7 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o
+MULTIVERSEOBJS=snis_multiverse.o
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
@@ -367,6 +368,7 @@ SDLCLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_
 SSGL=ssgl/libssglclient.a
 LIBS=-lGL -Lssgl -lssglclient -ldl -lm ${LUALIBS} ${PNGLIBS} ${GLEWLIBS}
 SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS}
+MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm
 #
 # NOTE: if you get
 #
@@ -386,7 +388,7 @@ SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS}
 #
 
 
-PROGS=snis_server snis_client snis_limited_client mesh_viewer
+PROGS=snis_server snis_client snis_limited_client mesh_viewer snis_multiverse
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/text_to_speech.sh
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap
 
@@ -464,6 +466,7 @@ CLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${GLEXTCFLAGS} ${CLI
 LIMCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${LIMCLIENTOBJS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
 SDLCLIENTLINK=$(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} && $(ECHO) '  LINK' $@
 SERVERLINK=$(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} && $(ECHO) '  LINK' $@
+MULTIVERSELINK=$(CC) ${MYCFLAGS} -o $@ ${MULTIVERSEOBJS} ${MULTIVERSELIBS} && $(ECHO) '  LINK' $@
 OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 EXTRACTSCADPARAMS=$(AWK) -f extract_scad_params.awk $< > $@ && $(ECHO) '  EXTRACT THRUST ATTACHMENTS' $@
 EXTRACTDOCKINGPORTS=$(AWK) -f extract_docking_ports.awk $< > $@ && $(ECHO) '  EXTRACT DOCKING PORTS' $@
@@ -483,7 +486,7 @@ GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o png_utils.o
 GGLIBS=-lm ${LRTLIB} -lpng
 GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} && $(ECHO) '  LINK' $@
 
-all:	${COMMONOBJS} ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES} ${UTILPROGS}
+all:	${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES} ${UTILPROGS}
 
 build:	all
 
@@ -565,6 +568,9 @@ shield_strength.o:	shield_strength.c Makefile
 snis_server.o:	snis_server.c Makefile build_info.h
 	$(Q)$(COMPILE)
 
+snis_multiverse.o:	snis_multiverse.c Makefile build_info.h
+	$(Q)$(COMPILE)
+
 snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h
 	$(Q)$(GLEXTCOMPILE)
 
@@ -621,6 +627,9 @@ snis_server:	${SERVEROBJS} ${SSGL} Makefile
 
 snis_client:	${CLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(CLIENTLINK)
+
+snis_multiverse:	${MULTIVERSEOBJS} ${SSGL} Makefile
+	$(Q)$(MULTIVERSELINK)
 
 snis_limited_client:	${LIMCLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(LIMCLIENTLINK)

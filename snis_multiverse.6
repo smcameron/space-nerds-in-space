@@ -1,0 +1,37 @@
+.TH SPACE-NERDS-IN-SPACE "6" "Jan 2014" "snis_multiverse" "Games"
+.SH NAME
+snis_multiverse \- Multi player cooperative star ship bridge simulator (server wrangler)
+.SH SYNOPSIS
+.B snis_multiverse gameinstance serverhost location
+.SH DESCRIPTION
+.\" Add any additional description here
+.warn 511
+.PP
+snis_multiverse is a meta-server process for the game Space Nerds In Space, which is
+a multiplayer starship bridge simulator.  The meta-server process tracks player
+ships between instances of the server process.  It is what enables player ships
+to travel from one snis_server instance to another, possibly on a different host.
+The "gameinstance" parameter is used by the game lobby
+process (ssgl_server) to distinguish one game instance from another running
+on the same host.
+The gameinstance should be a short human readable string to uniquely identify
+the game instance.  The serverhost is the hostname of the server hosting the
+ssgl_multiverse process.  The location is a human readable string giving some idea
+of the location of the server, or some other descriptive information.
+.SH Options:
+.TP
+\fB\--version\fR
+Print the program's version number and exit.
+.SH FILES
+.PP
+TBD
+.PP
+.SH SEE ALSO
+.PP
+snis_client(6), ssgl_server(6)
+.SH GOOD LUCK
+.PP
+You'll need it.
+.SH AUTHOR
+Written by Stephen M. Cameron
+.br
