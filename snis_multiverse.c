@@ -60,6 +60,8 @@ persisted in a simple database by snis_multiverse.
 #include "snis.h"
 #include "snis_hash.h"
 #include "quat.h"
+#include "string-utils.h"
+#include "key_value_parser.h"
 
 static char *database_root = "./snisdb";
 static const int database_mode = 0744;
@@ -93,7 +95,7 @@ static int nstarsystems = 0;
 static struct bridge_info {
 	unsigned char pwdhash[20];
 	int occupied;
-	int initialized;
+	int32_t initialized;
 	struct timeval created_on;
 	struct timeval last_seen;
 	struct snis_entity entity;
@@ -172,6 +174,155 @@ static void sync_dir(char *path)
 	fsync(fd);
 	closedir(d);
 }
+
+/* Macros for constructing key value specifications for snis_entity, and snis_entity.tsd.ship */
+#define DOUBLE_FIELD(x) { #x, KVS_DOUBLE, 0, offsetof(struct snis_entity, x), sizeof(double), }
+#define FLOAT_FIELD(x) { #x, KVS_FLOAT, 0, offsetof(struct snis_entity, x), sizeof(float), }
+#define UINT32_FIELD(x) { #x, KVS_UINT32, 0, offsetof(struct snis_entity, x), sizeof(uint32_t), }
+#define UINT16_FIELD(x) { #x, KVS_UINT16, 0, offsetof(struct snis_entity, x), sizeof(uint16_t), }
+#define UINT8_FIELD(x) { #x, KVS_INT8, 0, offsetof(struct snis_entity, x), sizeof(int8_t), }
+#define INT32_FIELD(x) { #x, KVS_INT32, 0, offsetof(struct snis_entity, x), sizeof(int32_t), }
+#define INT16_FIELD(x) { #x, KVS_INT16, 0, offsetof(struct snis_entity, x), sizeof(int16_t), }
+#define INT8_FIELD(x) { #x, KVS_INT8, 0, offsetof(struct snis_entity, x), sizeof(int8_t), }
+#define STRING_FIELD(x) { #x, KVS_STRING, 0, offsetof(struct snis_entity, x), \
+	sizeof(((struct snis_entity *) 0)->x), }
+
+#define FLOAT_TSDFIELD(x) { #x, KVS_FLOAT, 0, offsetof(struct snis_entity, tsd) + \
+				offsetof(struct ship_data, x), sizeof(float), }
+#define DOUBLE_TSDFIELD(x) { #x, KVS_DOUBLE, 0, offsetof(struct snis_entity, tsd) + \
+				offsetof(struct ship_data, x), sizeof(double), }
+#define UINT32_TSDFIELD(x) { #x, KVS_UINT32, 0, offsetof(struct snis_entity, tsd) + \
+				offsetof(struct ship_data, x), sizeof(uint32_t), }
+#define UINT16_TSDFIELD(x) { #x, KVS_UINT16, 0, offsetof(struct snis_entity, tsd) + \
+				offsetof(struct ship_data, x), sizeof(uint16_t), }
+#define UINT8_TSDFIELD(x) { #x, KVS_UINT8, 0, offsetof(struct snis_entity, tsd) + \
+				offsetof(struct ship_data, x), sizeof(uint8_t), }
+#define INT32_TSDFIELD(x) { #x, KVS_INT32, 0, offsetof(struct snis_entity, tsd) + \
+				offsetof(struct ship_data, x), sizeof(int32_t), }
+#define INT16_TSDFIELD(x) { #x, KVS_INT16, 0, offsetof(struct snis_entity, tsd) + \
+				offsetof(struct ship_data, x), sizeof(int16_t), }
+#define INT8_TSDFIELD(x) { #x, KVS_INT8, 0, offsetof(struct snis_entity, tsd) + \
+				offsetof(struct ship_data, x), sizeof(int8_t), }
+#define STRING_TSDFIELD(x) { #x, KVS_STRING, 0, offsetof(struct snis_entity, tsd) + \
+				offsetof(struct ship_data, x), sizeof(((struct snis_entity *) 0)->tsd.ship.x) }
+
+#define INT32_BRIDGE_FIELD(x) { #x, KVS_INT32, 1, offsetof(struct bridge_info, x), sizeof(int32_t), }
+
+struct key_value_specification snis_entity_kvs[] = {
+	DOUBLE_FIELD(x),
+	DOUBLE_FIELD(y),
+	DOUBLE_FIELD(z),
+	DOUBLE_FIELD(vx),
+	DOUBLE_FIELD(vy),
+	DOUBLE_FIELD(vz),
+	DOUBLE_FIELD(heading),
+	UINT16_FIELD(alive),
+	UINT32_FIELD(type),
+	UINT32_TSDFIELD(torpedoes),
+	UINT32_TSDFIELD(power),
+	UINT32_TSDFIELD(shields),
+	STRING_TSDFIELD(shipname),
+	DOUBLE_TSDFIELD(velocity),
+	DOUBLE_TSDFIELD(yaw_velocity),
+	DOUBLE_TSDFIELD(pitch_velocity),
+	DOUBLE_TSDFIELD(roll_velocity),
+	DOUBLE_TSDFIELD(desired_velocity),
+	DOUBLE_TSDFIELD(gun_yaw_velocity),
+	DOUBLE_TSDFIELD(sci_heading),
+	DOUBLE_TSDFIELD(sci_beam_width),
+	DOUBLE_TSDFIELD(sci_yaw_velocity),
+	FLOAT_TSDFIELD(sciball_orientation.vec[0]),
+	FLOAT_TSDFIELD(sciball_orientation.vec[1]),
+	FLOAT_TSDFIELD(sciball_orientation.vec[2]),
+	FLOAT_TSDFIELD(sciball_orientation.vec[3]),
+	DOUBLE_TSDFIELD(sciball_yawvel),
+	DOUBLE_TSDFIELD(sciball_pitchvel),
+	DOUBLE_TSDFIELD(sciball_rollvel),
+	FLOAT_TSDFIELD(weap_orientation.vec[0]),
+	FLOAT_TSDFIELD(weap_orientation.vec[1]),
+	FLOAT_TSDFIELD(weap_orientation.vec[2]),
+	FLOAT_TSDFIELD(weap_orientation.vec[3]),
+	DOUBLE_TSDFIELD(weap_yawvel),
+	DOUBLE_TSDFIELD(weap_pitchvel),
+	UINT8_TSDFIELD(torpedoes_loaded),
+	UINT8_TSDFIELD(torpedoes_loading),
+	UINT16_TSDFIELD(torpedo_load_time),
+	UINT8_TSDFIELD(phaser_bank_charge),
+	UINT32_TSDFIELD(fuel),
+	UINT8_TSDFIELD(rpm),
+	UINT8_TSDFIELD(throttle),
+	UINT8_TSDFIELD(temp),
+	UINT8_TSDFIELD(shiptype),
+	UINT8_TSDFIELD(scizoom),
+	UINT8_TSDFIELD(weapzoom),
+	UINT8_TSDFIELD(mainzoom),
+	UINT8_TSDFIELD(requested_warpdrive),
+	UINT8_TSDFIELD(requested_shield),
+	UINT8_TSDFIELD(phaser_wavelength),
+	UINT8_TSDFIELD(phaser_charge),
+	UINT8_TSDFIELD(damage.shield_damage),
+	UINT8_TSDFIELD(damage.impulse_damage),
+	UINT8_TSDFIELD(damage.warp_damage),
+	UINT8_TSDFIELD(damage.maneuvering_damage),
+	UINT8_TSDFIELD(damage.phaser_banks_damage),
+	UINT8_TSDFIELD(damage.sensors_damage),
+	UINT8_TSDFIELD(damage.comms_damage),
+	UINT8_TSDFIELD(damage.tractor_damage),
+	/* TODO damcon data... */
+	UINT8_TSDFIELD(view_mode),
+	DOUBLE_TSDFIELD(view_angle),
+	/* TODO power_data */
+	/* TODO power_model */
+	/* TODO coolant_data */
+	/* TODO coolant_model */
+	UINT8_TSDFIELD(temperature_data.shield_damage),
+	UINT8_TSDFIELD(temperature_data.impulse_damage),
+	UINT8_TSDFIELD(temperature_data.warp_damage),
+	UINT8_TSDFIELD(temperature_data.maneuvering_damage),
+	UINT8_TSDFIELD(temperature_data.phaser_banks_damage),
+	UINT8_TSDFIELD(temperature_data.sensors_damage),
+	UINT8_TSDFIELD(temperature_data.comms_damage),
+	UINT8_TSDFIELD(temperature_data.tractor_damage),
+	DOUBLE_TSDFIELD(warp_time),
+	DOUBLE_TSDFIELD(scibeam_a1),
+	DOUBLE_TSDFIELD(scibeam_a2),
+	DOUBLE_TSDFIELD(scibeam_range),
+	UINT8_TSDFIELD(reverse),
+	UINT8_TSDFIELD(trident),
+	DOUBLE_TSDFIELD(next_torpedo_time),
+	DOUBLE_TSDFIELD(next_laser_time),
+	UINT8_TSDFIELD(lifeform_count),
+	UINT32_TSDFIELD(tractor_beam),
+	UINT8_TSDFIELD(overheating_damage_done),
+	FLOAT_TSDFIELD(steering_adjustment.vec[0]),
+	FLOAT_TSDFIELD(steering_adjustment.vec[1]),
+	FLOAT_TSDFIELD(steering_adjustment.vec[2]),
+	FLOAT_TSDFIELD(braking_factor),
+	/* TODO cargo_bay_info cargo */
+	INT32_TSDFIELD(ncargo_bays),
+	FLOAT_TSDFIELD(wallet),
+	FLOAT_TSDFIELD(threat_level),
+	UINT8_TSDFIELD(docking_magnets),
+	UINT8_TSDFIELD(passenger_berths),
+	UINT8_TSDFIELD(mining_bots),
+	STRING_TSDFIELD(mining_bot_name),
+	STRING_FIELD(sdata.name),
+	UINT16_FIELD(sdata.science_data_known),
+	UINT8_FIELD(sdata.subclass),
+	UINT8_FIELD(sdata.shield_strength),
+	UINT8_FIELD(sdata.shield_wavelength),
+	UINT8_FIELD(sdata.shield_width),
+	UINT8_FIELD(sdata.shield_depth),
+	UINT8_FIELD(sdata.faction),
+	DOUBLE_FIELD(sci_coordx),
+	DOUBLE_FIELD(sci_coordz),
+	FLOAT_FIELD(orientation.vec[0]),
+	FLOAT_FIELD(orientation.vec[1]),
+	FLOAT_FIELD(orientation.vec[2]),
+	FLOAT_FIELD(orientation.vec[3]),
+	INT32_BRIDGE_FIELD(initialized),
+	{ 0, 0, 0, 0 },
+};
 
 static int write_bridge_info(FILE *f, struct bridge_info *b)
 {
@@ -346,9 +497,19 @@ static int save_bridge_info(struct bridge_info *b)
 	return 0;
 }
 
-static int __attribute((unused)) restore_bridge_info(char *filename, struct bridge_info **b, int *nitems)
+static int restore_bridge_info(const char *filename, struct bridge_info *b, unsigned char *pwdhash)
 {
-	return 0;
+	char *contents;
+	int rc;
+	void *base_address[] = { &b->entity, b };
+
+	contents = slurp_file(filename, NULL);
+	if (!contents)
+		return -1;
+	memcpy(b->pwdhash, pwdhash, 20);
+	rc = key_value_parse_lines(snis_entity_kvs, contents, base_address);
+	free(contents);
+	return rc;
 }
 
 static void usage()
@@ -1028,8 +1189,122 @@ static int start_listener_thread(void)
 	return listener_port;
 }
 
-static void restore_data(void)
+static int restore_data_from_file(const char *path)
 {
+	int i;
+	char *hexpwdhash;
+	unsigned char pwdhash[20];
+	char *tmppath;
+
+	if (nbridges >= MAX_BRIDGES)
+		return -1;
+
+	/* We expect path to be of the form 'something/something/something/hexpwdhash.data' */
+	i = strlen(path) - 1;
+	if (path[i] == '/') /* ends with slash... nope. */
+		return -1;
+
+	tmppath = strdup(path);
+	for (; i >= 0; i--) {
+		if (tmppath[i] == '.')
+			tmppath[i] = '\0';  /* Cut off the ".data" at the end. */
+		if (tmppath[i] == '/') {
+			hexpwdhash = &tmppath[i + 1];
+			break;
+		}
+	}
+	if (i < 0) {
+		fprintf(stderr, "bridge data filename '%s' doesn't look right.\n", path);
+		return -1;
+	}
+	if (strlen(hexpwdhash) != 40) {
+		fprintf(stderr, "bridge data filename '%s' is not 40 chars long.\n", path);
+		return -1;
+	}
+	for (i = 0; i < 40; i++) {
+		if (strchr("0123456789abcdef", hexpwdhash[i]) == NULL) {
+			fprintf(stderr, "bridge data filename '%s' is not composed of 40 hex chars\n", path);
+			return -1;
+		}
+	}
+	/* Filename seems good, convert to pwdhash */
+	memset(pwdhash, 0, sizeof(pwdhash));
+	snis_scan_hash(hexpwdhash, 40, pwdhash, 20);
+	if (restore_bridge_info(path, &ship[nbridges], pwdhash)) {
+		fprintf(stderr, "Failed to read bridge info from %s\n", path);
+		return -1;
+	}
+	nbridges++;
+	return 0;
+}
+
+static int restore_data_from_path(const char *path);
+
+static int restore_data_from_directory(const char *path)
+{
+	struct dirent **namelist;
+	char newpath[PATH_MAX];
+	int i, n, rc;
+
+	rc = 0;
+	n = scandir(path, &namelist, NULL, alphasort);
+	if (n < 0) {
+		fprintf(stderr, "scandir(%s): %s\n", path, strerror(errno));
+		return n;
+	}
+	for (i = 0; i < n; i++) {
+		sprintf(newpath, "%s/%s", path, namelist[i]->d_name);
+		rc += restore_data_from_path(newpath);
+		free(namelist[i]);
+	}
+	free(namelist);
+	return rc;
+}
+
+static int avoid_dots(const char *path)
+{
+	int len;
+
+	/* exclude ".", "..", and things ending in "/.", "/.." */
+	if (strcmp(path, ".") == 0)
+		return 1;
+	if (strcmp(path, "..") == 0)
+		return 1;
+	len = strlen(path);
+	if (len >= 2 && strcmp(&path[len - 2], "/.") == 0)
+		return 1;
+	if (len >= 3 && strcmp(&path[len - 3], "/..") == 0)
+		return 1;
+	return 0;
+}
+
+static int restore_data_from_path(const char *path)
+{
+	struct stat statbuf;
+	int rc;
+
+	if (avoid_dots(path))
+		return 0;
+
+	rc = stat(path, &statbuf);
+	if (rc < 0) {
+		fprintf(stderr, "stat(%s): %s\n", path, strerror(errno));
+		return rc;
+	}
+	if (S_ISDIR(statbuf.st_mode))
+		return restore_data_from_directory(path);
+	return restore_data_from_file(path); /* regular file, or, not a directory anyhow. */
+}
+
+static int restore_data(void)
+{
+	int rc;
+
+	assert(nbridges == 0);
+	pthread_mutex_lock(&data_mutex);
+	rc = restore_data_from_path(database_root);
+	pthread_mutex_unlock(&data_mutex);
+	return rc;
 }
 
 static void checkpoint_data(void)
@@ -1073,7 +1348,10 @@ int main(int argc, char *argv[])
 	pthread_t lobby_thread;
 
 	open_log_file();
-	restore_data();
+	if (restore_data()) {
+		fprintf(stderr, "Failed to restore data from checkpoint database\n");
+		return -1;
+	}
 
 	if (argc < 4)
 		usage();
