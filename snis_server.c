@@ -4320,6 +4320,25 @@ void do_docking_action(struct snis_entity *ship, struct snis_entity *starbase,
 			"player-docked-event", (double) ship->id, starbase->id);
 }
 
+static int player_attempt_warpgate_jump(struct snis_entity *warpgate, struct snis_entity *player)
+{
+	struct packed_buffer *pb;
+	int b = lookup_bridge_by_shipid(player->id);
+
+	if (b < 0 || b >= nbridges) {
+		fprintf(stderr, "BUG: %s:%d player ship has no bridge\n", __FILE__, __LINE__);
+		return 0;
+	}
+	if (bridgelist[b].warp_gate_ticket.ipaddr == 0) /* No ticket? No warp. */
+		return 0;
+	pb = packed_buffer_allocate(3 + 20);
+	packed_buffer_append(pb, "bb", OPCODE_SWITCH_SERVER,
+		(uint8_t) warpgate->tsd.warpgate.warpgate_number);
+	packed_buffer_append_raw(pb, bridgelist[b].warp_gate_ticket.location, 20);
+	send_packet_to_all_clients_on_a_bridge(player->id, pb, ROLE_ALL);
+	return 1;
+}
+
 static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
 						struct snis_entity *player)
 {
@@ -4447,6 +4466,10 @@ static void player_collision_detection(void *player, void *object)
 	if (t->type == OBJTYPE_DOCKING_PORT && dist2 < 50.0 * 50.0 &&
 		o->tsd.ship.docking_magnets) {
 		player_attempt_dock_with_starbase(t, o);
+	}
+	if (t->type == OBJTYPE_WARPGATE && dist2 < 50.0 * 50.0) {
+		if (player_attempt_warpgate_jump(t, o))
+			return;
 	}
 	if (t->type == OBJTYPE_PLANET) {
 		const float surface_dist2 = t->tsd.planet.radius * t->tsd.planet.radius;
@@ -12216,12 +12239,6 @@ static void queue_up_client_damcon_update(struct game_client *c)
 		queue_up_client_damcon_object_update(c, d, &d->o[i]);
 }
 
-static void queue_up_client_switch_server(struct game_client *c)
-{
-	return;
-	pb_queue_to_client(c, packed_buffer_new("b", OPCODE_SWITCH_SERVER));
-}
-
 #define GO_TOO_FAR_UPDATE_PER_NTICKS 7
 
 static void queue_up_client_updates(struct game_client *c)
@@ -12257,8 +12274,6 @@ static void queue_up_client_updates(struct game_client *c)
 		/* printf("queued up %d updates for client\n", count); */
 
 		c->timestamp = universe_timestamp;
-		if ((universe_timestamp % 300) == 0)
-			queue_up_client_switch_server(c);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }

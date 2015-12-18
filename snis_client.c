@@ -435,6 +435,8 @@ static void format_date(char *buf, int bufsize, double date)
 }
 
 int switched_server = -1;
+static char switch_server_location_string[20] = { 0 };
+static int switch_warp_gate_number = -1;
 int switched_server2 = -1;
 int writer_thread_should_die = 0;
 int writer_thread_alive = 0;
@@ -3298,6 +3300,18 @@ static void lobby_cancel_button_pressed()
 	}
 }
 
+static int lobby_lookup_server_by_location(char *location)
+{
+	/* FIXME, this is racy with connect_to_lobby() */
+	int i;
+
+	for (i = 0; i < ngameservers; i++) {
+		if (strcmp(lobby_game_server[i].location, location) == 0)
+			return i;
+	}
+	return -1;
+}
+
 static void show_lobbyscreen(GtkWidget *w)
 {
 	char msg[100];
@@ -3333,7 +3347,10 @@ static void show_lobbyscreen(GtkWidget *w)
 			pthread_mutex_lock(&to_server_queue_event_mutex);
 			time_to_switch_servers = (switched_server2 != -1);
 			if (time_to_switch_servers) {
-				lobby_selected_server = switched_server2;
+				lobby_selected_server =
+					lobby_lookup_server_by_location(switch_server_location_string);
+				if (lobby_selected_server == -1)
+					return;
 				switched_server2 = -1;
 				displaymode = DISPLAYMODE_CONNECTING;
 			}
@@ -4534,6 +4551,22 @@ static int process_ship_damage_packet(int do_damage_limbo)
 	return 0;
 }
 
+static int process_switch_server(void)
+{
+	char buffer[100];
+	struct packed_buffer pb;
+	int rc;
+
+	rc = snis_readsocket(gameserver_sock, buffer, 23);
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	switch_warp_gate_number = packed_buffer_extract_u8(&pb);
+	packed_buffer_extract_raw(&pb, switch_server_location_string, 20);
+	switch_server_location_string[19] = '\0';
+	return 0;
+}
+
 static int process_update_docking_port_packet(void)
 {
 	unsigned char buffer[100];
@@ -5004,6 +5037,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 				goto protocol_error;
 			break;
 		case OPCODE_SWITCH_SERVER:
+			rc = process_switch_server();
+			if (rc)
+				goto protocol_error;
 			printf("Switch server opcode received\n");
 			quickstartmode = 0;
 			pthread_mutex_lock(&to_server_queue_event_mutex);
@@ -5024,7 +5060,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			delete_all_objects();
 			printf("snis_client: writer thread left\n");
 			printf("**** lobby_selected_server = %d\n", lobby_selected_server);
-			switched_server = (lobby_selected_server + 1) % 2; /* TODO : something better */
+			switched_server = 1; /* TODO : something better */
 			printf("**** switched_server = %d\n", switched_server);
 			lobby_selected_server = -1;
 			close(gameserver_sock);
