@@ -899,6 +899,16 @@ int ray_intersects_sphere(const union vec3 *ray_origin,
 	return 1;
 }
 
+/* Returns distance from point to plane defined by plane_point and plane_normal */
+float plane_to_point_dist(const union vec3 plane_point, const union vec3 plane_normal,
+			const union vec3 point)
+{
+	union vec3 diff;
+
+	vec3_sub(&diff, &point, &plane_point);
+	return vec3_dot(&plane_normal, &diff);
+}
+
 /* See "Real Time Collision Detection", by Christer Ericson, p. 224 */
 int moving_spheres_intersection(union vec3 *s1, float r1, union vec3 *v1,
 				union vec3 *s2, float r2, union vec3 *v2,

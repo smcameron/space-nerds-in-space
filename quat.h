@@ -269,6 +269,10 @@ int ray_intersects_sphere(const union vec3 *ray_origin,
 				const union vec3 *sphere_origin,
 				const float radius);
 
+/* Returns distance from point to plane defined by plane_point and plane_normal */
+float plane_to_point_dist(const union vec3 plane_point, const union vec3 plane_normal,
+			const union vec3 point);
+
 /* moving_spheres_intersection() returns true if moving spheres intersect, and fills
  * in *time at which intersection occurs if time_horizon < 0 or
  * if *time < time_horizon. IOW, negative time_horizon == no time horizon.
