@@ -76,12 +76,12 @@ static int parse_##sign##size(const char *strvalue, struct key_value_specificati
 	return (rc != 1); \
 }
 
-PARSE_INT(uint, 8, "%*[ ]%hhu")	/* parse_uint8 defined here */
-PARSE_INT(uint, 16, "%*[ ]%hu")	/* parse_uint16 defined here */
-PARSE_INT(uint, 32, "%*[ ]%u")	/* parse_uint32 defined here */
-PARSE_INT(int, 8, "%*[ ]%hhd")	/* parse_int8 defined here */
-PARSE_INT(int, 16, "%*[ ]%hd")	/* parse_int16 defined here */
-PARSE_INT(int, 32, "%*[ ]%d")	/* parse_int32 defined here */
+PARSE_INT(uint, 8, "%hhu")	/* parse_uint8 defined here */
+PARSE_INT(uint, 16, "%hu")	/* parse_uint16 defined here */
+PARSE_INT(uint, 32, "%u")	/* parse_uint32 defined here */
+PARSE_INT(int, 8, "%hhd")	/* parse_int8 defined here */
+PARSE_INT(int, 16, "%hd")	/* parse_int16 defined here */
+PARSE_INT(int, 32, "%d")	/* parse_int32 defined here */
 
 /* Can't use the macros for 64 bit versions because "lld" and "llu" complain about (u)int64_t
  * and I couldn't figure out how to get ("%" PRId64) and ("%" PRIu64) to go through the macro.
@@ -91,7 +91,7 @@ static int parse_uint64(const char *strvalue, struct key_value_specification *k,
 {
 	int rc;
 	uint64_t *ptr = (uint64_t *) ((unsigned char *) base_address[k->address_index] + k->address_offset);
-	rc = sscanf(strvalue, "%*[ ]%llu", (unsigned long long *) ptr);
+	rc = sscanf(strvalue, "%llu", (unsigned long long *) ptr);
 	return (rc != 1);
 }
 
@@ -99,7 +99,7 @@ static int parse_int64(const char *strvalue, struct key_value_specification *k, 
 {
 	int rc;
 	int64_t *ptr = (int64_t *) ((unsigned char *) base_address[k->address_index] + k->address_offset);
-	rc = sscanf(strvalue, "%*[ ]%lld", (signed long long *) ptr);
+	rc = sscanf(strvalue, "%lld", (signed long long *) ptr);
 	return (rc != 1);
 }
 
@@ -107,7 +107,7 @@ static int parse_double(const char *strvalue, struct key_value_specification *k,
 {
 	int rc;
 	double *ptr = (double *) ((unsigned char *) base_address[k->address_index] + k->address_offset);
-	rc = sscanf(strvalue, "%*[ ]%lf", ptr);
+	rc = sscanf(strvalue, "%lf", ptr);
 	return (rc != 1);
 }
 
@@ -115,7 +115,7 @@ static int parse_float(const char *strvalue, struct key_value_specification *k, 
 {
 	int rc;
 	float *ptr = (float *) ((unsigned char *) base_address[k->address_index] + k->address_offset);
-	rc = sscanf(strvalue, "%*[ ]%f", ptr);
+	rc = sscanf(strvalue, "%f", ptr);
 	return (rc != 1);
 }
 
@@ -126,15 +126,19 @@ static int key_value_parse_line_with_key(struct key_value_specification *k, char
 
 	klen = strlen(k->key);
 	len = strlen(line);
-	if (len < klen + 2)
+	if (len < klen + 1)
 		return 1;
 	if (strncmp(line, k->key, klen) != 0)
 		return 1;
 	if (line[klen] != ':')
 		return 1;
 
+	/* Skip leading spaces */
+	klen = klen + 1;
+	while (line[klen] == ' ')
+		klen++;
 	/* At this point, we have a match on the key */
-	valuestr = &line[klen + 1];
+	valuestr = &line[klen];
 	switch (k->type) {
 	case KVS_STRING:
 		rc = parse_string(valuestr, k, base_address);
@@ -236,6 +240,7 @@ struct test_struct2 {
 	float xyz;
 	double abc[2];
 	char blah[100];
+	char blah2[100];
 };
 
 #define KVS_U8FIELD(x, i, s) { #x, KVS_UINT8, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
@@ -267,6 +272,7 @@ struct key_value_specification test_kvs[] = {
 	KVS_DOUBLEFIELD(abc[0], 1, test_struct2),
 	KVS_DOUBLEFIELD(abc[1], 1, test_struct2),
 	KVS_STRINGFIELD(blah, 1, test_struct2),
+	KVS_STRINGFIELD(blah2, 1, test_struct2),
 	{ 0 },
 };
 
@@ -294,6 +300,7 @@ int main(int argc, char *argv[])
 		"abc[0]: 7.8910\n"
 		"abc[1]: 2.222\n"
 		"blah: blah blah blah\n"
+		"blah2:\n"
 		"i32: 415\n"
 		"i64: 420\n"
 		"some_data: this is a test\n"
@@ -319,6 +326,7 @@ int main(int argc, char *argv[])
 	CHECK(fabs(data2.abc[1] - 2.222) < 0.0001);
 	CHECK(strcmp("this is a test", data.some_data) == 0);
 	CHECK(strcmp("blah blah blah", data2.blah) == 0);
+	CHECK(strcmp("", data2.blah2) == 0);
 	CHECK(rc == 0);
 	printf("test_key_value_parser: all tests pass.\n");
 	return 0;
