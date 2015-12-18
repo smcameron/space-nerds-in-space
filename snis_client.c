@@ -4847,6 +4847,21 @@ static int process_client_id_packet(void)
 	return 0;
 }
 
+static int process_add_player_error(uint8_t *error)
+{
+	unsigned char buffer[10];
+	uint8_t err;
+	int rc;
+
+	*error = 255;
+	assert(sizeof(buffer) > sizeof(struct client_ship_id_packet) - sizeof(uint8_t));
+	rc = read_and_unpack_buffer(buffer, "b", &err);
+	if (rc)
+		return rc;
+	*error = err;
+	return 0;
+}
+
 static void stop_gameserver_writer_thread(void)
 {
 	pthread_mutex_lock(&to_server_queue_event_mutex);
@@ -4864,6 +4879,7 @@ static void stop_gameserver_writer_thread(void)
 		sleep(1);
 	} while (1);
 	writer_thread_should_die = 0;
+	pthread_mutex_unlock(&to_server_queue_event_mutex);
 	/* FIXME: when this returns, to_server_queue_event_mutex is held */
 }
 
@@ -4873,10 +4889,12 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 	uint8_t previous_opcode;
 	uint8_t last_opcode = 0x00;
 	uint8_t opcode = 0xff;
+	uint8_t add_player_error;
 	int rc = 0;
 
 	printf("gameserver reader thread\n");
 	while (1) {
+		add_player_error = 0;
 		previous_opcode = last_opcode;
 		last_opcode = opcode;
 		/* printf("Client reading from game server %d bytes...\n", sizeof(opcode)); */
@@ -4909,6 +4927,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_ID_CLIENT_SHIP:
 			rc = process_client_id_packet();
+			break;
+		case OPCODE_ADD_PLAYER_ERROR:
+			rc = process_add_player_error(&add_player_error);
 			break;
 		case OPCODE_UPDATE_ASTEROID:
 			rc = process_update_asteroid_packet();
@@ -5074,13 +5095,37 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			gameserver_sock = -1;
 			rc = 0;
 			connected_to_gameserver = 0;
-			pthread_mutex_unlock(&to_server_queue_event_mutex);
+			// pthread_mutex_unlock(&to_server_queue_event_mutex);
 			return NULL;
 		default:
 			goto protocol_error;
 		}
 		if (rc) /* protocol error */
 			break;
+		if (add_player_error) {
+			switch (add_player_error) {
+			case ADD_PLAYER_ERROR_SHIP_DOES_NOT_EXIST:
+				printf("snis_client: failed to add player: ship does not exist\n");
+				break;
+			case ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS:
+				printf("snis_client: failed to add player: ship already exists\n");
+				break;
+			default:
+				printf("snis_client: failed to add player: unknown error %d\n",
+					add_player_error);
+				goto protocol_error;
+			}
+			stop_gameserver_writer_thread();
+			/* FIXME: when this ^^^ returns, to_server_queue_event_mutex is held */
+			lobby_selected_server = -1;
+			close(gameserver_sock);
+			gameserver_sock = -1;
+			rc = 0;
+			connected_to_gameserver = 0;
+			displaymode = DISPLAYMODE_NETWORK_SETUP;
+			// pthread_mutex_unlock(&to_server_queue_event_mutex);
+			return NULL;
+		}
 		successful_opcodes++;
 	}
 
@@ -5223,6 +5268,44 @@ static void send_build_info_to_server(void)
 	queue_to_server(pb);
 }
 
+struct network_setup_ui {
+	struct button *start_lobbyserver;
+	struct button *start_gameserver;
+	struct button *connect_to_lobby;
+	struct snis_text_input_box *lobbyservername;
+	struct snis_text_input_box *gameservername;
+	struct snis_text_input_box *shipname_box;
+	struct snis_text_input_box *password_box;
+	struct button *role_main;
+	struct button *role_nav;
+	struct button *role_weap;
+	struct button *role_eng;
+	struct button *role_damcon;
+	struct button *role_sci;
+	struct button *role_comms;
+	struct button *role_sound;
+	struct button *role_demon;
+	struct button *role_text_to_speech;
+	struct button *join_ship_checkbox;
+	struct button *create_ship_checkbox;
+	int role_main_v;
+	int role_nav_v;
+	int role_weap_v;
+	int role_eng_v;
+	int role_damcon_v;
+	int role_sci_v;
+	int role_comms_v;
+	int role_sound_v;
+	int role_demon_v;
+	int role_text_to_speech_v;
+	int create_ship_v;
+	int join_ship_v;
+	char lobbyname[60];
+	char servername[60];
+	char shipname[22];
+	char password[10];
+} net_setup_ui;
+
 static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 {
 	int rc;
@@ -5301,6 +5384,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	 */
 	memset(&app, 0, sizeof(app));
 	app.opcode = OPCODE_UPDATE_PLAYER;
+	app.new_ship = net_setup_ui.create_ship_v;
 	app.role = htonl(role);
 	strncpy((char *) app.shipname, shipname, 19);
 	strncpy((char *) app.password, password, 19);
@@ -11271,40 +11355,6 @@ static void show_warp_limbo_screen(GtkWidget *w)
 	}
 }
 
-struct network_setup_ui {
-	struct button *start_lobbyserver;
-	struct button *start_gameserver;
-	struct button *connect_to_lobby;
-	struct snis_text_input_box *lobbyservername;
-	struct snis_text_input_box *gameservername;
-	struct snis_text_input_box *shipname_box;
-	struct snis_text_input_box *password_box;
-	struct button *role_main;
-	struct button *role_nav;
-	struct button *role_weap;
-	struct button *role_eng;
-	struct button *role_damcon;
-	struct button *role_sci;
-	struct button *role_comms;
-	struct button *role_sound;
-	struct button *role_demon;
-	struct button *role_text_to_speech;
-	int role_main_v;
-	int role_nav_v;
-	int role_weap_v;
-	int role_eng_v;
-	int role_damcon_v;
-	int role_sci_v;
-	int role_comms_v;
-	int role_sound_v;
-	int role_demon_v;
-	int role_text_to_speech_v;
-	char lobbyname[60];
-	char servername[60];
-	char shipname[22];
-	char password[10];
-} net_setup_ui;
-
 static void lobby_hostname_entered()
 {
 	printf("lobby hostname entered: %s\n", net_setup_ui.lobbyname);
@@ -11478,14 +11528,20 @@ static void connect_to_lobby_button_pressed()
 	connect_to_lobby();
 }
 
-static struct button *init_net_role_button(int x, int *y, char *txt, int *value)
+static struct button *init_net_checkbox_button(int x, int *y, char *txt, int *value,
+			button_function bf, void *cookie)
 {
 	struct button *b;
 	b = snis_button_init(x, *y, 225, 23, txt, UI_COLOR(network_setup_role),
-			NANO_FONT, NULL, NULL);
+			NANO_FONT, bf, cookie);
 	snis_button_checkbox(b, value);
 	*y = *y + txy(23);
 	return b;
+}
+
+static struct button *init_net_role_button(int x, int *y, char *txt, int *value)
+{
+	return init_net_checkbox_button(x, y, txt, value, NULL, NULL);
 }
 
 static void ui_add_button(struct button *b, int active_displaymode);
@@ -11529,6 +11585,35 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	ui_add_button(nsu->role_sound, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_demon, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_text_to_speech, DISPLAYMODE_NETWORK_SETUP);
+}
+
+static void create_ship_checkbox_cb(__attribute__((unused)) void *cookie)
+{
+	/* If create-ship selected, make sure join-ship is turned off. */
+	struct network_setup_ui *nsu = cookie;
+	nsu->join_ship_v = 0;
+}
+
+static void join_ship_checkbox_cb(__attribute__((unused)) void *cookie)
+{
+	/* If join-ship selected, make sure create-ship is turned off. */
+	struct network_setup_ui *nsu = cookie;
+	nsu->create_ship_v = 0;
+}
+
+static void init_join_create_buttons(struct network_setup_ui *nsu)
+{
+	nsu->create_ship_v = 1;
+	nsu->join_ship_v = 0;
+	int x = txx(350);
+	int y = txy(450);
+	nsu->create_ship_checkbox = init_net_checkbox_button(x, &y,
+						"CREATE SHIP", &nsu->create_ship_v,
+						create_ship_checkbox_cb, nsu);
+	nsu->join_ship_checkbox = init_net_checkbox_button(x, &y, "JOIN SHIP", &nsu->join_ship_v,
+						join_ship_checkbox_cb, nsu);
+	ui_add_button(nsu->create_ship_checkbox, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->join_ship_checkbox, DISPLAYMODE_NETWORK_SETUP);
 }
 
 static void ui_add_text_input_box(struct snis_text_input_box *t, int active_displaymode);
@@ -11578,6 +11663,7 @@ static void init_net_setup_ui(void)
 		snis_button_init(left, y, -1, -1, "CONNECT TO LOBBY", inactive_button_color,
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
 	init_net_role_buttons(&net_setup_ui);
+	init_join_create_buttons(&net_setup_ui);
 	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(net_setup_ui.start_gameserver, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP);

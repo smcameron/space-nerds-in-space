@@ -150,11 +150,15 @@
 #define OPCODE_REQUEST_STANDARD_ORBIT		226
 #define OPCODE_SWITCH_SERVER			227
 #define OPCODE_UPDATE_WARPGATE			228
+#define OPCODE_ADD_PLAYER_ERROR			229
 #define OPCODE_NATURAL_LANGUAGE_REQUEST		230
 #define   OPCODE_NL_SUBCOMMAND_TEXT_REQUEST	1
 #define   OPCODE_NL_SUBCOMMAND_TEXT_TO_SPEECH	2
 
 #define OPCODE_NOOP		0xff
+
+#define   ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS   001
+#define   ADD_PLAYER_ERROR_SHIP_DOES_NOT_EXIST   002
 
 #define UPDATE_UNIVERSE_TIMESTAMP_COUNT 5
 #define UPDATE_UNIVERSE_TIMESTAMP_START_SAMPLE 1
@@ -387,6 +391,7 @@ struct request_thrust_packet {
 
 struct add_player_packet {
 	uint8_t opcode;
+	uint8_t new_ship;
 	uint32_t role;
 	unsigned char shipname[20];
 	unsigned char password[20];

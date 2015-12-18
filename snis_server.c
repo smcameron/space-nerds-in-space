@@ -12901,6 +12901,7 @@ static int add_new_player(struct game_client *c)
 {
 	int rc;
 	struct add_player_packet app;
+	uint8_t no_write_count = 0;
 
 	rc = snis_readsocket(c->socket, &app, sizeof(app));
 	if (rc)
@@ -12920,7 +12921,12 @@ static int add_new_player(struct game_client *c)
 
 	c->bridge = lookup_bridge(app.shipname, app.password);
 	c->role = app.role;
-	if (c->bridge == -1) { /* did not find our bridge, have to make a new one. */
+	if (c->bridge == -1 && !app.new_ship) {	/* didn't find bridge, but expected ship to exist */
+		pb_queue_to_client(c, packed_buffer_new("bb", OPCODE_ADD_PLAYER_ERROR,
+				ADD_PLAYER_ERROR_SHIP_DOES_NOT_EXIST));
+		write_queued_updates_to_client(c, 4, &no_write_count);
+		return -1;
+	} else if (c->bridge == -1 && app.new_ship) { /* didn't find our bridge, make a new one. */
 		double x, z;
 
 		for (int i = 0; i < 100; i++) {
@@ -12947,10 +12953,16 @@ static int add_new_player(struct game_client *c)
 		nbridges++;
 		schedule_callback(event_callback, &callback_schedule,
 				"player-respawn-event", (double) c->shipid);
-	} else {
+	} else if (c->bridge != -1 && !app.new_ship) { /* join existing ship */
 		c->shipid = bridgelist[c->bridge].shipid;
 		c->ship_index = lookup_by_id(c->shipid);
+	} else if (c->bridge != -1 && app.new_ship) { /* ship already exists, can't create */
+		pb_queue_to_client(c, packed_buffer_new("bb", OPCODE_ADD_PLAYER_ERROR,
+				ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS));
+		write_queued_updates_to_client(c, 4, &no_write_count);
+		return -1;
 	}
+
 	snis_sha1_hash(bridgelist[c->bridge].shipname, bridgelist[c->bridge].password,
 			bridgelist[c->bridge].pwdhash);
 	c->debug_ai = 0;
@@ -13016,7 +13028,13 @@ static void service_connection(int connection)
 	pthread_mutex_init(&client[i].client_write_queue_mutex, NULL);
 	packed_buffer_queue_init(&client[i].client_write_queue);
 
-	add_new_player(&client[i]);
+	rc = add_new_player(&client[i]);
+	if (rc) {
+		nclients--;
+		client_unlock();
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
 
 	pthread_attr_init(&client[i].read_attr);
 	pthread_attr_setdetachstate(&client[i].read_attr, PTHREAD_CREATE_DETACHED);

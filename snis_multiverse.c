@@ -282,15 +282,15 @@ static int update_bridge(struct starsystem_info *ss)
 	rc = read_and_unpack_fixed_size_buffer(ss, buffer, 20, "r", pwdhash, (uint16_t) 20);
 	if (rc != 0)
 		return rc;
+	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - 9);
+	rc = snis_readsocket(ss->socket, buffer, sizeof(struct update_ship_packet) - 9);
+	if (rc != 0)
+		return rc;
 	i = lookup_ship_by_hash(pwdhash);
 	if (i < 0) {
 		fprintf(stderr, "snis_multiverse: Unknown ship hash\n");
 		return rc;
 	}
-	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - 9);
-	rc = snis_readsocket(ss->socket, buffer, sizeof(struct update_ship_packet) - 9);
-	if (rc != 0)
-		return rc;
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	packed_buffer_extract(&pb, "hSSS", &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
