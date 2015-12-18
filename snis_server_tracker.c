@@ -44,6 +44,8 @@ struct server_tracker {
 	int game_server_count;
 	struct ssgl_game_server *mverse_server;
 	int mverse_server_count;
+	void *cookie;
+	server_tracker_change_notifier notifier;
 };
 
 int server_tracker_stop(struct server_tracker *st)
@@ -76,6 +78,18 @@ static void print_game_servers(struct ssgl_game_server *game_server, int game_se
 #endif
 }
 
+static int compare_game_server_list(struct ssgl_game_server *a, int acount,
+				struct ssgl_game_server *b, int bcount)
+{
+	if (!a && !b)
+		return 0;
+	if ((!a && b) || (!b && a))
+		return 1;
+	if (acount != bcount)
+		return 1;
+	return memcmp(a, b, sizeof(*a) * acount);
+}
+
 static void copy_game_server_list(struct ssgl_game_server **output, int *outputcount,
 				struct ssgl_game_server *input, int inputcount)
 {
@@ -98,6 +112,7 @@ static void *server_tracker_thread(void *tracker_info)
 	struct ssgl_client_filter multiverse_filter;
 	int game_server_count, mverse_server_count;
 	int rc, time_to_quit = 0;
+	int changed;
 
 	game_server = NULL;
 	mverse_server = NULL;
@@ -135,10 +150,18 @@ static void *server_tracker_thread(void *tracker_info)
 		(void) pthread_mutex_lock(&st->mutex);
 
 		/* update internal list of game servers */
-		copy_game_server_list(&st->game_server, &st->game_server_count,
-					game_server, game_server_count);
-		copy_game_server_list(&st->mverse_server, &st->mverse_server_count,
-					mverse_server, mverse_server_count);
+
+		changed =
+			compare_game_server_list(st->game_server, st->game_server_count,
+							game_server, game_server_count) +
+			compare_game_server_list(st->mverse_server, st->mverse_server_count,
+							mverse_server, mverse_server_count);
+		if (changed) {
+			copy_game_server_list(&st->game_server, &st->game_server_count,
+						game_server, game_server_count);
+			copy_game_server_list(&st->mverse_server, &st->mverse_server_count,
+						mverse_server, mverse_server_count);
+		}
 		if (game_server)
 			free(game_server);
 		if (mverse_server)
@@ -148,6 +171,8 @@ static void *server_tracker_thread(void *tracker_info)
 			time_to_quit = 1;
 
 		pthread_mutex_unlock(&st->mutex);
+		if (changed && st->notifier)
+			st->notifier(st->cookie);
 	} while (!time_to_quit);
 	fprintf(stderr, "snis_server: server tracker thread exiting\n");
 	free(st->lobbyhost);
@@ -155,7 +180,8 @@ static void *server_tracker_thread(void *tracker_info)
 	return NULL;
 }
 
-struct server_tracker *server_tracker_start(char *lobbyhost)
+struct server_tracker *server_tracker_start(char *lobbyhost,
+		server_tracker_change_notifier notifier, void *cookie)
 {
 	struct server_tracker *st;
 	int rc;
@@ -164,6 +190,8 @@ struct server_tracker *server_tracker_start(char *lobbyhost)
 	memset(st, 0, sizeof(*st));
 	st->lobbyhost = strdup(lobbyhost);
 	st->time_to_quit = 0;
+	st->cookie = cookie;
+	st->notifier = notifier;
 
 	pthread_attr_init(&st->thread_attr);
 	pthread_attr_setdetachstate(&st->thread_attr, PTHREAD_CREATE_DETACHED);

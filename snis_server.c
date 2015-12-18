@@ -16166,6 +16166,10 @@ static void process_options(int argc, char *argv[])
 		usage();
 }
 
+void servers_changed_cb(void *cookie)
+{
+}
+
 int main(int argc, char *argv[])
 {
 	int port, rc, i;
@@ -16227,7 +16231,7 @@ int main(int argc, char *argv[])
 	if (getenv("SNISSERVERNOLOBBY") == NULL) {
 		register_with_game_lobby(lobbyhost, port,
 			lobby_servernick, lobby_gameinstance, lobby_location);
-		server_tracker = server_tracker_start(lobbyhost);
+		server_tracker = server_tracker_start(lobbyhost, servers_changed_cb, NULL);
 	} else {
 		printf("snis_server: Skipping lobby registration\n");
 		server_tracker = NULL;
