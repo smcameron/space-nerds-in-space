@@ -438,7 +438,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/spaceship_turret_base.stl \
 	${MD}/vanquisher.stl \
 	${MD}/docking_port.stl \
-	${MD}/docking_port2.stl
+	${MD}/docking_port2.stl \
+	${MD}/warpgate.stl
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
