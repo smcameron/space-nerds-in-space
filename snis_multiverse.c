@@ -53,7 +53,10 @@ persisted in a simple database by snis_multiverse.
 #include "snis_socket_io.h"
 #include "snis.h"
 #include "mathutils.h"
+#include "snis_packet.h"
+#include "snis.h"
 #include "snis_hash.h"
+#include "quat.h"
 
 static pthread_mutex_t listener_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t listener_started;
@@ -82,12 +85,13 @@ static struct starsystem_info { /* one of these per connected snis_server */
 } starsystem[MAX_STARSYSTEMS] = { { 0 } };
 static int nstarsystems = 0;
 
-struct bridge_info {
-	unsigned char key[32];
+static struct bridge_info {
+	unsigned char pwdhash[20];
 	int occupied;
 	struct timeval created_on;
 	struct timeval last_seen;
-};
+	struct snis_entity entity;
+} ship[MAX_BRIDGES];
 
 static void remove_starsystem(struct starsystem_info *ss)
 {
@@ -244,14 +248,125 @@ static int read_and_unpack_fixed_size_buffer(struct starsystem_info *ss,
 	return rc;
 }
 
+static int lookup_ship_by_hash(unsigned char *hash)
+{
+	int i;
+
+	for (i = 0; i < nbridges; i++) {
+		if (memcmp(ship[i].pwdhash, hash, 20) == 0)
+			return i;
+	}
+	return -1;
+}
+
 static int update_bridge(struct starsystem_info *ss)
 {
-	unsigned char buffer[100];
 	unsigned char pwdhash[20];
-	int rc;
+	int i, rc;
+	unsigned char buffer[144];
+	struct packed_buffer pb;
+	uint16_t alive;
+	uint32_t torpedoes, power;
+	uint32_t fuel, victim_id;
+	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
+	double dgunyawvel, dsheading, dbeamwidth;
+	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
+		mainzoom, warpdrive, requested_warpdrive,
+		requested_shield, phaser_charge, phaser_wavelength, shiptype,
+		reverse, trident, in_secure_area, docking_magnets;
+	union quat orientation, sciball_orientation, weap_orientation;
+	union euler ypr;
+	struct snis_entity *o;
+	int32_t iwallet;
 
 	rc = read_and_unpack_fixed_size_buffer(ss, buffer, 20, "r", pwdhash, (uint16_t) 20);
-	/* TODO store away this info... */
+	if (rc != 0)
+		return rc;
+	i = lookup_ship_by_hash(pwdhash);
+	if (i < 0) {
+		fprintf(stderr, "snis_multiverse: Unknown ship hash\n");
+		return rc;
+	}
+	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - 9);
+	rc = snis_readsocket(ss->socket, buffer, sizeof(struct update_ship_packet) - 9);
+	if (rc != 0)
+		return rc;
+	packed_buffer_init(&pb, buffer, sizeof(buffer));
+	packed_buffer_extract(&pb, "hSSS", &alive,
+				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
+				&dz, (int32_t) UNIVERSE_DIM);
+	packed_buffer_extract(&pb, "RRRwwRRR",
+				&dyawvel,
+				&dpitchvel,
+				&drollvel,
+				&torpedoes, &power,
+				&dgunyawvel,
+				&dsheading,
+				&dbeamwidth);
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbbwQQQbbw",
+			&tloading, &throttle, &rpm, &fuel, &temp,
+			&scizoom, &weapzoom, &navzoom, &mainzoom,
+			&warpdrive, &requested_warpdrive,
+			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
+			&reverse, &trident, &victim_id, &orientation.vec[0],
+			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
+			&docking_magnets, (uint32_t *) &iwallet);
+	tloaded = (tloading >> 4) & 0x0f;
+	tloading = tloading & 0x0f;
+	quat_to_euler(&ypr, &orientation);
+
+	/* TODO locking */
+	o = &ship[i].entity;
+	o->x = dx;
+	o->y = dy;
+	o->z = dz;
+	o->vx = 0;
+	o->vy = 0;
+	o->vz = 0;
+	o->orientation = orientation;
+	o->alive = alive;
+	o->tsd.ship.yaw_velocity = dyawvel;
+	o->tsd.ship.pitch_velocity = dpitchvel;
+	o->tsd.ship.roll_velocity = drollvel;
+	o->tsd.ship.torpedoes = torpedoes;
+	o->tsd.ship.power = power;
+	o->tsd.ship.gun_yaw_velocity = dgunyawvel;
+	o->tsd.ship.sci_heading = dsheading;
+	o->tsd.ship.sci_beam_width = dbeamwidth;
+	o->tsd.ship.torpedoes_loaded = tloaded;
+	o->tsd.ship.torpedoes_loading = tloading;
+	o->tsd.ship.throttle = throttle;
+	o->tsd.ship.rpm = rpm;
+	o->tsd.ship.fuel = fuel;
+	o->tsd.ship.temp = temp;
+	o->tsd.ship.scizoom = scizoom;
+	o->tsd.ship.weapzoom = weapzoom;
+	o->tsd.ship.navzoom = navzoom;
+	o->tsd.ship.mainzoom = mainzoom;
+	o->tsd.ship.requested_warpdrive = requested_warpdrive;
+	o->tsd.ship.requested_shield = requested_shield;
+	o->tsd.ship.warpdrive = warpdrive;
+	o->tsd.ship.phaser_charge = phaser_charge;
+	o->tsd.ship.phaser_wavelength = phaser_wavelength;
+	o->tsd.ship.damcon = NULL;
+	o->tsd.ship.shiptype = shiptype;
+	o->tsd.ship.in_secure_area = in_secure_area;
+	o->tsd.ship.docking_magnets = docking_magnets;
+	o->tsd.ship.wallet = (float) iwallet / 100.0f;
+
+	/* shift old updates to make room for this one */
+	int j;
+	for (j = SNIS_ENTITY_NUPDATE_HISTORY - 1; j >= 1; j--) {
+		o->tsd.ship.sciball_o[j] = o->tsd.ship.sciball_o[j-1];
+		o->tsd.ship.weap_o[j] = o->tsd.ship.weap_o[j-1];
+	}
+	o->tsd.ship.sciball_o[0] = sciball_orientation;
+	o->tsd.ship.sciball_orientation = sciball_orientation;
+	o->tsd.ship.weap_o[0] = weap_orientation;
+	o->tsd.ship.weap_orientation = weap_orientation;
+	o->tsd.ship.reverse = reverse;
+	o->tsd.ship.trident = trident;
+	rc = 0;
 	return rc;
 }
 
@@ -398,8 +513,18 @@ static void service_connection(int connection)
 		if (starsystem[i].refcount == 0)
 			break;
 	fprintf(stderr, "snis_multiverse: zzz 6\n");
-	if (i == nstarsystems)
-		nstarsystems++;
+	if (i == nstarsystems) {
+		if (nstarsystems < MAX_STARSYSTEMS) {
+			nstarsystems++;
+		} else {
+			fprintf(stderr, "snis_multiverse: Too many starsystems.\n");
+			pthread_mutex_unlock(&service_mutex);
+			shutdown(connection, SHUT_RDWR);
+			close(connection);
+			connection = -1;
+			return;
+		}
+	}
 
 	starsystem[i].socket = connection;
 
