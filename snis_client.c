@@ -108,6 +108,7 @@
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
+#define WARPGATE_COLOR WHITE
 #define WORMHOLE_COLOR WHITE
 #define PLANET_COLOR GREEN
 #define ASTEROID_COLOR AMBER
@@ -326,6 +327,7 @@ struct mesh *cargo_container_mesh;
 struct mesh *nebula_mesh;
 struct mesh *sun_mesh;
 struct mesh *thrust_animation_mesh;
+struct mesh *warpgate_mesh;
 #define NDOCKING_PORT_STYLES 3
 struct mesh *docking_port_mesh[NDOCKING_PORT_STYLES];
 static struct mesh *warp_tunnel_mesh;
@@ -1642,6 +1644,25 @@ static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, 
 	return 0;
 }
 
+static int update_warpgate(uint32_t id, uint32_t timestamp, double x, double y, double z,
+	union quat *orientation)
+{
+	int i;
+	struct entity *e;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		e = add_entity(ecx, warpgate_mesh, x, y, z, WARPGATE_COLOR);
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
+					orientation, OBJTYPE_WARPGATE, 1, e);
+		if (i < 0)
+			return i;
+	} else {
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
+	}
+	return 0;
+}
+
 static void nebula_move(struct snis_entity *o)
 {
 	union quat q;
@@ -2054,6 +2075,7 @@ static void move_objects(void)
 			spin_wormhole(timestamp, o);
 			break;
 		case OBJTYPE_STARBASE:
+		case OBJTYPE_WARPGATE:
 		case OBJTYPE_DOCKING_PORT:
 			move_object(timestamp, o, &interpolate_orientated_object);
 			break;
@@ -2244,6 +2266,9 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 		break;
 	case OBJTYPE_STARBASE:
 		color = STARBASE_COLOR;
+		break;
+	case OBJTYPE_WARPGATE:
+		color = WARPGATE_COLOR;
 		break;
 	default:
 		color = GREEN;
@@ -2498,6 +2523,7 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 		if (go[i].type != OBJTYPE_SHIP1 &&
 			go[i].type != OBJTYPE_SHIP2 &&
 			go[i].type != OBJTYPE_STARBASE &&
+			go[i].type != OBJTYPE_WARPGATE &&
 			go[i].type != OBJTYPE_ASTEROID &&
 			go[i].type != OBJTYPE_SPACEMONSTER &&
 			go[i].type != OBJTYPE_CARGO_CONTAINER)
@@ -3951,6 +3977,7 @@ static void do_whatever_detonate_does(uint32_t id, double x, double y, double z,
 	case OBJTYPE_SHIP2:
 		radius = 1.25f * ship_mesh_map[o->tsd.ship.shiptype]->radius;
 		break;
+	case OBJTYPE_WARPGATE:
 	case OBJTYPE_STARBASE:
 		radius = 1.25 * entity_get_mesh(o->entity)->radius;
 		break;
@@ -4670,6 +4697,27 @@ static int process_update_starbase_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_warpgate_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id, timestamp;
+	double dx, dy, dz;
+	union quat orientation;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "wwSSSQ", &id, &timestamp,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM,
+			&orientation);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_warpgate(id, timestamp, dx, dy, dz, &orientation);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+}
+
 static int process_update_nebula_packet(void)
 {
 	unsigned char buffer[100];
@@ -4826,6 +4874,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_STARBASE:
 			rc = process_update_starbase_packet();
+			break;
+		case OPCODE_UPDATE_WARPGATE:
+			rc = process_update_warpgate_packet();
 			break;
 		case OPCODE_UPDATE_WORMHOLE:
 			rc = process_update_wormhole_packet();
@@ -6019,6 +6070,9 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		case OBJTYPE_SHIP1:
 			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			break;
+		case OBJTYPE_WARPGATE:
+			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
+			break;
 		case OBJTYPE_STARBASE:
 			sng_set_foreground(UI_COLOR(sci_ball_starbase));
 			break;
@@ -6061,13 +6115,17 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			sprintf(buffer, "%s %s\n", o->sdata.name,
 					ship_type[o->sdata.subclass].class); 
 			break;
+		case OBJTYPE_WARPGATE:
+			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
+			sprintf(buffer, "%s %s\n", "WG",  o->sdata.name);
+			break;
 		case OBJTYPE_STARBASE:
 			sng_set_foreground(UI_COLOR(sci_ball_starbase));
-			sprintf(buffer, "%s %s\n", "SB",  o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "SB",  o->sdata.name);
 			break;
 		case OBJTYPE_ASTEROID:
 			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
-			sprintf(buffer, "%s %s\n", "A",  o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "A",  o->sdata.name);
 			break;
 		case OBJTYPE_DERELICT:
 			sng_set_foreground(UI_COLOR(sci_ball_derelict));
@@ -6145,6 +6203,9 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 		case OBJTYPE_SHIP1:
 			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			break;
+		case OBJTYPE_WARPGATE:
+			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
+			break;
 		case OBJTYPE_STARBASE:
 			sng_set_foreground(UI_COLOR(sci_ball_starbase));
 			break;
@@ -6184,17 +6245,20 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 			sprintf(buffer, "%s %s\n", o->sdata.name,
 				ship_type[o->sdata.subclass].class); 
 			break;
+		case OBJTYPE_WARPGATE:
+			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
+			sprintf(buffer, "%s %s\n", "SB",  o->sdata.name);
 		case OBJTYPE_STARBASE:
 			sng_set_foreground(UI_COLOR(sci_ball_starbase));
-			sprintf(buffer, "%s %s\n", "SB",  o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "SB",  o->sdata.name);
 			break;
 		case OBJTYPE_ASTEROID:
 			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
-			sprintf(buffer, "%s %s\n", "A",  o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "A",  o->sdata.name);
 			break;
 		case OBJTYPE_DERELICT:
 			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
-			sprintf(buffer, "%s %s\n", "A",  "???"); 
+			sprintf(buffer, "%s %s\n", "A",  "???");
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(UI_COLOR(sci_ball_planet));
@@ -7066,6 +7130,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 
 		if (dist < range || go[i].type == OBJTYPE_PLANET ||
 					go[i].type == OBJTYPE_NEBULA ||
+					go[i].type == OBJTYPE_WARPGATE ||
 					go[i].type == OBJTYPE_STARBASE)
 			snis_draw_3d_science_guy(w, gc, &go[i], &x, &y, dist, bw, pwr, range,
 				&go[i] == curr_science_guy, 100.0 * current_zoom / 255.0, nebula_factor);
@@ -8150,6 +8215,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		case OBJTYPE_ASTEROID:
 		case OBJTYPE_PLANET:
 		case OBJTYPE_STARBASE:
+		case OBJTYPE_WARPGATE:
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_CARGO_CONTAINER:
 		case OBJTYPE_SHIP1:
@@ -8203,6 +8269,9 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			switch (go[i].type) {
 			case OBJTYPE_PLANET:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 0.0 + 1.0;
+				break;
+			case OBJTYPE_WARPGATE:
+				contact_scale = ((255.0 - current_zoom) / 255.0) * 4.0 + 1.0;
 				break;
 			case OBJTYPE_STARBASE:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 4.0 + 1.0;
@@ -9590,6 +9659,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 	if (o && (o->type == OBJTYPE_SHIP1 ||
 		o->type == OBJTYPE_SHIP2 ||
+		o->type == OBJTYPE_WARPGATE ||
 		o->type == OBJTYPE_STARBASE)) {
 		y += 25;
 		the_faction = o ? 
@@ -9606,10 +9676,13 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 			sprintf(buffer, "TYPE: %s", ship_type[o->sdata.subclass].class); 
 			break;
 		case OBJTYPE_STARBASE:
-			sprintf(buffer, "TYPE: %s", "STARBASE"); 
+			sprintf(buffer, "TYPE: %s", "STARBASE");
+			break;
+		case OBJTYPE_WARPGATE:
+			sprintf(buffer, "TYPE: %s", "WARPGATE");
 			break;
 		case OBJTYPE_ASTEROID:
-			sprintf(buffer, "TYPE: %s", "ASTEROID"); 
+			sprintf(buffer, "TYPE: %s", "ASTEROID");
 			break;
 		case OBJTYPE_DERELICT:
 			sprintf(buffer, "TYPE: %s", "DERELICT");
@@ -13250,6 +13323,7 @@ static void init_meshes()
 	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
 	sun_mesh = mesh_fabricate_billboard(0, 0, 30000, 30000);
 	thrust_animation_mesh = init_thrust_mesh(10, 7, 3, 1);
+	warpgate_mesh = snis_read_model(d, "warpgate.stl");
 
 	mtwist_free(mt);
 }

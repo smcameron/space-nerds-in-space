@@ -63,6 +63,7 @@
 #define NEBULA_RADIUS 5000
 #define MIN_NEBULA_RADIUS 200
 #define NDERELICTS 20
+#define NWARPGATES 10
 
 #define NPLANETS 10
 #define MIN_PLANET_SEPARATION (UNIVERSE_DIM / 10.0)
@@ -91,6 +92,7 @@
 #define OBJTYPE_WARP_EFFECT 18
 #define OBJTYPE_SHIELD_EFFECT 19
 #define OBJTYPE_DOCKING_PORT 20
+#define OBJTYPE_WARPGATE 21
 
 #define SHIELD_EFFECT_LIFETIME 30
 
@@ -566,6 +568,10 @@ struct planet_data {
 	struct material atm_material;
 };
 
+struct warpgate_data {
+	uint32_t warpgate_number;
+};
+
 union type_specific_data {
 	struct ship_data ship;
 	struct laser_data laser;
@@ -583,6 +589,7 @@ union type_specific_data {
 	struct planet_data planet;
 	struct warp_effect_data warp_effect;
 	struct docking_port_data docking_port;
+	struct warpgate_data warpgate;
 };
 
 struct snis_entity;

@@ -798,6 +798,9 @@ static void gather_opcode_not_sent_stats(struct snis_entity *o)
 	case OBJTYPE_WORMHOLE:
 		opcode[0] = OPCODE_UPDATE_WORMHOLE;
 		break;
+	case OBJTYPE_WARPGATE:
+		opcode[0] = OPCODE_UPDATE_WARPGATE;
+		break;
 	case OBJTYPE_STARBASE:
 		opcode[0] = OPCODE_UPDATE_STARBASE;
 		break;
@@ -5271,6 +5274,11 @@ static void starbase_move(struct snis_entity *o)
 	}
 }
 
+static void warpgate_move(struct snis_entity *o)
+{
+	o->timestamp = universe_timestamp;
+}
+
 static void explosion_move(struct snis_entity *o)
 {
 	if (o->alive > 0)
@@ -7120,6 +7128,62 @@ static void add_wormholes(void)
 	}
 }
 
+static int add_warpgate(double x, double y, double z,
+			double vx, double vz, double heading, int n, uint32_t assoc_planet_id)
+{
+	int i;
+
+	i = add_generic_object(x, y, z, vx, 0.0, vz, heading, OBJTYPE_WARPGATE);
+	if (i < 0)
+		return i;
+	if (n < 0)
+		n = -n;
+	n %= 99;
+	go[i].move = warpgate_move;
+	go[i].type = OBJTYPE_WARPGATE;
+	go[i].sdata.shield_strength = 255;
+	go[i].tsd.warpgate.warpgate_number = n;
+	sprintf(go[i].tsd.starbase.name, "WG-%02d", n);
+	sprintf(go[i].sdata.name, "WG-%02d", n);
+	return i;
+}
+
+static void add_warpgates(void)
+{
+	int i, j;
+	double x, y, z;
+	uint32_t assoc_planet_id;
+
+	for (i = 0; i < NWARPGATES; i++) {
+		int p = 0;
+		int found = 0;
+		for (j = 0; j <= snis_object_pool_highest_object(pool); j++) {
+			if (go[j].type == OBJTYPE_PLANET)
+				p++;
+			if (p == i + 1) {
+				float dx, dy, dz;
+				random_point_on_sphere(go[j].tsd.planet.radius * 1.3 + 400.0f +
+						snis_randn(400), &dx, &dy, &dz);
+				x = go[j].x + dx;
+				y = go[j].y + dy;
+				z = go[j].z + dz;
+				found = 1;
+				assoc_planet_id = go[j].id;
+				break;
+			}
+		}
+		if (!found)  {
+			/* If we get here, it's a bug... */
+			printf("Nonfatal bug at %s:%d\n", __FILE__, __LINE__);
+			x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+			y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
+			z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+			assoc_planet_id = (uint32_t) -1;
+		}
+		add_warpgate(x, y, z, 0.0, 0.0, 0.0, i, assoc_planet_id);
+	}
+}
+
 static void add_eships(void)
 {
 	int i;
@@ -7252,6 +7316,7 @@ static void make_universe(void)
 	add_asteroids();
 	add_planets();
 	add_starbases();
+	add_warpgates();
 	add_wormholes();
 	add_eships();
 	add_enforcers();
@@ -11968,6 +12033,8 @@ static void send_update_wormhole_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_warpgate_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_explosion_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_torpedo_packet(struct game_client *c,
@@ -12027,6 +12094,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_STARBASE:
 		send_update_starbase_packet(c, o);
+		break;
+	case OBJTYPE_WARPGATE:
+		send_update_warpgate_packet(c, o);
 		break;
 	case OBJTYPE_NEBULA:
 		send_update_nebula_packet(c, o);
@@ -12677,6 +12747,17 @@ static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o)
 {
 	pb_queue_to_client(c, packed_buffer_new("bwwSSSQ", OPCODE_UPDATE_STARBASE,
+					o->id, o->timestamp,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
+					&o->orientation));
+}
+
+static void send_update_warpgate_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSQ", OPCODE_UPDATE_WARPGATE,
 					o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
