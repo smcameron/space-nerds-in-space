@@ -1370,7 +1370,7 @@ static void create_vortex(int i)
 			band_speed = calculate_band_speed(angle);
 		} while (fabs(band_speed) > vortex_band_threshold * band_speed_factor &&
 			fabs(angle) > 15.0 * M_PI / 180.0); /* exclude vortice within 15 deg of poles */
-		if (band_speed > 0.0)
+		if (calculate_band_speed(angle + 0.05) < calculate_band_speed(angle - 0.05))
 			vort[i].angular_vel = 2.5;
 		else
 			vort[i].angular_vel = -2.5;
