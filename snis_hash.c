@@ -22,6 +22,7 @@
 #include <string.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
+#include <assert.h>
 
 int snis_md5_hash(unsigned char *shipname, unsigned char *password, unsigned char *md5)
 {
@@ -80,5 +81,26 @@ void snis_format_sha1_hash(unsigned char *sha1, unsigned char *buffer, int len)
 		sha1[0], sha1[1], sha1[2], sha1[3], sha1[4], sha1[5], sha1[6], sha1[7], sha1[8],
 		sha1[9], sha1[10], sha1[11], sha1[12], sha1[13], sha1[14], sha1[15],
 		sha1[16], sha1[17], sha1[18], sha1[19]);
+}
+
+void snis_scan_hash(char *hexhash, int hexhashlen, unsigned char *hash, int hashlen)
+{
+	int i, j, digit1, digit2;
+	const char hexdigit[] = "0123456789abcdef";
+	char *p;
+
+	assert(hexhashlen == hashlen * 2);
+	assert((hexhashlen % 2) == 0);
+
+	j = 0;
+	for (i = 0; i < hexhashlen; i += 2)  {
+		p = strchr(hexdigit, hexhash[i]);
+		digit1 = (p - hexdigit) * 16;
+		p = strchr(hexdigit, hexhash[i + 1]);
+		digit2 = (p - hexdigit);
+		assert(j < hashlen);
+		hash[j] = (unsigned char) (digit1 + digit2);
+		j++;
+	}
 }
 

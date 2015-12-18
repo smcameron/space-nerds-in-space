@@ -27,4 +27,6 @@ void snis_format_md5_hash(unsigned char *md5, unsigned char *buffer, int len);
 void snis_sha1_hash(unsigned char *shipname, unsigned char *password, unsigned char *sha1);
 void snis_format_sha1_hash(unsigned char *md5, unsigned char *buffer, int len);
 
+void snis_scan_hash(char *hexhash, int hexhashlen, unsigned char *hash, int hashlen);
+
 #endif
