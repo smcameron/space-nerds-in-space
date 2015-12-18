@@ -13357,6 +13357,29 @@ static void dump_opcode_stats(struct opcode_stat *data)
 #define dump_opcode_stats(x)
 #endif
 
+static void wakeup_multiverse_writer(struct multiverse_server_info *msi);
+static void queue_to_multiverse(struct multiverse_server_info *msi, struct packed_buffer *pb)
+{
+	assert(pb);
+	packed_buffer_queue_add(&msi->mverse_queue, pb, &msi->queue_mutex);
+	wakeup_multiverse_writer(msi);
+}
+
+static void update_multiverse(struct snis_entity *o)
+{
+	struct packed_buffer *pb;
+
+	if (!multiverse_server)
+		return;
+
+	pb = packed_buffer_allocate(20);
+	packed_buffer_append(pb, "b", SNISMV_OPCODE_UPDATE_BRIDGE);
+
+	pthread_mutex_lock(&multiverse_server->queue_mutex);
+	queue_to_multiverse(multiverse_server, pb);
+	pthread_mutex_unlock(&multiverse_server->queue_mutex);
+}
+
 static void move_objects(double absolute_time, int discontinuity)
 {
 	int i;
@@ -13367,6 +13390,7 @@ static void move_objects(double absolute_time, int discontinuity)
 	netstats.nships = 0;
 	universe_timestamp++;
 	universe_timestamp_absolute = absolute_time;
+	static uint32_t multiverse_update_time = 0;
 
 	if (discontinuity) {
 		for (i = 0; i < nclients; i++)
@@ -13383,16 +13407,24 @@ static void move_objects(double absolute_time, int discontinuity)
 			}
 			netstats.nobjects++;
 		} else {
-			if (go[i].type == OBJTYPE_SHIP1 &&
-				universe_timestamp >= go[i].respawn_time) {
-				respawn_player(&go[i]);
-				schedule_callback(event_callback, &callback_schedule,
-					"player-respawn-event", (double) go[i].id);
-				send_ship_damage_packet(&go[i]);
-			} else
-				go[i].timestamp = universe_timestamp; /* respawn is counting down */
+			if (go[i].type == OBJTYPE_SHIP1)  {
+				if (universe_timestamp >= go[i].respawn_time) {
+					respawn_player(&go[i]);
+					schedule_callback(event_callback, &callback_schedule,
+						"player-respawn-event", (double) go[i].id);
+					send_ship_damage_packet(&go[i]);
+				} else {
+					go[i].timestamp = universe_timestamp; /* respawn is counting down */
+				}
+				if (universe_timestamp >= multiverse_update_time)
+					update_multiverse(&go[i]);
+			}
 		}
 	}
+	/* Update multiverse every 10 seconds */
+	if (universe_timestamp >= multiverse_update_time)
+		multiverse_update_time = universe_timestamp + 100;
+
 	for (i = 0; i < nfactions(); i++)
 		if (i == 0 || faction_population[lowest_faction] > faction_population[i])
 			lowest_faction = i;
@@ -16231,13 +16263,6 @@ static void wakeup_multiverse_writer(struct multiverse_server_info *msi)
 static void wakeup_multiverse_reader(struct multiverse_server_info *msi)
 {
 	/* TODO: fill this in */
-}
-
-static void queue_to_multiverse(struct multiverse_server_info *msi, struct packed_buffer *pb)
-{
-	assert(pb);
-	packed_buffer_queue_add(&msi->mverse_queue, pb, &msi->queue_mutex);
-	wakeup_multiverse_writer(msi);
 }
 
 static void write_queued_packets_to_mvserver(struct multiverse_server_info *msi)

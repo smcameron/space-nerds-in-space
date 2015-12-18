@@ -191,8 +191,49 @@ static int verify_client_protocol(int connection)
 	return 0;
 }
 
+static int lookup_bridge(void)
+{
+	return 0;
+}
+
+static int update_bridge(void)
+{
+	return 0;
+}
+
 static void process_instructions_from_snis_server(struct starsystem_info *ss)
 {
+	uint8_t opcode;
+	int rc;
+
+	rc = snis_readsocket(ss->socket, &opcode, 1);
+	if (rc < 0)
+		goto bad_client;
+	switch (opcode) {
+	case SNISMV_OPCODE_NOOP:
+		break;
+	case SNISMV_OPCODE_LOOKUP_BRIDGE:
+		rc = lookup_bridge();
+		if (rc)
+			goto bad_client;
+		break;
+	case SNISMV_OPCODE_UPDATE_BRIDGE:
+		rc = update_bridge();
+		if (rc)
+			goto bad_client;
+		break;
+	default:
+		fprintf(stderr, "snis_multiverse: unknown opcode %hhu from socket %d\n",
+			opcode,  ss->socket);
+		goto bad_client;
+	}
+	return;
+
+bad_client:
+	fprintf(stderr, "snis_multiverse: bad client, disconnecting socket %d\n", ss->socket);
+	shutdown(ss->socket, SHUT_RDWR);
+	close(ss->socket);
+	ss->socket = -1;
 }
 
 static void *starsystem_read_thread(void /* struct starsystem_info */ *starsystem)
