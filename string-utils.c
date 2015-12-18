@@ -1,5 +1,12 @@
+#include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
 
 void clean_spaces(char *line)
 {
@@ -95,5 +102,52 @@ char *skip_leading_whitespace(char *s)
 int has_prefix(char *prefix, char *str)
 {
 	return strncmp(prefix, str, strlen(prefix)) == 0;
+}
+
+char *slurp_file(const char *path, int *bytes)
+{
+	int rc, fd;
+	struct stat statbuf;
+	char *buffer;
+	int bytesleft, bytesread, count;
+
+	rc = stat(path, &statbuf);
+	if (rc) {
+		fprintf(stderr, "stat(%s): %s\n", path, strerror(errno));
+		return NULL;
+	}
+
+	fd = open(path, O_RDONLY);
+	if (fd < 0) {
+		fprintf(stderr, "open(%s): %s\n", path, strerror(errno));
+		return NULL;
+	}
+	buffer = malloc(statbuf.st_size + 1);
+
+	count = 0;
+	bytesread = 0;
+	bytesleft = (int) statbuf.st_size;
+	do {
+		bytesread = read(fd, buffer + count, bytesleft);
+		if (bytesread < 0) {
+			if (errno == EINTR)
+				continue;
+			else {
+				fprintf(stderr, "read: %d bytes from %s failed: %s\n",
+						bytesleft, path, strerror(errno));
+				close(fd);
+				free(buffer);
+				return NULL;
+			}
+		} else {
+			bytesleft -= bytesread;
+			count += bytesread;
+		}
+	} while (bytesleft > 0);
+	close(fd);
+	buffer[statbuf.st_size] = '\0';
+	if (bytes)
+		*bytes = (int) statbuf.st_size;
+	return buffer;
 }
 
