@@ -611,6 +611,52 @@ static int update_bridge(struct starsystem_info *ss)
 	return rc;
 }
 
+static int create_new_ship(unsigned char pwdhash[20])
+{
+	if (nbridges >= MAX_BRIDGES)
+		return -1;
+	memset(&ship[nbridges], 0, sizeof(ship[nbridges]));
+	memcpy(ship[nbridges].pwdhash, pwdhash, 20);
+	nbridges++;
+	return 0;
+}
+
+static int verify_existence(struct starsystem_info *ss, int should_already_exist)
+{
+	unsigned char pwdhash[20];
+	unsigned char buffer[200];
+	struct packed_buffer *pb;
+	int i, rc;
+	unsigned char pass;
+
+	rc = read_and_unpack_fixed_size_buffer(ss, buffer, 20, "r", pwdhash, (uint16_t) 20);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&data_mutex);
+	i = lookup_ship_by_hash(pwdhash);
+	if (i < 0) {
+		if (should_already_exist) { /* It doesn't exist, but it should */
+			pass = SNISMV_VERIFICATION_RESPONSE_FAIL;
+		} else { /* doesn't exist, but we asked to create it, so that is expected */
+			pass = SNISMV_VERIFICATION_RESPONSE_PASS;
+			rc = create_new_ship(pwdhash);
+			if (rc) /* We failed to create it. */
+				pass = SNISMV_VERIFICATION_RESPONSE_TOO_MANY_BRIDGES;
+		}
+	} else {
+		/* It exists, pass if it should exist, fail otherwise */
+		if (should_already_exist)
+			pass = SNISMV_VERIFICATION_RESPONSE_PASS;
+		else
+			pass = SNISMV_VERIFICATION_RESPONSE_FAIL;
+	}
+	pthread_mutex_unlock(&data_mutex);
+	pb = packed_buffer_allocate(22);
+	packed_buffer_append(pb, "bbr", SNISMV_OPCODE_VERIFICATION_RESPONSE, pass, pwdhash, 20);
+	packed_buffer_queue_add(&ss->write_queue, pb, &ss->write_queue_mutex);
+	return 0;
+}
+
 static void process_instructions_from_snis_server(struct starsystem_info *ss)
 {
 	uint8_t opcode;
@@ -629,6 +675,16 @@ static void process_instructions_from_snis_server(struct starsystem_info *ss)
 		break;
 	case SNISMV_OPCODE_UPDATE_BRIDGE:
 		rc = update_bridge(ss);
+		if (rc)
+			goto bad_client;
+		break;
+	case SNISMV_OPCODE_VERIFY_CREATE:
+		rc = verify_existence(ss, 0);
+		if (rc)
+			goto bad_client;
+		break;
+	case SNISMV_OPCODE_VERIFY_EXISTS:
+		rc = verify_existence(ss, 1);
 		if (rc)
 			goto bad_client;
 		break;

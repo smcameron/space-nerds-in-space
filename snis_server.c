@@ -300,6 +300,13 @@ struct bridge_data {
 	int current_displaymode;
 	struct ssgl_game_server warp_gate_ticket;
 	unsigned char pwdhash[20];
+	int verified; /* whether this bridge has verified with multiverse server */
+#define BRIDGE_UNVERIFIED 0
+#define BRIDGE_VERIFIED 1
+#define BRIDGE_FAILED_VERIFICATION 2
+#define BRIDGE_REFUSED 3
+	int requested_verification; /* Whether we've requested verification from multiverse server yet */
+	int requested_creation; /* whether user has requested creating new ship */
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -664,6 +671,69 @@ static void log_client_info(int level, int connection, char *info)
 			client_ip, info);
 }
 
+static void delete_from_clients_and_server(struct snis_entity *o);
+static void delete_player_ship(int index)
+{
+	delete_from_clients_and_server(&go[index]);
+}
+
+static void delete_bridge(int b)
+{
+	/* Assumes universe mutex is held.
+	 * Assumes client lock not held.
+	 */
+
+	int i;
+	int clients_still_active = 0;
+
+	if (nbridges <= 0)
+		return;
+	client_lock();
+	for (i = 0; i < nclients; i++) {
+		if (!client[i].refcount)
+			continue;
+		if (client[i].bridge == b)
+			clients_still_active = 1;
+	}
+	client_unlock();
+	if (clients_still_active) {
+		fprintf(stderr, "snis_server: attempted to delete bridge clients still uses.\n");
+		return;
+	}
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].type == OBJTYPE_SHIP1 && go[i].id == bridgelist[b].shipid) {
+			delete_player_ship(i);
+		}
+	}
+	/* delete the bridge */
+	for (i = b + 1; i < nbridges; i++)
+		bridgelist[i - 1] = bridgelist[i];
+	nbridges--;
+}
+
+static int lookup_bridge_by_pwdhash(unsigned char *pwdhash)
+{
+	/* assumes universe_mutex held */
+	int i;
+
+	for (i = 0; i < nbridges; i++)
+		if (memcmp(bridgelist[i].pwdhash, pwdhash, 20) == 0)
+			return i;
+	return -1;
+}
+
+static void __attribute__((unused)) delete_bridge_by_pwdhash(unsigned char *pwdhash)
+{
+	/* Assumes universe mutex is held.
+	 * Assumes client lock not held.
+	 */
+	int b;
+	b = lookup_bridge_by_pwdhash(pwdhash);
+	if (b < 0)
+		return;
+	delete_bridge(b);
+}
+
 static void generic_move(__attribute__((unused)) struct snis_entity *o)
 {
 	return;
@@ -693,7 +763,6 @@ static void asteroid_move(struct snis_entity *o)
 				&o->tsd.asteroid.rotational_velocity);
 }
 
-static void delete_from_clients_and_server(struct snis_entity *o);
 static void cargo_container_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
@@ -12924,13 +12993,7 @@ static int add_new_player(struct game_client *c)
 	c->bridge = lookup_bridge(app.shipname, app.password);
 	fprintf(stderr, "snis_server: c->bridge = %d\n", c->bridge);
 	c->role = app.role;
-	if (c->bridge == -1 && !app.new_ship) {	/* didn't find bridge, but expected ship to exist */
-		fprintf(stderr, "snis_server: did not find bridge when expected\n");
-		pb_queue_to_client(c, packed_buffer_new("bb", OPCODE_ADD_PLAYER_ERROR,
-				ADD_PLAYER_ERROR_SHIP_DOES_NOT_EXIST));
-		write_queued_updates_to_client(c, 4, &no_write_count);
-		return -1;
-	} else if (c->bridge == -1 && app.new_ship) { /* didn't find our bridge, make a new one. */
+	if (c->bridge == -1) { /* didn't find our bridge, make a new one. */
 		double x, z;
 
 		for (int i = 0; i < 100; i++) {
@@ -12951,6 +13014,9 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].npcbot.object_id = (uint32_t) -1;
 		bridgelist[nbridges].damcon.bridge = nbridges;
 		bridgelist[nbridges].current_displaymode = DISPLAYMODE_MAINSCREEN;
+		bridgelist[nbridges].verified = BRIDGE_UNVERIFIED;
+		bridgelist[nbridges].requested_verification = 0;
+		bridgelist[nbridges].requested_creation = !!app.new_ship;
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
 	
@@ -13413,6 +13479,28 @@ static void update_multiverse(struct snis_entity *o)
 		return;
 	}
 
+	/* Verify that this ship does not already exist if creation was requested, or
+	 * that it does already exist if creation was not requested.  Only do this once.
+	 */
+	if (bridgelist[bridge].verified == BRIDGE_UNVERIFIED &&
+		!bridgelist[bridge].requested_verification && multiverse_server->sock != -1) {
+		unsigned char opcode;
+		pb = packed_buffer_allocate(21);
+		if (bridgelist[bridge].requested_creation)
+			opcode = SNISMV_OPCODE_VERIFY_CREATE;
+		else
+			opcode = SNISMV_OPCODE_VERIFY_EXISTS;
+		packed_buffer_append(pb, "br", opcode, bridgelist[bridge].pwdhash, (uint16_t) 20);
+		bridgelist[bridge].requested_verification = 1;
+		queue_to_multiverse(multiverse_server, pb);
+		return;
+	}
+
+	/* Skip updating multiverse server if the bridge isn't verified yet. */
+	if (bridgelist[bridge].verified != BRIDGE_VERIFIED)
+		return;
+
+	/* Update the ship */
 	pb = packed_buffer_allocate(50 + sizeof(struct update_ship_packet));
 	packed_buffer_append(pb, "br", SNISMV_OPCODE_UPDATE_BRIDGE,
 				bridgelist[bridge].pwdhash, (uint16_t) 20);
@@ -13468,6 +13556,7 @@ static void move_objects(double absolute_time, int discontinuity)
 	universe_timestamp++;
 	universe_timestamp_absolute = absolute_time;
 	static uint32_t multiverse_update_time = 0;
+	int b;
 
 	if (discontinuity) {
 		for (i = 0; i < nclients; i++)
@@ -13483,7 +13572,9 @@ static void move_objects(double absolute_time, int discontinuity)
 				faction_population[go[i].sdata.faction]++;
 			}
 			if (go[i].type == OBJTYPE_SHIP1)  {
-				if (universe_timestamp >= multiverse_update_time)
+				b = lookup_bridge_by_shipid(go[i].id);
+				if (universe_timestamp >= multiverse_update_time ||
+					(!bridgelist[b].verified && !bridgelist[b].requested_verification))
 					update_multiverse(&go[i]);
 			}
 			netstats.nobjects++;
@@ -16394,6 +16485,42 @@ static void *multiverse_writer(void *arg)
 	return NULL;
 }
 
+static int process_multiverse_verification(struct multiverse_server_info *msi)
+{
+	int rc, b;
+	unsigned char buffer[22];
+	unsigned char *pass;
+	unsigned char *pwdhash;
+
+	rc = snis_readsocket(msi->sock, buffer, 21);
+	if (rc)
+		return rc;
+	pass = &buffer[0];
+	pwdhash = &buffer[1];
+	pthread_mutex_lock(&universe_mutex);
+	b = lookup_bridge_by_pwdhash(pwdhash);
+	if (b >= 0) {
+		switch (*pass) {
+		case SNISMV_VERIFICATION_RESPONSE_PASS:
+			bridgelist[b].verified = BRIDGE_VERIFIED;
+			break;
+		case SNISMV_VERIFICATION_RESPONSE_TOO_MANY_BRIDGES:
+			bridgelist[b].verified = BRIDGE_REFUSED;
+			break;
+		case SNISMV_VERIFICATION_RESPONSE_FAIL: /* deliberate fall through */
+		default:
+			bridgelist[b].verified = BRIDGE_FAILED_VERIFICATION;
+			break;
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	if (b < 0) {
+		fprintf(stderr, "snis_server: received verification for unknown pwdhash.  Weird.\n");
+		return 0;
+	}
+	return 0;
+}
+
 static void *multiverse_reader(void *arg)
 {
 	struct multiverse_server_info *msi = arg;
@@ -16424,7 +16551,14 @@ static void *multiverse_reader(void *arg)
 			fprintf(stderr, "snis_server: unimplemented multiverse opcode %hhu\n",
 				opcode);
 			break;
+		case SNISMV_OPCODE_VERIFICATION_RESPONSE:
+			rc = process_multiverse_verification(msi);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
+			fprintf(stderr, "snis_server: unimplemented multiverse opcode %hhu\n",
+				opcode);
 			goto protocol_error;
 		}
 	}
