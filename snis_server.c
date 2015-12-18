@@ -128,6 +128,8 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_request_dock(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_warp_gate_tickets(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_buy_cargo(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sell_cargo(struct npc_menu_item *item,
@@ -199,6 +201,7 @@ static struct npc_menu_item starbase_main_menu[] = {
 	{ "STARBASE MAIN MENU", 0, 0, 0 },  /* by convention, first element is menu title */
 	{ "LOCAL TRAVEL ADVISORY", 0, 0, npc_menu_item_travel_advisory },
 	{ "REQUEST PERMISSION TO DOCK", 0, 0, npc_menu_item_request_dock },
+	{ "BUY WARP-GATE TICKETS", 0, 0, npc_menu_item_warp_gate_tickets },
 	{ "REQUEST REMOTE FUEL DELIVERY", 0, 0, npc_menu_item_not_implemented },
 	{ "BUY FUEL", 0, 0, npc_menu_item_not_implemented },
 	{ "REPAIRS AND MAINTENANCE", 0, repairs_and_maintenance_menu, 0 },
@@ -271,6 +274,7 @@ struct bridge_data {
 	int last_docking_permission_denied_time;
 	uint32_t science_selection;
 	int current_displaymode;
+	struct ssgl_game_server warp_gate_ticket;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -8893,6 +8897,71 @@ void npc_menu_item_request_dock(struct npc_menu_item *item,
 		return;
 	}
 	starbase_grant_docker_permission(sb, o->id, b, npcname, ch);
+}
+
+static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
+		char *name, char *msg)
+{
+	struct ssgl_game_server *gameserver = NULL;
+	int selection, rc, i, nservers;
+	char buf[100];
+	int ch = bridgelist[bridge].npcbot.channel;
+
+	if (server_tracker_get_server_list(server_tracker, &gameserver, &nservers) != 0
+		|| nservers <= 0) {
+		send_comms_packet(name, ch, "NO WARP-GATE TICKETS AVAILABLE\n");
+		return;
+	}
+	send_comms_packet(name, ch, "WARP-GATE TICKETS:\n");
+	send_comms_packet(name, ch, "------------------\n");
+	for (i = 0; i < nservers; i++) {
+		sprintf(buf, "%3d: %s\n", i + 1, gameserver[i].location);
+		send_comms_packet(name, ch, buf);
+	}
+	send_comms_packet(name, ch, "------------------\n");
+	send_comms_packet(name, ch, "  0: PREVIOUS MENU\n");
+	rc = sscanf(msg, "%d", &selection);
+	if (rc != 1)
+		selection = -1;
+	if (selection == 0) {
+		bridgelist[bridge].npcbot.special_bot = NULL; /* deactivate warpgate ticket bot */
+		free(gameserver);
+		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+		return;
+	}
+	if (selection < 1 || selection > nservers) {
+		free(gameserver);
+		return;
+	}
+	if (bridgelist[bridge].warp_gate_ticket.ipaddr == 0) { /* no current ticket held */
+		sprintf(buf, "WARP-GATE TICKET TO %s BOOKED\n", gameserver[selection - 1].location);
+		send_comms_packet(name, ch, buf);
+	} else {
+		sprintf(buf, "WARP-GATE TICKET TO %s EXCHANGED\n",
+			bridgelist[bridge].warp_gate_ticket.location);
+		send_comms_packet(name, ch, buf);
+		sprintf(buf, "FOR WARP-GATE TICKET TO %s\n", gameserver[selection - 1].location);
+		send_comms_packet(name, ch, buf);
+	}
+	bridgelist[bridge].warp_gate_ticket = gameserver[selection - 1];
+	free(gameserver);
+}
+
+void npc_menu_item_warp_gate_tickets(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate)
+{
+	struct snis_entity *o;
+	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
+	int i, bridge = b - bridgelist;
+
+	printf("npc_menu_item_warp_gate_tickets called for %s\n", b->shipname);
+
+	i = lookup_by_id(b->shipid);
+	if (i < 0)
+		return;
+	o = &go[i];
+	botstate->special_bot = warp_gate_ticket_buying_npc_bot;
+	botstate->special_bot(o, bridge, npcname, "");
 }
 
 static void send_npc_menu(char *npcname,  int bridge)

@@ -43,9 +43,9 @@ ssgl/ssgl_server
 sleep 0.25
 
 export SNISRAND=12345
-./snis_server localhost SPACENERDS `hostname` localhost --enable-enscript &
+./snis_server localhost SPACENERDS ALTAIR x --enable-enscript &
 export SNISRAND=54321
-./snis_server localhost XSPACENERDS `hostname` localhost --enable-enscript &
+./snis_server localhost XSPACENERDS SIRIUS x --enable-enscript &
 
 sleep 2.50
 
