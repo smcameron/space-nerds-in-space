@@ -4847,6 +4847,26 @@ static int process_client_id_packet(void)
 	return 0;
 }
 
+static void stop_gameserver_writer_thread(void)
+{
+	pthread_mutex_lock(&to_server_queue_event_mutex);
+	writer_thread_should_die = 1;
+	pthread_mutex_unlock(&to_server_queue_event_mutex);
+	wakeup_gameserver_writer();
+	do {
+		int alive;
+		printf("snis_client: Waiting for writer thread to leave\n");
+		pthread_mutex_lock(&to_server_queue_event_mutex);
+		alive = writer_thread_alive;
+		if (!alive)
+			break;
+		pthread_mutex_unlock(&to_server_queue_event_mutex);
+		sleep(1);
+	} while (1);
+	writer_thread_should_die = 0;
+	/* FIXME: when this returns, to_server_queue_event_mutex is held */
+}
+
 static void *gameserver_reader(__attribute__((unused)) void *arg)
 {
 	static uint32_t successful_opcodes;
@@ -5042,21 +5062,8 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 				goto protocol_error;
 			printf("Switch server opcode received\n");
 			quickstartmode = 0;
-			pthread_mutex_lock(&to_server_queue_event_mutex);
-			writer_thread_should_die = 1;
-			pthread_mutex_unlock(&to_server_queue_event_mutex);
-			wakeup_gameserver_writer();
-			do {
-				int alive;
-				printf("snis_client: Waiting for writer thread to leave\n");
-				pthread_mutex_lock(&to_server_queue_event_mutex);
-				alive = writer_thread_alive;
-				if (!alive)
-					break;
-				pthread_mutex_unlock(&to_server_queue_event_mutex);
-				sleep(1);
-			} while (1);
-			writer_thread_should_die = 0;
+			stop_gameserver_writer_thread();
+			/* FIXME: when this ^^^ returns, to_server_queue_event_mutex is held */
 			delete_all_objects();
 			printf("snis_client: writer thread left\n");
 			printf("**** lobby_selected_server = %d\n", lobby_selected_server);
