@@ -353,7 +353,7 @@ SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
 		snis_server_tracker.o
-MULTIVERSEOBJS=snis_multiverse.o
+MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
@@ -570,7 +570,7 @@ shield_strength.o:	shield_strength.c Makefile
 snis_server.o:	snis_server.c Makefile build_info.h
 	$(Q)$(COMPILE)
 
-snis_multiverse.o:	snis_multiverse.c Makefile build_info.h
+snis_multiverse.o:	snis_multiverse.c snis_multiverse.h Makefile build_info.h
 	$(Q)$(COMPILE)
 
 snis_server_tracker.o:	snis_server_tracker.c snis_server_tracker.h ssgl/ssgl.h Makefile

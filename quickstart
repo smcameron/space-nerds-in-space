@@ -42,10 +42,18 @@ ssgl/ssgl_server
 
 sleep 0.25
 
+# start the multiverse server
+# ./snis_multiverse localhost &
+
+sleep 0.25
+
 export SNISRAND=12345
 ./snis_server localhost SPACENERDS ALTAIR x --enable-enscript &
 export SNISRAND=54321
 ./snis_server localhost XSPACENERDS SIRIUS x --enable-enscript &
+export SNISRAND=9557
+./snis_server localhost YSPACENERDS POLARIS x --enable-enscript &
+
 
 sleep 2.50
 
