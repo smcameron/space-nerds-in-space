@@ -162,11 +162,14 @@ static void *server_tracker_thread(void *tracker_info)
 			copy_game_server_list(&st->mverse_server, &st->mverse_server_count,
 						mverse_server, mverse_server_count);
 		}
-		if (game_server)
+		if (game_server) {
 			free(game_server);
-		if (mverse_server)
+			game_server = NULL;
+		}
+		if (mverse_server) {
 			free(mverse_server);
-
+			mverse_server = NULL;
+		}
 		if (st->time_to_quit)
 			time_to_quit = 1;
 

@@ -173,11 +173,17 @@ static void log_client_info(int level, int connection, char *info)
 static int verify_client_protocol(int connection)
 {
 	int rc;
-	char protocol_version[10];
-	rc = snis_readsocket(connection, protocol_version, strlen(SNIS_MULTIVERSE_VERSION));
+	char protocol_version[sizeof(SNIS_MULTIVERSE_VERSION) + 1];
+	const int len = sizeof(SNIS_MULTIVERSE_VERSION) - 1;
+
+	rc = snis_writesocket(connection, SNIS_MULTIVERSE_VERSION, len);
+	if (rc < 0)
+		return -1;
+	memset(protocol_version, 0, sizeof(protocol_version));
+	rc = snis_readsocket(connection, protocol_version, len);
 	if (rc < 0)
 		return rc;
-	protocol_version[7] = '\0';
+	protocol_version[len] = '\0';
 	snis_log(SNIS_INFO, "snis_multiverse: protocol read...'%s'\n", protocol_version);
 	if (strcmp(protocol_version, SNIS_MULTIVERSE_VERSION) != 0)
 		return -1;
@@ -206,7 +212,7 @@ static void *starsystem_read_thread(void /* struct starsystem_info */ *starsyste
 static void write_queued_updates_to_snis_server(struct starsystem_info *ss)
 {
 	int rc;
-	uint8_t noop = 0xff;
+	uint8_t noop = SNISMV_OPCODE_NOOP;
 
 	struct packed_buffer *buffer;
 
@@ -268,7 +274,7 @@ static void service_connection(int connection)
 
 	i = setsockopt(connection, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 	if (i < 0)
-		snis_log(SNIS_ERROR, "setsockopt failed: %s.\n", strerror(errno));
+		snis_log(SNIS_ERROR, "snis_multiverse: setsockopt failed: %s.\n", strerror(errno));
 
 	if (verify_client_protocol(connection)) {
 		log_client_info(SNIS_ERROR, connection, "snis_multiverse: disconnected, protocol violation\n");
@@ -332,9 +338,7 @@ static void service_connection(int connection)
 	} while (thread_count < 2);
 
 	/* release this thread's reference */
-	pthread_mutex_lock(&service_mutex);
-	put_starsystem(&starsystem[i]);
-	pthread_mutex_unlock(&service_mutex);
+	lock_put_starsystem(&starsystem[i]);
 
 	snis_log(SNIS_INFO, "snis_multiverse: bottom of 'service connection'\n");
 }

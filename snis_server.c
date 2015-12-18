@@ -88,6 +88,7 @@
 #include "elastic_collision.h"
 #include "snis_nl.h"
 #include "snis_server_tracker.h"
+#include "snis_multiverse.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -105,6 +106,27 @@ static struct starbase_file_metadata *starbase_metadata;
 static struct docking_port_attachment_point **docking_port_info;
 static struct passenger_data passenger[MAX_PASSENGERS];
 static int npassengers;
+
+static struct multiverse_server_info {
+	int sock;
+	uint32_t ipaddr;
+	uint16_t port;
+	pthread_t read_thread;
+	pthread_t write_thread;
+	pthread_attr_t read_attr, write_attr;
+	pthread_cond_t write_cond;
+	struct packed_buffer_queue mverse_queue;
+	pthread_mutex_t queue_mutex;
+	pthread_mutex_t event_mutex;
+	pthread_mutex_t exit_mutex;
+	struct ssgl_game_server *mverse;
+	int mverse_count;
+	int have_packets_to_xmit;
+	int writer_time_to_exit;
+	int reader_time_to_exit;
+#define LOCATIONSIZE (sizeof((struct ssgl_game_server *) 0)->location)
+	char location[LOCATIONSIZE];
+} *multiverse_server = NULL;
 
 #define GATHER_OPCODE_STATS 0
 
@@ -13409,7 +13431,8 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 void usage(void)
 {
 	fprintf(stderr, "snis_server: usage:\n");
-	fprintf(stderr, "snis_server -l lobbyhost -L location [ -g gameinstance ] [ -n servernick ]\n");
+	fprintf(stderr, "snis_server -l lobbyhost -L location [ -g gameinstance ] \\\n"
+			"          [ -m multiverse-location ] [ -n servernick ]\n");
 	fprintf(stderr, "For example: snis_server -l lobbyserver -g 'steves game' -n zuul -L Houston\n");
 	exit(0);
 }
@@ -16108,6 +16131,7 @@ static struct option long_options[] = {
 	{ "gameinstance", required_argument, NULL, 'g' },
 	{ "servernick", required_argument, NULL, 'n' },
 	{ "location", required_argument, NULL, 'L' },
+	{ "multiverse", required_argument, NULL, 'm' },
 	{ "version", no_argument, NULL, 'v' },
 };
 
@@ -16130,7 +16154,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "eg:hL:l:n:v", long_options, &option_index);
+		c = getopt_long(argc, argv, "eg:hL:l:m:n:v", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -16151,6 +16175,16 @@ static void process_options(int argc, char *argv[])
 		case 'L':
 			lobby_location = optarg;
 			break;
+		case 'm':
+			if (!multiverse_server) {
+				multiverse_server = malloc(sizeof(*multiverse_server));
+				memset(multiverse_server, 0, sizeof(*multiverse_server));
+			}
+			strncpy(multiverse_server->location, optarg,
+					sizeof(multiverse_server->location) - 1);
+			multiverse_server->sock = -1;
+			pthread_mutex_init(&multiverse_server->queue_mutex, NULL);
+			break;
 		case 'n':
 			lobby_servernick = optarg;
 			break;
@@ -16166,8 +16200,321 @@ static void process_options(int argc, char *argv[])
 		usage();
 }
 
-void servers_changed_cb(void *cookie)
+static void wait_for_multiverse_bound_packets(struct multiverse_server_info *msi)
 {
+	int rc;
+
+	pthread_mutex_lock(&msi->event_mutex);
+	while (!msi->have_packets_to_xmit) {
+		rc = pthread_cond_wait(&msi->write_cond, &msi->event_mutex);
+		if (rc != 0)
+			printf("snis_server: pthread_cond_wait failed %s:%d.\n",
+				__FILE__, __LINE__);
+		if (msi->have_packets_to_xmit)
+			break;
+	}
+	pthread_mutex_unlock(&msi->event_mutex);
+}
+
+static void wakeup_multiverse_writer(struct multiverse_server_info *msi)
+{
+	int rc;
+
+	pthread_mutex_lock(&msi->event_mutex);
+	msi->have_packets_to_xmit = 1;
+	rc = pthread_cond_broadcast(&msi->write_cond);
+	if (rc)
+		printf("snis_server: huh... pthread_cond_broadcast failed.\n");
+	pthread_mutex_unlock(&msi->event_mutex);
+}
+
+static void wakeup_multiverse_reader(struct multiverse_server_info *msi)
+{
+	/* TODO: fill this in */
+}
+
+static void queue_to_multiverse(struct multiverse_server_info *msi, struct packed_buffer *pb)
+{
+	assert(pb);
+	packed_buffer_queue_add(&msi->mverse_queue, pb, &msi->queue_mutex);
+	wakeup_multiverse_writer(msi);
+}
+
+static void write_queued_packets_to_mvserver(struct multiverse_server_info *msi)
+{
+	struct packed_buffer *buffer;
+	int rc;
+
+	pthread_mutex_lock(&msi->event_mutex);
+	buffer = packed_buffer_queue_combine(&msi->mverse_queue, &msi->queue_mutex);
+	if (buffer) {
+		rc = snis_writesocket(msi->sock, buffer->buffer, buffer->buffer_size);
+		packed_buffer_free(buffer);
+		if (rc) {
+			fprintf(stderr, "snis_server; failed to write to multiverse server\n");
+			goto badserver;
+		}
+	} else {
+		fprintf(stderr, "snis_server: multiverse_writer awakened, but nothing to write.\n");
+	}
+	if (msi->have_packets_to_xmit)
+		msi->have_packets_to_xmit = 0;
+	pthread_mutex_unlock(&msi->event_mutex);
+	return;
+
+badserver:
+	fprintf(stderr, "snis_server: multiverse server disappeared\n");
+	pthread_mutex_unlock(&msi->event_mutex);
+	shutdown(msi->sock, SHUT_RDWR);
+	close(msi->sock);
+	msi->sock = -1;
+}
+
+static void *multiverse_writer(void *arg)
+{
+	struct multiverse_server_info *msi = arg;
+
+	assert(msi);
+	while (1) {
+		wait_for_multiverse_bound_packets(msi);
+		write_queued_packets_to_mvserver(msi);
+		pthread_mutex_lock(&msi->exit_mutex);
+		if (msi->writer_time_to_exit) {
+			msi->writer_time_to_exit = 0;
+			pthread_mutex_unlock(&msi->exit_mutex);
+			break;
+		}
+		pthread_mutex_unlock(&msi->exit_mutex);
+	}
+	fprintf(stderr, "snis_server: multiverse_writer thread exiting\n");
+	return NULL;
+}
+
+static void *multiverse_reader(void *arg)
+{
+	struct multiverse_server_info *msi = arg;
+	uint8_t previous_opcode, last_opcode, opcode;
+	int rc;
+
+	assert(msi);
+
+	last_opcode = 0x00;
+	opcode = 0x00;
+	while (1) {
+		previous_opcode = last_opcode;
+		last_opcode = opcode;
+		opcode = 0x00;
+		rc = snis_readsocket(msi->sock, &opcode, sizeof(opcode));
+		if (rc != 0) {
+			fprintf(stderr, "snis_server multiverse_reader(): snis_readsocket returns %d, errno  %s\n",
+				rc, strerror(errno));
+			goto protocol_error;
+		}
+		switch (opcode)	{
+		case SNISMV_OPCODE_NOOP:
+			break;
+		case SNISMV_OPCODE_LOOKUP_BRIDGE:
+		case SNISMV_OPCODE_UPDATE_BRIDGE:
+			fprintf(stderr, "snis_server: unimplemented multiverse opcode %hhu\n",
+				opcode);
+			break;
+		default:
+			goto protocol_error;
+		}
+	}
+	return NULL;
+
+protocol_error:
+	fprintf(stderr, "snis_server: protocol error in data from multiverse_server\n");
+	fprintf(stderr, "snis_server: opcodes: current = %hhu, last = %hhu, previous = %hhu\n",
+			opcode, last_opcode, previous_opcode);
+	snis_print_last_buffer(msi->sock);
+	shutdown(msi->sock, SHUT_RDWR);
+	close(msi->sock);
+	msi->sock = -1;
+	return NULL;
+}
+
+static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t ipaddr, uint16_t port)
+{
+	int rc;
+	int sock = -1;
+	struct addrinfo *mvserverinfo, *i;
+	struct addrinfo hints;
+	unsigned char *x = (unsigned char *) &ipaddr;
+	char response[100];
+
+	assert(msi);
+
+	fprintf(stderr, "snis_server: connecting to multiverse %s %hhu.%hhu.%hhu.%hhu/%hu\n",
+		multiverse_server->location, x[0], x[1], x[2], x[3], port);
+	char portstr[50];
+	char hoststr[50];
+	int flag = 1;
+
+	sprintf(portstr, "%d", port);
+	sprintf(hoststr, "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV | AI_NUMERICHOST;
+	rc = getaddrinfo(hoststr, portstr, &hints, &mvserverinfo);
+	if (rc) {
+		fprintf(stderr, "snis_server: Failed looking up %s:%s: %s\n",
+			hoststr, portstr, gai_strerror(rc));
+		goto error;
+	}
+
+	for (i = mvserverinfo; i != NULL; i = i->ai_next)
+		if (i->ai_family == AF_INET)
+			break;
+	if (i == NULL)
+		goto error;
+
+	sock = socket(AF_INET, SOCK_STREAM, i->ai_protocol);
+	if (sock < 0)
+		goto error;
+
+	rc = connect(sock, i->ai_addr, i->ai_addrlen);
+	if (rc < 0)
+		goto error;
+
+	rc = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+	if (rc)
+		fprintf(stderr, "setsockopt(TCP_NODELAY) failed.\n");
+	const int len = sizeof(SNIS_MULTIVERSE_VERSION) - 1;
+	rc = snis_writesocket(sock, SNIS_MULTIVERSE_VERSION, len);
+	if (rc < 0)
+		goto error;
+	memset(response, 0, sizeof(response));
+	rc = snis_readsocket(sock, response, len);
+	if (rc != 0)
+		sock = -1;
+	response[len] = '\0';
+	if (strcmp(response, SNIS_MULTIVERSE_VERSION) != 0) {
+		fprintf(stderr, "snis_server: expected '%s' got '%s' from snis_multiverse\n",
+			SNIS_MULTIVERSE_VERSION, response);
+		goto error;
+	}
+
+	fprintf(stderr, "snis_server: connected to snis_multiverse (%hhu.%hhu.%hhu.%hhu/%hu)\n",
+		x[0], x[1], x[2], x[3], port);
+
+	msi->sock = sock;
+	msi->ipaddr = ipaddr;
+	msi->port = port;
+	msi->writer_time_to_exit = 0;
+	msi->reader_time_to_exit = 0;
+	msi->have_packets_to_xmit = 0;
+	packed_buffer_queue_init(&msi->mverse_queue);
+	pthread_mutex_init(&msi->queue_mutex, NULL);
+	pthread_mutex_init(&msi->event_mutex, NULL);
+	pthread_mutex_init(&msi->exit_mutex, NULL);
+	pthread_cond_init(&msi->write_cond, NULL);
+	pthread_attr_init(&msi->read_attr);
+	pthread_attr_init(&msi->write_attr);
+	pthread_attr_setdetachstate(&msi->read_attr, PTHREAD_CREATE_DETACHED);
+	pthread_attr_setdetachstate(&msi->write_attr, PTHREAD_CREATE_DETACHED);
+	fprintf(stderr, "snis_server: starting multiverse reader thread\n");
+	rc = pthread_create(&msi->read_thread, &msi->read_attr, multiverse_reader, msi);
+	if (rc) {
+		fprintf(stderr, "snis_server: Failed to create multiverse reader thread: %d '%s', '%s'\n",
+			rc, strerror(rc), strerror(errno));
+	}
+	fprintf(stderr, "snis_server: started multiverse reader thread\n");
+	fprintf(stderr, "snis_server: starting multiverse writer thread\n");
+	rc = pthread_create(&msi->write_thread, &msi->write_attr, multiverse_writer, msi);
+	if (rc) {
+		fprintf(stderr, "snis_server: Failed to create multiverse writer thread: %d '%s', '%s'\n",
+			rc, strerror(rc), strerror(errno));
+	}
+	fprintf(stderr, "snis_server: started multiverse writer thread\n");
+	freeaddrinfo(mvserverinfo);
+	return;
+
+error:
+	if (sock >= 0) {
+		shutdown(sock, SHUT_RDWR);
+		close(sock);
+		sock = -1;
+	}
+	freeaddrinfo(mvserverinfo);
+	return;
+}
+
+static void disconnect_from_multiverse(struct multiverse_server_info *msi)
+{
+	unsigned char *x;
+
+	assert(multiverse_server);
+	x = (unsigned char *) &multiverse_server->ipaddr;
+	fprintf(stderr, "snis_server: disconnecting from multiverse %s %u.%u.%u.%u/%hu\n",
+		multiverse_server->location, x[0], x[1], x[2], x[3], multiverse_server->port);
+
+	/* Tell multiverse reader and writer threads to exit */
+	pthread_mutex_lock(&msi->exit_mutex);
+	msi->reader_time_to_exit = 1;
+	msi->writer_time_to_exit = 1;
+	pthread_mutex_unlock(&msi->exit_mutex);
+	wakeup_multiverse_writer(msi);
+	wakeup_multiverse_reader(msi);
+}
+
+/* This is used to check if the multiverse server has changed */
+static void servers_changed_cb(void *cookie)
+{
+	struct ssgl_game_server *gameserver = NULL;
+	int i, nservers, same_as_before = 0;
+	uint32_t ipaddr = -1;
+	uint16_t port = -1;
+	int found_multiverse_server = 0;
+
+	if (!multiverse_server)
+		return;
+
+	if (server_tracker_get_multiverse_list(server_tracker, &gameserver, &nservers) != 0) {
+		fprintf(stderr, "snis_server: Failed to get server list at %s:%d\n",
+			__FILE__, __LINE__);
+		return;
+	}
+
+	pthread_mutex_lock(&multiverse_server->queue_mutex);
+	for (i = 0; i < nservers; i++) {
+		if (strncmp(gameserver[i].location, multiverse_server->location, LOCATIONSIZE) != 0)
+			continue;
+		if (strncmp(gameserver[i].game_type, "SNIS-MVERSE",
+				sizeof(gameserver[i].game_type)) != 0)
+			continue;
+		if (gameserver[i].ipaddr == multiverse_server->ipaddr &&
+		    ntohs(gameserver[i].port) == multiverse_server->port) {
+			same_as_before = 1;
+			break;
+		}
+		ipaddr = gameserver[i].ipaddr;
+		port = ntohs(gameserver[i].port);
+		found_multiverse_server = 1;
+		break;
+	}
+
+	if (!found_multiverse_server || nservers <= 0) {
+		pthread_mutex_unlock(&multiverse_server->queue_mutex);
+		free(gameserver);
+		return;
+	}
+
+	if (same_as_before) {
+		pthread_mutex_unlock(&multiverse_server->queue_mutex);
+		free(gameserver);
+		return;
+	}
+
+	if (multiverse_server->sock != -1)
+		disconnect_from_multiverse(multiverse_server);
+	connect_to_multiverse(multiverse_server, ipaddr, port);
+	pthread_mutex_unlock(&multiverse_server->queue_mutex);
+	if (gameserver)
+		free(gameserver);
 }
 
 int main(int argc, char *argv[])
@@ -16235,6 +16582,14 @@ int main(int argc, char *argv[])
 	} else {
 		printf("snis_server: Skipping lobby registration\n");
 		server_tracker = NULL;
+		if (multiverse_server != NULL) {
+			fprintf(stderr,
+				"SNISSERVERNOLOBBY and --multiverse option are mutually exclusive\n");
+			fprintf(stderr,
+				"ignoring --multiverse option\n");
+			free(multiverse_server);
+			multiverse_server = NULL;
+		}
 	}
 
 	const double maxTimeBehind = 0.5;

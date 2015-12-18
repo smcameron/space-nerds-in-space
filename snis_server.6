@@ -6,6 +6,7 @@ snis_server \- Multi player cooperative star ship bridge simulator (server)
 -l lobbyhost
 -L location
 [ -g gameinstance ]
+[ -m multiverse location ]
 [ -n servernick ]
 [ --enable-enscript ]
 .SH DESCRIPTION
@@ -40,6 +41,12 @@ Set the hostname at which the lobbyhost is running.
 Set the "location" to be used with the lobby server.  This is just
 and arbitrary string for human consumption to differentiate one gameserver
 from another.  It is required.
+.TP
+\fB\-m, --multiverse location\fR
+Set the 'location' of the snis_multiverse server to connect to.  snis_server
+will monitor the lobby looking for entries with game type of 'SNIS-MVERSE'
+(i.e. for instances of snis_multiverse) and with the location field set to
+the value specified by the --multiverse option.
 .TP
 \fB\-v, --version\fR
 Print the program's version number and exit.

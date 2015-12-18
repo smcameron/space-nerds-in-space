@@ -42,18 +42,25 @@ ssgl/ssgl_server
 
 sleep 0.25
 
-# start the multiverse server
-# ./snis_multiverse localhost &
+start_multiverse()
+{
+	./snis_multiverse localhost nickname narnia
+	echo "snis_multiverse died, status was $?" 1>&2
+}
+
+start_multiverse &
 
 sleep 0.25
 
 export SNISRAND=12345
-./snis_server -l localhost -g SPACENERDS -L ALTAIR x --enable-enscript &
-export SNISRAND=54321
-./snis_server -l localhost -g XSPACENERDS -L SIRIUS x --enable-enscript &
-export SNISRAND=9557
-./snis_server -l localhost -g YSPACENERDS -L POLARIS x --enable-enscript &
-
+./snis_server -l localhost -g SPACENERDS -L ALTAIR x --enable-enscript -m narnia &
+if [ "$MULTIVERSE_TEST" != "" ]
+then
+	export SNISRAND=54321
+	./snis_server -l localhost -g XSPACENERDS -L SIRIUS x --enable-enscript -m narnia &
+	export SNISRAND=9557
+	./snis_server -l localhost -g YSPACENERDS -L POLARIS x --enable-enscript -m narnia &
+fi
 
 sleep 2.50
 
