@@ -4119,6 +4119,24 @@ static void delete_object(uint32_t id)
 	snis_object_pool_free_object(pool, i);
 }
 
+static void delete_all_objects(void)
+{
+	int i;
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].id == -1)
+			continue;
+		go[i].alive = 0;
+		remove_entity(ecx, go[i].entity);
+		go[i].entity = NULL;
+		free_spacemonster_data(&go[i]);
+		free_laserbeam_data(&go[i]);
+		go[i].id = -1;
+		snis_object_pool_free_object(pool, i);
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 static void demon_deselect(uint32_t id);
 static int process_delete_object_packet(void)
 {
@@ -4952,8 +4970,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 				sleep(1);
 			} while (1);
 			writer_thread_should_die = 0;
+			delete_all_objects();
 			printf("snis_client: writer thread left\n");
-			switched_server = lobby_selected_server; /* TODO : something better */
+			printf("**** lobby_selected_server = %d\n", lobby_selected_server);
+			switched_server = (lobby_selected_server + 1) % 2; /* TODO : something better */
+			printf("**** switched_server = %d\n", switched_server);
 			lobby_selected_server = -1;
 			close(gameserver_sock);
 			gameserver_sock = -1;

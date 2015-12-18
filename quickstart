@@ -42,9 +42,12 @@ ssgl/ssgl_server
 
 sleep 0.25
 
+export SNISRAND=12345
 ./snis_server localhost SPACENERDS `hostname` localhost --enable-enscript &
+export SNISRAND=54321
+./snis_server localhost XSPACENERDS `hostname` localhost --enable-enscript &
 
-sleep 0.50
+sleep 2.50
 
 # Some common aspect ratios.  Note: the game was designed on a machine
 # with a 16:9 aspect ratio.  Other aspect ratios may have some UI issues.
