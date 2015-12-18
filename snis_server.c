@@ -16329,7 +16329,9 @@ static void *multiverse_reader(void *arg)
 		previous_opcode = last_opcode;
 		last_opcode = opcode;
 		opcode = 0x00;
+		fprintf(stderr, "snis_server: reading from multiverse sock = %d...\n", msi->sock);
 		rc = snis_readsocket(msi->sock, &opcode, sizeof(opcode));
+		fprintf(stderr, "snis_server: read from multiverse, rc = %d, sock = %d\n", rc, msi->sock);
 		if (rc != 0) {
 			fprintf(stderr, "snis_server multiverse_reader(): snis_readsocket returns %d, errno  %s\n",
 				rc, strerror(errno));
@@ -16409,22 +16411,36 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 	if (rc)
 		fprintf(stderr, "setsockopt(TCP_NODELAY) failed.\n");
 	const int len = sizeof(SNIS_MULTIVERSE_VERSION) - 1;
+	fprintf(stderr, "snis_server: writing SNIS_MULTIVERSE_VERSION (len = %d)\n", len);
 	rc = snis_writesocket(sock, SNIS_MULTIVERSE_VERSION, len);
-	if (rc < 0)
+	fprintf(stderr, "snis_server: writesocket returned %d, sock = %d\n", rc, sock);
+	if (rc < 0) {
+		fprintf(stderr, "snis_server: snis_writesocket failed: %d (%d:%s)\n",
+				rc, errno, strerror(errno));
 		goto error;
+	}
 	memset(response, 0, sizeof(response));
+	fprintf(stderr, "snis_server: reading SNIS_MULTIVERSE_VERSION (len = %d, sock = %d)\n",
+			len, sock);
 	rc = snis_readsocket(sock, response, len);
-	if (rc != 0)
+	fprintf(stderr, "snis_server: read socket returned %d (len = %d, sock = %d)\n",
+			rc, len, sock);
+	if (rc != 0) {
+		fprintf(stderr, "snis_server: snis_readsocket failed: %d (%d:%s)\n",
+				rc, errno, strerror(errno));
+		fprintf(stderr, "response = '%s'\n", response);
 		sock = -1;
+	}
 	response[len] = '\0';
+	fprintf(stderr, "snis_server: got SNIS_MULTIVERSE_VERSION:'%s'\n", response);
 	if (strcmp(response, SNIS_MULTIVERSE_VERSION) != 0) {
 		fprintf(stderr, "snis_server: expected '%s' got '%s' from snis_multiverse\n",
 			SNIS_MULTIVERSE_VERSION, response);
 		goto error;
 	}
 
-	fprintf(stderr, "snis_server: connected to snis_multiverse (%hhu.%hhu.%hhu.%hhu/%hu)\n",
-		x[0], x[1], x[2], x[3], port);
+	fprintf(stderr, "snis_server: connected to snis_multiverse (%hhu.%hhu.%hhu.%hhu/%hu on socket %d)\n",
+		x[0], x[1], x[2], x[3], port, sock);
 
 	msi->sock = sock;
 	msi->ipaddr = ipaddr;
@@ -16495,8 +16511,11 @@ static void servers_changed_cb(void *cookie)
 	uint16_t port = -1;
 	int found_multiverse_server = 0;
 
-	if (!multiverse_server)
+	fprintf(stderr, "snis_server: servers_changed_cb zzz\n");
+	if (!multiverse_server) {
+		fprintf(stderr, "snis_server: multiverse_server not set zzz\n");
 		return;
+	}
 
 	if (server_tracker_get_multiverse_list(server_tracker, &gameserver, &nservers) != 0) {
 		fprintf(stderr, "snis_server: Failed to get server list at %s:%d\n",
@@ -16504,20 +16523,29 @@ static void servers_changed_cb(void *cookie)
 		return;
 	}
 
+	fprintf(stderr, "snis_server: servers_changed_cb taking queue lock\n");
 	pthread_mutex_lock(&multiverse_server->queue_mutex);
+	fprintf(stderr, "snis_server: servers_changed_cb got queue lock (nservers = %d)\n", nservers);
 	for (i = 0; i < nservers; i++) {
+		fprintf(stderr, "snis_server: servers_changed_cb i = %d\n", i);
 		if (strncmp(gameserver[i].location, multiverse_server->location, LOCATIONSIZE) != 0)
 			continue;
+		fprintf(stderr, "snis_server: servers_changed_cb i = %d, location = %s\n",
+					i, multiverse_server->location);
 		if (strncmp(gameserver[i].game_type, "SNIS-MVERSE",
 				sizeof(gameserver[i].game_type)) != 0)
 			continue;
+		fprintf(stderr, "snis_server: servers_changed_cb i = %d, game type = SNIS-MVERSE\n", i);
 		if (gameserver[i].ipaddr == multiverse_server->ipaddr &&
 		    ntohs(gameserver[i].port) == multiverse_server->port) {
 			same_as_before = 1;
 			break;
 		}
+		fprintf(stderr, "snis_server: servers_changed_cb i = %d, new ip/port\n", i);
 		ipaddr = gameserver[i].ipaddr;
 		port = ntohs(gameserver[i].port);
+		fprintf(stderr, "snis_server: connect_to_multiverse, ipaddr=%08x,port=%d\n",
+			ipaddr, port);
 		found_multiverse_server = 1;
 		break;
 	}
@@ -16529,15 +16557,22 @@ static void servers_changed_cb(void *cookie)
 	}
 
 	if (same_as_before) {
+		fprintf(stderr, "snis_server: multiverse servers same as before zzz\n");
 		pthread_mutex_unlock(&multiverse_server->queue_mutex);
 		free(gameserver);
 		return;
 	}
 
-	if (multiverse_server->sock != -1)
+	if (multiverse_server->sock != -1) {
+		fprintf(stderr, "snis_server: servers_changed_cb disconnecting from multiverse server\n");
 		disconnect_from_multiverse(multiverse_server);
+	}
+	fprintf(stderr, "snis_server: servers_changed_cb connecting to multiverse server\n");
 	connect_to_multiverse(multiverse_server, ipaddr, port);
+	fprintf(stderr, "snis_server: servers_changed_cb connected to multiverse server\n");
+	fprintf(stderr, "snis_server: servers_changed_cb releasing queue lock\n");
 	pthread_mutex_unlock(&multiverse_server->queue_mutex);
+	fprintf(stderr, "snis_server: servers_changed_cb released queue lock\n");
 	if (gameserver)
 		free(gameserver);
 }

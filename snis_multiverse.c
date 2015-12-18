@@ -176,17 +176,27 @@ static int verify_client_protocol(int connection)
 	char protocol_version[sizeof(SNIS_MULTIVERSE_VERSION) + 1];
 	const int len = sizeof(SNIS_MULTIVERSE_VERSION) - 1;
 
+	fprintf(stderr, "snis_multiverse: writing client protocol version (len = %d) zzz 1\n", len);
 	rc = snis_writesocket(connection, SNIS_MULTIVERSE_VERSION, len);
 	if (rc < 0)
 		return -1;
+	fprintf(stderr, "snis_multiverse: snis_writesocket returned %d\n", rc);
+	fprintf(stderr, "snis_multiverse: reading client protocol version zzz (len = %d)2\n", len);
 	memset(protocol_version, 0, sizeof(protocol_version));
 	rc = snis_readsocket(connection, protocol_version, len);
-	if (rc < 0)
+	if (rc < 0) {
+		fprintf(stderr, "snis_multiverse: snis_readsocket failed: %d (%d:%s)\n",
+			rc, errno, strerror(errno));
 		return rc;
+	}
+	fprintf(stderr, "snis_multiverse: verify client protocol zzz 3\n");
 	protocol_version[len] = '\0';
 	snis_log(SNIS_INFO, "snis_multiverse: protocol read...'%s'\n", protocol_version);
-	if (strcmp(protocol_version, SNIS_MULTIVERSE_VERSION) != 0)
+	if (strcmp(protocol_version, SNIS_MULTIVERSE_VERSION) != 0) {
+		fprintf(stderr, "snis_multiverse: verify client protocol zzz 4\n");
 		return -1;
+	}
+	fprintf(stderr, "snis_multiverse: verify client protocol zzz 5\n");
 	snis_log(SNIS_INFO, "snis_multiverse: protocol verified.\n");
 	return 0;
 }
@@ -259,7 +269,10 @@ static void write_queued_updates_to_snis_server(struct starsystem_info *ss)
 
 	buffer = packed_buffer_queue_combine(&ss->write_queue, &ss->write_queue_mutex);
 	if (buffer) {
+		fprintf(stderr, "snis_multiverse: writing buffer %d bytes.\n", buffer->buffer_size);
 		rc = snis_writesocket(ss->socket, buffer->buffer, buffer->buffer_size);
+		fprintf(stderr, "snis_multiverse: wrote buffer %d bytes, rc = %d\n",
+				buffer->buffer_size, rc);
 		packed_buffer_free(buffer);
 		if (rc != 0) {
 			snis_log(SNIS_ERROR, "snis_multiverse: writesocket failed, rc= %d, errno = %d(%s)\n",
@@ -268,16 +281,20 @@ static void write_queued_updates_to_snis_server(struct starsystem_info *ss)
 		}
 	} else {
 		/* Nothing to write, send a no-op just so we know if client is still there */
+		fprintf(stderr, "snis_multiverse: writing noop.\n");
 		rc = snis_writesocket(ss->socket, &noop, sizeof(noop));
+		fprintf(stderr, "snis_multiverse: wrote noop, rc = %d.\n", rc);
 		if (rc != 0) {
-			snis_log(SNIS_ERROR, "snis_multiverse: (noop) writesocket failed, rc= %d, errno = %d(%s)\n",
+			fprintf(stderr, "snis_multiverse: (noop) writesocket failed, rc= %d, errno = %d(%s)\n",
 				rc, errno, strerror(errno));
 			goto badclient;
 		}
 	}
+	fprintf(stderr, "snis_multiverse: done writing for now\n");
 	return;
 
 badclient:
+	fprintf(stderr, "snis_multiverse: bad client, disconnecting\n");
 	shutdown(ss->socket, SHUT_RDWR);
 	close(ss->socket);
 	ss->socket = -1;
@@ -308,27 +325,35 @@ static void service_connection(int connection)
 	int i, rc, flag = 1;
 	int thread_count, iterations;
 
+	fprintf(stderr, "snis_multiverse: zzz 1\n");
+
 	log_client_info(SNIS_INFO, connection, "snis_multiverse: servicing connection\n");
 	/* get connection moved off the stack so that when the thread needs it,
 	 * it's actually still around.
 	 */
 
+	fprintf(stderr, "snis_multiverse: zzz 2\n");
 	i = setsockopt(connection, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 	if (i < 0)
 		snis_log(SNIS_ERROR, "snis_multiverse: setsockopt failed: %s.\n", strerror(errno));
+	fprintf(stderr, "snis_multiverse: zzz 2.5\n");
 
 	if (verify_client_protocol(connection)) {
 		log_client_info(SNIS_ERROR, connection, "snis_multiverse: disconnected, protocol violation\n");
 		close(connection);
+		fprintf(stderr, "snis_multiverse, client verification failed.\n");
 		return;
 	}
+	fprintf(stderr, "snis_multiverse: zzz 3\n");
 
 	pthread_mutex_lock(&service_mutex);
+	fprintf(stderr, "snis_multiverse: zzz 5\n");
 
 	/* Set i to a free slot in starsystem[], or to nstarsystems if none free */
 	for (i = 0; i < nstarsystems; i++)
 		if (starsystem[i].refcount == 0)
 			break;
+	fprintf(stderr, "snis_multiverse: zzz 6\n");
 	if (i == nstarsystems)
 		nstarsystems++;
 
@@ -350,6 +375,7 @@ static void service_connection(int connection)
 	starsystem[i].refcount = 1;
 
 	/* create threads... */
+	fprintf(stderr, "snis_multiverse: zzz 7\n");
 	rc = pthread_create(&starsystem[i].read_thread,
 		&starsystem[i].read_attr, starsystem_read_thread, (void *) &starsystem[i]);
 	if (rc) {
@@ -363,6 +389,7 @@ static void service_connection(int connection)
 			rc, strerror(rc), strerror(errno));
 	}
 	pthread_mutex_unlock(&service_mutex);
+	fprintf(stderr, "snis_multiverse: zzz 8\n");
 
 	/* Wait for at least one of the threads to prevent premature reaping */
 	iterations = 0;
@@ -378,10 +405,12 @@ static void service_connection(int connection)
 			printf("Way too many iterations at %s:%d\n", __FILE__, __LINE__);
 	} while (thread_count < 2);
 
+	fprintf(stderr, "snis_multiverse: zzz 9\n");
 	/* release this thread's reference */
 	lock_put_starsystem(&starsystem[i]);
 
 	snis_log(SNIS_INFO, "snis_multiverse: bottom of 'service connection'\n");
+	fprintf(stderr, "snis_multiverse: zzz 10\n");
 }
 
 /* This thread listens for incoming client connections, and
@@ -439,6 +468,7 @@ static void *listener_thread(__attribute__((unused)) void *unused)
 
 		s = getaddrinfo(NULL, portstr, &hints, &result);
 		if (s != 0) {
+			fprintf(stderr, "snis_multiverse: snis_multiverse: getaddrinfo: %s\n", gai_strerror(s));
 			snis_log(SNIS_ERROR, "snis_multiverse: snis_multiverse: getaddrinfo: %s\n", gai_strerror(s));
 			exit(EXIT_FAILURE);
 		}
@@ -469,6 +499,7 @@ static void *listener_thread(__attribute__((unused)) void *unused)
 	/* Listen for incoming connections... */
 	rc = listen(rendezvous, SOMAXCONN);
 	if (rc < 0) {
+		fprintf(stderr, "snis_multiverse: listen() failed, exiting: %s\n", strerror(errno));
 		snis_log(SNIS_ERROR, "snis_multiverse: listen() failed, exiting: %s\n", strerror(errno));
 		exit(1);
 	}

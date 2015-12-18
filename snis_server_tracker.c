@@ -174,8 +174,12 @@ static void *server_tracker_thread(void *tracker_info)
 			time_to_quit = 1;
 
 		pthread_mutex_unlock(&st->mutex);
-		if (changed && st->notifier)
+		if (changed && st->notifier) {
+			fprintf(stderr, "server tracker calling callback zzz\n");
 			st->notifier(st->cookie);
+		} else if (changed) {
+			fprintf(stderr, "server tracker noticed change, but not calling callback zzz\n");
+		}
 	} while (!time_to_quit);
 	fprintf(stderr, "snis_server: server tracker thread exiting\n");
 	free(st->lobbyhost);
