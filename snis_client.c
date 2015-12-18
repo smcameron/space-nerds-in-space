@@ -432,21 +432,31 @@ static void format_date(char *buf, int bufsize, double date)
 	snprintf(buf, bufsize, "%-8.1f", FICTIONAL_DATE(date));
 }
 
+int switched_server = -1;
+int switched_server2 = -1;
+int writer_thread_should_die = 0;
+int writer_thread_alive = 0;
+int connected_to_gameserver = 0;
+
 #define MAX_LOBBY_TRIES 3
 static void *connect_to_lobby_thread(__attribute__((unused)) void *arg)
 {
 	int i, sock = -1, rc, game_server_count;
 	struct ssgl_game_server *game_server = NULL;
 	struct ssgl_client_filter filter;
+	lobby_count = 0;
 
 try_again:
 
+	printf("Trying to connect to lobby.\n");
 	/* Loop, trying to connect to the lobby server... */
 	strcpy(lobbyerror, "");
 	while (1 && lobby_count < MAX_LOBBY_TRIES && displaymode == DISPLAYMODE_LOBBYSCREEN) {
+		printf("snis_client: connecting to lobby\n");
 		sock = ssgl_gameclient_connect_to_lobby(lobbyhost);
 		lobby_count++;
 		if (sock >= 0) {
+			printf("snis_client: Connected to lobby\n");
 			lobby_socket = sock;
 			break;
 		}
@@ -455,6 +465,7 @@ try_again:
 		else
 			sprintf(lobbyerror, "%s (%d)", 
 				gai_strerror(sock), sock);
+		printf("snis_client: lobby connection failed: %s\n", lobbyerror);
 		ssgl_sleep(5);
 	}
 
@@ -474,6 +485,7 @@ try_again:
 		rc = ssgl_recv_game_servers(sock, &game_server, &game_server_count, &filter);
 		if (rc) {
 			sprintf(lobbyerror, "ssgl_recv_game_servers failed: %s\n", strerror(errno));
+			printf("snis_client: ssgl_recv_game_server failed: %s\n", lobbyerror);
 			goto handle_error;
 		}
 	
@@ -491,6 +503,7 @@ try_again:
 	} while (!done_with_lobby);
 
 outta_here:
+	printf("lobby socket = %d, done with lobby\n", sock);
 	/* close connection to the lobby */
 	shutdown(sock, SHUT_RDWR);
 	close(sock);
@@ -3267,7 +3280,7 @@ static void show_lobbyscreen(GtkWidget *w)
 #define LINEHEIGHT 30
 
 	sng_set_foreground(UI_COLOR(lobby_connecting));
-	if (lobby_socket == -1) {
+	if (lobby_socket == -1 && switched_server2 == -1) {
 		sng_abs_xy_draw_string("Space Nerds", BIG_FONT, txx(80), txy(200));
 		sng_abs_xy_draw_string("In Space", BIG_FONT, txx(180), txy(320));
 		sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron", NANO_FONT,
@@ -3286,6 +3299,21 @@ static void show_lobbyscreen(GtkWidget *w)
 			lobbylast1clicky > txy(520) && lobbylast1clicky < txy(520) + LINEHEIGHT * 2) {
 			displaymode = DISPLAYMODE_CONNECTING;
 			return;
+		}
+
+		/* Switch server rigamarole */
+		if (lobby_selected_server == -1) {
+			int time_to_switch_servers;
+			pthread_mutex_lock(&to_server_queue_event_mutex);
+			time_to_switch_servers = (switched_server2 != -1);
+			if (time_to_switch_servers) {
+				lobby_selected_server = switched_server2;
+				switched_server2 = -1;
+				displaymode = DISPLAYMODE_CONNECTING;
+			}
+			pthread_mutex_unlock(&to_server_queue_event_mutex);
+			if (displaymode == DISPLAYMODE_CONNECTING)
+				return;
 		}
 
 		if (lobby_selected_server != -1 && quickstartmode) {
@@ -4906,6 +4934,33 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_SWITCH_SERVER:
+			printf("Switch server opcode received\n");
+			quickstartmode = 0;
+			pthread_mutex_lock(&to_server_queue_event_mutex);
+			writer_thread_should_die = 1;
+			pthread_mutex_unlock(&to_server_queue_event_mutex);
+			wakeup_gameserver_writer();
+			do {
+				int alive;
+				printf("snis_client: Waiting for writer thread to leave\n");
+				pthread_mutex_lock(&to_server_queue_event_mutex);
+				alive = writer_thread_alive;
+				if (!alive)
+					break;
+				pthread_mutex_unlock(&to_server_queue_event_mutex);
+				sleep(1);
+			} while (1);
+			writer_thread_should_die = 0;
+			printf("snis_client: writer thread left\n");
+			switched_server = lobby_selected_server; /* TODO : something better */
+			lobby_selected_server = -1;
+			close(gameserver_sock);
+			gameserver_sock = -1;
+			rc = 0;
+			connected_to_gameserver = 0;
+			pthread_mutex_unlock(&to_server_queue_event_mutex);
+			return NULL;
 		default:
 			goto protocol_error;
 		}
@@ -4988,10 +5043,22 @@ static void wakeup_gameserver_writer(void)
 
 static void *gameserver_writer(__attribute__((unused)) void *arg)
 {
+	int tmpval;
+	writer_thread_alive = 1;
 	while (1) {
 		wait_for_serverbound_packets();
 		write_queued_packets_to_server();
+
+		/* Check if it's time to switch servers .*/
+		pthread_mutex_lock(&to_server_queue_event_mutex);
+		tmpval = writer_thread_should_die;
+		pthread_mutex_unlock(&to_server_queue_event_mutex);
+		if (tmpval) {
+			printf("snis_client: gameserver writer exiting due to server switch\n");
+			break;
+		}
 	}
+	writer_thread_alive = 0;
 	return NULL;
 }
 
@@ -5183,7 +5250,6 @@ int connect_to_gameserver(int selected_server)
 
 static void show_connecting_screen(GtkWidget *w)
 {
-	static int connected_to_gameserver = 0;
 	sng_set_foreground(UI_COLOR(lobby_connecting));
 	sng_abs_xy_draw_string("CONNECTING TO SERVER...", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
 	if (!connected_to_gameserver) {
@@ -11244,14 +11310,17 @@ static void start_gameserver_button_pressed()
 
 static void connect_to_lobby_button_pressed()
 {
-	printf("connect to lobby pressed\n");
+	printf("snis_client: connect to lobby pressed\n");
 	/* These must be set to connect to the lobby... */
+	printf("lobbyname = '%s'\n", net_setup_ui.lobbyname);
+	printf("shipname = '%s'\n", net_setup_ui.shipname);
+	printf("password = '%s'\n", net_setup_ui.password);
 	if (strcmp(net_setup_ui.lobbyname, "") == 0 ||
 		strcmp(net_setup_ui.shipname, "") == 0 ||
 		strcmp(net_setup_ui.password, "") == 0)
 		return;
 
-	printf("connecting to lobby...\n");
+	printf("snis_client: connecting to lobby...\n");
 	displaymode = DISPLAYMODE_LOBBYSCREEN;
 	lobbyhost = net_setup_ui.lobbyname;
 	shipname = net_setup_ui.shipname;
@@ -11881,6 +11950,8 @@ void really_quit(void);
 
 gint advance_game(gpointer data)
 {
+	int time_to_switch_servers;
+
 	timer++;
 
 	if (red_alert_mode && (role & ROLE_SOUNDSERVER) && (timer % 45) == 0)
@@ -11912,6 +11983,19 @@ gint advance_game(gpointer data)
 	gdk_window_invalidate_rect(gtk_widget_get_root_window(main_da), &alloc, FALSE);
 
 	gdk_threads_leave();
+
+	/* Check if it's time to switch servers */
+	pthread_mutex_lock(&to_server_queue_event_mutex);
+	time_to_switch_servers = (switched_server != -1);
+	if (time_to_switch_servers) {
+		/* this is a hack */
+		switched_server2 = switched_server;
+		switched_server = -1;
+		connect_to_lobby();
+		displaymode = DISPLAYMODE_LOBBYSCREEN;
+	}
+	pthread_mutex_unlock(&to_server_queue_event_mutex);
+
 	return TRUE;
 }
 

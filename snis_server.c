@@ -12075,6 +12075,11 @@ static void queue_up_client_damcon_update(struct game_client *c)
 		queue_up_client_damcon_object_update(c, d, &d->o[i]);
 }
 
+static void queue_up_client_switch_server(struct game_client *c)
+{
+	pb_queue_to_client(c, packed_buffer_new("b", OPCODE_SWITCH_SERVER));
+}
+
 #define GO_TOO_FAR_UPDATE_PER_NTICKS 7
 
 static void queue_up_client_updates(struct game_client *c)
@@ -12110,6 +12115,8 @@ static void queue_up_client_updates(struct game_client *c)
 		/* printf("queued up %d updates for client\n", count); */
 
 		c->timestamp = universe_timestamp;
+		if ((universe_timestamp % 300) == 0)
+			queue_up_client_switch_server(c);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
