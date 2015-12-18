@@ -12918,10 +12918,14 @@ static int add_new_player(struct game_client *c)
 		snis_log(SNIS_ERROR, "Bad ship name or password\n");
 		goto protocol_error;
 	}
+	fprintf(stderr, "snis_server: new client: sn='%s', pw='%s', create = %hhu\n",
+			app.shipname, app.password, app.new_ship);
 
 	c->bridge = lookup_bridge(app.shipname, app.password);
+	fprintf(stderr, "snis_server: c->bridge = %d\n", c->bridge);
 	c->role = app.role;
 	if (c->bridge == -1 && !app.new_ship) {	/* didn't find bridge, but expected ship to exist */
+		fprintf(stderr, "snis_server: did not find bridge when expected\n");
 		pb_queue_to_client(c, packed_buffer_new("bb", OPCODE_ADD_PLAYER_ERROR,
 				ADD_PLAYER_ERROR_SHIP_DOES_NOT_EXIST));
 		write_queued_updates_to_client(c, 4, &no_write_count);
@@ -12957,6 +12961,7 @@ static int add_new_player(struct game_client *c)
 		c->shipid = bridgelist[c->bridge].shipid;
 		c->ship_index = lookup_by_id(c->shipid);
 	} else if (c->bridge != -1 && app.new_ship) { /* ship already exists, can't create */
+		fprintf(stderr, "snis_server: ship already exists, can't create\n");
 		pb_queue_to_client(c, packed_buffer_new("bb", OPCODE_ADD_PLAYER_ERROR,
 				ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS));
 		write_queued_updates_to_client(c, 4, &no_write_count);

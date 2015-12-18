@@ -4882,10 +4882,13 @@ static int process_add_player_error(uint8_t *error)
 
 static void stop_gameserver_writer_thread(void)
 {
+	fprintf(stderr, "top of stop_gameserver_writer_thread\n");
 	pthread_mutex_lock(&to_server_queue_event_mutex);
 	writer_thread_should_die = 1;
 	pthread_mutex_unlock(&to_server_queue_event_mutex);
+	fprintf(stderr, "stop_gameserver_writer_thread 1\n");
 	wakeup_gameserver_writer();
+	fprintf(stderr, "stop_gameserver_writer_thread 2\n");
 	do {
 		int alive;
 		printf("snis_client: Waiting for writer thread to leave\n");
@@ -4894,10 +4897,12 @@ static void stop_gameserver_writer_thread(void)
 		if (!alive)
 			break;
 		pthread_mutex_unlock(&to_server_queue_event_mutex);
+		fprintf(stderr, "stop_gameserver_writer_thread 3, alive = %d\n", alive);
 		sleep(1);
 	} while (1);
 	writer_thread_should_die = 0;
 	pthread_mutex_unlock(&to_server_queue_event_mutex);
+	fprintf(stderr, "stop_gameserver_writer_thread 4\n");
 	/* FIXME: when this returns, to_server_queue_event_mutex is held */
 }
 
@@ -4947,6 +4952,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			rc = process_client_id_packet();
 			break;
 		case OPCODE_ADD_PLAYER_ERROR:
+			fprintf(stderr, "snis_client: OPCODE_ADD_PLAYER_ERROR\n");
 			rc = process_add_player_error(&add_player_error);
 			break;
 		case OPCODE_UPDATE_ASTEROID:
@@ -5124,7 +5130,8 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		if (add_player_error) {
 			switch (add_player_error) {
 			case ADD_PLAYER_ERROR_SHIP_DOES_NOT_EXIST:
-				printf("snis_client: failed to add player: ship does not exist\n");
+				fprintf(stderr,
+					"snis_client: failed to add player: ship does not exist\n");
 				break;
 			case ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS:
 				printf("snis_client: failed to add player: ship already exists\n");
