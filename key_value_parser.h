@@ -93,7 +93,11 @@ struct key_value_specification {
 	int size;		/* size of field in bytes */
 };
 
+/* Parse a line of text into base_address[<appropriate_index>]-><appropriate_offset> based on kvs */
 int key_value_parse_line(const struct key_value_specification *kvs, const char *line, void *base_address[]);
+/* Parse a series of lines of text into base_address[<appropriate_indices>]-><appropriate_offsets> based on kvs */
 int key_value_parse_lines(const struct key_value_specification *kvs, const char *lines, void *base_address[]);
+/* Write a series of lines of text based on base_address[<appropriate_indices>]-><appropriate_offsets> based on kvs */
+int key_value_write_lines(FILE *f, struct key_value_specification *kvs, void *base_address[]);
 
 #endif

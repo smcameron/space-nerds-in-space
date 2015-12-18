@@ -66,6 +66,71 @@ static int parse_string(const char *strvalue, struct key_value_specification *k,
 	return 0;
 }
 
+#define WRITE_INT(sign, size, format) \
+static int write_##sign##size(FILE *f, struct key_value_specification *k, void *base_address[]) \
+{ \
+	sign ## size ## _t *ptr = (sign ## size ## _t *) ((unsigned char *) base_address[k->address_index] + \
+					k->address_offset); \
+	fprintf(f, "%s:" format "\n", k->key, *ptr); \
+	return 0; \
+}
+
+WRITE_INT(uint, 8, "%hhu") /* write_uint8 defined here */
+WRITE_INT(uint, 16, "%hu") /* write_uint16 defined here */
+WRITE_INT(uint, 32, "%u") /* write_uint32 defined here */
+WRITE_INT(int, 8, "%hhd") /* write_uint8 defined here */
+WRITE_INT(int, 16, "%hd") /* write_uint16 defined here */
+WRITE_INT(int, 32, "%d") /* write_uint32 defined here */
+
+static int write_uint64(FILE *f, struct key_value_specification *k, void *base_address[])
+{
+	uint64_t *ptr = (uint64_t *) ((unsigned char *) base_address[k->address_index] +
+					k->address_offset);
+	fprintf(f, "%s:%llu\n", k->key, (unsigned long long) *ptr);
+	return 0;
+}
+
+static int write_int64(FILE *f, struct key_value_specification *k, void *base_address[])
+{
+	int64_t *ptr = (int64_t *) ((unsigned char *) base_address[k->address_index] +
+					k->address_offset);
+	fprintf(f, "%s:%lld\n", k->key, (long long) *ptr);
+	return 0;
+}
+
+static int write_float(FILE *f, struct key_value_specification *k, void *base_address[])
+{
+	float *ptr = (float *) ((unsigned char *) base_address[k->address_index] +
+					k->address_offset);
+	fprintf(f, "%s:%f\n", k->key, *ptr);
+	return 0;
+}
+
+static int write_double(FILE *f, struct key_value_specification *k, void *base_address[])
+{
+	double *ptr = (double *) ((unsigned char *) base_address[k->address_index] +
+					k->address_offset);
+	fprintf(f, "%s:%lf\n", k->key, *ptr);
+	return 0;
+}
+
+static int write_string(FILE *f, struct key_value_specification *k, void *base_address[])
+{
+	char tmpstring[1024];
+	char *x = &tmpstring[0];
+	char *ptr = (char *) ((unsigned char *) base_address[k->address_index] +
+					k->address_offset);
+	if (k->size >= 1024) {
+		x = malloc(k->size + 1);
+	}
+	memcpy(x, ptr, k->size);
+	x[k->size] = '\0';
+	fprintf(f, "%s:%s\n", k->key, x);
+	if (k->size >= 1024)
+		free(x);
+	return 0;
+}
+
 #define PARSE_INT(sign, size, format) \
 static int parse_##sign##size(const char *strvalue, struct key_value_specification *k, void *base_address[]) \
 { \
@@ -219,6 +284,59 @@ int key_value_parse_lines(const struct key_value_specification *kvs, const char 
 	return 0;
 }
 
+int key_value_write_lines(FILE *f, struct key_value_specification *kvs, void *base_address[])
+{
+	struct key_value_specification *k;
+	int rc;
+	int errs = 0;
+
+	for (k = kvs; k->key; k++) {
+		switch (k->type) {
+		case KVS_STRING:
+			rc = write_string(f, k, base_address);
+			break;
+		case KVS_INT64:
+			rc = write_int64(f, k, base_address);
+			break;
+		case KVS_INT32:
+			rc = write_int32(f, k, base_address);
+			break;
+		case KVS_INT16:
+			rc = write_int16(f, k, base_address);
+			break;
+		case KVS_INT8:
+			rc = write_int8(f, k, base_address);
+			break;
+		case KVS_UINT64:
+			rc = write_uint64(f, k, base_address);
+			break;
+		case KVS_UINT32:
+			rc = write_uint32(f, k, base_address);
+			break;
+		case KVS_UINT16:
+			rc = write_uint16(f, k, base_address);
+			break;
+		case KVS_UINT8:
+			rc = write_uint8(f, k, base_address);
+			break;
+		case KVS_DOUBLE:
+			rc = write_double(f, k, base_address);
+			break;
+		case KVS_FLOAT:
+			rc = write_float(f, k, base_address);
+			break;
+		default:
+			fprintf(stderr, "%s:%d: unknown key type '%c' for key '%s'\n",
+				__func__, __LINE__, k->type, k->key);
+			rc = -1;
+			break;
+		}
+		if (rc)
+			errs++;
+	}
+	return errs;
+}
+
 #ifdef TEST_KEY_VALUE_PARSER
 #include <math.h>
 
@@ -328,6 +446,11 @@ int main(int argc, char *argv[])
 	CHECK(strcmp("blah blah blah", data2.blah) == 0);
 	CHECK(strcmp("", data2.blah2) == 0);
 	CHECK(rc == 0);
+
+	printf("---- Begin testing key_value_write_lines\n");
+	key_value_write_lines(stdout, test_kvs, base_address);
+	printf("---- End testing key_value_write_lines\n");
+
 	printf("test_key_value_parser: all tests pass.\n");
 	return 0;
 }
