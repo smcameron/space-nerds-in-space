@@ -228,6 +228,9 @@ static int nfake_stars = 2000;
 static volatile int fake_stars_timer = 0;
 static volatile int credits_screen_active = 0;
 
+static volatile int login_failed_timer = 0;
+static char login_failed_msg[100] = { 0 };
+
 static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
 static volatile float weapons_camera_shake = 0.0f; 
@@ -4858,6 +4861,14 @@ static int process_add_player_error(uint8_t *error)
 	rc = read_and_unpack_buffer(buffer, "b", &err);
 	if (rc)
 		return rc;
+	switch (err) {
+	case ADD_PLAYER_ERROR_SHIP_DOES_NOT_EXIST:
+		sprintf(login_failed_msg, "NO SHIP BY THAT NAME EXISTS");
+		break;
+	case ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS:
+		sprintf(login_failed_msg, "A SHIP WITH THAT NAME ALREADY_EXISTS");
+	}
+	login_failed_timer = FRAME_RATE_HZ * 5;
 	*error = err;
 	return 0;
 }
@@ -5575,6 +5586,12 @@ static void show_common_screen(GtkWidget *w, char *title)
 	}
 	if (credits_screen_active)
 		draw_credits_screen(ARRAYSIZE(credits_text), credits_text);
+	if (login_failed_timer) {
+		sng_set_foreground(UI_COLOR(special_options));
+		login_failed_timer--;
+		sng_center_xy_draw_string(login_failed_msg, SMALL_FONT,
+						SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+	}
 }
 
 #define ANGLE_OF_VIEW (45)
@@ -11525,6 +11542,7 @@ static void connect_to_lobby_button_pressed()
 	role |= (ROLE_TEXT_TO_SPEECH * !!net_setup_ui.role_text_to_speech_v);
 	if (role == 0)
 		role = ROLE_ALL;
+	login_failed_timer = 0; /* turn off any old login failed messages */
 	connect_to_lobby();
 }
 
