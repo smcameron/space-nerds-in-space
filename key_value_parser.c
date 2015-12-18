@@ -222,11 +222,11 @@ struct test_struct {
 	uint8_t u8;
 	uint16_t u16;
 	uint32_t u32;
-	uint16_t u64;
+	uint64_t u64;
 	int8_t i8;
 	int16_t i16;
 	int32_t i32;
-	int16_t i64;
+	int64_t i64;
 	char some_data[64];
 	double doubledata;
 	float floatdata;
@@ -241,11 +241,11 @@ struct test_struct2 {
 #define KVS_U8FIELD(x, i, s) { #x, KVS_UINT8, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
 #define KVS_U16FIELD(x, i, s) { #x, KVS_UINT16, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
 #define KVS_U32FIELD(x, i, s) { #x, KVS_UINT32, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
-#define KVS_U64FIELD(x, i, s) { #x, KVS_UINT32, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
+#define KVS_U64FIELD(x, i, s) { #x, KVS_UINT64, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
 #define KVS_I8FIELD(x, i, s) { #x, KVS_INT8, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
 #define KVS_I16FIELD(x, i, s) { #x, KVS_INT16, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
 #define KVS_I32FIELD(x, i, s) { #x, KVS_INT32, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
-#define KVS_I64FIELD(x, i, s) { #x, KVS_INT32, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
+#define KVS_I64FIELD(x, i, s) { #x, KVS_INT64, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
 #define KVS_FLOATFIELD(x, i, s) { #x, KVS_FLOAT, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
 #define KVS_DOUBLEFIELD(x, i, s) { #x, KVS_DOUBLE, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
 #define KVS_STRINGFIELD(x, i, s) { #x, KVS_STRING, i, offsetof(struct s, x), sizeof(((struct s *)0)->x), }
