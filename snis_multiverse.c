@@ -331,6 +331,16 @@ static int write_bridge_info(FILE *f, struct bridge_info *b)
 	return key_value_write_lines(f, snis_entity_kvs, base_address);
 }
 
+static void print_hash(char *s, unsigned char *pwdhash)
+{
+	int i;
+
+	fprintf(stderr, "snis_multiverse: %s", s);
+	for (i = 0; i < 20; i++)
+		fprintf(stderr, "%02x", pwdhash[i]);
+	fprintf(stderr, "\n");
+}
+
 static int save_bridge_info(struct bridge_info *b)
 {
 	int rc;
@@ -339,6 +349,7 @@ static int save_bridge_info(struct bridge_info *b)
 	unsigned char hexpwdhash[41];
 	FILE *f;
 
+	fprintf(stderr, "save_bridge_info 1\n");
 	memset(dir1, 0, sizeof(dir1));
 	memset(dir2, 0, sizeof(dir2));
 
@@ -378,6 +389,7 @@ static int save_bridge_info(struct bridge_info *b)
 			path, path2, strerror(errno));
 		return -1;
 	}
+	fprintf(stderr, "snis_multiverse: wrote bridge info to %s\n", path2);
 	return 0;
 }
 
@@ -511,11 +523,20 @@ static int read_and_unpack_fixed_size_buffer(struct starsystem_info *ss,
 static int lookup_ship_by_hash(unsigned char *hash)
 {
 	int i;
+	unsigned char phash[100];
+
+	snis_format_sha1_hash(hash, phash, 100);
+	fprintf(stderr, "snis_multiverse: looking up hash '%s'\n", phash);
 
 	for (i = 0; i < nbridges; i++) {
-		if (memcmp(ship[i].pwdhash, hash, 20) == 0)
+		snis_format_sha1_hash(ship[i].pwdhash, phash, 100);
+		fprintf(stderr, "snis_multiverse: checking against '%s'\n", phash);
+		if (memcmp(ship[i].pwdhash, hash, 20) == 0) {
+			fprintf(stderr, "snis_multiverse: match hash '%s'\n", phash);
 			return i;
+		}
 	}
+	fprintf(stderr, "snis_multiverse: no match found\n");
 	return -1;
 }
 
@@ -540,13 +561,16 @@ static int update_bridge(struct starsystem_info *ss)
 	struct snis_entity *o;
 	int32_t iwallet;
 
+	fprintf(stderr, "snis_multiverse: update bridge 1\n");
 	rc = read_and_unpack_fixed_size_buffer(ss, buffer, 20, "r", pwdhash, (uint16_t) 20);
 	if (rc != 0)
 		return rc;
+	print_hash("update bridge 2: ", pwdhash);
 	assert(sizeof(buffer) > sizeof(struct update_ship_packet) - 9);
 	rc = snis_readsocket(ss->socket, buffer, sizeof(struct update_ship_packet) - 9 + 25);
 	if (rc != 0)
 		return rc;
+	fprintf(stderr, "snis_multiverse: update bridge 3\n");
 	pthread_mutex_lock(&data_mutex);
 	i = lookup_ship_by_hash(pwdhash);
 	if (i < 0) {
@@ -554,10 +578,12 @@ static int update_bridge(struct starsystem_info *ss)
 		pthread_mutex_unlock(&data_mutex);
 		return rc;
 	}
+	fprintf(stderr, "snis_multiverse: update bridge 4\n");
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	packed_buffer_extract(&pb, "hSSS", &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM);
+	fprintf(stderr, "snis_multiverse: update bridge 5\n");
 	packed_buffer_extract(&pb, "RRRwwRRR",
 				&dyawvel,
 				&dpitchvel,
@@ -566,6 +592,7 @@ static int update_bridge(struct starsystem_info *ss)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
+	fprintf(stderr, "snis_multiverse: update bridge 6\n");
 	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbbwQQQbbw",
 			&tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
@@ -574,17 +601,20 @@ static int update_bridge(struct starsystem_info *ss)
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
 			&docking_magnets, (uint32_t *) &iwallet);
+	fprintf(stderr, "snis_multiverse: update bridge 7\n");
 	packed_buffer_extract(&pb, "bbbbbr", &shield_strength, &shield_wavelength, &shield_width, &shield_depth,
 			&faction, name, (int) sizeof(name));
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);
+	fprintf(stderr, "snis_multiverse: update bridge 8\n");
 
 	o = &ship[i].entity;
 	if (!o->tsd.ship.damcon) {
 		o->tsd.ship.damcon = malloc(sizeof(*o->tsd.ship.damcon));
 		memset(o->tsd.ship.damcon, 0, sizeof(*o->tsd.ship.damcon));
 	}
+	fprintf(stderr, "snis_multiverse: update bridge 9\n");
 #if 0
 	if (!o->tsd.ship.power_model) {
 		o->tsd.ship.power_model = malloc(sizeof(*o->tsd.ship.power_model));
@@ -653,16 +683,19 @@ static int update_bridge(struct starsystem_info *ss)
 	ship[i].initialized = 1;
 	pthread_mutex_unlock(&data_mutex);
 	rc = 0;
+	fprintf(stderr, "snis_multiverse: update bridge 10\n");
 	return rc;
 }
 
 static int create_new_ship(unsigned char pwdhash[20])
 {
+	fprintf(stderr, "snis_multiverse: create_new_ship 1 (nbridges = %d, MAX=%d)\n", nbridges, MAX_BRIDGES);
 	if (nbridges >= MAX_BRIDGES)
 		return -1;
 	memset(&ship[nbridges], 0, sizeof(ship[nbridges]));
 	memcpy(ship[nbridges].pwdhash, pwdhash, 20);
 	nbridges++;
+	fprintf(stderr, "snis_multiverse: added new bridge, nbridges = %d\n", nbridges);
 	return 0;
 }
 
@@ -673,16 +706,25 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 	struct packed_buffer *pb;
 	int i, rc;
 	unsigned char pass;
+	unsigned char printable_hash[100];
 
+	fprintf(stderr, "snis_multiverse: verify_existence 1: should %salready exist\n",
+			should_already_exist ? "" : "not ");
 	rc = read_and_unpack_fixed_size_buffer(ss, buffer, 20, "r", pwdhash, (uint16_t) 20);
 	if (rc != 0)
 		return rc;
+	snis_format_sha1_hash(pwdhash, printable_hash, 100);
+	printable_hash[40] = '\0';
 	pthread_mutex_lock(&data_mutex);
+	fprintf(stderr, "snis_multiverse: lookup hash %s\n", printable_hash);
 	i = lookup_ship_by_hash(pwdhash);
+	fprintf(stderr, "snis_multiverse: verify existence pwdhash lookup returns %d\n", i);
 	if (i < 0) {
 		if (should_already_exist) { /* It doesn't exist, but it should */
+			fprintf(stderr, "snis_multiverse: hash %s does not exist, but should.\n", printable_hash);
 			pass = SNISMV_VERIFICATION_RESPONSE_FAIL;
 		} else { /* doesn't exist, but we asked to create it, so that is expected */
+			fprintf(stderr, "snis_multiverse: hash %s does not exist, as expected.\n", printable_hash);
 			pass = SNISMV_VERIFICATION_RESPONSE_PASS;
 			rc = create_new_ship(pwdhash);
 			if (rc) /* We failed to create it. */
@@ -690,11 +732,16 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 		}
 	} else {
 		/* It exists, pass if it should exist, fail otherwise */
-		if (should_already_exist)
+		if (should_already_exist) {
+			fprintf(stderr, "snis_multiverse: hash %s exists, as expected.\n", printable_hash);
 			pass = SNISMV_VERIFICATION_RESPONSE_PASS;
-		else
+		} else {
+			fprintf(stderr, "snis_multiverse: hash %s exists, but should not.\n", printable_hash);
 			pass = SNISMV_VERIFICATION_RESPONSE_FAIL;
+		}
 	}
+	print_hash("checking hash ", pwdhash);
+	fprintf(stderr, "snis_multiverse: verify existence pass=%d\n", pass);
 	pthread_mutex_unlock(&data_mutex);
 	pb = packed_buffer_allocate(22);
 	packed_buffer_append(pb, "bbr", SNISMV_OPCODE_VERIFICATION_RESPONSE, pass, pwdhash, 20);

@@ -711,6 +711,16 @@ static void delete_bridge(int b)
 	nbridges--;
 }
 
+static void print_hash(char *s, unsigned char *pwdhash)
+{
+	int i;
+
+	fprintf(stderr, "snis_server: %s", s);
+	for (i = 0; i < 20; i++)
+		fprintf(stderr, "%02x", pwdhash[i]);
+	fprintf(stderr, "\n");
+}
+
 static int lookup_bridge_by_pwdhash(unsigned char *pwdhash)
 {
 	/* assumes universe_mutex held */
@@ -13500,12 +13510,20 @@ static void update_multiverse(struct snis_entity *o)
 		return;
 	}
 
+	fprintf(stderr, "snis_server: update_multiverse: verified = '%s'\n",
+		bridgelist[bridge].verified == BRIDGE_UNVERIFIED ? "unverified" :
+		bridgelist[bridge].verified == BRIDGE_VERIFIED ? "verified" :
+		bridgelist[bridge].verified == BRIDGE_FAILED_VERIFICATION ? "failed verification" :
+		bridgelist[bridge].verified == BRIDGE_REFUSED ? "refused" : "unknown");
+
 	/* Verify that this ship does not already exist if creation was requested, or
 	 * that it does already exist if creation was not requested.  Only do this once.
 	 */
 	if (bridgelist[bridge].verified == BRIDGE_UNVERIFIED &&
 		!bridgelist[bridge].requested_verification && multiverse_server->sock != -1) {
 		unsigned char opcode;
+
+		print_hash("requesting verification of hash ", bridgelist[bridge].pwdhash);
 		pb = packed_buffer_allocate(21);
 		if (bridgelist[bridge].requested_creation)
 			opcode = SNISMV_OPCODE_VERIFY_CREATE;
@@ -13515,11 +13533,15 @@ static void update_multiverse(struct snis_entity *o)
 		bridgelist[bridge].requested_verification = 1;
 		queue_to_multiverse(multiverse_server, pb);
 		return;
+	} else {
+		fprintf(stderr, "snis_server: not requesting verification\n");
 	}
 
 	/* Skip updating multiverse server if the bridge isn't verified yet. */
-	if (bridgelist[bridge].verified != BRIDGE_VERIFIED)
+	if (bridgelist[bridge].verified != BRIDGE_VERIFIED) {
+		fprintf(stderr, "snis_server: bridge is not verified, not updating multiverse\n");
 		return;
+	}
 
 	/* Update the ship */
 	pb = packed_buffer_allocate(50 + sizeof(struct update_ship_packet));
@@ -16519,6 +16541,7 @@ static int process_multiverse_verification(struct multiverse_server_info *msi)
 	pass = &buffer[0];
 	pwdhash = &buffer[1];
 	pthread_mutex_lock(&universe_mutex);
+	print_hash("Looking up hash:", pwdhash);
 	b = lookup_bridge_by_pwdhash(pwdhash);
 	if (b >= 0) {
 		switch (*pass) {
@@ -16537,6 +16560,7 @@ static int process_multiverse_verification(struct multiverse_server_info *msi)
 	pthread_mutex_unlock(&universe_mutex);
 	if (b < 0) {
 		fprintf(stderr, "snis_server: received verification for unknown pwdhash.  Weird.\n");
+		print_hash("unknown hash: ", pwdhash);
 		return 0;
 	}
 	return 0;
