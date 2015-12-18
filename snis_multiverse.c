@@ -35,6 +35,7 @@ persisted in a simple database by snis_multiverse.
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -45,6 +46,8 @@ persisted in a simple database by snis_multiverse.
 #include <pthread.h>
 #include <assert.h>
 #include <stdarg.h>
+#include <limits.h>
+#include <dirent.h>
 
 #include "snis_marshal.h"
 #include "quat.h"
@@ -58,6 +61,9 @@ persisted in a simple database by snis_multiverse.
 #include "snis_hash.h"
 #include "quat.h"
 
+static char *database_root = "./snisdb";
+static const int database_mode = 0744;
+static pthread_mutex_t data_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t listener_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t listener_started;
 static pthread_mutex_t service_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -67,7 +73,6 @@ pthread_t lobbythread;
 char *lobbyserver = NULL;
 static int snis_log_level = 2;
 int nconnections = 0;
-int nbridges = 0;
 
 #define MAX_BRIDGES 1024
 #define MAX_CONNECTIONS 100
@@ -88,10 +93,12 @@ static int nstarsystems = 0;
 static struct bridge_info {
 	unsigned char pwdhash[20];
 	int occupied;
+	int initialized;
 	struct timeval created_on;
 	struct timeval last_seen;
 	struct snis_entity entity;
 } ship[MAX_BRIDGES];
+int nbridges = 0;
 
 static void remove_starsystem(struct starsystem_info *ss)
 {
@@ -126,8 +133,216 @@ static void lock_put_starsystem(struct starsystem_info *ss)
 	pthread_mutex_unlock(&service_mutex);
 }
 
-static int __attribute((unused)) save_bridge_info(char *filename, struct bridge_info *b, int nitems)
+static int make_dir(char *path)
 {
+	int rc = mkdir(path, database_mode);
+	if (rc != 0 && errno != EEXIST)
+		return rc;
+	return 0;
+}
+
+static void sync_file(FILE *f)
+{
+	int rc, fd;
+
+	fd = fileno(f);
+	if (fd < 0) {
+		fprintf(stderr, "snis_multiverse: sync_file: can't get file descriptor\n");
+		return;
+	}
+	rc = fsync(fd);
+	if (rc < 0)
+		fprintf(stderr, "snis_multiverse: fsync: %s\n", strerror(errno));
+}
+
+static void sync_dir(char *path)
+{
+	DIR *d = opendir(path);
+	int fd;
+
+	if (!d) {
+		fprintf(stderr, "snis_multiverse: open_dir(%s): %s\n", path, strerror(errno));
+		return;
+	}
+	fd = dirfd(d);
+	if (fd < 0) {
+		fprintf(stderr, "snis_multiverse: dirfd(%s): %s\n", path, strerror(errno));
+		return;
+	}
+	fsync(fd);
+	closedir(d);
+}
+
+static int write_bridge_info(FILE *f, struct bridge_info *b)
+{
+	fprintf(f, "initialized: %d\n", b->initialized);
+	if (!b->initialized)
+		return 0;
+	struct snis_entity *e = &b->entity;
+
+#define WRITE_FIELD(field, format) fprintf(f, #field ": %" #format "\n", e->field);
+#define WRITE_TSDFIELD(field, format) fprintf(f, #field ": %" #format "\n", e->tsd.ship.field);
+	WRITE_FIELD(x, lf);
+	WRITE_FIELD(y, lf);
+	WRITE_FIELD(z, lf);
+	WRITE_FIELD(vx, lf);
+	WRITE_FIELD(vy, lf);
+	WRITE_FIELD(vz, lf);
+	WRITE_FIELD(heading, lf);
+	WRITE_FIELD(alive, hu);
+	WRITE_FIELD(type, u);
+	WRITE_TSDFIELD(torpedoes, u);
+	WRITE_TSDFIELD(power, u);
+	WRITE_TSDFIELD(shields, u);
+	WRITE_TSDFIELD(shipname, s);
+	WRITE_TSDFIELD(velocity, lf);
+	WRITE_TSDFIELD(yaw_velocity, lf);
+	WRITE_TSDFIELD(pitch_velocity, lf);
+	WRITE_TSDFIELD(roll_velocity, lf);
+	WRITE_TSDFIELD(desired_velocity, lf);
+	WRITE_TSDFIELD(gun_yaw_velocity, lf);
+	WRITE_TSDFIELD(sci_heading, lf);
+	WRITE_TSDFIELD(sci_beam_width, lf);
+	WRITE_TSDFIELD(sci_yaw_velocity, lf);
+	WRITE_TSDFIELD(sciball_orientation.vec[0], f);
+	WRITE_TSDFIELD(sciball_orientation.vec[1], f);
+	WRITE_TSDFIELD(sciball_orientation.vec[2], f);
+	WRITE_TSDFIELD(sciball_orientation.vec[3], f);
+	WRITE_TSDFIELD(sciball_yawvel, lf);
+	WRITE_TSDFIELD(sciball_pitchvel, lf);
+	WRITE_TSDFIELD(sciball_rollvel, lf);
+	WRITE_TSDFIELD(weap_orientation.vec[0], f);
+	WRITE_TSDFIELD(weap_orientation.vec[1], f);
+	WRITE_TSDFIELD(weap_orientation.vec[2], f);
+	WRITE_TSDFIELD(weap_orientation.vec[3], f);
+	WRITE_TSDFIELD(weap_yawvel, lf);
+	WRITE_TSDFIELD(weap_pitchvel, lf);
+	WRITE_TSDFIELD(torpedoes_loaded, hhu);
+	WRITE_TSDFIELD(torpedoes_loading, hhu);
+	WRITE_TSDFIELD(torpedo_load_time, hu);
+	WRITE_TSDFIELD(phaser_bank_charge, hhu);
+	WRITE_TSDFIELD(fuel, u);
+	WRITE_TSDFIELD(rpm, hhu);
+	WRITE_TSDFIELD(throttle, hhu);
+	WRITE_TSDFIELD(temp, hhu);
+	WRITE_TSDFIELD(shiptype, hhu);
+	WRITE_TSDFIELD(scizoom, hhu);
+	WRITE_TSDFIELD(weapzoom, hhu);
+	WRITE_TSDFIELD(mainzoom, hhu);
+	WRITE_TSDFIELD(requested_warpdrive, hhu);
+	WRITE_TSDFIELD(requested_shield, hhu);
+	WRITE_TSDFIELD(phaser_wavelength, hhu);
+	WRITE_TSDFIELD(phaser_charge, hhu);
+	WRITE_TSDFIELD(damage.shield_damage, hhu);
+	WRITE_TSDFIELD(damage.impulse_damage, hhu);
+	WRITE_TSDFIELD(damage.warp_damage, hhu);
+	WRITE_TSDFIELD(damage.maneuvering_damage, hhu);
+	WRITE_TSDFIELD(damage.phaser_banks_damage, hhu);
+	WRITE_TSDFIELD(damage.sensors_damage, hhu);
+	WRITE_TSDFIELD(damage.comms_damage, hhu);
+	WRITE_TSDFIELD(damage.tractor_damage, hhu);
+	/* TODO damcon data... */
+	WRITE_TSDFIELD(view_mode, hhu);
+	WRITE_TSDFIELD(view_angle, lf);
+	/* TODO power_data */
+	/* TODO power_model */
+	/* TODO coolant_data */
+	/* TODO coolant_model */
+	WRITE_TSDFIELD(temperature_data.shield_damage, hhu);
+	WRITE_TSDFIELD(temperature_data.impulse_damage, hhu);
+	WRITE_TSDFIELD(temperature_data.warp_damage, hhu);
+	WRITE_TSDFIELD(temperature_data.maneuvering_damage, hhu);
+	WRITE_TSDFIELD(temperature_data.phaser_banks_damage, hhu);
+	WRITE_TSDFIELD(temperature_data.sensors_damage, hhu);
+	WRITE_TSDFIELD(temperature_data.comms_damage, hhu);
+	WRITE_TSDFIELD(temperature_data.tractor_damage, hhu);
+	WRITE_TSDFIELD(warp_time, d);
+	WRITE_TSDFIELD(scibeam_a1, lf);
+	WRITE_TSDFIELD(scibeam_a2, lf);
+	WRITE_TSDFIELD(scibeam_range, lf);
+	WRITE_TSDFIELD(reverse, hhu);
+	WRITE_TSDFIELD(trident, hhu);
+	WRITE_TSDFIELD(next_torpedo_time, d);
+	WRITE_TSDFIELD(next_laser_time, d);
+	WRITE_TSDFIELD(lifeform_count, hhu);
+	WRITE_TSDFIELD(tractor_beam, u);
+	WRITE_TSDFIELD(overheating_damage_done, hhu);
+	WRITE_TSDFIELD(steering_adjustment.vec[0], f);
+	WRITE_TSDFIELD(steering_adjustment.vec[1], f);
+	WRITE_TSDFIELD(steering_adjustment.vec[2], f);
+	WRITE_TSDFIELD(braking_factor, f);
+	/* TODO cargo_bay_info cargo */
+	WRITE_TSDFIELD(ncargo_bays, d);
+	WRITE_TSDFIELD(wallet, f);
+	WRITE_TSDFIELD(threat_level, f);
+	WRITE_TSDFIELD(docking_magnets, hhu);
+	WRITE_TSDFIELD(passenger_berths, hhu);
+	WRITE_TSDFIELD(mining_bots, hhu);
+	WRITE_TSDFIELD(mining_bot_name, s);
+	WRITE_FIELD(sdata.name, s);
+	WRITE_FIELD(sdata.science_data_known, hu);
+	WRITE_FIELD(sdata.subclass, hhu);
+	WRITE_FIELD(sdata.shield_strength, hhu);
+	WRITE_FIELD(sdata.shield_wavelength, hhu);
+	WRITE_FIELD(sdata.shield_width, hhu);
+	WRITE_FIELD(sdata.shield_depth, hhu);
+	WRITE_FIELD(sdata.faction, hhu);
+	WRITE_FIELD(sci_coordx, lf);
+	WRITE_FIELD(sci_coordz, lf);
+	WRITE_FIELD(orientation.vec[0], f);
+	WRITE_FIELD(orientation.vec[1], f);
+	WRITE_FIELD(orientation.vec[2], f);
+	WRITE_FIELD(orientation.vec[3], f);
+	return 0;
+}
+
+static int save_bridge_info(struct bridge_info *b)
+{
+	int rc;
+	char dirpath[PATH_MAX], path[PATH_MAX], path2[PATH_MAX];
+	char dir1[5], dir2[5];
+	unsigned char hexpwdhash[41];
+	FILE *f;
+
+	memset(dir1, 0, sizeof(dir1));
+	memset(dir2, 0, sizeof(dir2));
+
+	snis_format_sha1_hash(b->pwdhash, hexpwdhash, 41);
+	memcpy(&dir1[0], &hexpwdhash[0], 4);
+	memcpy(&dir2[0], &hexpwdhash[4], 4);
+
+	sprintf(path, "%s/%s", database_root, dir1);
+	if (make_dir(path)) {
+		fprintf(stderr, "snis_multiverse: mkdir failed: %s: %s\n", path, strerror(errno));
+		return -1;
+	}
+	sprintf(dirpath, "%s/%s/%s", database_root, dir1, dir2);
+	if (make_dir(dirpath)) {
+		fprintf(stderr, "snis_multiverse: mkdir failed: %s: %s\n", dirpath, strerror(errno));
+		return -1;
+	}
+	sprintf(path, "%s/%s.update", dirpath, hexpwdhash);
+	sprintf(path2, "%s/%s.data", dirpath, hexpwdhash);
+	f = fopen(path, "w+");
+	if (!f) {
+		fprintf(stderr, "snis_multiverse: fopen %s failed: %s\n", path, strerror(errno));
+		return -1;
+	}
+	rc = write_bridge_info(f, b);
+	if (rc) {
+		fprintf(stderr, "snis_multiverse: failed to write to %s\n", path);
+		fclose(f);
+		return -1;
+	}
+	sync_file(f);
+	fclose(f);
+	rc = rename(path, path2);
+	sync_dir(dirpath);
+	if (rc) {
+		fprintf(stderr, "snis_multiverse: failed to rename %s to %s: %s\n",
+			path, path2, strerror(errno));
+		return -1;
+	}
 	return 0;
 }
 
@@ -287,9 +502,11 @@ static int update_bridge(struct starsystem_info *ss)
 	rc = snis_readsocket(ss->socket, buffer, sizeof(struct update_ship_packet) - 9 + 25);
 	if (rc != 0)
 		return rc;
+	pthread_mutex_lock(&data_mutex);
 	i = lookup_ship_by_hash(pwdhash);
 	if (i < 0) {
 		fprintf(stderr, "snis_multiverse: Unknown ship hash\n");
+		pthread_mutex_unlock(&data_mutex);
 		return rc;
 	}
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
@@ -318,8 +535,21 @@ static int update_bridge(struct starsystem_info *ss)
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);
 
-	/* TODO locking */
 	o = &ship[i].entity;
+	if (!o->tsd.ship.damcon) {
+		o->tsd.ship.damcon = malloc(sizeof(*o->tsd.ship.damcon));
+		memset(o->tsd.ship.damcon, 0, sizeof(*o->tsd.ship.damcon));
+	}
+#if 0
+	if (!o->tsd.ship.power_model) {
+		o->tsd.ship.power_model = malloc(sizeof(*o->tsd.ship.power_model));
+		memset(o->tsd.ship.power_model, 0, sizeof(*o->tsd.ship.power_model));
+	}
+	if (!o->tsd.ship.coolant_model) {
+		o->tsd.ship.coolant_model = malloc(sizeof(*o->tsd.ship.coolant_model));
+		memset(o->tsd.ship.coolant_model, 0, sizeof(*o->tsd.ship.coolant_model));
+	}
+#endif
 	o->x = dx;
 	o->y = dy;
 	o->z = dz;
@@ -375,6 +605,8 @@ static int update_bridge(struct starsystem_info *ss)
 	o->tsd.ship.weap_orientation = weap_orientation;
 	o->tsd.ship.reverse = reverse;
 	o->tsd.ship.trident = trident;
+	ship[i].initialized = 1;
+	pthread_mutex_unlock(&data_mutex);
 	rc = 0;
 	return rc;
 }
@@ -746,6 +978,23 @@ static void restore_data(void)
 
 static void checkpoint_data(void)
 {
+	int i;
+
+	pthread_mutex_lock(&data_mutex);
+	for (i = 0; i < nbridges; i++)
+		save_bridge_info(&ship[i]);
+	pthread_mutex_unlock(&data_mutex);
+}
+
+static void create_database_root_or_die(char *database_root)
+{
+	if (mkdir(database_root, database_mode) != 0) {
+		if (errno != EEXIST) {
+			fprintf(stderr, "snis_multiverse: Can't mkdir %s: %s\n",
+				database_root, strerror(errno));
+			exit(1);
+		}
+	}
 }
 
 static void open_log_file(void)
@@ -774,6 +1023,8 @@ int main(int argc, char *argv[])
 		usage();
 
 	printf("SNIS multiverse server\n");
+
+	create_database_root_or_die(database_root);
 
 	snis_protocol_debugging(1);
 	ignore_sigpipe();
