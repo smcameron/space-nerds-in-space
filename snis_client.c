@@ -4874,6 +4874,16 @@ static int process_add_player_error(uint8_t *error)
 		break;
 	case ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS:
 		sprintf(login_failed_msg, "A SHIP WITH THAT NAME ALREADY_EXISTS");
+		break;
+	case ADD_PLAYER_ERROR_FAILED_VERIFICATION:
+		sprintf(login_failed_msg, "FAILED BRIDGE VERIFICATION");
+		break;
+	case ADD_PLAYER_ERROR_TOO_MANY_BRIDGES:
+		sprintf(login_failed_msg, "TOO_MANY_BRIDGES");
+		break;
+	default:
+		sprintf(login_failed_msg, "UNKNOWN ERROR");
+		break;
 	}
 	login_failed_timer = FRAME_RATE_HZ * 5;
 	*error = err;
@@ -5609,6 +5619,12 @@ static void show_common_screen(GtkWidget *w, char *title)
 		login_failed_timer--;
 		sng_center_xy_draw_string(login_failed_msg, SMALL_FONT,
 						SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+		if (login_failed_timer <= 0) {
+			/* We failed verfication, so quickstart didn't work, so turn it off. */
+			quickstartmode = 0;
+			displaymode = DISPLAYMODE_LOBBYSCREEN;
+			done_with_lobby = 0;
+		}
 	}
 }
 

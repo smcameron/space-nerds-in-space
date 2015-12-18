@@ -12411,11 +12411,13 @@ static void simulate_slow_server(__attribute__((unused)) int x)
 static void *per_client_write_thread(__attribute__((unused)) void /* struct game_client */ *client)
 {
 	struct game_client *c = (struct game_client *) client;
+	int bridge_status;
 
 	/* Wait for client[] array to get fully updated before proceeding. */
 	client_lock();
 	get_client(c);
 	client_unlock();
+	double disconnect_timer = -1.0;
 
 	const uint8_t over_clock = 4;
 	const double maxTimeBehind = 0.5;
@@ -12427,6 +12429,16 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 	while (1) {
 		if (c->socket < 0)
 			break;
+
+		bridge_status = bridgelist[c->bridge].verified;
+		if (bridge_status == BRIDGE_FAILED_VERIFICATION ||
+			bridge_status == BRIDGE_REFUSED) {
+			unsigned char player_error = ADD_PLAYER_ERROR_FAILED_VERIFICATION;
+			if (bridge_status == BRIDGE_REFUSED)
+				player_error = ADD_PLAYER_ERROR_TOO_MANY_BRIDGES;
+			pb_queue_to_client(c, packed_buffer_new("bb", OPCODE_ADD_PLAYER_ERROR, player_error));
+			disconnect_timer = 1.0;
+		}
 
 		currentTime = time_now_double();
 
@@ -12444,6 +12456,15 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 				sleep_double(timeToSleep);
 		}
 		simulate_slow_server(0);
+		if (disconnect_timer > 0.0)
+			break;
+	}
+	if (disconnect_timer > 0.0) {
+		fprintf(stderr, "snis_server: disconnecting client for failed bridge verification\n");
+		sleep_double(disconnect_timer);
+		shutdown(c->socket, SHUT_RDWR);
+		close(c->socket);
+		c->socket = -1;
 	}
 	log_client_info(SNIS_INFO, c->socket, "client writer thread exiting.\n");
 	pthread_mutex_lock(&universe_mutex);
