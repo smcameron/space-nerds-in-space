@@ -42,6 +42,8 @@ struct server_tracker {
 	int time_to_quit;
 	struct ssgl_game_server *game_server;
 	int game_server_count;
+	struct ssgl_game_server *mverse_server;
+	int mverse_server_count;
 };
 
 int server_tracker_stop(struct server_tracker *st)
@@ -74,13 +76,31 @@ static void print_game_servers(struct ssgl_game_server *game_server, int game_se
 #endif
 }
 
+static void copy_game_server_list(struct ssgl_game_server **output, int *outputcount,
+				struct ssgl_game_server *input, int inputcount)
+{
+	if (*output) {
+		free(*output);
+		*output = NULL;
+	}
+	if (inputcount > 0) {
+		*output = malloc(sizeof(**output) * inputcount);
+		memcpy(*output, input, sizeof(**output) * inputcount);
+	}
+	*outputcount = inputcount;
+}
+
 static void *server_tracker_thread(void *tracker_info)
 {
 	struct server_tracker *st = tracker_info;
-	struct ssgl_game_server *game_server = NULL;
-	struct ssgl_client_filter filter;
-	int game_server_count;
+	struct ssgl_game_server *game_server, *mverse_server;
+	struct ssgl_client_filter server_filter;
+	struct ssgl_client_filter multiverse_filter;
+	int game_server_count, mverse_server_count;
 	int rc, time_to_quit = 0;
+
+	game_server = NULL;
+	mverse_server = NULL;
 
 	pthread_mutex_init(&st->mutex, NULL);
 	st->sock = ssgl_gameclient_connect_to_lobby(st->lobbyhost);
@@ -91,26 +111,38 @@ static void *server_tracker_thread(void *tracker_info)
 		return NULL;
 	}
 
-	strcpy(filter.game_type, "SNIS");
+	memset(&server_filter, 0, sizeof(server_filter));
+	memset(&multiverse_filter, 0, sizeof(multiverse_filter));
+	strcpy(server_filter.game_type, "SNIS");
+	strcpy(multiverse_filter.game_type, "SNIS-MVERSE");
 	do {
-		rc = ssgl_recv_game_servers(st->sock, &game_server, &game_server_count, &filter);
+		rc = ssgl_recv_game_servers(st->sock, &game_server, &game_server_count, &server_filter);
+		if (rc) {
+			fprintf(stderr, "ssgl_recv_game_servers failed: %s\n", strerror(errno));
+			break;
+		}
+		rc = ssgl_recv_game_servers(st->sock, &mverse_server,
+						&mverse_server_count, &multiverse_filter);
 		if (rc) {
 			fprintf(stderr, "ssgl_recv_game_servers failed: %s\n", strerror(errno));
 			break;
 		}
 		print_game_servers(game_server, game_server_count);
-		if (game_server_count > 0)
-			free(game_server);
-		ssgl_sleep(20);  /* just a thread safe sleep. */
+		print_game_servers(mverse_server, mverse_server_count);
+
+		ssgl_sleep(20);  /* thread safe sleep. */
 
 		(void) pthread_mutex_lock(&st->mutex);
 
 		/* update internal list of game servers */
-		if (st->game_server)
-			free(st->game_server);
-		st->game_server = malloc(sizeof(*st->game_server) * game_server_count);
-		memcpy(st->game_server, game_server, sizeof(*st->game_server) * game_server_count);
-		st->game_server_count = game_server_count;
+		copy_game_server_list(&st->game_server, &st->game_server_count,
+					game_server, game_server_count);
+		copy_game_server_list(&st->mverse_server, &st->mverse_server_count,
+					mverse_server, mverse_server_count);
+		if (game_server)
+			free(game_server);
+		if (mverse_server)
+			free(mverse_server);
 
 		if (st->time_to_quit)
 			time_to_quit = 1;
@@ -150,10 +182,16 @@ int server_tracker_get_server_list(struct server_tracker *st,
 					struct ssgl_game_server **server_list, int *nservers)
 {
 	pthread_mutex_lock(&st->mutex);
-	*server_list = malloc(sizeof(struct ssgl_game_server) * st->game_server_count);
-	memcpy(*server_list, st->game_server,
-			sizeof(struct ssgl_game_server) * st->game_server_count);
-	*nservers = st->game_server_count;
+	copy_game_server_list(server_list, nservers, st->game_server, st->game_server_count);
+	pthread_mutex_unlock(&st->mutex);
+	return 0;
+}
+
+int server_tracker_get_multiverse_list(struct server_tracker *st,
+					struct ssgl_game_server **server_list, int *nservers)
+{
+	pthread_mutex_lock(&st->mutex);
+	copy_game_server_list(server_list, nservers, st->mverse_server, st->mverse_server_count);
 	pthread_mutex_unlock(&st->mutex);
 	return 0;
 }
