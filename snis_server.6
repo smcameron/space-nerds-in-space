@@ -2,7 +2,12 @@
 .SH NAME
 snis_server \- Multi player cooperative star ship bridge simulator (server) 
 .SH SYNOPSIS
-.B snis_server gameinstance serverhost location
+.B snis_server
+-l lobbyhost
+-L location
+[ -g gameinstance ]
+[ -n servernick ]
+[ --enable-enscript ]
 .SH DESCRIPTION
 .\" Add any additional description here
 .warn 511
@@ -10,16 +15,33 @@ snis_server \- Multi player cooperative star ship bridge simulator (server)
 snis_server is a server process for the game Space Nerds In Space, which is
 a multiplayer starship bridge simulator.  The server process simulates the 
 game universe and processes input data from client processes and sends outputs
-to client processes.  The "gameinstance" parameter is used by the game lobby
-process (ssgl_server) to distinguish one game instance from another running
+to client processes.  The "gameinstance" and "location" parameters are used
+to distinguish one game instance from another running
 on the same host (multiple snis_server processes may be run on the same host).
-The gameinstance should be a short human readable string to uniquely identify
-the game instance.  The serverhost is the hostname of the server hosting the
-ssgl_server process.  The location is a human readable string giving some idea
-of the location of the server, or some other descriptive information. 
+The gameinstance and location should be a short human readable string to
+uniquely identify the game instance.  Gameinstance may be omitted (in which
+case "-" is used) but location is required.  The lobbyhost is the hostname of
+the server hosting the ssgl_server process.
 .SH Options:
 .TP
-\fB\--version\fR
+\fB\-e, --enable-enscript\fR
+Enable the "enscript" command on the Demon screen.  This allows clients to create
+files on the server so you should probably leave this off.
+.TP
+\fB\-g, --gameinstance\fR
+Set the "gameinstance" to be used with the lobby server.  This is just
+and arbitrary string for human consumption to differentiate one gameserver
+from another.  It is optional.  If omitted, the value "-" will be used.
+.TP
+\fB\-l, --lobbyhost\fR
+Set the hostname at which the lobbyhost is running.
+.TP
+\fB\-L, --location\fR
+Set the "location" to be used with the lobby server.  This is just
+and arbitrary string for human consumption to differentiate one gameserver
+from another.  It is required.
+.TP
+\fB\-v, --version\fR
 Print the program's version number and exit.
 .SH FILES
 .PP

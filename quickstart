@@ -48,11 +48,11 @@ sleep 0.25
 sleep 0.25
 
 export SNISRAND=12345
-./snis_server localhost SPACENERDS ALTAIR x --enable-enscript &
+./snis_server -l localhost -g SPACENERDS -L ALTAIR x --enable-enscript &
 export SNISRAND=54321
-./snis_server localhost XSPACENERDS SIRIUS x --enable-enscript &
+./snis_server -l localhost -g XSPACENERDS -L SIRIUS x --enable-enscript &
 export SNISRAND=9557
-./snis_server localhost YSPACENERDS POLARIS x --enable-enscript &
+./snis_server -l localhost -g YSPACENERDS -L POLARIS x --enable-enscript &
 
 
 sleep 2.50

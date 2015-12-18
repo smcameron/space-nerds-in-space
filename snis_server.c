@@ -38,6 +38,7 @@
 #include <errno.h>
 #include <time.h>
 #include <ctype.h>
+#include <getopt.h>
 #include <math.h>
 #include <netinet/tcp.h>
 #include <stddef.h>
@@ -13407,8 +13408,9 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 
 void usage(void)
 {
-	fprintf(stderr, "snis_server lobbyserver gameinstance servernick location\n");
-	fprintf(stderr, "For example: snis_server lobbyserver 'steves game' zuul Houston\n");
+	fprintf(stderr, "snis_server: usage:\n");
+	fprintf(stderr, "snis_server -l lobbyhost -L location [ -g gameinstance ] [ -n servernick ]\n");
+	fprintf(stderr, "For example: snis_server -l lobbyserver -g 'steves game' -n zuul -L Houston\n");
 	exit(0);
 }
 
@@ -16099,22 +16101,79 @@ static void init_natural_language_system(void)
  * Here ends the natural language parsing code.
  *****************************************************************************************/
 
+static struct option long_options[] = {
+	{ "enable-enscript", no_argument, NULL, 'e' },
+	{ "help", no_argument, NULL, 'h' },
+	{ "lobbyhost", required_argument, NULL, 'l' },
+	{ "gameinstance", required_argument, NULL, 'g' },
+	{ "servernick", required_argument, NULL, 'n' },
+	{ "location", required_argument, NULL, 'L' },
+	{ "version", no_argument, NULL, 'v' },
+};
+
+static char *default_lobby_gameinstance = "-";
+static char *default_lobbyhost = "localhost";
+static char *default_lobby_servernick = "-";
+
+static char *lobby_gameinstance = NULL;
+static char *lobbyhost = NULL;
+static char *lobby_location = NULL;
+static char *lobby_servernick = NULL;
+
+static void process_options(int argc, char *argv[])
+{
+	int c;
+
+	lobby_gameinstance = default_lobby_gameinstance;
+	lobby_servernick = default_lobby_servernick;
+	lobbyhost = default_lobbyhost;
+
+	while (1) {
+		int option_index;
+		c = getopt_long(argc, argv, "eg:hL:l:n:v", long_options, &option_index);
+		if (c == -1)
+			break;
+		switch (c) {
+		case 'e':
+			lua_enscript_enabled = 1;
+			fprintf(stderr, "WARNING: lua enscript enabled!\n");
+			fprintf(stderr, "THIS PERMITS USERS TO CREATE FILES ON THE SERVER\n");
+			break;
+		case 'g':
+			lobby_gameinstance = optarg;
+			break;
+		case 'h':
+			usage();
+			break;
+		case 'l':
+			lobbyhost = optarg;
+			break;
+		case 'L':
+			lobby_location = optarg;
+			break;
+		case 'n':
+			lobby_servernick = optarg;
+			break;
+		case 'v':
+			printf("SPACE NERDS IN SPACE SERVER ");
+			printf("%s\n", BUILD_INFO_STRING1);
+			printf("%s\n", BUILD_INFO_STRING2);
+			exit(0);
+			break;
+		}
+	}
+	if (lobby_location == NULL)
+		usage();
+}
+
 int main(int argc, char *argv[])
 {
 	int port, rc, i;
 	struct timespec thirtieth_second;
 
 	take_your_locale_and_shove_it();
-	if (argc < 5) 
-		usage();
 
-	if (argc >= 6) {
-		if (strcmp(argv[5], "--enable-enscript") == 0) {
-			lua_enscript_enabled = 1;
-			fprintf(stderr, "WARNING: lua enscript enabled!\n");
-			fprintf(stderr, "THIS PERMITS USERS TO CREATE FILES ON THE SERVER\n");
-		}
-	}
+	process_options(argc, argv);
 
 	override_asset_dir();
 	set_random_seed();
@@ -16166,8 +16225,9 @@ int main(int argc, char *argv[])
 	ignore_sigpipe();	
 	snis_collect_netstats(&netstats);
 	if (getenv("SNISSERVERNOLOBBY") == NULL) {
-		register_with_game_lobby(argv[1], port, argv[2], argv[1], argv[3]);
-		server_tracker = server_tracker_start(argv[1]);
+		register_with_game_lobby(lobbyhost, port,
+			lobby_servernick, lobby_gameinstance, lobby_location);
+		server_tracker = server_tracker_start(lobbyhost);
 	} else {
 		printf("snis_server: Skipping lobby registration\n");
 		server_tracker = NULL;
