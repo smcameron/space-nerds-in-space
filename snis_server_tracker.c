@@ -94,14 +94,18 @@ static int compare_game_server_list(struct ssgl_game_server *a, int acount,
 static void copy_game_server_list(struct ssgl_game_server **output, int *outputcount,
 				struct ssgl_game_server *input, int inputcount)
 {
+	fprintf(stderr, "copy_game_server_list 1\n");
 	if (*output) {
 		free(*output);
 		*output = NULL;
+		fprintf(stderr, "copy_game_server_list 2\n");
 	}
 	if (inputcount > 0) {
 		*output = malloc(sizeof(**output) * inputcount);
 		memcpy(*output, input, sizeof(**output) * inputcount);
+		fprintf(stderr, "copy_game_server_list 3\n");
 	}
+	fprintf(stderr, "copy_game_server_list 4, count = %d\n", inputcount);
 	*outputcount = inputcount;
 }
 

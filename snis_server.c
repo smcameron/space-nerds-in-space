@@ -9067,7 +9067,7 @@ void npc_menu_item_warp_gate_tickets(struct npc_menu_item *item,
 	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
 	int i, bridge = b - bridgelist;
 
-	printf("npc_menu_item_warp_gate_tickets called for %s\n", b->shipname);
+	fprintf(stderr, "snis_server: npc_menu_item_warp_gate_tickets called for %s\n", b->shipname);
 
 	i = lookup_by_id(b->shipid);
 	if (i < 0)
