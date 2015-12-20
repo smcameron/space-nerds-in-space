@@ -490,6 +490,7 @@ static void draw_screen()
 		e = add_entity(cx, light_mesh, light_pos.v.x, light_pos.v.y, light_pos.v.z, WHITE);
 	}
 
+	render_skybox(cx);
 	render_entities(cx);
 
 	remove_all_entity(cx);
@@ -586,6 +587,19 @@ static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
 		sprintf(filename[i], "%s/%s%d.png", ".", filenameprefix, i);
 
 	return graph_dev_load_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
+					filename[5], filename[0], filename[2]);
+}
+
+static void setup_skybox(char *skybox_prefix)
+{
+	const char *asset_dir = "share/snis/textures";
+	int i;
+	char filename[6][PATH_MAX + 1];
+
+	for (i = 0; i < 6; i++)
+		sprintf(filename[i], "%s/%s%d.png", asset_dir, skybox_prefix, i);
+
+	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4],
 					filename[5], filename[0], filename[2]);
 }
 
@@ -701,6 +715,7 @@ int main(int argc, char *argv[])
 
 	snis_typefaces_init();
 	graph_dev_setup("share/snis/shader");
+	setup_skybox("orange-haze");
 
 	sng_set_extent_size(SCREEN_WIDTH, SCREEN_HEIGHT);
 	sng_set_screen_size(real_screen_width, real_screen_height);
