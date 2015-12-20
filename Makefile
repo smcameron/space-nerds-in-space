@@ -468,7 +468,7 @@ OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 EXTRACTSCADPARAMS=$(AWK) -f extract_scad_params.awk $< > $@ && $(ECHO) '  EXTRACT THRUST ATTACHMENTS' $@
 EXTRACTDOCKINGPORTS=$(AWK) -f extract_docking_ports.awk $< > $@ && $(ECHO) '  EXTRACT DOCKING PORTS' $@
 
-ELOBJS=mtwist.o mathutils.o quat.o open-simplex-noise.o png_utils.o
+ELOBJS=mtwist.o mathutils.o quat.o open-simplex-noise.o png_utils.o crater.o
 ELLIBS=-lm ${LRTLIB} -lpng
 ELLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} earthlike.o ${ELOBJS} ${ELLIBS} && $(ECHO) '  LINK' $@
 MCLIBS=-lm ${LRTLIB} -lpng
@@ -598,6 +598,9 @@ snis_font.o:	snis_font.c Makefile
 	$(Q)$(COMPILE)
 
 mathutils.o:	mathutils.c Makefile
+	$(Q)$(COMPILE)
+
+crater.o:	crater.c crater.h Makefile
 	$(Q)$(COMPILE)
 
 snis_alloc.o:	snis_alloc.c Makefile
