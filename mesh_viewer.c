@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <limits.h>
+#include <getopt.h>
 #include <locale.h>
 
 #include "mtwist.h"
@@ -47,6 +48,8 @@ static int draw_atmosphere = 1;
 static int frame_counter = 0;
 static int periodic_snapshots = 0;
 static int snapshot_number = 0;
+static char *planetname = NULL;
+static char *program;
 union quat autorotation; 
 
 static int display_frame_stats = 1;
@@ -605,14 +608,49 @@ static void setup_skybox(char *skybox_prefix)
 
 __attribute__((noreturn)) void usage(char *program)
 {
-	fprintf(stderr, "Usage: %s [ <mesh_file> | -p <planet-texture> ]\n", program);
+	fprintf(stderr, "Usage:\n");
+	fprintf(stderr, " %s [ -p <planet-texture> ]\n", program);
+	fprintf(stderr, " %s <mesh-file>\n", program);
 	exit(-1);
+}
+
+static struct option long_options[] = {
+	{ "help", no_argument, NULL, 'h' },
+	{ "planetmode", required_argument, NULL, 'p' },
+};
+
+static int process_options(int argc, char *argv[])
+{
+	int c;
+
+	int option_index = 0;
+	while (1) {
+		int option_index;
+
+		c = getopt_long(argc, argv, "hp:", long_options, &option_index);
+		if (c < 0) {
+			break;
+		}
+		switch (c) {
+		case 'p':
+			planet_mode = 1;
+			planetname = optarg;
+			break;
+		case 'h':
+			usage(program);
+		default:
+			fprintf(stderr, "%s: Unknown option.\n", program);
+			usage(program);
+		}
+	}
+	return option_index + 1;
 }
 
 int main(int argc, char *argv[])
 {
-	char *filename, *program, *planetname = NULL;
+	char *filename;
 	struct stat statbuf;
+	int last_arg;
 
 	setlocale(LC_ALL, "C");
 	program = argc >= 0 ? argv[0] : "mesh_viewer";
@@ -620,20 +658,8 @@ int main(int argc, char *argv[])
 	if (argc < 2)
 		usage(program);
 
-	/* TODO: should really used getoptlong here... */
-	if (strcmp(argv[1], "--help") == 0 ||
-		strcmp(argv[1], "-help") == 0 ||
-		strcmp(argv[1], "help") == 0 ||
-		strcmp(argv[1], "-h") == 0)
-		usage(program);
-
-	filename = argv[1];
-	if (strncmp(filename, "-p", 2) == 0) {
-		planet_mode = 1;
-		if (argc < 3)
-			usage(program);
-		planetname = argv[2];
-	}
+	last_arg = process_options(argc, argv);
+	filename = argv[last_arg];
 
 	if (!planet_mode && stat(filename, &statbuf) != 0) {
 		fprintf(stderr, "%s: %s: %s\n", program, filename, strerror(errno));
