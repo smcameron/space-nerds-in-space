@@ -102,6 +102,8 @@ struct vertex_triangle_buffer_data {
 	union vec3 tvertex2;
 	union vec3 wireframe_edge_mask;
 	union vec2 texture_coord;
+	union vec3 tangent;
+	union vec3 bitangent;
 };
 
 struct vertex_wireframe_line_buffer_data {
@@ -208,6 +210,14 @@ void mesh_graph_dev_init(struct mesh *m)
 				g_vt_buffer_data[v_index].tvertex2.v.x = m->t[i].v[2]->x;
 				g_vt_buffer_data[v_index].tvertex2.v.y = m->t[i].v[2]->y;
 				g_vt_buffer_data[v_index].tvertex2.v.z = m->t[i].v[2]->z;
+
+				g_vt_buffer_data[v_index].tangent.v.x = m->t[i].vtangent[j].x;
+				g_vt_buffer_data[v_index].tangent.v.y = m->t[i].vtangent[j].y;
+				g_vt_buffer_data[v_index].tangent.v.z = m->t[i].vtangent[j].z;
+
+				g_vt_buffer_data[v_index].bitangent.v.x = m->t[i].vbitangent[j].x;
+				g_vt_buffer_data[v_index].bitangent.v.y = m->t[i].vbitangent[j].y;
+				g_vt_buffer_data[v_index].bitangent.v.z = m->t[i].vbitangent[j].z;
 
 				/* bias the edge distance to make the coplanar edges not draw */
 				if ((j == 1 || j == 2) && (m->t[i].flag & TRIANGLE_1_2_COPLANAR))
@@ -669,6 +679,8 @@ struct graph_dev_gl_textured_shader {
 	GLint normal_matrix_id;
 	GLint vertex_position_id;
 	GLint vertex_normal_id;
+	GLint vertex_tangent_id;
+	GLint vertex_bitangent_id;
 	GLint tint_color_id;
 	GLint texture_coord_id;
 	GLint texture_2d_id;
@@ -1285,6 +1297,32 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		);
 	}
 
+	if (shader->vertex_tangent_id >= 0) {
+		glEnableVertexAttribArray(shader->vertex_tangent_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
+		glVertexAttribPointer(
+			shader->vertex_tangent_id,    /* The attribute we want to configure */
+			3,                            /* size */
+			GL_FLOAT,                     /* type */
+			GL_FALSE,                     /* normalized? */
+			sizeof(struct vertex_triangle_buffer_data), /* stride */
+			(void *)offsetof(struct vertex_triangle_buffer_data, tangent.v.x) /* array buffer offset */
+		);
+	}
+
+	if (shader->vertex_bitangent_id >= 0) {
+		glEnableVertexAttribArray(shader->vertex_bitangent_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
+		glVertexAttribPointer(
+			shader->vertex_bitangent_id,  /* The attribute we want to configure */
+			3,                            /* size */
+			GL_FLOAT,                     /* type */
+			GL_FALSE,                     /* normalized? */
+			sizeof(struct vertex_triangle_buffer_data), /* stride */
+			(void *)offsetof(struct vertex_triangle_buffer_data, bitangent.v.x) /* array buffer offset */
+		);
+	}
+
 	if (shader->texture_coord_id >= 0) {
 		glEnableVertexAttribArray(shader->texture_coord_id);
 		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
@@ -1298,6 +1336,10 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	glDisableVertexAttribArray(shader->vertex_position_id);
 	if (shader->vertex_normal_id >= 0)
 		glDisableVertexAttribArray(shader->vertex_normal_id);
+	if (shader->vertex_tangent_id >= 0)
+		glDisableVertexAttribArray(shader->vertex_tangent_id);
+	if (shader->vertex_bitangent_id >= 0)
+		glDisableVertexAttribArray(shader->vertex_bitangent_id);
 	if (shader->texture_coord_id >= 0)
 		glDisableVertexAttribArray(shader->texture_coord_id);
 	glUseProgram(0);
@@ -2798,6 +2840,9 @@ static void setup_textured_cubemap_shader(const char *basename, struct graph_dev
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
+	shader->vertex_tangent_id = glGetAttribLocation(shader->program_id, "a_Tangent");
+	shader->vertex_bitangent_id = glGetAttribLocation(shader->program_id, "a_BiTangent");
+	fprintf(stderr, "n, t, b = %d, %d, %d\n", shader->vertex_normal_id, shader->vertex_tangent_id, shader->vertex_bitangent_id);
 
 	shader->shadow_annulus_texture_id = glGetUniformLocation(shader->program_id, "u_AnnulusAlbedoTex");
 	glUniform1i(shader->shadow_annulus_texture_id, 1);
