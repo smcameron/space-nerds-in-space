@@ -932,3 +932,18 @@ int moving_spheres_intersection(union vec3 *s1, float r1, union vec3 *v1,
 	return 0;
 }
 
+/* For the +z face of a cubemapped unit sphere, returns tangent and bitangent vectors
+ * See: http://www.iquilezles.org/www/articles/patchedsphere/patchedsphere.htm
+ */
+void cubemapped_sphere_tangent_and_bitangent(float x, float y, union vec3 *u, union vec3 *v)
+{
+	u->v.x = -(1.0f + y * y);
+	u->v.y = x * y;
+	u->v.z = x;
+	vec3_normalize_self(u);
+
+	v->v.x = x * y;
+	v->v.y = -(1 + x * x);
+	v->v.z = y;
+	vec3_normalize_self(v);
+}
