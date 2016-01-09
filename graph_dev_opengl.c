@@ -674,6 +674,7 @@ struct graph_dev_gl_textured_shader {
 	GLint texture_2d_id;
 	GLint emit_texture_2d_id;
 	GLint texture_cubemap_id;
+	GLint normalmap_cubemap_id;
 	GLint light_pos_id;
 
 	GLint shadow_sphere_id;
@@ -1173,7 +1174,7 @@ static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh
 static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader, const struct mat44 *mat_mvp,
 	const struct mat44 *mat_mv, const struct mat33 *mat_normal, struct mesh *m,
 	struct sng_color *triangle_color, float alpha, union vec3 *eye_light_pos, GLuint texture_number,
-	GLuint emit_texture_number, struct shadow_sphere_data *shadow_sphere,
+	GLuint emit_texture_number, GLuint normalmap_texture_number, struct shadow_sphere_data *shadow_sphere,
 	struct shadow_annulus_data *shadow_annulus, int do_cullface, int do_blend,
 	float ring_texture_v, float ring_inner_radius, float ring_outer_radius)
 {
@@ -1204,6 +1205,9 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture_number);
 	else if (shader->texture_cubemap_id >= 0)
 		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, texture_number);
+
+	if (shader->normalmap_cubemap_id >= 0)
+		BIND_TEXTURE(GL_TEXTURE3, GL_TEXTURE_CUBE_MAP, normalmap_texture_number);
 
 	if (shader->emit_texture_2d_id >= 0)
 		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, emit_texture_number);
@@ -1837,7 +1841,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 		float alpha = fabs(vec3_dot(&camera_normal, &camera_ent_vector)) * mt->alpha;
 
 		graph_dev_raster_texture(&textured_shader, &mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
-			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, 0, 0, 0, 1, 0.0f,
+			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, -1, 0, 0, 0, 1, 0.0f,
 				2.0f, 4.0f);
 
 		if (draw_billboard_wireframe) {
@@ -2080,6 +2084,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		float texture_alpha = 1.0;
 		GLuint texture_id = 0;
 		GLuint emit_texture_id = 0;
+		GLuint normalmap_id = -1;
 
 		/* for sphere shadows */
 		struct shadow_sphere_data shadow_sphere;
@@ -2162,6 +2167,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 			case MATERIAL_TEXTURED_PLANET: {
 				struct material_textured_planet *mt = &e->material_ptr->textured_planet;
 				texture_id = mt->texture_id;
+				normalmap_id = mt->normalmap_id;
 
 				if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
 					tex_shader = &textured_cubemap_lit_with_annulus_shadow_shader;
@@ -2245,8 +2251,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				if (tex_shader)
 					graph_dev_raster_texture(tex_shader, mat_mvp, mat_mv, mat_normal, e->m,
 						&texture_tint, texture_alpha, eye_light_pos, texture_id,
-						emit_texture_id, &shadow_sphere, &shadow_annulus, do_cullface,
-						do_blend, ring_texture_v,
+						emit_texture_id, normalmap_id, &shadow_sphere, &shadow_annulus,
+						do_cullface, do_blend, ring_texture_v,
 						ring_inner_radius, ring_outer_radius);
 				else if (atmosphere)
 					graph_dev_raster_atmosphere(mat_mvp, mat_mv, mat_normal,
@@ -2776,6 +2782,8 @@ static void setup_textured_cubemap_shader(const char *basename, struct graph_dev
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
 	shader->texture_cubemap_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
 	glUniform1i(shader->texture_cubemap_id, 0);
+	shader->normalmap_cubemap_id = glGetUniformLocation(shader->program_id, "u_NormalMapTex");
+	glUniform1i(shader->normalmap_cubemap_id, 3); /* GL_TEXTURE3 */
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->ring_texture_v_id = glGetUniformLocation(shader->program_id, "u_ring_texture_v");
 	if (shader->ring_texture_v_id >= 0)

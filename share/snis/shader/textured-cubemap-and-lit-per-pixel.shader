@@ -55,6 +55,7 @@ varying vec3 v_TexCoord;
 
 #if defined(INCLUDE_FS)
 	uniform samplerCube u_AlbedoTex;
+	uniform samplerCube u_NormalMapTex;
 	uniform vec4 u_TintColor;
 	uniform vec3 u_LightPos;   // The position of the light in eye space.
 
