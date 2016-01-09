@@ -51,8 +51,10 @@ varying mat3 tbn;
 		v_Normal = normalize(u_NormalMatrix * a_Normal);
 		// v_Tangent = normalize(u_NormalMatrix * normalize(a_Tangent));
 		// v_BiTangent = normalize(u_NormalMatrix * normalize(a_BiTangent));
-		v_Tangent = normalize(u_NormalMatrix * a_Tangent);
-		v_BiTangent = normalize(u_NormalMatrix * a_BiTangent);
+		//v_Tangent = normalize(u_NormalMatrix * a_Tangent);
+		//v_BiTangent = normalize(u_NormalMatrix * a_BiTangent);
+		v_Tangent = normalize(a_Tangent);
+		v_BiTangent = normalize(a_BiTangent);
 
 		tbn = mat3(v_Tangent, v_BiTangent, v_Normal);
 
@@ -69,6 +71,8 @@ varying mat3 tbn;
 	uniform samplerCube u_NormalMapTex;
 	uniform vec4 u_TintColor;
 	uniform vec3 u_LightPos;   // The position of the light in eye space.
+	uniform mat4 u_MMatrix;
+	uniform mat4 u_MVMatrix;
 
 	void main()
 	{
@@ -80,8 +84,13 @@ varying mat3 tbn;
 		float direct = dot(normalize(v_Normal), light_dir);
 
 		// vec3 pixel_normal = tbn * normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
-		vec3 pixel_normal = normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
+		// vec3 pixel_normal = (u_MMatrix * vec4(normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0), 0.0)).xyz;
+		// vec3 pixel_normal = tbn * (u_MMatrix * vec4(normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0), 0.0)).xyz;
+		vec3 pixel_normal = tbn * normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
+		// vec3 pixel_normal = (u_MVMatrix * vec4(normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0), 0.0)).xyz;
  
+		//float normal_map_shadow = max(0.0, dot(pixel_normal, light_dir));
+		// float normal_map_shadow = max(0.0, dot(pixel_normal, (u_MVMatrix * vec4(light_dir, 0.0)).xyz));
 		float normal_map_shadow = max(0.0, dot(pixel_normal, light_dir));
 
 		/* make diffuse light atleast ambient */

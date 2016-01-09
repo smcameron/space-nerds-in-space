@@ -676,6 +676,7 @@ struct graph_dev_gl_textured_shader {
 	GLuint program_id;
 	GLint mvp_matrix_id;
 	GLint mv_matrix_id;
+	GLint m_matrix_id;
 	GLint normal_matrix_id;
 	GLint vertex_position_id;
 	GLint vertex_normal_id;
@@ -1184,7 +1185,7 @@ static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh
 }
 
 static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader, const struct mat44 *mat_mvp,
-	const struct mat44 *mat_mv, const struct mat33 *mat_normal, struct mesh *m,
+	const struct mat44 *mat_mv, const struct mat44 *mat_m, const struct mat33 *mat_normal, struct mesh *m,
 	struct sng_color *triangle_color, float alpha, union vec3 *eye_light_pos, GLuint texture_number,
 	GLuint emit_texture_number, GLuint normalmap_texture_number, struct shadow_sphere_data *shadow_sphere,
 	struct shadow_annulus_data *shadow_annulus, int do_cullface, int do_blend,
@@ -1230,6 +1231,8 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 	if (shader->mv_matrix_id >= 0)
 		glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
+	if (shader->m_matrix_id >= 0)
+		glUniformMatrix4fv(shader->m_matrix_id, 1, GL_FALSE, &mat_m->m[0][0]);
 	if (shader->normal_matrix_id >= 0)
 		glUniformMatrix3fv(shader->normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
 
@@ -1882,7 +1885,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 		float alpha = fabs(vec3_dot(&camera_normal, &camera_ent_vector)) * mt->alpha;
 
-		graph_dev_raster_texture(&textured_shader, &mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
+		graph_dev_raster_texture(&textured_shader, &mat_mvp_local_r, &mat_mv_local_r, NULL, &mat_normal_local_r,
 			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, -1, 0, 0, 0, 1, 0.0f,
 				2.0f, 4.0f);
 
@@ -2092,6 +2095,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 {
 	const struct mat44 *mat_mvp = &transform->mvp;
 	const struct mat44 *mat_mv = &transform->mv;
+	const struct mat44d *mat_m_double = &transform->m;
+	struct mat44 mat_m;
 	const struct mat33 *mat_normal = &transform->normal;
 	float ring_texture_v = 0.0f;
 	float ring_inner_radius = 1.0f;
@@ -2290,8 +2295,9 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 			if (outline_triangle) {
 				graph_dev_raster_filled_wireframe_mesh(mat_mvp, e->m, &line_color, &triangle_color);
 			} else {
+				mat44_convert_df(mat_m_double, &mat_m);
 				if (tex_shader)
-					graph_dev_raster_texture(tex_shader, mat_mvp, mat_mv, mat_normal, e->m,
+					graph_dev_raster_texture(tex_shader, mat_mvp, mat_mv, &mat_m, mat_normal, e->m,
 						&texture_tint, texture_alpha, eye_light_pos, texture_id,
 						emit_texture_id, normalmap_id, &shadow_sphere, &shadow_annulus,
 						do_cullface, do_blend, ring_texture_v,
@@ -2773,6 +2779,7 @@ static void setup_textured_shader(const char *basename, const char *defines,
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
+	shader->m_matrix_id = glGetUniformLocation(shader->program_id, "u_MMatrix");
 	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
@@ -2820,6 +2827,7 @@ static void setup_textured_cubemap_shader(const char *basename, struct graph_dev
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
+	shader->m_matrix_id = glGetUniformLocation(shader->program_id, "u_MMatrix");
 	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
 	shader->texture_cubemap_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");

@@ -464,16 +464,16 @@ void mesh_set_spherical_cubemap_tangent_and_bitangent(struct mesh *m)
 				y = ny;
 			} else if (abs(ny) > abs(nx) && abs(ny) > abs(nz)) {
 				if (ny > 0)
-					y = nz;
-				else
 					y = 1.0f - nz;
+				else
+					y = nz;
 				x = nx;
 			} else /* it must be true that (abs(nz) > abs(nx) && abs(nz) > abs(ny)) */ {
 				if (nz > 0)
-					y = ny;
+					x = nx;
 				else
-					y = 1.0f - ny;
-				x = nx;
+					x = 1.0f - nx;
+				y = ny;
 			}
 			cubemapped_sphere_tangent_and_bitangent(x, y, &tangent, &bitangent);
 			m->t[i].vtangent[j].x = tangent.v.x;
@@ -1108,6 +1108,7 @@ struct mesh *mesh_unit_icosphere(int subdivisions)
 	mesh_free(m2);
 	mesh_set_spherical_vertex_normals(m3);
 	mesh_set_spherical_cubemap_tangent_and_bitangent(m3);
+	mesh_graph_dev_init(m3);
 	return m3;
 }
 
