@@ -184,7 +184,7 @@ void mesh_graph_dev_init(struct mesh *m)
 		struct vertex_buffer_data *g_v_buffer_data = malloc(v_size);
 		struct vertex_triangle_buffer_data *g_vt_buffer_data = malloc(vt_size);
 
-		float normal_line_length = m->radius / 10.0;
+		float normal_line_length = m->radius / 20.0;
 		size_t nl_size = sizeof(struct vertex_buffer_data) * m->ntriangles * 3 * 2;
 		struct vertex_buffer_data *g_nl_buffer_data = malloc(nl_size * 3);
 		memset(g_nl_buffer_data, 0, nl_size * 3);
