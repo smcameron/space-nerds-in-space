@@ -1112,6 +1112,171 @@ struct mesh *mesh_unit_icosphere(int subdivisions)
 	return m3;
 }
 
+static void make_unit_cube_triangles(struct mesh *m, int face, int subdivisions)
+{
+	int i, j, v1, v2, v3, vindex, tindex;
+
+	vindex = face * (subdivisions + 1) * (subdivisions + 1);
+	tindex = face * (subdivisions * subdivisions) * 2;
+	for (i = 0; i < subdivisions; i++) {
+		for (j = 0; j < subdivisions; j++) {
+			v1 = vindex + i + j * (subdivisions + 1);
+			v2 = v1 + 1;
+			v3 = v1 + subdivisions + 1;
+			m->t[tindex].v[0] = &m->v[v1];
+			m->t[tindex].v[1] = &m->v[v2];
+			m->t[tindex].v[2] = &m->v[v3];
+			tindex++;
+
+			v1 = v3;
+			/* v2 is the same */
+			v3 = v1 + 1;
+			m->t[tindex].v[0] = &m->v[v1];
+			m->t[tindex].v[1] = &m->v[v2];
+			m->t[tindex].v[2] = &m->v[v3];
+			tindex++;
+		}
+	}
+}
+
+struct mesh *mesh_unit_cube(int subdivisions)
+{
+	struct mesh *m;
+	int i, j, face, vindex;
+
+	m = malloc(sizeof(*m));
+	if (!m)
+		return m;
+	memset(m, 0, sizeof(*m));
+	m->nvertices = 6 * (subdivisions + 1) * (subdivisions + 1);
+	m->ntriangles = 6 * (subdivisions * subdivisions) * 2;
+
+	m->t = malloc(sizeof(*m->t) * m->ntriangles);
+	if (!m->t)
+		goto bail;
+	memset(m->t, 0, sizeof(*m->t) * m->ntriangles);
+	m->v = malloc(sizeof(*m->v) * m->nvertices);
+	if (!m->v)
+		goto bail;
+	memset(m->v, 0, sizeof(*m->v) * m->nvertices);
+	m->tex = 0;
+	/* m->tex = malloc(sizeof(*m->tex) * m->ntriangles * 3);
+	if (!m->tex)
+		goto bail;
+	memset(m->tex, 0, sizeof(*m->tex) * m->ntriangles * 3); */
+	m->l = NULL;
+
+	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+
+	face = 0; /* normal is positive z */
+	vindex = face * (subdivisions + 1) * (subdivisions + 1);
+	for (i = 0; i < subdivisions + 1; i++) {
+		for (j = 0; j < subdivisions + 1; j++) {
+			m->v[vindex].x = (float) i * (1.0 / (float) subdivisions) * -2.0f + 1.0f;
+			m->v[vindex].y = (float) j * (1.0 / (float) subdivisions) * 2.0f - 1.0f;
+			m->v[vindex].z = 1.0f;
+			vindex++;
+		}
+	}
+
+	face = 1; /* normal is positive x */
+	vindex = face * (subdivisions + 1) * (subdivisions + 1);
+	for (i = 0; i < subdivisions + 1; i++) {
+		for (j = 0; j < subdivisions + 1; j++) {
+			m->v[vindex].x = 1.0;
+			m->v[vindex].y = (float) j * (1.0 / (float) subdivisions) * -2.0f + 1.0f;
+			m->v[vindex].z = (float) i * (1.0 / (float) subdivisions) * -2.0f + 1.0f;
+			vindex++;
+		}
+	}
+
+	face = 2; /* normal is negative z */
+	vindex = face * (subdivisions + 1) * (subdivisions + 1);
+	for (i = 0; i < subdivisions + 1; i++) {
+		for (j = 0; j < subdivisions + 1; j++) {
+			m->v[vindex].x = (float) i * (1.0 / (float) subdivisions) * 2.0f - 1.0f;
+			m->v[vindex].y = (float) j * (1.0 / (float) subdivisions) * 2.0f - 1.0f;
+			m->v[vindex].z = -1.0;
+			vindex++;
+		}
+	}
+
+	face = 3; /* normal is negative x */
+	vindex = face * (subdivisions + 1) * (subdivisions + 1);
+	for (i = 0; i < subdivisions + 1; i++) {
+		for (j = 0; j < subdivisions + 1; j++) {
+			m->v[vindex].x = -1.0;
+			m->v[vindex].y = (float) j * (1.0 / (float) subdivisions) * 2.0f - 1.0f;
+			m->v[vindex].z = (float) i * (1.0 / (float) subdivisions) * -2.0f + 1.0f;
+			vindex++;
+		}
+	}
+
+	face = 4; /* normal is positive y */
+	vindex = face * (subdivisions + 1) * (subdivisions + 1);
+	for (i = 0; i < subdivisions + 1; i++) {
+		for (j = 0; j < subdivisions + 1; j++) {
+			m->v[vindex].x = (float) i * (1.0 / (float) subdivisions) * -2.0 + 1.0f;
+			m->v[vindex].y = 1.0f;
+			m->v[vindex].z = (float) j * (1.0 / (float) subdivisions) * -2.0 + 1.0f;
+			vindex++;
+		}
+	}
+
+	face = 5; /* normal is negative y */
+	vindex = face * (subdivisions + 1) * (subdivisions + 1);
+	for (i = 0; i < subdivisions + 1; i++) {
+		for (j = 0; j < subdivisions + 1; j++) {
+			m->v[vindex].x = (float) i * (1.0 / (float) subdivisions) * -2.0 + 1.0f;
+			m->v[vindex].y = -1.0f;
+			m->v[vindex].z = (float) j * (1.0 / (float) subdivisions) * 2.0 - 1.0f;
+			vindex++;
+		}
+	}
+
+	for (i = 0; i < 6; i++)
+		make_unit_cube_triangles(m, i, subdivisions);
+
+	mesh_set_flat_shading_vertex_normals(m);
+	m->nlines = 0;
+	m->radius = mesh_compute_radius(m);
+	mesh_graph_dev_init(m);
+	return m;
+bail:
+	mesh_free(m);
+	return NULL;
+}
+
+struct mesh *mesh_unit_spherified_cube(int subdivisions)
+{
+	int i;
+	union vec3 v;
+
+	struct mesh *m = mesh_unit_cube(subdivisions);
+	if (!m)
+		return m;
+
+	/* Normalize all the vertices to turn the cube into a sphere */
+	for (i = 0; i < m->nvertices; i++) {
+		v.v.x = m->v[i].x;
+		v.v.y = m->v[i].y;
+		v.v.z = m->v[i].z;
+
+		vec3_normalize_self(&v);
+
+		m->v[i].x = v.v.x;
+		m->v[i].y = v.v.y;
+		m->v[i].z = v.v.z;
+	}
+
+	mesh_set_spherical_vertex_normals(m);
+	mesh_set_spherical_cubemap_tangent_and_bitangent(m);
+	m->nlines = 0;
+	m->radius = mesh_compute_radius(m);
+	mesh_graph_dev_init(m);
+	return m;
+}
+
 /* this has a known issue mapping vertices of tris that span the "international date line" */
 void mesh_sphere_uv_map(struct mesh *m)
 {
