@@ -60,7 +60,7 @@ varying mat3 tbn;
 
 		//tbn = transpose(mat3(v_Tangent, v_BiTangent, v_Normal));
 		// tbn = mat3(v_Tangent, v_BiTangent, v_Normal);
-		tbn = mat3(normalize(a_Normal), v_BiTangent, v_Normal);
+		tbn = mat3(v_Tangent, v_BiTangent, v_Normal);
 
 		v_TexCoord = a_Position.xyz;
 
@@ -92,7 +92,6 @@ varying mat3 tbn;
 		// vec3 pixel_normal = (u_MMatrix * vec4(normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0), 0.0)).xyz;
 		// vec3 pixel_normal = tbn * (u_MMatrix * vec4(normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0), 0.0)).xyz;
 		// vec3 pixel_normal = (u_MVMatrix * vec4(normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0), 0.0)).xyz;
-		// vec3 pixel_normal = tbn * normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
 		vec3 pixel_normal = tbn * normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
  
 		//float normal_map_shadow = max(0.0, dot(pixel_normal, light_dir));
@@ -107,9 +106,9 @@ varying mat3 tbn;
 
 		gl_FragColor = textureCube(u_AlbedoTex, v_TexCoord);
 
-		gl_FragColor.rgb *= diffuse;
-		gl_FragColor.rgb *= diffuse * 0.15;
-		gl_FragColor.rgb += 0.85 * pixel_normal;
+		gl_FragColor.rgb *= diffuse; //direct;
+		//gl_FragColor.rgb *= diffuse * 0.15;
+		//gl_FragColor.rgb += 0.85 * pixel_normal;
 		//gl_FragColor.rgb = pixel_normal;
 
 		/* tint with alpha pre multiply */
