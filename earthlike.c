@@ -315,7 +315,7 @@ static void add_crater(int i, union vec3 p, float r, float h)
 	b->sample_bytes_per_row = 3 * b->samplew;
 	crater_r = (0.5 * (snis_random_float() + 1.0) * 5.5) *
 			(0.5 * (snis_random_float() + 1.0) * 5.5) + 2.5;
-	create_crater_heightmap((unsigned char *) b->sampledata, 1024, 1024, 512, 512, (int) crater_r, 7);
+	create_crater_heightmap((unsigned char *) b->sampledata, 1024, 1024, 512, 512, (int) crater_r, 3);
 	quat_from_u2v(&b->texelq, &p, &right_at_ya, &up);
 }
 
