@@ -569,7 +569,7 @@ static void save_height_maps(void)
 static void calculate_normal(int f, int i, int j)
 {
 	int i1, i2, j1, j2;
-	int p1, p2, dzdx, dzdy;
+	int p1, p2, dzdx[3], dzdy[3];
 	union vec3 n;
 
 	i1 = i - 1;
@@ -585,14 +585,31 @@ static void calculate_normal(int f, int i, int j)
 	if (j2 >= DIM)
 		j2 = j;
 
-	p1 = (j * DIM + i1) * 4; 
-	p2 = (j * DIM + i2) * 4; 
-	dzdx = (int) output_image[f][p1] - (int) output_image[f][p2];
-	p1 = (j1 * DIM + i) * 4; 
-	p2 = (j2 * DIM + i) * 4; 
-	dzdy = (int) output_image[f][p2] - (int) output_image[f][p1];
-	n.v.x = (float) dzdx / 127.0f + 0.5;
-	n.v.y = (float) dzdy / 127.0f + 0.5;
+	p1 = (j1 * DIM + i1) * 4;
+	p2 = (j1 * DIM + i2) * 4;
+	dzdx[0] = (int) output_image[f][p1] - (int) output_image[f][p2];
+	p1 = (j * DIM + i1) * 4;
+	p2 = (j * DIM + i2) * 4;
+	dzdx[1] = (int) output_image[f][p1] - (int) output_image[f][p2];
+	p1 = (j2 * DIM + i1) * 4;
+	p2 = (j2 * DIM + i2) * 4;
+	dzdx[2] = (int) output_image[f][p1] - (int) output_image[f][p2];
+
+	p1 = (j1 * DIM + i1) * 4;
+	p2 = (j2 * DIM + i1) * 4;
+	dzdy[0] = (int) output_image[f][p2] - (int) output_image[f][p1];
+	p1 = (j1 * DIM + i) * 4;
+	p2 = (j2 * DIM + i) * 4;
+	dzdy[1] = (int) output_image[f][p2] - (int) output_image[f][p1];
+	p1 = (j1 * DIM + i2) * 4;
+	p2 = (j2 * DIM + i2) * 4;
+	dzdy[2] = (int) output_image[f][p2] - (int) output_image[f][p1];
+
+	dzdx[0] = dzdx[0] + 2 * dzdx[1] + dzdx[1];
+	dzdy[0] = -dzdy[0] - 2 * dzdy[1] - dzdy[1];
+
+	n.v.x = ((float) dzdx[0] / 4.0) / 127.0f + 0.5;
+	n.v.y = ((float) dzdy[0] / 4.0) / 127.0f + 0.5;
 	n.v.z = 1.0f;
 	normal[f][i][j] = n;
 }
