@@ -23,10 +23,13 @@
 
 varying vec3 v_Position;
 varying vec3 v_Normal;
+varying vec3 v_TexCoord;
+
+#if defined(USE_NORMAL_MAP)
 varying vec3 v_Tangent;
 varying vec3 v_BiTangent;
-varying vec3 v_TexCoord;
 varying mat3 tbn;
+#endif
 
 #if defined(INCLUDE_VS)
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
@@ -35,8 +38,10 @@ varying mat3 tbn;
 
 	attribute vec4 a_Position; // Per-vertex position information we will pass in.
 	attribute vec3 a_Normal;   // Per-vertex normal, tangent, and bitangent information we will pass in.
+#if defined(USE_NORMAL_MAP)
 	attribute vec3 a_Tangent;
 	attribute vec3 a_BiTangent;
+#endif
 
 	void main()
 	{
@@ -45,10 +50,11 @@ varying mat3 tbn;
 
 		/* Transform the normal's, Tangent's and BiTangent's orientations into eye space. */
 		v_Normal = normalize(u_NormalMatrix * a_Normal);
+#if defined(USE_NORMAL_MAP)
 		v_Tangent = normalize(u_NormalMatrix * a_Tangent);
 		v_BiTangent = normalize(u_NormalMatrix * a_BiTangent);
-
 		tbn = mat3(v_Tangent, v_BiTangent, v_Normal);
+#endif
 
 		v_TexCoord = a_Position.xyz;
 
@@ -60,9 +66,11 @@ varying mat3 tbn;
 
 #if defined(INCLUDE_FS)
 	uniform samplerCube u_AlbedoTex;
-	uniform samplerCube u_NormalMapTex;
 	uniform vec4 u_TintColor;
 	uniform vec3 u_LightPos;   // The position of the light in eye space.
+#if defined(USE_NORMAL_MAP)
+	uniform samplerCube u_NormalMapTex;
+#endif
 
 	uniform sampler2D u_AnnulusAlbedoTex;
 	uniform vec3 u_AnnulusCenter; // center of disk in eye space
@@ -126,15 +134,16 @@ varying mat3 tbn;
 				shadow  = 1.0 - ring_color.a;
 			}
 		}
-
+#if defined(USE_NORMAL_MAP)
 		vec3 pixel_normal = tbn * normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
 		float normal_map_shadow = max(0.0, dot(pixel_normal, light_dir));
-
+		float diffuse = max(shadow * normal_map_shadow, AMBIENT);
+#else
 		/* make diffuse light atleast ambient */
-		float diffuse = max(direct * shadow * normal_map_shadow, AMBIENT);
+		float diffuse = max(direct * shadow, AMBIENT);
+#endif
 
 		gl_FragColor = textureCube(u_AlbedoTex, v_TexCoord);
-
 		gl_FragColor.rgb *= diffuse;
 
 		/* tint with alpha pre multiply */

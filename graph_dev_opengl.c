@@ -826,6 +826,7 @@ static struct graph_dev_gl_textured_shader textured_cubemap_lit_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_normal_map_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_shield_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_with_annulus_shadow_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
 static struct graph_dev_gl_fs_effect_shader fs_copy_shader;
 static struct graph_dev_smaa_effect smaa_effect;
@@ -2274,7 +2275,10 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				normalmap_id = mt->normalmap_id;
 
 				if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
-					tex_shader = &textured_cubemap_lit_with_annulus_shadow_shader;
+					if (normalmap_id == (GLuint) -1)
+						tex_shader = &textured_cubemap_lit_with_annulus_shadow_shader;
+					else
+						tex_shader = &textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader;
 
 					struct material_textured_planet_ring *ring_mt =
 						&mt->ring_material->textured_planet_ring;
@@ -3491,6 +3495,8 @@ int graph_dev_setup(const char *shader_dir)
 	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", 0, &textured_cubemap_shield_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0,
 		&textured_cubemap_lit_with_annulus_shadow_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1,
+		&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
 	setup_fs_effect_shader("fs-effect-copy", &fs_copy_shader);
 
