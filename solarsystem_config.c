@@ -26,15 +26,6 @@
 #include "string-utils.h"
 #include "solarsystem_config.h"
 
-#if 0
-struct solarsystem_asset_spec {
-	char *directory;
-	char *sun_texture;
-	char *skybox_prefix;
-	int nplanet_textures;
-	char **planet_texture;
-};
-#endif
 static void free_string_ptr(char **x)
 {
 	if (*x) {
@@ -108,6 +99,8 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 			a->nplanet_textures = value;
 			a->planet_texture = malloc(sizeof(a->planet_texture[0]) * value);
 			memset(a->planet_texture, 0, sizeof(a->planet_texture[0]) * value);
+			a->planet_normalmap = malloc(sizeof(a->planet_normalmap[0]) * value);
+			memset(a->planet_normalmap, 0, sizeof(a->planet_normalmap[0]) * value);
 			a->planet_type = malloc(sizeof(a->planet_type[0]) * value);
 			memset(a->planet_type, 0, sizeof(a->planet_type[0]) * value);
 			continue;
@@ -121,16 +114,17 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				fprintf(stderr, "%s:line %d: too many planet textures.\n", filename, ln);
 				goto bad_line;
 			}
-			char word1[1000], word2[1000];
+			char word1[1000], word2[1000], word3[1000];
 			field = get_field(line);
-			rc = sscanf(field, "%s %s", word1, word2);
-			if (rc != 2) {
-				fprintf(stderr, "%s:line %d: expected planet texture prefix and planet type\n",
+			rc = sscanf(field, "%s %s %s", word1, word2, word3);
+			if (rc != 3) {
+				fprintf(stderr, "%s:line %d: expected planet texture prefix, planet normal map prefix, and planet type\n",
 					filename, ln);
 				goto bad_line;
 			}
 			a->planet_texture[planet_textures_read] = strdup(word1);
-			a->planet_type[planet_textures_read] = strdup(word2);
+			a->planet_normalmap[planet_textures_read] = strdup(word2);
+			a->planet_type[planet_textures_read] = strdup(word3);
 			planet_textures_read++;
 			continue;
 		} else if (has_prefix("sun texture:", line)) {

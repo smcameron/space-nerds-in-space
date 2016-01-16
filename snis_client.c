@@ -12016,7 +12016,12 @@ static void load_per_solarsystem_textures()
 		material_init_textured_planet(&planet_material[i]);
 		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, path);
 		planet_material[i].textured_planet.ring_material = 0;
-		planet_material[i].textured_planet.normalmap_id = -1;
+		if (strcmp(solarsystem_assets->planet_normalmap[i], "no-normal-map") == 0) {
+			planet_material[i].textured_planet.normalmap_id = -1;
+		} else {
+			sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->planet_normalmap[i]);
+			planet_material[i].textured_planet.normalmap_id = load_cubemap_textures(0, path);
+		}
 
 		int k;
 		for (k = 0; k < NPLANETARY_RING_MATERIALS; k++) {
