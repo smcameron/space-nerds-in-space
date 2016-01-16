@@ -823,6 +823,7 @@ static struct graph_dev_gl_textured_shader textured_with_sphere_shadow_shader;
 static struct graph_dev_gl_textured_shader textured_lit_shader;
 static struct graph_dev_gl_textured_shader textured_lit_emit_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_lit_normal_map_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_shield_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
@@ -2296,7 +2297,10 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					shadow_annulus.r2 = vec3_cwise_max(&e->scale) *
 									ring_outer_radius;
 				} else {
-					tex_shader = &textured_cubemap_lit_shader;
+					if (normalmap_id != (GLuint) -1)
+						tex_shader = &textured_cubemap_lit_normal_map_shader;
+					else
+						tex_shader = &textured_cubemap_lit_shader;
 				}
 				}
 				break;
@@ -2857,17 +2861,21 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->shadow_sphere_id = glGetUniformLocation(shader->program_id, "u_Sphere");
 }
 
-static void setup_textured_cubemap_shader(const char *basename, struct graph_dev_gl_textured_shader *shader)
+static void setup_textured_cubemap_shader(const char *basename, int use_normal_map,
+					struct graph_dev_gl_textured_shader *shader)
 {
 	/* set all attributes to -1 */
 	memset(shader, 0xff, sizeof(*shader));
 
-	const char *vert_header =
-		UNIVERSAL_SHADER_HEADER
-		"#define INCLUDE_VS 1\n";
-	const char *frag_header =
-		UNIVERSAL_SHADER_HEADER
-		"#define INCLUDE_FS 1\n";
+	char vert_header[1024];
+	char frag_header[1024];
+
+	sprintf(vert_header, "%s\n%s\n%s\n",
+		UNIVERSAL_SHADER_HEADER, "#define INCLUDE_VS 1\n",
+			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n");
+	sprintf(frag_header, "%s\n%s\n%s\n",
+		UNIVERSAL_SHADER_HEADER, "#define INCLUDE_FS 1\n",
+			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n");
 
 	char shader_filename[PATH_MAX];
 	snprintf(shader_filename, sizeof(shader_filename), "%s.shader", basename);
@@ -2885,8 +2893,10 @@ static void setup_textured_cubemap_shader(const char *basename, struct graph_dev
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
 	shader->texture_cubemap_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
 	glUniform1i(shader->texture_cubemap_id, 0);
-	shader->normalmap_cubemap_id = glGetUniformLocation(shader->program_id, "u_NormalMapTex");
-	glUniform1i(shader->normalmap_cubemap_id, 3); /* GL_TEXTURE3 */
+	if (use_normal_map) {
+		shader->normalmap_cubemap_id = glGetUniformLocation(shader->program_id, "u_NormalMapTex");
+		glUniform1i(shader->normalmap_cubemap_id, 3); /* GL_TEXTURE3 */
+	}
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->ring_texture_v_id = glGetUniformLocation(shader->program_id, "u_ring_texture_v");
 	if (shader->ring_texture_v_id >= 0)
@@ -3476,9 +3486,10 @@ int graph_dev_setup(const char *shader_dir)
 	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER, &textured_lit_shader);
 	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER "#define USE_EMIT_MAP",
 				&textured_lit_emit_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", &textured_cubemap_lit_shader);
-	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", &textured_cubemap_shield_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel",
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", 0, &textured_cubemap_lit_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", 1, &textured_cubemap_lit_normal_map_shader);
+	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", 0, &textured_cubemap_shield_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0,
 		&textured_cubemap_lit_with_annulus_shadow_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
 	setup_fs_effect_shader("fs-effect-copy", &fs_copy_shader);
