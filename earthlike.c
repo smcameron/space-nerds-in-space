@@ -590,7 +590,7 @@ static void calculate_normal(int f, int i, int j)
 	dzdx = (int) output_image[f][p1] - (int) output_image[f][p2];
 	p1 = (j1 * DIM + i) * 4; 
 	p2 = (j2 * DIM + i) * 4; 
-	dzdy = (int) output_image[f][p2] - (int) output_image[f][p1];
+	dzdy = (int) -output_image[f][p2] + (int) output_image[f][p1];
 	n.v.x = (float) dzdx / 127.0f + 0.5;
 	n.v.y = (float) dzdy / 127.0f + 0.5;
 	n.v.z = 1.0f;
