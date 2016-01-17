@@ -49,6 +49,7 @@ static int frame_counter = 0;
 static int periodic_snapshots = 0;
 static int snapshot_number = 0;
 static char *planetname = NULL;
+static char *normalmapname = NULL;
 static char *program;
 union quat autorotation; 
 static int icosohedron_subdivision = 4;
@@ -610,7 +611,8 @@ static void setup_skybox(char *skybox_prefix)
 __attribute__((noreturn)) void usage(char *program)
 {
 	fprintf(stderr, "Usage:\n");
-	fprintf(stderr, " %s [ -p <planet-texture> ] [ -i icosohedron-subdivision]\n", program);
+	fprintf(stderr, " %s -p <planet-texture> [ -i icosohedrion-subdivision] [ -n <normal-map-texture> ]\n",
+			program);
 	fprintf(stderr, " %s <mesh-file>\n", program);
 	exit(-1);
 }
@@ -631,6 +633,7 @@ static struct option long_options[] = {
 	{ "help", no_argument, NULL, 'h' },
 	{ "planetmode", required_argument, NULL, 'p' },
 	{ "icosohedron", required_argument, NULL, 'i' },
+	{ "normalmap", required_argument, NULL, 'n' },
 };
 
 static int process_options(int argc, char *argv[])
@@ -641,7 +644,7 @@ static int process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "hi:p:", long_options, &option_index);
+		c = getopt_long(argc, argv, "hi:n:p:", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -659,6 +662,9 @@ static int process_options(int argc, char *argv[])
 				fprintf(stderr, "Min icosohedron subdivision is 0\n");
 				icosohedron_subdivision = 0;
 			}
+			break;
+		case 'n':
+			normalmapname = optarg;
 			break;
 		case 'h':
 			usage(program);
@@ -776,6 +782,10 @@ int main(int argc, char *argv[])
 		atmosphere_mesh = mesh_unit_icosphere(icosohedron_subdivision);
 		material_init_textured_planet(&planet_material);
 		planet_material.textured_planet.texture_id = load_cubemap_textures(0, planetname);
+		if (normalmapname)
+			planet_material.textured_planet.normalmap_id = load_cubemap_textures(0, normalmapname);
+		else
+			planet_material.textured_planet.normalmap_id = -1;
 		planet_material.textured_planet.ring_material = 0;
 		material_init_atmosphere(&atmosphere_material);
 	} else {

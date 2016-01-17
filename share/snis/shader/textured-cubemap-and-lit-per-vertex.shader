@@ -40,6 +40,7 @@ varying vec3 v_LightColor;
 
 #if defined(INCLUDE_FS)
 	uniform samplerCube u_AlbedoTex;
+	uniform samplerCube u_NormalMapTex;
 	uniform vec4 u_TintColor;
 
 	void main()

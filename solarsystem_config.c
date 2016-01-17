@@ -99,6 +99,8 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 			a->nplanet_textures = value;
 			a->planet_texture = malloc(sizeof(a->planet_texture[0]) * value);
 			memset(a->planet_texture, 0, sizeof(a->planet_texture[0]) * value);
+			a->planet_normalmap = malloc(sizeof(a->planet_normalmap[0]) * value);
+			memset(a->planet_normalmap, 0, sizeof(a->planet_normalmap[0]) * value);
 			a->planet_type = malloc(sizeof(a->planet_type[0]) * value);
 			memset(a->planet_type, 0, sizeof(a->planet_type[0]) * value);
 			continue;
@@ -112,18 +114,34 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				fprintf(stderr, "%s:line %d: too many planet textures.\n", filename, ln);
 				goto bad_line;
 			}
-			char word1[1000], word2[1000];
+			char word1[1000], word2[1000], word3[1000];
 			field = get_field(line);
-			rc = sscanf(field, "%s %s", word1, word2);
-			if (rc != 2) {
-				fprintf(stderr, "%s:line %d: expected planet texture prefix and planet type\n",
-					filename, ln);
-				goto bad_line;
+			rc = sscanf(field, "%s %s %s", word1, word2, word3);
+			if (rc == 3) {
+				a->planet_texture[planet_textures_read] = strdup(word1);
+				a->planet_normalmap[planet_textures_read] = strdup(word2);
+				a->planet_type[planet_textures_read] = strdup(word3);
+				planet_textures_read++;
+				continue;
 			}
-			a->planet_texture[planet_textures_read] = strdup(word1);
-			a->planet_type[planet_textures_read] = strdup(word2);
-			planet_textures_read++;
-			continue;
+			rc = sscanf(field, "%s %s", word1, word2);
+			if (rc == 2) { /* old style, no normal map */
+				a->planet_texture[planet_textures_read] = strdup(word1);
+				a->planet_normalmap[planet_textures_read] = strdup("no-normal-map");
+				a->planet_type[planet_textures_read] = strdup(word3);
+				planet_textures_read++;
+				fprintf(stderr,
+					"%s:line %d: expected planet texture prefix, planet normal map prefix, and planet type\n",
+					filename, ln);
+				fprintf(stderr,
+					"%s:line %d: Assuming old style without normal map (use no-normal-map to suppress this message).\n",
+					filename, ln);
+				continue;
+			}
+			fprintf(stderr,
+				"%s:line %d: expected planet texture prefix, [ planet normal map prefix ], and planet type\n",
+				filename, ln);
+			goto bad_line;
 		} else if (has_prefix("sun texture:", line)) {
 			if (a->sun_texture != NULL) {
 				fprintf(stderr, "%s:line %d: too many sun textures.\n", filename, ln);

@@ -27,6 +27,7 @@ struct solarsystem_asset_spec {
 	char *skybox_prefix;
 	int nplanet_textures;
 	char **planet_texture;
+	char **planet_normalmap;
 	char **planet_type;
 };
 

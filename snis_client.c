@@ -12016,6 +12016,12 @@ static void load_per_solarsystem_textures()
 		material_init_textured_planet(&planet_material[i]);
 		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, path);
 		planet_material[i].textured_planet.ring_material = 0;
+		if (strcmp(solarsystem_assets->planet_normalmap[i], "no-normal-map") == 0) {
+			planet_material[i].textured_planet.normalmap_id = -1;
+		} else {
+			sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->planet_normalmap[i]);
+			planet_material[i].textured_planet.normalmap_id = load_cubemap_textures(0, path);
+		}
 
 		int k;
 		for (k = 0; k < NPLANETARY_RING_MATERIALS; k++) {
@@ -12743,7 +12749,7 @@ static struct mesh *snis_read_model(char *directory, char *filename)
 	if (!m) {
 		printf("Failed to read model from file '%s'\n", path);
 		printf("Assume form of . . . A SPHERICAL COW!\n");
-		m = mesh_unit_icosphere(3);
+		m = mesh_unit_spherified_cube(8);
 		if (!m)
 			printf("...or possibly a spherical cow dump!\n");
 		else
@@ -12801,7 +12807,7 @@ static void init_meshes()
 		printf("zzz radius %d = %f\n", i, mesh_compute_radius(asteroid_mesh[i]));
 	}
 
-	sphere_mesh = mesh_unit_icosphere(4);
+	sphere_mesh = mesh_unit_spherified_cube(16);
 	warp_tunnel_mesh = mesh_tube(XKNOWN_DIM, 450.0, 20);
 	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS);
 

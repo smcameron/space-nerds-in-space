@@ -106,6 +106,7 @@ struct material_textured_planet_ring {
 
 struct material_textured_planet {
 	int texture_id;
+	int normalmap_id;
 	struct material *ring_material;
 };
 
