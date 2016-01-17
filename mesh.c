@@ -501,6 +501,14 @@ void mesh_sample_spherical_cubemap_tangent_and_bitangent(struct mesh *m)
 	float epsilon = 0.001;
 	int triangles_per_face;
 	int face;
+	const float epsilon_factor[6][6] = {
+			{  1.0,  0.0f,  0.0f, 0.0f, -1.0f,  0.0f, }, /* face 0 */
+			{  0.0f, 0.0f, -1.0f, 0.0f, -1.0f,  0.0f, }, /* face 1 */
+			{ -1.0f, 0.0f,  0.0f, 0.0f, -1.0f,  0.0f, }, /* face 2 */
+			{  0.0f, 0.0f,  1.0f, 0.0f, -1.0f,  0.0f, }, /* face 3 */
+			{  1.0f, 0.0f,  0.0f, 0.0f,  0.0f,  1.0f, }, /* face 4 */
+			{  1.0f, 0.0f,  0.0f, 0.0f,  0.0f, -1.0f, }, /* face 5 */
+	};
 
 	/* This algorithm will have problems for triangles which have vertices which
 	 * are on different faces of the cubemap.  Luckily there are no such vertices
@@ -516,63 +524,16 @@ void mesh_sample_spherical_cubemap_tangent_and_bitangent(struct mesh *m)
 			normal.v.y = m->t[i].v[j]->y;
 			normal.v.z = m->t[i].v[j]->z;
 			vec3_normalize_self(&normal);
-			const float nx = normal.v.x;
-			const float ny = normal.v.y;
-			const float nz = normal.v.z;
 
-			/* Figure out which face of cubemap we're on, and which coords
+			/* Based on which face of cubemap we're on, figure which coords
 			 * play roles of x and y in calculation of tangent and bitangent
 			 */
-			switch (face) {
-			case 0:
-				tsample.v.x = nx + epsilon;
-				tsample.v.y = ny;
-				tsample.v.z = nz;
-				bsample.v.x = nx;
-				bsample.v.y = ny - epsilon;
-				bsample.v.z = nz;
-				break;
-			case 1:
-				tsample.v.x = nx;
-				tsample.v.y = ny;
-				tsample.v.z = nz - epsilon;
-				bsample.v.x = nx;
-				bsample.v.y = ny - epsilon;
-				bsample.v.z = nz;
-				break;
-			case 2:
-				tsample.v.x = nx - epsilon;
-				tsample.v.y = ny;
-				tsample.v.z = nz;
-				bsample.v.x = nx;
-				bsample.v.y = ny - epsilon;
-				bsample.v.z = nz;
-				break;
-			case 3:
-				tsample.v.x = nx;
-				tsample.v.y = ny;
-				tsample.v.z = nz + epsilon;
-				bsample.v.x = nx;
-				bsample.v.y = ny - epsilon;
-				bsample.v.z = nz;
-				break;
-			case 4:
-				tsample.v.x = nx + epsilon;
-				tsample.v.y = ny;
-				tsample.v.z = nz;
-				bsample.v.x = nx;
-				bsample.v.y = ny;
-				bsample.v.z = nz + epsilon;
-				break;
-			case 5:
-				tsample.v.x = nx + epsilon;
-				tsample.v.y = ny;
-				tsample.v.z = nz;
-				bsample.v.x = nx;
-				bsample.v.y = ny;
-				bsample.v.z = nz - epsilon;
-				break;
-			}
+			tsample.v.x = normal.v.x + epsilon_factor[face][0] * epsilon;
+			tsample.v.y = normal.v.y + epsilon_factor[face][1] * epsilon;
+			tsample.v.z = normal.v.z + epsilon_factor[face][2] * epsilon;
+			bsample.v.x = normal.v.x + epsilon_factor[face][3] * epsilon;
+			bsample.v.y = normal.v.y + epsilon_factor[face][4] * epsilon;
+			bsample.v.z = normal.v.z + epsilon_factor[face][5] * epsilon;
 			vec3_normalize_self(&tsample);
 			vec3_normalize_self(&bsample);
 			vec3_sub(&tangent, &tsample, &normal);
