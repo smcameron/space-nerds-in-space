@@ -51,6 +51,7 @@ static int snapshot_number = 0;
 static char *planetname = NULL;
 static char *program;
 union quat autorotation; 
+static int icosohedron_subdivision = 4;
 
 static int display_frame_stats = 1;
 
@@ -609,14 +610,27 @@ static void setup_skybox(char *skybox_prefix)
 __attribute__((noreturn)) void usage(char *program)
 {
 	fprintf(stderr, "Usage:\n");
-	fprintf(stderr, " %s [ -p <planet-texture> ]\n", program);
+	fprintf(stderr, " %s [ -p <planet-texture> ] [ -i icosohedron-subdivision]\n", program);
 	fprintf(stderr, " %s <mesh-file>\n", program);
 	exit(-1);
+}
+
+static void process_int_option(char *option_name, char *option_value, int *value)
+{
+	int tmp;
+
+	if (sscanf(option_value, "%d", &tmp) == 1) {
+		*value = tmp;
+	} else {
+		fprintf(stderr, "Bad %s option '%s'\n", option_name, option_value);
+		usage(program);
+	}
 }
 
 static struct option long_options[] = {
 	{ "help", no_argument, NULL, 'h' },
 	{ "planetmode", required_argument, NULL, 'p' },
+	{ "icosohedron", required_argument, NULL, 'i' },
 };
 
 static int process_options(int argc, char *argv[])
@@ -627,7 +641,7 @@ static int process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "hp:", long_options, &option_index);
+		c = getopt_long(argc, argv, "hi:p:", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -635,6 +649,16 @@ static int process_options(int argc, char *argv[])
 		case 'p':
 			planet_mode = 1;
 			planetname = optarg;
+			break;
+		case 'i':
+			process_int_option("icosohedron", optarg, &icosohedron_subdivision);
+			if (icosohedron_subdivision > 4) {
+				fprintf(stderr, "Max icosohedron subdivision is 4\n");
+				icosohedron_subdivision = 4;
+			} else if (icosohedron_subdivision < 0) {
+				fprintf(stderr, "Min icosohedron subdivision is 0\n");
+				icosohedron_subdivision = 0;
+			}
 			break;
 		case 'h':
 			usage(program);
@@ -748,8 +772,8 @@ int main(int argc, char *argv[])
 	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
 	if (planet_mode) {
-		target_mesh = mesh_unit_icosphere(4);
-		atmosphere_mesh = mesh_unit_icosphere(4);
+		target_mesh = mesh_unit_icosphere(icosohedron_subdivision);
+		atmosphere_mesh = mesh_unit_icosphere(icosohedron_subdivision);
 		material_init_textured_planet(&planet_material);
 		planet_material.textured_planet.texture_id = load_cubemap_textures(0, planetname);
 		planet_material.textured_planet.ring_material = 0;
