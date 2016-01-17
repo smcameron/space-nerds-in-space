@@ -279,4 +279,7 @@ int moving_spheres_intersection(union vec3 *s1, float r1, union vec3 *v1,
 				union vec3 *s2, float r2, union vec3 *v2,
 				float time_horizon, float *time);
 
+/* For the +z face of a cubemapped unit sphere, returns tangent and bitangent vectors */
+void cubemapped_sphere_tangent_and_bitangent(float x, float y, union vec3 *u, union vec3 *v);
+
 #endif /* __QUAT_H__ */

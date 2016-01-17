@@ -436,6 +436,56 @@ void mesh_set_spherical_vertex_normals(struct mesh *m)
 	}
 }
 
+void mesh_set_spherical_cubemap_tangent_and_bitangent(struct mesh *m)
+{
+	int i, j;
+
+	/* This algorithm will have problems for triangles which have vertices which
+	 * are on different faces of the cubemap...
+	 */
+	for (i = 0; i < m->ntriangles; i++) {
+		for (j = 0; j < 3; j++) {
+			union vec3 normal = { { m->t[i].v[j]->x, m->t[i].v[j]->y, m->t[i].v[j]->z } };
+			const float nx = normal.v.x;
+			const float ny = normal.v.y;
+			const float nz = normal.v.z;
+			float x = 0.0f;
+			float y = 0.0f;
+			union vec3 tangent, bitangent;
+
+			/* Figure out which face of cubemap we're on, and which coords
+			 * play roles of x and y in calculation of tangent and bitangent
+			 */
+			if (abs(nx) > abs(ny) && abs(nx) > abs(nz)) {
+				if (nx > 0)
+					x = 1.0f - nz;
+				else
+					x = nz;
+				y = ny;
+			} else if (abs(ny) > abs(nx) && abs(ny) > abs(nz)) {
+				if (ny > 0)
+					y = 1.0f - nz;
+				else
+					y = nz;
+				x = nx;
+			} else /* it must be true that (abs(nz) > abs(nx) && abs(nz) > abs(ny)) */ {
+				if (nz > 0)
+					x = nx;
+				else
+					x = 1.0f - nx;
+				y = ny;
+			}
+			cubemapped_sphere_tangent_and_bitangent(x, y, &tangent, &bitangent);
+			m->t[i].vtangent[j].x = tangent.v.x;
+			m->t[i].vtangent[j].y = tangent.v.y;
+			m->t[i].vtangent[j].z = tangent.v.z;
+			m->t[i].vbitangent[j].x = bitangent.v.x;
+			m->t[i].vbitangent[j].y = bitangent.v.y;
+			m->t[i].vbitangent[j].z = bitangent.v.z;
+		}
+	}
+}
+
 static int find_vertex(struct vertex *haystack[], struct vertex *needle, int nitems)
 {
 	int i;
@@ -1057,6 +1107,8 @@ struct mesh *mesh_unit_icosphere(int subdivisions)
 	m3 = mesh_duplicate(m2);
 	mesh_free(m2);
 	mesh_set_spherical_vertex_normals(m3);
+	mesh_set_spherical_cubemap_tangent_and_bitangent(m3);
+	mesh_graph_dev_init(m3);
 	return m3;
 }
 

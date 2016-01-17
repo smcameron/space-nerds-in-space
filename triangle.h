@@ -30,8 +30,9 @@
 
 struct triangle {
 	struct vertex *v[3]; /* three vertices */
-	struct vertex n; /* normal */
-	struct vertex vnormal[3]; /* vertex normal */
+	/* Umm, why are we using struct vertex for normals, etc. instead of union vec3? */
+	struct vertex n; /* triangle normal */
+	struct vertex vnormal[3], vtangent[3], vbitangent[3]; /* vertex normal, tangent and bitangent */
 	int flag;
 };
 #endif
