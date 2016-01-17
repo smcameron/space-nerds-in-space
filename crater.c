@@ -91,7 +91,8 @@ static void crater_dimple(unsigned char *image, int imagew, int imageh, int x, i
 					continue;
 				d = sqrtf((float) d2);
 				index = 3 * (iy * imagew + ix);
-				base = (unsigned char) ((d / r) * base_height);
+				const float maybe_central_peak = zerotoone() * 0.07;
+				base = ((1.0 - sin((d / r) * 0.45 * M_PI + maybe_central_peak)) + 1.0) * base_height;
 				image[index] = (unsigned char) base;
 				image[index + 1] = image[index];
 				image[index + 2] = image[index];
@@ -138,10 +139,10 @@ void create_crater_heightmap(unsigned char *image, int imagew, int imageh, int x
 		int tx, ty;
 
 		angle = (2.0 * M_PI * i) / (float) npoints + snis_random_float() * 10.0 * M_PI / 180.0;
-		tx = x + cos(angle) * r + snis_random_float() * snis_random_float() * r * 0.9;
-		ty = y - sin(angle) * r + snis_random_float() * snis_random_float() * r * 0.9;
+		tx = x + cos(angle) * r + snis_random_float() * snis_random_float() * r * 3.9;
+		ty = y - sin(angle) * r + snis_random_float() * snis_random_float() * r * 3.9;
 
-		add_cone(image, imagew, imageh, tx, ty, (0.2 + 0.10 * zerotoone()) * r, h);
+		add_cone(image, imagew, imageh, tx, ty, (0.2 + 0.50 * zerotoone()) * r, h);
 	}
 	add_rays(image, imagew, imageh, x, y, r, h * 2.75, 50 + snis_randn(350));
 }
