@@ -75,6 +75,8 @@ struct mesh_gl_info {
 	GLuint triangle_vertex_buffer;
 
 	GLuint triangle_normal_lines_buffer;
+	GLuint triangle_tangent_lines_buffer;
+	GLuint triangle_bitangent_lines_buffer;
 
 	int nwireframe_lines;
 	GLuint wireframe_lines_vertex_buffer;
@@ -141,6 +143,8 @@ void mesh_graph_dev_cleanup(struct mesh *m)
 		glDeleteBuffers(1, &ptr->triangle_vertex_buffer);
 		glDeleteBuffers(1, &ptr->wireframe_lines_vertex_buffer);
 		glDeleteBuffers(1, &ptr->triangle_normal_lines_buffer);
+		glDeleteBuffers(1, &ptr->triangle_tangent_lines_buffer);
+		glDeleteBuffers(1, &ptr->triangle_bitangent_lines_buffer);
 		glDeleteBuffers(1, &ptr->line_vertex_buffer);
 		glDeleteBuffers(1, &ptr->particle_vertex_buffer);
 		glDeleteBuffers(1, &ptr->particle_index_buffer);
@@ -180,9 +184,12 @@ void mesh_graph_dev_init(struct mesh *m)
 		struct vertex_buffer_data *g_v_buffer_data = malloc(v_size);
 		struct vertex_triangle_buffer_data *g_vt_buffer_data = malloc(vt_size);
 
-		int normal_line_length = m->radius / 20.0;
+		float normal_line_length = m->radius / 20.0;
 		size_t nl_size = sizeof(struct vertex_buffer_data) * m->ntriangles * 3 * 2;
-		struct vertex_buffer_data *g_nl_buffer_data = malloc(nl_size);
+		struct vertex_buffer_data *g_nl_buffer_data = malloc(nl_size * 3);
+		memset(g_nl_buffer_data, 0, nl_size * 3);
+		struct vertex_buffer_data *g_tl_buffer_data = &g_nl_buffer_data[m->ntriangles * 3 * 2];
+		struct vertex_buffer_data *g_bl_buffer_data = &g_nl_buffer_data[m->ntriangles * 3 * 2 * 2];
 
 		ptr->ntriangles = m->ntriangles;
 		ptr->npoints = m->ntriangles * 3; /* can be rendered as a point cloud too */
@@ -243,8 +250,10 @@ void mesh_graph_dev_init(struct mesh *m)
 					g_vt_buffer_data[v_index].texture_coord.v.y = 0;
 				}
 
-				/* draw a line for each vertex normal */
+				/* draw a line for each vertex normal, tangent, and bitangent */
 				int nl_index = i * 6 + j * 2;
+
+				/* normal */
 				g_nl_buffer_data[nl_index].position.v.x = m->t[i].v[j]->x;
 				g_nl_buffer_data[nl_index].position.v.y = m->t[i].v[j]->y;
 				g_nl_buffer_data[nl_index].position.v.z = m->t[i].v[j]->z;
@@ -255,12 +264,36 @@ void mesh_graph_dev_init(struct mesh *m)
 					m->t[i].v[j]->y + normal_line_length * m->t[i].vnormal[j].y;
 				g_nl_buffer_data[nl_index + 1].position.v.z =
 					m->t[i].v[j]->z + normal_line_length * m->t[i].vnormal[j].z;
+
+				/* tangent */
+				g_tl_buffer_data[nl_index].position.v.x = m->t[i].v[j]->x;
+				g_tl_buffer_data[nl_index].position.v.y = m->t[i].v[j]->y;
+				g_tl_buffer_data[nl_index].position.v.z = m->t[i].v[j]->z;
+				g_tl_buffer_data[nl_index + 1].position.v.x =
+					m->t[i].v[j]->x + normal_line_length * m->t[i].vtangent[j].x;
+				g_tl_buffer_data[nl_index + 1].position.v.y =
+					m->t[i].v[j]->y + normal_line_length * m->t[i].vtangent[j].y;
+				g_tl_buffer_data[nl_index + 1].position.v.z =
+					m->t[i].v[j]->z + normal_line_length * m->t[i].vtangent[j].z;
+
+				/* bitangent */
+				g_bl_buffer_data[nl_index].position.v.x = m->t[i].v[j]->x;
+				g_bl_buffer_data[nl_index].position.v.y = m->t[i].v[j]->y;
+				g_bl_buffer_data[nl_index].position.v.z = m->t[i].v[j]->z;
+				g_bl_buffer_data[nl_index + 1].position.v.x =
+					m->t[i].v[j]->x + normal_line_length * m->t[i].vbitangent[j].x;
+				g_bl_buffer_data[nl_index + 1].position.v.y =
+					m->t[i].v[j]->y + normal_line_length * m->t[i].vbitangent[j].y;
+				g_bl_buffer_data[nl_index + 1].position.v.z =
+					m->t[i].v[j]->z + normal_line_length * m->t[i].vbitangent[j].z;
 			}
 		}
 
 		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->vertex_buffer, v_size, g_v_buffer_data);
 		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer, vt_size, g_vt_buffer_data);
 		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_normal_lines_buffer, nl_size, g_nl_buffer_data);
+		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_tangent_lines_buffer, nl_size, g_tl_buffer_data);
+		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_bitangent_lines_buffer, nl_size, g_bl_buffer_data);
 
 		free(g_v_buffer_data);
 		free(g_vt_buffer_data);
@@ -1164,8 +1197,9 @@ static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh
 	glUseProgram(single_color_shader.program_id);
 
 	glUniformMatrix4fv(single_color_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
-	glUniform4f(single_color_shader.color_id, 0, 0, 1, 1);
 
+	/* normal lines */
+	glUniform4f(single_color_shader.color_id, 1, 0, 0, 1);
 	glEnableVertexAttribArray(single_color_shader.vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_normal_lines_buffer);
 	glVertexAttribPointer(
@@ -1176,7 +1210,34 @@ static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh
 		sizeof(struct vertex_buffer_data), /* stride */
 		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
 	);
+	glDrawArrays(GL_LINES, 0, m->ntriangles * 3 * 2);
 
+	/* tangent lines */
+	glUniform4f(single_color_shader.color_id, 0, 1, 0, 1);
+	glEnableVertexAttribArray(single_color_shader.vertex_position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_tangent_lines_buffer);
+	glVertexAttribPointer(
+		single_color_shader.vertex_position_id, /* The attribute we want to configure */
+		3,                           /* size */
+		GL_FLOAT,                    /* type */
+		GL_FALSE,                    /* normalized? */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
+	);
+	glDrawArrays(GL_LINES, 0, m->ntriangles * 3 * 2);
+
+	/* bitangent lines */
+	glUniform4f(single_color_shader.color_id, 0, 0, 1, 1);
+	glEnableVertexAttribArray(single_color_shader.vertex_position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_bitangent_lines_buffer);
+	glVertexAttribPointer(
+		single_color_shader.vertex_position_id, /* The attribute we want to configure */
+		3,                           /* size */
+		GL_FLOAT,                    /* type */
+		GL_FALSE,                    /* normalized? */
+		sizeof(struct vertex_buffer_data), /* stride */
+		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
+	);
 	glDrawArrays(GL_LINES, 0, m->ntriangles * 3 * 2);
 
 	glDisableVertexAttribArray(single_color_shader.vertex_position_id);
@@ -3743,7 +3804,7 @@ void graph_dev_display_debug_menu_show()
 	sng_set_foreground(WHITE);
 	graph_dev_draw_rectangle(0, 10, 30, 250 * sgc.x_scale, 225);
 
-	debug_menu_draw_item("VERTEX NORMAL LINES", 0, 0, draw_normal_lines);
+	debug_menu_draw_item("VERTEX NORM/TAN/BITAN (RGB)", 0, 0, draw_normal_lines);
 	debug_menu_draw_item("BILLBOARD WIREFRAME", 1, 0, draw_billboard_wireframe);
 	debug_menu_draw_item("POLYGON AS LINE", 2, 0, draw_polygon_as_lines);
 	debug_menu_draw_item("NO MSAA", 3, 0, draw_msaa_samples == 0);
