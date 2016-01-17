@@ -90,6 +90,8 @@ GLOBAL void mesh_set_triangle_texture_coords(struct mesh *m, int triangle,
 GLOBAL struct mesh *mesh_fabricate_billboard(float cx, float cy, float width, float height);
 GLOBAL struct mesh *mesh_unit_icosohedron(void);
 GLOBAL struct mesh *mesh_unit_icosphere(int subdivisions);
+GLOBAL struct mesh *mesh_unit_cube(int subdivisions);
+GLOBAL struct mesh *mesh_unit_spherified_cube(int subdivisions);
 GLOBAL void mesh_free(struct mesh *m);
 GLOBAL void mesh_sphere_uv_map(struct mesh *m);
 GLOBAL void mesh_map_xy_to_uv(struct mesh *m);

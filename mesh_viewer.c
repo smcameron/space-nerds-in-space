@@ -772,7 +772,7 @@ int main(int argc, char *argv[])
 	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
 	if (planet_mode) {
-		target_mesh = mesh_unit_icosphere(icosohedron_subdivision);
+		target_mesh = mesh_unit_spherified_cube(16);
 		atmosphere_mesh = mesh_unit_icosphere(icosohedron_subdivision);
 		material_init_textured_planet(&planet_material);
 		planet_material.textured_planet.texture_id = load_cubemap_textures(0, planetname);
