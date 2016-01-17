@@ -436,6 +436,10 @@ void mesh_set_spherical_vertex_normals(struct mesh *m)
 	}
 }
 
+/* An attempt at an analytic solution.
+ * (see: http://www.iquilezles.org/www/articles/patchedsphere/patchedsphere.htm )
+ * This does not seem to work (undoubtedly I've done something wrong.)
+ */
 void mesh_set_spherical_cubemap_tangent_and_bitangent(struct mesh *m)
 {
 	int i, j;
@@ -476,6 +480,99 @@ void mesh_set_spherical_cubemap_tangent_and_bitangent(struct mesh *m)
 				y = ny;
 			}
 			cubemapped_sphere_tangent_and_bitangent(x, y, &tangent, &bitangent);
+			m->t[i].vtangent[j].x = tangent.v.x;
+			m->t[i].vtangent[j].y = tangent.v.y;
+			m->t[i].vtangent[j].z = tangent.v.z;
+			m->t[i].vbitangent[j].x = bitangent.v.x;
+			m->t[i].vbitangent[j].y = bitangent.v.y;
+			m->t[i].vbitangent[j].z = bitangent.v.z;
+		}
+	}
+}
+
+/* An attempt at an empirical solution, sampling rather than computing analytically */
+void mesh_sample_spherical_cubemap_tangent_and_bitangent(struct mesh *m)
+{
+	int i, j;
+	union vec3 normal, tsample, bsample, tangent, bitangent;
+	float epsilon = 0.001;
+
+	/* This algorithm will have problems for triangles which have vertices which
+	 * are on different faces of the cubemap...
+	 */
+	for (i = 0; i < m->ntriangles; i++) {
+		for (j = 0; j < 3; j++) {
+			normal.v.x = m->t[i].v[j]->x;
+			normal.v.y = m->t[i].v[j]->y;
+			normal.v.z = m->t[i].v[j]->z;
+			vec3_normalize_self(&normal);
+			const float nx = normal.v.x;
+			const float ny = normal.v.y;
+			const float nz = normal.v.z;
+
+			/* Figure out which face of cubemap we're on, and which coords
+			 * play roles of x and y in calculation of tangent and bitangent
+			 */
+			if (fabsf(nx) > fabsf(ny) && fabsf(nx) > fabsf(nz)) {
+				if (nx > 0) {
+					/* face 1 */
+					tsample.v.x = nx;
+					tsample.v.y = ny;
+					tsample.v.z = nz - epsilon;
+					bsample.v.x = nx;
+					bsample.v.y = ny - epsilon;
+					bsample.v.z = nz;
+				} else {
+					tsample.v.x = nx;
+					tsample.v.y = ny;
+					tsample.v.z = nz + epsilon;
+					bsample.v.x = nx;
+					bsample.v.y = ny - epsilon;
+					bsample.v.z = nz;
+				}
+			} else if (fabsf(ny) > fabsf(nx) && fabsf(ny) > fabsf(nz)) {
+				if (ny > 0) {
+					/* face 4 */
+					tsample.v.x = nx + epsilon;
+					tsample.v.y = ny;
+					tsample.v.z = nz;
+					bsample.v.x = nx;
+					bsample.v.y = ny;
+					bsample.v.z = nz + epsilon;
+				} else {
+					/* face 5 */
+					tsample.v.x = nx + epsilon;
+					tsample.v.y = ny;
+					tsample.v.z = nz;
+					bsample.v.x = nx;
+					bsample.v.y = ny;
+					bsample.v.z = nz - epsilon;
+				}
+			} else /* it must be true that (fabsf(nz) > fabsf(nx) && fabsf(nz) > fabsf(ny)) */ {
+				if (nz > 0) {
+					/* face 0 */
+					tsample.v.x = nx + epsilon;
+					tsample.v.y = ny;
+					tsample.v.z = nz;
+					bsample.v.x = nx;
+					bsample.v.y = ny - epsilon;
+					bsample.v.z = nz;
+				} else {
+					/* face 2 */
+					tsample.v.x = nx - epsilon;
+					tsample.v.y = ny;
+					tsample.v.z = nz;
+					bsample.v.x = nx;
+					bsample.v.y = ny - epsilon;
+					bsample.v.z = nz;
+				}
+			}
+			vec3_normalize_self(&tsample);
+			vec3_normalize_self(&bsample);
+			vec3_sub(&tangent, &tsample, &normal);
+			vec3_normalize_self(&tangent);
+			vec3_sub(&bitangent, &bsample, &normal);
+			vec3_normalize_self(&bitangent);
 			m->t[i].vtangent[j].x = tangent.v.x;
 			m->t[i].vtangent[j].y = tangent.v.y;
 			m->t[i].vtangent[j].z = tangent.v.z;
@@ -1270,7 +1367,7 @@ struct mesh *mesh_unit_spherified_cube(int subdivisions)
 	}
 
 	mesh_set_spherical_vertex_normals(m);
-	mesh_set_spherical_cubemap_tangent_and_bitangent(m);
+	mesh_sample_spherical_cubemap_tangent_and_bitangent(m);
 	m->nlines = 0;
 	m->radius = mesh_compute_radius(m);
 	mesh_graph_dev_init(m);
