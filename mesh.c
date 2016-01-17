@@ -2,6 +2,7 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include "vertex.h"
 #include "triangle.h"
@@ -490,17 +491,26 @@ void mesh_set_spherical_cubemap_tangent_and_bitangent(struct mesh *m)
 	}
 }
 
-/* An attempt at an empirical solution, sampling rather than computing analytically */
+/* An attempt at an empirical solution, sampling rather than computing analytically.
+ * This only works with a spherified cube.
+ */
 void mesh_sample_spherical_cubemap_tangent_and_bitangent(struct mesh *m)
 {
 	int i, j;
 	union vec3 normal, tsample, bsample, tangent, bitangent;
 	float epsilon = 0.001;
+	int triangles_per_face;
+	int face;
 
 	/* This algorithm will have problems for triangles which have vertices which
-	 * are on different faces of the cubemap...
+	 * are on different faces of the cubemap.  Luckily there are no such vertices
+	 * in the case of a spherified cube with duplicated edge vertices.
 	 */
+
+	triangles_per_face = m->ntriangles / 6;
+	assert(triangles_per_face * 6 == m->ntriangles);
 	for (i = 0; i < m->ntriangles; i++) {
+		face = i / triangles_per_face;
 		for (j = 0; j < 3; j++) {
 			normal.v.x = m->t[i].v[j]->x;
 			normal.v.y = m->t[i].v[j]->y;
@@ -513,59 +523,55 @@ void mesh_sample_spherical_cubemap_tangent_and_bitangent(struct mesh *m)
 			/* Figure out which face of cubemap we're on, and which coords
 			 * play roles of x and y in calculation of tangent and bitangent
 			 */
-			if (fabsf(nx) > fabsf(ny) && fabsf(nx) > fabsf(nz)) {
-				if (nx > 0) {
-					/* face 1 */
-					tsample.v.x = nx;
-					tsample.v.y = ny;
-					tsample.v.z = nz - epsilon;
-					bsample.v.x = nx;
-					bsample.v.y = ny - epsilon;
-					bsample.v.z = nz;
-				} else {
-					tsample.v.x = nx;
-					tsample.v.y = ny;
-					tsample.v.z = nz + epsilon;
-					bsample.v.x = nx;
-					bsample.v.y = ny - epsilon;
-					bsample.v.z = nz;
-				}
-			} else if (fabsf(ny) > fabsf(nx) && fabsf(ny) > fabsf(nz)) {
-				if (ny > 0) {
-					/* face 4 */
-					tsample.v.x = nx + epsilon;
-					tsample.v.y = ny;
-					tsample.v.z = nz;
-					bsample.v.x = nx;
-					bsample.v.y = ny;
-					bsample.v.z = nz + epsilon;
-				} else {
-					/* face 5 */
-					tsample.v.x = nx + epsilon;
-					tsample.v.y = ny;
-					tsample.v.z = nz;
-					bsample.v.x = nx;
-					bsample.v.y = ny;
-					bsample.v.z = nz - epsilon;
-				}
-			} else /* it must be true that (fabsf(nz) > fabsf(nx) && fabsf(nz) > fabsf(ny)) */ {
-				if (nz > 0) {
-					/* face 0 */
-					tsample.v.x = nx + epsilon;
-					tsample.v.y = ny;
-					tsample.v.z = nz;
-					bsample.v.x = nx;
-					bsample.v.y = ny - epsilon;
-					bsample.v.z = nz;
-				} else {
-					/* face 2 */
-					tsample.v.x = nx - epsilon;
-					tsample.v.y = ny;
-					tsample.v.z = nz;
-					bsample.v.x = nx;
-					bsample.v.y = ny - epsilon;
-					bsample.v.z = nz;
-				}
+			switch (face) {
+			case 0:
+				tsample.v.x = nx + epsilon;
+				tsample.v.y = ny;
+				tsample.v.z = nz;
+				bsample.v.x = nx;
+				bsample.v.y = ny - epsilon;
+				bsample.v.z = nz;
+				break;
+			case 1:
+				tsample.v.x = nx;
+				tsample.v.y = ny;
+				tsample.v.z = nz - epsilon;
+				bsample.v.x = nx;
+				bsample.v.y = ny - epsilon;
+				bsample.v.z = nz;
+				break;
+			case 2:
+				tsample.v.x = nx - epsilon;
+				tsample.v.y = ny;
+				tsample.v.z = nz;
+				bsample.v.x = nx;
+				bsample.v.y = ny - epsilon;
+				bsample.v.z = nz;
+				break;
+			case 3:
+				tsample.v.x = nx;
+				tsample.v.y = ny;
+				tsample.v.z = nz + epsilon;
+				bsample.v.x = nx;
+				bsample.v.y = ny - epsilon;
+				bsample.v.z = nz;
+				break;
+			case 4:
+				tsample.v.x = nx + epsilon;
+				tsample.v.y = ny;
+				tsample.v.z = nz;
+				bsample.v.x = nx;
+				bsample.v.y = ny;
+				bsample.v.z = nz + epsilon;
+				break;
+			case 5:
+				tsample.v.x = nx + epsilon;
+				tsample.v.y = ny;
+				tsample.v.z = nz;
+				bsample.v.x = nx;
+				bsample.v.y = ny;
+				bsample.v.z = nz - epsilon;
+				break;
 			}
 			vec3_normalize_self(&tsample);
 			vec3_normalize_self(&bsample);
