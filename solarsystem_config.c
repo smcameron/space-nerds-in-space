@@ -26,15 +26,6 @@
 #include "string-utils.h"
 #include "solarsystem_config.h"
 
-#if 0
-struct solarsystem_asset_spec {
-	char *directory;
-	char *sun_texture;
-	char *skybox_prefix;
-	int nplanet_textures;
-	char **planet_texture;
-};
-#endif
 static void free_string_ptr(char **x)
 {
 	if (*x) {
