@@ -456,19 +456,19 @@ void mesh_set_spherical_cubemap_tangent_and_bitangent(struct mesh *m)
 			/* Figure out which face of cubemap we're on, and which coords
 			 * play roles of x and y in calculation of tangent and bitangent
 			 */
-			if (abs(nx) > abs(ny) && abs(nx) > abs(nz)) {
+			if (fabsf(nx) > fabsf(ny) && fabsf(nx) > fabsf(nz)) {
 				if (nx > 0)
 					x = 1.0f - nz;
 				else
 					x = nz;
 				y = ny;
-			} else if (abs(ny) > abs(nx) && abs(ny) > abs(nz)) {
+			} else if (fabsf(ny) > fabsf(nx) && fabsf(ny) > fabsf(nz)) {
 				if (ny > 0)
 					y = 1.0f - nz;
 				else
 					y = nz;
 				x = nx;
-			} else /* it must be true that (abs(nz) > abs(nx) && abs(nz) > abs(ny)) */ {
+			} else /* it must be true that (fabsf(nz) > fabsf(nx) && fabsf(nz) > fabsf(ny)) */ {
 				if (nz > 0)
 					x = nx;
 				else
