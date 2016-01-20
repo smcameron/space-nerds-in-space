@@ -114,7 +114,17 @@ This file describes how to generate earthlike planet cubemap textures.
   Once satisfied with the looks of things (which may take awhile) you can stop gaseous-giganticus
   between image production cycles (i.e. between the times that it prints 'o').
 
-4. Composite the cloud cubemaps with the terrain cubemaps.
+4. Mask the normalmaps
+
+	$ ./util/cloud-mask-normalmaps swirly-clouds yourplanet-normalmap
+	yourplanet-normalmap0.png X swirly-clouds0.png -> youtplanet-normalmap-masked0.png
+	yourplanet-normalmap1.png X swirly-clouds1.png -> yourplanet-normalmap-masked1.png
+	yourplanet-normalmap2.png X swirly-clouds2.png -> yourplanet-normalmap-masked2.png
+	yourplanet-normalmap3.png X swirly-clouds3.png -> yourplanet-normalmap-masked3.png
+	yourplanet-normalmap4.png X swirly-clouds4.png -> yourplanet-normalmap-masked4.png
+	yourplanet-normalmap5.png X swirly-clouds5.png -> yourplanet-normalmap-masked5.png
+
+5. Composite the cloud cubemaps with the terrain cubemaps.
 
    The cloud cubemaps created so far are black and white.  To composite them with the terrain cubemaps
    we construct an image with the right alpha mask.  One way to do this is to use the cloud images as

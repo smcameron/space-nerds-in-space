@@ -1,0 +1,25 @@
+#!/bin/sh
+
+usage()
+{
+	echo "usage: cloud-mask-prefix normalmap-prefix" 1>&2
+	exit 1
+}
+
+if [ "$1" = "" ]
+then
+	usage
+fi
+
+cloudmask_prefix="$1"
+normalmap_prefix="$2"
+
+for x in `seq 0 5`
+do
+	nm="$normalmap_prefix""$x".png
+	cm="$cloudmask_prefix""$x".png
+	output="$normalmap_prefix""-masked""$x".png
+	util/cloud-mask-normalmap -c $cm -n $nm -o $output
+	echo "$nm X $cm -> $output"
+done
+

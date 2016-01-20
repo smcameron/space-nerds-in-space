@@ -388,7 +388,7 @@ SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS}
 
 PROGS=snis_server snis_client snis_limited_client mesh_viewer
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client
-UTILPROGS=util/mask_clouds
+UTILPROGS=util/mask_clouds util/cloud-mask-normalmap
 
 # model directory
 MD=${ASSETSSRCDIR}/models
@@ -474,6 +474,10 @@ ELLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} earthlike.o ${ELOBJS} ${ELLIBS} && $
 MCLIBS=-lm ${LRTLIB} -lpng
 MCOBJS=png_utils.o
 MCLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} util/mask_clouds.o ${MCOBJS} ${MCLIBS} && $(ECHO) '  LINK' $@
+
+CMNMLIBS=-lm ${LRTLIB} -lpng
+CMNMOBJS=png_utils.o
+CMNMLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} util/cloud-mask-normalmap.o ${CMNMOBJS} ${CMNMLIBS} && $(ECHO) '  LINK' $@
 
 GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o png_utils.o
 GGLIBS=-lm ${LRTLIB} -lpng
@@ -588,6 +592,9 @@ earthlike.o:	earthlike.c
 util/mask_clouds.o:	util/mask_clouds.c
 	$(Q)$(COMPILE)
 
+util/cloud-mask-normalmap.o:	util/cloud-mask-normalmap.c
+	$(Q)$(COMPILE)
+
 snis_socket_io.o:	snis_socket_io.c Makefile
 	$(Q)$(COMPILE)
 
@@ -650,6 +657,9 @@ earthlike:	earthlike.o ${ELOBJS} Makefile
 
 util/mask_clouds:	util/mask_clouds.o ${ELOBJS} Makefile
 	$(Q)$(MCLINK)
+
+util/cloud-mask-normalmap:	util/cloud-mask-normalmap.o ${CMNMOBJS} Makefile
+	$(Q)$(CMNMLINK)
 
 starbase-comms.o:	starbase-comms.c Makefile
 	$(Q)$(COMPILE)	
