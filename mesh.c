@@ -1176,29 +1176,71 @@ struct mesh *mesh_unit_icosphere(int subdivisions)
 	return m3;
 }
 
+/* Compute the distance between two vertices of a cube after spherification */
+static float spherified_cube_vertex_distance(struct mesh *m, int v1, int v2)
+{
+	union vec3 vert1, vert2, diff;
+
+	vert1.v.x = m->v[v1].x;
+	vert1.v.y = m->v[v1].y;
+	vert1.v.z = m->v[v1].z;
+	vert2.v.x = m->v[v2].x;
+	vert2.v.y = m->v[v2].y;
+	vert2.v.z = m->v[v2].z;
+	vec3_normalize_self(&vert1);
+	vec3_normalize_self(&vert2);
+	vec3_sub(&diff, &vert1, &vert2);
+	return vec3_magnitude(&diff);
+}
+
 static void make_unit_cube_triangles(struct mesh *m, int face, int subdivisions)
 {
-	int i, j, v1, v2, v3, vindex, tindex;
+	int i, j, v1, v2, v3, v4, vindex, tindex;
+	float v1v4dist, v2v3dist;
 
 	vindex = face * (subdivisions + 1) * (subdivisions + 1);
 	tindex = face * (subdivisions * subdivisions) * 2;
 	for (i = 0; i < subdivisions; i++) {
 		for (j = 0; j < subdivisions; j++) {
+
+			/*
+			 *	v1--------v2
+			 *	|          |
+			 *	|          |
+			 *	v3--------v4
+			 */
+
 			v1 = vindex + i + j * (subdivisions + 1);
 			v2 = v1 + 1;
 			v3 = v1 + subdivisions + 1;
-			m->t[tindex].v[0] = &m->v[v1];
-			m->t[tindex].v[1] = &m->v[v2];
-			m->t[tindex].v[2] = &m->v[v3];
-			tindex++;
+			v4 = v3 + 1;
 
-			v1 = v3;
-			/* v2 is the same */
-			v3 = v1 + 1;
-			m->t[tindex].v[0] = &m->v[v1];
-			m->t[tindex].v[1] = &m->v[v2];
-			m->t[tindex].v[2] = &m->v[v3];
-			tindex++;
+			/* Cut the rectangle (v1,v2,v4,v3) into two triangles by the shortest diagonal */
+			v1v4dist = spherified_cube_vertex_distance(m, v1, v4);
+			v2v3dist = spherified_cube_vertex_distance(m, v2, v3);
+			if (v2v3dist < v1v4dist) {
+				/* Make triangles (v1,v2,v3) and (v3,v2,v4). */
+				m->t[tindex].v[0] = &m->v[v1];
+				m->t[tindex].v[1] = &m->v[v2];
+				m->t[tindex].v[2] = &m->v[v3];
+				tindex++;
+
+				m->t[tindex].v[0] = &m->v[v3];
+				m->t[tindex].v[1] = &m->v[v2];
+				m->t[tindex].v[2] = &m->v[v4];
+				tindex++;
+			} else {
+				/* Make triangles (v1,v2,v4) and (v1,v4,v3). */
+				m->t[tindex].v[0] = &m->v[v1];
+				m->t[tindex].v[1] = &m->v[v2];
+				m->t[tindex].v[2] = &m->v[v4];
+				tindex++;
+
+				m->t[tindex].v[0] = &m->v[v1];
+				m->t[tindex].v[1] = &m->v[v4];
+				m->t[tindex].v[2] = &m->v[v3];
+				tindex++;
+			}
 		}
 	}
 }
