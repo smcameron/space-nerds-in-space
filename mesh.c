@@ -1207,6 +1207,9 @@ struct mesh *mesh_unit_cube(int subdivisions)
 {
 	struct mesh *m;
 	int i, j, face, vindex;
+	float xangle, yangle, zangle;
+	const double da = (90.0 * M_PI / 180.0) / (double) subdivisions;
+	const double start_angle = 45.0 * M_PI / 180.0;
 
 	m = malloc(sizeof(*m));
 	if (!m)
@@ -1236,8 +1239,10 @@ struct mesh *mesh_unit_cube(int subdivisions)
 	vindex = face * (subdivisions + 1) * (subdivisions + 1);
 	for (i = 0; i < subdivisions + 1; i++) {
 		for (j = 0; j < subdivisions + 1; j++) {
-			m->v[vindex].x = (float) i * (1.0 / (float) subdivisions) * -2.0f + 1.0f;
-			m->v[vindex].y = (float) j * (1.0 / (float) subdivisions) * 2.0f - 1.0f;
+			xangle = start_angle - da * i;
+			yangle = -start_angle + da * j;
+			m->v[vindex].x = tan(xangle);
+			m->v[vindex].y = tan(yangle);
 			m->v[vindex].z = 1.0f;
 			vindex++;
 		}
@@ -1247,9 +1252,11 @@ struct mesh *mesh_unit_cube(int subdivisions)
 	vindex = face * (subdivisions + 1) * (subdivisions + 1);
 	for (i = 0; i < subdivisions + 1; i++) {
 		for (j = 0; j < subdivisions + 1; j++) {
+			yangle = start_angle - da * j;
+			zangle = start_angle - da * i;
 			m->v[vindex].x = 1.0;
-			m->v[vindex].y = (float) j * (1.0 / (float) subdivisions) * -2.0f + 1.0f;
-			m->v[vindex].z = (float) i * (1.0 / (float) subdivisions) * -2.0f + 1.0f;
+			m->v[vindex].y = tan(yangle);
+			m->v[vindex].z = tan(zangle);
 			vindex++;
 		}
 	}
@@ -1258,8 +1265,10 @@ struct mesh *mesh_unit_cube(int subdivisions)
 	vindex = face * (subdivisions + 1) * (subdivisions + 1);
 	for (i = 0; i < subdivisions + 1; i++) {
 		for (j = 0; j < subdivisions + 1; j++) {
-			m->v[vindex].x = (float) i * (1.0 / (float) subdivisions) * 2.0f - 1.0f;
-			m->v[vindex].y = (float) j * (1.0 / (float) subdivisions) * 2.0f - 1.0f;
+			xangle = -start_angle + da * i;
+			yangle = -start_angle + da * j;
+			m->v[vindex].x = tan(xangle);
+			m->v[vindex].y = tan(yangle);
 			m->v[vindex].z = -1.0;
 			vindex++;
 		}
@@ -1269,9 +1278,11 @@ struct mesh *mesh_unit_cube(int subdivisions)
 	vindex = face * (subdivisions + 1) * (subdivisions + 1);
 	for (i = 0; i < subdivisions + 1; i++) {
 		for (j = 0; j < subdivisions + 1; j++) {
+			yangle = -start_angle + da * j;
+			zangle = start_angle - da * i;
 			m->v[vindex].x = -1.0;
-			m->v[vindex].y = (float) j * (1.0 / (float) subdivisions) * 2.0f - 1.0f;
-			m->v[vindex].z = (float) i * (1.0 / (float) subdivisions) * -2.0f + 1.0f;
+			m->v[vindex].y = tan(yangle);
+			m->v[vindex].z = tan(zangle);
 			vindex++;
 		}
 	}
@@ -1280,9 +1291,11 @@ struct mesh *mesh_unit_cube(int subdivisions)
 	vindex = face * (subdivisions + 1) * (subdivisions + 1);
 	for (i = 0; i < subdivisions + 1; i++) {
 		for (j = 0; j < subdivisions + 1; j++) {
-			m->v[vindex].x = (float) i * (1.0 / (float) subdivisions) * -2.0 + 1.0f;
+			xangle = start_angle - da * i;
+			zangle = start_angle - da * j;
+			m->v[vindex].x = tan(xangle);
 			m->v[vindex].y = 1.0f;
-			m->v[vindex].z = (float) j * (1.0 / (float) subdivisions) * -2.0 + 1.0f;
+			m->v[vindex].z = tan(zangle);
 			vindex++;
 		}
 	}
@@ -1291,9 +1304,11 @@ struct mesh *mesh_unit_cube(int subdivisions)
 	vindex = face * (subdivisions + 1) * (subdivisions + 1);
 	for (i = 0; i < subdivisions + 1; i++) {
 		for (j = 0; j < subdivisions + 1; j++) {
-			m->v[vindex].x = (float) i * (1.0 / (float) subdivisions) * -2.0 + 1.0f;
+			xangle = start_angle - da * i;
+			zangle = -start_angle + da * j;
+			m->v[vindex].x = tan(xangle);
 			m->v[vindex].y = -1.0f;
-			m->v[vindex].z = (float) j * (1.0 / (float) subdivisions) * 2.0 - 1.0f;
+			m->v[vindex].z = tan(zangle);
 			vindex++;
 		}
 	}
