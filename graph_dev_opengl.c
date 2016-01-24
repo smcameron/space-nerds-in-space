@@ -38,6 +38,7 @@ struct loaded_texture {
 	char *filename;
 	time_t mtime;
 	double last_mtime_change;
+	int expired;
 };
 static int nloaded_textures = 0;
 static struct loaded_texture loaded_textures[MAX_LOADED_TEXTURES];
@@ -50,6 +51,7 @@ struct loaded_cubemap_texture {
 	char *filename[NCUBEMAP_TEXTURES];
 	time_t mtime;
 	double last_mtime_change;
+	int expired;
 };
 static int nloaded_cubemap_textures = 0;
 static struct loaded_cubemap_texture loaded_cubemap_textures[MAX_LOADED_CUBEMAP_TEXTURES];
@@ -3550,6 +3552,59 @@ static void load_cubemap_texture_id(
 	}
 }
 
+void graph_dev_expire_all_textures(void)
+{
+	int i;
+
+	for (i = 0; i < nloaded_textures; i++)
+		loaded_textures[i].expired = 1;
+	for (i = 0; i < nloaded_cubemap_textures; i++)
+		loaded_cubemap_textures[i].expired = 1;
+}
+
+void graph_dev_expire_texture(char *filename)
+{
+	int i;
+
+	for (i = 0; i < nloaded_textures; i++)
+		if (strcmp(loaded_textures[i].filename, filename) == 0) {
+			loaded_textures[i].expired = 1;
+			return;
+		}
+}
+
+void graph_dev_expire_cubemap_texture(int is_inside,
+					const char *texture_filename_pos_x,
+					const char *texture_filename_neg_x,
+					const char *texture_filename_pos_y,
+					const char *texture_filename_neg_y,
+					const char *texture_filename_pos_z,
+					const char *texture_filename_neg_z)
+{
+	int i, j;
+
+	const char *tex_filenames[] = {
+		texture_filename_pos_x, texture_filename_neg_x,
+		texture_filename_pos_y, texture_filename_neg_y,
+		texture_filename_pos_z, texture_filename_neg_z };
+
+	for (i = 0; i < nloaded_cubemap_textures; i++) {
+		if (loaded_cubemap_textures[i].is_inside == is_inside) {
+			int match = 1;
+			for (j = 0; j < NCUBEMAP_TEXTURES; j++) {
+				if (strcmp(tex_filenames[j], loaded_cubemap_textures[i].filename[j]) != 0) {
+					match = 0;
+					break;
+				}
+			}
+			if (match) {
+				loaded_cubemap_textures[i].expired = 1;
+				return;
+			}
+		}
+	}
+}
+
 unsigned int graph_dev_load_cubemap_texture(
 	int is_inside,
 	const char *texture_filename_pos_x,
@@ -3565,6 +3620,7 @@ unsigned int graph_dev_load_cubemap_texture(
 		texture_filename_pos_z, texture_filename_neg_z };
 
 	int i, j;
+	/* Check if we already loaded this texture */
 	for (i = 0; i < nloaded_cubemap_textures; i++) {
 		if (loaded_cubemap_textures[i].is_inside == is_inside) {
 			int match = 1;
@@ -3574,8 +3630,28 @@ unsigned int graph_dev_load_cubemap_texture(
 					break;
 				}
 			}
-			if (match)
+			if (match) {
+				loaded_cubemap_textures[i].expired = 0;
 				return loaded_cubemap_textures[i].texture_id;
+			}
+		}
+	}
+
+	/* See if we can re-use an expired texture */
+	for (i = 0; i < nloaded_cubemap_textures; i++) {
+		if (loaded_cubemap_textures[i].expired) {
+			GLuint cube_texture_id = loaded_cubemap_textures[i].texture_id;
+			glDeleteTextures(1, &cube_texture_id);
+			load_cubemap_texture_id(cube_texture_id, is_inside, tex_filenames);
+
+			loaded_cubemap_textures[i].is_inside = is_inside;
+			loaded_cubemap_textures[i].expired = 0;
+			for (j = 0; j < NCUBEMAP_TEXTURES; j++) {
+				if (loaded_cubemap_textures[i].filename[j])
+					free(loaded_cubemap_textures[i].filename[j]);
+				loaded_cubemap_textures[i].filename[j] = strdup(tex_filenames[j]);
+			}
+			return (unsigned int) cube_texture_id;
 		}
 	}
 
@@ -3646,8 +3722,26 @@ static void load_texture_id(GLuint texture_number, const char *filename)
 unsigned int graph_dev_load_texture(const char *filename)
 {
 	int i;
+
+	/* See if we already loaded this texture */
 	for (i = 0; i < nloaded_textures; i++) {
 		if (strcmp(filename, loaded_textures[i].filename) == 0) {
+			loaded_textures[i].expired = 0;
+			return loaded_textures[i].texture_id;
+		}
+	}
+
+	/* See if we can re-use an expired texture id */
+	for (i = 0; i < nloaded_textures; i++) {
+		if (loaded_textures[i].expired) {
+			glDeleteTextures(1, &loaded_textures[i].texture_id);
+			load_texture_id(loaded_textures[i].texture_id, filename);
+			if (loaded_textures[i].filename)
+				free(loaded_textures[i].filename);
+			loaded_textures[i].filename = strdup(filename);
+			loaded_textures[i].mtime = get_file_modify_time(filename);
+			loaded_textures[i].last_mtime_change = 0;
+			loaded_textures[i].expired = 0;
 			return loaded_textures[i].texture_id;
 		}
 	}
@@ -3667,6 +3761,7 @@ unsigned int graph_dev_load_texture(const char *filename)
 	loaded_textures[nloaded_textures].filename = strdup(filename);
 	loaded_textures[nloaded_textures].mtime = get_file_modify_time(filename);
 	loaded_textures[nloaded_textures].last_mtime_change = 0;
+	loaded_textures[nloaded_textures].expired = 0;
 
 	nloaded_textures++;
 

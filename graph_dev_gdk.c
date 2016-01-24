@@ -995,3 +995,24 @@ void graph_dev_grab_framebuffer(__attribute__((unused)) unsigned char **buffer,
 	/* noop */
 }
 
+void graph_dev_expire_all_textures(void)
+{
+	/* noop */
+}
+
+extern void graph_dev_expire_texture(char *filename)
+{
+	/* noop */
+}
+
+extern void graph_dev_expire_cubemap_texture(int is_inside,
+						const char *texture_filename_pos_x,
+						const char *texture_filename_neg_x,
+						const char *texture_filename_pos_y,
+						const char *texture_filename_neg_y,
+						const char *texture_filename_pos_z,
+						const char *texture_filename_neg_z)
+{
+	/* noop */
+}
+

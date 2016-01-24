@@ -77,6 +77,15 @@ extern const char *graph_dev_get_texture_filename(unsigned int);
 extern void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp);
 extern void graph_dev_reload_changed_textures();
 extern void graph_dev_reload_changed_cubemap_textures();
+extern void graph_dev_expire_all_textures();
+extern void graph_dev_expire_texture(char *filename);
+extern void graph_dev_expire_cubemap_texture(int is_inside,
+	const char *texture_filename_pos_x,
+	const char *texture_filename_neg_x,
+	const char *texture_filename_pos_y,
+	const char *texture_filename_neg_y,
+	const char *texture_filename_pos_z,
+	const char *texture_filename_neg_z);
 
 extern void graph_dev_display_debug_menu_show();
 extern int graph_dev_graph_dev_debug_menu_click(int x, int y);
