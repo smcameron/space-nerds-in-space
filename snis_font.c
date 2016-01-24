@@ -122,7 +122,7 @@ static stroke_t glyph_t[] = { 6, 21, 22, LP, 10, 12, 99 };
 static stroke_t glyph_s[] = { 13, 10, 15, 18, 23, 20, 99 };
 
 static stroke_t glyph_a[] = { 10, 13, 23, 20, 15, 18, 99 };
-static stroke_t glyph_b[] = { 0, 20, 23, 13, 10 };
+static stroke_t glyph_b[] = { 0, 20, 23, 13, 10, 99 };
 static stroke_t glyph_c[] = { 13, 10, 20, 23, 99 };
 static stroke_t glyph_d[] = { 3, 23, 20, 10, 13, 99 };
 static stroke_t glyph_e[] = { 15, 18, 13, 10, 20, 23, 99 };
