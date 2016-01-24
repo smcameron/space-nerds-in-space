@@ -26,6 +26,7 @@
 #include "docking_port.h"
 #include "space-part.h"
 
+#define DEFAULT_SOLAR_SYSTEM "default"
 #define SNIS_PROTOCOL_VERSION "SNIS001"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */

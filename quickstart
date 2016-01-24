@@ -53,13 +53,13 @@ start_multiverse &
 sleep 0.25
 
 export SNISRAND=12345
-./snis_server -l localhost -g SPACENERDS -L ALTAIR x --enable-enscript -m narnia &
+./snis_server -l localhost -g SPACENERDS -L KARADO x --enable-enscript -m narnia -s karado &
 if [ "$MULTIVERSE_TEST" != "" ]
 then
 	export SNISRAND=54321
-	./snis_server -l localhost -g XSPACENERDS -L SIRIUS x --enable-enscript -m narnia &
+	./snis_server -l localhost -g XSPACENERDS -L SIRIUS x --enable-enscript -m narnia -s sirius &
 	export SNISRAND=9557
-	./snis_server -l localhost -g YSPACENERDS -L POLARIS x --enable-enscript -m narnia &
+	./snis_server -l localhost -g YSPACENERDS -L POLARIS x --enable-enscript -m narnia -s polaris &
 fi
 
 sleep 2.50
@@ -75,7 +75,7 @@ ASPECT_RATIO="" # unspecified, figure it out from window manager
 
 # start the game client and server in quickstart mode
 # ./snis_client $ASPECT_RATIO --fullscreen --solarsystem "$SNIS_SOLARSYSTEM" --quickstart --starship "$shipname" --pw "$password" $@
-./snis_client $ASPECT_RATIO --fullscreen --quickstart --starship "$shipname" --pw "$password" $@
+./snis_client $ASPECT_RATIO --fullscreen --starship "$shipname" --pw "$password" $@
 
 exit $?
 

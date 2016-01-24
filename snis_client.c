@@ -354,8 +354,8 @@ static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
 static struct material *planet_material = NULL;
 static struct solarsystem_asset_spec *solarsystem_assets = NULL;
-#define DEFAULT_SOLAR_SYSTEM "default"
 static char *solarsystem_name = DEFAULT_SOLAR_SYSTEM;
+static char dynamic_solarsystem_name[100] = { 0 };
 /* static char **planet_material_filename = NULL; */
 /* int nplanet_materials = -1; */
 static struct material shield_material;
@@ -4047,6 +4047,21 @@ static int process_detonate(void)
 	return 0;
 }
 
+static int process_set_solarsystem(void)
+{
+	char solarsystem[100];
+	int rc;
+
+	rc = snis_readsocket(gameserver_sock, solarsystem, sizeof(solarsystem));
+	if (rc != 0)
+		return rc;
+	solarsystem[99] = '\0';
+	memcpy(dynamic_solarsystem_name, solarsystem, 100);
+	printf("SET SOLARSYSTEM TO '%s'\n", dynamic_solarsystem_name);
+	solarsystem_name = dynamic_solarsystem_name;
+	return 0;
+}
+
 static int process_update_universe_timestamp(double update_time)
 {
 	int rc;
@@ -5108,6 +5123,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_DETONATE:
 			rc = process_detonate();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_SET_SOLARSYSTEM:
+			rc = process_set_solarsystem();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -10077,6 +10097,7 @@ static void show_science(GtkWidget *w)
 {
 	struct snis_entity *o;
 	char buf[80];
+	char ssname[12];
 	double zoom;
 	static int current_zoom = 0;
 
@@ -10092,7 +10113,10 @@ static void show_science(GtkWidget *w)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 #endif
 	sng_set_foreground(UI_COLOR(sci_coords));
-	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf)", o->x, o->y, o->z);
+	strncpy(ssname, solarsystem_name, 11);
+	ssname[11] = '\0';
+	uppercase(ssname);
+	sprintf(buf, "LOC: %s SYSTEM (%5.2lf, %5.2lf, %5.2lf)", ssname, o->x, o->y, o->z);
 	sng_abs_xy_draw_string(buf, TINY_FONT, 0.25 * SCREEN_WIDTH, LINEHEIGHT * 0.5);
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
@@ -10110,7 +10134,7 @@ static void show_3d_science(GtkWidget *w)
 {
 	int /* rx, ry, rw, rh, */ cx, cy, r;
 	struct snis_entity *o;
-	char buf[80];
+	char buf[80], ssname[12];
 	double zoom;
 	static int current_zoom = 0;
 
@@ -10126,7 +10150,10 @@ static void show_3d_science(GtkWidget *w)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 #endif
 	sng_set_foreground(UI_COLOR(sci_coords));
-	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf)", o->x, o->y, o->z);
+	strncpy(ssname, solarsystem_name, 11);
+	ssname[11] = '\0';
+	uppercase(ssname);
+	sprintf(buf, "LOC: %s SYSTEM (%5.2lf, %5.2lf, %5.2lf)", ssname, o->x, o->y, o->z);
 	sng_abs_xy_draw_string(buf, TINY_FONT, 200, LINEHEIGHT * 0.5);
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;

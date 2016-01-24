@@ -129,6 +129,8 @@ static struct multiverse_server_info {
 	char location[LOCATIONSIZE];
 } *multiverse_server = NULL;
 
+static char *solarsystem_name = DEFAULT_SOLAR_SYSTEM;
+
 #define GATHER_OPCODE_STATS 0
 
 #if GATHER_OPCODE_STATS
@@ -12407,6 +12409,20 @@ static void queue_up_client_id(struct game_client *c)
 	pb_queue_to_client(c, packed_buffer_new("bw", OPCODE_ID_CLIENT_SHIP, c->shipid));
 }
 
+static void queue_set_solarsystem(struct game_client *c)
+{
+	char solarsystem[100];
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(101);
+	if (!pb)
+		return;
+	memset(solarsystem, 0, sizeof(solarsystem));
+	strncpy(solarsystem, solarsystem_name, 99);
+	packed_buffer_append(pb, "br", OPCODE_SET_SOLARSYSTEM, solarsystem, (uint16_t) 100);
+	pb_queue_to_client(c, pb);
+}
+
 #define SIMULATE_SLOW_SERVER 0
 #if SIMULATE_SLOW_SERVER
 static void simulate_slow_server(__attribute__((unused)) int x)
@@ -13203,6 +13219,7 @@ static void service_connection(int connection)
 	client_unlock();
 	pthread_mutex_unlock(&universe_mutex);
 
+	queue_set_solarsystem(&client[i]);
 	snis_log(SNIS_INFO, "bottom of 'service connection'\n");
 }
 
@@ -16377,6 +16394,7 @@ static struct option long_options[] = {
 	{ "servernick", required_argument, NULL, 'n' },
 	{ "location", required_argument, NULL, 'L' },
 	{ "multiverse", required_argument, NULL, 'm' },
+	{ "solarsystem", required_argument, NULL, 's' },
 	{ "version", no_argument, NULL, 'v' },
 };
 
@@ -16399,7 +16417,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "eg:hL:l:m:n:v", long_options, &option_index);
+		c = getopt_long(argc, argv, "eg:hL:l:m:n:s:v", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -16429,6 +16447,9 @@ static void process_options(int argc, char *argv[])
 					sizeof(multiverse_server->location) - 1);
 			multiverse_server->sock = -1;
 			pthread_mutex_init(&multiverse_server->queue_mutex, NULL);
+			break;
+		case 's':
+			solarsystem_name = optarg;
 			break;
 		case 'n':
 			lobby_servernick = optarg;
