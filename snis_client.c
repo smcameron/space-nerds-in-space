@@ -4047,18 +4047,22 @@ static int process_detonate(void)
 	return 0;
 }
 
+static void reload_per_solarsystem_textures();
 static int process_set_solarsystem(void)
 {
-	char solarsystem[100];
+	char old_solarsystem[100], solarsystem[100];
 	int rc;
 
 	rc = snis_readsocket(gameserver_sock, solarsystem, sizeof(solarsystem));
 	if (rc != 0)
 		return rc;
 	solarsystem[99] = '\0';
+	strncpy(old_solarsystem, solarsystem_name, sizeof(old_solarsystem) - 1);
+	old_solarsystem[99] = '\0';
 	memcpy(dynamic_solarsystem_name, solarsystem, 100);
 	printf("SET SOLARSYSTEM TO '%s'\n", dynamic_solarsystem_name);
 	solarsystem_name = dynamic_solarsystem_name;
+	reload_per_solarsystem_textures(old_solarsystem, solarsystem_name);
 	return 0;
 }
 
@@ -12348,6 +12352,18 @@ static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
 					filename[5], filename[0], filename[2]);
 }
 
+static void expire_cubemap_texture(int is_inside, char *filenameprefix)
+{
+	int i;
+	char filename[6][PATH_MAX + 1];
+
+	for (i = 0; i < 6; i++)
+		sprintf(filename[i], "%s/%s%d.png", asset_dir, filenameprefix, i);
+
+	graph_dev_expire_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
+					filename[5], filename[0], filename[2]);
+}
+
 static void load_skybox_textures(char *filenameprefix)
 {
 	/*
@@ -12384,6 +12400,17 @@ static void load_skybox_textures(char *filenameprefix)
 		sprintf(filename[i], "%s/%s%d.png", asset_dir, filenameprefix, i);
 
 	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4],
+					filename[5], filename[0], filename[2]);
+}
+
+static void expire_skybox_texture(char *filenameprefix)
+{
+	int i;
+	char filename[6][PATH_MAX + 1];
+
+	for (i = 0; i < 6; i++)
+		sprintf(filename[i], "%s/%s%d.png", asset_dir, filenameprefix, i);
+	graph_dev_expire_cubemap_texture(1, filename[3], filename[1], filename[4],
 					filename[5], filename[0], filename[2]);
 }
 
@@ -12474,6 +12501,8 @@ static int read_solarsystem_config(const char *solarsystem_name)
 	solarsystem_assets = solarsystem_asset_spec_read(path);
 	if (!solarsystem_assets)
 		return -1;
+	if (planet_material)
+		free(planet_material);
 	planet_material = malloc(sizeof(planet_material[0]) *
 				solarsystem_assets->nplanet_textures * (NPLANETARY_RING_MATERIALS + 1));
 	memset(planet_material, 0, sizeof(planet_material[0]) *
@@ -12633,7 +12662,45 @@ static void load_per_solarsystem_textures()
 			planet_material[pm_index].textured_planet.ring_material = &planetary_ring_material[k];
 		}
 	}
+	fprintf(stderr, "XXXXXXX ----------- planetary_ring_texture id before = %d\n", planetary_ring_texture_id);
+	planetary_ring_texture_id = load_texture("textures/planetary-ring0.png");
+	fprintf(stderr, "XXXXXXX ----------- planetary_ring_texture id after = %d\n", planetary_ring_texture_id);
 	per_solarsystem_textures_loaded = 1;
+}
+
+static void expire_per_solarsystem_textures(char *old_solarsystem)
+{
+	int i;
+	char path[PATH_MAX];
+
+	fprintf(stderr, "xxxxxxx asset_dir='%s', old_solarsystem='%s'\n", asset_dir, old_solarsystem);
+	sprintf(path, "solarsystems/%s/%s", old_solarsystem, solarsystem_assets->skybox_prefix);
+	expire_skybox_texture(path);
+
+	sprintf(path, "%s/solarsystems/%s/%s", asset_dir, old_solarsystem, solarsystem_assets->sun_texture);
+	graph_dev_expire_texture(path);
+
+	for (i = 0; i < solarsystem_assets->nplanet_textures; i++) {
+		sprintf(path, "solarsystems/%s/%s", old_solarsystem, solarsystem_assets->planet_texture[i]);
+		expire_cubemap_texture(0, path);
+		if (strcmp(solarsystem_assets->planet_normalmap[i], "no-normal-map") != 0) {
+			sprintf(path, "solarsystems/%s/%s", old_solarsystem, solarsystem_assets->planet_normalmap[i]);
+			expire_cubemap_texture(0, path);
+		}
+	}
+}
+
+static void reload_per_solarsystem_textures(char *old_solarsystem, char *new_solarsystem)
+{
+	expire_per_solarsystem_textures(old_solarsystem);
+	if (solarsystem_assets)
+		solarsystem_asset_spec_free(solarsystem_assets);
+	solarsystem_assets = NULL;
+	if (read_solarsystem_config(new_solarsystem)) {
+		fprintf(stderr, "Failed re-reading solarsystem metadata for %s\n", new_solarsystem);
+		return;
+	}
+	per_solarsystem_textures_loaded = 0;
 }
 
 static void load_textures(void)
