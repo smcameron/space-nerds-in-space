@@ -86,10 +86,10 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				goto bad_line;
 			}
 			/* FIXME: what should this limit really be? */
-			if (value > 5) {
-				fprintf(stderr, "%s:line %d: planet texture count %d exceeds max 5, capping\n",
+			if (value > 6) {
+				fprintf(stderr, "%s:line %d: planet texture count %d exceeds max 6, capping\n",
 						filename, ln, value);
-				value = 5;
+				value = 6;
 			}
 			if (a->planet_texture != NULL || a->nplanet_textures != 0) {
 				fprintf(stderr, "%s:line %d: multiple planet texture counts encountered, ignoring\n",
