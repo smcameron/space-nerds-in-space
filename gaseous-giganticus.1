@@ -21,6 +21,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -l ]
 [ -m speed-multiplier ]
 [ -n ]
+[ -N ]
 [ -o output-file-template ]
 [ -O opacity ]
 [ -p particle-count ]
@@ -165,6 +166,11 @@ Print a help message and exit.
 .TP
 -n, --no-fade
 Do not fade the image at all, divergences will be hidden
+.TP
+-N, --sequence-number
+Do not overwrite each of the six output images each time they are written
+(see the -I option).  Instead embed a sequence number in each of the six files.
+This may be useful for producing a sequence of textures for animation.
 .TP
 -p, --particle-count
 Use specified number of particles.  Default is 8000000.

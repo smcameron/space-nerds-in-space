@@ -69,6 +69,7 @@ static float ff2 = FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF;
 static float ff3 = FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF;
 static int cloudmode = 0;
 static float fade_rate = -1.0;
+static int save_texture_sequence = 0;
 
 #define DIM 1024 /* dimensions of cube map face images */
 #define VFDIM 2048 /* dimension of velocity field. (2 * DIM) is reasonable */
@@ -844,13 +845,16 @@ static void update_output_images(int image_threads, struct particle p[], const i
 		opacity = 0.95 * opacity;
 }
 
-static void save_output_images(void)
+static void save_output_images(int sequence_number)
 {
 	int i;
 	char fname[PATH_MAX];
 
 	for (i = 0; i < 6; i++) {
-		sprintf(fname, "%s%d.png", output_file_prefix, i);
+		if (sequence_number < 0)
+			sprintf(fname, "%s%d.png", output_file_prefix, i);
+		else
+			sprintf(fname, "%s%04d-%d.png", output_file_prefix, i, sequence_number);
 		if (png_utils_write_png_image(fname, output_image[i], DIM, DIM, 1, 0))
 			fprintf(stderr, "Failed to write %s\n", fname);
 	}
@@ -977,6 +981,8 @@ static void usage(void)
 	fprintf(stderr, "   -P, --plainmap  Do not use sinusoidal image mapping, instead repeat image\n");
 	fprintf(stderr, "                   on six sides of a cubemap.\n");
 	fprintf(stderr, "   -n, --no-fade:  Do not fade the image at all, divergences will be hidden\n");
+	fprintf(stderr, "   -N, --sequence-number:  Do not overwrite output images, instead embed a\n");
+	fprintf(stderr, "                           sequence number in the filenames.\n");
 	fprintf(stderr, "   -v, --velocity-factor: Multiply velocity field by this number when\n");
 	fprintf(stderr, "                   moving particles.  Default is 1200.0\n");
 	fprintf(stderr, "   -V, --vertical-bands:  Make bands rotate around Y axis instead of X\n");
@@ -1028,6 +1034,7 @@ static struct option long_options[] = {
 	{ "hot-pink", no_argument, NULL, 'h' },
 	{ "help", no_argument, NULL, 'H' },
 	{ "no-fade", no_argument, NULL, 'n' },
+	{ "sequence-number", no_argument, NULL, 'N' },
 	{ "velocity-factor", required_argument, NULL, 'v' },
 	{ "vertical-bands", required_argument, NULL, 'V' },
 	{ "band-vel-factor", required_argument, NULL, 'B' },
@@ -1113,7 +1120,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "a:B:b:c:Cd:D:f:F:hHi:k:I:lnm:o:O:p:PRr:sSt:Vv:w:W:x:z:",
+		c = getopt_long(argc, argv, "a:B:b:c:Cd:D:f:F:hHi:k:I:lnNm:o:O:p:PRr:sSt:Vv:w:W:x:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1189,6 +1196,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'n':
 			nofade = 1;
+			break;
+		case 'N':
+			save_texture_sequence = 1;
 			break;
 		case 'l':
 			large_pixels = 1;
@@ -1358,6 +1368,7 @@ int main(int argc, char *argv[])
 	int i, t;
 	struct movement_thread_info *ti;
 	int last_imaged_iteration = -1;
+	int sequence_number = -1;
 	particle_count = NPARTICLES;
 	struct timeval movebegin, moveend, move_elapsed;
 	struct timeval imagebegin, imageend, image_elapsed;
@@ -1438,7 +1449,8 @@ int main(int argc, char *argv[])
 		gettimeofday(&imageend, NULL);
 		image_elapsed.tv_sec += imageend.tv_sec - imagebegin.tv_sec;
 		if ((i % image_save_period) == 0) {
-			save_output_images();
+			sequence_number += save_texture_sequence;
+			save_output_images(sequence_number);
 			last_imaged_iteration = i;
 		}
 		if (use_wstep && (i % wstep_period == 0)) {
@@ -1447,8 +1459,10 @@ int main(int argc, char *argv[])
 			dump_velocity_field(vf_dump_file, &vf, use_wstep);
 		}
 	}
-	if (last_imaged_iteration != i - 1)
-		save_output_images();
+	if (last_imaged_iteration != i - 1) {
+		sequence_number += save_texture_sequence;
+		save_output_images(sequence_number);
+	}
 	printf("\n%5d / %5d -- done.\n", i, niterations);
 	open_simplex_noise_free(ctx);
 	return 0;
