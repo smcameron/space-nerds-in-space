@@ -357,6 +357,7 @@ static struct material planet_material[NPLANET_MATERIALS];
 static struct solarsystem_asset_spec *solarsystem_assets = NULL;
 static char *solarsystem_name = DEFAULT_SOLAR_SYSTEM;
 static char dynamic_solarsystem_name[100] = { 0 };
+static char old_solarsystem_name[100] = { 0 };
 /* static char **planet_material_filename = NULL; */
 /* int nplanet_materials = -1; */
 static struct material shield_material;
@@ -4062,19 +4063,19 @@ static int process_detonate(void)
 static void reload_per_solarsystem_textures();
 static int process_set_solarsystem(void)
 {
-	char old_solarsystem[100], solarsystem[100];
+	char solarsystem[100];
 	int rc;
 
 	rc = snis_readsocket(gameserver_sock, solarsystem, sizeof(solarsystem));
 	if (rc != 0)
 		return rc;
 	solarsystem[99] = '\0';
-	strncpy(old_solarsystem, solarsystem_name, sizeof(old_solarsystem) - 1);
-	old_solarsystem[99] = '\0';
+	strncpy(old_solarsystem_name, solarsystem_name, sizeof(old_solarsystem_name) - 1);
+	old_solarsystem_name[99] = '\0';
 	memcpy(dynamic_solarsystem_name, solarsystem, 100);
 	printf("SET SOLARSYSTEM TO '%s'\n", dynamic_solarsystem_name);
 	solarsystem_name = dynamic_solarsystem_name;
-	reload_per_solarsystem_textures(old_solarsystem, solarsystem_name);
+	per_solarsystem_textures_loaded = 0;
 	return 0;
 }
 
@@ -12648,6 +12649,7 @@ static void load_per_solarsystem_textures()
 
 	if (per_solarsystem_textures_loaded)
 		return;
+	reload_per_solarsystem_textures(old_solarsystem_name, solarsystem_name);
 	fprintf(stderr, "load_per_solarsystem_textures, loading\n");
 	sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->skybox_prefix);
 	load_skybox_textures(path);
