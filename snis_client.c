@@ -12534,10 +12534,10 @@ static struct mesh **allocate_starbase_mesh_ptrs(int nstarbase_meshes)
 	return m;
 }
 
-static void load_static_textures(void)
+static int load_static_textures(void)
 {
 	if (static_textures_loaded)
-		return;
+		return 0;
 
 	material_init_textured_particle(&green_phaser_material);
 	green_phaser_material.textured_particle.texture_id = load_texture("textures/green-burst.png");
@@ -12640,15 +12640,18 @@ static void load_static_textures(void)
 	warp_tunnel_material.texture_mapped_unlit.alpha = 0.25;
 
 	static_textures_loaded = 1;
+	return 1;
 }
 
-static void load_per_solarsystem_textures()
+static int load_per_solarsystem_textures()
 {
 	int i, j;
 	char path[PATH_MAX];
 
 	if (per_solarsystem_textures_loaded)
-		return;
+		return 0;
+	if (strcmp(old_solarsystem_name, "") == 0)
+		strcpy(old_solarsystem_name, DEFAULT_SOLAR_SYSTEM);
 	reload_per_solarsystem_textures(old_solarsystem_name, solarsystem_name);
 	fprintf(stderr, "load_per_solarsystem_textures, loading\n");
 	sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->skybox_prefix);
@@ -12694,6 +12697,7 @@ static void load_per_solarsystem_textures()
 	fprintf(stderr, "XXXXXXX ----------- planetary_ring_texture id after = %d\n", planetary_ring_texture_id);
 #endif
 	per_solarsystem_textures_loaded = 1;
+	return 1;
 }
 
 static void expire_per_solarsystem_textures(char *old_solarsystem)
@@ -12735,8 +12739,11 @@ static void reload_per_solarsystem_textures(char *old_solarsystem, char *new_sol
 
 static void load_textures(void)
 {
-	load_static_textures();
-	load_per_solarsystem_textures();
+	int loaded_something;
+	loaded_something = load_static_textures();
+	loaded_something += load_per_solarsystem_textures();
+	if (loaded_something)
+		glFinish();
 }
 
 static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
