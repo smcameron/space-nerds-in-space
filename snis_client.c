@@ -355,6 +355,7 @@ static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
 static struct material planet_material[NPLANET_MATERIALS];
 static struct solarsystem_asset_spec *solarsystem_assets = NULL;
+static struct solarsystem_asset_spec *old_solarsystem_assets = NULL;
 static char *solarsystem_name = DEFAULT_SOLAR_SYSTEM;
 static char dynamic_solarsystem_name[100] = { 0 };
 static char old_solarsystem_name[100] = { 0 };
@@ -4060,11 +4061,16 @@ static int process_detonate(void)
 	return 0;
 }
 
-static void reload_per_solarsystem_textures();
+static void reload_per_solarsystem_textures(char *old_solarsystem, char *new_solarsystem,
+						struct solarsystem_asset_spec *old_assets,
+						struct solarsystem_asset_spec *new_assets);
+static int read_solarsystem_config(const char *solarsystem_name,
+	struct solarsystem_asset_spec **assets);
 static int process_set_solarsystem(void)
 {
 	char solarsystem[100];
 	int rc;
+	struct solarsystem_asset_spec *assets = NULL;
 
 	rc = snis_readsocket(gameserver_sock, solarsystem, sizeof(solarsystem));
 	if (rc != 0)
@@ -4072,9 +4078,17 @@ static int process_set_solarsystem(void)
 	solarsystem[99] = '\0';
 	strncpy(old_solarsystem_name, solarsystem_name, sizeof(old_solarsystem_name) - 1);
 	old_solarsystem_name[99] = '\0';
+	strcpy(old_solarsystem_name, solarsystem_name);
 	memcpy(dynamic_solarsystem_name, solarsystem, 100);
 	printf("SET SOLARSYSTEM TO '%s'\n", dynamic_solarsystem_name);
 	solarsystem_name = dynamic_solarsystem_name;
+	if (read_solarsystem_config(dynamic_solarsystem_name, &assets)) {
+		fprintf(stderr, "Failed re-reading new solarsystem metadata for %s\n",
+			dynamic_solarsystem_name);
+		return -1;
+	}
+	old_solarsystem_assets = solarsystem_assets;
+	solarsystem_assets = assets;
 	per_solarsystem_textures_loaded = 0;
 	return 0;
 }
@@ -12502,25 +12516,26 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	return TRUE;
 }
 
-static int read_solarsystem_config(const char *solarsystem_name)
+static int read_solarsystem_config(const char *solarsystem_name,
+	struct solarsystem_asset_spec **assets)
 {
 	char path[PATH_MAX];
 
 	printf("Reading solarsystem specifications...");
 	fflush(stdout);
 	sprintf(path, "%s/solarsystems/%s/assets.txt", asset_dir, solarsystem_name);
-	if (solarsystem_assets)
-		solarsystem_asset_spec_free(solarsystem_assets);
-	solarsystem_assets = solarsystem_asset_spec_read(path);
-	if (!solarsystem_assets)
+	if (*assets)
+		solarsystem_asset_spec_free(*assets);
+	*assets = solarsystem_asset_spec_read(path);
+	if (!*assets)
 		return -1;
 #if 0
 	if (planet_material)
 		free(planet_material);
 	planet_material = malloc(sizeof(planet_material[0]) *
-				solarsystem_assets->nplanet_textures * (NPLANETARY_RING_MATERIALS + 1));
+				(*assets)->nplanet_textures * (NPLANETARY_RING_MATERIALS + 1));
 	memset(planet_material, 0, sizeof(planet_material[0]) *
-		solarsystem_assets->nplanet_textures * (NPLANETARY_RING_MATERIALS + 1));
+		(*assets)->nplanet_textures * (NPLANETARY_RING_MATERIALS + 1));
 #endif
 	printf("done\n");
 	fflush(stdout);
@@ -12652,7 +12667,8 @@ static int load_per_solarsystem_textures()
 		return 0;
 	if (strcmp(old_solarsystem_name, "") == 0)
 		strcpy(old_solarsystem_name, DEFAULT_SOLAR_SYSTEM);
-	reload_per_solarsystem_textures(old_solarsystem_name, solarsystem_name);
+	reload_per_solarsystem_textures(old_solarsystem_name, solarsystem_name,
+					old_solarsystem_assets, solarsystem_assets);
 	fprintf(stderr, "load_per_solarsystem_textures, loading\n");
 	sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->skybox_prefix);
 	load_skybox_textures(path);
@@ -12700,39 +12716,38 @@ static int load_per_solarsystem_textures()
 	return 1;
 }
 
-static void expire_per_solarsystem_textures(char *old_solarsystem)
+static void expire_per_solarsystem_textures(char *old_solarsystem, struct solarsystem_asset_spec *assets)
 {
 	int i;
 	char path[PATH_MAX];
 
 	fprintf(stderr, "xxxxxxx asset_dir='%s', old_solarsystem='%s'\n", asset_dir, old_solarsystem);
-	sprintf(path, "solarsystems/%s/%s", old_solarsystem, solarsystem_assets->skybox_prefix);
+	sprintf(path, "solarsystems/%s/%s", old_solarsystem, assets->skybox_prefix);
 	expire_skybox_texture(path);
 
-	sprintf(path, "%s/solarsystems/%s/%s", asset_dir, old_solarsystem, solarsystem_assets->sun_texture);
+	sprintf(path, "%s/solarsystems/%s/%s", asset_dir, old_solarsystem, assets->sun_texture);
 	graph_dev_expire_texture(path);
 
-	for (i = 0; i < solarsystem_assets->nplanet_textures; i++) {
-		sprintf(path, "solarsystems/%s/%s", old_solarsystem, solarsystem_assets->planet_texture[i]);
+	for (i = 0; i < assets->nplanet_textures; i++) {
+		sprintf(path, "solarsystems/%s/%s", old_solarsystem, assets->planet_texture[i]);
 		expire_cubemap_texture(0, path);
-		if (strcmp(solarsystem_assets->planet_normalmap[i], "no-normal-map") != 0) {
-			sprintf(path, "solarsystems/%s/%s", old_solarsystem, solarsystem_assets->planet_normalmap[i]);
+		if (strcmp(assets->planet_normalmap[i], "no-normal-map") != 0) {
+			sprintf(path, "solarsystems/%s/%s", old_solarsystem, assets->planet_normalmap[i]);
 			expire_cubemap_texture(0, path);
 		}
 	}
 }
 
-static void reload_per_solarsystem_textures(char *old_solarsystem, char *new_solarsystem)
+static void reload_per_solarsystem_textures(char *old_solarsystem, char *new_solarsystem,
+						struct solarsystem_asset_spec *old_assets,
+						struct solarsystem_asset_spec *new_assets)
 {
 	fprintf(stderr, "Re-loading per solarsystem textures\n");
-	expire_per_solarsystem_textures(old_solarsystem);
-	if (solarsystem_assets)
-		solarsystem_asset_spec_free(solarsystem_assets);
-	solarsystem_assets = NULL;
-	if (read_solarsystem_config(new_solarsystem)) {
-		fprintf(stderr, "Failed re-reading solarsystem metadata for %s\n", new_solarsystem);
-		return;
+	if (old_assets) {
+		expire_per_solarsystem_textures(old_solarsystem, old_assets);
+		solarsystem_asset_spec_free(old_assets);
 	}
+	solarsystem_assets = new_assets;
 	per_solarsystem_textures_loaded = 0;
 	// load_per_solarsystem_textures();
 }
@@ -14044,7 +14059,7 @@ int main(int argc, char *argv[])
 	read_keymap_config_file();
 	init_vects();
 	initialize_random_orientations_and_spins(COMMON_MTWIST_SEED);
-	if (read_solarsystem_config(solarsystem_name)) {
+	if (read_solarsystem_config(solarsystem_name, &solarsystem_assets)) {
 		fprintf(stderr, "Failed reading solarsystem metadata\n");
 		exit(1);
 	}
