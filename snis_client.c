@@ -350,9 +350,10 @@ static struct material spark_material;
 static struct material warp_effect_material;
 static struct material sun_material;
 #define NPLANETARY_RING_MATERIALS 256
+#define NPLANET_MATERIALS 256
 static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
-static struct material *planet_material = NULL;
+static struct material planet_material[NPLANET_MATERIALS];
 static struct solarsystem_asset_spec *solarsystem_assets = NULL;
 static char *solarsystem_name = DEFAULT_SOLAR_SYSTEM;
 static char dynamic_solarsystem_name[100] = { 0 };
@@ -1534,6 +1535,11 @@ static int update_derelict(uint32_t id, uint32_t timestamp, double x, double y, 
 	return 0;
 }
 
+static int has_atmosphere(char *planet_type)
+{
+	return strcmp(planet_type, "rocky") != 0;
+}
+
 static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, double z, double r, uint8_t government,
 				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring,
 				uint8_t security, uint16_t contraband,
@@ -1545,6 +1551,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	int i, m;
 	struct entity *e, *atm, *ring;
 	union quat orientation;
+	int has_atm;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -1552,9 +1559,10 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
 
 		/* each planet texture has another version with a variation of the ring materials */
-		int ring_m = id % NPLANETARY_RING_MATERIALS;
 		const int np = solarsystem_assets->nplanet_textures;
-		m = id % np + (np * (ring_m + 1) * (hasring ? 1 : 0));
+		//m = id % np + (np * (ring_m + 1) * (hasring ? 1 : 0));
+		m = id % NPLANET_MATERIALS;
+		has_atm = has_atmosphere(solarsystem_assets->planet_type[id % np]);
 
 		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
 		if (e) {
@@ -1581,18 +1589,22 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
-		atm = add_entity(ecx, sphere_mesh, 0.0f, 0.0f, 0.0f, WHITE);
-		go[i].tsd.planet.atmosphere = atm;
-		if (atm) {
-			update_entity_scale(atm, atm_scale);
-			material_init_atmosphere(&go[i].tsd.planet.atm_material);
-			go[i].tsd.planet.atm_material.atmosphere.r = (float) atm_r / 255.0f;
-			go[i].tsd.planet.atm_material.atmosphere.g = (float) atm_g / 255.0f;
-			go[i].tsd.planet.atm_material.atmosphere.b = (float) atm_b / 255.0f;
-			go[i].tsd.planet.atm_material.atmosphere.scale = (float) atm_scale;
-			update_entity_material(atm, &go[i].tsd.planet.atm_material);
-			update_entity_visibility(atm, 1);
-			update_entity_parent(ecx, atm, e);
+		if (has_atm) {
+			atm = add_entity(ecx, sphere_mesh, 0.0f, 0.0f, 0.0f, WHITE);
+			go[i].tsd.planet.atmosphere = atm;
+			if (atm) {
+				update_entity_scale(atm, atm_scale);
+				material_init_atmosphere(&go[i].tsd.planet.atm_material);
+				go[i].tsd.planet.atm_material.atmosphere.r = (float) atm_r / 255.0f;
+				go[i].tsd.planet.atm_material.atmosphere.g = (float) atm_g / 255.0f;
+				go[i].tsd.planet.atm_material.atmosphere.b = (float) atm_b / 255.0f;
+				go[i].tsd.planet.atm_material.atmosphere.scale = (float) atm_scale;
+				update_entity_material(atm, &go[i].tsd.planet.atm_material);
+				update_entity_visibility(atm, 1);
+				update_entity_parent(ecx, atm, e);
+			}
+		} else {
+			go[i].tsd.planet.atmosphere = NULL;
 		}
 		if (e)
 			update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
@@ -12077,10 +12089,10 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 	make_science_forget_stuff();
 
+	load_textures();
+
 	if (displaymode == DISPLAYMODE_GLMAIN)	
 		return 0;
-
-	load_textures();
 
 #ifndef WITHOUTOPENGL
 	GdkGLContext *gl_context = gtk_widget_get_gl_context(main_da);
@@ -12501,12 +12513,14 @@ static int read_solarsystem_config(const char *solarsystem_name)
 	solarsystem_assets = solarsystem_asset_spec_read(path);
 	if (!solarsystem_assets)
 		return -1;
+#if 0
 	if (planet_material)
 		free(planet_material);
 	planet_material = malloc(sizeof(planet_material[0]) *
 				solarsystem_assets->nplanet_textures * (NPLANETARY_RING_MATERIALS + 1));
 	memset(planet_material, 0, sizeof(planet_material[0]) *
 		solarsystem_assets->nplanet_textures * (NPLANETARY_RING_MATERIALS + 1));
+#endif
 	printf("done\n");
 	fflush(stdout);
 	return 0;
@@ -12629,11 +12643,12 @@ static void load_static_textures(void)
 
 static void load_per_solarsystem_textures()
 {
-	int i;
+	int i, j;
 	char path[PATH_MAX];
 
 	if (per_solarsystem_textures_loaded)
 		return;
+	fprintf(stderr, "load_per_solarsystem_textures, loading\n");
 	sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->skybox_prefix);
 	load_skybox_textures(path);
 
@@ -12647,24 +12662,35 @@ static void load_per_solarsystem_textures()
 		sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->planet_texture[i]);
 		material_init_textured_planet(&planet_material[i]);
 		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, path);
-		planet_material[i].textured_planet.ring_material = 0;
+		planet_material[i].textured_planet.ring_material =
+				&planetary_ring_material[i % NPLANETARY_RING_MATERIALS];
 		if (strcmp(solarsystem_assets->planet_normalmap[i], "no-normal-map") == 0) {
 			planet_material[i].textured_planet.normalmap_id = -1;
 		} else {
 			sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->planet_normalmap[i]);
 			planet_material[i].textured_planet.normalmap_id = load_cubemap_textures(0, path);
 		}
-
+#if 0
 		int k;
 		for (k = 0; k < NPLANETARY_RING_MATERIALS; k++) {
 			int pm_index = (k + 1) * solarsystem_assets->nplanet_textures + i;
 			planet_material[pm_index] = planet_material[i];
 			planet_material[pm_index].textured_planet.ring_material = &planetary_ring_material[k];
 		}
+#endif
 	}
+	j = 0;
+	for (i = solarsystem_assets->nplanet_textures; i < NPLANET_MATERIALS; i++) {
+		planet_material[i] = planet_material[j];
+		planet_material[i].textured_planet.ring_material =
+				&planetary_ring_material[i % NPLANETARY_RING_MATERIALS];
+		j = (j + 1) % solarsystem_assets->nplanet_textures;
+	}
+#if 0
 	fprintf(stderr, "XXXXXXX ----------- planetary_ring_texture id before = %d\n", planetary_ring_texture_id);
 	planetary_ring_texture_id = load_texture("textures/planetary-ring0.png");
 	fprintf(stderr, "XXXXXXX ----------- planetary_ring_texture id after = %d\n", planetary_ring_texture_id);
+#endif
 	per_solarsystem_textures_loaded = 1;
 }
 
@@ -12692,6 +12718,7 @@ static void expire_per_solarsystem_textures(char *old_solarsystem)
 
 static void reload_per_solarsystem_textures(char *old_solarsystem, char *new_solarsystem)
 {
+	fprintf(stderr, "Re-loading per solarsystem textures\n");
 	expire_per_solarsystem_textures(old_solarsystem);
 	if (solarsystem_assets)
 		solarsystem_asset_spec_free(solarsystem_assets);
@@ -12701,6 +12728,7 @@ static void reload_per_solarsystem_textures(char *old_solarsystem, char *new_sol
 		return;
 	}
 	per_solarsystem_textures_loaded = 0;
+	// load_per_solarsystem_textures();
 }
 
 static void load_textures(void)

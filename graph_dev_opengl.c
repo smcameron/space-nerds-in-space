@@ -3566,11 +3566,16 @@ void graph_dev_expire_texture(char *filename)
 {
 	int i;
 
+	fprintf(stderr, "attempting to expire texture %s\n", filename);
 	for (i = 0; i < nloaded_textures; i++)
 		if (strcmp(loaded_textures[i].filename, filename) == 0) {
+			fprintf(stderr, "Expired texture %d, %s\n", i, loaded_textures[i].filename);
 			loaded_textures[i].expired = 1;
 			return;
+		} else {
+			fprintf(stderr, "Did not match '%s'\n", loaded_textures[i].filename);
 		}
+	fprintf(stderr, "Did not expire texture %s\n", filename);
 }
 
 void graph_dev_expire_cubemap_texture(int is_inside,
@@ -3588,21 +3593,26 @@ void graph_dev_expire_cubemap_texture(int is_inside,
 		texture_filename_pos_y, texture_filename_neg_y,
 		texture_filename_pos_z, texture_filename_neg_z };
 
+	fprintf(stderr, "attempting to expire cubemap texture %s\n", texture_filename_pos_x);
 	for (i = 0; i < nloaded_cubemap_textures; i++) {
 		if (loaded_cubemap_textures[i].is_inside == is_inside) {
 			int match = 1;
 			for (j = 0; j < NCUBEMAP_TEXTURES; j++) {
 				if (strcmp(tex_filenames[j], loaded_cubemap_textures[i].filename[j]) != 0) {
+					fprintf(stderr, "Did not match %s\n", loaded_cubemap_textures[i].filename[j]);
 					match = 0;
 					break;
 				}
 			}
 			if (match) {
+				fprintf(stderr, "Expired cubemap texture %d, %s\n",
+					i, loaded_cubemap_textures[i].filename[0]);
 				loaded_cubemap_textures[i].expired = 1;
 				return;
 			}
 		}
 	}
+	fprintf(stderr, "Failed to expire cubemap texture %s\n", texture_filename_pos_x);
 }
 
 unsigned int graph_dev_load_cubemap_texture(
@@ -3647,6 +3657,8 @@ unsigned int graph_dev_load_cubemap_texture(
 			loaded_cubemap_textures[i].is_inside = is_inside;
 			loaded_cubemap_textures[i].expired = 0;
 			for (j = 0; j < NCUBEMAP_TEXTURES; j++) {
+				fprintf(stderr, "Replacing %s with %s\n",
+					loaded_cubemap_textures[i].filename[j], tex_filenames[j]);
 				if (loaded_cubemap_textures[i].filename[j])
 					free(loaded_cubemap_textures[i].filename[j]);
 				loaded_cubemap_textures[i].filename[j] = strdup(tex_filenames[j]);
@@ -3698,6 +3710,7 @@ static void load_texture_id(GLuint texture_number, const char *filename)
 	int whynotlen = 100;
 	int tw, th, hasAlpha = 1;
 
+
 	glBindTexture(GL_TEXTURE_2D, texture_number);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -3734,8 +3747,10 @@ unsigned int graph_dev_load_texture(const char *filename)
 	/* See if we can re-use an expired texture id */
 	for (i = 0; i < nloaded_textures; i++) {
 		if (loaded_textures[i].expired) {
+			glBindTexture(GL_TEXTURE_2D, 0);
 			glDeleteTextures(1, &loaded_textures[i].texture_id);
 			load_texture_id(loaded_textures[i].texture_id, filename);
+			fprintf(stderr, "Replacing %s with %s\n", loaded_textures[i].filename, filename);
 			if (loaded_textures[i].filename)
 				free(loaded_textures[i].filename);
 			loaded_textures[i].filename = strdup(filename);
@@ -3834,6 +3849,7 @@ void graph_dev_load_skybox_texture(
 	const char *texture_filename_neg_z)
 {
 	if (skybox_shader.texture_loaded) {
+		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 		glDeleteTextures(1, &skybox_shader.cube_texture_id);
 		skybox_shader.texture_loaded = 0;
 	}
