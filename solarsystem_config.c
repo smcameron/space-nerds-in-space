@@ -175,8 +175,15 @@ void solarsystem_asset_spec_free(struct solarsystem_asset_spec *s)
 	free_string_ptr(&s->skybox_prefix);
 	for (i = 0; i < s->nplanet_textures; i++) {
 		free_string_ptr(&s->planet_texture[i]);
+		free_string_ptr(&s->planet_normalmap[i]);
 		free_string_ptr(&s->planet_type[i]);
 	}
+	free(s->planet_texture);
+	free(s->planet_normalmap);
+	free(s->planet_type);
+	s->planet_texture = NULL;
+	s->planet_normalmap = NULL;
+	s->planet_type = NULL;
 	free(s);
 }
 
