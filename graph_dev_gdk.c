@@ -978,9 +978,9 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 	return 0;
 }
 
-void graph_dev_reload_changed_textures()
+int graph_dev_reload_changed_textures()
 {
-	/* noop */
+	return 0; /* noop */
 }
 
 int graph_dev_reload_changed_cubemap_textures()

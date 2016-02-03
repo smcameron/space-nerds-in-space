@@ -3716,7 +3716,7 @@ int graph_dev_reload_cubemap_textures()
 	return failed;
 }
 
-static void load_texture_id(GLuint texture_number, const char *filename)
+static int load_texture_id(GLuint texture_number, const char *filename)
 {
 	char whynotz[100];
 	int whynotlen = 100;
@@ -3735,9 +3735,10 @@ static void load_texture_id(GLuint texture_number, const char *filename)
 		glTexImage2D(GL_TEXTURE_2D, 0, (hasAlpha ? GL_RGBA8 : GL_RGB8), tw, th, 0,
 				(hasAlpha ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
 		free(image_data);
-	} else {
-		printf("Unable to load texture '%s': %s\n", filename, whynotz);
+		return 0;
 	}
+	fprintf(stderr, "Unable to load texture '%s': %s\n", filename, whynotz);
+	return -1;
 }
 
 
@@ -3761,8 +3762,11 @@ unsigned int graph_dev_load_texture(const char *filename)
 		if (loaded_textures[i].expired) {
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glDeleteTextures(1, &loaded_textures[i].texture_id);
-			load_texture_id(loaded_textures[i].texture_id, filename);
 			fprintf(stderr, "Replacing %s with %s\n", loaded_textures[i].filename, filename);
+			if (load_texture_id(loaded_textures[i].texture_id, filename)) {
+				fprintf(stderr, "Failed to load texture from '%s'\n", filename);
+				return 0;
+			}
 			if (loaded_textures[i].filename)
 				free(loaded_textures[i].filename);
 			loaded_textures[i].filename = strdup(filename);
@@ -3782,7 +3786,11 @@ unsigned int graph_dev_load_texture(const char *filename)
 	GLuint texture_number;
 	glGenTextures(1, &texture_number);
 
-	load_texture_id(texture_number, filename);
+	if (load_texture_id(texture_number, filename)) {
+		glDeleteTextures(1, &texture_number);
+		fprintf(stderr, "Failed to load texture from '%s'\n", filename);
+		return 0;
+	}
 
 	loaded_textures[nloaded_textures].texture_id = texture_number;
 	loaded_textures[nloaded_textures].filename = strdup(filename);
@@ -3806,15 +3814,16 @@ const char *graph_dev_get_texture_filename(unsigned int texture_id)
 	return "";
 }
 
-void graph_dev_reload_textures()
+int graph_dev_reload_textures()
 {
 	int i;
 	for (i = 0; i < nloaded_textures; i++) {
 		load_texture_id(loaded_textures[i].texture_id, loaded_textures[i].filename);
 	}
+	return 0;
 }
 
-void graph_dev_reload_changed_textures()
+int graph_dev_reload_changed_textures()
 {
 	int i;
 	for (i = 0; i < nloaded_textures; i++) {
@@ -3829,6 +3838,7 @@ void graph_dev_reload_changed_textures()
 			loaded_textures[i].last_mtime_change = 0;
 		}
 	}
+	return 0;
 }
 
 /* returns 0 on success */
