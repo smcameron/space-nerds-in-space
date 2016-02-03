@@ -966,6 +966,20 @@ static void remove_from_attack_lists(uint32_t victim_id)
 	}
 }
 
+static void delete_from_clients_and_server(struct snis_entity *o);
+static void delete_starbase_docking_ports(struct snis_entity *o)
+{
+	int i;
+
+	assert(o->type == OBJTYPE_STARBASE);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].type == OBJTYPE_DOCKING_PORT &&
+			go[i].tsd.docking_port.parent == o->id && go[i].alive) {
+				delete_from_clients_and_server(&go[i]);
+		}
+	}
+}
+
 static void delete_from_clients_and_server(struct snis_entity *o)
 {
 	snis_queue_delete_object(o);
@@ -977,6 +991,10 @@ static void delete_from_clients_and_server(struct snis_entity *o)
 	case OBJTYPE_EXPLOSION:
 	case OBJTYPE_LASERBEAM:
 	case OBJTYPE_TRACTORBEAM:
+	case OBJTYPE_DOCKING_PORT:
+		break;
+	case OBJTYPE_STARBASE:
+		delete_starbase_docking_ports(o);
 		break;
 	default:
 		schedule_callback(event_callback, &callback_schedule,
