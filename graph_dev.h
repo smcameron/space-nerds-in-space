@@ -55,7 +55,7 @@ extern void graph_dev_draw_point(float x, float y);
 extern void graph_dev_draw_arc(int filled, float x, float y, float width, float height,
 	float angle1, float angle2);
 
-extern void graph_dev_load_skybox_texture(
+extern int graph_dev_load_skybox_texture(
 	const char *texture_filename_pos_x,
 	const char *texture_filename_neg_x,
 	const char *texture_filename_pos_y,
@@ -76,7 +76,7 @@ extern unsigned int graph_dev_load_texture(const char *filename);
 extern const char *graph_dev_get_texture_filename(unsigned int);
 extern void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp);
 extern void graph_dev_reload_changed_textures();
-extern void graph_dev_reload_changed_cubemap_textures();
+extern int graph_dev_reload_changed_cubemap_textures();
 extern void graph_dev_expire_all_textures();
 extern void graph_dev_expire_texture(char *filename);
 extern void graph_dev_expire_cubemap_texture(int is_inside,

@@ -3516,7 +3516,8 @@ int graph_dev_setup(const char *shader_dir)
 	return 0;
 }
 
-static void load_cubemap_texture_id(
+/* returns zero on success, -1 otherwise */
+static int load_cubemap_texture_id(
 	GLuint cube_texture_id,
 	int is_inside,
 	const char **tex_filenames)
@@ -3534,7 +3535,7 @@ static void load_cubemap_texture_id(
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
 	char whynotz[100];
-	int whynotlen = 100;
+	int whynotlen = sizeof(whynotz);
 
 	int i;
 	for (i = 0; i < NCUBEMAP_TEXTURES; i++) {
@@ -3547,9 +3548,11 @@ static void load_cubemap_texture_id(
 					(hasAlpha ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
 			free(image_data);
 		} else {
-			printf("Unable to load cubemap texture %d '%s': %s\n", i, tex_filenames[i], whynotz);
+			fprintf(stderr, "Unable to load cubemap texture %d '%s': %s\n", i, tex_filenames[i], whynotz);
+			return -1;
 		}
 	}
+	return 0;
 }
 
 void graph_dev_expire_all_textures(void)
@@ -3615,6 +3618,7 @@ void graph_dev_expire_cubemap_texture(int is_inside,
 	fprintf(stderr, "Failed to expire cubemap texture %s\n", texture_filename_pos_x);
 }
 
+/* Returns texture id, or zero if failure */
 unsigned int graph_dev_load_cubemap_texture(
 	int is_inside,
 	const char *texture_filename_pos_x,
@@ -3652,7 +3656,8 @@ unsigned int graph_dev_load_cubemap_texture(
 		if (loaded_cubemap_textures[i].expired) {
 			GLuint cube_texture_id = loaded_cubemap_textures[i].texture_id;
 			glDeleteTextures(1, &cube_texture_id);
-			load_cubemap_texture_id(cube_texture_id, is_inside, tex_filenames);
+			if (load_cubemap_texture_id(cube_texture_id, is_inside, tex_filenames))
+				return 0;
 
 			loaded_cubemap_textures[i].is_inside = is_inside;
 			loaded_cubemap_textures[i].expired = 0;
@@ -3676,7 +3681,10 @@ unsigned int graph_dev_load_cubemap_texture(
 	GLuint cube_texture_id;
 	glGenTextures(1, &cube_texture_id);
 
-	load_cubemap_texture_id(cube_texture_id, is_inside, tex_filenames);
+	if (load_cubemap_texture_id(cube_texture_id, is_inside, tex_filenames)) {
+		glDeleteTextures(1, &cube_texture_id);
+		return 0;
+	}
 
 	loaded_cubemap_textures[nloaded_cubemap_textures].texture_id = cube_texture_id;
 	loaded_cubemap_textures[nloaded_cubemap_textures].is_inside = is_inside;
@@ -3695,13 +3703,17 @@ static time_t get_file_modify_time(const char *filename)
 	return s.st_mtime;
 }
 
-void graph_dev_reload_cubemap_textures()
+int graph_dev_reload_cubemap_textures()
 {
-	int i;
+	int i, failed = 0;
 	for (i = 0; i < nloaded_cubemap_textures; i++) {
-		load_cubemap_texture_id(loaded_cubemap_textures[i].texture_id,
+		failed = load_cubemap_texture_id(loaded_cubemap_textures[i].texture_id,
 			loaded_cubemap_textures[i].is_inside, (const char **)loaded_cubemap_textures[i].filename);
+		if (failed) {
+			fprintf(stderr, "Failed to reload texture from '%s'\n", loaded_cubemap_textures[i].filename[i]);
+		}
 	}
+	return failed;
 }
 
 static void load_texture_id(GLuint texture_number, const char *filename)
@@ -3819,9 +3831,10 @@ void graph_dev_reload_changed_textures()
 	}
 }
 
-void graph_dev_reload_changed_cubemap_textures()
+/* returns 0 on success */
+int graph_dev_reload_changed_cubemap_textures()
 {
-	int i;
+	int i, failed = 0;
 	for (i = 0; i < nloaded_cubemap_textures; i++) {
 		time_t mtime = get_file_modify_time(loaded_cubemap_textures[i].filename[5]);
 		if (loaded_cubemap_textures[i].mtime != mtime) {
@@ -3832,15 +3845,19 @@ void graph_dev_reload_changed_cubemap_textures()
 					CUBEMAP_TEX_RELOAD_DELAY) {
 			printf("reloading cubemap texture '%s'\n",
 				loaded_cubemap_textures[i].filename[0]);
-			load_cubemap_texture_id(loaded_cubemap_textures[i].texture_id,
+			if (load_cubemap_texture_id(loaded_cubemap_textures[i].texture_id,
 					loaded_cubemap_textures[i].is_inside,
-					(const char **)loaded_cubemap_textures[i].filename);
+					(const char **)loaded_cubemap_textures[i].filename)) {
+				failed = -1;
+			}
 			loaded_cubemap_textures[i].last_mtime_change = 0;
 		}
 	}
+	return failed;
 }
 
-void graph_dev_load_skybox_texture(
+/* returns 0 on success, -1 otherwise */
+int graph_dev_load_skybox_texture(
 	const char *texture_filename_pos_x,
 	const char *texture_filename_neg_x,
 	const char *texture_filename_pos_y,
@@ -3858,7 +3875,11 @@ void graph_dev_load_skybox_texture(
 		texture_filename_neg_x, texture_filename_pos_y, texture_filename_neg_y, texture_filename_pos_z,
 		texture_filename_neg_z);
 
-	skybox_shader.texture_loaded = 1;
+	if (skybox_shader.cube_texture_id != 0) {
+		skybox_shader.texture_loaded = 1;
+		return 0;
+	}
+	return -1;
 }
 
 void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp)
