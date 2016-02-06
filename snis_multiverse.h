@@ -1,6 +1,8 @@
 #ifndef SNIS_MULTIVERSE_H__
 #define SNIS_MULTIVERSE_H__
 
+#include "snis_packet.h"
+
 #define SNIS_MULTIVERSE_VERSION "SNISMULTIVERSE0001"
 
 #define SNISMV_OPCODE_NOOP 0x00

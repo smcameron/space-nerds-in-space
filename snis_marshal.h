@@ -1,6 +1,11 @@
 #ifndef __SNIS_MARSHAL_C__
 #define __SNIS_MARSHAL_C__
 
+#include <stdarg.h>
+#include <pthread.h>
+
+#include "quat.h"
+
 #pragma pack(1)
 struct packed_double 
 {
