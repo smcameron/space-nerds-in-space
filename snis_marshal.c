@@ -741,6 +741,19 @@ int packed_buffer_unpack(void * buffer, const char *format, ...)
 	return rc;
 }
 
+int packed_buffer_unpack_raw(void *buffer, int size, const char *format, ...)
+{
+	va_list ap;
+	struct packed_buffer pb;
+	int rc;
+
+	packed_buffer_init(&pb, buffer, size);
+	va_start(ap, format);
+	rc = packed_buffer_extract_va(&pb, format, ap);
+	va_end(ap);
+	return rc;
+}
+
 int packed_buffer_queue_length(struct packed_buffer_queue *pbq, pthread_mutex_t *mutex)
 {
 	int totalbytes;

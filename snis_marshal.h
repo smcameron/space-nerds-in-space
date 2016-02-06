@@ -53,6 +53,7 @@ GLOBAL int packed_buffer_append(struct packed_buffer *pb, const char *format, ..
 GLOBAL int packed_buffer_append_va(struct packed_buffer *pb, const char *format,
 					va_list ap);
 GLOBAL int packed_buffer_unpack(void*, const char *format, ...);
+GLOBAL int packed_buffer_unpack_raw(void *buffer, int size, const char *format, ...);
 GLOBAL int packed_buffer_extract(struct packed_buffer *pb, const char *format, ...);
 GLOBAL int packed_buffer_extract_va(struct packed_buffer *pb, const char *format,
 					va_list ap);
