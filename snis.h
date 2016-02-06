@@ -111,6 +111,7 @@ struct power_model_device {
 	uint8_t r1, r2, r3, i;
 };
 
+/* This thing must contain only endian clean data -- single byte values only */
 struct power_model_data {
 	struct power_model_device maneuvering;
 	struct power_model_device warp;

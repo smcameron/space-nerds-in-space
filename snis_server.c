@@ -13562,6 +13562,7 @@ static void update_multiverse(struct snis_entity *o)
 
 	/* Update the ship */
 	pb = packed_buffer_allocate(50 + sizeof(struct update_ship_packet) +
+					sizeof(struct power_model_data) +
 					sizeof(struct power_model_data));
 	packed_buffer_append(pb, "br", SNISMV_OPCODE_UPDATE_BRIDGE,
 				bridgelist[bridge].pwdhash, (uint16_t) 20);
@@ -13604,6 +13605,7 @@ static void update_multiverse(struct snis_entity *o)
 		o->sdata.shield_strength, o->sdata.shield_wavelength, o->sdata.shield_width, o->sdata.shield_depth,
 		o->sdata.faction, o->sdata.name, (unsigned short) sizeof(o->sdata.name));
 	packed_buffer_append(pb, "r", &o->tsd.ship.power_data, (uint16_t) sizeof(o->tsd.ship.power_data));
+	packed_buffer_append(pb, "r", &o->tsd.ship.coolant_data, (uint16_t) sizeof(o->tsd.ship.power_data));
 	queue_to_multiverse(multiverse_server, pb);
 }
 

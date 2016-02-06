@@ -63,6 +63,7 @@ persisted in a simple database by snis_multiverse.
 #include "quat.h"
 #include "string-utils.h"
 #include "key_value_parser.h"
+#include "build_bug_on.h"
 
 static char *database_root = "./snisdb";
 static const int database_mode = 0744;
@@ -317,9 +318,50 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_TSDFIELD(power_data.voltage),
 	/* End of power_data */
 
-	/* TODO power_model */
-	/* TODO coolant_data */
-	/* TODO coolant_model */
+	/* Beginning of coolant_data */
+	UINT8_TSDFIELD(coolant_data.maneuvering.r1),
+	UINT8_TSDFIELD(coolant_data.maneuvering.r2),
+	UINT8_TSDFIELD(coolant_data.maneuvering.r3),
+	UINT8_TSDFIELD(coolant_data.maneuvering.i),
+
+	UINT8_TSDFIELD(coolant_data.warp.r1),
+	UINT8_TSDFIELD(coolant_data.warp.r2),
+	UINT8_TSDFIELD(coolant_data.warp.r3),
+	UINT8_TSDFIELD(coolant_data.warp.i),
+
+	UINT8_TSDFIELD(coolant_data.impulse.r1),
+	UINT8_TSDFIELD(coolant_data.impulse.r2),
+	UINT8_TSDFIELD(coolant_data.impulse.r3),
+	UINT8_TSDFIELD(coolant_data.impulse.i),
+
+	UINT8_TSDFIELD(coolant_data.sensors.r1),
+	UINT8_TSDFIELD(coolant_data.sensors.r2),
+	UINT8_TSDFIELD(coolant_data.sensors.r3),
+	UINT8_TSDFIELD(coolant_data.sensors.i),
+
+	UINT8_TSDFIELD(coolant_data.comms.r1),
+	UINT8_TSDFIELD(coolant_data.comms.r2),
+	UINT8_TSDFIELD(coolant_data.comms.r3),
+	UINT8_TSDFIELD(coolant_data.comms.i),
+
+	UINT8_TSDFIELD(coolant_data.phasers.r1),
+	UINT8_TSDFIELD(coolant_data.phasers.r2),
+	UINT8_TSDFIELD(coolant_data.phasers.r3),
+	UINT8_TSDFIELD(coolant_data.phasers.i),
+
+	UINT8_TSDFIELD(coolant_data.shields.r1),
+	UINT8_TSDFIELD(coolant_data.shields.r2),
+	UINT8_TSDFIELD(coolant_data.shields.r3),
+	UINT8_TSDFIELD(coolant_data.shields.i),
+
+	UINT8_TSDFIELD(coolant_data.tractor.r1),
+	UINT8_TSDFIELD(coolant_data.tractor.r2),
+	UINT8_TSDFIELD(coolant_data.tractor.r3),
+	UINT8_TSDFIELD(coolant_data.tractor.i),
+
+	UINT8_TSDFIELD(coolant_data.voltage),
+	/* End of coolant_data */
+
 	UINT8_TSDFIELD(temperature_data.shield_damage),
 	UINT8_TSDFIELD(temperature_data.impulse_damage),
 	UINT8_TSDFIELD(temperature_data.warp_damage),
@@ -589,7 +631,7 @@ static int update_bridge(struct starsystem_info *ss)
 {
 	unsigned char pwdhash[20];
 	int i, rc;
-	unsigned char buffer[200];
+	unsigned char buffer[250];
 	struct packed_buffer pb;
 	uint16_t alive;
 	uint32_t torpedoes, power;
@@ -606,8 +648,10 @@ static int update_bridge(struct starsystem_info *ss)
 	struct snis_entity *o;
 	unsigned char name[sizeof(o->sdata.name)];
 	int32_t iwallet;
-	struct power_model_data power_data;
-#define bytes_to_read (sizeof(struct update_ship_packet) - 9 + 25 + 5 + sizeof(struct power_model_data) - 1)
+	struct power_model_data power_data, coolant_data;
+#define bytes_to_read (sizeof(struct update_ship_packet) - 9 + 25 + 5 + \
+			sizeof(struct power_model_data) + \
+			sizeof(struct power_model_data) - 1)
 
 	fprintf(stderr, "snis_multiverse: update bridge 1\n");
 	memset(buffer, 0, sizeof(buffer));
@@ -656,6 +700,7 @@ static int update_bridge(struct starsystem_info *ss)
 	packed_buffer_extract(&pb, "bbbbbr", &shield_strength, &shield_wavelength, &shield_width, &shield_depth,
 			&faction, name, (uint16_t) sizeof(name));
 	packed_buffer_extract(&pb, "r", &power_data, (uint16_t) sizeof(struct power_model_data));
+	packed_buffer_extract(&pb, "r", &coolant_data, (int) sizeof(struct power_model_data));
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);
@@ -720,6 +765,7 @@ static int update_bridge(struct starsystem_info *ss)
 	o->sdata.faction = faction;
 	memcpy(o->sdata.name, name, sizeof(o->sdata.name));
 	o->tsd.ship.power_data = power_data;
+	o->tsd.ship.coolant_data = coolant_data;
 
 	/* shift old updates to make room for this one */
 	int j;
