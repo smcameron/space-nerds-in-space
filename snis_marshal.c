@@ -116,6 +116,7 @@ static inline void packed_double_nbo(struct packed_double *pd)
 	if ((pb)->buffer_cursor > (pb)->buffer_size) { \
 		fprintf(stderr, "pb->buffer_cursor = %d, pb->buffer_size = %d\n", \
 			pb->buffer_cursor, pb->buffer_size); \
+		packed_buffer_print("sanity violation", pb); \
 		stacktrace("pb->buffer_cursor > pb->buffer_size\n"); \
 		assert((pb)->buffer_cursor <= (pb)->buffer_size); \
 	} \
