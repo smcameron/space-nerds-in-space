@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <assert.h>
+#include <ctype.h>
 
 #include "stacktrace.h"
 
@@ -424,6 +425,32 @@ void packed_buffer_queue_print(struct packed_buffer_queue *pbq)
 		count++;
 	}
 	printf("count = %d\n", count);
+}
+
+void packed_buffer_print(char *label, struct packed_buffer *pb)
+{
+	int i, len;
+
+	len = pb->buffer_size;
+	fprintf(stderr, "--- begin packed buffer: %s: cursor=%d, size=%d ---\n",
+		label, pb->buffer_cursor, pb->buffer_size);
+	for (i = 0; i < len; i++) {
+		fprintf(stderr, "%c%02x",
+			i == pb->buffer_cursor ? '>' : i == pb->buffer_cursor + 1 ? '<' : ' ',
+			pb->buffer[i]);
+		if (((i + 1) % 32) == 0)
+			fprintf(stderr, "\n");
+	}
+	fprintf(stderr, "---\n");
+	for (i = 0; i < len; i++) {
+		fprintf(stderr, "%c%c",
+			i == pb->buffer_cursor ? '>' : i == pb->buffer_cursor + 1 ? '<' : ' ',
+			isgraph(pb->buffer[i]) ? pb->buffer[i] : '.');
+		if (((i + 1) % 32) == 0)
+			fprintf(stderr, "\n");
+	}
+	fprintf(stderr, "--- end packed buffer: %s: L=%d,S=%d ---\n",
+		label, pb->buffer_cursor, pb->buffer_size);
 }
 
 struct packed_buffer *packed_buffer_copy(struct packed_buffer *pb)
