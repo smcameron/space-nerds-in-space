@@ -4127,7 +4127,7 @@ static int process_ship_sdata_packet(void)
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct ship_sdata_packet) - sizeof(uint8_t));
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack(buffer, "wbbbbbbbr",&id, &subclass, &shstrength, &shwavelength,
+	packed_buffer_unpack_raw(buffer, sizeof(buffer), "wbbbbbbbr", &id, &subclass, &shstrength, &shwavelength,
 			&shwidth, &shdepth, &faction, &lifeform_count,
 			name, (unsigned short) sizeof(name));
 	pthread_mutex_lock(&universe_mutex);
