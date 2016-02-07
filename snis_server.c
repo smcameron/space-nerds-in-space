@@ -6231,14 +6231,14 @@ static int add_nebula(double x, double y, double z,
 	go[i].move = nebula_move;
 	go[i].type = OBJTYPE_NEBULA;
 	go[i].tsd.nebula.r = r;
-	av = ((float) snis_randn(1000)) / 10000.0f - 0.05;
+	av = (((float) snis_randn(10000)) / 5000.0f - 1.0f) * 0.1;
 	random_axis_quat(&angvel, av * M_PI / 180);
 	quat_to_axis(&angvel,
 			&go[i].tsd.nebula.avx, &go[i].tsd.nebula.avy, &go[i].tsd.nebula.avz,
 			&go[i].tsd.nebula.ava);
 	random_axis_quat(&go[i].tsd.nebula.unrotated_orientation, snis_randn(360) * M_PI / 180.0);
 	go[i].tsd.nebula.phase_angle = 4.0 * (float) snis_randn(100) / 50.0f - 1.0;
-	go[i].tsd.nebula.phase_speed = snis_randn(1000) / 1000.0 - 0.5;
+	go[i].tsd.nebula.phase_speed = (snis_randn(1000) / 1000.0 - 0.5) * 0.1;
 	return i;
 }
 
