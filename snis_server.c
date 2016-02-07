@@ -90,6 +90,7 @@
 #include "snis_server_tracker.h"
 #include "snis_multiverse.h"
 #include "snis_hash.h"
+#include "snis_bridge_update_packet.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -13512,10 +13513,7 @@ static void queue_to_multiverse(struct multiverse_server_info *msi, struct packe
 static void update_multiverse(struct snis_entity *o)
 {
 	struct packed_buffer *pb;
-	uint32_t fuel;
-	uint8_t tloading, tloaded, throttle, rpm;
 	int bridge;
-	uint32_t iwallet = (int32_t) (o->tsd.ship.wallet * 100.0);
 
 	if (!multiverse_server)
 		return;
@@ -13561,51 +13559,7 @@ static void update_multiverse(struct snis_entity *o)
 	}
 
 	/* Update the ship */
-	pb = packed_buffer_allocate(50 + sizeof(struct update_ship_packet) +
-					sizeof(struct power_model_data) +
-					sizeof(struct power_model_data));
-	packed_buffer_append(pb, "br", SNISMV_OPCODE_UPDATE_BRIDGE,
-				bridgelist[bridge].pwdhash, (uint16_t) 20);
-
-	throttle = o->tsd.ship.throttle;
-	rpm = o->tsd.ship.rpm;
-	fuel = o->tsd.ship.fuel;
-
-	tloading = (uint8_t) (o->tsd.ship.torpedoes_loading & 0x0f);
-	tloaded = (uint8_t) (o->tsd.ship.torpedoes_loaded & 0x0f);
-	tloading = tloading | (tloaded << 4);
-
-	packed_buffer_append(pb, "hSSS", o->alive,
-			o->x, (int32_t) UNIVERSE_DIM,
-			o->y, (int32_t) UNIVERSE_DIM,
-			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbbwQQQbbw",
-			o->tsd.ship.yaw_velocity,
-			o->tsd.ship.pitch_velocity,
-			o->tsd.ship.roll_velocity,
-			o->tsd.ship.torpedoes, o->tsd.ship.power,
-			o->tsd.ship.gun_yaw_velocity,
-			o->tsd.ship.sci_heading,
-			o->tsd.ship.sci_beam_width,
-			tloading, throttle, rpm, fuel, o->tsd.ship.temp,
-			o->tsd.ship.scizoom, o->tsd.ship.weapzoom, o->tsd.ship.navzoom,
-			o->tsd.ship.mainzoom,
-			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
-			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
-			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype,
-			o->tsd.ship.reverse, o->tsd.ship.trident,
-			o->tsd.ship.ai[0].u.attack.victim_id,
-			&o->orientation.vec[0],
-			&o->tsd.ship.sciball_orientation.vec[0],
-			&o->tsd.ship.weap_orientation.vec[0],
-			o->tsd.ship.in_secure_area,
-			o->tsd.ship.docking_magnets,
-			(uint32_t) iwallet);
-	packed_buffer_append(pb, "bbbbbr",
-		o->sdata.shield_strength, o->sdata.shield_wavelength, o->sdata.shield_width, o->sdata.shield_depth,
-		o->sdata.faction, o->sdata.name, (unsigned short) sizeof(o->sdata.name));
-	packed_buffer_append(pb, "r", &o->tsd.ship.power_data, (uint16_t) sizeof(o->tsd.ship.power_data));
-	packed_buffer_append(pb, "r", &o->tsd.ship.coolant_data, (uint16_t) sizeof(o->tsd.ship.power_data));
+	pb = build_bridge_update_packet(o, bridgelist[bridge].pwdhash);
 	queue_to_multiverse(multiverse_server, pb);
 }
 
