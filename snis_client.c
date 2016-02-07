@@ -11967,6 +11967,7 @@ static void load_static_textures(void)
 		sprintf(filename, "nebula%d.mat", i);
 
 		material_nebula_read_from_file(asset_dir, filename, &nebula_material[i]);
+		nebula_material[i].nebula.alpha *= 0.25;
 	}
 
 	material_init_texture_cubemap(&asteroid_material[0]);
