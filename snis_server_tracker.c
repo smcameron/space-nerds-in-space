@@ -150,8 +150,6 @@ static void *server_tracker_thread(void *tracker_info)
 		print_game_servers(game_server, game_server_count);
 		print_game_servers(mverse_server, mverse_server_count);
 
-		ssgl_sleep(20);  /* thread safe sleep. */
-
 		(void) pthread_mutex_lock(&st->mutex);
 
 		/* update internal list of game servers */
@@ -185,6 +183,12 @@ static void *server_tracker_thread(void *tracker_info)
 		} else if (changed) {
 			fprintf(stderr, "server tracker noticed change, but not calling callback zzz\n");
 		}
+
+		if (mverse_server_count == 0 || game_server_count == 0)
+			ssgl_sleep(1);  /* thread safe sleep. */
+		else
+			ssgl_sleep(20);  /* thread safe sleep. */
+
 	} while (!time_to_quit);
 	fprintf(stderr, "snis_server: server tracker thread exiting\n");
 	free(st->lobbyhost);
