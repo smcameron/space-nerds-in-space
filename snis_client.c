@@ -12287,8 +12287,10 @@ gint advance_game(gpointer data)
 
 	timer++;
 
-	if (red_alert_mode && (role & ROLE_SOUNDSERVER) && (timer % 45) == 0)
-		wwviaudio_add_sound(RED_ALERT_SOUND);
+	if (red_alert_mode && (role & ROLE_SOUNDSERVER)) {
+		if ((timer % 45) == 0 && (timer % (45 * 6)) < (45 * 3))
+			wwviaudio_add_sound(RED_ALERT_SOUND);
+	}
 
 	deal_with_joystick();
 	deal_with_keyboard();
