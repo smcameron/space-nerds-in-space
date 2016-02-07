@@ -30,5 +30,6 @@
 #include "snis_multiverse.h"
 
 struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned char *pwdhash);
+void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb);
 
 #endif
