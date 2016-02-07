@@ -16507,6 +16507,59 @@ static void *multiverse_writer(void *arg)
 	return NULL;
 }
 
+
+static int process_update_bridge(struct multiverse_server_info *msi)
+{
+	unsigned char pwdhash[20];
+	int i, rc;
+	unsigned char buffer[250];
+	struct packed_buffer pb;
+	struct snis_entity *o;
+
+#define bytes_to_read (sizeof(struct update_ship_packet) - 9 + 25 + 5 + \
+			sizeof(struct power_model_data) + \
+			sizeof(struct power_model_data) - 1)
+
+	fprintf(stderr, "snis_server: process_update bridge 1\n");
+	memset(buffer, 0, sizeof(buffer));
+	memset(pwdhash, 0, sizeof(pwdhash));
+	rc = snis_readsocket(msi->sock, buffer, 20);
+	if (rc != 0)
+		return rc;
+	memcpy(pwdhash, buffer, 20);
+	print_hash("snis_server: update bridge, read 20 bytes: ", pwdhash);
+	BUILD_ASSERT(sizeof(buffer) > bytes_to_read);
+	memset(buffer, 0, sizeof(buffer));
+	rc = snis_readsocket(msi->sock, buffer, bytes_to_read);
+	if (rc != 0)
+		return rc;
+	fprintf(stderr, "snis_server: update bridge 3\n");
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_bridge_by_pwdhash(pwdhash);
+	if (i < 0) {
+		fprintf(stderr, "snis_server: Unknown bridge hash\n");
+		pthread_mutex_unlock(&universe_mutex);
+		return i;
+	}
+	fprintf(stderr, "snis_server: update bridge 4\n");
+	rc = lookup_by_id(bridgelist[i].shipid);
+	if (rc < 0) {
+		fprintf(stderr, "snis_server: Failed to lookup ship by id\n");
+		pthread_mutex_unlock(&universe_mutex);
+		return rc;
+	}
+	o = &go[rc];
+	if (!o->tsd.ship.damcon) {
+		o->tsd.ship.damcon = malloc(sizeof(*o->tsd.ship.damcon));
+		memset(o->tsd.ship.damcon, 0, sizeof(*o->tsd.ship.damcon));
+	}
+	packed_buffer_init(&pb, buffer, bytes_to_read);
+	unpack_bridge_update_packet(o, &pb);
+	pthread_mutex_unlock(&universe_mutex);
+	fprintf(stderr, "snis_server: update bridge 10\n");
+	return 0;
+}
+
 static int process_multiverse_verification(struct multiverse_server_info *msi)
 {
 	int rc, b;
@@ -16571,9 +16624,13 @@ static void *multiverse_reader(void *arg)
 		case SNISMV_OPCODE_NOOP:
 			break;
 		case SNISMV_OPCODE_LOOKUP_BRIDGE:
-		case SNISMV_OPCODE_UPDATE_BRIDGE:
 			fprintf(stderr, "snis_server: unimplemented multiverse opcode %hhu\n",
 				opcode);
+			break;
+		case SNISMV_OPCODE_UPDATE_BRIDGE:
+			rc = process_update_bridge(msi);
+			if (rc)
+				goto protocol_error;
 			break;
 		case SNISMV_OPCODE_VERIFICATION_RESPONSE:
 			rc = process_multiverse_verification(msi);

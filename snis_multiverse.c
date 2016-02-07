@@ -689,6 +689,24 @@ static int create_new_ship(unsigned char pwdhash[20])
 	return 0;
 }
 
+static void send_bridge_update_to_snis_server(struct starsystem_info *ss, unsigned char *pwdhash)
+{
+	int i;
+	struct packed_buffer *pb;
+	struct snis_entity *o;
+
+	pthread_mutex_lock(&data_mutex);
+	i = lookup_ship_by_hash(pwdhash);
+	if (i < 0)
+		return;
+	o = &ship[i].entity;
+
+	/* Update the ship */
+	pb = build_bridge_update_packet(o, pwdhash);
+	pthread_mutex_unlock(&data_mutex);
+	packed_buffer_queue_add(&ss->write_queue, pb, &ss->write_queue_mutex);
+}
+
 static int verify_existence(struct starsystem_info *ss, int should_already_exist)
 {
 	unsigned char pwdhash[20];
@@ -697,6 +715,7 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 	int i, rc;
 	unsigned char pass;
 	unsigned char printable_hash[100];
+	int send_update = 0;
 
 	fprintf(stderr, "snis_multiverse: verify_existence 1: should %salready exist\n",
 			should_already_exist ? "" : "not ");
@@ -725,6 +744,7 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 		if (should_already_exist) {
 			fprintf(stderr, "snis_multiverse: hash %s exists, as expected.\n", printable_hash);
 			pass = SNISMV_VERIFICATION_RESPONSE_PASS;
+			send_update = 1;
 		} else {
 			fprintf(stderr, "snis_multiverse: hash %s exists, but should not.\n", printable_hash);
 			pass = SNISMV_VERIFICATION_RESPONSE_FAIL;
@@ -736,6 +756,10 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 	pb = packed_buffer_allocate(22);
 	packed_buffer_append(pb, "bbr", SNISMV_OPCODE_VERIFICATION_RESPONSE, pass, pwdhash, 20);
 	packed_buffer_queue_add(&ss->write_queue, pb, &ss->write_queue_mutex);
+
+	if (send_update)
+		send_bridge_update_to_snis_server(ss, pwdhash);
+
 	return 0;
 }
 
