@@ -5378,6 +5378,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	union quat camera_orientation;
 	union vec3 recoil = { { -1.0f, 0.0f, 0.0f } };
 	char buf[20];
+	int i;
 
 	static int last_timer = 0;
 	int first_frame = (timer != last_timer+1);
@@ -5470,6 +5471,20 @@ static void show_weapons_camera_view(GtkWidget *w)
 				o->tsd.ship.shiptype, o->tsd.ship.power_data.impulse.i);
 
 	render_entities(ecx);
+
+	/* Show targeting aids */
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+
+		if (o->alive && (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)) {
+			if (entity_onscreen(o->entity)) {
+				float sx, sy;
+				entity_get_screen_coords(o->entity, &sx, &sy);
+				draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0, 0.5, 1.5f);
+			}
+		}
+	}
+
 
 	/* Remove our ship from the scene */
 	remove_entity(ecx, turret_entity);
