@@ -1563,7 +1563,9 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 		/* each planet texture has another version with a variation of the ring materials */
 		const int np = solarsystem_assets->nplanet_textures;
 		//m = id % np + (np * (ring_m + 1) * (hasring ? 1 : 0));
-		m = id % NPLANET_MATERIALS;
+		m = id % (NPLANET_MATERIALS / 2);
+		if (!hasring)
+			m += NPLANET_MATERIALS / 2;
 		has_atm = has_atmosphere(solarsystem_assets->planet_type[id % np]);
 
 		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
@@ -12685,8 +12687,11 @@ static int load_per_solarsystem_textures()
 		sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->planet_texture[i]);
 		material_init_textured_planet(&planet_material[i]);
 		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, path);
-		planet_material[i].textured_planet.ring_material =
-				&planetary_ring_material[i % NPLANETARY_RING_MATERIALS];
+		if (i < NPLANET_MATERIALS / 2)
+			planet_material[i].textured_planet.ring_material =
+					&planetary_ring_material[i % NPLANETARY_RING_MATERIALS];
+		else
+			planet_material[i].textured_planet.ring_material = NULL;
 		if (strcmp(solarsystem_assets->planet_normalmap[i], "no-normal-map") == 0) {
 			planet_material[i].textured_planet.normalmap_id = -1;
 		} else {
@@ -12705,8 +12710,11 @@ static int load_per_solarsystem_textures()
 	j = 0;
 	for (i = solarsystem_assets->nplanet_textures; i < NPLANET_MATERIALS; i++) {
 		planet_material[i] = planet_material[j];
-		planet_material[i].textured_planet.ring_material =
-				&planetary_ring_material[i % NPLANETARY_RING_MATERIALS];
+		if (i < NPLANET_MATERIALS / 2)
+			planet_material[i].textured_planet.ring_material =
+					&planetary_ring_material[i % NPLANETARY_RING_MATERIALS];
+		else
+			planet_material[i].textured_planet.ring_material = NULL;
 		j = (j + 1) % solarsystem_assets->nplanet_textures;
 	}
 #if 0
