@@ -5252,7 +5252,8 @@ static void draw_main_screen_text(GtkWidget *w, GdkGC *gc)
 	}
 }
 
-static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int color, int ring)
+static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int color,
+					int ring, float scale, float ratio)
 {
 	int i;
 
@@ -5265,15 +5266,15 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int 
 
 		angle = (M_PI * ((i * 90 + offset + timer * 4) % 360)) / 180.0;
 
-		dx = 15.0 * cos(angle);
-		dy = 15.0 * sin(angle);
-		ddx = 5.0 * cos(angle + M_PI / 2.0);
-		ddy = 5.0 * sin(angle + M_PI / 2.0);
+		dx = scale * 15.0 * cos(angle);
+		dy = scale * 15.0 * sin(angle);
+		ddx = scale * 5.0 * cos(angle + M_PI / 2.0);
+		ddy = scale * 5.0 * sin(angle + M_PI / 2.0);
 
 		x1 = x + dx;
 		y1 = y + dy;
-		x2 = x + 2.0 * dx;
-		y2 = y + 2.0 * dy;
+		x2 = x + ratio * dx;
+		y2 = y + ratio * dy;
 		/* snis_draw_line(x1, y1, x2, y2); */
 		snis_draw_line(x2 - ddx, y2 - ddy, x2 + ddx, y2 + ddy);
 		snis_draw_line(x2 - ddx, y2 - ddy, x1, y1);
@@ -5487,7 +5488,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 		if (target && target->alive && target->entity && entity_onscreen(target->entity)) {
 			entity_get_screen_coords(target->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
+			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0, 1.0f, 2.0f);
 		}
 	}
 #endif
@@ -5498,7 +5499,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 		if (curr_science_guy->alive && curr_science_guy->entity &&
 			entity_onscreen(curr_science_guy->entity)) {
 			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 0);
+			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 0, 1.0f, 2.0f);
 		}
 	}
 
@@ -5683,7 +5684,7 @@ static void show_mainscreen(GtkWidget *w)
 		if (target && target->alive && target->entity &&
 			entity_onscreen(target->entity)) {
 			entity_get_screen_coords(target->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
+			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0, 1.0f, 2.0f);
 		}
 	}
 #endif
@@ -5694,7 +5695,7 @@ static void show_mainscreen(GtkWidget *w)
 		if (curr_science_guy->alive && curr_science_guy->entity &&
 			entity_onscreen(curr_science_guy->entity)) {
 			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(main_sci_selection), 0);
+			draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(main_sci_selection), 0, 1.0f, 2.0f);
 		}
 	}
 
@@ -8065,14 +8066,14 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		float sx, sy;
 
 		entity_get_screen_coords(targeted_entity, &sx, &sy);
-		draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0);
+		draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0, 1.0f, 2.0f);
 	}
 #endif
 	if (science_entity && entity_onscreen(science_entity)) {
 		float sx, sy;
 
 		entity_get_screen_coords(science_entity, &sx, &sy);
-		draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(nav_science_select), 0);
+		draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(nav_science_select), 0, 1.0f, 2.0f);
 	}
 
 	pthread_mutex_unlock(&universe_mutex);
