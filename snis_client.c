@@ -11644,10 +11644,10 @@ static struct button *init_net_checkbox_button(int x, int *y, char *txt, int *va
 			button_function bf, void *cookie)
 {
 	struct button *b;
-	b = snis_button_init(x, *y, 225, 23, txt, UI_COLOR(network_setup_role),
+	b = snis_button_init(x, *y, txx(140), txy(18), txt, UI_COLOR(network_setup_role),
 			NANO_FONT, bf, cookie);
 	snis_button_checkbox(b, value);
-	*y = *y + txy(23);
+	*y = *y + txy(18);
 	return b;
 }
 
@@ -11718,7 +11718,7 @@ static void init_join_create_buttons(struct network_setup_ui *nsu)
 	nsu->create_ship_v = 1;
 	nsu->join_ship_v = 0;
 	int x = txx(350);
-	int y = txy(450);
+	int y = txy(400);
 	nsu->create_ship_checkbox = init_net_checkbox_button(x, &y,
 						"CREATE SHIP", &nsu->create_ship_v,
 						create_ship_checkbox_cb, nsu);
@@ -11762,12 +11762,12 @@ static void init_net_setup_ui(void)
 			TINY_FONT, start_gameserver_button_pressed, NULL);
 	y += yinc * 2;
 	net_setup_ui.shipname_box =
-		snis_text_input_box_init(150, y, txy(30), txx(250), input_color, TINY_FONT,
+		snis_text_input_box_init(txx(150), y, txy(30), txx(250), input_color, TINY_FONT,
 					net_setup_ui.shipname, 50, &timer,
 					shipname_entered, NULL);
 	y += yinc;
 	net_setup_ui.password_box =
-		snis_text_input_box_init(150, y, txy(30), txx(250), input_color, TINY_FONT,
+		snis_text_input_box_init(txx(150), y, txy(30), txx(250), input_color, TINY_FONT,
 					net_setup_ui.password, 50, &timer,
 					password_entered, NULL);
 	y += yinc;
@@ -11793,7 +11793,7 @@ static void show_network_setup(GtkWidget *w)
 	sng_set_foreground(UI_COLOR(network_setup_logo));
 	sng_draw_vect_obj(&snis_logo, txx(100), txy(500));
 	sng_set_foreground(UI_COLOR(network_setup_text));
-	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10) + LINEHEIGHT * 2);
+	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10 + LINEHEIGHT * 2));
 	sng_abs_xy_draw_string("LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, txx(25), txy(130));
 	sng_abs_xy_draw_string("GAME SERVER NICKNAME", TINY_FONT, txx(25), txy(280));
 	sng_abs_xy_draw_string("SHIP NAME", TINY_FONT, txx(20), txy(470));
