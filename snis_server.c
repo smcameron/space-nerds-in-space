@@ -310,6 +310,7 @@ struct bridge_data {
 #define BRIDGE_REFUSED 3
 	int requested_verification; /* Whether we've requested verification from multiverse server yet */
 	int requested_creation; /* whether user has requested creating new ship */
+	int nclients;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -386,12 +387,23 @@ static void remove_client(int client_index)
 }
 
 /* assumes universe and client locks are held. */
+static void delete_bridge(int b);
 static void put_client(struct game_client *c)
 {
+	int bridge_to_delete = -1;
 	assert(c->refcount > 0);
 	c->refcount--;
-	if (c->refcount == 0)
+	if (c->refcount == 0) {
+		if (c->bridge >= 0 && c->bridge < nbridges) {
+			bridgelist[c->bridge].nclients--;
+			if (bridgelist[c->bridge].nclients <= 0) {
+				bridge_to_delete = c->bridge;
+			}
+		}
 		remove_client(client_index(c));
+	}
+	if (bridge_to_delete >= 0)
+		delete_bridge(bridge_to_delete);
 }
 
 /* assumes universe and client locks are held. */
@@ -675,15 +687,21 @@ static void log_client_info(int level, int connection, char *info)
 }
 
 static void delete_from_clients_and_server(struct snis_entity *o);
+static void delete_object(struct snis_entity *o);
+static void remove_from_attack_lists(uint32_t victim_id);
 static void delete_player_ship(int index)
 {
-	delete_from_clients_and_server(&go[index]);
+	/* Note we do not need to delete from clients because there
+	 * shouldn't be any clients at this point.
+	 */
+	remove_from_attack_lists(go[index].id);
+	delete_object(&go[index]);
 }
 
 static void delete_bridge(int b)
 {
 	/* Assumes universe mutex is held.
-	 * Assumes client lock not held.
+	 * Assumes client lock held.
 	 */
 
 	int i;
@@ -691,14 +709,12 @@ static void delete_bridge(int b)
 
 	if (nbridges <= 0)
 		return;
-	client_lock();
 	for (i = 0; i < nclients; i++) {
 		if (!client[i].refcount)
 			continue;
 		if (client[i].bridge == b)
 			clients_still_active = 1;
 	}
-	client_unlock();
 	if (clients_still_active) {
 		fprintf(stderr, "snis_server: attempted to delete bridge clients still uses.\n");
 		return;
@@ -733,18 +749,6 @@ static int lookup_bridge_by_pwdhash(unsigned char *pwdhash)
 		if (memcmp(bridgelist[i].pwdhash, pwdhash, 20) == 0)
 			return i;
 	return -1;
-}
-
-static void __attribute__((unused)) delete_bridge_by_pwdhash(unsigned char *pwdhash)
-{
-	/* Assumes universe mutex is held.
-	 * Assumes client lock not held.
-	 */
-	int b;
-	b = lookup_bridge_by_pwdhash(pwdhash);
-	if (b < 0)
-		return;
-	delete_bridge(b);
 }
 
 static void generic_move(__attribute__((unused)) struct snis_entity *o)
@@ -13065,6 +13069,7 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].verified = BRIDGE_UNVERIFIED;
 		bridgelist[nbridges].requested_verification = 0;
 		bridgelist[nbridges].requested_creation = !!app.new_ship;
+		bridgelist[nbridges].nclients = 1;
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
 	
@@ -13074,6 +13079,7 @@ static int add_new_player(struct game_client *c)
 	} else if (c->bridge != -1 && !app.new_ship) { /* join existing ship */
 		c->shipid = bridgelist[c->bridge].shipid;
 		c->ship_index = lookup_by_id(c->shipid);
+		bridgelist[c->bridge].nclients++;
 	} else if (c->bridge != -1 && app.new_ship) { /* ship already exists, can't create */
 		fprintf(stderr, "snis_server: ship already exists, can't create\n");
 		pb_queue_to_client(c, packed_buffer_new("bb", OPCODE_ADD_PLAYER_ERROR,
