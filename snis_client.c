@@ -3373,8 +3373,11 @@ static void show_lobbyscreen(GtkWidget *w)
 			pthread_mutex_lock(&to_server_queue_event_mutex);
 			time_to_switch_servers = (switched_server2 != -1);
 			if (time_to_switch_servers) {
+				fprintf(stderr, "snis_client: time to switch servers\n");
 				lobby_selected_server =
 					lobby_lookup_server_by_location(switch_server_location_string);
+				fprintf(stderr, "snis_client: lobby_seleted_server = %d (%s)\n",
+					lobby_selected_server, switch_server_location_string);
 				if (lobby_selected_server == -1)
 					return;
 				switched_server2 = -1;
@@ -5410,6 +5413,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	struct add_player_packet app;
 	int flag = 1;
 
+	fprintf(stderr, "snis_client: connect to gameserver thread\n");
 	if (avoid_lobby) {
 		strcpy(hoststr, serverhost);
 		sprintf(portstr, "%d", serverport);
@@ -5418,7 +5422,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		sprintf(portstr, "%d", ntohs(lobby_game_server[lobby_selected_server].port));
 		sprintf(hoststr, "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
 	}
-	printf("connecting to %s/%s\n", hoststr, portstr);
+	fprintf(stderr, "snis_client: connecting to %s/%s\n", hoststr, portstr);
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET;
@@ -12327,6 +12331,7 @@ gint advance_game(gpointer data)
 	pthread_mutex_lock(&to_server_queue_event_mutex);
 	time_to_switch_servers = (switched_server != -1);
 	if (time_to_switch_servers) {
+		fprintf(stderr, "snis_client: switch server hack\n");
 		/* this is a hack */
 		switched_server2 = switched_server;
 		switched_server = -1;

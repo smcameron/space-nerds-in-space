@@ -393,14 +393,18 @@ static void put_client(struct game_client *c)
 	int bridge_to_delete = -1;
 	assert(c->refcount > 0);
 	c->refcount--;
+	fprintf(stderr, "snis_server: client refcount = %d\n", c->refcount);
 	if (c->refcount == 0) {
 		if (c->bridge >= 0 && c->bridge < nbridges) {
 			bridgelist[c->bridge].nclients--;
+			fprintf(stderr, "snis_server: client count of bridge %d = %d\n", c->bridge, bridgelist[c->bridge].nclients);
 			if (bridgelist[c->bridge].nclients <= 0) {
 				bridge_to_delete = c->bridge;
 			}
 		}
+		fprintf(stderr, "snis_server: calling remove_client %ld\n", client_index(c));
 		remove_client(client_index(c));
+		fprintf(stderr, "snis_server: remove_client %ld returned\n", client_index(c));
 	}
 	if (bridge_to_delete >= 0)
 		delete_bridge(bridge_to_delete);
@@ -707,6 +711,7 @@ static void delete_bridge(int b)
 	int i;
 	int clients_still_active = 0;
 
+	fprintf(stderr, "snis_server: delete_bridge %d, nbridges = %d\n", b, nbridges);
 	if (nbridges <= 0)
 		return;
 	for (i = 0; i < nclients; i++) {
@@ -715,15 +720,18 @@ static void delete_bridge(int b)
 		if (client[i].bridge == b)
 			clients_still_active = 1;
 	}
+	fprintf(stderr, "snis_server: delete_bridge, clients_still_active = %d\n", clients_still_active);
 	if (clients_still_active) {
 		fprintf(stderr, "snis_server: attempted to delete bridge clients still uses.\n");
 		return;
 	}
+	fprintf(stderr, "snis_server: deleting player ship\n");
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (go[i].type == OBJTYPE_SHIP1 && go[i].id == bridgelist[b].shipid) {
 			delete_player_ship(i);
 		}
 	}
+	fprintf(stderr, "snis_server: deleting bridge %d\n", b);
 	/* delete the bridge */
 	for (i = b + 1; i < nbridges; i++)
 		bridgelist[i - 1] = bridgelist[i];
@@ -13040,11 +13048,14 @@ static int add_new_player(struct game_client *c)
 	struct add_player_packet app;
 	uint8_t no_write_count = 0;
 
+	fprintf(stderr, "snis_server:snis_server: reading update player packet\n");
 	rc = snis_readsocket(c->socket, &app, sizeof(app));
+	fprintf(stderr, "snis_server:snis_server: read update player packet, rc = %d\n", rc);
 	if (rc)
 		return rc;
 	app.role = ntohl(app.role);
 	if (app.opcode != OPCODE_UPDATE_PLAYER) {
+		fprintf(stderr, "snis_server:snis_server: bad opcode %d\n", app.opcode);
 		snis_log(SNIS_ERROR, "bad opcode %d\n", app.opcode);
 		goto protocol_error;
 	}
@@ -13052,6 +13063,7 @@ static int add_new_player(struct game_client *c)
 	app.password[19] = '\0';
 
 	if (insane(app.shipname, 20) || insane(app.password, 20)) {
+		fprintf(stderr, "snis_server:name or password\n");
 		snis_log(SNIS_ERROR, "Bad ship name or password\n");
 		goto protocol_error;
 	}
@@ -13063,6 +13075,7 @@ static int add_new_player(struct game_client *c)
 	c->role = app.role;
 	if (c->bridge == -1) { /* didn't find our bridge, make a new one. */
 		double x, z;
+		fprintf(stderr, "snis_server: didn't find bridge, make new one\n");
 
 		for (int i = 0; i < 100; i++) {
 			x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
@@ -13093,6 +13106,7 @@ static int add_new_player(struct game_client *c)
 		schedule_callback(event_callback, &callback_schedule,
 				"player-respawn-event", (double) c->shipid);
 	} else if (c->bridge != -1 && !app.new_ship) { /* join existing ship */
+		fprintf(stderr, "snis_server: snis_server: existing ship\n");
 		c->shipid = bridgelist[c->bridge].shipid;
 		c->ship_index = lookup_by_id(c->shipid);
 		bridgelist[c->bridge].nclients++;
@@ -13108,6 +13122,7 @@ static int add_new_player(struct game_client *c)
 			bridgelist[c->bridge].pwdhash);
 	c->debug_ai = 0;
 	c->request_universe_timestamp = 0;
+	fprintf(stderr, "snis_server: snis_server: queue client id %d\n", c->shipid);
 	queue_up_client_id(c);
 
 	c->go_clients = malloc(sizeof(*c->go_clients) * MAXGAMEOBJS);
@@ -13141,6 +13156,7 @@ static void service_connection(int connection)
 
 	if (verify_client_protocol(connection)) {
 		log_client_info(SNIS_ERROR, connection, "disconnected, protocol violation\n");
+		fprintf(stderr, "snis_server: connection terminated protocol violation\n");
 		close(connection);
 		return;
 	}
@@ -13169,6 +13185,7 @@ static void service_connection(int connection)
 	pthread_mutex_init(&client[i].client_write_queue_mutex, NULL);
 	packed_buffer_queue_init(&client[i].client_write_queue);
 
+	fprintf(stderr, "snis_server: calling add new player\n");
 	rc = add_new_player(&client[i]);
 	if (rc) {
 		nclients--;
@@ -13345,6 +13362,7 @@ static void *listener_thread(__attribute__((unused)) void * unused)
 		snis_log(SNIS_INFO, "Accepting connection...\n");
 		connection = accept(rendezvous, (struct sockaddr *) &remote_addr, &remote_addr_len);
 		snis_log(SNIS_INFO, "accept returned %d\n", connection);
+		fprintf(stderr, "snis_server: accept returned %d\n", connection);
 		if (connection < 0) {
 			/* handle failed connection... */
 			snis_log(SNIS_WARN, "accept() failed: %s\n", strerror(errno));
