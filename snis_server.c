@@ -728,6 +728,7 @@ static void delete_bridge(int b)
 	for (i = b + 1; i < nbridges; i++)
 		bridgelist[i - 1] = bridgelist[i];
 	nbridges--;
+	fprintf(stderr, "snis_server: deleted bridge %d\n", b);
 }
 
 static void print_hash(char *s, unsigned char *pwdhash)
@@ -5821,7 +5822,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	}
 }
 
-static void respawn_player(struct snis_entity *o)
+static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 {
 	int b, i, found;
 	double x, y, z, a1, a2, rf;
@@ -5831,6 +5832,19 @@ static void respawn_player(struct snis_entity *o)
 		mt = mtwist_init(mtwist_seed);
 
 	/* Find a friendly location to respawn... */
+	if (warpgate_number != (uint8_t) -1) {
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			struct snis_entity *f = &go[i];
+			if (!f->alive || f->type != OBJTYPE_WARPGATE)
+				continue;
+			if (f->tsd.warpgate.warpgate_number != warpgate_number)
+				continue;
+			/* put player near at gate */
+			set_object_location(o, f->x, f->y, f->z);
+			goto finished;
+		}
+	}
+
 	found = 0;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *f = &go[i];
@@ -5867,6 +5881,8 @@ static void respawn_player(struct snis_entity *o)
 		set_object_location(o, x, y, z);
 		o->tsd.ship.in_secure_area = 0;
 	}
+
+finished:
 	/* Stop any warp that might be in progress */
 	b = lookup_bridge_by_shipid(o->id);
 	if (b >= 0)
@@ -5884,14 +5900,14 @@ static void respawn_player(struct snis_entity *o)
 	o->alive = 1;
 }
 
-static int add_player(double x, double z, double vx, double vz, double heading)
+static int add_player(double x, double z, double vx, double vz, double heading, uint8_t warpgate_number)
 {
 	int i;
 
 	i = add_generic_object(x, 0.0, z, vx, 0.0, vz, heading, OBJTYPE_SHIP1);
 	if (i < 0)
 		return i;
-	respawn_player(&go[i]);
+	respawn_player(&go[i], warpgate_number);
 	return i;
 }
 
@@ -13054,7 +13070,7 @@ static int add_new_player(struct game_client *c)
 			if (dist3d(x - SUNX, 0, z - SUNZ) > SUN_DIST_LIMIT)
 				break;
 		}
-		c->ship_index = add_player(x, z, 0.0, 0.0, M_PI / 2.0);
+		c->ship_index = add_player(x, z, 0.0, 0.0, M_PI / 2.0, app.warpgate_number);
 		c->shipid = go[c->ship_index].id;
 		strcpy(go[c->ship_index].sdata.name, (const char * restrict) app.shipname);
 		memset(&bridgelist[nbridges], 0, sizeof(bridgelist[nbridges]));
@@ -13605,7 +13621,7 @@ static void move_objects(double absolute_time, int discontinuity)
 		} else {
 			if (go[i].type == OBJTYPE_SHIP1)  {
 				if (universe_timestamp >= go[i].respawn_time) {
-					respawn_player(&go[i]);
+					respawn_player(&go[i], (uint8_t) -1);
 					schedule_callback(event_callback, &callback_schedule,
 						"player-respawn-event", (double) go[i].id);
 					send_ship_damage_packet(&go[i]);
@@ -16521,6 +16537,7 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 	unsigned char buffer[250];
 	struct packed_buffer pb;
 	struct snis_entity *o;
+	double x, y, z;
 
 #define bytes_to_read (sizeof(struct update_ship_packet) - 9 + 25 + 5 + \
 			sizeof(struct power_model_data) + \
@@ -16555,12 +16572,27 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 		return rc;
 	}
 	o = &go[rc];
+
+	/* Save position */
+	x = o->x;
+	y = o->y;
+	z = o->z;
+	fprintf(stderr, "snis_server: Saving position to %lf,%lf,%lf\n", x, y, z);
+
 	if (!o->tsd.ship.damcon) {
 		o->tsd.ship.damcon = malloc(sizeof(*o->tsd.ship.damcon));
 		memset(o->tsd.ship.damcon, 0, sizeof(*o->tsd.ship.damcon));
 	}
 	packed_buffer_init(&pb, buffer, bytes_to_read);
 	unpack_bridge_update_packet(o, &pb);
+
+	/* Restore position... */
+	fprintf(stderr, "snis_server: update would set position to %lf,%lf,%lf\n", o->x, o->y, o->z);
+	fprintf(stderr, "snis_server: restoring position to %lf,%lf,%lf\n", x, y, z);
+	o->x = x;
+	o->y = y;
+	o->z = z;
+
 	pthread_mutex_unlock(&universe_mutex);
 	fprintf(stderr, "snis_server: update bridge 10\n");
 	return 0;

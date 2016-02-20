@@ -396,6 +396,7 @@ struct request_thrust_packet {
 struct add_player_packet {
 	uint8_t opcode;
 	uint8_t new_ship;
+	uint8_t warpgate_number;
 	uint32_t role;
 	unsigned char shipname[20];
 	unsigned char password[20];

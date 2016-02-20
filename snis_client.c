@@ -5474,6 +5474,8 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	memset(&app, 0, sizeof(app));
 	app.opcode = OPCODE_UPDATE_PLAYER;
 	app.new_ship = net_setup_ui.create_ship_v;
+	app.warpgate_number = (uint8_t) switch_warp_gate_number;
+	switch_warp_gate_number = -1;
 	app.role = htonl(role);
 	strncpy((char *) app.shipname, shipname, 19);
 	strncpy((char *) app.password, password, 19);
