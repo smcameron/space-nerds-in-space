@@ -1505,7 +1505,7 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 	BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 	glEnable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE);
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -1549,6 +1549,7 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
+	glDepthMask(GL_TRUE);
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -3755,6 +3756,7 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 
 	enable_3d_viewport();
 
+	glDepthMask(GL_FALSE);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 
@@ -3779,6 +3781,9 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 
 	glDisableVertexAttribArray(skybox_shader.vertex_id);
 	glUseProgram(0);
+	glDepthMask(GL_TRUE);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 }
 
 static void debug_menu_draw_item(char *item, int itemnumber, int grayed, int checked)
