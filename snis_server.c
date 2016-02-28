@@ -91,6 +91,7 @@
 #include "snis_multiverse.h"
 #include "snis_hash.h"
 #include "snis_bridge_update_packet.h"
+#include "solarsystem_config.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -131,6 +132,7 @@ static struct multiverse_server_info {
 } *multiverse_server = NULL;
 
 static char *solarsystem_name = DEFAULT_SOLAR_SYSTEM;
+static struct solarsystem_asset_spec *solarsystem_assets = NULL;
 
 #define GATHER_OPCODE_STATS 0
 
@@ -13843,6 +13845,22 @@ static int read_factions(void)
 	return 0;
 }
 
+static struct solarsystem_asset_spec *read_solarsystem_assets(char *solarsystem_name)
+{
+	char path[PATH_MAX];
+	struct solarsystem_asset_spec *s;
+
+	sprintf(path, "%s/solarsystems/%s/assets.txt", asset_dir, solarsystem_name);
+
+	s = solarsystem_asset_spec_read(path);
+	if (!s) {
+		fprintf(stderr, "Unable to read solarsystem asset spec from '%s'", path);
+		if (errno)
+			fprintf(stderr, "%s: %s\n", path, strerror(errno));
+	}
+	return s;
+}
+
 static void set_random_seed(void)
 {
 	char *seed = getenv("SNISRAND");
@@ -16967,6 +16985,12 @@ int main(int argc, char *argv[])
 	}
 	docking_port_info = read_docking_port_info(starbase_metadata, nstarbase_models,
 					STARBASE_SCALE_FACTOR);
+
+	solarsystem_assets = read_solarsystem_assets(solarsystem_name);
+	if (!solarsystem_assets) {
+		fprintf(stderr, "Failed reading solarsystem assets for '%s'\n", solarsystem_name);
+		return -1;
+	}
 
 	open_log_file();
 
