@@ -7107,6 +7107,11 @@ static int choose_contraband(void)
 	return -1;
 }
 
+static int has_atmosphere(int i)
+{
+	return (strcmp(solarsystem_assets->planet_type[i], "rocky") != 0);
+}
+
 static int add_planet(double x, double y, double z, float radius, uint8_t security)
 {
 	int i;
@@ -7131,6 +7136,9 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].tsd.planet.description_seed = snis_rand();
 	go[i].tsd.planet.radius = radius;
 	go[i].tsd.planet.ring = snis_randn(100) < 50;
+	go[i].tsd.planet.solarsystem_planet_type = (uint8_t) (go[i].id % solarsystem_assets->nplanet_textures);
+	go[i].tsd.planet.has_atmosphere = has_atmosphere(go[i].tsd.planet.solarsystem_planet_type);
+	go[i].tsd.planet.ring_selector = snis_randn(256);
 	go[i].tsd.planet.security = security;
 	go[i].tsd.planet.contraband = choose_contraband();
 
@@ -12903,7 +12911,7 @@ static void send_update_planet_packet(struct game_client *c,
 	else
 		ring = 1.0;
 
-	pb_queue_to_client(c, packed_buffer_new("bwwSSSSwbbbbhbbbS", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSSwbbbbhbbbSbbb", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
@@ -12917,7 +12925,10 @@ static void send_update_planet_packet(struct game_client *c,
 					o->tsd.planet.atmosphere_r,
 					o->tsd.planet.atmosphere_g,
 					o->tsd.planet.atmosphere_b,
-					o->tsd.planet.atmosphere_scale, (int32_t) UNIVERSE_DIM));
+					o->tsd.planet.atmosphere_scale, (int32_t) UNIVERSE_DIM,
+					o->tsd.planet.has_atmosphere,
+					o->tsd.planet.solarsystem_planet_type,
+					o->tsd.planet.ring_selector));
 }
 
 static void send_update_wormhole_packet(struct game_client *c,

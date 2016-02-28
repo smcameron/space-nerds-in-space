@@ -66,7 +66,7 @@
 #define NDERELICTS 20
 #define NWARPGATES 10
 
-#define NPLANETS 10
+#define NPLANETS 6
 #define MIN_PLANET_SEPARATION (UNIVERSE_DIM / 10.0)
 #define NBASES (NPLANETS + 10)
 #define COMMODITIES_PER_BASE 10
@@ -562,6 +562,13 @@ struct planet_data {
 #define PLAYER_PLANET_DIST_TOO_CLOSE (200)
 #define PLAYER_PLANET_DIST_WARN (400)
 	float radius;
+	uint8_t planet_type;
+#define PLANET_TYPE_ROCKY 0
+#define PLANET_TYPE_EARTHLIKE 1
+#define PLANET_TYPE_GASGIANT 2
+	uint8_t has_atmosphere;
+	uint8_t ring_selector;
+	uint8_t solarsystem_planet_type;
 	uint8_t ring;
 	uint8_t atmosphere_r, atmosphere_g, atmosphere_b;
 	double atmosphere_scale;

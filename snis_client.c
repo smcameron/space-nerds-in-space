@@ -1537,36 +1537,34 @@ static int update_derelict(uint32_t id, uint32_t timestamp, double x, double y, 
 	return 0;
 }
 
-static int has_atmosphere(char *planet_type)
-{
-	return strcmp(planet_type, "rocky") != 0;
-}
-
 static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, double z, double r, uint8_t government,
 				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring,
 				uint8_t security, uint16_t contraband,
 				uint8_t atm_r,
 				uint8_t atm_g,
 				uint8_t atm_b,
-				double atm_scale)
+				double atm_scale,
+				uint8_t has_atmosphere,
+				uint8_t solarsystem_planet_type,
+				uint8_t ring_selector)
 {
 	int i, m;
 	struct entity *e, *atm, *ring;
 	union quat orientation;
-	int has_atm;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		/* Orientation should be consistent across clients because planets don't move */
 		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
 
-		/* each planet texture has another version with a variation of the ring materials */
-		const int np = solarsystem_assets->nplanet_textures;
-		//m = id % np + (np * (ring_m + 1) * (hasring ? 1 : 0));
-		m = id % (NPLANET_MATERIALS / 2);
-		if (!hasring)
-			m += NPLANET_MATERIALS / 2;
-		has_atm = has_atmosphere(solarsystem_assets->planet_type[id % np]);
+		/* each planet texture has other versions with a variation of the ring materials */
+		m = solarsystem_planet_type;
+		fprintf(stderr, "zzz %s solarsystem_planet_type = %d\n", solarsystem_name, m);
+		if (!hasring) {
+			const int ring_materials = (NPLANET_MATERIALS / 2);
+			m = ring_materials + m * (ring_selector % (ring_materials / 6));
+		}
+		fprintf(stderr, "zzz m = %d, has_atmosphere = %hhu, has ring = %d\n", m, has_atmosphere, hasring);
 
 		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
 		if (e) {
@@ -1593,7 +1591,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
-		if (has_atm) {
+		if (has_atmosphere) {
 			atm = add_entity(ecx, sphere_mesh, 0.0f, 0.0f, 0.0f, WHITE);
 			go[i].tsd.planet.atmosphere = atm;
 			if (atm) {
@@ -1626,6 +1624,9 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	go[i].tsd.planet.atmosphere_g = atm_g;
 	go[i].tsd.planet.atmosphere_b = atm_b;
 	go[i].tsd.planet.atmosphere_scale = atm_scale;
+	go[i].tsd.planet.has_atmosphere = has_atmosphere;
+	go[i].tsd.planet.solarsystem_planet_type = solarsystem_planet_type;
+	go[i].tsd.planet.ring_selector = ring_selector;
 	return 0;
 }
 
@@ -4723,29 +4724,32 @@ static int process_update_planet_packet(void)
 	unsigned char buffer[100];
 	uint32_t id, timestamp;
 	double dr, dx, dy, dz, atm_scale;
-	uint8_t government, tech_level, economy, security, atm_r, atm_g, atm_b;
+	uint8_t government, tech_level, economy, security, atm_r, atm_g, atm_b, has_atmosphere, solarsystem_planet_type;
+	uint8_t ring_selector;
 	uint32_t dseed;
 	int hasring;
 	uint16_t contraband;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbbhbbbS", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbbhbbbSbbb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
 			&dr, (int32_t) UNIVERSE_DIM,
 			&dseed, &government, &tech_level, &economy, &security,
-			&contraband, &atm_r, &atm_b, &atm_g, &atm_scale, (int32_t) UNIVERSE_DIM);
+			&contraband, &atm_r, &atm_b, &atm_g, &atm_scale, (int32_t) UNIVERSE_DIM,
+			&has_atmosphere, &solarsystem_planet_type, &ring_selector);
 	if (rc != 0)
 		return rc;
+	solarsystem_planet_type = solarsystem_planet_type % PLANET_TYPE_COUNT_SHALL_BE;
 	hasring = (dr < 0);
 	if (hasring)
 		dr = -dr;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_planet(id, timestamp, dx, dy, dz, dr, government, tech_level,
 				economy, dseed, hasring, security, contraband,
-				atm_r, atm_b, atm_g, atm_scale);
+				atm_r, atm_b, atm_g, atm_scale, has_atmosphere, solarsystem_planet_type, ring_selector);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
