@@ -54,6 +54,7 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 	char *field, *l, line[1000];
 	int rc, ln = 0;
 	int planet_textures_read = 0;
+	int planet_textures_expected = 0;
 
 	f = fopen(filename, "r");
 	if (!f) {
@@ -86,23 +87,24 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				goto bad_line;
 			}
 			/* FIXME: what should this limit really be? */
-			if (value > 6) {
-				fprintf(stderr, "%s:line %d: planet texture count %d exceeds max 6, capping\n",
-						filename, ln, value);
-				value = 6;
+			if (value > PLANET_TYPE_COUNT_SHALL_BE) {
+				fprintf(stderr, "%s:line %d: planet texture count %d exceeds max %d, capping\n",
+						filename, ln, value, PLANET_TYPE_COUNT_SHALL_BE);
+				value = PLANET_TYPE_COUNT_SHALL_BE;
 			}
+			planet_textures_expected = value;
 			if (a->planet_texture != NULL || a->nplanet_textures != 0) {
 				fprintf(stderr, "%s:line %d: multiple planet texture counts encountered, ignoring\n",
 						filename, ln);
 				goto bad_line;
 			}
-			a->nplanet_textures = value;
-			a->planet_texture = malloc(sizeof(a->planet_texture[0]) * value);
-			memset(a->planet_texture, 0, sizeof(a->planet_texture[0]) * value);
-			a->planet_normalmap = malloc(sizeof(a->planet_normalmap[0]) * value);
-			memset(a->planet_normalmap, 0, sizeof(a->planet_normalmap[0]) * value);
-			a->planet_type = malloc(sizeof(a->planet_type[0]) * value);
-			memset(a->planet_type, 0, sizeof(a->planet_type[0]) * value);
+			a->nplanet_textures = PLANET_TYPE_COUNT_SHALL_BE;
+			a->planet_texture = malloc(sizeof(a->planet_texture[0]) * PLANET_TYPE_COUNT_SHALL_BE);
+			memset(a->planet_texture, 0, sizeof(a->planet_texture[0]) * PLANET_TYPE_COUNT_SHALL_BE);
+			a->planet_normalmap = malloc(sizeof(a->planet_normalmap[0]) * PLANET_TYPE_COUNT_SHALL_BE);
+			memset(a->planet_normalmap, 0, sizeof(a->planet_normalmap[0]) * PLANET_TYPE_COUNT_SHALL_BE);
+			a->planet_type = malloc(sizeof(a->planet_type[0]) * PLANET_TYPE_COUNT_SHALL_BE);
+			memset(a->planet_type, 0, sizeof(a->planet_type[0]) * PLANET_TYPE_COUNT_SHALL_BE);
 			continue;
 		} else if (has_prefix("planet texture:", line)) {
 			if (a->nplanet_textures == 0) {
@@ -161,6 +163,34 @@ bad_line:
 		fprintf(stderr, "solar system asset file %s:ignoring line %d:%s\n", filename, ln, line);
 	}
 	fclose(f);
+
+	if (planet_textures_read <= 0) {
+		fprintf(stderr, "%s: failed to read any planet types\n", filename);
+		solarsystem_asset_spec_free(a);
+		return NULL;
+	}
+
+	if (planet_textures_read < planet_textures_expected) {
+		fprintf(stderr, "%s: expected %d planet types, but only found %d.\n",
+			filename, planet_textures_expected, planet_textures_read);
+	}
+
+	if (planet_textures_read < PLANET_TYPE_COUNT_SHALL_BE) {
+		int i, n;
+		fprintf(stderr, "solar system asset file is short %d planet types, padding with duplicates\n",
+			PLANET_TYPE_COUNT_SHALL_BE - planet_textures_read);
+
+		n = PLANET_TYPE_COUNT_SHALL_BE - planet_textures_read;
+		for (i = 0; i < n; i++)  {
+			a->planet_texture[i + planet_textures_read] =
+					strdup(a->planet_texture[i % planet_textures_read]);
+			a->planet_normalmap[i + planet_textures_read] =
+					strdup(a->planet_normalmap[i % planet_textures_read]);
+			a->planet_type[i + planet_textures_read] =
+					strdup(a->planet_type[i % planet_textures_read]);
+		}
+	}
+
 	return a;
 }
 
@@ -172,7 +202,7 @@ void solarsystem_asset_spec_free(struct solarsystem_asset_spec *s)
 		return;
 	free_string_ptr(&s->sun_texture);
 	free_string_ptr(&s->skybox_prefix);
-	for (i = 0; i < s->nplanet_textures; i++) {
+	for (i = 0; i < PLANET_TYPE_COUNT_SHALL_BE; i++) {
 		free_string_ptr(&s->planet_texture[i]);
 		free_string_ptr(&s->planet_normalmap[i]);
 		free_string_ptr(&s->planet_type[i]);

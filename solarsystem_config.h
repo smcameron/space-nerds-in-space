@@ -21,6 +21,8 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#define PLANET_TYPE_COUNT_SHALL_BE 6
+
 struct solarsystem_asset_spec {
 	char *sun_texture;
 	char *skybox_prefix;
