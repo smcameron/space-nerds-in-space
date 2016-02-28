@@ -22,7 +22,6 @@
 */
 
 struct solarsystem_asset_spec {
-	char *directory;
 	char *sun_texture;
 	char *skybox_prefix;
 	int nplanet_textures;

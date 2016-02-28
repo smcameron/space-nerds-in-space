@@ -170,7 +170,6 @@ void solarsystem_asset_spec_free(struct solarsystem_asset_spec *s)
 
 	if (!s)
 		return;
-	free_string_ptr(&s->directory);
 	free_string_ptr(&s->sun_texture);
 	free_string_ptr(&s->skybox_prefix);
 	for (i = 0; i < s->nplanet_textures; i++) {
