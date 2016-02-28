@@ -10078,6 +10078,13 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			for (i = 0; planet_desc[i] != '\0'; i++)
 				planet_desc[i] = toupper(planet_desc[i]);
 		}
+		sprintf(buf, "TYPE: %s (%s, %s)",
+			solarsystem_assets->planet_type[p->solarsystem_planet_type],
+			solarsystem_assets->planet_texture[p->solarsystem_planet_type],
+			solarsystem_assets->planet_normalmap[p->solarsystem_planet_type]);
+		uppercase(buf);
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		y += yinc;
 		sprintf(buf, "GOVERNMENT: %s", government_name[p->government]);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
