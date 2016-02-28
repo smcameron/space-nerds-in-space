@@ -801,8 +801,11 @@ test-commodities:	commodities.o Makefile
 test-obj-parser:	test-obj-parser.c stl_parser.o mesh.o mtwist.o mathutils.o matrix.o quat.o Makefile
 	gcc -o test-obj-parser stl_parser.o mtwist.o mathutils.o matrix.o mesh.o quat.o -lm test-obj-parser.c
 
-test:	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist test-commodities
+test:	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist test-commodities test_solarsystem_config
 	/bin/true	# Prevent make from running "gcc test.o".
+
+test_solarsystem_config:	test_solarsystem_config.c solarsystem_config.o string-utils.o
+	gcc -o $@ $< solarsystem_config.o string-utils.o
 
 snis_client.6.gz:	snis_client.6
 	gzip -9 - < snis_client.6 > snis_client.6.gz
