@@ -128,7 +128,7 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 			if (rc == 2) { /* old style, no normal map */
 				a->planet_texture[planet_textures_read] = strdup(word1);
 				a->planet_normalmap[planet_textures_read] = strdup("no-normal-map");
-				a->planet_type[planet_textures_read] = strdup(word3);
+				a->planet_type[planet_textures_read] = strdup(word2);
 				planet_textures_read++;
 				fprintf(stderr,
 					"%s:line %d: expected planet texture prefix, planet normal map prefix, and planet type\n",
