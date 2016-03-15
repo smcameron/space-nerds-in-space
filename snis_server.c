@@ -9147,9 +9147,23 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 	}
 	send_comms_packet(name, ch, "WARP-GATE TICKETS:\n");
 	send_comms_packet(name, ch, "------------------\n");
-	for (i = 0; i < nservers; i++) {
-		sprintf(buf, "%3d: %s\n", i + 1, gameserver[i].location);
-		send_comms_packet(name, ch, buf);
+	int our_ss_index = 0;
+	int index = 1;
+	for (i = 0; i < nservers;) {
+		int len = strlen(solarsystem_name);
+		if (len > LOCATIONSIZE)
+			len = LOCATIONSIZE;
+
+		/* Do not list the solarsystem we're already in */
+		if (strncasecmp(gameserver[i].location, solarsystem_name, len) != 0) {
+			sprintf(buf, "%3d: %s\n", index, gameserver[i].location);
+			send_comms_packet(name, ch, buf);
+			index++;
+		} else {
+			/* Remember which index corresponds to our solar system */
+			our_ss_index = i + 1;
+		}
+		i++;
 	}
 	send_comms_packet(name, ch, "------------------\n");
 	send_comms_packet(name, ch, "  0: PREVIOUS MENU\n");
@@ -9162,6 +9176,9 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
 		return;
 	}
+	/* Can't buy a ticket to solarsystem we're in */
+	if (selection >= our_ss_index && our_ss_index > 0)
+		selection++;
 	if (selection < 1 || selection > nservers) {
 		free(gameserver);
 		return;
