@@ -695,14 +695,6 @@ static void log_client_info(int level, int connection, char *info)
 static void delete_from_clients_and_server(struct snis_entity *o);
 static void delete_object(struct snis_entity *o);
 static void remove_from_attack_lists(uint32_t victim_id);
-static void delete_player_ship(int index)
-{
-	/* Note we do not need to delete from clients because there
-	 * shouldn't be any clients at this point.
-	 */
-	remove_from_attack_lists(go[index].id);
-	delete_object(&go[index]);
-}
 
 static void delete_bridge(int b)
 {
@@ -730,7 +722,8 @@ static void delete_bridge(int b)
 	fprintf(stderr, "snis_server: deleting player ship\n");
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (go[i].type == OBJTYPE_SHIP1 && go[i].id == bridgelist[b].shipid) {
-			delete_player_ship(i);
+			delete_from_clients_and_server(&go[i]);
+			break;
 		}
 	}
 	fprintf(stderr, "snis_server: deleting bridge %d\n", b);
@@ -13590,8 +13583,9 @@ static void update_multiverse(struct snis_entity *o)
 
 	bridge = lookup_bridge_by_shipid(o->id);
 	if (bridge < 0) {
-		fprintf(stderr, "snis_server: did not find bridge for %d: %s:%d\n",
-				o->id, __FILE__, __LINE__);
+		fprintf(stderr,
+			"snis_server: did not find bridge for id:%d, index=%lu, alive=%d: %s:%d\n",
+				o->id, go_index(o), o->alive, __FILE__, __LINE__);
 		return;
 	}
 
