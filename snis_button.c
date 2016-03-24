@@ -49,11 +49,18 @@ struct button *snis_button_init(int x, int y, int width, int height,
 
 void snis_button_draw(struct button *b)
 {
+	int offset;
+
 	sng_set_foreground(b->color);
-	sng_current_draw_rectangle(0, b->x, b->y, b->width, b->height);
 	if (b->button_press_feedback_counter)
-		sng_current_draw_rectangle(0, b->x + 1, b->y + 1,
-					b->width - 2, b->height - 2);
+		offset = 1;
+	else
+		offset = 0;
+	sng_current_draw_rectangle(0, b->x + offset, b->y + offset,
+					b->width + offset, b->height + offset);
+	if (b->button_press_feedback_counter)
+		sng_current_draw_rectangle(0, b->x + 1 + offset, b->y + 1 + offset,
+					b->width - 2 + offset, b->height - 2 + offset);
 	if (!b->checkbox_value) {
 		sng_abs_xy_draw_string(b->label, b->font, b->x + 10, b->y + b->height / 1.7);
 		if (b->button_press_feedback_counter)
