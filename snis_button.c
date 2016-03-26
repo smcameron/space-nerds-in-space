@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <gtk/gtk.h>
+#include <math.h>
 
 #include "snis_font.h"
 #include "snis_typeface.h"
@@ -25,6 +26,20 @@ void snis_button_set_label(struct button *b, char *label)
 	strncpy(b->label, label, sizeof(b->label) - 1);
 }
 
+static void snis_button_compute_dimensions(struct button *b)
+{
+	float x1, y1, x2, y2, emwidth, emheight;
+
+	sng_string_bounding_box("M", b->font, &x1, &y1, &x2, &y2);
+	emwidth = fabs(x2 - x1);
+	emheight = fabs(y2 - y1);
+	sng_string_bounding_box(b->label, b->font, &x1, &y1, &x2, &y2);
+	if (b->height < 0)
+		b->height = emheight * 1.8;
+	if (b->width < 0)
+		b->width = fabs(x2 - x1) + emwidth * 1.8;
+}
+
 struct button *snis_button_init(int x, int y, int width, int height,
 			char *label, int color, int font, button_function bf,
 			void *cookie)
@@ -44,6 +59,8 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->cookie = cookie;
 	b->checkbox_value = NULL;
 	b->button_press_feedback_counter = 0;
+	if (b->width < 0 || b->height < 0)
+		snis_button_compute_dimensions(b);
 	return b;
 }
 
@@ -71,6 +88,9 @@ static void snis_button_draw_outline(float x1, float y1, float width, float heig
 void snis_button_draw(struct button *b)
 {
 	int offset;
+
+	if (b->height < 0 || b->width < 0)
+		snis_button_compute_dimensions(b);
 
 	sng_set_foreground(b->color);
 	if (b->button_press_feedback_counter)
