@@ -59,6 +59,14 @@ void uppercase(char *w)
 		*i = toupper(*i);
 }
 
+void lowercase(char *w)
+{
+	char *i;
+
+	for (i = w; *i; i++)
+		*i = tolower(*i);
+}
+
 char *dir_name(char *path)
 {
 	char *x;
