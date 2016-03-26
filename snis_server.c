@@ -9258,6 +9258,28 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 	return 0;
 }
 
+static void perform_natural_language_request(struct game_client *c, char *txt);
+static int process_natural_language_request(struct game_client *c)
+{
+	unsigned char buffer[sizeof(struct comms_transmission_packet)];
+	char txt[256];
+	uint8_t subcommand, len;
+	int rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "bb", &subcommand, &len);
+	if (rc)
+		return rc;
+	if (subcommand != OPCODE_NL_SUBCOMMAND_TEXT_REQUEST)
+		return -1;
+	rc = snis_readsocket(c->socket, txt, len);
+	if (rc)
+		return rc;
+	txt[len] = '\0';
+	perform_natural_language_request(c, txt);
+	return 0;
+}
+
+
 static void enscript_prologue(FILE *f)
 {
 	fprintf(f, "\n");
@@ -11363,6 +11385,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_NATURAL_LANGUAGE_REQUEST:
+			rc = process_natural_language_request(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -13016,6 +13043,11 @@ static struct docking_port_attachment_point **read_docking_port_info(
 	return d;
 }
 #endif
+
+static void perform_natural_language_request(struct game_client *c, char *txt)
+{
+	lowercase(txt); /* TODO: actually do something smart here. */
+}
 
 int main(int argc, char *argv[])
 {
