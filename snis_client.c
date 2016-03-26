@@ -7362,7 +7362,7 @@ static void ui_add_text_input_box(struct snis_text_input_box *t, int active_disp
 
 static void init_lobby_ui()
 {
-	lobby_ui.lobby_cancel_button = snis_button_init(650, 520, 100, LINEHEIGHT * 2,
+	lobby_ui.lobby_cancel_button = snis_button_init(txx(650), txy(520), -1, -1,
 			"CANCEL", UI_COLOR(lobby_cancel), NANO_FONT, lobby_cancel_button_pressed, NULL);
 	ui_add_button(lobby_ui.lobby_cancel_button, DISPLAYMODE_LOBBYSCREEN);
 }
@@ -7450,15 +7450,15 @@ static void init_nav_ui(void)
 				10, "WARP", sample_warpdrive);
 	nav_ui.engage_warp_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
 					nav_ui.gauge_radius * 2 + 80,
-					150, 25, "ENGAGE WARP", button_color,
+					-1, -1, "ENGAGE WARP", button_color,
 					NANO_FONT, engage_warp_button_pressed, NULL);
 	nav_ui.docking_magnets_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
 					nav_ui.gauge_radius * 2 + 120,
-					150, 25, "DOCKING MAGNETS", button_color,
+					-1, -1, "DOCKING MAGNETS", button_color,
 					NANO_FONT, docking_magnets_button_pressed, NULL);
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", button_color,
 			NANO_FONT, reverse_button_pressed, NULL);
-	nav_ui.trident_button = snis_button_init(30, 228, 92, 20, "RELATIVE", button_color,
+	nav_ui.trident_button = snis_button_init(30, 228, -1, -1, "RELATIVE", button_color,
 			NANO_FONT, trident_button_pressed, NULL);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
@@ -8361,12 +8361,12 @@ static void init_engineering_ui(void)
 
 	y = eng_ui.gauge_radius * 2.5;
 	color = UI_COLOR(eng_button);
-	eu->damcon_button = snis_button_init(20, y + 30, 160, 25, "DAMAGE CONTROL", color,
-			NANO_FONT, damcon_button_pressed, (void *) 0);
-	eu->preset1_button = snis_button_init(200, y + 30, 25, 25, "1", color,
+	eu->preset1_button = snis_button_init(txx(20), y + txx(30), -1, -1, "1", color,
 			NANO_FONT, preset1_button_pressed, (void *) 0);
-	eu->preset2_button = snis_button_init(240, y + 30, 25, 25, "2", color,
-			NANO_FONT, preset2_button_pressed, (void *) 0);
+	eu->preset2_button = snis_button_init(snis_button_get_x(eu->preset1_button) + snis_button_get_width(eu->preset1_button) + txx(5),
+						y + txx(30), -1, -1, "2", color, NANO_FONT, preset2_button_pressed, (void *) 0);
+	eu->damcon_button = snis_button_init(snis_button_get_x(eu->preset2_button) + snis_button_get_width(eu->preset2_button) + txx(5),
+						y + txx(30), -1, -1, "DAMAGE CONTROL", color, NANO_FONT, damcon_button_pressed, (void *) 0);
 	y += yinc;
 	color = UI_COLOR(eng_power_meter);
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
@@ -9133,10 +9133,10 @@ static void init_comms_ui(void)
 			NANO_FONT, comms_screen_button_pressed, (void *) 7);
 	x = SCREEN_WIDTH - txx(150);
 	y = SCREEN_HEIGHT - txy(90);
-	comms_ui.red_alert_button = snis_button_init(x, y, 120, bh, "RED ALERT", red_alert_color,
+	comms_ui.red_alert_button = snis_button_init(x, y, -1, bh, "RED ALERT", red_alert_color,
 			NANO_FONT, comms_screen_red_alert_pressed, (void *) 6);
 	y = SCREEN_HEIGHT - 60;
-	comms_ui.mainscreen_comms = snis_button_init(x, y, txx(120), bh, "MAIN SCREEN", button_color,
+	comms_ui.mainscreen_comms = snis_button_init(x, y, -1, bh, "MAIN SCREEN", button_color,
 			NANO_FONT, comms_main_screen_pressed, (void *) 8);
 	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 20, text_color);
 	comms_ui.comms_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
@@ -9145,7 +9145,7 @@ static void init_comms_ui(void)
 					comms_input_entered, NULL);
 	snis_text_input_box_set_return(comms_ui.comms_input,
 					comms_transmit_button_pressed);
-	comms_ui.comms_transmit_button = snis_button_init(txx(10), txy(550), txx(160), txy(30),
+	comms_ui.comms_transmit_button = snis_button_init(txx(10), txy(550), -1, txy(30),
 			"TRANSMIT", button_color,
 			TINY_FONT, comms_transmit_button_pressed, NULL);
 	comms_ui.mainzoom_slider = snis_slider_init(txx(180), txy(560), txx(380), txy(15),
@@ -10592,7 +10592,7 @@ static void init_demon_ui()
 					demon_ui.input, 50, &timer, NULL, NULL);
 	snis_text_input_box_set_return(demon_ui.demon_input,
 					demon_exec_button_pressed); 
-	demon_ui.demon_exec_button = snis_button_init(txx(570), txy(520), txx(160), txy(30),
+	demon_ui.demon_exec_button = snis_button_init(txx(570), txy(520), -1, -1,
 			"EXECUTE", UI_COLOR(demon_input),
 			TINY_FONT, demon_exec_button_pressed, NULL);
 	x = txx(3);
@@ -11148,7 +11148,7 @@ static void init_net_setup_ui(void)
 					lobby_hostname_entered, NULL);
 	y += yinc;
 	net_setup_ui.start_lobbyserver =	
-		snis_button_init(left, y, txx(300), txy(25), "START LOBBY SERVER",
+		snis_button_init(left, y, -1, -1, "START LOBBY SERVER",
 			active_button_color, TINY_FONT, start_lobbyserver_button_pressed, NULL);
 	y += yinc * 2;
 	net_setup_ui.gameservername =
@@ -11157,7 +11157,7 @@ static void init_net_setup_ui(void)
 					gameserver_hostname_entered, NULL);
 	y += yinc;
 	net_setup_ui.start_gameserver = 
-		snis_button_init(left, y, txx(300), txy(25), "START GAME SERVER",
+		snis_button_init(left, y, -1, -1, "START GAME SERVER",
 			inactive_button_color,
 			TINY_FONT, start_gameserver_button_pressed, NULL);
 	y += yinc * 2;
@@ -11172,7 +11172,7 @@ static void init_net_setup_ui(void)
 					password_entered, NULL);
 	y += yinc;
 	net_setup_ui.connect_to_lobby = 
-		snis_button_init(left, y, txx(300), txy(25), "CONNECT TO LOBBY", inactive_button_color,
+		snis_button_init(left, y, -1, -1, "CONNECT TO LOBBY", inactive_button_color,
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
 	init_net_role_buttons(&net_setup_ui);
 	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP);
