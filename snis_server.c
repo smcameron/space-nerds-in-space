@@ -9729,6 +9729,32 @@ error:
 	return 0;
 }
 
+static int l_text_to_speech(lua_State *l)
+{
+	int i;
+	const double receiver_id = luaL_checknumber(l, 1);
+	const char *transmission = luaL_checkstring(l, 2);
+	struct snis_entity *receiver;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(receiver_id);
+	if (i < 0)
+		goto error;
+	receiver = &go[i];
+	switch (receiver->type) {
+	case OBJTYPE_SHIP1:
+		pthread_mutex_unlock(&universe_mutex);
+		snis_queue_add_text_to_speech(transmission, ROLE_TEXT_TO_SPEECH, receiver->id);
+		return 0;
+	default:
+		goto error;
+		break;
+	}
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int l_get_object_name(lua_State *l)
 {
 	const double id = luaL_checknumber(l, 1);
@@ -12964,6 +12990,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_ai_push_attack, "ai_push_attack");
 	add_lua_callable_fn(l_add_cargo_container, "add_cargo_container");
 	add_lua_callable_fn(l_set_faction, "set_faction");
+	add_lua_callable_fn(l_text_to_speech, "text_to_speech");
 }
 
 static int run_initial_lua_scripts(void)

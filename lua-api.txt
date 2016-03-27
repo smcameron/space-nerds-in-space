@@ -126,6 +126,9 @@ delete_object(object_id) -- delete the specified object from the universe
 comms_transmission(object_id, transmission); -- causes the object to transmit the
 	specified transmission via comms.
 
+text_to_speech(player_ship_id, text_to_speak); -- causes player ship to use text to speech to
+	say the specified text.
+
 register_callback(event, callback); -- event is a string, the name of the event you wish
 	to register a callback for, and	callback is a string, the name of the lua function
 	you want to get called when that event occurs.  The arguments passed to the lua
