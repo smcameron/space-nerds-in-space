@@ -1105,6 +1105,24 @@ static void queue_add_sound(struct game_client *c, uint16_t sound_number)
 	pb_queue_to_client(c, packed_buffer_new("bh", OPCODE_PLAY_SOUND, sound_number));
 }
 
+static void queue_add_text_to_speech(struct game_client *c, const char *text)
+{
+	struct packed_buffer *pb;
+	char tmpbuf[256];
+	uint8_t length;
+
+	length = strlen(text) & 0x0ff;
+	if (length >= 255)
+		length = 254;
+	snprintf(tmpbuf, 255, "%s", text);
+	tmpbuf[255] = '\0';
+	pb = packed_buffer_allocate(512);
+	packed_buffer_append(pb, "bbb", OPCODE_NATURAL_LANGUAGE_REQUEST,
+				OPCODE_NL_SUBCOMMAND_TEXT_TO_SPEECH, (uint8_t) strlen(tmpbuf) + 1);
+	packed_buffer_append_raw(pb, tmpbuf, length + 1);
+	pb_queue_to_client(c, pb);
+}
+
 static void snis_queue_add_sound(uint16_t sound_number, uint32_t roles, uint32_t shipid)
 {
 	int i;
@@ -1119,12 +1137,34 @@ static void snis_queue_add_sound(uint16_t sound_number, uint32_t roles, uint32_t
 	client_unlock();
 }
 
+static void snis_queue_add_text_to_speech(const char *text, uint32_t roles, uint32_t shipid)
+{
+	int i;
+	struct game_client *c;
+
+	client_lock();
+	for (i = 0; i < nclients; i++) {
+		c = &client[i];
+		if (c->refcount && (c->role & roles) && c->shipid == shipid)
+			queue_add_text_to_speech(c, text);
+	}
+	client_unlock();
+}
+
 static void snis_queue_add_global_sound(uint16_t sound_number)
 {
 	int i;
 
 	for (i = 0; i < nbridges; i++)
 		snis_queue_add_sound(sound_number, ROLE_ALL, bridgelist[i].shipid);
+}
+
+static void snis_queue_add_global_text_to_speech(const char *text)
+{
+	int i;
+
+	for (i = 0; i < nbridges; i++)
+		snis_queue_add_text_to_speech(text, ROLE_ALL, bridgelist[i].shipid);
 }
 
 static int add_explosion(double x, double y, double z, uint16_t velocity,
@@ -4615,10 +4655,14 @@ static void update_player_position_and_velocity(struct snis_entity *o)
 	o->tsd.ship.in_secure_area = 0;  /* player_collision_detection fills this in. */
 	space_partition_process(space_partition, o, o->x, o->z, o,
 				player_collision_detection);
-	if (o->tsd.ship.in_secure_area == 0 && previous_security > 0)
-		snis_queue_add_sound(LEAVING_SECURE_AREA, ROLE_SOUNDSERVER, o->id);
-	if (o->tsd.ship.in_secure_area > 0 && previous_security == 0)
-		snis_queue_add_sound(ENTERING_SECURE_AREA, ROLE_SOUNDSERVER, o->id);
+	if (o->tsd.ship.in_secure_area == 0 && previous_security > 0) {
+		/* snis_queue_add_sound(LEAVING_SECURE_AREA, ROLE_SOUNDSERVER, o->id); */
+		snis_queue_add_text_to_speech("Leaving high security area.", ROLE_TEXT_TO_SPEECH, o->id);
+	}
+	if (o->tsd.ship.in_secure_area > 0 && previous_security == 0) {
+		/* snis_queue_add_sound(ENTERING_SECURE_AREA, ROLE_SOUNDSERVER, o->id); */
+		snis_queue_add_text_to_speech("Entering high security area.", ROLE_TEXT_TO_SPEECH, o->id);
+	}
 }
 
 static int calc_sunburn_damage(struct snis_entity *o, struct damcon_data *d,
@@ -10476,7 +10520,10 @@ static int process_docking_magnets(struct game_client *c)
 	go[i].timestamp = universe_timestamp;
 	sound = go[i].tsd.ship.docking_magnets ? DOCKING_SYSTEM_ENGAGED : DOCKING_SYSTEM_DISENGAGED;
 	pthread_mutex_unlock(&universe_mutex);
-	snis_queue_add_sound(sound, ROLE_NAVIGATION, c->shipid);
+	/* snis_queue_add_sound(sound, ROLE_NAVIGATION, c->shipid); */
+	snis_queue_add_text_to_speech(sound == DOCKING_SYSTEM_ENGAGED ?
+				"Docking system engaged." : "Docking system disengaged",
+				ROLE_TEXT_TO_SPEECH, c->shipid);
 	return 0;
 }
 
@@ -12469,11 +12516,15 @@ static void service_connection(int connection)
 	client_unlock();
 	pthread_mutex_unlock(&universe_mutex);
 
-	if (client_count == 1)
-		snis_queue_add_global_sound(STARSHIP_JOINED);
-	else
-		snis_queue_add_sound(CREWMEMBER_JOINED, ROLE_ALL,
+	if (client_count == 1) {
+		/* snis_queue_add_global_sound(STARSHIP_JOINED); */
+		snis_queue_add_global_text_to_speech("star ship has joined");
+	} else {
+		/* snis_queue_add_sound(CREWMEMBER_JOINED, ROLE_ALL,
+					bridgelist[bridgenum].shipid); */
+		snis_queue_add_text_to_speech("crew member has joined.", ROLE_TEXT_TO_SPEECH,
 					bridgelist[bridgenum].shipid);
+	}
 
 	/* Wait for at least one of the threads to prevent premature reaping */
 	iterations = 0;

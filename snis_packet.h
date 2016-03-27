@@ -149,6 +149,7 @@
 #define OPCODE_REQUEST_MINING_BOT		225
 #define OPCODE_NATURAL_LANGUAGE_REQUEST		230
 #define   OPCODE_NL_SUBCOMMAND_TEXT_REQUEST	1
+#define   OPCODE_NL_SUBCOMMAND_TEXT_TO_SPEECH	2
 
 #define OPCODE_NOOP		0xff
 
@@ -374,7 +375,8 @@ struct request_thrust_packet {
 #define ROLE_DEMON		(1 << DISPLAYMODE_DEMON)
 #define ROLE_DAMCON		(1 << DISPLAYMODE_DAMCON)
 #define ROLE_SOUNDSERVER	(1 << DISPLAYMODE_FONTTEST)
-#define ROLE_ALL		(0xffffffff)
+#define ROLE_TEXT_TO_SPEECH	(1 << 10)
+#define ROLE_ALL		((uint32_t) 0x0ffffffffff)
 
 struct add_player_packet {
 	uint8_t opcode;

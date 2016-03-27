@@ -4368,6 +4368,60 @@ static int process_comm_transmission(void)
 	return 0;
 }
 
+static void text_to_speech(char *text)
+{
+	char command[PATH_MAX];
+	char *snisbindir;
+	char bindir[PATH_MAX];
+	struct stat statbuf;
+	int rc;
+
+	/* This is all a little gross... */
+
+	snisbindir = getenv("SNISBINDIR");
+	if (!snisbindir) {
+		snisbindir = STRPREFIX(PREFIX);
+		snprintf(bindir, sizeof(bindir), "%s/bin", snisbindir);
+	} else {
+		strcpy(bindir, snisbindir);
+	}
+
+	/* test that snisbindir is actually a directory. */
+	rc = stat(bindir, &statbuf);
+	if (rc < 0) {
+		fprintf(stderr, "Cannot stat %s: %s\n", bindir, strerror(errno));
+		return;
+	}
+	if (!S_ISDIR(statbuf.st_mode)) {
+		fprintf(stderr, "%s is not a directory.\n", snisbindir);
+		return;
+	}
+	remove_single_quotes(text);
+	sprintf(command, "%s/text_to_speech.sh '%s'", bindir, text);
+	system(command);
+}
+
+static int process_natural_language_request(void)
+{
+	unsigned char buffer[256];
+	char string[256];
+	uint8_t length, subcommand;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "bb", &subcommand, &length);
+	if (rc != 0)
+		return rc;
+	if (subcommand != OPCODE_NL_SUBCOMMAND_TEXT_TO_SPEECH)
+		return -1;
+	memset(string, 0, sizeof(string));
+	rc = snis_readsocket(gameserver_sock, string, length);
+	string[255] = '\0';
+	string[length] = '\0';
+	text_to_speech(string);
+	return 0;
+}
+
+
 static int process_ship_damage_packet(int do_damage_limbo)
 {
 	char buffer[sizeof(struct ship_damage_packet)];
@@ -4786,6 +4840,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_COMMS_TRANSMISSION:
 			rc = process_comm_transmission();
+			break;
+		case OPCODE_NATURAL_LANGUAGE_REQUEST:
+			rc = process_natural_language_request();
 			break;
 		case OPCODE_UPDATE_NETSTATS:
 			rc = process_update_netstats();
@@ -10895,6 +10952,7 @@ struct network_setup_ui {
 	struct button *role_comms;
 	struct button *role_sound;
 	struct button *role_demon;
+	struct button *role_text_to_speech;
 	int role_main_v;
 	int role_nav_v;
 	int role_weap_v;
@@ -10904,6 +10962,7 @@ struct network_setup_ui {
 	int role_comms_v;
 	int role_sound_v;
 	int role_demon_v;
+	int role_text_to_speech_v;
 	char lobbyname[60];
 	char servername[60];
 	char shipname[22];
@@ -11074,6 +11133,7 @@ static void connect_to_lobby_button_pressed()
 	role |= (ROLE_COMMS * !!net_setup_ui.role_comms_v);
 	role |= (ROLE_SOUNDSERVER * !!net_setup_ui.role_sound_v);
 	role |= (ROLE_DEMON * !!net_setup_ui.role_demon_v);
+	role |= (ROLE_TEXT_TO_SPEECH * !!net_setup_ui.role_text_to_speech_v);
 	if (role == 0)
 		role = ROLE_ALL;
 	connect_to_lobby();
@@ -11107,6 +11167,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	nsu->role_sound_v = 1;
 	nsu->role_damcon_v = 1;
 	nsu->role_demon_v = 1;
+	nsu->role_text_to_speech_v = 1;
 	nsu->role_main = init_net_role_button(x, &y, "MAIN SCREEN ROLE", &nsu->role_main_v);
 	nsu->role_nav = init_net_role_button(x, &y, "NAVIGATION ROLE", &nsu->role_nav_v);
 	nsu->role_weap = init_net_role_button(x, &y, "WEAPONS ROLE", &nsu->role_weap_v);
@@ -11117,6 +11178,8 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	nsu->role_sound = init_net_role_button(x, &y, "SOUND SERVER ROLE", &nsu->role_sound_v);
 	nsu->role_demon = init_net_role_button(x, &y, "DEMON MODE",
 							&nsu->role_demon_v);
+	nsu->role_text_to_speech = init_net_role_button(x, &y, "TEXT TO SPEECH",
+							&nsu->role_text_to_speech_v);
 	ui_add_button(nsu->role_main, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_nav, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_weap, DISPLAYMODE_NETWORK_SETUP);
@@ -11126,6 +11189,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	ui_add_button(nsu->role_comms, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_sound, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(nsu->role_demon, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->role_text_to_speech, DISPLAYMODE_NETWORK_SETUP);
 }
 
 static void ui_add_text_input_box(struct snis_text_input_box *t, int active_displaymode);
