@@ -1636,13 +1636,13 @@ int main(int argc, char *argv[])
 
 	set_random_seed(&mt);
 
-	for (i = 0; i < 1000; i++) {
+	for (i = 0; i < 1; i++) {
 		/* infinite_taunt(buffer, sizeof(buffer) - 1); */
-		/* planet_description(mt, buffer, sizeof(buffer) - 1, 60); */
+		planet_description(mt, buffer, sizeof(buffer) - 1, 60);
 		/* cop_attack_warning(mt, buffer, sizeof(buffer) - 1, 50); */
 		/* character_name(mt, buffer, sizeof(buffer) - 1); */
 		/* robot_name(mt, buffer, sizeof(buffer) - 1); */
-		ship_name(mt, buffer, sizeof(buffer) - 1);
+		/* ship_name(mt, buffer, sizeof(buffer) - 1); */
 		printf("%s\n", buffer);
 	}
 	free(mt);

@@ -9115,6 +9115,19 @@ static void send_comms_packet_to_server(char *msg, uint8_t opcode, uint32_t id)
 	wakeup_gameserver_writer();
 }
 
+static void send_text_to_speech_packet_to_server(char *msg)
+{
+	struct packed_buffer *pb;
+	uint8_t len = strlen(msg);
+
+	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + len);
+	packed_buffer_append(pb, "bbb", OPCODE_NATURAL_LANGUAGE_REQUEST,
+				OPCODE_NL_SUBCOMMAND_TEXT_TO_SPEECH, len);
+	packed_buffer_append_raw(pb, msg, (unsigned short) len);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
 static void send_enscript_packet_to_server(char *filename)
 {
 	struct packed_buffer *pb;
@@ -10217,6 +10230,7 @@ static struct demon_cmd_def {
 	{ "SAFEMODE", "TOGGLES SAFE MODE (prevents enemies from attacking)" },
 	{ "HELP", "PRINT THIS HELP INFORMATION" },
 	{ "ENSCRIPT", "SAVE (PARTIALLY) UNIVERSE STATE TO LUA SCRIPT" },
+	{ "TTS", "USE TEXT-TO-SPEECH TO SPEAK SOMETHING TO SELECTED SHIP." },
 };
 static int demon_help_mode = 0;
 #define DEMON_CMD_DELIM " ,"
@@ -10334,13 +10348,15 @@ static int construct_demon_command(char *input,
 	char *saveptr;
 	struct packed_buffer *pb;
 	int idcount;
+	char *original = NULL;
 
+	original = strdup(input); /* save lowercase version for text to speech */
 	uppercase(input);
 	saveptr = NULL;
 	s = strtok_r(input, DEMON_CMD_DELIM, &saveptr);
 	if (s == NULL) {
 		strcpy(errmsg, "empty command");
-		return -1;
+		goto error;
 	}
 
 	found = 0;
@@ -10353,7 +10369,7 @@ static int construct_demon_command(char *input,
 	}
 	if (!found) {
 		sprintf(errmsg, "Unknown verb '%s'", s);
-		return -1;
+		goto error;
 	}
 
 	switch (v) {
@@ -10361,12 +10377,12 @@ static int construct_demon_command(char *input,
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
 				sprintf(errmsg, "missing argument to mark command");
-				return -1;
+				goto error;
 			}
 			l = get_demon_location_var(s); 
 			if (l < 0) {
 				sprintf(errmsg, "out of location variables");
-				return -1;
+				goto error;
 			}
 			demon_location[l].x = demon_ui.selectedx;
 			demon_location[l].z = demon_ui.selectedz;
@@ -10375,12 +10391,12 @@ static int construct_demon_command(char *input,
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
 				sprintf(errmsg, "missing argument to name command");
-				return -1;
+				goto error;
 			}
 			g = get_demon_group_var(s); 
 			if (g < 0) {
 				sprintf(errmsg, "out of group variables");
-				return -1;
+				goto error;
 			}
 			set_demon_group(g);
 			break; 
@@ -10388,22 +10404,22 @@ static int construct_demon_command(char *input,
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
 				sprintf(errmsg, "missing 1st argument to attack command");
-				return -1;
+				goto error;
 			}
 			g = lookup_demon_group(s);
 			if (g < 0) {
 				sprintf(errmsg, "No such group '%s'", s);
-				return -1;
+				goto error;
 			}
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
 				sprintf(errmsg, "missing 2nd argument to attack command");
-				return -1;
+				goto error;
 			}
 			g2 = lookup_demon_group(s);
 			if (g2 < 0) {
 				sprintf(errmsg, "no such group '%s'", s);
-				return -1;
+				goto error;
 			}
 			/* TODO - finish this */
 			printf("group %d commanded to attack group %d\n", g, g2);
@@ -10432,35 +10448,35 @@ static int construct_demon_command(char *input,
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
 				sprintf(errmsg, "missing argument to goto command");
-				return -1;
+				goto error;
 			}
 			break; 
 		case 4: /* patrol */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
 				sprintf(errmsg, "missing argument to patrol command");
-				return -1;
+				goto error;
 			}
 			break; 
 		case 5: /* halt */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
 				sprintf(errmsg, "missing argument to halt command");
-				return -1;
+				goto error;
 			}
 			break; 
 		case 6: /* identify */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
 				sprintf(errmsg, "missing argument to identify command");
-				return -1;
+				goto error;
 			}
 			g = lookup_demon_group(s);
 			if (g < 0) {
 				l = lookup_demon_location(s);
 				if (l < 0) { 
 					sprintf(errmsg, "No such group or location '%s'\n", s);
-					return -1;
+					goto error;
 				}
 				demon_ui.selectedx = demon_location[l].x;
 				demon_ui.selectedz = demon_location[l].z;
@@ -10485,11 +10501,21 @@ static int construct_demon_command(char *input,
 		case 13:
 			send_enscript_packet_to_server(saveptr);
 			break;
+		case 14:
+			send_text_to_speech_packet_to_server(original + (saveptr - input));
+			break;
 		default: /* unknown */
 			sprintf(errmsg, "Unknown ver number %d\n", v);
-			return -1;
+			goto error;
 	}
+	if (original)
+		free(original);
 	return 0;
+
+error:
+	if (original)
+		free(original);
+	return -1;
 }
 
 static void clear_empty_demon_variables(void)

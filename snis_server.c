@@ -4128,6 +4128,18 @@ static int lookup_bridge_by_shipid(uint32_t shipid)
 	return -1;
 }
 
+static int lookup_bridge_by_ship_name(char *name)
+{
+	/* assumes universe lock is held */
+	int i;
+
+	for (i = 0; i < nbridges; i++) {
+		if (strcasecmp((char *) bridgelist[i].shipname, name) == 0)
+			return i;
+	}
+	return -1;
+}
+
 static void calculate_ship_scibeam_info(struct snis_entity *ship)
 {
 	double range, tx, tz, angle, A1, A2;
@@ -9308,18 +9320,40 @@ static int process_natural_language_request(struct game_client *c)
 	unsigned char buffer[sizeof(struct comms_transmission_packet)];
 	char txt[256];
 	uint8_t subcommand, len;
-	int rc;
+	int rc, b;
+	char *ship_name, *ch;
 
 	rc = read_and_unpack_buffer(c, buffer, "bb", &subcommand, &len);
 	if (rc)
 		return rc;
-	if (subcommand != OPCODE_NL_SUBCOMMAND_TEXT_REQUEST)
-		return -1;
 	rc = snis_readsocket(c->socket, txt, len);
 	if (rc)
 		return rc;
 	txt[len] = '\0';
-	perform_natural_language_request(c, txt);
+	switch (subcommand) {
+	case OPCODE_NL_SUBCOMMAND_TEXT_REQUEST:
+		perform_natural_language_request(c, txt);
+		break;
+	case OPCODE_NL_SUBCOMMAND_TEXT_TO_SPEECH:
+		/* Assume the string is of the form "shipname: text to send" */
+		ch = index(txt, ':');
+		if (!ch)
+			return 0;
+		if (strlen(txt) - (ch - txt) <= 1) /* nothing after the colon */
+			return 0;
+		/* look up the bridge with the given ship name */
+		ship_name = txt;
+		*ch = '\0';
+		pthread_mutex_lock(&universe_mutex);
+		b = lookup_bridge_by_ship_name(ship_name);
+		pthread_mutex_unlock(&universe_mutex);
+		if (b < 0)
+			return 0;
+		snis_queue_add_text_to_speech(ch + 1, ROLE_TEXT_TO_SPEECH, bridgelist[b].shipid);
+		break;
+	default:
+		return -1;
+	}
 	return 0;
 }
 

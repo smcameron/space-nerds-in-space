@@ -135,7 +135,10 @@ struct command_data {
 	uint8_t command;
 	double x, z;
 	uint8_t nids1, nids2;
-	uint32_t id[256];
+	__extension__ union {
+		uint32_t id[256];
+		char text[256];
+	};
 };
 
 struct damcon_data;
