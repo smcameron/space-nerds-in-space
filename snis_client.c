@@ -4980,7 +4980,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 	uint8_t add_player_error;
 	int rc = 0;
 
-	printf("gameserver reader thread\n");
+	printf("snis_client: gameserver reader thread\n");
 	while (1) {
 		add_player_error = 0;
 		previous_opcode = last_opcode;
@@ -5175,16 +5175,16 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			rc = process_switch_server();
 			if (rc)
 				goto protocol_error;
-			printf("Switch server opcode received\n");
+			printf("snis_client: Switch server opcode received\n");
 			quickstartmode = 0;
 			stop_gameserver_writer_thread();
 			/* FIXME: when this ^^^ returns, to_server_queue_event_mutex is held */
 			delete_all_objects();
 			clear_damcon_pool();
 			printf("snis_client: writer thread left\n");
-			printf("**** lobby_selected_server = %d\n", lobby_selected_server);
+			printf("snis_client: **** lobby_selected_server = %d\n", lobby_selected_server);
 			switched_server = 1; /* TODO : something better */
-			printf("**** switched_server = %d\n", switched_server);
+			printf("snis_client: **** switched_server = %d\n", switched_server);
 			lobby_selected_server = -1;
 			close(gameserver_sock);
 			gameserver_sock = -1;
@@ -5226,10 +5226,10 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 	}
 
 protocol_error:
-	printf("Protocol error in gameserver reader, opcode = %hu\n", opcode);
+	printf("snis_client: Protocol error in gameserver reader, opcode = %hu\n", opcode);
 	snis_print_last_buffer(gameserver_sock);	
-	printf("last opcode was %hhu, before that %hhu\n", last_opcode, previous_opcode);
-	printf("total successful opcodes = %u\n", successful_opcodes);
+	printf("snis_client: last opcode was %hhu, before that %hhu\n", last_opcode, previous_opcode);
+	printf("snis_client: total successful opcodes = %u\n", successful_opcodes);
 	close(gameserver_sock);
 	gameserver_sock = -1;
 	return NULL;
