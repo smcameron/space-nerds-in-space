@@ -159,3 +159,28 @@ char *slurp_file(const char *path, int *bytes)
 	return buffer;
 }
 
+void remove_single_quotes(char *s)
+{
+	char *src = s;
+	char *dest = s;
+
+	do {
+		if (*src == '\'') {
+			src++;
+			continue;
+		}
+		if (dest == src) {
+			if (!*src)
+				break;
+			dest++;
+			src++;
+			continue;
+		}
+		*dest = *src;
+		if (!*src)
+			break;
+		dest++;
+		src++;
+	} while (1);
+}
+
