@@ -17,6 +17,34 @@ Too much to list, but here's a list anyway:
     Friendly ship stuff
     bridge-to-bridge comm
     take damage into account
+    Allow submitting natural language queries to 'the computer' and
+      get responses verbally (text to speech) and in actions.  Ideally,
+      these could be activated via speech recognition as well, but this
+      may not be feasible.
+
+      For example:
+
+	Computer, set a course for starbase one.
+	(computer verbalizes: "setting course for starbase one, heading blah, mark blah."
+	and ship rotates to face sb-01)
+
+      More examples of commands which I'd like to work:
+
+	* Navigate to <destination>
+	* Set a course for <destination>
+	* Lower/raise/set shields (to <value>)
+	* engage docking system
+	* disengage docking system
+	* how far to <destination>
+	* range to <destination>
+	* Do we have enough fuel to reach <destination>
+	* calculate a course to <destination> (replies with heading and mark)
+	* damage/status report (replies with list of damaged systems in order from
+	  most damaged to least, eg: "Warp drive: 50%, Impulse drive: 70%, all
+	  other systems are within normal range."
+	* engage warp drive
+	* (set) warp factor <value>
+	* (set) impulse to <value> percent
 
 * Navigation screen
 
@@ -32,7 +60,7 @@ Too much to list, but here's a list anyway:
   contribute to this codebase.
 
 * computer-controlled-ships
-  loads of AI improvements and basic functionality 
+  loads of AI improvements and basic functionality
   remains to be done.
   Avoid going inside/through planets.  This is mostly done
   though I still see a ship crash into a planet every once it a blue moon
@@ -68,7 +96,7 @@ Too much to list, but here's a list anyway:
   basically, flesh out the lua scripting system.
 * Remove use of "heading" field in snis_entity
 * Make space monster do something interesting
-* Make space monster work again 
+* Make space monster work again
 * Allow to somehow mine asteroids and derelicts for something (fuel?)
 * make tractor beam work again/better.
 * Currently, number keypad doesn't work for numbers.  It should work.
@@ -76,7 +104,7 @@ Too much to list, but here's a list anyway:
 LOBBY
 * Allow multi-homed snis_server to work.  Currently only one ip addr is known
   to the lobby, so if machines are coming from multiple interfaces, it doesn't
-  really work. 
+  really work.
 * Allow lobbyless operation, user configurable port for snis_server, and client
   able to connect to user configureable ip and port.
 
@@ -91,3 +119,5 @@ NICE TO HAVE:
 * Allow multiple server processes and travel between them via warp gates.
 * Make art assets live on server and be transmitted to clients on demand.
 
+* Speech recognition with natural language support (see COMMS section above)
+  to make requests of "the computer"
