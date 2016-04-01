@@ -770,6 +770,12 @@ test-space-partition:	space-part.c Makefile
 snis_event_callback.o:	snis_event_callback.c Makefile
 	$(Q)$(COMPILE)
 
+snis_nl.o:	snis_nl.c snis_nl.h Makefile
+	$(Q)$(COMPILE)
+
+snis_nl:	snis_nl.o string-utils.o
+	$(CC) -DTEST_NL -o snis_nl string-utils.o snis_nl.c
+
 ${SSGL}:
 	(cd ssgl ; ${MAKE} )
 
