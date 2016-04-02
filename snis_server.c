@@ -13261,6 +13261,17 @@ static const struct noun_description_entry {
 	/* TODO: flesh this out more */
 };
 
+static int nl_find_next_word(int argc, int pos[], int part_of_speech, int start_with)
+{
+	int i;
+
+	for (i = start_with; i < argc; i++) {
+		if (pos[i] == part_of_speech)
+			return i;
+	}
+	return -1;
+}
+
 static void nl_describe_noun(struct game_client *c, char *word)
 {
 	int i;
@@ -13360,15 +13371,10 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 	/* Find the first noun... it should be "course". */
 
 	first_noun = -1;
-	for (i = 0; i < argc; i++) {
-		if (pos[i] == POS_NOUN) {
-			printf("first noun is '%s'\n", argv[i]);
-			if (strcasecmp(argv[i], "course") != 0)
-				goto no_understand;
-			first_noun = i;
-		}
-	}
+	first_noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
 	if (first_noun < 0) /* didn't find first noun... */
+		goto no_understand;
+	if (strcasecmp(argv[first_noun], "course") != 0)
 		goto no_understand;
 
 	/* TODO:  check the preposition here. "away", "from", "around", change the meaning.
@@ -13376,13 +13382,7 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 	 */
 
 	/* Find the second noun, it should be a place... */
-	second_noun = -1;
-	for (i = first_noun + 1; i < argc; i++) {
-		if (pos[i] == POS_EXTERNAL_NOUN) {
-			second_noun = i;
-			break;
-		}
-	}
+	second_noun = nl_find_next_word(argc, pos, POS_EXTERNAL_NOUN, first_noun + 1);
 	if (second_noun < 0)
 		goto no_understand;
 
