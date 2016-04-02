@@ -40,6 +40,9 @@ union snis_nl_extra_data;
 typedef void (*snis_nl_verb_function)(void *context, int argc, char *argv[], int part_of_speech[],
 				union snis_nl_extra_data *extra_data);
 typedef void (*snis_nl_error_function)(void *context);
+typedef void (*snis_nl_multiword_preprocessor_fn)(char *word, int encode_or_decode);
+#define SNIS_NL_ENCODE 1
+#define SNIS_NL_DECODE 2
 
 struct snis_nl_verb_data {
 	snis_nl_verb_function fn;
@@ -112,6 +115,7 @@ void snis_nl_add_dictionary_word(char *word, char *canonical_word, int part_of_s
 void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax, snis_nl_verb_function action);
 void snis_nl_add_external_lookup(snis_nl_external_noun_lookup lookup);
 void snis_nl_add_error_function(snis_nl_error_function error_func);
+void snis_nl_add_multiword_preprocessor(snis_nl_multiword_preprocessor_fn multiword_processor);
 void snis_nl_parse_natural_language_request(void *context, char *text);
 
 #endif

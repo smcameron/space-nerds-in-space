@@ -18,6 +18,9 @@
 	along with Spacenerds in Space; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13251,6 +13254,7 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("path", "course");
 	snis_nl_add_synonym("route", "course");
 	snis_nl_add_synonym("towards", "toward");
+	snis_nl_add_synonym("tell me about", "describe");
 }
 
 static const struct noun_description_entry {
@@ -13258,6 +13262,8 @@ static const struct noun_description_entry {
 	char *description;
 } noun_description[] = {
 	{ "drive", "The warp drive is a powerful sub-nuclear device that enables faster than light space travel." },
+	{ "warp drive", "The warp drive is a powerful sub-nuclear device that enables faster than light space travel." },
+	{ "impulse drive", "The impulse drive is a sub light speed conventional thruster." },
 	/* TODO: flesh this out more */
 };
 
@@ -13284,6 +13290,17 @@ static void nl_describe_noun(struct game_client *c, char *word)
 		}
 	}
 	queue_add_text_to_speech(c, "I do not know anything about that.");
+}
+
+static char *nl_get_object_name(struct snis_entity *o)
+{
+	/* Assumes universe lock is held */
+	switch (o->type) {
+	case OBJTYPE_STARBASE:
+		return o->tsd.starbase.name;
+	default:
+		return o->sdata.name;
+	}
 }
 
 static void nl_describe_game_object(struct game_client *c, uint32_t id)
@@ -13430,6 +13447,53 @@ static void natural_language_parse_failure(void *context)
 	queue_add_text_to_speech(c, "I am sorry, I did not understand that.");
 }
 
+static inline void nl_decode_spaces(char *text)
+{
+	char *x;
+
+	for (x = text; *x; x++)
+		if (*x == '_')
+			*x = ' ';
+}
+
+static inline void nl_encode_spaces(char *text, int len)
+{
+	int i;
+	char *x;
+
+	x = text;
+	for (i = 0; i < len && *x; i++) {
+		if (*x == ' ')
+			*x = '_';
+		x++;
+	}
+}
+
+static void natural_language_multiword_preprocessor(char *text, int coding_direction)
+{
+	char *hit;
+	int i;
+
+	if (coding_direction == SNIS_NL_DECODE) {
+		nl_decode_spaces(text);
+		return;
+	}
+	if (coding_direction != SNIS_NL_ENCODE) {
+		fprintf(stderr, "snis_server: Invalid coding direction\n");
+		return;
+	}
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		char *name = nl_get_object_name(&go[i]);
+		if (name[0] == '\0')
+			continue;
+		hit = strcasestr(text, name);
+		if (hit)
+			nl_encode_spaces(hit, strlen(name));
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 static void init_dictionary(void)
 {
 	snis_nl_add_dictionary_verb("describe",		"describe",	"n", nl_describe);
@@ -13459,6 +13523,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("full",		"full",		"n", sorry_dave);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
+	snis_nl_add_dictionary_word("warp drive",	"warp drive",	POS_NOUN);
+	snis_nl_add_dictionary_word("impulse drive",	"impulse drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
 	snis_nl_add_dictionary_word("starbase",		"starbase",	POS_NOUN);
 	snis_nl_add_dictionary_word("base",		"starbase",	POS_NOUN);
@@ -13619,6 +13685,7 @@ static void init_natural_language_system(void)
 	init_dictionary();
 	snis_nl_add_error_function(natural_language_parse_failure);
 	snis_nl_add_external_lookup(natural_language_object_lookup);
+	snis_nl_add_multiword_preprocessor(natural_language_multiword_preprocessor);
 }
 
 /*****************************************************************************************

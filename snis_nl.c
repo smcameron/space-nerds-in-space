@@ -73,6 +73,7 @@ static struct dictionary_entry {
 
 static snis_nl_external_noun_lookup external_lookup = NULL;
 static snis_nl_error_function error_function = NULL;
+static snis_nl_multiword_preprocessor_fn multiword_preprocessor_fn = NULL;
 
 #define MAX_MEANINGS 10
 struct nl_token {
@@ -105,6 +106,52 @@ static char *fixup_punctuation(char *s)
 	return n;
 }
 
+/* Replace underscores with spaces */
+static inline void multiword_processor_decode(char *w)
+{
+	char *x = w;
+	for (x = w; *x; x++)
+		if (*x == '_')
+			*x = ' ';
+}
+
+static inline void encode_spaces(char *instance, int len)
+{
+	int i;
+
+	for (i = 0; i < len; i++)
+		if (instance[i] == ' ')
+			instance[i] = '_';
+}
+
+/* For certain multiword phrases, replace spaces with underscores to make them
+ * tokenize as a unit.  This gets undone immediately after tokenization in
+ * tokenize().
+ */
+static void multiword_processor_encode(char *text)
+{
+	char *hit;
+	int i;
+
+	/* encode multiword synonyms */
+	for (i = 0; synonym[i].syn != NULL; i++) {
+		hit = strstr(text, synonym[i].syn);
+		if (hit)
+			encode_spaces(hit, strlen(synonym[i].syn));
+	}
+
+	/* encode multiword dictionary words */
+	for (i = 0; dictionary[i].word != NULL; i++) {
+		hit = strstr(text, dictionary[i].word);
+		if (hit)
+			encode_spaces(hit, strlen(dictionary[i].word));
+	}
+
+	/* encode specialized words */
+	if (multiword_preprocessor_fn)
+		multiword_preprocessor_fn(text, SNIS_NL_ENCODE);
+}
+
 static struct nl_token **tokenize(char *txt, int *nwords)
 {
 	char *s = fixup_punctuation(txt);
@@ -120,6 +167,9 @@ static struct nl_token **tokenize(char *txt, int *nwords)
 		if (!t)
 			break;
 		w[count] = strdup(t);
+		multiword_processor_decode(w[count]);
+		if (multiword_preprocessor_fn)
+			multiword_preprocessor_fn(txt, SNIS_NL_DECODE);
 		count++;
 		if (count >= 100)
 			break;
@@ -721,6 +771,7 @@ void snis_nl_parse_natural_language_request(void *context, char *txt)
 	char *original = strdup(txt);
 
 	lowercase(txt);
+	multiword_processor_encode(txt);
 	token = tokenize(txt, &ntokens);
 	classify_tokens(context, token, ntokens);
 	// print_tokens(token, ntokens);
@@ -789,6 +840,15 @@ void snis_nl_add_error_function(snis_nl_error_function error_func)
 	}
 	error_function = error_func;
 }
+
+void snis_nl_add_multiword_preprocessor(snis_nl_multiword_preprocessor_fn preprocessor)
+{
+	if (multiword_preprocessor_fn) {
+		fprintf(stderr, "Too many multiword preprocessor functions added\n");
+	}
+	multiword_preprocessor_fn = preprocessor;
+}
+
 
 #ifdef TEST_NL
 static void init_synonyms(void)
