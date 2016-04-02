@@ -13250,6 +13250,99 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("deploy", "launch");
 }
 
+static const struct noun_description_entry {
+	char *noun;
+	char *description;
+} noun_description[] = {
+	{ "drive", "The warp drive is a powerful sub-nuclear device that enables faster than light space travel." },
+	/* TODO: flesh this out more */
+};
+
+static void nl_describe_noun(struct game_client *c, char *word)
+{
+	int i;
+	printf("snis_server: describing '%s'\n", word);
+
+	for (i = 0; i < ARRAYSIZE(noun_description); i++) {
+		if (strcasecmp(word, noun_description[i].noun) == 0) {
+			queue_add_text_to_speech(c, noun_description[i].description);
+			return;
+		}
+	}
+	queue_add_text_to_speech(c, "I do not know anything about that.");
+}
+
+static void nl_describe_game_object(struct game_client *c, uint32_t id)
+{
+	int i;
+	char description[254];
+	static struct mtwist_state *mt = NULL;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "I do not know anything about that.");
+		return;
+	}
+	switch (go[i].type) {
+	case OBJTYPE_PLANET:
+		pthread_mutex_unlock(&universe_mutex);
+		mt = mtwist_init(go[i].tsd.planet.description_seed);
+		planet_description(mt, description, 250, 254);
+		mtwist_free(mt);
+		queue_add_text_to_speech(c, description);
+		return;
+	case OBJTYPE_ASTEROID:
+		pthread_mutex_unlock(&universe_mutex);
+		sprintf(description, "%s is a small and rather ordinary asteroid", go[i].sdata.name);
+		queue_add_text_to_speech(c, description);
+		return;
+	case OBJTYPE_STARBASE:
+		pthread_mutex_unlock(&universe_mutex);
+		sprintf(description, "%s is a starbase", go[i].tsd.starbase.name);
+		queue_add_text_to_speech(c, description);
+		return;
+	case OBJTYPE_SHIP2:
+		pthread_mutex_unlock(&universe_mutex);
+		sprintf(description, "%s is a %s class ship", go[i].sdata.name,
+				ship_type[go[i].sdata.subclass].class);
+		queue_add_text_to_speech(c, description);
+		return;
+	case OBJTYPE_SHIP1:
+		pthread_mutex_unlock(&universe_mutex);
+		sprintf(description, "%s is a human piloted wombat class space ship", go[i].sdata.name);
+		queue_add_text_to_speech(c, description);
+		return;
+	default:
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "I don't know anything about that.");
+		return;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
+static void nl_describe(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i;
+
+	for (i = 0; i < argc; i++) {
+		switch (pos[i]) {
+		case POS_NOUN:
+			nl_describe_noun(c, argv[i]);
+			return;
+		case POS_EXTERNAL_NOUN:
+			nl_describe_game_object(c, extra_data[i].external_noun.handle);
+			return;
+		default:
+			break;
+		}
+	}
+	queue_add_text_to_speech(c, "I do not know anything about that.");
+}
+
 static void sorry_dave(void *context, int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
@@ -13265,6 +13358,7 @@ static void natural_language_parse_failure(void *context)
 
 static void init_dictionary(void)
 {
+	snis_nl_add_dictionary_verb("describe",		"describe",	"n", nl_describe);
 	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn", sorry_dave);
 	snis_nl_add_dictionary_verb("set",		"set",		"npq", sorry_dave);
 	snis_nl_add_dictionary_verb("set",		"set",		"npa", sorry_dave);
