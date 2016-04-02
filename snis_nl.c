@@ -72,6 +72,7 @@ static struct dictionary_entry {
 } dictionary[MAX_DICTIONARY_ENTRIES + 1] = { { 0 } };
 
 static snis_nl_external_noun_lookup external_lookup = NULL;
+static snis_nl_error_function error_function = NULL;
 
 #define MAX_MEANINGS 10
 struct nl_token {
@@ -705,10 +706,12 @@ static void extract_meaning(void *context, char *original_text, struct nl_token 
 	if (p) {
 		printf("-------- Final interpretation: ----------\n");
 		nl_parse_machine_print(p, token, ntokens, 0);
+		do_action(context, p, token, ntokens);
 	} else {
 		printf("Failure to comprehend '%s'\n", original_text);
+		if (error_function)
+			error_function(context);
 	}
-	do_action(context, p, token, ntokens);
 }
 
 void snis_nl_parse_natural_language_request(void *context, char *txt)
@@ -777,6 +780,14 @@ void snis_nl_add_external_lookup(snis_nl_external_noun_lookup lookup)
 		fprintf(stderr, "Too many lookup functions added\n");
 	}
 	external_lookup = lookup;
+}
+
+void snis_nl_add_error_function(snis_nl_error_function error_func)
+{
+	if (error_function) {
+		fprintf(stderr, "Too many error functions added\n");
+	}
+	error_function = error_func;
 }
 
 #ifdef TEST_NL
