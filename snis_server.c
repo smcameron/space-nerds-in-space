@@ -13180,6 +13180,50 @@ static struct docking_port_attachment_point **read_docking_port_info(
  * Here begins the natural language parsing code.
  *****************************************************************************************/
 
+/* callback used by natural language parser to look up game objects */
+static uint32_t natural_language_object_lookup(void *context, char *word)
+{
+	uint32_t answer = 0xffffffff; /* not found */
+	int i, b;
+
+	char *w = strdup(word);
+	uppercase(w);
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
+		switch (go[i].type) {
+		case OBJTYPE_STARBASE:
+			if (strcmp(go[i].tsd.starbase.name, w) == 0) {
+				answer = go[i].id;
+				goto done;
+			}
+			break;
+		case OBJTYPE_PLANET:
+		case OBJTYPE_ASTEROID:
+		case OBJTYPE_SHIP2:
+			if (strcmp(go[i].sdata.name, w) == 0) {
+				answer = go[i].id;
+				goto done;
+			}
+			break;
+		case OBJTYPE_SHIP1:
+			b = lookup_bridge_by_shipid(go[i].id);
+			if (b < 0)
+				break;
+			if (strcasecmp((char *) bridgelist[b].shipname, w) == 0) {
+				answer = go[i].id;
+				goto done;
+			}
+			break;
+		default:
+			break;
+		}
+	}
+done:
+	pthread_mutex_unlock(&universe_mutex);
+	free(w);
+	return answer;
+}
+
 static void perform_natural_language_request(struct game_client *c, char *txt)
 {
 	lowercase(txt);
@@ -13406,6 +13450,7 @@ static void init_natural_language_system(void)
 	init_synonyms();
 	init_dictionary();
 	snis_nl_add_error_function(natural_language_parse_failure);
+	snis_nl_add_external_lookup(natural_language_object_lookup);
 }
 
 /*****************************************************************************************
