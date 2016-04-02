@@ -37,7 +37,7 @@
 #define POS_EXTERNAL_NOUN	11
 
 union snis_nl_extra_data;
-typedef void (*snis_nl_verb_function)(int argc, char *argv[], int part_of_speech[],
+typedef void (*snis_nl_verb_function)(void *context, int argc, char *argv[], int part_of_speech[],
 				union snis_nl_extra_data *extra_data);
 
 struct snis_nl_verb_data {
@@ -104,12 +104,12 @@ union snis_nl_extra_data {
 		struct snis_nl_external_noun_data external_noun;
 };
 
-typedef uint32_t (*snis_nl_external_noun_lookup)(char *word);
+typedef uint32_t (*snis_nl_external_noun_lookup)(void *context, char *word);
 
 void snis_nl_add_synonym(char *synonym, char *canonical_word);
 void snis_nl_add_dictionary_word(char *word, char *canonical_word, int part_of_speech);
 void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax, snis_nl_verb_function action);
 void snis_nl_add_external_lookup(snis_nl_external_noun_lookup lookup);
-void snis_nl_parse_natural_language_request(char *text);
+void snis_nl_parse_natural_language_request(void *context, char *text);
 
 #endif

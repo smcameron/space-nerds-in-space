@@ -144,7 +144,7 @@ static void free_tokens(struct nl_token *word[], int nwords)
 		free(word[i]);
 }
 
-static void classify_token(struct nl_token *t)
+static void classify_token(void *context, struct nl_token *t)
 {
 	int i, j;
 	float x, rc;
@@ -205,7 +205,7 @@ static void classify_token(struct nl_token *t)
 	}
 
 	if (external_lookup) {
-		handle = external_lookup(t->word);
+		handle = external_lookup(context, t->word);
 		if (handle != 0xffffffff) {
 			t->pos[t->npos] = POS_EXTERNAL_NOUN;
 			t->meaning[t->npos] = -1;
@@ -217,12 +217,12 @@ static void classify_token(struct nl_token *t)
 	}
 }
 
-static void classify_tokens(struct nl_token *t[], int ntokens)
+static void classify_tokens(void *context, struct nl_token *t[], int ntokens)
 {
 	int i;
 
 	for (i = 0; i < ntokens; i++)
-		classify_token(t[i]);
+		classify_token(context, t[i]);
 }
 
 static void print_token_instance(struct nl_token *t, int i)
@@ -559,7 +559,7 @@ static int nl_parse_machines_still_running(struct nl_parse_machine **list)
 	return 0;
 }
 
-static void do_action(struct nl_parse_machine *p, struct nl_token **token, int ntokens)
+static void do_action(void *context, struct nl_parse_machine *p, struct nl_token **token, int ntokens)
 {
 	int argc;
 	char *argv[MAX_WORDS];
@@ -573,7 +573,7 @@ static void do_action(struct nl_parse_machine *p, struct nl_token **token, int n
 		struct nl_token *t = token[i];
 		if (t->pos[p->meaning[i]] == POS_VERB) {
 			if (vf != NULL) {
-				vf(argc, argv, pos, extra_data);
+				vf(context, argc, argv, pos, extra_data);
 				vf = NULL;
 			}
 			argc = 1;
@@ -601,7 +601,7 @@ static void do_action(struct nl_parse_machine *p, struct nl_token **token, int n
 		}
 	}
 	if (vf != NULL) {
-		vf(argc, argv, pos, extra_data);
+		vf(context, argc, argv, pos, extra_data);
 		vf = NULL;
 	}
 }
@@ -690,7 +690,7 @@ static void nl_parse_machines_score(struct nl_parse_machine **list, int ntokens)
 		nl_parse_machine_score(p, ntokens);
 }
 
-static void extract_meaning(char *original_text, struct nl_token *token[], int ntokens)
+static void extract_meaning(void *context, char *original_text, struct nl_token *token[], int ntokens)
 {
 	struct nl_parse_machine *list, *p;
 
@@ -708,10 +708,10 @@ static void extract_meaning(char *original_text, struct nl_token *token[], int n
 	} else {
 		printf("Failure to comprehend '%s'\n", original_text);
 	}
-	do_action(p, token, ntokens);
+	do_action(context, p, token, ntokens);
 }
 
-void snis_nl_parse_natural_language_request(char *txt)
+void snis_nl_parse_natural_language_request(void *context, char *txt)
 {
 	int ntokens;
 	struct nl_token **token = NULL;
@@ -719,9 +719,9 @@ void snis_nl_parse_natural_language_request(char *txt)
 
 	lowercase(txt);
 	token = tokenize(txt, &ntokens);
-	classify_tokens(token, ntokens);
+	classify_tokens(context, token, ntokens);
 	// print_tokens(token, ntokens);
-	extract_meaning(original, token, ntokens);
+	extract_meaning(context, original, token, ntokens);
 	free_tokens(token, ntokens);
 	if (token)
 		free(token);
@@ -799,7 +799,7 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("deploy", "launch");
 }
 
-static void generic_verb_action(int argc, char *argv[], int pos[],
+static void generic_verb_action(__attribute__((unused)) void *context, int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	int i;
@@ -1001,7 +1001,7 @@ int main(int argc, char *argv[])
 	init_dictionary();
 
 	for (i = 1; i < argc; i++)
-		snis_nl_parse_natural_language_request(argv[i]);
+		snis_nl_parse_natural_language_request(NULL, argv[i]);
 	return 0;
 }
 
