@@ -30,18 +30,6 @@
 #include "arraysize.h"
 #include "string-utils.h"
 
-#define POS_UNKNOWN		0
-#define POS_NOUN		1
-#define POS_VERB		2
-#define POS_ARTICLE		3
-#define POS_PREPOSITION		4
-#define POS_SEPARATOR		5
-#define POS_ADJECTIVE		6
-#define POS_ADVERB		7
-#define POS_NUMBER		8
-#define POS_NAME		9
-#define POS_PRONOUN		10
-
 static const char * const part_of_speech[] = {
 	"unknown",
 	"noun",
@@ -112,6 +100,8 @@ static struct synonym_entry {
 	char *syn, *canonical;
 } synonym[MAX_SYNONYMS + 1] = { { 0 } }; 
 
+#define MAX_DICTIONARY_ENTRIES 1000
+static int ndictionary_entries = 0;
 static struct dictionary_entry {
 	char *word;
 	char *canonical_word;
@@ -127,187 +117,7 @@ static struct dictionary_entry {
 		struct number_data number;
 		struct pronoun_data pronoun;
 	};
-} dictionary[] = {
-	{ "navigate",		"navigate",	POS_VERB, .verb = { "pn" }, },
-	{ "set",		"set",		POS_VERB, .verb = { "npq" }, },
-	{ "set",		"set",		POS_VERB, .verb = { "npa" }, },
-	{ "lower",		"lower",	POS_VERB, .verb = { "npq" }, },
-	{ "lower",		"lower",	POS_VERB, .verb = { "n" }, },
-	{ "raise",		"raise",	POS_VERB, .verb = { "nq" }, },
-	{ "raise",		"raise",	POS_VERB, .verb = { "npq" }, },
-	{ "raise",		"raise",	POS_VERB, .verb = { "n" }, },
-	{ "engage",		"engage",	POS_VERB, .verb = { "n" }, },
-	{ "disengage",		"disengage",	POS_VERB, .verb = { "n" }, },
-	{ "turn",		"turn",		POS_VERB, .verb = { "pn" }, },
-	{ "turn",		"turn",		POS_VERB, .verb = { "aq" }, },
-	{ "compute",		"compute",	POS_VERB, .verb = { "npn" }, },
-	{ "report",		"report",	POS_VERB, .verb = { "n" }, },
-	{ "yaw",		"yaw",		POS_VERB, .verb = { "aq" }, },
-	{ "pitch",		"pitch",	POS_VERB, .verb = { "aq" }, },
-	{ "roll",		"roll",		POS_VERB, .verb = { "aq" }, },
-	{ "zoom",		"zoom",		POS_VERB, .verb = { "p" }, },
-	{ "zoom",		"zoom",		POS_VERB, .verb = { "pq" }, },
-	{ "shut",		"shut",		POS_VERB, .verb = { "an" }, },
-	{ "shut",		"shut",		POS_VERB, .verb = { "na" }, },
-	{ "launch",		"launch",	POS_VERB, .verb = { "n" }, },
-	{ "eject",		"eject",	POS_VERB, .verb = { "n" }, },
-	{ "full",		"full",		POS_VERB, .verb = { "n" }, },
-
-	{ "drive",		"drive",	POS_NOUN, .noun = { 0 }, },
-	{ "system",		"system",	POS_NOUN, .noun = { 0 }, },
-	{ "starbase",		"starbase",	POS_NOUN, .noun = { 0 }, },
-	{ "base",		"starbase",	POS_NOUN, .noun = { 0 }, },
-	{ "planet",		"planet",	POS_NOUN, .noun = { 0 }, },
-	{ "ship",		"ship",		POS_NOUN, .noun = { 0 }, },
-	{ "bot",		"bot",		POS_NOUN, .noun = { 0 }, },
-	{ "shields",		"shields",	POS_NOUN, .noun = { 0 }, },
-	{ "throttle",		"throttle",	POS_NOUN, .noun = { 0 }, },
-	{ "factor",		"factor",	POS_NOUN, .noun = { 0 }, },
-	{ "coolant",		"coolant",	POS_NOUN, .noun = { 0 }, },
-	{ "level",		"level",	POS_NOUN, .noun = { 0 }, },
-	{ "energy",		"energy",	POS_NOUN, .noun = { 0 }, },
-	{ "power",		"energy",	POS_NOUN, .noun = { 0 }, },
-	{ "asteroid",		"asteroid",	POS_NOUN, .noun = { 0 }, },
-	{ "nebula",		"nebula",	POS_NOUN, .noun = { 0 }, },
-	{ "star",		"star",		POS_NOUN, .noun = { 0 }, },
-	{ "range",		"range",	POS_NOUN, .noun = { 0 }, },
-	{ "distance",		"range",	POS_NOUN, .noun = { 0 }, },
-	{ "weapons",		"weapons",	POS_NOUN, .noun = { 0 }, },
-	{ "screen",		"screen",	POS_NOUN, .noun = { 0 }, },
-	{ "robot",		"robot",	POS_NOUN, .noun = { 0 }, },
-	{ "torpedo",		"torpedo",	POS_NOUN, .noun = { 0 }, },
-	{ "phasers",		"phasers",	POS_NOUN, .noun = { 0 }, },
-	{ "maneuvering",	"maneuvering",	POS_NOUN, .noun = { 0 }, },
-	{ "thruster",		"thrusters",	POS_NOUN, .noun = { 0 }, },
-	{ "thrusters",		"thrusters",	POS_NOUN, .noun = { 0 }, },
-	{ "sensor",		"sensors",	POS_NOUN, .noun = { 0 }, },
-	{ "science",		"science",	POS_NOUN, .noun = { 0 }, },
-	{ "comms",		"comms",	POS_NOUN, .noun = { 0 }, },
-	{ "enemy",		"enemy",	POS_NOUN, .noun = { 0 }, },
-	{ "derelict",		"derelict",	POS_NOUN, .noun = { 0 }, },
-	{ "computer",		"computer",	POS_NOUN, .noun = { 0 }, },
-	{ "fuel",		"fuel",		POS_NOUN, .noun = { 0 }, },
-	{ "radiation",		"radiation",	POS_NOUN, .noun = { 0 }, },
-	{ "wavelength",		"wavelength",	POS_NOUN, .noun = { 0 }, },
-	{ "charge",		"charge",	POS_NOUN, .noun = { 0 }, },
-	{ "magnets",		"magnets",	POS_NOUN, .noun = { 0 }, },
-	{ "gate",		"gate",		POS_NOUN, .noun = { 0 }, },
-	{ "percent",		"percent",	POS_NOUN, .noun = { 0 }, },
-	{ "sequence",		"sequence",	POS_NOUN, .noun = { 0 }, },
-	{ "core",		"core",		POS_NOUN, .noun = { 0 }, },
-	{ "code",		"code",		POS_NOUN, .noun = { 0 }, },
-	{ "hull",		"hull",		POS_NOUN, .noun = { 0 }, },
-	{ "scanner",		"scanner",	POS_NOUN, .noun = { 0 }, },
-	{ "scanners",		"scanners",	POS_NOUN, .noun = { 0 }, },
-	{ "detail",		"details",	POS_NOUN, .noun = { 0 }, },
-	{ "report",		"report",	POS_NOUN, .noun = { 0 }, },
-	{ "damage",		"damage",	POS_NOUN, .noun = { 0 }, },
-	{ "course",		"course",	POS_NOUN, .noun = { 0 }, },
-
-
-	{ "a",			"a",		POS_ARTICLE, .article = { 0 }, },
-	{ "an",			"an",		POS_ARTICLE, .article = { 0 }, },
-	{ "the",		"the",		POS_ARTICLE, .article = { 1 }, },
-
-	{ "above",		"above",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "aboard",		"aboard",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "across",		"across",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "after",		"after",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "along",		"along",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "alongside",		"alongside",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "at",			"at",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "atop",		"atop",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "around",		"around",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "before",		"before",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "behind",		"behind",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "beneath",		"beneath",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "below",		"below",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "beside",		"beside",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "besides",		"besides",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "between",		"between",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "by",			"by",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "down",		"down",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "during",		"during",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "except",		"except",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "for",		"for",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "from",		"from",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "in",			"in",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "inside",		"inside",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "of",			"of",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "off",		"off",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "on",			"on",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "onto",		"onto",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "out",		"out",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "outside",		"outside",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "through",		"through",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "throughout",		"throughout",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "to",			"to",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "toward",		"toward",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "under",		"under",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "up",			"up",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "until",		"until",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "with",		"with",		POS_PREPOSITION, .preposition = { 0 }, },
-	{ "within",		"within",	POS_PREPOSITION, .preposition = { 0 }, },
-	{ "without",		"without",	POS_PREPOSITION, .preposition = { 0 }, },
-
-	{ "or",			"or",		POS_SEPARATOR, .separator = { 0 }, },
-	{ "and",		"and",		POS_SEPARATOR, .separator = { 0 }, },
-	{ "then",		"then",		POS_SEPARATOR, .separator = { 0 }, },
-	{ ",",			",",		POS_SEPARATOR, .separator = { 0 }, },
-	{ ".",			".",		POS_SEPARATOR, .separator = { 0 }, },
-	{ ";",			";",		POS_SEPARATOR, .separator = { 0 }, },
-	{ "!",			"!",		POS_SEPARATOR, .separator = { 0 }, },
-	{ "?",			"?",		POS_SEPARATOR, .separator = { 0 }, },
-
-	{ "damage",		"damage",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "status",		"status",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "warp",		"warp",		POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "impulse",		"impulse",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "docking",		"docking",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "star",		"star",		POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "space",		"space",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "mining",		"mining",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "energy",		"energy",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "main",		"main",		POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "navigation",		"navigation",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "comms",		"comms",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "engineering",	"engineering",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "science",		"science",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "enemy",		"enemy",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "derelict",		"derelict",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "solar",		"solar",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "nearest",		"nearest",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "closest",		"nearest",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "nearby",		"nearest",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "close",		"nearest",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "up",			"up",		POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "down",		"down",		POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "left",		"left",		POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "right",		"right",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "self",		"self",		POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "destruct",		"destruct",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "self-destruct",	"self-destruct",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "short",		"short",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "long",		"long",		POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "range",		"range",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "full",		"maximum",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "max",		"maximum",	POS_ADJECTIVE, .adjective = { 0 }, },
-	{ "maximum",		"maximum",	POS_ADJECTIVE, .adjective = { 0 }, },
-
-	{ "percent",		"percent",	POS_ADVERB, .adverb = { 0 }, },
-	{ "quickly",		"quickly",	POS_ADVERB, .adverb = { 0 }, },
-	{ "rapidly",		"quickly",	POS_ADVERB, .adverb = { 0 }, },
-	{ "swiftly",		"quickly",	POS_ADVERB, .adverb = { 0 }, },
-	{ "slowly",		"slowly",	POS_ADVERB, .adverb = { 0 }, },
-
-	{ "it",			"it",		POS_PRONOUN, .pronoun = { 0 }, },
-	{ "me",			"me",		POS_PRONOUN, .pronoun = { 0 }, },
-	{ "them",		"them",		POS_PRONOUN, .pronoun = { 0 }, },
-	{ "all",		"all",		POS_PRONOUN, .pronoun = { 0 }, },
-	{ "everything",		"everything",	POS_PRONOUN, .pronoun = { 0 }, },
-
-	{ 0, 0, 0, .verb = { 0 }, }, /* mark the end of the dictionary */
-};
+} dictionary[MAX_DICTIONARY_ENTRIES + 1] = { { 0 } };
 
 #define MAX_MEANINGS 10
 struct nl_token {
@@ -916,6 +726,35 @@ void snis_nl_add_synonym(char *synonym_word, char *canonical_word)
 	nsynonyms++;
 }
 
+static void generic_add_dictionary_word(char *word, char *canonical_word, int part_of_speech, char *syntax)
+{
+	struct dictionary_entry *de;
+
+	if (ndictionary_entries >= MAX_DICTIONARY_ENTRIES) {
+		fprintf(stderr, "Too many dictionary entries, discarding '%s/%s'\n", word, canonical_word);
+		return;
+	}
+
+	de = &dictionary[ndictionary_entries];
+	memset(de, 0, sizeof(*de));
+	de->word = strdup(word);
+	de->canonical_word = strdup(canonical_word);
+	de->p_o_s = part_of_speech;
+	if (de->p_o_s == POS_VERB)
+		de->verb.syntax = syntax;
+	ndictionary_entries++;
+}
+
+void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax)
+{
+	generic_add_dictionary_word(word, canonical_word, POS_VERB, syntax);
+}
+
+void snis_nl_add_dictionary_word(char *word, char *canonical_word, int part_of_speech)
+{
+	generic_add_dictionary_word(word, canonical_word, part_of_speech, NULL);
+}
+
 #ifdef TEST_NL
 static void init_synonyms(void)
 {
@@ -936,11 +775,194 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("deploy", "launch");
 }
 
+static void init_dictionary(void)
+{
+	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn");
+	snis_nl_add_dictionary_verb("set",		"set",		"npq");
+	snis_nl_add_dictionary_verb("set",		"set",		"npa");
+	snis_nl_add_dictionary_verb("lower",		"lower",	"npq");
+	snis_nl_add_dictionary_verb("lower",		"lower",	"n");
+	snis_nl_add_dictionary_verb("raise",		"raise",	"nq");
+	snis_nl_add_dictionary_verb("raise",		"raise",	"npq");
+	snis_nl_add_dictionary_verb("raise",		"raise",	"n");
+	snis_nl_add_dictionary_verb("engage",		"engage",	"n");
+	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n");
+	snis_nl_add_dictionary_verb("turn",		"turn",		"pn");
+	snis_nl_add_dictionary_verb("turn",		"turn",		"aq");
+	snis_nl_add_dictionary_verb("compute",		"compute",	"npn");
+	snis_nl_add_dictionary_verb("report",		"report",	"n");
+	snis_nl_add_dictionary_verb("yaw",		"yaw",		"aq");
+	snis_nl_add_dictionary_verb("pitch",		"pitch",	"aq");
+	snis_nl_add_dictionary_verb("roll",		"roll",		"aq");
+	snis_nl_add_dictionary_verb("zoom",		"zoom",		"p");
+	snis_nl_add_dictionary_verb("zoom",		"zoom",		"pq");
+	snis_nl_add_dictionary_verb("shut",		"shut",		"an");
+	snis_nl_add_dictionary_verb("shut",		"shut",		"na");
+	snis_nl_add_dictionary_verb("launch",		"launch",	"n");
+	snis_nl_add_dictionary_verb("eject",		"eject",	"n");
+	snis_nl_add_dictionary_verb("full",		"full",		"n");
+
+	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
+	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
+	snis_nl_add_dictionary_word("starbase",		"starbase",	POS_NOUN);
+	snis_nl_add_dictionary_word("base",		"starbase",	POS_NOUN);
+	snis_nl_add_dictionary_word("planet",		"planet",	POS_NOUN);
+	snis_nl_add_dictionary_word("ship",		"ship",		POS_NOUN);
+	snis_nl_add_dictionary_word("bot",		"bot",		POS_NOUN);
+	snis_nl_add_dictionary_word("shields",		"shields",	POS_NOUN);
+	snis_nl_add_dictionary_word("throttle",		"throttle",	POS_NOUN);
+	snis_nl_add_dictionary_word("factor",		"factor",	POS_NOUN);
+	snis_nl_add_dictionary_word("coolant",		"coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("level",		"level",	POS_NOUN);
+	snis_nl_add_dictionary_word("energy",		"energy",	POS_NOUN);
+	snis_nl_add_dictionary_word("power",		"energy",	POS_NOUN);
+	snis_nl_add_dictionary_word("asteroid",		"asteroid",	POS_NOUN);
+	snis_nl_add_dictionary_word("nebula",		"nebula",	POS_NOUN);
+	snis_nl_add_dictionary_word("star",		"star",		POS_NOUN);
+	snis_nl_add_dictionary_word("range",		"range",	POS_NOUN);
+	snis_nl_add_dictionary_word("distance",		"range",	POS_NOUN);
+	snis_nl_add_dictionary_word("weapons",		"weapons",	POS_NOUN);
+	snis_nl_add_dictionary_word("screen",		"screen",	POS_NOUN);
+	snis_nl_add_dictionary_word("robot",		"robot",	POS_NOUN);
+	snis_nl_add_dictionary_word("torpedo",		"torpedo",	POS_NOUN);
+	snis_nl_add_dictionary_word("phasers",		"phasers",	POS_NOUN);
+	snis_nl_add_dictionary_word("maneuvering",	"maneuvering",	POS_NOUN);
+	snis_nl_add_dictionary_word("thruster",		"thrusters",	POS_NOUN);
+	snis_nl_add_dictionary_word("thrusters",	"thrusters",	POS_NOUN);
+	snis_nl_add_dictionary_word("sensor",		"sensors",	POS_NOUN);
+	snis_nl_add_dictionary_word("science",		"science",	POS_NOUN);
+	snis_nl_add_dictionary_word("comms",		"comms",	POS_NOUN);
+	snis_nl_add_dictionary_word("enemy",		"enemy",	POS_NOUN);
+	snis_nl_add_dictionary_word("derelict",		"derelict",	POS_NOUN);
+	snis_nl_add_dictionary_word("computer",		"computer",	POS_NOUN);
+	snis_nl_add_dictionary_word("fuel",		"fuel",		POS_NOUN);
+	snis_nl_add_dictionary_word("radiation",	"radiation",	POS_NOUN);
+	snis_nl_add_dictionary_word("wavelength",	"wavelength",	POS_NOUN);
+	snis_nl_add_dictionary_word("charge",		"charge",	POS_NOUN);
+	snis_nl_add_dictionary_word("magnets",		"magnets",	POS_NOUN);
+	snis_nl_add_dictionary_word("gate",		"gate",		POS_NOUN);
+	snis_nl_add_dictionary_word("percent",		"percent",	POS_NOUN);
+	snis_nl_add_dictionary_word("sequence",		"sequence",	POS_NOUN);
+	snis_nl_add_dictionary_word("core",		"core",		POS_NOUN);
+	snis_nl_add_dictionary_word("code",		"code",		POS_NOUN);
+	snis_nl_add_dictionary_word("hull",		"hull",		POS_NOUN);
+	snis_nl_add_dictionary_word("scanner",		"scanner",	POS_NOUN);
+	snis_nl_add_dictionary_word("scanners",		"scanners",	POS_NOUN);
+	snis_nl_add_dictionary_word("detail",		"details",	POS_NOUN);
+	snis_nl_add_dictionary_word("report",		"report",	POS_NOUN);
+	snis_nl_add_dictionary_word("damage",		"damage",	POS_NOUN);
+	snis_nl_add_dictionary_word("course",		"course",	POS_NOUN);
+
+
+	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
+	snis_nl_add_dictionary_word("an",		"an",		POS_ARTICLE);
+	snis_nl_add_dictionary_word("the",		"the",		POS_ARTICLE);
+
+	snis_nl_add_dictionary_word("above",		"above",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("aboard",		"aboard",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("across",		"across",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("after",		"after",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("along",		"along",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("alongside",	"alongside",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("at",		"at",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("atop",		"atop",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("around",		"around",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("before",		"before",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("behind",		"behind",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("beneath",		"beneath",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("below",		"below",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("beside",		"beside",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("besides",		"besides",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("between",		"between",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("by",		"by",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("down",		"down",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("during",		"during",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("except",		"except",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("for",		"for",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("from",		"from",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("in",		"in",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("inside",		"inside",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("of",		"of",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("off",		"off",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("on",		"on",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("onto",		"onto",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("out",		"out",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("outside",		"outside",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("through",		"through",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("throughout",	"throughout",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("to",		"to",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("toward",		"toward",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("under",		"under",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("up",		"up",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("until",		"until",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("with",		"with",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("within",		"within",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("without",		"without",	POS_PREPOSITION);
+
+	snis_nl_add_dictionary_word("or",		"or",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word("and",		"and",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word("then",		"then",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word(",",		",",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word(".",		".",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word(";",		";",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word("!",		"!",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word("?",		"?",		POS_SEPARATOR);
+
+	snis_nl_add_dictionary_word("damage",		"damage",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("status",		"status",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("warp",		"warp",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("impulse",		"impulse",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("docking",		"docking",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("star",		"star",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("space",		"space",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("mining",		"mining",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("energy",		"energy",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("main",		"main",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("navigation",	"navigation",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("comms",		"comms",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("engineering",	"engineering",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("science",		"science",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("enemy",		"enemy",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("derelict",		"derelict",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("solar",		"solar",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("nearest",		"nearest",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("closest",		"nearest",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("nearby",		"nearest",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("close",		"nearest",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("up",		"up",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("down",		"down",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("left",		"left",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("right",		"right",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("self",		"self",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("destruct",		"destruct",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("self-destruct",	"self-destruct",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("short",		"short",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("long",		"long",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("range",		"range",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("full",		"maximum",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("max",		"maximum",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("maximum",		"maximum",	POS_ADJECTIVE);
+
+	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
+	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);
+	snis_nl_add_dictionary_word("rapidly",		"quickly",	POS_ADVERB);
+	snis_nl_add_dictionary_word("swiftly",		"quickly",	POS_ADVERB);
+	snis_nl_add_dictionary_word("slowly",		"slowly",	POS_ADVERB);
+
+	snis_nl_add_dictionary_word("it",		"it",		POS_PRONOUN);
+	snis_nl_add_dictionary_word("me",		"me",		POS_PRONOUN);
+	snis_nl_add_dictionary_word("them",		"them",		POS_PRONOUN);
+	snis_nl_add_dictionary_word("all",		"all",		POS_PRONOUN);
+	snis_nl_add_dictionary_word("everything",	"everything",	POS_PRONOUN);
+
+}
+
 int main(int argc, char *argv[])
 {
 	int i;
 
 	init_synonyms();
+	init_dictionary();
 
 	for (i = 1; i < argc; i++)
 		snis_nl_parse_natural_language_request(argv[i]);

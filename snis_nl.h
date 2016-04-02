@@ -21,7 +21,21 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#define POS_UNKNOWN		0
+#define POS_NOUN		1
+#define POS_VERB		2
+#define POS_ARTICLE		3
+#define POS_PREPOSITION		4
+#define POS_SEPARATOR		5
+#define POS_ADJECTIVE		6
+#define POS_ADVERB		7
+#define POS_NUMBER		8
+#define POS_NAME		9
+#define POS_PRONOUN		10
+
 void snis_nl_add_synonym(char *synonym, char *canonical_word);
+void snis_nl_add_dictionary_word(char *word, char *canonical_word, int part_of_speech);
+void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax);
 void snis_nl_parse_natural_language_request(char *text);
 
 #endif
