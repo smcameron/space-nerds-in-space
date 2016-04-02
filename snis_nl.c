@@ -629,15 +629,19 @@ static void do_action(void *context, struct nl_parse_machine *p, struct nl_token
 			}
 			argc = 1;
 			w = 0;
-			argv[w] = t->word;
+			de = t->meaning[p->meaning[i]];
+			argv[w] = dictionary[de].canonical_word;
 			pos[w] = POS_VERB;
 			extra_data[w].number.value = 0.0;
-			de = t->meaning[p->meaning[i]];
 			vf = dictionary[de].verb.fn;
 			w++;
 		} else {
 			if (argc > 0) {
-				argv[w] = t->word;
+				de = t->meaning[p->meaning[i]];
+				if (pos[w] != POS_NUMBER && pos[w] != POS_EXTERNAL_NOUN)
+					argv[w] = dictionary[de].canonical_word;
+				else
+					argv[w] = t->word;
 				pos[w] = t->pos[p->meaning[i]];
 				if (pos[w] == POS_NUMBER) {
 					extra_data[w].number.value = t->number.value;
