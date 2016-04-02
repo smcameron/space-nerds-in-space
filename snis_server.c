@@ -82,6 +82,7 @@
 #include "build_info.h"
 #include "starbase_metadata.h"
 #include "elastic_collision.h"
+#include "snis_nl.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -13156,10 +13157,240 @@ static struct docking_port_attachment_point **read_docking_port_info(
 }
 #endif
 
+/*****************************************************************************************
+ * Here begins the natural language parsing code.
+ *****************************************************************************************/
+
 static void perform_natural_language_request(struct game_client *c, char *txt)
 {
-	lowercase(txt); /* TODO: actually do something smart here. */
+	lowercase(txt);
+	snis_nl_parse_natural_language_request(c, txt);
 }
+
+static void init_synonyms(void)
+{
+	snis_nl_add_synonym("cut", "lower");
+	snis_nl_add_synonym("decrease", "lower");
+	snis_nl_add_synonym("boost", "raise");
+	snis_nl_add_synonym("increase", "raise");
+	snis_nl_add_synonym("calculate", "compute");
+	snis_nl_add_synonym("figure", "compute");
+	snis_nl_add_synonym("activate", "engage");
+	snis_nl_add_synonym("actuate", "engage");
+	snis_nl_add_synonym("start", "engage");
+	snis_nl_add_synonym("energize", "engage");
+	snis_nl_add_synonym("deactivate", "disengage");
+	snis_nl_add_synonym("deenergize", "disengage");
+	snis_nl_add_synonym("stop", "disengage");
+	snis_nl_add_synonym("shutdown", "disengage");
+	snis_nl_add_synonym("deploy", "launch");
+}
+
+static void sorry_dave(void *context, int argc, char *argv[], int pos[],
+		__attribute__((unused)) union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	queue_add_text_to_speech(c, "I am sorry Dave, I am afraid I can't do that.");
+}
+
+static void natural_language_parse_failure(void *context)
+{
+	struct game_client *c = context;
+	queue_add_text_to_speech(c, "I am sorry, I did not understand that.");
+}
+
+static void init_dictionary(void)
+{
+	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn", sorry_dave);
+	snis_nl_add_dictionary_verb("set",		"set",		"npq", sorry_dave);
+	snis_nl_add_dictionary_verb("set",		"set",		"npa", sorry_dave);
+	snis_nl_add_dictionary_verb("lower",		"lower",	"npq", sorry_dave);
+	snis_nl_add_dictionary_verb("lower",		"lower",	"n", sorry_dave);
+	snis_nl_add_dictionary_verb("raise",		"raise",	"nq", sorry_dave);
+	snis_nl_add_dictionary_verb("raise",		"raise",	"npq", sorry_dave);
+	snis_nl_add_dictionary_verb("raise",		"raise",	"n", sorry_dave);
+	snis_nl_add_dictionary_verb("engage",		"engage",	"n", sorry_dave);
+	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", sorry_dave);
+	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", sorry_dave);
+	snis_nl_add_dictionary_verb("turn",		"turn",		"aq", sorry_dave);
+	snis_nl_add_dictionary_verb("compute",		"compute",	"npn", sorry_dave);
+	snis_nl_add_dictionary_verb("report",		"report",	"n", sorry_dave);
+	snis_nl_add_dictionary_verb("yaw",		"yaw",		"aq", sorry_dave);
+	snis_nl_add_dictionary_verb("pitch",		"pitch",	"aq", sorry_dave);
+	snis_nl_add_dictionary_verb("roll",		"roll",		"aq", sorry_dave);
+	snis_nl_add_dictionary_verb("zoom",		"zoom",		"p", sorry_dave);
+	snis_nl_add_dictionary_verb("zoom",		"zoom",		"pq", sorry_dave);
+	snis_nl_add_dictionary_verb("shut",		"shut",		"an", sorry_dave);
+	snis_nl_add_dictionary_verb("shut",		"shut",		"na", sorry_dave);
+	snis_nl_add_dictionary_verb("launch",		"launch",	"n", sorry_dave);
+	snis_nl_add_dictionary_verb("eject",		"eject",	"n", sorry_dave);
+	snis_nl_add_dictionary_verb("full",		"full",		"n", sorry_dave);
+
+	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
+	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
+	snis_nl_add_dictionary_word("starbase",		"starbase",	POS_NOUN);
+	snis_nl_add_dictionary_word("base",		"starbase",	POS_NOUN);
+	snis_nl_add_dictionary_word("planet",		"planet",	POS_NOUN);
+	snis_nl_add_dictionary_word("ship",		"ship",		POS_NOUN);
+	snis_nl_add_dictionary_word("bot",		"bot",		POS_NOUN);
+	snis_nl_add_dictionary_word("shields",		"shields",	POS_NOUN);
+	snis_nl_add_dictionary_word("throttle",		"throttle",	POS_NOUN);
+	snis_nl_add_dictionary_word("factor",		"factor",	POS_NOUN);
+	snis_nl_add_dictionary_word("coolant",		"coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("level",		"level",	POS_NOUN);
+	snis_nl_add_dictionary_word("energy",		"energy",	POS_NOUN);
+	snis_nl_add_dictionary_word("power",		"energy",	POS_NOUN);
+	snis_nl_add_dictionary_word("asteroid",		"asteroid",	POS_NOUN);
+	snis_nl_add_dictionary_word("nebula",		"nebula",	POS_NOUN);
+	snis_nl_add_dictionary_word("star",		"star",		POS_NOUN);
+	snis_nl_add_dictionary_word("range",		"range",	POS_NOUN);
+	snis_nl_add_dictionary_word("distance",		"range",	POS_NOUN);
+	snis_nl_add_dictionary_word("weapons",		"weapons",	POS_NOUN);
+	snis_nl_add_dictionary_word("screen",		"screen",	POS_NOUN);
+	snis_nl_add_dictionary_word("robot",		"robot",	POS_NOUN);
+	snis_nl_add_dictionary_word("torpedo",		"torpedo",	POS_NOUN);
+	snis_nl_add_dictionary_word("phasers",		"phasers",	POS_NOUN);
+	snis_nl_add_dictionary_word("maneuvering",	"maneuvering",	POS_NOUN);
+	snis_nl_add_dictionary_word("thruster",		"thrusters",	POS_NOUN);
+	snis_nl_add_dictionary_word("thrusters",	"thrusters",	POS_NOUN);
+	snis_nl_add_dictionary_word("sensor",		"sensors",	POS_NOUN);
+	snis_nl_add_dictionary_word("science",		"science",	POS_NOUN);
+	snis_nl_add_dictionary_word("comms",		"comms",	POS_NOUN);
+	snis_nl_add_dictionary_word("enemy",		"enemy",	POS_NOUN);
+	snis_nl_add_dictionary_word("derelict",		"derelict",	POS_NOUN);
+	snis_nl_add_dictionary_word("computer",		"computer",	POS_NOUN);
+	snis_nl_add_dictionary_word("fuel",		"fuel",		POS_NOUN);
+	snis_nl_add_dictionary_word("radiation",	"radiation",	POS_NOUN);
+	snis_nl_add_dictionary_word("wavelength",	"wavelength",	POS_NOUN);
+	snis_nl_add_dictionary_word("charge",		"charge",	POS_NOUN);
+	snis_nl_add_dictionary_word("magnets",		"magnets",	POS_NOUN);
+	snis_nl_add_dictionary_word("gate",		"gate",		POS_NOUN);
+	snis_nl_add_dictionary_word("percent",		"percent",	POS_NOUN);
+	snis_nl_add_dictionary_word("sequence",		"sequence",	POS_NOUN);
+	snis_nl_add_dictionary_word("core",		"core",		POS_NOUN);
+	snis_nl_add_dictionary_word("code",		"code",		POS_NOUN);
+	snis_nl_add_dictionary_word("hull",		"hull",		POS_NOUN);
+	snis_nl_add_dictionary_word("scanner",		"scanner",	POS_NOUN);
+	snis_nl_add_dictionary_word("scanners",		"scanners",	POS_NOUN);
+	snis_nl_add_dictionary_word("detail",		"details",	POS_NOUN);
+	snis_nl_add_dictionary_word("report",		"report",	POS_NOUN);
+	snis_nl_add_dictionary_word("damage",		"damage",	POS_NOUN);
+	snis_nl_add_dictionary_word("course",		"course",	POS_NOUN);
+
+
+	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
+	snis_nl_add_dictionary_word("an",		"an",		POS_ARTICLE);
+	snis_nl_add_dictionary_word("the",		"the",		POS_ARTICLE);
+
+	snis_nl_add_dictionary_word("above",		"above",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("aboard",		"aboard",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("across",		"across",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("after",		"after",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("along",		"along",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("alongside",	"alongside",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("at",		"at",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("atop",		"atop",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("around",		"around",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("before",		"before",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("behind",		"behind",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("beneath",		"beneath",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("below",		"below",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("beside",		"beside",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("besides",		"besides",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("between",		"between",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("by",		"by",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("down",		"down",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("during",		"during",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("except",		"except",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("for",		"for",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("from",		"from",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("in",		"in",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("inside",		"inside",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("of",		"of",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("off",		"off",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("on",		"on",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("onto",		"onto",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("out",		"out",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("outside",		"outside",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("through",		"through",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("throughout",	"throughout",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("to",		"to",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("toward",		"toward",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("under",		"under",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("up",		"up",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("until",		"until",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("with",		"with",		POS_PREPOSITION);
+	snis_nl_add_dictionary_word("within",		"within",	POS_PREPOSITION);
+	snis_nl_add_dictionary_word("without",		"without",	POS_PREPOSITION);
+
+	snis_nl_add_dictionary_word("or",		"or",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word("and",		"and",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word("then",		"then",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word(",",		",",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word(".",		".",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word(";",		";",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word("!",		"!",		POS_SEPARATOR);
+	snis_nl_add_dictionary_word("?",		"?",		POS_SEPARATOR);
+
+	snis_nl_add_dictionary_word("damage",		"damage",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("status",		"status",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("warp",		"warp",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("impulse",		"impulse",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("docking",		"docking",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("star",		"star",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("space",		"space",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("mining",		"mining",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("energy",		"energy",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("main",		"main",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("navigation",	"navigation",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("comms",		"comms",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("engineering",	"engineering",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("science",		"science",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("enemy",		"enemy",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("derelict",		"derelict",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("solar",		"solar",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("nearest",		"nearest",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("closest",		"nearest",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("nearby",		"nearest",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("close",		"nearest",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("up",		"up",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("down",		"down",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("left",		"left",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("right",		"right",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("self",		"self",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("destruct",		"destruct",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("self-destruct",	"self-destruct",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("short",		"short",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("long",		"long",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("range",		"range",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("full",		"maximum",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("max",		"maximum",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("maximum",		"maximum",	POS_ADJECTIVE);
+
+	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
+	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);
+	snis_nl_add_dictionary_word("rapidly",		"quickly",	POS_ADVERB);
+	snis_nl_add_dictionary_word("swiftly",		"quickly",	POS_ADVERB);
+	snis_nl_add_dictionary_word("slowly",		"slowly",	POS_ADVERB);
+
+	snis_nl_add_dictionary_word("it",		"it",		POS_PRONOUN);
+	snis_nl_add_dictionary_word("me",		"me",		POS_PRONOUN);
+	snis_nl_add_dictionary_word("them",		"them",		POS_PRONOUN);
+	snis_nl_add_dictionary_word("all",		"all",		POS_PRONOUN);
+	snis_nl_add_dictionary_word("everything",	"everything",	POS_PRONOUN);
+
+}
+
+static void init_natural_language_system(void)
+{
+	init_synonyms();
+	init_dictionary();
+	snis_nl_add_error_function(natural_language_parse_failure);
+}
+
+/*****************************************************************************************
+ * Here ends the natural language parsing code.
+ *****************************************************************************************/
 
 int main(int argc, char *argv[])
 {
@@ -13180,6 +13411,7 @@ int main(int argc, char *argv[])
 
 	override_asset_dir();
 	set_random_seed();
+	init_natural_language_system();
 
 	char commodity_path[PATH_MAX];
 	sprintf(commodity_path, "%s/%s", asset_dir, "commodities.txt");
