@@ -13255,6 +13255,17 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("route", "course");
 	snis_nl_add_synonym("towards", "toward");
 	snis_nl_add_synonym("tell me about", "describe");
+	snis_nl_add_synonym("energy", "power");
+	snis_nl_add_synonym("manuevering", "maneuvering");
+	snis_nl_add_synonym("cooling", "coolant");
+	snis_nl_add_synonym("throttle", "impulse drive");
+	snis_nl_add_synonym("warp power", "warp drive power");
+	snis_nl_add_synonym("warp coolant", "warp drive coolant");
+	snis_nl_add_synonym("tractor power", "tractor beam power");
+	snis_nl_add_synonym("tractor coolant", "tractor beam coolant");
+	snis_nl_add_synonym("impulse power", "impulse drive power");
+	snis_nl_add_synonym("impulse coolant", "impulse drive coolant");
+	snis_nl_add_synonym("comms", "communications");
 }
 
 static const struct noun_description_entry {
@@ -13474,12 +13485,139 @@ static void nl_set_shields(struct game_client *c, char *word, float fraction)
 	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
 }
 
+static void nl_set_impulse_drive(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.impulse.r1);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_maneuvering_power(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.maneuvering.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_impulse_power(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.impulse.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_warp_power(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.warp.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_sensor_power(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.sensors.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_comms_power(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.comms.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_phaser_power(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.phasers.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_shield_power(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.shields.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_tractor_power(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.tractor.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_warpdrive(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.warp.r1);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_maneuvering_coolant(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.coolant_data.maneuvering.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_impulse_coolant(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.coolant_data.impulse.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_warp_coolant(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.coolant_data.warp.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_sensor_coolant(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.coolant_data.sensors.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_comms_coolant(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.coolant_data.comms.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_phaser_coolant(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.coolant_data.phasers.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_shield_coolant(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.coolant_data.shields.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_tractor_coolant(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.coolant_data.tractor.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
 typedef void (*nl_set_function)(struct game_client *c, char *word, float value);
 static struct settable_thing_entry {
 	char *name;
 	nl_set_function setfn;
 } nl_settable_thing[] = {
 	{ "shields", nl_set_shields, },
+	{ "impulse drive", nl_set_impulse_drive, },
+	{ "warp drive", nl_set_warpdrive, },
+	{ "maneuvering power", nl_set_maneuvering_power, },
+	{ "impulse drive power", nl_set_impulse_power, },
+	{ "warp drive power", nl_set_warp_power, },
+	{ "sensor power", nl_set_sensor_power, },
+	{ "communications power", nl_set_comms_power, },
+	{ "phaser power", nl_set_phaser_power, },
+	{ "shield power", nl_set_shield_power, },
+	{ "tractor beam power", nl_set_tractor_power, },
+
+	{ "maneuvering coolant", nl_set_maneuvering_coolant, },
+	{ "impulse drive coolant", nl_set_impulse_coolant, },
+	{ "warp drive coolant", nl_set_warp_coolant, },
+	{ "sensor coolant", nl_set_sensor_coolant, },
+	{ "communications coolant", nl_set_comms_coolant, },
+	{ "phaser coolant", nl_set_phaser_coolant, },
+	{ "shield coolant", nl_set_shield_coolant, },
+	{ "tractor beam coolant", nl_set_tractor_coolant, },
 };
 
 static void nl_set_npq(void *context, int argc, char *argv[], int pos[],
@@ -13616,8 +13754,6 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("full",		"full",		"n", sorry_dave);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
-	snis_nl_add_dictionary_word("warp drive",	"warp drive",	POS_NOUN);
-	snis_nl_add_dictionary_word("impulse drive",	"impulse drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
 	snis_nl_add_dictionary_word("starbase",		"starbase",	POS_NOUN);
 	snis_nl_add_dictionary_word("base",		"starbase",	POS_NOUN);
@@ -13625,12 +13761,31 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("ship",		"ship",		POS_NOUN);
 	snis_nl_add_dictionary_word("bot",		"bot",		POS_NOUN);
 	snis_nl_add_dictionary_word("shields",		"shields",	POS_NOUN);
-	snis_nl_add_dictionary_word("throttle",		"throttle",	POS_NOUN);
 	snis_nl_add_dictionary_word("factor",		"factor",	POS_NOUN);
-	snis_nl_add_dictionary_word("coolant",		"coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("level",		"level",	POS_NOUN);
-	snis_nl_add_dictionary_word("energy",		"energy",	POS_NOUN);
-	snis_nl_add_dictionary_word("power",		"energy",	POS_NOUN);
+
+	snis_nl_add_dictionary_word("maneuvering power", "maneuvering power",	POS_NOUN);
+	snis_nl_add_dictionary_word("warp drive power", "warp drive power",	POS_NOUN);
+	snis_nl_add_dictionary_word("impulse drive power", "impulse drive power",	POS_NOUN);
+	snis_nl_add_dictionary_word("sensor power", "sensor power",	POS_NOUN);
+	snis_nl_add_dictionary_word("communications power", "communications power",	POS_NOUN);
+	snis_nl_add_dictionary_word("phaser power", "phaser power",	POS_NOUN);
+	snis_nl_add_dictionary_word("shield power", "shield power",	POS_NOUN);
+	snis_nl_add_dictionary_word("tractor beam power", "tractor beam power",	POS_NOUN);
+
+	snis_nl_add_dictionary_word("maneuvering coolant", "maneuvering coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("warp drive coolant", "warp drive coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("impulse drive coolant", "impulse drive coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("sensor coolant", "sensor coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("communications coolant", "communications coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("phaser coolant", "phaser coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("shield coolant", "shield coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("tractor beam coolant", "tractor beam coolant",	POS_NOUN);
+
+	snis_nl_add_dictionary_word("coolant",		"coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("power",		"power",	POS_NOUN);
+	snis_nl_add_dictionary_word("impulse drive",	"impulse drive",	POS_NOUN);
+	snis_nl_add_dictionary_word("warp drive",	"warp drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("asteroid",		"asteroid",	POS_NOUN);
 	snis_nl_add_dictionary_word("nebula",		"nebula",	POS_NOUN);
 	snis_nl_add_dictionary_word("star",		"star",		POS_NOUN);
