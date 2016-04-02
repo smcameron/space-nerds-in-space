@@ -42,6 +42,7 @@ static const char * const part_of_speech[] = {
 	"number",
 	"name",
 	"pronoun",
+	"externalnoun",
 };
 
 #define MAX_SYNONYMS 100
@@ -66,8 +67,11 @@ static struct dictionary_entry {
 		struct snis_nl_adverb_data adverb;
 		struct snis_nl_number_data number;
 		struct snis_nl_pronoun_data pronoun;
+		struct snis_nl_external_noun_data external_noun;
 	};
 } dictionary[MAX_DICTIONARY_ENTRIES + 1] = { { 0 } };
+
+static snis_nl_external_noun_lookup external_lookup = NULL;
 
 #define MAX_MEANINGS 10
 struct nl_token {
@@ -76,7 +80,7 @@ struct nl_token {
 	int meaning[MAX_MEANINGS];
 	int npos; /* number of possible parts of speech */
 	struct snis_nl_number_data number;
-	struct snis_nl_name_data name;
+	struct snis_nl_external_noun_data external_noun;
 };
 
 static char *fixup_punctuation(char *s)
@@ -145,6 +149,7 @@ static void classify_token(struct nl_token *t)
 	int i, j;
 	float x, rc;
 	char c;
+	uint32_t handle;
 
 	if (t->npos >= MAX_MEANINGS)
 		return;
@@ -199,7 +204,17 @@ static void classify_token(struct nl_token *t)
 			return;
 	}
 
-	/* TODO: See if it's an external name */
+	if (external_lookup) {
+		handle = external_lookup(t->word);
+		if (handle != 0xffffffff) {
+			t->pos[t->npos] = POS_EXTERNAL_NOUN;
+			t->meaning[t->npos] = -1;
+			t->external_noun.handle = handle;
+			t->npos++;
+		}
+		if (t->npos >= MAX_MEANINGS)
+			return;
+	}
 }
 
 static void classify_tokens(struct nl_token *t[], int ntokens)
@@ -401,7 +416,7 @@ static void nl_parse_machine_process_token(struct nl_parse_machine **list, struc
 
 	for (i = 0; i < token[p->current_token]->npos; i++) {
 		p_o_s = token[p->current_token]->pos[i]; /* part of speech */
-		if (p_o_s == looking_for_pos) {
+		if (p_o_s == looking_for_pos || (p_o_s == POS_EXTERNAL_NOUN && looking_for_pos == POS_NOUN)) {
 			p->meaning[p->current_token] = i;
 			if (found == 0) {
 				p->syntax_pos++;
@@ -565,6 +580,7 @@ static void do_action(struct nl_parse_machine *p, struct nl_token **token, int n
 			w = 0;
 			argv[w] = t->word;
 			pos[w] = POS_VERB;
+			extra_data[w].number.value = 0.0;
 			de = t->meaning[p->meaning[i]];
 			vf = dictionary[de].verb.fn;
 			w++;
@@ -574,6 +590,10 @@ static void do_action(struct nl_parse_machine *p, struct nl_token **token, int n
 				pos[w] = t->pos[p->meaning[i]];
 				if (pos[w] == POS_NUMBER) {
 					extra_data[w].number.value = t->number.value;
+				} else if (pos[w] == POS_EXTERNAL_NOUN) {
+					extra_data[w].external_noun.handle = t->external_noun.handle;
+				} else {
+					extra_data[w].number.value = 0.0;
 				}
 				w++;
 				argc++;
@@ -749,6 +769,14 @@ void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax,
 void snis_nl_add_dictionary_word(char *word, char *canonical_word, int part_of_speech)
 {
 	generic_add_dictionary_word(word, canonical_word, part_of_speech, NULL, NULL);
+}
+
+void snis_nl_add_external_lookup(snis_nl_external_noun_lookup lookup)
+{
+	if (external_lookup) {
+		fprintf(stderr, "Too many lookup functions added\n");
+	}
+	external_lookup = lookup;
 }
 
 #ifdef TEST_NL
