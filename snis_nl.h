@@ -21,6 +21,8 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include <stdint.h>
+
 #define POS_UNKNOWN		0
 #define POS_NOUN		1
 #define POS_VERB		2
@@ -33,7 +35,72 @@
 #define POS_NAME		9
 #define POS_PRONOUN		10
 
-typedef void (*snis_nl_verb_function)(int argc, char *argv[], int part_of_speech[]);
+union snis_nl_extra_data;
+typedef void (*snis_nl_verb_function)(int argc, char *argv[], int part_of_speech[],
+				union snis_nl_extra_data *extra_data);
+
+struct snis_nl_verb_data {
+	snis_nl_verb_function fn;
+	char *syntax;	/* Syntax of verb, denoted by characters.
+			 * 'n' -- single noun (or pronoun)
+			 * 'l' -- one or more nouns (or pronoun)
+			 * 'p' -- preposition
+			 * 'q' -- quantity, that is to say, a number.
+			 * 'a' -- adjective
+			 *
+			 * For example: "put", as in "put the butter on the bread with the knife"
+			 * has a syntax of "npnpn", while "put" as in "put the coat on",
+			 * has a syntax of "np".
+			 */
+};
+
+struct snis_nl_noun_data {
+	int nothing;
+};
+
+struct snis_nl_article_data {
+	int definite;
+};
+
+struct snis_nl_preposition_data {
+	int nothing;
+};
+
+struct snis_nl_separator_data {
+	int nothing;
+};
+
+struct snis_nl_adjective_data {
+	int nothing;
+};
+
+struct snis_nl_adverb_data {
+	int nothing;
+};
+
+struct snis_nl_number_data {
+	float value;
+};
+
+struct snis_nl_name_data {
+	uint32_t id;
+};
+
+struct snis_nl_pronoun_data {
+	int nothing;
+};
+
+union snis_nl_extra_data {
+		struct snis_nl_noun_data noun;
+		struct snis_nl_verb_data verb;
+		struct snis_nl_article_data article;
+		struct snis_nl_preposition_data preposition;
+		struct snis_nl_separator_data separator;
+		struct snis_nl_adjective_data adjective;
+		struct snis_nl_adverb_data adverb;
+		struct snis_nl_number_data number;
+		struct snis_nl_pronoun_data pronoun;
+};
 
 void snis_nl_add_synonym(char *synonym, char *canonical_word);
 void snis_nl_add_dictionary_word(char *word, char *canonical_word, int part_of_speech);

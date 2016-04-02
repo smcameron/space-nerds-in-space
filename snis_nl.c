@@ -44,57 +44,6 @@ static const char * const part_of_speech[] = {
 	"pronoun",
 };
 
-struct verb_data {
-	snis_nl_verb_function fn;
-	char *syntax;	/* Syntax of verb, denoted by characters.
-			 * 'n' -- single noun (or pronoun)
-			 * 'l' -- one or more nouns (or pronoun)
-			 * 'p' -- preposition
-			 * 'q' -- quantity, that is to say, a number.
-			 * 'a' -- adjective
-			 *
-			 * For example: "put", as in "put the butter on the bread with the knife"
-			 * has a syntax of "npnpn", while "put" as in "put the coat on",
-			 * has a syntax of "np".
-			 */
-};
-
-struct noun_data {
-	int blah;
-};
-
-struct article_data {
-	int definite;
-};
-
-struct preposition_data {
-	int blah;
-};
-
-struct separator_data {
-	int blah;
-};
-
-struct adjective_data {
-	int blah;
-};
-
-struct adverb_data {
-	int blah;
-};
-
-struct number_data {
-	float value;
-};
-
-struct name_data {
-	uint32_t id;
-};
-
-struct pronoun_data {
-	int blah;
-};
-
 #define MAX_SYNONYMS 100
 static int nsynonyms = 0;
 static struct synonym_entry {
@@ -108,15 +57,15 @@ static struct dictionary_entry {
 	char *canonical_word;
 	int p_o_s; /* part of speech */
 	__extension__ union {
-		struct noun_data noun;
-		struct verb_data verb;
-		struct article_data article;
-		struct preposition_data preposition;
-		struct separator_data separator;
-		struct adjective_data adjective;
-		struct adverb_data adverb;
-		struct number_data number;
-		struct pronoun_data pronoun;
+		struct snis_nl_noun_data noun;
+		struct snis_nl_verb_data verb;
+		struct snis_nl_article_data article;
+		struct snis_nl_preposition_data preposition;
+		struct snis_nl_separator_data separator;
+		struct snis_nl_adjective_data adjective;
+		struct snis_nl_adverb_data adverb;
+		struct snis_nl_number_data number;
+		struct snis_nl_pronoun_data pronoun;
 	};
 } dictionary[MAX_DICTIONARY_ENTRIES + 1] = { { 0 } };
 
@@ -126,8 +75,8 @@ struct nl_token {
 	int pos[MAX_MEANINGS];
 	int meaning[MAX_MEANINGS];
 	int npos; /* number of possible parts of speech */
-	struct number_data number;
-	struct name_data name;
+	struct snis_nl_number_data number;
+	struct snis_nl_name_data name;
 };
 
 static char *fixup_punctuation(char *s)
@@ -322,7 +271,7 @@ static char *starting_syntax = "v";
  */
 struct nl_parse_machine {
 	struct nl_parse_machine *next, *prev;
-	char *syntax;				/* expected syntax for this machine, see struct verb_data, above
+	char *syntax;				/* expected syntax for this machine, see struct snis_nl_verb_data, above
 						 * This starts out as "v" (verb), and when a verb is encounted, it
 						 * changes to the syntax for that verb, and the syntax_pos is reset to 0
 						 */
@@ -600,6 +549,7 @@ static void do_action(struct nl_parse_machine *p, struct nl_token **token, int n
 	int argc;
 	char *argv[MAX_WORDS];
 	int pos[MAX_WORDS];
+	union snis_nl_extra_data extra_data[MAX_WORDS] = { { { 0 } } };
 	int i, w = 0, de;
 	snis_nl_verb_function vf = NULL;
 
@@ -608,7 +558,7 @@ static void do_action(struct nl_parse_machine *p, struct nl_token **token, int n
 		struct nl_token *t = token[i];
 		if (t->pos[p->meaning[i]] == POS_VERB) {
 			if (vf != NULL) {
-				vf(argc, argv, pos);
+				vf(argc, argv, pos, extra_data);
 				vf = NULL;
 			}
 			argc = 1;
@@ -622,13 +572,16 @@ static void do_action(struct nl_parse_machine *p, struct nl_token **token, int n
 			if (argc > 0) {
 				argv[w] = t->word;
 				pos[w] = t->pos[p->meaning[i]];
+				if (pos[w] == POS_NUMBER) {
+					extra_data[w].number.value = t->number.value;
+				}
 				w++;
 				argc++;
 			}
 		}
 	}
 	if (vf != NULL) {
-		vf(argc, argv, pos);
+		vf(argc, argv, pos, extra_data);
 		vf = NULL;
 	}
 }
@@ -818,7 +771,8 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("deploy", "launch");
 }
 
-static void generic_verb_action(int argc, char *argv[], int pos[])
+static void generic_verb_action(int argc, char *argv[], int pos[],
+		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	int i;
 
