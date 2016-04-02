@@ -13434,6 +13434,99 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know how to compute that.");
 }
 
+static void nl_set_controllable_byte_value(struct game_client *c, char *word, float fraction, int offset,
+						 bytevalue_limit_function limit)
+{
+	char answer[100];
+	uint8_t *bytevalue;
+	uint8_t new_value;
+
+	if (fraction < 0)
+		fraction = 0.0;
+	if (fraction > 1.0)
+		fraction = 1.0;
+	new_value = (uint8_t) (255.0 * fraction);
+
+	int i;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		sprintf(answer, "Sorry, I can't seem to find the %s, it must be a memory error", word);
+		queue_add_text_to_speech(c, answer);
+		return;
+	}
+
+	sprintf(answer, "setting the %s to %3.0f percent", word, fraction * 100.0);
+	queue_add_text_to_speech(c, answer);
+
+	bytevalue = (uint8_t *) &go[i];
+	bytevalue += offset;
+	new_value = limit(c, new_value);
+	*bytevalue = new_value;
+
+	pthread_mutex_unlock(&universe_mutex);
+}
+
+static void nl_set_shields(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.shields.r1);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+typedef void (*nl_set_function)(struct game_client *c, char *word, float value);
+static struct settable_thing_entry {
+	char *name;
+	nl_set_function setfn;
+} nl_settable_thing[] = {
+	{ "shields", nl_set_shields, },
+};
+
+static void nl_set_npq(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, noun, prep, value;
+	float fraction;
+	nl_set_function setit = NULL;
+	char answer[100];
+
+	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (noun < 0)
+		goto no_understand;
+
+	for (i = 0; i < ARRAYSIZE(nl_settable_thing); i++) {
+		if (strcasecmp(nl_settable_thing[i].name, argv[noun]) == 0) {
+			setit = nl_settable_thing[i].setfn;
+			break;
+		}
+	}
+	if (!setit) {
+		sprintf(answer, "Sorry, I do not know how to set the %s", argv[noun]);
+		queue_add_text_to_speech(c, answer);
+		return;
+	}
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, noun + 1);
+	if (prep < 0)
+		goto no_understand2;
+	value = nl_find_next_word(argc, pos, POS_NUMBER, prep + 1);
+	if (value < 0)
+		goto no_understand2;
+	fraction = extra_data[value].number.value;
+	if (fraction > 1.0 && fraction <= 100.0)
+		fraction = fraction / 100.0;
+	setit(c, argv[noun], fraction);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not know how to set that.");
+	return;
+no_understand2:
+	sprintf(answer, "Sorry, I do not understand how you want me to set the %s", argv[noun]);
+	queue_add_text_to_speech(c, answer);
+	return;
+}
+
 static void sorry_dave(void *context, int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
@@ -13498,7 +13591,7 @@ static void init_dictionary(void)
 {
 	snis_nl_add_dictionary_verb("describe",		"describe",	"n", nl_describe);
 	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn", sorry_dave);
-	snis_nl_add_dictionary_verb("set",		"set",		"npq", sorry_dave);
+	snis_nl_add_dictionary_verb("set",		"set",		"npq", nl_set_npq);
 	snis_nl_add_dictionary_verb("set",		"set",		"npa", sorry_dave);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"npq", sorry_dave);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"n", sorry_dave);
