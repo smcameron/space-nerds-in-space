@@ -106,25 +106,11 @@ struct pronoun_data {
 	int blah;
 };
 
+#define MAX_SYNONYMS 100
+static int nsynonyms = 0;
 static struct synonym_entry {
 	char *syn, *canonical;
-} synonym[] = {
-	{ "cut",	"lower" },
-	{ "decrease",	"lower" },
-	{ "boost",	"raise" },
-	{ "increase",	"raise" },
-	{ "calculate",	"compute" },
-	{ "figure",	"compute" },
-	{ "activate",	"engage", },
-	{ "actuate",	"engage", },
-	{ "start",	"engage", },
-	{ "energize",	"engage", },
-	{ "deactivate",	"disengage", },
-	{ "deenergize",	"disengage", },
-	{ "stop",	"disengage", },
-	{ "shutdown",	"disengage", },
-	{ "deploy",	"launch", },
-};
+} synonym[MAX_SYNONYMS + 1] = { { 0 } }; 
 
 static struct dictionary_entry {
 	char *word;
@@ -919,11 +905,42 @@ void snis_nl_parse_natural_language_request(char *txt)
 	free(original);
 }
 
+void snis_nl_add_synonym(char *synonym_word, char *canonical_word)
+{
+	if (nsynonyms >= MAX_SYNONYMS) {
+		fprintf(stderr, "Too many synonyms, discarding '%s/%s'\n", synonym_word, canonical_word);
+		return;
+	}
+	synonym[nsynonyms].syn = strdup(synonym_word);
+	synonym[nsynonyms].canonical = strdup(canonical_word);
+	nsynonyms++;
+}
+
 #ifdef TEST_NL
+static void init_synonyms(void)
+{
+	snis_nl_add_synonym("cut", "lower");
+	snis_nl_add_synonym("decrease", "lower");
+	snis_nl_add_synonym("boost", "raise");
+	snis_nl_add_synonym("increase", "raise");
+	snis_nl_add_synonym("calculate", "compute");
+	snis_nl_add_synonym("figure", "compute");
+	snis_nl_add_synonym("activate", "engage");
+	snis_nl_add_synonym("actuate", "engage");
+	snis_nl_add_synonym("start", "engage");
+	snis_nl_add_synonym("energize", "engage");
+	snis_nl_add_synonym("deactivate", "disengage");
+	snis_nl_add_synonym("deenergize", "disengage");
+	snis_nl_add_synonym("stop", "disengage");
+	snis_nl_add_synonym("shutdown", "disengage");
+	snis_nl_add_synonym("deploy", "launch");
+}
 
 int main(int argc, char *argv[])
 {
 	int i;
+
+	init_synonyms();
 
 	for (i = 1; i < argc; i++)
 		snis_nl_parse_natural_language_request(argv[i]);
