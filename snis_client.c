@@ -9128,6 +9128,19 @@ static void send_text_to_speech_packet_to_server(char *msg)
 	wakeup_gameserver_writer();
 }
 
+static void send_natural_language_request_to_server(char *msg)
+{
+	struct packed_buffer *pb;
+	uint8_t len = strlen(msg);
+
+	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + len);
+	packed_buffer_append(pb, "bbb", OPCODE_NATURAL_LANGUAGE_REQUEST,
+				OPCODE_NL_SUBCOMMAND_TEXT_REQUEST, len);
+	packed_buffer_append_raw(pb, msg, (unsigned short) len);
+	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
+	wakeup_gameserver_writer();
+}
+
 static void send_enscript_packet_to_server(char *filename)
 {
 	struct packed_buffer *pb;
@@ -11452,6 +11465,7 @@ static char *help_text[] = {
 	"  * COMMANDS ARE PRECEDED BY FORWARD SLASH ->  /\n"
 	"  * /help\n"
 	"  * /channel channel-number - change current channel\n"
+	"  * /computer <english request for computer>\n"
 	"  * /hail ship-name - hail ship on current channel\n"
 	"\nPRESS ESC TO EXIT HELP\n",
 

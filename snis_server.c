@@ -7883,6 +7883,7 @@ static void meta_comms_help(char *name, struct game_client *c, char *txt)
 		"  COMMANDS",
 		"  * COMMANDS ARE PRECEDED BY FORWARD SLASH ->  /",
 		"  * /help",
+		"  * /computer <english request for computer>",
 		"  * /channel channel-number - change current channel",
 		"  * /eject cargo-bay-number - eject cargo",
 		"  * /hail ship-name - hail ship or starbase on current channel",
@@ -9151,6 +9152,24 @@ static void send_to_npcbot(int bridge, char *name, char *msg)
 	return;
 }
 
+static void perform_natural_language_request(struct game_client *c, char *txt);
+static void meta_comms_computer(char *name, struct game_client *c, char *txt)
+{
+	char *duptxt;
+	char *x;
+	int len;
+
+	printf("meta_comms_computer, txt = '%s'\n", txt);
+	duptxt = strdup(txt);
+	len = strlen(duptxt);
+
+	if (strncmp(duptxt, "/computer ", 10) == 0 && len > 10) {
+		x = &duptxt[10];
+	}
+	perform_natural_language_request(c, x);
+	free(duptxt);
+}
+
 static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 {
 #define MAX_SHIPS_HAILABLE 10
@@ -9265,6 +9284,7 @@ static const struct meta_comms_data {
 	{ "/eject", meta_comms_eject },
 	{ "/about", meta_comms_about },
 	{ "/help", meta_comms_help },
+	{ "/computer", meta_comms_computer },
 };
 
 static void process_meta_comms_packet(char *name, struct game_client *c, char *txt)
@@ -9315,7 +9335,6 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 	return 0;
 }
 
-static void perform_natural_language_request(struct game_client *c, char *txt);
 static int process_natural_language_request(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct comms_transmission_packet)];
@@ -13164,6 +13183,7 @@ static struct docking_port_attachment_point **read_docking_port_info(
 static void perform_natural_language_request(struct game_client *c, char *txt)
 {
 	lowercase(txt);
+	printf("%s\n", txt);
 	snis_nl_parse_natural_language_request(c, txt);
 }
 
