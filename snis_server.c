@@ -13248,6 +13248,9 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("stop", "disengage");
 	snis_nl_add_synonym("shutdown", "disengage");
 	snis_nl_add_synonym("deploy", "launch");
+	snis_nl_add_synonym("path", "course");
+	snis_nl_add_synonym("route", "course");
+	snis_nl_add_synonym("towards", "toward");
 }
 
 static const struct noun_description_entry {
@@ -13343,6 +13346,77 @@ static void nl_describe(void *context, int argc, char *argv[], int pos[],
 	queue_add_text_to_speech(c, "I do not know anything about that.");
 }
 
+static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	int i, first_noun, second_noun;
+	struct game_client *c = context;
+	struct snis_entity *us, *dest;
+	union vec3 direction;
+	char directions[200];
+	double heading, mark;
+	char *name;
+
+	/* Find the first noun... it should be "course". */
+
+	first_noun = -1;
+	for (i = 0; i < argc; i++) {
+		if (pos[i] == POS_NOUN) {
+			printf("first noun is '%s'\n", argv[i]);
+			if (strcasecmp(argv[i], "course") != 0)
+				goto no_understand;
+			first_noun = i;
+		}
+	}
+	if (first_noun < 0) /* didn't find first noun... */
+		goto no_understand;
+
+	/* TODO:  check the preposition here. "away", "from", "around", change the meaning.
+	 * for now, assume "to", "toward", etc.
+	 */
+
+	/* Find the second noun, it should be a place... */
+	second_noun = -1;
+	for (i = first_noun + 1; i < argc; i++) {
+		if (pos[i] == POS_EXTERNAL_NOUN) {
+			second_noun = i;
+			break;
+		}
+	}
+	if (second_noun < 0)
+		goto no_understand;
+
+	i = lookup_by_id(extra_data[second_noun].external_noun.handle);
+	if (i < 0) {
+		queue_add_text_to_speech(c, "Sorry, I cannot compute a course to an unknown location.");
+		return;
+	}
+	dest = &go[i];
+
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		queue_add_text_to_speech(c, "Sorry, I do not seem to know our current location.");
+		return;
+	}
+	us = &go[i];
+
+	/* Compute course... */
+	direction.v.x = dest->x - us->x;
+	direction.v.y = dest->y - us->y;
+	direction.v.z = dest->z - us->z;
+	vec3_to_heading_mark(&direction, NULL, &heading, &mark);
+	heading = heading * 180.0 / M_PI;
+	heading = 360 - heading + 90; /* why?  why do I have to do this? */
+	mark = mark * 180.0 / M_PI;
+	sprintf(directions, "Course to %s calculated.  Destination lies at bearing %3.0lf, mark %3.0lf",
+				argv[second_noun], heading, mark);
+	queue_add_text_to_speech(c, directions);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not know how to compute that.");
+}
+
 static void sorry_dave(void *context, int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
@@ -13371,7 +13445,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", sorry_dave);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"aq", sorry_dave);
-	snis_nl_add_dictionary_verb("compute",		"compute",	"npn", sorry_dave);
+	snis_nl_add_dictionary_verb("compute",		"compute",	"npn", nl_compute_npn);
 	snis_nl_add_dictionary_verb("report",		"report",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("yaw",		"yaw",		"aq", sorry_dave);
 	snis_nl_add_dictionary_verb("pitch",		"pitch",	"aq", sorry_dave);
