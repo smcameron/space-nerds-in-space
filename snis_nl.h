@@ -33,9 +33,11 @@
 #define POS_NAME		9
 #define POS_PRONOUN		10
 
+typedef void (*snis_nl_verb_function)(int argc, char *argv[], int part_of_speech[]);
+
 void snis_nl_add_synonym(char *synonym, char *canonical_word);
 void snis_nl_add_dictionary_word(char *word, char *canonical_word, int part_of_speech);
-void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax);
+void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax, snis_nl_verb_function action);
 void snis_nl_parse_natural_language_request(char *text);
 
 #endif

@@ -45,6 +45,7 @@ static const char * const part_of_speech[] = {
 };
 
 struct verb_data {
+	snis_nl_verb_function fn;
 	char *syntax;	/* Syntax of verb, denoted by characters.
 			 * 'n' -- single noun (or pronoun)
 			 * 'l' -- one or more nouns (or pronoun)
@@ -594,6 +595,44 @@ static int nl_parse_machines_still_running(struct nl_parse_machine **list)
 	return 0;
 }
 
+static void do_action(struct nl_parse_machine *p, struct nl_token **token, int ntokens)
+{
+	int argc;
+	char *argv[MAX_WORDS];
+	int pos[MAX_WORDS];
+	int i, w = 0, de;
+	snis_nl_verb_function vf = NULL;
+
+	argc = 0;
+	for (i = 0; i < ntokens; i++) {
+		struct nl_token *t = token[i];
+		if (t->pos[p->meaning[i]] == POS_VERB) {
+			if (vf != NULL) {
+				vf(argc, argv, pos);
+				vf = NULL;
+			}
+			argc = 1;
+			w = 0;
+			argv[w] = t->word;
+			pos[w] = POS_VERB;
+			de = t->meaning[p->meaning[i]];
+			vf = dictionary[de].verb.fn;
+			w++;
+		} else {
+			if (argc > 0) {
+				argv[w] = t->word;
+				pos[w] = t->pos[p->meaning[i]];
+				w++;
+				argc++;
+			}
+		}
+	}
+	if (vf != NULL) {
+		vf(argc, argv, pos);
+		vf = NULL;
+	}
+}
+
 static void nl_parse_machine_print(struct nl_parse_machine *p, struct nl_token **token, int ntokens, int number)
 {
 	int i;
@@ -696,6 +735,7 @@ static void extract_meaning(char *original_text, struct nl_token *token[], int n
 	} else {
 		printf("Failure to comprehend '%s'\n", original_text);
 	}
+	do_action(p, token, ntokens);
 }
 
 void snis_nl_parse_natural_language_request(char *txt)
@@ -726,7 +766,8 @@ void snis_nl_add_synonym(char *synonym_word, char *canonical_word)
 	nsynonyms++;
 }
 
-static void generic_add_dictionary_word(char *word, char *canonical_word, int part_of_speech, char *syntax)
+static void generic_add_dictionary_word(char *word, char *canonical_word, int part_of_speech,
+						char *syntax, snis_nl_verb_function action)
 {
 	struct dictionary_entry *de;
 
@@ -740,19 +781,21 @@ static void generic_add_dictionary_word(char *word, char *canonical_word, int pa
 	de->word = strdup(word);
 	de->canonical_word = strdup(canonical_word);
 	de->p_o_s = part_of_speech;
-	if (de->p_o_s == POS_VERB)
+	if (de->p_o_s == POS_VERB) {
 		de->verb.syntax = syntax;
+		de->verb.fn = action;
+	}
 	ndictionary_entries++;
 }
 
-void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax)
+void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax, snis_nl_verb_function action)
 {
-	generic_add_dictionary_word(word, canonical_word, POS_VERB, syntax);
+	generic_add_dictionary_word(word, canonical_word, POS_VERB, syntax, action);
 }
 
 void snis_nl_add_dictionary_word(char *word, char *canonical_word, int part_of_speech)
 {
-	generic_add_dictionary_word(word, canonical_word, part_of_speech, NULL);
+	generic_add_dictionary_word(word, canonical_word, part_of_speech, NULL, NULL);
 }
 
 #ifdef TEST_NL
@@ -775,32 +818,43 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("deploy", "launch");
 }
 
+static void generic_verb_action(int argc, char *argv[], int pos[])
+{
+	int i;
+
+	printf("generic_verb_action: ");
+	for (i = 0; i < argc; i++) {
+		printf("%s(%s) ", argv[i], part_of_speech[pos[i]]);
+	}
+	printf("\n");
+}
+
 static void init_dictionary(void)
 {
-	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn");
-	snis_nl_add_dictionary_verb("set",		"set",		"npq");
-	snis_nl_add_dictionary_verb("set",		"set",		"npa");
-	snis_nl_add_dictionary_verb("lower",		"lower",	"npq");
-	snis_nl_add_dictionary_verb("lower",		"lower",	"n");
-	snis_nl_add_dictionary_verb("raise",		"raise",	"nq");
-	snis_nl_add_dictionary_verb("raise",		"raise",	"npq");
-	snis_nl_add_dictionary_verb("raise",		"raise",	"n");
-	snis_nl_add_dictionary_verb("engage",		"engage",	"n");
-	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n");
-	snis_nl_add_dictionary_verb("turn",		"turn",		"pn");
-	snis_nl_add_dictionary_verb("turn",		"turn",		"aq");
-	snis_nl_add_dictionary_verb("compute",		"compute",	"npn");
-	snis_nl_add_dictionary_verb("report",		"report",	"n");
-	snis_nl_add_dictionary_verb("yaw",		"yaw",		"aq");
-	snis_nl_add_dictionary_verb("pitch",		"pitch",	"aq");
-	snis_nl_add_dictionary_verb("roll",		"roll",		"aq");
-	snis_nl_add_dictionary_verb("zoom",		"zoom",		"p");
-	snis_nl_add_dictionary_verb("zoom",		"zoom",		"pq");
-	snis_nl_add_dictionary_verb("shut",		"shut",		"an");
-	snis_nl_add_dictionary_verb("shut",		"shut",		"na");
-	snis_nl_add_dictionary_verb("launch",		"launch",	"n");
-	snis_nl_add_dictionary_verb("eject",		"eject",	"n");
-	snis_nl_add_dictionary_verb("full",		"full",		"n");
+	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn", generic_verb_action);
+	snis_nl_add_dictionary_verb("set",		"set",		"npq", generic_verb_action);
+	snis_nl_add_dictionary_verb("set",		"set",		"npa", generic_verb_action);
+	snis_nl_add_dictionary_verb("lower",		"lower",	"npq", generic_verb_action);
+	snis_nl_add_dictionary_verb("lower",		"lower",	"n", generic_verb_action);
+	snis_nl_add_dictionary_verb("raise",		"raise",	"nq", generic_verb_action);
+	snis_nl_add_dictionary_verb("raise",		"raise",	"npq", generic_verb_action);
+	snis_nl_add_dictionary_verb("raise",		"raise",	"n", generic_verb_action);
+	snis_nl_add_dictionary_verb("engage",		"engage",	"n", generic_verb_action);
+	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", generic_verb_action);
+	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", generic_verb_action);
+	snis_nl_add_dictionary_verb("turn",		"turn",		"aq", generic_verb_action);
+	snis_nl_add_dictionary_verb("compute",		"compute",	"npn", generic_verb_action);
+	snis_nl_add_dictionary_verb("report",		"report",	"n", generic_verb_action);
+	snis_nl_add_dictionary_verb("yaw",		"yaw",		"aq", generic_verb_action);
+	snis_nl_add_dictionary_verb("pitch",		"pitch",	"aq", generic_verb_action);
+	snis_nl_add_dictionary_verb("roll",		"roll",		"aq", generic_verb_action);
+	snis_nl_add_dictionary_verb("zoom",		"zoom",		"p", generic_verb_action);
+	snis_nl_add_dictionary_verb("zoom",		"zoom",		"pq", generic_verb_action);
+	snis_nl_add_dictionary_verb("shut",		"shut",		"an", generic_verb_action);
+	snis_nl_add_dictionary_verb("shut",		"shut",		"na", generic_verb_action);
+	snis_nl_add_dictionary_verb("launch",		"launch",	"n", generic_verb_action);
+	snis_nl_add_dictionary_verb("eject",		"eject",	"n", generic_verb_action);
+	snis_nl_add_dictionary_verb("full",		"full",		"n", generic_verb_action);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
