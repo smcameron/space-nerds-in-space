@@ -13403,14 +13403,25 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 	char directions[200];
 	double heading, mark;
 	char *name;
+	int calculate_course = 0;
+	int calculate_distance = 0;
+	double distance;
 
-	/* Find the first noun... it should be "course". */
+	/* Find the first noun... it should be "course", or "distance". */
 
 	first_noun = -1;
 	first_noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
 	if (first_noun < 0) /* didn't find first noun... */
 		goto no_understand;
-	if (strcasecmp(argv[first_noun], "course") != 0)
+
+	if (strcasecmp(argv[first_noun], "course") == 0)
+		calculate_course = 1;
+	else if (strcasecmp(argv[first_noun], "distance") != 0)
+		calculate_distance = 1;
+
+	if (!calculate_course && !calculate_distance)
+		goto no_understand;
+	if (calculate_course && calculate_distance)
 		goto no_understand;
 
 	/* TODO:  check the preposition here. "away", "from", "around", change the meaning.
@@ -13424,7 +13435,10 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 
 	i = lookup_by_id(extra_data[second_noun].external_noun.handle);
 	if (i < 0) {
-		queue_add_text_to_speech(c, "Sorry, I cannot compute a course to an unknown location.");
+		if (calculate_course)
+			queue_add_text_to_speech(c, "Sorry, I cannot compute a course to an unknown location.");
+		else if (calculate_distance)
+			queue_add_text_to_speech(c, "Sorry, I cannot compute the distance to an unknown location.");
 		return;
 	}
 	dest = &go[i];
@@ -13440,12 +13454,16 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 	direction.v.x = dest->x - us->x;
 	direction.v.y = dest->y - us->y;
 	direction.v.z = dest->z - us->z;
+	distance = vec3_magnitude(&direction);
 	vec3_to_heading_mark(&direction, NULL, &heading, &mark);
 	heading = heading * 180.0 / M_PI;
 	heading = 360 - heading + 90; /* why?  why do I have to do this? */
 	mark = mark * 180.0 / M_PI;
-	sprintf(directions, "Course to %s calculated.  Destination lies at bearing %3.0lf, mark %3.0lf",
-				argv[second_noun], heading, mark);
+	if (calculate_course)
+		sprintf(directions, "Course to %s calculated.  Destination lies at bearing %3.0lf, mark %3.0lf",
+					argv[second_noun], heading, mark);
+	if (calculate_distance)
+		sprintf(directions, "The distance to %s is %.0lf clicks", argv[second_noun], distance);
 	queue_add_text_to_speech(c, directions);
 	return;
 
@@ -13830,6 +13848,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("report",		"report",	POS_NOUN);
 	snis_nl_add_dictionary_word("damage",		"damage",	POS_NOUN);
 	snis_nl_add_dictionary_word("course",		"course",	POS_NOUN);
+	snis_nl_add_dictionary_word("distance",		"distance",	POS_NOUN);
 
 
 	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
