@@ -13318,7 +13318,9 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 {
 	int i;
 	char description[254];
+	char extradescription[40];
 	static struct mtwist_state *mt = NULL;
+	int planet;
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(id);
@@ -13346,9 +13348,15 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 		queue_add_text_to_speech(c, description);
 		return;
 	case OBJTYPE_SHIP2:
+		planet = lookup_by_id(go[i].tsd.ship.home_planet);
 		pthread_mutex_unlock(&universe_mutex);
-		sprintf(description, "%s is a %s class ship", go[i].sdata.name,
-				ship_type[go[i].sdata.subclass].class);
+		if (planet >= 0)
+			sprintf(extradescription, " originating from the planet %s",
+				go[planet].sdata.name);
+		else
+			strcpy(extradescription, " of unknown origin");
+		sprintf(description, "%s is a %s class ship %s", go[i].sdata.name,
+				ship_type[go[i].tsd.ship.shiptype].class, extradescription);
 		queue_add_text_to_speech(c, description);
 		return;
 	case OBJTYPE_SHIP1:
