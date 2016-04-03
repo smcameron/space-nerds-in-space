@@ -10169,6 +10169,12 @@ static int process_mainscreen_view_mode(struct game_client *c)
 	return 0;
 }
 
+static void set_red_alert_mode(struct game_client *c, unsigned char new_alert_mode)
+{
+	send_packet_to_all_clients_on_a_bridge(c->shipid,
+			packed_buffer_new("bb", OPCODE_REQUEST_REDALERT, new_alert_mode), ROLE_ALL);
+}
+
 static int process_request_redalert(struct game_client *c)
 {
 	int rc;
@@ -10178,8 +10184,7 @@ static int process_request_redalert(struct game_client *c)
 	rc = read_and_unpack_buffer(c, buffer, "b", &new_alert_mode);
 	if (rc)
 		return rc;
-	send_packet_to_all_clients_on_a_bridge(c->shipid,
-			packed_buffer_new("bb", OPCODE_REQUEST_REDALERT, new_alert_mode), ROLE_ALL);
+	set_red_alert_mode(c, new_alert_mode);
 	return 0;
 }
 
@@ -13278,6 +13283,7 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("energize", "engage");
 	snis_nl_add_synonym("deactivate", "disengage");
 	snis_nl_add_synonym("deenergize", "disengage");
+	snis_nl_add_synonym("disable", "disengage");
 	snis_nl_add_synonym("stop", "disengage");
 	snis_nl_add_synonym("shutdown", "disengage");
 	snis_nl_add_synonym("deploy", "launch");
@@ -13763,8 +13769,14 @@ static void nl_disengage_n(void *context, int argc, char *argv[], int pos[],
 				queue_add_text_to_speech(c, "The tractor beam is already disengaged");
 			return;
 		} else {
-			pthread_mutex_unlock(&universe_mutex);
-			goto no_understand;
+			if (strcasecmp("red alert", argv[device]) == 0) {
+				pthread_mutex_unlock(&universe_mutex);
+				set_red_alert_mode(c, 0);
+				return;
+			} else {
+				pthread_mutex_unlock(&universe_mutex);
+				goto no_understand;
+			}
 		}
 	}
 
@@ -13816,6 +13828,10 @@ static void nl_engage_n(void *context, int argc, char *argv[], int pos[],
 		pthread_mutex_unlock(&universe_mutex);
 		turn_on_tractor_beam(c, &go[i], 0xffffffff, 0);
 		return;
+	} else if (strcasecmp("red alert", argv[device]) == 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		set_red_alert_mode(c, 1);
+		return;
 	} else {
 		pthread_mutex_unlock(&universe_mutex);
 		goto no_understand;
@@ -13865,6 +13881,45 @@ static void nl_engage_npn(void *context, int argc, char *argv[], int pos[],
 
 no_understand:
 	queue_add_text_to_speech(c, "Sorry, I am unfamiliar with the way you are using the word engage");
+}
+
+static void nl_red_alert(void *context,
+			__attribute__((unused)) int argc,
+			__attribute__((unused)) char *argv[], int pos[],
+			__attribute__((unused)) union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	unsigned char new_alert_mode = 1;
+	set_red_alert_mode(c, new_alert_mode);
+}
+
+static void nl_red_alert_p(void *context, int argc, char *argv[], int pos[],
+			__attribute__((unused)) union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	unsigned char new_alert_mode = 0;
+	char reply[100];
+	int prep;
+
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
+	if (prep < 0)
+		goto no_understand; /* Should not get here, there really should be a preposition. */
+	if (strcasecmp(argv[prep], "on") == 0) {
+		new_alert_mode = 1;
+	} else {
+		if (strcasecmp(argv[prep], "off") == 0) {
+			new_alert_mode = 0;
+		} else {
+			sprintf(reply, "Sorry, I do not know what red alert %s means.", argv[prep]);
+			queue_add_text_to_speech(c, reply);
+			return;
+		}
+	}
+	set_red_alert_mode(c, new_alert_mode);
+
+no_understand:
+	sprintf(reply, "Did you want red alert on or off?  I seem to have missed the preposition.");
+	return;
 }
 
 struct damage_report_entry {
@@ -14034,6 +14089,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("launch",		"launch",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("eject",		"eject",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("full",		"full",		"n", sorry_dave);
+	snis_nl_add_dictionary_verb("red alert",	"red alert",	"", nl_red_alert);
+	snis_nl_add_dictionary_verb("red alert",	"red alert",	"p", nl_red_alert_p);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
@@ -14107,6 +14164,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("damage",		"damage",	POS_NOUN);
 	snis_nl_add_dictionary_word("course",		"course",	POS_NOUN);
 	snis_nl_add_dictionary_word("distance",		"distance",	POS_NOUN);
+	snis_nl_add_dictionary_word("red alert",	"red alert",	POS_NOUN);
 
 
 	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
