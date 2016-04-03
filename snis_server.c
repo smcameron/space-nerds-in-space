@@ -13922,6 +13922,56 @@ no_understand:
 	return;
 }
 
+static void nl_onscreen_verb_pn(void *context, int argc, char *argv[], int pos[],
+			__attribute__((unused)) union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int verb, prep, noun;
+	int new_displaymode = 255;
+	char reply[100];
+
+	verb = nl_find_next_word(argc, pos, POS_VERB, 0);
+	if (verb < 0)
+		goto no_understand;
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
+	if (prep < 0)
+		goto no_understand;
+	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (noun < 0)
+		goto no_understand;
+	if (strcasecmp(argv[verb], "navigation") == 0)
+		new_displaymode = DISPLAYMODE_NAVIGATION;
+	else if (strcasecmp(argv[verb], "main view") == 0)
+		new_displaymode = DISPLAYMODE_MAINSCREEN;
+	else if (strcasecmp(argv[verb], "weapons") == 0)
+		new_displaymode = DISPLAYMODE_WEAPONS;
+	else if (strcasecmp(argv[verb], "engineering") == 0)
+		new_displaymode = DISPLAYMODE_ENGINEERING;
+	else if (strcasecmp(argv[verb], "science") == 0)
+		new_displaymode = DISPLAYMODE_SCIENCE;
+	else if (strcasecmp(argv[verb], "communications") == 0)
+		new_displaymode = DISPLAYMODE_COMMS;
+	else
+		goto no_understand;
+
+	if (strcasecmp(argv[prep], "on") != 0)
+		goto no_understand;
+
+	if (strcasecmp(argv[noun], "screen") != 0)
+		goto no_understand;
+
+	sprintf(reply, "Main screen displaying %s", argv[verb]);
+	queue_add_text_to_speech(c, reply);
+	send_packet_to_all_clients_on_a_bridge(c->shipid,
+			packed_buffer_new("bb", OPCODE_ROLE_ONSCREEN, new_displaymode),
+			ROLE_MAIN);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "I do not understand your request.");
+	return;
+}
+
 struct damage_report_entry {
 	char system[100];
 	int percent;
@@ -14091,6 +14141,12 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("full",		"full",		"n", sorry_dave);
 	snis_nl_add_dictionary_verb("red alert",	"red alert",	"", nl_red_alert);
 	snis_nl_add_dictionary_verb("red alert",	"red alert",	"p", nl_red_alert_p);
+	snis_nl_add_dictionary_verb("main view",	"main view",	"pn", nl_onscreen_verb_pn);
+	snis_nl_add_dictionary_verb("navigation",	"navigation",	"pn", nl_onscreen_verb_pn);
+	snis_nl_add_dictionary_verb("weapons",		"weapons",	"pn", nl_onscreen_verb_pn);
+	snis_nl_add_dictionary_verb("engineering",	"engineering",	"pn", nl_onscreen_verb_pn);
+	snis_nl_add_dictionary_verb("science",		"science",	"pn", nl_onscreen_verb_pn);
+	snis_nl_add_dictionary_verb("communications",	"communications", "pn", nl_onscreen_verb_pn);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
@@ -14142,7 +14198,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("thrusters",	"thrusters",	POS_NOUN);
 	snis_nl_add_dictionary_word("sensor",		"sensors",	POS_NOUN);
 	snis_nl_add_dictionary_word("science",		"science",	POS_NOUN);
-	snis_nl_add_dictionary_word("comms",		"comms",	POS_NOUN);
+	snis_nl_add_dictionary_word("communications",	"communications", POS_NOUN);
 	snis_nl_add_dictionary_word("enemy",		"enemy",	POS_NOUN);
 	snis_nl_add_dictionary_word("derelict",		"derelict",	POS_NOUN);
 	snis_nl_add_dictionary_word("computer",		"computer",	POS_NOUN);
