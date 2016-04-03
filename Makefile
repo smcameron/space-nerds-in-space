@@ -774,7 +774,7 @@ snis_nl.o:	snis_nl.c snis_nl.h Makefile
 	$(Q)$(COMPILE)
 
 snis_nl:	snis_nl.o string-utils.o
-	$(CC) -DTEST_NL -o snis_nl string-utils.o snis_nl.c
+	$(CC) -g -DTEST_NL -o snis_nl string-utils.o snis_nl.c
 
 ${SSGL}:
 	(cd ssgl ; ${MAKE} )

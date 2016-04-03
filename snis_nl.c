@@ -279,6 +279,8 @@ static void classify_tokens(void *context, struct nl_token *t[], int ntokens)
 static void print_token_instance(struct nl_token *t, int i)
 {
 	printf("%s[%d]:", t->word, i);
+	if (i < 0)
+		return;
 	switch (t->pos[i]) {
 	case POS_NUMBER:
 		printf(" (%s: %f)\n", part_of_speech[t->pos[i]], t->number.value);
@@ -472,6 +474,10 @@ static void nl_parse_machine_process_token(struct nl_parse_machine **list, struc
 			if (found == 0) {
 				p->syntax_pos++;
 				p->current_token++;
+				if (p->current_token >= ntokens && p->syntax[p->syntax_pos] != '\0') {
+					p->state = NL_STATE_FAILED;
+					break;
+				}
 			} else {
 				new_parse_machine = malloc(sizeof(*new_parse_machine));
 				nl_parse_machine_init(new_parse_machine, p->syntax,
@@ -486,6 +492,10 @@ static void nl_parse_machine_process_token(struct nl_parse_machine **list, struc
 				p->meaning[p->current_token] = i;
 				if (found == 0) {
 					p->current_token++;
+					if (p->current_token >= ntokens) {
+						p->state = NL_STATE_FAILED;
+						break;
+					}
 				} else {
 					new_parse_machine = malloc(sizeof(*new_parse_machine));
 					nl_parse_machine_init(new_parse_machine, p->syntax,
@@ -618,9 +628,13 @@ static void do_action(void *context, struct nl_parse_machine *p, struct nl_token
 	union snis_nl_extra_data extra_data[MAX_WORDS] = { { { 0 } } };
 	int i, w = 0, de;
 	snis_nl_verb_function vf = NULL;
+	int limit = ntokens;
+
+	if (p->current_token < ntokens)
+		limit = p->current_token;
 
 	argc = 0;
-	for (i = 0; i < ntokens; i++) {
+	for (i = 0; i < limit; i++) {
 		struct nl_token *t = token[i];
 		if (t->pos[p->meaning[i]] == POS_VERB) {
 			if (vf != NULL) {
