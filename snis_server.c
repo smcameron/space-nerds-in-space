@@ -5717,6 +5717,7 @@ static int add_ship(int faction, int auto_respawn)
 	go[i].tsd.ship.nai_entries = 0;
 	memset(go[i].tsd.ship.ai, 0, sizeof(go[i].tsd.ship.ai));
 	go[i].tsd.ship.lifeform_count = ship_type[go[i].tsd.ship.shiptype].crew_max;
+	go[i].tsd.ship.tractor_beam = 0xffffffff; /* turn off tractor beam */
 	memset(&go[i].tsd.ship.damage, 0, sizeof(go[i].tsd.ship.damage));
 	memset(&go[i].tsd.ship.power_data, 0, sizeof(go[i].tsd.ship.power_data));
 	go[i].tsd.ship.braking_factor = 1.0f;
@@ -10988,38 +10989,44 @@ laserfail:
 #endif
 }
 
-static void turn_off_tractorbeam(struct snis_entity *ship)
+static int turn_off_tractorbeam(struct snis_entity *ship)
 {
 	int i;
 	struct snis_entity *tb;
 
 	/* universe lock must be held already. */
+	if (ship->tsd.ship.tractor_beam == (uint32_t) 0xffffffff)
+		return 0;
 	i = lookup_by_id(ship->tsd.ship.tractor_beam);
 	if (i < 0) {
 		/* thing we were tractoring died. */
 		ship->tsd.ship.tractor_beam = -1;
-		return;
+		return 0;
 	}
 	tb = &go[i];
 	delete_from_clients_and_server(tb);
 	ship->tsd.ship.tractor_beam = -1;
+	return 1;
 }
 
-static int process_request_tractor_beam(struct game_client *c)
+static int turn_on_tractor_beam(struct game_client *c, struct snis_entity *ship, uint32_t oid, int toggle)
 {
-	unsigned char buffer[10];
-	struct snis_entity *ship = &go[c->ship_index];
-	uint32_t oid;
-	int rc, i;
+	int i;
 
-	rc = read_and_unpack_buffer(c, buffer, "w", &oid);
-	if (rc)
-		return rc;
 	pthread_mutex_lock(&universe_mutex);
+	if (oid == (uint32_t) 0xffffffff && c)
+		oid = bridgelist[c->bridge].science_selection;
 	if (oid == (uint32_t) 0xffffffff) { /* nothing selected, turn off tractor beam */
-		turn_off_tractorbeam(ship);
-		pthread_mutex_unlock(&universe_mutex);
-		return 0;
+		if (toggle) {
+			turn_off_tractorbeam(ship);
+			pthread_mutex_unlock(&universe_mutex);
+			return 0;
+		} else {
+			pthread_mutex_unlock(&universe_mutex);
+			if (c)
+				queue_add_text_to_speech(c, "No target for tractor beam, beam not engaged.");
+			return 0;
+		}
 	}
 	i = lookup_by_id(oid);
 	if (i < 0)
@@ -11030,8 +11037,11 @@ static int process_request_tractor_beam(struct game_client *c)
 		i = lookup_by_id(ship->tsd.ship.tractor_beam);
 		if (i >= 0 && oid == go[i].tsd.laserbeam.target) {
 			/* if same thing selected, turn off beam and we're done */
-			turn_off_tractorbeam(ship);
+			if (toggle)
+				turn_off_tractorbeam(ship);
 			pthread_mutex_unlock(&universe_mutex);
+			if (!toggle && c)
+				queue_add_text_to_speech(c, "The tractor beam is already engaged");
 			return 0;
 		}
 		/* otherwise turn beam off then back on to newly selected item */
@@ -11049,6 +11059,8 @@ static int process_request_tractor_beam(struct game_client *c)
 	add_tractorbeam(ship, oid, 30);
 	/* TODO: tractor beam sound here. */
 	pthread_mutex_unlock(&universe_mutex);
+	if (!toggle && c)
+		queue_add_text_to_speech(c, "Tractor beam engaged");
 	return 0;
 
 tractorfail:
@@ -11056,6 +11068,19 @@ tractorfail:
 	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
+}
+
+static int process_request_tractor_beam(struct game_client *c)
+{
+	unsigned char buffer[10];
+	struct snis_entity *ship = &go[c->ship_index];
+	uint32_t oid;
+	int rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "w", &oid);
+	if (rc)
+		return rc;
+	return turn_on_tractor_beam(NULL, ship, oid, 1);
 }
 
 static int process_request_mining_bot(struct game_client *c)
@@ -13729,8 +13754,18 @@ static void nl_disengage_n(void *context, int argc, char *argv[], int pos[],
 			return;
 		}
 	} else {
-		pthread_mutex_unlock(&universe_mutex);
-		goto no_understand;
+		if (strcasecmp("tractor beam", argv[device]) == 0) {
+			int did_something = turn_off_tractorbeam(&go[i]);
+			pthread_mutex_unlock(&universe_mutex);
+			if (did_something)
+				queue_add_text_to_speech(c, "Tractor beam disengaged");
+			else
+				queue_add_text_to_speech(c, "The tractor beam is already disengaged");
+			return;
+		} else {
+			pthread_mutex_unlock(&universe_mutex);
+			goto no_understand;
+		}
 	}
 
 no_understand:
@@ -13777,6 +13812,10 @@ static void nl_engage_n(void *context, int argc, char *argv[], int pos[],
 			queue_add_text_to_speech(c, "Docking system engaged");
 			return;
 		}
+	} else if (strcasecmp("tractor beam", argv[device]) == 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		turn_on_tractor_beam(c, &go[i], 0xffffffff, 0);
+		return;
 	} else {
 		pthread_mutex_unlock(&universe_mutex);
 		goto no_understand;
@@ -13785,6 +13824,47 @@ static void nl_engage_n(void *context, int argc, char *argv[], int pos[],
 no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know how to engage that.");
 	return;
+}
+
+static void nl_engage_npn(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, device, prep, target;
+	char reply[100];
+
+	device = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (device < 0)
+		goto no_understand;
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
+	if (prep < 0)
+		goto no_understand;
+	target = nl_find_next_word(argc, pos, POS_EXTERNAL_NOUN, 0);
+	if (target < 0)
+		goto no_understand;
+
+	if (strcasecmp("tractor beam", argv[device]) == 0) {
+		pthread_mutex_lock(&universe_mutex);
+		i = lookup_by_id(c->shipid);
+		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			sprintf(reply, "Sorry, I cannot seem to engage the %s.", argv[device]);
+			queue_add_text_to_speech(c, reply);
+			return;
+		}
+		pthread_mutex_unlock(&universe_mutex);
+		turn_on_tractor_beam(c, &go[i], extra_data[target].external_noun.handle, 0);
+		return;
+	} else {
+		sprintf(reply, "I do not understand how engaging the %s relates to the %s\n",
+				argv[device], argv[target]);
+		queue_add_text_to_speech(c, reply);
+		return;
+	}
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I am unfamiliar with the way you are using the word engage");
 }
 
 struct damage_report_entry {
@@ -13935,6 +14015,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("raise",		"raise",	"npq", sorry_dave);
 	snis_nl_add_dictionary_verb("raise",		"raise",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("engage",		"engage",	"n", nl_engage_n);
+	snis_nl_add_dictionary_verb("engage",		"engage",	"npn", nl_engage_npn);
 	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", nl_disengage_n);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", sorry_dave);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"aq", sorry_dave);
@@ -13983,6 +14064,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("shield coolant", "shield coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("tractor beam coolant", "tractor beam coolant",	POS_NOUN);
 
+	snis_nl_add_dictionary_word("tractor beam", "tractor beam",	POS_NOUN);
 	snis_nl_add_dictionary_word("docking system", "docking system",	POS_NOUN);
 	snis_nl_add_dictionary_word("coolant",		"coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("power",		"power",	POS_NOUN);
