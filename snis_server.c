@@ -13957,6 +13957,82 @@ no_understand2:
 	return;
 }
 
+/* Eg: "set a course for blah..." */
+static void nl_set_npn(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int setthing, prep, settowhat;
+	char *name, *namecopy, reply[100];
+	int i;
+	union vec3 direction, right;
+	union quat new_orientation;
+	struct snis_entity *dest, *ship;
+
+	setthing = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (setthing < 0)
+		goto no_understand;
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
+	if (prep < 0)
+		goto no_understand;
+	settowhat = nl_find_next_word(argc, pos, POS_EXTERNAL_NOUN, 0);
+	if (settowhat < 0)
+		goto no_understand;
+
+	if (strcasecmp(argv[setthing], "course") != 0)
+		goto no_understand;
+	if (strcasecmp(argv[prep], "for") != 0)
+		goto no_understand;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(extra_data[settowhat].external_noun.handle);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "Sorry, I am not sure where that is.");
+		return;
+	}
+	dest = &go[i];
+	name = nl_get_object_name(dest);
+	if (!name) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "Sorry, I am not sure where that is.");
+		return;
+	}
+	namecopy = strdup(name);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "Sorry, I am not quite sure where we are.");
+		return;
+	}
+	ship = &go[i];
+
+	/* Calculate new desired orientation of ship pointing towards destination */
+	right.v.x = 1.0;
+	right.v.y = 0.0;
+	right.v.z = 0.0;
+
+	direction.v.x = dest->x - ship->x;
+	direction.v.y = dest->y - ship->y;
+	direction.v.z = dest->z - ship->z;
+	vec3_normalize_self(&direction);
+
+	quat_from_u2v(&new_orientation, &right, &direction, NULL);
+
+	ship->tsd.ship.computer_desired_orientation = new_orientation;
+	ship->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
+
+	pthread_mutex_unlock(&universe_mutex);
+	sprintf(reply, "Setting course for %s.", namecopy);
+	queue_add_text_to_speech(c, reply);
+	free(namecopy);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I am not sure what you're asking me to do.");
+	return;
+}
+
 static void nl_disengage_n(void *context, int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
@@ -14382,6 +14458,9 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn", sorry_dave);
 	snis_nl_add_dictionary_verb("set",		"set",		"npq", nl_set_npq);
 	snis_nl_add_dictionary_verb("set",		"set",		"npa", sorry_dave);
+	snis_nl_add_dictionary_verb("set",		"set",		"npn", nl_set_npn);
+	snis_nl_add_dictionary_verb("plot",		"plot",		"npn", nl_set_npn);
+	snis_nl_add_dictionary_verb("lay in",		"lay in",	"npn", nl_set_npn);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"npq", sorry_dave);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("raise",		"raise",	"nq", sorry_dave);
