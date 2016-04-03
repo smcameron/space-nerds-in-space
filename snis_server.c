@@ -13691,6 +13691,82 @@ no_understand2:
 	return;
 }
 
+struct damage_report_entry {
+	char system[100];
+	int percent;
+};
+
+static int compare_damage_report_entries(const void *a, const void *b)
+{
+	const struct damage_report_entry * const dra = a;
+	const struct damage_report_entry * const drb = b;
+
+	return dra->percent > drb->percent;
+}
+
+static void nl_damage_report(void *context, int argc, char *argv[], int pos[],
+		__attribute__((unused)) union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	struct damage_report_entry dr[8];
+	struct snis_entity *o;
+	int i;
+	char damage_report[250];
+	char next_bit[100];
+	int ok = 0;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c,
+			"I seem to be unable to collect the necessary data to provide a damage report.");
+		return;
+	}
+	o = &go[i];
+
+	dr[0].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.maneuvering_damage / 255.0));
+	sprintf(dr[0].system, "Maneuvering");
+	dr[1].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.warp_damage / 255.0));
+	sprintf(dr[1].system, "Impulse drive");
+	dr[2].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.impulse_damage / 255.0));
+	sprintf(dr[2].system, "Warp drive");
+	dr[3].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.phaser_banks_damage / 255.0));
+	sprintf(dr[3].system, "Phasers");
+	dr[4].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.comms_damage / 255.0));
+	sprintf(dr[4].system, "Communications");
+	dr[5].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.sensors_damage / 255.0));
+	sprintf(dr[5].system, "Sensors");
+	dr[6].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.shield_damage / 255.0));
+	sprintf(dr[6].system, "Shields");
+	dr[7].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.tractor_damage / 255.0));
+	sprintf(dr[7].system, "Tractor beam");
+	pthread_mutex_unlock(&universe_mutex);
+
+	qsort(dr, 8, sizeof(dr[0]), compare_damage_report_entries);
+
+	sprintf(damage_report, "Damage Report. ");
+	for (i = 0; i < 8; i++) {
+		if (dr[i].percent > 80) {
+			ok++;
+			continue;
+		}
+		sprintf(next_bit, "%s %d%%. ", dr[i].system, dr[i].percent);
+		strcat(damage_report, next_bit);
+	}
+	if (ok == 8) {
+		strcat(damage_report, "All systems within normal operating range.");
+	} else {
+		if (ok > 0) {
+			strcat(damage_report, "Remaining systems are within normal operating range.");
+		}
+	}
+	if (dr[6].percent < 20) {
+		strcat(damage_report, " Suggest repairing sheilds immediately.");
+	}
+	queue_add_text_to_speech(c, damage_report);
+}
+
 static void sorry_dave(void *context, int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
@@ -13767,7 +13843,10 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", sorry_dave);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"aq", sorry_dave);
 	snis_nl_add_dictionary_verb("compute",		"compute",	"npn", nl_compute_npn);
-	snis_nl_add_dictionary_verb("report",		"report",	"n", sorry_dave);
+	snis_nl_add_dictionary_verb("damage report",	"damage report", "", nl_damage_report);
+	snis_nl_add_dictionary_verb("report damage",	"damage report", "", nl_damage_report);
+	snis_nl_add_dictionary_verb("status report",	"damage report", "", nl_damage_report);
+	snis_nl_add_dictionary_verb("report status",	"damage report", "", nl_damage_report);
 	snis_nl_add_dictionary_verb("yaw",		"yaw",		"aq", sorry_dave);
 	snis_nl_add_dictionary_verb("pitch",		"pitch",	"aq", sorry_dave);
 	snis_nl_add_dictionary_verb("roll",		"roll",		"aq", sorry_dave);
