@@ -8050,7 +8050,7 @@ static void meta_comms_channel(char *name, struct game_client *c, char *txt)
 	uint32_t newchannel;
 	char msg[100];
 
-	rc = sscanf(txt, "/channel %u\n", &newchannel);
+	rc = sscanf(txt, "%*[/chanel] %u\n", &newchannel);
 	if (rc != 1) {
 		snprintf(msg, sizeof(msg), "INVALID CHANNEL - CURRENT CHANNEL %u",
 				bridgelist[c->bridge].comms_channel);
@@ -9172,10 +9172,12 @@ static void meta_comms_computer(char *name, struct game_client *c, char *txt)
 	duptxt = strdup(txt);
 	len = strlen(duptxt);
 
-	if (strncmp(duptxt, "/computer ", 10) == 0 && len > 10) {
-		x = &duptxt[10];
+	x = index(duptxt, ' ');
+	if (x) {
+		x++;
+		if (*x != '\0')
+			perform_natural_language_request(c, x);
 	}
-	perform_natural_language_request(c, x);
 	free(duptxt);
 }
 
@@ -9298,16 +9300,52 @@ static const struct meta_comms_data {
 
 static void process_meta_comms_packet(char *name, struct game_client *c, char *txt)
 {
-	int i;
+	int i, j;
+	struct meta_comms_data *mcd = NULL;
+	int current_match_length = 0;
+	int len2 = strlen(txt);
+	int limit;
+	int ambiguous = 1;
 
+	/* allow user to get away with typing enough of the command
+	 * name to resolve ambiguity
+	 */
 	for (i = 0; i < ARRAYSIZE(meta_comms); i++) {
 		int len = strlen(meta_comms[i].command);
-		if (strncasecmp(txt, meta_comms[i].command, len) == 0)  {
-			meta_comms[i].f(name, c, txt);
-			return;
+		if (len < len2)
+			limit = len;
+		else
+			limit = len2;
+
+		for (j = 0; j < limit; j++) {
+			if (toupper(txt[j]) == toupper(meta_comms[i].command[j])) {
+				if (j == len - 1 || j == len2 - 1) { /* exact match */
+					mcd = &meta_comms[i];
+					ambiguous = 0;
+					current_match_length = j;
+					goto match;
+				}
+				continue;
+			}
+			if (j > current_match_length) {
+				current_match_length = j;
+				ambiguous = 0;
+				mcd = &meta_comms[i];
+			} else {
+				if (j == current_match_length) {
+					ambiguous = 1;
+				}
+			}
+			break;
 		}
 	}
-	meta_comms_error(name, c, txt);
+
+match:
+
+	if (current_match_length > 1 && !ambiguous)
+		mcd->f(name, c, txt);
+	else
+		meta_comms_error(name, c, txt);
 }
 
 static int process_comms_transmission(struct game_client *c, int use_real_name)
