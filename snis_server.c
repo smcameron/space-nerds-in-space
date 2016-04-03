@@ -7817,6 +7817,16 @@ static int process_request_weapons_yaw_pitch(struct game_client *c)
 	return 0;
 }
 
+static void science_select_target(struct game_client *c, uint32_t id)
+{
+	/* just turn it around and fan it out to all the right places */
+	send_packet_to_all_clients_on_a_bridge(c->shipid,
+			packed_buffer_new("bw", OPCODE_SCI_SELECT_TARGET, id),
+			ROLE_SCIENCE);
+	/* remember sci selection for retargeting mining bot */
+	bridgelist[c->bridge].science_selection = id;
+}
+
 static int process_sci_select_target(struct game_client *c)
 {
 	unsigned char buffer[10];
@@ -7826,12 +7836,7 @@ static int process_sci_select_target(struct game_client *c)
 	rc = read_and_unpack_buffer(c, buffer, "w", &id);
 	if (rc)
 		return rc;
-	/* just turn it around and fan it out to all the right places */
-	send_packet_to_all_clients_on_a_bridge(c->shipid, 
-			packed_buffer_new("bw", OPCODE_SCI_SELECT_TARGET, id),
-			ROLE_SCIENCE);
-	/* remember sci selection for retargeting mining bot */
-	bridgelist[c->bridge].science_selection = id;
+	science_select_target(c, id);
 	return 0;
 }
 
@@ -13972,6 +13977,45 @@ no_understand:
 	return;
 }
 
+static void nl_target_n(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, noun;
+	char *name, *namecopy;
+	char reply[100];
+	uint32_t id;
+
+	noun = nl_find_next_word(argc, pos, POS_EXTERNAL_NOUN, 0);
+	if (noun < 0) {
+		queue_add_text_to_speech(c, "I do not understand what you want to target.");
+		return;
+	}
+	id = extra_data[noun].external_noun.handle;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		goto target_lost;
+	}
+	name = nl_get_object_name(&go[i]);
+	if (name)
+		namecopy = strdup(name);
+	else
+		namecopy = NULL;
+	pthread_mutex_unlock(&universe_mutex);
+	if (!namecopy)
+		goto target_lost;
+	sprintf(reply, "Targeting sensors on %s", namecopy);
+	free(namecopy);
+	queue_add_text_to_speech(c, reply);
+	science_select_target(c, id);
+	return;
+
+target_lost:
+	queue_add_text_to_speech(c, "Unable to locate the specified target for scanning.");
+	return;
+}
+
 struct damage_report_entry {
 	char system[100];
 	int percent;
@@ -14147,6 +14191,9 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("engineering",	"engineering",	"pn", nl_onscreen_verb_pn);
 	snis_nl_add_dictionary_verb("science",		"science",	"pn", nl_onscreen_verb_pn);
 	snis_nl_add_dictionary_verb("communications",	"communications", "pn", nl_onscreen_verb_pn);
+	snis_nl_add_dictionary_verb("target",		"target",	"n", nl_target_n);
+	snis_nl_add_dictionary_verb("scan",		"target",	"n", nl_target_n);
+	snis_nl_add_dictionary_verb("select",		"target",	"n", nl_target_n);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
