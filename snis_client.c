@@ -188,6 +188,9 @@ static int physical_io_socket = -1;
 static pthread_t physical_io_thread;
 static pthread_attr_t physical_io_thread_attr;
 
+static pthread_t natural_language_thread;
+static pthread_attr_t natural_language_thread_attr;
+
 GtkWidget *window;
 GdkGC *gc = NULL;               /* our graphics context. */
 GtkWidget *main_da;             /* main drawing area. */
@@ -12820,6 +12823,50 @@ static void setup_physical_io_socket(void)
 #endif
 }
 
+#define SNIS_NL_FIFO "/tmp/snis-natural-language-fifo"
+static void *monitor_natural_language_fifo(__attribute__((unused)) void *arg)
+{
+	pthread_setname_np(natural_language_thread, "snis-nat-lang");
+	char *rc, line[256];
+	FILE *f;
+
+	do {
+		f = fopen(SNIS_NL_FIFO, "r");
+		if (!f) {
+			fprintf(stderr, "snis_client: Failed to open '%s': %s\n", SNIS_NL_FIFO, strerror(errno));
+			break;
+		}
+
+		do {
+			rc = fgets(line, 255, f);
+			if (!rc)
+				break;
+			trim_whitespace(line);
+			clean_spaces(line);
+			if (strcmp(line, "") == 0) /* skip blank lines */
+				continue;
+			send_natural_language_request_to_server(line);
+		} while (1);
+		fclose(f);
+	} while (1);
+	fprintf(stderr, "snis_client: natural language thread exiting.\n");
+	return NULL;
+}
+
+static void setup_natural_language_fifo(void)
+{
+	int rc;
+
+	rc = mkfifo(SNIS_NL_FIFO, 0644);
+	if (rc != 0 && errno != EEXIST) {
+		fprintf(stderr, "snis_client: mkfifo(%s): %s\n", SNIS_NL_FIFO, strerror(errno));
+	}
+	rc = pthread_create(&natural_language_thread, &natural_language_thread_attr,
+			monitor_natural_language_fifo, NULL);
+	if (rc)
+		fprintf(stderr, "Failed to create natural language fifo monitor thread.\n");
+}
+
 static void setup_joystick(GtkWidget *window)
 {
 	strcpy(joystick_device, JOYSTICK_DEVNAME);
@@ -13521,6 +13568,7 @@ int main(int argc, char *argv[])
 	init_net_setup_ui();
 	setup_joystick(window);
 	setup_physical_io_socket();
+	setup_natural_language_fifo();
 	ecx = entity_context_new(5000, 1000);
 
 	snis_protocol_debugging(1);
