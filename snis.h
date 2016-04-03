@@ -291,6 +291,7 @@ struct ship_data {
 	double desired_velocity;
 #define PLAYER_ORIENTATION_DAMPING (0.85)
 #define DAMPING_SUPPRESSION_DECAY (0.98)
+#define COMPUTER_STEERING_TIME 120.0f
 #define MAX_YAW_VELOCITY (5 * PI / 180.0)
 #define YAW_INCREMENT (1 * PI / 180.0)
 #define YAW_INCREMENT_FINE (0.2 * PI / 180.0)
@@ -399,6 +400,8 @@ struct ship_data {
 	uint8_t mining_bots;
 	char mining_bot_name[20];
 	float nav_damping_suppression;
+	union quat computer_desired_orientation;
+	uint32_t computer_steering_time_left;
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200

@@ -4500,6 +4500,16 @@ static void player_collision_detection(void *player, void *object)
 
 static void update_player_orientation(struct snis_entity *o)
 {
+	if (o->tsd.ship.computer_steering_time_left > 0) {
+		float time = (COMPUTER_STEERING_TIME - o->tsd.ship.computer_steering_time_left) / COMPUTER_STEERING_TIME;
+		union quat new_orientation;
+
+		quat_slerp(&new_orientation, &o->orientation, &o->tsd.ship.computer_desired_orientation, time);
+		o->orientation = new_orientation;
+		o->tsd.ship.computer_steering_time_left--;
+	}
+
+	/* Apply current rotational velocities... (player's input comes into play via this path) */
 	quat_apply_relative_yaw_pitch_roll(&o->orientation,
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
@@ -5565,6 +5575,8 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.passenger_berths = 2;
 	o->tsd.ship.mining_bots = 1;
 	o->tsd.ship.nav_damping_suppression = 0.0;
+	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
+	o->tsd.ship.computer_steering_time_left = 0;
 	if (clear_cargo_bay) {
 		/* The clear_cargo_bay param is a stopgap until real docking code
 		 * is done.
@@ -5727,6 +5739,8 @@ static int add_ship(int faction, int auto_respawn)
 	go[i].tsd.ship.ncargo_bays = 0;
 	go[i].tsd.ship.home_planet = choose_ship_home_planet();
 	go[i].tsd.ship.auto_respawn = (uint8_t) auto_respawn;
+	quat_init_axis(&go[i].tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
+	go[i].tsd.ship.computer_steering_time_left = 0;
 	memset(go[i].tsd.ship.cargo, 0, sizeof(go[i].tsd.ship.cargo));
 	if (faction >= 0 && faction < nfactions())
 		go[i].sdata.faction = faction;
@@ -13346,6 +13360,9 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("impulse coolant", "impulse drive coolant");
 	snis_nl_add_synonym("docking magnets", "docking system");
 	snis_nl_add_synonym("comms", "communications");
+	snis_nl_add_synonym("counter-clockwise", "counterclockwise");
+	snis_nl_add_synonym("anti-clockwise", "counterclockwise");
+	snis_nl_add_synonym("anticlockwise", "counterclockwise");
 }
 
 static const struct noun_description_entry {
@@ -13550,6 +13567,175 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know how to compute that.");
 }
+
+/* Eg: "turn right 90 degrees" */
+static void nl_turn_aqa(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, direction, amount, unit;
+	float degrees;
+	union quat rotation, new_orientation, q1, q2, q3;
+	struct snis_entity *o;
+	char reply[100];
+
+	direction = nl_find_next_word(argc, pos, POS_ADJECTIVE, 0);
+	if (direction < 0)
+		goto no_understand;
+	amount = nl_find_next_word(argc, pos, POS_NUMBER, direction + 1);
+	if (amount < 0)
+		goto no_understand;
+	degrees = extra_data[amount].number.value;
+	unit = nl_find_next_word(argc, pos, POS_ADJECTIVE, amount + 1);
+	if (unit < 0)
+		goto no_understand;
+
+	if (strcasecmp(argv[unit], "degrees") != 0) {
+		queue_add_text_to_speech(c, "In degrees please?");
+		return;
+	}
+
+	strcpy(reply, "");
+	/* If the ship facing down the positive x axis, what rotation would we apply? */
+	if (strcasecmp(argv[direction], "starboard") == 0 || 
+		strcasecmp(argv[direction], "right") == 0) {
+		quat_init_axis(&rotation, 0, 1, 0, -degrees * M_PI / 180.0);
+		sprintf(reply, "rotating %3.0f degrees to starboard", degrees);
+	} else if (strcasecmp(argv[direction], "port") == 0 ||
+			strcasecmp(argv[direction], "left") == 0) {
+		quat_init_axis(&rotation, 0, 1, 0, degrees * M_PI / 180.0);
+		sprintf(reply, "rotating %3.0f degrees to port", degrees);
+	} else if (strcasecmp(argv[direction], "clockwise") == 0) {
+		quat_init_axis(&rotation, 1, 0, 0, degrees * M_PI / 180.0);
+		sprintf(reply, "rolling %3.0f degrees clockwise", degrees);
+	} else if (strcasecmp(argv[direction], "counterclockwise") == 0) {
+		quat_init_axis(&rotation, 1, 0, 0, -degrees * M_PI / 180.0);
+		sprintf(reply, "rolling %3.0f degrees counter clockwise", degrees);
+	} else if (strcasecmp(argv[direction], "up") == 0) {
+		quat_init_axis(&rotation, 0, 0, 1, degrees * M_PI / 180.0);
+		sprintf(reply, "pitching %3.0f degrees up", degrees);
+	} else if (strcasecmp(argv[direction], "down") == 0) {
+		quat_init_axis(&rotation, 0, 0, 1, -degrees * M_PI / 180.0);
+		sprintf(reply, "pitching %3.0f degrees down", degrees);
+	} else {
+		goto no_understand;
+	}
+
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "Sorry, I can't seem to steer, Computer needs maintenance.");
+		return;
+	}
+	o = &go[i];
+
+	/* Convert rotation to local coordinate system */
+	quat_mul(&q1, &o->orientation, &rotation);
+	quat_conj(&q2, &o->orientation);
+	quat_mul(&q3, &q1, &q2);
+	/* Apply to local orientation */
+	quat_mul(&new_orientation, &q3, &o->orientation);
+	quat_normalize_self(&new_orientation);
+
+	/* Now let the computer steer for awhile */
+	o->tsd.ship.computer_desired_orientation = new_orientation;
+	o->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
+	// o->orientation = new_orientation;
+	pthread_mutex_unlock(&universe_mutex);
+	queue_add_text_to_speech(c, reply);
+
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
+}
+
+/* Eg: "turn 90 degrees right " */
+static void nl_turn_qaa(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, direction, amount, unit;
+	float degrees;
+	union quat rotation, new_orientation, q1, q2, q3;
+	struct snis_entity *o;
+	char reply[100];
+
+	amount = nl_find_next_word(argc, pos, POS_NUMBER, 0);
+	if (amount < 0)
+		goto no_understand;
+	degrees = extra_data[amount].number.value;
+	unit = nl_find_next_word(argc, pos, POS_ADJECTIVE, amount + 1);
+	if (unit < 0)
+		goto no_understand;
+	direction = nl_find_next_word(argc, pos, POS_ADJECTIVE, unit + 1);
+	if (direction < 0)
+		goto no_understand;
+
+	if (strcasecmp(argv[unit], "degrees") != 0) {
+		queue_add_text_to_speech(c, "In degrees please?");
+		return;
+	}
+
+	strcpy(reply, "");
+	/* If the ship facing down the positive x axis, what rotation would we apply? */
+	if (strcasecmp(argv[direction], "starboard") == 0 || 
+		strcasecmp(argv[direction], "right") == 0) {
+		quat_init_axis(&rotation, 0, 1, 0, -degrees * M_PI / 180.0);
+		sprintf(reply, "rotating %3.0f degrees to starboard", degrees);
+	} else if (strcasecmp(argv[direction], "port") == 0 ||
+			strcasecmp(argv[direction], "left") == 0) {
+		quat_init_axis(&rotation, 0, 1, 0, degrees * M_PI / 180.0);
+		sprintf(reply, "rotating %3.0f degrees to port", degrees);
+	} else if (strcasecmp(argv[direction], "clockwise") == 0) {
+		quat_init_axis(&rotation, 1, 0, 0, degrees * M_PI / 180.0);
+		sprintf(reply, "rolling %3.0f degrees clockwise", degrees);
+	} else if (strcasecmp(argv[direction], "counterclockwise") == 0) {
+		quat_init_axis(&rotation, 1, 0, 0, -degrees * M_PI / 180.0);
+		sprintf(reply, "rolling %3.0f degrees counter clockwise", degrees);
+	} else if (strcasecmp(argv[direction], "up") == 0) {
+		quat_init_axis(&rotation, 0, 0, 1, degrees * M_PI / 180.0);
+		sprintf(reply, "pitching %3.0f degrees up", degrees);
+	} else if (strcasecmp(argv[direction], "down") == 0) {
+		quat_init_axis(&rotation, 0, 0, 1, -degrees * M_PI / 180.0);
+		sprintf(reply, "pitching %3.0f degrees down", degrees);
+	} else {
+		goto no_understand;
+	}
+
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "Sorry, I can't seem to steer, Computer needs maintenance.");
+		return;
+	}
+	o = &go[i];
+
+	/* Convert rotation to local coordinate system */
+	quat_mul(&q1, &o->orientation, &rotation);
+	quat_conj(&q2, &o->orientation);
+	quat_mul(&q3, &q1, &q2);
+	/* Apply to local orientation */
+	quat_mul(&new_orientation, &q3, &o->orientation);
+	quat_normalize_self(&new_orientation);
+
+	/* Now let the computer steer for awhile */
+	o->tsd.ship.computer_desired_orientation = new_orientation;
+	o->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
+	// o->orientation = new_orientation;
+	pthread_mutex_unlock(&universe_mutex);
+	queue_add_text_to_speech(c, reply);
+
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
+}
+
 
 static void nl_set_controllable_byte_value(struct game_client *c, char *word, float fraction, int offset,
 						 bytevalue_limit_function limit)
@@ -14205,15 +14391,21 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("engage",		"engage",	"npn", nl_engage_npn);
 	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", nl_disengage_n);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", sorry_dave);
-	snis_nl_add_dictionary_verb("turn",		"turn",		"aq", sorry_dave);
+	snis_nl_add_dictionary_verb("turn",		"turn",		"aqa", nl_turn_aqa);
+	snis_nl_add_dictionary_verb("rotate",		"rotate",	"aqa", nl_turn_aqa);
+	snis_nl_add_dictionary_verb("turn",		"turn",		"qaa", nl_turn_qaa);
+	snis_nl_add_dictionary_verb("rotate",		"rotate",	"qaa", nl_turn_qaa);
 	snis_nl_add_dictionary_verb("compute",		"compute",	"npn", nl_compute_npn);
 	snis_nl_add_dictionary_verb("damage report",	"damage report", "", nl_damage_report);
 	snis_nl_add_dictionary_verb("report damage",	"damage report", "", nl_damage_report);
 	snis_nl_add_dictionary_verb("status report",	"damage report", "", nl_damage_report);
 	snis_nl_add_dictionary_verb("report status",	"damage report", "", nl_damage_report);
-	snis_nl_add_dictionary_verb("yaw",		"yaw",		"aq", sorry_dave);
-	snis_nl_add_dictionary_verb("pitch",		"pitch",	"aq", sorry_dave);
-	snis_nl_add_dictionary_verb("roll",		"roll",		"aq", sorry_dave);
+	snis_nl_add_dictionary_verb("yaw",		"yaw",		"aqa", nl_turn_aqa);
+	snis_nl_add_dictionary_verb("pitch",		"pitch",	"aqa", nl_turn_aqa);
+	snis_nl_add_dictionary_verb("roll",		"roll",		"aqa", nl_turn_aqa);
+	snis_nl_add_dictionary_verb("yaw",		"yaw",		"qaa", nl_turn_qaa);
+	snis_nl_add_dictionary_verb("pitch",		"pitch",	"qaa", nl_turn_qaa);
+	snis_nl_add_dictionary_verb("roll",		"roll",		"qaa", nl_turn_qaa);
 	snis_nl_add_dictionary_verb("zoom",		"zoom",		"p", sorry_dave);
 	snis_nl_add_dictionary_verb("zoom",		"zoom",		"pq", sorry_dave);
 	snis_nl_add_dictionary_verb("shut",		"shut",		"an", sorry_dave);
@@ -14385,8 +14577,13 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("close",		"nearest",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("up",		"up",		POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("down",		"down",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("port",		"port",		POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("left",		"left",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("starboard",	"starboard",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("right",		"right",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("clockwise",	"clockwise",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("counterclockwise",	"counterclockwise",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("degrees",		"degrees",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("self",		"self",		POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("destruct",		"destruct",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("self-destruct",	"self-destruct",	POS_ADJECTIVE);
