@@ -10610,16 +10610,36 @@ static int process_docking_magnets(struct game_client *c)
 	return 0;
 }
 
+static int do_engage_warp_drive(struct snis_entity *o)
+{
+	int enough_oomph = ((double) o->tsd.ship.warpdrive / 255.0) > 0.075;
+	int b;
+	const union vec3 rightvec = { { 1.0f, 0.0f, 0.0f, } };
+	union vec3 warpvec;
+	double wfactor;
+
+	b = lookup_bridge_by_shipid(o->id);
+	if (b < 0) {
+		return 0;
+	}
+	if (enough_oomph) {
+		wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
+		quat_rot_vec(&warpvec, &rightvec, &o->orientation);
+		bridgelist[b].warpx = o->x + wfactor * warpvec.v.x;
+		bridgelist[b].warpy = o->y + wfactor * warpvec.v.y;
+		bridgelist[b].warpz = o->z + wfactor * warpvec.v.z;
+		o->tsd.ship.warp_time = 85; /* 8.5 seconds */
+	}
+	return enough_oomph;
+}
+
 static int process_engage_warp(struct game_client *c)
 {
 	unsigned char buffer[10];
-	int b, i, rc;
+	int i, rc;
 	uint32_t id;
 	uint8_t __attribute__((unused)) v;
-	double wfactor;
 	struct snis_entity *o;
-	const union vec3 rightvec = { { 1.0f, 0.0f, 0.0f, } };
-	union vec3 warpvec;
 	int enough_oomph;
 
 	rc = read_and_unpack_buffer(c, buffer, "wb", &id, &v);
@@ -10638,22 +10658,7 @@ static int process_engage_warp(struct game_client *c)
 		pthread_mutex_unlock(&universe_mutex);
 		return 0;
 	}
-	b = lookup_bridge_by_shipid(o->id);
-	if (b < 0) {
-		snis_log(SNIS_ERROR, "Can't find bridge for shipid %u\n",
-				o->id, __FILE__, __LINE__);
-		pthread_mutex_unlock(&universe_mutex);
-		return 0;
-	}
-	enough_oomph = ((double) o->tsd.ship.warpdrive / 255.0) > 0.075;
-	if (enough_oomph) {
-		wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
-		quat_rot_vec(&warpvec, &rightvec, &o->orientation);
-		bridgelist[b].warpx = o->x + wfactor * warpvec.v.x;
-		bridgelist[b].warpy = o->y + wfactor * warpvec.v.y;
-		bridgelist[b].warpz = o->z + wfactor * warpvec.v.z;
-		o->tsd.ship.warp_time = 85; /* 8.5 seconds */
-	}
+	enough_oomph = do_engage_warp_drive(o);
 	pthread_mutex_unlock(&universe_mutex);
 	send_initiate_warp_packet(c, enough_oomph);
 	return 0;
@@ -13265,6 +13270,7 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("tractor coolant", "tractor beam coolant");
 	snis_nl_add_synonym("impulse power", "impulse drive power");
 	snis_nl_add_synonym("impulse coolant", "impulse drive coolant");
+	snis_nl_add_synonym("docking magnets", "docking system");
 	snis_nl_add_synonym("comms", "communications");
 }
 
@@ -13691,6 +13697,96 @@ no_understand2:
 	return;
 }
 
+static void nl_disengage_n(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, device;
+	char response[100];
+
+	device = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (device < 0)
+		goto no_understand;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		sprintf(response, "Sorry, I cannot seem to disengage the %s.", argv[device]);
+		queue_add_text_to_speech(c, response);
+		return;
+	}
+
+	if (strcasecmp("docking system", argv[device]) == 0) {
+		if (!go[i].tsd.ship.docking_magnets) {
+			pthread_mutex_unlock(&universe_mutex);
+			queue_add_text_to_speech(c, "The docking system is already disengaged");
+			return;
+		} else {
+			go[i].tsd.ship.docking_magnets = 0;
+			pthread_mutex_unlock(&universe_mutex);
+			queue_add_text_to_speech(c, "Docking system disengaged");
+			return;
+		}
+	} else {
+		pthread_mutex_unlock(&universe_mutex);
+		goto no_understand;
+	}
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not know how to disengage that.");
+	return;
+}
+
+static void nl_engage_n(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i;
+	int device, enough_oomph;
+	char response[100];
+
+	device = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (device < 0)
+		goto no_understand;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		sprintf(response, "Sorry, I cannot seem to engage the %s.", argv[device]);
+		queue_add_text_to_speech(c, response);
+		return;
+	}
+
+	if (strcasecmp("warp drive", argv[device]) == 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		enough_oomph = do_engage_warp_drive(&go[i]);
+		send_initiate_warp_packet(c, enough_oomph);
+		sprintf(response, "%s engaged", argv[device]);
+		queue_add_text_to_speech(c, response);
+		return;
+	} else if (strcasecmp("docking system", argv[device]) == 0) {
+		if (go[i].tsd.ship.docking_magnets) {
+			pthread_mutex_unlock(&universe_mutex);
+			queue_add_text_to_speech(c, "The docking system is already engaged");
+			return;
+		} else {
+			go[i].tsd.ship.docking_magnets = 1;
+			pthread_mutex_unlock(&universe_mutex);
+			queue_add_text_to_speech(c, "Docking system engaged");
+			return;
+		}
+	} else {
+		pthread_mutex_unlock(&universe_mutex);
+		goto no_understand;
+	}
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not know how to engage that.");
+	return;
+}
+
 struct damage_report_entry {
 	char system[100];
 	int percent;
@@ -13838,8 +13934,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("raise",		"raise",	"nq", sorry_dave);
 	snis_nl_add_dictionary_verb("raise",		"raise",	"npq", sorry_dave);
 	snis_nl_add_dictionary_verb("raise",		"raise",	"n", sorry_dave);
-	snis_nl_add_dictionary_verb("engage",		"engage",	"n", sorry_dave);
-	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", sorry_dave);
+	snis_nl_add_dictionary_verb("engage",		"engage",	"n", nl_engage_n);
+	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", nl_disengage_n);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", sorry_dave);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"aq", sorry_dave);
 	snis_nl_add_dictionary_verb("compute",		"compute",	"npn", nl_compute_npn);
@@ -13887,6 +13983,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("shield coolant", "shield coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("tractor beam coolant", "tractor beam coolant",	POS_NOUN);
 
+	snis_nl_add_dictionary_word("docking system", "docking system",	POS_NOUN);
 	snis_nl_add_dictionary_word("coolant",		"coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("power",		"power",	POS_NOUN);
 	snis_nl_add_dictionary_word("impulse drive",	"impulse drive",	POS_NOUN);
