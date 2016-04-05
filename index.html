@@ -1,12 +1,11 @@
 <html>
-<body style="color:#ffffff; background-color:#000000">
+<body style="color:#7fafff; background-color:#000000">
 <font face="Helvetica">
 <title>Space Nerds In Space - A Multi-player Networked Starship Bridge Simulator</title>
 <p align=center><font size=+5>SPACE NERDS IN SPACE</font>
 <p align=center><font size=+3>An Open Source Multi-player Networked Starship Bridge Simulator for Linux</font>
 <p align=center><font size=+3><a href="https://github.com/smcameron/space-nerds-in-space">Here is the source code</a></font>
 <hr>
-
 <p>Space Nerds In Space is an open source (GPLv2) cooperative multiplayer
 networked starship simulator for linux (and possibly Mac OSX too.)  The idea is
 you get several of your friends together with their computers in a room with a projector.
@@ -17,7 +16,16 @@ an out-the-window 3d rendering.  Multiple starships each with their own team may
 connect to the server for bridge-vs-bridge combat, or for cooperative play.  Additionally,
 a game master may inject and control various NPC ships into the game to entertain the
 players, and scenarios may be constructed with a Lua based scripting API.
-Here are a few screen shots:
+<p>Here is a short mini-documentary created at <a href="http://txrxlabs.org">the premier
+hackerspace of Houston, TX, TX/RX Labs</a>, camera work and editing by Jack Younger.
+This is from 2013, and the graphics and other aspects of the game are much better now,
+but this video will still give you a good idea of what the game is all about. 
+
+<p align=center>
+<iframe width="840" height="630" src="//www.youtube.com/embed/ATWvxgZerb0" frameborder="0" allowfullscreen></iframe>
+<hr>
+
+<p>Here are a few screen shots:
 
 <p align=center><font size=+2>A Rocky Planet
 <p align=center><img src="misc-images/screenshots/rocky-planet-1.jpg">
@@ -27,11 +35,12 @@ Here are a few screen shots:
 <p align=center><img src="misc-images/screenshots/gas-giant-1.jpg">
 
 <p align=center><b><font size=+3><a href="screenshots.html">More Screen Shots</a></font></b>
+<hr>
 
 <font size=+1>
 
 <p>Latest development video (July 2014):
-<iframe width="560" height="315" src="//www.youtube.com/embed/v7axdQC5aVk?rel=0" frameborder="0" allowfullscreen></iframe>
+<p align=center><iframe width="560" height="315" src="//www.youtube.com/embed/v7axdQC5aVk?rel=0" frameborder="0" allowfullscreen></iframe>
 
 <p>There is a (so far)
 <a href="http://forum.freegamedev.net/viewtopic.php?f=22&t=3710">year long thread
@@ -102,7 +111,8 @@ machine to make the ISO, then when you're done, you can trash the virtual machin
 Linux Mint 13 ISO can be found here:
 <a href="http://www.linuxmint.com/oldreleases.php">http://www.linuxmint.com/oldreleases.php</a>
 
-
+<blockquote>
+<font style="color:#7fff7f; background-color:#000000">
 <pre>
   Install the package "mintconstructor" from the repositories
    sudo apt-get install mintconstructor
@@ -132,14 +142,21 @@ Linux Mint 13 ISO can be found here:
     apt-get install libgtkglext1-dev 
     apt-get install liblua5.2-dev 
     apt-get install libglew1.5-dev
-
+</pre>
+</font>
 (hope I didn't miss any packages -- if you find I did, let me know.)
 
-If the openscad package isn't around, you can get it from here:
-http://www.openscad.org/downloads.html
- and then from outside the chrooted environment, copy
+<p>If the openscad package isn't around, you can get it from here:
+<font style="color:#7fff7f; background-color:#000000">
+<pre>
+	http://www.openscad.org/downloads.html
+</pre>
+</font>
+and then from outside the chrooted environment, copy
 openscad-2013.0.x86-32.tar.gz into your chroot directory/root
-   Then, back in the chrooted xterm:
+<p>Then, back in the chrooted xterm:
+<font style="color:#7fff7f; background-color:#000000">
+<pre>
 
    cd /root
    tar xzvf openscad-2013.01.x86-32.tar.gz
@@ -150,15 +167,15 @@ openscad-2013.0.x86-32.tar.gz into your chroot directory/root
    git clone https://github.com/smcameron/space-nerds-in-space.git
    cd space-nerds-in-space/
    make
+</pre>
+</font>
+<p>(now Space Nerds in Space has been built within the chrooted env.)
 
-   (now Space Nerds in Space has been built within the chrooted env.)
+<p>Once you're finished making modifications, make sure to clean up with the following commands:
 
-    Once you're finished making modifications, make sure to clean up with the following commands:
-
-
-    Now clean up the chrooted env (and yes aptitude takes the weird
-    tilde options for some reason):
-
+<p>Now clean up the chrooted env (and yes aptitude takes the weird tilde options for some reason):
+<font style="color:#7fff7f; background-color:#000000">
+<pre>
     aptitude purge ~c
     aptitude unmarkauto ~M
     apt-get clean; rm -rf /var/cache/debconf/*.dat-old; rm -rf /var/lib/aptitude/*.old; rm -rf /var/lib/dpkg/*-old; rm -rf /var/cache/apt/*.bin; updatedb
@@ -167,17 +184,18 @@ openscad-2013.0.x86-32.tar.gz into your chroot directory/root
     rm /root/.nano_history
     history -c
     exit
-
-(xterm will close)
-
-    Click Next
-    Give your ISO a description (which will be embedded as the name of the CD
+</pre>
+</font>
+<p>(xterm will close)
+<p>Click Next
+<p>Give your ISO a description (which will be embedded as the name of the CD
 or USB stick onto which the ISO is burnt)  Don't pick too long of a name though
 because if you do, it won't work.
-    Click Next
+<p>Click Next
 
-Iso image will be made
-</pre>
+<p>Iso image will be made
+
+</blockquote>
 
 <p>Then to run the game, burn the iso to dvd several times, and boot up all your machines from dvd.
 
@@ -196,9 +214,11 @@ else before making he ISO image, but I don't have the exact instructions to do t
 (run ifconfig to figure this out.)
 
 <p>Then start the snis client:
+<font style="color:#7fff7f; background-color:#000000">
 <pre>
 ./snis_client
 </pre>
+</font>
 
 <p>From there, start the lobby server on localhost, start the gameserver, connect to lobby, and connect to the gameserver.
 <p>Note the shipname and password you use (make up what you want).
