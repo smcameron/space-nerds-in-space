@@ -91,6 +91,15 @@ are read.  By default, "share/snis" is used.
 SNIS_COLORS if set, the file $SNIS_ASSET_DIR/$SNIS_COLORS is read to obtain
 color information instead of reading the default file of $SNIS_ASSET_DIR/user_colors.cfg
 .PP
+SNIS_SUPPRESS_RENDER_TO_TEXTURE if set, suppresses the use of OpenGL's render to texture
+feature even if the driver claims to support it.
+.PP
+SNIS_SUPPRESS_MSAA if set, suppresses the use of OpenGL's MSAA
+feature even if the driver claims to support it.
+.PP
+SNIS_SUPPRESS_RENDER_TO_FBO if set, suppresses the use of OpenGL's render to fbo
+feature even if the driver claims to support it.
+.PP
 .SH FILES
 .PP
 $SNIS_ASSET_DIR/sounds/*.ogg, various audio files used by the game.
