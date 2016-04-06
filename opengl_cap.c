@@ -21,6 +21,8 @@
 #include <GL/glew.h>
 #include "opengl_cap.h"
 
+#include <stdlib.h>
+
 int msaa_framebuffer_supported()
 {
 	static int suppress = -1;
