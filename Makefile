@@ -776,6 +776,12 @@ snis_nl.o:	snis_nl.c snis_nl.h Makefile
 snis_nl:	snis_nl.o string-utils.o
 	$(CC) -g -DTEST_NL -o snis_nl string-utils.o snis_nl.c
 
+spelled_numbers.o:	spelled_numbers.c spelled_numbers.h Makefile
+	$(Q)$(COMPILE)
+
+spelled_numbers:	spelled_numbers.c
+	$(CC) -g -DSPELLED_NUMBERS_TEST_CASE -o spelled_numbers spelled_numbers.c
+
 ${SSGL}:
 	(cd ssgl ; ${MAKE} )
 
