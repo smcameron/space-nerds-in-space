@@ -13466,13 +13466,13 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 		return;
 	default:
 		pthread_mutex_unlock(&universe_mutex);
-		queue_add_text_to_speech(c, "I don't know anything about that.");
+		queue_add_text_to_speech(c, "I do not know anything about that.");
 		return;
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void nl_describe(void *context, int argc, char *argv[], int pos[],
+static void nl_describe_n(void *context, int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
@@ -13560,6 +13560,37 @@ static int nl_find_nearest_object(struct game_client *c, int argc, char *argv[],
 	return i;
 no_understand:
 	return -1;
+}
+
+static void nl_describe_an(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, adj, noun;
+	uint32_t id;
+
+	noun = nl_find_next_word(argc, pos, POS_EXTERNAL_NOUN, 0);
+	if (noun >= 0) {
+		nl_describe_game_object(c, extra_data[noun].external_noun.handle);
+		return;
+	}
+	adj = nl_find_next_word(argc, pos, POS_ADJECTIVE, 0);
+	if (adj < 0)
+		goto no_understand;
+	if (strcmp(argv[adj], "nearest") == 0) {
+		pthread_mutex_lock(&universe_mutex);
+		i = nl_find_nearest_object(c, argc, argv, pos, extra_data, adj);
+		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			goto no_understand;
+		}
+		id = go[i].id;
+		pthread_mutex_unlock(&universe_mutex);
+		nl_describe_game_object(c, id);
+		return;
+	}
+no_understand:
+	queue_add_text_to_speech(c, "I do not know anything about that.");
 }
 
 static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
@@ -14551,7 +14582,8 @@ static void natural_language_multiword_preprocessor(char *text, int coding_direc
 
 static void init_dictionary(void)
 {
-	snis_nl_add_dictionary_verb("describe",		"describe",	"n", nl_describe);
+	snis_nl_add_dictionary_verb("describe",		"describe",	"n", nl_describe_n);
+	snis_nl_add_dictionary_verb("describe",		"describe",	"an", nl_describe_an);
 	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn", sorry_dave);
 	snis_nl_add_dictionary_verb("set",		"set",		"npq", nl_set_npq);
 	snis_nl_add_dictionary_verb("set",		"set",		"npa", sorry_dave);

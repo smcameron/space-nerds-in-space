@@ -902,6 +902,8 @@ static void generic_verb_action(__attribute__((unused)) void *context, int argc,
 
 static void init_dictionary(void)
 {
+	snis_nl_add_dictionary_verb("describe",		"navigate",	"n", generic_verb_action);
+	snis_nl_add_dictionary_verb("describe",		"navigate",	"an", generic_verb_action);
 	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn", generic_verb_action);
 	snis_nl_add_dictionary_verb("set",		"set",		"npq", generic_verb_action);
 	snis_nl_add_dictionary_verb("set",		"set",		"npa", generic_verb_action);
