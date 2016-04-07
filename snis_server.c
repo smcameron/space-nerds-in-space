@@ -269,6 +269,7 @@ struct bridge_data {
 	struct npc_bot_state npcbot;
 	int last_docking_permission_denied_time;
 	uint32_t science_selection;
+	int current_displaymode;
 } bridgelist[MAXCLIENTS];
 int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -7769,6 +7770,7 @@ static int process_role_onscreen(struct game_client *c)
 	send_packet_to_all_clients_on_a_bridge(c->shipid, 
 			packed_buffer_new("bb", OPCODE_ROLE_ONSCREEN, new_displaymode),
 			ROLE_MAIN);
+	bridgelist[c->bridge].current_displaymode = new_displaymode;
 	return 0;
 }
 
@@ -12585,6 +12587,7 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].npcbot.channel = (uint32_t) -1;
 		bridgelist[nbridges].npcbot.object_id = (uint32_t) -1;
 		bridgelist[nbridges].damcon.bridge = nbridges;
+		bridgelist[nbridges].current_displaymode = DISPLAYMODE_MAINSCREEN;
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
 	
@@ -14002,6 +14005,60 @@ static void nl_set_tractor_coolant(struct game_client *c, char *word, float frac
 	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
 }
 
+static void nl_set_scizoom(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.scizoom);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_navzoom(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.navzoom);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_weapzoom(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.weapzoom);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_mainzoom(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.mainzoom);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_zoom(struct game_client *c, char *word, float value)
+{
+	char *zoom_name;
+
+	switch (bridgelist[c->bridge].current_displaymode) {
+	case DISPLAYMODE_MAINSCREEN:
+		zoom_name = "main screen zoom";
+		nl_set_mainzoom(c, zoom_name, value);
+		break;
+	case DISPLAYMODE_NAVIGATION:
+		zoom_name = "navigation zoom";
+		nl_set_navzoom(c, zoom_name, value);
+		break;
+	case DISPLAYMODE_WEAPONS:
+		zoom_name = "weapons zoom";
+		nl_set_weapzoom(c, zoom_name, value);
+		break;
+	case DISPLAYMODE_SCIENCE:
+		zoom_name = "science zoom";
+		nl_set_scizoom(c, zoom_name, value);
+		break;
+	default:
+		goto no_understand;
+	}
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "I do not understand your zoom request.");
+}
+
 typedef void (*nl_set_function)(struct game_client *c, char *word, float value);
 static struct settable_thing_entry {
 	char *name;
@@ -14027,6 +14084,7 @@ static struct settable_thing_entry {
 	{ "phaser coolant", nl_set_phaser_coolant, },
 	{ "shield coolant", nl_set_shield_coolant, },
 	{ "tractor beam coolant", nl_set_tractor_coolant, },
+	{ "zoom", nl_set_zoom, },
 };
 
 static void nl_set_npq(void *context, int argc, char *argv[], int pos[],
@@ -14393,11 +14451,89 @@ static void nl_onscreen_verb_pn(void *context, int argc, char *argv[], int pos[]
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
 			packed_buffer_new("bb", OPCODE_ROLE_ONSCREEN, new_displaymode),
 			ROLE_MAIN);
+	bridgelist[c->bridge].current_displaymode = new_displaymode;
 	return;
 
 no_understand:
 	queue_add_text_to_speech(c, "I do not understand your request.");
 	return;
+}
+
+static void nl_zoom_q(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int number;
+	float amount;
+
+	number = nl_find_next_word(argc, pos, POS_NUMBER, 0);
+	if (number < 0)
+		goto no_understand;
+	amount = extra_data[number].number.value;
+	if (amount > 1.0)
+		amount = amount / 100.0;
+	if (amount < 0.0 || amount > 1.0)
+		goto no_understand;
+	nl_set_zoom(c, "", amount);
+	return;
+no_understand:
+	queue_add_text_to_speech(c, "I do not understand your zoom request.");
+}
+
+static void nl_zoom_pq(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int prep, number;
+	float direction = 1.0;
+	float amount;
+	/* char *zoom_name; */
+
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
+	if (prep < 0)
+		goto no_understand;
+	if (strcasecmp(argv[prep], "out") == 0)
+		direction = -1.0;
+	else
+		direction = 1.0;
+	number = nl_find_next_word(argc, pos, POS_NUMBER, prep);
+	if (number < 0)
+		goto no_understand;
+	amount = extra_data[number].number.value;
+	if (amount > 1.0)
+		amount = amount / 100.0;
+	if (amount < 0.0 || amount > 1.0)
+		goto no_understand;
+
+	if (direction < 0)
+		amount = 1.0 - amount;
+
+#if 1
+	nl_set_zoom(c, "", amount);
+#else
+	switch (bridgelist[c->bridge].current_displaymode) {
+	case DISPLAYMODE_MAINSCREEN:
+		zoom_name = "main screen zoom";
+		nl_set_mainzoom(c, zoom_name, amount);
+		break;
+	case DISPLAYMODE_NAVIGATION:
+		zoom_name = "navigation zoom";
+		nl_set_navzoom(c, zoom_name, amount);
+		break;
+	case DISPLAYMODE_WEAPONS:
+		zoom_name = "weapons zoom";
+		nl_set_weapzoom(c, zoom_name, amount);
+		break;
+	case DISPLAYMODE_SCIENCE:
+		zoom_name = "science zoom";
+		nl_set_scizoom(c, zoom_name, amount);
+		break;
+	default:
+		goto no_understand;
+	}
+#endif
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "I do not understand your zoom request.");
 }
 
 static void nl_target_n(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
@@ -14617,8 +14753,9 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("yaw",		"yaw",		"qaa", nl_turn_qaa);
 	snis_nl_add_dictionary_verb("pitch",		"pitch",	"qaa", nl_turn_qaa);
 	snis_nl_add_dictionary_verb("roll",		"roll",		"qaa", nl_turn_qaa);
+	snis_nl_add_dictionary_verb("zoom",		"zoom",		"q", nl_zoom_q);
 	snis_nl_add_dictionary_verb("zoom",		"zoom",		"p", sorry_dave);
-	snis_nl_add_dictionary_verb("zoom",		"zoom",		"pq", sorry_dave);
+	snis_nl_add_dictionary_verb("zoom",		"zoom",		"pq", nl_zoom_pq);
 	snis_nl_add_dictionary_verb("shut",		"shut",		"an", sorry_dave);
 	snis_nl_add_dictionary_verb("shut",		"shut",		"na", sorry_dave);
 	snis_nl_add_dictionary_verb("launch",		"launch",	"n", sorry_dave);
@@ -14665,6 +14802,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("phaser coolant", "phaser coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("shield coolant", "shield coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("tractor beam coolant", "tractor beam coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("zoom",		"zoom",		POS_NOUN);
 
 	snis_nl_add_dictionary_word("tractor beam", "tractor beam",	POS_NOUN);
 	snis_nl_add_dictionary_word("docking system", "docking system",	POS_NOUN);
