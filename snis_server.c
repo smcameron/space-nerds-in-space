@@ -13363,6 +13363,7 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("counter-clockwise", "counterclockwise");
 	snis_nl_add_synonym("anti-clockwise", "counterclockwise");
 	snis_nl_add_synonym("anticlockwise", "counterclockwise");
+	snis_nl_add_synonym("star base", "starbase");
 }
 
 static const struct noun_description_entry {
@@ -13406,6 +13407,8 @@ static char *nl_get_object_name(struct snis_entity *o)
 	switch (o->type) {
 	case OBJTYPE_STARBASE:
 		return o->tsd.starbase.name;
+	case OBJTYPE_NEBULA:
+		return "nebula";
 	default:
 		return o->sdata.name;
 	}
@@ -13490,6 +13493,75 @@ static void nl_describe(void *context, int argc, char *argv[], int pos[],
 	queue_add_text_to_speech(c, "I do not know anything about that.");
 }
 
+/* Assumes universe lock is held */
+static int nl_find_nearest_object_of_type(uint32_t id, int objtype)
+{
+	int i;
+	double x, y, z;
+	double nearest_yet = -1.0;
+	double d;
+	struct snis_entity *o;
+	int nearest = -1;
+
+	i = lookup_by_id(id);
+	if (i < 0)
+		return (uint32_t) -1;
+
+	o = &go[i];
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].type != objtype)
+			continue;
+		if (!go[i].alive)
+			continue;
+		x = go[i].x - o->x;
+		y = go[i].y - o->y;
+		z = go[i].z - o->z;
+		d = x * x + y * y + z * z;
+		if (d < nearest_yet || nearest_yet < 0) {
+			nearest = i;
+			nearest_yet = d;
+		}
+	}
+	return nearest;
+}
+
+/* Assumes universe lock is held */
+static int nl_find_nearest_object(struct game_client *c, int argc, char *argv[], int pos[],
+					union snis_nl_extra_data extra_data[], int starting_word)
+{
+	int i, object, adj, objtype;
+
+	object = nl_find_next_word(argc, pos, POS_NOUN, starting_word);
+	if (object < 0)
+		goto no_understand;
+	adj = nl_find_next_word(argc, pos, POS_ADJECTIVE, starting_word);
+	if (adj > 0) {
+		if (strcmp(argv[adj], "nearest") != 0)
+			goto no_understand;
+	} /* else assume they meant nearest */
+	if (strcmp(argv[object], "planet") == 0)
+		objtype = OBJTYPE_PLANET;
+	else if (strcmp(argv[object], "starbase") == 0)
+		objtype = OBJTYPE_STARBASE;
+	else if (strcmp(argv[object], "nebula") == 0)
+		objtype = OBJTYPE_NEBULA;
+	else if (strcmp(argv[object], "ship") == 0)
+		objtype = OBJTYPE_SHIP2;
+	else if (strcmp(argv[object], "asteroid") == 0)
+		objtype = OBJTYPE_ASTEROID;
+	else
+		objtype = -1;
+	if (objtype < 0)
+		goto no_understand;
+	i = nl_find_nearest_object_of_type(c->shipid, objtype);
+	if (i < 0)
+		return -1;
+	return i;
+no_understand:
+	return -1;
+}
+
 static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
@@ -13499,9 +13571,9 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 	union vec3 direction;
 	char directions[200];
 	double heading, mark;
-	char *name;
 	int calculate_course = 0;
 	int calculate_distance = 0;
+	char destination_name[100];
 	double distance;
 
 	/* Find the first noun... it should be "course", or "distance". */
@@ -13527,21 +13599,33 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 
 	/* Find the second noun, it should be a place... */
 	second_noun = nl_find_next_word(argc, pos, POS_EXTERNAL_NOUN, first_noun + 1);
-	if (second_noun < 0)
-		goto no_understand;
-
-	i = lookup_by_id(extra_data[second_noun].external_noun.handle);
-	if (i < 0) {
-		if (calculate_course)
-			queue_add_text_to_speech(c, "Sorry, I cannot compute a course to an unknown location.");
-		else if (calculate_distance)
-			queue_add_text_to_speech(c, "Sorry, I cannot compute the distance to an unknown location.");
-		return;
+	pthread_mutex_lock(&universe_mutex);
+	if (second_noun < 0) {
+		i = nl_find_nearest_object(c, argc, argv, pos, extra_data, first_noun + 1);
+		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			goto no_understand;
+		}
+		sprintf(destination_name, "%s", nl_get_object_name(&go[i]));
+	} else {
+		i = lookup_by_id(extra_data[second_noun].external_noun.handle);
+		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			if (calculate_course)
+				queue_add_text_to_speech(c,
+					"Sorry, I cannot compute a course to an unknown location.");
+			else if (calculate_distance)
+				queue_add_text_to_speech(c,
+					"Sorry, I cannot compute the distance to an unknown location.");
+			return;
+		}
+		sprintf(destination_name, "%s", argv[second_noun]);
 	}
 	dest = &go[i];
 
 	i = lookup_by_id(c->shipid);
 	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
 		queue_add_text_to_speech(c, "Sorry, I do not seem to know our current location.");
 		return;
 	}
@@ -13551,6 +13635,8 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 	direction.v.x = dest->x - us->x;
 	direction.v.y = dest->y - us->y;
 	direction.v.z = dest->z - us->z;
+	pthread_mutex_unlock(&universe_mutex);
+
 	distance = vec3_magnitude(&direction);
 	vec3_to_heading_mark(&direction, NULL, &heading, &mark);
 	heading = heading * 180.0 / M_PI;
@@ -13558,9 +13644,9 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 	mark = mark * 180.0 / M_PI;
 	if (calculate_course)
 		sprintf(directions, "Course to %s calculated.  Destination lies at bearing %3.0lf, mark %3.0lf",
-					argv[second_noun], heading, mark);
+					destination_name, heading, mark);
 	if (calculate_distance)
-		sprintf(directions, "The distance to %s is %.0lf clicks", argv[second_noun], distance);
+		sprintf(directions, "The distance to %s is %.0lf clicks", destination_name, distance);
 	queue_add_text_to_speech(c, directions);
 	return;
 
@@ -13964,7 +14050,7 @@ static void nl_set_npn(void *context, int argc, char *argv[], int pos[],
 	struct game_client *c = context;
 	int setthing, prep, settowhat;
 	char *name, *namecopy, reply[100];
-	int i;
+	int i = -1;
 	union vec3 direction, right;
 	union quat new_orientation;
 	struct snis_entity *dest, *ship;
@@ -13975,17 +14061,23 @@ static void nl_set_npn(void *context, int argc, char *argv[], int pos[],
 	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
 	if (prep < 0)
 		goto no_understand;
-	settowhat = nl_find_next_word(argc, pos, POS_EXTERNAL_NOUN, 0);
-	if (settowhat < 0)
-		goto no_understand;
-
-	if (strcasecmp(argv[setthing], "course") != 0)
-		goto no_understand;
-	if (strcasecmp(argv[prep], "for") != 0)
-		goto no_understand;
-
+	settowhat = nl_find_next_word(argc, pos, POS_EXTERNAL_NOUN, prep);
 	pthread_mutex_lock(&universe_mutex);
-	i = lookup_by_id(extra_data[settowhat].external_noun.handle);
+	if (settowhat < 0) {
+		i = nl_find_nearest_object(c, argc, argv, pos, extra_data, prep);
+		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			goto no_understand;
+		}
+	}
+
+	if (strcasecmp(argv[setthing], "course") != 0 || strcasecmp(argv[prep], "for") != 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		goto no_understand;
+	}
+
+	if (i < 0)
+		i = lookup_by_id(extra_data[settowhat].external_noun.handle);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		queue_add_text_to_speech(c, "Sorry, I am not sure where that is.");
@@ -14286,13 +14378,18 @@ static void nl_target_n(void *context, int argc, char *argv[], int pos[], union 
 	uint32_t id;
 
 	noun = nl_find_next_word(argc, pos, POS_EXTERNAL_NOUN, 0);
-	if (noun < 0) {
-		queue_add_text_to_speech(c, "I do not understand what you want to target.");
-		return;
-	}
-	id = extra_data[noun].external_noun.handle;
 	pthread_mutex_lock(&universe_mutex);
-	i = lookup_by_id(id);
+	if (noun < 0) {
+		i = nl_find_nearest_object(c, argc, argv, pos, extra_data, 0);
+		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			goto target_lost;
+		}
+		id = go[i].id;
+	} else {
+		id = extra_data[noun].external_noun.handle;
+		i = lookup_by_id(id);
+	}
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		goto target_lost;
@@ -14459,8 +14556,11 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("set",		"set",		"npq", nl_set_npq);
 	snis_nl_add_dictionary_verb("set",		"set",		"npa", sorry_dave);
 	snis_nl_add_dictionary_verb("set",		"set",		"npn", nl_set_npn);
+	snis_nl_add_dictionary_verb("set",		"set",		"npan", nl_set_npn);
 	snis_nl_add_dictionary_verb("plot",		"plot",		"npn", nl_set_npn);
+	snis_nl_add_dictionary_verb("plot",		"plot",		"npan", nl_set_npn);
 	snis_nl_add_dictionary_verb("lay in",		"lay in",	"npn", nl_set_npn);
+	snis_nl_add_dictionary_verb("lay in",		"lay in",	"npan", nl_set_npn);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"npq", sorry_dave);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("raise",		"raise",	"nq", sorry_dave);
@@ -14507,6 +14607,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
 	snis_nl_add_dictionary_word("starbase",		"starbase",	POS_NOUN);
+	snis_nl_add_dictionary_word("station",		"starbase",	POS_NOUN);
 	snis_nl_add_dictionary_word("base",		"starbase",	POS_NOUN);
 	snis_nl_add_dictionary_word("planet",		"planet",	POS_NOUN);
 	snis_nl_add_dictionary_word("ship",		"ship",		POS_NOUN);
@@ -14672,6 +14773,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("full",		"maximum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("max",		"maximum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("maximum",		"maximum",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("planet",		"planet",	POS_ADJECTIVE);
 
 	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
 	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);

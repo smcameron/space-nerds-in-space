@@ -905,6 +905,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn", generic_verb_action);
 	snis_nl_add_dictionary_verb("set",		"set",		"npq", generic_verb_action);
 	snis_nl_add_dictionary_verb("set",		"set",		"npa", generic_verb_action);
+	snis_nl_add_dictionary_verb("set",		"set",		"npn", generic_verb_action);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"npq", generic_verb_action);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"n", generic_verb_action);
 	snis_nl_add_dictionary_verb("raise",		"raise",	"nq", generic_verb_action);
@@ -977,6 +978,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("report",		"report",	POS_NOUN);
 	snis_nl_add_dictionary_word("damage",		"damage",	POS_NOUN);
 	snis_nl_add_dictionary_word("course",		"course",	POS_NOUN);
+	snis_nl_add_dictionary_word("earth",		"earth",	POS_NOUN);
 
 
 	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
@@ -1067,6 +1069,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("full",		"maximum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("max",		"maximum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("maximum",		"maximum",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("planet",		"planet",	POS_ADJECTIVE);
 
 	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
 	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);
