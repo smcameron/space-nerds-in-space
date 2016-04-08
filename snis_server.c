@@ -14160,7 +14160,14 @@ static void nl_set_npn(void *context, int argc, char *argv[], int pos[],
 		}
 	}
 
-	if (strcasecmp(argv[setthing], "course") != 0 || strcasecmp(argv[prep], "for") != 0) {
+	if (strcasecmp(argv[prep], "for") != 0 &&
+		strcasecmp(argv[prep], "to") != 0 &&
+		strcasecmp(argv[prep], "toward") != 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		goto no_understand;
+	}
+
+	if (strcasecmp(argv[setthing], "course") != 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		goto no_understand;
 	}
