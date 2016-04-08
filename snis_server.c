@@ -13757,6 +13757,62 @@ static int nl_calculate_ship_rotation(struct game_client *c,
 	return 0;
 }
 
+static void nl_turn_aq(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int adj, number;
+	float degrees;
+	union quat rotation;
+	char reply[100];
+
+	adj = nl_find_next_word(argc, pos, POS_ADJECTIVE, 0);
+	if (adj < 0)
+		goto no_understand;
+	number = nl_find_next_word(argc, pos, POS_NUMBER, adj);
+	if (number < 0)
+		goto no_understand;
+
+	if (nl_calculate_ship_rotation(c, argc, argv, pos, extra_data,
+					adj, number, reply, &rotation))
+		return;
+
+	nl_rotate_ship(c, &rotation);
+	queue_add_text_to_speech(c, reply);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
+}
+
+static void nl_turn_qa(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int adj, number;
+	float degrees;
+	union quat rotation;
+	char reply[100];
+
+	number = nl_find_next_word(argc, pos, POS_NUMBER, 0j);
+	if (number < 0)
+		goto no_understand;
+	adj = nl_find_next_word(argc, pos, POS_ADJECTIVE, number);
+	if (adj < 0)
+		goto no_understand;
+
+	if (nl_calculate_ship_rotation(c, argc, argv, pos, extra_data,
+					adj, number, reply, &rotation))
+		return;
+
+	nl_rotate_ship(c, &rotation);
+	queue_add_text_to_speech(c, reply);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
+}
+
 /* Eg: "turn right 90 degrees" */
 static void nl_turn_aqa(void *context, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
@@ -14719,6 +14775,10 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("rotate",		"rotate",	"aqa", nl_turn_aqa);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"qaa", nl_turn_qaa);
 	snis_nl_add_dictionary_verb("rotate",		"rotate",	"qaa", nl_turn_qaa);
+	snis_nl_add_dictionary_verb("turn",		"turn",		"qa", nl_turn_qa);
+	snis_nl_add_dictionary_verb("rotate",		"rotate",	"qa", nl_turn_qa);
+	snis_nl_add_dictionary_verb("turn",		"turn",		"aq", nl_turn_aq);
+	snis_nl_add_dictionary_verb("rotate",		"rotate",	"aq", nl_turn_aq);
 	snis_nl_add_dictionary_verb("compute",		"compute",	"npn", nl_compute_npn);
 	snis_nl_add_dictionary_verb("damage report",	"damage report", "", nl_damage_report);
 	snis_nl_add_dictionary_verb("report damage",	"damage report", "", nl_damage_report);

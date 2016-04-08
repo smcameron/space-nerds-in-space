@@ -941,7 +941,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("engage",		"engage",	"n", generic_verb_action);
 	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", generic_verb_action);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", generic_verb_action);
-	snis_nl_add_dictionary_verb("turn",		"turn",		"aq", generic_verb_action);
+	snis_nl_add_dictionary_verb("turn",		"turn",		"aqa", generic_verb_action);
+	snis_nl_add_dictionary_verb("turn",		"turn",		"qaa", generic_verb_action);
 	snis_nl_add_dictionary_verb("compute",		"compute",	"npn", generic_verb_action);
 	snis_nl_add_dictionary_verb("report",		"report",	"n", generic_verb_action);
 	snis_nl_add_dictionary_verb("yaw",		"yaw",		"aq", generic_verb_action);
@@ -1097,6 +1098,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("max",		"maximum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("maximum",		"maximum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("planet",		"planet",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("degrees",		"degrees",	POS_ADJECTIVE);
 
 	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
 	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);
