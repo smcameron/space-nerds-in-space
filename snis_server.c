@@ -13719,13 +13719,50 @@ static void nl_rotate_ship(struct game_client *c, union quat *rotation)
 
 }
 
+static int nl_calculate_ship_rotation(struct game_client *c,
+					int argc, char *argv[], int pos[],
+					union snis_nl_extra_data extra_data[],
+					int direction, int amount, char *reply,
+					union quat *rotation)
+{
+	float degrees = extra_data[amount].number.value;
+
+	strcpy(reply, "");
+
+	/* If the ship facing down the positive x axis, what rotation would we apply? */
+	if (strcasecmp(argv[direction], "starboard") == 0 ||
+		strcasecmp(argv[direction], "right") == 0) {
+		quat_init_axis(rotation, 0, 1, 0, -degrees * M_PI / 180.0);
+		sprintf(reply, "rotating %3.0f degrees to starboard", degrees);
+	} else if (strcasecmp(argv[direction], "port") == 0 ||
+			strcasecmp(argv[direction], "left") == 0) {
+		quat_init_axis(rotation, 0, 1, 0, degrees * M_PI / 180.0);
+		sprintf(reply, "rotating %3.0f degrees to port", degrees);
+	} else if (strcasecmp(argv[direction], "clockwise") == 0) {
+		quat_init_axis(rotation, 1, 0, 0, degrees * M_PI / 180.0);
+		sprintf(reply, "rolling %3.0f degrees clockwise", degrees);
+	} else if (strcasecmp(argv[direction], "counterclockwise") == 0) {
+		quat_init_axis(rotation, 1, 0, 0, -degrees * M_PI / 180.0);
+		sprintf(reply, "rolling %3.0f degrees counter clockwise", degrees);
+	} else if (strcasecmp(argv[direction], "up") == 0) {
+		quat_init_axis(rotation, 0, 0, 1, degrees * M_PI / 180.0);
+		sprintf(reply, "pitching %3.0f degrees up", degrees);
+	} else if (strcasecmp(argv[direction], "down") == 0) {
+		quat_init_axis(rotation, 0, 0, 1, -degrees * M_PI / 180.0);
+		sprintf(reply, "pitching %3.0f degrees down", degrees);
+	} else {
+		queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
+		return -1;
+	}
+	return 0;
+}
+
 /* Eg: "turn right 90 degrees" */
 static void nl_turn_aqa(void *context, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int direction, amount, unit;
-	float degrees;
 	union quat rotation;
 	char reply[100];
 
@@ -13735,7 +13772,6 @@ static void nl_turn_aqa(void *context, int argc, char *argv[], int pos[],
 	amount = nl_find_next_word(argc, pos, POS_NUMBER, direction + 1);
 	if (amount < 0)
 		goto no_understand;
-	degrees = extra_data[amount].number.value;
 	unit = nl_find_next_word(argc, pos, POS_ADJECTIVE, amount + 1);
 	if (unit < 0)
 		goto no_understand;
@@ -13745,35 +13781,11 @@ static void nl_turn_aqa(void *context, int argc, char *argv[], int pos[],
 		return;
 	}
 
-	strcpy(reply, "");
-	/* If the ship facing down the positive x axis, what rotation would we apply? */
-	if (strcasecmp(argv[direction], "starboard") == 0 || 
-		strcasecmp(argv[direction], "right") == 0) {
-		quat_init_axis(&rotation, 0, 1, 0, -degrees * M_PI / 180.0);
-		sprintf(reply, "rotating %3.0f degrees to starboard", degrees);
-	} else if (strcasecmp(argv[direction], "port") == 0 ||
-			strcasecmp(argv[direction], "left") == 0) {
-		quat_init_axis(&rotation, 0, 1, 0, degrees * M_PI / 180.0);
-		sprintf(reply, "rotating %3.0f degrees to port", degrees);
-	} else if (strcasecmp(argv[direction], "clockwise") == 0) {
-		quat_init_axis(&rotation, 1, 0, 0, degrees * M_PI / 180.0);
-		sprintf(reply, "rolling %3.0f degrees clockwise", degrees);
-	} else if (strcasecmp(argv[direction], "counterclockwise") == 0) {
-		quat_init_axis(&rotation, 1, 0, 0, -degrees * M_PI / 180.0);
-		sprintf(reply, "rolling %3.0f degrees counter clockwise", degrees);
-	} else if (strcasecmp(argv[direction], "up") == 0) {
-		quat_init_axis(&rotation, 0, 0, 1, degrees * M_PI / 180.0);
-		sprintf(reply, "pitching %3.0f degrees up", degrees);
-	} else if (strcasecmp(argv[direction], "down") == 0) {
-		quat_init_axis(&rotation, 0, 0, 1, -degrees * M_PI / 180.0);
-		sprintf(reply, "pitching %3.0f degrees down", degrees);
-	} else {
-		goto no_understand;
-	}
-
+	if (nl_calculate_ship_rotation(c, argc, argv, pos, extra_data,
+					direction, amount, reply, &rotation))
+		return;
 	nl_rotate_ship(c, &rotation);
 	queue_add_text_to_speech(c, reply);
-
 	return;
 
 no_understand:
@@ -13786,14 +13798,12 @@ static void nl_turn_qaa(void *context, int argc, char *argv[], int pos[],
 {
 	struct game_client *c = context;
 	int direction, amount, unit;
-	float degrees;
 	union quat rotation;
 	char reply[100];
 
 	amount = nl_find_next_word(argc, pos, POS_NUMBER, 0);
 	if (amount < 0)
 		goto no_understand;
-	degrees = extra_data[amount].number.value;
 	unit = nl_find_next_word(argc, pos, POS_ADJECTIVE, amount + 1);
 	if (unit < 0)
 		goto no_understand;
@@ -13806,35 +13816,11 @@ static void nl_turn_qaa(void *context, int argc, char *argv[], int pos[],
 		return;
 	}
 
-	strcpy(reply, "");
-	/* If the ship facing down the positive x axis, what rotation would we apply? */
-	if (strcasecmp(argv[direction], "starboard") == 0 || 
-		strcasecmp(argv[direction], "right") == 0) {
-		quat_init_axis(&rotation, 0, 1, 0, -degrees * M_PI / 180.0);
-		sprintf(reply, "rotating %3.0f degrees to starboard", degrees);
-	} else if (strcasecmp(argv[direction], "port") == 0 ||
-			strcasecmp(argv[direction], "left") == 0) {
-		quat_init_axis(&rotation, 0, 1, 0, degrees * M_PI / 180.0);
-		sprintf(reply, "rotating %3.0f degrees to port", degrees);
-	} else if (strcasecmp(argv[direction], "clockwise") == 0) {
-		quat_init_axis(&rotation, 1, 0, 0, degrees * M_PI / 180.0);
-		sprintf(reply, "rolling %3.0f degrees clockwise", degrees);
-	} else if (strcasecmp(argv[direction], "counterclockwise") == 0) {
-		quat_init_axis(&rotation, 1, 0, 0, -degrees * M_PI / 180.0);
-		sprintf(reply, "rolling %3.0f degrees counter clockwise", degrees);
-	} else if (strcasecmp(argv[direction], "up") == 0) {
-		quat_init_axis(&rotation, 0, 0, 1, degrees * M_PI / 180.0);
-		sprintf(reply, "pitching %3.0f degrees up", degrees);
-	} else if (strcasecmp(argv[direction], "down") == 0) {
-		quat_init_axis(&rotation, 0, 0, 1, -degrees * M_PI / 180.0);
-		sprintf(reply, "pitching %3.0f degrees down", degrees);
-	} else {
-		goto no_understand;
-	}
-
+	if (nl_calculate_ship_rotation(c, argc, argv, pos, extra_data,
+					direction, amount, reply, &rotation))
+		return;
 	nl_rotate_ship(c, &rotation);
 	queue_add_text_to_speech(c, reply);
-
 	return;
 
 no_understand:
