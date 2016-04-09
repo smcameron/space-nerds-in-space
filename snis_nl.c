@@ -834,14 +834,31 @@ static void snis_nl_debuglevel(void *context, int argc, char *argv[], int pos[],
 	fprintf(stderr, "Set debug level to %d, '%s'\n", debuglevel, debuglevel ? "on" : "off");
 }
 
+static void snis_nl_dumpvocab(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	int i;
+
+	if (!debuglevel)
+		return;
+	/* Dump out all the words we know to stdout */
+
+	for (i = 0; i < nsynonyms; i++)
+		printf("%s\n", synonym[i].syn);
+	for (i = 0; i < ndictionary_entries; i++)
+		printf("%s\n", dictionary[i].word);
+}
+
 static void generic_add_dictionary_word(char *word, char *canonical_word, int part_of_speech,
 						char *syntax, snis_nl_verb_function action)
 {
 	struct dictionary_entry *de;
 
 	/* If the dictionary is empty, first, jam in an entry to allow turning on debugging */
-	if (ndictionary_entries == 0 && strcmp(word, "nldebuglevel") != 0)
+	if (ndictionary_entries == 0 && strcmp(word, "nldebuglevel") != 0) {
 		generic_add_dictionary_word("nldebuglevel", "nldebuglevel", POS_VERB, "q", snis_nl_debuglevel);
+		generic_add_dictionary_word("nldumpvocab", "nldumpvocab", POS_VERB, "", snis_nl_dumpvocab);
+	}
 	if (ndictionary_entries >= MAX_DICTIONARY_ENTRIES) {
 		fprintf(stderr, "Too many dictionary entries, discarding '%s/%s'\n", word, canonical_word);
 		return;
