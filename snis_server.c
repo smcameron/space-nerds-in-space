@@ -13794,7 +13794,7 @@ static void nl_turn_qa(void *context, int argc, char *argv[], int pos[],
 	union quat rotation;
 	char reply[100];
 
-	number = nl_find_next_word(argc, pos, POS_NUMBER, 0j);
+	number = nl_find_next_word(argc, pos, POS_NUMBER, 0);
 	if (number < 0)
 		goto no_understand;
 	adj = nl_find_next_word(argc, pos, POS_ADJECTIVE, number);
@@ -14443,17 +14443,17 @@ no_understand:
 
 static int string_to_displaymode(char *string)
 {
-	if (strcasecmp(argv[verb], "navigation") == 0)
+	if (strcasecmp(string, "navigation") == 0)
 		return DISPLAYMODE_NAVIGATION;
-	else if (strcasecmp(argv[verb], "main view") == 0)
+	else if (strcasecmp(string, "main view") == 0)
 		return DISPLAYMODE_MAINSCREEN;
-	else if (strcasecmp(argv[verb], "weapons") == 0)
+	else if (strcasecmp(string, "weapons") == 0)
 		return DISPLAYMODE_WEAPONS;
-	else if (strcasecmp(argv[verb], "engineering") == 0)
+	else if (strcasecmp(string, "engineering") == 0)
 		return DISPLAYMODE_ENGINEERING;
-	else if (strcasecmp(argv[verb], "science") == 0)
+	else if (strcasecmp(string, "science") == 0)
 		return DISPLAYMODE_SCIENCE;
-	else if (strcasecmp(argv[verb], "communications") == 0)
+	else if (strcasecmp(string, "communications") == 0)
 		return DISPLAYMODE_COMMS;
 	return -1;
 }
