@@ -13688,15 +13688,45 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know how to compute that.");
 }
 
+static void nl_rotate_ship(struct game_client *c, union quat *rotation)
+{
+	int i;
+	struct snis_entity *o;
+	union quat q1, q2, q3, new_orientation;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "Sorry, I can't seem to steer, Computer needs maintenance.");
+		return;
+	}
+	o = &go[i];
+
+	/* Convert rotation to local coordinate system */
+	quat_mul(&q1, &o->orientation, rotation);
+	quat_conj(&q2, &o->orientation);
+	quat_mul(&q3, &q1, &q2);
+	/* Apply to local orientation */
+	quat_mul(&new_orientation, &q3, &o->orientation);
+	quat_normalize_self(&new_orientation);
+
+	/* Now let the computer steer for awhile */
+	o->tsd.ship.computer_desired_orientation = new_orientation;
+	o->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
+	// o->orientation = new_orientation;
+	pthread_mutex_unlock(&universe_mutex);
+
+}
+
 /* Eg: "turn right 90 degrees" */
 static void nl_turn_aqa(void *context, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
-	int i, direction, amount, unit;
+	int direction, amount, unit;
 	float degrees;
-	union quat rotation, new_orientation, q1, q2, q3;
-	struct snis_entity *o;
+	union quat rotation;
 	char reply[100];
 
 	direction = nl_find_next_word(argc, pos, POS_ADJECTIVE, 0);
@@ -13741,29 +13771,7 @@ static void nl_turn_aqa(void *context, int argc, char *argv[], int pos[],
 		goto no_understand;
 	}
 
-
-	pthread_mutex_lock(&universe_mutex);
-	i = lookup_by_id(c->shipid);
-	if (i < 0) {
-		pthread_mutex_unlock(&universe_mutex);
-		queue_add_text_to_speech(c, "Sorry, I can't seem to steer, Computer needs maintenance.");
-		return;
-	}
-	o = &go[i];
-
-	/* Convert rotation to local coordinate system */
-	quat_mul(&q1, &o->orientation, &rotation);
-	quat_conj(&q2, &o->orientation);
-	quat_mul(&q3, &q1, &q2);
-	/* Apply to local orientation */
-	quat_mul(&new_orientation, &q3, &o->orientation);
-	quat_normalize_self(&new_orientation);
-
-	/* Now let the computer steer for awhile */
-	o->tsd.ship.computer_desired_orientation = new_orientation;
-	o->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
-	// o->orientation = new_orientation;
-	pthread_mutex_unlock(&universe_mutex);
+	nl_rotate_ship(c, &rotation);
 	queue_add_text_to_speech(c, reply);
 
 	return;
@@ -13777,10 +13785,9 @@ static void nl_turn_qaa(void *context, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
-	int i, direction, amount, unit;
+	int direction, amount, unit;
 	float degrees;
-	union quat rotation, new_orientation, q1, q2, q3;
-	struct snis_entity *o;
+	union quat rotation;
 	char reply[100];
 
 	amount = nl_find_next_word(argc, pos, POS_NUMBER, 0);
@@ -13825,29 +13832,7 @@ static void nl_turn_qaa(void *context, int argc, char *argv[], int pos[],
 		goto no_understand;
 	}
 
-
-	pthread_mutex_lock(&universe_mutex);
-	i = lookup_by_id(c->shipid);
-	if (i < 0) {
-		pthread_mutex_unlock(&universe_mutex);
-		queue_add_text_to_speech(c, "Sorry, I can't seem to steer, Computer needs maintenance.");
-		return;
-	}
-	o = &go[i];
-
-	/* Convert rotation to local coordinate system */
-	quat_mul(&q1, &o->orientation, &rotation);
-	quat_conj(&q2, &o->orientation);
-	quat_mul(&q3, &q1, &q2);
-	/* Apply to local orientation */
-	quat_mul(&new_orientation, &q3, &o->orientation);
-	quat_normalize_self(&new_orientation);
-
-	/* Now let the computer steer for awhile */
-	o->tsd.ship.computer_desired_orientation = new_orientation;
-	o->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
-	// o->orientation = new_orientation;
-	pthread_mutex_unlock(&universe_mutex);
+	nl_rotate_ship(c, &rotation);
 	queue_add_text_to_speech(c, reply);
 
 	return;
@@ -13855,7 +13840,6 @@ static void nl_turn_qaa(void *context, int argc, char *argv[], int pos[],
 no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
 }
-
 
 static void nl_set_controllable_byte_value(struct game_client *c, char *word, float fraction, int offset,
 						 bytevalue_limit_function limit)
