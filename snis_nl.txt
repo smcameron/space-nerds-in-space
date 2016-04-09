@@ -1,0 +1,330 @@
+
+snis_nl: A very tiny C library for parsing and reacting to English commands.
+-----------------
+
+snis_nl.c and snis_nl.h for a very tiny C library for parsing and reacting to
+English commands.  snis_nl.h defines the API for the library and snis_nl.c implements
+the API.
+
+The idea is you pass some (usually user provided) string to the function
+snis_nl_parse_natural_language_request(), and then this calls a function which
+you have defined to do the requested action.  For example, you might call:
+
+	char *x = get_a_string_from_someplace()l
+	snis_nl_parse_natural_language_request(my_context, x);
+
+and perhaps you've arranged things so that get_a_string_from_someplace actually
+gets a string from some voice recognition engine, and so you could imagine that
+x ends up being a pointer to the string "turn on the lights", and then you have
+also arranged things so that after "turn on the lights" has been parsed,
+snis_nl_parse_natural_language_request will call a function you have provided
+which will interact with your home automation systme and turn on the lights, and
+voila!  You're living in Star Trek.
+
+-----------------
+So, how to use this thing...?
+
+The library doesn't have any vocabulary, you have to provide that to the library by
+adding words to its intenal dictionary.  The library does know some "parts of speech",
+to wit, the following:
+
+#define POS_UNKNOWN		0
+#define POS_NOUN		1
+#define POS_VERB		2
+#define POS_ARTICLE		3
+#define POS_PREPOSITION		4
+#define POS_SEPARATOR		5
+#define POS_ADJECTIVE		6
+#define POS_ADVERB		7
+#define POS_NUMBER		8
+#define POS_NAME		9
+#define POS_PRONOUN		10
+#define POS_EXTERNAL_NOUN	11
+
+To use the library, first you have to teach it some vocabulary.  This is mainly done with the following
+three functions, which teach it about synonyms, verbs, and words that aren't verbs:
+
+void snis_nl_add_synonym(char *synonym, char *canonical_word);
+void snis_nl_add_dictionary_word(char *word, char *canonical_word, int part_of_speech);
+void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax, snis_nl_verb_function action);
+
+-----------------
+Synonyms are done first, as these are simple word substitutions which are done prior to
+any attempt to parse for meaning.  For example, the following defines a few synonyms:
+
+	snis_nl_add_synonym("lay in a course", "set a course");
+	snis_nl_add_synonym("rotate", "turn");
+	snis_nl_add_synonym("cut", "lower");
+	snis_nl_add_synonym("decrease", "lower");
+	snis_nl_add_synonym("boost", "raise");
+	snis_nl_add_synonym("booster", "rocket");
+	snis_nl_add_synonym("increase", "raise");
+
+If you attempt to parse "lay in a course for saturn and rotate 90 degrees left and increase shields"
+the parser would see this as being identical to "set a course for saturn and turn 90 degrees left and
+raise shields".  Synonyms are simple token substitutions done before parsing, and in the order they
+are listed.  Note that later substitutions may operate on results of earlier substitutions, and that
+this is affected by the order in which the synonyms are defined.  Note also that the unit of substitution
+is the word, or token.  So "booster" would not be transformed into "raiseer", but rather into "rocket".
+
+-----------------
+Adding words (other than verbs) to the dictionary is done via the "snis_nl_add_dictionary_word" function.
+Some examples:
+
+	snis_nl_add_dictionary_word("planet", "planet", POS_NOUN);
+	snis_nl_add_dictionary_word("star", "star", POS_NOUN);
+	snis_nl_add_dictionary_word("money", "money", POS_NOUN);
+	snis_nl_add_dictionary_word("coins", "money", POS_NOUN);
+	snis_nl_add_dictionary_word("of", "of", POS_PREPOSITION);
+	snis_nl_add_dictionary_word("for", "for", POS_PREPOSITION);
+	snis_nl_add_dictionary_word("red", "red", POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("a", "a", POS_ARTICLE);
+	snis_nl_add_dictionary_word("an", "an", POS_ARTICLE);
+	snis_nl_add_dictionary_word("the", "the", POS_ARTICLE);
+
+Note that words with equivalent meanings can be implemented by using the same "canonical" word
+(e.g. "coins" and "money" mean the same thing, above).
+
+-----------------
+Adding verbs to the dictionary is a little more complicated, and is done with the snis_nl_add_dictionary_verb
+function.  The arguments to this function require a little explanation.
+
+	void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax, snis_nl_verb_function action);
+
+word:	This is simply which verb you are adding to the dictionary, e.g.: "get",
+	"take", "set", "scan", or whatever verb you are trying to define.
+
+canonical_word: This is useful for defining verbs that mean the same, or almost the same
+	thing but which may have different ways of being used in a sentence.
+
+syntax: This is a string defining the "syntax" of the verb, or the "arguments" to the verb, how
+	it may be used.  The syntax is specified as a string of characters with each character
+	representing a part of speech.
+
+	'a' : adjective
+	'p' : preposition
+	'n' : noun
+	'l' : a list of nouns (Note: this is not implemented.)
+	'q' : a quantity -- that is, a number.
+
+	So, a syntax of "npn" means the verb requires a noun, a preposition, and another noun.
+	For example "set a course for saturn"  (The article "a" is not required.)
+
+action: This is a function pointer which will be called which should have the following signature
+	which will be explained later.
+
+	union snis_nl_extra_data;
+	typedef void (*snis_nl_verb_function)(void *context, int argc, char *argv[], int part_of_speech[],
+					union snis_nl_extra_data *extra_data);
+
+Some examples:
+
+	snis_nl_add_dictionary_verb("describe",		"describe",	"n", nl_describe_n);   /* describe the blah */
+	snis_nl_add_dictionary_verb("describe",		"describe",	"an", nl_describe_an); /* describe the red blah */
+	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn", nl_navigage_pn); /* navigate to home */
+	snis_nl_add_dictionary_verb("set",		"set",		"npq", nl_set_npq);    /* set the knob to 100 */
+	snis_nl_add_dictionary_verb("set",		"set",		"npa", nl_set_npa);    /* set the knob to maximum */
+	snis_nl_add_dictionary_verb("set",		"set",		"npn", nl_set_npn);    /* set a course for home */
+	snis_nl_add_dictionary_verb("set",		"set",		"npan", nl_set_npn);   /* set a course for the nearest starbase */
+	snis_nl_add_dictionary_verb("plot",		"plot",		"npn", nl_set_npn);    /* plot a course fo home */
+	snis_nl_add_dictionary_verb("plot",		"plot",		"npan", nl_set_npn);   /* plot a course for the nearest planet */
+
+Note that the same verb is often added to the dictionary multiple times with different
+syntaxes, sometimes associated with the same action function, sometimes with a different
+action function.  This is really the key to how the whole thing works.
+
+The parameters which are passed to your function are:
+
+context:  This is just a void pointer which is passed from your program through the parsing
+function and finally back to your program.  It is for you to use as a "cookie", so that you
+can pass along some context to know for example, what the current topic is, or which entity
+in your system is requesting something to be parsed, etc.  It is for you to use (or not)
+however you like.
+
+argc: This is simply count of the elements of the following parallel array parameters.
+
+argv[]: This is an array of the words that were parsed.  It will contain the "canonical"
+        version of the word in most cases (the exception is if the word is of type
+        POS_EXTERNAL_NOUN, in which case there is no canonical noun, so it's whatever
+	was passed in to be parsed.)
+
+pos[]:  This is an array of the parts of speech for each word in argv[].
+
+extra_data[]:  This is an array of "extra data" for each word in argv[].  The use cases
+	here are for the two parts of speech POS_EXTERNAL_NOUN and POS_NUMBER.  For
+	POS_NUMBER, the value of the number is in extra_data[x].number.value, which is
+	a float.  For POS_EXTERNAL_NOUN, the item of interest is a uint32_t value,
+	extra_data[x].external_noun.handle.  External nouns are described later.
+
+
+-----------------
+Some ancilliary functions:
+-----------------
+
+typedef void (*snis_nl_multiword_preprocessor_fn)(char *word, int encode_or_decode);
+#define SNIS_NL_ENCODE 1
+#define SNIS_NL_DECODE 2
+void snis_nl_add_multiword_preprocessor(snis_nl_multiword_preprocessor_fn multiword_processor);
+
+snis_nl_add_multiword_preprocessor allows you to provide a pre-processing function to encode
+multi-word tokens in a way that they won't be broken apart when tokenized.  Typically this
+function will look for certain word combinations and "encode" them by replacing internal
+spaces with dashes, and "decode" them by replacing dashes with spaces.  This allows your
+program to have tokens like "warp drive" made of multiple words that will be interpreted as
+if they are a single word.  It's also possible that you might not know ahead of time what
+the multiword tokens are, which is why this is implemented through a function pointer
+to a function which you may implement.  If you do not have such multiword tokens, you don't
+need to use this.
+
+-----------------
+typedef void (*snis_nl_error_function)(void *context);
+void snis_nl_add_error_function(snis_nl_error_function error_func);
+
+You can add an error function.  This will get called whenever the parser is not able to
+find a match for the provided text -- that is, the parser is unable to extract a meaning
+from the provided text.  You should make this function do whatever you want to happen
+when the provided text is not understood (e.g. print "I didn't understand.", for example.)
+
+-----------------
+External nouns:
+-----------------
+
+Your program may have some nouns which you don't know ahead of time.  For example,
+in a space game, you may have planets, creatures, spaceships, etc. that all have
+procedurally generated names like "Borto 7", "Capricorn Cutlass", or "despair squid"
+which you would like to be able to refer to by name.  This is what external nouns
+are for.  To use them, you provide a lookup function to the parse via:
+
+	void snis_nl_add_external_lookup(snis_nl_external_noun_lookup lookup);
+
+Your function should have a prototype like:
+
+	uint32_t my_lookup_function(void *context, char *word);
+
+This function should lookup the word that it is passed, and return a
+uint32_t handle.  Later, in your verb function, when you encounter
+the type POS_EXTERNAL_NOUN in the pos[] array passed to your verb function,
+you can look in extra_data[].external_noun.handle and get this handle back,
+and thus know *which* external noun is being referred to.  For example, if in
+your space game, you have 1000s of spaceships, and the player refers to
+"Capricorn Cutlass", (first you will need a multiword token encoder/decoder
+to prevent that from being treated as two tokens, see above) then your
+lookup function should return as the handle, say, the unique ID of the
+matching spaceship in the form of a uint32_t, so that when your verb function
+is called, you can extract the handle, and lookup the spaceship to which
+it refers.
+
+-----------------
+The main parsing function
+-----------------
+
+void snis_nl_parse_natural_language_request(void *context, char *text);
+
+snis_nl_parse_natural_language_request is the main function that parses the input
+text and calls the verb functions.  You pass it a context pointer which can be
+anything you want it to be, and a string to parse.  It will either call back an
+appropriate verb function, or the error function if you provided one.
+
+
+------------------
+Example program
+------------------
+
+snis_nl.c contains a main() function which is guarded behind some ifdef TEST_NL.
+You cand build the test program by the command "make snis_nl"
+
+Below is a sample run of the snis_nl test program.  Note that there is a lot
+of debugging output.  This is because by default the snis_nl test program has
+debug mode turned on.  You can turn this on in your program by sending as string
+like "nldebugmode 1" to be parsed by the parser, and turn it off by sending
+as string like "nldebugmode 0".  "nldebugmode" is the one verb the parser knows.
+This nldebugmode verb is added to the dictionary when the first user defined
+verb is added to the dictionary.
+
+$./snis_nl
+Enter string to parse: this is a test
+--- iteration 0 ---
+State machine 0 ('v,0, ', RUNNING) -- score = 0.000000
+this[-1]:is[-1]:a[-1]:test[-1]:--- iteration 1 ---
+State machine 0 ('v,0, ', RUNNING) -- score = 0.000000
+this[-1]:is[-1]:a[-1]:test[-1]:--- iteration 2 ---
+State machine 0 ('v,0, ', RUNNING) -- score = 0.000000
+this[-1]:is[-1]:a[-1]:test[-1]:--- iteration 3 ---
+State machine 0 ('v,0, ', RUNNING) -- score = 0.000000
+this[-1]:is[-1]:a[-1]:test[-1]:--- iteration 4 ---
+Failure to comprehend 'this is a test'
+Enter string to parse: set a course for earth
+--- iteration 0 ---
+State machine 0 ('v,0, ', RUNNING) -- score = 0.000000
+set[-1]:a[-1]:course[-1]:for[-1]:earth[-1]:--- iteration 1 ---
+State machine 0 ('npn,0, ', RUNNING) -- score = 0.000000
+set[2]:(npn verb (set))
+a[-1]:course[-1]:for[-1]:earth[-1]:State machine 1 ('npa,0, ', RUNNING) -- score = 0.000000
+set[1]:(npa verb (set))
+a[-1]:course[-1]:for[-1]:earth[-1]:State machine 2 ('npq,0, ', RUNNING) -- score = 0.000000
+set[0]:(npq verb (set))
+a[-1]:course[-1]:for[-1]:earth[-1]:--- iteration 2 ---
+State machine 0 ('npn,0, ', RUNNING) -- score = 0.000000
+set[2]:(npn verb (set))
+a[0]:(article (a))
+course[-1]:for[-1]:earth[-1]:State machine 1 ('npa,0, ', RUNNING) -- score = 0.000000
+set[1]:(npa verb (set))
+a[0]:(article (a))
+course[-1]:for[-1]:earth[-1]:State machine 2 ('npq,0, ', RUNNING) -- score = 0.000000
+set[0]:(npq verb (set))
+a[0]:(article (a))
+course[-1]:for[-1]:earth[-1]:--- iteration 3 ---
+State machine 0 ('npn,1, ', RUNNING) -- score = 0.000000
+set[2]:(npn verb (set))
+a[0]:(article (a))
+course[0]:(noun (course))
+for[-1]:earth[-1]:State machine 1 ('npa,1, ', RUNNING) -- score = 0.000000
+set[1]:(npa verb (set))
+a[0]:(article (a))
+course[0]:(noun (course))
+for[-1]:earth[-1]:State machine 2 ('npq,1, ', RUNNING) -- score = 0.000000
+set[0]:(npq verb (set))
+a[0]:(article (a))
+course[0]:(noun (course))
+for[-1]:earth[-1]:--- iteration 4 ---
+State machine 0 ('npn,2, ', RUNNING) -- score = 0.000000
+set[2]:(npn verb (set))
+a[0]:(article (a))
+course[0]:(noun (course))
+for[0]:(preposition (for))
+earth[-1]:State machine 1 ('npa,2, ', RUNNING) -- score = 0.000000
+set[1]:(npa verb (set))
+a[0]:(article (a))
+course[0]:(noun (course))
+for[0]:(preposition (for))
+earth[-1]:State machine 2 ('npq,2, ', RUNNING) -- score = 0.000000
+set[0]:(npq verb (set))
+a[0]:(article (a))
+course[0]:(noun (course))
+for[0]:(preposition (for))
+earth[-1]:--- iteration 5 ---
+State machine 0 ('npn,3, ', RUNNING) -- score = 0.000000
+set[2]:(npn verb (set))
+a[0]:(article (a))
+course[0]:(noun (course))
+for[0]:(preposition (for))
+earth[0]:(noun (earth))
+--- iteration 6 ---
+State machine 0 ('npn,3, ', SUCCESS) -- score = 0.000000
+set[2]:(npn verb (set))
+a[0]:(article (a))
+course[0]:(noun (course))
+for[0]:(preposition (for))
+earth[0]:(noun (earth))
+-------- Final interpretation: ----------
+State machine 0 ('npn,3, ', SUCCESS) -- score = 1.000000
+set[2]:(npn verb (set))
+a[0]:(article (a))
+course[0]:(noun (course))
+for[0]:(preposition (for))
+earth[0]:(noun (earth))
+generic_verb_action: set(verb) a(article) course(noun) for(preposition) earth(noun) 
+Enter string to parse: ^D
+$
+
+
