@@ -46,6 +46,7 @@ static const char * const part_of_speech[] = {
 };
 
 #define MAX_SYNONYMS 100
+static int debuglevel;
 static int nsynonyms = 0;
 static struct synonym_entry {
 	char *syn, *canonical;
@@ -722,15 +723,19 @@ static void nl_parse_machines_run(struct nl_parse_machine **list, struct nl_toke
 	struct nl_parse_machine *i;
 
 	do {
-		/* printf("--- iteration %d ---\n", iteration);
-		nl_parse_machines_print(list, tokens, ntokens); */
+		if (debuglevel > 0) {
+			printf("--- iteration %d ---\n", iteration);
+			nl_parse_machines_print(list, tokens, ntokens);
+		}
 		for (i = *list; i != NULL; i = i->next)
 			nl_parse_machine_step(list, i, tokens, ntokens);
 		iteration++;
 		nl_parse_machine_list_prune(list);
 	} while (nl_parse_machines_still_running(list));
-	/* printf("--- iteration %d ---\n", iteration);
-	nl_parse_machines_print(list, tokens, ntokens); */
+	if (debuglevel > 0) {
+		printf("--- iteration %d ---\n", iteration);
+		nl_parse_machines_print(list, tokens, ntokens);
+	}
 }
 
 static void nl_parse_machine_score(struct nl_parse_machine *p, int ntokens)
@@ -772,11 +777,14 @@ static void extract_meaning(void *context, char *original_text, struct nl_token 
 	nl_parse_machines_score(&list, ntokens);
 	p = nl_parse_machines_find_highest_score(&list);
 	if (p) {
-		printf("-------- Final interpretation: ----------\n");
-		nl_parse_machine_print(p, token, ntokens, 0);
+		if (debuglevel > 0) {
+			printf("-------- Final interpretation: ----------\n");
+			nl_parse_machine_print(p, token, ntokens, 0);
+		}
 		do_action(context, p, token, ntokens);
 	} else {
-		printf("Failure to comprehend '%s'\n", original_text);
+		if (debuglevel > 0)
+			printf("Failure to comprehend '%s'\n", original_text);
 		if (error_function)
 			error_function(context);
 	}
@@ -811,11 +819,28 @@ void snis_nl_add_synonym(char *synonym_word, char *canonical_word)
 	nsynonyms++;
 }
 
+static void snis_nl_debuglevel(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	int number;
+
+	if (pos[1] != POS_NUMBER) {
+		debuglevel = !!debuglevel;
+		fprintf(stderr, "Toggling debug level to %d, '%s'\n", debuglevel, debuglevel ? "on" : "off");
+		return;
+	}
+	debuglevel = (int) extra_data[1].number.value;
+	fprintf(stderr, "Set debug level to %d, '%s'\n", debuglevel, debuglevel ? "on" : "off");
+}
+
 static void generic_add_dictionary_word(char *word, char *canonical_word, int part_of_speech,
 						char *syntax, snis_nl_verb_function action)
 {
 	struct dictionary_entry *de;
 
+	/* If the dictionary is empty, first, jam in an entry to allow turning on debugging */
+	if (ndictionary_entries == 0 && strcmp(word, "nldebuglevel") != 0)
+		generic_add_dictionary_word("nldebuglevel", "nldebuglevel", POS_VERB, "q", snis_nl_debuglevel);
 	if (ndictionary_entries >= MAX_DICTIONARY_ENTRIES) {
 		fprintf(stderr, "Too many dictionary entries, discarding '%s/%s'\n", word, canonical_word);
 		return;
@@ -1090,12 +1115,33 @@ static void init_dictionary(void)
 int main(int argc, char *argv[])
 {
 	int i;
+	char line[255];
+	char *x;
+
+	debuglevel = 1;
 
 	init_synonyms();
 	init_dictionary();
 
 	for (i = 1; i < argc; i++)
 		snis_nl_parse_natural_language_request(NULL, argv[i]);
+
+	if (argc != 1)
+		return 0;
+	do {
+		printf("Enter string to parse: ");
+		fflush(stdout);
+		x = fgets(line, sizeof(line), stdin);
+		if (!x)
+			break;
+
+		/* cut off the newline that fgets leaves in. */
+		i = strlen(x);
+		if (i > 0)
+			x[i - 1] = '\0';
+
+		snis_nl_parse_natural_language_request(NULL, line);
+	} while (1);
 	return 0;
 }
 
