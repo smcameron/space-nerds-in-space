@@ -14441,6 +14441,57 @@ no_understand:
 	return;
 }
 
+static int string_to_displaymode(char *string)
+{
+	if (strcasecmp(argv[verb], "navigation") == 0)
+		return DISPLAYMODE_NAVIGATION;
+	else if (strcasecmp(argv[verb], "main view") == 0)
+		return DISPLAYMODE_MAINSCREEN;
+	else if (strcasecmp(argv[verb], "weapons") == 0)
+		return DISPLAYMODE_WEAPONS;
+	else if (strcasecmp(argv[verb], "engineering") == 0)
+		return DISPLAYMODE_ENGINEERING;
+	else if (strcasecmp(argv[verb], "science") == 0)
+		return DISPLAYMODE_SCIENCE;
+	else if (strcasecmp(argv[verb], "communications") == 0)
+		return DISPLAYMODE_COMMS;
+	return -1;
+}
+
+static void nl_onscreen_verb_n(void *context, int argc, char *argv[], int pos[],
+			__attribute__((unused)) union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int verb, noun;
+	int new_displaymode = 255;
+	char reply[100];
+
+	verb = nl_find_next_word(argc, pos, POS_VERB, 0);
+	if (verb < 0)
+		goto no_understand;
+	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (noun < 0)
+		goto no_understand;
+	new_displaymode = string_to_displaymode(argv[verb]);
+	if (new_displaymode < 0)
+		goto no_understand;
+
+	if (strcasecmp(argv[noun], "screen") != 0)
+		goto no_understand;
+
+	sprintf(reply, "Main screen displaying %s", argv[verb]);
+	queue_add_text_to_speech(c, reply);
+	send_packet_to_all_clients_on_a_bridge(c->shipid,
+			packed_buffer_new("bb", OPCODE_ROLE_ONSCREEN, new_displaymode),
+			ROLE_MAIN);
+	bridgelist[c->bridge].current_displaymode = new_displaymode;
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "I do not understand your request.");
+	return;
+}
+
 static void nl_onscreen_verb_pn(void *context, int argc, char *argv[], int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
@@ -14458,19 +14509,8 @@ static void nl_onscreen_verb_pn(void *context, int argc, char *argv[], int pos[]
 	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
 	if (noun < 0)
 		goto no_understand;
-	if (strcasecmp(argv[verb], "navigation") == 0)
-		new_displaymode = DISPLAYMODE_NAVIGATION;
-	else if (strcasecmp(argv[verb], "main view") == 0)
-		new_displaymode = DISPLAYMODE_MAINSCREEN;
-	else if (strcasecmp(argv[verb], "weapons") == 0)
-		new_displaymode = DISPLAYMODE_WEAPONS;
-	else if (strcasecmp(argv[verb], "engineering") == 0)
-		new_displaymode = DISPLAYMODE_ENGINEERING;
-	else if (strcasecmp(argv[verb], "science") == 0)
-		new_displaymode = DISPLAYMODE_SCIENCE;
-	else if (strcasecmp(argv[verb], "communications") == 0)
-		new_displaymode = DISPLAYMODE_COMMS;
-	else
+	new_displaymode = string_to_displaymode(argv[verb]);
+	if (new_displaymode < 0)
 		goto no_understand;
 
 	if (strcasecmp(argv[prep], "on") != 0)
@@ -14806,6 +14846,12 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("engineering",	"engineering",	"pn", nl_onscreen_verb_pn);
 	snis_nl_add_dictionary_verb("science",		"science",	"pn", nl_onscreen_verb_pn);
 	snis_nl_add_dictionary_verb("communications",	"communications", "pn", nl_onscreen_verb_pn);
+	snis_nl_add_dictionary_verb("main view",	"main view",	"n", nl_onscreen_verb_n);
+	snis_nl_add_dictionary_verb("navigation",	"navigation",	"n", nl_onscreen_verb_n);
+	snis_nl_add_dictionary_verb("weapons",		"weapons",	"n", nl_onscreen_verb_n);
+	snis_nl_add_dictionary_verb("engineering",	"engineering",	"n", nl_onscreen_verb_n);
+	snis_nl_add_dictionary_verb("science",		"science",	"n", nl_onscreen_verb_n);
+	snis_nl_add_dictionary_verb("communications",	"communications", "n", nl_onscreen_verb_n);
 	snis_nl_add_dictionary_verb("target",		"target",	"n", nl_target_n);
 	snis_nl_add_dictionary_verb("scan",		"target",	"n", nl_target_n);
 	snis_nl_add_dictionary_verb("select",		"target",	"n", nl_target_n);
