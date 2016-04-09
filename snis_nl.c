@@ -788,6 +788,7 @@ static void extract_meaning(void *context, char *original_text, struct nl_token 
 		if (error_function)
 			error_function(context);
 	}
+	parse_machine_free_list(p);
 }
 
 void snis_nl_parse_natural_language_request(void *context, char *txt)
