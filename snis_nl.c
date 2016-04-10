@@ -29,6 +29,7 @@
 
 #include "arraysize.h"
 #include "string-utils.h"
+#include "spelled_numbers.h"
 
 static const char * const part_of_speech[] = {
 	"unknown",
@@ -798,6 +799,7 @@ void snis_nl_parse_natural_language_request(void *context, char *txt)
 	char *original = strdup(txt);
 
 	lowercase(txt);
+	handle_spelled_numbers_in_place(txt);
 	multiword_processor_encode(txt);
 	token = tokenize(txt, &ntokens);
 	classify_tokens(context, token, ntokens);
