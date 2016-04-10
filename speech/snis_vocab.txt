@@ -1,8 +1,181 @@
-a
+activate warp drive
+engage warp drive
+actuate warp drive
+energize warp drive
+disengage docking system
+deactivate docking system
+energize docking system
+engage docking system
+actuate docking system
+full stop
+set a course for the nearest planet
+plot a course for the nearest planet
+lay in a course for the nearest planet
+set a course for the nearest asteroid
+plot a course for the nearest asteroid
+lay in a course for the nearest asteroid
+set a course for the nearest star base
+plot a course for the nearest star base
+lay in a course for the nearest star base
+set a course for the nearest nebula
+plot a course for the nearest nebula
+lay in a course for the nearest nebula
+set a course for the nearest warp gate
+plot a course for the nearest warp gate
+lay in a course for the nearest warp gate
+set a course for the nearest worm hole
+plot a course for the nearest worm hole
+lay in a course for the nearest worm hole
+navigation on screen
+main view on screen
+weapons on screen
+communications on screen
+comms on screen
+engineering on screen
+science on screen
+navigation screen
+main view screen
+weapon screen
+communications screen
+comms screen
+engineering screen
+science screen
+full throttle
+set warp drive power to
+set warp drive coolant to
+set warp drive to
+set impulse drive power to
+set impulse drive coolant to
+set impulse drive to
+set throttle to
+set maneuvering power to
+set maneuvering coolant to
+set sensor power to
+set sensor coolant to
+set tractor beam power to
+set tractor beam coolant to
+set communications power to
+set communications coolant to
+set comms power to
+set comms coolant to
+set phaser power to
+set phaser coolant to
+set shields power to
+set shields coolant to
+set shields to
+raise shields
+lower shields
+calculate the distance to
+compute the distance to
+figure the distance to
+degrees left
+degrees right
+degrees up
+degrees down
+degrees clockwise
+degrees counter clockwise
+degrees anti clockwise
+turn left
+turn right
+roll left
+roll right
+turn clockwise
+turn anti clockwise
+turn counter clockwise
+turn up
+turn down
+pitch up
+pitch down
+pitch forward
+pitch back
+pitch backwards
+turn towards
+damage report
+status report
+zoom one hundred
+zoom fifty
+zoom thirty
+zoom twenty
+zoom ninety
+zoom zero
+one hundred percent
+ninety percent
+eighty percent
+seventy percent
+sixty percent
+fifty percent
+forty percent
+thirty percent
+twenty percent
+twenty five percent
+fifteen percent
+ten percent
+five percent
+red alert
+cancel red alert
+coolant to one hundred
+coolant to a hundred
+coolant to ninety
+coolant to zero
+power to one hundred
+power to ninety
+power to eighty
+power to seventy
+power to sixty
+power to zero
+stop red alert
+scan the nearest planet
+scan the nearest asteroid
+scan the nearest nebula
+scan the nearest ship
+scan the nearest derelict
+select the nearest planet
+select the nearest asteroid
+select the nearest nebula
+select the nearest ship
+select the nearest derelict
+scan the closest planet
+scan the closest asteroid
+scan the closest nebula
+scan the closest ship
+scan the closest derelict
+select the closest planet
+select the closest asteroid
+select the closest nebula
+select the closest ship
+select the closest derelict
+scan the nearby planet
+scan the nearby asteroid
+scan the nearby nebula
+scan the nearby ship
+scan the nearby derelict
+select the nearby planet
+select the nearby asteroid
+select the nearby nebula
+select the nearby ship
+select the nearby derelict
+scan the planet
+scan the asteroid
+scan the nebula
+scan the ship
+scan the derelict
+select the planet
+select the asteroid
+select the nebula
+select the ship
+select the derelict
+the nearest ship
+the nearest planet
+the nearest asteroid
+the nearest nebula
+launch the mining bot
+deploy the mining bot
+launch the mining robot
+deploy the mining robot
+eject the warp core
 aboard
 above
 across
-activate
 actuate
 after
 alert
@@ -101,8 +274,6 @@ navigation
 nearby
 nearest
 nebula
-nldebuglevel
-nldumpvocab
 of
 off
 on
@@ -168,6 +339,10 @@ through
 throughout
 thruster
 thrusters
+reverse thrusters
+full reverse
+reverse engines
+reverse the polarity
 to
 torpedo
 toward
