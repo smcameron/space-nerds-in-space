@@ -773,8 +773,8 @@ snis_event_callback.o:	snis_event_callback.c Makefile
 snis_nl.o:	snis_nl.c snis_nl.h Makefile
 	$(Q)$(COMPILE)
 
-snis_nl:	snis_nl.o string-utils.o
-	$(CC) -g -DTEST_NL -o snis_nl string-utils.o snis_nl.c
+snis_nl:	snis_nl.o string-utils.o spelled_numbers.o
+	$(CC) -g -DTEST_NL -o snis_nl string-utils.o spelled_numbers.o snis_nl.c
 
 spelled_numbers.o:	spelled_numbers.c spelled_numbers.h Makefile
 	$(Q)$(COMPILE)
