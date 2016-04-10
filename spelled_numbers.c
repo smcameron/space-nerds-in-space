@@ -57,7 +57,9 @@ static struct number_map_entry {
 	{ "seventy", 70 },
 	{ "eighty", 80 },
 	{ "ninety", 90 },
+	{ "a hundred", 100 },
 	{ "hundred", 100 },
+	{ "a thousand", 1000 },
 	{ "thousand", 1000 },
 	{ "four", 4 }, /* these need to come after, eg. fourteen, sixteen, etc. */
 	{ "six", 6 },
@@ -354,7 +356,6 @@ int main(int argc, char *argv[])
 
 #if 0
 	/* Some cases not handled yet ... */
-	rc += testcase("a hundred", "100");
 	rc += testcase("two hundred and ten", "210");
 	rc += testcase("nineteen fifty six", "1956");
 	rc += testcase("one hundred and ten thousand", "110000");
@@ -367,6 +368,8 @@ int main(int argc, char *argv[])
 	rc += testcase("twentyfour", "24");
 #endif
 
+	rc += testcase("a hundred", "100");
+	rc += testcase("a thousand", "1000");
 	rc += testcase("two hundred thousand", "200000");
 	rc += testcase("two hundred sixty seven thousand", "267000");
 	rc += testcase("three hundred fifty eight", "358");
