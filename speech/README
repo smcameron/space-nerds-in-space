@@ -1,0 +1,34 @@
+
+How to get speech recognition working with Space Nerds In Space
+---------------------------------------------------------------
+
+1. Install pocketsphinx on the client system to which the microphone you want to use is attached
+
+(TODO: what are the steps?  "apt-cache search pocketsphinx" and then apt-get install ... something)
+
+2. Create specialized language files for pocketsphinx from snis_vocab.txt
+
+Go to http://www.speech.cs.cmu.edu/tools/lmtool-new.html
+
+Click the "BROWSE" button, and upload the snis_vocab.txt
+
+Then click COMPILE KNOWLEDGE BASE
+
+This will produce a number of files, including a gzipped tarball that contains
+all the files.  Download the gzipped tarball which will be named something like
+"TAR1234.tgz" (but probably different numbers than 1234).
+
+3. Download and unpack the TAR1234.tgz, which should contain 5 other files:
+
+1234.dic
+1234.log_pronounce
+1234.vocab
+1234.lm
+1234.sent
+
+Copy these to this directory.
+
+4. Run "queeg500"
+
+$ queeg500 1234
+
