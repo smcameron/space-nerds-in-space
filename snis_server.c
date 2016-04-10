@@ -14977,6 +14977,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("with",		"with",		POS_PREPOSITION);
 	snis_nl_add_dictionary_word("within",		"within",	POS_PREPOSITION);
 	snis_nl_add_dictionary_word("without",		"without",	POS_PREPOSITION);
+	/* bit of a hack for speech recognition to handle "two" vs. "to" */
+	snis_nl_add_dictionary_word("2",		"to",		POS_PREPOSITION);
 
 	snis_nl_add_dictionary_word("or",		"or",		POS_SEPARATOR);
 	snis_nl_add_dictionary_word("and",		"and",		POS_SEPARATOR);
