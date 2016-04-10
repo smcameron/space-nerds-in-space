@@ -175,14 +175,47 @@ static int value_of_digit_group(char *s, int start, int end)
 	return value;
 }
 
+/* Check if there is anything between start + 1 and end - 1 inclusive
+ * that isn't whitespace, or the word 'and'.  Return true if there's something
+ * else, false if it's only whitespace and/or the word 'and'.
+ */
 static int anything_between(char *s, int start, int end)
 {
-	int i;
+	int i, all_spaces;
+	char *and;
 
+	/* Nothing but spaces between start and end? */
 	for (i = start + 1; i < end; i++)
 		if (s[i] != ' ')
-			return 1;
-	return 0;
+			goto harder_test;
+	return 0; /* nothing but spaces between start and end. */
+
+harder_test:
+
+	if ((end - start) < 6)
+		return 1; /* not enough room for those non-spaces to be " and " */
+
+	and = strstr(&s[start + 1], " and ");
+	if (!and)
+		return 1; /* Nope, wasn't " and " */
+
+	/* Blot out the and, and see if now it's all spaces. */
+	and[1] = ' ';
+	and[2] = ' ';
+	and[3] = ' ';
+
+	all_spaces = 1;
+	for (i = start + 1; i < end; i++)
+		if (s[i] != ' ')
+			all_spaces = 0;
+	if (all_spaces)
+		return 0; /* After removing the 'and', nothing was left but spaces. */
+
+	/* After removing the 'and', there's still something else.  Put the 'and' back. */
+	and[1] = 'a';
+	and[2] = 'n';
+	and[3] = 'd';
+	return 1;
 }
 
 static void replace_segment(char *s, int start, int end, char *replacement)
@@ -356,18 +389,17 @@ int main(int argc, char *argv[])
 
 #if 0
 	/* Some cases not handled yet ... */
-	rc += testcase("two hundred and ten", "210");
 	rc += testcase("nineteen fifty six", "1956");
-	rc += testcase("one hundred and ten thousand", "110000");
-	rc += testcase("ten thousand and one hundred", "10100");
 	rc += testcase("it was a different time, nineteen fifty seven, fifty eight.",
 			"it was a different time, 1957, 58.");
-	rc += testcase("six hundred and seven", "607");
-	rc += testcase("six hundred and then seven more", "600 and then 7 more");
-	rc += testcase("six hundred and then seven more", "600 and then 7 more");
 	rc += testcase("twentyfour", "24");
 #endif
 
+	rc += testcase("two hundred and ten", "210");
+	rc += testcase("two hundred and and ten", "200 and and 10");
+	rc += testcase("ten thousand and one hundred", "10100");
+	rc += testcase("six hundred and seven", "607");
+	rc += testcase("six hundred and then seven more", "600 and then 7 more");
 	rc += testcase("a hundred", "100");
 	rc += testcase("a thousand", "1000");
 	rc += testcase("two hundred thousand", "200000");
@@ -398,6 +430,10 @@ int main(int argc, char *argv[])
 	rc += testcase("twenty three", "23");
 	rc += testcase("twenty four", "24");
 	rc += testcase("someone", "someone");
+
+	/* It is a pretty severe bug that the following test case fails. */
+	rc += testcase("one hundred and ten thousand", "110000");
+
 	if (rc) {
 		printf("Failed %d out of %d test cases\n", rc, total);
 		return 1;
