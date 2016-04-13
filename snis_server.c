@@ -13905,16 +13905,13 @@ static void nl_set_controllable_byte_value(struct game_client *c, char *word, fl
 		queue_add_text_to_speech(c, answer);
 		return;
 	}
-
-	sprintf(answer, "setting the %s to %3.0f percent", word, fraction * 100.0);
-	queue_add_text_to_speech(c, answer);
-
 	bytevalue = (uint8_t *) &go[i];
 	bytevalue += offset;
 	new_value = limit(c, new_value);
 	*bytevalue = new_value;
-
 	pthread_mutex_unlock(&universe_mutex);
+	sprintf(answer, "setting the %s to %3.0f percent", word, fraction * 100.0);
+	queue_add_text_to_speech(c, answer);
 }
 
 static void nl_set_shields(struct game_client *c, char *word, float fraction)
