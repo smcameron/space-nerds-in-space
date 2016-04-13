@@ -14604,6 +14604,46 @@ no_understand:
 	queue_add_text_to_speech(c, "I do not understand your zoom request.");
 }
 
+static void nl_reverse_n(void *context, int argc, char *argv[], int pos[],
+			union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, noun;
+	struct snis_entity *o;
+
+	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (noun < 0)
+		goto no_understand;
+
+	if (strcasecmp(argv[noun], "polarity") == 0) {
+		queue_add_text_to_speech(c, "Very funny, Dave");
+		return;
+	}
+	if (strcasecmp(argv[noun], "thrusters") == 0 ||
+		strcasecmp(argv[noun], "impulse drive") == 0) {
+		goto full_reverse;
+	}
+	queue_add_text_to_speech(c, "I do not how to reverse that.");
+	return;
+
+full_reverse:
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "I lost my train of thought.");
+		return;
+	}
+	o = &go[i];
+	o->tsd.ship.reverse = 1;
+	pthread_mutex_unlock(&universe_mutex);
+	nl_set_impulse_drive(c, "impulse drive", 1.0);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "I do not understand your zoom request.");
+}
+
 static void nl_target_n(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
@@ -14896,6 +14936,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("target",		"target",	"n", nl_target_n);
 	snis_nl_add_dictionary_verb("scan",		"target",	"n", nl_target_n);
 	snis_nl_add_dictionary_verb("select",		"target",	"n", nl_target_n);
+	snis_nl_add_dictionary_verb("reverse",		"reverse",	"n", nl_reverse_n);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
@@ -14950,6 +14991,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("maneuvering",	"maneuvering",	POS_NOUN);
 	snis_nl_add_dictionary_word("thruster",		"thrusters",	POS_NOUN);
 	snis_nl_add_dictionary_word("thrusters",	"thrusters",	POS_NOUN);
+	snis_nl_add_dictionary_word("polarity",		"polarity",	POS_NOUN);
 	snis_nl_add_dictionary_word("sensor",		"sensors",	POS_NOUN);
 	snis_nl_add_dictionary_word("science",		"science",	POS_NOUN);
 	snis_nl_add_dictionary_word("communications",	"communications", POS_NOUN);
