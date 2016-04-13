@@ -3,7 +3,7 @@
 do_text_to_speech()
 {
 	tmpfile=/tmp/tts-$$.wav
-	pico2wave -w "$tmpfile" "$1" || espeak "$1"
+	pico2wave -l=en-GB -w "$tmpfile" "$1" || espeak "$1"
 	aplay "$tmpfile" > /dev/null 2>&1
 	# mplayer /tmp/x.wav
 	/bin/rm -f "$tmpfile"
