@@ -9182,11 +9182,9 @@ static void meta_comms_computer(char *name, struct game_client *c, char *txt)
 {
 	char *duptxt;
 	char *x;
-	int len;
 
 	printf("meta_comms_computer, txt = '%s'\n", txt);
 	duptxt = strdup(txt);
-	len = strlen(duptxt);
 
 	x = index(duptxt, ' ');
 	if (x) {
