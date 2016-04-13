@@ -9315,7 +9315,7 @@ static const struct meta_comms_data {
 static void process_meta_comms_packet(char *name, struct game_client *c, char *txt)
 {
 	int i, j;
-	struct meta_comms_data *mcd = NULL;
+	struct meta_comms_data const * mcd = NULL;
 	int current_match_length = 0;
 	int len2 = strlen(txt);
 	int limit;
