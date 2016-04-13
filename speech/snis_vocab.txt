@@ -417,3 +417,11 @@ eighty
 ninety
 hundred
 thousand
+one quarter
+one half
+one third
+two thirds
+three quarters
+max power
+full power
+maximum power

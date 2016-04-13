@@ -30,9 +30,15 @@
 
 static struct number_map_entry {
 	char *name;
-	int value;
+	float value;
 } number_map[] = {
 	{ "zero", 0 },
+	{ "one third", 0.33 },
+	{ "one half", 0.50 },
+	{ "one quarter", 0.25 },
+	{ "three quarters", 0.75 },
+	{ "two thirds", 0.67 },
+	{ "one fourth", 0.25 },
 	{ "one", 1 },
 	{ "two", 2 },
 	{ "three", 3 },
@@ -93,7 +99,10 @@ static int straight_replace_entry(char *input, struct number_map_entry *e)
 
 	m = strstr(input, e->name);
 	if (m) {
-		sprintf(replacement, "%d", e->value);
+		if (e->value < 1.0 && e->value > 0.0)
+			sprintf(replacement, "%0.2f", e->value);
+		else
+			sprintf(replacement, "%.0f", e->value);
 		len = strlen(replacement);
 		wordlen = strlen(e->name);
 		if (len > strlen(e->name)) {
@@ -430,6 +439,11 @@ int main(int argc, char *argv[])
 	rc += testcase("twenty three", "23");
 	rc += testcase("twenty four", "24");
 	rc += testcase("someone", "someone");
+	rc += testcase("one quarter", "0.25");
+	rc += testcase("one third", "0.33");
+	rc += testcase("one half", "0.50");
+	rc += testcase("two thirds", "0.67");
+	rc += testcase("three quarters", "0.75");
 
 	/* It is a pretty severe bug that the following test case fails. */
 	rc += testcase("one hundred and ten thousand", "110000");
