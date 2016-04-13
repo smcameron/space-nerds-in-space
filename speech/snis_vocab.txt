@@ -192,6 +192,12 @@ the nearest nebula
 launch the mining bot
 deploy the mining bot
 launch the mining robot
+long range scan
+long range scanner
+long range
+short range scan
+short range scanner
+short range
 deploy the mining robot
 eject the warp core
 aboard
@@ -249,6 +255,7 @@ derelict
 describe
 destruct
 detail
+details
 disable
 disengage
 distance

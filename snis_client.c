@@ -4184,10 +4184,10 @@ static int process_role_onscreen_packet(void)
 }
 
 static struct science_ui {
+	/* details mode is one of define SCI_DETAILS_MODE_THREED,
+	 * SCI_DETAILS_MODE_DETAILS, SCI_DETAILS_MODE_SCIPLANE
+	 */
 	int details_mode;
-#define SCI_DETAILS_MODE_THREED 1
-#define SCI_DETAILS_MODE_DETAILS 2
-#define SCI_DETAILS_MODE_SCIPLANE 3
 	struct slider *scizoom;
 	struct slider *scipower;
 	struct button *details_button;
@@ -9662,8 +9662,10 @@ static void show_science(GtkWidget *w)
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.scizoom);
 
+#if 0
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
+#endif
 	sng_set_foreground(UI_COLOR(sci_coords));
 	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf)", o->x, o->y, o->z);
 	sng_abs_xy_draw_string(buf, TINY_FONT, 0.25 * SCREEN_WIDTH, LINEHEIGHT * 0.5);
@@ -9694,8 +9696,10 @@ static void show_3d_science(GtkWidget *w)
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.scizoom);
 
+#if endif
 	if ((timer & 0x3f) == 0)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
+#endif
 	sng_set_foreground(UI_COLOR(sci_coords));
 	sprintf(buf, "LOC: (%5.2lf, %5.2lf, %5.2lf)", o->x, o->y, o->z);
 	sng_abs_xy_draw_string(buf, TINY_FONT, 200, LINEHEIGHT * 0.5);

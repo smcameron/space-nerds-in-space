@@ -378,6 +378,10 @@ struct request_thrust_packet {
 #define ROLE_TEXT_TO_SPEECH	(1 << 10)
 #define ROLE_ALL		((uint32_t) 0x0ffffffffff)
 
+#define SCI_DETAILS_MODE_THREED 1
+#define SCI_DETAILS_MODE_DETAILS 2
+#define SCI_DETAILS_MODE_SCIPLANE 3
+
 struct add_player_packet {
 	uint8_t opcode;
 	uint32_t role;

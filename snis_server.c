@@ -14644,6 +14644,34 @@ no_understand:
 	queue_add_text_to_speech(c, "I do not understand your zoom request.");
 }
 
+static void nl_shortlong_range_scan(void *context, int argc, char *argv[], int pos[],
+			union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	uint8_t mode;
+
+	int verb;
+
+	verb = nl_find_next_word(argc, pos, POS_VERB, 0);
+	if (verb < 0)
+		goto no_understand;
+
+	if (strcasecmp("long range scan", argv[verb]) == 0)
+		mode = SCI_DETAILS_MODE_THREED;
+	else if (strcasecmp("short range scan", argv[verb]) == 0)
+		mode = SCI_DETAILS_MODE_SCIPLANE;
+	else if (strcasecmp("details", argv[verb]) == 0)
+		mode = SCI_DETAILS_MODE_DETAILS;
+	else
+		goto no_understand;
+	send_packet_to_all_clients_on_a_bridge(c->shipid,
+			packed_buffer_new("bb", OPCODE_SCI_DETAILS, mode), ROLE_ALL | ROLE_SCIENCE);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "I do not understand your request.");
+}
+
 static void nl_target_n(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
@@ -14937,6 +14965,14 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("scan",		"target",	"n", nl_target_n);
 	snis_nl_add_dictionary_verb("select",		"target",	"n", nl_target_n);
 	snis_nl_add_dictionary_verb("reverse",		"reverse",	"n", nl_reverse_n);
+	snis_nl_add_dictionary_verb("long range scanner",	"long range scan",	"", nl_shortlong_range_scan);
+	snis_nl_add_dictionary_verb("long range scan",	"long range scan",	"", nl_shortlong_range_scan);
+	snis_nl_add_dictionary_verb("long range",	"long range scan",	"", nl_shortlong_range_scan);
+	snis_nl_add_dictionary_verb("short range scanner",	"short range scan",	"", nl_shortlong_range_scan);
+	snis_nl_add_dictionary_verb("short range scan",	"short range scan",	"", nl_shortlong_range_scan);
+	snis_nl_add_dictionary_verb("short range",	"short range scan",	"", nl_shortlong_range_scan);
+	snis_nl_add_dictionary_verb("details",		"details",		"", nl_shortlong_range_scan);
+	snis_nl_add_dictionary_verb("detail",		"details",		"", nl_shortlong_range_scan);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
