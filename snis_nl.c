@@ -928,7 +928,6 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("energize", "engage");
 	snis_nl_add_synonym("deactivate", "disengage");
 	snis_nl_add_synonym("deenergize", "disengage");
-	snis_nl_add_synonym("stop", "disengage");
 	snis_nl_add_synonym("shutdown", "disengage");
 	snis_nl_add_synonym("deploy", "launch");
 }
@@ -960,6 +959,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("raise",		"raise",	"n", generic_verb_action);
 	snis_nl_add_dictionary_verb("engage",		"engage",	"n", generic_verb_action);
 	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", generic_verb_action);
+	snis_nl_add_dictionary_verb("stop",		"disengage",	"n", generic_verb_action);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", generic_verb_action);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"aqa", generic_verb_action);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"qaa", generic_verb_action);
@@ -990,6 +990,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("level",		"level",	POS_NOUN);
 	snis_nl_add_dictionary_word("energy",		"energy",	POS_NOUN);
 	snis_nl_add_dictionary_word("power",		"energy",	POS_NOUN);
+	snis_nl_add_dictionary_word("stop",		"stop",		POS_NOUN); /* as in:full stop */
+	snis_nl_add_dictionary_word("speed",		"speed",	POS_NOUN);
 	snis_nl_add_dictionary_word("asteroid",		"asteroid",	POS_NOUN);
 	snis_nl_add_dictionary_word("nebula",		"nebula",	POS_NOUN);
 	snis_nl_add_dictionary_word("star",		"star",		POS_NOUN);

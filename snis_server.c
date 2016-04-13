@@ -13344,7 +13344,6 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("deactivate", "disengage");
 	snis_nl_add_synonym("deenergize", "disengage");
 	snis_nl_add_synonym("disable", "disengage");
-	snis_nl_add_synonym("stop", "disengage");
 	snis_nl_add_synonym("shutdown", "disengage");
 	snis_nl_add_synonym("deploy", "launch");
 	snis_nl_add_synonym("path", "course");
@@ -13355,6 +13354,7 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("manuevering", "maneuvering");
 	snis_nl_add_synonym("cooling", "coolant");
 	snis_nl_add_synonym("throttle", "impulse drive");
+	snis_nl_add_synonym("engines", "impulse drive");
 	snis_nl_add_synonym("warp power", "warp drive power");
 	snis_nl_add_synonym("warp coolant", "warp drive coolant");
 	snis_nl_add_synonym("tractor power", "tractor beam power");
@@ -14724,6 +14724,51 @@ static void nl_damage_report(void *context, int argc, char *argv[], int pos[],
 	queue_add_text_to_speech(c, damage_report);
 }
 
+/* full stop, full throttle, full reverse... */
+static void nl_full_n(void *context, int argc, char *argv[], int pos[],
+		__attribute__((unused)) union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, noun, reverse = 0;
+	struct snis_entity *o;
+	float value = 1.0;
+
+	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (noun < 0)
+		goto no_understand;
+	if (strcasecmp(argv[noun], "impulse drive") == 0)
+		goto full_throttle;
+	if (strcasecmp(argv[noun], "power") == 0)
+		goto full_throttle;
+	if (strcasecmp(argv[noun], "speed") == 0)
+		goto full_throttle;
+	if (strcasecmp(argv[noun], "reverse") == 0) {
+		reverse = 1;
+		goto full_throttle;
+	}
+	if (strcasecmp(argv[noun], "stop") == 0) {
+		value = 0.0;
+		goto full_throttle;
+	}
+
+full_throttle: /* or full reverse, or full stop */
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "I lost my train of thought.");
+		return;
+	}
+	o = &go[i];
+	o->tsd.ship.reverse = reverse;
+	pthread_mutex_unlock(&universe_mutex);
+	nl_set_impulse_drive(c, "impulse drive", value);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "I'm sorry, full what?");
+}
+
 static void sorry_dave(void *context, int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
@@ -14805,6 +14850,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("engage",		"engage",	"n", nl_engage_n);
 	snis_nl_add_dictionary_verb("engage",		"engage",	"npn", nl_engage_npn);
 	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", nl_disengage_n);
+	snis_nl_add_dictionary_verb("stop",		"disengage",	"n", nl_disengage_n);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", sorry_dave);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"aqa", nl_turn_aqa);
 	snis_nl_add_dictionary_verb("rotate",		"rotate",	"aqa", nl_turn_aqa);
@@ -14832,7 +14878,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("shut",		"shut",		"na", sorry_dave);
 	snis_nl_add_dictionary_verb("launch",		"launch",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("eject",		"eject",	"n", sorry_dave);
-	snis_nl_add_dictionary_verb("full",		"full",		"n", sorry_dave);
+	snis_nl_add_dictionary_verb("full",		"full",		"n", nl_full_n),
 	snis_nl_add_dictionary_verb("red alert",	"red alert",	"", nl_red_alert);
 	snis_nl_add_dictionary_verb("red alert",	"red alert",	"p", nl_red_alert_p);
 	snis_nl_add_dictionary_verb("main view",	"main view",	"pn", nl_onscreen_verb_pn);
@@ -14886,6 +14932,9 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("docking system", "docking system",	POS_NOUN);
 	snis_nl_add_dictionary_word("coolant",		"coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("power",		"power",	POS_NOUN);
+	snis_nl_add_dictionary_word("stop",		"stop",		POS_NOUN); /* as in:full stop */
+	snis_nl_add_dictionary_word("speed",		"speed",	POS_NOUN);
+	snis_nl_add_dictionary_word("reverse",		"reverse",	POS_NOUN);
 	snis_nl_add_dictionary_word("impulse drive",	"impulse drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("warp drive",	"warp drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("asteroid",		"asteroid",	POS_NOUN);
@@ -15024,6 +15073,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("max",		"maximum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("maximum",		"maximum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("planet",		"planet",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("ahead",		"ahead",	POS_ADJECTIVE);
 
 	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
 	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);
