@@ -13762,7 +13762,6 @@ static void nl_turn_aq(void *context, int argc, char *argv[], int pos[],
 {
 	struct game_client *c = context;
 	int adj, number;
-	float degrees;
 	union quat rotation;
 	char reply[100];
 
@@ -13790,7 +13789,6 @@ static void nl_turn_qa(void *context, int argc, char *argv[], int pos[],
 {
 	struct game_client *c = context;
 	int adj, number;
-	float degrees;
 	union quat rotation;
 	char reply[100];
 
