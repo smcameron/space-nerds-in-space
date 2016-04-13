@@ -1156,7 +1156,7 @@ static void snis_queue_add_text_to_speech(const char *text, uint32_t roles, uint
 	client_unlock();
 }
 
-static void snis_queue_add_global_sound(uint16_t sound_number)
+static void __attribute__((unused)) snis_queue_add_global_sound(uint16_t sound_number)
 {
 	int i;
 
