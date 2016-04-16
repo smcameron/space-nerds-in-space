@@ -13330,6 +13330,7 @@ static void perform_natural_language_request(struct game_client *c, char *txt)
 static void init_synonyms(void)
 {
 	snis_nl_add_synonym("cut", "lower");
+	snis_nl_add_synonym("reduce", "lower");
 	snis_nl_add_synonym("decrease", "lower");
 	snis_nl_add_synonym("boost", "raise");
 	snis_nl_add_synonym("increase", "raise");
@@ -13361,7 +13362,9 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("impulse coolant", "impulse drive coolant");
 	snis_nl_add_synonym("docking magnets", "docking system");
 	snis_nl_add_synonym("comms", "communications");
+	snis_nl_add_synonym("counter clockwise", "counterclockwise");
 	snis_nl_add_synonym("counter-clockwise", "counterclockwise");
+	snis_nl_add_synonym("anti clockwise", "counterclockwise");
 	snis_nl_add_synonym("anti-clockwise", "counterclockwise");
 	snis_nl_add_synonym("anticlockwise", "counterclockwise");
 	snis_nl_add_synonym("star base", "starbase");
@@ -15113,9 +15116,13 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("lay in",		"lay in",	"npn", nl_set_npn);
 	snis_nl_add_dictionary_verb("lay in",		"lay in",	"npan", nl_set_npn);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"npq", sorry_dave);
+	snis_nl_add_dictionary_verb("lower",		"lower",	"npn", sorry_dave);
+	snis_nl_add_dictionary_verb("lower",		"lower",	"npa", sorry_dave); /* lower power to impulse */
 	snis_nl_add_dictionary_verb("lower",		"lower",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("raise",		"raise",	"nq", sorry_dave);
 	snis_nl_add_dictionary_verb("raise",		"raise",	"npq", sorry_dave);
+	snis_nl_add_dictionary_verb("raise",		"raise",	"npn", sorry_dave);
+	snis_nl_add_dictionary_verb("raise",		"raise",	"npa", sorry_dave); /* raise power to impulse */
 	snis_nl_add_dictionary_verb("raise",		"raise",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("engage",		"engage",	"n", nl_engage_n);
 	snis_nl_add_dictionary_verb("engage",		"engage",	"npn", nl_engage_npn);
@@ -15148,18 +15155,24 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("shut",		"shut",		"na", sorry_dave);
 	snis_nl_add_dictionary_verb("launch",		"launch",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("eject",		"eject",	"n", sorry_dave);
-	snis_nl_add_dictionary_verb("full",		"full",		"n", nl_full_n),
+	snis_nl_add_dictionary_verb("full",		"full",		"a", nl_full_n),    /* full impulse */
+	snis_nl_add_dictionary_verb("full",		"full",		"n", nl_full_n),    /* full impulse drive */
+	snis_nl_add_dictionary_verb("full",		"full",		"npn", sorry_dave), /* full power to impulse drive */
+	snis_nl_add_dictionary_verb("full",		"full",		"npa", sorry_dave), /* full power to impulse */
+	snis_nl_add_dictionary_verb("full",		"full",		"na", sorry_dave), /* full speed ahead */
 	snis_nl_add_dictionary_verb("red alert",	"red alert",	"", nl_red_alert);
 	snis_nl_add_dictionary_verb("red alert",	"red alert",	"p", nl_red_alert_p);
 	snis_nl_add_dictionary_verb("main view",	"main view",	"pn", nl_onscreen_verb_pn);
 	snis_nl_add_dictionary_verb("navigation",	"navigation",	"pn", nl_onscreen_verb_pn);
 	snis_nl_add_dictionary_verb("weapons",		"weapons",	"pn", nl_onscreen_verb_pn);
+	snis_nl_add_dictionary_verb("weapon",		"weapons",	"pn", nl_onscreen_verb_pn);
 	snis_nl_add_dictionary_verb("engineering",	"engineering",	"pn", nl_onscreen_verb_pn);
 	snis_nl_add_dictionary_verb("science",		"science",	"pn", nl_onscreen_verb_pn);
 	snis_nl_add_dictionary_verb("communications",	"communications", "pn", nl_onscreen_verb_pn);
 	snis_nl_add_dictionary_verb("main view",	"main view",	"n", nl_onscreen_verb_n);
 	snis_nl_add_dictionary_verb("navigation",	"navigation",	"n", nl_onscreen_verb_n);
 	snis_nl_add_dictionary_verb("weapons",		"weapons",	"n", nl_onscreen_verb_n);
+	snis_nl_add_dictionary_verb("weapon",		"weapons",	"n", nl_onscreen_verb_n);
 	snis_nl_add_dictionary_verb("engineering",	"engineering",	"n", nl_onscreen_verb_n);
 	snis_nl_add_dictionary_verb("science",		"science",	"n", nl_onscreen_verb_n);
 	snis_nl_add_dictionary_verb("communications",	"communications", "n", nl_onscreen_verb_n);
@@ -15187,23 +15200,28 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("shields",		"shields",	POS_NOUN);
 	snis_nl_add_dictionary_word("factor",		"factor",	POS_NOUN);
 	snis_nl_add_dictionary_word("level",		"level",	POS_NOUN);
+	snis_nl_add_dictionary_word("worm hole",	"worm hole",	POS_NOUN);
 
 	snis_nl_add_dictionary_word("maneuvering power", "maneuvering power",	POS_NOUN);
 	snis_nl_add_dictionary_word("warp drive power", "warp drive power",	POS_NOUN);
 	snis_nl_add_dictionary_word("impulse drive power", "impulse drive power",	POS_NOUN);
 	snis_nl_add_dictionary_word("sensor power", "sensor power",	POS_NOUN);
+	snis_nl_add_dictionary_word("sensors power", "sensor power",	POS_NOUN);
 	snis_nl_add_dictionary_word("communications power", "communications power",	POS_NOUN);
 	snis_nl_add_dictionary_word("phaser power", "phaser power",	POS_NOUN);
 	snis_nl_add_dictionary_word("shield power", "shield power",	POS_NOUN);
+	snis_nl_add_dictionary_word("shields power", "shield power",	POS_NOUN);
 	snis_nl_add_dictionary_word("tractor beam power", "tractor beam power",	POS_NOUN);
 
 	snis_nl_add_dictionary_word("maneuvering coolant", "maneuvering coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("warp drive coolant", "warp drive coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("impulse drive coolant", "impulse drive coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("sensor coolant", "sensor coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("sensors coolant", "sensor coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("communications coolant", "communications coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("phaser coolant", "phaser coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("shield coolant", "shield coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("shields coolant", "shield coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("tractor beam coolant", "tractor beam coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("zoom",		"zoom",		POS_NOUN);
 
@@ -15230,6 +15248,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("thruster",		"thrusters",	POS_NOUN);
 	snis_nl_add_dictionary_word("thrusters",	"thrusters",	POS_NOUN);
 	snis_nl_add_dictionary_word("polarity",		"polarity",	POS_NOUN);
+	snis_nl_add_dictionary_word("sensors",		"sensors",	POS_NOUN);
 	snis_nl_add_dictionary_word("sensor",		"sensors",	POS_NOUN);
 	snis_nl_add_dictionary_word("science",		"science",	POS_NOUN);
 	snis_nl_add_dictionary_word("communications",	"communications", POS_NOUN);
@@ -15354,6 +15373,10 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("maximum",		"maximum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("planet",		"planet",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("ahead",		"ahead",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("forward",		"forward",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("backwards",	"backwards",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("backward",		"backwards",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("back",		"backwards",	POS_ADJECTIVE);
 
 	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
 	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);
