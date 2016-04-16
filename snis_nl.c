@@ -801,23 +801,23 @@ static void extract_meaning(void *context, char *original_text, struct nl_token 
 	parse_machine_free_list(p);
 }
 
-void snis_nl_parse_natural_language_request(void *context, char *txt)
+void snis_nl_parse_natural_language_request(void *context, char *original)
 {
 	int ntokens;
 	struct nl_token **token = NULL;
-	char *original = strdup(txt);
+	char *copy = strdup(original);
 
-	lowercase(txt);
-	handle_spelled_numbers_in_place(txt);
-	multiword_processor_encode(txt);
-	token = tokenize(txt, &ntokens);
+	lowercase(copy);
+	handle_spelled_numbers_in_place(copy);
+	multiword_processor_encode(copy);
+	token = tokenize(copy, &ntokens);
 	classify_tokens(context, token, ntokens);
 	// print_tokens(token, ntokens);
 	extract_meaning(context, original, token, ntokens);
 	free_tokens(token, ntokens);
 	if (token)
 		free(token);
-	free(original);
+	free(copy);
 }
 
 void snis_nl_add_synonym(char *synonym_word, char *canonical_word)
