@@ -825,8 +825,6 @@ void snis_nl_add_synonym(char *synonym_word, char *canonical_word)
 static void snis_nl_debuglevel(void *context, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
-	int number;
-
 	if (pos[1] != POS_NUMBER) {
 		debuglevel = !!debuglevel;
 		fprintf(stderr, "Toggling debug level to %d, '%s'\n", debuglevel, debuglevel ? "on" : "off");
