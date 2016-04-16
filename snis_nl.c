@@ -100,6 +100,15 @@ static char *fixup_punctuation(char *s)
 			dest++;
 			continue;
 		}
+		/* If it is a dot, check if the preceding and following chars are digits */
+		if (*src == '.') {
+			if (src != s && isdigit(*(src + 1)) && isdigit(*(src - 1))) {
+				/* preserve decimal point */
+				*dest = *src;
+				dest++;
+				continue;
+			}
+		}
 		*dest = ' '; dest++;
 		*dest = *src; dest++;
 		*dest = ' '; dest++;
