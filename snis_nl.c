@@ -316,7 +316,7 @@ static void print_token(struct nl_token *t)
 		print_token_instance(t, i);
 }
 
-static void print_tokens(struct nl_token *t[], int ntokens)
+static void __attribute__((unused)) print_tokens(struct nl_token *t[], int ntokens)
 {
 	int i;
 	for (i = 0; i < ntokens; i++)
