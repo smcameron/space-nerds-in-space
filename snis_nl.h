@@ -117,5 +117,7 @@ void snis_nl_add_external_lookup(snis_nl_external_noun_lookup lookup);
 void snis_nl_add_error_function(snis_nl_error_function error_func);
 void snis_nl_add_multiword_preprocessor(snis_nl_multiword_preprocessor_fn multiword_processor);
 void snis_nl_parse_natural_language_request(void *context, char *text);
+int snis_nl_test_parse_natural_language_request(void *context, char *text);
+void snis_nl_print_verbs_by_fn(const char *label, snis_nl_verb_function verb_function);
 
 #endif

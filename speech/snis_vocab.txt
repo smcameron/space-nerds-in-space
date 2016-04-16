@@ -10,8 +10,8 @@ actuate docking system
 full stop
 full reverse
 full power
-full impulse-drive
-full power to impulse-drive
+full impulse drive
+full power to impulse drive
 full power to shields
 full power to warp drive
 full power to maneuvering
@@ -21,7 +21,7 @@ full power to sensors
 full power to phasers
 full speed
 full speed ahead
-cut power to impulse-drive
+cut power to impulse drive
 cut power to shields
 cut power to warp drive
 cut power to maneuvering

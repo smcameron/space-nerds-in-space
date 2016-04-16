@@ -774,9 +774,10 @@ static void nl_parse_machines_score(struct nl_parse_machine **list, int ntokens)
 		nl_parse_machine_score(p, ntokens);
 }
 
-static void extract_meaning(void *context, char *original_text, struct nl_token *token[], int ntokens)
+static int extract_meaning(void *context, char *original_text, struct nl_token *token[], int ntokens, int test_only)
 {
 	struct nl_parse_machine *list, *p;
+	int rc;
 
 	list = NULL;
 	p = malloc(sizeof(*p));
@@ -791,21 +792,26 @@ static void extract_meaning(void *context, char *original_text, struct nl_token 
 			printf("-------- Final interpretation: ----------\n");
 			nl_parse_machine_print(p, token, ntokens, 0);
 		}
-		do_action(context, p, token, ntokens);
+		rc = 0;
+		if (!test_only)
+			do_action(context, p, token, ntokens);
 	} else {
 		if (debuglevel > 0)
 			printf("Failure to comprehend '%s'\n", original_text);
-		if (error_function)
+		if (error_function && !test_only)
 			error_function(context);
+		rc = -1;
 	}
 	parse_machine_free_list(p);
+	return rc;
 }
 
-void snis_nl_parse_natural_language_request(void *context, char *original)
+static int nl_parse_natural_language_request(void *context, char *original, int test_only)
 {
 	int ntokens;
 	struct nl_token **token = NULL;
 	char *copy = strdup(original);
+	int rc;
 
 	lowercase(copy);
 	handle_spelled_numbers_in_place(copy);
@@ -813,11 +819,22 @@ void snis_nl_parse_natural_language_request(void *context, char *original)
 	token = tokenize(copy, &ntokens);
 	classify_tokens(context, token, ntokens);
 	// print_tokens(token, ntokens);
-	extract_meaning(context, original, token, ntokens);
+	rc = extract_meaning(context, original, token, ntokens, test_only);
 	free_tokens(token, ntokens);
 	if (token)
 		free(token);
 	free(copy);
+	return rc;
+}
+
+void snis_nl_parse_natural_language_request(void *context, char *txt)
+{
+	(void) nl_parse_natural_language_request(context, txt, 0);
+}
+
+int snis_nl_test_parse_natural_language_request(void *context, char *txt)
+{
+	return nl_parse_natural_language_request(context, txt, 1);
 }
 
 void snis_nl_add_synonym(char *synonym_word, char *canonical_word)
@@ -917,6 +934,24 @@ void snis_nl_add_multiword_preprocessor(snis_nl_multiword_preprocessor_fn prepro
 		fprintf(stderr, "Too many multiword preprocessor functions added\n");
 	}
 	multiword_preprocessor_fn = preprocessor;
+}
+
+void snis_nl_print_verbs_by_fn(const char *label, snis_nl_verb_function verb_function)
+{
+	int i, count;
+
+	count = 0;
+	for (i = 0; i < ndictionary_entries; i++) {
+		if (dictionary[i].p_o_s != POS_VERB)
+			continue;
+		if (dictionary[i].verb.fn != verb_function)
+			continue;
+		printf("%s %30s %30s %10s\n", label, dictionary[i].word,
+			dictionary[i].canonical_word, dictionary[i].verb.syntax);
+		count++;
+	}
+	if (count > 0)
+		printf("%s total count: %d\n", label, count);
 }
 
 
