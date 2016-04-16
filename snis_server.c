@@ -13329,6 +13329,8 @@ static void perform_natural_language_request(struct game_client *c, char *txt)
 
 static void init_synonyms(void)
 {
+	snis_nl_add_synonym("max", "maximum");
+	snis_nl_add_synonym("min", "minimum");
 	snis_nl_add_synonym("cut", "lower");
 	snis_nl_add_synonym("reduce", "lower");
 	snis_nl_add_synonym("decrease", "lower");
@@ -14085,7 +14087,37 @@ typedef void (*nl_set_function)(struct game_client *c, char *word, float value);
 static struct settable_thing_entry {
 	char *name;
 	nl_set_function setfn;
-} nl_settable_thing[] = {
+} nl_settable_power_thing[] = {
+	{ "impulse", nl_set_impulse_power, },
+	{ "impulse drive", nl_set_impulse_power, },
+	{ "warp", nl_set_warp_power, },
+	{ "warp drive", nl_set_warp_power, },
+	{ "maneuvering", nl_set_maneuvering_power, },
+	{ "sensors", nl_set_sensor_power, },
+	{ "sensor", nl_set_sensor_power, },
+	{ "communications", nl_set_comms_power, },
+	{ "phasers", nl_set_phaser_power, },
+	{ "shields", nl_set_shield_power, },
+	{ "tractor beam", nl_set_tractor_power, },
+	{ "tractor", nl_set_tractor_power, },
+};
+
+static struct settable_thing_entry nl_settable_coolant_thing[] = {
+	{ "impulse", nl_set_impulse_coolant, },
+	{ "impulse drive", nl_set_impulse_coolant, },
+	{ "warp", nl_set_warp_coolant, },
+	{ "warp drive", nl_set_warp_coolant, },
+	{ "maneuvering", nl_set_maneuvering_coolant, },
+	{ "sensors", nl_set_sensor_coolant, },
+	{ "sensor", nl_set_sensor_coolant, },
+	{ "communications", nl_set_comms_coolant, },
+	{ "phasers", nl_set_phaser_coolant, },
+	{ "shields", nl_set_shield_coolant, },
+	{ "tractor beam", nl_set_tractor_coolant, },
+	{ "tractor", nl_set_tractor_coolant, },
+};
+
+static struct settable_thing_entry nl_settable_thing[] = {
 	{ "shields", nl_set_shields, },
 	{ "impulse drive", nl_set_impulse_drive, },
 	{ "warp drive", nl_set_warpdrive, },
@@ -14298,6 +14330,135 @@ static void nl_disengage_n(void *context, int argc, char *argv[], int pos[],
 no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know how to disengage that.");
 	return;
+}
+
+/* increase power to impulse, increase coolant to blah, raise shields to maximum */
+static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[], int raise)
+{
+	struct game_client *c = context;
+	nl_set_function setit = NULL;
+	char answer[100];
+	int i, noun, prep, adj;
+
+	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (noun < 0)
+		goto no_understand;
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, noun + 1);
+	if (prep < 0)
+		goto no_understand;
+	adj = nl_find_next_word(argc, pos, POS_ADJECTIVE, prep + 1);
+	if (adj < 0)
+		goto no_understand;
+
+	for (i = 0; i < ARRAYSIZE(nl_settable_thing); i++) {
+		if (strcasecmp(nl_settable_thing[i].name, argv[noun]) == 0) {
+			setit = nl_settable_thing[i].setfn;
+			break;
+		}
+	}
+	if (setit) {
+		if (raise && strcasecmp(argv[adj], "maximum") == 0) {
+			setit(c, argv[noun], 1.0);
+			return;
+		}
+		if (!raise && strcasecmp(argv[adj], "minimum") == 0) {
+			setit(c, argv[noun], 0.0);
+			return;
+		}
+		sprintf(answer, "I don't know how to %s %s %s %s\n", raise ? "increase" : "decrease",
+				argv[noun], argv[prep], argv[adj]);
+		queue_add_text_to_speech(c, answer);
+		return;
+	} else if (strcasecmp(argv[noun], "power") == 0) {
+		for (i = 0; i < ARRAYSIZE(nl_settable_power_thing); i++) {
+			if (strcasecmp(nl_settable_power_thing[i].name, argv[adj]) == 0) {
+				setit = nl_settable_power_thing[i].setfn;
+				break;
+			}
+		}
+		if (!setit) {
+			sprintf(answer, "I don't know how to increase power to that.\n");
+			queue_add_text_to_speech(c, answer);
+			return;
+		}
+		setit(c, argv[adj], raise ? 1.0 : 0.0);
+		return;
+	} else if (strcasecmp(argv[noun], "coolant") == 0) {
+		for (i = 0; i < ARRAYSIZE(nl_settable_coolant_thing); i++) {
+			if (strcasecmp(nl_settable_coolant_thing[i].name, argv[adj]) == 0) {
+				setit = nl_settable_coolant_thing[i].setfn;
+				break;
+			}
+		}
+		if (!setit) {
+			sprintf(answer, "I don't know how to decrease power to that.\n");
+			queue_add_text_to_speech(c, answer);
+			return;
+		}
+		setit(c, argv[adj], raise ? 1.0 : 0.0);
+		return;
+	}
+no_understand:
+	queue_add_text_to_speech(c, "I don't know how to adjust that.");
+}
+
+static void nl_raise_npa(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	nl_raise_or_lower_npa(context, argc, argv, pos, extra_data, 1);
+}
+
+static void nl_lower_npa(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	nl_raise_or_lower_npa(context, argc, argv, pos, extra_data, 0);
+}
+
+/* "raise shields" */
+static void nl_raise_or_lower_n(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[], int raise)
+{
+	struct game_client *c = context;
+	nl_set_function setit = NULL;
+	char answer[100];
+	int i, noun;
+
+	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (noun < 0)
+		goto no_understand;
+
+	for (i = 0; i < ARRAYSIZE(nl_settable_thing); i++) {
+		if (strcasecmp(nl_settable_thing[i].name, argv[noun]) == 0) {
+			setit = nl_settable_thing[i].setfn;
+			break;
+		}
+	}
+	if (!setit) {
+		sprintf(answer, "Sorry, I do not know how to raise the %s", argv[noun]);
+		queue_add_text_to_speech(c, answer);
+		return;
+	}
+	setit(c, argv[noun], raise ? 1.0 : 0.0);
+	return;
+
+no_understand:
+	if (raise)
+		queue_add_text_to_speech(c, "Sorry, I do not know how to increase that.");
+	else
+		queue_add_text_to_speech(c, "Sorry, I do not know how to decrease that.");
+}
+
+static void nl_raise_n(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	nl_raise_or_lower_n(context, argc, argv, pos, extra_data, 1);
+}
+
+static void nl_lower_n(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	nl_raise_or_lower_n(context, argc, argv, pos, extra_data, 0);
 }
 
 static void nl_engage_n(void *context, int argc, char *argv[], int pos[],
@@ -14912,6 +15073,12 @@ static const struct nl_test_case_entry {
 	{ "energize docking system", 0, },
 	{ "engage docking system", 0, },
 	{ "actuate docking system", 0, },
+	{ "increase power to impulse", 0, },
+	{ "maximum power to impulse", 0, },
+	{ "max coolant to tractor beam", 0, },
+	{ "increase power to warp", 0, },
+	{ "increase coolant to maneuvering", 0, },
+	{ "increase coolant to sensors", 0, },
 	{ "full stop", 0, },
 	{ "full reverse", 0, },
 	{ "full power", 0, },
@@ -15073,6 +15240,13 @@ static const struct nl_test_case_entry {
 	{ "short range", 0, },
 	{ "deploy the mining robot", 0, },
 	{ "eject the warp core", 0, },
+	{ "minimum warp drive", 0, },
+	{ "maximum warp drive", 0, },
+	{ "maximum warp", 0, },
+	{ "max coolant to warp drive", 0, },
+	{ "minimum warp drive power", 0, },
+	{ "increase warp drive to max", 0, },
+	{ "decrease warp drive to minimum", 0, },
 };
 
 static void nl_run_snis_test_cases(__attribute__((unused)) void *context,
@@ -15115,15 +15289,17 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("plot",		"plot",		"npan", nl_set_npn);
 	snis_nl_add_dictionary_verb("lay in",		"lay in",	"npn", nl_set_npn);
 	snis_nl_add_dictionary_verb("lay in",		"lay in",	"npan", nl_set_npn);
-	snis_nl_add_dictionary_verb("lower",		"lower",	"npq", sorry_dave);
-	snis_nl_add_dictionary_verb("lower",		"lower",	"npn", sorry_dave);
-	snis_nl_add_dictionary_verb("lower",		"lower",	"npa", sorry_dave); /* lower power to impulse */
-	snis_nl_add_dictionary_verb("lower",		"lower",	"n", sorry_dave);
-	snis_nl_add_dictionary_verb("raise",		"raise",	"nq", sorry_dave);
-	snis_nl_add_dictionary_verb("raise",		"raise",	"npq", sorry_dave);
+	snis_nl_add_dictionary_verb("lower",		"lower",	"npq", nl_set_npq);
+	snis_nl_add_dictionary_verb("lower",		"lower",	"npn", nl_set_npn);
+	snis_nl_add_dictionary_verb("lower",		"lower",	"npa", nl_lower_npa); /* lower power to impulse */
+	snis_nl_add_dictionary_verb("lower",		"lower",	"n", nl_lower_n); /* decrease warp drive */
+	snis_nl_add_dictionary_verb("minimum",		"lower",	"n", nl_lower_n); /* minimum warp drive */
+	snis_nl_add_dictionary_verb("raise",		"raise",	"npq", nl_set_npq); /* raise warp drive to 100 */
 	snis_nl_add_dictionary_verb("raise",		"raise",	"npn", sorry_dave);
-	snis_nl_add_dictionary_verb("raise",		"raise",	"npa", sorry_dave); /* raise power to impulse */
-	snis_nl_add_dictionary_verb("raise",		"raise",	"n", sorry_dave);
+	snis_nl_add_dictionary_verb("raise",		"raise",	"npa", nl_raise_npa); /* increase power to impulse, raise warp to max */
+	snis_nl_add_dictionary_verb("raise",		"raise",	"n", nl_raise_n);	/* increase warp drive */
+	snis_nl_add_dictionary_verb("maximum",		"raise",	"n", nl_raise_n);	/* max warp */
+	snis_nl_add_dictionary_verb("maximum",		"raise",	"npa", nl_raise_npa); /* max power to impulse */
 	snis_nl_add_dictionary_verb("engage",		"engage",	"n", nl_engage_n);
 	snis_nl_add_dictionary_verb("engage",		"engage",	"npn", nl_engage_npn);
 	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", nl_disengage_n);
@@ -15158,7 +15334,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("full",		"full",		"a", nl_full_n),    /* full impulse */
 	snis_nl_add_dictionary_verb("full",		"full",		"n", nl_full_n),    /* full impulse drive */
 	snis_nl_add_dictionary_verb("full",		"full",		"npn", sorry_dave), /* full power to impulse drive */
-	snis_nl_add_dictionary_verb("full",		"full",		"npa", sorry_dave), /* full power to impulse */
+	snis_nl_add_dictionary_verb("full",		"full",		"npa", nl_raise_npa), /* full power to impulse */
 	snis_nl_add_dictionary_verb("full",		"full",		"na", sorry_dave), /* full speed ahead */
 	snis_nl_add_dictionary_verb("red alert",	"red alert",	"", nl_red_alert);
 	snis_nl_add_dictionary_verb("red alert",	"red alert",	"p", nl_red_alert_p);
@@ -15369,8 +15545,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("long",		"long",		POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("range",		"range",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("full",		"maximum",	POS_ADJECTIVE);
-	snis_nl_add_dictionary_word("max",		"maximum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("maximum",		"maximum",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("minimum",		"minimum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("planet",		"planet",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("ahead",		"ahead",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("forward",		"forward",	POS_ADJECTIVE);
