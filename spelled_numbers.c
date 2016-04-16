@@ -32,6 +32,7 @@ static struct number_map_entry {
 	char *name;
 	float value;
 } number_map[] = {
+	{ "percent", 0.01 },
 	{ "zero", 0 },
 	{ "one third", 0.33 },
 	{ "one half", 0.50 },
@@ -103,6 +104,8 @@ static int straight_replace_entry(char *input, struct number_map_entry *e)
 			sprintf(replacement, "%0.2f", e->value);
 		else
 			sprintf(replacement, "%.0f", e->value);
+		if (strcmp(e->name, "percent") == 0)
+			strcpy(replacement, "");
 		len = strlen(replacement);
 		wordlen = strlen(e->name);
 		if (len > strlen(e->name)) {
@@ -444,6 +447,9 @@ int main(int argc, char *argv[])
 	rc += testcase("one half", "0.50");
 	rc += testcase("two thirds", "0.67");
 	rc += testcase("three quarters", "0.75");
+	rc += testcase("75 percent", "75 ");
+	rc += testcase("thirty five percent", "35 ");
+	rc += testcase("two thirds percent", "0.67 ");
 
 	/* It is a pretty severe bug that the following test case fails. */
 	rc += testcase("one hundred and ten thousand", "110000");

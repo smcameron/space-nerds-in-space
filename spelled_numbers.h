@@ -33,6 +33,11 @@
  * would print out:
  *
  *    turn left 45 degrees and then set the throttle to 90
+ *
+ * You do not want to use this code for anything where it is important
+ * to actually get the correct answer, as it pretty hacky and it *will*
+ * get a few cases wrong for sure.
+ *
  */
 
 char *handle_spelled_numbers_in_place(char *input);
