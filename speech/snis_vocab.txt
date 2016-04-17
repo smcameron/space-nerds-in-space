@@ -425,3 +425,5 @@ three quarters
 max power
 full power
 maximum power
+shields up
+shields down

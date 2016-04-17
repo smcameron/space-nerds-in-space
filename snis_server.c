@@ -14425,6 +14425,28 @@ static void nl_lower_npa(void *context, int argc, char *argv[], int pos[],
 }
 
 /* "raise shields" */
+static void nl_shields_p(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int prep;
+
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
+	if (prep < 0)
+		goto no_understand;
+	if (strcasecmp(argv[prep], "up") == 0)
+		nl_set_shields(c, "shields", 1.0);
+	else if (strcasecmp(argv[prep], "down") == 0)
+		nl_set_shields(c, "shields", 0.0);
+	else
+		goto no_understand;
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not know what you want me to do with the shields.");
+}
+
+/* "raise shields" */
 static void nl_raise_or_lower_n(void *context, int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[], int raise)
 {
@@ -15110,6 +15132,8 @@ static const struct nl_test_case_entry {
 	char *text;
 	int expected;
 } nl_test_case[] = {
+	{ "shields up", 0, },
+	{ "shields down", 0, },
 	{ "set a course for the nearest planet", 0, },
 	{ "activate warp drive", 0, },
 	{ "engage warp drive", 0, },
@@ -15345,6 +15369,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("raise",		"raise",	"npn", sorry_dave);
 	snis_nl_add_dictionary_verb("raise",		"raise",	"npa", nl_raise_npa); /* increase power to impulse, raise warp to max */
 	snis_nl_add_dictionary_verb("raise",		"raise",	"n", nl_raise_n);	/* increase warp drive */
+	snis_nl_add_dictionary_verb("shields",		"shields",	"p", nl_shields_p);	/* shields up/down */
 	snis_nl_add_dictionary_verb("maximum",		"raise",	"n", nl_raise_n);	/* max warp */
 	snis_nl_add_dictionary_verb("maximum",		"raise",	"npa", nl_raise_npa); /* max power to impulse */
 	snis_nl_add_dictionary_verb("engage",		"engage",	"n", nl_engage_n);
