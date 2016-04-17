@@ -15029,13 +15029,30 @@ no_target:
 	return;
 }
 
+static void nl_set_reverse(struct game_client *c, int reverse, float value)
+{
+	int i;
+	struct snis_entity *o;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "I lost my train of thought.");
+		return;
+	}
+	o = &go[i];
+	o->tsd.ship.reverse = reverse;
+	pthread_mutex_unlock(&universe_mutex);
+	nl_set_impulse_drive(c, "impulse drive", value);
+}
+
 /* full stop, full throttle, full reverse... */
 static void nl_full_n(void *context, int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
-	int i, noun, reverse = 0;
-	struct snis_entity *o;
+	int noun, reverse = 0;
 	float value = 1.0;
 
 	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
@@ -15057,21 +15074,45 @@ static void nl_full_n(void *context, int argc, char *argv[], int pos[],
 	}
 
 full_throttle: /* or full reverse, or full stop */
-	pthread_mutex_lock(&universe_mutex);
-	i = lookup_by_id(c->shipid);
-	if (i < 0) {
-		pthread_mutex_unlock(&universe_mutex);
-		queue_add_text_to_speech(c, "I lost my train of thought.");
-		return;
-	}
-	o = &go[i];
-	o->tsd.ship.reverse = reverse;
-	pthread_mutex_unlock(&universe_mutex);
-	nl_set_impulse_drive(c, "impulse drive", value);
+	nl_set_reverse(c, reverse, value);
 	return;
 
 no_understand:
 	queue_add_text_to_speech(c, "I'm sorry, full what?");
+}
+
+/* full speed ahead */
+static void nl_full_na(void *context, int argc, char *argv[], int pos[],
+		__attribute__((unused)) union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int adj, noun, reverse;
+
+	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (noun < 0)
+		goto no_understand;
+	adj = nl_find_next_word(argc, pos, POS_ADJECTIVE, 0);
+	if (adj < 0)
+		goto no_understand;
+	if (strcasecmp(argv[noun], "speed") == 0 ||
+		strcasecmp(argv[noun], "throttle") == 0 ||
+		strcasecmp(argv[noun], "impulse-drive") == 0) {
+		if (strcasecmp(argv[adj], "ahead") == 0 ||
+			strcasecmp(argv[adj], "impulse") == 0) {
+			reverse = 0;
+		} else if (strcasecmp(argv[adj], "reverse") == 0 ||
+				strcasecmp(argv[adj], "backwards") == 0 ||
+				strcasecmp(argv[adj], "back") == 0) {
+			reverse = 1;
+		} else  {
+			goto no_understand;
+		}
+		nl_set_reverse(c, reverse, 1.0);
+		return;
+	}
+
+no_understand:
+	queue_add_text_to_speech(c, "I am sorry, I did not understand that.");
 }
 
 static void sorry_dave(void *context, int argc, char *argv[], int pos[],
@@ -15173,6 +15214,9 @@ static const struct nl_test_case_entry {
 	{ "full power to phasers", 0, },
 	{ "full speed", 0, },
 	{ "full speed ahead", 0, },
+	{ "full speed reverse", 0, },
+	{ "maximum speed ahead", 0, },
+	{ "maximum speed reverse", 0, },
 	{ "cut power to impulse drive", 0, },
 	{ "cut power to impulse drive", 0, },
 	{ "cut power to shields", 0, },
@@ -15418,7 +15462,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("ramming",		"full",		"n", nl_full_n),    /* ramming speed */
 	snis_nl_add_dictionary_verb("full",		"full",		"npn", sorry_dave), /* full power to impulse drive */
 	snis_nl_add_dictionary_verb("full",		"full",		"npa", nl_raise_npa), /* full power to impulse */
-	snis_nl_add_dictionary_verb("full",		"full",		"na", sorry_dave), /* full speed ahead */
+	snis_nl_add_dictionary_verb("full",		"full",		"na", nl_full_na), /* full speed ahead */
+	snis_nl_add_dictionary_verb("maximum",		"full",		"na", nl_full_na), /* maximum speed ahead */
 	snis_nl_add_dictionary_verb("red alert",	"red alert",	"", nl_red_alert);
 	snis_nl_add_dictionary_verb("red alert",	"red alert",	"p", nl_red_alert_p);
 	snis_nl_add_dictionary_verb("main view",	"main view",	"pn", nl_onscreen_verb_pn);
@@ -15632,6 +15677,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("minimum",		"minimum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("planet",		"planet",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("ahead",		"ahead",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("reverse",		"reverse",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("forward",		"forward",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("backwards",	"backwards",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("backward",		"backwards",	POS_ADJECTIVE);
