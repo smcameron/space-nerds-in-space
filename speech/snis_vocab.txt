@@ -188,11 +188,17 @@ main view screen
 maneuvering
 manuevering
 max
-max coolant to tractor beam
+max coolant
+max coolant to
+maximum
+maximum coolant
+maximum coolant to
+maximum power to
+max power
+max power to
 maximum
 maximum power
-maximum power to impulse
-max power
+maximum power to
 mining
 navigate
 navigation
