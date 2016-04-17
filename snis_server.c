@@ -4504,8 +4504,10 @@ static void update_player_orientation(struct snis_entity *o)
 	if (o->tsd.ship.computer_steering_time_left > 0) {
 		float time = (COMPUTER_STEERING_TIME - o->tsd.ship.computer_steering_time_left) / COMPUTER_STEERING_TIME;
 		union quat new_orientation;
+		float slerp_power_factor = 0.3 * (float) (o->tsd.ship.power_data.maneuvering.i) / 255.0;
 
-		quat_slerp(&new_orientation, &o->orientation, &o->tsd.ship.computer_desired_orientation, time);
+		quat_slerp(&new_orientation, &o->orientation, &o->tsd.ship.computer_desired_orientation,
+				time * slerp_power_factor);
 		o->orientation = new_orientation;
 		o->tsd.ship.computer_steering_time_left--;
 	}
