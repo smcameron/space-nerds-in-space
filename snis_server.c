@@ -7389,6 +7389,7 @@ static void do_yaw(struct game_client *c, int yaw)
 	double max_yaw_velocity =
 		(MAX_YAW_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
 
+	ship->tsd.ship.computer_steering_time_left = 0; /* cancel any computer steering in progress */
 	do_generic_yaw(&ship->tsd.ship.yaw_velocity, yaw, max_yaw_velocity,
 			YAW_INCREMENT, YAW_INCREMENT_FINE);
 }
@@ -7399,6 +7400,7 @@ static void do_pitch(struct game_client *c, int pitch)
 	double max_pitch_velocity =
 		(MAX_PITCH_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
 
+	ship->tsd.ship.computer_steering_time_left = 0; /* cancel any computer steering in progress */
 	do_generic_yaw(&ship->tsd.ship.pitch_velocity, pitch, max_pitch_velocity,
 			PITCH_INCREMENT, PITCH_INCREMENT_FINE);
 }
@@ -7409,6 +7411,7 @@ static void do_roll(struct game_client *c, int roll)
 	double max_roll_velocity =
 		(MAX_ROLL_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
 
+	ship->tsd.ship.computer_steering_time_left = 0; /* cancel any computer steering in progress */
 	do_generic_yaw(&ship->tsd.ship.roll_velocity, roll, max_roll_velocity,
 			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
 }
