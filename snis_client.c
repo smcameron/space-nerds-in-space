@@ -5386,7 +5386,7 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 	union vec3 v;
 	float m;
 	static float max = 0;
-	const float max_alpha = 0.4;
+	const float max_alpha = 0.95;
 
 	if (first_time) {
 		lastp = p;
