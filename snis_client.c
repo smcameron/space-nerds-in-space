@@ -3378,6 +3378,7 @@ static struct navigation_ui {
 	struct gauge *warp_gauge;
 	struct button *engage_warp_button;
 	struct button *docking_magnets_button;
+	struct button *standard_orbit_button;
 	struct button *reverse_button;
 	struct button *trident_button;
 	int gauge_radius;
@@ -5386,7 +5387,7 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 	union vec3 v;
 	float m;
 	static float max = 0;
-	const float max_alpha = 0.95;
+	const float max_alpha = 0.85;
 
 	if (first_time) {
 		lastp = p;
@@ -7325,6 +7326,11 @@ static void docking_magnets_button_pressed(__attribute__((unused)) void *cookie)
 	do_adjust_byte_value(0,  OPCODE_DOCKING_MAGNETS);
 }
 
+static void standard_orbit_button_pressed(__attribute__((unused)) void *cookie)
+{
+	do_adjust_byte_value(0, OPCODE_REQUEST_STANDARD_ORBIT);
+}
+
 static void reverse_button_pressed(__attribute__((unused)) void *s)
 {
 	struct snis_entity *o;
@@ -7516,6 +7522,10 @@ static void init_nav_ui(void)
 					nav_ui.gauge_radius * 2 + 120,
 					-1, -1, "DOCKING MAGNETS", button_color,
 					NANO_FONT, docking_magnets_button_pressed, NULL);
+	nav_ui.standard_orbit_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
+					nav_ui.gauge_radius * 2 + 180,
+					-1, -1, "STANDARD ORBIT", button_color,
+					NANO_FONT, standard_orbit_button_pressed, NULL);
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", button_color,
 			NANO_FONT, reverse_button_pressed, NULL);
 	nav_ui.trident_button = snis_button_init(30, 228, -1, -1, "RELATIVE", button_color,
@@ -7525,6 +7535,7 @@ static void init_nav_ui(void)
 	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.docking_magnets_button, DISPLAYMODE_NAVIGATION);
+	ui_add_button(nav_ui.standard_orbit_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.trident_button, DISPLAYMODE_NAVIGATION);
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
@@ -12639,6 +12650,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		break;
 	case DEVIO_OPCODE_NAV_DOCKING_MAGNETS:
 		docking_magnets_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_NAV_STANDARD_ORBIT:
+		standard_orbit_button_pressed((void *) 0);
 		break;
 	case DEVIO_OPCODE_NAV_THROTTLE:
 		snis_slider_poke_input(nav_ui.throttle_slider, d, 1);

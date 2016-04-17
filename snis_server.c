@@ -4501,6 +4501,71 @@ static void player_collision_detection(void *player, void *object)
 
 static void update_player_orientation(struct snis_entity *o)
 {
+	int i;
+	struct snis_entity *planet;
+	double v;
+
+	/* This is where "standard orbit" is implemented */
+	if (o->tsd.ship.orbiting_object_id != 0xffffffff) {
+
+		/* If we're moving too slowly, numerical problems result */
+		v = sqrt(o->vx * o->vx + o->vy * o->vy + o->vz * o->vz);
+		if (v < 0.01) {
+			o->tsd.ship.orbiting_object_id = 0xffffffff;
+			goto skip_standard_orbit;
+		}
+
+		i = lookup_by_id(o->tsd.ship.orbiting_object_id);
+		if (i < 0) {
+			o->tsd.ship.orbiting_object_id = 0xffffffff;
+		} else {
+			/* Find where we would like to be pointed for "standard orbit"
+			 * Take vector P, from planet to us, and make it the standard length.
+			 * Take velocity vector V, project to be parallel to surface of sphere,
+			 * then scale to some constant fraction of planet radius (2.5 degrees, say).
+			 * Add V to P to produce D.  This is where we want to aim.
+			 */
+			union vec3 p, d, direction, right;
+			union quat new_orientation;
+			planet = &go[i];
+			p.v.x = o->x - planet->x;
+			p.v.y = o->y - planet->y;
+			p.v.z = o->z - planet->z;
+			vec3_normalize_self(&p);
+			vec3_mul_self(&p, planet->tsd.planet.radius * STANDARD_ORBIT_RADIUS_FACTOR);
+			d.v.x = o->vx;
+			d.v.y = o->vy;
+			d.v.z = o->vz;
+			vec3_add_self(&d, &p);
+			vec3_normalize_self(&d);
+			vec3_mul_self(&d, planet->tsd.planet.radius * STANDARD_ORBIT_RADIUS_FACTOR);
+			vec3_sub_self(&d, &p);
+			vec3_normalize_self(&d);
+			vec3_mul_self(&d, planet->tsd.planet.radius * 2.5 / M_PI); /* 2.5 degrees */
+			vec3_add_self(&d, &p);
+			d.v.x += planet->x;
+			d.v.y += planet->y;
+			d.v.z += planet->z;
+
+			/* Compute new orientation to point us at d */
+			/* Calculate new desired orientation of ship pointing towards destination */
+			right.v.x = 1.0;
+			right.v.y = 0.0;
+			right.v.z = 0.0;
+
+			direction.v.x = d.v.x - o->x;
+			direction.v.y = d.v.y - o->y;
+			direction.v.z = d.v.z - o->z;
+			vec3_normalize_self(&direction);
+
+			quat_from_u2v(&new_orientation, &right, &direction, NULL);
+
+			o->tsd.ship.computer_desired_orientation = new_orientation;
+			o->tsd.ship.computer_steering_time_left = 10; /* let the computer steer */
+		}
+	}
+skip_standard_orbit:
+
 	if (o->tsd.ship.computer_steering_time_left > 0) {
 		float time = (COMPUTER_STEERING_TIME - o->tsd.ship.computer_steering_time_left) / COMPUTER_STEERING_TIME;
 		union quat new_orientation;
@@ -5577,6 +5642,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.ncargo_bays = 8;
 	o->tsd.ship.passenger_berths = 2;
 	o->tsd.ship.mining_bots = 1;
+	o->tsd.ship.orbiting_object_id = 0xffffffff;
 	o->tsd.ship.nav_damping_suppression = 0.0;
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
@@ -5744,6 +5810,7 @@ static int add_ship(int faction, int auto_respawn)
 	go[i].tsd.ship.auto_respawn = (uint8_t) auto_respawn;
 	quat_init_axis(&go[i].tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	go[i].tsd.ship.computer_steering_time_left = 0;
+	go[i].tsd.ship.orbiting_object_id = 0xffffffff;
 	memset(go[i].tsd.ship.cargo, 0, sizeof(go[i].tsd.ship.cargo));
 	if (faction >= 0 && faction < nfactions())
 		go[i].sdata.faction = faction;
@@ -10678,6 +10745,75 @@ static int process_docking_magnets(struct game_client *c)
 	return 0;
 }
 
+static int nl_find_nearest_object_of_type(uint32_t id, int objtype);
+
+/* Assumes universe lock is held, and releases it. */
+static void toggle_standard_orbit(struct game_client *c, struct snis_entity *ship)
+{
+	int planet_index;
+	struct snis_entity *planet;
+	double dx, dy, dz, d;
+
+	if (ship->tsd.ship.orbiting_object_id != 0xffffffff) {
+		ship->tsd.ship.orbiting_object_id = 0xffffffff;
+		ship->tsd.ship.computer_steering_time_left = 0; /* turn off computer steering */
+		pthread_mutex_unlock(&universe_mutex);
+		snis_queue_add_text_to_speech("Leaving standard orbit",
+					ROLE_TEXT_TO_SPEECH, c->shipid);
+		return;
+	}
+	/* Find nearest planet to ship */
+	planet_index = nl_find_nearest_object_of_type(c->shipid, OBJTYPE_PLANET);
+	if (planet_index < 0) { /* no planets around */
+		pthread_mutex_unlock(&universe_mutex);
+		snis_queue_add_text_to_speech("There are no nearby planets to orbit",
+					ROLE_TEXT_TO_SPEECH, c->shipid);
+		return;
+	}
+	planet = &go[planet_index];
+	dx = planet->x - ship->x;
+	dy = planet->y - ship->y;
+	dz = planet->z - ship->z;
+	d = sqrt(dx * dx + dy * dy + dz * dz);
+	if (d > planet->tsd.planet.radius * STANDARD_ORBIT_RADIUS_FACTOR * 3.00) {
+		pthread_mutex_unlock(&universe_mutex);
+		snis_queue_add_text_to_speech("We are too far from a planet to enter standard orbit",
+					ROLE_TEXT_TO_SPEECH, c->shipid);
+		printf("radius = %lf, d = %lf, limit = %lf\n", planet->tsd.planet.radius, d,
+			planet->tsd.planet.radius * STANDARD_ORBIT_RADIUS_FACTOR);
+		return;
+	}
+	ship->tsd.ship.orbiting_object_id = planet->id;
+	pthread_mutex_unlock(&universe_mutex);
+	snis_queue_add_text_to_speech("Entering standard orbit",
+				ROLE_TEXT_TO_SPEECH, c->shipid);
+	return;
+}
+
+static int process_standard_orbit(struct game_client *c)
+{
+	unsigned char buffer[10];
+	uint8_t v;
+	uint32_t id;
+	int i;
+	struct snis_entity *ship;
+
+	int rc = read_and_unpack_buffer(c, buffer, "wb", &id, &v);
+	if (rc)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->ship_index)
+		snis_log(SNIS_ERROR, "i != ship index at %s:%t\n", __FILE__, __LINE__);
+	ship = &go[i];
+	toggle_standard_orbit(c, ship);
+	return 0;
+}
+
 static int do_engage_warp_drive(struct snis_entity *o)
 {
 	int enough_oomph = ((double) o->tsd.ship.warpdrive / 255.0) > 0.075;
@@ -11326,6 +11462,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_DOCKING_MAGNETS:
 			rc = process_docking_magnets(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_STANDARD_ORBIT:
+			rc = process_standard_orbit(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -13343,6 +13484,7 @@ static void perform_natural_language_request(struct game_client *c, char *txt)
 
 static void init_synonyms(void)
 {
+	snis_nl_add_synonym("exit", "leave");
 	snis_nl_add_synonym("velocity", "speed");
 	snis_nl_add_synonym("max", "maximum");
 	snis_nl_add_synonym("min", "minimum");
@@ -13526,7 +13668,7 @@ static int nl_find_nearest_object_of_type(uint32_t id, int objtype)
 
 	i = lookup_by_id(id);
 	if (i < 0)
-		return (uint32_t) -1;
+		return -1;
 
 	o = &go[i];
 
@@ -13732,6 +13874,7 @@ static void nl_rotate_ship(struct game_client *c, union quat *rotation)
 	/* Now let the computer steer for awhile */
 	o->tsd.ship.computer_desired_orientation = new_orientation;
 	o->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
+	o->tsd.ship.orbiting_object_id = 0xffffffff;
 	// o->orientation = new_orientation;
 	pthread_mutex_unlock(&universe_mutex);
 
@@ -14278,6 +14421,7 @@ static void nl_set_npn(void *context, int argc, char *argv[], int pos[],
 
 	ship->tsd.ship.computer_desired_orientation = new_orientation;
 	ship->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
+	ship->tsd.ship.orbiting_object_id = 0xffffffff;
 
 	pthread_mutex_unlock(&universe_mutex);
 	sprintf(reply, "Setting course for %s.", namecopy);
@@ -14594,6 +14738,62 @@ static void nl_engage_npn(void *context, int argc, char *argv[], int pos[],
 
 no_understand:
 	queue_add_text_to_speech(c, "Sorry, I am unfamiliar with the way you are using the word engage");
+}
+
+static void nl_leave_or_enter_n(void *context, int argc, char *argv[], int pos[],
+			__attribute__((unused)) union snis_nl_extra_data extra_data[], int entering)
+{
+	struct game_client *c = context;
+	int i, noun;
+
+	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (noun < 0)
+		goto no_understand;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "Sorry, I seem to have lost my mind.");
+		return;
+	}
+	if (strcasecmp(argv[noun], "orbit") == 0) {
+		if (entering && go[i].tsd.ship.orbiting_object_id != 0xffffffff) {
+			pthread_mutex_unlock(&universe_mutex);
+			queue_add_text_to_speech(c, "Already in standard orbit");
+			return;
+		}
+		if (!entering && go[i].tsd.ship.orbiting_object_id == 0xffffffff) {
+			pthread_mutex_unlock(&universe_mutex);
+			queue_add_text_to_speech(c, "We are not in standard orbit");
+			return;
+		}
+		toggle_standard_orbit(c, &go[i]); /* releases universe mutex */
+		return;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I am unfamiliar with the way you are using the word leave");
+}
+
+static void nl_leave_n(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+{
+	nl_leave_or_enter_n(context, argc, argv, pos, extra_data, 0);
+}
+
+static void nl_leave_an(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+{
+	nl_leave_or_enter_n(context, argc, argv, pos, extra_data, 0);
+}
+
+static void nl_enter_n(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+{
+	nl_leave_or_enter_n(context, argc, argv, pos, extra_data, 1);
+}
+
+static void nl_enter_an(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+{
+	nl_leave_or_enter_n(context, argc, argv, pos, extra_data, 1);
 }
 
 static void nl_red_alert(void *context,
@@ -15179,6 +15379,10 @@ static const struct nl_test_case_entry {
 	char *text;
 	int expected;
 } nl_test_case[] = {
+	{ "exit standard orbit", 0, },
+	{ "leave standard orbit", 0, },
+	{ "enter standard orbit", 0, },
+	{ "standard orbit", 0, },
 	{ "ramming speed", 0, },
 	{ "ramming velocity", 0, },
 	{ "shields up", 0, },
@@ -15428,6 +15632,11 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("maximum",		"raise",	"npa", nl_raise_npa); /* max power to impulse */
 	snis_nl_add_dictionary_verb("engage",		"engage",	"n", nl_engage_n);
 	snis_nl_add_dictionary_verb("engage",		"engage",	"npn", nl_engage_npn);
+	snis_nl_add_dictionary_verb("leave",		"leave",	"n", nl_leave_n); /* leave orbit */
+	snis_nl_add_dictionary_verb("leave",		"leave",	"an", nl_leave_an); /* leave standard orbit */
+	snis_nl_add_dictionary_verb("standard",		"enter",	"n", nl_enter_n); /* enter orbit */
+	snis_nl_add_dictionary_verb("enter",		"enter",	"n", nl_enter_n); /* enter orbit */
+	snis_nl_add_dictionary_verb("enter",		"enter",	"an", nl_enter_an); /* enter standard orbit */
 	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", nl_disengage_n);
 	snis_nl_add_dictionary_verb("stop",		"disengage",	"n", nl_disengage_n);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", sorry_dave);
@@ -15578,6 +15787,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("course",		"course",	POS_NOUN);
 	snis_nl_add_dictionary_word("distance",		"distance",	POS_NOUN);
 	snis_nl_add_dictionary_word("red alert",	"red alert",	POS_NOUN);
+	snis_nl_add_dictionary_word("orbit",		"orbit",	POS_NOUN);
 
 
 	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
@@ -15682,6 +15892,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("backwards",	"backwards",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("backward",		"backwards",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("back",		"backwards",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("standard",		"standard",	POS_ADJECTIVE);
 
 	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
 	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);

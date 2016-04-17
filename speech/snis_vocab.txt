@@ -115,6 +115,7 @@ engage warp drive
 engineering
 engineering on screen
 engineering screen
+enter standard orbit
 everything
 except
 factor
@@ -174,6 +175,8 @@ lay in a course for the nearest planet
 lay in a course for the nearest star base
 lay in a course for the nearest warp gate
 lay in a course for the nearest worm hole
+leave standard orbit
+leave orbit
 left
 level
 long
@@ -222,6 +225,7 @@ one quarter
 one third
 onto
 or
+orbit
 out
 outside
 path
@@ -377,6 +381,8 @@ sixty percent
 slowly
 solar
 space
+standard
+standard orbit
 star
 starboard
 start

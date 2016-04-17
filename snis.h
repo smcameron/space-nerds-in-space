@@ -283,6 +283,7 @@ struct ship_data {
 	uint32_t shields;
 	char shipname[100];
 	double velocity;
+#define STANDARD_ORBIT_RADIUS_FACTOR (1.1)
 #define MIN_PLAYER_VELOCITY (0.1)
 #define MAX_PLAYER_VELOCITY (30.0)
 #define PLAYER_VELOCITY_DAMPING (0.97)
@@ -398,6 +399,7 @@ struct ship_data {
 	uint8_t docking_magnets;
 	uint8_t passenger_berths;
 	uint8_t mining_bots;
+	uint32_t orbiting_object_id;
 	char mining_bot_name[20];
 	float nav_damping_suppression;
 	union quat computer_desired_orientation;
