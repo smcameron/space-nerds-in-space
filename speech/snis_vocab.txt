@@ -149,6 +149,7 @@ full power to warp drive
 full reverse
 full speed
 full speed ahead
+full velocity
 full stop
 full throttle
 gate
@@ -254,6 +255,8 @@ quickly
 radiation
 raise
 raise shields
+ramming speed
+ramming velocity
 range
 rapidly
 red

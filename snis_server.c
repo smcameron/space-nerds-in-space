@@ -13343,6 +13343,7 @@ static void perform_natural_language_request(struct game_client *c, char *txt)
 
 static void init_synonyms(void)
 {
+	snis_nl_add_synonym("velocity", "speed");
 	snis_nl_add_synonym("max", "maximum");
 	snis_nl_add_synonym("min", "minimum");
 	snis_nl_add_synonym("cut", "lower");
@@ -15137,6 +15138,8 @@ static const struct nl_test_case_entry {
 	char *text;
 	int expected;
 } nl_test_case[] = {
+	{ "ramming speed", 0, },
+	{ "ramming velocity", 0, },
 	{ "shields up", 0, },
 	{ "shields down", 0, },
 	{ "set a course for the nearest planet", 0, },
@@ -15412,6 +15415,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("eject",		"eject",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("full",		"full",		"a", nl_full_n),    /* full impulse */
 	snis_nl_add_dictionary_verb("full",		"full",		"n", nl_full_n),    /* full impulse drive */
+	snis_nl_add_dictionary_verb("ramming",		"full",		"n", nl_full_n),    /* ramming speed */
 	snis_nl_add_dictionary_verb("full",		"full",		"npn", sorry_dave), /* full power to impulse drive */
 	snis_nl_add_dictionary_verb("full",		"full",		"npa", nl_raise_npa), /* full power to impulse */
 	snis_nl_add_dictionary_verb("full",		"full",		"na", sorry_dave), /* full speed ahead */
