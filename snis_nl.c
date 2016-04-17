@@ -834,6 +834,8 @@ void snis_nl_parse_natural_language_request(void *context, char *txt)
 
 int snis_nl_test_parse_natural_language_request(void *context, char *txt)
 {
+	if (debuglevel > 0)
+		printf("Testing: %s\n", txt);
 	return nl_parse_natural_language_request(context, txt, 1);
 }
 
