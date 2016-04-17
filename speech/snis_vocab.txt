@@ -1,209 +1,10 @@
-activate warp drive
-engage warp drive
-actuate warp drive
-energize warp drive
-disengage docking system
-deactivate docking system
-energize docking system
-engage docking system
-actuate docking system
-full stop
-full reverse
-full power
-full impulse drive
-full power to impulse drive
-full power to shields
-full power to warp drive
-full power to maneuvering
-full power to impulse
-full power to tractor beam
-full power to sensors
-full power to phasers
-full speed
-full speed ahead
-cut power to impulse drive
-cut power to shields
-cut power to warp drive
-cut power to maneuvering
-cut power to impulse
-cut power to tractor beam
-cut power to sensors
-cut power to phasers
-set a course for the nearest planet
-plot a course for the nearest planet
-lay in a course for the nearest planet
-set a course for the nearest asteroid
-plot a course for the nearest asteroid
-lay in a course for the nearest asteroid
-set a course for the nearest star base
-plot a course for the nearest star base
-lay in a course for the nearest star base
-set a course for the nearest nebula
-plot a course for the nearest nebula
-lay in a course for the nearest nebula
-set a course for the nearest warp gate
-plot a course for the nearest warp gate
-lay in a course for the nearest warp gate
-set a course for the nearest worm hole
-plot a course for the nearest worm hole
-lay in a course for the nearest worm hole
-navigation on screen
-main view on screen
-weapons on screen
-communications on screen
-comms on screen
-engineering on screen
-science on screen
-navigation screen
-main view screen
-weapon screen
-communications screen
-comms screen
-engineering screen
-science screen
-full throttle
-set warp drive power to
-set warp drive coolant to
-set warp drive to
-set impulse drive power to
-set impulse drive coolant to
-set impulse drive to
-set throttle to
-set maneuvering power to
-set maneuvering coolant to
-set sensor power to
-set sensor coolant to
-set tractor beam power to
-set tractor beam coolant to
-set communications power to
-set communications coolant to
-set comms power to
-set comms coolant to
-set phaser power to
-set phaser coolant to
-set shields power to
-set shields coolant to
-set shields to
-raise shields
-lower shields
-calculate the distance to
-compute the distance to
-figure the distance to
-degrees left
-degrees right
-degrees up
-degrees down
-degrees clockwise
-degrees counter clockwise
-degrees anti clockwise
-turn left
-turn right
-roll left
-roll right
-turn clockwise
-turn anti clockwise
-turn counter clockwise
-turn up
-turn down
-pitch up
-pitch down
-pitch forward
-pitch back
-pitch backwards
-turn towards
-damage report
-status report
-zoom one hundred
-zoom fifty
-zoom thirty
-zoom twenty
-zoom ninety
-zoom zero
-one hundred percent
-ninety percent
-eighty percent
-seventy percent
-sixty percent
-fifty percent
-forty percent
-thirty percent
-twenty percent
-twenty five percent
-fifteen percent
-ten percent
-five percent
-red alert
-cancel red alert
-coolant to one hundred
-coolant to a hundred
-coolant to ninety
-coolant to zero
-power to one hundred
-power to ninety
-power to eighty
-power to seventy
-power to sixty
-power to zero
-stop red alert
-scan the nearest planet
-scan the nearest asteroid
-scan the nearest nebula
-scan the nearest ship
-scan the nearest derelict
-select the nearest planet
-select the nearest asteroid
-select the nearest nebula
-select the nearest ship
-select the nearest derelict
-scan the closest planet
-scan the closest asteroid
-scan the closest nebula
-scan the closest ship
-scan the closest derelict
-select the closest planet
-select the closest asteroid
-select the closest nebula
-select the closest ship
-select the closest derelict
-scan the nearby planet
-scan the nearby asteroid
-scan the nearby nebula
-scan the nearby ship
-scan the nearby derelict
-select the nearby planet
-select the nearby asteroid
-select the nearby nebula
-select the nearby ship
-select the nearby derelict
-scan the planet
-scan the asteroid
-scan the nebula
-scan the ship
-scan the derelict
-select the planet
-select the asteroid
-select the nebula
-select the ship
-select the derelict
-the nearest ship
-the nearest planet
-the nearest asteroid
-the nearest nebula
-launch the mining bot
-deploy the mining bot
-launch the mining robot
-long range scan
-long range scanner
-long range
-short range scan
-short range scanner
-short range
-deploy the mining robot
-eject the warp core
 aboard
 above
 across
+activate warp drive
 actuate
+actuate docking system
+actuate warp drive
 after
 alert
 all
@@ -229,28 +30,60 @@ boost
 bot
 by
 calculate
+calculate the distance to
+calculate the distance to the nearest planet
+cancel red alert
 charge
 clockwise
 close
 closest
 code
 comms
+comms on screen
+comms screen
 communications
+communications on screen
+communications screen
 compute
 computer
+compute the distance to
+compute the distance to the nearest planet
 coolant
+coolant to a hundred
+coolant to ninety
+coolant to one hundred
+coolant to zero
 cooling
 core
 counterclockwise
 counter-clockwise
 course
 cut
+cut power to impulse
+cut power to impulse drive
+cut power to maneuvering
+cut power to phasers
+cut power to sensors
+cut power to shields
+cut power to tractor beam
+cut power to warp drive
 damage
+damage report
 deactivate
+deactivate docking system
 decrease
 deenergize
 degrees
+degrees anti clockwise
+degrees clockwise
+degrees counter clockwise
+degrees down
+degrees left
+degrees right
+degrees up
 deploy
+deploy the mining bot
+deploy the mining robot
 derelict
 describe
 destruct
@@ -258,53 +91,128 @@ detail
 details
 disable
 disengage
+disengage docking system
 distance
 docking
 down
 drive
 during
+eight
+eighteen
+eighty
+eighty percent
 eject
+eject the warp core
+eleven
 enemy
 energize
+energize docking system
+energize warp drive
 energy
 engage
+engage docking system
+engage warp drive
 engineering
+engineering on screen
+engineering screen
 everything
 except
 factor
+fifteen
+fifteen percent
+fifty
+fifty percent
 figure
+figure the distance to
+figure the distance to the nearest ship
+five
+five percent
 for
+forty
+forty percent
+four
+fourteen
 from
 fuel
 full
+full impulse
+full impulse drive
+full power
+full power to impulse
+full power to impulse drive
+full power to maneuvering
+full power to phasers
+full power to sensors
+full power to shields
+full power to tractor beam
+full power to warp drive
+full reverse
+full speed
+full speed ahead
+full stop
+full throttle
 gate
 hull
+hundred
 impulse
 in
 increase
+increase coolant to maneuvering
+increase coolant to sensors
+increase power to impulse
+increase power to warp
 inside
 it
 launch
+launch the mining bot
+launch the mining robot
 lay
+lay in a course for the nearest asteroid
+lay in a course for the nearest nebula
+lay in a course for the nearest planet
+lay in a course for the nearest star base
+lay in a course for the nearest warp gate
+lay in a course for the nearest worm hole
 left
 level
 long
+long range
+long range scan
+long range scanner
 lower
+lower shields
 magnets
 main
+main view on screen
+main view screen
 maneuvering
 manuevering
 max
+max coolant to tractor beam
 maximum
+maximum power
+maximum power to impulse
+max power
 mining
 navigate
 navigation
+navigation on screen
+navigation screen
 nearby
 nearest
 nebula
+nine
+nineteen
+ninety
+ninety percent
 of
 off
 on
+one
+one half
+one hundred percent
+one quarter
+one third
 onto
 or
 out
@@ -314,38 +222,149 @@ percent
 phaser
 phasers
 pitch
+pitch back
+pitch backward
+pitch backwards
+pitch down
+pitch forward
+pitch up
 planet
 plot
+plot a course for the nearest asteroid
+plot a course for the nearest nebula
+plot a course for the nearest planet
+plot a course for the nearest star base
+plot a course for the nearest warp gate
+plot a course for the nearest worm hole
 port
 power
+power to eighty
+power to ninety
+power to one hundred
+power to seventy
+power to sixty
+power to zero
 quickly
 radiation
 raise
+raise shields
 range
 rapidly
 red
+red alert
 report
+reverse engines
+reverse the polarity
+reverse thrusters
 right
 robot
 roll
+roll anti clockwise
+roll clockwise
+roll counter clockwise
+roll left
+roll right
 rotate
 route
 scan
 scanner
 scanners
+scan the asteroid
+scan the closest asteroid
+scan the closest derelict
+scan the closest nebula
+scan the closest planet
+scan the closest ship
+scan the derelict
+scan the nearby asteroid
+scan the nearby derelict
+scan the nearby nebula
+scan the nearby planet
+scan the nearby ship
+scan the nearest asteroid
+scan the nearest derelict
+scan the nearest nebula
+scan the nearest planet
+scan the nearest ship
+scan the nebula
+scan the planet
+scan the ship
 science
+science on screen
+science screen
 screen
 select
+select the asteroid
+select the closest asteroid
+select the closest derelict
+select the closest nebula
+select the closest planet
+select the closest ship
+select the derelict
+select the nearby asteroid
+select the nearby derelict
+select the nearby nebula
+select the nearby planet
+select the nearby ship
+select the nearest asteroid
+select the nearest derelict
+select the nearest nebula
+select the nearest planet
+select the nearest ship
+select the nebula
+select the planet
+select the ship
 self
 sensor
 sequence
 set
+set a course for the nearest asteroid
+set a course for the nearest nebula
+set a course for the nearest planet
+set a course for the nearest star base
+set a course for the nearest warp gate
+set a course for the nearest worm hole
+set comms coolant to
+set comms power to
+set communications coolant to
+set communications power to
+set impulse drive coolant to
+set impulse drive power to
+set impulse drive to
+set maneuvering coolant to
+set maneuvering power to
+set phaser coolant to
+set phaser power to
+set sensor coolant to
+set sensor power to
+set shields coolant to
+set shields power to
+set shields to
+set throttle to
+set tractor beam coolant to
+set tractor beam power to
+set warp drive coolant to
+set warp drive power to
+set warp drive to
+seven
+seventeen
+seventy
+seventy percent
 shield
 shields
+shields down
+shields up
 ship
 short
+short range
+short range scan
+short range scanner
 shut
 shutdown
+six
+sixteen
+sixty
+sixty percent
 slowly
 solar
 space
@@ -354,29 +373,53 @@ starboard
 start
 station
 status
+status report
 stop
+stop red alert
 swiftly
 system
 target
 tell me about
+ten
+ten percent
 the
 them
 then
+the nearest asteroid
+the nearest nebula
+the nearest planet
+the nearest ship
+thirteen
+thirty
+thirty percent
+thousand
+three
+three quarters
 throttle
 through
 throughout
 thruster
 thrusters
-reverse thrusters
-full reverse
-reverse engines
-reverse the polarity
 to
 torpedo
 toward
 towards
 tractor
 turn
+turn anti clockwise
+turn clockwise
+turn counter clockwise
+turn down
+turn left
+turn right
+turn towards
+turn up
+twelve
+twenty
+twenty five percent
+twenty percent
+two
+two thirds
 under
 until
 up
@@ -384,46 +427,15 @@ view
 warp
 wavelength
 weapons
+weapon screen
+weapons on screen
 with
 yaw
-zoom
 zero
-one
-two
-three
-four
-five
-six
-seven
-eight
-nine
-ten
-eleven
-twelve
-thirteen
-fourteen
-fifteen
-sixteen
-seventeen
-eighteen
-nineteen
-twenty
-thirty
-forty
-fifty
-sixty
-seventy
-eighty
-ninety
-hundred
-thousand
-one quarter
-one half
-one third
-two thirds
-three quarters
-max power
-full power
-maximum power
-shields up
-shields down
+zoom
+zoom fifty
+zoom ninety
+zoom one hundred
+zoom thirty
+zoom twenty
+zoom zero
