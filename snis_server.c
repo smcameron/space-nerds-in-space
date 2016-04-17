@@ -11145,16 +11145,10 @@ static int process_request_tractor_beam(struct game_client *c)
 	return turn_on_tractor_beam(NULL, ship, oid, 1);
 }
 
-static int process_request_mining_bot(struct game_client *c)
+static void launch_mining_bot(struct game_client *c, struct snis_entity *ship, uint32_t oid)
 {
-	unsigned char buffer[10];
-	struct snis_entity *ship = &go[c->ship_index];
-	uint32_t oid;
-	int rc, i;
+	int i;
 
-	rc = read_and_unpack_buffer(c, buffer, "w", &oid);
-	if (rc)
-		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	if (oid == (uint32_t) 0xffffffff) /* nothing selected */
 		goto miningbotfail;
@@ -11169,18 +11163,33 @@ static int process_request_mining_bot(struct game_client *c)
 	i = add_mining_bot(ship, oid);
 	if (i < 0)
 		goto miningbotfail;
-	snis_queue_add_sound(MINING_BOT_DEPLOYED,
-				ROLE_COMMS | ROLE_SOUNDSERVER | ROLE_SCIENCE, ship->id);
+	/* snis_queue_add_sound(MINING_BOT_DEPLOYED,
+					ROLE_COMMS | ROLE_SOUNDSERVER | ROLE_SCIENCE, ship->id); */
 	pthread_mutex_unlock(&universe_mutex);
-	return 0;
+	queue_add_text_to_speech(c, "Mining robot deployed");
+	return;
 
 miningbotfail:
 	/* TODO: make special miningbot failure sound */
 	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
-	return 0;
+	queue_add_text_to_speech(c, "No target selected for mining robot");
+	return;
 }
 
+static int process_request_mining_bot(struct game_client *c)
+{
+	unsigned char buffer[10];
+	struct snis_entity *ship = &go[c->ship_index];
+	uint32_t oid;
+	int rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "w", &oid);
+	if (rc)
+		return rc;
+	launch_mining_bot(c, ship, oid);
+	return 0;
+}
 
 static int process_demon_fire_phaser(struct game_client *c)
 {
@@ -14954,6 +14963,44 @@ static void nl_damage_report(void *context, int argc, char *argv[], int pos[],
 	queue_add_text_to_speech(c, damage_report);
 }
 
+static void nl_launch_n(void *context, int argc, char *argv[], int pos[],
+		__attribute__((unused)) union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	struct snis_entity *ship;
+	uint32_t oid;
+	int i, noun;
+
+	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (noun < 0)
+		goto no_understand;
+	if (strcasecmp(argv[noun], "robot") == 0) {
+		pthread_mutex_lock(&universe_mutex);
+		oid = bridgelist[c->bridge].science_selection;
+		if (oid == 0xffffffff) {
+			pthread_mutex_unlock(&universe_mutex);
+			goto no_target;
+		}
+		i = lookup_by_id(c->shipid);
+		pthread_mutex_unlock(&universe_mutex);
+		if (i < 0) {
+			queue_add_text_to_speech(c, "I'm sorry, I seem to have lost my train of thought");
+			return;
+		}
+		ship = &go[i];
+		launch_mining_bot(c, ship, oid);
+		return;
+	}
+
+no_understand:
+	queue_add_text_to_speech(c, "I'm sorry, launch what?");
+	return;
+
+no_target:
+	queue_add_text_to_speech(c, "Sorry, no mining target selected.");
+	return;
+}
+
 /* full stop, full throttle, full reverse... */
 static void nl_full_n(void *context, int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
@@ -15329,7 +15376,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("zoom",		"zoom",		"pq", nl_zoom_pq);
 	snis_nl_add_dictionary_verb("shut",		"shut",		"an", sorry_dave);
 	snis_nl_add_dictionary_verb("shut",		"shut",		"na", sorry_dave);
-	snis_nl_add_dictionary_verb("launch",		"launch",	"n", sorry_dave);
+	snis_nl_add_dictionary_verb("launch",		"launch",	"n", nl_launch_n);
 	snis_nl_add_dictionary_verb("eject",		"eject",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("full",		"full",		"a", nl_full_n),    /* full impulse */
 	snis_nl_add_dictionary_verb("full",		"full",		"n", nl_full_n),    /* full impulse drive */
@@ -15372,7 +15419,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("base",		"starbase",	POS_NOUN);
 	snis_nl_add_dictionary_word("planet",		"planet",	POS_NOUN);
 	snis_nl_add_dictionary_word("ship",		"ship",		POS_NOUN);
-	snis_nl_add_dictionary_word("bot",		"bot",		POS_NOUN);
+	snis_nl_add_dictionary_word("bot",		"robot",	POS_NOUN);
 	snis_nl_add_dictionary_word("shields",		"shields",	POS_NOUN);
 	snis_nl_add_dictionary_word("factor",		"factor",	POS_NOUN);
 	snis_nl_add_dictionary_word("level",		"level",	POS_NOUN);
