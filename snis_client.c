@@ -225,6 +225,7 @@ struct entity_context *sciballecx;
 static int ecx_fake_stars_initialized = 0;
 static int nfake_stars = 2000;
 static volatile int fake_stars_timer = 0;
+static volatile int credits_screen_active = 0;
 
 static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
@@ -3175,6 +3176,10 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		set_renderer(ecx, valid_combos[r]);
 		break;
 		}
+	case key_toggle_credits:
+		if (control_key_pressed)
+			credits_screen_active = !credits_screen_active;
+		break;
 	default:
 		break;
 	}
@@ -5194,6 +5199,75 @@ static void show_connected_screen(GtkWidget *w)
 	sng_abs_xy_draw_string("DOWNLOADING GAME DATA", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT * 3);
 }
 
+static char *credits_text[] = {
+	"S P A C E   N E R D S   I N   S P A C E",
+	"",
+	"*   *   *",
+	"",
+	"HTTPS://SMCAMERON.GITHUB.IO/SPACE-NERDS-IN-SPACE/",
+	"",
+	"CREATED BY",
+	"STEPHEN M. CAMERON",
+	"AND",
+	"JEREMY VAN GRINSVEN",
+	"",
+	"INSPIRED BY",
+	"THOM ROBERTSON AND",
+	"ARTEMIS: STARSHIP BRIDGE SIMULATOR",
+	"",
+	"SPECIAL THANKS TO",
+	"",
+	"TX/RX LABS IN HOUSTON, TX",
+	"WITHOUT WHICH THIS GAME",
+	"WOULD NOT EXIST",
+	"",
+	"QUBODUP & FREEGAMEDEV.NET",
+	"",
+	"KWADROKE & BRIDGESIM.NET",
+	"",
+	"*   *   *",
+	"",
+	"OTHER CONTRIBUTORS",
+	"",
+	"ANDY CONRAD",
+	"ANTHONY J. BENTLEY",
+	"CHRISTIAN ROBERTS",
+	"DUSTEDDK",
+	"EMMANOUEL KAPERNAROS",
+	"HER0_01",
+	"IOAN LOOSLEY",
+	"IVAN SANCHEZ ORTEGA",
+	"LUCKI",
+	"MIKEYD",
+	"REMI VERSCHELDE",
+	"SCOTT BENESH",
+	"STEFAN GUSTAVSON",
+	"THOMAS GLAMSCH",
+	"TOBIAS SIMON",
+	"ZACHARY SCHULTZ",
+	"",
+	"*   *   *",
+	"",
+};
+
+static void draw_credits_screen(int lines, char *crawl[])
+{
+	static float z = 1200;
+	int i;
+
+	z = z - 2.0;
+	if (z < -4500.0) {
+		z = 1200;
+		credits_screen_active = 0;
+	}
+
+	sng_set_foreground(UI_COLOR(damcon_part));
+	for (i = 0; i < lines; i++) {
+			sng_center_xz_draw_string(crawl[i],
+					SMALL_FONT, SCREEN_WIDTH / 2, i * txy(40) + z);
+	}
+}
+
 static void show_common_screen(GtkWidget *w, char *title)
 {
 	int title_color;
@@ -5234,6 +5308,8 @@ static void show_common_screen(GtkWidget *w, char *title)
 			sng_center_xy_draw_string("SPACE DUST DISABLED",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 	}
+	if (credits_screen_active)
+		draw_credits_screen(ARRAYSIZE(credits_text), credits_text);
 }
 
 #define ANGLE_OF_VIEW (45)
@@ -11411,6 +11487,8 @@ static char *help_text[] = {
 	"  * 1 KEY TOGGLES CAMERA VIEW MODES\n"
 	"  * CTRL-I INVERTS VERTICAL KEYBOARD CONTROLS\n"
 	"  * 'f' TOGGLES SPACE DUST EFFECT\n"
+	"  * CTRL-C TOGGLES CREDITS SCREEN\n"
+
 	"\nPRESS ESC TO EXIT HELP\n",
 
 	/* Navigation help text */

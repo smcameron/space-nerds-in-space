@@ -168,6 +168,7 @@ char *keyactionstring[] = {
 	"key_page_up",
 	"key_page_down",
 	"key_toggle_space_dust",
+	"key_toggle_credits",
 };
 
 void init_keymap()
@@ -193,6 +194,7 @@ void init_keymap()
 	keymap[GDK_less] = keyleft;
 	keymap[GDK_q] = keyrollleft;
 	keymap[GDK_e] = keyrollright;
+	keymap[GDK_c] = key_toggle_credits;
 
 	keymap[GDK_space] = keyphaser;
 	keymap[GDK_z] = keytorpedo;

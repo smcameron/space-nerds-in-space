@@ -357,6 +357,60 @@ float sng_abs_xy_draw_letter(struct my_vect_obj **font, unsigned char letter, fl
 	return diff; 
 }
 
+static float crawl3d_transform_x(float x, float y)
+{
+	x = (1800.0 * (x - sgc.screen_width / 2.0) / (2000.0 - y)) + sgc.screen_width / 2.0;
+	return x;
+}
+
+static float crawl3d_transform_y(float y)
+{
+	y = (1300.0 * (y - sgc.screen_height / 2.0) / (3000.0 - y)) + 7.0 * sgc.screen_height / 8.0;
+	return y;
+}
+
+float sng_abs_xz_draw_letter(struct my_vect_obj **font, unsigned char letter, float x, float y)
+{
+	int i;
+	float x1, y1, x2, y2;
+	float minx, maxx, diff;
+
+	if (letter == ' ' || letter == '\n' || letter == '\t' || font[letter] == NULL)
+		return abs(font['Z']->p[0].x - font['Z']->p[1].x);
+
+	minx = x + font[letter]->p[0].x;
+	maxx = minx;
+	for (i = 0; i < font[letter]->npoints-1; i++) {
+		if (font[letter]->p[i+1].x == LINE_BREAK)
+			i += 2;
+		x1 = x + font[letter]->p[i].x;
+		y1 = y + font[letter]->p[i].y;
+		x2 = x + font[letter]->p[i + 1].x;
+		y2 = y + font[letter]->p[i + 1].y;
+
+		if (x1 < minx)
+			minx = x1;
+		if (x2 < minx)
+			minx = x2;
+		if (x1 > maxx)
+			maxx = x1;
+		if (x2 > maxx)
+			maxx = x2;
+
+		x1 = crawl3d_transform_x(x1, y1);
+		y1 = crawl3d_transform_y(y1);
+		x2 = crawl3d_transform_x(x2, y2);
+		y2 = crawl3d_transform_y(y2);
+
+		if (x1 > 0 && x2 > 0 && y1 > 0 && y2 > 0)
+			sng_current_draw_line(x1, y1, x2, y2);
+	}
+	diff = fabs(maxx - minx);
+	/* if (diff == 0)
+		return (abs(font['Z']->p[0].x - font['Z']->p[1].x) / 4); */
+	return diff;
+}
+
 /* Used for floating labels in the game. */
 /* Draws a string at an absolute x,y position on the screen. */ 
 void sng_abs_xy_draw_string(char *s, int font, float x, float y)
@@ -410,6 +464,23 @@ void sng_center_xy_draw_string(char *s, int font, float x, float y)
 
 	for (i=0;s[i];i++) {
 		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font], s[i], ox + deltax, oy);
+		deltax += dx;
+	}
+}
+
+void sng_center_xz_draw_string(char *s, int font, float x, float y)
+{
+	float bbx1, bby1, bbx2, bby2;
+	sng_string_bounding_box(s, font, &bbx1, &bby1, &bbx2, &bby2);
+
+	float ox = x - (bbx2 + bbx1)/2.0;
+	float oy = y - (bby2 + bby1)/2.0;
+
+	int i, dx;
+	float deltax = 0;
+
+	for (i = 0; s[i]; i++) {
+		dx = (letter_spacing[font]) + sng_abs_xz_draw_letter(gamefont[font], s[i], ox + deltax, oy);
 		deltax += dx;
 	}
 }
