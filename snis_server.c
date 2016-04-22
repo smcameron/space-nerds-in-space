@@ -680,6 +680,17 @@ static void get_peer_name(int connection, char *buffer)
 	printf("put '%s' in buffer\n", buffer);
 }
 
+static char *logprefix(void)
+{
+	static char logprefixstrbuffer[100];
+	static char *logprefixstr = NULL;
+	if (logprefixstr != NULL)
+		return logprefixstr;
+	sprintf(logprefixstrbuffer, "%s(%s):", "snis_server", solarsystem_name);
+	logprefixstr = logprefixstrbuffer;
+	return logprefixstr;
+}
+
 static void log_client_info(int level, int connection, char *info)
 {
 	char client_ip[50];
@@ -688,8 +699,7 @@ static void log_client_info(int level, int connection, char *info)
 		return;
 
 	get_peer_name(connection, client_ip);
-	snis_log(level, "snis_server: %s: %s",
-			client_ip, info);
+	snis_log(level, "%s: %s: %s", logprefix(), client_ip, info);
 }
 
 static void delete_from_clients_and_server(struct snis_entity *o);
@@ -716,7 +726,8 @@ static void delete_bridge(int b)
 	}
 	fprintf(stderr, "snis_server: delete_bridge, clients_still_active = %d\n", clients_still_active);
 	if (clients_still_active) {
-		fprintf(stderr, "snis_server: attempted to delete bridge clients still uses.\n");
+		fprintf(stderr, "%s: attempted to delete bridge clients still uses.\n",
+			logprefix());
 		return;
 	}
 	fprintf(stderr, "snis_server: deleting player ship\n");
@@ -731,14 +742,14 @@ static void delete_bridge(int b)
 	for (i = b + 1; i < nbridges; i++)
 		bridgelist[i - 1] = bridgelist[i];
 	nbridges--;
-	fprintf(stderr, "snis_server: deleted bridge %d\n", b);
+	fprintf(stderr, "%s: deleted bridge %d\n", logprefix(), b);
 }
 
 static void print_hash(char *s, unsigned char *pwdhash)
 {
 	int i;
 
-	fprintf(stderr, "snis_server: %s", s);
+	fprintf(stderr, "%s: %s", logprefix(), s);
 	for (i = 0; i < 20; i++)
 		fprintf(stderr, "%02x", pwdhash[i]);
 	fprintf(stderr, "\n");
@@ -9197,7 +9208,8 @@ void npc_menu_item_warp_gate_tickets(struct npc_menu_item *item,
 	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
 	int i, bridge = b - bridgelist;
 
-	fprintf(stderr, "snis_server: npc_menu_item_warp_gate_tickets called for %s\n", b->shipname);
+	fprintf(stderr, "%s: npc_menu_item_warp_gate_tickets called for %s\n",
+			logprefix(), b->shipname);
 
 	i = lookup_by_id(b->shipid);
 	if (i < 0)
@@ -12535,7 +12547,8 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 			break;
 	}
 	if (disconnect_timer > 0.0) {
-		fprintf(stderr, "snis_server: disconnecting client for failed bridge verification\n");
+		fprintf(stderr, "%s: disconnecting client for failed bridge verification\n",
+			logprefix());
 		sleep_double(disconnect_timer);
 		shutdown(c->socket, SHUT_RDWR);
 		close(c->socket);
@@ -13071,14 +13084,14 @@ static int add_new_player(struct game_client *c)
 	struct add_player_packet app;
 	uint8_t no_write_count = 0;
 
-	fprintf(stderr, "snis_server:snis_server: reading update player packet\n");
+	fprintf(stderr, "%s: reading update player packet\n", logprefix());
 	rc = snis_readsocket(c->socket, &app, sizeof(app));
-	fprintf(stderr, "snis_server:snis_server: read update player packet, rc = %d\n", rc);
+	fprintf(stderr, "%s: read update player packet, rc = %d\n", logprefix(), rc);
 	if (rc)
 		return rc;
 	app.role = ntohl(app.role);
 	if (app.opcode != OPCODE_UPDATE_PLAYER) {
-		fprintf(stderr, "snis_server:snis_server: bad opcode %d\n", app.opcode);
+		fprintf(stderr, "%s: bad opcode %d\n", logprefix(), app.opcode);
 		snis_log(SNIS_ERROR, "bad opcode %d\n", app.opcode);
 		goto protocol_error;
 	}
@@ -13086,19 +13099,19 @@ static int add_new_player(struct game_client *c)
 	app.password[19] = '\0';
 
 	if (insane(app.shipname, 20) || insane(app.password, 20)) {
-		fprintf(stderr, "snis_server:name or password\n");
+		fprintf(stderr, "%s: name or password\n", logprefix());
 		snis_log(SNIS_ERROR, "Bad ship name or password\n");
 		goto protocol_error;
 	}
-	fprintf(stderr, "snis_server: new client: sn='%s', pw='%s', create = %hhu\n",
-			app.shipname, app.password, app.new_ship);
+	fprintf(stderr, "%s: new client: sn='%s', pw='%s', create = %hhu\n",
+			logprefix(), app.shipname, app.password, app.new_ship);
 
 	c->bridge = lookup_bridge(app.shipname, app.password);
-	fprintf(stderr, "snis_server: c->bridge = %d\n", c->bridge);
+	fprintf(stderr, "%s: c->bridge = %d\n", logprefix(), c->bridge);
 	c->role = app.role;
 	if (c->bridge == -1) { /* didn't find our bridge, make a new one. */
 		double x, z;
-		fprintf(stderr, "snis_server: didn't find bridge, make new one\n");
+		fprintf(stderr, "%s: didn't find bridge, make new one\n", logprefix());
 
 		for (int i = 0; i < 100; i++) {
 			x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
@@ -13129,12 +13142,12 @@ static int add_new_player(struct game_client *c)
 		schedule_callback(event_callback, &callback_schedule,
 				"player-respawn-event", (double) c->shipid);
 	} else if (c->bridge != -1 && !app.new_ship) { /* join existing ship */
-		fprintf(stderr, "snis_server: snis_server: existing ship\n");
+		fprintf(stderr, "%s: join existing ship\n", logprefix());
 		c->shipid = bridgelist[c->bridge].shipid;
 		c->ship_index = lookup_by_id(c->shipid);
 		bridgelist[c->bridge].nclients++;
 	} else if (c->bridge != -1 && app.new_ship) { /* ship already exists, can't create */
-		fprintf(stderr, "snis_server: ship already exists, can't create\n");
+		fprintf(stderr, "%s: ship already exists, can't create\n", logprefix());
 		pb_queue_to_client(c, packed_buffer_new("bb", OPCODE_ADD_PLAYER_ERROR,
 				ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS));
 		write_queued_updates_to_client(c, 4, &no_write_count);
@@ -13145,7 +13158,7 @@ static int add_new_player(struct game_client *c)
 			bridgelist[c->bridge].pwdhash);
 	c->debug_ai = 0;
 	c->request_universe_timestamp = 0;
-	fprintf(stderr, "snis_server: snis_server: queue client id %d\n", c->shipid);
+	fprintf(stderr, "%s: queue client id %d\n", logprefix(), c->shipid);
 	queue_up_client_id(c);
 
 	c->go_clients = malloc(sizeof(*c->go_clients) * MAXGAMEOBJS);
@@ -13168,7 +13181,7 @@ static void service_connection(int connection)
 	int bridgenum, client_count;
 	int thread_count, iterations;
 
-	log_client_info(SNIS_INFO, connection, "snis_server: servicing snis_client connection\n");
+	log_client_info(SNIS_INFO, connection, "servicing snis_client connection\n");
         /* get connection moved off the stack so that when the thread needs it,
 	 * it's actually still around. 
 	 */
@@ -13179,10 +13192,11 @@ static void service_connection(int connection)
 
 	if (verify_client_protocol(connection)) {
 		log_client_info(SNIS_ERROR, connection, "disconnected, protocol violation\n");
-		fprintf(stderr, "snis_server: connection terminated protocol violation\n");
+		fprintf(stderr, "%s: connection terminated protocol violation\n", logprefix());
 		close(connection);
 		return;
 	}
+	fprintf(stderr, "%s: connection 3\n", logprefix());
 
 	pthread_mutex_lock(&universe_mutex);
 	client_lock();
@@ -13208,7 +13222,7 @@ static void service_connection(int connection)
 	pthread_mutex_init(&client[i].client_write_queue_mutex, NULL);
 	packed_buffer_queue_init(&client[i].client_write_queue);
 
-	fprintf(stderr, "snis_server: calling add new player\n");
+	fprintf(stderr, "%s: calling add new player\n", logprefix());
 	rc = add_new_player(&client[i]);
 	if (rc) {
 		nclients--;
@@ -13310,8 +13324,8 @@ static void *listener_thread(__attribute__((unused)) void * unused)
 		rc = sscanf(snis_server_port_var, "%d", &value);
 		if (rc == 1) {
 			default_snis_server_port = value & 0x0ffff;
-			printf("snis_server: Using SNISSERVERPORT value %d\n",
-				default_snis_server_port);
+			printf("%s: Using SNISSERVERPORT value %d\n",
+				logprefix(), default_snis_server_port);
 		}
 	}
 
@@ -13385,7 +13399,7 @@ static void *listener_thread(__attribute__((unused)) void * unused)
 		snis_log(SNIS_INFO, "Accepting connection...\n");
 		connection = accept(rendezvous, (struct sockaddr *) &remote_addr, &remote_addr_len);
 		snis_log(SNIS_INFO, "accept returned %d\n", connection);
-		fprintf(stderr, "snis_server: accept returned %d\n", connection);
+		fprintf(stderr, "%s: accept returned %d\n", logprefix(), connection);
 		if (connection < 0) {
 			/* handle failed connection... */
 			snis_log(SNIS_WARN, "accept() failed: %s\n", strerror(errno));
@@ -13584,12 +13598,12 @@ static void update_multiverse(struct snis_entity *o)
 	bridge = lookup_bridge_by_shipid(o->id);
 	if (bridge < 0) {
 		fprintf(stderr,
-			"snis_server: did not find bridge for id:%d, index=%lu, alive=%d: %s:%d\n",
-				o->id, go_index(o), o->alive, __FILE__, __LINE__);
+			"%s: did not find bridge for id:%d, index=%lu, alive=%d: %s:%d\n",
+				logprefix(), o->id, go_index(o), o->alive, __FILE__, __LINE__);
 		return;
 	}
 
-	fprintf(stderr, "snis_server: update_multiverse: verified = '%s'\n",
+	fprintf(stderr, "%s: update_multiverse: verified = '%s'\n", logprefix(),
 		bridgelist[bridge].verified == BRIDGE_UNVERIFIED ? "unverified" :
 		bridgelist[bridge].verified == BRIDGE_VERIFIED ? "verified" :
 		bridgelist[bridge].verified == BRIDGE_FAILED_VERIFICATION ? "failed verification" :
@@ -13613,12 +13627,13 @@ static void update_multiverse(struct snis_entity *o)
 		queue_to_multiverse(multiverse_server, pb);
 		return;
 	} else {
-		fprintf(stderr, "snis_server: not requesting verification\n");
+		fprintf(stderr, "%s: not requesting verification\n", logprefix());
 	}
 
 	/* Skip updating multiverse server if the bridge isn't verified yet. */
 	if (bridgelist[bridge].verified != BRIDGE_VERIFIED) {
-		fprintf(stderr, "snis_server: bridge is not verified, not updating multiverse\n");
+		fprintf(stderr, "%s: bridge is not verified, not updating multiverse\n",
+			logprefix());
 		return;
 	}
 
@@ -14053,7 +14068,7 @@ static int nl_find_next_word(int argc, int pos[], int part_of_speech, int start_
 static void nl_describe_noun(struct game_client *c, char *word)
 {
 	int i;
-	printf("snis_server: describing '%s'\n", word);
+	printf("%s: describing '%s'\n", logprefix(), word);
 
 	for (i = 0; i < ARRAYSIZE(noun_description); i++) {
 		if (strcasecmp(word, noun_description[i].noun) == 0) {
@@ -15860,7 +15875,7 @@ static void natural_language_multiword_preprocessor(char *text, int coding_direc
 		return;
 	}
 	if (coding_direction != SNIS_NL_ENCODE) {
-		fprintf(stderr, "snis_server: Invalid coding direction\n");
+		fprintf(stderr, "%s: Invalid coding direction\n", logprefix());
 		return;
 	}
 	pthread_mutex_lock(&universe_mutex);
@@ -16512,8 +16527,8 @@ static void wait_for_multiverse_bound_packets(struct multiverse_server_info *msi
 	while (!msi->have_packets_to_xmit) {
 		rc = pthread_cond_wait(&msi->write_cond, &msi->event_mutex);
 		if (rc != 0)
-			printf("snis_server: pthread_cond_wait failed %s:%d.\n",
-				__FILE__, __LINE__);
+			printf("%s: pthread_cond_wait failed %s:%d.\n",
+				logprefix(), __FILE__, __LINE__);
 		if (msi->have_packets_to_xmit)
 			break;
 	}
@@ -16528,7 +16543,7 @@ static void wakeup_multiverse_writer(struct multiverse_server_info *msi)
 	msi->have_packets_to_xmit = 1;
 	rc = pthread_cond_broadcast(&msi->write_cond);
 	if (rc)
-		printf("snis_server: huh... pthread_cond_broadcast failed.\n");
+		printf("%s: huh... pthread_cond_broadcast failed.\n", logprefix());
 	pthread_mutex_unlock(&msi->event_mutex);
 }
 
@@ -16552,7 +16567,8 @@ static void write_queued_packets_to_mvserver(struct multiverse_server_info *msi)
 			goto badserver;
 		}
 	} else {
-		fprintf(stderr, "snis_server: multiverse_writer awakened, but nothing to write.\n");
+		fprintf(stderr, "%s: multiverse_writer awakened, but nothing to write.\n",
+			logprefix());
 	}
 	if (msi->have_packets_to_xmit)
 		msi->have_packets_to_xmit = 0;
@@ -16560,7 +16576,7 @@ static void write_queued_packets_to_mvserver(struct multiverse_server_info *msi)
 	return;
 
 badserver:
-	fprintf(stderr, "snis_server: multiverse server disappeared\n");
+	fprintf(stderr, "%s: multiverse server disappeared\n", logprefix());
 	pthread_mutex_unlock(&msi->event_mutex);
 	shutdown(msi->sock, SHUT_RDWR);
 	close(msi->sock);
@@ -16583,7 +16599,7 @@ static void *multiverse_writer(void *arg)
 		}
 		pthread_mutex_unlock(&msi->exit_mutex);
 	}
-	fprintf(stderr, "snis_server: multiverse_writer thread exiting\n");
+	fprintf(stderr, "%s: multiverse_writer thread exiting\n", logprefix());
 	return NULL;
 }
 
@@ -16601,7 +16617,7 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 			sizeof(struct power_model_data) + \
 			sizeof(struct power_model_data) - 1)
 
-	fprintf(stderr, "snis_server: process_update bridge 1\n");
+	fprintf(stderr, "%s: process_update bridge 1\n", logprefix());
 	memset(buffer, 0, sizeof(buffer));
 	memset(pwdhash, 0, sizeof(pwdhash));
 	rc = snis_readsocket(msi->sock, buffer, 20);
@@ -16614,18 +16630,18 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 	rc = snis_readsocket(msi->sock, buffer, bytes_to_read);
 	if (rc != 0)
 		return rc;
-	fprintf(stderr, "snis_server: update bridge 3\n");
+	fprintf(stderr, "%s: update bridge 3\n", logprefix());
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_bridge_by_pwdhash(pwdhash);
 	if (i < 0) {
-		fprintf(stderr, "snis_server: Unknown bridge hash\n");
+		fprintf(stderr, "%s: Unknown bridge hash\n", logprefix());
 		pthread_mutex_unlock(&universe_mutex);
 		return i;
 	}
-	fprintf(stderr, "snis_server: update bridge 4\n");
+	fprintf(stderr, "%s: update bridge 4\n", logprefix());
 	rc = lookup_by_id(bridgelist[i].shipid);
 	if (rc < 0) {
-		fprintf(stderr, "snis_server: Failed to lookup ship by id\n");
+		fprintf(stderr, "%s: Failed to lookup ship by id\n", logprefix());
 		pthread_mutex_unlock(&universe_mutex);
 		return rc;
 	}
@@ -16635,7 +16651,7 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 	x = o->x;
 	y = o->y;
 	z = o->z;
-	fprintf(stderr, "snis_server: Saving position to %lf,%lf,%lf\n", x, y, z);
+	fprintf(stderr, "%s: Saving position to %lf,%lf,%lf\n", logprefix(), x, y, z);
 
 	if (!o->tsd.ship.damcon) {
 		o->tsd.ship.damcon = malloc(sizeof(*o->tsd.ship.damcon));
@@ -16645,14 +16661,16 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 	unpack_bridge_update_packet(o, &pb);
 
 	/* Restore position... */
-	fprintf(stderr, "snis_server: update would set position to %lf,%lf,%lf\n", o->x, o->y, o->z);
-	fprintf(stderr, "snis_server: restoring position to %lf,%lf,%lf\n", x, y, z);
+	fprintf(stderr, "%s: update would set position to %lf,%lf,%lf\n",
+		logprefix(), o->x, o->y, o->z);
+	fprintf(stderr, "%s: restoring position to %lf,%lf,%lf\n",
+		logprefix(), x, y, z);
 	o->x = x;
 	o->y = y;
 	o->z = z;
 
 	pthread_mutex_unlock(&universe_mutex);
-	fprintf(stderr, "snis_server: update bridge 10\n");
+	fprintf(stderr, "%s: update bridge 10\n", logprefix());
 	return 0;
 }
 
@@ -16687,7 +16705,7 @@ static int process_multiverse_verification(struct multiverse_server_info *msi)
 	}
 	pthread_mutex_unlock(&universe_mutex);
 	if (b < 0) {
-		fprintf(stderr, "snis_server: received verification for unknown pwdhash.  Weird.\n");
+		fprintf(stderr, "%s: received verification for unknown pwdhash.  Weird.\n", logprefix());
 		print_hash("unknown hash: ", pwdhash);
 		return 0;
 	}
@@ -16708,9 +16726,11 @@ static void *multiverse_reader(void *arg)
 		previous_opcode = last_opcode;
 		last_opcode = opcode;
 		opcode = 0x00;
-		fprintf(stderr, "snis_server: reading from multiverse sock = %d...\n", msi->sock);
+		fprintf(stderr, "%s: reading from multiverse sock = %d...\n",
+			logprefix(), msi->sock);
 		rc = snis_readsocket(msi->sock, &opcode, sizeof(opcode));
-		fprintf(stderr, "snis_server: read from multiverse, rc = %d, sock = %d\n", rc, msi->sock);
+		fprintf(stderr, "%s: read from multiverse, rc = %d, sock = %d\n",
+			logprefix(), rc, msi->sock);
 		if (rc != 0) {
 			fprintf(stderr, "snis_server multiverse_reader(): snis_readsocket returns %d, errno  %s\n",
 				rc, strerror(errno));
@@ -16720,8 +16740,8 @@ static void *multiverse_reader(void *arg)
 		case SNISMV_OPCODE_NOOP:
 			break;
 		case SNISMV_OPCODE_LOOKUP_BRIDGE:
-			fprintf(stderr, "snis_server: unimplemented multiverse opcode %hhu\n",
-				opcode);
+			fprintf(stderr, "%s: unimplemented multiverse opcode %hhu\n",
+				logprefix(), opcode);
 			break;
 		case SNISMV_OPCODE_UPDATE_BRIDGE:
 			rc = process_update_bridge(msi);
@@ -16734,17 +16754,17 @@ static void *multiverse_reader(void *arg)
 				goto protocol_error;
 			break;
 		default:
-			fprintf(stderr, "snis_server: unimplemented multiverse opcode %hhu\n",
-				opcode);
+			fprintf(stderr, "%s: unimplemented multiverse opcode %hhu\n",
+				logprefix(), opcode);
 			goto protocol_error;
 		}
 	}
 	return NULL;
 
 protocol_error:
-	fprintf(stderr, "snis_server: protocol error in data from multiverse_server\n");
-	fprintf(stderr, "snis_server: opcodes: current = %hhu, last = %hhu, previous = %hhu\n",
-			opcode, last_opcode, previous_opcode);
+	fprintf(stderr, "%s: protocol error in data from multiverse_server\n", logprefix());
+	fprintf(stderr, "%s: opcodes: current = %hhu, last = %hhu, previous = %hhu\n",
+			logprefix(), opcode, last_opcode, previous_opcode);
 	snis_print_last_buffer(msi->sock);
 	shutdown(msi->sock, SHUT_RDWR);
 	close(msi->sock);
@@ -16763,8 +16783,8 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 
 	assert(msi);
 
-	fprintf(stderr, "snis_server: connecting to multiverse %s %hhu.%hhu.%hhu.%hhu/%hu\n",
-		multiverse_server->location, x[0], x[1], x[2], x[3], port);
+	fprintf(stderr, "%s: connecting to multiverse %s %hhu.%hhu.%hhu.%hhu/%hu\n",
+		logprefix(), multiverse_server->location, x[0], x[1], x[2], x[3], port);
 	char portstr[50];
 	char hoststr[50];
 	int flag = 1;
@@ -16778,8 +16798,8 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV | AI_NUMERICHOST;
 	rc = getaddrinfo(hoststr, portstr, &hints, &mvserverinfo);
 	if (rc) {
-		fprintf(stderr, "snis_server: Failed looking up %s:%s: %s\n",
-			hoststr, portstr, gai_strerror(rc));
+		fprintf(stderr, "%s: Failed looking up %s:%s: %s\n",
+			logprefix(), hoststr, portstr, gai_strerror(rc));
 		goto error;
 	}
 
@@ -16801,36 +16821,38 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 	if (rc)
 		fprintf(stderr, "setsockopt(TCP_NODELAY) failed.\n");
 	const int len = sizeof(SNIS_MULTIVERSE_VERSION) - 1;
-	fprintf(stderr, "snis_server: writing SNIS_MULTIVERSE_VERSION (len = %d)\n", len);
+	fprintf(stderr, "%s: writing SNIS_MULTIVERSE_VERSION (len = %d)\n",
+			logprefix(), len);
 	rc = snis_writesocket(sock, SNIS_MULTIVERSE_VERSION, len);
-	fprintf(stderr, "snis_server: writesocket returned %d, sock = %d\n", rc, sock);
+	fprintf(stderr, "%s: writesocket returned %d, sock = %d\n", logprefix(), rc, sock);
 	if (rc < 0) {
-		fprintf(stderr, "snis_server: snis_writesocket failed: %d (%d:%s)\n",
-				rc, errno, strerror(errno));
+		fprintf(stderr, "%s: snis_writesocket failed: %d (%d:%s)\n",
+				logprefix(), rc, errno, strerror(errno));
 		goto error;
 	}
 	memset(response, 0, sizeof(response));
-	fprintf(stderr, "snis_server: reading SNIS_MULTIVERSE_VERSION (len = %d, sock = %d)\n",
-			len, sock);
+	fprintf(stderr, "%s: reading SNIS_MULTIVERSE_VERSION (len = %d, sock = %d)\n",
+			logprefix(), len, sock);
 	rc = snis_readsocket(sock, response, len);
-	fprintf(stderr, "snis_server: read socket returned %d (len = %d, sock = %d)\n",
-			rc, len, sock);
+	fprintf(stderr, "%s: read socket returned %d (len = %d, sock = %d)\n",
+			logprefix(), rc, len, sock);
 	if (rc != 0) {
-		fprintf(stderr, "snis_server: snis_readsocket failed: %d (%d:%s)\n",
-				rc, errno, strerror(errno));
+		fprintf(stderr, "%s: snis_readsocket failed: %d (%d:%s)\n",
+				logprefix(), rc, errno, strerror(errno));
 		fprintf(stderr, "response = '%s'\n", response);
 		sock = -1;
 	}
 	response[len] = '\0';
-	fprintf(stderr, "snis_server: got SNIS_MULTIVERSE_VERSION:'%s'\n", response);
+	fprintf(stderr, "%s: got SNIS_MULTIVERSE_VERSION:'%s'\n",
+			logprefix(), response);
 	if (strcmp(response, SNIS_MULTIVERSE_VERSION) != 0) {
-		fprintf(stderr, "snis_server: expected '%s' got '%s' from snis_multiverse\n",
-			SNIS_MULTIVERSE_VERSION, response);
+		fprintf(stderr, "%s: expected '%s' got '%s' from snis_multiverse\n",
+			logprefix(), SNIS_MULTIVERSE_VERSION, response);
 		goto error;
 	}
 
-	fprintf(stderr, "snis_server: connected to snis_multiverse (%hhu.%hhu.%hhu.%hhu/%hu on socket %d)\n",
-		x[0], x[1], x[2], x[3], port, sock);
+	fprintf(stderr, "%s: connected to snis_multiverse (%hhu.%hhu.%hhu.%hhu/%hu on socket %d)\n",
+		logprefix(), x[0], x[1], x[2], x[3], port, sock);
 
 	msi->sock = sock;
 	msi->ipaddr = ipaddr;
@@ -16847,22 +16869,22 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 	pthread_attr_init(&msi->write_attr);
 	pthread_attr_setdetachstate(&msi->read_attr, PTHREAD_CREATE_DETACHED);
 	pthread_attr_setdetachstate(&msi->write_attr, PTHREAD_CREATE_DETACHED);
-	fprintf(stderr, "snis_server: starting multiverse reader thread\n");
+	fprintf(stderr, "%s: starting multiverse reader thread\n", logprefix());
 	rc = pthread_create(&msi->read_thread, &msi->read_attr, multiverse_reader, msi);
 	if (rc) {
-		fprintf(stderr, "snis_server: Failed to create multiverse reader thread: %d '%s', '%s'\n",
-			rc, strerror(rc), strerror(errno));
+		fprintf(stderr, "%s: Failed to create multiverse reader thread: %d '%s', '%s'\n",
+			logprefix(), rc, strerror(rc), strerror(errno));
 	}
 	pthread_setname_np(msi->read_thread, "sniss-mvrdr");
-	fprintf(stderr, "snis_server: started multiverse reader thread\n");
-	fprintf(stderr, "snis_server: starting multiverse writer thread\n");
+	fprintf(stderr, "%s: started multiverse reader thread\n", logprefix());
+	fprintf(stderr, "%s: starting multiverse writer thread\n", logprefix());
 	rc = pthread_create(&msi->write_thread, &msi->write_attr, multiverse_writer, msi);
 	if (rc) {
-		fprintf(stderr, "snis_server: Failed to create multiverse writer thread: %d '%s', '%s'\n",
-			rc, strerror(rc), strerror(errno));
+		fprintf(stderr, "%s: Failed to create multiverse writer thread: %d '%s', '%s'\n",
+			logprefix(), rc, strerror(rc), strerror(errno));
 	}
 	pthread_setname_np(msi->write_thread, "sniss-mvwrtr");
-	fprintf(stderr, "snis_server: started multiverse writer thread\n");
+	fprintf(stderr, "%s: started multiverse writer thread\n", logprefix());
 	freeaddrinfo(mvserverinfo);
 	return;
 
@@ -16882,8 +16904,9 @@ static void disconnect_from_multiverse(struct multiverse_server_info *msi)
 
 	assert(multiverse_server);
 	x = (unsigned char *) &multiverse_server->ipaddr;
-	fprintf(stderr, "snis_server: disconnecting from multiverse %s %u.%u.%u.%u/%hu\n",
-		multiverse_server->location, x[0], x[1], x[2], x[3], multiverse_server->port);
+	fprintf(stderr, "%s: disconnecting from multiverse %s %u.%u.%u.%u/%hu\n",
+		logprefix(), multiverse_server->location,
+		x[0], x[1], x[2], x[3], multiverse_server->port);
 
 	/* Tell multiverse reader and writer threads to exit */
 	pthread_mutex_lock(&msi->exit_mutex);
@@ -16903,41 +16926,44 @@ static void servers_changed_cb(void *cookie)
 	uint16_t port = -1;
 	int found_multiverse_server = 0;
 
-	fprintf(stderr, "snis_server: servers_changed_cb zzz\n");
+	fprintf(stderr, "%s: servers_changed_cb zzz\n", logprefix());
 	if (!multiverse_server) {
-		fprintf(stderr, "snis_server: multiverse_server not set zzz\n");
+		fprintf(stderr, "%s: multiverse_server not set zzz\n", logprefix());
 		return;
 	}
 
 	if (server_tracker_get_multiverse_list(server_tracker, &gameserver, &nservers) != 0) {
-		fprintf(stderr, "snis_server: Failed to get server list at %s:%d\n",
-			__FILE__, __LINE__);
+		fprintf(stderr, "%s: Failed to get server list at %s:%d\n",
+			logprefix(), __FILE__, __LINE__);
 		return;
 	}
 
-	fprintf(stderr, "snis_server: servers_changed_cb taking queue lock\n");
+	fprintf(stderr, "%s: servers_changed_cb taking queue lock\n", logprefix());
 	pthread_mutex_lock(&multiverse_server->queue_mutex);
-	fprintf(stderr, "snis_server: servers_changed_cb got queue lock (nservers = %d)\n", nservers);
+	fprintf(stderr, "%s: servers_changed_cb got queue lock (nservers = %d)\n",
+			logprefix(), nservers);
 	for (i = 0; i < nservers; i++) {
-		fprintf(stderr, "snis_server: servers_changed_cb i = %d\n", i);
+		fprintf(stderr, "%s: servers_changed_cb i = %d\n", logprefix(), i);
 		if (strncmp(gameserver[i].location, multiverse_server->location, LOCATIONSIZE) != 0)
 			continue;
-		fprintf(stderr, "snis_server: servers_changed_cb i = %d, location = %s\n",
-					i, multiverse_server->location);
+		fprintf(stderr, "%s: servers_changed_cb i = %d, location = %s\n",
+					logprefix(), i, multiverse_server->location);
 		if (strncmp(gameserver[i].game_type, "SNIS-MVERSE",
 				sizeof(gameserver[i].game_type)) != 0)
 			continue;
-		fprintf(stderr, "snis_server: servers_changed_cb i = %d, game type = SNIS-MVERSE\n", i);
+		fprintf(stderr, "%s: servers_changed_cb i = %d, game type = SNIS-MVERSE\n",
+			logprefix(), i);
 		if (gameserver[i].ipaddr == multiverse_server->ipaddr &&
 		    ntohs(gameserver[i].port) == multiverse_server->port) {
 			same_as_before = 1;
 			break;
 		}
-		fprintf(stderr, "snis_server: servers_changed_cb i = %d, new ip/port\n", i);
+		fprintf(stderr, "%s: servers_changed_cb i = %d, new ip/port\n",
+			logprefix(), i);
 		ipaddr = gameserver[i].ipaddr;
 		port = ntohs(gameserver[i].port);
-		fprintf(stderr, "snis_server: connect_to_multiverse, ipaddr=%08x,port=%d\n",
-			ipaddr, port);
+		fprintf(stderr, "%s: connect_to_multiverse, ipaddr=%08x,port=%d\n",
+			logprefix(), ipaddr, port);
 		found_multiverse_server = 1;
 		break;
 	}
@@ -16949,22 +16975,26 @@ static void servers_changed_cb(void *cookie)
 	}
 
 	if (same_as_before) {
-		fprintf(stderr, "snis_server: multiverse servers same as before zzz\n");
+		fprintf(stderr, "%s: multiverse servers same as before zzz\n", logprefix());
 		pthread_mutex_unlock(&multiverse_server->queue_mutex);
 		free(gameserver);
 		return;
 	}
 
 	if (multiverse_server->sock != -1) {
-		fprintf(stderr, "snis_server: servers_changed_cb disconnecting from multiverse server\n");
+		fprintf(stderr, "%s: servers_changed_cb disconnecting from multiverse server\n",
+			logprefix());
 		disconnect_from_multiverse(multiverse_server);
 	}
-	fprintf(stderr, "snis_server: servers_changed_cb connecting to multiverse server\n");
+	fprintf(stderr, "%s: servers_changed_cb connecting to multiverse server\n",
+			logprefix());
 	connect_to_multiverse(multiverse_server, ipaddr, port);
-	fprintf(stderr, "snis_server: servers_changed_cb connected to multiverse server\n");
-	fprintf(stderr, "snis_server: servers_changed_cb releasing queue lock\n");
+	fprintf(stderr, "%s: servers_changed_cb connected to multiverse server\n",
+		logprefix());
+	fprintf(stderr, "%s: servers_changed_cb releasing queue lock\n",
+		logprefix());
 	pthread_mutex_unlock(&multiverse_server->queue_mutex);
-	fprintf(stderr, "snis_server: servers_changed_cb released queue lock\n");
+	fprintf(stderr, "%s: servers_changed_cb released queue lock\n", logprefix());
 	if (gameserver)
 		free(gameserver);
 }
@@ -17038,7 +17068,7 @@ int main(int argc, char *argv[])
 			lobby_servernick, lobby_gameinstance, lobby_location);
 		server_tracker = server_tracker_start(lobbyhost, servers_changed_cb, NULL);
 	} else {
-		printf("snis_server: Skipping lobby registration\n");
+		printf("%s: Skipping lobby registration\n", logprefix());
 		server_tracker = NULL;
 		if (multiverse_server != NULL) {
 			fprintf(stderr,
