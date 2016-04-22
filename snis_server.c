@@ -702,7 +702,7 @@ static void log_client_info(int level, int connection, char *info)
 	snis_log(level, "%s: %s: %s", logprefix(), client_ip, info);
 }
 
-static void delete_from_clients_and_server(struct snis_entity *o);
+static void delete_from_clients_and_server_helper(struct snis_entity *o, int take_client_lock);
 static void delete_object(struct snis_entity *o);
 static void remove_from_attack_lists(uint32_t victim_id);
 
@@ -733,7 +733,7 @@ static void delete_bridge(int b)
 	fprintf(stderr, "snis_server: deleting player ship\n");
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (go[i].type == OBJTYPE_SHIP1 && go[i].id == bridgelist[b].shipid) {
-			delete_from_clients_and_server(&go[i]);
+			delete_from_clients_and_server_helper(&go[i], 0);
 			break;
 		}
 	}
@@ -795,6 +795,7 @@ static void asteroid_move(struct snis_entity *o)
 				&o->tsd.asteroid.rotational_velocity);
 }
 
+static void delete_from_clients_and_server(struct snis_entity *o);
 static void cargo_container_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
@@ -1037,6 +1038,16 @@ static void delete_object(struct snis_entity *o)
 	o->alive = 0;
 }
 
+static void snis_queue_delete_object_helper(struct snis_entity *o)
+{
+	int i;
+	uint32_t oid = o->id;
+
+	for (i = 0; i < nclients; i++)
+		if (client[i].refcount)
+			queue_delete_oid(&client[i], oid);
+}
+
 static void snis_queue_delete_object(struct snis_entity *o)
 {
 	/* Iterate over all clients and inform them that
@@ -1049,13 +1060,9 @@ static void snis_queue_delete_object(struct snis_entity *o)
 	 * and when we build the packet, we'll need the
 	 * client_write_queue_mutexes.  Hope there's no deadlocks.
 	 */
-	int i;
-	uint32_t oid = o->id;
 
 	client_lock();
-	for (i = 0; i < nclients; i++)
-		if (client[i].refcount)
-			queue_delete_oid(&client[i], oid);
+	snis_queue_delete_object_helper(o);
 	client_unlock();
 }
 
@@ -1106,7 +1113,6 @@ static void remove_from_attack_lists(uint32_t victim_id)
 	}
 }
 
-static void delete_from_clients_and_server(struct snis_entity *o);
 static void delete_starbase_docking_ports(struct snis_entity *o)
 {
 	int i;
@@ -1120,9 +1126,12 @@ static void delete_starbase_docking_ports(struct snis_entity *o)
 	}
 }
 
-static void delete_from_clients_and_server(struct snis_entity *o)
+static void delete_from_clients_and_server_helper(struct snis_entity *o, int take_client_lock)
 {
-	snis_queue_delete_object(o);
+	if (take_client_lock)
+		snis_queue_delete_object(o);
+	else
+		snis_queue_delete_object_helper(o);
 	switch (o->type) {
 	case OBJTYPE_DEBRIS:
 	case OBJTYPE_SPARK:
@@ -1146,6 +1155,11 @@ static void delete_from_clients_and_server(struct snis_entity *o)
 		fleet_leave(o->id); /* leave any fleets ship might be a member of */
 	remove_from_attack_lists(o->id);
 	delete_object(o);
+}
+
+static void delete_from_clients_and_server(struct snis_entity *o)
+{
+	delete_from_clients_and_server_helper(o, 1);
 }
 
 #define ANY_SHIP_ID (0xffffffff)
