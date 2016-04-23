@@ -13684,8 +13684,8 @@ static void move_objects(double absolute_time, int discontinuity)
 			}
 			if (go[i].type == OBJTYPE_SHIP1)  {
 				b = lookup_bridge_by_shipid(go[i].id);
-				if (universe_timestamp >= multiverse_update_time ||
-					(!bridgelist[b].verified && !bridgelist[b].requested_verification))
+				if (b >= 0 && (universe_timestamp >= multiverse_update_time ||
+					(!bridgelist[b].verified && !bridgelist[b].requested_verification)))
 					update_multiverse(&go[i]);
 			}
 			netstats.nobjects++;
