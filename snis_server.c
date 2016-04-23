@@ -13691,13 +13691,16 @@ static void move_objects(double absolute_time, int discontinuity)
 			netstats.nobjects++;
 		} else {
 			if (go[i].type == OBJTYPE_SHIP1)  {
-				if (universe_timestamp >= go[i].respawn_time) {
-					respawn_player(&go[i], (uint8_t) -1);
-					schedule_callback(event_callback, &callback_schedule,
-						"player-respawn-event", (double) go[i].id);
-					send_ship_damage_packet(&go[i]);
-				} else {
-					go[i].timestamp = universe_timestamp; /* respawn is counting down */
+				int b = lookup_bridge_by_shipid(go[i].id);
+				if (b != -1) {
+					if (universe_timestamp >= go[i].respawn_time) {
+						respawn_player(&go[i], (uint8_t) -1);
+						schedule_callback(event_callback, &callback_schedule,
+							"player-respawn-event", (double) go[i].id);
+						send_ship_damage_packet(&go[i]);
+					} else {
+						go[i].timestamp = universe_timestamp; /* respawn is counting down */
+					}
 				}
 			}
 		}
