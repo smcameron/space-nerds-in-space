@@ -3312,7 +3312,15 @@ int lobbylast1clicky = -1;
 int lobby_selected_server = -1;
 static struct lobby_ui {
 	struct button *lobby_cancel_button;
+	struct button *lobby_connect_to_server_button;
 } lobby_ui;
+
+static void lobby_connect_to_server_button_pressed()
+{
+	printf("lobby connect to server button pressed\n");
+	if (lobby_selected_server != -1)
+		displaymode = DISPLAYMODE_CONNECTING;
+}
 
 static void lobby_cancel_button_pressed()
 {
@@ -3361,12 +3369,6 @@ static void show_lobbyscreen(GtkWidget *w)
 		sng_abs_xy_draw_string(msg, SMALL_FONT, txx(100), txy(400));
 		sng_abs_xy_draw_string(lobbyerror, NANO_FONT, txx(100), txy(430));
 	} else {
-		if (lobby_selected_server != -1 &&
-			lobbylast1clickx > txx(200) && lobbylast1clickx < txx(620) &&
-			lobbylast1clicky > txy(520) && lobbylast1clicky < txy(520) + LINEHEIGHT * 2) {
-			displaymode = DISPLAYMODE_CONNECTING;
-			return;
-		}
 
 		/* Switch server rigamarole */
 		if (lobby_selected_server == -1) {
@@ -3428,12 +3430,9 @@ static void show_lobbyscreen(GtkWidget *w)
 			sng_abs_xy_draw_string(msg, TINY_FONT, txx(700), txy(100) + i * LINEHEIGHT);
 		}
 		if (lobby_selected_server != -1)
-			sng_set_foreground(UI_COLOR(lobby_connect_ok));
+			snis_button_set_color(lobby_ui.lobby_connect_to_server_button, UI_COLOR(lobby_connect_ok));
 		else
-			sng_set_foreground(UI_COLOR(lobby_connect_not_ok));
-		/* This should be a real button, but I'm too lazy to fix it now. */
-		snis_draw_rectangle(0, txx(250), txy(520), txx(300), LINEHEIGHT * 2);
-		sng_abs_xy_draw_string("CONNECT TO SERVER", TINY_FONT, txx(280), txy(520) + LINEHEIGHT);
+			snis_button_set_color(lobby_ui.lobby_connect_to_server_button, UI_COLOR(lobby_connect_not_ok));
 	}
 }
 
@@ -7899,7 +7898,11 @@ static void init_lobby_ui()
 {
 	lobby_ui.lobby_cancel_button = snis_button_init(txx(650), txy(520), -1, -1,
 			"CANCEL", UI_COLOR(lobby_cancel), NANO_FONT, lobby_cancel_button_pressed, NULL);
+	lobby_ui.lobby_connect_to_server_button = snis_button_init(txx(250), txy(520), -1, -1,
+			"CONNECT TO SERVER", UI_COLOR(lobby_connect_not_ok), NANO_FONT,
+			lobby_connect_to_server_button_pressed, NULL);
 	ui_add_button(lobby_ui.lobby_cancel_button, DISPLAYMODE_LOBBYSCREEN);
+	ui_add_button(lobby_ui.lobby_connect_to_server_button, DISPLAYMODE_LOBBYSCREEN);
 }
 
 static double sample_phaser_wavelength(void);
