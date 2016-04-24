@@ -35,6 +35,9 @@ Step 0: Build the game from source. (or alternately, see instructions
 	make
 	(wait for it to compile... Openscad might take its sweet time.)
 
+Optional: There are additional art assets here:
+https://github.com/smcameron/space-nerds-in-space-assets
+
 Step 1: run "./quickstart" or "./nolobby-quickstart".
 
 The "quickstart" script will start both a client process with all stations enabled

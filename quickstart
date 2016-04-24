@@ -52,14 +52,33 @@ start_multiverse &
 
 sleep 0.25
 
+get_solarsystem_name()
+{
+	if [ -d share/snis/solarsystems/"$1" ]
+	then
+		echo "$1"
+	else
+		echo "default2"
+	fi
+}
+
+uppercase()
+{
+	echo "$1" | tr '[a-z]' '[A-Z]'
+}
+
+SS1=$(get_solarsystem_name karado)
+SS2=$(get_solarsystem_name sirius)
+SS3=$(get_solarsystem_name polaris)
+
 export SNISRAND=12345
-./snis_server -l localhost -g SPACENERDS -L KARADO x --enable-enscript -m narnia -s karado &
+./snis_server -l localhost -g SPACENERDS -L $(uppercase "$SS1") x --enable-enscript -m narnia -s "$SS1" &
 if [ "$MULTIVERSE_TEST" != "" ]
 then
 	export SNISRAND=54321
-	./snis_server -l localhost -g XSPACENERDS -L SIRIUS x --enable-enscript -m narnia -s sirius &
+	./snis_server -l localhost -g XSPACENERDS -L $(uppercase "$SS2") x --enable-enscript -m narnia -s "$SS2" &
 	export SNISRAND=9557
-	./snis_server -l localhost -g YSPACENERDS -L POLARIS x --enable-enscript -m narnia -s polaris &
+	./snis_server -l localhost -g YSPACENERDS -L $(uppercase "$SS3") x --enable-enscript -m narnia -s "$SS3" &
 fi
 
 sleep 2.50
