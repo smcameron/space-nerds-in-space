@@ -4632,6 +4632,7 @@ static void player_collision_detection(void *player, void *object)
 	case OBJTYPE_NEBULA:
 	case OBJTYPE_WORMHOLE:
 	case OBJTYPE_SPACEMONSTER:
+	case OBJTYPE_STARBASE:
 		return;
 	default:
 		break;
