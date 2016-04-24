@@ -7547,6 +7547,10 @@ static void add_damcon_robot(struct damcon_data *d)
 		return;
 	d->robot = &d->o[i];
 	d->robot->tsd.robot.cargo_id = ROBOT_CARGO_EMPTY;
+	d->robot->tsd.robot.short_term_goal_x = 50.0;
+	d->robot->tsd.robot.short_term_goal_y = 50.0;
+	d->robot->tsd.robot.long_term_goal_x = -1.0;
+	d->robot->tsd.robot.long_term_goal_y = -1.0;
 }
 
 /* offsets for sockets... */
@@ -7949,6 +7953,35 @@ out:
 static int process_request_robot_thrust(struct game_client *c)
 {
 	return process_generic_request_thrust(c, do_robot_thrust);
+}
+
+static int process_request_robot_cmd(struct game_client *c)
+{
+	double x, y;
+	struct damcon_data *d;
+	int rc;
+	uint8_t subcmd;
+	unsigned char buffer[30];
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &subcmd);
+	if (rc < 0)
+		return rc;
+	switch (subcmd) {
+	case OPCODE_ROBOT_SUBCMD_STG:
+		rc = read_and_unpack_buffer(c, buffer, "SS",
+					&x, (int32_t) DAMCONXDIM, &y, (int32_t) DAMCONYDIM);
+		if (rc < 0)
+			return rc;
+		pthread_mutex_lock(&universe_mutex);
+		d = &bridgelist[c->bridge].damcon;
+		d->robot->tsd.robot.short_term_goal_x = x;
+		d->robot->tsd.robot.short_term_goal_y = y;
+		pthread_mutex_unlock(&universe_mutex);
+		break;
+	default:
+		return -1;
+	}
+	return 0;
 }
 
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip);
@@ -11920,6 +11953,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_REQUEST_ROBOT_CMD:
+			rc = process_request_robot_cmd(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		case OPCODE_REQUEST_SCIZOOM:
 			rc = process_request_scizoom(c);
 			if (rc)
@@ -12863,7 +12901,7 @@ static void send_update_ship_packet(struct game_client *c,
 static void send_update_damcon_obj_packet(struct game_client *c,
 		struct snis_damcon_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("bwwwSSSRb",
+	pb_queue_to_client(c, packed_buffer_new("bwwwSSSRbSS",
 					OPCODE_DAMCON_OBJ_UPDATE,   
 					o->id, o->ship_id, o->type,
 					o->x, (int32_t) DAMCONXDIM,
@@ -12871,7 +12909,9 @@ static void send_update_damcon_obj_packet(struct game_client *c,
 					o->velocity,  (int32_t) DAMCONXDIM,
 		/* send desired_heading as heading to client to enable drifting */
 					o->tsd.robot.desired_heading,
-					o->tsd.robot.autonomous_mode));
+					o->tsd.robot.autonomous_mode,
+					o->tsd.robot.short_term_goal_x, (int32_t) DAMCONXDIM,
+					o->tsd.robot.short_term_goal_y, (int32_t) DAMCONYDIM));
 }
 
 static void send_update_damcon_socket_packet(struct game_client *c,

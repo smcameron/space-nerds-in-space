@@ -666,6 +666,8 @@ struct damcon_robot_type_specific_data {
 	double yaw_velocity;
 	double desired_velocity, desired_heading;
 	uint8_t autonomous_mode;
+	double short_term_goal_x, short_term_goal_y;
+	double long_term_goal_x, long_term_goal_y;
 };
 
 struct damcon_label_specific_data {

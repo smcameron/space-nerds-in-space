@@ -742,7 +742,9 @@ struct damcon_ui {
 
 static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
 			double x, double y, double velocity,
-			double heading, uint8_t autonomous_mode)
+			double heading, uint8_t autonomous_mode,
+			double short_term_goal_x,
+			double short_term_goal_y)
 
 {
 	int i;
@@ -765,6 +767,8 @@ static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
 			o->tsd.robot.autonomous_mode = !!autonomous_mode;
 			snis_button_set_color(damcon_ui.robot_auto_button,
 				autonomous_mode ? selected : deselected);
+			o->tsd.robot.short_term_goal_x = short_term_goal_x;
+			o->tsd.robot.short_term_goal_y = short_term_goal_y;
 		}
 		return 0;
 	}
@@ -772,6 +776,8 @@ static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
 	update_generic_damcon_object(o, x, y, velocity, heading);
 	if (o->type == DAMCON_TYPE_ROBOT) {
 		o->tsd.robot.autonomous_mode = !!autonomous_mode;
+		o->tsd.robot.short_term_goal_x = short_term_goal_x;
+		o->tsd.robot.short_term_goal_y = short_term_goal_y;
 		snis_button_set_color(damcon_ui.robot_auto_button,
 			autonomous_mode ? selected : deselected);
 		snis_button_set_color(damcon_ui.robot_manual_button,
@@ -3634,19 +3640,23 @@ static int process_update_damcon_object(void)
 	uint32_t id, ship_id, type;
 	double x, y, velocity, heading;
 	uint8_t autonomous_mode;
+	double short_term_goal_x, short_term_goal_y;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "wwwSSSRb",
+	rc = read_and_unpack_buffer(buffer, "wwwSSSRbSS",
 			&id, &ship_id, &type,
 			&x, (int32_t) DAMCONXDIM, 
 			&y, (int32_t) DAMCONYDIM, 
 			&velocity, (int32_t) DAMCONXDIM, 
 			&heading,
-			&autonomous_mode);
+			&autonomous_mode,
+			&short_term_goal_x, (int32_t) DAMCONXDIM,
+			&short_term_goal_y, (int32_t) DAMCONYDIM);
 	if (rc)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_damcon_object(id, ship_id, type, x, y, velocity, heading, autonomous_mode);
+	rc = update_damcon_object(id, ship_id, type, x, y, velocity, heading, autonomous_mode,
+					short_term_goal_x, short_term_goal_y);
 	pthread_mutex_unlock(&universe_mutex);
 	return rc;
 }
@@ -9217,6 +9227,16 @@ static void show_engineering(GtkWidget *w)
 	show_common_screen(w, "ENGINEERING");
 }
 
+static inline double screenx_to_damconx(double x)
+{
+	return x - damconscreenx0 - damconscreenxdim / 2.0 + *damconscreenx;
+}
+
+static inline double screeny_to_damcony(double y)
+{
+	return y - damconscreeny0 - damconscreenydim / 2.0 + *damconscreeny;
+}
+
 static inline int damconx_to_screenx(double x)
 {
 	return x + damconscreenx0 + damconscreenxdim / 2.0 - *damconscreenx;
@@ -9305,6 +9325,10 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 	y = o->y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
 	sng_set_foreground(UI_COLOR(damcon_robot));
 	sng_draw_vect_obj(&damcon_robot_spun[byteangle], x, y);
+	x = damconx_to_screenx(o->tsd.robot.short_term_goal_x);
+	y = damcony_to_screeny(o->tsd.robot.short_term_goal_y);
+	sng_current_draw_line(x - 5, y, x + 5, y);
+	sng_current_draw_line(x, y - 5, x, y + 5);
 }
 
 static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
@@ -10573,6 +10597,23 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 		return;
 	default:
 		return;
+	}
+}
+
+static void do_damcon_button_release(int button, gdouble x, gdouble y)
+{
+	double dcx, dcy;
+	switch (button) {
+	case 1:
+		dcx = screenx_to_damconx(x);
+		dcy = screeny_to_damcony(y);
+		queue_to_server(packed_buffer_new("bbSS",
+					OPCODE_REQUEST_ROBOT_CMD, OPCODE_ROBOT_SUBCMD_STG,
+					dcx, (int32_t) DAMCONXDIM,
+					dcy, (int32_t) DAMCONYDIM));
+		break;
+	default:
+		break;
 	}
 }
 
@@ -12850,6 +12891,9 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 			do_torpedo();
 			load_torpedo_button_pressed();
 		}
+		break;
+	case DISPLAYMODE_DAMCON:
+		do_damcon_button_release(event->button, event->x, event->y);
 		break;
 	default:
 		break;
