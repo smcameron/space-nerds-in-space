@@ -44,6 +44,21 @@ sleep 0.25
 
 start_multiverse()
 {
+	if [ ! -d ./snisdb ]
+	then
+		echo "./snisdb/ does not exist, creating directory." 1>&2
+		mkdir ./snisdb
+		if [ "$?" != "0" ]
+		then
+			echo "mkdir ./snisdb failed."
+		fi
+		if [ ! -d ./snisdb ]
+		then
+			echo "Directory ./snisdb does not exist, snis_multiverse will not run without it, please create it." 1>&2
+			exit 1
+		fi
+		echo "Created ./snisdb for snis_multiverse" 1>&2
+	fi
 	./snis_multiverse localhost nickname narnia
 	echo "snis_multiverse died, status was $?" 1>&2
 }
