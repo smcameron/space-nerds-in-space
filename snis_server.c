@@ -2170,6 +2170,7 @@ static int projectile_collides(double x1, double y1, double z1,
 	return moving_spheres_intersection(&s1, (float) r1, &v1, &s2, (float) r2, &v2, 1.0f, time);
 }
 
+static void do_collision_impulse(struct snis_entity *player, struct snis_entity *object);
 static void torpedo_collision_detection(void *context, void *entity)
 {
 	struct snis_entity *t = entity;  /* target */
@@ -2239,6 +2240,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 	}
 
 	if (t->type == OBJTYPE_SHIP1 || t->type == OBJTYPE_SHIP2) {
+		do_collision_impulse(t, o);
 		calculate_torpedo_damage(t);
 		send_ship_damage_packet(t);
 		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
