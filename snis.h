@@ -666,6 +666,9 @@ struct damcon_robot_type_specific_data {
 	double yaw_velocity;
 	double desired_velocity, desired_heading;
 	uint8_t autonomous_mode;
+#define DAMCON_ROBOT_MANUAL_MODE 0
+#define DAMCON_ROBOT_FULLY_AUTONOMOUS 1
+#define DAMCON_ROBOT_SEMI_AUTONOMOUS 2
 	double short_term_goal_x, short_term_goal_y;
 	double long_term_goal_x, long_term_goal_y;
 };

@@ -3895,12 +3895,52 @@ static void damcon_repair_socket_move(struct snis_damcon_entity *o,
 	}
 }
 
+static void damcon_robot_think(struct snis_damcon_entity *o, struct damcon_data *d)
+{
+	double goal_heading, desired_delta_angle;
+	double dist, dx, dy;
+
+	if (o->tsd.robot.autonomous_mode == DAMCON_ROBOT_MANUAL_MODE)
+		return;
+
+	dx = o->x - o->tsd.robot.short_term_goal_x;
+	dy = o->y - o->tsd.robot.short_term_goal_y;
+	dist = dx * dx + dy * dy;
+	if (dist < 200) { /* we have arrived */
+		if (o->tsd.robot.autonomous_mode == DAMCON_ROBOT_SEMI_AUTONOMOUS)
+			o->tsd.robot.autonomous_mode = DAMCON_ROBOT_MANUAL_MODE;
+		return;
+	}
+	goal_heading = atan2(dy, dx) - M_PI / 2.0;
+	normalize_angle(&goal_heading);
+	desired_delta_angle = goal_heading - o->tsd.robot.desired_heading;
+	if (desired_delta_angle > M_PI)
+		desired_delta_angle = desired_delta_angle - 2.0 * M_PI;
+	else if (desired_delta_angle < -M_PI)
+		desired_delta_angle = desired_delta_angle + 2.0 * M_PI;
+
+	if (abs(desired_delta_angle) < 1.0 * M_PI / 180.0 && dist > 600)
+		o->tsd.robot.desired_velocity = 0.5 *
+				-MAX_ROBOT_VELOCITY / ((abs(desired_delta_angle) * 180.0 / M_PI) + 1.0);
+	else if (abs(desired_delta_angle) < 5.0 * M_PI / 180.0 && dist > 200)
+		o->tsd.robot.desired_velocity = 0.05 *
+				-MAX_ROBOT_VELOCITY / ((abs(desired_delta_angle) * 180.0 / M_PI) + 1.0);
+	else
+		o->tsd.robot.desired_velocity = 0;
+
+	desired_delta_angle = 0.05 * desired_delta_angle;
+	o->tsd.robot.desired_heading += desired_delta_angle;
+	normalize_angle(&o->tsd.robot.desired_heading);
+}
+
 static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *d)
 {
 	double vx, vy, lastx, lasty, lasth, dv;
 	int bounds_hit = 0;
 	struct snis_damcon_entity *cargo = NULL;
 	double clawx, clawy;
+
+	damcon_robot_think(o, d);
 
 	lastx = o->x;
 	lasty = o->y;
@@ -7976,6 +8016,8 @@ static int process_request_robot_cmd(struct game_client *c)
 		d = &bridgelist[c->bridge].damcon;
 		d->robot->tsd.robot.short_term_goal_x = x;
 		d->robot->tsd.robot.short_term_goal_y = y;
+		if (d->robot->tsd.robot.autonomous_mode == DAMCON_ROBOT_MANUAL_MODE)
+			d->robot->tsd.robot.autonomous_mode = DAMCON_ROBOT_SEMI_AUTONOMOUS;
 		pthread_mutex_unlock(&universe_mutex);
 		break;
 	default:
