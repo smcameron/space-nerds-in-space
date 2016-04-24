@@ -1059,3 +1059,13 @@ cleanup:
 	return 0;
 }
 
+/* convert from physical (e.g. mouse) coords to extent coords */
+float sng_pixelx_to_screenx(float x)
+{
+	return x / sgc.xscale;
+}
+
+float sng_pixely_to_screeny(float y)
+{
+	return y / sgc.yscale;
+}

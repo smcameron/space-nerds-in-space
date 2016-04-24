@@ -110,5 +110,9 @@ SNG_GLOBAL char *sng_load_png_texture(const char *filename, int flipVertical, in
 
 SNG_GLOBAL int add_user_color(uint8_t r, uint8_t g, uint8_t b);
 
+/* convert from physical (e.g. mouse) coords to extent coords */
+SNG_GLOBAL float sng_pixelx_to_screenx(float x);
+SNG_GLOBAL float sng_pixely_to_screeny(float y);
+
 #undef SNG_GLOBAL
 #endif
