@@ -4638,6 +4638,17 @@ static void player_collision_detection(void *player, void *object)
 	}
 	if (t == o) /* skip self */
 		return;
+
+	/* Prevent our own mining bot from bumping us. */
+	if (t->type == OBJTYPE_SHIP2 && t->tsd.ship.shiptype == SHIP_CLASS_ASTEROIDMINER) {
+		int n = t->tsd.ship.nai_entries - 1;
+		if (n < MAX_AI_STACK_ENTRIES && n >= 0) {
+			if (t->tsd.ship.ai[n].ai_mode == AI_MODE_MINING_BOT &&
+				t->tsd.ship.ai[n].u.mining_bot.parent_ship == o->id)
+				return;
+		}
+	}
+
 	dist2 = dist3dsqrd(o->x - t->x, o->y - t->y, o->z - t->z);
 	if (t->type == OBJTYPE_CARGO_CONTAINER && dist2 < 150.0 * 150.0) {
 			scoop_up_cargo(o, t);
