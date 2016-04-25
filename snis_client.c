@@ -10602,11 +10602,13 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 
 static void do_damcon_button_release(int button, gdouble x, gdouble y)
 {
-	double dcx, dcy;
+	double dcx, dcy, sx, sy;
 	switch (button) {
 	case 1:
-		dcx = screenx_to_damconx(x);
-		dcy = screeny_to_damcony(y);
+		sx = sng_pixelx_to_screenx(x);
+		sy = sng_pixely_to_screeny(y);
+		dcx = screenx_to_damconx(sx);
+		dcy = screeny_to_damcony(sy);
 		queue_to_server(packed_buffer_new("bbSS",
 					OPCODE_REQUEST_ROBOT_CMD, OPCODE_ROBOT_SUBCMD_STG,
 					dcx, (int32_t) DAMCONXDIM,
