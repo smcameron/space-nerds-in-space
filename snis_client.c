@@ -10612,6 +10612,9 @@ static void do_damcon_button_release(int button, gdouble x, gdouble y)
 					dcx, (int32_t) DAMCONXDIM,
 					dcy, (int32_t) DAMCONYDIM));
 		break;
+	case 3:
+		robot_gripper_button_pressed(NULL);
+		break;
 	default:
 		break;
 	}
