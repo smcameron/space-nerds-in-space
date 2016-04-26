@@ -3905,15 +3905,15 @@ static void damcon_robot_think(struct snis_damcon_entity *o, struct damcon_data 
 	if (o->tsd.robot.autonomous_mode == DAMCON_ROBOT_MANUAL_MODE)
 		return;
 
-	dx = o->x - o->tsd.robot.short_term_goal_x;
-	dy = o->y - o->tsd.robot.short_term_goal_y;
+	dx = o->tsd.robot.short_term_goal_x - o->x;
+	dy = o->tsd.robot.short_term_goal_y - o->y;
 	dist = dx * dx + dy * dy;
 	if (dist < 200) { /* we have arrived */
 		if (o->tsd.robot.autonomous_mode == DAMCON_ROBOT_SEMI_AUTONOMOUS)
 			o->tsd.robot.autonomous_mode = DAMCON_ROBOT_MANUAL_MODE;
 		return;
 	}
-	goal_heading = atan2(dy, dx) - M_PI / 2.0;
+	goal_heading = atan2(dy, dx) + M_PI / 2;
 	normalize_angle(&goal_heading);
 	desired_delta_angle = goal_heading - o->tsd.robot.desired_heading;
 	if (desired_delta_angle > M_PI)
@@ -3921,16 +3921,16 @@ static void damcon_robot_think(struct snis_damcon_entity *o, struct damcon_data 
 	else if (desired_delta_angle < -M_PI)
 		desired_delta_angle = desired_delta_angle + 2.0 * M_PI;
 
-	if (abs(desired_delta_angle) < 1.0 * M_PI / 180.0 && dist > 600)
+	if (fabs(desired_delta_angle) < 15.0 * M_PI / 180.0 && dist > 600)
+		o->tsd.robot.desired_velocity =
+				-MAX_ROBOT_VELOCITY / ((fabs(desired_delta_angle) * 180.0 / M_PI) + 1.0) / 3.0;
+	else if (fabs(desired_delta_angle) < 40.0 * M_PI / 180.0 && dist > 200)
 		o->tsd.robot.desired_velocity = 0.5 *
-				-MAX_ROBOT_VELOCITY / ((abs(desired_delta_angle) * 180.0 / M_PI) + 1.0);
-	else if (abs(desired_delta_angle) < 5.0 * M_PI / 180.0 && dist > 200)
-		o->tsd.robot.desired_velocity = 0.05 *
-				-MAX_ROBOT_VELOCITY / ((abs(desired_delta_angle) * 180.0 / M_PI) + 1.0);
+				-MAX_ROBOT_VELOCITY / ((fabs(desired_delta_angle) * 180.0 / M_PI) + 1.0) / 3.0;
 	else
 		o->tsd.robot.desired_velocity = 0;
 
-	desired_delta_angle = 0.05 * desired_delta_angle;
+	desired_delta_angle = 0.25 * desired_delta_angle;
 	o->tsd.robot.desired_heading += desired_delta_angle;
 	normalize_angle(&o->tsd.robot.desired_heading);
 }
