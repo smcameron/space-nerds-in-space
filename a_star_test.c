@@ -115,16 +115,23 @@ static float maze_cost(void *context, void *first, void *second)
 
 int main(int argc, char *argv[])
 {
-	static int maxnodes, i, nnodes = 0;
-	char *start, *goal, **path;
+	static int maxnodes, i;
+	char *start, *goal;
+	struct a_star_path *path;
 
 	start = strchr(maze, '@');
 	goal = strchr(maze, 'x');
 	maxnodes = strlen(maze);
 
-	a_star((void *) maze, start, goal, maxnodes, maze_cost, maze_cost, nth_neighbor, (void *) &path, &nnodes);
-	for (i = 0; i < nnodes; i++)
-		*path[i] = '.';
+	path = a_star((void *) maze, start, goal, maxnodes, maze_cost, maze_cost, nth_neighbor);
+	if (!path) {
+		printf("a_star() failed to return a path.\n");
+		return 0;
+	}
+	for (i = 0; i < path->node_count; i++) {
+		char *p = path->path[i];
+		*p = '.';
+	}
 	*goal = 'x';
 	*start = '@';
 

@@ -224,21 +224,21 @@ static void reconstruct_path(struct node_map *came_from, void *current, void ***
 	*path = p;
 }
 
-void a_star(void *context, void *start, void *goal,
-		int maxnodes,
-		a_star_node_cost_fn distance,
-		a_star_node_cost_fn cost_estimate,
-		a_star_neighbor_iterator_fn nth_neighbor,
-		void ***path, int *node_count)
+struct a_star_path *a_star(void *context, void *start, void *goal,
+				int maxnodes,
+				a_star_node_cost_fn distance,
+				a_star_node_cost_fn cost_estimate,
+				a_star_neighbor_iterator_fn nth_neighbor)
 {
 	struct nodeset *openset, *closedset;
 	struct node_map *came_from;
 	struct score_map *gscore, *fscore;
 	void *neighbor, *current;
 	float tentative_gscore;
-	int n;
+	int i, n;
 	void **answer = NULL;
 	int answer_count = 0;
+	struct a_star_path *return_value;
 
 	closedset = nodeset_new(maxnodes);
 	openset = nodeset_new(maxnodes);
@@ -280,6 +280,15 @@ void a_star(void *context, void *start, void *goal,
 	free(came_from);
 	free(gscore);
 	free(fscore);
-	*path = answer;
-	*node_count = answer_count;
+	if (answer_count == 0) {
+		return_value = NULL;
+	} else {
+		return_value = malloc(sizeof(*return_value) + sizeof(return_value->path[0]) * answer_count);
+		return_value->node_count = answer_count;
+		for (i = 0; i < answer_count; i++) {
+			return_value->path[answer_count - i - 1] = answer[i];
+		}
+	}
+	free(answer);
+	return return_value;
 }

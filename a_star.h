@@ -21,6 +21,11 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+struct a_star_path {
+	int node_count;
+	__extension__ void *path[0];
+};
+
 typedef float (*a_star_node_cost_fn)(void *context, void *first, void *second);
 typedef void *(*a_star_neighbor_iterator_fn)(void *context, void *node, int neighbor);
 
@@ -43,26 +48,19 @@ typedef void *(*a_star_neighbor_iterator_fn)(void *context, void *node, int neig
  * nth_neighbor returns the nth neighbor of a given node, or NULL if all
  *	n is greater than the number of neighbors - 1.
  *
- * path is a pointer to a pointer to a pointer to a void.  Essentially, an
- * array of pointers is allocated and the pointer to this array is returned.
- * This array is filled in with the nodes along the path found by the A*
- * algorithm.  The elements in the path array are in reverse order, the first
- * element is the goal node, the last is the start node.
- *
- * nnodes is a pointer to an integer, and this gets filled in with the
- * number of elements in the path array.
+ * The return value is an allocated struct a_star_path.  the node_count is the
+ * number of nodes in the path, and the path array is a pointer to an array of
+ * node_count nodes.
  *
  * See a_star_test.c for example of how to use this.
  *
  *********************/
 
-void a_star(void *context,
+struct a_star_path *a_star(void *context,
 		void *start,
 		void *goal,
 		int maxnodes,
 		a_star_node_cost_fn distance,
 		a_star_node_cost_fn cost_estimate,
-		a_star_neighbor_iterator_fn nth_neighbor,
-		void ***path,
-		int *nodecount);
+		a_star_neighbor_iterator_fn nth_neighbor);
 #endif
