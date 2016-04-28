@@ -353,7 +353,7 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
-		snis_server_tracker.o snis_bridge_update_packet.o solarsystem_config.o
+		snis_server_tracker.o snis_bridge_update_packet.o solarsystem_config.o a_star.o
 MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o
 
@@ -759,6 +759,15 @@ vec4.o:	vec4.c Makefile
 
 arbitrary_spin.o:	arbitrary_spin.c arbitrary_spin.h Makefile
 	$(Q)$(COMPILE)
+
+a_star.o:	a_star.c a_star.h Makefile
+	$(Q)$(COMPILE)
+
+a_star_test.o:	a_star_test.c a_star.h Makefile
+	$(Q)$(COMPILE)
+
+a_star_test:	a_star_test.o a_star.o Makefile
+	gcc -g -o a_star_test a_star_test.c a_star.o -lm
 
 mtwist.o:	mtwist.c Makefile
 	$(Q)$(COMPILE)
