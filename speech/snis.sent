@@ -1,0 +1,456 @@
+<s> ABOARD </s>
+<s> ABOVE </s>
+<s> ACROSS </s>
+<s> ACTIVATE WARP DRIVE </s>
+<s> ACTUATE </s>
+<s> ACTUATE DOCKING SYSTEM </s>
+<s> ACTUATE WARP DRIVE </s>
+<s> AFTER </s>
+<s> ALERT </s>
+<s> ALL </s>
+<s> ALONGSIDE </s>
+<s> AN </s>
+<s> AND </s>
+<s> ANTICLOCKWISE </s>
+<s> ANTI-CLOCKWISE </s>
+<s> AROUND </s>
+<s> ASTEROID </s>
+<s> AT </s>
+<s> ATOP </s>
+<s> BASE </s>
+<s> BEAM </s>
+<s> BEFORE </s>
+<s> BEHIND </s>
+<s> BELOW </s>
+<s> BENEATH </s>
+<s> BESIDE </s>
+<s> BESIDES </s>
+<s> BETWEEN </s>
+<s> BOOST </s>
+<s> BOT </s>
+<s> BY </s>
+<s> CALCULATE </s>
+<s> CALCULATE THE DISTANCE TO </s>
+<s> CALCULATE THE DISTANCE TO THE NEAREST PLANET </s>
+<s> CANCEL RED ALERT </s>
+<s> CHARGE </s>
+<s> CLOCKWISE </s>
+<s> CLOSE </s>
+<s> CLOSEST </s>
+<s> CODE </s>
+<s> COMMS </s>
+<s> COMMS ON SCREEN </s>
+<s> COMMS SCREEN </s>
+<s> COMMUNICATIONS </s>
+<s> COMMUNICATIONS ON SCREEN </s>
+<s> COMMUNICATIONS SCREEN </s>
+<s> COMPUTE </s>
+<s> COMPUTER </s>
+<s> COMPUTE THE DISTANCE TO </s>
+<s> COMPUTE THE DISTANCE TO THE NEAREST PLANET </s>
+<s> COOLANT </s>
+<s> COOLANT TO A HUNDRED </s>
+<s> COOLANT TO NINETY </s>
+<s> COOLANT TO ONE HUNDRED </s>
+<s> COOLANT TO ZERO </s>
+<s> COOLING </s>
+<s> CORE </s>
+<s> COUNTERCLOCKWISE </s>
+<s> COUNTER-CLOCKWISE </s>
+<s> COURSE </s>
+<s> CUT </s>
+<s> CUT POWER TO IMPULSE </s>
+<s> CUT POWER TO IMPULSE DRIVE </s>
+<s> CUT POWER TO MANEUVERING </s>
+<s> CUT POWER TO PHASERS </s>
+<s> CUT POWER TO SENSORS </s>
+<s> CUT POWER TO SHIELDS </s>
+<s> CUT POWER TO TRACTOR BEAM </s>
+<s> CUT POWER TO WARP DRIVE </s>
+<s> DAMAGE </s>
+<s> DAMAGE REPORT </s>
+<s> DEACTIVATE </s>
+<s> DEACTIVATE DOCKING SYSTEM </s>
+<s> DECREASE </s>
+<s> DEENERGIZE </s>
+<s> DEGREES </s>
+<s> DEGREES ANTI CLOCKWISE </s>
+<s> DEGREES CLOCKWISE </s>
+<s> DEGREES COUNTER CLOCKWISE </s>
+<s> DEGREES DOWN </s>
+<s> DEGREES LEFT </s>
+<s> DEGREES RIGHT </s>
+<s> DEGREES UP </s>
+<s> DEPLOY </s>
+<s> DEPLOY THE MINING BOT </s>
+<s> DEPLOY THE MINING ROBOT </s>
+<s> DERELICT </s>
+<s> DESCRIBE </s>
+<s> DESTRUCT </s>
+<s> DETAIL </s>
+<s> DETAILS </s>
+<s> DISABLE </s>
+<s> DISENGAGE </s>
+<s> DISENGAGE DOCKING SYSTEM </s>
+<s> DISTANCE </s>
+<s> DOCKING </s>
+<s> DOWN </s>
+<s> DRIVE </s>
+<s> DURING </s>
+<s> EIGHT </s>
+<s> EIGHTEEN </s>
+<s> EIGHTY </s>
+<s> EIGHTY PERCENT </s>
+<s> EJECT </s>
+<s> EJECT THE WARP CORE </s>
+<s> ELEVEN </s>
+<s> ENEMY </s>
+<s> ENERGIZE </s>
+<s> ENERGIZE DOCKING SYSTEM </s>
+<s> ENERGIZE WARP DRIVE </s>
+<s> ENERGY </s>
+<s> ENGAGE </s>
+<s> ENGAGE DOCKING SYSTEM </s>
+<s> ENGAGE WARP DRIVE </s>
+<s> ENGINEERING </s>
+<s> ENGINEERING ON SCREEN </s>
+<s> ENGINEERING SCREEN </s>
+<s> ENTER STANDARD ORBIT </s>
+<s> EVERYTHING </s>
+<s> EXCEPT </s>
+<s> FACTOR </s>
+<s> FIFTEEN </s>
+<s> FIFTEEN PERCENT </s>
+<s> FIFTY </s>
+<s> FIFTY PERCENT </s>
+<s> FIGURE </s>
+<s> FIGURE THE DISTANCE TO </s>
+<s> FIGURE THE DISTANCE TO THE NEAREST SHIP </s>
+<s> FIVE </s>
+<s> FIVE PERCENT </s>
+<s> FOR </s>
+<s> FORTY </s>
+<s> FORTY PERCENT </s>
+<s> FOUR </s>
+<s> FOURTEEN </s>
+<s> FROM </s>
+<s> FUEL </s>
+<s> FULL </s>
+<s> FULL IMPULSE </s>
+<s> FULL IMPULSE DRIVE </s>
+<s> FULL POWER </s>
+<s> FULL POWER TO IMPULSE </s>
+<s> FULL POWER TO IMPULSE DRIVE </s>
+<s> FULL POWER TO MANEUVERING </s>
+<s> FULL POWER TO PHASERS </s>
+<s> FULL POWER TO SENSORS </s>
+<s> FULL POWER TO SHIELDS </s>
+<s> FULL POWER TO TRACTOR BEAM </s>
+<s> FULL POWER TO WARP DRIVE </s>
+<s> FULL REVERSE </s>
+<s> FULL SPEED </s>
+<s> FULL SPEED AHEAD </s>
+<s> FULL VELOCITY </s>
+<s> FULL STOP </s>
+<s> FULL THROTTLE </s>
+<s> GATE </s>
+<s> HULL </s>
+<s> HUNDRED </s>
+<s> IMPULSE </s>
+<s> IN </s>
+<s> INCREASE </s>
+<s> INCREASE COOLANT TO MANEUVERING </s>
+<s> INCREASE COOLANT TO SENSORS </s>
+<s> INCREASE POWER TO IMPULSE </s>
+<s> INCREASE POWER TO WARP </s>
+<s> INSIDE </s>
+<s> IT </s>
+<s> LAUNCH </s>
+<s> LAUNCH THE MINING BOT </s>
+<s> LAUNCH THE MINING ROBOT </s>
+<s> LAY </s>
+<s> LAY IN A COURSE FOR THE NEAREST ASTEROID </s>
+<s> LAY IN A COURSE FOR THE NEAREST NEBULA </s>
+<s> LAY IN A COURSE FOR THE NEAREST PLANET </s>
+<s> LAY IN A COURSE FOR THE NEAREST STAR BASE </s>
+<s> LAY IN A COURSE FOR THE NEAREST WARP GATE </s>
+<s> LAY IN A COURSE FOR THE NEAREST WORM HOLE </s>
+<s> LEAVE STANDARD ORBIT </s>
+<s> LEAVE ORBIT </s>
+<s> LEFT </s>
+<s> LEVEL </s>
+<s> LONG </s>
+<s> LONG RANGE </s>
+<s> LONG RANGE SCAN </s>
+<s> LONG RANGE SCANNER </s>
+<s> LOWER </s>
+<s> LOWER SHIELDS </s>
+<s> MAGNETS </s>
+<s> MAIN </s>
+<s> MAIN VIEW ON SCREEN </s>
+<s> MAIN VIEW SCREEN </s>
+<s> MANEUVERING </s>
+<s> MANUEVERING </s>
+<s> MAX </s>
+<s> MAX COOLANT </s>
+<s> MAX COOLANT TO </s>
+<s> MAXIMUM </s>
+<s> MAXIMUM COOLANT </s>
+<s> MAXIMUM COOLANT TO </s>
+<s> MAXIMUM POWER TO </s>
+<s> MAX POWER </s>
+<s> MAX POWER TO </s>
+<s> MAXIMUM </s>
+<s> MAXIMUM POWER </s>
+<s> MAXIMUM POWER TO </s>
+<s> MINING </s>
+<s> NAVIGATE </s>
+<s> NAVIGATION </s>
+<s> NAVIGATION ON SCREEN </s>
+<s> NAVIGATION SCREEN </s>
+<s> NEARBY </s>
+<s> NEAREST </s>
+<s> NEBULA </s>
+<s> NINE </s>
+<s> NINETEEN </s>
+<s> NINETY </s>
+<s> NINETY PERCENT </s>
+<s> OF </s>
+<s> OFF </s>
+<s> ON </s>
+<s> ONE </s>
+<s> ONE HALF </s>
+<s> ONE HUNDRED PERCENT </s>
+<s> ONE QUARTER </s>
+<s> ONE THIRD </s>
+<s> ONTO </s>
+<s> OR </s>
+<s> ORBIT </s>
+<s> OUT </s>
+<s> OUTSIDE </s>
+<s> PATH </s>
+<s> PERCENT </s>
+<s> PHASER </s>
+<s> PHASERS </s>
+<s> PITCH </s>
+<s> PITCH BACK </s>
+<s> PITCH BACKWARD </s>
+<s> PITCH BACKWARDS </s>
+<s> PITCH DOWN </s>
+<s> PITCH FORWARD </s>
+<s> PITCH UP </s>
+<s> PLANET </s>
+<s> PLOT </s>
+<s> PLOT A COURSE FOR THE NEAREST ASTEROID </s>
+<s> PLOT A COURSE FOR THE NEAREST NEBULA </s>
+<s> PLOT A COURSE FOR THE NEAREST PLANET </s>
+<s> PLOT A COURSE FOR THE NEAREST STAR BASE </s>
+<s> PLOT A COURSE FOR THE NEAREST WARP GATE </s>
+<s> PLOT A COURSE FOR THE NEAREST WORM HOLE </s>
+<s> PORT </s>
+<s> POWER </s>
+<s> POWER TO EIGHTY </s>
+<s> POWER TO NINETY </s>
+<s> POWER TO ONE HUNDRED </s>
+<s> POWER TO SEVENTY </s>
+<s> POWER TO SIXTY </s>
+<s> POWER TO ZERO </s>
+<s> QUICKLY </s>
+<s> RADIATION </s>
+<s> RAISE </s>
+<s> RAISE SHIELDS </s>
+<s> RAMMING SPEED </s>
+<s> RAMMING VELOCITY </s>
+<s> RANGE </s>
+<s> RAPIDLY </s>
+<s> RED </s>
+<s> RED ALERT </s>
+<s> REPORT </s>
+<s> REVERSE ENGINES </s>
+<s> REVERSE THE POLARITY </s>
+<s> REVERSE THRUSTERS </s>
+<s> RIGHT </s>
+<s> ROBOT </s>
+<s> ROLL </s>
+<s> ROLL ANTI CLOCKWISE </s>
+<s> ROLL CLOCKWISE </s>
+<s> ROLL COUNTER CLOCKWISE </s>
+<s> ROLL LEFT </s>
+<s> ROLL RIGHT </s>
+<s> ROTATE </s>
+<s> ROUTE </s>
+<s> SCAN </s>
+<s> SCANNER </s>
+<s> SCANNERS </s>
+<s> SCAN THE ASTEROID </s>
+<s> SCAN THE CLOSEST ASTEROID </s>
+<s> SCAN THE CLOSEST DERELICT </s>
+<s> SCAN THE CLOSEST NEBULA </s>
+<s> SCAN THE CLOSEST PLANET </s>
+<s> SCAN THE CLOSEST SHIP </s>
+<s> SCAN THE DERELICT </s>
+<s> SCAN THE NEARBY ASTEROID </s>
+<s> SCAN THE NEARBY DERELICT </s>
+<s> SCAN THE NEARBY NEBULA </s>
+<s> SCAN THE NEARBY PLANET </s>
+<s> SCAN THE NEARBY SHIP </s>
+<s> SCAN THE NEAREST ASTEROID </s>
+<s> SCAN THE NEAREST DERELICT </s>
+<s> SCAN THE NEAREST NEBULA </s>
+<s> SCAN THE NEAREST PLANET </s>
+<s> SCAN THE NEAREST SHIP </s>
+<s> SCAN THE NEBULA </s>
+<s> SCAN THE PLANET </s>
+<s> SCAN THE SHIP </s>
+<s> SCIENCE </s>
+<s> SCIENCE ON SCREEN </s>
+<s> SCIENCE SCREEN </s>
+<s> SCREEN </s>
+<s> SELECT </s>
+<s> SELECT THE ASTEROID </s>
+<s> SELECT THE CLOSEST ASTEROID </s>
+<s> SELECT THE CLOSEST DERELICT </s>
+<s> SELECT THE CLOSEST NEBULA </s>
+<s> SELECT THE CLOSEST PLANET </s>
+<s> SELECT THE CLOSEST SHIP </s>
+<s> SELECT THE DERELICT </s>
+<s> SELECT THE NEARBY ASTEROID </s>
+<s> SELECT THE NEARBY DERELICT </s>
+<s> SELECT THE NEARBY NEBULA </s>
+<s> SELECT THE NEARBY PLANET </s>
+<s> SELECT THE NEARBY SHIP </s>
+<s> SELECT THE NEAREST ASTEROID </s>
+<s> SELECT THE NEAREST DERELICT </s>
+<s> SELECT THE NEAREST NEBULA </s>
+<s> SELECT THE NEAREST PLANET </s>
+<s> SELECT THE NEAREST SHIP </s>
+<s> SELECT THE NEBULA </s>
+<s> SELECT THE PLANET </s>
+<s> SELECT THE SHIP </s>
+<s> SELF </s>
+<s> SENSOR </s>
+<s> SEQUENCE </s>
+<s> SET </s>
+<s> SET A COURSE FOR THE NEAREST ASTEROID </s>
+<s> SET A COURSE FOR THE NEAREST NEBULA </s>
+<s> SET A COURSE FOR THE NEAREST PLANET </s>
+<s> SET A COURSE FOR THE NEAREST STAR BASE </s>
+<s> SET A COURSE FOR THE NEAREST WARP GATE </s>
+<s> SET A COURSE FOR THE NEAREST WORM HOLE </s>
+<s> SET COMMS COOLANT TO </s>
+<s> SET COMMS POWER TO </s>
+<s> SET COMMUNICATIONS COOLANT TO </s>
+<s> SET COMMUNICATIONS POWER TO </s>
+<s> SET IMPULSE DRIVE COOLANT TO </s>
+<s> SET IMPULSE DRIVE POWER TO </s>
+<s> SET IMPULSE DRIVE TO </s>
+<s> SET MANEUVERING COOLANT TO </s>
+<s> SET MANEUVERING POWER TO </s>
+<s> SET PHASER COOLANT TO </s>
+<s> SET PHASER POWER TO </s>
+<s> SET SENSOR COOLANT TO </s>
+<s> SET SENSOR POWER TO </s>
+<s> SET SHIELDS COOLANT TO </s>
+<s> SET SHIELDS POWER TO </s>
+<s> SET SHIELDS TO </s>
+<s> SET THROTTLE TO </s>
+<s> SET TRACTOR BEAM COOLANT TO </s>
+<s> SET TRACTOR BEAM POWER TO </s>
+<s> SET WARP DRIVE COOLANT TO </s>
+<s> SET WARP DRIVE POWER TO </s>
+<s> SET WARP DRIVE TO </s>
+<s> SEVEN </s>
+<s> SEVENTEEN </s>
+<s> SEVENTY </s>
+<s> SEVENTY PERCENT </s>
+<s> SHIELD </s>
+<s> SHIELDS </s>
+<s> SHIELDS DOWN </s>
+<s> SHIELDS UP </s>
+<s> SHIP </s>
+<s> SHORT </s>
+<s> SHORT RANGE </s>
+<s> SHORT RANGE SCAN </s>
+<s> SHORT RANGE SCANNER </s>
+<s> SHUT </s>
+<s> SHUTDOWN </s>
+<s> SIX </s>
+<s> SIXTEEN </s>
+<s> SIXTY </s>
+<s> SIXTY PERCENT </s>
+<s> SLOWLY </s>
+<s> SOLAR </s>
+<s> SPACE </s>
+<s> STANDARD </s>
+<s> STANDARD ORBIT </s>
+<s> STAR </s>
+<s> STARBOARD </s>
+<s> START </s>
+<s> STATION </s>
+<s> STATUS </s>
+<s> STATUS REPORT </s>
+<s> STOP </s>
+<s> STOP RED ALERT </s>
+<s> SWIFTLY </s>
+<s> SYSTEM </s>
+<s> TARGET </s>
+<s> TELL ME ABOUT </s>
+<s> TEN </s>
+<s> TEN PERCENT </s>
+<s> THE </s>
+<s> THEM </s>
+<s> THEN </s>
+<s> THE NEAREST ASTEROID </s>
+<s> THE NEAREST NEBULA </s>
+<s> THE NEAREST PLANET </s>
+<s> THE NEAREST SHIP </s>
+<s> THIRTEEN </s>
+<s> THIRTY </s>
+<s> THIRTY PERCENT </s>
+<s> THOUSAND </s>
+<s> THREE </s>
+<s> THREE QUARTERS </s>
+<s> THROTTLE </s>
+<s> THROUGH </s>
+<s> THROUGHOUT </s>
+<s> THRUSTER </s>
+<s> THRUSTERS </s>
+<s> TO </s>
+<s> TORPEDO </s>
+<s> TOWARD </s>
+<s> TOWARDS </s>
+<s> TRACTOR </s>
+<s> TURN </s>
+<s> TURN ANTI CLOCKWISE </s>
+<s> TURN CLOCKWISE </s>
+<s> TURN COUNTER CLOCKWISE </s>
+<s> TURN DOWN </s>
+<s> TURN LEFT </s>
+<s> TURN RIGHT </s>
+<s> TURN TOWARDS </s>
+<s> TURN UP </s>
+<s> TWELVE </s>
+<s> TWENTY </s>
+<s> TWENTY FIVE PERCENT </s>
+<s> TWENTY PERCENT </s>
+<s> TWO </s>
+<s> TWO THIRDS </s>
+<s> UNDER </s>
+<s> UNTIL </s>
+<s> UP </s>
+<s> VIEW </s>
+<s> WARP </s>
+<s> WAVELENGTH </s>
+<s> WEAPONS </s>
+<s> WEAPON SCREEN </s>
+<s> WEAPONS ON SCREEN </s>
+<s> WITH </s>
+<s> YAW </s>
+<s> ZERO </s>
+<s> ZOOM </s>
+<s> ZOOM FIFTY </s>
+<s> ZOOM NINETY </s>
+<s> ZOOM ONE HUNDRED </s>
+<s> ZOOM THIRTY </s>
+<s> ZOOM TWENTY </s>
+<s> ZOOM ZERO </s>
