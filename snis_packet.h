@@ -158,6 +158,7 @@
 #define OPCODE_SET_SOLARSYSTEM			231
 #define OPCODE_REQUEST_ROBOT_CMD		232
 #define   OPCODE_ROBOT_SUBCMD_STG		1	/* set short term goal */
+#define   OPCODE_ROBOT_SUBCMD_LTG		2	/* set long term goal */
 
 #define OPCODE_NOOP		0xff
 
@@ -525,6 +526,7 @@ struct damcon_obj_update_packet {
 	uint32_t type;
 	uint32_t x, y, velocity, heading;
 	uint8_t autonomous_mode;
+	uint32_t stgx, stgy, ltgx, ltgy;
 };
 
 struct damcon_socket_update_packet {

@@ -92,6 +92,7 @@
 #include "snis_hash.h"
 #include "snis_bridge_update_packet.h"
 #include "solarsystem_config.h"
+#include "a_star.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -3897,42 +3898,438 @@ static void damcon_repair_socket_move(struct snis_damcon_entity *o,
 	}
 }
 
+static void *damcon_robot_nth_neighbor(__attribute__((unused)) void *context, void *node, int n)
+{
+	struct snis_damcon_entity *n1 = node;
+
+	if (n < 0 || n > 9)
+		return NULL;
+	if (n1->type != DAMCON_TYPE_WAYPOINT)
+		return NULL;
+	return n1->tsd.waypoint.neighbor[n];
+}
+
+static float damcon_robot_movement_cost(void *context, void *node1, void *node2)
+{
+	struct snis_damcon_entity *n1, *n2;
+	float dx, dy;
+	assert(node1 != NULL);
+	assert(node2 != NULL);
+	n1 = node1;
+	n2 = node2;
+	assert(n1->type == DAMCON_TYPE_WAYPOINT);
+	assert(n2->type == DAMCON_TYPE_WAYPOINT);
+
+	dx = n1->x - n2->x;
+	dy = n1->y - n2->y;
+	return fabsf(dx) + fabsf(dy); /* Manhattan distance */
+}
+
+static struct snis_damcon_entity *find_nearest_waypoint(struct damcon_data *d, float x, float y)
+{
+	int i, nearest = -1;
+	float dx, dy, dist, nearest_dist;
+
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		if (d->o[i].type != DAMCON_TYPE_WAYPOINT)
+			continue;
+		dx = x - d->o[i].x;
+		dy = y - d->o[i].y;
+		dist = dx * dx + dy * dy;
+		if (nearest < 0 || dist < nearest_dist) {
+			nearest = i;
+			nearest_dist = dist;
+		}
+	}
+	if (nearest < 0)
+		return NULL;
+	return &d->o[nearest];
+}
+
+static struct snis_damcon_entity *find_nearest_waypoint_to_obj(struct damcon_data *d, struct snis_damcon_entity *target)
+{
+	return find_nearest_waypoint(d, target->x, target->y);
+}
+
+static struct snis_damcon_entity *damcon_find_closest_damaged_part_by_damage(struct damcon_data *d,
+									uint8_t damage_limit)
+{
+	struct snis_damcon_entity *part, *damaged_part = NULL;
+	uint8_t max_damage = 0;
+	float dist, min_dist;
+	int i;
+
+	/* Find the *closest* (by manhattan distance) part that is more than damage_limit damaged */
+	damaged_part = NULL;
+	max_damage = 0;
+	min_dist = 0;
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		if (d->o[i].type != DAMCON_TYPE_PART)
+			continue;
+		part = &d->o[i];
+		if (part->tsd.part.damage > max_damage && part->tsd.part.damage > damage_limit) {
+			dist = fabsf(d->robot->x - part->x) + fabsf(d->robot->y - part->y);
+			if (dist < min_dist || damaged_part == NULL) {
+				damaged_part = part;
+				max_damage = part->tsd.part.damage;
+				min_dist = dist;
+			}
+		}
+	}
+	return damaged_part;
+}
+
+static struct snis_damcon_entity *damcon_find_next_thing_to_repair(struct damcon_data *d)
+{
+	struct snis_damcon_entity *part, *damaged_part = NULL;
+	uint8_t max_damage = 0;
+	int i;
+
+	/* First get anything sitting around in the repair socket */
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		if (d->o[i].type == DAMCON_TYPE_SOCKET &&
+			d->o[i].tsd.socket.system == DAMCON_TYPE_REPAIR_STATION &&
+			d->o[i].tsd.socket.contents_id != DAMCON_SOCKET_EMPTY) {
+			i = lookup_by_damcon_id(d, d->o[i].tsd.socket.contents_id);
+			if (i < 0)
+				continue;
+			return &d->o[i];
+		}
+	}
+
+	/* Next repair any shields below 60% */
+	max_damage = 0;
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		part = &d->o[i];
+		if (part->type != DAMCON_TYPE_PART || part->tsd.part.system != DAMCON_TYPE_SHIELDSYSTEM)
+			continue;
+		if (part->tsd.part.damage > max_damage) {
+			damaged_part = part;
+			max_damage = part->tsd.part.damage;
+		}
+	}
+	if (max_damage > 153) /* 60% of 256 */
+		return damaged_part;
+
+	/* Next find the *closest* (by manhattan distance) part that is more than 75%, 50%, 25%, or 0% damaged */
+	damaged_part = damcon_find_closest_damaged_part_by_damage(d, 192);
+	if (damaged_part)
+		return damaged_part;
+	damaged_part = damcon_find_closest_damaged_part_by_damage(d, 127);
+	if (damaged_part)
+		return damaged_part;
+	damaged_part = damcon_find_closest_damaged_part_by_damage(d, 65);
+	if (damaged_part)
+		return damaged_part;
+	damaged_part = damcon_find_closest_damaged_part_by_damage(d, 0);
+	return damaged_part;
+}
+
+static struct snis_damcon_entity *find_repair_socket(struct damcon_data *d)
+{
+	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		if (d->o[i].type != DAMCON_TYPE_SOCKET)
+			continue;
+		if (d->o[i].tsd.part.system != DAMCON_TYPE_REPAIR_STATION)
+			continue;
+		return &d->o[i];
+	}
+	return NULL;
+}
+
+static struct snis_damcon_entity *find_socket_for_part(struct damcon_data *d, struct snis_damcon_entity *part)
+{
+	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		if (d->o[i].type != DAMCON_TYPE_SOCKET)
+			continue;
+		if (d->o[i].tsd.socket.part == part->tsd.part.part &&
+			d->o[i].tsd.socket.system == part->tsd.part.system)
+				return &d->o[i];
+	}
+	return NULL;
+}
+
+static struct snis_damcon_entity *find_nth_waypoint(struct damcon_data *d, int n);
+static struct snis_damcon_entity *find_robot_goal(struct damcon_data *d)
+{
+	struct snis_damcon_entity *part, *socket, *waypoint;
+	float dx, dy, dist2;
+	int i, next_state;
+
+	/* Is the robot carrying something? */
+	if (d->robot->tsd.robot.cargo_id != ROBOT_CARGO_EMPTY) {
+		i = lookup_by_damcon_id(d, d->robot->tsd.robot.cargo_id);
+		if (i < 0)
+			return NULL;
+		part = &d->o[i];
+		if (part->tsd.part.damage >= DAMCON_EASY_REPAIR_THRESHOLD) {
+			/* have to take it to the repair station */
+			socket = find_repair_socket(d);
+			waypoint = find_nearest_waypoint_to_obj(d, socket);
+			d->robot->tsd.robot.repair_socket_id = socket->id;
+			next_state = DAMCON_ROBOT_REPAIR;
+		} else {
+			socket = find_socket_for_part(d, part);
+			if (!socket)
+				return NULL;
+			waypoint = find_nearest_waypoint_to_obj(d, socket);
+			next_state = DAMCON_ROBOT_REPLACE;
+		}
+		dx = waypoint->x - d->robot->x;
+		dy = waypoint->y - d->robot->y;
+		dist2 = (dx * dx) + (dy * dy);
+		if (dist2 < 20 * 20)
+			d->robot->tsd.robot.robot_state = next_state;
+		return waypoint;
+	}
+
+	d->robot->tsd.robot.damaged_part_id = (uint32_t) -1;
+	part = damcon_find_next_thing_to_repair(d);
+	if (part)
+		waypoint = find_nearest_waypoint_to_obj(d, part);
+	else
+		waypoint = find_nth_waypoint(d, 17); /* default destination */
+	if (waypoint && !part)
+		return waypoint;
+	if (waypoint && part) {
+		if (part && part->type == DAMCON_TYPE_PART)
+			d->robot->tsd.robot.damaged_part_id = part->id;
+		dx = d->robot->x - waypoint->x;
+		dy = d->robot->y - waypoint->y;
+		dist2 = (dx * dx) + (dy * dy);
+		if (dist2 < 50 * 50 && part->type == DAMCON_TYPE_PART)
+			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_PICKUP;
+		return waypoint;
+	} else {
+		return find_nearest_waypoint(d, d->robot->tsd.robot.long_term_goal_x,
+						d->robot->tsd.robot.long_term_goal_y);
+	}
+}
+
+typedef void (*robot_claw_action_fn)(struct damcon_data *d);
+typedef int (*robot_claw_condition_fn)(struct damcon_data *d);
+
+static void print_waypoint_table(struct damcon_data *d, int tablesize);
+static void do_robot_drop(struct damcon_data *d);
+static void do_robot_pickup(struct damcon_data *d);
+
+static int damcon_part_sufficiently_repaired(struct damcon_data *d)
+{
+	int i;
+	struct snis_damcon_entity *part;
+
+	i = lookup_by_damcon_id(d, d->robot->tsd.robot.damaged_part_id);
+	if (i < 0) {
+		d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+		return 0;
+	}
+	part = &d->o[i];
+	return part->tsd.part.damage < DAMCON_EASY_REPAIR_THRESHOLD;
+}
+
+/* damcon_robot_claw_object():
+ *   Make the robot aim its claw at something and either pick it up or put it down,
+ *   then transition to a new state
+ */
+static void damcon_robot_claw_object(struct damcon_data *d, struct snis_damcon_entity *object,
+					robot_claw_action_fn robot_claw_action,
+					robot_claw_condition_fn robot_claw_condition,
+					int next_robot_state)
+{
+	double dx, dy, goal_heading, desired_delta_angle;
+
+	dx = robot_clawx(d->robot) - object->x;
+	dy = robot_clawy(d->robot) - object->y;
+	if (dx * dx + dy * dy < ROBOT_MAX_GRIP_DIST2) {
+		if (robot_claw_condition) {
+			if (!robot_claw_condition(d))
+				return; /* condition not met */
+		}
+		robot_claw_action(d);
+		d->robot->tsd.robot.robot_state = next_robot_state;
+		return;
+	} else {
+		dx = d->robot->x - object->x;
+		dy = d->robot->y - object->y;
+		goal_heading = atan2(-dx, dy) - M_PI / 4;
+		normalize_angle(&goal_heading);
+		desired_delta_angle = goal_heading - d->robot->heading;
+		normalize_angle(&desired_delta_angle);
+		while (desired_delta_angle > M_PI)
+			desired_delta_angle = desired_delta_angle - 2.0 * M_PI;
+		while (desired_delta_angle < -M_PI)
+			desired_delta_angle = desired_delta_angle + 2.0 * M_PI;
+		desired_delta_angle = 0.25 * desired_delta_angle;
+		if (desired_delta_angle > 5.0 * M_PI / 180.0)
+			desired_delta_angle = 5 * M_PI / 180.0;
+		if (desired_delta_angle < -5.0 * M_PI / 180.0)
+			desired_delta_angle = -5.0 * M_PI / 180.0;
+		d->robot->tsd.robot.desired_heading += desired_delta_angle;
+		d->robot->tsd.robot.desired_velocity = 0;
+		normalize_angle(&d->robot->tsd.robot.desired_heading);
+	}
+}
+
 static void damcon_robot_think(struct snis_damcon_entity *o, struct damcon_data *d)
 {
 	double goal_heading, desired_delta_angle;
 	double dist, dx, dy;
+	struct a_star_path *path;
+	struct snis_damcon_entity *part, *socket, *goal;
+	struct snis_damcon_entity *start;
+	int i;
 
 	if (o->tsd.robot.autonomous_mode == DAMCON_ROBOT_MANUAL_MODE)
 		return;
 
-	dx = o->tsd.robot.short_term_goal_x - o->x;
-	dy = o->tsd.robot.short_term_goal_y - o->y;
-	dist = dx * dx + dy * dy;
-	if (dist < 200) { /* we have arrived */
-		if (o->tsd.robot.autonomous_mode == DAMCON_ROBOT_SEMI_AUTONOMOUS)
-			o->tsd.robot.autonomous_mode = DAMCON_ROBOT_MANUAL_MODE;
-		return;
+	switch (o->tsd.robot.robot_state) {
+	case  DAMCON_ROBOT_DECIDE_LTG:
+		start = find_nearest_waypoint_to_obj(d, d->robot);
+		goal = find_robot_goal(d);
+		d->robot->tsd.robot.long_term_goal_x = goal->x;
+		d->robot->tsd.robot.long_term_goal_y = goal->y;
+		path = a_star(d, start, goal, snis_object_pool_highest_object(d->pool),
+				damcon_robot_movement_cost,
+				damcon_robot_movement_cost,
+				damcon_robot_nth_neighbor);
+		if (d->robot->tsd.robot.robot_state == DAMCON_ROBOT_REPAIR)
+			break;
+		if (d->robot->tsd.robot.robot_state == DAMCON_ROBOT_REPLACE)
+			break;
+		if (d->robot->tsd.robot.robot_state == DAMCON_ROBOT_PICKUP)
+			break;
+		if (!path) {
+			fprintf(stderr, "%s: path is null at %s:%dn", logprefix(), __FILE__, __LINE__);
+			break;
+		}
+		if (path->node_count <= 0) {
+			fprintf(stderr, "%s: path->node_count is %d\n", logprefix(), path->node_count);
+			break;
+		}
+		if (path->node_count > 1)
+			goal = path->path[1];
+		else if (path->node_count > 0)
+			goal = path->path[0];
+		d->robot->tsd.robot.short_term_goal_x = goal->x;
+		d->robot->tsd.robot.short_term_goal_y = goal->y;
+		d->robot->tsd.robot.autonomous_mode = DAMCON_ROBOT_FULLY_AUTONOMOUS;
+		d->robot->tsd.robot.robot_state = DAMCON_ROBOT_CRUISE;
+		free(path);
+		break;
+	case DAMCON_ROBOT_CRUISE:
+		dx = o->tsd.robot.short_term_goal_x - o->x;
+		dy = o->tsd.robot.short_term_goal_y - o->y;
+		dist = dx * dx + dy * dy;
+		if (dist < 400) { /* we have arrived */
+			if (o->tsd.robot.autonomous_mode == DAMCON_ROBOT_SEMI_AUTONOMOUS)
+				o->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+			if (o->tsd.robot.autonomous_mode == DAMCON_ROBOT_FULLY_AUTONOMOUS)
+				o->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+			return;
+		}
+		goal_heading = atan2(dy, dx) + M_PI / 2;
+		normalize_angle(&goal_heading);
+		desired_delta_angle = goal_heading - o->tsd.robot.desired_heading;
+		if (desired_delta_angle > M_PI)
+			desired_delta_angle = desired_delta_angle - 2.0 * M_PI;
+		else if (desired_delta_angle < -M_PI)
+			desired_delta_angle = desired_delta_angle + 2.0 * M_PI;
+
+		if (fabs(desired_delta_angle) < 15.0 * M_PI / 180.0 && dist > 600)
+			o->tsd.robot.desired_velocity =
+					-MAX_ROBOT_VELOCITY / ((fabs(desired_delta_angle) * 180.0 / M_PI) + 1.0) / 3.0;
+		else if (fabs(desired_delta_angle) < 40.0 * M_PI / 180.0 && dist > 200)
+			o->tsd.robot.desired_velocity = 0.5 *
+					-MAX_ROBOT_VELOCITY / ((fabs(desired_delta_angle) * 180.0 / M_PI) + 1.0) / 3.0;
+		else
+			o->tsd.robot.desired_velocity = 0;
+
+		desired_delta_angle = 0.25 * desired_delta_angle;
+		o->tsd.robot.desired_heading += desired_delta_angle;
+		normalize_angle(&o->tsd.robot.desired_heading);
+		break;
+	case DAMCON_ROBOT_PICKUP:
+		i = lookup_by_damcon_id(d, d->robot->tsd.robot.damaged_part_id);
+		if (i < 0) {
+			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+			return;
+		}
+		damcon_robot_claw_object(d, &d->o[i], do_robot_pickup, NULL, DAMCON_ROBOT_DECIDE_LTG);
+		break;
+	case DAMCON_ROBOT_REPAIR:
+		if (d->robot->tsd.robot.cargo_id == DAMCON_SOCKET_EMPTY) {
+			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+			return;
+		}
+		i = lookup_by_damcon_id(d, d->robot->tsd.robot.cargo_id);
+		if (i < 0) {
+			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+			return;
+		}
+		part = &d->o[i];
+		if (part->tsd.part.damage < DAMCON_EASY_REPAIR_THRESHOLD) {
+			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+			return;
+		}
+		if (d->robot->tsd.robot.repair_socket_id != ROBOT_CARGO_EMPTY) {
+			i = lookup_by_damcon_id(d, d->robot->tsd.robot.repair_socket_id);
+			if (i < 0)
+				socket = NULL;
+			else
+				socket = &d->o[i];
+		}
+		if (!socket) {
+			socket = find_repair_socket(d);
+			if (!socket) {
+				d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+				return;
+			}
+		}
+		damcon_robot_claw_object(d, socket, do_robot_drop, NULL, DAMCON_ROBOT_REPAIR_WAIT);
+		break;
+	case DAMCON_ROBOT_REPAIR_WAIT:
+		if (d->robot->tsd.robot.repair_socket_id == DAMCON_SOCKET_EMPTY) {
+			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+			return;
+		}
+		i = lookup_by_damcon_id(d, d->robot->tsd.robot.repair_socket_id);
+		if (i < 0) {
+			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+			return;
+		}
+		socket = &d->o[i];
+		i = lookup_by_damcon_id(d, d->robot->tsd.robot.damaged_part_id);
+		if (i < 0) {
+			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+			return;
+		}
+		part = &d->o[i];
+		damcon_robot_claw_object(d, socket, do_robot_pickup, damcon_part_sufficiently_repaired,
+					DAMCON_ROBOT_DECIDE_LTG);
+		break;
+	case DAMCON_ROBOT_REPLACE:
+		i = lookup_by_damcon_id(d, d->robot->tsd.robot.cargo_id);
+		if (i < 0) {
+			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+			return;
+		}
+		part = &d->o[i];
+		if (part->tsd.part.damage > 0)
+			return; /* just wait for it to repair */
+		socket = find_socket_for_part(d, part);
+		if (!socket) {
+			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+			return;
+		}
+		damcon_robot_claw_object(d, socket, do_robot_drop, NULL, DAMCON_ROBOT_DECIDE_LTG);
+		break;
+	default:
+		break;
 	}
-	goal_heading = atan2(dy, dx) + M_PI / 2;
-	normalize_angle(&goal_heading);
-	desired_delta_angle = goal_heading - o->tsd.robot.desired_heading;
-	if (desired_delta_angle > M_PI)
-		desired_delta_angle = desired_delta_angle - 2.0 * M_PI;
-	else if (desired_delta_angle < -M_PI)
-		desired_delta_angle = desired_delta_angle + 2.0 * M_PI;
-
-	if (fabs(desired_delta_angle) < 15.0 * M_PI / 180.0 && dist > 600)
-		o->tsd.robot.desired_velocity =
-				-MAX_ROBOT_VELOCITY / ((fabs(desired_delta_angle) * 180.0 / M_PI) + 1.0) / 3.0;
-	else if (fabs(desired_delta_angle) < 40.0 * M_PI / 180.0 && dist > 200)
-		o->tsd.robot.desired_velocity = 0.5 *
-				-MAX_ROBOT_VELOCITY / ((fabs(desired_delta_angle) * 180.0 / M_PI) + 1.0) / 3.0;
-	else
-		o->tsd.robot.desired_velocity = 0;
-
-	desired_delta_angle = 0.25 * desired_delta_angle;
-	o->tsd.robot.desired_heading += desired_delta_angle;
-	normalize_angle(&o->tsd.robot.desired_heading);
 }
 
 static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *d)
@@ -4058,7 +4455,7 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 			normalize_angle(&cargo->heading);
 
 			/* If part is lightly damaged, the robot can repair in place */
-			if (cargo->tsd.part.damage < 200) {
+			if (cargo->tsd.part.damage < DAMCON_EASY_REPAIR_THRESHOLD) {
 				new_damage = cargo->tsd.part.damage - 8;
 				if (new_damage < 0)
 					new_damage = 0;
@@ -7605,11 +8002,53 @@ static void add_damcon_robot(struct damcon_data *d)
 	d->robot->tsd.robot.short_term_goal_y = 50.0;
 	d->robot->tsd.robot.long_term_goal_x = -1.0;
 	d->robot->tsd.robot.long_term_goal_y = -1.0;
+	d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
+	d->robot->tsd.robot.repair_socket_id = ROBOT_CARGO_EMPTY;
+}
+
+static int inside_damcon_system(struct damcon_data *d, int x, int y)
+{
+	int i;
+	const int w = 270; /* These must match placeholder-system-points.h */
+	const int h = 180 / 2;
+
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		switch (d->o[i].type) {
+		case DAMCON_TYPE_SHIELDSYSTEM:
+		case DAMCON_TYPE_IMPULSE:
+		case DAMCON_TYPE_WARPDRIVE:
+		case DAMCON_TYPE_MANEUVERING:
+		case DAMCON_TYPE_PHASERBANK:
+		case DAMCON_TYPE_SENSORARRAY:
+		case DAMCON_TYPE_COMMUNICATIONS:
+		case DAMCON_TYPE_TRACTORSYSTEM:
+		case DAMCON_TYPE_REPAIR_STATION:
+			break;
+		default:
+			continue;
+		}
+		if (x >= d->o[i].x && x <= d->o[i].x + w &&
+			y >= d->o[i].y - h && y <= d->o[i].y + h)
+			return 1;
+	}
+	return 0;
+}
+
+static int add_damcon_waypoint(struct damcon_data *d, int x, int y)
+{
+	if (inside_damcon_system(d, x, y)) /* reject waypoints robot can't reach */
+		return -1;
+	if (x < -DAMCONXDIM / 2 || x > DAMCONXDIM / 2 ||
+		y < -DAMCONYDIM / 2  || y > DAMCONYDIM / 2) /* reject waypoints outside damcon area */
+		return -1;
+	return add_generic_damcon_object(d, x, y, DAMCON_TYPE_WAYPOINT, NULL);
 }
 
 /* offsets for sockets... */
-static int dcxo[] = { 20, 160, 205, 160, 20 };
-static int dcyo[] = { -65, -65, 0, 65, 65 };
+static const int dcxo[] = { 20, 160, 205, 160, 20 };
+static const int dcyo[] = { -65, -65, 0, 65, 65 };
+static const int socket_waypoint_xoff[] = { -70, 0, 70, 0 };
+static const int socket_waypoint_yoff[] = { 0, 90, 0, -90 };
 
 static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 				uint8_t system, int left_side)
@@ -7711,6 +8150,168 @@ static void add_damcon_parts(struct damcon_data *d)
 {
 }
 
+static struct snis_damcon_entity *find_nth_waypoint(struct damcon_data *d, int n)
+{
+	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		if (d->o[i].type != DAMCON_TYPE_WAYPOINT)
+			continue;
+		if (d->o[i].tsd.waypoint.n == n)
+			return &d->o[i];
+	}
+	return NULL;
+}
+
+/******************************************************************************
+
+The waypoint_data below describes the following network of waypoints:
+
+    ------------------------------------------------------------------------
+    |                                                                      |
+    |           0 ---------------------- 1 ------------------ 2            |
+    |         /    \                  /  |  \              /     \         |
+    |       24     25             /      |      \        26        27      |
+    |                          40 ------ 3 ------ 41                       |
+    |                              \     |      /                          |
+    |                                  \ |   /                             |
+    |           4 ---------------------- 5 ------------------- 6           |
+    |         /   \                   /  |   \               /   \         |
+    |       28      29             /     |      \          30      31      |
+    |                          42 ------ 7 ------ 43                       |
+    |                              \     |       /                         |
+    |                                 \  |    /                            |
+    |           8 ---------------------- 9 ------------------- 10          |
+    |         /   \                  /   |  \                /   \         |
+    |       32     33              /     |    \            34     35       |
+    |                          44 ------ 11 ----- 45                       |
+    |                             \      |     /                           |
+    |                                \   |  /                              |
+    |           12---------------------- 13------------------- 14          |
+    |         /   \                  /   |  \                /   \         |
+    |       36     37             /      |     \           38     39       |
+    |                          46 ------ 15 ----- 47                       |
+    |                             \      |     /                           |
+    |                                \   |  /                              |
+    |           16---------------------- 17------------------- 18          |
+    |            |                     /     \                  |          |
+    |            |                  /           \               |          |
+    |            |              48               49             |          |
+    |            |                                              |          |
+    |           19                                             20          |
+    |            |                                              |          |
+    |            |                                              |          |
+    |            |                                              |          |
+    |           21---------------------- 22------------------- 23          |
+    |                                                                      |
+    ------------------------------------------------------------------------
+*******************************************************************************/
+
+static struct waypoint_data_entry {
+	int n, x, y;
+	int neighbor[10];
+} damcon_waypoint_data[] = {
+#define WAYPOINTBASE -850
+#define WAYPOINTY(n) (WAYPOINTBASE + n * 170)
+	{  0, -256, WAYPOINTY(0), { 1, 24, 25, -1 }, },
+	{  1,    0, WAYPOINTY(0), { 0, 2, 3, 40, 41, -1  }, },
+	{  2,  256, WAYPOINTY(0), { 1, 26, 27, -1 }, },
+	{  3,    0, WAYPOINTY(1), { 1, 5, 40, 41, -1 }, },
+	{  4, -256, WAYPOINTY(2), { 5, 28, 29, -1 }, },
+	{  5,    0, WAYPOINTY(2), { 3, 4, 6, 7, 40, 45, 42, 43, -1  }, },
+	{  6,  256, WAYPOINTY(2), { 5, 30, 31, -1 }, },
+	{  7,    0, WAYPOINTY(3), { 5, 9, 42, 43, -1 }, },
+	{  8, -256, WAYPOINTY(4), { 9, 32, 33, -1 }, },
+	{  9,    0, WAYPOINTY(4), { 7, 8, 10, 11, 42, 43, 44, 45, -1 }, },
+	{ 10,  256, WAYPOINTY(4), { 9, 34, 35, -1 }, },
+	{ 11,    0, WAYPOINTY(5), { 9, 13, 44, 45, -1 }, },
+	{ 12, -256, WAYPOINTY(6), { 13, 36, 37, -1 }, },
+	{ 13,    0, WAYPOINTY(6), { 11, 12, 14, 15, 44, 45, 46, 47, -1 }, },
+	{ 14,  256, WAYPOINTY(6), { 13, 38, 39, -1 }, },
+	{ 15,    0, WAYPOINTY(7), { 13, 17, 46, 47, -1 }, },
+	{ 16, -256, WAYPOINTY(8), { 17, 19, -1 }, },
+	{ 17,    0, WAYPOINTY(8), { 15, 16, 18, 46, 47, 48, 49, -1 }, },
+	{ 18,  256, WAYPOINTY(8), { 17, 20, -1 }, },
+	{ 19, -256, WAYPOINTY(9), { 16, 21, -1 }, },
+	{ 20,  256, WAYPOINTY(9), { 18, 23, -1 }, },
+	{ 21, -256, WAYPOINTY(10), { 19, 22, -1 }, },
+	{ 22,    0, WAYPOINTY(10), { 21, 23, -1 }, },
+	{ 23,  256, WAYPOINTY(10), { 20, 22, -1 }, },
+	{ 24, -340, WAYPOINTY(0) + 50, { 0, -1 }, },
+	{ 25, -220, WAYPOINTY(0) + 50, { 0, -1 }, },
+	{ 26,  340, WAYPOINTY(0) + 50, { 2, -1 }, },
+	{ 27,  220, WAYPOINTY(0) + 50, { 2, -1 }, },
+	{ 28, -340, WAYPOINTY(2) + 50, { 4, -1 }, },
+	{ 29, -220, WAYPOINTY(2) + 50, { 4, -1 }, },
+	{ 30,  340, WAYPOINTY(2) + 50, { 6, -1 }, },
+	{ 31,  220, WAYPOINTY(2) + 50, { 6, -1 }, },
+	{ 32, -340, WAYPOINTY(4) + 50, { 8, -1 }, },
+	{ 33, -220, WAYPOINTY(4) + 50, { 8, -1 }, },
+	{ 34,  340, WAYPOINTY(4) + 50, { 10, -1 }, },
+	{ 35,  220, WAYPOINTY(4) + 50, { 10, -1 }, },
+	{ 36, -340, WAYPOINTY(6) + 50, { 12, -1 }, },
+	{ 37, -220, WAYPOINTY(6) + 50, { 12, -1 }, },
+	{ 38,  340, WAYPOINTY(6) + 50, { 14, -1 }, },
+	{ 39,  220, WAYPOINTY(6) + 50, { 14, -1 }, },
+	{ 40, -100, WAYPOINTY(1), { 3, 1, 5, 42, -1 }, },
+	{ 41,  100, WAYPOINTY(1), { 3, 1, 5, 43, -1 }, },
+	{ 42, -100, WAYPOINTY(3), { 7, 5, 9, -1 }, },
+	{ 43,  100, WAYPOINTY(3), { 7, 5, 9, -1 }, },
+	{ 44, -100, WAYPOINTY(5), { 11, 9, 13, -1 }, },
+	{ 45,  100, WAYPOINTY(5), { 11, 9, 13, -1 }, },
+	{ 46, -100, WAYPOINTY(7), { 15, 13, 17, -1 }, },
+	{ 47,  100, WAYPOINTY(7), { 15, 13, 17, -1 }, },
+	{ 48, -60, WAYPOINTY(8) + 40, { 17, -1 }, },
+	{ 49,  60, WAYPOINTY(8) + 40, { 17, -1 }, },
+};
+
+static void __attribute__((unused)) print_waypoint_table(struct damcon_data *d, int tablesize)
+{
+	int i, j;
+	struct snis_damcon_entity *w;
+
+	printf("--- Begin Travel table ------------------\n");
+	for (i = 0; i < tablesize; i++) {
+		struct waypoint_data_entry *e = &damcon_waypoint_data[i];
+		w = find_nth_waypoint(d, e->n);
+		for (j = 0; e->neighbor[j] > 0; j++) {
+			printf("    %d[%d]) --> %d\n", w->tsd.waypoint.n, j,
+				w->tsd.waypoint.neighbor[j] ? w->tsd.waypoint.neighbor[j]->tsd.waypoint.n : -1);
+		}
+	}
+	printf("--- End Travel table ------------------\n");
+
+}
+
+static void add_damcon_waypoints(struct damcon_data *d)
+{
+	int i, j, rc;
+	struct snis_damcon_entity *w, *n;
+
+	for (i = 0; i < ARRAYSIZE(damcon_waypoint_data); i++) {
+		struct waypoint_data_entry *e = &damcon_waypoint_data[i];
+		rc = add_damcon_waypoint(d, e->x, e->y);
+		if (rc < 0) {
+			fprintf(stderr, "%s: Failed to add waypoint, i = %d at %s:%d\n",
+				logprefix(), i, __FILE__, __LINE__);
+			break;
+		}
+		d->o[rc].tsd.waypoint.n = e->n;
+	}
+	for (i = 0; i < ARRAYSIZE(damcon_waypoint_data); i++) {
+		struct waypoint_data_entry *e = &damcon_waypoint_data[i];
+		w = find_nth_waypoint(d, e->n);
+		for (j = 0; e->neighbor[j] >= 0; j++) {
+			n = find_nth_waypoint(d, e->neighbor[j]);
+			if (!n) {
+				fprintf(stderr, "%s: n is unexpectedly null at %s:%d.\n",
+					logprefix(), __FILE__, __LINE__);
+			}
+			w->tsd.waypoint.neighbor[j] = n;
+		}
+	}
+}
+
 static void populate_damcon_arena(struct damcon_data *d)
 {
 	snis_object_pool_setup(&d->pool, MAXDAMCONENTITIES);
@@ -7718,6 +8319,7 @@ static void populate_damcon_arena(struct damcon_data *d)
 	add_damcon_systems(d);
 	add_damcon_labels(d);
 	add_damcon_parts(d);
+	add_damcon_waypoints(d);
 }
 
 typedef void (*thrust_function)(struct game_client *c, int thrust);
@@ -8022,14 +8624,20 @@ static int process_request_robot_cmd(struct game_client *c)
 		return rc;
 	switch (subcmd) {
 	case OPCODE_ROBOT_SUBCMD_STG:
+	case OPCODE_ROBOT_SUBCMD_LTG:
 		rc = read_and_unpack_buffer(c, buffer, "SS",
 					&x, (int32_t) DAMCONXDIM, &y, (int32_t) DAMCONYDIM);
 		if (rc < 0)
 			return rc;
 		pthread_mutex_lock(&universe_mutex);
 		d = &bridgelist[c->bridge].damcon;
-		d->robot->tsd.robot.short_term_goal_x = x;
-		d->robot->tsd.robot.short_term_goal_y = y;
+		if (subcmd == OPCODE_ROBOT_SUBCMD_STG) {
+			d->robot->tsd.robot.short_term_goal_x = x;
+			d->robot->tsd.robot.short_term_goal_y = y;
+		} else {
+			d->robot->tsd.robot.long_term_goal_x = x;
+			d->robot->tsd.robot.long_term_goal_y = y;
+		}
 		if (d->robot->tsd.robot.autonomous_mode == DAMCON_ROBOT_MANUAL_MODE)
 			d->robot->tsd.robot.autonomous_mode = DAMCON_ROBOT_SEMI_AUTONOMOUS;
 		pthread_mutex_unlock(&universe_mutex);
@@ -10965,6 +11573,7 @@ static int process_robot_auto_manual(struct game_client *c)
 	new_mode = !!new_mode;
 	d = &bridgelist[c->bridge].damcon;
 	d->robot->tsd.robot.autonomous_mode = new_mode;
+	d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
 	d->robot->version++;
 	return 0;
 }
@@ -12497,6 +13106,8 @@ static void queue_up_client_damcon_object_update(struct game_client *c,
 		case DAMCON_TYPE_SOCKET:
 			send_update_damcon_socket_packet(c, o);
 			break;
+		case DAMCON_TYPE_WAYPOINT:
+			break;
 		default:
 			send_update_damcon_obj_packet(c, o);
 			break;
@@ -12957,7 +13568,7 @@ static void send_update_ship_packet(struct game_client *c,
 static void send_update_damcon_obj_packet(struct game_client *c,
 		struct snis_damcon_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("bwwwSSSRbSS",
+	pb_queue_to_client(c, packed_buffer_new("bwwwSSSRb",
 					OPCODE_DAMCON_OBJ_UPDATE,   
 					o->id, o->ship_id, o->type,
 					o->x, (int32_t) DAMCONXDIM,
@@ -12965,9 +13576,7 @@ static void send_update_damcon_obj_packet(struct game_client *c,
 					o->velocity,  (int32_t) DAMCONXDIM,
 		/* send desired_heading as heading to client to enable drifting */
 					o->tsd.robot.desired_heading,
-					o->tsd.robot.autonomous_mode,
-					o->tsd.robot.short_term_goal_x, (int32_t) DAMCONXDIM,
-					o->tsd.robot.short_term_goal_y, (int32_t) DAMCONYDIM));
+					o->tsd.robot.autonomous_mode));
 }
 
 static void send_update_damcon_socket_packet(struct game_client *c,

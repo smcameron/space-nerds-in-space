@@ -659,6 +659,9 @@ typedef void (*damcon_draw_function)(void *drawable, struct snis_damcon_entity *
 #define DAMCON_TYPE_SOCKET 9
 #define DAMCON_TYPE_PART 10 
 #define DAMCON_TYPE_ROBOT 11 
+#define DAMCON_TYPE_WAYPOINT 12
+/* Threshold beyond which repair requires using the repair station */
+#define DAMCON_EASY_REPAIR_THRESHOLD 200
 
 struct damcon_robot_type_specific_data {
 	uint32_t cargo_id; /* what the robot is carrying */
@@ -671,6 +674,15 @@ struct damcon_robot_type_specific_data {
 #define DAMCON_ROBOT_SEMI_AUTONOMOUS 2
 	double short_term_goal_x, short_term_goal_y;
 	double long_term_goal_x, long_term_goal_y;
+	uint8_t robot_state;
+#define DAMCON_ROBOT_DECIDE_LTG 3
+#define DAMCON_ROBOT_CRUISE 4
+#define DAMCON_ROBOT_PICKUP 5
+#define DAMCON_ROBOT_REPAIR 6
+#define DAMCON_ROBOT_REPLACE 7
+#define DAMCON_ROBOT_REPAIR_WAIT 8
+	uint32_t damaged_part_id;
+	uint32_t repair_socket_id;
 };
 
 struct damcon_label_specific_data {
@@ -692,12 +704,18 @@ struct damcon_socket_specific_data {
 #define DAMCON_SOCKET_EMPTY 0xffffffff
 };
 
+struct damcon_waypoint_specific_data {
+	int n;
+	struct snis_damcon_entity *neighbor[10];
+};
+
 union damcon_type_specific_data {
 	struct damcon_robot_type_specific_data robot;
 	struct damcon_label_specific_data label;
 	struct damcon_system_specific_data system;
 	struct damcon_part_specific_data part;
 	struct damcon_socket_specific_data socket;
+	struct damcon_waypoint_specific_data waypoint;
 };
 
 struct snis_damcon_entity {
