@@ -286,4 +286,109 @@ int moving_spheres_intersection(union vec3 *s1, float r1, union vec3 *v1,
 /* For the +z face of a cubemapped unit sphere, returns tangent and bitangent vectors */
 void cubemapped_sphere_tangent_and_bitangent(float x, float y, union vec3 *u, union vec3 *v);
 
+/***********************************************************************************************
+
+Some Notes About Quaternions
+----------------------------
+
+A quaternion q is a 4 dimensional quantity:
+
+		q = q0 + q1i + q2j + q3k
+
+	with i, j, k representing orthogonal basis vectors, and also,
+
+		i^2 = j^2 = k^2 = -1
+		ij = -ji = k
+		jk = -kj = i
+		ki = -ik = j
+
+Quaternion multiplication:
+
+	r = pq
+
+	r0 = p0q0 - p1q1 - p2q2 - p3q3
+	r1 = p0q1 + p1q0 + p2q3 - p3q2
+	r2 = p0q2 + p2q0 - p1q3 + p3q1
+	r3 = p0q3 + p3q0 + p1q2 - p2q1
+
+	r = r0 + r1i + r2j + r3k
+
+Magnitude of a quaternion, |q|, is computed:
+
+	|q| = (q0^2 + q1^2 + q2^2 + q3^2)^(0.5)
+
+Inverse of a quaternion, q^(-1) has the property:
+
+		qq^(1) = q^(-1)q = 1
+
+	and is computed:
+
+		q^(-1) = (q0 - q1 - q2 - q3) / |q|^2
+
+Constructing a unit quaternion from an axis of rotation and an angle of rotation:
+
+	If n1 + n2 + n3 is a unit vector representing an axis about which rotation occurs
+	and theta is 0.5 * the angle of the rotation about this axis, then a unit quaternion
+	representing that rotation can be written:
+
+		cos(theta) + n1 * sin(theta) + n2 * sin(theta) + n3 * sin(theta)
+
+To rotate a vector v, by quaternion q:
+
+	qvq^(-1)
+
+Rotations may be composed by quaternion multiplication:
+
+	Let R1 and R2 be quaternions representing two rotations performed in
+	order, R1, then R2.  The composite rotation quaternion R is:
+
+		R = R2R1		(notice the order is reversed)
+
+	The order is important as quaternion multiplication is not commutative.
+
+Rotations may be divided or multiplied by quaternion powers:
+
+	if q represents a rotation of x around some axis, then q^2 represents a rotation of 2x,
+	and q^0.5 represents a rotation of 0.5x arount that axis.
+
+		q^x = |q|^(x) * ( cos(x * theta) + n1 * sin(x * theta) + n2 * sin(x * theta) + n3 * sin(x * theta)).
+
+	Note that if x is -1, then this reduces to the inversion.
+
+Changing the coordinate system of a quaternion:
+
+	Suppose the following:
+
+	1. You have some canonical defined orientation that is consired "zero rotation", ie.
+	   "facing down the positive x axis with "up" being up the postitive y axis."
+
+	2. You have a spaceship whose current orientation is defined as a quaternion representing
+	   the rotation from this zero rotation, call it r.
+
+	3. You have a rotation which you want to apply to the spaceship in its orientation.  Let's
+	   say you want to yaw 5 degrees left.  So you construct a quaternion, q, to represent a 5
+	   degrees left yaw from "zero rotation".
+
+	To apply q to r, to get a new orientation quaternion, n, we can do something analogous to rotating a
+	vector by q.
+
+	n = rqr^(-1) = r(q0 + q)r^(-1)
+	  = rq0r^(-1) + rqr^(-1)
+	  = q0rr^(-1) + rqr^(-1)
+	  = q0 + rqr^(-1)
+
+Main properties of quaternions:
+
+	1. pq is not equal to qp
+	2. p(q + r) = pq + pr
+	3. (sp)q = p(sq) = s(pq)
+	4. q^(-1) = (q0 - q) / |q|^2
+	5. p(qr) = (pq)r
+	6. qvq^(-1) rotates a vector by q
+	7. pq composes two rotations
+	8. q^x does rotation q but x times (ie q^3 does rotation q 3 times)
+	9. rqr-1 rotates the rotation axis of
+
+***********************************************************************************************/
+
 #endif /* __QUAT_H__ */
