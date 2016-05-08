@@ -15102,7 +15102,7 @@ static void nl_rotate_ship(struct game_client *c, union quat *rotation)
 
 	/* Convert rotation to local coordinate system */
 	quat_mul(&q1, &o->orientation, rotation);
-	quat_conj(&q2, &o->orientation);
+	quat_inverse(&q2, &o->orientation);
 	quat_mul(&q3, &q1, &q2);
 	/* Apply to local orientation */
 	quat_mul(&new_orientation, &q3, &o->orientation);

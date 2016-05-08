@@ -2538,8 +2538,8 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 	float range2 = range*range;
 	union vec3 ship_pos = {{o->x, o->y, o->z}};
 
-	union quat aim_conj;
-	quat_conj(&aim_conj, aim);
+	union quat aim_inverse;
+	quat_inverse(&aim_inverse, aim);
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (!go[i].alive)
@@ -2572,7 +2572,7 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 		/* get direction vector, rotate back to basis axis, then normalize */
 		union vec3 dir;
 		vec3_sub(&dir, &contact_pos, &ship_pos);
-		quat_rot_vec_self(&dir, &aim_conj);
+		quat_rot_vec_self(&dir, &aim_inverse);
 		vec3_normalize(&dir, &dir);
 
 		/* dist to forward vector */

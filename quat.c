@@ -151,7 +151,7 @@ float quat_len(const union quat *q)
 	return sqrtf(s);
 }
 
-void quat_conj(union quat *q_out, const union quat *q_in)
+void quat_inverse(union quat *q_out, const union quat *q_in)
 {
 	q_out->v.x = -q_in->v.x;
 	q_out->v.y = -q_in->v.y;
@@ -730,7 +730,7 @@ union quat *quat_apply_relative_yaw_pitch_roll(union quat *q,
 
 	/* Convert rotation to local coordinate system */
 	quat_mul(&q1, q, &qrot);
-	quat_conj(&q2, q);
+	quat_inverse(&q2, q);
 	quat_mul(&q3, &q1, &q2);
 	/* Apply to local orientation */
 	quat_mul(&q4, &q3, q);
@@ -761,9 +761,9 @@ void quat_decompose_twist_swing(const union quat *q, const union vec3 *v1, union
 	quat_rot_vec(&v2, v1, q);
 
 	quat_from_u2v(swing, v1, &v2, 0);
-	union quat swing_conj;
-	quat_conj(&swing_conj, swing);
-	quat_mul(twist, q, &swing_conj);
+	union quat swing_inverse;
+	quat_inverse(&swing_inverse, swing);
+	quat_mul(twist, q, &swing_inverse);
 }
 
 void quat_decompose_swing_twist(const union quat *q, const union vec3 *v1, union quat *swing, union quat *twist)
@@ -772,9 +772,9 @@ void quat_decompose_swing_twist(const union quat *q, const union vec3 *v1, union
 	quat_rot_vec(&v2, v1, q);
 
 	quat_from_u2v(swing, v1, &v2, 0);
-	union quat swing_conj;
-	quat_conj(&swing_conj, swing);
-	quat_mul(twist, &swing_conj, q);
+	union quat swing_inverse;
+	quat_inverse(&swing_inverse, swing);
+	quat_mul(twist, &swing_inverse, q);
 }
 
 /* find the two endpoints of a line segment that are inside a given sphere

@@ -175,8 +175,8 @@ void quat_scale(union quat *qo, const union quat *qi, float f);
 /* qo *= f */
 void quat_scale_self(union quat *q, float f);
 
-/* conjugate quaternion */
-void quat_conj(union quat *qo, const union quat *qi);
+/* Compute the inverse of a unit quaternion */
+void quat_inverse(union quat *qo, const union quat *qi);
 
 /* o = q1 + q2 */
 void quat_add(union quat *qo, const union quat *q1, const union quat *q2);
