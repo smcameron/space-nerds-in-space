@@ -159,6 +159,17 @@ void quat_inverse(union quat *q_out, const union quat *q_in)
 	q_out->v.w = q_in->v.w;
 }
 
+union quat *quat_conjugate(union quat *qo, union quat *rotation, union quat *new_coord_system)
+{
+	union quat temp, inverse;
+
+	/* Convert rotation to new coordinate system */
+	quat_mul(&temp, new_coord_system, rotation);
+	quat_inverse(&inverse, new_coord_system);
+	quat_mul(qo, &temp, &inverse);
+	return qo;
+}
+
 union vec3* heading_mark_to_vec3(float r, double heading, double mark, union vec3 *dir)
 {
 	dir->v.x = r*cos(mark)*cos(heading);
@@ -716,7 +727,7 @@ union vec3* vec3_lerp(union vec3* vo, const union vec3* vfrom, const union vec3*
 union quat *quat_apply_relative_yaw_pitch_roll(union quat *q,
 					double yaw, double pitch, double roll)
 {
-	union quat qyaw, qpitch, qroll, qrot, q1, q2, q3, q4;
+	union quat qyaw, qpitch, qroll, qrot, tempq, local_rotation, rotated_q;
 
 	/* calculate amount of yaw to impart this iteration... */
 	quat_init_axis(&qyaw, 0.0, 1.0, 0.0, yaw);
@@ -725,17 +736,15 @@ union quat *quat_apply_relative_yaw_pitch_roll(union quat *q,
 	/* Calculate amount of roll to impart this iteration... */
 	quat_init_axis(&qroll, 1.0, 0.0, 0.0, roll);
 	/* Combine pitch, roll and yaw */
-	quat_mul(&q1, &qyaw, &qpitch);
-	quat_mul(&qrot, &q1, &qroll);
+	quat_mul(&tempq, &qyaw, &qpitch);
+	quat_mul(&qrot, &tempq, &qroll);
 
 	/* Convert rotation to local coordinate system */
-	quat_mul(&q1, q, &qrot);
-	quat_inverse(&q2, q);
-	quat_mul(&q3, &q1, &q2);
+	quat_conjugate(&local_rotation, &qrot, q);
 	/* Apply to local orientation */
-	quat_mul(&q4, &q3, q);
-	quat_normalize_self(&q4);
-	*q = q4;
+	quat_mul(&rotated_q, &local_rotation, q);
+	quat_normalize_self(&rotated_q);
+	*q = rotated_q;
 	return q;
 }
 

@@ -15089,7 +15089,7 @@ static void nl_rotate_ship(struct game_client *c, union quat *rotation)
 {
 	int i;
 	struct snis_entity *o;
-	union quat q1, q2, q3, new_orientation;
+	union quat local_rotation, new_orientation;
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(c->shipid);
@@ -15101,11 +15101,9 @@ static void nl_rotate_ship(struct game_client *c, union quat *rotation)
 	o = &go[i];
 
 	/* Convert rotation to local coordinate system */
-	quat_mul(&q1, &o->orientation, rotation);
-	quat_inverse(&q2, &o->orientation);
-	quat_mul(&q3, &q1, &q2);
+	quat_conjugate(&local_rotation, rotation, &o->orientation);
 	/* Apply to local orientation */
-	quat_mul(&new_orientation, &q3, &o->orientation);
+	quat_mul(&new_orientation, &local_rotation, &o->orientation);
 	quat_normalize_self(&new_orientation);
 
 	/* Now let the computer steer for awhile */

@@ -175,6 +175,9 @@ void quat_scale(union quat *qo, const union quat *qi, float f);
 /* qo *= f */
 void quat_scale_self(union quat *q, float f);
 
+/* Change a quaternion's coordinate system */
+union quat *quat_conjugate(union quat *qo, union quat *rotation, union quat *new_coord_system);
+
 /* Compute the inverse of a unit quaternion */
 void quat_inverse(union quat *qo, const union quat *qi);
 
@@ -325,6 +328,8 @@ Inverse of a quaternion, q^(-1) has the property:
 
 		q^(-1) = (q0 - q1 - q2 - q3) / |q|^2
 
+	See quat_inverse().
+
 Constructing a unit quaternion from an axis of rotation and an angle of rotation:
 
 	If n1 + n2 + n3 is a unit vector representing an axis about which rotation occurs
@@ -376,6 +381,8 @@ Changing the coordinate system of a quaternion:
 	  = rq0r^(-1) + rqr^(-1)
 	  = q0rr^(-1) + rqr^(-1)
 	  = q0 + rqr^(-1)
+
+	See quat_conjugate().
 
 Main properties of quaternions:
 
