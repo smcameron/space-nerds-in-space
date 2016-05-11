@@ -3603,7 +3603,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		wwviaudio_add_sound(REVERSE_SOUND);
 	o->tsd.ship.reverse = reverse;
 	o->tsd.ship.trident = trident;
-	snis_button_set_label(nav_ui.trident_button, trident ? "ABSOLUTE" : "RELATIVE");
+	snis_button_set_label(nav_ui.trident_button, trident ? "RELATIVE" : "ABSOLUTE");
 	o->tsd.ship.ai[0].u.attack.victim_id = victim_id;
 	rc = 0;
 out:
@@ -7999,7 +7999,7 @@ static void init_nav_ui(void)
 					NANO_FONT, standard_orbit_button_pressed, NULL);
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", button_color,
 			NANO_FONT, reverse_button_pressed, NULL);
-	nav_ui.trident_button = snis_button_init(30, 228, -1, -1, "RELATIVE", button_color,
+	nav_ui.trident_button = snis_button_init(10, 250, -1, -1, "ABSOLUTE", button_color,
 			NANO_FONT, trident_button_pressed, NULL);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
@@ -8017,7 +8017,7 @@ static void init_nav_ui(void)
 void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, float rx, float ry, float rr)
 {
 	static struct mesh *xz_ring_mesh = 0;
-	int absolute_mode = o->tsd.ship.trident;
+	int relative_mode = o->tsd.ship.trident;
 
 	if (!xz_ring_mesh) {
 		xz_ring_mesh = init_circle_mesh(0, 0, 1, 40, 2.0*M_PI);
@@ -8028,7 +8028,7 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 	struct entity *e;
 	union quat cam_orientation;
 
-	if (absolute_mode)
+	if (!relative_mode)
 		quat_init_axis(&cam_orientation, 0, 1, 0, 0);
 	else
 		cam_orientation = o->orientation;
@@ -8046,16 +8046,16 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 
 	/* figure out the camera positions */
 	union vec3 camera_up = { {0, 1, 0} };
-	if (!absolute_mode)
+	if (relative_mode)
 		quat_rot_vec_self(&camera_up, &cam_orientation);
 
 	union vec3 camera_pos = { {-dist_to_cam, 0, 0} };
-	if (!absolute_mode)
+	if (relative_mode)
 		quat_rot_vec_self(&camera_pos, &cam_orientation);
 	vec3_add_self(&camera_pos, &center_pos);
 
 	union vec3 camera_lookat = {{0, 0, 0}};
-	if (!absolute_mode)
+	if (relative_mode)
 		quat_rot_vec_self(&camera_lookat, &cam_orientation);
 	vec3_add_self(&camera_lookat, &center_pos);
 
@@ -8134,7 +8134,7 @@ void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, fl
 			center_pos.v.x, center_pos.v.y, center_pos.v.z, UI_COLOR(nav_trident_ship));
 	if (e) {
 		update_entity_orientation(e, &o->orientation);
-		update_entity_scale(e, 0.07 / heading_indicator_mesh->radius);
+		update_entity_scale(e, 0.15 / heading_indicator_mesh->radius);
 	}
 
 	render_entities(tridentecx);
@@ -8593,7 +8593,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	}
 	render_entities(navecx);
 
-	draw_orientation_trident(w, gc, o, 75, 175, 100);
+	draw_orientation_trident(w, gc, o, 75, 175, 150);
 
 	/* Draw labels on ships... */
 	sng_set_foreground(UI_COLOR(nav_entity_label));
