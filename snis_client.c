@@ -652,10 +652,25 @@ static void update_generic_object(int index, uint32_t timestamp, double x, doubl
 static int lookup_object_by_id(uint32_t id)
 {
 	int i;
+	const int cachebits = 13;
+	const int cachesize = 1 << cachebits;
+	const int cachemask = cachesize - 1;
+	static int *cache = NULL;
+
+	if (cache == NULL) {
+		cache = malloc(sizeof(int) * cachesize);
+		memset(cache, -1, sizeof(int) * cachesize);
+	}
+
+	i = cache[id & cachemask];
+	if (i != -1 && go[i].id == id)
+		return i;
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
-		if (go[i].id == id)
+		if (go[i].id == id) {
+			cache[id & cachemask] = i;
 			return i;
+		}
 	return -1;
 }
 

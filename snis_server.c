@@ -7069,10 +7069,25 @@ static int add_explosion(double x, double y, double z, uint16_t velocity,
 static int lookup_by_id(uint32_t id)
 {
 	int i;
+	const int cachebits = 13;
+	const int cachesize = 1 << cachebits;
+	const int cachemask = cachesize - 1;
+	static int *cache = NULL;
+
+	if (cache == NULL) {
+		cache = malloc(sizeof(int) * cachesize);
+		memset(cache, -1, sizeof(int) * cachesize);
+	}
+
+	i = cache[id & cachemask];
+	if (i != -1 && go[i].id == id)
+		return i;
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
-		if (go[i].id == id)
+		if (go[i].id == id) {
+			cache[id & cachemask] = i;
 			return i;
+		}
 	return -1;
 }
 
