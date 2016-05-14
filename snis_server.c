@@ -10240,6 +10240,15 @@ static void generic_npc_bot(struct snis_entity *o, int bridge, char *name, char 
 	}
 }
 
+static struct npc_menu_item *topmost_menu(struct npc_menu_item *m)
+{
+	if (!m)
+		return m;
+	if (!m->parent_menu)
+		return m;
+	return topmost_menu(m->parent_menu);
+}
+
 static void send_to_npcbot(int bridge, char *name, char *msg)
 {
 	int i;
@@ -10271,13 +10280,15 @@ static void send_to_npcbot(int bridge, char *name, char *msg)
 
 	switch (o->type) {
 	case OBJTYPE_STARBASE:
-		bridgelist[bridge].npcbot.current_menu = starbase_main_menu;
+		if (topmost_menu(bridgelist[bridge].npcbot.current_menu) != starbase_main_menu)
+			bridgelist[bridge].npcbot.current_menu = starbase_main_menu;
 		generic_npc_bot(o, bridge, name, msg);
 		break;
 	case OBJTYPE_SHIP2:
 		if (o->tsd.ship.ai[0].ai_mode != AI_MODE_MINING_BOT)
 			break;
-		bridgelist[bridge].npcbot.current_menu = mining_bot_main_menu;
+		if (topmost_menu(bridgelist[bridge].npcbot.current_menu) != mining_bot_main_menu)
+			bridgelist[bridge].npcbot.current_menu = mining_bot_main_menu;
 		generic_npc_bot(o, bridge, name, msg);
 		break;
 	default:
