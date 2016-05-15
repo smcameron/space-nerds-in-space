@@ -219,7 +219,7 @@ int damage_limbo_countdown = 0;
 
 struct entity_context *ecx;
 struct entity_context *sciecx;
-struct entity_context *instrumentecx; /* Used by nav screen and sciplane screen */
+struct entity_context *instrumentecx; /* Used by nav screen, sciplane screen, and demon screen */
 struct entity_context *tridentecx;
 struct entity_context *sciballecx;
 
@@ -309,6 +309,7 @@ struct mesh *torpedo_nav_mesh;
 struct mesh *laser_mesh;
 struct mesh *asteroid_mesh[NASTEROID_MODELS];
 struct mesh *sphere_mesh;
+struct mesh *low_poly_sphere_mesh;
 struct mesh *planetary_ring_mesh;
 struct mesh **starbase_mesh;
 static int nstarbase_models = -1;
@@ -2444,10 +2445,15 @@ static void request_demon_thrust_packet(uint32_t oid, uint8_t thrust)
 static struct demon_ui {
 	float ux1, uy1, ux2, uy2;
 	double selectedx, selectedz;
+	double press_mousex, press_mousey;
+	double release_mousex, release_mousey;
+	int button3_pressed;
+	int button3_released;
 	int nselected;
 #define MAX_DEMON_SELECTABLE 256
 	uint32_t selected_id[MAX_DEMON_SELECTABLE];
 	struct button *demon_exec_button;
+	struct button *demon_home_button;
 	struct button *demon_ship_button;
 	struct button *demon_starbase_button;
 	struct button *demon_planet_button;
@@ -2459,6 +2465,7 @@ static struct demon_ui {
 	struct button *demon_select_none_button;
 	struct button *demon_torpedo_button;
 	struct button *demon_phaser_button;
+	struct button *demon_2d3d_button;
 	struct snis_text_input_box *demon_input;
 	char input[100];
 	char error_msg[80];
@@ -2477,8 +2484,27 @@ static struct demon_ui {
 #define DEMON_BUTTON_DELETE 7
 #define DEMON_BUTTON_SELECTNONE 8
 #define DEMON_BUTTON_CAPTAINMODE 9
-
+	int use_3d;
+	union vec3 camera_pos;
+	union quat camera_orientation;
+	union vec3 desired_camera_pos;
+	union quat desired_camera_orientation;
 } demon_ui;
+
+static void home_demon_camera(void)
+{
+	union vec3 right = { { 1.0f, 0.0f, 0.0f } };
+	const float homex = XKNOWN_DIM / 2.0;
+	const float homey = YKNOWN_DIM * 7.0;
+	const float homez = ZKNOWN_DIM / 2.0;
+	const union vec3 camera_pos = { { homex, homey, homez, } };
+	union vec3 up = { { 0.0, 1.0, 0.0, } };
+	union vec3 camera_lookat = { { XKNOWN_DIM / 2.0, YKNOWN_DIM / 2.0, ZKNOWN_DIM / 2.0 } };
+	vec3_sub_self(&camera_lookat, &camera_pos);
+
+	demon_ui.desired_camera_pos = camera_pos;
+	quat_from_u2v(&demon_ui.desired_camera_orientation, &right, &camera_lookat, &up);
+}
 
 static void demon_dirkey(int h, int v)
 {
@@ -10462,16 +10488,24 @@ static void demon_select_none(void)
 static void demon_button_press(int button, gdouble x, gdouble y)
 {
 	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
-	if (button == 3) {
-		demon_ui.ix = demon_mousex_to_ux(x);
-		demon_ui.iz = demon_mousey_to_uz(y);
-		demon_ui.ix2 = demon_mousex_to_ux(x);
-		demon_ui.iz2 = demon_mousey_to_uz(y);
-		demon_ui.selectmode = 1;
-	}
-	if (button == 2) {
-		demon_ui.move_from_x = x;
-		demon_ui.move_from_y = y;
+	if (demon_ui.use_3d) {
+		if (button == 3) {
+			demon_ui.press_mousex = x;
+			demon_ui.press_mousey = y;
+			demon_ui.button3_pressed = 1;
+		}
+	} else {
+		if (button == 3) {
+			demon_ui.ix = demon_mousex_to_ux(x);
+			demon_ui.iz = demon_mousey_to_uz(y);
+			demon_ui.ix2 = demon_mousex_to_ux(x);
+			demon_ui.iz2 = demon_mousey_to_uz(y);
+			demon_ui.selectmode = 1;
+		}
+		if (button == 2) {
+			demon_ui.move_from_x = x;
+			demon_ui.move_from_y = y;
+		}
 	}
 }
 
@@ -10619,6 +10653,14 @@ static void demon_button2_release(int button, gdouble x, gdouble y)
 
 static void demon_button_release(int button, gdouble x, gdouble y)
 {
+	if (demon_ui.use_3d) {
+		if (button == 3) {
+			demon_ui.release_mousex = x;
+			demon_ui.release_mousey = y;
+			demon_ui.button3_released = 1;
+		}
+		return;
+	}
 	switch (button) {
 	case 2:
 		demon_button2_release(button, x, y);
@@ -11170,6 +11212,8 @@ static void set_demon_button_colors()
 	const int selected = UI_COLOR(demon_selected_button);
 	const int deselected = UI_COLOR(demon_deselected_button);
 
+	snis_button_set_color(demon_ui.demon_home_button,
+		demon_ui.buttonmode == DEMON_BUTTON_SHIPMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_ship_button,
 		demon_ui.buttonmode == DEMON_BUTTON_SHIPMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_starbase_button,
@@ -11193,6 +11237,18 @@ static void demon_modebutton_pressed(int whichmode)
 	else
 		demon_ui.buttonmode = whichmode;
 	set_demon_button_colors();
+}
+
+static void demon_home_button_pressed(void *x)
+{
+	if (demon_ui.use_3d) {
+		home_demon_camera();
+	} else {
+		demon_ui.ux1 = 0;
+		demon_ui.uy1 = 0;
+		demon_ui.ux2 = XKNOWN_DIM;
+		demon_ui.uy2 = ZKNOWN_DIM;
+	}
 }
 
 static void demon_ship_button_pressed(void *x)
@@ -11267,6 +11323,11 @@ static void demon_phaser_button_pressed(void *x)
 				go[demon_ui.captain_of].id));
 }
 
+static void demon_2d3d_button_pressed(void *x)
+{
+	demon_ui.use_3d = !demon_ui.use_3d;
+}
+
 static void init_demon_ui()
 {
 	int x, y, dy, n;
@@ -11280,6 +11341,7 @@ static void init_demon_ui()
 	demon_ui.selectedz = -1.0;
 	demon_ui.selectmode = 0;
 	demon_ui.captain_of = -1;
+	demon_ui.use_3d = 0;
 	strcpy(demon_ui.error_msg, "");
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
 	demon_ui.demon_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
@@ -11294,6 +11356,9 @@ static void init_demon_ui()
 	y = txy(60);
 	dy = txy(25);
 	n = 0;
+	demon_ui.demon_home_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
+			"HOME", UI_COLOR(demon_deselected_button),
+			NANO_FONT, demon_home_button_pressed, NULL);
 	demon_ui.demon_ship_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"SHIP", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_ship_button_pressed, NULL);
@@ -11327,7 +11392,11 @@ static void init_demon_ui()
 	demon_ui.demon_phaser_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"PHASER", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_phaser_button_pressed, NULL);
+	demon_ui.demon_2d3d_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
+			"2D/3D", UI_COLOR(demon_deselected_button),
+			NANO_FONT, demon_2d3d_button_pressed, NULL);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_starbase_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_planet_button, DISPLAYMODE_DEMON);
@@ -11339,7 +11408,11 @@ static void init_demon_ui()
 	ui_add_button(demon_ui.demon_captain_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_torpedo_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_phaser_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_2d3d_button, DISPLAYMODE_DEMON);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
+	home_demon_camera();
+	demon_ui.camera_orientation = demon_ui.desired_camera_orientation;
+	demon_ui.camera_pos = demon_ui.desired_camera_pos;
 }
 
 static void calculate_new_2d_zoom(int direction, gdouble x, gdouble y, double zoom_amount,
@@ -11370,6 +11443,15 @@ static void calculate_new_demon_zoom(int direction, gdouble x, gdouble y)
 {
 	calculate_new_2d_zoom(direction, x, y, 0.05,
 			&demon_ui.ux1, &demon_ui.uy1, &demon_ui.ux2, &demon_ui.uy2);
+}
+
+static void demon_3d_scroll(int direction, gdouble x, gdouble y)
+{
+	union vec3 delta = { { 0 } };
+
+	delta.v.x = direction == GDK_SCROLL_UP ? delta.v.x = XKNOWN_DIM * 0.02 : -XKNOWN_DIM * 0.02;
+	quat_rot_vec_self(&delta, &demon_ui.camera_orientation);
+	vec3_add(&demon_ui.desired_camera_pos, &demon_ui.camera_pos, &delta);
 }
 
 static void show_demon_groups(GtkWidget *w)
@@ -11454,7 +11536,7 @@ static void draw_2d_small_cross(float x, float y, int color, int blink)
 	}
 }
 
-static void show_demon(GtkWidget *w)
+static void show_demon_2d(GtkWidget *w)
 {
 	int i;
 	char buffer[100];
@@ -11512,6 +11594,244 @@ static void show_demon(GtkWidget *w)
 	show_demon_groups(w);
 	demon_cmd_help(w);
 	show_common_screen(w, "DEMON");
+}
+
+static void show_demon_3d(GtkWidget *w)
+{
+	char buffer[100];
+	static struct mesh *axes = NULL;
+	int i, j, k;
+	float angle_of_view = 60.0 * M_PI / 180.0;
+	union vec3 camera_pos_delta;
+	int color;
+
+	if (!axes) {
+		axes = mesh_fabricate_axes();
+		mesh_scale(axes, 0.002 * XKNOWN_DIM);
+	}
+
+	if (go[my_ship_oid].alive > 0)
+		sng_set_foreground(UI_COLOR(demon_default));
+	else
+		sng_set_foreground(UI_COLOR(demon_default_dead));
+
+	/* Move camera towards desired position */
+	vec3_sub(&camera_pos_delta, &demon_ui.desired_camera_pos, &demon_ui.camera_pos);
+	vec3_mul_self(&camera_pos_delta, 0.1);
+	vec3_add_self(&demon_ui.camera_pos, &camera_pos_delta);
+
+	/* Move camera towards desired orientation */
+	quat_nlerp(&demon_ui.camera_orientation,
+			&demon_ui.camera_orientation, &demon_ui.desired_camera_orientation, 0.05);
+
+	/* Setup 3d universe grid */
+	for (i = 0; i < 10; i++) {
+		float x = i * XKNOWN_DIM / 10.0;
+		for (j = 0; j < 10; j++) {
+			float y = (j * XKNOWN_DIM / 10.0) - XKNOWN_DIM / 2.0;
+			for (k = 0; k < 10; k++) {
+				float z = k * XKNOWN_DIM / 10.0;
+				(void) add_entity(instrumentecx, axes, x, y, z, UI_COLOR(demon_default));
+			}
+		}
+	}
+
+	set_renderer(instrumentecx, WIREFRAME_RENDERER);
+	camera_set_pos(instrumentecx, demon_ui.camera_pos.v.x, demon_ui.camera_pos.v.y, demon_ui.camera_pos.v.z);
+	camera_set_orientation(instrumentecx, &demon_ui.camera_orientation);
+	camera_set_parameters(instrumentecx, 10.0, XKNOWN_DIM * 2.0, SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
+	set_window_offset(instrumentecx, 0, 0);
+	calculate_camera_transform(instrumentecx);
+
+	pthread_mutex_lock(&universe_mutex);
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct entity *e = NULL;
+		struct snis_entity *o = &go[i];
+		struct mesh *m = NULL;
+		float scale = XKNOWN_DIM / 10000.0;
+		int draw_label = 0;
+		char label[100];
+		float sx, sy;
+
+		if (!o->alive)
+			continue;
+		switch (o->type) {
+		case OBJTYPE_PLANET:
+			color = WHITE;
+			strcpy(label, o->sdata.name);
+			draw_label = 1;
+			break;
+		case OBJTYPE_SHIP1:
+			color = MAGENTA;
+			strcpy(label, o->sdata.name);
+			draw_label = 1;
+			break;
+		case OBJTYPE_SHIP2:
+			color = CYAN;
+			strcpy(label, o->sdata.name);
+			draw_label = 1;
+			break;
+		case OBJTYPE_ASTEROID:
+			color = ORANGE;
+			break;
+		case OBJTYPE_STARBASE:
+			scale = XKNOWN_DIM / 50000.0;
+			color = RED;
+			strcpy(label, o->sdata.name);
+			draw_label = 1;
+			break;
+		case OBJTYPE_CARGO_CONTAINER:
+			color = GREEN;
+			break;
+		case OBJTYPE_LASER:
+			color = ORANGERED;
+			break;
+		case OBJTYPE_TORPEDO:
+			color = ORANGERED;
+			break;
+		case OBJTYPE_WARPGATE:
+			color = YELLOW;
+			scale = XKNOWN_DIM / 100000.0;
+			break;
+		default:
+			color = MAGENTA;
+			break;
+		}
+
+		switch (o->type) {
+		case OBJTYPE_PLANET:
+			e = add_entity(instrumentecx, low_poly_sphere_mesh,  o->x, o->y, o->z, color);
+			if (e)
+				update_entity_scale(e, o->tsd.planet.radius);
+			break;
+		case OBJTYPE_SHIP2:
+		case OBJTYPE_SHIP1:
+		case OBJTYPE_ASTEROID:
+		case OBJTYPE_STARBASE:
+		case OBJTYPE_CARGO_CONTAINER:
+		case OBJTYPE_LASER:
+		case OBJTYPE_WARPGATE:
+		case OBJTYPE_TORPEDO:
+			if (!o->entity)
+				break;
+			if (o->type != OBJTYPE_SHIP1)
+				m = entity_get_mesh(o->entity);
+			if (!m) {
+				if (o->type == OBJTYPE_SHIP1)
+					m = ship_mesh_map[o->tsd.ship.shiptype];
+				else
+					break;
+			}
+			e = add_entity(instrumentecx, m, o->x, o->y, o->z, color);
+			if (!e)
+				break;
+			update_entity_scale(e, scale);
+			update_entity_orientation(e, &o->orientation);
+			if (draw_label) {
+				union vec3 opos = { { o->x, o->y, o->z } };
+				union vec3 dist;
+				vec3_sub(&dist, &opos, &demon_ui.camera_pos);
+				if (o->type == OBJTYPE_PLANET || o->type == OBJTYPE_STARBASE ||
+					vec3_magnitude(&dist) < XKNOWN_DIM / 10.0) {
+					transform_point(instrumentecx, o->x, o->y, o->z, &sx, &sy);
+					sng_abs_xy_draw_string(label, NANO_FONT, sx + 10, sy - 10);
+				}
+			}
+		default:
+			break;
+		}
+	}
+
+	/* Check if user has selected something on the screen */
+	if (demon_ui.button3_released) {
+		int found = 0;
+
+		demon_ui.button3_released = 0;
+		for (i = 0; i <= get_entity_count(instrumentecx); i++) {
+			const double threshold = real_screen_width * 0.005;
+			float sx, sy;
+			union vec3 epos, dpos, backoff;
+			struct entity *e;
+			struct mesh *m;
+
+			e = get_entity(instrumentecx, i);
+			if (!entity_onscreen(e))
+				continue;
+			entity_get_screen_coords(e, &sx, &sy);
+			if (fabsf(sx - demon_ui.release_mousex) < threshold &&
+			    fabsf(sy - demon_ui.release_mousey) < threshold) {
+				entity_get_pos(e, &epos.v.x, &epos.v.y, &epos.v.z);
+				m = entity_get_mesh(e);
+				if (m) {
+					union vec3 right = { { 1.0, 0.0, 0.0, }, };
+					union vec3 up = { { 0.0, 0.0, 1.0 } };
+
+					vec3_sub(&dpos, &epos, &demon_ui.camera_pos);
+					vec3_normalize(&backoff, &dpos);
+					vec3_mul_self(&backoff, -XKNOWN_DIM / 100.0);
+					vec3_add_self(&dpos, &backoff);
+					vec3_add(&demon_ui.desired_camera_pos, &demon_ui.camera_pos, &dpos);
+					vec3_normalize_self(&dpos);
+					quat_rot_vec_self(&up, &demon_ui.camera_orientation);
+					quat_from_u2v(&demon_ui.desired_camera_orientation, &right, &dpos, &up);
+					found = 1;
+					break;
+				}
+			}
+		}
+		if (!found) {
+			union vec3 turn;
+			union vec3 right = { { 1.0, 0.0, 0.0 } };
+			union quat rotation, local_rotation;
+
+			turn.v.z = demon_ui.release_mousex - real_screen_width / 2.0;
+			turn.v.y = -demon_ui.release_mousey + real_screen_height / 2.0;
+			turn.v.x = real_screen_width / 2.0;
+
+			quat_from_u2v(&rotation, &right, &turn, NULL);
+			quat_conjugate(&local_rotation, &rotation, &demon_ui.camera_orientation);
+			/* Apply to local orientation */
+			quat_mul(&demon_ui.desired_camera_orientation, &local_rotation, &demon_ui.camera_orientation);
+			quat_normalize_self(&demon_ui.desired_camera_orientation);
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	render_entities(instrumentecx);
+	pthread_mutex_lock(&universe_mutex);
+	pthread_mutex_unlock(&universe_mutex);
+
+
+	sng_set_foreground(UI_COLOR(demon_default));
+	if (netstats.elapsed_seconds == 0)
+		sprintf(buffer, "Waiting for data");
+	else
+		sprintf(buffer,
+			"TX:%llu RX:%llu T=%lu SECS. BW=%llu B/S SHIPS:%u OBJS:%u %u/%u/%u/%u/%u",
+			(unsigned long long) netstats.bytes_sent,
+			(unsigned long long) netstats.bytes_recd,
+			(unsigned long) netstats.elapsed_seconds,
+			(unsigned long long) (netstats.bytes_recd + netstats.bytes_sent) / netstats.elapsed_seconds,
+			netstats.nships, netstats.nobjects,
+			netstats.faction_population[0],
+			netstats.faction_population[1],
+			netstats.faction_population[2],
+			netstats.faction_population[3],
+			netstats.faction_population[4]);
+	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
+
+	show_demon_groups(w);
+	demon_cmd_help(w);
+	show_common_screen(w, "DEMON");
+	remove_all_entity(instrumentecx);
+}
+
+static void show_demon(GtkWidget *w)
+{
+	if (demon_ui.use_3d)
+		show_demon_3d(w);
+	else
+		show_demon_2d(w);
 }
 
 struct warp_star {
@@ -11960,7 +12280,10 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 		do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_SCIZOOM);
 		return 0;
 	case DISPLAYMODE_DEMON:
-		calculate_new_demon_zoom(e->direction, e->x, e->y);
+		if (demon_ui.use_3d)
+			demon_3d_scroll(e->direction, e->x, e->y);
+		else
+			calculate_new_demon_zoom(e->direction, e->x, e->y);
 		return 0;
 	case DISPLAYMODE_NAVIGATION:
 		if (e->direction == GDK_SCROLL_UP)
@@ -12884,7 +13207,9 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 {
 	switch (displaymode) {
 		case DISPLAYMODE_DEMON:
-			demon_button_press(event->button, event->x, event->y);
+			demon_button_press(event->button,
+					SCREEN_WIDTH * event->x / real_screen_width,
+					SCREEN_HEIGHT * event->y / real_screen_height);
 			break;
 		default:
 			break;
@@ -13699,6 +14024,7 @@ static void init_meshes()
 	}
 
 	sphere_mesh = mesh_unit_spherified_cube(16);
+	low_poly_sphere_mesh = mesh_unit_spherified_cube(5);
 	warp_tunnel_mesh = mesh_tube(XKNOWN_DIM, 450.0, 20);
 	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS);
 
