@@ -219,7 +219,7 @@ int damage_limbo_countdown = 0;
 
 struct entity_context *ecx;
 struct entity_context *sciecx;
-struct entity_context *navecx;
+struct entity_context *instrumentecx; /* Used by nav screen and sciplane screen */
 struct entity_context *tridentecx;
 struct entity_context *sciballecx;
 
@@ -6936,25 +6936,25 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 	union vec3 camera_up = {{0,1,0}};
 	quat_rot_vec_self(&camera_up, &cam_orientation);
 
-	camera_assign_up_direction(navecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
-	camera_set_pos(navecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
-	camera_look_at(navecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
+	camera_assign_up_direction(instrumentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
+	camera_set_pos(instrumentecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(instrumentecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
 
-        set_renderer(navecx, WIREFRAME_RENDERER);
-	camera_set_parameters(navecx, range*(cam_range_fraction-1.0), range*(dist_to_cam_frac+1.0),
+	set_renderer(instrumentecx, WIREFRAME_RENDERER);
+	camera_set_parameters(instrumentecx, range*(cam_range_fraction-1.0), range*(dist_to_cam_frac+1.0),
 				SCREEN_WIDTH, SCREEN_HEIGHT, fovy);
-	set_window_offset(navecx, 0, 0);
-	calculate_camera_transform(navecx);
+	set_window_offset(instrumentecx, 0, 0);
+	calculate_camera_transform(instrumentecx);
 
-	e = add_entity(navecx, ring_mesh, o->x, o->y, o->z, UI_COLOR(sci_plane_ring));
+	e = add_entity(instrumentecx, ring_mesh, o->x, o->y, o->z, UI_COLOR(sci_plane_ring));
 	if (e)
 		update_entity_scale(e, range);
 
-	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 0.0f, range * 0.98,
+	add_basis_ring(instrumentecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 0.0f, range * 0.98,
 							UI_COLOR(sci_basis_ring_1));
-	add_basis_ring(navecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 90.0f * M_PI / 180.0, range * 0.98,
+	add_basis_ring(instrumentecx, o->x, o->y, o->z, 1.0f, 0.0f, 0.0f, 90.0f * M_PI / 180.0, range * 0.98,
 							UI_COLOR(sci_basis_ring_2));
-	add_basis_ring(navecx, o->x, o->y, o->z, 0.0f, 0.0f, 1.0f, 90.0f * M_PI / 180.0, range * 0.98,
+	add_basis_ring(instrumentecx, o->x, o->y, o->z, 0.0f, 0.0f, 1.0f, 90.0f * M_PI / 180.0, range * 0.98,
 							UI_COLOR(sci_basis_ring_3));
 
 	int i;
@@ -6973,7 +6973,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		union vec3 ind_pos = {{range,0,0}};
 		quat_rot_vec_self(&ind_pos, &ind_orientation);
 		vec3_add_self(&ind_pos, &ship_pos);
-		e = add_entity(navecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
+		e = add_entity(instrumentecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
 		if (e) {
 			update_entity_scale(e, heading_indicator_mesh->radius*range/100.0);
 			update_entity_orientation(e, &ind_orientation);
@@ -6981,7 +6981,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		}
 
 		/* heading arrow tail */
-		e = add_entity(navecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
+		e = add_entity(instrumentecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
 		if (e) {
 			update_entity_scale(e, range);
 			update_entity_orientation(e, &ind_orientation);
@@ -7011,10 +7011,10 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			z2 += o->z;
 
 			float sx1, sy1, sx2, sy2, sx3, sy3;
-			if (!transform_line(navecx, x1, o->y, z1, x2, o->y, z2, &sx1, &sy1, &sx2, &sy2)) {
+			if (!transform_line(instrumentecx, x1, o->y, z1, x2, o->y, z2, &sx1, &sy1, &sx2, &sy2)) {
 				sng_draw_dotted_line(sx1, sy1, sx2, sy2);
 			}
-			if (!transform_point(navecx, x3, o->y, z3, &sx3, &sy3)) {
+			if (!transform_point(instrumentecx, x3, o->y, z3, &sx3, &sy3)) {
 				sprintf(buf, "%d", (int)math_angle_to_game_angle_degrees(i * 360.0/slices));
 				sng_center_xy_draw_string(buf, font, sx3, sy3);
 			}
@@ -7032,7 +7032,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		tz1 = o->z - sin(heading - beam_width / 2) * range * 0.05;
 		tx2 = o->x + cos(heading - beam_width / 2) * range;
 		tz2 = o->z - sin(heading - beam_width / 2) * range;
-		if (!transform_line(navecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2)) {
+		if (!transform_line(instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2)) {
 			sng_draw_electric_line(sx1, sy1, sx2, sy2);
 		}
 
@@ -7040,20 +7040,20 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		tz1 = o->z - sin(heading + beam_width / 2) * range * 0.05;
 		tx2 = o->x + cos(heading + beam_width / 2) * range;
 		tz2 = o->z - sin(heading + beam_width / 2) * range;
-		if (!transform_line(navecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2)) {
+		if (!transform_line(instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2)) {
 			sng_draw_electric_line(sx1, sy1, sx2, sy2);
 		}
 	}
 
 	/* add my ship */
-	e = add_entity(navecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, UI_COLOR(sci_plane_self));
+	e = add_entity(instrumentecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, UI_COLOR(sci_plane_self));
 	if (e) {
 		set_render_style(e, science_style);
 		update_entity_scale(e, range/300.0);
 		update_entity_orientation(e, &o->orientation);
 	}
 
-	render_entities(navecx);
+	render_entities(instrumentecx);
 
 	/* draw all the rest onto the 3d scene */
 	{
@@ -7133,12 +7133,14 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			if ( draw_popout_arc && tween > 0 ) {
 				/* show the flyout arc */
 				sng_set_foreground(UI_COLOR(sci_plane_popout_arc));
-				draw_3d_mark_arc(w, gc, navecx, &ship_pos, dist, heading, mark * tween * 0.9);
+				draw_3d_mark_arc(w, gc, instrumentecx, &ship_pos, dist, heading, mark * tween * 0.9);
 			}
 
 			float sx, sy;
-			if (!transform_point(navecx, display_pos.v.x, display_pos.v.y, display_pos.v.z, &sx, &sy)) {
-				snis_draw_science_guy(w, gc, &go[i], sx, sy, dist, bw, pwr, range, &go[i] == curr_science_guy, nebula_factor);
+			if (!transform_point(instrumentecx, display_pos.v.x, display_pos.v.y, display_pos.v.z,
+						&sx, &sy)) {
+				snis_draw_science_guy(w, gc, &go[i], sx, sy, dist, bw, pwr, range,
+								&go[i] == curr_science_guy, nebula_factor);
 			}
 
 			if (go[i].sdata.science_data_known && selected_guy_popout) {
@@ -7191,7 +7193,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 		/* draw in the laserbeams */
 		for (i = 0; i < nlaserbeams; i++) {
-			draw_sciplane_laserbeam(w, gc, navecx, o, laserbeams[i], range);
+			draw_sciplane_laserbeam(w, gc, instrumentecx, o, laserbeams[i], range);
 		}
 
 		pthread_mutex_unlock(&universe_mutex);
@@ -7215,14 +7217,14 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 				float z2 = o->z - sin(angle) * radius;
 
 				float sx1, sy1, sx2, sy2;
-				if (!transform_line(navecx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
+				if (!transform_line(instrumentecx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
 					snis_draw_line(sx1, sy1, sx2, sy2);
 				}
 			}
 		}
 	}
 
-	remove_all_entity(navecx);
+	remove_all_entity(instrumentecx);
 }
 
 static void add_basis_ring(struct entity_context *ecx, float x, float y, float z,
@@ -8025,7 +8027,7 @@ static void init_nav_ui(void)
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.trident_button, DISPLAYMODE_NAVIGATION);
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
-	navecx = entity_context_new(5000, 1000);
+	instrumentecx = entity_context_new(5000, 1000);
 	tridentecx = entity_context_new(10, 0);
 }
 
@@ -8312,20 +8314,20 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	quat_rot_vec_self(&camera_lookat, &cam_orientation);
 	vec3_add_self(&camera_lookat, &ship_pos);
 
-	camera_assign_up_direction(navecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
-	camera_set_pos(navecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
-	camera_look_at(navecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
+	camera_assign_up_direction(instrumentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
+	camera_set_pos(instrumentecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(instrumentecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
 
-	set_renderer(navecx, WIREFRAME_RENDERER);
-	camera_set_parameters(navecx, 1.0, camera_pos_len+screen_radius*2,
+	set_renderer(instrumentecx, WIREFRAME_RENDERER);
+	camera_set_parameters(instrumentecx, 1.0, camera_pos_len+screen_radius*2,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
-	calculate_camera_transform(navecx);
+	calculate_camera_transform(instrumentecx);
 
 	int in_nebula = 0;
 	int i;
 
 	for (i=0; i<4; ++i) {
-		e = add_entity(navecx, radar_ring_mesh[i], o->x - ship_normal.v.x, o->y - ship_normal.v.y,
+		e = add_entity(instrumentecx, radar_ring_mesh[i], o->x - ship_normal.v.x, o->y - ship_normal.v.y,
 			o->z - ship_normal.v.z, UI_COLOR(nav_ring));
 		if (e) {
 			update_entity_scale(e, screen_radius);
@@ -8355,7 +8357,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		union vec3 ind_pos = {{screen_radius,0,0}};
 		quat_rot_vec_self(&ind_pos, &ind_orientation);
 		vec3_add_self(&ind_pos, &ship_pos);
-		e = add_entity(navecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
+		e = add_entity(instrumentecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
 		if (e) {
 			update_entity_scale(e, heading_indicator_mesh->radius*screen_radius/100.0);
 			update_entity_orientation(e, &ind_orientation);
@@ -8363,7 +8365,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		}
 
 		/* heading arrow tail */
-		e = add_entity(navecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
+		e = add_entity(instrumentecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
 		if (e) {
 			update_entity_scale(e, screen_radius);
 			update_entity_orientation(e, &ind_orientation);
@@ -8371,7 +8373,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	}
 
 	/* ship forward vector */
-	e = add_entity(navecx, forward_line_mesh, o->x, o->y, o->z, UI_COLOR(nav_forward_vector));
+	e = add_entity(instrumentecx, forward_line_mesh, o->x, o->y, o->z, UI_COLOR(nav_forward_vector));
 	if (e) {
 		update_entity_scale(e, screen_radius);
 		update_entity_orientation(e, &o->orientation);
@@ -8401,7 +8403,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			random_point_in_3d_annulus(visible_distance, screen_radius, &ship_pos, &u, &v, &point);
 
 			float sx, sy;
-			if (!transform_point(navecx, point.v.x, point.v.y, point.v.z, &sx, &sy)) {
+			if (!transform_point(instrumentecx, point.v.x, point.v.y, point.v.z, &sx, &sy)) {
 				sng_draw_point(sx, sy);
 			}
 		}
@@ -8411,7 +8413,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	pthread_mutex_lock(&universe_mutex);
 
 	/* add my ship */
-	e = add_entity(navecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, UI_COLOR(nav_self));
+	e = add_entity(instrumentecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, UI_COLOR(nav_self));
 	if (e) {
 		set_render_style(e, science_style);
 		update_entity_scale(e, ship_scale);
@@ -8437,7 +8439,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		}
 
 		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
-			draw_3d_laserbeam(w, gc, navecx, o, &go[i], display_radius);
+			draw_3d_laserbeam(w, gc, instrumentecx, o, &go[i], display_radius);
 			continue;
 		}
 
@@ -8481,21 +8483,21 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			struct mesh *m = entity_get_mesh(go[i].entity);
 
 			if (go[i].type == OBJTYPE_TORPEDO) {
-				contact = add_entity(navecx, torpedo_nav_mesh, go[i].x, go[i].y, go[i].z,
+				contact = add_entity(instrumentecx, torpedo_nav_mesh, go[i].x, go[i].y, go[i].z,
 							UI_COLOR(nav_torpedo));
 				if (contact) {
 					set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 					entity_set_user_data(contact, &go[i]); /* for debug */
 				}
 			} else if (go[i].type == OBJTYPE_LASER) {
-				contact = add_entity(navecx, laserbeam_nav_mesh, go[i].x, go[i].y, go[i].z,
+				contact = add_entity(instrumentecx, laserbeam_nav_mesh, go[i].x, go[i].y, go[i].z,
 					UI_COLOR(nav_laser));
 				if (contact) {
 					set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 					entity_set_user_data(contact, &go[i]); /* for debug */
 				}
 			} else {
-				contact = add_entity(navecx, m, go[i].x, go[i].y, go[i].z, UI_COLOR(nav_entity));
+				contact = add_entity(instrumentecx, m, go[i].x, go[i].y, go[i].z, UI_COLOR(nav_entity));
 				if (contact) {
 					set_render_style(contact, science_style);
 					entity_set_user_data(contact, &go[i]);
@@ -8587,17 +8589,17 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				}
 
 				if (proj_distance > 0)
-					e = add_entity(navecx, vline_mesh_neg, contact_pos.v.x, contact_pos.v.y,
+					e = add_entity(instrumentecx, vline_mesh_neg, contact_pos.v.x, contact_pos.v.y,
 						contact_pos.v.z, UI_COLOR(nav_ring));
 				else
-					e = add_entity(navecx, vline_mesh_pos, contact_pos.v.x, contact_pos.v.y,
+					e = add_entity(instrumentecx, vline_mesh_pos, contact_pos.v.x, contact_pos.v.y,
 						contact_pos.v.z, UI_COLOR(nav_ring));
 				if (e) {
 					update_entity_scale(e, abs(proj_distance));
 					update_entity_orientation(e, &o->orientation);
 				}
 
-				e = add_entity(navecx, ring_mesh, ship_plane_proj.v.x,
+				e = add_entity(instrumentecx, ring_mesh, ship_plane_proj.v.x,
 						ship_plane_proj.v.y, ship_plane_proj.v.z, UI_COLOR(nav_projected_ring));
 				if (e) {
 					update_entity_scale(e, contact_ring_radius);
@@ -8606,19 +8608,19 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			}
 		}
 	}
-	render_entities(navecx);
+	render_entities(instrumentecx);
 
 	draw_orientation_trident(w, gc, o, 75, 175, 150);
 
 	/* Draw labels on ships... */
 	sng_set_foreground(UI_COLOR(nav_entity_label));
-	for (i = 0; i <= get_entity_count(navecx); i++) {
+	for (i = 0; i <= get_entity_count(instrumentecx); i++) {
 		float sx, sy;
 		char buffer[100];
 		struct entity *e;
 		struct snis_entity *o;
 
-		e = get_entity(navecx, i);
+		e = get_entity(instrumentecx, i);
 		if (!e)
 			continue;
 		o = entity_get_user_data(e);
@@ -8654,7 +8656,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 	pthread_mutex_unlock(&universe_mutex);
 
-	remove_all_entity(navecx);
+	remove_all_entity(instrumentecx);
 }
 
 static void show_navigation(GtkWidget *w)
