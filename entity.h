@@ -41,6 +41,7 @@ GLOBAL void update_entity_parent(struct entity_context *cx, struct entity *child
 GLOBAL void update_entity_pos(struct entity *e, float x, float y, float z);
 GLOBAL void update_entity_orientation(struct entity *e, const union quat *orientation);
 GLOBAL union quat *entity_get_orientation(struct entity *e);
+GLOBAL void entity_get_pos(struct entity *e, float *x, float *y, float *z);
 GLOBAL float entity_get_scale(struct entity *e);
 GLOBAL void update_entity_scale(struct entity *e, float scale);
 GLOBAL void entity_get_non_uniform_scale(struct entity *e, float *x_scale, float *y_scale, float *z_scale);

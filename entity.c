@@ -1213,6 +1213,13 @@ union quat *entity_get_orientation(struct entity *e)
 	return &e->e_orientation;
 }
 
+void entity_get_pos(struct entity *e, float *x, float *y, float *z)
+{
+	*x = e->x;
+	*y = e->y;
+	*z = e->z;
+}
+
 struct mat44d get_camera_v_transform(struct entity_context *cx)
 {
 	return cx->camera.frustum.v_matrix;
