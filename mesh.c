@@ -380,6 +380,63 @@ struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y
 	return my_mesh;
 }
 
+struct mesh *mesh_fabricate_axes(void)
+{
+	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
+
+	if (!my_mesh)
+		return my_mesh;
+	memset(my_mesh, 0, sizeof(*my_mesh));
+
+	my_mesh->geometry_mode = MESH_GEOMETRY_LINES;
+	my_mesh->nvertices = 6;
+	my_mesh->ntriangles = 0;
+	my_mesh->nlines = 3;
+	my_mesh->t = 0;
+	my_mesh->v = malloc(sizeof(*my_mesh->v) * my_mesh->nvertices);
+	my_mesh->l = malloc(sizeof(*my_mesh->l) * my_mesh->nlines);
+	my_mesh->tex = 0;
+	my_mesh->radius = 2.0;
+	my_mesh->graph_ptr = 0;
+
+	my_mesh->v[0].x = -1.0f;
+	my_mesh->v[0].y = 0.0f;
+	my_mesh->v[0].z = 0.0f;
+	my_mesh->v[1].x = 1.0f;
+	my_mesh->v[1].y = 0.0f;
+	my_mesh->v[1].z = 0.0f;
+
+	my_mesh->v[2].x = 0.0f;
+	my_mesh->v[2].y = -1.0f;
+	my_mesh->v[2].z = 0.0f;
+	my_mesh->v[3].x = 0.0f;
+	my_mesh->v[3].y = 1.0f;
+	my_mesh->v[3].z = 0.0f;
+
+	my_mesh->v[4].x = 0.0f;
+	my_mesh->v[4].y = 0.0f;
+	my_mesh->v[4].z = -1.0f;
+	my_mesh->v[5].x = 0.0f;
+	my_mesh->v[5].y = 0.0f;
+	my_mesh->v[5].z = 1.0f;
+
+	my_mesh->l[0].start = &my_mesh->v[0];
+	my_mesh->l[0].end = &my_mesh->v[1];
+	my_mesh->l[0].flag = 0;
+
+	my_mesh->l[1].start = &my_mesh->v[2];
+	my_mesh->l[1].end = &my_mesh->v[3];
+	my_mesh->l[1].flag = 0;
+
+	my_mesh->l[2].start = &my_mesh->v[4];
+	my_mesh->l[2].end = &my_mesh->v[5];
+	my_mesh->l[2].flag = 0;
+	my_mesh->radius = 1.0;
+
+	mesh_graph_dev_init(my_mesh);
+	return my_mesh;
+}
+
 static union vec3 compute_triangle_normal(struct triangle *t)
 {
 	union vec3 v1, v2, cross;
