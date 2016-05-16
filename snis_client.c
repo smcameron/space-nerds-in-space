@@ -10519,9 +10519,15 @@ static void demon_button_create_item(gdouble x, gdouble y, gdouble z)
 	double ux, uy, uz;
 	uint8_t item_type;
 
-	ux = demon_mousex_to_ux(x);
-	uz = demon_mousey_to_uz(z);
-	uy = y;
+	if (demon_ui.use_3d) {
+		ux = x;
+		uy = y;
+		uz = z;
+	} else {
+		ux = demon_mousex_to_ux(x);
+		uz = demon_mousey_to_uz(z);
+		uy = y;
+	}
 
 	switch (demon_ui.buttonmode) {
 		case DEMON_BUTTON_SHIPMODE:
@@ -11231,13 +11237,29 @@ static void set_demon_button_colors()
 		demon_ui.buttonmode == DEMON_BUTTON_CAPTAINMODE ? selected : deselected);
 }
 
+static void demon_button_create_item_3d(int button_mode)
+{
+	union vec3 pos = { { 1.0, 0.0, 0.0 } };
+	quat_rot_vec_self(&pos, &demon_ui.camera_orientation);
+	vec3_mul_self(&pos, XKNOWN_DIM * 0.005);
+	vec3_add_self(&pos, &demon_ui.camera_pos);
+	demon_ui.buttonmode = button_mode;
+	set_demon_button_colors();
+	demon_button_create_item((double) pos.v.x, (double) pos.v.y, (double) pos.v.z);
+}
+
 static void demon_modebutton_pressed(int whichmode)
 {
-	if (demon_ui.buttonmode == whichmode)
-		demon_ui.buttonmode = DEMON_BUTTON_NOMODE;
-	else
-		demon_ui.buttonmode = whichmode;
-	set_demon_button_colors();
+	if (demon_ui.use_3d) {
+		if (whichmode != DEMON_BUTTON_CAPTAINMODE)
+			demon_button_create_item_3d(whichmode);
+	} else {
+		if (demon_ui.buttonmode == whichmode)
+			demon_ui.buttonmode = DEMON_BUTTON_NOMODE;
+		else
+			demon_ui.buttonmode = whichmode;
+		set_demon_button_colors();
+	}
 }
 
 static void demon_home_button_pressed(void *x)
