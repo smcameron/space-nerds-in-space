@@ -11517,13 +11517,15 @@ static int l_clear_all(__attribute__((unused)) lua_State *l)
 
 static int process_create_item(struct game_client *c)
 {
-	unsigned char buffer[10];
+	unsigned char buffer[14];
 	unsigned char item_type;
-	double x, z, r;
+	double x, y, z, r;
 	int rc, i = -1;
 
-	rc = read_and_unpack_buffer(c, buffer, "bSS", &item_type,
-			&x, (int32_t) UNIVERSE_DIM, &z, (int32_t) UNIVERSE_DIM);
+	rc = read_and_unpack_buffer(c, buffer, "bSSS", &item_type,
+			&x, (int32_t) UNIVERSE_DIM,
+			&y, (int32_t) UNIVERSE_DIM,
+			&z, (int32_t) UNIVERSE_DIM);
 	if (rc)
 		return rc;
 
@@ -11533,29 +11535,29 @@ static int process_create_item(struct game_client *c)
 		i = add_ship(-1, 1);
 		break;
 	case OBJTYPE_STARBASE:
-		i = add_starbase(x, 0, z, 0, 0, 0, snis_randn(100), -1);
+		i = add_starbase(x, y, z, 0, 0, 0, snis_randn(100), -1);
 		break;
 	case OBJTYPE_PLANET:
 		r = (float) snis_randn(MAX_PLANET_RADIUS - MIN_PLANET_RADIUS) +
 					MIN_PLANET_RADIUS;
-		i = add_planet(x, 0.0, z, r, 0);
+		i = add_planet(x, y, z, r, 0);
 		break;
 	case OBJTYPE_ASTEROID:
-		i = add_asteroid(x, 0.0, z, 0.0, 0.0, 0.0);
+		i = add_asteroid(x, y, z, 0.0, 0.0, 0.0);
 		break;
 	case OBJTYPE_NEBULA:
 		r = (double) snis_randn(NEBULA_RADIUS) +
 				(double) MIN_NEBULA_RADIUS;
-		i = add_nebula(x, 0, z, 0, 0, 0, r);
+		i = add_nebula(x, y, z, 0, 0, 0, r);
 		break;
 	case OBJTYPE_SPACEMONSTER:
-		i = add_spacemonster(x, 0.0, z);
+		i = add_spacemonster(x, y, z);
 		break;
 	default:
 		break;
 	}
 	if (i >= 0)
-		set_object_location(&go[i], x, go[i].y, z);
+		set_object_location(&go[i], x, y, z);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }

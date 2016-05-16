@@ -10514,13 +10514,14 @@ static inline int between(double a, double b, double v)
 	return ((a <= v && v <= b) || (b <= v && v <= a));
 }
 
-static void demon_button_create_item(gdouble x, gdouble y)
+static void demon_button_create_item(gdouble x, gdouble y, gdouble z)
 {
-	double ux, uz;
+	double ux, uy, uz;
 	uint8_t item_type;
 
 	ux = demon_mousex_to_ux(x);
-	uz = demon_mousey_to_uz(y);
+	uz = demon_mousey_to_uz(z);
+	uy = y;
 
 	switch (demon_ui.buttonmode) {
 		case DEMON_BUTTON_SHIPMODE:
@@ -10544,8 +10545,8 @@ static void demon_button_create_item(gdouble x, gdouble y)
 		default:
 			return;
 	}
-	queue_to_server(packed_buffer_new("bbSS", OPCODE_CREATE_ITEM, item_type,
-			ux, (int32_t) UNIVERSE_DIM, uz, (int32_t) UNIVERSE_DIM));
+	queue_to_server(packed_buffer_new("bbSSS", OPCODE_CREATE_ITEM, item_type,
+			ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM, uz, (int32_t) UNIVERSE_DIM));
 }
 
 typedef int (*demon_select_test)(uint32_t oid);
@@ -10591,7 +10592,7 @@ static void demon_button3_release(int button, gdouble x, gdouble y)
 	/* If the item creation buttons selected, create item... */ 
 	if (demon_ui.buttonmode > DEMON_BUTTON_NOMODE &&
 		demon_ui.buttonmode < DEMON_BUTTON_DELETE) {
-		demon_button_create_item(x, y);
+		demon_button_create_item(x, 0.0, y);
 		return;
 	}
 
