@@ -11725,11 +11725,11 @@ static void show_demon_3d(GtkWidget *w)
 
 	/* Move camera towards desired position */
 	vec3_sub(&camera_pos_delta, &demon_ui.desired_camera_pos, &demon_ui.camera_pos);
-	vec3_mul_self(&camera_pos_delta, 0.1);
+	vec3_mul_self(&camera_pos_delta, 0.05);
 	vec3_add_self(&demon_ui.camera_pos, &camera_pos_delta);
 
 	/* Move camera towards desired orientation */
-	quat_nlerp(&demon_ui.camera_orientation,
+	quat_slerp(&demon_ui.camera_orientation,
 			&demon_ui.camera_orientation, &demon_ui.desired_camera_orientation, 0.05);
 
 	/* Setup 3d universe grid */
