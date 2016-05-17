@@ -2447,6 +2447,8 @@ static struct demon_ui {
 	double selectedx, selectedz;
 	double press_mousex, press_mousey;
 	double release_mousex, release_mousey;
+	int button2_pressed;
+	int button2_released;
 	int button3_pressed;
 	int button3_released;
 	int nselected;
@@ -10489,10 +10491,17 @@ static void demon_button_press(int button, gdouble x, gdouble y)
 {
 	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
 	if (demon_ui.use_3d) {
-		if (button == 3) {
-			demon_ui.press_mousex = x;
-			demon_ui.press_mousey = y;
+		demon_ui.press_mousex = x;
+		demon_ui.press_mousey = y;
+		switch (button) {
+		case 2:
+			demon_ui.button2_pressed = 1;
+			break;
+		case 3:
 			demon_ui.button3_pressed = 1;
+			break;
+		default:
+			break;
 		}
 	} else {
 		if (button == 3) {
@@ -10589,6 +10598,20 @@ static void demon_select_and_act(double sx1, double sy1,
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static void demon_button2_release_3d(int button, gdouble x, gdouble y)
+{
+	demon_ui.release_mousex = x;
+	demon_ui.release_mousey = y;
+	demon_ui.button2_released = 1;
+}
+
+static void demon_button3_release_3d(int button, gdouble x, gdouble y)
+{
+	demon_ui.release_mousex = x;
+	demon_ui.release_mousey = y;
+	demon_ui.button3_released = 1;
+}
+
 static void demon_button3_release(int button, gdouble x, gdouble y)
 {
 	int nselected;
@@ -10661,10 +10684,15 @@ static void demon_button2_release(int button, gdouble x, gdouble y)
 static void demon_button_release(int button, gdouble x, gdouble y)
 {
 	if (demon_ui.use_3d) {
-		if (button == 3) {
-			demon_ui.release_mousex = x;
-			demon_ui.release_mousey = y;
-			demon_ui.button3_released = 1;
+		switch (button) {
+		case 2:
+			demon_button2_release_3d(button, x, y);
+			break;
+		case 3:
+			demon_button3_release_3d(button, x, y);
+			break;
+		default:
+			break;
 		}
 		return;
 	}
@@ -11720,12 +11748,20 @@ static void show_demon_3d(GtkWidget *w)
 			color = MAGENTA;
 			break;
 		}
+		if (demon_id_selected(o->id)) {
+			if ((timer & 0x0f) < 0x03)
+				color = BLACK;
+			else
+				color = MAGENTA;
+		}
 
 		switch (o->type) {
 		case OBJTYPE_PLANET:
 			e = add_entity(instrumentecx, low_poly_sphere_mesh,  o->x, o->y, o->z, color);
-			if (e)
+			if (e) {
 				update_entity_scale(e, o->tsd.planet.radius);
+				entity_set_user_data(e, o);
+			}
 			break;
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_SHIP1:
@@ -11748,6 +11784,7 @@ static void show_demon_3d(GtkWidget *w)
 			e = add_entity(instrumentecx, m, o->x, o->y, o->z, color);
 			if (!e)
 				break;
+			entity_set_user_data(e, o);
 			update_entity_scale(e, scale);
 			update_entity_orientation(e, &o->orientation);
 			if (draw_label) {
@@ -11765,7 +11802,7 @@ static void show_demon_3d(GtkWidget *w)
 		}
 	}
 
-	/* Check if user has selected something on the screen */
+	/* Check if user is navigating to something on the screen */
 	if (demon_ui.button3_released) {
 		int found = 0;
 
@@ -11816,6 +11853,34 @@ static void show_demon_3d(GtkWidget *w)
 			/* Apply to local orientation */
 			quat_mul(&demon_ui.desired_camera_orientation, &local_rotation, &demon_ui.camera_orientation);
 			quat_normalize_self(&demon_ui.desired_camera_orientation);
+		}
+	}
+
+	/* Check if the user is trying to select something */
+	if (demon_ui.button2_released) {
+		struct snis_entity *o;
+
+		demon_ui.button2_released = 0;
+		for (i = 0; i <= get_entity_count(instrumentecx); i++) {
+			const double threshold = real_screen_width * 0.005;
+			float sx, sy;
+			struct entity *e;
+
+			e = get_entity(instrumentecx, i);
+			if (!entity_onscreen(e))
+				continue;
+			entity_get_screen_coords(e, &sx, &sy);
+			if (fabsf(sx - demon_ui.release_mousex) < threshold &&
+			    fabsf(sy - demon_ui.release_mousey) < threshold) {
+				o = entity_get_user_data(e);
+				if (!o) /* e.g. axes have no associated object */
+					continue;
+				if (demon_id_selected(o->id))
+					demon_deselect(o->id);
+				else
+					demon_select(o->id);
+				break;
+			}
 		}
 	}
 	pthread_mutex_unlock(&universe_mutex);
