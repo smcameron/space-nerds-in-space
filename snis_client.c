@@ -10661,21 +10661,23 @@ static void demon_button3_release(int button, gdouble x, gdouble y)
 static void demon_button2_release(int button, gdouble x, gdouble y)
 {
 	int i;
-	double dx, dz;
+	double dx, dy, dz;
 
 	if (demon_ui.nselected <= 0)
 		return;
 
 	/* Moving objects... */
 	dx = demon_mousex_to_ux(x) - demon_mousex_to_ux(demon_ui.move_from_x);
+	dy = 0.0;
 	dz = demon_mousey_to_uz(y) - demon_mousey_to_uz(demon_ui.move_from_y);
 	
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < demon_ui.nselected; i++) {
-		queue_to_server(packed_buffer_new("bwSS",
+		queue_to_server(packed_buffer_new("bwSSS",
 				OPCODE_DEMON_MOVE_OBJECT,
 				demon_ui.selected_id[i],
 				dx, (int32_t) UNIVERSE_DIM,
+				dy, (int32_t) UNIVERSE_DIM,
 				dz, (int32_t) UNIVERSE_DIM));
 	}
 	pthread_mutex_unlock(&universe_mutex);

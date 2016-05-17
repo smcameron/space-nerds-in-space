@@ -8597,11 +8597,12 @@ static int process_demon_move_object(struct game_client *c)
 	struct snis_entity *o;
 	unsigned char buffer[sizeof(struct demon_move_object_packet)];
 	uint32_t oid;
-	double dx, dz;
+	double dx, dy, dz;
 	int i, rc;
 
-	rc = read_and_unpack_buffer(c, buffer, "wSS", &oid,
+	rc = read_and_unpack_buffer(c, buffer, "wSSS", &oid,
 			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM);
 	if (rc)
 		return rc;
@@ -8614,7 +8615,7 @@ static int process_demon_move_object(struct game_client *c)
 	o = &go[i];
 	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)
 		add_warp_effect(o->id, o->x, o->y, o->z, o->x + dx, o->y, o->z + dz);
-	set_object_location(o, o->x + dx, o->y, o->z + dz);
+	set_object_location(o, o->x + dx, o->y + dy, o->z + dz);
 	o->timestamp = universe_timestamp;
 out:
 	pthread_mutex_unlock(&universe_mutex);

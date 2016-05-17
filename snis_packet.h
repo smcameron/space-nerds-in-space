@@ -558,7 +558,7 @@ struct request_robot_gripper_packet {
 struct demon_move_object_packet {
 	uint8_t opcode;
 	uint32_t id;
-	uint32_t x, y;
+	uint32_t x, y, z;
 };
 
 struct request_mainscreen_view_change {
