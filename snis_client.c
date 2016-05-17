@@ -11219,8 +11219,7 @@ static void set_demon_button_colors()
 	const int selected = UI_COLOR(demon_selected_button);
 	const int deselected = UI_COLOR(demon_deselected_button);
 
-	snis_button_set_color(demon_ui.demon_home_button,
-		demon_ui.buttonmode == DEMON_BUTTON_SHIPMODE ? selected : deselected);
+	snis_button_set_color(demon_ui.demon_home_button, deselected);
 	snis_button_set_color(demon_ui.demon_ship_button,
 		demon_ui.buttonmode == DEMON_BUTTON_SHIPMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_starbase_button,
