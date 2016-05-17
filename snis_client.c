@@ -2468,6 +2468,7 @@ static struct demon_ui {
 	struct button *demon_torpedo_button;
 	struct button *demon_phaser_button;
 	struct button *demon_2d3d_button;
+	struct button *demon_move_button;
 	struct snis_text_input_box *demon_input;
 	char input[100];
 	char error_msg[80];
@@ -11378,6 +11379,56 @@ static void demon_phaser_button_pressed(void *x)
 static void demon_2d3d_button_pressed(void *x)
 {
 	demon_ui.use_3d = !demon_ui.use_3d;
+	if (demon_ui.use_3d)
+		ui_unhide_widget(demon_ui.demon_move_button);
+	else
+		ui_hide_widget(demon_ui.demon_move_button);
+}
+
+static void demon_move_button_pressed(void *x)
+{
+	double avgx, avgy, avgz, dx, dy, dz;
+	int i, count;
+
+	if (!demon_ui.use_3d)
+		return;
+
+	avgx = 0.0;
+	avgy = 0.0;
+	avgy = 0.0;
+
+	count = 0;
+
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		if (!o->alive)
+			continue;
+		if (!demon_id_selected(o->id))
+			continue;
+		avgx += o->x;
+		avgy += o->y;
+		avgz += o->z;
+		count++;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+
+	if (count == 0)
+		return;
+	avgx /= (double) count;
+	avgy /= (double) count;
+	avgz /= (double) count;
+	dx = demon_ui.camera_pos.v.x - avgx;
+	dy = demon_ui.camera_pos.v.y - avgy;
+	dz = demon_ui.camera_pos.v.z - avgz;
+	for (i = 0; i < demon_ui.nselected; i++) {
+		queue_to_server(packed_buffer_new("bwSSS",
+				OPCODE_DEMON_MOVE_OBJECT,
+				demon_ui.selected_id[i],
+				dx, (int32_t) UNIVERSE_DIM,
+				dy, (int32_t) UNIVERSE_DIM,
+				dz, (int32_t) UNIVERSE_DIM));
+	}
 }
 
 static void init_demon_ui()
@@ -11447,6 +11498,9 @@ static void init_demon_ui()
 	demon_ui.demon_2d3d_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"2D/3D", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_2d3d_button_pressed, NULL);
+	demon_ui.demon_move_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
+			"MOVE", UI_COLOR(demon_deselected_button),
+			NANO_FONT, demon_move_button_pressed, NULL);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
@@ -11461,6 +11515,8 @@ static void init_demon_ui()
 	ui_add_button(demon_ui.demon_torpedo_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_phaser_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_2d3d_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_move_button, DISPLAYMODE_DEMON);
+	ui_hide_widget(demon_ui.demon_move_button);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
 	home_demon_camera();
 	demon_ui.camera_orientation = demon_ui.desired_camera_orientation;
