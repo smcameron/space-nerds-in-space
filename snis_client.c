@@ -2469,6 +2469,7 @@ static struct demon_ui {
 	struct button *demon_phaser_button;
 	struct button *demon_2d3d_button;
 	struct button *demon_move_button;
+	struct button *demon_scale_button;
 	struct snis_text_input_box *demon_input;
 	char input[100];
 	char error_msg[80];
@@ -2492,6 +2493,8 @@ static struct demon_ui {
 	union quat camera_orientation;
 	union vec3 desired_camera_pos;
 	union quat desired_camera_orientation;
+	float exaggerated_scale;
+	float desired_exaggerated_scale;
 } demon_ui;
 
 static void home_demon_camera(void)
@@ -11270,8 +11273,11 @@ static void set_demon_button_colors()
 static void demon_button_create_item_3d(int button_mode)
 {
 	union vec3 pos = { { 1.0, 0.0, 0.0 } };
+	float distance = demon_ui.exaggerated_scale * XKNOWN_DIM * 0.005 +
+			(1.0 - demon_ui.exaggerated_scale) * XKNOWN_DIM * 0.0005;
+
 	quat_rot_vec_self(&pos, &demon_ui.camera_orientation);
-	vec3_mul_self(&pos, XKNOWN_DIM * 0.005);
+	vec3_mul_self(&pos, distance);
 	vec3_add_self(&pos, &demon_ui.camera_pos);
 	demon_ui.buttonmode = button_mode;
 	set_demon_button_colors();
@@ -11379,10 +11385,13 @@ static void demon_phaser_button_pressed(void *x)
 static void demon_2d3d_button_pressed(void *x)
 {
 	demon_ui.use_3d = !demon_ui.use_3d;
-	if (demon_ui.use_3d)
+	if (demon_ui.use_3d) {
 		ui_unhide_widget(demon_ui.demon_move_button);
-	else
+		ui_unhide_widget(demon_ui.demon_scale_button);
+	} else {
 		ui_hide_widget(demon_ui.demon_move_button);
+		ui_hide_widget(demon_ui.demon_scale_button);
+	}
 }
 
 static void demon_move_button_pressed(void *x)
@@ -11429,6 +11438,14 @@ static void demon_move_button_pressed(void *x)
 				dy, (int32_t) UNIVERSE_DIM,
 				dz, (int32_t) UNIVERSE_DIM));
 	}
+}
+
+static void demon_scale_button_pressed(void *x)
+{
+	if (demon_ui.desired_exaggerated_scale > 0.0)
+		demon_ui.desired_exaggerated_scale = 0.0;
+	else
+		demon_ui.desired_exaggerated_scale = 1.0;
 }
 
 static void init_demon_ui()
@@ -11501,6 +11518,9 @@ static void init_demon_ui()
 	demon_ui.demon_move_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"MOVE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_move_button_pressed, NULL);
+	demon_ui.demon_scale_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
+			"EXAG SCALE", UI_COLOR(demon_deselected_button),
+			NANO_FONT, demon_scale_button_pressed, NULL);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
@@ -11516,11 +11536,15 @@ static void init_demon_ui()
 	ui_add_button(demon_ui.demon_phaser_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_2d3d_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_move_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_scale_button, DISPLAYMODE_DEMON);
 	ui_hide_widget(demon_ui.demon_move_button);
+	ui_hide_widget(demon_ui.demon_scale_button);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
 	home_demon_camera();
 	demon_ui.camera_orientation = demon_ui.desired_camera_orientation;
 	demon_ui.camera_pos = demon_ui.desired_camera_pos;
+	demon_ui.exaggerated_scale = 1.0;
+	demon_ui.desired_exaggerated_scale = 1.0;
 }
 
 static void calculate_new_2d_zoom(int direction, gdouble x, gdouble y, double zoom_amount,
@@ -11556,8 +11580,12 @@ static void calculate_new_demon_zoom(int direction, gdouble x, gdouble y)
 static void demon_3d_scroll(int direction, gdouble x, gdouble y)
 {
 	union vec3 delta = { { 0 } };
+	float scroll_factor;
 
-	delta.v.x = direction == GDK_SCROLL_UP ? delta.v.x = XKNOWN_DIM * 0.02 : -XKNOWN_DIM * 0.02;
+	scroll_factor = (demon_ui.exaggerated_scale * XKNOWN_DIM * 0.02) +
+			(1.0 - demon_ui.exaggerated_scale) * XKNOWN_DIM * 0.001;
+
+	delta.v.x = direction == GDK_SCROLL_UP ? scroll_factor : -scroll_factor;
 	quat_rot_vec_self(&delta, &demon_ui.camera_orientation);
 	vec3_add(&demon_ui.desired_camera_pos, &demon_ui.camera_pos, &delta);
 }
@@ -11732,6 +11760,10 @@ static void show_demon_3d(GtkWidget *w)
 	quat_slerp(&demon_ui.camera_orientation,
 			&demon_ui.camera_orientation, &demon_ui.desired_camera_orientation, 0.05);
 
+	/* Move exaggerate scale factor towards desired value */
+	if (demon_ui.desired_exaggerated_scale != demon_ui.exaggerated_scale)
+		demon_ui.exaggerated_scale += (demon_ui.desired_exaggerated_scale - demon_ui.exaggerated_scale) * 0.1;
+
 	/* Setup 3d universe grid */
 	for (i = 0; i < 10; i++) {
 		float x = i * XKNOWN_DIM / 10.0;
@@ -11843,7 +11875,8 @@ static void show_demon_3d(GtkWidget *w)
 			if (!e)
 				break;
 			entity_set_user_data(e, o);
-			update_entity_scale(e, scale);
+			update_entity_scale(e, demon_ui.exaggerated_scale * scale +
+					(1.0 - demon_ui.exaggerated_scale) * entity_get_scale(o->entity));
 			update_entity_orientation(e, &o->orientation);
 			if (draw_label) {
 				union vec3 opos = { { o->x, o->y, o->z } };
@@ -11883,10 +11916,12 @@ static void show_demon_3d(GtkWidget *w)
 				if (m) {
 					union vec3 right = { { 1.0, 0.0, 0.0, }, };
 					union vec3 up = { { 0.0, 0.0, 1.0 } };
+					float factor = (demon_ui.exaggerated_scale * XKNOWN_DIM / 100.0) +
+						(1.0 - demon_ui.exaggerated_scale) * XKNOWN_DIM / 2000.0;
 
 					vec3_sub(&dpos, &epos, &demon_ui.camera_pos);
 					vec3_normalize(&backoff, &dpos);
-					vec3_mul_self(&backoff, -XKNOWN_DIM / 100.0);
+					vec3_mul_self(&backoff, factor);
 					vec3_add_self(&dpos, &backoff);
 					vec3_add(&demon_ui.desired_camera_pos, &demon_ui.camera_pos, &dpos);
 					vec3_normalize_self(&dpos);
