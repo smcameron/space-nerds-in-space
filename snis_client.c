@@ -11871,6 +11871,8 @@ static void show_demon_3d(GtkWidget *w)
 				else
 					break;
 			}
+			if (m == torpedo_mesh)
+				m = torpedo_nav_mesh;
 			e = add_entity(instrumentecx, m, o->x, o->y, o->z, color);
 			if (!e)
 				break;
