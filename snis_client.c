@@ -2433,7 +2433,8 @@ static void navigation_dirkey(int h, int v, int r)
 
 static void request_demon_yaw_packet(uint32_t oid, uint8_t yaw)
 {
-	queue_to_server(packed_buffer_new("bwb", OPCODE_DEMON_YAW, oid, yaw));
+	queue_to_server(packed_buffer_new("bbwb", OPCODE_DEMON_ROT,
+				OPCODE_DEMON_ROT_YAW, oid, yaw));
 }
 
 static void request_demon_thrust_packet(uint32_t oid, uint8_t thrust)

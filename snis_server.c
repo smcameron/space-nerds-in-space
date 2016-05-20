@@ -8371,16 +8371,16 @@ static void do_robot_thrust(struct game_client *c, int thrust)
 
 typedef void (*do_yaw_function)(struct game_client *c, int yaw);
 
-static void do_generic_yaw(double *yawvel, int yaw, double max_yaw, double yaw_inc,
-				double yaw_inc_fine)
+static void do_generic_axis_rot(double *axisvel, int amount, double max_amount,
+				double amount_inc, double amount_inc_fine)
 {
-	double delta_yaw = abs(yaw) > 1 ? yaw_inc_fine : yaw_inc;
-	if (yaw > 0) {
-		if (*yawvel < max_yaw)
-			*yawvel += delta_yaw;
+	double delta_amount = abs(amount) > 1 ? amount_inc_fine : amount_inc;
+	if (amount > 0) {
+		if (*axisvel < max_amount)
+			*axisvel += delta_amount;
 	} else {
-		if (*yawvel > -max_yaw)
-			*yawvel -= delta_yaw;
+		if (*axisvel > -max_amount)
+			*axisvel -= delta_amount;
 	}
 }
 
@@ -8391,7 +8391,7 @@ static void do_yaw(struct game_client *c, int yaw)
 		(MAX_YAW_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
 
 	ship->tsd.ship.computer_steering_time_left = 0; /* cancel any computer steering in progress */
-	do_generic_yaw(&ship->tsd.ship.yaw_velocity, yaw, max_yaw_velocity,
+	do_generic_axis_rot(&ship->tsd.ship.yaw_velocity, yaw, max_yaw_velocity,
 			YAW_INCREMENT, YAW_INCREMENT_FINE);
 }
 
@@ -8402,7 +8402,7 @@ static void do_pitch(struct game_client *c, int pitch)
 		(MAX_PITCH_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
 
 	ship->tsd.ship.computer_steering_time_left = 0; /* cancel any computer steering in progress */
-	do_generic_yaw(&ship->tsd.ship.pitch_velocity, pitch, max_pitch_velocity,
+	do_generic_axis_rot(&ship->tsd.ship.pitch_velocity, pitch, max_pitch_velocity,
 			PITCH_INCREMENT, PITCH_INCREMENT_FINE);
 }
 
@@ -8413,7 +8413,7 @@ static void do_roll(struct game_client *c, int roll)
 		(MAX_ROLL_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
 
 	ship->tsd.ship.computer_steering_time_left = 0; /* cancel any computer steering in progress */
-	do_generic_yaw(&ship->tsd.ship.roll_velocity, roll, max_roll_velocity,
+	do_generic_axis_rot(&ship->tsd.ship.roll_velocity, roll, max_roll_velocity,
 			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
 }
 
@@ -8422,7 +8422,7 @@ static void do_sciball_yaw(struct game_client *c, int yaw)
 	struct snis_entity *ship = &go[c->ship_index];
 	const double max_yaw_velocity = MAX_YAW_VELOCITY;
 
-	do_generic_yaw(&ship->tsd.ship.sciball_yawvel, yaw, max_yaw_velocity,
+	do_generic_axis_rot(&ship->tsd.ship.sciball_yawvel, yaw, max_yaw_velocity,
 			YAW_INCREMENT, YAW_INCREMENT_FINE);
 }
 
@@ -8431,7 +8431,7 @@ static void do_sciball_pitch(struct game_client *c, int pitch)
 	struct snis_entity *ship = &go[c->ship_index];
 	double max_pitch_velocity = MAX_PITCH_VELOCITY;
 
-	do_generic_yaw(&ship->tsd.ship.sciball_pitchvel, pitch, max_pitch_velocity,
+	do_generic_axis_rot(&ship->tsd.ship.sciball_pitchvel, pitch, max_pitch_velocity,
 			PITCH_INCREMENT, PITCH_INCREMENT_FINE);
 }
 
@@ -8440,7 +8440,7 @@ static void do_sciball_roll(struct game_client *c, int roll)
 	struct snis_entity *ship = &go[c->ship_index];
 	double max_roll_velocity = MAX_ROLL_VELOCITY;
 
-	do_generic_yaw(&ship->tsd.ship.sciball_rollvel, roll, max_roll_velocity,
+	do_generic_axis_rot(&ship->tsd.ship.sciball_rollvel, roll, max_roll_velocity,
 			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
 }
 
@@ -8449,7 +8449,7 @@ static void do_manual_gunyaw(struct game_client *c, int yaw)
 	struct snis_entity *ship = &go[c->ship_index];
 	double max_yaw_velocity = MAX_YAW_VELOCITY;
 
-	do_generic_yaw(&ship->tsd.ship.weap_yawvel, yaw, max_yaw_velocity,
+	do_generic_axis_rot(&ship->tsd.ship.weap_yawvel, yaw, max_yaw_velocity,
 			YAW_INCREMENT, YAW_INCREMENT_FINE);
 }
 
@@ -8458,7 +8458,7 @@ static void do_manual_gunpitch(struct game_client *c, int pitch)
 	struct snis_entity *ship = &go[c->ship_index];
 	double max_pitch_velocity = MAX_PITCH_VELOCITY;
 
-	do_generic_yaw(&ship->tsd.ship.weap_pitchvel, pitch, max_pitch_velocity,
+	do_generic_axis_rot(&ship->tsd.ship.weap_pitchvel, pitch, max_pitch_velocity,
 			PITCH_INCREMENT, PITCH_INCREMENT_FINE);
 }
 
@@ -8466,8 +8466,24 @@ static void do_demon_yaw(struct snis_entity *o, int yaw)
 {
 	double max_yaw_velocity = MAX_YAW_VELOCITY;
 
-	do_generic_yaw(&o->tsd.ship.yaw_velocity, yaw, max_yaw_velocity,
+	do_generic_axis_rot(&o->tsd.ship.yaw_velocity, yaw, max_yaw_velocity,
 			YAW_INCREMENT, YAW_INCREMENT_FINE);
+}
+
+static void do_demon_pitch(struct snis_entity *o, int pitch)
+{
+	double max_pitch_velocity = MAX_PITCH_VELOCITY;
+
+	do_generic_axis_rot(&o->tsd.ship.pitch_velocity, pitch, max_pitch_velocity,
+			PITCH_INCREMENT, PITCH_INCREMENT_FINE);
+}
+
+static void do_demon_roll(struct snis_entity *o, int roll)
+{
+	double max_roll_velocity = MAX_PITCH_VELOCITY;
+
+	do_generic_axis_rot(&o->tsd.ship.roll_velocity, roll, max_roll_velocity,
+			PITCH_INCREMENT, PITCH_INCREMENT_FINE);
 }
 
 static void do_gun_yaw(struct game_client *c, int yaw)
@@ -8475,7 +8491,7 @@ static void do_gun_yaw(struct game_client *c, int yaw)
 	/* FIXME combine this with do_yaw somehow */
 	struct snis_entity *ship = &go[c->ship_index];
 
-	do_generic_yaw(&ship->tsd.ship.gun_yaw_velocity, yaw,
+	do_generic_axis_rot(&ship->tsd.ship.gun_yaw_velocity, yaw,
 				MAX_GUN_YAW_VELOCITY, GUN_YAW_INCREMENT,
 				GUN_YAW_INCREMENT_FINE);
 }
@@ -8484,7 +8500,7 @@ static void do_sci_yaw(struct game_client *c, int yaw)
 {
 	struct snis_entity *ship = &go[c->ship_index];
 
-	do_generic_yaw(&ship->tsd.ship.sci_yaw_velocity, yaw,
+	do_generic_axis_rot(&ship->tsd.ship.sci_yaw_velocity, yaw,
 				MAX_SCI_YAW_VELOCITY, SCI_YAW_INCREMENT,
 				SCI_YAW_INCREMENT_FINE);
 }
@@ -8494,7 +8510,7 @@ static void do_robot_yaw(struct game_client *c, int yaw)
 	struct damcon_data *d = &bridgelist[c->bridge].damcon;
 	struct snis_damcon_entity *r = d->robot;
 
-	do_generic_yaw(&r->tsd.robot.yaw_velocity, yaw,
+	do_generic_axis_rot(&r->tsd.robot.yaw_velocity, yaw,
 			2.0 * MAX_SCI_YAW_VELOCITY, SCI_YAW_INCREMENT,
 				SCI_YAW_INCREMENT_FINE);
 }
@@ -8503,7 +8519,7 @@ static void do_sci_bw_yaw(struct game_client *c, int yaw)
 {
 	struct snis_entity *ship = &go[c->ship_index];
 
-	do_generic_yaw(&ship->tsd.ship.sci_beam_width, yaw,
+	do_generic_axis_rot(&ship->tsd.ship.sci_beam_width, yaw,
 			MAX_SCI_BW_YAW_VELOCITY, SCI_BW_YAW_INCREMENT,
 			SCI_BW_YAW_INCREMENT_FINE);
 	ship->tsd.ship.sci_beam_width = fabs(ship->tsd.ship.sci_beam_width);
@@ -12023,15 +12039,15 @@ static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 	return 0;
 }
 
-static int process_demon_yaw(struct game_client *c)
+static int process_demon_rot(struct game_client *c)
 {
 	unsigned char buffer[10];
 	struct snis_entity *o;
 	uint32_t oid;
-	uint8_t yaw;
+	uint8_t subcmd, amount;
 	int i, rc;
 
-	rc = read_and_unpack_buffer(c, buffer, "wb", &oid, &yaw);
+	rc = read_and_unpack_buffer(c, buffer, "bwb", &subcmd, &oid, &amount);
 	if (rc)
 		return rc;
 	if (!(c->role & ROLE_DEMON))
@@ -12042,19 +12058,64 @@ static int process_demon_yaw(struct game_client *c)
 		goto out;
 	o = &go[i];
 
-	switch (yaw) {
-	case YAW_LEFT:
-		do_demon_yaw(o, 1);
+	switch (subcmd) {
+	case OPCODE_DEMON_ROT_YAW: {
+		switch (amount) {
+		case YAW_LEFT:
+			do_demon_yaw(o, 1);
+			break;
+		case YAW_RIGHT:
+			do_demon_yaw(o, -1);
+			break;
+		case YAW_LEFT_FINE:
+			do_demon_yaw(o, 2);
+			break;
+		case YAW_RIGHT_FINE:
+			do_demon_yaw(o, -2);
+			break;
+		default:
+			break;
+		}
 		break;
-	case YAW_RIGHT:
-		do_demon_yaw(o, -1);
+	}
+	case OPCODE_DEMON_ROT_PITCH: {
+		switch (amount) {
+		case PITCH_FORWARD:
+			do_demon_pitch(o, 1);
+			break;
+		case PITCH_BACK:
+			do_demon_pitch(o, -1);
+			break;
+		case PITCH_FORWARD_FINE:
+			do_demon_pitch(o, 2);
+			break;
+		case PITCH_BACK_FINE:
+			do_demon_pitch(o, -2);
+			break;
+		default:
+			break;
+		}
 		break;
-	case YAW_LEFT_FINE:
-		do_demon_yaw(o, 2);
+	}
+	case OPCODE_DEMON_ROT_ROLL: {
+		switch (amount) {
+		case ROLL_LEFT:
+			do_demon_roll(o, 1);
+			break;
+		case ROLL_RIGHT:
+			do_demon_roll(o, -1);
+			break;
+		case ROLL_LEFT_FINE:
+			do_demon_roll(o, 2);
+			break;
+		case ROLL_RIGHT_FINE:
+			do_demon_roll(o, -2);
+			break;
+		default:
+			break;
+		}
 		break;
-	case YAW_RIGHT_FINE:
-		do_demon_yaw(o, -2);
-		break;
+	}
 	default:
 		break;
 	}
@@ -12502,8 +12563,8 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
-		case OPCODE_DEMON_YAW:
-			rc = process_demon_yaw(c);
+		case OPCODE_DEMON_ROT:
+			rc = process_demon_rot(c);
 			if (rc)
 				goto protocol_error;
 			break;
