@@ -2431,10 +2431,9 @@ static void navigation_dirkey(int h, int v, int r)
 	}
 }
 
-static void request_demon_yaw_packet(uint32_t oid, uint8_t yaw)
+static void request_demon_rot_packet(uint32_t oid, uint8_t kind, uint8_t amount)
 {
-	queue_to_server(packed_buffer_new("bbwb", OPCODE_DEMON_ROT,
-				OPCODE_DEMON_ROT_YAW, oid, yaw));
+	queue_to_server(packed_buffer_new("bbwb", OPCODE_DEMON_ROT, kind, oid, amount));
 }
 
 static void request_demon_thrust_packet(uint32_t oid, uint8_t thrust)
@@ -2513,9 +2512,9 @@ static void home_demon_camera(void)
 	quat_from_u2v(&demon_ui.desired_camera_orientation, &right, &camera_lookat, &up);
 }
 
-static void demon_dirkey(int h, int v)
+static void demon_dirkey(int h, int v, int r, int t)
 {
-	uint8_t yaw, thrust;
+	uint8_t yaw, pitch, roll, thrust;
 	static int last_time = 0;
 	uint32_t oid;
 	int fine;
@@ -2529,15 +2528,23 @@ static void demon_dirkey(int h, int v)
 	fine = 2 * (timer - last_time > 5);
 	last_time = timer;
 
-	if (!h && !v)
+	if (!h && !v && !r && !t)
 		return;
 
 	if (h) {
 		yaw = h < 0 ? YAW_LEFT + fine : YAW_RIGHT + fine;
-		request_demon_yaw_packet(oid, yaw);
+		request_demon_rot_packet(oid, OPCODE_DEMON_ROT_YAW, yaw);
 	}
 	if (v) {
-		thrust = v < 0 ? THRUST_BACKWARDS : THRUST_FORWARDS;
+		pitch = v < 0 ? PITCH_BACK + fine : PITCH_FORWARD + fine;
+		request_demon_rot_packet(oid, OPCODE_DEMON_ROT_PITCH, pitch);
+	}
+	if (r) {
+		roll = r < 0 ? ROLL_LEFT + fine : ROLL_RIGHT + fine;
+		request_demon_rot_packet(oid, OPCODE_DEMON_ROT_ROLL, roll);
+	}
+	if (t) {
+		thrust = THRUST_FORWARDS;
 		request_demon_thrust_packet(oid, thrust);
 	}
 }
@@ -2724,7 +2731,7 @@ static void do_view_mode_change()
 
 static void comms_dirkey(int h, int v);
 
-static void do_dirkey(int h, int v, int r)
+static void do_dirkey(int h, int v, int r, int t)
 {
 	v = v * vertical_controls_inverted;
 
@@ -2751,7 +2758,7 @@ static void do_dirkey(int h, int v, int r)
 			damcon_dirkey(h, v);
 			break;
 		case DISPLAYMODE_DEMON:
-			demon_dirkey(h, v);
+			demon_dirkey(h, v, r, t);
 			break;
 		case DISPLAYMODE_COMMS:
 			comms_dirkey(h, v);
@@ -3046,7 +3053,7 @@ static void do_pagedown(void);
 
 static void deal_with_keyboard()
 {
-	int h, v, z, r;
+	int h, v, z, r, t;
 	int sbh, sbv, sbr; /* sciball keys */
 
 	static const int keyboard_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
@@ -3057,6 +3064,7 @@ static void deal_with_keyboard()
 	v = 0;
 	r = 0;
 	z = 0;
+	t = 0;
 	sbh = 0;
 	sbv = 0;
 	sbr = 0;
@@ -3073,8 +3081,10 @@ static void deal_with_keyboard()
 		r = 1;
 	if (kbstate.pressed[keyrollright])
 		r = -1;
+	if (kbstate.pressed[keythrust])
+		t = 1;
 	if (h || v || r)
-		do_dirkey(h, v, r);
+		do_dirkey(h, v, r, t);
 	if (kbstate.pressed[key_page_up])
 		do_pageup();
 	if (kbstate.pressed[key_page_down])

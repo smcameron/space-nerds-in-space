@@ -5630,15 +5630,23 @@ static void player_move(struct snis_entity *o)
 
 static void demon_ship_move(struct snis_entity *o)
 {
-	o->vx = o->tsd.ship.velocity * cos(o->heading);
-	o->vz = o->tsd.ship.velocity * -sin(o->heading);
+	union vec3 right = { { 1.0, 0.0, 0.0 } };
+
+	quat_rot_vec_self(&right, &o->orientation);
+	o->vx = o->tsd.ship.velocity * right.v.x;
+	o->vy = o->tsd.ship.velocity * right.v.y;
+	o->vz = o->tsd.ship.velocity * right.v.z;
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
-	o->heading += o->tsd.ship.yaw_velocity;
-	normalize_angle(&o->heading);
-	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
+	quat_apply_relative_yaw_pitch_roll(&o->orientation,
+			o->tsd.ship.yaw_velocity,
+			o->tsd.ship.pitch_velocity,
+			o->tsd.ship.roll_velocity);
+
 	o->timestamp = universe_timestamp;
 
 	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, YAW_DAMPING);
+	damp_yaw_velocity(&o->tsd.ship.pitch_velocity, YAW_DAMPING);
+	damp_yaw_velocity(&o->tsd.ship.roll_velocity, YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.gun_yaw_velocity, GUN_YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.sci_yaw_velocity, SCI_YAW_DAMPING);
 
@@ -8480,10 +8488,10 @@ static void do_demon_pitch(struct snis_entity *o, int pitch)
 
 static void do_demon_roll(struct snis_entity *o, int roll)
 {
-	double max_roll_velocity = MAX_PITCH_VELOCITY;
+	double max_roll_velocity = MAX_ROLL_VELOCITY;
 
 	do_generic_axis_rot(&o->tsd.ship.roll_velocity, roll, max_roll_velocity,
-			PITCH_INCREMENT, PITCH_INCREMENT_FINE);
+			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
 }
 
 static void do_gun_yaw(struct game_client *c, int yaw)
@@ -12178,9 +12186,9 @@ static int process_demon_fire_torpedo(struct game_client *c)
 {
 	struct snis_entity *o;
 	unsigned char buffer[10];
-	double vx, vz;
 	uint32_t oid;
 	int i, rc;
+	union vec3 tv = { { 1.0, 0.0, 0.0 } };
 
 	rc = read_and_unpack_buffer(c, buffer, "w", &oid);
 	if (rc)
@@ -12195,9 +12203,12 @@ static int process_demon_fire_torpedo(struct game_client *c)
 	if (o->type != OBJTYPE_SHIP2)
 		goto out;
 
-	vx = TORPEDO_VELOCITY * cos(o->heading);
-	vz = TORPEDO_VELOCITY * -sin(o->heading);
-	add_torpedo(o->x, o->y, o->z, vx, 0.0, vz, o->id); /* vy is wrong here... */
+	quat_rot_vec_self(&tv, &o->orientation);
+	vec3_mul_self(&tv, TORPEDO_VELOCITY);
+	tv.v.x += o->vx;
+	tv.v.y += o->vy;
+	tv.v.z += o->vz;
+	add_torpedo(o->x, o->y, o->z, tv.v.x, tv.v.y, tv.v.z, o->id);
 out:
 	pthread_mutex_unlock(&universe_mutex);
 
