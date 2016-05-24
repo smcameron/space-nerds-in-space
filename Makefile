@@ -393,7 +393,7 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lcrypto -lssl
 
 
 PROGS=snis_server snis_client snis_limited_client mesh_viewer snis_multiverse
-BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/text_to_speech.sh
+BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/text_to_speech.sh snis_multiverse
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap
 
 # model directory
