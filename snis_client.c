@@ -11300,9 +11300,8 @@ static void demon_button_create_item_3d(int button_mode)
 
 static void demon_modebutton_pressed(int whichmode)
 {
-	if (demon_ui.use_3d) {
-		if (whichmode != DEMON_BUTTON_CAPTAINMODE)
-			demon_button_create_item_3d(whichmode);
+	if (demon_ui.use_3d && whichmode != DEMON_BUTTON_CAPTAINMODE) {
+		demon_button_create_item_3d(whichmode);
 	} else {
 		if (demon_ui.buttonmode == whichmode)
 			demon_ui.buttonmode = DEMON_BUTTON_NOMODE;
