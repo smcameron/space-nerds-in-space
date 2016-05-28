@@ -4273,6 +4273,9 @@ static void delete_object(uint32_t id)
 	if (i < 0)
 		return;
 	go[i].alive = 0;
+	/* if demon screen was captain of this thing, it isn't now. */
+	if (i == demon_ui.captain_of)
+		demon_ui.captain_of = -1;
 	remove_entity(ecx, go[i].entity);
 	go[i].entity = NULL;
 	free_spacemonster_data(&go[i]);
