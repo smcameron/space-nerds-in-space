@@ -11436,7 +11436,7 @@ static void demon_move_button_pressed(void *x)
 
 	avgx = 0.0;
 	avgy = 0.0;
-	avgy = 0.0;
+	avgz = 0.0;
 
 	count = 0;
 
