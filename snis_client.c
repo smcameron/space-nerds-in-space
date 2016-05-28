@@ -11978,6 +11978,20 @@ static void show_demon_3d(GtkWidget *w)
 					vec3_normalize_self(&dpos);
 					quat_rot_vec_self(&up, &demon_ui.camera_orientation);
 					quat_from_u2v(&demon_ui.desired_camera_orientation, &right, &dpos, &up);
+					if (demon_ui.captain_of != -1) {
+						double dx, dy, dz;
+
+						dx = demon_ui.desired_camera_pos.v.x - go[demon_ui.captain_of].x;
+						dy = demon_ui.desired_camera_pos.v.y - go[demon_ui.captain_of].y;
+						dz = demon_ui.desired_camera_pos.v.z - go[demon_ui.captain_of].z;
+						queue_to_server(packed_buffer_new("bwSSSQ",
+								OPCODE_DEMON_MOVE_OBJECT,
+								go[demon_ui.captain_of].id,
+								dx, (int32_t) UNIVERSE_DIM,
+								dy, (int32_t) UNIVERSE_DIM,
+								dz, (int32_t) UNIVERSE_DIM,
+								&demon_ui.desired_camera_orientation));
+					}
 					found = 1;
 					break;
 				}
