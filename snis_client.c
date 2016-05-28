@@ -10459,6 +10459,8 @@ static int demon_id_selected(uint32_t id)
 
 static void demon_select(uint32_t id)
 {
+	int old_captain = -1;
+
 	if (demon_ui.nselected >= MAX_DEMON_SELECTABLE)
 		return;
 	demon_ui.selected_id[demon_ui.nselected] = id;
@@ -10469,15 +10471,22 @@ static void demon_select(uint32_t id)
 		if (demon_ui.captain_of != -1) {
 			queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_DISPOSSESS,
 				go[demon_ui.captain_of].id));
+				old_captain = demon_ui.captain_of;
+				demon_ui.captain_of = -1;
 				demon_ui.captain_of = -1;
 		}
 		if (index >= 0 && (go[index].type == OBJTYPE_SHIP2 ||
 			go[index].type == OBJTYPE_STARBASE)) {
-			demon_ui.captain_of = lookup_object_by_id(id);
-			demon_ui.exaggerated_scale_active = 0;
-			demon_ui.desired_exaggerated_scale = 0.0;
-			queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_POSSESS,
-				go[demon_ui.captain_of].id));
+			int new_captain;
+
+			new_captain = lookup_object_by_id(id);
+			if (new_captain != old_captain) {
+				demon_ui.captain_of = lookup_object_by_id(id);
+				demon_ui.exaggerated_scale_active = 0;
+				demon_ui.desired_exaggerated_scale = 0.0;
+				queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_POSSESS,
+					go[demon_ui.captain_of].id));
+			}
 		}
 	}
 }
@@ -10487,10 +10496,15 @@ static void demon_deselect(uint32_t id)
 	int i;
 	for (i = 0; i < demon_ui.nselected; i++) {
 		if (demon_ui.selected_id[i] == id) {
-			if (demon_ui.captain_of == id && id != -1) {
-				queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_DISPOSSESS,
-					go[demon_ui.captain_of].id));
-				demon_ui.captain_of = -1;
+			int index;
+
+			if (demon_ui.captain_of != -1) {
+				index = lookup_object_by_id(id);
+				if (demon_ui.captain_of == index) {
+					queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_DISPOSSESS,
+						go[demon_ui.captain_of].id));
+					demon_ui.captain_of = -1;
+				}
 			}
 			if (i == demon_ui.nselected - 1) {
 				demon_ui.nselected--;
