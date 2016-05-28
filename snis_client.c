@@ -11747,7 +11747,6 @@ static void show_demon_2d(GtkWidget *w)
 	}
 	show_demon_groups(w);
 	demon_cmd_help(w);
-	show_common_screen(w, "DEMON");
 }
 
 static void show_demon_3d(GtkWidget *w)
@@ -12035,7 +12034,6 @@ static void show_demon_3d(GtkWidget *w)
 
 	show_demon_groups(w);
 	demon_cmd_help(w);
-	show_common_screen(w, "DEMON");
 	remove_all_entity(instrumentecx);
 }
 
@@ -12045,6 +12043,11 @@ static void show_demon(GtkWidget *w)
 		show_demon_3d(w);
 	else
 		show_demon_2d(w);
+	if (demon_ui.captain_of != -1) {
+		sng_set_foreground(WHITE);
+		sng_center_xy_draw_string("CAPTAIN MODE", SMALL_FONT, SCREEN_WIDTH / 2, txy(20));
+	}
+	show_common_screen(w, "DEMON");
 }
 
 struct warp_star {
