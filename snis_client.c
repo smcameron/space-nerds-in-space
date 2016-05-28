@@ -10708,12 +10708,14 @@ static void demon_button2_release(int button, gdouble x, gdouble y)
 	
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < demon_ui.nselected; i++) {
-		queue_to_server(packed_buffer_new("bwSSS",
+		int index = lookup_object_by_id(demon_ui.selected_id[i]);
+		queue_to_server(packed_buffer_new("bwSSSQ",
 				OPCODE_DEMON_MOVE_OBJECT,
 				demon_ui.selected_id[i],
 				dx, (int32_t) UNIVERSE_DIM,
 				dy, (int32_t) UNIVERSE_DIM,
-				dz, (int32_t) UNIVERSE_DIM));
+				dz, (int32_t) UNIVERSE_DIM,
+				&go[index].orientation));
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -11461,12 +11463,15 @@ static void demon_move_button_pressed(void *x)
 	dy = demon_ui.camera_pos.v.y - avgy;
 	dz = demon_ui.camera_pos.v.z - avgz;
 	for (i = 0; i < demon_ui.nselected; i++) {
-		queue_to_server(packed_buffer_new("bwSSS",
-				OPCODE_DEMON_MOVE_OBJECT,
-				demon_ui.selected_id[i],
-				dx, (int32_t) UNIVERSE_DIM,
-				dy, (int32_t) UNIVERSE_DIM,
-				dz, (int32_t) UNIVERSE_DIM));
+		int index = lookup_object_by_id(demon_ui.selected_id[i]);
+		if (index >= 0)
+			queue_to_server(packed_buffer_new("bwSSSQ",
+					OPCODE_DEMON_MOVE_OBJECT,
+					demon_ui.selected_id[i],
+					dx, (int32_t) UNIVERSE_DIM,
+					dy, (int32_t) UNIVERSE_DIM,
+					dz, (int32_t) UNIVERSE_DIM,
+					&go[index].orientation));
 	}
 }
 

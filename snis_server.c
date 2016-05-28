@@ -8623,11 +8623,13 @@ static int process_demon_move_object(struct game_client *c)
 	uint32_t oid;
 	double dx, dy, dz;
 	int i, rc;
+	union quat orientation;
 
-	rc = read_and_unpack_buffer(c, buffer, "wSSS", &oid,
+	rc = read_and_unpack_buffer(c, buffer, "wSSSQ", &oid,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
-			&dz, (int32_t) UNIVERSE_DIM);
+			&dz, (int32_t) UNIVERSE_DIM,
+			&orientation);
 	if (rc)
 		return rc;
 	if (!(c->role & ROLE_DEMON))
@@ -8640,6 +8642,7 @@ static int process_demon_move_object(struct game_client *c)
 	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)
 		add_warp_effect(o->id, o->x, o->y, o->z, o->x + dx, o->y, o->z + dz);
 	set_object_location(o, o->x + dx, o->y + dy, o->z + dz);
+	o->orientation = orientation;
 	o->timestamp = universe_timestamp;
 out:
 	pthread_mutex_unlock(&universe_mutex);

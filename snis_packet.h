@@ -562,6 +562,7 @@ struct demon_move_object_packet {
 	uint8_t opcode;
 	uint32_t id;
 	uint32_t x, y, z;
+	union quat q;
 };
 
 struct request_mainscreen_view_change {
