@@ -741,30 +741,61 @@ static char *Planet[] = {
 	"system",
 	"planet",
 	"world",
-	"planetoid",
 	"place",
 	"locale",
 	"region",
 };
 
+static char *GasGiantClimate[] = {
+	"vaporous",
+	"gaseous",
+	"cloudy",
+	"heavy",
+	"huge",
+	"monstrous",
+	"gigantic",
+	"enormous",
+	"ginormous",
+	"gigantic",
+	"gargantuan",
+	"beautiful",
+	"striking",
+	"gorgeous",
+	"wondrous",
+	"amazing",
+	"hydrogenous",
+};
+
+static char *RockyClimate[] = {
+	"dessicated",
+	"dry",
+	"hot",
+	"cold",
+	"cratered",
+	"rocky",
+	"mountainous",
+	"rugged",
+	"dry",
+	"exposed",
+};
+
 static char *Climate[] = {
 	"tropical",
-	"icy",
-	"desert",
-	"aqueous",
-	"gaseous",
-	"mountainous",
-	"featureless",
-	"stormy",
 	"pleasant",
+	"not entirely unpleasant",
+	"somewhat cold",
+	"mostly desert",
+	"watery",
+	"mountainous",
+	"stormy",
 	"warm",
 	"cold",
 	"frozen",
 	"hot",
-	"dry",
 	"snowy",
 	"rainy",
 	"temperate",
+	"humid",
 };
 	
 static char *Be_advised[] = {
@@ -1389,8 +1420,18 @@ static char *planet(struct mtwist_state *mt)
 	return random_word(mt, Planet, ARRAYSIZE(Planet));
 }
 
-static char *climate(struct mtwist_state *mt)
+static char *climate(struct mtwist_state *mt, enum planet_type ptype)
 {
+	switch (ptype) {
+	case planet_type_gas_giant:
+		return random_word(mt, GasGiantClimate, ARRAYSIZE(GasGiantClimate));
+	case planet_type_earthlike:
+		return random_word(mt, Climate, ARRAYSIZE(Climate));
+	case planet_type_rocky:
+		return random_word(mt, RockyClimate, ARRAYSIZE(RockyClimate));
+	default:
+		break;
+	}
 	return random_word(mt, Climate, ARRAYSIZE(Climate));
 }
 
@@ -1460,7 +1501,8 @@ static char *post_nominal_letters(struct mtwist_state *mt)
 	return random_word(mt, PostNominalLetters, ARRAYSIZE(PostNominalLetters));
 }
 
-void planet_description(struct mtwist_state *mt, char *buffer, int buflen, int line_len)
+void planet_description(struct mtwist_state *mt, char *buffer, int buflen,
+			int line_len, enum planet_type ptype)
 {
 	char do_avoid[100];
 
@@ -1468,7 +1510,7 @@ void planet_description(struct mtwist_state *mt, char *buffer, int buflen, int l
 	do_avoid[0] = toupper(do_avoid[0]);
 
 	snprintf(buffer, buflen, "This %s %s %s %s %s %s %s and %s %s %s %s. %s the %s %s.  %s %s.\n",
-		climate(mt), planet(mt), known_for(mt), producing(mt),
+		climate(mt, ptype), planet(mt), known_for(mt), producing(mt),
 			exceptional(mt), qnationality(mt), product(mt),
 			known_for(mt), exceptional(mt), qnationality(mt),
 			culture(mt),
@@ -1617,6 +1659,17 @@ void robot_name(struct mtwist_state *mt, char *buffer, int buflen)
 	strncpy(buffer, name, buflen);
 }
 
+enum planet_type planet_type_from_string(char *s)
+{
+	if (strcmp(s, "gas-giant") == 0)
+		return planet_type_gas_giant;
+	if (strcmp(s, "earth-like") == 0)
+		return planet_type_earthlike;
+	if (strcmp(s, "rocky") == 0)
+		return planet_type_rocky;
+	return planet_type_rocky;
+}
+
 #ifdef TEST_TAUNT
 #include "mtwist.h"
 #include <sys/time.h>
@@ -1628,17 +1681,26 @@ static void set_random_seed(struct mtwist_state **mt)
 	*mt = mtwist_init(tv.tv_usec);
 }
 
+enum planet_type PlanetType(struct mtwist_state *mt)
+{
+	int x;
+	x = (int) (((double) mtwist_next(mt) / (double) (0xffffffff)) * 3);
+	return (enum planet_type) x;
+}
+
 int main(int argc, char *argv[])
 {
 	int i;
 	char buffer[1000];
 	struct mtwist_state *mt;
+	enum planet_type pt;
 
 	set_random_seed(&mt);
 
 	for (i = 0; i < 1; i++) {
 		/* infinite_taunt(buffer, sizeof(buffer) - 1); */
-		planet_description(mt, buffer, sizeof(buffer) - 1, 60);
+		pt = PlanetType(mt);
+		planet_description(mt, buffer, sizeof(buffer) - 1, 60, pt);
 		/* cop_attack_warning(mt, buffer, sizeof(buffer) - 1, 50); */
 		/* character_name(mt, buffer, sizeof(buffer) - 1); */
 		/* robot_name(mt, buffer, sizeof(buffer) - 1); */

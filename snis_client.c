@@ -10172,21 +10172,20 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		static char planet_desc[500];
 		char tmpbuf[60];
 		int i, len, j;
+		char *planet_type_str;
 
 		struct planet_data *p = &curr_science_guy->tsd.planet;
 
 		if (p->description_seed != last) {
 			mt = mtwist_init(p->description_seed);
-			planet_description(mt, planet_desc, 500, 40);
+			planet_type_str = solarsystem_assets->planet_type[p->solarsystem_planet_type];
+			planet_description(mt, planet_desc, 500, 40, planet_type_from_string(planet_type_str));
 			last = p->description_seed;
 			mtwist_free(mt);
 			for (i = 0; planet_desc[i] != '\0'; i++)
 				planet_desc[i] = toupper(planet_desc[i]);
 		}
-		sprintf(buf, "TYPE: %s (%s, %s)",
-			solarsystem_assets->planet_type[p->solarsystem_planet_type],
-			solarsystem_assets->planet_texture[p->solarsystem_planet_type],
-			solarsystem_assets->planet_normalmap[p->solarsystem_planet_type]);
+		sprintf(buf, "TYPE: %s", solarsystem_assets->planet_type[p->solarsystem_planet_type]);
 		uppercase(buf);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;

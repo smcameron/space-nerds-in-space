@@ -14925,6 +14925,8 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 	char extradescription[40];
 	static struct mtwist_state *mt = NULL;
 	int planet;
+	char *planet_type_str;
+	int ss_planet_type;
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(id);
@@ -14937,7 +14939,9 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 	case OBJTYPE_PLANET:
 		pthread_mutex_unlock(&universe_mutex);
 		mt = mtwist_init(go[i].tsd.planet.description_seed);
-		planet_description(mt, description, 250, 254);
+		ss_planet_type = go[i].tsd.planet.solarsystem_planet_type;
+		planet_type_str = solarsystem_assets->planet_type[ss_planet_type];
+		planet_description(mt, description, 250, 254, planet_type_from_string(planet_type_str));
 		mtwist_free(mt);
 		queue_add_text_to_speech(c, description);
 		return;
