@@ -11741,10 +11741,23 @@ static void show_demon_3d(GtkWidget *w)
 	float angle_of_view = 60.0 * M_PI / 180.0;
 	union vec3 camera_pos_delta;
 	int color;
+	float camera_movement_rate = 0.05;
 
 	if (!axes) {
 		axes = mesh_fabricate_axes();
 		mesh_scale(axes, 0.002 * XKNOWN_DIM);
+	}
+
+	/* If in captain mode, then set desired camera position/orientation accordingly */
+	if (demon_ui.captain_of >= 0) {
+		struct snis_entity *o = &go[demon_ui.captain_of];
+		union vec3 rel_cam_pos = { { -50.0, 10.0, 0.0 } };
+		union vec3 ship_pos = { { o->x, o->y, o->z } };
+
+		demon_ui.desired_camera_orientation = o->orientation;
+		quat_rot_vec_self(&rel_cam_pos, &o->orientation);
+		vec3_add(&demon_ui.desired_camera_pos, &ship_pos, &rel_cam_pos);
+		camera_movement_rate = 0.1;
 	}
 
 	if (go[my_ship_oid].alive > 0)
@@ -11754,12 +11767,12 @@ static void show_demon_3d(GtkWidget *w)
 
 	/* Move camera towards desired position */
 	vec3_sub(&camera_pos_delta, &demon_ui.desired_camera_pos, &demon_ui.camera_pos);
-	vec3_mul_self(&camera_pos_delta, 0.05);
+	vec3_mul_self(&camera_pos_delta, camera_movement_rate);
 	vec3_add_self(&demon_ui.camera_pos, &camera_pos_delta);
 
 	/* Move camera towards desired orientation */
 	quat_slerp(&demon_ui.camera_orientation,
-			&demon_ui.camera_orientation, &demon_ui.desired_camera_orientation, 0.05);
+			&demon_ui.camera_orientation, &demon_ui.desired_camera_orientation, camera_movement_rate);
 
 	/* Move exaggerate scale factor towards desired value */
 	if (demon_ui.desired_exaggerated_scale != demon_ui.exaggerated_scale)
@@ -11919,8 +11932,8 @@ static void show_demon_3d(GtkWidget *w)
 				if (m) {
 					union vec3 right = { { 1.0, 0.0, 0.0, }, };
 					union vec3 up = { { 0.0, 0.0, 1.0 } };
-					float factor = (demon_ui.exaggerated_scale * XKNOWN_DIM / 100.0) +
-						(1.0 - demon_ui.exaggerated_scale) * XKNOWN_DIM / 2000.0;
+					float factor = (-demon_ui.exaggerated_scale * XKNOWN_DIM / 100.0) +
+						-(1.0 - demon_ui.exaggerated_scale) * XKNOWN_DIM / 2000.0;
 
 					vec3_sub(&dpos, &epos, &demon_ui.camera_pos);
 					vec3_normalize(&backoff, &dpos);
