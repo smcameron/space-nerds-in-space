@@ -1642,6 +1642,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	go[i].tsd.planet.has_atmosphere = has_atmosphere;
 	go[i].tsd.planet.solarsystem_planet_type = solarsystem_planet_type;
 	go[i].tsd.planet.ring_selector = ring_selector;
+	go[i].tsd.planet.ring = hasring;
 	return 0;
 }
 
@@ -10185,7 +10186,8 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			for (i = 0; planet_desc[i] != '\0'; i++)
 				planet_desc[i] = toupper(planet_desc[i]);
 		}
-		sprintf(buf, "TYPE: %s", solarsystem_assets->planet_type[p->solarsystem_planet_type]);
+		sprintf(buf, "TYPE: %s%s", p->ring ? "RINGED " : "",
+				solarsystem_assets->planet_type[p->solarsystem_planet_type]);
 		uppercase(buf);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
