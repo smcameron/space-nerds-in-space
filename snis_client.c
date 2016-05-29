@@ -1577,7 +1577,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 		fprintf(stderr, "zzz %s solarsystem_planet_type = %d\n", solarsystem_name, m);
 		if (!hasring) {
 			const int ring_materials = (NPLANET_MATERIALS / 2);
-			m = ring_materials + m * (ring_selector % (ring_materials / 6));
+			m = m + ring_materials + 6 * (ring_selector % (ring_materials / 6));
 		}
 		fprintf(stderr, "zzz m = %d, has_atmosphere = %hhu, has ring = %d\n", m, has_atmosphere, hasring);
 
@@ -13388,6 +13388,8 @@ static int load_per_solarsystem_textures()
 	}
 	j = 0;
 	for (i = solarsystem_assets->nplanet_textures; i < NPLANET_MATERIALS; i++) {
+		if (i == NPLANET_MATERIALS / 2)
+			j = 0;
 		planet_material[i] = planet_material[j];
 		if (i < NPLANET_MATERIALS / 2)
 			planet_material[i].textured_planet.ring_material =
