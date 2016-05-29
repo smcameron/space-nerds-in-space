@@ -2495,6 +2495,7 @@ static struct demon_ui {
 	union quat desired_camera_orientation;
 	float exaggerated_scale;
 	float desired_exaggerated_scale;
+	int exaggerated_scale_active;
 } demon_ui;
 
 static void home_demon_camera(void)
@@ -10473,6 +10474,8 @@ static void demon_select(uint32_t id)
 		if (index >= 0 && (go[index].type == OBJTYPE_SHIP2 ||
 			go[index].type == OBJTYPE_STARBASE)) {
 			demon_ui.captain_of = lookup_object_by_id(id);
+			demon_ui.exaggerated_scale_active = 0;
+			demon_ui.desired_exaggerated_scale = 0.0;
 			queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_POSSESS,
 				go[demon_ui.captain_of].id));
 		}
@@ -11534,6 +11537,7 @@ static void init_demon_ui()
 	demon_ui.demon_scale_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"EXAG SCALE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_scale_button_pressed, NULL);
+	snis_button_checkbox(demon_ui.demon_scale_button, &demon_ui.exaggerated_scale_active);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
@@ -11558,6 +11562,7 @@ static void init_demon_ui()
 	demon_ui.camera_pos = demon_ui.desired_camera_pos;
 	demon_ui.exaggerated_scale = 1.0;
 	demon_ui.desired_exaggerated_scale = 1.0;
+	demon_ui.exaggerated_scale_active = 1.0;
 }
 
 static void calculate_new_2d_zoom(int direction, gdouble x, gdouble y, double zoom_amount,
