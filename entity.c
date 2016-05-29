@@ -235,6 +235,11 @@ void update_entity_material(struct entity *e, struct material *material_ptr)
 	e->material_ptr = material_ptr;
 }
 
+struct material *entity_get_material(struct entity *e)
+{
+	return e->material_ptr;
+}
+
 static inline float wx_screen(struct entity_context *cx, float wx)
 {
 	struct camera_info *c = &cx->camera;
