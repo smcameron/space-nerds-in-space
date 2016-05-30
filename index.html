@@ -75,11 +75,29 @@ on freegamedev.net</a> which is something like a development blog.
 <li>libgtkglext1-dev 
 <li>liblua5.2-dev 
 <li>libglew1.5-dev
-<li>libsdl-image1.2-dev (debian wheezy needs this)
-<li>libsdl1.2-dev
+<li>libsdl2-2.0-0 # version may differ for your distro
+<li>libsdl2-dev # version may differ for your distro
+<li>libssl-dev
+<li>libttspico-utils # for text to speech
 </ul>
 
-<p>The above list may be incomplete, and these are the package names on mint 13 / ubuntu,
+<p>If you want to try the speech recognition, you will want:
+<ul>
+<li>pocketsphinx-utils
+<li>pocketsphinx-lm-en-hub4
+<li>pocketsphinx-lm-en-hub4
+<li>libpocketsphinx1
+</ul>
+
+<p>For development you probably also want
+<ul>
+<li>git
+<li>stgit
+<li>openscad # get it from http://www.openscad.org/downloads.html
+</ul>
+
+
+<p>The above list may be incomplete, and these are the package names on mint 17 / ubuntu,
 so may be different on RPM based systems.
 
 <p>If you don't have linux, I have instructions for building a linux live DVD that you can 
@@ -111,6 +129,7 @@ is pretty stable in the sense that it really doesn't crash much at all (if you
 find it crashing, please let me know via <a href="https://github.com/smcameron/space-nerds-in-space/issues?state=open">github's issue reporting system</a>.)
 
 <p><b>Instructions for creating a Live DVD image to run the game</b>
+<p>Warning: These instructions are likely to be out of date (2016-05-30)
 <p>Warning: if this trashes your hard drive, you're on your own.  This procedure
 worked for me, but you assume all risk and responsibility for the safety of your
 data.
