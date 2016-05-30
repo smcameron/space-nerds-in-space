@@ -12021,29 +12021,39 @@ static void show_demon_3d(GtkWidget *w)
 
 	/* Check if the user is trying to select something */
 	if (demon_ui.button2_released) {
-		struct snis_entity *o;
+		struct snis_entity *o = NULL;
+		struct snis_entity *closest = NULL;
+		float distance, closest_distance = 1000000;
 
 		demon_ui.button2_released = 0;
 		for (i = 0; i <= get_entity_count(instrumentecx); i++) {
-			const double threshold = real_screen_width * 0.005;
-			float sx, sy;
+			const double threshold = real_screen_width * 0.02;
+			float sx, sy, dx, dy;
 			struct entity *e;
 
 			e = get_entity(instrumentecx, i);
 			if (!entity_onscreen(e))
 				continue;
 			entity_get_screen_coords(e, &sx, &sy);
-			if (fabsf(sx - demon_ui.release_mousex) < threshold &&
-			    fabsf(sy - demon_ui.release_mousey) < threshold) {
-				o = entity_get_user_data(e);
-				if (!o) /* e.g. axes have no associated object */
-					continue;
-				if (demon_id_selected(o->id))
-					demon_deselect(o->id);
-				else
-					demon_select(o->id);
-				break;
+			dx = sx - demon_ui.release_mousex;
+			dy = sy - demon_ui.release_mousey;
+			if (fabsf(dx) < threshold &&
+			    fabsf(dy) < threshold) {
+				distance = sqrtf(dx * dx + dy * dy);
+				if (!closest || distance < closest_distance) {
+					o = entity_get_user_data(e);
+					if (!o) /* e.g. axes have no associated object */
+						continue;
+					closest_distance = distance;
+					closest = o;
+				}
 			}
+		}
+		if (closest) {
+			if (demon_id_selected(closest->id))
+				demon_deselect(closest->id);
+			else
+				demon_select(closest->id);
 		}
 	}
 	pthread_mutex_unlock(&universe_mutex);
