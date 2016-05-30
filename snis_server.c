@@ -4275,11 +4275,10 @@ static void damcon_robot_think(struct snis_damcon_entity *o, struct damcon_data 
 			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
 			return;
 		}
+		socket = NULL;
 		if (d->robot->tsd.robot.repair_socket_id != ROBOT_CARGO_EMPTY) {
 			i = lookup_by_damcon_id(d, d->robot->tsd.robot.repair_socket_id);
-			if (i < 0)
-				socket = NULL;
-			else
+			if (i >= 0)
 				socket = &d->o[i];
 		}
 		if (!socket) {
