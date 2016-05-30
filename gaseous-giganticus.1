@@ -1,4 +1,4 @@
-.TH GASEOUS-GIGANGICUS 1 "Dec 2015" "Space-Nerds-In-Space" "User Commands"
+.TH GASEOUS-GIGANGICUS 1 "May 2016" "Space-Nerds-In-Space" "User Commands"
 
 .SH NAME
 gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet 
@@ -19,6 +19,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -i input-file ]
 [ -I image-save-period ]
 [ -l ]
+[ -L noise-levels ]
 [ -m speed-multiplier ]
 [ -n ]
 [ -N ]
@@ -114,6 +115,10 @@ with [x] taking on the values 0 through 5.
 Use 3x3 pixels for particles instead of single pixel particles.  The allows getting away
 with fewer particles and thus speeds up the process, however it will leave visible artifacts
 at cubemap face boundaries so it is really only suitable for previewing.
+.TP
+-L, --noise-levels
+Number of fractal browning motion noise levels to use.  Default is 4, minimum is 1, and
+maximum is 7.
 .TP
 -m, --speed-multiplier
 Multiply band_speed_factor and velocity factor by this number.  It is a single

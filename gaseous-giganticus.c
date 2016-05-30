@@ -63,10 +63,19 @@ static int wstep_period = 10;
 static float wstep = 0.0f;
 #define FBM_DEFAULT_FALLOFF (0.5)
 static float fbm_falloff = FBM_DEFAULT_FALLOFF; 
-static float ff0 = 1.0;
-static float ff1 = FBM_DEFAULT_FALLOFF;
-static float ff2 = FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF;
-static float ff3 = FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF;
+static float ff[] = {
+	1.0,
+	FBM_DEFAULT_FALLOFF,
+	FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF,
+	FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF,
+	FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF,
+	FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF *
+			FBM_DEFAULT_FALLOFF,
+	FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF *
+			FBM_DEFAULT_FALLOFF * FBM_DEFAULT_FALLOFF,
+};
+static int noise_levels = 4;
+static const int max_noise_levels = 7;
 static int cloudmode = 0;
 static float fade_rate = -1.0;
 static int save_texture_sequence = 0;
@@ -500,10 +509,13 @@ static void init_particles(struct particle **pp, const int nparticles)
 
 static inline float fbmnoise4(float x, float y, float z, float w)
 {
-	return	ff0 * open_simplex_noise4(ctx, x, y, z, w) +
-		ff1 * open_simplex_noise4(ctx, 2.0f * x, 2.0f * y, 2.0f * z, 2.0f * w) +
-		ff2 * open_simplex_noise4(ctx, 4.0f * x, 4.0f * y, 4.0f * z, 4.0f * w) +
-		ff3 * open_simplex_noise4(ctx, 8.0f * x, 8.0f * y, 8.0f * z, 8.0f * w);
+	return	ff[0] * open_simplex_noise4(ctx, x, y, z, w) +
+		ff[1] * open_simplex_noise4(ctx, 2.0f * x, 2.0f * y, 2.0f * z, 2.0f * w) +
+		ff[2] * open_simplex_noise4(ctx, 4.0f * x, 4.0f * y, 4.0f * z, 4.0f * w) +
+		ff[3] * open_simplex_noise4(ctx, 8.0f * x, 8.0f * y, 8.0f * z, 8.0f * w) +
+		ff[4] * open_simplex_noise4(ctx, 16.0f * x, 16.0f * y, 16.0f * z, 16.0f * w) +
+		ff[5] * open_simplex_noise4(ctx, 32.0f * x, 32.0f * y, 32.0f * z, 32.0f * w) +
+		ff[6] * open_simplex_noise4(ctx, 64.0f * x, 64.0f * y, 64.0f * z, 64.0f * w);
 }
 
 /* compute the noise gradient at the given point on the surface of a sphere */
@@ -977,6 +989,8 @@ static void usage(void)
 	fprintf(stderr, "   -l, --large-pixels: particles are 3x3 pixels instead of 1 pixel.  Allows\n");
 	fprintf(stderr, "                       for fewer particles and thus faster rendering, but this\n");
 	fprintf(stderr, "                       WILL leave visible artifacts at cubemap face boundaries.\n");
+	fprintf(stderr, "   -L, --noise-levels: Number of fractal noise levels to consider.  Default 4, max %d\n",
+			max_noise_levels);
 	fprintf(stderr, "   -p, --particles: Use specified number of particles. Default is 8000000.\n");
 	fprintf(stderr, "   -P, --plainmap  Do not use sinusoidal image mapping, instead repeat image\n");
 	fprintf(stderr, "                   on six sides of a cubemap.\n");
@@ -1027,6 +1041,7 @@ static struct option long_options[] = {
 	{ "image-save-period", required_argument, NULL, 'I' },
 	{ "cubemap", required_argument, NULL, 'k' },
 	{ "large-pixels", no_argument, NULL, 'l' },
+	{ "noise-levels", no_argument, NULL, 'L' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "opacity", required_argument, NULL, 'O' },
 	{ "w-offset", required_argument, NULL, 'w' },
@@ -1113,14 +1128,14 @@ static void set_automatic_options(int random_mode)
 
 static void process_options(int argc, char *argv[])
 {
-	int c;
+	int i, c;
 
 	output_file_prefix = default_output_file_prefix;
 	input_file = default_input_file;
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "a:B:b:c:Cd:D:f:F:hHi:k:I:lnNm:o:O:p:PRr:sSt:Vv:w:W:x:z:",
+		c = getopt_long(argc, argv, "a:B:b:c:Cd:D:f:F:hHi:k:I:lL:nNm:o:O:p:PRr:sSt:Vv:w:W:x:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1160,10 +1175,13 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'f':
 			process_float_option("fbm-falloff", optarg, &fbm_falloff);
-			ff0 = 1.0;
-			ff1 = fbm_falloff;
-			ff2 = ff1 * fbm_falloff;
-			ff3 = ff2 * fbm_falloff;
+			ff[0] = 1.0;
+			ff[1] = fbm_falloff;
+			ff[2] = ff[1] * fbm_falloff;
+			ff[3] = ff[2] * fbm_falloff;
+			ff[4] = ff[3] * fbm_falloff;
+			ff[5] = ff[4] * fbm_falloff;
+			ff[6] = ff[5] * fbm_falloff;
 			break;
 		case 'F':
 			process_int_option("vfdim", optarg, &vfdim);
@@ -1202,6 +1220,17 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'l':
 			large_pixels = 1;
+			break;
+		case 'L':
+			process_int_option("noise-levels", optarg, &noise_levels);
+			if (noise_levels < 1) {
+				fprintf(stderr, "Noise levels value of %d is out of range, using 1\n", noise_levels);
+				noise_levels = 1;
+			} else if (noise_levels > max_noise_levels) {
+				fprintf(stderr, "Noise levels value of %d is out of range, using %d\n",
+					noise_levels, max_noise_levels);
+				noise_levels = max_noise_levels;
+			}
 			break;
 		case 'o':
 			output_file_prefix = optarg;
@@ -1281,6 +1310,9 @@ static void process_options(int argc, char *argv[])
 	/* Scale so that vfdim doesn't change the effect of these */
 	band_speed_factor = ((float) vfdim / 2048.0) * band_speed_factor * speed_multiplier;
 	velocity_factor = ((float) vfdim / 2048.0) * velocity_factor * speed_multiplier;
+
+	for (i = noise_levels; i < max_noise_levels; i++)
+		ff[i] = 0.0;
 
 	return;
 }
