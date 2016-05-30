@@ -126,7 +126,7 @@ static void *lowest_score(struct nodeset *candidates, struct score_map *s)
 
 	for (i = 0; i < candidates->nmembers; i++) {
 		score = score_map_get_score(s, candidates->node[i]);
-		if (score > lowest_score && lowest != NULL)
+		if (lowest != NULL && score > lowest_score)
 			continue;
 		lowest = candidates->node[i];
 		lowest_score = score;
