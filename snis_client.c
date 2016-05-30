@@ -4620,7 +4620,11 @@ static void text_to_speech(char *text)
 	}
 	remove_single_quotes(text);
 	sprintf(command, "%s/text_to_speech.sh '%s'", bindir, text);
-	system(command);
+	rc = system(command);
+	if (rc != 0 && errno != ECHILD)  { /* we have ignored SIGCHLD, so we get ECHILD here */
+		fprintf(stderr, "Shell command '%s' returned %d, errno = %d (%s)\n",
+			command, rc, errno, strerror(errno));
+	}
 }
 
 static int process_natural_language_request(void)
