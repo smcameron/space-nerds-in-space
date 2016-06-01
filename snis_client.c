@@ -3406,6 +3406,11 @@ static int lobby_lookup_server_by_location(char *location)
 	return -1;
 }
 
+static void ui_hide_widget(void *widget);
+static void ui_unhide_widget(void *widget);
+
+static void show_common_screen(GtkWidget *w, char *title);
+
 static void show_lobbyscreen(GtkWidget *w)
 {
 	char msg[100];
@@ -3413,6 +3418,7 @@ static void show_lobbyscreen(GtkWidget *w)
 #define STARTLINE 100
 #define LINEHEIGHT 30
 
+	show_common_screen(w, "");
 	sng_set_foreground(UI_COLOR(lobby_connecting));
 	if (lobby_socket == -1 && switched_server2 == -1) {
 		sng_abs_xy_draw_string("Space Nerds", BIG_FONT, txx(80), txy(200));
@@ -3456,10 +3462,31 @@ static void show_lobbyscreen(GtkWidget *w)
 		}
 
 		lobby_selected_server = -1;
+#if 0
 		sprintf(msg, "Connected to lobby on socket %d\n", lobby_socket);
 		sng_abs_xy_draw_string(msg, TINY_FONT, txx(30), LINEHEIGHT);
 		sprintf(msg, "Total game servers: %d\n", ngameservers);
 		sng_abs_xy_draw_string(msg, TINY_FONT, txx(30), LINEHEIGHT + txy(20));
+#endif
+		sng_center_xy_draw_string("SPACE NERDS IN SPACE LOBBY", TINY_FONT, txx(400), LINEHEIGHT);
+		sng_center_xy_draw_string("SELECT A SERVER", NANO_FONT, txx(400), LINEHEIGHT * 2);
+
+		/* Draw column headings */
+		i = -1;
+		sng_set_foreground(DARKGREEN);
+		sprintf(msg, "IP ADDRESS/PORT");
+		sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
+		sprintf(msg, "GAME INSTANCE");
+		sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
+		sprintf(msg, "SERVER_NICKNAME");
+		sng_abs_xy_draw_string(msg, NANO_FONT, txx(300), txy(100) + i * LINEHEIGHT);
+		sprintf(msg, "LOCATION");
+		sng_abs_xy_draw_string(msg, NANO_FONT, txx(450), txy(100) + i * LINEHEIGHT);
+		sprintf(msg, "CONNECTIONS");
+		sng_abs_xy_draw_string(msg, NANO_FONT, txx(550), txy(100) + i * LINEHEIGHT);
+
+		/* Draw server info */
+		sng_set_foreground(UI_COLOR(lobby_connecting));
 		for (i = 0; i < ngameservers; i++) {
 			unsigned char *x = (unsigned char *) 
 				&lobby_game_server[i].ipaddr;
@@ -3469,7 +3496,10 @@ static void show_lobbyscreen(GtkWidget *w)
 				lobby_selected_server = i;
 				sng_set_foreground(UI_COLOR(lobby_selected_server));
 				snis_draw_rectangle(0, txx(25), txy(100) + (-0.5 + i) * LINEHEIGHT,
-					txx(725), LINEHEIGHT);
+					txx(600), LINEHEIGHT);
+				snis_button_set_position(lobby_ui.lobby_connect_to_server_button,
+					txx(650), (int) (txy(100) + (-0.5 + i) * LINEHEIGHT));
+				ui_unhide_widget(lobby_ui.lobby_connect_to_server_button);
 			} else
 				sng_set_foreground(UI_COLOR(lobby_connecting));
 
@@ -3478,20 +3508,20 @@ static void show_lobbyscreen(GtkWidget *w)
 			}
 			 
 			sprintf(msg, "%hu.%hu.%hu.%hu/%hu", x[0], x[1], x[2], x[3], lobby_game_server[i].port);
-			sng_abs_xy_draw_string(msg, TINY_FONT, txx(30), txy(100) + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].game_instance);
-			sng_abs_xy_draw_string(msg, TINY_FONT, txx(350), txy(100) + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].server_nickname);
-			sng_abs_xy_draw_string(msg, TINY_FONT, txx(450), txy(100) + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, NANO_FONT, txx(300), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].location);
-			sng_abs_xy_draw_string(msg, TINY_FONT, txx(650), txy(100) + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, NANO_FONT, txx(450), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%d", lobby_game_server[i].nconnections);
-			sng_abs_xy_draw_string(msg, TINY_FONT, txx(700), txy(100) + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, NANO_FONT, txx(550), txy(100) + i * LINEHEIGHT);
 		}
 		if (lobby_selected_server != -1)
 			snis_button_set_color(lobby_ui.lobby_connect_to_server_button, UI_COLOR(lobby_connect_ok));
 		else
-			snis_button_set_color(lobby_ui.lobby_connect_to_server_button, UI_COLOR(lobby_connect_not_ok));
+			ui_hide_widget(lobby_ui.lobby_connect_to_server_button);
 	}
 }
 
@@ -4416,9 +4446,6 @@ static struct science_ui {
 	struct button *align_to_ship_button;
 	struct button *launch_mining_bot_button;
 } sci_ui;
-
-static void ui_hide_widget(void *widget);
-static void ui_unhide_widget(void *widget);
 
 static int process_sci_details(void)
 {
