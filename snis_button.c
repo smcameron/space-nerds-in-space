@@ -151,6 +151,12 @@ void snis_button_checkbox(struct button *b, int *value)
 	b->checkbox_value = value;
 }
 
+void snis_button_set_position(struct button *b, int x, int y)
+{
+	b->x = x;
+	b->y = y;
+}
+
 int snis_button_get_x(struct button *b) { return b->x; }
 int snis_button_get_y(struct button *b) { return b->y; }
 int snis_button_get_width(struct button *b) { return b->width; }
