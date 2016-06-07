@@ -201,6 +201,9 @@ int in_the_process_of_quitting = 0;
 int current_quit_selection = 0;
 int final_quit_selection = 0;
 
+static int textscreen_timer = 0;
+static char textscreen[1024] = { 0 };
+
 struct ship_type_entry *ship_type;
 int nshiptypes = 0;
 
@@ -5727,6 +5730,51 @@ static void draw_credits_screen(int lines, char *crawl[])
 	}
 }
 
+static void show_textscreen(GtkWidget *w)
+{
+	char tmp_textscreen[sizeof(textscreen)];
+
+	switch (displaymode) {
+	case DISPLAYMODE_MAINSCREEN:
+	case DISPLAYMODE_NAVIGATION:
+	case DISPLAYMODE_WEAPONS:
+	case DISPLAYMODE_ENGINEERING:
+	case DISPLAYMODE_SCIENCE:
+	case DISPLAYMODE_COMMS:
+	case DISPLAYMODE_DEMON:
+	case DISPLAYMODE_DAMCON:
+		break;
+	default:
+		return;
+	}
+	if (textscreen_timer <= 0)
+		return;
+	strcpy(tmp_textscreen, textscreen);
+	textscreen_timer--;
+	char *line;
+	int y = 100;
+
+	sng_set_foreground(BLACK);
+	snis_draw_rectangle(1, txx(50), txy(50),
+			SCREEN_WIDTH - txx(100), SCREEN_HEIGHT - txy(100));
+	sng_set_foreground(RED);
+	snis_draw_rectangle(FALSE, txx(50), txy(50),
+			SCREEN_WIDTH - txx(100), SCREEN_HEIGHT - txy(100));
+	sng_set_foreground(WHITE);
+
+	line = strtok(tmp_textscreen, "\n");
+	if (!line) {
+		textscreen_timer = 0;
+		return;
+	}
+	sng_center_xy_draw_string(line, BIG_FONT, SCREEN_WIDTH / 2, txy(y)); y += txy(35);
+
+	while ((line = strtok(NULL, "\n"))) {
+		sng_abs_xy_draw_string(line, SMALL_FONT, txx(60), txy(y));
+		y += txy(20);
+	}
+}
+
 static void show_common_screen(GtkWidget *w, char *title)
 {
 	int title_color;
@@ -5781,6 +5829,8 @@ static void show_common_screen(GtkWidget *w, char *title)
 			done_with_lobby = 0;
 		}
 	}
+	if (textscreen_timer > 0)
+		show_textscreen(w);
 }
 
 #define ANGLE_OF_VIEW (45)
