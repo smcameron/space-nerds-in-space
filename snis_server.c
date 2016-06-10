@@ -11559,7 +11559,6 @@ static void send_timed_text(int id, uint16_t timevalue, uint16_t length, char *t
 
 static int l_show_timed_text(lua_State *l)
 {
-	printf("huzzah!\n");
 	const double id = luaL_checknumber(l, 1);
 	const double seconds = luaL_checknumber(l, 2);
 	const char *luatext = luaL_checkstring(l, 3);
