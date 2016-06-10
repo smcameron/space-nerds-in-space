@@ -4620,6 +4620,42 @@ static int process_comm_transmission(void)
 	return 0;
 }
 
+static int process_textscreen_op(void)
+{
+	unsigned char buffer[sizeof(textscreen) + 20];
+	uint8_t subcode;
+	uint16_t length, timevalue;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "b", &subcode);
+	if (rc != 0)
+		return -1;
+	switch (subcode) {
+	case OPCODE_TEXTSCREEN_CLEAR:
+		textscreen_timer = 0;
+		memset(textscreen, 0, sizeof(textscreen));
+		break;
+	case OPCODE_TEXTSCREEN_TIMEDTEXT:
+		rc = read_and_unpack_buffer(buffer, "hh", &length, &timevalue);
+		if (rc != 0)
+			return rc;
+		if (length > 1023)
+			return -1;
+		if (timevalue > 120)
+			return -1;
+		memset(buffer, 0, sizeof(buffer));
+		rc = snis_readsocket(gameserver_sock, buffer, length);
+		if (rc != 0)
+			return rc;
+		memcpy(textscreen, buffer, sizeof(textscreen));
+		textscreen_timer = timevalue * 30;
+		break;
+	default:
+		return -1;
+	}
+	return 0;
+}
+
 static void text_to_speech(char *text)
 {
 	char command[PATH_MAX];
@@ -5287,6 +5323,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			connected_to_gameserver = 0;
 			// pthread_mutex_unlock(&to_server_queue_event_mutex);
 			return NULL;
+		case OPCODE_TEXTSCREEN_OP:
+			rc = process_textscreen_op();
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 		}

@@ -162,6 +162,9 @@
 #define OPCODE_REQUEST_ROBOT_CMD		232
 #define   OPCODE_ROBOT_SUBCMD_STG		1	/* set short term goal */
 #define   OPCODE_ROBOT_SUBCMD_LTG		2	/* set long term goal */
+#define OPCODE_TEXTSCREEN_OP			233
+#define   OPCODE_TEXTSCREEN_CLEAR		0
+#define   OPCODE_TEXTSCREEN_TIMEDTEXT		1
 
 #define OPCODE_NOOP		0xff
 
