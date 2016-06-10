@@ -169,3 +169,8 @@ ai_push_attack(attacker_id, victim_id)
 set_faction(object_id, faction_id) -- sets the specified object's faction to the specified
 	faction.  Clears the object's ai stack.
 
+show_timed_text(id, time_in_seconds, textstring);
+	shows a text screen with the given textstring for the specified amount of time
+	on all clients of the bridge for the given player ship id.  If id is -1, then
+	the message is displayed on all clients of all bridges.
+

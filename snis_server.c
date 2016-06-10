@@ -11542,6 +11542,75 @@ static int l_clear_all(__attribute__((unused)) lua_State *l)
 	return 0;
 }
 
+static void send_timed_text(int id, uint16_t timevalue, uint16_t length, char *text)
+{
+	struct packed_buffer *pb;
+
+	assert(strlen(text) + 1 == length);
+	pb = packed_buffer_allocate(2 + 2 + 2 + length);
+	packed_buffer_append(pb, "bbhh", OPCODE_TEXTSCREEN_OP, OPCODE_TEXTSCREEN_TIMEDTEXT,
+				length, timevalue);
+	packed_buffer_append_raw(pb, text, length);
+	if (id == -1)
+		send_packet_to_all_clients(pb, ROLE_ALL);
+	else
+		send_packet_to_all_clients_on_a_bridge(id, pb, ROLE_ALL);
+}
+
+static int l_show_timed_text(lua_State *l)
+{
+	printf("huzzah!\n");
+	const double id = luaL_checknumber(l, 1);
+	const double seconds = luaL_checknumber(l, 2);
+	const char *luatext = luaL_checkstring(l, 3);
+	char *text = NULL;
+	uint32_t oid = (uint32_t) id;
+	int i;
+	struct snis_entity *o;
+	int length;
+	uint16_t timevalue = (uint16_t) seconds;
+
+	if (!luatext)
+		goto error;
+	text = strdup(luatext);
+	if (seconds > 120.0)
+		goto error;
+
+	length = strlen(text) + 1;
+	if (length > 1024) { /* truncate excessively long strings */
+		text[1024] = '\0';
+		length = 1024;
+	}
+
+	if (oid != (uint32_t) -1) { /* User has specified a ship id. */
+		pthread_mutex_lock(&universe_mutex);
+		i = lookup_by_id(oid);
+		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			goto error;
+		}
+		o = &go[i];
+		if (o->type != OBJTYPE_SHIP1) {
+			pthread_mutex_unlock(&universe_mutex);
+			goto error;
+		}
+		pthread_mutex_unlock(&universe_mutex);
+		send_timed_text(o->id, timevalue, length, text);
+	} else {
+		/* User has specified -1 as ship id == all ships. */
+		send_timed_text(-1, timevalue, length, text);
+	}
+	if (text)
+		free(text);
+	lua_pushnumber(l, 0.0);
+	return 1;
+error:
+	if (text)
+		free(text);
+	lua_pushnil(l);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -14620,6 +14689,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_cargo_container, "add_cargo_container");
 	add_lua_callable_fn(l_set_faction, "set_faction");
 	add_lua_callable_fn(l_text_to_speech, "text_to_speech");
+	add_lua_callable_fn(l_show_timed_text, "show_timed_text");
 }
 
 static int run_initial_lua_scripts(void)

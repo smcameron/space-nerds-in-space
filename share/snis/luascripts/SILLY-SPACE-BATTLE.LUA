@@ -111,3 +111,5 @@ sbase_id = add_starbase(px + 2500, py, pz - 2500, 76);
 --p1 = add_planet("NOWWHAT", px - 19000, 300, pz - 50000, 4000);
 p2 = add_planet("NOWWHAT", px - 6000, -700, pz - 50000, 8000);
 
+show_timed_text(-1, 10, "SILLY SPACE BATTLE\n" .. "THIS IS A SILLY SPACE BATTLE\n" .. "ENJOY THE SILLY SPACE BATTLE\n");
+
