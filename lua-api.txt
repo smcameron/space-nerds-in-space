@@ -174,3 +174,8 @@ show_timed_text(id, time_in_seconds, textstring);
 	on all clients of the bridge for the given player ship id.  If id is -1, then
 	the message is displayed on all clients of all bridges.
 
+snis_sleep(seconds);
+	sleeps for the specified number of seconds. Strangely, lua doesn't have a native
+	way to sleep.
+
+
