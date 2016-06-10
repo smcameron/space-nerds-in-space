@@ -178,4 +178,6 @@ snis_sleep(seconds);
 	sleeps for the specified number of seconds. Strangely, lua doesn't have a native
 	way to sleep.
 
+enqueue_lua_script(scriptname);
+	Queue the named lua script for execution;
 

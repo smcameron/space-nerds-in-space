@@ -426,7 +426,7 @@ struct lua_command_queue_entry {
 	char lua_command[PATH_MAX];
 } *lua_command_queue_head = NULL,  *lua_command_queue_tail = NULL;
 
-static void enqueue_lua_command(char *cmd)
+static void enqueue_lua_command(const char *cmd)
 {
 	/* should obtain universe_mutex before touching this queue. */
 	struct lua_command_queue_entry *q;
@@ -11618,6 +11618,34 @@ static int l_snis_sleep(lua_State *l)
 	return 0;
 }
 
+static int l_enqueue_lua_script(lua_State *l)
+{
+	const char *lua_scriptname = luaL_checkstring(l, 1);
+	char scriptname[PATH_MAX];
+	char *upper_scriptname = NULL;
+	if (!lua_scriptname)
+		goto error;
+
+	upper_scriptname = strdup(lua_scriptname);
+	if (!upper_scriptname)
+		goto error;
+
+	uppercase(upper_scriptname);
+	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", LUASCRIPTDIR, upper_scriptname);
+	pthread_mutex_lock(&universe_mutex);
+	enqueue_lua_command(scriptname); /* queue up for execution by main thread. */
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, 0.0);
+	if (upper_scriptname)
+		free(upper_scriptname);
+	return 1;
+error:
+	if (upper_scriptname)
+		free(upper_scriptname);
+	lua_pushnil(l);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -14698,6 +14726,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_text_to_speech, "text_to_speech");
 	add_lua_callable_fn(l_show_timed_text, "show_timed_text");
 	add_lua_callable_fn(l_snis_sleep, "snis_sleep");
+	add_lua_callable_fn(l_enqueue_lua_script, "enqueue_lua_script");
 }
 
 static int run_initial_lua_scripts(void)
