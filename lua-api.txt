@@ -174,10 +174,10 @@ show_timed_text(id, time_in_seconds, textstring);
 	on all clients of the bridge for the given player ship id.  If id is -1, then
 	the message is displayed on all clients of all bridges.
 
-snis_sleep(seconds);
-	sleeps for the specified number of seconds. Strangely, lua doesn't have a native
-	way to sleep.
-
 enqueue_lua_script(scriptname);
 	Queue the named lua script for execution;
+
+NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
+long running calculations (nothing more than a few hundredths of a second) because the lua
+scripts are called from the main thread and if the scripts block, the entire game will block.
 

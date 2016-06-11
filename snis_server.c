@@ -11610,14 +11610,6 @@ error:
 	return 1;
 }
 
-static int l_snis_sleep(lua_State *l)
-{
-	const double seconds = luaL_checknumber(l, 1);
-
-	ssgl_sleep((int) seconds);
-	return 0;
-}
-
 static int l_enqueue_lua_script(lua_State *l)
 {
 	const char *lua_scriptname = luaL_checkstring(l, 1);
@@ -14725,7 +14717,6 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_faction, "set_faction");
 	add_lua_callable_fn(l_text_to_speech, "text_to_speech");
 	add_lua_callable_fn(l_show_timed_text, "show_timed_text");
-	add_lua_callable_fn(l_snis_sleep, "snis_sleep");
 	add_lua_callable_fn(l_enqueue_lua_script, "enqueue_lua_script");
 }
 
