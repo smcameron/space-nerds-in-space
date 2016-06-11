@@ -348,6 +348,29 @@ static int ncommodities;
 static int ncontraband;
 static struct commodity *commodity;
 
+int nframes = 0;
+int timer = 0;
+struct timeval start_time, end_time;
+
+static struct snis_object_pool *pool;
+static struct snis_entity go[MAXGAMEOBJS];
+#define go_index(snis_entity_ptr) ((snis_entity_ptr) - &go[0])
+static struct space_partition *space_partition = NULL;
+
+static int lookup_by_id(uint32_t id);
+
+static uint32_t get_new_object_id(void)
+{
+	static uint32_t current_id = 0;
+	static uint32_t answer;
+	static pthread_mutex_t object_id_lock = PTHREAD_MUTEX_INITIALIZER;
+
+	pthread_mutex_lock(&object_id_lock);
+	answer = current_id++;
+	pthread_mutex_unlock(&object_id_lock);
+	return answer;
+}
+
 static inline void client_lock()
 {
         (void) pthread_mutex_lock(&client_mutex);
@@ -564,6 +587,128 @@ static void fire_lua_timers(void)
 
 }
 
+struct lua_proximity_check {
+	char *callback;
+	uint32_t oid1, oid2;
+	double distance2;
+	struct lua_proximity_check *next;
+} *lua_proximity_check = NULL;
+
+static struct lua_proximity_check *init_lua_proximity_check(const char *callback,
+			const uint32_t oid1, const uint32_t oid2, const double distance,
+			struct lua_proximity_check *next)
+{
+	struct lua_proximity_check *newone = calloc(sizeof(*newone), 1);
+
+	newone->callback = strdup(callback);
+	newone->oid1 = oid1;
+	newone->oid2 = oid2;
+	newone->distance2 = distance * distance;
+	newone->next = next;
+	return newone;
+}
+
+/* insert new lua_proximity check into list */
+static double register_lua_proximity_callback(const char *callback,
+		const uint32_t oid1, const uint32_t oid2, const double distance)
+{
+	struct lua_proximity_check *i, *last, *newone;
+
+	last = NULL;
+	for (i = lua_proximity_check; i != NULL; i = i->next) {
+		/* Replace values if callback already exists */
+		if (oid1 == i->oid1 && oid2 == i->oid2) {
+			if (i->callback)
+				free(i->callback);
+			i->callback = strdup(callback);
+			i->distance2 = distance * distance;
+			return 0.0;
+		}
+		last = i;
+	}
+	newone = init_lua_proximity_check(callback, oid1, oid2, distance, i);
+	if (!last)
+		lua_proximity_check = newone;
+	else
+		last->next = newone;
+	return 0.0;
+}
+
+static void free_lua_proximity_check(struct lua_proximity_check **e)
+{
+	free((*e)->callback);
+	free(*e);
+	*e = NULL;
+}
+
+static void free_lua_proximity_checks(struct lua_proximity_check **e)
+{
+	struct lua_proximity_check *i, *next;
+
+	for (i = *e; i != NULL; i = next) {
+		next = i->next;
+		free_lua_proximity_check(&i);
+	}
+	*e = NULL;
+}
+
+static void fire_lua_proximity_checks(void)
+{
+	struct lua_proximity_check *i, *last, *next;
+	struct lua_proximity_check *temp_list = NULL;
+	struct snis_entity *o1, *o2;
+	double dx, dy, dz, dist2;
+	int a, b;
+
+	last = NULL;
+	pthread_mutex_lock(&universe_mutex);
+	for (i = lua_proximity_check; i != NULL;) {
+		next = i->next;
+
+		a = lookup_by_id(i->oid1);
+		b = lookup_by_id(i->oid2);
+		if (a < 0 || b < 0) {
+			/* remove this check */
+			if (last)
+				last->next = next;
+			else
+				lua_proximity_check = next;
+			continue;
+		}
+
+		o1 = &go[a];
+		o2 = &go[b];
+		dx = o1->x - o2->x;
+		dy = o1->y - o2->y;
+		dz = o1->z - o2->z;
+		dist2 = dx * dx + dy * dy + dz * dz;
+
+
+		if (dist2 <= i->distance2) { /* add the proximity check to temp list */
+			/* Remove the proximity check */
+			if (last)
+				last->next = next;
+			else
+				lua_proximity_check = next;
+			/* Add the check to a temporary list */
+			i->next = temp_list;
+			temp_list = i;
+		}
+		i = next;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+
+	/* Call all the lua proximity check callback functions in the temporary list  */
+	for (i = temp_list; i != NULL; i = next) {
+		next = i->next;
+		lua_getglobal(lua_state, i->callback);
+		lua_pushnumber(lua_state, (double) i->oid1);
+		lua_pushnumber(lua_state, (double) i->oid2);
+		lua_pushnumber(lua_state, (double) sqrt(dist2));
+		lua_pcall(lua_state, 3, 0, 0);
+		free_lua_proximity_check(&i);
+	}
+}
 
 void lua_object_id_event(char *event, uint32_t object_id)
 {
@@ -605,27 +750,6 @@ void lua_player_respawn_event(uint32_t object_id)
 void lua_player_death_event(uint32_t object_id)
 {
 	lua_object_id_event("player-death-event", object_id);
-}
-
-int nframes = 0;
-int timer = 0;
-struct timeval start_time, end_time;
-
-static struct snis_object_pool *pool;
-static struct snis_entity go[MAXGAMEOBJS];
-#define go_index(snis_entity_ptr) ((snis_entity_ptr) - &go[0])
-static struct space_partition *space_partition = NULL;
-
-static uint32_t get_new_object_id(void)
-{
-	static uint32_t current_id = 0;
-	static uint32_t answer;
-	static pthread_mutex_t object_id_lock = PTHREAD_MUTEX_INITIALIZER;
-
-	pthread_mutex_lock(&object_id_lock);
-	answer = current_id++;
-	pthread_mutex_unlock(&object_id_lock);	
-	return answer;
 }
 
 static void set_object_location(struct snis_entity *o, double x, double y, double z);
@@ -1541,7 +1665,6 @@ static void send_ship_damage_packet(struct snis_entity *o);
 static void send_detonate_packet(struct snis_entity *o, double x, double y, double z,
 				uint32_t time, double fractional_time);
 static void send_silent_ship_damage_packet(struct snis_entity *o);
-static int lookup_by_id(uint32_t id);
 
 static struct snis_entity *lookup_entity_by_id(uint32_t id)
 {
@@ -10967,6 +11090,29 @@ static int l_register_callback(lua_State *l)
 	return 1;
 }
 
+static int l_register_proximity_callback(lua_State *l)
+{
+	const char *callback = luaL_checkstring(l, 1);
+	const double lua_oid1 = luaL_checknumber(l, 2);
+	const double lua_oid2 = luaL_checknumber(l, 3);
+	const double distance = luaL_checknumber(l, 4);
+	double rc;
+	uint32_t oid1, oid2;
+
+	if (lua_oid1 < lua_oid2) {
+		oid1 = (uint32_t) lua_oid1;
+		oid2 = (uint32_t) lua_oid2;
+	} else {
+		oid1 = (uint32_t) lua_oid2;
+		oid2 = (uint32_t) lua_oid1;
+	}
+	pthread_mutex_lock(&universe_mutex);
+	rc = register_lua_proximity_callback(callback, oid1, oid2, distance);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, rc);
+	return 1;
+}
+
 static int l_register_timer_callback(lua_State *l)
 {
 	const char *callback = luaL_checkstring(l, 1);
@@ -11484,6 +11630,7 @@ static void process_demon_clear_all(void)
 	pthread_mutex_lock(&universe_mutex);
 	free_event_callbacks(&event_callback);
 	free_timer_events(&lua_timer);
+	free_lua_proximity_checks(&lua_proximity_check);
 	free_callback_schedule(&callback_schedule);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
@@ -14620,6 +14767,7 @@ static void move_objects(double absolute_time, int discontinuity)
 	pthread_mutex_unlock(&universe_mutex);
 	fire_lua_timers();
 	fire_lua_callbacks(&callback_schedule);
+	fire_lua_proximity_checks();
 }
 
 static void register_with_game_lobby(char *lobbyhost, int port,
@@ -14718,6 +14866,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_text_to_speech, "text_to_speech");
 	add_lua_callable_fn(l_show_timed_text, "show_timed_text");
 	add_lua_callable_fn(l_enqueue_lua_script, "enqueue_lua_script");
+	add_lua_callable_fn(l_register_proximity_callback, "register_proximity_callback");
 }
 
 static int run_initial_lua_scripts(void)
