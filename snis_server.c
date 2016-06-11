@@ -14732,6 +14732,9 @@ static int run_initial_lua_scripts(void)
 	if (rc != 0)
 		return rc;
 	rc = luaL_dofile(lua_state, scriptname);
+	if (rc)
+		fprintf(stderr, "Error executing lua script: %s\n",
+			lua_tostring(lua_state, -1));
 	return rc;
 }
 
@@ -14748,10 +14751,9 @@ static void process_lua_commands(void)
 
 		pthread_mutex_unlock(&universe_mutex);
 		rc = luaL_dofile(lua_state, lua_command);
-		if (rc) {
-			/* TODO: something? */
-			printf("lua script %s failed to execute.\n", lua_command);
-		}
+		if (rc)
+			fprintf(stderr, "Error executing lua script: %s\n",
+				lua_tostring(lua_state, -1));
 		pthread_mutex_lock(&universe_mutex);
 	}
 	pthread_mutex_unlock(&universe_mutex);
