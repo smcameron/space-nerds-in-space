@@ -9233,7 +9233,7 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 			format_due_date(due_date, sizeof(due_date), (double)
 				ship->tsd.ship.cargo[i].due_date);
 			snprintf(msg, sizeof(msg),
-				"    CARGO BAY %d: %4.0f %s %s - PAID $%.2f ORIG %10s DEST %10s DUE %s",
+				"    CARGO BAY %d: %4.2f %s %s - PAID $%.2f ORIG %10s DEST %10s DUE %s",
 					i, qty, unit, itemname, ship->tsd.ship.cargo[i].paid,
 					origin, dest, due_date);
 			send_comms_packet(name, ch, msg);
@@ -10239,7 +10239,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			return;
 		}
 		if (strncasecmp("sell ", msg, 5) == 0)  {
-			int q;
+			float qf;
 			char x;
 
 			/* check transporter range */
@@ -10249,26 +10249,36 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				return;
 			}
 
-			rc = sscanf(msg + 5, "%d %c", &q, &x);
+			rc = sscanf(msg + 5, "%f %c", &qf, &x);
+			printf("rc = %d, qf = %f, x = %c\n", rc, qf, x);
 			if (rc != 2) {
-				send_comms_packet(n, channel, " INVALID SELL ORDER");
-				return;
+				rc = sscanf(msg + 5, "%c", &x);
+				if (rc == 1 && strlen(msg) == 6) {
+					if (toupper(x) - 'A' < 0 || toupper(x) - 'A' >= ship->tsd.ship.ncargo_bays) {
+						send_comms_packet(n, channel, " INVALID SELL ORDER, BAD CARGO BAY");
+						return;
+					}
+					qf = ship->tsd.ship.cargo[(int) toupper(x) - 'A'].contents.qty;
+				} else {
+					send_comms_packet(n, channel, " INVALID SELL ORDER, PARSE ERROR");
+					return;
+				}
 			}
 			x = toupper(x) - 'A';
 			if (x < 0 || x >= ship->tsd.ship.ncargo_bays) {
-				send_comms_packet(n, channel, " INVALID SELL ORDER");
+				send_comms_packet(n, channel, " INVALID SELL ORDER, BAD CARGO BAY");
 				return;
 			}
-			if (q > ship->tsd.ship.cargo[(int) x].contents.qty) {
-				send_comms_packet(n, channel, " INVALID SELL ORDER");
+			if (qf > ship->tsd.ship.cargo[(int) x].contents.qty) {
+				send_comms_packet(n, channel, " INVALID SELL ORDER, INSUFFICIENT QUANTITY");
 				return;
 			}
-			ship->tsd.ship.cargo[(int) x].contents.qty -= q;
+			ship->tsd.ship.cargo[(int) x].contents.qty -= qf;
 			ship->tsd.ship.wallet +=
-				q * o->tsd.starbase.bid_price[ship->tsd.ship.cargo[(int) x].contents.item];
-			profitloss = q * o->tsd.starbase.bid_price[ship->tsd.ship.cargo[(int) x].contents.item]
-					- q * ship->tsd.ship.cargo[(int) x].paid;
-			if (ship->tsd.ship.cargo[(int) x].contents.qty < 0.1) {
+				qf * o->tsd.starbase.bid_price[ship->tsd.ship.cargo[(int) x].contents.item];
+			profitloss = qf * o->tsd.starbase.bid_price[ship->tsd.ship.cargo[(int) x].contents.item]
+					- qf * ship->tsd.ship.cargo[(int) x].paid;
+			if (ship->tsd.ship.cargo[(int) x].contents.qty < 0.001) {
 				ship->tsd.ship.cargo[(int) x].contents.item = -1;
 				ship->tsd.ship.cargo[(int) x].contents.qty = 0.0f;
 				ship->tsd.ship.cargo[(int) x].paid = 0.0f;
@@ -10276,7 +10286,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				ship->tsd.ship.cargo[(int) x].dest = -1;
 				ship->tsd.ship.cargo[(int) x].due_date = -1;
 			}
-			snprintf(m, sizeof(m), " EXECUTING SELL ORDER %d %c", q, x);
+			snprintf(m, sizeof(m), " EXECUTING SELL ORDER %.2f %c", qf, x);
 			send_comms_packet(n, channel, m);
 			snis_queue_add_sound(TRANSPORTER_SOUND,
 					ROLE_SOUNDSERVER, ship->id);
@@ -10301,7 +10311,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				bid = mkt[i].bid;
 				ask = mkt[i].ask;
 				qty = mkt[i].qty;
-				snprintf(m, sizeof(m), " %c: %04.0f %s %s -- $%4.2f  $%4.2f\n",
+				snprintf(m, sizeof(m), " %c: %4.2f %s %s -- $%4.2f  $%4.2f\n",
 					i + 'A', qty, unit, itemname, bid, ask);
 				send_comms_packet(n, channel, m);
 			}
@@ -10320,7 +10330,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				unit = commodity[item].unit;
 				qty = ship->tsd.ship.cargo[i].contents.qty;
 				bid = o->tsd.starbase.bid_price[item];
-				snprintf(m, sizeof(m), " %c: %04.0f %s %s -- $%4.2f (PAID $%.2f)",
+				snprintf(m, sizeof(m), " %c: %4.2f %s %s -- $%4.2f (PAID $%.2f)",
 					i + 'A', qty, unit, itemname, bid,
 					ship->tsd.ship.cargo[i].paid);
 				send_comms_packet(n, channel, m);
@@ -10334,7 +10344,8 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 		if (buy)
 			send_comms_packet(n, channel, "  (TYPE 'BUY 3 A' TO BUY 3 of item A)");
 		else
-			send_comms_packet(n, channel, "  (TYPE 'SELL 3 A' TO SELL 3 of item A)");
+			send_comms_packet(n, channel,
+				"  (TYPE 'SELL 3 A' TO SELL 3 of item A or 'SELL A' to sell all A)");
 		send_comms_packet(n, channel, "----------------------------");
 	}
 	if (selection == 0) {
