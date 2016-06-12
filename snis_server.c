@@ -6889,6 +6889,42 @@ static void normalize_percentage(uint8_t *v, int total)
 	*v = (uint8_t) (fraction * 255.0);
 }
 
+static int set_asteroid_minerals(uint32_t id, float carbon, float silicates, float nickeliron, float preciousmetals)
+{
+	float total;
+	int i;
+	struct snis_entity *o;
+
+	i = lookup_by_id(id);
+	if (i < 0)
+		return -1;
+	o = &go[i];
+	if (o->type != OBJTYPE_ASTEROID)
+		return -1;
+
+	carbon = fabsf(carbon);
+	silicates = fabsf(silicates);
+	nickeliron = fabsf(nickeliron);
+	preciousmetals = fabsf(preciousmetals);
+	total = carbon + silicates + nickeliron + preciousmetals;
+
+	if (total < 0.0001) {
+		total += 1.0;
+		carbon += 1.0;
+	}
+
+	o->tsd.asteroid.carbon = carbon;
+	o->tsd.asteroid.silicates = silicates;
+	o->tsd.asteroid.nickeliron = nickeliron;
+	o->tsd.asteroid.preciousmetals = preciousmetals;
+
+	normalize_percentage(&go[i].tsd.asteroid.carbon, total);
+	normalize_percentage(&go[i].tsd.asteroid.silicates, total);
+	normalize_percentage(&go[i].tsd.asteroid.nickeliron, total);
+	normalize_percentage(&go[i].tsd.asteroid.preciousmetals, total);
+	return 0;
+}
+
 static int add_asteroid(double x, double y, double z, double vx, double vz, double heading, double velocity)
 {
 	int i, n, v;
@@ -11827,6 +11863,28 @@ error:
 	return 1;
 }
 
+static int l_set_asteroid_minerals(lua_State *l)
+{
+	const double lua_oid = luaL_checknumber(l, 1);
+	const double lua_carbon = luaL_checknumber(l, 2);
+	const double lua_silicates = luaL_checknumber(l, 3);
+	const double lua_nickeliron = luaL_checknumber(l, 4);
+	const double lua_preciousmetals = luaL_checknumber(l, 5);
+	uint32_t oid = (uint32_t) lua_oid;
+	int rc;
+
+	pthread_mutex_lock(&universe_mutex);
+	rc = set_asteroid_minerals(oid, (float) lua_carbon, (float) lua_silicates,
+					(float) lua_nickeliron, (float) lua_preciousmetals);
+	pthread_mutex_unlock(&universe_mutex);
+	if (rc) {
+		lua_pushnil(lua_state);
+		return 1;
+	}
+	lua_pushnumber(lua_state, 0.0);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -14910,6 +14968,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_show_timed_text, "show_timed_text");
 	add_lua_callable_fn(l_enqueue_lua_script, "enqueue_lua_script");
 	add_lua_callable_fn(l_register_proximity_callback, "register_proximity_callback");
+	add_lua_callable_fn(l_set_asteroid_minerals, "set_asteroid_minerals");
 }
 
 static int run_initial_lua_scripts(void)

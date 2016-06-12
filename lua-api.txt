@@ -84,6 +84,16 @@ set_asteroid_speed(id, speed);
 	Sets the speed of the asteroid with the specified id to the specified
 	value.  The speed should be between 0 and 1.
 
+set_asteroid_minerals(id, carbon, silicates, nickeliron, preciousmetals); -- sets the proportions
+	of carbon, silicates, nickeliron, preciousmetals.  Returns 0.0 on success, nil otherwise.
+	May fail if id doesn't match an asteroid.
+
+	Example:
+
+	asteroid = add_asteroid(1000.0, 1000.0, 10000.0);
+	set_asteroid_speed(asteroid, 0.0);
+	set_asteroid_minerals(asteroid, 90.0, 5.0, 3.0, 2.0);
+
 id = add_cargo_container(x, y, z, vx, vy, vz) -- adds a cargo container at specified
 	location and velocity
 
