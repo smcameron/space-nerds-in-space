@@ -10250,7 +10250,6 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			}
 
 			rc = sscanf(msg + 5, "%f %c", &qf, &x);
-			printf("rc = %d, qf = %f, x = %c\n", rc, qf, x);
 			if (rc != 2) {
 				rc = sscanf(msg + 5, "%c", &x);
 				if (rc == 1 && strlen(msg) == 6) {
