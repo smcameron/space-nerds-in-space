@@ -92,7 +92,10 @@
 #include "snis_hash.h"
 #include "snis_bridge_update_packet.h"
 #include "solarsystem_config.h"
+#include "key_value_parser.h"
 #include "a_star.h"
+
+#include "snis_entity_key_value_specification.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -11885,6 +11888,104 @@ static int l_set_asteroid_minerals(lua_State *l)
 	return 1;
 }
 
+static int l_get_ship_attribute(lua_State *l)
+{
+	struct key_value_specification *kvs;
+	const double lua_oid = luaL_checknumber(l, 1);
+	const char *attribute;
+	struct snis_entity *o;
+	uint64_t ui64;
+	uint32_t ui32;
+	uint16_t ui16;
+	uint8_t ui8;
+	int64_t i64;
+	int32_t i32;
+	int16_t i16;
+	int8_t i8;
+	double dbl;
+	float flt;
+	char *str;
+	uint32_t oid;
+	int i;
+	void *base_address[1];
+
+	oid = (uint32_t) lua_oid;
+	attribute = lua_tostring(lua_state, 2);
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto error;
+	o = &go[i];
+	base_address[0] = o;
+	kvs = lookup_key_entry(snis_entity_kvs, attribute);
+	if (!kvs)
+		goto error;
+	switch (kvs->type) {
+	case KVS_STRING:
+		str = (char *) o + kvs->address_offset;
+		lua_pushstring(l, str);
+		break;
+	case KVS_UINT64:
+		if (key_value_get_value(kvs, attribute, base_address, &ui64, sizeof(ui64)) != sizeof(ui64))
+			goto error;
+		lua_pushnumber(l, (double) ui64);
+		break;
+	case KVS_UINT32:
+		if (key_value_get_value(kvs, attribute, base_address, &ui32, sizeof(ui32)) != sizeof(ui32))
+			goto error;
+		lua_pushnumber(l, (double) ui32);
+		break;
+	case KVS_UINT16:
+		if (key_value_get_value(kvs, attribute, base_address, &ui16, sizeof(ui16)) != sizeof(ui16))
+			goto error;
+		lua_pushnumber(l, (double) ui16);
+		break;
+	case KVS_UINT8:
+		if (key_value_get_value(kvs, attribute, base_address, &ui8, sizeof(ui16)) != sizeof(ui8))
+			goto error;
+		lua_pushnumber(l, (double) ui8);
+		break;
+	case KVS_INT64:
+		if (key_value_get_value(kvs, attribute, base_address, &i64, sizeof(i64)) != sizeof(i64))
+			goto error;
+		lua_pushnumber(l, (double) i64);
+		break;
+	case KVS_INT32:
+		if (key_value_get_value(kvs, attribute, base_address, &i32, sizeof(i32)) != sizeof(i32))
+			goto error;
+		lua_pushnumber(l, (double) i32);
+		break;
+	case KVS_INT16:
+		if (key_value_get_value(kvs, attribute, base_address, &i16, sizeof(i16)) != sizeof(i16))
+			goto error;
+		lua_pushnumber(l, (double) i16);
+		break;
+	case KVS_INT8:
+		if (key_value_get_value(kvs, attribute, base_address, &i8, sizeof(i8)) != sizeof(i8))
+			goto error;
+		lua_pushnumber(l, (double) i8);
+		break;
+	case KVS_DOUBLE:
+		if (key_value_get_value(kvs, attribute, base_address, &dbl, sizeof(dbl)) != sizeof(dbl))
+			goto error;
+		lua_pushnumber(l, dbl);
+		break;
+	case KVS_FLOAT:
+		if (key_value_get_value(kvs, attribute, base_address, &flt, sizeof(flt)) != sizeof(flt))
+			goto error;
+		lua_pushnumber(l, (double) flt);
+		break;
+	default:
+		goto error;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	return 1;
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnil(lua_state);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -14969,6 +15070,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_enqueue_lua_script, "enqueue_lua_script");
 	add_lua_callable_fn(l_register_proximity_callback, "register_proximity_callback");
 	add_lua_callable_fn(l_set_asteroid_minerals, "set_asteroid_minerals");
+	add_lua_callable_fn(l_get_ship_attribute, "get_ship_attribute");
 }
 
 static int run_initial_lua_scripts(void)

@@ -203,6 +203,208 @@ show_timed_text(id, time_in_seconds, textstring);
 enqueue_lua_script(scriptname);
 	Queue the named lua script for execution;
 
+get_ship_attribute(id, attribute_name); -- returns the specified attribute of the ship.  The
+	type depends on the attribute, though generally will be a number or a string.
+
+	The attributes and their types are listed below (output of print_ship_attributes program):
+	The types are as follows (from key_value_parser.h):
+
+	's' - string
+	'q' - number (uint64_t)
+	'w' - number (uint32_t)
+	'h' - number (uint16_t)
+	'b' - number (uint8_t)
+	'Q' - number (int64_t)
+	'W' - number (int32_t)
+	'H' - number (int16_t)
+	'B' - number (int8_t)
+	'd' - number (double)
+	'f' - number (float)
+
+	Though, to lua, they're all just "numbers."
+
+
+	The attributes are as follows:
+
+                                     Key Type     offset       size      index
+                                       x    d         96          8          0
+                                       y    d        104          8          0
+                                       z    d        112          8          0
+                                      vx    d        120          8          0
+                                      vy    d        128          8          0
+                                      vz    d        136          8          0
+                                 heading    d        144          8          0
+                                   alive    h        152          2          0
+                                    type    w        156          4          0
+                               torpedoes    w        168          4          0
+                                   power    w        172          4          0
+                                 shields    w        176          4          0
+                                shipname    s        180        100          0
+                                velocity    d        280          8          0
+                            yaw_velocity    d        288          8          0
+                          pitch_velocity    d        296          8          0
+                           roll_velocity    d        304          8          0
+                        desired_velocity    d        312          8          0
+                        gun_yaw_velocity    d        320          8          0
+                             sci_heading    d        328          8          0
+                          sci_beam_width    d        336          8          0
+                        sci_yaw_velocity    d        344          8          0
+              sciball_orientation.vec[0]    f        352          4          0
+              sciball_orientation.vec[1]    f        356          4          0
+              sciball_orientation.vec[2]    f        360          4          0
+              sciball_orientation.vec[3]    f        364          4          0
+                          sciball_yawvel    d        432          8          0
+                        sciball_pitchvel    d        440          8          0
+                         sciball_rollvel    d        448          8          0
+                 weap_orientation.vec[0]    f        456          4          0
+                 weap_orientation.vec[1]    f        460          4          0
+                 weap_orientation.vec[2]    f        464          4          0
+                 weap_orientation.vec[3]    f        468          4          0
+                             weap_yawvel    d        536          8          0
+                           weap_pitchvel    d        544          8          0
+                        torpedoes_loaded    b        552          1          0
+                       torpedoes_loading    b        553          1          0
+                       torpedo_load_time    h        554          2          0
+                      phaser_bank_charge    b        556          1          0
+                                    fuel    w        560          4          0
+                                     rpm    b        564          1          0
+                                throttle    b        565          1          0
+                                    temp    b        566          1          0
+                                shiptype    b        567          1          0
+                                 scizoom    b        568          1          0
+                                weapzoom    b        569          1          0
+                                mainzoom    b        571          1          0
+                     requested_warpdrive    b        573          1          0
+                        requested_shield    b        574          1          0
+                       phaser_wavelength    b        575          1          0
+                           phaser_charge    b        576          1          0
+                    damage.shield_damage    b        992          1          0
+                   damage.impulse_damage    b        993          1          0
+                      damage.warp_damage    b        994          1          0
+               damage.maneuvering_damage    b        995          1          0
+              damage.phaser_banks_damage    b        996          1          0
+                   damage.sensors_damage    b        997          1          0
+                     damage.comms_damage    b        998          1          0
+                   damage.tractor_damage    b        999          1          0
+                               view_mode    b       2064          1          0
+                              view_angle    d       2072          8          0
+               power_data.maneuvering.r1    b       2080          1          0
+               power_data.maneuvering.r2    b       2081          1          0
+               power_data.maneuvering.r3    b       2082          1          0
+                power_data.maneuvering.i    b       2083          1          0
+                      power_data.warp.r1    b       2084          1          0
+                      power_data.warp.r2    b       2085          1          0
+                      power_data.warp.r3    b       2086          1          0
+                       power_data.warp.i    b       2087          1          0
+                   power_data.impulse.r1    b       2088          1          0
+                   power_data.impulse.r2    b       2089          1          0
+                   power_data.impulse.r3    b       2090          1          0
+                    power_data.impulse.i    b       2091          1          0
+                   power_data.sensors.r1    b       2092          1          0
+                   power_data.sensors.r2    b       2093          1          0
+                   power_data.sensors.r3    b       2094          1          0
+                    power_data.sensors.i    b       2095          1          0
+                     power_data.comms.r1    b       2096          1          0
+                     power_data.comms.r2    b       2097          1          0
+                     power_data.comms.r3    b       2098          1          0
+                      power_data.comms.i    b       2099          1          0
+                   power_data.phasers.r1    b       2100          1          0
+                   power_data.phasers.r2    b       2101          1          0
+                   power_data.phasers.r3    b       2102          1          0
+                    power_data.phasers.i    b       2103          1          0
+                   power_data.shields.r1    b       2104          1          0
+                   power_data.shields.r2    b       2105          1          0
+                   power_data.shields.r3    b       2106          1          0
+                    power_data.shields.i    b       2107          1          0
+                   power_data.tractor.r1    b       2108          1          0
+                   power_data.tractor.r2    b       2109          1          0
+                   power_data.tractor.r3    b       2110          1          0
+                    power_data.tractor.i    b       2111          1          0
+                      power_data.voltage    b       2112          1          0
+             coolant_data.maneuvering.r1    b       2128          1          0
+             coolant_data.maneuvering.r2    b       2129          1          0
+             coolant_data.maneuvering.r3    b       2130          1          0
+              coolant_data.maneuvering.i    b       2131          1          0
+                    coolant_data.warp.r1    b       2132          1          0
+                    coolant_data.warp.r2    b       2133          1          0
+                    coolant_data.warp.r3    b       2134          1          0
+                     coolant_data.warp.i    b       2135          1          0
+                 coolant_data.impulse.r1    b       2136          1          0
+                 coolant_data.impulse.r2    b       2137          1          0
+                 coolant_data.impulse.r3    b       2138          1          0
+                  coolant_data.impulse.i    b       2139          1          0
+                 coolant_data.sensors.r1    b       2140          1          0
+                 coolant_data.sensors.r2    b       2141          1          0
+                 coolant_data.sensors.r3    b       2142          1          0
+                  coolant_data.sensors.i    b       2143          1          0
+                   coolant_data.comms.r1    b       2144          1          0
+                   coolant_data.comms.r2    b       2145          1          0
+                   coolant_data.comms.r3    b       2146          1          0
+                    coolant_data.comms.i    b       2147          1          0
+                 coolant_data.phasers.r1    b       2148          1          0
+                 coolant_data.phasers.r2    b       2149          1          0
+                 coolant_data.phasers.r3    b       2150          1          0
+                  coolant_data.phasers.i    b       2151          1          0
+                 coolant_data.shields.r1    b       2152          1          0
+                 coolant_data.shields.r2    b       2153          1          0
+                 coolant_data.shields.r3    b       2154          1          0
+                  coolant_data.shields.i    b       2155          1          0
+                 coolant_data.tractor.r1    b       2156          1          0
+                 coolant_data.tractor.r2    b       2157          1          0
+                 coolant_data.tractor.r3    b       2158          1          0
+                  coolant_data.tractor.i    b       2159          1          0
+                    coolant_data.voltage    b       2160          1          0
+          temperature_data.shield_damage    b       2176          1          0
+         temperature_data.impulse_damage    b       2177          1          0
+            temperature_data.warp_damage    b       2178          1          0
+     temperature_data.maneuvering_damage    b       2179          1          0
+    temperature_data.phaser_banks_damage    b       2180          1          0
+         temperature_data.sensors_damage    b       2181          1          0
+           temperature_data.comms_damage    b       2182          1          0
+         temperature_data.tractor_damage    b       2183          1          0
+                               warp_time    d       2184          8          0
+                              scibeam_a1    d       2192          8          0
+                              scibeam_a2    d       2200          8          0
+                           scibeam_range    d       2208          8          0
+                                 reverse    b       2216          1          0
+                                 trident    b       2217          1          0
+                       next_torpedo_time    d       2220          8          0
+                         next_laser_time    d       2224          8          0
+                          lifeform_count    b       2228          1          0
+                            tractor_beam    w       2232          4          0
+                 overheating_damage_done    b       2236          1          0
+              steering_adjustment.vec[0]    f       2240          4          0
+              steering_adjustment.vec[1]    f       2244          4          0
+              steering_adjustment.vec[2]    f       2248          4          0
+                          braking_factor    f       2252          4          0
+                             ncargo_bays    W       2448          4          0
+                                  wallet    f       2452          4          0
+                            threat_level    f       2456          4          0
+                         docking_magnets    b       2516          1          0
+                        passenger_berths    b       2517          1          0
+                             mining_bots    b       2518          1          0
+                         mining_bot_name    s       2524         20          0
+                              sdata.name    s       2576         20          0
+                sdata.science_data_known    h       2596          2          0
+                          sdata.subclass    B       2598          1          0
+                   sdata.shield_strength    B       2599          1          0
+                 sdata.shield_wavelength    B       2600          1          0
+                      sdata.shield_width    B       2601          1          0
+                      sdata.shield_depth    B       2602          1          0
+                           sdata.faction    B       2603          1          0
+                              sci_coordx    d       2608          8          0
+                              sci_coordz    d       2616          8          0
+                      orientation.vec[0]    f       2720          4          0
+                      orientation.vec[1]    f       2724          4          0
+                      orientation.vec[2]    f       2728          4          0
+                      orientation.vec[3]    f       2732          4          0
+
+	Example usage:
+
+	player_ids = get_player_ship_ids();
+	money_player_has = get_ship_attribute(player_ids[1], "wallet");
+	ship_name = get_ship_attribute(player_ids[1], "sdata.name");
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.

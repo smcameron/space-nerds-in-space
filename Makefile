@@ -353,7 +353,8 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
-		snis_server_tracker.o snis_bridge_update_packet.o solarsystem_config.o a_star.o
+		snis_server_tracker.o snis_bridge_update_packet.o solarsystem_config.o a_star.o \
+		key_value_parser.o
 MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o
 
@@ -879,6 +880,9 @@ earthlike.1.gz:	earthlike.1
 
 gaseous-giganticus.1.gz:	gaseous-giganticus.1
 	gzip -9 - < gaseous-giganticus.6 > gaseous-giganticus.6.gz
+
+print_ship_attributes:	snis_entity_key_value_specification.h key_value_parser.o
+	gcc -o print_ship_attributes print_ship_attributes.c key_value_parser.o
 
 install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${MANPAGES} ${SSGL} \
