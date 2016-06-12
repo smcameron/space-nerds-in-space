@@ -10331,6 +10331,11 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 		}
 		send_comms_packet(n, channel, " 0: PREVIOUS MENU");
 		send_comms_packet(n, channel, "----------------------------");
+		if (buy)
+			send_comms_packet(n, channel, "  (TYPE 'BUY 3 A' TO BUY 3 of item A)");
+		else
+			send_comms_packet(n, channel, "  (TYPE 'SELL 3 A' TO SELL 3 of item A)");
+		send_comms_packet(n, channel, "----------------------------");
 	}
 	if (selection == 0) {
 		bridgelist[bridge].npcbot.special_bot = NULL; /* deactivate cargo buying bot */
