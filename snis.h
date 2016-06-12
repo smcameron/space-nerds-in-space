@@ -488,6 +488,7 @@ struct asteroid_data {
 	double r; /* distance from center of universe */
 	double angle_offset;
 	union quat rotational_velocity;
+	float v;
 	uint8_t carbon;
 	uint8_t nickeliron;
 	uint8_t silicates;

@@ -898,7 +898,9 @@ static void generic_move(__attribute__((unused)) struct snis_entity *o)
 
 static void asteroid_move(struct snis_entity *o)
 {
-	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+	set_object_location(o, o->x + o->vx * o->tsd.asteroid.v,
+				o->y + o->vy * o->tsd.asteroid.v,
+				o->z + o->vz * o->tsd.asteroid.v);
 	o->timestamp = universe_timestamp;
 
 	if (((o->timestamp + o->id) & 0x07) == 0) { /* throttle this calculation */
@@ -6663,7 +6665,7 @@ static int l_add_ship(lua_State *l)
 	return 1;
 }
 
-static int add_asteroid(double x, double y, double z, double vx, double vz, double heading);
+static int add_asteroid(double x, double y, double z, double vx, double vz, double heading, double v);
 static int l_add_asteroid(lua_State *l)
 {
 	double x, y, z;
@@ -6674,9 +6676,31 @@ static int l_add_asteroid(lua_State *l)
 	z = lua_tonumber(lua_state, 3);
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_asteroid(x, y, z, 0.0, 0.0, 0.0);
+	i = add_asteroid(x, y, z, 0.0, 0.0, 0.0, 1.0);
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
+	return 1;
+}
+
+static int l_set_asteroid_speed(lua_State *l)
+{
+	const double id = luaL_checknumber(lua_state, 1);
+	const double v = luaL_checknumber(lua_state, 2);
+	pthread_mutex_lock(&universe_mutex);
+	int i = lookup_by_id((uint32_t) id);
+	if (i < 0)
+		goto error;
+	if (go[i].type != OBJTYPE_ASTEROID)
+		goto error;
+	if (v < 0.0 || v > 1.0)
+		goto error;
+	go[i].tsd.asteroid.v = (float) v;
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, 0.0);
+	return 1;
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnil(lua_state);
 	return 1;
 }
 
@@ -6865,7 +6889,7 @@ static void normalize_percentage(uint8_t *v, int total)
 	*v = (uint8_t) (fraction * 255.0);
 }
 
-static int add_asteroid(double x, double y, double z, double vx, double vz, double heading)
+static int add_asteroid(double x, double y, double z, double vx, double vz, double heading, double velocity)
 {
 	int i, n, v;
 	int total;
@@ -6880,6 +6904,7 @@ static int add_asteroid(double x, double y, double z, double vx, double vz, doub
 	go[i].move = asteroid_move;
 	go[i].vx = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
 	go[i].vz = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
+	go[i].tsd.asteroid.v = velocity;
 	go[i].alive = snis_randn(10) + 5;
 	go[i].orientation = random_spin[go[i].id % NRANDOM_ORIENTATIONS];
 	go[i].tsd.asteroid.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
@@ -7637,7 +7662,7 @@ static void add_asteroids(void)
 			x = cx + r * sin(a);
 			z = cz + r * cos(a);
 			y = cy + r * cos(a2);
-			add_asteroid(x, y, z, 0.0, 0.0, 0.0);
+			add_asteroid(x, y, z, 0.0, 0.0, 0.0, 1.0);
 		}
 	}
 }
@@ -10771,6 +10796,8 @@ static void enscript_asteroid(FILE *f, struct snis_entity *o, int asteroid)
 		fprintf(f, "asteroid = {};\n");
 	fprintf(f, "asteroid[%d] = add_asteroid(%lf, %lf, %lf);\n",
 				asteroid, o->x, o->y, o->z);
+	fprintf(f, "asteroid_set_velocity(asteroid[%d], %f);\n",
+				asteroid, o->tsd.asteroid.v);
 }
 
 static void enscript_starbase(FILE *f, struct snis_entity *o, int starbase)
@@ -11828,7 +11855,7 @@ static int process_create_item(struct game_client *c)
 		i = add_planet(x, y, z, r, 0);
 		break;
 	case OBJTYPE_ASTEROID:
-		i = add_asteroid(x, y, z, 0.0, 0.0, 0.0);
+		i = add_asteroid(x, y, z, 0.0, 0.0, 0.0, 1.0);
 		break;
 	case OBJTYPE_NEBULA:
 		r = (double) snis_randn(NEBULA_RADIUS) +
@@ -14856,6 +14883,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_random_ship, "add_random_ship");
 	add_lua_callable_fn(l_add_ship, "add_ship");
 	add_lua_callable_fn(l_add_asteroid, "add_asteroid");
+	add_lua_callable_fn(l_set_asteroid_speed, "set_asteroid_speed");
 	add_lua_callable_fn(l_add_starbase, "add_starbase");
 	add_lua_callable_fn(l_add_planet, "add_planet");
 	add_lua_callable_fn(l_add_nebula, "add_nebula");

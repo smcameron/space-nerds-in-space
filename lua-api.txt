@@ -80,6 +80,10 @@ id = add_ship(name, x, y, z, type, faction, auto_respawn) -- adds a ship to the
 id = add_asterod(x, y, z) -- adds an asteroid at the specified location
 	(it will orbit around the center of the universe)
 
+set_asteroid_speed(id, speed);
+	Sets the speed of the asteroid with the specified id to the specified
+	value.  The speed should be between 0 and 1.
+
 id = add_cargo_container(x, y, z, vx, vy, vz) -- adds a cargo container at specified
 	location and velocity
 
