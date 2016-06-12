@@ -574,7 +574,8 @@ shield_strength.o:	shield_strength.c Makefile
 snis_server.o:	snis_server.c Makefile build_info.h
 	$(Q)$(COMPILE)
 
-snis_multiverse.o:	snis_multiverse.c snis_multiverse.h Makefile build_info.h
+snis_multiverse.o:	snis_multiverse.c snis_multiverse.h Makefile build_info.h \
+			snis_entity_key_value_specification.h
 	$(Q)$(COMPILE)
 
 snis_server_tracker.o:	snis_server_tracker.c snis_server_tracker.h ssgl/ssgl.h Makefile
