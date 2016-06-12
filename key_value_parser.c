@@ -337,6 +337,49 @@ int key_value_write_lines(FILE *f, struct key_value_specification *kvs, void *ba
 	return errs;
 }
 
+int key_value_get_value(struct key_value_specification *kvs, const char *key, void *base_address[],
+			void *output_buffer, int output_buffersize)
+{
+	struct key_value_specification *k;
+	unsigned char *data;
+	int amount;
+
+	for (k = kvs; k->key; k++) {
+		if (strcmp(key, k->key) != 0)
+			continue;
+		data = (unsigned char *) base_address[k->address_index] + k->address_offset;
+		amount = output_buffersize;
+		if (k->size < amount)
+			amount = k->size;
+		memcpy(output_buffer, data, amount);
+		return amount;
+	}
+	return -1;
+}
+
+void key_value_specification_print(struct key_value_specification *kvs)
+{
+	struct key_value_specification *k;
+
+	printf("%40s %4s %10s %10s %10s\n", "Key", "Type", "offset", "size", "index");
+	for (k = kvs; k->key; k++) {
+		printf("%40s %4c %10d %10d %10d\n",
+			k->key, k->type, k->address_offset, k->size, k->address_index);
+	}
+}
+
+struct key_value_specification *lookup_key_entry(struct key_value_specification *kvs, const char *key)
+{
+	struct key_value_specification *k;
+
+	for (k = kvs; k->key; k++) {
+		if (strcmp(key, k->key) != 0)
+			continue;
+		return k;
+	}
+	return NULL;
+}
+
 #ifdef TEST_KEY_VALUE_PARSER
 #include <math.h>
 

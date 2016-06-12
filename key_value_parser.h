@@ -100,4 +100,13 @@ int key_value_parse_lines(const struct key_value_specification *kvs, const char 
 /* Write a series of lines of text based on base_address[<appropriate_indices>]-><appropriate_offsets> based on kvs */
 int key_value_write_lines(FILE *f, struct key_value_specification *kvs, void *base_address[]);
 
+/* key_value_get_value() Looks up key in kvs, extracts corresponding value from base_address[],
+ * and copies the data to output_buffer.  Returns number of bytes copied, or -1 if the key
+ * was not found.
+ */
+int key_value_get_value(struct key_value_specification *kvs, const char *key, void *base_address[],
+			void *output_buffer, int output_buffersize);
+struct key_value_specification *lookup_key_entry(struct key_value_specification *kvs, const char *key);
+void key_value_specification_print(struct key_value_specification *kvs);
+
 #endif
