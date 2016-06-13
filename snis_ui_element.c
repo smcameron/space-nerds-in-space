@@ -128,6 +128,11 @@ void ui_element_set_focus_callback(struct ui_element *e,
 	e->set_focus = set_focus;
 }
 
+void ui_element_set_displaymode(struct ui_element *e, int displaymode)
+{
+	e->active_displaymode = displaymode;
+}
+
 static void advance_focus(struct ui_element_list *list)
 {
 	struct ui_element_list *i;
