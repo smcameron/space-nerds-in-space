@@ -11916,6 +11916,8 @@ static int l_get_ship_attribute(lua_State *l)
 	if (i < 0)
 		goto error;
 	o = &go[i];
+	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_SHIP2)
+		goto error;
 	base_address[0] = o;
 	kvs = lookup_key_entry(snis_entity_kvs, attribute);
 	if (!kvs)
