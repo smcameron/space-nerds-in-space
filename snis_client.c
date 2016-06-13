@@ -3411,6 +3411,15 @@ static int lobby_lookup_server_by_location(char *location)
 
 static void ui_hide_widget(void *widget);
 static void ui_unhide_widget(void *widget);
+static void ui_set_widget_displaymode(void *widget, int displaymode)
+{
+	struct ui_element *uie;
+
+	uie = widget_to_ui_element(uiobjs, widget);
+	if (!uie)
+		return;
+	ui_element_set_displaymode(uie, displaymode);
+}
 
 static void show_common_screen(GtkWidget *w, char *title);
 
@@ -5771,8 +5780,28 @@ static void draw_credits_screen(int lines, char *crawl[])
 	}
 }
 
+static void textscreen_dismiss_button_pressed(void *button_ptr_ptr)
+{
+	struct button **button = button_ptr_ptr;
+	textscreen_timer = 0;
+	if (*button)
+		ui_hide_widget(*button);
+}
+
+static void ui_add_button(struct button *b, int active_displaymode);
 static void show_textscreen(GtkWidget *w)
 {
+	static struct button *dismiss_button = NULL;
+
+	if (!dismiss_button) {
+		dismiss_button = snis_button_init(txx(650), txy(520), -1, -1,
+			"DISMISS", RED, NANO_FONT, textscreen_dismiss_button_pressed, &dismiss_button);
+		ui_add_button(dismiss_button, DISPLAYMODE_INTROSCREEN); /* so it doesn't show up anywhere */
+	}
+	ui_unhide_widget(dismiss_button);
+	/* make it show on the current screen, whatever it is */
+	ui_set_widget_displaymode(dismiss_button, displaymode);
+
 	char tmp_textscreen[sizeof(textscreen)];
 
 	switch (displaymode) {
@@ -5792,6 +5821,8 @@ static void show_textscreen(GtkWidget *w)
 		return;
 	strcpy(tmp_textscreen, textscreen);
 	textscreen_timer--;
+	if (textscreen_timer == 0)
+		ui_hide_widget(dismiss_button);
 	char *line;
 	int y = 100;
 
