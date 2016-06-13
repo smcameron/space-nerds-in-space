@@ -5793,6 +5793,9 @@ static void show_textscreen(GtkWidget *w)
 {
 	static struct button *dismiss_button = NULL;
 
+	if (displaymode != DISPLAYMODE_MAINSCREEN)
+		return;
+
 	if (!dismiss_button) {
 		dismiss_button = snis_button_init(txx(650), txy(520), -1, -1,
 			"DISMISS", RED, NANO_FONT, textscreen_dismiss_button_pressed, &dismiss_button);
