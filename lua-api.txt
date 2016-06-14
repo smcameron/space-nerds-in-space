@@ -377,6 +377,54 @@ get_ship_attribute(id, attribute_name); -- returns the specified attribute of th
               steering_adjustment.vec[1]    f       2244          4          0
               steering_adjustment.vec[2]    f       2248          4          0
                           braking_factor    f       2252          4          0
+                           cargo[0].paid    f       2264          4          0
+                  cargo[0].contents.item    W       2256          4          0
+                   cargo[0].contents.qty    f       2260          4          0
+                         cargo[0].origin    w       2268          4          0
+                           cargo[0].dest    w       2272          4          0
+                       cargo[0].due_date    W       2276          4          0
+                           cargo[1].paid    f       2288          4          0
+                  cargo[1].contents.item    W       2280          4          0
+                   cargo[1].contents.qty    f       2284          4          0
+                         cargo[1].origin    w       2292          4          0
+                           cargo[1].dest    w       2296          4          0
+                       cargo[1].due_date    W       2300          4          0
+                           cargo[2].paid    f       2312          4          0
+                  cargo[2].contents.item    W       2304          4          0
+                   cargo[2].contents.qty    f       2308          4          0
+                         cargo[2].origin    w       2316          4          0
+                           cargo[2].dest    w       2320          4          0
+                       cargo[2].due_date    W       2324          4          0
+                           cargo[3].paid    f       2336          4          0
+                  cargo[3].contents.item    W       2328          4          0
+                   cargo[3].contents.qty    f       2332          4          0
+                         cargo[3].origin    w       2340          4          0
+                           cargo[3].dest    w       2344          4          0
+                       cargo[3].due_date    W       2348          4          0
+                           cargo[4].paid    f       2360          4          0
+                  cargo[4].contents.item    W       2352          4          0
+                   cargo[4].contents.qty    f       2356          4          0
+                         cargo[4].origin    w       2364          4          0
+                           cargo[4].dest    w       2368          4          0
+                       cargo[4].due_date    W       2372          4          0
+                           cargo[5].paid    f       2384          4          0
+                  cargo[5].contents.item    W       2376          4          0
+                   cargo[5].contents.qty    f       2380          4          0
+                         cargo[5].origin    w       2388          4          0
+                           cargo[5].dest    w       2392          4          0
+                       cargo[5].due_date    W       2396          4          0
+                           cargo[6].paid    f       2408          4          0
+                  cargo[6].contents.item    W       2400          4          0
+                   cargo[6].contents.qty    f       2404          4          0
+                         cargo[6].origin    w       2412          4          0
+                           cargo[6].dest    w       2416          4          0
+                       cargo[6].due_date    W       2420          4          0
+                           cargo[7].paid    f       2432          4          0
+                  cargo[7].contents.item    W       2424          4          0
+                   cargo[7].contents.qty    f       2428          4          0
+                         cargo[7].origin    w       2436          4          0
+                           cargo[7].dest    w       2440          4          0
+                       cargo[7].due_date    W       2444          4          0
                              ncargo_bays    W       2448          4          0
                                   wallet    f       2452          4          0
                             threat_level    f       2456          4          0
