@@ -12034,12 +12034,10 @@ static int l_set_commodity_contents(lua_State *l)
 	const double lua_oid = luaL_checknumber(l, 1);
 	const double lua_commodity_index = luaL_checknumber(l, 2);
 	const double lua_quantity = luaL_checknumber(l, 3);
-	const double lua_cargo_bay = luaL_checknumber(l, 4);
 	struct snis_entity *o;
 	uint32_t oid = (uint32_t) lua_oid;
 	int index = (int) lua_commodity_index;
 	int i;
-	int cargo_bay = (int) lua_cargo_bay;
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(oid);
@@ -12048,17 +12046,24 @@ static int l_set_commodity_contents(lua_State *l)
 	if (i >= snis_object_pool_highest_object(pool))
 		goto out;
 	o = &go[i];
-	if (o->type != OBJTYPE_SHIP1)
-		goto out;
-	if (cargo_bay < 0 || cargo_bay >= o->tsd.ship.ncargo_bays)
+	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_CARGO_CONTAINER)
 		goto out;
 	if (index < -1 || index >= ncommodities)
 		goto out;
-	o->tsd.ship.cargo[cargo_bay].contents.item = index;
-	o->tsd.ship.cargo[cargo_bay].contents.qty = lua_quantity;
-	o->tsd.ship.cargo[cargo_bay].paid = 0.0;
-	o->tsd.ship.cargo[cargo_bay].origin = -1;
-	o->tsd.ship.cargo[cargo_bay].dest = -1;
+	if (o->type == OBJTYPE_SHIP1) {
+		const double lua_cargo_bay = luaL_checknumber(l, 4);
+		int cargo_bay = (int) lua_cargo_bay;
+		if (cargo_bay < 0 || cargo_bay >= o->tsd.ship.ncargo_bays)
+			goto out;
+		o->tsd.ship.cargo[cargo_bay].contents.item = index;
+		o->tsd.ship.cargo[cargo_bay].contents.qty = lua_quantity;
+		o->tsd.ship.cargo[cargo_bay].paid = 0.0;
+		o->tsd.ship.cargo[cargo_bay].origin = -1;
+		o->tsd.ship.cargo[cargo_bay].dest = -1;
+	} else if (o->type == OBJTYPE_CARGO_CONTAINER) {
+		o->tsd.cargo_container.contents.item = index;
+		o->tsd.cargo_container.contents.qty = lua_quantity;
+	}
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, 0.0);
 	return 1;
