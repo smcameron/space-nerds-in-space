@@ -483,6 +483,15 @@ lookup_commodity(commodity_name); -- returns the index of a named commodity, or 
 
 	n = lookup_commodity("gold ore");
 
+set_commodity_contents(shipid, commodity_index, quantity, cargo_bay_number) -- sets
+	the contents of a player ship's cargo bay to the specified item and quantity.
+
+  Example:
+
+	player_ids = get_player_ship_ids();
+	n = lookup_commodity("gold ore");
+	set_commodity_contents(player_ids[1], n, 100.0, 0);
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.

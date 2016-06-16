@@ -12029,6 +12029,45 @@ static int l_lookup_commodity(lua_State *l)
 	return 1;
 }
 
+static int l_set_commodity_contents(lua_State *l)
+{
+	const double lua_oid = luaL_checknumber(l, 1);
+	const double lua_commodity_index = luaL_checknumber(l, 2);
+	const double lua_quantity = luaL_checknumber(l, 3);
+	const double lua_cargo_bay = luaL_checknumber(l, 4);
+	struct snis_entity *o;
+	uint32_t oid = (uint32_t) lua_oid;
+	int index = (int) lua_commodity_index;
+	int i;
+	int cargo_bay = (int) lua_cargo_bay;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto out;
+	if (i >= snis_object_pool_highest_object(pool))
+		goto out;
+	o = &go[i];
+	if (o->type != OBJTYPE_SHIP1)
+		goto out;
+	if (cargo_bay < 0 || cargo_bay >= o->tsd.ship.ncargo_bays)
+		goto out;
+	if (index < -1 || index >= ncommodities)
+		goto out;
+	o->tsd.ship.cargo[cargo_bay].contents.item = index;
+	o->tsd.ship.cargo[cargo_bay].contents.qty = lua_quantity;
+	o->tsd.ship.cargo[cargo_bay].paid = 0.0;
+	o->tsd.ship.cargo[cargo_bay].origin = -1;
+	o->tsd.ship.cargo[cargo_bay].dest = -1;
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, 0.0);
+	return 1;
+out:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnil(l);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -15117,6 +15156,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_commodity_name, "get_commodity_name");
 	add_lua_callable_fn(l_get_commodity_units, "get_commodity_units");
 	add_lua_callable_fn(l_lookup_commodity, "lookup_commodity");
+	add_lua_callable_fn(l_set_commodity_contents, "set_commodity_contents");
 }
 
 static int run_initial_lua_scripts(void)
