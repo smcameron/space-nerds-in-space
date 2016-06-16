@@ -11988,6 +11988,47 @@ error:
 	return 1;
 }
 
+static int l_get_commodity_name(lua_State *l)
+{
+	const double lua_commodity_index = luaL_checknumber(l, 1);
+	int index = (int) lua_commodity_index;
+
+	if (index < 0 || index >= ncommodities) {
+		lua_pushnil(lua_state);
+		return 1;
+	}
+	lua_pushstring(l, commodity[index].name);
+	return 1;
+}
+
+static int l_get_commodity_units(lua_State *l)
+{
+	const double lua_commodity_index = luaL_checknumber(l, 1);
+	int index = (int) lua_commodity_index;
+
+	if (index < 0 || index >= ncommodities) {
+		lua_pushnil(lua_state);
+		return 1;
+	}
+	lua_pushstring(l, commodity[index].unit);
+	return 1;
+}
+
+static int l_lookup_commodity(lua_State *l)
+{
+	const char *lua_commodity_name = luaL_checkstring(l, 1);
+	int i;
+
+	for (i = 0; i < ncommodities; i++) {
+		if (strcasecmp(lua_commodity_name, commodity[i].name) == 0) {
+			lua_pushnumber(l, (float) i);
+			return 1;
+		}
+	}
+	lua_pushnil(l);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -15073,6 +15114,9 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_register_proximity_callback, "register_proximity_callback");
 	add_lua_callable_fn(l_set_asteroid_minerals, "set_asteroid_minerals");
 	add_lua_callable_fn(l_get_ship_attribute, "get_ship_attribute");
+	add_lua_callable_fn(l_get_commodity_name, "get_commodity_name");
+	add_lua_callable_fn(l_get_commodity_units, "get_commodity_units");
+	add_lua_callable_fn(l_lookup_commodity, "lookup_commodity");
 }
 
 static int run_initial_lua_scripts(void)

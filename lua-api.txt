@@ -453,6 +453,36 @@ get_ship_attribute(id, attribute_name); -- returns the specified attribute of th
 	money_player_has = get_ship_attribute(player_ids[1], "wallet");
 	ship_name = get_ship_attribute(player_ids[1], "sdata.name");
 
+get_commodity_name(index); -- This field allows you to get the names of cargo bay items.
+  Returns the name of the commodity associated with the given index.  The commodities are
+  initially defined by the contents of share/snis/commodities.txt.  The name is the first
+  field in each line this file.  You get the index value via calling for example
+  get_ship_attribute(shipid, "cargo[0].contents.item"), which returns you a number.
+  get_commodity_name() decodes this number into a name.  See the example for
+  get_commodity_units(), below.
+
+get_commodity_units(index); -- This field allows you to get the units of cargo bay items.
+  Returns the units of the commodity associated with the given index.  The commodities are
+  initially defined by the contents of share/snis/commodities.txt.  The units is the second
+  field in each line this file.  You get the index value via calling for example
+  get_ship_attribute(shipid, "cargo[0].contents.item"), which returns you a number.  get_commodity_units()
+  decodes this number into a string defining the units.
+
+  Example:
+
+	player_ids = get_player_ship_ids();
+	cargo = get_ship_attribute(player_ids[1], "cargo[0].contents.item");
+	cargo_name = get_commodity_name(cargo);
+	cargo_units = get_commodity_units(cargo);
+
+lookup_commodity(commodity_name); -- returns the index of a named commodity, or nil
+	if there is no commodity with the specified name.  The name is not case
+	sensitive.
+
+  Example:
+
+	n = lookup_commodity("gold ore");
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
