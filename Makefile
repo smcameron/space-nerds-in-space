@@ -856,6 +856,12 @@ device-io-sample-1:	device-io-sample-1.c snis-device-io.o
 	gcc -Wall -Wextra --pedantic -pthread -o device-io-sample-1 snis-device-io.o \
 			device-io-sample-1.c
 
+nonuniform_random_sampler.o:	nonuniform_random_sampler.c nonuniform_random_sampler.h
+	$(Q)$(COMPILE) -c nonuniform_random_sampler.c
+
+test_nonuniform_random_sampler:	nonuniform_random_sampler.o mathutils.o mtwist.o
+	gcc -D TEST_NONUNIFORM_SAMPLER -o test_nonuniform_random_sampler mtwist.o mathutils.o -lm nonuniform_random_sampler.c
+
 test-commodities:	commodities.o Makefile
 	gcc -DTESTCOMMODITIES=1 -c commodities.c -o test-commodities.o
 	gcc -DTESTCOMMODITIES=1 -o test-commodities string-utils.o test-commodities.o
