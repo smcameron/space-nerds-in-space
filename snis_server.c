@@ -1949,16 +1949,31 @@ static int add_cargo_container(double x, double y, double z, double vx, double v
 				int item, float qty);
 static int make_derelict(struct snis_entity *o)
 {
-	int rc;
+	int i, rc;
 	rc = add_derelict(o->sdata.name, o->x, o->y, o->z,
 				o->vx + snis_random_float() * 2.0,
 				o->vy + snis_random_float() * 2.0,
 				o->vz + snis_random_float() * 2.0,
 				o->tsd.ship.shiptype, o->sdata.faction, 0);
-	(void) add_cargo_container(o->x, o->y, o->z,
+	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
+		for (i = 0; i < o->tsd.ship.ncargo_bays; i++) {
+			int item;
+			float qty;
+
+			item = o->tsd.ship.cargo[i].contents.item;
+			qty = o->tsd.ship.cargo[i].contents.qty;
+			if (qty > 0.0 && item >= 0)
+				(void) add_cargo_container(o->x, o->y, o->z,
+					o->vx + snis_random_float() * 2.0,
+					o->vy + snis_random_float() * 2.0,
+					o->vz + snis_random_float(), item, qty);
+		}
+	} else {
+		(void) add_cargo_container(o->x, o->y, o->z,
 				o->vx + snis_random_float() * 2.0,
 				o->vy + snis_random_float() * 2.0,
 				o->vz + snis_random_float(), -1, 0.0);
+	}
 	return rc;
 }
 
@@ -6542,7 +6557,7 @@ static uint32_t choose_ship_home_planet(void)
 
 static int add_ship(int faction, int auto_respawn)
 {
-	int i;
+	int i, cb;
 	double x, y, z, heading;
 	int st;
 	static struct mtwist_state *mt = NULL;
@@ -6583,7 +6598,15 @@ static int add_ship(int faction, int auto_respawn)
 	go[i].tsd.ship.steering_adjustment.v.x = 0.0;
 	go[i].tsd.ship.steering_adjustment.v.y = 0.0;
 	go[i].tsd.ship.steering_adjustment.v.z = 0.0;
-	go[i].tsd.ship.ncargo_bays = 0;
+	go[i].tsd.ship.ncargo_bays = ship_type[st].ncargo_bays;
+	for (cb = 0; cb < go[i].tsd.ship.ncargo_bays; cb++) {
+		int item = snis_randn(ncommodities);
+		float qty = (float) snis_randn(100);
+		go[i].tsd.ship.cargo[cb].contents.item = item;
+		go[i].tsd.ship.cargo[cb].contents.qty = qty;
+		if (snis_randn(10000) < 2000)
+			break;
+	}
 	go[i].tsd.ship.home_planet = choose_ship_home_planet();
 	go[i].tsd.ship.auto_respawn = (uint8_t) auto_respawn;
 	quat_init_axis(&go[i].tsd.ship.computer_desired_orientation, 0, 1, 0, 0);

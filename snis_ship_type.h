@@ -34,6 +34,7 @@ struct ship_type_entry {
 	double max_speed;
 	int warpchance;
 	int crew_max;
+	int ncargo_bays;
 	int nrotations;
 	char axis[3];
 	float angle[3];

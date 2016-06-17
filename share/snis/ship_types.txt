@@ -1,29 +1,29 @@
 # 
 # format is:
-# SHIP TYPENAME model-file exhaustportsfile toughness max-speed warpchance crew-size [[axis angle] ...]
+# SHIP TYPENAME model-file exhaustportsfile toughness max-speed warpchance crew-size cargo-bays [[axis angle] ...]
 #
 # if exhaustportsfile is "-", then it's name is same as the modelfile, but with .scad_params.h
 # substituted for the "extension" of the filename.
 # if exhaustportsfile is "!", then there is intentionally no exhaustports file.
 #
-CRUISER cruiser.stl ! 0.5 1000 50 15
-DESTROYER destroyer.stl - 0.7 1500 50 10
-FREIGHTER freighter.stl - 0.2 800 3 10
-TANKER tanker.stl - 0.2 750 5 10
-TRANSPORT transport.stl ! 0.4 900 10 200
-BATTLESTAR battlestar.stl - 0.8 1100 25 75
-STARSHIP spaceship.stl - 0.5 800 40 10
-MINER asteroid-miner.stl - 0.1 2250 2 3
-SCIENCE spaceship2.stl - 0.9 750 5 7
-SPACEFARER spaceship3.stl ! 0.6 900 35 5
-DRAGONHAWK dragonhawk.stl - 0.3 1200 20 5
-SKORPIO skorpio.stl - 0.3 1400 50 9
-DISRUPTOR disruptor/disruptor.obj ../disruptor.scad_params.h 0.9 1000 50 21
-RESEARCH research-vessel/research-vessel.obj ../research-vessel.scad_params.h 0.15 700 3 7
-CONQUEROR conqueror/conqueror.obj ../conqueror.scad_params.h 0.7 1000 25 17
-SCRAMBLER scrambler.stl - 0.3 1400 15 30
-SWORDFISH swordfish.stl - 0.2 1400 15 30
-WOMBAT wombat/snis3006.obj ../wombat.scad_params.h 0.95 1400 50 30 x -90.0 y 90.0
-DREADKNIGHT dreadknight/dreadknight.obj dreadknight-exhaust-plumes.h 0.7 1300 30 25
-VANQUISHER vanquisher.stl - 0.3 1400 60 3
-ENFORCER enforcer/enforcer.obj ../enforcer.scad_params.h 0.98 2700 50 5
+CRUISER cruiser.stl ! 0.5 1000 50 15 3
+DESTROYER destroyer.stl - 0.7 1500 50 10 2
+FREIGHTER freighter.stl - 0.2 800 3 10 8
+TANKER tanker.stl - 0.2 750 5 10 1
+TRANSPORT transport.stl ! 0.4 900 10 200 1
+BATTLESTAR battlestar.stl - 0.8 1100 25 75 3
+STARSHIP spaceship.stl - 0.5 800 40 10 3
+MINER asteroid-miner.stl - 0.1 2250 2 3 2
+SCIENCE spaceship2.stl - 0.9 750 5 7 2
+SPACEFARER spaceship3.stl ! 0.6 900 35 5 1
+DRAGONHAWK dragonhawk.stl - 0.3 1200 20 5 1
+SKORPIO skorpio.stl - 0.3 1400 50 9 1
+DISRUPTOR disruptor/disruptor.obj ../disruptor.scad_params.h 0.9 1000 50 21 2
+RESEARCH research-vessel/research-vessel.obj ../research-vessel.scad_params.h 0.15 700 3 7 1
+CONQUEROR conqueror/conqueror.obj ../conqueror.scad_params.h 0.7 1000 25 17 1
+SCRAMBLER scrambler.stl - 0.3 1400 15 30 1
+SWORDFISH swordfish.stl - 0.2 1400 15 30 1
+WOMBAT wombat/snis3006.obj ../wombat.scad_params.h 0.95 1400 50 30 8 x -90.0 y 90.0
+DREADKNIGHT dreadknight/dreadknight.obj dreadknight-exhaust-plumes.h 0.7 1300 30 25 2
+VANQUISHER vanquisher.stl - 0.3 1400 60 3 1
+ENFORCER enforcer/enforcer.obj ../enforcer.scad_params.h 0.98 2700 50 5 1
