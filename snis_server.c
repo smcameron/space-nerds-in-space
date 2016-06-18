@@ -94,6 +94,7 @@
 #include "solarsystem_config.h"
 #include "key_value_parser.h"
 #include "a_star.h"
+#include "nonuniform_random_sampler.h"
 
 #include "snis_entity_key_value_specification.h"
 
@@ -6555,6 +6556,7 @@ static uint32_t choose_ship_home_planet(void)
 	return (uint32_t) -1;
 }
 
+static int commodity_sample(void);
 static int add_ship(int faction, int auto_respawn)
 {
 	int i, cb;
@@ -6600,7 +6602,7 @@ static int add_ship(int faction, int auto_respawn)
 	go[i].tsd.ship.steering_adjustment.v.z = 0.0;
 	go[i].tsd.ship.ncargo_bays = ship_type[st].ncargo_bays;
 	for (cb = 0; cb < go[i].tsd.ship.ncargo_bays; cb++) {
-		int item = snis_randn(ncommodities);
+		int item = commodity_sample();
 		float qty = (float) snis_randn(100);
 		go[i].tsd.ship.cargo[cb].contents.item = item;
 		go[i].tsd.ship.cargo[cb].contents.qty = qty;
@@ -6901,7 +6903,7 @@ static int add_cargo_container(double x, double y, double z, double vx, double v
 	go[i].alive = CARGO_CONTAINER_LIFETIME;
 	if (item < 0) {
 		/* TODO: something better for container contents */
-		item = snis_randn(ncommodities);
+		item = commodity_sample();
 		qty = (float) snis_randn(100);
 	}
 	go[i].tsd.cargo_container.contents.item = item;
@@ -7000,6 +7002,20 @@ static int mkt_item_already_present(struct marketplace_data *mkt, int nitems, in
 	return 0;
 }
 
+static int commodity_sample(void)
+{
+	static struct nonuniform_sample_distribution *d = NULL;
+	int i;
+
+	if (d)
+		return nonuniform_sample(d);
+
+	d = nonuniform_sample_distribution_init(ncommodities, 77277);
+	for (i = 0; i < ncommodities; i++)
+		nonuniform_sample_add_item(d, i, commodity[i].odds);
+	return nonuniform_sample(d);
+}
+
 static float calculate_commodity_price(struct snis_entity *planet, int item)
 {
 	float economy, tech_level, government;
@@ -7073,7 +7089,7 @@ static void init_starbase_market(struct snis_entity *o)
 	for (i = 0; i < COMMODITIES_PER_BASE; i++) {
 		int item;
 		do {
-			item = snis_randn(ncommodities);
+			item = commodity_sample();
 		} while (mkt_item_already_present(mkt, i, item)); 
 		mkt[i].item = item;
 		mkt[i].qty = snis_randn(100); /* TODO: something better */

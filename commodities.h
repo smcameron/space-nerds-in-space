@@ -30,6 +30,13 @@ struct commodity {
 	float econ_sensitivity;
 	float govt_sensitivity;
 	float tech_sensitivity;
+
+	/* odds: relative odds that this commodity will appear.  The probability that
+	 * a commodity will appear is its odds / (sum of all the odds).  This allows
+	 * a non-uniform sampling, so that some items are rarer and others more
+	 * plentiful.
+	 */
+	int odds;
 };
 
 struct commodity *read_commodities(char *filename, int *ncommodities);

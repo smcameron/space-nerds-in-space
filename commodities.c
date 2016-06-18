@@ -26,6 +26,7 @@
 
 #include "commodities.h"
 #include "string-utils.h"
+#include "nonuniform_random_sampler.h"
 
 static int parse_error(char *filename, char *line, int ln, char *bad_word)
 {
@@ -48,6 +49,23 @@ static int parse_float_field(char *filename, char *line, int ln, float *value, c
 	strcpy(word, c);
 	clean_spaces(word);
 	rc = sscanf(word, "%f", value);
+	if (rc != 1)
+		return parse_error(filename, line, ln, word);
+	return 0;
+}
+
+static int parse_int_field(char *filename, char *line, int ln, int *value, char **saveptr)
+{
+	char *c;
+	char word[100];
+	int rc;
+
+	c = strtok_r(NULL, ",", saveptr);
+	if (!c)
+		return parse_error(filename, line, ln, NULL);
+	strcpy(word, c);
+	clean_spaces(word);
+	rc = sscanf(word, "%d", value);
 	if (rc != 1)
 		return parse_error(filename, line, ln, word);
 	return 0;
@@ -99,6 +117,9 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	if (rc)
 		return rc;
 	rc = parse_float_field(filename, line, ln, &c->tech_sensitivity, &saveptr);
+	if (rc)
+		return rc;
+	rc = parse_int_field(filename, line, ln, &c->odds, &saveptr);
 	if (rc)
 		return rc;
 	return 0;

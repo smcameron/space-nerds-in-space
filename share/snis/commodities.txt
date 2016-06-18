@@ -8,84 +8,89 @@
 #        float econ_sensitivity; range: 0 - 1, how sensitive price is to wealth of econ
 #        float govt_sensitivity; range: 0 - 1, how sensitive price is to govt. stability
 #        float tech_sensitivity; range: 0 - 1, how sensitive price is to tech level
+#	 int odds
 #
 # Note, first 8 must match mining-bot in snis.h
 #
-gold ore, tons, 1010.0, 0.2, 1.0, 0.3, 0.2, 0.2
-platinum ore, tons, 1480.0, 0.2, 1.0, 0.3, 0.2, 0.2
-germanium ore, tons, 490.0, 0.2, 1.0, 0.3, 0.2, 0.2
-uranium ore, tons, 420.0, 0.2, 1.0, 0.3, 0.2, 0.2
-gold, grams, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2
-platinum, grams, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2
-germanium, kilograms, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2
-uranium, grams, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2
-dubious metaphors, volumes, 3.0, 0.2, 1.0, 0.3, 0.1, -0.2
-spicy curry, barrels, 10.0, 0.2, 1.0, 0.2, 0.0, 0.0
-spiritual hogwash, pamphlets, 10.0, 0.2, 1.0, 0.2, 0.3, 0.0
-negative entropy, casks, 10.0, 0.2, 0.1, 0.2, 0.0, 0.2
-ethical theories, manifestos, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0
-wine, casks, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0
-racy novellas, tons, 10.0, 0.2, 0.2, 0.2, 0.2, 0.0
-mysterious nostrums, vials, 10.0, 0.2, 1.0, 0.1, 0.0, -0.1
-accurate horoscopes, rolls, 10.0, 0.2, 1.0, 0.2, 0.05, -0.1
-cylindric diamacron, cylinders, 10.0, 0.2, 1.0, 0.3, 0.1, 0.05
-jakk, kilograms, 10.0, 0.2, 0.2, 0.3, 0.2, 0.0
-complicated art, flights, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2
-tax returns, manila folders, 10.0, 0.2, 1.0, 0.1, 0.2, 0.0
-suspect philosophical theories, monographs, 10.0, 0.2, 0.2, 0.1, 0.2, 0.0
-teakettles, crates, 10.0, 0.2, 1.0, 0.0, 0.0, -0.1
-legal documents, volumes, 10.0, 0.2, 1.0, 0.1, 0.1, 0.1
-recreational drugs, kilos, 10.0, 0.2, 1.0, 0.3, 0.3, 0.0
-misc. positronics, tons, 10.0, 0.2, 1.0, 0.1, 0.0, 0.2
-dubious financial instruments, tranches, 10.0, 0.2, 1.0, 0.1, 0.1, 0.1
-corn fritters, baskets, 10.0, 0.2, 1.0, 0.1, 0.0, 0.1
-conspiracy theories, manifestos, 10.0, 0.2, 1.0, 0.1, 0.2, 0.0
-double entendres, comprehensions, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0
-airtight religions, prevarications,  10.0, 0.2, 1.0, -0.1, 0.2, -0.2
-onions, bushels, 10.0, 0.2, 1.0, 0.0, 0.0, 0.2
-bolonium, tons, 10.0, 0.2, 1.0, 0.0, 0.0, -0.2
-tractor parts, tons, 10.0, 0.2, 1.0, 0.0, 0.0, -0.2
-stolen weapons designs, briefcases, 10.0, 0.2, 1.0, 0.0, -0.2, 0.3
-diplomatic papers, briefcases, 10.0, 0.2, 1.0, 0.0, -0.2, 0.3
-ancient artifacts, crates, 10.0, 0.2, 1.0, 0.3, 0.0, 0.3
-oxygen, tons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.3
-hydrazine, tons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.3
-aluminum, tons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.3
-thorium, tons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.3
-Misc. Krustaceans, tons, 10.0, 0.2, 1.0, 0.2, 0.0, 0.0
-Oil, barrels, 10.0, 0.2, 1.0, 0.0, 0.0, 0.1
-kerosene, barrels, 10.0, 0.2, 1.0, 0.0, 0.0, 0.1
-bacon, tons, 10.0, 0.2, 1.0, 0.0, 0.0, -0.1
-cream gravy, barrels, 10.0, 0.2, 1.0, 0.0, 0.0, 0.1
-Frozen biscuit dough, barrels, 10.0, 0.2, 1.0, 0.0, 0.0, 0.1
-Chippos, bags, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0
-Ethanol, kegs, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0
-tobacco, cartons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0
-scrap metal, tons, 10.0, 0.2, 1.0, 0.3, 0.0, 0.2
-iron ore, tons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0
-thorium ore, tons, 10.0, 0.2, 1.0, 0.2, 0.0, 0.2
-bauxite, tons, 10.0, 0.2, 1.0, 0.2, 0.0, 0.2
-skittlebrau, kegs, 10.0, 0.2, 0.2, 0.2, 0.1, 0.0
-peanuts, pkgs, 10.0, 0.2, 1.0, 0.02, 0.0, 0.04
-beer, kegs, 10.0, 0.2, 1.0, 0.2, 0.0, 0.1
-Champagne, bottles, 10.0, 0.2, 1.0, 0.2, 0.2, 0.1
-vodka, bottles, 10.0, 0.2, 1.0, 0.1, 0.2, 0.1
-whiskey, barrels, 10.0, 0.2, 1.0, 0.3, 0.1, 0.1
-distilling equipment, tons, 10.0, 0.2, 0.2, 0.1, 0.3, 0.2
-textiles, tons, 10.0, 0.2, 1.0, 0.05, 0.05, 0.05
-dried pasta, tons, 10.0, 0.2, 1.0, 0.05, 0.00, 0.05
-beeves, sides, 10.0, 0.2, 1.0, 0.2, 0.0, 0.05
-raisins, bushels, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05
-wheat, bushels, 10.0, 0.2, 1.0, 0.1, 0.0, 0.05
-corn, bushels, 10.0, 0.2, 1.0, 0.1, 0.0, 0.05
-flour, tons, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05
-cheese, wheels, 10.0, 0.2, 1.0, 0.1, 0.0, 0.0
-bullets, gross, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0
-maui wowie, kilograms, 10.0, 0.2, 1.0, 0.3, 0.3, 0.0
-flatware, pkgs, 10.0, 0.2, 1.0, 0.03, 0.0, -0.05
-cook stoves, units, 10.0, 0.2, 1.0, 0.03, 0.0, 0.03
-duunmelons, bushels, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05
-betelberries, bushels, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05
-pharmaceuticals, kilograms, 10.0, 0.2, 1.0, 0.2, 0.2, 0.2
-coffins, units, 10.0, 0.2, 1.0, 0.03, 0.0, 0.03
-laser pistols, units, 10.0, 0.2, 0.2, 0.1, 0.1, 0.1
+gold ore, tons, 1010.0, 0.2, 1.0, 0.3, 0.2, 0.2, 10
+platinum ore, tons, 1480.0, 0.2, 1.0, 0.3, 0.2, 0.2, 5
+germanium ore, tons, 490.0, 0.2, 1.0, 0.3, 0.2, 0.2, 30
+uranium ore, tons, 420.0, 0.2, 1.0, 0.3, 0.2, 0.2, 20
+gold, grams, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2, 10
+platinum, grams, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2, 5
+germanium, kilograms, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2, 30
+uranium, grams, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2, 20
+
+# "normal" items
+spicy curry, barrels, 10.0, 0.2, 1.0, 0.2, 0.0, 0.0, 100
+wine, casks, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0, 100
+jakk, kilograms, 10.0, 0.2, 0.2, 0.3, 0.2, 0.0, 100
+teakettles, crates, 10.0, 0.2, 1.0, 0.0, 0.0, -0.1, 100
+recreational drugs, kilos, 10.0, 0.2, 1.0, 0.3, 0.3, 0.0, 100
+misc. positronics, tons, 10.0, 0.2, 1.0, 0.1, 0.0, 0.2, 100
+onions, bushels, 10.0, 0.2, 1.0, 0.0, 0.0, 0.2, 100
+tractor parts, tons, 10.0, 0.2, 1.0, 0.0, 0.0, -0.2, 100
+oxygen, tons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.3, 1000
+hydrazine, tons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.3, 1000
+aluminum, tons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.3, 1000
+thorium, tons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.3, 1000
+Oil, barrels, 10.0, 0.2, 1.0, 0.0, 0.0, 0.1, 500
+kerosene, barrels, 10.0, 0.2, 1.0, 0.0, 0.0, 0.1, 500
+Ethanol, kegs, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0, 500
+tobacco, cartons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0, 100
+scrap metal, tons, 10.0, 0.2, 1.0, 0.3, 0.0, 0.2, 300
+iron ore, tons, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0, 700
+thorium ore, tons, 10.0, 0.2, 1.0, 0.2, 0.0, 0.2, 700
+bauxite, tons, 10.0, 0.2, 1.0, 0.2, 0.0, 0.2, 700
+Champagne, bottles, 10.0, 0.2, 1.0, 0.2, 0.2, 0.1, 200
+vodka, bottles, 10.0, 0.2, 1.0, 0.1, 0.2, 0.1, 300
+whiskey, barrels, 10.0, 0.2, 1.0, 0.3, 0.1, 0.1, 100
+distilling equipment, tons, 10.0, 0.2, 0.2, 0.1, 0.3, 0.2, 50
+textiles, tons, 10.0, 0.2, 1.0, 0.05, 0.05, 0.05, 900
+flour, tons, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05, 500
+beer, kegs, 10.0, 0.2, 1.0, 0.2, 0.0, 0.1, 300
+peanuts, pkgs, 10.0, 0.2, 1.0, 0.02, 0.0, 0.04, 50
+dried pasta, tons, 10.0, 0.2, 1.0, 0.05, 0.00, 0.05, 50
+raisins, bushels, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05, 20
+wheat, bushels, 10.0, 0.2, 1.0, 0.1, 0.0, 0.05, 100
+corn, bushels, 10.0, 0.2, 1.0, 0.1, 0.0, 0.05, 100
+beeves, sides, 10.0, 0.2, 1.0, 0.2, 0.0, 0.05, 100
+cheese, wheels, 10.0, 0.2, 1.0, 0.1, 0.0, 0.0, 100
+bullets, gross, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0, 20
+pharmaceuticals, kilograms, 10.0, 0.2, 1.0, 0.2, 0.2, 0.2, 100
+
+# silly items
+stolen weapons designs, briefcases, 10.0, 0.2, 1.0, 0.0, -0.2, 0.3, 10
+diplomatic papers, briefcases, 10.0, 0.2, 1.0, 0.0, -0.2, 0.3, 10
+bolonium, tons, 10.0, 0.2, 1.0, 0.0, 0.0, -0.2, 10
+dubious metaphors, volumes, 3.0, 0.2, 1.0, 0.3, 0.1, -0.2, 10
+spiritual hogwash, pamphlets, 10.0, 0.2, 1.0, 0.2, 0.3, 0.0, 10
+negative entropy, casks, 10.0, 0.2, 0.1, 0.2, 0.0, 0.2, 10
+ethical theories, manifestos, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0, 10
+racy novellas, tons, 10.0, 0.2, 0.2, 0.2, 0.2, 0.0, 10
+mysterious nostrums, vials, 10.0, 0.2, 1.0, 0.1, 0.0, -0.1, 10
+accurate horoscopes, rolls, 10.0, 0.2, 1.0, 0.2, 0.05, -0.1, 10
+legal documents, volumes, 10.0, 0.2, 1.0, 0.1, 0.1, 0.1, 10
+cylindric diamacron, cylinders, 10.0, 0.2, 1.0, 0.3, 0.1, 0.05, 10
+complicated art, flights, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2, 10
+tax returns, manila folders, 10.0, 0.2, 1.0, 0.1, 0.2, 0.0, 10
+suspect philosophical theories, monographs, 10.0, 0.2, 0.2, 0.1, 0.2, 0.0, 10
+dubious financial instruments, tranches, 10.0, 0.2, 1.0, 0.1, 0.1, 0.1, 10
+corn fritters, baskets, 10.0, 0.2, 1.0, 0.1, 0.0, 0.1, 10
+conspiracy theories, manifestos, 10.0, 0.2, 1.0, 0.1, 0.2, 0.0, 10
+double entendres, comprehensions, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0, 10
+airtight religions, prevarications,  10.0, 0.2, 1.0, -0.1, 0.2, -0.2, 10
+ancient artifacts, crates, 10.0, 0.2, 1.0, 0.3, 0.0, 0.3, 10
+Misc. Krustaceans, tons, 10.0, 0.2, 1.0, 0.2, 0.0, 0.0, 10
+bacon, tons, 10.0, 0.2, 1.0, 0.0, 0.0, -0.1, 10
+cream gravy, barrels, 10.0, 0.2, 1.0, 0.0, 0.0, 0.1, 10
+Frozen biscuit dough, barrels, 10.0, 0.2, 1.0, 0.0, 0.0, 0.1, 10
+Chippos, bags, 10.0, 0.2, 1.0, 0.0, 0.0, 0.0, 10
+skittlebrau, kegs, 10.0, 0.2, 0.2, 0.2, 0.1, 0.0, 10
+maui wowie, kilograms, 10.0, 0.2, 1.0, 0.3, 0.3, 0.0, 10
+flatware, pkgs, 10.0, 0.2, 1.0, 0.03, 0.0, -0.05, 10
+cook stoves, units, 10.0, 0.2, 1.0, 0.03, 0.0, 0.03, 10
+duunmelons, bushels, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05, 10
+betelberries, bushels, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05, 10
+coffins, units, 10.0, 0.2, 1.0, 0.03, 0.0, 0.03, 10
+laser pistols, units, 10.0, 0.2, 0.2, 0.1, 0.1, 0.1, 10
