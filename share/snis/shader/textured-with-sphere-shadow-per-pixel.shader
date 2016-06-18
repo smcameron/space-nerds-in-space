@@ -80,7 +80,7 @@ varying vec3 v_LightDir;
 		vec2 txcoord;
 
 		if (sphere_ray_intersect(u_Sphere, v_Position, normalize(v_LightDir)))
-			shadow_tint = vec4(0.4,0.4,0.4,1.0);
+			shadow_tint = vec4(0.25,0.1,0.1,1.0);
 
 		/*
 		 * 1.0 is MIN_RING_RADIUS, * see: ../../../material.h
