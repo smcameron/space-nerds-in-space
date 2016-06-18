@@ -13440,7 +13440,7 @@ static int load_static_textures(void)
 	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) {
 		material_init_textured_planet_ring(&planetary_ring_material[i]);
 		planetary_ring_material[i].textured_planet_ring.texture_id = planetary_ring_texture_id;
-		planetary_ring_material[i].textured_planet_ring.alpha = 0.5;
+		planetary_ring_material[i].textured_planet_ring.alpha = 1.0;
 		planetary_ring_material[i].textured_planet_ring.texture_v = (float) i / 256.0f;
 		planetary_ring_material[i].textured_planet_ring.inner_radius =
 					MIN_RING_RADIUS +
