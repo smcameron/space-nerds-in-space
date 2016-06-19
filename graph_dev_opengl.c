@@ -1266,6 +1266,8 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 
 	if (do_cullface)
 		glEnable(GL_CULL_FACE);
+	else
+		glDisable(GL_CULL_FACE);
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
