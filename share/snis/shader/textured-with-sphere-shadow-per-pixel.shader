@@ -110,7 +110,7 @@ varying vec3 v_Normal;
 		txcoord.x = max(0.0f, (u_ring_outer_radius * v_TexCoord.x - u_ring_inner_radius + 1.0) /
 						(u_ring_outer_radius - u_ring_inner_radius));
 		gl_FragColor = shadow_tint * texture2D(u_AlbedoTex, txcoord);
-		gl_FragColor.rgb *= v_darkside_shading;
+		gl_FragColor.rgb *= v_darkside_shading + (0.5 * (1.0 - v_darkside_shading) * 0.5 * abs(gl_FragColor.a - 0.5));
 
 		/* tint with alpha pre multiply */
 		gl_FragColor.rgb *= v_TintColor.rgb;
