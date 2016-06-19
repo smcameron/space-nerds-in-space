@@ -25,21 +25,42 @@ varying vec4 v_TintColor;
 varying vec2 v_TexCoord;
 varying vec3 v_Position;
 varying vec3 v_LightDir;
+varying float v_darkside_shading;
+varying vec3 v_Normal;
 
 #if defined(INCLUDE_VS)
 	uniform mat4 u_MVMatrix;  // A constant representing the combined model/view matrix.
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
+	uniform mat3 u_NormalMatrix;
 	uniform vec4 u_TintColor;
 	uniform vec3 u_LightPos; // light position in eye space
 	uniform float u_ring_texture_v; // v coord in ring texture
 
 	attribute vec4 a_Position; // Per-vertex position information we will pass in.
 	attribute vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
+	attribute vec3 a_Normal;   // Per-vertex normal we pass in.
 
 	void main()
 	{
+		// Transform the vertex into eye space.
 		v_Position = vec3(u_MVMatrix * a_Position);
+		// Transform the normal's orientation into eye space.
+		v_Normal = u_NormalMatrix * a_Normal;
 		v_LightDir = normalize(u_LightPos - v_Position);
+
+		// Check if the light source is on the same side of the surface as the eye.
+		// Dot product of vector to point with v_Normal will be positive or negative
+		// depending on which side of the plane defined by v_Normal the point lies.
+		// Find the dot product for eye, and for light.  If they are the same sign,
+		// then they are on the same side (the light side) othewise they are on
+		// opposite sides (camera is on dark side).
+		float lightdot = dot(v_LightDir, v_Normal);
+		float eyedot = dot(-v_Position, v_Normal);
+
+		float sameside = lightdot * eyedot;	// > 0 means same side, < 0 means opposite
+		sameside = sameside / abs(sameside);	// Scale to either +1.0 or to -1.0
+		sameside = (sameside + 1.0) / 2.0;	// transform -1.0 -> 0.0, and +1.0 -> +1.0
+		v_darkside_shading = sameside * 1.0 + (1.0 - sameside) * 0.2; // either 1.0 or 0.2
 
 		v_TintColor = u_TintColor;
 		v_TexCoord = a_TexCoord;
@@ -89,6 +110,7 @@ varying vec3 v_LightDir;
 		txcoord.x = max(0.0f, (u_ring_outer_radius * v_TexCoord.x - u_ring_inner_radius + 1.0) /
 						(u_ring_outer_radius - u_ring_inner_radius));
 		gl_FragColor = shadow_tint * texture2D(u_AlbedoTex, txcoord);
+		gl_FragColor.rgb *= v_darkside_shading;
 
 		/* tint with alpha pre multiply */
 		gl_FragColor.rgb *= v_TintColor.rgb;
