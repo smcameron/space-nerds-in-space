@@ -6941,10 +6941,10 @@ static int set_asteroid_minerals(uint32_t id, float carbon, float silicates, flo
 		carbon += 1.0;
 	}
 
-	o->tsd.asteroid.carbon = carbon;
-	o->tsd.asteroid.silicates = silicates;
-	o->tsd.asteroid.nickeliron = nickeliron;
-	o->tsd.asteroid.preciousmetals = preciousmetals;
+	o->tsd.asteroid.carbon = (uint8_t) (255.0 * carbon);
+	o->tsd.asteroid.silicates = (uint8_t) (255.0 * silicates);
+	o->tsd.asteroid.nickeliron = (uint8_t) (255.0 * nickeliron);
+	o->tsd.asteroid.preciousmetals = (uint8_t) (255.0 * preciousmetals);
 
 	normalize_percentage(&go[i].tsd.asteroid.carbon, total);
 	normalize_percentage(&go[i].tsd.asteroid.silicates, total);
