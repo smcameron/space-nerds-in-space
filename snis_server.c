@@ -13009,7 +13009,7 @@ static void launch_mining_bot(struct game_client *c, struct snis_entity *ship, u
 		goto miningbotfail;
 	if (ship->tsd.ship.mining_bots <= 0) /* no bots left */
 		goto miningbotfail;
-	if (go[oid].type != OBJTYPE_ASTEROID)
+	if (go[i].type != OBJTYPE_ASTEROID)
 		goto miningbotfail;
 
 	i = add_mining_bot(ship, oid);
