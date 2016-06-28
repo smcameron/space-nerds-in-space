@@ -139,6 +139,11 @@ static struct multiverse_server_info {
 static char *solarsystem_name = DEFAULT_SOLAR_SYSTEM;
 static struct solarsystem_asset_spec *solarsystem_assets = NULL;
 
+/* This is used by l_show_menu and process_textscreen_op for user
+ * definable menus from lua.
+ */
+static char *current_user_menu_callback = NULL;
+
 #define GATHER_OPCODE_STATS 0
 
 #if GATHER_OPCODE_STATS
@@ -10841,6 +10846,27 @@ static int process_natural_language_request(struct game_client *c)
 	return 0;
 }
 
+static int process_textscreen_op(struct game_client *c)
+{
+	int rc;
+	uint8_t subcommand, selection;
+	unsigned char buffer[10];
+
+	rc = read_and_unpack_buffer(c, buffer, "bb", &subcommand, &selection);
+	if (rc)
+		return rc;
+	if (!current_user_menu_callback)
+		return 0;
+	switch (subcommand) {
+	case OPCODE_TEXTSCREEN_MENU_CHOICE:
+		schedule_one_callback(&callback_schedule, current_user_menu_callback,
+			(double) c->shipid, (double) selection, 0.0);
+		break;
+	default:
+		return -1;
+	}
+	return 0;
+}
 
 static void enscript_prologue(FILE *f)
 {
@@ -11822,6 +11848,75 @@ static void send_timed_text(int id, uint16_t timevalue, uint16_t length, char *t
 		send_packet_to_all_clients(pb, ROLE_ALL);
 	else
 		send_packet_to_all_clients_on_a_bridge(id, pb, ROLE_ALL);
+}
+
+static void send_menu(int id, uint16_t length, char *text)
+{
+	struct packed_buffer *pb;
+
+	assert(strlen(text) + 1 == length);
+	pb = packed_buffer_allocate(2 + 2 + length);
+	packed_buffer_append(pb, "bbh", OPCODE_TEXTSCREEN_OP, OPCODE_TEXTSCREEN_MENU, length);
+	packed_buffer_append_raw(pb, text, length);
+	if (id == -1)
+		send_packet_to_all_clients(pb, ROLE_ALL);
+	else
+		send_packet_to_all_clients_on_a_bridge(id, pb, ROLE_ALL);
+}
+
+static int l_show_menu(lua_State *l)
+{
+	const double id = luaL_checknumber(l, 1);
+	const char *luatext = luaL_checkstring(l, 2);
+	const char *luacallback = luaL_checkstring(l, 3);
+	if (current_user_menu_callback) {
+		/* FIXME, this races with process_textscreen_op() */
+		free(current_user_menu_callback);
+	}
+	current_user_menu_callback = strdup(luacallback);
+	char *text = NULL;
+	uint32_t oid = (uint32_t) id;
+	int i;
+	struct snis_entity *o;
+	int length;
+
+	if (!luatext)
+		goto error;
+	text = strdup(luatext);
+
+	length = strlen(text) + 1;
+	if (length > 1024) { /* truncate excessively long strings */
+		text[1024] = '\0';
+		length = 1024;
+	}
+
+	if (oid != (uint32_t) -1) { /* User has specified a ship id. */
+		pthread_mutex_lock(&universe_mutex);
+		i = lookup_by_id(oid);
+		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			goto error;
+		}
+		o = &go[i];
+		if (o->type != OBJTYPE_SHIP1) {
+			pthread_mutex_unlock(&universe_mutex);
+			goto error;
+		}
+		pthread_mutex_unlock(&universe_mutex);
+		send_menu(o->id, length, text);
+	} else {
+		/* User has specified -1 as ship id == all ships. */
+		send_menu(-1, length, text);
+	}
+	if (text)
+		free(text);
+	lua_pushnumber(l, 0.0);
+	return 1;
+error:
+	if (text)
+		free(text);
+	lua_pushnil(l);
+	return 1;
 }
 
 static int l_show_timed_text(lua_State *l)
@@ -13483,6 +13578,10 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_TEXTSCREEN_OP:
+			rc = process_textscreen_op(c);
+			if (rc)
+				goto protocol_error;
 		default:
 			goto protocol_error;
 	}
@@ -15201,6 +15300,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_commodity_units, "get_commodity_units");
 	add_lua_callable_fn(l_lookup_commodity, "lookup_commodity");
 	add_lua_callable_fn(l_set_commodity_contents, "set_commodity_contents");
+	add_lua_callable_fn(l_show_menu, "show_menu");
 }
 
 static int run_initial_lua_scripts(void)

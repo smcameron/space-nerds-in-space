@@ -203,7 +203,10 @@ int current_quit_selection = 0;
 int final_quit_selection = 0;
 
 static int textscreen_timer = 0;
+static int user_defined_menu_active = 0;
 static char textscreen[1024] = { 0 };
+#define NUM_USER_MENU_BUTTONS 10
+static struct button *user_menu_button[NUM_USER_MENU_BUTTONS];
 
 struct ship_type_entry *ship_type;
 int nshiptypes = 0;
@@ -4660,6 +4663,19 @@ static int process_textscreen_op(void)
 		memcpy(textscreen, buffer, sizeof(textscreen));
 		textscreen_timer = timevalue * 30;
 		break;
+	case OPCODE_TEXTSCREEN_MENU:
+		rc = read_and_unpack_buffer(buffer, "h", &length);
+		if (rc != 0)
+			return rc;
+		if (length > 1023)
+			return -1;
+		memset(buffer, 0, sizeof(buffer));
+		rc = snis_readsocket(gameserver_sock, buffer, length);
+		if (rc != 0)
+			return rc;
+		memcpy(textscreen, buffer, sizeof(textscreen));
+		user_defined_menu_active = 1;
+		break;
 	default:
 		return -1;
 	}
@@ -5789,10 +5805,31 @@ static void textscreen_dismiss_button_pressed(void *button_ptr_ptr)
 		ui_hide_widget(*button);
 }
 
+static void textscreen_menu_button_pressed(void *button_ptr_ptr)
+{
+	struct button **button = button_ptr_ptr;
+	int i, selection;
+	uint8_t byte_selection;
+
+	if (*button) {
+		ui_hide_widget(*button);
+		selection = button - &user_menu_button[0];
+		byte_selection = (uint8_t) selection;
+		for (i = 0; i < NUM_USER_MENU_BUTTONS; i++)
+			ui_hide_widget(user_menu_button[i]);
+		user_defined_menu_active = 0;
+		if (selection >= 0 && selection < NUM_USER_MENU_BUTTONS)
+			queue_to_server(packed_buffer_new("bbb", OPCODE_TEXTSCREEN_OP,
+					OPCODE_TEXTSCREEN_MENU_CHOICE, byte_selection));
+	}
+}
+
 static void ui_add_button(struct button *b, int active_displaymode);
 static void show_textscreen(GtkWidget *w)
 {
+	int i;
 	static struct button *dismiss_button = NULL;
+	int menucount = 0;
 
 	if (displaymode != DISPLAYMODE_MAINSCREEN)
 		return;
@@ -5801,10 +5838,31 @@ static void show_textscreen(GtkWidget *w)
 		dismiss_button = snis_button_init(txx(650), txy(520), -1, -1,
 			"DISMISS", RED, NANO_FONT, textscreen_dismiss_button_pressed, &dismiss_button);
 		ui_add_button(dismiss_button, DISPLAYMODE_INTROSCREEN); /* so it doesn't show up anywhere */
+		for (i = 0; i < NUM_USER_MENU_BUTTONS; i++) {
+			user_menu_button[i] = snis_button_init(txx(60), txy(135) + i * txy(20), txx(650), -1,
+				"M", WHITE, NANO_FONT, textscreen_menu_button_pressed, &user_menu_button[i]);
+			ui_add_button(user_menu_button[i], DISPLAYMODE_INTROSCREEN);
+		}
 	}
-	ui_unhide_widget(dismiss_button);
+	if (user_defined_menu_active)
+		ui_hide_widget(dismiss_button);
+	else
+		ui_unhide_widget(dismiss_button);
 	/* make it show on the current screen, whatever it is */
 	ui_set_widget_displaymode(dismiss_button, displaymode);
+
+	if (user_defined_menu_active) {
+		menucount = strchrcount(textscreen, '\n') - 1;
+		if (menucount > NUM_USER_MENU_BUTTONS)
+			menucount = NUM_USER_MENU_BUTTONS;
+		for (i = 0; i < NUM_USER_MENU_BUTTONS; i++) {
+			if (i < menucount)
+				ui_unhide_widget(user_menu_button[i]);
+			else
+				ui_hide_widget(user_menu_button[i]);
+			ui_set_widget_displaymode(user_menu_button[i], displaymode);
+		}
+	}
 
 	char tmp_textscreen[sizeof(textscreen)];
 
@@ -5821,11 +5879,12 @@ static void show_textscreen(GtkWidget *w)
 	default:
 		return;
 	}
-	if (textscreen_timer <= 0)
+	if (textscreen_timer <= 0 && !user_defined_menu_active)
 		return;
 	strcpy(tmp_textscreen, textscreen);
-	textscreen_timer--;
-	if (textscreen_timer == 0)
+	if (textscreen_timer > 0)
+		textscreen_timer--;
+	if (textscreen_timer == 0 && !user_defined_menu_active)
 		ui_hide_widget(dismiss_button);
 	char *line;
 	int y = 100;
@@ -5845,9 +5904,18 @@ static void show_textscreen(GtkWidget *w)
 	}
 	sng_center_xy_draw_string(line, BIG_FONT, SCREEN_WIDTH / 2, txy(y)); y += txy(35);
 
+	i = 0;
 	while ((line = strtok(NULL, "\n"))) {
-		sng_abs_xy_draw_string(line, SMALL_FONT, txx(60), txy(y));
-		y += txy(20);
+		if (!user_defined_menu_active) {
+			sng_abs_xy_draw_string(line, SMALL_FONT, txx(60), txy(y));
+			y += txy(20);
+		} else {
+			if (i < menucount) {
+				ui_unhide_widget(user_menu_button[i]);
+				snis_button_set_label(user_menu_button[i], line);
+			}
+			i++;
+		}
 	}
 }
 
@@ -5905,7 +5973,7 @@ static void show_common_screen(GtkWidget *w, char *title)
 			done_with_lobby = 0;
 		}
 	}
-	if (textscreen_timer > 0)
+	if (textscreen_timer > 0 || user_defined_menu_active)
 		show_textscreen(w);
 }
 

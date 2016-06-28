@@ -200,6 +200,34 @@ show_timed_text(id, time_in_seconds, textstring);
 	on all clients of the bridge for the given player ship id.  If id is -1, then
 	the message is displayed on all clients of all bridges.
 
+show_menu(id, menustring, callback_function);
+	shows a menu defined by menustring to players aboard the ship with the specified id,
+	and calls callback_function, passing the selection made by the user.  The menu is
+	defined by a multiline string. The first line is used as the title of the menu, and
+	subsequent lines define the menu items.  There is a maximum of 10 menu items.  The
+	callback will be passed an integer between 0 and 9 indicating which item was selected.
+
+	Example:
+
+	function my_menu_callback(shipid, selection)
+		print("========================= Player ", shipid, " has chosen ", selection, "\n");
+        end
+
+	player_ids = get_player_ship_ids();
+	show_menu(player_ids[1],
+			"MY MENU\n" ..
+			"ITEM 1\n" ..
+			"ITEM 2\n" ..
+			"ITEM 3\n" ..
+			"ITEM 4\n" ..
+			"ITEM 5\n" ..
+			"ITEM 6\n" ..
+			"ITEM 7\n" ..
+			"ITEM 8\n" ..
+			"ITEM 9\n" ..
+			"ITEM 0\n",
+			"my_menu_callback");
+
 enqueue_lua_script(scriptname);
 	Queue the named lua script for execution;
 
