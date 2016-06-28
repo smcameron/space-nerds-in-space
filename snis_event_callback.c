@@ -19,7 +19,7 @@ struct callback_schedule_entry {
 	struct callback_schedule_entry *next;
 };
 
-static void schedule_one_callback(struct callback_schedule_entry **e, 
+void schedule_one_callback(struct callback_schedule_entry **e,
 		const char *callback, double param1, double param2, double param3)
 {
 	struct callback_schedule_entry *newone;

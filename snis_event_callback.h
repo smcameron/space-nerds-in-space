@@ -4,6 +4,8 @@
 struct event_callback_entry;
 struct callback_schedule_entry;
 
+void schedule_one_callback(struct callback_schedule_entry **e,
+		const char *callback, double param1, double param2, double param3);
 void schedule_callback(struct event_callback_entry *e, struct callback_schedule_entry **s, 
                 const char *callback, double param);
 /* ugh, this is horrible, I'm a horrible person. */
