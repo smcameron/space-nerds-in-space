@@ -51,6 +51,7 @@
 #include <assert.h>
 #include <netinet/tcp.h>
 #include <netinet/in.h>
+#include <getopt.h>
 
 #include "arraysize.h"
 #include "build_bug_on.h"
@@ -14703,151 +14704,154 @@ static void check_lobby_serverhost_options()
 	}
 }
 
+static struct option long_options[] = {
+	{ "allroles", no_argument, NULL, 'A' },
+	{ "soundserver", no_argument, NULL, 'a' },
+	{ "comms", no_argument, NULL, 'C' },
+	{ "engineering", no_argument, NULL, 'E' },
+	{ "fullscreen", no_argument, NULL, 'f' },
+	{ "nolobby", no_argument, NULL, 'L' },
+	{ "lobbyhost", required_argument, NULL, 'l' },
+	{ "navigation", no_argument, NULL, 'N' },
+	{ "starship", required_argument, NULL, 'n' },
+	{ "main", no_argument, NULL, 'M' },
+	{ "monitor", required_argument, NULL, 'm' },
+	{ "serverport", required_argument, NULL, 'p' },
+	{ "pw", required_argument, NULL, 'P' },
+	{ "quickstart", no_argument, NULL, 'q' },
+	{ "aspect-ratio", required_argument, NULL, 'r' },
+	{ "science", no_argument, NULL, 'S' },
+	{ "serverhost", required_argument, NULL, 's' },
+	{ "version", no_argument, NULL, 'v' },
+	{ "weapons", no_argument, NULL, 'W' },
+	{ "solarsystem", required_argument, NULL, '*'},
+};
+
+static void process_options(int argc, char *argv[])
+{
+	int x, y, rc, c, value;
+
+	x = -1;
+	y = -1;
+	while (1) {
+		int option_index;
+		c = getopt_long(argc, argv, "AaCEfLl:Nn:Mm:p:P:qr:Ss:vW*:", long_options, &option_index);
+		if (c == -1)
+			break;
+		switch (c) {
+		case 'v':
+			printf("snis_client v. %s\n", SNIS_VERSION);
+			break;
+		case 'q':
+			quickstartmode = 1;
+			break;
+		case 'l':
+			lobbyhost = optarg;
+			if (!lobbyhost)
+				usage();
+			break;
+		case 'L':
+			avoid_lobby = 1;
+			break;
+		case 's':
+			serverhost = optarg;
+			if (!serverhost)
+				usage();
+			break;
+		case 'm':
+			if (!optarg)
+				usage();
+			rc = sscanf(optarg, "%d", &value);
+			if (rc == 1)
+				monitorid = value;
+			else
+				usage();
+			break;
+		case 'p':
+			if (!optarg)
+				usage();
+			rc = sscanf(optarg, "%d", &value);
+			if (rc == 1)
+				serverport = value;
+			else
+				usage();
+			break;
+		case 'P':
+			password = optarg;
+			if (!password)
+				usage();
+			break;
+		case 'n':
+			shipname = optarg;
+			if (!shipname)
+				usage();
+			break;
+		case 'A':
+			role |= ROLE_ALL;
+			break;
+		case 'M':
+			role |= ROLE_MAIN;
+			break;
+		case 'N':
+			role |= ROLE_NAVIGATION;
+			break;
+		case 'W':
+			role |= ROLE_WEAPONS;
+			break;
+		case 'E':
+			role |= ROLE_ENGINEERING;
+			break;
+		case 'S':
+			role |= ROLE_SCIENCE;
+			break;
+		case 'C':
+			role |= ROLE_COMMS;
+			break;
+		case 'a':
+			role |= ROLE_SOUNDSERVER;
+			break;
+		case 'f':
+			fullscreen = 1;
+			break;
+		case 'r':
+			if (!optarg)
+				usage();
+			rc = sscanf(optarg, "%d%*[,:]%d", &x, &y);
+			if (rc != 2)
+				usage();
+			requested_aspect_x = x;
+			requested_aspect_y = y;
+			break;
+		case 'y':
+			if (!optarg)
+				usage();
+			rc = scanf(optarg, "%d", &y);
+			if (rc != 1)
+				usage();
+			requested_aspect_y = y;
+			break;
+		case '*':
+			if (!optarg)
+				usage();
+			solarsystem_name = optarg;
+			break;
+		default:
+			usage();
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
-	int i;
 
 	take_your_locale_and_shove_it();
 	set_random_seed();
 
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
 
-	/* *Sigh*  why am I too lazy to use getopt,
-	 * but not too lazy for this crap?
-	 */
-
 	role = 0;
-	for (i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "--version") == 0) {
-			printf("snis_client v. %s\n", SNIS_VERSION);
-			continue;
-		}
-		if (strcmp(argv[i], "--quickstart") == 0) {
-			quickstartmode = 1;
-			continue;
-		}
-		if (strcmp(argv[i], "--lobbyhost") == 0) {
-			if ((i + 1) >= argc)
-				usage();
-			lobbyhost = argv[i + 1];
-			i++;
-			continue;
-		}
-		if (strcmp(argv[i], "--nolobby") == 0) {
-			avoid_lobby = 1;
-			continue;
-		}
-		if (strcmp(argv[i], "--serverhost") == 0) {
-			if ((i + 1) >= argc)
-				usage();
-			serverhost = argv[i + 1];
-			i++;
-			continue;
-		}
-		if (strcmp(argv[i], "--monitor") == 0) {
-			int rc, value;
-			char *monitorstr;
-
-			if ((i + 1) >= argc)
-				usage();
-			monitorstr = argv[i + 1];
-			rc = sscanf(monitorstr, "%d", &value);
-			if (rc == 1)
-				monitorid = value;
-			else
-				usage();
-			i++;
-			continue;
-		}
-		if (strcmp(argv[i], "--serverport") == 0) {
-			int rc, value;
-			char *portstr;
-
-			if ((i + 1) >= argc)
-				usage();
-			portstr = argv[i + 1];
-			rc = sscanf(portstr, "%d", &value);
-			if (rc == 1)
-				serverport = value;
-			else
-				usage();
-			i++;
-			continue;
-		}
-		if (strcmp(argv[i], "--pw") == 0) {
-			if ((i + 1) >= argc)
-				usage();
-			password = argv[i + 1];
-			i++;
-			continue;
-		}
-		if (strcmp(argv[i], "--starship") == 0) {
-			if ((i + 1) >= argc)
-				usage();
-			shipname = argv[i + 1];
-			i++;
-			continue;
-		}
-		if (strcmp(argv[i], "--allroles") == 0) {
-			role |= ROLE_ALL;
-			continue;
-		}
-		if (strcmp(argv[i], "--main") == 0) {
-			role |= ROLE_MAIN;
-			continue;
-		}
-		if (strcmp(argv[i], "--navigation") == 0) {
-			role |= ROLE_NAVIGATION;
-			continue;
-		}
-		if (strcmp(argv[i], "--weapons") == 0) {
-			role |= ROLE_WEAPONS;
-			continue;
-		}
-		if (strcmp(argv[i], "--engineering") == 0) {
-			role |= ROLE_ENGINEERING;
-			continue;
-		}
-		if (strcmp(argv[i], "--science") == 0) {
-			role |= ROLE_SCIENCE;
-			continue;
-		}
-		if (strcmp(argv[i], "--comms") == 0) {
-			role |= ROLE_COMMS;
-			continue;
-		}
-		if (strcmp(argv[i], "--soundserver") == 0) {
-			role |= ROLE_SOUNDSERVER;
-			continue;
-		}
-		if (strcmp(argv[i], "--fullscreen") == 0) {
-			fullscreen = 1;
-			continue;
-		}
-		if (strcmp(argv[i], "--aspect-ratio") == 0) {
-			int rc, x, y;
-			printf("argc = %d, i = %d\n", argc, i);
-			if (i + 1 >= argc)
-				usage();
-			rc = sscanf(argv[i + 1], "%d%*[,:]%d", &x, &y);
-			if (rc != 2)
-				usage();
-			requested_aspect_x = x;
-			requested_aspect_y = y;
-			i++;
-			continue;
-		}
-		if (strcmp(argv[i], "--solarsystem") == 0) {
-			if (i + 1 >= argc)
-				usage();
-			solarsystem_name = argv[i + 1];
-			i++;
-			continue;
-		}
-		fprintf(stderr, "Bad argument: %s\n", argv[i]);
-		usage();
-	}
+	process_options(argc, argv);
 	if (role == 0)
 		role = ROLE_ALL;
 

@@ -1,4 +1,4 @@
-.TH SPACE-NERDS-IN-SPACE "6" "Apr 2015" "snis_client" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "JUNE 2016" "snis_client" "Games"
 .SH NAME
 snis_client \- Multi player cooperative star ship bridge simulator (client) 
 .SH SYNOPSIS
@@ -20,7 +20,7 @@ on a ship establishes a ship name and password, subsequent clients join the ship
 created with the wrong name/password.)
 .SH Options:
 .TP
-\fB--aspect-ratio x,y\fR
+\fB-r x:y, --aspect-ratio x:y\fR
 Specify a requested aspect ratio.  By default, the window manager is queried
 to determine the display dimensions, and the aspect ratio is made to match.
 Other arbitrary aspect ratios may be specified.  This may be desirable if
@@ -32,57 +32,57 @@ and aspect ratio will disable the --fullscreen option.  Note: You may experience
 some problems with widget and text placement with aspect ratios significantly
 different than 16:9.
 .TP
-\fB\--comms\fR
+\fB\-C, --comms\fR
 Request this client process support the COMMS (communication) role.
 .TP
 \fB\--debug\fR
 Request this client process support the DEBUG role.
 .TP
-\fB\--fullscreen\fR
+\fB\-f, --fullscreen\fR
 Use the full display, with no window borders.  This option is ignored
 if the --aspect-ratio option is also specified.
 .TP
-\fB\--main\fR
+\fB\-M, --main\fR
 Request this client process support the MAIN SCREEN role.
 .TP
-\fB\--monitor m\fR
+\fB\-m, --monitor m\fR
 If your system has multiple monitors, the --monitor option allows you to
 specify which one you want to use.  It takes an integer argument, with 0
 being the first monitor, 1 being the second, etc.  The default monitor may
 be designated by -1 (or by omitting the --monitor option entirely).
 .TP
-\fB\--navigation\fR
+\fB\-N, --navigation\fR
 Request this client process support the NAVIGATION role.
 .TP
-\fB\--nolobby\fR
+\fB\-L, --nolobby\fR
 Do not use the lobby server.  This option requires that the
 --serverport and --serverhost options be used and that the --lobbyhost
 option is not used.
 .TP
-\fB\--science\fR
+\fB\-S, --science\fR
 Request this client process support the SCIENCE role.
 .TP
-\fB\--serverhost\fR
+\fB\-s host, --serverhost host\fR
 Specify the hostname of the server to contact.  This option requires
 the --nolobby and --serverport options are also used, and requires that
 the --lobbyhost option is not used.
 .TP
-\fB\--serverport\fR
+\fB\-p portnumber, --serverport portnumber\fR
 Specify the portnumber of the snis_server process.  This option requires
 the --nolobby and --serverhost options are also used, and requires that
 the --lobbyhost option is not used.
 .TP
-\fB\--solarsystem solarsystem\fR
+\fB\-* solarsystem, --solarsystem solarsystem\fR
 Load the specified solarsystem assets instead of the default assets.  These
 are defined by $SNIS_ASSET_DIR/solarsystems/*/assets.txt
 .TP
-\fB\--soundserver\fR
+\fB\-a, --soundserver\fR
 Request this client process support the SOUNDSERVER role.
 .TP
-\fB\--weapons\fR
+\fB\-W, --weapons\fR
 Request this client process support the WEAPONS role.
 .TP
-\fB\--version\fR
+\fB\-v, --version\fR
 Print the program's version number and exit.
 .SH ENVIRONMENT VARIABLES
 SNIS_ASSET_DIR if set controls the directory from which sounds and 3D models
