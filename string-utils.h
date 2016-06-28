@@ -11,5 +11,6 @@ char *skip_leading_whitespace(char *s); /* returns ptr into string after skippin
 int has_prefix(char *prefix, char *str);
 char *slurp_file(const char *path, int *bytes); /* returns allocated string containingg contents of file */
 void remove_single_quotes(char *text);
+int strchrcount(char *s, int c); /* returns count of occurrences of c within s */
 
 #endif

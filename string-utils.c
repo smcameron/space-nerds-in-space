@@ -184,3 +184,13 @@ void remove_single_quotes(char *s)
 	} while (1);
 }
 
+int strchrcount(char *s, int c)
+{
+	char *x;
+	int count = 0;
+
+	for (x = s; *x; x++)
+		if (*x == c)
+			count++;
+	return count;
+}
