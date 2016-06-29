@@ -104,6 +104,7 @@
 static uint32_t mtwist_seed = COMMON_MTWIST_SEED;
 
 static int lua_enscript_enabled = 0;
+static char *initial_lua_script = "initialize.lua";
 
 struct network_stats netstats;
 static int faction_population[5];
@@ -15310,7 +15311,7 @@ static int run_initial_lua_scripts(void)
 	char scriptname[PATH_MAX];
 
 	snprintf(scriptname, sizeof(scriptname) - 1,
-			"%s/%s", LUASCRIPTDIR, "initialize.lua");
+			"%s/%s", LUASCRIPTDIR, initial_lua_script);
 	rc = stat(scriptname, &statbuf);
 	if (rc != 0)
 		return rc;
@@ -17951,6 +17952,7 @@ static void init_natural_language_system(void)
 
 static struct option long_options[] = {
 	{ "enable-enscript", no_argument, NULL, 'e' },
+	{ "initscript", required_argument, NULL, 'i' },
 	{ "help", no_argument, NULL, 'h' },
 	{ "lobbyhost", required_argument, NULL, 'l' },
 	{ "gameinstance", required_argument, NULL, 'g' },
@@ -17980,7 +17982,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "eg:hL:l:m:n:s:v", long_options, &option_index);
+		c = getopt_long(argc, argv, "eg:hi:L:l:m:n:s:v", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -17988,6 +17990,9 @@ static void process_options(int argc, char *argv[])
 			lua_enscript_enabled = 1;
 			fprintf(stderr, "WARNING: lua enscript enabled!\n");
 			fprintf(stderr, "THIS PERMITS USERS TO CREATE FILES ON THE SERVER\n");
+			break;
+		case 'i':
+			initial_lua_script = optarg;
 			break;
 		case 'g':
 			lobby_gameinstance = optarg;

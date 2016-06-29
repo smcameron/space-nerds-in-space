@@ -34,6 +34,9 @@ Set the "gameinstance" to be used with the lobby server.  This is just
 and arbitrary string for human consumption to differentiate one gameserver
 from another.  It is optional.  If omitted, the value "-" will be used.
 .TP
+\fB\-i, --initscript scriptname\fR
+Use the specified initial lua script instead of the default which is "initialize.lua"
+.TP
 \fB\-l, --lobbyhost\fR
 Set the hostname at which the lobbyhost is running.
 .TP
@@ -57,6 +60,9 @@ Print the program's version number and exit.
 /dev/input/event5, the rumble effect device. 
 .PP
 /usr/share/snis/sounds/*.ogg contain the audio data used by the game.
+.PP
+share/snis/luascripts/* -- various lua scripts which may be run to
+implement scenarios or missions.
 .PP
 .SH ENVIRONMENT VARIABLES
 .PP
