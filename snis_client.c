@@ -6097,6 +6097,8 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[],
 	if (!ap)
 		return;
 
+	assert((thrust_entity && nthrust_ports) || (!thrust_entity && !nthrust_ports));
+
 	/* 180 is about max current with preset and 5x is about right for max size */
 	float thrust_size = clampf(impulse / 36.0, 0.1, 5.0);
 
