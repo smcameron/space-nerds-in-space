@@ -274,7 +274,7 @@ static void usage()
 static void get_peer_name(int connection, char *buffer)
 {
 	struct sockaddr_in *peer;
-	struct sockaddr p;
+	struct sockaddr p = { 0 };
 	socklen_t addrlen = sizeof(p);
 	int rc;
 
@@ -300,6 +300,7 @@ static void log_client_info(int level, int connection, char *info)
 	if (level < snis_log_level)
 		return;
 
+	memset(client_ip, 0, sizeof(client_ip));
 	get_peer_name(connection, client_ip);
 	snis_log(level, "snis_multiverse: connection from %s: %s",
 			client_ip, info);
