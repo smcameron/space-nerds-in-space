@@ -908,15 +908,15 @@ static int restore_data_from_file(const char *path)
 	int i;
 	char *hexpwdhash;
 	unsigned char pwdhash[20];
-	char *tmppath;
+	char *tmppath = NULL;
 
 	if (nbridges >= MAX_BRIDGES)
-		return -1;
+		goto error;
 
 	/* We expect path to be of the form 'something/something/something/hexpwdhash.data' */
 	i = strlen(path) - 1;
 	if (path[i] == '/') /* ends with slash... nope. */
-		return -1;
+		goto error;
 
 	tmppath = strdup(path);
 	for (; i >= 0; i--) {
@@ -929,16 +929,16 @@ static int restore_data_from_file(const char *path)
 	}
 	if (i < 0) {
 		fprintf(stderr, "bridge data filename '%s' doesn't look right.\n", path);
-		return -1;
+		goto error;
 	}
 	if (strlen(hexpwdhash) != 40) {
 		fprintf(stderr, "bridge data filename '%s' is not 40 chars long.\n", path);
-		return -1;
+		goto error;
 	}
 	for (i = 0; i < 40; i++) {
 		if (strchr("0123456789abcdef", hexpwdhash[i]) == NULL) {
 			fprintf(stderr, "bridge data filename '%s' is not composed of 40 hex chars\n", path);
-			return -1;
+			goto error;
 		}
 	}
 	/* Filename seems good, convert to pwdhash */
@@ -946,10 +946,15 @@ static int restore_data_from_file(const char *path)
 	snis_scan_hash(hexpwdhash, 40, pwdhash, 20);
 	if (restore_bridge_info(path, &ship[nbridges], pwdhash)) {
 		fprintf(stderr, "Failed to read bridge info from %s\n", path);
-		return -1;
+		goto error;
 	}
 	nbridges++;
+	free(tmppath);
 	return 0;
+error:
+	if (tmppath)
+		free(tmppath);
+	return -1;
 }
 
 static int restore_data_from_path(const char *path);
