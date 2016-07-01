@@ -14110,7 +14110,7 @@ static void send_econ_update_ship_packet(struct game_client *c,
 {
 	int n;
 	int32_t victim_id;
-	uint8_t ai[MAX_AI_STACK_ENTRIES];
+	uint8_t ai[MAX_AI_STACK_ENTRIES] = { 0 };
 	int i;
 	uint8_t opcode = OPCODE_ECON_UPDATE_SHIP;
 
