@@ -8135,6 +8135,10 @@ static uint32_t nth_starbase(int n)
 					return go[i].id;
 			}
 		}
+		if (nstarbases == 0)
+			return (uint32_t) -1;
+
+		/* If n > number of starbase, we will make n = n modulo nstarbases and try again. */
 		n = n % nstarbases;
 		nstarbases = 0;
 	} while (1);
@@ -8157,6 +8161,8 @@ static int compute_fare(uint32_t src, uint32_t dest)
 	if (i < 0)
 		return default_fare + fare_noise;
 	d = &go[i];
+	if (d == s)
+		return min_fare + fare_noise;
 	travel.v.x = d->x - s->x;
 	travel.v.y = d->y - s->y;
 	travel.v.z = d->z - s->z;
@@ -8172,7 +8178,7 @@ static void update_passenger(int i, int nstarbases)
 	passenger[i].location = nth_starbase(snis_randn(nstarbases));
 	do {
 		passenger[i].destination = nth_starbase(snis_randn(nstarbases));
-	} while (passenger[i].destination == passenger[i].location);
+	} while (passenger[i].destination == passenger[i].location && nstarbases > 1);
 	passenger[i].fare = compute_fare(passenger[i].location, passenger[i].destination);
 }
 
