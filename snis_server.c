@@ -16435,6 +16435,7 @@ static void nl_set_npn(void *context, int argc, char *argv[], int pos[],
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		queue_add_text_to_speech(c, "Sorry, I am not quite sure where we are.");
+		free(namecopy);
 		return;
 	}
 	ship = &go[i];
