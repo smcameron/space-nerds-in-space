@@ -572,6 +572,7 @@ struct planet_data {
 	uint16_t contraband;
 	struct entity *atmosphere;
 	struct material atm_material;
+	union quat rotational_velocity;
 };
 
 struct warpgate_data {

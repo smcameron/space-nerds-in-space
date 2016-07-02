@@ -1573,11 +1573,13 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	int i, m;
 	struct entity *e, *atm, *ring;
 	union quat orientation;
+	union quat rotational_velocity;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		/* Orientation should be consistent across clients because planets don't move */
 		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
+		quat_init_axis(&rotational_velocity, 0.0, 0.0, 1.0, 0.03 * M_PI / 180.0);
 
 		/* each planet texture has other versions with a variation of the ring materials */
 		m = solarsystem_planet_type;
@@ -1613,6 +1615,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 					&orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
+		go[i].tsd.planet.rotational_velocity = rotational_velocity;
 		if (has_atmosphere) {
 			atm = add_entity(ecx, sphere_mesh, 0.0f, 0.0f, 0.0f, WHITE);
 			go[i].tsd.planet.atmosphere = atm;
@@ -1871,6 +1874,11 @@ static inline void spin_cargo_container(double timestamp, struct snis_entity *o)
 static inline void spin_derelict(double timestamp, struct snis_entity *o)
 {
 	arbitrary_spin(timestamp, o, &o->tsd.derelict.rotational_velocity);
+}
+
+static inline void spin_planet(double timestamp, struct snis_entity *o)
+{
+	arbitrary_spin(timestamp, o, &o->tsd.planet.rotational_velocity);
 }
 
 typedef void(*interpolate_update_func)(double timestamp, struct snis_entity *o, int visible,
@@ -2160,6 +2168,7 @@ static void move_objects(void)
 			break;
 		case OBJTYPE_PLANET:
 			move_object(timestamp, o, &interpolate_orientated_object);
+			spin_planet(timestamp, o);
 			break;
 		default:
 			break;
