@@ -61,6 +61,18 @@ function greetings(cookie)
 	comms_transmission(sb1, ": -- TYPE 'dock' ON THE COMMS SCREEN");
 	comms_transmission(sb1, ": ");
 	comms_transmission(sb1, ": GOOD LUCK...");
+	show_timed_text(player_ids[1], 10,
+		"TRAINING MISSION 1\n" ..
+		"MAKE A CIRCUIT OF 4 STARBASES\n" ..
+		"AS QUICKLY AS POSSIBLE.\n" ..
+		"1. SB-01\n" ..
+		"2. SB-02\n" ..
+		"3. SB-03\n" ..
+		"4. SB-04\n" ..
+		"FINALLY, BACK TO SB-01\n" ..
+		"PROCEED IMMEDIATELY TO " .. sb1_name .. "\n... GO! ...\n");
+	text_to_speech(player_ids[1], "Make a circuit of 4 star bases as quickly as possible.");
+	text_to_speech(player_ids[1], "Get ready. Get set. Go.");
 end
 
 function why_are_you_back_here(base, base_name)
@@ -83,6 +95,8 @@ function congrats_on_this_leg(base, base_name, next_location)
 	comms_transmission(base, ": NOW PROCEED TO " .. next_location);
 	print("os.time() = ", os.time);
 	print("start_time = ", start_time);
+	show_timed_text(player_ids[1], 10, "NEXT LEG\nPROCEED TO " .. next_location .. "\n\nGO!!!\n");
+	text_to_speech(player_ids[1], "Proceed immediately to the next star base.");
 end
 
 function we_have_a_winner(base)
@@ -92,6 +106,11 @@ function we_have_a_winner(base)
 	comms_transmission(base, ": AND THIS TRAINING MISSION.");
 	comms_transmission(base, string.format("%s %5.2f %s",
 				": TOTAL ELAPSED TIME: ", os.time() - start_time, " SECONDS"));
+	show_timed_text(player_ids[1], 10, "RACE COMPLETE\n");
+	text_to_speech(player_ids[1], "Congratulations to the captain and crew.");
+	text_to_speech(player_ids[1], "You have completed the course.");
+	text_to_speech(player_ids[1], string.format("%s %5.1f %s",
+				"Total elapsed time ", os.time() - start_time, " seconds"));
 end
 
 -- called whenever the player docks at a starbase
