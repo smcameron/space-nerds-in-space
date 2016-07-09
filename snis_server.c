@@ -2392,7 +2392,9 @@ static void torpedo_collision_detection(void *context, void *entity)
 	}
 
 	if (t->type == OBJTYPE_SHIP1 || t->type == OBJTYPE_SHIP2) {
-		do_collision_impulse(t, o);
+		if (t->type != OBJTYPE_SHIP1 ||
+			t->tsd.ship.damage.maneuvering_damage > 150)
+			do_collision_impulse(t, o);
 		calculate_torpedo_damage(t);
 		send_ship_damage_packet(t);
 		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
