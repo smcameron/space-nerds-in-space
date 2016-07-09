@@ -67,6 +67,7 @@ add_some_asteroids();
 
 function add_bad_guys(cookie)
 
+	text_to_speech(player_ids[1], "A fleet of Zarkon disruptors is nearing planet erph.");
 	for i = 1, 5 do
 		print("Adding " .. shipname[i]);
 		baddy[i] = add_ship(shipname[i], x, y, z, disruptor, zarkon, 0);
@@ -119,7 +120,11 @@ function object_hit_callback(target_oid, attacker_oid)
 end
 
 function final_score()
-	
+
+	text_to_speech(player_ids[1], "All the zarkon invaders have been destroyed.");
+	text_to_speech(player_ids[1], "Commendations to the captain and crew.");
+	text_to_speech(player_ids[1], "The civilizatino of planet erph thanks you.");
+
 	comms_transmission(erph_starbase, "ALL THE ZARKON INVADERS HAVE BEEN DESTROYED");
 	if erph_hit_count < 100 then
 		comms_transmission(erph_starbase, "ERPH CASUALTIES ARE LIGHT");
@@ -152,10 +157,12 @@ function object_death_callback(oid)
 		end
 	end
 	if dead_count > 0 then
+		text_to_speech(player_ids[1], "Zarkon ship destroyed.");
 		comms_transmission(erph_starbase, "");
 		comms_transmission(erph_starbase, player_name .. ", ANOTHER ONE BITES THE DUST");
 		if alive_count > 0 then
 			comms_transmission(erph_starbase, "ONLY " .. alive_count .. " MORE TO GO");
+			text_to_speech(player_ids[1], alive_count .. " Zarkon ships remain.");
 		else
 			final_score();
 		end
@@ -165,4 +172,10 @@ end
 register_timer_callback("add_bad_guys", 100, 0);
 register_callback("object-hit-event", "object_hit_callback");
 register_callback("object-death-event", "object_death_callback");
+
+show_timed_text(player_ids[1], 15,
+	"ERPH\n" ..
+	"A FLEET OF ZARKON DISRUPTORS THREATENS\n" ..
+	"ERPH.  DESTROY THE INVADERS AND SAVE\n" ..
+	"PLANET ERPH.\n");
 
