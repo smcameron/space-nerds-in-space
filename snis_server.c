@@ -13590,6 +13590,7 @@ static void process_instructions_from_client(struct game_client *c)
 			rc = process_textscreen_op(c);
 			if (rc)
 				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
