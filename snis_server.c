@@ -12218,6 +12218,31 @@ out:
 	return 1;
 }
 
+static int l_reset_player_ship(lua_State *l)
+{
+	const double lua_oid = luaL_checknumber(l, 1);
+	struct snis_entity *o;
+	uint32_t oid = (uint32_t) lua_oid;
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto out;
+	o = &go[i];
+	if (o->type != OBJTYPE_SHIP1)
+		goto out;
+	init_player(o, 1, NULL);
+	o->timestamp = universe_timestamp;
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, 0.0);
+	return 1;
+out:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnil(l);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -15312,6 +15337,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_commodity_units, "get_commodity_units");
 	add_lua_callable_fn(l_lookup_commodity, "lookup_commodity");
 	add_lua_callable_fn(l_set_commodity_contents, "set_commodity_contents");
+	add_lua_callable_fn(l_reset_player_ship, "reset_player_ship");
 	add_lua_callable_fn(l_show_menu, "show_menu");
 }
 

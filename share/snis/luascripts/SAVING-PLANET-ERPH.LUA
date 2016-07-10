@@ -23,6 +23,7 @@ player_name = "Unknown Player"
 if (player_ids[1]) then
     move_object(player_ids[1], startx, starty, 0);
     player_name = get_object_name(player_ids[1]);
+    reset_player_ship(player_ids[1]);
 end
 
 x = 2900;

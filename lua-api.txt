@@ -527,6 +527,14 @@ set_commodity_contents(object_id, commodity_index, quantity, cargo_bay_number) -
 	set_commodity_contents(player_ids[1], n, 100.0, 0);
 	set_commodity_contents(my_container, n, 100.0);
 
+reset_player_ship(player_ship_id) -- resets the player ship to healthy status with all
+	systems turned off.  Most useful at the beginning of mission scripts.
+
+  Example:
+
+	player_ids = get_player_ship_ids();
+	reset_player_ship(player_ids[1]);
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.

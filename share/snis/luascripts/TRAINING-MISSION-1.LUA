@@ -33,6 +33,7 @@ all_bases_visited = 0;
 
 -- find the player and move him where we want him to start.
 player_ids = get_player_ship_ids();
+reset_player_ship(player_ids[1]);
 player_name = "Unknown Player"
 if (player_ids[1]) then
     move_object(player_ids[1], 25000, 0, 25000);
