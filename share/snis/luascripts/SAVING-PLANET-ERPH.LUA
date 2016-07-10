@@ -142,7 +142,7 @@ end
 function object_death_callback(oid)
 	dead_count = 0;
 	alive_count = 0;
-	for i in 1, 5 do
+	for i = 1, 5 do
 		if oid == baddy[i] then
 			alive[i] = 0;
 			dead_count = dead_count + 1
