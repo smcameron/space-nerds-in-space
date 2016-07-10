@@ -124,7 +124,7 @@ function final_score()
 
 	text_to_speech(player_ids[1], "All the zarkon invaders have been destroyed.");
 	text_to_speech(player_ids[1], "Commendations to the captain and crew.");
-	text_to_speech(player_ids[1], "The civilizatino of planet erph thanks you.");
+	text_to_speech(player_ids[1], "The civilization of planet erph thanks you.");
 
 	comms_transmission(erph_starbase, "ALL THE ZARKON INVADERS HAVE BEEN DESTROYED");
 	if erph_hit_count < 100 then
