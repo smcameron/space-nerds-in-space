@@ -1283,10 +1283,10 @@ static void delete_from_clients_and_server_helper(struct snis_entity *o, int tak
 		break;
 	case OBJTYPE_STARBASE:
 		delete_starbase_docking_ports(o);
-		break;
+		/* deliberate fallthrough */
 	default:
 		schedule_callback(event_callback, &callback_schedule,
-				"object-death-callback", o->id);
+				"object-death-event", o->id);
 		break;
 	}
 
