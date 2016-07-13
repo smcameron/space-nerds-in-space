@@ -12218,6 +12218,26 @@ out:
 	return 1;
 }
 
+static int l_add_commodity(lua_State *l)
+{
+	const char *name = luaL_checkstring(l, 1);
+	const char *units = luaL_checkstring(l, 2);
+	const double base_price = luaL_checknumber(l, 3);
+	const double volatility = luaL_checknumber(l, 4);
+	const double legality = luaL_checknumber(l, 5);
+	const double econ_sensitivity = luaL_checknumber(l, 6);
+	const double govt_sensitivity = luaL_checknumber(l, 7);
+	const double tech_sensitivity = luaL_checknumber(l, 8);
+	const double odds = luaL_checknumber(l, 9);
+	int iodds = odds;
+
+	int n = add_commodity(&commodity, &ncommodities,
+		name, units, base_price, volatility, legality,
+		econ_sensitivity, govt_sensitivity, tech_sensitivity, iodds);
+	lua_pushnumber(l, (double) n);
+	return 1;
+}
+
 static int l_reset_player_ship(lua_State *l)
 {
 	const double lua_oid = luaL_checknumber(l, 1);
@@ -15337,6 +15357,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_commodity_units, "get_commodity_units");
 	add_lua_callable_fn(l_lookup_commodity, "lookup_commodity");
 	add_lua_callable_fn(l_set_commodity_contents, "set_commodity_contents");
+	add_lua_callable_fn(l_add_commodity, "add_commodity");
 	add_lua_callable_fn(l_reset_player_ship, "reset_player_ship");
 	add_lua_callable_fn(l_show_menu, "show_menu");
 }

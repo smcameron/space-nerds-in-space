@@ -188,6 +188,32 @@ float commodity_calculate_price(struct commodity *c,
 	return price;
 }
 
+int add_commodity(struct commodity **c, int *ncommodities, const char *name, const char *unit,
+			float base_price, float volatility, float legality,
+			float econ_sensitivity, float govt_sensitivity, float tech_sensitivity, int odds)
+{
+	struct commodity *newc;
+	int n = *ncommodities + 1;
+
+	newc = realloc(*c, n * sizeof(newc[0]));
+	if (!newc)
+		return -1;
+	*c = newc;
+	newc = &(*c)[n - 1];
+
+	strncpy(newc->name, name, sizeof(newc->name));
+	strncpy(newc->unit, unit, sizeof(newc->name));
+	newc->base_price = base_price;
+	newc->volatility = volatility;
+	newc->legality = legality;
+	newc->econ_sensitivity = econ_sensitivity;
+	newc->govt_sensitivity = govt_sensitivity;
+	newc->tech_sensitivity = tech_sensitivity;
+	newc->odds = odds;
+	*ncommodities = n;
+	return n - 1;
+}
+
 #ifdef TESTCOMMODITIES
 
 static void test_price(struct commodity *c, float e, float g, float t)

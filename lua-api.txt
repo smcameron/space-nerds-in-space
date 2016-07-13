@@ -521,11 +521,28 @@ set_commodity_contents(object_id, commodity_index, quantity, cargo_bay_number) -
   Example:
 
 	my_container = add_cargo_container(1000, 1000, 1000, 0, 0, 0);
-	location and velocity
 	player_ids = get_player_ship_ids();
 	n = lookup_commodity("gold ore");
 	set_commodity_contents(player_ids[1], n, 100.0, 0);
 	set_commodity_contents(my_container, n, 100.0);
+
+add_commodity(name, unit, base_price, volatility, legality,
+		econ_sensitivity, govt_sensitivity, tech_sensitivity,
+		odds);
+  Adds a new commodity to the predefined set of commodities.  This is useful for
+  custom scenarios to create special "macguffins".   If the odds are set to zero, then
+  the game will never randomly generate the item, and it is up to the script to place
+  it into the game.  See share/snis/commodities.txt for an explanation of the
+  parameters.
+
+  Example:
+
+	macguffin = add_commodity("flux capacity", "gigawatts", 100.0, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0);
+	my_container = add_cargo_container(1000, 1000, 1000, 0, 0, 0);
+	player_ids = get_player_ship_ids();
+	n = lookup_commodity("gold ore");
+	set_commodity_contents(player_ids[1], macguffin, 100.0, 0);
+	set_commodity_contents(my_container, macguffin, 100.0);
 
 reset_player_ship(player_ship_id) -- resets the player ship to healthy status with all
 	systems turned off.  Most useful at the beginning of mission scripts.

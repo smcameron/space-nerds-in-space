@@ -48,4 +48,8 @@ struct commodity *read_commodities(char *filename, int *ncommodities);
 float commodity_calculate_price(struct commodity *c,
 		float economy, float tech_level, float government);
 
+int add_commodity(struct commodity **c, int *ncommodities, const char *name, const char *unit,
+			float base_price, float volatility, float legality,
+			float econ_sensitivity, float govt_sensitivity, float tech_sensitivity, int odds);
+
 #endif
