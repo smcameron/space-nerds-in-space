@@ -47,10 +47,19 @@ Too much to list, but here's a list anyway:
 	* (set) impulse to <value> percent
 
 * Navigation screen
+  Allow easier navigation by coordinates so lua scripts can say: goto x,y,z
+  and it's possible for nav to reasonably follow such orders.
 
 * Weapons screen
 
 * Science station
+  Allow some sort of arbitrary info about objects or just in general
+  to be detected and fed to the game via lua.
+  * Allow scanning of planet surface
+
+* Add some kind of transporter control which interacts with science
+  scanning of planet surface/scanning of ships to allow beaming up/down
+  of "passengers" or cargo.
 
 * Setup screen
   Try to make it more intuitive for people who are seeing it for
@@ -64,11 +73,22 @@ Too much to list, but here's a list anyway:
   remains to be done.
   Avoid going inside/through planets.  This is mostly done
   though I still see a ship crash into a planet every once it a blue moon
+  * it should be the case that each ship model is associated with a particular
+    faction.
+  * It should be the case that each ship model is noticably different in capabilities
+    and science should have some insight into this.  Some ships should be noticeably
+    more difficult or easier to destroy.
+  * Allow ship to ship docking?
+
+* Add proximity mines
+* Add missiles of some kind
+* Add black holes with some kind of physics impact
+* Add Lua controllable macguffins of some kind
 
 * starbase behavior
-  improve docking with starbase
+  Allow refueler ships to be requested for remote refueling.
 
-* anomalies, etc. need to be implemented
+* anomalies, macguffins etc. need to be implemented
 
 * 3D out the window view
   Fade distant objects to black
@@ -94,10 +114,10 @@ Too much to list, but here's a list anyway:
   (how do lua scripts fit into checkpoint restart?)
 * more lua event callbacks, some mission scripts done with lua
   basically, flesh out the lua scripting system.
+* Moar mission scripts!
 * Remove use of "heading" field in snis_entity
 * Make space monster do something interesting
 * Make space monster work again
-* Allow to somehow mine asteroids and derelicts for something (fuel?)
 * make tractor beam work again/better.
 * Currently, number keypad doesn't work for numbers.  It should work.
 
@@ -116,8 +136,6 @@ NICE TO HAVE:
   realism.   Also, have planets orbiting stars, stations orbiting planets, etc,
   instead of what we have now, which is just stuff randomly sprinkled around.
 
-* Allow multiple server processes and travel between them via warp gates.
 * Make art assets live on server and be transmitted to clients on demand.
 
-* Speech recognition with natural language support (see COMMS section above)
-  to make requests of "the computer"
+
