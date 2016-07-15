@@ -498,6 +498,7 @@ struct asteroid_data {
 struct cargo_container_data {
 	union quat rotational_velocity;
 	struct cargo_container_contents contents;
+	uint8_t persistent;
 };
 
 struct warp_effect_data {

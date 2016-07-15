@@ -939,6 +939,8 @@ static void cargo_container_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
+	if (o->tsd.cargo_container.persistent)
+		return;
 	o->alive--;
 	if (o->alive == 0)
 		delete_from_clients_and_server(o);
@@ -1955,7 +1957,7 @@ static int add_derelict(const char *name, double x, double y, double z,
 			int the_faction, int persistent);
 
 static int add_cargo_container(double x, double y, double z, double vx, double vy, double vz,
-				int item, float qty);
+				int item, float qty, int persistent);
 static int make_derelict(struct snis_entity *o)
 {
 	int i, rc;
@@ -1975,13 +1977,13 @@ static int make_derelict(struct snis_entity *o)
 				(void) add_cargo_container(o->x, o->y, o->z,
 					o->vx + snis_random_float() * 2.0,
 					o->vy + snis_random_float() * 2.0,
-					o->vz + snis_random_float(), item, qty);
+					o->vz + snis_random_float(), item, qty, 0);
 		}
 	} else {
 		(void) add_cargo_container(o->x, o->y, o->z,
 				o->vx + snis_random_float() * 2.0,
 				o->vy + snis_random_float() * 2.0,
-				o->vz + snis_random_float(), -1, 0.0);
+				o->vz + snis_random_float(), -1, 0.0, 0);
 	}
 	return rc;
 }
@@ -6755,7 +6757,7 @@ static int l_add_cargo_container(lua_State *l)
 	vz = lua_tonumber(lua_state, 6);
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_cargo_container(x, y, z, vx, vy, vz, -1, 0);
+	i = add_cargo_container(x, y, z, vx, vy, vz, -1, 0, 1);
 	if (i < 0) {
 		lua_pushnil(lua_state);
 		pthread_mutex_unlock(&universe_mutex);
@@ -6898,7 +6900,7 @@ static int l_add_spacemonster(lua_State *l)
 }
 
 static int add_cargo_container(double x, double y, double z, double vx, double vy, double vz,
-			int item, float qty)
+			int item, float qty, int persistent)
 {
 	int i;
 
@@ -6918,6 +6920,7 @@ static int add_cargo_container(double x, double y, double z, double vx, double v
 	}
 	go[i].tsd.cargo_container.contents.item = item;
 	go[i].tsd.cargo_container.contents.qty = qty;
+	go[i].tsd.cargo_container.persistent = persistent & 0xff;
 	return i;
 }
 
@@ -9445,7 +9448,7 @@ static void meta_comms_eject(char *name, struct game_client *c, char *txt)
 
 	(void) add_cargo_container(container_loc.v.x, container_loc.v.y, container_loc.v.z,
 				container_vel.v.x, container_vel.v.y, container_vel.v.z,
-				item, qty);
+				item, qty, 1);
 	snprintf(msg, sizeof(msg), "CARGO BAY %d EJECTED", cargobay);
 	send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
 	return;
