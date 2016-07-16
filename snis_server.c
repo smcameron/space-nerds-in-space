@@ -792,7 +792,14 @@ static void set_object_location(struct snis_entity *o, double x, double y, doubl
 	o->z = z;
 	normalize_coords(o);
 	space_partition_update(space_partition, o, x, z);
-} 
+}
+
+static void set_object_velocity(struct snis_entity *o, double vx, double vy, double vz)
+{
+	o->vx = vx;
+	o->vy = vy;
+	o->vz = vz;
+}
 
 static void get_peer_name(int connection, char *buffer)
 {
@@ -6831,6 +6838,30 @@ static int l_move_object(lua_State *l)
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
+
+static int l_set_object_velocity(lua_State *l)
+{
+	int i;
+	double id, vx, vy, vz;
+	struct snis_entity *o;
+
+	id = lua_tonumber(lua_state, 1);
+	vx = lua_tonumber(lua_state, 2);
+	vy = lua_tonumber(lua_state, 3);
+	vz = lua_tonumber(lua_state, 4);
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id((uint32_t) id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	o = &go[i];
+	set_object_velocity(o, vx, vy, vz);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 
 static int l_delete_object(lua_State *l)
 {
@@ -15337,6 +15368,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_player_ship_ids, "get_player_ship_ids");
 	add_lua_callable_fn(l_get_object_location, "get_object_location");
 	add_lua_callable_fn(l_move_object, "move_object");
+	add_lua_callable_fn(l_set_object_velocity, "set_object_velocity");
 	add_lua_callable_fn(l_delete_object, "delete_object");
 	add_lua_callable_fn(l_register_callback, "register_callback");
 	add_lua_callable_fn(l_register_timer_callback, "register_timer_callback");
