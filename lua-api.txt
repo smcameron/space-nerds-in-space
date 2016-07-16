@@ -97,8 +97,8 @@ set_asteroid_minerals(id, carbon, silicates, nickeliron, preciousmetals); -- set
 id = add_cargo_container(x, y, z, vx, vy, vz) -- adds a cargo container at specified
 	location and velocity
 
-id = add_derelict(x, y, z, vx, vy, vz, shiptype, faction) -- adds a derelict vessel at
-	specified location and velocity
+id = add_derelict(name, x, y, z, shiptype, faction) -- adds a derelict vessel at
+	specified location
 
 id = add_starbase(x, y, z, n) - adds a starbase at location x,y with number n (0 <= n <= 99).
 	the starbase will be named "SB-n"
