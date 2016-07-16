@@ -158,7 +158,9 @@ get_object_name(object_id); -- returns string name of specified object
 
 register_timer_callback(callback, timer_ticks, cookie)
 	register a function to be called back in timer_ticks (each timer_tick is 1/10th second).
-	the cookie value is passed to your callback function.
+	the cookie value is passed to your callback function.  The callback is only triggered
+	once.  If you need a repeated callback, the callback can re-register itself to be
+	called again.
 
 register_proximity_callback(callback, oid1, oid2, distance); -- when the objects
 	indicated by oid1 and oid2 are within the specified distance of one another,
