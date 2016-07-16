@@ -24,6 +24,7 @@
 #define SHIP_CLASS_DREADKNIGHT 18
 #define SHIP_CLASS_VANQUISHER 19
 #define SHIP_CLASS_ENFORCER 20
+#define SHIP_CLASS_ESCAPE_POD 21
 
 struct ship_type_entry {
 	char *class;
