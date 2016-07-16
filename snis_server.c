@@ -10118,7 +10118,7 @@ void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 	}
 	send_comms_packet(npcname, ch, " SPACE WEATHER ADVISORY: ALL CLEAR");
 	send_comms_packet(npcname, ch, "");
-	if (contraband >= 0) {
+	if (contraband != (uint16_t) -1) {
 		send_comms_packet(npcname, ch, " TRAVELERS TAKE NOTICE OF PROHIBITED ITEMS:");
 		snprintf(msg, sizeof(msg), "    %s", commodity[contraband].name);
 		send_comms_packet(npcname, ch, msg);
