@@ -28,6 +28,8 @@ survivors = 8;
 number_of_zarkons = 2;
 zarkon_check_interval = 10 * 15; -- check for zarkon attack every 15 seconds
 
+vaccine_delivered = false;
+
 -- Interval between distress calls from ICARUS station is 120 seconds
 distress_call_interval = 10 * 120;
 
@@ -154,6 +156,7 @@ function all_hands_lost()
 end
 
 function you_brought_the_vaccine()
+	vaccine_delivered = true;
 	if survivors <= 0 then
 		all_hands_lost();
 	else
@@ -228,6 +231,9 @@ end
 -- Generic distress call from so-and-so complaining that the space pox has
 -- killed his predecessor in some unlikely way.
 function distress_call(rank, firstname, lastname, predecessor, died)
+	if vaccine_delivered then -- nothing to complain about
+		return;
+	end
 	text_to_speech(player_ids[1], "Incoming transmission from Icarus station");
 	comms_transmission(bonx_starbase, "------------------");
 	comms_transmission(bonx_starbase, "THIS IS " .. rank .. " " .. firstname .. " " .. lastname);
