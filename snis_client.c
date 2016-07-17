@@ -10483,6 +10483,19 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
 	}
+	if (curr_science_guy->type == OBJTYPE_SHIP2) {
+		struct ship_data *s = &curr_science_guy->tsd.ship;
+		if (!ship_type[s->shiptype].has_lasers && !ship_type[s->shiptype].has_torpedoes)
+			sprintf(buf, "WEAPONRY: NONE");
+		else if (ship_type[s->shiptype].has_lasers && ship_type[s->shiptype].has_torpedoes)
+			sprintf(buf, "WEAPONRY: TORPEDOES AND LASERS");
+		else if (ship_type[s->shiptype].has_lasers)
+			sprintf(buf, "WEAPONRY: LASERS");
+		else
+			sprintf(buf, "WEAPONRY: TORPEDOES");
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		y += yinc;
+	}
 }
  
 static void show_science(GtkWidget *w)
