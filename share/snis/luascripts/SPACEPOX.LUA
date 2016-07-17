@@ -51,6 +51,7 @@ if (player_ids[1]) then
     move_object(player_ids[1], startx, starty, startz);
     player_name = get_object_name(player_ids[1]);
     reset_player_ship(player_ids[1]);
+    set_faction(player_ids[1], 0); -- set player faction to neutral so only zarkons fight
 end
 
 -- Create our macguffin -- a derelict and a cargo container of spacepox vaccine

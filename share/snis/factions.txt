@@ -34,14 +34,14 @@ Zarkon
 0 0 300000
 Vekkazi
 300000 0 0
-hostility Wallunni Schaazbaut 90
+hostility Wallunni Schaazbaut 30
 hostility Wallunni Zarkon 90
-hostility Wallunni Vekkazi 90
-hostility Wallunni Neutral 90
+hostility Wallunni Vekkazi 30
+hostility Wallunni Neutral 0
 hostility Zarkon Schaazbaut 90
 hostility Zarkon Vekkazi 90
 hostility Zarkon Neutral 90
-hostility Schaazbaut Neutral 90
-hostility Schaazbaut Vekkazi 90
-hostility Vekkazi Neutral 90
+hostility Schaazbaut Neutral 0
+hostility Schaazbaut Vekkazi 30
+hostility Vekkazi Neutral 0
 
