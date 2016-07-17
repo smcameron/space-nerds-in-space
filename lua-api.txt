@@ -2,6 +2,69 @@ NOTE: I am still working out what the lua api should look like, so
       all of this is subject to change.  But this is what it looks like
       now (barring bitrot of this document, which is not inconceivable.)
 
+TIPS ON DEBUGGING YOUR LUA SCRIPTS:
+
+	1. Run luac on your script -- if luac can't compile it, it won't run in SNIS either.
+		This is a necessary but insufficient condition -- that is, just because luac is happy
+		with your script doesn't mean it contains no errors.
+
+	2. Add print statements into your lua functions to see what they're doing.
+	   The output will be mixed in with the output of snis_server.
+
+	3. Watch out for some common errors:
+
+		A. Specifying the name of a function in a callback registration without quotes.
+
+		function player_docked_callback(player_id, station_id)
+			do_somthing();
+		end
+
+		register_callback("player-docked-event", player_docked_callback);   -- THIS IS WRONG!
+		register_callback("player-docked-event", "player_docked_callback"); -- This is correct.
+
+		B.  Misspelling an event name or function name:
+
+		register_callback("player_docked_event", player_docked_callback);   -- THIS IS WRONG!
+		register_callback("player-dock-event", "player_docked_callback");   -- THIS IS WRONG!
+		register_callback("player-docked-event", "player_dock_callback");   -- THIS IS WRONG!
+		register_callback("player-docked-event", "player_docked_callback"); -- This is correct.
+
+		The symptom of this is typically it just doesn't seem to get called or doesn't do anything.
+		Look in the output of snis_server for things like:
+
+		snis_server: lua callback 'blahblah' had error 2: 'attempt to call a nil value'.
+		do_lua_pcall
+		Stack trace:
+		- ./snis_server(stacktrace+0x3b) [0x41114d]
+		- ./snis_server(main+0x2d41) [0x40b4a1]
+		- /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf5) [0x7fc02f899ec5]
+		- ./snis_server() [0x40bc97]
+
+		C. Misspelling a variable name or function name
+
+		Like many interpreted languages, if you misspell a variable name, Lua happily makes
+		a new variable with the new misspelled name.   Watch out for unexpectedly nil values
+		or for misspelled function names, things like this in snis_server output:
+
+		Error executing lua script: share/snis/luascripts/ERRORTEST.LUA:4: attempt to call global 'blahblah' (a nil value)
+
+		or things like this:
+
+		snis_server: lua callback 'mycallback' had error 2: 'share/snis/luascripts/ERRORTEST.LUA:5: attempt to call global 'blahblah' (a nil value)'.
+		do_lua_pcall
+		Stack trace:
+		- ./snis_server(stacktrace+0x3b) [0x41114d]
+		- ./snis_server(main+0x2d41) [0x40b4a1]
+		- /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf5) [0x7f3149f69ec5]
+		- ./snis_server() [0x40bc97]
+
+	3. Last resort, debug it in snis_server.c
+
+		All the lua callable functions are set up in snis_server.c in a function
+		called "setup_lua", and are named with a leading "l_".  You can put printf()
+		statements inside these "l_..." functions to see what they're doing or if theyr'e
+		getting called how you expect.  The output will be mixed in with snis_server output.
+
 Space Nerds In Space lua inteface:
 
 Locations in space nerds in space:
