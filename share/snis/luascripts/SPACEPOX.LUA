@@ -25,7 +25,7 @@ startz = 0;
 survivors = 8;
 
 -- how many zarkons to attack
-number_of_zarkons = 2;
+number_of_zarkons = 3;
 zarkon_check_interval = 10 * 15; -- check for zarkon attack every 15 seconds
 
 vaccine_delivered = false;
@@ -323,6 +323,13 @@ function distress_call8()
 	survivors = survivors - 1;
 end
 
+function maintain_zarkon_focus()
+	for i = 1, number_of_zarkons do
+		ai_push_attack(zarkon_ship[i], player_ids[1]);
+	end
+	register_timer_callback("maintain_zarkon_focus", 20, 0);
+end
+
 function send_in_the_zarkons()
 	print("Sending in the zarkons");
 	px,py,pz = get_object_location(player_ids[1]);
@@ -339,6 +346,7 @@ function send_in_the_zarkons()
 	set_player_damage(player_ids[1], "warp", 255); -- 3 times because of the way
 	set_player_damage(player_ids[1], "warp", 255); -- damage is distributed
 	set_player_damage(player_ids[1], "warp", 255);
+	register_timer_callback("maintain_zarkon_focus", 20, 0);
 end
 
 -- check to see if the space vaccine has been acquired and if so send in the zarkons
