@@ -1854,6 +1854,11 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 	if (safe_mode)
 		return;
 
+	/* Do not attack if no weapons */
+	if (!ship_type[attacker->tsd.ship.shiptype].has_lasers &&
+		!ship_type[attacker->tsd.ship.shiptype].has_torpedoes)
+		return;
+
 	if (recursion_level > 2) /* guard against infinite recursion */
 		return;
 
@@ -3028,7 +3033,8 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 
 		if (snis_randn(1000) < 150 + imacop * 150 && vdist <= TORPEDO_RANGE + extra_range &&
 			o->tsd.ship.next_torpedo_time <= universe_timestamp &&
-			o->tsd.ship.torpedoes > 0) {
+			o->tsd.ship.torpedoes > 0 &&
+			ship_type[o->tsd.ship.shiptype].has_torpedoes) {
 			double dist, flight_time, tx, ty, tz, vx, vy, vz;
 			/* int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y); */
 
@@ -3044,13 +3050,15 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 
 				add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
 				o->tsd.ship.torpedoes--;
+				/* FIXME: how do the torpedoes refill? */
 				o->tsd.ship.next_torpedo_time = universe_timestamp +
 					ENEMY_TORPEDO_FIRE_INTERVAL;
 				check_for_incoming_fire(v);
 			}
 		} else {
 			if (snis_randn(1000) < 300 + imacop * 200 &&
-				o->tsd.ship.next_laser_time <= universe_timestamp) {
+				o->tsd.ship.next_laser_time <= universe_timestamp &&
+				ship_type[o->tsd.ship.shiptype].has_lasers) {
 				if (v->type == OBJTYPE_PLANET || !planet_in_the_way(o, v)) {
 					o->tsd.ship.next_laser_time = universe_timestamp +
 						ENEMY_LASER_FIRE_INTERVAL;
@@ -5998,7 +6006,8 @@ static void starbase_move(struct snis_entity *o)
 			fired_at_player = a->type == OBJTYPE_SHIP1;
 		}
 		if (snis_randn(100) < 30 &&
-			o->tsd.starbase.next_laser_time <= universe_timestamp) {
+			o->tsd.starbase.next_laser_time <= universe_timestamp &&
+				ship_type[o->tsd.ship.shiptype].has_lasers) {
 			/* fire laser */
 			add_laserbeam(o->id, a->id, LASERBEAM_DURATION);
 			o->tsd.starbase.next_laser_time = universe_timestamp +

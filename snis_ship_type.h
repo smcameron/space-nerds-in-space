@@ -39,6 +39,8 @@ struct ship_type_entry {
 	int nrotations;
 	char axis[3];
 	float angle[3];
+	int has_lasers;
+	int has_torpedoes;
 };
 
 struct ship_type_entry *snis_read_ship_types(char *filename, int *count);
