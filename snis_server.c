@@ -563,6 +563,20 @@ static void free_timer_events(struct timer_event **e)
 	*e = NULL;
 }
 
+static int do_lua_pcall(char *function_name, lua_State *l, int nargs, int nresults, int errfunc)
+{
+	int rc;
+
+	rc = lua_pcall(l, nargs, nresults, errfunc);
+	if (rc) {
+		fprintf(stderr, "snis_server: lua callback '%s' had error %d: '%s'.\n",
+			function_name, rc, lua_tostring(l, -1));
+		stacktrace("do_lua_pcall");
+		fflush(stderr);
+	}
+	return rc;
+}
+
 static void fire_lua_timers(void)
 {
 	struct timer_event *i, *last, *next;
@@ -591,7 +605,7 @@ static void fire_lua_timers(void)
 		next = i->next;
 		lua_getglobal(lua_state, i->callback);
 		lua_pushnumber(lua_state, i->cookie_val);
-		lua_pcall(lua_state, 1, 0, 0);
+		do_lua_pcall(i->callback, lua_state, 1, 0, 0);
 		free_timer_event(&i);
 	}
 
@@ -715,7 +729,7 @@ static void fire_lua_proximity_checks(void)
 		lua_pushnumber(lua_state, (double) i->oid1);
 		lua_pushnumber(lua_state, (double) i->oid2);
 		lua_pushnumber(lua_state, (double) sqrt(dist2));
-		lua_pcall(lua_state, 3, 0, 0);
+		do_lua_pcall(i->callback, lua_state, 3, 0, 0);
 		free_lua_proximity_check(&i);
 	}
 }
@@ -731,7 +745,7 @@ void lua_object_id_event(char *event, uint32_t object_id)
 		lua_getglobal(lua_state, callback[i]);
 		tmp = (double) object_id;
 		lua_pushnumber(lua_state, tmp);
-		lua_pcall(lua_state, 1, 0, 0);
+		do_lua_pcall(callback[i], lua_state, 1, 0, 0);
 	}
 }
 
@@ -744,11 +758,11 @@ void fire_lua_callbacks(struct callback_schedule_entry **sched)
 		next = next_scheduled_callback(i);
 		callback = callback_name(i);
 		lua_getglobal(lua_state, callback);
-		free(callback);
 		lua_pushnumber(lua_state, callback_schedule_entry_param(i, 0));
 		lua_pushnumber(lua_state, callback_schedule_entry_param(i, 1));
 		lua_pushnumber(lua_state, callback_schedule_entry_param(i, 2));
-		lua_pcall(lua_state, 3, 0, 0);
+		do_lua_pcall(callback, lua_state, 3, 0, 0);
+		free(callback);
 	}
 	free_callback_schedule(sched);
 }
