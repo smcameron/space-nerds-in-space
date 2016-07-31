@@ -14059,7 +14059,7 @@ static void queue_up_to_clients_that_care(struct snis_entity *o)
 			continue;
 
 		if (too_far_away_to_care(c, o))
-			return;
+			continue;
 
 		if (o->timestamp != c->go_clients[go_index(o)].last_timestamp_sent) {
 			queue_up_client_object_update(c, o);
