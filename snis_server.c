@@ -6020,8 +6020,7 @@ static void starbase_move(struct snis_entity *o)
 			fired_at_player = a->type == OBJTYPE_SHIP1;
 		}
 		if (snis_randn(100) < 30 &&
-			o->tsd.starbase.next_laser_time <= universe_timestamp &&
-				ship_type[o->tsd.ship.shiptype].has_lasers) {
+			o->tsd.starbase.next_laser_time <= universe_timestamp) {
 			/* fire laser */
 			add_laserbeam(o->id, a->id, LASERBEAM_DURATION);
 			o->tsd.starbase.next_laser_time = universe_timestamp +
