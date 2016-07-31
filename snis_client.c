@@ -13969,7 +13969,7 @@ static void read_sound_clips(void)
 
 	printf("Decoding audio data..."); fflush(stdout);
 	read_ogg_clip(EXPLOSION_SOUND, d, "big_explosion.ogg");
-	read_ogg_clip(TORPEDO_LAUNCH_SOUND, d, "flak_gun_sound.ogg");
+	read_ogg_clip(TORPEDO_LAUNCH_SOUND, d, "flak_hit.ogg");
 	read_ogg_clip(LASER_FIRE_SOUND, d, "bigshotlaser.ogg");
 	read_ogg_clip(ONSCREEN_SOUND, d, "onscreen.ogg");
 	read_ogg_clip(OFFSCREEN_SOUND, d, "offscreen.ogg");

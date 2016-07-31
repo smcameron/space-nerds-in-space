@@ -37,6 +37,10 @@ flak_gun_sound.ogg:
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
 COPYRIGHT=2008 by Stephen M. Cameron
 
+flak_hit.ogg:
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
+COPYRIGHT=2008 by Stephen M. Cameron
+
 offscreen.ogg:
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
 COPYRIGHT=2008 by Stephen M. Cameron
