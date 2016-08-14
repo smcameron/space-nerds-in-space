@@ -2,7 +2,8 @@
 #define SOUNDS_H
 
 #define MAX_CONCURRENT_SOUNDS 20
-#define NSOUND_CLIPS 42
+#define NSOUND_CLIPS 52
+#define NHULL_CREAK_SOUNDS 10
 
 #define EXPLOSION_SOUND 1
 #define TORPEDO_LAUNCH_SOUND 2
@@ -49,5 +50,15 @@
 #define MINING_BOT_DEPLOYED 39
 #define MINING_BOT_STOWED 40 
 #define MINING_BOT_STANDING_BY 41 
+#define HULL_CREAK_0 42
+#define HULL_CREAK_1 43
+#define HULL_CREAK_2 44
+#define HULL_CREAK_3 45
+#define HULL_CREAK_4 46
+#define HULL_CREAK_5 47
+#define HULL_CREAK_6 48
+#define HULL_CREAK_7 49
+#define HULL_CREAK_8 50
+#define HULL_CREAK_9 51
 
 #endif

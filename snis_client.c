@@ -14009,6 +14009,16 @@ static void read_sound_clips(void)
 	read_ogg_clip(MINING_BOT_DEPLOYED, d, "mining-bot-deployed.ogg");
 	read_ogg_clip(MINING_BOT_STOWED, d, "mining-bot-stowed.ogg");
 	read_ogg_clip(MINING_BOT_STANDING_BY, d, "mining-bot-standing-by.ogg");
+	read_ogg_clip(HULL_CREAK_0, d, "hull-creak-0.ogg");
+	read_ogg_clip(HULL_CREAK_1, d, "hull-creak-1.ogg");
+	read_ogg_clip(HULL_CREAK_2, d, "hull-creak-2.ogg");
+	read_ogg_clip(HULL_CREAK_3, d, "hull-creak-3.ogg");
+	read_ogg_clip(HULL_CREAK_4, d, "hull-creak-4.ogg");
+	read_ogg_clip(HULL_CREAK_5, d, "hull-creak-5.ogg");
+	read_ogg_clip(HULL_CREAK_6, d, "hull-creak-6.ogg");
+	read_ogg_clip(HULL_CREAK_7, d, "hull-creak-7.ogg");
+	read_ogg_clip(HULL_CREAK_8, d, "hull-creak-8.ogg");
+	read_ogg_clip(HULL_CREAK_9, d, "hull-creak-9.ogg");
 	printf("Done.\n");
 }
 

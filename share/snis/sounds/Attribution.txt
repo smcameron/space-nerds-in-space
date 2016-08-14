@@ -96,4 +96,43 @@ welcome-to-starbase.ogg
 COPYRIGHT=2015 by Stephen M. Cameron
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
 
+hull-creak-0.ogg
+COPYRIGHT=2016 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+hull-creak-1.ogg
+COPYRIGHT=2016 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+hull-creak-2.ogg
+COPYRIGHT=2016 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+hull-creak-3.ogg
+COPYRIGHT=2016 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+hull-creak-4.ogg
+COPYRIGHT=2016 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+hull-creak-5.ogg
+COPYRIGHT=2016 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+hull-creak-6.ogg
+COPYRIGHT=2016 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+hull-creak-7.ogg
+COPYRIGHT=2016 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+hull-creak-8.ogg
+COPYRIGHT=2016 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+hull-creak-9.ogg
+COPYRIGHT=2016 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
 

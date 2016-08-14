@@ -78,7 +78,17 @@ SOUNDFILES=${SOUNDSRCDIR}/Attribution.txt \
 	${SOUNDSRCDIR}/warning-hull-breach-imminent.ogg \
 	${SOUNDSRCDIR}/warp-drive-fumble.ogg \
 	${SOUNDSRCDIR}/warpdrive.ogg \
-	${SOUNDSRCDIR}/welcome-to-starbase.ogg
+	${SOUNDSRCDIR}/welcome-to-starbase.ogg \
+	${SOUNDSRCDIR}/hull-creak-0.ogg \
+	${SOUNDSRCDIR}/hull-creak-1.ogg \
+	${SOUNDSRCDIR}/hull-creak-2.ogg \
+	${SOUNDSRCDIR}/hull-creak-3.ogg \
+	${SOUNDSRCDIR}/hull-creak-4.ogg \
+	${SOUNDSRCDIR}/hull-creak-5.ogg \
+	${SOUNDSRCDIR}/hull-creak-6.ogg \
+	${SOUNDSRCDIR}/hull-creak-7.ogg \
+	${SOUNDSRCDIR}/hull-creak-8.ogg \
+	${SOUNDSRCDIR}/hull-creak-9.ogg
 TEXTUREDIR=${DATADIR}/textures
 TEXTURESRCDIR=${ASSETSSRCDIR}/textures
 TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
