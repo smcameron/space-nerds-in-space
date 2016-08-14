@@ -55,7 +55,7 @@ double shield_strength(uint8_t probe, uint8_t sh_strength, uint8_t sh_width,
 	/* check if probe is outside the dip region.  If so, return baseline level */
 	dip1 = sh_wavelength - sh_width / 2.0;
 	dip2 = sh_wavelength + sh_width / 2.0;
-	if (probe < dip1 || probe > dip2)
+	if (probe < dip1 || probe > dip2 || dip1 == dip2)
 		return (double) sh_strength / 255.0;
 
 	depth = (double) sh_depth / 255.0;
