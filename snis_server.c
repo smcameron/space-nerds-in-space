@@ -5681,9 +5681,11 @@ static void player_move(struct snis_entity *o)
 	int phaser_chargerate, current_phaserbank;
 	float orientation_damping, velocity_damping;
 
-	if (o->tsd.ship.damage.shield_damage > 200) {
-		if (universe_timestamp % (10 * 5) == 0)
-			snis_queue_add_sound(HULL_BREACH_IMMINENT, ROLE_SOUNDSERVER, o->id);
+	if (o->tsd.ship.damage.shield_damage > 100) {
+		if (o->tsd.ship.damage.shield_damage > 200) {
+			if (universe_timestamp % (10 * 5) == 0)
+				snis_queue_add_sound(HULL_BREACH_IMMINENT, ROLE_SOUNDSERVER, o->id);
+		}
 		if (snis_randn(8000) < 100 + o->tsd.ship.damage.shield_damage)
 			snis_queue_add_sound(HULL_CREAK_0 + (snis_randn(1000) % NHULL_CREAK_SOUNDS),
 							ROLE_SOUNDSERVER, o->id);
