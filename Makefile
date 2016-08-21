@@ -280,7 +280,8 @@ SCAD_PARAMS_FILES=${MODELSRCDIR}/disruptor.scad_params.h \
 	${MODELSRCDIR}/spaceship2.scad_params.h \
 	${MODELSRCDIR}/skorpio.scad_params.h \
 	${MODELSRCDIR}/spaceship.scad_params.h \
-	${MODELSRCDIR}/escapepod.scad_params.h
+	${MODELSRCDIR}/escapepod.scad_params.h \
+	${MODELSRCDIR}/mantis.scad_params.h
 
 DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
 	${MODELSRCDIR}/starbase3.docking_ports.h \
@@ -456,7 +457,9 @@ MODELS=${MD}/freighter.stl \
 	${MD}/docking_port.stl \
 	${MD}/docking_port2.stl \
 	${MD}/warpgate.stl \
-	${MD}/escapepod.stl
+	${MD}/escapepod.stl \
+	${MD}/mantis.stl
+
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic
