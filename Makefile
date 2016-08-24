@@ -371,7 +371,7 @@ MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtw
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
-	mesh.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
+	snis_strip_chart.o mesh.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
 	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o snis_keyboard.o solarsystem_config.o
 
 CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o
@@ -735,6 +735,9 @@ snis_gauge.o:	snis_gauge.c Makefile
 	$(Q)$(GTKCOMPILE)
 
 snis_button.o:	snis_button.c Makefile
+	$(Q)$(GTKCOMPILE)
+
+snis_strip_chart.o:	snis_strip_chart.c Makefile
 	$(Q)$(GTKCOMPILE)
 
 snis_label.o:	snis_label.c Makefile
