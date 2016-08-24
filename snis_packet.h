@@ -217,6 +217,7 @@ struct update_ship_packet {
 	int32_t weap_orientation[4];
 	uint8_t in_secure_area;
 	uint8_t docking_magnets;
+	uint8_t emf_detector;
 };
 
 struct ship_sdata_packet {

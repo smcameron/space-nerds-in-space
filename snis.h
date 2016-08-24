@@ -397,6 +397,7 @@ struct ship_data {
 	int nthrust_ports;
 	struct entity *thrust_entity[MAX_THRUST_PORTS];
 	uint8_t in_secure_area;
+	uint8_t emf_detector;
 	uint8_t auto_respawn;
 	uint32_t home_planet;
 	int flames_timer;

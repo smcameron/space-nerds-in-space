@@ -3001,6 +3001,15 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		pop_ai_attack_mode(o);
 		return;
 	}
+
+	/* Trigger the victim ship's emf detector */
+	if (v->type == OBJTYPE_SHIP1 || v->type == OBJTYPE_SHIP2) {
+		uint8_t emf_value = (uint8_t) (snis_randn(120) +
+			130.0 * ATTACK_MODE_GIVE_UP_DISTANCE / vdist);
+		if (v->tsd.ship.emf_detector < emf_value)
+			v->tsd.ship.emf_detector = emf_value;
+	}
+
 	extra_range = 0.0;
 	if (v->type == OBJTYPE_PLANET)
 		extra_range = v->tsd.planet.radius;
@@ -6471,6 +6480,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.ncargo_bays = 8;
 	o->tsd.ship.passenger_berths = 2;
 	o->tsd.ship.mining_bots = 1;
+	o->tsd.ship.emf_detector = 0;
 	o->tsd.ship.orbiting_object_id = 0xffffffff;
 	o->tsd.ship.nav_damping_suppression = 0.0;
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
@@ -14435,7 +14445,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbbwQQQbb",
+	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbbwQQQbbb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -14455,8 +14465,12 @@ static void send_update_ship_packet(struct game_client *c,
 			&o->tsd.ship.sciball_orientation.vec[0],
 			&o->tsd.ship.weap_orientation.vec[0],
 			o->tsd.ship.in_secure_area,
-			o->tsd.ship.docking_magnets);
+			o->tsd.ship.docking_magnets,
+			o->tsd.ship.emf_detector);
 	pb_queue_to_client(c, pb);
+
+	/* now that we've sent the accumulated value, clear the emf_detector to the noise floor */
+	o->tsd.ship.emf_detector = snis_randn(50);
 }
 
 static void send_update_damcon_obj_packet(struct game_client *c,

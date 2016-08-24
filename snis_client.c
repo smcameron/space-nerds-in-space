@@ -79,6 +79,7 @@
 #include "snis_sliders.h"
 #include "snis_text_window.h"
 #include "snis_text_input.h"
+#include "snis_strip_chart.h"
 #include "snis_socket_io.h"
 #include "ssgl/ssgl.h"
 #include "snis_marshal.h"
@@ -288,6 +289,7 @@ ui_element_drawing_function ui_slider_draw = (ui_element_drawing_function) snis_
 ui_element_button_press_function ui_slider_button_press = (ui_element_button_press_function) snis_slider_button_press;
 
 ui_element_drawing_function ui_button_draw = (ui_element_drawing_function) snis_button_draw;
+ui_element_drawing_function ui_strip_chart_draw = (ui_element_drawing_function) snis_strip_chart_draw;
 ui_element_drawing_function ui_label_draw = (ui_element_drawing_function) snis_label_draw;
 ui_element_button_press_function ui_button_button_press = (ui_element_button_press_function) snis_button_button_press;
 ui_element_drawing_function ui_gauge_draw = (ui_element_drawing_function) gauge_draw;
@@ -3590,6 +3592,8 @@ static int process_update_coolant_data(void)
 	return rc;
 }
 
+static void update_emf_detector(uint8_t emf_value);
+
 static struct navigation_ui {
 	struct slider *warp_slider;
 	struct slider *navzoom_slider;
@@ -3618,7 +3622,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
-		reverse, trident, in_secure_area, docking_magnets;
+		reverse, trident, in_secure_area, docking_magnets, emf_detector;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -3641,14 +3645,14 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbbwQQQbb",
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbbwQQQbbb",
 			&tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
-			&docking_magnets);
+			&docking_magnets, &emf_detector);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -3704,6 +3708,9 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.shiptype = shiptype;
 	o->tsd.ship.in_secure_area = in_secure_area;
 	o->tsd.ship.docking_magnets = docking_magnets;
+	o->tsd.ship.emf_detector = emf_detector;
+	/* FIXME: really update_emf_detector should get called every frame and passed o->tsd.ship.emf_detector. */
+	update_emf_detector(emf_detector);
 
 	/* shift old updates to make room for this one */
 	int j;
@@ -4470,7 +4477,13 @@ static struct science_ui {
 	struct button *tractor_button;
 	struct button *align_to_ship_button;
 	struct button *launch_mining_bot_button;
+	struct strip_chart *emf_strip_chart;
 } sci_ui;
+
+static void update_emf_detector(uint8_t emf_value)
+{
+	snis_strip_chart_update(sci_ui.emf_strip_chart, emf_value);
+}
 
 static int process_sci_details(void)
 {
@@ -8136,6 +8149,15 @@ static void ui_add_button(struct button *b, int active_displaymode)
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
+static void ui_add_strip_chart(struct strip_chart *sc, int active_displaymode)
+{
+	struct ui_element *uie;
+
+	uie = ui_element_init(sc, ui_strip_chart_draw, NULL,
+		active_displaymode, &displaymode);
+	ui_element_list_add_element(&uiobjs, uie);
+}
+
 static void ui_hide_widget(void *widget)
 {
 	struct ui_element *uie;
@@ -9876,6 +9898,10 @@ static void init_science_ui(void)
 			UI_COLOR(sci_button), NANO_FONT, sci_details_pressed, (void *) 0);
 	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
 			UI_COLOR(sci_button), NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
+	sci_ui.emf_strip_chart =
+		snis_strip_chart_init(txx(705), txy(5), txx(90.0), txy(50.0),
+				"EMF", "SCAN DETECTED", UI_COLOR(science_graph_plot_strong),
+				UI_COLOR(common_red_alert), 100, NANO_FONT, 900);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
@@ -9885,6 +9911,7 @@ static void init_science_ui(void)
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.align_to_ship_button, DISPLAYMODE_SCIENCE);
 	ui_hide_widget(sci_ui.align_to_ship_button);
+	ui_add_strip_chart(sci_ui.emf_strip_chart, DISPLAYMODE_SCIENCE);
 	sciecx = entity_context_new(50, 10);
 	sciballecx = entity_context_new(5000, 1000);
 	sciplane_tween = tween_init(500);
