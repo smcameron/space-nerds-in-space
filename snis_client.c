@@ -4596,6 +4596,7 @@ struct comms_ui {
 	struct snis_text_input_box *comms_input;
 	struct slider *mainzoom_slider;
 	char input[100];
+	uint32_t channel;
 } comms_ui;
 
 static void comms_dirkey(int h, int v)
@@ -4640,7 +4641,10 @@ static int process_comm_transmission(void)
 	unsigned char buffer[sizeof(struct comms_transmission_packet) + 100];
 	char string[256];
 	uint8_t length;
-	int rc;
+	int rc, n;
+	uint32_t comms_channel;
+	const char const *channel_change_pattern = COMMS_CHANNEL_CHANGE_MSG " %u";
+	char *channel_change_msg;
 
 	rc = read_and_unpack_buffer(buffer, "b", &length);
 	if (rc != 0)
@@ -4652,6 +4656,16 @@ static int process_comm_transmission(void)
 	main_screen_add_text(string);
 	if (strstr(string, ": *** HAILING "))
 		wwviaudio_add_sound(COMMS_HAIL_SOUND);
+	/* This is a little hoaky.  The client doesn't actually know which
+	 * channel comms is on, that's 100% server side.  But we can snoop
+	 * channel change messages so we can have a channel indicator.
+	 */
+	channel_change_msg = strstr(string, COMMS_CHANNEL_CHANGE_MSG);
+	if (channel_change_msg) {
+		n = sscanf(channel_change_msg, channel_change_pattern, &comms_channel);
+		if (n == 1)
+			comms_ui.channel = comms_channel;
+	}
 	return 0;
 }
 
@@ -10104,6 +10118,7 @@ static void init_comms_ui(void)
 	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS);
 	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
 	ui_add_slider(comms_ui.mainzoom_slider, DISPLAYMODE_COMMS);
+	comms_ui.channel = 0;
 }
 
 #define SCIDIST2 100
@@ -10603,7 +10618,7 @@ static void show_3d_science(GtkWidget *w)
 static void show_comms(GtkWidget *w)
 {
 	struct snis_entity *o;
-	char current_date[32], comms_clock[16];
+	char current_date[32], comms_buffer[64];
 
 	if (!(o = find_my_ship()))
 		return;
@@ -10621,9 +10636,11 @@ static void show_comms(GtkWidget *w)
 		sng_center_xy_draw_string(buf, NANO_FONT, shield_ind_x_center, shield_ind_y_center);
 	}
 	sng_set_foreground(UI_COLOR(comms_text));
-	format_date(current_date, sizeof(comms_clock), universe_timestamp());
-	sprintf(comms_clock, "TIME: %s", current_date);
-	sng_abs_xy_draw_string(comms_clock, TINY_FONT, txx(25), txy(55));
+	format_date(current_date, sizeof(current_date), universe_timestamp());
+	sprintf(comms_buffer, "TIME: %s", current_date);
+	sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(25), txy(55));
+	sprintf(comms_buffer, "CHANNEL: %u", comms_ui.channel);
+	sng_center_xy_draw_string(comms_buffer, NANO_FONT, shield_ind_x_center, shield_ind_y_center - txy(15));
 	show_common_screen(w, "COMMS");
 }
 

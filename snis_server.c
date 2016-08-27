@@ -9471,7 +9471,8 @@ static void meta_comms_channel(char *name, struct game_client *c, char *txt)
 		bridgelist[c->bridge].npcbot.special_bot = NULL;
 	}
 
-	snprintf(msg, sizeof(msg), "TX/RX INITIATED ON CHANNEL %u", newchannel);
+	/* Note: client snoops this channel change message. */
+	snprintf(msg, sizeof(msg), "%s%u", COMMS_CHANNEL_CHANGE_MSG, newchannel);
 	send_comms_packet(name, newchannel, msg);
 }
 
@@ -10773,7 +10774,8 @@ channels_maxxed:
 		bridgelist[c->bridge].npcbot.channel = channel[0];
 		bridgelist[c->bridge].npcbot.current_menu = starbase_main_menu;
 		bridgelist[c->bridge].npcbot.special_bot = NULL;
-		snprintf(msg, sizeof(msg), "TX/RX INITIATED ON CHANNEL %u", channel[0]);
+		/* Note: client snoops this channel change message */
+		snprintf(msg, sizeof(msg), "%s%u", COMMS_CHANNEL_CHANGE_MSG, channel[0]);
 		send_comms_packet(name, channel[0], msg);
 		send_to_npcbot(c->bridge, name, msg);
 	} else {
