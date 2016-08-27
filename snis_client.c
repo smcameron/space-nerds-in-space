@@ -4477,13 +4477,7 @@ static struct science_ui {
 	struct button *tractor_button;
 	struct button *align_to_ship_button;
 	struct button *launch_mining_bot_button;
-	struct strip_chart *emf_strip_chart;
 } sci_ui;
-
-static void update_emf_detector(uint8_t emf_value)
-{
-	snis_strip_chart_update(sci_ui.emf_strip_chart, emf_value);
-}
 
 static int process_sci_details(void)
 {
@@ -4597,6 +4591,7 @@ struct comms_ui {
 	struct slider *mainzoom_slider;
 	char input[100];
 	uint32_t channel;
+	struct strip_chart *emf_strip_chart;
 } comms_ui;
 
 static void comms_dirkey(int h, int v)
@@ -9912,10 +9907,6 @@ static void init_science_ui(void)
 			UI_COLOR(sci_button), NANO_FONT, sci_details_pressed, (void *) 0);
 	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
 			UI_COLOR(sci_button), NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
-	sci_ui.emf_strip_chart =
-		snis_strip_chart_init(txx(705), txy(5), txx(90.0), txy(50.0),
-				"EMF", "SCAN DETECTED", UI_COLOR(science_graph_plot_strong),
-				UI_COLOR(common_red_alert), 100, NANO_FONT, 900);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
@@ -9925,7 +9916,6 @@ static void init_science_ui(void)
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.align_to_ship_button, DISPLAYMODE_SCIENCE);
 	ui_hide_widget(sci_ui.align_to_ship_button);
-	ui_add_strip_chart(sci_ui.emf_strip_chart, DISPLAYMODE_SCIENCE);
 	sciecx = entity_context_new(50, 10);
 	sciballecx = entity_context_new(5000, 1000);
 	sciplane_tween = tween_init(500);
@@ -10057,7 +10047,7 @@ static void init_comms_ui(void)
 {
 	int x = txx(200);
 	int y = txy(20);
-	int bw = txx(75);
+	int bw = txx(70);
 	int bh = txy(25);
 	const int button_color = UI_COLOR(comms_button);
 	const int slider_color = UI_COLOR(comms_slider);
@@ -10105,6 +10095,10 @@ static void init_comms_ui(void)
 				slider_color, "ZOOM",
 				"1", "10", 0.0, 100.0, sample_mainzoom,
 				do_mainzoom);
+	comms_ui.emf_strip_chart =
+		snis_strip_chart_init(txx(705), txy(5), txx(90.0), txy(50.0),
+				"EMF", "SCAN DETECTED", UI_COLOR(science_graph_plot_strong),
+				UI_COLOR(common_red_alert), 100, NANO_FONT, 900);
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.nav_onscreen_button, DISPLAYMODE_COMMS);
@@ -10118,7 +10112,13 @@ static void init_comms_ui(void)
 	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS);
 	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
 	ui_add_slider(comms_ui.mainzoom_slider, DISPLAYMODE_COMMS);
+	ui_add_strip_chart(comms_ui.emf_strip_chart, DISPLAYMODE_COMMS);
 	comms_ui.channel = 0;
+}
+
+static void update_emf_detector(uint8_t emf_value)
+{
+	snis_strip_chart_update(comms_ui.emf_strip_chart, emf_value);
 }
 
 #define SCIDIST2 100
