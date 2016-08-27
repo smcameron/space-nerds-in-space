@@ -1,8 +1,8 @@
-.TH SPACE-NERDS-IN-SPACE "6" "Oct 2015" "mesh_viewer" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "Aug 2016" "mesh_viewer" "Games"
 .SH NAME
 mesh_viewer \- a utility for viewing models for "Space Nerds In Space."
 .SH SYNOPSIS
-.B mesh_viewer [ -p ] filename
+.B mesh_viewer [ -p ] filename [ -n normalmap-prefix ] [ -c cubemap-texture-prefix ]
 .SH DESCRIPTION
 .\" Add any additional description here
 .warn 511
@@ -19,9 +19,18 @@ digits 0-5 and ".png" appended.  So for example, if you give the partial filenam
 PNG images representing 6 faces of a cube to be mapped onto a sphere.  No sphere model
 is required.  The "-p" option will cause mesh_viewer to generate its own sphere
 model.
+.TP
+\fB\-n\fR normalmap-prefix
+Use 6 cubemapped normalmap images numbered 0 - 5.
+Only makes sense in combination with -p option.
+.TP
+\fB\-c\fR cubemap-texture-prefix
+Use 6 cubemapped texture images with numbered 0 - 5.
 .SH BASIC OPERATION
 .TP
-Drag with the right mouse button pressed to rotate the model.  Drag with the right mouse button pressed and the CTRL key pressed to rotate the light source.  Use the mouse wheel to zoom in and out on the model.
+Drag with the right mouse button pressed to rotate the model.  Drag with the
+right mouse button pressed and the CTRL key pressed to rotate the light source.
+Use the mouse wheel to zoom in and out on the model.
 .SH KEYS
 .TP
 The 'a' key toggles atmosphere rendering on and off (planet mode only).
@@ -42,8 +51,9 @@ EXAMPLES
 .TP
 Here are some sample invocations of mesh viewer:
   ./mesh_viewer -p share/snis/textures/planet-texture0-
-  ./mesh_viewer share/snis/models/wombat/snis3006.obj
-  ./mesh_viewer share/snis/models/starbase5.stl
+  ./mesh_viewer -m share/snis/models/wombat/snis3006.obj
+  ./mesh_viewer -m share/snis/models/starbase5.stl
+  ./mesh_viewer -m share/snis/models/asteroid3.stl -c share/snis/textures/asteroid1-
 .SH SEE ALSO
 .PP
 snis_client(6), ssgl_server(6), snis_server(6)

@@ -50,6 +50,8 @@ static int periodic_snapshots = 0;
 static int snapshot_number = 0;
 static char *planetname = NULL;
 static char *normalmapname = NULL;
+static char *cubemapname = NULL;
+static char *modelfile = NULL;
 static char *program;
 union quat autorotation; 
 static int icosohedron_subdivision = 4;
@@ -424,6 +426,7 @@ static struct mesh *light_mesh;
 static struct material planet_material;
 static struct material atmosphere_material;
 static int planet_mode = 0;
+static int cubemap_mode = 0;
 
 #define FRAME_INDEX_MAX 10
 
@@ -481,6 +484,8 @@ static void draw_screen()
 			update_entity_scale(ae, 1.03);
 			update_entity_material(ae, &atmosphere_material);
 		}
+	} else if (cubemap_mode) {
+		update_entity_material(e, &planet_material);
 	}
 	update_entity_orientation(e, &lobby_orientation);
 
@@ -611,9 +616,9 @@ static void setup_skybox(char *skybox_prefix)
 __attribute__((noreturn)) void usage(char *program)
 {
 	fprintf(stderr, "Usage:\n");
-	fprintf(stderr, " %s -p <planet-texture> [ -i icosohedrion-subdivision] [ -n <normal-map-texture> ]\n",
+	fprintf(stderr, "%s -p <planet-texture> [ -i icosohedrion-subdivision] [ -n <normal-map-texture> ]\n",
 			program);
-	fprintf(stderr, " %s <mesh-file>\n", program);
+	fprintf(stderr, " %s -m <mesh-file> [ -c cubemap-texture- ]\n", program);
 	exit(-1);
 }
 
@@ -630,21 +635,22 @@ static void process_int_option(char *option_name, char *option_value, int *value
 }
 
 static struct option long_options[] = {
+	{ "model", required_argument, NULL, 'm' },
+	{ "cubemap", required_argument, NULL, 'c' },
 	{ "help", no_argument, NULL, 'h' },
 	{ "planetmode", required_argument, NULL, 'p' },
 	{ "icosohedron", required_argument, NULL, 'i' },
 	{ "normalmap", required_argument, NULL, 'n' },
 };
 
-static int process_options(int argc, char *argv[])
+static void process_options(int argc, char *argv[])
 {
 	int c;
 
-	int option_index = 0;
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "hi:n:p:", long_options, &option_index);
+		c = getopt_long(argc, argv, "c:hi:m:n:p:", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -652,6 +658,13 @@ static int process_options(int argc, char *argv[])
 		case 'p':
 			planet_mode = 1;
 			planetname = optarg;
+			break;
+		case 'm':
+			modelfile = optarg;
+			break;
+		case 'c':
+			cubemap_mode = 1;
+			cubemapname = optarg;
 			break;
 		case 'i':
 			process_int_option("icosohedron", optarg, &icosohedron_subdivision);
@@ -673,14 +686,13 @@ static int process_options(int argc, char *argv[])
 			usage(program);
 		}
 	}
-	return option_index + 1;
+	return;
 }
 
 int main(int argc, char *argv[])
 {
 	char *filename;
 	struct stat statbuf;
-	int last_arg;
 
 	setlocale(LC_ALL, "C");
 	program = argc >= 0 ? argv[0] : "mesh_viewer";
@@ -688,8 +700,10 @@ int main(int argc, char *argv[])
 	if (argc < 2)
 		usage(program);
 
-	last_arg = process_options(argc, argv);
-	filename = argv[last_arg];
+	process_options(argc, argv);
+	filename = modelfile;
+	if (!filename)
+		usage(program);
 
 	if (!planet_mode && stat(filename, &statbuf) != 0) {
 		fprintf(stderr, "%s: %s: %s\n", program, filename, strerror(errno));
@@ -788,6 +802,16 @@ int main(int argc, char *argv[])
 			planet_material.textured_planet.normalmap_id = -1;
 		planet_material.textured_planet.ring_material = 0;
 		material_init_atmosphere(&atmosphere_material);
+	} else if (cubemap_mode) {
+		target_mesh = snis_read_model(filename);
+		atmosphere_mesh = NULL;
+		material_init_textured_planet(&planet_material);
+		planet_material.textured_planet.texture_id = load_cubemap_textures(0, cubemapname);
+		planet_material.textured_planet.ring_material = 0;
+		if (normalmapname)
+			planet_material.textured_planet.normalmap_id = load_cubemap_textures(0, normalmapname);
+		else
+			planet_material.textured_planet.normalmap_id = -1;
 	} else {
 		target_mesh = snis_read_model(filename);
 		atmosphere_mesh = NULL;
