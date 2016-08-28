@@ -2750,6 +2750,7 @@ static void do_view_mode_change()
 }
 
 static void comms_dirkey(int h, int v);
+static inline int nav_ui_computer_active(void);
 
 static void do_dirkey(int h, int v, int r, int t)
 {
@@ -2766,6 +2767,8 @@ static void do_dirkey(int h, int v, int r, int t)
 	switch (displaymode) {
 		case DISPLAYMODE_MAINSCREEN:
 		case DISPLAYMODE_NAVIGATION:
+			if (nav_ui_computer_active()) /* suppress keystrokes typed to computer */
+				break;
 			navigation_dirkey(h, v, r); 
 			break;
 		case DISPLAYMODE_WEAPONS:
@@ -3217,7 +3220,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	case key_camera_mode:
 		if (displaymode == DISPLAYMODE_MAINSCREEN)
 			do_mainscreen_camera_mode();
-		else if (displaymode == DISPLAYMODE_NAVIGATION)
+		else if (displaymode == DISPLAYMODE_NAVIGATION && !nav_ui_computer_active())
 			do_nav_camera_mode();
 		break;
 	case keyf1:
@@ -3604,8 +3607,17 @@ static struct navigation_ui {
 	struct button *standard_orbit_button;
 	struct button *reverse_button;
 	struct button *trident_button;
+	struct button *computer_button;
 	int gauge_radius;
+	struct snis_text_input_box *computer_input;
+	char input[100];
+	int computer_active;
 } nav_ui;
+
+static inline int nav_ui_computer_active(void)
+{
+	return nav_ui.computer_active;
+}
 
 static int process_update_ship_packet(uint8_t opcode)
 {
@@ -8287,7 +8299,28 @@ static void show_manual_weapons(GtkWidget *w)
 	show_common_screen(w, "WEAPONS");
 }
 
+static void send_natural_language_request_to_server(char *msg);
+static void nav_computer_data_entered(void *x)
+{
+	trim_whitespace(nav_ui.input);
+	clean_spaces(nav_ui.input);
+	if (strcmp(nav_ui.input, "") != 0) /* skip blank lines */
+		send_natural_language_request_to_server(nav_ui.input);
+	snis_text_input_box_zero(nav_ui.computer_input);
+	nav_ui.computer_active = 0;
+	ui_unhide_widget(nav_ui.computer_button);
+	ui_hide_widget(nav_ui.computer_input);
+}
+
 static double sample_warpdrive(void);
+
+static void nav_computer_button_pressed(__attribute__((unused)) void *s)
+{
+	nav_ui.computer_active = 1;
+	ui_hide_widget(nav_ui.computer_button);
+	ui_unhide_widget(nav_ui.computer_input);
+}
+
 static void init_nav_ui(void)
 {
 	int x;
@@ -8333,6 +8366,13 @@ static void init_nav_ui(void)
 			NANO_FONT, reverse_button_pressed, NULL);
 	nav_ui.trident_button = snis_button_init(10, 250, -1, -1, "ABSOLUTE", button_color,
 			NANO_FONT, trident_button_pressed, NULL);
+	nav_ui.computer_button = snis_button_init(txx(10), txy(570), -1, -1, "COMPUTER", UI_COLOR(nav_warning),
+			NANO_FONT, nav_computer_button_pressed, NULL);
+	nav_ui.computer_active = 0;
+	nav_ui.computer_input = snis_text_input_box_init(txx(10), txy(560), txy(30), txx(550),
+					UI_COLOR(nav_warning), TINY_FONT, nav_ui.input, 50, &timer, NULL, NULL);
+	snis_text_input_box_set_return(nav_ui.computer_input, nav_computer_data_entered);
+	snis_text_input_box_set_dynamic_width(nav_ui.computer_input, txx(100), txx(550));
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION);
@@ -8342,6 +8382,9 @@ static void init_nav_ui(void)
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.trident_button, DISPLAYMODE_NAVIGATION);
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
+	ui_add_button(nav_ui.computer_button, DISPLAYMODE_NAVIGATION);
+	ui_add_text_input_box(nav_ui.computer_input, DISPLAYMODE_NAVIGATION);
+	ui_hide_widget(nav_ui.computer_input);
 	instrumentecx = entity_context_new(5000, 1000);
 	tridentecx = entity_context_new(10, 0);
 }
