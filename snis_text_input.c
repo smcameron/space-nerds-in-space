@@ -19,7 +19,7 @@ struct snis_text_input_box {
 	void *cookie;
 	int cursor_pos;
 	volatile int *timer;
-	int height, width;
+	int height, width, minwidth, maxwidth, desiredwidth;
 	int has_focus;
 };
 
@@ -47,20 +47,57 @@ struct snis_text_input_box *snis_text_input_box_init(int x, int y,
 	t->cookie = cookie;
 	t->height = height;
 	t->width = width;
+	t->minwidth = width;
+	t->maxwidth = width;
+	t->desiredwidth = width;
 	t->has_focus = 0;
 	return t;
 }
 
 void snis_text_input_box_draw(struct snis_text_input_box *t)
 {
+	static int twice_cursor_width = 0;
 	int cursor_on = t->has_focus && (*t->timer & 0x04);
 
-	sng_set_foreground(t->color);	
+	sng_set_foreground(t->color);
+
+	if (twice_cursor_width == 0) {
+		float x1, y1, x2, y2;
+		sng_string_bounding_box("_", t->font, &x1, &y1, &x2, &y2);
+		twice_cursor_width = (int) x2 * 2;
+	}
+	if (t->minwidth == t->maxwidth) {
+		t->width = t->minwidth;
+		t->desiredwidth = t->minwidth;
+	} else {
+		float x1, y1, x2, y2;
+		sng_string_bounding_box(t->buffer, t->font, &x1, &y1, &x2, &y2);
+		int text_width = (int) x2 + twice_cursor_width;
+		if (text_width >= t->width - 5) {
+			if (text_width + 10 < t->maxwidth)
+				t->desiredwidth = text_width + 10;
+			else
+				t->desiredwidth = t->maxwidth;
+		} else {
+			if (text_width < t->width - 10) {
+				if (text_width < t->minwidth - 10)
+					t->desiredwidth = t->minwidth;
+				else
+					t->desiredwidth = text_width + 10;
+			}
+		}
+	}
+	if (t->width != t->desiredwidth) {
+		int delta = (t->desiredwidth - t->width) / 2;
+		if (delta < 3)
+			t->width = t->desiredwidth;
+		else
+			t->width += delta;
+	}
 	sng_current_draw_rectangle(0, t->x, t->y, t->width, t->height);
 	if (t->has_focus)
 		sng_current_draw_rectangle(0, t->x - 1, t->y - 1,
 						t->width + 2, t->height + 2);
-
 	sng_abs_xy_draw_string_with_cursor(t->buffer, t->font,
 				t->x + 4, t->y + font_lineheight[t->font],
 				t->cursor_pos, cursor_on);
@@ -192,4 +229,14 @@ void snis_text_input_box_set_return(struct snis_text_input_box *t,
 		snis_text_input_box_callback return_function)
 {
 	t->return_function = return_function;
+}
+
+void snis_text_input_box_set_dynamic_width(struct snis_text_input_box *t,
+		int minwidth, int maxwidth)
+{
+	if (minwidth > maxwidth)
+		return;
+	t->minwidth = minwidth;
+	t->maxwidth = maxwidth;
+	t->desiredwidth = t->width;
 }

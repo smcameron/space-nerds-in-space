@@ -27,6 +27,8 @@ GLOBAL int snis_text_input_box_keyrelease(struct snis_text_input_box *t, GdkEven
 GLOBAL void snis_text_input_box_zero(struct snis_text_input_box *t);
 GLOBAL void snis_text_input_box_set_return(struct snis_text_input_box *t,
 		snis_text_input_box_callback return_function);
+GLOBAL void snis_text_input_box_set_dynamic_width(struct snis_text_input_box *t,
+		int minwidth, int maxwidth);
 	
 #undef GLOBAL
 #endif
