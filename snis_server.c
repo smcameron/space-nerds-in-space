@@ -17238,6 +17238,14 @@ no_understand:
 	queue_add_text_to_speech(c, "I do not understand your request.");
 }
 
+static void nl_help(void *context, int argc, char *argv[], int pos[],
+			union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+
+	queue_add_text_to_speech(c, "Sure.  Just ask me what you would like me to do in plain English.");
+}
+
 static void nl_target_n(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
@@ -17871,6 +17879,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("short range",	"short range scan",	"", nl_shortlong_range_scan);
 	snis_nl_add_dictionary_verb("details",		"details",		"", nl_shortlong_range_scan);
 	snis_nl_add_dictionary_verb("detail",		"details",		"", nl_shortlong_range_scan);
+	snis_nl_add_dictionary_verb("help",		"help",			"", nl_help);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
