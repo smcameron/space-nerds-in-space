@@ -12856,6 +12856,12 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 		if (e->direction == GDK_SCROLL_DOWN)
 			do_zoom(-10);
 		return 0;
+	case DISPLAYMODE_COMMS:
+		if (e->direction == GDK_SCROLL_UP)
+			comms_dirkey(0, -1);
+		if (e->direction == GDK_SCROLL_DOWN)
+			comms_dirkey(0, 1);
+		return 0;
 	default:
 		return 0;
 	}
