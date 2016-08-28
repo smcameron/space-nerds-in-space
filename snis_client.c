@@ -10088,6 +10088,7 @@ static void init_comms_ui(void)
 					comms_input_entered, NULL);
 	snis_text_input_box_set_return(comms_ui.comms_input,
 					comms_transmit_button_pressed);
+	snis_text_input_box_set_dynamic_width(comms_ui.comms_input, txx(100), txx(550));
 	comms_ui.comms_transmit_button = snis_button_init(txx(10), txy(550), -1, txy(30),
 			"TRANSMIT", button_color,
 			TINY_FONT, comms_transmit_button_pressed, NULL);
@@ -11796,11 +11797,10 @@ static void init_demon_ui()
 	demon_ui.demon_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
 					UI_COLOR(demon_input), TINY_FONT,
 					demon_ui.input, 50, &timer, NULL, NULL);
-	snis_text_input_box_set_return(demon_ui.demon_input,
-					demon_exec_button_pressed); 
-	demon_ui.demon_exec_button = snis_button_init(txx(570), txy(520), -1, -1,
-			"EXECUTE", UI_COLOR(demon_input),
-			TINY_FONT, demon_exec_button_pressed, NULL);
+	snis_text_input_box_set_dynamic_width(demon_ui.demon_input, txx(100), txx(550));
+	snis_text_input_box_set_return(demon_ui.demon_input, demon_exec_button_pressed);
+	demon_ui.demon_exec_button = snis_button_init(txx(10), txy(555), -1, -1,
+			"EXECUTE", UI_COLOR(demon_input), TINY_FONT, demon_exec_button_pressed, NULL);
 	x = txx(3);
 	y = txy(60);
 	dy = txy(25);
