@@ -44,6 +44,8 @@
 
 #define PROXIMITY_DIST2 (100.0 * 100.0)
 #define CRASH_DIST2 (40.0 * 40.0)
+#define TOWING_DROP_DIST (500.0)
+#define TOWING_PICKUP_DIST (40.0)
 
 #define MAXGAMEOBJS 5000
 #define MAXSPARKS 5000
@@ -158,6 +160,7 @@ struct damcon_data;
 #define AI_MODE_HANGOUT 7
 #define AI_MODE_COP 8
 #define AI_MODE_MINING_BOT 9
+#define AI_MODE_TOW_SHIP 10
 
 /* distance more than which fleet ships will warp back to position rather than simply flying */
 #define FLEET_WARP_DISTANCE 5000.0
@@ -214,6 +217,12 @@ struct ai_mining_bot_data {
 	uint8_t uranium;
 };
 
+struct ai_tow_ship_data {
+	uint32_t disabled_ship;
+	uint32_t starbase_dispatcher;
+	int ship_connected;
+};
+
 union ai_data {
 	struct ai_attack_data attack;
 	struct ai_patrol_data patrol;
@@ -222,6 +231,7 @@ union ai_data {
 	struct ai_hangout_data hangout;
 	struct ai_flee_data flee;
 	struct ai_mining_bot_data mining_bot;
+	struct ai_tow_ship_data tow_ship;
 };
 
 struct ai_stack_entry {
