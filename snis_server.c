@@ -3716,6 +3716,9 @@ static void ai_tow_ship_mode_brain(struct snis_entity *o)
 		double dist2 = ai_ship_travel_towards(o,
 			starbase_dispatcher->x, starbase_dispatcher->y, starbase_dispatcher->z);
 		if (dist2 < (TOWING_DROP_DIST * TOWING_DROP_DIST)) {
+			/* Give player a little fuel if they're super low. */
+			if (disabled_ship->tsd.ship.fuel < FUEL_CONSUMPTION_UNIT * 30 * 60)
+				disabled_ship->tsd.ship.fuel = FUEL_CONSUMPTION_UNIT * 30 * 60;
 			/* We're done */
 			pop_ai_stack(o);
 			return;
