@@ -2228,6 +2228,8 @@ static void pop_ai_stack(struct snis_entity *o)
 	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
 		calculate_attack_vector(o, MIN_COMBAT_ATTACK_DIST,
 						MAX_COMBAT_ATTACK_DIST);
+	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_TOW_SHIP)
+		o->tsd.ship.ai[n].u.tow_ship.ship_connected = 0;
 }
 
 static void pop_ai_attack_mode(struct snis_entity *o)
