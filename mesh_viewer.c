@@ -702,7 +702,7 @@ int main(int argc, char *argv[])
 
 	process_options(argc, argv);
 	filename = modelfile;
-	if (!filename)
+	if (!filename && !planet_mode)
 		usage(program);
 
 	if (!planet_mode && stat(filename, &statbuf) != 0) {
