@@ -591,6 +591,23 @@ void vec3_print(const char *prefix, const union vec3 *v)
 	printf("%s%f, %f, %f\n", prefix, v->v.x, v->v.y, v->v.z);
 }
 
+#if 1
+/* Calculate the quaternion to rotate from vector u to vector v */
+void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, const union vec3 *up)
+{
+	/* See: http://lolengine.net/blog/2013/09/18/beautiful-maths-quaternion-from-vectors */
+	union vec3 w;
+
+	vec3_cross(&w, u, v);
+	q->v.w = vec3_dot(u, v);
+	q->v.x = w.v.x;
+	q->v.y = w.v.y;
+	q->v.z = w.v.z;
+	q->v.w += quat_len(q);
+	quat_normalize_self(q);
+}
+
+#else
 /* see http://gamedev.stackexchange.com/questions/15070/orienting-a-model-to-face-a-target */
 /* Calculate the quaternion to rotate from vector u to vector v */
 void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, const union vec3 *up)
@@ -624,6 +641,7 @@ void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, cons
 	vec3_normalize(&axisn, &axis);
 	quat_init_axis(q, axisn.v.x, axisn.v.y, axisn.v.z, angle);
 }
+#endif
 
 union quat *quat_lerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t)
 {
