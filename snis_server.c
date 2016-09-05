@@ -3398,6 +3398,7 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 {
 	double maxv = ship_type[o->tsd.ship.shiptype].max_speed;
 	o->tsd.ship.desired_velocity = maxv;
+	int warproll = 10000;
 
 	double dist2 = dist3dsqrd(o->x - destx, o->y - desty, o->z - destz);
 	if (dist2 > 2000.0 * 2000.0) {
@@ -3407,7 +3408,9 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 		if (((universe_timestamp + o->id) & 0x3ff) == 0 || ld < 50.0 * 50.0)
 			ai_add_ship_movement_variety(o, destx, desty, destz, 1500.0f);
 		/* sometimes just warp if it's too far... */
-		if (snis_randn(10000) < ship_type[o->tsd.ship.shiptype].warpchance)
+		if (ship_is_towing(o))
+			warproll = warproll * 3;
+		if (snis_randn(warproll) < ship_type[o->tsd.ship.shiptype].warpchance)
 			ai_ship_warp_to(o, destx, desty, destz);
 	} else {
 		o->tsd.ship.dox = destx;
