@@ -2846,22 +2846,35 @@ static void update_ship_orientation(struct snis_entity *o)
 	quat_from_u2v(&o->orientation, &right, &current, &up);
 }
 
-static void update_towed_ship(struct snis_entity *o)
+/* Returns 0 if ship is not towing anything, the object ID of the thing it's towing otherwise */
+static uint32_t ship_is_towing(struct snis_entity *o)
 {
 	int i, n;
+	if (o->type != OBJTYPE_SHIP2)
+		return 0;
+	n = o->tsd.ship.nai_entries - 1;
+	for (i = n; n >= 0; n--) {
+		if (o->tsd.ship.ai[i].ai_mode != AI_MODE_TOW_SHIP)
+			continue;
+		if (o->tsd.ship.ai[i].u.tow_ship.ship_connected)
+			return o->tsd.ship.ai[n].u.tow_ship.disabled_ship;
+	}
+	return 0;
+}
+
+static void update_towed_ship(struct snis_entity *o)
+{
+	int i;
 	struct snis_entity *disabled_ship;
+	uint32_t disabled_ship_id;
 	union vec3 towing_offset = { { 0.0, -20.0, 0.0 } };
 
 	if (o->tsd.ship.shiptype != SHIP_CLASS_MANTIS)
 		return;
-	n = o->tsd.ship.nai_entries - 1;
-	if (n < 0)
+	disabled_ship_id = ship_is_towing(o);
+	if (!disabled_ship_id)
 		return;
-	if (o->tsd.ship.ai[n].ai_mode != AI_MODE_TOW_SHIP)
-		return;
-	if (!o->tsd.ship.ai[n].u.tow_ship.ship_connected)
-		return;
-	i = lookup_by_id(o->tsd.ship.ai[n].u.tow_ship.disabled_ship);
+	i = lookup_by_id(disabled_ship_id);
 	if (i < 0)
 		return;
 	disabled_ship = &go[i];
