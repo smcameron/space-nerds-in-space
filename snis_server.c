@@ -3987,6 +3987,11 @@ static void ship_collision_avoidance(void *context, void *entity)
 	if (obstacle->type == OBJTYPE_SPARK) /* no point trying to avoid */
 		return;
 
+	/* Tow ship should not try to avoid thing it's towing */
+	if ((obstacle->type == OBJTYPE_SHIP2 || obstacle->type == OBJTYPE_SHIP1) &&
+		ship_is_towing(o) == obstacle->id)
+		return;
+
 	/* hmm, server has no idea about meshes... */
 	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
 
