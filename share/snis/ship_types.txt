@@ -28,5 +28,5 @@ DREADKNIGHT dreadknight/dreadknight.obj dreadknight-exhaust-plumes.h 0.7 1300 30
 VANQUISHER vanquisher.stl - 0.3 1400 60 3 1 1 0
 ENFORCER enforcer/enforcer.obj ../enforcer.scad_params.h 0.98 2700 50 5 1 1 1
 ESCAPEPOD escapepod.stl - 0.1 200 0 3 0 0 0
-MANTIS mantis.stl - 0.9 1200 50 30 5 1 1
+MANTIS mantis.stl - 0.9 1600 50 30 5 1 1
 
