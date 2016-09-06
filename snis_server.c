@@ -2936,23 +2936,15 @@ static void check_for_nearby_targets(struct snis_entity *o)
 	}
 }
 
-/* check if a planet is in the way of a shot */
-static int planet_between_objs(struct snis_entity *origin,
-				struct snis_entity *target)
+/* check if a planet is between two points */
+static int planet_between_points(union vec3 *ray_origin, union vec3 *target)
 {
 	int i;
-	union vec3 ray_origin, ray_direction, sphere_origin;
+	union vec3 ray_direction, sphere_origin;
 	float target_dist;
 	float planet_dist;
 
-	ray_origin.v.x = origin->x;
-	ray_origin.v.y = origin->y;
-	ray_origin.v.z = origin->z;
-
-	ray_direction.v.x = target->x - ray_origin.v.x;
-	ray_direction.v.y = target->y - ray_origin.v.y;
-	ray_direction.v.z = target->z - ray_origin.v.z;
-
+	vec3_sub(&ray_direction, target, ray_origin);
 	target_dist = vec3_magnitude(&ray_direction);
 	vec3_normalize_self(&ray_direction);
 
@@ -2964,17 +2956,34 @@ static int planet_between_objs(struct snis_entity *origin,
 		sphere_origin.v.x = go[i].x;
 		sphere_origin.v.y = go[i].y;
 		sphere_origin.v.z = go[i].z;
-		if (!ray_intersects_sphere(&ray_origin, &ray_direction,
+		if (!ray_intersects_sphere(ray_origin, &ray_direction,
 						&sphere_origin,
 						go[i].tsd.planet.radius * 1.05))
 			continue;
-		planet_dist = dist3d(sphere_origin.v.x - ray_origin.v.x,
-					sphere_origin.v.y - ray_origin.v.y,
-					sphere_origin.v.z - ray_origin.v.z);
+		planet_dist = dist3d(sphere_origin.v.x - ray_origin->v.x,
+					sphere_origin.v.y - ray_origin->v.y,
+					sphere_origin.v.z - ray_origin->v.z);
 		if (planet_dist < target_dist) /* planet blocks... */
 			return 1;
 	}
 	return 0; /* no planets blocking */
+}
+
+/* check if a planet is between two objects */
+static int planet_between_objs(struct snis_entity *origin,
+				struct snis_entity *target)
+{
+	union vec3 from, to;
+
+	from.v.x = origin->x;
+	from.v.y = origin->y;
+	from.v.z = origin->z;
+
+	to.v.x = target->x;
+	to.v.y = target->y;
+	to.v.z = target->z;
+
+	return planet_between_points(&from, &to);
 }
 
 static float calculate_threat_level(struct snis_entity *o)
