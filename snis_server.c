@@ -2846,6 +2846,28 @@ static void update_ship_orientation(struct snis_entity *o)
 	quat_from_u2v(&o->orientation, &right, &current, &up);
 }
 
+/* Returns 0 if not being towed, the id of the tow ship otherwise */
+static uint32_t is_being_towed(struct snis_entity *o)
+{
+	int i, j, n;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].type != OBJTYPE_SHIP2)
+			continue;
+		if (!go[i].alive)
+			continue;
+		n = go[i].tsd.ship.nai_entries - 1;
+		for (j = n; n >= 0; n--) {
+			if (go[i].tsd.ship.ai[j].ai_mode != AI_MODE_TOW_SHIP)
+				continue;
+			if (go[i].tsd.ship.ai[j].u.tow_ship.ship_connected &&
+				go[i].tsd.ship.ai[n].u.tow_ship.disabled_ship == o->id)
+					return go[i].id;
+		}
+	}
+	return 0;
+}
+
 /* Returns 0 if ship is not towing anything, the object ID of the thing it's towing otherwise */
 static uint32_t ship_is_towing(struct snis_entity *o)
 {
