@@ -2937,7 +2937,7 @@ static void check_for_nearby_targets(struct snis_entity *o)
 }
 
 /* check if a planet is in the way of a shot */
-static int planet_in_the_way(struct snis_entity *origin,
+static int planet_between_objs(struct snis_entity *origin,
 				struct snis_entity *target)
 {
 	int i;
@@ -3127,7 +3127,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 			double dist, flight_time, tx, ty, tz, vx, vy, vz;
 			/* int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y); */
 
-			if (v->type == OBJTYPE_PLANET || !planet_in_the_way(o, v)) {
+			if (v->type == OBJTYPE_PLANET || !planet_between_objs(o, v)) {
 				dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
 				flight_time = dist / TORPEDO_VELOCITY;
 				tx = v->x + (v->vx * flight_time);
@@ -3148,7 +3148,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 			if (snis_randn(1000) < 300 + imacop * 200 &&
 				o->tsd.ship.next_laser_time <= universe_timestamp &&
 				ship_type[o->tsd.ship.shiptype].has_lasers) {
-				if (v->type == OBJTYPE_PLANET || !planet_in_the_way(o, v)) {
+				if (v->type == OBJTYPE_PLANET || !planet_between_objs(o, v)) {
 					o->tsd.ship.next_laser_time = universe_timestamp +
 						ENEMY_LASER_FIRE_INTERVAL;
 					add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
@@ -6162,7 +6162,7 @@ static void starbase_move(struct snis_entity *o)
 			continue;
 		if (snis_randn(1000) < STARBASE_FIRE_CHANCE)
 			continue;
-		if (planet_in_the_way(o, a))
+		if (planet_between_objs(o, a))
 			continue;
 		if (snis_randn(100) < 30 &&
 			o->tsd.starbase.next_torpedo_time <= universe_timestamp) {
