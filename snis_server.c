@@ -2942,7 +2942,6 @@ static int planet_between_objs(struct snis_entity *origin,
 {
 	int i;
 	union vec3 ray_origin, ray_direction, sphere_origin;
-	const float radius = 800.0; /* FIXME: nuke this hardcoded crap */
 	float target_dist;
 	float planet_dist;
 
@@ -2964,7 +2963,8 @@ static int planet_between_objs(struct snis_entity *origin,
 		sphere_origin.v.y = go[i].y;
 		sphere_origin.v.z = go[i].z;
 		if (!ray_intersects_sphere(&ray_origin, &ray_direction,
-						&sphere_origin, radius))
+						&sphere_origin,
+						go[i].tsd.planet.radius * 1.05))
 			continue;
 		planet_dist = dist3d(sphere_origin.v.x - ray_origin.v.x,
 					sphere_origin.v.y - ray_origin.v.y,
