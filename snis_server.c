@@ -3733,6 +3733,7 @@ static void disconnect_from_tow_ship(struct snis_entity *towing_ship,
 	pop_ai_stack(towing_ship);
 	snis_queue_add_text_to_speech("Disconnected from mantis tow ship.",
 					ROLE_TEXT_TO_SPEECH, towed_ship->id);
+	towed_ship->tsd.ship.wallet -= TOW_SHIP_CHARGE; /* Charge player */
 }
 
 static void ai_tow_ship_mode_brain(struct snis_entity *o)
@@ -10456,7 +10457,6 @@ void npc_menu_item_towing_service(struct npc_menu_item *item,
 	int closest_tow_ship;
 	double closest_tow_ship_distance;
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
-	float charges = 5000.0;
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(b->shipid);
@@ -10475,7 +10475,7 @@ void npc_menu_item_towing_service(struct npc_menu_item *item,
 				/* Check to see if there's a tow ship already en route to this player */
 				if (go[i].tsd.ship.ai[n].u.tow_ship.disabled_ship == b->shipid) {
 					snprintf(msg, sizeof(msg),
-						"%s, THE MANTIS TOW SHIP %s IS ALREADY EN ROUTE TO YOUR LOCATION.",
+						"%s, THE MANTIS TOW SHIP %s IS ALREADY EN ROUTE",
 						b->shipname, go[i].sdata.name);
 					send_comms_packet(npcname, channel, msg);
 					goto out;
@@ -10504,12 +10504,14 @@ void npc_menu_item_towing_service(struct npc_menu_item *item,
 
 	/* Send the tow ship to the player */
 	push_tow_mode(&go[closest_tow_ship], o->id, botstate->object_id);
-	snprintf(msg, sizeof(msg), "%s, THE MANTIS TOW SHIP %s HAS BEEN DISPATCHED TO YOUR LOCATION",
+	snprintf(msg, sizeof(msg), "%s, THE MANTIS TOW SHIP %s HAS BEEN",
 			b->shipname, go[closest_tow_ship].sdata.name);
 	send_comms_packet(npcname, channel, msg);
-	snprintf(msg, sizeof(msg), "%s, YOUR ACCOUNT HAS BEEN BILLED $%5.2f\n",
-		b->shipname, charges);
-	o->tsd.ship.wallet -= charges;
+	snprintf(msg, sizeof(msg), "DISPATCHED TO YOUR LOCATION");
+	send_comms_packet(npcname, channel, msg);
+	snprintf(msg, sizeof(msg), "%s, UPON DELIVERY YOUR ACCOUNT\n", b->shipname);
+	send_comms_packet(npcname, channel, msg);
+	snprintf(msg, sizeof(msg), "WILL BE BILLED $%5.2f\n", TOW_SHIP_CHARGE);
 	send_comms_packet(npcname, channel, msg);
 	send_comms_packet(npcname, channel, " WARNING THE TOW SHIP NAVIGATION ALGORITHM IS BUGGY");
 	send_comms_packet(npcname, channel, " AND IT MAY OCCASIONALLY TRY TO DRIVE YOU INTO A PLANET");
