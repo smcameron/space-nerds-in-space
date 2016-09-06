@@ -10463,6 +10463,8 @@ void npc_menu_item_towing_service(struct npc_menu_item *item,
 		b->shipname, charges);
 	o->tsd.ship.wallet -= charges;
 	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(npcname, channel, " WARNING THE TOW SHIP NAVIGATION ALGORITHM IS BUGGY");
+	send_comms_packet(npcname, channel, " AND IT MAY OCCASIONALLY TRY TO DRIVE YOU INTO A PLANET");
 
 out:
 	pthread_mutex_unlock(&universe_mutex);
