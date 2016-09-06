@@ -3724,6 +3724,14 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 	ai->mode = MINING_MODE_RETURN_TO_PARENT;
 }
 
+static void disconnect_from_tow_ship(struct snis_entity *towing_ship,
+		__attribute__((unused)) struct snis_entity *towed_ship)
+{
+	pop_ai_stack(towing_ship);
+	snis_queue_add_text_to_speech("Disconnected from mantis tow ship.",
+					ROLE_TEXT_TO_SPEECH, towed_ship->id);
+}
+
 static void ai_tow_ship_mode_brain(struct snis_entity *o)
 {
 	int i, n;
@@ -3757,7 +3765,7 @@ static void ai_tow_ship_mode_brain(struct snis_entity *o)
 			if (disabled_ship->tsd.ship.fuel < FUEL_CONSUMPTION_UNIT * 30 * 60)
 				disabled_ship->tsd.ship.fuel = FUEL_CONSUMPTION_UNIT * 30 * 60;
 			/* We're done */
-			pop_ai_stack(o);
+			disconnect_from_tow_ship(o, disabled_ship);
 			return;
 		}
 	} else {
@@ -10502,6 +10510,7 @@ void npc_menu_item_towing_service(struct npc_menu_item *item,
 	send_comms_packet(npcname, channel, msg);
 	send_comms_packet(npcname, channel, " WARNING THE TOW SHIP NAVIGATION ALGORITHM IS BUGGY");
 	send_comms_packet(npcname, channel, " AND IT MAY OCCASIONALLY TRY TO DRIVE YOU INTO A PLANET");
+	send_comms_packet(npcname, channel, " USE DOCKING MAGNETS TO DISCONNECT IF NECESSARY");
 
 out:
 	pthread_mutex_unlock(&universe_mutex);
@@ -12831,6 +12840,7 @@ static int process_docking_magnets(struct game_client *c)
 	uint8_t __attribute__((unused)) v;
 	int i;
 	int sound;
+	uint32_t tow_ship_id;
 
 	int rc = read_and_unpack_buffer(c, buffer, "wb", &id, &v);
 	if (rc)
@@ -12846,6 +12856,13 @@ static int process_docking_magnets(struct game_client *c)
 	go[i].tsd.ship.docking_magnets = !go[i].tsd.ship.docking_magnets;
 	go[i].timestamp = universe_timestamp;
 	sound = go[i].tsd.ship.docking_magnets ? DOCKING_SYSTEM_ENGAGED : DOCKING_SYSTEM_DISENGAGED;
+	tow_ship_id = is_being_towed(&go[i]);
+	if (!go[i].tsd.ship.docking_magnets && tow_ship_id) {
+		int tow_ship_index;
+		tow_ship_index = lookup_by_id(tow_ship_id);
+		if (tow_ship_index >= 0)
+			disconnect_from_tow_ship(&go[tow_ship_index], &go[i]);
+	}
 	pthread_mutex_unlock(&universe_mutex);
 	/* snis_queue_add_sound(sound, ROLE_NAVIGATION, c->shipid); */
 	snis_queue_add_text_to_speech(sound == DOCKING_SYSTEM_ENGAGED ?
