@@ -4349,6 +4349,15 @@ static void delete_object(uint32_t id)
 	if (i < 0)
 		return;
 	go[i].alive = 0;
+
+	/* If science was targeting this guy, it isn't now. */
+	if (curr_science_guy == &go[i]) {
+		curr_science_guy = NULL;
+		prev_science_guy = NULL;
+	}
+	if (prev_science_guy == &go[i])
+		prev_science_guy = NULL;
+
 	/* if demon screen was captain of this thing, it isn't now. */
 	if (i == demon_ui.captain_of)
 		demon_ui.captain_of = -1;
