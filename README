@@ -30,11 +30,18 @@ Step 0: Build the game from source. (or alternately, see instructions
 	apt-get install libssl-dev
 	apt-get install libttspico-utils # for text to speech
 
+      Note: SDL should only be required if you want to build mesh_viewer,
+      which is a utility program for viewing 3D models, and which is not
+      required to run the game.
+
      0.2: Download the game source and build it.
 	git clone https://github.com/smcameron/space-nerds-in-space.git
 	cd space-nerds-in-space
 	make
 	(wait for it to compile... Openscad might take its sweet time.)
+
+     0.3: Optionally, build mesh_viewer:
+        make utils
 
 Optional: There are additional art assets here:
 https://github.com/smcameron/space-nerds-in-space-assets
@@ -74,7 +81,8 @@ Press F3 to go to the weapons screen.  The arrow keys or the mouse control where
 the guns point.  Left and right mouse buttons fire phasers and torpedoes.  Do not
 anger the local law enforcement.
 
-Step 5. For Speech Recognition, see speech/README
+Step 6. For Speech Recognition, see speech/README
+
 -----------------------------------------
 
 Longer more technical instructions for multi-computer setup follow:
