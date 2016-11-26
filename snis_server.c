@@ -2957,6 +2957,8 @@ static int planet_between_objs(struct snis_entity *origin,
 	vec3_normalize_self(&ray_direction);
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (!go[i].alive)
+			continue;
 		if (go[i].type != OBJTYPE_PLANET)
 			continue;
 		sphere_origin.v.x = go[i].x;
