@@ -2937,7 +2937,7 @@ static void check_for_nearby_targets(struct snis_entity *o)
 }
 
 /* check if a planet is between two points */
-static int planet_between_points(union vec3 *ray_origin, union vec3 *target)
+static struct snis_entity *planet_between_points(union vec3 *ray_origin, union vec3 *target)
 {
 	int i;
 	union vec3 ray_direction, sphere_origin;
@@ -2964,13 +2964,13 @@ static int planet_between_points(union vec3 *ray_origin, union vec3 *target)
 					sphere_origin.v.y - ray_origin->v.y,
 					sphere_origin.v.z - ray_origin->v.z);
 		if (planet_dist < target_dist) /* planet blocks... */
-			return 1;
+			return &go[i];
 	}
-	return 0; /* no planets blocking */
+	return NULL; /* no planets blocking */
 }
 
 /* check if a planet is between two objects */
-static int planet_between_objs(struct snis_entity *origin,
+static struct snis_entity *planet_between_objs(struct snis_entity *origin,
 				struct snis_entity *target)
 {
 	union vec3 from, to;
