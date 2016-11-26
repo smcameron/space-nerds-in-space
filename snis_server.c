@@ -3413,6 +3413,66 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 	o->tsd.ship.desired_velocity = maxv;
 	int warproll = 10000;
 
+	union vec3 startv, endv;
+	struct snis_entity *planet;
+
+	startv.v.x = o->x;
+	startv.v.y = o->y;
+	startv.v.z = o->z;
+	endv.v.x = destx;
+	endv.v.y = desty;
+	endv.v.z = destz;
+
+	/* Check if there's a planet in the way and try to avoid it. */
+	planet = planet_between_points(&startv, &endv);
+	if (planet) {
+		double planet_distance;
+		double dx, dy, dz;
+		dx = planet->x - o->x;
+		dy = planet->y - o->y;
+		dz = planet->z - o->z;
+
+		/* Don't bother trying to avoid the planet unless it is close */
+		planet_distance = sqrt(dx * dx + dy * dy + dz + dz);
+		if (planet_distance < 2.0 * planet->tsd.planet.radius) {
+			union vec3 planetv, planet_to_dest, planet_to_ship;
+			union quat ship_to_dest;
+			double angle;
+			planetv.v.x = planet->x;
+			planetv.v.y = planet->y;
+			planetv.v.z = planet->z;
+
+			/*
+			 * Find vector from planet to ship, and from planet to
+			 * destination and quaterion to rotate between these.
+			 * vectors.
+			 */
+			vec3_sub(&planet_to_dest, &endv, &planetv);
+			vec3_sub(&planet_to_ship, &startv, &planetv);
+			vec3_normalize_self(&planet_to_dest);
+			vec3_normalize_self(&planet_to_ship);
+			quat_from_u2v(&ship_to_dest, &planet_to_ship, &planet_to_dest, NULL);
+
+			/* Find a path along the great circle around planet from ship
+			 * to destination at 1.5 * radius of planet.  First dest point
+			 * on this path is (say) 5% around the curve from where the ship
+			 * is now.
+			 */
+			vec3_mul_self(&planet_to_ship, planet->tsd.planet.radius * 1.5);
+
+			/* Find the 5% of the angle of the quaternion, and change
+			 * the quaternion to the new angle. */
+			angle = 0.05f * 2.0f * acosf(ship_to_dest.v.w);
+			ship_to_dest.v.w = cos(0.5f * angle);
+
+			/* Find our new intermediate destination, 5% along our great circle. */
+			quat_rot_vec_self(&planet_to_ship, &ship_to_dest);
+			destx = planet->x + planet_to_ship.v.x;
+			desty = planet->y + planet_to_ship.v.y;
+			destz = planet->z + planet_to_ship.v.z;
+		}
+	}
+
 	double dist2 = dist3dsqrd(o->x - destx, o->y - desty, o->z - destz);
 	if (dist2 > 2000.0 * 2000.0) {
 		double ld = dist3dsqrd(o->x - o->tsd.ship.dox,
