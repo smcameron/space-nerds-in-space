@@ -3496,8 +3496,6 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 			o->tsd.ship.doz = destz;
 		}
 		/* sometimes just warp if it's too far... */
-		if (ship_is_towing(o))
-			warproll = warproll * 3;
 		if (snis_randn(warproll) < ship_type[o->tsd.ship.shiptype].warpchance)
 			ai_ship_warp_to(o, destx, desty, destz);
 	} else {
