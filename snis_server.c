@@ -4090,7 +4090,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 			o->alive = 0;
 			return;
 		}
-		d -= (obstacle->tsd.planet.radius * 1.2 * obstacle->tsd.planet.radius * 1.2);
+		d -= (obstacle->tsd.planet.radius * 1.3 * obstacle->tsd.planet.radius * 1.3);
 		if (d <= 0.0)
 			d = 1.0;
 	}
