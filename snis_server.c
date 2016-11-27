@@ -3809,6 +3809,8 @@ static void ai_tow_ship_mode_brain(struct snis_entity *o)
 							ROLE_SOUNDSERVER, disabled_ship->id);
 			snis_queue_add_text_to_speech("Mantis tow ship has attached.",
 							ROLE_TEXT_TO_SPEECH, disabled_ship->id);
+			dist2 = ai_ship_travel_towards(o,
+				starbase_dispatcher->x, starbase_dispatcher->y, starbase_dispatcher->z);
 			return;
 		}
 	}
