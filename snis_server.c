@@ -3420,6 +3420,21 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 		/* give ships some variety in movement */
 		if (((universe_timestamp + o->id) & 0x3ff) == 0 || ld < 50.0 * 50.0)
 			ai_add_ship_movement_variety(o, destx, desty, destz, 0.05);
+
+		/* Check that current destination isn't too far from desired destination,
+		 * If we have just set a new destination, we want it to take effect right
+		 * away, not just within the (possibly) 400 secs of the above variety
+		 * injecting code.
+		 */
+		double dest_discrepancy = dist3dsqrd(
+					o->tsd.ship.dox - destx,
+					o->tsd.ship.doy - desty,
+					o->tsd.ship.doz - destz);
+		if (dest_discrepancy > 0.05 * dist2 * 0.05 * dist2) {
+			o->tsd.ship.dox = destx;
+			o->tsd.ship.doy = desty;
+			o->tsd.ship.doz = destz;
+		}
 		/* sometimes just warp if it's too far... */
 		if (ship_is_towing(o))
 			warproll = warproll * 3;
