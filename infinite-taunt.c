@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <getopt.h>
 
 #include "arraysize.h"
 #include "mtwist.h"
@@ -1688,24 +1689,111 @@ enum planet_type PlanetType(struct mtwist_state *mt)
 	return (enum planet_type) x;
 }
 
-int main(int argc, char *argv[])
+static struct option long_options[] = {
+	{ "count", required_argument, NULL, 'c' },
+	{ "npc", no_argument, NULL, 'n' },
+	{ "planet", no_argument, NULL, 'p' },
+	{ "robot", no_argument, NULL, 'r' },
+	{ "ship", no_argument, NULL, 's' },
+	{ "taunt", no_argument, NULL, 't' },
+	{ "warning", no_argument, NULL, 'w' },
+};
+
+static void usage(char *program)
 {
 	int i;
+
+	fprintf(stderr, "%s: usage:\n", program);
+	fprintf(stderr, "%s [ options ]\n", program);
+	fprintf(stderr, "Options are:\n");
+
+	for (i = 0; i < ARRAYSIZE(long_options); i++)
+		fprintf(stderr, "  --%s\n", long_options[i].name);
+	exit(1);
+}
+
+int main(int argc, char *argv[])
+{
+	int i, c, rc;
 	char buffer[1000];
 	struct mtwist_state *mt;
 	enum planet_type pt;
+	int count = 1;
+	int npc_mode = 0;
+	int planet_mode = 0;
+	int robot_mode = 0;
+	int ship_mode = 0;
+	int taunt_mode = 0;
+	int warning_mode = 0;
 
 	set_random_seed(&mt);
 
-	for (i = 0; i < 1; i++) {
-		/* infinite_taunt(buffer, sizeof(buffer) - 1); */
-		pt = PlanetType(mt);
-		planet_description(mt, buffer, sizeof(buffer) - 1, 60, pt);
-		/* cop_attack_warning(mt, buffer, sizeof(buffer) - 1, 50); */
-		/* character_name(mt, buffer, sizeof(buffer) - 1); */
-		/* robot_name(mt, buffer, sizeof(buffer) - 1); */
-		/* ship_name(mt, buffer, sizeof(buffer) - 1); */
-		printf("%s\n", buffer);
+	while (1) {
+		int option_index;
+
+		c = getopt_long(argc, argv, "c:nprstw", long_options, &option_index);
+		if (c < 0) {
+			break;
+		}
+		switch (c) {
+		case 'c':
+			rc = sscanf(optarg, "%d", &count);
+			if (rc != 1)
+				count = 0;
+			break;
+		case 'n':
+			npc_mode = 1;
+			break;
+		case 'p':
+			planet_mode = 1;
+			break;
+		case 'r':
+			robot_mode = 1;
+			break;
+		case 's':
+			ship_mode = 1;
+			break;
+		case 't':
+			taunt_mode = 1;
+			break;
+		case 'w':
+			warning_mode = 1;
+			break;
+		default:
+			fprintf(stderr, "%s: Unknown option.\n", argv[0]);
+			usage(argv[0]);
+		}
+	}
+
+	if (taunt_mode + planet_mode + warning_mode + npc_mode + robot_mode + ship_mode == 0)
+		usage(argv[0]);
+
+	for (i = 0; i < count; i++) {
+		if (taunt_mode) {
+			infinite_taunt(mt, buffer, sizeof(buffer) - 1);
+			printf("%s\n", buffer);
+		}
+		if (planet_mode) {
+			pt = PlanetType(mt);
+			planet_description(mt, buffer, sizeof(buffer) - 1, 60, pt);
+			printf("%s\n", buffer);
+		}
+		if (warning_mode) {
+			cop_attack_warning(mt, buffer, sizeof(buffer) - 1, 50);
+			printf("%s\n", buffer);
+		}
+		if (npc_mode) {
+			character_name(mt, buffer, sizeof(buffer) - 1);
+			printf("%s\n", buffer);
+		}
+		if (robot_mode) {
+			robot_name(mt, buffer, sizeof(buffer) - 1);
+			printf("%s\n", buffer);
+		}
+		if (ship_mode) {
+			ship_name(mt, buffer, sizeof(buffer) - 1);
+			printf("%s\n", buffer);
+		}
 	}
 	free(mt);
 	return 0;
