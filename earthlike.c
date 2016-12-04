@@ -48,16 +48,17 @@ static struct bump {
 } bumplist[MAXBUMPS], craterlist[MAXCRATERS];
 static int totalbumps = 0;
 
-#define DIM 1024
+#define MAXDIM 2048
+int dim = 1024;
 static unsigned char *output_image[6];
 static unsigned char *normal_image[6];
 static unsigned char *heightmap_image[6];
 static unsigned char *land, *water;
 static int landw, landh, landa, landbpr;
 static int waterw, waterh, watera, waterbpr; 
-static union vec3 vertex[6][DIM][DIM];
-static union vec3 normal[6][DIM][DIM];
-static float noise[6][DIM][DIM];
+static union vec3 vertex[6][MAXDIM][MAXDIM];
+static union vec3 normal[6][MAXDIM][MAXDIM];
+static float noise[6][MAXDIM][MAXDIM];
 static char *output_file_prefix = "terrainmap";
 static char *normal_file_prefix = "normalmap";
 static char *heightmap_file_prefix = "heightmap";
@@ -125,9 +126,9 @@ static void initialize_vertices(void)
 	int f, i, j;
 
 	for (f = 0; f < 6; f++)
-		for (i = 0; i < DIM; i++)
-			for (j = 0; j < DIM; j++) {
-				const union vec3 v = fij_to_xyz(f, i, j, DIM);
+		for (i = 0; i < dim; i++)
+			for (j = 0; j < dim; j++) {
+				const union vec3 v = fij_to_xyz(f, i, j, dim);
 				vertex[f][i][j] = v;
 				noise[f][i][j] = fbmnoise4(v.v.x, v.v.y, v.v.z);
 				if (f == 0 && i == 0 && j == 0) {
@@ -191,13 +192,13 @@ static void *render_bumps_on_face_fn(void *info)
 
 	f = t->f; 
 
-	for (i = 0; i < DIM; i++) {
-		if (i % (DIM / 8) == 0) {
+	for (i = 0; i < dim; i++) {
+		if (i % (dim / 8) == 0) {
 			printf("%d", f);
 			fflush(stdout);
 		}
-		for (j = 0; j < DIM; j++) {
-			p = fij_to_xyz(f, i, j, DIM);
+		for (j = 0; j < dim; j++) {
+			p = fij_to_xyz(f, i, j, dim);
 			for (k = 0; k < t->bumpcount; k++) {
 				b = &t->bumplist[k];
 				p2 = &b->p;
@@ -285,8 +286,8 @@ static void add_bump(union vec3 p, float r, float h)
 	else
 		b->ts = sampleh / RADII;
 	b->sampledata = sampledata;
-	b->samplew = samplew;
-	b->sampleh = sampleh;
+	b->samplew = samplew * MAXDIM / dim;
+	b->sampleh = sampleh * MAXDIM / dim;
 	b->sample_bytes_per_row = sample_bytes_per_row;
 	b->is_crater = 0;
 	quat_from_u2v(&b->texelq, &p, &right_at_ya, &up);
@@ -303,7 +304,7 @@ static void add_crater(int i, union vec3 p, float r, float h)
 	b = &craterlist[i];
 	b->is_crater = 1;
 	b->p = p;
-	b->r = r;
+	b->r = r * (float) MAXDIM / (float) dim;
 	b->h = h;
 	b->tx = 512;
 	b->ty = 512;
@@ -315,7 +316,7 @@ static void add_crater(int i, union vec3 p, float r, float h)
 	b->sample_bytes_per_row = 3 * b->samplew;
 	crater_r = (0.5 * (snis_random_float() + 1.0) * 5.5) *
 			(0.5 * (snis_random_float() + 1.0) * 5.5) + 2.5;
-	create_crater_heightmap((unsigned char *) b->sampledata, 1024, 1024, 512, 512, (int) crater_r, 3);
+	create_crater_heightmap((unsigned char *) b->sampledata, 1024, 1024, 512, 512, (int) crater_r, 6);
 	quat_from_u2v(&b->texelq, &p, &right_at_ya, &up);
 }
 
@@ -345,9 +346,9 @@ static void add_bumps(const int initial_bumps)
 	float h;
 
 	if (nbumps == 1) /* If we're not doing any recursive bumps, then make the bumps taller */
-		h = 0.3;
+		h = 0.3 * MAXDIM / dim;
 	else
-		h = 0.1;
+		h = 0.1 * MAXDIM / dim;
 	printf("adding bumps:");
 	for (i = 0; i < initial_bumps; i++) {
 		union vec3 p;
@@ -386,8 +387,8 @@ static void find_min_max_height(float *min, float *max)
 	mmax = 0.0f;
 
 	for (f = 0; f < 6; f++) {
-		for (i = 0; i < DIM; i++) {
-			for (j = 0; j < DIM; j++) {
+		for (i = 0; i < dim; i++) {
+			for (j = 0; j < dim; j++) {
 				h = vec3_magnitude(&vertex[f][i][j]);
 				if (h < mmin)
 					mmin = h;
@@ -405,16 +406,16 @@ void allocate_output_images(void)
 	int i;
 
 	for (i = 0; i < 6; i++) {
-		output_image[i] = malloc(4 * DIM * DIM);
-		memset(output_image[i], 0, 4 * DIM * DIM);
+		output_image[i] = malloc(4 * dim * dim);
+		memset(output_image[i], 0, 4 * dim * dim);
 	}
 	for (i = 0; i < 6; i++) {
-		normal_image[i] = malloc(4 * DIM * DIM);
-		memset(normal_image[i], 0, 4 * DIM * DIM);
+		normal_image[i] = malloc(4 * dim * dim);
+		memset(normal_image[i], 0, 4 * dim * dim);
 	}
 	for (i = 0; i < 6; i++) {
-		heightmap_image[i] = malloc(4 * DIM * DIM);
-		memset(heightmap_image[i], 128, 4 * DIM * DIM);
+		heightmap_image[i] = malloc(4 * dim * dim);
+		memset(heightmap_image[i], 128, 4 * dim * dim);
 	}
 }
 
@@ -426,9 +427,9 @@ static void paint_height_maps(float min, float max)
 	int p;
 
 	for (f = 0; f < 6; f++) {
-		for (i = 0; i < DIM; i++) {
-			for (j = 0; j < DIM; j++) {
-				p = (j * DIM + i) * 4; 
+		for (i = 0; i < dim; i++) {
+			for (j = 0; j < dim; j++) {
+				p = (j * dim + i) * 4;
 				r = vec3_magnitude(&vertex[f][i][j]);
 				r = (r - min) / (max - min);
 				c = (unsigned char) (r * 255.0f);
@@ -474,9 +475,9 @@ static void paint_terrain_colors(float min, float max)
 	int p;
 
 	for (f = 0; f < 6; f++) {
-		for (i = 0; i < DIM; i++) {
-			for (j = 0; j < DIM; j++) {
-				p = (j * DIM + i) * 4; 
+		for (i = 0; i < dim; i++) {
+			for (j = 0; j < dim; j++) {
+				p = (j * dim + i) * 4;
 				r = vec3_magnitude(&vertex[f][i][j]);
 				r = (r - min) / (max - min);
 				n = (noise[f][i][j] - minn) / (maxn - minn);
@@ -495,9 +496,9 @@ static void paint_normal_and_height_maps(float min, float max)
 	int p;
 
 	for (f = 0; f < 6; f++) {
-		for (i = 0; i < DIM; i++) {
-			for (j = 0; j < DIM; j++) {
-				p = (j * DIM + i) * 4; 
+		for (i = 0; i < dim; i++) {
+			for (j = 0; j < dim; j++) {
+				p = (j * dim + i) * 4;
 				rad = vec3_magnitude(&vertex[f][i][j]);
 				rad = (rad - min) / (max - min);
 				heightmap_image[f][p + 0] = (unsigned char) (255.0 * rad);
@@ -546,7 +547,7 @@ static void save_images(const char *prefix, unsigned char *image[])
 
 	for (i = 0; i < 6; i++) {
 		sprintf(fname, "%s%d.png", prefix, i);
-		if (png_utils_write_png_image(fname, image[i], DIM, DIM, 1, 0))
+		if (png_utils_write_png_image(fname, image[i], dim, dim, 1, 0))
 			fprintf(stderr, "Failed to write %s\n", fname);
 	}
 }
@@ -576,36 +577,36 @@ static void calculate_normal(int f, int i, int j)
 	if (i1 < 0)
 		i1 = i;
 	i2 = i + 1;
-	if (i2 >= DIM)
+	if (i2 >= dim)
 		i2 = i;
 	j1 = j - 1;
 	if (j1 < 0)
 		j1 = j;
 	j2 = j + 1;
-	if (j2 >= DIM)
+	if (j2 >= dim)
 		j2 = j;
 
 	/* Average over the surrounding 3x3 pixels in x and in y, emphasizing the central regions
 	 * (Sobel filter,  https://en.wikipedia.org/wiki/Sobel_operator )
 	 */
-	p1 = (j1 * DIM + i1) * 4;
-	p2 = (j1 * DIM + i2) * 4;
+	p1 = (j1 * dim + i1) * 4;
+	p2 = (j1 * dim + i2) * 4;
 	dzdx[0] = (int) output_image[f][p1] - (int) output_image[f][p2];
-	p1 = (j * DIM + i1) * 4;
-	p2 = (j * DIM + i2) * 4;
+	p1 = (j * dim + i1) * 4;
+	p2 = (j * dim + i2) * 4;
 	dzdx[1] = (int) output_image[f][p1] - (int) output_image[f][p2];
-	p1 = (j2 * DIM + i1) * 4;
-	p2 = (j2 * DIM + i2) * 4;
+	p1 = (j2 * dim + i1) * 4;
+	p2 = (j2 * dim + i2) * 4;
 	dzdx[2] = (int) output_image[f][p1] - (int) output_image[f][p2];
 
-	p1 = (j1 * DIM + i1) * 4;
-	p2 = (j2 * DIM + i1) * 4;
+	p1 = (j1 * dim + i1) * 4;
+	p2 = (j2 * dim + i1) * 4;
 	dzdy[0] = (int) output_image[f][p2] - (int) output_image[f][p1];
-	p1 = (j1 * DIM + i) * 4;
-	p2 = (j2 * DIM + i) * 4;
+	p1 = (j1 * dim + i) * 4;
+	p2 = (j2 * dim + i) * 4;
 	dzdy[1] = (int) output_image[f][p2] - (int) output_image[f][p1];
-	p1 = (j1 * DIM + i2) * 4;
-	p2 = (j2 * DIM + i2) * 4;
+	p1 = (j1 * dim + i2) * 4;
+	p2 = (j2 * dim + i2) * 4;
 	dzdy[2] = (int) output_image[f][p2] - (int) output_image[f][p1];
 
 	dzdx[0] = dzdx[0] + 2 * dzdx[1] + dzdx[1];
@@ -623,8 +624,8 @@ static void calculate_normals(void)
 
 	printf("calculating normals\n");
 	for (f = 0; f < 6; f++) {
-		for (i = 0; i < DIM; i++) {
-			for (j = 0; j < DIM; j++) {
+		for (i = 0; i < dim; i++) {
+			for (j = 0; j < dim; j++) {
 				calculate_normal(f, i, j);
 			}
 		}
@@ -635,6 +636,7 @@ static struct option long_options[] = {
 	{ "bumps", required_argument, NULL, 'b' },
 	{ "initialbumps", required_argument, NULL, 'B' },
 	{ "craters", required_argument, NULL, 'c' },
+	{ "dimension", required_argument, NULL, 'd' },
 	{ "height", required_argument, NULL, 'h' },
 	{ "heightmap-output", required_argument, NULL, 'H' },
 	{ "ibumps", required_argument, NULL, 'i' },
@@ -658,6 +660,8 @@ static void usage(void)
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "   -b, bumps : number of bumps in recursive bump placement, default = 3\n");
 	fprintf(stderr, "   -B, initialbumps: number of bumps in initial pass.  default = 60\n");
+	fprintf(stderr, "   -d, dimension: size of output images.  Default is 1024 for 1024x1024 images.\n");
+	fprintf(stderr, "                 Minimum is 128, maximum is %d\n", MAXDIM);
 	fprintf(stderr, "   -c, craters : number of craters to add.\n");
 	fprintf(stderr, "   -h, height : png file containing height map data to sample for terrain\n");
 	fprintf(stderr, "   -H, heightmap-output : prefix of filename for height map output data\n");
@@ -713,10 +717,11 @@ static void process_int_option(char *option_name, char *option_value, int *value
 static void process_options(int argc, char *argv[])
 {
 	int c;
+	int tmpdim;
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:c:H:h:i:n:O:k:l:o:r:s:S:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:b:d:c:H:h:i:n:O:k:l:o:r:s:S:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -732,6 +737,16 @@ static void process_options(int argc, char *argv[])
 				ncraters = 0;
 			if (ncraters > MAXCRATERS)
 				ncraters = MAXCRATERS;
+			break;
+		case 'd':
+			process_int_option("dimension", optarg, &tmpdim);
+			dim = tmpdim;
+			if (dim < 128)
+				dim = 128;
+			if (dim > MAXDIM)
+				dim = MAXDIM;
+			if (dim != tmpdim)
+				printf("Dimension %d out of range, adjusted to %d\n", tmpdim, dim);
 			break;
 		case 'h':
 			heightfile = optarg;

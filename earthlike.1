@@ -1,4 +1,4 @@
-.TH EARTHLIKE 1 "Nov 2015" "Space-Nerds-In-Space" "User Commands"
+.TH EARTHLIKE 1 "Dec 2016" "Space-Nerds-In-Space" "User Commands"
 
 .SH NAME
 earthlike \- make 6 images forming a cube map for an earth-like planet
@@ -6,6 +6,7 @@ earthlike \- make 6 images forming a cube map for an earth-like planet
 .B earthlike
 [ -b bumps ]
 [ -B initialbumps ]
+[ -d dimension ]
 [ -c craters ]
 [ -h input-heightmap-data.png ]
 [ -H output-heightmap-prefix ]
@@ -48,6 +49,10 @@ Number of smaller bumps to recursively add to each bump.  Default is 3.
 .TP
 -B, --initialbumps
 Number of initial bumps to add.  Default is 60.
+.TP
+-d, --dimension
+Size of (square) output images in pixels.  Default is 1024 (for 1024x1024 images),
+minimum is 128, maximum is 2048.
 .TP
 -h, --height
 Name of file containing input heightmap data.  This should be an
