@@ -647,6 +647,9 @@ mathutils.o:	mathutils.c Makefile
 crater.o:	crater.c crater.h Makefile
 	$(Q)$(COMPILE)
 
+test_crater.o:	test_crater.c
+	$(Q)$(COMPILE)
+
 snis_alloc.o:	snis_alloc.c Makefile
 	$(Q)$(COMPILE)
 
@@ -896,6 +899,9 @@ test:	test-matrix test-space-partition test-marshal test-quat test-fleet test-mt
 test_solarsystem_config:	test_solarsystem_config.c solarsystem_config.o string-utils.o
 	gcc -o $@ $< solarsystem_config.o string-utils.o
 
+test_crater:	test_crater.o crater.o mathutils.o mtwist.o png_utils.o png_utils.o
+	gcc -o $@ ${PNGCFLAGS} test_crater.o crater.o mtwist.o png_utils.o ${PNGLIBS} mathutils.o -lm
+
 snis_client.6.gz:	snis_client.6
 	gzip -9 - < snis_client.6 > snis_client.6.gz
 
@@ -993,7 +999,7 @@ uninstall:
 	${UPDATE_DESKTOP}
 
 clean:	mostly-clean
-	rm -f ${MODELS} test_marshal
+	rm -f ${MODELS} test_marshal test_crater
 
 depend:
 	rm -f Makefile.depend
