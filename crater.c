@@ -29,7 +29,7 @@
 #include "png_utils.h"
 #include "mathutils.h"
 
-unsigned char base_level = 0;
+unsigned char base_level = 127;
 
 static float zerotoone()
 {
@@ -92,7 +92,8 @@ static void crater_dimple(unsigned char *image, int imagew, int imageh, int x, i
 				d = sqrtf((float) d2);
 				index = 3 * (iy * imagew + ix);
 				const float maybe_central_peak = zerotoone() * 0.07;
-				base = ((1.0 - sin((d / r) * 0.45 * M_PI + maybe_central_peak)) + 1.0) * base_height;
+				base = 0.75 * base_height  +
+					0.25 * sin((d / r) * 0.45 * M_PI + maybe_central_peak) * base_height;
 				image[index] = (unsigned char) base;
 				image[index + 1] = image[index];
 				image[index + 2] = image[index];
@@ -131,7 +132,7 @@ static void add_rays(unsigned char *image, int imagew, int imageh, int x, int y,
 
 void create_crater_heightmap(unsigned char *image, int imagew, int imageh, int x, int y, int r, int h)
 {
-	int i, npoints = (int) (0.7 * (M_PI * 2.0 * r));
+	int i, npoints = (int) (1.7 * (M_PI * 2.0 * r));
 	float angle;
 
 	crater_dimple(image, imagew, imageh, x, y, r * 0.95, base_level);

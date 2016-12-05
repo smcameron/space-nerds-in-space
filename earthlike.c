@@ -34,7 +34,7 @@ static int random_seed = 31415;
 static float shrink_factor = 0.55;
 static int initial_bumps = 60;
 static float initial_bump_size = 0.4;
-static char crater_base_level = 20;
+static unsigned char crater_base_level = 127;
 
 static struct bump {
 	union vec3 p;
@@ -414,7 +414,7 @@ void allocate_output_images(void)
 	}
 	for (i = 0; i < 6; i++) {
 		heightmap_image[i] = malloc(4 * DIM * DIM);
-		memset(heightmap_image[i], 0, 4 * DIM * DIM);
+		memset(heightmap_image[i], 128, 4 * DIM * DIM);
 	}
 }
 
