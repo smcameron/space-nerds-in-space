@@ -17,9 +17,8 @@ static struct fixup_list_entry {
 
 #define TMP_PRONOUNCE_BUFFER_SIZE 4096
 
-int fix_pronunciation_buffer(char *input, char *output, struct fixup_list_entry *fixup)
+static int fix_pronunciation_buffer(char *input, char *output, struct fixup_list_entry *fixup)
 {
-	int count = 0;
 	int rc;
 	regmatch_t match;
 
@@ -35,9 +34,9 @@ int fix_pronunciation_buffer(char *input, char *output, struct fixup_list_entry 
 	}
 
 	rc = regexec(fixup->re, input, 1, &match, 0);
-	if (rc == REG_NOMATCH) {
+	if (rc) {
 		strncpy(output, input, TMP_PRONOUNCE_BUFFER_SIZE);
-		return count;
+		return 0;
 	}
 
 	memset(output, 0, TMP_PRONOUNCE_BUFFER_SIZE);
@@ -69,6 +68,8 @@ char *fix_pronunciation(char *input)
 	}
 	return strdup(buffer[current_buffer]);
 }
+
+#undef TMP_PRONOUNCE_BUFFER_SIZE
 
 #ifdef TEST_PRONUNCIATION_FIXUP
 
