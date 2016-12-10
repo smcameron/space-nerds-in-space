@@ -97,6 +97,7 @@
 #include "thrust_attachment.h"
 #include "starbase_metadata.h"
 #include "solarsystem_config.h"
+#include "pronunciation.h"
 
 #include "vertex.h"
 #include "triangle.h"
@@ -4738,6 +4739,7 @@ static void text_to_speech(char *text)
 {
 	char command[PATH_MAX];
 	char *snisbindir;
+	char *fixed_text;
 	char bindir[PATH_MAX];
 	struct stat statbuf;
 	int rc;
@@ -4763,7 +4765,9 @@ static void text_to_speech(char *text)
 		return;
 	}
 	remove_single_quotes(text);
-	sprintf(command, "%s/text_to_speech.sh '%s'", bindir, text);
+	fixed_text = fix_pronunciation(text);
+	snprintf(command, sizeof(command), "%s/text_to_speech.sh '%s'", bindir, fixed_text);
+	free(fixed_text);
 	rc = system(command);
 	if (rc != 0 && errno != ECHILD)  { /* we have ignored SIGCHLD, so we get ECHILD here */
 		fprintf(stderr, "Shell command '%s' returned %d, errno = %d (%s)\n",
