@@ -361,7 +361,7 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o mtwist.o names.o infinite-taunt.o snis_damcon_systems.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
-		snis_hash.o
+		snis_hash.o planetary_atmosphere.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
@@ -826,6 +826,12 @@ pronunciation.o:	pronunciation.c Makefile
 
 test_pronunciation:	pronunciation.c Makefile
 	gcc -DTEST_PRONUNCIATION_FIXUP -o test_pronunciation pronunciation.c
+
+planetary_atmosphere.o:	planetary_atmosphere.c Makefile
+	$(Q)$(COMPILE)
+
+test_planetary_atmosphere:	planetary_atmosphere.c mtwist.o Makefile
+	gcc -g -DTEST_PLANETARY_ATMOSPHERE_PROFILE -o test_planetary_atmosphere planetary_atmosphere.c mtwist.o
 
 key_value_parser.o:	key_value_parser.c key_value_parser.h Makefile
 	$(Q)$(COMPILE)

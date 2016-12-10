@@ -98,6 +98,7 @@
 #include "starbase_metadata.h"
 #include "solarsystem_config.h"
 #include "pronunciation.h"
+#include "planetary_atmosphere.h"
 
 #include "vertex.h"
 #include "triangle.h"
@@ -1570,6 +1571,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 				uint8_t atm_b,
 				double atm_scale,
 				uint8_t has_atmosphere,
+				uint16_t atmosphere_type,
 				uint8_t solarsystem_planet_type,
 				uint8_t ring_selector)
 {
@@ -1653,6 +1655,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	go[i].tsd.planet.atmosphere_b = atm_b;
 	go[i].tsd.planet.atmosphere_scale = atm_scale;
 	go[i].tsd.planet.has_atmosphere = has_atmosphere;
+	go[i].tsd.planet.atmosphere_type = atmosphere_type;
 	go[i].tsd.planet.solarsystem_planet_type = solarsystem_planet_type;
 	go[i].tsd.planet.ring_selector = ring_selector;
 	go[i].tsd.planet.ring = hasring;
@@ -4200,6 +4203,11 @@ static int process_detonate(void)
 	return 0;
 }
 
+static void init_planetary_atmospheres(void)
+{
+	planetary_atmosphere_model_init_models(ATMOSPHERE_TYPE_GEN_SEED, NATMOSPHERE_TYPES);
+}
+
 static void reload_per_solarsystem_textures(char *old_solarsystem, char *new_solarsystem,
 						struct solarsystem_asset_spec *old_assets,
 						struct solarsystem_asset_spec *new_assets);
@@ -4937,22 +4945,24 @@ static int process_update_planet_packet(void)
 	unsigned char buffer[100];
 	uint32_t id, timestamp;
 	double dr, dx, dy, dz, atm_scale;
-	uint8_t government, tech_level, economy, security, atm_r, atm_g, atm_b, has_atmosphere, solarsystem_planet_type;
+	uint8_t government, tech_level, economy, security, atm_r, atm_g, atm_b;
+	uint8_t has_atmosphere, solarsystem_planet_type;
 	uint8_t ring_selector;
+	uint16_t atmosphere_type;
 	uint32_t dseed;
 	int hasring;
 	uint16_t contraband;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbbhbbbSbbb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbbhbbbSbhbb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
 			&dr, (int32_t) UNIVERSE_DIM,
 			&dseed, &government, &tech_level, &economy, &security,
 			&contraband, &atm_r, &atm_b, &atm_g, &atm_scale, (int32_t) UNIVERSE_DIM,
-			&has_atmosphere, &solarsystem_planet_type, &ring_selector);
+			&has_atmosphere, &atmosphere_type, &solarsystem_planet_type, &ring_selector);
 	if (rc != 0)
 		return rc;
 	solarsystem_planet_type = solarsystem_planet_type % PLANET_TYPE_COUNT_SHALL_BE;
@@ -4962,7 +4972,8 @@ static int process_update_planet_packet(void)
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_planet(id, timestamp, dx, dy, dz, dr, government, tech_level,
 				economy, dseed, hasring, security, contraband,
-				atm_r, atm_b, atm_g, atm_scale, has_atmosphere, solarsystem_planet_type, ring_selector);
+				atm_r, atm_b, atm_g, atm_scale, has_atmosphere,
+				atmosphere_type, solarsystem_planet_type, ring_selector);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -10459,6 +10470,40 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	draw_science_graph(w, ship, o, gx1, gy1, gx2, gy2);
 }
 
+static void science_details_draw_atmosphere_data(GtkWidget *w, GdkGC *gc,
+				struct planetary_atmosphere_profile *atm)
+{
+	int i;
+	int y, yinc = 20 * SCREEN_HEIGHT / 600;
+	y = yinc * 4;
+	char buf[100], compound_name[100];
+
+	sng_abs_xy_draw_string("ATMOSPHERIC DATA:", TINY_FONT, 10, y); y += yinc;
+	yinc = 15 * SCREEN_HEIGHT / 600;
+	sprintf(buf, "%30s: %.0f Pa", "PRESSURE:", atm->pressure);
+	sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
+	sprintf(buf, "%30s: %.0f K / %.0f C / %.0f F", "TEMPERATURE:",
+		atm->temperature, atm->temperature - 273.15, atm->temperature * 9.0 / 5.0 - 459.67);
+	sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
+	for (i = 0; i < atm->nmajor; i++) {
+		int compound = atm->major_compound[i];
+		char *name = atmospheric_compound[compound].name;
+		char *symbol = atmospheric_compound[compound].symbol;
+		sprintf(compound_name, "%s (%s)", name, symbol);
+		sprintf(buf, "%30s: %3.2f%%\n", compound_name, atm->major_fraction[i] * 100.0);
+		sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
+	}
+
+	for (i = 0; i < atm->nminor; i++) {
+		int compound = atm->minor_compound[i];
+		char *name = atmospheric_compound[compound].name;
+		char *symbol = atmospheric_compound[compound].symbol;
+		sprintf(compound_name, "%s (%s)", name, symbol);
+		sprintf(buf, "%30s: %4.2f ppm\n", compound_name, atm->minor_ppm[i]);
+		sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
+	}
+}
+
 static void draw_science_details(GtkWidget *w, GdkGC *gc)
 {
 	struct entity *e = NULL;
@@ -10509,6 +10554,10 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		char tmpbuf[60];
 		int i, len, j;
 		char *planet_type_str;
+		struct planetary_atmosphere_profile *atm =
+			planetary_atmosphere_by_index(curr_science_guy->tsd.planet.atmosphere_type);
+
+		science_details_draw_atmosphere_data(w, gc, atm);
 
 		struct planet_data *p = &curr_science_guy->tsd.planet;
 
@@ -15136,6 +15185,7 @@ int main(int argc, char *argv[])
 	read_keymap_config_file();
 	init_vects();
 	initialize_random_orientations_and_spins(COMMON_MTWIST_SEED);
+	init_planetary_atmospheres();
 	if (read_solarsystem_config(solarsystem_name, &solarsystem_assets)) {
 		fprintf(stderr, "Failed reading solarsystem metadata\n");
 		exit(1);
