@@ -16107,8 +16107,17 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 		queue_add_text_to_speech(c, description);
 		return;
 	case OBJTYPE_STARBASE:
+		if (go[i].tsd.starbase.associated_planet_id < 0) {
+			sprintf(description, "%s is a star base in deep space", go[i].tsd.starbase.name);
+		} else {
+			planet = lookup_by_id(go[i].tsd.starbase.associated_planet_id);
+			if (planet < 0)
+				sprintf(description, "%s is a star base in deep space", go[i].tsd.starbase.name);
+			else
+				sprintf(description, "%s is a star base in orbit around the planet %s",
+					go[i].tsd.starbase.name, go[planet].sdata.name);
+		}
 		pthread_mutex_unlock(&universe_mutex);
-		sprintf(description, "%s is a starbase", go[i].tsd.starbase.name);
 		queue_add_text_to_speech(c, description);
 		return;
 	case OBJTYPE_SHIP2:
