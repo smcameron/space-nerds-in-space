@@ -996,6 +996,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("set",		"set",		"npq", generic_verb_action);
 	snis_nl_add_dictionary_verb("set",		"set",		"npa", generic_verb_action);
 	snis_nl_add_dictionary_verb("set",		"set",		"npn", generic_verb_action);
+	snis_nl_add_dictionary_verb("set",		"set",		"npnq", generic_verb_action);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"npq", generic_verb_action);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"n", generic_verb_action);
 	snis_nl_add_dictionary_verb("raise",		"raise",	"nq", generic_verb_action);

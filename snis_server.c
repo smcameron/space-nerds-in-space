@@ -16876,6 +16876,125 @@ no_understand2:
 	return;
 }
 
+/* Eg: "set a course for starbase one..." */
+static void nl_set_npnq(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int setthing, prep, settowhat;
+	char *name, *namecopy, reply[100];
+	int i = -1;
+	union vec3 direction, right;
+	union quat new_orientation;
+	struct snis_entity *dest, *ship;
+	char *modifier;
+	int number;
+	float value;
+	char buffer[100];
+
+	setthing = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (setthing < 0)
+		goto no_understand;
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
+	if (prep < 0)
+		goto no_understand;
+	settowhat = nl_find_next_word(argc, pos, POS_NOUN, prep);
+	if (settowhat < 0)
+		goto no_understand;
+	number = nl_find_next_word(argc, pos, POS_NUMBER, 0);
+	if (number < 0)
+		goto no_understand;
+	value = extra_data[number].number.value;
+	if (strcasecmp(argv[settowhat], "starbase") == 0) {
+		sprintf(buffer, "SB-%02.0f", value);
+		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
+		pthread_mutex_lock(&universe_mutex);
+		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			goto no_understand;
+		}
+	} else if (strcasecmp(argv[settowhat], "gate") == 0) {
+		sprintf(buffer, "WG-%02.0f", value);
+		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
+		pthread_mutex_lock(&universe_mutex);
+		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			goto no_understand;
+		}
+	}
+
+	if (strcasecmp(argv[prep], "for") != 0 &&
+		strcasecmp(argv[prep], "to") != 0 &&
+		strcasecmp(argv[prep], "toward") != 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		goto no_understand;
+	}
+
+	if (strcasecmp(argv[setthing], "course") != 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		goto no_understand;
+	}
+
+	if (i < 0)
+		i = lookup_by_id(extra_data[settowhat].external_noun.handle);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "Sorry, I am not sure where that is.");
+		return;
+	}
+	dest = &go[i];
+	name = nl_get_object_name(dest);
+	if (!name) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "Sorry, I am not sure where that is.");
+		return;
+	}
+	namecopy = strdup(name);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "Sorry, I am not quite sure where we are.");
+		free(namecopy);
+		return;
+	}
+	ship = &go[i];
+
+	/* Calculate new desired orientation of ship pointing towards destination */
+	right.v.x = 1.0;
+	right.v.y = 0.0;
+	right.v.z = 0.0;
+
+	direction.v.x = dest->x - ship->x;
+	direction.v.y = dest->y - ship->y;
+	direction.v.z = dest->z - ship->z;
+	vec3_normalize_self(&direction);
+
+	quat_from_u2v(&new_orientation, &right, &direction, NULL);
+
+	ship->tsd.ship.computer_desired_orientation = new_orientation;
+	ship->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
+	ship->tsd.ship.orbiting_object_id = 0xffffffff;
+
+	if (dest->type == OBJTYPE_PLANET)
+		modifier = "the planet ";
+	else if (dest->type == OBJTYPE_ASTEROID)
+		modifier = "the asteroid ";
+	else if (dest->type == OBJTYPE_SHIP1 || dest->type == OBJTYPE_SHIP2)
+		modifier = "the ship ";
+	else
+		modifier = "";
+
+	pthread_mutex_unlock(&universe_mutex);
+	sprintf(reply, "Setting course for %s%s.", modifier, namecopy);
+	queue_add_text_to_speech(c, reply);
+	free(namecopy);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I am not sure what you're asking me to do.");
+	return;
+}
+
 /* Eg: "set a course for blah..." */
 static void nl_set_npn(void *context, int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
@@ -17666,6 +17785,60 @@ target_lost:
 	return;
 }
 
+/* E.g.: target warp gate 1, target star base 2 */
+static void nl_target_nq(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, noun;
+	char *name, *namecopy;
+	char reply[100];
+	uint32_t id;
+	int number;
+	char buffer[20];
+	float amount;
+
+	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (noun < 0)
+		goto target_lost;
+	number = nl_find_next_word(argc, pos, POS_NUMBER, noun);
+	if (number < 0)
+		goto target_lost;
+	amount = extra_data[number].number.value;
+	if (strcmp(argv[noun], "starbase") == 0) {
+		sprintf(buffer, "SB-%02.0f", amount);
+		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
+	} else if (strcmp(argv[noun], "gate") == 0) {
+		sprintf(buffer, "WG-%02.0f", amount);
+		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
+	} else {
+		goto target_lost;
+	}
+
+	pthread_mutex_lock(&universe_mutex);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		goto target_lost;
+	}
+	id = go[i].id;
+	name = nl_get_object_name(&go[i]);
+	if (name)
+		namecopy = strdup(name);
+	else
+		namecopy = NULL;
+	pthread_mutex_unlock(&universe_mutex);
+	if (!namecopy)
+		goto target_lost;
+	sprintf(reply, "Targeting sensors on %s", namecopy);
+	free(namecopy);
+	queue_add_text_to_speech(c, reply);
+	science_select_target(c, id);
+	return;
+
+target_lost:
+	queue_add_text_to_speech(c, "Unable to locate the specified target for scanning.");
+	return;
+}
+
 struct damage_report_entry {
 	char system[100];
 	int percent;
@@ -18166,10 +18339,13 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("set",		"set",		"npa", sorry_dave);
 	snis_nl_add_dictionary_verb("set",		"set",		"npn", nl_set_npn);
 	snis_nl_add_dictionary_verb("set",		"set",		"npan", nl_set_npn);
+	snis_nl_add_dictionary_verb("set",		"set",		"npnq", nl_set_npnq);
 	snis_nl_add_dictionary_verb("plot",		"plot",		"npn", nl_set_npn);
 	snis_nl_add_dictionary_verb("plot",		"plot",		"npan", nl_set_npn);
+	snis_nl_add_dictionary_verb("plot",		"plot",		"npnq", nl_set_npnq);
 	snis_nl_add_dictionary_verb("lay in",		"lay in",	"npn", nl_set_npn);
 	snis_nl_add_dictionary_verb("lay in",		"lay in",	"npan", nl_set_npn);
+	snis_nl_add_dictionary_verb("lay in",		"lay in",	"npnq", nl_set_npnq);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"npq", nl_set_npq);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"npn", nl_set_npn);
 	snis_nl_add_dictionary_verb("lower",		"lower",	"npa", nl_lower_npa); /* lower power to impulse */
@@ -18244,8 +18420,11 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("science",		"science",	"n", nl_onscreen_verb_n);
 	snis_nl_add_dictionary_verb("communications",	"communications", "n", nl_onscreen_verb_n);
 	snis_nl_add_dictionary_verb("target",		"target",	"n", nl_target_n);
+	snis_nl_add_dictionary_verb("target",		"target",	"nq", nl_target_nq);
 	snis_nl_add_dictionary_verb("scan",		"target",	"n", nl_target_n);
+	snis_nl_add_dictionary_verb("scan",		"target",	"nq", nl_target_nq);
 	snis_nl_add_dictionary_verb("select",		"target",	"n", nl_target_n);
+	snis_nl_add_dictionary_verb("select",		"target",	"nq", nl_target_nq);
 	snis_nl_add_dictionary_verb("reverse",		"reverse",	"n", nl_reverse_n);
 	snis_nl_add_dictionary_verb("long range scanner",	"long range scan",	"", nl_shortlong_range_scan);
 	snis_nl_add_dictionary_verb("long range scan",	"long range scan",	"", nl_shortlong_range_scan);
