@@ -15969,6 +15969,7 @@ static uint32_t natural_language_object_lookup(void *context, char *word)
 		case OBJTYPE_PLANET:
 		case OBJTYPE_ASTEROID:
 		case OBJTYPE_SHIP2:
+		case OBJTYPE_WARPGATE:
 			if (strcmp(go[i].sdata.name, w) == 0) {
 				answer = go[i].id;
 				goto done;
@@ -16244,6 +16245,8 @@ static int nl_find_nearest_object(struct game_client *c, int argc, char *argv[],
 		objtype = OBJTYPE_SHIP2;
 	else if (strcmp(argv[object], "asteroid") == 0)
 		objtype = OBJTYPE_ASTEROID;
+	else if (strcmp(argv[object], "gate") == 0)
+		objtype = OBJTYPE_WARPGATE;
 	else
 		objtype = -1;
 	if (objtype < 0)
