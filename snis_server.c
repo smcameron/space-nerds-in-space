@@ -16884,6 +16884,7 @@ static void nl_set_npn(void *context, int argc, char *argv[], int pos[],
 	union vec3 direction, right;
 	union quat new_orientation;
 	struct snis_entity *dest, *ship;
+	char *modifier;
 
 	setthing = nl_find_next_word(argc, pos, POS_NOUN, 0);
 	if (setthing < 0)
@@ -16953,8 +16954,17 @@ static void nl_set_npn(void *context, int argc, char *argv[], int pos[],
 	ship->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
 	ship->tsd.ship.orbiting_object_id = 0xffffffff;
 
+	if (dest->type == OBJTYPE_PLANET)
+		modifier = "the planet ";
+	else if (dest->type == OBJTYPE_ASTEROID)
+		modifier = "the asteroid ";
+	else if (dest->type == OBJTYPE_SHIP1 || dest->type == OBJTYPE_SHIP2)
+		modifier = "the ship ";
+	else
+		modifier = "";
+
 	pthread_mutex_unlock(&universe_mutex);
-	sprintf(reply, "Setting course for %s.", namecopy);
+	sprintf(reply, "Setting course for %s%s.", modifier, namecopy);
 	queue_add_text_to_speech(c, reply);
 	free(namecopy);
 	return;
