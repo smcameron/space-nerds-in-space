@@ -13,6 +13,12 @@ static struct fixup_list_entry {
 } fixup_list[] = {
 	{ " SB-0", " star base ", NULL },
 	{ "^SB-0", "star base ", NULL },
+	{ " SB-", " star base ", NULL },
+	{ "^SB-", "star base ", NULL },
+	{ " WG-0", " warp gate ", NULL },
+	{ "^WG-0", "warp gate ", NULL },
+	{ " WG-", " warp gate ", NULL },
+	{ "^WG-", "warp gate ", NULL },
 };
 
 #define TMP_PRONOUNCE_BUFFER_SIZE 4096
@@ -89,6 +95,11 @@ int main(int argc, char *argv)
 	testcase("Setting a course for SB-01 ok?");
 	testcase("SB-02 is thataway!");
 	testcase("SB-01 and SB-02 and SB-03 are being attacked!");
+	testcase("SB-21 and SB-42");
+	testcase("Setting a course for WG-01 ok?");
+	testcase("WG-02 is thataway!");
+	testcase("WG-01 and WG-02 and WG-03 are being attacked!");
+	testcase("WG-25 and WG-26");
 	return 0;
 }
 #endif
