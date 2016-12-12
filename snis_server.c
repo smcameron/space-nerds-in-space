@@ -16876,18 +16876,57 @@ no_understand2:
 	return;
 }
 
+/* Assumes universe lock is held, will unlock */
+static void nl_set_ship_course_to_dest_helper(struct game_client *c,
+	struct snis_entity *ship,
+	struct snis_entity *dest,
+	char *name)
+{
+	union vec3 direction, right;
+	union quat new_orientation;
+	char *modifier;
+	char reply[100];
+
+	/* Calculate new desired orientation of ship pointing towards destination */
+	right.v.x = 1.0;
+	right.v.y = 0.0;
+	right.v.z = 0.0;
+
+	direction.v.x = dest->x - ship->x;
+	direction.v.y = dest->y - ship->y;
+	direction.v.z = dest->z - ship->z;
+	vec3_normalize_self(&direction);
+
+	quat_from_u2v(&new_orientation, &right, &direction, NULL);
+
+	ship->tsd.ship.computer_desired_orientation = new_orientation;
+	ship->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
+	ship->tsd.ship.orbiting_object_id = 0xffffffff;
+
+	if (dest->type == OBJTYPE_PLANET)
+		modifier = "the planet ";
+	else if (dest->type == OBJTYPE_ASTEROID)
+		modifier = "the asteroid ";
+	else if (dest->type == OBJTYPE_SHIP1 || dest->type == OBJTYPE_SHIP2)
+		modifier = "the ship ";
+	else
+		modifier = "";
+
+	pthread_mutex_unlock(&universe_mutex);
+	sprintf(reply, "Setting course for %s%s.", modifier, name);
+	queue_add_text_to_speech(c, reply);
+	return;
+}
+
 /* Eg: "set a course for starbase one..." */
 static void nl_set_npnq(void *context, int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int setthing, prep, settowhat;
-	char *name, *namecopy, reply[100];
+	char *name, *namecopy;
 	int i = -1;
-	union vec3 direction, right;
-	union quat new_orientation;
-	struct snis_entity *dest, *ship;
-	char *modifier;
+	struct snis_entity *dest;
 	int number;
 	float value;
 	char buffer[100];
@@ -16957,36 +16996,8 @@ static void nl_set_npnq(void *context, int argc, char *argv[], int pos[],
 		free(namecopy);
 		return;
 	}
-	ship = &go[i];
 
-	/* Calculate new desired orientation of ship pointing towards destination */
-	right.v.x = 1.0;
-	right.v.y = 0.0;
-	right.v.z = 0.0;
-
-	direction.v.x = dest->x - ship->x;
-	direction.v.y = dest->y - ship->y;
-	direction.v.z = dest->z - ship->z;
-	vec3_normalize_self(&direction);
-
-	quat_from_u2v(&new_orientation, &right, &direction, NULL);
-
-	ship->tsd.ship.computer_desired_orientation = new_orientation;
-	ship->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
-	ship->tsd.ship.orbiting_object_id = 0xffffffff;
-
-	if (dest->type == OBJTYPE_PLANET)
-		modifier = "the planet ";
-	else if (dest->type == OBJTYPE_ASTEROID)
-		modifier = "the asteroid ";
-	else if (dest->type == OBJTYPE_SHIP1 || dest->type == OBJTYPE_SHIP2)
-		modifier = "the ship ";
-	else
-		modifier = "";
-
-	pthread_mutex_unlock(&universe_mutex);
-	sprintf(reply, "Setting course for %s%s.", modifier, namecopy);
-	queue_add_text_to_speech(c, reply);
+	nl_set_ship_course_to_dest_helper(c, &go[i], dest, namecopy); /* unlocks */
 	free(namecopy);
 	return;
 
@@ -17001,12 +17012,9 @@ static void nl_set_npn(void *context, int argc, char *argv[], int pos[],
 {
 	struct game_client *c = context;
 	int setthing, prep, settowhat;
-	char *name, *namecopy, reply[100];
+	char *name, *namecopy;
 	int i = -1;
-	union vec3 direction, right;
-	union quat new_orientation;
-	struct snis_entity *dest, *ship;
-	char *modifier;
+	struct snis_entity *dest;
 
 	setthing = nl_find_next_word(argc, pos, POS_NOUN, 0);
 	if (setthing < 0)
@@ -17058,36 +17066,8 @@ static void nl_set_npn(void *context, int argc, char *argv[], int pos[],
 		free(namecopy);
 		return;
 	}
-	ship = &go[i];
 
-	/* Calculate new desired orientation of ship pointing towards destination */
-	right.v.x = 1.0;
-	right.v.y = 0.0;
-	right.v.z = 0.0;
-
-	direction.v.x = dest->x - ship->x;
-	direction.v.y = dest->y - ship->y;
-	direction.v.z = dest->z - ship->z;
-	vec3_normalize_self(&direction);
-
-	quat_from_u2v(&new_orientation, &right, &direction, NULL);
-
-	ship->tsd.ship.computer_desired_orientation = new_orientation;
-	ship->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
-	ship->tsd.ship.orbiting_object_id = 0xffffffff;
-
-	if (dest->type == OBJTYPE_PLANET)
-		modifier = "the planet ";
-	else if (dest->type == OBJTYPE_ASTEROID)
-		modifier = "the asteroid ";
-	else if (dest->type == OBJTYPE_SHIP1 || dest->type == OBJTYPE_SHIP2)
-		modifier = "the ship ";
-	else
-		modifier = "";
-
-	pthread_mutex_unlock(&universe_mutex);
-	sprintf(reply, "Setting course for %s%s.", modifier, namecopy);
-	queue_add_text_to_speech(c, reply);
+	nl_set_ship_course_to_dest_helper(c, &go[i], dest, namecopy); /* unlocks */
 	free(namecopy);
 	return;
 
