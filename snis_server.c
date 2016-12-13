@@ -16046,6 +16046,7 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("anti-clockwise", "counterclockwise");
 	snis_nl_add_synonym("anticlockwise", "counterclockwise");
 	snis_nl_add_synonym("star base", "starbase");
+	snis_nl_add_synonym("warp gate", "gate");
 }
 
 static const struct noun_description_entry {
@@ -16916,6 +16917,69 @@ static void nl_set_ship_course_to_dest_helper(struct game_client *c,
 	sprintf(reply, "Setting course for %s%s.", modifier, name);
 	queue_add_text_to_speech(c, reply);
 	return;
+}
+
+/* E.g.: navigate to the star base one, navigate to warp gate seven */
+static void nl_navigate_pnq(void *context, int argc, char *argv[], int pos[],
+	union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, prep, noun;
+	char *name, *namecopy;
+	char buffer[20];
+	struct snis_entity *dest;
+	int number;
+	float value;
+
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
+	if (prep < 0)
+		goto no_understand;
+
+	noun = nl_find_next_word(argc, pos, POS_NOUN, prep);
+	if (noun < 0)
+		goto no_understand;
+	number = nl_find_next_word(argc, pos, POS_NUMBER, noun);
+	if (number < 0)
+		goto no_understand;
+	value = extra_data[number].number.value;
+	i = -1;
+	if (strcasecmp(argv[noun], "starbase") == 0) {
+		sprintf(buffer, "SB-%02.0f", value);
+		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
+	} else if (strcasecmp(argv[noun], "gate") == 0) {
+		sprintf(buffer, "WG-%02.0f", value);
+		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
+	}
+	if (i < 0) {
+		goto no_understand;
+	}
+	pthread_mutex_lock(&universe_mutex);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		goto no_understand;
+	}
+	dest = &go[i];
+	name = nl_get_object_name(dest);
+	if (!name) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "Sorry, I am not sure where that is.");
+		return;
+	}
+	namecopy = strdup(name);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		queue_add_text_to_speech(c, "Sorry, I am not quite sure where we are.");
+		free(namecopy);
+		return;
+	}
+
+	nl_set_ship_course_to_dest_helper(c, &go[i], dest, namecopy); /* unlocks */
+	free(namecopy);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "I did not understand your request.");
 }
 
 /* E.g.: navigate to the nearest starbase */
@@ -18357,6 +18421,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("describe",		"describe",	"an", nl_describe_an);
 	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn", nl_navigate_pn);
 	snis_nl_add_dictionary_verb("head",		"navigate",	"pn", nl_navigate_pn);
+	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pnq", nl_navigate_pnq);
+	snis_nl_add_dictionary_verb("head",		"navigate",	"pnq", nl_navigate_pnq);
 	snis_nl_add_dictionary_verb("set",		"set",		"npq", nl_set_npq);
 	snis_nl_add_dictionary_verb("set",		"set",		"npa", sorry_dave);
 	snis_nl_add_dictionary_verb("set",		"set",		"npn", nl_set_npn);
