@@ -16991,23 +16991,17 @@ static void nl_set_npnq(void *context, int argc, char *argv[], int pos[],
 	if (number < 0)
 		goto no_understand;
 	value = extra_data[number].number.value;
+	i = -1;
 	if (strcasecmp(argv[settowhat], "starbase") == 0) {
 		sprintf(buffer, "SB-%02.0f", value);
 		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
-		pthread_mutex_lock(&universe_mutex);
-		if (i < 0) {
-			pthread_mutex_unlock(&universe_mutex);
-			goto no_understand;
-		}
 	} else if (strcasecmp(argv[settowhat], "gate") == 0) {
 		sprintf(buffer, "WG-%02.0f", value);
 		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
-		pthread_mutex_lock(&universe_mutex);
-		if (i < 0) {
-			pthread_mutex_unlock(&universe_mutex);
-			goto no_understand;
-		}
 	}
+	if (i < 0)
+		goto no_understand;
+	pthread_mutex_lock(&universe_mutex);
 
 	if (strcasecmp(argv[prep], "for") != 0 &&
 		strcasecmp(argv[prep], "to") != 0 &&
