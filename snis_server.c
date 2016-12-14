@@ -16303,6 +16303,7 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 	int calculate_course = 0;
 	int calculate_distance = 0;
 	char destination_name[100];
+	char *modifier = "";
 	double distance;
 
 	/* Find the first noun... it should be "course", or "distance". */
@@ -16351,6 +16352,10 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 		sprintf(destination_name, "%s", argv[second_noun]);
 	}
 	dest = &go[i];
+	if (dest->type == OBJTYPE_PLANET)
+		modifier = "the planet ";
+	else if (dest->type == OBJTYPE_ASTEROID)
+		modifier = "the asteroid ";
 
 	i = lookup_by_id(c->shipid);
 	if (i < 0) {
@@ -16372,10 +16377,11 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 	heading = 360 - heading + 90; /* why?  why do I have to do this? */
 	mark = mark * 180.0 / M_PI;
 	if (calculate_course)
-		sprintf(directions, "Course to %s calculated.  Destination lies at bearing %3.0lf, mark %3.0lf",
-					destination_name, heading, mark);
+		sprintf(directions,
+			"Course to %s%s calculated.  Destination lies at bearing %3.0lf, mark %3.0lf at a distance of %.0f clicks",
+			modifier, destination_name, heading, mark, distance);
 	if (calculate_distance)
-		sprintf(directions, "The distance to %s is %.0lf clicks", destination_name, distance);
+		sprintf(directions, "The distance to %s%s is %.0lf clicks", modifier, destination_name, distance);
 	queue_add_text_to_speech(c, directions);
 	return;
 
