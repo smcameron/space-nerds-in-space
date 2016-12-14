@@ -103,6 +103,7 @@ FUEL - Main
 FULL - Main 
 GATE - Main 
 HALF - Main 
+HEAD - Main 
 HOLE - Main 
 HULL - Main 
 HUNDRED - Main 
@@ -175,6 +176,8 @@ SCANNERS - Main
 SCIENCE - Main 
 SCREEN - Main 
 SELECT - Main 
+SELECTED - Main 
+SELECTION - Main 
 SELF - Main 
 SENSOR - Main 
 SENSORS - Main 

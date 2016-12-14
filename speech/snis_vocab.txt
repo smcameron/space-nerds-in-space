@@ -32,6 +32,8 @@ by
 calculate
 calculate the distance to
 calculate the distance to the nearest planet
+calculate the distance to the selected target
+calculate the distance to the selected planet
 cancel red alert
 charge
 clockwise
@@ -454,3 +456,15 @@ zoom one hundred
 zoom thirty
 zoom twenty
 zoom zero
+navigate to the selected target
+set a course for the selected target
+selected planet
+selected asteroid
+selected ship
+selected gate
+selected target
+head for the selected target
+head for the nearest planet
+head for the nearest ship
+head for the selection
+head for the target

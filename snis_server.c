@@ -16222,7 +16222,7 @@ static int nl_find_nearest_object_of_type(uint32_t id, int objtype)
 	return nearest;
 }
 
-/* Assumes universe lock is held */
+/* Assumes universe lock is held -- find "nearest" or "selected" or "other adjective" object */
 static int nl_find_nearest_object(struct game_client *c, int argc, char *argv[], int pos[],
 					union snis_nl_extra_data extra_data[], int starting_word)
 {
@@ -16233,7 +16233,8 @@ static int nl_find_nearest_object(struct game_client *c, int argc, char *argv[],
 		goto no_understand;
 	adj = nl_find_next_word(argc, pos, POS_ADJECTIVE, starting_word);
 	if (adj > 0) {
-		if (strcmp(argv[adj], "nearest") != 0)
+		if (strcmp(argv[adj], "nearest") != 0 &&
+			strcmp(argv[adj], "selected") != 0)
 			goto no_understand;
 	} /* else assume they meant nearest */
 	if (strcmp(argv[object], "planet") == 0)
@@ -16248,11 +16249,25 @@ static int nl_find_nearest_object(struct game_client *c, int argc, char *argv[],
 		objtype = OBJTYPE_ASTEROID;
 	else if (strcmp(argv[object], "gate") == 0)
 		objtype = OBJTYPE_WARPGATE;
-	else
+	else if (strcmp(argv[object], "selection") == 0 ||
+		strcmp(argv[object], "target") == 0) {
+		if (bridgelist[c->bridge].science_selection < 0)
+			return -1;
+		i = lookup_by_id(bridgelist[c->bridge].science_selection);
+		if (i >= 0)
+			return i;
+		return -1;
+	} else
 		objtype = -1;
 	if (objtype < 0)
 		goto no_understand;
-	i = nl_find_nearest_object_of_type(c->shipid, objtype);
+	if (adj > 0 && strcmp(argv[adj], "selected") == 0) {
+		if (bridgelist[c->bridge].science_selection < 0)
+			return -1;
+		i = lookup_by_id(bridgelist[c->bridge].science_selection);
+	} else {
+		i = nl_find_nearest_object_of_type(c->shipid, objtype);
+	}
 	if (i < 0)
 		return -1;
 	return i;
@@ -18622,6 +18637,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("distance",		"distance",	POS_NOUN);
 	snis_nl_add_dictionary_word("red alert",	"red alert",	POS_NOUN);
 	snis_nl_add_dictionary_word("orbit",		"orbit",	POS_NOUN);
+	snis_nl_add_dictionary_word("target",		"selection",	POS_NOUN);
+	snis_nl_add_dictionary_word("selection",	"selection",	POS_NOUN);
 
 
 	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
@@ -18698,6 +18715,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("derelict",		"derelict",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("solar",		"solar",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("nearest",		"nearest",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("selected",		"selected",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("closest",		"nearest",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("nearby",		"nearest",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("close",		"nearest",	POS_ADJECTIVE);
