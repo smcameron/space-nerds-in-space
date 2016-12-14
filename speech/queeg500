@@ -23,13 +23,14 @@ then
 	echo "usage: queeg500 language-model" 1>&2
 	echo "where language-model is the base name of the files produced by QuickLM from snis_vocab.txt" 1>&2
 	echo "See the README" 1>&2
-	exit 1
+	echo "Using snis as language mode" 1>&2
+	language_model="snis"
 fi
 
 # stdbuf -o 0 pocketsphinx_continuous -inmic yes -lm "$language_model".lm -dict "$language_model".dic -keyphrase computer -kws_threshold 1e-20
 # exit 0
 
-stdbuf -o 0 pocketsphinx_continuous -inmic yes -lm "$language_model".lm -dict "$language_model".dic 2>/dev/null |\
+stdbuf -o 0 pocketsphinx_continuous -inmic yes -lm "$language_model".lm -dict "$language_model".dic -keyphrase computer -kws_threshold 1e-20 2>/dev/null |\
 	stdbuf -o 0 egrep -v 'READY...|Listening...|Stopped listening' |\
 	stdbuf -o 0 sed -e 's/^[0-9][0-9]*[:] //' |\
 	stdbuf -o 0 grep COMPUTER |\
