@@ -18386,6 +18386,12 @@ static const struct nl_test_case_entry {
 	{ "minimum warp drive power", 0, },
 	{ "increase warp drive to max", 0, },
 	{ "decrease warp drive to minimum", 0, },
+	{ "head for the starbase", 0, },
+	{ "navigate towards the starbase", 0, },
+	{ "navigate towards the starbase", 0, },
+	{ "set a course for star base two", 0, },
+	{ "set a course for warp gate three", 0, },
+	{ "set a course for the warp gate", 0, },
 };
 
 static void nl_run_snis_test_cases(__attribute__((unused)) void *context,
@@ -18416,7 +18422,7 @@ static void nl_run_snis_test_cases(__attribute__((unused)) void *context,
 
 static void init_dictionary(void)
 {
-	snis_nl_add_dictionary_verb("run-snis-nl-test-cases", "run-snis-nl-test-casees", "", nl_run_snis_test_cases);
+	snis_nl_add_dictionary_verb("run-snis-nl-test-cases", "run-snis-nl-test-cases", "", nl_run_snis_test_cases);
 	snis_nl_add_dictionary_verb("describe",		"describe",	"n", nl_describe_n);
 	snis_nl_add_dictionary_verb("describe",		"describe",	"an", nl_describe_an);
 	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn", nl_navigate_pn);
