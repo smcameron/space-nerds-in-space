@@ -8166,7 +8166,7 @@ static int select_atmospheric_profile(struct snis_entity *planet)
 
 static int add_planet(double x, double y, double z, float radius, uint8_t security)
 {
-	int i;
+	int i, sst;
 
 	i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_PLANET);
 	if (i < 0)
@@ -8188,19 +8188,16 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].tsd.planet.description_seed = snis_rand();
 	go[i].tsd.planet.radius = radius;
 	go[i].tsd.planet.ring = snis_randn(100) < 50;
-	go[i].tsd.planet.solarsystem_planet_type = (uint8_t) (go[i].id % solarsystem_assets->nplanet_textures);
+	sst = (uint8_t) (go[i].id % solarsystem_assets->nplanet_textures);
+	go[i].tsd.planet.solarsystem_planet_type = sst;
 	go[i].tsd.planet.has_atmosphere = has_atmosphere(go[i].tsd.planet.solarsystem_planet_type);
 	go[i].tsd.planet.atmosphere_type = select_atmospheric_profile(&go[i]);
 	go[i].tsd.planet.ring_selector = snis_randn(256);
 	go[i].tsd.planet.security = security;
 	go[i].tsd.planet.contraband = choose_contraband();
-
-	/* If we wish each planet to have a different color and size atmosphere
-	 * this is where that would happen.
-	 */
-	go[i].tsd.planet.atmosphere_r = (uint8_t) (255.0 * 0.6);
-	go[i].tsd.planet.atmosphere_g = (uint8_t) (255.0 * 0.6);
-	go[i].tsd.planet.atmosphere_b = (uint8_t) (255.0 * 1.0);
+	go[i].tsd.planet.atmosphere_r = solarsystem_assets->atmosphere_color[sst].r;
+	go[i].tsd.planet.atmosphere_g = solarsystem_assets->atmosphere_color[sst].g;
+	go[i].tsd.planet.atmosphere_b = solarsystem_assets->atmosphere_color[sst].b;
 	go[i].tsd.planet.atmosphere_scale = 1.03;
 
 	return i;
