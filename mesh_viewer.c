@@ -54,7 +54,7 @@ static char *cubemapname = NULL;
 static char *modelfile = NULL;
 static char *program;
 union quat autorotation; 
-static int icosohedron_subdivision = 4;
+static int icosahedron_subdivision = 4;
 
 static int display_frame_stats = 1;
 
@@ -639,7 +639,7 @@ static struct option long_options[] = {
 	{ "cubemap", required_argument, NULL, 'c' },
 	{ "help", no_argument, NULL, 'h' },
 	{ "planetmode", required_argument, NULL, 'p' },
-	{ "icosohedron", required_argument, NULL, 'i' },
+	{ "icosahedron", required_argument, NULL, 'i' },
 	{ "normalmap", required_argument, NULL, 'n' },
 };
 
@@ -667,13 +667,13 @@ static void process_options(int argc, char *argv[])
 			cubemapname = optarg;
 			break;
 		case 'i':
-			process_int_option("icosohedron", optarg, &icosohedron_subdivision);
-			if (icosohedron_subdivision > 4) {
-				fprintf(stderr, "Max icosohedron subdivision is 4\n");
-				icosohedron_subdivision = 4;
-			} else if (icosohedron_subdivision < 0) {
-				fprintf(stderr, "Min icosohedron subdivision is 0\n");
-				icosohedron_subdivision = 0;
+			process_int_option("icosahedron", optarg, &icosahedron_subdivision);
+			if (icosahedron_subdivision > 4) {
+				fprintf(stderr, "Max icosahedron subdivision is 4\n");
+				icosahedron_subdivision = 4;
+			} else if (icosahedron_subdivision < 0) {
+				fprintf(stderr, "Min icosahedron subdivision is 0\n");
+				icosahedron_subdivision = 0;
 			}
 			break;
 		case 'n':
@@ -793,7 +793,7 @@ int main(int argc, char *argv[])
 
 	if (planet_mode) {
 		target_mesh = mesh_unit_spherified_cube(16);
-		atmosphere_mesh = mesh_unit_icosphere(icosohedron_subdivision);
+		atmosphere_mesh = mesh_unit_icosphere(icosahedron_subdivision);
 		material_init_textured_planet(&planet_material);
 		planet_material.textured_planet.texture_id = load_cubemap_textures(0, planetname);
 		if (normalmapname)

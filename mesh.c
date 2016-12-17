@@ -946,7 +946,7 @@ static struct vertex *lookup_maybe_add_vertex(struct mesh *m, struct vertex *v, 
 }
 
 /* See: http://blog.andreaskahler.com/2009/06/creating-icosphere-mesh-in-code.html */
-struct mesh *mesh_unit_icosohedron(void)
+struct mesh *mesh_unit_icosahedron(void)
 {
 	const double tau = (1.0 + sqrt(5.0)) / 2.0;
 	const double scale = 1.0 / sqrt(1.0 + tau * tau);
@@ -1215,7 +1215,7 @@ static struct mesh *mesh_subdivide_icosphere(struct mesh *m, int subdivisions)
 
 struct mesh *mesh_unit_icosphere(int subdivisions)
 {
-	struct mesh *m = mesh_unit_icosohedron();
+	struct mesh *m = mesh_unit_icosahedron();
 	struct mesh *m2, *m3;
 
 	if (!m)
