@@ -409,7 +409,7 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lcrypto -lssl
 PROGS=snis_server snis_client snis_limited_client snis_multiverse
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/text_to_speech.sh \
 		bin/snis_multiverse
-UTILPROGS=util/mask_clouds util/cloud-mask-normalmap mesh_viewer
+UTILPROGS=util/mask_clouds util/cloud-mask-normalmap mesh_viewer sample_image_colors
 
 # model directory
 MD=${ASSETSSRCDIR}/models
@@ -629,6 +629,12 @@ util/mask_clouds.o:	util/mask_clouds.c
 
 util/cloud-mask-normalmap.o:	util/cloud-mask-normalmap.c
 	$(Q)$(COMPILE)
+
+util/sample_image_colors.o:	util/sample_image_colors.c png_utils.o
+	$(Q)$(COMPILE)
+
+util/sample_image_colors:	util/sample_image_colors.o png_utils.o
+	$(CC) ${MYCFLAGS} -o $@ util/sample_image_colors.o png_utils.o ${PNGLIBS}
 
 snis_socket_io.o:	snis_socket_io.c Makefile
 	$(Q)$(COMPILE)
