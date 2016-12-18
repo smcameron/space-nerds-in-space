@@ -554,6 +554,9 @@ snis_keyboard.o:	snis_keyboard.c snis_keyboard.h string-utils.o Makefile
 solarsystem_config.o:	solarsystem_config.c solarsystem_config.h string-utils.h Makefile
 	$(Q)$(COMPILE)
 
+solarsystem_config_test: solarsystem_config.c string-utils.o
+	$(CC) ${MYCFLAGS} -DSOLARSYSTEM_CONFIG_TEST=1 -o $@ solarsystem_config.c string-utils.o
+
 my_point.o:   my_point.c Makefile
 	$(Q)$(COMPILE)
 

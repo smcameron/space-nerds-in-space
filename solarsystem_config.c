@@ -249,3 +249,44 @@ void solarsystem_asset_spec_free(struct solarsystem_asset_spec *s)
 	free(s);
 }
 
+#ifdef SOLARSYSTEM_CONFIG_TEST
+
+static void print_solarsystem_config(char *name, struct solarsystem_asset_spec *ss)
+{
+	int i;
+
+	printf("-----------------------------\n");
+	printf("Solarsystem %s:\n", name);
+	printf("  Sun texture: %s\n", ss->sun_texture);
+	printf("  skybox prefix: %s\n", ss->skybox_prefix);
+	printf("  nplanet textures: %d\n", ss->nplanet_textures);
+
+	for (i = 0; i < ss->nplanet_textures; i++) {
+		printf("    planet_texture[%d]   : %s\n", i, ss->planet_texture[i]);
+		printf("    planet_normalmap[%d] : %s\n", i, ss->planet_normalmap[i]);
+		printf("    planet_type[%d] : %s\n", i, ss->planet_type[i]);
+		printf("    planet  rgb[%d] : %hhu, %hhu, %hhu\n", i,
+			ss->atmosphere_color[i].r, ss->atmosphere_color[i].g, ss->atmosphere_color[i].b);
+	}
+}
+
+int main(int argc, char *argv[])
+{
+	struct solarsystem_asset_spec *ss;
+	int i;
+
+	for (i = 1; i < argc; i++) {
+		printf("Reading solarsystem config file %s\n", argv[i]);
+		ss = solarsystem_asset_spec_read(argv[i]);
+		if (!ss) {
+			fprintf(stderr, "Failed to read solarsystem config '%s'\n", argv[i]);
+			continue;
+		}
+		print_solarsystem_config(argv[i], ss);
+		solarsystem_asset_spec_free(ss);
+		ss = NULL;
+	}
+	exit(0);
+}
+
+#endif
