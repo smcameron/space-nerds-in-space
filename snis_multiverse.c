@@ -408,7 +408,7 @@ static int update_bridge(struct starsystem_info *ss)
 
 #define bytes_to_read (sizeof(struct update_ship_packet) - 9 + 25 + 5 + \
 			sizeof(struct power_model_data) + \
-			sizeof(struct power_model_data) - 1)
+			sizeof(struct power_model_data) - 1 - 1)
 
 	fprintf(stderr, "snis_multiverse: update bridge 1\n");
 	memset(buffer, 0, sizeof(buffer));
