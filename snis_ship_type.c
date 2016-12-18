@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include "snis_ship_type.h"
+#include "string-utils.h"
 
 struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 {
@@ -48,6 +49,10 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 
 		if (line[0] == '#') /* skip comment lines */
 			continue;
+		remove_trailing_whitespace(line);
+		clean_spaces(line);
+		if (strcmp(line, "") == 0)
+			continue; /* skip blank lines */
 
 		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %[xyzs] %f %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
 				class, model_file, thrust_attach,
