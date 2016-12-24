@@ -16044,6 +16044,8 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("anticlockwise", "counterclockwise");
 	snis_nl_add_synonym("star base", "starbase");
 	snis_nl_add_synonym("warp gate", "gate");
+	snis_nl_add_synonym("far is it", "far");
+	snis_nl_add_synonym("far is", "far");
 }
 
 static const struct noun_description_entry {
@@ -16435,6 +16437,25 @@ static void nl_what_is_npn(void *context, int argc, char *argv[], int pos[],
 
 no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know what that is.");
+}
+
+/* "how far to starbase 0?" */
+static void nl_how_apn(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int adjective;
+
+	adjective = nl_find_next_word(argc, pos, POS_ADJECTIVE, 0);
+	if (adjective < 0)
+		goto no_understand;
+	if (strcasecmp(argv[adjective], "far") != 0)
+		goto no_understand;
+	calculate_course_and_distance(c, argc, argv, pos, extra_data, 1, 0, adjective + 1);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not know.");
 }
 
 static void nl_what_is_n(void *context, int argc, char *argv[], int pos[],
@@ -18591,6 +18612,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("help",		"help",			"", nl_help);
 	snis_nl_add_dictionary_verb("what is",		"what is",		"n", nl_what_is_n);
 	snis_nl_add_dictionary_verb("what is",		"what is",		"npn", nl_what_is_npn);
+	snis_nl_add_dictionary_verb("how",		"how",			"apn", nl_how_apn);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
@@ -18786,6 +18808,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("backward",		"backwards",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("back",		"backwards",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("standard",		"standard",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("far",		"far",		POS_ADJECTIVE);
 
 	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
 	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);

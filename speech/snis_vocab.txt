@@ -120,6 +120,7 @@ engineering screen
 enter standard orbit
 everything
 except
+far
 factor
 fifteen
 fifteen percent
@@ -156,6 +157,8 @@ full velocity
 full stop
 full throttle
 gate
+how
+how far
 hull
 hundred
 impulse
