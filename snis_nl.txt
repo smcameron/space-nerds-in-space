@@ -40,6 +40,7 @@ to wit, the following:
 #define POS_NAME		9
 #define POS_PRONOUN		10
 #define POS_EXTERNAL_NOUN	11
+#define POS_AUXVERB		12
 
 To use the library, first you have to teach it some vocabulary.  This is mainly done with the following
 three functions, which teach it about synonyms, verbs, and words that aren't verbs:
@@ -103,9 +104,11 @@ syntax: This is a string defining the "syntax" of the verb, or the "arguments" t
 
 	'a' : adjective
 	'p' : preposition
+	'P' : pronoun (you probably want 'n' instead)
 	'n' : noun
 	'l' : a list of nouns (Note: this is not implemented.)
 	'q' : a quantity -- that is, a number.
+	'x' : an auxiliary verb (e.g. "do", "have", "be", "should", etc.)
 
 	So, a syntax of "npn" means the verb requires a noun, a preposition, and another noun.
 	For example "set a course for saturn"  (The article "a" is not required.)

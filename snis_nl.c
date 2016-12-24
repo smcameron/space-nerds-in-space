@@ -44,6 +44,7 @@ static const char * const part_of_speech[] = {
 	"name",
 	"pronoun",
 	"externalnoun",
+	"auxverb",
 };
 
 #define MAX_SYNONYMS 100
@@ -77,7 +78,7 @@ static snis_nl_external_noun_lookup external_lookup = NULL;
 static snis_nl_error_function error_function = NULL;
 static snis_nl_multiword_preprocessor_fn multiword_preprocessor_fn = NULL;
 
-#define MAX_MEANINGS 10
+#define MAX_MEANINGS 11
 struct nl_token {
 	char *word;
 	int pos[MAX_MEANINGS];
@@ -359,7 +360,7 @@ static void __attribute__((unused)) print_tokens(struct nl_token *t[], int ntoke
 		print_token(t[i]);
 }
 
-#define MAX_MEANINGS 10
+#define MAX_MEANINGS 11
 #define MAX_WORDS 100
 
 static char *starting_syntax = "v";
@@ -550,6 +551,10 @@ static void nl_parse_machine_process_token(struct nl_parse_machine **list, struc
 	}
 	if (!found) {
 		/* didn't find a required meaning for this token, we're done */
+		if (debuglevel > 0) {
+			printf("   Failed to parse '%s'\n", token[p->current_token]->word);
+			printf("   Looking for %s\n", part_of_speech[looking_for_pos]);
+		}
 		p->state = NL_STATE_FAILED;
 	}
 }
@@ -634,6 +639,12 @@ static void nl_parse_machine_step(struct nl_parse_machine **list,
 		break;
 	case 'a':
 		nl_parse_machine_process_token(list, p, token, ntokens, POS_ADJECTIVE);
+		break;
+	case 'P':
+		nl_parse_machine_process_token(list, p, token, ntokens, POS_PRONOUN);
+		break;
+	case 'x':
+		nl_parse_machine_process_token(list, p, token, ntokens, POS_AUXVERB);
 		break;
 	case 's':
 		nl_parse_machine_process_token(list, p, token, ntokens, POS_SEPARATOR);
@@ -824,7 +835,7 @@ static void nl_parse_machines_run(struct nl_parse_machine **list, struct nl_toke
 
 	do {
 		if (debuglevel > 0) {
-			printf("--- iteration %d ---\n", iteration);
+			printf("\n--- iteration %d ---\n", iteration);
 			nl_parse_machines_print(list, tokens, ntokens);
 		}
 		for (i = *list; i != NULL; i = i->next)
@@ -1113,6 +1124,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("launch",		"launch",	"n", generic_verb_action);
 	snis_nl_add_dictionary_verb("eject",		"eject",	"n", generic_verb_action);
 	snis_nl_add_dictionary_verb("full",		"full",		"n", generic_verb_action);
+	snis_nl_add_dictionary_verb("how",		"how",		"anxPx", generic_verb_action);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
@@ -1167,6 +1179,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("damage",		"damage",	POS_NOUN);
 	snis_nl_add_dictionary_word("course",		"course",	POS_NOUN);
 	snis_nl_add_dictionary_word("earth",		"earth",	POS_NOUN);
+	snis_nl_add_dictionary_word("fuel",		"fuel",		POS_NOUN);
 
 
 	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
@@ -1259,6 +1272,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("maximum",		"maximum",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("planet",		"planet",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("degrees",		"degrees",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("much",		"much",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("far",		"far",		POS_ADJECTIVE);
 
 	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
 	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);
@@ -1268,9 +1283,23 @@ static void init_dictionary(void)
 
 	snis_nl_add_dictionary_word("it",		"it",		POS_PRONOUN);
 	snis_nl_add_dictionary_word("me",		"me",		POS_PRONOUN);
+	snis_nl_add_dictionary_word("we",		"we",		POS_PRONOUN);
 	snis_nl_add_dictionary_word("them",		"them",		POS_PRONOUN);
 	snis_nl_add_dictionary_word("all",		"all",		POS_PRONOUN);
 	snis_nl_add_dictionary_word("everything",	"everything",	POS_PRONOUN);
+
+	snis_nl_add_dictionary_word("do",		"do",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("be",		"be",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("have",		"have",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("will",		"will",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("shall",		"shall",	POS_AUXVERB);
+	snis_nl_add_dictionary_word("would",		"would",	POS_AUXVERB);
+	snis_nl_add_dictionary_word("could",		"could",	POS_AUXVERB);
+	snis_nl_add_dictionary_word("should",		"should",	POS_AUXVERB);
+	snis_nl_add_dictionary_word("can",		"can",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("may",		"may",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("must",		"must",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("ought",		"ought",	POS_AUXVERB);
 
 }
 

@@ -35,6 +35,7 @@
 #define POS_NAME		9
 #define POS_PRONOUN		10
 #define POS_EXTERNAL_NOUN	11
+#define POS_AUXVERB		12
 
 union snis_nl_extra_data;
 typedef void (*snis_nl_verb_function)(void *context, int argc, char *argv[], int part_of_speech[],
@@ -50,8 +51,11 @@ struct snis_nl_verb_data {
 			 * 'n' -- single noun (or pronoun)
 			 * 'l' -- one or more nouns (or pronoun)
 			 * 'p' -- preposition
+			 * 'P' -- pronoun (unsubstitued, in most cases you probably want 'n' for noun.)
 			 * 'q' -- quantity, that is to say, a number.
 			 * 'a' -- adjective
+			 * 'x' -- auxiliary verb (be, do, have, will, shall, would, should,
+			 *	  can, could, may, might, must, ought, etc. )
 			 *
 			 * For example: "put", as in "put the butter on the bread with the knife"
 			 * has a syntax of "npnpn", while "put" as in "put the coat on",
