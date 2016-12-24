@@ -16510,6 +16510,57 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know.");
 }
 
+/* "How much fuel..." */
+static void nl_how_an(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int adjective, noun;
+	char fuel_report[100];
+	struct snis_entity *ship;
+	float fuel_level;
+	int i;
+
+	adjective = nl_find_next_word(argc, pos, POS_ADJECTIVE, 0);
+	if (adjective < 0)
+		goto no_understand;
+	if (strcasecmp(argv[adjective], "far") == 0) {
+		nl_how_apn(context, argc, argv, pos, extra_data);
+		return;
+	}
+	if (strcasecmp(argv[adjective], "much") != 0)
+		goto no_understand;
+	noun = nl_find_next_word(argc, pos, POS_NOUN, adjective + 1);
+	if (noun < 0)
+		goto no_understand;
+	if (strcasecmp(argv[noun], "fuel") != 0)
+		goto no_understand;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	ship = &go[i];
+	fuel_level = 100.0 * (float) ship->tsd.ship.fuel / (float) UINT32_MAX;
+	pthread_mutex_unlock(&universe_mutex);
+
+	sprintf(fuel_report, "Fuel tanks are at %2.0f percent.", fuel_level);
+	queue_add_text_to_speech(c, fuel_report);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not know.");
+}
+
+/* How much fuel do we have */
+static void nl_how_anxPx(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	nl_how_an(context, argc, argv, pos, extra_data);
+}
+
 static void nl_african_or_european(void *context, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
@@ -18152,6 +18203,9 @@ static void nl_damage_report(void *context, int argc, char *argv[], int pos[],
 		strcat(damage_report, " Suggest repairing sheilds immediately.");
 	}
 	queue_add_text_to_speech(c, damage_report);
+	sprintf(damage_report, "Fuel tanks are at %2.0f percent.",
+		100.0 * (float) o->tsd.ship.fuel / (float) UINT32_MAX);
+	queue_add_text_to_speech(c, damage_report);
 }
 
 static void nl_launch_n(void *context, int argc, char *argv[], int pos[],
@@ -18687,7 +18741,9 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("what is",		"what is",		"npn", nl_what_is_npn);
 	snis_nl_add_dictionary_verb("what is",		"what is",		"npn", nl_what_is_anpan);
 	snis_nl_add_dictionary_verb("how",		"how",			"apn", nl_how_apn);
-	snis_nl_add_dictionary_verb("how",		"how",			"an", nl_how_apn); /* preposition optional */
+	snis_nl_add_dictionary_verb("how",		"how",			"an", nl_how_an);
+		/* how much fuel do we have */
+	snis_nl_add_dictionary_verb("how",		"how",			"anxPx", nl_how_anxPx);
 	snis_nl_add_dictionary_verb("african",		"african",		"", nl_african_or_european);
 	snis_nl_add_dictionary_verb("european",		"european",		"", nl_african_or_european);
 
@@ -18891,6 +18947,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("unladen",		"unladen",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("african",		"african",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("european",		"european",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("much",		"much",		POS_ADJECTIVE);
 
 	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
 	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);
@@ -18900,9 +18957,23 @@ static void init_dictionary(void)
 
 	snis_nl_add_dictionary_word("it",		"it",		POS_PRONOUN);
 	snis_nl_add_dictionary_word("me",		"me",		POS_PRONOUN);
+	snis_nl_add_dictionary_word("we",		"we",		POS_PRONOUN);
 	snis_nl_add_dictionary_word("them",		"them",		POS_PRONOUN);
 	snis_nl_add_dictionary_word("all",		"all",		POS_PRONOUN);
 	snis_nl_add_dictionary_word("everything",	"everything",	POS_PRONOUN);
+
+	snis_nl_add_dictionary_word("do",		"do",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("be",		"be",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("have",		"have",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("will",		"will",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("shall",		"shall",	POS_AUXVERB);
+	snis_nl_add_dictionary_word("would",		"would",	POS_AUXVERB);
+	snis_nl_add_dictionary_word("could",		"could",	POS_AUXVERB);
+	snis_nl_add_dictionary_word("should",		"should",	POS_AUXVERB);
+	snis_nl_add_dictionary_word("can",		"can",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("may",		"may",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("must",		"must",		POS_AUXVERB);
+	snis_nl_add_dictionary_word("ought",		"ought",	POS_AUXVERB);
 
 }
 

@@ -19,6 +19,7 @@ asteroid
 at
 atop
 base
+be
 beam
 before
 behind
@@ -96,6 +97,7 @@ disable
 disengage
 disengage docking system
 distance
+do
 docking
 down
 drive
@@ -118,6 +120,7 @@ engage warp drive
 engineering
 engineering on screen
 engineering screen
+enough
 enter standard orbit
 european
 everything
@@ -159,6 +162,7 @@ full velocity
 full stop
 full throttle
 gate
+have
 how
 how far
 hull
@@ -454,6 +458,7 @@ weapons on screen
 what
 what is
 what is the distance
+will
 with
 yaw
 zero
@@ -476,3 +481,5 @@ head for the nearest planet
 head for the nearest ship
 head for the selection
 head for the target
+how much fuel do we have
+do we have enough fuel
