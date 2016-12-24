@@ -16303,41 +16303,19 @@ no_understand:
 	queue_add_text_to_speech(c, "I do not know anything about that.");
 }
 
-static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
-				union snis_nl_extra_data extra_data[])
+static void calculate_course_and_distance(struct game_client *c, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[], int calculate_distance,
+				int calculate_course, int first_noun)
 {
-	int i, first_noun, second_noun;
-	struct game_client *c = context;
+	int second_noun;
 	struct snis_entity *us, *dest;
 	union vec3 direction;
 	char directions[200];
 	double heading, mark;
-	int calculate_course = 0;
-	int calculate_distance = 0;
 	char destination_name[100];
 	char *modifier = "";
 	double distance;
-
-	/* Find the first noun... it should be "course", or "distance". */
-
-	first_noun = -1;
-	first_noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
-	if (first_noun < 0) /* didn't find first noun... */
-		goto no_understand;
-
-	if (strcasecmp(argv[first_noun], "course") == 0)
-		calculate_course = 1;
-	else if (strcasecmp(argv[first_noun], "distance") == 0)
-		calculate_distance = 1;
-
-	if (!calculate_course && !calculate_distance)
-		goto no_understand;
-	if (calculate_course && calculate_distance)
-		goto no_understand;
-
-	/* TODO:  check the preposition here. "away", "from", "around", change the meaning.
-	 * for now, assume "to", "toward", etc.
-	 */
+	int i;
 
 	/* Find the second noun, it should be a place... */
 	second_noun = nl_find_next_word(argc, pos, POS_EXTERNAL_NOUN, first_noun + 1);
@@ -16395,6 +16373,43 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 	if (calculate_distance)
 		sprintf(directions, "The distance to %s%s is %.0lf clicks", modifier, destination_name, distance);
 	queue_add_text_to_speech(c, directions);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not know how to compute that.");
+}
+
+static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	int first_noun;
+	struct game_client *c = context;
+	int calculate_course = 0;
+	int calculate_distance = 0;
+
+	/* Find the first noun... it should be "course", or "distance". */
+
+	first_noun = -1;
+	first_noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (first_noun < 0) /* didn't find first noun... */
+		goto no_understand;
+
+	if (strcasecmp(argv[first_noun], "course") == 0)
+		calculate_course = 1;
+	else if (strcasecmp(argv[first_noun], "distance") == 0)
+		calculate_distance = 1;
+
+	if (!calculate_course && !calculate_distance)
+		goto no_understand;
+	if (calculate_course && calculate_distance)
+		goto no_understand;
+
+	/* TODO:  check the preposition here. "away", "from", "around", change the meaning.
+	 * for now, assume "to", "toward", etc.
+	 */
+
+	calculate_course_and_distance(c, argc, argv, pos, extra_data,
+					calculate_distance, calculate_course, first_noun + 1);
 	return;
 
 no_understand:
