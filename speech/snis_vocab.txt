@@ -402,6 +402,7 @@ status
 status report
 stop
 stop red alert
+sufficient
 swiftly
 system
 target
@@ -483,3 +484,4 @@ head for the selection
 head for the target
 how much fuel do we have
 do we have enough fuel
+do we have sufficient fuel

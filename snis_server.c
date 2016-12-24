@@ -16510,16 +16510,33 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know.");
 }
 
+static void nl_fuel_report(struct game_client *c)
+{
+	int i;
+	struct snis_entity *ship;
+	float fuel_level;
+	char fuel_report[100];
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	ship = &go[i];
+	fuel_level = 100.0 * (float) ship->tsd.ship.fuel / (float) UINT32_MAX;
+	pthread_mutex_unlock(&universe_mutex);
+
+	sprintf(fuel_report, "Fuel tanks are at %2.0f percent.", fuel_level);
+	queue_add_text_to_speech(c, fuel_report);
+}
+
 /* "How much fuel..." */
 static void nl_how_an(void *context, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int adjective, noun;
-	char fuel_report[100];
-	struct snis_entity *ship;
-	float fuel_level;
-	int i;
 
 	adjective = nl_find_next_word(argc, pos, POS_ADJECTIVE, 0);
 	if (adjective < 0)
@@ -16536,18 +16553,8 @@ static void nl_how_an(void *context, int argc, char *argv[], int pos[],
 	if (strcasecmp(argv[noun], "fuel") != 0)
 		goto no_understand;
 
-	pthread_mutex_lock(&universe_mutex);
-	i = lookup_by_id(c->shipid);
-	if (i < 0) {
-		pthread_mutex_unlock(&universe_mutex);
-		return;
-	}
-	ship = &go[i];
-	fuel_level = 100.0 * (float) ship->tsd.ship.fuel / (float) UINT32_MAX;
-	pthread_mutex_unlock(&universe_mutex);
+	nl_fuel_report(c);
 
-	sprintf(fuel_report, "Fuel tanks are at %2.0f percent.", fuel_level);
-	queue_add_text_to_speech(c, fuel_report);
 	return;
 
 no_understand:
@@ -16559,6 +16566,40 @@ static void nl_how_anxPx(void *context, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
 	nl_how_an(context, argc, argv, pos, extra_data);
+}
+
+/* do we have enough fuel */
+static void nl_do_Pxan(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int pronoun, auxverb, adjective, noun;
+
+	pronoun = nl_find_next_word(argc, pos, POS_PRONOUN, 0);
+	if (pronoun < 0)
+		goto no_understand;
+	if (strcasecmp(argv[pronoun], "we") != 0)
+		goto no_understand;
+	auxverb = nl_find_next_word(argc, pos, POS_AUXVERB, pronoun + 1);
+	if (auxverb < 0)
+		goto no_understand;
+	if (strcasecmp(argv[auxverb], "have") != 0)
+		goto no_understand;
+	adjective = nl_find_next_word(argc, pos, POS_ADJECTIVE, pronoun + 1);
+	if (adjective < 0)
+		goto no_understand;
+	if (strcasecmp(argv[adjective], "enough") != 0)
+		goto no_understand;
+	noun = nl_find_next_word(argc, pos, POS_NOUN, pronoun + 1);
+	if (noun < 0)
+		goto no_understand;
+	if (strcasecmp(argv[noun], "fuel") == 0) {
+		nl_fuel_report(c);
+		return;
+	}
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not know.");
 }
 
 static void nl_african_or_european(void *context, int argc, char *argv[], int pos[],
@@ -18746,6 +18787,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("how",		"how",			"anxPx", nl_how_anxPx);
 	snis_nl_add_dictionary_verb("african",		"african",		"", nl_african_or_european);
 	snis_nl_add_dictionary_verb("european",		"european",		"", nl_african_or_european);
+		/* do we have enough fuel */
+	snis_nl_add_dictionary_verb("do",		"do",			"Pxan", nl_do_Pxan);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
@@ -18948,6 +18991,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("african",		"african",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("european",		"european",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("much",		"much",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("enough",		"enough",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("sufficient",	"enough",	POS_ADJECTIVE);
 
 	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
 	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);
