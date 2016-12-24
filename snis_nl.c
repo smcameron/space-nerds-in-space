@@ -222,6 +222,8 @@ static void maybe_do_pronoun_substitution(void *context, struct nl_token *t)
 {
 	if (t->pos[t->npos] != POS_PRONOUN)
 		return;
+	if (strcasecmp(t->word, "it") != 0) /* only try to substitute for "it" */
+		return;
 	if (snis_nl_current_topic.part_of_speech == -1) /* No antecedent ready */
 		return;
 	/* Substitute the antecedent */
