@@ -16044,6 +16044,9 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("anticlockwise", "counterclockwise");
 	snis_nl_add_synonym("star base", "starbase");
 	snis_nl_add_synonym("warp gate", "gate");
+	snis_nl_add_synonym("far away is it", "far");
+	snis_nl_add_synonym("far away is", "far");
+	snis_nl_add_synonym("far away", "far");
 	snis_nl_add_synonym("far is it", "far");
 	snis_nl_add_synonym("far is", "far");
 }
@@ -18663,6 +18666,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("what is",		"what is",		"npn", nl_what_is_npn);
 	snis_nl_add_dictionary_verb("what is",		"what is",		"npn", nl_what_is_anpan);
 	snis_nl_add_dictionary_verb("how",		"how",			"apn", nl_how_apn);
+	snis_nl_add_dictionary_verb("how",		"how",			"an", nl_how_apn); /* preposition optional */
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
