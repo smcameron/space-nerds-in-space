@@ -87,6 +87,17 @@ struct nl_token {
 	struct snis_nl_external_noun_data external_noun;
 };
 
+static struct snis_nl_topic {
+	int part_of_speech;
+	int meaning;
+	char *word;
+	union snis_nl_extra_data extra_data;
+} snis_nl_current_topic = {
+	.part_of_speech = -1,
+	.word = NULL,
+	.extra_data = { { 0 } },
+};
+
 static char *fixup_punctuation(char *s)
 {
 	char *src, *dest;
@@ -206,6 +217,21 @@ static void free_tokens(struct nl_token *word[], int nwords)
 		free(word[i]);
 }
 
+static void maybe_do_pronoun_substitution(void *context, struct nl_token *t)
+{
+	if (t->pos[t->npos] != POS_PRONOUN)
+		return;
+	if (snis_nl_current_topic.part_of_speech == -1) /* No antecedent ready */
+		return;
+	/* Substitute the antecedent */
+	t->pos[t->npos] = snis_nl_current_topic.part_of_speech;
+	t->meaning[t->npos] = snis_nl_current_topic.meaning;
+	if (snis_nl_current_topic.part_of_speech == POS_EXTERNAL_NOUN)
+		t->external_noun.handle = snis_nl_current_topic.extra_data.external_noun.handle;
+	else
+		t->external_noun.handle = -1;
+}
+
 static void classify_token(void *context, struct nl_token *t)
 {
 	int i, j;
@@ -222,6 +248,7 @@ static void classify_token(void *context, struct nl_token *t)
 			continue;
 		t->pos[t->npos] = dictionary[i].p_o_s;
 		t->meaning[t->npos] = i;
+		maybe_do_pronoun_substitution(context, t);
 		t->npos++;
 		if (t->npos >= MAX_MEANINGS)
 			break;
@@ -477,10 +504,14 @@ static void nl_parse_machine_process_token(struct nl_parse_machine **list, struc
 	struct nl_parse_machine *new_parse_machine;
 	int i, found = 0;
 	int p_o_s;
+	int topic_pos = snis_nl_current_topic.part_of_speech;
 
 	for (i = 0; i < token[p->current_token]->npos; i++) {
 		p_o_s = token[p->current_token]->pos[i]; /* part of speech */
-		if (p_o_s == looking_for_pos || (p_o_s == POS_EXTERNAL_NOUN && looking_for_pos == POS_NOUN)) {
+		if (p_o_s == looking_for_pos ||
+			(p_o_s == POS_EXTERNAL_NOUN && looking_for_pos == POS_NOUN) ||
+			(p_o_s == POS_PRONOUN && looking_for_pos == POS_NOUN &&
+				(topic_pos == POS_NOUN || topic_pos == POS_EXTERNAL_NOUN))) {
 			p->meaning[p->current_token] = i;
 			if (found == 0) {
 				p->syntax_pos++;
@@ -631,12 +662,56 @@ static int nl_parse_machines_still_running(struct nl_parse_machine **list)
 	return 0;
 }
 
+void snis_nl_clear_current_topic(void)
+{
+	snis_nl_current_topic.part_of_speech = -1;
+	snis_nl_current_topic.meaning = -1;
+	if (snis_nl_current_topic.word) {
+		free(snis_nl_current_topic.word);
+		snis_nl_current_topic.word = NULL;
+	}
+	memset(&snis_nl_current_topic.extra_data, 0, sizeof(snis_nl_current_topic.extra_data));
+	snis_nl_current_topic.extra_data.external_noun.handle = -1;
+}
+
+void snis_nl_set_current_topic(int part_of_speech, char *word, union snis_nl_extra_data extra_data)
+{
+	int i;
+
+	snis_nl_clear_current_topic();
+	if (part_of_speech != POS_EXTERNAL_NOUN) {
+		for (i = 0; dictionary[i].word != NULL; i++) {
+			if (strcmp(dictionary[i].word, word) != 0)
+				continue;
+			if (part_of_speech != dictionary[i].p_o_s)
+				continue;
+			break;
+		}
+		if (!dictionary[i].word) {
+			snis_nl_clear_current_topic();
+			return;
+		}
+	}
+	/* TODO make synonyms work here? */
+	snis_nl_current_topic.part_of_speech = part_of_speech;
+	snis_nl_current_topic.word = strdup(word);
+	if (part_of_speech == POS_EXTERNAL_NOUN)
+		snis_nl_current_topic.meaning = -1;
+	else
+		snis_nl_current_topic.meaning = i;
+	snis_nl_current_topic.extra_data = extra_data;
+}
+
 static void do_action(void *context, struct nl_parse_machine *p, struct nl_token **token, int ntokens)
 {
 	int argc;
 	char *argv[MAX_WORDS];
 	int pos[MAX_WORDS];
 	union snis_nl_extra_data extra_data[MAX_WORDS] = { { { 0 } } };
+	union snis_nl_extra_data antecedent_extra_data = { { 0 } };
+	int antecedent_word = -1;
+	int antecedent_noun_meaning = -1;
+	int antecedent_pos = -1;
 	int i, w = 0, de;
 	snis_nl_verb_function vf = NULL;
 	int limit = ntokens;
@@ -672,6 +747,16 @@ static void do_action(void *context, struct nl_parse_machine *p, struct nl_token
 					extra_data[w].number.value = t->number.value;
 				} else if (pos[w] == POS_EXTERNAL_NOUN) {
 					extra_data[w].external_noun.handle = t->external_noun.handle;
+					antecedent_extra_data = extra_data[w];
+					antecedent_noun_meaning = -1;
+					antecedent_pos = POS_EXTERNAL_NOUN;
+					antecedent_word = w;
+				} else if (pos[w] == POS_NOUN) {
+					memset(&antecedent_extra_data, 0, sizeof(antecedent_extra_data));
+					antecedent_noun_meaning = de;
+					antecedent_word = w;
+					antecedent_pos = POS_NOUN;
+				de = t->meaning[p->meaning[i]];
 				} else {
 					extra_data[w].number.value = 0.0;
 				}
@@ -680,7 +765,12 @@ static void do_action(void *context, struct nl_parse_machine *p, struct nl_token
 			}
 		}
 	}
+
 	if (vf != NULL) {
+		if (antecedent_word != -1) {
+			snis_nl_set_current_topic(antecedent_pos, argv[antecedent_word], antecedent_extra_data);
+			snis_nl_current_topic.meaning = antecedent_noun_meaning;
+		}
 		vf(context, argc, argv, pos, extra_data);
 		vf = NULL;
 	}

@@ -119,5 +119,7 @@ void snis_nl_add_multiword_preprocessor(snis_nl_multiword_preprocessor_fn multiw
 void snis_nl_parse_natural_language_request(void *context, char *text);
 int snis_nl_test_parse_natural_language_request(void *context, char *text);
 void snis_nl_print_verbs_by_fn(const char *label, snis_nl_verb_function verb_function);
+void snis_nl_set_current_topic(int part_of_speech, char *word, union snis_nl_extra_data extra_data);
+void snis_nl_clear_current_topic(void);
 
 #endif
