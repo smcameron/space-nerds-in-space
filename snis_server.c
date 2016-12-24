@@ -16401,6 +16401,33 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know how to compute that.");
 }
 
+static void nl_what_is_npn(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int noun;
+
+	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+	if (noun < 0) { /* didn't find first noun... */
+		noun = nl_find_next_word(argc, pos, POS_EXTERNAL_NOUN, 0);
+		if (noun < 0) /* didn't find first noun... */
+			goto no_understand;
+	}
+	if (strcasecmp(argv[noun], "distance") == 0) { /* what is the distance <preposition> <noun> */
+		nl_compute_npn(c, argc, argv, pos, extra_data);
+		return;
+	}
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not know what that is.");
+}
+
+static void nl_what_is_n(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	nl_describe_n(context, argc, argv, pos, extra_data);
+}
+
 static void nl_rotate_ship(struct game_client *c, union quat *rotation)
 {
 	int i;
@@ -18547,6 +18574,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("details",		"details",		"", nl_shortlong_range_scan);
 	snis_nl_add_dictionary_verb("detail",		"details",		"", nl_shortlong_range_scan);
 	snis_nl_add_dictionary_verb("help",		"help",			"", nl_help);
+	snis_nl_add_dictionary_verb("what is",		"what is",		"n", nl_what_is_n);
+	snis_nl_add_dictionary_verb("what is",		"what is",		"npn", nl_what_is_npn);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);

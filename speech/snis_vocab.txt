@@ -446,6 +446,9 @@ wavelength
 weapons
 weapon screen
 weapons on screen
+what
+what is
+what is the distance
 with
 yaw
 zero
