@@ -11,14 +11,14 @@ static struct fixup_list_entry {
 	char *replacement;
 	regex_t *re;
 } fixup_list[] = {
-	{ " SB-0", " star base ", NULL },
-	{ "^SB-0", "star base ", NULL },
-	{ " SB-", " star base ", NULL },
-	{ "^SB-", "star base ", NULL },
-	{ " WG-0", " warp gate ", NULL },
-	{ "^WG-0", "warp gate ", NULL },
-	{ " WG-", " warp gate ", NULL },
-	{ "^WG-", "warp gate ", NULL },
+	{ " [Ss][Bb]-0", " star base ", NULL },
+	{ "^[Ss][Bb]-0", "star base ", NULL },
+	{ " [Ss][Bb]-", " star base ", NULL },
+	{ "^[Ss][Bb]-", "star base ", NULL },
+	{ " [Ww][Gg]-0", " warp gate ", NULL },
+	{ "^[Ww][Gg]-0", "warp gate ", NULL },
+	{ " [Ww][Gg]-", " warp gate ", NULL },
+	{ "^[Ww][Gg]-", "warp gate ", NULL },
 };
 
 #define TMP_PRONOUNCE_BUFFER_SIZE 4096
@@ -94,7 +94,7 @@ int main(int argc, char *argv)
 
 	testcase("Setting a course for SB-01 ok?");
 	testcase("SB-02 is thataway!");
-	testcase("SB-01 and SB-02 and SB-03 are being attacked!");
+	testcase("sb-01 and SB-02 and sb-03 are being attacked!");
 	testcase("SB-21 and SB-42");
 	testcase("Setting a course for WG-01 ok?");
 	testcase("WG-02 is thataway!");
