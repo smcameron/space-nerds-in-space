@@ -16439,6 +16439,55 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know what that is.");
 }
 
+static void nl_what_is_anpan(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int adj1, adj2, adj3, prep, noun1, noun2;
+
+	adj1 = nl_find_next_word(argc, pos, POS_ADJECTIVE, 0);
+	if (adj1 < 0)
+		goto skip_joke;
+	noun1 = nl_find_next_word(argc, pos, POS_NOUN, adj1 + 1);
+	if (noun1 < 0)
+		goto skip_joke;
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, noun1 + 1);
+	if (prep < 0)
+		goto skip_joke;
+	adj2 = nl_find_next_word(argc, pos, POS_ADJECTIVE, prep + 1);
+	if (adj2 < 0)
+		goto skip_joke;
+	adj3 = nl_find_next_word(argc, pos, POS_ADJECTIVE, adj2 + 1);
+	noun2 = nl_find_next_word(argc, pos, POS_NOUN, adj2 + 1);
+	if (noun2 < 0)
+		goto skip_joke;
+
+	if (strcasecmp(argv[adj1], "airspeed") == 0 &&
+	    strcasecmp(argv[noun1], "speed" /* velocity */) == 0 &&
+	    strcasecmp(argv[prep], "of" /* velocity */) == 0 &&
+	    strcasecmp(argv[adj2], "unladen") == 0 &&
+	    strcasecmp(argv[noun2], "swallow") == 0) {
+		if (adj3 >= 0) {
+			if (strcasecmp(argv[adj3], "african") == 0) {
+				queue_add_text_to_speech(c, "uh? I don't know that.");
+			} else if (strcasecmp(argv[adj3], "european") == 0) {
+				queue_add_text_to_speech(c, "About 11 meters per second.");
+				queue_add_text_to_speech(c,
+					"You have to know these things when your a computer on a starship you know.");
+					/* "your" is pronounced better than "you're" by pico2wave. */
+			} else {
+				queue_add_text_to_speech(c, "What do you mean? African or European?");
+			}
+		} else {
+			queue_add_text_to_speech(c, "What do you mean? African or European?");
+		}
+	}
+	return;
+
+skip_joke:
+	queue_add_text_to_speech(c, "Sorry, I didn't understand that.");
+}
+
 /* "how far to starbase 0?" */
 static void nl_how_apn(void *context, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
@@ -18612,6 +18661,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("help",		"help",			"", nl_help);
 	snis_nl_add_dictionary_verb("what is",		"what is",		"n", nl_what_is_n);
 	snis_nl_add_dictionary_verb("what is",		"what is",		"npn", nl_what_is_npn);
+	snis_nl_add_dictionary_verb("what is",		"what is",		"npn", nl_what_is_anpan);
 	snis_nl_add_dictionary_verb("how",		"how",			"apn", nl_how_apn);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
@@ -18702,6 +18752,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("orbit",		"orbit",	POS_NOUN);
 	snis_nl_add_dictionary_word("target",		"selection",	POS_NOUN);
 	snis_nl_add_dictionary_word("selection",	"selection",	POS_NOUN);
+	snis_nl_add_dictionary_word("swallow",		"swallow",	POS_NOUN);
 
 
 	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
@@ -18809,6 +18860,10 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("back",		"backwards",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("standard",		"standard",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("far",		"far",		POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("airspeed",		"airspeed",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("unladen",		"unladen",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("african",		"african",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("european",		"european",	POS_ADJECTIVE);
 
 	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
 	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);

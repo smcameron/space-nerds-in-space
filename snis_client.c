@@ -8394,7 +8394,7 @@ static void init_nav_ui(void)
 			NANO_FONT, nav_computer_button_pressed, NULL);
 	nav_ui.computer_active = 0;
 	nav_ui.computer_input = snis_text_input_box_init(txx(10), txy(560), txy(30), txx(550),
-					UI_COLOR(nav_warning), TINY_FONT, nav_ui.input, 50, &timer, NULL, NULL);
+					UI_COLOR(nav_warning), TINY_FONT, nav_ui.input, 80, &timer, NULL, NULL);
 	snis_text_input_box_set_return(nav_ui.computer_input, nav_computer_data_entered);
 	snis_text_input_box_set_dynamic_width(nav_ui.computer_input, txx(100), txx(550));
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
