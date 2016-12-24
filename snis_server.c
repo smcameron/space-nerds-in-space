@@ -16510,6 +16510,27 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know.");
 }
 
+static void nl_african_or_european(void *context, int argc, char *argv[], int pos[],
+				union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int verb;
+
+	verb = nl_find_next_word(argc, pos, POS_VERB, 0);
+	if (strcasecmp(argv[verb], "african") == 0) {
+		queue_add_text_to_speech(c, "uh? I don't know that.");
+		return;
+	}
+	if (strcasecmp(argv[verb], "european") == 0) {
+		queue_add_text_to_speech(c, "About 11 meters per second.");
+		queue_add_text_to_speech(c,
+			"You have to know these things when your a computer on a starship you know.");
+			/* "your" is pronounced better than "you're" by pico2wave. */
+		return;
+	}
+	queue_add_text_to_speech(c, "Um, what?");
+}
+
 static void nl_what_is_n(void *context, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
@@ -18667,6 +18688,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("what is",		"what is",		"npn", nl_what_is_anpan);
 	snis_nl_add_dictionary_verb("how",		"how",			"apn", nl_how_apn);
 	snis_nl_add_dictionary_verb("how",		"how",			"an", nl_how_apn); /* preposition optional */
+	snis_nl_add_dictionary_verb("african",		"african",		"", nl_african_or_european);
+	snis_nl_add_dictionary_verb("european",		"european",		"", nl_african_or_european);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);

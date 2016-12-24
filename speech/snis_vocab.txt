@@ -5,6 +5,7 @@ activate warp drive
 actuate
 actuate docking system
 actuate warp drive
+african
 after
 alert
 all
@@ -118,6 +119,7 @@ engineering
 engineering on screen
 engineering screen
 enter standard orbit
+european
 everything
 except
 far
