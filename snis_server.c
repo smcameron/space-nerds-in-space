@@ -16327,7 +16327,7 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 
 	if (strcasecmp(argv[first_noun], "course") == 0)
 		calculate_course = 1;
-	else if (strcasecmp(argv[first_noun], "distance") != 0)
+	else if (strcasecmp(argv[first_noun], "distance") == 0)
 		calculate_distance = 1;
 
 	if (!calculate_course && !calculate_distance)
