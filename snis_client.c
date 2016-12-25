@@ -128,6 +128,7 @@
 #define SPACEMONSTER_COLOR GREEN
 #define NEBULA_COLOR MAGENTA
 #define TRACTORBEAM_COLOR BLUE
+#define BLOCK_COLOR WHITE
 
 static int SCREEN_WIDTH = 800; // 1366;        /* window width, in pixels */
 static int SCREEN_HEIGHT = 600; // 768;       /* window height, in pixels */
@@ -319,6 +320,7 @@ struct mesh *torpedo_mesh;
 struct mesh *torpedo_nav_mesh;
 struct mesh *laser_mesh;
 struct mesh *asteroid_mesh[NASTEROID_MODELS];
+struct mesh *unit_cube_mesh;
 struct mesh *sphere_mesh;
 struct mesh *low_poly_sphere_mesh;
 struct mesh *planetary_ring_mesh;
@@ -1477,6 +1479,39 @@ static int update_docking_port(uint32_t id, uint32_t timestamp, double scale,
 	return 0;
 }
 
+static int update_block(uint32_t id, uint32_t timestamp, double x, double y, double z,
+		double sizex, double sizey, double sizez, union quat *orientation)
+{
+	int i;
+	struct entity *e;
+	double vx, vy, vz;
+
+	i = lookup_object_by_id(id);
+	if (i >= 0) {
+		vx = x - go[i].x; /* verlet integration */
+		vy = y - go[i].y;
+		vz = z - go[i].z;
+		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, orientation, 1);
+		go[i].tsd.block.sx = sizex;
+		go[i].tsd.block.sy = sizey;
+		go[i].tsd.block.sz = sizez;
+		if (go[i].entity)
+			update_entity_non_uniform_scale(go[i].entity, sizex, sizey, sizez);
+		return 0;
+	}
+	e = add_entity(ecx, unit_cube_mesh, x, y, z, BLOCK_COLOR);
+	if (!e)
+		return -1;
+	update_entity_non_uniform_scale(e, sizex, sizey, sizez);
+	i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_BLOCK, 1, e);
+	if (i < 0)
+		return i;
+	go[i].tsd.block.sx = sizex;
+	go[i].tsd.block.sy = sizey;
+	go[i].tsd.block.sz = sizez;
+	return 0;
+}
+
 static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, double z,
 	double vx, double vy, double vz,
 	uint8_t carbon, uint8_t nickeliron, uint8_t silicates, uint8_t preciousmetals)
@@ -2147,6 +2182,7 @@ static void move_objects(void)
 		case OBJTYPE_STARBASE:
 		case OBJTYPE_WARPGATE:
 		case OBJTYPE_DOCKING_PORT:
+		case OBJTYPE_BLOCK:
 			move_object(timestamp, o, &interpolate_orientated_object);
 			break;
 		case OBJTYPE_LASER:
@@ -4878,6 +4914,30 @@ static int process_update_docking_port_packet(void)
 	return (rc < 0);
 }
 
+static int process_update_block_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id, timestamp;
+	double dx, dy, dz, dsx, dsy, dsz;
+	union quat orientation;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "wwSSSSSSQ", &id, &timestamp,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM,
+			&dsx, (int32_t) UNIVERSE_DIM,
+			&dsy, (int32_t) UNIVERSE_DIM,
+			&dsz, (int32_t) UNIVERSE_DIM,
+			&orientation);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_block(id, timestamp, dx, dy, dz, dsx, dsy, dsz, &orientation);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+}
+
 static int process_update_asteroid_packet(void)
 {
 	unsigned char buffer[100];
@@ -5254,6 +5314,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_DOCKING_PORT:
 			rc = process_update_docking_port_packet();
+			break;
+		case OPCODE_UPDATE_BLOCK:
+			rc = process_update_block_packet();
 			break;
 		case OPCODE_UPDATE_CARGO_CONTAINER:
 			rc = process_update_cargo_container_packet();
@@ -14714,6 +14777,7 @@ static void init_meshes()
 	}
 
 	sphere_mesh = mesh_unit_spherified_cube(16);
+	unit_cube_mesh = mesh_unit_cube(2);
 	low_poly_sphere_mesh = mesh_unit_spherified_cube(5);
 	warp_tunnel_mesh = mesh_tube(XKNOWN_DIM, 450.0, 20);
 	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS);

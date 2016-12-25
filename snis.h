@@ -99,6 +99,7 @@
 #define OBJTYPE_SHIELD_EFFECT 19
 #define OBJTYPE_DOCKING_PORT 20
 #define OBJTYPE_WARPGATE 21
+#define OBJTYPE_BLOCK 22
 
 #define SHIELD_EFFECT_LIFETIME 30
 
@@ -595,6 +596,13 @@ struct warpgate_data {
 	uint32_t warpgate_number;
 };
 
+struct block_data {
+	uint32_t parent_id;
+	double sx, sy, sz; /* scale in x, y, z */
+	union quat relative_orientation;
+	double dx, dy, dz; /* offset position from parent, used only server side */
+};
+
 union type_specific_data {
 	struct ship_data ship;
 	struct laser_data laser;
@@ -613,6 +621,7 @@ union type_specific_data {
 	struct warp_effect_data warp_effect;
 	struct docking_port_data docking_port;
 	struct warpgate_data warpgate;
+	struct block_data block;
 };
 
 struct snis_entity;

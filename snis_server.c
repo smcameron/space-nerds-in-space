@@ -6179,6 +6179,35 @@ static void docking_port_move(struct snis_entity *o)
 	docker->timestamp = universe_timestamp;
 }
 
+static void block_move(struct snis_entity *o)
+{
+	struct snis_entity *parent;
+	union vec3 pos;
+	int i;
+
+	if (o->tsd.block.parent_id == (uint32_t) -1)
+		goto default_move;
+	i = lookup_by_id(o->tsd.block.parent_id);
+	if (i < 0)
+		goto default_move;
+	parent = &go[i];
+	pos.v.x = o->tsd.block.dx;
+	pos.v.y = o->tsd.block.dy;
+	pos.v.z = o->tsd.block.dz;
+	quat_rot_vec_self(&pos, &o->orientation);
+	quat_mul(&o->orientation, &parent->orientation, &o->tsd.block.relative_orientation);
+	set_object_location(o, pos.v.x + parent->x, pos.v.y + parent->y, pos.v.z + parent->z);
+	o->timestamp = universe_timestamp;
+	return;
+
+default_move:
+	o->x += o->vx;
+	o->y += o->vy;
+	o->z += o->vz;
+	o->timestamp = universe_timestamp;
+	return;
+}
+
 static void starbase_update_docking_ports(struct snis_entity *o)
 {
 	int i, d, model;
@@ -7447,6 +7476,28 @@ static void fabricate_prices(struct snis_entity *starbase)
 				damcon_base_price(i, j) * variation;
 		}
 	}
+}
+
+static int add_block_object(int parent_id, double x, double y, double z,
+				double vx, double vy, double vz,
+				double dx, double dy, double dz, /* displacement from parent */
+				double sx, double sy, double sz, /* nonuniform scaling */
+				union quat relative_orientation)
+{
+	int i;
+	i = add_generic_object(x, y, z, vx, vy, vz, 0.0, OBJTYPE_BLOCK);
+	if (i < 0)
+		return i;
+	go[i].tsd.block.parent_id = parent_id;
+	go[i].tsd.block.dx = dx;
+	go[i].tsd.block.dy = dy;
+	go[i].tsd.block.dz = dz;
+	go[i].tsd.block.sx = sx;
+	go[i].tsd.block.sy = sy;
+	go[i].tsd.block.sz = sz;
+	go[i].tsd.block.relative_orientation = relative_orientation;
+	go[i].move = block_move;
+	return i;
 }
 
 static int add_docking_port(int parent_id, int portnumber)
@@ -14186,6 +14237,8 @@ static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_docking_port_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_block_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_cargo_container_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_derelict_packet(struct game_client *c,
@@ -14288,6 +14341,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_DOCKING_PORT:
 		send_update_docking_port_packet(c, o);
+		break;
+	case OBJTYPE_BLOCK:
+		send_update_block_packet(c, o);
 		break;
 	default:
 		break;
@@ -15047,6 +15103,20 @@ static void send_update_docking_port_packet(struct game_client *c,
 					o->z, (int32_t) UNIVERSE_DIM,
 					&o->orientation,
 					o->tsd.docking_port.model));
+}
+
+static void send_update_block_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSSSSQ", OPCODE_UPDATE_BLOCK,
+					o->id, o->timestamp,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
+					o->tsd.block.sx, (int32_t) UNIVERSE_DIM,
+					o->tsd.block.sy, (int32_t) UNIVERSE_DIM,
+					o->tsd.block.sz, (int32_t) UNIVERSE_DIM,
+					&o->orientation));
 }
 
 static void send_update_spacemonster_packet(struct game_client *c,
