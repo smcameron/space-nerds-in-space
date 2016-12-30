@@ -845,7 +845,7 @@ int main(int argc, char *argv[])
 		else
 			planet_material.textured_planet.normalmap_id = -1;
 	} else if (thrust_mode) {
-		target_mesh = init_thrust_mesh(10, 7, 3, 1);
+		target_mesh = init_thrust_mesh(30, 30, 1.3, 1);
 		material_init_textured_particle(&thrust_material);
 		thrust_material.textured_particle.texture_id = graph_dev_load_texture(thrustfile);
 		thrust_material.textured_particle.radius = 1.5;

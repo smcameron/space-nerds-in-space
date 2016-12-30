@@ -14773,7 +14773,7 @@ static void init_meshes()
 	docking_port_mesh[2] = snis_read_model(d, "tetrahedron.stl");
 	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
 	sun_mesh = mesh_fabricate_billboard(0, 0, 30000, 30000);
-	thrust_animation_mesh = init_thrust_mesh(10, 7, 3, 1);
+	thrust_animation_mesh = init_thrust_mesh(30, 30, 1.3, 1);
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");
 
 	mtwist_free(mt);

@@ -1651,16 +1651,19 @@ struct particle {
 
 static void create_particle(float h, float r1, struct particle *particles, int i)
 {
+	float angle, r;
 	particles[i].offset = fabs(snis_random_float());
 	particles[i].lifetime = fabs(snis_random_float());
 	particles[i].decay = 0.1;
 
+	angle = snis_random_float() * M_PI * 2;
+	r = snis_random_float();
 	particles[i].xpos = 0.0;
-	particles[i].ypos = 0.0;
-	particles[i].zpos = 0.0;
+	particles[i].ypos = 0.0 + cos(angle) * r * r1;
+	particles[i].zpos = 0.0 + sin(angle) * r * r1;
 
 	/* uniform_random_point_in_spehere(r1 * 0.1, &particles[i].yspeed, &particles[i].zspeed); */
-	particles[i].xspeed = -fabs(snis_random_float()) * h * 0.1;
+	particles[i].xspeed = -fabs(snis_random_float() * 0.5 + 0.5) * h * 0.1;
 	particles[i].yspeed = 0;
 	particles[i].zspeed = 0;
 
