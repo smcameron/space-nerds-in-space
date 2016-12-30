@@ -39,7 +39,7 @@ varying vec3 v_Normal;
 
 	void main()
 	{
-		v_Normal = u_NormalMatrix * a_Normal;
+		v_Normal = normalize(u_NormalMatrix * a_Normal);
 		#ifdef USE_NORMAL_MAP
 			v_Tangent = vec4(vec3(u_MVMatrix * vec4(a_Tangent.xyz, 0)), a_Tangent.w);
 		#endif

@@ -45,7 +45,7 @@ varying vec3 v_Normal;
 		// Transform the vertex into eye space.
 		v_Position = vec3(u_MVMatrix * a_Position);
 		// Transform the normal's orientation into eye space.
-		v_Normal = u_NormalMatrix * a_Normal;
+		v_Normal = normalize(u_NormalMatrix * a_Normal);
 		v_LightDir = normalize(u_LightPos - v_Position);
 
 		// Check if the light source is on the same side of the surface as the eye.

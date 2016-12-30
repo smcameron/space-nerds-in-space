@@ -20,7 +20,7 @@ void main()
 	vec3 modelViewVertex = vec3(u_MVMatrix * a_Position);
 
 	// Transform the normal's orientation into eye space.
-	vec3 modelViewNormal = u_NormalMatrix * a_Normal;
+	vec3 modelViewNormal = normalize(u_NormalMatrix * a_Normal);
 
 	vec3 eyeVector = normalize(-modelViewVertex);
 	vec3 clipSphereVector = normalize(u_ClipSphere.xyz - modelViewVertex);

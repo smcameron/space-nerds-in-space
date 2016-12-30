@@ -21,7 +21,7 @@ void main()                // The entry point for our vertex shader.
 	vec3 modelViewVertex = vec3(u_MVMatrix * a_Position);
 
 	// Transform the normal's orientation into eye space.
-	vec3 modelViewNormal = u_NormalMatrix * a_Normal;
+	vec3 modelViewNormal = normalize(u_NormalMatrix * a_Normal);
 
 	// Get a lighting direction vector from the light to the vertex.
 	vec3 lightVector = normalize(u_LightPos - modelViewVertex);

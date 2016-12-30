@@ -22,7 +22,7 @@ varying vec2 v_TexCoord;
 		vec3 position = vec3(u_MVMatrix * a_Position);
 
 		// Transform the normal's orientation into eye space.
-		vec3 normal = u_NormalMatrix * a_Normal;
+		vec3 normal = normalize(u_NormalMatrix * a_Normal);
 
 		// Get a lighting direction vector from the light to the vertex.
 		vec3 light_dir = normalize(u_LightPos - position);

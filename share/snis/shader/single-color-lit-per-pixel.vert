@@ -21,7 +21,7 @@ void main()
 	v_Color = u_Color;
 
 	// Transform the normal's orientation into eye space.
-	v_Normal = u_NormalMatrix * a_Normal;
+	v_Normal = normalize(u_NormalMatrix * a_Normal);
 
 	// gl_Position is a special variable used to store the final position.
 	// Multiply the vertex by the matrix to get the final point in normalized screen coordinates.
