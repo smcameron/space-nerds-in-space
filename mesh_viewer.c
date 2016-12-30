@@ -426,10 +426,12 @@ static struct mesh *atmosphere_mesh;
 static struct mesh *light_mesh;
 static struct material planet_material;
 static struct material green_phaser_material;
+static struct material thrust_material;
 static struct material atmosphere_material;
 static int planet_mode = 0;
 static int cubemap_mode = 0;
 static int burst_rod_mode = 0;
+static int thrust_mode = 0;
 
 #define FRAME_INDEX_MAX 10
 
@@ -491,6 +493,8 @@ static void draw_screen()
 		update_entity_material(e, &planet_material);
 	} else if (burst_rod_mode) {
 		update_entity_material(e, &green_phaser_material);
+	} else if (thrust_mode) {
+		update_entity_material(e, &thrust_material);
 	}
 	update_entity_orientation(e, &lobby_orientation);
 
@@ -647,6 +651,7 @@ static struct option long_options[] = {
 	{ "icosahedron", required_argument, NULL, 'i' },
 	{ "normalmap", required_argument, NULL, 'n' },
 	{ "burstrod", no_argument, NULL, 'b' },
+	{ "thrust", no_argument, NULL, 't' },
 };
 
 static void process_options(int argc, char *argv[])
@@ -656,7 +661,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "bc:hi:m:n:p:", long_options, &option_index);
+		c = getopt_long(argc, argv, "bc:hi:m:n:p:t", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -690,6 +695,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'h':
 			usage(program);
+		case 't':
+			thrust_mode = 1;
+			break;
 		default:
 			fprintf(stderr, "%s: Unknown option.\n", program);
 			usage(program);
@@ -711,10 +719,10 @@ int main(int argc, char *argv[])
 
 	process_options(argc, argv);
 	filename = modelfile;
-	if (!filename && !(planet_mode || burst_rod_mode))
+	if (!filename && !(planet_mode || burst_rod_mode || thrust_mode))
 		usage(program);
 
-	if (!planet_mode && !burst_rod_mode && stat(filename, &statbuf) != 0) {
+	if (!planet_mode && !burst_rod_mode && !thrust_mode && stat(filename, &statbuf) != 0) {
 		fprintf(stderr, "%s: %s: %s\n", program, filename, strerror(errno));
 		exit(1);
 	}
@@ -829,6 +837,12 @@ int main(int argc, char *argv[])
 			planet_material.textured_planet.normalmap_id = load_cubemap_textures(0, normalmapname);
 		else
 			planet_material.textured_planet.normalmap_id = -1;
+	} else if (thrust_mode) {
+		target_mesh = init_thrust_mesh(10, 7, 3, 1);
+		material_init_textured_particle(&thrust_material);
+		thrust_material.textured_particle.texture_id = graph_dev_load_texture("share/snis/textures/thrust.png");
+		thrust_material.textured_particle.radius = 1.5;
+		thrust_material.textured_particle.time_base = 0.1;
 	} else {
 		target_mesh = snis_read_model(filename);
 		atmosphere_mesh = NULL;
