@@ -55,6 +55,7 @@ static char *modelfile = NULL;
 static char *program;
 union quat autorotation; 
 static int icosahedron_subdivision = 4;
+#define LASER_VELOCITY 200.0
 
 static int display_frame_stats = 1;
 
@@ -424,9 +425,11 @@ static struct mesh *target_mesh;
 static struct mesh *atmosphere_mesh;
 static struct mesh *light_mesh;
 static struct material planet_material;
+static struct material green_phaser_material;
 static struct material atmosphere_material;
 static int planet_mode = 0;
 static int cubemap_mode = 0;
+static int burst_rod_mode = 0;
 
 #define FRAME_INDEX_MAX 10
 
@@ -486,6 +489,8 @@ static void draw_screen()
 		}
 	} else if (cubemap_mode) {
 		update_entity_material(e, &planet_material);
+	} else if (burst_rod_mode) {
+		update_entity_material(e, &green_phaser_material);
 	}
 	update_entity_orientation(e, &lobby_orientation);
 
@@ -641,6 +646,7 @@ static struct option long_options[] = {
 	{ "planetmode", required_argument, NULL, 'p' },
 	{ "icosahedron", required_argument, NULL, 'i' },
 	{ "normalmap", required_argument, NULL, 'n' },
+	{ "burstrod", no_argument, NULL, 'b' },
 };
 
 static void process_options(int argc, char *argv[])
@@ -650,11 +656,14 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "c:hi:m:n:p:", long_options, &option_index);
+		c = getopt_long(argc, argv, "bc:hi:m:n:p:", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
 		switch (c) {
+		case 'b':
+			burst_rod_mode = 1;
+			break;
 		case 'p':
 			planet_mode = 1;
 			planetname = optarg;
@@ -702,10 +711,10 @@ int main(int argc, char *argv[])
 
 	process_options(argc, argv);
 	filename = modelfile;
-	if (!filename && !planet_mode)
+	if (!filename && !(planet_mode || burst_rod_mode))
 		usage(program);
 
-	if (!planet_mode && stat(filename, &statbuf) != 0) {
+	if (!planet_mode && !burst_rod_mode && stat(filename, &statbuf) != 0) {
 		fprintf(stderr, "%s: %s: %s\n", program, filename, strerror(errno));
 		exit(1);
 	}
@@ -791,7 +800,15 @@ int main(int argc, char *argv[])
 	sng_set_screen_size(real_screen_width, real_screen_height);
 	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-	if (planet_mode) {
+	if (burst_rod_mode) {
+		target_mesh = init_burst_rod_mesh(1000, LASER_VELOCITY * 2 / 3, 0.5, 0.5);
+		atmosphere_mesh = NULL;
+		material_init_textured_particle(&green_phaser_material);
+		green_phaser_material.textured_particle.texture_id =
+			graph_dev_load_texture("share/snis/textures/green-burst.png");
+		green_phaser_material.textured_particle.radius = 0.75;
+		green_phaser_material.textured_particle.time_base = 0.25;
+	} else if (planet_mode) {
 		target_mesh = mesh_unit_spherified_cube(16);
 		atmosphere_mesh = mesh_unit_icosphere(icosahedron_subdivision);
 		material_init_textured_planet(&planet_material);

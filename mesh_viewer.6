@@ -3,12 +3,21 @@
 mesh_viewer \- a utility for viewing models for "Space Nerds In Space."
 .SH SYNOPSIS
 .B mesh_viewer [ -p ] filename [ -n normalmap-prefix ] [ -c cubemap-texture-prefix ]
+.br
+.B mesh_viewer [ -b ]
 .SH DESCRIPTION
 .\" Add any additional description here
 .warn 511
 .PP
 mesh_viewer is a tool for viewing models for the game "Space Nerds In Space."  It can read STL files and a subset of OBJ files, and can also be used with the -p option to view a sphere with a cube mapped texture applied.
 .SH Options:
+.TP
+\fB-b\fR
+Invoke "burstrod" mode.  This means the model is constructed as a cylinder full of randomly
+oriented lines which emanate from a the central axis of the cylinder and radiate outward
+(see init_burst_rod_mesh() in mesh.c) and these lines are used as paths for a particle system.
+This is what is used for a laser bolt effect in Space Nerds In Space.   The -b option can be
+used to see what the laser bolt will look like.
 .TP
 \fB\-p\fR
 Invoke "planet" mode.  In this case, the filename is actually a partial filename,
