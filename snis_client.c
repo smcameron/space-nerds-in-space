@@ -378,7 +378,8 @@ static struct material warp_tunnel_material;
 #define NASTEROID_TEXTURES 2
 static struct material asteroid_material[NASTEROID_TEXTURES];
 static struct material wormhole_material;
-static struct material thrust_material;
+#define NTHRUSTMATERIALS 5
+static struct material thrust_material[NTHRUSTMATERIALS];
 static struct material atmosphere_material;
 
 #ifdef WITHOUTOPENGL
@@ -952,7 +953,8 @@ static struct thrust_attachment_point *ship_thrust_attachment_point(int shiptype
 }
 
 static void add_ship_thrust_entities(struct entity *thrust_entity[], int *nthrust_entities,
-		struct entity_context *cx, struct entity *e, int shiptype, int impulse);
+		struct entity_context *cx, struct entity *e, int shiptype, int impulse,
+		const int thrust_material_index);
 
 static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y, double z,
 			union quat *orientation, uint16_t alive, uint32_t victim_id,
@@ -969,7 +971,8 @@ static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y,
 	if (i < 0) {
 		e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes], x, y, z, SHIP_COLOR);
 		if (e)
-			add_ship_thrust_entities(thrust_entity, &nthrust_ports, ecx, e, shiptype, 36);
+			add_ship_thrust_entities(thrust_entity, &nthrust_ports, ecx, e, shiptype, 36,
+						 faction % NTHRUSTMATERIALS);
 		vx = 0.0;
 		vy = 0.0;
 		vz = 0.0;
@@ -3687,7 +3690,7 @@ static int process_update_ship_packet(uint8_t opcode)
 			e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes],
 					dx, dy, dz, SHIP_COLOR);
 			if (e)
-				add_ship_thrust_entities(NULL, NULL, ecx, e, shiptype, 36);
+				add_ship_thrust_entities(NULL, NULL, ecx, e, shiptype, 36, 0);
 		}
 		i = add_generic_object(id, timestamp, dx, dy, dz, 0.0, 0.0, 0.0, &orientation, type, alive, e);
 		if (i < 0) {
@@ -6158,7 +6161,7 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int 
 /* size is 0.0 to 1.0 */
 static void add_ship_thrust_entities(struct entity *thrust_entity[],
 		int *nthrust_ports, struct entity_context *cx, struct entity *e,
-		int shiptype, int impulse)
+		int shiptype, int impulse, const int thrust_material_index)
 {
 	int i;
 	struct thrust_attachment_point *ap = ship_thrust_attachment_point(shiptype);
@@ -6181,7 +6184,7 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[],
 			(*nthrust_ports)++;
 		}
 		if (t) {
-			update_entity_material(t, &thrust_material);
+			update_entity_material(t, &thrust_material[thrust_material_index]);
 			update_entity_orientation(t, &identity_quat);
 			union vec3 thrust_scale = { { thrust_size, 1.0, 1.0 } };
 			vec3_mul_self(&thrust_scale, ap->port[i].scale);
@@ -6341,7 +6344,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	if (o->entity)
 		add_ship_thrust_entities(NULL, NULL, ecx, o->entity,
-				o->tsd.ship.shiptype, o->tsd.ship.power_data.impulse.i);
+				o->tsd.ship.shiptype, o->tsd.ship.power_data.impulse.i, 0);
 
 	render_entities(ecx);
 
@@ -6515,7 +6518,7 @@ static void show_mainscreen(GtkWidget *w)
 			if (player_ship)
 				add_ship_thrust_entities(NULL, NULL, ecx,
 					player_ship, o->tsd.ship.shiptype,
-					o->tsd.ship.power_data.impulse.i);
+					o->tsd.ship.power_data.impulse.i, 0);
 
 			break;
 		}
@@ -13650,6 +13653,14 @@ static struct mesh **allocate_starbase_mesh_ptrs(int nstarbase_meshes)
 	return m;
 }
 
+static void init_thrust_material(struct material *thrust_material, char *image_filename)
+{
+	material_init_textured_particle(thrust_material);
+	thrust_material->textured_particle.texture_id = load_texture(image_filename);
+	thrust_material->textured_particle.radius = 1.5;
+	thrust_material->textured_particle.time_base = 0.1;
+}
+
 static int load_static_textures(void)
 {
 	if (static_textures_loaded)
@@ -13744,10 +13755,11 @@ static int load_static_textures(void)
 	wormhole_material.texture_mapped_unlit.tint = sng_get_color(MAGENTA);
 	wormhole_material.texture_mapped_unlit.alpha = 0.5;
 
-	material_init_textured_particle(&thrust_material);
-	thrust_material.textured_particle.texture_id = load_texture("textures/thrust.png");
-	thrust_material.textured_particle.radius = 1.5;
-	thrust_material.textured_particle.time_base = 0.1;
+	init_thrust_material(&thrust_material[0], "textures/thrustblue.png");
+	init_thrust_material(&thrust_material[1], "textures/thrustred.png");
+	init_thrust_material(&thrust_material[2], "textures/thrustgreen.png");
+	init_thrust_material(&thrust_material[3], "textures/thrustyellow.png");
+	init_thrust_material(&thrust_material[4], "textures/thrustviolet.png");
 
 	material_init_texture_mapped_unlit(&warp_tunnel_material);
 	warp_tunnel_material.texture_mapped_unlit.texture_id = load_texture("textures/warp-tunnel.png");
