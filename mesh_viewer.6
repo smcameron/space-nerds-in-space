@@ -5,6 +5,8 @@ mesh_viewer \- a utility for viewing models for "Space Nerds In Space."
 .B mesh_viewer [ -p ] filename [ -n normalmap-prefix ] [ -c cubemap-texture-prefix ]
 .br
 .B mesh_viewer [ -b ]
+.br
+.B mesh_viewer [ -t thrustimage.png ]
 .SH DESCRIPTION
 .\" Add any additional description here
 .warn 511
@@ -36,9 +38,10 @@ Only makes sense in combination with -p option.
 \fB\-c\fR cubemap-texture-prefix
 Use 6 cubemapped texture images with numbered 0 - 5.
 .TP
-\fB\-t\fR
+\fB\-t\fR thrust-image-file
 Invoke "thrust" mode.  This means the model is constructed and a particle system
-is created to show a rocket thrust animation.
+is created to show a rocket thrust animation.  The image used for the animation
+is thrust-image-file, which must be an RGBA png file, typically 128x128 pixels.
 .SH BASIC OPERATION
 .TP
 Drag with the right mouse button pressed to rotate the model.  Drag with the

@@ -52,6 +52,7 @@ static char *planetname = NULL;
 static char *normalmapname = NULL;
 static char *cubemapname = NULL;
 static char *modelfile = NULL;
+static char *thrustfile = NULL;
 static char *program;
 union quat autorotation; 
 static int icosahedron_subdivision = 4;
@@ -628,6 +629,8 @@ __attribute__((noreturn)) void usage(char *program)
 	fprintf(stderr, "%s -p <planet-texture> [ -i icosohedrion-subdivision] [ -n <normal-map-texture> ]\n",
 			program);
 	fprintf(stderr, " %s -m <mesh-file> [ -c cubemap-texture- ]\n", program);
+	fprintf(stderr, " %s --burstrod\n", program);
+	fprintf(stderr, " %s --thrust <image-file>\n", program);
 	exit(-1);
 }
 
@@ -651,7 +654,7 @@ static struct option long_options[] = {
 	{ "icosahedron", required_argument, NULL, 'i' },
 	{ "normalmap", required_argument, NULL, 'n' },
 	{ "burstrod", no_argument, NULL, 'b' },
-	{ "thrust", no_argument, NULL, 't' },
+	{ "thrust", required_argument, NULL, 't' },
 };
 
 static void process_options(int argc, char *argv[])
@@ -661,7 +664,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "bc:hi:m:n:p:t", long_options, &option_index);
+		c = getopt_long(argc, argv, "bc:hi:m:n:p:t:", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -697,6 +700,7 @@ static void process_options(int argc, char *argv[])
 			usage(program);
 		case 't':
 			thrust_mode = 1;
+			thrustfile = optarg;
 			break;
 		default:
 			fprintf(stderr, "%s: Unknown option.\n", program);
@@ -726,6 +730,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s: %s: %s\n", program, filename, strerror(errno));
 		exit(1);
 	}
+
+	if (thrust_mode && !thrustfile)
+		usage(program);
 
 	/* Information about the current video settings. */
 	const SDL_VideoInfo *info = NULL;
@@ -840,7 +847,7 @@ int main(int argc, char *argv[])
 	} else if (thrust_mode) {
 		target_mesh = init_thrust_mesh(10, 7, 3, 1);
 		material_init_textured_particle(&thrust_material);
-		thrust_material.textured_particle.texture_id = graph_dev_load_texture("share/snis/textures/thrust.png");
+		thrust_material.textured_particle.texture_id = graph_dev_load_texture(thrustfile);
 		thrust_material.textured_particle.radius = 1.5;
 		thrust_material.textured_particle.time_base = 0.1;
 	} else {
