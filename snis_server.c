@@ -14632,10 +14632,10 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	else
 		victim_id = o->tsd.ship.ai[n].u.attack.victim_id;
 
-	pb_queue_to_client(c, packed_buffer_new("bwwhSSSQwb", opcode,
+	pb_queue_to_client(c, packed_buffer_new("bwwhSSSQwbb", opcode,
 			o->id, o->timestamp, o->alive, o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM, o->z, (int32_t) UNIVERSE_DIM,
-			&o->orientation, victim_id, o->tsd.ship.shiptype));
+			&o->orientation, victim_id, o->tsd.ship.shiptype, o->sdata.faction));
 
 	if (!c->debug_ai)
 		return;

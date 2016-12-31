@@ -957,7 +957,7 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[], int *nthrus
 static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y, double z,
 			union quat *orientation, uint16_t alive, uint32_t victim_id,
 			uint8_t shiptype, uint8_t ai[], double threat_level,
-			uint8_t npoints, union vec3 *patrol)
+			uint8_t npoints, union vec3 *patrol, uint8_t faction)
 {
 	int i;
 	struct entity *e;
@@ -1008,6 +1008,7 @@ static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y,
 			}
 		}
 	}
+	go[i].sdata.faction = faction;
 
 	/* Ugh, using ai[0] and ai[1] this way is a pretty putrid hack. */
 	go[i].tsd.ship.ai[0].u.attack.victim_id = (int32_t) victim_id;
@@ -3855,6 +3856,7 @@ static int process_update_econ_ship_packet(uint8_t opcode)
 	unsigned char buffer[200];
 	uint16_t alive;
 	uint32_t id, timestamp, victim_id;
+	uint8_t faction;
 	double dx, dy, dz, px, py, pz;
 	union quat orientation;
 	uint8_t shiptype, ai[MAX_AI_STACK_ENTRIES], npoints;
@@ -3863,11 +3865,11 @@ static int process_update_econ_ship_packet(uint8_t opcode)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwhSSSQwb", &id, &timestamp, &alive,
+	rc = read_and_unpack_buffer(buffer, "wwhSSSQwbb", &id, &timestamp, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
 				&dz, (int32_t) UNIVERSE_DIM,
 				&orientation,
-				&victim_id, &shiptype);
+				&victim_id, &shiptype, &faction);
 	if (rc != 0)
 		return rc;
 	if (opcode != OPCODE_ECON_UPDATE_SHIP_DEBUG_AI) {
@@ -3902,7 +3904,7 @@ static int process_update_econ_ship_packet(uint8_t opcode)
 done:
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_econ_ship(id, timestamp, dx, dy, dz, &orientation, alive, victim_id,
-				shiptype, ai, threat_level, npoints, patrol);
+				shiptype, ai, threat_level, npoints, patrol, faction);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
