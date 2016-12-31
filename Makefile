@@ -267,6 +267,7 @@ SCAD_PARAMS_FILES=${MODELSRCDIR}/disruptor.scad_params.h \
 	${MODELSRCDIR}/starbase5.scad_params.h \
 	${MODELSRCDIR}/research-vessel.scad_params.h \
 	${MODELSRCDIR}/conqueror.scad_params.h \
+	${MODELSRCDIR}/cruiser.scad_params.h \
 	${MODELSRCDIR}/asteroid-miner.scad_params.h \
 	${MODELSRCDIR}/battlestar.scad_params.h \
 	${MODELSRCDIR}/wombat.scad_params.h \
@@ -278,8 +279,10 @@ SCAD_PARAMS_FILES=${MODELSRCDIR}/disruptor.scad_params.h \
 	${MODELSRCDIR}/freighter.scad_params.h \
 	${MODELSRCDIR}/scrambler.scad_params.h \
 	${MODELSRCDIR}/spaceship2.scad_params.h \
+	${MODELSRCDIR}/spaceship3.scad_params.h \
 	${MODELSRCDIR}/skorpio.scad_params.h \
 	${MODELSRCDIR}/spaceship.scad_params.h \
+	${MODELSRCDIR}/transport.scad_params.h \
 	${MODELSRCDIR}/escapepod.scad_params.h \
 	${MODELSRCDIR}/mantis.scad_params.h
 

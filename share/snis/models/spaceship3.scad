@@ -48,6 +48,37 @@ module cockpit()
 	}
 }
 
+module sidepodshape(x, y, z)
+{
+	translate(v = [x, y, z])
+		rotate(v = [0, 1, 0], a = 90) {
+			cylinder(h = 7, r1 = 1, r2 = 2);
+		}
+}
+
+module sidepod(x, y, z)
+{
+	difference() {
+		sidepodshape(x, y, z);
+		sidepodshape(x + 2, y, z);
+	}
+}
+
+module engine() {
+	translate(v = [25, 0, 0])
+	scale(v = [1.0, 0.6, 0.20]) {
+		difference() {
+			sphere(10);
+			translate(v = [-1, 0, 0])
+				sphere(9);
+			translate(v = [-15, 0, 0])
+				cube(size = [20, 20, 20], center = true);
+		}
+	}
+	sidepod(30, 3.7, 0);
+	sidepod(30, -3.7, 0);
+}
+
 
 module spacefarer()
 {
@@ -57,6 +88,7 @@ module spacefarer()
 			fuselage();
 			cockpit();
 		}
+		engine();
 	}
 }
 rotate(a = 180, v = [0, 1, 0])
@@ -64,3 +96,9 @@ rotate(a = -90, v = [1, 0, 0])
 scale(v = [2, 2, 2])
 	spacefarer();
 
+use <imposter_thrust.scad>;
+thrust_ports = 0;
+if (thrust_ports) {
+	imposter_thrust(-39, 0, -3.7, 1.55);
+	imposter_thrust(-39, 0, 3.7, 1.55);
+}
