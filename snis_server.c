@@ -7500,6 +7500,58 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	return i;
 }
 
+static int add_rotated_subblock(int parent_id, double sx, double sy, double sz, /* displacement from parent */
+			double dx, double dy, double dz, /* nonuniform scaling */
+			union quat relative_orientation)
+{
+	const double s = 60.0;
+	return add_block_object(parent_id, 0, 0, 0, 0, 0, 0,
+				dx * s, dy * s, dz * s,
+				sx * s, sy * s, sz * s, relative_orientation);
+}
+
+static int add_subblock(int parent_id, double sx, double sy, double sz, /* displacement from parent */
+			double dx, double dy, double dz) /* nonuniform scaling */
+{
+	const double s = 60.0;
+	return add_block_object(parent_id, 0, 0, 0, 0, 0, 0,
+				dx * s, dy * s, dz * s,
+				sx * s, sy * s, sz * s, identity_quat);
+}
+
+static int add_giant_spaceship(double x, double y, double z)
+{
+	int i, parent;
+	union quat plus12, minus12;
+
+	quat_init_axis(&plus12, 1, 0, 0, 12.0 * M_PI / 180.0);
+	quat_init_axis(&minus12, 1, 0, 0, -12.0 * M_PI / 180);
+
+	i = add_block_object(-1, x, y, z, 0, 0, 0, 0, 0, 0, 1, 1, 1, identity_quat);
+	if (i < 0)
+		return i;
+	parent = go[i].id;
+	add_subblock(parent, 200, 100, 4, 20, 0, -19);
+	add_subblock(parent, 300, 75, 4, 0, 0, 19);
+	add_rotated_subblock(parent, 300, 5, 68, 0, 43, 0, plus12); /* needs rotating 12 degrees */
+	add_rotated_subblock(parent, 300, 5, 68, 0, -43, 0, minus12); /* needs rotating 12 degrees */
+	add_subblock(parent, 5, 95, 45, -150, 0, 0);
+	add_subblock(parent, 5, 88, 25, -125, 0, 10);
+	add_subblock(parent, 5, 88, 25, -100, 0, -10);
+	add_subblock(parent, 5, 88, 25, -75, 0, 10);
+	add_subblock(parent, 5, 88, 25, -50, 0, -10);
+	add_subblock(parent, 5, 88, 25, 0, 0, 10);
+	add_subblock(parent, 5, 88, 25, 50, 0, -10);
+	add_subblock(parent, 5, 88, 25, 75, 0, 10);
+
+	add_subblock(parent, 5, 60, 45, 100, -15, 0);
+	add_subblock(parent, 5, 60, 45, 120, 15, 0);
+	add_subblock(parent, 5, 60, 45, 20, -15, 0);
+	add_subblock(parent, 5, 60, 45, -20, 15, 0);
+
+	return i;
+}
+
 static int add_docking_port(int parent_id, int portnumber)
 {
 	int i, p, model;
@@ -8598,6 +8650,7 @@ static void make_universe(void)
 	add_enforcers();
 	add_spacemonsters();
 	add_passengers();
+	add_giant_spaceship(56000.0, -76000.0, 297000.0);
 	pthread_mutex_unlock(&universe_mutex);
 }
 

@@ -14777,7 +14777,7 @@ static void init_meshes()
 	}
 
 	sphere_mesh = mesh_unit_spherified_cube(16);
-	unit_cube_mesh = mesh_unit_cube(2);
+	unit_cube_mesh = mesh_unit_cube(20);
 	low_poly_sphere_mesh = mesh_unit_spherified_cube(5);
 	warp_tunnel_mesh = mesh_tube(XKNOWN_DIM, 450.0, 20);
 	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS);
