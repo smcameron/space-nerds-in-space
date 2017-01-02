@@ -25,6 +25,7 @@
 #include "material.h"
 #include "docking_port.h"
 #include "space-part.h"
+#include "oriented_bounding_box.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
 #define SNIS_PROTOCOL_VERSION "SNIS001"
@@ -602,6 +603,7 @@ struct block_data {
 	union quat relative_orientation;
 	double dx, dy, dz; /* offset position from parent, used only server side */
 	double radius;
+	struct oriented_bounding_box obb;
 };
 
 union type_specific_data {

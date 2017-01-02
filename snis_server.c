@@ -61,6 +61,7 @@
 #include "snis_faction.h"
 #include "space-part.h"
 #include "quat.h"
+#include "oriented_bounding_box.h"
 #include "arbitrary_spin.h"
 #include "snis.h"
 #include "snis-culture.h"
@@ -5435,6 +5436,43 @@ static void do_collision_impulse(struct snis_entity *player, struct snis_entity 
 	player->tsd.ship.nav_damping_suppression = 1.0;
 }
 
+/* Calculate oriented bounding box for a block */
+static void block_calculate_obb(struct snis_entity *block, struct oriented_bounding_box *obb)
+{
+	union vec3 xaxis, yaxis, zaxis;
+
+	if (block->type != OBJTYPE_BLOCK)
+		return;
+
+	xaxis.v.x = 1.0;
+	xaxis.v.y = 0.0;
+	xaxis.v.z = 0.0;
+
+	yaxis.v.x = 0.0;
+	yaxis.v.y = 1.0;
+	yaxis.v.z = 0.0;
+
+	zaxis.v.x = 0.0;
+	zaxis.v.y = 0.0;
+	zaxis.v.z = 1.0;
+
+	quat_rot_vec_self(&xaxis, &block->orientation);
+	quat_rot_vec_self(&yaxis, &block->orientation);
+	quat_rot_vec_self(&zaxis, &block->orientation);
+
+	obb->centerx = block->x;
+	obb->centery = block->y;
+	obb->centerz = block->z;
+
+	obb->u[0] = xaxis;
+	obb->u[1] = yaxis;
+	obb->u[2] = zaxis;
+
+	obb->e[0] = block->tsd.block.sx * 0.5;
+	obb->e[1] = block->tsd.block.sy * 0.5;
+	obb->e[2] = block->tsd.block.sz * 0.5;
+}
+
 static void player_collision_detection(void *player, void *object)
 {
 	struct snis_entity *o, *t;
@@ -5528,6 +5566,39 @@ static void player_collision_detection(void *player, void *object)
 				packed_buffer_new("b", OPCODE_ATMOSPHERIC_FRICTION),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
 		}
+		return;
+	}
+	if (t->type == OBJTYPE_BLOCK) {
+		union vec3 my_ship, closest_point, displacement;
+
+		if (dist2 > t->tsd.block.radius * t->tsd.block.radius)
+			return;
+
+		my_ship.v.x = o->x;
+		my_ship.v.y = o->y;
+		my_ship.v.z = o->z;
+
+		oriented_bounding_box_closest_point(&my_ship, &t->tsd.block.obb, &closest_point);
+
+		dist2 = dist3dsqrd(o->x - closest_point.v.x, o->y - closest_point.v.y, o->z - closest_point.v.z);
+		if (dist2 > 8.0 * 8.0)
+			return;
+		printf("BLOCK COLLISION DETECTION:HIT, dist2 = %f\n", sqrt(dist2));
+		snis_queue_add_sound(HULL_CREAK_0 + (snis_randn(1000) % NHULL_CREAK_SOUNDS),
+							ROLE_SOUNDSERVER, o->id);
+		o->vx = 0;
+		o->vy = 0;
+		o->vz = 0;
+
+		displacement.v.x = o->x - closest_point.v.x;
+		displacement.v.y = o->y - closest_point.v.y;
+		displacement.v.z = o->z - closest_point.v.z;
+		vec3_normalize_self(&displacement);
+		vec3_mul_self(&displacement, 30.0);
+		o->x += displacement.v.x;
+		o->y += displacement.v.y;
+		o->z += displacement.v.z;
+		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z, 85, 5, 20, OBJTYPE_SPARK);
 		return;
 	}
 	proximity_dist2 = PROXIMITY_DIST2;
@@ -6200,6 +6271,7 @@ static void block_move(struct snis_entity *o)
 	quat_rot_vec_self(&pos, &o->orientation);
 	quat_mul(&o->orientation, &parent->orientation, &o->tsd.block.relative_orientation);
 	set_object_location(o, pos.v.x + parent->x, pos.v.y + parent->y, pos.v.z + parent->z);
+	block_calculate_obb(o, &o->tsd.block.obb);
 	o->timestamp = universe_timestamp;
 	return;
 
@@ -6207,6 +6279,8 @@ default_move:
 	o->x += o->vx;
 	o->y += o->vy;
 	o->z += o->vz;
+	quat_init_axis(&o->orientation, 1.0, 0.0, 0.0, 0.1 * (universe_timestamp % 3600) * M_PI / 180.0);
+	block_calculate_obb(o, &o->tsd.block.obb);
 	o->timestamp = universe_timestamp;
 	return;
 }
@@ -7501,6 +7575,7 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	go[i].tsd.block.relative_orientation = relative_orientation;
 	go[i].tsd.block.radius = mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
 	go[i].move = block_move;
+	block_calculate_obb(&go[i], &go[i].tsd.block.obb);
 	return i;
 }
 
