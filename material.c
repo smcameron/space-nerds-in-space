@@ -138,6 +138,8 @@ void material_init_texture_mapped(struct material *m)
 	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
 	m->texture_mapped.texture_id = 0;
 	m->texture_mapped.emit_texture_id = 0;
+	m->texture_mapped.specular_power = 512.0;
+	m->texture_mapped.specular_intensity = 0.2;
 }
 
 void material_init_texture_mapped_unlit(struct material *m)

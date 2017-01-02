@@ -723,6 +723,8 @@ struct graph_dev_gl_textured_shader {
 	GLint texture_cubemap_id;
 	GLint normalmap_cubemap_id;
 	GLint light_pos_id;
+	GLint specular_power_id;
+	GLint specular_intensity_id;
 
 	GLint shadow_sphere_id;
 
@@ -1253,7 +1255,8 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	struct sng_color *triangle_color, float alpha, union vec3 *eye_light_pos, GLuint texture_number,
 	GLuint emit_texture_number, GLuint normalmap_texture_number, struct shadow_sphere_data *shadow_sphere,
 	struct shadow_annulus_data *shadow_annulus, int do_cullface, int do_blend,
-	float ring_texture_v, float ring_inner_radius, float ring_outer_radius)
+	float ring_texture_v, float ring_inner_radius, float ring_outer_radius,
+	float specular_power, float specular_intensity)
 {
 	enable_3d_viewport();
 
@@ -1299,6 +1302,10 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
 	if (shader->normal_matrix_id >= 0)
 		glUniformMatrix3fv(shader->normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
+	if (shader->specular_power_id >= 0)
+		glUniform1f(shader->specular_power_id, specular_power);
+	if (shader->specular_intensity_id >= 0)
+		glUniform1f(shader->specular_intensity_id, specular_intensity);
 
 	glUniform4f(shader->tint_color_id, triangle_color->red,
 		triangle_color->green, triangle_color->blue, alpha);
@@ -1952,7 +1959,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 		graph_dev_raster_texture(&textured_shader, &mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
 			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, -1, 0, 0, 0, 1, 0.0f,
-				2.0f, 4.0f);
+				2.0f, 4.0f, 512.0, 0.2);
 
 		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
@@ -2165,6 +2172,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	float ring_inner_radius = 1.0f;
 	float ring_outer_radius = 4.0f;
 	struct sng_color atmosphere_color = { 0 };
+	float specular_power = 512.0;
+	float specular_intensity = 0.2;
 
 	draw_vertex_buffer_2d();
 
@@ -2226,6 +2235,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				struct material_texture_mapped *mt = &e->material_ptr->texture_mapped;
 				texture_id = mt->texture_id;
 				emit_texture_id = mt->emit_texture_id;
+				specular_power = mt->specular_power;
+				specular_intensity = mt->specular_intensity;
 
 				if (emit_texture_id > 0)
 					tex_shader = &textured_lit_emit_shader;
@@ -2370,7 +2381,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						&texture_tint, texture_alpha, eye_light_pos, texture_id,
 						emit_texture_id, normalmap_id, &shadow_sphere, &shadow_annulus,
 						do_cullface, do_blend, ring_texture_v,
-						ring_inner_radius, ring_outer_radius);
+						ring_inner_radius, ring_outer_radius,
+						specular_power, specular_intensity);
 				else if (atmosphere)
 					graph_dev_raster_atmosphere(mat_mvp, mat_mv, mat_normal,
 						e->m, &atmosphere_color, eye_light_pos);
@@ -2863,6 +2875,12 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->ring_outer_radius_id = glGetUniformLocation(shader->program_id, "u_ring_outer_radius");
 	if (shader->ring_outer_radius_id >= 0)
 		glUniform1f(shader->ring_outer_radius_id, 2.0);
+	shader->specular_power_id = glGetUniformLocation(shader->program_id, "u_SpecularPower");
+	if (shader->specular_power_id >= 0)
+		glUniform1f(shader->specular_power_id, 512.0);
+	shader->specular_intensity_id = glGetUniformLocation(shader->program_id, "u_SpecularIntensity");
+	if (shader->specular_power_id >= 0)
+		glUniform1f(shader->specular_intensity_id, 0.2);
 
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");

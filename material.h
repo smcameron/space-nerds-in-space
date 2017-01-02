@@ -60,6 +60,8 @@ struct material_color_by_w {
 struct material_texture_mapped {
 	int texture_id;
 	int emit_texture_id;
+	float specular_power;
+	float specular_intensity;
 };
 
 struct material_texture_mapped_unlit {

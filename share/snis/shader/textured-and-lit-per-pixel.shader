@@ -19,6 +19,11 @@ varying vec3 v_Position;
 varying UV_TYPE v_TexCoord;
 varying vec3 v_Normal;
 
+#ifdef USE_SPECULAR
+uniform float u_SpecularPower; /* 512 is a good value */
+uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is flat */
+#endif
+
 #ifdef USE_NORMAL_MAP
 	varying vec4 v_Tangent;
 #endif
@@ -65,7 +70,6 @@ varying vec3 v_Normal;
 		uniform TEX_SAMPLER u_NormalTex;
 	#endif
 	#if defined(USE_SPECULAR) || defined(USE_SPECULAR_MAP)
-		float u_SpecularPower = 512;
 		#ifdef USE_SPECULAR_MAP
 			uniform TEX_SAMPLER u_SpecularTex;
 		#else
@@ -111,7 +115,7 @@ varying vec3 v_Normal;
 			float n_dot_h = max(0, dot(normal, half_dir));
 			float spec = pow(n_dot_h, u_SpecularPower);
 
-			color += u_SpecularColor * spec;
+			color += u_SpecularColor * u_SpecularIntensity * spec;
 		#endif
 
 		gl_FragColor = clamp(vec4(color, albedo.a), 0.0, 1.0);
