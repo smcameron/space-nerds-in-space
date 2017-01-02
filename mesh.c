@@ -31,6 +31,19 @@ float mesh_compute_radius(struct mesh *m)
 	return max_radius;
 }
 
+float mesh_compute_nonuniform_scaled_radius(struct mesh *m, double sx, double sy, double sz)
+{
+	int i;
+	float r, max_radius = 0.0;
+
+	for (i = 0; i < m->nvertices; i++) {
+		r = dist3d(m->v[i].x * sx, m->v[i].y * sy, m->v[i].z * sz);
+		if (r > max_radius)
+			max_radius = r;
+	}
+	return max_radius;
+}
+
 void mesh_distort_helper(struct mesh *m, float distortion)
 {
 	int i;

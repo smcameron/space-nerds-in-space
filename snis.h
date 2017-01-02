@@ -601,6 +601,7 @@ struct block_data {
 	double sx, sy, sz; /* scale in x, y, z */
 	union quat relative_orientation;
 	double dx, dy, dz; /* offset position from parent, used only server side */
+	double radius;
 };
 
 union type_specific_data {

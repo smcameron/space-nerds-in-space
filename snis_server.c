@@ -96,6 +96,7 @@
 #include "a_star.h"
 #include "nonuniform_random_sampler.h"
 #include "planetary_atmosphere.h"
+#include "mesh.h"
 
 #include "snis_entity_key_value_specification.h"
 
@@ -360,6 +361,8 @@ static int nebulalist[NNEBULA] = { 0 };
 static int ncommodities;
 static int ncontraband;
 static struct commodity *commodity;
+
+static struct mesh *unit_cube_mesh;
 
 int nframes = 0;
 int timer = 0;
@@ -7496,6 +7499,7 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	go[i].tsd.block.sy = sy;
 	go[i].tsd.block.sz = sz;
 	go[i].tsd.block.relative_orientation = relative_orientation;
+	go[i].tsd.block.radius = mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
 	go[i].move = block_move;
 	return i;
 }
@@ -19738,6 +19742,13 @@ static void servers_changed_cb(void *cookie)
 		free(gameserver);
 }
 
+static void init_meshes(void)
+{
+	unit_cube_mesh = mesh_unit_cube(1);
+	/* The "unit" cube is 1 unit in *radius* -- we need one with 0.5 unit radius. */
+	mesh_scale(unit_cube_mesh, 0.5);
+}
+
 int main(int argc, char *argv[])
 {
 	int port, rc, i;
@@ -19750,6 +19761,7 @@ int main(int argc, char *argv[])
 	override_asset_dir();
 	set_random_seed();
 	init_natural_language_system();
+	init_meshes();
 
 	char commodity_path[PATH_MAX];
 	sprintf(commodity_path, "%s/%s", asset_dir, "commodities.txt");

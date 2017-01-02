@@ -364,18 +364,18 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o mtwist.o names.o infinite-taunt.o snis_damcon_systems.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
-		snis_hash.o planetary_atmosphere.o
+		snis_hash.o planetary_atmosphere.o mesh.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
 		snis_server_tracker.o snis_bridge_update_packet.o solarsystem_config.o a_star.o \
-		key_value_parser.o nonuniform_random_sampler.o oriented_bounding_box.o
+		key_value_parser.o nonuniform_random_sampler.o oriented_bounding_box.o graph_dev_mesh_stub.o
 MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
-	snis_strip_chart.o mesh.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
+	snis_strip_chart.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
 	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o snis_keyboard.o solarsystem_config.o \
 	pronunciation.o
 
@@ -526,6 +526,9 @@ opengl_cap.o : opengl_cap.c Makefile
 
 graph_dev_gdk.o : graph_dev_gdk.c Makefile
 	$(Q)$(GTKCOMPILE)
+
+graph_dev_mesh_stub.o:	graph_dev_mesh_stub.c graph_dev_mesh_stub.h
+	$(Q)$(COMPILE)
 
 material.o : material.c Makefile
 	$(Q)$(GTKCOMPILE)

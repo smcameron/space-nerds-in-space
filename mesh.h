@@ -68,6 +68,7 @@ struct mesh {
 };
 
 GLOBAL float mesh_compute_radius(struct mesh *m);
+GLOBAL float mesh_compute_nonuniform_scaled_radius(struct mesh *m, double sx, double sy, double sz);
 GLOBAL void mesh_distort(struct mesh *m, float distortion);
 GLOBAL void mesh_derelict(struct mesh *m, float distortion);
 GLOBAL struct mesh *mesh_duplicate(struct mesh *original);
