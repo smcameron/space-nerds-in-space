@@ -383,6 +383,7 @@ static struct material wormhole_material;
 #define NTHRUSTMATERIALS 5
 static struct material thrust_material[NTHRUSTMATERIALS];
 static struct material atmosphere_material;
+static struct material block_material;
 
 #ifdef WITHOUTOPENGL
 const int wormhole_render_style = RENDER_SPARKLE;
@@ -1503,6 +1504,7 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 	if (!e)
 		return -1;
 	update_entity_non_uniform_scale(e, sizex, sizey, sizez);
+	update_entity_material(e, &block_material);
 	i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_BLOCK, 1, e);
 	if (i < 0)
 		return i;
@@ -13830,6 +13832,10 @@ static int load_static_textures(void)
 	warp_tunnel_material.texture_mapped_unlit.do_blend = 1;
 	warp_tunnel_material.texture_mapped_unlit.alpha = 0.25;
 
+	material_init_texture_mapped(&block_material);
+	block_material.texture_mapped.texture_id = load_texture("textures/spaceplate.png");
+	block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplateemit.png");
+
 	static_textures_loaded = 1;
 	return 1;
 }
@@ -14776,8 +14782,11 @@ static void init_meshes()
 		printf("zzz radius %d = %f\n", i, mesh_compute_radius(asteroid_mesh[i]));
 	}
 
-	sphere_mesh = mesh_unit_spherified_cube(16);
 	unit_cube_mesh = mesh_unit_cube(20);
+	mesh_scale(unit_cube_mesh, 0.5);
+	mesh_unit_cube_uv_map(unit_cube_mesh);
+
+	sphere_mesh = mesh_unit_spherified_cube(16);
 	low_poly_sphere_mesh = mesh_unit_spherified_cube(5);
 	warp_tunnel_mesh = mesh_tube(XKNOWN_DIM, 450.0, 20);
 	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS);
