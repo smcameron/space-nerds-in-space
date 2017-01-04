@@ -622,6 +622,13 @@ reset_player_ship(player_ship_id) -- resets the player ship to healthy status wi
 	player_ids = get_player_ship_ids();
 	reset_player_ship(player_ids[1]);
 
+add_giant_spaceship(x, y, z); -- adds a giant spaceship into the universe at the
+	specified location.  This API is very likely to change.
+
+  Example:
+	giant_ship_id = add_giant_spaceship(10000, 10000, 10000);
+
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.

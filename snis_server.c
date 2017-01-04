@@ -8650,7 +8650,6 @@ static void make_universe(void)
 	add_enforcers();
 	add_spacemonsters();
 	add_passengers();
-	add_giant_spaceship(56000.0, -76000.0, 297000.0);
 	pthread_mutex_unlock(&universe_mutex);
 }
 
@@ -12453,6 +12452,22 @@ error:
 	return 1;
 }
 
+static int l_add_giant_spaceship(lua_State *l)
+{
+	double x, y, z;
+	int i;
+
+	x = lua_tonumber(lua_state, 1);
+	y = lua_tonumber(lua_state, 2);
+	z = lua_tonumber(lua_state, 3);
+
+	pthread_mutex_lock(&universe_mutex);
+	i = add_giant_spaceship(x, y, z);
+	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 1;
+}
+
 static int l_show_timed_text(lua_State *l)
 {
 	const double id = luaL_checknumber(l, 1);
@@ -15916,6 +15931,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_commodity, "add_commodity");
 	add_lua_callable_fn(l_reset_player_ship, "reset_player_ship");
 	add_lua_callable_fn(l_show_menu, "show_menu");
+	add_lua_callable_fn(l_add_giant_spaceship, "add_giant_spaceship");
 }
 
 static int run_initial_lua_scripts(void)
