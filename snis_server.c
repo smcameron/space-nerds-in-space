@@ -2587,8 +2587,37 @@ static void laser_collision_detection(void *context, void *entity)
 		return;
 	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
 		t->type != OBJTYPE_STARBASE && t->type != OBJTYPE_ASTEROID &&
-		t->type != OBJTYPE_TORPEDO && t->type != OBJTYPE_CARGO_CONTAINER)
+		t->type != OBJTYPE_TORPEDO && t->type != OBJTYPE_CARGO_CONTAINER &&
+		t->type != OBJTYPE_BLOCK)
 		return;
+
+	if (t->type == OBJTYPE_BLOCK) {
+		double dist2;
+		union vec3 laser_pos, closest_point;
+
+		dist2 = dist3dsqrd(o->x - t->x, o->y - t->y, o->z - t->z);
+		if (dist2 > t->tsd.block.radius * t->tsd.block.radius)
+			return;
+		laser_pos.v.x = o->x;
+		laser_pos.v.y = o->y;
+		laser_pos.v.z = o->z;
+
+		oriented_bounding_box_closest_point(&laser_pos, &t->tsd.block.obb, &closest_point);
+
+		dist2 = dist3dsqrd(o->x - closest_point.v.x, o->y - closest_point.v.y, o->z - closest_point.v.z);
+		if (dist2 > LASER_VELOCITY * LASER_VELOCITY)
+			return;
+		o->alive = 0; /* hit!!!! */
+		schedule_callback2(event_callback, &callback_schedule,
+					"object-hit-event", t->id, (double) o->tsd.laser.ship_id);
+		impact_time = universe_timestamp;
+		impact_fractional_time = 0.0; /* TODO: something better? */
+		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z, 50, 5, 5, t->type);
+		snis_queue_add_sound(DISTANT_PHASER_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
+		/* How does the laser get deleted? */
+		return;
+	}
+
 	if (t->id == o->tsd.laser.ship_id)
 		return; /* can't laser yourself. */
 
