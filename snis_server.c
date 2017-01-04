@@ -2383,11 +2383,36 @@ static void torpedo_collision_detection(void *context, void *entity)
 			t->type != OBJTYPE_STARBASE &&
 			t->type != OBJTYPE_ASTEROID &&
 			t->type != OBJTYPE_CARGO_CONTAINER &&
-			t->type != OBJTYPE_PLANET)
+			t->type != OBJTYPE_PLANET &&
+			t->type != OBJTYPE_BLOCK)
 		return;
 	if (t->id == o->tsd.torpedo.ship_id)
 		return; /* can't torpedo yourself. */
 	dist2 = dist3dsqrd(t->x - o->x, t->y - o->y, t->z - o->z);
+
+	if (t->type == OBJTYPE_BLOCK) {
+		union vec3 torpedo_pos, closest_point;
+
+		if (dist2 > t->tsd.block.radius * t->tsd.block.radius)
+			return;
+		torpedo_pos.v.x = o->x;
+		torpedo_pos.v.y = o->y;
+		torpedo_pos.v.z = o->z;
+
+		oriented_bounding_box_closest_point(&torpedo_pos, &t->tsd.block.obb, &closest_point);
+
+		dist2 = dist3dsqrd(o->x - closest_point.v.x, o->y - closest_point.v.y, o->z - closest_point.v.z);
+		if (dist2 > TORPEDO_VELOCITY * TORPEDO_VELOCITY)
+			return;
+		o->alive = 0; /* hit!!!! */
+		schedule_callback2(event_callback, &callback_schedule,
+					"object-hit-event", t->id, (double) o->tsd.torpedo.ship_id);
+		impact_time = universe_timestamp;
+		impact_fractional_time = 0.0; /* TODO: something better? */
+		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z, 50, 5, 5, t->type);
+		snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
+		return;
+	}
 
 	if (t->type == OBJTYPE_PLANET && dist2 < t->tsd.planet.radius * t->tsd.planet.radius) {
 		o->alive = 0; /* smashed into planet */
