@@ -462,7 +462,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/docking_port2.stl \
 	${MD}/warpgate.stl \
 	${MD}/escapepod.stl \
-	${MD}/mantis.stl
+	${MD}/mantis.stl \
+	${MD}/laser_turret.stl
 
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
