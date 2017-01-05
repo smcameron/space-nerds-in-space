@@ -6339,6 +6339,62 @@ default_move:
 	return;
 }
 
+static void turret_move(struct snis_entity *o)
+{
+	struct snis_entity *parent, *target;
+	union quat desired_orientation;
+	union vec3 pos;
+	int i, t;
+
+	if (o->tsd.turret.parent_id == (uint32_t) -1)
+		goto default_move;
+	i = lookup_by_id(o->tsd.turret.parent_id);
+	if (i < 0)
+		goto default_move;
+	parent = &go[i];
+	pos.v.x = o->tsd.turret.dx;
+	pos.v.y = o->tsd.turret.dy;
+	pos.v.z = o->tsd.turret.dz;
+
+	/* For now, do the stupidest thing that can possibly work... */
+	if (o->tsd.turret.current_target_id == (uint32_t) -1) { /* no target */
+		o->orientation = parent->orientation;
+	} else {
+		const union vec3 right = { { 1.0, 0.0, 0.0 } };
+		union vec3 to_enemy;
+
+		t = lookup_by_id(o->tsd.turret.current_target_id);
+		if (t < 0) {
+			o->tsd.turret.current_target_id = (uint32_t) -1;
+		} else {
+			double dist, lasertime;
+
+			target = &go[t];
+			to_enemy.v.x = target->x - o->x;
+			to_enemy.v.y = target->y - o->y;
+			to_enemy.v.z = target->z - o->z;
+			dist = vec3_magnitude(&to_enemy);
+			lasertime = dist / (double) LASER_VELOCITY;
+			to_enemy.v.x += target->vx * lasertime;
+			to_enemy.v.y += target->vy * lasertime;
+			to_enemy.v.z += target->vz * lasertime;
+			vec3_normalize_self(&to_enemy);
+			quat_from_u2v(&desired_orientation, &right, &to_enemy, NULL);
+			quat_slerp(&o->orientation, &o->orientation, &desired_orientation, 0.1);
+		}
+	}
+	quat_rot_vec_self(&pos, &parent->orientation);
+	set_object_location(o, pos.v.x + parent->x, pos.v.y + parent->y, pos.v.z + parent->z);
+	o->timestamp = universe_timestamp;
+	return;
+
+default_move:
+	quat_init_axis(&o->orientation, 1.0, 0.0, 0.0, 0.1 * (universe_timestamp % 3600) * M_PI / 180.0);
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+	o->timestamp = universe_timestamp;
+	return;
+}
+
 static void starbase_update_docking_ports(struct snis_entity *o)
 {
 	int i, d, model;
@@ -7609,6 +7665,48 @@ static void fabricate_prices(struct snis_entity *starbase)
 	}
 }
 
+static int add_turret(int parent_id, double x, double y, double z,
+			double dx, double dy, double dz,
+			union quat relative_orientation)
+{
+	int i;
+	i = add_generic_object(x, y, z, 0.0, 0.0, 0.0, 0.0, OBJTYPE_TURRET);
+	if (i < 0)
+		return i;
+	go[i].tsd.turret.parent_id = parent_id;
+	go[i].tsd.turret.dx = dx;
+	go[i].tsd.turret.dy = dy;
+	go[i].tsd.turret.dz = dz;
+	go[i].tsd.turret.relative_orientation = relative_orientation;
+	go[i].move = turret_move;
+	return i;
+}
+
+static int l_add_turret(lua_State *l)
+{
+	double rid, x, y, z;
+	uint32_t parent_id;
+	int i;
+
+	rid = lua_tonumber(lua_state, 1);
+	x = lua_tonumber(lua_state, 2);
+	y = lua_tonumber(lua_state, 3);
+	z = lua_tonumber(lua_state, 4);
+
+	pthread_mutex_lock(&universe_mutex);
+	parent_id = (uint32_t) rid;
+	i = lookup_by_id(parent_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(lua_state, -1.0);
+		return 1;
+	}
+	i = add_turret(parent_id, 0.0, 0.0, 0.0, x, y, z, identity_quat);
+	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 1;
+}
+
 static int add_block_object(int parent_id, double x, double y, double z,
 				double vx, double vy, double vz,
 				double dx, double dy, double dz, /* displacement from parent */
@@ -7633,8 +7731,8 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	return i;
 }
 
-static int add_rotated_subblock(int parent_id, double sx, double sy, double sz, /* displacement from parent */
-			double dx, double dy, double dz, /* nonuniform scaling */
+static int add_rotated_subblock(int parent_id, double sx, double sy, double sz, /* nonuniform scaling */
+			double dx, double dy, double dz, /* displacement from parent */
 			union quat relative_orientation)
 {
 	const double s = 60.0;
@@ -7643,8 +7741,8 @@ static int add_rotated_subblock(int parent_id, double sx, double sy, double sz, 
 				sx * s, sy * s, sz * s, relative_orientation);
 }
 
-static int add_subblock(int parent_id, double sx, double sy, double sz, /* displacement from parent */
-			double dx, double dy, double dz) /* nonuniform scaling */
+static int add_subblock(int parent_id, double sx, double sy, double sz, /* nonuniform scaling */
+			double dx, double dy, double dz) /* displacement from parent */
 {
 	const double s = 60.0;
 	return add_block_object(parent_id, 0, 0, 0, 0, 0, 0,
@@ -14440,6 +14538,8 @@ static void send_update_docking_port_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_block_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_turret_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_cargo_container_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_derelict_packet(struct game_client *c,
@@ -14545,6 +14645,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_BLOCK:
 		send_update_block_packet(c, o);
+		break;
+	case OBJTYPE_TURRET:
+		send_update_turret_packet(c, o);
 		break;
 	default:
 		break;
@@ -15320,6 +15423,17 @@ static void send_update_block_packet(struct game_client *c,
 					&o->orientation));
 }
 
+static void send_update_turret_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSQ", OPCODE_UPDATE_TURRET,
+					o->id, o->timestamp,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
+					&o->orientation));
+}
+
 static void send_update_spacemonster_packet(struct game_client *c,
 	struct snis_entity *o)
 {
@@ -16065,6 +16179,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_reset_player_ship, "reset_player_ship");
 	add_lua_callable_fn(l_show_menu, "show_menu");
 	add_lua_callable_fn(l_add_giant_spaceship, "add_giant_spaceship");
+	add_lua_callable_fn(l_add_turret, "add_turret");
 }
 
 static int run_initial_lua_scripts(void)

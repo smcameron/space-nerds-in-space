@@ -330,6 +330,7 @@ static struct starbase_file_metadata *starbase_metadata;
 static struct docking_port_attachment_point **docking_port_info;
 struct mesh *ship_turret_mesh;
 struct mesh *ship_turret_base_mesh;
+struct mesh *turret_mesh;
 struct mesh *particle_mesh;
 struct mesh *debris_mesh;
 struct mesh *debris2_mesh;
@@ -1514,6 +1515,29 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 	return 0;
 }
 
+static int update_turret(uint32_t id, uint32_t timestamp, double x, double y, double z, union quat *orientation)
+{
+	int i;
+	struct entity *e;
+	double vx, vy, vz;
+
+	i = lookup_object_by_id(id);
+	if (i >= 0) {
+		vx = x - go[i].x; /* verlet integration */
+		vy = y - go[i].y;
+		vz = z - go[i].z;
+		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, orientation, 1);
+		return 0;
+	}
+	e = add_entity(ecx, turret_mesh, x, y, z, BLOCK_COLOR);
+	if (!e)
+		return -1;
+	i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_TURRET, 1, e);
+	if (i < 0)
+		return i;
+	return 0;
+}
+
 static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, double z,
 	double vx, double vy, double vz,
 	uint8_t carbon, uint8_t nickeliron, uint8_t silicates, uint8_t preciousmetals)
@@ -2191,6 +2215,7 @@ static void move_objects(void)
 		case OBJTYPE_WARPGATE:
 		case OBJTYPE_DOCKING_PORT:
 		case OBJTYPE_BLOCK:
+		case OBJTYPE_TURRET:
 			move_object(timestamp, o, &interpolate_orientated_object);
 			break;
 		case OBJTYPE_LASER:
@@ -4946,6 +4971,28 @@ static int process_update_block_packet(void)
 	return (rc < 0);
 }
 
+static int process_update_turret_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id, timestamp;
+	double dx, dy, dz;
+	union quat orientation;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "wwSSSQ", &id, &timestamp,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM,
+			&orientation);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_turret(id, timestamp, dx, dy, dz, &orientation);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+}
+
+
 static int process_update_asteroid_packet(void)
 {
 	unsigned char buffer[100];
@@ -5325,6 +5372,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_BLOCK:
 			rc = process_update_block_packet();
+			break;
+		case OPCODE_UPDATE_TURRET:
+			rc = process_update_turret_packet();
 			break;
 		case OPCODE_UPDATE_CARGO_CONTAINER:
 			rc = process_update_cargo_container_packet();
@@ -14761,6 +14811,7 @@ static void init_meshes()
 		return;
 	}
 
+	turret_mesh = snis_read_model(d, "laser_turret.stl");
 	ship_turret_mesh = snis_read_model(d, "spaceship_turret.stl");
 	ship_turret_base_mesh = snis_read_model(d, "spaceship_turret_base.stl");
 	mesh_scale(ship_turret_mesh, SHIP_MESH_SCALE);

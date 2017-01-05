@@ -101,6 +101,7 @@
 #define OBJTYPE_DOCKING_PORT 20
 #define OBJTYPE_WARPGATE 21
 #define OBJTYPE_BLOCK 22
+#define OBJTYPE_TURRET 23
 
 #define SHIELD_EFFECT_LIFETIME 30
 
@@ -606,6 +607,15 @@ struct block_data {
 	struct oriented_bounding_box obb;
 };
 
+struct turret_data {
+	uint32_t parent_id;
+	union quat relative_orientation;
+	double dx, dy, dz; /* offset position from parent, used only server side */
+	uint32_t current_target_id;
+	uint8_t fire_countdown;
+	uint8_t fire_countdown_reset_value;
+};
+
 union type_specific_data {
 	struct ship_data ship;
 	struct laser_data laser;
@@ -625,6 +635,7 @@ union type_specific_data {
 	struct docking_port_data docking_port;
 	struct warpgate_data warpgate;
 	struct block_data block;
+	struct turret_data turret;
 };
 
 struct snis_entity;
