@@ -385,6 +385,7 @@ static struct material wormhole_material;
 static struct material thrust_material[NTHRUSTMATERIALS];
 static struct material atmosphere_material;
 static struct material block_material;
+static struct material small_block_material;
 
 #ifdef WITHOUTOPENGL
 const int wormhole_render_style = RENDER_SPARKLE;
@@ -1482,7 +1483,8 @@ static int update_docking_port(uint32_t id, uint32_t timestamp, double scale,
 }
 
 static int update_block(uint32_t id, uint32_t timestamp, double x, double y, double z,
-		double sizex, double sizey, double sizez, union quat *orientation)
+		double sizex, double sizey, double sizez, union quat *orientation,
+		uint8_t block_material_index)
 {
 	int i;
 	struct entity *e;
@@ -1505,7 +1507,10 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 	if (!e)
 		return -1;
 	update_entity_non_uniform_scale(e, sizex, sizey, sizez);
-	update_entity_material(e, &block_material);
+	if ((block_material_index % 2) == 0)
+		update_entity_material(e, &block_material);
+	else
+		update_entity_material(e, &small_block_material);
 	i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_BLOCK, 1, e);
 	if (i < 0)
 		return i;
@@ -4953,20 +4958,23 @@ static int process_update_block_packet(void)
 	uint32_t id, timestamp;
 	double dx, dy, dz, dsx, dsy, dsz;
 	union quat orientation;
+	uint8_t block_material_index;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "wwSSSSSSQ", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSSSQb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
 			&dsx, (int32_t) UNIVERSE_DIM,
 			&dsy, (int32_t) UNIVERSE_DIM,
 			&dsz, (int32_t) UNIVERSE_DIM,
-			&orientation);
+			&orientation,
+			&block_material_index);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_block(id, timestamp, dx, dy, dz, dsx, dsy, dsz, &orientation);
+	rc = update_block(id, timestamp, dx, dy, dz, dsx, dsy, dsz,
+				&orientation, block_material_index);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }
@@ -13891,6 +13899,9 @@ static int load_static_textures(void)
 	material_init_texture_mapped(&block_material);
 	block_material.texture_mapped.texture_id = load_texture("textures/spaceplate.png");
 	block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplateemit.png");
+	material_init_texture_mapped(&small_block_material);
+	small_block_material.texture_mapped.texture_id = load_texture("textures/spaceplate_small.png");
+	small_block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplate_small_emit.png");
 
 	static_textures_loaded = 1;
 	return 1;

@@ -7711,7 +7711,8 @@ static int add_block_object(int parent_id, double x, double y, double z,
 				double vx, double vy, double vz,
 				double dx, double dy, double dz, /* displacement from parent */
 				double sx, double sy, double sz, /* nonuniform scaling */
-				union quat relative_orientation)
+				union quat relative_orientation,
+				uint8_t block_material_index)
 {
 	int i;
 	i = add_generic_object(x, y, z, vx, vy, vz, 0.0, OBJTYPE_BLOCK);
@@ -7726,6 +7727,7 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	go[i].tsd.block.sz = sz;
 	go[i].tsd.block.relative_orientation = relative_orientation;
 	go[i].tsd.block.radius = mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
+	go[i].tsd.block.block_material_index = block_material_index;
 	go[i].move = block_move;
 	block_calculate_obb(&go[i], &go[i].tsd.block.obb);
 	return i;
@@ -7738,18 +7740,20 @@ static int add_rotated_subblock(int parent_id, double sx, double sy, double sz, 
 	const double s = 60.0;
 	return add_block_object(parent_id, 0, 0, 0, 0, 0, 0,
 				dx * s, dy * s, dz * s,
-				sx * s, sy * s, sz * s, relative_orientation);
+				sx * s, sy * s, sz * s, relative_orientation, 0);
 }
 
 static int add_subblock(int parent_id, double sx, double sy, double sz, /* nonuniform scaling */
-			double dx, double dy, double dz) /* displacement from parent */
+			double dx, double dy, double dz, /* displacement from parent */
+			uint8_t block_material_index)
 {
 	const double s = 60.0;
 	int i;
 
 	i = add_block_object(parent_id, 0, 0, 0, 0, 0, 0,
 				dx * s, dy * s, dz * s,
-				sx * s, sy * s, sz * s, identity_quat);
+				sx * s, sy * s, sz * s, identity_quat,
+				block_material_index);
 	return i;
 }
 
@@ -7829,11 +7833,11 @@ static int add_giant_spaceship(double x, double y, double z)
 	quat_init_axis(&plus12, 1, 0, 0, 12.0 * M_PI / 180.0);
 	quat_init_axis(&minus12, 1, 0, 0, -12.0 * M_PI / 180);
 
-	i = add_block_object(-1, x, y, z, 0, 0, 0, 0, 0, 0, 1, 1, 1, identity_quat);
+	i = add_block_object(-1, x, y, z, 0, 0, 0, 0, 0, 0, 1, 1, 1, identity_quat, 0);
 	if (i < 0)
 		return i;
 	parent = go[i].id;
-	i = add_subblock(parent, 200, 100, 4, 20, 0, -19);
+	i = add_subblock(parent, 200, 100, 4, 20, 0, -19, 0);
 	add_turrets_to_block_face(go[i].id, 0, 8, 1);
 	add_turrets_to_block_face(go[i].id, 1, 8, 1);
 	add_turrets_to_block_face(go[i].id, 2, 8, 1);
@@ -7841,22 +7845,22 @@ static int add_giant_spaceship(double x, double y, double z)
 	add_turrets_to_block_face(go[i].id, 4, 8, 5);
 	add_turrets_to_block_face(go[i].id, 5, 8, 5);
 #if 0
-	add_subblock(parent, 300, 75, 4, 0, 0, 19);
+	add_subblock(parent, 300, 75, 4, 0, 0, 19, 0);
 	add_rotated_subblock(parent, 300, 5, 68, 0, 43, 0, plus12); /* needs rotating 12 degrees */
 	add_rotated_subblock(parent, 300, 5, 68, 0, -43, 0, minus12); /* needs rotating 12 degrees */
-	add_subblock(parent, 5, 95, 45, -150, 0, 0);
-	add_subblock(parent, 5, 88, 25, -125, 0, 10);
-	add_subblock(parent, 5, 88, 25, -100, 0, -10);
-	add_subblock(parent, 5, 88, 25, -75, 0, 10);
-	add_subblock(parent, 5, 88, 25, -50, 0, -10);
-	add_subblock(parent, 5, 88, 25, 0, 0, 10);
-	add_subblock(parent, 5, 88, 25, 50, 0, -10);
-	add_subblock(parent, 5, 88, 25, 75, 0, 10);
+	add_subblock(parent, 5, 95, 45, -150, 0, 0, 0);
+	add_subblock(parent, 5, 88, 25, -125, 0, 10, 0);
+	add_subblock(parent, 5, 88, 25, -100, 0, -10, 0);
+	add_subblock(parent, 5, 88, 25, -75, 0, 10, 0);
+	add_subblock(parent, 5, 88, 25, -50, 0, -10, 0);
+	add_subblock(parent, 5, 88, 25, 0, 0, 10, 0);
+	add_subblock(parent, 5, 88, 25, 50, 0, -10, 0);
+	add_subblock(parent, 5, 88, 25, 75, 0, 10, 0);
 
-	add_subblock(parent, 5, 60, 45, 100, -15, 0);
-	add_subblock(parent, 5, 60, 45, 120, 15, 0);
-	add_subblock(parent, 5, 60, 45, 20, -15, 0);
-	add_subblock(parent, 5, 60, 45, -20, 15, 0);
+	add_subblock(parent, 5, 60, 45, 100, -15, 0, 0);
+	add_subblock(parent, 5, 60, 45, 120, 15, 0, 0);
+	add_subblock(parent, 5, 60, 45, 20, -15, 0, 0);
+	add_subblock(parent, 5, 60, 45, -20, 15, 0, 0);
 #endif
 	return i;
 }
@@ -15490,7 +15494,7 @@ static void send_update_docking_port_packet(struct game_client *c,
 static void send_update_block_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("bwwSSSSSSQ", OPCODE_UPDATE_BLOCK,
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSSSSQb", OPCODE_UPDATE_BLOCK,
 					o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
@@ -15498,7 +15502,8 @@ static void send_update_block_packet(struct game_client *c,
 					o->tsd.block.sx, (int32_t) UNIVERSE_DIM,
 					o->tsd.block.sy, (int32_t) UNIVERSE_DIM,
 					o->tsd.block.sz, (int32_t) UNIVERSE_DIM,
-					&o->orientation));
+					&o->orientation,
+					o->tsd.block.block_material_index));
 }
 
 static void send_update_turret_packet(struct game_client *c,

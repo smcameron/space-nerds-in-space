@@ -605,6 +605,7 @@ struct block_data {
 	double dx, dy, dz; /* offset position from parent, used only server side */
 	double radius;
 	struct oriented_bounding_box obb;
+	uint8_t block_material_index; /* For now, 0 for big blocks, 1 for small blocks */
 };
 
 struct turret_data {
