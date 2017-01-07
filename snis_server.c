@@ -6339,6 +6339,23 @@ default_move:
 	return;
 }
 
+static void turret_fire(struct snis_entity *o)
+{
+	union vec3 pos_right = { { 40.0, 0.0, 20.0 } };
+	union vec3 pos_left = { { 40.0, 0.0, -20.0 } };
+	union vec3 vel = { { 1.0, 0.0, 0.0 } };
+
+	quat_rot_vec_self(&vel, &o->orientation);
+	vec3_mul_self(&vel, LASER_VELOCITY);
+	quat_rot_vec_self(&pos_right, &o->orientation);
+	quat_rot_vec_self(&pos_left, &o->orientation);
+
+	add_laser(o->x, o->y, o->z,
+		vel.v.x, vel.v.y, vel.v.z, &o->orientation, o->id);
+	add_laser(o->x + pos_left.v.x, o->y + pos_left.v.y, o->z + pos_left.v.z,
+		vel.v.x, vel.v.y, vel.v.z, &o->orientation, o->id);
+}
+
 static void turret_move(struct snis_entity *o)
 {
 	struct snis_entity *parent, *target;
@@ -6346,6 +6363,8 @@ static void turret_move(struct snis_entity *o)
 	union vec3 pos;
 	int i, t;
 
+	if (((o->id + universe_timestamp) % 150) == 0)
+		turret_fire(o);
 	if (o->tsd.turret.parent_id == (uint32_t) -1)
 		goto default_move;
 	i = lookup_by_id(o->tsd.turret.parent_id);
@@ -8095,8 +8114,13 @@ static int add_laser(double x, double y, double z,
 	go[i].alive = LASER_LIFETIME;
 	go[i].tsd.laser.ship_id = ship_id;
 	s = lookup_by_id(ship_id);
-	go[i].tsd.laser.power = go[s].tsd.ship.phaser_charge;
-	go[i].tsd.laser.wavelength = go[s].tsd.ship.phaser_wavelength;
+	if (go[s].type == OBJTYPE_SHIP1 || go[s].type == OBJTYPE_SHIP2) {
+		go[i].tsd.laser.power = go[s].tsd.ship.phaser_charge;
+		go[i].tsd.laser.wavelength = go[s].tsd.ship.phaser_wavelength;
+	} else if (go[s].type == OBJTYPE_TURRET) {
+		go[i].tsd.laser.power = TURRET_LASER_POWER;
+		go[i].tsd.laser.wavelength = TURRET_LASER_WAVELENGTH;
+	}
 	if (orientation) {
 		go[i].orientation = *orientation;
 	} else {
