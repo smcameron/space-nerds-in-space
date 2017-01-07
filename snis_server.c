@@ -7733,21 +7733,21 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	return i;
 }
 
-static int add_rotated_subblock(int parent_id, double sx, double sy, double sz, /* nonuniform scaling */
+static int add_rotated_subblock(int parent_id, double scalefactor, double sx, double sy, double sz, /* nonuniform scaling */
 			double dx, double dy, double dz, /* displacement from parent */
 			union quat relative_orientation)
 {
-	const double s = 60.0;
+	const double s = scalefactor;
 	return add_block_object(parent_id, 0, 0, 0, 0, 0, 0,
 				dx * s, dy * s, dz * s,
 				sx * s, sy * s, sz * s, relative_orientation, 0);
 }
 
-static int add_subblock(int parent_id, double sx, double sy, double sz, /* nonuniform scaling */
+static int add_subblock(int parent_id, double scalefactor, double sx, double sy, double sz, /* nonuniform scaling */
 			double dx, double dy, double dz, /* displacement from parent */
 			uint8_t block_material_index)
 {
-	const double s = 60.0;
+	const double s = scalefactor;
 	int i;
 
 	i = add_block_object(parent_id, 0, 0, 0, 0, 0, 0,
@@ -7829,6 +7829,7 @@ static int add_giant_spaceship(double x, double y, double z)
 {
 	int i, parent;
 	union quat plus12, minus12;
+	const double scalefactor = 60.0;
 
 	quat_init_axis(&plus12, 1, 0, 0, 12.0 * M_PI / 180.0);
 	quat_init_axis(&minus12, 1, 0, 0, -12.0 * M_PI / 180);
@@ -7837,7 +7838,7 @@ static int add_giant_spaceship(double x, double y, double z)
 	if (i < 0)
 		return i;
 	parent = go[i].id;
-	i = add_subblock(parent, 200, 100, 4, 20, 0, -19, 0);
+	i = add_subblock(parent, scalefactor, 200, 100, 4, 20, 0, -19, 0);
 	add_turrets_to_block_face(go[i].id, 0, 8, 1);
 	add_turrets_to_block_face(go[i].id, 1, 8, 1);
 	add_turrets_to_block_face(go[i].id, 2, 8, 1);
@@ -7845,22 +7846,22 @@ static int add_giant_spaceship(double x, double y, double z)
 	add_turrets_to_block_face(go[i].id, 4, 8, 5);
 	add_turrets_to_block_face(go[i].id, 5, 8, 5);
 #if 0
-	add_subblock(parent, 300, 75, 4, 0, 0, 19, 0);
-	add_rotated_subblock(parent, 300, 5, 68, 0, 43, 0, plus12); /* needs rotating 12 degrees */
-	add_rotated_subblock(parent, 300, 5, 68, 0, -43, 0, minus12); /* needs rotating 12 degrees */
-	add_subblock(parent, 5, 95, 45, -150, 0, 0, 0);
-	add_subblock(parent, 5, 88, 25, -125, 0, 10, 0);
-	add_subblock(parent, 5, 88, 25, -100, 0, -10, 0);
-	add_subblock(parent, 5, 88, 25, -75, 0, 10, 0);
-	add_subblock(parent, 5, 88, 25, -50, 0, -10, 0);
-	add_subblock(parent, 5, 88, 25, 0, 0, 10, 0);
-	add_subblock(parent, 5, 88, 25, 50, 0, -10, 0);
-	add_subblock(parent, 5, 88, 25, 75, 0, 10, 0);
+	add_subblock(parent, scalefactor, 300, 75, 4, 0, 0, 19, 0);
+	add_rotated_subblock(parent, scalefactor, 300, 5, 68, 0, 43, 0, plus12); /* needs rotating 12 degrees */
+	add_rotated_subblock(parent, scalefactor, 300, 5, 68, 0, -43, 0, minus12); /* needs rotating 12 degrees */
+	add_subblock(parent, scalefactor, 5, 95, 45, -150, 0, 0, 0);
+	add_subblock(parent, scalefactor, 5, 88, 25, -125, 0, 10, 0);
+	add_subblock(parent, scalefactor, 5, 88, 25, -100, 0, -10, 0);
+	add_subblock(parent, scalefactor, 5, 88, 25, -75, 0, 10, 0);
+	add_subblock(parent, scalefactor, 5, 88, 25, -50, 0, -10, 0);
+	add_subblock(parent, scalefactor, 5, 88, 25, 0, 0, 10, 0);
+	add_subblock(parent, scalefactor, 5, 88, 25, 50, 0, -10, 0);
+	add_subblock(parent, scalefactor, 5, 88, 25, 75, 0, 10, 0);
 
-	add_subblock(parent, 5, 60, 45, 100, -15, 0, 0);
-	add_subblock(parent, 5, 60, 45, 120, 15, 0, 0);
-	add_subblock(parent, 5, 60, 45, 20, -15, 0, 0);
-	add_subblock(parent, 5, 60, 45, -20, 15, 0, 0);
+	add_subblock(parent, scalefactor, 5, 60, 45, 100, -15, 0, 0);
+	add_subblock(parent, scalefactor, 5, 60, 45, 120, 15, 0, 0);
+	add_subblock(parent, scalefactor, 5, 60, 45, 20, -15, 0, 0);
+	add_subblock(parent, scalefactor, 5, 60, 45, -20, 15, 0, 0);
 #endif
 	return i;
 }
