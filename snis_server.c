@@ -7745,9 +7745,80 @@ static int add_subblock(int parent_id, double sx, double sy, double sz, /* nonun
 			double dx, double dy, double dz) /* displacement from parent */
 {
 	const double s = 60.0;
-	return add_block_object(parent_id, 0, 0, 0, 0, 0, 0,
+	int i;
+
+	i = add_block_object(parent_id, 0, 0, 0, 0, 0, 0,
 				dx * s, dy * s, dz * s,
 				sx * s, sy * s, sz * s, identity_quat);
+	return i;
+}
+
+static void add_turrets_to_block_face(int parent_id, int face, int rows, int cols)
+{
+	int i, j, index;
+	const double xoff[] = { 1, -1, 0, 0, 0, 0 };
+	const double yoff[] = { 0,  0, -1, 1, 0, 0 };
+	const double zoff[] = { 0,  0, 0, 0, 1, -1 };
+	double x, y, z, xo, yo, zo, xrowstep, xcolstep, yrowstep, ycolstep, zrowstep, zcolstep;
+	struct snis_entity *block;
+	const double turret_offset = 25.0;
+
+	face = abs(face) % 6;
+
+
+	index = lookup_by_id(parent_id);
+	if (index < 0)
+		return;
+	block = &go[index];
+	if (block->type != OBJTYPE_BLOCK)
+		return;
+	xo = xoff[face] * block->tsd.block.sx * 0.5 + turret_offset * xoff[face];
+	yo = yoff[face] * block->tsd.block.sy * 0.5 + turret_offset * yoff[face];
+	zo = zoff[face] * block->tsd.block.sz * 0.5 + turret_offset * zoff[face];
+
+	xrowstep = 0.0;
+	yrowstep = 0.0;
+	zrowstep = 0.0;
+	xcolstep = 0.0;
+	ycolstep = 0.0;
+	zcolstep = 0.0;
+
+	if (fabs(xo) > 0.01) {
+		/* y,z  plane */
+		printf("y z plane\n");
+		yrowstep = block->tsd.block.sy / (1.0 + rows);
+		zcolstep = block->tsd.block.sz / (1.0 + cols);
+		printf("yrowstep = %lf\n", yrowstep);
+		printf("zcolstep = %lf\n", zcolstep);
+		printf("block->tsd.block.sy = %lf\n", block->tsd.block.sy);
+		printf("block->tsd.block.sz = %lf\n", block->tsd.block.sz);
+	} else if (fabs(yo) > 0.01) {
+		printf("x z plane\n");
+		/* x,z  plane */
+		xrowstep = block->tsd.block.sx / (1.0 + rows);
+		zcolstep = block->tsd.block.sz / (1.0 + cols);
+	} else {
+		/* x,y  plane */
+		printf("x y plane\n");
+		xrowstep = block->tsd.block.sx / (1.0 + rows);
+		ycolstep = block->tsd.block.sy / (1.0 + cols);
+	}
+
+	printf("xcs, ycs, zcs, xrs, yrs, zrs = %lf, %lf, %lf, %lf, %lf, %lf\n",
+		xcolstep, ycolstep, zcolstep, xrowstep, yrowstep, zrowstep);
+
+	for (i = 0; i < rows; i++) {
+		double row = i;
+		double rowfactor = 0.5 + row - 0.5 * rows;
+		for (j = 0; j < cols; j++) {
+			double col = j;
+			double colfactor = 0.5 + col - 0.5 * cols;
+			x = rowfactor * xrowstep + colfactor * xcolstep + xo;
+			y = rowfactor * yrowstep + colfactor * ycolstep + yo;
+			z = rowfactor * zrowstep + colfactor * zcolstep + zo;
+			add_turret(parent_id, 0, 0, 0, x, y, z, identity_quat);
+		}
+	}
 }
 
 static int add_giant_spaceship(double x, double y, double z)
@@ -7762,7 +7833,14 @@ static int add_giant_spaceship(double x, double y, double z)
 	if (i < 0)
 		return i;
 	parent = go[i].id;
-	add_subblock(parent, 200, 100, 4, 20, 0, -19);
+	i = add_subblock(parent, 200, 100, 4, 20, 0, -19);
+	add_turrets_to_block_face(go[i].id, 0, 8, 1);
+	add_turrets_to_block_face(go[i].id, 1, 8, 1);
+	add_turrets_to_block_face(go[i].id, 2, 8, 1);
+	add_turrets_to_block_face(go[i].id, 3, 8, 1);
+	add_turrets_to_block_face(go[i].id, 4, 8, 5);
+	add_turrets_to_block_face(go[i].id, 5, 8, 5);
+#if 0
 	add_subblock(parent, 300, 75, 4, 0, 0, 19);
 	add_rotated_subblock(parent, 300, 5, 68, 0, 43, 0, plus12); /* needs rotating 12 degrees */
 	add_rotated_subblock(parent, 300, 5, 68, 0, -43, 0, minus12); /* needs rotating 12 degrees */
@@ -7779,7 +7857,7 @@ static int add_giant_spaceship(double x, double y, double z)
 	add_subblock(parent, 5, 60, 45, 120, 15, 0);
 	add_subblock(parent, 5, 60, 45, 20, -15, 0);
 	add_subblock(parent, 5, 60, 45, -20, 15, 0);
-
+#endif
 	return i;
 }
 
