@@ -7765,7 +7765,9 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 	const double zoff[] = { 0,  0, 0, 0, 1, -1 };
 	double x, y, z, xo, yo, zo, xrowstep, xcolstep, yrowstep, ycolstep, zrowstep, zcolstep;
 	struct snis_entity *block;
-	const double turret_offset = 25.0;
+	const double turret_offset = 350.0;
+	double platformsx, platformsy, platformsz;
+	double platformxo, platformyo, platformzo;
 
 	face = abs(face) % 6;
 
@@ -7779,6 +7781,14 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 	xo = xoff[face] * block->tsd.block.sx * 0.5 + turret_offset * xoff[face];
 	yo = yoff[face] * block->tsd.block.sy * 0.5 + turret_offset * yoff[face];
 	zo = zoff[face] * block->tsd.block.sz * 0.5 + turret_offset * zoff[face];
+
+	platformsx = turret_offset * 0.15 + turret_offset * 0.75 * fabs(xoff[face]);
+	platformsy = turret_offset * 0.15 + turret_offset * 0.75 * fabs(yoff[face]);
+	platformsz = turret_offset * 0.15 + turret_offset * 0.75 * fabs(zoff[face]);
+
+	platformxo = -turret_offset * 0.5 * xoff[face];
+	platformyo = -turret_offset * 0.5 * yoff[face];
+	platformzo = -turret_offset * 0.5 * zoff[face];
 
 	xrowstep = 0.0;
 	yrowstep = 0.0;
@@ -7820,6 +7830,8 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 			x = rowfactor * xrowstep + colfactor * xcolstep + xo;
 			y = rowfactor * yrowstep + colfactor * ycolstep + yo;
 			z = rowfactor * zrowstep + colfactor * zcolstep + zo;
+			add_subblock(parent_id, 1.0, platformsx, platformsy, platformsz,
+						x + platformxo, y + platformyo, z + platformzo, 1);
 			add_turret(parent_id, 0, 0, 0, x, y, z, identity_quat);
 		}
 	}
@@ -7845,7 +7857,7 @@ static int add_giant_spaceship(double x, double y, double z)
 	add_turrets_to_block_face(go[i].id, 3, 8, 1);
 	add_turrets_to_block_face(go[i].id, 4, 8, 5);
 	add_turrets_to_block_face(go[i].id, 5, 8, 5);
-#if 0
+#if 1
 	add_subblock(parent, scalefactor, 300, 75, 4, 0, 0, 19, 0);
 	add_rotated_subblock(parent, scalefactor, 300, 5, 68, 0, 43, 0, plus12); /* needs rotating 12 degrees */
 	add_rotated_subblock(parent, scalefactor, 300, 5, 68, 0, -43, 0, minus12); /* needs rotating 12 degrees */
