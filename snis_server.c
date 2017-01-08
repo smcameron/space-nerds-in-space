@@ -2361,6 +2361,8 @@ static int projectile_collides(double x1, double y1, double z1,
 }
 
 static void do_collision_impulse(struct snis_entity *player, struct snis_entity *object);
+static void block_add_to_naughty_list(struct snis_entity *o, uint32_t id);
+
 static void torpedo_collision_detection(void *context, void *entity)
 {
 	struct snis_entity *t = entity;  /* target */
@@ -2411,6 +2413,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 		impact_fractional_time = 0.0; /* TODO: something better? */
 		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z, 50, 5, 5, t->type);
 		snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
+		block_add_to_naughty_list(t, o->tsd.torpedo.ship_id);
 		return;
 	}
 
@@ -2614,6 +2617,7 @@ static void laser_collision_detection(void *context, void *entity)
 		impact_fractional_time = 0.0; /* TODO: something better? */
 		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z, 50, 5, 5, t->type);
 		snis_queue_add_sound(DISTANT_PHASER_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
+		block_add_to_naughty_list(t, o->tsd.laser.ship_id);
 		/* How does the laser get deleted? */
 		return;
 	}
@@ -6307,6 +6311,35 @@ static void docking_port_move(struct snis_entity *o)
 	docker->timestamp = universe_timestamp;
 }
 
+static void block_add_to_naughty_list(struct snis_entity *o, uint32_t id)
+{
+	const int itemsize = sizeof(o->tsd.block.naughty_list[0]);
+	uint32_t *dest = &o->tsd.block.naughty_list[1];
+	uint32_t *src = &o->tsd.block.naughty_list[0];
+	uint32_t rootid;
+	int i;
+
+	if (id == (uint32_t) -1)
+		return;
+	if (o->type != OBJTYPE_BLOCK)
+		return;
+	i = lookup_by_id(id);
+	if (i < 0)
+		return;
+	if (go[i].type != OBJTYPE_SHIP1 && go[i].type != OBJTYPE_SHIP2)
+		return;
+	rootid = o->tsd.block.root_id;
+	if (rootid != -1) {
+		i = lookup_by_id(rootid);
+		if (i < 0)
+			return;
+		dest = &go[i].tsd.block.naughty_list[1];
+		src = &go[i].tsd.block.naughty_list[0];
+	}
+	memmove(dest, src, itemsize * (ARRAYSIZE(o->tsd.block.naughty_list) - 1));
+	*src = id;
+}
+
 static void block_move(struct snis_entity *o)
 {
 	struct snis_entity *parent;
@@ -7689,6 +7722,8 @@ static uint32_t find_root_id(int parent_id)
 	/* TODO: Detect cycles. */
 	int i;
 	uint32_t id;
+	if (parent_id == (uint32_t) -1) /* am I root? */
+		return -1;
 	id = parent_id;
 	do {
 		i = lookup_by_id(id);
@@ -7757,6 +7792,7 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	if (i < 0)
 		return i;
 	go[i].tsd.block.parent_id = parent_id;
+	go[i].tsd.block.root_id = find_root_id(parent_id);
 	go[i].tsd.block.dx = dx;
 	go[i].tsd.block.dy = dy;
 	go[i].tsd.block.dz = dz;
@@ -7766,6 +7802,7 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	go[i].tsd.block.relative_orientation = relative_orientation;
 	go[i].tsd.block.radius = mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
 	go[i].tsd.block.block_material_index = block_material_index;
+	memset(&go[i].tsd.block.naughty_list, 0xff, sizeof(go[i].tsd.block.naughty_list));
 	go[i].move = block_move;
 	block_calculate_obb(&go[i], &go[i].tsd.block.obb);
 	return i;
