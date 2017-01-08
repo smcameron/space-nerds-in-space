@@ -7684,6 +7684,24 @@ static void fabricate_prices(struct snis_entity *starbase)
 	}
 }
 
+static uint32_t find_root_id(int parent_id)
+{
+	/* TODO: Detect cycles. */
+	int i;
+	uint32_t id;
+	id = parent_id;
+	do {
+		i = lookup_by_id(id);
+		if (i < 0) /* shouldn't happen */
+			return i;
+		if (go[i].type != OBJTYPE_BLOCK)
+			return id;
+		if (go[i].tsd.block.parent_id == (uint32_t) -1)
+			return id;
+		id = go[i].tsd.block.parent_id;
+	} while (1);
+}
+
 static int add_turret(int parent_id, double x, double y, double z,
 			double dx, double dy, double dz,
 			union quat relative_orientation)
@@ -7693,6 +7711,7 @@ static int add_turret(int parent_id, double x, double y, double z,
 	if (i < 0)
 		return i;
 	go[i].tsd.turret.parent_id = parent_id;
+	go[i].tsd.turret.root_id = find_root_id(parent_id);
 	go[i].tsd.turret.dx = dx;
 	go[i].tsd.turret.dy = dy;
 	go[i].tsd.turret.dz = dz;

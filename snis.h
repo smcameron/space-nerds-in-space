@@ -611,7 +611,7 @@ struct block_data {
 };
 
 struct turret_data {
-	uint32_t parent_id;
+	uint32_t parent_id, root_id;
 	union quat relative_orientation;
 	double dx, dy, dz; /* offset position from parent, used only server side */
 	uint32_t current_target_id;
