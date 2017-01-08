@@ -6395,6 +6395,9 @@ static void turret_move(struct snis_entity *o)
 	union quat desired_orientation;
 	union vec3 pos;
 	int i, t;
+	int root;
+	double min_dist = 1e20;
+	int closest = -1;
 
 	if (((o->id + universe_timestamp) % 150) == 0)
 		turret_fire(o);
@@ -6407,6 +6410,32 @@ static void turret_move(struct snis_entity *o)
 	pos.v.x = o->tsd.turret.dx;
 	pos.v.y = o->tsd.turret.dy;
 	pos.v.z = o->tsd.turret.dz;
+
+	/* Check to see what our target should be, if anything */
+	root = lookup_by_id(o->tsd.turret.root_id);
+	if (root < 0) {
+		o->tsd.turret.current_target_id = (uint32_t) -1;
+	} else {
+		for (i = 0; i < ARRAYSIZE(go[root].tsd.block.naughty_list); i++)  {
+			if (go[root].tsd.block.naughty_list[i] == (uint32_t) -1)
+				break;
+			uint32_t n = lookup_by_id(go[root].tsd.block.naughty_list[i]);
+			if (n < 0)
+				continue;
+			double dist2 = dist3dsqrd(o->x - go[n].x, o->y - go[n].y, o->z - go[n].z);
+			if (dist2 > LASER_RANGE * LASER_RANGE) /* too far? */
+				continue;
+			if (dist2 < min_dist) {
+				min_dist = dist2;
+				closest = n;
+			}
+		}
+		if (closest < 0) {
+			o->tsd.turret.current_target_id = (uint32_t) -1;
+		} else {
+			o->tsd.turret.current_target_id = go[closest].id;
+		}
+	}
 
 	/* For now, do the stupidest thing that can possibly work... */
 	if (o->tsd.turret.current_target_id == (uint32_t) -1) { /* no target */
