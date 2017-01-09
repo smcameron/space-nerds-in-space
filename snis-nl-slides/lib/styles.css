@@ -1,0 +1,56 @@
+/*
+ * HTML Slideshow 
+ * Author: Rob Flaherty | rob@ravelrumba.com
+ */
+
+/* Meyer Reset */
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-weight:inherit;font-style:inherit;font-size:100%;font-family:inherit;vertical-align:baseline}:focus{outline:0}body{line-height:1;color:black;background:white}ol,ul{list-style:none}table{border-collapse:separate;border-spacing:0}caption,th,td{text-align:left;font-weight:normal}blockquote:before,blockquote:after,q:before,q:after{content:""}blockquote,q{quotes:""""}
+
+/* Core Styles */
+html{ font-size:100%; overflow: hidden; }
+body { font-size: 62.5%; line-height: 1.5; font-family: "Helvetica Neue", Helvetica, Arial, Sans-serif; color: #333; }
+input, select, textarea { font-family: "Helvetica Neue", Helvetica, Arial, Sans-serif; font-size: 1em; }
+:focus { outline: 1px; }
+strong{ font-weight:bold; }
+em { font-style: italic; }
+hr { display: none; }
+img { display: block; }
+a img { border: none; } 
+cite { font-style: normal; } 
+code { background: #ececec; padding: 0 3px; }
+blockquote { margin:0 0 24px 32px; border-left:7px solid #ececec; padding-left:16px; }
+blockquote p { margin:0; }
+.center { text-align: center; margin: 0 auto; }
+.left { float: left; }
+.right { float: right; }
+article, aside, dialog, figure, footer, header, hgroup, menu, nav, section { display: block; }
+
+/* Links */
+a:link, a:visited, a:active { color: #3c5dc9; text-decoration: underline; }
+a:hover { color: #3c5dc9; text-decoration:none; }
+
+/* Slider App Styles */
+section { padding: 0 30px 30px; display: none; }
+header { color: #000; background-image: -moz-linear-gradient(top, #c5c5c5, #b0b0b0); background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0, #c5c5c5),color-stop(1, #b0b0b0)); background-image: -o-linear-gradient(top, #c5c5c5, #b0b0b0); border-top:1px solid #dcdcdc; border-bottom: 1px solid rgb(105, 105, 105); text-shadow: 0px 1px 0px rgba(255, 255, 255, 0.5); font-family: "Lucida Grande"; padding: 1px 10px; overflow:hidden; z-index: 10000; position: relative; }
+header h1 { float: left; font-size: 18px;  line-height: 32px;}
+.slide-selected { display: block; }
+.action, .action-on  { display: none; }
+
+/* Slider Nav */
+nav { float: right; }
+nav li { float: left; line-height: 32px; font-size: 14px;}
+nav button { float: left; border: 0; width: 26px; height: 25px; text-indent: -9999px; display: block; cursor: pointer; margin-top:4px; }
+#prev-btn { background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAZCAYAAAAv3j5gAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAkFJREFUeNpi/PTpEwMxIDw8HJkrAcTcQHyXgUjAxEA6EGRhYVmnqKjoQYomoi36//8/COsBmcd+//5tqaKiIgEVIwqzkGCRDxMT09J///7xgfhAy36BDCAWEGVRcHBwAZDqB1oCFwOxkfkUWRQYGAiSnwHEydiCkioW+fv7izMyMq4EGmiPTR4o959ii3x9fY2A8bHu79+/8rg0/vjxgxVoESeR9vxhRM9H3t7e4UDXzgf6BK8hwCT+GeiQL0QlbSamlSg+8vT0rAFSzcRo/vXrFy+Q4iVGrbq6ugPYIjc3N1AunwrE8Qw0AMzMzKwsLi4u+sCgWgwMKl0GGgFQCmUCRryymJiYIixf0Aozb9y4kcnd3d3oyZMnYvfv32clpVghFktISLwGlXVXeXh4vBobG+dFR0d/oYVv/vz5wwhLdV+BOCctLe2+tLR0TU9PD//Pnz8Z8YU70HH/WFlZiYojLi6un4xY6qPAS5cuTa6trZV4+fIlMy7N9fX1Tx0cHN4RmR42MuKo+AyeP38+v7q6WuvKlSts2BSEhIQ0lpWVdRBp0V9cZd0FSUlJjxkzZswCxp3rzp07ObEUQX9MTEx+UKPie8nGxhbS2to6KzMz8xN6BANTEyMpCYJQDfsbiAuSk5MrOjs733Nycv5HsoiBmhbBwHRXV9eI6dOnP5KRkflDS4sYdHV1d+np6fksWLDgDJD9CxhH7KRkWpIaJzo6OldERES8gEn/kKWl5TNSLGIktl2HBhSgleYdYjUABBgAOCl8S+xfAp8AAAAASUVORK5CYII=) no-repeat; margin-right: 10px;line-height: 32px; }
+#next-btn { background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAZCAYAAAAv3j5gAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAjdJREFUeNpi/PTpEwOxIDw8XBlIfV25cuULBhIBEymKFRUVPVhYWNYBLRSkqUUqKioSv3//tgQyj4WFhenRzCKgJb/+///P8O/fPw1GRsbDoaGhPjSxCGgBHP/584cPSG8ODg4uoLpFUN+g4/7AwMA5QMxCNYuAwfUfi0UgnAx0xB5/f39xXHpZfH19WUE0MRY5ODiwggzGAeyZmJhOAs0L2rx58zkMRwI19wM1hxNjETMzMw8wbngJ+Po70HeJW7duXYkinpqaev7atWsGDNQHtdu3b2+BBx3Qlax///6lgT0MzW5ubipAOnvXrl1fWWApiUYgHhiURi4uLrEssJRDKyApKaloZmamDLaIRkEHSqXfS0tLz/Hw8NxkAaYiRlr4KDY29ktaWtpCILMcVOKzcHFx/eTj4/tHZFnH8OXLF7yZnJ2d/X9JSclHb29vUIrrhSfvly9fNgNpf2IsOnDggFBjY6M0LnlxcfG/zc3NL/T09HKB3PUoJQMnJ2cTkG4lxqLLly9XAIO5Hpucjo7Or9bW1mvAyE8Eci9gFEGgEIFiguDHjx9/sMWnu7v79/r6+t1sbGxpQO5LrGUdiaU3RsLJzs7+lJycPB/ILMXnYFItguc5bm7u/w0NDR9cXV2rgdzphPSSZZGcnNyftra2p8BIBwXVLmL0kmQRMI7YdXV1f02cOPGciIhIKlDoCrF6SbLI0tLymYaGxiGgJWFA7nuSKk1S2nWghhAQ/wHiB6SWFAABBgC+fxD2vIG/7gAAAABJRU5ErkJggg==) no-repeat; margin-left:9px; }
+
+/* General Slide Styles */
+.slide h1 { font-size: 32px; }
+.slide h2 { font-size: 26px; }
+.slide p { font-size: 20px; margin: 0 0 1em; }
+.slide li { list-style-type: disc; margin-left: 40px; font-size: 20px; }
+.slide pre { font-size:20px; font-family: monospace; }
+.slide hgroup { margin: 0 0 20px; }
+
+/* Center graphics and media content */
+.slide img, .slide video, .slide canvas, .slide figure, .slide object, .slide embed { margin:0 auto; }
+.slide .fullscreen { position: absolute; left:0; top:0; width:100%; z-index:1; }

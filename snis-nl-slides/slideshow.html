@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  
+  <!--[if lt IE 9]>
+  <script src="./lib/html5shim.js"></script>
+  <![endif]-->  
+  
+  <!-- These are some core styles the slideshow app requires -->
+  <link rel="stylesheet" href="./lib/styles.css" />
+  
+  <!-- These are the styles you'll add to make the slides look great -->
+  <link rel="stylesheet" href="css/styles.css" />
+  
+  <title>Cheap and Easy DIY Speech Recognition For Your Home Made Starship</title>
+</head>
+<style>
+hili {
+	background-color:#ffff9f  
+}
+</style>
+<body>
+
+  <header>
+    <h1>Cheap and Easy DIY Speech Recognition For Your Home Made Starship</h1>
+    <nav>
+      <ul>
+        <li><button id="prev-btn" title="Previous slide">Previous Slide</button></li>
+        <li><span id="slide-number"></span>/<span id="slide-total"></span></li>
+        <li><button id="next-btn" title="Next Slide">Next Slide</button></li>
+      </ul>
+    </nav>
+  </header>
+  <div id="deck">
+  
+    <!-- Begin slides -->
+    <section>
+      <hgroup>
+        <h1>Cheap and Easy Speech Recognition<br>For Your Home Made Starship</h1>
+	<p align=center><img src="file:///home/scameron/Downloads/homemade-starship.jpg" style="width:50%">
+        <h2>(Use arrow keys to navigate slides, F11 for fullscreen)</h2>
+      </hgroup>
+    </section>
+
+<section> <hgroup>
+<h1>So You're Making a Starship?
+<h2>You're gonna need a computer...
+<p align=center><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/HAL9000.svg/220px-HAL9000.svg.png", style="width:30%">
+<p align=center><em>(What a computer might look like)</em>
+</hgroup> </section>
+
+<section> <hgroup>
+<h1>So You're Making a Starship?
+<h2>You're gonna need a computer 
+<p align=center><img src="https://upload.wikimedia.org/wikipedia/en/0/01/HollyRed.jpg", style="width:30%">
+<p align=center><em>(What a cheaper, easier computer might look like)</em>
+</hgroup> </section>
+
+<section> <hgroup>
+<h1>Disclaimer: If you haven't figured it out already this is all more of a very cheesy hack than real AI or NLP
+</hgroup> </section>
+
+<section> <hgroup>
+<h1>Three parts to a Starship Computer:
+<li><h1>Speech Synthesis</h1></li>
+<li><h1>Speech Recognition</h1></li>
+<li><h1>"Natural Language Processing"</h1></li>
+</hgroup> </section>
+
+<section><hgroup>
+<h1>Speech Synthesis - Cheap and easy:
+<li><h1>espeak</h1></l1>
+<li><h2><pre>espeak 'I'\''m afraid I can'\''t do that dave'</pre></h2></li>
+<li><h1>pico2wave</h1></l1>
+<li><h2><pre>pico2wave -w /tmp/zzz.wav 'I'\''m afraid I can'\''t do that dave'; aplay /tmp/zzz.wav</pre></h2></li>
+<li><h2><pre>pico2wave -l en-GB -w /tmp/zzz.wav 'I'\''m afraid I can'\''t do that dave'; aplay /tmp/zzz.wav</pre></h2></li>
+</hgroup></section>
+
+<section><hgroup>
+<h1>Speech Synthesis - Cheap and easy:
+<li><h2>To serialize speech, to keep the computer from talking over itself
+and saying multiple things at the same time, a simple "mkdir" based lock
+is used:</h2></li>
+<li><h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/text_to_speech.sh">text_to_speech.sh</a></h2></li>
+</hgroup></section>
+
+<section><hgroup>
+<h1>Speech Recognition - Cheap and easy:
+<li><h1><a href="http://cmusphinx.sourceforge.net/wiki/tutorialpocketsphinx">Pocketsphinx</a></h1></li>
+<li><h1>Has hotword support</h1></li>
+<li><h1>Trainable with custom vocabulary for (hopefully good enough) accuracy</h1></li>
+</hgroup></section>
+
+<section><hgroup>
+<h1>Speech Recognition - Cheap and easy:
+<h1><a href="http://cmusphinx.sourceforge.net/wiki/tutorialpocketsphinx">Pocketsphinx</a> - How to use it</h1>
+<pre>
+language_model="yourlanguagemodel"
+keyphrase="computer"
+stdbuf -o 0 pocketsphinx_continuous -inmic yes -lm "$language_model".lm \
+  		-dict "$language_model".dic -keyphrase "$keyphrase" \
+		-kws_threshold 1e-20 2>/dev/null |\
+	stdbuf -o 0 egrep -v 'READY...|Listening...|Stopped listening' |\
+	stdbuf -o 0 sed -e 's/^[0-9][0-9]*[:] //' |\
+	stdbuf -o 0 grep COMPUTER |\
+	stdbuf -o 0 sed -e 's/^.*COMPUTER //' |\
+	stdbuf -o 0 tee recog.txt | \
+	stdbuf -o 0 cat > /tmp/snis-natural-language-fifo
+</pre>
+</hgroup></section>
+
+<section><hgroup>
+<h1><a href="http://cmusphinx.sourceforge.net/wiki/tutorialpocketsphinx">Pocketsphinx</a> - How to use it</h1>
+<pre>
+language_model="yourlanguagemodel"
+keyphrase="computer"
+<hili>stdbuf -o 0</hili> pocketsphinx_continuous -inmic yes -lm "$language_model".lm \
+  		-dict "$language_model".dic -keyphrase "$keyphrase" \
+		-kws_threshold 1e-20 2>/dev/null |\
+	<hili>stdbuf -o 0</hili> egrep -v 'READY...|Listening...|Stopped listening' |\
+	<hili>stdbuf -o 0</hili> sed -e 's/^[0-9][0-9]*[:] //' |\
+	<hili>stdbuf -o 0</hili> grep COMPUTER |\
+	<hili>stdbuf -o 0</hili> sed -e 's/^.*COMPUTER //' |\
+	<hili>stdbuf -o 0</hili> tee recog.txt | \
+	<hili>stdbuf -o 0</hili> cat > /tmp/snis-natural-language-fifo
+</pre>
+<li><h2>"stdbuf -o 0" turns off any output buffering of the command it runs.</h1></li>
+<li><h2>We need this because we want "real time" responsiveness and don't want things
+to get stuck for lack of a newline</h1></li>
+</hgroup></section>
+
+<section><hgroup>
+<h1><a href="http://cmusphinx.sourceforge.net/wiki/tutorialpocketsphinx">Pocketsphinx</a> - How to use it</h1>
+<pre>
+language_model="yourlanguagemodel"
+keyphrase="computer"
+stdbuf -o 0 <hili>pocketsphinx_continuous -inmic yes -lm "$language_model".lm \</hili>
+  		<hili>-dict "$language_model".dic -keyphrase "$keyphrase" \</hili>
+		<hili>-kws_threshold 1e-20 2>/dev/null</hili> |\
+	stdbuf -o 0 egrep -v 'READY...|Listening...|Stopped listening' |\
+	stdbuf -o 0 sed -e 's/^[0-9][0-9]*[:] //' |\
+	stdbuf -o 0 grep COMPUTER |\
+	stdbuf -o 0 sed -e 's/^.*COMPUTER //' |\
+	stdbuf -o 0 tee recog.txt | \
+	stdbuf -o 0 cat > /tmp/snis-natural-language-fifo
+</pre>
+<li><h2>pocketsphinx_continuous - run continuously</h1></li>
+<li><h2>-inmic yes - Use the microphone</h1></li>
+<li><h2>-lm, -dict - specify language model (more on this later)</h1></li>
+<li><h2>-keyphrase - specify "key phrase" or "hot word"</h1></li>
+<li><h2>-kws_threshold - adjust sensitivity of key phrase recognition</h1></li>
+</hgroup></section>
+
+<section><hgroup>
+<h1><a href="http://cmusphinx.sourceforge.net/wiki/tutorialpocketsphinx">Pocketsphinx</a> - How to use it</h1>
+<pre>
+language_model="yourlanguagemodel"
+keyphrase="computer"
+stdbuf -o 0 pocketsphinx_continuous -inmic yes -lm "$language_model".lm \
+  		-dict "$language_model".dic -keyphrase "$keyphrase" \
+		-kws_threshold 1e-20 2>/dev/null |\
+	stdbuf -o 0 <hili>egrep -v 'READY...|Listening...|Stopped listening' |\</hili>
+	stdbuf -o 0 <hili>sed -e 's/^[0-9][0-9]*[:] //' |\</hili>
+	stdbuf -o 0 grep COMPUTER |\
+	stdbuf -o 0 sed -e 's/^.*COMPUTER //' |\
+	stdbuf -o 0 tee recog.txt | \
+	stdbuf -o 0 cat > /tmp/snis-natural-language-fifo
+</pre>
+<li><h2>Ignoring portions of the output from pocketsphinx (determined empirically)</h1></li>
+</hgroup></section>
+
+<section><hgroup>
+<h1><a href="http://cmusphinx.sourceforge.net/wiki/tutorialpocketsphinx">Pocketsphinx</a> - How to use it</h1>
+<pre>
+language_model="yourlanguagemodel"
+keyphrase="computer"
+stdbuf -o 0 pocketsphinx_continuous -inmic yes -lm "$language_model".lm \
+  		-dict "$language_model".dic -keyphrase "$keyphrase" \
+		-kws_threshold 1e-20 2>/dev/null |\
+	stdbuf -o 0 egrep -v 'READY...|Listening...|Stopped listening' |\
+	stdbuf -o 0 sed -e 's/^[0-9][0-9]*[:] //' |\
+	stdbuf -o 0 <hili>grep COMPUTER |\</hili>
+	stdbuf -o 0 <hili>sed -e 's/^.*COMPUTER //' |\</hili>
+	stdbuf -o 0 tee recog.txt | \
+	stdbuf -o 0 cat > /tmp/snis-natural-language-fifo
+</pre>
+<li><h2>Transform "blah blah COMPUTER DO SOMETHING" into "DO SOMETHING"</h1></li>
+</hgroup></section>
+
+<section><hgroup>
+<h1><a href="http://cmusphinx.sourceforge.net/wiki/tutorialpocketsphinx">Pocketsphinx</a> - How to use it</h1>
+<pre>
+language_model="yourlanguagemodel"
+keyphrase="computer"
+stdbuf -o 0 pocketsphinx_continuous -inmic yes -lm "$language_model".lm \
+  		-dict "$language_model".dic -keyphrase "$keyphrase" \
+		-kws_threshold 1e-20 2>/dev/null |\
+	stdbuf -o 0 egrep -v 'READY...|Listening...|Stopped listening' |\
+	stdbuf -o 0 sed -e 's/^[0-9][0-9]*[:] //' |\
+	stdbuf -o 0 grep COMPUTER |\
+	stdbuf -o 0 sed -e 's/^.*COMPUTER //' |\
+	stdbuf -o 0 <hili>tee recog.txt | \</hili>
+	stdbuf -o 0 cat > /tmp/snis-natural-language-fifo
+</pre>
+<li><h2>Capture recognizer output for debugging.</h1></li>
+</hgroup></section>
+
+<section><hgroup>
+<h1><a href="http://cmusphinx.sourceforge.net/wiki/tutorialpocketsphinx">Pocketsphinx</a> - How to use it</h1>
+<pre>
+language_model="yourlanguagemodel"
+keyphrase="computer"
+stdbuf -o 0 pocketsphinx_continuous -inmic yes -lm "$language_model".lm \
+  		-dict "$language_model".dic -keyphrase "$keyphrase" \
+		-kws_threshold 1e-20 2>/dev/null |\
+	stdbuf -o 0 egrep -v 'READY...|Listening...|Stopped listening' |\
+	stdbuf -o 0 sed -e 's/^[0-9][0-9]*[:] //' |\
+	stdbuf -o 0 grep COMPUTER |\
+	stdbuf -o 0 sed -e 's/^.*COMPUTER //' |\
+	stdbuf -o 0 tee recog.txt | \
+	stdbuf -o 0 <hili>cat > /tmp/snis-natural-language-fifo</hili>
+</pre>
+<li><h2>Send text of recognized speech into a FIFO for "natural language processing"</h1></li>
+</hgroup></section>
+
+<section><hgroup>
+<h1><a href="http://cmusphinx.sourceforge.net/wiki/tutorialpocketsphinx">Pocketsphinx</a> - Language Model</h1>
+<li><h1>Web Service for building language model</h1></li>
+<li><h2><a href="http://cmusphinx.sourceforge.net/wiki/tutoriallm#building_a_simple_language_model_using_web_service">Instructions</a> </li></h2>
+<li><h2><a href="http://www.speech.cs.cmu.edu/tools/lmtool-new.html">Service:  http://www.speech.cs.cmu.edu/tools/lmtool-new.html</a></li></h2>
+<li><h2>General procedure is:</h2></li>
+<li><h2>Upload a <a href="https://github.com/smcameron/space-nerds-in-space/blob/master/speech/snis_vocab.txt">corpus of typical commands</a>
+you want to recognize</h2></li>
+<li><h2>Web service processes this corpus</h2></li>
+<li><h2>Download a tarball containing 5 files: xxxx.dic, xxxx.lm, xxxx.log_pronounce, xxxx.sent, xxxx.vocab 
+(where "xxxx" is some number)</h2></li>
+<li><h2>xxxx.dic and xxxx.lm are the dictionary and language files used by pocketsphinx_continuous</h2></li>
+</hgroup></section>
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<li><h1>For this I wrote my own C code</h1></li>
+<li><h1>Works much as old games like Zork did</h1></li>
+<li><h1><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/snis_nl.h">snis_nl.h</a>,
+<a href="https://github.com/smcameron/space-nerds-in-space/blob/master/snis_nl.c">snis_nl.c</a></h1></li>
+<li><h1>What it does:</h1>
+<ul>
+<li><h2>Parses text using user supplied dictionary and verb syntax</h2></li>
+<li><h2>Calls user supplied verb functions, passing text and part of speech information</h2></li>
+</ul>
+</section></hgroup>
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<li><h1>For this I wrote my own C code</h1></li>
+<li><h1>Works much as old games like Zork did</h1></li>
+<li><h1><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/snis_nl.h">snis_nl.h</a>,
+<a href="https://github.com/smcameron/space-nerds-in-space/blob/master/snis_nl.c">snis_nl.c</a></h1></li>
+<li><h1>What it does <b>not</b> do:</h1>
+<ul>
+<li><h2>Associate any meaning to any words (apart from mapping verbs to callbacks)</h2></li>
+<li><h2>Understand anything.</h2></li>
+</ul>
+<li><h1>All "understanding" happens in user supplied verb callbacks</h1></li>
+</section></hgroup>
+
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<h1>The basic process is:
+<ul>
+<li><h1>At start up, call functions to add words to dictionary</h1>
+<ul>
+<li><h1>Define your nouns, pronouns, articles, adjectives, adverbs</h1></li>
+<li><h1>Define your verbs, with "syntax", and associated function pointers</h1></li>
+</ul>
+<li><h1>Parse text with <b>snis_nl_parse_natural_language_request()</b></h1></li>
+<li><h1>which will call back functions you have associated with verbs</h1></li>
+</ul>
+</li>
+</hgroup></section>
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<h1>Example: adding <b>non-verbs</b> to the dictionary
+<pre>
+snis_nl_add_dictionary_word("coolant",		"coolant",	POS_NOUN);
+snis_nl_add_dictionary_word("power",		"power",	POS_NOUN);
+snis_nl_add_dictionary_word("off",		"off",		POS_PREPOSITION);
+snis_nl_add_dictionary_word("on",		"on",		POS_PREPOSITION);
+snis_nl_add_dictionary_word("up",		"up",		POS_ADJECTIVE);
+snis_nl_add_dictionary_word("down",		"down",		POS_ADJECTIVE);
+snis_nl_add_dictionary_word("port",		"port",		POS_ADJECTIVE);
+snis_nl_add_dictionary_word("left",		"port",		POS_ADJECTIVE);
+</pre>
+</hgroup></section>
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<h1>Example: adding <b>verbs</b> to the dictionary
+<pre>
+snis_nl_add_dictionary_verb("set",		"set",		"npq", nl_set_npq); /* set warp drive power to 50 percent */
+snis_nl_add_dictionary_verb("set",		"set",		"npn", nl_set_npn); /* set a course for the planet */ 
+snis_nl_add_dictionary_verb("set",		"set",		"npan", nl_set_npn); /* set a course for the nearest planet */
+snis_nl_add_dictionary_verb("set",		"set",		"npnq", nl_set_npnq); /* set a course for starbase one */
+snis_nl_add_dictionary_verb("plot",		"plot",		"npn", nl_set_npn);
+snis_nl_add_dictionary_verb("plot",		"plot",		"npan", nl_set_npn);
+snis_nl_add_dictionary_verb("plot",		"plot",		"npnq", nl_set_npnq);
+snis_nl_add_dictionary_verb("lay in",		"lay in",	"npn", nl_set_npn);
+snis_nl_add_dictionary_verb("lay in",		"lay in",	"npan", nl_set_npn);
+snis_nl_add_dictionary_verb("lay in",		"lay in",	"npnq", nl_set_npnq);
+</pre>
+</hgroup></section>
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<h1>Example: adding <b>verbs</b> to the dictionary
+<pre>
+snis_nl_add_dictionary_verb(<hili>"set"</hili>,		"set",		"npn", nl_set_npn); /* set a course for the planet */ 
+</pre>
+<h1>First parameter is the verb you want to define.</h1>
+</hgroup></section>
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<h1>Example: adding <b>verbs</b> to the dictionary
+<pre>
+snis_nl_add_dictionary_verb("set",		<hili>"set"</hili>,		"npn", nl_set_npn); /* set a course for the planet */ 
+</pre>
+<h1>Second parameter is the "canonical" word, which doesn't have to be the same, but often is. </h1>
+</hgroup></section>
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<h1>Example: adding <b>verbs</b> to the dictionary
+<pre>
+snis_nl_add_dictionary_verb("set",		"set",		<hili>"npn"</hili>, nl_set_npn); /* set a course for the planet */ 
+</pre>
+<h1>Third parameter is the verb "syntax"</h1>
+<h1>In this case, "npn" means the verb expects a noun, a preposition, and another noun. (more on this later)</h1>
+</hgroup></section>
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<h1>Example: adding <b>verbs</b> to the dictionary
+<pre>
+snis_nl_add_dictionary_verb("set",		"set",		"npn", <hili>nl_set_npn</hili>); /* set a course for the planet */ 
+</pre>
+<h1>The fourth parameter is a pointer to the function to be called when this verb is encountered.</h1>
+<h1></h1>
+</hgroup></section>
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<h2>The verb syntax is defined by a string with each character representing
+an expected part of speech.</h2>
+<pre>
+Syntax of verb, denoted by characters.
+'n' - single noun (or pronoun)
+'l' - one or more nouns (or pronoun)
+'p' - preposition
+'P' - pronoun (unsubstitued, in most cases you probably want 'n' for noun.)
+      This is for cases like "it" in "how far is it to earth?" The word
+      "it" doesn't have or need any explicit antecedent.
+'q' - quantity, that is to say, a number.
+'a' - adjective
+'x' - auxiliary verb (be, do, have, will, shall, would, should,
+                       can, could, may, might, must, ought, etc. )
+</pre>
+<li><h2>For example: "put", as in "put the butter on the bread with the knife"
+has a syntax of "npnpn", while "put" as in "put the coat on",
+has a syntax of "np".</h2></li>
+<li><h2>Verbs with the same "word", but different syntaxes are considered different
+verbs and typically have different associated function pointers.</h2></li>
+<li><h2>Think of the verb syntax as kind of loose overloaded function prototypes.</h2></li>
+</section></hgroup>
+
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<h1>Verb Callback functions:
+<pre>
+static void my_verb_callback_fn(void *context, int argc, char *argv[], int pos[],
+                union snis_nl_extra_data extra_data[])
+</pre>
+<li><h2><em>context</em> : allows for your call back to receive some information to be
+passed through from the point of call of the parse.</h2>
+<li><h2><em>argc</em> : indicates number of elements in following array params.</h2></li>
+<li><h2><em>argv[]</em> : Array of canonical words parsed., eg: { "turn", "on", "the", "lights" }</h2></li>
+<li><h2><em>pos[]</em> : parallel array of parts of speech of argv[] elements, eg: { VERB, PREP, ART, NOUN }</h2></li>
+<li><h2><em>extra_data[]</em> : parallel array of "extra data" corresponding to argv[] array. (more on this later)</h2></li>
+</section></hgroup>
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<h1>External noun lookup function:
+<pre>static uint32_t my_lookup_function(void *context, char *word);</pre>
+<pre>snis_nl_add_external_lookup(my_lookup_function);</pre>
+<li><h2>An external noun lookup function can be provided to handle, eg. named objects.</h2></li>
+<li><h2>For example, if you have a game with procedurally named planets, the parser can
+call back a lookup function to be able to identify them, so you can parse "set a course for <em>name-of-planet</em>"</h2></li>
+<li><h2>Your lookup function can associate a uint32_t handle with any words it chooses.
+In the verb callback functions, these handles will be available in the extra_data[]
+parameter for any words identified as POS_EXTERNAL_NOUN.</h2></li>
+<pre>uint32_t noun_id = extra_data[noun].external_noun.handle</pre>
+</section></hgroup>
+
+<section><hgroup>
+<h1>"Natural Language Processing"</h1>
+<h1>Numbers</h1>
+<li><h2>'q' in a verb syntax means a number is expected.</h2></li>
+<li><h2>Numbers come from speech recognition as text, eg: "forty two", not "42".</h2></li>
+<li><h2>Custom code for handling percent, common fractions, the word "and" in
+the middle of numbers, etc.</h2></li>
+<li><h2>The value of parsed numbers is passed back to verb functions in
+the "extra_data[]" parameter.</h2></li>
+<pre>float value = extra_data[number].number.value;</pre>
+<li><h2>Not completely bug free. (Fails to parse "one hundred and ten thousand" correctly, for instance.)</h2></li>
+<li><h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/spelled_numbers.h">spelled_numbers.h</a>,
+<a href="https://github.com/smcameron/space-nerds-in-space/blob/master/spelled_numbers.c">spelled_numbers.c</a></h2></li>
+<li><h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/spelled_numbers.c#L410">Some things it can parse.</a></h2></li>
+</hgroup></section>
+
+<section> <hgroup>
+<h1>"Natural Language Processing"</h1>
+<h1>Parsing</h1>
+<h2>Assuming the dictionary is set up, parsing is as simple as passing it a string to chew on:</h2>
+<pre>snis_nl_parse_natural_language_request(NULL, "set the warp drive power to fifty percent");</pre>
+</hgroup></section>
+
+<section>
+<hgroup>
+<h1>Links
+<h2><ul>
+<li><h2>My github account: <a href="https://github.com/smcameron">https://github.com/smcameron</a></h2></li>
+<li><h2><a href="http://smcameron.github.io/space-nerds-in-space/">Space Nerds In Space web page</a></h2></li>
+<li><h2><a href="https://github.com/smcameron/space-nerds-in-space">Space Nerds In Space source code</a></h2></li>
+</ul>
+</hgroup>
+</section>
+    <!-- /End slides -->
+    
+  </div>
+  <!-- /deck -->
+  <script src="./lib/jquery-1.5.2.min.js"></script>
+  <script src="./lib/jquery.jswipe-0.1.2.js"></script>  
+  <script src="./lib/htmlSlides.js"></script>
+  <script>
+    //Do our business when the DOM is ready for us
+    $(function() {
+      
+      //You can trigger Javascript based on the slide number like this:
+      $('html').bind('newSlide', function(e, id) { 
+        switch(id) {
+          case 2:
+            console.log('This is the second slide.');;
+            break;
+          case 3:
+            console.log('Hello, third slide.');
+            break;
+        }
+      });
+
+      //One little option: hideToolbar (boolean; default = false)
+      htmlSlides.init({ hideToolbar: true });
+      
+    });
+  </script>
+  </body>
+</html>
