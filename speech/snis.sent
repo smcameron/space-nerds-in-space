@@ -5,7 +5,9 @@
 <s> ACTUATE </s>
 <s> ACTUATE DOCKING SYSTEM </s>
 <s> ACTUATE WARP DRIVE </s>
+<s> AFRICAN </s>
 <s> AFTER </s>
+<s> AIRSPEED VELOCITY </s>
 <s> ALERT </s>
 <s> ALL </s>
 <s> ALONGSIDE </s>
@@ -18,6 +20,7 @@
 <s> AT </s>
 <s> ATOP </s>
 <s> BASE </s>
+<s> BE </s>
 <s> BEAM </s>
 <s> BEFORE </s>
 <s> BEHIND </s>
@@ -95,6 +98,7 @@
 <s> DISENGAGE </s>
 <s> DISENGAGE DOCKING SYSTEM </s>
 <s> DISTANCE </s>
+<s> DO </s>
 <s> DOCKING </s>
 <s> DOWN </s>
 <s> DRIVE </s>
@@ -117,9 +121,12 @@
 <s> ENGINEERING </s>
 <s> ENGINEERING ON SCREEN </s>
 <s> ENGINEERING SCREEN </s>
+<s> ENOUGH </s>
 <s> ENTER STANDARD ORBIT </s>
+<s> EUROPEAN </s>
 <s> EVERYTHING </s>
 <s> EXCEPT </s>
+<s> FAR </s>
 <s> FACTOR </s>
 <s> FIFTEEN </s>
 <s> FIFTEEN PERCENT </s>
@@ -156,6 +163,9 @@
 <s> FULL STOP </s>
 <s> FULL THROTTLE </s>
 <s> GATE </s>
+<s> HAVE </s>
+<s> HOW </s>
+<s> HOW FAR </s>
 <s> HULL </s>
 <s> HUNDRED </s>
 <s> IMPULSE </s>
@@ -393,6 +403,7 @@
 <s> STATUS REPORT </s>
 <s> STOP </s>
 <s> STOP RED ALERT </s>
+<s> SUFFICIENT </s>
 <s> SWIFTLY </s>
 <s> SYSTEM </s>
 <s> TARGET </s>
@@ -438,6 +449,7 @@
 <s> TWO </s>
 <s> TWO THIRDS </s>
 <s> UNDER </s>
+<s> UNLADEN SWALLOW </s>
 <s> UNTIL </s>
 <s> UP </s>
 <s> VIEW </s>
@@ -446,6 +458,11 @@
 <s> WEAPONS </s>
 <s> WEAPON SCREEN </s>
 <s> WEAPONS ON SCREEN </s>
+<s> WHAT </s>
+<s> WHAT IS </s>
+<s> WHAT IS THE DISTANCE </s>
+<s> WHAT IS THE AIRSPEED VELOCITY OF AN UNLADEN SWALLOW </s>
+<s> WILL </s>
 <s> WITH </s>
 <s> YAW </s>
 <s> ZERO </s>
@@ -468,3 +485,6 @@
 <s> HEAD FOR THE NEAREST SHIP </s>
 <s> HEAD FOR THE SELECTION </s>
 <s> HEAD FOR THE TARGET </s>
+<s> HOW MUCH FUEL DO WE HAVE </s>
+<s> DO WE HAVE ENOUGH FUEL </s>
+<s> DO WE HAVE SUFFICIENT FUEL </s>

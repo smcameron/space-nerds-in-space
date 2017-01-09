@@ -7,6 +7,7 @@ actuate docking system
 actuate warp drive
 african
 after
+airspeed velocity
 alert
 all
 alongside
@@ -448,6 +449,7 @@ twenty percent
 two
 two thirds
 under
+unladen swallow
 until
 up
 view
@@ -459,6 +461,7 @@ weapons on screen
 what
 what is
 what is the distance
+what is the airspeed velocity of an unladen swallow
 will
 with
 yaw
