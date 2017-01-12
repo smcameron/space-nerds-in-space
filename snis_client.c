@@ -2023,7 +2023,13 @@ static void interpolate_laser(double timestamp, struct snis_entity *o, int visib
 	vec3_sub_self(&pos, &o->tsd.laser.birth_r);
 	float dist = vec3_magnitude(&pos);
 
-	float radius_scale = fmaxf(0.5, o->tsd.laser.power / 255.0);
+	/* Make the laser's appearance vary with power, but only for lasers from your
+	 * own ship.  That is because otherwise lasers of reasonable power (e.g. not
+	 * insta-kill power) would be nearly invisible.
+	 */
+	float radius_scale = 1.0;
+	if (o->tsd.laser.ship_id == my_ship_id)
+		radius_scale = fmaxf(0.5, o->tsd.laser.power / 255.0);
 
 	/* laser bolts are forced to 1.0 scale so we can shrink x to distance traveled */
 	float length_scale = clampf(dist / m->radius, 0.0, 1.0);
