@@ -609,6 +609,7 @@ struct block_data {
 	struct oriented_bounding_box obb;
 	uint32_t naughty_list[8];
 	uint32_t root_id;
+	union quat rotational_velocity;
 	uint8_t block_material_index; /* For now, 0 for big blocks, 1 for small blocks */
 	uint8_t health;
 };
@@ -618,6 +619,7 @@ struct turret_data {
 	union quat relative_orientation;
 	double dx, dy, dz; /* offset position from parent, used only server side */
 	uint32_t current_target_id;
+	union quat rotational_velocity;
 	uint8_t fire_countdown;
 	uint8_t fire_countdown_reset_value;
 	uint8_t health;

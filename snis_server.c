@@ -6409,17 +6409,30 @@ static void block_move(struct snis_entity *o)
 	pos.v.z = o->tsd.block.dz;
 	quat_rot_vec_self(&pos, &parent->orientation);
 	quat_mul(&o->orientation, &parent->orientation, &o->tsd.block.relative_orientation);
+	o->vx = pos.v.x + parent->x - o->x;
+	o->vy = pos.v.y + parent->y - o->y;
+	o->vz = pos.v.z + parent->z - o->z;
 	set_object_location(o, pos.v.x + parent->x, pos.v.y + parent->y, pos.v.z + parent->z);
 	block_calculate_obb(o, &o->tsd.block.obb);
 	o->timestamp = universe_timestamp;
-	if (o->tsd.block.health == 0)
+	if (o->tsd.block.health <= 100 && o->tsd.block.parent_id != (uint32_t) -1) {
 		o->tsd.block.parent_id = (uint32_t) -1;
+		(void) add_explosion(o->x, o->y, o->z, 50, 150, 50, o->type);
+		o->tsd.block.health = snis_randn(10) + 10;
+	}
 	return;
 
 default_move:
+	quat_mul(&o->orientation, &o->orientation, &o->tsd.block.rotational_velocity);
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
-	quat_init_axis(&o->orientation, 1.0, 0.0, 0.0, 0.1 * (universe_timestamp % 3600) * M_PI / 180.0);
 	block_calculate_obb(o, &o->tsd.block.obb);
+	if (o->tsd.block.health == 0) {
+		(void) add_explosion(o->x, o->y, o->z, 50, 150, 50, o->type);
+		o->alive = 0;
+		delete_from_clients_and_server(o);
+	}
+	if (o->tsd.block.health <= 100 && o->tsd.block.health > 0)
+		o->tsd.block.health--;
 	o->timestamp = universe_timestamp;
 	return;
 }
@@ -6465,16 +6478,13 @@ static void turret_move(struct snis_entity *o)
 		goto default_move;
 	parent = &go[i];
 
-	if (parent->type == OBJTYPE_BLOCK && parent->tsd.block.health == 0)
-		o->tsd.turret.parent_id = (uint32_t) -1;
-
 	pos.v.x = o->tsd.turret.dx;
 	pos.v.y = o->tsd.turret.dy;
 	pos.v.z = o->tsd.turret.dz;
 
 	/* Check to see what our target should be, if anything */
 	root = lookup_by_id(o->tsd.turret.root_id);
-	if (root < 0) {
+	if (root < 0 || (parent->type == OBJTYPE_BLOCK && parent->tsd.block.health == 0)) {
 		o->tsd.turret.current_target_id = (uint32_t) -1;
 	} else {
 		for (i = 0; i < ARRAYSIZE(go[root].tsd.block.naughty_list); i++)  {
@@ -6526,14 +6536,25 @@ static void turret_move(struct snis_entity *o)
 		}
 	}
 	quat_rot_vec_self(&pos, &parent->orientation);
+	o->vx = pos.v.x + parent->x - o->x;
+	o->vy = pos.v.y + parent->y - o->y;
+	o->vz = pos.v.z + parent->z - o->z;
 	set_object_location(o, pos.v.x + parent->x, pos.v.y + parent->y, pos.v.z + parent->z);
 	o->timestamp = universe_timestamp;
 	return;
 
 default_move:
-	quat_init_axis(&o->orientation, 1.0, 0.0, 0.0, 0.1 * (universe_timestamp % 3600) * M_PI / 180.0);
+	quat_mul(&o->orientation, &o->orientation, &o->tsd.turret.rotational_velocity);
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
+	if (o->tsd.turret.health > 10)
+		o->tsd.turret.health = snis_randn(7) + 3;
+	o->tsd.turret.health--;
+	if (o->tsd.turret.health == 0) {
+		(void) add_explosion(o->x, o->y, o->z, 50, 150, 50, o->type);
+		o->alive = 0;
+		delete_from_clients_and_server(o);
+	}
 	return;
 }
 
@@ -7842,6 +7863,7 @@ static int add_turret(int parent_id, double x, double y, double z,
 	go[i].tsd.turret.dz = dz;
 	go[i].tsd.turret.relative_orientation = relative_orientation;
 	go[i].tsd.turret.health = 255;
+	go[i].tsd.turret.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
 	go[i].move = turret_move;
 	return i;
 }
@@ -7891,6 +7913,7 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	go[i].tsd.block.sy = sy;
 	go[i].tsd.block.sz = sz;
 	go[i].tsd.block.health = 255; /* immortal */
+	go[i].tsd.block.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
 	go[i].tsd.block.relative_orientation = relative_orientation;
 	go[i].tsd.block.radius = mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
 	go[i].tsd.block.block_material_index = block_material_index;
@@ -8002,8 +8025,11 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 						x + platformxo, y + platformyo, z + platformzo, 1);
 			if (block >= 0) {
 				printf("ADDING TURRET parent = %d, %lf, %lf, %lf\n", go[block].id, x, y, z); 
-				add_turret(go[block].id, 0, 0, 0, 0, 0, -platformsz * 0.6, identity_quat);
-				go[block].tsd.block.health = 1; /* mortal */
+				add_turret(go[block].id, 0, 0, 0,
+						platformsx * 0.6 * xoff[face],
+						platformsy * 0.6 * yoff[face],
+						platformsz * 0.6 * zoff[face], identity_quat);
+				go[block].tsd.block.health = 121; /* mortal */
 			}
 		}
 	}
@@ -8021,6 +8047,7 @@ static int add_giant_spaceship(double x, double y, double z)
 	i = add_block_object(-1, x, y, z, 0, 0, 0, 0, 0, 0, 1, 1, 1, identity_quat, 0);
 	if (i < 0)
 		return i;
+	quat_init_axis(&go[i].tsd.block.rotational_velocity, 1.0, 0.0, 0.0, M_PI * 0.1 / 180.0);
 	parent = go[i].id;
 	i = add_subblock(parent, scalefactor, 200, 100, 4, 20, 0, -19, 0);
 	add_turrets_to_block_face(go[i].id, 0, 8, 1);
