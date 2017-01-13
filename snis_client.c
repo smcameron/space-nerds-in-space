@@ -1520,7 +1520,8 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 	return 0;
 }
 
-static int update_turret(uint32_t id, uint32_t timestamp, double x, double y, double z, union quat *orientation)
+static int update_turret(uint32_t id, uint32_t timestamp, double x, double y, double z,
+			union quat *orientation, uint8_t health)
 {
 	int i;
 	struct entity *e;
@@ -1532,6 +1533,7 @@ static int update_turret(uint32_t id, uint32_t timestamp, double x, double y, do
 		vy = y - go[i].y;
 		vz = z - go[i].z;
 		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, orientation, 1);
+		go[i].tsd.turret.health = health;
 		return 0;
 	}
 	e = add_entity(ecx, turret_mesh, x, y, z, BLOCK_COLOR);
@@ -1540,6 +1542,7 @@ static int update_turret(uint32_t id, uint32_t timestamp, double x, double y, do
 	i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_TURRET, 1, e);
 	if (i < 0)
 		return i;
+	go[i].tsd.turret.health = health;
 	return 0;
 }
 
@@ -2173,10 +2176,19 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
 		struct material *material, float shrink_factor, int debris_chance, float scale_factor);
 
+static void emit_flames(struct snis_entity *o)
+{
+	double vx, vy, vz;
+	vx = (double) snis_randn(50) / 20.0;
+	vy = (double) snis_randn(50) / 20.0;
+	vz = (double) snis_randn(50) / 20.0;
+
+	add_spark(o->x, o->y, o->z, vx, vy, vz, 5, YELLOW, &spark_material, 0.95, 0.0, 0.25);
+}
+
 /* make badly damaged ships "catch on fire" */
 static void ship_emit_sparks(struct snis_entity *o)
 {
-	double vx, vy, vz;
 
 	if (o->type == OBJTYPE_SHIP1)
 		return;
@@ -2189,11 +2201,16 @@ static void ship_emit_sparks(struct snis_entity *o)
 
 	o->tsd.ship.flames_timer--;
 
-	vx = (double) snis_randn(50) / 20.0;
-	vy = (double) snis_randn(50) / 20.0;
-	vz = (double) snis_randn(50) / 20.0;
+	emit_flames(o);
+}
 
-	add_spark(o->x, o->y, o->z, vx, vy, vz, 5, YELLOW, &spark_material, 0.95, 0.0, 0.25);
+static void turret_emit_sparks(struct snis_entity *o)
+{
+	if (o->type != OBJTYPE_TURRET)
+		return;
+	if (o->tsd.turret.health > 100)
+		return;
+	emit_flames(o);
 }
 
 static void move_objects(void)
@@ -2222,6 +2239,7 @@ static void move_objects(void)
 		case OBJTYPE_BLOCK:
 		case OBJTYPE_TURRET:
 			move_object(timestamp, o, &interpolate_orientated_object);
+			turret_emit_sparks(o);
 			break;
 		case OBJTYPE_LASER:
 			move_object(timestamp, o, &interpolate_laser);
@@ -4986,16 +5004,17 @@ static int process_update_turret_packet(void)
 	double dx, dy, dz;
 	union quat orientation;
 	int rc;
+	uint8_t health;
 
-	rc = read_and_unpack_buffer(buffer, "wwSSSQ", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSQb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
-			&orientation);
+			&orientation, &health);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_turret(id, timestamp, dx, dy, dz, &orientation);
+	rc = update_turret(id, timestamp, dx, dy, dz, &orientation, health);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }

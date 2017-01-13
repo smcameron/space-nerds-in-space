@@ -1584,6 +1584,20 @@ static int roll_damage(struct snis_entity *o, struct damcon_data *d,
 	return damage + system;
 }
 
+static void calculate_turret_damage(struct snis_entity *o)
+{
+	if (o->type != OBJTYPE_TURRET)
+		return;
+	int damage = 100 + snis_randn(100);
+	int health = o->tsd.turret.health;
+	health -= damage;
+	if (health < 0)
+		health = 0;
+	o->tsd.turret.health = health;
+	if (o->tsd.turret.health == 0)
+		o->alive = 0;
+}
+
 static int lookup_bridge_by_shipid(uint32_t shipid);
 static void calculate_torpedolike_damage(struct snis_entity *o, double weapons_factor)
 {
@@ -1599,6 +1613,11 @@ static void calculate_torpedolike_damage(struct snis_entity *o, double weapons_f
 			return;
 		}
 		d = &bridgelist[bridge].damcon;
+	}
+
+	if (o->type == OBJTYPE_TURRET) {
+		calculate_turret_damage(o);
+		return;
 	}
 
 	ss = shield_strength(snis_randn(255), o->sdata.shield_strength,
@@ -1656,6 +1675,11 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 			fprintf(stderr, "b < 0 at %s:%d\n", __FILE__, __LINE__);
 		else
 			d = &bridgelist[b].damcon;
+	}
+
+	if (o->type == OBJTYPE_TURRET) {
+		calculate_turret_damage(o);
+		return;
 	}
 
 	ss = shield_strength(wavelength, o->sdata.shield_strength,
@@ -2468,6 +2492,8 @@ static void torpedo_collision_detection(void *context, void *entity)
 	} else if (t->type == OBJTYPE_ASTEROID || t->type == OBJTYPE_CARGO_CONTAINER) {
 		if (t->alive)
 			t->alive--;
+	} else if (t->type == OBJTYPE_TURRET) {
+		calculate_torpedo_damage(t);
 	}
 
 	if (!t->alive) {
@@ -2667,6 +2693,11 @@ static void laser_collision_detection(void *context, void *entity)
 		send_ship_damage_packet(t);
 		attack_your_attacker(t, lookup_entity_by_id(o->tsd.laser.ship_id));
 		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
+	}
+
+	if (t->type == OBJTYPE_TURRET) {
+		calculate_laser_damage(t, o->tsd.laser.wavelength,
+			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST);
 	}
 
 	if (t->type == OBJTYPE_ASTEROID || t->type == OBJTYPE_TORPEDO ||
@@ -6399,6 +6430,11 @@ static void turret_move(struct snis_entity *o)
 	double min_dist = 1e20;
 	int closest = -1;
 
+	if (o->tsd.turret.health == 0) {
+		/* TODO add turret derelict */
+		o->alive = 0;
+	}
+
 	if (((o->id + universe_timestamp) % 150) == 0)
 		turret_fire(o);
 	if (o->tsd.turret.parent_id == (uint32_t) -1)
@@ -7780,6 +7816,7 @@ static int add_turret(int parent_id, double x, double y, double z,
 	go[i].tsd.turret.dy = dy;
 	go[i].tsd.turret.dz = dz;
 	go[i].tsd.turret.relative_orientation = relative_orientation;
+	go[i].tsd.turret.health = 255;
 	go[i].move = turret_move;
 	return i;
 }
@@ -8270,6 +8307,11 @@ static void laserbeam_move(struct snis_entity *o)
 		send_ship_damage_packet(target);
 		attack_your_attacker(target, lookup_entity_by_id(o->tsd.laserbeam.origin));
 		notify_the_cops(o);
+	}
+
+	if (ttype == OBJTYPE_TURRET) {
+		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
+					(float) o->tsd.laserbeam.power);
 	}
 
 	if (ttype == OBJTYPE_ASTEROID)
@@ -15631,12 +15673,12 @@ static void send_update_block_packet(struct game_client *c,
 static void send_update_turret_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("bwwSSSQ", OPCODE_UPDATE_TURRET,
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSQb", OPCODE_UPDATE_TURRET,
 					o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
-					&o->orientation));
+					&o->orientation, o->tsd.turret.health));
 }
 
 static void send_update_spacemonster_packet(struct game_client *c,

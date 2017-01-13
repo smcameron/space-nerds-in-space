@@ -619,6 +619,7 @@ struct turret_data {
 	uint32_t current_target_id;
 	uint8_t fire_countdown;
 	uint8_t fire_countdown_reset_value;
+	uint8_t health;
 };
 
 union type_specific_data {
