@@ -610,6 +610,7 @@ struct block_data {
 	uint32_t naughty_list[8];
 	uint32_t root_id;
 	uint8_t block_material_index; /* For now, 0 for big blocks, 1 for small blocks */
+	uint8_t health;
 };
 
 struct turret_data {

@@ -1484,7 +1484,7 @@ static int update_docking_port(uint32_t id, uint32_t timestamp, double scale,
 
 static int update_block(uint32_t id, uint32_t timestamp, double x, double y, double z,
 		double sizex, double sizey, double sizez, union quat *orientation,
-		uint8_t block_material_index)
+		uint8_t block_material_index, uint8_t health)
 {
 	int i;
 	struct entity *e;
@@ -1499,6 +1499,7 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 		go[i].tsd.block.sx = sizex;
 		go[i].tsd.block.sy = sizey;
 		go[i].tsd.block.sz = sizez;
+		go[i].tsd.block.health = health;
 		if (go[i].entity)
 			update_entity_non_uniform_scale(go[i].entity, sizex, sizey, sizez);
 		return 0;
@@ -1517,6 +1518,7 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 	go[i].tsd.block.sx = sizex;
 	go[i].tsd.block.sy = sizey;
 	go[i].tsd.block.sz = sizez;
+	go[i].tsd.block.health = health;
 	return 0;
 }
 
@@ -2176,12 +2178,12 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
 		struct material *material, float shrink_factor, int debris_chance, float scale_factor);
 
-static void emit_flames(struct snis_entity *o)
+static void emit_flames(struct snis_entity *o, double factor)
 {
 	double vx, vy, vz;
-	vx = (double) snis_randn(50) / 20.0;
-	vy = (double) snis_randn(50) / 20.0;
-	vz = (double) snis_randn(50) / 20.0;
+	vx = factor * (double) snis_randn(50) / 20.0;
+	vy = factor * (double) snis_randn(50) / 20.0;
+	vz = factor * (double) snis_randn(50) / 20.0;
 
 	add_spark(o->x, o->y, o->z, vx, vy, vz, 5, YELLOW, &spark_material, 0.95, 0.0, 0.25);
 }
@@ -2201,7 +2203,7 @@ static void ship_emit_sparks(struct snis_entity *o)
 
 	o->tsd.ship.flames_timer--;
 
-	emit_flames(o);
+	emit_flames(o, 1.0);
 }
 
 static void turret_emit_sparks(struct snis_entity *o)
@@ -2210,7 +2212,16 @@ static void turret_emit_sparks(struct snis_entity *o)
 		return;
 	if (o->tsd.turret.health > 100)
 		return;
-	emit_flames(o);
+	emit_flames(o, 1.0);
+}
+
+static void block_emit_sparks(struct snis_entity *o)
+{
+	if (o->type != OBJTYPE_BLOCK)
+		return;
+	if (o->tsd.block.health > 100)
+		return;
+	emit_flames(o, 5.0);
 }
 
 static void move_objects(void)
@@ -2236,7 +2247,11 @@ static void move_objects(void)
 		case OBJTYPE_STARBASE:
 		case OBJTYPE_WARPGATE:
 		case OBJTYPE_DOCKING_PORT:
+			move_object(timestamp, o, &interpolate_orientated_object);
+			break;
 		case OBJTYPE_BLOCK:
+			move_object(timestamp, o, &interpolate_orientated_object);
+			block_emit_sparks(o);
 		case OBJTYPE_TURRET:
 			move_object(timestamp, o, &interpolate_orientated_object);
 			turret_emit_sparks(o);
@@ -4976,10 +4991,10 @@ static int process_update_block_packet(void)
 	uint32_t id, timestamp;
 	double dx, dy, dz, dsx, dsy, dsz;
 	union quat orientation;
-	uint8_t block_material_index;
+	uint8_t block_material_index, health;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "wwSSSSSSQb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSSSQbb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
@@ -4987,12 +5002,13 @@ static int process_update_block_packet(void)
 			&dsy, (int32_t) UNIVERSE_DIM,
 			&dsz, (int32_t) UNIVERSE_DIM,
 			&orientation,
-			&block_material_index);
+			&block_material_index,
+			&health);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_block(id, timestamp, dx, dy, dz, dsx, dsy, dsz,
-				&orientation, block_material_index);
+				&orientation, block_material_index, health);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }

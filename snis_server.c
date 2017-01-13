@@ -1598,6 +1598,22 @@ static void calculate_turret_damage(struct snis_entity *o)
 		o->alive = 0;
 }
 
+static void calculate_block_damage(struct snis_entity *o)
+{
+	if (o->type != OBJTYPE_BLOCK)
+		return;
+	if (o->tsd.block.health == 255) /* immortal */
+		return;
+	int damage = 100 + snis_randn(100);
+	int health = o->tsd.block.health;
+	health -= damage;
+	if (health < 0)
+		health = 0;
+	printf("block health is %d\n", health);
+	o->tsd.block.health = health;
+	/* Doesn't die, just breaks away... */
+}
+
 static int lookup_bridge_by_shipid(uint32_t shipid);
 static void calculate_torpedolike_damage(struct snis_entity *o, double weapons_factor)
 {
@@ -1613,10 +1629,11 @@ static void calculate_torpedolike_damage(struct snis_entity *o, double weapons_f
 			return;
 		}
 		d = &bridgelist[bridge].damcon;
-	}
-
-	if (o->type == OBJTYPE_TURRET) {
+	} else if (o->type == OBJTYPE_TURRET) {
 		calculate_turret_damage(o);
+		return;
+	} else if (o->type == OBJTYPE_BLOCK) {
+		calculate_block_damage(o);
 		return;
 	}
 
@@ -1675,10 +1692,11 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 			fprintf(stderr, "b < 0 at %s:%d\n", __FILE__, __LINE__);
 		else
 			d = &bridgelist[b].damcon;
-	}
-
-	if (o->type == OBJTYPE_TURRET) {
+	} else if (o->type == OBJTYPE_TURRET) {
 		calculate_turret_damage(o);
+		return;
+	} else if (o->type == OBJTYPE_BLOCK) {
+		calculate_block_damage(o);
 		return;
 	}
 
@@ -2438,6 +2456,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z, 50, 5, 5, t->type);
 		snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
 		block_add_to_naughty_list(t, o->tsd.torpedo.ship_id);
+		calculate_torpedo_damage(o);
 		return;
 	}
 
@@ -2644,6 +2663,8 @@ static void laser_collision_detection(void *context, void *entity)
 		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z, 50, 5, 5, t->type);
 		snis_queue_add_sound(DISTANT_PHASER_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
 		block_add_to_naughty_list(t, o->tsd.laser.ship_id);
+		calculate_laser_damage(t, o->tsd.laser.wavelength,
+			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST);
 		/* How does the laser get deleted? */
 		return;
 	}
@@ -6391,12 +6412,12 @@ static void block_move(struct snis_entity *o)
 	set_object_location(o, pos.v.x + parent->x, pos.v.y + parent->y, pos.v.z + parent->z);
 	block_calculate_obb(o, &o->tsd.block.obb);
 	o->timestamp = universe_timestamp;
+	if (o->tsd.block.health == 0)
+		o->tsd.block.parent_id = (uint32_t) -1;
 	return;
 
 default_move:
-	o->x += o->vx;
-	o->y += o->vy;
-	o->z += o->vz;
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	quat_init_axis(&o->orientation, 1.0, 0.0, 0.0, 0.1 * (universe_timestamp % 3600) * M_PI / 180.0);
 	block_calculate_obb(o, &o->tsd.block.obb);
 	o->timestamp = universe_timestamp;
@@ -6443,6 +6464,10 @@ static void turret_move(struct snis_entity *o)
 	if (i < 0)
 		goto default_move;
 	parent = &go[i];
+
+	if (parent->type == OBJTYPE_BLOCK && parent->tsd.block.health == 0)
+		o->tsd.turret.parent_id = (uint32_t) -1;
+
 	pos.v.x = o->tsd.turret.dx;
 	pos.v.y = o->tsd.turret.dy;
 	pos.v.z = o->tsd.turret.dz;
@@ -7865,6 +7890,7 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	go[i].tsd.block.sx = sx;
 	go[i].tsd.block.sy = sy;
 	go[i].tsd.block.sz = sz;
+	go[i].tsd.block.health = 255; /* immortal */
 	go[i].tsd.block.relative_orientation = relative_orientation;
 	go[i].tsd.block.radius = mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
 	go[i].tsd.block.block_material_index = block_material_index;
@@ -7966,14 +7992,19 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 		double row = i;
 		double rowfactor = 0.5 + row - 0.5 * rows;
 		for (j = 0; j < cols; j++) {
+			int block;
 			double col = j;
 			double colfactor = 0.5 + col - 0.5 * cols;
 			x = rowfactor * xrowstep + colfactor * xcolstep + xo;
 			y = rowfactor * yrowstep + colfactor * ycolstep + yo;
 			z = rowfactor * zrowstep + colfactor * zcolstep + zo;
-			add_subblock(parent_id, 1.0, platformsx, platformsy, platformsz,
+			block = add_subblock(parent_id, 1.0, platformsx, platformsy, platformsz,
 						x + platformxo, y + platformyo, z + platformzo, 1);
-			add_turret(parent_id, 0, 0, 0, x, y, z, identity_quat);
+			if (block >= 0) {
+				printf("ADDING TURRET parent = %d, %lf, %lf, %lf\n", go[block].id, x, y, z); 
+				add_turret(go[block].id, 0, 0, 0, 0, 0, -platformsz * 0.6, identity_quat);
+				go[block].tsd.block.health = 1; /* mortal */
+			}
 		}
 	}
 }
@@ -15658,7 +15689,7 @@ static void send_update_docking_port_packet(struct game_client *c,
 static void send_update_block_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("bwwSSSSSSQb", OPCODE_UPDATE_BLOCK,
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSSSSQbb", OPCODE_UPDATE_BLOCK,
 					o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
@@ -15667,7 +15698,8 @@ static void send_update_block_packet(struct game_client *c,
 					o->tsd.block.sy, (int32_t) UNIVERSE_DIM,
 					o->tsd.block.sz, (int32_t) UNIVERSE_DIM,
 					&o->orientation,
-					o->tsd.block.block_material_index));
+					o->tsd.block.block_material_index,
+					o->tsd.block.health));
 }
 
 static void send_update_turret_packet(struct game_client *c,
