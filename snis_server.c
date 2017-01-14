@@ -98,6 +98,7 @@
 #include "nonuniform_random_sampler.h"
 #include "planetary_atmosphere.h"
 #include "mesh.h"
+#include "turret_aimer.h"
 
 #include "snis_entity_key_value_specification.h"
 
@@ -6457,7 +6458,6 @@ static void turret_fire(struct snis_entity *o)
 static void turret_move(struct snis_entity *o)
 {
 	struct snis_entity *parent, *target;
-	union quat desired_orientation;
 	union vec3 pos;
 	int i, t;
 	int root;
@@ -6510,9 +6510,9 @@ static void turret_move(struct snis_entity *o)
 
 	/* For now, do the stupidest thing that can possibly work... */
 	if (o->tsd.turret.current_target_id == (uint32_t) -1) { /* no target */
-		o->orientation = parent->orientation;
+		// o->orientation = parent->orientation;
+		quat_mul(&o->orientation, &parent->orientation, &o->tsd.turret.relative_orientation);
 	} else {
-		const union vec3 right = { { 1.0, 0.0, 0.0 } };
 		union vec3 to_enemy;
 
 		t = lookup_by_id(o->tsd.turret.current_target_id);
@@ -6520,6 +6520,8 @@ static void turret_move(struct snis_entity *o)
 			o->tsd.turret.current_target_id = (uint32_t) -1;
 		} else {
 			double dist, lasertime;
+			union quat rest_orientation, new_turret_orientation;
+			union vec3 aim_point;
 
 			target = &go[t];
 			to_enemy.v.x = target->x - o->x;
@@ -6527,12 +6529,14 @@ static void turret_move(struct snis_entity *o)
 			to_enemy.v.z = target->z - o->z;
 			dist = vec3_magnitude(&to_enemy);
 			lasertime = dist / (double) LASER_VELOCITY;
-			to_enemy.v.x += target->vx * lasertime;
-			to_enemy.v.y += target->vy * lasertime;
-			to_enemy.v.z += target->vz * lasertime;
-			vec3_normalize_self(&to_enemy);
-			quat_from_u2v(&desired_orientation, &right, &to_enemy, NULL);
-			quat_slerp(&o->orientation, &o->orientation, &desired_orientation, 0.1);
+			aim_point.v.x = target->x + target->vx * lasertime;
+			aim_point.v.y = target->y + target->vy * lasertime;
+			aim_point.v.z = target->z + target->vz * lasertime;
+			quat_mul(&rest_orientation, &parent->orientation, &o->tsd.turret.relative_orientation);
+			turret_aim(aim_point.v.x, aim_point.v.y, aim_point.v.z, o->x, o->y, o->z,
+					&rest_orientation, &o->orientation, NULL,
+					&new_turret_orientation);
+			o->orientation = new_turret_orientation;
 		}
 	}
 	quat_rot_vec_self(&pos, &parent->orientation);
@@ -7850,7 +7854,7 @@ static uint32_t find_root_id(int parent_id)
 
 static int add_turret(int parent_id, double x, double y, double z,
 			double dx, double dy, double dz,
-			union quat relative_orientation)
+			union quat relative_orientation, union vec3 up)
 {
 	int i;
 	i = add_generic_object(x, y, z, 0.0, 0.0, 0.0, 0.0, OBJTYPE_TURRET);
@@ -7864,6 +7868,7 @@ static int add_turret(int parent_id, double x, double y, double z,
 	go[i].tsd.turret.relative_orientation = relative_orientation;
 	go[i].tsd.turret.health = 255;
 	go[i].tsd.turret.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
+	go[i].tsd.turret.up_direction = up;
 	go[i].move = turret_move;
 	return i;
 }
@@ -7872,6 +7877,7 @@ static int l_add_turret(lua_State *l)
 {
 	double rid, x, y, z;
 	uint32_t parent_id;
+	union vec3 up = { { 0.0, 0.0, 1.0 } };
 	int i;
 
 	rid = lua_tonumber(lua_state, 1);
@@ -7887,7 +7893,7 @@ static int l_add_turret(lua_State *l)
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
-	i = add_turret(parent_id, 0.0, 0.0, 0.0, x, y, z, identity_quat);
+	i = add_turret(parent_id, 0.0, 0.0, 0.0, x, y, z, identity_quat, up);
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -7958,8 +7964,15 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 	const double turret_offset = 350.0;
 	double platformsx, platformsy, platformsz;
 	double platformxo, platformyo, platformzo;
+	union vec3 absolute_up = { { 0.0, 0.0, 1.0 } };
+	union quat rest_orientation;
+	union vec3 up;
 
 	face = abs(face) % 6;
+
+	up.v.x = xoff[face];
+	up.v.y = yoff[face];
+	up.v.z = zoff[face];
 
 
 	index = lookup_by_id(parent_id);
@@ -7971,6 +7984,20 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 	xo = xoff[face] * block->tsd.block.sx * 0.5 + turret_offset * xoff[face];
 	yo = yoff[face] * block->tsd.block.sy * 0.5 + turret_offset * yoff[face];
 	zo = zoff[face] * block->tsd.block.sz * 0.5 + turret_offset * zoff[face];
+
+	if (xoff[face] > 0.0)
+		quat_init_axis(&rest_orientation, 0, 0, 1, -0.5 * M_PI);
+	else if (xoff[face] < 0.0)
+		quat_init_axis(&rest_orientation, 0, 0, 1, 0.5 * M_PI);
+	else if (yoff[face] > 0.0)
+		quat_init_axis(&rest_orientation, 0, 0, 1, 0.0 * M_PI);
+	else if (yoff[face] < 0.0)
+		quat_init_axis(&rest_orientation, 0, 0, 1, 1.0 * M_PI);
+	else if (zoff[face] > 0.0)
+		quat_init_axis(&rest_orientation, 1, 0, 0, 0.5 * M_PI);
+	else if (zoff[face] < 0.0)
+		quat_init_axis(&rest_orientation, 1, 0, 0, -0.5 * M_PI);
+	quat_rot_vec(&up, &absolute_up, &rest_orientation);
 
 	platformsx = turret_offset * 0.15 + turret_offset * 0.75 * fabs(xoff[face]);
 	platformsy = turret_offset * 0.15 + turret_offset * 0.75 * fabs(yoff[face]);
@@ -8028,7 +8055,7 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 				add_turret(go[block].id, 0, 0, 0,
 						platformsx * 0.6 * xoff[face],
 						platformsy * 0.6 * yoff[face],
-						platformsz * 0.6 * zoff[face], identity_quat);
+						platformsz * 0.6 * zoff[face], rest_orientation, up);
 				go[block].tsd.block.health = 121; /* mortal */
 			}
 		}

@@ -620,6 +620,7 @@ struct turret_data {
 	double dx, dy, dz; /* offset position from parent, used only server side */
 	uint32_t current_target_id;
 	union quat rotational_velocity;
+	union vec3 up_direction;
 	uint8_t fire_countdown;
 	uint8_t fire_countdown_reset_value;
 	uint8_t health;
