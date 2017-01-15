@@ -6453,6 +6453,7 @@ static void turret_fire(struct snis_entity *o)
 		vel.v.x, vel.v.y, vel.v.z, &o->orientation, o->id);
 	add_laser(o->x + pos_left.v.x, o->y + pos_left.v.y, o->z + pos_left.v.z,
 		vel.v.x, vel.v.y, vel.v.z, &o->orientation, o->id);
+	o->tsd.turret.fire_countdown = o->tsd.turret.fire_countdown_reset_value;
 }
 
 static void turret_move(struct snis_entity *o)
@@ -6468,9 +6469,6 @@ static void turret_move(struct snis_entity *o)
 		/* TODO add turret derelict */
 		o->alive = 0;
 	}
-
-	if (((o->id + universe_timestamp) % 150) == 0)
-		turret_fire(o);
 	if (o->tsd.turret.parent_id == (uint32_t) -1)
 		goto default_move;
 	i = lookup_by_id(o->tsd.turret.parent_id);
@@ -6537,6 +6535,8 @@ static void turret_move(struct snis_entity *o)
 					&rest_orientation, &o->orientation, NULL,
 					&new_turret_orientation, &aim_is_good);
 			o->orientation = new_turret_orientation;
+			if (aim_is_good && o->tsd.turret.fire_countdown == 0)
+				turret_fire(o);
 		}
 	}
 	quat_rot_vec_self(&pos, &parent->orientation);
@@ -6545,6 +6545,8 @@ static void turret_move(struct snis_entity *o)
 	o->vz = pos.v.z + parent->z - o->z;
 	set_object_location(o, pos.v.x + parent->x, pos.v.y + parent->y, pos.v.z + parent->z);
 	o->timestamp = universe_timestamp;
+	if (o->tsd.turret.fire_countdown > 0)
+		o->tsd.turret.fire_countdown--;
 	return;
 
 default_move:
@@ -7869,6 +7871,8 @@ static int add_turret(int parent_id, double x, double y, double z,
 	go[i].tsd.turret.health = 255;
 	go[i].tsd.turret.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
 	go[i].tsd.turret.up_direction = up;
+	go[i].tsd.turret.fire_countdown = 0;
+	go[i].tsd.turret.fire_countdown_reset_value = TURRET_FIRE_INTERVAL;
 	go[i].move = turret_move;
 	return i;
 }
