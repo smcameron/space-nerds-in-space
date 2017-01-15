@@ -8120,6 +8120,34 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 	}
 }
 
+static int l_add_turrets_to_block_face(lua_State *l)
+{
+	double rid, dface, drows, dcols;
+	uint32_t parent_id;
+	int i, face, rows, cols;
+
+	rid = lua_tonumber(lua_state, 1);
+	dface = lua_tonumber(lua_state, 2);
+	drows = lua_tonumber(lua_state, 3);
+	dcols = lua_tonumber(lua_state, 4);
+
+	pthread_mutex_lock(&universe_mutex);
+	parent_id = (uint32_t) rid;
+	i = lookup_by_id(parent_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(lua_state, -1.0);
+		return 1;
+	}
+	face = (int) dface;
+	rows = (int) drows;
+	cols = (int) dcols;
+	add_turrets_to_block_face(parent_id, face, rows, cols);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, 0.0);
+	return 1;
+}
+
 static int add_giant_spaceship(double x, double y, double z)
 {
 	int i, parent;
@@ -16572,6 +16600,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_giant_spaceship, "add_giant_spaceship");
 	add_lua_callable_fn(l_add_turret, "add_turret");
 	add_lua_callable_fn(l_add_block, "add_block");
+	add_lua_callable_fn(l_add_turrets_to_block_face, "add_turrets_to_block_face");
 }
 
 static int run_initial_lua_scripts(void)

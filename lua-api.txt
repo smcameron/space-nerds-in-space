@@ -662,6 +662,29 @@ add_block(parent_id, x, y, z, sx, sy, sz, rotx, roty, rotz, angle, material_inde
 	block = add_block(-1, 1000, 1000, 1000, 50, 100, 50, 1, 0, 0, 45 * 3.1415927 / 180.0, 0);
 	subblock = add_block(block, 10, 20, 10, 20, 20, 20, 1, 0, 0, 0, 0);
 
+add_turrets_to_block_face(parent_id, face, rows, cols)
+	Adds an array of rows * cols turrets onto one of the faces of a block;
+
+	if parent_id is invalid, -1 is returned and nothing is done.
+
+	face is a number betwee 0 and 5 inclusive indicating which face of the block
+	to add the turret array.
+
+	0 - positive x face
+	1 - negative x face
+	2 - positive y face
+	3 - negative y face
+	4 - positive z face
+	5 - negative z face
+
+	face is forced in range by "face = fabs(face) % 6".
+
+	rows and cols indicate the size of the turret array to add.
+
+  Example:
+	block = add_block(-1, 1000, 1000, 1000, 500, 500, 500, 1, 0, 0, 45 * 3.1415927 / 180.0, 0);
+	add_turrets_to_block_face(block, 1, 2, 3);
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
