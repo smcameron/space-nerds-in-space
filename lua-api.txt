@@ -628,8 +628,8 @@ add_giant_spaceship(x, y, z); -- adds a giant spaceship into the universe at the
   Example:
 	giant_ship_id = add_giant_spaceship(10000, 10000, 10000);
 
-add_turret(parent_id, x, y, z) -- adds a turrent onto the specified object at the
-	specified offset
+add_turret(parent_id, x, y, z, firing_interval) -- adds a turrent onto the specified
+	object at the specified offset with specified firing interval (10ths of secs).
 
   Example:
 	turret_id = add_turret(starbase_id, 100, 100, 0);

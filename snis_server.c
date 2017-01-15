@@ -7856,7 +7856,8 @@ static uint32_t find_root_id(int parent_id)
 
 static int add_turret(int parent_id, double x, double y, double z,
 			double dx, double dy, double dz,
-			union quat relative_orientation, union vec3 up)
+			union quat relative_orientation, union vec3 up,
+			int turret_fire_interval)
 {
 	int i;
 	i = add_generic_object(x, y, z, 0.0, 0.0, 0.0, 0.0, OBJTYPE_TURRET);
@@ -7872,14 +7873,17 @@ static int add_turret(int parent_id, double x, double y, double z,
 	go[i].tsd.turret.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
 	go[i].tsd.turret.up_direction = up;
 	go[i].tsd.turret.fire_countdown = 0;
-	go[i].tsd.turret.fire_countdown_reset_value = TURRET_FIRE_INTERVAL;
+	if (turret_fire_interval < 0)
+		go[i].tsd.turret.fire_countdown_reset_value = TURRET_FIRE_INTERVAL;
+	else
+		go[i].tsd.turret.fire_countdown_reset_value = turret_fire_interval;
 	go[i].move = turret_move;
 	return i;
 }
 
 static int l_add_turret(lua_State *l)
 {
-	double rid, x, y, z;
+	double rid, x, y, z, firing_interval;
 	uint32_t parent_id;
 	union vec3 up = { { 0.0, 0.0, 1.0 } };
 	int i;
@@ -7888,6 +7892,7 @@ static int l_add_turret(lua_State *l)
 	x = lua_tonumber(lua_state, 2);
 	y = lua_tonumber(lua_state, 3);
 	z = lua_tonumber(lua_state, 4);
+	firing_interval = lua_tonumber(lua_state, 5);
 
 	pthread_mutex_lock(&universe_mutex);
 	parent_id = (uint32_t) rid;
@@ -7897,7 +7902,8 @@ static int l_add_turret(lua_State *l)
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
-	i = add_turret(parent_id, 0.0, 0.0, 0.0, x, y, z, identity_quat, up);
+	i = add_turret(parent_id, 0.0, 0.0, 0.0, x, y, z, identity_quat, up,
+			(int) firing_interval);
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -8059,7 +8065,7 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 				add_turret(go[block].id, 0, 0, 0,
 						platformsx * 0.6 * xoff[face],
 						platformsy * 0.6 * yoff[face],
-						platformsz * 0.6 * zoff[face], rest_orientation, up);
+						platformsz * 0.6 * zoff[face], rest_orientation, up, -1);
 				go[block].tsd.block.health = 121; /* mortal */
 			}
 		}
