@@ -52,6 +52,7 @@ union quat *turret_aim(double target_x, double target_y, double target_z,	/* in:
 			union quat *turret_rest_orientation,			/* in: orientation of turret at rest */
 			union quat *current_turret_orientation,			/* in: Current orientation of turret */
 			const struct turret_params *turret,			/* in: turret params, can be NULL */
-			union quat *new_turret_orientation);			/* out: new orientation of turret */
+			union quat *new_turret_orientation,			/* out: new orientation of turret */
+			int *aim_is_good);					/* out: true if aim is good */
 
 #endif

@@ -6460,7 +6460,7 @@ static void turret_move(struct snis_entity *o)
 	struct snis_entity *parent, *target;
 	union vec3 pos;
 	int i, t;
-	int root;
+	int root, aim_is_good;
 	double min_dist = 1e20;
 	int closest = -1;
 
@@ -6535,7 +6535,7 @@ static void turret_move(struct snis_entity *o)
 			quat_mul(&rest_orientation, &parent->orientation, &o->tsd.turret.relative_orientation);
 			turret_aim(aim_point.v.x, aim_point.v.y, aim_point.v.z, o->x, o->y, o->z,
 					&rest_orientation, &o->orientation, NULL,
-					&new_turret_orientation);
+					&new_turret_orientation, &aim_is_good);
 			o->orientation = new_turret_orientation;
 		}
 	}

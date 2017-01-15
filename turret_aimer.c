@@ -38,7 +38,8 @@ union quat *turret_aim(double target_x, double target_y, double target_z,
 			union quat *turret_rest_orientation,
 			union quat *current_turret_orientation,
 			const struct turret_params *turret,
-			union quat *new_turret_orientation)
+			union quat *new_turret_orientation,
+			int *aim_is_good)
 {
 	union vec3 yaw_axis = { { 0.0, 1.0, 0.0 } };
 	union quat yaw, pitch, inverse_rest;
@@ -106,5 +107,10 @@ union quat *turret_aim(double target_x, double target_y, double target_z,
 	quat_rot_vec_self(&pitch_axis, new_turret_orientation);
 	quat_init_axis(&pitch, pitch_axis.v.x, pitch_axis.v.y, pitch_axis.v.z, elevation);
 	quat_mul(new_turret_orientation, &pitch, new_turret_orientation);
+
+	if (aim_is_good)
+		*aim_is_good = (fabsf(delta_elevation) < 0.5 * M_PI / 180.0 &&
+				fabsf(delta_azimuth) < 0.5 * M_PI / 180.0);
+
 	return new_turret_orientation;
 }
