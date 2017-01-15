@@ -2605,7 +2605,7 @@ static void laser_collision_detection(void *context, void *entity)
 		oriented_bounding_box_closest_point(&laser_pos, &t->tsd.block.obb, &closest_point);
 
 		dist2 = dist3dsqrd(o->x - closest_point.v.x, o->y - closest_point.v.y, o->z - closest_point.v.z);
-		if (dist2 > LASER_VELOCITY * LASER_VELOCITY)
+		if (dist2 > 0.5 * LASER_VELOCITY)
 			return;
 		o->alive = 0; /* hit!!!! */
 		schedule_callback2(event_callback, &callback_schedule,
