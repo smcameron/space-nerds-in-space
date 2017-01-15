@@ -803,7 +803,7 @@ quat.o:	quat.c Makefile
 oriented_bounding_box.o:	oriented_bounding_box.c oriented_bounding_box.h
 	$(Q)$(COMPILE)
 
-turretn_aimer.o:	turret_aimer.c turret_aimer.h quat.h
+turret_aimer.o:	turret_aimer.c turret_aimer.h quat.h
 	$(Q)$(COMPILE)
 
 vec4.o:	vec4.c Makefile
