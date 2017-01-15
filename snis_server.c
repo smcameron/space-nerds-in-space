@@ -7939,6 +7939,54 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	return i;
 }
 
+static int l_add_block(lua_State *l)
+{
+	double rid, x, y, z, sx, sy, sz, rotx, roty, rotz, angle, material_index;
+	double dx, dy, dz;
+	uint32_t parent_id;
+	union quat rotation;
+	int i;
+
+	rid = lua_tonumber(lua_state, 1);
+	x = lua_tonumber(lua_state, 2);
+	y = lua_tonumber(lua_state, 3);
+	z = lua_tonumber(lua_state, 4);
+	sx = lua_tonumber(lua_state, 5);
+	sy = lua_tonumber(lua_state, 6);
+	sz = lua_tonumber(lua_state, 7);
+	rotx = lua_tonumber(lua_state, 8);
+	roty = lua_tonumber(lua_state, 9);
+	rotz = lua_tonumber(lua_state, 10);
+	angle = lua_tonumber(lua_state, 11);
+	material_index = lua_tonumber(lua_state, 12);
+	dx = 0.0;
+	dy = 0.0;
+	dz = 0.0;
+
+	if ((int) material_index != 0 && (int) material_index != 1) {
+		lua_pushnumber(lua_state, -1.0);
+		return 1;
+	}
+	quat_init_axis(&rotation, rotx, roty, rotz, angle);
+
+	pthread_mutex_lock(&universe_mutex);
+	parent_id = (uint32_t) rid;
+	i = lookup_by_id(parent_id);
+	if (i >= 0) {
+		dx = x;
+		dy = y;
+		dz = z;
+		x = 0.0;
+		y = 0.0;
+		z = 0.0;
+	}
+	i = add_block_object(parent_id, x, y, z, 0.0, 0.0, 0.0, dx, dy, dz, sx, sy, sz, rotation,
+				(int) material_index);
+	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 1;
+}
+
 static int add_rotated_subblock(int parent_id, double scalefactor, double sx, double sy, double sz, /* nonuniform scaling */
 			double dx, double dy, double dz, /* displacement from parent */
 			union quat relative_orientation)
@@ -16523,6 +16571,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_show_menu, "show_menu");
 	add_lua_callable_fn(l_add_giant_spaceship, "add_giant_spaceship");
 	add_lua_callable_fn(l_add_turret, "add_turret");
+	add_lua_callable_fn(l_add_block, "add_block");
 }
 
 static int run_initial_lua_scripts(void)

@@ -634,6 +634,34 @@ add_turret(parent_id, x, y, z, firing_interval) -- adds a turrent onto the speci
   Example:
 	turret_id = add_turret(starbase_id, 100, 100, 0);
 
+add_block(parent_id, x, y, z, sx, sy, sz, rotx, roty, rotz, angle, material_index);
+	Adds a "block" into the universe at the specified location (or relative location
+	if parent_id >= 0) and size, with specified orientation and material.
+
+	x, y, z:
+		if parent_id is -1, then x, y, z indicate the position to add the block.
+		if parent_id is >= 0, then parent_id is the ID of a parent object, and x, y, z
+		denote the relative position the block is added onto the parent object.
+	sx, sy, sz:
+		These denote the dimensions of the block in three axes
+	rotx, roty, rotz, angle:
+		These specify an axis and an angle about which to rotate the block.
+		The angle is in radians.  If you do not want any rotation, use: 1, 0, 0, 0
+		If you want 45 degrees about the X axis, use 1, 0, 0, 45.0 * 3.145927 / 180.0
+	material_index:
+		This chooses a texture for the block.  There are currently two choices, 0 and 1.
+		Anything else is invalid.  0 is suitable for larger blocks, 1 for smaller blocks.
+
+	Returns the ID of the created block.
+
+	Note: if the parent_id < 0, then the block will be given a random rotational
+	velocity.
+
+  Example:
+
+	block = add_block(-1, 1000, 1000, 1000, 50, 100, 50, 1, 0, 0, 45 * 3.1415927 / 180.0, 0);
+	subblock = add_block(block, 10, 20, 10, 20, 20, 20, 1, 0, 0, 0, 0);
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
