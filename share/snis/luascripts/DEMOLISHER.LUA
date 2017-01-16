@@ -9,6 +9,11 @@ if (player_ids[1]) then
     x, y, z = get_object_location(player_ids[1]);
 end
 
+door1 = -1;
+door2 = -1;
+door3 = -1;
+door4 = -1;
+
 function add_demolisher_ship(x, y, z)
 
   m = 500;
@@ -42,8 +47,8 @@ function add_demolisher_ship(x, y, z)
   walloffset = w * 1.0;
 
   -- ribs
-  b = add_block(id, 0.45 * l + zfight, 0, 0.55 * -walloffset, thick, wallheight, walllength * 1.15, 1, 0, 0, 0, 0);
-  b = add_block(id, 0.45 * l, 0, 0.55 *  walloffset, thick, wallheight, walllength * 1.15, 1, 0, 0, 0, 0);
+  door1 = add_block(id, 0.45 * l + zfight, 0, 0.55 * -walloffset, thick, wallheight, walllength * 1.15, 1, 0, 0, 0, 0);
+  door2 = add_block(id, 0.45 * l, 0, 0.55 *  walloffset, thick, wallheight, walllength * 1.15, 1, 0, 0, 0, 0);
   b = add_block(id, 0.35 * l, 0, 0.75 * -walloffset, thick, wallheight, walllength, 1, 0, 0, 0, 0);
   b = add_block(id, 0.35 * l, 0, 0.75 *  walloffset, thick, wallheight, walllength, 1, 0, 0, 0, 0);
 
@@ -74,8 +79,8 @@ function add_demolisher_ship(x, y, z)
 
   b = add_block(id, -0.35 * l, 0, 0.75 * -walloffset, thick, wallheight, walllength, 1, 0, 0, 0, 0);
   b = add_block(id, -0.35 * l, 0, 0.75 *  walloffset, thick, wallheight, walllength, 1, 0, 0, 0, 0);
-  door1 = add_block(id, -0.45 * l + zfight, 0, 0.55 * -walloffset, thick, wallheight, walllength * 1.15, 1, 0, 0, 0, 0);
-  door2 = add_block(id, -0.45 * l, 0, 0.55 *  walloffset, thick, wallheight, walllength * 1.15, 1, 0, 0, 0, 0);
+  door3 = add_block(id, -0.45 * l + zfight, 0, 0.55 * -walloffset, thick, wallheight, walllength * 1.15, 1, 0, 0, 0, 0);
+  door4 = add_block(id, -0.45 * l, 0, 0.55 *  walloffset, thick, wallheight, walllength * 1.15, 1, 0, 0, 0, 0);
 
 
   move_object(id, x, y, z);
@@ -83,4 +88,29 @@ function add_demolisher_ship(x, y, z)
 end
 
 add_demolisher_ship(x + 10000, y, z);
+
+door_speed = 0.01;
+door_open = 0.0;
+door_direction = door_speed;
+
+function set_door_position(door_open)
+  set_object_relative_position(door1,  0.45 * l + zfight, 0, 0.55 * -walloffset - door_open * 0.3 * walloffset);
+  set_object_relative_position(door2,  0.45 * l, 0, 0.55 *  walloffset + door_open * 0.3 * walloffset);
+  set_object_relative_position(door3, -0.45 * l + zfight, 0, 0.55 * -walloffset - door_open * 0.3 * walloffset);
+  set_object_relative_position(door4, -0.45 * l, 0, 0.55 *  walloffset + door_open * 0.3 * walloffset);
+end
+
+function door_mover(cookie)
+  door_open = door_open + door_direction;
+  if door_open > 1.0 and door_direction > 0.0 then
+    door_direction = -door_speed;
+  end
+  if door_open < 0.0 and door_direction < 0.0 then
+    door_direction = door_speed;
+  end
+  set_door_position(door_open);
+  register_timer_callback("door_mover", 1, 0);
+end
+
+register_timer_callback("door_mover", 1, 0);
 

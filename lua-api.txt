@@ -216,6 +216,10 @@ set_object_rotational_velocity(object_id, rotx, roty, rotz, angle);
 	rotational velocities, or the rotational velocities are computed entirely
 	client side and are thus not mutable.
 
+set_object_relative_position(object_id, rx, ry, rz);
+	Sets and objects position relative to a parent object to which it is
+	attached.  Note: This only works for "block" objects so far.
+
 delete_object(object_id) -- delete the specified object from the universe
 
 comms_transmission(object_id, transmission); -- causes the object to transmit the

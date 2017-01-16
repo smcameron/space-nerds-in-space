@@ -7593,6 +7593,41 @@ static int l_set_object_rotational_velocity(lua_State *l)
 	return 0;
 }
 
+static int l_set_object_relative_position(lua_State *l)
+{
+	int i;
+	double id, rx, ry, rz;
+	struct snis_entity *o;
+
+	id = lua_tonumber(lua_state, 1);
+	rx = lua_tonumber(lua_state, 2);
+	ry = lua_tonumber(lua_state, 3);
+	rz = lua_tonumber(lua_state, 4);
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id((uint32_t) id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	o = &go[i];
+	/* note that this only works for OBJTYPE_BLOCK for now. */
+	switch (o->type) {
+	case OBJTYPE_BLOCK:
+		/* This is the main use case for this function. */
+		o->tsd.block.dx = rx;
+		o->tsd.block.dy = ry;
+		o->tsd.block.dz = rz;
+		o->timestamp = universe_timestamp;
+		break;
+	default:
+		break;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+
 static int l_delete_object(lua_State *l)
 {
 	int i;
@@ -16576,6 +16611,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_object_velocity, "set_object_velocity");
 	add_lua_callable_fn(l_set_object_orientation, "set_object_orientation");
 	add_lua_callable_fn(l_set_object_rotational_velocity, "set_object_rotational_velocity");
+	add_lua_callable_fn(l_set_object_relative_position, "set_object_relative_position");
 	add_lua_callable_fn(l_delete_object, "delete_object");
 	add_lua_callable_fn(l_register_callback, "register_callback");
 	add_lua_callable_fn(l_register_timer_callback, "register_timer_callback");
