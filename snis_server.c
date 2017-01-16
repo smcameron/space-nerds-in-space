@@ -7991,16 +7991,6 @@ static int l_add_block(lua_State *l)
 	return 1;
 }
 
-static int add_rotated_subblock(int parent_id, double scalefactor, double sx, double sy, double sz, /* nonuniform scaling */
-			double dx, double dy, double dz, /* displacement from parent */
-			union quat relative_orientation)
-{
-	const double s = scalefactor;
-	return add_block_object(parent_id, 0, 0, 0, 0, 0, 0,
-				dx * s, dy * s, dz * s,
-				sx * s, sy * s, sz * s, relative_orientation, 0);
-}
-
 static int add_subblock(int parent_id, double scalefactor, double sx, double sy, double sz, /* nonuniform scaling */
 			double dx, double dy, double dz, /* displacement from parent */
 			uint8_t block_material_index)
@@ -8150,48 +8140,6 @@ static int l_add_turrets_to_block_face(lua_State *l)
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(lua_state, 0.0);
 	return 1;
-}
-
-static int add_giant_spaceship(double x, double y, double z)
-{
-	int i, parent;
-	union quat plus12, minus12;
-	const double scalefactor = 60.0;
-
-	quat_init_axis(&plus12, 1, 0, 0, 12.0 * M_PI / 180.0);
-	quat_init_axis(&minus12, 1, 0, 0, -12.0 * M_PI / 180);
-
-	i = add_block_object(-1, x, y, z, 0, 0, 0, 0, 0, 0, 1, 1, 1, identity_quat, 0);
-	if (i < 0)
-		return i;
-	quat_init_axis(&go[i].tsd.block.rotational_velocity, 1.0, 0.0, 0.0, M_PI * 0.1 / 180.0);
-	parent = go[i].id;
-	i = add_subblock(parent, scalefactor, 200, 100, 4, 20, 0, -19, 0);
-	add_turrets_to_block_face(go[i].id, 0, 8, 1);
-	add_turrets_to_block_face(go[i].id, 1, 8, 1);
-	add_turrets_to_block_face(go[i].id, 2, 8, 1);
-	add_turrets_to_block_face(go[i].id, 3, 8, 1);
-	add_turrets_to_block_face(go[i].id, 4, 8, 5);
-	add_turrets_to_block_face(go[i].id, 5, 8, 5);
-#if 1
-	add_subblock(parent, scalefactor, 300, 75, 4, 0, 0, 19, 0);
-	add_rotated_subblock(parent, scalefactor, 300, 5, 68, 0, 43, 0, plus12); /* needs rotating 12 degrees */
-	add_rotated_subblock(parent, scalefactor, 300, 5, 68, 0, -43, 0, minus12); /* needs rotating 12 degrees */
-	add_subblock(parent, scalefactor, 5, 95, 45, -150, 0, 0, 0);
-	add_subblock(parent, scalefactor, 5, 88, 25, -125, 0, 10, 0);
-	add_subblock(parent, scalefactor, 5, 88, 25, -100, 0, -10, 0);
-	add_subblock(parent, scalefactor, 5, 88, 25, -75, 0, 10, 0);
-	add_subblock(parent, scalefactor, 5, 88, 25, -50, 0, -10, 0);
-	add_subblock(parent, scalefactor, 5, 88, 25, 0, 0, 10, 0);
-	add_subblock(parent, scalefactor, 5, 88, 25, 50, 0, -10, 0);
-	add_subblock(parent, scalefactor, 5, 88, 25, 75, 0, 10, 0);
-
-	add_subblock(parent, scalefactor, 5, 60, 45, 100, -15, 0, 0);
-	add_subblock(parent, scalefactor, 5, 60, 45, 120, 15, 0, 0);
-	add_subblock(parent, scalefactor, 5, 60, 45, 20, -15, 0, 0);
-	add_subblock(parent, scalefactor, 5, 60, 45, -20, 15, 0, 0);
-#endif
-	return i;
 }
 
 static int add_docking_port(int parent_id, int portnumber)
@@ -13104,22 +13052,6 @@ error:
 	return 1;
 }
 
-static int l_add_giant_spaceship(lua_State *l)
-{
-	double x, y, z;
-	int i;
-
-	x = lua_tonumber(lua_state, 1);
-	y = lua_tonumber(lua_state, 2);
-	z = lua_tonumber(lua_state, 3);
-
-	pthread_mutex_lock(&universe_mutex);
-	i = add_giant_spaceship(x, y, z);
-	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
-	pthread_mutex_unlock(&universe_mutex);
-	return 1;
-}
-
 static int l_show_timed_text(lua_State *l)
 {
 	const double id = luaL_checknumber(l, 1);
@@ -16601,7 +16533,6 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_commodity, "add_commodity");
 	add_lua_callable_fn(l_reset_player_ship, "reset_player_ship");
 	add_lua_callable_fn(l_show_menu, "show_menu");
-	add_lua_callable_fn(l_add_giant_spaceship, "add_giant_spaceship");
 	add_lua_callable_fn(l_add_turret, "add_turret");
 	add_lua_callable_fn(l_add_block, "add_block");
 	add_lua_callable_fn(l_add_turrets_to_block_face, "add_turrets_to_block_face");
