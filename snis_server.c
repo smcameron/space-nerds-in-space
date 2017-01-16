@@ -7525,6 +7525,28 @@ static int l_set_object_velocity(lua_State *l)
 	return 0;
 }
 
+static int l_set_object_orientation(lua_State *l)
+{
+	int i;
+	double id, rotx, roty, rotz, angle;
+
+	id = lua_tonumber(lua_state, 1);
+	rotx = lua_tonumber(lua_state, 2);
+	roty = lua_tonumber(lua_state, 3);
+	rotz = lua_tonumber(lua_state, 4);
+	angle = lua_tonumber(lua_state, 5);
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id((uint32_t) id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	quat_init_axis(&go[i].orientation, rotx, roty, rotz, angle);
+	go[i].timestamp = universe_timestamp;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
 
 static int l_delete_object(lua_State *l)
 {
@@ -16507,6 +16529,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_object_location, "get_object_location");
 	add_lua_callable_fn(l_move_object, "move_object");
 	add_lua_callable_fn(l_set_object_velocity, "set_object_velocity");
+	add_lua_callable_fn(l_set_object_orientation, "set_object_orientation");
 	add_lua_callable_fn(l_delete_object, "delete_object");
 	add_lua_callable_fn(l_register_callback, "register_callback");
 	add_lua_callable_fn(l_register_timer_callback, "register_timer_callback");

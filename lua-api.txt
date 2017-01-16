@@ -203,6 +203,11 @@ move_object(object_id, x, y, z); -- move object to x, y, z location.
 
 set_object_velocity(object_id, vx, vy, vz); set's and object's velocity
 
+set_object_orientation(object_id, rotx, roty, rotz, angle);
+	set's and object's orientation.  The object orientation is
+	the rotation around the axis defined by the vector from the
+	origin (0, 0, 0)  to (rotx, roty, rotz) of angle (in radians).
+
 delete_object(object_id) -- delete the specified object from the universe
 
 comms_transmission(object_id, transmission); -- causes the object to transmit the
