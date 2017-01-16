@@ -18,8 +18,12 @@ function add_demolisher_ship(x, y, z)
   degrees = (3.1415927 / 180.0);
   zfight = 10;
 
+  -- This is our main, unparented block of the ship to which all other
+  -- blocks are attached:
   id = add_block(-1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0);
+  set_object_rotational_velocity(id, 1, 0, 0, 0);  -- Stop default spinning
   set_object_orientation(id, 1, 0, 0, 0);  -- unrotated
+
   top = add_block(id, 0, 0.3 * w, 0, l * 1.1, thick, w, 1, 0, 0, 0, 0);
   add_turrets_to_block_face(top, 3, 8, 2);
   bottom = add_block(id, 0, -0.3 * w, 0, l, thick, w, 1, 0, 0, 0, 0);

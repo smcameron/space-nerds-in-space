@@ -7548,6 +7548,51 @@ static int l_set_object_orientation(lua_State *l)
 	return 0;
 }
 
+static int l_set_object_rotational_velocity(lua_State *l)
+{
+	int i;
+	double id, rotx, roty, rotz, angle;
+	struct snis_entity *o;
+
+	id = lua_tonumber(lua_state, 1);
+	rotx = lua_tonumber(lua_state, 2);
+	roty = lua_tonumber(lua_state, 3);
+	rotz = lua_tonumber(lua_state, 4);
+	angle = lua_tonumber(lua_state, 5);
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id((uint32_t) id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	o = &go[i];
+	/* note that we can't set this for a lot of things because it's done client side
+	 * or doesn't have a rotational velocity at all.
+	 */
+	switch (o->type) {
+	case OBJTYPE_BLOCK:
+		/* This is the main use case for this function. */
+		quat_init_axis(&go[i].tsd.block.rotational_velocity, rotx, roty, rotz, angle);
+		o->timestamp = universe_timestamp;
+		break;
+	case OBJTYPE_ASTEROID:
+	case OBJTYPE_CARGO_CONTAINER:
+	case OBJTYPE_PLANET:
+		/* These have rotational velocities, but they're done client side. */
+		break;
+	case OBJTYPE_TURRET:
+		/* Only works if turret if free floating, not attached to a block. */
+		quat_init_axis(&go[i].tsd.turret.rotational_velocity, rotx, roty, rotz, angle);
+		o->timestamp = universe_timestamp;
+		break;
+	default:
+		break;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int l_delete_object(lua_State *l)
 {
 	int i;
@@ -16530,6 +16575,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_move_object, "move_object");
 	add_lua_callable_fn(l_set_object_velocity, "set_object_velocity");
 	add_lua_callable_fn(l_set_object_orientation, "set_object_orientation");
+	add_lua_callable_fn(l_set_object_rotational_velocity, "set_object_rotational_velocity");
 	add_lua_callable_fn(l_delete_object, "delete_object");
 	add_lua_callable_fn(l_register_callback, "register_callback");
 	add_lua_callable_fn(l_register_timer_callback, "register_timer_callback");

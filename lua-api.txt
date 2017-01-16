@@ -204,9 +204,17 @@ move_object(object_id, x, y, z); -- move object to x, y, z location.
 set_object_velocity(object_id, vx, vy, vz); set's and object's velocity
 
 set_object_orientation(object_id, rotx, roty, rotz, angle);
-	set's and object's orientation.  The object orientation is
+	sets an object's orientation.  The object orientation is
 	the rotation around the axis defined by the vector from the
 	origin (0, 0, 0)  to (rotx, roty, rotz) of angle (in radians).
+
+set_object_rotational_velocity(object_id, rotx, roty, rotz, angle);
+	sets an objects rotational velocity about the axis defined by
+	rotx, roty, rotz to angle (in radians) per tick (1 tick is 1/10th sec).
+	NOTE: This really only works for "block" objects (useful) and for
+	free-floating turrets (not useful).  Other object types either do not have
+	rotational velocities, or the rotational velocities are computed entirely
+	client side and are thus not mutable.
 
 delete_object(object_id) -- delete the specified object from the universe
 
