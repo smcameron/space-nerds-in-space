@@ -6322,7 +6322,7 @@ static void block_move(struct snis_entity *o)
 	pos.v.x = o->tsd.block.dx;
 	pos.v.y = o->tsd.block.dy;
 	pos.v.z = o->tsd.block.dz;
-	quat_rot_vec_self(&pos, &o->orientation);
+	quat_rot_vec_self(&pos, &parent->orientation);
 	quat_mul(&o->orientation, &parent->orientation, &o->tsd.block.relative_orientation);
 	set_object_location(o, pos.v.x + parent->x, pos.v.y + parent->y, pos.v.z + parent->z);
 	block_calculate_obb(o, &o->tsd.block.obb);
