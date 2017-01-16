@@ -6410,6 +6410,7 @@ static void block_move(struct snis_entity *o)
 	pos.v.z = o->tsd.block.dz;
 	quat_rot_vec_self(&pos, &parent->orientation);
 	quat_mul(&o->orientation, &parent->orientation, &o->tsd.block.relative_orientation);
+	quat_normalize_self(&o->orientation);
 	o->vx = pos.v.x + parent->x - o->x;
 	o->vy = pos.v.y + parent->y - o->y;
 	o->vz = pos.v.z + parent->z - o->z;
@@ -6425,6 +6426,7 @@ static void block_move(struct snis_entity *o)
 
 default_move:
 	quat_mul(&o->orientation, &o->orientation, &o->tsd.block.rotational_velocity);
+	quat_normalize_self(&o->orientation);
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	block_calculate_obb(o, &o->tsd.block.obb);
 	if (o->tsd.block.health == 0) {
@@ -6510,6 +6512,7 @@ static void turret_move(struct snis_entity *o)
 	if (o->tsd.turret.current_target_id == (uint32_t) -1) { /* no target */
 		// o->orientation = parent->orientation;
 		quat_mul(&o->orientation, &parent->orientation, &o->tsd.turret.relative_orientation);
+		quat_normalize_self(&o->orientation);
 	} else {
 		union vec3 to_enemy;
 
@@ -6551,6 +6554,7 @@ static void turret_move(struct snis_entity *o)
 
 default_move:
 	quat_mul(&o->orientation, &o->orientation, &o->tsd.turret.rotational_velocity);
+	quat_normalize_self(&o->orientation);
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
 	if (o->tsd.turret.health > 10)
