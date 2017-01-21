@@ -4886,7 +4886,7 @@ static void text_to_speech(char *text)
 	}
 	remove_single_quotes(text);
 	fixed_text = fix_pronunciation(text);
-	snprintf(command, sizeof(command), "%s/text_to_speech.sh '%s'", bindir, fixed_text);
+	snprintf(command, sizeof(command), "%s/snis_text_to_speech.sh '%s'", bindir, fixed_text);
 	free(fixed_text);
 	rc = system(command);
 	if (rc != 0 && errno != ECHILD)  { /* we have ignored SIGCHLD, so we get ECHILD here */

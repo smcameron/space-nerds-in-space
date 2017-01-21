@@ -411,7 +411,7 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lcrypto -lssl
 
 
 PROGS=snis_server snis_client snis_limited_client snis_multiverse
-BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/text_to_speech.sh \
+BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/snis_text_to_speech.sh \
 		bin/snis_multiverse
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap mesh_viewer sample_image_colors
 
@@ -709,9 +709,9 @@ bin/ssgl_server:	ssgl/ssgl_server
 	@mkdir -p bin
 	@cp ssgl/ssgl_server bin
 
-bin/text_to_speech.sh:	text_to_speech.sh
-	@cp text_to_speech.sh bin/text_to_speech.sh
-	@chmod +x bin/text_to_speech.sh
+bin/snis_text_to_speech.sh:	snis_text_to_speech.sh
+	@cp snis_text_to_speech.sh bin/snis_text_to_speech.sh
+	@chmod +x bin/snis_text_to_speech.sh
 
 mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(SDLCLIENTLINK)
