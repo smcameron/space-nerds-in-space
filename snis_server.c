@@ -375,6 +375,24 @@ static struct snis_entity go[MAXGAMEOBJS];
 #define go_index(snis_entity_ptr) ((snis_entity_ptr) - &go[0])
 static struct space_partition *space_partition = NULL;
 
+#define MAX_LUA_CHANNELS 10
+static struct lua_comms_channel {
+	uint32_t channel;
+	char *name;
+	char *callback;
+} lua_channel[MAX_LUA_CHANNELS];
+static int nlua_channels = 0;
+
+/* Queue of pending lua comms transmissions */
+struct lua_comms_transmission {
+	uint32_t channel;
+	char *sender;
+	char *transmission;
+	struct lua_comms_transmission *next;
+};
+
+static struct lua_comms_transmission *lua_comms_transmission_queue = NULL;
+
 static int lookup_by_id(uint32_t id);
 
 static uint32_t get_new_object_id(void)
@@ -740,6 +758,51 @@ static void fire_lua_proximity_checks(void)
 		do_lua_pcall(i->callback, lua_state, 3, 0, 0);
 		free_lua_proximity_check(&i);
 	}
+}
+
+/* This sends one comms transmission to any lua callback listening on the channel
+ * This is for lua scripts to recieve transmissions from players.  This should only
+ * be called from the main thread that started lua.
+ */
+static void send_one_lua_comms_transmission(struct lua_comms_transmission *transmission)
+{
+	int i;
+
+	if (!transmission || !transmission->sender || !transmission->transmission) {
+		fprintf(stderr, "send_one_lua_comms_transmission: something is not right.\n");
+		return;
+	}
+	for (i = 0; i < nlua_channels; i++) {
+		if (transmission->channel != lua_channel[i].channel)
+			continue;
+		lua_getglobal(lua_state, lua_channel[i].callback);
+		lua_pushstring(lua_state, transmission->sender);
+		lua_pushnumber(lua_state, (double) lua_channel[i].channel);
+		lua_pushstring(lua_state, transmission->transmission);
+		do_lua_pcall(lua_channel[i].callback, lua_state, 3, 0, 0);
+	}
+}
+
+/* This sends comms transmission to any lua callback listening on the channel
+ * This is for lua scripts to recieve transmissions from players
+ */
+static void send_queued_lua_comms_transmissions(struct lua_comms_transmission **transmission_queue)
+{
+	struct lua_comms_transmission *t, *next = NULL;
+
+	for (t = *transmission_queue; t != NULL; t = next) {
+		send_one_lua_comms_transmission(t);
+		next = t->next;
+		if (t->sender)
+			free(t->sender);
+		if (t->transmission)
+			free(t->transmission);
+		t->sender = NULL;
+		t->transmission = NULL;
+		free(t);
+		t = NULL;
+	}
+	*transmission_queue = NULL;
 }
 
 void lua_object_id_event(char *event, uint32_t object_id)
@@ -11883,6 +11946,17 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 		}
 	}
 
+	/* check for lua channels being hailed */
+	for (i = 0; i < nnames; i++) {
+		for (j = 0; j < nlua_channels; j++) {
+			if (!lua_channel[j].name)
+				continue;
+			if (strcasecmp(lua_channel[j].name, namelist[i]) != 0)
+				continue;
+			/* What to do here? */
+		}
+	}
+
 	/* check for starbases being hailed */
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
@@ -12529,6 +12603,64 @@ static int l_comms_transmission(lua_State *l)
 		break;
 	}
 error:
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static int l_comms_channel_transmit(lua_State *l)
+{
+	const char *name = luaL_checkstring(l, 1);
+	const double channel = luaL_checknumber(l, 2);
+	const char *transmission = luaL_checkstring(l, 3);
+	uint32_t ch;
+
+	ch = (uint32_t) channel;
+	send_comms_packet((char *) name, ch, transmission);
+	return 0;
+}
+
+static int l_comms_channel_unlisten(lua_State *l)
+{
+	int i, n;
+	const char *name = luaL_checkstring(l, 1);
+	const double channel = luaL_checknumber(l, 2);
+
+	n = -1;
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i < nlua_channels; i++) {
+		if (strcasecmp(lua_channel[i].name, name) == 0 &&
+			lua_channel[i].channel == (uint32_t) channel) {
+			n = i;
+			break;
+		}
+	}
+	if (n >= 0) {
+		free(lua_channel[n].name);
+		free(lua_channel[n].callback);
+		for (i = n; i < nlua_channels - 1; i++)
+			lua_channel[i] = lua_channel[i + 1];
+		nlua_channels--;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+/* Listen on a comms channel and forward traffic to lua callback */
+static int l_comms_channel_listen(lua_State *l)
+{
+	const char *name = luaL_checkstring(l, 1);
+	const double channel = luaL_checknumber(l, 2);
+	const char *callback = luaL_checkstring(l, 3);
+
+	pthread_mutex_lock(&universe_mutex);
+	if (nlua_channels >= MAX_LUA_CHANNELS) {
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	lua_channel[nlua_channels].name = strdup(name);
+	lua_channel[nlua_channels].channel = (uint32_t) channel;
+	lua_channel[nlua_channels].callback = strdup(callback);
+	nlua_channels++;
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -15542,6 +15674,46 @@ static void send_silent_ship_damage_packet(struct snis_entity *o)
 	send_generic_ship_damage_packet(o, OPCODE_SILENT_UPDATE_DAMAGE);
 }
 
+/* Append a transmission onto the trasmission queue */
+static void schedule_lua_comms_transmission(struct lua_comms_transmission **transmission_queue,
+						char *sender, uint32_t channel, const char *str)
+{
+	/* Assumes universe lock is held */
+	struct lua_comms_transmission *t, *i;
+
+	t = malloc(sizeof(*t));
+	t->channel = channel;
+	t->sender = strdup(sender);
+	t->transmission = strdup(str);
+	t->next = NULL;
+
+	if (!*transmission_queue) {
+		*transmission_queue = t;
+		return;
+	}
+	/* Find the last queue entry */
+	for (i = *transmission_queue; i->next != NULL; i = i->next)
+		; /* empty loop body */
+	i->next = t;
+}
+
+/* If any lua scripts are listening on the channel, queue up comms to them. */
+static void queue_comms_to_lua_channels(char *sender, uint32_t channel, const char *str)
+{
+	int i;
+
+	/* assumes universe lock is held */
+	for (i = 0; i < nlua_channels; i++) {
+		if (channel != lua_channel[i].channel)
+			continue;
+		/* We have to schedule a callback to send this because
+		 * you can't just call lua from any old thread.
+		 */
+		schedule_lua_comms_transmission(&lua_comms_transmission_queue, sender, channel, str);
+		break;
+	}
+}
+
 static void send_comms_packet(char *sender, uint32_t channel, const char *str)
 {
 	struct packed_buffer *pb;
@@ -15555,6 +15727,8 @@ static void send_comms_packet(char *sender, uint32_t channel, const char *str)
 		send_packet_to_all_clients(pb, ROLE_ALL);
 	else
 		send_packet_to_all_bridges_on_channel(channel, pb, ROLE_ALL);
+	/* Send comms to any lua scripts that are listening */
+	queue_comms_to_lua_channels(sender, channel, str);
 }
 
 static void send_respawn_time(struct game_client *c,
@@ -16521,6 +16695,7 @@ static void move_objects(double absolute_time, int discontinuity)
 		if (i == 0 || faction_population[lowest_faction] > faction_population[i])
 			lowest_faction = i;
 	move_damcon_entities();
+	send_queued_lua_comms_transmissions(&lua_comms_transmission_queue);
 	pthread_mutex_unlock(&universe_mutex);
 	fire_lua_timers();
 	fire_lua_callbacks(&callback_schedule);
@@ -16641,6 +16816,9 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_turret, "add_turret");
 	add_lua_callable_fn(l_add_block, "add_block");
 	add_lua_callable_fn(l_add_turrets_to_block_face, "add_turrets_to_block_face");
+	add_lua_callable_fn(l_comms_channel_listen, "comms_channel_listen");
+	add_lua_callable_fn(l_comms_channel_unlisten, "comms_channel_unlisten");
+	add_lua_callable_fn(l_comms_channel_transmit, "comms_channel_transmit");
 }
 
 static int run_initial_lua_scripts(void)

@@ -223,7 +223,58 @@ set_object_relative_position(object_id, rx, ry, rz);
 delete_object(object_id) -- delete the specified object from the universe
 
 comms_transmission(object_id, transmission); -- causes the object to transmit the
-	specified transmission via comms.
+	specified transmission via comms on channel 0.  Note: you may prefer to
+	use comms_channel_transmit() instead.  See below.
+
+comms_channel_listen(name, channel, callback)
+
+	Note: if you transmit on a channel you are listening to, you will recieve your
+	own transmissions, so you must be prepared to ignore them.
+
+		function transmission_received(from, channel, message)
+		   print("Transmission recieved from", from, " on channel ", channel, ".")
+		   print("Message: ", message)
+		end
+
+		comms_channel_listen("Bob", "transmission_received", 10);
+
+	Beware of something like the following:
+
+		function transmission_received(from, channel, message)
+		   print("Transmission recieved from", from, " on channel ", channel, ".")
+		   print("Message: ", message)
+		   comms_channel_transmit("Bob", channel, "Hello!"); -- THIS IS A PROBLEM
+		end
+		comms_channel_listen("Bob", "transmission_received", 10);
+
+	When you receive on a channel, you will transmit on the same channel, and then
+	you will receive your own transmission, to which you will respond, which you will
+	then recieve, to which you will respond, etc.  You'll set up a loop.  So, if you
+	need to transmit on the same channel you receive on (which is the normal case)
+	you have to figure out a way to ignore your own transmissions.  The easiest way
+	is to decouple the transmissions from the messages received.  That is, do not
+	transmit in response to a message received, or if you mush, only respond to very
+	specific messages which you never transmit yourself.
+
+comms_channel_unlisten(name, channel)
+
+	Stop listening on the given channel (your listener callback won't be
+	called anymore).
+
+	Example:
+
+	comms_channel_unlisten("Bob", 10);
+
+comms_channel_transmit(name, channel, text)
+
+	Transmit the given text from the given name on the given channel
+	Similar to comms_transmission except can transmit on channels other than
+	zero, and instead of using the name of the object specified, uses whatever
+	name you give it.
+
+	Example:
+
+	comms_channel_transmit("Bob", 10, "Hi from Bob!");
 
 text_to_speech(player_ship_id, text_to_speak); -- causes player ship to use text to speech to
 	say the specified text.
