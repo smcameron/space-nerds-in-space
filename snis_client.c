@@ -305,6 +305,8 @@ ui_element_button_press_function ui_text_input_button_press = (ui_element_button
 					snis_text_input_box_button_press;
 ui_element_keypress_function ui_text_input_keypress = (ui_element_keypress_function)
 					snis_text_input_box_keypress;
+ui_element_button_press_function ui_text_window_button_press = (ui_element_button_press_function)
+					text_window_button_press;
 
 #define MAXTEXTURES 10
 
@@ -8414,7 +8416,7 @@ static void ui_add_text_window(struct text_window *tw, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(tw, ui_text_window_draw, NULL,
+	uie = ui_element_init(tw, ui_text_window_draw, ui_text_window_button_press,
 						active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }

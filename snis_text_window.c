@@ -77,6 +77,7 @@ struct text_window *text_window_init(int x, int y, int w,
 		memset(tw->text[i], 0, 80);
 	}
 	tw->lineheight = 20;
+	tw->thumb_pos = 0;
 	tw->first_entry = 0;
 	tw->last_entry = 0;
 	tw->top_line = 0;
@@ -90,7 +91,7 @@ struct text_window *text_window_init(int x, int y, int w,
 void text_window_draw(struct text_window *tw)
 {
 	int i, j;
-	int thumb_pos, thumb_top, thumb_bottom, twec;
+	int thumb_top, thumb_bottom, twec;
 
 	sng_set_foreground(tw->color);
 	/* draw outer rectangle */
@@ -100,30 +101,30 @@ void text_window_draw(struct text_window *tw)
 
 	twec = text_window_entry_count(tw);
 	if (twec == 0) {
-		thumb_pos = 0;
+		tw->thumb_pos = 0;
 		thumb_top = tw->y + 5;
 		thumb_bottom = tw->y + tw->h - 10;
 	} else {
 		float f;
 		/* figure which line the thumb pos is on. */
-		thumb_pos = (tw->top_line + (tw->visible_lines / 2) - tw->first_entry) % tw->total_lines;
-		if (thumb_pos < 0)
-			thumb_pos += tw->total_lines;
+		tw->thumb_pos = (tw->top_line + (tw->visible_lines / 2) - tw->first_entry) % tw->total_lines;
+		if (tw->thumb_pos < 0)
+			tw->thumb_pos += tw->total_lines;
 		/* figure where that is on the screen */
-		f = (float) thumb_pos / (float) text_window_entry_count(tw);
-		thumb_pos = (int) (f * tw->h) + tw->y;
+		f = (float) tw->thumb_pos / (float) text_window_entry_count(tw);
+		tw->thumb_pos = (int) (f * tw->h) + tw->y;
 		thumb_top = (int) (((float) (tw->visible_lines / 2.0) / (float) twec) * 
-				-tw->lineheight * tw->visible_lines + thumb_pos);
+				-tw->lineheight * tw->visible_lines + tw->thumb_pos);
 		if (thumb_top < tw->y + 5)
 			thumb_top = tw->y + 5;
 		thumb_bottom = (int) (((float) (tw->visible_lines / 2.0) / (float) twec) * 
-				tw->lineheight * tw->visible_lines + thumb_pos);
+				tw->lineheight * tw->visible_lines + tw->thumb_pos);
 		if (thumb_bottom > tw->y + tw->h - 10)
 			thumb_bottom = tw->y + tw->h - 10;
 			
 	}
 	sng_current_draw_rectangle(0,
-			tw->x + tw->w - 13, thumb_pos - tw->lineheight / 2,
+			tw->x + tw->w - 13, tw->thumb_pos - tw->lineheight / 2,
 			6, tw->lineheight);
 	sng_current_draw_rectangle(0,
 			tw->x + tw->w - 11, thumb_top,
@@ -228,5 +229,34 @@ void text_window_page_down(struct text_window *tw)
 
 	for (i = 0; i < tw->visible_lines; i++)
 		text_window_scroll_down(tw);
+}
+
+int text_window_button_press(struct text_window *tw, int x, int y)
+{
+	int i, left, right, top, bottom;
+
+	left = tw->x + tw->w - 15;
+	right = tw->x + tw->w - 5;
+	top = tw->y + 5;
+	bottom = tw->y + tw->h - 10;
+
+	/* is it in the scroll bar area? */
+	if (x < left)
+		return 0;
+	if (x > right)
+		return 0;
+	if (y < top)
+		return 0;
+	if (y > bottom)
+		return 0;
+
+	/* It is in the scroll bar area */
+	if (y > tw->thumb_pos + 10)
+		for (i = 0; i < 5; i++)
+			text_window_scroll_down(tw);
+	else if (y < tw->thumb_pos - 10)
+		for (i = 0; i < 5; i++)
+			text_window_scroll_up(tw);
+	return 0;
 }
 

@@ -20,5 +20,6 @@ GLOBAL void text_window_scroll_up(struct text_window *tw);
 GLOBAL void text_window_scroll_down(struct text_window *tw);
 GLOBAL void text_window_page_up(struct text_window *tw);
 GLOBAL void text_window_page_down(struct text_window *tw);
+GLOBAL int text_window_button_press(struct text_window *tw, int x, int y);
 
 #endif
