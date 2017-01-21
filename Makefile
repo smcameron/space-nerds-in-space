@@ -414,6 +414,7 @@ PROGS=snis_server snis_client snis_limited_client snis_multiverse
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/snis_text_to_speech.sh \
 		bin/snis_multiverse
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap mesh_viewer sample_image_colors
+ESSENTIAL_SCRIPTS=snis_text_to_speech.sh
 
 # model directory
 MD=${ASSETSSRCDIR}/models
@@ -955,7 +956,7 @@ print_ship_attributes:	snis_entity_key_value_specification.h key_value_parser.o
 
 install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${MANPAGES} ${SSGL} \
-		${SOLARSYSTEMFILES}
+		${SOLARSYSTEMFILES} ${ESSENTIAL_SCRIPTS}
 	@# First check that PREFIX is sane, and esp. that it's not pointed at source
 	@mkdir -p ${DESTDIR}/${PREFIX}
 	@touch ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
@@ -970,7 +971,7 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 	@ rm -f ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
 	mkdir -p ${DESTDIR}/${PREFIX}/bin
 	${INSTALL} -m 755 ssgl/ssgl_server ${DESTDIR}/${PREFIX}/bin
-	for x in ${PROGS} ; do \
+	for x in ${PROGS} ${ESSENTIAL_SCRIPTS} ; do \
 		${INSTALL} -m 755 bin/$$x \
 				${DESTDIR}/${PREFIX}/bin; \
 	done
