@@ -91,7 +91,8 @@ add_demolisher_ship(x + 10000, y, z);
 
 door_speed = 0.01;
 door_open = 0.0;
-door_direction = door_speed;
+door_direction = 0.0;
+comms_channel = 1234;
 
 function set_door_position(door_open)
   set_object_relative_position(door1,  0.45 * l + zfight, 0, 0.55 * -walloffset - door_open * 0.3 * walloffset);
@@ -103,14 +104,27 @@ end
 function door_mover(cookie)
   door_open = door_open + door_direction;
   if door_open > 1.0 and door_direction > 0.0 then
-    door_direction = -door_speed;
+    door_direction = 0;
   end
   if door_open < 0.0 and door_direction < 0.0 then
-    door_direction = door_speed;
+    door_direction = 0;
   end
   set_door_position(door_open);
   register_timer_callback("door_mover", 1, 0);
 end
 
+function door_comms(from, channel, message)
+  print("door_comms: message = ", message)
+  if message == "open" then
+    door_direction = door_speed;
+    comms_channel_transmit("DEMOLISHER: ", comms_channel, "COMMAND ACKNOWLEDGED, DOORS OPENING");
+  end
+  if message == "close" then
+    door_direction = -door_speed;
+    comms_channel_transmit("DEMOLISHER: ", comms_channel, "COMMAND ACKNOWLEDGED, DOORS CLOSING");
+  end
+end
+
 register_timer_callback("door_mover", 1, 0);
+comms_channel_listen("DEMOLISHER", comms_channel, "door_comms")
 
