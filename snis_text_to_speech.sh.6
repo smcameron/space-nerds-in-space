@@ -1,0 +1,27 @@
+.TH SPACE-NERDS-IN-SPACE "6" "Jan 2017" "snis_text_to_speech.sh" "Games"
+.SH NAME
+snis_text_to_speech.sh \- a wrapper script "Space Nerds In Space" uses to convert text to speech
+.SH SYNOPSIS
+.B snis_text_to_speech.sh 'Text you want it to speak'
+.SH DESCRIPTION
+.PP
+snis_text_to_speech.sh is a wrapper script around pico2wave, espeak, and aplay which
+is used by Space Nerds In Space to convert text to audible computer generated speech.
+First it tries to use pico2wave(1) and aplay(1), and if that doesn't work (typically
+because pico2wave or aplay aren't installed) it falls back to trying espeak(1).
+.SH EXAMPLES
+.TP
+  ./snis_text_to_speech.sh 'Ramming speed!'
+.SH FILES
+  /tmp/tts-*.wav - temporary audio files produced by pico2wave which are then played
+	via aplay(1) and then deleted.
+
+  /tmp/snisttslockdir - A directory which is created and deleted as a synchronization mechanism to
+	keep parallel invocations of snis_text_to_speech.sh from speaking over one
+	another.
+.SH SEE ALSO
+.PP
+espeak(1), pico2wave(1), aplay(1)
+.SH AUTHOR
+snis_text_to_speech.sh was written by Stephen M. Cameron
+.br

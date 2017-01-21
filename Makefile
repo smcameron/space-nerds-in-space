@@ -295,7 +295,8 @@ DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
 
 MANSRCDIR=.
 MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz \
-	${MANSRCDIR}/earthlike.1.gz ${MANSRCDIR}/gaseous-giganticus.1
+	${MANSRCDIR}/earthlike.1.gz ${MANSRCDIR}/gaseous-giganticus.1 \
+	${MANSRCDIR}/snis_text_to_speech.sh.6
 MANDIR=${DESTDIR}/${PREFIX}/share/man/man6
 
 DESKTOPDIR=${DESTDIR}/${PREFIX}/share/applications
