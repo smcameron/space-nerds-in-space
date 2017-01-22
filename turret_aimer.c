@@ -23,6 +23,8 @@
 
 #include <math.h>
 
+#include "mathutils.h"
+
 static const struct turret_params default_turret_params = {
 	/* NOTE: only the rate limits are actually implemented. */
 	.elevation_lower_limit = 0.0,
@@ -81,8 +83,8 @@ union quat *turret_aim(double target_x, double target_y, double target_z,
 	 * Rate limit change to each to make the turret swing smoothly
 	 */
 
-	delta_elevation = elevation - current_elevation;
-	delta_azimuth = azimuth - current_azimuth;
+	delta_elevation = short_angular_distance(current_elevation, elevation);
+	delta_azimuth = short_angular_distance(current_azimuth, azimuth);
 	if (delta_azimuth > turret->azimuth_rate_limit)
 		delta_azimuth = turret->azimuth_rate_limit;
 	else if (delta_azimuth < -turret->azimuth_rate_limit)
