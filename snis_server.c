@@ -16641,6 +16641,7 @@ static void update_multiverse(struct snis_entity *o)
 static void move_objects(double absolute_time, int discontinuity)
 {
 	int i;
+	struct lua_comms_transmission *lua_comms_transmission_queue_copy = NULL;
 
 	pthread_mutex_lock(&universe_mutex);
 	memset(faction_population, 0, sizeof(faction_population));
@@ -16695,11 +16696,17 @@ static void move_objects(double absolute_time, int discontinuity)
 		if (i == 0 || faction_population[lowest_faction] > faction_population[i])
 			lowest_faction = i;
 	move_damcon_entities();
-	send_queued_lua_comms_transmissions(&lua_comms_transmission_queue);
+
+	/* copy and clear the lua comms queue head pointer while holding the lock */
+	lua_comms_transmission_queue_copy = lua_comms_transmission_queue;
+	lua_comms_transmission_queue = NULL;
+
 	pthread_mutex_unlock(&universe_mutex);
+
 	fire_lua_timers();
 	fire_lua_callbacks(&callback_schedule);
 	fire_lua_proximity_checks();
+	send_queued_lua_comms_transmissions(&lua_comms_transmission_queue_copy);
 }
 
 static void register_with_game_lobby(char *lobbyhost, int port,
