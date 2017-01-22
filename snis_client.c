@@ -13610,6 +13610,14 @@ static unsigned int load_texture(char *filename)
 	return graph_dev_load_texture(fname);
 }
 
+static unsigned int load_texture_no_mipmaps(char *filename)
+{
+	char fname[PATH_MAX + 1];
+
+	sprintf(fname, "%s/%s", asset_dir, filename);
+	return graph_dev_load_texture_no_mipmaps(fname);
+}
+
 static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
 {
 	/*
@@ -13863,7 +13871,7 @@ static int load_static_textures(void)
 	warp_effect_material.texture_mapped_unlit.do_blend = 1;
 
 	int i;
-	planetary_ring_texture_id = load_texture("textures/planetary-ring0.png");
+	planetary_ring_texture_id = load_texture_no_mipmaps("textures/planetary-ring0.png");
 	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) {
 		material_init_textured_planet_ring(&planetary_ring_material[i]);
 		planetary_ring_material[i].textured_planet_ring.texture_id = planetary_ring_texture_id;
