@@ -12209,7 +12209,7 @@ static void enscript_asteroid(FILE *f, struct snis_entity *o, int asteroid)
 		fprintf(f, "asteroid = {};\n");
 	fprintf(f, "asteroid[%d] = add_asteroid(%lf, %lf, %lf);\n",
 				asteroid, o->x, o->y, o->z);
-	fprintf(f, "asteroid_set_velocity(asteroid[%d], %f);\n",
+	fprintf(f, "set_asteroid_speed(asteroid[%d], %f);\n",
 				asteroid, o->tsd.asteroid.v);
 }
 
