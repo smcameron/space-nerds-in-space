@@ -314,7 +314,6 @@ ui_element_button_press_function ui_text_window_button_press = (ui_element_butto
 #define GLuint int
 #endif
 
-char skybox_texture_prefix[255];
 volatile int static_textures_loaded = 0; /* blech, volatile global. */
 volatile int per_solarsystem_textures_loaded = 0;
 
@@ -15188,6 +15187,7 @@ static void process_options(int argc, char *argv[])
 {
 	int x, y, rc, c, value;
 
+	role = 0;
 	x = -1;
 	y = -1;
 	while (1) {
@@ -15296,48 +15296,12 @@ static void process_options(int argc, char *argv[])
 			usage();
 		}
 	}
-}
-
-int main(int argc, char *argv[])
-{
-	GtkWidget *vbox;
-
-	take_your_locale_and_shove_it();
-	set_random_seed();
-
-	displaymode = DISPLAYMODE_NETWORK_SETUP;
-
-	role = 0;
-	process_options(argc, argv);
 	if (role == 0)
 		role = ROLE_ALL;
+}
 
-	printf("serverport = %d\n", serverport);
-	check_lobby_serverhost_options();
-
-	strcpy(skybox_texture_prefix, "textures/orange-haze");
-	override_asset_dir();
-
-	memset(&main_screen_text, 0, sizeof(main_screen_text));
-	snis_object_pool_setup(&pool, MAXGAMEOBJS);
-	snis_object_pool_setup(&sparkpool, MAXSPARKS);
-	snis_object_pool_setup(&damcon_pool, MAXDAMCONENTITIES);
-	memset(dco, 0, sizeof(dco));
-	damconscreenx = NULL;
-	damconscreeny = NULL;
-
-	ignore_sigpipe();
-	prevent_zombies();
-
-	setup_sound();
-	if (read_ship_types()) {
-                fprintf(stderr, "%s: unable to read ship types\n", argv[0]);
-                return -1;
-        }
-
-	if (read_factions())
-		return -1;
-
+static void setup_ship_mesh_maps(void)
+{
 	ship_mesh_map = malloc(sizeof(*ship_mesh_map) * nshiptypes);
 	derelict_mesh = malloc(sizeof(*derelict_mesh) * nshiptypes);
 	if (!ship_mesh_map || !derelict_mesh) {
@@ -15346,43 +15310,123 @@ int main(int argc, char *argv[])
 	}
 	memset(ship_mesh_map, 0, sizeof(*ship_mesh_map) * nshiptypes);
 	memset(derelict_mesh, 0, sizeof(*derelict_mesh) * nshiptypes);
+}
 
+static void setup_screen_parameters(void)
+{
+	GdkScreen *s;
+
+	s = gdk_screen_get_default();
+	if (s)
+		figure_aspect_ratio(requested_aspect_x, requested_aspect_y,
+					&SCREEN_WIDTH, &SCREEN_HEIGHT);
+	if (requested_aspect_x >= 0 || requested_aspect_y >= 0)
+		fullscreen = 0; /* can't request aspect ratio AND fullscreen */
+	real_screen_width = SCREEN_WIDTH;
+	real_screen_height = SCREEN_HEIGHT;
+
+	damconscreenxdim = 600 * SCREEN_WIDTH / 800;
+	damconscreenydim = 500 * SCREEN_HEIGHT / 600;
+	damconscreenx0 = 20 * SCREEN_WIDTH / 800;
+	damconscreeny0 = 80 * SCREEN_HEIGHT / 600;
+	sng_set_extent_size(SCREEN_WIDTH, SCREEN_HEIGHT);
+	sng_set_screen_size(real_screen_width, real_screen_height);
+}
+
+static void setup_window_geometry(GtkWidget *window)
+{
+	/* clamp window aspect ratio to constant */
+	GdkGeometry geom;
+	geom.min_aspect = (gdouble) SCREEN_WIDTH / (gdouble) SCREEN_HEIGHT;
+	geom.max_aspect = geom.min_aspect;
+	gtk_window_set_geometry_hints(GTK_WINDOW(window), NULL, &geom, GDK_HINT_ASPECT);
+}
+
+static void setup_gtk_window_and_drawing_area(GtkWidget **window, GtkWidget **vbox, GtkWidget **main_da)
+{
+	*window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	setup_window_geometry(*window);
+	/* These scalings are arbitrary, just played with it until it looked "good." */
+	snis_typefaces_init_with_scaling((float) SCREEN_WIDTH / 1050.0, (float) SCREEN_HEIGHT / 500.0);
+
+	gtk_container_set_border_width(GTK_CONTAINER(*window), 0);
+	*vbox = gtk_vbox_new(FALSE, 0);
+	gtk_window_move(GTK_WINDOW(*window), screen_offset_x, screen_offset_y);
+	*main_da = gtk_drawing_area_new();
+
+	g_signal_connect(G_OBJECT(*window), "delete_event",
+		G_CALLBACK(delete_event), NULL);
+	g_signal_connect(G_OBJECT(*window), "destroy",
+		G_CALLBACK(destroy), NULL);
+	g_signal_connect(G_OBJECT(*window), "key_press_event",
+		G_CALLBACK(key_press_cb), "window");
+	g_signal_connect(G_OBJECT(*window), "key_release_event",
+		G_CALLBACK(key_release_cb), "window");
+	g_signal_connect(G_OBJECT(*main_da), "expose_event",
+		G_CALLBACK(main_da_expose), NULL);
+	g_signal_connect(G_OBJECT(*main_da), "configure_event",
+		G_CALLBACK(main_da_configure), NULL);
+	g_signal_connect(G_OBJECT(*main_da), "scroll_event",
+		G_CALLBACK(main_da_scroll), NULL);
+	gtk_widget_add_events(*main_da, GDK_BUTTON_PRESS_MASK);
+	gtk_widget_add_events(*main_da, GDK_BUTTON_RELEASE_MASK);
+	gtk_widget_add_events(*main_da, GDK_BUTTON3_MOTION_MASK);
+	gtk_widget_add_events(*main_da, GDK_POINTER_MOTION_MASK);
+	g_signal_connect(G_OBJECT(*main_da), "button_press_event",
+		G_CALLBACK(main_da_button_press), NULL);
+	g_signal_connect(G_OBJECT(*main_da), "button_release_event",
+		G_CALLBACK(main_da_button_release), NULL);
+	g_signal_connect(G_OBJECT(*main_da), "motion_notify_event",
+		G_CALLBACK(main_da_motion_notify), NULL);
+
+	gtk_container_add(GTK_CONTAINER(*window), *vbox);
+	gtk_box_pack_start(GTK_BOX(*vbox), *main_da, TRUE /* expand */, TRUE /* fill */, 0);
+
+	gtk_window_set_default_size(GTK_WINDOW(*window), real_screen_width, real_screen_height);
+}
+
+static void maybe_connect_to_lobby(void)
+{
 	if (avoid_lobby) {
 		done_with_lobby = 1;
 		lobby_socket = -1;
 		displaymode = DISPLAYMODE_CONNECTING;
-	} else {
-		if (displaymode != DISPLAYMODE_NETWORK_SETUP || quickstartmode) {
+		return;
+	}
+	if (displaymode != DISPLAYMODE_NETWORK_SETUP || quickstartmode) {
 			connect_to_lobby();
 			if (quickstartmode)
 				displaymode = DISPLAYMODE_LOBBYSCREEN;
-		}
 	}
+}
 
-	/* gtk_set_locale();  The setlocale() above takes care of this. */
-	gtk_init (&argc, &argv);
-	{
-		GdkScreen *s;
+int main(int argc, char *argv[])
+{
+	GtkWidget *vbox;
 
-		s = gdk_screen_get_default();
-		if (s)
-			figure_aspect_ratio(requested_aspect_x, requested_aspect_y,
-						&SCREEN_WIDTH, &SCREEN_HEIGHT);
-		if (requested_aspect_x >= 0 || requested_aspect_y >= 0)
-			fullscreen = 0; /* can't request aspect ratio AND fullscreen */
-		real_screen_width = SCREEN_WIDTH;
-		real_screen_height = SCREEN_HEIGHT;
+	displaymode = DISPLAYMODE_NETWORK_SETUP;
 
-		damconscreenxdim = 600 * SCREEN_WIDTH / 800;
-		damconscreenydim = 500 * SCREEN_HEIGHT / 600;
-		damconscreenx0 = 20 * SCREEN_WIDTH / 800;
-		damconscreeny0 = 80 * SCREEN_HEIGHT / 600;
-		sng_set_extent_size(SCREEN_WIDTH, SCREEN_HEIGHT);
-		sng_set_screen_size(real_screen_width, real_screen_height);
-	}
+	take_your_locale_and_shove_it();
+	ignore_sigpipe();
+	prevent_zombies();
+	set_random_seed();
+	process_options(argc, argv);
+	check_lobby_serverhost_options();
+	override_asset_dir();
+	setup_sound();
+	memset(&main_screen_text, 0, sizeof(main_screen_text));
+	snis_object_pool_setup(&pool, MAXGAMEOBJS);
+	snis_object_pool_setup(&sparkpool, MAXSPARKS);
+	snis_object_pool_setup(&damcon_pool, MAXDAMCONENTITIES);
+	memset(dco, 0, sizeof(dco));
+	damconscreenx = NULL;
+	damconscreeny = NULL;
 
-	init_keymap();
-	read_keymap_config_file();
+	if (read_ship_types())
+		return -1;
+	if (read_factions())
+		return -1;
+	setup_ship_mesh_maps();
 	init_vects();
 	initialize_random_orientations_and_spins(COMMON_MTWIST_SEED);
 	init_planetary_atmospheres();
@@ -15398,59 +15442,12 @@ int main(int argc, char *argv[])
 	starbase_mesh = allocate_starbase_mesh_ptrs(nstarbase_models);
 	docking_port_info = read_docking_port_info(starbase_metadata, nstarbase_models,
 							STARBASE_SCALE_FACTOR);
-
-#if 0
-	init_player();
-	init_game_state(the_player);
-#endif
-
-	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	{
-		/* clamp window aspect ratio to constant */
-		GdkGeometry geom;
-		geom.min_aspect = (gdouble) SCREEN_WIDTH / (gdouble) SCREEN_HEIGHT;
-		geom.max_aspect = geom.min_aspect;
-		gtk_window_set_geometry_hints(GTK_WINDOW(window), NULL, &geom, GDK_HINT_ASPECT);
-	}
-
-	/* These scalings are arbitrary, just played with it until it looked "good." */
-	snis_typefaces_init_with_scaling((float) SCREEN_WIDTH / 1050.0, (float) SCREEN_HEIGHT / 500.0);
-
-	gtk_container_set_border_width (GTK_CONTAINER (window), 0);
-	vbox = gtk_vbox_new(FALSE, 0);
-	gtk_window_move(GTK_WINDOW(window), screen_offset_x, screen_offset_y);
-	main_da = gtk_drawing_area_new();
-
-	g_signal_connect (G_OBJECT (window), "delete_event",
-		G_CALLBACK (delete_event), NULL);
-	g_signal_connect (G_OBJECT (window), "destroy",
-		G_CALLBACK (destroy), NULL);
-	g_signal_connect(G_OBJECT (window), "key_press_event",
-		G_CALLBACK (key_press_cb), "window");
-	g_signal_connect(G_OBJECT (window), "key_release_event",
-		G_CALLBACK (key_release_cb), "window");
-	g_signal_connect(G_OBJECT (main_da), "expose_event",
-		G_CALLBACK (main_da_expose), NULL);
-        g_signal_connect(G_OBJECT (main_da), "configure_event",
-		G_CALLBACK (main_da_configure), NULL);
-        g_signal_connect(G_OBJECT (main_da), "scroll_event",
-		G_CALLBACK (main_da_scroll), NULL);
-	gtk_widget_add_events(main_da, GDK_BUTTON_PRESS_MASK);
-	gtk_widget_add_events(main_da, GDK_BUTTON_RELEASE_MASK);
-	gtk_widget_add_events(main_da, GDK_BUTTON3_MOTION_MASK);
-	gtk_widget_add_events(main_da, GDK_POINTER_MOTION_MASK);
-	g_signal_connect(G_OBJECT (main_da), "button_press_event",
-                      G_CALLBACK (main_da_button_press), NULL);
-	g_signal_connect(G_OBJECT (main_da), "button_release_event",
-                      G_CALLBACK (main_da_button_release), NULL);
-	g_signal_connect(G_OBJECT (main_da), "motion_notify_event",
-                      G_CALLBACK (main_da_motion_notify), NULL);
-
-	gtk_container_add (GTK_CONTAINER (window), vbox);
-	gtk_box_pack_start(GTK_BOX (vbox), main_da, TRUE /* expand */, TRUE /* fill */, 0);
-
-        gtk_window_set_default_size(GTK_WINDOW(window), real_screen_width, real_screen_height);
-
+	maybe_connect_to_lobby();
+	gtk_init(&argc, &argv);
+	setup_screen_parameters();
+	init_keymap();
+	read_keymap_config_file();
+	setup_gtk_window_and_drawing_area(&window, &vbox, &main_da);
 	init_gl(argc, argv, main_da);
         gtk_widget_show (vbox);
         gtk_widget_show (main_da);
