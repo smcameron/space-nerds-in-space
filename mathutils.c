@@ -497,4 +497,13 @@ float float_lerp(float from, float to, float t)
 	return from + t * (to - from);
 }
 
+double short_angular_distance(double from, double to)
+{
+	double distance;
+
+	distance = to - from;
+	if (fabs(distance) < 180)
+		return distance;
+	return 2.0 * M_PI - distance;
+}
 

@@ -110,4 +110,9 @@ int circle_line_segment_intersection(double x1, double y1, double x2, double y2,
 
 float float_lerp(float from, float to, float t);
 
+/* Given angles from and to (radians) returns the difference between them
+ * going the short way around the circle
+ */
+double short_angular_distance(double from, double to);
+
 #endif
