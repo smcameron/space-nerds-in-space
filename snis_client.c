@@ -235,7 +235,7 @@ struct entity_context *tridentecx;
 struct entity_context *sciballecx;
 
 static int ecx_fake_stars_initialized = 0;
-static int nfake_stars = 2000;
+static int nfake_stars = 0;
 static volatile int fake_stars_timer = 0;
 static volatile int credits_screen_active = 0;
 
