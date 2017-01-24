@@ -10310,14 +10310,14 @@ static void init_comms_ui(void)
 			NANO_FONT, comms_screen_button_pressed, (void *) 5);
 	x += bw;
 	comms_ui.main_onscreen_button = snis_button_init(x, y, bw, bh, "MAIN", button_color,
-			NANO_FONT, comms_screen_button_pressed, (void *) 7);
+			NANO_FONT, comms_screen_button_pressed, (void *) 6);
 	x = SCREEN_WIDTH - txx(150);
 	y = SCREEN_HEIGHT - txy(90);
 	comms_ui.red_alert_button = snis_button_init(x, y, -1, bh, "RED ALERT", red_alert_color,
-			NANO_FONT, comms_screen_red_alert_pressed, (void *) 6);
+			NANO_FONT, comms_screen_red_alert_pressed, NULL);
 	y = SCREEN_HEIGHT - 60;
 	comms_ui.mainscreen_comms = snis_button_init(x, y, -1, bh, "MAIN SCREEN", button_color,
-			NANO_FONT, comms_main_screen_pressed, (void *) 8);
+			NANO_FONT, comms_main_screen_pressed, NULL);
 	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 20, text_color);
 	comms_ui.comms_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
 					text_color, TINY_FONT,
@@ -14641,16 +14641,16 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		comms_screen_button_pressed((void *) 5);
 		break;
 	case DEVIO_OPCODE_COMMS_MAIN_ONSCREEN:
-		comms_screen_button_pressed((void *) 7);
+		comms_screen_button_pressed((void *) 6);
 		break;
 	case DEVIO_OPCODE_COMMS_TRANSMIT:
-		comms_transmit_button_pressed((void *) 0);
+		comms_transmit_button_pressed(NULL);
 		break;
 	case DEVIO_OPCODE_COMMS_RED_ALERT:
-		comms_screen_red_alert_pressed((void *) 0);
+		comms_screen_red_alert_pressed(NULL);
 		break;
 	case DEVIO_OPCODE_COMMS_MAINSCREEN_COMMS:
-		comms_main_screen_pressed((void *) 8);
+		comms_main_screen_pressed(NULL);
 		break;
 	case DEVIO_OPCODE_COMMS_MAINZOOM:
 		snis_slider_poke_input(comms_ui.mainzoom_slider, d, 1);
