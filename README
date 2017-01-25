@@ -29,6 +29,9 @@ Step 0: Build the game from source. (or alternately, see instructions
 	apt-get install libsdl2-dev # version may differ for your distro
 	apt-get install libssl-dev
 	apt-get install libttspico-utils # for text to speech
+	apt-get install sox # for "play" command, used by text to speech
+	apt-get install espeak # optional alternative to libttspico-utils
+	apt-get install alsa-utils # optional alternative to sox, for "aplay" command
 
       Note: SDL should only be required if you want to build mesh_viewer,
       which is a utility program for viewing 3D models, and which is not
