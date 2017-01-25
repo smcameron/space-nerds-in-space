@@ -23,8 +23,70 @@
 #
 # snis_text_to_speech.sh 'text you want it to speak'
 #
+# If this script isn't working for you, try:
+#
+#    snis_text_to_speech.sh --debug
+#
+
 
 export SNISTTSLOCKDIR=/tmp/snisttslockdir
+
+check_presence()
+{
+	program="$1"
+	arg="$2"
+	expected="$3"
+	if [ -x /usr/bin/"$program" ]
+	then
+		echo "    OK - $program is present and executable"
+	else
+		echo "    OK - /usr/bin/$program does not seem to exist.  Maybe it is in a weird place."
+	fi
+	$program "$arg" > /dev/null 2>&1
+	code="$?"
+	if [ "$code" = "127" ]
+	then
+		echo "NOT OK!!!   Failed to run $program"
+	fi
+	if [ "$code" != "$expected" ]
+	then
+		echo "NOT OK!!! Attempting to run $program got exit code $code instead of $expected"
+	else
+		echo "    OK - $program seems OK"
+	fi
+}
+
+if [ "$1" = "--debug" ]
+then
+	echo "snis_text_to_speech debugging mode enabled"
+	echo "Testing /tmp"
+	stat /tmp
+	if [ "$?" != "0" ]
+	then
+		echo "NOT OK!!! Failed to stat /tmp" 1>&2
+		exit 1
+	fi
+	echo "    OK - Checking permissions on /tmp"
+	stat /tmp | grep 'Access.*1777[/]drwxrwxrwt' > /dev/null 2>&1
+	if [ "$?" != "0" ]
+	then
+		echo "NOT OK!!! Permissions on /tmp do not seem to be correct, should be 1777"
+	else
+		echo "    OK - Permissions on /tmp seem to be ok (1777)"
+	fi
+	echo "    OK - Checking if we can create a directory in /tmp"
+	TMPFILE=/tmp/snistmp$$
+	mkdir "$TMPFILE" || (echo "NOT OK!!! Failed to create dir in /tmp" && exit 1)
+	echo "    OK - Created directory in /tmp OK"
+	echo "    Ok - Checking if we can remove the directory in /tmp"
+	rmdir "$TMPFILE" || (echo "NOT OK!!! Failed to rmdir $TMPFILE" && exit 1)
+	echo "    OK - Removed directory in /tmp OK"
+	check_presence play /dev/null 2
+	check_presence aplay /dev/null 1
+	check_presence pico2wave x 1
+	check_presence espeak '' 0
+	exit 1
+fi
 
 release_lock()
 {
@@ -36,7 +98,7 @@ get_lock()
 {
 	count=0
 	worked=0
-	while [ $count -lt 20 ]
+	while [ $count -lt 5 ]
 	do
 		mkdir "$SNISTTSLOCKDIR" > /dev/null 2>&1
 		if [ "$?" = "0" ]
