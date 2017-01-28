@@ -287,18 +287,12 @@ the other players.
 <br>
 <br>
 <br>
-<p>What follows is some old instructions about building bootable CDs
-<p><font size=+2>NOTE: THE FOLLOWING INSTRUCTIONS ARE QUITE OLD AND MAY NO LONGER WORK</font>
-
-<p>If you don't have linux, I have instructions for building a linux live DVD that you can 
-play the game from without affecting your pre-existing OS install (but no guarantees -- it should
-be ok, but don't come crying to me if this procedure trashes your hard drive.)
-
+<hr>
+<h2>Miscellaneous Development Topics</h2>
 <p>Here is a <a href="http://www.youtube.com/playlist?list=PLcSUyKz3gfa9BG8X0DKkIMTnQag8_tJFQ">youtube
 playlist of development videos for Space Nerds In Space</a> spanning the time from the very beginning
 when the game was literally not much more than 
 <a href="http://www.youtube.com/watch?v=BF19sPZGvmo&list=PLcSUyKz3gfa9BG8X0DKkIMTnQag8_tJFQ&index=20">just a bunch of dots on the screen</a> up until the present day.
-
 <p>Here is <a href="snis-nl-slides/slideshow.html">a set of slides about speech recognition and
 natural language processing in Space Nerds In Space</a>.
 
@@ -316,145 +310,17 @@ In Space.
 is a program used to generate some of the earthlike planet textures within Space Nerds In Space. 
 (Use arrow keys to navigate the slideshow.  And press F11 for full screen.)
 
-<p>Please keep in mind that this program is still very much a work in progress,
-so there are a lot of rough edges and sharp corners everywhere, though the code
-is pretty stable in the sense that it really doesn't crash much at all (if you
-find it crashing, please let me know via <a href="https://github.com/smcameron/space-nerds-in-space/issues?state=open">github's issue reporting system</a>.)
+<p>Most of the code is
+licensed under the GPL v. 2, or at your option, any later version.  Some parts of the code
+have an MIT license.  Audio files have 
+various other licenses, typically some variant of a Creative Commons license. I have tried
+to be diligent about making sure it is clear which parts of the code have what licenses.
+Consult the source if in doubt.
 
-<p><b>Instructions for creating a Live DVD image to run the game</b>
-<p>Warning: These instructions are likely to be out of date (2016-05-30)
-<p>Warning: if this trashes your hard drive, you're on your own.  This procedure
-worked for me, but you assume all risk and responsibility for the safety of your
-data.
-
-<p>These instructions assume you have a Mint 13 linux distro running to create the
-DVD ISO image.  You can use virtualbox and install linux Mint 13 on the virtual 
-machine to make the ISO, then when you're done, you can trash the virtual machine.
-Linux Mint 13 ISO can be found here:
-<a href="http://www.linuxmint.com/oldreleases.php">http://www.linuxmint.com/oldreleases.php</a>
-
-<blockquote>
-<font style="color:#7fff7f; background-color:#000000">
-<pre>
-  Install the package "mintconstructor" from the repositories
-   sudo apt-get install mintconstructor
-
-    Open a terminal
-    Type sudo /usr/lib/linuxmint/mintConstructor/mintConstructor.py
-    In the mintconstructor window that opens:
-   In the "Directory" field, choose a directory for the ISO (use a new
-   directory with nothing in it for this) Make sure to select the
-   "New project" radio option
-        Click the browse button on the right of the "ISO file" field and
-   point it to your ISO file
-   (in my case I used linuxmint-13-cinnamon-dvd-32bit.iso  from here: http://www.linuxmint.com/edition.php?id=105
-        Click "Next" and then "Yes" to confirm.
-
-    Wait for it to do its thing for a bit, then click the button it
-    presents to open a chrooted environment (it opens an xterm).  In
-    the xterm:
-
-    apt-get install build-essential
-    apt-get install portaudio19-dev
-    apt-get install libvorbis-dev
-    apt-get install libgtk2.0-dev
-    apt-get install git
-    apt-get install stgit
-    apt-get install openscad
-    apt-get install libgtkglext1-dev 
-    apt-get install liblua5.2-dev 
-    apt-get install libglew1.5-dev
-</pre>
-</font>
-(hope I didn't miss any packages -- if you find I did, let me know.)
-
-<p>If the openscad package isn't around, you can get it from here:
-<font style="color:#7fff7f; background-color:#000000">
-<pre>
-	http://www.openscad.org/downloads.html
-</pre>
-</font>
-and then from outside the chrooted environment, copy
-openscad-2013.0.x86-32.tar.gz into your chroot directory/root
-<p>Then, back in the chrooted xterm:
-<font style="color:#7fff7f; background-color:#000000">
-<pre>
-
-   cd /root
-   tar xzvf openscad-2013.01.x86-32.tar.gz
-   cd openscad-2013.01/
-   ./install.sh
-   cd ..
-
-   git clone https://github.com/smcameron/space-nerds-in-space.git
-   cd space-nerds-in-space/
-   make
-</pre>
-</font>
-<p>(now Space Nerds in Space has been built within the chrooted env.)
-
-<p>Once you're finished making modifications, make sure to clean up with the following commands:
-
-<p>Now clean up the chrooted env (and yes aptitude takes the weird tilde options for some reason):
-<font style="color:#7fff7f; background-color:#000000">
-<pre>
-    aptitude purge ~c
-    aptitude unmarkauto ~M
-    apt-get clean; rm -rf /var/cache/debconf/*.dat-old; rm -rf /var/lib/aptitude/*.old; rm -rf /var/lib/dpkg/*-old; rm -rf /var/cache/apt/*.bin; updatedb
-    history -c
-    rm /root/.bash_history
-    rm /root/.nano_history
-    history -c
-    exit
-</pre>
-</font>
-<p>(xterm will close)
-<p>Click Next
-<p>Give your ISO a description (which will be embedded as the name of the CD
-or USB stick onto which the ISO is burnt)  Don't pick too long of a name though
-because if you do, it won't work.
-<p>Click Next
-
-<p>Iso image will be made
-
-</blockquote>
-
-<p>Then to run the game, burn the iso to dvd several times, and boot up all your machines from dvd.
-
-<p>Open up a terminal, type "sudo su -"
-(no password -- it's a live dvd)
-
-<p>Then, cd to space-nerds-in-space
-
-<p>Has to be root because we installed spacenerds in space into /root/space-nerds-in-space above when
-making the dvd -- this could be worked around by chowning it all to user "mint", perhaps putting it someplace
-else before making he ISO image, but I don't have the exact instructions to do that, and didn't think to do it,but if you're paranoid, you probably want to think about that.
-
-<p>Repeat for several machines on your lan, say, five of them or so.
-
-<p>On one machine that is connected to a projector, note the IP address:
-(run ifconfig to figure this out.)
-
-<p>Then start the snis client:
-<font style="color:#7fff7f; background-color:#000000">
-<pre>
-./snis_client
-</pre>
-</font>
-
-<p>From there, start the lobby server on localhost, start the gameserver, connect to lobby, and connect to the gameserver.
-<p>Note the shipname and password you use (make up what you want).
-
-<p>On the remaining machines, start snis_client, replace the lobby host "localhost" with the ip address noted above, fill in only the shipname and password as above, and connect to the lobby, then to the gameserver. You can be choosy about the 'roles' for each station at this point, but you don't have to.
-
-<p>That's it.
-
-<p>btw, prior to making live dvd iso's and burning a bunch of dvds, we tried to run the game in linux installed to virtual machines on the windows boxes -- that didn't work out so well, performance was kind of crap for whatever reason. With the dvds, performance was fine at least for the few minutes the network was working.  They were relatively low performance, inexpensive USB flash drives though.
-
-<p>The code is
-licensed under the GPL v. 2, or at your option, any later version.  Audio files have 
-various other licenses, typically some variant of a Creative Commons license. 
-
-<p>
+<p>Here are <a href="old_bootable_cd_instructions.html">some very old out-of-date instructions</a>
+about creating bootable images to play the game.
+<hr>
+<br>
+<br>
 </body>
 </html>
