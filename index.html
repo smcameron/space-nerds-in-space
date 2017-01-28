@@ -8,12 +8,10 @@
 <p align=center><table width=90%>
 <font size=+3>
 <tr>
-<td><p align=center><font size=+3><a href="http://packages.libregeek.org/debian/pool/games/s/snis/" title="Binaries for Debian Jessie built and hosted by github user ProfessorKaos64">Debian Jessie Binaries</a><br><a href="http://packages.libregeek.org/steamos-tools/pool/games/s/snis/" title="Binaries for SteamOS Brewmaster built and hosted by github user ProfessorKaos64">SteamOS Brewmaster Binaries</a>
-</font></td>
 <td><p align=center><font size=+3><a href="https://github.com/smcameron/space-nerds-in-space">SOURCE<br>CODE</a></font></td>
 <td><p align=center><font size=+3><a href="#screenshots">SCREEN<br>SHOTS</a></font></td>
-<td><p align=center><font size=+3><a href="https://www.youtube.com/playlist?list=PLcSUyKz3gfa9BG8X0DKkIMTnQag8_tJFQ">DEVELOPMENT<br>VIDEOS</a></font></td>
-<td><p align=center><font size=+3><a href="http://forum.freegamedev.net/viewtopic.php?f=22&t=3710">DEVELOPMENT<br>DISCUSSION</a></font></td>
+<td><p align=center><font size=+3><a href="https://www.youtube.com/playlist?list=PLcSUyKz3gfa9BG8X0DKkIMTnQag8_tJFQ">DEV<br>VIDEOS</a></font></td>
+<td><p align=center><font size=+3><a href="http://forum.freegamedev.net/viewtopic.php?f=22&t=3710">DEV<br>DISCUSSION</a></font></td>
 <td><p align=center><font size=+3><a href="http://bridgesim.net/discussion/2/game-space-nerds-in-space">BRIDGESIM.NET<br>DISCUSSION</a></font></td>
 <td><p align=center><font size=+3><a href="https://www.reddit.com/r/snis">REDDIT<br>FORUM</a></font></td>
 <td><p align=center><font size=+3><a href="https://github.com/smcameron/space-nerds-in-space-assets">ADDITIONAL<br>ART ASSETS</a></font></td>
@@ -27,6 +25,14 @@ networked starship simulator for linux (may also work on Mac).
 So go out and get together with a crew of your linux-nerd friends and their computers
 in a room with a projector or TV, and go forth and explore the galaxy.
 
+<p align=center>Here is a demo video from July 9, 2016, showing one of the mission scripts, "Saving Planet Erph".
+<p align=center><iframe width="840" height="630" src="https://www.youtube.com/embed/nTBiM5zJi8A" frameborder="0" allowfullscreen></iframe>
+
+<p align=center>Latest development video (January 2017):
+<p align=center><iframe width="840" height="630" src="https://www.youtube.com/embed/WUTmXUIMifQ" frameborder="0" allowfullscreen></iframe>
+
+<p align=center><font size=+3><a href="http://packages.libregeek.org/debian/pool/games/s/snis/" title="Binaries for Debian Jessie built and hosted by github user ProfessorKaos64">Debian Jessie Binaries</a><br><a href="http://packages.libregeek.org/steamos-tools/pool/games/s/snis/" title="Binaries for SteamOS Brewmaster built and hosted by github user ProfessorKaos64">SteamOS Brewmaster Binaries</a></font>
+
 <p>One computer runs the central server simulation of the game's universe.  Each player's 
 computer acts as a station on a simulated starship.  There are stations for
 <b>Navigation, Weapons, Engineering, Communications, Damage Control,</b> and <b>the "Main View",</b>
@@ -35,22 +41,18 @@ connect to the server for bridge-vs-bridge combat, or for cooperative play.  Add
 a game master may inject and control various NPC ships into the game to entertain the
 players, and scenarios may be constructed with a Lua based scripting API.
 
-<p>Here is a demo video from July 9, 2016, showing one of the mission scripts, "Saving Planet Erph".
-
-<p align=center><iframe width="840" height="630" src="https://www.youtube.com/embed/nTBiM5zJi8A" frameborder="0" allowfullscreen></iframe>
-
 <p>Here is a short mini-documentary created at <a href="http://txrxlabs.org">the premier
 hackerspace of Houston, TX, TX/RX Labs</a>, camera work and editing by Jack Younger.
 This is from 2013, and the graphics and other aspects of the game are much better now,
 but this video will still give you a good idea of what the game is all about.
+
+<p align=center><iframe width="840" height="630" src="http://www.youtube.com/embed/ATWvxgZerb0" frameborder="0" allowfullscreen></iframe>
 
 <p>Space Nerds In Space was designed with hackerspaces in mind -- where else are you going to
 find enough people to run a linux-based multi-player LAN game for Star Trek nerds but a
 hackerspace?  The <a href="http://i.imgur.com/jPffJyj.png">very first 3D model</a> created
 for Space Nerds In Space may seem <a href="https://twitter.com/cbase">strikingly familiar</a>.
 If you're a member of a hackerspace, this game is explicitly <em>made for you</em>.
-
-<p align=center><iframe width="840" height="630" src="//www.youtube.com/embed/ATWvxgZerb0" frameborder="0" allowfullscreen></iframe>
 <hr>
 
 <p><a name="screenshots">Here are a few screen shots</a>:
@@ -67,51 +69,226 @@ If you're a member of a hackerspace, this game is explicitly <em>made for you</e
 
 <font size=+1>
 
-<p>Latest development video (January 2017):
+<h1>Build Instructions</h1>
+<h2>Step 0: Acquire Hardware and OS</h2>
+<p>This is a linux game.  You will need a computer running linux.
+A raspberry pi doesn't count, it's not powerful enough.  The game is
+currently developed using <a href="https://www.linuxmint.com/">Mint 17.3</a>
+It is within the realm of possibility that the game could be made to build
+and work on Mac OSX (it has been done before, but not within the last
+couple years.)  You're on your own if you want to try to run it on Mac.
 
-<p align=center><iframe width="840" height="630" src="https://www.youtube.com/embed/WUTmXUIMifQ" frameborder="0" allowfullscreen></iframe>
+<h2>Step 1: Install Dependencies</h2>
+<p><b>Build dependencies</b>
+<pre>
+<blockquote>
+apt-get install build-essential
+apt-get install portaudio19-dev
+apt-get install libvorbis-dev
+apt-get install libgtk2.0-dev
+apt-get install git
+apt-get install stgit
+apt-get install openscad # or get it from http://www.openscad.org/downloads.html
+apt-get install libgtkglext1-dev
+apt-get install liblua5.2-dev
+apt-get install libglew1.5-dev
+apt-get install libssl-dev
+apt-get install libttspico-utils # for text to speech
+apt-get install sox # for "play" command, used by text to speech
+apt-get install espeak # optional alternative to libttspico-utils
+apt-get install alsa-utils # optional alternative to sox, for "aplay" command
+apt-get-install libsdl1.2-dev # optional, only needed for mesh_viewer
+</blockquote>
+</pre>
 
-<p>There is a (so far)
-<a href="http://forum.freegamedev.net/viewtopic.php?f=22&t=3710">year long thread
-on freegamedev.net</a> which is something like a development blog.
+<blockquote>
+Note: SDL should only be required if you want to build mesh_viewer,
+which is a utility program for viewing 3D models, and which is not
+required to run the game.  mesh_viewer uses SDL 1.2, not SDL 2.x
+</blockquote>
+
+<p>If you want to try the optional speech recognition, you will want the following packages:
+<pre>
+<blockquote>
+apt-get install pocketsphinx-utils
+apt-get install pocketsphinx-lm-en-hub4
+apt-get install pocketsphinx-lm-en-hub4
+apt-get install libpocketsphinx1
+</blockquote>
+</pre>
+
+<p>The above list may be incomplete, and these are the package names on mint 17.3 / ubuntu,
+so may be different on RPM based systems.
+
+<h2>Step 2: Download the Source Code</h2>
 
 <p>The source code is here:
 <a href="https://github.com/smcameron/space-nerds-in-space">Space Nerds In Space github page</a>
-
-<p><b>Build dependencies</b>
+To get it, there are three methods:
 <ul>
-<li>build-essential
-<li>portaudio19-dev
-<li>libvorbis-dev
-<li>libgtk2.0-dev
-<li>openscad
-<li>libgtkglext1-dev 
-<li>liblua5.2-dev 
-<li>libglew1.5-dev
-<li>libsdl2-2.0-0 # version may differ for your distro
-<li>libsdl2-dev # version may differ for your distro
-<li>libssl-dev
-<li>libttspico-utils # for text to speech
+<li>If you are a registered github user, type:
+<pre>
+<blockquote>
+git clone git@github.com:smcameron/space-nerds-in-space.git
+<blockquote>
+</pre>
+<li>If not a registered github user, you can still use git with https.  Type:
+<pre>
+<blockquote>
+git clone https://github.com/smcameron/space-nerds-in-space.git
+<blockquote>
+</pre>
+<li>Finally, you can just download a snapshot zipfile without using git at all:
+<ul>
+<li><a href="https://github.com/smcameron/space-nerds-in-space/archive/master.zip">
+https://github.com/smcameron/space-nerds-in-space/archive/master.zip</a>
+</ul>
+<p>After downloading, you must unpack the zip file.  Type:
+<pre>
+<blockquote>
+unzip space-nerds-in-space-master.zip 
+cd space-nerds-in-space-master
+</blockquote>
 </ul>
 
-<p>If you want to try the speech recognition, you will want:
+<h2>Step 3: Build the Code</h2>
+<p>To build the code, make sure you are in the top level
+directory for the game ("space-nerds-in-space" if you
+got the source using git, or "space-nerds-in-space-master" if you
+downloaded the zip file), and type:
+<pre><blockquote>
+make O=1
+</blockquote></pre>
+<p>You should see quite a lot of output, like this:
+<pre>
+<blockquote>
+  COMPILE mathutils.c
+  COMPILE snis_alloc.c
+  COMPILE snis_socket_io.c
+
+... many steps omitted here ...
+
+  LINK snis_server
+  LINK snis_client
+  LINK snis_limited_client
+  LINK snis_multiverse
+</blockquote>
+</pre>
+
+<p>If you have problems building the code, it likely means there is some
+missing dependency.  Double check that you have all the required dependencies
+installed.
+
+<p>You can also file a bug report if you think you have discovered a problem
+with the build process, or the instructions here.  I believe you will need a github
+account to file a bug report.
 <ul>
-<li>pocketsphinx-utils
-<li>pocketsphinx-lm-en-hub4
-<li>pocketsphinx-lm-en-hub4
-<li>libpocketsphinx1
+<li><a href="https://github.com/smcameron/space-nerds-in-space/issues">Click here to file a bug report</a>.
 </ul>
 
-<p>For development you probably also want
+<h2>Step 4. Run the Game (on a single system)</h2>
+<p>Type:
+<blockquote>
+<pre>
+	./quickstart
+</pre>
+</blockquote>
+<p>Note: This will run both the "server" and the "client" on your machine.
+After awhile, you should see a screen that looks something like this
+(without the white ovals):
+<p align=center><img src="network-setup.jpg", width=85%>
+
+<ol>
+<li>Click on the MAIN SCREEN ROLE checkbox to be sure it is checked.
+<li>The <em>very first</em> time you run it, leave the CREATE SHIP box
+checked.  On subsequent runs, make sure CREATE SHIP is not checked.
+<li>Enter the name of your ship in the "SHIP NAME" field.
+<li>Choose a password for your ship and enter it in the PASSWORD field.
+(Note: the passwords are not cryptographically secure.)
+<li>Click the "CONNECT TO LOBBY" button in the lower left part of the screen
+</ol>
+<p>Once connected to the lobby, you should see something like this:
+<p align=center><img src="lobby1.jpg", width=85%>
+<p>Click on the white text "DEFAULT2".  When you do that, you should see:
+<p align=center><img src="lobby2.jpg", width=85%>
+<p>Click on the "CONNECT TO SERVER" button on the right side of the screen.
+After you do that, you should briefly see this:
+<p align=center><img src="connecting.jpg">
+<p>and then this should quickly be replaced be an "out the window" view
+of space, as below, the "main screen" view of Space Nerds In Space.  It may not look
+exactly like this as your ship will be placed in a semi-random location facing
+an arbitrary direction.  If you've gotten this far, congratulations, you're doing
+better than most.
+<p align=center><img src="out-the-window.jpg", width=85%>
+<h2>Step 5. Play around</h2>
+<h3>Keyboard Controls</h3>
+<p>The function keys are used to switch between screens, except for F1, which is the 'help' key.
 <ul>
-<li>git
-<li>stgit
-<li>openscad # get it from http://www.openscad.org/downloads.html
+<li>F1 is the help screen.  What it displays depends on which screen you're on.
+<li>F2 - NAVIGATION
+<li>F3 - WEAPONS
+<li>F4 - ENGINEERING
+<li>F5 - DAMAGE CONTROL
+<li>F6 - SCIENCE
+<li>F7 - COMMUNICATIONS
+<li>F8 - MAIN SCREEN
+<li>F9 - DEMON SCREEN (dungeon master screen)
 </ul>
-
-
-<p>The above list may be incomplete, and these are the package names on mint 17 / ubuntu,
-so may be different on RPM based systems.
+<p>To quit the game, press ESC and confirm using arrow keys and ENTER.
+Note, this only quits your client process.
+You can re-join the server (via "./quickjoin" script)
+It still leaves several processes running, the snis_server, the lobby process
+and snis_multiverse.  To kill all of them, run the "./killem" script.
+<h3>NAVIGATION SCREEN</h3>
+<p>From the navigation screen, you can steer the ship and maneuver around. 
+<p align=center><img src="navigation.png", width=85%>
+<h3>WEAPONS SCREEN</h3>
+<p>From the weapons screen, you can fire the laser turret and launch torpedoes.
+<p align=center><img src="weapons.jpg", width=85%>
+<h3>ENGINEERING SCREEN</h3>
+<p>From the engineering screen, you can control how power and coolant is distributed
+to the various systems of the ship.
+<p align=center><img src="engineering.png", width=85%>
+<h3>DAMAGE CONTROL SCREEN</h3>
+<p>From the damage control screen, you can repair the various systems of the ship.
+<p align=center><img src="damage-control.png", width=85%>
+<h3>SCIENCE SCREEN</h3>
+<p>From the science screen, you can scan ships, planets, asteroids, launch the mining
+robot and help navigate to distant targets.
+<p align=center><img src="science1.png", width=85%>
+<p align=center>Short Range Scanner
+<p align=center><img src="science2.png", width=85%>
+<p align=center>Scanning Target Details
+<p align=center><img src="science3.png", width=85%>
+<p align=center>Long Range Scanner
+<h3>COMMUNICATIONS SCREEN</h3>
+<p>From the communications screen, you can hail starbases and other player ships and
+control what is displayed on the "main screen" as well as activate the RED ALERT alarm.
+You also control the ship's inventory and can interact with the ship's computer to
+ask it questions or even use it to control almost any aspect of the ship.
+<p align=center><img src="communications.png", width=85%>
+<h3>MAIN SCREEN</h3>
+From the main screen, you can steer the ship.  The primary purpose of the main
+screen view it to be projected on a large screen for all players to view at once.
+<p align=center><img src="out-the-window.jpg", width=85%>
+<h3>DEMON SCREEN</h3>
+From the demon screen, the game master can inject all kinds of objects into
+the game, direct NPC ships, run Lua scripts and construct scenarios to entertain
+the other players.
+<p align=center><img src="demon-screen.png", width=85%>
+<h1>Have Fun!</h1>
+<hr>
+<h1>TODO: Add more instructions here about how to run a multiplayer setup</h1>
+<hr>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<p>What follows is some old instructions about building bootable CDs
+<p><font size=+2>NOTE: THE FOLLOWING INSTRUCTIONS ARE QUITE OLD AND MAY NO LONGER WORK</font>
 
 <p>If you don't have linux, I have instructions for building a linux live DVD that you can 
 play the game from without affecting your pre-existing OS install (but no guarantees -- it should
