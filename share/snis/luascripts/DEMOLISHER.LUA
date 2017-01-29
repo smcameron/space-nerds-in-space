@@ -17,6 +17,10 @@ door3 = -1;
 door4 = -1;
 demolisher_id = -1;
 
+demox = 100000;
+demoy = 100000;
+demoz = 1000;
+
 function add_demolisher_ship(x, y, z)
 
   m = 500;
@@ -403,12 +407,35 @@ if (player_ids[1]) then
 	move_object(player_ids[1], 198288.048317, -96759.000902, 40475.262355);
 end
 
-demolisher_id = add_demolisher_ship(x + 10000, y, z);
+demolisher_id = add_demolisher_ship(demox, demoy, demoz);
 
-function align_demolisher()
+function move_demolisher()
     zetax, zetay, zetaz = get_object_location(planet[2]);
-    misaligned = align_object_towards(demolisher_id, zetax, zetay, zetaz, 0.1 * 3.1415927 / 180.0);
-    register_timer_callback("align_demolisher", 1, 0);
+    myx, myy, myz = get_object_location(demolisher_id);
+    angle = align_object_towards(demolisher_id, zetax, zetay, zetaz, 0.1 * 3.1415927 / 180.0);
+    demolisher_speed = 100;
+
+    dx = zetax - myx;
+    dy = zetay - myy;
+    dz = zetaz - myz;
+
+    dist = math.sqrt(dx * dx + dy * dy + dz * dz);
+    if dist > 100000 then
+ 	    demolisher_speed = 400;
+    elseif dist > 60000 then
+ 	    demolisher_speed = 200;
+    elseif dist > 30000 then
+ 	    demolisher_speed = 100;
+    elseif dist > 25000 then
+	    demolisher_speed = 50;
+    end
+    if dist > 25000 and math.abs(angle) < math.pi / 180.0 then
+	    dx = demolisher_speed * dx / dist;
+	    dy = demolisher_speed * dy / dist;
+	    dz = demolisher_speed * dz / dist;
+	    move_object(demolisher_id, myx + dx, myy + dy, myz + dz);
+    end
+    register_timer_callback("move_demolisher", 1, 0);
 end
 
 function long_warning_message()
@@ -439,7 +466,7 @@ function warning_message(cookie)
 end
 
 register_timer_callback("door_mover", 1, 0);
-register_timer_callback("align_demolisher", 10, 0);
+register_timer_callback("move_demolisher", 10, 0);
 register_timer_callback("warning_message", 10, 0);
 comms_channel_listen("DEMOLISHER", comms_channel, "door_comms")
 
