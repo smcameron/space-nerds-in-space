@@ -9,6 +9,8 @@ if (player_ids[1]) then
     x, y, z = get_object_location(player_ids[1]);
 end
 
+days_left = 30;
+
 door1 = -1;
 door2 = -1;
 door3 = -1;
@@ -409,7 +411,35 @@ function align_demolisher()
     register_timer_callback("align_demolisher", 1, 0);
 end
 
+function long_warning_message()
+	text_to_speech(player_ids[1], "Message received on emergency channel from unknown source.  Message follows");
+	text_to_speech(player_ids[1], "Attention citizens! This announcement is in accord with space infrastructure regulation 7 2 3 dash C subparagraph 7.");
+	text_to_speech(player_ids[1],
+		string.format("The planet you call Zeta Scorpio is scheduled to be demolished in %d of your days.",
+				days_left));
+	text_to_speech(player_ids[1], "You are advised to evacuate to a safe distance immediately. We assume you have made appropriate plans.");
+	text_to_speech(player_ids[1], "The demolition notice has been available for hundreds of your years.");
+	text_to_speech(player_ids[1], "The department of space infrastructure thanks you for your cooperation.");
+end
+
+function short_warning_message()
+	text_to_speech(player_ids[1],
+		string.format("Attention Citizens! The planet you call Zeta Scorpio is scheduled to be demolished in %d of your days.",
+				days_left));
+end
+
+function warning_message(cookie)
+	if (days_left % 5) == 0 then
+		long_warning_message();
+	else
+		short_warning_message();
+	end
+	days_left = days_left - 1;
+	register_timer_callback("warning_message", 600, 0);
+end
+
 register_timer_callback("door_mover", 1, 0);
 register_timer_callback("align_demolisher", 10, 0);
+register_timer_callback("warning_message", 10, 0);
 comms_channel_listen("DEMOLISHER", comms_channel, "door_comms")
 
