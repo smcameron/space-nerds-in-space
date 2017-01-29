@@ -28,6 +28,7 @@
 #    snis_text_to_speech.sh --debug
 #
 
+echo "snis_text_to_speech.sh $1" 1>&2
 
 export SNISTTSLOCKDIR=/tmp/snisttslockdir
 
@@ -98,7 +99,11 @@ get_lock()
 {
 	count=0
 	worked=0
-	while [ $count -lt 5 ]
+	# Try for 50 seconds -- this needs to be somewhat long so we don't
+	# give up while another message is playing
+	# TODO: implement a proper ordered queue for the messages instead of using
+	# OS processes contending for a lock as an implicit unordered queue
+	while [ $count -lt 200 ]
 	do
 		mkdir "$SNISTTSLOCKDIR" > /dev/null 2>&1
 		if [ "$?" = "0" ]
@@ -108,7 +113,7 @@ get_lock()
 			break;
 		fi
 		count=$(expr $count + 1)
-		sleep 1
+		sleep 0.25
 	done
 	if [ "$worked" != "1" ]
 	then
