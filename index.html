@@ -267,6 +267,78 @@ control what is displayed on the "main screen" as well as activate the RED ALERT
 You also control the ship's inventory and can interact with the ship's computer to
 ask it questions or even use it to control almost any aspect of the ship.
 <p align=center><img src="communications.png", width=85%>
+
+<p>So what can Comms do with this terminal interface? First of all, anything
+which is typed in that is not a command is broadcast on the current channel,
+which is by default channel 0, which all player ships receive. You can also
+switch channels, and only player ships tuned to the particular channel will
+receive those messages. The intent here is for player-to-player chat in a
+multi-bridge setup. The channel system is also used (implicitly) for
+communications with starbases and with mining bots.
+
+<p>Commands you can type in are preceded with a slash, '/', along the lines of IRC commands.
+<pre>
+    /help -- displays a list of commands (I need to update the help screen)
+    /computer <english request for computer>",
+    /channel channel-number - change current channel",
+    /eject cargo-bay-number - eject cargo",
+    /hail ship-name - hail ship or starbase on current channel",
+    /inventory - report inventory of ship's cargo hold",
+    /passengers - report list of passengers
+    /about - report information about the game (i.e. version number, etc.)
+</pre>
+<p>Of the above, /hail, and /computer are the most powerful.
+
+<p>/hail is how you communicate with starbases to request permission to dock,
+or other things that starbases do (not all of which are implemented yet):
+<pre>
+    LOCAL TRAVEL ADVISORY
+    REQUEST PERMISSION TO DOCK
+    BUY WARP-GATE TICKETS
+    REQUEST REMOTE FUEL DELIVERY
+    BUY FUEL
+    REPAIRS AND MAINTENANCE
+        BUY SHIELD SYSTEM PARTS
+        IMPULSE DRIVE PARTS
+        BUY WARP DRIVE PARTS
+        BUY MANEUVERING PARTS
+        BUY PHASER BANKS PARTS
+        BUY SENSORS PARTS
+        BUY COMMUNICATIONS PARTS
+        BUY TRACTOR BEAM PARTS
+    ARRANGE TRANSPORT CONTRACTS
+        BUY CARGO
+        SELL CARGO
+        BOARD PASSENGERS
+        DISEMBARK PASSENGERS
+        EJECT PASSENGERS
+    SIGN OFF
+</pre>
+<p>You may /hail other player ships, or mining bots. The mining bots have some
+functionality accessed via comms:
+<pre>
+    STATUS REPORT
+    RETURN TO SHIP
+    TRANSPORT ORES TO CARGO BAYS
+    STOW MINING BOT
+    RETARGET MINING BOT
+    SIGN OFF
+</pre>
+<p>The /computer command is the most powerful action the Comms officer can use,
+with this, the entire ship may be controlled just by asking the computer to do
+things in English. For example, stuff like this should all work:
+<pre>
+    /computer set a course for the nearest starbase
+    /computer launch the mining bot
+    /computer lower shields
+    /computer set warp power to 100%
+    /computer engage warp drive
+    /computer turn left 10 degrees
+    /computer engineering on screen
+    /computer calculate a course to the nearest asteroid
+    /computer describe <name of planet>
+    /computer set warp drive coolant to 50 percent
+</pre>
 <h3>MAIN SCREEN</h3>
 From the main screen, you can steer the ship.  The primary purpose of the main
 screen view it to be projected on a large screen for all players to view at once.
