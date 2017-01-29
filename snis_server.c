@@ -7611,6 +7611,56 @@ static int l_set_object_orientation(lua_State *l)
 	return 0;
 }
 
+static int l_align_object_towards(lua_State *l)
+{
+	int i;
+	double id, x, y, z, max_angle;
+	float axisx, axisy, axisz, angle;
+	union vec3 start, goal;
+	union quat rotation, new_orientation;
+
+	id = lua_tonumber(lua_state, 1);
+	x = lua_tonumber(lua_state, 2);
+	y = lua_tonumber(lua_state, 3);
+	z = lua_tonumber(lua_state, 4);
+	max_angle = fabs(lua_tonumber(lua_state, 5));
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id((uint32_t) id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(lua_state, -720.0 * M_PI / 180.0);
+		return 1;
+	}
+	start.v.x = 1.0;
+	start.v.y = 0.0;
+	start.v.z = 0.0;
+	quat_rot_vec_self(&start, &go[i].orientation);
+
+	goal.v.x = x - go[i].x;
+	goal.v.y = y - go[i].y;
+	goal.v.z = z - go[i].z;
+	vec3_normalize_self(&goal);
+
+	quat_from_u2v(&rotation, &start, &goal, NULL);
+
+	quat_to_axis(&rotation, &axisx, &axisy, &axisz, &angle);
+
+	if (angle < max_angle)
+		angle = -max_angle;
+	else if (angle > max_angle)
+		angle = max_angle;
+
+	quat_init_axis(&rotation, axisx, axisy, axisz, angle);
+	quat_mul(&new_orientation, &go[i].orientation, &rotation);
+	quat_normalize_self(&new_orientation);
+	go[i].orientation = new_orientation;
+	go[i].timestamp = universe_timestamp;
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, angle);
+	return 1;
+}
+
 static int l_set_object_rotational_velocity(lua_State *l)
 {
 	int i;
@@ -16792,6 +16842,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_move_object, "move_object");
 	add_lua_callable_fn(l_set_object_velocity, "set_object_velocity");
 	add_lua_callable_fn(l_set_object_orientation, "set_object_orientation");
+	add_lua_callable_fn(l_align_object_towards, "align_object_towards");
 	add_lua_callable_fn(l_set_object_rotational_velocity, "set_object_rotational_velocity");
 	add_lua_callable_fn(l_set_object_relative_position, "set_object_relative_position");
 	add_lua_callable_fn(l_delete_object, "delete_object");
