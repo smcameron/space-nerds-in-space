@@ -17,6 +17,13 @@ door3 = -1;
 door4 = -1;
 demolisher_id = -1;
 
+challenge="WHAT IS YOUR QUEST?"
+challenge_answer="GRAPEFRUIT45"
+
+door_channel = 1234;
+sb01channel1 = 123
+sb01channel2 = 75
+
 demox = 100000;
 demoy = 100000;
 demoz = 1000;
@@ -99,7 +106,6 @@ end
 door_speed = 0.01;
 door_open = 0.0;
 door_direction = 0.0;
-comms_channel = 1234;
 
 function set_door_position(door_open)
   set_object_relative_position(door1,  0.45 * l + zfight, 0, 0.55 * -walloffset - door_open * 0.3 * walloffset);
@@ -121,14 +127,15 @@ function door_mover(cookie)
 end
 
 function door_comms(from, channel, message)
-  print("door_comms: message = ", message)
-  if message == "open" then
+  if message == "open" or message == "OPEN" then
+    comms_channel_transmit("DEMOLISHER: ", door_channel, challenge);
+  elseif message == challenge_answer then
     door_direction = door_speed;
-    comms_channel_transmit("DEMOLISHER: ", comms_channel, "COMMAND ACKNOWLEDGED, DOORS OPENING");
+    comms_channel_transmit("DEMOLISHER: ", door_channel, "COMMAND ACKNOWLEDGED, DOORS OPENING");
   end
   if message == "close" then
     door_direction = -door_speed;
-    comms_channel_transmit("DEMOLISHER: ", comms_channel, "COMMAND ACKNOWLEDGED, DOORS CLOSING");
+    comms_channel_transmit("DEMOLISHER: ", door_channel, "COMMAND ACKNOWLEDGED, DOORS CLOSING");
   end
 end
 
@@ -465,8 +472,50 @@ function warning_message(cookie)
 	register_timer_callback("warning_message", 600, 0);
 end
 
+function starbase_listener1(from, channel, message)
+	comms_channel_transmit("SB-01", sb01channel1, ": GREETINGS.  WE HAVE GOOD NEWS.");
+	comms_channel_transmit("SB-01", sb01channel1, ": WE HAVE BROKEN THE CODE USED BY THE DEMOLISHER");
+	comms_channel_transmit("SB-01", sb01channel1, ": AND WE THINK WE HAVE FIGURED OUT A WAY TO GAIN ENTRY.");
+	comms_channel_transmit("SB-01", sb01channel1, ": THE LANDING BAY DOOR COMPUTER ON THE DEMOLISHER HAS");
+	comms_channel_transmit("SB-01", sb01channel1, ": BEEN COMPROMISED.");
+	comms_channel_transmit("SB-01", sb01channel1,
+		string.format(": YOU CAN TRANSMIT 'OPEN' ON CHANNEL %d, AND THE DOOR", door_channel));
+	comms_channel_transmit("SB-01", sb01channel1, ": WILL RESPOND WITH A CHALLENGE.  WE CAN WITH SOME EFFORT");
+	comms_channel_transmit("SB-01", sb01channel1, ": DETERMINE THE CORRECT RESPONSE TO THE CHALLENGE.");
+	comms_channel_transmit("SB-01", sb01channel1, ": WHEN YOU RECEIVE THE CHALLENGE, FORWARD IT TO SB-01 ON");
+	comms_channel_transmit("SB-01", sb01channel1,
+		string.format(": CHANNEL %d AND WE WILL DECODE IT ON THE SUPERCOMPUTERS", sb01channel2));
+	comms_channel_transmit("SB-01", sb01channel1, ": AND TRANSMIT THE CORRECT RESPONSE BACK TO YOU.");
+	comms_channel_transmit("SB-01", sb01channel1, ": YOU CAN THEN TRANSMIT THIS ANSWER TO THE LANDING BAY DOOR");
+	comms_channel_transmit("SB-01", sb01channel1, ": COMPUTER AND GAIN ENTRY.");
+	comms_channel_unlisten("SB-01", sb01channel1);
+	comms_channel_listen("SB-01", sb01channel2, "starbase_listener2");
+end
+
+function starbase_listener2(from, channel, message)
+   if from == "SB-01" then
+	return;
+   end
+   if string.sub(message, 1, 26) == "TX/RX INITIATED ON CHANNEL" then
+	return;
+   end
+   if message == challenge then
+	comms_channel_transmit("SB-01", channel,
+		string.format(": THE ANSWER TO THE CHALLENGE IS: %s", challenge_answer));
+   else
+	comms_channel_transmit("SB-01", channel, "THE CHALLENGE DOES NOT SEEM TO DECODE CORRECTLY.");
+	comms_channel_transmit("SB-01", channel, "DOUBLE CHECK THE ACCURACY OF YOUR TRANSCRIPTION.");
+   end
+end
+
+function hail_player()
+	comms_channel_transmit("SB-01", 0, ": *** HAILING ON CHANNEL 123 ***");
+	comms_channel_listen("SB-01", sb01channel1, "starbase_listener1");
+end
+
 register_timer_callback("door_mover", 1, 0);
 register_timer_callback("move_demolisher", 10, 0);
 register_timer_callback("warning_message", 10, 0);
-comms_channel_listen("DEMOLISHER", comms_channel, "door_comms")
+register_timer_callback("hail_player", 300, 0);
+comms_channel_listen("DEMOLISHER", door_channel, "door_comms")
 
