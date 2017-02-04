@@ -1,0 +1,205 @@
+#!/bin/sh
+
+BINDIR=./bin
+SNIS_SERVER=${BINDIR}/snis_server
+SNIS_CLIENT=${BINDIR}/snis_client
+SNIS_MULTIVERSE=${BINDIR}/snis_multiverse
+SSGL_SERVER=${BINDIR}/ssgl_server
+LSSSGL=${BINDIR}/lsssgl
+
+SOLARSYSTEM_NAME="default2"
+
+print_main_menu()
+{
+cat << EOF 1>&2
+
+   1. Launch SNIS lobby server
+	The lobby server allows clients to find servers
+	There should be one lobby server total.
+   2. Launch SNIS multiverse server
+	The multiverse server stores player ship data
+	There should be one multiverse server total
+   3. Launch SNIS server
+	There should be one snis server per solarsystem.
+	There should be at least one instance of snis_server.
+   4. Launch SNIS client process
+	There should be one snis client process per player
+	plus one more per ship for the main screen.
+   5. Stop all SNIS processes
+   6. Stop all SNIS clients
+   7. Stop all SNIS servers
+   0. Quit
+EOF
+}
+
+kill_processes()
+{
+	pattern="$1"
+	p=$(ps aux | egrep "$pattern" | grep -v 'grep')
+	if [ "$p" = "" ]
+	then
+		echo "There are no processes to kill."
+		return
+	else
+		echo "$p"
+	fi
+	ps aux | egrep "$pattern" | grep -v 'grep' | awk '{ printf("kill %s\n", $2); }' | /bin/sh
+	echo "Killed the above processes."
+}
+
+start_snis_lobby()
+{
+	echo
+	echo "Starting the lobby server"
+	echo
+	${SSGL_SERVER} > snis_lobby_log.txt 2>&1
+	sleep 0.25
+}
+
+start_snis_multiverse()
+{
+	if [ ! -d ./snisdb ]
+	then
+		echo "./snisdb/ does not exist, creating directory." 1>&2
+		mkdir ./snisdb
+		if [ "$?" != "0" ]
+		then
+			echo "mkdir ./snisdb failed."
+		fi
+		if [ ! -d ./snisdb ]
+		then
+			echo "Directory ./snisdb does not exist, snis_multiverse will not run without it, please create it." 1>&2
+			echo "Failed to start multiverse server" 1>&2
+			return;
+		fi
+		echo "Created ./snisdb for snis_multiverse" 1>&2
+	fi
+	(${SNIS_MULTIVERSE} localhost nickname narnia > snis_multiverse_log.txt 2>&1 ; \
+		echo "snis_multiverse died, status was $?" 1>&2 ) &
+}
+
+get_solarsystem_name()
+{
+	while [ "1" = "1" ]
+	do
+		default="default2"
+		dname="."
+
+		echo "Choose a solar system:"
+		for ss in share/snis/solarsystems/*/assets.txt
+		do
+			dname=$(dirname "$ss")
+			name=$(basename "$dname")
+			echo "   $name"
+		done
+		echo -n "Enter the name of the solarsystem: "
+		read ssname;
+		if [ "$ssname" = "" ]
+		then
+			ssname="$default"
+		fi
+		if [ ! -f "share/snis/solarsystems"/"$ssname"/assets.txt ]
+		then
+			echo "Invalid choice: $ssname"
+		else
+			break;
+		fi
+	done
+	if [ -d share/snis/solarsystems/"$ssname" -a -f share/snis/solarsystems/"$ssname"/assets.txt ]
+	then
+		SOLARSYSTEM_NAME="$ssname"
+	else
+		SOLARSYSTEM_NAME="default2"
+	fi
+}
+
+uppercase()
+{
+	echo "$1" | tr '[a-z]' '[A-Z]'
+}
+
+start_snis_server()
+{
+	echo
+	echo "Starting snis_server"
+	echo
+	get_solarsystem_name
+	echo "Using solar system $SOLARSYSTEM_NAME"
+	SS1="$SOLARSYSTEM_NAME"
+	export SNISRAND=12345
+	${SNIS_SERVER} -l localhost -g SPACENERDS -L $(uppercase "$SS1") x --enable-enscript -m narnia -s "$SS1" > snis_server_log.txt 2>&1 &
+	sleep 2.5
+}
+
+start_snis_client()
+{
+	echo
+	echo "Starting snis_client"
+	echo
+	${SNIS_CLIENT} $ASPECT_RATIO --fullscreen > snis_client_log.txt 2>&1 &
+	sleep 1
+	# --starship "$shipname" --pw "$password" $@
+}
+
+reformat_processes()
+{
+	awk ' \
+		/ssgl_server/ { printf("%20s -- %s\n", "LOBBY SERVER", $0); next; } \
+		/snis_client/ { printf("%20s -- %s\n", "SNIS CLIENT", $0); next; } \
+		/snis_server/ { printf("%20s -- %s\n", "SNIS SERVER", $0); next; } \
+		/snis_multiverse/ { printf("%20s -- %s\n", "MULTIVERSE SERVER", $0); next; } \
+		{ printf("%20s -- %s\n", "UNKNOWN", $0); next; }'
+}
+
+show_snis_processes()
+{
+	echo "------------------------------------------------------------"
+	p=$(ps aux | egrep 'snis_multiverse|snis_server|snis_client|ssgl_server' | grep -v grep)
+	if [ "$p" = "" ]
+	then
+		echo "No SNIS processes are currently running."
+	else
+		echo "The following SNIS processes are running:"
+		echo "$p" | reformat_processes
+	fi
+	echo "------------------------------------------------------------"
+}
+
+while [ "1" = "1" ]
+do
+	echo
+	echo "     Welcome to Space Nerds In Space"
+	echo
+	show_snis_processes
+	print_main_menu
+	echo -n "   Choose [0-7]: "
+	read x
+
+	case "$x" in
+	0)
+	   echo
+	   echo "Goodbye! Thanks for playing!"
+	   echo
+	   exit
+		;;
+	5) kill_processes 'snis_server|snis_client|snis_multiverse|ssgl_server'
+		;;
+	6) kill_processes 'snis_client'
+		;;
+	7) kill_processes 'snis_server|snis_multiverse|ssgl_server'
+		;;
+	1) start_snis_lobby
+		;;
+	2) start_snis_multiverse
+		;;
+	3) start_snis_server
+		;;
+	4) start_snis_client
+		;;
+	*) echo "Invalid choice."
+	        ;;
+	esac
+done
+
+exit
+
