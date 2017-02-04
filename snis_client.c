@@ -197,6 +197,16 @@ static pthread_attr_t physical_io_thread_attr;
 static pthread_t natural_language_thread;
 static pthread_attr_t natural_language_thread_attr;
 
+struct text_to_speech_queue_entry {
+	char *text;
+	struct text_to_speech_queue_entry *next;
+} *text_to_speech_queue_head, *text_to_speech_queue_tail;
+static pthread_t text_to_speech_thread;
+static pthread_attr_t text_to_speech_thread_attr;
+pthread_mutex_t text_to_speech_mutex;
+pthread_cond_t text_to_speech_cond = PTHREAD_COND_INITIALIZER;
+static int text_to_speech_thread_time_to_quit = 0;
+
 GtkWidget *window;
 GdkGC *gc = NULL;               /* our graphics context. */
 GtkWidget *main_da;             /* main drawing area. */
@@ -4856,7 +4866,7 @@ static int process_textscreen_op(void)
 	return 0;
 }
 
-static void text_to_speech(char *text)
+static void do_text_to_speech(char *text)
 {
 	char command[PATH_MAX];
 	char *snisbindir;
@@ -4894,6 +4904,115 @@ static void text_to_speech(char *text)
 		fprintf(stderr, "Shell command '%s' returned %d, errno = %d (%s)\n",
 			command, rc, errno, strerror(errno));
 	}
+}
+
+/* Wait for something to appear at the head of the text to speech queue */
+static void text_to_speech_wait_for_input(void)
+{
+	int rc;
+
+	pthread_mutex_lock(&text_to_speech_mutex);
+	if (text_to_speech_thread_time_to_quit) {
+		pthread_mutex_unlock(&text_to_speech_mutex);
+		return;
+	}
+	while (!text_to_speech_queue_head) {
+		rc = pthread_cond_wait(&text_to_speech_cond,
+			&text_to_speech_mutex);
+		if (text_to_speech_thread_time_to_quit)
+			break;
+		if (rc != 0)
+			printf("text_to_speech_wait_for_input: pthread_cond_wait failed.\n");
+		if (text_to_speech_queue_head)
+			break;
+	}
+	pthread_mutex_unlock(&text_to_speech_mutex);
+}
+
+/* Thread to process text to speech queue */
+static void *text_to_speech_thread_fn(__attribute__((unused)) void *arg)
+{
+	struct text_to_speech_queue_entry *entry = NULL;
+
+	pthread_setname_np(text_to_speech_thread, "snisc-tts");
+	do {
+		text_to_speech_wait_for_input();
+		pthread_mutex_lock(&text_to_speech_mutex);
+		if (text_to_speech_thread_time_to_quit) {
+			pthread_mutex_unlock(&text_to_speech_mutex);
+			break;
+		}
+		if (text_to_speech_queue_head) {
+			entry = text_to_speech_queue_head;
+			text_to_speech_queue_head = entry->next;
+			/* if we consumed the last item, the tail is now NULL too */
+			if (!text_to_speech_queue_head)
+				text_to_speech_queue_tail = NULL;
+		}
+		pthread_mutex_unlock(&text_to_speech_mutex);
+		if (entry) {
+			if (entry->text) {
+				do_text_to_speech(entry->text);
+				free(entry->text);
+			}
+			free(entry);
+		}
+	} while (1);
+	return NULL;
+}
+
+static void setup_text_to_speech_thread(void)
+{
+	int rc;
+
+	text_to_speech_queue_head = NULL;
+	text_to_speech_queue_tail = NULL;
+	pthread_mutex_init(&text_to_speech_mutex, NULL);
+	rc = pthread_create(&text_to_speech_thread, &text_to_speech_thread_attr,
+			text_to_speech_thread_fn, NULL);
+	if (rc)
+		fprintf(stderr, "Failed to create text to speech thread.\n");
+}
+
+static void stop_text_to_speech_thread(void)
+{
+	int rc;
+
+	pthread_mutex_lock(&text_to_speech_mutex);
+	if (!text_to_speech_thread) {
+		pthread_mutex_unlock(&text_to_speech_mutex);
+		return;
+	}
+	text_to_speech_thread_time_to_quit = 1;
+	rc = pthread_cond_broadcast(&text_to_speech_cond);
+	if (rc)
+		printf("huh... pthread_cond_broadcast failed in text_to_speech().\n");
+	pthread_mutex_unlock(&text_to_speech_mutex);
+}
+
+static void text_to_speech(char *text)
+{
+	struct text_to_speech_queue_entry *entry;
+	int rc;
+
+	/* Create a new entry */
+	entry = malloc(sizeof(*entry));
+	entry->text = strdup(text);
+	entry->next = NULL;
+
+	/* Add new entry to the tail of the queue */
+	pthread_mutex_lock(&text_to_speech_mutex);
+	if (text_to_speech_queue_tail == NULL)
+		text_to_speech_queue_head = entry;
+	else
+		text_to_speech_queue_tail->next = entry;
+	text_to_speech_queue_tail = entry;
+
+	/* Wake up the text to speech queue processing thread */
+	rc = pthread_cond_broadcast(&text_to_speech_cond);
+	if (rc)
+		printf("huh... pthread_cond_broadcast failed in text_to_speech().\n");
+	pthread_mutex_unlock(&text_to_speech_mutex);
 }
 
 static int process_natural_language_request(void)
@@ -14245,6 +14364,7 @@ void really_quit(void)
         wwviaudio_cancel_all_sounds();
         wwviaudio_stop_portaudio();
 	close_joystick();
+	stop_text_to_speech_thread();
 	exit(1); /* probably bad form... oh well. */
 }
 
@@ -15496,6 +15616,7 @@ int main(int argc, char *argv[])
 	setup_joystick(window);
 	setup_physical_io_socket();
 	setup_natural_language_fifo();
+	setup_text_to_speech_thread();
 	ecx = entity_context_new(5000, 1000);
 
 	snis_protocol_debugging(1);

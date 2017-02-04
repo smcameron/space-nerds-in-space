@@ -131,5 +131,7 @@ do_text_to_speech()
 	/bin/rm -f "$tmpfile"
 }
 
-do_text_to_speech "$1" &
+# We no longer run this in the background as now snis_client has an internal queue
+# for text to speech and should not invoke this script more than once concurrently.
+do_text_to_speech "$1"
 
