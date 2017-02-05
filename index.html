@@ -25,21 +25,33 @@ networked starship simulator for linux (may also work on Mac).
 So go out and get together with a crew of your linux-nerd friends and their computers
 in a room with a projector or TV, and go forth and explore the galaxy.
 
-<p align=center>Here is a demo video from July 9, 2016, showing one of the mission scripts, "Saving Planet Erph".
-<p align=center><iframe width="840" height="630" src="https://www.youtube.com/embed/nTBiM5zJi8A" frameborder="0" allowfullscreen></iframe>
-
-<p align=center>Latest development video (January 2017):
-<p align=center><iframe width="840" height="630" src="https://www.youtube.com/embed/WUTmXUIMifQ" frameborder="0" allowfullscreen></iframe>
-
-<p align=center><font size=+3><a href="http://packages.libregeek.org/debian/pool/games/s/snis/" title="Binaries for Debian Jessie built and hosted by github user ProfessorKaos64">Debian Jessie Binaries</a><br><a href="http://packages.libregeek.org/steamos-tools/pool/games/s/snis/" title="Binaries for SteamOS Brewmaster built and hosted by github user ProfessorKaos64">SteamOS Brewmaster Binaries</a></font> (Note: These binaries are build by a third part, not me.)
-
-<p>One computer runs the central server simulation of the game's universe.  Each player's 
+<p>One computer runs the central server simulation of the game's universe.  Each player's
 computer acts as a station on a simulated starship.  There are stations for
 <b>Navigation, Weapons, Engineering, Communications, Damage Control,</b> and <b>the "Main View",</b>
 an out-the-window 3d rendering.  Multiple starships each with their own team may
 connect to the server for bridge-vs-bridge combat, or for cooperative play.  Additionally,
 a game master may inject and control various NPC ships into the game to entertain the
 players, and scenarios may be constructed with a Lua based scripting API.
+<hr>
+<h3>Contents</h3>
+<ul>
+<li><a href="#videos">Videos</a>
+<li><a href="#screenshots">ScreenShots</a>
+<li><a href="#buildinstructions">Build Instructions</a> -- How to build the game from source code
+<li><a href="#singlemachineinstructions">How to run Space Nerds In Space on a single machine</a>
+<li><a href="#multiplayerinstructions">How to run Space Nerds In Space in a multiplayer LAN setup</a>
+<li><a href="#troubleshooting">Troubleshooting</a>
+<li><a href="#misctopics">Miscellaneous development topics</a>
+</ul>
+<hr>
+
+<p align=center><a name="videos">Here is a demo video</a> from July 9, 2016, showing one of the mission scripts, "Saving Planet Erph".
+<p align=center><iframe width="840" height="630" src="https://www.youtube.com/embed/nTBiM5zJi8A" frameborder="0" allowfullscreen></iframe>
+
+<p align=center>Latest development video (January 2017):
+<p align=center><iframe width="840" height="630" src="https://www.youtube.com/embed/WUTmXUIMifQ" frameborder="0" allowfullscreen></iframe>
+
+<p align=center><font size=+3><a href="http://packages.libregeek.org/debian/pool/games/s/snis/" title="Binaries for Debian Jessie built and hosted by github user ProfessorKaos64">Debian Jessie Binaries</a><br><a href="http://packages.libregeek.org/steamos-tools/pool/games/s/snis/" title="Binaries for SteamOS Brewmaster built and hosted by github user ProfessorKaos64">SteamOS Brewmaster Binaries</a></font> (Note: These binaries are build by a third part, not me.)
 
 <p>Here is a short mini-documentary created at <a href="http://txrxlabs.org">the premier
 hackerspace of Houston, TX, TX/RX Labs</a>, camera work and editing by Jack Younger.
@@ -61,7 +73,7 @@ If you're a member of a hackerspace, this game is explicitly <em>made for you</e
 <p align=center><img src="misc-images/screenshots/rocky-planet-1.jpg">
 <p align=center><font size=+2>A Terrestrial Planet
 <p align=center><img src="misc-images/screenshots/terrestrial-planet-1.jpg">
-<p align=center><font size=+2>A Gas Giant 
+<p align=center><font size=+2>A Gas Giant
 <p align=center><img src="misc-images/screenshots/gas-giant-1.jpg">
 
 <p align=center><b><font size=+3><a href="screenshots.html">More Screen Shots</a></font></b>
@@ -69,7 +81,7 @@ If you're a member of a hackerspace, this game is explicitly <em>made for you</e
 
 <font size=+1>
 
-<h1>Build Instructions</h1>
+<h1><a name="buildinstructions">Build Instructions</a></h1>
 <h2>Step 0: Acquire Hardware and OS</h2>
 <p>This is a linux game.  You will need a computer running linux.
 A raspberry pi doesn't count, it's not powerful enough.  The game is
@@ -146,7 +158,7 @@ https://github.com/smcameron/space-nerds-in-space/archive/master.zip</a>
 <p>After downloading, you must unpack the zip file.  Type:
 <pre>
 <blockquote>
-unzip space-nerds-in-space-master.zip 
+unzip space-nerds-in-space-master.zip
 cd space-nerds-in-space-master
 </blockquote>
 </ul>
@@ -186,7 +198,7 @@ account to file a bug report.
 <li><a href="https://github.com/smcameron/space-nerds-in-space/issues">Click here to file a bug report</a>.
 </ul>
 
-<h2>Step 4. Run the Game on a single system (Try this before trying multiplayer)</h2>
+<h2><a name="singlemachineinstructions">Step 4. Run the Game on a single system (Try this before trying multiplayer)</a></h2>
 <p>Type:
 <blockquote>
 <pre>
@@ -240,7 +252,7 @@ You can re-join the server (via "./quickjoin" script)
 It still leaves several processes running, the snis_server, the lobby process
 and snis_multiverse.  To kill all of them, run the "./killem" script.
 <h3>NAVIGATION SCREEN</h3>
-<p>From the navigation screen, you can steer the ship and maneuver around. 
+<p>From the navigation screen, you can steer the ship and maneuver around.
 <p align=center><img src="navigation.png", width=85%>
 <h3>WEAPONS SCREEN</h3>
 <p>From the weapons screen, you can fire the laser turret and launch torpedoes.
@@ -349,10 +361,10 @@ the game, direct NPC ships, run Lua scripts and construct scenarios to entertain
 the other players.
 <p align=center><img src="demon-screen.png", width=85%>
 <hr>
-<h1>Multiplayer Setup</h1>
+<h1><a name="multiplayerinstructions">Multiplayer Setup</a></h1>
 <p align=center><img src=multiplayer-setup.png>
 <p align=center>What a typical multiplayer setup looks like.
-<p><h2>Hardware for Multiplayer Setup</h2>
+<p><h2>Step 0. Obtain Necessary Hardware for Multiplayer Setup</h2>
 <p>You will need the following hardware:
 <ul>
 <li>A big TV or projector for the "Main Screen" view that you can drive
@@ -368,7 +380,7 @@ performance reasons and for ease of configuration.
 recognition capabilities (need to reject background noise).
 as you have.
 </ul>
-<h2>Software Components</h2>
+<h2>Step 0.5  Understanding the Software Components</h2>
 <p>It helps to have a basic understanding of how the system works
 in order to set it up and troubleshoot in case something doesn't work
 like you expect.  The basic components of the system are:
@@ -400,7 +412,7 @@ any other computers reachable on the network. It's usually just easiest to use a
 powerful desktop system for the "main screen" <b>snis_client</b> and then also run the
 server processes on that system as well, and means the other computers are simpler to
 set up, in that they are all identical, and only run a single process, <b>snis_client</b>.
-<h2>Preliminary Hardware Setup</h2>
+<h2>Step 1. Preliminary Hardware Setup</h2>
 <p>The first thing that you need to do is get all the hardware into your game room,
 arranged on furniture in such a way that everyone can see the big TV or projector,
 connect it all up and make sure it is nominally working.  That means:
@@ -413,15 +425,16 @@ this will also be the same computer which is connected to the projector (or big 
 and the stereo.  Again, this is not a requirement, but we will assume this is the case.
 <li>Boot up all your computers and make sure every computer can "ping" the <b>Main Computer</b>.
 If this doesn't work, the game won't work.  Note, many wireless routers
-are configured to deliberately prevent local devices from talking to one another 
+are configured to deliberately prevent local devices from talking to one another
 for security reasons on the assumption that they normally are only using the router
 to get to the internet, not to communicate amongst themselves.  For this reason,
 and for performance reasons, a <b>wired network switch or router is strongly
 preferred</b>.
 </ol>
-<h2>Software Setup</h2>
+<h2>Step 2.  Software Setup</h2>
 <ol>
-<li>Install "Space Nerds In Space" on all computers.  Note, you should install <b>the same
+<li>Install "Space Nerds In Space" on all computers.  <a href="#buildinstructions">(See
+Build Instructions above)</a>. Note, you should install <b>the same
 version</b> on all computers.  The protocol used by <b>snis_server</b> and <b>snis_client</b>
 to communicate with one another frequently changes, and if there is a mismatch, they won't
 be able to talk to each other (in fact, will refuse to talk to one another most likely.)
@@ -430,7 +443,7 @@ Generally this means you should use the latest version from git on all computers
 from <a href="http://github.com/smcameron/space-nerds-in-space-assets">
 http://github.com/smcameron/space-nerds-in-space-assets</a> on all your computers.
 </ol>
-<h3>Setting up the <b>Main Computer</b></h3>
+<h3>Step 3.  Setting up the <b>Main Computer</b></h3>
 <p>There is a script to help with setting up: <b>snis_launcher</b>.
 <ol>
 <li>Log into the <b>Main Computer</b> and run <b>snis_launcher</b>.  You should
@@ -438,7 +451,7 @@ see something like this (assuming your username is capnkirk):
 <blockquote>
 <pre>
 capnkirk@enterprise ~ $ cd github/space-nerds-in-space
-capnkirk@enterprise ~/github/space-nerds-in-space $ ./snis_launcher 
+capnkirk@enterprise ~/github/space-nerds-in-space $ ./snis_launcher
 
      Welcome to Space Nerds In Space
 
@@ -462,7 +475,7 @@ No SNIS processes are currently running.
    6. Stop all SNIS clients
    7. Stop all SNIS servers
    0. Quit
-   Choose [0-7]: 
+   Choose [0-7]:
 </pre>
 </blockquote>
 <li>Select <b>1</b> to start the lobby server.  You should see something like this:
@@ -502,7 +515,7 @@ Choose a solar system:
    karado
    polaris
    sirius
-Enter the name of the solarsystem: 
+Enter the name of the solarsystem:
 </pre>
 </blockquote>
 Type in the name of the solarsystem you want. <b>Do not choose "default"
@@ -578,13 +591,13 @@ capnkirk@enterprise$ ifconfig | grep 'inet addr'
 </pre>
 </blockquote>
 </ol>
-<h3>Setting up the <b>Bridge Stations</b></h3>
+<h3>Step 4.  Setting up the <b>Bridge Stations</b></h3>
 <p>Repeat the following steps for each bridge station.
 <ol>
 <li>Run <b>snis_launcher</b>. You should see:
 <blockquote>
 <pre>
-capnkirk@enterprise $ ./snis_launcher 
+capnkirk@enterprise $ ./snis_launcher
 
      Welcome to Space Nerds In Space
 
@@ -608,7 +621,7 @@ No SNIS processes are currently running.
    6. Stop all SNIS clients
    7. Stop all SNIS servers
    0. Quit
-   Choose [0-7]: 
+   Choose [0-7]:
 </pre>
 </blockquote>
 Note that it shows "No SNIS processes are currently running."  This
@@ -652,8 +665,66 @@ network setup screen.
 console (e.g. if you mean for this to be the NAVIGATION station, press F2).
 </ul>
 </ol>
-<p>That's it for the bridge station setup.  Repeat for each station. 
+<p>That's it for the bridge station setup.  Repeat for each station.
 <hr>
+<h1><a name="troubleshooting">Troubleshooting</a></h1>
+<ol>
+<li><b>I keep getting "BRIDGE VERIFICATION FAILED" -- what am I doing wrong?</b>
+<p>This means one of several things:
+<ol>
+<li>If you have checked the "CREATE SHIP" checkbox:
+Either:
+<ul>
+<li>You meant to create a new ship with the given name, but a ship with that
+name has already been created.  In that case, choose a different name for your
+ship.
+<li>You meant to re-use an existing ship.  In that case, uncheck the "CREATE SHIP"
+checkbox.  If the ship is already running in the game (other players are onboard)
+check the JOIN SHIP checkbox.  If the ship is not yet in the game (but has been
+used before and is recorded) then uncheck the JOIN SHIP checkbox.
+</ul>
+<li>If you have not checked the "CREATE SHIP" checkbox:
+<ul>
+<li>If you have checked the "JOIN SHIP" checkbox:  One of the following has occurred:
+<ul>
+<li>You have entered the name of an existing ship, and entered the password
+correctly, but this ship is only known from past runs, the ship has not entered
+the solar system where you are trying to join it.   In that case, uncheck the
+JOIN SHIP checkbox.
+<li>You have entered the name of a ship which does not exist, or mistyped the
+name of the ship.  Enter the name of a ship which exists.
+<li>You have entered the name of an existing ship, but entered an incorrect password.
+</ul>
+<li>If you have not checked the "JOIN SHIP" checkbox.  This means that one of
+the following has occurred:
+<ul>
+<li>You intended to start up a previously used ship in a solarsystem
+but that ship is already in the solarsystem with players on it.  You
+need to check the "JOIN SHIP" checkbox.
+<li>You have entered an incorrect ship name.
+<li>You have entered an incorrect ship password.
+</ul>
+</ul>
+</ol>
+<li><b>What is with this "JOIN SHIP" and "CREATE SHIP" checkbox crap?  Why is it so confusing?</b>
+<p>"CREATE SHIP" has to do with whether snis_multiverse knows about your shipname/password.
+The snis_multiverse process maintains a database of shipname/password hashes which is persistent
+across invocations.  However snis_server also has a notion of whether a ship is known to it.
+When you check "CREATE SHIP", you are telling snis_server to tell snis_multiverse to create
+a new ship.  If snis_multiverse thinks the ship already exists, you will get BRIDGE VERIFICATION
+FAILURE.  The "JOIN SHIP" checkbox means that you are attempting to join a ship that snis_server
+already knows about -- that means, a ship that already has other snis_clients attached to it.
+If you are the first snis_client in a session to use a ship, you should not check JOIN SHIP.
+If you are <em>not</em> the first snis_client to use a ship name, then you should check
+JOIN SHIP.
+<p>Basically it is about intent.  The game needs to know the difference between intentionally
+creating a new ship vs. mistyping a ship name, and the difference between creating a new ship
+and joining an existing ship.  Not to suggest that there isn't room for improvement in how
+it works.
+<p>
+
+<li>TODO: Need to put more trouble shooting tips in here.
+</ol>
 <br>
 <br>
 <br>
@@ -661,19 +732,18 @@ console (e.g. if you mean for this to be the NAVIGATION station, press F2).
 <br>
 <br>
 <br>
-<h1>Have Fun!</h1>
 <hr>
-<h2>Miscellaneous Development Topics</h2>
+<h2><a name="misctopics">Miscellaneous Development Topics</a></h2>
 <p>Here is a <a href="http://www.youtube.com/playlist?list=PLcSUyKz3gfa9BG8X0DKkIMTnQag8_tJFQ">youtube
 playlist of development videos for Space Nerds In Space</a> spanning the time from the very beginning
-when the game was literally not much more than 
+when the game was literally not much more than
 <a href="http://www.youtube.com/watch?v=BF19sPZGvmo&list=PLcSUyKz3gfa9BG8X0DKkIMTnQag8_tJFQ&index=20">just a bunch of dots on the screen</a> up until the present day.
 <p>Here is <a href="snis-nl-slides/slideshow.html">a set of slides about speech recognition and
 natural language processing in Space Nerds In Space</a>.
 
 <p>Here is a set of slides from a talk I gave about procedurally generating gas giant
 planet textures: <a href="gaseous-giganticus-slides/slideshow.html">Procedurally Generating
-Gas Giant Textures</a>.  
+Gas Giant Textures</a>.
 <p>Here are some pictures showing <a href="gaseous-giganticus-noise-scale.html">various noise-scales and the effect they have in gaseous-giganticus</a>.
 
 
@@ -682,12 +752,12 @@ implemenation of planetary rings and shadows cast by and on them</a> in Space Ne
 In Space.
 
 <p>Here is a <a href="earthlike/example/slideshow.html">slideshow about 'earthlike'</a>, which
-is a program used to generate some of the earthlike planet textures within Space Nerds In Space. 
+is a program used to generate some of the earthlike planet textures within Space Nerds In Space.
 (Use arrow keys to navigate the slideshow.  And press F11 for full screen.)
 
 <p>Most of the code is
 licensed under the GPL v. 2, or at your option, any later version.  Some parts of the code
-have an MIT license.  Audio files have 
+have an MIT license.  Audio files have
 various other licenses, typically some variant of a Creative Commons license. I have tried
 to be diligent about making sure it is clear which parts of the code have what licenses.
 Consult the source if in doubt.
