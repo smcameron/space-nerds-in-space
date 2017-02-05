@@ -378,7 +378,7 @@ parts of the system find one another.  There should be <em>exactly one</em> ssgl
 process running in your system, on <em>one computer only</em>.  You will need to
 know the IP address of the system that the lobby process (ssgl_server) runs
 on.  This process has no graphics and no UI at all.
-<li><b>snis_multiverse</b>This keeps track of player ships and stores
+<li><b>snis_multiverse</b> - This keeps track of player ships and stores
 ship names, ship state, and ship password hashes.  This is what allows ships
 to travel between solarsystems (between snis_server instances).  There should
 be <em>exactly one</em> snis_multiverse process in your system.  This process has
@@ -417,7 +417,7 @@ are configured to deliberately prevent local devices from talking to one another
 for security reasons on the assumption that they normally are only using the router
 to get to the internet, not to communicate amongst themselves.  For this reason,
 and for performance reasons, a <b>wired network switch or router is strongly
-prefrerred</b>.
+preferred</b>.
 </ol>
 <h2>Software Setup</h2>
 <ol>
@@ -534,10 +534,10 @@ Starting snis_client
 
 ------------------------------------------------------------
 The following SNIS processes are running:
-        LOBBY SERVER -- scameron  6290  0.0  0.0  99160  2024 ?        Ssl  12:01   0:00 ./bin/ssgl_server
-   MULTIVERSE SERVER -- scameron  6313  0.0  0.0 186580  2856 pts/7    Sl+  12:03   0:00 ./bin/snis_multiverse localhost nickname narnia
-         SNIS SERVER -- scameron  6459  1.5  0.0 277000 11772 pts/7    Sl+  12:09   0:04 ./bin/snis_server -l localhost -g SPACENERDS -L DEFAULT2 x --enable-enscript -m narnia -s default2
-         SNIS CLIENT -- scameron  6583 94.0  0.9 708860 114848 pts/7   Rl+  12:14   0:00 ./bin/snis_client --fullscreen
+        LOBBY SERVER -- capnkirk  6290  0.0  0.0  99160  2024 ?        Ssl  12:01   0:00 ./bin/ssgl_server
+   MULTIVERSE SERVER -- capnkirk  6313  0.0  0.0 186580  2856 pts/7    Sl+  12:03   0:00 ./bin/snis_multiverse localhost nickname narnia
+         SNIS SERVER -- capnkirk  6459  1.5  0.0 277000 11772 pts/7    Sl+  12:09   0:04 ./bin/snis_server -l localhost -g SPACENERDS -L DEFAULT2 x --enable-enscript -m narnia -s default2
+         SNIS CLIENT -- capnkirk  6583 94.0  0.9 708860 114848 pts/7   Rl+  12:14   0:00 ./bin/snis_client --fullscreen
 ------------------------------------------------------------
 </pre>
 </blockquote>
@@ -623,7 +623,7 @@ Starting snis_client
 
 ------------------------------------------------------------
 The following SNIS processes are running:
-         SNIS CLIENT -- scameron  7247 98.0  1.1 748036 142528 pts/7   Rl+  12:38   0:00 ./bin/snis_client --fullscreen
+         SNIS CLIENT -- capnkirk  7247 98.0  1.1 748036 142528 pts/7   Rl+  12:38   0:00 ./bin/snis_client --fullscreen
 --------------------------------------------------
 </pre>
 </blockquote>
