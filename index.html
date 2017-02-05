@@ -31,7 +31,7 @@ in a room with a projector or TV, and go forth and explore the galaxy.
 <p align=center>Latest development video (January 2017):
 <p align=center><iframe width="840" height="630" src="https://www.youtube.com/embed/WUTmXUIMifQ" frameborder="0" allowfullscreen></iframe>
 
-<p align=center><font size=+3><a href="http://packages.libregeek.org/debian/pool/games/s/snis/" title="Binaries for Debian Jessie built and hosted by github user ProfessorKaos64">Debian Jessie Binaries</a><br><a href="http://packages.libregeek.org/steamos-tools/pool/games/s/snis/" title="Binaries for SteamOS Brewmaster built and hosted by github user ProfessorKaos64">SteamOS Brewmaster Binaries</a></font>
+<p align=center><font size=+3><a href="http://packages.libregeek.org/debian/pool/games/s/snis/" title="Binaries for Debian Jessie built and hosted by github user ProfessorKaos64">Debian Jessie Binaries</a><br><a href="http://packages.libregeek.org/steamos-tools/pool/games/s/snis/" title="Binaries for SteamOS Brewmaster built and hosted by github user ProfessorKaos64">SteamOS Brewmaster Binaries</a></font> (Note: These binaries are build by a third part, not me.)
 
 <p>One computer runs the central server simulation of the game's universe.  Each player's 
 computer acts as a station on a simulated starship.  There are stations for
@@ -186,7 +186,7 @@ account to file a bug report.
 <li><a href="https://github.com/smcameron/space-nerds-in-space/issues">Click here to file a bug report</a>.
 </ul>
 
-<h2>Step 4. Run the Game (on a single system)</h2>
+<h2>Step 4. Run the Game on a single system (Try this before trying multiplayer)</h2>
 <p>Type:
 <blockquote>
 <pre>
@@ -348,17 +348,320 @@ From the demon screen, the game master can inject all kinds of objects into
 the game, direct NPC ships, run Lua scripts and construct scenarios to entertain
 the other players.
 <p align=center><img src="demon-screen.png", width=85%>
+<hr>
+<h1>Multiplayer Setup</h1>
+<p align=center><img src=multiplayer-setup.png>
+<p align=center>What a typical multiplayer setup looks like.
+<p><h2>Hardware for Multiplayer Setup</h2>
+<p>You will need the following hardware:
+<ul>
+<li>A big TV or projector for the "Main Screen" view that you can drive
+directly from a computer (e.g. chromecast likely will not work well.)
+<li>A stereo or sound system of some type (something better than laptop speakers).
+<li>Several reasonably powerful computers running linux (at least 3, preferably
+5 per bridge).
+<li>A network router or switch which can support as many computers as you're
+planning to use.
+Note: a <b>wired</b> router or switch is <b>strongly preferred</b> both for
+performance reasons and for ease of configuration.
+<li>(Optional) decent microphone or headset if you want to use the speech
+recognition capabilities (need to reject background noise).
+as you have.
+</ul>
+<h2>Software Components</h2>
+<p>It helps to have a basic understanding of how the system works
+in order to set it up and troubleshoot in case something doesn't work
+like you expect.  The basic components of the system are:
+<ul>
+<li><b>ssgl_lobby</b> - This is the lobby server and is how all the other
+parts of the system find one another.  There should be <em>exactly one</em> ssgl_server
+process running in your system, on <em>one computer only</em>.  You will need to
+know the IP address of the system that the lobby process (ssgl_server) runs
+on.  This process has no graphics and no UI at all.
+<li><b>snis_multiverse</b>This keeps track of player ships and stores
+ship names, ship state, and ship password hashes.  This is what allows ships
+to travel between solarsystems (between snis_server instances).  There should
+be <em>exactly one</em> snis_multiverse process in your system.  This process has
+no graphics and no UI at all.
+<li><b>snis_server</b> - This runs the simulation of a solar system, its associated
+planets, starbases, nebula, NPC ships, etc.  You need at least one snis_server, but
+may have more than one.  This process has no graphics and no UI at all.
+<li><b>snis_client</b> - This process is the face of SNIS, and is what the
+player interacts with.  It is responsible for drawing all graphics and making
+all sounds.  You need one snis_client process running for each player's computer
+plus one for the "Main Screen".
+</ul>
+Note that the above diagram shows that <b>snis_server</b>, <b>snis_multiverse</b>,
+and <b>ssgl_lobby</b> are all running on the same computer that controls the
+projector and stereo, and this computer also runs a <b>snis_client</b> process
+to drive the projector and stereo.  This is not a requirement.  The <b>snis_server</b>,
+<b>snis_multiverse</b>, and <b>ssgl_lobby</b> processes could also run on
+any other computers reachable on the network. It's usually just easiest to use a big
+powerful desktop system for the "main screen" <b>snis_client</b> and then also run the
+server processes on that system as well, and means the other computers are simpler to
+set up, in that they are all identical, and only run a single process, <b>snis_client</b>.
+<h2>Preliminary Hardware Setup</h2>
+<p>The first thing that you need to do is get all the hardware into your game room,
+arranged on furniture in such a way that everyone can see the big TV or projector,
+connect it all up and make sure it is nominally working.  That means:
+<ol>
+<li>Figure out which computer will run <b>ssgl_server</b>, <b>snis_multiverse</b>, and
+<b>snis_server</b>.  It is easiest if these will all run on the same computer, but
+this is not a requirement.  For the purposes of these instructions we will assume this
+is the case, and we will refer to this system as the <b>Main Computer</b>.  Usually
+this will also be the same computer which is connected to the projector (or big TV)
+and the stereo.  Again, this is not a requirement, but we will assume this is the case.
+<li>Boot up all your computers and make sure every computer can "ping" the <b>Main Computer</b>.
+If this doesn't work, the game won't work.  Note, many wireless routers
+are configured to deliberately prevent local devices from talking to one another 
+for security reasons on the assumption that they normally are only using the router
+to get to the internet, not to communicate amongst themselves.  For this reason,
+and for performance reasons, a <b>wired network switch or router is strongly
+prefrerred</b>.
+</ol>
+<h2>Software Setup</h2>
+<ol>
+<li>Install "Space Nerds In Space" on all computers.  Note, you should install <b>the same
+version</b> on all computers.  The protocol used by <b>snis_server</b> and <b>snis_client</b>
+to communicate with one another frequently changes, and if there is a mismatch, they won't
+be able to talk to each other (in fact, will refuse to talk to one another most likely.)
+Generally this means you should use the latest version from git on all computers.
+<li>Install any additional art assets you might want to use (for extra solar systems)
+from <a href="http://github.com/smcameron/space-nerds-in-space-assets">
+http://github.com/smcameron/space-nerds-in-space-assets</a> on all your computers.
+</ol>
+<h3>Setting up the <b>Main Computer</b></h3>
+<p>There is a script to help with setting up: <b>snis_launcher</b>.
+<ol>
+<li>Log into the <b>Main Computer</b> and run <b>snis_launcher</b>.  You should
+see something like this (assuming your username is capnkirk):
+<blockquote>
+<pre>
+capnkirk@enterprise ~ $ cd github/space-nerds-in-space
+capnkirk@enterprise ~/github/space-nerds-in-space $ ./snis_launcher 
+
+     Welcome to Space Nerds In Space
+
+------------------------------------------------------------
+No SNIS processes are currently running.
+------------------------------------------------------------
+
+   1. Launch SNIS lobby server
+	The lobby server allows clients to find servers
+	There should be one lobby server total.
+   2. Launch SNIS multiverse server
+	The multiverse server stores player ship data
+	There should be one multiverse server total
+   3. Launch SNIS server
+	There should be one snis server per solarsystem.
+	There should be at least one instance of snis_server.
+   4. Launch SNIS client process
+	There should be one snis client process per player
+	plus one more per ship for the main screen.
+   5. Stop all SNIS processes
+   6. Stop all SNIS clients
+   7. Stop all SNIS servers
+   0. Quit
+   Choose [0-7]: 
+</pre>
+</blockquote>
+<li>Select <b>1</b> to start the lobby server.  You should see something like this:
+<blockquote>
+<pre>
+Starting the lobby server
+
+
+     Welcome to Space Nerds In Space
+
+------------------------------------------------------------
+The following SNIS processes are running:
+        LOBBY SERVER -- capnkirk  6290  0.0  0.0  17232  2024 ?        Ssl  12:01   0:00 ./bin/ssgl_server
+------------------------------------------------------------
+</pre>
+</blockquote>
+And then the menu will be displayed again.
+<li>Choose <b>2</b> to start <b>snis_multiverse</b>.  You should see something like this:
+<blockquote>
+<pre>
+     Welcome to Space Nerds In Space
+
+------------------------------------------------------------
+The following SNIS processes are running:
+        LOBBY SERVER -- capnkirk  6290  0.0  0.0  25428  2024 ?        Ssl  12:01   0:00 ./bin/ssgl_server
+   MULTIVERSE SERVER -- capnkirk  6313  0.0  0.0 170188  1724 pts/7    Sl+  12:03   0:00 ./bin/snis_multiverse localhost nickname narnia
+------------------------------------------------------------
+</pre>
+</blockquote>
+and then the menu again.
+<li>Choose <b>3</b> to start the <b>snis_server</b> process.  You should see something like this:
+<blockquote>
+<pre>
+Choose a solar system:
+   default
+   default2
+   karado
+   polaris
+   sirius
+Enter the name of the solarsystem: 
+</pre>
+</blockquote>
+Type in the name of the solarsystem you want. <b>Do not choose "default"
+(due to a bug).</b>  You should see something like this:
+<blockquote>
+<pre>
+Enter the name of the solarsystem: default2
+Using solar system default2
+
+     Welcome to Space Nerds In Space
+
+------------------------------------------------------------
+The following SNIS processes are running:
+        LOBBY SERVER -- capnkirk  6290  0.0  0.0  99160  2024 ?        Ssl  12:01   0:00 ./bin/ssgl_server
+   MULTIVERSE SERVER -- capnkirk  6313  0.0  0.0 170188  2856 pts/7    Sl+  12:03   0:00 ./bin/snis_multiverse localhost nickname narnia
+         SNIS SERVER -- capnkirk  6459  1.0  0.0 260608  9724 pts/7    Sl+  12:09   0:00 ./bin/snis_server -l localhost -g SPACENERDS -L DEFAULT2 x --enable-enscript -m narnia -s default2
+------------------------------------------------------------
+</pre>
+</blockquote>
+You can repeat this step to start multiple instances of <b>snis_server</b> with different solar systems.
+<li>Choose <b>4</b> to start a <b>snis_client</b>.  This will be what runs the "Main Screen".
+You should briefly see something like:
+<blockquote>
+<pre>
+Starting snis_client
+
+
+     Welcome to Space Nerds In Space
+
+------------------------------------------------------------
+The following SNIS processes are running:
+        LOBBY SERVER -- scameron  6290  0.0  0.0  99160  2024 ?        Ssl  12:01   0:00 ./bin/ssgl_server
+   MULTIVERSE SERVER -- scameron  6313  0.0  0.0 186580  2856 pts/7    Sl+  12:03   0:00 ./bin/snis_multiverse localhost nickname narnia
+         SNIS SERVER -- scameron  6459  1.5  0.0 277000 11772 pts/7    Sl+  12:09   0:04 ./bin/snis_server -l localhost -g SPACENERDS -L DEFAULT2 x --enable-enscript -m narnia -s default2
+         SNIS CLIENT -- scameron  6583 94.0  0.9 708860 114848 pts/7   Rl+  12:14   0:00 ./bin/snis_client --fullscreen
+------------------------------------------------------------
+</pre>
+</blockquote>
+This will quickly be covered over by the graphical display of the snis_client process which will look like this:
+<p align=center><img src="network-setup.jpg", width=85%>
+Make sure the MAIN SCREEN checkbox is checked.
+<ul>
+<li>If this is the very first time you have run the game, or if you intend to create a new
+ship with a name you have never used before, then check the "CREATE SHIP" checkbox.  Otherwise
+leave the CREATE SHIP checkbox unchecked.
+<li>Leave the "JOIN SHIP" checkbox unchecked.
+<li>Since ssgl_server is running on the same system as snis_client (our <b>Main Computer</b>),
+it is fine to leave the LOBBY SERVER NAME OR IP ADDRESS field as "localhost".
+<li>Enter your ship's name and password (these you make up.)
+<li>Click on the CONNECT TO LOBBY button.
+You should then see something like this, with one line for each <b>snis_server</b>
+that you started (in this case, one.):
+<p align=center><img src="lobby1.jpg", width=85%>
+</ul>
+<li>Click on the white text "DEFAULT2".  When you do that, you should see:
+<p align=center><img src="lobby2.jpg", width=85%>
+<li>Click on the "CONNECT TO SERVER" button on the right side of the screen.
+After you do that, you should briefly see this:
+<p align=center><img src="connecting.jpg">
+<p>and after a short time, you should see the "main view", something like this:
+<p align=center><img src="out-the-window.jpg", width=85%>
+<li>Arrange things so this main view is appearing via your projector
+or big TV.
+<li>Choose <b>0</b> to exit the <b>snis_launcher</b> script.
+<li>Make a note of the IP address(es) of the system running ssgl_server
+(our <b>Main Computer</b>).  Run
+<blockquote>
+<pre>
+capnkirk@enterprise$ ifconfig | grep 'inet addr'
+          inet addr:<b>10.0.0.3</b>  Bcast:10.0.0.255  Mask:255.255.255.0
+          inet addr:<b>127.0.0.1</b>  Mask:255.0.0.0
+          inet addr:<b>10.236.226.31</b>  Bcast:10.255.255.255  Mask:255.224.0.0
+</pre>
+</blockquote>
+</ol>
+<h3>Setting up the <b>Bridge Stations</b></h3>
+<p>Repeat the following steps for each bridge station.
+<ol>
+<li>Run <b>snis_launcher</b>. You should see:
+<blockquote>
+<pre>
+capnkirk@enterprise $ ./snis_launcher 
+
+     Welcome to Space Nerds In Space
+
+------------------------------------------------------------
+No SNIS processes are currently running.
+------------------------------------------------------------
+
+   1. Launch SNIS lobby server
+	The lobby server allows clients to find servers
+	There should be one lobby server total.
+   2. Launch SNIS multiverse server
+	The multiverse server stores player ship data
+	There should be one multiverse server total
+   3. Launch SNIS server
+	There should be one snis server per solarsystem.
+	There should be at least one instance of snis_server.
+   4. Launch SNIS client process
+	There should be one snis client process per player
+	plus one more per ship for the main screen.
+   5. Stop all SNIS processes
+   6. Stop all SNIS clients
+   7. Stop all SNIS servers
+   0. Quit
+   Choose [0-7]: 
+</pre>
+</blockquote>
+Note that it shows "No SNIS processes are currently running."  This
+is because this is a different computer (not the <b>Main Computer</b>).
+<li>Choose <b>4</b> to start <b>snis_client</b>.  You should briefly see something like this:
+<blockquote>
+<pre>
+Starting snis_client
+
+
+     Welcome to Space Nerds In Space
+
+------------------------------------------------------------
+The following SNIS processes are running:
+         SNIS CLIENT -- scameron  7247 98.0  1.1 748036 142528 pts/7   Rl+  12:38   0:00 ./bin/snis_client --fullscreen
+--------------------------------------------------
+</pre>
+</blockquote>
+which will quickly be covered up by the network setup screen, something like this:
+<p align=center><img src="network-setup.jpg", width=85%>
+<ul>
+<li>Make sure MAIN SCREEN checkbox is <b>not</b> checked.
+<li>Make sure CREATE SHIP checkbox is <b>not</b> checked.
+<li>Make sure JOIN SHIP checkbox <b>is checked</b>.
+<li>For LOBBY SERVER NAME OR IP ADDRESS enter the IP address that
+you noted for the <b>MAIN COMPUTER</b> in step 10, above.
+<li>For SHIP NAME and PASSWORD, enter the same name and password
+you used for the <b>Main Computer</b> setup in step 5 above.
+<li>Click the CONNECT TO LOBBY button.
+You should then see something like this, with one line for each <b>snis_server</b>
+that you started (in this case, one.):
+<p align=center><img src="lobby1.jpg", width=85%>
+</ul>
+<li>Click on the white text "DEFAULT2".  When you do that, you should see:
+<p align=center><img src="lobby2.jpg", width=85%>
+<li>Click on the "CONNECT TO SERVER" button on the right side of the screen.
+After you do that, you should see the snis_client graphical display appear.
+Which screen it ends up on depends on what ROLES were selected on the
+network setup screen.
+<li>Use the function keys to select the appropriate station for this
+console (e.g. if you mean for this to be the NAVIGATION station, press F2).
+</ul>
+</ol>
+<p>That's it for the bridge station setup.  Repeat for each station. 
+<hr>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
 <h1>Have Fun!</h1>
-<hr>
-<h1>TODO: Add more instructions here about how to run a multiplayer setup</h1>
-<hr>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
 <hr>
 <h2>Miscellaneous Development Topics</h2>
 <p>Here is a <a href="http://www.youtube.com/playlist?list=PLcSUyKz3gfa9BG8X0DKkIMTnQag8_tJFQ">youtube
