@@ -265,10 +265,9 @@ struct client_network_stats {
 	uint32_t nobjects, nships;
 	uint32_t elapsed_seconds;
 	uint32_t faction_population[5];
-#define NETSTATS_SAMPLES 1000
-	uint32_t bytes_recd_per_sec[NETSTATS_SAMPLES];
-	uint32_t bytes_sent_per_sec[NETSTATS_SAMPLES];
-	int sample_count, end;
+	uint32_t bytes_recd_per_sec[2];
+	uint32_t bytes_sent_per_sec[2];
+	int bps_index;
 	struct timespec lasttime;
 } netstats;
 
@@ -308,6 +307,7 @@ ui_element_button_press_function ui_slider_button_press = (ui_element_button_pre
 
 ui_element_drawing_function ui_button_draw = (ui_element_drawing_function) snis_button_draw;
 ui_element_drawing_function ui_strip_chart_draw = (ui_element_drawing_function) snis_strip_chart_draw;
+ui_element_drawing_function ui_scaling_strip_chart_draw = (ui_element_drawing_function) snis_scaling_strip_chart_draw;
 ui_element_drawing_function ui_label_draw = (ui_element_drawing_function) snis_label_draw;
 ui_element_button_press_function ui_button_button_press = (ui_element_button_press_function) snis_button_button_press;
 ui_element_drawing_function ui_gauge_draw = (ui_element_drawing_function) gauge_draw;
@@ -2620,7 +2620,10 @@ static struct demon_ui {
 	struct button *demon_2d3d_button;
 	struct button *demon_move_button;
 	struct button *demon_scale_button;
+	struct button *demon_netstats_button;
 	struct snis_text_input_box *demon_input;
+	struct scaling_strip_chart *bytes_recd_strip_chart;
+	struct scaling_strip_chart *bytes_sent_strip_chart;
 	char input[100];
 	char error_msg[80];
 	double ix, iz, ix2, iz2;
@@ -2646,6 +2649,7 @@ static struct demon_ui {
 	float exaggerated_scale;
 	float desired_exaggerated_scale;
 	int exaggerated_scale_active;
+	int netstats_active;
 } demon_ui;
 
 static void home_demon_camera(void)
@@ -4722,10 +4726,7 @@ static int process_update_netstats(void)
 	int rc;
 	uint64_t bytes_recd_last_time, bytes_sent_last_time;
 	float elapsed_time_ms;
-	int last = netstats.end - 1;
 
-	if (last < 0)
-		last = ARRAYSIZE(netstats.bytes_recd_per_sec) - 1;
 	bytes_recd_last_time = netstats.bytes_recd;
 	bytes_sent_last_time = netstats.bytes_sent;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -4739,18 +4740,20 @@ static int process_update_netstats(void)
 				&netstats.faction_population[2],
 				&netstats.faction_population[3],
 				&netstats.faction_population[4]);
-	if (elapsed_time_ms < 0.0000001)
-		elapsed_time_ms = 0.0000001;
-	netstats.bytes_recd_per_sec[netstats.end] = (uint32_t) (1000.0 *
-		(netstats.bytes_recd - bytes_recd_last_time) / elapsed_time_ms);
-	netstats.bytes_sent_per_sec[netstats.end] = (uint32_t) (1000.0 *
-		(netstats.bytes_sent - bytes_sent_last_time) / elapsed_time_ms);
-	netstats.end = (netstats.end + 1) % ARRAYSIZE(netstats.bytes_sent_per_sec);
-	netstats.sample_count++;
-	netstats.lasttime = ts;
-
 	if (rc != 0)
 		return rc;
+	if (elapsed_time_ms < 0.0000001)
+		elapsed_time_ms = 0.0000001;
+	netstats.bytes_recd_per_sec[netstats.bps_index] = (uint32_t) ((1000.0 *
+		(netstats.bytes_recd - bytes_recd_last_time)) / elapsed_time_ms);
+	netstats.bytes_sent_per_sec[netstats.bps_index] = (uint32_t) ((1000.0 *
+		(netstats.bytes_sent - bytes_sent_last_time)) / elapsed_time_ms);
+	snis_scaling_strip_chart_update(demon_ui.bytes_sent_strip_chart,
+				(float) netstats.bytes_sent_per_sec[netstats.bps_index]);
+	snis_scaling_strip_chart_update(demon_ui.bytes_recd_strip_chart,
+				(float) netstats.bytes_recd_per_sec[netstats.bps_index]);
+	netstats.bps_index = (netstats.bps_index + 1) & 0x01;
+	netstats.lasttime = ts;
 	return 0;
 }
 
@@ -8518,6 +8521,15 @@ static void ui_add_strip_chart(struct strip_chart *sc, int active_displaymode)
 	ui_element_list_add_element(&uiobjs, uie);
 }
 
+static void ui_add_scaling_strip_chart(struct scaling_strip_chart *sc, int active_displaymode)
+{
+	struct ui_element *uie;
+
+	uie = ui_element_init(sc, ui_scaling_strip_chart_draw, NULL,
+		active_displaymode, &displaymode);
+	ui_element_list_add_element(&uiobjs, uie);
+}
+
 static void ui_hide_widget(void *widget)
 {
 	struct ui_element *uie;
@@ -12198,6 +12210,17 @@ static void demon_scale_button_pressed(void *x)
 		demon_ui.desired_exaggerated_scale = 1.0;
 }
 
+static void demon_netstats_button_pressed(void *x)
+{
+	if (!demon_ui.netstats_active) {
+		ui_unhide_widget(demon_ui.bytes_sent_strip_chart);
+		ui_unhide_widget(demon_ui.bytes_recd_strip_chart);
+	} else {
+		ui_hide_widget(demon_ui.bytes_sent_strip_chart);
+		ui_hide_widget(demon_ui.bytes_recd_strip_chart);
+	}
+}
+
 static void init_demon_ui()
 {
 	int x, y, dy, n;
@@ -12271,6 +12294,19 @@ static void init_demon_ui()
 			"EXAG SCALE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_scale_button_pressed, NULL);
 	snis_button_checkbox(demon_ui.demon_scale_button, &demon_ui.exaggerated_scale_active);
+	demon_ui.demon_netstats_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
+			"NET STATS", UI_COLOR(demon_deselected_button),
+			NANO_FONT, demon_netstats_button_pressed, NULL);
+	snis_button_checkbox(demon_ui.demon_netstats_button, &demon_ui.netstats_active);
+#define NETSTATS_SAMPLES 1000
+	demon_ui.bytes_recd_strip_chart =
+		snis_scaling_strip_chart_init(txx(120), txy(5), txx(550.0), txy(100.0),
+				"BYTES/S RECD BY SERVER", "", UI_COLOR(science_graph_plot_strong),
+				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
+	demon_ui.bytes_sent_strip_chart =
+		snis_scaling_strip_chart_init(txx(120), txy(135), txx(550.0), txy(100.0),
+				"BYTES/S SENT BY SERVER", "", UI_COLOR(science_graph_plot_strong),
+				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
@@ -12287,15 +12323,21 @@ static void init_demon_ui()
 	ui_add_button(demon_ui.demon_2d3d_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_move_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_scale_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_netstats_button, DISPLAYMODE_DEMON);
 	ui_hide_widget(demon_ui.demon_move_button);
 	ui_hide_widget(demon_ui.demon_scale_button);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
+	ui_add_scaling_strip_chart(demon_ui.bytes_recd_strip_chart, DISPLAYMODE_DEMON);
+	ui_add_scaling_strip_chart(demon_ui.bytes_sent_strip_chart, DISPLAYMODE_DEMON);
+	ui_hide_widget(demon_ui.bytes_recd_strip_chart);
+	ui_hide_widget(demon_ui.bytes_sent_strip_chart);
 	home_demon_camera();
 	demon_ui.camera_orientation = demon_ui.desired_camera_orientation;
 	demon_ui.camera_pos = demon_ui.desired_camera_pos;
 	demon_ui.exaggerated_scale = 1.0;
 	demon_ui.desired_exaggerated_scale = 1.0;
-	demon_ui.exaggerated_scale_active = 1.0;
+	demon_ui.exaggerated_scale_active = 1;
+	demon_ui.netstats_active = 0;
 }
 
 static void calculate_new_2d_zoom(int direction, gdouble x, gdouble y, double zoom_amount,
