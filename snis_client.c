@@ -265,6 +265,11 @@ struct client_network_stats {
 	uint32_t nobjects, nships;
 	uint32_t elapsed_seconds;
 	uint32_t faction_population[5];
+#define NETSTATS_SAMPLES 1000
+	uint32_t bytes_recd_per_sec[NETSTATS_SAMPLES];
+	uint32_t bytes_sent_per_sec[NETSTATS_SAMPLES];
+	int sample_count, end;
+	struct timespec lasttime;
 } netstats;
 
 int nframes = 0;
@@ -4713,8 +4718,19 @@ static int process_update_respawn_time(void)
 static int process_update_netstats(void)
 {
 	unsigned char buffer[sizeof(struct netstats_packet)];
+	struct timespec ts;
 	int rc;
+	uint64_t bytes_recd_last_time, bytes_sent_last_time;
+	float elapsed_time_ms;
+	int last = netstats.end - 1;
 
+	if (last < 0)
+		last = ARRAYSIZE(netstats.bytes_recd_per_sec) - 1;
+	bytes_recd_last_time = netstats.bytes_recd;
+	bytes_sent_last_time = netstats.bytes_sent;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	elapsed_time_ms = (1000.0 * ts.tv_sec + 0.000001 * ts.tv_nsec) -
+		(1000.0 * netstats.lasttime.tv_sec + 0.000001 * netstats.lasttime.tv_nsec);
 	rc = read_and_unpack_buffer(buffer, "qqwwwwwwww", &netstats.bytes_sent,
 				&netstats.bytes_recd, &netstats.nobjects,
 				&netstats.nships, &netstats.elapsed_seconds,
@@ -4723,6 +4739,16 @@ static int process_update_netstats(void)
 				&netstats.faction_population[2],
 				&netstats.faction_population[3],
 				&netstats.faction_population[4]);
+	if (elapsed_time_ms < 0.0000001)
+		elapsed_time_ms = 0.0000001;
+	netstats.bytes_recd_per_sec[netstats.end] = (uint32_t) (1000.0 *
+		(netstats.bytes_recd - bytes_recd_last_time) / elapsed_time_ms);
+	netstats.bytes_sent_per_sec[netstats.end] = (uint32_t) (1000.0 *
+		(netstats.bytes_sent - bytes_sent_last_time) / elapsed_time_ms);
+	netstats.end = (netstats.end + 1) % ARRAYSIZE(netstats.bytes_sent_per_sec);
+	netstats.sample_count++;
+	netstats.lasttime = ts;
+
 	if (rc != 0)
 		return rc;
 	return 0;
