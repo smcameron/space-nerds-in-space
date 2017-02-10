@@ -2624,6 +2624,7 @@ static struct demon_ui {
 	struct snis_text_input_box *demon_input;
 	struct scaling_strip_chart *bytes_recd_strip_chart;
 	struct scaling_strip_chart *bytes_sent_strip_chart;
+	struct scaling_strip_chart *latency_strip_chart;
 	char input[100];
 	char error_msg[80];
 	double ix, iz, ix2, iz2;
@@ -4451,6 +4452,20 @@ static int process_update_universe_timestamp(double update_time)
 	return 0;
 }
 
+static int process_latency_check(void)
+{
+	int rc;
+	unsigned char buffer[20];
+	uint64_t value[2];
+
+	rc = read_and_unpack_buffer(buffer, "qq", &value[0], &value[1]);
+	if (rc)
+		return rc;
+	/* Just turn it around and send back to server */
+	queue_to_server(packed_buffer_new("bqq", OPCODE_LATENCY_CHECK, value[0], value[1]));
+	return 0;
+}
+
 static int process_proximity_alert()
 {
 	static int last_time = 0;
@@ -4726,15 +4741,17 @@ static int process_update_netstats(void)
 	int rc;
 	uint64_t bytes_recd_last_time, bytes_sent_last_time;
 	float elapsed_time_ms;
+	uint32_t latency_in_usec;
 
 	bytes_recd_last_time = netstats.bytes_recd;
 	bytes_sent_last_time = netstats.bytes_sent;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	elapsed_time_ms = (1000.0 * ts.tv_sec + 0.000001 * ts.tv_nsec) -
 		(1000.0 * netstats.lasttime.tv_sec + 0.000001 * netstats.lasttime.tv_nsec);
-	rc = read_and_unpack_buffer(buffer, "qqwwwwwwww", &netstats.bytes_sent,
+	rc = read_and_unpack_buffer(buffer, "qqwwwwwwwww", &netstats.bytes_sent,
 				&netstats.bytes_recd, &netstats.nobjects,
 				&netstats.nships, &netstats.elapsed_seconds,
+				&latency_in_usec,
 				&netstats.faction_population[0],
 				&netstats.faction_population[1],
 				&netstats.faction_population[2],
@@ -4754,6 +4771,7 @@ static int process_update_netstats(void)
 				(float) netstats.bytes_recd_per_sec[netstats.bps_index]);
 	netstats.bps_index = (netstats.bps_index + 1) & 0x01;
 	netstats.lasttime = ts;
+	snis_scaling_strip_chart_update(demon_ui.latency_strip_chart, 0.001 * (float) latency_in_usec);
 	return 0;
 }
 
@@ -5702,6 +5720,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_UNIVERSE_TIMESTAMP:
 			rc = process_update_universe_timestamp(update_time);
+			break;
+		case OPCODE_LATENCY_CHECK:
+			rc = process_latency_check();
 			break;
 		case OPCODE_DETONATE:
 			rc = process_detonate();
@@ -12215,9 +12236,11 @@ static void demon_netstats_button_pressed(void *x)
 	if (!demon_ui.netstats_active) {
 		ui_unhide_widget(demon_ui.bytes_sent_strip_chart);
 		ui_unhide_widget(demon_ui.bytes_recd_strip_chart);
+		ui_unhide_widget(demon_ui.latency_strip_chart);
 	} else {
 		ui_hide_widget(demon_ui.bytes_sent_strip_chart);
 		ui_hide_widget(demon_ui.bytes_recd_strip_chart);
+		ui_hide_widget(demon_ui.latency_strip_chart);
 	}
 }
 
@@ -12307,6 +12330,10 @@ static void init_demon_ui()
 		snis_scaling_strip_chart_init(txx(120), txy(135), txx(550.0), txy(100.0),
 				"BYTES/S SENT BY SERVER", "", UI_COLOR(science_graph_plot_strong),
 				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
+	demon_ui.latency_strip_chart =
+		snis_scaling_strip_chart_init(txx(120), txy(265), txx(550.0), txy(100.0),
+				"LATENCY (ms)", "", UI_COLOR(science_graph_plot_strong),
+				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON);
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
@@ -12329,8 +12356,10 @@ static void init_demon_ui()
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
 	ui_add_scaling_strip_chart(demon_ui.bytes_recd_strip_chart, DISPLAYMODE_DEMON);
 	ui_add_scaling_strip_chart(demon_ui.bytes_sent_strip_chart, DISPLAYMODE_DEMON);
+	ui_add_scaling_strip_chart(demon_ui.latency_strip_chart, DISPLAYMODE_DEMON);
 	ui_hide_widget(demon_ui.bytes_recd_strip_chart);
 	ui_hide_widget(demon_ui.bytes_sent_strip_chart);
+	ui_hide_widget(demon_ui.latency_strip_chart);
 	home_demon_camera();
 	demon_ui.camera_orientation = demon_ui.desired_camera_orientation;
 	demon_ui.camera_pos = demon_ui.desired_camera_pos;

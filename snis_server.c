@@ -294,6 +294,7 @@ struct game_client {
 	uint8_t refcount; /* how many threads currently using this client structure. */
 	int request_universe_timestamp;
 	char *build_info[2];
+	uint32_t latency_in_usec;
 #define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
 #if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
 	uint64_t write_sum;
@@ -13216,6 +13217,27 @@ static int process_request_universe_timestamp(struct game_client *c)
 	return 0;
 }
 
+static int process_latency_check(struct game_client *c)
+{
+	struct timespec new_ts, orig_ts;
+	unsigned char buffer[20];
+	uint64_t value[2];
+	int rc;
+	double latency_in_usec;
+
+	clock_gettime(CLOCK_MONOTONIC, &new_ts);
+	rc = read_and_unpack_buffer(c, buffer, "qq", &value[0], &value[1]);
+	if (rc)
+		return rc;
+	BUILD_ASSERT(sizeof(value) >= sizeof(orig_ts));
+	memcpy(&orig_ts, value, sizeof(orig_ts));
+
+	latency_in_usec = (1000000.0 * new_ts.tv_sec + 0.001 * new_ts.tv_nsec) -
+				(1000000.0 * orig_ts.tv_sec + 0.001 * orig_ts.tv_nsec);
+	c->latency_in_usec = (uint32_t) latency_in_usec;
+	return 0;
+}
+
 static int process_build_info(struct game_client *c)
 {
 	unsigned char buffer[256], data[256];
@@ -15038,6 +15060,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_LATENCY_CHECK:
+			rc = process_latency_check(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		case OPCODE_UPDATE_BUILD_INFO:
 			rc = process_build_info(c);
 			if (rc)
@@ -15328,6 +15355,20 @@ static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
 	return (dist > threshold);
 }
 
+static void queue_latency_check(struct game_client *c)
+{
+	struct timespec ts;
+	uint64_t value[2];
+
+	value[0] = 0;
+	value[1] = 0;
+	BUILD_ASSERT(sizeof(value) >= sizeof(ts));
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	memcpy(value, &ts, sizeof(ts));
+	pb_queue_to_client(c, packed_buffer_new("bqq",
+		OPCODE_LATENCY_CHECK, value[0], value[1]));
+}
+
 static void queue_netstats(struct game_client *c)
 {
 	struct timeval now;
@@ -15337,10 +15378,11 @@ static void queue_netstats(struct game_client *c)
 		return;
 	gettimeofday(&now, NULL);
 	elapsed_seconds = now.tv_sec - netstats.start.tv_sec;
-	pb_queue_to_client(c, packed_buffer_new("bqqwwwwwwww", OPCODE_UPDATE_NETSTATS,
+	pb_queue_to_client(c, packed_buffer_new("bqqwwwwwwwww", OPCODE_UPDATE_NETSTATS,
 					netstats.bytes_sent, netstats.bytes_recd,
 					netstats.nobjects, netstats.nships,
 					elapsed_seconds,
+					c->latency_in_usec,
 					faction_population[0],
 					faction_population[1],
 					faction_population[2],
@@ -15410,6 +15452,7 @@ static void queue_up_client_updates(struct game_client *c)
 			queue_up_client_object_sdata_update(c, &go[i]);
 		}
 		queue_up_client_damcon_update(c);
+		queue_latency_check(c);
 		/* printf("queued up %d updates for client\n", count); */
 
 		c->timestamp = universe_timestamp;
