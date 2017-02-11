@@ -217,9 +217,9 @@ struct update_ship_packet {
 	uint8_t reverse;
 	uint8_t trident;
 	uint32_t victim_id;
-	int32_t orientation[4]; /* int32_t encoded orientation quaternion */
-	int32_t sciball_orientation[4]; /* int32_t encoded orientation quaternion */
-	int32_t weap_orientation[4];
+	int16_t orientation[4]; /* int16_t encoded orientation quaternion */
+	int16_t sciball_orientation[4]; /* int16_t encoded orientation quaternion */
+	int16_t weap_orientation[4];
 	uint8_t in_secure_area;
 	uint8_t docking_magnets;
 	uint8_t emf_detector;
@@ -333,7 +333,7 @@ struct update_laser_packet {
 	uint32_t timestamp;
 	uint32_t ship_oid; /* ship laser came from */
 	uint32_t x, y, z;
-	uint32_t orientation[4]; /* encoded orientation quaternion */	
+	uint16_t orientation[4]; /* encoded orientation quaternion */
 }; 
 
 struct update_spacemonster_packet {

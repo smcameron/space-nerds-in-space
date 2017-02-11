@@ -499,6 +499,19 @@ float s32toQ(int32_t i)
 	return ((float) i) / (float) (INT32_MAX - 1);
 }
 
+/* Q for quaternion */
+int16_t Qtos16(float q)
+{
+	/* q must be between -1.0 and 1.0 */
+	return (int16_t) (q * (float) (INT16_MAX - 1));
+}
+
+/* Q for quaternion */
+float s16toQ(int16_t i)
+{
+	return ((float) i) / (float) (INT16_MAX - 1);
+}
+
 double s32tod(int32_t u, int32_t scale)
 {
 	return ((double) u * (double) scale) / (double) INT32_MAX;
@@ -527,11 +540,11 @@ double packed_buffer_extract_ds32(struct packed_buffer *pb, int32_t scale)
 int packed_buffer_append_quat(struct packed_buffer *pb, float q[])
 {
 	int i;
-	int32_t v[4];
+	int16_t v[4];
 
 	PACKED_BUFFER_CHECK_ADD(pb, sizeof(v));
 	for (i = 0; i < 4; i++)
-		v[i] = htonl(Qtos32(q[i]));
+		v[i] = htons(Qtos16(q[i]));
 	memcpy(&pb->buffer[pb->buffer_cursor], v, sizeof(v));
 	pb->buffer_cursor += sizeof(v);
 	PACKED_BUFFER_CHECK(pb);
@@ -541,12 +554,12 @@ int packed_buffer_append_quat(struct packed_buffer *pb, float q[])
 void packed_buffer_extract_quat(struct packed_buffer *pb, float q[])
 {
 	int i;
-	int32_t v;
+	int16_t v;
 
 	for (i = 0; i < 4; i++) {
 		/* need the memcpy for alignment reasons (not on x86, but for others) */
 		memcpy(&v, &pb->buffer[pb->buffer_cursor], sizeof(v));
-		q[i] = s32toQ(ntohl(v));
+		q[i] = s16toQ(ntohs(v));
 		pb->buffer_cursor += sizeof(v);
 		PACKED_BUFFER_CHECK(pb);
 	}
@@ -638,7 +651,7 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
  * "d" = double
  * "S" = 32-bit signed integer encoded double (takes 2 params, double + scale )
  * "U" = 32-bit unsigned integer encoded double (takes 2 params, double + scale )
- * "Q" = 4 32-bit signed integer encoded floats representing a quaternion axis + angle
+ * "Q" = 4 16-bit signed integer encoded floats representing a quaternion axis + angle
  * "R" = 32-bit signed integer encoded double radians representing an angle
  *       (-2 * M_PI <= angle <= 2 * M_PI must hold.)
  */
@@ -679,7 +692,7 @@ int calculate_buffer_size(const char *format)
 			size += 8;
 			break;
 		case 'Q':
-			size += 16;
+			size += 8;
 			break;
 		default:
 			fprintf(stderr, "Bad format string '%s' (at %c)\n", format, format[i]);

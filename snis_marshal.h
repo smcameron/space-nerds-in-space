@@ -49,7 +49,7 @@ GLOBAL void packed_buffer_free(struct packed_buffer *pb);
  * "d" = double
  * "S" = 32-bit signed integer encoded double (takes 2 params, double + scale )
  * "U" = 32-bit unsigned integer encoded double (takes 2 params, double + scale )
- * "Q" = 4 32-bit signed integer encoded floats representing a quaternion axis + angle
+ * "Q" = 4 16-bit signed integer encoded floats representing a quaternion axis + angle
  * "R" = 32-bit signed integer encoded double radians representing an angle
  *       (-2 * M_PI <= angle <= 2 * M_PI must hold.)
  */
@@ -94,7 +94,9 @@ GLOBAL uint32_t dtou32(double d, uint32_t scale);
 GLOBAL double u32tod(uint32_t u, uint32_t scale);
 GLOBAL int32_t dtos32(double d, int32_t scale);
 GLOBAL double s32tod(int32_t u, int32_t scale);
-GLOBAL int32_t Qtos32(float q); /* for quaternion elements. (-1.0 <= q <= 1.0) must hold */
+GLOBAL int16_t Qtos16(float q); /* for quaternion elements. (-1.0 <= q <= 1.0) must hold */
+GLOBAL int32_t Qtos32(float q);
+GLOBAL float s16toQ(int16_t i);
 GLOBAL float s32toQ(int32_t i);
 
 GLOBAL int packed_buffer_append_du32(struct packed_buffer *pb, double d, uint32_t scale);
