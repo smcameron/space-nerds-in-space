@@ -37,7 +37,7 @@ void remove_trailing_whitespace(char *s)
 {
 	int len = strlen(s) - 1;
 
-	do {
+	while (len >= 0) {
 		switch (s[len]) {
 		case '\t':
 		case ' ':
@@ -48,7 +48,7 @@ void remove_trailing_whitespace(char *s)
 		default:
 			return;
 		}
-	} while (1);
+	}
 }
 
 void uppercase(char *w)
