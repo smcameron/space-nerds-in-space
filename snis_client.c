@@ -2020,11 +2020,11 @@ static void interpolate_generic_object(double timestamp, struct snis_entity *o, 
 	}
 }
 
-static void interpolate_orientated_object(double timestamp, struct snis_entity *o,
+static void interpolate_oriented_object(double timestamp, struct snis_entity *o,
 	int visible, int from_index, int to_index, float t)
 {
 #ifdef INTERP_DEBUG
-	printf("  interpolate_orientated_generic_object: from=%d to=%d update_delta=%f, t=%f\n", from_index, to_index,
+	printf("  interpolate_oriented_generic_object: from=%d to=%d update_delta=%f, t=%f\n", from_index, to_index,
 		o->updatetime[to_index] - o->updatetime[from_index], t);
 #endif
 
@@ -2081,7 +2081,7 @@ static void interpolate_laser(double timestamp, struct snis_entity *o, int visib
 	int from_index, int to_index, float t)
 {
 	/* do the standard interpolation */
-	interpolate_orientated_object(timestamp, o, visible, from_index, to_index, t);
+	interpolate_oriented_object(timestamp, o, visible, from_index, to_index, t);
 
 	/* set the scaling based on the object age */
 	if (!o->entity)
@@ -2276,7 +2276,7 @@ static void move_objects(void)
 		switch (o->type) {
 		case OBJTYPE_SHIP1:
 		case OBJTYPE_SHIP2:
-			move_object(timestamp, o, &interpolate_orientated_object);
+			move_object(timestamp, o, &interpolate_oriented_object);
 			ship_emit_sparks(o);
 			break;
 		case OBJTYPE_WORMHOLE:
@@ -2286,20 +2286,20 @@ static void move_objects(void)
 		case OBJTYPE_STARBASE:
 		case OBJTYPE_WARPGATE:
 		case OBJTYPE_DOCKING_PORT:
-			move_object(timestamp, o, &interpolate_orientated_object);
+			move_object(timestamp, o, &interpolate_oriented_object);
 			break;
 		case OBJTYPE_BLOCK:
-			move_object(timestamp, o, &interpolate_orientated_object);
+			move_object(timestamp, o, &interpolate_oriented_object);
 			block_emit_sparks(o);
 		case OBJTYPE_TURRET:
-			move_object(timestamp, o, &interpolate_orientated_object);
+			move_object(timestamp, o, &interpolate_oriented_object);
 			turret_emit_sparks(o);
 			break;
 		case OBJTYPE_LASER:
 			move_object(timestamp, o, &interpolate_laser);
 			break;
 		case OBJTYPE_TORPEDO:
-			move_object(timestamp, o, &interpolate_orientated_object);
+			move_object(timestamp, o, &interpolate_oriented_object);
 			break;
 		case OBJTYPE_ASTEROID:
 			move_object(timestamp, o, &interpolate_generic_object);
@@ -2318,12 +2318,12 @@ static void move_objects(void)
 			o->move(o);
 			break;
 		case OBJTYPE_NEBULA:
-			/* move_object(timestamp, o, &interpolate_orientated_object); */
+			/* move_object(timestamp, o, &interpolate_oriented_object); */
 			move_object(timestamp, o, &interpolate_generic_object);
 			o->move(o);
 			break;
 		case OBJTYPE_PLANET:
-			move_object(timestamp, o, &interpolate_orientated_object);
+			move_object(timestamp, o, &interpolate_oriented_object);
 			spin_planet(timestamp, o);
 			break;
 		default:
@@ -6866,7 +6866,7 @@ static void show_mainscreen(GtkWidget *w)
 			struct entity *turret = add_entity(ecx, ship_turret_mesh, 0, 0, 0, SHIP_COLOR);
 
 			if (turret) {
-				/* TODO: this should probably happen in interpolate_orientated_object */
+				/* TODO: this should probably happen in interpolate_oriented_object */
 				update_entity_orientation(turret, &o->tsd.ship.weap_orientation);
 				if (turret_base)
 					update_entity_parent(ecx, turret, turret_base);
