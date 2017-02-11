@@ -1565,7 +1565,6 @@ static int update_turret(uint32_t id, uint32_t timestamp, double x, double y, do
 }
 
 static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, double z,
-	double vx, double vy, double vz,
 	uint8_t carbon, uint8_t nickeliron, uint8_t silicates, uint8_t preciousmetals)
 {
 	int i, k, m, s;
@@ -1587,7 +1586,7 @@ static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, 
 			update_entity_scale(e, s ? s * 10 : 3.0);
 			update_entity_material(e, &asteroid_material[id % NASTEROID_TEXTURES]);
 		}
-		i = add_generic_object(id, timestamp, x, y, z, vx, vy, vz,
+		i = add_generic_object(id, timestamp, x, y, z, 0, 0, 0,
 				&orientation, OBJTYPE_ASTEROID, 1, e);
 		if (i < 0)
 			return i;
@@ -1595,7 +1594,7 @@ static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, 
 		o->tsd.asteroid.rotational_velocity = random_spin[id % NRANDOM_SPINS];
 	} else {
 		o = &go[i];
-		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, NULL, 1);
+		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, NULL, 1);
 	}
 	o->tsd.asteroid.carbon = carbon;
 	o->tsd.asteroid.nickeliron = nickeliron;
@@ -5207,23 +5206,20 @@ static int process_update_asteroid_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, timestamp;
-	double dx, dy, dz, dvx, dvy, dvz;
+	double dx, dy, dz;
 	int rc;
 	uint8_t carbon, nickeliron, silicates, preciousmetals;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSSSbbbb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSbbbb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
-			&dvx, (int32_t) UNIVERSE_DIM,
-			&dvy, (int32_t) UNIVERSE_DIM,
-			&dvz, (int32_t) UNIVERSE_DIM,
 			&carbon, &nickeliron, &silicates, &preciousmetals);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_asteroid(id, timestamp, dx, dy, dz, dvx, dvy, dvz,
+	rc = update_asteroid(id, timestamp, dx, dy, dz,
 				carbon, nickeliron, silicates, preciousmetals);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
