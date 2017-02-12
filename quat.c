@@ -598,12 +598,20 @@ void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, cons
 	/* See: http://lolengine.net/blog/2013/09/18/beautiful-maths-quaternion-from-vectors */
 	union vec3 w;
 
+	if (vec3_len2(u) < 0.001 || vec3_len2(v) < 0.001) {
+		*q = identity_quat;
+		return;
+	}
 	vec3_cross(&w, u, v);
 	q->v.w = vec3_dot(u, v);
 	q->v.x = w.v.x;
 	q->v.y = w.v.y;
 	q->v.z = w.v.z;
 	q->v.w += quat_len(q);
+	if (quat_len(q) < 0.00001) {
+		*q = identity_quat;
+		return;
+	}
 	quat_normalize_self(q);
 }
 
