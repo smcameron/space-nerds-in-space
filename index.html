@@ -18,6 +18,11 @@
 </tr>
 </table>
 </font>
+<style>
+cmd {
+	font-family: courier
+}
+</style>
 <hr>
 <font size=+1>
 <p><b>Space Nerds In Space</b> is an open source (GPLv2) cooperative multiplayer
@@ -503,7 +508,7 @@ covers, but the less resolution it has.  The narrower the beam is, the
 less volume it covers, but the more resolving power it has.
 <li>The <b>comma</b>, and <b>forward slash</b> keys rotate (yaw) the scanned
 volume sphere to the left or right, respectively.
-<li>The <b>period</b> and <b>l</b> keys rotate (pitch) the scanned volume sphere
+<li>The <b>period</b> and <b>L</b> keys rotate (pitch) the scanned volume sphere
 down and up, respectively.
 <li>The <b>K</b> and <b>semicolon</b> keys rotate (roll) the scanned
 volume sphere counter-clockwise and and clockwise, respectively.
@@ -521,13 +526,24 @@ ask it questions or even use it to control almost any aspect of the ship.
 <p>The row of buttons at the top is for the <b>COMMS OFFICER</b> to control
 what is displayed on the <b>MAIN SCREEN</b>.  For this to work best, individual
 player stations should not have the <b>MAIN SCREEN ROLE</b> checked (on the
-<b>NETWORK SETUP SCREEN</b> when the joined the game) but only the computer
+<b>NETWORK SETUP SCREEN</b> when they joined the game) but only the computer
 attached to the projector or big TV should have the <b>MAIN SCREEN</b> role
 checked.  Essentially these buttons make all terminals that have the MAIN
 SCREEN role switch to displaying the selected station instead.  The idea
-behind this is Picard's command "On screen!"  The captain can command any
+behind this comes from Captain Picard's command, "On screen!"  The captain can command any
 station's screen be displayed "On Screen!" and the <b>COMMS OFFICER</b> can
-"make it so".
+"make it so".  Note: it is also possible for any player to press <b>Ctrl-O</b>
+on their station to make their screen be displayed on the main screen.
+If they press <b>Ctrl-O</b> a second time, the main screen reverts to showing
+the main view out the window into space.  So if the captain orders "Weapons,
+On Screen!", either the <b>Weapons Officer</b> can press <b>Ctrl-O</b>,
+or the <b>Comms Officer</b> can press the <b>WEAPONS</b> button on
+the <b>COMMS</b> screen.  Again, if players have the "MAIN SCREEN" role
+checked when they join the game, it can be a bit confusing, because
+then <em>their own computer</em> will be considered to be a "main
+screen".  In general, there normally should only be <em>one computer
+per bridge</em> that joins the game with the MAIN SCREEN role enabled,
+and that computer should be the one connected to a projector.
 
 <p>The "EMF" chart in the upper right shows a measuring of local EMF.  When
 an NPC ship scans the players ship, this chart will show elevated levels of
@@ -765,6 +781,7 @@ This is useful if you want to use the demon screen to populate a universe
 for a scenario and then store that setup in a Lua script.  For this to work
 the snis_server process must have been started with the --enable-enscript
 option.  The lua script is created on the server in share/snis/luascripts.
+Example: <b>enscript myscript.lua</b>
 <li><b>TTS</b> - Text to speech.  Select one or more player ships, then
 use the tts command to cause the computer on those ships to speak something.
 (This appears to be broken at the moment.)
@@ -785,7 +802,8 @@ server in share/snis/luascripts.  Currently there are few scripts:
 <hr>
 <h1><a name="multiplayerinstructions">Multiplayer Setup</a></h1>
 <p align=center><img src=multiplayer-setup.png>
-<p align=center>What a typical multiplayer setup looks like.
+<p align=center>What a typical multiplayer setup looks like, showing
+which processes typically run on which physical machines.
 <p><h2>Step 0. Obtain Necessary Hardware for Multiplayer Setup</h2>
 <p>You will need the following hardware:
 <ul>
@@ -800,18 +818,19 @@ Note: a <b>wired</b> router or switch is <b>strongly preferred</b> both for
 performance reasons and for ease of configuration.
 <li>(Optional) decent microphone or headset if you want to use the speech
 recognition capabilities (need to reject background noise).
-as you have.
 </ul>
 <h2>Step 0.5  Understanding the Software Components</h2>
 <p>It helps to have a basic understanding of how the system works
 in order to set it up and troubleshoot in case something doesn't work
-like you expect.  The basic components of the system are:
+like you expect.  The system is composed of the following linux processes:
 <ul>
-<li><b>ssgl_lobby</b> - This is the lobby server and is how all the other
+<li><b>ssgl_lobby</b> - This process is the lobby server and is how all the other
 parts of the system find one another.  There should be <em>exactly one</em> ssgl_server
 process running in your system, on <em>one computer only</em>.  You will need to
 know the IP address of the system that the lobby process (ssgl_server) runs
-on.  This process has no graphics and no UI at all.
+on.  (Use the linux command <cmd>ip addr show</cmd>
+or <cmd>ifconfig -a</cmd>). The ssgl_lobby process has no
+graphics and no UI at all.
 <li><b>snis_multiverse</b> - This keeps track of player ships and stores
 ship names, ship state, and ship password hashes.  This is what allows ships
 to travel between solarsystems (between snis_server instances).  There should
