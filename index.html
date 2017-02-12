@@ -39,6 +39,17 @@ players, and scenarios may be constructed with a Lua based scripting API.
 <li><a href="#screenshots">ScreenShots</a>
 <li><a href="#buildinstructions">Build Instructions</a> -- How to build the game from source code
 <li><a href="#singlemachineinstructions">How to run Space Nerds In Space on a single machine</a>
+<li><a href="#controls">Controlling the Ship</a>
+<ul>
+<li><a href="#navcontrols">Navigation</a>
+<li><a href="#weapcontrols">Weapons</a>
+<li><a href="#engcontrols">Engineering</a>
+<li><a href="#damcontrols">Damage Control</a>
+<li><a href="#scicontrols">Science</a>
+<li><a href="#comcontrols">Communications</a>
+<li><a href="#maincontrols">Main Screen</a>
+<li><a href="#demcontrols">Game Master Station (Demon Screen)</a>
+</ul>
 <li><a href="#multiplayerinstructions">How to run Space Nerds In Space in a multiplayer LAN setup</a>
 <li><a href="#troubleshooting">Troubleshooting</a>
 <li><a href="#misctopics">Miscellaneous development topics</a>
@@ -233,7 +244,7 @@ an arbitrary direction.  If you've gotten this far, congratulations, you're doin
 better than most.
 <p align=center><img src="out-the-window.jpg", width=85%>
 <h2>Step 5. Play around</h2>
-<h3>Keyboard Controls</h3>
+<h3><a name="controls">Keyboard Controls</b></h3>
 <p>The function keys are used to switch between screens, except for F1, which is the 'help' key.
 <ul>
 <li>F1 is the help screen.  What it displays depends on which screen you're on.
@@ -251,34 +262,289 @@ Note, this only quits your client process.
 You can re-join the server (via "./quickjoin" script)
 It still leaves several processes running, the snis_server, the lobby process
 and snis_multiverse.  To kill all of them, run the "./killem" script.
-<h3>NAVIGATION SCREEN</h3>
+<h3><a name="navcontrols">NAVIGATION SCREEN</a></h3>
 <p>From the navigation screen, you can steer the ship and maneuver around.
 <p align=center><img src="navigation.png", width=85%>
-<h3>WEAPONS SCREEN</h3>
+<h4>Navigation Controls</h4>
+<p>You can use the following keys to steer the ship:
+<pre>
+           Q   W   E                ^
+                                    |
+           A   S   D          <-        ->
+                                    |
+                                    V
+</pre>
+<ul>
+<li><b>A</b> and <b>D</b>, and <b>Left Arrow</b> and <b>Right Arrow</b> will yaw the ship left and right, respectively.
+<li><b>W</b> and <b>S</b>, and <b>Up Arrow</b> and <b>Down Arrow</b> will pitch the ship down (forward) and up (back),
+respectively.  (If you want to invert these, press Ctrl-I).
+<li>The <b>1</b> key controls the position of the camera in the 3D view,
+moving it closer or farther from the ship.
+Press it multiple times to cycle through several possible camera positions.
+<li><b>+</B> and <b>-</b> (plus and minus) and the <b>mouse scroll wheel</b>
+control the camera zoom level.
+<li>The vertical slider control on the upper right hand side of the screen is the
+ship's throttle.  Use this to control how fast the ship moves.
+<li>The <b>R</b> button
+above the throttle slider toggles the ship into or out of reverse thrusting.
+<li>The horizontal slider control below the warp drive controls how much power
+the warp drive uses.  To use the warp drive, set the warp drive control slider
+to the desired level, wait until the warp drive gauge reaches the desired
+value, and press the <b>ENGAGE WARP</b> button.  Set the warp drive power to
+zero when not in use to conserve power, although doing so will make warping your
+way out of trouble take longer, so bear that in mind.
+<li>The <b>GREEN ARROW</b> on the screen points in the direction of whatever
+entity the <b>SCIENCE OFFICER</b> has selected for scanning.  A good way to
+navigate is for the <b>SCIENCE OFFICER</b> to scan whatever you wish to navigate
+towards (e.g. a distant planet) and then the <b>NAVIGATION OFFICER</b> can
+follow the <b>GREEN ARROW</b>
+<li>The <b>CYAN ARROW</b> indicates which direction the weapons are currently
+pointed.  Note that the weapons are mounted on top of the ship, and cannot fire
+on anything beneath the plane parallel to the floor of the ship.  Keep this in
+mind while battling other ships.  You need to make sure your guns are able to
+face the enemy, and you need to be aware that driving the ship in an erratic
+manner makes it very difficult for the <b>WEAPONS OFFICER</b> to hit his
+targets.  The <b>WEAPONS OFFICER</b> will remind you if you forget.
+<li>To dock at a star base:
+<ul>
+<li>Have the <b>COMMS OFFICER</b> hail the station and request permission to
+dock.  To receive permission to dock, you must be reasonably close to the
+station, and your shields must be lowered.
+</li>Press the <b>DOCKING MAGNETS</b> button to engage the docking system.
+(to disengage the docking system press it again.)
+<li>Maneuver the ship towards one of the docking ports on the station.  When
+close enough, your ship will latch on.
+<li>To disconnect from the station, press the <b>DOCKING MAGNETS</b> button
+again.
+</ul>
+<li>Use the <b>STANDARD ORBIT</b> button when near a planet to enter
+"standard orbit".
+<li>The <b>COMPUTER</b> button allows you to ask the computer to do something.
+You can control most aspects of the ship in this way.  For example, you can
+type in "navigate to the nearest starbase", and it should point your ship
+in the direction of the nearest starbase.
+</ul>
+<h3><a name="weapcontrols">WEAPONS SCREEN</a></h3>
 <p>From the weapons screen, you can fire the laser turret and launch torpedoes.
 <p align=center><img src="weapons.jpg", width=85%>
-<h3>ENGINEERING SCREEN</h3>
+<h4>Weapons Screen Controls</h4>
+<ul>
+<li>The mouse controls where the guns are pointed.  The guns can yaw left
+and right and pitch up and down, but cannot roll.
+<li>When the mouse is at the
+bottom center of the screen, the guns will be pointed straight ahead.
+<li>Moving the mouse from the bottom to the top of the screen moves the guns
+through the full range of pitch.
+<li>Moving the mouse to the left side of the screen to the right side
+of the screen moves the guns through the full range of yaw.
+(Note:  Using the arrow keys, you can also yaw and pitch the guns.
+With the arrow keys, the yaw range is not limited (guns can rotate
+360 degrees.  This discrepancy could be considered a bug.)
+<li>The <b>Left mouse button</b> and the <b>SPACE BAR</b>
+fire the phasers.
+<li>The <b>Right mouse button</b> and the <b>Z</b> key fire
+torpedoes.
+<li>The <b>mouse scroll wheel</b> or the <b>+</b> and <b>-</b> (plus and minus)
+keys control the <b>WAVE LENGTH</b> of the phasers.  The <b>SCIENCE OFFICER</b>
+can use the ships scanners to determine what is what the most
+effective value for the wave length is for a given enemy.
+<li>The <b>CHARGE</b> graph shows how much power will be released in
+the next phaser shot.  It takes some time for the phasers to recharge.
+Firing rapidly means each shot contains less energy and does less damage
+(but if you miss, you will have wasted less energy.)  If the phasers are
+damaged, or <b>ENGINEERING</b> has diverted power from the phasers, it
+may take longer to recharge.
+</ul>
+<h3><a name="engcontrols">ENGINEERING SCREEN</a></h3>
 <p>From the engineering screen, you can control how power and coolant is distributed
 to the various systems of the ship.
 <p align=center><img src="engineering.png", width=85%>
-<h3>DAMAGE CONTROL SCREEN</h3>
+<h4>Engineering Screen Controls</h4>
+<ul>
+<li>Along the left side of the screen are the power and coolant
+distribution controls for each of the systems on the ship,
+<ul>
+<li>SHIELDS
+<li>PHASERS
+<li>COMMS
+<li>SENSORS
+<li>IMPULSE DRIVE
+<li>WARP DRIVE
+<li>MANEUVERING
+<li>TRACTOR BEAM
+</ul>
+<li>The slider controls labeled <b>PWR</b> control how much power is available
+for a given system.  This is not quite the same as how much power the
+system actually uses.  Most systems will automatically use as much
+power as you give them.  Some systems (e.g. <b>SHIELDS</b>
+and <b>WARP DRIVE</b>
+have additional controls controlling how much power they actually
+use (e.g. the controls on the Navigation screen control how much
+power the warp drive will use.)  You can think of these power controls
+on the left side of the engineering screen as a power deprivation
+system.  You're really placing limits on how much power the systems
+have access to, not telling them how much power to use.
+<li>Note that as you deprive power from some systems, more total power
+is available to distribute among the other systems, so you may have to
+adjust other systems power and coolant levels to keep things from
+overheating.
+<li>The slider controls labelled <b>COOLANT</b> control how much coolant
+each system gets.  If a system is using too much power relative to how
+much coolant it gets, it will overheat and start damaging itself.
+<li>The charts on the right side of the screen show the <b>STATUS</b>
+and <b>TEMPERATURE</b> of each system.  If a system is too hot, the
+<b>TEMPERATURE</b> graph will flash red, and this means the system
+is damaging itself.
+<li>The <b>STATUS</b> bar shows the general health of each system.
+Hovering over the <b>STATUS</b> bar with the mouse will show a
+popup window that gives the status of each of the components of that
+system broken out.  The components may be repaired on the <b>DAMAGE
+CONTROL</b> screen.
+
+<li>There are two buttons on the screen labeled <b>1</b> and <b>2</b>.
+These are <b>presets</b> for setting many power and coolant controls
+at once.  The <b>1</b> preset button sets the controls with most systems
+powered up, but with the warp drive powered down and the tractor
+beam powered down.  This setting is useful for just driving around.
+The <b>2</b> preset button turns all systems off.
+<li>The <b>DAMAGE CONTROL</b> button switches to the DAMAGE CONTROL
+screen.
+<li>The <b>SHEILDS</b> slider control in the upper right part of
+the screen controls the amount of energy the shields use.  The higher
+the value, the more effective the shields will be.  Set to maximum,
+the shields will use all the power available to them (which might be
+zero, if the <b>SHIELD PWR</b> control is depriving the shields of
+power.)
+</ul>
+<h3><a name="damcontrols">DAMAGE CONTROL SCREEN<a></h3>
 <p>From the damage control screen, you can repair the various systems of the ship.
 <p align=center><img src="damage-control.png", width=85%>
-<h3>SCIENCE SCREEN</h3>
+<h4>Damage Control Controls</h4>
+<ul>
+<li>Use the <b>Arrow Keys</b> or <b>W, A, S, D</b> keys to control
+the movement of the robot.
+<li>Use the <b>Space Bar</b> to control the robot's gripper.
+<li>The screen shows each of the systems on the ship, with
+each system having three components.  The components may become
+damaged, making the systems less effective.
+<li>To repair a component, maneuver the robot near the component
+and use the gripper to pick up the component.  If the component
+is not too badly damaged, the robot will repair it right there.
+After the component is repaired, operate the gripper to put
+the component back.
+<li>Note, you must put components back in the correct slots for them
+to work correctly, otherwise the systems will not operate well.
+<li>If a component is too badly damaged, you will need to take
+the component to the repair station located at the bottom.
+Put the component into one of the slots on the repair station and
+wait a moment for it to repair.  You can pick it up before it is
+fully repaired and repair it to completion on the way back to
+replace the component in its slot in the appropriate system.
+<li>If you do not have enough players, or if you simply do not
+want to manually repair the ship, you can press the <b>AUTO</b>
+button, and the robot will autonomously repair the ship by
+itself.  It probably won't do it as quickly as you could do
+it manually though.
+</ul>
+<h3><a name="scicontrols">SCIENCE SCREEN</a></h3>
 <p>From the science screen, you can scan ships, planets, asteroids, launch the mining
 robot and help navigate to distant targets.
 <p align=center><img src="science1.png", width=85%>
 <p align=center>Short Range Scanner
+<h4>Science Short Range Scanner Controls</h4>
+<ul>
+<li>The <b>Mouse Scroll Wheel</b> or the <b>RANGE</b> slider
+control at the top of the screen controls the range (distance)
+of the short range scanner.
+<li>The <b>Left and Right Arrow</b> keys or the <b>A</b> and <b>D</b>
+keys control the direction the scanning beam is pointed.  The boundaries
+of the scanning beam is indicated by two flickering lines on the display.
+<li>The <b>Up and Down Arrow</b> keys or the <b>W</b> and <b>S</b> keys
+control the scanning beam width.  The wider the beam is the more volume it
+covers, but the less resolution it has.  The narrower the beam is, the
+less volume it covers, but the more resolving power it has.
+<li>Items in the scanner are displayed at a distance from the center
+which corresponds to the 3D distance.
+<li>When the scanner has resolved an entity, you can click on it with
+the mouse, and it, and nearby resolved entities will "pop up" out of
+the display to give you an idea of how they are situated in 3D space.
+</ul>
 <p align=center><img src="science2.png", width=85%>
 <p align=center>Scanning Target Details
+<h4>Science Details Screen</h4>
+<ul>
+<li>Once an entity is resolved by the scanner and selected, you
+can press the <b>DETAILS</b> button to see more details about the
+selected item.  What you see depends on the type of the item.
+<li>The <b>Warp Factor</b> value gives you an idea of what value
+to use if you wish to travel to the entity via the warp drive
+(that is, you may want to relay this information to
+the <b>NAVIGATION OFFICER</b>.)
+<li>If the entity is a ship, the <b>SHIELD PROFILE</b> may
+indicate that some phaser frequency might be especially effective
+(so you may want to relay this information to the<b>WEAPONS OFFICER</b>.)
+</ul>
 <p align=center><img src="science3.png", width=85%>
 <p align=center>Long Range Scanner
-<h3>COMMUNICATIONS SCREEN</h3>
+<h4>Science Long Range Scanner Controls</h4>
+<p>The long range scanner is useful for locating distant planets and starbases.
+It shows a 3D view of the space around your ship.
+<ul>
+<li>The <b>Mouse Scroll Wheel</b> or the <b>RANGE</b> slider
+control at the top of the screen controls the range (distance)
+of the long range scanner.
+<li>The <b>Left and Right Arrow</b> keys or the <b>A</b> and <b>D</b>
+keys control the direction the scanning beam is pointed.  The boundaries
+of the scanning beam is indicated by two orange dotted lines on the display
+forming a kind of "orange slice".
+<li>The <b>Up and Down Arrow</b> keys or the <b>W</b> and <b>S</b> keys
+control the scanning beam width.  The wider the beam is the more volume it
+covers, but the less resolution it has.  The narrower the beam is, the
+less volume it covers, but the more resolving power it has.
+<li>The <b>comma</b>, and <b>forward slash</b> keys rotate (yaw) the scanned
+volume sphere to the left or right, respectively.
+<li>The <b>period</b> and <b>l</b> keys rotate (pitch) the scanned volume sphere
+down and up, respectively.
+<li>The <b>K</b> and <b>semicolon</b> keys rotate (roll) the scanned
+volume sphere counter-clockwise and and clockwise, respectively.
+<li>The <b>ALIGN TO SHIP</b> button aligns the view with the ship so that
+the view is as if from behind the ship with the ship facing forwards and
+up is up, left is left, right is right, etc.
+</ul>
+<h3><a name="comcontrols">COMMUNICATIONS SCREEN</a></h3>
 <p>From the communications screen, you can hail starbases and other player ships and
 control what is displayed on the "main screen" as well as activate the RED ALERT alarm.
 You also control the ship's inventory and can interact with the ship's computer to
 ask it questions or even use it to control almost any aspect of the ship.
 <p align=center><img src="communications.png", width=85%>
+
+<p>The row of buttons at the top is for the <b>COMMS OFFICER</b> to control
+what is displayed on the <b>MAIN SCREEN</b>.  For this to work best, individual
+player stations should not have the <b>MAIN SCREEN ROLE</b> checked (on the
+<b>NETWORK SETUP SCREEN</b> when the joined the game) but only the computer
+attached to the projector or big TV should have the <b>MAIN SCREEN</b> role
+checked.  Essentially these buttons make all terminals that have the MAIN
+SCREEN role switch to displaying the selected station instead.  The idea
+behind this is Picard's command "On screen!"  The captain can command any
+station's screen be displayed "On Screen!" and the <b>COMMS OFFICER</b> can
+"make it so".
+
+<p>The "EMF" chart in the upper right shows a measuring of local EMF.  When
+an NPC ship scans the players ship, this chart will show elevated levels of
+EMF.  This can give a heads up that some ship is scanning you, and an attack
+might be coming soon.
+
+<p>The <b>MAIN SCREEN</b> button in the lower right portion of the screen
+makes the last 4 lines received appear on the main screen so everyone
+can see them.
+
+<p>The <b>RED ALERT</b> button toggles the red alert system on and off.
+
+<p>The shields display is there so the COMMS officer can know if a request
+to dock will be denied due to shields still being up.
+
+<p>The zoom slider control at the bottom of the screen controls the zoom
+level of the <b>MAIN SCREEN</b>
 
 <p>So what can Comms do with this terminal interface? First of all, anything
 which is typed in that is not a command is broadcast on the current channel,
@@ -336,6 +602,8 @@ functionality accessed via comms:
     RETARGET MINING BOT
     SIGN OFF
 </pre>
+<p>If you aren't sure of the name of the mining bot, you can ask the
+<b>SCIENCE OFFICER</b> to scan it.
 <p>The /computer command is the most powerful action the Comms officer can use,
 with this, the entire ship may be controlled just by asking the computer to do
 things in English. For example, stuff like this should all work:
@@ -351,15 +619,169 @@ things in English. For example, stuff like this should all work:
     /computer describe <name of planet>
     /computer set warp drive coolant to 50 percent
 </pre>
-<h3>MAIN SCREEN</h3>
-From the main screen, you can steer the ship.  The primary purpose of the main
-screen view it to be projected on a large screen for all players to view at once.
+<h3><a name="maincontrols">MAIN SCREEN</a></h3>
 <p align=center><img src="out-the-window.jpg", width=85%>
-<h3>DEMON SCREEN</h3>
+<p>From the main screen, you can steer the ship with the <b>ARROW KEYS</b>
+and with the <b>A, W, S, D</b> keys and additionally <b>Q</b> and <b>E</b>
+allow you to roll the ship.  The primary purpose of the main
+screen view it to be projected on a large screen for all players to view at once.
+<p>The <b>1</b> key cycles through first person and a few third person views
+of the ship.
+<p>The <b>+</b> and <b>-</b> (plus and minus) keys and the <b>Mouse Scroll Wheel</b>
+zoom and unzoom the camera.  Additionally the zoom can be controlled from the
+<b>COMMS</b> screen.
+<p><b>SHIFT-W</b> toggles the main screen view between front facing and weapons
+facing.  This is fun to let the whole crew see what the <b>WEAPONS OFFICER</b>
+is busy destroying.
+<p>Note, in a proper multi-player setup, the <b>MAIN SCREEN ROLE</b> (on the
+NETWORK SETUP SCREEN, see below) should not be active (checked) for most
+players, but only for the computer which is connected to the projector or
+big TV.
+<p>The <b>R</b> key can be used to cycle through different renderer modes
+(this is really just for debugging though.)
+<h3><a name="demcontrols">DEMON SCREEN</a></h3>
 From the demon screen, the game master can inject all kinds of objects into
 the game, direct NPC ships, run Lua scripts and construct scenarios to entertain
-the other players.
+the other players.  Note: The "demon" screen began life as a debugging screen,
+and it contains kind of a mish-mash of features that don't necessarily hang
+together in a very coherent way.  Consider yourself warned.  Some quirkiness
+lies ahead.
 <p align=center><img src="demon-screen.png", width=85%>
+<p align=center>Game Master Screen (aka "Demon" screen).
+<ul>
+<li>General Controls:
+<ul>
+<li><b>On the 2D screen</b>
+<ul>
+<li><b>Selecting objects</b> is done with the <b>RIGHT MOUSE BUTTON</b>.
+To deselect an object, click it again with the <b>RIGHT MOUSE BUTTON</b>.
+or use the <b>SELECT NONE</b> button on the left side of the screen.
+You can also <b>drag with the right mouse button</b> to select a rectangular
+area.  Objects in this rectangular area that were alread selected will be
+deselected, and those which were not previously selected will be selected.
+<li><b>Moving objects</b> is done by <b>dragging with the middle mouse button</b>.
+<li><b>Zooming</b> is done with the <b>Mouse Scroll Wheel</b>.
+Where you zoom in is determined by the <b>mouse pointer location</b>.
+<li>When one of the <b>object buttons</b> on the left side of the screen
+is active (e.g. SHIP, PLANET, ASTEROID, STARBASE, NEBULA, MONSTER), then
+the <b>RIGHT MOUSE BUTTON</b> places an object of that type instead of
+selecting objects.
+</ul>
+<li><b>On the 3D screen</b>
+<ul>
+<li><b>Navigate</b> around by <b>right clicking</b> on objects.  You
+will fly in near those objects.
+<li><b>Turn left, right, or pitch up and down</b> by right clicking on empty space.
+Clicking closer to the bottom edge of the screen pitches down, the top edge pitches
+up, the left edge yaws left, the right edge yaws right.  The closer to the center of
+the screen the slower the yaw or pitch, the closer to the edge of the screen the
+faster the the yaw or pitch.
+<li><b>Select</b> objects with the middle mouse button -- they will blink pink when selected.
+<li><b>De-select</b> objects by clicking the middle mouse button on them again.  The will stop blinking pink.
+<li><b>Move objects</b> by first selecting them, then flying to where you want them to be,
+then click the <b>MOVE</b> button on the left side of the screen.
+<li><b>Use the HOME button</b> on the left side of the screen if you get lost.
+</ul>
+</ul>
+<li>The <b>HOME</b> button returns the camera (2D or 3D) to a fixed
+location (e.g. if you get lost zooming around).
+<li>The <b>SHIP</b> button
+<ul>
+<li>On the 2D screen this is a toggle.  When it is active you can
+then click with the right mouse button to place ships into the
+universe.  The type of ship is random.  With the 2D view, you only
+control 2 axes of the placement, the 3rd axis is selected randomly
+but limited to a relatively thin slice.  Though the slice is relatively
+thin, in absolute terms it is quite thick, so it is not really possible
+to place things precisely.
+<li>On the 3D view, when you click the ship button, a ship is emitted
+immediately right where you are.  The type of ship is random.
+</ul>
+<li>The <b>STARBASE</b>, <b>PLANET</b>, <b>ASTEROID</b>, <b>NEBULA</b>, and <b>MONSTER</b>
+buttons behave just like the <b>SHIP</b> button except they emit
+objects of the appropriate type rather than ships.  NOTE: <b>MONSTER</b>
+currently doesn't work.
+<li>The <b>CAPTAIN</b> allows the game master to "captain" an NPC ship -- that is,
+drive it around and shoot with it.  This is best done in the 3D view.
+To "captain" an NPC ship, select it in the 3D view with the middle mouse
+button -- it should turn <b>MAGENTA</b> and start blinking.  Then press the
+<b>CAPTAIN</b> button.  You can now steer the ship with the <b>arrow keys</b> and fire
+the torpedoes with the <b>TORPEDO</b> button.  To stop captaining an NPC ship,
+deselect it with the middle mouse button.
+<li>The <b>DELETE</b> deletes the selected objects.
+<li>The <b>SELECT NONE</b> button de-selects any objects which are currently selected.
+<li>The <b>TORPEDO</b> only works when <b>CAPTAINING</b> an NPC ship.  It fires a torpedo
+from the NPC ship.
+<li>The <b>PHASER</b> button currently does nothing.
+<li>The <b>2D/3D</b> button toggles between 2D and 3D view.
+<li>The <b>MOVE</b> button (3D view only) moves the selected objects to your
+current location.
+<li>The <b>EXAG SCALE</b> checkbox makes objects appear bigger than they really
+are so that you can see them from greater distances.
+<li>The <b>NET STATS</b> checkbox shows some graphs about network statistics.
+Currently there are graphs showing:
+<ul>
+<li>Total bytes/sec transmitted from the snis_server process to all clients
+<li>Total bytes/sec transmitted from all clients to the snis_server process
+<li>Round trip latency in milliseconds between this client and the snis_server
+process.
+</ul
+<li>The <b>EXECUTE</b> button executes whatever command is typed into the text
+box immediately above it.  Commands are as follows:
+<ul>
+<li><b>help</b> - displays a short summary of commands.
+<li><b>mark</b> - (2D view only) On the 2D view, if you right click,
+a flashing blue plus will appear in the display.  You can mark the location
+with a name, by typing, for example: "<b>mark orion</b>".  Then later you can use
+the word "orion" to refer to this location.  (This command isn't terribly
+useful.)
+<li><b>name</b> - give the currently selected group of objects a name.
+For example, you might select a group of ships and type "<b>name myfleet</b>"
+to give them collectively the name "myfleet".
+<li><b>attack</b> - commands one group to attack another.  The groups
+must be previously named with the "name" command.  For example, you might
+type "<b>attack myfleet theirfleet</b>" to command your fleet ("myfleet") to attack
+their fleet ("theirfleet").
+<li><b>goto</b> - command a <b>name</b>d group to travel to a <b>mark</b>ed destination.
+For example, you might type "<b>goto myfleet orion</b>".
+<li><b>patrol</b> - not implemented
+<li><b>halt</b> - not implemented
+<li><b>identify</b> - identify a previously named group by deselecting all objects
+and then selecting the named object.
+<li><b>say</b> - cause the currently <b>captain</b>ed NPC ship to transmit
+something on channel 0.
+For example "<b>say make like a tree and get outta here</b>".
+<li><b>clear all</b> - Deletes all objects except for player ships.
+<li><b>aidebug</b> - Turns on some debug information about NPC ship AI state.
+<li><b>safemode</b> - toggles "safemode".  In "safemode", if a player ship
+runs out of fuel, it will be magically refueled, and NPC ships won't attack
+the player (if they are already attacking when safemode is entered, they won't
+immediately stop though.)  There is no indicator whether safe mode is active.
+The purpose of this is to make testing easier (i.e. testing things out
+without danger of getting killed.)
+<li><b>enscript</b> - saves the current state of objects to a Lua script
+so that they may be restored.  Not everything is saved, but most things are.
+This is useful if you want to use the demon screen to populate a universe
+for a scenario and then store that setup in a Lua script.  For this to work
+the snis_server process must have been started with the --enable-enscript
+option.  The lua script is created on the server in share/snis/luascripts.
+<li><b>TTS</b> - Text to speech.  Select one or more player ships, then
+use the tts command to cause the computer on those ships to speak something.
+(This appears to be broken at the moment.)
+<li><b>LUA</b> - run a lua script.  The lua scripts must reside on the
+server in share/snis/luascripts.  Currently there are few scripts:
+<ul>
+<li>MAINMENU.LUA
+<li>DEMOLISHER.LUA
+<li>SAVING-PLANET-ERPH.LUA
+<li>SILLY-SPACE-BATTLE.LUA
+<li>SPACEPOX.LUA
+<li>TRAINING-MISSION-1.LUA
+<li>TRAINING-MISSION-2.LUA
+</ul>
+<p>Example: <b>lua saving-planet-erph.lua</b>
+</ul>
+</ul>
 <hr>
 <h1><a name="multiplayerinstructions">Multiplayer Setup</a></h1>
 <p align=center><img src=multiplayer-setup.png>
