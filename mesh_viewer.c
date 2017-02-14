@@ -54,6 +54,7 @@ static char *cubemapname = NULL;
 static char *modelfile = NULL;
 static char *thrustfile = NULL;
 static char *program;
+static char *skyboxfile = NULL;
 union quat autorotation; 
 static int icosahedron_subdivision = 4;
 #define LASER_VELOCITY 200.0
@@ -616,8 +617,13 @@ static void setup_skybox(char *skybox_prefix)
 	int i;
 	char filename[6][PATH_MAX + 1];
 
-	for (i = 0; i < 6; i++)
-		sprintf(filename[i], "%s/%s%d.png", asset_dir, skybox_prefix, i);
+	if (!skyboxfile) {
+		for (i = 0; i < 6; i++)
+			sprintf(filename[i], "%s/%s%d.png", asset_dir, skybox_prefix, i);
+	} else {
+		for (i = 0; i < 6; i++)
+			sprintf(filename[i], "%s%d.png", skyboxfile, i);
+	}
 
 	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4],
 					filename[5], filename[0], filename[2]);
@@ -655,6 +661,7 @@ static struct option long_options[] = {
 	{ "normalmap", required_argument, NULL, 'n' },
 	{ "burstrod", no_argument, NULL, 'b' },
 	{ "thrust", required_argument, NULL, 't' },
+	{ "skybox", required_argument, NULL, 's' },
 };
 
 static void process_options(int argc, char *argv[])
@@ -664,7 +671,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "bc:hi:m:n:p:t:", long_options, &option_index);
+		c = getopt_long(argc, argv, "bc:hi:m:n:p:s:t:", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -701,6 +708,9 @@ static void process_options(int argc, char *argv[])
 		case 't':
 			thrust_mode = 1;
 			thrustfile = optarg;
+			break;
+		case 's':
+			skyboxfile = optarg;
 			break;
 		default:
 			fprintf(stderr, "%s: Unknown option.\n", program);

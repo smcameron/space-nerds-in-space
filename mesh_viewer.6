@@ -2,7 +2,7 @@
 .SH NAME
 mesh_viewer \- a utility for viewing models for "Space Nerds In Space."
 .SH SYNOPSIS
-.B mesh_viewer [ -p ] filename [ -n normalmap-prefix ] [ -c cubemap-texture-prefix ]
+.B mesh_viewer [ -p ] filename [ -n normalmap-prefix ] [ -c cubemap-texture-prefix ] [ -s skybox-prefix ]
 .br
 .B mesh_viewer [ -b ]
 .br
@@ -38,6 +38,11 @@ Only makes sense in combination with -p option.
 \fB\-c\fR cubemap-texture-prefix
 Use 6 cubemapped texture images with numbered 0 - 5.
 .TP
+\fB\-s, --skybox\fR skybox-prefix.  Specify alternate skybox images.
+For example: ./mesh_viewer -m model.stl -s my/alt/skybox will uses
+images: my/alt/skybox0.png, my/alt/skybox1.png, my/alt/skybox2.png,
+my/alt/skybox3.png, my/alt/skybox4.png, my/alt/skybox5.png.
+.TP
 \fB\-t\fR thrust-image-file
 Invoke "thrust" mode.  This means the model is constructed and a particle system
 is created to show a rocket thrust animation.  The image used for the animation
@@ -70,6 +75,7 @@ Here are some sample invocations of mesh viewer:
   ./mesh_viewer -m share/snis/models/wombat/snis3006.obj
   ./mesh_viewer -m share/snis/models/starbase5.stl
   ./mesh_viewer -m share/snis/models/asteroid3.stl -c share/snis/textures/asteroid1-
+  ./mesh_viewer -p myplanet -n myplanet-normalmap -s myalternate-skybox
 .SH SEE ALSO
 .PP
 snis_client(6), ssgl_server(6), snis_server(6)
