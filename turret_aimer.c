@@ -41,6 +41,7 @@ union quat *turret_aim(double target_x, double target_y, double target_z,
 			union quat *current_turret_orientation,
 			const struct turret_params *turret,
 			union quat *new_turret_orientation,
+			union quat *new_turret_base_orientation,
 			int *aim_is_good)
 {
 	union vec3 yaw_axis = { { 0.0, 1.0, 0.0 } };
@@ -100,15 +101,15 @@ union quat *turret_aim(double target_x, double target_y, double target_z,
 
 	quat_rot_vec_self(&yaw_axis, turret_rest_orientation);
 	quat_init_axis(&yaw, yaw_axis.v.x, yaw_axis.v.y, yaw_axis.v.z, azimuth);
-	quat_mul(new_turret_orientation, &yaw, turret_rest_orientation);
+	quat_mul(new_turret_base_orientation, &yaw, turret_rest_orientation);
 
 	pitch_axis.v.x = 0.0;
 	pitch_axis.v.y = 0.0;
 	pitch_axis.v.z = 1.0;
 
-	quat_rot_vec_self(&pitch_axis, new_turret_orientation);
+	quat_rot_vec_self(&pitch_axis, new_turret_base_orientation);
 	quat_init_axis(&pitch, pitch_axis.v.x, pitch_axis.v.y, pitch_axis.v.z, elevation);
-	quat_mul(new_turret_orientation, &pitch, new_turret_orientation);
+	quat_mul(new_turret_orientation, &pitch, new_turret_base_orientation);
 
 	if (aim_is_good)
 		*aim_is_good = (fabsf(delta_elevation) < 0.5 * M_PI / 180.0 &&

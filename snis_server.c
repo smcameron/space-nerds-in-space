@@ -6585,7 +6585,7 @@ static void turret_move(struct snis_entity *o)
 			o->tsd.turret.current_target_id = (uint32_t) -1;
 		} else {
 			double dist, lasertime;
-			union quat rest_orientation, new_turret_orientation;
+			union quat rest_orientation, new_turret_orientation, new_turret_base_orientation;
 			union vec3 aim_point;
 
 			target = &go[t];
@@ -6600,7 +6600,7 @@ static void turret_move(struct snis_entity *o)
 			quat_mul(&rest_orientation, &parent->orientation, &o->tsd.turret.relative_orientation);
 			turret_aim(aim_point.v.x, aim_point.v.y, aim_point.v.z, o->x, o->y, o->z,
 					&rest_orientation, &o->orientation, NULL,
-					&new_turret_orientation, &aim_is_good);
+					&new_turret_orientation, &new_turret_base_orientation, &aim_is_good);
 			o->orientation = new_turret_orientation;
 			if (aim_is_good && o->tsd.turret.fire_countdown == 0)
 				turret_fire(o);
