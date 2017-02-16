@@ -8269,13 +8269,13 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 		quat_init_axis(&rest_orientation, 1, 0, 0, -0.5 * M_PI);
 	quat_rot_vec(&up, &absolute_up, &rest_orientation);
 
-	platformsx = turret_offset * 0.15 + turret_offset * 0.75 * fabs(xoff[face]);
-	platformsy = turret_offset * 0.15 + turret_offset * 0.75 * fabs(yoff[face]);
-	platformsz = turret_offset * 0.15 + turret_offset * 0.75 * fabs(zoff[face]);
+	platformsx = turret_offset * 0.20 + turret_offset * 0.80 * fabs(xoff[face]);
+	platformsy = turret_offset * 0.20 + turret_offset * 0.80 * fabs(yoff[face]);
+	platformsz = turret_offset * 0.20 + turret_offset * 0.80 * fabs(zoff[face]);
 
-	platformxo = -turret_offset * 0.5 * xoff[face];
-	platformyo = -turret_offset * 0.5 * yoff[face];
-	platformzo = -turret_offset * 0.5 * zoff[face];
+	platformxo = -turret_offset * 0.55 * xoff[face];
+	platformyo = -turret_offset * 0.55 * yoff[face];
+	platformzo = -turret_offset * 0.55 * zoff[face];
 
 	xrowstep = 0.0;
 	yrowstep = 0.0;
@@ -8323,9 +8323,9 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 			if (block >= 0) {
 				printf("ADDING TURRET parent = %d, %lf, %lf, %lf\n", go[block].id, x, y, z); 
 				add_turret(go[block].id, 0, 0, 0,
-						platformsx * 0.6 * xoff[face],
-						platformsy * 0.6 * yoff[face],
-						platformsz * 0.6 * zoff[face], rest_orientation, up, -1);
+						platformsx * 0.65 * xoff[face],
+						platformsy * 0.65 * yoff[face],
+						platformsz * 0.65 * zoff[face], rest_orientation, up, -1);
 				go[block].tsd.block.health = 121; /* mortal */
 			}
 		}
