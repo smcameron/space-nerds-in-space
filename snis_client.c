@@ -1539,6 +1539,16 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 	return 0;
 }
 
+static void update_orientation_history(union quat history[], union quat *new_orientation)
+{
+	int j;
+
+	/* shift old updates to make room for this one */
+	for (j = SNIS_ENTITY_NUPDATE_HISTORY - 1; j >= 1; j--)
+		history[j] = history[j-1];
+	history[0] = *new_orientation;
+}
+
 static int update_turret(uint32_t id, uint32_t timestamp, double x, double y, double z,
 			union quat *orientation, union quat *base_orientation, uint8_t health)
 {
@@ -1562,19 +1572,7 @@ static int update_turret(uint32_t id, uint32_t timestamp, double x, double y, do
 		go[i].tsd.turret.turret_base_entity = add_entity(ecx, turret_base_mesh, x, y, z, BLOCK_COLOR);
 	}
 	go[i].tsd.turret.health = health;
-#if 1
-	int j;
-	for (j = SNIS_ENTITY_NUPDATE_HISTORY - 1; j >= 1; j--)
-		go[i].tsd.turret.base_orientation_history[j] = go[i].tsd.turret.base_orientation_history[j-1];
-	go[i].tsd.turret.base_orientation_history[0] = *base_orientation;
-#else
-	/* TODO: interpolate this movement and rotation */
-	go[i].tsd.turret.base_orientation = *base_orientation;
-	 if (go[i].tsd.turret.turret_base_entity) {
-		update_entity_pos(go[i].tsd.turret.turret_base_entity, go[i].x, go[i].y, go[i].z);
-		update_entity_orientation(go[i].tsd.turret.turret_base_entity, base_orientation);
-	}
-#endif
+	update_orientation_history(go[i].tsd.turret.base_orientation_history, base_orientation);
 	return 0;
 }
 
@@ -3883,14 +3881,8 @@ static int process_update_ship_packet(uint8_t opcode)
 	/* FIXME: really update_emf_detector should get called every frame and passed o->tsd.ship.emf_detector. */
 	update_emf_detector(emf_detector);
 
-	/* shift old updates to make room for this one */
-	int j;
-	for (j = SNIS_ENTITY_NUPDATE_HISTORY - 1; j >= 1; j--) {
-		o->tsd.ship.sciball_o[j] = o->tsd.ship.sciball_o[j-1];
-		o->tsd.ship.weap_o[j] = o->tsd.ship.weap_o[j-1];
-	}
-	o->tsd.ship.sciball_o[0] = sciball_orientation;
-	o->tsd.ship.weap_o[0] = weap_orientation;
+	update_orientation_history(o->tsd.ship.sciball_o, &sciball_orientation);
+	update_orientation_history(o->tsd.ship.weap_o, &weap_orientation);
 
 	if (!o->tsd.ship.reverse && reverse)
 		wwviaudio_add_sound(REVERSE_SOUND);
