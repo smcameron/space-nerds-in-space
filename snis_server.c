@@ -6577,6 +6577,7 @@ static void turret_move(struct snis_entity *o)
 		// o->orientation = parent->orientation;
 		quat_mul(&o->orientation, &parent->orientation, &o->tsd.turret.relative_orientation);
 		quat_normalize_self(&o->orientation);
+		o->tsd.turret.base_orientation = o->orientation;
 	} else {
 		union vec3 to_enemy;
 
@@ -6602,6 +6603,7 @@ static void turret_move(struct snis_entity *o)
 					&rest_orientation, &o->orientation, NULL,
 					&new_turret_orientation, &new_turret_base_orientation, &aim_is_good);
 			o->orientation = new_turret_orientation;
+			o->tsd.turret.base_orientation = new_turret_base_orientation;
 			if (aim_is_good && o->tsd.turret.fire_countdown == 0)
 				turret_fire(o);
 		}
@@ -16147,12 +16149,14 @@ static void send_update_block_packet(struct game_client *c,
 static void send_update_turret_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, packed_buffer_new("bwwSSSQb", OPCODE_UPDATE_TURRET,
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSQQb", OPCODE_UPDATE_TURRET,
 					o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
-					&o->orientation, o->tsd.turret.health));
+					&o->orientation,
+					&o->tsd.turret.base_orientation,
+					o->tsd.turret.health));
 }
 
 static void send_update_spacemonster_packet(struct game_client *c,

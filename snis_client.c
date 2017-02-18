@@ -347,6 +347,7 @@ static struct docking_port_attachment_point **docking_port_info;
 struct mesh *ship_turret_mesh;
 struct mesh *ship_turret_base_mesh;
 struct mesh *turret_mesh;
+struct mesh *turret_base_mesh;
 struct mesh *particle_mesh;
 struct mesh *debris_mesh;
 struct mesh *debris2_mesh;
@@ -1539,7 +1540,7 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 }
 
 static int update_turret(uint32_t id, uint32_t timestamp, double x, double y, double z,
-			union quat *orientation, uint8_t health)
+			union quat *orientation, union quat *base_orientation, uint8_t health)
 {
 	int i;
 	struct entity *e;
@@ -1551,16 +1552,29 @@ static int update_turret(uint32_t id, uint32_t timestamp, double x, double y, do
 		vy = y - go[i].y;
 		vz = z - go[i].z;
 		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, orientation, 1);
-		go[i].tsd.turret.health = health;
-		return 0;
+	} else {
+		e = add_entity(ecx, turret_mesh, x, y, z, BLOCK_COLOR);
+		if (!e)
+			return -1;
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_TURRET, 1, e);
+		if (i < 0)
+			return i;
+		go[i].tsd.turret.turret_base_entity = add_entity(ecx, turret_base_mesh, x, y, z, BLOCK_COLOR);
 	}
-	e = add_entity(ecx, turret_mesh, x, y, z, BLOCK_COLOR);
-	if (!e)
-		return -1;
-	i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_TURRET, 1, e);
-	if (i < 0)
-		return i;
 	go[i].tsd.turret.health = health;
+#if 1
+	int j;
+	for (j = SNIS_ENTITY_NUPDATE_HISTORY - 1; j >= 1; j--)
+		go[i].tsd.turret.base_orientation_history[j] = go[i].tsd.turret.base_orientation_history[j-1];
+	go[i].tsd.turret.base_orientation_history[0] = *base_orientation;
+#else
+	/* TODO: interpolate this movement and rotation */
+	go[i].tsd.turret.base_orientation = *base_orientation;
+	 if (go[i].tsd.turret.turret_base_entity) {
+		update_entity_pos(go[i].tsd.turret.turret_base_entity, go[i].x, go[i].y, go[i].z);
+		update_entity_orientation(go[i].tsd.turret.turret_base_entity, base_orientation);
+	}
+#endif
 	return 0;
 }
 
@@ -2043,6 +2057,16 @@ static void interpolate_orientated_object(double timestamp, struct snis_entity *
 					&o->tsd.ship.sciball_o[from_index], &o->tsd.ship.sciball_o[to_index], t);
 			quat_nlerp(&o->tsd.ship.weap_orientation,
 					&o->tsd.ship.weap_o[from_index], &o->tsd.ship.weap_o[to_index], t);
+		} else if (o->type == OBJTYPE_TURRET) {
+			quat_nlerp(&o->tsd.turret.base_orientation,
+					&o->tsd.turret.base_orientation_history[from_index],
+					&o->tsd.turret.base_orientation_history[to_index], t);
+			if (o->tsd.turret.turret_base_entity) {
+				update_entity_visibility(o->tsd.turret.turret_base_entity, visible);
+				update_entity_pos(o->tsd.turret.turret_base_entity, o->x, o->y, o->z);
+				update_entity_orientation(o->tsd.turret.turret_base_entity,
+								&o->tsd.turret.base_orientation);
+			}
 		}
 	}
 
@@ -2112,7 +2136,7 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 		return;
 	}
 
-	/* search in updates to find a "from" index that is in the past and a "to" index that is in the figure */
+	/* search in updates to find a "from" index that is in the past and a "to" index that is in the future */
 	int from_index = -1;
 	int to_index = -1;
 
@@ -2138,7 +2162,7 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 	}
 
 	if (to_index < 0) {
-		/* all updates are older, maybe interp interp into future */
+		/* all updates are older, maybe interp into future */
 		from_index = 1;
 		to_index = 0;
 
@@ -4517,6 +4541,8 @@ static void delete_object(uint32_t id)
 	if (i == demon_ui.captain_of)
 		demon_ui.captain_of = -1;
 	remove_entity(ecx, go[i].entity);
+	if (go[i].type == OBJTYPE_TURRET && go[i].tsd.turret.turret_base_entity)
+		remove_entity(ecx, go[i].tsd.turret.turret_base_entity);
 	go[i].entity = NULL;
 	free_spacemonster_data(&go[i]);
 	free_laserbeam_data(&go[i]);
@@ -5184,19 +5210,19 @@ static int process_update_turret_packet(void)
 	unsigned char buffer[100];
 	uint32_t id, timestamp;
 	double dx, dy, dz;
-	union quat orientation;
+	union quat orientation, base_orientation;
 	int rc;
 	uint8_t health;
 
-	rc = read_and_unpack_buffer(buffer, "wwSSSQb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSQQb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
-			&orientation, &health);
+			&orientation, &base_orientation, &health);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_turret(id, timestamp, dx, dy, dz, &orientation, health);
+	rc = update_turret(id, timestamp, dx, dy, dz, &orientation, &base_orientation, health);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }
@@ -6840,6 +6866,7 @@ static void show_mainscreen(GtkWidget *w)
 			struct entity *turret = add_entity(ecx, ship_turret_mesh, 0, 0, 0, SHIP_COLOR);
 
 			if (turret) {
+				/* TODO: this should probably happen in interpolate_orientated_object */
 				update_entity_orientation(turret, &o->tsd.ship.weap_orientation);
 				if (turret_base)
 					update_entity_parent(ecx, turret, turret_base);
@@ -15080,6 +15107,7 @@ static void init_meshes()
 	}
 
 	turret_mesh = snis_read_model(d, "laser_turret.stl");
+	turret_base_mesh = snis_read_model(d, "laser_turret_base.stl");
 	ship_turret_mesh = snis_read_model(d, "spaceship_turret.stl");
 	ship_turret_base_mesh = snis_read_model(d, "spaceship_turret_base.stl");
 	mesh_scale(ship_turret_mesh, SHIP_MESH_SCALE);

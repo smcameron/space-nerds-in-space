@@ -621,10 +621,13 @@ struct turret_data {
 	double dx, dy, dz; /* offset position from parent, used only server side */
 	uint32_t current_target_id;
 	union quat rotational_velocity;
+	union quat base_orientation;
+	union quat base_orientation_history[SNIS_ENTITY_NUPDATE_HISTORY];
 	union vec3 up_direction;
 	uint8_t fire_countdown;
 	uint8_t fire_countdown_reset_value;
 	uint8_t health;
+	struct entity *turret_base_entity;
 };
 
 union type_specific_data {
