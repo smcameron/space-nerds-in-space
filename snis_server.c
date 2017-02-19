@@ -6572,13 +6572,24 @@ static void turret_move(struct snis_entity *o)
 		}
 	}
 
-	/* For now, do the stupidest thing that can possibly work... */
-	if (o->tsd.turret.current_target_id == (uint32_t) -1) { /* no target */
-		// o->orientation = parent->orientation;
-		quat_mul(&o->orientation, &parent->orientation, &o->tsd.turret.relative_orientation);
-		quat_normalize_self(&o->orientation);
-		o->tsd.turret.base_orientation = o->orientation;
-	} else {
+	if (o->tsd.turret.current_target_id == (uint32_t) -1) { /* no target, return to rest orientation */
+		union quat rest_orientation, new_turret_orientation, new_turret_base_orientation;
+		union vec3 aim_point;
+
+		aim_point.v.x = 1.0;
+		aim_point.v.y = 0.0;
+		aim_point.v.z = 0.0;
+		quat_mul(&rest_orientation, &parent->orientation, &o->tsd.turret.relative_orientation);
+		quat_rot_vec_self(&aim_point, &rest_orientation);
+		aim_point.v.x = aim_point.v.x + o->x;
+		aim_point.v.y = aim_point.v.y + o->y;
+		aim_point.v.z = aim_point.v.z + o->z;
+		turret_aim(aim_point.v.x, aim_point.v.y, aim_point.v.z, o->x, o->y, o->z,
+				&rest_orientation, &o->orientation, NULL,
+				&new_turret_orientation, &new_turret_base_orientation, &aim_is_good);
+		o->orientation = new_turret_orientation;
+		o->tsd.turret.base_orientation = new_turret_base_orientation;
+	} else { /* aim at target */
 		union vec3 to_enemy;
 
 		t = lookup_by_id(o->tsd.turret.current_target_id);
