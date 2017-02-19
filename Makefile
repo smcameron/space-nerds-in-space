@@ -422,7 +422,6 @@ MD=${ASSETSSRCDIR}/models
 
 MODELS=${MD}/freighter.stl \
 	${MD}/laser.stl \
-	${MD}/planet.stl \
 	${MD}/spaceship.stl \
 	${MD}/torpedo.stl \
 	${MD}/tanker.stl \
@@ -446,9 +445,6 @@ MODELS=${MD}/freighter.stl \
 	${MD}/asteroid-miner.stl \
 	${MD}/spaceship2.stl \
 	${MD}/spaceship3.stl \
-	${MD}/planet1.stl \
-	${MD}/planet2.stl \
-	${MD}/planet3.stl \
 	${MD}/dragonhawk.stl \
 	${MD}/skorpio.stl \
 	${MD}/long-triangular-prism.stl \
