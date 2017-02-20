@@ -89,7 +89,7 @@ GLOBAL void mesh_set_average_vertex_normals(struct mesh *m);
 GLOBAL struct mesh *mesh_fabricate_crossbeam(float length, float radius);
 GLOBAL void mesh_set_triangle_texture_coords(struct mesh *m, int triangle,
 	float u1, float v1, float u2, float v2, float u3, float v3);
-GLOBAL struct mesh *mesh_fabricate_billboard(float cx, float cy, float width, float height);
+GLOBAL struct mesh *mesh_fabricate_billboard(float width, float height);
 GLOBAL struct mesh *mesh_unit_icosahedron(void);
 GLOBAL struct mesh *mesh_unit_icosphere(int subdivisions);
 GLOBAL struct mesh *mesh_unit_cube(int subdivisions);

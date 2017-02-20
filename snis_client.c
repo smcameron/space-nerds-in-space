@@ -15106,7 +15106,7 @@ static void init_meshes()
 	mesh_scale(ship_turret_base_mesh, SHIP_MESH_SCALE);
 	torpedo_nav_mesh = snis_read_model(d, "torpedo.stl");
 #ifndef WITHOUTOPENGL
-	torpedo_mesh = mesh_fabricate_billboard(0, 0, 50.0f, 50.0f);
+	torpedo_mesh = mesh_fabricate_billboard(50.0f, 50.0f);
 #else
 	torpedo_mesh = torpedo_nav_mesh;
 #endif
@@ -15173,7 +15173,7 @@ static void init_meshes()
 	}
 
 #ifndef WITHOUTOPENGL
-	particle_mesh = mesh_fabricate_billboard(0, 0, 50.0f, 50.0f);
+	particle_mesh = mesh_fabricate_billboard(50.0f, 50.0f);
 #else
 	particle_mesh = snis_read_model(d, "tetrahedron.stl");
 #endif
@@ -15191,7 +15191,7 @@ static void init_meshes()
 	spacemonster_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
 	laserbeam_nav_mesh = snis_read_model(d, "long-triangular-prism.stl");
 #ifndef WITHOUTOPENGL
-	laserbeam_mesh = mesh_fabricate_billboard(0, 0, 200, 5);
+	laserbeam_mesh = mesh_fabricate_billboard(200, 5);
 	phaser_mesh = init_burst_rod_mesh(1000, LASER_VELOCITY * 2 / 3, 0.5, 0.5);
 #else
 	laserbeam_mesh = laserbeam_nav_mesh;
@@ -15203,8 +15203,8 @@ static void init_meshes()
 	docking_port_mesh[0] = snis_read_model(d, "docking_port.stl");
 	docking_port_mesh[1] = snis_read_model(d, "docking_port2.stl");
 	docking_port_mesh[2] = snis_read_model(d, "tetrahedron.stl");
-	nebula_mesh = mesh_fabricate_billboard(0, 0, 2, 2);
-	sun_mesh = mesh_fabricate_billboard(0, 0, 30000, 30000);
+	nebula_mesh = mesh_fabricate_billboard(2, 2);
+	sun_mesh = mesh_fabricate_billboard(30000, 30000);
 	thrust_animation_mesh = init_thrust_mesh(30, 30, 1.3, 1);
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");
 

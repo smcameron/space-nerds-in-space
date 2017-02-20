@@ -869,7 +869,7 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	light_mesh = mesh_fabricate_billboard(0, 0, 10, 10); //target_mesh->radius / 10.0, target_mesh->radius / 10.0);
+	light_mesh = mesh_fabricate_billboard(10, 10);
 
 	struct material light_material;
 	material_init_texture_mapped_unlit(&light_material);
