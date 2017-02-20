@@ -1130,7 +1130,7 @@ static int update_torpedo(uint32_t id, uint32_t timestamp, double x, double y, d
 }
 
 static void init_laserbeam_data(struct snis_entity *o);
-static void update_laserbeam_segments(struct snis_entity *o);
+static void laserbeam_move(struct snis_entity *o);
 static int update_laserbeam(uint32_t id, uint32_t timestamp, uint32_t origin, uint32_t target)
 {
 	int i;
@@ -1145,7 +1145,7 @@ static int update_laserbeam(uint32_t id, uint32_t timestamp, uint32_t origin, ui
 		go[i].tsd.laserbeam.target = target;
 		go[i].tsd.laserbeam.material = &red_laser_material;
 		init_laserbeam_data(&go[i]);
-		go[i].move = update_laserbeam_segments;
+		go[i].move = laserbeam_move;
 	} /* nothing to do */
 	return 0;
 }
@@ -1164,7 +1164,7 @@ static int update_tractorbeam(uint32_t id, uint32_t timestamp, uint32_t origin, 
 		go[i].tsd.laserbeam.target = target;
 		go[i].tsd.laserbeam.material = &blue_tractor_material;
 		init_laserbeam_data(&go[i]);
-		go[i].move = update_laserbeam_segments;
+		go[i].move = laserbeam_move;
 	} /* nothing to do */
 	return 0;
 }
@@ -1302,26 +1302,22 @@ static void free_spacemonster_data(struct snis_entity *o)
 	}
 }
 
-static void update_laserbeam_segments(struct snis_entity *o)
+static void laserbeam_move(struct snis_entity *o)
 {
-	double x1, y1, z1, x2, y2, z2, dx, dy, dz;
-	double lastd;
-	int i, oid, tid;
+	int oid, tid;
 	struct snis_entity *origin, *target;
-	struct laserbeam_data *ld = &o->tsd.laserbeam;
-	double yaw;
 	union vec3 right = { { 1.0f, 0.0f, 0.0f } };
 	union vec3 up = { { 0.0f, 0.1f, 0.0f } } ;
 	union vec3 target_vector;
 	union quat orientation;
+	double x, y, z, length;
 
 	oid = lookup_object_by_id(o->tsd.laserbeam.origin);
 	tid = lookup_object_by_id(o->tsd.laserbeam.target);
 
 	if (oid < 0 || tid < 0) {
-		for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++)
-			if (ld->entity[i])
-				entity_set_mesh(ld->entity[i], NULL);
+		if (o->entity)
+			entity_set_mesh(o->entity, NULL);
 		return;
 	}
 	origin = &go[oid];
@@ -1330,56 +1326,33 @@ static void update_laserbeam_segments(struct snis_entity *o)
 	target_vector.v.x = target->x - origin->x;
 	target_vector.v.y = target->y - origin->y;
 	target_vector.v.z = target->z - origin->z;
+	length = vec3_magnitude(&target_vector);
 
 	quat_from_u2v(&orientation, &right, &target_vector, &up); /* correct up vector? */
 	quat_normalize_self(&orientation);
-	
-	x1 = origin->x;
-	y1 = origin->y;
-	z1 = origin->z;
-	x2 = target->x;
-	y2 = target->y;
-	z2 = target->z;
 
-	yaw = atan2(z2 - z1, x2 - x1);
+	x = origin->x + 0.5 * target_vector.v.x;
+	y = origin->y + 0.5 * target_vector.v.y;
+	z = origin->z + 0.5 * target_vector.v.z;
 
-	x1 += cos(yaw) * 15.0;
-	z1 -= sin(yaw) * 15.0;
-	x2 -= cos(yaw) * 15.0;
-	z2 += sin(yaw) * 15.0;
-
-	dx = (x2 - x1) / MAX_LASERBEAM_SEGMENTS;
-	dy = (y2 - y1) / MAX_LASERBEAM_SEGMENTS;
-	dz = (z2 - z1) / MAX_LASERBEAM_SEGMENTS;
-
-	for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++) {
-		lastd = (snis_randn(50) - 25) / 100.0;
-		ld->x[i] = x1 + (i + lastd) * dx;
-		ld->y[i] = y1 + (i + lastd) * dy;
-		ld->z[i] = z1 + (i + lastd) * dz; 
-		if (ld->entity[i]) {
-			update_entity_pos(ld->entity[i], ld->x[i], ld->y[i], ld->z[i]);
-			update_entity_orientation(ld->entity[i], &orientation);
-			update_entity_material(ld->entity[i], o->tsd.laserbeam.material);
-		}
-	}
+	update_entity_pos(o->entity, x, y, z);
+	update_entity_orientation(o->entity, &orientation);
+	update_entity_material(o->entity, o->tsd.laserbeam.material);
+	update_entity_non_uniform_scale(o->entity, length, 2.0 + snis_randn(7), 0.0);
 }
 
 static void init_laserbeam_data(struct snis_entity *o)
 {
 	struct laserbeam_data *ld = &o->tsd.laserbeam;
-	int i, color;
-	struct snis_entity *shooter;
+	int color;
+	struct snis_entity *shooter, *target;
 
-	ld->x = malloc(sizeof(*o->tsd.laserbeam.x) *
-					MAX_LASERBEAM_SEGMENTS);
-	ld->y = malloc(sizeof(*o->tsd.laserbeam.y) *
-					MAX_LASERBEAM_SEGMENTS);
-	ld->z = malloc(sizeof(*o->tsd.laserbeam.z) *
-					MAX_LASERBEAM_SEGMENTS);
-	ld->entity = malloc(sizeof(*o->tsd.laserbeam.entity) *
-					MAX_LASERBEAM_SEGMENTS);
 	shooter = lookup_entity_by_id(ld->origin);
+	target = lookup_entity_by_id(ld->target);
+	if (!shooter || !target) {
+		o->entity = NULL;
+		return;
+	}
 	if (o->type == OBJTYPE_TRACTORBEAM) {
 		color = TRACTORBEAM_COLOR;
 	} else {
@@ -1389,45 +1362,16 @@ static void init_laserbeam_data(struct snis_entity *o)
 		else
 			color = NPC_LASER_COLOR;
 	}
-	for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++) {
-		ld->x[i] = o->x;
-		ld->y[i] = o->y;
-		ld->z[i] = 0.0;
-		ld->entity[i] = add_entity(ecx, laserbeam_mesh, o->x, 0, -o->y, color);
-		if (ld->entity[i])
-			set_render_style(ld->entity[i], laserbeam_render_style);
-	}
-	update_laserbeam_segments(o);
-}
+	o->x = shooter->x + (target->x - shooter->x) / 2.0;
+	o->y = shooter->y + (target->y - shooter->y) / 2.0;
+	o->z = shooter->z + (target->z - shooter->z) / 2.0;
 
-static void free_laserbeam_data(struct snis_entity *o)
-{
-	int i;
-	struct laserbeam_data *ld = &o->tsd.laserbeam;
 
-	if (o->type != OBJTYPE_LASERBEAM && o->type != OBJTYPE_TRACTORBEAM)
-		return;
 
-	if (ld->x) {
-		free(ld->x);
-		ld->x = NULL;
-	}
-	if (ld->y) {
-		free(ld->y);
-		ld->y = NULL;
-	}
-	if (ld->z) {
-		free(ld->z);
-		ld->z = NULL;
-	}
-
-	if (ld->entity) {
-		for (i = 0; i < MAX_LASERBEAM_SEGMENTS; i++)
-			if (ld->entity[i])
-				remove_entity(ecx, ld->entity[i]);
-		free(ld->entity);
-		ld->entity = NULL;
-	}
+	o->entity = add_entity(ecx, laserbeam_mesh, o->x, o->y, o->z, color);
+	if (o->entity)
+		set_render_style(o->entity, laserbeam_render_style);
+	laserbeam_move(o);
 }
 
 static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double y, double z)
@@ -4537,7 +4481,6 @@ static void delete_object(uint32_t id)
 		remove_entity(ecx, go[i].tsd.turret.turret_base_entity);
 	go[i].entity = NULL;
 	free_spacemonster_data(&go[i]);
-	free_laserbeam_data(&go[i]);
 	go[i].id = -1;
 	snis_object_pool_free_object(pool, i);
 }
@@ -4553,7 +4496,6 @@ static void delete_all_objects(void)
 		remove_entity(ecx, go[i].entity);
 		go[i].entity = NULL;
 		free_spacemonster_data(&go[i]);
-		free_laserbeam_data(&go[i]);
 		go[i].id = -1;
 		snis_object_pool_free_object(pool, i);
 	}
@@ -15191,7 +15133,7 @@ static void init_meshes()
 	spacemonster_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
 	laserbeam_nav_mesh = snis_read_model(d, "long-triangular-prism.stl");
 #ifndef WITHOUTOPENGL
-	laserbeam_mesh = mesh_fabricate_billboard(200, 5);
+	laserbeam_mesh = mesh_fabricate_billboard(1.0, 1.0);
 	phaser_mesh = init_burst_rod_mesh(1000, LASER_VELOCITY * 2 / 3, 0.5, 0.5);
 #else
 	laserbeam_mesh = laserbeam_nav_mesh;

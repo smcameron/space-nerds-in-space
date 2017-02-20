@@ -555,16 +555,11 @@ struct spacemonster_data {
 	struct entity **entity;
 };
 
-#define MAX_LASERBEAM_SEGMENTS 32
 struct laserbeam_data {
-	double *x;
-	double *y;
-	double *z;
 	uint32_t origin;
 	uint32_t target;
 	uint8_t power;
 	uint8_t wavelength;
-	struct entity **entity;
 	struct material *material;
 	uint8_t mining_laser;
 };
