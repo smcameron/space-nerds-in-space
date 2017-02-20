@@ -379,6 +379,7 @@ static struct material red_laser_material;
 static struct material blue_tractor_material;
 static struct material green_phaser_material;
 static struct material spark_material;
+static struct material laserflash_material;
 static struct material warp_effect_material;
 static struct material sun_material;
 #define NPLANETARY_RING_MATERIALS 256
@@ -1311,6 +1312,7 @@ static void laserbeam_move(struct snis_entity *o)
 	union vec3 target_vector;
 	union quat orientation;
 	double x, y, z, length;
+	const double epsilon = 0.1; /* offset so laserbeam isn't exactly on the camera */
 
 	oid = lookup_object_by_id(o->tsd.laserbeam.origin);
 	tid = lookup_object_by_id(o->tsd.laserbeam.target);
@@ -1323,9 +1325,9 @@ static void laserbeam_move(struct snis_entity *o)
 	origin = &go[oid];
 	target = &go[tid];
 
-	target_vector.v.x = target->x - origin->x;
-	target_vector.v.y = target->y - origin->y;
-	target_vector.v.z = target->z - origin->z;
+	target_vector.v.x = target->x - origin->x + epsilon;
+	target_vector.v.y = target->y - origin->y + epsilon;
+	target_vector.v.z = target->z - origin->z + epsilon;
 	length = vec3_magnitude(&target_vector);
 
 	quat_from_u2v(&orientation, &right, &target_vector, &up); /* correct up vector? */
@@ -1339,6 +1341,14 @@ static void laserbeam_move(struct snis_entity *o)
 	update_entity_orientation(o->entity, &orientation);
 	update_entity_material(o->entity, o->tsd.laserbeam.material);
 	update_entity_non_uniform_scale(o->entity, length, 2.0 + snis_randn(7), 0.0);
+
+	if (o->tsd.laserbeam.laserflash_entity) {
+		/* particle mesh is 50x50, scale it randomly to make it flicker */
+		update_entity_scale(o->tsd.laserbeam.laserflash_entity,
+					0.01 * (snis_randn(200) + 50.0));
+		update_entity_pos(o->tsd.laserbeam.laserflash_entity,
+					target->x + epsilon, target->y + epsilon, target->z + epsilon);
+	}
 }
 
 static void init_laserbeam_data(struct snis_entity *o)
@@ -1355,12 +1365,22 @@ static void init_laserbeam_data(struct snis_entity *o)
 	}
 	if (o->type == OBJTYPE_TRACTORBEAM) {
 		color = TRACTORBEAM_COLOR;
+		o->tsd.laserbeam.laserflash_entity = NULL;
 	} else {
 		if (shooter)
 			color = (shooter->type == OBJTYPE_SHIP2) ?
 				NPC_LASER_COLOR : PLAYER_LASER_COLOR;
 		else
 			color = NPC_LASER_COLOR;
+		o->tsd.laserbeam.laserflash_entity =
+			add_entity(ecx, particle_mesh, target->x, target->y, target->z, color);
+		if (o->tsd.laserbeam.laserflash_entity) {
+			update_entity_material(o->tsd.laserbeam.laserflash_entity,
+						&laserflash_material);
+			/* particle mesh is 50x50, scale it from 0.5 to 1.0, randomly */
+			update_entity_scale(o->tsd.laserbeam.laserflash_entity,
+						0.01 * (snis_randn(50) + 50.0));
+		}
 	}
 	o->x = shooter->x + (target->x - shooter->x) / 2.0;
 	o->y = shooter->y + (target->y - shooter->y) / 2.0;
@@ -4481,6 +4501,12 @@ static void delete_object(uint32_t id)
 		remove_entity(ecx, go[i].tsd.turret.turret_base_entity);
 	go[i].entity = NULL;
 	free_spacemonster_data(&go[i]);
+	if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
+		if (go[i].tsd.laserbeam.laserflash_entity) {
+			remove_entity(ecx, go[i].tsd.laserbeam.laserflash_entity);
+			go[i].tsd.laserbeam.laserflash_entity = NULL;
+		}
+	}
 	go[i].id = -1;
 	snis_object_pool_free_object(pool, i);
 }
@@ -14036,6 +14062,11 @@ static int load_static_textures(void)
 	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	spark_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
 	spark_material.texture_mapped_unlit.do_blend = 1;
+
+	material_init_texture_mapped_unlit(&laserflash_material);
+	laserflash_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	laserflash_material.texture_mapped_unlit.texture_id = load_texture("textures/laserflash.png");
+	laserflash_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&warp_effect_material);
 	warp_effect_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;

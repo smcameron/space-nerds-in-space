@@ -558,9 +558,10 @@ struct spacemonster_data {
 struct laserbeam_data {
 	uint32_t origin;
 	uint32_t target;
+	struct material *material;
+	struct entity *laserflash_entity;
 	uint8_t power;
 	uint8_t wavelength;
-	struct material *material;
 	uint8_t mining_laser;
 };
 
