@@ -4335,6 +4335,10 @@ static void ship_move(struct snis_entity *o)
 	if (o->sdata.shield_strength < ship_type[st].max_shield_strength && snis_randn(1000) < 7)
 		o->sdata.shield_strength++;
 
+	/* Change shield wavelength every 10 seconds */
+	if ((universe_timestamp % 100) == 0)
+		o->sdata.shield_wavelength = snis_randn(256);
+
 	/* Check if we are in a secure area */
 	o->tsd.ship.in_secure_area = 0;
 	space_partition_process(space_partition, o, o->x, o->z, o, ship_security_avoidance);
