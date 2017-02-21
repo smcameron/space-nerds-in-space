@@ -33,7 +33,7 @@ struct turret_params {
 	float azimuth_rate_limit;
 };
 
-/* Given target location, turret location, direction of "up" relative to turret,
+/* Given target location, turret location,
  * current turret orientation, and limits on turret movement and movement rates,
  * compute a new turret orientation aimed more towards the target within those
  * limits.
@@ -41,11 +41,12 @@ struct turret_params {
  * If the turret_params are NULL, then default limits will be used, which are:
  * No limit on azimuth angle (+2 * M_PI to -2 * M_PI)
  * elevation limited to 0 to M_PI
- * elevation and azimuth rate limited to 2 degrees change
+ * elevation and azimuth rate limited to 9 degrees change
  *
  * It is assumed that in the turret model, at rest, the turret is pointed down the X
- * axis, Y axis is up (the azimuth axis) and the Z axis is Z axis is to the turret's
- * right -- the Z axis is the elevation axis.
+ * axis, Y axis is up (the azimuth axis) and the Z axis is to the turret's right
+ * -- the Z axis is the elevation axis. If your model is different (pretty
+ * likely) you'll have to do additional transformations.
  */
 union quat *turret_aim(double target_x, double target_y, double target_z,	/* in: world coord position of target */
 			double turret_x, double turret_y, double turret_z,	/* in: world coord position of turret */
