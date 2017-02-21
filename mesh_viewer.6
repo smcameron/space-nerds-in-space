@@ -1,8 +1,10 @@
-.TH SPACE-NERDS-IN-SPACE "6" "Aug 2016" "mesh_viewer" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "Feb 2017" "mesh_viewer" "Games"
 .SH NAME
 mesh_viewer \- a utility for viewing models for "Space Nerds In Space."
 .SH SYNOPSIS
 .B mesh_viewer [ -p ] filename [ -n normalmap-prefix ] [ -c cubemap-texture-prefix ] [ -s skybox-prefix ]
+.br
+.B mesh_viewer -T turret-model -B turret-base-model
 .br
 .B mesh_viewer [ -b ]
 .br
@@ -21,6 +23,17 @@ oriented lines which emanate from a the central axis of the cylinder and radiate
 This is what is used for a laser bolt effect in Space Nerds In Space.   The -b option can be
 used to see what the laser bolt will look like.
 .TP
+\fB-B, --turretbase\fR turret-base-model
+Set "turret-mode" and specify the model for the "base" of the turret.
+In "turret mode", two models are required, the turret, and the turret
+base. (See the --turret option, below.) The turret is animated to
+always try to point at the light source.
+.TP
+\fB-T, --turret\fR turret-model
+Set "turret-mode" and specify the model for the turret.
+In "turret mode", two models are required, the turret, and the turret
+base. (See the --turretbase option, above.) The turret is animated to
+always try to point at the light source.
 \fB\-p\fR
 Invoke "planet" mode.  In this case, the filename is actually a partial filename,
 and six png files are expected to exist with the given partial filename with the
