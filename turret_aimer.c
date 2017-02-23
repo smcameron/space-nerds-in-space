@@ -97,6 +97,17 @@ union quat *turret_aim(double target_x, double target_y, double target_z,
 	azimuth = current_azimuth + delta_azimuth;
 	elevation = current_elevation + delta_elevation;
 
+	/* Enforce upper and lower limits on azimuth and elevation */
+
+	if (elevation > turret->elevation_upper_limit)
+		elevation = turret->elevation_upper_limit;
+	else if (elevation < turret->elevation_lower_limit)
+		elevation = turret->elevation_lower_limit;
+	if (azimuth > turret->azimuth_upper_limit)
+		azimuth = turret->azimuth_upper_limit;
+	else if (azimuth < turret->azimuth_lower_limit)
+		azimuth = turret->azimuth_lower_limit;
+
 	/* Now set the azimuth and elevation */
 
 	quat_rot_vec_self(&yaw_axis, turret_rest_orientation);
