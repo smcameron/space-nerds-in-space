@@ -540,7 +540,7 @@ static void draw_screen()
 
 		tparams.elevation_lower_limit = 0.0;
 		tparams.elevation_upper_limit = 90.0 * M_PI / 180.0;
-		tparams.azimuth_lower_limit = 3.0 * M_PI; /* no limit */
+		tparams.azimuth_lower_limit = -3.0 * M_PI; /* no limit */
 		tparams.azimuth_upper_limit = 3.0 * M_PI; /* no limit */
 		tparams.elevation_rate_limit = 1.0 * M_PI / 180.0; /* 60 degrees/sec at 60Hz */
 		tparams.azimuth_rate_limit = 1.0 * M_PI / 180.0; /* 60 degrees/sec at 60Hz */
