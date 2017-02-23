@@ -502,7 +502,7 @@ double short_angular_distance(double from, double to)
 	double distance;
 
 	distance = to - from;
-	if (fabs(distance) < 180)
+	if (fabs(distance) < M_PI)
 		return distance;
 	return 2.0 * M_PI - distance;
 }
