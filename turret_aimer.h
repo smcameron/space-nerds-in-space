@@ -58,4 +58,13 @@ union quat *turret_aim(double target_x, double target_y, double target_z,	/* in:
 										/*      base of the turret */
 			int *aim_is_good);					/* out: true if aim is good */
 
+/* Given target location, turret location, orientation, and limits on elevation
+ * and azimuth, return true if the turret is capable of aiming at the target
+ * or false if it is not capable of aiming at the target.
+ */
+int turret_can_aim_at(double target_x, double target_y, double target_z,	/* in: world coord pos of target */
+		double turret_x, double turret_y, double turret_z,		/* in: world coord pos of turret */
+		union quat *turret_rest_orientation,			/* in: orientation of turret at rest */
+		const struct turret_params *turret);			/* in: turret params, can be NULL */
+
 #endif

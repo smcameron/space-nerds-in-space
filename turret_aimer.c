@@ -117,3 +117,39 @@ union quat *turret_aim(double target_x, double target_y, double target_z,
 
 	return new_turret_orientation;
 }
+
+int turret_can_aim_at(double target_x, double target_y, double target_z,
+		double turret_x, double turret_y, double turret_z,
+		union quat *turret_rest_orientation,
+		const struct turret_params *turret)
+{
+	union quat inverse_rest;
+	union vec3 to_target;
+	float azimuth;
+	float elevation;
+	float xzdist;
+
+	if (!turret)
+		turret = &default_turret_params;
+
+	/* Figure out the desired azimuth and elevation */
+
+	to_target.v.x = target_x - turret_x;
+	to_target.v.y = target_y - turret_y;
+	to_target.v.z = target_z - turret_z;
+	quat_inverse(&inverse_rest, turret_rest_orientation);
+	quat_rot_vec_self(&to_target, &inverse_rest);
+	azimuth = atan2f(-to_target.v.z, to_target.v.x);
+	xzdist = sqrtf(to_target.v.z * to_target.v.z + to_target.v.x * to_target.v.x);
+	elevation = atan2f(to_target.v.y, xzdist);
+
+	if (elevation > turret->elevation_upper_limit)
+		return 0;
+	if (elevation < turret->elevation_lower_limit)
+		return 0;
+	if (azimuth > turret->azimuth_upper_limit)
+		return 0;
+	if (azimuth < turret->azimuth_lower_limit)
+		return 0;
+	return 1;
+}
