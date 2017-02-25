@@ -6534,6 +6534,14 @@ static void turret_move(struct snis_entity *o)
 	int root, aim_is_good;
 	double min_dist = 1e20;
 	int closest = -1;
+	struct turret_params tparams;
+
+	tparams.elevation_lower_limit = -30.0 * M_PI / 180.0;
+	tparams.elevation_upper_limit = 90.0 * M_PI / 180.0;
+	tparams.azimuth_lower_limit = -3.0 * M_PI; /* no limit */
+	tparams.azimuth_upper_limit = 3.0 * M_PI; /* no limit */
+	tparams.elevation_rate_limit = 1.0 * M_PI / 180.0; /* 60 degrees/sec at 60Hz */
+	tparams.azimuth_rate_limit = 1.0 * M_PI / 180.0; /* 60 degrees/sec at 60Hz */
 
 	if (o->tsd.turret.health == 0) {
 		/* TODO add turret derelict */
@@ -6589,7 +6597,7 @@ static void turret_move(struct snis_entity *o)
 		aim_point.v.y = aim_point.v.y + o->y;
 		aim_point.v.z = aim_point.v.z + o->z;
 		turret_aim(aim_point.v.x, aim_point.v.y, aim_point.v.z, o->x, o->y, o->z,
-				&rest_orientation, &o->orientation, NULL,
+				&rest_orientation, &o->orientation, &tparams,
 				&new_turret_orientation, &new_turret_base_orientation, &aim_is_good);
 		o->orientation = new_turret_orientation;
 		o->tsd.turret.base_orientation = new_turret_base_orientation;
@@ -6615,7 +6623,7 @@ static void turret_move(struct snis_entity *o)
 			aim_point.v.z = target->z + target->vz * lasertime;
 			quat_mul(&rest_orientation, &parent->orientation, &o->tsd.turret.relative_orientation);
 			turret_aim(aim_point.v.x, aim_point.v.y, aim_point.v.z, o->x, o->y, o->z,
-					&rest_orientation, &o->orientation, NULL,
+					&rest_orientation, &o->orientation, &tparams,
 					&new_turret_orientation, &new_turret_base_orientation, &aim_is_good);
 			o->orientation = new_turret_orientation;
 			o->tsd.turret.base_orientation = new_turret_base_orientation;

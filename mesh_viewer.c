@@ -538,7 +538,7 @@ static void draw_screen()
 		struct turret_params tparams;
 		int aim_is_good = 0;
 
-		tparams.elevation_lower_limit = 0.0;
+		tparams.elevation_lower_limit = -30.0 * M_PI / 180.0;
 		tparams.elevation_upper_limit = 90.0 * M_PI / 180.0;
 		tparams.azimuth_lower_limit = -3.0 * M_PI; /* no limit */
 		tparams.azimuth_upper_limit = 3.0 * M_PI; /* no limit */
