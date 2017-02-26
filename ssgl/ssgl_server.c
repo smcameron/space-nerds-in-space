@@ -24,6 +24,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
  */
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -249,11 +250,14 @@ out:
 	return;
 }
 
+static pthread_t expiry_thread;
+
 static void *expire_game_servers(__attribute__((unused)) void *arg)
 {
 	int i, j;
 	struct timeval tv;
 
+	pthread_setname_np(expiry_thread, "ssgl-expiry");
 	ssgl_log(SSGL_INFO, "ssgl_server: game server expiration thread started.\n");
 	while (1) { /* TODO, replace this with some condition... */
 		(void) gettimeofday(&tv, NULL);
@@ -357,71 +361,80 @@ badclient:
 	return;
 }
 
-static void * service_thread(void * arg)
+struct service_thread_info {
+	int connection;
+	pthread_t thread;
+};
+
+static void *service_thread(void *arg)
 {
 	int rc;
 	struct ssgl_protocol_id proto_id;
-	int *connection = arg;
+	struct service_thread_info *threadinfo = arg;
+	int connection = threadinfo->connection;
+
+	char threadname[16];
+	snprintf(threadname, sizeof(threadname), "ssglcon-%d", connection);
+	pthread_setname_np(threadinfo->thread, threadname);
 
 	/* Get the SSGL protocol version number from connection
 	 * and make sure it's a version we understand.
 	 */
 
-	rc = get_protocol_version(*connection, &proto_id);
+	rc = get_protocol_version(connection, &proto_id);
 	if (rc < 0)
 		goto out;	
 
 	/* Determine if this is a game client or a game server connecting */
 	if (proto_id.client_type == SSGL_GAME_SERVER)
-		service_game_server(*connection);
+		service_game_server(connection);
 	else
-		service_game_client(*connection);
+		service_game_client(connection);
 out:
-	log_disconnect(SSGL_INFO, *connection, "service thread terminated.");
-	shutdown(*connection, SHUT_RDWR);
-	close(*connection);
-	free(connection); /* allocated prior to thread creation in service(), below. */
+	log_disconnect(SSGL_INFO, connection, "service thread terminated.");
+	shutdown(connection, SHUT_RDWR);
+	close(connection);
+	free(threadinfo); /* allocated prior to thread creation in service(), below. */
 	return 0; /* implicit pthread_exit(); here */
 }
 
 static void service(int connection)
 {
 	pthread_attr_t attr;
-	pthread_t thread;
-	int rc, *conn;
+	int rc;
 	char client_ip[50];
+	struct service_thread_info *threadinfo;
 
 	/* printf("ssgl_server: servicing connection %d\n", connection); */
 	/* get connection moved off the stack so that when the thread needs it,
 	 * it's actually still around. 
 	 */
-	conn = malloc(sizeof(*conn)); /* will be freed in service_thread(). */
-	*conn = connection; /* linux overcommits, no sense in checking malloc return. */
+	threadinfo = malloc(sizeof(*threadinfo)); /* will be freed in service_thread(). */
+	threadinfo->connection = connection; /* linux overcommits, no sense in checking malloc return. */
 
 	get_peer_name(connection, client_ip);
 	ssgl_log(SSGL_INFO, "ssgl_server: New connection from %s\n", client_ip);
 
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-	rc = pthread_create(&thread, &attr, service_thread, (void *) conn);
+	rc = pthread_create(&threadinfo->thread, &attr, service_thread, threadinfo);
 	if (rc) {
 		ssgl_log(SSGL_ERROR, "ssgl_server: pthread_create failed for %s, rc = %d, errno = %d\n",
 			client_ip, rc, errno); 
-		shutdown(SHUT_RDWR, *conn);
-		close(*conn);
-		free(conn);
+		shutdown(SHUT_RDWR, threadinfo->connection);
+		close(threadinfo->connection);
+		free(threadinfo);
 	}
 }
 
 static void start_game_server_expiration_thread(void)
 {
 	pthread_attr_t attr;
-	pthread_t thread;
 	int rc;
 
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-	rc = pthread_create(&thread, &attr, expire_game_servers, NULL); 
+	rc = pthread_create(&expiry_thread, &attr, expire_game_servers, NULL);
 	if (rc < 0) {
 		ssgl_log(SSGL_ERROR, "Unable to create game server expiration thread: %s.\n",
 			strerror(errno));

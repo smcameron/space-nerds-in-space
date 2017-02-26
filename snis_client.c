@@ -494,6 +494,7 @@ static void *connect_to_lobby_thread(__attribute__((unused)) void *arg)
 
 try_again:
 
+	pthread_setname_np(lobby_thread, "snisc-lobbycon");
 	printf("Trying to connect to lobby.\n");
 	/* Loop, trying to connect to the lobby server... */
 	strcpy(lobbyerror, "");
@@ -579,7 +580,6 @@ static void connect_to_lobby()
 		fprintf(stderr, "Failed to create lobby connection thread.\n");
 		fprintf(stderr, "%d %s (%s)\n", rc, strerror(rc), strerror(errno));
 	}
-	pthread_setname_np(lobby_thread, "snisc-lobbycon");
 	return;
 }
 
@@ -5516,6 +5516,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 	uint8_t add_player_error;
 	int rc = 0;
 
+	pthread_setname_np(read_from_gameserver_thread, "snisc-reader");
 	printf("snis_client: gameserver reader thread\n");
 	while (1) {
 		add_player_error = 0;
@@ -5850,7 +5851,9 @@ static void wakeup_gameserver_writer(void)
 static void *gameserver_writer(__attribute__((unused)) void *arg)
 {
 	int tmpval;
+
 	writer_thread_alive = 1;
+	pthread_setname_np(write_to_gameserver_thread, "snisc-writer");
 	while (1) {
 		wait_for_serverbound_packets();
 		write_queued_packets_to_server();
@@ -5967,6 +5970,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	struct add_player_packet app;
 	int flag = 1;
 
+	pthread_setname_np(gameserver_connect_thread, "snisc-servcon");
 	fprintf(stderr, "snis_client: connect to gameserver thread\n");
 	if (avoid_lobby) {
 		strcpy(hoststr, serverhost);
@@ -6058,7 +6062,6 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		fprintf(stderr, "Failed to create gameserver reader thread: %d '%s', '%s'\n",
 			rc, strerror(rc), strerror(errno));
 	}
-	pthread_setname_np(read_from_gameserver_thread, "snisc-reader");
 	printf("started gameserver reader thread\n");
 
 	pthread_mutex_init(&to_server_queue_mutex, NULL);
@@ -6071,7 +6074,6 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		fprintf(stderr, "Failed to create gameserver writer thread: %d '%s', '%s'\n",
 			rc, strerror(rc), strerror(errno));
 	}
-	pthread_setname_np(write_to_gameserver_thread, "snisc-writer");
 	printf("started gameserver writer thread\n");
 
 	request_universe_timestamp();
@@ -6095,7 +6097,6 @@ int connect_to_gameserver(int selected_server)
 			"snis_client", rc, strerror(rc), strerror(errno));
 		return -1;
 	}
-	pthread_setname_np(gameserver_connect_thread, "snisc-servcon");
 	return 0;
 }
 
@@ -14874,6 +14875,7 @@ static void *monitor_physical_io_devices(__attribute__((unused)) void *arg)
 #define PHYS_IO_BUF_SIZE (sizeof(unsigned short) * 2)
 	char buf[PHYS_IO_BUF_SIZE];
 
+	pthread_setname_np(physical_io_thread, "snisc-devio");
 	for (;;) {
 		len = sizeof(client_addr);
 		bytecount = recvfrom(physical_io_socket, buf, sizeof(buf), 0,
@@ -14941,7 +14943,6 @@ static void setup_physical_io_socket(void)
 			close(physical_io_socket);
 			physical_io_socket = -1;
 		}
-		pthread_setname_np(physical_io_thread, "snisc-devio");
 	}
 #endif
 }

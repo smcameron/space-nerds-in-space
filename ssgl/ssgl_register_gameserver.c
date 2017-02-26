@@ -24,6 +24,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
  */
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -47,6 +48,7 @@ struct lobby_thread_arg {
 	struct ssgl_game_server gameserver;
 	char lobbyhost[1000];
 	volatile int *nconnections;
+	pthread_t *thread;
 };
 
 static void *update_lobby_thread(void *arg)
@@ -56,14 +58,17 @@ static void *update_lobby_thread(void *arg)
 	struct ssgl_game_server gameserver;
 	char lobbyhost[1024];
 	volatile int *nconnections = a->nconnections;
+	pthread_t *thread;
 
 	/* now move this to stack, and free malloc'ed memory. */
 	memset(lobbyhost, 0, sizeof(lobbyhost));
 	strncpy(lobbyhost, a->lobbyhost, 1023);
 	gameserver = a->gameserver;
+	thread = a->thread;
 
 	free(arg);
 
+	pthread_setname_np(*thread, "ssgl-lobby");
 	while (1) {
 		lobbysock = ssgl_gameserver_connect_to_lobby(lobbyhost);
 		if (lobbysock < 0) {
@@ -98,6 +103,7 @@ int ssgl_register_gameserver(char *lobbyhost, struct ssgl_game_server *gameserve
 	arg->gameserver = *gameserver;
 	arg->nconnections = (volatile int *) nconnections;
 	strncpy(arg->lobbyhost, lobbyhost, sizeof(arg->lobbyhost)-1);
+	arg->thread = lobby_thread;
 
 	rc = pthread_create(lobby_thread, NULL, update_lobby_thread, arg);
 	if (rc == 0 && pthread_detach(*lobby_thread))
