@@ -14,7 +14,7 @@ Super Simple Game Lobby protocol is used.  TBD: describe that.
 
 <h3>2.1 General Overview</h3>
 
-<p>Space Nerds In Space is a multi-player networked game which attempts to 
+<p>Space Nerds In Space is a multi-player networked game which attempts to
 simulate a starship bridge.  The idea is several players in the same room
 take on various roles such as Captain, Navigator, Weapons Officer, Science
 Officer, Communications officer, etc.  The design of the game is a client
@@ -29,7 +29,7 @@ which follows the opcode depends on the type of packet.
 <p>The server process has a main thread which runs the simulation of the
 universe, and it also has two threads per client, one to read requests
 from the client, and one to send updates to the client.  The client
-reader thread recieves packets from the client and interprets them and
+reader thread receives packets from the client and interprets them and
 updates the state of the universe as appropriate.  The client writer
 thread periodically examines the state of the universe to see what news
 the client needs to be appraised of, and sends the appropriate packets to
@@ -39,7 +39,7 @@ update the client.
 as a reader and writer thread to communicate with the server.  User actions
 typically result in request packets being sent to the server.  For example
 the user may request to increase the throttle or to turn the ship right or
-left.  These inputs are packetized and sent to the server.  The server 
+left.  These inputs are packetized and sent to the server.  The server
 considers these inputs and simulates the universe.  As time passes in the
 server-side simulation, presumably the player's ship will speed up, or turn,
 or whatever the case may be, and these changes will be communicated back
@@ -49,14 +49,27 @@ to the client by the per-client writer thread running on the server.
 
 <h4>2.2.1 Integer types</h4>
 
-<p>All integer data types are transmitted in network byte order (big endian). 
-Only unsigned 8, 16 and 32 bit integer types are supported.
+<p>All integer data types are transmitted in network byte order (big endian).
+The following integer types are supported:
+<ul>
+<li>"b" = u8 (byte)
+<li>"h" = u16 (half-word)
+<li>"w" = u32 (word)
+<li>"q" = u64 (quad word)
+</ul>
 
 <h4>2.2.2 Floating point types</h4>
 
-Floating point numbers (doubles) are converted to unsigned 32 bit integers prior to
-being transmitted by a scaling algorithm that varies depending on the
-expected range of the value.  See esp. packed_buffer_append() and
+<ul>
+<li>"S" = 32-bit signed integer encoded double (takes 2 params, double + scale )
+<li>"U" = 32-bit unsigned integer encoded double (takes 2 params, double + scale )
+<li>"R" = 32-bit unsigned integer encoded double Radians value (same as "U",
+but scale is predetermined.)
+</ul>
+
+Floating point numbers (doubles) are converted to either signed or unsigned
+32 bit integers prior to being transmitted by a scaling algorithm that varies
+depending on the expected range of the value.  See esp. packed_buffer_append() and
 packed_buffer_extract() in snis_marshal.c for authoritative information on
 how the encodings are done.
 
@@ -73,7 +86,7 @@ and back to doubles upon receipt by this formula:
 </pre>
 where d (or u) is the double to be converted and scale is a uint32_t
 with a value that is specific to the use case (e.g. typically 360 for
-values that are angles in degrees, and 2000000 (UNIVERSE_DIM) for 
+values that are angles in degrees, and 2000000 (UNIVERSE_DIM) for
 spatial coordinates.
 
 <p>If the value is signed, scale is an int32_t rather than a uint32_t
@@ -82,18 +95,55 @@ and INT32_MAX is used rather than UINT32_MAX.
 <h4>2.2.3 Strings</h4>
 
 <p>Strings are transmitted by encoding the length as a big endian
-uint16_t preceding the bytes of the string. 
+uint16_t preceding the bytes of the string.
+
+<ul>
+<li>"s" = string (char *)
+</ul>
 
 <h4>2.2.4 "Raw" data</h4>
 
 <p>There is a "raw" type which is encoded much as strings are.
 The raw data is preceded by a big endian uint16_t indicating
 the length of the raw data.  After the 2-byte length field, the
-raw data is transmitted verbatim.  The raw data format is currently
-only used for COMMS transmissions.  (Note: revisit this and see if
-the "raw" format should be eliminated.)
+raw data is transmitted verbatim.
+(Note: revisit this and see if the "raw" format should be eliminated.)
 
-<h4>2.2.5 Generic packet format</h4>
+<h4>2.2.6 Quaternions</h4>
+
+<ul>
+<li>"Q" = 4 16-bit signed integer encoded floats representing a quaternion.
+</ul>
+
+Consider a rotation defined by a normalized vector (x, y, z) describing an
+axis of rotation, and an angle theta describing the rotation about that axis.
+A quaternion describing that rotation can be represented by an array of
+four floats:
+
+<pre>
+	q[0] = sin(0.5 * theta) * x;
+	q[1] = sin(0.5 * theta) * y;
+	q[2] = sin(0.5 * theta) * z;
+	q[4] = cos(0.5 * theta);
+</pre>
+Note that all elements of q[] will be between -1.0 and 1.0.  For transmission,
+these four floats are converted to 16-bit signed integers by the following
+method:
+
+<pre>
+	return (int16_t) (q * (float) (INT16_MAX - 1));
+</pre>
+
+and upon receipt converted back via:
+
+<pre>
+	return ((float) i) / (float) (INT16_MAX - 1);
+</pre>
+
+
+
+
+<h4>2.2.7 Generic packet format</h4>
 
 SNIS packets typically have the following form:
 
@@ -101,7 +151,7 @@ SNIS packets typically have the following form:
 <p align=center><table border=1, width=75%>
 <tr>
 <td>
-16-bit, big-endian opcode
+8-bit opcode
 </td>
 </tr>
 <tr>
@@ -130,6 +180,8 @@ with TCP_NODELAY option set.
 <td>u16</td>
 <td>OPCODE = 104 (UPDATE PLAYER)</td>
 </tr>
+<tr><td>u8</td><td>new_ship</td>
+<tr><td>u8</td><td>warpgate_number</td>
 <tr>
 <td>u32</td><td>ROLE (bitmap of roles)</td>
 </tr>
@@ -145,7 +197,7 @@ with TCP_NODELAY option set.
 </pre>
 <li>This completes the client side connection initiation protocol.
 The client then starts two threads, one to read from the gameserver
-socket, and one to write to the gameserver socket.  
+socket, and one to write to the gameserver socket.
 </ol>
 
 <p>On the server side, the connection initiation process is as follows:
@@ -155,9 +207,9 @@ socket, and one to write to the gameserver socket.
 <li>7 bytes are read and matched against "SNIS001" to verify the
 protocol version.  If they do not match, the connection is closed.
 <li>UPDATE PLAYER packet is read, opcode is checked to be 104 (if
-not connection is closed). 
+not connection is closed).
 <li>The ship name and password fields are
-forcibly null terminated in each fields last byte (19).   
+forcibly null terminated in each fields last byte (19).
 <li>The ship
 name and password are verified to contain only alphanumeric
 characters (via isalnum()) -- if not, connection is closed.
@@ -178,17 +230,17 @@ ID of his own ship.
 </ol>
 
 <h3>2.4 Operation Codes</h3>
-<p>Operation codes ("op codes") are transmitted as unsigned 16 bit
-big-endian integers.  An authoritative list of opcodes may be found in snis_packet.h
+<p>Operation codes ("op codes") are transmitted as unsigned 8 bit bytes.
+An authoritative list of opcodes may be found in snis_packet.h
 <p align=center><table align=center, width=75%, border=1>
 <tr><td>OPCODE_UPDATE_SHIP</td><td>100</td></tr>
 <tr><td>OPCODE_UPDATE_STARBASE</td><td>	101</td></tr>
 <tr><td>OPCODE_UPDATE_LASER</td><td>	102</td></tr>
 <tr><td>OPCODE_UPDATE_TORPEDO</td><td>	103</td></tr>
 <tr><td>OPCODE_UPDATE_PLAYER</td><td>	104</td></tr>
-<tr><td>OPCODE_ACK_PLAYER</td><td>	105	</td></tr>
+<tr><td>OPCODE_ACK_PLAYER (not used)</td><td>	105	</td></tr>
 <tr><td>OPCODE_ID_CLIENT_SHIP</td><td>	106</td></tr>
-<tr><td>OPCODE_UPDATE_PLANET</td><td>	107</td></tr>
+<tr><td>OPCODE_UPDATE_ASTEROID</td><td>	107</td></tr>
 <tr><td>OPCODE_REQUEST_YAW</td><td>	108</td></tr>
 <tr><td>OPCODE_REQUEST_THRUST</td><td>	109</td></tr>
 <tr><td>OPCODE_REQUEST_GUNYAW</td><td>	110</td></tr>
@@ -198,9 +250,9 @@ big-endian integers.  An authoritative list of opcodes may be found in snis_pack
 <tr><td>OPCODE_PLAY_SOUND</td><td>	114</td></tr>
 <tr><td>OPCODE_REQUEST_SCIYAW</td><td>	115</td></tr>
 <tr><td>OPCODE_REQUEST_SCIBEAMWIDTH</td><td>	116</td></tr>
-<tr><td>OPCODE_UPDATE_SHIP2</td><td>		117</td></tr>
+<tr><td>OPCODE_UPDATE_SHIP2 (not used)</td><td>		117</td></tr>
 <tr><td>OPCODE_ECON_UPDATE_SHIP</td><td>	118</td></tr>
-<tr><td>OPCODE_REQUEST_SHIP_SDATA</td><td> 119</td></tr>
+<tr><td><em>not used</em></td><td> 119</td></tr>
 <tr><td>OPCODE_SHIP_SDATA</td><td>	120</td></tr>
 <tr><td>OPCODE_LOAD_TORPEDO</td><td>	121</td></tr>
 <tr><td>OPCODE_REQUEST_PHASER</td><td>	122</td></tr>
@@ -218,7 +270,7 @@ big-endian integers.  An authoritative list of opcodes may be found in snis_pack
 <tr><td>OPCODE_ROLE_ONSCREEN</td><td> 134</td></tr>
 <tr><td>OPCODE_SCI_SELECT_TARGET</td><td> 135</td></tr>
 <tr><td>OPCODE_UPDATE_DAMAGE</td><td> 136</td></tr>
-<tr><td>OPCODE_REQUEST_LASER</td><td> 137</td></tr>
+<tr><td>OPCODE_REQUEST_LASER (not used)</td><td> 137</td></tr>
 <tr><td>OPCODE_REQUEST_LASER_WAVELENGTH</td><td> 138</td></tr>
 <tr><td>OPCODE_SCI_SELECT_COORDS</td><td> 139</td></tr>
 <tr><td>OPCODE_REQUEST_SHIELD</td><td> 140</td></tr>
@@ -231,15 +283,1691 @@ big-endian integers.  An authoritative list of opcodes may be found in snis_pack
 <tr><td>OPCODE_DAMCON_OBJ_UPDATE</td><td>	147</td></tr>
 <tr><td>OPCODE_REQUEST_ROBOT_YAW</td><td>	148</td></tr>
 <tr><td>OPCODE_REQUEST_ROBOT_THRUST</td><td>	149</td></tr>
-<tr><td>OPCODE_DAMCON_SOCKET_UPDATE</td><td>	150</td></tr>
-
-<tr><td>OPCODE_POS_SHIP</td><td>		200</td></tr>
-<tr><td>OPCODE_POS_STARBASE</td><td>	201</td></tr>
-<tr><td>OPCODE_POS_LASER</td><td>	202</td></tr>
-<tr><td>OPCODE_NOOP</td><td>		0xffff</td></tr>
-
+<tr><td>OPCODE_DAMCON_SOCKET_UPDATE</td><td>150</td></tr>
+<tr><td>OPCODE_DAMCON_PART_UPDATE</td><td>151</td></tr>
+<tr><td>OPCODE_REQUEST_ROBOT_GRIPPER</td><td>152</td></tr>
+<tr><td>OPCODE_MAINSCREEN_VIEW_MODE</td><td>153</td></tr>
+<tr><td>OPCODE_UPDATE_WORMHOLE</td><td>154</td></tr>
+<tr><td>OPCODE_WORMHOLE_LIMBO</td><td>155</td></tr>
+<tr><td>OPCODE_UPDATE_SPACEMONSTER</td><td>156</td></tr>
+<tr><td>OPCODE_REQUEST_WEAPZOOM</td><td>157</td></tr>
+<tr><td>OPCODE_REQUEST_NAVZOOM</td><td>158</td></tr>
+<tr><td>OPCODE_REQUEST_REDALERT</td><td>159</td></tr>
+<tr><td>OPCODE_UPDATE_POWER_DATA</td><td>160</td></tr>
+<tr><td>OPCODE_UPDATE_PLANET</td><td>161</td></tr>
+<tr><td>OPCODE_CREATE_ITEM</td><td>162</td></tr>
+<tr><td>OPCODE_DEMON_COMMS_XMIT</td><td>163</td></tr>
+<tr><td>OPCODE_DEMON_FIRE_TORPEDO</td><td>164</td></tr>
+<tr><td>OPCODE_DEMON_FIRE_PHASER</td><td>165</td></tr>
+<tr><td>OPCODE_DEMON_POSSESS</td><td>166</td></tr>
+<tr><td>OPCODE_DEMON_DISPOSSESS</td><td>167</td></tr>
+<tr><td>OPCODE_DEMON_ROT</td><td>168</td></tr>
+<tr><td>OPCODE_DEMON_THRUST</td><td>169</td></tr>
+<tr><td>OPCODE_DEMON_MOVE_OBJECT</td><td>170</td></tr>
+<tr><td>OPCODE_INITIATE_WARP</td><td>171</td></tr>
+<tr><td>OPCODE_REQUEST_REVERSE</td><td>172</td></tr>
+<tr><td>OPCODE_UPDATE_LASERBEAM</td><td>173</td></tr>
+<tr><td>OPCODE_WEAP_SELECT_TARGET (not used)</td><td>174</td></tr>
+<tr><td>OPCODE_SCI_DETAILS</td><td>175</td></tr>
+<tr><td>OPCODE_PROXIMITY_ALERT</td><td>176</td></tr>
+<tr><td>OPCODE_COLLISION_NOTIFICATION</td><td>177</td></tr>
+<tr><td>OPCODE_UPDATE_DERELICT</td><td>178</td></tr>
+<tr><td>OPCODE_DEMON_CLEAR_ALL</td><td>179</td></tr>
+<tr><td>OPCODE_EXEC_LUA_SCRIPT</td><td>180</td></tr>
+<tr><td>OPCODE_REQUEST_TRACTORBEAM</td><td>181</td></tr>
+<tr><td>OPCODE_UPDATE_TRACTORBEAM</td><td>182</td></tr>
+<tr><td>OPCODE_REQUEST_TRACTOR_PWR</td><td>183</td></tr>
+<tr><td>OPCODE_COMMS_MAINSCREEN</td><td>184</td></tr>
+<tr><td>OPCODE_LOAD_SKYBOX</td><td>185</td></tr>
+<tr><td>OPCODE_ROBOT_AUTO_MANUAL</td><td>186</td></tr>
+<tr><td>OPCODE_ADD_WARP_EFFECT</td><td>187</td></tr>
+<tr><td>OPCODE_REQUEST_MAINZOOM</td><td>188</td></tr>
+<tr><td>OPCODE_REQUEST_PITCH</td><td>189</td></tr>
+<tr><td>OPCODE_REQUEST_ROLL</td><td>190</td></tr>
+<tr><td>OPCODE_REQUEST_SCIBALL_YAW</td><td>191</td></tr>
+<tr><td>OPCODE_REQUEST_SCIBALL_PITCH</td><td>192</td></tr>
+<tr><td>OPCODE_REQUEST_SCIBALL_ROLL</td><td>193</td></tr>
+<tr><td>not used</td><td>194</td></tr>
+<tr><td>OPCODE_REQUEST_MANUAL_GUNYAW</td><td>195</td></tr>
+<tr><td>OPCODE_REQUEST_MANUAL_GUNPITCH</td><td>196</td></tr>
+<tr><td>OPCODE_REQUEST_MANUAL_LASER</td><td>197</td></tr>
+<tr><td>OPCODE_REQUEST_WEAPONS_YAW_PITCH</td><td>198</td></tr>
+<tr><td>OPCODE_UPDATE_COOLANT_DATA</td><td>199</td></tr>
+<tr><td>OPCODE_REQUEST_MANEUVERING_COOLANT</td><td>200</td></tr>
+<tr><td>OPCODE_REQUEST_WARP_COOLANT</td><td>201</td></tr>
+<tr><td>OPCODE_REQUEST_IMPULSE_COOLANT</td><td>202</td></tr>
+<tr><td>OPCODE_REQUEST_SHIELDS_COOLANT</td><td>203</td></tr>
+<tr><td>OPCODE_REQUEST_COMMS_COOLANT</td><td>204</td></tr>
+<tr><td>OPCODE_REQUEST_SENSORS_COOLANT</td><td>205</td></tr>
+<tr><td>OPCODE_REQUEST_PHASERBANKS_COOLANT</td><td>206</td></tr>
+<tr><td>OPCODE_REQUEST_TRACTOR_COOLANT</td><td>207</td></tr>
+<tr><td>OPCODE_SILENT_UPDATE_DAMAGE</td><td>208</td></tr>
+<tr><td>OPCODE_ECON_UPDATE_SHIP_DEBUG_AI</td><td>209</td></tr>
+<tr><td>OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE</td><td>210</td></tr>
+<tr><td>OPCODE_TOGGLE_DEMON_SAFE_MODE</td><td>211</td></tr>
+<tr><td>OPCODE_UPDATE_CARGO_CONTAINER</td><td>212</td></tr>
+<tr><td>OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW</td><td>213</td></tr>
+<tr><td>OPCODE_REQUEST_UNIVERSE_TIMESTAMP</td><td>214</td></tr>
+<tr><td>OPCODE_UPDATE_UNIVERSE_TIMESTAMP</td><td>215</td></tr>
+<tr><td>OPCODE_UPDATE_BUILD_INFO</td><td>216</td></tr>
+<tr><td>OPCODE_DETONATE</td><td>217</td></tr>
+<tr><td>OPCODE_ENSCRIPT</td><td>218</td></tr>
+<tr><td>OPCODE_SCI_ALIGN_TO_SHIP</td><td>219</td></tr>
+<tr><td>OPCODE_NAV_TRIDENT_MODE</td><td>220</td></tr>
+<tr><td>OPCODE_ATMOSPHERIC_FRICTION</td><td>221</td></tr>
+<tr><td>OPCODE_UPDATE_DOCKING_PORT</td><td>222</td></tr>
+<tr><td>OPCODE_DOCKING_MAGNETS</td><td>223</td></tr>
+<tr><td>OPCODE_CYCLE_NAV_POINT_OF_VIEW</td><td>224</td></tr>
+<tr><td>OPCODE_REQUEST_MINING_BOT</td><td>225</td></tr>
+<tr><td>OPCODE_REQUEST_STANDARD_ORBIT</td><td>226</td></tr>
+<tr><td>OPCODE_SWITCH_SERVER</td><td>227</td></tr>
+<tr><td>OPCODE_UPDATE_WARPGATE</td><td>228</td></tr>
+<tr><td>OPCODE_UPDATE_WARPGATE</td><td>228</td></tr>
+<tr><td>OPCODE_ADD_PLAYER_ERROR</td><td>229</td></tr>
+<tr><td>OPCODE_NATURAL_LANGUAGE_REQUEST</td><td>230</td></tr>
+<tr><td>OPCODE_SET_SOLARSYSTEM</td><td>231</td></tr>
+<tr><td>OPCODE_REQUEST_ROBOT_CMD</td><td>232</td></tr>
+<tr><td>OPCODE_TEXTSCREEN_OP</td><td>233</td></tr>
+<tr><td>OPCODE_UPDATE_BLOCK</td><td>234</td></tr>
+<tr><td>OPCODE_UPDATE_TURRET</td><td>235</td></tr>
+<tr><td>OPCODE_LATENCY_CHECK</td><td>236</td></tr>
+<tr><td>OPCODE_NOOP</td><td>0xff</td></tr>
 </table>
 
+<h4>100 UPDATE SHIP PACKET</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>100</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID of ship</td></tr>
+<tr><td>5</td><td>w</td><td>timestamp</td></tr>
+<tr><td>9</td><td>h</td><td>alive</td></tr>
+<tr><td>11</td><td>S</td><td>x position</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>15</td><td>S</td><td>y position</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>19</td><td>S</td><td>z position</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>23</td><td>R</td><td>ship yaw velocity</td><td>INT32_MAX / 100</td></tr>
+<tr><td>27</td><td>R</td><td>ship pitch velocity</td><td>INT32_MAX / 100</td></tr>
+<tr><td>31</td><td>R</td><td>ship roll velocity</td><td>INT32_MAX / 100</td></tr>
+<tr><td>35</td><td>w</td><td>torpedoes</td></tr>
+<tr><td>39</td><td>w</td><td>ship power</td><td></tr>
+<tr><td>33</td><td>R</td><td>gun yaw velocity</td><td>INT32_MAX / 100</td></tr>
+<tr><td>37</td><td>R</td><td>science beam heading</td><td>INT32_MAX / 100</td></tr>
+<tr><td>41</td><td>R</td><td>science beam width</td><td>INT32_MAX / 100</td></tr>
+<tr><td>45</td><td>b</td><td>torpedoes loading</td></tr>
+<tr><td>46</td><td>b</td><td>throttle</td></tr>
+<tr><td>47</td><td>b</td><td>rpm</td></tr>
+<tr><td>48</td><td>w</td><td>fuel</td></tr>
+<tr><td>52</td><td>b</td><td>science zoom factor</td></tr>
+<tr><td>53</td><td>b</td><td>weapons zoom factor</td></tr>
+<tr><td>54</td><td>b</td><td>navigation zoom factor</td></tr>
+<tr><td>55</td><td>b</td><td>main screen zoom factor</td></tr>
+<tr><td>56</td><td>b</td><td>warp drive power</td></tr>
+<tr><td>57</td><td>b</td><td>warp drive requested power</td></tr>
+<tr><td>58</td><td>b</td><td>shield requested power</td></tr>
+<tr><td>59</td><td>b</td><td>phaser charge</td></tr>
+<tr><td>60</td><td>b</td><td>phaser wavelength</td></tr>
+<tr><td>61</td><td>b</td><td>ship type</td></tr>
+<tr><td>62</td><td>b</td><td>reverse active</td></tr>
+<tr><td>63</td><td>b</td><td>trident</td></tr>
+<tr><td>64</td><td>w</td><td>victim_id</td></tr>
+<tr><td>68</td><td>Q</td><td>ship orientation</td></tr>
+<tr><td>76</td><td>Q</td><td>science orientation</td></tr>
+<tr><td>84</td><td>Q</td><td>weapons orientation</td></tr>
+<tr><td>92</td><td>b</td><td>secure area</td></tr>
+<tr><td>93</td><td>b</td><td>docking magnets</td></tr>
+<tr><td>94</td><td>b</td><td>emf detector</td></tr>
+</table>
+
+<h4>101 UPDATE STARBASE</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>101</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>Q</td><td>orientation</td></tr>
+</table>
+
+<h4>102 UPDATE LASER  (laser bolt, not laser beam)</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>102</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>w</td><td>Ship ID</td></tr>
+<tr><td>13</td><td>b</td><td>Laser Power</td></tr>
+<tr><td>14</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>18</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>22</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>26</td><td>Q</td><td>orientation</td></tr>
+</table>
+
+<h4>103 UPDATE TORPEDO</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>103</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>w</td><td>Ship ID</td></tr>
+<tr><td>13</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+</table>
+
+<h4>104 UPDATE PLAYER</h4> (Client to Server)
+<p>This is how a client initiates a session with the server.
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>104</td></tr>
+<tr><td>1</td><td>b</td><td>New Ship</td></tr>
+<tr><td>2</td><td>b</td><td>Warpgate Number</td></tr>
+<tr><td>3</td><td>w</td><td>Role bitmap</td></tr>
+<tr><td>7</td><td>s</td><td>x</td><td>ship name (20 chars)</td></tr>
+<tr><td>27</td><td>S</td><td>y</td><td>password (20 chars)</td></tr>
+</table>
+
+<h4>105 ACK PLAYER (not used)</h4>
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>105</td></tr>
+</table>
+
+<h4>106 ID CLIENT SHIP</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>106</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+</table>
+
+<h4>107 UPDATE ASTEROID</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>107</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>13</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>33</td><td>b</td><td>carbon</td></tr>
+<tr><td>33</td><td>b</td><td>nickel/iron</td></tr>
+<tr><td>33</td><td>b</td><td>silicates</td></tr>
+<tr><td>33</td><td>b</td><td>precious metals</td></tr>
+</table>
+
+<h4>108 Request Yaw</h4> (Client to Server)
+<p>The yaw request contains a Yaw Code:
+<ul>
+<li>0 - YAW_LEFT
+<li>1 - YAW_RIGHT
+<li>2 - YAW_LEFT_FINE
+<li>3 - YAW_RIGHT_FINE
+</ul>
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>108</td></tr>
+<tr><td>1</td><td>b</td><td>Yaw Code</td></tr>
+</table>
+
+<h4>109 Request Thrust</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>109</td></tr>
+<tr><td>1</td><td>b</td><td>Thrust</td></tr>
+</table>
+
+<h4>110 Request Gun Yaw</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>110</td></tr>
+<tr><td>1</td><td>b</td><td>Yaw Code (0-3)  See opcode 108</td></tr>
+</table>
+
+<h4>111 Request Torpedo</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>111</td></tr>
+</table>
+
+<h4>112 Delete Object</h4> (bidirectional)
+
+<p>This opcode is bidirectional.  The client can request the server to delete an
+an object from the Demon Screen using this opcode (and depending on what the
+player has selected, the server may decline to delete the object).  More commonly
+this opcode is used by the server to inform the clients that objects have
+been deleted, and the client should therefore delete their copy.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>112</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+</table>
+
+<h4>113 Update Explosion</h4> (Server to Client)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>113</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>13</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>25</td><td>h</td><td>nsparks</td></tr>
+<tr><td>27</td><td>h</td><td>velocity</td></tr>
+<tr><td>29</td><td>h</td><td>explosion time</td></tr>
+<tr><td>31</td><td>b</td><td>victim type</td></tr>
+</table>
+
+<h4>114 Play Sound</h4> (Server to Client)
+<p>Sound numbers are defined in sounds.h
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>114</td></tr>
+<tr><td>1</td><td>h</td><td>Sound Number</td></tr>
+</table>
+
+<h4>115 Request Science Yaw</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>115</td></tr>
+<tr><td>1</td><td>b</td><td>Yaw Code (0-3)  See opcode 108</td></tr>
+</table>
+
+<h4>116 Request Science Beam Width</h4> (Client to Server)
+<p>The beam width code is as follows:
+<ul>
+<li>0 - make beam larger
+<li>1 - make beam smaller
+</ul>
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>116</td></tr>
+<tr><td>1</td><td>b</td><td>Beam width code</td></tr>
+</table>
+
+<h4>117 Update Ship 2</h4> Not used, snis_client currently treats it
+the same as Update Ship 100, but nothing transmits opcode 117.
+
+<h4>118 Econ Update Ship</h4> (Server to Client)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>118</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>h</td><td>alive</td></tr>
+<tr><td>11</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>15</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>19</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>23</td><td>Q</td><td>orientation</td></tr>
+<tr><td>31</td><td>w</td><td>Victim ID</td></tr>
+<tr><td>35</td><td>b</td><td>ship type</td></tr>
+<tr><td>36</td><td>b</td><td>faction</td></tr>
+</table>
+
+<h4>119 Not Used</h4>
+
+<h4>120 Update Ship "sdata"</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>120</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>subclass</td></tr>
+<tr><td>6</td><td>b</td><td>shield strength</td></tr>
+<tr><td>7</td><td>b</td><td>shield wavelength</td></tr>
+<tr><td>8</td><td>b</td><td>shield width</td></tr>
+<tr><td>9</td><td>b</td><td>shield depth</td></tr>
+<tr><td>10</td><td>b</td><td>faction</td></tr>
+<tr><td>11</td><td>b</td><td>lifeform count</td></tr>
+<tr><td>12</td><td>20xb</td><td>name (20 chars)</td></tr>
+</table>
+
+<h4>121 Load Torpedo</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>121</td></tr>
+</table>
+
+<h4>122 Request Phaser</h4> (not used)
+
+<h4>123 Request Throttle</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>123</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>throttle value</td></tr>
+</table>
+
+<h4>124 Request Maneuvering Power</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>124</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>power value</td></tr>
+</table>
+
+<h4>125 Request Warp Power</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>125</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>power value</td></tr>
+</table>
+
+<h4>126 Request Impulse Power</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>126</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>power value</td></tr>
+</table>
+
+<h4>127 Request Shields Power</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>127</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>power value</td></tr>
+</table>
+
+<h4>128 Request Comms Power</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>128</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>power value</td></tr>
+</table>
+
+<h4>129 Request Sensors Power</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>129</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>power value</td></tr>
+</table>
+
+<h4>130 Request Phaser Banks Power</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>130</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>power value</td></tr>
+</table>
+
+<h4>131 Request Science Zoom</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>131</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>zoom value</td></tr>
+</table>
+
+
+<h4>132 Request Warp Drive</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>132</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>warp drive value</td></tr>
+</table>
+
+<h4>133 Engage Warp</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>133</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>this value is ignored</td></tr>
+</table>
+
+<h4>134 Role Onscreen</h4> (bidirectional)
+<p>Possible display mode values are:
+<ul>
+<li>0 - MAINSCREEN
+<li>1 - NAVIGATION
+<li>2 - WEAPONS
+<li>3 - ENGINEERING
+<li>4 - SCIENCE
+<li>5 - COMMS
+<li>6 - DEMON
+<li>7 - DAMAGE CONTROL
+<li>8 - GLMAIN
+<li>9 - FONTTEST
+<li>10 - INTROSCREEN
+<li>11 - LOBBYSCREEN
+<li>12 - CONNECTING
+<li>13 - CONNECTED
+<li>14 - FINDSERVER
+<li>15 - NETWORK_SETUP
+</ul>
+<p>Only 0 - 7 make sense to use with this opcode.
+The idea behind this opcode is any client can request
+that all the other clients on the bridge that have the
+MAINSCREEN role should instead display what the requesting
+client wants to show (typically the screen they're currently
+on.)  So, when the Captain says, "Onscreen!" to the Science
+Officer, for example, the Science officer can press Ctrl-O,
+which sends this opcode to request the Science role to be
+put on the main screen.  The server then forwards this request
+to all the clients, and any client capable of the mainscreen
+role complies, and shows science.  It acts as a toggle as well,
+so if the main screen is already showing science, then it reverts
+back to showing main out-the-window view.
+
+</ul>
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>134</td></tr>
+<tr><td>1</td><td>b</td><td>new display mode (0 - 7)</td></tr>
+</table>
+
+<h4>135 Science Select Target</h4> (bidirectional)
+
+The client initiates this request, sending it to the server, and the server
+forwards it back to each client.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>135</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID of ship</td></tr>
+</table>
+
+<h4>136 Update Damage</h4> (Server to Client)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>136</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID of ship</td></tr>
+<tr><td>5</td><td>h</td><td>8</td></tr>
+<tr><td>7</td><td>b</td><td>shield damage</td></tr>
+<tr><td>8</td><td>b</td><td>impulse damage</td></tr>
+<tr><td>9</td><td>b</td><td>warp damage</td></tr>
+<tr><td>10</td><td>b</td><td>maneuvering damage</td></tr>
+<tr><td>11</td><td>b</td><td>phaser banks damage</td></tr>
+<tr><td>12</td><td>b</td><td>sensors damage</td></tr>
+<tr><td>13</td><td>b</td><td>comms damage</td></tr>
+<tr><td>14</td><td>b</td><td>tractor damage</td></tr>
+</table>
+
+<h4>137 Request Laser</h4> (not used, though there is obsolete code in snis_server to handle this request.)
+
+<h4>138 Request Laser Wavelength</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>138</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>wavelength value</td></tr>
+</table>
+
+<h4>139 Science Select Coords</h4> (bidirectional, obsolete)
+
+This opcode is left over from the days when the game was 2-dimensional.
+There should probably be something to replace this for 3-dimensions.
+The idea was a user selected coordinates on the science screen with the
+mouse, and this data was simply relayed to other clients by the server
+by resending the command to all the clients.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>139</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>S</td><td>x coord</td></tr>
+<tr><td>9</td><td>S</td><td>y coord</td></tr>
+</table>
+
+<h4>140 Request Shield</h4> (bidirectional)
+
+This sets the shield slider.  The user selects desired shield slider
+value on one client.  This is forwarded to the server, and the server
+then sends the same command back to all the clients, so all the clients
+have the same slider setting.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>140</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>value</td></tr>
+</table>
+
+<h4>141 Update Respawn Time</h4> (Server to Client)
+
+Updates the respawn clock on the clients when they have been killed
+and are waiting to respawn.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>141</td></tr>
+<tr><td>1</td><td>w</td><td>seconds remaining</td></tr>
+</table>
+
+<h4>142 Update Net Stats</h4> (Server to Client)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>142</td></tr>
+<tr><td>1</td><td>q (64-bit unsigned int)</td><td>bytes sent to date</td></tr>
+<tr><td>9</td><td>q (64-bit unsigned int)</td><td>bytes received to date</td></tr>
+<tr><td>17</td><td>w</td><td>number of objects</td></tr>
+<tr><td>21</td><td>w</td><td>number of ships</td></tr>
+<tr><td>25</td><td>w</td><td>elapsed seconds</td></tr>
+<tr><td>29</td><td>w</td><td>latency in microseconds</td></tr>
+<tr><td>33</td><td>w</td><td>faction population[0]</td></tr>
+<tr><td>37</td><td>w</td><td>faction population[1]</td></tr>
+<tr><td>41</td><td>w</td><td>faction population[2]</td></tr>
+<tr><td>45</td><td>w</td><td>faction population[3]</td></tr>
+<tr><td>49</td><td>w</td><td>faction population[4]</td></tr>
+</table>
+
+<h4>143 Comms Transmission</h4> (bidirectional)
+This command has two variants depending whether it is being sent by the
+client or by the server.  If you're passively listening to traffic without
+actually being a client or a server yourself, I'm not sure how you could
+tell the variants apart.  In general though, clients only receive from the
+server, and the server only receives from clients, so they don't need to
+decide which variant it is, they already know what it must be.  The difference
+is the client includes the object id of the client in the command.  This is
+so that the client can spoof other ships for the Demon Screen. (TODO:
+this should probably be locked down a little better, somehow.)
+
+<p>Client to Server Variant
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>143</td></tr>
+<tr><td>1</td><td>b</td><td>length</td></tr>
+<tr><td>2</td><td>w</td><td>Object Id</td></tr>
+<tr><td>6</td><td>b</td><td><em>length</em> bytes of comms transmission</td></tr>
+</table>
+
+<p>Server to Client Variant
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>143</td></tr>
+<tr><td>1</td><td>b</td><td>length</td></tr>
+<tr><td>1</td><td>b</td><td><em>length</em> bytes of comms transmission</td></tr>
+</table>
+
+<h4>144 Warp Limbo</h4> (Server to Client)
+
+This command puts some terminals (not Main View, not Weapons)
+into "warp limbo" so they show only hash.  The idea is, the terminals
+don't work while in hyperspace, but you can still look out the windows.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>144</td></tr>
+<tr><td>1</td><td>h</td><td>time in 1/30ths of a second (30 == 1 second)</td></tr>
+</table>
+
+<h4>145 Demon Command</h4> (Client to Server)
+
+<p>This opcode is somewhat buggy and needs some work.
+
+<p>This command allows the player to command one group of objects to attack another group of objects.
+There are 2 "group counts" embedded in the command which identify how many objects are in each
+group.  Following the group counts are the object IDs for each group, first the object IDs for
+group 1, then the object IDs for group 2.
+
+<p>This command currently fails to check that the objects being ordered to attack
+are actually capable of attacking and does the wrong thing if they aren't.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>145</td></tr>
+<tr><td>1</td><td>b</td><td>Demon Command (the only valid value is 1, which is "attack")</td></tr>
+<tr><td>1</td><td>w</td><td>x</td></tr>
+<tr><td>1</td><td>w</td><td>z</td></tr>
+<tr><td>1</td><td>b</td><td>group count 1</td></tr>
+<tr><td>1</td><td>b</td><td>group count 2</td></tr>
+<tr><td>1</td><td>w[]</td><td>(group count 1 + group count 2) x Object ID</td></tr>
+</table>
+
+<h4>146 Update Nebula</h4> (Server to Client)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>146</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID of ship</td></tr>
+<tr><td>5</td><td>w</td><td>timestamp</td></tr>
+<tr><td>9</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>S</td><td>radius</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>25</td><td>Q</td><td>rotation</td></tr>
+<tr><td>33</td><td>Q</td><td>unrotated orientation</td></tr>
+<tr><td>41</td><td>S</td><td>phase angle</td><td>360.0</td></tr>
+<tr><td>45</td><td>S</td><td>phase speed</td><td>100.0</td></tr>
+</table>
+
+<h4>147 Update Damage Control Object</h4> (Server to Client)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>147</td></tr>
+<tr><td>1</td><td>w</td><td>Damcon Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Ship Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>type</td></tr>
+<tr><td>5</td><td>S</td><td>X</td><td>DAMCONXDIM</td></tr>
+<tr><td>5</td><td>S</td><td>Y</td><td>DAMCONYDIM</td></tr>
+<tr><td>5</td><td>S</td><td>velocity</td><td>DAMCONXDIM</td></tr>
+<tr><td>5</td><td>R</td><td>desired heading</td><td>INT32_MAX / 100</td></tr>
+<tr><td>5</td><td>b</td><td>autonomous mode</td></tr>
+</table>
+
+<h4>148 Request Robot Yaw</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>148</td></tr>
+<tr><td>1</td><td>b</td><td>Yaw Code (See opcode 108)</td></tr>
+</table>
+
+<h4>149 Request Robot Thrust</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>149</td></tr>
+<tr><td>1</td><td>b</td><td>Thrust</td></tr>
+</table>
+
+<h4>150 Update Damage Control Socket</h4> (Server to Client)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>150</td></tr>
+<tr><td>1</td><td>w</td><td>Damcon Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Ship Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>type</td></tr>
+<tr><td>5</td><td>S</td><td>X</td><td>DAMCONXDIM</td></tr>
+<tr><td>5</td><td>S</td><td>Y</td><td>DAMCONYDIM</td></tr>
+<tr><td>5</td><td>w</td><td>Contents ID</td></tr>
+<tr><td>5</td><td>b</td><td>System</td></tr>
+<tr><td>5</td><td>b</td><td>Part</td></tr>
+</table>
+
+
+<h4>151 Update Damage Control Part</h4> (Server to Client)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>151</td></tr>
+<tr><td>1</td><td>w</td><td>Damcon Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Ship Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>type</td></tr>
+<tr><td>5</td><td>S</td><td>X</td><td>DAMCONXDIM</td></tr>
+<tr><td>5</td><td>S</td><td>Y</td><td>DAMCONYDIM</td></tr>
+<tr><td>5</td><td>R</td><td>heading</td></tr>
+<tr><td>5</td><td>b</td><td>System</td></tr>
+<tr><td>5</td><td>b</td><td>Part</td></tr>
+<tr><td>5</td><td>b</td><td>Damage</td></tr>
+</table>
+
+<h4>152 Request Robot Gripper</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>152</td></tr>
+</table>
+
+<h4>153 Mainscreen View Mode</h4> (bidirectional)
+
+This opcode is initiated by clients, then fanned out by server to all
+clients with main screen role capability.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>153</td></tr>
+<tr><td>1</td><td>R</td><td>View Angle (this value is ignored)</td></tr>
+<tr><td>5</td><td>b</td><td>View Mode (0 = Normal View, 1 = Weapons View)</td></tr>
+</table>
+
+<h4>154 Update Wormhole</h4> (Server to Client)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>154</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+</table>
+
+<h4>155 Wormhole Limbo</h4> (Server to Client)
+
+Similar to 144 Warp Limbo.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>155</td></tr>
+<tr><td>1</td><td>h</td><td>time in 1/30ths of a second (30 == 1 second)</td></tr>
+</table>
+
+<h4>156 Update Spacemonster</h4> (Server to Client)
+
+Spacemonsters are currently sort of broken.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>156</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+</table>
+
+<h4>157 Request Weapons Zoom</h4> (Not used, Client to Server, server has code to handle it)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>157</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>zoom value</td></tr>
+</table>
+
+<h4>158 Request Navigation Zoom</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>158</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>zoom value</td></tr>
+</table>
+
+<h4>159 Request Red Alert</h4> (bidirectional)
+
+Client initiates request for red alert, server forwards to all clients on the same bridge.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>159</td></tr>
+<tr><td>1</td><td>b</td><td>New alert mode (0 means off, non-zero means on)</td></tr>
+</table>
+
+<h4>160 Update Power Data</h4> (Server to Client)
+
+The power system is modelled after a resistive network.
+
+<pre>
+             R01        R02        R03
+ +---------/\/\/-------------------/\/\/--------+ S0
+ |                                              |
+ |           R11        R12         R13         |
+ +---------/\/\/-------------------/\/\/--------+ S1
+ |                                              |
+ |           R21        R22         R23         |
+ +---------/\/\/-------------------/\/\/--------+ S2
+ |                                              |
+ |           R31        R32         R33         |
+ +---------/\/\/-------------------/\/\/--------+ S3
+ |                                              |
+ |           R41        R42         R43         |
+ +---------/\/\/-------------------/\/\/--------+ S4
+ |                                              |
+ |           R51        R52         R53         |
+ +---------/\/\/-------------------/\/\/--------+ S5
+ |                                              |
+ |           R61        R62         R63         |
+ +---------/\/\/-------------------/\/\/--------+ S6
+ |                                              |
+ |                                              |
+ |      RS        | | | |                       |
+ +----/\/\/------||||||||-----------------------+
+                  | | | |
+                    V0, Imax
+</pre>
+<ul>
+<li>R*1 is usually a variable resistor connected to a slider
+which the user can control.  Setting the slider to "full power"
+reduces that resistor to 0.  Some systems just have a constant
+value for this resistor.
+<li>R*2 is a variable resistor connected to power controls in
+engineering.  It is a way for engineering to limit the power
+that a system can consume.
+<li>R*3 is the innate resistance of the system (not zero).
+</ul>
+The circuit is modelled and the current and voltage (I) are
+calculated for each system.  The current controls how much
+oomph a system is currently operating with.  These values are
+updated on the client by this opcode.  The client only uses them
+for display purposes (slider positions and power
+consumption meters).
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>160</td></tr>
+<tr><td>1</td><td>w</td><td>Ship ID</td></tr>
+<tr><td>5</td><td>h</td><td>32</td></tr>
+<tr><td>7</td><td>b</td><td>Maneuvering R1</td></tr>
+<tr><td>8</td><td>b</td><td>Maneuvering R2</td></tr>
+<tr><td>9</td><td>b</td><td>Maneuvering R3</td></tr>
+<tr><td>10</td><td>b</td><td>Maneuvering Current</td></tr>
+<tr><td>11</td><td>b</td><td>Warp R1</td></tr>
+<tr><td>12</td><td>b</td><td>Warp R2</td></tr>
+<tr><td>13</td><td>b</td><td>Warp R3</td></tr>
+<tr><td>14</td><td>b</td><td>Warp Current</td></tr>
+<tr><td>15</td><td>b</td><td>Impulse R1</td></tr>
+<tr><td>16</td><td>b</td><td>Impulse R2</td></tr>
+<tr><td>17</td><td>b</td><td>Impulse R3</td></tr>
+<tr><td>18</td><td>b</td><td>Impulse Current</td></tr>
+<tr><td>19</td><td>b</td><td>Sensors R1</td></tr>
+<tr><td>20</td><td>b</td><td>Sensors R2</td></tr>
+<tr><td>21</td><td>b</td><td>Sensors R3</td></tr>
+<tr><td>22</td><td>b</td><td>Sensors Current</td></tr>
+<tr><td>23</td><td>b</td><td>Comms R1</td></tr>
+<tr><td>24</td><td>b</td><td>Comms R2</td></tr>
+<tr><td>25</td><td>b</td><td>Comms R3</td></tr>
+<tr><td>26</td><td>b</td><td>Comms Current</td></tr>
+<tr><td>27</td><td>b</td><td>Phasers R1</td></tr>
+<tr><td>28</td><td>b</td><td>Phasers R2</td></tr>
+<tr><td>29</td><td>b</td><td>Phasers R3</td></tr>
+<tr><td>30</td><td>b</td><td>Phasers Current</td></tr>
+<tr><td>31</td><td>b</td><td>Shields R1</td></tr>
+<tr><td>32</td><td>b</td><td>Shields R2</td></tr>
+<tr><td>33</td><td>b</td><td>Shields R3</td></tr>
+<tr><td>34</td><td>b</td><td>Shields Current</td></tr>
+<tr><td>35</td><td>b</td><td>Tractor Beam R1</td></tr>
+<tr><td>36</td><td>b</td><td>Tractor Beam R2</td></tr>
+<tr><td>37</td><td>b</td><td>Tractor Beam R3</td></tr>
+<tr><td>38</td><td>b</td><td>Tractor Beam Current</td></tr>
+</table>
+
+<h4>161 Update Planet</h4> (Server to Client)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>161</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>13</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>25</td><td>S</td><td>planet radius</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>29</td><td>w</td><td>planet description seed</td></tr>
+<tr><td>33</td><td>b</td><td>government</td></tr>
+<tr><td>34</td><td>b</td><td>tech level</td></tr>
+<tr><td>35</td><td>b</td><td>economy</td></tr>
+<tr><td>36</td><td>b</td><td>security</td></tr>
+<tr><td>37</td><td>h</td><td>contraband</td></tr>
+<tr><td>39</td><td>b</td><td>Atmosphere R</td></tr>
+<tr><td>40</td><td>b</td><td>Atmosphere G</td></tr>
+<tr><td>41</td><td>b</td><td>Atmosphere B</td></tr>
+<tr><td>42</td><td>S</td><td>Atmosphere scale</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>46</td><td>b</td><td>has atmosphere</td></tr>
+<tr><td>47</td><td>h</td><td>Atmosphere type</td></tr>
+<tr><td>49</td><td>b</td><td>solarsystem planet type</td></tr>
+<tr><td>50</td><td>b</td><td>ring selector</td></tr>
+</table>
+
+<h4>162 Create Item</h4> (Client to Server)
+
+This is triggered via the Demon Screen. Allowable item types are:
+
+<ul>
+<li>1 Ship
+<li>2 Asteroid
+<li>3 Starbase
+<li>10 Nebula
+<li>12 Spacemonster (current out of order)
+<li>13 Planet
+</ul>
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>162</td></tr>
+<tr><td>1</td><td>b</td><td>Item Type</td></tr>
+<tr><td>13</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+</table>
+
+<h4>163 Demon Comms Transmit</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>163</td></tr>
+<tr><td>1</td><td>b</td><td>Length</td></tr>
+<tr><td>2</td><td>w</td><td>Transmitting Ship ID</td></tr>
+<tr><td>6</td><td>b[]</td><td>Message (<em>Length</em> bytes)</td></tr>
+</table>
+
+<h4>164 Demon Fire Torpedo</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>164</td></tr>
+<tr><td>1</td><td>w</td><td>Firing Ship ID</td></tr>
+</table>
+
+<h4>165 Demon Fire Phaser</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>165</td></tr>
+<tr><td>1</td><td>w</td><td>Firing Ship ID</td></tr>
+</table>
+
+<h4>166 Demon Possess (captain NPC ship)</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>166</td></tr>
+<tr><td>1</td><td>w</td><td>Possessed Ship ID</td></tr>
+</table>
+
+<h4>167 Demon Dispossess (uncaptain NPC ship)</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>167</td></tr>
+<tr><td>1</td><td>w</td><td>Dispossessed Ship ID</td></tr>
+</table>
+
+<h4>168 Demon Rotate</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>168</td></tr>
+<tr><td>1</td><td>b</td><td>Kind (0 = YAW, 1 = PITCH, 2 = ROLL)</td></tr>
+<tr><td>2</td><td>w</td><td>Object ID</td></tr>
+<tr><td>6</td><td>b</td><td>Amount (Yaw Code, see opcode 108)</td></tr>
+</table>
+
+<h4>169 Demon Thrust</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>169</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>Thrust</td></tr>
+</table>
+
+<h4>170 Demon Move Object</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>170</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>9</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>W</td><td>orientation</td></tr>
+</table>
+
+<h4>171 Initiate Warp</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>171</td></tr>
+<tr><td>1</td><td>b</td><td>Enough oomph flag</td></tr>
+</table>
+
+
+<h4>172 Request Reverse</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>172</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>reverse flag (zero = forward, non-zero = reverse)</td></tr>
+</table>
+
+<h4>173 Update Laserbeam</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>173</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>w</td><td>Origin ID</td></tr>
+<tr><td>13</td><td>w</td><td>Target ID</td></tr>
+</table>
+
+<h4>174 Weapons Select Target</h4> (not used, client to server, code in server to interpret this)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>174</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+</table>
+
+<h4>175 Science Details</h4> (bidirectional)
+
+Initiated by the client and fanned out by the server to requestor
+client plus clients on the same bridge with role main.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>175</td></tr>
+<tr><td>1</td><td>b</td><td>new science mode (0 = Long Range Scanner, 1 = Details, 2 = Short Range Scanner)</td></tr>
+</table>
+
+<h4>176 Proximity Alert</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>176</td></tr>
+</table>
+
+<h4>177 Collision Notification</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>177</td></tr>
+</table>
+
+<h4>178 Update Derelict</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>178</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>b</td><td>ship type</td></tr>
+</table>
+
+<h4>179 Demon Clear All</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>179</td></tr>
+</table>
+
+<h4>180 Execute Lua Script</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>180</td></tr>
+<tr><td>1</td><td>b</td><td>Length</td></tr>
+<tr><td>2</td><td>b[Length]</td><td>Lua Script Name (<em>Length</em> bytes)</td></tr>
+</table>
+
+<h4>181 Request Tractor Beam</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>181</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+</table>
+
+<h4>182 Update Tractor Beam</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>182</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>w</td><td>Origin ID</td></tr>
+<tr><td>13</td><td>w</td><td>Target ID</td></tr>
+</table>
+
+<h4>183 Request Tractor Power</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>183</td></tr>
+<tr><td>1</td><td>w</td><td>power</td></tr>
+</table>
+
+<h4>184 COMMS MAINSCREEN</h4> (bidirectional)
+Client initiates, server fans it out to all clients on the bridge.
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>183</td></tr>
+<tr><td>1</td><td>w</td><td>new comms mainscreen mode (0 = off, nonzero = on)</td></tr>
+</table>
+
+<h4>185 Load Skybox</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>185</td></tr>
+<tr><td>1</td><td>b</td><td>Length</td></tr>
+<tr><td>2</td><td>b</td><td>Skybox name (<em>Length</em> bytes)</td></tr>
+</table>
+
+<h4>186 ROBOT AUTO MANUAL</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>186</td></tr>
+<tr><td>1</td><td>w</td><td>new robot mode (0 = manual, 1 = autonomous, 2 = semi autonomous)</td></tr>
+</table>
+
+<h4>187 Add Warp Effect</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>187</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>9</td><td>S</td><td>current x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>current y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>current z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>S</td><td>destination x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>25</td><td>S</td><td>destination y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>29</td><td>S</td><td>destination z</td><td>UNIVERSE_DIM</td></tr>
+</table>
+
+<h4>188 Request Main Zoom</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>188</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>zoom value</td></tr>
+</table>
+
+<h4>189 Request Pitch</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>189</td></tr>
+<tr><td>1</td><td>b</td><td>Yaw Code (see 108)</td></tr>
+</table>
+
+<h4>190 Request Roll</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>190</td></tr>
+<tr><td>1</td><td>b</td><td>Yaw Code (see 108)</td></tr>
+</table>
+
+<h4>191 Request Science Yaw</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>191</td></tr>
+<tr><td>1</td><td>b</td><td>Yaw Code (see 108)</td></tr>
+</table>
+
+<h4>192 Request Science Pitch</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>192</td></tr>
+<tr><td>1</td><td>b</td><td>Yaw Code (see 108)</td></tr>
+</table>
+
+<h4>193 Request Science Roll</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>193</td></tr>
+<tr><td>1</td><td>b</td><td>Yaw Code (see 108)</td></tr>
+</table>
+
+<h4>195 Request Manual Gun Yaw</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>195</td></tr>
+<tr><td>1</td><td>b</td><td>Yaw Code (see 108)</td></tr>
+</table>
+
+<h4>196 Request Manual Gun Pitch</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>196</td></tr>
+<tr><td>1</td><td>b</td><td>Yaw Code (see 108)</td></tr>
+</table>
+
+<h4>197 Request Manual Laser</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>197</td></tr>
+</table>
+
+<h4>198 Request Weapons Yaw/Pitch</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>198</td></tr>
+<tr><td>1</td><td>R</td><td>yaw angle</td></tr>
+<tr><td>5</td><td>R</td><td>pitch angle</td></tr>
+</table>
+
+<h4>199 Update Coolant Data</h4> (Server to Client)
+
+Coolant is modelled in the same way as power. See opcode 160.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>199</td></tr>
+<tr><td>1</td><td>w</td><td>Ship ID</td></tr>
+<tr><td>5</td><td>h</td><td>32</td></tr>
+<tr><td>7</td><td>b</td><td>Maneuvering R1</td></tr>
+<tr><td>8</td><td>b</td><td>Maneuvering R2</td></tr>
+<tr><td>9</td><td>b</td><td>Maneuvering R3</td></tr>
+<tr><td>10</td><td>b</td><td>Maneuvering Coolant</td></tr>
+<tr><td>11</td><td>b</td><td>Warp R1</td></tr>
+<tr><td>12</td><td>b</td><td>Warp R2</td></tr>
+<tr><td>13</td><td>b</td><td>Warp R3</td></tr>
+<tr><td>14</td><td>b</td><td>Warp Coolant</td></tr>
+<tr><td>15</td><td>b</td><td>Impulse R1</td></tr>
+<tr><td>16</td><td>b</td><td>Impulse R2</td></tr>
+<tr><td>17</td><td>b</td><td>Impulse R3</td></tr>
+<tr><td>18</td><td>b</td><td>Impulse Coolant</td></tr>
+<tr><td>19</td><td>b</td><td>Sensors R1</td></tr>
+<tr><td>20</td><td>b</td><td>Sensors R2</td></tr>
+<tr><td>21</td><td>b</td><td>Sensors R3</td></tr>
+<tr><td>22</td><td>b</td><td>Sensors Coolant</td></tr>
+<tr><td>23</td><td>b</td><td>Comms R1</td></tr>
+<tr><td>24</td><td>b</td><td>Comms R2</td></tr>
+<tr><td>25</td><td>b</td><td>Comms R3</td></tr>
+<tr><td>26</td><td>b</td><td>Comms Coolant</td></tr>
+<tr><td>27</td><td>b</td><td>Phasers R1</td></tr>
+<tr><td>28</td><td>b</td><td>Phasers R2</td></tr>
+<tr><td>29</td><td>b</td><td>Phasers R3</td></tr>
+<tr><td>30</td><td>b</td><td>Phasers Coolant</td></tr>
+<tr><td>31</td><td>b</td><td>Shields R1</td></tr>
+<tr><td>32</td><td>b</td><td>Shields R2</td></tr>
+<tr><td>33</td><td>b</td><td>Shields R3</td></tr>
+<tr><td>34</td><td>b</td><td>Shields Coolant</td></tr>
+<tr><td>35</td><td>b</td><td>Tractor Beam R1</td></tr>
+<tr><td>36</td><td>b</td><td>Tractor Beam R2</td></tr>
+<tr><td>37</td><td>b</td><td>Tractor Beam R3</td></tr>
+<tr><td>38</td><td>b</td><td>Tractor Beam Coolant</td></tr>
+<tr><td>5</td><td>h</td><td>8</td></tr>
+<tr><td>7</td><td>b</td><td>shield temperature</td></tr>
+<tr><td>8</td><td>b</td><td>impulse temperature</td></tr>
+<tr><td>9</td><td>b</td><td>warp temperature</td></tr>
+<tr><td>10</td><td>b</td><td>maneuvering temperature</td></tr>
+<tr><td>11</td><td>b</td><td>phaser banks temperature</td></tr>
+<tr><td>12</td><td>b</td><td>sensors temperature</td></tr>
+<tr><td>13</td><td>b</td><td>comms temperature</td></tr>
+<tr><td>14</td><td>b</td><td>tractor temperature</td></tr>
+</table>
+
+<h4>200 Request Maneuvering Coolant</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>200</td></tr>
+<tr><td>1</td><td>w</td><td>coolant</td></tr>
+</table>
+
+<h4>201 Request Warp Coolant</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>201</td></tr>
+<tr><td>1</td><td>w</td><td>coolant</td></tr>
+</table>
+
+<h4>202 Request Impulse Coolant</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>202</td></tr>
+<tr><td>1</td><td>w</td><td>coolant</td></tr>
+</table>
+
+<h4>203 Request Shields Coolant</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>203</td></tr>
+<tr><td>1</td><td>w</td><td>coolant</td></tr>
+</table>
+
+<h4>204 Request Comms Coolant</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>204</td></tr>
+<tr><td>1</td><td>w</td><td>coolant</td></tr>
+</table>
+
+<h4>205 Request Sensors Coolant</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>205</td></tr>
+<tr><td>1</td><td>w</td><td>coolant</td></tr>
+</table>
+
+<h4>206 Request Phaserbanks Coolant</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>206</td></tr>
+<tr><td>1</td><td>w</td><td>coolant</td></tr>
+</table>
+
+<h4>207 Request Tractor Beam Coolant</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>207</td></tr>
+<tr><td>1</td><td>w</td><td>coolant</td></tr>
+</table>
+
+<h4>208 Silent Update Damage</h4> (Client to Server)
+
+Same as opcode 136, but sound isn't triggered.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>136</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID of ship</td></tr>
+<tr><td>5</td><td>h</td><td>8</td></tr>
+<tr><td>7</td><td>b</td><td>shield damage</td></tr>
+<tr><td>8</td><td>b</td><td>impulse damage</td></tr>
+<tr><td>9</td><td>b</td><td>warp damage</td></tr>
+<tr><td>10</td><td>b</td><td>maneuvering damage</td></tr>
+<tr><td>11</td><td>b</td><td>phaser banks damage</td></tr>
+<tr><td>12</td><td>b</td><td>sensors damage</td></tr>
+<tr><td>13</td><td>b</td><td>comms damage</td></tr>
+<tr><td>14</td><td>b</td><td>tractor damage</td></tr>
+</table>
+
+<h4>209 Econ Update Ship Debug AI</h4> (Server to Client)
+
+Same as opcode 118, but with extra debug info for AI.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>209</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>h</td><td>alive</td></tr>
+<tr><td>11</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>15</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>19</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>23</td><td>Q</td><td>orientation</td></tr>
+<tr><td>31</td><td>w</td><td>Victim ID</td></tr>
+<tr><td>35</td><td>b</td><td>ship type</td></tr>
+<tr><td>36</td><td>b</td><td>faction</td></tr>
+<tr><td>37</td><td>b[5]</td><td>AI mode char (5x)</td></tr>
+<tr><td>42</td><td>S</td><td>threat level</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>42</td><td>b</td><td>number of waypoints</td></tr>
+<tr><td>43</td><td>S</td><td>X</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>47</td><td>S</td><td>Y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>51</td><td>S</td><td>Z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>(There are <em>number of waypoints</em> instances of x, y, z tuples</td</tr>
+</table>
+
+<h4>210 Toggle Demon Debug AI mode</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>210</td></tr>
+</table>
+
+<h4>211 Toggle Demon Safe mode</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>211</td></tr>
+</table>
+
+<h4>212 Update Cargo Container</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>212</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+</table>
+
+<h4>213 Cycle Main Screen Point of View</h4> (bidirectional)
+Client initiates and server fans it out to all the clients on a bridge.
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>213</td></tr>
+<tr><td>1</td><td>w</td><td>new view mode (0 - 4)</td></tr>
+</table>
+
+<h4>214 Request Universe Timestamp</h4> (client to server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>214</td></tr>
+</table>
+
+<h4>215 Update Universe Timestamp</h4> (server to client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>215</td></tr>
+<tr><td>1</td><td>b</td><td>code (0 = SAMPLE, 1 = START_SAMPLE, 2 = END_SAMPLE)</td></tr>
+<tr><td>1</td><td>w</td><td>timestamp</td></tr>
+<tr><td>1</td><td>S</td><td>timestamp delta</td><td>5</td></tr>
+</table>
+
+<h4>216 Update Build Info</h4> (server to client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>216</td></tr>
+<tr><td>1</td><td>b</td><td>0</td></tr>
+<tr><td>2</td><td>w</td><td>length1</td></tr>
+<tr><td>6</td><td>b[length1]</td><td>Build info string 1 (<em>length1</em> bytes)</td></tr>
+<tr><td>6 + <em>length1</em></td><td>b</td><td>1</td></tr>
+<tr><td>7 + <em>length1</em></td><td>w</td><td>length2</td></tr>
+<tr><td>11 + <em>length1</em></td><td>b[length2]</td><td>Build info string 2 (<em>length2</em> bytes)</td></tr>
+</table>
+
+<h4>217 Detonate</h4> (server to client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>217</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>9</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>w</td><td>time</td></tr>
+<tr><td>21</td><td>U</td><td>fractional time</td><td>5</td></tr>
+</table>
+
+<h4>218 Enscript to Lua Script</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>0</td><td>b</td><td>218</td></tr>
+<tr><td>1</td><td>b</td><td>Length</td></tr>
+<tr><td>2</td><td>b[Length}</td><td>Lua Script Name (<em>Length</em> bytes)</td></tr>
+</table>
+
+<h4>219 Science Align to Ship</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>219</td></tr>
+</table>
+
+<h4>220 Navigation Trident Mode</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>220</td></tr>
+<tr><td>1</td><td>b</td><td>trident mode (0 = absolute mode, 1 = relative mode)</td></tr>
+</table>
+
+<h4>221 Atmospheric Friction</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>221</td></tr>
+</table>
+
+<h4>222 Update Docking Port</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>222</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>S</td><td>Scale</td><td>1000</td></tr>
+<tr><td>13</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>25</td><td>Q</td><td>orientation</td></tr>
+</table>
+
+<h4>223 Toggle Docking Magnets</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>223</td></tr>
+<tr><td>1</td><td>b</td><td>this value is ignored</td></tr>
+</table>
+
+<h4>224 Cycle Navigation Point of View</h4> (bidirectional)
+Client initiates and server fans it out to all the clients on a bridge.
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>213</td></tr>
+<tr><td>1</td><td>w</td><td>new view mode (0 - 3)</td></tr>
+</table>
+
+<h4>225 Request Mining Bot</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>225</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID of thing to mine</td></tr>
+</table>
+
+<h4>226 Request Standard Orbit Toggle</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>226</td></tr>
+</table>
+
+<h4>227 Switch Server</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>227</td></tr>
+<tr><td>1</td><td>b</td><td>Warp Gate Number</td></tr>
+<tr><td>2</td><td>h</td><td>Length (should be 20)</td></tr>
+<tr><td>4</td><td>b[20]</td><td>server location string (20 bytes)</td></tr>
+</table>
+
+<h4>228 Update Warp Gate</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>228</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>Q</td><td>orientation</td></tr>
+</table>
+
+<h4>229 Add Player Error</h4> (Server to Client)
+Error codes are:
+<ul>
+<li>1 - ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS
+<li>2 - ADD_PLAYER_ERROR_SHIP_DOES_NOT_EXIST
+<li>3 - ADD_PLAYER_ERROR_TOO_MANY_BRIDGES
+<li>4 - ADD_PLAYER_ERROR_FAILED_VERIFICATION
+</ul>
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>229</td></tr>
+<tr><td>1</td><td>b</td><td>Error Code</td></tr>
+</table>
+
+<h4>230 Natural Language Request</h4> (bidirectional)
+
+This command is overloaded with sub commands and has
+different behavior depending if the client sends the
+command to the server, or vice versa.
+
+Subcommands are:
+<ul>
+<li>1 - OPCODE_NL_SUBCOMMAND_TEXT_REQUEST
+<ul>
+<li>Client sends to server: Server interprets natural language request as
+a request to "the computer" and does its best to comply.
+<li>Server sends to client: N/A
+</ul>
+<li>2 - OPCODE_NL_SUBCOMMAND_TEXT_TO_SPEECH
+<ul>
+<li>Client sends to server:  The text is of the form: "shipname: text to say"
+Forwards the command to clients on the bridge with the given ship name that
+have the Text to Speech role.
+<li>Server sends to client: Client speaks the given text.
+</ul>
+</ul>
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>230</td></tr>
+<tr><td>1</td><td>b</td><td>Subcommand</td></tr>
+<tr><td>2</td><td>b</td><td>Length</td></tr>
+<tr><td>3</td><td>b[Length]</td><td>Text</td></tr>
+</table>
+
+<h4>231 Set Solarsystem</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>231</td></tr>
+<tr><td>1</td><td>h</td><td>100</td></tr>
+<tr><td>2</td><td>b[100]</td><td>Solarsystem Name</td></tr>
+</table>
+
+<h4>232 Request Robot Command</h4> (Client to Server)
+Requests the Damage Control Robot to navigate to a location.
+Subcommands are:
+<ul>
+<li>1 - set short term goal (robot should be able to move in straight line)
+<li>2 - set long term goal (robot may have to navigate around obstacles)
+</ul>
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>232</td></tr>
+<tr><td>1</td><td>b</td><td>subcommand</td></tr>
+<tr><td>2</td><td>S</td><td>X</td></tr>
+<tr><td>6</td><td>S</td><td>Y</td></tr>
+</table>
+
+<h4>233 Text Screen Operation</h4> (bidirectional))
+Subcommands are, and the commands have different forms:
+<ul>
+<li>0 - OPCODE_TEXTSCREEN_CLEAR (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>233</td></tr>
+<tr><td>1</td><td>b</td><td>0 (clear textscreen)</td></tr>
+</table>
+<li>1 - OPCODE_TEXTSCREEN_TIMEDTEXT (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>233</td></tr>
+<tr><td>1</td><td>b</td><td>1 (timed text)</td></tr>
+<tr><td>1</td><td>h</td><td>Length</td></tr>
+<tr><td>1</td><td>h</td><td>Time in Seconds</td></tr>
+<tr><td>1</td><td>b[Length]</td><td>text</td></tr>
+</table>
+<li>2 - OPCODE_TEXTSCREEN_MENU (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>233</td></tr>
+<tr><td>1</td><td>b</td><td>2 (menu)</td></tr>
+<tr><td>1</td><td>h</td><td>Length</td></tr>
+<tr><td>1</td><td>b[Length]</td><td>text</td></tr>
+</table>
+The text menu relies on newlines for formatting.  Eg.:
+<pre>
+		"Menu Title\nOption 1\nOption 2\nOption 3"
+</pre>
+<li>3 - OPCODE_TEXTSCREEN_MENU_CHOICE (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>233</td></tr>
+<tr><td>1</td><td>b</td><td>3 (menu choice)</td></tr>
+<tr><td>1</td><td>b</td><td>selection</td></tr>
+</table>
+</ul>
+
+<h4>234 Update Block</h4>
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>234</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>S</td><td>x scale</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>25</td><td>S</td><td>y scale</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>29</td><td>S</td><td>z scale</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>33</td><td>Q</td><td>orientation</td></tr>
+<tr><td>41</td><td>b</td><td>block material index</td></tr>
+<tr><td>42</td><td>b</td><td>health</td></tr>
+</table>
+
+<h4>235 Update Turret</h4>
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>235</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>Q</td><td>orientation</td></tr>
+<tr><td>29</td><td>Q</td><td>base orientation</td></tr>
+<tr><td>37</td><td>b</td><td>health</td></tr>
+</table>
+
+<h4>236 Latency Check</h4> (bidirectional)
+The server periodically sends this command to the client.  The client
+immediately turs it around and sends it right back to the server.  The
+server then records the time this and updates the client with
+UPDATE NETSTATS (142) so the client can plot it on a graph on the demon
+screen.
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>236</td></tr>
+<tr><td>1</td><td>q</td><td>64 bit departure timestamp</td></tr>
+<tr><td>1</td><td>q</td><td>64 bit arrival timestamp</td></tr>
+</table>
+
+<h4>255 No-Op
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>255</td></tr>
+</table>
 
 </body>
 </html>
