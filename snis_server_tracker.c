@@ -33,11 +33,11 @@
 #include <pthread.h>
 
 #include "ssgl/ssgl.h"
+#include "pthread_util.h"
 
 struct server_tracker {
 	char *lobbyhost;
 	pthread_t thread;
-	pthread_attr_t thread_attr;
 	int sock;
 	pthread_mutex_t mutex;
 	int time_to_quit;
@@ -209,17 +209,14 @@ struct server_tracker *server_tracker_start(char *lobbyhost,
 	st->cookie = cookie;
 	st->notifier = notifier;
 
-	pthread_attr_init(&st->thread_attr);
-	pthread_attr_setdetachstate(&st->thread_attr, PTHREAD_CREATE_DETACHED);
-	rc = pthread_create(&st->thread, &st->thread_attr, server_tracker_thread, st);
+	rc = create_thread(&st->thread, server_tracker_thread, st, "sniss-srvtrack", 1);
 	if (rc) {
-		fprintf(stderr, "snis_server: failed to create server tracker theread: %d, %s, %s.\n",
+		fprintf(stderr, "snis_server: failed to create server tracker thread: %d, %s, %s.\n",
 			rc, strerror(rc), strerror(errno));
 		free(st->lobbyhost);
 		free(st);
 		return NULL;
 	}
-	pthread_setname_np(st->thread, "sniss-srvtrack");
 	return st;
 }
 

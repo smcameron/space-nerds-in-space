@@ -373,7 +373,8 @@ SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		key_value_parser.o nonuniform_random_sampler.o oriented_bounding_box.o \
 		graph_dev_mesh_stub.o turret_aimer.o
 MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
-		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o
+		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o \
+		pthread_util.o
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
@@ -499,7 +500,7 @@ OPENSCAD=openscad -o $@ $< && $(ECHO) '  OPENSCAD' $<
 EXTRACTSCADPARAMS=$(AWK) -f extract_scad_params.awk $< > $@ && $(ECHO) '  EXTRACT THRUST ATTACHMENTS' $@
 EXTRACTDOCKINGPORTS=$(AWK) -f extract_docking_ports.awk $< > $@ && $(ECHO) '  EXTRACT DOCKING PORTS' $@
 
-ELOBJS=mtwist.o mathutils.o quat.o open-simplex-noise.o png_utils.o crater.o
+ELOBJS=mtwist.o mathutils.o quat.o open-simplex-noise.o png_utils.o crater.o pthread_util.o
 ELLIBS=-lm ${LRTLIB} -lpng
 ELLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} earthlike.o ${ELOBJS} ${ELLIBS} && $(ECHO) '  LINK' $@
 MCLIBS=-lm ${LRTLIB} -lpng
@@ -510,7 +511,7 @@ CMNMLIBS=-lm ${LRTLIB} -lpng
 CMNMOBJS=png_utils.o
 CMNMLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} util/cloud-mask-normalmap.o ${CMNMOBJS} ${CMNMLIBS} && $(ECHO) '  LINK' $@
 
-GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o png_utils.o
+GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o png_utils.o pthread_util.o
 GGLIBS=-lm ${LRTLIB} -lpng
 GGLINK=$(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} && $(ECHO) '  LINK' $@
 
@@ -611,7 +612,8 @@ snis_multiverse.o:	snis_multiverse.c snis_multiverse.h Makefile build_info.h \
 			snis_entity_key_value_specification.h
 	$(Q)$(COMPILE)
 
-snis_server_tracker.o:	snis_server_tracker.c snis_server_tracker.h ssgl/ssgl.h Makefile
+snis_server_tracker.o:	snis_server_tracker.c snis_server_tracker.h pthread_util.h \
+			ssgl/ssgl.h Makefile
 	$(Q)$(COMPILE)
 
 snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h

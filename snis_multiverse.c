@@ -65,6 +65,7 @@ persisted in a simple database by snis_multiverse.
 #include "key_value_parser.h"
 #include "build_bug_on.h"
 #include "snis_bridge_update_packet.h"
+#include "pthread_util.h"
 
 static char *database_root = "./snisdb";
 static const int database_mode = 0744;
@@ -88,7 +89,6 @@ static struct starsystem_info { /* one of these per connected snis_server */
 	int refcount;
 	pthread_t read_thread;
 	pthread_t write_thread;
-	pthread_attr_t read_attr, write_attr;
 	struct packed_buffer_queue write_queue;
 	pthread_mutex_t write_queue_mutex;
 	char starsystem_name[20]; /* corresponds to "location" parameter of snis_server */
@@ -582,7 +582,6 @@ static void *starsystem_read_thread(void /* struct starsystem_info */ *starsyste
 {
 	struct starsystem_info *ss = (struct starsystem_info *) starsystem;
 
-	pthread_setname_np(ss->read_thread, "snismv-rdr");
 	lock_get_starsystem(ss);
 	while (1) {
 		process_instructions_from_snis_server(ss);
@@ -637,7 +636,6 @@ static void *starsystem_write_thread(void /* struct starsystem_info */ *starsyst
 {
 	struct starsystem_info *ss = (struct starsystem_info *) starsystem;
 
-	pthread_setname_np(ss->write_thread, "snismv-wrtr");
 	lock_get_starsystem(ss);
 	while (1) {
 		if (ss->socket < 0)
@@ -710,26 +708,21 @@ static void service_connection(int connection)
 
 	add_new_starsystem(&starsystem[i]);
 
-	pthread_attr_init(&starsystem[i].read_attr);
-	pthread_attr_setdetachstate(&starsystem[i].read_attr, PTHREAD_CREATE_DETACHED);
-	pthread_attr_init(&starsystem[i].write_attr);
-	pthread_attr_setdetachstate(&starsystem[i].write_attr, PTHREAD_CREATE_DETACHED);
-
 	/* initialize refcount to 1 to keep starsystem[i] from getting reaped. */
 	starsystem[i].refcount = 1;
 
 	/* create threads... */
 	fprintf(stderr, "snis_multiverse: zzz 7\n");
-	rc = pthread_create(&starsystem[i].read_thread,
-		&starsystem[i].read_attr, starsystem_read_thread, (void *) &starsystem[i]);
+	rc = create_thread(&starsystem[i].read_thread,
+		starsystem_read_thread, (void *) &starsystem[i], "snismv-rdr", 1);
 	if (rc) {
-		snis_log(SNIS_ERROR, "per client read thread, pthread_create failed: %d %s %s\n",
+		snis_log(SNIS_ERROR, "per client read thread, create_thread failed: %d %s %s\n",
 			rc, strerror(rc), strerror(errno));
 	}
-	rc = pthread_create(&starsystem[i].write_thread,
-		&starsystem[i].write_attr, starsystem_write_thread, (void *) &starsystem[i]);
+	rc = create_thread(&starsystem[i].write_thread,
+		starsystem_write_thread, (void *) &starsystem[i], "snismv-wrtr", 1);
 	if (rc) {
-		snis_log(SNIS_ERROR, "per client write thread, pthread_create failed: %d %s %s\n",
+		snis_log(SNIS_ERROR, "per client write thread, create_thread failed: %d %s %s\n",
 			rc, strerror(rc), strerror(errno));
 	}
 	pthread_mutex_unlock(&service_mutex);
@@ -775,7 +768,6 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 	char portstr[20];
 	char *snis_multiverse_port_var;
 
-	pthread_setname_np(listener_thread, "snismv-listen");
 	snis_log(SNIS_INFO, "snis_multiverse: snis_multiverse starting\n");
 	snis_multiverse_port_var = getenv("SNISMULTIVERSEPORT");
 	default_snis_multiverse_port = -1;
@@ -882,7 +874,6 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
  */
 static int start_listener_thread(void)
 {
-	pthread_attr_t attr;
 	int rc;
 
 	/* Setup to wait for the listener thread to become ready... */
@@ -890,11 +881,9 @@ static int start_listener_thread(void)
 	(void) pthread_mutex_lock(&listener_mutex);
 
 	/* Create the listener thread... */
-	pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-	rc = pthread_create(&listener_thread, &attr, listener_thread_fn, NULL);
+	rc = create_thread(&listener_thread, listener_thread_fn, NULL, "snismv-listen", 1);
 	if (rc) {
-		snis_log(SNIS_ERROR, "snis_multiverse: Failed to create listener thread, pthread_create: %d %s %s\n",
+		snis_log(SNIS_ERROR, "snis_multiverse: Failed to create listener thread, create_thread: %d %s %s\n",
 				rc, strerror(rc), strerror(errno));
 	}
 

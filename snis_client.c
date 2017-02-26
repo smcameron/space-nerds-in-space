@@ -109,6 +109,7 @@
 #include "matrix.h"
 #include "graph_dev.h"
 #include "ui_colors.h"
+#include "pthread_util.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -192,17 +193,14 @@ int joystickx, joysticky;
 
 static int physical_io_socket = -1;
 static pthread_t physical_io_thread;
-static pthread_attr_t physical_io_thread_attr;
 
 static pthread_t natural_language_thread;
-static pthread_attr_t natural_language_thread_attr;
 
 struct text_to_speech_queue_entry {
 	char *text;
 	struct text_to_speech_queue_entry *next;
 } *text_to_speech_queue_head, *text_to_speech_queue_tail;
 static pthread_t text_to_speech_thread;
-static pthread_attr_t text_to_speech_thread_attr;
 pthread_mutex_t text_to_speech_mutex;
 pthread_cond_t text_to_speech_cond = PTHREAD_COND_INITIALIZER;
 static int text_to_speech_thread_time_to_quit = 0;
@@ -278,11 +276,10 @@ struct timeval start_time, end_time;
 static double universe_timestamp_offset = 0;
 
 volatile int done_with_lobby = 0;
-pthread_t lobby_thread; pthread_attr_t lobby_attr;
-pthread_t gameserver_connect_thread; pthread_attr_t gameserver_connect_attr;
-pthread_t read_from_gameserver_thread; pthread_attr_t gameserver_reader_attr;
-
-pthread_t write_to_gameserver_thread; pthread_attr_t gameserver_writer_attr;
+pthread_t lobby_thread;
+pthread_t gameserver_connect_thread;
+pthread_t read_from_gameserver_thread;
+pthread_t write_to_gameserver_thread;
 struct packed_buffer_queue to_server_queue;
 pthread_mutex_t to_server_queue_mutex;
 pthread_mutex_t to_server_queue_event_mutex;
@@ -494,7 +491,6 @@ static void *connect_to_lobby_thread(__attribute__((unused)) void *arg)
 
 try_again:
 
-	pthread_setname_np(lobby_thread, "snisc-lobbycon");
 	printf("Trying to connect to lobby.\n");
 	/* Loop, trying to connect to the lobby server... */
 	strcpy(lobbyerror, "");
@@ -573,9 +569,8 @@ handle_error:
 static void connect_to_lobby()
 {
 	int rc;
-        pthread_attr_init(&lobby_attr);
-        pthread_attr_setdetachstate(&lobby_attr, PTHREAD_CREATE_DETACHED);
-	rc = pthread_create(&lobby_thread, &lobby_attr, connect_to_lobby_thread, NULL);
+
+	rc = create_thread(&lobby_thread, connect_to_lobby_thread, NULL, "snisc-lobbycon", 1);
 	if (rc) {
 		fprintf(stderr, "Failed to create lobby connection thread.\n");
 		fprintf(stderr, "%d %s (%s)\n", rc, strerror(rc), strerror(errno));
@@ -4966,7 +4961,6 @@ static void *text_to_speech_thread_fn(__attribute__((unused)) void *arg)
 {
 	struct text_to_speech_queue_entry *entry = NULL;
 
-	pthread_setname_np(text_to_speech_thread, "snisc-tts");
 	do {
 		text_to_speech_wait_for_input();
 		pthread_mutex_lock(&text_to_speech_mutex);
@@ -5000,8 +4994,7 @@ static void setup_text_to_speech_thread(void)
 	text_to_speech_queue_head = NULL;
 	text_to_speech_queue_tail = NULL;
 	pthread_mutex_init(&text_to_speech_mutex, NULL);
-	rc = pthread_create(&text_to_speech_thread, &text_to_speech_thread_attr,
-			text_to_speech_thread_fn, NULL);
+	rc = create_thread(&text_to_speech_thread, text_to_speech_thread_fn, NULL, "snisc-tts", 0);
 	if (rc)
 		fprintf(stderr, "Failed to create text to speech thread.\n");
 }
@@ -5516,7 +5509,6 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 	uint8_t add_player_error;
 	int rc = 0;
 
-	pthread_setname_np(read_from_gameserver_thread, "snisc-reader");
 	printf("snis_client: gameserver reader thread\n");
 	while (1) {
 		add_player_error = 0;
@@ -5853,7 +5845,6 @@ static void *gameserver_writer(__attribute__((unused)) void *arg)
 	int tmpval;
 
 	writer_thread_alive = 1;
-	pthread_setname_np(write_to_gameserver_thread, "snisc-writer");
 	while (1) {
 		wait_for_serverbound_packets();
 		write_queued_packets_to_server();
@@ -5970,7 +5961,6 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	struct add_player_packet app;
 	int flag = 1;
 
-	pthread_setname_np(gameserver_connect_thread, "snisc-servcon");
 	fprintf(stderr, "snis_client: connect to gameserver thread\n");
 	if (avoid_lobby) {
 		strcpy(hoststr, serverhost);
@@ -6052,12 +6042,8 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	}
 	printf("Wrote update player opcode\n");
 
-        pthread_attr_init(&gameserver_reader_attr);
-        pthread_attr_init(&gameserver_writer_attr);
-        pthread_attr_setdetachstate(&gameserver_reader_attr, PTHREAD_CREATE_DETACHED);
-        pthread_attr_setdetachstate(&gameserver_writer_attr, PTHREAD_CREATE_DETACHED);
 	printf("starting gameserver reader thread\n");
-	rc = pthread_create(&read_from_gameserver_thread, &gameserver_reader_attr, gameserver_reader, NULL);
+	rc = create_thread(&read_from_gameserver_thread, gameserver_reader, NULL, "snisc-reader", 1);
 	if (rc) {
 		fprintf(stderr, "Failed to create gameserver reader thread: %d '%s', '%s'\n",
 			rc, strerror(rc), strerror(errno));
@@ -6069,7 +6055,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	packed_buffer_queue_init(&to_server_queue);
 
 	printf("starting gameserver writer thread\n");
-	rc = pthread_create(&write_to_gameserver_thread, &gameserver_writer_attr, gameserver_writer, NULL);
+	rc = create_thread(&write_to_gameserver_thread, gameserver_writer, NULL, "snisc-writer", 1);
 	if (rc) {
 		fprintf(stderr, "Failed to create gameserver writer thread: %d '%s', '%s'\n",
 			rc, strerror(rc), strerror(errno));
@@ -6089,9 +6075,8 @@ int connect_to_gameserver(int selected_server)
 {
 	int rc;
 
-        pthread_attr_init(&gameserver_connect_attr);
-        pthread_attr_setdetachstate(&gameserver_connect_attr, PTHREAD_CREATE_DETACHED);
-	rc = pthread_create(&gameserver_connect_thread, &gameserver_connect_attr, connect_to_gameserver_thread, NULL);
+	rc = create_thread(&gameserver_connect_thread,
+		connect_to_gameserver_thread, NULL, "snisc-servcon", 1);
 	if (rc) {
 		fprintf(stderr, "%s: Failed to create thread to connect to gameserver:%d '%s', '%s'\n",
 			"snis_client", rc, strerror(rc), strerror(errno));
@@ -14875,7 +14860,6 @@ static void *monitor_physical_io_devices(__attribute__((unused)) void *arg)
 #define PHYS_IO_BUF_SIZE (sizeof(unsigned short) * 2)
 	char buf[PHYS_IO_BUF_SIZE];
 
-	pthread_setname_np(physical_io_thread, "snisc-devio");
 	for (;;) {
 		len = sizeof(client_addr);
 		bytecount = recvfrom(physical_io_socket, buf, sizeof(buf), 0,
@@ -14935,8 +14919,8 @@ static void setup_physical_io_socket(void)
 		/* FIXME: is this how to deal with the socket at this point? */
 		physical_io_socket = -1;
 	} else {
-		rc = pthread_create(&physical_io_thread, &physical_io_thread_attr,
-			monitor_physical_io_devices, NULL);
+		rc = create_thread(&physical_io_thread,
+			monitor_physical_io_devices, NULL, "snisc-devio", 0);
 		if (rc) {
 			fprintf(stderr, "Failed to create physical device monitor thread.\n");
 			fprintf(stderr, "Physical input devices will not work.\n");
@@ -14950,7 +14934,6 @@ static void setup_physical_io_socket(void)
 #define SNIS_NL_FIFO "/tmp/snis-natural-language-fifo"
 static void *monitor_natural_language_fifo(__attribute__((unused)) void *arg)
 {
-	pthread_setname_np(natural_language_thread, "snis-nat-lang");
 	char *rc, line[256];
 	FILE *f;
 
@@ -14985,8 +14968,8 @@ static void setup_natural_language_fifo(void)
 	if (rc != 0 && errno != EEXIST) {
 		fprintf(stderr, "snis_client: mkfifo(%s): %s\n", SNIS_NL_FIFO, strerror(errno));
 	}
-	rc = pthread_create(&natural_language_thread, &natural_language_thread_attr,
-			monitor_natural_language_fifo, NULL);
+	rc = create_thread(&natural_language_thread,
+			monitor_natural_language_fifo, NULL, "snis-nat-lang", 0);
 	if (rc)
 		fprintf(stderr, "Failed to create natural language fifo monitor thread.\n");
 }

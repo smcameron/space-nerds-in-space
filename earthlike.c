@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -15,6 +16,7 @@
 #include "open-simplex-noise.h"
 #include "png_utils.h"
 #include "crater.h"
+#include "pthread_util.h"
 
 static struct osn_context *ctx;
 
@@ -232,9 +234,9 @@ static void multithread_face_render(render_on_face_fn render, struct bump *bumpl
 		t[f].f = f;
 		t[f].bumplist = bumplist;
 		t[f].bumpcount = bumpcount;
-		rc = pthread_create(&t[f].thread, NULL, render, &t[f]);
+		rc = create_thread(&t[f].thread, render, &t[f], "face-render", 0);
 		if (rc)
-			fprintf(stderr, "%s: pthread_create failed: %s\n",
+			fprintf(stderr, "%s: create_thread failed: %s\n",
 					__func__, strerror(errno));
 	}
 	for (f = 0; f < 6; f++) {

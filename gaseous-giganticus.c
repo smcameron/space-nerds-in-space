@@ -18,6 +18,7 @@
 	along with Spacenerds in Space; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -39,6 +40,7 @@
 #include "quat.h"
 #include "open-simplex-noise.h"
 #include "png_utils.h"
+#include "pthread_util.h"
 
 static struct osn_context *ctx;
 
@@ -653,9 +655,9 @@ static void update_velocity_field(struct velocity_field *vf, float noise_scale, 
 		t[f].f = f;
 		t[f].w = w;
 		t[f].vf = vf;
-		rc = pthread_create(&t[f].thread, NULL, update_velocity_field_thread_fn, &t[f]);
+		rc = create_thread(&t[f].thread, update_velocity_field_thread_fn, &t[f], "veloc-field", 0);
 		if (rc)
-			fprintf(stderr, "%s: pthread_create failed: %s\n",
+			fprintf(stderr, "%s: create_thread failed: %s\n",
 					__func__, strerror(errno));
 	}
 	for (f = 0; f < 6; f++) {
@@ -794,9 +796,9 @@ static void move_particles(struct particle *p, struct movement_thread_info *thr,
 
 	thr->vf = vf;
 	thr->p = p;
-	rc = pthread_create(&thr->thread, NULL, move_particles_thread_fn, thr);
+	rc = create_thread(&thr->thread, move_particles_thread_fn, thr, "move-particles", 0);
 	if (rc)
-		fprintf(stderr, "%s: pthread_create failed: %s\n",
+		fprintf(stderr, "%s: create_thread failed: %s\n",
 				__func__, strerror(errno));
 }
 
@@ -841,9 +843,9 @@ static void update_output_images(int image_threads, struct particle p[], const i
 		t[i].face = i;
 		t[i].p = p;
 		t[i].nparticles = nparticles;
-		rc = pthread_create(&t[i].thread, NULL, update_output_image_thread_fn, &t[i]);
+		rc = create_thread(&t[i].thread, update_output_image_thread_fn, &t[i], "update-image", 0);
 		if (rc)
-			fprintf(stderr, "%s: pthread_create failed: %s\n",
+			fprintf(stderr, "%s: create_thread failed: %s\n",
 					__func__, strerror(errno));
 	}
 
