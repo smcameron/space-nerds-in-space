@@ -418,6 +418,7 @@ static void service(int connection)
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	rc = pthread_create(&threadinfo->thread, &attr, service_thread, threadinfo);
+	pthread_attr_destroy(&attr);
 	if (rc) {
 		ssgl_log(SSGL_ERROR, "ssgl_server: pthread_create failed for %s, rc = %d, errno = %d\n",
 			client_ip, rc, errno); 
@@ -435,6 +436,7 @@ static void start_game_server_expiration_thread(void)
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	rc = pthread_create(&expiry_thread, &attr, expire_game_servers, NULL);
+	pthread_attr_destroy(&attr);
 	if (rc < 0) {
 		ssgl_log(SSGL_ERROR, "Unable to create game server expiration thread: %s.\n",
 			strerror(errno));
