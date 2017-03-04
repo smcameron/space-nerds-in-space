@@ -6538,8 +6538,8 @@ static void turret_move(struct snis_entity *o)
 	tparams.elevation_upper_limit = 90.0 * M_PI / 180.0;
 	tparams.azimuth_lower_limit = -3.0 * M_PI; /* no limit */
 	tparams.azimuth_upper_limit = 3.0 * M_PI; /* no limit */
-	tparams.elevation_rate_limit = 1.0 * M_PI / 180.0; /* 60 degrees/sec at 60Hz */
-	tparams.azimuth_rate_limit = 1.0 * M_PI / 180.0; /* 60 degrees/sec at 60Hz */
+	tparams.elevation_rate_limit = 6.0 * M_PI / 180.0; /* 60 degrees/sec at 10Hz */
+	tparams.azimuth_rate_limit = 6.0 * M_PI / 180.0; /* 60 degrees/sec at 10Hz */
 
 	if (o->tsd.turret.health == 0) {
 		/* TODO add turret derelict */
