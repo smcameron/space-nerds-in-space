@@ -415,8 +415,10 @@ struct add_player_packet {
 	uint8_t new_ship;
 	uint8_t warpgate_number;
 	uint32_t role;
-	unsigned char shipname[20];
-	unsigned char password[20];
+#define SHIPNAME_LEN 20
+	unsigned char shipname[SHIPNAME_LEN];
+#define PASSWORD_LEN 20
+	unsigned char password[PASSWORD_LEN];
 };
 
 struct ack_player_packet {

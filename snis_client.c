@@ -5942,8 +5942,8 @@ struct network_setup_ui {
 	int join_ship_v;
 	char lobbyname[60];
 	char servername[60];
-	char shipname[22];
-	char password[10];
+	char shipname[SHIPNAME_LEN];
+	char password[PASSWORD_LEN];
 } net_setup_ui;
 
 static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
@@ -13193,7 +13193,7 @@ static void init_net_setup_ui(void)
 	y += yinc * 2;
 	net_setup_ui.gameservername =
 		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
-					net_setup_ui.servername, 50, &timer,
+					net_setup_ui.servername, sizeof(net_setup_ui.servername) - 1, &timer,
 					gameserver_hostname_entered, NULL);
 	y += yinc;
 	net_setup_ui.start_gameserver = 
@@ -13203,12 +13203,12 @@ static void init_net_setup_ui(void)
 	y += yinc * 2;
 	net_setup_ui.shipname_box =
 		snis_text_input_box_init(txx(150), y, txy(30), txx(250), input_color, TINY_FONT,
-					net_setup_ui.shipname, 50, &timer,
+					net_setup_ui.shipname, sizeof(net_setup_ui.shipname) - 1, &timer,
 					shipname_entered, NULL);
 	y += yinc;
 	net_setup_ui.password_box =
 		snis_text_input_box_init(txx(150), y, txy(30), txx(250), input_color, TINY_FONT,
-					net_setup_ui.password, 50, &timer,
+					net_setup_ui.password, sizeof(net_setup_ui.password), &timer,
 					password_entered, NULL);
 	y += yinc;
 	net_setup_ui.connect_to_lobby = 
