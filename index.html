@@ -22,6 +22,9 @@
 cmd {
 	font-family: courier
 }
+hili {
+	color:#afafff;
+}
 </style>
 <hr>
 <font size=+1>
@@ -1163,7 +1166,301 @@ creating a new ship vs. mistyping a ship name, and the difference between creati
 and joining an existing ship.  Not to suggest that there isn't room for improvement in how
 it works.
 <p>
-
+<li><b>The game is crashing!  What can I do?</b>
+<p>Suppose you see something like this ("Segmentation fault"):
+<pre>
+snis_multiverse: hash 82b24d25b042724aa94a39a9ea38e05cf0cf6340 exists, as expected.
+snis_multiverse: checking hash 82b24d25b042724aa94a39a9ea38e05cf0cf6340
+snis_multiverse: verify existence pass=1
+snis_multiverse: looking up hash '82b24d25b042724aa94a39a9ea38e05cf0cf6340'
+snis_multiverse: checking against '2aa83672bace43178acab8e73b7391d1c316e80d'
+snis_multiverse: checking against '80f2969eded0cb559081e3e3202c94fcb5917a41'
+snis_multiverse: checking against '82b24d25b042724aa94a39a9ea38e05cf0cf6340'
+snis_multiverse: match hash '82b24d25b042724aa94a39a9ea38e05cf0cf6340'
+<hili><b>Segmentation fault</b></hili>
+capnkirk@enterprise ~/github/space-nerds-in-space $ Last buffer length read from socket 14 was 67
+32 30 31 37 2d 30 33 2d 30 34 20 30 37 3a 35 39 3a 30 30 20 64 31 39 64 62 64 66 30 62 39 33 38 30 34 62 63 62 65 35 36 66 31 33 64 34 66 33 32 63 63 62 34 39 32 33 31 63 37 32 34 20 2b 20 33 36 38 00 
+snis_server: client refcount = 1
+snis_server: client refcount = 0
+snis_server: client count of bridge 0 = 0
+snis_server: calling remove_client 0
+snis_server: remove_client 0 returned
+</pre>
+First, see if you can make it happen reliably.  If you can, then do the following:
+Here is a summary of what to do (more detailed instructions are below).
+<ol>
+<li><b><hili><cmd>make mostly-clean</cmd></hili></b>
+<li><b><hili><cmd>make</cmd></hili></b>
+<li><b><hili><cmd>ulimit -c unlimited</cmd></hili></b>
+<li>Reproduce the problem with the unoptimized program and
+obtain a core file.
+<li>Figure out which program the core file came from (most likely, <cmd>snis_client</cmd>
+but could be something else, like <cmd>snis_server</cmd> or <cmd>snis_multiverse</cmd>.)
+<li><b><hili><cmd>file core</cmd></hili></b>
+<li><b><hili><cmd>gdb -c core ./snis_client</cmd></hili></b>
+<li>(gdb) <b><hili><cmd>bt</cmd></hili></b>
+<li>Capture the output of gdb and paste it into a bug report.
+</ol>
+</ol>
+<ol>
+Here is a more detailed version of the above instructions.
+<li>Try to capture a core dump
+<pre>
+	$ <b><hili>ulimit -c unlimited</hili></b>
+</pre>
+Then run the game again.  This time you should see something like this for example:
+<pre>
+Replacing ./share/snis/solarsystems/default/../../textures/planet-texture4-4.png with ./share/snis/solarsystems/karado/ounii-with-clouds-4.png
+Replacing ./share/snis/solarsystems/default/../../textures/planet-texture4-5.png with ./share/snis/solarsystems/karado/ounii-with-clouds-5.png
+Replacing ./share/snis/solarsystems/default/../../textures/planet-texture4-0.png with ./share/snis/solarsystems/karado/ounii-with-clouds-0.png
+Replacing ./share/snis/solarsystems/default/../../textures/planet-texture4-2.png with ./share/snis/solarsystems/karado/ounii-with-clouds-2.png
+snis_text_to_speech.sh Leaving high security area.
+<hili><b>Segmentation fault (core dumped)</b></hili>
+capnkirk@enterprise ~/github/space-nerds-in-space $ Last buffer length read from socket 14 was 16
+</pre>
+The "(core dumped)" means a memory image of the game was captured in a file
+named "core" (or maybe "core.xxxxxx", where xxxxxx is some numbers.)  Run the following
+command:
+<pre>
+	$ <b><hili>ls -ltr | tail -5</hili></b>
+	-rwxr-xr-x 1 capnkirk capnkirk    850856 Mar  4 07:59 snis_server
+	-rwxr-xr-x 1 capnkirk capnkirk   1193104 Mar  4 07:59 snis_client
+	-rwxr-xr-x 1 capnkirk capnkirk    909616 Mar  4 07:59 snis_limited_client
+	-rwxr-xr-x 1 capnkirk capnkirk    212432 Mar  4 07:59 snis_multiverse
+	<b><hili>-rw------- 1 capnkirk capnkirk 417386496 Mar  4 08:17 core</hili></b>
+</pre>
+<li>See if we can get any information out of the core file with the debugger, <cmd>gdb</cmd>.  Run the following command:
+<pre>
+	$ <hili><b>$ file core</b></hili>
+	core: ELF 64-bit LSB core file x86-64, version 1 (SYSV), SVR4-style, from '<b><hili>./snis_client</hili></b> --fullscreen --starship spacenerd --pw spacenerd'
+</pre>
+From this, we can see that the core file came from the <cmd>snis_client</cmd>
+program (rather than from <cmd>snis_server</cmd>, <cmd>snis_multiverse</cmd>,
+or something else.)  Now that we know what program the core file is from,
+we can try to get a bit more info out of it.  Run the following:
+<pre>
+	$ <b><hili>gdb -c core ./snis_client</b>
+	$ gdb -c core
+	GNU gdb (Ubuntu 7.11.1-0ubuntu1~16.04) 7.11.1
+	Copyright (C) 2016 Free Software Foundation, Inc.
+	License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;
+	This is free software: you are free to change and redistribute it.
+	There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+	and "show warranty" for details.
+	This GDB was configured as "x86_64-linux-gnu".
+	Type "show configuration" for configuration details.
+	For bug reporting instructions, please see:
+	&lt;http://www.gnu.org/software/gdb/bugs/&gt;
+	Find the GDB manual and other documentation resources online at:
+	&lt;http://www.gnu.org/software/gdb/documentation/&gt;
+	For help, type "help".
+	Type "apropos word" to search for commands related to "word".
+	[New LWP 6365]
+	[New LWP 6386]
+	[New LWP 6371]
+	[New LWP 6375]
+	[New LWP 6372]
+	[New LWP 6373]
+	[New LWP 6385]
+	[New LWP 6374]
+	Core was generated by `./snis_client --fullscreen --starship spacenerd --pw spacenerd'.
+	Program terminated with signal SIGSEGV, Segmentation fault.
+	#0  0x0000000000431960 in ?? ()
+	[Current thread is 1 (LWP 6365)]
+	(gdb) _
+</pre>
+At this point, you're running <cmd>gdb</cmd> and it is waiting for you to tell it what
+to do.  We can already see some information though.  The program terminated with
+<cmd>SIGSEGV</cmd> (segmentation fault, we already knew that).
+<p>Now type <cmd>bt</cmd> to see a <em>back trace</em>:
+<pre>
+	(gdb) <b><hili>bt</hili></b>
+	#0  0x0000000000431960 in ?? ()
+	#1  0x000000000044de3b in ?? ()
+	#2  0x00000000006fb480 in ?? ()
+	#3  0x00000000004752dd in ?? ()
+	#4  0x00007ffc221ca910 in ?? ()
+	#5  0x00000001bc70f20e in ?? ()
+	#6  0x00007ffc221ca900 in ?? ()
+	#7  0x00007ffc221f3cd5 in ?? ()
+	#8  0x00007ffc221ca930 in ?? ()
+	#9  0x000000017fffffff in ?? ()
+	#10 0x0000000000000001 in ?? ()
+	#11 0xa4ef74cf09462800 in ?? ()
+	#12 0x00007ffc221ca968 in ?? ()
+	#13 0x0000000000000000 in ?? ()
+	(gdb) _
+</pre>
+Not very helpful.  Type <cmd>quit</cmd> to exit <cmd>gdb</cmd>.
+<pre>
+	(gdb) <b><hili>quit</hili></b>
+	$ _
+</pre>
+This is because the program was built <em>optimized</em>
+and stripped of debugging symbols (to make it smaller).  So now we should try
+to recreate the problem with an unoptimized version of the program with
+debugging symbols.  To make an unoptimized build, do the following:
+<pre>
+	$ <b><hili>make mostly-clean</hili></b>
+	... lots of output omitted ...
+	$ <b><hili>make</hili></b>
+	  COMPILE mathutils.c
+  	  COMPILE snis_alloc.c
+  	  COMPILE snis_socket_io.c
+  	  COMPILE snis_marshal.c
+	... lots of output omitted ...
+	  LINK snis_server
+	  LINK snis_client
+	  LINK snis_limited_client
+	  LINK snis_multiverse
+</pre>
+Now, try to recreate the problem by running the unoptimized game.
+Presuming you're successful at recreating the problem, you should
+have a new core file.
+<pre>
+	$ <b><hili>ls -ltr | tail -5</hili></b>
+	-rwxr-xr-x 1 capnkirk capnkirk   1410480 Mar  4 08:37 snis_client
+	-rwxr-xr-x 1 capnkirk capnkirk   1124344 Mar  4 08:37 snis_limited_client
+	-rwxr-xr-x 1 capnkirk capnkirk    237352 Mar  4 08:37 snis_multiverse
+	drwxr-xr-x 2 capnkirk capnkirk      4096 Mar  4 08:37 bin
+	<hili><b>-rw------- 1 capnkirk capnkirk 417390592 Mar  4 08:39 core</b></hili>
+</pre>
+Let's run the debugger on the new core file:
+<pre>
+	$ file core
+	core: ELF 64-bit LSB core file x86-64, version 1 (SYSV), SVR4-style, from './snis_client --fullscreen --starship spacenerd --pw spacenerd'
+	capnkirk@enterprise ~/github/space-nerds-in-space $ gdb -c core ./snis_client
+	GNU gdb (Ubuntu 7.11.1-0ubuntu1~16.04) 7.11.1
+	Copyright (C) 2016 Free Software Foundation, Inc.
+	License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;
+	This is free software: you are free to change and redistribute it.
+	There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+	and "show warranty" for details.
+	This GDB was configured as "x86_64-linux-gnu".
+	Type "show configuration" for configuration details.
+	For bug reporting instructions, please see:
+	&lt;http://www.gnu.org/software/gdb/bugs/&gt;.
+	Find the GDB manual and other documentation resources online at:
+	&lt;http://www.gnu.org/software/gdb/documentation/&gt;.
+	For help, type "help".
+	Type "apropos word" to search for commands related to "word"...
+	Reading symbols from ./snis_client...done.
+	[New LWP 6866]
+	[New LWP 6851]
+	[New LWP 6867]
+	[New LWP 6850]
+	[New LWP 6848]
+	[New LWP 6841]
+	[New LWP 6849]
+	[New LWP 6847]
+	[Thread debugging using libthread_db enabled]
+	Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+	Core was generated by `./snis_client --fullscreen --starship spacenerd --pw spacenerd'.
+	Program terminated with signal SIGSEGV, Segmentation fault.
+	#0  0x000000000043c305 in vec3_init (vo=0x7c, x=221934.969, y=-5072.68408, z=175696.594) at quat.c:419
+	419		vo-&gt;v.x = x;
+	[Current thread is 1 (Thread 0x7fb02f7fe700 (LWP 6866))]
+	(gdb) _
+</pre>
+Now we see some more information.  It's telling us the program crashed in the function
+called <cmd>vec3_init</cmd> in the file <cmd>quat.c</cmd> at line <cmd>419</cmd>
+and it's even showing use the line of source code where the program crashed.  This
+is perfect information to put into bug report.
+Type <cmd>bt</cmd> to get a <em>back trace</em>:
+<pre>
+	(gdb) <b><hili>bt</hili></b>
+	#0  0x000000000043c305 in vec3_init (vo=0x7c, x=221934.969, y=-5072.68408, z=175696.594) at quat.c:419
+	#1  0x0000000000433034 in update_entity_pos (e=0x0, x=221934.969, y=-5072.68408, z=175696.594) at entity.c:189
+	#2  0x0000000000456383 in laserbeam_move (o=0x7da290 &lt;go+938448&gt;) at snis_client.c:1335
+	#3  0x0000000000456774 in init_laserbeam_data (o=0x7da290 &lt;go+938448&gt; at snis_client.c:1389
+	#4  0x000000000045587e in update_laserbeam (id=887, timestamp=243, origin=293, target=354) at snis_client.c:1143
+	#5  0x00000000004628ba in process_update_laserbeam () at snis_client.c:5386
+	#6  0x0000000000462fdf in gameserver_reader (arg=0x0) at snis_client.c:5586
+	#7  0x00007fb07228d6ba in start_thread (arg=0x7fb02f7fe700) at pthread_create.c:333
+	#8  0x00007fb071dba82d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:109
+	(gdb) 
+</pre>
+Now it's showing us all the function calls along the way that lead up to the crash
+within the <cmd>vec3_init</cmd> function, which is more great info to put into a
+bug report.  This is probably sufficient.  But, if you want to go a little further...
+<pre>
+	(gdb) <b><hili>list</hili></b>
+	414		quat_init_axis_v(q, &amp;v, angle);
+	415	}
+	416	
+	417	void vec3_init(union vec3 *vo, float x, float y, float z)
+	418	{
+	419		vo-&gt;v.x = x;
+	420		vo-&gt;v.y = y;
+	421		vo-&gt;v.z = z;
+	422	}
+	423	
+</pre>
+Unless you know C, that probably doesn't mean much to you.  If you
+do know C, you can see that "vo" is a pointer to a union, and the function
+is setting several members of the union, and there aren't any other pointers
+in the vicinity, so let's look at vo.
+<pre>
+	(gdb) <b><hili>print vo</hili></b>
+	$1 = (union vec3 *) 0x7c
+	(gdb) _
+</pre>
+Hmm, <cmd>0x7c</cmd> does not look especially like a valid memory address.
+<pre>
+	(gdb) <hili><b>print *vo</b></hili>
+	Cannot access memory at address 0x7c
+	(gdb) _
+</pre>
+Nope, it's not valid.  Digging a little more, let's go <cmd>up</cmd>
+the stack and see what called this <cmd>vec3_init()</cmd> function.
+<pre>
+	(gdb) <b><hili>up</hili></b>
+	#1  0x0000000000433034 in update_entity_pos (e=0x0, x=221934.969, y=-5072.68408, z=175696.594) at entity.c:189
+	189		vec3_init(&amp;e-&gt;e_pos, x, y, z);
+	(gdb) <b><hili>list</hili></b>
+	184		}
+	185	}
+	186	
+	187	void update_entity_pos(struct entity *e, float x, float y, float z)
+	188	{
+	189		vec3_init(&amp;e-&gt;e_pos, x, y, z);
+	190	}
+	191	
+	192	void update_entity_orientation(struct entity *e, const union quat *orientation)
+	193	{
+	(gdb) <b><hili>print e</hili></b>
+	$2 = (struct entity *) 0x0
+</pre>
+Hmm, <cmd>e</cmd> is null, but was passed in here, so let's go up the stack again.
+<pre>
+	(gdb) <b><hili>up</hili></b>
+	#2  0x0000000000456383 in laserbeam_move (o=0x7da290 &lt;go+938448&gt; at snis_client.c:1335
+	1335		update_entity_pos(o-&gt;entity, x, y, z);
+	(gdb) <b><hili>list</hili></b>
+	1330	
+	1331		x = origin-&gt;x + 0.5 * target_vector.v.x;
+	1332		y = origin-&gt;y + 0.5 * target_vector.v.y;
+	1333		z = origin-&gt;z + 0.5 * target_vector.v.z;
+	1334	
+	1335		update_entity_pos(o-&gt;entity, x, y, z);
+	1336		update_entity_orientation(o-&gt;entity, &amp;orientation);
+	1337		update_entity_material(o-&gt;entity, o-&gt;tsd.laserbeam.material);
+	1338		update_entity_non_uniform_scale(o-&gt;entity, length, 2.0 + snis_randn(7), 0.0);
+	1339	
+	(gdb) <b><hili>print o</hili></b>
+	$3 = (struct snis_entity *) 0x7da290 &lt;go+938448&gt;
+	(gdb) print o-&gt;entity
+	$4 = (struct entity *) 0x0
+	(gdb)
+</pre>
+So <cmd>o</cmd> seems to be a valid pointer, but <cmd>o-&gt;entity</cmd> is 0 (means NULL).
+So it seems we have an unexpected null pointer.
+</ol>
+<br>
+<br>
+<br>
+<br>
+<br>
 <li>TODO: Need to put more trouble shooting tips in here.
 </ol>
 <br>
