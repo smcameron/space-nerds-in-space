@@ -2355,8 +2355,9 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				struct material_wireframe_sphere_clip *mt =
 					&e->material_ptr->wireframe_sphere_clip;
 
-				union vec4 clip_sphere_pos;
-				vec4_init_vec3(&clip_sphere_pos, &mt->center->e_pos, 1);
+				union vec4 clip_sphere_pos = VEC4_INITIALIZER;
+				if (mt->center)
+					vec4_init_vec3(&clip_sphere_pos, &mt->center->e_pos, 1);
 				mat44_x_vec4_into_vec3_dff(transform->v, &clip_sphere_pos, &clip_sphere.eye_pos);
 
 				clip_sphere.r = e->material_ptr->wireframe_sphere_clip.radius;

@@ -1332,10 +1332,12 @@ static void laserbeam_move(struct snis_entity *o)
 	y = origin->y + 0.5 * target_vector.v.y;
 	z = origin->z + 0.5 * target_vector.v.z;
 
-	update_entity_pos(o->entity, x, y, z);
-	update_entity_orientation(o->entity, &orientation);
-	update_entity_material(o->entity, o->tsd.laserbeam.material);
-	update_entity_non_uniform_scale(o->entity, length, 2.0 + snis_randn(7), 0.0);
+	if (o->entity) {
+		update_entity_pos(o->entity, x, y, z);
+		update_entity_orientation(o->entity, &orientation);
+		update_entity_material(o->entity, o->tsd.laserbeam.material);
+		update_entity_non_uniform_scale(o->entity, length, 2.0 + snis_randn(7), 0.0);
+	}
 
 	if (o->tsd.laserbeam.laserflash_entity) {
 		/* particle mesh is 50x50, scale it randomly to make it flicker */
@@ -1867,9 +1869,11 @@ static void shield_effect_move(struct snis_entity *o)
 	o->y += o->vy;
 	o->z += o->vz;
 	o->alive--;
-	entity_update_alpha(o->entity, entity_get_alpha(o->entity) * 0.9);
+	if (o->entity)
+		entity_update_alpha(o->entity, entity_get_alpha(o->entity) * 0.9);
 	if (o->alive <= 0) {
-		remove_entity(ecx, o->entity);
+		if (o->entity)
+			remove_entity(ecx, o->entity);
 		snis_object_pool_free_object(sparkpool, spark_index(o));
 	}
 }
@@ -1884,7 +1888,8 @@ static void spark_move(struct snis_entity *o)
 	o->z += o->vz;
 	o->alive--;
 	if (o->alive <= 0) {
-		remove_entity(ecx, o->entity);
+		if (o->entity)
+			remove_entity(ecx, o->entity);
 		o->entity = NULL;
 		snis_object_pool_free_object(sparkpool, spark_index(o));
 		return;
@@ -6655,7 +6660,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 		struct snis_entity *o = &go[i];
 
 		if (o->alive && (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)) {
-			if (entity_onscreen(o->entity)) {
+			if (o->entity && entity_onscreen(o->entity)) {
 				float sx, sy;
 				entity_get_screen_coords(o->entity, &sx, &sy);
 				draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0, 0.5, 1.5f);
@@ -6665,8 +6670,10 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 
 	/* Remove our ship from the scene */
-	remove_entity(ecx, turret_entity);
-	remove_entity(ecx, o->entity);
+	if (turret_entity)
+		remove_entity(ecx, turret_entity);
+	if (o->entity)
+		remove_entity(ecx, o->entity);
 	o->entity = NULL;
 
 	/* range is the same as max zoom on old weapons */
@@ -9219,7 +9226,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			break;
 		}
 
-		if ( contact ) {
+		if (contact) {
 			int draw_contact_offset_and_ring = 1;
 			float contact_scale = 1.0;
 
