@@ -498,8 +498,10 @@ struct netstats_packet {
 	uint8_t opcode;
 	uint64_t bytes_sent;
 	uint64_t bytes_recd;
-	uint32_t nships, nobjects;
+	uint32_t nobjects;
+	uint32_t nships;
 	uint32_t elapsed_seconds;
+	uint32_t latency_in_usec;
 	uint32_t faction_population[5];
 };
 
