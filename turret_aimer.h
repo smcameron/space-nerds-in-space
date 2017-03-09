@@ -23,7 +23,6 @@
 #include "quat.h"
 
 struct turret_params {
-	/* Note only the rate limits are implemented. */
 
 	float elevation_lower_limit;	/* how low and high can the turret be raised in radians */
 	float elevation_upper_limit;

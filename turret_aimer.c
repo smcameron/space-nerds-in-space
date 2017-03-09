@@ -26,7 +26,6 @@
 #include "mathutils.h"
 
 static const struct turret_params default_turret_params = {
-	/* NOTE: only the rate limits are actually implemented. */
 	.elevation_lower_limit = 0.0,
 	.elevation_upper_limit = 90.0 * M_PI / 180.0,
 	.azimuth_lower_limit = -2.0 * M_PI,
