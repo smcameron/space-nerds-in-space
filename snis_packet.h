@@ -184,6 +184,7 @@
 #define UPDATE_UNIVERSE_TIMESTAMP_SAMPLE 0
 #define UPDATE_UNIVERSE_TIMESTAMP_END_SAMPLE 2
 
+#define OPCODE_NO_SUBCODE 0
 
 #define NAMESIZE 20
 
@@ -586,6 +587,12 @@ struct request_mainscreen_view_change {
 	uint8_t view_mode;
 #define MAINSCREEN_VIEW_MODE_NORMAL 0
 #define MAINSCREEN_VIEW_MODE_WEAPONS 1
+};
+
+struct opcode_format_descriptor {
+	int32_t size;
+	uint8_t subcode;
+	char format[256];
 };
 
 #pragma pack()

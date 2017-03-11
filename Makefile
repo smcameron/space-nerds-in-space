@@ -365,7 +365,7 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o mtwist.o names.o infinite-taunt.o snis_damcon_systems.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
-		snis_hash.o planetary_atmosphere.o mesh.o pthread_util.o
+		snis_hash.o planetary_atmosphere.o mesh.o pthread_util.o snis_opcode_def.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
@@ -656,6 +656,9 @@ snis_socket_io.o:	snis_socket_io.c Makefile
 	$(Q)$(COMPILE)
 
 snis_marshal.o:	snis_marshal.c Makefile
+	$(Q)$(COMPILE)
+
+snis_opcode_def.o:	snis_opcode_def.c snis_opcode_def.h snis_packet.h Makefile
 	$(Q)$(COMPILE)
 
 snis_bridge_update_packet.o:	snis_bridge_update_packet.c snis_bridge_update_packet.h Makefile

@@ -320,6 +320,11 @@ snis_nl.o: arraysize.h
 snis_nl.o: snis_nl.h
 snis_nl.o: spelled_numbers.h
 snis_nl.o: string-utils.h
+snis_opcode_def.o: mtwist.h
+snis_opcode_def.o: quat.h
+snis_opcode_def.o: snis_marshal.h
+snis_opcode_def.o: snis_opcode_def.h
+snis_opcode_def.o: snis_packet.h
 snis_server.o: arbitrary_spin.h
 snis_server.o: arraysize.h
 snis_server.o: a_star.h
