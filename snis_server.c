@@ -12252,6 +12252,81 @@ static int process_textscreen_op(struct game_client *c)
 	return 0;
 }
 
+static int process_check_opcode_format(struct game_client *c)
+{
+	int rc;
+	uint8_t subcode, opcode;
+	uint16_t len;
+	unsigned char buffer[256];
+	const char *format;
+
+	rc = read_and_unpack_buffer(c, buffer, "bb", &subcode, &opcode);
+	if (rc)
+		return rc;
+	/* fprintf(stderr, "snis_server: Checking opcode for client.  check = %hhu, opcode = %hhu\n",
+		subcode, opcode); */
+	switch (subcode) {
+	case OPCODE_CHECK_OPCODE_UNKNOWN:
+		fprintf(stderr, "\n\n\n\n"
+			"snis_server:  ==> Client reports unknown opcode: %hhu <==\n"
+			"\n\n\n", opcode);
+		break;
+	case OPCODE_CHECK_OPCODE_MATCH:
+		fprintf(stderr, "snis_server: Unexpected CHECK_OPCODE_MATCH from client.\n");
+		return -1;
+	case OPCODE_CHECK_OPCODE_QUERY:
+		fprintf(stderr, "snis_server: Unexpected CHECK_OPCODE_QUERY from client.\n");
+		return -1;
+	case OPCODE_CHECK_OPCODE_VERIFY:
+		rc = read_and_unpack_buffer(c, buffer, "h", &len);
+		if (rc)
+			return rc;
+		/* fprintf(stderr, "snis_server: verifying client opcode, len = %hu\n", len); */
+		if (len > 255) {
+			fprintf(stderr, "\n\n\n\n"
+				"snis_server: Client sent too long (%hu) format string for opcode %hhu verification."
+				"\n\n\n\n", len, opcode);
+			return -1;
+		}
+		memset(buffer, 0, sizeof(buffer));
+		rc = snis_readsocket(c->socket, buffer, len);
+		if (rc)
+			return rc;
+		buffer[len] = '\0';
+		format = snis_opcode_format(opcode);
+		if (!format) {
+			fprintf(stderr, "\n\n\n\n"
+				"snis_server: Client requested verification of unknown opcode %hhu with format '%s'\n"
+				"\n\n\n", opcode, buffer);
+			pb_queue_to_client(c, packed_buffer_new("bbb",
+					OPCODE_CHECK_OPCODE_FORMAT,
+					OPCODE_CHECK_OPCODE_UNKNOWN, opcode));
+			return 0;
+		}
+		if (strcmp(format, (char *) buffer) == 0) {
+			/* fprintf(stderr, "snis_server: Client opcode %hhu verified.\n", opcode); */
+			pb_queue_to_client(c, packed_buffer_new("bbb",
+					OPCODE_CHECK_OPCODE_FORMAT,
+					OPCODE_CHECK_OPCODE_MATCH, opcode));
+			return 0;
+		}
+		fprintf(stderr, "\n\n\n\n"
+			"snis_server:  ==> Client opcode %hhu format mismatch, expected '%s', got '%s' <==\n"
+			"\n\n\n", opcode, format, buffer);
+		pb_queue_to_client(c, packed_buffer_new("bbb",
+				OPCODE_CHECK_OPCODE_FORMAT,
+				OPCODE_CHECK_OPCODE_MISMATCH, opcode));
+		return 0;
+	case OPCODE_CHECK_OPCODE_MISMATCH:
+		fprintf(stderr, "snis_server: Unexpected CHECK_OPCODE_MISMATCH from client.\n");
+		return -1;
+	default:
+		return -1;
+	}
+	return 0;
+}
+
+
 static void enscript_prologue(FILE *f)
 {
 	fprintf(f, "\n");
@@ -15104,6 +15179,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_CHECK_OPCODE_FORMAT:
+			rc = process_check_opcode_format(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -16286,6 +16366,20 @@ protocol_error:
 	return -1;
 }
 
+static void snis_server_cross_check_opcodes(struct game_client *c)
+{
+	uint8_t i;
+
+	for (i = snis_first_opcode(); i != 255; i = snis_next_opcode(i)) {
+		/* fprintf(stderr, "snis_server: cross checking opcode %hhu, '%s'\n",
+			i, snis_opcode_format(i)); */
+		pb_queue_to_client(c, packed_buffer_new("bbb",
+				OPCODE_CHECK_OPCODE_FORMAT,
+				OPCODE_CHECK_OPCODE_QUERY, i));
+	}
+	/* fprintf(stderr, "snis_server: submitted last cross check\n"); */
+}
+
 /* Creates a thread for each incoming connection... */
 static void service_connection(int connection)
 {
@@ -16402,6 +16496,7 @@ static void service_connection(int connection)
 	client_unlock();
 	pthread_mutex_unlock(&universe_mutex);
 
+	snis_server_cross_check_opcodes(&client[i]);
 	queue_set_solarsystem(&client[i]);
 	snis_log(SNIS_INFO, "bottom of 'service connection'\n");
 }

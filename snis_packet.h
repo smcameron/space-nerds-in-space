@@ -172,6 +172,19 @@
 #define OPCODE_UPDATE_TURRET			235
 #define OPCODE_LATENCY_CHECK			236
 
+/* Opcode to make sure client and server are running compatible protocols.
+ * Client can send FORMAT+VERIFY with format of opcode
+ * Server will respond with UNKNOWN, MATCH, or MISMATCH
+ * Server can send FORMAT+QUERY to client (no format included)
+ * Client will respond with VERIFY + format, or UNKNOWN
+ */
+#define OPCODE_CHECK_OPCODE_FORMAT		237
+#define   OPCODE_CHECK_OPCODE_UNKNOWN		1
+#define   OPCODE_CHECK_OPCODE_MATCH		2
+#define   OPCODE_CHECK_OPCODE_QUERY		3
+#define   OPCODE_CHECK_OPCODE_VERIFY		4
+#define   OPCODE_CHECK_OPCODE_MISMATCH		5
+
 #define OPCODE_NOOP		0xff
 
 #define   ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS	0x01

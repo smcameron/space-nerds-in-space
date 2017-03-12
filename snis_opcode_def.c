@@ -311,3 +311,38 @@ struct packed_buffer *snis_opcode_pkt(const char *format, ...)
 	va_end(ap);
 	return pb;
 }
+
+uint8_t snis_first_opcode(void)
+{
+	int i;
+
+	for (i = 0; i < 256 * NSUBCODES; i += NSUBCODES)
+		if (opcode_def[i].format[0]) {
+			/* printf("i = %d, opcode_def[i].format = '%s'\n", i, opcode_def[i].format); */
+			return (uint8_t) (i / NSUBCODES);
+		}
+	return 255;
+}
+
+uint8_t snis_next_opcode(uint8_t opcode)
+{
+	int i;
+
+	for (i = (int) opcode * NSUBCODES + NSUBCODES; i < 256 * NSUBCODES; i += NSUBCODES) {
+		if (opcode_def[i].format[0]) {
+			/* printf("i = %d, opcode_def[i].format = '%s'\n", i, opcode_def[i].format); */
+			return (uint8_t) (i / NSUBCODES);
+		}
+	}
+	return 255;
+}
+
+uint8_t snis_last_opcode(void)
+{
+	int i;
+
+	for (i = 256 * NSUBCODES - 1; i > 0; i -= NSUBCODES)
+		if (opcode_def[i].format[0])
+			return (uint8_t) (i / NSUBCODES);
+	return 0;
+}
