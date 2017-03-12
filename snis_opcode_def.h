@@ -35,6 +35,11 @@ const char *snis_opcode_format(uint8_t opcode);
 /* Returns format of an opcode, subcode pair */
 const char *snis_opcode_subcode_format(uint8_t opcode, uint8_t subcode);
 
+/* snis_opcode_pkt() is like packed_buffer_new() from snis_marshal.h,
+ * except it checks correctness of opcode format for the opcode.
+ */
+struct packed_buffer *snis_opcode_pkt(const char *format, ...);
+
 #define SNIS_OPCODE(x) snis_opcode_format((x)), x
 
 #endif

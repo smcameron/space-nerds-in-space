@@ -28,9 +28,11 @@
 #include <string.h>
 #include <assert.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 #include "snis_packet.h"
 #include "snis_marshal.h"
+#include "stacktrace.h"
 
 #define NSUBCODES 10
 #define NOPCODES (256 * NSUBCODES)
@@ -249,4 +251,63 @@ const char *snis_opcode_subcode_format(uint8_t opcode, uint8_t subcode)
 	assert(opcode < NOPCODES);
 	assert(subcode < NSUBCODES);
 	return opcode_def[index].format;
+}
+
+/* This does exactly what packed_buffer_new() in snis_marshal.c does
+ * except it checks that the opcode format is as expected.
+ * There are conflicting goals.  It would be nice if the formats
+ * for opcodes were in one place.  However, it is also nice to see
+ * the formats at the place where the packeds are packed and unpacked
+ * which requires duplication of the formats.  It would also be nice
+ * to detect if there is a problem with the formats (mismatch)
+ * This is the compromise I came up with -- preserving the clarity
+ * of having the formats visible at the point packets are created
+ * or unpacked, (sacrificing a single point to change such formats)
+ * while still checking that they are as expected -- though only at
+ * run time.
+ */
+struct packed_buffer *snis_opcode_pkt(const char *format, ...)
+{
+	va_list ap, apcopy;
+	struct packed_buffer *pb;
+	int size = calculate_buffer_size(format);
+	uint8_t opcode;
+
+	if (size < 0)
+		return NULL;
+	pb = packed_buffer_allocate(size);
+	if (!pb)
+		return NULL;
+
+	/* Check that this looks like an opcode format */
+	if (format[0] != 'b') {
+		fprintf(stderr, "Bad opcode format '%s'\n", format);
+		va_end(ap);
+		packed_buffer_free(pb);
+		stacktrace("Bad opcode format");
+		return NULL;
+	}
+
+	/* Check that the opcode format seems correct */
+	va_start(ap, format);
+	va_copy(apcopy, ap);
+	opcode = (uint8_t) va_arg(apcopy, int);
+	va_end(apcopy);
+	const char *expected_format = snis_opcode_format(opcode);
+	if (strcmp(expected_format, format) != 0) {
+		packed_buffer_free(pb);
+		fprintf(stderr, "Bad format '%s' for opcode %hhu, expected format '%s'\n",
+			format, opcode, expected_format);
+		stacktrace("Unexpected opcode format");
+		va_end(ap);
+		return NULL;
+	}
+
+	if (packed_buffer_append_va(pb, format, ap)) {
+		packed_buffer_free(pb);
+		va_end(ap);
+		return NULL;
+	}
+	va_end(ap);
+	return pb;
 }
