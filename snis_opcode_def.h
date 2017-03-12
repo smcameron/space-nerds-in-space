@@ -39,6 +39,7 @@ const char *snis_opcode_subcode_format(uint8_t opcode, uint8_t subcode);
  * except it checks correctness of opcode format for the opcode.
  */
 struct packed_buffer *snis_opcode_pkt(const char *format, ...);
+struct packed_buffer *snis_opcode_subcode_pkt(const char *format, ...);
 
 /* Functions to allow iterating over all opcodes */
 uint8_t snis_first_opcode(void);

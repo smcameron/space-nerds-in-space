@@ -11565,7 +11565,7 @@ static void do_damcon_button_release(int button, gdouble x, gdouble y)
 		sy = sng_pixely_to_screeny(y);
 		dcx = screenx_to_damconx(sx);
 		dcy = screeny_to_damcony(sy);
-		queue_to_server(snis_opcode_pkt("bbSS",
+		queue_to_server(snis_opcode_subcode_pkt("bbSS",
 					OPCODE_REQUEST_ROBOT_CMD, OPCODE_ROBOT_SUBCMD_STG,
 					dcx, (int32_t) DAMCONXDIM,
 					dcy, (int32_t) DAMCONYDIM));
@@ -11575,7 +11575,7 @@ static void do_damcon_button_release(int button, gdouble x, gdouble y)
 		sy = sng_pixely_to_screeny(y);
 		dcx = screenx_to_damconx(sx);
 		dcy = screeny_to_damcony(sy);
-		queue_to_server(snis_opcode_pkt("bbSS",
+		queue_to_server(snis_opcode_subcode_pkt("bbSS",
 					OPCODE_REQUEST_ROBOT_CMD, OPCODE_ROBOT_SUBCMD_LTG,
 					dcx, (int32_t) DAMCONXDIM,
 					dcy, (int32_t) DAMCONYDIM));

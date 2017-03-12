@@ -312,6 +312,54 @@ struct packed_buffer *snis_opcode_pkt(const char *format, ...)
 	return pb;
 }
 
+struct packed_buffer *snis_opcode_subcode_pkt(const char *format, ...)
+{
+	va_list ap, apcopy;
+	struct packed_buffer *pb;
+	int size = calculate_buffer_size(format);
+	uint8_t opcode, subcmd;
+
+	if (size < 0)
+		return NULL;
+	pb = packed_buffer_allocate(size);
+	if (!pb)
+		return NULL;
+
+	/* Check that this looks like an opcode format */
+	if (format[0] != 'b' || format[1] != 'b') {
+		fprintf(stderr, "Bad opcode format '%s'\n", format);
+		va_end(ap);
+		packed_buffer_free(pb);
+		stacktrace("Bad opcode format");
+		return NULL;
+	}
+
+	/* Check that the opcode format seems correct */
+	va_start(ap, format);
+	va_copy(apcopy, ap);
+	opcode = (uint8_t) va_arg(apcopy, int);
+	subcmd = (uint8_t) va_arg(apcopy, int);
+	va_end(apcopy);
+	const char *expected_format = snis_opcode_subcode_format(opcode, subcmd);
+	if (strcmp(expected_format, format) != 0) {
+		packed_buffer_free(pb);
+		fprintf(stderr, "Bad format '%s' for opcode %hhu, subcmd %hhu expected format '%s'\n",
+			format, opcode, subcmd, expected_format);
+		stacktrace("Unexpected opcode format");
+		va_end(ap);
+		return NULL;
+	}
+
+	if (packed_buffer_append_va(pb, format, ap)) {
+		packed_buffer_free(pb);
+		va_end(ap);
+		return NULL;
+	}
+	va_end(ap);
+	return pb;
+}
+
+
 uint8_t snis_first_opcode(void)
 {
 	int i;
