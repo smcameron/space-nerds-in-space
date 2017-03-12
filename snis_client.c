@@ -84,6 +84,7 @@
 #include "ssgl/ssgl.h"
 #include "snis_marshal.h"
 #include "snis_packet.h"
+#include "snis_opcode_def.h"
 #include "wwviaudio.h"
 #include "sounds.h"
 #include "bline.h"
@@ -2511,33 +2512,33 @@ static void queue_to_server(struct packed_buffer *pb)
 
 static void request_sci_select_target(uint32_t id)
 {
-	queue_to_server(packed_buffer_new("bw", OPCODE_SCI_SELECT_TARGET, id));
+	queue_to_server(snis_opcode_pkt("bw", OPCODE_SCI_SELECT_TARGET, id));
 }
 
 static void request_sci_select_coords(double ux, double uy)
 {
-	queue_to_server(packed_buffer_new("bSS", OPCODE_SCI_SELECT_COORDS,
+	queue_to_server(snis_opcode_pkt("bSS", OPCODE_SCI_SELECT_COORDS,
 			ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM));
 }
 
 static void request_navigation_yaw_packet(uint8_t yaw)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_YAW, yaw));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_YAW, yaw));
 }
 
 static void request_navigation_thrust_packet(uint8_t thrust)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_THRUST, thrust));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_THRUST, thrust));
 }
 
 static void request_navigation_pitch_packet(uint8_t pitch)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_PITCH, pitch));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_PITCH, pitch));
 }
 
 static void request_navigation_roll_packet(uint8_t roll)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_ROLL, roll));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_ROLL, roll));
 }
 
 static void navigation_dirkey(int h, int v, int r)
@@ -2568,12 +2569,12 @@ static void navigation_dirkey(int h, int v, int r)
 
 static void request_demon_rot_packet(uint32_t oid, uint8_t kind, uint8_t amount)
 {
-	queue_to_server(packed_buffer_new("bbwb", OPCODE_DEMON_ROT, kind, oid, amount));
+	queue_to_server(snis_opcode_pkt("bbwb", OPCODE_DEMON_ROT, kind, oid, amount));
 }
 
 static void request_demon_thrust_packet(uint32_t oid, uint8_t thrust)
 {
-	queue_to_server(packed_buffer_new("bwb",
+	queue_to_server(snis_opcode_pkt("bwb",
 				OPCODE_DEMON_THRUST, oid, thrust));
 }
 
@@ -2693,17 +2694,17 @@ static void demon_dirkey(int h, int v, int r, int t)
 
 static void request_weapons_yaw_packet(uint8_t yaw)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_GUNYAW, yaw));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_GUNYAW, yaw));
 }
 
 static void request_weapons_manual_yaw_packet(uint8_t yaw)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_MANUAL_GUNYAW, yaw));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_MANUAL_GUNYAW, yaw));
 }
 
 static void request_weapons_manual_pitch_packet(uint8_t pitch)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_MANUAL_GUNPITCH, pitch));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_MANUAL_GUNPITCH, pitch));
 }
 
 struct weapons_ui {
@@ -2821,12 +2822,12 @@ static void science_dirkey(int h, int v)
 		return;
 	if (v) {
 		yaw = v < 0 ? YAW_LEFT : YAW_RIGHT;
-		queue_to_server(packed_buffer_new("bb",
+		queue_to_server(snis_opcode_pkt("bb",
 				OPCODE_REQUEST_SCIBEAMWIDTH, yaw));
 	}
 	if (h) {
 		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
-		queue_to_server(packed_buffer_new("bb",
+		queue_to_server(snis_opcode_pkt("bb",
 				OPCODE_REQUEST_SCIYAW, yaw));
 	}
 }
@@ -2839,12 +2840,12 @@ static void damcon_dirkey(int h, int v)
 		return;
 	if (v) {
 		thrust = v < 0 ? THRUST_BACKWARDS : THRUST_FORWARDS;
-		queue_to_server(packed_buffer_new("bb",
+		queue_to_server(snis_opcode_pkt("bb",
 				OPCODE_REQUEST_ROBOT_THRUST, thrust));
 	}
 	if (h) {
 		yaw = h > 0 ? YAW_LEFT : YAW_RIGHT;
-		queue_to_server(packed_buffer_new("bb",
+		queue_to_server(snis_opcode_pkt("bb",
 				OPCODE_REQUEST_ROBOT_YAW, yaw));
 	}
 	wakeup_gameserver_writer();
@@ -2852,7 +2853,7 @@ static void damcon_dirkey(int h, int v)
 
 static void do_onscreen(uint8_t mode)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_ROLE_ONSCREEN, mode));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_ROLE_ONSCREEN, mode));
 }
 
 static void do_view_mode_change()
@@ -2866,7 +2867,7 @@ static void do_view_mode_change()
 		new_mode = MAINSCREEN_VIEW_MODE_WEAPONS;
 	else
 		new_mode = MAINSCREEN_VIEW_MODE_NORMAL;
-	queue_to_server(packed_buffer_new("bRb", OPCODE_MAINSCREEN_VIEW_MODE,
+	queue_to_server(snis_opcode_pkt("bRb", OPCODE_MAINSCREEN_VIEW_MODE,
 				0.0, new_mode));
 }
 
@@ -2925,17 +2926,17 @@ static void do_sciball_dirkey(int h, int v, int r)
 				return;
 			if (v) {
 				value = v < 0 ? YAW_LEFT : YAW_RIGHT;
-				queue_to_server(packed_buffer_new("bb",
+				queue_to_server(snis_opcode_pkt("bb",
 						OPCODE_REQUEST_SCIBALL_PITCH, value));
 			}
 			if (h) {
 				value = h < 0 ? YAW_LEFT : YAW_RIGHT;
-				queue_to_server(packed_buffer_new("bb",
+				queue_to_server(snis_opcode_pkt("bb",
 						OPCODE_REQUEST_SCIBALL_YAW, value));
 			}
 			if (r) {
 				value = r < 0 ? YAW_LEFT : YAW_RIGHT;
-				queue_to_server(packed_buffer_new("bb",
+				queue_to_server(snis_opcode_pkt("bb",
 						OPCODE_REQUEST_SCIBALL_ROLL, value));
 			}
 			break;
@@ -2955,14 +2956,14 @@ static void do_torpedo(void)
 		return;
 	if (o->tsd.ship.torpedoes_loaded <= 0)
 		return;
-	queue_to_server(packed_buffer_new("b", OPCODE_REQUEST_TORPEDO));
+	queue_to_server(snis_opcode_pkt("b", OPCODE_REQUEST_TORPEDO));
 }
 
 static void do_mainscreen_camera_mode()
 {
 	if (displaymode != DISPLAYMODE_MAINSCREEN)
 		return;
-	queue_to_server(packed_buffer_new("bb", OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW,
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW,
 		(unsigned char) (camera_mode + 1) % 3));
 }
 
@@ -2970,7 +2971,7 @@ static void do_nav_camera_mode()
 {
 	if (displaymode != DISPLAYMODE_NAVIGATION)
 		return;
-	queue_to_server(packed_buffer_new("bb", OPCODE_CYCLE_NAV_POINT_OF_VIEW,
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_CYCLE_NAV_POINT_OF_VIEW,
 		(unsigned char) (nav_camera_mode + 1) % 4));
 }
 
@@ -2979,7 +2980,7 @@ static void do_laser(void)
 {
 	switch (displaymode) {
 	case DISPLAYMODE_WEAPONS: 
-		queue_to_server(packed_buffer_new("b", OPCODE_REQUEST_MANUAL_LASER));
+		queue_to_server(snis_opcode_pkt("b", OPCODE_REQUEST_MANUAL_LASER));
 		break;
 	case DISPLAYMODE_DAMCON:
 		robot_gripper_button_pressed(NULL);
@@ -4441,7 +4442,7 @@ static int process_latency_check(void)
 	if (rc)
 		return rc;
 	/* Just turn it around and send back to server */
-	queue_to_server(packed_buffer_new("bqq", OPCODE_LATENCY_CHECK, value[0], value[1]));
+	queue_to_server(snis_opcode_pkt("bqq", OPCODE_LATENCY_CHECK, value[0], value[1]));
 	return 0;
 }
 
@@ -6198,7 +6199,7 @@ static void textscreen_menu_button_pressed(void *button_ptr_ptr)
 			ui_hide_widget(user_menu_button[i]);
 		user_defined_menu_active = 0;
 		if (selection >= 0 && selection < NUM_USER_MENU_BUTTONS)
-			queue_to_server(packed_buffer_new("bbb", OPCODE_TEXTSCREEN_OP,
+			queue_to_server(snis_opcode_pkt("bbb", OPCODE_TEXTSCREEN_OP,
 					OPCODE_TEXTSCREEN_MENU_CHOICE, byte_selection));
 	}
 }
@@ -8117,7 +8118,7 @@ static void load_torpedo_button_pressed()
 		return;
 	if (o->tsd.ship.torpedoes_loading != 0)
 		return;
-	queue_to_server(packed_buffer_new("b", OPCODE_LOAD_TORPEDO));
+	queue_to_server(snis_opcode_pkt("b", OPCODE_LOAD_TORPEDO));
 }
 
 static void fire_phaser_button_pressed(__attribute__((unused)) void *notused)
@@ -8137,7 +8138,7 @@ static void do_adjust_byte_value(uint8_t value,  uint8_t opcode)
 
 	if (!(o = find_my_ship()))
 		return;
-	queue_to_server(packed_buffer_new("bwb", opcode, o->id, value));
+	queue_to_server(snis_opcode_pkt("bwb", opcode, o->id, value));
 }
 
 static void do_adjust_slider_value(struct slider *s,  uint8_t opcode)
@@ -9432,17 +9433,17 @@ static void robot_right_button_pressed(void *x)
 
 static void robot_gripper_button_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("b", OPCODE_REQUEST_ROBOT_GRIPPER));
+	queue_to_server(snis_opcode_pkt("b", OPCODE_REQUEST_ROBOT_GRIPPER));
 }
 
 static void robot_auto_button_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_ROBOT_AUTO_MANUAL, DAMCON_ROBOT_FULLY_AUTONOMOUS));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_ROBOT_AUTO_MANUAL, DAMCON_ROBOT_FULLY_AUTONOMOUS));
 }
 
 static void robot_manual_button_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_ROBOT_AUTO_MANUAL, DAMCON_ROBOT_MANUAL_MODE));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_ROBOT_AUTO_MANUAL, DAMCON_ROBOT_MANUAL_MODE));
 }
 
 static void init_damcon_ui(void)
@@ -10205,37 +10206,37 @@ static void show_damcon(GtkWidget *w)
 
 static void sci_details_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_SCI_DETAILS,
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_DETAILS));
 }
 
 static void sci_align_to_ship_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("b", OPCODE_SCI_ALIGN_TO_SHIP));
+	queue_to_server(snis_opcode_pkt("b", OPCODE_SCI_ALIGN_TO_SHIP));
 }
 
 static void sci_threed_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_SCI_DETAILS,
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_THREED));
 }
 
 static void sci_sciplane_pressed(void *x)
 {
-	queue_to_server(packed_buffer_new("bb", OPCODE_SCI_DETAILS,
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_SCIPLANE));
 }
 
 static void sci_tractor_pressed(void *x)
 {
 	uint32_t id = curr_science_guy ? curr_science_guy->id : (uint32_t) 0xffffffff;
-	queue_to_server(packed_buffer_new("bw", OPCODE_REQUEST_TRACTORBEAM, id));
+	queue_to_server(snis_opcode_pkt("bw", OPCODE_REQUEST_TRACTORBEAM, id));
 }
 
 static void sci_mining_bot_pressed(void *x)
 {
 	uint32_t id = curr_science_guy ? curr_science_guy->id : (uint32_t) 0xffffffff;
-	queue_to_server(packed_buffer_new("bw", OPCODE_REQUEST_MINING_BOT, id));
+	queue_to_server(snis_opcode_pkt("bw", OPCODE_REQUEST_MINING_BOT, id));
 }
 
 static void init_science_ui(void)
@@ -10343,7 +10344,7 @@ static void comms_screen_red_alert_pressed(void *x)
 	unsigned char new_alert_mode;
 
 	new_alert_mode = (red_alert_mode == 0);	
-	queue_to_server(packed_buffer_new("bb", OPCODE_REQUEST_REDALERT, new_alert_mode));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_REDALERT, new_alert_mode));
 }
 
 static void comms_main_screen_pressed(void *x)
@@ -10351,7 +10352,7 @@ static void comms_main_screen_pressed(void *x)
 	unsigned char new_comms_mode;
 
 	new_comms_mode = (main_screen_text.comms_on_mainscreen == 0);	
-	queue_to_server(packed_buffer_new("bb", OPCODE_COMMS_MAINSCREEN, new_comms_mode));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_COMMS_MAINSCREEN, new_comms_mode));
 }
 
 static void send_comms_packet_to_server(char *msg, uint8_t opcode, uint32_t id)
@@ -11084,22 +11085,22 @@ static void send_demon_comms_packet_to_server(char *msg)
 
 static void send_demon_clear_all_packet_to_server(void)
 {
-	queue_to_server(packed_buffer_new("b", OPCODE_DEMON_CLEAR_ALL));
+	queue_to_server(snis_opcode_pkt("b", OPCODE_DEMON_CLEAR_ALL));
 }
 
 static void toggle_demon_ai_debug_mode(void)
 {
-	queue_to_server(packed_buffer_new("b", OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE));
+	queue_to_server(snis_opcode_pkt("b", OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE));
 }
 
 static void request_universe_timestamp(void)
 {
-	queue_to_server(packed_buffer_new("b", OPCODE_REQUEST_UNIVERSE_TIMESTAMP));
+	queue_to_server(snis_opcode_pkt("b", OPCODE_REQUEST_UNIVERSE_TIMESTAMP));
 }
 
 static void toggle_demon_safe_mode(void)
 {
-	queue_to_server(packed_buffer_new("b", OPCODE_TOGGLE_DEMON_SAFE_MODE));
+	queue_to_server(snis_opcode_pkt("b", OPCODE_TOGGLE_DEMON_SAFE_MODE));
 }
 
 static int ux_to_usersx(double ux, float x1, float x2)
@@ -11193,7 +11194,7 @@ static void demon_select(uint32_t id)
 		int index = lookup_object_by_id(id);
 
 		if (demon_ui.captain_of != -1) {
-			queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_DISPOSSESS,
+			queue_to_server(snis_opcode_pkt("bw", OPCODE_DEMON_DISPOSSESS,
 				go[demon_ui.captain_of].id));
 				old_captain = demon_ui.captain_of;
 				demon_ui.captain_of = -1;
@@ -11208,7 +11209,7 @@ static void demon_select(uint32_t id)
 				demon_ui.captain_of = lookup_object_by_id(id);
 				demon_ui.exaggerated_scale_active = 0;
 				demon_ui.desired_exaggerated_scale = 0.0;
-				queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_POSSESS,
+				queue_to_server(snis_opcode_pkt("bw", OPCODE_DEMON_POSSESS,
 					go[demon_ui.captain_of].id));
 			}
 		}
@@ -11225,7 +11226,7 @@ static void demon_deselect(uint32_t id)
 			if (demon_ui.captain_of != -1) {
 				index = lookup_object_by_id(id);
 				if (demon_ui.captain_of == index) {
-					queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_DISPOSSESS,
+					queue_to_server(snis_opcode_pkt("bw", OPCODE_DEMON_DISPOSSESS,
 						go[demon_ui.captain_of].id));
 					demon_ui.captain_of = -1;
 				}
@@ -11319,7 +11320,7 @@ static void demon_button_create_item(gdouble x, gdouble y, gdouble z)
 		default:
 			return;
 	}
-	queue_to_server(packed_buffer_new("bbSSS", OPCODE_CREATE_ITEM, item_type,
+	queue_to_server(snis_opcode_pkt("bbSSS", OPCODE_CREATE_ITEM, item_type,
 			ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM, uz, (int32_t) UNIVERSE_DIM));
 }
 
@@ -11433,7 +11434,7 @@ static void demon_button2_release(int button, gdouble x, gdouble y)
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < demon_ui.nselected; i++) {
 		int index = lookup_object_by_id(demon_ui.selected_id[i]);
-		queue_to_server(packed_buffer_new("bwSSSQ",
+		queue_to_server(snis_opcode_pkt("bwSSSQ",
 				OPCODE_DEMON_MOVE_OBJECT,
 				demon_ui.selected_id[i],
 				dx, (int32_t) UNIVERSE_DIM,
@@ -11480,7 +11481,7 @@ static void do_damcon_button_release(int button, gdouble x, gdouble y)
 		sy = sng_pixely_to_screeny(y);
 		dcx = screenx_to_damconx(sx);
 		dcy = screeny_to_damcony(sy);
-		queue_to_server(packed_buffer_new("bbSS",
+		queue_to_server(snis_opcode_pkt("bbSS",
 					OPCODE_REQUEST_ROBOT_CMD, OPCODE_ROBOT_SUBCMD_STG,
 					dcx, (int32_t) DAMCONXDIM,
 					dcy, (int32_t) DAMCONYDIM));
@@ -11490,7 +11491,7 @@ static void do_damcon_button_release(int button, gdouble x, gdouble y)
 		sy = sng_pixely_to_screeny(y);
 		dcx = screenx_to_damconx(sx);
 		dcy = screeny_to_damcony(sy);
-		queue_to_server(packed_buffer_new("bbSS",
+		queue_to_server(snis_opcode_pkt("bbSS",
 					OPCODE_REQUEST_ROBOT_CMD, OPCODE_ROBOT_SUBCMD_LTG,
 					dcx, (int32_t) DAMCONXDIM,
 					dcy, (int32_t) DAMCONYDIM));
@@ -12107,7 +12108,7 @@ static void demon_delete_button_pressed(void *x)
 
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < demon_ui.nselected; i++) {
-		queue_to_server(packed_buffer_new("bw",
+		queue_to_server(snis_opcode_pkt("bw",
 				OPCODE_DELETE_OBJECT, demon_ui.selected_id[i]));
 	}
 	pthread_mutex_unlock(&universe_mutex);
@@ -12124,7 +12125,7 @@ static void demon_torpedo_button_pressed(void *x)
 		return;
 	if (go[demon_ui.captain_of].type != OBJTYPE_SHIP2)
 		return;
-	queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_FIRE_TORPEDO,
+	queue_to_server(snis_opcode_pkt("bw", OPCODE_DEMON_FIRE_TORPEDO,
 				go[demon_ui.captain_of].id));
 }
 
@@ -12134,7 +12135,7 @@ static void demon_phaser_button_pressed(void *x)
 		return;
 	if (go[demon_ui.captain_of].type != OBJTYPE_SHIP2)
 		return;
-	queue_to_server(packed_buffer_new("bw", OPCODE_DEMON_FIRE_PHASER,
+	queue_to_server(snis_opcode_pkt("bw", OPCODE_DEMON_FIRE_PHASER,
 				go[demon_ui.captain_of].id));
 }
 
@@ -12189,7 +12190,7 @@ static void demon_move_button_pressed(void *x)
 	for (i = 0; i < demon_ui.nselected; i++) {
 		int index = lookup_object_by_id(demon_ui.selected_id[i]);
 		if (index >= 0)
-			queue_to_server(packed_buffer_new("bwSSSQ",
+			queue_to_server(snis_opcode_pkt("bwSSSQ",
 					OPCODE_DEMON_MOVE_OBJECT,
 					demon_ui.selected_id[i],
 					dx, (int32_t) UNIVERSE_DIM,
@@ -12745,7 +12746,7 @@ static void show_demon_3d(GtkWidget *w)
 						dx = demon_ui.desired_camera_pos.v.x - go[demon_ui.captain_of].x;
 						dy = demon_ui.desired_camera_pos.v.y - go[demon_ui.captain_of].y;
 						dz = demon_ui.desired_camera_pos.v.z - go[demon_ui.captain_of].z;
-						queue_to_server(packed_buffer_new("bwSSSQ",
+						queue_to_server(snis_opcode_pkt("bwSSSQ",
 								OPCODE_DEMON_MOVE_OBJECT,
 								go[demon_ui.captain_of].id,
 								dx, (int32_t) UNIVERSE_DIM,
@@ -14362,7 +14363,7 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 		smooth_mousexy(event->x, event->y, &smoothx, &smoothy);
 		yaw = weapons_mousex_to_yaw(smoothx);
 		pitch = weapons_mousey_to_pitch(smoothy);
-		queue_to_server(packed_buffer_new("bRR", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
+		queue_to_server(snis_opcode_pkt("bRR", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
 					yaw, pitch));
 		break;
 	case DISPLAYMODE_ENGINEERING:
@@ -15611,6 +15612,7 @@ int main(int argc, char *argv[])
 	check_lobby_serverhost_options();
 	override_asset_dir();
 	setup_sound();
+	snis_opcode_def_init();
 	memset(&main_screen_text, 0, sizeof(main_screen_text));
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
 	snis_object_pool_setup(&sparkpool, MAXSPARKS);
