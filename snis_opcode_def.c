@@ -95,7 +95,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_SHIELDS_PWR, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_COMMS_PWR, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SENSORS_PWR, "bwb");
-	rc |= init_opcode_def(OPCODE_REQUEST_PHASERBANKS_PWR, "wb");
+	rc |= init_opcode_def(OPCODE_REQUEST_PHASERBANKS_PWR, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIZOOM, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_WARPDRIVE, "bwb");
 	rc |= init_opcode_def(OPCODE_ENGAGE_WARP, "bwb");
@@ -127,7 +127,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_REDALERT, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_POWER_DATA, "n/a");
 	rc |= init_opcode_def(OPCODE_UPDATE_PLANET, "bwwSSSSwbbbbhbbbSbhbb");
-	rc |= init_opcode_def(OPCODE_CREATE_ITEM, "bSSS");
+	rc |= init_opcode_def(OPCODE_CREATE_ITEM, "bbSSS");
 	rc |= init_opcode_def(OPCODE_DEMON_COMMS_XMIT, "n/a");
 	rc |= init_opcode_def(OPCODE_DEMON_FIRE_TORPEDO, "bw");
 	rc |= init_opcode_def(OPCODE_DEMON_FIRE_PHASER, "bw");
@@ -164,7 +164,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_MANUAL_GUNYAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_MANUAL_GUNPITCH, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_MANUAL_LASER, "b");
-	rc |= init_opcode_def(OPCODE_REQUEST_WEAPONS_YAW_PITCH, "RR");
+	rc |= init_opcode_def(OPCODE_REQUEST_WEAPONS_YAW_PITCH, "bRR");
 	rc |= init_opcode_def(OPCODE_UPDATE_COOLANT_DATA, "n/a");
 	rc |= init_opcode_def(OPCODE_REQUEST_MANEUVERING_COOLANT, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_WARP_COOLANT, "bwb");
