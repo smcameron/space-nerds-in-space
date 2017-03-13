@@ -17,12 +17,28 @@ door3 = -1;
 door4 = -1;
 demolisher_id = -1;
 
-challenge="WHAT IS YOUR QUEST?"
-challenge_answer="GRAPEFRUIT45"
+math.randomseed(os.time())
 
-door_channel = 1234;
-sb01channel1 = 123
-sb01channel2 = 75
+function alphachar(n)
+  return string.char(n % 26 + 65)
+end
+
+function string.random(length)
+  if length == 0 then
+    return ""
+  end
+  return string.random(length - 1) .. alphachar(math.random(0, 25))
+end
+
+tmpstr=string.random(24)
+challenge=string.sub(tmpstr, 1, 8)
+challenge_answer=string.sub(tmpstr, 9, 16)
+opencmd=string.sub(tmpstr, 17, 20)
+closecmd=string.sub(tmpstr, 21, 24)
+
+door_channel = 1000 + math.random(8000)
+sb01channel1 = 1000 + math.random(8000)
+sb01channel2 = 1000 + math.random(8000)
 
 demox = 100000;
 demoy = 100000;
@@ -127,13 +143,13 @@ function door_mover(cookie)
 end
 
 function door_comms(from, channel, message)
-  if message == "open" or message == "OPEN" then
+  if message == opencmd then
     comms_channel_transmit("DEMOLISHER: ", door_channel, challenge);
   elseif message == challenge_answer then
     door_direction = door_speed;
     comms_channel_transmit("DEMOLISHER: ", door_channel, "COMMAND ACKNOWLEDGED, DOORS OPENING");
   end
-  if message == "close" then
+  if message == closecmd then
     door_direction = -door_speed;
     comms_channel_transmit("DEMOLISHER: ", door_channel, "COMMAND ACKNOWLEDGED, DOORS CLOSING");
   end
@@ -479,7 +495,8 @@ function starbase_listener1(from, channel, message)
 	comms_channel_transmit("SB-01", sb01channel1, ": THE LANDING BAY DOOR COMPUTER ON THE DEMOLISHER HAS");
 	comms_channel_transmit("SB-01", sb01channel1, ": BEEN COMPROMISED.");
 	comms_channel_transmit("SB-01", sb01channel1,
-		string.format(": YOU CAN TRANSMIT 'OPEN' ON CHANNEL %d, AND THE DOOR", door_channel));
+		string.format(": YOU CAN TRANSMIT " .. opencmd .. " ON CHANNEL %d TO OPEN THE DOOR OR ", door_channel))
+	comms_channel_transmit("SB-01", sb01channel1, ": OR " .. closecmd .. " TO CLOSE THE DOOR AND THE DOOR")
 	comms_channel_transmit("SB-01", sb01channel1, ": WILL RESPOND WITH A CHALLENGE.  WE CAN WITH SOME EFFORT");
 	comms_channel_transmit("SB-01", sb01channel1, ": DETERMINE THE CORRECT RESPONSE TO THE CHALLENGE.");
 	comms_channel_transmit("SB-01", sb01channel1, ": WHEN YOU RECEIVE THE CHALLENGE, FORWARD IT TO SB-01 ON");
@@ -509,7 +526,7 @@ function starbase_listener2(from, channel, message)
 end
 
 function hail_player()
-	comms_channel_transmit("SB-01", 0, ": *** HAILING ON CHANNEL 123 ***");
+	comms_channel_transmit("SB-01", 0, ": *** HAILING ON CHANNEL " .. sb01channel1 .. " ***");
 	comms_channel_listen("SB-01", sb01channel1, "starbase_listener1");
 end
 
