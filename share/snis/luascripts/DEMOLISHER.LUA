@@ -50,7 +50,7 @@ function add_demolisher_ship(x, y, z)
   l = 20 * m;
   w = 3 * m;
   thick = 0.3 * m;
-  degrees = (3.1415927 / 180.0);
+  degrees = (math.pi / 180.0);
   zfight = 10;
 
   -- This is our main, unparented block of the ship to which all other
@@ -431,12 +431,13 @@ if (player_ids[1]) then
 end
 
 demolisher_id = add_demolisher_ship(demox, demoy, demoz);
+demolisher_speed = 0;
 
 function move_demolisher()
     zetax, zetay, zetaz = get_object_location(planet[2]);
     myx, myy, myz = get_object_location(demolisher_id);
-    angle = align_object_towards(demolisher_id, zetax, zetay, zetaz, 0.1 * 3.1415927 / 180.0);
-    demolisher_speed = 100;
+    angle = align_object_towards(demolisher_id, zetax, zetay, zetaz, 0.1 * math.pi / 180.0);
+    desired_demolisher_speed = 100;
 
     dx = zetax - myx;
     dy = zetay - myy;
@@ -444,20 +445,28 @@ function move_demolisher()
 
     dist = math.sqrt(dx * dx + dy * dy + dz * dz);
     if dist > 100000 then
- 	    demolisher_speed = 400;
+       desired_demolisher_speed = 400;
     elseif dist > 60000 then
- 	    demolisher_speed = 200;
+       desired_demolisher_speed = 200;
     elseif dist > 30000 then
- 	    demolisher_speed = 100;
+       desired_demolisher_speed = 100;
     elseif dist > 25000 then
-	    demolisher_speed = 50;
+       desired_demolisher_speed = 50;
+    else
+       desired_demolisher_speed = 0;
     end
-    if dist > 25000 and math.abs(angle) < math.pi / 180.0 then
-	    dx = demolisher_speed * dx / dist;
-	    dy = demolisher_speed * dy / dist;
-	    dz = demolisher_speed * dz / dist;
-	    move_object(demolisher_id, myx + dx, myy + dy, myz + dz);
+    if angle > 3.0 * math.pi / 180.0 then
+	desired_demolisher_speed = 0;
     end
+    if demolisher_speed < desired_demolisher_speed then
+       demolisher_speed = demolisher_speed + 1
+    elseif demolisher_speed > desired_demolisher_speed then
+       demolisher_speed = demolisher_speed - 1
+    end
+    dx = demolisher_speed * dx / dist;
+    dy = demolisher_speed * dy / dist;
+    dz = demolisher_speed * dz / dist;
+    move_object(demolisher_id, myx + dx, myy + dy, myz + dz);
     register_timer_callback("move_demolisher", 1, 0);
 end
 
