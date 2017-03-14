@@ -7640,7 +7640,7 @@ static int l_align_object_towards(lua_State *l)
 {
 	int i;
 	double id, x, y, z, max_angle;
-	float axisx, axisy, axisz, angle;
+	float axisx, axisy, axisz, unlimited_angle, angle;
 	union vec3 start, goal;
 	union quat rotation, new_orientation;
 
@@ -7670,6 +7670,7 @@ static int l_align_object_towards(lua_State *l)
 	quat_from_u2v(&rotation, &start, &goal, NULL);
 
 	quat_to_axis(&rotation, &axisx, &axisy, &axisz, &angle);
+	unlimited_angle = angle;
 
 	if (angle < max_angle)
 		angle = -max_angle;
@@ -7682,7 +7683,7 @@ static int l_align_object_towards(lua_State *l)
 	go[i].orientation = new_orientation;
 	go[i].timestamp = universe_timestamp;
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, angle);
+	lua_pushnumber(lua_state, unlimited_angle);
 	return 1;
 }
 

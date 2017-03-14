@@ -219,8 +219,9 @@ set_object_rotational_velocity(object_id, rotx, roty, rotz, angle);
 align_object_towards(object_id, x, y, z, max_rads)
 	Aligns and object to face towards x, y, z (facing means the object's local x
 	points at the destination.  max_rads is the maximum angle to adjust by.
-	returns the angle of rotation applied (numbers near zero mean alignment is
-	achieved.  If the object_id isn't found -720.0 * PI / 180 is returned.
+	returns the total angle of rotation which needs to be applied. (numbers near
+	zero mean alignment is achieved.  If the object_id isn't found
+	-720.0 * PI / 180 is returned.
 
 set_object_relative_position(object_id, rx, ry, rz);
 	Sets and objects position relative to a parent object to which it is
