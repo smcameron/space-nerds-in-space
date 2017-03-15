@@ -154,10 +154,6 @@ static float turret_recoil_amount = 0.0f;
 
 static int mtwist_seed = COMMON_MTWIST_SEED;
 
-typedef void explosion_function(int x, int y, int ivx, int ivy, int v, int nsparks, int time);
-
-explosion_function *explosion = NULL;
-
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
 #define DEFAULT_LINE_STYLE sng_current_draw_line
@@ -171,8 +167,8 @@ explosion_function *explosion = NULL;
 #define snis_draw_rectangle DEFAULT_RECTANGLE_STYLE
 #define snis_bright_line DEFAULT_BRIGHT_LINE_STYLE
 #define snis_draw_arc DEFAULT_ARC_STYLE
-int frame_rate_hz = 30;
-int red_alert_mode = 0;
+static int frame_rate_hz = 30;
+static int red_alert_mode = 0;
 #define MAX_UPDATETIME_START_PAUSE 1.5
 #define MAX_UPDATETIME_INTERVAL 0.5
 
@@ -184,36 +180,36 @@ int red_alert_mode = 0;
 #define STRPREFIX(s) str(s)
 #define str(s) #s
 
-char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
-char *asset_dir;
+static char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
+static char *asset_dir;
 
 typedef void (*joystick_button_fn)(void *x);
-char joystick_device[PATH_MAX+1];
-int joystick_fd = -1;
-int joystickx, joysticky;
+static char joystick_device[PATH_MAX+1];
+static int joystick_fd = -1;
+static int joystickx, joysticky;
 
 static int physical_io_socket = -1;
 static pthread_t physical_io_thread;
 
 static pthread_t natural_language_thread;
 
-struct text_to_speech_queue_entry {
+static struct text_to_speech_queue_entry {
 	char *text;
 	struct text_to_speech_queue_entry *next;
 } *text_to_speech_queue_head, *text_to_speech_queue_tail;
 static pthread_t text_to_speech_thread;
-pthread_mutex_t text_to_speech_mutex;
-pthread_cond_t text_to_speech_cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t text_to_speech_mutex;
+static pthread_cond_t text_to_speech_cond = PTHREAD_COND_INITIALIZER;
 static int text_to_speech_thread_time_to_quit = 0;
 
-GtkWidget *window;
-GdkGC *gc = NULL;               /* our graphics context. */
-GtkWidget *main_da;             /* main drawing area. */
-gint timer_tag;  
-int fullscreen = 0;
-int in_the_process_of_quitting = 0;
-int current_quit_selection = 0;
-int final_quit_selection = 0;
+static GtkWidget *window;
+static GdkGC *gc = NULL;               /* our graphics context. */
+static GtkWidget *main_da;             /* main drawing area. */
+static gint timer_tag;
+static int fullscreen = 0;
+static int in_the_process_of_quitting = 0;
+static int current_quit_selection = 0;
+static int final_quit_selection = 0;
 
 static int textscreen_timer = 0;
 static int user_defined_menu_active = 0;
@@ -221,27 +217,27 @@ static char textscreen[1024] = { 0 };
 #define NUM_USER_MENU_BUTTONS 10
 static struct button *user_menu_button[NUM_USER_MENU_BUTTONS];
 
-struct ship_type_entry *ship_type;
-int nshiptypes = 0;
+static struct ship_type_entry *ship_type;
+static int nshiptypes = 0;
 
-uint32_t role = ROLE_ALL;
+static uint32_t role = ROLE_ALL;
 
-char *password;
-char *shipname;
+static char *password;
+static char *shipname;
 #define UNKNOWN_ID 0xffffffff
-uint32_t my_ship_id = UNKNOWN_ID;
-uint32_t my_ship_oid = UNKNOWN_ID;
+static uint32_t my_ship_id = UNKNOWN_ID;
+static uint32_t my_ship_oid = UNKNOWN_ID;
 
-int real_screen_width;
-int real_screen_height;
-int warp_limbo_countdown = 0;
-int damage_limbo_countdown = 0;
+static int real_screen_width;
+static int real_screen_height;
+static int warp_limbo_countdown = 0;
+static int damage_limbo_countdown = 0;
 
-struct entity_context *ecx;
-struct entity_context *sciecx;
-struct entity_context *instrumentecx; /* Used by nav screen, sciplane screen, and demon screen */
-struct entity_context *tridentecx;
-struct entity_context *sciballecx;
+static struct entity_context *ecx;
+static struct entity_context *sciecx;
+static struct entity_context *instrumentecx; /* Used by nav screen, sciplane screen, and demon screen */
+static struct entity_context *tridentecx;
+static struct entity_context *sciballecx;
 
 static int ecx_fake_stars_initialized = 0;
 static int nfake_stars = 0;
@@ -258,7 +254,7 @@ static volatile float main_camera_shake = 0.0f;
 static unsigned char camera_mode;
 static unsigned char nav_camera_mode;
 
-struct client_network_stats {
+static struct client_network_stats {
 	uint64_t bytes_sent;
 	uint64_t bytes_recd;
 	uint32_t nobjects, nships;
@@ -270,55 +266,59 @@ struct client_network_stats {
 	struct timespec lasttime;
 } netstats;
 
-int nframes = 0;
-int timer = 0;
-struct timeval start_time, end_time;
+static int nframes = 0;
+static int timer = 0;
+static struct timeval start_time, end_time;
 #define UNIVERSE_TICKS_PER_SECOND 10
 static double universe_timestamp_offset = 0;
 
-volatile int done_with_lobby = 0;
-pthread_t lobby_thread;
-pthread_t gameserver_connect_thread;
-pthread_t read_from_gameserver_thread;
-pthread_t write_to_gameserver_thread;
-struct packed_buffer_queue to_server_queue;
-pthread_mutex_t to_server_queue_mutex;
-pthread_mutex_t to_server_queue_event_mutex;
-pthread_cond_t server_write_cond = PTHREAD_COND_INITIALIZER;
-int have_packets_for_server = 0;
+static volatile int done_with_lobby = 0;
+static pthread_t lobby_thread;
+static pthread_t gameserver_connect_thread;
+static pthread_t read_from_gameserver_thread;
+static pthread_t write_to_gameserver_thread;
+static struct packed_buffer_queue to_server_queue;
+static pthread_mutex_t to_server_queue_mutex;
+static pthread_mutex_t to_server_queue_event_mutex;
+static pthread_cond_t server_write_cond = PTHREAD_COND_INITIALIZER;
+static int have_packets_for_server = 0;
 
-int lobby_socket = -1;
-int gameserver_sock = -1;
-int lobby_count = 0;
-char lobbyerror[200];
-char *lobbyhost = "localhost";
+static int lobby_socket = -1;
+static int gameserver_sock = -1;
+static int lobby_count = 0;
+static char lobbyerror[200];
+static char *lobbyhost = "localhost";
 static char *serverhost = NULL;
 static int serverport = -1;
 static int monitorid = -1;
 static int avoid_lobby = 0;
-struct ssgl_game_server lobby_game_server[100];
-int ngameservers = 0;
+static struct ssgl_game_server lobby_game_server[100];
+static int ngameservers = 0;
 
-struct ui_element_list *uiobjs = NULL;
-ui_element_drawing_function ui_slider_draw = (ui_element_drawing_function) snis_slider_draw;
-ui_element_button_press_function ui_slider_button_press = (ui_element_button_press_function) snis_slider_button_press;
+static struct ui_element_list *uiobjs = NULL;
+static ui_element_drawing_function ui_slider_draw = (ui_element_drawing_function) snis_slider_draw;
+static ui_element_button_press_function ui_slider_button_press =
+		(ui_element_button_press_function) snis_slider_button_press;
 
-ui_element_drawing_function ui_button_draw = (ui_element_drawing_function) snis_button_draw;
-ui_element_drawing_function ui_strip_chart_draw = (ui_element_drawing_function) snis_strip_chart_draw;
-ui_element_drawing_function ui_scaling_strip_chart_draw = (ui_element_drawing_function) snis_scaling_strip_chart_draw;
-ui_element_drawing_function ui_label_draw = (ui_element_drawing_function) snis_label_draw;
-ui_element_button_press_function ui_button_button_press = (ui_element_button_press_function) snis_button_button_press;
-ui_element_drawing_function ui_gauge_draw = (ui_element_drawing_function) gauge_draw;
-ui_element_drawing_function ui_text_window_draw = (ui_element_drawing_function) text_window_draw;
-ui_element_drawing_function ui_text_input_draw = (ui_element_drawing_function)
+static ui_element_drawing_function ui_button_draw = (ui_element_drawing_function) snis_button_draw;
+static ui_element_drawing_function ui_strip_chart_draw =
+		(ui_element_drawing_function) snis_strip_chart_draw;
+static ui_element_drawing_function ui_scaling_strip_chart_draw =
+		(ui_element_drawing_function) snis_scaling_strip_chart_draw;
+static ui_element_drawing_function ui_label_draw = (ui_element_drawing_function) snis_label_draw;
+static ui_element_button_press_function ui_button_button_press =
+		(ui_element_button_press_function) snis_button_button_press;
+static ui_element_drawing_function ui_gauge_draw = (ui_element_drawing_function) gauge_draw;
+static ui_element_drawing_function ui_text_window_draw = (ui_element_drawing_function) text_window_draw;
+static ui_element_drawing_function ui_text_input_draw = (ui_element_drawing_function)
 					snis_text_input_box_draw;
-ui_element_set_focus_function ui_text_input_box_set_focus = (ui_element_set_focus_function)
+static ui_element_set_focus_function ui_text_input_box_set_focus = (ui_element_set_focus_function)
 					snis_text_input_box_set_focus;
-ui_element_button_press_function ui_text_input_button_press = (ui_element_button_press_function)
+static ui_element_button_press_function ui_text_input_button_press = (ui_element_button_press_function)
 					snis_text_input_box_button_press;
-ui_element_keypress_function ui_text_input_keypress = (ui_element_keypress_function)
+static ui_element_keypress_function ui_text_input_keypress = (ui_element_keypress_function)
 					snis_text_input_box_keypress;
-ui_element_button_press_function ui_text_window_button_press = (ui_element_button_press_function)
+static ui_element_button_press_function ui_text_window_button_press = (ui_element_button_press_function)
 					text_window_button_press;
 
 #define MAXTEXTURES 10
@@ -327,48 +327,48 @@ ui_element_button_press_function ui_text_window_button_press = (ui_element_butto
 #define GLuint int
 #endif
 
-volatile int static_textures_loaded = 0; /* blech, volatile global. */
-volatile int per_solarsystem_textures_loaded = 0;
+static volatile int static_textures_loaded = 0; /* blech, volatile global. */
+static volatile int per_solarsystem_textures_loaded = 0;
 
-struct mesh *torpedo_mesh;
-struct mesh *torpedo_nav_mesh;
-struct mesh *laser_mesh;
-struct mesh *asteroid_mesh[NASTEROID_MODELS];
-struct mesh *unit_cube_mesh;
-struct mesh *sphere_mesh;
-struct mesh *low_poly_sphere_mesh;
-struct mesh *planetary_ring_mesh;
-struct mesh **starbase_mesh;
+static struct mesh *torpedo_mesh;
+static struct mesh *torpedo_nav_mesh;
+static struct mesh *laser_mesh;
+static struct mesh *asteroid_mesh[NASTEROID_MODELS];
+static struct mesh *unit_cube_mesh;
+static struct mesh *sphere_mesh;
+static struct mesh *low_poly_sphere_mesh;
+static struct mesh *planetary_ring_mesh;
+static struct mesh **starbase_mesh;
 static int nstarbase_models = -1;
 static struct starbase_file_metadata *starbase_metadata;
 static struct docking_port_attachment_point **docking_port_info;
-struct mesh *ship_turret_mesh;
-struct mesh *ship_turret_base_mesh;
-struct mesh *turret_mesh;
-struct mesh *turret_base_mesh;
-struct mesh *particle_mesh;
-struct mesh *debris_mesh;
-struct mesh *debris2_mesh;
-struct mesh *wormhole_mesh;
-struct mesh *spacemonster_mesh;
-struct mesh *laserbeam_mesh;
-struct mesh *phaser_mesh;
-struct mesh *laserbeam_nav_mesh;
-struct mesh *ship_icon_mesh;
-struct mesh *heading_indicator_mesh;
-struct mesh *cargo_container_mesh;
-struct mesh *nebula_mesh;
-struct mesh *sun_mesh;
-struct mesh *thrust_animation_mesh;
-struct mesh *warpgate_mesh;
+static struct mesh *ship_turret_mesh;
+static struct mesh *ship_turret_base_mesh;
+static struct mesh *turret_mesh;
+static struct mesh *turret_base_mesh;
+static struct mesh *particle_mesh;
+static struct mesh *debris_mesh;
+static struct mesh *debris2_mesh;
+static struct mesh *wormhole_mesh;
+static struct mesh *spacemonster_mesh;
+static struct mesh *laserbeam_mesh;
+static struct mesh *phaser_mesh;
+static struct mesh *laserbeam_nav_mesh;
+static struct mesh *ship_icon_mesh;
+static struct mesh *heading_indicator_mesh;
+static struct mesh *cargo_container_mesh;
+static struct mesh *nebula_mesh;
+static struct mesh *sun_mesh;
+static struct mesh *thrust_animation_mesh;
+static struct mesh *warpgate_mesh;
 #define NDOCKING_PORT_STYLES 3
-struct mesh *docking_port_mesh[NDOCKING_PORT_STYLES];
+static struct mesh *docking_port_mesh[NDOCKING_PORT_STYLES];
 static struct mesh *warp_tunnel_mesh;
 static struct entity *warp_tunnel = NULL;
 static union vec3 warp_tunnel_direction;
 
-struct mesh **ship_mesh_map;
-struct mesh **derelict_mesh;
+static struct mesh **ship_mesh_map;
+static struct mesh **derelict_mesh;
 
 #define NNEBULA_MATERIALS 20
 static struct material nebula_material[NNEBULA_MATERIALS];
@@ -404,50 +404,50 @@ static struct material block_material;
 static struct material small_block_material;
 
 #ifdef WITHOUTOPENGL
-const int wormhole_render_style = RENDER_SPARKLE;
-const int torpedo_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
-const int laserbeam_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
-const int spark_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
+static const int wormhole_render_style = RENDER_SPARKLE;
+static const int torpedo_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
+static const int laserbeam_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
+static const int spark_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
 #else
-const int wormhole_render_style = RENDER_NORMAL;
-const int torpedo_render_style = RENDER_NORMAL;
-const int laserbeam_render_style = RENDER_NORMAL;
-const int spark_render_style = RENDER_NORMAL;
+static const int wormhole_render_style = RENDER_NORMAL;
+static const int torpedo_render_style = RENDER_NORMAL;
+static const int laserbeam_render_style = RENDER_NORMAL;
+static const int spark_render_style = RENDER_NORMAL;
 #endif
 
-struct my_point_t snis_logo_points[] = {
+static struct my_point_t snis_logo_points[] = {
 #include "snis-logo.h"
 };
-struct my_vect_obj snis_logo;
+static struct my_vect_obj snis_logo;
 
-struct my_point_t damcon_robot_points[] = {
+static struct my_point_t damcon_robot_points[] = {
 #include "damcon-robot-points.h"
 };
-struct my_vect_obj damcon_robot;
-struct my_point_t *damcon_robot_spun_points;
-struct my_vect_obj damcon_robot_spun[256];
+static struct my_vect_obj damcon_robot;
+static struct my_point_t *damcon_robot_spun_points;
+static struct my_vect_obj damcon_robot_spun[256];
 
-struct my_point_t placeholder_system_points[] = {
+static struct my_point_t placeholder_system_points[] = {
 #include "placeholder-system-points.h"
 };
-struct my_vect_obj placeholder_system;
+static struct my_vect_obj placeholder_system;
 
-struct my_point_t placeholder_socket_points[] = {
+static struct my_point_t placeholder_socket_points[] = {
 #include "placeholder-socket-points.h"
 };
-struct my_vect_obj placeholder_socket;
+static struct my_vect_obj placeholder_socket;
 
-struct my_point_t placeholder_part_points[] = {
+static struct my_point_t placeholder_part_points[] = {
 #include "placeholder-part-points.h"
 };
-struct my_point_t *placeholder_part_spun_points;
-struct my_vect_obj placeholder_part;
-struct my_vect_obj placeholder_part_spun[128];
+static struct my_point_t *placeholder_part_spun_points;
+static struct my_vect_obj placeholder_part;
+static struct my_vect_obj placeholder_part_spun[128];
 
 static struct snis_entity *curr_science_guy = NULL;
 static struct snis_entity *prev_science_guy = NULL;
 
-void to_snis_heading_mark(const union quat *q, double *heading, double *mark)
+static void to_snis_heading_mark(const union quat *q, double *heading, double *mark)
 {
 	quat_to_heading_mark(q,heading,mark);
 	*heading = game_angle_to_math_angle(*heading);
@@ -474,13 +474,13 @@ static void format_date(char *buf, int bufsize, double date)
 	snprintf(buf, bufsize, "%-8.1f", FICTIONAL_DATE(date));
 }
 
-int switched_server = -1;
+static int switched_server = -1;
 static char switch_server_location_string[20] = { 0 };
 static int switch_warp_gate_number = -1;
-int switched_server2 = -1;
-int writer_thread_should_die = 0;
-int writer_thread_alive = 0;
-int connected_to_gameserver = 0;
+static int switched_server2 = -1;
+static int writer_thread_should_die = 0;
+static int writer_thread_alive = 0;
+static int connected_to_gameserver = 0;
 
 #define MAX_LOBBY_TRIES 3
 static void *connect_to_lobby_thread(__attribute__((unused)) void *arg)
@@ -775,7 +775,7 @@ static int add_generic_damcon_object(uint32_t id, uint32_t ship_id, double x, do
 	return i;
 }
 
-struct damcon_ui {
+static struct damcon_ui {
 	struct label *robot_controls;
 	struct button *engineering_button;
 	struct button *robot_forward_button;
@@ -2177,7 +2177,7 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 	interp_func(timestamp, o, visible, from_index, to_index, t);
 }
 
-void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
+static void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
 		struct material *material, float shrink_factor, int debris_chance, float scale_factor);
 
 static void emit_flames(struct snis_entity *o, double factor)
@@ -2295,7 +2295,7 @@ static void move_objects(void)
 	}
 }
 
-void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
+static void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
 		struct material *material, float shrink_factor, int debris_chance, float scale_factor)
 {
 	int i, r;
@@ -2345,7 +2345,7 @@ void add_spark(double x, double y, double z, double vx, double vy, double vz, in
 	return;
 }
 
-void add_warp_effect(double x, double y, double z, int arriving, int time,
+static void add_warp_effect(double x, double y, double z, int arriving, int time,
 			union vec3 *direction, float dist)
 {
 	int i;
@@ -2390,7 +2390,7 @@ void add_warp_effect(double x, double y, double z, int arriving, int time,
 	return;
 }
 
-void add_shield_effect(double x, double y, double z,
+static void add_shield_effect(double x, double y, double z,
 			double vx, double vy, double vz,
 			double radius, union quat *orientation)
 {
@@ -2483,7 +2483,7 @@ static int update_explosion(uint32_t id, uint32_t timestamp, double x, double y,
 	return 0;
 }
 
-void scale_points(struct my_point_t *points, int npoints,
+static void scale_points(struct my_point_t *points, int npoints,
 			double xscale, double yscale)
 {
 	int i;
@@ -2707,7 +2707,7 @@ static void request_weapons_manual_pitch_packet(uint8_t pitch)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_MANUAL_GUNPITCH, pitch));
 }
 
-struct weapons_ui {
+static struct weapons_ui {
 	struct gauge *phaser_bank_gauge;
 	struct gauge *phaser_wavelength;
 	struct slider *wavelen_slider;
@@ -3509,9 +3509,9 @@ static void show_introscreen(GtkWidget *w)
 	sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, txx(255), txy(550));
 }
 
-int lobbylast1clickx = -1;
-int lobbylast1clicky = -1;
-int lobby_selected_server = -1;
+static int lobbylast1clickx = -1;
+static int lobbylast1clicky = -1;
+static int lobby_selected_server = -1;
 static struct lobby_ui {
 	struct button *lobby_cancel_button;
 	struct button *lobby_connect_to_server_button;
@@ -4761,7 +4761,7 @@ static int process_update_netstats(void)
 	return 0;
 }
 
-struct comms_ui {
+static struct comms_ui {
 	struct text_window *tw;
 	struct button *comms_onscreen_button;
 	struct button *nav_onscreen_button;
@@ -5931,7 +5931,7 @@ static void *gameserver_writer(__attribute__((unused)) void *arg)
 	return NULL;
 }
 
-int role_to_displaymode(uint32_t role)
+static int role_to_displaymode(uint32_t role)
 {
 	int displaymode, j;
 
@@ -5977,7 +5977,7 @@ static void send_build_info_to_server(void)
 	queue_to_server(pb);
 }
 
-struct network_setup_ui {
+static struct network_setup_ui {
 	struct button *start_lobbyserver;
 	struct button *start_gameserver;
 	struct button *connect_to_lobby;
@@ -6161,7 +6161,7 @@ error:
 	return NULL;
 }
 
-int connect_to_gameserver(int selected_server)
+static int connect_to_gameserver(int selected_server)
 {
 	int rc;
 
@@ -8822,7 +8822,7 @@ static void init_nav_ui(void)
 	tridentecx = entity_context_new(10, 0);
 }
 
-void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, float rx, float ry, float rr)
+static void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, float rx, float ry, float rr)
 {
 	static struct mesh *xz_ring_mesh = 0;
 	int relative_mode = o->tsd.ship.trident;
@@ -9566,7 +9566,7 @@ static void init_damcon_ui(void)
 	ui_add_label(damcon_ui.robot_controls, DISPLAYMODE_DAMCON);
 }
 
-struct engineering_ui {
+static struct engineering_ui {
 	struct gauge *fuel_gauge;
 	struct gauge *amp_gauge;
 	struct gauge *voltage_gauge;
@@ -12939,35 +12939,6 @@ static void show_demon(GtkWidget *w)
 	show_common_screen(w, "DEMON");
 }
 
-struct warp_star {
-	float x, y, lx, ly, vx, vy;
-};
-
-void init_warp_star(struct warp_star *star)
-{
-	float dx, dy;
-	star->x = (float) snis_randn(SCREEN_WIDTH);
-	star->y = (float) snis_randn(SCREEN_HEIGHT);
-
-	/* cheesy avoid divide by zero. */
-	if (abs(star->x) < 0.00001)
-		star->x += 0.003;
-	if (abs(star->y) < 0.00001)
-		star->y += 0.003;
-
-	dx = star->x - (SCREEN_WIDTH/2);
-	dy = star->y - (SCREEN_HEIGHT/2);
-	if (abs(dx) > abs(dy)) {
-		star->vx = dx/abs(dx);
-		star->vy = dy/abs(dx); 
-	} else {
-		star->vx = dx/abs(dy);
-		star->vy = dy/abs(dy); 
-	}
-	star->lx = star->x;
-	star->ly = star->y;
-}
-
 static void show_warp_hash_screen(GtkWidget *w)
 {
 	int i;
@@ -13822,7 +13793,7 @@ end_of_drawing:
 	return 0;
 }
 
-void really_quit(void);
+static void really_quit(void);
 
 gint advance_game(gpointer data)
 {
@@ -14501,7 +14472,7 @@ static void destroy(GtkWidget *widget, gpointer data)
     gtk_main_quit ();
 }
 
-void really_quit(void)
+static void really_quit(void)
 {
 
 	float seconds;

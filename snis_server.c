@@ -112,7 +112,7 @@ static uint32_t mtwist_seed = COMMON_MTWIST_SEED;
 static int lua_enscript_enabled = 0;
 static char *initial_lua_script = "initialize.lua";
 
-struct network_stats netstats;
+static struct network_stats netstats;
 static int faction_population[5];
 static int lowest_faction = 0;
 
@@ -276,7 +276,7 @@ struct snis_damcon_entity_client_info {
 	unsigned int last_version_sent;
 };
 
-struct game_client {
+static struct game_client {
 	int socket;
 	pthread_t read_thread;
 	pthread_t write_thread;
@@ -300,11 +300,11 @@ struct game_client {
 	uint64_t write_count;
 #endif
 } client[MAXCLIENTS];
-int nclients = 0;
+static int nclients = 0;
 #define client_index(client_ptr) ((client_ptr) - &client[0])
 static pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-struct bridge_data {
+static struct bridge_data {
 	unsigned char shipname[20];
 	unsigned char password[20];
 	uint32_t shipid;
@@ -331,19 +331,19 @@ struct bridge_data {
 	int requested_creation; /* whether user has requested creating new ship */
 	int nclients;
 } bridgelist[MAXCLIENTS];
-int nbridges = 0;
+static int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_mutex_t listener_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t listener_started;
-int listener_port = -1;
+static pthread_cond_t listener_started;
+static int listener_port = -1;
 static int default_snis_server_port = -1; /* -1 means choose a random port */
-pthread_t lobbythread;
-char *lobbyserver = NULL;
+static pthread_t lobbythread;
+static char *lobbyserver = NULL;
 static struct server_tracker *server_tracker;
 static int snis_log_level = 2;
 static struct ship_type_entry *ship_type;
-int nshiptypes;
+static int nshiptypes;
 
 static int safe_mode = 0; /* prevents enemies from attacking if set */
 
@@ -355,8 +355,8 @@ static int safe_mode = 0; /* prevents enemies from attacking if set */
 #define STRPREFIX(s) str(s)
 #define str(s) #s
 
-char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
-char *asset_dir;
+static char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
+static char *asset_dir;
 
 static int nebulalist[NNEBULA] = { 0 };
 
@@ -366,9 +366,9 @@ static struct commodity *commodity;
 
 static struct mesh *unit_cube_mesh;
 
-int nframes = 0;
-int timer = 0;
-struct timeval start_time, end_time;
+static int nframes = 0;
+static int timer = 0;
+static struct timeval start_time, end_time;
 
 static struct snis_object_pool *pool;
 static struct snis_entity go[MAXGAMEOBJS];
@@ -480,7 +480,7 @@ static void get_client(struct game_client *c)
 
 static lua_State *lua_state = NULL;
 /* should obtain universe_mutex before touching this queue. */
-struct lua_command_queue_entry {
+static struct lua_command_queue_entry {
 	struct lua_command_queue_entry *next;
 	char lua_command[PATH_MAX];
 } *lua_command_queue_head = NULL,  *lua_command_queue_tail = NULL;
@@ -524,15 +524,15 @@ static void dequeue_lua_command(char *cmdbuf, int bufsize)
 	printf("xxxx2\n"); fflush(stdout);
 }
 
-struct timer_event {
+static struct timer_event {
 	char *callback;
 	uint32_t firetime;
 	double cookie_val;
 	struct timer_event *next;
 } *lua_timer = NULL;
 
-struct event_callback_entry *event_callback = NULL;
-struct callback_schedule_entry *callback_schedule = NULL; 
+static struct event_callback_entry *event_callback = NULL;
+static struct callback_schedule_entry *callback_schedule = NULL;
 
 static struct timer_event *init_lua_timer(const char *callback,
 			const double firetime, const double cookie_val,
@@ -637,7 +637,7 @@ static void fire_lua_timers(void)
 
 }
 
-struct lua_proximity_check {
+static struct lua_proximity_check {
 	char *callback;
 	uint32_t oid1, oid2;
 	double distance2;
@@ -805,7 +805,7 @@ static void send_queued_lua_comms_transmissions(struct lua_comms_transmission **
 	*transmission_queue = NULL;
 }
 
-void lua_object_id_event(char *event, uint32_t object_id)
+static void lua_object_id_event(char *event, uint32_t object_id)
 {
 	int i, ncallbacks;
 	char **callback;
@@ -820,7 +820,7 @@ void lua_object_id_event(char *event, uint32_t object_id)
 	}
 }
 
-void fire_lua_callbacks(struct callback_schedule_entry **sched)
+static void fire_lua_callbacks(struct callback_schedule_entry **sched)
 {
 	struct callback_schedule_entry *i, *next;
 	char *callback;
@@ -838,12 +838,12 @@ void fire_lua_callbacks(struct callback_schedule_entry **sched)
 	free_callback_schedule(sched);
 }
 
-void lua_player_respawn_event(uint32_t object_id)
+static void lua_player_respawn_event(uint32_t object_id)
 {
 	lua_object_id_event("player-respawn-event", object_id);
 }
 
-void lua_player_death_event(uint32_t object_id)
+static void lua_player_death_event(uint32_t object_id)
 {
 	lua_object_id_event("player-death-event", object_id);
 }
@@ -2206,7 +2206,7 @@ static int find_nearest_victim(struct snis_entity *o)
 	return info.victim_id;
 }
 
-union vec3 pick_random_patrol_destination(struct snis_entity *ship)
+static union vec3 pick_random_patrol_destination(struct snis_entity *ship)
 {
 	union vec3 v;
 	struct snis_entity *o;
@@ -5475,7 +5475,7 @@ static int starbase_expecting_docker(struct snis_entity *starbase, uint32_t dock
 }
 
 static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charges);
-void do_docking_action(struct snis_entity *ship, struct snis_entity *starbase,
+static void do_docking_action(struct snis_entity *ship, struct snis_entity *starbase,
 			struct bridge_data *b, char *npcname)
 {
 	char msg[100];
@@ -10736,14 +10736,14 @@ static uint32_t find_free_channel(void)
 	return snis_randn(100000); /* simplest possible thing that might work. */
 }
 
-void npc_menu_item_not_implemented(struct npc_menu_item *item,
+static void npc_menu_item_not_implemented(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	send_comms_packet(npcname, botstate->channel,
 				"  SORRY, THAT IS NOT IMPLEMENTED");
 }
 
-void npc_menu_item_sign_off(struct npc_menu_item *item,
+static void npc_menu_item_sign_off(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	send_comms_packet(npcname, botstate->channel,
@@ -10862,7 +10862,7 @@ static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge,
 						char *name, char *msg);
 static void starbase_cargo_selling_npc_bot(struct snis_entity *o, int bridge,
 						char *name, char *msg);
-void npc_menu_item_buysell_cargo(struct npc_menu_item *item,
+static void npc_menu_item_buysell_cargo(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate, int buy)
 {
 	struct bridge_data *b;
@@ -11096,13 +11096,13 @@ static int ship_is_docked(uint32_t ship_id, struct snis_entity *starbase)
 	return 0;
 }
 
-void npc_menu_item_buy_cargo(struct npc_menu_item *item,
+static void npc_menu_item_buy_cargo(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	npc_menu_item_buysell_cargo(item, npcname, botstate, 1);
 }
 
-void npc_menu_item_sell_cargo(struct npc_menu_item *item,
+static void npc_menu_item_sell_cargo(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	npc_menu_item_buysell_cargo(item, npcname, botstate, 0);
@@ -11198,7 +11198,7 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 	}
 }
 
-void npc_menu_item_eject_passengers(struct npc_menu_item *item,
+static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *sb, *ship;
@@ -11245,7 +11245,7 @@ void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 	}
 }
 
-void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
+static void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *sb, *ship;
@@ -11282,7 +11282,7 @@ void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
 	}
 }
 
-void npc_menu_item_board_passengers(struct npc_menu_item *item,
+static void npc_menu_item_board_passengers(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *sb;
@@ -11298,7 +11298,7 @@ void npc_menu_item_board_passengers(struct npc_menu_item *item,
 	botstate->special_bot(sb, bridge, (char *) b->shipname, "");
 }
 
-void npc_menu_item_travel_advisory(struct npc_menu_item *item,
+static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	uint32_t plid, ch = botstate->channel;
@@ -11363,7 +11363,7 @@ void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 	send_comms_packet(npcname, ch, "-----------------------------------------------------");
 }
 
-void npc_menu_item_request_dock(struct npc_menu_item *item,
+static void npc_menu_item_request_dock(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *o;
@@ -11465,7 +11465,7 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 	free(gameserver);
 }
 
-void npc_menu_item_warp_gate_tickets(struct npc_menu_item *item,
+static void npc_menu_item_warp_gate_tickets(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *o;
@@ -11483,7 +11483,7 @@ void npc_menu_item_warp_gate_tickets(struct npc_menu_item *item,
 	botstate->special_bot(o, bridge, npcname, "");
 }
 
-void push_tow_mode(struct snis_entity *tow_ship, uint32_t disabled_ship,
+static void push_tow_mode(struct snis_entity *tow_ship, uint32_t disabled_ship,
 					uint32_t starbase_dispatcher)
 {
 	if (!tow_ship)
@@ -11501,7 +11501,7 @@ void push_tow_mode(struct snis_entity *tow_ship, uint32_t disabled_ship,
 	tow_ship->tsd.ship.ai[0].u.tow_ship.ship_connected = 0;
 }
 
-void npc_menu_item_towing_service(struct npc_menu_item *item,
+static void npc_menu_item_towing_service(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
 	char msg[100];
@@ -16740,7 +16740,7 @@ static void move_damcon_entities(void)
 }
 
 #if GATHER_OPCODE_STATS
-int compare_opcode_stats(const void *a, const void *b)
+static int compare_opcode_stats(const void *a, const void *b)
 {
 	const struct opcode_stat *A = a;
 	const struct opcode_stat *B = b;
@@ -16938,7 +16938,7 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 	return;	
 }
 
-void usage(void)
+static void usage(void)
 {
 	fprintf(stderr, "snis_server: usage:\n");
 	fprintf(stderr, "snis_server -l lobbyhost -L location [ -g gameinstance ] \\\n"
