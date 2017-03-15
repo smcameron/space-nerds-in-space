@@ -92,6 +92,7 @@
 #include "joystick.h"
 #include "stacktrace.h"
 #include "snis_keyboard.h"
+#include "snis_preferences.h"
 #include "snis_damcon_systems.h"
 #include "build_info.h"
 #include "snis-device-io.h"
@@ -5489,6 +5490,44 @@ static int process_update_explosion_packet(void)
 	return (rc < 0);
 }
 
+static struct network_setup_ui {
+	struct button *start_lobbyserver;
+	struct button *start_gameserver;
+	struct button *connect_to_lobby;
+	struct snis_text_input_box *lobbyservername;
+	struct snis_text_input_box *gameservername;
+	struct snis_text_input_box *shipname_box;
+	struct snis_text_input_box *password_box;
+	struct button *role_main;
+	struct button *role_nav;
+	struct button *role_weap;
+	struct button *role_eng;
+	struct button *role_damcon;
+	struct button *role_sci;
+	struct button *role_comms;
+	struct button *role_sound;
+	struct button *role_demon;
+	struct button *role_text_to_speech;
+	struct button *join_ship_checkbox;
+	struct button *create_ship_checkbox;
+	int role_main_v;
+	int role_nav_v;
+	int role_weap_v;
+	int role_eng_v;
+	int role_damcon_v;
+	int role_sci_v;
+	int role_comms_v;
+	int role_sound_v;
+	int role_demon_v;
+	int role_text_to_speech_v;
+	int create_ship_v;
+	int join_ship_v;
+	char lobbyname[60];
+	char servername[60];
+	char shipname[SHIPNAME_LEN];
+	char password[PASSWORD_LEN];
+} net_setup_ui;
+
 static int process_client_id_packet(void)
 {
 	unsigned char buffer[100];
@@ -5502,6 +5541,15 @@ static int process_client_id_packet(void)
 	my_ship_id = id;
 	my_ship_oid = UNKNOWN_ID;
 	printf("SET MY SHIP ID to %u\n", my_ship_id);
+	printf("Saving default shipname as '%s'\n", shipname);
+	/* shipname is set to net_setup_ui.shipname in connect_to_lobby_button_pressed() */
+	snis_prefs_save_default_ship_name(shipname);
+	snis_prefs_save_checkbox_defaults(net_setup_ui.role_main_v, net_setup_ui.role_nav_v,
+					net_setup_ui.role_weap_v, net_setup_ui.role_eng_v,
+					net_setup_ui.role_damcon_v, net_setup_ui.role_sci_v,
+					net_setup_ui.role_comms_v, net_setup_ui.role_sound_v,
+					net_setup_ui.role_demon_v, net_setup_ui.role_text_to_speech_v,
+					net_setup_ui.create_ship_v, net_setup_ui.join_ship_v);
 	return 0;
 }
 
@@ -5976,44 +6024,6 @@ static void send_build_info_to_server(void)
 	packed_buffer_append_raw(pb, buildinfo2, (unsigned short) strlen(buildinfo2) + 1);
 	queue_to_server(pb);
 }
-
-static struct network_setup_ui {
-	struct button *start_lobbyserver;
-	struct button *start_gameserver;
-	struct button *connect_to_lobby;
-	struct snis_text_input_box *lobbyservername;
-	struct snis_text_input_box *gameservername;
-	struct snis_text_input_box *shipname_box;
-	struct snis_text_input_box *password_box;
-	struct button *role_main;
-	struct button *role_nav;
-	struct button *role_weap;
-	struct button *role_eng;
-	struct button *role_damcon;
-	struct button *role_sci;
-	struct button *role_comms;
-	struct button *role_sound;
-	struct button *role_demon;
-	struct button *role_text_to_speech;
-	struct button *join_ship_checkbox;
-	struct button *create_ship_checkbox;
-	int role_main_v;
-	int role_nav_v;
-	int role_weap_v;
-	int role_eng_v;
-	int role_damcon_v;
-	int role_sci_v;
-	int role_comms_v;
-	int role_sound_v;
-	int role_demon_v;
-	int role_text_to_speech_v;
-	int create_ship_v;
-	int join_ship_v;
-	char lobbyname[60];
-	char servername[60];
-	char shipname[SHIPNAME_LEN];
-	char password[PASSWORD_LEN];
-} net_setup_ui;
 
 static void snis_client_cross_check_opcodes(void)
 {
@@ -12981,12 +12991,12 @@ static void gameserver_hostname_entered()
 
 static void shipname_entered()
 {
-	printf("shipname entered: %s\n", net_setup_ui.lobbyname);
+	printf("shipname entered: %s\n", net_setup_ui.shipname);
 }
 
 static void password_entered()
 {
-	printf("password entered: %s\n", net_setup_ui.lobbyname);
+	printf("password entered: %s\n", net_setup_ui.password);
 }
 
 static void start_lobbyserver_button_pressed()
@@ -13241,6 +13251,8 @@ static void init_net_setup_ui(void)
 	int active_button_color = UI_COLOR(network_setup_active);
 	int inactive_button_color = UI_COLOR(network_setup_inactive);
 
+	char *preferred_shipname = snis_prefs_read_default_ship_name();
+
 	memset(net_setup_ui.lobbyname, 0, sizeof(net_setup_ui.lobbyname));
 	strcpy(net_setup_ui.lobbyname, "localhost");
 	strcpy(net_setup_ui.servername, "");
@@ -13279,6 +13291,17 @@ static void init_net_setup_ui(void)
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
 	init_net_role_buttons(&net_setup_ui);
 	init_join_create_buttons(&net_setup_ui);
+	snis_prefs_read_checkbox_defaults(&net_setup_ui.role_main_v, &net_setup_ui.role_nav_v,
+					&net_setup_ui.role_weap_v, &net_setup_ui.role_eng_v,
+					&net_setup_ui.role_damcon_v,
+					&net_setup_ui.role_sci_v, &net_setup_ui.role_comms_v,
+					&net_setup_ui.role_sound_v, &net_setup_ui.role_demon_v,
+					&net_setup_ui.role_text_to_speech_v, &net_setup_ui.create_ship_v,
+					&net_setup_ui.join_ship_v);
+	if (preferred_shipname) {
+		snis_text_input_box_set_contents(net_setup_ui.shipname_box, preferred_shipname);
+		net_setup_ui.create_ship_v = 0;
+	}
 	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(net_setup_ui.start_gameserver, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP);

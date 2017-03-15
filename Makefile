@@ -380,7 +380,7 @@ COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	snis_strip_chart.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
 	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o snis_keyboard.o solarsystem_config.o \
-	pronunciation.o
+	pronunciation.o snis_preferences.o
 
 CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o
 
@@ -559,6 +559,9 @@ ui_colors.o:	ui_colors.c ui_colors.h snis_graph.h Makefile
 
 snis_keyboard.o:	snis_keyboard.c snis_keyboard.h string-utils.o Makefile
 	$(Q)$(GTKCOMPILE)
+
+snis_preferences.o:	snis_preferences.c snis_preferences.h string-utils.h snis_packet.h
+	$(Q)$(COMPILE)
 
 solarsystem_config.o:	solarsystem_config.c solarsystem_config.h string-utils.h Makefile
 	$(Q)$(COMPILE)
