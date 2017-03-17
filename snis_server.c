@@ -339,7 +339,6 @@ static pthread_cond_t listener_started;
 static int listener_port = -1;
 static int default_snis_server_port = -1; /* -1 means choose a random port */
 static pthread_t lobbythread;
-static char *lobbyserver = NULL;
 static struct server_tracker *server_tracker;
 static int snis_log_level = 2;
 static struct ship_type_entry *ship_type;
@@ -365,10 +364,6 @@ static int ncontraband;
 static struct commodity *commodity;
 
 static struct mesh *unit_cube_mesh;
-
-static int nframes = 0;
-static int timer = 0;
-static struct timeval start_time, end_time;
 
 static struct snis_object_pool *pool;
 static struct snis_entity go[MAXGAMEOBJS];
@@ -805,21 +800,6 @@ static void send_queued_lua_comms_transmissions(struct lua_comms_transmission **
 	*transmission_queue = NULL;
 }
 
-static void lua_object_id_event(char *event, uint32_t object_id)
-{
-	int i, ncallbacks;
-	char **callback;
-	double tmp;
-
-	ncallbacks = callback_list(event_callback, event, &callback);
-	for (i = 0; i < ncallbacks; i++) {
-		lua_getglobal(lua_state, callback[i]);
-		tmp = (double) object_id;
-		lua_pushnumber(lua_state, tmp);
-		do_lua_pcall(callback[i], lua_state, 1, 0, 0);
-	}
-}
-
 static void fire_lua_callbacks(struct callback_schedule_entry **sched)
 {
 	struct callback_schedule_entry *i, *next;
@@ -836,16 +816,6 @@ static void fire_lua_callbacks(struct callback_schedule_entry **sched)
 		free(callback);
 	}
 	free_callback_schedule(sched);
-}
-
-static void lua_player_respawn_event(uint32_t object_id)
-{
-	lua_object_id_event("player-respawn-event", object_id);
-}
-
-static void lua_player_death_event(uint32_t object_id)
-{
-	lua_object_id_event("player-death-event", object_id);
 }
 
 static void set_object_location(struct snis_entity *o, double x, double y, double z);
