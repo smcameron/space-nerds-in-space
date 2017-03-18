@@ -66,11 +66,22 @@ static void add_cone(unsigned char *image, int imagew, int imageh, int x, int y,
 	}
 }
 
+static float crater_depth_profile(float x)
+{
+	/* values chosen empirically */
+	return sigmoid(x / 50.0, 10.0, 2.0);
+}
+
 static void crater_dimple(unsigned char *image, int imagew, int imageh, int x, int y, int r, unsigned char base)
 {
 	int i, j, ix, iy, index, d2;
 	float d;
 	float base_height;
+	float level;
+	float crater_depth = 0.02 * r;
+
+	if (crater_depth < 0.2)
+		crater_depth = 0.2;
 
 	ix = x + r;
 	iy = y + r;
@@ -81,6 +92,8 @@ static void crater_dimple(unsigned char *image, int imagew, int imageh, int x, i
 		base_height = (float) image[index];
 	}
 
+	if (crater_depth > 1.0)
+		crater_depth = 1.0;
 	for (i = 0; i < r * 2; i++) {
 		for (j = 0; j < r * 2; j++) {
 			d2 = distsqrd(i - r, j - r, 0, 0);
@@ -92,8 +105,9 @@ static void crater_dimple(unsigned char *image, int imagew, int imageh, int x, i
 				d = sqrtf((float) d2);
 				index = 3 * (iy * imagew + ix);
 				const float maybe_central_peak = zerotoone() * 0.07;
-				base = 0.75 * base_height  +
-					0.25 * sin((d / r) * 0.45 * M_PI + maybe_central_peak) * base_height;
+				level = (1.0 - crater_depth) * base_height +
+					crater_depth * crater_depth_profile(1.0 - (d / r));
+				base = (unsigned char) level;
 				image[index] = (unsigned char) base;
 				image[index + 1] = image[index];
 				image[index + 2] = image[index];

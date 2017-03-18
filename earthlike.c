@@ -21,7 +21,7 @@
 static struct osn_context *ctx;
 
 #define MAXBUMPS 100000
-#define MAXCRATERS 1000
+#define MAXCRATERS 2000
 #define RADII (3.0f)
 static float sealevel = 0.08;
 
@@ -170,7 +170,8 @@ static inline void distort_vertex(union vec3 *v, float d, struct bump *b)
 	}
 	p = y * b->sample_bytes_per_row + x * 3;
 	c = (unsigned char *) &b->sampledata[p];
-	m = ((float) *c - (float) crater_base_level * (float) b->is_crater) / 255.0f;
+	m = (float) *c;
+	m = (m - 127.0) / 256.0; /* essentially, convert to signed. */
 	vec3_mul_self(&distortion, nr * m);
 	vec3_add_self(v, &distortion);
 }
@@ -316,8 +317,8 @@ static void add_crater(int i, union vec3 p, float r, float h)
 	b->samplew = 1024;
 	b->sampleh = 1024;
 	b->sample_bytes_per_row = 3 * b->samplew;
-	crater_r = (0.5 * (snis_random_float() + 1.0) * 5.5) *
-			(0.5 * (snis_random_float() + 1.0) * 5.5) + 2.5;
+	crater_r = (0.5 * (snis_random_float)() + 1.0);
+	crater_r = (-logf(1.0 - crater_r) / 10.0) * 35.0 + 1.0;
 	create_crater_heightmap((unsigned char *) b->sampledata, 1024, 1024, 512, 512, (int) crater_r, 6);
 	quat_from_u2v(&b->texelq, &p, &right_at_ya, &up);
 }
@@ -686,7 +687,7 @@ static void usage(void)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "  For more rocky, mars-like planets (a.png and b.png should both be land images):\n");
 	fprintf(stderr, "  ./earthlike -B 400 -b 1 -h heightdata.png -l ~/a.png -w ~/b.png -O 0 --bumpsize 0.5 \\\n");
-	fprintf(stderr, "         --craters 250 -o myplanet\n");
+	fprintf(stderr, "         --craters 2000 -o myplanet\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "\n");
 	exit(1);
