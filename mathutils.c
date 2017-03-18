@@ -507,3 +507,8 @@ double short_angular_distance(double from, double to)
 	return 2.0 * M_PI - distance;
 }
 
+float sigmoid(float x, float sigma, float lambda)
+{
+	return powf(x, lambda) / (powf(x, lambda) + powf(sigma, lambda));
+}
+
