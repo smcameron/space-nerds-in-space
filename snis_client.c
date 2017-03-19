@@ -2516,6 +2516,7 @@ static void request_sci_select_target(uint32_t id)
 	queue_to_server(snis_opcode_pkt("bw", OPCODE_SCI_SELECT_TARGET, id));
 }
 
+/* TODO: this needs to be converted to 3D or deleted. */
 static void request_sci_select_coords(double ux, double uy)
 {
 	queue_to_server(snis_opcode_pkt("bSS", OPCODE_SCI_SELECT_COORDS,
