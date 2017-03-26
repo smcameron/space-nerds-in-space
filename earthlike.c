@@ -24,6 +24,8 @@ static struct osn_context *ctx;
 #define MAXCRATERS 2000
 #define RADII (3.0f)
 static float sealevel = 0.08;
+static int height_histogram[256] = { 0 };
+static float fraction_land = 0.35;
 
 static char *landfile = "land.png";
 static char *waterfile = "water.png";
@@ -440,7 +442,22 @@ static void paint_height_maps(float min, float max)
 				output_image[f][p + 1] = c;
 				output_image[f][p + 2] = c;
 				output_image[f][p + 3] = 255;
+				height_histogram[c]++;
 			}
+		}
+	}
+}
+
+static void set_sealevel(float fraction_land)
+{
+	int i, cutoff, so_far = 0;
+
+	cutoff = (int) ((1.0 - fraction_land) * 6.0 * dim * dim);
+	for (i = 0; i < 256; i++) {
+		so_far += height_histogram[i];
+		if (so_far >= cutoff) {
+			sealevel = ((float) i / (float) 256);
+			return;
 		}
 	}
 }
@@ -797,6 +814,32 @@ static void process_options(int argc, char *argv[])
 	}
 }
 
+static void print_histogram_bar(int nchars, int bucket, int value)
+{
+	int i;
+
+	printf("%3d %10d: ", bucket, value);
+	for (i = 0; i < nchars; i++)
+		printf("#");
+	printf("\n");
+}
+
+static void print_height_histogram(int h[], int n)
+{
+	int i;
+	int max = 0;
+
+	for (i = 0; i < n; i++) {
+		if (h[i] > max)
+			max = h[i];
+	}
+	for (i = 0; i < n; i++) {
+		float ratio = (float) h[i] / (float) max;
+		int nchars = (int) (ratio * 60.0);
+		print_histogram_bar(nchars, i, h[i]);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	float min, max;
@@ -826,6 +869,7 @@ int main(int argc, char *argv[])
 	find_min_max_height(&min, &max);
 	printf("min h = %f, max h = %f\n", min, max);
 	paint_height_maps(min, max);
+	set_sealevel(fraction_land);
 	calculate_normals();
 	paint_normal_and_height_maps(min, max);
 	printf("painting terrain colors\n");
@@ -838,6 +882,7 @@ int main(int argc, char *argv[])
 	save_height_maps();
 	open_simplex_noise_free(ctx);
 	printf("Done.\n");
+	print_height_histogram(height_histogram, 256);
 	return 0;
 }
 
