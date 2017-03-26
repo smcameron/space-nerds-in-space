@@ -71,6 +71,58 @@ static int samplew, sampleh, samplea, sample_bytes_per_row;
 static float minn, maxn; /* min and max noise values encountered */
 static float crater_min_height, crater_max_height;
 
+static unsigned char get_sampledata(int x, int y, int bytes_per_row, char *sampledata)
+{
+	int p;
+	unsigned char *c;
+
+	p = y * bytes_per_row + x * 3;
+	c = (unsigned char *) &sampledata[p];
+	return *c;
+}
+
+static void set_sampledata(int x, int y, int bytes_per_row, char *sampledata, unsigned char value)
+{
+	int i, p;
+	unsigned char *c;
+
+	p = y * bytes_per_row + x * 3;
+	c = (unsigned char *) &sampledata[p];
+	for (i = 0; i < 3; i++)
+		c[i] = value;
+}
+
+static void scale_sampledata(char *sampledata, int samplew, int sampleh, int sample_bytes_per_row)
+{
+	int x, y;
+	float lowest, highest, diff;
+	lowest = 1000;
+	highest = 0;
+
+	printf("Scaling sample height data\n");
+	for (y = 0; y < sampleh; y++) {
+		for (x = 0; x < samplew; x++) {
+			unsigned char c = get_sampledata(x, y, sample_bytes_per_row, sampledata);
+			if (c > highest)
+				highest = c;
+			if (c < lowest)
+				lowest = c;
+		}
+	}
+	diff = (highest - lowest);
+	for (y = 0; y < sampleh; y++) {
+		for (x = 0; x < samplew; x++) {
+			unsigned char c = get_sampledata(x, y, sample_bytes_per_row, sampledata);
+			float v = c;
+			v = v - lowest;
+			v = 100 + 155.0 * v / diff;
+			c = (unsigned char) v;
+			set_sampledata(x, y, sample_bytes_per_row, sampledata, c);
+		}
+	}
+	printf("scale sampledata done\n");
+}
+
 static inline float fbmnoise4(float x, float y, float z)
 {
 	const float fbm_falloff = 0.5;
@@ -852,6 +904,8 @@ int main(int argc, char *argv[])
 	printf("Loading %s\n", heightfile);
 	sampledata = load_image(heightfile, &samplew, &sampleh, &samplea,
 					&sample_bytes_per_row);
+	if (sampledata)
+		scale_sampledata(sampledata, samplew, sampleh, sample_bytes_per_row);
 	printf("Loading %s\n", landfile);
 	land = load_image(landfile, &landw, &landh, &landa, &landbpr);
 	printf("Loading %s\n", waterfile);
