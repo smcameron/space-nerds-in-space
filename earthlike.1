@@ -12,6 +12,7 @@ earthlike \- make 6 images forming a cube map for an earth-like planet
 [ -H output-heightmap-prefix ]
 [ -k shrink-factor ]
 [ -l input-land-colors.png ]
+[ -L land-fraction ]
 [ -n normal-map-output-prefix ]
 [ -o terrain-output-prefix ]
 [ -O oceanlevel ]
@@ -68,6 +69,9 @@ algorithm. Default value is 0.55.
 -l, --land
 Name of land color png input file. This should be an
 8-bit/color RGB, non-interlaced PNG image.
+.TP
+-L, --land-fraction
+Approximate fraction of planet that should be land.  Range is 0.0 to 1.0
 .TP
 -n, --normal
 Name of prefix to use for filenames of output normal map images.

@@ -713,6 +713,7 @@ static struct option long_options[] = {
 	{ "heightmap-output", required_argument, NULL, 'H' },
 	{ "ibumps", required_argument, NULL, 'i' },
 	{ "land", required_argument, NULL, 'l' },
+	{ "land-fraction", required_argument, NULL, 'L' },
 	{ "oceanlevel", required_argument, NULL, 'O' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "normal", required_argument, NULL, 'n' },
@@ -739,6 +740,7 @@ static void usage(void)
 	fprintf(stderr, "   -H, heightmap-output : prefix of filename for height map output data\n");
 	fprintf(stderr, "   -k, shrink : factor to shrink each recursive iteration.  Default is 0.55\n");
 	fprintf(stderr, "   -l, land : png file containing land color data to sample for terrain\n");
+	fprintf(stderr, "   -L, land fraction: Range 0.0 to 1.0, approximate fraction of planet to be land\n");
 	fprintf(stderr, "   -n, normal : filename prefix for normal map images, default is 'normalmap'\n");
 	fprintf(stderr, "   -o, output : filename prefix for output images, default is 'heightmap'\n");
 	fprintf(stderr, "   -O, oceanlevel : set sealevel, default is 0.08\n");
@@ -752,10 +754,11 @@ static void usage(void)
 	fprintf(stderr, "Examples:\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "  For earthlike planets:\n");
-	fprintf(stderr, "  ./earthlike -B 400 -h heightdata.png -l land.png -w water.png --bumpsize 0.5 -o myplanet\n");
+	fprintf(stderr, "  ./earthlike -B 400 -h heightdata.png -l land.png -w water.png --bumpsize 0.5 \\\n");
+	fprintf(stderr, "              -L 0.35 -o myplanet\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "  For more rocky, mars-like planets (a.png and b.png should both be land images):\n");
-	fprintf(stderr, "  ./earthlike -B 400 -b 1 -h heightdata.png -l ~/a.png -w ~/b.png -O 0 --bumpsize 0.5 \\\n");
+	fprintf(stderr, "  ./earthlike -B 400 -b 1 -h heightdata.png -l ~/a.png -w ~/b.png -L 1.0 --bumpsize 0.5 \\\n");
 	fprintf(stderr, "         --craters 2000 -o myplanet\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "\n");
@@ -793,7 +796,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "B:b:d:c:H:h:i:n:O:k:l:o:r:s:S:w:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:L:b:d:c:H:h:i:n:O:k:l:o:r:s:S:w:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -858,6 +861,13 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'z':
 			process_float_option("bumpsize", optarg, &initial_bump_size);
+			break;
+		case 'L':
+			process_float_option("land_fraction", optarg, &fraction_land);
+			if (fraction_land < 0.0 || fraction_land > 1.0) {
+				fprintf(stderr, "land-fraction must be between 0 and 1.\n");
+				exit(1);
+			}
 			break;
 		default:
 			fprintf(stderr, "Unknown option.\n");
