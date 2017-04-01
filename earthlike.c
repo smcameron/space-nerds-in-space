@@ -752,7 +752,7 @@ static void usage(void)
 	fprintf(stderr, "Examples:\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "  For earthlike planets:\n");
-	fprintf(stderr, "  ./earthlike -B 25 -h heightdata.png -l land.png -w water.png --bumpsize 0.5 -o myplanet\n");
+	fprintf(stderr, "  ./earthlike -B 400 -h heightdata.png -l land.png -w water.png --bumpsize 0.5 -o myplanet\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "  For more rocky, mars-like planets (a.png and b.png should both be land images):\n");
 	fprintf(stderr, "  ./earthlike -B 400 -b 1 -h heightdata.png -l ~/a.png -w ~/b.png -O 0 --bumpsize 0.5 \\\n");
