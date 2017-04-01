@@ -104,7 +104,6 @@ static void crater_dimple(unsigned char *image, int imagew, int imageh, int x, i
 					continue;
 				d = sqrtf((float) d2);
 				index = 3 * (iy * imagew + ix);
-				const float maybe_central_peak = zerotoone() * 0.07;
 				level = (1.0 - crater_depth) * base_height +
 					crater_depth * crater_depth_profile(1.0 - (d / r));
 				base = (unsigned char) level;
