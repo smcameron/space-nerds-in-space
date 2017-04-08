@@ -460,6 +460,23 @@ int wwviaudio_set_sound_device(int device)
 	return 0;
 }
 
+void wwviaudio_list_devices(void)
+{
+	int i, device_count;
+
+	device_count = Pa_GetDeviceCount();
+
+	printf("Portaudio reports %d devices\n", device_count);
+	for (i = 0; i < device_count; i++) {
+		const struct PaDeviceInfo *devinfo = Pa_GetDeviceInfo(i);
+		if (!devinfo) {
+			printf("%d: No device info\n", i);
+			continue;
+		}
+		printf("%d: %s\n", i, devinfo->name);
+	}
+}
+
 #else /* stubs only... */
 
 int wwviaudio_initialize_portaudio() { return 0; }
@@ -484,5 +501,6 @@ void wwviaudio_add_sound_low_priority(int which_sound) { return; }
 void wwviaudio_cancel_sound(int queue_entry) { return; }
 void wwviaudio_cancel_all_sounds() { return; }
 int wwviaudio_set_sound_device(int device) { return 0; }
+void wwviaudio_list_devices(void) {}
 
 #endif

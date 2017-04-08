@@ -915,7 +915,7 @@ ${SSGL}:
 mostly-clean:
 	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${SDLCLIENTOBJS} ${PROGS} ${SSGL} \
 	${BINPROGS} ${UTILPROGS} stl_parser snis_limited_graph.c snis_limited_client.c \
-	test-space-partition
+	test-space-partition snis_test_audio.o snis_test_audio
 	( cd ssgl; ${MAKE} clean )
 
 test-marshal:	snis_marshal.c stacktrace.o Makefile
@@ -974,6 +974,12 @@ gaseous-giganticus.1.gz:	gaseous-giganticus.1
 
 print_ship_attributes:	snis_entity_key_value_specification.h key_value_parser.o
 	gcc -o print_ship_attributes print_ship_attributes.c key_value_parser.o
+
+snis_test_audio.o:	snis_test_audio.c Makefile ${SNDOBJS} ${OGGOBJ}
+	$(Q)$(VORBISCOMPILE)
+
+snis_test_audio:	snis_test_audio.o ${SNDLIBS} Makefile
+	gcc -o snis_test_audio snis_test_audio.o ${SNDOBJS} ${OGGOBJ} ${SNDLIBS}
 
 install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${MANPAGES} ${SSGL} \

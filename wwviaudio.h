@@ -139,6 +139,9 @@ GLOBAL void wwviaudio_cancel_sound(int channel);
 /* Stop playing the playing buffer from all channels */
 GLOBAL void wwviaudio_cancel_all_sounds(void);
 
+/* List available devices */
+GLOBAL void wwviaudio_list_devices(void);
+
 /*
 	Example usage, something along these lines:
 

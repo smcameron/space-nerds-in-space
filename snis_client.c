@@ -14670,6 +14670,7 @@ static void setup_sound(void)
 		printf("Failed to initialize sound system\n");
 		return;
 	}
+	wwviaudio_list_devices();
 	read_sound_clips();
 }
 
