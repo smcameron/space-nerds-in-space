@@ -13340,6 +13340,10 @@ static int process_build_info(struct game_client *c)
 static int process_toggle_demon_safe_mode(void)
 {
 	safe_mode = !safe_mode;
+	if (safe_mode)
+		snis_queue_add_global_text_to_speech("Safe mode enabled.");
+	else
+		snis_queue_add_global_text_to_speech("Safe mode disabled.");
 	return 0;
 }
 
