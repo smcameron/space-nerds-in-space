@@ -100,6 +100,11 @@ feature even if the driver claims to support it.
 SNIS_SUPPRESS_RENDER_TO_FBO if set, suppresses the use of OpenGL's render to fbo
 feature even if the driver claims to support it.
 .PP
+SNIS_AUDIO_DEVICE if set, manually selects an audio device. Ordinarily a default
+device is chosen.  This variable allows the default device to be overridden.  This
+value should be an integer between 0 and the number of sound devices you have minus
+one.
+.PP
 .SH FILES
 .PP
 $SNIS_ASSET_DIR/sounds/*.ogg, various audio files used by the game.

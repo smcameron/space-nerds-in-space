@@ -14651,6 +14651,21 @@ static void read_sound_clips(void)
 
 static void setup_sound(void)
 {
+	char *sound_device_str;
+	int sound_device = -1;
+
+	sound_device_str = getenv("SNIS_AUDIO_DEVICE");
+	if (sound_device_str) {
+		int rc = 0;
+
+		rc = sscanf(sound_device_str, "%d", &sound_device);
+		if (rc != 1)
+			sound_device = -1;
+	}
+	if (sound_device > -1) {
+		printf("Using manually selected sound device %d\n", sound_device);
+		wwviaudio_set_sound_device(sound_device);
+	}
 	if (wwviaudio_initialize_portaudio(MAX_CONCURRENT_SOUNDS, NSOUND_CLIPS) != 0) {
 		printf("Failed to initialize sound system\n");
 		return;
