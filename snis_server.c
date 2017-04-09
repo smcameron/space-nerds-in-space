@@ -11383,6 +11383,10 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 	int selection, rc, i, nservers;
 	char buf[100];
 	int ch = bridgelist[bridge].npcbot.channel;
+	double ssx, ssy, ssz; /* our solarsystem's position */
+	double dx, dy, dz;
+	int sslist[100];
+	int nsslist = 0;
 
 	if (server_tracker_get_server_list(server_tracker, &gameserver, &nservers) != 0
 		|| nservers <= 0) {
@@ -11391,23 +11395,48 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 	}
 	send_comms_packet(name, ch, "WARP-GATE TICKETS:\n");
 	send_comms_packet(name, ch, "------------------\n");
-	int our_ss_index = 0;
-	int index = 1;
-	for (i = 0; i < nservers;) {
-		int len = strlen(solarsystem_name);
-		if (len > LOCATIONSIZE)
-			len = LOCATIONSIZE;
 
+	/* Find our solarsystem */
+	int len = strlen(solarsystem_name);
+	if (len > LOCATIONSIZE)
+		len = LOCATIONSIZE;
+	for (i = 0; i < nservers; i++) {
+		if (strncasecmp(gameserver[i].location, solarsystem_name, len) == 0) {
+			rc = sscanf(gameserver[i].game_instance, "%lf %lf %lf", &ssx, &ssy, &ssz);
+			if (rc != 3) {
+				ssx = 0.0;
+				ssy = 0.0;
+				ssz = 0.0;
+				fprintf(stderr,
+					"%s: Could not extract own solarsystem position from game_instance '%s'\n",
+					logprefix(), gameserver[i].game_instance);
+			}
+			break;
+		}
+	}
+	for (i = 0; i < nservers; i++) {
 		/* Do not list the solarsystem we're already in */
 		if (strncasecmp(gameserver[i].location, solarsystem_name, len) != 0) {
-			sprintf(buf, "%3d: %s\n", index, gameserver[i].location);
-			send_comms_packet(name, ch, buf);
-			index++;
-		} else {
-			/* Remember which index corresponds to our solar system */
-			our_ss_index = i + 1;
+			rc = sscanf(gameserver[i].game_instance, "%lf %lf %lf", &dx, &dy, &dz);
+			if (rc != 3) {
+				dx = 0.0;
+				dy = 0.0;
+				dz = 0.0;
+				fprintf(stderr,
+					"%s: Could not extract solarsystem position from game_instance '%s'\n",
+					logprefix(), gameserver[i].game_instance);
+			}
+			dx = dx - ssx;
+			dy = dy - ssy;
+			dz = dz - ssz;
+			double dist = sqrt(dx * dx + dy * dy + dz * dy);
+			if (dist < SNIS_WARP_GATE_THRESHOLD) {
+				sslist[nsslist] = i;
+				nsslist++;
+				sprintf(buf, "%3d: %s\n", nsslist, gameserver[i].location);
+				send_comms_packet(name, ch, buf);
+			}
 		}
-		i++;
 	}
 	send_comms_packet(name, ch, "------------------\n");
 	send_comms_packet(name, ch, "  0: PREVIOUS MENU\n");
@@ -11420,24 +11449,27 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
 		return;
 	}
-	/* Can't buy a ticket to solarsystem we're in */
-	if (selection >= our_ss_index && our_ss_index > 0)
-		selection++;
+	if (selection < 1 || selection > nsslist) {
+		free(gameserver);
+		return;
+	}
+	/* Figure out what we selected */
+	selection = sslist[selection - 1];
 	if (selection < 1 || selection > nservers) {
 		free(gameserver);
 		return;
 	}
 	if (bridgelist[bridge].warp_gate_ticket.ipaddr == 0) { /* no current ticket held */
-		sprintf(buf, "WARP-GATE TICKET TO %s BOOKED\n", gameserver[selection - 1].location);
+		sprintf(buf, "WARP-GATE TICKET TO %s BOOKED\n", gameserver[selection].location);
 		send_comms_packet(name, ch, buf);
 	} else {
 		sprintf(buf, "WARP-GATE TICKET TO %s EXCHANGED\n",
 			bridgelist[bridge].warp_gate_ticket.location);
 		send_comms_packet(name, ch, buf);
-		sprintf(buf, "FOR WARP-GATE TICKET TO %s\n", gameserver[selection - 1].location);
+		sprintf(buf, "FOR WARP-GATE TICKET TO %s\n", gameserver[selection].location);
 		send_comms_packet(name, ch, buf);
 	}
-	bridgelist[bridge].warp_gate_ticket = gameserver[selection - 1];
+	bridgelist[bridge].warp_gate_ticket = gameserver[selection];
 	free(gameserver);
 }
 
