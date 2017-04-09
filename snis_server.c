@@ -345,6 +345,19 @@ static int snis_log_level = 2;
 static struct ship_type_entry *ship_type;
 static int nshiptypes;
 
+/*
+ * Starmap entries -- these are locations of star systems
+ * as defined in the solarsystem asset files and transmitted
+ * via the game_instance data in the lobby -- 1 star system
+ * corresponds to 1 server process.  See queue_starmap().
+ */
+static struct starmap_entry {
+	char name[LOCATIONSIZE];
+	double x, y, z;
+} starmap[MAXSTARMAPENTRIES] = { 0 };
+static int nstarmap_entries = 0;
+static int starmap_dirty = 0;
+
 static int safe_mode = 0; /* prevents enemies from attacking if set */
 
 #ifndef PREFIX
@@ -7160,6 +7173,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.passenger_berths = 2;
 	o->tsd.ship.mining_bots = 1;
 	o->tsd.ship.emf_detector = 0;
+	o->tsd.ship.nav_mode = NAV_MODE_NORMAL;
 	o->tsd.ship.orbiting_object_id = 0xffffffff;
 	o->tsd.ship.nav_damping_suppression = 0.0;
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
@@ -14176,6 +14190,31 @@ static int process_standard_orbit(struct game_client *c)
 	return 0;
 }
 
+static int process_request_starmap(struct game_client *c)
+{
+	unsigned char buffer[10];
+	uint8_t v;
+	uint32_t id;
+	int i;
+	struct snis_entity *ship;
+
+	int rc = read_and_unpack_buffer(c, buffer, "wb", &id, &v);
+	if (rc)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->ship_index)
+		snis_log(SNIS_ERROR, "i != ship index at %s:%t\n", __FILE__, __LINE__);
+	ship = &go[i];
+	ship->tsd.ship.nav_mode = !ship->tsd.ship.nav_mode;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int do_engage_warp_drive(struct snis_entity *o)
 {
 	int enough_oomph = ((double) o->tsd.ship.warpdrive / 255.0) > 0.075;
@@ -14880,6 +14919,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_REQUEST_STARMAP:
+			rc = process_request_starmap(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		case OPCODE_REQUEST_LASER_WAVELENGTH:
 			rc = process_request_laser_wavelength(c);
 			if (rc)
@@ -15507,6 +15551,28 @@ static void queue_netstats(struct game_client *c)
 					faction_population[4]));
 }
 
+static void queue_starmap(struct game_client *c)
+{
+	int i;
+	struct packed_buffer *pb;
+
+	/* Send starmap if it is dirty, or once every 8 seconds
+	 * This is because deletions happen on client side via
+	 * expiration, refreshes stop the expiration.
+	 */
+	if (!starmap_dirty && ((universe_timestamp + 20) % 80) != 0)
+		return;
+	for (i = 0; i < nstarmap_entries; i++) {
+		pb = packed_buffer_allocate(1 + 4 + 4 + 4 + LOCATIONSIZE);
+		packed_buffer_append(pb, "bSSS", OPCODE_UPDATE_SOLARSYSTEM_LOCATION,
+					starmap[i].x, (int32_t) 1000.0,
+					starmap[i].y, (int32_t) 1000.0,
+					starmap[i].z, (int32_t) 1000.0);
+		packed_buffer_append_raw(pb, starmap[i].name, LOCATIONSIZE);
+		pb_queue_to_client(c, pb);
+	}
+}
+
 static void queue_up_client_damcon_object_update(struct game_client *c,
 			struct damcon_data *d, struct snis_damcon_entity *o)
 {
@@ -15548,6 +15614,7 @@ static void queue_up_client_updates(struct game_client *c)
 	pthread_mutex_lock(&universe_mutex);
 	if (universe_timestamp != c->timestamp) {
 		queue_netstats(c);
+		queue_starmap(c);
 		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 			/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
 				i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type); */
@@ -15996,7 +16063,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbbwQQQbbb",
+	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbbwQQQbbbb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -16017,7 +16084,8 @@ static void send_update_ship_packet(struct game_client *c,
 			&o->tsd.ship.weap_orientation.vec[0],
 			o->tsd.ship.in_secure_area,
 			o->tsd.ship.docking_magnets,
-			o->tsd.ship.emf_detector);
+			o->tsd.ship.emf_detector,
+			o->tsd.ship.nav_mode);
 	pb_queue_to_client(c, pb);
 
 	/* now that we've sent the accumulated value, clear the emf_detector to the noise floor */
@@ -20754,6 +20822,64 @@ static void disconnect_from_multiverse(struct multiverse_server_info *msi)
 	wakeup_multiverse_reader(msi);
 }
 
+static void update_starmap(struct ssgl_game_server *gameserver, int ngameservers)
+{
+	int i, j, rc, found;
+	double x, y, z;
+
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i < ngameservers; i++) {
+		rc = sscanf(gameserver[i].game_instance, "%lf %lf %lf", &x, &y, &z);
+		if (rc != 3)
+			continue;
+		/* Lookup this entry in the current star map */
+		found = 0;
+		for (j = 0; j < nstarmap_entries; j++) {
+			if (strncasecmp(starmap[j].name, gameserver[i].location, LOCATIONSIZE) == 0) {
+				if (x != starmap[j].x || y != starmap[j].y || z != starmap[j].z) {
+					/* found it, and (strangely) it moved */
+					starmap[j].x = x;
+					starmap[j].y = y;
+					starmap[j].z = z;
+					starmap_dirty = 1;
+				}
+				found = 1;
+				break;
+			}
+		}
+		/* Didn't find it, it is one we do not know about, add it. */
+		if (!found && nstarmap_entries < ARRAYSIZE(starmap)) {
+			strncpy(starmap[nstarmap_entries].name, gameserver[i].location, LOCATIONSIZE);
+			starmap[j].x = x;
+			starmap[j].y = y;
+			starmap[j].z = z;
+			nstarmap_entries++;
+			starmap_dirty = 1;
+		}
+	}
+
+	/* Now check if there are ones we knew about that have disappeared */
+	for (i = 0; i < nstarmap_entries; /* no increment here */) {
+		found = 0;
+		for (j = 0; j < ngameservers; j++) {
+			if (strncasecmp(starmap[i].name, gameserver[j].location, LOCATIONSIZE) == 0) {
+				found = 1;
+				break;
+			}
+		}
+		if (!found) {
+			/* starmap contains an entry with no corresponding server, so delete it. */
+			for (j = i; j < nstarmap_entries - 1; j++)
+				starmap[j] = starmap[j + 1];
+			nstarmap_entries--;
+			starmap_dirty = 1;
+		} else {
+			i++;
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 /* This is used to check if the multiverse server has changed */
 static void servers_changed_cb(void *cookie)
 {
@@ -20768,6 +20894,15 @@ static void servers_changed_cb(void *cookie)
 		fprintf(stderr, "%s: multiverse_server not set zzz\n", logprefix());
 		return;
 	}
+
+	if (server_tracker_get_server_list(server_tracker, &gameserver, &nservers) != 0) {
+		fprintf(stderr, "%s: Failed to get server list at %s:%d\n",
+			logprefix(), __FILE__, __LINE__);
+		return;
+	}
+	update_starmap(gameserver, nservers);
+	free(gameserver);
+	gameserver = NULL;
 
 	if (server_tracker_get_multiverse_list(server_tracker, &gameserver, &nservers) != 0) {
 		fprintf(stderr, "%s: Failed to get server list at %s:%d\n",

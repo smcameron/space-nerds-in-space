@@ -68,7 +68,7 @@ int snis_opcode_def_init(void)
 {
 	int rc = 0;
 
-	rc |= init_opcode_def(OPCODE_UPDATE_SHIP, "bwwhSSSRRRwwRRRbbbwbbbbbbbbbbbbbwQQQbbb");
+	rc |= init_opcode_def(OPCODE_UPDATE_SHIP, "bwwhSSSRRRwwRRRbbbwbbbbbbbbbbbbbwQQQbbbb");
 	rc |= init_opcode_def(OPCODE_UPDATE_STARBASE, "bwwSSSQ");
 	rc |= init_opcode_def(OPCODE_UPDATE_LASER, "bwwwbSSSQ");
 	rc |= init_opcode_def(OPCODE_UPDATE_TORPEDO, "bwwwSSS");
@@ -212,6 +212,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_UPDATE_BLOCK, "bwwSSSSSSQbb");
 	rc |= init_opcode_def(OPCODE_UPDATE_TURRET, "bwwSSSQQb");
 	rc |= init_opcode_def(OPCODE_LATENCY_CHECK, "bqq");
+	rc |= init_opcode_def(OPCODE_REQUEST_STARMAP, "bwb");
 	rc |= init_opcode_def(OPCODE_NOOP, "b");
 	return rc;
 }

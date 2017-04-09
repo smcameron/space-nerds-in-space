@@ -184,6 +184,8 @@
 #define   OPCODE_CHECK_OPCODE_QUERY		3
 #define   OPCODE_CHECK_OPCODE_VERIFY		4
 #define   OPCODE_CHECK_OPCODE_MISMATCH		5
+#define OPCODE_REQUEST_STARMAP			238
+#define OPCODE_UPDATE_SOLARSYSTEM_LOCATION	239
 
 #define OPCODE_NOOP		0xff
 
@@ -237,6 +239,7 @@ struct update_ship_packet {
 	uint8_t in_secure_area;
 	uint8_t docking_magnets;
 	uint8_t emf_detector;
+	uint8_t nav_mode;
 };
 
 struct ship_sdata_packet {

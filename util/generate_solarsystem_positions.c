@@ -37,7 +37,7 @@ static struct solarsystem_data {
 } ss[MAX_SS] = { 0 };
 static int nsolarsystems = 0;
 static int num_to_add = 10;
-static int max_connections = 5;
+static int max_connections = 5; /* Should match MAX_STARMAP_ADJACENCIES in ../snis.h */
 static double connection_threshold = 15.0;
 
 static void usage(void)
@@ -47,7 +47,8 @@ static void usage(void)
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "-s, --starcount:   How many stars to add.\n");
 	fprintf(stderr, "-t, --threshold:   How close stars must be before they are considered connected.\n");
-	fprintf(stderr, "-c, --connections: Max number of connections a star may have.\n\n");
+	fprintf(stderr, "-c, --connections: Max number of connections a star may have. This should be less\n");
+	fprintf(stderr, "                   than or equal to MAX_STARMAP_ADJACENCIES in snis.h -- it should be 5\n");
 	fprintf(stderr, "Example: Generate coords for 10 new solarsystems\n");
 	fprintf(stderr, "         with max 3 connections and connection-threshold of 1.0\n");
 	fprintf(stderr, "         using existing solarsystem coords as a starting point:\n\n");

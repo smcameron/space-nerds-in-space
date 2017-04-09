@@ -391,6 +391,20 @@ static struct solarsystem_asset_spec *old_solarsystem_assets = NULL;
 static char *solarsystem_name = DEFAULT_SOLAR_SYSTEM;
 static char dynamic_solarsystem_name[100] = { 0 };
 static char old_solarsystem_name[100] = { 0 };
+
+/* star map data -- corresponds to known snis_server instances
+ * as discovered by snis_server via ssgl_lobby and relayed to
+ * clients via OPCODE_UPDATE_SOLARSYSTEM_LOCATION
+ */
+#define LOCATIONSIZE (sizeof(((struct ssgl_game_server *) 0)->location))
+static struct starmap_entry {
+	char name[LOCATIONSIZE];
+	double x, y, z;
+	int time_before_expiration;
+} starmap[MAXSTARMAPENTRIES] =  { 0 };
+static int nstarmap_entries = 0;
+static int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STARMAP_ADJACENCIES];
+
 /* static char **planet_material_filename = NULL; */
 /* int nplanet_materials = -1; */
 static struct material shield_material;
@@ -3732,6 +3746,7 @@ static struct navigation_ui {
 	struct button *reverse_button;
 	struct button *trident_button;
 	struct button *computer_button;
+	struct button *starmap_button;
 	int gauge_radius;
 	struct snis_text_input_box *computer_input;
 	char input[100];
@@ -3758,7 +3773,8 @@ static int process_update_ship_packet(uint8_t opcode)
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
-		reverse, trident, in_secure_area, docking_magnets, emf_detector;
+		reverse, trident, in_secure_area, docking_magnets, emf_detector,
+		nav_mode;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -3781,14 +3797,14 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbbwQQQbbb",
+	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbbwQQQbbbb",
 			&tloading, &throttle, &rpm, &fuel, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
-			&docking_magnets, &emf_detector);
+			&docking_magnets, &emf_detector, &nav_mode);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -3847,6 +3863,8 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.emf_detector = emf_detector;
 	/* FIXME: really update_emf_detector should get called every frame and passed o->tsd.ship.emf_detector. */
 	update_emf_detector(emf_detector);
+	o->tsd.ship.nav_mode = nav_mode;
+	snis_button_set_label(nav_ui.starmap_button, nav_mode ? "NAV MODE" : "STARMAP");
 
 	update_orientation_history(o->tsd.ship.sciball_o, &sciball_orientation);
 	update_orientation_history(o->tsd.ship.weap_o, &weap_orientation);
@@ -4959,6 +4977,125 @@ static int process_check_opcode_format(void)
 	return 0;
 }
 
+static void starmap_set_one_adjacency(int star_a, int star_b)
+{
+	int i;
+
+	for (i = 0; i < MAX_STARMAP_ADJACENCIES; i++) {
+		if (starmap_adjacency[star_a][i] == star_b) /* already set */
+			return;
+		if (starmap_adjacency[star_a][i] == -1) {
+			starmap_adjacency[star_a][i] = star_b;
+			return;
+		}
+	}
+	fprintf(stderr, "snis_client: Exceeded MAX_STARMAP_ADJACENCIES (%d)\n",
+			MAX_STARMAP_ADJACENCIES);
+}
+
+static void starmap_set_adjacency(int star_a, int star_b)
+{
+	starmap_set_one_adjacency(star_a, star_b);
+	starmap_set_one_adjacency(star_b, star_a);
+}
+
+static void starmap_clear_all_adjacencies(void)
+{
+	int i, j;
+
+	for (i = 0; i < nstarmap_entries; i++)
+		for (j = 0; j < MAX_STARMAP_ADJACENCIES; j++)
+			starmap_adjacency[i][j] = -1;
+}
+
+static void starmap_recompute_adjacencies(void)
+{
+	int i, j;
+	union vec3 s1, s2, d;
+
+	starmap_clear_all_adjacencies();
+	for (i = 0; i < nstarmap_entries; i++) {
+		for (j = 0; j < nstarmap_entries; j++) {
+			double dist;
+			s1.v.x = starmap[i].x;
+			s1.v.y = starmap[i].y;
+			s1.v.z = starmap[i].z;
+			s2.v.x = starmap[j].x;
+			s2.v.y = starmap[j].y;
+			s2.v.z = starmap[j].z;
+			vec3_sub(&d, &s1, &s2);
+			dist = vec3_magnitude(&d);
+			if (dist <= SNIS_WARP_GATE_THRESHOLD)
+				starmap_set_adjacency(i, j);
+		}
+	}
+}
+
+static int process_update_solarsystem_location(void)
+{
+	int i, rc, found;
+	double x, y, z;
+	unsigned char buffer[1 + 4 + 4 + 4 + LOCATIONSIZE];
+	char name[LOCATIONSIZE];
+
+	rc = read_and_unpack_buffer(buffer, "SSS",
+			&x, (int32_t) 1000,
+			&y, (int32_t) 1000,
+			&z, (int32_t) 1000);
+	if (rc != 0)
+		return -1;
+	rc = snis_readsocket(gameserver_sock, name, LOCATIONSIZE);
+	if (rc != 0)
+		return rc;
+	name[LOCATIONSIZE - 1] = '\0';
+	pthread_mutex_lock(&universe_mutex);
+	found = 0;
+
+	for (i = 0; i < nstarmap_entries; i++) {
+		if (strncasecmp(starmap[i].name, name, LOCATIONSIZE) != 0)
+			continue;
+		found = 1;
+		starmap[i].x = x;
+		starmap[i].y = y;
+		starmap[i].z = z;
+		starmap[i].time_before_expiration = 30 * 10; /* 10 seconds */
+	}
+	if (!found) {
+		if (nstarmap_entries < MAXSTARMAPENTRIES) {
+			i = nstarmap_entries;
+			memcpy(starmap[i].name, name, LOCATIONSIZE);
+			starmap[i].x = x;
+			starmap[i].y = y;
+			starmap[i].z = z;
+			starmap[i].time_before_expiration = 30 * 10; /* 10 seconds */
+			nstarmap_entries++;
+		}
+	}
+	starmap_recompute_adjacencies();
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static void expire_starmap_entries(void)
+{
+	int i, j, changed;
+
+	changed = 0;
+	for (i = 0; i < nstarmap_entries; /* no increment here */) {
+		starmap[i].time_before_expiration--;
+		if (starmap[i].time_before_expiration <= 0) {
+			for (j = i; j < nstarmap_entries - 1; j++)
+				starmap[j] = starmap[j + 1];
+			nstarmap_entries--;
+			changed = 1;
+		} else {
+			i++;
+		}
+	}
+	if (changed)
+		starmap_recompute_adjacencies();
+}
+
 static void do_text_to_speech(char *text)
 {
 	char command[PATH_MAX];
@@ -5850,6 +5987,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_CHECK_OPCODE_FORMAT:
 			rc = process_check_opcode_format();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_SOLARSYSTEM_LOCATION:
+			rc = process_update_solarsystem_location();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -8568,6 +8710,11 @@ static void standard_orbit_button_pressed(__attribute__((unused)) void *cookie)
 	do_adjust_byte_value(0, OPCODE_REQUEST_STANDARD_ORBIT);
 }
 
+static void nav_starmap_button_pressed(__attribute__((unused)) void *cookie)
+{
+	do_adjust_byte_value(0, OPCODE_REQUEST_STARMAP);
+}
+
 static void reverse_button_pressed(__attribute__((unused)) void *s)
 {
 	struct snis_entity *o;
@@ -8806,6 +8953,10 @@ static void init_nav_ui(void)
 					nav_ui.gauge_radius * 2 + 180,
 					-1, -1, "STANDARD ORBIT", button_color,
 					NANO_FONT, standard_orbit_button_pressed, NULL);
+	nav_ui.starmap_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
+					nav_ui.gauge_radius * 2 + 240, -1, -1, "STAR MAP",
+					button_color,
+					NANO_FONT, nav_starmap_button_pressed, NULL);
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", button_color,
 			NANO_FONT, reverse_button_pressed, NULL);
 	nav_ui.trident_button = snis_button_init(10, 250, -1, -1, "ABSOLUTE", button_color,
@@ -8823,6 +8974,7 @@ static void init_nav_ui(void)
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.docking_magnets_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.standard_orbit_button, DISPLAYMODE_NAVIGATION);
+	ui_add_button(nav_ui.starmap_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.trident_button, DISPLAYMODE_NAVIGATION);
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
@@ -8997,6 +9149,152 @@ static void draw_nav_idiot_lights(GtkWidget *w, GdkGC *gc, struct snis_entity *s
 				SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 35,
 				nav_ui.gauge_radius * 2 + 20);
 	}
+}
+
+static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
+{
+	int i, j, k, our_ss = -1;
+	double ox, oy, oz;
+	struct entity *e = NULL;
+	union vec3 camera_up = { { 0.0, 1.0, 0.0 } };
+	union vec3 camera_pos = { { 0.0, 40.0, 5.0 } };
+	float x1, y1, z1, x2, y2, z2;
+	static struct mesh *axes = NULL;
+	const float starmap_mesh_scale = 1.0 * SNIS_WARP_GATE_THRESHOLD;
+	const float starmap_grid_size = 5.0;
+	float cam_dist;
+	static float nav_camera_pos_factor = 1.0;
+	float new_nav_camera_pos_factor;
+
+	if (!axes) { /* Init axes mesh once */
+		axes = mesh_fabricate_axes();
+		mesh_scale(axes, SNIS_WARP_GATE_THRESHOLD * 0.05);
+	}
+
+	/* Slide the camera towards desired position */
+	switch (nav_camera_mode) {
+	case 0:
+		new_nav_camera_pos_factor = 1.0;
+		break;
+	case 1:
+		new_nav_camera_pos_factor = 0.5;
+		break;
+	case 2:
+		new_nav_camera_pos_factor = 0.25;
+		break;
+	case 3:
+		new_nav_camera_pos_factor = 0.125;
+		break;
+	default:
+		new_nav_camera_pos_factor = 1.0;
+		break;
+	}
+	float camera_pos_delta = 0.3 * (new_nav_camera_pos_factor - nav_camera_pos_factor);
+	nav_camera_pos_factor += camera_pos_delta;
+	cam_dist = 100.0 * nav_camera_pos_factor;
+
+	/* Check that there is at least one star */
+	if (nstarmap_entries <= 0)
+		return;
+
+	pthread_mutex_lock(&universe_mutex);
+	/* Find which solarsystem we are in. */
+	for (i = 0; i < nstarmap_entries; i++)
+		if (strcasecmp(starmap[i].name, solarsystem_name) == 0) {
+			our_ss = i;
+			break;
+		}
+
+	/* Make sure we actually know where we are */
+	if (our_ss < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+
+	/* Origin */
+	ox = starmap[our_ss].x;
+	oy = starmap[our_ss].y;
+	oz = starmap[our_ss].z;
+
+	/* Spin the camera slowly around */
+	float angle = fmod((10.0 * universe_timestamp() / UNIVERSE_TICKS_PER_SECOND), 360.0) * M_PI / 180.0;
+	camera_pos.v.x = sin(angle) * cam_dist;
+	camera_pos.v.y = 0;
+	camera_pos.v.z = cos(angle) * cam_dist;
+
+	camera_assign_up_direction(instrumentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
+	camera_set_pos(instrumentecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(instrumentecx, 0.0, 0.0, 0.0);
+	set_renderer(instrumentecx, WIREFRAME_RENDERER);
+	float near = 0.5;
+	float far = 1000.0;
+	float angle_of_view = 80;
+	camera_set_parameters(instrumentecx, near, far,
+				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view * M_PI / 180.0);
+	calculate_camera_transform(instrumentecx);
+
+	/* Add star entities to the instrumentecx... */
+	for (i = 0; i < nstarmap_entries; i++) {
+		e = add_entity(instrumentecx, torpedo_nav_mesh,
+			starmap[i].x - ox, starmap[i].y - oy, starmap[i].z - oz,
+			i == our_ss ? UI_COLOR(starmap_home_star) : UI_COLOR(starmap_star));
+		update_entity_scale(e, 0.1);
+		entity_set_user_data(e, &starmap[i]); /* so we can draw labels later */
+	}
+
+	/* Setup 3d grid entities */
+	for (i = 0; i < (int) starmap_grid_size; i++) {
+		float x = ((float) i - 0.5 * (starmap_grid_size - 1.0)) * starmap_mesh_scale - ox;
+		for (j = 0; j < (int) starmap_grid_size; j++) {
+			float y = ((float) j - 0.5 * (starmap_grid_size - 1.0)) * starmap_mesh_scale - oy;
+			for (k = 0; k < (int) starmap_grid_size; k++) {
+				float z = ((float) k - 0.5 * (starmap_grid_size - 1.0)) * starmap_mesh_scale - oz;
+				(void) add_entity(instrumentecx, axes, x, y, z, UI_COLOR(starmap_grid_color));
+			}
+		}
+	}
+
+	/* Draw warp lanes between stars */
+	for (i = 0; i < nstarmap_entries; i++) {
+		for (j = 0; j < MAX_STARMAP_ADJACENCIES; j++) {
+			int n = starmap_adjacency[i][j];
+			if (n == -1)
+				break;
+			x1 = starmap[i].x - ox;
+			y1 = starmap[i].y - oy;
+			z1 = starmap[i].z - oz;
+			x2 = starmap[n].x - ox;
+			y2 = starmap[n].y - oy;
+			z2 = starmap[n].z - oz;
+			if (n == our_ss || i == our_ss)
+				sng_set_foreground(UI_COLOR(starmap_warp_lane));
+			else
+				sng_set_foreground(UI_COLOR(starmap_far_warp_lane));
+			snis_draw_3d_line(w, gc, instrumentecx, x1, y1, z1, x2, y2, z2);
+		}
+	}
+
+	render_entities(instrumentecx);
+
+	/* Draw labels on stars... */
+	sng_set_foreground(UI_COLOR(nav_entity_label));
+	for (i = 0; i <= get_entity_count(instrumentecx); i++) {
+		float sx, sy;
+		char buffer[100];
+		struct starmap_entry *s;
+
+		e = get_entity(instrumentecx, i);
+		if (!e)
+			continue;
+		s = entity_get_user_data(e);
+		if (!s)
+			continue;
+		entity_get_screen_coords(e, &sx, &sy);
+		sprintf(buffer, "%s", s->name);
+		sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	remove_all_entity(instrumentecx);
 }
 
 static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
@@ -9415,8 +9713,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	}
 	render_entities(instrumentecx);
 
-	//draw_orientation_trident(w, gc, o, 75, 175, 150);
-
 	/* Draw labels on ships... */
 	sng_set_foreground(UI_COLOR(nav_entity_label));
 	for (i = 0; i <= get_entity_count(instrumentecx); i++) {
@@ -9502,7 +9798,15 @@ static void show_navigation(GtkWidget *w)
 	sng_set_foreground(UI_COLOR(nav_text));
 	draw_nav_idiot_lights(w, gc, o);
 	draw_orientation_trident(w, gc, o, 75, 175, 150);
-	draw_3d_nav_display(w, gc);
+	switch (o->tsd.ship.nav_mode) {
+	case NAV_MODE_STARMAP:
+		draw_3d_nav_starmap(w, gc);
+		break;
+	case NAV_MODE_NORMAL:
+	default:
+		draw_3d_nav_display(w, gc);
+		break;
+	}
 	show_common_screen(w, "NAV");
 }
 
@@ -13853,6 +14157,7 @@ gint advance_game(gpointer data)
 	pthread_mutex_lock(&universe_mutex);
 	move_sparks();
 	move_objects();
+	expire_starmap_entries();
 	pthread_mutex_unlock(&universe_mutex);
 	nframes++;
 
@@ -14851,6 +15156,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		break;
 	case DEVIO_OPCODE_NAV_STANDARD_ORBIT:
 		standard_orbit_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_NAV_STARMAP:
+		nav_starmap_button_pressed((void *) 0);
 		break;
 	case DEVIO_OPCODE_NAV_THROTTLE:
 		snis_slider_poke_input(nav_ui.throttle_slider, d, 1);

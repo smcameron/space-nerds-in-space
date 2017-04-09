@@ -27,6 +27,8 @@
 #include "space-part.h"
 #include "oriented_bounding_box.h"
 
+#define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
+#define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
 #define SNIS_PROTOCOL_VERSION "SNIS001"
 #define COMMON_MTWIST_SEED 97872
@@ -423,6 +425,9 @@ struct ship_data {
 	uint8_t in_secure_area;
 	uint8_t emf_detector;
 	uint8_t auto_respawn;
+#define NAV_MODE_NORMAL 0
+#define NAV_MODE_STARMAP 1
+	uint8_t nav_mode;
 	uint32_t home_planet;
 	int flames_timer;
 	uint8_t docking_magnets;

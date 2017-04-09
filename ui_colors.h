@@ -195,6 +195,12 @@ struct ui_color_map {
 
 	struct ui_color_entry warp_hash;
 	struct ui_color_entry last_color;
+
+	struct ui_color_entry starmap_star;
+	struct ui_color_entry starmap_home_star;
+	struct ui_color_entry starmap_warp_lane;
+	struct ui_color_entry starmap_far_warp_lane;
+	struct ui_color_entry starmap_grid_color;
 };
 
 struct ui_color_map_accessor {
@@ -351,6 +357,12 @@ struct ui_color_map_accessor {
 	.u.map.help_text		= { WHITE,		"help-text" },
 
 	.u.map.warp_hash		= { WHITE,		"warp-hash" },
+
+	.u.map.starmap_star		= { GREEN_FIXUP,	"starmap-star" },
+	.u.map.starmap_home_star	= { WHITE,		"starmap-home-star" },
+	.u.map.starmap_warp_lane	= { CYAN_FIXUP,		"starmap-warp-lane" },
+	.u.map.starmap_far_warp_lane	= { AMBER,		"starmap-far-warp-lane" },
+	.u.map.starmap_grid_color	= { DARKRED,		"starmap-grid-color" },
 
 	.u.map.last_color		= { GREEN_FIXUP,	"last-color" },
 	}
