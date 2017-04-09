@@ -5,7 +5,6 @@ snis_server \- Multi player cooperative star ship bridge simulator (server)
 .B snis_server
 -l lobbyhost
 -L location
-[ -g gameinstance ]
 [ -m multiverse location ]
 [ -n servernick ]
 [ --enable-enscript ]
@@ -13,26 +12,19 @@ snis_server \- Multi player cooperative star ship bridge simulator (server)
 .\" Add any additional description here
 .warn 511
 .PP
-snis_server is a server process for the game Space Nerds In Space, which is
-a multiplayer starship bridge simulator.  The server process simulates the 
-game universe and processes input data from client processes and sends outputs
-to client processes.  The "gameinstance" and "location" parameters are used
-to distinguish one game instance from another running
-on the same host (multiple snis_server processes may be run on the same host).
-The gameinstance and location should be a short human readable string to
-uniquely identify the game instance.  Gameinstance may be omitted (in which
-case "-" is used) but location is required.  The lobbyhost is the hostname of
-the server hosting the ssgl_server process.
+snis_server is a server process for the game Space Nerds In Space, which is a
+multiplayer starship bridge simulator.  The server process simulates the game
+universe and processes input data from client processes and sends outputs to
+client processes.  The "location" parameter is used to distinguish one game
+instance from another running on the same host (multiple snis_server processes
+may be run on the same host).  The location should be a short human readable
+string to uniquely identify the game instance and is required.  The lobbyhost
+is the hostname of the server hosting the ssgl_server process.
 .SH Options:
 .TP
 \fB\-e, --enable-enscript\fR
 Enable the "enscript" command on the Demon screen.  This allows clients to create
 files on the server so you should probably leave this off.
-.TP
-\fB\-g, --gameinstance\fR
-Set the "gameinstance" to be used with the lobby server.  This is just
-and arbitrary string for human consumption to differentiate one gameserver
-from another.  It is optional.  If omitted, the value "-" will be used.
 .TP
 \fB\-i, --initscript scriptname\fR
 Use the specified initial lua script instead of the default which is "initialize.lua"

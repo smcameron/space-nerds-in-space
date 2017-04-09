@@ -16920,7 +16920,7 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 static void usage(void)
 {
 	fprintf(stderr, "snis_server: usage:\n");
-	fprintf(stderr, "snis_server -l lobbyhost -L location [ -g gameinstance ] \\\n"
+	fprintf(stderr, "snis_server -l lobbyhost -L location \\\n"
 			"          [ -m multiverse-location ] [ -n servernick ]\n");
 	fprintf(stderr, "For example: snis_server -l lobbyserver -g 'steves game' -n zuul -L Houston\n");
 	exit(0);
@@ -20256,7 +20256,6 @@ static struct option long_options[] = {
 	{ "initscript", required_argument, NULL, 'i' },
 	{ "help", no_argument, NULL, 'h' },
 	{ "lobbyhost", required_argument, NULL, 'l' },
-	{ "gameinstance", required_argument, NULL, 'g' },
 	{ "servernick", required_argument, NULL, 'n' },
 	{ "location", required_argument, NULL, 'L' },
 	{ "multiverse", required_argument, NULL, 'm' },
@@ -20283,7 +20282,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "eg:hi:L:l:m:n:s:v", long_options, &option_index);
+		c = getopt_long(argc, argv, "ehi:L:l:m:n:s:v", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -20294,9 +20293,6 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'i':
 			initial_lua_script = optarg;
-			break;
-		case 'g':
-			lobby_gameinstance = optarg;
 			break;
 		case 'h':
 			usage();
