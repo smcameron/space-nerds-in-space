@@ -420,7 +420,8 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lcrypto -lssl
 PROGS=snis_server snis_client snis_limited_client snis_multiverse
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/snis_text_to_speech.sh \
 		bin/snis_multiverse bin/lsssgl
-UTILPROGS=util/mask_clouds util/cloud-mask-normalmap mesh_viewer util/sample_image_colors
+UTILPROGS=util/mask_clouds util/cloud-mask-normalmap mesh_viewer util/sample_image_colors \
+		util/generate_solarsystem_positions
 ESSENTIAL_SCRIPTS=snis_text_to_speech.sh
 
 # model directory
@@ -658,6 +659,12 @@ util/sample_image_colors.o:	util/sample_image_colors.c png_utils.o
 
 util/sample_image_colors:	util/sample_image_colors.o png_utils.o
 	$(CC) ${MYCFLAGS} -o $@ util/sample_image_colors.o png_utils.o ${PNGLIBS}
+
+util/generate_solarsystem_positions.o:	util/generate_solarsystem_positions.c string-utils.o
+	$(Q)$(COMPILE)
+
+util/generate_solarsystem_positions:	util/generate_solarsystem_positions.o
+	$(CC) ${MYCFLAGS} -o $@ util/generate_solarsystem_positions.o string-utils.o -lm
 
 snis_socket_io.o:	snis_socket_io.c Makefile
 	$(Q)$(COMPILE)
