@@ -103,7 +103,11 @@ feature even if the driver claims to support it.
 SNIS_AUDIO_DEVICE if set, manually selects an audio device. Ordinarily a default
 device is chosen.  This variable allows the default device to be overridden.  This
 value should be an integer between 0 and the number of sound devices you have minus
-one.
+one.  You can see which audio devices you have by running "aplay -l", or
+"pactl list".  Note: Text-to-Speech functionality (e.g. "the computer" within the
+game) will not honor SNIS_AUDIO_DEVICE as text to speech is implemented by an
+external program (either pico2wave (plus play or aplay) or espeak) which figures
+out which sound device to use on its own.
 .PP
 .SH FILES
 .PP
