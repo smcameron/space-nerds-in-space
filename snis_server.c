@@ -139,6 +139,7 @@ static struct multiverse_server_info {
 	int writer_time_to_exit;
 	int reader_time_to_exit;
 #define LOCATIONSIZE (sizeof((struct ssgl_game_server *) 0)->location)
+#define GAMEINSTANCESIZE (sizeof((struct ssgl_game_server *) 0)->game_instance)
 	char location[LOCATIONSIZE];
 } *multiverse_server = NULL;
 
@@ -20263,11 +20264,10 @@ static struct option long_options[] = {
 	{ "version", no_argument, NULL, 'v' },
 };
 
-static char *default_lobby_gameinstance = "-";
 static char *default_lobbyhost = "localhost";
 static char *default_lobby_servernick = "-";
 
-static char *lobby_gameinstance = NULL;
+static char lobby_gameinstance[GAMEINSTANCESIZE];
 static char *lobbyhost = NULL;
 static char *lobby_location = NULL;
 static char *lobby_servernick = NULL;
@@ -20276,7 +20276,6 @@ static void process_options(int argc, char *argv[])
 {
 	int c;
 
-	lobby_gameinstance = default_lobby_gameinstance;
 	lobby_servernick = default_lobby_servernick;
 	lobbyhost = default_lobbyhost;
 
@@ -20879,6 +20878,9 @@ int main(int argc, char *argv[])
 	ignore_sigpipe();	
 	snis_collect_netstats(&netstats);
 	if (getenv("SNISSERVERNOLOBBY") == NULL) {
+		/* Pack the solarsystem position into the gameinstance string */
+		snprintf(lobby_gameinstance, sizeof(lobby_gameinstance), "%3.1lf %3.1lf %3.1lf",
+			solarsystem_assets->x, solarsystem_assets->y, solarsystem_assets->z);
 		register_with_game_lobby(lobbyhost, port,
 			lobby_servernick, lobby_gameinstance, lobby_location);
 		server_tracker = server_tracker_start(lobbyhost, servers_changed_cb, NULL);

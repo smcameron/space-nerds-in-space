@@ -55,6 +55,7 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 	int rc, ln = 0;
 	int planet_textures_read = 0;
 	int planet_textures_expected = 0;
+	int got_position = 0;
 
 	f = fopen(filename, "r");
 	if (!f) {
@@ -188,9 +189,30 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 			}
 			a->skybox_prefix = strdup(get_field(line));
 			continue;
+		} else if (has_prefix("star location:", line)) {
+			/* On the client, this info will be overridden by info from the lobby,
+			 * On the server, this info is authoritative.
+			 */
+			double x, y, z;
+			field = get_field(line);
+			rc = sscanf(field, "%lf %lf %lf", &x, &y, &z);
+			if (rc == 3) {
+				a->x = x;
+				a->y = y;
+				a->z = z;
+				got_position = 1;
+			}
+			continue;
 		}
 bad_line:
 		fprintf(stderr, "solar system asset file %s:ignoring line %d:%s\n", filename, ln, line);
+	}
+
+	if (!got_position) {
+		fprintf(stderr, "Solar system '%s' had no position information, using default.\n", filename);
+		a->x = 0.0;
+		a->y = 0.0;
+		a->z = 0.0;
 	}
 	fclose(f);
 

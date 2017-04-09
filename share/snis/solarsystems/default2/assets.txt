@@ -11,4 +11,5 @@ planet texture: ../../textures/planet-texture4- no-normal-map earth-like
 sun texture: ../../textures/sun.png
 
 skybox texture: ../../textures/orange-haze
+star location: 0 0 0
 
