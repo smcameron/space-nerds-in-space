@@ -8978,6 +8978,27 @@ static void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity
 static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o,
 		int x1, int y1, int x2, int y2);
 
+static void draw_nav_idiot_lights(GtkWidget *w, GdkGC *gc, struct snis_entity *ship)
+{
+	/* idiot lights for low power of various systems */
+	const int low_power_threshold = 10;
+	sng_set_foreground(UI_COLOR(nav_warning));
+	if (ship->tsd.ship.power_data.sensors.i < low_power_threshold) {
+		sng_abs_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2 + 20, 65);
+	}
+	if (ship->tsd.ship.power_data.maneuvering.i < low_power_threshold) {
+		sng_abs_xy_draw_string("LOW MANEUVERING POWER", NANO_FONT, SCREEN_WIDTH / 2  + 20, 80);
+	}
+	if (ship->tsd.ship.power_data.impulse.r2 < low_power_threshold) {
+		sng_abs_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, SCREEN_WIDTH / 2 + 20, 95);
+	}
+	if (ship->tsd.ship.power_data.warp.r2 < low_power_threshold) {
+		sng_abs_xy_draw_string("LOW WARP POWER", NANO_FONT,
+				SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 35,
+				nav_ui.gauge_radius * 2 + 20);
+	}
+}
+
 static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 {
 	static struct mesh *ring_mesh = 0;
@@ -9020,24 +9041,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		current_zoom = o->tsd.ship.navzoom;
 	else
 		current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
-
-	/* idiot lights for low power of various systems */
-	const int low_power_threshold = 10;
-	sng_set_foreground(UI_COLOR(nav_warning));
-	if (o->tsd.ship.power_data.sensors.i < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2 + 20, 65);
-	}
-	if (o->tsd.ship.power_data.maneuvering.i < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW MANEUVERING POWER", NANO_FONT, SCREEN_WIDTH / 2  + 20, 80);
-	}
-	if (o->tsd.ship.power_data.impulse.r2 < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, SCREEN_WIDTH / 2 + 20, 95);
-	}
-	if (o->tsd.ship.power_data.warp.r2 < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW WARP POWER", NANO_FONT,
-				SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 35,
-				nav_ui.gauge_radius * 2 + 20);
-	}
 
 	const float min_xknown_pct = 0.001;
 	const float max_xknown_pct = 0.080;
@@ -9412,7 +9415,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	}
 	render_entities(instrumentecx);
 
-	draw_orientation_trident(w, gc, o, 75, 175, 150);
+	//draw_orientation_trident(w, gc, o, 75, 175, 150);
 
 	/* Draw labels on ships... */
 	sng_set_foreground(UI_COLOR(nav_entity_label));
@@ -9497,6 +9500,8 @@ static void show_navigation(GtkWidget *w)
 
 	quat_to_euler(&ypr, &o->orientation);	
 	sng_set_foreground(UI_COLOR(nav_text));
+	draw_nav_idiot_lights(w, gc, o);
+	draw_orientation_trident(w, gc, o, 75, 175, 150);
 	draw_3d_nav_display(w, gc);
 	show_common_screen(w, "NAV");
 }
