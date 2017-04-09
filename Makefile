@@ -296,7 +296,7 @@ DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
 MANSRCDIR=.
 MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz \
 	${MANSRCDIR}/earthlike.1.gz ${MANSRCDIR}/gaseous-giganticus.1 \
-	${MANSRCDIR}/snis_text_to_speech.sh.6
+	${MANSRCDIR}/snis_text_to_speech.sh.6 ${MANSRCDIR}/snis_test_audio.1.gz
 MANDIR=${DESTDIR}/${PREFIX}/share/man/man6
 
 DESKTOPDIR=${DESTDIR}/${PREFIX}/share/applications
@@ -971,6 +971,9 @@ earthlike.1.gz:	earthlike.1
 
 gaseous-giganticus.1.gz:	gaseous-giganticus.1
 	gzip -9 - < gaseous-giganticus.6 > gaseous-giganticus.6.gz
+
+snis_test_audio.1.gz:	snis_test_audio.1
+	gzip -9 - < snis_test_audio.1 > snis_test_audio.1.gz
 
 print_ship_attributes:	snis_entity_key_value_specification.h key_value_parser.o
 	gcc -o print_ship_attributes print_ship_attributes.c key_value_parser.o

@@ -1,0 +1,52 @@
+.TH SNIS-TEST-AUDIO "1" "APRIL 2017" "snis_test_audio" "User Commands"
+.SH NAME
+snis_test_audio \- test program for testing audio path used by Space Nerds
+In Space
+.SH SYNOPSIS
+.B snis_test_audio [ device-number ]
+.SH DESCRIPTION
+.\" Add any additional description here
+.warn 511
+.PP
+snis_test_audio initializes the audio system in the same way that the game
+Space Nerds In Space does, prints out the name of each discovered audio device
+and then attempts to play a sound.  If the device-number argument is omitted,
+a default device is used.
+.PP
+.SH EXAMPLE
+.nf
+	$ ./snis_test_audio
+	Space Nerds In Space audio test program.
+	ALSA lib pcm_dsnoop.c:606:(snd_pcm_dsnoop_open) unable to open slave
+	ALSA lib pcm_dmix.c:1029:(snd_pcm_dmix_open) unable to open slave
+	ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.rear
+	ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.center_lfe
+	ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.side
+	ALSA lib pcm_dmix.c:1029:(snd_pcm_dmix_open) unable to open slave
+	connect(2) call to /dev/shm/jack-1000/default/jack_0 failed (err=No such file or directory)
+	attempt to connect to server failed
+	Portaudio reports 10 sound devices.
+	Portaudio says the default device is: 9
+	wwviaudio_initialize_portaudio returned 0
+	Portaudio reports 10 devices
+	0: HDA Intel PCH: ALC887-VD Digital (hw:0,1)
+	1: HDA Intel PCH: ALC887-VD Alt Analog (hw:0,2)
+	2: HDA Intel PCH: HDMI 0 (hw:0,3)
+	3: HDA Intel PCH: HDMI 1 (hw:0,7)
+	4: HDA Intel PCH: HDMI 2 (hw:0,8)
+	5: iec958
+	6: spdif
+	7: hdmi
+	8: pulse
+	9: default
+	Attempting to play sound... ...finished attempting to play sound
+.fi
+.PP
+.SH FILES
+.PP
+share/snis/sounds/red-alert.ogg, an ogg-vorbis file that the program
+attempts to play.
+.PP
+.SH AUTHOR
+Written by Stephen M. Cameron
+.br
