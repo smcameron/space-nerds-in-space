@@ -165,7 +165,7 @@ static void take_picture(char *filename)
 	int width, height;
 	graph_dev_grab_framebuffer(&buffer, &width, &height);
 	printf("Saved snapshot: %s %dx%d\n", filename, width, height);
-	png_utils_write_png_image(filename, buffer, width, height, 0, 1);
+	png_utils_write_png_image(filename, buffer, width, height, 1, 1);
 	free(buffer);
 }
 

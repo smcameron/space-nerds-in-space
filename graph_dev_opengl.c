@@ -4063,9 +4063,9 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 
 void graph_dev_grab_framebuffer(unsigned char **buffer, int *width, int *height)
 {
-	*buffer = malloc(3 * sgc.screen_x * sgc.screen_y);
+	*buffer = malloc(4 * sgc.screen_x * sgc.screen_y);
 	*width = sgc.screen_x;
 	*height = sgc.screen_y;
-	glReadPixels(0, 0, sgc.screen_x - 1, sgc.screen_y - 1,
-			GL_RGB, GL_UNSIGNED_BYTE, *buffer);
+	glReadPixels(0, 0, sgc.screen_x, sgc.screen_y,
+			GL_RGBA, GL_UNSIGNED_BYTE, *buffer);
 }
