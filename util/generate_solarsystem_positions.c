@@ -132,9 +132,11 @@ static int count_connections(double x, double y, double z, int self, double thre
 }
 
 static struct option long_options[] = {
+	{ "help", no_argument, NULL, 'h' },
 	{ "starcount", required_argument, NULL, 's' },
 	{ "connections", required_argument, NULL, 'c' },
 	{ "threshold", required_argument, NULL, 't' },
+	{ NULL, NULL, NULL, '\0' },
 };
 
 static int get_parameters(int argc, char *argv[])
@@ -143,10 +145,13 @@ static int get_parameters(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "c:s:t:", long_options, &option_index);
+		c = getopt_long(argc, argv, "c:hs:t:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
+		case 'h':
+			usage();
+			break;
 		case 'c':
 			rc = sscanf(optarg, "%d", &max_connections);
 			if (rc != 1)
