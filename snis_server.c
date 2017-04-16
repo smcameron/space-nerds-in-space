@@ -11443,7 +11443,7 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 			dx = dx - ssx;
 			dy = dy - ssy;
 			dz = dz - ssz;
-			double dist = sqrt(dx * dx + dy * dy + dz * dy);
+			double dist = sqrt(dx * dx + dy * dy + dz * dz);
 			if (dist < SNIS_WARP_GATE_THRESHOLD) {
 				sslist[nsslist] = i;
 				nsslist++;
@@ -11469,7 +11469,7 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 	}
 	/* Figure out what we selected */
 	selection = sslist[selection - 1];
-	if (selection < 1 || selection > nservers) {
+	if (selection < 0 || selection >= nservers) {
 		free(gameserver);
 		return;
 	}
