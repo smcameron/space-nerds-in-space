@@ -9189,7 +9189,7 @@ static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
 		new_nav_camera_pos_factor = 1.0;
 		break;
 	}
-	float camera_pos_delta = 0.3 * (new_nav_camera_pos_factor - nav_camera_pos_factor);
+	float camera_pos_delta = 0.05 * (new_nav_camera_pos_factor - nav_camera_pos_factor);
 	nav_camera_pos_factor += camera_pos_delta;
 	cam_dist = 100.0 * nav_camera_pos_factor;
 
