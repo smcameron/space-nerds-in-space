@@ -7280,6 +7280,8 @@ finished:
 			"MNR-%s", mining_bot_name);
 	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
 	init_player(o, 1, NULL);
+	if (warpgate_number != (uint8_t) -1) /* Give player a little boost out of the warp gate */
+		o->tsd.ship.velocity = MAX_PLAYER_VELOCITY;
 	o->alive = 1;
 }
 
