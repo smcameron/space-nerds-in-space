@@ -9161,7 +9161,7 @@ static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
 	float x1, y1, z1, x2, y2, z2;
 	static struct mesh *axes = NULL;
 	const float starmap_mesh_scale = 1.0 * SNIS_WARP_GATE_THRESHOLD;
-	const float starmap_grid_size = 5.0;
+	const float starmap_grid_size = 6.0;
 	float cam_dist;
 	static float nav_camera_pos_factor = 1.0;
 	float new_nav_camera_pos_factor;
@@ -9244,11 +9244,11 @@ static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
 
 	/* Setup 3d grid entities */
 	for (i = 0; i < (int) starmap_grid_size; i++) {
-		float x = ((float) i - 0.5 * (starmap_grid_size - 1.0)) * starmap_mesh_scale - ox;
+		float x = (i - 0.5 * (starmap_grid_size - 1.0)) * starmap_mesh_scale;
 		for (j = 0; j < (int) starmap_grid_size; j++) {
-			float y = ((float) j - 0.5 * (starmap_grid_size - 1.0)) * starmap_mesh_scale - oy;
+			float y = (j - 0.5 * (starmap_grid_size - 1.0)) * starmap_mesh_scale;
 			for (k = 0; k < (int) starmap_grid_size; k++) {
-				float z = ((float) k - 0.5 * (starmap_grid_size - 1.0)) * starmap_mesh_scale - oz;
+				float z = (k - 0.5 * (starmap_grid_size - 1.0)) * starmap_mesh_scale;
 				(void) add_entity(instrumentecx, axes, x, y, z, UI_COLOR(starmap_grid_color));
 			}
 		}
