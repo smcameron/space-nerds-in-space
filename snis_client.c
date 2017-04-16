@@ -6743,6 +6743,8 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 {
 	static int first_time = 1;
 	static union vec3 lastp;
+	static double lasttime = 0;
+	double thistime;
 	union vec3 p = { { o->x, o->y, o->z } };
 	union vec3 v;
 	float m;
@@ -6752,6 +6754,7 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 	if (first_time) {
 		lastp = p;
 		first_time = 0;
+		lasttime = universe_timestamp() - 1.0;
 		return;
 	}
 
@@ -6761,30 +6764,49 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 		max = m;
 	lastp = p;
 
-	if (m < MAX_PLAYER_VELOCITY * 1.5 && *warp_tunnel != NULL) {
-		remove_entity(ecx, *warp_tunnel);
-		*warp_tunnel = NULL;
+	/* Suppress spurious warp tunnel on switching to main view.
+	 * Keep track of the last time we went through here. If we switch away
+	 * from the main screen or the weapons screen for awhile and a lot of
+	 * time goes by, and we travel some distance, we do not want to interpret
+	 * that distance traveled as velocity without accounting for the time it
+	 * took.
+	 */
+	thistime = universe_timestamp();
+	printf("thistime - lasttime = %lf\n", thistime - lasttime);
+	if (thistime - lasttime > 0.5) {
+		if (*warp_tunnel) {
+			remove_entity(ecx, *warp_tunnel);
+			*warp_tunnel = NULL;
+		}
+		lasttime = thistime;
+		return;
+	}
+	lasttime = thistime;
+
+	if (m <= MAX_PLAYER_VELOCITY) {
+		if (*warp_tunnel) {
+			remove_entity(ecx, *warp_tunnel);
+			*warp_tunnel = NULL;
+		}
 		return;
 	}
 
-	if (m > MAX_PLAYER_VELOCITY * 1.5) {
-		if (m > 2500)
-			m = 2500;
-		float new_alpha = max_alpha * ((m - MAX_PLAYER_VELOCITY * 1.5) /
-						(2500 - MAX_PLAYER_VELOCITY * 1.5));
-		if (*warp_tunnel == NULL) {
-			union vec3 down_x_axis = { { 1, 0, 0 } };
-			union vec3 up = { {0, 1, 0} };
-			union quat orientation;
-			vec3_normalize_self(&v);
-			quat_from_u2v(&orientation, &down_x_axis, &warp_tunnel_direction, &up);
-			*warp_tunnel = add_entity(ecx, warp_tunnel_mesh, o->x, o->y, o->z, SHIP_COLOR);
-			update_entity_material(*warp_tunnel, &warp_tunnel_material);
-			update_entity_orientation(*warp_tunnel, &orientation);
-		}
-		entity_update_alpha(*warp_tunnel, new_alpha);
-		warp_tunnel_material.texture_mapped_unlit.alpha = new_alpha;
+	if (m > 2500)
+		m = 2500;
+	float new_alpha = max_alpha * ((m - MAX_PLAYER_VELOCITY * 1.5) /
+					(2500 - MAX_PLAYER_VELOCITY * 1.5));
+	if (*warp_tunnel == NULL) {
+		union vec3 down_x_axis = { { 1, 0, 0 } };
+		union vec3 up = { {0, 1, 0} };
+		union quat orientation;
+		vec3_normalize_self(&v);
+		quat_from_u2v(&orientation, &down_x_axis, &warp_tunnel_direction, &up);
+		*warp_tunnel = add_entity(ecx, warp_tunnel_mesh, o->x, o->y, o->z, SHIP_COLOR);
+		update_entity_material(*warp_tunnel, &warp_tunnel_material);
+		update_entity_orientation(*warp_tunnel, &orientation);
 	}
+	entity_update_alpha(*warp_tunnel, new_alpha);
+	warp_tunnel_material.texture_mapped_unlit.alpha = new_alpha;
 }
 
 
