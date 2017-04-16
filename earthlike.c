@@ -738,11 +738,16 @@ static void usage(void)
 	fprintf(stderr, "   -c, craters : number of craters to add.\n");
 	fprintf(stderr, "   -h, height : png file containing height map data to sample for terrain\n");
 	fprintf(stderr, "   -H, heightmap-output : prefix of filename for height map output data\n");
+	fprintf(stderr, "                Default is to append '-heightmap' to the output filename\n");
+	fprintf(stderr, "                prefex (-o option). If the -o option is not specified, then\n");
+	fprintf(stderr, "                'heightmap' is used.\n");
 	fprintf(stderr, "   -k, shrink : factor to shrink each recursive iteration.  Default is 0.55\n");
 	fprintf(stderr, "   -l, land : png file containing land color data to sample for terrain\n");
 	fprintf(stderr, "   -L, land fraction: Range 0.0 to 1.0, approximate fraction of planet to be land\n");
-	fprintf(stderr, "   -n, normal : filename prefix for normal map images, default is 'normalmap'\n");
-	fprintf(stderr, "   -o, output : filename prefix for output images, default is 'heightmap'\n");
+	fprintf(stderr, "   -n, normal : filename prefix for normal map images, default is to append\n");
+	fprintf(stderr, "                '-normalmap' to the output filename prefex (-o option). If the\n");
+	fprintf(stderr, "                -o option is not specified, then 'normalmap' is used.\n");
+	fprintf(stderr, "   -o, output : filename prefix for output images, default is 'terrainmap'\n");
 	fprintf(stderr, "   -O, oceanlevel : set sealevel, default is 0.08\n");
 	fprintf(stderr, "   -r, rlimit : limit to how small bumps may get before stopping recursion\n");
 	fprintf(stderr, "                default rlimit is 0.005\n");
@@ -873,6 +878,24 @@ static void process_options(int argc, char *argv[])
 			fprintf(stderr, "Unknown option.\n");
 			usage();
 		}
+	}
+
+	/* Set a reasonable default normalmap file name if none is specified */
+	if (strcmp(normal_file_prefix, "normalmap") == 0 &&
+		strcmp(output_file_prefix, "terrainmap") != 0) {
+		char new_normalmap_prefix[PATH_MAX];
+
+		snprintf(new_normalmap_prefix, PATH_MAX, "%s-normalmap", output_file_prefix);
+		normal_file_prefix = strdup(new_normalmap_prefix);
+	}
+
+	/* Set a reasonable default heightmap file name if none is specified */
+	if (strcmp(normal_file_prefix, "heightmap") == 0 &&
+		strcmp(output_file_prefix, "terrainmap") != 0) {
+		char new_normalmap_prefix[PATH_MAX];
+
+		snprintf(new_normalmap_prefix, PATH_MAX, "%s-heightmap", output_file_prefix);
+		normal_file_prefix = strdup(new_normalmap_prefix);
 	}
 }
 

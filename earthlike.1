@@ -61,6 +61,9 @@ Name of file containing input heightmap data.  This should be an
 .TP
 -H, --heightmap-output
 Prefix for name of 6 output heightmap png image files.
+If this option is omitted but the -o option is used, then "-heightmap"
+is appended to the prefix specified for the -o option.  If the
+-o option is also omitted, then "heightmap" will be used by default.
 .TP
 -k, --shrink
 Factor by which to shrink "sub-bumps" relative to "bumps" in the recursive bump-adding
@@ -75,9 +78,13 @@ Approximate fraction of planet that should be land.  Range is 0.0 to 1.0
 .TP
 -n, --normal
 Name of prefix to use for filenames of output normal map images.
+If this option is omitted but the -o option is used, then "-normalmap"
+is appended to the prefix specified for the -o option.  If the
+-o option is also omitted, then "normalmap" will be used by default.
 .TP
 -o, --output
 Name of prefix to use for filenames of output terrain images.
+By default, "terrainmap" is used.
 .TP
 -O, --oceanlevel
 Value to use to determine sealevel.  Default is 0.08.
