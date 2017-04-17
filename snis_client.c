@@ -6772,7 +6772,6 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 	 * took.
 	 */
 	thistime = universe_timestamp();
-	printf("thistime - lasttime = %lf\n", thistime - lasttime);
 	if (thistime - lasttime > 0.5) {
 		if (*warp_tunnel) {
 			remove_entity(ecx, *warp_tunnel);
