@@ -100,7 +100,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_WARPDRIVE, "bwb");
 	rc |= init_opcode_def(OPCODE_ENGAGE_WARP, "bwb");
 	rc |= init_opcode_def(OPCODE_ROLE_ONSCREEN, "bb");
-	rc |= init_opcode_def(OPCODE_SCI_SELECT_TARGET, "bw");
+	rc |= init_opcode_def(OPCODE_SCI_SELECT_TARGET, "bbw");
 	rc |= init_opcode_def(OPCODE_UPDATE_DAMAGE, "n/a");
 	rc |= init_opcode_def(OPCODE_REQUEST_LASER, "b");
 	rc |= init_opcode_def(OPCODE_REQUEST_LASER_WAVELENGTH, "bwb");

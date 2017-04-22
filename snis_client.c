@@ -2527,9 +2527,9 @@ static void queue_to_server(struct packed_buffer *pb)
 	wakeup_gameserver_writer();
 }
 
-static void request_sci_select_target(uint32_t id)
+static void request_sci_select_target(uint8_t selection_type, uint32_t id)
 {
-	queue_to_server(snis_opcode_pkt("bw", OPCODE_SCI_SELECT_TARGET, id));
+	queue_to_server(snis_opcode_pkt("bbw", OPCODE_SCI_SELECT_TARGET, selection_type, id));
 }
 
 /* TODO: this needs to be converted to 3D or deleted. */
@@ -4772,24 +4772,30 @@ static int process_sci_select_target_packet(void)
 {
 	unsigned char buffer[sizeof(struct snis_sci_select_target_packet)];
 	uint32_t id;
+	uint8_t selection_type;
 	int rc, i;
 
-	rc = read_and_unpack_buffer(buffer, "w", &id);
+	rc = read_and_unpack_buffer(buffer, "bw", &selection_type, &id);
 	if (rc != 0)
 		return rc;
 
-	if (id == (uint32_t) -1) { /* deselection */
-		curr_science_guy = NULL;
-		wwviaudio_add_sound(SCIENCE_DATA_ACQUIRED_SOUND);
+	switch (selection_type) {
+	case OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT:
+		if (id == (uint32_t) -1) { /* deselection */
+			curr_science_guy = NULL;
+			wwviaudio_add_sound(SCIENCE_DATA_ACQUIRED_SOUND);
+			return 0;
+		}
+
+		i = lookup_object_by_id(id);
+		if (i >= 0) {
+			curr_science_guy = &go[i];
+			wwviaudio_add_sound(SCIENCE_DATA_ACQUIRED_SOUND);
+		}
+		return 0;
+	default:
 		return 0;
 	}
-
-	i = lookup_object_by_id(id);
-	if (i >= 0) {
-		curr_science_guy = &go[i];
-		wwviaudio_add_sound(SCIENCE_DATA_ACQUIRED_SOUND);
-	}
-	return 0;
 }
 
 static int process_sci_select_coords_packet(void)
@@ -11289,9 +11295,9 @@ static int science_button_press(int x, int y)
 	}
 	if (selected) {
 		if (curr_science_guy != selected)
-			request_sci_select_target(selected->id);
+			request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, selected->id);
 		else
-			request_sci_select_target((uint32_t) -1); /* deselect */
+			request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, (uint32_t) -1); /* deselect */
 	} else {
 		o = &go[my_ship_oid];
 		cx = SCIENCE_SCOPE_CX;

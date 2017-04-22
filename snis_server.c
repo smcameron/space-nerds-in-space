@@ -321,6 +321,7 @@ static struct bridge_data {
 	struct npc_bot_state npcbot;
 	int last_docking_permission_denied_time;
 	uint32_t science_selection;
+	uint8_t science_selection_type;
 	int current_displaymode;
 	struct ssgl_game_server warp_gate_ticket;
 	unsigned char pwdhash[20];
@@ -10435,11 +10436,11 @@ static int process_request_weapons_yaw_pitch(struct game_client *c)
 	return 0;
 }
 
-static void science_select_target(struct game_client *c, uint32_t id)
+static void science_select_target(struct game_client *c, uint8_t selection_type, uint32_t id)
 {
 	/* just turn it around and fan it out to all the right places */
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
-			snis_opcode_pkt("bw", OPCODE_SCI_SELECT_TARGET, id),
+			snis_opcode_pkt("bbw", OPCODE_SCI_SELECT_TARGET, selection_type, id),
 			ROLE_SCIENCE);
 	/* remember sci selection for retargeting mining bot */
 	bridgelist[c->bridge].science_selection = id;
@@ -10448,13 +10449,14 @@ static void science_select_target(struct game_client *c, uint32_t id)
 static int process_sci_select_target(struct game_client *c)
 {
 	unsigned char buffer[10];
+	uint8_t selection_type;
 	uint32_t id;
 	int rc;
 
-	rc = read_and_unpack_buffer(c, buffer, "w", &id);
+	rc = read_and_unpack_buffer(c, buffer, "bw", &selection_type, &id);
 	if (rc)
 		return rc;
-	science_select_target(c, id);
+	science_select_target(c, selection_type, id);
 	return 0;
 }
 
@@ -19548,7 +19550,7 @@ static void nl_target_n(void *context, int argc, char *argv[], int pos[], union 
 	sprintf(reply, "Targeting sensors on %s", namecopy);
 	free(namecopy);
 	queue_add_text_to_speech(c, reply);
-	science_select_target(c, id);
+	science_select_target(c, OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, id);
 	return;
 
 target_lost:
@@ -19602,7 +19604,7 @@ static void nl_target_nq(void *context, int argc, char *argv[], int pos[], union
 	sprintf(reply, "Targeting sensors on %s", namecopy);
 	free(namecopy);
 	queue_add_text_to_speech(c, reply);
-	science_select_target(c, id);
+	science_select_target(c, OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, id);
 	return;
 
 target_lost:
