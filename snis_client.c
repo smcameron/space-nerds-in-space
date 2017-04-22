@@ -11096,6 +11096,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		return;
 	x = SCIENCE_DATA_X + 10 * SCREEN_WIDTH / 800;
 	y = SCIENCE_DATA_Y + 15 * SCREEN_HEIGHT / 600;
+	sng_set_foreground(UI_COLOR(sci_wireframe));
 	snis_draw_rectangle(0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
 	sprintf(buffer, "NAME: %s", o ? o->sdata.name : "");
