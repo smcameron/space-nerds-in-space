@@ -51,7 +51,7 @@ void ui_element_draw(struct ui_element *element)
 void ui_element_list_add_element(struct ui_element_list **list,
 					struct ui_element *element)
 {
-	struct ui_element_list *l;
+	struct ui_element_list *l, *i;
 
 	if (*list == NULL) {
 		*list = malloc(sizeof(**list));
@@ -61,8 +61,13 @@ void ui_element_list_add_element(struct ui_element_list **list,
 	}
 	l = malloc(sizeof(*l));
 	l->element = element;
-	l->next = *list;
-	*list = l;
+	l->next = NULL;
+	/* We need to add it to the end of the list, not the beginning
+	 * so that the focus order is correct.
+	 */
+	for (i = *list; i->next != NULL;)
+		i = i->next;
+	i->next = l;
 }
 
 void ui_element_list_free(struct ui_element_list *list)
