@@ -463,6 +463,8 @@ static struct my_vect_obj placeholder_part_spun[128];
 
 static struct snis_entity *curr_science_guy = NULL;
 static struct snis_entity *prev_science_guy = NULL;
+uint32_t curr_science_waypoint = (uint32_t) -1;
+uint32_t prev_science_waypoint = (uint32_t) -1;
 
 static void to_snis_heading_mark(const union quat *q, double *heading, double *mark)
 {
@@ -4779,11 +4781,26 @@ static int process_sci_select_target_packet(void)
 			wwviaudio_add_sound(SCIENCE_DATA_ACQUIRED_SOUND);
 			return 0;
 		}
-
 		i = lookup_object_by_id(id);
 		if (i >= 0) {
 			curr_science_guy = &go[i];
+			curr_science_waypoint = (uint32_t) -1;
+			prev_science_waypoint = (uint32_t) -1;
 			wwviaudio_add_sound(SCIENCE_DATA_ACQUIRED_SOUND);
+		}
+		return 0;
+	case OPCODE_SCI_SELECT_TARGET_TYPE_WAYPOINT:
+		if (id >= sci_ui.nwaypoints && id != (uint32_t) -1) /* not valid */
+			return 0;
+		wwviaudio_add_sound(SCIENCE_DATA_ACQUIRED_SOUND);
+		if (id == curr_science_waypoint || id == (uint32_t) -1) {
+			curr_science_waypoint = -1; /* deselect */
+			prev_science_waypoint = -1;
+		} else {
+			curr_science_waypoint = id;
+			prev_science_waypoint = id;
+			curr_science_guy = NULL;
+			prev_science_guy = NULL;
 		}
 		return 0;
 	default:
@@ -5193,8 +5210,26 @@ static int process_set_waypoint(void)
 		rc = read_and_unpack_buffer(buffer, "b", &count);
 		if (rc)
 			return rc;
-		if (count <= MAXWAYPOINTS)
+		if (count <= MAXWAYPOINTS) {
 			sci_ui.nwaypoints = count;
+			if (count <= curr_science_waypoint) {
+				curr_science_waypoint = -1;
+				prev_science_waypoint = -1;
+			}
+		}
+		return 0;
+	case OPCODE_SET_WAYPOINT_UPDATE_SELECTION: /* silent update of selection */
+		rc = read_and_unpack_buffer(buffer, "w", &row);
+		if (rc)
+			return rc;
+		if (row == (uint32_t) -1 || row < sci_ui.nwaypoints) {
+			curr_science_waypoint = row;
+			prev_science_waypoint = row;
+			if (row != (uint32_t) -1) {
+				curr_science_guy = NULL;
+				prev_science_guy = NULL;
+			}
+		}
 		return 0;
 	default:
 		fprintf(stderr, "snis_client: Bad subcode for OPCODE_SET_WAYPOINT: %hhu\n", subcode);
@@ -7584,6 +7619,7 @@ static void snis_draw_arrow(GtkWidget *w, GdkGC *gc, gint x, gint y, gint r,
 struct science_data {
 	int sx, sy; /* screen coords on scope */
 	struct snis_entity *o;
+	int waypoint_index;
 };
 static struct science_data science_guy[MAXGAMEOBJS] = { {0}, };
 static int nscience_guys = 0;
@@ -7793,7 +7829,9 @@ static void draw_sciplane_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_conte
 	int i, rc, color;
 	struct snis_entity *shooter=0, *shootee=0;
 
-	for (i=0; i<nscience_guys; i++) {
+	for (i = 0; i < nscience_guys; i++) {
+		if (!science_guy[i].o)
+			continue;
 		if (science_guy[i].o->id == laserbeam->tsd.laserbeam.origin)
 			shooter = science_guy[i].o;
 		if (science_guy[i].o->id == laserbeam->tsd.laserbeam.target)
@@ -7905,7 +7943,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		selected_guy_popout = 1;
 		vec3_init(&selected_pos, curr_science_guy->x, curr_science_guy->y, curr_science_guy->z);
 
-		/* take currnet position, find dir from ship to it, get heading/mark, recalc pos with mark=0 */
+		/* take current position, find dir from ship to it, get heading/mark, recalc pos with mark=0 */
 		double dist, heading, mark;
 		union vec3 selected_dir;
 		vec3_sub(&selected_dir, &selected_pos, &ship_pos);
@@ -7914,6 +7952,20 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		vec3_add_self(&selected_m0_pos, &ship_pos);
 
 		tween_get_value(sciplane_tween, TWEEN_ACTIVE_OBJECT, curr_science_guy->id, &selected_guy_tween);
+	} else if (curr_science_waypoint != (uint32_t) -1) {
+		double *wp = &sci_ui.waypoint[curr_science_waypoint][0];
+		selected_guy_popout = 1;
+		vec3_init(&selected_pos, wp[0], wp[1], wp[2]);
+
+		/* take current position, find dir from ship to it, get heading/mark, recalc pos with mark=0 */
+		double dist, heading, mark;
+		union vec3 selected_dir;
+		vec3_sub(&selected_dir, &selected_pos, &ship_pos);
+		vec3_to_heading_mark(&selected_dir, &dist, &heading, &mark);
+		heading_mark_to_vec3(dist, heading, 0, &selected_m0_pos);
+		vec3_add_self(&selected_m0_pos, &ship_pos);
+
+		tween_get_value(sciplane_tween, TWEEN_ACTIVE_WAYPOINT, curr_science_waypoint, &selected_guy_tween);
 	}
 
 	/* cam orientation is locked with world */
@@ -7982,10 +8034,10 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 							UI_COLOR(sci_basis_ring_3));
 
 	int i;
-	for (i=0; i<2; ++i) {
+	for (i = 0; i < 2; ++i) {
 		int color;
 		union quat ind_orientation;
-		if (i==0) {
+		if (i == 0) {
 			color = UI_COLOR(sci_plane_ship_vector);
 			ind_orientation = o->orientation;
 		} else {
@@ -8195,6 +8247,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 			/* cache screen coords for mouse picking */
 			science_guy[nscience_guys].o = &go[i];
+			science_guy[nscience_guys].waypoint_index = -1;
 			science_guy[nscience_guys].sx = sx;
 			science_guy[nscience_guys].sy = sy;
 			if (&go[i] == curr_science_guy) {
@@ -8210,10 +8263,92 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			/* If we moved the beam off our guy, and back on, select him again. */
 			curr_science_guy = prev_science_guy;
 			prev_science_guy = NULL;
-		}
-		else if (!selected_guy_still_visible && curr_science_guy) {
+		} else if (!selected_guy_still_visible && curr_science_guy) {
 			prev_science_guy = curr_science_guy;
 			curr_science_guy = NULL;
+		}
+
+		/* Draw the waypoints */
+		for (i = 0; i < sci_ui.nwaypoints; i++) {
+			double *wp = &sci_ui.waypoint[i][0];
+			dist2 = dist3dsqrd(wp[0] - o->x, wp[1] - o->y, wp[2] - o->z);
+
+			if (dist2 > range * range) {
+				/* follow selected guy outside bounds */
+				if (!(selected_guy_popout && curr_science_waypoint == i)) {
+					continue; /* not close enough */
+				}
+			}
+			dist = sqrt(dist2);
+
+			union vec3 contact_pos = { { wp[0], wp[1], wp[2] } };
+			union vec3 dir;
+			double heading, mark;
+			float tween = 0;
+			int draw_popout_arc = 0;
+
+			vec3_sub(&dir, &contact_pos, &ship_pos);
+			vec3_to_heading_mark(&dir, 0, &heading, &mark);
+
+			/* get tween from bank and draw a popout arc */
+			tween_get_value_and_decay(sciplane_tween, TWEEN_ACTIVE_WAYPOINT, i, &tween);
+			draw_popout_arc = 1;
+
+			union vec3 display_pos;
+			heading_mark_to_vec3(dist, heading, mark * tween, &display_pos);
+			vec3_add_self(&display_pos, &ship_pos);
+
+			if (draw_popout_arc && tween > 0) { /* show the flyout arc */
+				sng_set_foreground(UI_COLOR(sci_plane_popout_arc));
+				draw_3d_mark_arc(w, gc, instrumentecx, &ship_pos, dist, heading, mark * tween * 0.9);
+			}
+
+			float sx, sy;
+			if (!transform_point(instrumentecx, display_pos.v.x, display_pos.v.y, display_pos.v.z,
+						&sx, &sy)) {
+				char buf[20];
+
+				sng_set_foreground(UI_COLOR(sci_waypoint));
+				snis_draw_line(sx - 10, sy, sx + 10, sy);
+				snis_draw_line(sx, sy - 10, sx, sy + 10);
+				snprintf(buf, sizeof(buf), "WP-%02d", i);
+				sng_abs_xy_draw_string(buf, PICO_FONT, sx + 10, sy - 10);
+				if (i == curr_science_waypoint)
+					sng_draw_circle(0, sx, sy, 10);
+			}
+
+			if (selected_guy_popout) {
+				int popout = 0;
+
+				/* check if contact is close to selected in 3d space */
+				double dist_to_selected = vec3_dist(&selected_pos, &contact_pos);
+				if (dist_to_selected < mark_popout_extra_dist) {
+					popout = 1;
+				} else {
+					/* check if contact is close to selected on sciplane */
+					union vec3 contact_m0_pos;
+					heading_mark_to_vec3(dist, heading, 0, &contact_m0_pos);
+					vec3_add_self(&contact_m0_pos, &ship_pos);
+
+					double dist_to_selected_m0 = vec3_dist(&selected_m0_pos, &contact_m0_pos);
+					if (dist_to_selected_m0 < mark_popout_extra_dist) {
+						popout = 1;
+					}
+				}
+
+				if (popout) {
+					/* start the mark tween to popout */
+					tween_add_or_update(sciplane_tween, TWEEN_ACTIVE_WAYPOINT,
+								i, 0, TWEEN_EXP_DECAY, mark_popout_rate, 0, 1);
+				}
+			}
+
+			/* cache screen coords for mouse picking */
+			science_guy[nscience_guys].o = NULL;
+			science_guy[nscience_guys].waypoint_index = i;
+			science_guy[nscience_guys].sx = sx;
+			science_guy[nscience_guys].sy = sy;
+			nscience_guys++;
 		}
 
 		/* draw in the laserbeams */
@@ -8320,6 +8455,14 @@ static void draw_science_3d_waypoints(struct snis_entity *o, double range)
 		snis_draw_line(sx, sy - 10, sx, sy + 10);
 		snprintf(buf, sizeof(buf), "WP-%02d", i);
 		sng_abs_xy_draw_string(buf, PICO_FONT, sx + 10, sy - 10);
+		/* cache screen coords for mouse picking */
+		science_guy[nscience_guys].o = NULL;
+		science_guy[nscience_guys].waypoint_index = i;
+		science_guy[nscience_guys].sx = sx;
+		science_guy[nscience_guys].sy = sy;
+		nscience_guys++;
+		if (i == curr_science_waypoint)
+			sng_draw_circle(0, sx, sy, 10);
 	}
 }
 
@@ -8420,6 +8563,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 
 		/* cache screen coords for mouse picking */
 		science_guy[nscience_guys].o = &go[i];
+		science_guy[nscience_guys].waypoint_index = -1;
 		science_guy[nscience_guys].sx = x;
 		science_guy[nscience_guys].sy = y;
 		if (&go[i] == curr_science_guy)
@@ -9661,15 +9805,23 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		if (i == 0)
 			quat_mul(&ind_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 		else {
-			if (!curr_science_guy)
-				continue;
-
 			union vec3 up = { { 0, 1, 0 } };
 			union vec3 xaxis = { { 1, 0, 0 } };
-			union vec3 to_science_guy = { { curr_science_guy->x - o->x,
-						  curr_science_guy->y - o->y,
-						  curr_science_guy->z - o->z, } };
-			quat_from_u2v(&ind_orientation, &xaxis, &to_science_guy, &up);
+
+			if (!curr_science_guy && curr_science_waypoint == (uint32_t) -1)
+				continue;
+
+			if (curr_science_guy) {
+				union vec3 sci_guy = { { curr_science_guy->x - o->x,
+							 curr_science_guy->y - o->y,
+							 curr_science_guy->z - o->z, } };
+				quat_from_u2v(&ind_orientation, &xaxis, &sci_guy, &up);
+			} else {
+				union vec3 sci_wp = { { sci_ui.waypoint[curr_science_waypoint][0]  - o->x,
+							sci_ui.waypoint[curr_science_waypoint][1]  - o->y,
+							sci_ui.waypoint[curr_science_waypoint][2]  - o->z, } };
+				quat_from_u2v(&ind_orientation, &xaxis, &sci_wp, &up);
+			}
 		}
 
 		/* heading arrow head */
@@ -10857,9 +11009,10 @@ static void science_select_waypoint_pressed(void *cookie)
 	struct button **b = cookie;
 	int index = b - &sci_ui.select_waypoint_button[0];
 
-	queue_to_server(snis_opcode_subcode_pkt("bbb", OPCODE_SET_WAYPOINT,
-						OPCODE_SET_WAYPOINT_CLEAR,
-						(uint8_t) index));
+	if (index == curr_science_waypoint)
+		index = -1;
+	request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_WAYPOINT,
+					(uint32_t) index);
 }
 
 static void science_add_current_pos_pressed(void *cookie)
@@ -11228,18 +11381,30 @@ static void update_emf_detector(uint8_t emf_value)
 static int science_button_press(int x, int y)
 {
 	int i;
-	int xdist, ydist, dist2;
+	int xdist, ydist, dist2, mindist;
 	struct snis_entity *selected;
+	int waypoint_selected = -1;
 
 	selected = NULL;
+	mindist = -1;
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < nscience_guys; i++) {
 		xdist = (x - science_guy[i].sx);
 		ydist = (y - science_guy[i].sy);
 		dist2 = xdist * xdist + ydist * ydist; 
 		if (dist2 < SCIDIST2) {
-			if (curr_science_guy == science_guy[i].o || science_guy[i].o->sdata.science_data_known) {
-				selected = science_guy[i].o;
+			if (dist2 < mindist || mindist == -1) {
+				if (science_guy[i].o) {
+					if (curr_science_guy == science_guy[i].o ||
+						science_guy[i].o->sdata.science_data_known) {
+						selected = science_guy[i].o;
+						waypoint_selected = -1;
+					}
+				} else {
+					waypoint_selected = science_guy[i].waypoint_index;
+					selected = NULL;
+				}
+				mindist = dist2;
 			}
 		}
 	}
@@ -11248,9 +11413,15 @@ static int science_button_press(int x, int y)
 			request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, selected->id);
 		else
 			request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, (uint32_t) -1); /* deselect */
+	} else if (waypoint_selected != -1) {
+		if (curr_science_waypoint != waypoint_selected)
+			request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_WAYPOINT,
+					(uint32_t) waypoint_selected);
+		else
+			request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_WAYPOINT,
+					(uint32_t) -1); /* deselect */
 	}
 	pthread_mutex_unlock(&universe_mutex);
-
 	return 0;
 }
 
@@ -11350,7 +11521,7 @@ skip_data:
 	sng_abs_xy_draw_string("Shield Profile (nm)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 30);
 }
 
-static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o)
+static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o, int waypoint_index)
 {
 	char buffer[40];
 	char buffer2[40];
@@ -11358,7 +11529,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	double dx, dy, dz, range;
 	char *the_faction;
 
-	yinc = 25 * SCREEN_HEIGHT / 600;
+	yinc = 22 * SCREEN_HEIGHT / 600;
 
 	if (!ship)
 		return;
@@ -11367,19 +11538,24 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_set_foreground(UI_COLOR(sci_wireframe));
 	snis_draw_rectangle(0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
-	sprintf(buffer, "NAME: %s", o ? o->sdata.name : "");
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
-	if (o && (o->type == OBJTYPE_SHIP1 ||
-		o->type == OBJTYPE_SHIP2 ||
-		o->type == OBJTYPE_WARPGATE ||
-		o->type == OBJTYPE_STARBASE)) {
-		y += 25;
-		the_faction = o ? 
-			o->sdata.faction >= 0 &&
-			o->sdata.faction < nfactions() ?
-				faction_name(o->sdata.faction) : "UNKNOWN" : "UNKNOWN";
-		sprintf(buffer, "ORIG: %s", the_faction);
+	if (waypoint_index != (uint32_t) -1)  {
+		sprintf(buffer, "NAME: WAYPOINT-%02d", waypoint_index);
 		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+	} else {
+		sprintf(buffer, "NAME: %s", o ? o->sdata.name : "");
+		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+		if (o && (o->type == OBJTYPE_SHIP1 ||
+			o->type == OBJTYPE_SHIP2 ||
+			o->type == OBJTYPE_WARPGATE ||
+			o->type == OBJTYPE_STARBASE)) {
+			y += yinc;
+			the_faction = o ?
+				o->sdata.faction >= 0 &&
+				o->sdata.faction < nfactions() ?
+					faction_name(o->sdata.faction) : "UNKNOWN" : "UNKNOWN";
+			sprintf(buffer, "ORIG: %s", the_faction);
+			sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+		}
 	}
 
 	if (o) {
@@ -11403,7 +11579,9 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 			sprintf(buffer, "TYPE: %s", "UNKNOWN"); 
 			break;
 		}
-	} else  {
+	} else if (waypoint_index != (uint32_t) -1) {
+		sprintf(buffer, "TYPE: WAYPOINT");
+	} else {
 		sprintf(buffer, "TYPE:"); 
 	}
 	y += yinc;
@@ -11411,6 +11589,8 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 
 	if (o)
 		sprintf(buffer, "X: %0.2lf", o->x);
+	else if (waypoint_index != (uint32_t) -1)
+		sprintf(buffer, "X: %0.2lf", sci_ui.waypoint[waypoint_index][0]);
 	else
 		sprintf(buffer, "X:");
 	y += yinc;
@@ -11418,6 +11598,8 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 
 	if (o)
 		sprintf(buffer, "Y: %0.2lf", o->y);
+	else if (waypoint_index != (uint32_t) -1)
+		sprintf(buffer, "Y: %0.2lf", sci_ui.waypoint[waypoint_index][1]);
 	else
 		sprintf(buffer, "Y:");
 	y += yinc;
@@ -11425,15 +11607,23 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 
 	if (o)
 		sprintf(buffer, "Z: %0.2lf", o->z);
+	else if (waypoint_index != (uint32_t) -1)
+		sprintf(buffer, "Z: %0.2lf", sci_ui.waypoint[waypoint_index][2]);
 	else
 		sprintf(buffer, "Z:");
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
-	if (o) { 
-		dx = o->x - go[my_ship_oid].x;
-		dy = o->y - go[my_ship_oid].y;
-		dz = o->z - go[my_ship_oid].z;
+	if (o || waypoint_index != (uint32_t) -1) {
+		if (o) {
+			dx = o->x - go[my_ship_oid].x;
+			dy = o->y - go[my_ship_oid].y;
+			dz = o->z - go[my_ship_oid].z;
+		} else {
+			dx = sci_ui.waypoint[waypoint_index][0] - go[my_ship_oid].x;
+			dy = sci_ui.waypoint[waypoint_index][1] - go[my_ship_oid].y;
+			dz = sci_ui.waypoint[waypoint_index][2] - go[my_ship_oid].z;
+		}
 
 		union quat q_to_o;
 		union vec3 dir_forward = {{1, 0, 0}};
@@ -11454,7 +11644,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	y += yinc;
 	sng_abs_xy_draw_string(buffer2, TINY_FONT, x, y);
 
-	if (o) {
+	if (o || waypoint_index != (uint32_t) -1) {
 		range = dist3d(dx, dy, dz);
 		sprintf(buffer, "RANGE: %8.2lf", range);
 	} else {
@@ -11463,7 +11653,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
-	if (o) {
+	if (o || waypoint_index != (uint32_t) -1) {
 		sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * range / (XKNOWN_DIM / 2.0));
 	} else {
 		sprintf(buffer, "WARP FACTOR:");
@@ -11510,6 +11700,10 @@ static void draw_science_waypoints(GtkWidget *w)
 	sng_abs_xy_draw_string("Y", NANO_FONT, txx(350), txy(180));
 	sng_abs_xy_draw_string("Z", NANO_FONT, txx(450), txy(180));
 	for (i = 0; i < sci_ui.nwaypoints; i++) {
+		if (i != curr_science_waypoint)
+			sng_set_foreground(UI_COLOR(sci_wireframe));
+		else
+			sng_set_foreground(UI_COLOR(sci_selected_waypoint));
 		snprintf(buffer, sizeof(buffer), "WP-%02d", i);
 		sng_abs_xy_draw_string(buffer, NANO_FONT, txx(100), txy(210 + i * 25));
 		snprintf(buffer, sizeof(buffer), "%10.1lf", sci_ui.waypoint[i][0]);
@@ -11519,6 +11713,7 @@ static void draw_science_waypoints(GtkWidget *w)
 		snprintf(buffer, sizeof(buffer), "%10.1lf", sci_ui.waypoint[i][2]);
 		sng_abs_xy_draw_string(buffer, NANO_FONT, txx(400), txy(210 + i * 25));
 	}
+	sng_set_foreground(UI_COLOR(sci_wireframe));
 	snis_draw_rectangle(0, txx(5), txy(80), txx(760), txy(480));
 }
 
@@ -11737,7 +11932,7 @@ static void show_science(GtkWidget *w)
 	case SCI_DETAILS_MODE_THREED:
 	default:
 		draw_science_details(w, gc);
-		draw_science_data(w, o, curr_science_guy);
+		draw_science_data(w, o, curr_science_guy, curr_science_waypoint);
 	}
 	show_common_screen(w, "SCIENCE");
 }
@@ -11775,7 +11970,7 @@ static void show_3d_science(GtkWidget *w)
 	sng_set_foreground(UI_COLOR(sci_ball_ring));
 	sng_draw_circle(0, cx, cy, r);
 	draw_all_the_3d_science_guys(w, o, zoom * 4.0, current_zoom * 4.0);
-	draw_science_data(w, o, curr_science_guy);
+	draw_science_data(w, o, curr_science_guy, curr_science_waypoint);
 	show_common_screen(w, "SCIENCE");
 }
 

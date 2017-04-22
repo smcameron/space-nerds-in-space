@@ -321,7 +321,6 @@ static struct bridge_data {
 	struct npc_bot_state npcbot;
 	int last_docking_permission_denied_time;
 	uint32_t science_selection;
-	uint8_t science_selection_type;
 	int current_displaymode;
 	struct ssgl_game_server warp_gate_ticket;
 	unsigned char pwdhash[20];
@@ -334,6 +333,7 @@ static struct bridge_data {
 	int requested_creation; /* whether user has requested creating new ship */
 	int nclients;
 	struct player_waypoint waypoint[MAXWAYPOINTS];
+	int selected_waypoint;
 	int nwaypoints;
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;
@@ -10443,7 +10443,16 @@ static void science_select_target(struct game_client *c, uint8_t selection_type,
 			snis_opcode_pkt("bbw", OPCODE_SCI_SELECT_TARGET, selection_type, id),
 			ROLE_SCIENCE);
 	/* remember sci selection for retargeting mining bot */
-	bridgelist[c->bridge].science_selection = id;
+	if (selection_type == OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT) {
+		bridgelist[c->bridge].selected_waypoint = -1;
+		bridgelist[c->bridge].science_selection = id;
+	}
+	if (selection_type == OPCODE_SCI_SELECT_TARGET_TYPE_WAYPOINT) {
+		if (id < bridgelist[c->bridge].nwaypoints || id == (uint32_t) -1) {
+			bridgelist[c->bridge].selected_waypoint = id;
+			bridgelist[c->bridge].science_selection = (uint32_t) -1;
+		}
+	}
 }
 
 static int process_sci_select_target(struct game_client *c)
@@ -12392,6 +12401,14 @@ static int process_set_waypoint(struct game_client *c)
 			for (int i = row; i < bridgelist[b].nwaypoints - 1; i++)
 				bridgelist[b].waypoint[i] = bridgelist[b].waypoint[i + 1];
 			bridgelist[b].nwaypoints--;
+			if (bridgelist[b].selected_waypoint >= 0) {
+				if (row == bridgelist[b].selected_waypoint)
+					bridgelist[b].selected_waypoint = -1;
+				else if (row < bridgelist[b].selected_waypoint)
+					bridgelist[b].selected_waypoint--;
+			} else {
+				bridgelist[b].selected_waypoint = -1;
+			}
 			set_waypoints_dirty_all_clients_on_bridge(c->shipid, 1);
 		}
 		return 0;
@@ -15697,6 +15714,9 @@ static void queue_up_client_waypoint_update(struct game_client *c)
 				b->waypoint[i].y, (int32_t) UNIVERSE_DIM,
 				b->waypoint[i].z, (int32_t) UNIVERSE_DIM));
 	}
+	pb_queue_to_client(c, snis_opcode_subcode_pkt("bbw", OPCODE_SET_WAYPOINT,
+				OPCODE_SET_WAYPOINT_UPDATE_SELECTION,
+				(uint32_t) b->selected_waypoint));
 	c->waypoints_dirty = 0;
 }
 
