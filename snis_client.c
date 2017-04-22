@@ -7691,13 +7691,16 @@ enum {
 
 struct tween_state
 {
-	char active;
-	uint32_t id;
+	uint32_t id; /* object id or waypoint index, depending on value of .active */
 	float value;
 	int mode;
 	float delta;
 	float min;
 	float max;
+	char active;
+#define TWEEN_INACTIVE 0
+#define TWEEN_ACTIVE_OBJECT 1
+#define TWEEN_ACTIVE_WAYPOINT 2
 };
 
 struct tween_map
@@ -7706,16 +7709,16 @@ struct tween_map
 	struct tween_state* states;
 };
 
-static struct tween_map* tween_init(int max_size)
+static struct tween_map *tween_init(int max_size)
 {
-	struct tween_map* result = malloc(sizeof(struct tween_map));
-	result->last_index=0;
+	struct tween_map *result = malloc(sizeof(struct tween_map));
+	result->last_index = 0;
 	result->states = malloc(sizeof(struct tween_state) * max_size);
-	memset(result->states,0,sizeof(struct tween_state) * max_size);
+	memset(result->states, 0, sizeof(struct tween_state) * max_size);
 	return result;
 }
 
-static void tween_update(struct tween_map* map)
+static void tween_update(struct tween_map *map)
 {
 	int i;
 	for (i=0; i < map->last_index; i++) {
@@ -7740,54 +7743,52 @@ static void tween_update(struct tween_map* map)
 
 		if (map->states[i].mode == TWEEN_EXP_DECAY || map->states[i].mode == TWEEN_EXP_DECAY) {
 			/* if we have decayed to < 1% then we are not active */
-			if (map->states[i].value < (map->states[i].max - map->states[i].min) * 0.01) {
-				map->states[i].active = 0;
-			}
+			if (map->states[i].value < (map->states[i].max - map->states[i].min) * 0.01)
+				map->states[i].active = TWEEN_INACTIVE;
 		}
 	}
 }
 
-static int __attribute__((unused)) tween_get_value(struct tween_map* map, uint32_t id, float *value)
+static int __attribute__((unused)) tween_get_value(struct tween_map *map, char active, uint32_t id, float *value)
 {
 	int i;
-	for (i=0; i < map->last_index; i++) {
-		if (map->states[i].active && map->states[i].id == id) {
+
+	for (i = 0; i < map->last_index; i++)
+		if (map->states[i].active == active && map->states[i].id == id) {
 			*value = map->states[i].value;
 			return 1;
 		}
-	}
 	return 0;
 }
 
-static int tween_get_value_and_decay(struct tween_map* map, uint32_t id, float *value)
+static int tween_get_value_and_decay(struct tween_map *map, char active, uint32_t id, float *value)
 {
 	int i;
-	for (i=0; i < map->last_index; i++) {
-		if (map->states[i].active && map->states[i].id == id) {
-			if (map->states[i].delta>0) {
+
+	for (i = 0; i < map->last_index; i++)
+		if (map->states[i].active == active && map->states[i].id == id) {
+			if (map->states[i].delta > 0)
 				map->states[i].delta = -map->states[i].delta;
-			}
 			*value = map->states[i].value;
 			return 1;
 		}
-	}
 	return 0;
 }
 
 
-static void tween_add_or_update(struct tween_map* map, uint32_t id, float initial_value,
+static void tween_add_or_update(struct tween_map *map, char active, uint32_t id, float initial_value,
 					int mode, float delta, float min, float max)
 {
 	int first_free = map->last_index;
         int i;
+
         for (i=0; i < map->last_index; i++) {
                 if (!map->states[i].active) {
-			if (i<first_free) {
-				first_free=i;
-			}
+			if (i < first_free)
+				first_free = i;
 			continue;
 		}
-		if (map->states[i].id == id) {
+		if (map->states[i].id == id && map->states[i].active == active) {
 			map->states[i].mode = mode;
 			map->states[i].delta = delta;
 			map->states[i].min = min;
@@ -7797,19 +7798,18 @@ static void tween_add_or_update(struct tween_map* map, uint32_t id, float initia
         }
 
 	map->states[first_free].id = id;
-	map->states[first_free].active = 1;
+	map->states[first_free].active = active;
 	map->states[first_free].value = initial_value;
 	map->states[first_free].mode = mode;
 	map->states[first_free].delta = delta;
 	map->states[first_free].min = min;
 	map->states[first_free].max = max;
 
-	if (first_free>=map->last_index) {
-		map->last_index = first_free+1;
-	}
+	if (first_free >= map->last_index)
+		map->last_index = first_free + 1;
 }
 
-static struct tween_map* sciplane_tween = 0;
+static struct tween_map *sciplane_tween = 0;
 
 static void draw_sciplane_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct snis_entity *o, struct snis_entity *laserbeam, double r)
 {
@@ -7862,7 +7862,7 @@ static void draw_sciplane_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_conte
 	union vec3 shooter_dir = {{shooter->x, shooter->y, shooter->z}};
 	vec3_sub_self(&shooter_dir, &ship_pos);
 	vec3_to_heading_mark(&shooter_dir, &shooter_range, &shooter_heading, &shooter_mark);
-	tween_get_value(sciplane_tween, shooter->id, &shooter_tween);
+	tween_get_value(sciplane_tween, TWEEN_ACTIVE_OBJECT, shooter->id, &shooter_tween);
 	heading_mark_to_vec3(shooter_range, shooter_heading, shooter_mark * shooter_tween, &vshooter);
 	vec3_add_self(&vshooter, &ship_pos);
 
@@ -7874,7 +7874,7 @@ static void draw_sciplane_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_conte
 	union vec3 shootee_dir = {{shootee->x, shootee->y, shootee->z}};
 	vec3_sub_self(&shootee_dir, &ship_pos);
 	vec3_to_heading_mark(&shootee_dir, &shootee_range, &shootee_heading, &shootee_mark);
-	tween_get_value(sciplane_tween, shootee->id, &shootee_tween);
+	tween_get_value(sciplane_tween, TWEEN_ACTIVE_OBJECT, shootee->id, &shootee_tween);
 	heading_mark_to_vec3(shootee_range, shootee_heading, shootee_mark * shootee_tween, &vshootee);
 	vec3_add_self(&vshootee, &ship_pos);
 
@@ -7936,7 +7936,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		heading_mark_to_vec3(dist, heading, 0, &selected_m0_pos);
 		vec3_add_self(&selected_m0_pos, &ship_pos);
 
-		tween_get_value(sciplane_tween, curr_science_guy->id, &selected_guy_tween);
+		tween_get_value(sciplane_tween, TWEEN_ACTIVE_OBJECT, curr_science_guy->id, &selected_guy_tween);
 	}
 
 	/* cam orientation is locked with world */
@@ -8169,7 +8169,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 				draw_popout_arc = 0;
 			} else {
 				/* get tween from bank and draw a popout arc */
-				tween_get_value_and_decay(sciplane_tween, go[i].id, &tween);
+				tween_get_value_and_decay(sciplane_tween, TWEEN_ACTIVE_OBJECT, go[i].id, &tween);
 				draw_popout_arc = 1;
 			}
 
@@ -8211,7 +8211,8 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 
 				if (popout) {
 					/* start the mark tween to popout */
-					tween_add_or_update(sciplane_tween, go[i].id, 0, TWEEN_EXP_DECAY, mark_popout_rate, 0, 1);
+					tween_add_or_update(sciplane_tween, TWEEN_ACTIVE_OBJECT,
+								go[i].id, 0, TWEEN_EXP_DECAY, mark_popout_rate, 0, 1);
 				}
 			}
 
