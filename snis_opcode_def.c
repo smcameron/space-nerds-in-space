@@ -104,7 +104,6 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_UPDATE_DAMAGE, "n/a");
 	rc |= init_opcode_def(OPCODE_REQUEST_LASER, "b");
 	rc |= init_opcode_def(OPCODE_REQUEST_LASER_WAVELENGTH, "bwb");
-	rc |= init_opcode_def(OPCODE_SCI_SELECT_COORDS, "bSS");
 	rc |= init_opcode_def(OPCODE_REQUEST_SHIELD, "bwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwww");

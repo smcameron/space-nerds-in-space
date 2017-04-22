@@ -687,8 +687,6 @@ struct snis_entity {
 	union type_specific_data tsd;
 	move_function move;
 	struct snis_entity_science_data sdata;
-	double sci_coordx; /* selected coords by science station for warp calculations */
-	double sci_coordz;
 	struct entity *entity;
 	struct space_partition_entry partition;
 	union quat o[SNIS_ENTITY_NUPDATE_HISTORY];

@@ -613,12 +613,10 @@ get_ship_attribute(id, attribute_name); -- returns the specified attribute of th
                       sdata.shield_width    B       2601          1          0
                       sdata.shield_depth    B       2602          1          0
                            sdata.faction    B       2603          1          0
-                              sci_coordx    d       2608          8          0
-                              sci_coordz    d       2616          8          0
-                      orientation.vec[0]    f       2720          4          0
-                      orientation.vec[1]    f       2724          4          0
-                      orientation.vec[2]    f       2728          4          0
-                      orientation.vec[3]    f       2732          4          0
+                      orientation.vec[0]    f       2704          4          0
+                      orientation.vec[1]    f       2708          4          0
+                      orientation.vec[2]    f       2712          4          0
+                      orientation.vec[3]    f       2716          4          0
 
 	Example usage:
 

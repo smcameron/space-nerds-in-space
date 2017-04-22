@@ -2532,13 +2532,6 @@ static void request_sci_select_target(uint8_t selection_type, uint32_t id)
 	queue_to_server(snis_opcode_pkt("bbw", OPCODE_SCI_SELECT_TARGET, selection_type, id));
 }
 
-/* TODO: this needs to be converted to 3D or deleted. */
-static void request_sci_select_coords(double ux, double uy)
-{
-	queue_to_server(snis_opcode_pkt("bSS", OPCODE_SCI_SELECT_COORDS,
-			ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM));
-}
-
 static void request_navigation_yaw_packet(uint8_t yaw)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_YAW, yaw));
@@ -4798,25 +4791,6 @@ static int process_sci_select_target_packet(void)
 	}
 }
 
-static int process_sci_select_coords_packet(void)
-{
-	unsigned char buffer[sizeof(struct snis_sci_select_coords_packet)];
-	struct snis_entity *o;
-	double ux, uz;
-	int rc;
-
-	rc = read_and_unpack_buffer(buffer, "SS",
-			&ux, (int32_t) UNIVERSE_DIM,
-			&uz, (int32_t) UNIVERSE_DIM); 
-	if (rc != 0)
-		return rc;
-	if (!(o = find_my_ship()))
-		return 0;
-	o->sci_coordx = ux;	
-	o->sci_coordz = uz;	
-	return 0;
-}
-
 static int process_update_respawn_time(void)
 {
 	unsigned char buffer[sizeof(struct respawn_time_packet)];
@@ -6005,9 +5979,6 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_SCI_DETAILS:
 			rc = process_sci_details();
-			break;
-		case OPCODE_SCI_SELECT_COORDS:
-			rc = process_sci_select_coords_packet();
 			break;
 		case OPCODE_UPDATE_DAMAGE:
 			rc = process_ship_damage_packet(1);
@@ -8396,23 +8367,6 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 	r = SCIENCE_SCOPE_R;
 	pwr = o->tsd.ship.power_data.sensors.i;
 	/* Draw all the stuff */
-
-#if 1
-	/* Draw selected coordinate */
-	dist = hypot(o->x - o->sci_coordx, o->z - o->sci_coordz);
-	if (dist < range) {
-		tx = (o->sci_coordx - o->x) * (double) r / range;
-		ty = (o->sci_coordz - o->z) * (double) r / range;
-		x = (int) (tx + (double) cx);
-		y = (int) (ty + (double) cy);
-		snis_draw_line(x - 5, y, x + 5, y);
-		snis_draw_line(x, y - 5, x, y + 5);
-	}
-#endif
-
-	/* FIXME this is quite likely wrong */
-        tx = sin(o->tsd.ship.sci_heading) * range;
-        ty = -cos(o->tsd.ship.sci_heading) * range;
 
 	sng_set_foreground(UI_COLOR(sci_ball_default_blip));
 	pthread_mutex_lock(&universe_mutex);
@@ -11276,10 +11230,6 @@ static int science_button_press(int x, int y)
 	int i;
 	int xdist, ydist, dist2;
 	struct snis_entity *selected;
-	struct snis_entity *o;
-	double ur, ux, uz;
-	int cx, cy, r;
-	double dx, dy;
 
 	selected = NULL;
 	pthread_mutex_lock(&universe_mutex);
@@ -11298,19 +11248,6 @@ static int science_button_press(int x, int y)
 			request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, selected->id);
 		else
 			request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, (uint32_t) -1); /* deselect */
-	} else {
-		o = &go[my_ship_oid];
-		cx = SCIENCE_SCOPE_CX;
-		cy = SCIENCE_SCOPE_CY;
-		r = SCIENCE_SCOPE_R;
-		ur = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
-				(o->tsd.ship.scizoom / 255.0) +
-				MIN_SCIENCE_SCREEN_RADIUS;
-		dx = x - cx;
-		dy = y - cy;
-		ux = o->x + dx * ur / r;
-		uz = o->z + dy * ur / r;
-		request_sci_select_coords(ux, uz);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 

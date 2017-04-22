@@ -10482,27 +10482,6 @@ static int process_weap_select_target(struct game_client *c)
 	return 0;
 }
 
-/* TODO: this needs to be converted to 3D or deleted */
-static int process_sci_select_coords(struct game_client *c)
-{
-	unsigned char buffer[sizeof(struct snis_sci_select_coords_packet)];
-	double x, z;
-	int rc;
-
-	rc = read_and_unpack_buffer(c, buffer, "SS",
-					&x, (int32_t) UNIVERSE_DIM,
-					&z, (int32_t) UNIVERSE_DIM);
-	if (rc)
-		return rc;
-	/* just turn it around and fan it out to all the right places */
-	send_packet_to_all_clients_on_a_bridge(c->shipid,
-				snis_opcode_pkt("bSS", OPCODE_SCI_SELECT_COORDS,
-						 x, (int32_t) UNIVERSE_DIM,
-						 z, (int32_t) UNIVERSE_DIM),
-				ROLE_SCIENCE);
-	return 0;
-}
-
 typedef void (*meta_comms_func)(char *name, struct game_client *c, char *txt);
 
 static void meta_comms_help(char *name, struct game_client *c, char *txt)
@@ -15219,11 +15198,6 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_WEAP_SELECT_TARGET:
 			rc = process_weap_select_target(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_SCI_SELECT_COORDS:
-			rc = process_sci_select_coords(c);
 			if (rc)
 				goto protocol_error;
 			break;

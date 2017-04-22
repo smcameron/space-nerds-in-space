@@ -282,8 +282,6 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_FIELD(sdata.shield_width),
 	UINT8_FIELD(sdata.shield_depth),
 	UINT8_FIELD(sdata.faction),
-	DOUBLE_FIELD(sci_coordx),
-	DOUBLE_FIELD(sci_coordz),
 	FLOAT_FIELD(orientation.vec[0]),
 	FLOAT_FIELD(orientation.vec[1]),
 	FLOAT_FIELD(orientation.vec[2]),
