@@ -8326,6 +8326,25 @@ static void add_scanner_beam_orange_slice(struct entity_context *ecx,
 	}
 }
 
+static void draw_science_3d_waypoints(struct snis_entity *o, double range)
+{
+	int i;
+
+	sng_set_foreground(UI_COLOR(sci_waypoint));
+	for (i = 0; i < sci_ui.nwaypoints; i++) {
+		double *wp = &sci_ui.waypoint[i][0];
+		float sx, sy;
+		char buf[10];
+		if (dist3d(wp[0] - o->x, wp[1] - o->y, wp[2] - o->z) >= range)
+			continue;
+		transform_point(sciballecx, wp[0], wp[1], wp[2], &sx, &sy);
+		snis_draw_line(sx - 10, sy, sx + 10, sy);
+		snis_draw_line(sx, sy - 10, sx, sy + 10);
+		snprintf(buf, sizeof(buf), "WP-%02d", i);
+		sng_abs_xy_draw_string(buf, PICO_FONT, sx + 10, sy - 10);
+	}
+}
+
 static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, double range, double current_zoom)
 {
 	int i, x, y, cx, cy, r, bw, pwr;
@@ -8450,7 +8469,9 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 		prev_science_guy = curr_science_guy;
 		curr_science_guy = NULL;
 	}
+	draw_science_3d_waypoints(o, range);
 	pthread_mutex_unlock(&universe_mutex);
+	sng_set_foreground(UI_COLOR(sci_ball_default_blip));
 	if (nebula_factor) {
 		for (i = 0; i < 300; i++) {
 			double angle;

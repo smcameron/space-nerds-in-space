@@ -159,6 +159,7 @@ struct ui_color_map {
 	struct ui_color_entry sci_plane_player_laser;
 	struct ui_color_entry sci_wireframe;
 	struct ui_color_entry sci_details_text;
+	struct ui_color_entry sci_waypoint;
 
 	struct ui_color_entry comms_button;
 	struct ui_color_entry comms_slider;
@@ -322,6 +323,7 @@ struct ui_color_map_accessor {
 	.u.map.sci_plane_player_laser	= { LIMEGREEN,		"sci-plane-player-laser" },
 	.u.map.sci_wireframe		= { GREEN_FIXUP,	"sci-wireframe" },
 	.u.map.sci_details_text		= { GREEN_FIXUP,	"sci-details-text" },
+	.u.map.sci_waypoint		= { CYAN_FIXUP,		"sci-waypoint" },
 
 	.u.map.comms_button		= { GREEN_FIXUP,	"comms-button" },
 	.u.map.comms_slider		= { GREEN_FIXUP,	"comms-slider" },
