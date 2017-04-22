@@ -9509,6 +9509,32 @@ static void draw_nav_contact_offset_and_ring(struct snis_entity *player_ship,
 	}
 }
 
+static void draw_3d_nav_waypoints(struct snis_entity *player_ship, union vec3 *ship_pos, union vec3 *ship_normal,
+					float display_radius, int current_zoom, int render_style)
+{
+	int i;
+
+	for (i = 0; i < sci_ui.nwaypoints; i++) {
+		double *wp = &sci_ui.waypoint[i][0];
+
+		/* Check if the waypoint is too far away */
+		if (nav_entity_too_far_away(player_ship->x, player_ship->y, player_ship->z, wp[0], wp[1], wp[2],
+						nav_axes_mesh->radius, display_radius))
+			continue; /* not close enough */
+		struct entity *contact = NULL;
+		contact = add_entity(instrumentecx, nav_axes_mesh, wp[0], wp[1], wp[2], UI_COLOR(nav_entity));
+		if (contact) {
+			union vec3 contact_pos = { { wp[0], wp[1], wp[2] } };
+			float contact_scale = ((255.0 - current_zoom) / 255.0) * 30.0 + 1000.0;
+			set_render_style(contact, render_style);
+			entity_set_user_data(contact, wp);
+			update_entity_scale(contact, entity_get_scale(contact) * contact_scale);
+			/* add line from center disk to contact in z axis */
+			draw_nav_contact_offset_and_ring(player_ship, ship_pos, ship_normal, contact, &contact_pos);
+		}
+	}
+}
+
 static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 {
 	static struct mesh *ring_mesh = 0;
@@ -9872,15 +9898,19 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			}
 		}
 	}
+
+	draw_3d_nav_waypoints(o, &ship_pos, &ship_normal, display_radius, current_zoom, science_style);
 	render_entities(instrumentecx);
 
-	/* Draw labels on ships... */
+	/* Draw labels on objects and waypoints */
 	sng_set_foreground(UI_COLOR(nav_entity_label));
 	for (i = 0; i <= get_entity_count(instrumentecx); i++) {
 		float sx, sy;
 		char buffer[100];
 		struct entity *e;
 		struct snis_entity *o;
+		double *wp;
+		int waypoint_diff;
 
 		e = get_entity(instrumentecx, i);
 		if (!e)
@@ -9888,16 +9918,27 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		o = entity_get_user_data(e);
 		if (!o)
 			continue; 
-		entity_get_screen_coords(e, &sx, &sy);
-		if (o->sdata.science_data_known) {
-			sprintf(buffer, "%s", o->sdata.name);
+
+		/* Check if it is a waypoint rather than an object.
+		 * This is a little gross, we do it by checking if the
+		 * pointer is within the array containing the waypoints.
+		 */
+		wp = (double *) o;
+		waypoint_diff = wp - &sci_ui.waypoint[0][0];
+		if (waypoint_diff >= 0 && waypoint_diff < 3 * MAXWAYPOINTS) {
+			/* It is a waypoint */
+			waypoint_diff = waypoint_diff / 3;
+			entity_get_screen_coords(e, &sx, &sy);
+			sprintf(buffer, "WAYPOINT-%02d", waypoint_diff);
 			sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
+		} else {
+			/* It is not a waypoint */
+			entity_get_screen_coords(e, &sx, &sy);
+			if (o->sdata.science_data_known) {
+				sprintf(buffer, "%s", o->sdata.name);
+				sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
+			}
 		}
-#if 0
-		sprintf(buffer, "%3.1f,%6.1f,%6.1f,%6.1f",
-				o->heading * 180.0 / M_PI, o->x, o->y, o->z);
-		sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy);
-#endif
 	}
 
 #if 0
