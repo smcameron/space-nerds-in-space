@@ -819,4 +819,11 @@ struct passenger_data {
 	uint32_t fare;
 };
 
+/* For waypoints that players can set */
+#define MAXWAYPOINTS 10  /* must be small enough to fit on science screen */
+struct player_waypoint {
+	double x, y, z;
+	char name[15];
+};
+
 #endif

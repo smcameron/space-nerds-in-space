@@ -213,6 +213,10 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_UPDATE_TURRET, "bwwSSSQQb");
 	rc |= init_opcode_def(OPCODE_LATENCY_CHECK, "bqq");
 	rc |= init_opcode_def(OPCODE_REQUEST_STARMAP, "bwb");
+	rc |= init_opcode_subcode_def(OPCODE_SET_WAYPOINT, OPCODE_SET_WAYPOINT_CLEAR, "bbb");
+	rc |= init_opcode_subcode_def(OPCODE_SET_WAYPOINT, OPCODE_SET_WAYPOINT_COUNT, "bbb");
+	rc |= init_opcode_subcode_def(OPCODE_SET_WAYPOINT, OPCODE_SET_WAYPOINT_ROW, "bbbSSS");
+	rc |= init_opcode_subcode_def(OPCODE_SET_WAYPOINT, OPCODE_SET_WAYPOINT_ADD_ROW, "bbSSS");
 	rc |= init_opcode_def(OPCODE_NOOP, "b");
 	return rc;
 }

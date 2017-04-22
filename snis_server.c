@@ -295,6 +295,7 @@ static struct game_client {
 	int request_universe_timestamp;
 	char *build_info[2];
 	uint32_t latency_in_usec;
+	int waypoints_dirty;
 #define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
 #if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
 	uint64_t write_sum;
@@ -331,6 +332,8 @@ static struct bridge_data {
 	int requested_verification; /* Whether we've requested verification from multiverse server yet */
 	int requested_creation; /* whether user has requested creating new ship */
 	int nclients;
+	struct player_waypoint waypoint[MAXWAYPOINTS];
+	int nwaypoints;
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -1403,6 +1406,21 @@ static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packe
 	}
 	packed_buffer_free(pb);
 	client_unlock();
+}
+
+static void set_waypoints_dirty_all_clients_on_bridge(uint32_t shipid, int value)
+{
+	int i;
+
+	/* client_lock(); TODO - do we need this lock? (it deadlocks though) */
+	for (i = 0; i < nclients; i++) {
+		if (!client[i].refcount)
+			continue;
+		if (client[i].shipid != shipid)
+			continue;
+		client[i].waypoints_dirty = value;
+	}
+	/* client_unlock(); TODO - do we need this lock? (it deadlocks though) */
 }
 
 static void send_packet_to_all_bridges_on_channel(uint32_t channel,
@@ -7205,6 +7223,13 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	}
 }
 
+static void clear_bridge_waypoints(int bridge)
+{
+	bridgelist[bridge].nwaypoints = 0;
+	memset(bridgelist[bridge].waypoint, 0, sizeof(bridgelist[bridge].waypoint));
+	set_waypoints_dirty_all_clients_on_bridge(bridgelist[bridge].shipid, 1);
+}
+
 static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 {
 	int b, i, found;
@@ -7266,10 +7291,12 @@ static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 	}
 
 finished:
-	/* Stop any warp that might be in progress */
 	b = lookup_bridge_by_shipid(o->id);
-	if (b >= 0)
-		bridgelist[b].warptimeleft = 0;
+	if (b >= 0) {
+		bridgelist[b].warptimeleft = 0; /* Stop any warp that might be in progress */
+		if (warpgate_number != (uint8_t) -1) /* just entered new solar system? */
+			clear_bridge_waypoints(b);
+	}
 	o->vx = 0;
 	o->vy = 0;
 	o->vz = 0;
@@ -10359,7 +10386,7 @@ static int process_sci_details(struct game_client *c)
 	if (rc)
 		return rc;
 	/* just turn it around and fan it out to all the right places */
-	if (new_details > 3)
+	if (new_details > 4)
 		new_details = 0;
 	send_packet_to_requestor_plus_role_on_a_bridge(c, 
 			snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
@@ -12361,6 +12388,56 @@ static int process_check_opcode_format(struct game_client *c)
 	return 0;
 }
 
+static int process_set_waypoint(struct game_client *c)
+{
+	int rc;
+	uint8_t subcode, row;
+	double value[3];
+	unsigned char buffer[20];
+	int b;
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &subcode);
+	if (rc)
+		return rc;
+	switch (subcode) {
+	case OPCODE_SET_WAYPOINT_CLEAR:
+		rc = read_and_unpack_buffer(c, buffer, "b", &row);
+		if (rc)
+			return rc;
+		b = lookup_bridge_by_shipid(c->shipid);
+		if (b < 0)
+			return 0;
+		if (row >= 0 && row < bridgelist[b].nwaypoints) {
+			for (int i = row; i < bridgelist[b].nwaypoints - 1; i++)
+				bridgelist[b].waypoint[i] = bridgelist[b].waypoint[i + 1];
+			bridgelist[b].nwaypoints--;
+			set_waypoints_dirty_all_clients_on_bridge(c->shipid, 1);
+		}
+		return 0;
+	case OPCODE_SET_WAYPOINT_ADD_ROW:
+		rc = read_and_unpack_buffer(c, buffer, "SSS",
+					&value[0], (int32_t) UNIVERSE_DIM,
+					&value[1], (int32_t) UNIVERSE_DIM,
+					&value[2], (int32_t) UNIVERSE_DIM);
+		if (rc)
+			return rc;
+		b = lookup_bridge_by_shipid(c->shipid);
+		if (b < 0)
+			return 0;
+		if (bridgelist[b].nwaypoints < MAXWAYPOINTS) {
+			bridgelist[b].waypoint[bridgelist[b].nwaypoints].x = value[0];
+			bridgelist[b].waypoint[bridgelist[b].nwaypoints].y = value[1];
+			bridgelist[b].waypoint[bridgelist[b].nwaypoints].z = value[2];
+			bridgelist[b].nwaypoints++;
+			set_waypoints_dirty_all_clients_on_bridge(c->shipid, 1);
+		}
+		return 0;
+	default:
+		fprintf(stderr, "%s: bad subcode for OPCODE_SET_WAYPOINT: %hhu\n",
+			logprefix(), subcode);
+		return -1;
+	}
+}
 
 static void enscript_prologue(FILE *f)
 {
@@ -13809,7 +13886,7 @@ static int l_reset_player_ship(lua_State *l)
 	const double lua_oid = luaL_checknumber(l, 1);
 	struct snis_entity *o;
 	uint32_t oid = (uint32_t) lua_oid;
-	int i;
+	int i, b;
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(oid);
@@ -13819,6 +13896,9 @@ static int l_reset_player_ship(lua_State *l)
 	if (o->type != OBJTYPE_SHIP1)
 		goto out;
 	init_player(o, 1, NULL);
+	b = lookup_bridge_by_shipid(o->id);
+	if (b >= 0)
+		clear_bridge_waypoints(b);
 	o->timestamp = universe_timestamp;
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, 0.0);
@@ -15253,6 +15333,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_SET_WAYPOINT:
+			rc = process_set_waypoint(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -15615,6 +15700,30 @@ static void queue_up_client_damcon_update(struct game_client *c)
 		queue_up_client_damcon_object_update(c, d, &d->o[i]);
 }
 
+static void queue_up_client_waypoint_update(struct game_client *c)
+{
+	int i;
+
+	if ((universe_timestamp % 100) == c->bridge) /* update every 10 secs regardless */
+		c->waypoints_dirty = 1;
+	if (!c->waypoints_dirty)
+		return;
+
+	struct bridge_data *b = &bridgelist[c->bridge];
+	pb_queue_to_client(c, snis_opcode_subcode_pkt("bbb",
+			OPCODE_SET_WAYPOINT, OPCODE_SET_WAYPOINT_COUNT,
+			(uint8_t) b->nwaypoints));
+	for (i = 0; i < b->nwaypoints; i++) {
+		uint8_t row = i;
+		pb_queue_to_client(c, snis_opcode_subcode_pkt("bbbSSS",
+			OPCODE_SET_WAYPOINT, OPCODE_SET_WAYPOINT_ROW, row,
+				b->waypoint[i].x, (int32_t) UNIVERSE_DIM,
+				b->waypoint[i].y, (int32_t) UNIVERSE_DIM,
+				b->waypoint[i].z, (int32_t) UNIVERSE_DIM));
+	}
+	c->waypoints_dirty = 0;
+}
+
 #define GO_TOO_FAR_UPDATE_PER_NTICKS 7
 
 static void queue_up_client_updates(struct game_client *c)
@@ -15648,6 +15757,7 @@ static void queue_up_client_updates(struct game_client *c)
 			queue_up_client_object_sdata_update(c, &go[i]);
 		}
 		queue_up_client_damcon_update(c);
+		queue_up_client_waypoint_update(c);
 		queue_latency_check(c);
 		/* printf("queued up %d updates for client\n", count); */
 
@@ -16420,6 +16530,7 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].requested_verification = 0;
 		bridgelist[nbridges].requested_creation = !!app.new_ship;
 		bridgelist[nbridges].nclients = 1;
+		clear_bridge_waypoints(nbridges);
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
 	

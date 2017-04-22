@@ -4651,7 +4651,8 @@ static int process_role_onscreen_packet(void)
 
 static struct science_ui {
 	/* details mode is one of define SCI_DETAILS_MODE_THREED,
-	 * SCI_DETAILS_MODE_DETAILS, SCI_DETAILS_MODE_SCIPLANE
+	 * SCI_DETAILS_MODE_DETAILS, SCI_DETAILS_MODE_SCIPLANE,
+	 * SCI_DETAILS_MODE_WAYPOINTS
 	 */
 	int details_mode;
 	struct slider *scizoom;
@@ -4662,7 +4663,72 @@ static struct science_ui {
 	struct button *tractor_button;
 	struct button *align_to_ship_button;
 	struct button *launch_mining_bot_button;
+	struct button *waypoints_button;
+	struct button *add_waypoint_button;
+	struct button *add_current_pos_button;
+	struct snis_text_input_box *waypoint_input[3];
+	char waypoint_text[3][15];
+	struct button *clear_waypoint_button[MAXWAYPOINTS];
+	struct button *select_waypoint_button[MAXWAYPOINTS];
+	double waypoint[MAXWAYPOINTS][3];
+	int nwaypoints;
 } sci_ui;
+
+static void science_activate_waypoints_widgets(void)
+{
+	int i;
+
+	ui_hide_widget(sci_ui.scizoom);
+	ui_hide_widget(sci_ui.scipower);
+	ui_hide_widget(sci_ui.details_button);
+	ui_hide_widget(sci_ui.launch_mining_bot_button);
+	ui_hide_widget(sci_ui.tractor_button);
+	ui_hide_widget(sci_ui.threed_button);
+	ui_hide_widget(sci_ui.sciplane_button);
+	ui_unhide_widget(sci_ui.waypoints_button);
+	ui_unhide_widget(sci_ui.add_waypoint_button);
+	ui_unhide_widget(sci_ui.add_current_pos_button);
+	ui_hide_widget(sci_ui.align_to_ship_button);
+	ui_hide_widget(sci_ui.align_to_ship_button);
+
+	for (i = 0; i < 3; i++)
+		ui_unhide_widget(sci_ui.waypoint_input[i]);
+	for (i = 0; i < sci_ui.nwaypoints; i++) {
+		ui_unhide_widget(sci_ui.clear_waypoint_button[i]);
+		ui_unhide_widget(sci_ui.select_waypoint_button[i]);
+	}
+	for (i = sci_ui.nwaypoints; i < MAXWAYPOINTS; i++) {
+		ui_hide_widget(sci_ui.clear_waypoint_button[i]);
+		ui_hide_widget(sci_ui.select_waypoint_button[i]);
+	}
+	snis_button_set_label(sci_ui.waypoints_button, "BACK");
+}
+
+static void science_deactivate_waypoints_widgets(void)
+{
+	int i;
+
+	ui_unhide_widget(sci_ui.scizoom);
+	ui_unhide_widget(sci_ui.scipower);
+	ui_unhide_widget(sci_ui.details_button);
+	ui_unhide_widget(sci_ui.launch_mining_bot_button);
+	ui_unhide_widget(sci_ui.tractor_button);
+	ui_unhide_widget(sci_ui.threed_button);
+	ui_unhide_widget(sci_ui.sciplane_button);
+	ui_unhide_widget(sci_ui.waypoints_button);
+	ui_unhide_widget(sci_ui.align_to_ship_button);
+	ui_unhide_widget(sci_ui.align_to_ship_button);
+
+	ui_hide_widget(sci_ui.add_waypoint_button);
+	ui_hide_widget(sci_ui.add_current_pos_button);
+	for (i = 0; i < 3; i++)
+		ui_hide_widget(sci_ui.waypoint_input[i]);
+	for (i = 0; i < MAXWAYPOINTS; i++) {
+		ui_hide_widget(sci_ui.clear_waypoint_button[i]);
+		ui_hide_widget(sci_ui.select_waypoint_button[i]);
+	}
+	snis_button_set_label(sci_ui.waypoints_button, "WAYPOINTS");
+}
 
 static int process_sci_details(void)
 {
@@ -4673,13 +4739,32 @@ static int process_sci_details(void)
 	rc = read_and_unpack_buffer(buffer, "b", &new_details);
 	if (rc != 0)
 		return rc;
+	sci_ui.details_mode = new_details;
 	if (new_details == 0)
 		new_details = SCI_DETAILS_MODE_SCIPLANE;
-	sci_ui.details_mode = new_details;
-	if (new_details == SCI_DETAILS_MODE_THREED)
+	switch (new_details) {
+	case SCI_DETAILS_MODE_THREED:
+		science_deactivate_waypoints_widgets();
 		ui_unhide_widget(sci_ui.align_to_ship_button);
-	else
+		break;
+	case SCI_DETAILS_MODE_DETAILS:
+		science_deactivate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
+		break;
+	case SCI_DETAILS_MODE_SCIPLANE:
+		science_deactivate_waypoints_widgets();
+		ui_hide_widget(sci_ui.align_to_ship_button);
+		break;
+	case SCI_DETAILS_MODE_WAYPOINTS:
+		science_activate_waypoints_widgets();
+		ui_hide_widget(sci_ui.align_to_ship_button);
+		break;
+	default:
+		science_deactivate_waypoints_widgets();
+		ui_hide_widget(sci_ui.align_to_ship_button);
+		break;
+	}
+
 	return 0;
 }
 
@@ -5096,6 +5181,45 @@ static void expire_starmap_entries(void)
 	}
 	if (changed)
 		starmap_recompute_adjacencies();
+}
+
+static int process_set_waypoint(void)
+{
+	int rc;
+	uint8_t subcode, row, count;
+	double x, y, z;
+	unsigned char buffer[64];
+
+	rc = read_and_unpack_buffer(buffer, "b", &subcode);
+	if (rc)
+		return rc;
+	switch (subcode) {
+	case OPCODE_SET_WAYPOINT_ROW:
+		rc = read_and_unpack_buffer(buffer, "bSSS", &row,
+			&x, (int32_t) UNIVERSE_DIM,
+			&y, (int32_t) UNIVERSE_DIM,
+			&z, (int32_t) UNIVERSE_DIM);
+		if (rc != 0)
+			return -1;
+		if (row >= MAXWAYPOINTS) {
+			fprintf(stderr, "snis_client: Bad row for OPCODE_SET_WAYPOINT: %hhu\n", row);
+			return -1;
+		}
+		sci_ui.waypoint[row][0] = x;
+		sci_ui.waypoint[row][1] = y;
+		sci_ui.waypoint[row][2] = z;
+		return 0;
+	case OPCODE_SET_WAYPOINT_COUNT:
+		rc = read_and_unpack_buffer(buffer, "b", &count);
+		if (rc)
+			return rc;
+		if (count <= MAXWAYPOINTS)
+			sci_ui.nwaypoints = count;
+		return 0;
+	default:
+		fprintf(stderr, "snis_client: Bad subcode for OPCODE_SET_WAYPOINT: %hhu\n", subcode);
+		return -1;
+	}
 }
 
 static void do_text_to_speech(char *text)
@@ -5994,6 +6118,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_SOLARSYSTEM_LOCATION:
 			rc = process_update_solarsystem_location();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_SET_WAYPOINT:
+			rc = process_set_waypoint();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -10632,6 +10761,16 @@ static void sci_details_pressed(void *x)
 		(unsigned char) SCI_DETAILS_MODE_DETAILS));
 }
 
+static void sci_waypoints_pressed(void *x)
+{
+	if (sci_ui.details_mode == SCI_DETAILS_MODE_WAYPOINTS)
+		queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
+			(unsigned char) SCI_DETAILS_MODE_SCIPLANE));
+	else
+		queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
+			(unsigned char) SCI_DETAILS_MODE_WAYPOINTS));
+}
+
 static void sci_align_to_ship_pressed(void *x)
 {
 	queue_to_server(snis_opcode_pkt("b", OPCODE_SCI_ALIGN_TO_SHIP));
@@ -10661,8 +10800,71 @@ static void sci_mining_bot_pressed(void *x)
 	queue_to_server(snis_opcode_pkt("bw", OPCODE_REQUEST_MINING_BOT, id));
 }
 
+static void science_waypoint_entered(void *cookie)
+{
+	return;
+}
+
+static void science_clear_waypoint_pressed(void *cookie)
+{
+	struct button **b = cookie;
+	int index = b - &sci_ui.clear_waypoint_button[0];
+
+	queue_to_server(snis_opcode_subcode_pkt("bbb", OPCODE_SET_WAYPOINT,
+						OPCODE_SET_WAYPOINT_CLEAR,
+						(uint8_t) index));
+}
+
+static void science_select_waypoint_pressed(void *cookie)
+{
+	struct button **b = cookie;
+	int index = b - &sci_ui.select_waypoint_button[0];
+
+	queue_to_server(snis_opcode_subcode_pkt("bbb", OPCODE_SET_WAYPOINT,
+						OPCODE_SET_WAYPOINT_CLEAR,
+						(uint8_t) index));
+}
+
+static void science_add_current_pos_pressed(void *cookie)
+{
+	struct snis_entity *o = find_my_ship();
+	if (!o)
+		return;
+	queue_to_server(snis_opcode_subcode_pkt("bbSSS", OPCODE_SET_WAYPOINT,
+						OPCODE_SET_WAYPOINT_ADD_ROW,
+						o->x, (int32_t) UNIVERSE_DIM,
+						o->y, (int32_t) UNIVERSE_DIM,
+						o->z, (int32_t) UNIVERSE_DIM));
+}
+
+static void science_add_waypoint_pressed(void *cookie)
+{
+	int rc;
+	double x, y, z;
+
+	rc = sscanf(sci_ui.waypoint_text[0], "%lf", &x);
+	if (rc != 1)
+		return;
+	rc = sscanf(sci_ui.waypoint_text[1], "%lf", &y);
+	if (rc != 1)
+		return;
+	rc = sscanf(sci_ui.waypoint_text[2], "%lf", &z);
+	if (rc != 1)
+		return;
+	queue_to_server(snis_opcode_subcode_pkt("bbSSS", OPCODE_SET_WAYPOINT,
+						OPCODE_SET_WAYPOINT_ADD_ROW,
+						x, (int32_t) UNIVERSE_DIM,
+						y, (int32_t) UNIVERSE_DIM,
+						z, (int32_t) UNIVERSE_DIM));
+	snis_text_input_box_set_contents(sci_ui.waypoint_input[0], "");
+	snis_text_input_box_set_contents(sci_ui.waypoint_input[1], "");
+	snis_text_input_box_set_contents(sci_ui.waypoint_input[2], "");
+}
+
 static void init_science_ui(void)
 {
+	int i;
+
 	const int szx = (350 * SCREEN_WIDTH) / 800;
 	const int szy = 35 * SCREEN_HEIGHT / 600;
 	const int szw = 300 * SCREEN_WIDTH / 800;
@@ -10670,6 +10872,11 @@ static void init_science_ui(void)
 
 	const int spx = szx;
 	const int spy = 50 * SCREEN_HEIGHT / 600;
+
+	const int wpx = 330 * SCREEN_WIDTH / 800;
+	const int wpy = 575 * SCREEN_HEIGHT / 600;
+	const int wpw = 75 * SCREEN_WIDTH / 800;
+	const int wph = 20 * SCREEN_HEIGHT / 600;
 
 	const int mbbx = 420 * SCREEN_WIDTH / 800;
 	const int mbby = 575 * SCREEN_HEIGHT / 600;
@@ -10719,6 +10926,8 @@ static void init_science_ui(void)
 			UI_COLOR(sci_button), NANO_FONT, sci_threed_pressed, (void *) 0);
 	sci_ui.details_button = snis_button_init(detx, dety, detw, deth, "DETAILS",
 			UI_COLOR(sci_button), NANO_FONT, sci_details_pressed, (void *) 0);
+	sci_ui.waypoints_button = snis_button_init(wpx, wpy, wpw, wph, "WAYPOINTS",
+			UI_COLOR(sci_button), NANO_FONT, sci_waypoints_pressed, (void *) 0);
 	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
 			UI_COLOR(sci_button), NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
@@ -10728,12 +10937,54 @@ static void init_science_ui(void)
 	ui_add_button(sci_ui.tractor_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE);
+	ui_add_button(sci_ui.waypoints_button, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.align_to_ship_button, DISPLAYMODE_SCIENCE);
 	ui_hide_widget(sci_ui.align_to_ship_button);
 	sciecx = entity_context_new(50, 10);
 	sciballecx = entity_context_new(5000, 1000);
 	sciplane_tween = tween_init(500);
 	sci_ui.details_mode = SCI_DETAILS_MODE_SCIPLANE;
+
+	for (i = 0; i < 3; i++) {
+		sci_ui.waypoint_input[i] =
+			snis_text_input_box_init(i * txx(135) + txx(10), txy(100),
+						txy(30), txx(130),
+						UI_COLOR(sci_wireframe), TINY_FONT,
+						&sci_ui.waypoint_text[i][0],
+						sizeof(sci_ui.waypoint_text[i]), &timer,
+						science_waypoint_entered, &sci_ui.waypoint_text[i][0]);
+			snis_text_input_box_set_return(sci_ui.waypoint_input[i],
+							science_waypoint_entered);
+			ui_add_text_input_box(sci_ui.waypoint_input[i], DISPLAYMODE_SCIENCE);
+			ui_hide_widget(sci_ui.waypoint_input[i]);
+	}
+
+	sci_ui.add_waypoint_button = snis_button_init(txx(3 * 135 + 20), txy(100),
+				100 * SCREEN_WIDTH / 800, wph, "ADD WAYPOINT",
+				UI_COLOR(sci_button), NANO_FONT, science_add_waypoint_pressed, NULL);
+	ui_add_button(sci_ui.add_waypoint_button, DISPLAYMODE_SCIENCE);
+	ui_hide_widget(sci_ui.add_waypoint_button);
+
+	sci_ui.add_current_pos_button = snis_button_init(txx(4 * 135 + 20), txy(100),
+				100 * SCREEN_WIDTH / 800, wph, "CURRENT POSITION",
+				UI_COLOR(sci_button), NANO_FONT, science_add_current_pos_pressed, NULL);
+	ui_add_button(sci_ui.add_current_pos_button, DISPLAYMODE_SCIENCE);
+	ui_hide_widget(sci_ui.add_current_pos_button);
+
+	for (i = 0; i < MAXWAYPOINTS; i++) {
+		sci_ui.clear_waypoint_button[i] = snis_button_init(txx(10), txy(25 * i) + txy(200),
+				40 * SCREEN_WIDTH / 800, wph, "CLEAR",
+				UI_COLOR(sci_button), NANO_FONT, science_clear_waypoint_pressed,
+				&sci_ui.clear_waypoint_button[i]);
+		ui_add_button(sci_ui.clear_waypoint_button[i], DISPLAYMODE_SCIENCE);
+		ui_hide_widget(sci_ui.clear_waypoint_button[i]);
+		sci_ui.select_waypoint_button[i] = snis_button_init(txx(500), txy(25 * i) + txy(200),
+				40 * SCREEN_WIDTH / 800, wph, "SELECT",
+				UI_COLOR(sci_button), NANO_FONT, science_select_waypoint_pressed,
+				&sci_ui.select_waypoint_button[i]);
+		ui_add_button(sci_ui.select_waypoint_button[i], DISPLAYMODE_SCIENCE);
+		ui_hide_widget(sci_ui.select_waypoint_button[i]);
+	}
 }
 
 static void comms_screen_button_pressed(void *x)
@@ -11218,6 +11469,39 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	draw_science_graph(w, ship, o, gx1, gy1, gx2, gy2);
 }
 
+static void draw_science_waypoints(GtkWidget *w)
+{
+	char buffer[100];
+	int i;
+
+	if (sci_ui.details_mode != SCI_DETAILS_MODE_WAYPOINTS)
+		return;
+	for (i = 0; i < sci_ui.nwaypoints; i++) {
+		ui_unhide_widget(sci_ui.clear_waypoint_button[i]);
+		ui_unhide_widget(sci_ui.select_waypoint_button[i]);
+	}
+	for (i = sci_ui.nwaypoints; i < MAXWAYPOINTS; i++) {
+		ui_hide_widget(sci_ui.clear_waypoint_button[i]);
+		ui_hide_widget(sci_ui.select_waypoint_button[i]);
+	}
+	sng_set_foreground(UI_COLOR(sci_wireframe));
+	sng_abs_xy_draw_string("WAYPOINT", NANO_FONT, txx(100), txy(180));
+	sng_abs_xy_draw_string("X", NANO_FONT, txx(250), txy(180));
+	sng_abs_xy_draw_string("Y", NANO_FONT, txx(350), txy(180));
+	sng_abs_xy_draw_string("Z", NANO_FONT, txx(450), txy(180));
+	for (i = 0; i < sci_ui.nwaypoints; i++) {
+		snprintf(buffer, sizeof(buffer), "WP-%02d", i);
+		sng_abs_xy_draw_string(buffer, NANO_FONT, txx(100), txy(210 + i * 25));
+		snprintf(buffer, sizeof(buffer), "%10.1lf", sci_ui.waypoint[i][0]);
+		sng_abs_xy_draw_string(buffer, NANO_FONT, txx(200), txy(210 + i * 25));
+		snprintf(buffer, sizeof(buffer), "%10.1lf", sci_ui.waypoint[i][1]);
+		sng_abs_xy_draw_string(buffer, NANO_FONT, txx(300), txy(210 + i * 25));
+		snprintf(buffer, sizeof(buffer), "%10.1lf", sci_ui.waypoint[i][2]);
+		sng_abs_xy_draw_string(buffer, NANO_FONT, txx(400), txy(210 + i * 25));
+	}
+	snis_draw_rectangle(0, txx(5), txy(80), txx(760), txy(480));
+}
+
 static void science_details_draw_atmosphere_data(GtkWidget *w, GdkGC *gc,
 				struct planetary_atmosphere_profile *atm)
 {
@@ -11422,9 +11706,16 @@ static void show_science(GtkWidget *w)
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
 	sng_set_foreground(DARKGREEN); /* zzzz check this */
-	if (sci_ui.details_mode == SCI_DETAILS_MODE_SCIPLANE) {
+	switch (sci_ui.details_mode) {
+	case SCI_DETAILS_MODE_SCIPLANE:
 		draw_sciplane_display(w, o, zoom);
-	} else {
+		break;
+	case SCI_DETAILS_MODE_WAYPOINTS:
+		draw_science_waypoints(w);
+		break;
+	case SCI_DETAILS_MODE_DETAILS:
+	case SCI_DETAILS_MODE_THREED:
+	default:
 		draw_science_details(w, gc);
 		draw_science_data(w, o, curr_science_guy);
 	}
@@ -15241,6 +15532,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		break;
 	case DEVIO_OPCODE_SCIENCE_DETAILS:
 		sci_details_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_SCIENCE_WAYPOINTS:
+		sci_waypoints_pressed((void *) 0);
 		break;
 	case DEVIO_OPCODE_COMMS_COMMS_ONSCREEN:
 		comms_screen_button_pressed((void *) 0);
