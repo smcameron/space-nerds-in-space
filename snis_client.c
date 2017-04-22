@@ -367,6 +367,8 @@ static struct mesh *docking_port_mesh[NDOCKING_PORT_STYLES];
 static struct mesh *warp_tunnel_mesh;
 static struct entity *warp_tunnel = NULL;
 static union vec3 warp_tunnel_direction;
+static struct mesh *nav_axes_mesh = NULL;
+static struct mesh *demon3d_axes_mesh = NULL;
 
 static struct mesh **ship_mesh_map;
 static struct mesh **derelict_mesh;
@@ -9180,17 +9182,11 @@ static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
 	union vec3 camera_up = { { 0.0, 1.0, 0.0 } };
 	union vec3 camera_pos = { { 0.0, 40.0, 5.0 } };
 	float x1, y1, z1, x2, y2, z2;
-	static struct mesh *axes = NULL;
 	const float starmap_mesh_scale = 1.0 * SNIS_WARP_GATE_THRESHOLD;
 	const float starmap_grid_size = 6.0;
 	float cam_dist;
 	static float nav_camera_pos_factor = 1.0;
 	float new_nav_camera_pos_factor;
-
-	if (!axes) { /* Init axes mesh once */
-		axes = mesh_fabricate_axes();
-		mesh_scale(axes, SNIS_WARP_GATE_THRESHOLD * 0.05);
-	}
 
 	/* Slide the camera towards desired position */
 	switch (nav_camera_mode) {
@@ -9270,7 +9266,8 @@ static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
 			float y = (j - 0.5 * (starmap_grid_size - 1.0)) * starmap_mesh_scale;
 			for (k = 0; k < (int) starmap_grid_size; k++) {
 				float z = (k - 0.5 * (starmap_grid_size - 1.0)) * starmap_mesh_scale;
-				(void) add_entity(instrumentecx, axes, x, y, z, UI_COLOR(starmap_grid_color));
+				(void) add_entity(instrumentecx, nav_axes_mesh, x, y, z,
+							UI_COLOR(starmap_grid_color));
 			}
 		}
 	}
@@ -12959,17 +12956,11 @@ static void show_demon_2d(GtkWidget *w)
 static void show_demon_3d(GtkWidget *w)
 {
 	char buffer[100];
-	static struct mesh *axes = NULL;
 	int i, j, k;
 	float angle_of_view = 60.0 * M_PI / 180.0;
 	union vec3 camera_pos_delta;
 	int color;
 	float camera_movement_rate = 0.05;
-
-	if (!axes) {
-		axes = mesh_fabricate_axes();
-		mesh_scale(axes, 0.002 * XKNOWN_DIM);
-	}
 
 	/* If in captain mode, then set desired camera position/orientation accordingly */
 	if (demon_ui.captain_of >= 0) {
@@ -13008,7 +12999,7 @@ static void show_demon_3d(GtkWidget *w)
 			float y = (j * XKNOWN_DIM / 10.0) - XKNOWN_DIM / 2.0;
 			for (k = 0; k < 10; k++) {
 				float z = k * XKNOWN_DIM / 10.0;
-				(void) add_entity(instrumentecx, axes, x, y, z, UI_COLOR(demon_default));
+				(void) add_entity(instrumentecx, demon3d_axes_mesh, x, y, z, UI_COLOR(demon_default));
 			}
 		}
 	}
@@ -15529,6 +15520,10 @@ static void init_meshes()
 	sphere_mesh = mesh_unit_spherified_cube(16);
 	low_poly_sphere_mesh = mesh_unit_spherified_cube(5);
 	warp_tunnel_mesh = mesh_tube(XKNOWN_DIM, 450.0, 20);
+	nav_axes_mesh = mesh_fabricate_axes();
+	mesh_scale(nav_axes_mesh, SNIS_WARP_GATE_THRESHOLD * 0.05);
+	demon3d_axes_mesh = mesh_fabricate_axes();
+	mesh_scale(demon3d_axes_mesh, 0.002 * XKNOWN_DIM);
 	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS);
 
 	for (i = 0; i < nstarbase_models; i++) {
