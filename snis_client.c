@@ -9444,6 +9444,16 @@ static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
 	remove_all_entity(instrumentecx);
 }
 
+static int nav_entity_too_far_away(double centerx, double centery, double centerz,
+					double objx, double objy, double objz,
+					double obj_radius, double display_radius)
+{
+	double dist = dist3d(centerx - objx, centery - objy, centerz - objz);
+	if (dist > obj_radius) /* use the distance to the edge and not the center */
+		dist -= obj_radius;
+	return dist > display_radius;
+}
+
 static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 {
 	static struct mesh *ring_mesh = 0;
@@ -9679,8 +9689,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	float display_radius = MIN(visible_distance, screen_radius) * (1.0 + radius_fadeout_percent);
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		double dist;
-
 		if (!go[i].alive)
 			continue;
 
@@ -9696,18 +9704,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		if (!go[i].entity)
 			continue;
 
-		dist = dist3d(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
-
-		/* use the distance to the edge and not the center */
 		struct mesh *obj_entity_mesh = entity_get_mesh(go[i].entity);
-		if (obj_entity_mesh) {
-			float obj_radius = obj_entity_mesh->radius * fabs(entity_get_scale(go[i].entity));
-			if (dist > obj_radius) {
-				dist -= obj_radius;
-			}
-		}
+		float obj_radius = 0.0;
+		if (obj_entity_mesh)
+			obj_radius = obj_entity_mesh->radius * fabs(entity_get_scale(go[i].entity));
 
-		if (dist > display_radius)
+		if (nav_entity_too_far_away(o->x, o->y, o->z, go[i].x, go[i].y, go[i].z,
+						obj_radius, display_radius))
 			continue; /* not close enough */
 
 		if (in_nebula && snis_randn(1000) < 850)
