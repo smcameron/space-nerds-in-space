@@ -9454,13 +9454,66 @@ static int nav_entity_too_far_away(double centerx, double centery, double center
 	return dist > display_radius;
 }
 
+static void draw_nav_contact_offset_and_ring(struct snis_entity *player_ship,
+					union vec3 *ship_pos, union vec3 *ship_normal,
+					struct entity *contact, union vec3 *contact_pos)
+{
+	static struct mesh *ring_mesh = NULL;
+	static struct mesh *vline_mesh_pos = NULL;
+	static struct mesh *vline_mesh_neg = NULL;
+	union vec3 ship_plane_proj;
+	float proj_distance = 0;
+	struct entity *e;
+
+	if (!ring_mesh) {
+		ring_mesh = init_circle_mesh(0, 0, 1, 180, 2.0f * M_PI);
+		vline_mesh_pos = init_line_mesh(0, 0, 0, 0, 1, 0);
+		vline_mesh_neg = init_line_mesh(0, 0, 0, 0, -1, 0);
+	}
+
+	/* add line from center disk to contact in z axis */
+	/* first find the point where the contact is orthogonally projected onto the ships normal plane */
+
+	/* orthogonal projection of point onto plane
+	   q_proj = q - dot( q - p, n) * n
+	   q = point to project, p = point on plane, n = normal to plane */
+	union vec3 temp1, temp2;
+	proj_distance = vec3_dot(vec3_sub(&temp1, contact_pos, ship_pos), ship_normal);
+	vec3_sub(&ship_plane_proj, contact_pos, vec3_mul(&temp2, ship_normal, proj_distance));
+
+	float contact_radius = entity_get_mesh(contact)->radius * fabs(entity_get_scale(contact));
+	float contact_ring_radius = 0;
+
+	/* contact intersects the ship normal plane so make the radius the size of that intersection */
+	if (fabs(proj_distance) < contact_radius)
+		contact_ring_radius = sqrt(contact_radius * contact_radius - proj_distance * proj_distance);
+	if (contact_ring_radius < contact_radius / 5.0) /* set a lower bound on size */
+		contact_ring_radius = contact_radius / 5.0;
+
+	if (proj_distance > 0)
+		e = add_entity(instrumentecx, vline_mesh_neg, contact_pos->v.x, contact_pos->v.y,
+			contact_pos->v.z, UI_COLOR(nav_ring));
+	else
+		e = add_entity(instrumentecx, vline_mesh_pos, contact_pos->v.x, contact_pos->v.y,
+			contact_pos->v.z, UI_COLOR(nav_ring));
+	if (e) {
+		update_entity_scale(e, abs(proj_distance));
+		update_entity_orientation(e, &player_ship->orientation);
+	}
+
+	e = add_entity(instrumentecx, ring_mesh, ship_plane_proj.v.x,
+			ship_plane_proj.v.y, ship_plane_proj.v.z, UI_COLOR(nav_projected_ring));
+	if (e) {
+		update_entity_scale(e, contact_ring_radius);
+		update_entity_orientation(e, &player_ship->orientation);
+	}
+}
+
 static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 {
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *radar_ring_mesh[4] = {0, 0, 0, 0};
 	static struct mesh *heading_ind_line_mesh = 0;
-	static struct mesh *vline_mesh_pos = 0;
-	static struct mesh *vline_mesh_neg = 0;
 	static struct mesh *forward_line_mesh = 0;
 	static int current_zoom = 0;
 	/* struct entity *targeted_entity = NULL; */
@@ -9472,8 +9525,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		radar_ring_mesh[1] = init_radar_circle_xz_plane_mesh(0, 0, 0.6, 18, 0.2);
 		radar_ring_mesh[2] = init_radar_circle_xz_plane_mesh(0, 0, 0.8, 18, 0.2);
 		radar_ring_mesh[3] = init_radar_circle_xz_plane_mesh(0, 0, 1.0, 36, 0.2);
-		vline_mesh_pos = init_line_mesh(0, 0, 0, 0, 1, 0);
-		vline_mesh_neg = init_line_mesh(0, 0, 0, 0, -1, 0);
 		heading_ind_line_mesh = init_line_mesh(0.7, 0, 0, 1, 0, 0);
 		forward_line_mesh = init_line_mesh(1, 0, 0, 0.5, 0, 0);
 	}
@@ -9817,47 +9868,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			/* add line from center disk to contact in z axis */
 			if (draw_contact_offset_and_ring && contact) {
 				union vec3 contact_pos = { { go[i].x, go[i].y, go[i].z } };
-				union vec3 ship_plane_proj;
-				float proj_distance = 0;
-
-				/* first find the point where the contact is orthogonally projected onto the ships normal plane */
-
-				/* orthogonal projection of point onto plane
-				   q_proj = q - dot( q - p, n) * n
-				   q = point to project, p = point on plane, n = normal to plane */
-				union vec3 temp1, temp2;
-				proj_distance = vec3_dot(vec3_sub(&temp1, &contact_pos, &ship_pos), &ship_normal);
-				vec3_sub(&ship_plane_proj, &contact_pos, vec3_mul(&temp2, &ship_normal, proj_distance));
-
-				float contact_radius = entity_get_mesh(contact)->radius * fabs(entity_get_scale(contact));
-				float contact_ring_radius = 0;
-
-				if ( fabs(proj_distance) < contact_radius) {
-					/* contact intersacts the ship normal plane so make the radius the size of that intersection */
-					contact_ring_radius = sqrt(contact_radius*contact_radius - proj_distance*proj_distance);
-				}
-				if (contact_ring_radius < contact_radius/5.0) {
-					/* set a lower bound on size */
-					contact_ring_radius = contact_radius/5.0;
-				}
-
-				if (proj_distance > 0)
-					e = add_entity(instrumentecx, vline_mesh_neg, contact_pos.v.x, contact_pos.v.y,
-						contact_pos.v.z, UI_COLOR(nav_ring));
-				else
-					e = add_entity(instrumentecx, vline_mesh_pos, contact_pos.v.x, contact_pos.v.y,
-						contact_pos.v.z, UI_COLOR(nav_ring));
-				if (e) {
-					update_entity_scale(e, abs(proj_distance));
-					update_entity_orientation(e, &o->orientation);
-				}
-
-				e = add_entity(instrumentecx, ring_mesh, ship_plane_proj.v.x,
-						ship_plane_proj.v.y, ship_plane_proj.v.z, UI_COLOR(nav_projected_ring));
-				if (e) {
-					update_entity_scale(e, contact_ring_radius);
-					update_entity_orientation(e, &o->orientation);
-				}
+				draw_nav_contact_offset_and_ring(o, &ship_pos, &ship_normal, contact, &contact_pos);
 			}
 		}
 	}
