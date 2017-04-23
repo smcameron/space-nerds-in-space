@@ -272,7 +272,7 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>OPCODE_UPDATE_DAMAGE</td><td> 136</td></tr>
 <tr><td>OPCODE_REQUEST_LASER (not used)</td><td> 137</td></tr>
 <tr><td>OPCODE_REQUEST_LASER_WAVELENGTH</td><td> 138</td></tr>
-<tr><td>OPCODE_SCI_SELECT_COORDS</td><td> 139</td></tr>
+<tr><td>not used</td><td> 139</td></tr>
 <tr><td>OPCODE_REQUEST_SHIELD</td><td> 140</td></tr>
 <tr><td>OPCODE_UPDATE_RESPAWN_TIME</td><td> 141</td></tr>
 <tr><td>OPCODE_UPDATE_NETSTATS</td><td> 142</td></tr>
@@ -371,6 +371,8 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>OPCODE_UPDATE_BLOCK</td><td>234</td></tr>
 <tr><td>OPCODE_UPDATE_TURRET</td><td>235</td></tr>
 <tr><td>OPCODE_LATENCY_CHECK</td><td>236</td></tr>
+<tr><td>OPCODE_CHECK_OPCODE_FORMAT</td><td>237</td</tr>
+<tr><td>OPCODE_REQUEST_STARMAP</td><td>238</td</tr>
 <tr><td>OPCODE_NOOP</td><td>0xff</td></tr>
 </table>
 
@@ -415,6 +417,7 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>92</td><td>b</td><td>secure area</td></tr>
 <tr><td>93</td><td>b</td><td>docking magnets</td></tr>
 <tr><td>94</td><td>b</td><td>emf detector</td></tr>
+<tr><td>95</td><td>b</td><td>nav mode</td></tr>
 </table>
 
 <h4>101 UPDATE STARBASE</h4> (Server to Client)
@@ -816,20 +819,9 @@ forwards it back to each client.
 <tr><td>5</td><td>b</td><td>wavelength value</td></tr>
 </table>
 
-<h4>139 Science Select Coords</h4> (bidirectional, obsolete)
+<h4>139 not used</h4>
 
-This opcode is left over from the days when the game was 2-dimensional.
-There should probably be something to replace this for 3-dimensions.
-The idea was a user selected coordinates on the science screen with the
-mouse, and this data was simply relayed to other clients by the server
-by resending the command to all the clients.
-
-<p align=center><table border=1, width=60%>
-<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
-<tr><td>0</td><td>b</td><td>139</td></tr>
-<tr><td>5</td><td>S</td><td>x coord</td></tr>
-<tr><td>9</td><td>S</td><td>y coord</td></tr>
-</table>
+Not Used.
 
 <h4>140 Request Shield</h4> (bidirectional)
 
@@ -1962,7 +1954,164 @@ screen.
 <tr><td>1</td><td>q</td><td>64 bit arrival timestamp</td></tr>
 </table>
 
-<h4>255 No-Op
+<h4>237 Check Opcode Format</h4> (bidirectional)
+This opcode is used when an instance of snis_client connects to
+a snis_server to be somewhat confident the programs are both using the
+same conventions for opcodes.  There are five subcodes for this opcode:
+
+<p align=center><table border=1, width=60%>
+<tr><td>Subcode</td><td>Value</td></tr>
+<tr><td>OPCODE_CHECK_OPCODE_UNKNOWN</td><td>1</td>
+<tr><td>OPCODE_CHECK_OPCODE_MATCH</td><td>2</td>
+<tr><td>OPCODE_CHECK_OPCODE_QUERY</td><td>3</td>
+<tr><td>OPCODE_CHECK_OPCODE_VERIFY</td><td>4</td>
+<tr><td>OPCODE_CHECK_OPCODE_MISMATCH</td><td>5</td>
+</table>
+
+<p>The snis_server and snis_client programs have built within them a table of
+opcodes and the expected formats for those opcodes (see snis_opcode.h and
+snis_opcode.c).  When snis_client connects to a snis_server, it issues a
+series of OPCODE_CHECK_OPCODE_FORMAT VERIFY requests to snis_server,
+containing the opcode the verify, the opcode format, and the length
+of the opcode format.
+
+<p align=center><table border=1, width=60%> (Client to Server)
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>237</td></tr>
+<tr><td>1</td><td>b</td><td>4</td></tr>
+<tr><td>2</td><td>b</td><td>Opcode to verify</td></tr>
+<tr><td>4</td><td>h</td><td>length of opcode format</td></tr>
+<tr><td>6</td><td>raw</td><td>Opcode format</td></tr>
+</table>
+
+<p>In response to these requests for opcode format verification, the snis_server
+process will respond with one of three responses: 1) OPCODE_CHECK_OPCODE_UNKNOWN
+if the opcode to be verified was unknown to the server, 2) OPCODE_CHECK_OPCODE_FORMAT
+if the provided format did not match the expected format, or 3) OPCODE_CHECK_OPCODE_MATCH
+if everything is as expected.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>237</td></tr>
+<tr><td>1</td><td>b</td><td>1</td></tr>
+<tr><td>2</td><td>b</td><td>Opcode that is unknown</td></tr>
+</table>
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>237</td></tr>
+<tr><td>1</td><td>b</td><td>2</td></tr>
+<tr><td>2</td><td>b</td><td>Opcode that matches expectations</td></tr>
+</table>
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>237</td></tr>
+<tr><td>1</td><td>b</td><td>5</td></tr>
+<tr><td>2</td><td>b</td><td>Opcode that has mismatched format</td></tr>
+</table>
+
+<p>When an instance of snis_client connects to a snis_server, the server will
+send a series of OPCODE_CHECK_OPCODE_QUERY requests to the client for each
+opcode the server is aware of.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>237</td></tr>
+<tr><td>1</td><td>b</td><td>3</td></tr>
+<tr><td>2</td><td>b</td><td>Opcode to query</td></tr>
+</table>
+
+<p>In response to these queries, the client will send OPCODE_CHECK_OPCODE_VERIFY (4)
+responses (as described above) if the opcode is known, or
+OPCODE_CHECK_OPCODE_UNKNOWN (as described above) if the opcode is not known.
+
+<h4>238 Request Starmap</h4> (Client to Server)
+
+<p>The client sends this to the server when the "STARMAP" button on the
+navigation screen is pressed.  On the server, this sets the player ships
+navigation mode to indicate the starmap should be displayed on the navigation
+screen. This is propagated back to the player ship by the OPCODE_UPDATE_SHIP
+opcode (100).
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>238</td></tr>
+<tr><td>1</td><td>b</td><td>0</td></tr>
+</table>
+
+<h4>239 Update Solarsystem Location</h4> (Server to Client)
+
+<p>Periodically, the snis_server process sends this opcode once for
+each solarsystem to each snis_client process to update the positions
+of solarsystems.
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>239</td></tr>
+<tr><td>1</td><td>S</td><td>X position</td></tr>
+<tr><td>5</td><td>S</td><td>Y position</td></tr>
+<tr><td>9</td><td>S</td><td>Z position</td></tr>
+<tr><td>13</td><td>raw (exactly 20 bytes)</td><td>solar system name</td></tr>
+</table>
+
+<h4>240 Set Waypoint</h4> (bidirectional)
+
+There are a small number (10) of "waypoints" that each player ship can
+keep track of in an array.  Each waypoint amounts is a number from 0-9 plus
+three double precision coordinates, x, y, z.  This opcode manages that
+array of waypoints.
+
+<p>This opcode has 5 subcommands.
+<ul>
+<li>1: OPCODE_SET_WAYPOINT_CLEAR
+<li>2: OPCODE_SET_WAYPOINT_COUNT
+<li>3: OPCODE_SET_WAYPOINT_ROW
+<li>4: OPCODE_SET_WAYPOINT_ADD_ROW
+<li>5: OPCODE_SET_WAYPOINT_UPDATE_SELECTION
+</ul>
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>240</td></tr>
+<tr><td>1</td><td>b</td><td>1 (clear row)</td></tr>
+<tr><td>2</td><td>b</td><td>Which row to clear</td></tr>
+</table>
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>240</td></tr>
+<tr><td>1</td><td>b</td><td>2 (set waypoint count)</td></tr>
+<tr><td>2</td><td>b</td><td>Count of how many rows are in table</td></tr>
+</table>
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>240</td></tr>
+<tr><td>1</td><td>b</td><td>3 (set waypoint row)</td></tr>
+<tr><td>2</td><td>b</td><td>Row to set</td>
+<tr><td>3</td><td>S</td><td>X value</td><td>UNIVERSE_DIM</td>
+<tr><td>7</td><td>S</td><td>Y value</td><td>UNIVERSE_DIM</td>
+<tr><td>11</td><td>S</td><td>Z value</td><td>UNIVERSE_DIM</td>
+</table>
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>240</td></tr>
+<tr><td>1</td><td>b</td><td>4 (add row)</td></tr>
+<tr><td>2</td><td>S</td><td>X value</td><td>UNIVERSE_DIM</td>
+<tr><td>6</td><td>S</td><td>Y value</td><td>UNIVERSE_DIM</td>
+<tr><td>10</td><td>S</td><td>Z value</td><td>UNIVERSE_DIM</td>
+</table>
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>240</td></tr>
+<tr><td>1</td><td>b</td><td>5</td></tr>
+<tr><td>2</td><td>w</td><td>Which row is selected (0xffffffff means no row selected)</td></tr>
+</table>
+
+<h4>255 No-Op</h4>
 <p align=center><table border=1, width=60%>
 <tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
 <tr><td>0</td><td>b</td><td>255</td></tr>
