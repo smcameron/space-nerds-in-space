@@ -16526,6 +16526,8 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].requested_verification = 0;
 		bridgelist[nbridges].requested_creation = !!app.new_ship;
 		bridgelist[nbridges].nclients = 1;
+		bridgelist[nbridges].selected_waypoint = -1;
+		bridgelist[nbridges].nwaypoints = 0;
 		clear_bridge_waypoints(nbridges);
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
@@ -16549,6 +16551,7 @@ static int add_new_player(struct game_client *c)
 	snis_sha1_hash(bridgelist[c->bridge].shipname, bridgelist[c->bridge].password,
 			bridgelist[c->bridge].pwdhash);
 	c->debug_ai = 0;
+	c->waypoints_dirty = 1;
 	c->request_universe_timestamp = 0;
 	fprintf(stderr, "%s: queue client id %d\n", logprefix(), c->shipid);
 	queue_up_client_id(c);
