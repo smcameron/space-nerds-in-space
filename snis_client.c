@@ -4675,12 +4675,6 @@ static void science_activate_waypoints_widgets(void)
 
 	ui_hide_widget(sci_ui.scizoom);
 	ui_hide_widget(sci_ui.scipower);
-	ui_hide_widget(sci_ui.details_button);
-	ui_hide_widget(sci_ui.launch_mining_bot_button);
-	ui_hide_widget(sci_ui.tractor_button);
-	ui_hide_widget(sci_ui.threed_button);
-	ui_hide_widget(sci_ui.sciplane_button);
-	ui_unhide_widget(sci_ui.waypoints_button);
 	ui_unhide_widget(sci_ui.add_waypoint_button);
 	ui_unhide_widget(sci_ui.add_current_pos_button);
 	ui_hide_widget(sci_ui.align_to_ship_button);
@@ -4696,7 +4690,6 @@ static void science_activate_waypoints_widgets(void)
 		ui_hide_widget(sci_ui.clear_waypoint_button[i]);
 		ui_hide_widget(sci_ui.select_waypoint_button[i]);
 	}
-	snis_button_set_label(sci_ui.waypoints_button, "BACK");
 }
 
 static void science_deactivate_waypoints_widgets(void)
@@ -4722,7 +4715,6 @@ static void science_deactivate_waypoints_widgets(void)
 		ui_hide_widget(sci_ui.clear_waypoint_button[i]);
 		ui_hide_widget(sci_ui.select_waypoint_button[i]);
 	}
-	snis_button_set_label(sci_ui.waypoints_button, "WAYPOINTS");
 }
 
 static int process_sci_details(void)
@@ -10952,12 +10944,8 @@ static void sci_details_pressed(void *x)
 
 static void sci_waypoints_pressed(void *x)
 {
-	if (sci_ui.details_mode == SCI_DETAILS_MODE_WAYPOINTS)
-		queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
-			(unsigned char) SCI_DETAILS_MODE_SCIPLANE));
-	else
-		queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
-			(unsigned char) SCI_DETAILS_MODE_WAYPOINTS));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
+		(unsigned char) SCI_DETAILS_MODE_WAYPOINTS));
 }
 
 static void sci_align_to_ship_pressed(void *x)
@@ -11063,34 +11051,34 @@ static void init_science_ui(void)
 	const int spx = szx;
 	const int spy = 50 * SCREEN_HEIGHT / 600;
 
-	const int wpx = 330 * SCREEN_WIDTH / 800;
-	const int wpy = 575 * SCREEN_HEIGHT / 600;
-	const int wpw = 75 * SCREEN_WIDTH / 800;
-	const int wph = 20 * SCREEN_HEIGHT / 600;
-
-	const int mbbx = 420 * SCREEN_WIDTH / 800;
+	const int mbbx = 485 * SCREEN_WIDTH / 800;
 	const int mbby = 575 * SCREEN_HEIGHT / 600;
-	const int mbbw = 95 * SCREEN_WIDTH / 800;
+	const int mbbw = 60 * SCREEN_WIDTH / 800;
 	const int mbbh = 20 * SCREEN_HEIGHT / 600;
 
-	const int trbx = 530 * SCREEN_WIDTH / 800;
+	const int trbx = 555 * SCREEN_WIDTH / 800;
 	const int trby = 575 * SCREEN_HEIGHT / 600;
-	const int trbw = 85 * SCREEN_WIDTH / 800;
+	const int trbw = 50 * SCREEN_WIDTH / 800;
 	const int trbh = 20 * SCREEN_HEIGHT / 600;
 
-	const int scpx = 620 * SCREEN_WIDTH / 800;
+	const int wpx = 615 * SCREEN_WIDTH / 800;
+	const int wpy = 575 * SCREEN_HEIGHT / 600;
+	const int wpw = 60 * SCREEN_WIDTH / 800;
+	const int wph = 20 * SCREEN_HEIGHT / 600;
+
+	const int scpx = 685 * SCREEN_WIDTH / 800;
 	const int scpy = trby;
-	const int scpw = 40 * SCREEN_WIDTH / 800; 
+	const int scpw = 23 * SCREEN_WIDTH / 800;
 	const int scph = trbh;
 
-	const int thdx = 665 * SCREEN_WIDTH / 800;  
-	const int thdy = trby;  
-	const int thdw = 40 * SCREEN_WIDTH / 800;
+	const int thdx = 715 * SCREEN_WIDTH / 800;
+	const int thdy = trby;
+	const int thdw = 23 * SCREEN_WIDTH / 800;
 	const int thdh = trbh;
 
-	const int detx = 710 * SCREEN_WIDTH / 800;
+	const int detx = 745 * SCREEN_WIDTH / 800;
 	const int dety = trby;
-	const int detw = 75 * SCREEN_WIDTH / 800;
+	const int detw = 50 * SCREEN_WIDTH / 800;
 	const int deth = trbh;
 
 	const int atsx = 10 * SCREEN_WIDTH / 800;
@@ -11110,14 +11098,14 @@ static void init_science_ui(void)
 			UI_COLOR(sci_button), NANO_FONT, sci_mining_bot_pressed, (void *) 0);
 	sci_ui.tractor_button = snis_button_init(trbx, trby, trbw, trbh, "TRACTOR",
 			UI_COLOR(sci_button), NANO_FONT, sci_tractor_pressed, (void *) 0);
+	sci_ui.waypoints_button = snis_button_init(wpx, wpy, wpw, wph, "WAYPOINTS",
+			UI_COLOR(sci_button), NANO_FONT, sci_waypoints_pressed, (void *) 0);
 	sci_ui.sciplane_button = snis_button_init(scpx, scpy, scpw, scph, "SRS",
 			UI_COLOR(sci_button), NANO_FONT, sci_sciplane_pressed, (void *) 0);
 	sci_ui.threed_button = snis_button_init(thdx, thdy, thdw, thdh, "LRS",
 			UI_COLOR(sci_button), NANO_FONT, sci_threed_pressed, (void *) 0);
 	sci_ui.details_button = snis_button_init(detx, dety, detw, deth, "DETAILS",
 			UI_COLOR(sci_button), NANO_FONT, sci_details_pressed, (void *) 0);
-	sci_ui.waypoints_button = snis_button_init(wpx, wpy, wpw, wph, "WAYPOINTS",
-			UI_COLOR(sci_button), NANO_FONT, sci_waypoints_pressed, (void *) 0);
 	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
 			UI_COLOR(sci_button), NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
