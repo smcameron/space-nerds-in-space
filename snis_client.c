@@ -2474,6 +2474,8 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 		break;
 	}
 
+	if (nsparks > 40) /* a big explosion, add one big freakin' stationary spark that fades quickly */
+		add_spark(x, y, z, 0, 0, 0, 15, color, &spark_material, 0.8, 0, 250.0);
 	for (i = 0; i < nsparks; i++) {
 		angle = ((double) snis_randn(360) * M_PI / 180.0);
 		zangle = ((double) snis_randn(360) * M_PI / 180.0);
