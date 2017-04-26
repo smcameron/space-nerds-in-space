@@ -1113,8 +1113,14 @@ console (e.g. if you mean for this to be the NAVIGATION station, press F2).
 <p>That's it for the bridge station setup.  Repeat for each station.
 <hr>
 <h1><a name="troubleshooting">Troubleshooting</a></h1>
+<b>Contents:</b>
 <ol>
-<li><b>I keep getting "BRIDGE VERIFICATION FAILED" -- what am I doing wrong?</b>
+<li><a href="#bridgeverification">Bridge Verification Failed</a>
+<li><a href="#audioproblems">Audio Problems</a>
+<li><a href="#crashing">The game is crashing!</a>
+</ol>
+<ol>
+<li><b><a name="bridgeverification">I keep getting "BRIDGE VERIFICATION FAILED" -- what am I doing wrong?</a></b>
 <p>This means one of several things:
 <ol>
 <li>If you have checked the "CREATE SHIP" checkbox:
@@ -1167,7 +1173,130 @@ creating a new ship vs. mistyping a ship name, and the difference between creati
 and joining an existing ship.  Not to suggest that there isn't room for improvement in how
 it works.
 <p>
-<li><b>The game is crashing!  What can I do?</b>
+<li><b><a name="audioproblems">Sound isn't working!  (Or sound isn't working quite as I expected)</a></b>
+<p>Audio on linux is complicated. In general, there are two main takes on how
+audio should work in linux, "the pulse way", and "the JACK way". The "JACK way"
+is generally concerned with professional audio recording, very low latency, etc.
+The "pulse way" is less concerned with such things, and is more concerned with
+"just make some damn sound work."  I'm going to assume you're using the "pulse
+way," since if you're using JACK, you probably already know what you're doing
+and can troubleshoot it yourself.
+
+<p>Space Nerds in Space uses <a href="http://www.portaudio.com/">the Portaudio
+library</a> for sound.  You need version <b>1.9</b> of portaudio (not 2.0).
+There is a test program, <cmd>snis_test_audio</cmd> to help trace down audio problems.
+It will print out a list of devices that Portaudio knows about.  Often,
+when there is some audio problem, the problem turns out to be that sound
+is by default playing on a different device than what you expected.
+<p>Here is an example of running the <cmd>snis_test_audio</cmd>
+program on my system:
+<blockquote>
+<pre>
+$ make snis_test_audio
+$ ./snis_test_audio
+Space Nerds In Space audio test program.
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.rear
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.center_lfe
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.side
+ALSA lib pcm_route.c:867:(find_matching_chmap) Found no matching channel map
+connect(2) call to /dev/shm/jack-1000/default/jack_0 failed (err=No such file or directory)
+attempt to connect to server failed
+Portaudio reports 21 sound devices.
+Portaudio says the default device is: 20
+wwviaudio_initialize_portaudio returned 0
+Portaudio reports 21 devices
+0: HDA Intel PCH: ALC887-VD Analog (hw:0,0)
+1: HDA Intel PCH: ALC887-VD Digital (hw:0,1)
+2: HDA Intel PCH: ALC887-VD Alt Analog (hw:0,2)
+3: HDA Intel PCH: HDMI 0 (hw:0,3)
+4: HDA Intel PCH: HDMI 1 (hw:0,7)
+5: HDA Intel PCH: HDMI 2 (hw:0,8)
+6: Scarlett 2i2 USB: Audio (hw:1,0)
+7: sysdefault
+8: front
+9: surround21
+10: surround40
+11: surround41
+12: surround50
+13: surround51
+14: surround71
+15: iec958
+16: spdif
+17: hdmi
+18: pulse
+19: dmix
+20: default
+Attempting to play sound... ...finished attempting to play sound
+</pre>
+</blockquote>
+You can try alternate devices, for example, I can make it play through my
+Scarlett 2i2 USB sound device by:
+
+<blockquote>
+<pre>
+$ ./snis_test_audio 6
+Space Nerds In Space audio test program.
+Manually setting sound device to 6
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.rear
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.center_lfe
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.side
+ALSA lib pcm_route.c:867:(find_matching_chmap) Found no matching channel map
+connect(2) call to /dev/shm/jack-1000/default/jack_0 failed (err=No such file or directory)
+attempt to connect to server failed
+Portaudio reports 21 sound devices.
+Portaudio says the default device is: 20
+Using sound device 6
+wwviaudio_initialize_portaudio returned 0
+Portaudio reports 21 devices
+0: HDA Intel PCH: ALC887-VD Analog (hw:0,0)
+1: HDA Intel PCH: ALC887-VD Digital (hw:0,1)
+2: HDA Intel PCH: ALC887-VD Alt Analog (hw:0,2)
+3: HDA Intel PCH: HDMI 0 (hw:0,3)
+4: HDA Intel PCH: HDMI 1 (hw:0,7)
+5: HDA Intel PCH: HDMI 2 (hw:0,8)
+6: Scarlett 2i2 USB: Audio (hw:1,0)
+7: sysdefault
+8: front
+9: surround21
+10: surround40
+11: surround41
+12: surround50
+13: surround51
+14: surround71
+15: iec958
+16: spdif
+17: hdmi
+18: pulse
+19: dmix
+20: default
+Attempting to play sound... ...finished attempting to play sound
+</pre>
+</blockquote>
+
+<p>So, you can see what devices it thinks you have, and try them out.
+
+<p>I also made it so snis_client can use alternate sound devices, e.g.
+<blockquote>
+<pre>
+export SNIS_AUDIO_DEVICE=6
+</pre>
+</blockquote>
+then launch the game and it will play sounds through my Scarlett 2i2 USB device instead of the default device.
+
+<p>Another thing worth trying. On my system (Mint 18.1)
+there is a "Sound Settings..." thing that I can play with. When the game is
+running, it shows "ALSA plug-in [snis_client]: ALSA Playback on", and from this
+GUI Sound Setting thing, I can dynamically switch it to play on either
+"Built-in Audio Analog Stereo" (which I think is probably what portaudio calls
+"0: HDA Intel PCH: ALC887-VD Analog (hw:0,0)", and the Scarlett 2i2. But I
+think that is via pulse, so if snis_test_audio shows "pulse" as a device it
+knows, then you should probably do: export SNIS_AUDIO_DEVICE={whatever number
+portaudio thinks pulse is according to snis_test_audio output}  (You can install
+<cmd>pulse</cmd> and <cmd>pavucontrol</cmd> if they aren't installed and
+see if that helps.  The <cmd>pavucontrul</cmd> program should let you dynamically
+control to which device a running program's sound output is directed.
+
+<li><b><a name="crashing">The game is crashing!  What can I do?</a></b>
 <p>Suppose you see something like this ("Segmentation fault"):
 <pre>
 snis_multiverse: hash 82b24d25b042724aa94a39a9ea38e05cf0cf6340 exists, as expected.
