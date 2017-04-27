@@ -48,6 +48,13 @@ GLOBAL void wwviaudio_set_nomusic(void);
  */
 GLOBAL int wwviaudio_set_sound_device(int device);
 
+/* Returns the audio device number as set when
+ * wwviaudio_initialize_portaudio() (see below) ran.
+ * This is meant to be called after calling
+ * wwviaudio_initialize_portaudio().
+ */
+GLOBAL int wwviaudio_get_sound_device(void);
+
 /* Initialize portaudio and start the audio engine.
  * Space will be allocated to allow for the specified
  * number of concurrently playing sounds.  The 2nd parameter

@@ -293,6 +293,7 @@ int wwviaudio_initialize_portaudio(int maximum_concurrent_sounds, int maximum_so
 			outparams.device = sound_device;
 		printf("Using sound device %d\n", outparams.device);
 	}
+	sound_device = outparams.device;
 
 	if (outparams.device < 0 && device_count > 0) {
 		printf("Hmm, that's strange, portaudio says the default device is %d,\n"
@@ -458,6 +459,11 @@ int wwviaudio_set_sound_device(int device)
 {
 	sound_device = device;
 	return 0;
+}
+
+int wwviaudio_get_sound_device(void)
+{
+	return sound_device;
 }
 
 void wwviaudio_list_devices(void)
