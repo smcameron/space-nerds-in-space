@@ -1356,13 +1356,13 @@ static void laserbeam_move(struct snis_entity *o)
 		update_entity_pos(o->entity, x, y, z);
 		update_entity_orientation(o->entity, &orientation);
 		update_entity_material(o->entity, o->tsd.laserbeam.material);
-		update_entity_non_uniform_scale(o->entity, length, 2.0 + snis_randn(7), 0.0);
+		update_entity_non_uniform_scale(o->entity, length, 5.0 + snis_randn(20), 0.0);
 	}
 
 	if (o->tsd.laserbeam.laserflash_entity) {
 		/* particle mesh is 50x50, scale it randomly to make it flicker */
 		update_entity_scale(o->tsd.laserbeam.laserflash_entity,
-					0.01 * (snis_randn(200) + 50.0));
+					0.02 * (snis_randn(200) + 50.0));
 		update_entity_pos(o->tsd.laserbeam.laserflash_entity,
 					target->x + epsilon, target->y + epsilon, target->z + epsilon);
 	}
