@@ -5827,8 +5827,9 @@ static void update_player_orientation(struct snis_entity *o)
 			 * then scale to some constant fraction of planet radius (2.5 degrees, say).
 			 * Add V to P to produce D.  This is where we want to aim.
 			 */
-			union vec3 p, d, direction, right;
-			union quat new_orientation;
+			union vec3 p, d, direction, right, up, desired_up;
+			union quat new_orientation, up_adjustment, adjusted_orientation;
+
 			planet = &go[i];
 			p.v.x = o->x - planet->x;
 			p.v.y = o->y - planet->y;
@@ -5862,8 +5863,31 @@ static void update_player_orientation(struct snis_entity *o)
 
 			quat_from_u2v(&new_orientation, &right, &direction, NULL);
 
-			o->tsd.ship.computer_desired_orientation = new_orientation;
-			o->tsd.ship.computer_steering_time_left = 10; /* let the computer steer */
+			/* new_orientation is at least pointing in the right direction, but
+			 * "up" in that orientation is not necessarily "correct" yet.
+			 * We want "up" to be perpendicular to direction, and parallel to
+			 * a plane tangent to the sphere at the closest point.
+			 */
+			vec3_normalize_self(&p);
+			vec3_cross(&desired_up, &p, &direction); /* p is vector from planet to player */
+			vec3_normalize_self(&desired_up);
+
+			/* Find up in the "new_orientation" */
+			up.v.x = 0.0;
+			up.v.y = 1.0;
+			up.v.z = 0.0;
+			quat_rot_vec_self(&up, &new_orientation);
+
+			/* Find the rotation from up in the new orientation to the desired up */
+			quat_from_u2v(&up_adjustment, &up, &desired_up, NULL);
+			quat_normalize_self(&up_adjustment);
+
+			/* Adjust new orientation to have the desired up direction */
+			quat_mul(&adjusted_orientation, &up_adjustment, &new_orientation);
+			quat_normalize_self(&adjusted_orientation);
+
+			o->tsd.ship.computer_desired_orientation = adjusted_orientation;
+			o->tsd.ship.computer_steering_time_left = 50; /* let the computer steer */
 		}
 	}
 skip_standard_orbit:
