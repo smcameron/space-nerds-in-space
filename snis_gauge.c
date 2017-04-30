@@ -18,6 +18,7 @@ struct gauge {
 	double r1,r2;
 	double start_angle, angular_range;
 	int needle_color, dial_color, needle_color2;
+	int dial_font, label_font;
 	int ndivs;
 	char title[16]; 
 	int bg_color;
@@ -47,6 +48,12 @@ struct gauge *gauge_init(int x, int y, int r, double r1, double r2,
 	g->angular_range = angular_range;
 	g->needle_color = needle_color;
 	g->dial_color = dial_color;
+	g->dial_font = NANO_FONT;
+	g->label_font = TINY_FONT;
+	if (g->r < 60) {
+		g->dial_font = PICO_FONT;
+		g->label_font = PICO_FONT;
+	}
 	g->ndivs = ndivs;
 	g->sample = gmf;
 	strncpy(g->title, title, sizeof(g->title) - 1);
@@ -91,13 +98,6 @@ void gauge_draw(struct gauge *g)
 	double value;
 	double inc, v;
 	char buffer[10], buf2[10];
-	int dial_font = NANO_FONT;
-	int label_font = TINY_FONT;
-
-	if (g->r < 60) {
-		dial_font = PICO_FONT;
-		label_font = PICO_FONT;
-	}
 
 	if (g->bg_color >= 0) {
 		sng_set_foreground_alpha(g->bg_color, g->bg_alpha);
@@ -130,13 +130,13 @@ void gauge_draw(struct gauge *g)
 		sng_current_draw_line(x1, y1, x2, y2);
 		sprintf(buf2, "%1.0lf", v);
 		v += inc;
-		sng_center_xy_draw_string(buf2, dial_font, x3, y3);
+		sng_center_xy_draw_string(buf2, g->dial_font, x3, y3);
 	}
-	sng_center_xy_draw_string(g->title, label_font,
+	sng_center_xy_draw_string(g->title, g->label_font,
 			g->x, (g->y + (g->r * 0.5)));
 	value = g->sample();
 	sprintf(buffer, "%4.2lf", value);
-	sng_center_xy_draw_string(buffer, label_font,
+	sng_center_xy_draw_string(buffer, g->label_font,
 			g->x, (g->y + (g->r * 0.5)) + 15);
 
 	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
@@ -161,6 +161,12 @@ void gauge_get_location(struct gauge *g, float *x, float *y, float *r)
 	*x = g->x;
 	*y = g->y;
 	*r = g->r;
+}
+
+void gauge_set_fonts(struct gauge *g, int dial_font, int label_font)
+{
+	g->dial_font = dial_font;
+	g->label_font = label_font;
 }
 
 /*

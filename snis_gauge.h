@@ -17,6 +17,7 @@ GLOBAL struct gauge *gauge_init(int x, int y, int r, double r1, double r2,
 			double start_angle, double angular_range,
 			int needle_color, int dial_color, int ndivs, char *title,
 			gauge_monitor_function gmf);
+GLOBAL void gauge_set_fonts(struct gauge *g, int dial_font, int label_font);
 GLOBAL void draw_gauge_needle(float x, float y, float r, double a);
 GLOBAL void gauge_fill_background(struct gauge *g, int bg, float alpha);
 GLOBAL void gauge_draw(struct gauge *g);
