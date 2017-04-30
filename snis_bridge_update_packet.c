@@ -26,7 +26,7 @@
 struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned char *pwdhash)
 {
 	struct packed_buffer *pb;
-	uint32_t fuel;
+	uint32_t fuel, oxygen;
 	uint8_t tloading, tloaded, throttle, rpm;
 	uint32_t iwallet = (int32_t) (o->tsd.ship.wallet * 100.0);
 
@@ -40,6 +40,7 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 	throttle = o->tsd.ship.throttle;
 	rpm = o->tsd.ship.rpm;
 	fuel = o->tsd.ship.fuel;
+	oxygen = o->tsd.ship.fuel;
 
 	tloading = (uint8_t) (o->tsd.ship.torpedoes_loading & 0x0f);
 	tloaded = (uint8_t) (o->tsd.ship.torpedoes_loaded & 0x0f);
@@ -49,7 +50,7 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 			o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbbwQQQbbw",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbw",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -57,7 +58,7 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 			o->tsd.ship.gun_yaw_velocity,
 			o->tsd.ship.sci_heading,
 			o->tsd.ship.sci_beam_width,
-			tloading, throttle, rpm, fuel, o->tsd.ship.temp,
+			tloading, throttle, rpm, fuel, oxygen, o->tsd.ship.temp,
 			o->tsd.ship.scizoom, o->tsd.ship.weapzoom, o->tsd.ship.navzoom,
 			o->tsd.ship.mainzoom,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
@@ -83,7 +84,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 {
 	uint16_t alive;
 	uint32_t torpedoes, power;
-	uint32_t fuel, victim_id;
+	uint32_t fuel, oxygen, victim_id;
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
 	double dgunyawvel, dsheading, dbeamwidth;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
@@ -108,8 +109,8 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(pb, "bbbwbbbbbbbbbbbbbwQQQbbw",
-			&tloading, &throttle, &rpm, &fuel, &temp,
+	packed_buffer_extract(pb, "bbbwwbbbbbbbbbbbbbwQQQbbw",
+			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
@@ -159,6 +160,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 	o->tsd.ship.throttle = throttle;
 	o->tsd.ship.rpm = rpm;
 	o->tsd.ship.fuel = fuel;
+	o->tsd.ship.oxygen = oxygen;
 	o->tsd.ship.temp = temp;
 	o->tsd.ship.scizoom = scizoom;
 	o->tsd.ship.weapzoom = weapzoom;

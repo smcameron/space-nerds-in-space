@@ -76,6 +76,7 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT16_TSDFIELD(torpedo_load_time),
 	UINT8_TSDFIELD(phaser_bank_charge),
 	UINT32_TSDFIELD(fuel),
+	UINT32_TSDFIELD(oxygen),
 	UINT8_TSDFIELD(rpm),
 	UINT8_TSDFIELD(throttle),
 	UINT8_TSDFIELD(temp),

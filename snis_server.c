@@ -6214,8 +6214,10 @@ static void player_move(struct snis_entity *o)
 		snis_queue_add_sound(FUEL_LEVELS_CRITICAL, ROLE_SOUNDSERVER, o->id);
 
 		/* auto-refuel in safe mode */
-		if (safe_mode)
+		if (safe_mode) {
 			o->tsd.ship.fuel = UINT32_MAX;
+			o->tsd.ship.oxygen = UINT32_MAX;
+		}
 	}
 	do_power_model_computations(o);
 	do_coolant_model_computations(o);
@@ -6229,6 +6231,10 @@ static void player_move(struct snis_entity *o)
 	} else {
 		power_model_disable(o->tsd.ship.power_model);
 	}
+	if (o->tsd.ship.oxygen > OXYGEN_CONSUMPTION_UNIT)
+		o->tsd.ship.oxygen -= OXYGEN_CONSUMPTION_UNIT; /* Consume oxygen */
+	else
+		o->tsd.ship.oxygen = 0;
 	update_player_orientation(o);
 	update_player_sciball_orientation(o);
 	update_player_weap_orientation(o);
@@ -6338,6 +6344,14 @@ static void player_move(struct snis_entity *o)
 	o->tsd.ship.phaser_charge = update_phaser_banks(current_phaserbank, phaser_chargerate, 255);
 	maybe_do_player_warp(o);
 	calculate_ship_scibeam_info(o);
+
+	/* Check if crew has asphixiated */
+	if (o->tsd.ship.oxygen == 0) {
+		o->alive = 0;
+		o->timestamp = universe_timestamp;
+		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+		send_ship_damage_packet(o);
+	}
 }
 
 static void demon_ship_move(struct snis_entity *o)
@@ -7177,6 +7191,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.sci_beam_width = MAX_SCI_BW_YAW_VELOCITY;
 	money += (float) (UINT32_MAX - o->tsd.ship.fuel) * FUEL_UNIT_COST;
 	o->tsd.ship.fuel = UINT32_MAX;
+	o->tsd.ship.oxygen = UINT32_MAX;
 	o->tsd.ship.rpm = 0;
 	o->tsd.ship.temp = 0;
 	o->tsd.ship.power = 0;
@@ -16190,12 +16205,13 @@ static void send_update_ship_packet(struct game_client *c,
 	struct snis_entity *o, uint8_t opcode)
 {
 	struct packed_buffer *pb;
-	uint32_t fuel;
+	uint32_t fuel, oxygen;
 	uint8_t tloading, tloaded, throttle, rpm;
 
 	throttle = o->tsd.ship.throttle;
 	rpm = o->tsd.ship.rpm;
 	fuel = o->tsd.ship.fuel;
+	oxygen = o->tsd.ship.oxygen;
 
 	tloading = (uint8_t) (o->tsd.ship.torpedoes_loading & 0x0f);
 	tloaded = (uint8_t) (o->tsd.ship.torpedoes_loaded & 0x0f);
@@ -16205,7 +16221,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwbbbbbbbbbbbbbwQQQbbbb",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -16213,7 +16229,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.gun_yaw_velocity,
 			o->tsd.ship.sci_heading,
 			o->tsd.ship.sci_beam_width,
-			tloading, throttle, rpm, fuel, o->tsd.ship.temp,
+			tloading, throttle, rpm, fuel, oxygen, o->tsd.ship.temp,
 			o->tsd.ship.scizoom, o->tsd.ship.weapzoom, o->tsd.ship.navzoom,
 			o->tsd.ship.mainzoom,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,

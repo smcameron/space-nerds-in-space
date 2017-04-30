@@ -228,6 +228,7 @@ struct update_ship_packet {
 	uint8_t throttle;
 	uint8_t rpm;
 	uint32_t fuel;
+	uint32_t oxygen;
 	uint8_t temp;
 	uint8_t scizoom;
 	uint8_t weapzoom;

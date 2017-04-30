@@ -3760,7 +3760,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	struct packed_buffer pb;
 	uint16_t alive;
 	uint32_t id, timestamp, torpedoes, power;
-	uint32_t fuel, victim_id;
+	uint32_t fuel, oxygen, victim_id;
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
 	double dgunyawvel, dsheading, dbeamwidth;
 	int rc;
@@ -3792,8 +3792,8 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwbbbbbbbbbbbbbwQQQbbbb",
-			&tloading, &throttle, &rpm, &fuel, &temp,
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbb",
+			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
@@ -3841,6 +3841,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.throttle = throttle;
 	o->tsd.ship.rpm = rpm;
 	o->tsd.ship.fuel = fuel;
+	o->tsd.ship.oxygen = oxygen;
 	o->tsd.ship.temp = temp;
 	o->tsd.ship.scizoom = scizoom;
 	o->tsd.ship.weapzoom = weapzoom;
@@ -6673,6 +6674,9 @@ static void show_common_screen(GtkWidget *w, char *title)
 {
 	int title_color;
 	int border_color;
+	struct snis_entity *o;
+
+	o = find_my_ship();
 
 	if (red_alert_mode) {
 		title_color = UI_COLOR(common_red_alert);
@@ -6681,8 +6685,17 @@ static void show_common_screen(GtkWidget *w, char *title)
 		title_color = UI_COLOR(common_text);
 		border_color = UI_COLOR(common_border);
 	}
-	sng_set_foreground(title_color);
-	sng_abs_xy_draw_string(title, SMALL_FONT, txx(25), txy(LINEHEIGHT));
+
+	/* Low oxygen warning is common on all screens */
+	if (o && o->tsd.ship.oxygen < UINT32_MAX * 0.1) { /* 10% */
+		if (timer & 0x04) {
+			sng_set_foreground(UI_COLOR(common_red_alert));
+			sng_abs_xy_draw_string("LOW OXYGEN WARNING", SMALL_FONT, txx(25), txy(LINEHEIGHT));
+		}
+	} else {
+		sng_set_foreground(title_color);
+		sng_abs_xy_draw_string(title, SMALL_FONT, txx(25), txy(LINEHEIGHT));
+	}
 	sng_set_foreground(border_color);
 	snis_draw_line(1, 1, SCREEN_WIDTH, 0);
 	snis_draw_line(SCREEN_WIDTH - 1, 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
@@ -8776,6 +8789,7 @@ DEFINE_SAMPLER_FUNCTION(sample_temp, tsd.ship.temp, UINT8_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_warpdrive, tsd.ship.warpdrive, 10.0 * 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_scizoom, tsd.ship.scizoom, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_fuel, tsd.ship.fuel, UINT32_MAX, 0)
+DEFINE_SAMPLER_FUNCTION(sample_oxygen, tsd.ship.oxygen, UINT32_MAX, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phasercharge, tsd.ship.phaser_charge, 255.0, 0)
 DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 255.0 * 2.0, 10.0)
 DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 255.0, 0.0)
@@ -9139,17 +9153,31 @@ static void show_death_screen(GtkWidget *w)
 {
 	char buf[100];
 
+	struct snis_entity *o;
+
+	o = find_my_ship();
+
 	sng_set_foreground(UI_COLOR(death_text));
-	sprintf(buf, "YOUR SHIP");
-	sng_abs_xy_draw_string(buf, BIG_FONT, 20, 150);
-	sprintf(buf, "HAS BEEN");
-	sng_abs_xy_draw_string(buf, BIG_FONT, 20, 250);
-	sprintf(buf, "BLOWN TO");
-	sng_abs_xy_draw_string(buf, BIG_FONT, 20, 350);
-	sprintf(buf, "SMITHEREENS");
-	sng_abs_xy_draw_string(buf, BIG_FONT, 20, 450);
-	sprintf(buf, "RESPAWNING IN %d SECONDS", go[my_ship_oid].respawn_time);
-	sng_abs_xy_draw_string(buf, TINY_FONT, 20, 500);
+
+	if (o && o->tsd.ship.oxygen < 10) {
+		sprintf(buf, "YOUR CREW HAS DIED");
+		sng_abs_xy_draw_string(buf, BIG_FONT, 20, 150);
+		sprintf(buf, "BY ASPHYXIATION");
+		sng_abs_xy_draw_string(buf, BIG_FONT, 20, 250);
+		sprintf(buf, "RESPAWNING IN %d SECONDS", go[my_ship_oid].respawn_time);
+		sng_abs_xy_draw_string(buf, TINY_FONT, 20, 500);
+	} else {
+		sprintf(buf, "YOUR SHIP");
+		sng_abs_xy_draw_string(buf, BIG_FONT, 20, 150);
+		sprintf(buf, "HAS BEEN");
+		sng_abs_xy_draw_string(buf, BIG_FONT, 20, 250);
+		sprintf(buf, "BLOWN TO");
+		sng_abs_xy_draw_string(buf, BIG_FONT, 20, 350);
+		sprintf(buf, "SMITHEREENS");
+		sng_abs_xy_draw_string(buf, BIG_FONT, 20, 450);
+		sprintf(buf, "RESPAWNING IN %d SECONDS", go[my_ship_oid].respawn_time);
+		sng_abs_xy_draw_string(buf, TINY_FONT, 20, 500);
+	}
 }
 
 static void show_manual_weapons(GtkWidget *w)
@@ -10217,6 +10245,7 @@ static struct engineering_ui {
 	struct gauge *amp_gauge;
 	struct gauge *voltage_gauge;
 	struct gauge *temp_gauge;
+	struct gauge *oxygen_gauge;
 	struct button *damcon_button;
 	struct button *preset1_button;
 	struct button *preset2_button;
@@ -10324,10 +10353,10 @@ static void init_engineering_ui(void)
 	const int s2x = 0.4375 * SCREEN_WIDTH; /* x start of 2nd bank of sliders */
 	struct engineering_ui *eu = &eng_ui;
 
-	r = SCREEN_WIDTH / 14;
+	r = SCREEN_WIDTH / 16;
 	eng_ui.gauge_radius = r;
-	y = r * 1.5;
-	x = r * 1.1;
+	y = r + 100.0;
+	x = r * 1.05;
 	xinc = (2.0 * r) * 1.1;
 	yinc = 0.07 * SCREEN_HEIGHT;
 
@@ -10335,18 +10364,28 @@ static void init_engineering_ui(void)
 	eu->amp_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(eng_gauge_needle), color,
 			10, "AMPS", sample_power_model_current);
+	gauge_set_fonts(eu->amp_gauge, PICO_FONT, PICO_FONT);
 	x += xinc;
 	eu->voltage_gauge = gauge_init(x, y, r, 0.0, 200.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(eng_gauge_needle), color,
 			10, "VOLTS", sample_power_model_voltage);
+	gauge_set_fonts(eu->voltage_gauge, PICO_FONT, PICO_FONT);
 	x += xinc;
 	eu->temp_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(eng_gauge_needle), color,
 			10, "TEMP", sample_temp);
+	gauge_set_fonts(eu->temp_gauge, PICO_FONT, PICO_FONT);
 	x += xinc;
 	eu->fuel_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(eng_gauge_needle), color,
 			10, "FUEL", sample_fuel);
+	gauge_set_fonts(eu->fuel_gauge, PICO_FONT, PICO_FONT);
+	x += xinc;
+	eu->oxygen_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(eng_gauge_needle), color,
+			10, "O2", sample_oxygen);
+	gauge_set_fonts(eu->oxygen_gauge, PICO_FONT, PICO_FONT);
+	x += xinc;
 
 	int gx1 = SCREEN_WIDTH - eng_ui.gauge_radius * 5;
 	int gy1 = SCREEN_HEIGHT * 0.02;
@@ -10464,6 +10503,7 @@ static void init_engineering_ui(void)
 	ui_add_gauge(eu->voltage_gauge, dm);
 	ui_add_gauge(eu->fuel_gauge, dm);
 	ui_add_gauge(eu->temp_gauge, dm);
+	ui_add_gauge(eu->oxygen_gauge, dm);
 	ui_add_button(eu->damcon_button, dm);
 	ui_add_button(eu->preset1_button, dm);
 	ui_add_button(eu->preset2_button, dm);
@@ -10654,6 +10694,22 @@ static void show_engineering(GtkWidget *w)
 			sng_center_xy_draw_string("LOW FUEL", NANO_FONT, fg_x_center, fg_y_center);
 		}
 	}
+
+	if (o->tsd.ship.oxygen < UINT32_MAX * 0.1) { /* 10% */
+		float o2_x, o2_y, o2_r;
+		gauge_get_location(eng_ui.oxygen_gauge, &o2_x, &o2_y, &o2_r);
+
+		float o2_x_center = o2_x;
+		float o2_y_center = o2_y - o2_r * 1.25;
+
+		sng_set_foreground(UI_COLOR(eng_warning));
+		if (o->tsd.ship.oxygen < UINT32_MAX * 0.01) { /* 1% */
+			sng_center_xy_draw_string("OUT Of OXYGEN", NANO_FONT, o2_x_center, o2_y_center);
+		} else {
+			sng_center_xy_draw_string("LOW OXYGEN", NANO_FONT, o2_x_center, o2_y_center);
+		}
+	}
+
 
 	gx1 = SCREEN_WIDTH - eng_ui.gauge_radius * 5;
 	gy1 = SCREEN_HEIGHT * 0.02;

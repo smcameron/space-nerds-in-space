@@ -368,6 +368,11 @@ struct ship_data {
 #define FUEL_UNITS (FUEL_DURATION * 60.0 * 30.0)
 #define FUEL_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / FUEL_UNITS))
 	uint32_t fuel;
+#define OXYGEN_DURATION (0.5) /* minutes */
+#define OXYGEN_UNITS (OXYGEN_DURATION * 60.0 * 30.0)
+#define OXYGEN_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / OXYGEN_UNITS))
+#define OXYGEN_REPLENISHMENT_UNIT OXYGEN_CONSUMPTION_UNIT
+	uint32_t oxygen;
 	uint8_t rpm;
 	uint8_t throttle;
 	uint8_t temp;
