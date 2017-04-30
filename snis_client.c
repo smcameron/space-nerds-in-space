@@ -13910,8 +13910,6 @@ static void start_gameserver_button_pressed()
 	}
 
 	memset(command, 0, sizeof(command));
-	snprintf(command, 200, "%s/snis_server %s SNIS '%s' . &",
-			bindir, net_setup_ui.lobbyname, net_setup_ui.servername);
 	printf("start game server button pressed.\n");
 
 	snprintf(command, sizeof(command), "%s/snis_server", bindir);
@@ -13921,8 +13919,8 @@ static void start_gameserver_button_pressed()
 		return;
 	}
 	if (child == 0) { /* This is the child process */
-		execl(command, "snis_server", net_setup_ui.lobbyname, "SNIS",
-				net_setup_ui.servername, ".", NULL);
+		execl(command, "snis_server", "-l", net_setup_ui.lobbyname, "-L", "DEFAULT2",
+				"--enable-enscript", "-m", "narnia", "-s", "default2", NULL);
 		/*
 		 * if execl returns at all, there was an error, and btw, be careful, very
 		 * limited stuff that we can safely call, similar to limitations of signal
