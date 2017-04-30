@@ -4591,6 +4591,7 @@ static struct snis_damcon_entity *damcon_find_closest_damaged_part_by_damage(str
 static struct snis_damcon_entity *damcon_find_next_thing_to_repair(struct damcon_data *d)
 {
 	struct snis_damcon_entity *part, *damaged_part = NULL;
+	struct snis_entity *o;
 	uint8_t max_damage = 0;
 	int i;
 
@@ -4603,6 +4604,28 @@ static struct snis_damcon_entity *damcon_find_next_thing_to_repair(struct damcon
 			if (i < 0)
 				continue;
 			return &d->o[i];
+		}
+	}
+
+	/* Next if oxygen is < 50% and any oxygen part damaged more then 33%, repair that */
+	i = lookup_by_id(bridgelist[d->bridge].shipid);
+	if (i >= 0) {
+		max_damage = 0;
+		o = &go[i];
+		if (o->tsd.ship.oxygen < (UINT32_MAX / 2)) {
+			for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+				part = &d->o[i];
+				if (part->type != DAMCON_TYPE_PART ||
+					part->tsd.part.system != DAMCON_TYPE_LIFESUPPORTSYSTEM)
+					continue;
+				if (part->tsd.part.damage > max_damage) {
+					damaged_part = part;
+					max_damage = part->tsd.part.damage;
+				}
+			}
+			if (max_damage >= 85) { /* 1/3rd of 256, or 33% damage */
+				return damaged_part;
+			}
 		}
 	}
 
@@ -9743,7 +9766,7 @@ static void add_damcon_systems(struct damcon_data *d)
 	int x, y, dy;
 
 	x = -DAMCONXDIM / 2;
-	dy = DAMCONYDIM / 6;
+	dy = DAMCONYDIM / 8;
 	y = dy - DAMCONYDIM / 2;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_WARPDRIVE, NULL);
 	d->o[i].version++;
@@ -9778,13 +9801,16 @@ static void add_damcon_systems(struct damcon_data *d)
 	d->o[i].version++;
 	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_TRACTORSYSTEM, NULL);
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_TRACTORSYSTEM, 0);
-	d->o[i].version++;
-
-	x = -DAMCONXDIM / 6;
 	y += dy;
-	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_REPAIR_STATION, NULL);
+	x = -DAMCONXDIM / 2;
 	d->o[i].version++;
+	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_REPAIR_STATION, NULL);
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_REPAIR_STATION, 0);
+	x = 2 * DAMCONXDIM / 3 - DAMCONXDIM / 2;
+	d->o[i].version++;
+	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_LIFESUPPORTSYSTEM, NULL);
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_LIFESUPPORTSYSTEM, 0);
+	d->o[i].version++;
 }
 
 static void add_damcon_parts(struct damcon_data *d)
@@ -9835,15 +9861,15 @@ The waypoint_data below describes the following network of waypoints:
     |                             \      |     /                           |
     |                                \   |  /                              |
     |           16---------------------- 17------------------- 18          |
-    |            |                     /     \                  |          |
-    |            |                  /           \               |          |
-    |            |              48               49             |          |
-    |            |                                              |          |
-    |           19                                             20          |
-    |            |                                              |          |
-    |            |                                              |          |
-    |            |                                              |          |
-    |           21---------------------- 22------------------- 23          |
+    |          /   \                  /  | \                  /   \        |
+    |        48     49                   |   \              50     51      |
+    |                              /     |     \                           |
+    |                            /       |       \                         |
+    |                          19-------20------- 21                       |
+    |                            \       |        /                        |
+    |                              \     |     /                           |
+    |                                 \  |  /                              |
+    |                                   22-------------------- 23          |
     |                                                                      |
     ------------------------------------------------------------------------
 *******************************************************************************/
@@ -9852,7 +9878,7 @@ static struct waypoint_data_entry {
 	int n, x, y;
 	int neighbor[10];
 } damcon_waypoint_data[] = {
-#define WAYPOINTBASE -850
+#define WAYPOINTBASE (-850 - 170 * 2)
 #define WAYPOINTY(n) (WAYPOINTBASE + n * 170)
 	{  0, -256, WAYPOINTY(0), { 1, 24, 25, -1 }, },
 	{  1,    0, WAYPOINTY(0), { 0, 2, 3, 40, 41, -1  }, },
@@ -9870,14 +9896,14 @@ static struct waypoint_data_entry {
 	{ 13,    0, WAYPOINTY(6), { 11, 12, 14, 15, 44, 45, 46, 47, -1 }, },
 	{ 14,  256, WAYPOINTY(6), { 13, 38, 39, -1 }, },
 	{ 15,    0, WAYPOINTY(7), { 13, 17, 46, 47, -1 }, },
-	{ 16, -256, WAYPOINTY(8), { 17, 19, -1 }, },
-	{ 17,    0, WAYPOINTY(8), { 15, 16, 18, 46, 47, 48, 49, -1 }, },
-	{ 18,  256, WAYPOINTY(8), { 17, 20, -1 }, },
-	{ 19, -256, WAYPOINTY(9), { 16, 21, -1 }, },
-	{ 20,  256, WAYPOINTY(9), { 18, 23, -1 }, },
-	{ 21, -256, WAYPOINTY(10), { 19, 22, -1 }, },
-	{ 22,    0, WAYPOINTY(10), { 21, 23, -1 }, },
-	{ 23,  256, WAYPOINTY(10), { 20, 22, -1 }, },
+	{ 16, -256, WAYPOINTY(8), { 17, -1 }, },
+	{ 17,    0, WAYPOINTY(8), { 15, 16, 18, 22, 46, 47, -1 }, },
+	{ 18,  256, WAYPOINTY(8), { 17, -1 }, },
+	{ 19, -100, WAYPOINTY(9), { 17, 20, 22, -1 }, },
+	{ 20,    0, WAYPOINTY(9), { 17, 19, 21, 22, -1 }, },
+	{ 21,  100, WAYPOINTY(9), { 17, 20, 22, -1 }, },
+	{ 22,    0, WAYPOINTY(10), { 19, 20, 21, 23, -1 }, },
+	{ 23,  256, WAYPOINTY(10), { 22, -1 }, },
 	{ 24, -340, WAYPOINTY(0) + 50, { 0, -1 }, },
 	{ 25, -220, WAYPOINTY(0) + 50, { 0, -1 }, },
 	{ 26,  340, WAYPOINTY(0) + 50, { 2, -1 }, },
@@ -9902,9 +9928,10 @@ static struct waypoint_data_entry {
 	{ 45,  100, WAYPOINTY(5), { 11, 9, 13, -1 }, },
 	{ 46, -100, WAYPOINTY(7), { 15, 13, 17, -1 }, },
 	{ 47,  100, WAYPOINTY(7), { 15, 13, 17, -1 }, },
-	/* TODO add waypoints for lifesupport */
-	{ 48, -60, WAYPOINTY(8) + 40, { 17, -1 }, },
-	{ 49,  60, WAYPOINTY(8) + 40, { 17, -1 }, },
+	{ 48, -340, WAYPOINTY(8) + 50, { 16, -1 }, },
+	{ 49, -220, WAYPOINTY(8) + 50, { 16, -1 }, },
+	{ 50,  340, WAYPOINTY(8) + 50, { 18, -1 }, },
+	{ 51,  220, WAYPOINTY(8) + 50, { 18, -1 }, },
 };
 
 static void __attribute__((unused)) print_waypoint_table(struct damcon_data *d, int tablesize)
@@ -13263,6 +13290,10 @@ static int l_get_player_damage(lua_State *l)
 	}
 	if (strncmp(system, "tractor", 7) == 0) {
 		bvalue = o->tsd.ship.damage.tractor_damage;
+		goto done;
+	}
+	if (strncmp(system, "lifesupport", 7) == 0) {
+		bvalue = o->tsd.ship.damage.lifesupport_damage;
 		goto done;
 	}
 error:

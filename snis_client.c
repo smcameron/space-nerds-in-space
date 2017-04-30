@@ -11000,6 +11000,7 @@ static void draw_damcon_object(GtkWidget *w, struct snis_damcon_entity *o)
 	case DAMCON_TYPE_IMPULSE:
 	case DAMCON_TYPE_SHIELDSYSTEM:
 	case DAMCON_TYPE_TRACTORSYSTEM:
+	case DAMCON_TYPE_LIFESUPPORTSYSTEM:
 	case DAMCON_TYPE_REPAIR_STATION:
 		draw_damcon_system(w, o);
 		break;
@@ -15392,6 +15393,8 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 			eng_ui.selected_subsystem = 6;
 		else if (snis_slider_mouse_inside(eng_ui.tractor_damage, sx, sy))
 			eng_ui.selected_subsystem = 7;
+		else if (snis_slider_mouse_inside(eng_ui.lifesupport_damage, sx, sy))
+			eng_ui.selected_subsystem = 8;
 		else
 			eng_ui.selected_subsystem = -1;
 		break;

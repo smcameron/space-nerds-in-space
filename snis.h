@@ -811,7 +811,7 @@ struct damcon_data {
 #define damcon_index(data, object) ((object) - &(data)->o[0])
 
 #define DAMCONXDIM 800.0
-#define DAMCONYDIM 2000.0
+#define DAMCONYDIM 2666.666
 
 /* Time after being killed to wait for respawn */
 #define RESPAWN_TIME_SECS 20
