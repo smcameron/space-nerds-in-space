@@ -136,6 +136,7 @@ struct power_model_data {
 	struct power_model_device phasers;
 	struct power_model_device shields;
 	struct power_model_device tractor;
+	struct power_model_device lifesupport;
 	uint8_t voltage;
 };
 
@@ -148,6 +149,7 @@ struct ship_damage_data {
 	uint8_t sensors_damage;
 	uint8_t comms_damage;
 	uint8_t tractor_damage;
+	uint8_t lifesupport_damage;
 };
 
 struct command_data {
@@ -371,6 +373,7 @@ struct ship_data {
 #define OXYGEN_DURATION (0.5) /* minutes */
 #define OXYGEN_UNITS (OXYGEN_DURATION * 60.0 * 30.0)
 #define OXYGEN_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / OXYGEN_UNITS))
+#define OXYGEN_PRODUCTION_UNIT (1.8 * OXYGEN_CONSUMPTION_UNIT)
 #define OXYGEN_REPLENISHMENT_UNIT OXYGEN_CONSUMPTION_UNIT
 	uint32_t oxygen;
 	uint8_t rpm;
@@ -715,11 +718,12 @@ typedef void (*damcon_draw_function)(void *drawable, struct snis_damcon_entity *
 #define DAMCON_TYPE_SENSORARRAY 5
 #define DAMCON_TYPE_COMMUNICATIONS 6
 #define DAMCON_TYPE_TRACTORSYSTEM 7
-#define DAMCON_TYPE_REPAIR_STATION 8
-#define DAMCON_TYPE_SOCKET 9
-#define DAMCON_TYPE_PART 10 
-#define DAMCON_TYPE_ROBOT 11 
-#define DAMCON_TYPE_WAYPOINT 12
+#define DAMCON_TYPE_LIFESUPPORTSYSTEM 8
+#define DAMCON_TYPE_REPAIR_STATION 9
+#define DAMCON_TYPE_SOCKET 10
+#define DAMCON_TYPE_PART 11
+#define DAMCON_TYPE_ROBOT 12
+#define DAMCON_TYPE_WAYPOINT 13
 /* Threshold beyond which repair requires using the repair station */
 #define DAMCON_EASY_REPAIR_THRESHOLD 200
 

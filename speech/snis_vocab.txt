@@ -66,6 +66,7 @@ course
 cut
 cut power to impulse
 cut power to impulse drive
+cut power to life support
 cut power to maneuvering
 cut power to phasers
 cut power to sensors
@@ -150,6 +151,7 @@ full impulse drive
 full power
 full power to impulse
 full power to impulse drive
+full power to life support
 full power to maneuvering
 full power to phasers
 full power to sensors
@@ -191,6 +193,7 @@ leave standard orbit
 leave orbit
 left
 level
+life support
 long
 long range
 long range scan
@@ -356,6 +359,8 @@ set communications power to
 set impulse drive coolant to
 set impulse drive power to
 set impulse drive to
+set life support coolant to
+set life support power to
 set maneuvering coolant to
 set maneuvering power to
 set phaser coolant to

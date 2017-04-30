@@ -15,6 +15,7 @@ static char *damcon_system_names[] = {
 	"SENSORS",
 	"COMMUNICATIONS",
 	"TRACTOR BEAM",
+	"LIFE SUPPORT",
 	"REPAIR STATION",
 };
 
@@ -28,6 +29,7 @@ static float damcon_part_price[][DAMCON_PARTS_PER_SYSTEM] = {
 	{ 325.0, 269.0, 167.0, },	/* sensor system parts */
 	{ 75.0,	105.0, 211.0, },	/* communication system parts */
 	{ 70.0, 350.0, 102.0, },	/* tractor beam system parts */
+	{ 370.0, 250.0, 590.0, },	/* life support system parts */
 	{ 0.0, 0.0, 0.0, },		/* repair station parts... special case, no parts. */
 };
 
@@ -87,6 +89,11 @@ static char *damcon_part_names[][DAMCON_PARTS_PER_SYSTEM] = {
 		"GRAVITON INDUCTION UNIT",
 		/* "BLACK HOLE SUPPRESSOR",
 		"TURBO-GRAVITASER COLLIMATOR", */
+	},
+	{	/* life support beam system parts */
+		"OXYGEN GENERATOR",
+		"CO2 SCRUBBER",
+		"GAS RATIO CONTROLLER",
 	},
 	{	/* repair station parts... special case, no parts. */
 		"RS BUG", /* if you see these in the game, it's a bug. */

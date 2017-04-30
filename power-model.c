@@ -16,7 +16,7 @@ struct power_device {
 	float i;
 };
 
-#define MAX_DEVICES_PER_MODEL 8
+#define MAX_DEVICES_PER_MODEL 9
 struct power_model {
 	int ndevices;
 	struct power_device *d[MAX_DEVICES_PER_MODEL];

@@ -196,6 +196,9 @@
 #define OPCODE_SET_WAYPOINT_ADD_ROW		4
 #define OPCODE_SET_WAYPOINT_UPDATE_SELECTION	5
 
+#define OPCODE_REQUEST_LIFESUPPORT_PWR		241
+#define OPCODE_REQUEST_LIFESUPPORT_COOLANT	242
+
 #define OPCODE_NOOP		0xff
 
 #define   ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS	0x01
@@ -515,6 +518,7 @@ struct ship_damage_packet {
 	uint8_t sensors;
 	uint8_t comms;
 	uint8_t tractor;
+	uint8_t lifesupport;
 };
 
 struct respawn_time_packet {

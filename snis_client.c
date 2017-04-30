@@ -8705,6 +8705,11 @@ static void do_tractor_pwr(struct slider *s)
 	do_adjust_slider_value(s, OPCODE_REQUEST_TRACTOR_PWR);
 }
 
+static void do_lifesupport_pwr(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_LIFESUPPORT_PWR);
+}
+
 static void do_shields_pwr(struct slider *s)
 {
 	do_adjust_slider_value(s, OPCODE_REQUEST_SHIELDS_PWR);
@@ -8743,6 +8748,11 @@ static void do_maneuvering_coolant(struct slider *s)
 static void do_tractor_coolant(struct slider *s)
 {
 	do_adjust_slider_value(s, OPCODE_REQUEST_TRACTOR_COOLANT);
+}
+
+static void do_lifesupport_coolant(struct slider *s)
+{
+	do_adjust_slider_value(s, OPCODE_REQUEST_LIFESUPPORT_COOLANT);
 }
 
 static void do_shields_coolant(struct slider *s)
@@ -8849,6 +8859,7 @@ static double sample_power_model_current(void)
 	total_current += o->tsd.ship.power_data.phasers.i;
 	total_current += o->tsd.ship.power_data.shields.i;
 	total_current += o->tsd.ship.power_data.tractor.i;
+	total_current += o->tsd.ship.power_data.lifesupport.i;
 
 	return 100.0 * total_current / (255.0 * 3.5); 
 }
@@ -8869,6 +8880,7 @@ static double __attribute__((unused)) sample_coolant_model_current(void)
 	total_current += o->tsd.ship.coolant_data.phasers.i;
 	total_current += o->tsd.ship.coolant_data.shields.i;
 	total_current += o->tsd.ship.coolant_data.tractor.i;
+	total_current += o->tsd.ship.coolant_data.lifesupport.i;
 
 	return 100.0 * total_current / (255.0 * 3.5); 
 }
@@ -8891,6 +8903,7 @@ DEFINE_CURRENT_SAMPLER(power_data, shields) /* defines sample_power_data_shields
 DEFINE_CURRENT_SAMPLER(power_data, comms) /* defines sample_power_data_comms_current */
 DEFINE_CURRENT_SAMPLER(power_data, impulse) /* defines sample_power_data_impulse_current */
 DEFINE_CURRENT_SAMPLER(power_data, tractor) /* defines sample_power_data_tractor_current */
+DEFINE_CURRENT_SAMPLER(power_data, lifesupport) /* defines sample_power_data_lifesupport_current */
 
 DEFINE_CURRENT_SAMPLER(coolant_data, warp) /* defines sample_coolant_data_warp_current */
 DEFINE_CURRENT_SAMPLER(coolant_data, sensors) /* defines sample_coolant_data_sensors_current */
@@ -8900,6 +8913,7 @@ DEFINE_CURRENT_SAMPLER(coolant_data, shields) /* defines sample_coolant_data_shi
 DEFINE_CURRENT_SAMPLER(coolant_data, comms) /* defines sample_coolant_data_comms_current */
 DEFINE_CURRENT_SAMPLER(coolant_data, impulse) /* defines sample_coolant_data_impulse_current */
 DEFINE_CURRENT_SAMPLER(coolant_data, tractor) /* defines sample_coolant_data_tractor_current */
+DEFINE_CURRENT_SAMPLER(coolant_data, lifesupport) /* defines sample_coolant_data_lifesupport_current */
 
 
 static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
@@ -8967,6 +8981,7 @@ CREATE_DAMAGE_SAMPLER_FUNC(phaser_banks) /* sample_phaser_banks_damage defined h
 CREATE_DAMAGE_SAMPLER_FUNC(sensors) /* sample_sensors_damage defined here */
 CREATE_DAMAGE_SAMPLER_FUNC(comms) /* sample_comms_damage defined here */
 CREATE_DAMAGE_SAMPLER_FUNC(tractor) /* sample_tractor_damage defined here */
+CREATE_DAMAGE_SAMPLER_FUNC(lifesupport) /* sample_lifesupport_damage defined here */
 
 CREATE_TEMPERATURE_SAMPLER_FUNC(shield) /* sample_shield_temperature defined here */
 CREATE_TEMPERATURE_SAMPLER_FUNC(impulse) /* sample_impulse_temperature defined here */
@@ -8976,6 +8991,7 @@ CREATE_TEMPERATURE_SAMPLER_FUNC(phaser_banks) /* sample_phaser_banks_temperature
 CREATE_TEMPERATURE_SAMPLER_FUNC(sensors) /* sample_sensors_temperature defined here */
 CREATE_TEMPERATURE_SAMPLER_FUNC(comms) /* sample_comms_temperature defined here */
 CREATE_TEMPERATURE_SAMPLER_FUNC(tractor) /* sample_tractor_temperature defined here */
+CREATE_TEMPERATURE_SAMPLER_FUNC(lifesupport) /* sample_lifesupport_temperature defined here */
 
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
 {
@@ -10265,6 +10281,8 @@ static struct engineering_ui {
 	struct slider *phaserbanks_coolant_slider;
 	struct slider *tractor_slider;
 	struct slider *tractor_coolant_slider;
+	struct slider *lifesupport_slider;
+	struct slider *lifesupport_coolant_slider;
 	struct slider *shield_control_slider;
 
 	struct slider *shield_damage;
@@ -10275,6 +10293,7 @@ static struct engineering_ui {
 	struct slider *sensors_damage;
 	struct slider *comms_damage;
 	struct slider *tractor_damage;
+	struct slider *lifesupport_damage;
 
 	struct slider *shield_temperature;
 	struct slider *impulse_temperature;
@@ -10284,6 +10303,7 @@ static struct engineering_ui {
 	struct slider *sensors_temperature;
 	struct slider *comms_temperature;
 	struct slider *tractor_temperature;
+	struct slider *lifesupport_temperature;
 
 	int selected_subsystem;
 	int gauge_radius;
@@ -10313,6 +10333,9 @@ static void preset1_button_pressed(void *x)
 	snis_slider_poke_input(eng_ui.phaserbanks_coolant_slider, 1.0, 0);
 	snis_slider_poke_input(eng_ui.tractor_slider, 0.0, 0);
 	snis_slider_poke_input(eng_ui.tractor_coolant_slider, 0.0, 0);
+	snis_slider_poke_input(eng_ui.lifesupport_slider, 0.95, 0);
+	snis_slider_poke_input(eng_ui.lifesupport_coolant_slider, 1.0, 0);
+	snis_slider_poke_input(eng_ui.tractor_coolant_slider, 0.0, 0);
 	snis_slider_poke_input(eng_ui.shield_control_slider, 1.0, 0);
 }
 
@@ -10335,6 +10358,8 @@ static void preset2_button_pressed(void *x)
 	snis_slider_poke_input(eng_ui.phaserbanks_coolant_slider, 0.3, 0);
 	snis_slider_poke_input(eng_ui.tractor_slider, 0.0, 0);
 	snis_slider_poke_input(eng_ui.tractor_coolant_slider, 0.3, 0);
+	snis_slider_poke_input(eng_ui.lifesupport_slider, 0.95, 0);
+	snis_slider_poke_input(eng_ui.lifesupport_coolant_slider, 1.0, 0);
 	snis_slider_poke_input(eng_ui.shield_control_slider, 0.0, 0);
 }
 
@@ -10345,7 +10370,7 @@ static void init_engineering_ui(void)
 	int color = UI_COLOR(eng_gauge);
 	const int ccolor = COLOR_LIGHTER(BLUE, 25); /* coolant color */
 	const int tcolor = UI_COLOR(eng_temperature); /* temperature color */
-	const int coolant_inc = 19;
+	const int coolant_inc = txy(12);
 	const int sh = 0.02 * SCREEN_HEIGHT; /* slider height */
 	const int sw = 0.1875 * SCREEN_WIDTH; /* slider width */
 	const int powersliderlen = 0.225 * SCREEN_WIDTH;
@@ -10358,7 +10383,7 @@ static void init_engineering_ui(void)
 	y = r + 100.0;
 	x = r * 1.05;
 	xinc = (2.0 * r) * 1.1;
-	yinc = 0.07 * SCREEN_HEIGHT;
+	yinc = 0.06 * SCREEN_HEIGHT;
 
 	eu->selected_subsystem = -1;
 	eu->amp_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
@@ -10482,6 +10507,15 @@ static void init_engineering_ui(void)
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_tractor_current, do_tractor_coolant);
 	snis_slider_set_label_font(eu->tractor_coolant_slider, NANO_FONT);
+	eu->lifesupport_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
+				"PWR LIFE SUPPORT", "0", "100", 0.0, 255.0,
+				sample_power_data_lifesupport_current, do_lifesupport_pwr);
+	snis_slider_set_fuzz(eu->lifesupport_slider, 2);
+	snis_slider_set_label_font(eu->lifesupport_slider, NANO_FONT);
+	eu->lifesupport_coolant_slider = snis_slider_init(20, y + coolant_inc, coolantsliderlen, sh,
+				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
+				sample_coolant_data_lifesupport_current, do_lifesupport_coolant);
+	snis_slider_set_label_font(eu->lifesupport_coolant_slider, NANO_FONT);
 	ui_add_slider(eu->shield_slider, dm);
 	ui_add_slider(eu->shield_coolant_slider, dm);
 	ui_add_slider(eu->phaserbanks_slider, dm);
@@ -10498,6 +10532,8 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->maneuvering_coolant_slider, dm);
 	ui_add_slider(eu->tractor_slider, dm);
 	ui_add_slider(eu->tractor_coolant_slider, dm);
+	ui_add_slider(eu->lifesupport_slider, dm);
+	ui_add_slider(eu->lifesupport_coolant_slider, dm);
 	ui_add_slider(eu->shield_control_slider, dm);
 	ui_add_gauge(eu->amp_gauge, dm);
 	ui_add_gauge(eu->voltage_gauge, dm);
@@ -10574,6 +10610,14 @@ static void init_engineering_ui(void)
 				sample_tractor_temperature, NULL);
 	snis_slider_set_label_font(eu->tractor_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->tractor_temperature, 1);	
+	eu->lifesupport_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "LIFE SUPPORT STATUS", "0", "100",
+				0.0, 100.0, sample_lifesupport_damage, NULL);
+	snis_slider_set_label_font(eu->lifesupport_damage, NANO_FONT);
+	eu->lifesupport_temperature = snis_slider_init(s2x, y + coolant_inc, sw, sh, tcolor,
+				"TEMPERATURE", "0", "100", 0.0, 100.0,
+				sample_lifesupport_temperature, NULL);
+	snis_slider_set_label_font(eu->lifesupport_temperature, NANO_FONT);
+	snis_slider_set_color_scheme(eu->lifesupport_temperature, 1);
 	ui_add_slider(eu->shield_damage, dm);
 	ui_add_slider(eu->impulse_damage, dm);
 	ui_add_slider(eu->warp_damage, dm);
@@ -10582,6 +10626,7 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->sensors_damage, dm);
 	ui_add_slider(eu->comms_damage, dm);
 	ui_add_slider(eu->tractor_damage, dm);
+	ui_add_slider(eu->lifesupport_damage, dm);
 	ui_add_slider(eu->shield_temperature, dm);
 	ui_add_slider(eu->impulse_temperature, dm);
 	ui_add_slider(eu->warp_temperature, dm);
@@ -10590,6 +10635,7 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->sensors_temperature, dm);
 	ui_add_slider(eu->comms_temperature, dm);
 	ui_add_slider(eu->tractor_temperature, dm);
+	ui_add_slider(eu->lifesupport_temperature, dm);
 }
 
 static void show_engineering_damage_report(GtkWidget *w, int subsystem)
@@ -10599,7 +10645,8 @@ static void show_engineering_damage_report(GtkWidget *w, int subsystem)
 	char msg[50];
 
 	/* in different order on screen... barf. */
-	const int sysmap[] = { 0, 4, 5, 6, 1, 3, 2, 7 };
+	const int sysmap[] = { 0, 4, 5, 6, 1, 3, 2, 7, 8 };
+	/* TODO BUILD ASSERT that sysmap is correct size */
 
 	if (subsystem < 0 || subsystem >= ARRAYSIZE(sysmap))
 		return;
@@ -10643,24 +10690,26 @@ static void show_engineering(GtkWidget *w)
 	if (!(o = find_my_ship()))
 		return;
 
-	snis_slider_set_input(eng_ui.shield_slider, o->tsd.ship.power_data.shields.r2/255.0 );
-	snis_slider_set_input(eng_ui.phaserbanks_slider, o->tsd.ship.power_data.phasers.r2/255.0 );
-	snis_slider_set_input(eng_ui.comm_slider, o->tsd.ship.power_data.comms.r2/255.0 );
-	snis_slider_set_input(eng_ui.sensors_slider, o->tsd.ship.power_data.sensors.r2/255.0 );
-	snis_slider_set_input(eng_ui.impulse_slider, o->tsd.ship.power_data.impulse.r2/255.0 );
-	snis_slider_set_input(eng_ui.warp_slider, o->tsd.ship.power_data.warp.r2/255.0 );
-	snis_slider_set_input(eng_ui.maneuvering_slider, o->tsd.ship.power_data.maneuvering.r2/255.0 );
-	snis_slider_set_input(eng_ui.tractor_slider, o->tsd.ship.power_data.tractor.r2/255.0 );
-	snis_slider_set_input(eng_ui.shield_control_slider, o->tsd.ship.power_data.shields.r1/255.0 );
+	snis_slider_set_input(eng_ui.shield_slider, o->tsd.ship.power_data.shields.r2 / 255.0);
+	snis_slider_set_input(eng_ui.phaserbanks_slider, o->tsd.ship.power_data.phasers.r2 / 255.0);
+	snis_slider_set_input(eng_ui.comm_slider, o->tsd.ship.power_data.comms.r2 / 255.0);
+	snis_slider_set_input(eng_ui.sensors_slider, o->tsd.ship.power_data.sensors.r2 / 255.0);
+	snis_slider_set_input(eng_ui.impulse_slider, o->tsd.ship.power_data.impulse.r2 / 255.0);
+	snis_slider_set_input(eng_ui.warp_slider, o->tsd.ship.power_data.warp.r2 / 255.0);
+	snis_slider_set_input(eng_ui.maneuvering_slider, o->tsd.ship.power_data.maneuvering.r2 / 255.0);
+	snis_slider_set_input(eng_ui.tractor_slider, o->tsd.ship.power_data.tractor.r2 / 255.0);
+	snis_slider_set_input(eng_ui.lifesupport_slider, o->tsd.ship.power_data.lifesupport.r2 / 255.0);
+	snis_slider_set_input(eng_ui.shield_control_slider, o->tsd.ship.power_data.shields.r1/255.0);
 
-	snis_slider_set_input(eng_ui.shield_coolant_slider, o->tsd.ship.coolant_data.shields.r2/255.0 );
-	snis_slider_set_input(eng_ui.phaserbanks_coolant_slider, o->tsd.ship.coolant_data.phasers.r2/255.0 );
-	snis_slider_set_input(eng_ui.comm_coolant_slider, o->tsd.ship.coolant_data.comms.r2/255.0 );
-	snis_slider_set_input(eng_ui.sensors_coolant_slider, o->tsd.ship.coolant_data.sensors.r2/255.0 );
-	snis_slider_set_input(eng_ui.impulse_coolant_slider, o->tsd.ship.coolant_data.impulse.r2/255.0 );
-	snis_slider_set_input(eng_ui.warp_coolant_slider, o->tsd.ship.coolant_data.warp.r2/255.0 );
-	snis_slider_set_input(eng_ui.maneuvering_coolant_slider, o->tsd.ship.coolant_data.maneuvering.r2/255.0 );
-	snis_slider_set_input(eng_ui.tractor_coolant_slider, o->tsd.ship.coolant_data.tractor.r2/255.0 );
+	snis_slider_set_input(eng_ui.shield_coolant_slider, o->tsd.ship.coolant_data.shields.r2 / 255.0);
+	snis_slider_set_input(eng_ui.phaserbanks_coolant_slider, o->tsd.ship.coolant_data.phasers.r2 / 255.0);
+	snis_slider_set_input(eng_ui.comm_coolant_slider, o->tsd.ship.coolant_data.comms.r2 / 255.0);
+	snis_slider_set_input(eng_ui.sensors_coolant_slider, o->tsd.ship.coolant_data.sensors.r2 / 255.0);
+	snis_slider_set_input(eng_ui.impulse_coolant_slider, o->tsd.ship.coolant_data.impulse.r2 / 255.0);
+	snis_slider_set_input(eng_ui.warp_coolant_slider, o->tsd.ship.coolant_data.warp.r2 / 255.0);
+	snis_slider_set_input(eng_ui.maneuvering_coolant_slider, o->tsd.ship.coolant_data.maneuvering.r2 / 255.0);
+	snis_slider_set_input(eng_ui.tractor_coolant_slider, o->tsd.ship.coolant_data.tractor.r2 / 255.0);
+	snis_slider_set_input(eng_ui.lifesupport_coolant_slider, o->tsd.ship.coolant_data.lifesupport.r2 / 255.0);
 
 	/* idiot lights for low power of various systems */
 	const int low_power_threshold = 10;

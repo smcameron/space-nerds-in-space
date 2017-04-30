@@ -231,6 +231,7 @@ static struct npc_menu_item repairs_and_maintenance_menu[] = {
 	{ "BUY SENSORS PARTS", 0, 0, npc_menu_item_buy_parts },
 	{ "BUY COMMUNICATIONS PARTS", 0, 0, npc_menu_item_buy_parts },
 	{ "BUY TRACTOR BEAM PARTS", 0, 0, npc_menu_item_buy_parts },
+	{ "BUY LIFE SUPPORT SYSTEM PARTS", 0, 0, npc_menu_item_buy_parts },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
 
@@ -1725,6 +1726,8 @@ static void calculate_torpedolike_damage(struct snis_entity *o, double weapons_f
 			o->tsd.ship.damage.comms_damage, DAMCON_TYPE_COMMUNICATIONS);
 	o->tsd.ship.damage.tractor_damage = roll_damage(o, d, twp, ss,
 			o->tsd.ship.damage.tractor_damage, DAMCON_TYPE_TRACTORSYSTEM);
+	o->tsd.ship.damage.lifesupport_damage = roll_damage(o, d, twp, ss,
+			o->tsd.ship.damage.lifesupport_damage, DAMCON_TYPE_LIFESUPPORTSYSTEM);
 
 	if (o->tsd.ship.damage.shield_damage == 255) { 
 		o->timestamp = universe_timestamp;
@@ -4455,6 +4458,7 @@ static int robot_collision_detect(struct snis_damcon_entity *o,
 			case DAMCON_TYPE_MANEUVERING:
 			case DAMCON_TYPE_SHIELDSYSTEM:
 			case DAMCON_TYPE_TRACTORSYSTEM:
+			case DAMCON_TYPE_LIFESUPPORTSYSTEM:
 			case DAMCON_TYPE_REPAIR_STATION:
 				/* ugh, this is ugly. Ideally, polygon intersection, but... bleah. */
 				if (x + 25 > t->x && x - 25 < t->x + 270 &&
@@ -5103,6 +5107,7 @@ static void do_power_model_computations(struct snis_entity *o)
 #define COMMS_POWER_DEVICE 5
 #define IMPULSE_POWER_DEVICE 6
 #define TRACTOR_POWER_DEVICE 7
+#define LIFESUPPORT_POWER_DEVICE 8
 
 	device = power_model_get_device(m, WARP_POWER_DEVICE);
 	power_device_set_damage(device, (float) o->tsd.ship.damage.warp_damage / 255.0f);
@@ -5135,6 +5140,10 @@ static void do_power_model_computations(struct snis_entity *o)
 	device = power_model_get_device(m, TRACTOR_POWER_DEVICE);
 	power_device_set_damage(device, (float) o->tsd.ship.damage.tractor_damage / 255.0f);
 	o->tsd.ship.power_data.tractor.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, LIFESUPPORT_POWER_DEVICE);
+	power_device_set_damage(device, (float) o->tsd.ship.damage.lifesupport_damage / 255.0f);
+	o->tsd.ship.power_data.lifesupport.i = device_power_byte_form(device);
 
 	o->tsd.ship.power_data.voltage = (unsigned char)
 		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
@@ -5170,6 +5179,9 @@ static void do_coolant_model_computations(struct snis_entity *o)
 
 	device = power_model_get_device(m, TRACTOR_POWER_DEVICE);
 	o->tsd.ship.coolant_data.tractor.i = device_power_byte_form(device);
+
+	device = power_model_get_device(m, LIFESUPPORT_POWER_DEVICE);
+	o->tsd.ship.coolant_data.lifesupport.i = device_power_byte_form(device);
 
 	o->tsd.ship.coolant_data.voltage = (unsigned char)
 		(255.0 * power_model_actual_voltage(m) / power_model_nominal_voltage(m));
@@ -5240,6 +5252,10 @@ static void do_temperature_computations(struct snis_entity *o)
 	calc_temperature_change(o->tsd.ship.power_data.tractor.i,
 			o->tsd.ship.coolant_data.tractor.i,
 			&o->tsd.ship.temperature_data.tractor_damage);
+	calc_temperature_change(o->tsd.ship.power_data.lifesupport.i,
+			o->tsd.ship.coolant_data.lifesupport.i,
+			&o->tsd.ship.temperature_data.lifesupport_damage);
+
 
 	/* overheated and overdamaged warp system == self destruct */
 	if (o->tsd.ship.temperature_data.warp_damage > 240 &&
@@ -6235,6 +6251,13 @@ static void player_move(struct snis_entity *o)
 		o->tsd.ship.oxygen -= OXYGEN_CONSUMPTION_UNIT; /* Consume oxygen */
 	else
 		o->tsd.ship.oxygen = 0;
+	/* Generate oxygen */
+	uint32_t new_oxygen = (uint32_t) (OXYGEN_PRODUCTION_UNIT *
+				o->tsd.ship.power_data.lifesupport.i / 255.0);
+	if (o->tsd.ship.oxygen < UINT32_MAX - new_oxygen)
+		o->tsd.ship.oxygen += new_oxygen;
+	else
+		o->tsd.ship.oxygen = UINT32_MAX;
 	update_player_orientation(o);
 	update_player_sciball_orientation(o);
 	update_player_weap_orientation(o);
@@ -6961,6 +6984,9 @@ DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, r3) /* declares sample_power_da
 DECLARE_POWER_MODEL_SAMPLER(tractor, power_data, r1) /* declares sample_power_data_tractor_r1 */
 DECLARE_POWER_MODEL_SAMPLER(tractor, power_data, r2) /* declares sample_power_data_tractor_r2 */
 DECLARE_POWER_MODEL_SAMPLER(tractor, power_data, r3) /* declares sample_power_data_tractor_r3 */
+DECLARE_POWER_MODEL_SAMPLER(lifesupport, power_data, r1) /* declares sample_power_data_lifesupport_r1 */
+DECLARE_POWER_MODEL_SAMPLER(lifesupport, power_data, r2) /* declares sample_power_data_lifesupport_r2 */
+DECLARE_POWER_MODEL_SAMPLER(lifesupport, power_data, r3) /* declares sample_power_data_lifesupport_r3 */
 
 DECLARE_POWER_MODEL_SAMPLER(warp, coolant_data, r1) /* declares sample_coolant_data_warp_r1 */
 DECLARE_POWER_MODEL_SAMPLER(warp, coolant_data, r2) /* declares sample_coolant_data_warp_r2 */
@@ -6986,6 +7012,9 @@ DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, r3) /* declares sample_coolan
 DECLARE_POWER_MODEL_SAMPLER(tractor, coolant_data, r1) /* declares sample_coolant_data_tractor_r1 */
 DECLARE_POWER_MODEL_SAMPLER(tractor, coolant_data, r2) /* declares sample_coolant_data_tractor_r2 */
 DECLARE_POWER_MODEL_SAMPLER(tractor, coolant_data, r3) /* declares sample_coolant_data_tractor_r3 */
+DECLARE_POWER_MODEL_SAMPLER(lifesupport, coolant_data, r1) /* declares sample_coolant_data_lifesupport_r1 */
+DECLARE_POWER_MODEL_SAMPLER(lifesupport, coolant_data, r2) /* declares sample_coolant_data_lifesupport_r2 */
+DECLARE_POWER_MODEL_SAMPLER(lifesupport, coolant_data, r3) /* declares sample_coolant_data_lifesupport_r3 */
 
 
 #define POWERFUNC(system, number) \
@@ -7071,6 +7100,13 @@ static void init_power_model(struct snis_entity *o)
 	pd->tractor.r3 = 200;
 	d = new_power_device(o, POWERFUNCS(tractor));
 	power_model_add_device(pm, d);
+
+	/* Lifesupport system */
+	pd->lifesupport.r1 = 255;
+	pd->lifesupport.r2 = 0;
+	pd->lifesupport.r3 = 200;
+	d = new_power_device(o, POWERFUNCS(lifesupport));
+	power_model_add_device(pm, d);
 }
 
 static void init_coolant_model(struct snis_entity *o)
@@ -7143,6 +7179,13 @@ static void init_coolant_model(struct snis_entity *o)
 	pd->tractor.r2 = 0;
 	pd->tractor.r3 = 200;
 	d = new_power_device(o, COOLANTFUNCS(tractor));
+	power_model_add_device(pm, d);
+
+	/* Life Support System */
+	pd->lifesupport.r1 = 255;
+	pd->lifesupport.r2 = 0;
+	pd->lifesupport.r3 = 200;
+	d = new_power_device(o, COOLANTFUNCS(lifesupport));
 	power_model_add_device(pm, d);
 }
 
@@ -7219,6 +7262,8 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.power_data.maneuvering.r1 = 0;
 	o->tsd.ship.power_data.impulse.r1 = 0;
 	o->tsd.ship.power_data.tractor.r1 = 0;
+	o->tsd.ship.power_data.lifesupport.r1 = 230; /* don't turn off the air */
+	o->tsd.ship.coolant_data.lifesupport.r1 = 255;
 	o->tsd.ship.warp_time = -1;
 	o->tsd.ship.scibeam_range = 0;
 	o->tsd.ship.scibeam_a1 = 0;
@@ -9857,6 +9902,7 @@ static struct waypoint_data_entry {
 	{ 45,  100, WAYPOINTY(5), { 11, 9, 13, -1 }, },
 	{ 46, -100, WAYPOINTY(7), { 15, 13, 17, -1 }, },
 	{ 47,  100, WAYPOINTY(7), { 15, 13, 17, -1 }, },
+	/* TODO add waypoints for lifesupport */
 	{ 48, -60, WAYPOINTY(8) + 40, { 17, -1 }, },
 	{ 49,  60, WAYPOINTY(8) + 40, { 17, -1 }, },
 };
@@ -13115,6 +13161,13 @@ static int l_set_player_damage(lua_State *l)
 		system_number = DAMCON_TYPE_TRACTORSYSTEM;
 		goto distribute_damage;
 	}
+	if (strncmp(system, "lifesupport", 11) == 0) {
+		damage_delta =
+			(int) bvalue - (int) o->tsd.ship.damage.lifesupport_damage;
+		o->tsd.ship.damage.lifesupport_damage = bvalue;
+		system_number = DAMCON_TYPE_LIFESUPPORTSYSTEM;
+		goto distribute_damage;
+	}
 error:
 	lua_pushnil(l);
 	return 1;
@@ -14192,6 +14245,18 @@ static int process_request_tractor_coolant(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.tractor.r2), no_limit); 
 }
 
+static int process_request_lifesupport_pwr(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity,
+					tsd.ship.power_data.lifesupport.r2), no_limit);
+}
+
+static int process_request_lifesupport_coolant(struct game_client *c)
+{
+	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity,
+					tsd.ship.coolant_data.lifesupport.r2), no_limit);
+}
+
 static int process_request_laser_wavelength(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.phaser_wavelength), no_limit); 
@@ -15068,6 +15133,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_REQUEST_LIFESUPPORT_PWR:
+			rc = process_request_lifesupport_pwr(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		case OPCODE_REQUEST_WARP_PWR:
 			rc = process_request_warp_pwr(c);
 			if (rc)
@@ -15105,6 +15175,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_TRACTOR_COOLANT:
 			rc = process_request_tractor_coolant(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_LIFESUPPORT_COOLANT:
+			rc = process_request_lifesupport_coolant(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -18391,6 +18466,12 @@ static void nl_set_tractor_power(struct game_client *c, char *word, float fracti
 	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
 }
 
+static void nl_set_lifesupport_power(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.lifesupport.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
 static void nl_set_warpdrive(struct game_client *c, char *word, float fraction)
 {
 	int offset = offsetof(struct snis_entity, tsd.ship.power_data.warp.r1);
@@ -18442,6 +18523,12 @@ static void nl_set_shield_coolant(struct game_client *c, char *word, float fract
 static void nl_set_tractor_coolant(struct game_client *c, char *word, float fraction)
 {
 	int offset = offsetof(struct snis_entity, tsd.ship.coolant_data.tractor.r2);
+	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
+}
+
+static void nl_set_lifesupport_coolant(struct game_client *c, char *word, float fraction)
+{
+	int offset = offsetof(struct snis_entity, tsd.ship.coolant_data.lifesupport.r2);
 	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
 }
 
@@ -18516,6 +18603,7 @@ static struct settable_thing_entry {
 	{ "shields", nl_set_shield_power, },
 	{ "tractor beam", nl_set_tractor_power, },
 	{ "tractor", nl_set_tractor_power, },
+	{ "life support", nl_set_lifesupport_power, },
 };
 
 static struct settable_thing_entry nl_settable_coolant_thing[] = {
@@ -18531,6 +18619,7 @@ static struct settable_thing_entry nl_settable_coolant_thing[] = {
 	{ "shields", nl_set_shield_coolant, },
 	{ "tractor beam", nl_set_tractor_coolant, },
 	{ "tractor", nl_set_tractor_coolant, },
+	{ "life support", nl_set_lifesupport_coolant, },
 };
 
 static struct settable_thing_entry nl_settable_thing[] = {
@@ -18545,6 +18634,7 @@ static struct settable_thing_entry nl_settable_thing[] = {
 	{ "phaser power", nl_set_phaser_power, },
 	{ "shield power", nl_set_shield_power, },
 	{ "tractor beam power", nl_set_tractor_power, },
+	{ "life support power", nl_set_lifesupport_power, },
 
 	{ "maneuvering coolant", nl_set_maneuvering_coolant, },
 	{ "impulse drive coolant", nl_set_impulse_coolant, },
@@ -18554,6 +18644,7 @@ static struct settable_thing_entry nl_settable_thing[] = {
 	{ "phaser coolant", nl_set_phaser_coolant, },
 	{ "shield coolant", nl_set_shield_coolant, },
 	{ "tractor beam coolant", nl_set_tractor_coolant, },
+	{ "life support coolant", nl_set_lifesupport_coolant, },
 	{ "zoom", nl_set_zoom, },
 };
 
@@ -20292,6 +20383,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("shield power", "shield power",	POS_NOUN);
 	snis_nl_add_dictionary_word("shields power", "shield power",	POS_NOUN);
 	snis_nl_add_dictionary_word("tractor beam power", "tractor beam power",	POS_NOUN);
+	snis_nl_add_dictionary_word("life support power", "life support power",	POS_NOUN);
 
 	snis_nl_add_dictionary_word("maneuvering coolant", "maneuvering coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("warp drive coolant", "warp drive coolant",	POS_NOUN);
@@ -20303,9 +20395,11 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("shield coolant", "shield coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("shields coolant", "shield coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("tractor beam coolant", "tractor beam coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("life support coolant", "life support coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("zoom",		"zoom",		POS_NOUN);
 
 	snis_nl_add_dictionary_word("tractor beam", "tractor beam",	POS_NOUN);
+	snis_nl_add_dictionary_word("life support", "life support",	POS_NOUN);
 	snis_nl_add_dictionary_word("docking system", "docking system",	POS_NOUN);
 	snis_nl_add_dictionary_word("coolant",		"coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("power",		"power",	POS_NOUN);

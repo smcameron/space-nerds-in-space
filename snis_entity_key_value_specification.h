@@ -96,6 +96,7 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_TSDFIELD(damage.sensors_damage),
 	UINT8_TSDFIELD(damage.comms_damage),
 	UINT8_TSDFIELD(damage.tractor_damage),
+	UINT8_TSDFIELD(damage.lifesupport_damage),
 	/* TODO damcon data... */
 	UINT8_TSDFIELD(view_mode),
 	DOUBLE_TSDFIELD(view_angle),
@@ -141,6 +142,11 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_TSDFIELD(power_data.tractor.r3),
 	UINT8_TSDFIELD(power_data.tractor.i),
 
+	UINT8_TSDFIELD(power_data.lifesupport.r1),
+	UINT8_TSDFIELD(power_data.lifesupport.r2),
+	UINT8_TSDFIELD(power_data.lifesupport.r3),
+	UINT8_TSDFIELD(power_data.lifesupport.i),
+
 	UINT8_TSDFIELD(power_data.voltage),
 	/* End of power_data */
 
@@ -185,6 +191,11 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_TSDFIELD(coolant_data.tractor.r3),
 	UINT8_TSDFIELD(coolant_data.tractor.i),
 
+	UINT8_TSDFIELD(coolant_data.lifesupport.r1),
+	UINT8_TSDFIELD(coolant_data.lifesupport.r2),
+	UINT8_TSDFIELD(coolant_data.lifesupport.r3),
+	UINT8_TSDFIELD(coolant_data.lifesupport.i),
+
 	UINT8_TSDFIELD(coolant_data.voltage),
 	/* End of coolant_data */
 
@@ -196,6 +207,7 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_TSDFIELD(temperature_data.sensors_damage),
 	UINT8_TSDFIELD(temperature_data.comms_damage),
 	UINT8_TSDFIELD(temperature_data.tractor_damage),
+	UINT8_TSDFIELD(temperature_data.lifesupport_damage),
 	DOUBLE_TSDFIELD(warp_time),
 	DOUBLE_TSDFIELD(scibeam_a1),
 	DOUBLE_TSDFIELD(scibeam_a2),
