@@ -88,15 +88,15 @@ SS3=$(get_solarsystem_name polaris)
 SS4=$(get_solarsystem_name tau-scorpii)
 
 export SNISRAND=12345
-./snis_server -l localhost -L $(uppercase "$SS1") x --enable-enscript -m narnia -s "$SS1" &
+./snis_server -l localhost -L $(uppercase "$SS1") --enable-enscript -m narnia -s "$SS1" &
 if [ "$MULTIVERSE_TEST" != "" ]
 then
 	export SNISRAND=54321
-	./snis_server -l localhost -L $(uppercase "$SS2") x --enable-enscript -m narnia -s "$SS2" &
+	./snis_server -l localhost -L $(uppercase "$SS2") --enable-enscript -m narnia -s "$SS2" &
 	export SNISRAND=9557
-	./snis_server -l localhost -L $(uppercase "$SS3") x --enable-enscript -m narnia -s "$SS3" &
+	./snis_server -l localhost -L $(uppercase "$SS3") --enable-enscript -m narnia -s "$SS3" &
 	export SNISRAND=1337
-	./snis_server -l localhost -L $(uppercase "$SS4") x --enable-enscript -m narnia -s "$SS4" &
+	./snis_server -l localhost -L $(uppercase "$SS4") --enable-enscript -m narnia -s "$SS4" &
 fi
 
 sleep 2.50
