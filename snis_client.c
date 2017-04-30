@@ -3645,8 +3645,6 @@ static void show_lobbyscreen(GtkWidget *w)
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 		sprintf(msg, "GAME INSTANCE");
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
-		sprintf(msg, "SERVER_NICKNAME");
-		sng_abs_xy_draw_string(msg, NANO_FONT, txx(300), txy(100) + i * LINEHEIGHT);
 		sprintf(msg, "LOCATION");
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(450), txy(100) + i * LINEHEIGHT);
 		sprintf(msg, "CONNECTIONS");
@@ -3678,8 +3676,6 @@ static void show_lobbyscreen(GtkWidget *w)
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].game_instance);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
-			sprintf(msg, "%s", lobby_game_server[i].server_nickname);
-			sng_abs_xy_draw_string(msg, NANO_FONT, txx(300), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].location);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(450), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%d", lobby_game_server[i].nconnections);
@@ -5768,7 +5764,7 @@ static struct network_setup_ui {
 	struct button *start_gameserver;
 	struct button *connect_to_lobby;
 	struct snis_text_input_box *lobbyservername;
-	struct snis_text_input_box *gameservername;
+	struct snis_text_input_box *solarsystemname;
 	struct snis_text_input_box *shipname_box;
 	struct snis_text_input_box *password_box;
 	struct button *role_main;
@@ -5796,7 +5792,7 @@ static struct network_setup_ui {
 	int create_ship_v;
 	int join_ship_v;
 	char lobbyname[60];
-	char servername[60];
+	char solarsystem[60];
 	char shipname[SHIPNAME_LEN];
 	char password[PASSWORD_LEN];
 } net_setup_ui;
@@ -13805,7 +13801,7 @@ static void lobby_hostname_entered()
 
 static void gameserver_hostname_entered()
 {
-	printf("game server hostname entered: %s\n", net_setup_ui.servername);
+	printf("game server hostname entered: %s\n", net_setup_ui.solarsystem);
 }
 
 static void shipname_entered()
@@ -13891,13 +13887,19 @@ static void start_gameserver_button_pressed()
 	char *snisbindir;
 	pid_t child;
 	const char errorstr[] = "Failed to exec snis_server.\n";
+	char *uppersolarsys, *lowersolarsys;
 
 	/* FIXME this is probably not too cool. */
-	sanitize_string(net_setup_ui.servername);
+	sanitize_string(net_setup_ui.solarsystem);
 	sanitize_string(net_setup_ui.lobbyname);
 
+	uppersolarsys = strdup(net_setup_ui.solarsystem);
+	lowersolarsys = strdup(net_setup_ui.solarsystem);
+	uppercase(uppersolarsys);
+	lowercase(lowersolarsys);
+
 	/* These must be set in order to start the game server. */
-	if (strcmp(net_setup_ui.servername, "") == 0 || 
+	if (strcmp(net_setup_ui.solarsystem, "") == 0 ||
 		strcmp(net_setup_ui.lobbyname, "") == 0)
 		return;
 
@@ -13919,8 +13921,9 @@ static void start_gameserver_button_pressed()
 		return;
 	}
 	if (child == 0) { /* This is the child process */
-		execl(command, "snis_server", "-l", net_setup_ui.lobbyname, "-L", "DEFAULT2",
-				"--enable-enscript", "-m", "narnia", "-s", "default2", NULL);
+		execl(command, "snis_server", "-l", net_setup_ui.lobbyname, "-L",
+				uppersolarsys, "--enable-enscript",
+				"-m", "narnia", "-s", lowersolarsys, NULL);
 		/*
 		 * if execl returns at all, there was an error, and btw, be careful, very
 		 * limited stuff that we can safely call, similar to limitations of signal
@@ -13934,6 +13937,8 @@ static void start_gameserver_button_pressed()
 		else
 			_exit(-1);
 	}
+	free(uppersolarsys);
+	free(lowersolarsys);
 }
 
 static void connect_to_lobby_button_pressed()
@@ -14072,7 +14077,7 @@ static void init_net_setup_ui(void)
 
 	memset(net_setup_ui.lobbyname, 0, sizeof(net_setup_ui.lobbyname));
 	strcpy(net_setup_ui.lobbyname, "localhost");
-	strcpy(net_setup_ui.servername, "");
+	strcpy(net_setup_ui.solarsystem, "");
 	y += yinc;
 	net_setup_ui.lobbyservername =
 		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
@@ -14083,10 +14088,11 @@ static void init_net_setup_ui(void)
 		snis_button_init(left, y, -1, -1, "START LOBBY SERVER",
 			active_button_color, TINY_FONT, start_lobbyserver_button_pressed, NULL);
 	y += yinc * 2;
-	net_setup_ui.gameservername =
+	net_setup_ui.solarsystemname =
 		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
-					net_setup_ui.servername, sizeof(net_setup_ui.servername) - 1, &timer,
+					net_setup_ui.solarsystem, sizeof(net_setup_ui.solarsystem) - 1, &timer,
 					gameserver_hostname_entered, NULL);
+	snis_text_input_box_set_contents(net_setup_ui.solarsystemname, "DEFAULT2");
 	y += yinc;
 	net_setup_ui.start_gameserver = 
 		snis_button_init(left, y, -1, -1, "START GAME SERVER",
@@ -14125,7 +14131,7 @@ static void init_net_setup_ui(void)
 
 	/* note: the order of these is important for TAB key focus advance */
 	ui_add_text_input_box(net_setup_ui.lobbyservername, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_text_input_box(net_setup_ui.gameservername, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_text_input_box(net_setup_ui.solarsystemname, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.shipname_box, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.password_box, DISPLAYMODE_NETWORK_SETUP);
 } 
@@ -14138,13 +14144,13 @@ static void show_network_setup(GtkWidget *w)
 	sng_set_foreground(UI_COLOR(network_setup_text));
 	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10 + LINEHEIGHT * 2));
 	sng_abs_xy_draw_string("LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, txx(25), txy(130));
-	sng_abs_xy_draw_string("GAME SERVER NICKNAME", TINY_FONT, txx(25), txy(280));
+	sng_abs_xy_draw_string("SOLARSYSTEM NAME", TINY_FONT, txx(25), txy(280));
 	sng_abs_xy_draw_string("SHIP NAME", TINY_FONT, txx(20), txy(470));
 	sng_abs_xy_draw_string("PASSWORD", TINY_FONT, txx(20), txy(520));
 
-	sanitize_string(net_setup_ui.servername);
+	sanitize_string(net_setup_ui.solarsystem);
 	sanitize_string(net_setup_ui.lobbyname);
-	if (strcmp(net_setup_ui.servername, "") != 0 &&
+	if (strcmp(net_setup_ui.solarsystem, "") != 0 &&
 		strcmp(net_setup_ui.lobbyname, "") != 0)
 		snis_button_set_color(net_setup_ui.start_gameserver, UI_COLOR(network_setup_active));
 	else
