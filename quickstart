@@ -104,15 +104,23 @@ sleep 2.50
 # Some common aspect ratios.  Note: the game was designed on a machine
 # with a 16:9 aspect ratio.  Other aspect ratios may have some UI issues.
 #
-ASPECT_RATIO="" # unspecified, figure it out from window manager
-# ASPECT_RATIO="--aspect-ratio 5:4"
-# ASPECT_RATIO="--aspect-ratio 4:3"
-# ASPECT_RATIO="--aspect-ratio 16:10"
-# ASPECT_RATIO="--aspect-ratio 16:9"
+# ASPECT_RATIO, if unspecified, will figure it out from window manager
+ASPECT_RATIO="${ASPECT_RATIO:-}"
+# ASPECT_RATIO="5:4"
+# ASPECT_RATIO="4:3"
+# ASPECT_RATIO="16:10"
+# ASPECT_RATIO="16:9"
+
+if [ "$ASPECT_RATIO" != "" ]
+then
+	ASPECT_RATIO_ARG="--aspect-ratio $ASPECT_RATIO"
+else
+	ASPECT_RATIO_ARG=""
+fi
 
 # start the game client and server in quickstart mode
 # ./snis_client $ASPECT_RATIO --fullscreen --solarsystem "$SNIS_SOLARSYSTEM" --quickstart --starship "$shipname" --pw "$password" $@
-./snis_client $ASPECT_RATIO --fullscreen --starship "$shipname" --pw "$password" $@
+./snis_client $ASPECT_RATIO_ARG --fullscreen --starship "$shipname" --pw "$password" $@
 
 exit $?
 

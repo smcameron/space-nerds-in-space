@@ -14375,8 +14375,8 @@ static void draw_help_text(GtkWidget *w, char *text)
 		if (text[i] == '\n' || text[i] == '\0') {
 			if (line >= 0 && line < 20) {
 				buffer[buflen] = '\0';
-				sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
-				y += 25;
+				sng_abs_xy_draw_string(buffer, NANO_FONT, 60, y);
+				y += font_lineheight[NANO_FONT];
 				strcpy(buffer, "");
 				buflen = 0;
 				line++;

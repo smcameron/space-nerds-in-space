@@ -6,6 +6,18 @@ SNIS_CLIENT=${BINDIR}/snis_client
 SNIS_MULTIVERSE=${BINDIR}/snis_multiverse
 SSGL_SERVER=${BINDIR}/ssgl_server
 LSSSGL=${BINDIR}/lsssgl
+ASPECT_RATIO="${ASPECT_RATIO:-}"
+# ASPECT_RATIO="5:4"
+# ASPECT_RATIO="4:3"
+# ASPECT_RATIO="16:10"
+# ASPECT_RATIO="16:9"
+
+if [ "$ASPECT_RATIO" != "" ]
+then
+	ASPECT_RATIO_ARG="--aspect-ratio $ASPECT_RATIO"
+else
+	ASPECT_RATIO_ARG=""
+fi
 
 SOLARSYSTEM_NAME="default2"
 
@@ -136,7 +148,7 @@ start_snis_client()
 	echo
 	echo "Starting snis_client"
 	echo
-	${SNIS_CLIENT} $ASPECT_RATIO --fullscreen > snis_client_log.txt 2>&1 &
+	${SNIS_CLIENT} $ASPECT_RATIO_ARG --fullscreen > snis_client_log.txt 2>&1 &
 	sleep 1
 	# --starship "$shipname" --pw "$password" $@
 }
