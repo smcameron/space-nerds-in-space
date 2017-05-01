@@ -5261,8 +5261,8 @@ static int calc_overheat_damage(struct snis_entity *o, struct damcon_data *d,
 	float damage, overheat_amount, old_value, new_value;
 	int system_number = system - (unsigned char *) &o->tsd.ship.damage;
 
-	BUILD_ASSERT(sizeof(o->tsd.ship.damage) == 8);
-	if (system_number < 0 || system_number >= 8)
+	BUILD_ASSERT(sizeof(o->tsd.ship.damage) == DAMCON_SYSTEM_COUNT - 1);
+	if (system_number < 0 || system_number >= DAMCON_SYSTEM_COUNT - 1)
 		fprintf(stderr, "system_number out of range: %d at %s:%d\n",
 			system_number, __FILE__, __LINE__);
 	if (temperature < (uint8_t) (0.9f * 255.0f))
@@ -6091,8 +6091,8 @@ static int calc_sunburn_damage(struct snis_entity *o, struct damcon_data *d,
 	float damage, old_value, new_value;
 	int system_number = system - (unsigned char *) &o->tsd.ship.damage;
 
-	BUILD_ASSERT(sizeof(o->tsd.ship.damage) == 8);
-	if (system_number < 0 || system_number >= 8)
+	BUILD_ASSERT(sizeof(o->tsd.ship.damage) == DAMCON_SYSTEM_COUNT - 1);
+	if (system_number < 0 || system_number >= DAMCON_SYSTEM_COUNT - 1)
 		fprintf(stderr, "system_number out of range: %d at %s:%d\n",
 			system_number, __FILE__, __LINE__);
 	if (snis_randn(1000) > 10) 
@@ -16883,10 +16883,10 @@ static void move_damcon_entities_on_bridge(int bridge_number)
 	int i, j;
 	struct damcon_data *d = &bridgelist[bridge_number].damcon;
 	struct snis_damcon_entity *socket, *part;
-	float damage[8];
+	float damage[DAMCON_SYSTEM_COUNT - 1];
 	int nobjs;
 
-	for (i = 0; i < 8; i++)
+	for (i = 0; i < DAMCON_SYSTEM_COUNT - 1; i++)
 		damage[i] = 0.0f;
 
 	if (!d->pool)
@@ -16905,7 +16905,7 @@ static void move_damcon_entities_on_bridge(int bridge_number)
 		if (d->o[i].type != DAMCON_TYPE_SOCKET)
 			continue;
 		socket = &d->o[i];
-		if (socket->tsd.socket.system >= 8)
+		if (socket->tsd.socket.system >= DAMCON_SYSTEM_COUNT - 1)
 			continue;
 		if (socket->tsd.socket.system < 0)
 			continue;
@@ -16944,9 +16944,9 @@ static void move_damcon_entities_on_bridge(int bridge_number)
 	}
 	struct snis_entity *o = &go[ship];
 
-	BUILD_ASSERT(sizeof(o->tsd.ship.damage) == 8);
+	BUILD_ASSERT(sizeof(o->tsd.ship.damage) == DAMCON_SYSTEM_COUNT - 1);
 	int changed = 0;
-	for (i = 0; i < 8; i++) {
+	for (i = 0; i < DAMCON_SYSTEM_COUNT - 1; i++) {
 		unsigned char *x = (unsigned char *) &o->tsd.ship.damage;
 		if (x[i] != (unsigned char) damage[i]) {
 			x[i] = (unsigned char) damage[i];
