@@ -14307,6 +14307,9 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_IMPULSE_PWR:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.power_data.impulse.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_WARP_PWR:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.power_data.warp.r2), v, no_limit);
 	default:
 		return -1;
 	}
@@ -14512,11 +14515,6 @@ static int process_engage_warp(struct game_client *c)
 	pthread_mutex_unlock(&universe_mutex);
 	send_initiate_warp_packet(c, enough_oomph);
 	return 0;
-}
-
-static int process_request_warp_pwr(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.warp.r2), no_limit); 
 }
 
 static int process_request_warp_coolant(struct game_client *c)
@@ -15146,11 +15144,6 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_ADJUST_CONTROL_INPUT:
 			rc = process_adjust_control_input(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_WARP_PWR:
-			rc = process_request_warp_pwr(c);
 			if (rc)
 				goto protocol_error;
 			break;
