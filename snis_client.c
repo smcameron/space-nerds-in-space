@@ -3202,7 +3202,7 @@ static void do_zoom(int z)
 			newval = 0;
 		if (newval > 255)
 			newval = 255;
-                do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_MAINZOOM);
+		transmit_adjust_control_input((uint8_t) newval, OPCODE_ADJUST_CONTROL_MAINZOOM);
 		break;
 	default:
 		break;
@@ -8690,7 +8690,7 @@ static void do_navzoom(struct slider *s)
 
 static void do_mainzoom(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_MAINZOOM);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_MAINZOOM);
 }
 
 static void do_throttle(struct slider *s)
