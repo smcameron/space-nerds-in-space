@@ -115,6 +115,8 @@ int snis_opcode_def_init(void)
 			OPCODE_ADJUST_CONTROL_SHIELD, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_MANEUVERING_PWR, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_TRACTOR_PWR, "bbwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwww");
 	rc |= init_opcode_def(OPCODE_COMMS_TRANSMISSION, "n/a");
@@ -158,7 +160,6 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_EXEC_LUA_SCRIPT, "n/a");
 	rc |= init_opcode_def(OPCODE_REQUEST_TRACTORBEAM, "bw");
 	rc |= init_opcode_def(OPCODE_UPDATE_TRACTORBEAM, "bwwww");
-	rc |= init_opcode_def(OPCODE_REQUEST_TRACTOR_PWR, "bwb");
 	rc |= init_opcode_def(OPCODE_COMMS_MAINSCREEN, "bb");
 	rc |= init_opcode_def(OPCODE_LOAD_SKYBOX, "n/a");
 	rc |= init_opcode_def(OPCODE_ROBOT_AUTO_MANUAL, "bb");
