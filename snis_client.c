@@ -8750,7 +8750,7 @@ static void do_sensors_pwr(struct slider *s)
 	
 static void do_phaserbanks_pwr(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_PHASERBANKS_PWR);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_PHASERBANKS_PWR);
 }
 	
 static void do_comms_pwr(struct slider *s)

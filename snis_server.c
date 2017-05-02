@@ -14313,6 +14313,9 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_SENSORS_PWR:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.power_data.sensors.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_PHASERBANKS_PWR:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.power_data.phasers.r2), v, no_limit);
 	default:
 		return -1;
 	}
@@ -14548,11 +14551,6 @@ static int process_request_comms_coolant(struct game_client *c)
 static int process_request_shields_coolant(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.shields.r2), no_limit); 
-}
-
-static int process_request_phaserbanks_pwr(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.power_data.phasers.r2), no_limit); 
 }
 
 static int process_request_phaserbanks_coolant(struct game_client *c)
@@ -15147,11 +15145,6 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_COMMS_PWR:
 			rc = process_request_comms_pwr(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_PHASERBANKS_PWR:
-			rc = process_request_phaserbanks_pwr(c);
 			if (rc)
 				goto protocol_error;
 			break;
