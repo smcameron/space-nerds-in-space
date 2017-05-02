@@ -34,7 +34,7 @@
 #include "snis_marshal.h"
 #include "stacktrace.h"
 
-#define NSUBCODES 10
+#define NSUBCODES 25
 #define NOPCODES (256 * NSUBCODES)
 
 static struct opcode_format_descriptor opcode_def[NOPCODES] = { 0 };
@@ -42,7 +42,7 @@ static struct opcode_format_descriptor opcode_def[NOPCODES] = { 0 };
 static int init_opcode_subcode_def(uint8_t opcode, uint8_t subcode, char *format)
 {
 	int index = opcode * NSUBCODES + subcode;
-	if (subcode > 9) {
+	if (subcode > NSUBCODES - 1) {
 		fprintf(stderr, "invalid subcode %d\n", subcode);
 		return -1;
 	}
@@ -125,6 +125,24 @@ int snis_opcode_def_init(void)
 			OPCODE_ADJUST_CONTROL_PHASERBANKS_PWR, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_COMMS_PWR, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_MANEUVERING_COOLANT, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_WARP_COOLANT, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_IMPULSE_COOLANT, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_SHIELDS_COOLANT, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_COMMS_COOLANT, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_SENSORS_COOLANT, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_PHASERBANKS_COOLANT, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_TRACTOR_COOLANT, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_LIFESUPPORT_COOLANT, "bbwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwww");
 	rc |= init_opcode_def(OPCODE_COMMS_TRANSMISSION, "n/a");
@@ -182,14 +200,6 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_MANUAL_LASER, "b");
 	rc |= init_opcode_def(OPCODE_REQUEST_WEAPONS_YAW_PITCH, "bRR");
 	rc |= init_opcode_def(OPCODE_UPDATE_COOLANT_DATA, "n/a");
-	rc |= init_opcode_def(OPCODE_REQUEST_MANEUVERING_COOLANT, "bwb");
-	rc |= init_opcode_def(OPCODE_REQUEST_WARP_COOLANT, "bwb");
-	rc |= init_opcode_def(OPCODE_REQUEST_IMPULSE_COOLANT, "bwb");
-	rc |= init_opcode_def(OPCODE_REQUEST_SHIELDS_COOLANT, "bwb");
-	rc |= init_opcode_def(OPCODE_REQUEST_COMMS_COOLANT, "bwb");
-	rc |= init_opcode_def(OPCODE_REQUEST_SENSORS_COOLANT, "bwb");
-	rc |= init_opcode_def(OPCODE_REQUEST_PHASERBANKS_COOLANT, "bwb");
-	rc |= init_opcode_def(OPCODE_REQUEST_TRACTOR_COOLANT, "bwb");
 	rc |= init_opcode_def(OPCODE_SILENT_UPDATE_DAMAGE, "n/a");
 	rc |= init_opcode_def(OPCODE_ECON_UPDATE_SHIP_DEBUG_AI, "bwwhSSSQwbbbbbbbSb");
 	rc |= init_opcode_def(OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE, "b");
@@ -234,7 +244,6 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_subcode_def(OPCODE_SET_WAYPOINT, OPCODE_SET_WAYPOINT_ROW, "bbbSSS");
 	rc |= init_opcode_subcode_def(OPCODE_SET_WAYPOINT, OPCODE_SET_WAYPOINT_ADD_ROW, "bbSSS");
 	rc |= init_opcode_subcode_def(OPCODE_SET_WAYPOINT, OPCODE_SET_WAYPOINT_UPDATE_SELECTION, "bbw");
-	rc |= init_opcode_def(OPCODE_REQUEST_LIFESUPPORT_COOLANT, "bwb");
 	rc |= init_opcode_def(OPCODE_NOOP, "b");
 	return rc;
 }

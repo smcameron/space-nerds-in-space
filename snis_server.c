@@ -14222,22 +14222,6 @@ static int process_nav_trident_mode(struct game_client *c)
 	return 0;
 }
 
-static int process_request_maneuvering_coolant(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.maneuvering.r2), no_limit); 
-}
-
-static int process_request_tractor_coolant(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.tractor.r2), no_limit); 
-}
-
-static int process_request_lifesupport_coolant(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity,
-					tsd.ship.coolant_data.lifesupport.r2), no_limit);
-}
-
 static int process_adjust_control_bytevalue(struct game_client *c, uint32_t id,
 				int offset, uint8_t value, bytevalue_limit_function limit)
 {
@@ -14319,6 +14303,33 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_COMMS_PWR:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.power_data.comms.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_MANEUVERING_COOLANT:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.coolant_data.maneuvering.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_TRACTOR_COOLANT:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.coolant_data.tractor.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_LIFESUPPORT_COOLANT:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.coolant_data.lifesupport.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_SHIELDS_COOLANT:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.coolant_data.shields.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_IMPULSE_COOLANT:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.coolant_data.impulse.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_WARP_COOLANT:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.coolant_data.warp.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_SENSORS_COOLANT:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.coolant_data.sensors.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_PHASERBANKS_COOLANT:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.coolant_data.phasers.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_COMMS_COOLANT:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.coolant_data.comms.r2), v, no_limit);
 	default:
 		return -1;
 	}
@@ -14524,36 +14535,6 @@ static int process_engage_warp(struct game_client *c)
 	pthread_mutex_unlock(&universe_mutex);
 	send_initiate_warp_packet(c, enough_oomph);
 	return 0;
-}
-
-static int process_request_warp_coolant(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.warp.r2), no_limit); 
-}
-
-static int process_request_impulse_coolant(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.impulse.r2), no_limit); 
-}
-
-static int process_request_sensors_coolant(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.sensors.r2), no_limit); 
-}
-
-static int process_request_comms_coolant(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.comms.r2), no_limit); 
-}
-
-static int process_request_shields_coolant(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.shields.r2), no_limit); 
-}
-
-static int process_request_phaserbanks_coolant(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.phasers.r2), no_limit); 
 }
 
 static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
@@ -15138,51 +15119,6 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_ADJUST_CONTROL_INPUT:
 			rc = process_adjust_control_input(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_MANEUVERING_COOLANT:
-			rc = process_request_maneuvering_coolant(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_TRACTOR_COOLANT:
-			rc = process_request_tractor_coolant(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_LIFESUPPORT_COOLANT:
-			rc = process_request_lifesupport_coolant(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_WARP_COOLANT:
-			rc = process_request_warp_coolant(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_IMPULSE_COOLANT:
-			rc = process_request_impulse_coolant(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_SHIELDS_COOLANT:
-			rc = process_request_shields_coolant(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_SENSORS_COOLANT:
-			rc = process_request_sensors_coolant(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_COMMS_COOLANT:
-			rc = process_request_comms_coolant(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_PHASERBANKS_COOLANT:
-			rc = process_request_phaserbanks_coolant(c);
 			if (rc)
 				goto protocol_error;
 			break;

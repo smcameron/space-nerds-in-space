@@ -8677,12 +8677,6 @@ static void do_adjust_byte_value(uint8_t value,  uint8_t opcode)
 	queue_to_server(snis_opcode_pkt("bwb", opcode, o->id, value));
 }
 
-static void do_adjust_slider_value(struct slider *s,  uint8_t opcode)
-{
-	uint8_t value = (uint8_t) (255.0 * snis_slider_get_input(s));
-	do_adjust_byte_value(value, opcode);
-}
-
 static void do_navzoom(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_NAVZOOM);
@@ -8760,47 +8754,47 @@ static void do_comms_pwr(struct slider *s)
 
 static void do_maneuvering_coolant(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_MANEUVERING_COOLANT);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_MANEUVERING_COOLANT);
 }
 	
 static void do_tractor_coolant(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_TRACTOR_COOLANT);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_TRACTOR_COOLANT);
 }
 
 static void do_lifesupport_coolant(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_LIFESUPPORT_COOLANT);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_LIFESUPPORT_COOLANT);
 }
 
 static void do_shields_coolant(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_SHIELDS_COOLANT);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_SHIELDS_COOLANT);
 }
 	
 static void do_impulse_coolant(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_IMPULSE_COOLANT);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_IMPULSE_COOLANT);
 }
 
 static void do_warp_coolant(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_WARP_COOLANT);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_WARP_COOLANT);
 }
 
 static void do_sensors_coolant(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_SENSORS_COOLANT);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_SENSORS_COOLANT);
 }
 	
 static void do_phaserbanks_coolant(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_PHASERBANKS_COOLANT);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_PHASERBANKS_COOLANT);
 }
 	
 static void do_comms_coolant(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_COMMS_COOLANT);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_COMMS_COOLANT);
 }
 
 #define DEFINE_SAMPLER_FUNCTION(f, field, divisor, min) \
