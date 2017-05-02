@@ -8710,7 +8710,7 @@ static void do_warpdrive(struct slider *s)
 
 static void do_shieldadj(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_SHIELD);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_SHIELD);
 }
 
 static void do_maneuvering_pwr(struct slider *s)

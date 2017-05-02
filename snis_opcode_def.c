@@ -112,7 +112,8 @@ int snis_opcode_def_init(void)
 			OPCODE_ADJUST_CONTROL_SCIZOOM, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_WARPDRIVE, "bbwb");
-	rc |= init_opcode_def(OPCODE_REQUEST_SHIELD, "bwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_SHIELD, "bbwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwww");
 	rc |= init_opcode_def(OPCODE_COMMS_TRANSMISSION, "n/a");
