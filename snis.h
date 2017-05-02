@@ -370,7 +370,7 @@ struct ship_data {
 #define FUEL_UNITS (FUEL_DURATION * 60.0 * 30.0)
 #define FUEL_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / FUEL_UNITS))
 	uint32_t fuel;
-#define OXYGEN_DURATION (0.5) /* minutes */
+#define OXYGEN_DURATION (4.0) /* minutes */
 #define OXYGEN_UNITS (OXYGEN_DURATION * 60.0 * 30.0)
 #define OXYGEN_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / OXYGEN_UNITS))
 #define OXYGEN_PRODUCTION_UNIT (1.8 * OXYGEN_CONSUMPTION_UNIT)
