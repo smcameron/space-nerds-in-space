@@ -14232,12 +14232,6 @@ static int process_request_tractor_coolant(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.coolant_data.tractor.r2), no_limit); 
 }
 
-static int process_request_lifesupport_pwr(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity,
-					tsd.ship.power_data.lifesupport.r2), no_limit);
-}
-
 static int process_request_lifesupport_coolant(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity,
@@ -14304,6 +14298,9 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_TRACTOR_PWR:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.power_data.tractor.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_LIFESUPPORT_PWR:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.power_data.lifesupport.r2), v, no_limit);
 	default:
 		return -1;
 	}
@@ -15153,11 +15150,6 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_ADJUST_CONTROL_INPUT:
 			rc = process_adjust_control_input(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_LIFESUPPORT_PWR:
-			rc = process_request_lifesupport_pwr(c);
 			if (rc)
 				goto protocol_error;
 			break;

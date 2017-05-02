@@ -8725,7 +8725,7 @@ static void do_tractor_pwr(struct slider *s)
 
 static void do_lifesupport_pwr(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_LIFESUPPORT_PWR);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_LIFESUPPORT_PWR);
 }
 
 static void do_shields_pwr(struct slider *s)
