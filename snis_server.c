@@ -9896,9 +9896,9 @@ static struct waypoint_data_entry {
 	{ 13,    0, WAYPOINTY(6), { 11, 12, 14, 15, 44, 45, 46, 47, -1 }, },
 	{ 14,  256, WAYPOINTY(6), { 13, 38, 39, -1 }, },
 	{ 15,    0, WAYPOINTY(7), { 13, 17, 46, 47, -1 }, },
-	{ 16, -256, WAYPOINTY(8), { 17, -1 }, },
-	{ 17,    0, WAYPOINTY(8), { 15, 16, 18, 22, 46, 47, -1 }, },
-	{ 18,  256, WAYPOINTY(8), { 17, -1 }, },
+	{ 16, -256, WAYPOINTY(8), { 17, 48, 49, -1 }, },
+	{ 17,    0, WAYPOINTY(8), { 15, 16, 18, 19, 21, 22, 46, 47, -1 }, },
+	{ 18,  256, WAYPOINTY(8), { 17, 50, 51, -1 }, },
 	{ 19, -100, WAYPOINTY(9), { 17, 20, 22, -1 }, },
 	{ 20,    0, WAYPOINTY(9), { 17, 19, 21, 22, -1 }, },
 	{ 21,  100, WAYPOINTY(9), { 17, 20, 22, -1 }, },
@@ -15683,7 +15683,7 @@ static void queue_up_client_damcon_object_update(struct game_client *c,
 			send_update_damcon_socket_packet(c, o);
 			break;
 		case DAMCON_TYPE_WAYPOINT:
-			break;
+			break; /* Comment this "break" out to debug damcon robot waypoints */
 		default:
 			send_update_damcon_obj_packet(c, o);
 			break;
