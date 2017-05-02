@@ -95,7 +95,6 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_COMMS_PWR, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SENSORS_PWR, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_PHASERBANKS_PWR, "bwb");
-	rc |= init_opcode_def(OPCODE_REQUEST_SCIZOOM, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_WARPDRIVE, "bwb");
 	rc |= init_opcode_def(OPCODE_ENGAGE_WARP, "bwb");
 	rc |= init_opcode_def(OPCODE_ROLE_ONSCREEN, "bb");
@@ -110,6 +109,8 @@ int snis_opcode_def_init(void)
 			OPCODE_ADJUST_CONTROL_MAINZOOM, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_THROTTLE, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_SCIZOOM, "bbwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SHIELD, "bwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwww");

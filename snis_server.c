@@ -14171,11 +14171,6 @@ static int process_request_bytevalue_pwr(struct game_client *c, int offset,
 	return 0;
 }
 
-static int process_request_scizoom(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.scizoom), no_limit); 
-}
-
 static int process_request_weapzoom(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.weapzoom), no_limit);
@@ -14316,6 +14311,9 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_THROTTLE:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.power_data.impulse.r1), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_SCIZOOM:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.scizoom), v, no_limit);
 	default:
 		return -1;
 	}
@@ -15295,11 +15293,6 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_ROBOT_CMD:
 			rc = process_request_robot_cmd(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_SCIZOOM:
-			rc = process_request_scizoom(c);
 			if (rc)
 				goto protocol_error;
 			break;

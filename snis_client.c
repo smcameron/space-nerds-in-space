@@ -8700,7 +8700,7 @@ static void do_throttle(struct slider *s)
 
 static void do_scizoom(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_SCIZOOM);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_SCIZOOM);
 }
 	
 static void do_warpdrive(struct slider *s)
@@ -14323,7 +14323,7 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 			newval = 0;
 		if (newval > 255)
 			newval = 255;
-		do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_SCIZOOM);
+		transmit_adjust_control_input((uint8_t) newval, OPCODE_ADJUST_CONTROL_SCIZOOM);
 		return 0;
 	case DISPLAYMODE_DEMON:
 		if (demon_ui.use_3d)
