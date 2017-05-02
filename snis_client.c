@@ -8715,7 +8715,7 @@ static void do_shieldadj(struct slider *s)
 
 static void do_maneuvering_pwr(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_MANEUVERING_PWR);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_MANEUVERING_PWR);
 }
 	
 static void do_tractor_pwr(struct slider *s)

@@ -88,7 +88,6 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_ECON_UPDATE_SHIP, "bwwhSSSQwbb");
 	/* rc |= init_opcode_def(OPCODE_SHIP_SDATA, "bwbbbbbbbr"); */
 	rc |= init_opcode_def(OPCODE_LOAD_TORPEDO, "b");
-	rc |= init_opcode_def(OPCODE_REQUEST_MANEUVERING_PWR, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_WARP_PWR, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_IMPULSE_PWR, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SHIELDS_PWR, "bwb");
@@ -114,6 +113,8 @@ int snis_opcode_def_init(void)
 			OPCODE_ADJUST_CONTROL_WARPDRIVE, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_SHIELD, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_MANEUVERING_PWR, "bbwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwww");
 	rc |= init_opcode_def(OPCODE_COMMS_TRANSMISSION, "n/a");
