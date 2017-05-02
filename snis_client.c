@@ -8705,7 +8705,7 @@ static void do_scizoom(struct slider *s)
 	
 static void do_warpdrive(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_WARPDRIVE);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_WARPDRIVE);
 }
 
 static void do_shieldadj(struct slider *s)
