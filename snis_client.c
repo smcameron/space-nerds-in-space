@@ -8695,7 +8695,7 @@ static void do_mainzoom(struct slider *s)
 
 static void do_throttle(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_THROTTLE);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_THROTTLE);
 }
 
 static void do_scizoom(struct slider *s)
