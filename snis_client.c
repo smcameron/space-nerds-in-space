@@ -3175,6 +3175,7 @@ static void deal_with_physical_io_devices()
 }
 
 static void do_adjust_byte_value(uint8_t value,  uint8_t opcode);
+static void transmit_adjust_control_input(uint8_t value,  uint8_t subcode);
 static void do_zoom(int z)
 {
 	int newval;
@@ -3193,7 +3194,7 @@ static void do_zoom(int z)
 			newval = 0;
 		if (newval > 255)
 			newval = 255;
-                do_adjust_byte_value((uint8_t) newval, OPCODE_REQUEST_NAVZOOM);
+		transmit_adjust_control_input((uint8_t) newval, OPCODE_ADJUST_CONTROL_NAVZOOM);
 		break;
 	case DISPLAYMODE_MAINSCREEN:
 		newval = o->tsd.ship.mainzoom + z;
@@ -8684,7 +8685,7 @@ static void do_adjust_slider_value(struct slider *s,  uint8_t opcode)
 
 static void do_navzoom(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_NAVZOOM);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_NAVZOOM);
 }
 
 static void do_mainzoom(struct slider *s)

@@ -14176,11 +14176,6 @@ static int process_request_scizoom(struct game_client *c)
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.scizoom), no_limit); 
 }
 
-static int process_request_navzoom(struct game_client *c)
-{
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.navzoom), no_limit);
-}
-
 static int process_request_mainzoom(struct game_client *c)
 {
 	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.mainzoom), no_limit);
@@ -14324,6 +14319,9 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_LASER_WAVELENGTH:
 		return process_adjust_control_bytevalue(c, id,
 				offsetof(struct snis_entity, tsd.ship.phaser_wavelength), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_NAVZOOM:
+		return process_adjust_control_bytevalue(c, id,
+				offsetof(struct snis_entity, tsd.ship.navzoom), v, no_limit);
 	default:
 		return -1;
 	}
@@ -15313,11 +15311,6 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_SCIZOOM:
 			rc = process_request_scizoom(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_NAVZOOM:
-			rc = process_request_navzoom(c);
 			if (rc)
 				goto protocol_error;
 			break;
