@@ -14288,9 +14288,46 @@ static int process_request_lifesupport_coolant(struct game_client *c)
 					tsd.ship.coolant_data.lifesupport.r2), no_limit);
 }
 
-static int process_request_laser_wavelength(struct game_client *c)
+static int process_adjust_control_bytevalue(struct game_client *c, uint32_t id,
+				int offset, uint8_t value, bytevalue_limit_function limit)
 {
-	return process_request_bytevalue_pwr(c, offsetof(struct snis_entity, tsd.ship.phaser_wavelength), no_limit); 
+	int i;
+	uint8_t *bytevalue;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->ship_index)
+		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
+	bytevalue = (uint8_t *) &go[i];
+	bytevalue += offset;
+	value = limit(c, value);
+	*bytevalue = value;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static int process_adjust_control_input(struct game_client *c)
+{
+	int rc;
+	uint32_t id;
+	unsigned char subcode, v;
+	unsigned char buffer[10];
+
+	rc = read_and_unpack_buffer(c, buffer, "bwb", &subcode, &id, &v);
+	if (rc)
+		return rc;
+	switch (subcode) {
+	case OPCODE_ADJUST_CONTROL_LASER_WAVELENGTH:
+		return process_adjust_control_bytevalue(c, id,
+				offsetof(struct snis_entity, tsd.ship.phaser_wavelength), v, no_limit);
+	default:
+		return -1;
+	}
+	return 0;
 }
 
 static void send_initiate_warp_packet(struct game_client *c, int enough_oomph)
@@ -15149,8 +15186,8 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
-		case OPCODE_REQUEST_LASER_WAVELENGTH:
-			rc = process_request_laser_wavelength(c);
+		case OPCODE_ADJUST_CONTROL_INPUT:
+			rc = process_adjust_control_input(c);
 			if (rc)
 				goto protocol_error;
 			break;

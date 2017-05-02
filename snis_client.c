@@ -8650,6 +8650,23 @@ static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
 	load_torpedo_button_pressed();
 }
 
+static void transmit_adjust_control_input(uint8_t value,  uint8_t subcode)
+{
+	struct snis_entity *o = find_my_ship();
+
+	if (!o)
+		return;
+	queue_to_server(snis_opcode_subcode_pkt("bbwb",
+					OPCODE_ADJUST_CONTROL_INPUT,
+					subcode, o->id, value));
+}
+
+static void do_adjust_control_input(struct slider *s, uint8_t subcode)
+{
+	uint8_t value = (uint8_t) (255.0 * snis_slider_get_input(s));
+	transmit_adjust_control_input(value, subcode);
+}
+
 static void do_adjust_byte_value(uint8_t value,  uint8_t opcode)
 {
 	struct snis_entity *o;
@@ -8916,9 +8933,9 @@ DEFINE_CURRENT_SAMPLER(coolant_data, tractor) /* defines sample_coolant_data_tra
 DEFINE_CURRENT_SAMPLER(coolant_data, lifesupport) /* defines sample_coolant_data_lifesupport_current */
 
 
-static void do_phaser_wavelength(__attribute__((unused)) struct slider *s)
+static void do_phaser_wavelength(struct slider *s)
 {
-	do_adjust_slider_value(s, OPCODE_REQUEST_LASER_WAVELENGTH);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_LASER_WAVELENGTH);
 }
 
 static void wavelen_updown_button_pressed(int direction)
@@ -8936,7 +8953,7 @@ static void wavelen_updown_button_pressed(int direction)
 	if (direction < 0 && value - inc < 0)
 		return;
 	value += direction < 0 ? -inc : direction > 0 ? inc : 0;
-	do_adjust_byte_value(value, OPCODE_REQUEST_LASER_WAVELENGTH);
+	transmit_adjust_control_input(value, OPCODE_ADJUST_CONTROL_LASER_WAVELENGTH);
 }
 
 static double sample_generic_damage_data(int field_offset)

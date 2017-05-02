@@ -103,7 +103,8 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_SCI_SELECT_TARGET, "bbw");
 	rc |= init_opcode_def(OPCODE_UPDATE_DAMAGE, "n/a");
 	rc |= init_opcode_def(OPCODE_REQUEST_LASER, "b");
-	rc |= init_opcode_def(OPCODE_REQUEST_LASER_WAVELENGTH, "bwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_LASER_WAVELENGTH, "bbwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SHIELD, "bwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwww");
