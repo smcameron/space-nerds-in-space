@@ -9952,11 +9952,43 @@ static void __attribute__((unused)) print_waypoint_table(struct damcon_data *d, 
 
 }
 
+/* return 0 if there is a connection from "from" to "to", 1 otherwise */
+static int  damcon_waypoint_continuity_failure(int from, int to)
+{
+	int i, j;
+
+	for (i = 0; i < ARRAYSIZE(damcon_waypoint_data); i++) {
+		struct waypoint_data_entry *e = &damcon_waypoint_data[i];
+		if (e->n != from)
+			continue;
+		for (j = 0; e->neighbor[j] != -1; j++)
+			if (e->neighbor[j] == to)
+				return 0;
+	}
+	return 1;
+}
+
+static void damcon_waypoint_sanity_check(void)
+{
+	int i, j;
+
+	for (i = 0; i < ARRAYSIZE(damcon_waypoint_data); i++) {
+		struct waypoint_data_entry *e = &damcon_waypoint_data[i];
+		for (j = 0; e->neighbor[j] != -1; j++) {
+			if (damcon_waypoint_continuity_failure(e->neighbor[j], e->n)) {
+				printf("damcon waypoint continuity failure: %d -> %d, but not %d -> %d\n",
+					e->n, e->neighbor[j], e->neighbor[j], e->n);
+			}
+		}
+	}
+}
+
 static void add_damcon_waypoints(struct damcon_data *d)
 {
 	int i, j, rc;
 	struct snis_damcon_entity *w, *n;
 
+	damcon_waypoint_sanity_check();
 	for (i = 0; i < ARRAYSIZE(damcon_waypoint_data); i++) {
 		struct waypoint_data_entry *e = &damcon_waypoint_data[i];
 		rc = add_damcon_waypoint(d, e->x, e->y);
