@@ -15718,6 +15718,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_ENG_PWR_TRACTOR:
 		snis_slider_poke_input(eng_ui.tractor_slider, d, 1);
 		break;
+	case DEVIO_OPCODE_ENG_PWR_LIFESUPPORT:
+		snis_slider_poke_input(eng_ui.lifesupport_slider, d, 1);
+		break;
 	case DEVIO_OPCODE_ENG_COOL_SHIELDS:
 		snis_slider_poke_input(eng_ui.shield_coolant_slider, d, 1);
 		break;
@@ -15741,6 +15744,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		break;
 	case DEVIO_OPCODE_ENG_COOL_TRACTOR:
 		snis_slider_poke_input(eng_ui.tractor_coolant_slider, d, 1);
+		break;
+	case DEVIO_OPCODE_ENG_COOL_LIFESUPPORT:
+		snis_slider_poke_input(eng_ui.lifesupport_coolant_slider, d, 1);
 		break;
 	case DEVIO_OPCODE_ENG_SHIELD_LEVEL:
 		snis_slider_poke_input(eng_ui.shield_control_slider, d, 1);
