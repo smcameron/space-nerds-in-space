@@ -263,7 +263,7 @@ static struct npc_menu_item mining_bot_main_menu[] = {
 	{ "MINING BOT MAIN MENU", 0, 0, 0 },  /* by convention, first element is menu title */
 	{ "STATUS REPORT", 0, 0, npc_menu_item_mining_bot_status_report },
 	{ "RETURN TO SHIP", 0, 0, npc_menu_item_mining_bot_stow },
-	{ "TRANSPORT ORES TO CARGO BAYS", 0, 0, npc_menu_item_mining_bot_transport_ores },
+	{ "TRANSPORT MATERIALS TO CARGO BAYS", 0, 0, npc_menu_item_mining_bot_transport_ores },
 	{ "STOW MINING BOT", 0, 0, npc_menu_item_mining_bot_stow },
 	{ "RETARGET MINING BOT", 0, 0, npc_menu_item_mining_bot_retarget },
 	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
@@ -1039,6 +1039,14 @@ static void derelict_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
+
+	/* Unrealistic, but slow derelicts so the mining bot can catch them */
+	float v = sqrtf(o->vx * o->vx + o->vy * o->vy + o->vz * o->vz);
+	if (v > ship_type[SHIP_CLASS_ASTEROIDMINER].max_speed * 0.8) {
+		o->vx *= 0.99;
+		o->vy *= 0.99;
+		o->vz *= 0.99;
+	}
 
 	if (o->tsd.derelict.persistent)
 		return;
@@ -3735,6 +3743,8 @@ static void mining_bot_unload_ores(struct snis_entity *bot,
 {
 	if (!bot || !parent)
 		return;
+	uint32_t fuel, oxygen;
+	uint64_t tmpval;
 
 #define GOLD 0
 #define PLATINUM 1
@@ -3745,6 +3755,25 @@ static void mining_bot_unload_ores(struct snis_entity *bot,
 	mining_bot_unload_one_ore(bot, parent, ai, &ai->platinum, PLATINUM);
 	mining_bot_unload_one_ore(bot, parent, ai, &ai->germanium, GERMANIUM);
 	mining_bot_unload_one_ore(bot, parent, ai, &ai->uranium, URANIUM);
+
+	/* unload the fuel */
+	fuel = (uint32_t) ((ai->fuel / 255.0) * 0.33 * UINT32_MAX);
+	ai->fuel = 0;
+	tmpval = parent->tsd.ship.fuel;
+	tmpval += fuel;
+	if (tmpval > UINT32_MAX)
+		tmpval = UINT32_MAX;
+	parent->tsd.ship.fuel = tmpval;
+
+	/* unload the oxygen */
+	oxygen = (uint32_t) ((ai->oxygen / 255.0) * 0.33 * UINT32_MAX);
+	ai->oxygen = 0;
+	tmpval = parent->tsd.ship.oxygen;
+	tmpval += oxygen;
+	if (tmpval > UINT32_MAX)
+		tmpval = UINT32_MAX;
+	parent->tsd.ship.oxygen = tmpval;
+
 	snis_queue_add_sound(TRANSPORTER_SOUND, ROLE_SOUNDSERVER, parent->id);
 }
 
@@ -3774,7 +3803,7 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 		b = lookup_bridge_by_shipid(parent->id);
 		if (b >= 0)
 			send_comms_packet(o->sdata.name, bridgelist[b].npcbot.channel,
-				" -- STANDING BY FOR TRANSPORT OF ORES --");
+				" -- STANDING BY FOR TRANSPORT OF MATERIALS --");
 		ai->mode = MINING_MODE_STANDBY_TO_TRANSPORT_ORE;
 		snis_queue_add_sound(MINING_BOT_STANDING_BY,
 				ROLE_COMMS | ROLE_SOUNDSERVER | ROLE_SCIENCE, parent->id);
@@ -3784,8 +3813,8 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 		b = lookup_bridge_by_shipid(ai->parent_ship);
 		if (b >= 0) {
 			channel = bridgelist[b].npcbot.channel;
-			send_comms_packet(o->sdata.name, channel, "--- TRANSPORTING ORES ---");
-			send_comms_packet(o->sdata.name, channel, "--- ORES TRANSPORTED ---");
+			send_comms_packet(o->sdata.name, channel, "--- TRANSPORTING MATERIALS ---");
+			send_comms_packet(o->sdata.name, channel, "--- MATERIALS TRANSPORTED ---");
 			send_comms_packet(o->sdata.name, bridgelist[b].npcbot.channel,
 				" MINING BOT STOWING AND SHUTTING DOWN");
 			bridgelist[b].npcbot.current_menu = NULL;
@@ -3900,8 +3929,15 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 		int b = lookup_bridge_by_shipid(ai->parent_ship);
 		if (b >= 0) {
 			int channel = bridgelist[b].npcbot.channel;
-			send_comms_packet(o->sdata.name, channel,
-				"COMMENCING MINING OPERATION");
+			if (asteroid->type == OBJTYPE_ASTEROID)
+				send_comms_packet(o->sdata.name, channel,
+					"COMMENCING MINING OPERATION");
+			else if (asteroid->type == OBJTYPE_DERELICT)
+				send_comms_packet(o->sdata.name, channel,
+					"COMMENCING SALVAGE OPERATION");
+			else
+				send_comms_packet(o->sdata.name, channel,
+					"COMMENCING OPERATION");
 		}
 		ai->mode = MINING_MODE_MINE;
 		ai->countdown = 400;
@@ -3935,7 +3971,7 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 		if (b >= 0) {
 			int channel = bridgelist[b].npcbot.channel;
 			send_comms_packet(o->sdata.name, channel,
-				"TARGET ASTEROID LOST -- RETURNING TO SHIP");
+				"TARGET LOST -- RETURNING TO SHIP");
 		}
 		ai->mode = MINING_MODE_RETURN_TO_PARENT;
 		return;
@@ -3962,29 +3998,57 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 
 	/* TODO something better here that depends on composition of asteroid */
 	ai->countdown--;
-	chance = snis_randn(1000);
-	if (chance < 20) {
-		int total = (int) ((float) snis_randn(100) *
-			(float) asteroid->tsd.asteroid.preciousmetals / 255.0);
-		int n;
+	switch (asteroid->type) {
+	case OBJTYPE_ASTEROID:
+		chance = snis_randn(1000);
+		if (chance < 20) {
+			int total = (int) ((float) snis_randn(100) *
+				(float) asteroid->tsd.asteroid.preciousmetals / 255.0);
+			int n;
 
-		n = snis_randn(total); total -= n;
-		update_mineral_amount(&ai->germanium, n);
-		n = snis_randn(total); total -= n;
-		update_mineral_amount(&ai->gold, n);
-		n = snis_randn(total); total -= n;
-		update_mineral_amount(&ai->platinum, n);
-		n = snis_randn(total); total -= n;
-		update_mineral_amount(&ai->uranium, n);
-		n = snis_randn(total); total -= n;
-	}
-	if (chance < 80) {
-		add_mining_laserbeam(o->id, asteroid->id, MINING_LASER_DURATION);
-		vec3_mul(&sparks_offset, &offset, 0.7);
-		(void) add_explosion(asteroid->x + sparks_offset.v.x,
-					asteroid->y + sparks_offset.v.y,
-					asteroid->z + sparks_offset.v.z,
-					 20, 20, 15, OBJTYPE_ASTEROID);
+			n = snis_randn(total); total -= n;
+			update_mineral_amount(&ai->germanium, n);
+			n = snis_randn(total); total -= n;
+			update_mineral_amount(&ai->gold, n);
+			n = snis_randn(total); total -= n;
+			update_mineral_amount(&ai->platinum, n);
+			n = snis_randn(total); total -= n;
+			update_mineral_amount(&ai->uranium, n);
+			n = snis_randn(total); total -= n;
+		}
+		if (chance < 80) {
+			add_mining_laserbeam(o->id, asteroid->id, MINING_LASER_DURATION);
+			vec3_mul(&sparks_offset, &offset, 0.7);
+			(void) add_explosion(asteroid->x + sparks_offset.v.x,
+						asteroid->y + sparks_offset.v.y,
+						asteroid->z + sparks_offset.v.z,
+						 20, 20, 15, OBJTYPE_ASTEROID);
+		}
+		break;
+	case OBJTYPE_DERELICT:
+		chance = snis_randn(1000);
+		if (chance < 20) {
+			n = snis_randn(10);
+			if (n > asteroid->tsd.derelict.fuel)
+				n = asteroid->tsd.derelict.fuel;
+			asteroid->tsd.derelict.fuel -= n;
+			if (ai->fuel + n < 255)
+				ai->fuel += n;
+			else
+				ai->fuel = 255;
+		} else if (chance < 40) {
+			n = snis_randn(10);
+			if (n > asteroid->tsd.derelict.oxygen)
+				n = asteroid->tsd.derelict.oxygen;
+			asteroid->tsd.derelict.oxygen -= n;
+			if (ai->oxygen + n < 255)
+				ai->oxygen += n;
+			else
+				ai->oxygen = 255;
+		}
+		break;
+	default:
+		break;
 	}
 
 	if (ai->countdown != 0)
@@ -3992,8 +4056,20 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 	int b = lookup_bridge_by_shipid(ai->parent_ship);
 	if (b >= 0) {
 		int channel = bridgelist[b].npcbot.channel;
-		send_comms_packet(o->sdata.name, channel,
-			"MINING OPERATION COMPLETE -- RETURNING TO SHIP");
+		switch (asteroid->type) {
+		case OBJTYPE_ASTEROID:
+			send_comms_packet(o->sdata.name, channel,
+				"MINING OPERATION COMPLETE -- RETURNING TO SHIP");
+			break;
+		case OBJTYPE_DERELICT:
+			send_comms_packet(o->sdata.name, channel,
+				"SALVAGE OPERATION COMPLETE -- RETURNING TO SHIP");
+			break;
+		default:
+			send_comms_packet(o->sdata.name, channel,
+				"OPERATION COMPLETE -- RETURNING TO SHIP");
+			break;
+		}
 	}
 	ai->mode = MINING_MODE_RETURN_TO_PARENT;
 }
@@ -9173,6 +9249,8 @@ static int add_derelict(const char *name, double x, double y, double z,
 	go[i].vz = vz;
 	go[i].alive = 60 * 10; /* 1 minute */
 	go[i].tsd.derelict.persistent = persistent & 0xff;
+	go[i].tsd.derelict.fuel = snis_randn(255); /* TODO some better non-uniform distribution */
+	go[i].tsd.derelict.oxygen = snis_randn(255); /* TODO some better non-uniform distribution */
 	return i;
 }
 
@@ -11071,11 +11149,11 @@ static void npc_menu_item_mining_bot_transport_ores(struct npc_menu_item *item,
 		send_comms_packet(npcname, channel,
 			"UNABLE TO OBTAIN COHERENT TRANSPORTER BEAM LOCK");
 	} else {
-		send_comms_packet(npcname, channel, "--- TRANSPORTING ORES ---");
+		send_comms_packet(npcname, channel, "--- TRANSPORTING MATERIALS ---");
 		mining_bot_unload_ores(miner, parent, ai);
-		send_comms_packet(npcname, channel, "--- ORES TRANSPORTED ---");
+		send_comms_packet(npcname, channel, "--- MATERIALS TRANSPORTED ---");
 		send_comms_packet(npcname, channel,
-			"COMMENCING RENDEZVOUS WITH TARGET ASTEROID");
+			"COMMENCING RENDEZVOUS WITH TARGET");
 		ai->mode = MINING_MODE_APPROACH_ASTEROID;
 	}
 }
@@ -11129,8 +11207,8 @@ static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 		return;
 	}
 	asteroid = &go[i];
-	if (asteroid->type != OBJTYPE_ASTEROID) {
-		send_comms_packet(npcname, channel, " SELECTED DESTINATION UNMINABLE");
+	if (asteroid->type != OBJTYPE_ASTEROID && asteroid->type != OBJTYPE_DERELICT) {
+		send_comms_packet(npcname, channel, " SELECTED DESTINATION INAPPROPRIATE");
 		return;
 	}
 	ai->asteroid = b->science_selection;
@@ -11145,7 +11223,7 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 {
 	int i;
 	uint32_t channel = botstate->channel;
-	float gold, platinum, germanium, uranium, total;
+	float gold, platinum, germanium, uranium, total, fuel, oxygen;
 	struct snis_entity *miner, *asteroid, *parent;
 	struct ai_mining_bot_data *ai;
 	float dist, dist_to_parent;
@@ -11175,17 +11253,13 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 			dist3d(parent->x - miner->x, parent->y - miner->y, parent->z - miner->z);
 	}
 
-	total = 0.0;
-	gold = 0.0;
-	platinum = 0.0;
-	germanium = 0.0;
-	uranium = 0.0;
-
 	gold = ai->gold;
 	platinum = ai->platinum;
 	germanium = ai->germanium;
 	uranium = ai->uranium;
 	total = gold + platinum + germanium + uranium;
+	fuel = ai->fuel;
+	oxygen = ai->oxygen;
 	send_comms_packet(npcname, channel, "--- BEGIN STATUS REPORT ---");
 	switch (ai->mode) {
 	case MINING_MODE_APPROACH_ASTEROID:
@@ -11199,8 +11273,12 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 		send_comms_packet(npcname, channel, msg);
 		break;
 	case MINING_MODE_MINE:
-		sprintf(msg, "MINING ON %s\n",
-			asteroid ? asteroid->sdata.name : "UNKNOWN");
+		if (asteroid->type == OBJTYPE_ASTEROID)
+			sprintf(msg, "MINING ON %s\n",
+				asteroid ? asteroid->sdata.name : "UNKNOWN");
+		else
+			sprintf(msg, "SALVAGING %s\n",
+				asteroid ? asteroid->sdata.name : "UNKNOWN");
 		send_comms_packet(npcname, channel, msg);
 		break;
 	case MINING_MODE_RETURN_TO_PARENT:
@@ -11213,7 +11291,7 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 		send_comms_packet(npcname, channel, msg);
 		break;
 	case MINING_MODE_STANDBY_TO_TRANSPORT_ORE:
-		sprintf(msg, "STANDING BY TO TRANSPORT ORES\n");
+		sprintf(msg, "STANDING BY TO TRANSPORT MATERIALS\n");
 		send_comms_packet(npcname, channel, msg);
 		sprintf(msg, "DISTANCE TO %s: %f\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
@@ -11225,18 +11303,31 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 	sprintf(msg, "DISTANCE TO %s: %f\n",
 		parent ? parent->sdata.name : "MOTHER SHIP", dist_to_parent);
 	send_comms_packet(npcname, channel, msg);
-	sprintf(msg, "ORE COLLECTED: %f TONS\n", 2.0 * total / (255.0 * 4.0));
-	send_comms_packet(npcname, channel, msg);
-	send_comms_packet(npcname, channel, "ORE COMPOSITION:");
-	sprintf(msg, "GOLD: %2f%%\n", gold / total);
-	send_comms_packet(npcname, channel, msg);
-	sprintf(msg, "PLATINUM: %2f%%\n", platinum / total);
-	send_comms_packet(npcname, channel, msg);
-	sprintf(msg, "GERMANIUM: %2f%%\n", germanium / total);
-	send_comms_packet(npcname, channel, msg);
-	sprintf(msg, "URANIUM: %2f%%\n", uranium / total);
-	send_comms_packet(npcname, channel, msg);
-	send_comms_packet(npcname, channel, "FUEL: UNKNOWN");
+	switch (asteroid->type) {
+	case OBJTYPE_ASTEROID:
+		sprintf(msg, "ORE COLLECTED: %f TONS\n", 2.0 * total / (255.0 * 4.0));
+		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(npcname, channel, "ORE COMPOSITION:");
+		sprintf(msg, "GOLD: %2f%%\n", gold / total);
+		send_comms_packet(npcname, channel, msg);
+		sprintf(msg, "PLATINUM: %2f%%\n", platinum / total);
+		send_comms_packet(npcname, channel, msg);
+		sprintf(msg, "GERMANIUM: %2f%%\n", germanium / total);
+		send_comms_packet(npcname, channel, msg);
+		sprintf(msg, "URANIUM: %2f%%\n", uranium / total);
+		send_comms_packet(npcname, channel, msg);
+		break;
+	case OBJTYPE_DERELICT:
+		sprintf(msg, "FUEL AND OXYGEN COLLECTED:\n");
+		send_comms_packet(npcname, channel, msg);
+		sprintf(msg, "FUEL: %2f%%\n", fuel / 255.0);
+		send_comms_packet(npcname, channel, msg);
+		sprintf(msg, "OXYGEN: %2f%%\n", oxygen / 255.0);
+		send_comms_packet(npcname, channel, msg);
+		break;
+	default:
+		break;
+	}
 	send_comms_packet(npcname, channel, "--- END STATUS REPORT ---");
 }
 
@@ -14987,14 +15078,12 @@ static void launch_mining_bot(struct game_client *c, struct snis_entity *ship, u
 		goto miningbotfail;
 	if (ship->tsd.ship.mining_bots <= 0) /* no bots left */
 		goto miningbotfail;
-	if (go[i].type != OBJTYPE_ASTEROID)
+	if (go[i].type != OBJTYPE_ASTEROID && go[i].type != OBJTYPE_DERELICT)
 		goto miningbotfail;
 
 	i = add_mining_bot(ship, oid);
 	if (i < 0)
 		goto miningbotfail;
-	/* snis_queue_add_sound(MINING_BOT_DEPLOYED,
-					ROLE_COMMS | ROLE_SOUNDSERVER | ROLE_SCIENCE, ship->id); */
 	pthread_mutex_unlock(&universe_mutex);
 	queue_add_text_to_speech(c, "Mining robot deployed");
 	return;
@@ -16317,11 +16406,13 @@ static void send_update_cargo_container_packet(struct game_client *c,
 static void send_update_derelict_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSb", OPCODE_UPDATE_DERELICT, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSbbb", OPCODE_UPDATE_DERELICT, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
-					o->tsd.derelict.shiptype));
+					o->tsd.derelict.shiptype,
+					o->tsd.derelict.fuel,
+					o->tsd.derelict.oxygen));
 }
 
 

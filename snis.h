@@ -230,6 +230,8 @@ struct ai_mining_bot_data {
 	uint8_t platinum;
 	uint8_t germanium;
 	uint8_t uranium;
+	uint8_t oxygen;
+	uint8_t fuel;
 };
 
 struct ai_tow_ship_data {
@@ -557,6 +559,8 @@ struct derelict_data {
 	uint8_t shiptype; /* same as snis_entity_science_data subclass */
 	union quat rotational_velocity;
 	uint8_t persistent;
+	uint8_t fuel;
+	uint8_t oxygen;
 };
 
 struct wormhole_data {
