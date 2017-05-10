@@ -15875,6 +15875,17 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_SCIENCE_WAYPOINTS:
 		sci_waypoints_pressed((void *) 0);
 		break;
+	case DEVIO_OPCODE_SELECT_WAYPOINT:
+		if (value >= 0 && value < sci_ui.nwaypoints && value < MAXWAYPOINTS)
+			science_select_waypoint_pressed(&sci_ui.select_waypoint_button[value]);
+		break;
+	case DEVIO_OPCODE_CURRPOS_WAYPOINT:
+		science_add_current_pos_pressed(NULL);
+		break;
+	case DEVIO_OPCODE_CLEAR_WAYPOINT:
+		if (value >= 0 && value < sci_ui.nwaypoints && value < MAXWAYPOINTS)
+			science_clear_waypoint_pressed(&sci_ui.clear_waypoint_button[value]);
+		break;
 	case DEVIO_OPCODE_COMMS_COMMS_ONSCREEN:
 		comms_screen_button_pressed((void *) 0);
 		break;
