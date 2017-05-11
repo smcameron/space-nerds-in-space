@@ -10010,6 +10010,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 					set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 					entity_set_user_data(contact, &go[i]); /* for debug */
 				}
+			} else if (go[i].type == OBJTYPE_PLANET) {
+				contact = add_entity(instrumentecx, low_poly_sphere_mesh,
+							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_entity));
+				if (contact) {
+					set_render_style(contact, science_style);
+					entity_set_user_data(contact, &go[i]);
+				}
 			} else {
 				contact = add_entity(instrumentecx, m, go[i].x, go[i].y, go[i].z, UI_COLOR(nav_entity));
 				if (contact) {
@@ -11872,9 +11879,12 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		return;
 
 	set_renderer(sciecx, WIREFRAME_RENDERER | BLACK_TRIS);
-	m = entity_get_mesh(curr_science_guy->entity);
+	if (curr_science_guy->type == OBJTYPE_PLANET)
+		m = low_poly_sphere_mesh;
+	else
+		m = entity_get_mesh(curr_science_guy->entity);
 	angle = (M_PI / 180.0) * (timer % 360);
-	if (curr_science_guy->type == OBJTYPE_STARBASE) {
+	if (curr_science_guy->type == OBJTYPE_STARBASE || curr_science_guy->type == OBJTYPE_PLANET) {
 		e = add_entity(sciecx, m, 0.0, -m->radius, 0.0, UI_COLOR(sci_wireframe));
 		quat_init_axis(&orientation, 0.0, 0.0, 1.0, angle);
 	} else {
@@ -11885,6 +11895,9 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		update_entity_orientation(e, &orientation);
 	if (curr_science_guy->type == OBJTYPE_STARBASE) {
 		camera_set_pos(sciecx, m->radius * 4, 0.0, m->radius * 2);
+		camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
+	} else if (curr_science_guy->type == OBJTYPE_PLANET) {
+		camera_set_pos(sciecx, m->radius * 6, 0.0, m->radius * 2);
 		camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
 	} else {
 		camera_assign_up_direction(sciecx, 0.0, 1.0, 0.0);
@@ -16173,7 +16186,7 @@ static void init_meshes()
 	mesh_unit_cube_uv_map(unit_cube_mesh);
 
 	sphere_mesh = mesh_unit_spherified_cube(16);
-	low_poly_sphere_mesh = mesh_unit_spherified_cube(5);
+	low_poly_sphere_mesh = snis_read_model(d, "uv_sphere.stl");
 	warp_tunnel_mesh = mesh_tube(XKNOWN_DIM, 450.0, 20);
 	nav_axes_mesh = mesh_fabricate_axes();
 	mesh_scale(nav_axes_mesh, SNIS_WARP_GATE_THRESHOLD * 0.05);
