@@ -11873,12 +11873,23 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 
 	set_renderer(sciecx, WIREFRAME_RENDERER | BLACK_TRIS);
 	m = entity_get_mesh(curr_science_guy->entity);
-	e = add_entity(sciecx, m, 0, 0, 0, UI_COLOR(sci_wireframe));
 	angle = (M_PI / 180.0) * (timer % 360);
-	quat_init_axis(&orientation, 0.0, 1.0, 0.0, angle);
+	if (curr_science_guy->type == OBJTYPE_STARBASE) {
+		e = add_entity(sciecx, m, 0.0, -m->radius, 0.0, UI_COLOR(sci_wireframe));
+		quat_init_axis(&orientation, 0.0, 0.0, 1.0, angle);
+	} else {
+		e = add_entity(sciecx, m, 0.0, 0.0, -m->radius, UI_COLOR(sci_wireframe));
+		quat_init_axis(&orientation, 0.0, 1.0, 0.0, angle);
+	}
 	if (e)
 		update_entity_orientation(e, &orientation);
-	camera_set_pos(sciecx, -m->radius * 4, 20, 0);
+	if (curr_science_guy->type == OBJTYPE_STARBASE) {
+		camera_set_pos(sciecx, m->radius * 4, 0.0, m->radius * 2);
+		camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
+	} else {
+		camera_assign_up_direction(sciecx, 0.0, 1.0, 0.0);
+		camera_set_pos(sciecx, -m->radius * 4, m->radius * 1, 0);
+	}
 	camera_look_at(sciecx, (float) 0, (float) 0, (float) m->radius / 2.0);
 	camera_set_parameters(sciecx, 0.5, 8000.0,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
