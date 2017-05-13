@@ -14677,9 +14677,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	case DISPLAYMODE_CONNECTED:
 		show_connected_screen(w);
 		break;
-	case DISPLAYMODE_FINDSERVER:
-		show_fonttest(w);
-		break;
 	case DISPLAYMODE_MAINSCREEN:
 		show_mainscreen(w);
 		break;
