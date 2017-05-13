@@ -6585,11 +6585,13 @@ static void show_textscreen(GtkWidget *w)
 	if (!dismiss_button) {
 		dismiss_button = snis_button_init(txx(650), txy(520), -1, -1,
 			"DISMISS", RED, NANO_FONT, textscreen_dismiss_button_pressed, &dismiss_button);
+		snis_button_set_sound(dismiss_button, UISND1);
 		ui_add_button(dismiss_button, DISPLAYMODE_INTROSCREEN); /* so it doesn't show up anywhere */
 		for (i = 0; i < NUM_USER_MENU_BUTTONS; i++) {
 			user_menu_button[i] = snis_button_init(txx(60), txy(135) + i * txy(20), txx(650), -1,
 				"M", WHITE, NANO_FONT, textscreen_menu_button_pressed, &user_menu_button[i]);
 			ui_add_button(user_menu_button[i], DISPLAYMODE_INTROSCREEN);
+			snis_button_set_sound(user_menu_button[i], UISND2);
 		}
 	}
 	if (user_defined_menu_active)
@@ -9143,6 +9145,8 @@ static void init_lobby_ui()
 			lobby_connect_to_server_button_pressed, NULL);
 	ui_add_button(lobby_ui.lobby_cancel_button, DISPLAYMODE_LOBBYSCREEN);
 	ui_add_button(lobby_ui.lobby_connect_to_server_button, DISPLAYMODE_LOBBYSCREEN);
+	snis_button_set_sound(lobby_ui.lobby_cancel_button, UISND3);
+	snis_button_set_sound(lobby_ui.lobby_connect_to_server_button, UISND4);
 }
 
 static double sample_phaser_wavelength(void);
@@ -9265,24 +9269,31 @@ static void init_nav_ui(void)
 					nav_ui.gauge_radius * 2 + 80,
 					-1, -1, "ENGAGE WARP", button_color,
 					NANO_FONT, engage_warp_button_pressed, NULL);
+	snis_button_set_sound(nav_ui.engage_warp_button, UISND4);
 	nav_ui.docking_magnets_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
 					nav_ui.gauge_radius * 2 + 120,
 					-1, -1, "DOCKING MAGNETS", button_color,
 					NANO_FONT, docking_magnets_button_pressed, NULL);
+	snis_button_set_sound(nav_ui.docking_magnets_button, UISND5);
 	nav_ui.standard_orbit_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
 					nav_ui.gauge_radius * 2 + 180,
 					-1, -1, "STANDARD ORBIT", button_color,
 					NANO_FONT, standard_orbit_button_pressed, NULL);
+	snis_button_set_sound(nav_ui.standard_orbit_button, UISND6);
 	nav_ui.starmap_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
 					nav_ui.gauge_radius * 2 + 240, -1, -1, "STAR MAP",
 					button_color,
 					NANO_FONT, nav_starmap_button_pressed, NULL);
+	snis_button_set_sound(nav_ui.starmap_button, UISND7);
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", button_color,
 			NANO_FONT, reverse_button_pressed, NULL);
+	snis_button_set_sound(nav_ui.reverse_button, UISND8);
 	nav_ui.trident_button = snis_button_init(10, 250, -1, -1, "ABSOLUTE", button_color,
 			NANO_FONT, trident_button_pressed, NULL);
+	snis_button_set_sound(nav_ui.trident_button, UISND9);
 	nav_ui.computer_button = snis_button_init(txx(10), txy(570), -1, -1, "COMPUTER", UI_COLOR(nav_warning),
 			NANO_FONT, nav_computer_button_pressed, NULL);
+	snis_button_set_sound(nav_ui.computer_button, UISND10);
 	nav_ui.computer_active = 0;
 	nav_ui.computer_input = snis_text_input_box_init(txx(10), txy(560), txy(30), txx(550),
 					UI_COLOR(nav_warning), TINY_FONT, nav_ui.input, 80, &timer, NULL, NULL);
@@ -10240,6 +10251,7 @@ static void init_damcon_ui(void)
 	damcon_ui.engineering_button = snis_button_init(txx(630), txy(550), txx(140), txy(25),
 			"ENGINEERING", UI_COLOR(damcon_button),
 			NANO_FONT, main_engineering_button_pressed, (void *) 0);
+	snis_button_set_sound(damcon_ui.engineering_button, UISND11);
 	damcon_ui.robot_controls = snis_label_init(txx(630), txy(30), "ROBOT CONTROLS",
 							UI_COLOR(damcon_button), NANO_FONT);
 	damcon_ui.robot_forward_button = snis_button_init(txx(650), txy(60), txx(90), txy(25),
@@ -10442,8 +10454,10 @@ static void init_engineering_ui(void)
 	color = UI_COLOR(eng_button);
 	eu->preset1_button = snis_button_init(txx(20), y + txx(30), -1, -1, "1", color,
 			NANO_FONT, preset1_button_pressed, (void *) 0);
+	snis_button_set_sound(eu->preset1_button, UISND12);
 	eu->preset2_button = snis_button_init(snis_button_get_x(eu->preset1_button) + snis_button_get_width(eu->preset1_button) + txx(5),
 						y + txx(30), -1, -1, "2", color, NANO_FONT, preset2_button_pressed, (void *) 0);
+	snis_button_set_sound(eu->preset2_button, UISND12);
 	eu->damcon_button = snis_button_init(snis_button_get_x(eu->preset2_button) + snis_button_get_width(eu->preset2_button) + txx(5),
 						y + txx(30), -1, -1, "DAMAGE CONTROL", color, NANO_FONT, damcon_button_pressed, (void *) 0);
 	y += yinc;
@@ -11215,18 +11229,25 @@ static void init_science_ui(void)
 	snis_slider_set_label_font(sci_ui.scipower, NANO_FONT);
 	sci_ui.launch_mining_bot_button = snis_button_init(mbbx, mbby, mbbw, mbbh, "MINING BOT",
 			UI_COLOR(sci_button), NANO_FONT, sci_mining_bot_pressed, (void *) 0);
+	snis_button_set_sound(sci_ui.launch_mining_bot_button, UISND13);
 	sci_ui.tractor_button = snis_button_init(trbx, trby, trbw, trbh, "TRACTOR",
 			UI_COLOR(sci_button), NANO_FONT, sci_tractor_pressed, (void *) 0);
+	snis_button_set_sound(sci_ui.tractor_button, UISND14);
 	sci_ui.waypoints_button = snis_button_init(wpx, wpy, wpw, wph, "WAYPOINTS",
 			UI_COLOR(sci_button), NANO_FONT, sci_waypoints_pressed, (void *) 0);
+	snis_button_set_sound(sci_ui.waypoints_button, UISND15);
 	sci_ui.sciplane_button = snis_button_init(scpx, scpy, scpw, scph, "SRS",
 			UI_COLOR(sci_button), NANO_FONT, sci_sciplane_pressed, (void *) 0);
+	snis_button_set_sound(sci_ui.sciplane_button, UISND16);
 	sci_ui.threed_button = snis_button_init(thdx, thdy, thdw, thdh, "LRS",
 			UI_COLOR(sci_button), NANO_FONT, sci_threed_pressed, (void *) 0);
+	snis_button_set_sound(sci_ui.threed_button, UISND17);
 	sci_ui.details_button = snis_button_init(detx, dety, detw, deth, "DETAILS",
 			UI_COLOR(sci_button), NANO_FONT, sci_details_pressed, (void *) 0);
+	snis_button_set_sound(sci_ui.details_button, UISND18);
 	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
 			UI_COLOR(sci_button), NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
+	snis_button_set_sound(sci_ui.align_to_ship_button, UISND19);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
@@ -11259,12 +11280,14 @@ static void init_science_ui(void)
 	sci_ui.add_waypoint_button = snis_button_init(txx(3 * 135 + 20), txy(100),
 				100 * SCREEN_WIDTH / 800, wph, "ADD WAYPOINT",
 				UI_COLOR(sci_button), NANO_FONT, science_add_waypoint_pressed, NULL);
+	snis_button_set_sound(sci_ui.add_waypoint_button, UISND20);
 	ui_add_button(sci_ui.add_waypoint_button, DISPLAYMODE_SCIENCE);
 	ui_hide_widget(sci_ui.add_waypoint_button);
 
 	sci_ui.add_current_pos_button = snis_button_init(txx(4 * 135 + 20), txy(100),
 				100 * SCREEN_WIDTH / 800, wph, "CURRENT POSITION",
 				UI_COLOR(sci_button), NANO_FONT, science_add_current_pos_pressed, NULL);
+	snis_button_set_sound(sci_ui.add_current_pos_button, UISND1);
 	ui_add_button(sci_ui.add_current_pos_button, DISPLAYMODE_SCIENCE);
 	ui_hide_widget(sci_ui.add_current_pos_button);
 
@@ -11273,12 +11296,14 @@ static void init_science_ui(void)
 				40 * SCREEN_WIDTH / 800, wph, "CLEAR",
 				UI_COLOR(sci_button), NANO_FONT, science_clear_waypoint_pressed,
 				&sci_ui.clear_waypoint_button[i]);
+		snis_button_set_sound(sci_ui.clear_waypoint_button[i], UISND2);
 		ui_add_button(sci_ui.clear_waypoint_button[i], DISPLAYMODE_SCIENCE);
 		ui_hide_widget(sci_ui.clear_waypoint_button[i]);
 		sci_ui.select_waypoint_button[i] = snis_button_init(txx(500), txy(25 * i) + txy(200),
 				40 * SCREEN_WIDTH / 800, wph, "SELECT",
 				UI_COLOR(sci_button), NANO_FONT, science_select_waypoint_pressed,
 				&sci_ui.select_waypoint_button[i]);
+		snis_button_set_sound(sci_ui.select_waypoint_button[i], UISND3);
 		ui_add_button(sci_ui.select_waypoint_button[i], DISPLAYMODE_SCIENCE);
 		ui_hide_widget(sci_ui.select_waypoint_button[i]);
 	}
@@ -15695,6 +15720,26 @@ static void read_sound_clips(void)
 	read_ogg_clip(HULL_CREAK_7, d, "hull-creak-7.ogg");
 	read_ogg_clip(HULL_CREAK_8, d, "hull-creak-8.ogg");
 	read_ogg_clip(HULL_CREAK_9, d, "hull-creak-9.ogg");
+	read_ogg_clip(UISND1, d, "ui1.ogg");
+	read_ogg_clip(UISND2, d, "ui2.ogg");
+	read_ogg_clip(UISND3, d, "ui3.ogg");
+	read_ogg_clip(UISND4, d, "ui4.ogg");
+	read_ogg_clip(UISND5, d, "ui5.ogg");
+	read_ogg_clip(UISND6, d, "ui6.ogg");
+	read_ogg_clip(UISND7, d, "ui7.ogg");
+	read_ogg_clip(UISND8, d, "ui8.ogg");
+	read_ogg_clip(UISND9, d, "ui9.ogg");
+	read_ogg_clip(UISND10, d, "ui10.ogg");
+	read_ogg_clip(UISND11, d, "ui11.ogg");
+	read_ogg_clip(UISND12, d, "ui12.ogg");
+	read_ogg_clip(UISND13, d, "ui13.ogg");
+	read_ogg_clip(UISND14, d, "ui14.ogg");
+	read_ogg_clip(UISND15, d, "ui15.ogg");
+	read_ogg_clip(UISND16, d, "ui16.ogg");
+	read_ogg_clip(UISND17, d, "ui17.ogg");
+	read_ogg_clip(UISND18, d, "ui18.ogg");
+	read_ogg_clip(UISND19, d, "ui19.ogg");
+	read_ogg_clip(UISND20, d, "ui20.ogg");
 	printf("Done.\n");
 }
 
@@ -15721,6 +15766,7 @@ static void setup_sound(void)
 	}
 	wwviaudio_list_devices();
 	read_sound_clips();
+	snis_button_set_default_sound(UISND18);
 }
 
 static void check_for_screensaver(void)

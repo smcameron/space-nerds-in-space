@@ -2,7 +2,7 @@
 #define SOUNDS_H
 
 #define MAX_CONCURRENT_SOUNDS 20
-#define NSOUND_CLIPS 52
+#define NSOUND_CLIPS 72
 #define NHULL_CREAK_SOUNDS 10
 
 #define EXPLOSION_SOUND 1
@@ -60,5 +60,25 @@
 #define HULL_CREAK_7 49
 #define HULL_CREAK_8 50
 #define HULL_CREAK_9 51
+#define UISND1 52
+#define UISND2 53
+#define UISND3 54
+#define UISND4 55
+#define UISND5 56
+#define UISND6 57
+#define UISND7 58
+#define UISND8 59
+#define UISND9 60 
+#define UISND10 61 
+#define UISND11 62
+#define UISND12 63
+#define UISND13 64
+#define UISND14 65
+#define UISND15 66
+#define UISND16 67
+#define UISND17 68
+#define UISND18 69
+#define UISND19 70 
+#define UISND20 71 
 
 #endif
