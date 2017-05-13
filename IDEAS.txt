@@ -21,11 +21,6 @@ or... something like that.  Allow transfer of funds between player ships.
 *maybe* funds transfer between NPC ships and player ships. (what about 
 derelicts -- perhaps bearer bonds might be found aboard, or... something?)
 
-*** ASTEROID MINING
-
-goes with money, above, some way to extract some loot and/or fuel
-from asteroids.
-
 *** SHARDS
 
 allow players to travel from a universe hosted on one server to
