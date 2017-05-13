@@ -3432,14 +3432,6 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
-	case keyf10:
-		if (displaymode >= DISPLAYMODE_FONTTEST)
-			break;
-		if (role & ROLE_MAIN) {
-			displaymode = DISPLAYMODE_GLMAIN;
-			wwviaudio_add_sound(CHANGESCREEN_SOUND);
-		}
-		break;
 	case keyonscreen:
 		if (control_key_pressed)
 			do_onscreen((uint8_t) displaymode & 0xff);
@@ -14611,9 +14603,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	make_science_forget_stuff();
 
 	load_textures();
-
-	if (displaymode == DISPLAYMODE_GLMAIN)	
-		return 0;
 
 #ifndef WITHOUTOPENGL
 	GdkGLContext *gl_context = gtk_widget_get_gl_context(main_da);
