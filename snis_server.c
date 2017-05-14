@@ -15410,6 +15410,7 @@ static void process_instructions_from_client(struct game_client *c)
 			rc = process_enscript_command(c);
 			if (rc)
 				goto protocol_error;
+			break;
 		case OPCODE_ROBOT_AUTO_MANUAL:
 			rc = process_robot_auto_manual(c);
 			if (rc)
