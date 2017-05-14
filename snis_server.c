@@ -5942,8 +5942,10 @@ static void update_player_orientation(struct snis_entity *o)
 			 * then scale to some constant fraction of planet radius (2.5 degrees, say).
 			 * Add V to P to produce D.  This is where we want to aim.
 			 */
-			union vec3 p, d, direction, right, up, desired_up;
-			union quat new_orientation, up_adjustment, adjusted_orientation;
+			union vec3 p, d, direction, right, up, desired_up, alternate_up;
+			union quat new_orientation, up_adjustment, adjusted_orientation,
+					alternate_up_adjustment;
+			float tmpx, tmpy, tmpz, angle1, angle2;
 
 			planet = &go[i];
 			p.v.x = o->x - planet->x;
@@ -5996,6 +5998,21 @@ static void update_player_orientation(struct snis_entity *o)
 			/* Find the rotation from up in the new orientation to the desired up */
 			quat_from_u2v(&up_adjustment, &up, &desired_up, NULL);
 			quat_normalize_self(&up_adjustment);
+
+			/* Consider if up might be the opposite direction */
+			alternate_up.v.x = -desired_up.v.x;
+			alternate_up.v.y = -desired_up.v.y;
+			alternate_up.v.z = -desired_up.v.z;
+
+			/* Find the rotation from up in the new orientation to the alternate desired up */
+			quat_from_u2v(&alternate_up_adjustment, &up, &alternate_up, NULL);
+			quat_normalize_self(&alternate_up_adjustment);
+
+			/* Choose the smaller of up_adjustment and alternate_up_adjustment */
+			quat_to_axis(&up_adjustment, &tmpx, &tmpy, &tmpz, &angle1);
+			quat_to_axis(&alternate_up_adjustment, &tmpx, &tmpy, &tmpz, &angle2);
+			if (fabsf(angle1) > fabsf(angle2))
+				up_adjustment = alternate_up_adjustment;
 
 			/* Adjust new orientation to have the desired up direction */
 			quat_mul(&adjusted_orientation, &up_adjustment, &new_orientation);
