@@ -15177,8 +15177,12 @@ static void init_thrust_material(struct material *thrust_material, char *image_f
 
 static int load_static_textures(void)
 {
+	struct mtwist_state *mt;
+
 	if (static_textures_loaded)
 		return 0;
+
+	mt = mtwist_init(178851064); /* Just using an arbitrary constant seed */
 
 	material_init_textured_particle(&green_phaser_material);
 	green_phaser_material.textured_particle.texture_id = load_texture("textures/green-burst.png");
@@ -15224,12 +15228,12 @@ static int load_static_textures(void)
 		planetary_ring_material[i].textured_planet_ring.texture_v = (float) i / 256.0f;
 		planetary_ring_material[i].textured_planet_ring.inner_radius =
 					MIN_RING_RADIUS +
-					2.0f * fabs(snis_random_float() * snis_random_float());
+					2.0f * fabs(mtwist_float(mt) * mtwist_float(mt));
 		if (planetary_ring_material[i].textured_planet_ring.inner_radius < MIN_RING_RADIUS)
 			planetary_ring_material[i].textured_planet_ring.inner_radius = MIN_RING_RADIUS;
 		planetary_ring_material[i].textured_planet_ring.outer_radius =
 			planetary_ring_material[i].textured_planet_ring.inner_radius +
-				fabs(snis_random_float()) * (MAX_RING_RADIUS + 0.5 -
+				fabs(mtwist_float(mt)) * (MAX_RING_RADIUS + 0.5 -
 				planetary_ring_material[i].textured_planet_ring.inner_radius);
 		if (planetary_ring_material[i].textured_planet_ring.outer_radius > MAX_RING_RADIUS)
 			planetary_ring_material[i].textured_planet_ring.outer_radius = MAX_RING_RADIUS;
@@ -15242,7 +15246,7 @@ static int load_static_textures(void)
 	 * too similar.
 	 */
 	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) {
-		int n = snis_randn(256 * 100) % 256;
+		int n = ((int) (mtwist_float(mt) * 256 * 100)) % 256;
 		float x = planetary_ring_material[n].textured_planet_ring.texture_v;
 		planetary_ring_material[n].textured_planet_ring.texture_v =
 			planetary_ring_material[i].textured_planet_ring.texture_v;
@@ -15294,6 +15298,8 @@ static int load_static_textures(void)
 	small_block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplate_small_emit.png");
 
 	static_textures_loaded = 1;
+
+	mtwist_free(mt);
 	return 1;
 }
 
