@@ -190,6 +190,7 @@
 #define   OPCODE_NL_SUBCOMMAND_TEXT_TO_SPEECH	2
 #define OPCODE_SET_SOLARSYSTEM			231
 #define OPCODE_REQUEST_ROBOT_CMD		232
+/* TODO: delete these unused ROBOT_SUBCDM_?TG opcodes */
 #define   OPCODE_ROBOT_SUBCMD_STG		1	/* set short term goal */
 #define   OPCODE_ROBOT_SUBCMD_LTG		2	/* set long term goal */
 #define OPCODE_TEXTSCREEN_OP			233

@@ -12552,28 +12552,7 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 
 static void do_damcon_button_release(int button, gdouble x, gdouble y)
 {
-	double dcx, dcy, sx, sy;
 	switch (button) {
-	case 1:
-		sx = sng_pixelx_to_screenx(x);
-		sy = sng_pixely_to_screeny(y);
-		dcx = screenx_to_damconx(sx);
-		dcy = screeny_to_damcony(sy);
-		queue_to_server(snis_opcode_subcode_pkt("bbSS",
-					OPCODE_REQUEST_ROBOT_CMD, OPCODE_ROBOT_SUBCMD_STG,
-					dcx, (int32_t) DAMCONXDIM,
-					dcy, (int32_t) DAMCONYDIM));
-		break;
-	case 2:
-		sx = sng_pixelx_to_screenx(x);
-		sy = sng_pixely_to_screeny(y);
-		dcx = screenx_to_damconx(sx);
-		dcy = screeny_to_damcony(sy);
-		queue_to_server(snis_opcode_subcode_pkt("bbSS",
-					OPCODE_REQUEST_ROBOT_CMD, OPCODE_ROBOT_SUBCMD_LTG,
-					dcx, (int32_t) DAMCONXDIM,
-					dcy, (int32_t) DAMCONYDIM));
-		break;
 	case 3:
 		robot_gripper_button_pressed(NULL);
 		break;
