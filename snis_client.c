@@ -11815,6 +11815,7 @@ static void draw_science_waypoints(GtkWidget *w)
 {
 	char buffer[100];
 	int i;
+	int x, y;
 
 	if (sci_ui.details_mode != SCI_DETAILS_MODE_WAYPOINTS)
 		return;
@@ -11827,6 +11828,17 @@ static void draw_science_waypoints(GtkWidget *w)
 		ui_hide_widget(sci_ui.select_waypoint_button[i]);
 	}
 	sng_set_foreground(UI_COLOR(sci_wireframe));
+
+	x = snis_text_input_box_get_x(sci_ui.waypoint_input[0]);
+	y = snis_text_input_box_get_y(sci_ui.waypoint_input[0]) - font_lineheight[NANO_FONT];
+	sng_abs_xy_draw_string("X", NANO_FONT, x, y);
+	x = snis_text_input_box_get_x(sci_ui.waypoint_input[1]);
+	y = snis_text_input_box_get_y(sci_ui.waypoint_input[1]) - font_lineheight[NANO_FONT];
+	sng_abs_xy_draw_string("Y", NANO_FONT, x, y);
+	x = snis_text_input_box_get_x(sci_ui.waypoint_input[2]);
+	y = snis_text_input_box_get_y(sci_ui.waypoint_input[2]) - font_lineheight[NANO_FONT];
+	sng_abs_xy_draw_string("Z", NANO_FONT, x, y);
+
 	sng_abs_xy_draw_string("WAYPOINT", NANO_FONT, txx(100), txy(180));
 	sng_abs_xy_draw_string("X", NANO_FONT, txx(250), txy(180));
 	sng_abs_xy_draw_string("Y", NANO_FONT, txx(350), txy(180));
@@ -11846,7 +11858,7 @@ static void draw_science_waypoints(GtkWidget *w)
 		sng_abs_xy_draw_string(buffer, NANO_FONT, txx(400), txy(210 + i * 25));
 	}
 	sng_set_foreground(UI_COLOR(sci_wireframe));
-	snis_draw_rectangle(0, txx(5), txy(80), txx(760), txy(480));
+	snis_draw_rectangle(0, txx(5), txy(70), txx(760), txy(480));
 }
 
 static void science_details_draw_atmosphere_data(GtkWidget *w, GdkGC *gc,
