@@ -2,7 +2,13 @@
 How to get speech recognition working with Space Nerds In Space
 ---------------------------------------------------------------
 
-1. Install pocketsphinx on the client system to which the microphone you want to use is attached
+1. Install pocketsphinx on the client system to which the microphone you want
+   to use is attached
+
+NOTE: You can build pocketsphinx from source as described in steps 1.1
+and 1.2.  Or you may be able to install it from your distro's package
+repositories instead, which may be more convenient, but I don't have
+instructions for how to do that.
 
 1.1 Clone sphinxbase then build it.
 
@@ -20,6 +26,12 @@ sh ./autogen.sh
 sh ./configure
 make
 sudo make install
+
+NOTE: If you have not modified the vocabulary, you do not need to do steps 2
+and 3 below, as they have already been done and the processed files are in
+"snis.dic" and "snis.lm".  These instructions are mostly here so that
+smcameron doesn't forget how to do it.  Skip to step 4 if you do not want
+to modify the vocabulary.
 
 2. Create specialized language files for pocketsphinx from snis_vocab.txt
 
@@ -45,5 +57,9 @@ Copy these to this directory.
 
 4. Run "queeg500"
 
-$ queeg500 1234
+$ queeg500
+
+By default, queeg500 will use snis.lm and snis.dic, but if you have made
+your own files (steps 2 and 3 above), you can tell it to use those files
+instead, e.g. "queeg500 1234" will make it use 1234.dic and 1234.lm.
 
