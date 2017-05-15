@@ -4,7 +4,22 @@ How to get speech recognition working with Space Nerds In Space
 
 1. Install pocketsphinx on the client system to which the microphone you want to use is attached
 
-(TODO: what are the steps?  "apt-cache search pocketsphinx" and then apt-get install ... something)
+1.1 Clone sphinxbase then build it.
+
+git clone https://github.com/cmusphinx/sphinxbase.git
+cd sphinxbase
+sh ./autogen.sh
+sh ./configure --enable-fixed
+make
+
+1.2 Clone pocketsphinx to the same parent dirctory as sphinxbase then build it.
+
+git clone https://github.com/cmusphinx/pocketsphinx.git
+cd pocketsphinx
+sh ./autogen.sh
+sh ./configure
+make
+sudo make install
 
 2. Create specialized language files for pocketsphinx from snis_vocab.txt
 
