@@ -17,6 +17,7 @@ cd sphinxbase
 sh ./autogen.sh
 sh ./configure --enable-fixed
 make
+sudo make install
 
 1.2 Clone pocketsphinx to the same parent dirctory as sphinxbase then build it.
 
