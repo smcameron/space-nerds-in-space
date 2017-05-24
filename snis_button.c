@@ -153,6 +153,11 @@ void snis_button_set_color(struct button *b, int color)
 	b->color = color;
 }
 
+int snis_button_get_color(struct button *b)
+{
+	return b->color;
+}
+
 void snis_button_checkbox(struct button *b, int *value)
 {
 	b->checkbox_value = value;

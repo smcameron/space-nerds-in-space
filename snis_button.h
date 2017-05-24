@@ -18,6 +18,7 @@ GLOBAL void snis_button_draw(struct button *b);
 
 GLOBAL int snis_button_button_press(struct button *b, int x, int y);
 GLOBAL void snis_button_set_color(struct button *b, int color);
+GLOBAL int snis_button_get_color(struct button *b);
 GLOBAL void snis_button_checkbox(struct button *b, int *value);
 GLOBAL void snis_button_set_label(struct button *b, char *label);
 GLOBAL int snis_button_get_x(struct button *b);
