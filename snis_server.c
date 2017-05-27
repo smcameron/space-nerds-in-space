@@ -21518,7 +21518,7 @@ static void init_meshes(void)
 
 int main(int argc, char *argv[])
 {
-	int port, rc, i;
+	int port, i;
 	struct timespec thirtieth_second;
 
 	take_your_locale_and_shove_it();
@@ -21635,7 +21635,5 @@ int main(int argc, char *argv[])
 
 	snis_close_logfile();
 
-	if (rc) /* satisfy compiler */
-		return 0; 
 	return 0;
 }
