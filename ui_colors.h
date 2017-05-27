@@ -194,6 +194,7 @@ struct ui_color_map {
 
 	struct ui_color_entry special_options;
 	struct ui_color_entry help_text;
+	struct ui_color_entry tooltip;
 
 	struct ui_color_entry warp_hash;
 	struct ui_color_entry last_color;
@@ -359,10 +360,11 @@ struct ui_color_map_accessor {
 
 	.u.map.special_options		= { WHITE,		"special-options" },
 	.u.map.help_text		= { WHITE,		"help-text" },
+	.u.map.tooltip			= { DARKGREEN,		"tooltip" },
 
 	.u.map.warp_hash		= { WHITE,		"warp-hash" },
 
-	.u.map.starmap_star		= { GREEN_FIXUP,	"starmap-star" },
+	.u.map.starmap_star		= { LIMEGREEN,		"starmap-star" },
 	.u.map.starmap_home_star	= { WHITE,		"starmap-home-star" },
 	.u.map.starmap_warp_lane	= { CYAN_FIXUP,		"starmap-warp-lane" },
 	.u.map.starmap_far_warp_lane	= { AMBER,		"starmap-far-warp-lane" },

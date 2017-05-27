@@ -90,6 +90,14 @@ static void snis_button_draw_outline(float x1, float y1, float width, float heig
 	sng_current_draw_line(x1 + width, y1 + height - d, x1 + width - d, y1 + height);
 }
 
+int snis_button_inside(struct button *b, int x, int y)
+{
+	x = sng_pixelx_to_screenx(x);
+	y = sng_pixely_to_screeny(y);
+	return x >= b->x && x <= b->x + b->width &&
+		y >= b->y && y <= b->y + b->height;
+}
+
 void snis_button_draw(struct button *b)
 {
 	int offset;
@@ -135,10 +143,7 @@ void snis_button_draw(struct button *b)
 
 int snis_button_button_press(struct button *b, int x, int y)
 {
-	x = sng_pixelx_to_screenx(x);
-	y = sng_pixely_to_screeny(y);
-	if (x < b->x || x > b->x + b->width || 
-		y < b->y || y > b->y + b->height)
+	if (!snis_button_inside(b, x, y))
 		return 0;
 	if (b->button_sound != -1)
 		wwviaudio_add_sound(b->button_sound);

@@ -321,6 +321,11 @@ static ui_element_keypress_function ui_text_input_keypress = (ui_element_keypres
 					snis_text_input_box_keypress;
 static ui_element_button_press_function ui_text_window_button_press = (ui_element_button_press_function)
 					text_window_button_press;
+static ui_element_inside_function ui_button_inside = (ui_element_inside_function)
+					snis_button_inside;
+/* global_mouse_x, global_mouse_y are updated in main_da_motion_notify() and used for tooltips */
+static int global_mouse_x;
+static int global_mouse_y;
 
 #define MAXTEXTURES 10
 
@@ -6572,7 +6577,7 @@ static void textscreen_menu_button_pressed(void *button_ptr_ptr)
 	}
 }
 
-static void ui_add_button(struct button *b, int active_displaymode);
+static void ui_add_button(struct button *b, int active_displaymode, char *tooltip);
 static void show_textscreen(GtkWidget *w)
 {
 	int i;
@@ -6586,11 +6591,11 @@ static void show_textscreen(GtkWidget *w)
 		dismiss_button = snis_button_init(txx(650), txy(520), -1, -1,
 			"DISMISS", RED, NANO_FONT, textscreen_dismiss_button_pressed, &dismiss_button);
 		snis_button_set_sound(dismiss_button, UISND1);
-		ui_add_button(dismiss_button, DISPLAYMODE_INTROSCREEN); /* so it doesn't show up anywhere */
+		ui_add_button(dismiss_button, DISPLAYMODE_INTROSCREEN, ""); /* so it doesn't show up anywhere */
 		for (i = 0; i < NUM_USER_MENU_BUTTONS; i++) {
 			user_menu_button[i] = snis_button_init(txx(60), txy(135) + i * txy(20), txx(650), -1,
 				"M", WHITE, NANO_FONT, textscreen_menu_button_pressed, &user_menu_button[i]);
-			ui_add_button(user_menu_button[i], DISPLAYMODE_INTROSCREEN);
+			ui_add_button(user_menu_button[i], DISPLAYMODE_INTROSCREEN, "");
 			snis_button_set_sound(user_menu_button[i], UISND2);
 		}
 	}
@@ -9046,17 +9051,18 @@ static void ui_add_slider(struct slider *s, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(s, ui_slider_draw, ui_slider_button_press,
+	uie = ui_element_init(s, ui_slider_draw, ui_slider_button_press, NULL,
 						active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
-static void ui_add_button(struct button *b, int active_displaymode)
+static void ui_add_button(struct button *b, int active_displaymode, char *tooltip)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(b, ui_button_draw, ui_button_button_press,
+	uie = ui_element_init(b, ui_button_draw, ui_button_button_press, ui_button_inside,
 						active_displaymode, &displaymode);
+	ui_element_set_tooltip(uie, tooltip);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
@@ -9064,7 +9070,7 @@ static void ui_add_strip_chart(struct strip_chart *sc, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(sc, ui_strip_chart_draw, NULL,
+	uie = ui_element_init(sc, ui_strip_chart_draw, NULL, NULL,
 		active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie);
 }
@@ -9073,7 +9079,7 @@ static void ui_add_scaling_strip_chart(struct scaling_strip_chart *sc, int activ
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(sc, ui_scaling_strip_chart_draw, NULL,
+	uie = ui_element_init(sc, ui_scaling_strip_chart_draw, NULL, NULL,
 		active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie);
 }
@@ -9102,7 +9108,7 @@ static void ui_add_label(struct label *l, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(l, ui_label_draw, NULL,
+	uie = ui_element_init(l, ui_label_draw, NULL, NULL,
 						active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
@@ -9111,7 +9117,7 @@ static void ui_add_gauge(struct gauge *g, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(g, ui_gauge_draw, NULL,
+	uie = ui_element_init(g, ui_gauge_draw, NULL, NULL,
 						active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
@@ -9120,7 +9126,7 @@ static void ui_add_text_window(struct text_window *tw, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(tw, ui_text_window_draw, ui_text_window_button_press,
+	uie = ui_element_init(tw, ui_text_window_draw, ui_text_window_button_press, NULL,
 						active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
@@ -9129,7 +9135,7 @@ static void ui_add_text_input_box(struct snis_text_input_box *t, int active_disp
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(t, ui_text_input_draw, ui_text_input_button_press,
+	uie = ui_element_init(t, ui_text_input_draw, ui_text_input_button_press, NULL,
 						active_displaymode, &displaymode);
 	ui_element_set_focus_callback(uie, ui_text_input_box_set_focus);
 	ui_element_get_keystrokes(uie, ui_text_input_keypress, NULL);
@@ -9143,8 +9149,10 @@ static void init_lobby_ui()
 	lobby_ui.lobby_connect_to_server_button = snis_button_init(txx(250), txy(520), -1, -1,
 			"CONNECT TO SERVER", UI_COLOR(lobby_connect_not_ok), NANO_FONT,
 			lobby_connect_to_server_button_pressed, NULL);
-	ui_add_button(lobby_ui.lobby_cancel_button, DISPLAYMODE_LOBBYSCREEN);
-	ui_add_button(lobby_ui.lobby_connect_to_server_button, DISPLAYMODE_LOBBYSCREEN);
+	ui_add_button(lobby_ui.lobby_cancel_button, DISPLAYMODE_LOBBYSCREEN,
+			"RETURN TO NETWORK SETUP SCREEN");
+	ui_add_button(lobby_ui.lobby_connect_to_server_button, DISPLAYMODE_LOBBYSCREEN,
+			"CONNECT TO THE SELECTED SERVER");
 	snis_button_set_sound(lobby_ui.lobby_cancel_button, UISND3);
 	snis_button_set_sound(lobby_ui.lobby_connect_to_server_button, UISND4);
 }
@@ -9302,14 +9310,21 @@ static void init_nav_ui(void)
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
 	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION);
-	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION);
-	ui_add_button(nav_ui.docking_magnets_button, DISPLAYMODE_NAVIGATION);
-	ui_add_button(nav_ui.standard_orbit_button, DISPLAYMODE_NAVIGATION);
-	ui_add_button(nav_ui.starmap_button, DISPLAYMODE_NAVIGATION);
-	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION);
-	ui_add_button(nav_ui.trident_button, DISPLAYMODE_NAVIGATION);
+	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION,
+				"ACTIVATE THE WARP DRIVE");
+	ui_add_button(nav_ui.docking_magnets_button, DISPLAYMODE_NAVIGATION,
+				"TOGGLE THE DOCKING MAGNETS ON OR OFF");
+	ui_add_button(nav_ui.standard_orbit_button, DISPLAYMODE_NAVIGATION,
+				"ENTER OR LEAVE STANDARD ORBIT AROUND NEARBY PLANET");
+	ui_add_button(nav_ui.starmap_button, DISPLAYMODE_NAVIGATION,
+				"SWITCH BETWEEN NAVIGATION AND STAR MAP");
+	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION,
+				"TOGGLE REVERSE THRUST");
+	ui_add_button(nav_ui.trident_button, DISPLAYMODE_NAVIGATION,
+				"TOGGLE ABSOLUTE OR RELATIVE ORIENTATION");
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
-	ui_add_button(nav_ui.computer_button, DISPLAYMODE_NAVIGATION);
+	ui_add_button(nav_ui.computer_button, DISPLAYMODE_NAVIGATION,
+				"ACTIVATE THE COMPUTER");
 	ui_add_text_input_box(nav_ui.computer_input, DISPLAYMODE_NAVIGATION);
 	ui_hide_widget(nav_ui.computer_input);
 	instrumentecx = entity_context_new(5000, 1000);
@@ -10272,14 +10287,14 @@ static void init_damcon_ui(void)
 							UI_COLOR(damcon_selected_button), NANO_FONT,
 							robot_manual_button_pressed, (void *) 0);
 
-	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON);
-	ui_add_button(damcon_ui.robot_forward_button, DISPLAYMODE_DAMCON);
-	ui_add_button(damcon_ui.robot_left_button, DISPLAYMODE_DAMCON);
-	ui_add_button(damcon_ui.robot_right_button, DISPLAYMODE_DAMCON);
-	ui_add_button(damcon_ui.robot_backward_button, DISPLAYMODE_DAMCON);
-	ui_add_button(damcon_ui.robot_gripper_button, DISPLAYMODE_DAMCON);
-	ui_add_button(damcon_ui.robot_auto_button, DISPLAYMODE_DAMCON);
-	ui_add_button(damcon_ui.robot_manual_button, DISPLAYMODE_DAMCON);
+	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON, "SWITCH TO ENGINEERING SCREEN");
+	ui_add_button(damcon_ui.robot_forward_button, DISPLAYMODE_DAMCON, "MOVE THE ROBOT FORWARD");
+	ui_add_button(damcon_ui.robot_left_button, DISPLAYMODE_DAMCON, "TURN THE ROBOT LEFT");
+	ui_add_button(damcon_ui.robot_right_button, DISPLAYMODE_DAMCON, "TURN THE ROBOT RIGHT");
+	ui_add_button(damcon_ui.robot_backward_button, DISPLAYMODE_DAMCON, "MOVE THE ROBOT BACKWARD");
+	ui_add_button(damcon_ui.robot_gripper_button, DISPLAYMODE_DAMCON, "OPERATE THE ROBOT GRIPPER");
+	ui_add_button(damcon_ui.robot_auto_button, DISPLAYMODE_DAMCON, "SELECT AUTONOMOUS ROBOT OPERATION");
+	ui_add_button(damcon_ui.robot_manual_button, DISPLAYMODE_DAMCON, "SELECT MANUAL ROBOT CONTROL");
 	ui_add_label(damcon_ui.robot_controls, DISPLAYMODE_DAMCON);
 }
 
@@ -10569,9 +10584,9 @@ static void init_engineering_ui(void)
 	ui_add_gauge(eu->fuel_gauge, dm);
 	ui_add_gauge(eu->temp_gauge, dm);
 	ui_add_gauge(eu->oxygen_gauge, dm);
-	ui_add_button(eu->damcon_button, dm);
-	ui_add_button(eu->preset1_button, dm);
-	ui_add_button(eu->preset2_button, dm);
+	ui_add_button(eu->damcon_button, dm, "SWITCH TO THE DAMAGE CONTROL SCREEN");
+	ui_add_button(eu->preset1_button, dm, "SELECT ENGINEERING PRESET 1 - NORMAL MODE");
+	ui_add_button(eu->preset2_button, dm, "SELECT ENGINEERING PRESET 2 - QUIESCENT MODE");
 
 	y = 220 + yinc;
 	y = eng_ui.gauge_radius * 2.5 + yinc;
@@ -10665,6 +10680,33 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->comms_temperature, dm);
 	ui_add_slider(eu->tractor_temperature, dm);
 	ui_add_slider(eu->lifesupport_temperature, dm);
+}
+
+static void draw_tooltip(int mousex, int mousey, char *tooltip)
+{
+	float bbx1, bby1, bbx2, bby2, width, height;
+	int x, y;
+
+	x = sng_pixelx_to_screenx(mousex);
+	y = sng_pixely_to_screeny(mousey);
+
+	sng_string_bounding_box(tooltip, NANO_FONT, &bbx1, &bby1, &bbx2, &bby2);
+	width = fabsf(bbx2 - bbx1) + 20;
+	height = fabsf(bby2 - bby1) + 20;
+
+	if (x + width > SCREEN_WIDTH)
+		x = SCREEN_WIDTH - width;
+	if (x < 0)
+		x = 0;
+	y = y + height * 1.5;
+	if (y + height > SCREEN_HEIGHT)
+		y = SCREEN_HEIGHT - height;
+
+	sng_set_foreground(BLACK);
+	snis_draw_rectangle(1, x, y - height / 2, width, height);
+	sng_set_foreground(UI_COLOR(tooltip));
+	snis_draw_rectangle(0, x, y - height / 2, width, height);
+	sng_abs_xy_draw_string(tooltip, NANO_FONT, x + 10, y + 5);
 }
 
 static void show_engineering_damage_report(GtkWidget *w, int subsystem)
@@ -11250,13 +11292,14 @@ static void init_science_ui(void)
 	snis_button_set_sound(sci_ui.align_to_ship_button, UISND19);
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
-	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE);
-	ui_add_button(sci_ui.launch_mining_bot_button, DISPLAYMODE_SCIENCE);
-	ui_add_button(sci_ui.tractor_button, DISPLAYMODE_SCIENCE);
-	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE);
-	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE);
-	ui_add_button(sci_ui.waypoints_button, DISPLAYMODE_SCIENCE);
-	ui_add_button(sci_ui.align_to_ship_button, DISPLAYMODE_SCIENCE);
+	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE, "VIEW DETAILS ABOUT SELECTED TARGET");
+	ui_add_button(sci_ui.launch_mining_bot_button, DISPLAYMODE_SCIENCE, "LAUNCH THE MINING ROBOT");
+	ui_add_button(sci_ui.tractor_button, DISPLAYMODE_SCIENCE, "TOGGLE THE TRACTOR BEAM ON OR OFF");
+	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE, "SELECT LONG RANGE SCANNERS");
+	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE, "SELECT SHORT RANGE SCANNERS");
+	ui_add_button(sci_ui.waypoints_button, DISPLAYMODE_SCIENCE, "MANAGE WAYPOINTS");
+	ui_add_button(sci_ui.align_to_ship_button, DISPLAYMODE_SCIENCE,
+				"ALIGN LONG RANGE SCANNERS TO SHIP'S ORIENTATION");
 	ui_hide_widget(sci_ui.align_to_ship_button);
 	sciecx = entity_context_new(50, 10);
 	sciballecx = entity_context_new(5000, 1000);
@@ -11281,14 +11324,16 @@ static void init_science_ui(void)
 				100 * SCREEN_WIDTH / 800, wph, "ADD WAYPOINT",
 				UI_COLOR(sci_button), NANO_FONT, science_add_waypoint_pressed, NULL);
 	snis_button_set_sound(sci_ui.add_waypoint_button, UISND20);
-	ui_add_button(sci_ui.add_waypoint_button, DISPLAYMODE_SCIENCE);
+	ui_add_button(sci_ui.add_waypoint_button, DISPLAYMODE_SCIENCE,
+			"ADDS A WAYPOINT AT SPECIFIED X, Y, Z");
 	ui_hide_widget(sci_ui.add_waypoint_button);
 
 	sci_ui.add_current_pos_button = snis_button_init(txx(4 * 135 + 20), txy(100),
 				100 * SCREEN_WIDTH / 800, wph, "CURRENT POSITION",
 				UI_COLOR(sci_button), NANO_FONT, science_add_current_pos_pressed, NULL);
 	snis_button_set_sound(sci_ui.add_current_pos_button, UISND1);
-	ui_add_button(sci_ui.add_current_pos_button, DISPLAYMODE_SCIENCE);
+	ui_add_button(sci_ui.add_current_pos_button, DISPLAYMODE_SCIENCE,
+			"ADD THE SHIP'S CURRENT POSITION AS A WAYPOINT");
 	ui_hide_widget(sci_ui.add_current_pos_button);
 
 	for (i = 0; i < MAXWAYPOINTS; i++) {
@@ -11297,14 +11342,14 @@ static void init_science_ui(void)
 				UI_COLOR(sci_button), NANO_FONT, science_clear_waypoint_pressed,
 				&sci_ui.clear_waypoint_button[i]);
 		snis_button_set_sound(sci_ui.clear_waypoint_button[i], UISND2);
-		ui_add_button(sci_ui.clear_waypoint_button[i], DISPLAYMODE_SCIENCE);
+		ui_add_button(sci_ui.clear_waypoint_button[i], DISPLAYMODE_SCIENCE, "DELETE THIS WAYPOINT");
 		ui_hide_widget(sci_ui.clear_waypoint_button[i]);
 		sci_ui.select_waypoint_button[i] = snis_button_init(txx(500), txy(25 * i) + txy(200),
 				40 * SCREEN_WIDTH / 800, wph, "SELECT",
 				UI_COLOR(sci_button), NANO_FONT, science_select_waypoint_pressed,
 				&sci_ui.select_waypoint_button[i]);
 		snis_button_set_sound(sci_ui.select_waypoint_button[i], UISND3);
-		ui_add_button(sci_ui.select_waypoint_button[i], DISPLAYMODE_SCIENCE);
+		ui_add_button(sci_ui.select_waypoint_button[i], DISPLAYMODE_SCIENCE, "SELECT THIS WAYPOINT");
 		ui_hide_widget(sci_ui.select_waypoint_button[i]);
 	}
 }
@@ -11488,16 +11533,26 @@ static void init_comms_ui(void)
 				"EMF", "SCAN DETECTED", UI_COLOR(science_graph_plot_strong),
 				UI_COLOR(common_red_alert), 100, NANO_FONT, 900);
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
-	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS);
-	ui_add_button(comms_ui.nav_onscreen_button, DISPLAYMODE_COMMS);
-	ui_add_button(comms_ui.weap_onscreen_button, DISPLAYMODE_COMMS);
-	ui_add_button(comms_ui.eng_onscreen_button, DISPLAYMODE_COMMS);
-	ui_add_button(comms_ui.damcon_onscreen_button, DISPLAYMODE_COMMS);
-	ui_add_button(comms_ui.sci_onscreen_button, DISPLAYMODE_COMMS);
-	ui_add_button(comms_ui.main_onscreen_button, DISPLAYMODE_COMMS);
-	ui_add_button(comms_ui.red_alert_button, DISPLAYMODE_COMMS);
-	ui_add_button(comms_ui.mainscreen_comms, DISPLAYMODE_COMMS);
-	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS);
+	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS,
+			"PROJECT COMMS SCREEN ON THE MAIN VIEW");
+	ui_add_button(comms_ui.nav_onscreen_button, DISPLAYMODE_COMMS,
+			"PROJECT NAVIGATION SCREEN ON THE MAIN VIEW");
+	ui_add_button(comms_ui.weap_onscreen_button, DISPLAYMODE_COMMS,
+			"PROJECT WEAPONS SCREEN ON THE MAIN VIEW");
+	ui_add_button(comms_ui.eng_onscreen_button, DISPLAYMODE_COMMS,
+			"PROJECT ENGINEERING SCREEN ON THE MAIN VIEW");
+	ui_add_button(comms_ui.damcon_onscreen_button, DISPLAYMODE_COMMS,
+			"PROJECT DAMAGE CONTROL SCREEN ON THE MAIN VIEW");
+	ui_add_button(comms_ui.sci_onscreen_button, DISPLAYMODE_COMMS,
+			"PROJECT SCIENCE SCREEN ON THE MAIN VIEW");
+	ui_add_button(comms_ui.main_onscreen_button, DISPLAYMODE_COMMS,
+			"PROJECT MAIN SCREEN ON THE MAIN VIEW");
+	ui_add_button(comms_ui.red_alert_button, DISPLAYMODE_COMMS,
+			"ACTIVATE RED ALERT ALARM");
+	ui_add_button(comms_ui.mainscreen_comms, DISPLAYMODE_COMMS,
+			"DISPLAY MOST RECENT COMMS TRANSMISSSIONS ON MAIN SCREEN");
+	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS,
+			"TRANSMIT ENTERED TEXT ON CURRENT CHANNEL");
 	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
 	ui_add_slider(comms_ui.mainzoom_slider, DISPLAYMODE_COMMS);
 	ui_add_strip_chart(comms_ui.emf_strip_chart, DISPLAYMODE_COMMS);
@@ -13382,23 +13437,40 @@ static void init_demon_ui()
 		snis_scaling_strip_chart_init(txx(120), txy(265), txx(550.0), txy(100.0),
 				"LATENCY (ms)", "", UI_COLOR(science_graph_plot_strong),
 				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
-	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_starbase_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_planet_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_asteroid_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_nebula_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_spacemonster_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_delete_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_select_none_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_captain_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_torpedo_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_phaser_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_2d3d_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_move_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_scale_button, DISPLAYMODE_DEMON);
-	ui_add_button(demon_ui.demon_netstats_button, DISPLAYMODE_DEMON);
+	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON,
+			"EXECUTE THE ENTERED COMMAND");
+	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON,
+			"RETURN VIEWPORT TO HOME POSITION AND ORIENTATION");
+	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON,
+			"CREATE A SHIP");
+	ui_add_button(demon_ui.demon_starbase_button, DISPLAYMODE_DEMON,
+			"CREATE A STARBASE");
+	ui_add_button(demon_ui.demon_planet_button, DISPLAYMODE_DEMON,
+			"CREATE A PLANET");
+	ui_add_button(demon_ui.demon_asteroid_button, DISPLAYMODE_DEMON,
+			"CREATE AN ASTEROID");
+	ui_add_button(demon_ui.demon_nebula_button, DISPLAYMODE_DEMON,
+			"CREATE A NEBULA");
+	ui_add_button(demon_ui.demon_spacemonster_button, DISPLAYMODE_DEMON,
+			"CREATE A SPACEMONSTER");
+	ui_add_button(demon_ui.demon_delete_button, DISPLAYMODE_DEMON,
+			"DELETE THE SELECTED OBJECTS");
+	ui_add_button(demon_ui.demon_select_none_button, DISPLAYMODE_DEMON,
+			"SELECT ZERO OBJECTS");
+	ui_add_button(demon_ui.demon_captain_button, DISPLAYMODE_DEMON,
+			"BECOME CAPTAIN OF THE SELECTED SHIP");
+	ui_add_button(demon_ui.demon_torpedo_button, DISPLAYMODE_DEMON,
+			"MAKE THE CURRENTLY CAPTAINED SHIP FIRE A TORPEDO");
+	ui_add_button(demon_ui.demon_phaser_button, DISPLAYMODE_DEMON,
+			"MAKE THE CURRENTLY CAPTAINED SHIP FIRE A PHASER");
+	ui_add_button(demon_ui.demon_2d3d_button, DISPLAYMODE_DEMON,
+			"TOGGLE BETWEEN 2D AND 3D MODE");
+	ui_add_button(demon_ui.demon_move_button, DISPLAYMODE_DEMON,
+			"MOVE SELECTED ITEMS TO YOUR CURRENT LOCATION");
+	ui_add_button(demon_ui.demon_scale_button, DISPLAYMODE_DEMON,
+			"TOGGLE BETWEEN NORMAL AND EXAGERATED SCALES");
+	ui_add_button(demon_ui.demon_netstats_button, DISPLAYMODE_DEMON,
+			"DISPLAY GRAPHS OF NETWORK STATISTICS");
 	ui_hide_widget(demon_ui.demon_move_button);
 	ui_hide_widget(demon_ui.demon_scale_button);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
@@ -13944,6 +14016,7 @@ static void show_warp_limbo_screen(GtkWidget *w)
 		if (displaymode == DISPLAYMODE_WEAPONS) {
 			show_manual_weapons(w);
 			ui_element_list_draw(uiobjs);
+			ui_element_list_maybe_draw_tooltips(uiobjs, global_mouse_x, global_mouse_y);
 		} else {
 			show_warp_hash_screen(w);
 		}
@@ -14147,8 +14220,6 @@ static struct button *init_net_role_button(int x, int *y, char *txt, int *value)
 	return init_net_checkbox_button(x, y, txt, value, NULL, NULL);
 }
 
-static void ui_add_button(struct button *b, int active_displaymode);
-
 static void init_net_role_buttons(struct network_setup_ui *nsu)
 {
 	int x, y;
@@ -14178,16 +14249,26 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 							&nsu->role_demon_v);
 	nsu->role_text_to_speech = init_net_role_button(x, &y, "TEXT TO SPEECH",
 							&nsu->role_text_to_speech_v);
-	ui_add_button(nsu->role_main, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(nsu->role_nav, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(nsu->role_weap, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(nsu->role_eng, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(nsu->role_damcon, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(nsu->role_sci, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(nsu->role_comms, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(nsu->role_sound, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(nsu->role_demon, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(nsu->role_text_to_speech, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->role_main, DISPLAYMODE_NETWORK_SETUP,
+			"WHETHER THIS TERMINAL SHOULD ACT AS MAIN SCREEN");
+	ui_add_button(nsu->role_nav, DISPLAYMODE_NETWORK_SETUP,
+			"WHETHER THIS TERMINAL SHOULD ACT AS NAVIGATION SCREEN");
+	ui_add_button(nsu->role_weap, DISPLAYMODE_NETWORK_SETUP,
+			"WHETHER THIS TERMINAL SHOULD ACT AS WEAPONS SCREEN");
+	ui_add_button(nsu->role_eng, DISPLAYMODE_NETWORK_SETUP,
+			"WHETHER THIS TERMINAL SHOULD ACT AS ENGINEERING SCREEN");
+	ui_add_button(nsu->role_damcon, DISPLAYMODE_NETWORK_SETUP,
+			"WHETHER THIS TERMINAL SHOULD ACT AS DAMAGE CONTROL SCREEN");
+	ui_add_button(nsu->role_sci, DISPLAYMODE_NETWORK_SETUP,
+			"WHETHER THIS TERMINAL SHOULD ACT AS SCIENCE SCREEN");
+	ui_add_button(nsu->role_comms, DISPLAYMODE_NETWORK_SETUP,
+			"WHETHER THIS TERMINAL SHOULD ACT AS COMMUNICATIONS SCREEN");
+	ui_add_button(nsu->role_sound, DISPLAYMODE_NETWORK_SETUP,
+			"WHETHER THIS TERMINAL SHOULD ACT AS SOUND SERVER");
+	ui_add_button(nsu->role_demon, DISPLAYMODE_NETWORK_SETUP,
+			"WHETHER THIS TERMINAL SHOULD ACT AS DEMON SCREEN");
+	ui_add_button(nsu->role_text_to_speech, DISPLAYMODE_NETWORK_SETUP,
+			"WHETHER THIS TERMINAL SHOULD ACT AS TEXT TO SPEECH SERVER");
 }
 
 static void create_ship_checkbox_cb(__attribute__((unused)) void *cookie)
@@ -14215,8 +14296,10 @@ static void init_join_create_buttons(struct network_setup_ui *nsu)
 						create_ship_checkbox_cb, nsu);
 	nsu->join_ship_checkbox = init_net_checkbox_button(x, &y, "JOIN SHIP", &nsu->join_ship_v,
 						join_ship_checkbox_cb, nsu);
-	ui_add_button(nsu->create_ship_checkbox, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(nsu->join_ship_checkbox, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(nsu->create_ship_checkbox, DISPLAYMODE_NETWORK_SETUP,
+			"SELECT THIS IF YOU WISH TO CREATE A NEW SHIP FOR THE FIRST TIME");
+	ui_add_button(nsu->join_ship_checkbox, DISPLAYMODE_NETWORK_SETUP,
+			"SELECT THIS IF YOU WISH TO JOIN A SHIP ALREADY IN PLAY");
 }
 
 static void ui_add_text_input_box(struct snis_text_input_box *t, int active_displaymode);
@@ -14281,9 +14364,12 @@ static void init_net_setup_ui(void)
 		snis_text_input_box_set_contents(net_setup_ui.shipname_box, preferred_shipname);
 		net_setup_ui.create_ship_v = 0;
 	}
-	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(net_setup_ui.start_gameserver, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP,
+			"START THE LOBBY SERVER PROCESS");
+	ui_add_button(net_setup_ui.start_gameserver, DISPLAYMODE_NETWORK_SETUP,
+			"START THE GAME SERVER PROCESS");
+	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP,
+			"CONNECT TO THE LOBBY SERVER");
 
 	/* note: the order of these is important for TAB key focus advance */
 	ui_add_text_input_box(net_setup_ui.lobbyservername, DISPLAYMODE_NETWORK_SETUP);
@@ -14817,6 +14903,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		break;
 	}
 	ui_element_list_draw(uiobjs);
+	ui_element_list_maybe_draw_tooltips(uiobjs, global_mouse_x, global_mouse_y);
 
 	/* this has to come after ui_element_list_draw() to avoid getting clobbered */
 	if (displaymode == DISPLAYMODE_ENGINEERING)
@@ -15504,6 +15591,9 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 	float pitch, yaw;
 	float smoothx, smoothy;
 	int sx, sy;
+
+	global_mouse_x = event->x;
+	global_mouse_y = event->y;
 
 	switch (displaymode) {
 	case DISPLAYMODE_DEMON:
@@ -16901,6 +16991,7 @@ int main(int argc, char *argv[])
 	snis_slider_set_sound(SLIDER_SOUND);
 	text_window_set_chatter_sound(TTY_CHATTER_SOUND);
 	text_window_set_timer(&timer);
+	ui_set_tooltip_drawing_function(draw_tooltip);
 	init_lobby_ui();
 	init_nav_ui();
 	init_engineering_ui();

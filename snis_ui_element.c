@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
@@ -14,7 +15,10 @@ struct ui_element {
 	ui_element_set_focus_function set_focus;
 	int has_focus;
 	ui_element_keypress_function keypress_fn, keyrelease_fn;
+	ui_element_inside_function inside_fn;
 	int hidden;
+	char *tooltip;
+	int tooltip_timer;
 };
 
 struct ui_element_list {
@@ -22,9 +26,12 @@ struct ui_element_list {
 	struct ui_element_list *next;
 };
 
+static void (*draw_tooltip)(int mousex, int mousey, char *tooltip);
+
 struct ui_element *ui_element_init(void *element,
 			ui_element_drawing_function draw,
 			ui_element_button_press_function button_press,
+			ui_element_inside_function inside_fn,
 			int active_displaymode, volatile int *displaymode)
 {
 	struct ui_element *e;
@@ -33,6 +40,7 @@ struct ui_element *ui_element_init(void *element,
 	e->element = element;
 	e->draw = draw;
 	e->button_press = button_press;
+	e->inside_fn = inside_fn;
 	e->active_displaymode = active_displaymode;
 	e->displaymode = displaymode;
 	e->set_focus = NULL;
@@ -40,12 +48,33 @@ struct ui_element *ui_element_init(void *element,
 	e->keypress_fn = NULL;	
 	e->keyrelease_fn = NULL;
 	e->hidden = 0;
+	e->tooltip = NULL;
+	e->tooltip_timer = TOOLTIP_DELAY;
 	return e;
 }
 
 void ui_element_draw(struct ui_element *element)
 {
 	element->draw(element);
+}
+
+void ui_element_maybe_draw_tooltip(struct ui_element *element, int mousex, int mousey)
+{
+	if (!element->inside_fn) {
+		return;
+	}
+	if (!element->tooltip)
+		return;
+	if (!element->inside_fn(element->element, mousex, mousey)) {
+		element->tooltip_timer = TOOLTIP_DELAY;
+		return;
+	}
+	if (element->tooltip_timer > 0)
+		element->tooltip_timer--;
+	if (element->tooltip_timer > 0)
+		return;
+	if (draw_tooltip)
+		draw_tooltip(mousex, mousey, element->tooltip);
 }
 
 void ui_element_list_add_element(struct ui_element_list **list,
@@ -91,6 +120,28 @@ void ui_element_list_draw(struct ui_element_list *list)
 	}
 }
 
+void ui_element_list_maybe_draw_tooltips(struct ui_element_list *list, int mousex, int mousey)
+{
+	for (; list != NULL; list = list->next) {
+		struct ui_element *e = list->element;
+		if (e->draw && e->active_displaymode == *e->displaymode && !e->hidden)
+			ui_element_maybe_draw_tooltip(e, mousex, mousey);
+	}
+}
+
+void ui_element_set_tooltip(struct ui_element *element, char *tooltip)
+{
+	if (element->tooltip) {
+		free(element->tooltip);
+		element->tooltip = NULL;
+	}
+	if (!tooltip)
+		return;
+	if (strcmp(tooltip, "") == 0)
+		return;
+	element->tooltip = strdup(tooltip);
+}
+
 static void ui_set_focus(struct ui_element_list *list, struct ui_element *e)
 {
 	if (!e->set_focus)
@@ -131,6 +182,12 @@ void ui_element_set_focus_callback(struct ui_element *e,
 					ui_element_set_focus_function set_focus)
 {
 	e->set_focus = set_focus;
+}
+
+void ui_element_set_inside_callback(struct ui_element *e,
+					ui_element_inside_function inside_fn)
+{
+	e->inside_fn = inside_fn;
 }
 
 void ui_element_set_displaymode(struct ui_element *e, int displaymode)
@@ -250,5 +307,10 @@ struct ui_element *widget_to_ui_element(struct ui_element_list *list, void *widg
 			return list->element;
 	}
 	return NULL;
+}
+
+void ui_set_tooltip_drawing_function(ui_tooltip_drawing_function f)
+{
+	draw_tooltip = f;
 }
 
