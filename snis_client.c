@@ -3642,7 +3642,7 @@ static void show_lobbyscreen(GtkWidget *w)
 
 		/* Draw column headings */
 		i = -1;
-		sng_set_foreground(DARKGREEN);
+		sng_set_foreground(UI_COLOR(lobby_server_heading));
 		sprintf(msg, "IP ADDRESS/PORT");
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 		sprintf(msg, "GAME INSTANCE");
@@ -7072,7 +7072,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 			if (o->entity && entity_onscreen(o->entity)) {
 				float sx, sy;
 				entity_get_screen_coords(o->entity, &sx, &sy);
-				draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0, 0.5, 1.5f);
+				draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_targeting), 0, 0.5, 1.5f);
 			}
 		}
 	}
@@ -9299,7 +9299,7 @@ static void init_nav_ui(void)
 	nav_ui.trident_button = snis_button_init(10, 250, -1, -1, "ABSOLUTE", button_color,
 			NANO_FONT, trident_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.trident_button, UISND9);
-	nav_ui.computer_button = snis_button_init(txx(10), txy(570), -1, -1, "COMPUTER", UI_COLOR(nav_warning),
+	nav_ui.computer_button = snis_button_init(txx(10), txy(570), -1, -1, "COMPUTER", UI_COLOR(nav_button),
 			NANO_FONT, nav_computer_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.computer_button, UISND10);
 	nav_ui.computer_active = 0;
@@ -11481,10 +11481,9 @@ static void init_comms_ui(void)
 	int y = txy(20);
 	int bw = txx(70);
 	int bh = txy(25);
-	const int button_color = UI_COLOR(comms_button);
-	const int slider_color = UI_COLOR(comms_slider);
-	const int text_color = UI_COLOR(comms_text);
-	const int red_alert_color = UI_COLOR(comms_red_alert);
+	int button_color = UI_COLOR(comms_button);
+	int text_color = UI_COLOR(comms_text);
+	int red_alert_color = UI_COLOR(comms_red_alert);
 
 	comms_ui.comms_onscreen_button = snis_button_init(x, y, bw, bh, "COMMS", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 0);
@@ -11525,7 +11524,7 @@ static void init_comms_ui(void)
 			"TRANSMIT", button_color,
 			TINY_FONT, comms_transmit_button_pressed, NULL);
 	comms_ui.mainzoom_slider = snis_slider_init(txx(180), txy(560), txx(380), txy(15),
-				slider_color, "ZOOM",
+				UI_COLOR(comms_slider), "ZOOM",
 				"1", "10", 0.0, 100.0, sample_mainzoom,
 				do_mainzoom);
 	comms_ui.emf_strip_chart =
@@ -14762,28 +14761,28 @@ static void draw_quit_screen(GtkWidget *w)
 	sng_set_foreground(BLACK);
 	snis_draw_rectangle(1, txx(100), txy(100),
 			SCREEN_WIDTH - txx(200), SCREEN_HEIGHT - txy(200));
-	sng_set_foreground(RED);
+	sng_set_foreground(UI_COLOR(quit_border));
 	snis_draw_rectangle(FALSE, txx(100), txy(100),
 			SCREEN_WIDTH - txx(200), SCREEN_HEIGHT - txy(200));
-	sng_set_foreground(WHITE);
+	sng_set_foreground(UI_COLOR(quit_text));
 	sng_abs_xy_draw_string("Quit?", BIG_FONT, txx(300), txy(280));
 
 	if (current_quit_selection == 1) {
 		x = QUIT_BUTTON_X;
-		sng_set_foreground(WHITE);
+		sng_set_foreground(UI_COLOR(quit_selection));
 	} else {
 		x = NOQUIT_BUTTON_X;
-		sng_set_foreground(RED);
+		sng_set_foreground(UI_COLOR(quit_unselected));
 	}
 	sng_abs_xy_draw_string("Quit Now", SMALL_FONT, txx(150), txy(450));
 	if (current_quit_selection == 0)
-		sng_set_foreground(WHITE);
+		sng_set_foreground(UI_COLOR(quit_selection));
 	else
-		sng_set_foreground(RED);
+		sng_set_foreground(UI_COLOR(quit_unselected));
 	sng_abs_xy_draw_string("Don't Quit", SMALL_FONT, txx(500), txy(450));
 
 	if ((quittimer & 0x04)) {
-		sng_set_foreground(WHITE);
+		sng_set_foreground(UI_COLOR(quit_selection));
 		snis_draw_rectangle(FALSE, x, QUIT_BUTTON_Y,
 			QUIT_BUTTON_WIDTH, QUIT_BUTTON_HEIGHT);
 	}

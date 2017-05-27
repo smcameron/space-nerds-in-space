@@ -64,6 +64,7 @@ struct ui_color_map {
 	struct ui_color_entry lobby_connect_ok;
 	struct ui_color_entry lobby_connect_not_ok;
 	struct ui_color_entry lobby_cancel;
+	struct ui_color_entry lobby_server_heading;
 
 	struct ui_color_entry network_setup_text;
 	struct ui_color_entry network_setup_logo;
@@ -103,6 +104,7 @@ struct ui_color_map {
 	struct ui_color_entry weap_torpedoes_loaded;
 	struct ui_color_entry weap_warning;
 	struct ui_color_entry weap_gunsight;
+	struct ui_color_entry weap_targeting;
 
 	struct ui_color_entry eng_gauge;
 	struct ui_color_entry eng_gauge_needle;
@@ -204,6 +206,11 @@ struct ui_color_map {
 	struct ui_color_entry starmap_warp_lane;
 	struct ui_color_entry starmap_far_warp_lane;
 	struct ui_color_entry starmap_grid_color;
+
+	struct ui_color_entry quit_text;
+	struct ui_color_entry quit_border;
+	struct ui_color_entry quit_selection;
+	struct ui_color_entry quit_unselected;
 };
 
 struct ui_color_map_accessor {
@@ -230,6 +237,7 @@ struct ui_color_map_accessor {
 	.u.map.lobby_connect_ok		= { GREEN_FIXUP,	"lobby-connect-ok" },
 	.u.map.lobby_connect_not_ok	= { RED,		"lobby-connect-not-ok" },
 	.u.map.lobby_cancel		= { WHITE,		"lobby-cancel" },
+	.u.map.lobby_server_heading	= { DARKGREEN,		"lobby-server-heading" },
 
 	.u.map.network_setup_text	= { GREEN_FIXUP,	"network-setup-text" },
 	.u.map.network_setup_logo	= { DARKGREEN,		"network-setup-logo" },
@@ -269,6 +277,7 @@ struct ui_color_map_accessor {
 	.u.map.weap_torpedoes_loaded	= { AMBER,		"weap-torpedoes_loaded" },
 	.u.map.weap_warning		= { RED,		"weap-warning" },
 	.u.map.weap_gunsight		= { GREEN_FIXUP,	"weap-gunsight" },
+	.u.map.weap_targeting		= { ORANGERED,		"weap-targeting" },
 
 	.u.map.eng_gauge		= { AMBER,		"eng-gauge" },
 	.u.map.eng_gauge_needle		= { RED,		"eng-gauge-needle" },
@@ -369,6 +378,11 @@ struct ui_color_map_accessor {
 	.u.map.starmap_warp_lane	= { CYAN_FIXUP,		"starmap-warp-lane" },
 	.u.map.starmap_far_warp_lane	= { AMBER,		"starmap-far-warp-lane" },
 	.u.map.starmap_grid_color	= { DARKRED,		"starmap-grid-color" },
+
+	.u.map.quit_text		= { WHITE,		"quit-text"},
+	.u.map.quit_border		= { RED,		"quit-border"},
+	.u.map.quit_selection		= { WHITE,		"quit-selection"},
+	.u.map.quit_unselected		= { RED,		"quit-unselected"},
 
 	.u.map.last_color		= { GREEN_FIXUP,	"last-color" },
 	}
