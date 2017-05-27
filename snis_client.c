@@ -126,7 +126,6 @@
 #define PLAYER_LASER_COLOR GREEN
 #define NPC_LASER_COLOR ORANGERED
 #define TARGETING_COLOR ORANGERED
-#define SCIENCE_SELECT_COLOR GREEN
 #define TORPEDO_COLOR RED
 #define SPACEMONSTER_COLOR GREEN
 #define NEBULA_COLOR MAGENTA
@@ -7108,7 +7107,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 		if (curr_science_guy->alive && curr_science_guy->entity &&
 			entity_onscreen(curr_science_guy->entity)) {
 			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy, SCIENCE_SELECT_COLOR, 0, 1.0f, 2.0f);
+			draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_sci_selection), 0, 1.0f, 2.0f);
 		}
 	}
 
@@ -10410,7 +10409,7 @@ static void init_engineering_ui(void)
 	int x, y, r, xinc, yinc;
 	int dm = DISPLAYMODE_ENGINEERING;
 	int color = UI_COLOR(eng_gauge);
-	const int ccolor = COLOR_LIGHTER(BLUE, 25); /* coolant color */
+	const int ccolor = UI_COLOR(eng_coolant_meter); /* coolant color */
 	const int tcolor = UI_COLOR(eng_temperature); /* temperature color */
 	const int coolant_inc = txy(12);
 	const int sh = 0.02 * SCREEN_HEIGHT; /* slider height */
