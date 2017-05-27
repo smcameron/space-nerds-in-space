@@ -135,6 +135,8 @@ void snis_button_draw(struct button *b)
 
 int snis_button_button_press(struct button *b, int x, int y)
 {
+	x = sng_pixelx_to_screenx(x);
+	y = sng_pixely_to_screeny(y);
 	if (x < b->x || x > b->x + b->width || 
 		y < b->y || y > b->y + b->height)
 		return 0;

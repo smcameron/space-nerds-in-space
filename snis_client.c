@@ -11517,6 +11517,8 @@ static int science_button_press(int x, int y)
 	struct snis_entity *selected;
 	int waypoint_selected = -1;
 
+	x = sng_pixelx_to_screenx(x);
+	y = sng_pixely_to_screeny(y);
 	selected = NULL;
 	mindist = -1;
 	pthread_mutex_lock(&universe_mutex);
@@ -15439,8 +15441,8 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	}
 
 	if (in_the_process_of_quitting) {
-		int sx = (int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH);
-		int sy = (int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT);
+		int sx = sng_pixelx_to_screenx(event->x);
+		int sy = sng_pixely_to_screeny(event->y);
 		if (sx > QUIT_BUTTON_X && sx < QUIT_BUTTON_X + QUIT_BUTTON_WIDTH &&
 			sy > QUIT_BUTTON_Y && sy < QUIT_BUTTON_Y + QUIT_BUTTON_HEIGHT) {
 			final_quit_selection = 1;
@@ -15456,13 +15458,11 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 
 	switch (displaymode) {
 	case DISPLAYMODE_LOBBYSCREEN:
-		lobbylast1clickx = (int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH);
-		lobbylast1clicky = (int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT);
-		
+		lobbylast1clickx = sng_pixelx_to_screenx(event->x);
+		lobbylast1clicky = sng_pixely_to_screeny(event->y);
 		break;
 	case DISPLAYMODE_SCIENCE:
-		science_button_press((int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
-				(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
+		science_button_press(event->x, event->y);
 		break;
 	case DISPLAYMODE_DEMON:
 		demon_button_release(event->button, event->x, event->y);
@@ -15481,9 +15481,7 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	default:
 		break;
 	}
-	ui_element_list_button_press(uiobjs,
-		(int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH),
-		(int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT));
+	ui_element_list_button_press(uiobjs, event->x, event->y);
 	return TRUE;
 }
 
