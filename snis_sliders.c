@@ -213,6 +213,8 @@ double snis_slider_get_input(struct slider *s)
 
 static int snis_slider_button_press_vertical(struct slider *s, int x, int y)
 {
+	x = sng_pixelx_to_screenx(x);
+	y = sng_pixely_to_screeny(y);
 	if (x < s->x || x > s->x + s->height || 
 		y < s->y - 5 || y > s->y + s->length + 5)
 			return 0;
@@ -234,6 +236,8 @@ int snis_slider_button_press(struct slider *s, int x, int y)
 {
 	if (s->vertical)
 		return snis_slider_button_press_vertical(s, x, y);
+	x = sng_pixelx_to_screenx(x);
+	y = sng_pixely_to_screeny(y);
 	if (x < s->x - 5 || x > s->x + s->length + 5 || 
 		y < s->y || y > s->y + s->height)
 			return 0;
