@@ -322,6 +322,8 @@ static ui_element_button_press_function ui_text_window_button_press = (ui_elemen
 					text_window_button_press;
 static ui_element_inside_function ui_button_inside = (ui_element_inside_function)
 					snis_button_inside;
+static ui_element_inside_function ui_slider_inside = (ui_element_inside_function)
+					snis_slider_mouse_inside;
 /* global_mouse_x, global_mouse_y are updated in main_da_motion_notify() and used for tooltips */
 static int global_mouse_x;
 static int global_mouse_y;
@@ -9046,12 +9048,13 @@ static void trident_button_pressed(__attribute__((unused)) void *s)
 	do_adjust_byte_value(!o->tsd.ship.trident,  OPCODE_NAV_TRIDENT_MODE);
 }
 
-static void ui_add_slider(struct slider *s, int active_displaymode)
+static void ui_add_slider(struct slider *s, int active_displaymode, char *tooltip)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(s, ui_slider_draw, ui_slider_button_press, NULL,
+	uie = ui_element_init(s, ui_slider_draw, ui_slider_button_press, ui_slider_inside,
 						active_displaymode, &displaymode);
+	ui_element_set_tooltip(uie, tooltip);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
@@ -9179,7 +9182,7 @@ static void init_weapons_ui(void)
 	weapons.wavelen_slider = snis_slider_init(wlsx, wlsy, wlsw, wlsh, UI_COLOR(weap_slider), "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength);
-	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS);
+	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS, "PHASER WAVELENGTH CONTROL");
 	ui_add_gauge(weapons.phaser_bank_gauge, DISPLAYMODE_WEAPONS);
 	ui_add_gauge(weapons.phaser_wavelength, DISPLAYMODE_WEAPONS);
 }
@@ -9306,9 +9309,9 @@ static void init_nav_ui(void)
 					UI_COLOR(nav_warning), TINY_FONT, nav_ui.input, 80, &timer, NULL, NULL);
 	snis_text_input_box_set_return(nav_ui.computer_input, nav_computer_data_entered);
 	snis_text_input_box_set_dynamic_width(nav_ui.computer_input, txx(100), txx(550));
-	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION);
-	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION);
-	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION);
+	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION, "WARP DRIVER POWER CONTROL");
+	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION, "NAVIGATION ZOOM CONTROL");
+	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION, "IMPULSE DRIVE THROTTLE CONTROL");
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION,
 				"ACTIVATE THE WARP DRIVE");
 	ui_add_button(nav_ui.docking_magnets_button, DISPLAYMODE_NAVIGATION,
@@ -10559,25 +10562,25 @@ static void init_engineering_ui(void)
 				ccolor, "COOLANT", "0", "100", 0.0, 255.0,
 				sample_coolant_data_lifesupport_current, do_lifesupport_coolant);
 	snis_slider_set_label_font(eu->lifesupport_coolant_slider, NANO_FONT);
-	ui_add_slider(eu->shield_slider, dm);
-	ui_add_slider(eu->shield_coolant_slider, dm);
-	ui_add_slider(eu->phaserbanks_slider, dm);
-	ui_add_slider(eu->phaserbanks_coolant_slider, dm);
-	ui_add_slider(eu->comm_slider, dm);
-	ui_add_slider(eu->comm_coolant_slider, dm);
-	ui_add_slider(eu->sensors_slider, dm);
-	ui_add_slider(eu->sensors_coolant_slider, dm);
-	ui_add_slider(eu->impulse_slider, dm);
-	ui_add_slider(eu->impulse_coolant_slider, dm);
-	ui_add_slider(eu->warp_slider, dm);
-	ui_add_slider(eu->warp_coolant_slider, dm);
-	ui_add_slider(eu->maneuvering_slider, dm);
-	ui_add_slider(eu->maneuvering_coolant_slider, dm);
-	ui_add_slider(eu->tractor_slider, dm);
-	ui_add_slider(eu->tractor_coolant_slider, dm);
-	ui_add_slider(eu->lifesupport_slider, dm);
-	ui_add_slider(eu->lifesupport_coolant_slider, dm);
-	ui_add_slider(eu->shield_control_slider, dm);
+	ui_add_slider(eu->shield_slider, dm, "SHIELD POWER LIMIT CONTROL");
+	ui_add_slider(eu->shield_coolant_slider, dm, "SHIELD COOLANT CONTROL");
+	ui_add_slider(eu->phaserbanks_slider, dm, "PHASER POWER LIMIT CONTROL");
+	ui_add_slider(eu->phaserbanks_coolant_slider, dm, "PHASER COOLANT CONTROL");
+	ui_add_slider(eu->comm_slider, dm, "COMMS POWER LIMIT CONTROL");
+	ui_add_slider(eu->comm_coolant_slider, dm, "COMMS COOLANT CONTROL");
+	ui_add_slider(eu->sensors_slider, dm, "SENSORS POWER LIMIT CONTROL");
+	ui_add_slider(eu->sensors_coolant_slider, dm, "SENSORS COOLANT CONTROL");
+	ui_add_slider(eu->impulse_slider, dm, "IMPULSE DRIVE POWER LIMIT CONTROL");
+	ui_add_slider(eu->impulse_coolant_slider, dm, "IMPULSE COOLANT CONTROL");
+	ui_add_slider(eu->warp_slider, dm, "WARP POWER LIMIT CONTROL");
+	ui_add_slider(eu->warp_coolant_slider, dm, "WARP COOLANT CONTROL");
+	ui_add_slider(eu->maneuvering_slider, dm, "MANEUVERING THRUSTER POWER LIMIT CONTROL");
+	ui_add_slider(eu->maneuvering_coolant_slider, dm, "MANEUVERING THRUSTER COOLANT CONTROL");
+	ui_add_slider(eu->tractor_slider, dm, "TRACTOR BEAM POWER CONTROL");
+	ui_add_slider(eu->tractor_coolant_slider, dm, "TRACTOR BEAM COOLANT CONTROL");
+	ui_add_slider(eu->lifesupport_slider, dm, "LIFE SUPPORT SYSTEM POWER LIMIT CONTROL");
+	ui_add_slider(eu->lifesupport_coolant_slider, dm, "LIFE SUPPORT SYSTEM COOLANT CONTROL");
+	ui_add_slider(eu->shield_control_slider, dm, "SHIELD POWER CONTROL");
 	ui_add_gauge(eu->amp_gauge, dm);
 	ui_add_gauge(eu->voltage_gauge, dm);
 	ui_add_gauge(eu->fuel_gauge, dm);
@@ -10661,24 +10664,24 @@ static void init_engineering_ui(void)
 				sample_lifesupport_temperature, NULL);
 	snis_slider_set_label_font(eu->lifesupport_temperature, NANO_FONT);
 	snis_slider_set_color_scheme(eu->lifesupport_temperature, 1);
-	ui_add_slider(eu->shield_damage, dm);
-	ui_add_slider(eu->impulse_damage, dm);
-	ui_add_slider(eu->warp_damage, dm);
-	ui_add_slider(eu->maneuvering_damage, dm);
-	ui_add_slider(eu->phaser_banks_damage, dm);
-	ui_add_slider(eu->sensors_damage, dm);
-	ui_add_slider(eu->comms_damage, dm);
-	ui_add_slider(eu->tractor_damage, dm);
-	ui_add_slider(eu->lifesupport_damage, dm);
-	ui_add_slider(eu->shield_temperature, dm);
-	ui_add_slider(eu->impulse_temperature, dm);
-	ui_add_slider(eu->warp_temperature, dm);
-	ui_add_slider(eu->maneuvering_temperature, dm);
-	ui_add_slider(eu->phaser_banks_temperature, dm);
-	ui_add_slider(eu->sensors_temperature, dm);
-	ui_add_slider(eu->comms_temperature, dm);
-	ui_add_slider(eu->tractor_temperature, dm);
-	ui_add_slider(eu->lifesupport_temperature, dm);
+	ui_add_slider(eu->shield_damage, dm, NULL); /* These all have specialized dynamic tooltips */
+	ui_add_slider(eu->impulse_damage, dm, NULL);
+	ui_add_slider(eu->warp_damage, dm, NULL);
+	ui_add_slider(eu->maneuvering_damage, dm, NULL);
+	ui_add_slider(eu->phaser_banks_damage, dm, NULL);
+	ui_add_slider(eu->sensors_damage, dm, NULL);
+	ui_add_slider(eu->comms_damage, dm, NULL);
+	ui_add_slider(eu->tractor_damage, dm, NULL);
+	ui_add_slider(eu->lifesupport_damage, dm, NULL);
+	ui_add_slider(eu->shield_temperature, dm, NULL);
+	ui_add_slider(eu->impulse_temperature, dm, NULL);
+	ui_add_slider(eu->warp_temperature, dm, NULL);
+	ui_add_slider(eu->maneuvering_temperature, dm, NULL);
+	ui_add_slider(eu->phaser_banks_temperature, dm, NULL);
+	ui_add_slider(eu->sensors_temperature, dm, NULL);
+	ui_add_slider(eu->comms_temperature, dm, NULL);
+	ui_add_slider(eu->tractor_temperature, dm, NULL);
+	ui_add_slider(eu->lifesupport_temperature, dm, NULL);
 }
 
 static void draw_tooltip(int mousex, int mousey, char *tooltip)
@@ -11289,8 +11292,8 @@ static void init_science_ui(void)
 	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
 			UI_COLOR(sci_button), NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.align_to_ship_button, UISND19);
-	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE);
-	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE);
+	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE, "SCIENCE SCOPE ZOOM CONTROL");
+	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE, "SCANNING BEAM POWER CONTROL");
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE, "VIEW DETAILS ABOUT SELECTED TARGET");
 	ui_add_button(sci_ui.launch_mining_bot_button, DISPLAYMODE_SCIENCE, "LAUNCH THE MINING ROBOT");
 	ui_add_button(sci_ui.tractor_button, DISPLAYMODE_SCIENCE, "TOGGLE THE TRACTOR BEAM ON OR OFF");
@@ -11552,7 +11555,7 @@ static void init_comms_ui(void)
 	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS,
 			"TRANSMIT ENTERED TEXT ON CURRENT CHANNEL");
 	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
-	ui_add_slider(comms_ui.mainzoom_slider, DISPLAYMODE_COMMS);
+	ui_add_slider(comms_ui.mainzoom_slider, DISPLAYMODE_COMMS, "ZOOM CONTROL FOR THE MAIN SCREEN");
 	ui_add_strip_chart(comms_ui.emf_strip_chart, DISPLAYMODE_COMMS);
 	comms_ui.channel = 0;
 }
@@ -15607,8 +15610,8 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 					yaw, pitch));
 		break;
 	case DISPLAYMODE_ENGINEERING:
-		sx = (int) ((0.0 + event->x) / (0.0 + real_screen_width) * SCREEN_WIDTH);
-		sy = (int) ((0.0 + event->y) / (0.0 + real_screen_height) * SCREEN_HEIGHT);
+		sx = (int) event->x;
+		sy = (int) event->y;
 		if (snis_slider_mouse_inside(eng_ui.shield_damage, sx, sy))
 			eng_ui.selected_subsystem = 0;
 		else if (snis_slider_mouse_inside(eng_ui.impulse_damage, sx, sy))
