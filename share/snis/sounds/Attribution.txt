@@ -51,7 +51,7 @@ COPYRIGHT=2008 by Stephen M. Cameron
 
 changescreen.ogg:
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
-COPYRIGHT=2008 by Stephen M. Cameron
+COPYRIGHT=2017 by Stephen M. Cameron
 
 slider-noise.ogg:
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
@@ -213,6 +213,42 @@ COPYRIGHT=2017 by Stephen M. Cameron
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
 
 ui20.ogg
+COPYRIGHT=2017 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+ui21.ogg
+COPYRIGHT=2017 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+ui22.ogg
+COPYRIGHT=2017 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+ui23.ogg
+COPYRIGHT=2017 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+ui24.ogg
+COPYRIGHT=2017 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+ui25.ogg
+COPYRIGHT=2017 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+ui26.ogg
+COPYRIGHT=2017 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+ui27.ogg
+COPYRIGHT=2017 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+ui28.ogg
+COPYRIGHT=2017 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
+
+ui29.ogg
 COPYRIGHT=2017 by Stephen M. Cameron
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0
 

@@ -10283,11 +10283,14 @@ static void init_damcon_ui(void)
 	damcon_ui.robot_gripper_button = snis_button_init(txx(650), txy(180), txx(90), txy(25), "GRIPPER",
 							UI_COLOR(damcon_button), NANO_FONT,
 							robot_gripper_button_pressed, (void *) 0);
+	snis_button_set_sound(damcon_ui.robot_gripper_button, UISND24);
 	damcon_ui.robot_auto_button = snis_button_init(txx(400), txy(30), txx(90), txy(25),
 				"AUTO", UI_COLOR(damcon_button), NANO_FONT, robot_auto_button_pressed, (void *) 0);
+	snis_button_set_sound(damcon_ui.robot_gripper_button, UISND25);
 	damcon_ui.robot_manual_button = snis_button_init(txx(500), txy(30), txx(90), txy(25), "MANUAL",
 							UI_COLOR(damcon_selected_button), NANO_FONT,
 							robot_manual_button_pressed, (void *) 0);
+	snis_button_set_sound(damcon_ui.robot_manual_button, UISND25);
 
 	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON, "SWITCH TO ENGINEERING SCREEN");
 	ui_add_button(damcon_ui.robot_forward_button, DISPLAYMODE_DAMCON, "MOVE THE ROBOT FORWARD");
@@ -11333,7 +11336,7 @@ static void init_science_ui(void)
 	sci_ui.add_current_pos_button = snis_button_init(txx(4 * 135 + 20), txy(100),
 				100 * SCREEN_WIDTH / 800, wph, "CURRENT POSITION",
 				UI_COLOR(sci_button), NANO_FONT, science_add_current_pos_pressed, NULL);
-	snis_button_set_sound(sci_ui.add_current_pos_button, UISND1);
+	snis_button_set_sound(sci_ui.add_current_pos_button, UISND21);
 	ui_add_button(sci_ui.add_current_pos_button, DISPLAYMODE_SCIENCE,
 			"ADD THE SHIP'S CURRENT POSITION AS A WAYPOINT");
 	ui_hide_widget(sci_ui.add_current_pos_button);
@@ -11343,14 +11346,14 @@ static void init_science_ui(void)
 				40 * SCREEN_WIDTH / 800, wph, "CLEAR",
 				UI_COLOR(sci_button), NANO_FONT, science_clear_waypoint_pressed,
 				&sci_ui.clear_waypoint_button[i]);
-		snis_button_set_sound(sci_ui.clear_waypoint_button[i], UISND2);
+		snis_button_set_sound(sci_ui.clear_waypoint_button[i], UISND22);
 		ui_add_button(sci_ui.clear_waypoint_button[i], DISPLAYMODE_SCIENCE, "DELETE THIS WAYPOINT");
 		ui_hide_widget(sci_ui.clear_waypoint_button[i]);
 		sci_ui.select_waypoint_button[i] = snis_button_init(txx(500), txy(25 * i) + txy(200),
 				40 * SCREEN_WIDTH / 800, wph, "SELECT",
 				UI_COLOR(sci_button), NANO_FONT, science_select_waypoint_pressed,
 				&sci_ui.select_waypoint_button[i]);
-		snis_button_set_sound(sci_ui.select_waypoint_button[i], UISND3);
+		snis_button_set_sound(sci_ui.select_waypoint_button[i], UISND23);
 		ui_add_button(sci_ui.select_waypoint_button[i], DISPLAYMODE_SCIENCE, "SELECT THIS WAYPOINT");
 		ui_hide_widget(sci_ui.select_waypoint_button[i]);
 	}
@@ -11489,31 +11492,40 @@ static void init_comms_ui(void)
 
 	comms_ui.comms_onscreen_button = snis_button_init(x, y, bw, bh, "COMMS", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 0);
+	snis_button_set_sound(comms_ui.comms_onscreen_button, UISND9);
 	x += bw;
 	comms_ui.nav_onscreen_button = snis_button_init(x, y, bw, bh, "NAV", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 1);
+	snis_button_set_sound(comms_ui.nav_onscreen_button, UISND10);
 	x += bw;
 	comms_ui.weap_onscreen_button = snis_button_init(x, y, bw, bh, "WEAP", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 2);
+	snis_button_set_sound(comms_ui.weap_onscreen_button, UISND11);
 	x += bw;
 	comms_ui.eng_onscreen_button = snis_button_init(x, y, bw, bh, "ENG", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 3);
+	snis_button_set_sound(comms_ui.eng_onscreen_button, UISND12);
 	x += bw;
 	comms_ui.damcon_onscreen_button = snis_button_init(x, y, bw, bh, "DAMCON", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 4);
+	snis_button_set_sound(comms_ui.damcon_onscreen_button, UISND13);
 	x += bw;
 	comms_ui.sci_onscreen_button = snis_button_init(x, y, bw, bh, "SCI", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 5);
+	snis_button_set_sound(comms_ui.sci_onscreen_button, UISND14);
 	x += bw;
 	comms_ui.main_onscreen_button = snis_button_init(x, y, bw, bh, "MAIN", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 6);
+	snis_button_set_sound(comms_ui.main_onscreen_button, UISND15);
 	x = SCREEN_WIDTH - txx(150);
 	y = SCREEN_HEIGHT - txy(90);
 	comms_ui.red_alert_button = snis_button_init(x, y, -1, bh, "RED ALERT", red_alert_color,
 			NANO_FONT, comms_screen_red_alert_pressed, NULL);
+	snis_button_set_sound(comms_ui.red_alert_button, UISND16);
 	y = SCREEN_HEIGHT - 60;
 	comms_ui.mainscreen_comms = snis_button_init(x, y, -1, bh, "MAIN SCREEN", button_color,
 			NANO_FONT, comms_main_screen_pressed, NULL);
+	snis_button_set_sound(comms_ui.mainscreen_comms, UISND17);
 	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 20, text_color);
 	comms_ui.comms_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
 					text_color, TINY_FONT,
@@ -11525,6 +11537,7 @@ static void init_comms_ui(void)
 	comms_ui.comms_transmit_button = snis_button_init(txx(10), txy(550), -1, txy(30),
 			"TRANSMIT", button_color,
 			TINY_FONT, comms_transmit_button_pressed, NULL);
+	snis_button_set_sound(comms_ui.comms_transmit_button, UISND18);
 	comms_ui.mainzoom_slider = snis_slider_init(txx(180), txy(560), txx(380), txy(15),
 				UI_COLOR(comms_slider), "ZOOM",
 				"1", "10", 0.0, 100.0, sample_mainzoom,
@@ -13378,53 +13391,69 @@ static void init_demon_ui()
 	demon_ui.demon_home_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"HOME", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_home_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_home_button, UISND29);
 	demon_ui.demon_ship_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"SHIP", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_ship_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_ship_button, UISND28);
 	demon_ui.demon_starbase_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"STARBASE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_starbase_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_starbase_button, UISND27);
 	demon_ui.demon_planet_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"PLANET", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_planet_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_planet_button, UISND26);
 	demon_ui.demon_asteroid_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"ASTEROID", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_asteroid_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_asteroid_button, UISND25);
 	demon_ui.demon_nebula_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"NEBULA", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_nebula_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_nebula_button, UISND24);
 	demon_ui.demon_spacemonster_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"MONSTER", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_spacemonster_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_spacemonster_button, UISND23);
 	demon_ui.demon_captain_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"CAPTAIN", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_captain_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_captain_button, UISND22);
 	demon_ui.demon_delete_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"DELETE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_delete_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_delete_button, UISND21);
 	demon_ui.demon_select_none_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"SELECT NONE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_select_none_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_select_none_button, UISND20);
 	demon_ui.demon_torpedo_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"TORPEDO", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_torpedo_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_torpedo_button, UISND19);
 	demon_ui.demon_phaser_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"PHASER", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_phaser_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_phaser_button, UISND18);
 	demon_ui.demon_2d3d_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"2D/3D", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_2d3d_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_2d3d_button, UISND17);
 	demon_ui.demon_move_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"MOVE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_move_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_move_button, UISND16);
 	demon_ui.demon_scale_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"EXAG SCALE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_scale_button_pressed, NULL);
 	snis_button_checkbox(demon_ui.demon_scale_button, &demon_ui.exaggerated_scale_active);
+	snis_button_set_sound(demon_ui.demon_scale_button, UISND15);
 	demon_ui.demon_netstats_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"NET STATS", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_netstats_button_pressed, NULL);
 	snis_button_checkbox(demon_ui.demon_netstats_button, &demon_ui.netstats_active);
+	snis_button_set_sound(demon_ui.demon_netstats_button, UISND14);
 #define NETSTATS_SAMPLES 1000
 	demon_ui.bytes_recd_strip_chart =
 		snis_scaling_strip_chart_init(txx(120), txy(5), txx(550.0), txy(100.0),
@@ -15767,7 +15796,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(ONSCREEN_SOUND, d, "onscreen.ogg");
 	read_ogg_clip(OFFSCREEN_SOUND, d, "offscreen.ogg");
 	read_ogg_clip(CHANGESCREEN_SOUND, d, "changescreen.ogg");
-	read_ogg_clip(SLIDER_SOUND, d, "slider-noise.ogg");
+	read_ogg_clip(SLIDER_SOUND, d, "ui23.ogg");
 	read_ogg_clip(SCIENCE_DATA_ACQUIRED_SOUND, d, "science-data-acquired.ogg");
 	read_ogg_clip(SCIENCE_PROBE_SOUND, d, "science-probe.ogg");
 	read_ogg_clip(TTY_CHATTER_SOUND, d, "tty-chatter.ogg");
@@ -15832,6 +15861,15 @@ static void read_sound_clips(void)
 	read_ogg_clip(UISND18, d, "ui18.ogg");
 	read_ogg_clip(UISND19, d, "ui19.ogg");
 	read_ogg_clip(UISND20, d, "ui20.ogg");
+	read_ogg_clip(UISND21, d, "ui21.ogg");
+	read_ogg_clip(UISND22, d, "ui22.ogg");
+	read_ogg_clip(UISND23, d, "ui23.ogg");
+	read_ogg_clip(UISND24, d, "ui24.ogg");
+	read_ogg_clip(UISND25, d, "ui25.ogg");
+	read_ogg_clip(UISND26, d, "ui26.ogg");
+	read_ogg_clip(UISND27, d, "ui27.ogg");
+	read_ogg_clip(UISND28, d, "ui28.ogg");
+	read_ogg_clip(UISND29, d, "ui29.ogg");
 	printf("Done.\n");
 }
 
@@ -15858,7 +15896,7 @@ static void setup_sound(void)
 	}
 	wwviaudio_list_devices();
 	read_sound_clips();
-	snis_button_set_default_sound(UISND18);
+	snis_button_set_default_sound(UISND22);
 }
 
 static void check_for_screensaver(void)
