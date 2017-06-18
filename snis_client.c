@@ -11768,6 +11768,12 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	int x, y, gx1, gy1, gx2, gy2, yinc;
 	double dx, dy, dz, range;
 	char *the_faction;
+	static double lastx = 0.0;
+	static double lasty = 0.0;
+	static double lastz = 0.0;
+	static double lastvel = 0.0;
+	static double closing_rate = 0.0;
+	static double last_range = 1.0;
 
 	yinc = 22 * SCREEN_HEIGHT / 600;
 
@@ -11854,6 +11860,25 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
+	if (o) {
+		double vx = o->x - lastx;
+		double vy = o->y - lasty;
+		double vz = o->z - lastz;
+		double v = 3.0 * dist3d(vx, vy, vz);
+		lastx = o->x;
+		lasty = o->y;
+		lastz = o->z;
+		v = 0.5 * (v + lastvel);
+		if (v > 3000)
+			v = 0;
+		lastvel = v;
+		sprintf(buffer, "VELOCITY: %0.1lf", v);
+	} else {
+		sprintf(buffer, "VELOCITY: 0.0");
+	}
+	y += yinc;
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+
 	if (o || waypoint_index != (uint32_t) -1) {
 		if (o) {
 			dx = o->x - go[my_ship_oid].x;
@@ -11889,6 +11914,16 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		sprintf(buffer, "RANGE: %8.2lf", range);
 	} else {
 		sprintf(buffer, "RANGE:");
+	}
+	y += yinc;
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+
+	if (o || waypoint_index != (uint32_t) -1) {
+		closing_rate = FRAME_RATE_HZ * (last_range - range);
+		last_range = range;
+		sprintf(buffer, "CLOSING RATE: %0.2lf", closing_rate);
+	} else {
+		sprintf(buffer, "CLOSING RATE:");
 	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
