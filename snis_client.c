@@ -3738,6 +3738,7 @@ static struct navigation_ui {
 	struct slider *navzoom_slider;
 	struct slider *throttle_slider;
 	struct gauge *warp_gauge;
+	struct gauge *speedometer;
 	struct button *engage_warp_button;
 	struct button *docking_magnets_button;
 	struct button *standard_orbit_button;
@@ -8821,6 +8822,34 @@ DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 25
 DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 255.0, 0.0)
 DEFINE_SAMPLER_FUNCTION(sample_mainzoom, tsd.ship.mainzoom, 255.0, 0.0)
 
+static double sample_ship_velocity(void)
+{
+	struct snis_entity *o;
+	static double lastx = 0.0;
+	static double lasty = 0.0;
+	static double lastz = 0.0;
+	static double lastdist = 0.0;
+	double vx, vy, vz;
+	double dist;
+
+	if (!(o = find_my_ship()))
+		return 0.0;
+	vx = o->x - lastx;
+	vy = o->y - lasty;
+	vz = o->z - lastz;
+
+	lastx = o->x;
+	lasty = o->y;
+	lastz = o->z;
+
+	dist = FRAME_RATE_HZ * dist3d(vx, vy, vz);
+	if (dist > 1000)
+		dist = 0;
+	dist = (dist + lastdist) / 2.0; /* smooth it */
+	lastdist = dist;
+	return dist;
+}
+
 static double sample_phaser_power(void)
 {
 	struct snis_entity *o;
@@ -9254,7 +9283,7 @@ static void init_nav_ui(void)
 	const int button_color = UI_COLOR(nav_button);
 
 	x = 0;
-	nav_ui.gauge_radius = 80;
+	nav_ui.gauge_radius = 100;
 	
 	nav_ui.warp_slider = snis_slider_init(SCREEN_WIDTH - 2 * nav_ui.gauge_radius - 40,
 				2 * nav_ui.gauge_radius + 10,
@@ -9275,6 +9304,13 @@ static void init_nav_ui(void)
 				nav_ui.gauge_radius, 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, needle_color, gauge_color,
 				10, "WARP", sample_warpdrive);
+	gauge_set_fonts(nav_ui.warp_gauge, PICO_FONT, PICO_FONT);
+	nav_ui.speedometer = gauge_init(SCREEN_WIDTH - 3.5 * nav_ui.gauge_radius - 40,
+				nav_ui.gauge_radius + 5,
+				nav_ui.gauge_radius, 0.0, 1000.0, -120.0 * M_PI / 180.0,
+				120.0 * 2.0 * M_PI / 180.0, needle_color, gauge_color,
+				10, "VEL", sample_ship_velocity);
+	gauge_set_fonts(nav_ui.speedometer, PICO_FONT, PICO_FONT);
 	nav_ui.engage_warp_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
 					nav_ui.gauge_radius * 2 + 80,
 					-1, -1, "ENGAGE WARP", button_color,
@@ -9325,6 +9361,7 @@ static void init_nav_ui(void)
 	ui_add_button(nav_ui.trident_button, DISPLAYMODE_NAVIGATION,
 				"TOGGLE ABSOLUTE OR RELATIVE ORIENTATION");
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
+	ui_add_gauge(nav_ui.speedometer, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.computer_button, DISPLAYMODE_NAVIGATION,
 				"ACTIVATE THE COMPUTER");
 	ui_add_text_input_box(nav_ui.computer_input, DISPLAYMODE_NAVIGATION);
