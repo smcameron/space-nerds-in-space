@@ -1117,6 +1117,8 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 		go[i].tsd.ship.lifeform_count = lifeform_count;
 	if (go[i].type == OBJTYPE_STARBASE)
 		go[i].tsd.starbase.lifeform_count = lifeform_count;
+	if (!go[i].sdata.science_data_known && displaymode == DISPLAYMODE_SCIENCE)
+		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 	if (go[i].type != OBJTYPE_PLANET && go[i].type != OBJTYPE_STARBASE)
 		go[i].sdata.science_data_known = 30 * 10; /* only remember for ten secs. */
 	else
@@ -12212,10 +12214,6 @@ static void show_science(GtkWidget *w)
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.scizoom);
 
-#if 0
-	if ((timer & 0x3f) == 0)
-		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
-#endif
 	sng_set_foreground(UI_COLOR(sci_coords));
 	strncpy(ssname, solarsystem_name, 11);
 	ssname[11] = '\0';
@@ -12256,10 +12254,6 @@ static void show_3d_science(GtkWidget *w)
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.scizoom);
 
-#if endif
-	if ((timer & 0x3f) == 0)
-		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
-#endif
 	sng_set_foreground(UI_COLOR(sci_coords));
 	strncpy(ssname, solarsystem_name, 11);
 	ssname[11] = '\0';
