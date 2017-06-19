@@ -7378,6 +7378,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.nav_mode = NAV_MODE_NORMAL;
 	o->tsd.ship.orbiting_object_id = 0xffffffff;
 	o->tsd.ship.nav_damping_suppression = 0.0;
+	o->tsd.ship.warp_core_status = WARP_CORE_STATUS_GOOD;
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
 	if (clear_cargo_bay) {
@@ -14614,6 +14615,8 @@ static int do_engage_warp_drive(struct snis_entity *o)
 	union vec3 warpvec;
 	double wfactor;
 
+	if (o->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED)
+		enough_oomph = 0;
 	b = lookup_bridge_by_shipid(o->id);
 	if (b < 0) {
 		return 0;
@@ -14787,6 +14790,16 @@ static int process_load_torpedo(struct game_client *c)
 	ship->tsd.ship.torpedoes_loading++;
 	ship->tsd.ship.torpedo_load_time = TORPEDO_LOAD_SECONDS * 10;
 	snis_queue_add_sound(TORPEDO_LOAD_SOUND, ROLE_SOUNDSERVER, ship->id);
+	return 0;
+}
+
+static int process_eject_warp_core(struct game_client *c)
+{
+	struct snis_entity *ship = &go[c->ship_index];
+
+	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED)
+		return 0; /* Warp core is already ejected */
+	ship->tsd.ship.warp_core_status = WARP_CORE_STATUS_EJECTED;
 	return 0;
 }
 
@@ -15182,6 +15195,9 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_LOAD_TORPEDO:
 			process_load_torpedo(c);
+			break;
+		case OPCODE_EJECT_WARP_CORE:
+			process_eject_warp_core(c);
 			break;
 		case OPCODE_REQUEST_YAW:
 			rc = process_request_yaw(c, do_yaw);
@@ -16312,7 +16328,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbb",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -16334,7 +16350,8 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.in_secure_area,
 			o->tsd.ship.docking_magnets,
 			o->tsd.ship.emf_detector,
-			o->tsd.ship.nav_mode);
+			o->tsd.ship.nav_mode,
+			o->tsd.ship.warp_core_status);
 	pb_queue_to_client(c, pb);
 
 	/* now that we've sent the accumulated value, clear the emf_detector to the noise floor */

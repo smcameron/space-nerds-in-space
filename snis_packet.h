@@ -46,7 +46,7 @@
 #define OPCODE_SHIP_SDATA	120
 #define OPCODE_LOAD_TORPEDO	121
 #define OPCODE_REQUEST_PHASER	122
-/* UNUSED OPCODE 123 */
+#define OPCODE_EJECT_WARP_CORE	123
 /* UNUSED OPCODE 124 */
 /* UNUSED OPCODE 125 */
 /* UNUSED OPCODE 126 */
@@ -281,6 +281,7 @@ struct update_ship_packet {
 	uint8_t docking_magnets;
 	uint8_t emf_detector;
 	uint8_t nav_mode;
+	uint8_t warp_core_status;
 };
 
 struct ship_sdata_packet {

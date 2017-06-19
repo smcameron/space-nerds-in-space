@@ -282,6 +282,7 @@ struct key_value_specification snis_entity_kvs[] = {
 
 	INT32_TSDFIELD(ncargo_bays),
 	FLOAT_TSDFIELD(wallet),
+	UINT8_TSDFIELD(warp_core_status),
 	FLOAT_TSDFIELD(threat_level),
 	UINT8_TSDFIELD(docking_magnets),
 	UINT8_TSDFIELD(passenger_berths),

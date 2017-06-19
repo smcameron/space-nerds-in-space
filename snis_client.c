@@ -3775,7 +3775,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, emf_detector,
-		nav_mode;
+		nav_mode, warp_core_status;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -3798,14 +3798,14 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbb",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbb",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
-			&docking_magnets, &emf_detector, &nav_mode);
+			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -3866,6 +3866,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	/* FIXME: really update_emf_detector should get called every frame and passed o->tsd.ship.emf_detector. */
 	update_emf_detector(emf_detector);
 	o->tsd.ship.nav_mode = nav_mode;
+	o->tsd.ship.warp_core_status = warp_core_status;
 	snis_button_set_label(nav_ui.starmap_button, nav_mode ? "NAV MODE" : "STARMAP");
 
 	update_orientation_history(o->tsd.ship.sciball_o, &sciball_orientation);
@@ -9531,6 +9532,9 @@ static void draw_nav_idiot_lights(GtkWidget *w, GdkGC *gc, struct snis_entity *s
 	if (ship->tsd.ship.power_data.impulse.r2 < low_power_threshold) {
 		sng_abs_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, SCREEN_WIDTH / 2 + 20, 95);
 	}
+	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED) {
+		sng_abs_xy_draw_string("WARP CORE EJECTED", NANO_FONT, SCREEN_WIDTH / 2 + 20, 110);
+	}
 	if (ship->tsd.ship.power_data.warp.r2 < low_power_threshold) {
 		sng_abs_xy_draw_string("LOW WARP POWER", NANO_FONT,
 				SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 35,
@@ -10351,6 +10355,7 @@ static struct engineering_ui {
 	struct button *damcon_button;
 	struct button *preset1_button;
 	struct button *preset2_button;
+	struct button *eject_warp_core_button;
 	struct slider *shield_slider;
 	struct slider *shield_coolant_slider;
 	struct slider *maneuvering_slider;
@@ -10449,6 +10454,12 @@ static void preset2_button_pressed(void *x)
 	snis_slider_poke_input(eng_ui.shield_control_slider, 0.0, 0);
 }
 
+static void eject_warp_core_button_pressed(void *x)
+{
+	queue_to_server(snis_opcode_pkt("b", OPCODE_EJECT_WARP_CORE));
+	return;
+}
+
 static void init_engineering_ui(void)
 {
 	int x, y, r, xinc, yinc;
@@ -10519,6 +10530,11 @@ static void init_engineering_ui(void)
 	snis_button_set_sound(eu->preset2_button, UISND12);
 	eu->damcon_button = snis_button_init(snis_button_get_x(eu->preset2_button) + snis_button_get_width(eu->preset2_button) + txx(5),
 						y + txx(30), -1, -1, "DAMAGE CONTROL", color, NANO_FONT, damcon_button_pressed, (void *) 0);
+	eu->eject_warp_core_button = snis_button_init(
+			snis_button_get_x(eu->damcon_button) + snis_button_get_width(eu->damcon_button) + txx(5),
+						y + txx(30), -1, -1, "EJECT WARP CORE", color, NANO_FONT,
+						eject_warp_core_button_pressed, (void *) 0);
+	snis_button_set_sound(eu->eject_warp_core_button, UISND12); /* FIXME: custom sound here */
 	y += yinc;
 	color = UI_COLOR(eng_power_meter);
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
@@ -10631,6 +10647,7 @@ static void init_engineering_ui(void)
 	ui_add_button(eu->damcon_button, dm, "SWITCH TO THE DAMAGE CONTROL SCREEN");
 	ui_add_button(eu->preset1_button, dm, "SELECT ENGINEERING PRESET 1 - NORMAL MODE");
 	ui_add_button(eu->preset2_button, dm, "SELECT ENGINEERING PRESET 2 - QUIESCENT MODE");
+	ui_add_button(eu->eject_warp_core_button, dm, "EJECT THE WARP CORE");
 
 	y = 220 + yinc;
 	y = eng_ui.gauge_radius * 2.5 + yinc;
@@ -16104,6 +16121,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		break;
 	case DEVIO_OPCODE_ENG_PRESET2_BUTTON:
 		preset2_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_ENG_EJECT_WARP_CORE_BUTTON:
+		eject_warp_core_button_pressed((void *) 0);
 		break;
 	case DEVIO_OPCODE_ENG_DAMAGE_CTRL:
 		damcon_button_pressed((void *) 0);

@@ -50,7 +50,7 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 			o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbw",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbwb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -71,7 +71,8 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 			&o->tsd.ship.weap_orientation.vec[0],
 			o->tsd.ship.in_secure_area,
 			o->tsd.ship.docking_magnets,
-			(uint32_t) iwallet);
+			(uint32_t) iwallet,
+			o->tsd.ship.warp_core_status);
 	packed_buffer_append(pb, "bbbbbr",
 		o->sdata.shield_strength, o->sdata.shield_wavelength, o->sdata.shield_width, o->sdata.shield_depth,
 		o->sdata.faction, o->sdata.name, (unsigned short) sizeof(o->sdata.name));
@@ -96,6 +97,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 	union euler ypr;
 	unsigned char name[sizeof(o->sdata.name)];
 	int32_t iwallet;
+	uint8_t warp_core_status;
 	struct power_model_data power_data, coolant_data;
 
 	packed_buffer_extract(pb, "hSSS", &alive,
@@ -109,14 +111,14 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(pb, "bbbwwbbbbbbbbbbbbbwQQQbbw",
+	packed_buffer_extract(pb, "bbbwwbbbbbbbbbbbbbwQQQbbwb",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
-			&docking_magnets, (uint32_t *) &iwallet);
+			&docking_magnets, (uint32_t *) &iwallet, &warp_core_status);
 	packed_buffer_extract(pb, "bbbbbr", &shield_strength, &shield_wavelength, &shield_width, &shield_depth,
 			&faction, name, (uint16_t) sizeof(name));
 	packed_buffer_extract(pb, "r", &power_data, (uint16_t) sizeof(struct power_model_data));
@@ -176,6 +178,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 	o->tsd.ship.in_secure_area = in_secure_area;
 	o->tsd.ship.docking_magnets = docking_magnets;
 	o->tsd.ship.wallet = (float) iwallet / 100.0f;
+	o->tsd.ship.warp_core_status = warp_core_status;
 	o->sdata.shield_strength = shield_strength;
 	o->sdata.shield_wavelength = shield_wavelength;
 	o->sdata.shield_width = shield_width;

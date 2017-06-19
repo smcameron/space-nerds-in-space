@@ -391,6 +391,9 @@ struct ship_data {
 	uint8_t requested_shield;
 	uint8_t phaser_wavelength;
 	uint8_t phaser_charge;
+#define WARP_CORE_STATUS_GOOD 0
+#define WARP_CORE_STATUS_EJECTED 1
+	uint8_t warp_core_status;
 #define MAX_AI_STACK_ENTRIES 5
 	struct ai_stack_entry ai[MAX_AI_STACK_ENTRIES];
 	int nai_entries;
