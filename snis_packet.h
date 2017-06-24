@@ -322,6 +322,7 @@ struct update_asteroid_packet {
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t x, y, z;
+	uint8_t carbon, nickel, silicates, precious_metals;
 };
 
 struct update_cargo_container_packet {
