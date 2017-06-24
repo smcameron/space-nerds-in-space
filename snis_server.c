@@ -1015,7 +1015,26 @@ static void asteroid_move(struct snis_entity *o)
 				&o->tsd.asteroid.rotational_velocity);
 }
 
+static int add_explosion(double x, double y, double z, uint16_t velocity,
+				uint16_t nsparks, uint16_t time, uint8_t victim_type);
+
+static void snis_queue_add_sound(uint16_t sound_number, uint32_t roles, uint32_t shipid);
 static void delete_from_clients_and_server(struct snis_entity *o);
+static void warp_core_move(struct snis_entity *o)
+{
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+	o->timestamp = universe_timestamp;
+	o->tsd.warp_core.countdown_timer--;
+	compute_arbitrary_spin(30, universe_timestamp, &o->orientation,
+				&o->tsd.warp_core.rotational_velocity);
+	if (o->tsd.warp_core.countdown_timer == 0) {
+		(void) add_explosion(o->x, o->y, o->z, 50, 150, 150, o->type);
+		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.warp_core.ship_id);
+		o->alive = 0;
+		delete_from_clients_and_server(o);
+	}
+}
+
 static void cargo_container_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
@@ -1565,9 +1584,6 @@ static void snis_queue_add_global_text_to_speech(const char *text)
 	for (i = 0; i < nbridges; i++)
 		snis_queue_add_text_to_speech(text, ROLE_ALL, bridgelist[i].shipid);
 }
-
-static int add_explosion(double x, double y, double z, uint16_t velocity,
-				uint16_t nsparks, uint16_t time, uint8_t victim_type);
 
 static void instantly_repair_damcon_part(struct damcon_data *d, int system, int part)
 {
@@ -5788,6 +5804,7 @@ static void player_collision_detection(void *player, void *object)
 	case OBJTYPE_WORMHOLE:
 	case OBJTYPE_SPACEMONSTER:
 	case OBJTYPE_STARBASE:
+	case OBJTYPE_WARP_CORE:
 		return;
 	default:
 		break;
@@ -8146,6 +8163,31 @@ static int add_asteroid(double x, double y, double z, double vx, double vz, doub
 	normalize_percentage(&go[i].tsd.asteroid.nickeliron, total);
 	normalize_percentage(&go[i].tsd.asteroid.preciousmetals, total);
 
+	return i;
+}
+
+static int add_warp_core(double x, double y, double z,
+				double vx, double vy, double vz,
+				uint16_t countdown_timer, uint32_t ship_id)
+{
+	int i;
+
+	i = add_generic_object(x, y, z, vx, vy, vz, 0.0, OBJTYPE_WARP_CORE);
+	if (i < 0)
+		return i;
+	go[i].sdata.shield_strength = 0;
+	go[i].sdata.shield_wavelength = 0;
+	go[i].sdata.shield_width = 0;
+	go[i].sdata.shield_depth = 0;
+	go[i].move = warp_core_move;
+	go[i].vx = vx;
+	go[i].vy = vy;
+	go[i].vz = vz;
+	go[i].tsd.warp_core.countdown_timer = countdown_timer;
+	go[i].tsd.warp_core.ship_id = ship_id;
+	go[i].alive = 1;
+	go[i].orientation = random_spin[go[i].id % NRANDOM_ORIENTATIONS];
+	go[i].tsd.warp_core.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
 	return i;
 }
 
@@ -14796,9 +14838,18 @@ static int process_load_torpedo(struct game_client *c)
 static int process_eject_warp_core(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
+	union vec3 relvel = { { 1.0, 0.0, 0.0, }, };
 
-	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED)
+	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED) {
+		snis_queue_add_text_to_speech("The warp core has already been ejected.",
+						ROLE_TEXT_TO_SPEECH, ship->id);
 		return 0; /* Warp core is already ejected */
+	}
+	snis_queue_add_text_to_speech("Ejecting the warp core.", ROLE_TEXT_TO_SPEECH, ship->id);
+	quat_rot_vec_self(&relvel, &ship->orientation);
+	add_warp_core(ship->x, ship->y, ship->z,
+			ship->vx + relvel.v.x, ship->vy + relvel.v.y, ship->vz + relvel.v.z,
+			300.0, ship->id);
 	ship->tsd.ship.warp_core_status = WARP_CORE_STATUS_EJECTED;
 	return 0;
 }
@@ -15637,6 +15688,8 @@ static void send_update_power_model_data(struct game_client *c,
 		struct snis_entity *o);
 static void send_update_coolant_model_data(struct game_client *c,
 		struct snis_entity *o);
+static void send_update_warp_core(struct game_client *c,
+		struct snis_entity *o);
 
 static void send_respawn_time(struct game_client *c, struct snis_entity *o);
 
@@ -15709,6 +15762,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_TURRET:
 		send_update_turret_packet(c, o);
+		break;
+	case OBJTYPE_WARP_CORE:
+		send_update_warp_core(c, o);
 		break;
 	default:
 		break;
@@ -16306,6 +16362,16 @@ static void send_update_coolant_model_data(struct game_client *c,
 		(char *) &o->tsd.ship.temperature_data,
 			(unsigned short) sizeof(o->tsd.ship.temperature_data)); 
 	pb_queue_to_client(c, pb);
+}
+
+static void send_update_warp_core(struct game_client *c,
+		struct snis_entity *o)
+{
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSS", OPCODE_UPDATE_WARP_CORE,
+					o->id, o->timestamp,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_ship_packet(struct game_client *c,

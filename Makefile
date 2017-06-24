@@ -471,7 +471,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/mantis.stl \
 	${MD}/laser_turret.stl \
 	${MD}/laser_turret_base.stl \
-	${MD}/uv_sphere.stl
+	${MD}/uv_sphere.stl \
+	${MD}/warp-core.stl
 
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\

@@ -109,6 +109,7 @@
 #define OBJTYPE_WARPGATE 21
 #define OBJTYPE_BLOCK 22
 #define OBJTYPE_TURRET 23
+#define OBJTYPE_WARP_CORE 24
 
 #define SHIELD_EFFECT_LIFETIME 30
 
@@ -651,6 +652,12 @@ struct turret_data {
 	struct entity *turret_base_entity;
 };
 
+struct warp_core_data {
+	union quat rotational_velocity;
+	uint32_t ship_id;
+	uint16_t countdown_timer;
+};
+
 union type_specific_data {
 	struct ship_data ship;
 	struct laser_data laser;
@@ -671,6 +678,7 @@ union type_specific_data {
 	struct warpgate_data warpgate;
 	struct block_data block;
 	struct turret_data turret;
+	struct warp_core_data warp_core;
 };
 
 struct snis_entity;

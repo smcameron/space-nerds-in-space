@@ -75,6 +75,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_UPDATE_PLAYER, "n/a");
 	rc |= init_opcode_def(OPCODE_ID_CLIENT_SHIP, "bw");
 	rc |= init_opcode_def(OPCODE_UPDATE_ASTEROID, "bwwSSSbbbb");
+	rc |= init_opcode_def(OPCODE_UPDATE_WARP_CORE, "bwwSSS");
 	rc |= init_opcode_def(OPCODE_REQUEST_YAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_THRUST, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_GUNYAW, "bb");

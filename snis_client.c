@@ -119,6 +119,7 @@
 #define WORMHOLE_COLOR WHITE
 #define PLANET_COLOR GREEN
 #define ASTEROID_COLOR AMBER
+#define WARP_CORE_COLOR YELLOW
 #define CARGO_CONTAINER_COLOR YELLOW 
 #define DERELICT_COLOR BLUE 
 #define PARTICLE_COLOR YELLOW
@@ -368,6 +369,7 @@ static struct mesh *nebula_mesh;
 static struct mesh *sun_mesh;
 static struct mesh *thrust_animation_mesh;
 static struct mesh *warpgate_mesh;
+static struct mesh *warp_core_mesh;
 #define NDOCKING_PORT_STYLES 3
 static struct mesh *docking_port_mesh[NDOCKING_PORT_STYLES];
 static struct mesh *warp_tunnel_mesh;
@@ -1604,6 +1606,33 @@ static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, 
 	return 0;
 }
 
+static int update_warp_core(uint32_t id, uint32_t timestamp, double x, double y, double z)
+{
+	int i;
+	struct entity *e;
+	union quat orientation;
+	struct snis_entity *o;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		/* Note, orientation won't be consistent across clients
+		 * due to joining at different times
+		 */
+		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
+		e = add_entity(ecx, warp_core_mesh, x, y, z, WARP_CORE_COLOR);
+		i = add_generic_object(id, timestamp, x, y, z, 0, 0, 0,
+				&orientation, OBJTYPE_WARP_CORE, 1, e);
+		if (i < 0)
+			return i;
+		o = &go[i];
+		o->tsd.warp_core.rotational_velocity = random_spin[id % NRANDOM_SPINS];
+	} else {
+		o = &go[i];
+		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, NULL, 1);
+	}
+	return 0;
+}
+
 static int update_cargo_container(uint32_t id, uint32_t timestamp, double x, double y, double z)
 {
 	int i;
@@ -1970,6 +1999,11 @@ static inline void spin_asteroid(double timestamp, struct snis_entity *o)
 	arbitrary_spin(timestamp, o, &o->tsd.asteroid.rotational_velocity);
 }
 
+static inline void spin_warp_core(double timestamp, struct snis_entity *o)
+{
+	arbitrary_spin(timestamp, o, &o->tsd.warp_core.rotational_velocity);
+}
+
 static inline void spin_cargo_container(double timestamp, struct snis_entity *o)
 {
 	arbitrary_spin(timestamp, o, &o->tsd.cargo_container.rotational_velocity);
@@ -2298,6 +2332,10 @@ static void move_objects(void)
 		case OBJTYPE_ASTEROID:
 			move_object(timestamp, o, &interpolate_generic_object);
 			spin_asteroid(timestamp, o);
+			break;
+		case OBJTYPE_WARP_CORE:
+			move_object(timestamp, o, &interpolate_generic_object);
+			spin_warp_core(timestamp, o);
 			break;
 		case OBJTYPE_CARGO_CONTAINER:
 			move_object(timestamp, o, &interpolate_generic_object);
@@ -5546,6 +5584,26 @@ static int process_update_asteroid_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_warp_core_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id, timestamp;
+	double dx, dy, dz;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_warp_core_packet) - sizeof(uint8_t));
+	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_warp_core(id, timestamp, dx, dy, dz);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+}
+
 static int process_update_cargo_container_packet(void)
 {
 	unsigned char buffer[100];
@@ -5940,6 +5998,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_ASTEROID:
 			rc = process_update_asteroid_packet();
+			break;
+		case OPCODE_UPDATE_WARP_CORE:
+			rc = process_update_warp_core_packet();
 			break;
 		case OPCODE_UPDATE_DOCKING_PORT:
 			rc = process_update_docking_port_packet();
@@ -16605,6 +16666,7 @@ static void init_meshes()
 	sun_mesh = mesh_fabricate_billboard(30000, 30000);
 	thrust_animation_mesh = init_thrust_mesh(30, 30, 1.3, 1);
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");
+	warp_core_mesh = snis_read_model(d, "warp-core.stl");
 
 	mtwist_free(mt);
 }

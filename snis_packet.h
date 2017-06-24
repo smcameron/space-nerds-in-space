@@ -47,7 +47,7 @@
 #define OPCODE_LOAD_TORPEDO	121
 #define OPCODE_REQUEST_PHASER	122
 #define OPCODE_EJECT_WARP_CORE	123
-/* UNUSED OPCODE 124 */
+#define OPCODE_UPDATE_WARP_CORE 124
 /* UNUSED OPCODE 125 */
 /* UNUSED OPCODE 126 */
 /* UNUSED OPCODE 127 */
@@ -323,6 +323,13 @@ struct update_asteroid_packet {
 	uint32_t timestamp;
 	uint32_t x, y, z;
 	uint8_t carbon, nickel, silicates, precious_metals;
+};
+
+struct update_warp_core_packet {
+	uint8_t opcode;
+	uint32_t id;
+	uint32_t timestamp;
+	uint32_t x, y, z;
 };
 
 struct update_cargo_container_packet {
