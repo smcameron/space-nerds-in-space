@@ -2245,14 +2245,14 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 static void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
 		struct material *material, float shrink_factor, int debris_chance, float scale_factor);
 
-static void emit_flames(struct snis_entity *o, double factor)
+static void emit_flames(struct snis_entity *o, double velocity_factor, double size_factor)
 {
 	double vx, vy, vz;
-	vx = factor * (double) (snis_randn(100) - 50) / 20.0;
-	vy = factor * (double) (snis_randn(100) - 50) / 20.0;
-	vz = factor * (double) (snis_randn(100) - 50) / 20.0;
+	vx = velocity_factor * (double) (snis_randn(100) - 50) / 20.0;
+	vy = velocity_factor * (double) (snis_randn(100) - 50) / 20.0;
+	vz = velocity_factor * (double) (snis_randn(100) - 50) / 20.0;
 
-	add_spark(o->x, o->y, o->z, vx, vy, vz, 5, YELLOW, &spark_material, 0.95, 0.0, 0.25);
+	add_spark(o->x, o->y, o->z, vx, vy, vz, 5, YELLOW, &spark_material, 0.95, 0.0, size_factor * 0.25);
 }
 
 /* make badly damaged ships "catch on fire" */
@@ -2270,7 +2270,7 @@ static void ship_emit_sparks(struct snis_entity *o)
 
 	o->tsd.ship.flames_timer--;
 
-	emit_flames(o, 1.0);
+	emit_flames(o, 1.0, 1.0);
 }
 
 static void turret_emit_sparks(struct snis_entity *o)
@@ -2279,7 +2279,7 @@ static void turret_emit_sparks(struct snis_entity *o)
 		return;
 	if (o->tsd.turret.health > 100)
 		return;
-	emit_flames(o, 1.0);
+	emit_flames(o, 1.0, 1.0);
 }
 
 static void block_emit_sparks(struct snis_entity *o)
@@ -2288,7 +2288,7 @@ static void block_emit_sparks(struct snis_entity *o)
 		return;
 	if (o->tsd.block.health > 100)
 		return;
-	emit_flames(o, 5.0);
+	emit_flames(o, 5.0, 1.0);
 }
 
 static void move_objects(void)
