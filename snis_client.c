@@ -2245,14 +2245,25 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 static void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
 		struct material *material, float shrink_factor, int debris_chance, float scale_factor);
 
-static void emit_flames(struct snis_entity *o, double velocity_factor, double size_factor)
+static void emit_sparks(struct snis_entity *o, double velocity_factor, double size_factor,
+			struct material *material, double vxo, double vyo, double vzo)
 {
 	double vx, vy, vz;
-	vx = velocity_factor * (double) (snis_randn(100) - 50) / 20.0;
-	vy = velocity_factor * (double) (snis_randn(100) - 50) / 20.0;
-	vz = velocity_factor * (double) (snis_randn(100) - 50) / 20.0;
+	vx = vxo + velocity_factor * (double) (snis_randn(100) - 50) / 20.0;
+	vy = vyo + velocity_factor * (double) (snis_randn(100) - 50) / 20.0;
+	vz = vzo + velocity_factor * (double) (snis_randn(100) - 50) / 20.0;
 
-	add_spark(o->x, o->y, o->z, vx, vy, vz, 5, YELLOW, &spark_material, 0.95, 0.0, size_factor * 0.25);
+	add_spark(o->x, o->y, o->z, vx, vy, vz, 5, YELLOW, material, 0.95, 0.0, size_factor * 0.25);
+}
+
+static void emit_flames(struct snis_entity *o, double velocity_factor, double size_factor)
+{
+	emit_sparks(o, velocity_factor, size_factor, &spark_material, 0, 0, 0);
+}
+
+static void emit_warp_core_sparks(struct snis_entity *o, double velocity_factor, double size_factor)
+{
+	emit_sparks(o, velocity_factor, size_factor, &warp_effect_material, o->vx, o->vy, o->vz);
 }
 
 /* make badly damaged ships "catch on fire" */
@@ -2336,6 +2347,7 @@ static void move_objects(void)
 		case OBJTYPE_WARP_CORE:
 			move_object(timestamp, o, &interpolate_generic_object);
 			spin_warp_core(timestamp, o);
+			emit_warp_core_sparks(o, 0.3, 0.3);
 			break;
 		case OBJTYPE_CARGO_CONTAINER:
 			move_object(timestamp, o, &interpolate_generic_object);
