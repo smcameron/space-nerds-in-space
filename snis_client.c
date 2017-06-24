@@ -2248,9 +2248,9 @@ static void add_spark(double x, double y, double z, double vx, double vy, double
 static void emit_flames(struct snis_entity *o, double factor)
 {
 	double vx, vy, vz;
-	vx = factor * (double) snis_randn(50) / 20.0;
-	vy = factor * (double) snis_randn(50) / 20.0;
-	vz = factor * (double) snis_randn(50) / 20.0;
+	vx = factor * (double) (snis_randn(100) - 50) / 20.0;
+	vy = factor * (double) (snis_randn(100) - 50) / 20.0;
+	vz = factor * (double) (snis_randn(100) - 50) / 20.0;
 
 	add_spark(o->x, o->y, o->z, vx, vy, vz, 5, YELLOW, &spark_material, 0.95, 0.0, 0.25);
 }
