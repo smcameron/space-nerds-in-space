@@ -11917,6 +11917,9 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		case OBJTYPE_DERELICT:
 			sprintf(buffer, "TYPE: %s", "DERELICT");
 			break;
+		case OBJTYPE_WARP_CORE:
+			sprintf(buffer, "TYPE: %s", "EJECTED WARP CORE");
+			break;
 		default:
 			sprintf(buffer, "TYPE: %s", "UNKNOWN"); 
 			break;

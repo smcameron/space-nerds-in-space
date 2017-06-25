@@ -15790,6 +15790,7 @@ static void queue_up_client_object_sdata_update(struct game_client *c, struct sn
 	case OBJTYPE_TORPEDO:
 	case OBJTYPE_LASER:
 	case OBJTYPE_SPACEMONSTER:
+	case OBJTYPE_WARP_CORE:
 		send_update_sdata_packets(c, o);
 		break;
 	default:
