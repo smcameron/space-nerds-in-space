@@ -1015,6 +1015,52 @@ static void asteroid_move(struct snis_entity *o)
 				&o->tsd.asteroid.rotational_velocity);
 }
 
+static void do_detailed_collision_impulse(struct snis_entity *o1, struct snis_entity *o2, /* objects */
+						float m1, float m2, /* masses */
+						float r1, float r2, /* radii */
+						float energy_transmission_factor);
+
+static void warp_core_collision_detection(void *o1, void *o2)
+{
+	struct snis_entity *warp_core = o1;
+	struct snis_entity *object = o2;
+	union vec3 core_pos, closest_point, displacement;
+	double dist2;
+
+	if (object->type != OBJTYPE_BLOCK)
+		return;
+	dist2 = dist3dsqrd(warp_core->x - object->x,
+				warp_core->y - object->y,
+				warp_core->z - object->z);
+
+	if (dist2 > object->tsd.block.radius * object->tsd.block.radius)
+		return;
+
+	core_pos.v.x = warp_core->x;
+	core_pos.v.y = warp_core->y;
+	core_pos.v.z = warp_core->z;
+
+	oriented_bounding_box_closest_point(&core_pos, &object->tsd.block.obb, &closest_point);
+
+	dist2 = dist3dsqrd(warp_core->x - closest_point.v.x, warp_core->y - closest_point.v.y, warp_core->z - closest_point.v.z);
+	if (dist2 > 8.0 * 8.0)
+		return;
+	warp_core->vx = 0;
+	warp_core->vy = 0;
+	warp_core->vz = 0;
+
+	displacement.v.x = warp_core->x - closest_point.v.x;
+	displacement.v.y = warp_core->y - closest_point.v.y;
+	displacement.v.z = warp_core->z - closest_point.v.z;
+	vec3_normalize_self(&displacement);
+	vec3_mul_self(&displacement, 30.0);
+	warp_core->x += displacement.v.x;
+	warp_core->y += displacement.v.y;
+	warp_core->z += displacement.v.z;
+	do_detailed_collision_impulse(warp_core, object, 1.0, 1e6, 10, 100, 0.5);
+	return;
+}
+
 static int add_explosion(double x, double y, double z, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type);
 
@@ -1025,6 +1071,8 @@ static void warp_core_move(struct snis_entity *o)
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
 	o->tsd.warp_core.countdown_timer--;
+	space_partition_process(space_partition, o, o->x, o->z, o,
+				warp_core_collision_detection);
 	compute_arbitrary_spin(30, universe_timestamp, &o->orientation,
 				&o->tsd.warp_core.rotational_velocity);
 	if (o->tsd.warp_core.countdown_timer == 0) {
