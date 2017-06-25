@@ -10129,6 +10129,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_CARGO_CONTAINER:
 		case OBJTYPE_SHIP1:
+		case OBJTYPE_WARP_CORE:
 		{
 			struct mesh *m = entity_get_mesh(go[i].entity);
 
@@ -10211,6 +10212,9 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				break;
 			case OBJTYPE_CARGO_CONTAINER:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 20.0 + 1.0;
+				break;
+			case OBJTYPE_WARP_CORE:
+				contact_scale = ((255.0 - current_zoom) / 255.0) * 120.0 + 1.0;
 				break;
 			}
 
