@@ -140,7 +140,7 @@ id = add_ship(name, x, y, z, type, faction, auto_respawn) -- adds a ship to the
         universe of the specified type and faction at the specified locations.  If
         adding ship failed, -1.0 is returned.
 
-id = add_asterod(x, y, z) -- adds an asteroid at the specified location
+id = add_asteroid(x, y, z) -- adds an asteroid at the specified location
 	(it will orbit around the center of the universe)
 
 set_asteroid_speed(id, speed);
@@ -176,6 +176,7 @@ id = add_nebula(name, x, y, z, r) - adds nebula at x,y with specified radius and
 
 id = add_spacemonster(name, x, y, z, r) - adds spacemonster at x,y with specified radius and name,
 	returns id of spacemonster or -1.0 on failure. 
+	NOTE: space monsters are currently broken
 
 id1, id2 = add_wormhole_pair(x1, y1, z1, x2, y2, z2) - adds connected wormholes at the
 	specified location, returns -1 for a wormhole id that fails to create.
@@ -260,7 +261,7 @@ comms_channel_listen(name, channel, callback)
 	need to transmit on the same channel you receive on (which is the normal case)
 	you have to figure out a way to ignore your own transmissions.  The easiest way
 	is to decouple the transmissions from the messages received.  That is, do not
-	transmit in response to a message received, or if you mush, only respond to very
+	transmit in response to a message received, or if you must, only respond to very
 	specific messages which you never transmit yourself.
 
 comms_channel_unlisten(name, channel)
