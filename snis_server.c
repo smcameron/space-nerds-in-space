@@ -9395,7 +9395,7 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].tsd.planet.atmosphere_r = solarsystem_assets->atmosphere_color[sst].r;
 	go[i].tsd.planet.atmosphere_g = solarsystem_assets->atmosphere_color[sst].g;
 	go[i].tsd.planet.atmosphere_b = solarsystem_assets->atmosphere_color[sst].b;
-	go[i].tsd.planet.atmosphere_scale = 1.03;
+	go[i].tsd.planet.atmosphere_scale = 1.02;
 
 	return i;
 }
