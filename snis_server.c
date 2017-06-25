@@ -1028,7 +1028,7 @@ static void warp_core_move(struct snis_entity *o)
 	compute_arbitrary_spin(30, universe_timestamp, &o->orientation,
 				&o->tsd.warp_core.rotational_velocity);
 	if (o->tsd.warp_core.countdown_timer == 0) {
-		(void) add_explosion(o->x, o->y, o->z, 50, 150, 150, o->type);
+		(void) add_explosion(o->x, o->y, o->z, 150, 350, 250, o->type);
 		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.warp_core.ship_id);
 		o->alive = 0;
 		delete_from_clients_and_server(o);
