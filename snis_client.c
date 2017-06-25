@@ -13968,6 +13968,9 @@ static void show_demon_3d(GtkWidget *w)
 			color = YELLOW;
 			scale = XKNOWN_DIM / 100000.0;
 			break;
+		case OBJTYPE_WARP_CORE:
+			color = WARP_CORE_COLOR;
+			break;
 		default:
 			color = MAGENTA;
 			break;
@@ -13995,6 +13998,7 @@ static void show_demon_3d(GtkWidget *w)
 		case OBJTYPE_LASER:
 		case OBJTYPE_WARPGATE:
 		case OBJTYPE_TORPEDO:
+		case OBJTYPE_WARP_CORE:
 			if (!o->entity)
 				break;
 			if (o->type != OBJTYPE_SHIP1)
