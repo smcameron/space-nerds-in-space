@@ -5701,43 +5701,44 @@ static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
 	}
 }
 
-static void do_collision_impulse(struct snis_entity *player, struct snis_entity *object)
+static void do_detailed_collision_impulse(struct snis_entity *o1, struct snis_entity *o2, /* objects */
+						float m1, float m2, /* masses */
+						float r1, float r2, /* radii */
+						float energy_transmission_factor)
 {
 	union vec3 p1, p2, v1, v2, vo1, vo2;
-	float m1, m2, r1, r2;
-	const float energy_transmission_factor = 0.7;
 
-	m1 = 10;
-	m2 = 20;
-	r1 = 10;
-	r2 = 10;
+	p1.v.x = o1->x;
+	p1.v.y = o1->y;
+	p1.v.z = o1->z;
 
-	p1.v.x = player->x;
-	p1.v.y = player->y;
-	p1.v.z = player->z;
+	v1.v.x = o1->vx;
+	v1.v.y = o1->vy;
+	v1.v.z = o1->vz;
 
-	v1.v.x = player->vx;
-	v1.v.y = player->vy;
-	v1.v.z = player->vz;
+	p2.v.x = o2->x;
+	p2.v.y = o2->y;
+	p2.v.z = o2->z;
 
-	p2.v.x = object->x;
-	p2.v.y = object->y;
-	p2.v.z = object->z;
-
-	v2.v.x = object->vx;
-	v2.v.y = object->vy;
-	v2.v.z = object->vz;
+	v2.v.x = o2->vx;
+	v2.v.y = o2->vy;
+	v2.v.z = o2->vz;
 
 	elastic_collision(m1, &p1, &v1, r1, m2, &p2, &v2, r2,
 				energy_transmission_factor, &vo1, &vo2);
 
-	player->vx = vo1.v.x;
-	player->vy = vo1.v.y;
-	player->vz = vo1.v.z;
+	o1->vx = vo1.v.x;
+	o1->vy = vo1.v.y;
+	o1->vz = vo1.v.z;
 
-	object->vx = vo2.v.x;
-	object->vy = vo2.v.y;
-	object->vz = vo2.v.z;
+	o2->vx = vo2.v.x;
+	o2->vy = vo2.v.y;
+	o2->vz = vo2.v.z;
+}
+
+static void do_collision_impulse(struct snis_entity *player, struct snis_entity *object)
+{
+	do_detailed_collision_impulse(player, object, 10, 20, 10, 10, 0.7);
 
 	/* Give ship some random small rotational velocity */
 	const float maxrv = 15.0;
