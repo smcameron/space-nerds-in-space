@@ -7438,6 +7438,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 #define TORPEDO_UNIT_COST 50.0f
 #define SHIELD_UNIT_COST 5.0f;
 #define FUEL_UNIT_COST (1500.0f / (float) UINT32_MAX)
+#define WARP_CORE_COST 1500
 	b = lookup_bridge_by_shipid(o->id);
 	o->move = player_move;
 	money += (INITIAL_TORPEDO_COUNT - o->tsd.ship.torpedoes) * TORPEDO_UNIT_COST;
@@ -7499,6 +7500,8 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.nav_mode = NAV_MODE_NORMAL;
 	o->tsd.ship.orbiting_object_id = 0xffffffff;
 	o->tsd.ship.nav_damping_suppression = 0.0;
+	if (o->tsd.ship.warp_core_status != WARP_CORE_STATUS_GOOD)
+		money += WARP_CORE_COST;
 	o->tsd.ship.warp_core_status = WARP_CORE_STATUS_GOOD;
 	bridgelist[b].warp_core_critical = 0;
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
