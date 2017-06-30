@@ -1015,6 +1015,34 @@ static void asteroid_move(struct snis_entity *o)
 				&o->tsd.asteroid.rotational_velocity);
 }
 
+static void calculate_torpedolike_damage(struct snis_entity *o, double weapons_factor);
+static void calculate_warp_core_explosion_damage(struct snis_entity *o, double damage_factor)
+{
+	calculate_torpedolike_damage(o, WARP_CORE_EXPLOSION_WEAPONS_FACTOR * damage_factor);
+}
+
+static void send_ship_damage_packet(struct snis_entity *o);
+static void check_warp_core_explosion_damage(struct snis_entity *warp_core,
+						struct snis_entity *object)
+{
+	double dist;
+	double damage_factor;
+
+	switch (object->type) {
+	case OBJTYPE_SHIP1:
+	case OBJTYPE_SHIP2:
+		dist = dist3d(warp_core->x - object->x, warp_core->y - object->y, warp_core->z - object->z);
+		if (dist > WARP_CORE_EXPLOSION_DAMAGE_DISTANCE)
+			return;
+		damage_factor = WARP_CORE_EXPLOSION_DAMAGE_DISTANCE / (dist + 1.0);
+		calculate_warp_core_explosion_damage(object, damage_factor);
+		send_ship_damage_packet(object);
+		break;
+	default:
+		break;
+	}
+}
+
 static void do_detailed_collision_impulse(struct snis_entity *o1, struct snis_entity *o2, /* objects */
 						float m1, float m2, /* masses */
 						float r1, float r2, /* radii */
@@ -1027,6 +1055,8 @@ static void warp_core_collision_detection(void *o1, void *o2)
 	union vec3 core_pos, closest_point, displacement;
 	double dist2;
 
+	if (warp_core->tsd.warp_core.countdown_timer == 0)
+		check_warp_core_explosion_damage(warp_core, object);
 	if (object->type != OBJTYPE_BLOCK)
 		return;
 	dist2 = dist3dsqrd(warp_core->x - object->x,
@@ -1891,7 +1921,6 @@ static void calculate_laser_starbase_damage(struct snis_entity *o, uint8_t wavel
 		o->alive = 0;
 }
 
-static void send_ship_damage_packet(struct snis_entity *o);
 static void send_detonate_packet(struct snis_entity *o, double x, double y, double z,
 				uint32_t time, double fractional_time);
 static void send_silent_ship_damage_packet(struct snis_entity *o);
