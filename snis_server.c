@@ -336,6 +336,8 @@ static struct bridge_data {
 	struct player_waypoint waypoint[MAXWAYPOINTS];
 	int selected_waypoint;
 	int nwaypoints;
+	int warp_core_critical_timer;
+	int warp_core_critical;
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -5421,6 +5423,7 @@ static void calc_temperature_change(uint8_t current, uint8_t coolant, uint8_t *t
 
 static void do_temperature_computations(struct snis_entity *o)
 {
+	int b = lookup_bridge_by_shipid(o->id);
 
 	calc_temperature_change(o->tsd.ship.power_data.warp.i,
 			o->tsd.ship.coolant_data.warp.i,
@@ -5453,15 +5456,33 @@ static void do_temperature_computations(struct snis_entity *o)
 
 	/* overheated and overdamaged warp system == self destruct */
 	if (o->tsd.ship.temperature_data.warp_damage > 240 &&
-		o->tsd.ship.damage.warp_damage > 240) {
-		o->alive = 0;
-		o->tsd.ship.damage.shield_damage = 255;
-		o->timestamp = universe_timestamp;
-		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
-		snis_queue_add_sound(EXPLOSION_SOUND,
-				ROLE_SOUNDSERVER, o->id);
-		schedule_callback(event_callback, &callback_schedule,
-			"player-death-callback", o->id);
+		o->tsd.ship.damage.warp_damage > 240 &&
+		o->tsd.ship.warp_core_status != WARP_CORE_STATUS_EJECTED) {
+		if (!bridgelist[b].warp_core_critical) {
+			bridgelist[b].warp_core_critical = 1;
+			bridgelist[b].warp_core_critical_timer = 300; /* 30 seconds */
+		}
+	}
+	if (bridgelist[b].warp_core_critical) {
+		if (bridgelist[b].warp_core_critical_timer > 0 &&
+			(bridgelist[b].warp_core_critical_timer % 100) == 0) {
+			char msg[100];
+			snprintf(msg, sizeof(msg), "Warning, %d seconds until warp core breach",
+					bridgelist[b].warp_core_critical_timer / 10);
+			snis_queue_add_text_to_speech(msg, ROLE_TEXT_TO_SPEECH, o->id);
+		}
+		bridgelist[b].warp_core_critical_timer--;
+		if (bridgelist[b].warp_core_critical_timer == 0) {
+			bridgelist[b].warp_core_critical = 0;
+			o->alive = 0;
+			o->tsd.ship.damage.shield_damage = 255;
+			o->timestamp = universe_timestamp;
+			o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+			snis_queue_add_sound(EXPLOSION_SOUND,
+					ROLE_SOUNDSERVER, o->id);
+			schedule_callback(event_callback, &callback_schedule,
+				"player-death-callback", o->id);
+		}
 	}
 }
 
@@ -7411,10 +7432,13 @@ static void repair_damcon_systems(struct snis_entity *o)
 static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charges)
 {
 	int i;
+	int b;
 	float money = 0.0;
+
 #define TORPEDO_UNIT_COST 50.0f
 #define SHIELD_UNIT_COST 5.0f;
 #define FUEL_UNIT_COST (1500.0f / (float) UINT32_MAX)
+	b = lookup_bridge_by_shipid(o->id);
 	o->move = player_move;
 	money += (INITIAL_TORPEDO_COUNT - o->tsd.ship.torpedoes) * TORPEDO_UNIT_COST;
 	o->tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
@@ -7476,6 +7500,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.orbiting_object_id = 0xffffffff;
 	o->tsd.ship.nav_damping_suppression = 0.0;
 	o->tsd.ship.warp_core_status = WARP_CORE_STATUS_GOOD;
+	bridgelist[b].warp_core_critical = 0;
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
 	if (clear_cargo_bay) {
@@ -14919,6 +14944,7 @@ static int process_eject_warp_core(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
 	union vec3 relvel = { { 1.0, 0.0, 0.0, }, };
+	int b = c->bridge;
 
 	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED) {
 		snis_queue_add_text_to_speech("The warp core has already been ejected.",
@@ -14929,7 +14955,8 @@ static int process_eject_warp_core(struct game_client *c)
 	quat_rot_vec_self(&relvel, &ship->orientation);
 	add_warp_core(ship->x, ship->y, ship->z,
 			ship->vx + relvel.v.x, ship->vy + relvel.v.y, ship->vz + relvel.v.z,
-			300.0, ship->id);
+			bridgelist[b].warp_core_critical_timer, ship->id);
+	bridgelist[b].warp_core_critical = 0; /* Save player from warp core breach */
 	ship->tsd.ship.warp_core_status = WARP_CORE_STATUS_EJECTED;
 	return 0;
 }
@@ -16825,6 +16852,8 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].nclients = 1;
 		bridgelist[nbridges].selected_waypoint = -1;
 		bridgelist[nbridges].nwaypoints = 0;
+		bridgelist[nbridges].warp_core_critical_timer = 0;
+		bridgelist[nbridges].warp_core_critical = 0;
 		clear_bridge_waypoints(nbridges);
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
