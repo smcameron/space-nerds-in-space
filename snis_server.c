@@ -1042,7 +1042,9 @@ static void warp_core_collision_detection(void *o1, void *o2)
 
 	oriented_bounding_box_closest_point(&core_pos, &object->tsd.block.obb, &closest_point);
 
-	dist2 = dist3dsqrd(warp_core->x - closest_point.v.x, warp_core->y - closest_point.v.y, warp_core->z - closest_point.v.z);
+	dist2 = dist3dsqrd(warp_core->x - closest_point.v.x,
+				warp_core->y - closest_point.v.y,
+				warp_core->z - closest_point.v.z);
 	if (dist2 > 8.0 * 8.0)
 		return;
 	warp_core->vx = 0;

@@ -812,6 +812,7 @@ static struct damcon_ui {
 	struct button *robot_gripper_button;
 	struct button *robot_auto_button;
 	struct button *robot_manual_button;
+	struct button *eject_warp_core_button;
 } damcon_ui;
 
 static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
@@ -10383,6 +10384,12 @@ static void robot_manual_button_pressed(void *x)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_ROBOT_AUTO_MANUAL, DAMCON_ROBOT_MANUAL_MODE));
 }
 
+static void eject_warp_core_button_pressed(void *x)
+{
+	queue_to_server(snis_opcode_pkt("b", OPCODE_EJECT_WARP_CORE));
+	return;
+}
+
 static void init_damcon_ui(void)
 {
 	damcon_ui.engineering_button = snis_button_init(txx(630), txy(550), txx(140), txy(25),
@@ -10411,6 +10418,10 @@ static void init_damcon_ui(void)
 							UI_COLOR(damcon_selected_button), NANO_FONT,
 							robot_manual_button_pressed, (void *) 0);
 	snis_button_set_sound(damcon_ui.robot_manual_button, UISND25);
+	damcon_ui.eject_warp_core_button = snis_button_init(txx(300), txy(30), txx(90), txy(25),
+						"EJECT WARP CORE", UI_COLOR(damcon_button), NANO_FONT,
+						eject_warp_core_button_pressed, (void *) 0);
+	snis_button_set_sound(damcon_ui.eject_warp_core_button, UISND12); /* FIXME: custom sound here */
 
 	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON, "SWITCH TO ENGINEERING SCREEN");
 	ui_add_button(damcon_ui.robot_forward_button, DISPLAYMODE_DAMCON, "MOVE THE ROBOT FORWARD");
@@ -10421,6 +10432,7 @@ static void init_damcon_ui(void)
 	ui_add_button(damcon_ui.robot_auto_button, DISPLAYMODE_DAMCON, "SELECT AUTONOMOUS ROBOT OPERATION");
 	ui_add_button(damcon_ui.robot_manual_button, DISPLAYMODE_DAMCON, "SELECT MANUAL ROBOT CONTROL");
 	ui_add_label(damcon_ui.robot_controls, DISPLAYMODE_DAMCON);
+	ui_add_button(damcon_ui.eject_warp_core_button, DISPLAYMODE_DAMCON, "EJECT THE WARP CORE");
 }
 
 static struct engineering_ui {
@@ -10432,7 +10444,6 @@ static struct engineering_ui {
 	struct button *damcon_button;
 	struct button *preset1_button;
 	struct button *preset2_button;
-	struct button *eject_warp_core_button;
 	struct slider *shield_slider;
 	struct slider *shield_coolant_slider;
 	struct slider *maneuvering_slider;
@@ -10531,12 +10542,6 @@ static void preset2_button_pressed(void *x)
 	snis_slider_poke_input(eng_ui.shield_control_slider, 0.0, 0);
 }
 
-static void eject_warp_core_button_pressed(void *x)
-{
-	queue_to_server(snis_opcode_pkt("b", OPCODE_EJECT_WARP_CORE));
-	return;
-}
-
 static void init_engineering_ui(void)
 {
 	int x, y, r, xinc, yinc;
@@ -10607,11 +10612,6 @@ static void init_engineering_ui(void)
 	snis_button_set_sound(eu->preset2_button, UISND12);
 	eu->damcon_button = snis_button_init(snis_button_get_x(eu->preset2_button) + snis_button_get_width(eu->preset2_button) + txx(5),
 						y + txx(30), -1, -1, "DAMAGE CONTROL", color, NANO_FONT, damcon_button_pressed, (void *) 0);
-	eu->eject_warp_core_button = snis_button_init(
-			snis_button_get_x(eu->damcon_button) + snis_button_get_width(eu->damcon_button) + txx(5),
-						y + txx(30), -1, -1, "EJECT WARP CORE", color, NANO_FONT,
-						eject_warp_core_button_pressed, (void *) 0);
-	snis_button_set_sound(eu->eject_warp_core_button, UISND12); /* FIXME: custom sound here */
 	y += yinc;
 	color = UI_COLOR(eng_power_meter);
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
@@ -10724,7 +10724,6 @@ static void init_engineering_ui(void)
 	ui_add_button(eu->damcon_button, dm, "SWITCH TO THE DAMAGE CONTROL SCREEN");
 	ui_add_button(eu->preset1_button, dm, "SELECT ENGINEERING PRESET 1 - NORMAL MODE");
 	ui_add_button(eu->preset2_button, dm, "SELECT ENGINEERING PRESET 2 - QUIESCENT MODE");
-	ui_add_button(eu->eject_warp_core_button, dm, "EJECT THE WARP CORE");
 
 	y = 220 + yinc;
 	y = eng_ui.gauge_radius * 2.5 + yinc;
@@ -16206,9 +16205,6 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_ENG_PRESET2_BUTTON:
 		preset2_button_pressed((void *) 0);
 		break;
-	case DEVIO_OPCODE_ENG_EJECT_WARP_CORE_BUTTON:
-		eject_warp_core_button_pressed((void *) 0);
-		break;
 	case DEVIO_OPCODE_ENG_DAMAGE_CTRL:
 		damcon_button_pressed((void *) 0);
 		break;
@@ -16298,6 +16294,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		break;
 	case DEVIO_OPCODE_DMGCTRL_ENGINEERING:
 		main_engineering_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_DMGCTRL_EJECT_WARP_CORE_BUTTON:
+		eject_warp_core_button_pressed((void *) 0);
 		break;
 	case DEVIO_OPCODE_SCIENCE_RANGE:
 		snis_slider_poke_input(sci_ui.scizoom, d, 1);
