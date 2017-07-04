@@ -9944,6 +9944,91 @@ static void draw_3d_nav_waypoints(struct snis_entity *player_ship, union vec3 *s
 	}
 }
 
+static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
+			union vec3 *ship_normal, float screen_radius)
+{
+	int i;
+	float angle;
+	union quat q1;
+	union vec3 v1, v2, v3, v4, v5, v6, v7, v8;
+
+	v1.v.x = 1.0;
+	v1.v.y = 0.0;
+	v1.v.z = 0.03;
+	v2.v.x = 1.0;
+	v2.v.y = 0.0;
+	v2.v.z = -0.03;
+	vec3_mul_self(&v1, screen_radius);
+	vec3_mul_self(&v2, screen_radius);
+
+	v5.v.x = 0.03;
+	v5.v.y = 0.0;
+	v5.v.z = 1.0;
+	v6.v.x = -0.03;
+	v6.v.y = 0.0;
+	v6.v.z = 1.0;
+	vec3_mul_self(&v5, screen_radius);
+	vec3_mul_self(&v6, screen_radius);
+
+	v7.v.x = 1.0;
+	v7.v.y = 0.03;
+	v7.v.z = 0.0;
+	v8.v.x = 1.0;
+	v8.v.y = -0.03;
+	v8.v.z = 0.0;
+	vec3_mul_self(&v7, screen_radius);
+	vec3_mul_self(&v8, screen_radius);
+
+	for (i = 0; i < 360; i += 5) {
+		if ((i % 15) == 0)
+			sng_set_foreground(UI_COLOR(nav_gauge_needle));
+		else
+			sng_set_foreground(UI_COLOR(nav_ring));
+		angle = M_PI * i / 180.0;
+		quat_init_axis(&q1, 0, 0, 1, angle);
+		quat_rot_vec(&v3, &v1, &q1);
+		quat_rot_vec(&v4, &v2, &q1);
+
+		v3.v.x += o->x - ship_normal->v.x;
+		v3.v.y += o->y - ship_normal->v.y;
+		v3.v.z += o->z - ship_normal->v.z;
+		v4.v.x += o->x - ship_normal->v.x;
+		v4.v.y += o->y - ship_normal->v.y;
+		v4.v.z += o->z - ship_normal->v.z;
+
+		snis_draw_3d_line(w, gc, instrumentecx,
+				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
+
+		quat_init_axis(&q1, 1, 0, 0, angle);
+		quat_rot_vec(&v3, &v5, &q1);
+		quat_rot_vec(&v4, &v6, &q1);
+
+		v3.v.x += o->x - ship_normal->v.x;
+		v3.v.y += o->y - ship_normal->v.y;
+		v3.v.z += o->z - ship_normal->v.z;
+		v4.v.x += o->x - ship_normal->v.x;
+		v4.v.y += o->y - ship_normal->v.y;
+		v4.v.z += o->z - ship_normal->v.z;
+
+		snis_draw_3d_line(w, gc, instrumentecx,
+				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
+
+		quat_init_axis(&q1, 0, 1, 0, angle);
+		quat_rot_vec(&v3, &v7, &q1);
+		quat_rot_vec(&v4, &v8, &q1);
+
+		v3.v.x += o->x - ship_normal->v.x;
+		v3.v.y += o->y - ship_normal->v.y;
+		v3.v.z += o->z - ship_normal->v.z;
+		v4.v.x += o->x - ship_normal->v.x;
+		v4.v.y += o->y - ship_normal->v.y;
+		v4.v.z += o->z - ship_normal->v.z;
+
+		snis_draw_3d_line(w, gc, instrumentecx,
+				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
+	}
+}
+
 static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 {
 	static struct mesh *ring_mesh = 0;
@@ -10072,6 +10157,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	int in_nebula = 0;
 	int i;
 
+	draw_attitude_indicator_reticles(w, gc, o, &ship_normal, screen_radius);
 	for (i=0; i<4; ++i) {
 		e = add_entity(instrumentecx, radar_ring_mesh[i], o->x - ship_normal.v.x, o->y - ship_normal.v.y,
 			o->z - ship_normal.v.z, UI_COLOR(nav_ring));
