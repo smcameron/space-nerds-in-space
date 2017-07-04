@@ -9474,8 +9474,8 @@ static void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity
 
         set_renderer(tridentecx, WIREFRAME_RENDERER);
 	camera_set_parameters(tridentecx, dist_to_cam-1.0, dist_to_cam+1.0,
-				rr*ASPECT_RATIO, rr, fovy);
-	set_window_offset(tridentecx, rx-rr*ASPECT_RATIO/2.0, ry-rr/2.0);
+				2.0 * rr * ASPECT_RATIO, 2.0 * rr, fovy);
+	set_window_offset(tridentecx, rx - rr * ASPECT_RATIO, ry - rr);
 
 	/* figure out the camera positions */
 	union vec3 camera_up = { {0, 1, 0} };
@@ -10331,7 +10331,7 @@ static void show_navigation(GtkWidget *w)
 	quat_to_euler(&ypr, &o->orientation);	
 	sng_set_foreground(UI_COLOR(nav_text));
 	draw_nav_idiot_lights(w, gc, o);
-	draw_orientation_trident(w, gc, o, 75, 175, 150);
+	draw_orientation_trident(w, gc, o, 75, 175, 75);
 	switch (o->tsd.ship.nav_mode) {
 	case NAV_MODE_STARMAP:
 		draw_3d_nav_starmap(w, gc);
