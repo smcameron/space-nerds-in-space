@@ -9411,7 +9411,7 @@ static void init_nav_ui(void)
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", button_color,
 			NANO_FONT, reverse_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.reverse_button, UISND8);
-	nav_ui.trident_button = snis_button_init(10, 250, -1, -1, "ABSOLUTE", button_color,
+	nav_ui.trident_button = snis_button_init(10, 300, -1, -1, "ABSOLUTE", button_color,
 			NANO_FONT, trident_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.trident_button, UISND9);
 	nav_ui.computer_button = snis_button_init(txx(10), txy(570), -1, -1, "COMPUTER", UI_COLOR(nav_button),
@@ -9445,6 +9445,92 @@ static void init_nav_ui(void)
 	ui_hide_widget(nav_ui.computer_input);
 	instrumentecx = entity_context_new(5000, 1000);
 	tridentecx = entity_context_new(10, 0);
+}
+
+static float angular_rate_indicator_xy(double angle, float xyoffset, float rr, float max_angular_rate, float sign)
+{
+	const float max_rate_deg = max_angular_rate * 180 / M_PI;
+	const float angular_rate_deg = angle * 180.0 / M_PI;
+	return xyoffset + rr / max_rate_deg * sign * angular_rate_deg;
+}
+
+static float pitch_rate_indicator_y(double angle, float ry, float rr)
+{
+	return angular_rate_indicator_xy(angle, ry, rr, MAX_PITCH_VELOCITY, -1.0);
+}
+
+static float yaw_rate_indicator_x(double angle, float rx, float rr)
+{
+	return angular_rate_indicator_xy(angle, rx, rr, MAX_YAW_VELOCITY, -1.0);
+}
+
+static float roll_rate_indicator_x(double angle, float rx, float rr)
+{
+	return angular_rate_indicator_xy(angle, rx, rr, MAX_ROLL_VELOCITY, 1.0);
+}
+
+static void draw_pitch_rate_indicator(struct snis_entity *o, float rx, float ry, float rr)
+{
+	int i;
+	float iy;
+	char buffer[10];
+	static float last_iy = 0.0;
+
+	for (i = -5; i <= 5; i++) { /* Draw pitch indicator tick marks */
+		iy = pitch_rate_indicator_y(i * M_PI / 180.0, ry, rr);
+		snis_draw_line(rx + rr * 1.02, iy, rx + rr * 1.1, iy);
+	}
+
+	iy = pitch_rate_indicator_y(o->tsd.ship.pitch_velocity, ry, rr);
+	iy = (iy + last_iy) / 2.0; /* give the indicator some hysteresis */
+	last_iy = iy;
+	snis_draw_line(rx + rr * 1.1, iy, rx + rr * 1.3, iy - rr * 0.1);
+	snis_draw_line(rx + rr * 1.1, iy, rx + rr * 1.3, iy + rr * 0.1);
+	snis_draw_line(rx + rr * 1.3, iy - rr * 0.1, rx + rr * 1.3, iy + rr * 0.1);
+	snprintf(buffer, sizeof(buffer), "%3.1f", o->tsd.ship.pitch_velocity * 1800.0 / M_PI);
+	sng_abs_xy_draw_string(buffer, PICO_FONT, rx + rr * 1.4, iy);
+}
+
+static void draw_yaw_rate_indicator(struct snis_entity *o, float rx, float ry, float rr)
+{
+	int i;
+	float ix;
+	char buffer[10];
+	static float last_ix = 0.0;
+
+	for (i = -5; i <= 5; i++) { /* Draw Yaw indicator tick marks */
+		ix = yaw_rate_indicator_x(i * M_PI / 180.0, rx, rr);
+		snis_draw_line(ix, ry + rr * 1.02, ix, ry + rr * 1.1);
+	}
+	ix = yaw_rate_indicator_x(o->tsd.ship.yaw_velocity, rx, rr);
+	ix = (ix + last_ix) / 2.0; /* give the indicator some hysteresis */
+	last_ix = ix;
+	snis_draw_line(ix, ry + rr * 1.1, ix - rr * 0.1, ry + rr * 1.3);
+	snis_draw_line(ix, ry + rr * 1.1, ix + rr * 0.1, ry + rr * 1.3);
+	snis_draw_line(ix - rr * 0.1, ry + rr * 1.3, ix + rr * 0.1, ry + rr * 1.3);
+	snprintf(buffer, sizeof(buffer), "%3.1f", o->tsd.ship.yaw_velocity * 1800.0 / M_PI);
+	sng_abs_xy_draw_string(buffer, PICO_FONT, ix + rr * 0.4, ry + rr * 1.25);
+}
+
+static void draw_roll_rate_indicator(struct snis_entity *o, float rx, float ry, float rr)
+{
+	int i;
+	float ix;
+	char buffer[10];
+	static float last_ix = 0.0;
+
+	for (i = -5; i <= 5; i++) { /* Draw Roll indicator tick marks */
+		ix = roll_rate_indicator_x(i * M_PI / 180.0, rx, rr);
+		snis_draw_line(ix, ry - rr * 1.02, ix, ry - rr * 1.1);
+	}
+	ix = roll_rate_indicator_x(o->tsd.ship.roll_velocity, rx, rr);
+	ix = (ix + last_ix) / 2.0; /* give the indicator some hysteresis */
+	last_ix = ix;
+	snis_draw_line(ix, ry - rr * 1.1, ix - rr * 0.1, ry - rr * 1.3);
+	snis_draw_line(ix, ry - rr * 1.1, ix + rr * 0.1, ry - rr * 1.3);
+	snis_draw_line(ix - rr * 0.1, ry - rr * 1.3, ix + rr * 0.1, ry - rr * 1.3);
+	snprintf(buffer, sizeof(buffer), "%3.1f", o->tsd.ship.roll_velocity * 1800.0 / M_PI);
+	sng_abs_xy_draw_string(buffer, PICO_FONT, ix + rr * 0.4, ry - rr * 1.25);
 }
 
 static void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity *o, float rx, float ry, float rr)
@@ -9571,8 +9657,18 @@ static void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity
 	}
 
 	render_entities(tridentecx);
-
 	remove_all_entity(tridentecx);
+
+	/* FIXME: These indicators use the yaw/pitch/roll velocities transmitted from
+	 * the server which is straighforward, but these values are kind of jumpy and
+	 * seemingly (from player's point of view) imprecise. It would probably be a
+	 * lot smoother to sample the interpolated orientation quaternions instead.
+	 */
+	sng_set_foreground(UI_COLOR(nav_gauge_needle));
+	draw_pitch_rate_indicator(o, rx, ry, rr);
+	draw_yaw_rate_indicator(o, rx, ry, rr);
+	draw_roll_rate_indicator(o, rx, ry, rr);
+
 }
 
 #if 0
@@ -10331,7 +10427,7 @@ static void show_navigation(GtkWidget *w)
 	quat_to_euler(&ypr, &o->orientation);	
 	sng_set_foreground(UI_COLOR(nav_text));
 	draw_nav_idiot_lights(w, gc, o);
-	draw_orientation_trident(w, gc, o, 75, 175, 75);
+	draw_orientation_trident(w, gc, o, 75, 200, 75);
 	switch (o->tsd.ship.nav_mode) {
 	case NAV_MODE_STARMAP:
 		draw_3d_nav_starmap(w, gc);
