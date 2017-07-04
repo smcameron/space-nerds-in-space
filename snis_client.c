@@ -7760,6 +7760,14 @@ static void snis_draw_3d_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx
 	}
 }
 
+static void snis_draw_3d_string(struct entity_context *cx, char *string, int font, float x, float y, float z)
+{
+	float sx, sy;
+
+	transform_point(cx, x, y, z, &sx, &sy);
+	sng_abs_xy_draw_string(string, font, sx, sy);
+}
+
 static void draw_3d_mark_arc(GtkWidget *w, GdkGC *gc, struct entity_context *ecx,
 			const union vec3 *center, float r, float heading, float mark)
 {
@@ -9951,11 +9959,20 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 	float angle;
 	union quat q1;
 	union vec3 v1, v2, v3, v4, v5, v6, v7, v8;
+	char buffer[10];
+	int draw_numbers;
+	union vec3 ship_direction;
+	float dot;
 
-	v1.v.x = 1.0;
+	ship_direction.v.x = 1.0;
+	ship_direction.v.y = 0.0;
+	ship_direction.v.z = 0.0;
+	quat_rot_vec_self(&ship_direction, &o->orientation);
+
+	v1.v.x = -1.0;
 	v1.v.y = 0.0;
 	v1.v.z = 0.03;
-	v2.v.x = 1.0;
+	v2.v.x = -1.0;
 	v2.v.y = 0.0;
 	v2.v.z = -0.03;
 	vec3_mul_self(&v1, screen_radius);
@@ -9980,15 +9997,23 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 	vec3_mul_self(&v8, screen_radius);
 
 	for (i = 0; i < 360; i += 5) {
-		if ((i % 15) == 0)
+		if ((i % 15) == 0) {
 			sng_set_foreground(UI_COLOR(nav_gauge_needle));
-		else
+			if ((i % 90) == 0)
+				draw_numbers = 0;
+			else
+				draw_numbers = 1;
+		} else {
 			sng_set_foreground(UI_COLOR(nav_ring));
+			draw_numbers = 0;
+		}
 		angle = M_PI * i / 180.0;
 		quat_init_axis(&q1, 0, 0, 1, angle);
 		quat_rot_vec(&v3, &v1, &q1);
 		quat_rot_vec(&v4, &v2, &q1);
 
+		dot = vec3_dot(&v3, &ship_direction);
+
 		v3.v.x += o->x - ship_normal->v.x;
 		v3.v.y += o->y - ship_normal->v.y;
 		v3.v.z += o->z - ship_normal->v.z;
@@ -9996,13 +10021,26 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 		v4.v.y += o->y - ship_normal->v.y;
 		v4.v.z += o->z - ship_normal->v.z;
 
+		/* This is "mark" (or elevation) */
+		if (i >= 270)
+			sprintf(buffer, "%d", abs(i - 360));
+		else if (i >= 180)
+			sprintf(buffer, "%d", abs(i - 180));
+		else if (i >= 90)
+			sprintf(buffer, "%d", -abs(i - 180));
+		else
+			sprintf(buffer, "%d", -i);
 		snis_draw_3d_line(w, gc, instrumentecx,
 				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
+		if (draw_numbers && dot >= 0)
+			snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
 
 		quat_init_axis(&q1, 1, 0, 0, angle);
 		quat_rot_vec(&v3, &v5, &q1);
 		quat_rot_vec(&v4, &v6, &q1);
 
+		dot = vec3_dot(&v3, &ship_direction);
+
 		v3.v.x += o->x - ship_normal->v.x;
 		v3.v.y += o->y - ship_normal->v.y;
 		v3.v.z += o->z - ship_normal->v.z;
@@ -10012,11 +10050,16 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 
 		snis_draw_3d_line(w, gc, instrumentecx,
 				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
+		if (draw_numbers && dot > 0)
+			snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
 
+		/* This one, rotating about y axis, is the "heading" */
 		quat_init_axis(&q1, 0, 1, 0, angle);
 		quat_rot_vec(&v3, &v7, &q1);
 		quat_rot_vec(&v4, &v8, &q1);
 
+		dot = vec3_dot(&v3, &ship_direction);
+
 		v3.v.x += o->x - ship_normal->v.x;
 		v3.v.y += o->y - ship_normal->v.y;
 		v3.v.z += o->z - ship_normal->v.z;
@@ -10024,8 +10067,12 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 		v4.v.y += o->y - ship_normal->v.y;
 		v4.v.z += o->z - ship_normal->v.z;
 
+		sng_set_foreground(UI_COLOR(nav_heading_ring));
+		sprintf(buffer, "%d", (360 + 90 - i) % 360);
 		snis_draw_3d_line(w, gc, instrumentecx,
 				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
+		if (draw_numbers && dot >= 0)
+			snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
 	}
 }
 
