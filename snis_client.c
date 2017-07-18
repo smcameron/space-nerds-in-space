@@ -17125,6 +17125,7 @@ static struct option long_options[] = {
 	{ "version", no_argument, NULL, 'v' },
 	{ "weapons", no_argument, NULL, 'W' },
 	{ "solarsystem", required_argument, NULL, '*'},
+	{ 0, 0, 0, 0 },
 };
 
 static void process_options(int argc, char *argv[])

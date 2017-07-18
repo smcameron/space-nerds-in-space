@@ -1697,6 +1697,7 @@ static struct option long_options[] = {
 	{ "ship", no_argument, NULL, 's' },
 	{ "taunt", no_argument, NULL, 't' },
 	{ "warning", no_argument, NULL, 'w' },
+	{ 0, 0, 0, 0 },
 };
 
 static void usage(char *program)

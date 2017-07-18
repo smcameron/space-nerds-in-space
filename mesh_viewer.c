@@ -726,6 +726,7 @@ static struct option long_options[] = {
 	{ "thrust", required_argument, NULL, 't' },
 	{ "skybox", required_argument, NULL, 's' },
 	{ "turret", required_argument, NULL, 'T' },
+	{ 0, 0, 0, 0 },
 };
 
 static void process_options(int argc, char *argv[])

@@ -20832,6 +20832,7 @@ static struct option long_options[] = {
 	{ "multiverse", required_argument, NULL, 'm' },
 	{ "solarsystem", required_argument, NULL, 's' },
 	{ "version", no_argument, NULL, 'v' },
+	{ 0, 0, 0, 0 },
 };
 
 static char *default_lobbyhost = "localhost";
