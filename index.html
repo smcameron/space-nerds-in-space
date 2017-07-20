@@ -1172,7 +1172,37 @@ JOIN SHIP.
 creating a new ship vs. mistyping a ship name, and the difference between creating a new ship
 and joining an existing ship.  Not to suggest that there isn't room for improvement in how
 it works.
-<p>
+<li><b>I made a ship, but I forgot the password, what can I do?</b>
+<p>Or you made a ship, and you want to delete it. You cannot recover the
+password, or recover the ship. You can delete the ship and make a new one
+with the same name though.
+First, make sure the game is not running. Use snis_launcher and select the
+"Stop all SNIS processes" option on the system that is running <b>snis_multiverse</b>.
+Then, on the system that runs <b>snis_multiverse</b>, look for a directory called
+<b>snisdb</b>. Let's say you named your ship <b>enterprise</b>, and you want
+to delete it and create a new one with the same name.
+<blockquote>
+<pre>
+capnkirk@enterprise ~/github/space-nerds-in-space $ ls -l snisdb/*/*/*
+-rw-r--r-- 1 capnkirk capnkirk 5370 Jul 19 18:36 snisdb/2aa8/3672/2aa83672bace43178acab8e73b7391d1c316e80d.data
+-rw-r--r-- 1 capnkirk capnkirk 5241 Jul 19 18:36 snisdb/80f2/969e/80f2969eded0cb559081e3e3202c94fcb5917a41.data
+-rw-r--r-- 1 capnkirk capnkirk 5355 Jul 19 18:36 snisdb/82b2/4d25/82b24d25b042724aa94a39a9ea38e05cf0cf6340.data
+-rw-r--r-- 1 capnkirk capnkirk 5241 Jul 19 18:36 snisdb/d253/706d/d253706d8cecf7537337da834ea7d48894f0618f.data
+-rw-r--r-- 1 capnkirk capnkirk 5432 Jul 19 18:36 snisdb/e7d9/fa36/e7d9fa368467e5549e6846be3d8d11ebac751851.data
+-rw-r--r-- 1 capnkirk capnkirk 5427 Jul 19 18:36 snisdb/fc4c/c56a/fc4cc56a58319495465a36128e65d1dcf69b2c08.data
+capnkirk@enterprise ~/github/space-nerds-in-space $ grep enterprise snisdb/*/*/*
+<hili>snisdb/e7d9/fa36/e7d9fa368467e5549e6846be3d8d11ebac751851.data:sdata.name:enterprise</hili>
+</pre>
+</blockquote>
+From this we can see that the data for the "enterprise" ship (including the hashed password) is
+stored in <hili>snisdb/e7d9/fa36/e7d9fa368467e5549e6846be3d8d11ebac751851.data</hili>
+<p>Delete this file.
+<blockquote>
+<pre>
+capnkirk@enterprise ~/github/space-nerds-in-space $ rm snisdb/e7d9/fa36/e7d9fa368467e5549e6846be3d8d11ebac751851.data
+</pre>
+</blockquote>
+<p>Now you should be able to create a new ship with the name "enterprise" in the usual way.
 <li><b><a name="audioproblems">Sound isn't working!  (Or sound isn't working quite as I expected)</a></b>
 <p>Audio on linux is complicated. In general, there are two main takes on how
 audio should work in linux, "the pulse way", and "the JACK way". The "JACK way"
