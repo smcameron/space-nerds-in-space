@@ -14611,7 +14611,7 @@ static void connect_to_lobby_button_pressed()
 	displaymode = DISPLAYMODE_LOBBYSCREEN;
 	lobbyhost = net_setup_ui.lobbyname;
 	shipname = net_setup_ui.shipname;
-	password = net_setup_ui.shipname;
+	password = net_setup_ui.password;
 	role = 0;
 	role |= (ROLE_MAIN * !!net_setup_ui.role_main_v);
 	role |= (ROLE_WEAPONS * !!net_setup_ui.role_weap_v);
@@ -14814,6 +14814,7 @@ static void show_network_setup(GtkWidget *w)
 	sng_abs_xy_draw_string("SOLARSYSTEM NAME", TINY_FONT, txx(25), txy(280));
 	sng_abs_xy_draw_string("SHIP NAME", TINY_FONT, txx(20), txy(470));
 	sng_abs_xy_draw_string("PASSWORD", TINY_FONT, txx(20), txy(520));
+	sng_abs_xy_draw_string("NOTE: THE \"PASSWORD\" IS NOT CRYPTOGRAPHICALLY SECURE", NANO_FONT, txx(20), txy(540));
 
 	sanitize_string(net_setup_ui.solarsystem);
 	sanitize_string(net_setup_ui.lobbyname);
