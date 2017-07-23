@@ -139,3 +139,8 @@ NICE TO HAVE:
 * Make art assets live on server and be transmitted to clients on demand.
 
 * Flesh out warp core ejection mechanic
+
+* Make computer better at understanding waypoints.
+  It now understands "set a course for waypoint X", but doesn't understand
+  "set a course for the nearest waypoint", or "set a course for the selected
+  waypoint", or "how far to waypoint blah"

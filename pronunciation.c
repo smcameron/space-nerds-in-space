@@ -19,6 +19,10 @@ static struct fixup_list_entry {
 	{ "^[Ww][Gg]-0", "warp gate ", NULL },
 	{ " [Ww][Gg]-", " warp gate ", NULL },
 	{ "^[Ww][Gg]-", "warp gate ", NULL },
+	{ " [Ww][Pp]-0", " waypoint ", NULL },
+	{ "^[Ww][Pp]-0", "waypoint ", NULL },
+	{ " [Ww][Pp]-", " waypoint ", NULL },
+	{ "^[Ww][Pp]-", "waypoint ", NULL },
 };
 
 #define TMP_PRONOUNCE_BUFFER_SIZE 4096

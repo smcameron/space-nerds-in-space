@@ -18907,15 +18907,14 @@ no_understand2:
 	return;
 }
 
-/* Assumes universe lock is held, will unlock */
-static void nl_set_ship_course_to_dest_helper(struct game_client *c,
+/* Assumes universe lock held, will unlock */
+static void nl_set_ship_course_to_direction_helper(struct game_client *c,
 	struct snis_entity *ship,
-	struct snis_entity *dest,
-	char *name)
+	union vec3 direction,
+	char *destination_name)
 {
-	union vec3 direction, right;
+	union vec3 right;
 	union quat new_orientation;
-	char *modifier;
 	char reply[100];
 
 	/* Calculate new desired orientation of ship pointing towards destination */
@@ -18923,16 +18922,51 @@ static void nl_set_ship_course_to_dest_helper(struct game_client *c,
 	right.v.y = 0.0;
 	right.v.z = 0.0;
 
-	direction.v.x = dest->x - ship->x;
-	direction.v.y = dest->y - ship->y;
-	direction.v.z = dest->z - ship->z;
 	vec3_normalize_self(&direction);
-
 	quat_from_u2v(&new_orientation, &right, &direction, NULL);
 
 	ship->tsd.ship.computer_desired_orientation = new_orientation;
 	ship->tsd.ship.computer_steering_time_left = COMPUTER_STEERING_TIME;
 	ship->tsd.ship.orbiting_object_id = 0xffffffff;
+	pthread_mutex_unlock(&universe_mutex);
+
+	sprintf(reply, "Setting course for %s.", destination_name);
+	queue_add_text_to_speech(c, reply);
+	return;
+}
+
+/* Assumes universe lock held, will unlock */
+static void nl_set_ship_course_to_waypoint_helper(struct game_client *c,
+	struct snis_entity *ship,
+	int waypoint_number,
+	char *destination_name)
+{
+	union vec3 direction;
+	char waypoint_name[20];
+
+	struct player_waypoint *wp = &bridgelist[c->bridge].waypoint[waypoint_number];
+	direction.v.x = wp->x - ship->x;
+	direction.v.y = wp->y - ship->y;
+	direction.v.z = wp->z - ship->z;
+
+	snprintf(waypoint_name, sizeof(waypoint_name), "waypoint %d", waypoint_number);
+	nl_set_ship_course_to_direction_helper(c, ship, direction, waypoint_name); /* will unlock */;
+	return;
+}
+
+/* Assumes universe lock is held, will unlock */
+static void nl_set_ship_course_to_dest_helper(struct game_client *c,
+	struct snis_entity *ship,
+	struct snis_entity *dest,
+	char *name)
+{
+	union vec3 direction;
+	char *modifier;
+	char dest_name[100];
+
+	direction.v.x = dest->x - ship->x;
+	direction.v.y = dest->y - ship->y;
+	direction.v.z = dest->z - ship->z;
 
 	if (dest->type == OBJTYPE_PLANET)
 		modifier = "the planet ";
@@ -18943,9 +18977,8 @@ static void nl_set_ship_course_to_dest_helper(struct game_client *c,
 	else
 		modifier = "";
 
-	pthread_mutex_unlock(&universe_mutex);
-	sprintf(reply, "Setting course for %s%s.", modifier, name);
-	queue_add_text_to_speech(c, reply);
+	sprintf(dest_name, "%s%s", modifier, name);
+	nl_set_ship_course_to_direction_helper(c, ship, direction, dest_name);
 	return;
 }
 
@@ -18954,7 +18987,7 @@ static void nl_navigate_pnq(void *context, int argc, char *argv[], int pos[],
 	union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
-	int i, prep, noun;
+	int wp, i, prep, noun;
 	char *name, *namecopy;
 	char buffer[20];
 	struct snis_entity *dest;
@@ -18979,6 +19012,22 @@ static void nl_navigate_pnq(void *context, int argc, char *argv[], int pos[],
 	} else if (strcasecmp(argv[noun], "gate") == 0) {
 		sprintf(buffer, "WG-%02.0f", value);
 		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
+	} else if (strcasecmp(argv[noun], "waypoint") == 0) {
+		sprintf(buffer, "WP-%02.0f", value);
+		wp = (int) value;
+		if (wp < 0 || wp >= bridgelist[c->bridge].nwaypoints) {
+			queue_add_text_to_speech(c, "No such waypoint recorded.");
+			return;
+		}
+		pthread_mutex_lock(&universe_mutex);
+		i = lookup_by_id(c->shipid);
+		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			queue_add_text_to_speech(c, "Sorry, I am not quite sure where we are.");
+			return;
+		}
+		nl_set_ship_course_to_waypoint_helper(c, &go[i], wp, buffer); /* will unlock */
+		return;
 	}
 	if (i < 0) {
 		goto no_understand;
@@ -19066,7 +19115,7 @@ static void nl_set_npnq(void *context, int argc, char *argv[], int pos[],
 	struct game_client *c = context;
 	int setthing, prep, settowhat;
 	char *name, *namecopy;
-	int i = -1;
+	int wp, i = -1;
 	struct snis_entity *dest;
 	int number;
 	float value;
@@ -19092,6 +19141,22 @@ static void nl_set_npnq(void *context, int argc, char *argv[], int pos[],
 	} else if (strcasecmp(argv[settowhat], "gate") == 0) {
 		sprintf(buffer, "WG-%02.0f", value);
 		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
+	} else if (strcasecmp(argv[settowhat], "waypoint") == 0) {
+		sprintf(buffer, "WP-%02.0f", value);
+		wp = (int) value;
+		if (wp < 0 || wp >= bridgelist[c->bridge].nwaypoints) {
+			queue_add_text_to_speech(c, "No such waypoint recorded.");
+			return;
+		}
+		pthread_mutex_lock(&universe_mutex);
+		i = lookup_by_id(c->shipid);
+		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			queue_add_text_to_speech(c, "Sorry, I am not quite sure where we are.");
+			return;
+		}
+		nl_set_ship_course_to_waypoint_helper(c, &go[i], wp, buffer); /* will unlock */
+		return;
 	}
 	if (i < 0)
 		goto no_understand;
@@ -20462,11 +20527,11 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("head",		"navigate",	"pn", nl_navigate_pn);
 	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pnq", nl_navigate_pnq);
 	snis_nl_add_dictionary_verb("head",		"navigate",	"pnq", nl_navigate_pnq);
-	snis_nl_add_dictionary_verb("set",		"set",		"npq", nl_set_npq);
+	snis_nl_add_dictionary_verb("set",		"set",		"npq", nl_set_npq); /* set warp drive to 50 percent */
 	snis_nl_add_dictionary_verb("set",		"set",		"npa", sorry_dave);
 	snis_nl_add_dictionary_verb("set",		"set",		"npn", nl_set_npn);
-	snis_nl_add_dictionary_verb("set",		"set",		"npan", nl_set_npn);
-	snis_nl_add_dictionary_verb("set",		"set",		"npnq", nl_set_npnq);
+	snis_nl_add_dictionary_verb("set",		"set",		"npan", nl_set_npn); /* set a course for the nearest planet */
+	snis_nl_add_dictionary_verb("set",		"set",		"npnq", nl_set_npnq); /* set a course for starbase one */
 	snis_nl_add_dictionary_verb("plot",		"plot",		"npn", nl_set_npn);
 	snis_nl_add_dictionary_verb("plot",		"plot",		"npan", nl_set_npn);
 	snis_nl_add_dictionary_verb("plot",		"plot",		"npnq", nl_set_npnq);
@@ -20666,6 +20731,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("target",		"selection",	POS_NOUN);
 	snis_nl_add_dictionary_word("selection",	"selection",	POS_NOUN);
 	snis_nl_add_dictionary_word("swallow",		"swallow",	POS_NOUN);
+	snis_nl_add_dictionary_word("waypoint",		"waypoint",	POS_NOUN);
 
 
 	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);

@@ -189,6 +189,8 @@ lay in a course for the nearest planet
 lay in a course for the nearest star base
 lay in a course for the nearest warp gate
 lay in a course for the nearest worm hole
+lay in a course for the nearest waypoint
+lay in a course for waypoint
 leave standard orbit
 leave orbit
 left
@@ -262,6 +264,8 @@ plot a course for the nearest planet
 plot a course for the nearest star base
 plot a course for the nearest warp gate
 plot a course for the nearest worm hole
+plot a course for the nearest waypoint
+plot a course for waypoint
 port
 power
 power to eighty
@@ -351,7 +355,10 @@ set a course for the nearest nebula
 set a course for the nearest planet
 set a course for the nearest star base
 set a course for the nearest warp gate
+set a course for the nearest waypoint
 set a course for the nearest worm hole
+set a course for the selected waypoint
+set a course for waypoint
 set comms coolant to
 set comms power to
 set communications coolant to
@@ -460,6 +467,7 @@ up
 view
 warp
 wavelength
+waypoint
 weapons
 weapon screen
 weapons on screen
