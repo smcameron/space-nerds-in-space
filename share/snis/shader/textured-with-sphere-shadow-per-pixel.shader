@@ -27,6 +27,7 @@ varying vec3 v_Position;
 varying vec3 v_LightDir;
 varying float v_darkside_shading;
 varying vec3 v_Normal;
+varying float v_sameside;
 
 #if defined(INCLUDE_VS)
 	uniform mat4 u_MVMatrix;  // A constant representing the combined model/view matrix.
@@ -57,10 +58,10 @@ varying vec3 v_Normal;
 		float lightdot = dot(v_LightDir, v_Normal);
 		float eyedot = dot(-v_Position, v_Normal);
 
-		float sameside = lightdot * eyedot;	// > 0 means same side, < 0 means opposite
-		sameside = sameside / abs(sameside);	// Scale to either +1.0 or to -1.0
-		sameside = (sameside + 1.0) / 2.0;	// transform -1.0 -> 0.0, and +1.0 -> +1.0
-		v_darkside_shading = sameside * 1.0 + (1.0 - sameside) * 0.2; // either 1.0 or 0.2
+		v_sameside = lightdot * eyedot;	// > 0 means same side, < 0 means opposite
+		v_sameside = v_sameside / abs(v_sameside);	// Scale to either +1.0 or to -1.0
+		v_sameside = (v_sameside + 1.0) / 2.0;	// transform -1.0 -> 0.0, and +1.0 -> +1.0
+		v_darkside_shading = v_sameside * 1.0 + (1.0 - v_sameside) * 0.2; // either 1.0 or 0.2
 
 		v_TintColor = u_TintColor;
 		v_TexCoord = a_TexCoord;
@@ -99,9 +100,14 @@ varying vec3 v_Normal;
 	{
 		vec4 shadow_tint = vec4(1.0);
 		vec2 txcoord;
+		vec3 spec_color = vec3(0.4);
+		const float shininess = 14.0;
+		float not_in_shadow = 1.0;
 
-		if (sphere_ray_intersect(u_Sphere, v_Position, normalize(v_LightDir)))
+		if (sphere_ray_intersect(u_Sphere, v_Position, normalize(v_LightDir))) {
 			shadow_tint = vec4(0.25,0.1,0.1,1.0);
+			not_in_shadow = 0.0;
+		}
 
 		/*
 		 * 1.0 is MIN_RING_RADIUS, * see: ../../../material.h
@@ -109,8 +115,18 @@ varying vec3 v_Normal;
 		txcoord = v_TexCoord;
 		txcoord.x = max(0.0f, (u_ring_outer_radius * v_TexCoord.x - u_ring_inner_radius + 1.0) /
 						(u_ring_outer_radius - u_ring_inner_radius));
+
+                // blinn phong half vector specular
+                vec3 view_dir = normalize(-v_Position);
+                vec3 half_dir = normalize(v_LightDir + view_dir);
+                float n_dot_h = max(0, dot(v_Normal, half_dir));
+                float n_dot_h2 = max(0, dot(-v_Normal, half_dir)); /* Consider both sides */
+                n_dot_h = max(n_dot_h, n_dot_h2);
+                float spec = pow(n_dot_h, shininess);
+
 		gl_FragColor = shadow_tint * texture2D(u_AlbedoTex, txcoord);
 		gl_FragColor.rgb *= v_darkside_shading + (0.5 * (1.0 - v_darkside_shading) * 0.5 * abs(gl_FragColor.a - 0.5));
+		gl_FragColor.rgb += not_in_shadow * v_sameside * spec * spec_color * gl_FragColor.a;
 
 		/* tint with alpha pre multiply */
 		gl_FragColor.rgb *= v_TintColor.rgb;
