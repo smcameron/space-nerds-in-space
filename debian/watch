@@ -1,0 +1,3 @@
+version=3
+opts=filenamemangle=s/.+\/v?(\d\S+)\.tar\.gz/space-nerds-in-space-$1\.tar\.gz/ \
+  https://github.com/smcameron/space-nerds-in-space/tags .*/v?(\d\S+)\.tar\.gz
