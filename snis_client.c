@@ -13889,7 +13889,7 @@ static void init_demon_ui()
 	ui_add_button(demon_ui.demon_move_button, DISPLAYMODE_DEMON,
 			"MOVE SELECTED ITEMS TO YOUR CURRENT LOCATION");
 	ui_add_button(demon_ui.demon_scale_button, DISPLAYMODE_DEMON,
-			"TOGGLE BETWEEN NORMAL AND EXAGERATED SCALES");
+			"TOGGLE BETWEEN NORMAL AND EXAGGERATED SCALES");
 	ui_add_button(demon_ui.demon_netstats_button, DISPLAYMODE_DEMON,
 			"DISPLAY GRAPHS OF NETWORK STATISTICS");
 	ui_hide_widget(demon_ui.demon_move_button);
@@ -15043,7 +15043,7 @@ static char *help_text[] = {
 	"  USE ARROW KEYS TO CONTROL \"CAPTAINED\" SHIPS\n"
 	"  USE PHASER AND TORPEDO BUTTONS WHILE\n"
 	"  \"CAPTAINING SHIPS.\n"
-	"* USE \"HELP\" COMAND IN TEXT BOX FOR MORE INFO\n"
+	"* USE \"HELP\" COMMAND IN TEXT BOX FOR MORE INFO\n"
 	"\nPRESS ESC TO EXIT HELP\n",
 
 	/* 7 - Damage control help text */
