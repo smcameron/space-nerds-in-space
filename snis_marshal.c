@@ -19,6 +19,7 @@
 #include "stacktrace.h"
 
 #define MAX_FRACTIONAL 0x7FFFFFFFFFFFFFFFLL /* 2^63 - 1 */
+#define RADIANS_SCALE (31415927)
 
 static void pack_double(double value, struct packed_double *pd)
 {
@@ -618,7 +619,7 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 			break;
 		case 'R':
 			d = va_arg(ap, double);
-			sscale = INT32_MAX / 100; 
+			sscale = INT32_MAX / RADIANS_SCALE;
 			if (d < -2.0 * M_PI || d > 2.0 * M_PI) {
 				printf("out of range angle %d\n", (int) (d * 180.0 / M_PI));
 				stacktrace("out of range angle in packed_buffer_append_va");
@@ -779,7 +780,7 @@ int packed_buffer_extract_va(struct packed_buffer *pb, const char *format, va_li
 			break;
 		case 'R':
 			d = va_arg(ap, double *);
-			sscale = INT32_MAX / 100; 
+			sscale = INT32_MAX / RADIANS_SCALE;
 			*d = packed_buffer_extract_ds32(pb, sscale);
 			break;
 		case 'U':
@@ -870,6 +871,44 @@ int main(int argc, char *argv[])
 			printf("FAIL!!!\n");
 			return -1;
 		}
+	}
+
+	double angle, outangle;
+	int32_t min_diff, max_diff, diff;
+	max_diff = -100000;
+	min_diff = 100000;
+	uint32_t last_value = 0x7fffffff;
+	double angle_increment = M_PI / 18000000.0;
+	double error, max_error = 0;
+	struct packed_buffer *pb;
+	for (angle = -2.0 * M_PI; angle < 2.0 * M_PI; angle = angle + angle_increment) {
+		uint32_t value;
+		uint32_t scale = INT32_MAX / RADIANS_SCALE;
+		value = (uint32_t) dtos32(angle, scale);
+		if (last_value != 0x7fffffff) {
+			diff = value - last_value;
+			if (diff < 0)
+				diff = -diff;
+			if (diff > max_diff)
+				max_diff = diff;
+			if (diff < min_diff)
+				min_diff = diff;
+		}
+		last_value = value;
+		/* printf("%lf --> %u\n", angle * 180.0 / M_PI, value);  */
+		pb = packed_buffer_new("R", angle);
+		pb->buffer_cursor = 0;
+		packed_buffer_extract(pb, "R", &outangle);
+		packed_buffer_free(pb);
+		error = fabs(outangle - angle);
+		if (error > max_error)
+			max_error = error;
+	}
+	printf("For radians conversions, max_diff = %d / %g deg, min_diff = %d / %g deg\n",
+		max_diff, angle_increment * 180.0 / M_PI, min_diff, angle_increment * 180.0 / M_PI);
+	printf("Max radians error = %g\n", max_error);
+	if (max_diff > 6 || min_diff < 5) { /* these limits determined empirically */
+		printf("Something's wrong with the radians conversions.\n");
 	}
 	return 0;
 }
