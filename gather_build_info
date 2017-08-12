@@ -39,11 +39,11 @@ else
 	diffsummary="+ $diffcount"
 fi
 
-today=$(date '+%Y-%m-%d %H:%M:%S')
-if [ "$?" != "0" ]
-then
-	today="unknown"
-fi
+# today=$(date '+%Y-%m-%d %H:%M:%S')
+# if [ "$?" != "0" ]
+# then
+#	today="unknown"
+# fi
 
 endianness=$(./check-endianness)
 if [ "$?" != "0" ]
@@ -51,13 +51,15 @@ then
 	endianness="unknown-wordsize unknown-endianness"
 fi
 
+protocol_version=$(awk '/SNIS_PROTOCOL_VERSION/ { print $3; }' < snis.h | sed -e 's/"//g')
+
 cat << EOF
 #ifndef __BUILD_INFO
 #define __BUILD_INFO
 
 /* This file is machine generated */
 #define BUILD_INFO_STRING1 "v. " SNIS_VERSION " - $endianness $machine $os"
-#define BUILD_INFO_STRING2 "$today $git_hash $diffsummary"
+#define BUILD_INFO_STRING2 "$protocol_version $git_hash $diffsummary"
 
 #endif
 EOF
