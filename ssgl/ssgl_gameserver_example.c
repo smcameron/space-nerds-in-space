@@ -63,6 +63,7 @@ int main(int argc, char *argv[])
 	COPYINARG(game_type, 3);
 	COPYINARG(game_instance, 4);
 	COPYINARG(location, 5);
+	strcpy(gameserver.protocol_version, "SNIS001");
 
 	/* create a thread to contact and update the lobby server... */
 	(void) ssgl_register_gameserver(argv[1], &gameserver, &lobby_thread, &nconnections);

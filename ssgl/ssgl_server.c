@@ -148,6 +148,7 @@ static int sanitize_game_server_entry(struct ssgl_game_server *gs)
 	fill_trailing_zeroes(gs->game_type, sizeof(gs->game_type));
 	fill_trailing_zeroes(gs->game_instance, sizeof(gs->game_instance));
 	fill_trailing_zeroes(gs->server_nickname, sizeof(gs->server_nickname));
+	fill_trailing_zeroes(gs->protocol_version, sizeof(gs->protocol_version));
 	fill_trailing_zeroes(gs->location, sizeof(gs->location));
 	
 	return 0;	
@@ -226,6 +227,7 @@ static void service_game_server(int connection)
 			memcmp(ogs->game_type, gs.game_type, sizeof(gs.game_type)) == 0 &&
 			memcmp(ogs->game_instance, gs.game_instance, sizeof(gs.game_instance)) == 0 &&
 			memcmp(ogs->server_nickname, gs.server_nickname, sizeof(gs.server_nickname)) == 0 &&
+			memcmp(ogs->protocol_version, gs.protocol_version, sizeof(gs.protocol_version)) == 0 &&
 			memcmp(ogs->location, gs.location, sizeof(gs.location)) == 0) {
 			ogs->nconnections = gs.nconnections;
 			update_expiration(i);

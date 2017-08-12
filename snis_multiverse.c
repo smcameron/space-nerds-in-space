@@ -1084,6 +1084,7 @@ int main(int argc, char *argv[])
 	gameserver.port = htons(listener_port);
 #define COPYINARG(field, arg) strncpy(gameserver.field, argv[arg], sizeof(gameserver.field) - 1)
 	COPYINARG(server_nickname, 2);
+	strcpy(gameserver.protocol_version, SNIS_PROTOCOL_VERSION);
 	strcpy(gameserver.game_type, "SNIS-MVERSE");
 	strcpy(gameserver.game_instance, "-");
 	COPYINARG(location, 3);

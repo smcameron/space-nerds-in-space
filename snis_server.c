@@ -17454,6 +17454,7 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 	snis_log(SNIS_INFO, "gs.port = %hu\n", gs.port);
 		
 	strncpy(gs.server_nickname, servernick, 14);
+	strncpy(gs.protocol_version, SNIS_PROTOCOL_VERSION, sizeof(gs.protocol_version));
 	strncpy(gs.game_instance, gameinstance, 19);
 	strncpy(gs.location, location, 19);
 	strcpy(gs.game_type, "SNIS");

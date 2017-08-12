@@ -3637,7 +3637,7 @@ static void show_common_screen(GtkWidget *w, char *title);
 static void show_lobbyscreen(GtkWidget *w)
 {
 	char msg[100];
-	int i;
+	int i, protocol_mismatch;
 #define STARTLINE 100
 #define LINEHEIGHT 30
 
@@ -3693,6 +3693,8 @@ static void show_lobbyscreen(GtkWidget *w)
 #endif
 		sng_center_xy_draw_string("SPACE NERDS IN SPACE LOBBY", TINY_FONT, txx(400), LINEHEIGHT);
 		sng_center_xy_draw_string("SELECT A SERVER", NANO_FONT, txx(400), LINEHEIGHT * 2);
+		sprintf(msg, "CLIENT PROTOCOL VERSION IS %s", SNIS_PROTOCOL_VERSION);
+		sng_center_xy_draw_string(msg, NANO_FONT, txx(400), LINEHEIGHT * 3);
 
 		/* Draw column headings */
 		i = -1;
@@ -3701,6 +3703,8 @@ static void show_lobbyscreen(GtkWidget *w)
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 		sprintf(msg, "GAME INSTANCE");
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
+		sprintf(msg, "PROTOCOL");
+		sng_abs_xy_draw_string(msg, NANO_FONT, txx(350), txy(100) + i * LINEHEIGHT);
 		sprintf(msg, "LOCATION");
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(450), txy(100) + i * LINEHEIGHT);
 		sprintf(msg, "CONNECTIONS");
@@ -3732,6 +3736,15 @@ static void show_lobbyscreen(GtkWidget *w)
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].game_instance);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
+			protocol_mismatch = strncmp(lobby_game_server[i].protocol_version, SNIS_PROTOCOL_VERSION,
+							sizeof(lobby_game_server[i].protocol_version)) != 0;
+			if (timer & 0x04 || !protocol_mismatch) {
+				if (protocol_mismatch)
+					sng_set_foreground(ORANGERED);
+				sprintf(msg, "%s", lobby_game_server[i].protocol_version);
+				sng_abs_xy_draw_string(msg, NANO_FONT, txx(350), txy(100) + i * LINEHEIGHT);
+			}
+			sng_set_foreground(UI_COLOR(lobby_connecting));
 			sprintf(msg, "%s", lobby_game_server[i].location);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(450), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%d", lobby_game_server[i].nconnections);

@@ -97,19 +97,20 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "ssgl_recv_game_servers failed: %s\n", strerror(errno));
 			break;
 		}
-		printf("%20s %15s %20s %15s %20s\n",
-			"IP addr/port", "Game Type", "Instance/Map", "Server Nickname", "Location");
-		printf("-----------------------------------------------------------------------------------------------\n");
+		printf("%20s %15s %20s %15s %20s %10s\n",
+			"IP addr/port", "Game Type", "Instance/Map", "Server Nickname", "Location", "Protocol");
+		printf("---------------------------------------------------------------------------------------------------------\n");
 		for (i = 0; i < game_server_count; i++) {
 			unsigned char *x = (unsigned char *) &game_server[i].ipaddr;
 			char ipaddr_and_port[100];
 			sprintf(ipaddr_and_port, "%d.%d.%d.%d/%d", x[0], x[1], x[2], x[3],
 					ntohs(game_server[i].port));
-			printf("%20s %15s %20s %15s %20s\n", ipaddr_and_port,
+			printf("%20s %15s %20s %15s %20s %10s\n", ipaddr_and_port,
 				game_server[i].game_type,
 				game_server[i].game_instance,
 				game_server[i].server_nickname,
-				game_server[i].location);
+				game_server[i].location,
+				game_server[i].protocol_version);
 				
 		}
 		printf("\n");	

@@ -41,6 +41,7 @@ struct ssgl_game_server {
 	char game_type[15];		/* What kind of game is this? */
 	char game_instance[20];		/* which instance on the server of the game */
 	char server_nickname[15];	/* server nickname where game is hosted */
+	char protocol_version[9];
 	char location[20];
 	uint32_t nconnections;
 };
