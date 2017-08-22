@@ -21,8 +21,15 @@
 
 /*
  * Link this in to make all calls to setlocale do setlocale(LC_ALL, "C");
- * regardless of what parameters are passed.
- *
+ * regardless of what parameters are passed. We do this so that the scanf()
+ * family behaves sanely.  Otherwise we would have to ship localized
+ * variants of our own data files (e.g. wavefront obj files for 3d models)
+ * to use commas (',') in floating point numbers rather than the
+ * usual periods ('.') to represent the decimal point for some locales,
+ * and write some conversion utility to modify the output of e.g. blender
+ * to "fix" the files for these locales, which would be completely insane.
+ * Instead, we suppress this locale insanity by forcing the locale to
+ * always be 'C'.
  */
 #define _GNU_SOURCE
 
@@ -43,26 +50,40 @@ char *setlocale(__attribute__((unused)) int category,
 
 	/* printf("setlocale intercepted, using locale of 'C'\n"); */
 	if (!real_setlocale) {
-		/* Any use of dlsym to extract a function pointer rather than a
-		 * data pointer is going to be on thin ice (it is actually forbidden by
-		 * the standard, since it is not guaranteed that a function pointer will
-		 * fit into a void * (think about DOS's NEAR and FAR pointers -- or maybe
-		 * on a modern arch, you might have 32 bit data ptrs and 48 bit code ptrs.)
-		 * Plugin libraries typically get around this by using dlsym to extract a
-		 * pointer to an array of function or similar.  We don't have that luxury
-		 * since we're trying to get the ptr to libc's "setlocale" function, and
-		 * our only way to get it is via the void * that dlsym returns.
+
+		/* To explain the cast of the lvalue "real_setlocale" used to store
+		 * the (void *) return value of dlsym() below, here is a quote from the
+		 * dlopen(3) man page:
 		 *
-		 * What we're doing here is probably pretty thin ice anyhow, but
-		 * what sscanf does with floats and the locale is arguably idiotic,
-		 * and this makes things work consistently.
+		 *	cosine = (double (*)(double)) dlsym(handle, "cos");
 		 *
-		 * We can suppress the warnings from GCC with some pragmas though.
+		 * [...]
+		 *
+		 *	According to the ISO C standard, casting between function
+		 *	pointers and 'void *', as done above, produces undefined results.
+		 *	POSIX.1-2003 and POSIX.1-2008 accepted this state of affairs and
+		 *	proposed the following workaround:
+		 *
+		 *	*(void **) (&cosine) = dlsym(handle, "cos");
+		 *
+		 *	This (clumsy) cast conforms with the ISO C standard and will
+		 *	avoid any compiler warnings.
+		 *
+		 *	The 2013 Technical Corrigendum to POSIX.1-2008 (a.k.a.
+		 *	POSIX.1-2013) improved matters by requiring that conforming
+		 *	implementations support casting 'void *' to a function pointer.
+		 *	Nevertheless, some compilers (e.g., gcc with the '-pedantic'
+		 *	option) may complain about the cast used in this program.
+		 *
+		 * Previously, I had used the following to avoid GCC diagnostic warnings:
+		 *
+		 *	#pragma GCC diagnostic push
+		 *	#pragma GCC diagnostic ignored "-Wpedantic"
+		 *	real_setlocale = (setlocale_prototype) dlsym(RTLD_NEXT, "setlocale");
+		 *	#pragma GCC diagnostic ignored "-Wpedantic"
+		 *
 		 */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-		real_setlocale = (setlocale_prototype) dlsym(RTLD_NEXT, "setlocale");
-#pragma GCC diagnostic pop
+		*(void **) &real_setlocale = dlsym(RTLD_NEXT, "setlocale");
 		msg = dlerror();
 		if (msg) {
 			fprintf(stderr, "Failed to override setlocale(): %s\n", msg);
