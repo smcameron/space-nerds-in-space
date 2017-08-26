@@ -471,8 +471,8 @@ static struct my_vect_obj placeholder_part_spun[128];
 
 static struct snis_entity *curr_science_guy = NULL;
 static struct snis_entity *prev_science_guy = NULL;
-uint32_t curr_science_waypoint = (uint32_t) -1;
-uint32_t prev_science_waypoint = (uint32_t) -1;
+static uint32_t curr_science_waypoint = (uint32_t) -1;
+static uint32_t prev_science_waypoint = (uint32_t) -1;
 
 static void to_snis_heading_mark(const union quat *q, double *heading, double *mark)
 {
