@@ -11952,8 +11952,49 @@ static void update_emf_detector(uint8_t emf_value)
 	snis_strip_chart_update(comms_ui.emf_strip_chart, emf_value);
 }
 
+static void science_mouse_rotate(int x, int y)
+{
+	double dist_from_center, dx, dy, yaw, pitch;
+	int8_t yawval, pitchval;
+	int i, yawcount, pitchcount;
+
+	if (sci_ui.details_mode != SCI_DETAILS_MODE_THREED)
+		return;
+	dx = x - SCIENCE_SCOPE_CX;
+	dy = y - SCIENCE_SCOPE_CY;
+	dist_from_center = sqrt(dx * dx + dy * dy);
+	if (dist_from_center > SCIENCE_SCOPE_R)
+		return;
+	yaw = -dx;
+	pitch = -dy;
+	yawcount = (abs(dx));
+	pitchcount = (abs(dy));
+	if (yawcount > 0 && pitchcount / yawcount > 3)
+		yawcount = 0;
+	else if (pitchcount > 0 && yawcount / pitchcount > 3)
+		pitchcount = 0;
+	if (yawcount > 2)
+		yawcount = 2;
+	if (pitchcount > 2)
+		pitchcount = 2;
+	if (yaw > 0)
+		yawval = YAW_LEFT;
+	if (yaw <= 0)
+		yawval = YAW_RIGHT;
+	if (pitch > 0)
+		pitchval = PITCH_FORWARD;
+	if (pitch <= 0)
+		pitchval = PITCH_BACK;
+	for (i = 0; i < yawcount; i++)
+		queue_to_server(snis_opcode_pkt("bb",
+			OPCODE_REQUEST_SCIBALL_YAW, yawval));
+	for (i = 0; i < pitchcount; i++)
+		queue_to_server(snis_opcode_pkt("bb",
+			OPCODE_REQUEST_SCIBALL_PITCH, pitchval));
+}
+
 #define SCIDIST2 100
-static int science_button_press(int x, int y)
+static void science_button_release(int button, int x, int y)
 {
 	int i;
 	int xdist, ydist, dist2, mindist;
@@ -11962,6 +12003,11 @@ static int science_button_press(int x, int y)
 
 	x = sng_pixelx_to_screenx(x);
 	y = sng_pixely_to_screeny(y);
+	if (button == 3) {
+		science_mouse_rotate(x, y);
+		return;
+	}
+
 	selected = NULL;
 	mindist = -1;
 	pthread_mutex_lock(&universe_mutex);
@@ -11999,7 +12045,7 @@ static int science_button_press(int x, int y)
 					(uint32_t) -1); /* deselect */
 	}
 	pthread_mutex_unlock(&universe_mutex);
-	return 0;
+	return;
 }
 
 #define SCIENCE_DATA_X (SCIENCE_SCOPE_X + SCIENCE_SCOPE_W + 80 * SCREEN_WIDTH / 800)
@@ -15988,7 +16034,7 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 		lobbylast1clicky = sng_pixely_to_screeny(event->y);
 		break;
 	case DISPLAYMODE_SCIENCE:
-		science_button_press(event->x, event->y);
+		science_button_release(event->button, event->x, event->y);
 		break;
 	case DISPLAYMODE_DEMON:
 		demon_button_release(event->button, event->x, event->y);
