@@ -13273,7 +13273,7 @@ static struct demon_cmd_def {
 	{ "SAFEMODE", "TOGGLES SAFE MODE (prevents enemies from attacking)" },
 	{ "HELP", "PRINT THIS HELP INFORMATION" },
 	{ "ENSCRIPT", "SAVE (PARTIALLY) UNIVERSE STATE TO LUA SCRIPT" },
-	{ "TTS", "USE TEXT-TO-SPEECH TO SPEAK SOMETHING TO SELECTED SHIP." },
+	{ "TTS", "USE TEXT-TO-SPEECH TO SPEAK SOMETHING TO SPECIFIED SHIP. E.G.: TTS SHIPNAME: HELLO" },
 };
 static int demon_help_mode = 0;
 #define DEMON_CMD_DELIM " ,"
