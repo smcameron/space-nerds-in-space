@@ -112,6 +112,8 @@ int snis_text_input_box_button_press(struct snis_text_input_box *t, int x, int y
 {
 	int hit;
 
+	x = sng_pixelx_to_screenx(x);
+	y = sng_pixely_to_screeny(y);
 	if (x < t->x || x > t->x + t->width ||
                 y < t->y || y > t->y + t->height)
                 hit = 0;
