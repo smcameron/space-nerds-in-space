@@ -6664,7 +6664,7 @@ static void textscreen_menu_button_pressed(void *button_ptr_ptr)
 			ui_hide_widget(user_menu_button[i]);
 		user_defined_menu_active = 0;
 		if (selection >= 0 && selection < NUM_USER_MENU_BUTTONS)
-			queue_to_server(snis_opcode_pkt("bbb", OPCODE_TEXTSCREEN_OP,
+			queue_to_server(snis_opcode_subcode_pkt("bbb", OPCODE_TEXTSCREEN_OP,
 					OPCODE_TEXTSCREEN_MENU_CHOICE, byte_selection));
 	}
 }
