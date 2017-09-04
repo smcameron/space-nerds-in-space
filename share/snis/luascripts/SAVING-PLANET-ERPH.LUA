@@ -57,9 +57,17 @@ alive = { 0, 0, 0, 0, 0 }
 
 function add_some_asteroids()
 	for i = 1, 200 do
-		dx = math.random(15000) - 7500 + 15000;
-		dy = math.random(15000) - 7500;
-		dz = math.random(15000) - 7500 + 15000;
+		done = false
+		while (not done)
+		do
+			dx = math.random(40000) - 20000;
+			dy = math.random(40000) - 20000;
+			dz = math.random(40000) - 20000;
+			distance = math.sqrt(dx * dx + dy * dy + dz * dz);
+			if distance > 13000 and distance < 20000 then
+				done = true;
+			end
+		end
 		add_asteroid(erphx + dx, erphy + dy, erphz + dz);
 	end
 end
