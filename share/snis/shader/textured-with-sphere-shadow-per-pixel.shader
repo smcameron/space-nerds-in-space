@@ -1,5 +1,6 @@
 /*
 	Copyright (C) 2014 Jeremy Van Grinsven
+	Copyright (C) 2017 Stephen M. Cameron 
 
 	This file is part of Spacenerds In Space.
 
@@ -18,16 +19,16 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 	Author:
-		Jeremy Van Grinsven
+		Jeremy Van Grinsven, Stephen M. Cameron
 */
 
 varying vec4 v_TintColor;
 varying vec2 v_TexCoord;
-varying vec3 v_Position;
-varying vec3 v_LightDir;
-varying float v_darkside_shading;
-varying vec3 v_Normal;
-varying float v_sameside;
+varying vec3 v_Position;		// Fragment position in eye space
+varying vec3 v_LightDir;		// normalized vector from fragment to light in eye space
+varying float v_darkside_shading;	// Shading multiplier for ring, 1.0 on light side, 0.2 on dark side
+varying vec3 v_Normal;			// Normal at fragment (i.e. normal to the ring plane)
+varying float v_sameside;		// 1.0 if eye and light are on same side of ring plane, 0.0 otherwise
 
 #if defined(INCLUDE_VS)
 	uniform mat4 u_MVMatrix;  // A constant representing the combined model/view matrix.
@@ -43,11 +44,9 @@ varying float v_sameside;
 
 	void main()
 	{
-		// Transform the vertex into eye space.
-		v_Position = vec3(u_MVMatrix * a_Position);
-		// Transform the normal's orientation into eye space.
-		v_Normal = normalize(u_NormalMatrix * a_Normal);
-		v_LightDir = normalize(u_LightPos - v_Position);
+		v_Position = vec3(u_MVMatrix * a_Position);		// Transform the vertex into eye space.
+		v_Normal = normalize(u_NormalMatrix * a_Normal);	// Transform the normal's orientation into eye space.
+		v_LightDir = normalize(u_LightPos - v_Position);	// Find direction from vertex to light
 
 		// Check if the light source is on the same side of the surface as the eye.
 		// Dot product of vector to point with v_Normal will be positive or negative
@@ -58,9 +57,9 @@ varying float v_sameside;
 		float lightdot = dot(v_LightDir, v_Normal);
 		float eyedot = dot(-v_Position, v_Normal);
 
-		v_sameside = lightdot * eyedot;	// > 0 means same side, < 0 means opposite
+		v_sameside = lightdot * eyedot;			// > 0 means same side, < 0 means opposite
 		v_sameside = v_sameside / abs(v_sameside);	// Scale to either +1.0 or to -1.0
-		v_sameside = (v_sameside + 1.0) / 2.0;	// transform -1.0 -> 0.0, and +1.0 -> +1.0
+		v_sameside = (v_sameside + 1.0) / 2.0;		// transform -1.0 -> 0.0, and +1.0 -> +1.0
 		v_darkside_shading = v_sameside * 1.0 + (1.0 - v_sameside) * 0.2; // either 1.0 or 0.2
 
 		v_TintColor = u_TintColor;
@@ -77,7 +76,8 @@ varying float v_sameside;
 	uniform float u_ring_inner_radius;
 	uniform float u_ring_outer_radius;
 
-	bool sphere_ray_intersect(in vec4 sphere, in vec3 ray_pos, in vec3 ray_dir)
+	/* Returns 1.0 if no intersect (not in shadow), 0.0 if intersect (in shadow) */
+	float sphere_ray_intersect(in vec4 sphere, in vec3 ray_pos, in vec3 ray_dir)
 	{
 		vec3 dir_sphere = ray_pos - sphere.xyz;
 
@@ -86,14 +86,16 @@ varying float v_sameside;
 
 		float disc = b * b - 4.0 * c;
 		if (disc < 0.0)
-			return false;
+			return 1.0;
 
 		float sqrt_disc = sqrt(disc);
 		float t0 = (-b - sqrt_disc) / 2.0;
 		if (t0 >= 0)
-			return true;
+			return 0.0;
 		float t1 = (-b + sqrt_disc) / 2.0;
-		return t1 >= 0;
+		if (t1 >= 0)
+			return 0.0;
+		return 1.0;
 	}
 
 	void main()
@@ -101,13 +103,13 @@ varying float v_sameside;
 		vec4 shadow_tint = vec4(1.0);
 		vec2 txcoord;
 		vec3 spec_color = vec3(0.4);
+		vec4 shadow_color = vec4(0.25, 0.1, 0.1, 1.0);
 		const float shininess = 14.0;
-		float not_in_shadow = 1.0;
+		float not_in_shadow, in_shadow;
 
-		if (sphere_ray_intersect(u_Sphere, v_Position, normalize(v_LightDir))) {
-			shadow_tint = vec4(0.25,0.1,0.1,1.0);
-			not_in_shadow = 0.0;
-		}
+		not_in_shadow = sphere_ray_intersect(u_Sphere, v_Position, normalize(v_LightDir));
+		in_shadow = 1.0 - not_in_shadow;
+		shadow_tint = not_in_shadow * shadow_tint + in_shadow * shadow_color;
 
 		/*
 		 * 1.0 is MIN_RING_RADIUS, * see: ../../../material.h
