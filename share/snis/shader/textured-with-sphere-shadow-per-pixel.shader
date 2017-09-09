@@ -80,22 +80,22 @@ varying float v_sameside;		// 1.0 if eye and light are on same side of ring plan
 	float sphere_ray_intersect(in vec4 sphere, in vec3 ray_pos, in vec3 ray_dir)
 	{
 		vec3 dir_sphere = ray_pos - sphere.xyz;
+		const float in_shadow = 0.0;
+		const float not_in_shadow = 1.0;
 
 		float b = 2.0 * dot(dir_sphere, ray_dir);
 		float c = dot(dir_sphere, dir_sphere) - sphere.w;
 
 		float disc = b * b - 4.0 * c;
 		if (disc < 0.0)
-			return 1.0;
+			return not_in_shadow;
 
 		float sqrt_disc = sqrt(disc);
 		float t0 = (-b - sqrt_disc) / 2.0;
 		if (t0 >= 0)
-			return 0.0;
+			return in_shadow;
 		float t1 = (-b + sqrt_disc) / 2.0;
-		if (t1 >= 0)
-			return 0.0;
-		return 1.0;
+		return 1.0 - (max(sign(t1), 0));	// if (t1 >= 0) return 0.0; else return 1.0;
 	}
 
 	void main()
