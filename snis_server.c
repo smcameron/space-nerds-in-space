@@ -324,7 +324,7 @@ static struct bridge_data {
 	uint32_t science_selection;
 	int current_displaymode;
 	struct ssgl_game_server warp_gate_ticket;
-	unsigned char pwdhash[20];
+	unsigned char pwdhash[PWDHASHLEN];
 	int verified; /* whether this bridge has verified with multiverse server */
 #define BRIDGE_UNVERIFIED 0
 #define BRIDGE_VERIFIED 1
@@ -970,7 +970,7 @@ static void print_hash(char *s, unsigned char *pwdhash)
 	int i;
 
 	fprintf(stderr, "%s: %s", logprefix(), s);
-	for (i = 0; i < 20; i++)
+	for (i = 0; i < PWDHASHLEN; i++)
 		fprintf(stderr, "%02x", pwdhash[i]);
 	fprintf(stderr, "\n");
 }
@@ -981,7 +981,7 @@ static int lookup_bridge_by_pwdhash(unsigned char *pwdhash)
 	int i;
 
 	for (i = 0; i < nbridges; i++)
-		if (memcmp(bridgelist[i].pwdhash, pwdhash, 20) == 0)
+		if (memcmp(bridgelist[i].pwdhash, pwdhash, PWDHASHLEN) == 0)
 			return i;
 	return -1;
 }
@@ -16877,8 +16877,9 @@ static int add_new_player(struct game_client *c)
 		return -1;
 	}
 
-	snis_sha1_hash(bridgelist[c->bridge].shipname, bridgelist[c->bridge].password,
-			bridgelist[c->bridge].pwdhash);
+	/* FIXME: need to redesign this mess not to use a constant salt */
+	snis_crypt(bridgelist[c->bridge].shipname, bridgelist[c->bridge].password,
+			bridgelist[c->bridge].pwdhash, PWDHASHLEN, "$1$abcdefgh", 11);
 	c->debug_ai = 0;
 	c->waypoints_dirty = 1;
 	c->request_universe_timestamp = 0;
@@ -17347,12 +17348,12 @@ static void update_multiverse(struct snis_entity *o)
 		unsigned char opcode;
 
 		print_hash("requesting verification of hash ", bridgelist[bridge].pwdhash);
-		pb = packed_buffer_allocate(21);
+		pb = packed_buffer_allocate(PWDHASHLEN + 1);
 		if (bridgelist[bridge].requested_creation)
 			opcode = SNISMV_OPCODE_VERIFY_CREATE;
 		else
 			opcode = SNISMV_OPCODE_VERIFY_EXISTS;
-		packed_buffer_append(pb, "br", opcode, bridgelist[bridge].pwdhash, (uint16_t) 20);
+		packed_buffer_append(pb, "br", opcode, bridgelist[bridge].pwdhash, (uint16_t) PWDHASHLEN);
 		bridgelist[bridge].requested_verification = 1;
 		queue_to_multiverse(multiverse_server, pb);
 		return;
@@ -21055,7 +21056,7 @@ static void *multiverse_writer(void *arg)
 
 static int process_update_bridge(struct multiverse_server_info *msi)
 {
-	unsigned char pwdhash[20];
+	unsigned char pwdhash[PWDHASHLEN];
 	int i, rc;
 	unsigned char buffer[250];
 	struct packed_buffer pb;
@@ -21069,11 +21070,11 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 	fprintf(stderr, "%s: process_update bridge 1, expecting %lu bytes\n", logprefix(), bytes_to_read);
 	memset(buffer, 0, sizeof(buffer));
 	memset(pwdhash, 0, sizeof(pwdhash));
-	rc = snis_readsocket(msi->sock, buffer, 20);
+	rc = snis_readsocket(msi->sock, buffer, PWDHASHLEN);
 	if (rc != 0)
 		return rc;
-	memcpy(pwdhash, buffer, 20);
-	print_hash("snis_server: update bridge, read 20 bytes: ", pwdhash);
+	memcpy(pwdhash, buffer, PWDHASHLEN);
+	print_hash("snis_server: update bridge: ", pwdhash);
 	BUILD_ASSERT(sizeof(buffer) > bytes_to_read);
 	memset(buffer, 0, sizeof(buffer));
 	rc = snis_readsocket(msi->sock, buffer, bytes_to_read);
@@ -21126,11 +21127,11 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 static int process_multiverse_verification(struct multiverse_server_info *msi)
 {
 	int rc, b;
-	unsigned char buffer[22];
+	unsigned char buffer[PWDHASHLEN + 2];
 	unsigned char *pass;
 	unsigned char *pwdhash;
 
-	rc = snis_readsocket(msi->sock, buffer, 21);
+	rc = snis_readsocket(msi->sock, buffer, PWDHASHLEN + 1);
 	if (rc)
 		return rc;
 	pass = &buffer[0];

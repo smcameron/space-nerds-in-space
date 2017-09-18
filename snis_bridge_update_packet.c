@@ -23,6 +23,8 @@
 
 #include "snis_bridge_update_packet.h"
 
+#define PWDHASHLEN 34
+
 struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned char *pwdhash)
 {
 	struct packed_buffer *pb;
@@ -30,12 +32,12 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 	uint8_t tloading, tloaded, throttle, rpm;
 	uint32_t iwallet = (int32_t) (o->tsd.ship.wallet * 100.0);
 
-	pb = packed_buffer_allocate(50 + sizeof(struct update_ship_packet) +
+	pb = packed_buffer_allocate(64 + sizeof(struct update_ship_packet) +
 					sizeof(struct power_model_data) +
 					sizeof(struct power_model_data));
 	if (!pb)
 		return pb;
-	packed_buffer_append(pb, "br", SNISMV_OPCODE_UPDATE_BRIDGE, pwdhash, (uint16_t) 20);
+	packed_buffer_append(pb, "br", SNISMV_OPCODE_UPDATE_BRIDGE, pwdhash, (uint16_t) PWDHASHLEN);
 
 	throttle = o->tsd.ship.throttle;
 	rpm = o->tsd.ship.rpm;

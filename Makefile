@@ -365,13 +365,13 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o mtwist.o names.o infinite-taunt.o snis_damcon_systems.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
-		snis_hash.o planetary_atmosphere.o mesh.o pthread_util.o snis_opcode_def.o
+		planetary_atmosphere.o mesh.o pthread_util.o snis_opcode_def.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		commodities.o docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
 		snis_server_tracker.o snis_bridge_update_packet.o solarsystem_config.o a_star.o \
 		key_value_parser.o nonuniform_random_sampler.o oriented_bounding_box.o \
-		graph_dev_mesh_stub.o turret_aimer.o
+		graph_dev_mesh_stub.o turret_aimer.o snis_hash.o
 MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o \
 		pthread_util.o
@@ -394,10 +394,10 @@ SDLCLIENTOBJS=shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer.
 
 
 SSGL=ssgl/libssglclient.a
-LIBS=-lGL -Lssgl -lssglclient -ldl -lm ${LUALIBS} ${PNGLIBS} ${GLEWLIBS} -lcrypto
-SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS} -lcrypto -lssl
+LIBS=-lGL -Lssgl -lssglclient -ldl -lm ${LUALIBS} ${PNGLIBS} ${GLEWLIBS} -lcrypt
+SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS} -lcrypt
 MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm
-MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lcrypto -lssl
+MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lcrypt
 #
 # NOTE: if you get
 #
@@ -905,6 +905,9 @@ snis_event_callback.o:	snis_event_callback.c Makefile
 
 snis_hash.o:	snis_hash.c snis_hash.h Makefile
 	$(Q)$(COMPILE)
+
+test_snis_crypt:	snis_hash.c snis_hash.h
+	$(CC) -DTEST_SNIS_CRYPT -o test_snis_crypt snis_hash.c -lcrypt
 
 snis_nl.o:	snis_nl.c snis_nl.h Makefile
 	$(Q)$(COMPILE)

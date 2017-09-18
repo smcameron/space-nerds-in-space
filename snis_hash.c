@@ -20,67 +20,27 @@
 */
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <openssl/md5.h>
-#include <openssl/sha.h>
 #include <assert.h>
+#define _GNU_SOURCE
+#define __USE_GNU
+#include <crypt.h>
 
-int snis_md5_hash(unsigned char *shipname, unsigned char *password, unsigned char *md5)
+void snis_format_hash(unsigned char *hash, int hashlen, unsigned char *buffer, int len)
 {
-	unsigned char *md5tmp, md5buffer[20];
+	int i;
+	const char hexdigit[] = "0123456789abcdef";
 
-	unsigned char buffer[50];
-	memset(buffer, 'x', sizeof(buffer));
-	if (strlen((char *) password) > 20)
-		return -1;
-	if (strlen((char *) shipname) > 20)
-		return -1;
-	buffer[49] = '\0';
-	memcpy(buffer, shipname, strlen((char *) shipname));
-	memcpy(buffer + 20, password, strlen((char *) password));
-
-	memset(md5buffer, 0, sizeof(md5buffer));
-	md5tmp = MD5(buffer, 50,  md5buffer);
-
-	memcpy(md5, md5tmp, 16);
-	return 0;
-}
-
-void snis_format_md5_hash(unsigned char *md5, unsigned char *buffer, int len)
-{
-	snprintf((char *) buffer, len,
-		"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-		md5[0], md5[1], md5[2], md5[3], md5[4], md5[5], md5[6], md5[7], md5[8],
-		md5[9], md5[10], md5[11], md5[12], md5[13], md5[14], md5[15]);
-}
-
-int snis_sha1_hash(unsigned char *shipname, unsigned char *password, unsigned char *sha1)
-{
-	unsigned char *sha1tmp, sha1buffer[20];
-
-	unsigned char buffer[50];
-	memset(buffer, 'x', sizeof(buffer));
-	if (strlen((char *) password) > 20)
-		return -1;
-	if (strlen((char *) shipname) > 20)
-		return -1;
-	buffer[49] = '\0';
-	memcpy(buffer, shipname, strlen((char *) shipname));
-	memcpy(buffer + 20, password, strlen((char *) password));
-
-	memset(sha1buffer, 0, sizeof(sha1buffer));
-	sha1tmp = SHA1(buffer, 50,  sha1buffer);
-
-	memcpy(sha1, sha1tmp, 20);
-	return 0;
-}
-
-void snis_format_sha1_hash(unsigned char *sha1, unsigned char *buffer, int len)
-{
-	snprintf((char *) buffer, len,
-		"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-		sha1[0], sha1[1], sha1[2], sha1[3], sha1[4], sha1[5], sha1[6], sha1[7], sha1[8],
-		sha1[9], sha1[10], sha1[11], sha1[12], sha1[13], sha1[14], sha1[15],
-		sha1[16], sha1[17], sha1[18], sha1[19]);
+	for (i = 0; i < hashlen && i * 2 < len; i++) {
+		buffer[i * 2] = hexdigit[((hash[i] & 0xf0) >> 4)];
+		buffer[i * 2 + 1] = hexdigit[(hash[i] & 0x0f)];
+	}
+	buffer[i * 2] = '\0';
 }
 
 void snis_scan_hash(char *hexhash, int hexhashlen, unsigned char *hash, int hashlen)
@@ -103,4 +63,97 @@ void snis_scan_hash(char *hexhash, int hexhashlen, unsigned char *hash, int hash
 		j++;
 	}
 }
+
+/* get_salt() reads saltsize bytes from /dev/random into salt.
+ * Returns 0 on success, -1 on failure with errno set.
+ */
+static int get_salt(unsigned char *salt, int saltsize)
+{
+	int f, i, rc, bytesleft, offset;
+	unsigned char buffer[saltsize];
+	/* note: we remove . and / from seedchar because we use some of them as dir paths (fixme: should not do that) */
+	const char *const seedchar = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	const int nseedchars = strlen(seedchar);
+
+	f = open("/dev/random", O_RDONLY);
+	if (f < 0)
+		return f;
+	memset(buffer, 0, sizeof(buffer));
+	bytesleft = saltsize;
+	offset = 0;
+	do {
+		rc = read(f, &buffer[offset], bytesleft);
+		if (rc < 0) {
+			if (errno == EINTR)
+				continue;
+			return rc;
+		}
+		bytesleft -= rc;
+		offset += rc;
+	} while (bytesleft > 0);
+	for (i = 0; i < saltsize; i++)
+		buffer[i] = seedchar[buffer[i] % nseedchars];
+	memcpy(salt, buffer, saltsize);
+	return 0;
+}
+
+int snis_crypt(unsigned char *shipname, unsigned char *password,
+		unsigned char *crypted, int cryptsize, char *insalt, int insaltsize)
+{
+	unsigned char salt[] = "$1$........";
+	unsigned char buffer[50];
+	struct crypt_data data;
+	int rc;
+
+	if (insalt) {
+		if (insaltsize != 11)
+			return -1;
+		memcpy(&salt[3], &insalt[3], 8);
+	} else {
+		rc = get_salt(&salt[3], 8);
+		if (rc < 0)
+			return rc;
+	}
+
+	memset(buffer, 'x', sizeof(buffer));
+	if (strlen((char *) password) > 20)
+		return -1;
+	if (strlen((char *) shipname) > 20)
+		return -1;
+	buffer[49] = '\0';
+	memcpy(buffer, shipname, strlen((char *) shipname));
+	memcpy(buffer + 20, password, strlen((char *) password));
+
+	data.initialized = 0;
+	password = (unsigned char *) crypt_r((char *) buffer, (char *) salt, &data);
+	strncpy((char *) crypted, (char *) password, cryptsize);
+	return 0;
+}
+
+#ifdef TEST_SNIS_CRYPT
+int main(int argc, char *argv)
+{
+
+	char *shipname = "enterprise";
+	char *password = "khaaan";
+	char crypted[1000], recrypted[1000];
+	int cryptsize = sizeof(crypted);
+	int rc;
+	char salt[100];
+
+	rc = snis_crypt(shipname, password, crypted, cryptsize, NULL, 0);
+	printf("rc = %d\n", rc);
+	printf("crypted = '%s' (len = %lu)\n", crypted, strlen(crypted));
+	memset(salt, 0, sizeof(salt));
+	memcpy(salt, crypted, 11);
+	cryptsize = sizeof(recrypted);
+	rc = snis_crypt(shipname, password, recrypted, cryptsize, salt, 11);
+	printf("rc = %d\n", rc);
+	printf("recrypted = '%s' (len = %lu)\n", recrypted, strlen(recrypted));
+	if (strcmp(crypted, recrypted) != 0)
+		printf("FAIL: encryption came out different with same salt!\n");
+
+	return 0;
+}
+#endif
 

@@ -96,7 +96,7 @@ static struct starsystem_info { /* one of these per connected snis_server */
 static int nstarsystems = 0;
 
 static struct bridge_info {
-	unsigned char pwdhash[20];
+	unsigned char pwdhash[PWDHASHLEN];
 	int occupied;
 	int32_t initialized;
 	struct timeval created_on;
@@ -193,7 +193,7 @@ static void print_hash(char *s, unsigned char *pwdhash)
 	int i;
 
 	fprintf(stderr, "snis_multiverse: %s", s);
-	for (i = 0; i < 20; i++)
+	for (i = 0; i < PWDHASHLEN; i++)
 		fprintf(stderr, "%02x", pwdhash[i]);
 	fprintf(stderr, "\n");
 }
@@ -203,16 +203,16 @@ static int save_bridge_info(struct bridge_info *b)
 	int rc;
 	char dirpath[PATH_MAX], path[PATH_MAX], path2[PATH_MAX];
 	char dir1[5], dir2[5];
-	unsigned char hexpwdhash[41];
+	unsigned char hexpwdhash[PWDHASHLEN * 2 + 1];
 	FILE *f;
 
 	fprintf(stderr, "save_bridge_info 1\n");
 	memset(dir1, 0, sizeof(dir1));
 	memset(dir2, 0, sizeof(dir2));
 
-	snis_format_sha1_hash(b->pwdhash, hexpwdhash, 41);
-	memcpy(&dir1[0], &hexpwdhash[0], 4);
-	memcpy(&dir2[0], &hexpwdhash[4], 4);
+	snis_format_hash(b->pwdhash, PWDHASHLEN, hexpwdhash, PWDHASHLEN * 2 + 1);
+	memcpy(&dir1[0], &hexpwdhash[PWDSALTLEN], 4);
+	memcpy(&dir2[0], &hexpwdhash[PWDSALTLEN + 4], 4);
 
 	sprintf(path, "%s/%s", database_root, dir1);
 	if (make_dir(path)) {
@@ -259,7 +259,7 @@ static int restore_bridge_info(const char *filename, struct bridge_info *b, unsi
 	contents = slurp_file(filename, NULL);
 	if (!contents)
 		return -1;
-	memcpy(b->pwdhash, pwdhash, 20);
+	memcpy(b->pwdhash, pwdhash, PWDHASHLEN);
 	rc = key_value_parse_lines(snis_entity_kvs, contents, base_address);
 	free(contents);
 	return rc;
@@ -381,15 +381,15 @@ static int read_and_unpack_fixed_size_buffer(struct starsystem_info *ss,
 static int lookup_ship_by_hash(unsigned char *hash)
 {
 	int i;
-	unsigned char phash[100];
+	unsigned char phash[PWDHASHLEN * 2 + 1];
 
-	snis_format_sha1_hash(hash, phash, 100);
+	snis_format_hash(hash, PWDHASHLEN, phash, PWDHASHLEN * 2 + 1);
 	fprintf(stderr, "snis_multiverse: looking up hash '%s'\n", phash);
 
 	for (i = 0; i < nbridges; i++) {
-		snis_format_sha1_hash(ship[i].pwdhash, phash, 100);
+		snis_format_hash(ship[i].pwdhash, PWDHASHLEN, phash, PWDHASHLEN * 2 + 1);
 		fprintf(stderr, "snis_multiverse: checking against '%s'\n", phash);
-		if (memcmp(ship[i].pwdhash, hash, 20) == 0) {
+		if (memcmp(ship[i].pwdhash, hash, PWDHASHLEN) == 0) {
 			fprintf(stderr, "snis_multiverse: match hash '%s'\n", phash);
 			return i;
 		}
@@ -400,7 +400,7 @@ static int lookup_ship_by_hash(unsigned char *hash)
 
 static int update_bridge(struct starsystem_info *ss)
 {
-	unsigned char pwdhash[20];
+	unsigned char pwdhash[PWDHASHLEN];
 	int i, rc;
 	unsigned char buffer[250];
 	struct packed_buffer pb;
@@ -413,10 +413,10 @@ static int update_bridge(struct starsystem_info *ss)
 	fprintf(stderr, "snis_multiverse: update bridge 1, expecting %lu bytes\n", bytes_to_read);
 	memset(buffer, 0, sizeof(buffer));
 	memset(pwdhash, 0, sizeof(pwdhash));
-	rc = read_and_unpack_fixed_size_buffer(ss, buffer, 20, "r", pwdhash, (uint16_t) 20);
+	rc = read_and_unpack_fixed_size_buffer(ss, buffer, PWDHASHLEN, "r", pwdhash, (uint16_t) PWDHASHLEN);
 	if (rc != 0)
 		return rc;
-	print_hash("update bridge 2, read 20 bytes: ", pwdhash);
+	print_hash("update bridge 2: ", pwdhash);
 	BUILD_ASSERT(sizeof(buffer) > bytes_to_read);
 	memset(buffer, 0, sizeof(buffer));
 	rc = snis_readsocket(ss->socket, buffer, bytes_to_read);
@@ -447,13 +447,13 @@ static int update_bridge(struct starsystem_info *ss)
 	return rc;
 }
 
-static int create_new_ship(unsigned char pwdhash[20])
+static int create_new_ship(unsigned char pwdhash[PWDHASHLEN])
 {
 	fprintf(stderr, "snis_multiverse: create_new_ship 1 (nbridges = %d, MAX=%d)\n", nbridges, MAX_BRIDGES);
 	if (nbridges >= MAX_BRIDGES)
 		return -1;
 	memset(&ship[nbridges], 0, sizeof(ship[nbridges]));
-	memcpy(ship[nbridges].pwdhash, pwdhash, 20);
+	memcpy(ship[nbridges].pwdhash, pwdhash, PWDHASHLEN);
 	nbridges++;
 	fprintf(stderr, "snis_multiverse: added new bridge, nbridges = %d\n", nbridges);
 	return 0;
@@ -479,21 +479,21 @@ static void send_bridge_update_to_snis_server(struct starsystem_info *ss, unsign
 
 static int verify_existence(struct starsystem_info *ss, int should_already_exist)
 {
-	unsigned char pwdhash[20];
+	unsigned char pwdhash[PWDHASHLEN];
 	unsigned char buffer[200];
 	struct packed_buffer *pb;
 	int i, rc;
 	unsigned char pass;
-	unsigned char printable_hash[100];
+	unsigned char printable_hash[PWDHASHLEN * 2 + 1];
 	int send_update = 0;
 
 	fprintf(stderr, "snis_multiverse: verify_existence 1: should %salready exist\n",
 			should_already_exist ? "" : "not ");
-	rc = read_and_unpack_fixed_size_buffer(ss, buffer, 20, "r", pwdhash, (uint16_t) 20);
+	rc = read_and_unpack_fixed_size_buffer(ss, buffer, PWDHASHLEN, "r", pwdhash, (uint16_t) PWDHASHLEN);
 	if (rc != 0)
 		return rc;
-	snis_format_sha1_hash(pwdhash, printable_hash, 100);
-	printable_hash[40] = '\0';
+	snis_format_hash(pwdhash, PWDHASHLEN, printable_hash, PWDHASHLEN * 2 + 1);
+	printable_hash[PWDHASHLEN * 2] = '\0';
 	pthread_mutex_lock(&data_mutex);
 	fprintf(stderr, "snis_multiverse: lookup hash %s\n", printable_hash);
 	i = lookup_ship_by_hash(pwdhash);
@@ -523,8 +523,8 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 	print_hash("checking hash ", pwdhash);
 	fprintf(stderr, "snis_multiverse: verify existence pass=%d\n", pass);
 	pthread_mutex_unlock(&data_mutex);
-	pb = packed_buffer_allocate(22);
-	packed_buffer_append(pb, "bbr", SNISMV_OPCODE_VERIFICATION_RESPONSE, pass, pwdhash, 20);
+	pb = packed_buffer_allocate(PWDHASHLEN + 2);
+	packed_buffer_append(pb, "bbr", SNISMV_OPCODE_VERIFICATION_RESPONSE, pass, pwdhash, PWDHASHLEN);
 	packed_buffer_queue_add(&ss->write_queue, pb, &ss->write_queue_mutex);
 
 	if (send_update)
@@ -898,7 +898,7 @@ static int restore_data_from_file(const char *path)
 {
 	int i;
 	char *hexpwdhash;
-	unsigned char pwdhash[20];
+	unsigned char pwdhash[PWDHASHLEN];
 	char *tmppath = NULL;
 
 	if (nbridges >= MAX_BRIDGES)
@@ -922,19 +922,19 @@ static int restore_data_from_file(const char *path)
 		fprintf(stderr, "bridge data filename '%s' doesn't look right.\n", path);
 		goto error;
 	}
-	if (strlen(hexpwdhash) != 40) {
-		fprintf(stderr, "bridge data filename '%s' is not 40 chars long.\n", path);
+	if (strlen(hexpwdhash) != PWDHASHLEN * 2) {
+		fprintf(stderr, "bridge data filename '%s' is not %d chars long.\n", path, PWDHASHLEN * 2);
 		goto error;
 	}
-	for (i = 0; i < 40; i++) {
+	for (i = 0; i < PWDHASHLEN * 2; i++) {
 		if (strchr("0123456789abcdef", hexpwdhash[i]) == NULL) {
-			fprintf(stderr, "bridge data filename '%s' is not composed of 40 hex chars\n", path);
+			fprintf(stderr, "bridge data filename '%s' is not composed of hex chars\n", path);
 			goto error;
 		}
 	}
 	/* Filename seems good, convert to pwdhash */
 	memset(pwdhash, 0, sizeof(pwdhash));
-	snis_scan_hash(hexpwdhash, 40, pwdhash, 20);
+	snis_scan_hash(hexpwdhash, PWDHASHLEN * 2, pwdhash, PWDHASHLEN);
 	if (restore_bridge_info(path, &ship[nbridges], pwdhash)) {
 		fprintf(stderr, "Failed to read bridge info from %s\n", path);
 		goto error;

@@ -21,12 +21,11 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-void snis_md5_hash(unsigned char *shipname, unsigned char *password, unsigned char *md5);
-void snis_format_md5_hash(unsigned char *md5, unsigned char *buffer, int len);
-
-void snis_sha1_hash(unsigned char *shipname, unsigned char *password, unsigned char *sha1);
-void snis_format_sha1_hash(unsigned char *md5, unsigned char *buffer, int len);
-
+#define PWDHASHLEN 34
+#define PWDSALTLEN 11
+void snis_format_hash(unsigned char *hash, int hashlen, unsigned char *buffer, int len);
 void snis_scan_hash(char *hexhash, int hexhashlen, unsigned char *hash, int hashlen);
+void snis_crypt(unsigned char *shipname, unsigned char *password, unsigned char *crypted,
+			int cryptsize, char *insalt, int saltsize);
 
 #endif
