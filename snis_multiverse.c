@@ -408,9 +408,9 @@ static int update_bridge(struct starsystem_info *ss)
 
 #define bytes_to_read (sizeof(struct update_ship_packet) - 9 + 25 + 5 + \
 			sizeof(struct power_model_data) + \
-			sizeof(struct power_model_data) - 1 - 1)
+			sizeof(struct power_model_data) - 1 - 1 - 1)
 
-	fprintf(stderr, "snis_multiverse: update bridge 1\n");
+	fprintf(stderr, "snis_multiverse: update bridge 1, expecting %lu bytes\n", bytes_to_read);
 	memset(buffer, 0, sizeof(buffer));
 	memset(pwdhash, 0, sizeof(pwdhash));
 	rc = read_and_unpack_fixed_size_buffer(ss, buffer, 20, "r", pwdhash, (uint16_t) 20);

@@ -21064,9 +21064,9 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 
 #define bytes_to_read (sizeof(struct update_ship_packet) - 9 + 25 + 5 + \
 			sizeof(struct power_model_data) + \
-			sizeof(struct power_model_data) - 1)
+			sizeof(struct power_model_data) - 1 - 1)
 
-	fprintf(stderr, "%s: process_update bridge 1\n", logprefix());
+	fprintf(stderr, "%s: process_update bridge 1, expecting %lu bytes\n", logprefix(), bytes_to_read);
 	memset(buffer, 0, sizeof(buffer));
 	memset(pwdhash, 0, sizeof(pwdhash));
 	rc = snis_readsocket(msi->sock, buffer, 20);
