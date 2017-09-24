@@ -25,7 +25,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <openssl/md5.h>
 #include <assert.h>
 #define _GNU_SOURCE
 #define __USE_GNU
