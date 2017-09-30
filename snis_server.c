@@ -411,6 +411,16 @@ static struct lua_comms_transmission *lua_comms_transmission_queue = NULL;
 
 static uint8_t rts_mode = 0;
 
+static union vec3 rts_main_planet_pos[] = { /* Positions of main RTS planets */
+	{ { 120000, -XKNOWN_DIM / 2 + 120000, 120000 } },
+	{ { XKNOWN_DIM - 120000, XKNOWN_DIM / 2 - 120000, XKNOWN_DIM - 120000 } },
+};
+
+static struct rts_main_planet {
+	int index;   /* Index into go[] for corrsponding planet object */
+	uint16_t health;
+} rts_planet[ARRAYSIZE(rts_main_planet_pos)] = { 0 };
+
 static int lookup_by_id(uint32_t id);
 
 static uint32_t get_new_object_id(void)
@@ -13814,6 +13824,82 @@ static void process_demon_clear_all(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static void reset_player_ship(struct snis_entity *o)
+{
+	int b;
+
+	init_player(o, 1, NULL);
+	b = lookup_bridge_by_shipid(o->id);
+	if (b >= 0)
+		clear_bridge_waypoints(b);
+	o->timestamp = universe_timestamp;
+}
+
+static void setup_rtsmode_battlefield(void)
+{
+	int i, j, rc;
+	float x, y, z;
+
+	process_demon_clear_all(); /* Clear the universe */
+	pthread_mutex_lock(&universe_mutex);
+
+	rts_mode = 1;
+
+	/* Reset all the human controlled ships to good state */
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+
+		if (o->type == OBJTYPE_SHIP1)
+			reset_player_ship(o);
+	}
+	for (i = 0; i < ARRAYSIZE(rts_planet); i++) { /* Add the main planets */
+		union vec3 *p = &rts_main_planet_pos[0];
+		struct snis_entity *planet;
+		rts_planet[i].index = add_planet(p[i].v.x, p[i].v.y, p[i].v.z, MAX_PLANET_RADIUS * 0.85, 0);
+		planet = &go[rts_planet[i].index];
+		fprintf(stderr, "Added main planet %d, index = %d\n", i, rts_planet[i].index);
+		fprintf(stderr, "Position = %fm %fm %f\n", planet->x, planet->y, planet->z);
+		rts_planet[i].health = MAX_RTS_MAIN_PLANET_HEALTH;
+		planet->sdata.faction = (i % 2) + 1;
+	}
+	/* Place each human controlled ship near their home planets */
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		int side = i % ARRAYSIZE(rts_planet);
+		union vec3 *p = &rts_main_planet_pos[side];
+		if (o->type != OBJTYPE_SHIP1)
+			continue;
+		random_point_on_sphere(MAX_PLANET_RADIUS * 1.2, &x, &y, &z);
+		set_object_location(o, x + p->v.x, y + p->v.y, z + p->v.z);
+		o->sdata.faction = side + 1;
+	}
+	/* Create a number of bases in a sphere around the main star */
+	for (i = 0; i < NUM_RTS_BASES; i++) {
+		random_point_on_sphere(XKNOWN_DIM * 0.35, &x, &y, &z);
+		x += XKNOWN_DIM / 2;
+		/* y doesn't need adjusting */
+		z += ZKNOWN_DIM / 2;
+		rc = add_starbase(x, y, z, 0, 0, 0, i, (uint32_t) -1);
+		if (rc < 0)
+			continue;
+		if (i % 2) {
+			/* Put a small planet near the starbase */
+			random_point_on_sphere(MAX_PLANET_RADIUS * 1.1, &x, &y, &z);
+			add_planet(go[rc].x + x, go[rc].y + y, go[rc].z + z, MAX_PLANET_RADIUS * 0.6, 0);
+			go[rc].sdata.faction = 0; /* neutral */
+		} else {
+			/* Put some asteroids around the starbase */
+			for (j = 0; j < 20; j++) {
+				random_point_on_sphere(MAX_PLANET_RADIUS * 0.75, &x, &y, &z);
+				add_asteroid(x + go[rc].x, y + go[rc].y, z + go[rc].z, 0, 0, 0, 0);
+				go[rc].sdata.faction = 0;
+			}
+		}
+	}
+	add_nebulae();
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 static int process_demon_rtsmode(struct game_client *c)
 {
 	int rc;
@@ -13825,7 +13911,7 @@ static int process_demon_rtsmode(struct game_client *c)
 		return rc;
 	switch (subcode) {
 	case OPCODE_RTSMODE_SUBCMD_ENABLE:
-		process_demon_clear_all(); /* Clear the universe */
+		setup_rtsmode_battlefield();
 		pthread_mutex_lock(&universe_mutex);
 		rts_mode = 1;
 		pthread_mutex_unlock(&universe_mutex);
@@ -14314,7 +14400,7 @@ static int l_reset_player_ship(lua_State *l)
 	const double lua_oid = luaL_checknumber(l, 1);
 	struct snis_entity *o;
 	uint32_t oid = (uint32_t) lua_oid;
-	int i, b;
+	int i;
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(oid);
@@ -14323,11 +14409,7 @@ static int l_reset_player_ship(lua_State *l)
 	o = &go[i];
 	if (o->type != OBJTYPE_SHIP1)
 		goto out;
-	init_player(o, 1, NULL);
-	b = lookup_bridge_by_shipid(o->id);
-	if (b >= 0)
-		clear_bridge_waypoints(b);
-	o->timestamp = universe_timestamp;
+	reset_player_ship(o);
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, 0.0);
 	return 1;
