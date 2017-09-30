@@ -1,5 +1,5 @@
-# To compile withaudio, WITHAUDIO=yes, 
-# for no audio support, change to WITHAUDIO=no, 
+# To compile withaudio, WITHAUDIO=yes,
+# for no audio support, change to WITHAUDIO=no,
 WITHAUDIO=yes
 # WITHAUDIO=no
 
@@ -31,7 +31,7 @@ SOLARSYSTEMDIR=${DATADIR}/solarsystems
 SOLARSYSTEMFILES=${SOLARSYSTEMSRCDIR}/default/assets.txt
 
 ASSETSSRCDIR=share/snis
-	
+
 MODELSRCDIR=${ASSETSSRCDIR}/models
 MODELDIR=${DATADIR}/models
 SOUNDDIR=${DATADIR}/sounds
@@ -402,7 +402,7 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lcrypt
 # NOTE: if you get
 #
 # /usr/bin/ld: cannot find -llua5.2
-# collect2: ld returned 1 exit status 
+# collect2: ld returned 1 exit status
 #
 # try:
 #
@@ -762,7 +762,7 @@ util/cloud-mask-normalmap:	util/cloud-mask-normalmap.o ${CMNMOBJS} Makefile
 	$(Q)$(CMNMLINK)
 
 starbase-comms.o:	starbase-comms.c Makefile
-	$(Q)$(COMPILE)	
+	$(Q)$(COMPILE)
 
 starbase_metadata.o:	starbase_metadata.c starbase_metadata.h Makefile
 	$(Q)$(COMPILE)
