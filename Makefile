@@ -12,8 +12,8 @@ else
 LRTLIB=
 endif
 
-INSTALL=install
-AWK=awk
+INSTALL ?= install
+AWK ?= awk
 
 DESTDIR=.
 PREFIX?=.
