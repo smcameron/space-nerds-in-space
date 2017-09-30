@@ -25,7 +25,7 @@
 
 VERSION=0.1
 
-CC=gcc
+CC ?= gcc
 
 ifeq (${E},1)
 STOP_ON_WARN=-Werror
@@ -61,12 +61,12 @@ endif
 
 COMPILE=$(CC) ${MYCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 
-MYCFLAGS=${DEBUGFLAG} ${OPTIMIZEFLAG} --pedantic -Wall ${STOP_ON_WARN} -pthread ${LRTFLAGS} 
+MYCFLAGS=${DEBUGFLAG} ${OPTIMIZEFLAG} --pedantic -Wall ${STOP_ON_WARN} -pthread ${LRTFLAGS} $(CFLAGS)
 
 SERVEROBJS=ssgl_sanitize.o ssgl_sleep.o \
 	ssgl_socket_io.o ssgl_log.o
-LINKSERVER=$(CC) ${MYCFLAGS} ${LINKFLAGS} $< ${SERVEROBJS} -o $@ && $(ECHO) '  LINK' $<
-LINKCLIENT=$(CC) ${MYCFLAGS} -L. -o $@ $< -lssglclient && $(ECHO) '  LINK' $<
+LINKSERVER=$(CC) ${MYCFLAGS} ${LINKFLAGS} $< ${SERVEROBJS} -o $@ $(LDFLAGS) && $(ECHO) '  LINK' $<
+LINKCLIENT=$(CC) ${MYCFLAGS} -L. -o $@ $< -lssglclient $(LDFLAGS) && $(ECHO) '  LINK' $<
 
 ARCHIVEOBJS=ssgl_sleep.o ssgl_sanitize.o ssgl_recv_game_servers.o \
 		ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
