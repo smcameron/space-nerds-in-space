@@ -71,7 +71,9 @@ LINKCLIENT=$(CC) ${MYCFLAGS} -L. -o $@ $< -lssglclient $(LDFLAGS) && $(ECHO) '  
 ARCHIVEOBJS=ssgl_sleep.o ssgl_sanitize.o ssgl_recv_game_servers.o \
 		ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
 		ssgl_register_gameserver.o ssgl_log.o
-ARCHIVE=ar -cr $@ ${ARCHIVEOBJS} && $(ECHO) '  ARCHIVE' $@
+
+AR ?= ar
+ARCHIVE=$(AR) -cr $@ ${ARCHIVEOBJS} && $(ECHO) '  ARCHIVE' $@
 
 SRCS = ssgl_connect_to_lobby.c \
 	ssgl_gameclient_example.c \
