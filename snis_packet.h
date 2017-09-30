@@ -48,7 +48,9 @@
 #define OPCODE_REQUEST_PHASER	122
 #define OPCODE_EJECT_WARP_CORE	123
 #define OPCODE_UPDATE_WARP_CORE 124
-/* UNUSED OPCODE 125 */
+#define OPCODE_DEMON_RTSMODE	125
+#define		OPCODE_RTSMODE_SUBCMD_DISABLE	0
+#define		OPCODE_RTSMODE_SUBCMD_ENABLE	1
 /* UNUSED OPCODE 126 */
 /* UNUSED OPCODE 127 */
 /* UNUSED OPCODE 128 */
@@ -282,6 +284,7 @@ struct update_ship_packet {
 	uint8_t emf_detector;
 	uint8_t nav_mode;
 	uint8_t warp_core_status;
+	uint8_t rts_mode;
 };
 
 struct ship_sdata_packet {

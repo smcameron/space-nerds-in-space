@@ -409,6 +409,8 @@ struct lua_comms_transmission {
 
 static struct lua_comms_transmission *lua_comms_transmission_queue = NULL;
 
+static uint8_t rts_mode = 0;
+
 static int lookup_by_id(uint32_t id);
 
 static uint32_t get_new_object_id(void)
@@ -13808,7 +13810,38 @@ static void process_demon_clear_all(void)
 		if (o->type != OBJTYPE_SHIP1)
 			delete_from_clients_and_server(o);
 	}
+	rts_mode = 0;
 	pthread_mutex_unlock(&universe_mutex);
+}
+
+static int process_demon_rtsmode(struct game_client *c)
+{
+	int rc;
+	uint8_t subcode;
+	unsigned char buffer[20];
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &subcode);
+	if (rc)
+		return rc;
+	switch (subcode) {
+	case OPCODE_RTSMODE_SUBCMD_ENABLE:
+		process_demon_clear_all(); /* Clear the universe */
+		pthread_mutex_lock(&universe_mutex);
+		rts_mode = 1;
+		pthread_mutex_unlock(&universe_mutex);
+		snis_queue_add_global_text_to_speech("Real time strategy mode is now enabled.");
+		break;
+	case OPCODE_RTSMODE_SUBCMD_DISABLE:
+		process_demon_clear_all(); /* Clear the universe */
+		pthread_mutex_lock(&universe_mutex);
+		rts_mode = 0;
+		snis_queue_add_global_text_to_speech("Real time strategy mode has been disabled.");
+		pthread_mutex_unlock(&universe_mutex);
+		break;
+	default:
+		return -1;
+	}
+	return 0;
 }
 
 static int process_toggle_demon_ai_debug_mode(struct game_client *c)
@@ -15638,6 +15671,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_DEMON_RTSMODE:
+			rc = process_demon_rtsmode(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -16505,7 +16543,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbb",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbbb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -16528,7 +16566,8 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.docking_magnets,
 			o->tsd.ship.emf_detector,
 			o->tsd.ship.nav_mode,
-			o->tsd.ship.warp_core_status);
+			o->tsd.ship.warp_core_status,
+			rts_mode);
 	pb_queue_to_client(c, pb);
 
 	/* now that we've sent the accumulated value, clear the emf_detector to the noise floor */

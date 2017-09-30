@@ -30,7 +30,7 @@
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
 #define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS004"
+#define SNIS_PROTOCOL_VERSION "SNIS005"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -449,6 +449,7 @@ struct ship_data {
 	uint8_t docking_magnets;
 	uint8_t passenger_berths;
 	uint8_t mining_bots;
+	uint8_t rts_mode; /* Is rts mode active? */
 	uint32_t orbiting_object_id;
 	char mining_bot_name[20];
 	float nav_damping_suppression;

@@ -256,9 +256,9 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>OPCODE_SHIP_SDATA</td><td>	120</td></tr>
 <tr><td>OPCODE_LOAD_TORPEDO</td><td>	121</td></tr>
 <tr><td>OPCODE_REQUEST_PHASER</td><td>	122</td></tr>
-<tr><td>OPCODE_REQUEST_THROTTLE</td><td>	123</td></tr>
-<tr><td>OPCODE_REQUEST_MANEUVERING_PWR</td><td>	124</td></tr>
-<tr><td>not used</td><td>	125</td></tr>
+<tr><td>not used</td><td>	123</td></tr>
+<tr><td>not used</td><td>	124</td></tr>
+<tr><td>OPCODE_DEMON_RTSMODE</td><td>	125</td></tr>
 <tr><td>not used</td><td>	126</td></tr>
 <tr><td>not used</td><td>	127</td></tr>
 <tr><td>not used</td><td>	128</td></tr>
@@ -638,6 +638,14 @@ the same as Update Ship 100, but nothing transmits opcode 117.
 </table>
 
 <h4>122 Request Phaser</h4> (not used)
+
+<h4>125 Request RTS mode</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td></tr>
+<tr><td>0</td><td>b</td><td>125</td></tr>
+<tr><td>1</td><td>b</td><td>requested mode (0 disable RTS mode, 1 enable RTS mode)</td></tr>
+</table>
 
 <h4>133 Engage Warp</h4> (Client to Server)
 

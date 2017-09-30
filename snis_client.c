@@ -3839,7 +3839,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, emf_detector,
-		nav_mode, warp_core_status;
+		nav_mode, warp_core_status, rts_mode;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -3862,14 +3862,14 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbb",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbbb",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
-			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status);
+			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status, &rts_mode);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -3931,6 +3931,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	update_emf_detector(emf_detector);
 	o->tsd.ship.nav_mode = nav_mode;
 	o->tsd.ship.warp_core_status = warp_core_status;
+	o->tsd.ship.rts_mode = rts_mode;
 	snis_button_set_label(nav_ui.starmap_button, nav_mode ? "NAV MODE" : "STARMAP");
 
 	update_orientation_history(o->tsd.ship.sciball_o, &sciball_orientation);
@@ -11799,6 +11800,11 @@ static void send_text_to_speech_packet_to_server(char *msg)
 	wakeup_gameserver_writer();
 }
 
+static void send_rtsmode_change_to_server(unsigned char desired_rts_mode)
+{
+	queue_to_server(packed_buffer_new("bb", OPCODE_DEMON_RTSMODE, desired_rts_mode));
+}
+
 static void send_natural_language_request_to_server(char *msg)
 {
 	struct packed_buffer *pb;
@@ -13274,6 +13280,8 @@ static struct demon_cmd_def {
 	{ "HELP", "PRINT THIS HELP INFORMATION" },
 	{ "ENSCRIPT", "SAVE (PARTIALLY) UNIVERSE STATE TO LUA SCRIPT" },
 	{ "TTS", "USE TEXT-TO-SPEECH TO SPEAK SOMETHING TO SPECIFIED SHIP. E.G.: TTS SHIPNAME: HELLO" },
+	{ "RTSMODE-ON", "ENABLE REAL TIME STRATEGY MODE" },
+	{ "RTSMODE-OFF", "DISABLE REAL TIME STRATEGY MODE" },
 };
 static int demon_help_mode = 0;
 #define DEMON_CMD_DELIM " ,"
@@ -13546,6 +13554,12 @@ static int construct_demon_command(char *input,
 			break;
 		case 14:
 			send_text_to_speech_packet_to_server(original + (saveptr - input));
+			break;
+		case 15: /* enable real-time-strategy mode */
+			send_rtsmode_change_to_server(1);
+			break;
+		case 16: /* disable real-time-strategy mode */
+			send_rtsmode_change_to_server(0);
 			break;
 		default: /* unknown */
 			sprintf(errmsg, "Unknown ver number %d\n", v);
