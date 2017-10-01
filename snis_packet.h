@@ -354,6 +354,7 @@ struct update_starbase_packet {
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t x, y;
+	uint8_t occupant[4];
 };
 
 struct update_nebula_packet {

@@ -1811,7 +1811,7 @@ static int update_wormhole(uint32_t id, uint32_t timestamp, double x, double y, 
 }
 
 static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, double z,
-	union quat *orientation)
+	union quat *orientation, uint8_t occupant[4])
 {
 	int i, m;
 	struct entity *e;
@@ -1827,6 +1827,10 @@ static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, 
 	} else {
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
 	}
+	go[i].tsd.starbase.occupant[0] = occupant[0];
+	go[i].tsd.starbase.occupant[1] = occupant[1];
+	go[i].tsd.starbase.occupant[2] = occupant[2];
+	go[i].tsd.starbase.occupant[3] = occupant[3];
 	return 0;
 }
 
@@ -5736,17 +5740,22 @@ static int process_update_starbase_packet(void)
 	uint32_t id, timestamp;
 	double dx, dy, dz;
 	union quat orientation;
+	uint8_t occupant[4];
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "wwSSSQ", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSQbbbb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
-			&orientation);
+			&orientation,
+			&occupant[0],
+			&occupant[1],
+			&occupant[2],
+			&occupant[3]);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_starbase(id, timestamp, dx, dy, dz, &orientation);
+	rc = update_starbase(id, timestamp, dx, dy, dz, &orientation, occupant);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

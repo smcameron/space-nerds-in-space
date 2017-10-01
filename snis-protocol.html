@@ -430,6 +430,7 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>21</td><td>Q</td><td>orientation</td></tr>
+<tr><td>21</td><td>Q</td><td>orientation</td></tr>
 </table>
 
 <h4>102 UPDATE LASER  (laser bolt, not laser beam)</h4> (Server to Client)
@@ -444,7 +445,12 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>18</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>22</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>26</td><td>Q</td><td>orientation</td></tr>
+<tr><td>34</td><td>b</td><td>occupant[0]</td></tr>
+<tr><td>35</td><td>b</td><td>occupant[1]</td></tr>
+<tr><td>36</td><td>b</td><td>occupant[2]</td></tr>
+<tr><td>37</td><td>b</td><td>occupant[3]</td></tr>
 </table>
+<p>For the occupants, the value stored is the faction of the occupant, with 255 meaning the slot is vacant.
 
 <h4>103 UPDATE TORPEDO</h4> (Server to Client)
 <p align=center><table border=1, width=60%>

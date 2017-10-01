@@ -30,7 +30,7 @@
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
 #define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS005"
+#define SNIS_PROTOCOL_VERSION "SNIS006"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -494,6 +494,7 @@ struct starbase_data {
 	int32_t expected_docker[MAX_DOCKING_PORTS];
 	int32_t expected_docker_timer[MAX_DOCKING_PORTS];
 	int32_t spin_rate_10ths_deg_per_sec;
+	uint8_t occupant[4]; /* factions of occupants. occupant[3] defines who controls the starbase */
 };
 
 struct nebula_data {
