@@ -145,10 +145,61 @@ NICE TO HAVE:
   "set a course for the nearest waypoint", or "set a course for the selected
   waypoint", or "how far to waypoint blah"
 
+
 * Make the central star shader better. Right now it is simply a
   dumb billboard, which looks ok, but there it looks unnatural as
   the star comes around the limb of a planet, etc. there's no sense
   of brightness. See for example: https://www.seedofandromeda.com/blogs/51-procedural-star-rendering
   The sunspots, corona, etc are overkill, but the lens flare, the way
   it comes around the edge of a planet, etc, all look really good.
+
+* Add a Real Time Strategy game into SNIS.
+
+  This will give COMMS station some things to do. I envision it to work
+  something like this.
+
+  There will be two MAIN PLANETS, each belonging to two main OPPONENTS.
+
+  To win the game, conquer opponents MAIN PLANET. MAIN PLANET has some
+  hit points that cannot be replenished. Once depleted to zero, the game
+  is over. So it is important to defend main planet.
+
+  There will be some subsidiary planets and starbases between the two
+  MAIN PLANETS. Starbases can build UNITS. Each starbase may be controlled
+  by either opponent, or be neutral.  Players can request starbases that
+  they control to build units, for some cost. The more starbases a player
+  controls, the faster they accumulate money for building units.  To capture
+  a starbase, a player must occupy it with four units. Once it is occuppied,
+  it may be taken over by another player if that player occupies it with 4 units.
+  There will be several types of units, tentatively:
+
+  * Troop ship: These are the only units which may occupy a starbase.
+    They are cheap, but weakly armored and slow, and can inflict minimal
+    damage.
+  * Gunship: heavily armored, slow, can inflict medium damage
+  * Scout: light, fast, light damage.
+  * Turret: Fixed position, heavy fire, good for defense.
+  * Resupply ship: slow, light armor, can repair and replenish other ships
+  * Others???
+
+  Each unit can be given ORDERS (not all units can take all orders):
+
+  (tentative):
+  * Attack MAIN PLANET
+  * Occupy nearest starbase (troopship only)
+  * Patrol area
+  * Escort
+  * Attack nearest enemy
+  * Move to destination
+
+  So COMMS station will:
+
+  1. Direct STARBASES to manufacture UNITS.
+  2. Give ORDERS to UNITS.
+
+  The rest of the crew of the ship can drive around and help
+  the UNITS accomplish their goal by wreaking destruction upon
+  enemy units.
+
+  It may be that COMMS POWER restricts range of communication?
 
