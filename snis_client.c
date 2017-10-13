@@ -3827,6 +3827,8 @@ static inline int nav_ui_computer_active(void)
 	return nav_ui.computer_active;
 }
 
+static void comms_setup_rts_buttons(int activate, uint8_t faction);
+
 static int process_update_ship_packet(uint8_t opcode)
 {
 	int i;
@@ -3936,6 +3938,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.nav_mode = nav_mode;
 	o->tsd.ship.warp_core_status = warp_core_status;
 	o->tsd.ship.rts_mode = rts_mode;
+	comms_setup_rts_buttons(rts_mode, o->sdata.faction);
 	snis_button_set_label(nav_ui.starmap_button, nav_mode ? "NAV MODE" : "STARMAP");
 
 	update_orientation_history(o->tsd.ship.sciball_o, &sciball_orientation);
@@ -4944,6 +4947,9 @@ static struct comms_ui {
 	struct button *comms_transmit_button;
 	struct button *red_alert_button;
 	struct button *mainscreen_comms;
+	struct button *rts_starbase_button[NUM_RTS_BASES];
+	struct button *rts_fleet_button;
+	struct button *rts_main_planet_button;
 	struct snis_text_input_box *comms_input;
 	struct slider *mainzoom_slider;
 	char input[100];
@@ -11871,6 +11877,7 @@ static void comms_input_entered()
 
 static void init_comms_ui(void)
 {
+	int i;
 	int x = txx(200);
 	int y = txy(20);
 	int bw = txx(70);
@@ -11935,6 +11942,23 @@ static void init_comms_ui(void)
 		snis_strip_chart_init(txx(705), txy(5), txx(90.0), txy(50.0),
 				"EMF", "SCAN DETECTED", UI_COLOR(science_graph_plot_strong),
 				UI_COLOR(common_red_alert), 100, NANO_FONT, 900);
+	const int rts_button_y = txy(310);
+	const int rts_button_spacing = txx(60);
+	comms_ui.rts_main_planet_button = snis_button_init(txx(10) + rts_button_spacing * 0, rts_button_y, -1, txy(20),
+			"HOME PLANET", button_color, NANO_FONT, NULL, NULL);
+	snis_button_set_sound(comms_ui.rts_main_planet_button, UISND18);
+	comms_ui.rts_fleet_button = snis_button_init(txx(10) + rts_button_spacing * 2, rts_button_y, -1, txy(20),
+			"FLEET", button_color, NANO_FONT, NULL, NULL);
+	snis_button_set_sound(comms_ui.rts_fleet_button, UISND18);
+	for (i = 0; i < NUM_RTS_BASES; i++) {
+		char name[20];
+		sprintf(name, "SB-%02d ?/?", i);
+		comms_ui.rts_starbase_button[i] = snis_button_init(txx(10) + rts_button_spacing * (i + 3),
+			rts_button_y, -1, txy(20), name, button_color, NANO_FONT, NULL, NULL);
+		snis_button_set_sound(comms_ui.rts_starbase_button[i], UISND18);
+		snis_button_set_color(comms_ui.rts_starbase_button[i], UI_COLOR(comms_neutral));
+	}
+
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS,
 			"PROJECT COMMS SCREEN ON THE MAIN VIEW");
@@ -11956,10 +11980,84 @@ static void init_comms_ui(void)
 			"DISPLAY MOST RECENT COMMS TRANSMISSSIONS ON MAIN SCREEN");
 	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS,
 			"TRANSMIT ENTERED TEXT ON CURRENT CHANNEL");
+	ui_add_button(comms_ui.rts_fleet_button, DISPLAYMODE_COMMS,
+			"TRANSMIT ORDERS TO FLEET");
+	ui_add_button(comms_ui.rts_main_planet_button, DISPLAYMODE_COMMS,
+			"TRANSMIT ORDERS TO HOME PLANET");
+	for (i = 0; i < NUM_RTS_BASES; i++) {
+		ui_add_button(comms_ui.rts_starbase_button[i], DISPLAYMODE_COMMS,
+				"TRANSMIT ORDERS TO STARBASE");
+	}
 	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
 	ui_add_slider(comms_ui.mainzoom_slider, DISPLAYMODE_COMMS, "ZOOM CONTROL FOR THE MAIN SCREEN");
 	ui_add_strip_chart(comms_ui.emf_strip_chart, DISPLAYMODE_COMMS);
 	comms_ui.channel = 0;
+}
+
+static void comms_activate_rts_buttons(void)
+{
+	int i;
+
+	ui_unhide_widget(comms_ui.rts_fleet_button);
+	ui_unhide_widget(comms_ui.rts_main_planet_button);
+	for (i = 0; i < NUM_RTS_BASES; i++)
+		ui_unhide_widget(comms_ui.rts_starbase_button[i]);
+}
+
+static void comms_deactivate_rts_buttons(void)
+{
+	int i;
+
+	ui_hide_widget(comms_ui.rts_fleet_button);
+	ui_hide_widget(comms_ui.rts_main_planet_button);
+	for (i = 0; i < NUM_RTS_BASES; i++)
+		ui_hide_widget(comms_ui.rts_starbase_button[i]);
+}
+
+static void comms_setup_rts_buttons(int activate, uint8_t faction) /* called with universe lock held */
+{
+	int i, j;
+	int us, them;
+
+	if (!activate) {
+		comms_deactivate_rts_buttons();
+		return;
+	}
+	comms_activate_rts_buttons();
+
+	/* Modify the button labels to indication the occupation status of the starbases */
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *starbase = &go[i];
+		if (starbase->type != OBJTYPE_STARBASE)
+			continue;
+		/* Count how many occupiers are "us" and how many are "them" */
+		us = 0;
+		them = 0;
+		for (j = 0; j < 4; j++) {
+			if (starbase->tsd.starbase.occupant[j] == faction)
+				us++;
+			else if (starbase->tsd.starbase.occupant[j] != 255)
+				them++;
+		}
+		/* Modify the appropriate button label and color */
+		for (j = 0; j < NUM_RTS_BASES; j++) {
+			char button_label[20];
+			sprintf(button_label, "SB-%02d", j);
+			snis_button_set_color(comms_ui.rts_starbase_button[j], UI_COLOR(comms_neutral));
+			if (strncmp(starbase->sdata.name, button_label, 5) == 0) {
+				sprintf(button_label, "SB-%02d %01d/%01d", j, us, them);
+				snis_button_set_label(comms_ui.rts_starbase_button[j], button_label);
+				if (starbase->tsd.starbase.occupant[3] == faction)
+					snis_button_set_color(comms_ui.rts_starbase_button[j],
+								UI_COLOR(comms_good_status));
+				else if (starbase->tsd.starbase.occupant[3] != 255)
+					snis_button_set_color(comms_ui.rts_starbase_button[j], UI_COLOR(comms_warning));
+				else
+					snis_button_set_color(comms_ui.rts_starbase_button[j], UI_COLOR(comms_neutral));
+				break;
+			}
+		}
+	}
 }
 
 static void update_emf_detector(uint8_t emf_value)
