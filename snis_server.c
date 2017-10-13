@@ -7512,6 +7512,8 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.nav_mode = NAV_MODE_NORMAL;
 	o->tsd.ship.orbiting_object_id = 0xffffffff;
 	o->tsd.ship.nav_damping_suppression = 0.0;
+	o->tsd.ship.rts_mode = 0;
+	o->tsd.ship.rts_active_button = 255; /* none active */
 	if (o->tsd.ship.warp_core_status != WARP_CORE_STATUS_GOOD)
 		money += WARP_CORE_COST;
 	o->tsd.ship.warp_core_status = WARP_CORE_STATUS_GOOD;
@@ -13934,6 +13936,22 @@ static int process_demon_rtsmode(struct game_client *c)
 	return 0;
 }
 
+static int process_comms_rts_button(struct game_client *c)
+{
+	int rc;
+	unsigned char buffer[20];
+	uint8_t rts_button_number;
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &rts_button_number);
+	if (rc)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	int ship = lookup_by_id(bridgelist[c->bridge].shipid);
+	go[ship].tsd.ship.rts_active_button = rts_button_number;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_toggle_demon_ai_debug_mode(struct game_client *c)
 {
 	c->debug_ai = !c->debug_ai;
@@ -15762,6 +15780,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_COMMS_RTS_BUTTON:
+			rc = process_comms_rts_button(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -16629,7 +16652,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbbb",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbbbb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -16653,7 +16676,8 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.emf_detector,
 			o->tsd.ship.nav_mode,
 			o->tsd.ship.warp_core_status,
-			rts_mode);
+			rts_mode,
+			o->tsd.ship.rts_active_button);
 	pb_queue_to_client(c, pb);
 
 	/* now that we've sent the accumulated value, clear the emf_detector to the noise floor */

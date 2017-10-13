@@ -152,6 +152,7 @@ static volatile int vertical_controls_timer = 0;
 static int display_frame_stats = 0;
 static int quickstartmode = 0; /* allows auto connecting to first (only) lobby entry */
 static float turret_recoil_amount = 0.0f;
+static int global_rts_mode = 0;
 
 static int mtwist_seed = COMMON_MTWIST_SEED;
 
@@ -3845,7 +3846,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, emf_detector,
-		nav_mode, warp_core_status, rts_mode;
+		nav_mode, warp_core_status, rts_mode, rts_active_button;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -3868,14 +3869,14 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbbb",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbbbb",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
-			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status, &rts_mode);
+			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status, &rts_mode, &rts_active_button);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -3938,6 +3939,8 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.nav_mode = nav_mode;
 	o->tsd.ship.warp_core_status = warp_core_status;
 	o->tsd.ship.rts_mode = rts_mode;
+	global_rts_mode = rts_mode;
+	o->tsd.ship.rts_active_button = rts_active_button;
 	comms_setup_rts_buttons(rts_mode, o->sdata.faction);
 	snis_button_set_label(nav_ui.starmap_button, nav_mode ? "NAV MODE" : "STARMAP");
 
@@ -11870,6 +11873,12 @@ static void comms_transmit_button_pressed(void *x)
 	snis_text_input_box_zero(comms_ui.comms_input);
 }
 
+static void comms_rts_button_pressed(void *x)
+{
+	uint8_t rts_button_number = (uint8_t) (((intptr_t) x) & 0x0ff);
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_COMMS_RTS_BUTTON, rts_button_number));
+}
+
 static void comms_input_entered()
 {
 	printf("comms input entered\n");
@@ -11945,16 +11954,19 @@ static void init_comms_ui(void)
 	const int rts_button_y = txy(310);
 	const int rts_button_spacing = txx(60);
 	comms_ui.rts_main_planet_button = snis_button_init(txx(10) + rts_button_spacing * 0, rts_button_y, -1, txy(20),
-			"HOME PLANET", button_color, NANO_FONT, NULL, NULL);
+			"HOME PLANET", button_color, NANO_FONT,
+			comms_rts_button_pressed, (void *) NUM_RTS_BASES);
 	snis_button_set_sound(comms_ui.rts_main_planet_button, UISND18);
 	comms_ui.rts_fleet_button = snis_button_init(txx(10) + rts_button_spacing * 2, rts_button_y, -1, txy(20),
-			"FLEET", button_color, NANO_FONT, NULL, NULL);
+			"FLEET", button_color, NANO_FONT,
+			comms_rts_button_pressed, (void *) (NUM_RTS_BASES + 1));
 	snis_button_set_sound(comms_ui.rts_fleet_button, UISND18);
 	for (i = 0; i < NUM_RTS_BASES; i++) {
 		char name[20];
 		sprintf(name, "SB-%02d ?/?", i);
 		comms_ui.rts_starbase_button[i] = snis_button_init(txx(10) + rts_button_spacing * (i + 3),
-			rts_button_y, -1, txy(20), name, button_color, NANO_FONT, NULL, NULL);
+			rts_button_y, -1, txy(20), name, button_color, NANO_FONT,
+			comms_rts_button_pressed, (void *) ((intptr_t) i));
 		snis_button_set_sound(comms_ui.rts_starbase_button[i], UISND18);
 		snis_button_set_color(comms_ui.rts_starbase_button[i], UI_COLOR(comms_neutral));
 	}
@@ -12796,6 +12808,21 @@ static void show_comms(GtkWidget *w)
 	sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(25), txy(55));
 	sprintf(comms_buffer, "CHANNEL: %u", comms_ui.channel);
 	sng_center_xy_draw_string(comms_buffer, NANO_FONT, shield_ind_x_center, shield_ind_y_center - txy(15));
+	if (o->tsd.ship.rts_mode) {
+		if (o->tsd.ship.rts_active_button != 255) {
+			snis_draw_rectangle(0, txx(10), txy(350), SCREEN_WIDTH - txx(200), txy(150));
+			if (o->tsd.ship.rts_active_button < NUM_RTS_BASES) {
+				sprintf(comms_buffer, "STARBASE %02d", o->tsd.ship.rts_active_button);
+				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
+			} else if (o->tsd.ship.rts_active_button == NUM_RTS_BASES) {
+				sprintf(comms_buffer, "HOME PLANET");
+				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
+			} else if (o->tsd.ship.rts_active_button == NUM_RTS_BASES + 1) {
+				sprintf(comms_buffer, "FLEET");
+				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
+			}
+		}
+	}
 	show_common_screen(w, "COMMS");
 }
 

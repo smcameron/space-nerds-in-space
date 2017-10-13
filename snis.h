@@ -457,6 +457,7 @@ struct ship_data {
 	float nav_damping_suppression;
 	union quat computer_desired_orientation;
 	uint32_t computer_steering_time_left;
+	uint8_t rts_active_button; /* which comms RTS button is currently active. 255 means none */
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200

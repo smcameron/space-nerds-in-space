@@ -259,7 +259,7 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>not used</td><td>	123</td></tr>
 <tr><td>not used</td><td>	124</td></tr>
 <tr><td>OPCODE_DEMON_RTSMODE</td><td>	125</td></tr>
-<tr><td>not used</td><td>	126</td></tr>
+<tr><td>OPCODE_COMMS_RTS_BUTTON</td><td>	126</td></tr>
 <tr><td>not used</td><td>	127</td></tr>
 <tr><td>not used</td><td>	128</td></tr>
 <tr><td>not used</td><td>	129</td></tr>
@@ -651,6 +651,13 @@ the same as Update Ship 100, but nothing transmits opcode 117.
 <tr><td>Offset</td><td>Data Type</td><td>Value</td></tr>
 <tr><td>0</td><td>b</td><td>125</td></tr>
 <tr><td>1</td><td>b</td><td>requested mode (0 disable RTS mode, 1 enable RTS mode)</td></tr>
+</table>
+
+<h4>126 Comms RTS Button</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td></tr>
+<tr><td>0</td><td>b</td><td>126</td></tr>
+<tr><td>1</td><td>b</td><td>Button number (0 - NUM_RTS_BASES + 1)</td></tr>
 </table>
 
 <h4>133 Engage Warp</h4> (Client to Server)

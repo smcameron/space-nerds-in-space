@@ -51,7 +51,7 @@
 #define OPCODE_DEMON_RTSMODE	125
 #define		OPCODE_RTSMODE_SUBCMD_DISABLE	0
 #define		OPCODE_RTSMODE_SUBCMD_ENABLE	1
-/* UNUSED OPCODE 126 */
+#define OPCODE_COMMS_RTS_BUTTON 126
 /* UNUSED OPCODE 127 */
 /* UNUSED OPCODE 128 */
 /* UNUSED OPCODE 129 */
@@ -285,6 +285,7 @@ struct update_ship_packet {
 	uint8_t nav_mode;
 	uint8_t warp_core_status;
 	uint8_t rts_mode;
+	uint8_t rts_active_button;
 };
 
 struct ship_sdata_packet {
