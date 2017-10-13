@@ -13947,7 +13947,10 @@ static int process_comms_rts_button(struct game_client *c)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	int ship = lookup_by_id(bridgelist[c->bridge].shipid);
-	go[ship].tsd.ship.rts_active_button = rts_button_number;
+	if (go[ship].tsd.ship.rts_active_button != rts_button_number)
+		go[ship].tsd.ship.rts_active_button = rts_button_number;
+	else
+		go[ship].tsd.ship.rts_active_button = 255; /* deactivate on double selection */
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
