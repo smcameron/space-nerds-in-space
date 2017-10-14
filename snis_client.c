@@ -101,6 +101,7 @@
 #include "solarsystem_config.h"
 #include "pronunciation.h"
 #include "planetary_atmosphere.h"
+#include "rts_unit_data.h"
 
 #include "vertex.h"
 #include "triangle.h"
@@ -4953,18 +4954,8 @@ static struct comms_ui {
 	struct button *rts_starbase_button[NUM_RTS_BASES];
 	struct button *rts_fleet_button;
 	struct button *rts_main_planet_button;
-	struct button *rts_order_scout_button;
-	struct button *rts_order_heavy_bomber_button;
-	struct button *rts_order_gunship_button;
-	struct button *rts_order_troopship_button;
-	struct button *rts_order_turret_button;
-	struct button *rts_order_resupply_ship_button;
-	struct button *rts_patrol_button;
-	struct button *rts_escort_button;
-	struct button *rts_attack_nearest_enemy_button;
-	struct button *rts_move_to_waypoint_button;
-	struct button *rts_occupy_nearest_starbase_button;
-	struct button *rts_attack_main_planet_button;
+	struct button *rts_order_unit_button[NUM_RTS_UNIT_TYPES];
+	struct button *rts_order_command_button[NUM_RTS_ORDER_TYPES];
 	struct snis_text_input_box *comms_input;
 	struct slider *mainzoom_slider;
 	char input[100];
@@ -11982,30 +11973,22 @@ static void init_comms_ui(void)
 		snis_button_set_sound(comms_ui.rts_starbase_button[i], UISND18);
 		snis_button_set_color(comms_ui.rts_starbase_button[i], UI_COLOR(comms_neutral));
 	}
-	comms_ui.rts_order_scout_button = snis_button_init(txx(22), txy(375) + txy(21) * 0, -1, txy(20),
-				"ORDER SCOUT", button_color, PICO_FONT, NULL, NULL);
-	comms_ui.rts_order_heavy_bomber_button = snis_button_init(txx(22), txy(375) + txy(21) * 1, -1, txy(20),
-				"ORDER HEAVY BOMBER", button_color, PICO_FONT, NULL, NULL);
-	comms_ui.rts_order_gunship_button = snis_button_init(txx(22), txy(375) + txy(21) * 2, -1, txy(20),
-				"ORDER GUNSHIP", button_color, PICO_FONT, NULL, NULL);
-	comms_ui.rts_order_troopship_button = snis_button_init(txx(22), txy(375) + txy(21) * 3, -1, txy(20),
-				"ORDER TROOP SHIP", button_color, PICO_FONT, NULL, NULL);
-	comms_ui.rts_order_turret_button = snis_button_init(txx(22), txy(375) + txy(21) * 4, -1, txy(20),
-				"ORDER TURRET", button_color, PICO_FONT, NULL, NULL);
-	comms_ui.rts_order_resupply_ship_button = snis_button_init(txx(22), txy(375) + txy(21) * 5, -1, txy(20),
-				"ORDER RESUPPLY SHIP", button_color, PICO_FONT, NULL, NULL);
-	comms_ui.rts_patrol_button = snis_button_init(txx(22), txy(375) + txy(21) * 0, -1, txy(20),
-				"PATROL", button_color, PICO_FONT, NULL, NULL);
-	comms_ui.rts_escort_button = snis_button_init(txx(22), txy(375) + txy(21) * 1, -1, txy(20),
-				"ESCORT", button_color, PICO_FONT, NULL, NULL);
-	comms_ui.rts_attack_nearest_enemy_button = snis_button_init(txx(22), txy(375) + txy(21) * 2, -1, txy(20),
-				"ATTACK NEAREST ENEMY", button_color, PICO_FONT, NULL, NULL);
-	comms_ui.rts_move_to_waypoint_button = snis_button_init(txx(22), txy(375) + txy(21) * 3, -1, txy(20),
-				"MOVE TO WAYPOINT", button_color, PICO_FONT, NULL, NULL);
-	comms_ui.rts_occupy_nearest_starbase_button = snis_button_init(txx(22), txy(375) + txy(21) * 4, -1, txy(20),
-				"OCCUPY NEAREST STARBASE", button_color, PICO_FONT, NULL, NULL);
-	comms_ui.rts_attack_main_planet_button = snis_button_init(txx(22), txy(375) + txy(21) * 5, -1, txy(20),
-				"ATTACK ENEMY PLANET", button_color, PICO_FONT, NULL, NULL);
+
+	for (i = 0; i < NUM_RTS_UNIT_TYPES; i++) {
+		char button_label[20];
+
+		snprintf(button_label, 20, "ORDER %s", rts_unit_type(i)->name);
+		comms_ui.rts_order_unit_button[i] = snis_button_init(txx(22), txy(375) + txy(21) * i, -1, txy(20),
+				button_label, button_color, PICO_FONT, NULL, NULL);
+	}
+
+	for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) {
+		char button_label[20];
+
+		snprintf(button_label, 20, "%s", rts_order_type(i)->name);
+		comms_ui.rts_order_command_button[i] = snis_button_init(txx(22), txy(375) + txy(21) * i, -1, txy(20),
+				button_label, button_color, PICO_FONT, NULL, NULL);
+	}
 
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS,
@@ -12036,21 +12019,16 @@ static void init_comms_ui(void)
 		ui_add_button(comms_ui.rts_starbase_button[i], DISPLAYMODE_COMMS,
 				"TRANSMIT ORDERS TO STARBASE");
 	}
-	ui_add_button(comms_ui.rts_order_scout_button, DISPLAYMODE_COMMS, "ORDER A SCOUT SHIP TO BE BUILT");
-	ui_add_button(comms_ui.rts_order_heavy_bomber_button, DISPLAYMODE_COMMS, "ORDER A HEAVY BOMBER TO BE BUILT");
-	ui_add_button(comms_ui.rts_order_gunship_button, DISPLAYMODE_COMMS, "ORDER A GUNSHIP TO BE BUILT");
-	ui_add_button(comms_ui.rts_order_troopship_button, DISPLAYMODE_COMMS, "ORDER A TROOP SHIP TO BE BUILT");
-	ui_add_button(comms_ui.rts_order_turret_button, DISPLAYMODE_COMMS, "ORDER A TURRET TO BE BUILT");
-	ui_add_button(comms_ui.rts_order_resupply_ship_button, DISPLAYMODE_COMMS, "ORDER A RESUPPLY SHIP TO BE BUILT");
-	ui_add_button(comms_ui.rts_patrol_button, DISPLAYMODE_COMMS, "ORDER UNIT TO PATROL AREA");
-	ui_add_button(comms_ui.rts_escort_button, DISPLAYMODE_COMMS, "ORDER UNIT TO ESCORT FRIENDLY SHIPS");
-	ui_add_button(comms_ui.rts_attack_nearest_enemy_button, DISPLAYMODE_COMMS,
-				"ORDER UNIT TO ATTACK NEAREST ENEMY");
-	ui_add_button(comms_ui.rts_move_to_waypoint_button, DISPLAYMODE_COMMS, "ORDER UNIT TO MOVE TO WAYPOINT");
-	ui_add_button(comms_ui.rts_occupy_nearest_starbase_button, DISPLAYMODE_COMMS,
-				"ORDER UNIT TO OCCUPY NEAREST STARBASE");
-	ui_add_button(comms_ui.rts_attack_main_planet_button, DISPLAYMODE_COMMS,
-				"ORDER UNIT TO ATTACK MAIN ENEMY PLANET");
+
+	for (i = 0; i < NUM_RTS_UNIT_TYPES; i++) {
+		char help_text[40];
+		snprintf(help_text, 40, "ORDER A %s TO BE BUILT", rts_unit_type(i)->name);
+		ui_add_button(comms_ui.rts_order_unit_button[i], DISPLAYMODE_COMMS, help_text);
+	}
+
+	for (i = 0; i < NUM_RTS_ORDER_TYPES; i++)
+		ui_add_button(comms_ui.rts_order_command_button[i], DISPLAYMODE_COMMS, rts_order_type(i)->help_text);
+
 	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
 	ui_add_slider(comms_ui.mainzoom_slider, DISPLAYMODE_COMMS, "ZOOM CONTROL FOR THE MAIN SCREEN");
 	ui_add_strip_chart(comms_ui.emf_strip_chart, DISPLAYMODE_COMMS);
@@ -12066,50 +12044,20 @@ static void comms_activate_rts_buttons(struct snis_entity *player_ship)
 	for (i = 0; i < NUM_RTS_BASES; i++)
 		ui_unhide_widget(comms_ui.rts_starbase_button[i]);
 	if (player_ship->tsd.ship.rts_active_button < NUM_RTS_BASES + 1) {
-		/* Unhide starbase and main planet buttons */
-		ui_unhide_widget(comms_ui.rts_order_scout_button);
-		ui_unhide_widget(comms_ui.rts_order_heavy_bomber_button);
-		ui_unhide_widget(comms_ui.rts_order_gunship_button);
-		ui_unhide_widget(comms_ui.rts_order_troopship_button);
-		ui_unhide_widget(comms_ui.rts_order_turret_button);
-		ui_unhide_widget(comms_ui.rts_order_resupply_ship_button);
-		/* Hide fleet buttons */
-		ui_hide_widget(comms_ui.rts_patrol_button);
-		ui_hide_widget(comms_ui.rts_escort_button);
-		ui_hide_widget(comms_ui.rts_attack_nearest_enemy_button);
-		ui_hide_widget(comms_ui.rts_move_to_waypoint_button);
-		ui_hide_widget(comms_ui.rts_occupy_nearest_starbase_button);
-		ui_hide_widget(comms_ui.rts_attack_main_planet_button);
+		for (i = 0; i < NUM_RTS_UNIT_TYPES; i++) /* Unhide starbase and main planet buttons */
+			ui_unhide_widget(comms_ui.rts_order_unit_button[i]);
+		for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) /* Hide fleet buttons */
+			ui_hide_widget(comms_ui.rts_order_command_button[i]);
 	} else if (player_ship->tsd.ship.rts_active_button == NUM_RTS_BASES + 1) {
-		/* Hide starbase and main planet buttons */
-		ui_hide_widget(comms_ui.rts_order_scout_button);
-		ui_hide_widget(comms_ui.rts_order_heavy_bomber_button);
-		ui_hide_widget(comms_ui.rts_order_gunship_button);
-		ui_hide_widget(comms_ui.rts_order_troopship_button);
-		ui_hide_widget(comms_ui.rts_order_turret_button);
-		ui_hide_widget(comms_ui.rts_order_resupply_ship_button);
-		/* Unhide fleet buttons */
-		ui_unhide_widget(comms_ui.rts_patrol_button);
-		ui_unhide_widget(comms_ui.rts_escort_button);
-		ui_unhide_widget(comms_ui.rts_attack_nearest_enemy_button);
-		ui_unhide_widget(comms_ui.rts_move_to_waypoint_button);
-		ui_unhide_widget(comms_ui.rts_occupy_nearest_starbase_button);
-		ui_unhide_widget(comms_ui.rts_attack_main_planet_button);
+		for (i = 0; i < NUM_RTS_UNIT_TYPES; i++) /* Hide starbase and main planet buttons */
+			ui_hide_widget(comms_ui.rts_order_unit_button[i]);
+		for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) /* Unhide fleet buttons */
+			ui_unhide_widget(comms_ui.rts_order_command_button[i]);
 	} else {
-		/* Hide starbase and main planet buttons */
-		ui_hide_widget(comms_ui.rts_order_scout_button);
-		ui_hide_widget(comms_ui.rts_order_heavy_bomber_button);
-		ui_hide_widget(comms_ui.rts_order_gunship_button);
-		ui_hide_widget(comms_ui.rts_order_troopship_button);
-		ui_hide_widget(comms_ui.rts_order_turret_button);
-		ui_hide_widget(comms_ui.rts_order_resupply_ship_button);
-		/* Hide fleet buttons */
-		ui_hide_widget(comms_ui.rts_patrol_button);
-		ui_hide_widget(comms_ui.rts_escort_button);
-		ui_hide_widget(comms_ui.rts_attack_nearest_enemy_button);
-		ui_hide_widget(comms_ui.rts_move_to_waypoint_button);
-		ui_hide_widget(comms_ui.rts_occupy_nearest_starbase_button);
-		ui_hide_widget(comms_ui.rts_attack_main_planet_button);
+		for (i = 0; i < NUM_RTS_UNIT_TYPES; i++) /* Hide starbase and main planet buttons */
+			ui_hide_widget(comms_ui.rts_order_unit_button[i]);
+		for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) /* Hide fleet buttons */
+			ui_hide_widget(comms_ui.rts_order_command_button[i]);
 	}
 }
 
@@ -12121,18 +12069,10 @@ static void comms_deactivate_rts_buttons(void)
 	ui_hide_widget(comms_ui.rts_main_planet_button);
 	for (i = 0; i < NUM_RTS_BASES; i++)
 		ui_hide_widget(comms_ui.rts_starbase_button[i]);
-	ui_hide_widget(comms_ui.rts_order_scout_button);
-	ui_hide_widget(comms_ui.rts_order_heavy_bomber_button);
-	ui_hide_widget(comms_ui.rts_order_gunship_button);
-	ui_hide_widget(comms_ui.rts_order_troopship_button);
-	ui_hide_widget(comms_ui.rts_order_turret_button);
-	ui_hide_widget(comms_ui.rts_order_resupply_ship_button);
-	ui_hide_widget(comms_ui.rts_patrol_button);
-	ui_hide_widget(comms_ui.rts_escort_button);
-	ui_hide_widget(comms_ui.rts_attack_nearest_enemy_button);
-	ui_hide_widget(comms_ui.rts_move_to_waypoint_button);
-	ui_hide_widget(comms_ui.rts_occupy_nearest_starbase_button);
-	ui_hide_widget(comms_ui.rts_attack_main_planet_button);
+	for (i = 0; i < NUM_RTS_UNIT_TYPES; i++)
+		ui_hide_widget(comms_ui.rts_order_unit_button[i]);
+	for (i = 0; i < NUM_RTS_ORDER_TYPES; i++)
+		ui_hide_widget(comms_ui.rts_order_command_button[i]);
 }
 
 static void comms_setup_rts_buttons(int activate, struct snis_entity *player_ship) /* called with universe lock held */
