@@ -791,6 +791,19 @@ static struct snis_entity *rts_find_my_home_planet(void)
 	return NULL;
 }
 
+static struct snis_entity *rts_find_my_starbase(int starbase_number)
+{
+	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].type != OBJTYPE_STARBASE || !go[i].alive)
+			continue;
+		if (go[i].tsd.starbase.starbase_number == starbase_number)
+			return &go[i];
+	}
+	return NULL;
+}
+
 static void update_generic_damcon_object(struct snis_damcon_entity *o,
 			double x, double y, double velocity, double heading)
 {
@@ -12209,15 +12222,12 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 			for (j = 0; j < NUM_RTS_BASES; j++) {
 				char button_label[20];
 				char activity;
-				sprintf(button_label, "SB-%02d", j);
-				snis_button_set_color(comms_ui.rts_starbase_button[j], UI_COLOR(comms_neutral));
-				if (strncmp(starbase->sdata.name, button_label, 5) == 0) {
+				if (starbase->tsd.starbase.starbase_number == j) {
 					if (starbase->tsd.starbase.time_left_to_build == 0)
 						activity = ' ';
 					else
-						activity = spinner[starbase->tsd.starbase.time_left_to_build % 4];
+						activity = spinner[(starbase->tsd.starbase.time_left_to_build / 2) % 4];
 					sprintf(button_label, "SB-%02d %01d/%01d %c", j, us, them, activity);
-
 					snis_button_set_label(comms_ui.rts_starbase_button[j], button_label);
 					if (starbase->tsd.starbase.occupant[3] == player_ship->sdata.faction)
 						snis_button_set_color(comms_ui.rts_starbase_button[j],
@@ -12231,16 +12241,6 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 					break;
 				}
 			}
-		}
-		if (starbase->type == OBJTYPE_STARBASE && starbase->sdata.faction == player_ship->sdata.faction) {
-			char activity;
-			char button_label[20];
-			if (starbase->tsd.starbase.time_left_to_build == 0)
-				activity = ' ';
-			else
-				activity = spinner[starbase->tsd.starbase.time_left_to_build % 4];
-			sprintf(button_label, "HOME PLANET %c", activity);
-			snis_button_set_label(comms_ui.rts_main_planet_button, button_label);
 		}
 	}
 }
@@ -12954,7 +12954,6 @@ static void show_3d_science(GtkWidget *w)
 	show_common_screen(w, "SCIENCE");
 }
 
-
 static void show_comms(GtkWidget *w)
 {
 	struct snis_entity *o;
@@ -12985,7 +12984,15 @@ static void show_comms(GtkWidget *w)
 		if (o->tsd.ship.rts_active_button != 255) {
 			snis_draw_rectangle(0, txx(10), txy(350), SCREEN_WIDTH - txx(200), txy(150));
 			if (o->tsd.ship.rts_active_button < NUM_RTS_BASES) {
-				sprintf(comms_buffer, "STARBASE %02d", o->tsd.ship.rts_active_button);
+				struct snis_entity *starbase = rts_find_my_starbase(o->tsd.ship.rts_active_button);
+				if (starbase && starbase->tsd.starbase.time_left_to_build != 0) {
+					sprintf(comms_buffer, "STARBASE %02d: BUILDING %s, %d SECONDS REMAINING",
+						starbase->tsd.starbase.starbase_number,
+						rts_unit_type(starbase->tsd.starbase.build_unit_type)->name,
+						starbase->tsd.starbase.time_left_to_build / 10);
+				} else {
+					sprintf(comms_buffer, "STARBASE %02d", o->tsd.ship.rts_active_button);
+				}
 				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
 			} else if (o->tsd.ship.rts_active_button == RTS_HOME_PLANET_BUTTON) {
 				struct snis_entity *home_planet = rts_find_my_home_planet();
@@ -12994,7 +13001,8 @@ static void show_comms(GtkWidget *w)
 						rts_unit_type(home_planet->tsd.planet.build_unit_type)->name,
 						home_planet->tsd.planet.time_left_to_build / 10);
 				} else  {
-					sprintf(comms_buffer, "HOME PLANET");
+					sprintf(comms_buffer, "HOME PLANET (faction = %d/%d)",
+						o->sdata.faction, home_planet ? home_planet->sdata.faction : 255);
 				}
 				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
 			} else if (o->tsd.ship.rts_active_button == RTS_FLEET_BUTTON) {
