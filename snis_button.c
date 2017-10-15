@@ -16,7 +16,9 @@ static int default_button_sound = -1;
 struct button {
 	int x, y, width, height;
 	char label[20];
+	int enabled;
 	int color;
+	int disabled_color;
 	int font;
 	int *checkbox_value;
 	button_function bf;
@@ -58,12 +60,14 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	snis_button_set_label(b, label);
 	b->label[sizeof(b->label) - 1] = '\0';
 	b->color = color;
+	b->disabled_color = color;
 	b->font = font;
 	b->bf = bf;
 	b->cookie = cookie;
 	b->checkbox_value = NULL;
 	b->button_press_feedback_counter = 0;
 	b->button_sound = default_button_sound;
+	b->enabled = 1;
 	if (b->width < 0 || b->height < 0)
 		snis_button_compute_dimensions(b);
 	return b;
@@ -105,7 +109,11 @@ void snis_button_draw(struct button *b)
 	if (b->height < 0 || b->width < 0)
 		snis_button_compute_dimensions(b);
 
-	sng_set_foreground(b->color);
+	if (b->enabled)
+		sng_set_foreground(b->color);
+	else
+		sng_set_foreground(b->disabled_color);
+
 	if (b->button_press_feedback_counter)
 		offset = 1;
 	else
@@ -145,6 +153,8 @@ int snis_button_button_press(struct button *b, int x, int y)
 {
 	if (!snis_button_inside(b, x, y))
 		return 0;
+	if (!b->enabled)
+		return 0;
 	if (b->button_sound != -1)
 		wwviaudio_add_sound(b->button_sound);
 	if (b->bf)
@@ -160,9 +170,19 @@ void snis_button_set_color(struct button *b, int color)
 	b->color = color;
 }
 
+void snis_button_set_disabled_color(struct button *b, int color)
+{
+	b->disabled_color = color;
+}
+
 int snis_button_get_color(struct button *b)
 {
 	return b->color;
+}
+
+int snis_button_get_disabled_color(struct button *b)
+{
+	return b->disabled_color;
 }
 
 void snis_button_checkbox(struct button *b, int *value)
@@ -189,5 +209,15 @@ void snis_button_set_sound(struct button *b, int sound)
 void snis_button_set_default_sound(int sound)
 {
 	default_button_sound = sound;
+}
+
+void snis_button_disable(struct button *b)
+{
+	b->enabled = 0;
+}
+
+void snis_button_enable(struct button *b)
+{
+	b->enabled = 1;
 }
 

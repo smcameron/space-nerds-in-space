@@ -29,6 +29,10 @@ GLOBAL void snis_button_set_position(struct button *b, int x, int y);
 GLOBAL void snis_button_set_sound(struct button *b, int sound);
 GLOBAL void snis_button_set_default_sound(int sound);
 GLOBAL int snis_button_inside(struct button *b, int x, int y);
+GLOBAL void snis_button_disable(struct button *b);
+GLOBAL void snis_button_enable(struct button *b);
+GLOBAL void snis_button_set_disabled_color(struct button *b, int color);
+GLOBAL int snis_button_get_disabled_color(struct button *b);
 
 #undef GLOBAL
 #endif
