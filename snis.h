@@ -30,7 +30,7 @@
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
 #define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS006"
+#define SNIS_PROTOCOL_VERSION "SNIS007"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -491,9 +491,10 @@ struct marketplace_data {
 #define STARBASE_DOCK_TIME (1200) /* 2 minutes */
 struct starbase_data {
 	uint8_t under_attack;
-	uint32_t last_time_called_for_help;
 	uint8_t lifeform_count;
 	uint8_t security;
+	uint8_t starbase_number;
+	uint32_t last_time_called_for_help;
 	char name[16];
 	struct marketplace_data *mkt;
 	int associated_planet_id;

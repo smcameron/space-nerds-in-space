@@ -9002,6 +9002,7 @@ static int add_starbase(double x, double y, double z,
 	go[i].tsd.starbase.occupant[3] = 255;
 	go[i].tsd.starbase.time_left_to_build = 0;
 	go[i].tsd.starbase.build_unit_type = 255;
+	go[i].tsd.starbase.starbase_number = n;
 	fabricate_prices(&go[i]);
 	init_starbase_market(&go[i]);
 	/* FIXME, why name stored twice? probably just use sdata.name is best
@@ -17050,7 +17051,7 @@ static void send_update_wormhole_packet(struct game_client *c,
 static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSQbbbbwb", OPCODE_UPDATE_STARBASE,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSQbbbbwbb", OPCODE_UPDATE_STARBASE,
 					o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
@@ -17061,7 +17062,8 @@ static void send_update_starbase_packet(struct game_client *c,
 					o->tsd.starbase.occupant[2],
 					o->tsd.starbase.occupant[3],
 					o->tsd.starbase.time_left_to_build,
-					o->tsd.starbase.build_unit_type));
+					o->tsd.starbase.build_unit_type,
+					o->tsd.starbase.starbase_number));
 }
 
 static void send_update_warpgate_packet(struct game_client *c,

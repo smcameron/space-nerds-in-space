@@ -358,6 +358,7 @@ struct update_starbase_packet {
 	uint8_t occupant[4];
 	uint32_t time_left_to_build;
 	uint8_t build_unit_type;
+	uint8_t starbase_number;
 };
 
 struct update_nebula_packet {

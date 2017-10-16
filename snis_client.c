@@ -1838,7 +1838,8 @@ static int update_wormhole(uint32_t id, uint32_t timestamp, double x, double y, 
 }
 
 static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, double z,
-	union quat *orientation, uint8_t occupant[4], uint32_t time_left_to_build, uint8_t build_unit_type)
+	union quat *orientation, uint8_t occupant[4], uint32_t time_left_to_build, uint8_t build_unit_type,
+	uint8_t starbase_number)
 {
 	int i, m;
 	struct entity *e;
@@ -1860,6 +1861,7 @@ static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, 
 	go[i].tsd.starbase.occupant[3] = occupant[3];
 	go[i].tsd.starbase.time_left_to_build = time_left_to_build;
 	go[i].tsd.starbase.build_unit_type = build_unit_type;
+	go[i].tsd.starbase.starbase_number = starbase_number;
 	return 0;
 }
 
@@ -5782,10 +5784,10 @@ static int process_update_starbase_packet(void)
 	double dx, dy, dz;
 	union quat orientation;
 	uint32_t time_left_to_build;
-	uint8_t occupant[4], build_unit_type;
+	uint8_t occupant[4], build_unit_type, starbase_number;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "wwSSSQbbbbwb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSQbbbbwbb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
@@ -5795,12 +5797,13 @@ static int process_update_starbase_packet(void)
 			&occupant[2],
 			&occupant[3],
 			&time_left_to_build,
-			&build_unit_type);
+			&build_unit_type,
+			&starbase_number);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_starbase(id, timestamp, dx, dy, dz, &orientation, occupant,
-				time_left_to_build, build_unit_type);
+				time_left_to_build, build_unit_type, starbase_number);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
