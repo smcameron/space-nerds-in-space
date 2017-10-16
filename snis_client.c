@@ -12112,7 +12112,7 @@ static void init_comms_ui(void)
 	for (i = 0; i < NUM_RTS_UNIT_TYPES; i++) {
 		char button_label[20];
 
-		snprintf(button_label, 20, "ORDER %s", rts_unit_type(i)->name);
+		snprintf(button_label, 20, "$%.0f %s", rts_unit_type(i)->cost_to_build, rts_unit_type(i)->name);
 		comms_ui.rts_order_unit_button[i] = snis_button_init(txx(22), txy(375) + txy(21) * i, -1, txy(20),
 				button_label, button_color, PICO_FONT,
 				comms_rts_build_unit_button_pressed, (void *) (intptr_t) i);
@@ -12122,7 +12122,7 @@ static void init_comms_ui(void)
 	for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) {
 		char button_label[20];
 
-		snprintf(button_label, 20, "%s", rts_order_type(i)->name);
+		snprintf(button_label, 20, "$%.0f %s", rts_order_type(i)->cost_to_order, rts_order_type(i)->name);
 		comms_ui.rts_order_command_button[i] = snis_button_init(txx(22), txy(375) + txy(21) * i, -1, txy(20),
 				button_label, button_color, PICO_FONT, NULL, NULL);
 	}
@@ -12159,7 +12159,8 @@ static void init_comms_ui(void)
 
 	for (i = 0; i < NUM_RTS_UNIT_TYPES; i++) {
 		char help_text[40];
-		snprintf(help_text, 40, "ORDER A %s TO BE BUILT", rts_unit_type(i)->name);
+		snprintf(help_text, 40, "$%5.0f ORDER A %s TO BE BUILT", rts_unit_type(i)->cost_to_build,
+				rts_unit_type(i)->name);
 		ui_add_button(comms_ui.rts_order_unit_button[i], DISPLAYMODE_COMMS, help_text);
 	}
 
