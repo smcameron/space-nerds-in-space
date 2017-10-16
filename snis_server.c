@@ -14161,6 +14161,11 @@ static int process_rts_build_unit(struct game_client *c)
 		goto out;
 	builder = &go[index];
 
+	if (rts_unit_type(unit_type)->cost_to_build > ship->tsd.ship.wallet) {
+		pthread_mutex_unlock(&universe_mutex);
+		snis_queue_add_text_to_speech("Insufficient funds.", ROLE_TEXT_TO_SPEECH, c->shipid);
+		return 0;
+	}
 	if (ship->sdata.faction != builder->sdata.faction) {
 		sprintf(speech, "You do not control %s", builder->sdata.name);
 		pthread_mutex_unlock(&universe_mutex);
@@ -14175,6 +14180,7 @@ static int process_rts_build_unit(struct game_client *c)
 			snis_queue_add_text_to_speech(speech, ROLE_TEXT_TO_SPEECH, c->shipid);
 			return 0;
 		} else {
+			ship->tsd.ship.wallet -= rts_unit_type(unit_type)->cost_to_build;
 			builder->tsd.starbase.time_left_to_build = rts_unit_type(unit_type)->time_to_build;
 			builder->tsd.starbase.build_unit_type = unit_type;
 			pthread_mutex_unlock(&universe_mutex);
@@ -14190,6 +14196,7 @@ static int process_rts_build_unit(struct game_client *c)
 			snis_queue_add_text_to_speech(speech, ROLE_TEXT_TO_SPEECH, c->shipid);
 			return 0;
 		} else {
+			ship->tsd.ship.wallet -= rts_unit_type(unit_type)->cost_to_build;
 			builder->tsd.planet.time_left_to_build = rts_unit_type(unit_type)->time_to_build;
 			builder->tsd.planet.build_unit_type = unit_type;
 			pthread_mutex_unlock(&universe_mutex);
