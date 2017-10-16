@@ -101,6 +101,7 @@
 #include "mesh.h"
 #include "turret_aimer.h"
 #include "pthread_util.h"
+#include "rts_unit_data.h"
 
 #include "snis_entity_key_value_specification.h"
 
@@ -1003,6 +1004,70 @@ static void generic_move(__attribute__((unused)) struct snis_entity *o)
 	return;
 }
 
+static int add_ship(int faction, int auto_respawn);
+static void add_new_rts_unit(struct snis_entity *builder)
+{
+	float dx, dy, dz;
+	struct snis_entity *unit;
+	uint8_t unit_type;
+	int i;
+
+	/* Figure out where to add the new unit */
+	if (builder->type == OBJTYPE_PLANET) {
+		random_point_on_sphere(builder->tsd.planet.radius * 1.3 + 400.0f +
+					snis_randn(400), &dx, &dy, &dz);
+		unit_type = builder->tsd.planet.build_unit_type;
+	} else if (builder->type == OBJTYPE_STARBASE) {
+		random_point_on_sphere(400.0f + snis_randn(400), &dx, &dy, &dz);
+		unit_type = builder->tsd.starbase.build_unit_type;
+	} else {
+		fprintf(stderr, "Unexpected builder type %hhu\n", builder->type);
+		return;
+	}
+	dx += builder->x;
+	dy += builder->y;
+	dz += builder->z;
+	i = add_ship(builder->sdata.faction, 0);
+	if (i < 0) {
+		fprintf(stderr, "add_ship failed.\n");
+		return;
+	}
+	unit = &go[i];
+	unit->x = dx;
+	unit->y = dy;
+	unit->z = dz;
+	unit->vx = 0;
+	unit->vy = 0;
+	unit->vz = 0;
+	unit->tsd.ship.nai_entries = 1;
+	unit->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_OCCUPY_ENEMY_BASE;
+	unit->tsd.ship.ai[0].u.occupy_base.base_id = (uint32_t) -1;
+	for (i = 0; i < nshiptypes; i++) { /* Figure out what model this ship is */
+		if (strcmp(ship_type[i].class, rts_unit_type(unit_type)->class) == 0) {
+			unit->sdata.subclass = i;
+			unit->tsd.ship.shiptype = i;
+			unit->sdata.shield_strength = ship_type[i].max_shield_strength;
+			unit->tsd.ship.lifeform_count = ship_type[i].crew_max;
+			unit->tsd.ship.ncargo_bays = ship_type[i].ncargo_bays;
+			fprintf(stderr, "Added ship successfully\n");
+			return;
+		}
+	}
+	fprintf(stderr, "Did not figure out what model of ship to use.\n");
+}
+
+static void planet_move(struct snis_entity *o)
+{
+	if (!rts_mode)
+		return;
+	if (o->tsd.planet.time_left_to_build == 0)
+		return;
+	o->tsd.planet.time_left_to_build--;
+	o->timestamp = universe_timestamp;
+	if (o->tsd.planet.time_left_to_build == 0 && o->tsd.planet.build_unit_type != 255) /* Unit is completed? */
+		add_new_rts_unit(o);
+}
+
 static void asteroid_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx * o->tsd.asteroid.v,
@@ -1338,7 +1403,6 @@ static void queue_delete_oid(struct game_client *c, uint32_t oid)
 	pb_queue_to_client(c, snis_opcode_pkt("bw", OPCODE_DELETE_OBJECT, oid));
 }
 
-static int add_ship(int faction, int auto_respawn);
 static void push_cop_mode(struct snis_entity *cop);
 static void respawn_object(struct snis_entity *o)
 {
@@ -4347,6 +4411,82 @@ static void maybe_leave_fleet(struct snis_entity *o)
 	}
 }
 
+static void rts_occupy_starbase_slot(struct snis_entity *starbase, struct snis_entity *occupier)
+{
+	int i;
+	/* See if there's an unoccupied slot in the first 3 */
+	for (i = 0; i < 3; i++) {
+		if (starbase->tsd.starbase.occupant[i] == 255) {
+			starbase->tsd.starbase.occupant[i] = occupier->sdata.faction;
+			delete_from_clients_and_server(occupier);
+			starbase->timestamp = universe_timestamp;
+			return;
+		}
+	}
+	/* See if there's a slot in the first 3 that's not us */
+	for (i = 0; i < 3; i++) {
+		if (starbase->tsd.starbase.occupant[i] != occupier->sdata.faction) {
+			starbase->tsd.starbase.occupant[i] = occupier->sdata.faction;
+			delete_from_clients_and_server(occupier);
+			starbase->timestamp = universe_timestamp;
+			return;
+		}
+	}
+	/* See if the last slot is not us */
+	if (starbase->tsd.starbase.occupant[3] != occupier->sdata.faction) {
+		starbase->tsd.starbase.occupant[3] = occupier->sdata.faction;
+		starbase->sdata.faction = occupier->sdata.faction; /* take over the base */
+		delete_from_clients_and_server(occupier);
+		starbase->timestamp = universe_timestamp;
+		return;
+	}
+}
+
+static void ai_occupy_enemy_base_mode_brain(struct snis_entity *o)
+{
+	int i, n;
+	int closest = -1;
+	double dist, min_dist = 0;
+
+	/* Find the closest starbase that we do not already control */
+	n = o->tsd.ship.nai_entries - 1;
+	if (o->tsd.ship.ai[n].u.occupy_base.base_id == (uint32_t) -1 ||
+		((o->id + universe_timestamp)  % 10) == 0) {
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			struct snis_entity *sb = &go[i];
+			if (!sb->alive)
+				continue;
+			if (sb->type != OBJTYPE_STARBASE)
+				continue;
+			if (sb->tsd.starbase.occupant[3] == o->sdata.faction)
+				continue;
+			dist = dist3d(sb->x - o->x, sb->y - o->y, sb->z - o->z);
+			if (closest == -1 || dist < min_dist) {
+				closest = i;
+				min_dist = dist;
+			}
+		}
+		if (closest == -1) { /* There are no starbases we do not already control */
+			n = o->tsd.ship.nai_entries - 1;
+			o->tsd.ship.ai[n].ai_mode = AI_MODE_RTS_STANDBY; /* switch to standby mode */
+		} else {
+			o->tsd.ship.ai[n].u.occupy_base.base_id = go[closest].id;
+		}
+	}
+	if (o->tsd.ship.ai[n].u.occupy_base.base_id != (uint32_t) -1) {
+		i = lookup_by_id(o->tsd.ship.ai[n].u.occupy_base.base_id);
+		if (i >= 0) {
+			struct snis_entity *sb = &go[i];
+			if (sb->type == OBJTYPE_STARBASE && sb->tsd.starbase.occupant[3] != o->sdata.faction) {
+				dist = ai_ship_travel_towards(o, sb->x, sb->y, sb->z);
+				if (dist < 300.0 * 300.0) {
+					rts_occupy_starbase_slot(sb, o);
+				}
+			}
+		}
+	}
+}
+
 static void ai_brain(struct snis_entity *o)
 {
 	int n;
@@ -4399,6 +4539,14 @@ static void ai_brain(struct snis_entity *o)
 		break;
 	case AI_MODE_TOW_SHIP:
 		ai_tow_ship_mode_brain(o);
+		break;
+	case AI_MODE_RTS_STANDBY: /* Just sit there not doing anything. */
+		o->vx = 0;
+		o->vy = 0;
+		o->vz = 0;
+		break;
+	case AI_MODE_RTS_OCCUPY_ENEMY_BASE:
+		ai_occupy_enemy_base_mode_brain(o);
 		break;
 	default:
 		break;
@@ -7097,6 +7245,17 @@ static void starbase_move(struct snis_entity *o)
 			snis_queue_add_sound(PERMISSION_TO_DOCK_EXPIRED, ROLE_NAVIGATION, b->shipid);
 		}
 	}
+
+	if (rts_mode) { /* Build any RTS units ordered */
+		if (o->tsd.starbase.time_left_to_build > 0) { /* Building something? */
+			o->tsd.starbase.time_left_to_build--;
+			if (o->tsd.starbase.time_left_to_build == 0 &&
+				o->tsd.starbase.build_unit_type != 255) { /* Unit is completed? */
+				printf("Starbase has completed building a unit\n");
+				add_new_rts_unit(o);
+			}
+		}
+	}
 }
 
 static void warpgate_move(struct snis_entity *o)
@@ -8841,6 +9000,8 @@ static int add_starbase(double x, double y, double z,
 	go[i].tsd.starbase.occupant[1] = 255;
 	go[i].tsd.starbase.occupant[2] = 255;
 	go[i].tsd.starbase.occupant[3] = 255;
+	go[i].tsd.starbase.time_left_to_build = 0;
+	go[i].tsd.starbase.build_unit_type = 255;
 	fabricate_prices(&go[i]);
 	init_starbase_market(&go[i]);
 	/* FIXME, why name stored twice? probably just use sdata.name is best
@@ -9504,7 +9665,7 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
 	go[i].sdata.shield_depth = 0;
-	go[i].move = generic_move;
+	go[i].move = planet_move;
 	go[i].tsd.planet.government = snis_randn(1000) % ARRAYSIZE(government_name);
 	go[i].tsd.planet.economy = snis_randn(1000) % ARRAYSIZE(economy_name);
 	go[i].tsd.planet.tech_level = snis_randn(1000) % ARRAYSIZE(tech_level_name);
@@ -13955,6 +14116,74 @@ static int process_comms_rts_button(struct game_client *c)
 	return 0;
 }
 
+static int process_rts_build_unit(struct game_client *c)
+{
+	int rc, index;
+	unsigned char buffer[20];
+	char speech[100];
+	uint32_t builder_id;
+	uint8_t unit_type;
+	struct snis_entity *ship, *builder;
+
+	rc = read_and_unpack_buffer(c, buffer, "wb", &builder_id, &unit_type);
+	if (rc)
+		return rc;
+	if (!rts_mode)
+		return 0;
+	if (unit_type >= NUM_RTS_UNIT_TYPES)
+		return 0;
+	pthread_mutex_lock(&universe_mutex);
+	index = lookup_by_id(bridgelist[c->bridge].shipid);
+	if (index == (uint32_t) -1)
+		goto out;
+	ship = &go[index];
+	index = lookup_by_id(builder_id);
+	if (index == (uint32_t) -1)
+		goto out;
+	builder = &go[index];
+
+	if (ship->sdata.faction != builder->sdata.faction) {
+		sprintf(speech, "You do not control %s", builder->sdata.name);
+		pthread_mutex_unlock(&universe_mutex);
+		snis_queue_add_text_to_speech(speech, ROLE_TEXT_TO_SPEECH, c->shipid);
+		return 0;
+	}
+	if (builder->type == OBJTYPE_STARBASE) {
+		if (builder->tsd.starbase.time_left_to_build != 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			sprintf(speech, "%s already building %s.", builder->sdata.name,
+				rts_unit_type(builder->tsd.planet.build_unit_type)->name);
+			snis_queue_add_text_to_speech(speech, ROLE_TEXT_TO_SPEECH, c->shipid);
+			return 0;
+		} else {
+			builder->tsd.starbase.time_left_to_build = rts_unit_type(unit_type)->time_to_build;
+			builder->tsd.starbase.build_unit_type = unit_type;
+			pthread_mutex_unlock(&universe_mutex);
+			sprintf(speech, "%s building %s.", builder->sdata.name, rts_unit_type(unit_type)->name);
+			snis_queue_add_text_to_speech(speech, ROLE_TEXT_TO_SPEECH, c->shipid);
+			return 0;
+		}
+	} else if (builder->type == OBJTYPE_PLANET) {
+		if (builder->tsd.planet.time_left_to_build != 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			sprintf(speech, "Home planet already building %s.",
+				rts_unit_type(builder->tsd.planet.build_unit_type)->name);
+			snis_queue_add_text_to_speech(speech, ROLE_TEXT_TO_SPEECH, c->shipid);
+			return 0;
+		} else {
+			builder->tsd.planet.time_left_to_build = rts_unit_type(unit_type)->time_to_build;
+			builder->tsd.planet.build_unit_type = unit_type;
+			pthread_mutex_unlock(&universe_mutex);
+			sprintf(speech, "Home planet building %s.", rts_unit_type(unit_type)->name);
+			snis_queue_add_text_to_speech(speech, ROLE_TEXT_TO_SPEECH, c->shipid);
+			return 0;
+		}
+	}
+out:
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_toggle_demon_ai_debug_mode(struct game_client *c)
 {
 	c->debug_ai = !c->debug_ai;
@@ -15788,6 +16017,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_COMMS_RTS_BUILD_UNIT:
+			rc = process_rts_build_unit(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -16425,6 +16659,12 @@ static void send_econ_update_ship_packet(struct game_client *c,
 			case AI_MODE_COP:
 				ai[i] = 'C';
 				break;
+			case AI_MODE_RTS_STANDBY:
+				ai[i] = 'S';
+				break;
+			case AI_MODE_RTS_OCCUPY_ENEMY_BASE:
+				ai[i] = 'O';
+				break;
 			default:
 				ai[i] = '?';
 				break;
@@ -16774,7 +17014,7 @@ static void send_update_planet_packet(struct game_client *c,
 	else
 		ring = 1.0;
 
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSSwbbbbhbbbSbhbb", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSSwbbbbhbbbSbhbbwb", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
@@ -16792,7 +17032,9 @@ static void send_update_planet_packet(struct game_client *c,
 					o->tsd.planet.has_atmosphere,
 					o->tsd.planet.atmosphere_type,
 					o->tsd.planet.solarsystem_planet_type,
-					o->tsd.planet.ring_selector));
+					o->tsd.planet.ring_selector,
+					o->tsd.planet.time_left_to_build,
+					o->tsd.planet.build_unit_type));
 }
 
 static void send_update_wormhole_packet(struct game_client *c,
@@ -16808,7 +17050,7 @@ static void send_update_wormhole_packet(struct game_client *c,
 static void send_update_starbase_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSQbbbb", OPCODE_UPDATE_STARBASE,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSQbbbbwb", OPCODE_UPDATE_STARBASE,
 					o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
@@ -16817,7 +17059,9 @@ static void send_update_starbase_packet(struct game_client *c,
 					o->tsd.starbase.occupant[0],
 					o->tsd.starbase.occupant[1],
 					o->tsd.starbase.occupant[2],
-					o->tsd.starbase.occupant[3]));
+					o->tsd.starbase.occupant[3],
+					o->tsd.starbase.time_left_to_build,
+					o->tsd.starbase.build_unit_type));
 }
 
 static void send_update_warpgate_packet(struct game_client *c,

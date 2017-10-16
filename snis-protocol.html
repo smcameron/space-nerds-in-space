@@ -260,7 +260,7 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>not used</td><td>	124</td></tr>
 <tr><td>OPCODE_DEMON_RTSMODE</td><td>	125</td></tr>
 <tr><td>OPCODE_COMMS_RTS_BUTTON</td><td>	126</td></tr>
-<tr><td>not used</td><td>	127</td></tr>
+<tr><td>OPCODE_COMMS_RTS_BUILD_UNIT</td><td>	127</td></tr>
 <tr><td>not used</td><td>	128</td></tr>
 <tr><td>not used</td><td>	129</td></tr>
 <tr><td>not used</td><td>	130</td></tr>
@@ -430,7 +430,12 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>21</td><td>Q</td><td>orientation</td></tr>
-<tr><td>21</td><td>Q</td><td>orientation</td></tr>
+<tr><td>29</td><td>b</td><td>occupant[0]</td></tr>
+<tr><td>30</td><td>b</td><td>occupant[1]</td></tr>
+<tr><td>31</td><td>b</td><td>occupant[2]</td></tr>
+<tr><td>32</td><td>b</td><td>occupant[3]</td></tr>
+<tr><td>33</td><td>w</td><td>time left to build (RTS mode)</td></tr>
+<tr><td>37</td><td>b</td><td>build unit type (RTS mode)</td></tr>
 </table>
 
 <h4>102 UPDATE LASER  (laser bolt, not laser beam)</h4> (Server to Client)
@@ -445,10 +450,6 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>18</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>22</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>26</td><td>Q</td><td>orientation</td></tr>
-<tr><td>34</td><td>b</td><td>occupant[0]</td></tr>
-<tr><td>35</td><td>b</td><td>occupant[1]</td></tr>
-<tr><td>36</td><td>b</td><td>occupant[2]</td></tr>
-<tr><td>37</td><td>b</td><td>occupant[3]</td></tr>
 </table>
 <p>For the occupants, the value stored is the faction of the occupant, with 255 meaning the slot is vacant.
 
@@ -658,6 +659,15 @@ the same as Update Ship 100, but nothing transmits opcode 117.
 <tr><td>Offset</td><td>Data Type</td><td>Value</td></tr>
 <tr><td>0</td><td>b</td><td>126</td></tr>
 <tr><td>1</td><td>b</td><td>Button number (0 - NUM_RTS_BASES + 1)</td></tr>
+</table>
+
+<h4>127 Comms RTS Build Unit</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td></tr>
+<tr><td>0</td><td>b</td><td>127</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID of builder object (starbase or home planet)</td></tr>
+<tr><td>5</td><td>b</td><td>Type of object to build</td></tr>
 </table>
 
 <h4>133 Engage Warp</h4> (Client to Server)
@@ -1393,6 +1403,8 @@ consumption meters).
 <tr><td>47</td><td>h</td><td>Atmosphere type</td></tr>
 <tr><td>49</td><td>b</td><td>solarsystem planet type</td></tr>
 <tr><td>50</td><td>b</td><td>ring selector</td></tr>
+<tr><td>51</td><td>w</td><td>time left to build (RTS mode)</td></tr>
+<tr><td>55</td><td>b</td><td>build unit type (RTS mode)</td></tr>
 </table>
 
 <h4>162 Create Item</h4> (Client to Server)

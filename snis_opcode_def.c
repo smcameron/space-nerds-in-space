@@ -69,7 +69,7 @@ int snis_opcode_def_init(void)
 	int rc = 0;
 
 	rc |= init_opcode_def(OPCODE_UPDATE_SHIP, "bwwhSSSRRRwwwRRRbbbwbbbbbbbbbbbbbwQQQbbbbbbb");
-	rc |= init_opcode_def(OPCODE_UPDATE_STARBASE, "bwwSSSQbbbb");
+	rc |= init_opcode_def(OPCODE_UPDATE_STARBASE, "bwwSSSQbbbbwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_LASER, "bwwwbSSSQ");
 	rc |= init_opcode_def(OPCODE_UPDATE_TORPEDO, "bwwwSSS");
 	rc |= init_opcode_def(OPCODE_UPDATE_PLAYER, "n/a");
@@ -78,6 +78,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_UPDATE_WARP_CORE, "bwwSSS");
 	rc |= init_opcode_def(OPCODE_DEMON_RTSMODE, "bb");
 	rc |= init_opcode_def(OPCODE_COMMS_RTS_BUTTON, "bb");
+	rc |= init_opcode_def(OPCODE_COMMS_RTS_BUILD_UNIT, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_YAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_THRUST, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_GUNYAW, "bb");
@@ -166,7 +167,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_WEAPZOOM, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_REDALERT, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_POWER_DATA, "n/a");
-	rc |= init_opcode_def(OPCODE_UPDATE_PLANET, "bwwSSSSwbbbbhbbbSbhbb");
+	rc |= init_opcode_def(OPCODE_UPDATE_PLANET, "bwwSSSSwbbbbhbbbSbhbbwb");
 	rc |= init_opcode_def(OPCODE_CREATE_ITEM, "bbSSS");
 	rc |= init_opcode_def(OPCODE_DEMON_COMMS_XMIT, "n/a");
 	rc |= init_opcode_def(OPCODE_DEMON_FIRE_TORPEDO, "bw");

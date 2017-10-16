@@ -52,7 +52,7 @@
 #define		OPCODE_RTSMODE_SUBCMD_DISABLE	0
 #define		OPCODE_RTSMODE_SUBCMD_ENABLE	1
 #define OPCODE_COMMS_RTS_BUTTON 126
-/* UNUSED OPCODE 127 */
+#define OPCODE_COMMS_RTS_BUILD_UNIT 127
 /* UNUSED OPCODE 128 */
 /* UNUSED OPCODE 129 */
 /* UNUSED OPCODE 130 */
@@ -356,6 +356,8 @@ struct update_starbase_packet {
 	uint32_t timestamp;
 	uint32_t x, y;
 	uint8_t occupant[4];
+	uint32_t time_left_to_build;
+	uint8_t build_unit_type;
 };
 
 struct update_nebula_packet {

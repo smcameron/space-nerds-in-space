@@ -230,6 +230,7 @@ static char *shipname;
 #define UNKNOWN_ID 0xffffffff
 static uint32_t my_ship_id = UNKNOWN_ID;
 static uint32_t my_ship_oid = UNKNOWN_ID;
+static uint32_t my_home_planet_oid = UNKNOWN_ID;
 
 static int real_screen_width;
 static int real_screen_height;
@@ -768,6 +769,26 @@ static struct snis_entity *find_my_ship(void)
 	if (my_ship_oid == UNKNOWN_ID)
 		return NULL;
 	return &go[my_ship_oid];
+}
+
+static struct snis_entity *rts_find_my_home_planet(void)
+{
+	int i;
+	struct snis_entity *player;
+
+	if (my_home_planet_oid != UNKNOWN_ID)
+		return &go[my_home_planet_oid];
+
+	player = find_my_ship();
+	if (!player)
+		return NULL;
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].alive && go[i].type == OBJTYPE_PLANET && go[i].sdata.faction == player->sdata.faction) {
+			my_home_planet_oid = i;
+			return &go[my_home_planet_oid];
+		}
+	}
+	return NULL;
 }
 
 static void update_generic_damcon_object(struct snis_damcon_entity *o,
@@ -1700,7 +1721,9 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 				uint8_t has_atmosphere,
 				uint16_t atmosphere_type,
 				uint8_t solarsystem_planet_type,
-				uint8_t ring_selector)
+				uint8_t ring_selector,
+				uint32_t time_left_to_build,
+				uint8_t build_unit_type)
 {
 	int i, m;
 	struct entity *e, *atm, *ring;
@@ -1786,6 +1809,8 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	go[i].tsd.planet.solarsystem_planet_type = solarsystem_planet_type;
 	go[i].tsd.planet.ring_selector = ring_selector;
 	go[i].tsd.planet.ring = hasring;
+	go[i].tsd.planet.time_left_to_build = time_left_to_build;
+	go[i].tsd.planet.build_unit_type = build_unit_type;
 	return 0;
 }
 
@@ -1813,7 +1838,7 @@ static int update_wormhole(uint32_t id, uint32_t timestamp, double x, double y, 
 }
 
 static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, double z,
-	union quat *orientation, uint8_t occupant[4])
+	union quat *orientation, uint8_t occupant[4], uint32_t time_left_to_build, uint8_t build_unit_type)
 {
 	int i, m;
 	struct entity *e;
@@ -1833,6 +1858,8 @@ static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, 
 	go[i].tsd.starbase.occupant[1] = occupant[1];
 	go[i].tsd.starbase.occupant[2] = occupant[2];
 	go[i].tsd.starbase.occupant[3] = occupant[3];
+	go[i].tsd.starbase.time_left_to_build = time_left_to_build;
+	go[i].tsd.starbase.build_unit_type = build_unit_type;
 	return 0;
 }
 
@@ -5694,23 +5721,24 @@ static int process_update_planet_packet(void)
 	uint32_t id, timestamp;
 	double dr, dx, dy, dz, atm_scale;
 	uint8_t government, tech_level, economy, security, atm_r, atm_g, atm_b;
-	uint8_t has_atmosphere, solarsystem_planet_type;
+	uint8_t has_atmosphere, solarsystem_planet_type, build_unit_type;
 	uint8_t ring_selector;
 	uint16_t atmosphere_type;
-	uint32_t dseed;
+	uint32_t dseed, time_left_to_build;
 	int hasring;
 	uint16_t contraband;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbbhbbbSbhbb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbbhbbbSbhbbwb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
 			&dr, (int32_t) UNIVERSE_DIM,
 			&dseed, &government, &tech_level, &economy, &security,
 			&contraband, &atm_r, &atm_b, &atm_g, &atm_scale, (int32_t) UNIVERSE_DIM,
-			&has_atmosphere, &atmosphere_type, &solarsystem_planet_type, &ring_selector);
+			&has_atmosphere, &atmosphere_type, &solarsystem_planet_type, &ring_selector,
+			&time_left_to_build, &build_unit_type);
 	if (rc != 0)
 		return rc;
 	solarsystem_planet_type = solarsystem_planet_type % PLANET_TYPE_COUNT_SHALL_BE;
@@ -5721,7 +5749,8 @@ static int process_update_planet_packet(void)
 	rc = update_planet(id, timestamp, dx, dy, dz, dr, government, tech_level,
 				economy, dseed, hasring, security, contraband,
 				atm_r, atm_b, atm_g, atm_scale, has_atmosphere,
-				atmosphere_type, solarsystem_planet_type, ring_selector);
+				atmosphere_type, solarsystem_planet_type, ring_selector,
+				time_left_to_build, build_unit_type);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -5752,10 +5781,11 @@ static int process_update_starbase_packet(void)
 	uint32_t id, timestamp;
 	double dx, dy, dz;
 	union quat orientation;
-	uint8_t occupant[4];
+	uint32_t time_left_to_build;
+	uint8_t occupant[4], build_unit_type;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "wwSSSQbbbb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSQbbbbwb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
@@ -5763,11 +5793,14 @@ static int process_update_starbase_packet(void)
 			&occupant[0],
 			&occupant[1],
 			&occupant[2],
-			&occupant[3]);
+			&occupant[3],
+			&time_left_to_build,
+			&build_unit_type);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_starbase(id, timestamp, dx, dy, dz, &orientation, occupant);
+	rc = update_starbase(id, timestamp, dx, dy, dz, &orientation, occupant,
+				time_left_to_build, build_unit_type);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -11882,6 +11915,74 @@ static void comms_rts_button_pressed(void *x)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_COMMS_RTS_BUTTON, rts_button_number));
 }
 
+static void comms_rts_build_unit_button_pressed(void *x)
+{
+	struct snis_entity *o, *builder;
+	uint8_t rts_build_unit_button_number = (uint8_t) (((intptr_t) x) & 0x0ff);
+	uint32_t builder_id;
+	int i;
+
+	fprintf(stderr, "RTS Build Unit (%s) button pressed: %hhu\n",
+			rts_unit_type(rts_build_unit_button_number)->name,
+			rts_build_unit_button_number);
+	/* Figure out which starbase or home planet to use. */
+	if (!(o = find_my_ship())) {
+		fprintf(stderr, "DID NOT FIND MY SHIP\n");
+		return;
+	}
+	if (o->tsd.ship.rts_active_button == 255) {
+		fprintf(stderr, "NO ACTIVE RTS BUTTON\n");
+		return;
+	}
+	if (o->tsd.ship.rts_active_button == RTS_FLEET_BUTTON) { /* shouldn't happen */
+		fprintf(stderr, "FLEET BUTTON ACTIVE\n");
+		return;
+	}
+	builder = NULL;
+	builder_id = (uint32_t) -1;
+	if (o->tsd.ship.rts_active_button == RTS_HOME_PLANET_BUTTON) { /* Figure out which planet to use */
+		pthread_mutex_lock(&universe_mutex);
+		/* First planet with same faction as player is the right one. */
+		builder = rts_find_my_home_planet();
+		if (builder) {
+			builder_id = builder->id;
+			fprintf(stderr, "HOME PLANET, BUILDER ID = %u\n", builder->id);
+		} else {
+			fprintf(stderr, "HOME PLANET NOT FOUND\n");
+		}
+		pthread_mutex_unlock(&universe_mutex);
+	} else { /* Figure out which starbase to use */
+		char sbname[10];
+		sprintf(sbname, "SB-%02d", o->tsd.ship.rts_active_button);
+		pthread_mutex_lock(&universe_mutex);
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			if (go[i].alive && go[i].type == OBJTYPE_STARBASE) {
+				fprintf(stderr, "Looking for '%s' vs '%s'\n",
+					sbname, go[i].sdata.name);
+				if (strncmp(go[i].sdata.name, sbname, 5) == 0) {
+					builder = &go[i];
+					break;
+				}
+			}
+		}
+		if (builder) {
+			fprintf(stderr, "BUILDER STARBASE FOUND, ID = %u\n", builder->id);
+			builder_id = builder->id;
+			if (builder->tsd.starbase.occupant[3] != o->sdata.faction) {
+				fprintf(stderr, "STARBASE IS NOT OCCUPIED BY FACTION\n");
+			}
+		} else {
+			fprintf(stderr, "BUILDER STARBASE NOT FOUND\n");
+		}
+		pthread_mutex_unlock(&universe_mutex);
+	}
+	if (builder_id != (uint32_t) -1) {
+		fprintf(stderr, "BUILDER ID is %u\n", builder_id);
+		queue_to_server(snis_opcode_pkt("bwb", OPCODE_COMMS_RTS_BUILD_UNIT,
+			builder_id, rts_build_unit_button_number));
+	}
+}
+
 static void comms_input_entered()
 {
 	printf("comms input entered\n");
@@ -11958,11 +12059,11 @@ static void init_comms_ui(void)
 	const int rts_button_spacing = txx(60);
 	comms_ui.rts_main_planet_button = snis_button_init(txx(10) + rts_button_spacing * 0, rts_button_y, -1, txy(20),
 			"HOME PLANET", button_color, NANO_FONT,
-			comms_rts_button_pressed, (void *) NUM_RTS_BASES);
+			comms_rts_button_pressed, (void *) RTS_HOME_PLANET_BUTTON);
 	snis_button_set_sound(comms_ui.rts_main_planet_button, UISND18);
 	comms_ui.rts_fleet_button = snis_button_init(txx(10) + rts_button_spacing * 2, rts_button_y, -1, txy(20),
 			"FLEET", button_color, NANO_FONT,
-			comms_rts_button_pressed, (void *) (NUM_RTS_BASES + 1));
+			comms_rts_button_pressed, (void *) RTS_FLEET_BUTTON);
 	snis_button_set_sound(comms_ui.rts_fleet_button, UISND18);
 	for (i = 0; i < NUM_RTS_BASES; i++) {
 		char name[20];
@@ -11979,7 +12080,8 @@ static void init_comms_ui(void)
 
 		snprintf(button_label, 20, "ORDER %s", rts_unit_type(i)->name);
 		comms_ui.rts_order_unit_button[i] = snis_button_init(txx(22), txy(375) + txy(21) * i, -1, txy(20),
-				button_label, button_color, PICO_FONT, NULL, NULL);
+				button_label, button_color, PICO_FONT,
+				comms_rts_build_unit_button_pressed, (void *) (intptr_t) i);
 	}
 
 	for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) {
@@ -12043,12 +12145,12 @@ static void comms_activate_rts_buttons(struct snis_entity *player_ship)
 	ui_unhide_widget(comms_ui.rts_main_planet_button);
 	for (i = 0; i < NUM_RTS_BASES; i++)
 		ui_unhide_widget(comms_ui.rts_starbase_button[i]);
-	if (player_ship->tsd.ship.rts_active_button < NUM_RTS_BASES + 1) {
+	if (player_ship->tsd.ship.rts_active_button < RTS_FLEET_BUTTON) {
 		for (i = 0; i < NUM_RTS_UNIT_TYPES; i++) /* Unhide starbase and main planet buttons */
 			ui_unhide_widget(comms_ui.rts_order_unit_button[i]);
 		for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) /* Hide fleet buttons */
 			ui_hide_widget(comms_ui.rts_order_command_button[i]);
-	} else if (player_ship->tsd.ship.rts_active_button == NUM_RTS_BASES + 1) {
+	} else if (player_ship->tsd.ship.rts_active_button == RTS_FLEET_BUTTON) {
 		for (i = 0; i < NUM_RTS_UNIT_TYPES; i++) /* Hide starbase and main planet buttons */
 			ui_hide_widget(comms_ui.rts_order_unit_button[i]);
 		for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) /* Unhide fleet buttons */
@@ -12079,6 +12181,7 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 {
 	int i, j;
 	int us, them;
+	const char *spinner = "|/-\\";
 
 	if (!activate) {
 		comms_deactivate_rts_buttons();
@@ -12089,34 +12192,52 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 	/* Modify the button labels to indication the occupation status of the starbases */
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *starbase = &go[i];
-		if (starbase->type != OBJTYPE_STARBASE)
-			continue;
-		/* Count how many occupiers are "us" and how many are "them" */
-		us = 0;
-		them = 0;
-		for (j = 0; j < 4; j++) {
-			if (starbase->tsd.starbase.occupant[j] == player_ship->sdata.faction)
-				us++;
-			else if (starbase->tsd.starbase.occupant[j] != 255)
-				them++;
-		}
-		/* Modify the appropriate button label and color */
-		for (j = 0; j < NUM_RTS_BASES; j++) {
-			char button_label[20];
-			sprintf(button_label, "SB-%02d", j);
-			snis_button_set_color(comms_ui.rts_starbase_button[j], UI_COLOR(comms_neutral));
-			if (strncmp(starbase->sdata.name, button_label, 5) == 0) {
-				sprintf(button_label, "SB-%02d %01d/%01d", j, us, them);
-				snis_button_set_label(comms_ui.rts_starbase_button[j], button_label);
-				if (starbase->tsd.starbase.occupant[3] == player_ship->sdata.faction)
-					snis_button_set_color(comms_ui.rts_starbase_button[j],
-								UI_COLOR(comms_good_status));
-				else if (starbase->tsd.starbase.occupant[3] != 255)
-					snis_button_set_color(comms_ui.rts_starbase_button[j], UI_COLOR(comms_warning));
-				else
-					snis_button_set_color(comms_ui.rts_starbase_button[j], UI_COLOR(comms_neutral));
-				break;
+		if (starbase->type == OBJTYPE_STARBASE) {
+			/* Count how many occupiers are "us" and how many are "them" */
+			us = 0;
+			them = 0;
+			for (j = 0; j < 4; j++) {
+				if (starbase->tsd.starbase.occupant[j] == player_ship->sdata.faction)
+					us++;
+				else if (starbase->tsd.starbase.occupant[j] != 255)
+					them++;
 			}
+			/* Modify the appropriate button label and color */
+			for (j = 0; j < NUM_RTS_BASES; j++) {
+				char button_label[20];
+				char activity;
+				sprintf(button_label, "SB-%02d", j);
+				snis_button_set_color(comms_ui.rts_starbase_button[j], UI_COLOR(comms_neutral));
+				if (strncmp(starbase->sdata.name, button_label, 5) == 0) {
+					if (starbase->tsd.starbase.time_left_to_build == 0)
+						activity = ' ';
+					else
+						activity = spinner[starbase->tsd.starbase.time_left_to_build % 4];
+					sprintf(button_label, "SB-%02d %01d/%01d %c", j, us, them, activity);
+
+					snis_button_set_label(comms_ui.rts_starbase_button[j], button_label);
+					if (starbase->tsd.starbase.occupant[3] == player_ship->sdata.faction)
+						snis_button_set_color(comms_ui.rts_starbase_button[j],
+									UI_COLOR(comms_good_status));
+					else if (starbase->tsd.starbase.occupant[3] != 255)
+						snis_button_set_color(comms_ui.rts_starbase_button[j],
+									UI_COLOR(comms_warning));
+					else
+						snis_button_set_color(comms_ui.rts_starbase_button[j],
+									UI_COLOR(comms_neutral));
+					break;
+				}
+			}
+		}
+		if (starbase->type == OBJTYPE_STARBASE && starbase->sdata.faction == player_ship->sdata.faction) {
+			char activity;
+			char button_label[20];
+			if (starbase->tsd.starbase.time_left_to_build == 0)
+				activity = ' ';
+			else
+				activity = spinner[starbase->tsd.starbase.time_left_to_build % 4];
+			sprintf(button_label, "HOME PLANET %c", activity);
+			snis_button_set_label(comms_ui.rts_main_planet_button, button_label);
 		}
 	}
 }
@@ -12834,7 +12955,7 @@ static void show_3d_science(GtkWidget *w)
 static void show_comms(GtkWidget *w)
 {
 	struct snis_entity *o;
-	char current_date[32], comms_buffer[64];
+	char current_date[32], comms_buffer[100];
 
 	if (!(o = find_my_ship()))
 		return;
@@ -12863,10 +12984,17 @@ static void show_comms(GtkWidget *w)
 			if (o->tsd.ship.rts_active_button < NUM_RTS_BASES) {
 				sprintf(comms_buffer, "STARBASE %02d", o->tsd.ship.rts_active_button);
 				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
-			} else if (o->tsd.ship.rts_active_button == NUM_RTS_BASES) {
-				sprintf(comms_buffer, "HOME PLANET");
+			} else if (o->tsd.ship.rts_active_button == RTS_HOME_PLANET_BUTTON) {
+				struct snis_entity *home_planet = rts_find_my_home_planet();
+				if (home_planet && home_planet->tsd.planet.time_left_to_build != 0) {
+					sprintf(comms_buffer, "HOME PLANET: BUILDING %s, %d SECONDS REMAINING",
+						rts_unit_type(home_planet->tsd.planet.build_unit_type)->name,
+						home_planet->tsd.planet.time_left_to_build / 10);
+				} else  {
+					sprintf(comms_buffer, "HOME PLANET");
+				}
 				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
-			} else if (o->tsd.ship.rts_active_button == NUM_RTS_BASES + 1) {
+			} else if (o->tsd.ship.rts_active_button == RTS_FLEET_BUTTON) {
 				sprintf(comms_buffer, "FLEET");
 				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
 			}

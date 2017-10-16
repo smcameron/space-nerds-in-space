@@ -79,6 +79,8 @@
 
 #define NPLANETS 6
 #define NUM_RTS_BASES 9
+#define RTS_HOME_PLANET_BUTTON NUM_RTS_BASES
+#define RTS_FLEET_BUTTON (NUM_RTS_BASES + 1)
 #define MAX_RTS_MAIN_PLANET_HEALTH 10000
 #define NATMOSPHERE_TYPES 100
 #define ATMOSPHERE_TYPE_GEN_SEED 31415927
@@ -179,6 +181,8 @@ struct damcon_data;
 #define AI_MODE_COP 8
 #define AI_MODE_MINING_BOT 9
 #define AI_MODE_TOW_SHIP 10
+#define AI_MODE_RTS_STANDBY 11
+#define AI_MODE_RTS_OCCUPY_ENEMY_BASE 12
 
 /* distance more than which fleet ships will warp back to position rather than simply flying */
 #define FLEET_WARP_DISTANCE 5000.0
@@ -243,6 +247,14 @@ struct ai_tow_ship_data {
 	int ship_connected;
 };
 
+struct ai_rts_standby_data {
+	uint8_t not_used;
+};
+
+struct ai_rts_occupy_base_data {
+	uint32_t base_id;
+};
+
 union ai_data {
 	struct ai_attack_data attack;
 	struct ai_patrol_data patrol;
@@ -252,6 +264,8 @@ union ai_data {
 	struct ai_flee_data flee;
 	struct ai_mining_bot_data mining_bot;
 	struct ai_tow_ship_data tow_ship;
+	struct ai_rts_standby_data standby;
+	struct ai_rts_occupy_base_data occupy_base;
 };
 
 struct ai_stack_entry {
@@ -496,6 +510,8 @@ struct starbase_data {
 	int32_t expected_docker_timer[MAX_DOCKING_PORTS];
 	int32_t spin_rate_10ths_deg_per_sec;
 	uint8_t occupant[4]; /* factions of occupants. occupant[3] defines who controls the starbase */
+	uint32_t time_left_to_build;
+	uint8_t build_unit_type;
 };
 
 struct nebula_data {
@@ -624,6 +640,8 @@ struct planet_data {
 	struct entity *atmosphere;
 	struct material atm_material;
 	union quat rotational_velocity;
+	uint32_t time_left_to_build;
+	uint8_t build_unit_type;
 };
 
 struct warpgate_data {
