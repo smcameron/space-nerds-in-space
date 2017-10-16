@@ -6589,7 +6589,7 @@ static void maybe_do_player_warp(struct snis_entity *o)
 		
 static void player_move(struct snis_entity *o)
 {
-	int desired_rpm, desired_temp, diff;
+	int i, desired_rpm, desired_temp, diff;
 	int phaser_chargerate, current_phaserbank;
 	float orientation_damping, velocity_damping;
 
@@ -6751,6 +6751,21 @@ static void player_move(struct snis_entity *o)
 		o->timestamp = universe_timestamp;
 		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
 		send_ship_damage_packet(o);
+	}
+
+	/* Update player wallet */
+	if (rts_mode) { /* count how many starbases the player controls */
+		int starbase_count = 0;
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			if (go[i].type != OBJTYPE_STARBASE)
+				continue;
+			if (!go[i].alive)
+				continue;
+			if (go[i].tsd.starbase.occupant[3] == o->sdata.faction)
+				starbase_count++;
+		}
+		o->tsd.ship.wallet += starbase_count * RTS_WALLET_REFRESH_PER_BASE_PER_TICK +
+					RTS_WALLET_REFRESH_MINIMUM;
 	}
 }
 
@@ -7691,7 +7706,10 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 			o->tsd.ship.cargo[i].dest = -1;
 			o->tsd.ship.cargo[i].due_date = -1;
 		}
-		o->tsd.ship.wallet = INITIAL_WALLET_MONEY;
+		if (rts_mode)
+			o->tsd.ship.wallet = INITIAL_RTS_WALLET_MONEY;
+		else
+			o->tsd.ship.wallet = INITIAL_WALLET_MONEY;
 	}
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
@@ -16887,16 +16905,18 @@ static void send_update_ship_packet(struct game_client *c,
 	rpm = o->tsd.ship.rpm;
 	fuel = o->tsd.ship.fuel;
 	oxygen = o->tsd.ship.oxygen;
+	uint32_t wallet;
 
 	tloading = (uint8_t) (o->tsd.ship.torpedoes_loading & 0x0f);
 	tloaded = (uint8_t) (o->tsd.ship.torpedoes_loaded & 0x0f);
 	tloading = tloading | (tloaded << 4);
+	wallet = (uint32_t) o->tsd.ship.wallet;
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbbbb",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbbbbw",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -16921,7 +16941,8 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.nav_mode,
 			o->tsd.ship.warp_core_status,
 			rts_mode,
-			o->tsd.ship.rts_active_button);
+			o->tsd.ship.rts_active_button,
+			wallet);
 	pb_queue_to_client(c, pb);
 
 	/* now that we've sent the accumulated value, clear the emf_detector to the noise floor */

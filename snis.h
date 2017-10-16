@@ -448,6 +448,9 @@ struct ship_data {
 	struct cargo_bay_info cargo[MAX_CARGO_BAYS_PER_SHIP];
 	int32_t ncargo_bays;
 #define INITIAL_WALLET_MONEY (2500.0f)
+#define INITIAL_RTS_WALLET_MONEY (0.0f)
+#define RTS_WALLET_REFRESH_PER_BASE_PER_TICK (5.0f)
+#define RTS_WALLET_REFRESH_MINIMUM (5.0f)
 	float wallet;
 #define THREAT_LEVEL_FLEE_THRESHOLD 50.0 /* arrived at empirically */
 	float threat_level;

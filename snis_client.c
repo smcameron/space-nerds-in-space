@@ -3880,7 +3880,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	struct packed_buffer pb;
 	uint16_t alive;
 	uint32_t id, timestamp, torpedoes, power;
-	uint32_t fuel, oxygen, victim_id;
+	uint32_t fuel, oxygen, victim_id, wallet;
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
 	double dgunyawvel, dsheading, dbeamwidth;
 	int rc;
@@ -3912,14 +3912,15 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbbbb",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbbbbw",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
-			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status, &rts_mode, &rts_active_button);
+			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status, &rts_mode, &rts_active_button,
+			&wallet);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -3994,6 +3995,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		wwviaudio_add_sound(REVERSE_SOUND);
 	o->tsd.ship.reverse = reverse;
 	o->tsd.ship.trident = trident;
+	o->tsd.ship.wallet = (float) wallet;
 	snis_button_set_label(nav_ui.trident_button, trident ? "RELATIVE" : "ABSOLUTE");
 	o->tsd.ship.ai[0].u.attack.victim_id = victim_id;
 	rc = 0;
@@ -12995,6 +12997,10 @@ static void show_comms(GtkWidget *w)
 	format_date(current_date, sizeof(current_date), universe_timestamp());
 	sprintf(comms_buffer, "TIME: %s", current_date);
 	sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(25), txy(55));
+	if (o->tsd.ship.rts_mode) {
+		sprintf(comms_buffer, "FUNDS: $%6.0f", o->tsd.ship.wallet);
+		sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(625), txy(350));
+	}
 	sprintf(comms_buffer, "CHANNEL: %u", comms_ui.channel);
 	sng_center_xy_draw_string(comms_buffer, NANO_FONT, shield_ind_x_center, shield_ind_y_center - txy(15));
 	if (o->tsd.ship.rts_mode) {

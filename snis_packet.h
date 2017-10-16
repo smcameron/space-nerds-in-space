@@ -286,6 +286,7 @@ struct update_ship_packet {
 	uint8_t warp_core_status;
 	uint8_t rts_mode;
 	uint8_t rts_active_button;
+	uint32_t wallet;
 };
 
 struct ship_sdata_packet {
