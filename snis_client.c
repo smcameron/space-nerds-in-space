@@ -12004,6 +12004,22 @@ static void comms_input_entered()
 	printf("comms input entered\n");
 }
 
+static void disable_comms_rts_unit_ordering_buttons(void)
+{
+	int i;
+
+	for (i = 0; i < NUM_RTS_UNIT_TYPES; i++)
+		snis_button_disable(comms_ui.rts_order_unit_button[i]);
+}
+
+static void enable_comms_rts_unit_ordering_buttons(void)
+{
+	int i;
+
+	for (i = 0; i < NUM_RTS_UNIT_TYPES; i++)
+		snis_button_enable(comms_ui.rts_order_unit_button[i]);
+}
+
 static void init_comms_ui(void)
 {
 	int i;
@@ -12098,6 +12114,7 @@ static void init_comms_ui(void)
 		comms_ui.rts_order_unit_button[i] = snis_button_init(txx(22), txy(375) + txy(21) * i, -1, txy(20),
 				button_label, button_color, PICO_FONT,
 				comms_rts_build_unit_button_pressed, (void *) (intptr_t) i);
+		snis_button_set_disabled_color(comms_ui.rts_order_unit_button[i], UI_COLOR(comms_neutral));
 	}
 
 	for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) {
@@ -12990,8 +13007,10 @@ static void show_comms(GtkWidget *w)
 						starbase->tsd.starbase.starbase_number,
 						rts_unit_type(starbase->tsd.starbase.build_unit_type)->name,
 						starbase->tsd.starbase.time_left_to_build / 10);
+					disable_comms_rts_unit_ordering_buttons();
 				} else {
 					sprintf(comms_buffer, "STARBASE %02d", o->tsd.ship.rts_active_button);
+					enable_comms_rts_unit_ordering_buttons();
 				}
 				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
 			} else if (o->tsd.ship.rts_active_button == RTS_HOME_PLANET_BUTTON) {
@@ -13000,9 +13019,11 @@ static void show_comms(GtkWidget *w)
 					sprintf(comms_buffer, "HOME PLANET: BUILDING %s, %d SECONDS REMAINING",
 						rts_unit_type(home_planet->tsd.planet.build_unit_type)->name,
 						home_planet->tsd.planet.time_left_to_build / 10);
+					disable_comms_rts_unit_ordering_buttons();
 				} else  {
 					sprintf(comms_buffer, "HOME PLANET (faction = %d/%d)",
 						o->sdata.faction, home_planet ? home_planet->sdata.faction : 255);
+					enable_comms_rts_unit_ordering_buttons();
 				}
 				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
 			} else if (o->tsd.ship.rts_active_button == RTS_FLEET_BUTTON) {
