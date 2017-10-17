@@ -144,3 +144,11 @@ NICE TO HAVE:
   It now understands "set a course for waypoint X", but doesn't understand
   "set a course for the nearest waypoint", or "set a course for the selected
   waypoint", or "how far to waypoint blah"
+
+* Make the central star shader better. Right now it is simply a
+  dumb billboard, which looks ok, but there it looks unnatural as
+  the star comes around the limb of a planet, etc. there's no sense
+  of brightness. See for example: https://www.seedofandromeda.com/blogs/51-procedural-star-rendering
+  The sunspots, corona, etc are overkill, but the lens flare, the way
+  it comes around the edge of a planet, etc, all look really good.
+
