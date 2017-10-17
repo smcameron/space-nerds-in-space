@@ -1010,6 +1010,7 @@ static void add_new_rts_unit(struct snis_entity *builder)
 	float dx, dy, dz;
 	struct snis_entity *unit;
 	uint8_t unit_type;
+	int unit_number;
 	int i;
 
 	/* Figure out where to add the new unit */
@@ -1042,6 +1043,11 @@ static void add_new_rts_unit(struct snis_entity *builder)
 	unit->tsd.ship.nai_entries = 1;
 	unit->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_OCCUPY_ENEMY_BASE;
 	unit->tsd.ship.ai[0].u.occupy_base.base_id = (uint32_t) -1;
+
+	/* Give the unit a short name based on the type, ie. a scout becomes, eg. "S5". */
+	unit_number = rts_allocate_unit_number(unit_type, builder->sdata.faction);
+	sprintf(unit->sdata.name, "%s%d", rts_unit_type(unit_type)->short_name_prefix, unit_number);
+
 	for (i = 0; i < nshiptypes; i++) { /* Figure out what model this ship is */
 		if (strcmp(ship_type[i].class, rts_unit_type(unit_type)->class) == 0) {
 			unit->sdata.subclass = i;

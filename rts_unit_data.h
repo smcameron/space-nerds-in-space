@@ -29,6 +29,7 @@
 struct rts_unit_data {
 	char *name;
 	char *class; /* Name of ship model to use, matches snis_ship_type.h ->class */
+	char *short_name_prefix;
 	float cost_to_build;
 	int time_to_build; /* in 10ths of secs */
 	float toughness;
@@ -43,6 +44,7 @@ struct rts_order_data {
 
 struct rts_unit_data *rts_unit_type(int n);
 struct rts_order_data *rts_order_type(int n);
+int rts_allocate_unit_number(int unit_type, int faction);
 
 #endif
 

@@ -25,12 +25,12 @@
 #include "build_bug_on.h"
 
 static struct rts_unit_data unit_data[] = {
-	{ "SCOUT SHIP", "SPACEFARER", 949.0, 100, 0.1, 0.3},
-	{ "HEAVY BOMBER", "DISRUPTOR", 3199.0, 300, 0.7, 0.7 },
-	{ "GUN SHIP", "DREADKNIGHT", 3499.0, 350, 0.4, 0.9 },
-	{ "TROOP SHIP", "TRANSPORT", 499.0, 100, 0.1, 0.2 },
-	{ "TURRET", "VANQUISHER", 4399.0, 400, 0.5, 0.9  },
-	{ "RESUPPLY SHIP", "RESEARCH", 1599.0, 150, 0.3, 0.1 },
+	{ "SCOUT SHIP", "SPACEFARER", "S", 949.0, 100, 0.1, 0.3},
+	{ "HEAVY BOMBER", "DISRUPTOR", "HB", 3199.0, 300, 0.7, 0.7 },
+	{ "GUN SHIP", "DREADKNIGHT", "G", 3499.0, 350, 0.4, 0.9 },
+	{ "TROOP SHIP", "TRANSPORT", "TS", 499.0, 100, 0.1, 0.2 },
+	{ "TURRET", "VANQUISHER", "T", 4399.0, 400, 0.5, 0.9  },
+	{ "RESUPPLY SHIP", "RESEARCH", "R", 1599.0, 150, 0.3, 0.1 },
 };
 
 static struct rts_order_data order_data[] = {
@@ -56,4 +56,16 @@ struct rts_order_data *rts_order_type(int n)
 	if (n < 0 || n >= ARRAYSIZE(order_data))
 		return NULL;
 	return &order_data[n];
+}
+
+/* assume no more than 10 faction (really, should be no more than 2 for RTS) */
+static int unit_numbers[NUM_RTS_UNIT_TYPES][10];
+
+/* Note, this is not thread safe */
+int rts_allocate_unit_number(int unit_type, int faction)
+{
+	unit_type = unit_type % NUM_RTS_UNIT_TYPES;
+	faction = faction % 10;
+	unit_numbers[unit_type][faction]++;
+	return unit_numbers[unit_type][faction];
 }
