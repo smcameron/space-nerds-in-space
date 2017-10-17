@@ -3680,6 +3680,16 @@ static void ui_set_widget_displaymode(void *widget, int displaymode)
 	ui_element_set_displaymode(uie, displaymode);
 }
 
+static void ui_set_widget_tooltip(void *widget, char *tooltip)
+{
+	struct ui_element *uie;
+
+	uie = widget_to_ui_element(uiobjs, widget);
+	if (!uie)
+		return;
+	ui_element_set_tooltip(uie, tooltip);
+}
+
 static void show_common_screen(GtkWidget *w, char *title);
 
 static void show_lobbyscreen(GtkWidget *w)
