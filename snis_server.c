@@ -10858,6 +10858,10 @@ static int should_send_sdata(struct game_client *c, struct snis_entity *ship,
 	if (ship == o) /* always send our own sdata to ourself */
 		return 1;
 
+	/* Always send sdata for our own faction ships for RTS mode */
+	if (rts_mode && ship->sdata.faction == go[c->ship_index].sdata.faction)
+		return 1;
+
 	range2 = ship->tsd.ship.scibeam_range * ship->tsd.ship.scibeam_range;
 	range3 = 4.0 * ship->tsd.ship.scibeam_range * 4.0 * ship->tsd.ship.scibeam_range;
 	/* distance to target... */
