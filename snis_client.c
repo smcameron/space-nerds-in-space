@@ -5000,6 +5000,10 @@ static struct comms_ui {
 	struct button *rts_main_planet_button;
 	struct button *rts_order_unit_button[NUM_RTS_UNIT_TYPES];
 	struct button *rts_order_command_button[NUM_RTS_ORDER_TYPES];
+#define FLEET_BUTTON_COLS 9
+#define FLEET_BUTTON_ROWS 10
+	struct button *fleet_unit_button[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
+	int fleet_unit_checkbox[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
 	struct snis_text_input_box *comms_input;
 	struct slider *mainzoom_slider;
 	char input[100];
@@ -12022,9 +12026,14 @@ static void enable_comms_rts_unit_ordering_buttons(void)
 		snis_button_enable(comms_ui.rts_order_unit_button[i]);
 }
 
+static void comms_fleet_ship_button_pressed(__attribute__((unused)) void *x)
+{
+	printf("Comms fleet button pressed\n");
+}
+
 static void init_comms_ui(void)
 {
-	int i;
+	int i, j;
 	int x = txx(200);
 	int y = txy(20);
 	int bw = txx(70);
@@ -12127,6 +12136,18 @@ static void init_comms_ui(void)
 				button_label, button_color, PICO_FONT, NULL, NULL);
 	}
 
+	for (i = 0; i < FLEET_BUTTON_COLS; i++) {
+		for (j = 0; j < FLEET_BUTTON_ROWS; j++) {
+			comms_ui.fleet_unit_button[i][j] = snis_button_init(txx(140) + i * txx(50),
+									txy(355) + j * txy(14), txx(45), -1,
+									"BLAH", UI_COLOR(comms_good_status), PICO_FONT,
+									comms_fleet_ship_button_pressed, NULL);
+			snis_button_checkbox(comms_ui.fleet_unit_button[i][j], &comms_ui.fleet_unit_checkbox[i][j]);
+			ui_add_button(comms_ui.fleet_unit_button[i][j], DISPLAYMODE_COMMS, "ASSIGN ORDERS TO UNIT");
+			ui_hide_widget(comms_ui.fleet_unit_button[i][j]);
+		}
+	}
+
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS,
 			"PROJECT COMMS SCREEN ON THE MAIN VIEW");
@@ -12175,7 +12196,7 @@ static void init_comms_ui(void)
 
 static void comms_activate_rts_buttons(struct snis_entity *player_ship)
 {
-	int i;
+	int i, j;
 
 	ui_unhide_widget(comms_ui.rts_fleet_button);
 	ui_unhide_widget(comms_ui.rts_main_planet_button);
@@ -12186,16 +12207,25 @@ static void comms_activate_rts_buttons(struct snis_entity *player_ship)
 			ui_unhide_widget(comms_ui.rts_order_unit_button[i]);
 		for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) /* Hide fleet buttons */
 			ui_hide_widget(comms_ui.rts_order_command_button[i]);
+		for (i = 0; i < FLEET_BUTTON_COLS; i++)
+			for (j = 0; j < FLEET_BUTTON_ROWS; j++)
+				ui_hide_widget(comms_ui.fleet_unit_button[i][j]);
 	} else if (player_ship->tsd.ship.rts_active_button == RTS_FLEET_BUTTON) {
 		for (i = 0; i < NUM_RTS_UNIT_TYPES; i++) /* Hide starbase and main planet buttons */
 			ui_hide_widget(comms_ui.rts_order_unit_button[i]);
 		for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) /* Unhide fleet buttons */
 			ui_unhide_widget(comms_ui.rts_order_command_button[i]);
+		for (i = 0; i < FLEET_BUTTON_COLS; i++)
+			for (j = 0; j < FLEET_BUTTON_ROWS; j++)
+				ui_unhide_widget(comms_ui.fleet_unit_button[i][j]);
 	} else {
 		for (i = 0; i < NUM_RTS_UNIT_TYPES; i++) /* Hide starbase and main planet buttons */
 			ui_hide_widget(comms_ui.rts_order_unit_button[i]);
 		for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) /* Hide fleet buttons */
 			ui_hide_widget(comms_ui.rts_order_command_button[i]);
+		for (i = 0; i < FLEET_BUTTON_COLS; i++)
+			for (j = 0; j < FLEET_BUTTON_ROWS; j++)
+				ui_hide_widget(comms_ui.fleet_unit_button[i][j]);
 	}
 }
 
@@ -12225,7 +12255,7 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 	}
 	comms_activate_rts_buttons(player_ship);
 
-	/* Modify the button labels to indication the occupation status of the starbases */
+	/* Modify the starbase button labels to indication the occupation status of the starbases */
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *starbase = &go[i];
 		if (starbase->type == OBJTYPE_STARBASE) {
@@ -12261,6 +12291,29 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 					break;
 				}
 			}
+		}
+	}
+
+	/* Modify the fleet unit buttons labels */
+	if (player_ship->tsd.ship.rts_active_button == RTS_FLEET_BUTTON) {
+		int fleet_unit_button = 0;
+		int col = 0;
+		int row = 0;
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			struct snis_entity *ship = &go[i];
+			if (ship->alive && ship->type == OBJTYPE_SHIP2 &&
+				ship->sdata.faction == player_ship->sdata.faction) {
+				col = fleet_unit_button % FLEET_BUTTON_COLS;
+				row = fleet_unit_button / FLEET_BUTTON_COLS;
+				snis_button_set_label(comms_ui.fleet_unit_button[col][row], ship->sdata.name);
+				fleet_unit_button++;
+			}
+		}
+		/* Hide buttons that do not have associated ships */
+		for (i = fleet_unit_button; i < FLEET_BUTTON_ROWS * FLEET_BUTTON_COLS; i++) {
+				col = i % FLEET_BUTTON_COLS;
+				row = i / FLEET_BUTTON_COLS;
+				ui_hide_widget(comms_ui.fleet_unit_button[col][row]);
 		}
 	}
 }
