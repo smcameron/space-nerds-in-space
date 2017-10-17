@@ -315,6 +315,7 @@ struct update_econ_ship_packet {
 	uint32_t x, y, z;
 	union quat orientation;
 	uint8_t shiptype; /* same as ship_sdata_packet subclass */
+	uint8_t rts_order; /* current order of this ship */
 };
 
 struct client_ship_id_packet {

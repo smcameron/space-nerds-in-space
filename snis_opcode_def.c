@@ -89,7 +89,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIYAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIBEAMWIDTH, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_SHIP2, "bwwhSSSRRRwwRRRbbbwbbbbbbbbbbbbbwQQQbbb");
-	rc |= init_opcode_def(OPCODE_ECON_UPDATE_SHIP, "bwwhSSSQwbb");
+	rc |= init_opcode_def(OPCODE_ECON_UPDATE_SHIP, "bwwhSSSQwbbb");
 	/* rc |= init_opcode_def(OPCODE_SHIP_SDATA, "bwbbbbbbbr"); */
 	rc |= init_opcode_def(OPCODE_LOAD_TORPEDO, "b");
 	rc |= init_opcode_def(OPCODE_EJECT_WARP_CORE, "b");

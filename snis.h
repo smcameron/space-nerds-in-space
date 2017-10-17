@@ -181,8 +181,15 @@ struct damcon_data;
 #define AI_MODE_COP 8
 #define AI_MODE_MINING_BOT 9
 #define AI_MODE_TOW_SHIP 10
+/* NOTE: These RTS modes must be contiguous and match the order in rts_unit_data.c order_data[] */
+#define AI_MODE_RTS_FIRST_COMMAND 11
 #define AI_MODE_RTS_STANDBY 11
-#define AI_MODE_RTS_OCCUPY_ENEMY_BASE 12
+#define AI_MODE_RTS_PATROL 12
+#define AI_MODE_RTS_ESCORT 13
+#define AI_MODE_RTS_ATK_NEAR_ENEMY 14
+#define AI_MODE_RTS_MOVE_TO_WAYPOINT 15
+#define AI_MODE_RTS_OCCUPY_NEAR_BASE 16
+#define AI_MODE_RTS_ATK_MAIN_BASE 17
 
 /* distance more than which fleet ships will warp back to position rather than simply flying */
 #define FLEET_WARP_DISTANCE 5000.0

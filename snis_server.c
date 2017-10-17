@@ -1041,7 +1041,7 @@ static void add_new_rts_unit(struct snis_entity *builder)
 	unit->vy = 0;
 	unit->vz = 0;
 	unit->tsd.ship.nai_entries = 1;
-	unit->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_OCCUPY_ENEMY_BASE;
+	unit->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_OCCUPY_NEAR_BASE;
 	unit->tsd.ship.ai[0].u.occupy_base.base_id = (uint32_t) -1;
 
 	/* Give the unit a short name based on the type, ie. a scout becomes, eg. "S5". */
@@ -4551,7 +4551,7 @@ static void ai_brain(struct snis_entity *o)
 		o->vy = 0;
 		o->vz = 0;
 		break;
-	case AI_MODE_RTS_OCCUPY_ENEMY_BASE:
+	case AI_MODE_RTS_OCCUPY_NEAR_BASE:
 		ai_occupy_enemy_base_mode_brain(o);
 		break;
 	default:
@@ -16665,6 +16665,17 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	uint8_t ai[MAX_AI_STACK_ENTRIES] = { 0 };
 	int i;
 	uint8_t opcode = OPCODE_ECON_UPDATE_SHIP;
+	uint8_t rts_order;
+
+	n = o->tsd.ship.nai_entries - 1;
+	rts_order = 255;
+	victim_id = -1;
+	if (n >= 0) {
+		if (rts_mode && go[c->ship_index].sdata.faction == o->sdata.faction)
+			rts_order = o->tsd.ship.ai[0].ai_mode;
+		if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
+			victim_id = o->tsd.ship.ai[n].u.attack.victim_id;
+	}
 
 	if (c->debug_ai) {
 		opcode = OPCODE_ECON_UPDATE_SHIP_DEBUG_AI; 
@@ -16698,7 +16709,7 @@ static void send_econ_update_ship_packet(struct game_client *c,
 			case AI_MODE_RTS_STANDBY:
 				ai[i] = 'S';
 				break;
-			case AI_MODE_RTS_OCCUPY_ENEMY_BASE:
+			case AI_MODE_RTS_OCCUPY_NEAR_BASE:
 				ai[i] = 'O';
 				break;
 			default:
@@ -16707,16 +16718,10 @@ static void send_econ_update_ship_packet(struct game_client *c,
 			}
 		}
 	}
-	n = o->tsd.ship.nai_entries - 1;
-	if (n < 0 || o->tsd.ship.ai[n].ai_mode != AI_MODE_ATTACK)
-		victim_id = -1;
-	else
-		victim_id = o->tsd.ship.ai[n].u.attack.victim_id;
-
-	pb_queue_to_client(c, packed_buffer_new("bwwhSSSQwbb", opcode,
+	pb_queue_to_client(c, packed_buffer_new("bwwhSSSQwbbb", opcode,
 			o->id, o->timestamp, o->alive, o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM, o->z, (int32_t) UNIVERSE_DIM,
-			&o->orientation, victim_id, o->tsd.ship.shiptype, o->sdata.faction));
+			&o->orientation, victim_id, o->tsd.ship.shiptype, o->sdata.faction, rts_order));
 
 	if (!c->debug_ai)
 		return;

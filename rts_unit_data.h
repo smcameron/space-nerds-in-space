@@ -24,7 +24,7 @@
 #include <stdlib.h>
 
 #define NUM_RTS_UNIT_TYPES 6
-#define NUM_RTS_ORDER_TYPES 6
+#define NUM_RTS_ORDER_TYPES 7
 
 struct rts_unit_data {
 	char *name;
@@ -38,6 +38,7 @@ struct rts_unit_data {
 
 struct rts_order_data {
 	char *name;
+	char *short_name;
 	char *help_text;
 	float cost_to_order;
 };

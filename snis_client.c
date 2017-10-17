@@ -1042,7 +1042,7 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[], int *nthrus
 static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y, double z,
 			union quat *orientation, uint16_t alive, uint32_t victim_id,
 			uint8_t shiptype, uint8_t ai[], double threat_level,
-			uint8_t npoints, union vec3 *patrol, uint8_t faction)
+			uint8_t npoints, union vec3 *patrol, uint8_t faction, uint8_t rts_order)
 {
 	int i;
 	struct entity *e;
@@ -1109,6 +1109,10 @@ static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y,
 		int j;
 		for (j = 0; j < npoints; j++)
 			go[i].tsd.ship.ai[1].u.patrol.p[j] = patrol[j];
+	}
+	if (rts_order != 255) {
+		go[i].tsd.ship.ai[0].ai_mode = rts_order;
+		go[i].tsd.ship.nai_entries = 1;
 	}
 	return 0;
 }
@@ -4123,17 +4127,17 @@ static int process_update_econ_ship_packet(uint8_t opcode)
 	uint8_t faction;
 	double dx, dy, dz, px, py, pz;
 	union quat orientation;
-	uint8_t shiptype, ai[MAX_AI_STACK_ENTRIES], npoints;
+	uint8_t shiptype, ai[MAX_AI_STACK_ENTRIES], npoints, rts_order;
 	union vec3 patrol[MAX_PATROL_POINTS];
 	double threat_level;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwhSSSQwbb", &id, &timestamp, &alive,
+	rc = read_and_unpack_buffer(buffer, "wwhSSSQwbbb", &id, &timestamp, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
 				&dz, (int32_t) UNIVERSE_DIM,
 				&orientation,
-				&victim_id, &shiptype, &faction);
+				&victim_id, &shiptype, &faction, &rts_order);
 	if (rc != 0)
 		return rc;
 	if (opcode != OPCODE_ECON_UPDATE_SHIP_DEBUG_AI) {
@@ -4168,7 +4172,7 @@ static int process_update_econ_ship_packet(uint8_t opcode)
 done:
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_econ_ship(id, timestamp, dx, dy, dz, &orientation, alive, victim_id,
-				shiptype, ai, threat_level, npoints, patrol, faction);
+				shiptype, ai, threat_level, npoints, patrol, faction, rts_order);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -12311,11 +12315,27 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 		int row = 0;
 		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 			struct snis_entity *ship = &go[i];
+			char button_label[20];
+			char tooltip[100];
 			if (ship->alive && ship->type == OBJTYPE_SHIP2 &&
 				ship->sdata.faction == player_ship->sdata.faction) {
 				col = fleet_unit_button % FLEET_BUTTON_COLS;
 				row = fleet_unit_button / FLEET_BUTTON_COLS;
-				snis_button_set_label(comms_ui.fleet_unit_button[col][row], ship->sdata.name);
+				if (ship->tsd.ship.nai_entries > 0 &&
+					ship->tsd.ship.ai[0].ai_mode >= AI_MODE_RTS_FIRST_COMMAND &&
+					ship->tsd.ship.ai[0].ai_mode <=
+						AI_MODE_RTS_FIRST_COMMAND + NUM_RTS_ORDER_TYPES - 1) {
+					int order_type = ship->tsd.ship.ai[0].ai_mode - AI_MODE_RTS_STANDBY;
+					snprintf(button_label, 20, "%s %s", ship->sdata.name,
+							rts_order_type(order_type)->short_name);
+					snprintf(tooltip, 100, "ASSIGN ORDERS TO %s (CURRENT: %s)",
+							ship->sdata.name, rts_order_type(order_type)->name);
+				} else {
+					snprintf(button_label, 20, "%s", ship->sdata.name);
+					snprintf(tooltip, 100, "ASSIGN ORDERS TO %s (CURRENT: NONE)", ship->sdata.name);
+				}
+				snis_button_set_label(comms_ui.fleet_unit_button[col][row], button_label);
+				ui_set_widget_tooltip(comms_ui.fleet_unit_button[col][row], tooltip);
 				fleet_unit_button++;
 			}
 		}
