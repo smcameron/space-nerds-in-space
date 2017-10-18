@@ -5018,6 +5018,7 @@ static struct comms_ui {
 #define FLEET_BUTTON_ROWS 10
 	struct button *fleet_unit_button[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
 	int fleet_unit_checkbox[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
+	int fleet_order_checkbox[NUM_RTS_ORDER_TYPES];
 	struct snis_text_input_box *comms_input;
 	struct slider *mainzoom_slider;
 	char input[100];
@@ -12019,6 +12020,24 @@ static void comms_rts_build_unit_button_pressed(void *x)
 	}
 }
 
+static void comms_rts_order_command_button_pressed(void *x)
+{
+	int i;
+	uint8_t rts_command_number = (uint8_t) (((intptr_t) x) & 0x0ff);
+
+	/* Make the checkboxes behave as radio buttons. FIXME: state is local to client here. */
+	for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) {
+		if (i != rts_command_number)
+			comms_ui.fleet_order_checkbox[i] = 0;
+		/* Note, we do not have to do anything for the one selected, as the
+		 * generic button code will toggle that one. In fact, we should not set
+		 * it, since if we do, the button code will afterwards toggle it off
+		 * plus the user might be turning it off anyway.
+		 */
+		printf("comms_ui.fleet_order_checkbox[%d] = %d\n", i, comms_ui.fleet_order_checkbox[i]);
+	}
+}
+
 static void comms_input_entered()
 {
 	printf("comms input entered\n");
@@ -12146,8 +12165,10 @@ static void init_comms_ui(void)
 		char button_label[20];
 
 		snprintf(button_label, 20, "$%.0f %s", rts_order_type(i)->cost_to_order, rts_order_type(i)->name);
-		comms_ui.rts_order_command_button[i] = snis_button_init(txx(22), txy(375) + txy(14) * i, -1, -1,
-				button_label, button_color, PICO_FONT, NULL, NULL);
+		comms_ui.rts_order_command_button[i] = snis_button_init(txx(22), txy(375) + txy(14) * i, txx(100), -1,
+				button_label, button_color, PICO_FONT, comms_rts_order_command_button_pressed,
+				(void *) (intptr_t) i);
+		snis_button_checkbox(comms_ui.rts_order_command_button[i], &comms_ui.fleet_order_checkbox[i]);
 	}
 
 	for (i = 0; i < FLEET_BUTTON_COLS; i++) {
