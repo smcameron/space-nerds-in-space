@@ -1041,7 +1041,7 @@ static void add_new_rts_unit(struct snis_entity *builder)
 	unit->vy = 0;
 	unit->vz = 0;
 	unit->tsd.ship.nai_entries = 1;
-	unit->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_OCCUPY_NEAR_BASE;
+	unit->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_STANDBY;
 	unit->tsd.ship.ai[0].u.occupy_base.base_id = (uint32_t) -1;
 
 	/* Give the unit a short name based on the type, ie. a scout becomes, eg. "S5". */
