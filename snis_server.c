@@ -14227,6 +14227,7 @@ static int process_rts_command_unit(struct game_client *c)
 	uint8_t command;
 	struct snis_entity *ship;
 	int rc, index;
+	float cost;
 
 	rc = read_and_unpack_buffer(c, buffer, "wbw", &ship_id, &command, &direct_object);
 	if (rc)
@@ -14251,6 +14252,15 @@ static int process_rts_command_unit(struct game_client *c)
 	case AI_MODE_RTS_MOVE_TO_WAYPOINT:
 	case AI_MODE_RTS_OCCUPY_NEAR_BASE:
 	case AI_MODE_RTS_ATK_MAIN_BASE:
+		if (ship->tsd.ship.ai[0].ai_mode == command) /* Already set to this order? */
+			goto out;
+		cost = rts_order_type(command - AI_MODE_RTS_FIRST_COMMAND)->cost_to_order;
+		if (cost > go[c->ship_index].tsd.ship.wallet) {
+			pthread_mutex_unlock(&universe_mutex);
+			snis_queue_add_text_to_speech("Insufficient funds.", ROLE_TEXT_TO_SPEECH, c->shipid);
+			return 0;
+		}
+		go[c->ship_index].tsd.ship.wallet -= cost;
 		ship->tsd.ship.ai[0].ai_mode = command;
 		ship->tsd.ship.nai_entries = 1;
 		ship->timestamp = universe_timestamp;
