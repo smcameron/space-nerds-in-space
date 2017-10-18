@@ -221,3 +221,7 @@ void snis_button_enable(struct button *b)
 	b->enabled = 1;
 }
 
+void snis_button_set_cookie(struct button *b, void *cookie)
+{
+	b->cookie = cookie;
+}

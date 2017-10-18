@@ -33,6 +33,6 @@ GLOBAL void snis_button_disable(struct button *b);
 GLOBAL void snis_button_enable(struct button *b);
 GLOBAL void snis_button_set_disabled_color(struct button *b, int color);
 GLOBAL int snis_button_get_disabled_color(struct button *b);
-
+GLOBAL void snis_button_set_cookie(struct button *b, void *cookie);
 #undef GLOBAL
 #endif
