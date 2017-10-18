@@ -4417,35 +4417,73 @@ static void maybe_leave_fleet(struct snis_entity *o)
 	}
 }
 
+static void announce_starbase_status_change(char *basename, int winner, int loser, int zone)
+{
+	int i;
+	char buffer[100];
+
+	if (zone <= 0) /* should not happen */
+		return;
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		if (o->alive && o->type == OBJTYPE_SHIP1) {
+			if (o->sdata.faction == loser) {
+				if (zone == 4) /* Starbase changed hands */
+					snprintf(buffer, sizeof(buffer), "%s has been captured by the enemy.",
+						basename);
+				else
+					snprintf(buffer, sizeof(buffer), "%s zone %d has fallen to the enemy.",
+						basename, zone);
+				snis_queue_add_text_to_speech(buffer, ROLE_TEXT_TO_SPEECH, o->id);
+			} else if (o->sdata.faction == winner) {
+				if (zone == 4) /* Starbase changed hands */
+					snprintf(buffer, sizeof(buffer), "We have captured %s.",
+						basename);
+				else
+					snprintf(buffer, sizeof(buffer), "%s zone %d has been secured.",
+						basename, zone);
+				snis_queue_add_text_to_speech(buffer, ROLE_TEXT_TO_SPEECH, o->id);
+			}
+		}
+	}
+}
+
 static void rts_occupy_starbase_slot(struct snis_entity *starbase, struct snis_entity *occupier)
 {
 	int i;
+	int loser, zone = -1;
 	/* See if there's an unoccupied slot in the first 3 */
 	for (i = 0; i < 3; i++) {
 		if (starbase->tsd.starbase.occupant[i] == 255) {
+			loser = starbase->tsd.starbase.occupant[i];
 			starbase->tsd.starbase.occupant[i] = occupier->sdata.faction;
-			delete_from_clients_and_server(occupier);
-			starbase->timestamp = universe_timestamp;
-			return;
+			zone = i + 1;
+			goto out;
 		}
 	}
 	/* See if there's a slot in the first 3 that's not us */
 	for (i = 0; i < 3; i++) {
 		if (starbase->tsd.starbase.occupant[i] != occupier->sdata.faction) {
+			loser = starbase->tsd.starbase.occupant[i];
 			starbase->tsd.starbase.occupant[i] = occupier->sdata.faction;
-			delete_from_clients_and_server(occupier);
-			starbase->timestamp = universe_timestamp;
-			return;
+			zone = i + 1;
+			goto out;
 		}
 	}
 	/* See if the last slot is not us */
 	if (starbase->tsd.starbase.occupant[3] != occupier->sdata.faction) {
+		loser = starbase->tsd.starbase.occupant[3];
 		starbase->tsd.starbase.occupant[3] = occupier->sdata.faction;
 		starbase->sdata.faction = occupier->sdata.faction; /* take over the base */
-		delete_from_clients_and_server(occupier);
-		starbase->timestamp = universe_timestamp;
-		return;
+		zone = 4;
+		goto out;
 	}
+out:
+	delete_from_clients_and_server(occupier);
+	starbase->timestamp = universe_timestamp;
+	announce_starbase_status_change(starbase->sdata.name, occupier->sdata.faction, loser, zone);
+	return;
+
 }
 
 static void ai_occupy_enemy_base_mode_brain(struct snis_entity *o)
