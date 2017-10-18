@@ -14220,6 +14220,49 @@ out:
 	return 0;
 }
 
+static int process_rts_command_unit(struct game_client *c)
+{
+	unsigned char buffer[20];
+	uint32_t ship_id, direct_object;
+	uint8_t command;
+	struct snis_entity *ship;
+	int rc, index;
+
+	rc = read_and_unpack_buffer(c, buffer, "wbw", &ship_id, &command, &direct_object);
+	if (rc)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	index = lookup_by_id(ship_id);
+	if (index < 0)
+		goto out;
+	ship = &go[index];
+	if (!ship->alive)
+		goto out;
+	if (ship->type != OBJTYPE_SHIP2)
+		goto out;
+	if (ship->sdata.faction != go[c->ship_index].sdata.faction)
+		goto out;
+
+	switch ((int) command) {
+	case AI_MODE_RTS_STANDBY:
+	case AI_MODE_RTS_PATROL:
+	case AI_MODE_RTS_ESCORT:
+	case AI_MODE_RTS_ATK_NEAR_ENEMY:
+	case AI_MODE_RTS_MOVE_TO_WAYPOINT:
+	case AI_MODE_RTS_OCCUPY_NEAR_BASE:
+	case AI_MODE_RTS_ATK_MAIN_BASE:
+		ship->tsd.ship.ai[0].ai_mode = command;
+		ship->tsd.ship.nai_entries = 1;
+		ship->timestamp = universe_timestamp;
+		break;
+	default:
+		break;
+	}
+out:
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_toggle_demon_ai_debug_mode(struct game_client *c)
 {
 	c->debug_ai = !c->debug_ai;
@@ -16055,6 +16098,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_COMMS_RTS_BUILD_UNIT:
 			rc = process_rts_build_unit(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_COMMS_RTS_COMMAND_UNIT:
+			rc = process_rts_command_unit(c);
 			if (rc)
 				goto protocol_error;
 			break;

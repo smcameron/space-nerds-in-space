@@ -261,7 +261,7 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>OPCODE_DEMON_RTSMODE</td><td>	125</td></tr>
 <tr><td>OPCODE_COMMS_RTS_BUTTON</td><td>	126</td></tr>
 <tr><td>OPCODE_COMMS_RTS_BUILD_UNIT</td><td>	127</td></tr>
-<tr><td>not used</td><td>	128</td></tr>
+<tr><td>OPCODE_COMMS_RTS_COMMAND_UNIT</td><td>	128</td></tr>
 <tr><td>not used</td><td>	129</td></tr>
 <tr><td>not used</td><td>	130</td></tr>
 <tr><td>not used</td><td>	131</td></tr>
@@ -669,6 +669,16 @@ the same as Update Ship 100, but nothing transmits opcode 117.
 <tr><td>0</td><td>b</td><td>127</td></tr>
 <tr><td>1</td><td>w</td><td>Object ID of builder object (starbase or home planet)</td></tr>
 <tr><td>5</td><td>b</td><td>Type of object to build</td></tr>
+</table>
+
+<h4>128 Comms RTS Command Unit</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td></tr>
+<tr><td>0</td><td>b</td><td>128</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID to which Command is directed</td></tr>
+<tr><td>5</td><td>b</td><td>Command</td></tr>
+<tr><td>6</td><td>w</td><td>Object ID of object which command is about, or waypoint number</td></tr>
 </table>
 
 <h4>133 Engage Warp</h4> (Client to Server)

@@ -79,6 +79,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_DEMON_RTSMODE, "bb");
 	rc |= init_opcode_def(OPCODE_COMMS_RTS_BUTTON, "bb");
 	rc |= init_opcode_def(OPCODE_COMMS_RTS_BUILD_UNIT, "bwb");
+	rc |= init_opcode_def(OPCODE_COMMS_RTS_COMMAND_UNIT, "bwbw");
 	rc |= init_opcode_def(OPCODE_REQUEST_YAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_THRUST, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_GUNYAW, "bb");

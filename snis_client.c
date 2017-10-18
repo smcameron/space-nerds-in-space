@@ -12060,7 +12060,28 @@ static void enable_comms_rts_unit_ordering_buttons(void)
 
 static void comms_fleet_ship_button_pressed(__attribute__((unused)) void *x)
 {
+	int i;
+	uint8_t command;
+	uint32_t direct_object = (uint32_t) -1;
+	uint32_t id = (uint32_t) (intptr_t) x;
+
 	printf("Comms fleet button pressed\n");
+	/* Figure out which command is requested */
+	command = 255;
+	for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) {
+		if (comms_ui.fleet_order_checkbox[i]) {
+			command = i + AI_MODE_RTS_STANDBY;
+			break;
+		}
+	}
+	if (command == 255) /* User has not selected any command */
+		return;
+	/* Figure out which ship is requested */
+	i = lookup_object_by_id(id);
+	if (i < 0)
+		return;
+	queue_to_server(snis_opcode_pkt("bwbw", OPCODE_COMMS_RTS_COMMAND_UNIT,
+			id, command, direct_object));
 }
 
 static void init_comms_ui(void)
@@ -12355,6 +12376,8 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 				}
 				snis_button_set_label(comms_ui.fleet_unit_button[col][row], button_label);
 				ui_set_widget_tooltip(comms_ui.fleet_unit_button[col][row], tooltip);
+				snis_button_set_cookie(comms_ui.fleet_unit_button[col][row],
+							(void *) (intptr_t) ship->id);
 				fleet_unit_button++;
 			}
 		}
