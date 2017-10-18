@@ -12152,19 +12152,19 @@ static void init_comms_ui(void)
 				"EMF", "SCAN DETECTED", UI_COLOR(science_graph_plot_strong),
 				UI_COLOR(common_red_alert), 100, NANO_FONT, 900);
 	const int rts_button_y = txy(310);
-	const int rts_button_spacing = txx(60);
+	const int rts_button_spacing = txx(70);
 	comms_ui.rts_main_planet_button = snis_button_init(txx(10) + rts_button_spacing * 0, rts_button_y, -1, txy(20),
-			"HOME PLANET", button_color, NANO_FONT,
+			"HOME PLANET X", button_color, NANO_FONT,
 			comms_rts_button_pressed, (void *) RTS_HOME_PLANET_BUTTON);
 	snis_button_set_sound(comms_ui.rts_main_planet_button, UISND18);
-	comms_ui.rts_fleet_button = snis_button_init(txx(10) + rts_button_spacing * 2, rts_button_y, -1, txy(20),
+	comms_ui.rts_fleet_button = snis_button_init(txx(50) + rts_button_spacing, rts_button_y, -1, txy(20),
 			"FLEET", button_color, NANO_FONT,
 			comms_rts_button_pressed, (void *) RTS_FLEET_BUTTON);
 	snis_button_set_sound(comms_ui.rts_fleet_button, UISND18);
 	for (i = 0; i < NUM_RTS_BASES; i++) {
 		char name[20];
-		sprintf(name, "SB-%02d ?/?", i);
-		comms_ui.rts_starbase_button[i] = snis_button_init(txx(10) + rts_button_spacing * (i + 3),
+		sprintf(name, "SB-%02d ?/? X", i);
+		comms_ui.rts_starbase_button[i] = snis_button_init(txx(160) + rts_button_spacing * i,
 			rts_button_y, -1, txy(20), name, button_color, NANO_FONT,
 			comms_rts_button_pressed, (void *) ((intptr_t) i));
 		snis_button_set_sound(comms_ui.rts_starbase_button[i], UISND18);
@@ -12302,6 +12302,7 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 	int i, j;
 	int us, them;
 	const char *spinner = "|/-\\";
+	int set_planet_spinner = 0;
 
 	if (!activate) {
 		comms_deactivate_rts_buttons();
@@ -12309,7 +12310,7 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 	}
 	comms_activate_rts_buttons(player_ship);
 
-	/* Modify the starbase button labels to indication the occupation status of the starbases */
+	/* Modify the starbase/home planet button labels to indication the occupation status of the starbases */
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *starbase = &go[i];
 		if (starbase->type == OBJTYPE_STARBASE) {
@@ -12345,8 +12346,23 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 					break;
 				}
 			}
+		} else if (starbase->type == OBJTYPE_PLANET && starbase->alive &&
+				starbase->sdata.faction == player_ship->sdata.faction) {
+			/* Modify the Home Planet button with activity spinner */
+			char button_label[20];
+			char activity;
+			if (set_planet_spinner == 0) { /* only look at the first planet with the right faction */
+				if (starbase->tsd.planet.time_left_to_build == 0)
+					activity = ' ';
+				else
+					activity = spinner[(starbase->tsd.planet.time_left_to_build / 2) % 4];
+			}
+			set_planet_spinner++;
+			sprintf(button_label, "HOME PLANET %c", activity);
+			snis_button_set_label(comms_ui.rts_main_planet_button, button_label);
 		}
 	}
+
 
 	/* Modify the fleet unit buttons labels */
 	if (player_ship->tsd.ship.rts_active_button == RTS_FLEET_BUTTON) {
