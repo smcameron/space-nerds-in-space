@@ -5017,7 +5017,6 @@ static struct comms_ui {
 #define FLEET_BUTTON_COLS 9
 #define FLEET_BUTTON_ROWS 10
 	struct button *fleet_unit_button[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
-	int fleet_unit_checkbox[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
 	int fleet_order_checkbox[NUM_RTS_ORDER_TYPES];
 	struct snis_text_input_box *comms_input;
 	struct slider *mainzoom_slider;
@@ -12177,7 +12176,6 @@ static void init_comms_ui(void)
 									txy(355) + j * txy(14), txx(45), -1,
 									"BLAH", UI_COLOR(comms_good_status), PICO_FONT,
 									comms_fleet_ship_button_pressed, NULL);
-			snis_button_checkbox(comms_ui.fleet_unit_button[i][j], &comms_ui.fleet_unit_checkbox[i][j]);
 			ui_add_button(comms_ui.fleet_unit_button[i][j], DISPLAYMODE_COMMS, "ASSIGN ORDERS TO UNIT");
 			ui_hide_widget(comms_ui.fleet_unit_button[i][j]);
 		}
