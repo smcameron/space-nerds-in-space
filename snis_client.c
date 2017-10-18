@@ -12361,13 +12361,18 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 				ship->sdata.faction == player_ship->sdata.faction) {
 				col = fleet_unit_button % FLEET_BUTTON_COLS;
 				row = fleet_unit_button / FLEET_BUTTON_COLS;
+				char *short_name;
 				if (ship->tsd.ship.nai_entries > 0 &&
 					ship->tsd.ship.ai[0].ai_mode >= AI_MODE_RTS_FIRST_COMMAND &&
 					ship->tsd.ship.ai[0].ai_mode <=
 						AI_MODE_RTS_FIRST_COMMAND + NUM_RTS_ORDER_TYPES - 1) {
 					int order_type = ship->tsd.ship.ai[0].ai_mode - AI_MODE_RTS_STANDBY;
-					snprintf(button_label, 20, "%s %s", ship->sdata.name,
-							rts_order_type(order_type)->short_name);
+					/* Make standby orders blink to draw attention to idle units. */
+					if (ship->tsd.ship.ai[0].ai_mode == AI_MODE_RTS_STANDBY && (timer & 0x8) == 0)
+						short_name = "";
+					else
+						short_name = rts_order_type(order_type)->short_name;
+					snprintf(button_label, 20, "%s %s", ship->sdata.name, short_name);
 					snprintf(tooltip, 100, "ASSIGN ORDERS TO %s (CURRENT: %s)",
 							ship->sdata.name, rts_order_type(order_type)->name);
 				} else {
