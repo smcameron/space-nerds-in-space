@@ -14232,8 +14232,6 @@ static int process_rts_build_unit(struct game_client *c)
 			builder->tsd.starbase.time_left_to_build = rts_unit_type(unit_type)->time_to_build;
 			builder->tsd.starbase.build_unit_type = unit_type;
 			pthread_mutex_unlock(&universe_mutex);
-			sprintf(speech, "%s building %s.", builder->sdata.name, rts_unit_type(unit_type)->name);
-			snis_queue_add_text_to_speech(speech, ROLE_TEXT_TO_SPEECH, c->shipid);
 			return 0;
 		}
 	} else if (builder->type == OBJTYPE_PLANET) {
@@ -14248,8 +14246,6 @@ static int process_rts_build_unit(struct game_client *c)
 			builder->tsd.planet.time_left_to_build = rts_unit_type(unit_type)->time_to_build;
 			builder->tsd.planet.build_unit_type = unit_type;
 			pthread_mutex_unlock(&universe_mutex);
-			sprintf(speech, "Home planet building %s.", rts_unit_type(unit_type)->name);
-			snis_queue_add_text_to_speech(speech, ROLE_TEXT_TO_SPEECH, c->shipid);
 			return 0;
 		}
 	}
