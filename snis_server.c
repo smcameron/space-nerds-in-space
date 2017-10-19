@@ -4542,6 +4542,58 @@ static void ai_occupy_enemy_base_mode_brain(struct snis_entity *o)
 	}
 }
 
+static void ai_atk_main_base_mode_brain(struct snis_entity *o)
+{
+	int i, j, n, firing_range;
+	struct snis_entity *main_base;
+	union vec3 to_main_base;
+	float dist;
+	double dist2;
+
+	/* Find the main base if we haven't already */
+	n = o->tsd.ship.nai_entries - 1; /* We expect n to be 0 here. */
+	if (o->tsd.ship.ai[n].u.atk_main_base.base_id == (uint32_t) -1) {
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			main_base = &go[i];
+			if (main_base->alive && main_base->type == OBJTYPE_PLANET &&
+				main_base->sdata.faction != o->sdata.faction) {
+				for (j = 0; j < ARRAYSIZE(rts_planet); j++) {
+					if (i == rts_planet[j].index) {
+						o->tsd.ship.ai[n].u.atk_main_base.base_id = main_base->id;
+						break;
+					}
+				}
+				if (o->tsd.ship.ai[n].u.atk_main_base.base_id != (uint32_t) -1)
+					break;
+			}
+		}
+		/* If we didn't find the base (should not happen), go to standby mode. */
+		if (o->tsd.ship.ai[n].u.atk_main_base.base_id == (uint32_t) -1) {
+			o->tsd.ship.ai[n].ai_mode = AI_MODE_RTS_STANDBY;
+			return;
+		}
+	}
+	i = lookup_by_id(o->tsd.ship.ai[n].u.atk_main_base.base_id);
+	if (i < 0) {
+		o->tsd.ship.ai[n].ai_mode = AI_MODE_RTS_STANDBY;
+		return;
+	}
+	main_base = &go[i];
+	/* Figure out how to move */
+	to_main_base.v.x = main_base->x - o->x;
+	to_main_base.v.y = main_base->y - o->y;
+	to_main_base.v.z = main_base->z - o->z;
+	dist = vec3_magnitude(&to_main_base);
+	firing_range = (dist <= LASER_RANGE + main_base->tsd.planet.radius);
+	dist = dist - main_base->tsd.planet.radius - LASER_RANGE * 0.9;
+	vec3_normalize_self(&to_main_base);
+	vec3_mul_self(&to_main_base, dist);
+	o->tsd.ship.desired_velocity = ship_type[o->tsd.ship.shiptype].max_speed;
+	dist2 = ai_ship_travel_towards(o, o->x + to_main_base.v.x, o->y + to_main_base.v.y, o->z + to_main_base.v.z);
+	if (firing_range)
+		ai_maybe_fire_weapon(o, main_base, 0, sqrt(dist2), main_base->tsd.planet.radius);
+}
+
 static void ai_brain(struct snis_entity *o)
 {
 	int n;
@@ -4602,6 +4654,9 @@ static void ai_brain(struct snis_entity *o)
 		break;
 	case AI_MODE_RTS_OCCUPY_NEAR_BASE:
 		ai_occupy_enemy_base_mode_brain(o);
+		break;
+	case AI_MODE_RTS_ATK_MAIN_BASE:
+		ai_atk_main_base_mode_brain(o);
 		break;
 	default:
 		break;

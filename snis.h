@@ -262,6 +262,10 @@ struct ai_rts_occupy_base_data {
 	uint32_t base_id;
 };
 
+struct ai_rts_atk_main_base_data {
+	uint32_t base_id;
+};
+
 union ai_data {
 	struct ai_attack_data attack;
 	struct ai_patrol_data patrol;
@@ -273,6 +277,7 @@ union ai_data {
 	struct ai_tow_ship_data tow_ship;
 	struct ai_rts_standby_data standby;
 	struct ai_rts_occupy_base_data occupy_base;
+	struct ai_rts_atk_main_base_data atk_main_base;
 };
 
 struct ai_stack_entry {
