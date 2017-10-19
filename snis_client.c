@@ -12285,7 +12285,7 @@ static void comms_activate_rts_buttons(struct snis_entity *player_ship)
 
 static void comms_deactivate_rts_buttons(void)
 {
-	int i;
+	int i, j;
 
 	ui_hide_widget(comms_ui.rts_fleet_button);
 	ui_hide_widget(comms_ui.rts_main_planet_button);
@@ -12295,6 +12295,9 @@ static void comms_deactivate_rts_buttons(void)
 		ui_hide_widget(comms_ui.rts_order_unit_button[i]);
 	for (i = 0; i < NUM_RTS_ORDER_TYPES; i++)
 		ui_hide_widget(comms_ui.rts_order_command_button[i]);
+	for (i = 0; i < FLEET_BUTTON_COLS; i++)
+		for (j = 0; j < FLEET_BUTTON_ROWS; j++)
+			ui_hide_widget(comms_ui.fleet_unit_button[i][j]);
 }
 
 static void comms_setup_rts_buttons(int activate, struct snis_entity *player_ship) /* called with universe lock held */
