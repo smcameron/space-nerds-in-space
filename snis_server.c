@@ -14393,12 +14393,22 @@ static int process_rts_func_command_unit(struct game_client *c)
 
 	switch ((int) command) {
 	case AI_MODE_RTS_STANDBY:
+		goto common;
 	case AI_MODE_RTS_PATROL:
+		goto common;
 	case AI_MODE_RTS_ESCORT:
+		goto common;
 	case AI_MODE_RTS_ATK_NEAR_ENEMY:
+		goto common;
 	case AI_MODE_RTS_MOVE_TO_WAYPOINT:
+		goto common;
 	case AI_MODE_RTS_OCCUPY_NEAR_BASE:
+		ship->tsd.ship.ai[0].u.occupy_base.base_id = (uint32_t) -1;
+		goto common;
 	case AI_MODE_RTS_ATK_MAIN_BASE:
+		ship->tsd.ship.ai[0].u.atk_main_base.base_id = (uint32_t) -1;
+		goto common;
+common:
 		if (ship->tsd.ship.ai[0].ai_mode == command) /* Already set to this order? */
 			goto out;
 		cost = rts_order_type(command - AI_MODE_RTS_FIRST_COMMAND)->cost_to_order;
