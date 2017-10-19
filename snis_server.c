@@ -3390,6 +3390,53 @@ static int too_many_cops_around(struct snis_entity *o)
 	return o->tsd.ship.in_secure_area;
 }
 
+/* o is ai controled entity doing the weapons firing
+ * v is the victim object being fired upon
+ * imacop is true if o is a cop
+ * vdist is distance to victim (minus anything like planet radius)
+ * extra_range is e.g. planet radius.
+ */
+static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, int imacop,
+					double vdist, float extra_range)
+{
+	if (snis_randn(1000) < 150 + imacop * 150 && vdist <= TORPEDO_RANGE + extra_range &&
+		o->tsd.ship.next_torpedo_time <= universe_timestamp &&
+		o->tsd.ship.torpedoes > 0 &&
+		ship_type[o->tsd.ship.shiptype].has_torpedoes) {
+		double dist, flight_time, tx, ty, tz, vx, vy, vz;
+		/* int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y); */
+
+		if (v->type == OBJTYPE_PLANET || !planet_between_objs(o, v)) {
+			dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
+			flight_time = dist / TORPEDO_VELOCITY;
+			tx = v->x + (v->vx * flight_time);
+			tz = v->z + (v->vz * flight_time);
+			ty = v->y + (v->vy * flight_time);
+
+			calculate_torpedo_velocities(o->x, o->y, o->z,
+				tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
+
+			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
+			o->tsd.ship.torpedoes--;
+			/* FIXME: how do the torpedoes refill? */
+			o->tsd.ship.next_torpedo_time = universe_timestamp +
+				ENEMY_TORPEDO_FIRE_INTERVAL;
+			check_for_incoming_fire(v);
+		}
+	} else {
+		if (snis_randn(1000) < 300 + imacop * 200 &&
+			o->tsd.ship.next_laser_time <= universe_timestamp &&
+			ship_type[o->tsd.ship.shiptype].has_lasers) {
+			if (v->type == OBJTYPE_PLANET || !planet_between_objs(o, v)) {
+				o->tsd.ship.next_laser_time = universe_timestamp +
+					ENEMY_LASER_FIRE_INTERVAL;
+				add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
+				check_for_incoming_fire(v);
+			}
+		}
+	}
+}
+
 static void ai_attack_mode_brain(struct snis_entity *o)
 {
 	struct snis_entity *v;
@@ -3502,43 +3549,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	 */
 	if ((o->sdata.faction != 0 || imacop) ||
 		(v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_PLANET)) {
-
-		if (snis_randn(1000) < 150 + imacop * 150 && vdist <= TORPEDO_RANGE + extra_range &&
-			o->tsd.ship.next_torpedo_time <= universe_timestamp &&
-			o->tsd.ship.torpedoes > 0 &&
-			ship_type[o->tsd.ship.shiptype].has_torpedoes) {
-			double dist, flight_time, tx, ty, tz, vx, vy, vz;
-			/* int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y); */
-
-			if (v->type == OBJTYPE_PLANET || !planet_between_objs(o, v)) {
-				dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
-				flight_time = dist / TORPEDO_VELOCITY;
-				tx = v->x + (v->vx * flight_time);
-				tz = v->z + (v->vz * flight_time);
-				ty = v->y + (v->vy * flight_time);
-
-				calculate_torpedo_velocities(o->x, o->y, o->z,
-					tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
-
-				add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
-				o->tsd.ship.torpedoes--;
-				/* FIXME: how do the torpedoes refill? */
-				o->tsd.ship.next_torpedo_time = universe_timestamp +
-					ENEMY_TORPEDO_FIRE_INTERVAL;
-				check_for_incoming_fire(v);
-			}
-		} else {
-			if (snis_randn(1000) < 300 + imacop * 200 &&
-				o->tsd.ship.next_laser_time <= universe_timestamp &&
-				ship_type[o->tsd.ship.shiptype].has_lasers) {
-				if (v->type == OBJTYPE_PLANET || !planet_between_objs(o, v)) {
-					o->tsd.ship.next_laser_time = universe_timestamp +
-						ENEMY_LASER_FIRE_INTERVAL;
-					add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
-					check_for_incoming_fire(v);
-				}
-			}
-		}
+		ai_maybe_fire_weapon(o, v, imacop, vdist, extra_range);
 		if (v->type == OBJTYPE_SHIP1 && snis_randn(10000) < 50)
 			taunt_player(o, v);
 	} else {
