@@ -2005,6 +2005,48 @@ static void calculate_laser_starbase_damage(struct snis_entity *o, uint8_t wavel
 		o->alive = 0;
 }
 
+static int calculate_rts_main_base_laser_damage(struct snis_entity *o, struct snis_entity *target)
+{
+	/* FIXME: do something better here to take strength of unit into account */
+	return RTS_MAX_LASER_MAIN_BASE_DAMAGE;
+}
+
+static int calculate_rts_main_base_torpedo_damage(struct snis_entity *o, struct snis_entity *target)
+{
+	/* FIXME: do something better here taking the strength of the unit into account */
+	return RTS_MAX_TORPEDO_MAIN_BASE_DAMAGE;
+}
+
+static void inflict_rts_main_base_damage(struct snis_entity *o, struct snis_entity *target,
+						int (*damage_fn)(struct snis_entity *o, struct snis_entity *target))
+{
+	int i;
+	if (!rts_mode)
+		return;
+	if (target->type != OBJTYPE_PLANET)
+		return;
+	for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+		if (go[rts_planet[i].index].id == target->id) {
+			int health = rts_planet[i].health;
+			health = health - damage_fn(o, target);
+			if (health < 0)
+				health = 0;
+			rts_planet[i].health = health;
+			break;
+		}
+	}
+}
+
+static void inflict_rts_main_base_torpedo_damage(struct snis_entity *o, struct snis_entity *target)
+{
+	inflict_rts_main_base_damage(o, target, calculate_rts_main_base_torpedo_damage);
+}
+
+static void inflict_rts_main_base_laser_damage(struct snis_entity *o, struct snis_entity *target)
+{
+	inflict_rts_main_base_damage(o, target, calculate_rts_main_base_laser_damage);
+}
+
 static void send_detonate_packet(struct snis_entity *o, double x, double y, double z,
 				uint32_t time, double fractional_time);
 static void send_silent_ship_damage_packet(struct snis_entity *o);
@@ -2722,6 +2764,8 @@ static void torpedo_collision_detection(void *context, void *entity)
 		schedule_callback2(event_callback, &callback_schedule,
 				"object-hit-event", (double) t->id,
 				(double) o->tsd.torpedo.ship_id);
+		if (rts_mode)
+			inflict_rts_main_base_torpedo_damage(o, t);
 	} else if (dist2 > TORPEDO_DETONATE_DIST2)
 		return; /* not close enough */
 
@@ -9344,6 +9388,9 @@ static void laserbeam_move(struct snis_entity *o)
 		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
 					(float) o->tsd.laserbeam.power);
 	}
+
+	if (rts_mode && ttype == OBJTYPE_PLANET)
+		inflict_rts_main_base_laser_damage(o, target);
 
 	if (ttype == OBJTYPE_ASTEROID)
 		target->alive = 0;
