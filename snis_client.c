@@ -11948,7 +11948,8 @@ static void comms_transmit_button_pressed(void *x)
 static void comms_rts_button_pressed(void *x)
 {
 	uint8_t rts_button_number = (uint8_t) (((intptr_t) x) & 0x0ff);
-	queue_to_server(snis_opcode_pkt("bb", OPCODE_COMMS_RTS_BUTTON, rts_button_number));
+	queue_to_server(snis_opcode_subcode_pkt("bbb", OPCODE_RTS_FUNC,
+			OPCODE_RTS_FUNC_COMMS_BUTTON, rts_button_number));
 }
 
 static void comms_rts_build_unit_button_pressed(void *x)
@@ -12014,7 +12015,7 @@ static void comms_rts_build_unit_button_pressed(void *x)
 	}
 	if (builder_id != (uint32_t) -1) {
 		fprintf(stderr, "BUILDER ID is %u\n", builder_id);
-		queue_to_server(snis_opcode_pkt("bwb", OPCODE_COMMS_RTS_BUILD_UNIT,
+		queue_to_server(snis_opcode_subcode_pkt("bbwb", OPCODE_RTS_FUNC, OPCODE_RTS_FUNC_BUILD_UNIT,
 			builder_id, rts_build_unit_button_number));
 	}
 }
@@ -12080,8 +12081,8 @@ static void comms_fleet_ship_button_pressed(__attribute__((unused)) void *x)
 	i = lookup_object_by_id(id);
 	if (i < 0)
 		return;
-	queue_to_server(snis_opcode_pkt("bwbw", OPCODE_COMMS_RTS_COMMAND_UNIT,
-			id, command, direct_object));
+	queue_to_server(snis_opcode_subcode_pkt("bbwbw", OPCODE_RTS_FUNC,
+			OPCODE_RTS_FUNC_COMMAND_UNIT, id, command, direct_object));
 }
 
 static void init_comms_ui(void)

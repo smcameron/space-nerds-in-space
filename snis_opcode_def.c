@@ -77,9 +77,9 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_UPDATE_ASTEROID, "bwwSSSbbbb");
 	rc |= init_opcode_def(OPCODE_UPDATE_WARP_CORE, "bwwSSS");
 	rc |= init_opcode_def(OPCODE_DEMON_RTSMODE, "bb");
-	rc |= init_opcode_def(OPCODE_COMMS_RTS_BUTTON, "bb");
-	rc |= init_opcode_def(OPCODE_COMMS_RTS_BUILD_UNIT, "bwb");
-	rc |= init_opcode_def(OPCODE_COMMS_RTS_COMMAND_UNIT, "bwbw");
+	rc |= init_opcode_subcode_def(OPCODE_RTS_FUNC, OPCODE_RTS_FUNC_COMMS_BUTTON, "bbb");
+	rc |= init_opcode_subcode_def(OPCODE_RTS_FUNC, OPCODE_RTS_FUNC_BUILD_UNIT, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_RTS_FUNC, OPCODE_RTS_FUNC_COMMAND_UNIT, "bbwbw");
 	rc |= init_opcode_def(OPCODE_REQUEST_YAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_THRUST, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_GUNYAW, "bb");

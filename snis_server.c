@@ -14277,7 +14277,7 @@ static int process_demon_rtsmode(struct game_client *c)
 	return 0;
 }
 
-static int process_comms_rts_button(struct game_client *c)
+static int process_rts_func_comms_button(struct game_client *c)
 {
 	int rc;
 	unsigned char buffer[20];
@@ -14296,7 +14296,7 @@ static int process_comms_rts_button(struct game_client *c)
 	return 0;
 }
 
-static int process_rts_build_unit(struct game_client *c)
+static int process_rts_func_build_unit(struct game_client *c)
 {
 	int rc, index;
 	unsigned char buffer[20];
@@ -14367,7 +14367,7 @@ out:
 	return 0;
 }
 
-static int process_rts_command_unit(struct game_client *c)
+static int process_rts_func_command_unit(struct game_client *c)
 {
 	unsigned char buffer[20];
 	uint32_t ship_id, direct_object;
@@ -14417,6 +14417,37 @@ static int process_rts_command_unit(struct game_client *c)
 	}
 out:
 	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static int process_rts_func(struct game_client *c)
+{
+	int rc;
+	unsigned char subcode;
+	unsigned char buffer[10];
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &subcode);
+	if (rc)
+		return rc;
+	switch (subcode) {
+	case OPCODE_RTS_FUNC_COMMS_BUTTON:
+		rc = process_rts_func_comms_button(c);
+		if (rc)
+			return rc;
+		break;
+	case OPCODE_RTS_FUNC_BUILD_UNIT:
+		rc = process_rts_func_build_unit(c);
+		if (rc)
+			return rc;
+		break;
+	case OPCODE_RTS_FUNC_COMMAND_UNIT:
+		rc = process_rts_func_command_unit(c);
+		if (rc)
+			return rc;
+		break;
+	default:
+		return -1;
+	}
 	return 0;
 }
 
@@ -16248,18 +16279,8 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
-		case OPCODE_COMMS_RTS_BUTTON:
-			rc = process_comms_rts_button(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_COMMS_RTS_BUILD_UNIT:
-			rc = process_rts_build_unit(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_COMMS_RTS_COMMAND_UNIT:
-			rc = process_rts_command_unit(c);
+		case OPCODE_RTS_FUNC:
+			rc = process_rts_func(c);
 			if (rc)
 				goto protocol_error;
 			break;
