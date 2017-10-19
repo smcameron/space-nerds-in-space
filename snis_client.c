@@ -5030,6 +5030,7 @@ static struct comms_ui {
 	char input[100];
 	uint32_t channel;
 	struct strip_chart *emf_strip_chart;
+	struct slider *our_base_health, *enemy_base_health;
 } comms_ui;
 
 static void comms_dirkey(int h, int v)
@@ -9067,6 +9068,36 @@ DEFINE_SAMPLER_FUNCTION(sample_phaser_wavelength, tsd.ship.phaser_wavelength, 25
 DEFINE_SAMPLER_FUNCTION(sample_navzoom, tsd.ship.navzoom, 255.0, 0.0)
 DEFINE_SAMPLER_FUNCTION(sample_mainzoom, tsd.ship.mainzoom, 255.0, 0.0)
 
+static double sample_main_base_health(void)
+{
+	int i;
+	struct snis_entity *o;
+
+	o = find_my_ship();
+	if (!o)
+		return 0.0;
+	for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+		if (o->sdata.faction == rts_planet[i].faction)
+			return (double) rts_planet[i].health;
+	}
+	return 0.0;
+}
+
+static double sample_enemy_base_health(void)
+{
+	int i;
+	struct snis_entity *o;
+
+	o = find_my_ship();
+	if (!o)
+		return 0.0;
+	for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+		if (o->sdata.faction != rts_planet[i].faction)
+			return (double) rts_planet[i].health;
+	}
+	return 0.0;
+}
+
 static double sample_ship_velocity(void)
 {
 	struct snis_entity *o;
@@ -12259,6 +12290,15 @@ static void init_comms_ui(void)
 		}
 	}
 
+	comms_ui.our_base_health = snis_slider_init(txx(20), txy(505), txx(200), txy(10),
+				UI_COLOR(comms_slider), "MAIN BASE",
+				"1", "100", 0.0, 10000.0, sample_main_base_health, NULL);
+	comms_ui.enemy_base_health = snis_slider_init(txx(330), txy(505), txx(200), txy(10),
+				UI_COLOR(comms_slider), "ENEMY BASE",
+				"1", "100", 0.0, 10000.0, sample_enemy_base_health, NULL);
+	snis_slider_set_label_font(comms_ui.our_base_health, PICO_FONT);
+	snis_slider_set_label_font(comms_ui.enemy_base_health, PICO_FONT);
+
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS,
 			"PROJECT COMMS SCREEN ON THE MAIN VIEW");
@@ -12301,6 +12341,8 @@ static void init_comms_ui(void)
 
 	ui_add_text_input_box(comms_ui.comms_input, DISPLAYMODE_COMMS);
 	ui_add_slider(comms_ui.mainzoom_slider, DISPLAYMODE_COMMS, "ZOOM CONTROL FOR THE MAIN SCREEN");
+	ui_add_slider(comms_ui.our_base_health, DISPLAYMODE_COMMS, "OUR MAIN BASE HEALTH");
+	ui_add_slider(comms_ui.enemy_base_health, DISPLAYMODE_COMMS, "ENEMY MAIN BASE HEALTH");
 	ui_add_strip_chart(comms_ui.emf_strip_chart, DISPLAYMODE_COMMS);
 	comms_ui.channel = 0;
 }
@@ -12311,6 +12353,8 @@ static void comms_activate_rts_buttons(struct snis_entity *player_ship)
 
 	ui_unhide_widget(comms_ui.rts_fleet_button);
 	ui_unhide_widget(comms_ui.rts_main_planet_button);
+	ui_unhide_widget(comms_ui.our_base_health);
+	ui_unhide_widget(comms_ui.enemy_base_health);
 	for (i = 0; i < NUM_RTS_BASES; i++)
 		ui_unhide_widget(comms_ui.rts_starbase_button[i]);
 	if (player_ship->tsd.ship.rts_active_button < RTS_FLEET_BUTTON) {
@@ -12346,6 +12390,8 @@ static void comms_deactivate_rts_buttons(void)
 
 	ui_hide_widget(comms_ui.rts_fleet_button);
 	ui_hide_widget(comms_ui.rts_main_planet_button);
+	ui_hide_widget(comms_ui.our_base_health);
+	ui_hide_widget(comms_ui.enemy_base_health);
 	for (i = 0; i < NUM_RTS_BASES; i++)
 		ui_hide_widget(comms_ui.rts_starbase_button[i]);
 	for (i = 0; i < NUM_RTS_UNIT_TYPES; i++)
