@@ -477,6 +477,13 @@ static struct snis_entity *prev_science_guy = NULL;
 static uint32_t curr_science_waypoint = (uint32_t) -1;
 static uint32_t prev_science_waypoint = (uint32_t) -1;
 
+static struct rts_planet_data {
+	uint16_t health;
+	uint32_t id;
+	uint8_t faction;
+} rts_planet[2] = {	{ 0, 0, 255 },
+			{ 0, 0, 255 }, };
+
 static void to_snis_heading_mark(const union quat *q, double *heading, double *mark)
 {
 	quat_to_heading_mark(q,heading,mark);
@@ -5378,6 +5385,50 @@ static int process_set_waypoint(void)
 	}
 }
 
+static int process_rts_func(void)
+{
+	int i, rc, found = 0;
+	uint8_t subcode;
+	uint32_t id, health;
+	unsigned char buffer[64];
+	uint8_t faction;
+
+	rc = read_and_unpack_buffer(buffer, "b", &subcode);
+	if (rc)
+		return rc;
+	switch (subcode) {
+	case OPCODE_RTS_FUNC_MAIN_BASE_UPDATE:
+		rc = read_and_unpack_buffer(buffer, "bww", &faction, &id, &health);
+		if (rc)
+			return rc;
+		for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+			if (rts_planet[i].id == id && rts_planet[i].faction != 255) {
+				rts_planet[i].health = (uint16_t) health;
+				found = 1;
+				break;
+			}
+		}
+		if (!found) {
+			for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+				if (rts_planet[i].faction == 255) {
+					int index = lookup_object_by_id(id);
+					if (index >= 0 && go[index].type == OBJTYPE_PLANET) {
+							rts_planet[i].id = id;
+							rts_planet[i].health = (uint16_t) health;
+							rts_planet[i].faction = faction;
+							go[index].sdata.faction = faction;
+					}
+					break;
+				}
+			}
+		}
+		break;
+	default:
+		return -1;
+	}
+	return 0;
+}
+
 static void do_text_to_speech(char *text)
 {
 	char command[PATH_MAX];
@@ -6311,6 +6362,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_SET_WAYPOINT:
 			rc = process_set_waypoint();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_RTS_FUNC:
+			rc = process_rts_func();
 			if (rc)
 				goto protocol_error;
 			break;

@@ -16679,6 +16679,23 @@ static void queue_up_client_waypoint_update(struct game_client *c)
 	c->waypoints_dirty = 0;
 }
 
+static void queue_up_client_rts_update(struct game_client *c)
+{
+	int i;
+
+	if (!rts_mode)
+		return;
+
+	/* Queue up main base health updates */
+	for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+		uint32_t health = rts_planet[i].health;
+		uint32_t id = go[rts_planet[i].index].id;
+		pb_queue_to_client(c, snis_opcode_subcode_pkt("bbbww", OPCODE_RTS_FUNC,
+					OPCODE_RTS_FUNC_MAIN_BASE_UPDATE,
+					go[rts_planet[i].index].sdata.faction, id, health));
+	}
+}
+
 #define GO_TOO_FAR_UPDATE_PER_NTICKS 7
 
 static void queue_up_client_updates(struct game_client *c)
@@ -16713,6 +16730,7 @@ static void queue_up_client_updates(struct game_client *c)
 		}
 		queue_up_client_damcon_update(c);
 		queue_up_client_waypoint_update(c);
+		queue_up_client_rts_update(c);
 		queue_latency_check(c);
 		/* printf("queued up %d updates for client\n", count); */
 
