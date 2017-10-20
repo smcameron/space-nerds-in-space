@@ -13896,9 +13896,9 @@ static void show_cmd_help(GtkWidget *w, struct demon_cmd_def cmd[], int nitems)
 	sng_set_foreground(UI_COLOR(help_text));
 	for (i = 0; i < nitems; i++) {
 		sprintf(buffer, "%s", cmd[i].verb);
-		sng_abs_xy_draw_string(buffer, NANO_FONT, 85, i * 18 + 60);
+		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(85), txy(i * 15 + 60));
 		sprintf(buffer, "%s", cmd[i].help);
-		sng_abs_xy_draw_string(buffer, NANO_FONT, 170, i * 18 + 60);
+		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(170), txy(i * 15 + 60));
 	}
 }
 
