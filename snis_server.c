@@ -423,6 +423,72 @@ static struct rts_main_planet {
 	uint16_t health;
 } rts_planet[ARRAYSIZE(rts_main_planet_pos)] = { 0 };
 
+static struct rts_ai_state {
+	int active;
+	float wallet;
+	uint8_t faction;
+	uint32_t main_base_id;
+} rts_ai;
+
+static struct rts_ai_build_queue_entry {
+	int priority; /* lower number means more important */
+	int unittype;
+	uint32_t builder_id;
+#define MAX_RTS_BUILD_QUEUE_SIZE 200
+} rts_ai_build_queue[MAX_RTS_BUILD_QUEUE_SIZE];
+static int rts_ai_build_queue_size;
+
+static void rts_ai_add_to_build_queue(int priority, int unittype, uint32_t builder_id)
+{
+	int i;
+
+	if (rts_ai_build_queue_size >= MAX_RTS_BUILD_QUEUE_SIZE)
+		return;
+
+	for (i = 0; i < rts_ai_build_queue_size; i++) {
+		if (rts_ai_build_queue[i].unittype == unittype &&
+			rts_ai_build_queue[i].builder_id == builder_id) {
+			rts_ai_build_queue[i].priority = priority; /* Already in queue, just adjust priority */
+			return;
+		}
+	}
+	rts_ai_build_queue[rts_ai_build_queue_size].priority = priority;
+	rts_ai_build_queue[rts_ai_build_queue_size].unittype = unittype;
+	rts_ai_build_queue[rts_ai_build_queue_size].builder_id = builder_id;
+	rts_ai_build_queue_size++;
+}
+
+static int rts_ai_build_queue_compare(const void *a, const void *b,
+					__attribute__((unused)) void *cookie)
+{
+	const struct rts_ai_build_queue_entry *entry1 = a;
+	const struct rts_ai_build_queue_entry *entry2 = b;
+	if (entry1->priority == entry2->priority) /* Same priority, prioritize cheapest one */
+		return rts_unit_type(entry1->unittype)->cost_to_build -
+				rts_unit_type(entry2->unittype)->cost_to_build;
+	return entry1->priority - entry2->priority;
+}
+
+static void rts_ai_sort_build_queue(void)
+{
+	qsort_r(rts_ai_build_queue, rts_ai_build_queue_size,
+			sizeof(struct rts_ai_build_queue_entry),
+			rts_ai_build_queue_compare, NULL);
+}
+
+static void rts_ai_build_queue_remove_entry(int n)
+{
+	if (n < 0 || n >= rts_ai_build_queue_size)
+		return;
+	if (n == rts_ai_build_queue_size - 1) {
+		rts_ai_build_queue_size--;
+		return;
+	}
+	memmove(&rts_ai_build_queue[n], &rts_ai_build_queue[n + 1],
+			sizeof(struct rts_ai_build_queue_entry) * (rts_ai_build_queue_size - n - 1));
+	rts_ai_build_queue_size--;
+}
+
 static int lookup_by_id(uint32_t id);
 
 static uint32_t get_new_object_id(void)
@@ -14199,10 +14265,20 @@ static void reset_player_ship(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
+static void initialize_rts_ai()
+{
+	rts_ai.active = 0;
+	rts_ai.wallet = INITIAL_RTS_WALLET_MONEY;
+	rts_ai.faction = 255;
+	rts_ai_build_queue_size = 0;
+}
+
 static void setup_rtsmode_battlefield(void)
 {
 	int i, j, rc;
 	float x, y, z;
+	int human_teams = 0;
+	uint8_t computer_faction = 255;
 
 	process_demon_clear_all(); /* Clear the universe */
 	pthread_mutex_lock(&universe_mutex);
@@ -14236,6 +14312,8 @@ static void setup_rtsmode_battlefield(void)
 		random_point_on_sphere(MAX_PLANET_RADIUS * 1.2, &x, &y, &z);
 		set_object_location(o, x + p->v.x, y + p->v.y, z + p->v.z);
 		o->sdata.faction = side + 1;
+		human_teams++;
+		computer_faction = ((side + 1) % ARRAYSIZE(rts_planet)) + 1;
 	}
 	/* Create a number of bases in a sphere around the main star */
 	for (i = 0; i < NUM_RTS_BASES; i++) {
@@ -14261,11 +14339,22 @@ static void setup_rtsmode_battlefield(void)
 		}
 	}
 	add_nebulae();
+
+	/* Turn on the RTS ai if there is only one human team */
+	if (human_teams == 1) {
+		rts_ai.faction = computer_faction;
+		rts_ai.active = 1;
+		for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+			if (go[rts_planet[i].index].sdata.faction == computer_faction)
+				rts_ai.main_base_id = go[rts_planet[i].index].id;
+		}
+	}
 	pthread_mutex_unlock(&universe_mutex);
 }
 
 static void enable_rts_mode(void)
 {
+	initialize_rts_ai();
 	setup_rtsmode_battlefield();
 	pthread_mutex_lock(&universe_mutex);
 	rts_mode = 1;
@@ -18337,6 +18426,135 @@ static void lua_teardown(void)
 	lua_state = NULL;
 }
 
+/* Figure out what we want to build at the given starbase and add it to the build queue */
+static void rts_ai_figure_what_to_build(struct snis_entity *base)
+{
+	/* TODO: something much better here */
+	/* For now, the answer is always "build a troop ship!" */
+	rts_ai_add_to_build_queue(0, 3 /* troop ship */, base->id);
+}
+
+/* starbase_index is array of indices into go[], nstarbases is how many
+ * Should be only starbases that we own.
+ */
+static void rts_ai_process_build_queue(int starbase_index[], int nstarbases)
+{
+	int i, j, do_increment, index;
+	rts_ai_sort_build_queue();
+
+	for (i = 0; i < rts_ai_build_queue_size; /* no auto increment */) {
+		struct rts_ai_build_queue_entry *e = &rts_ai_build_queue[i];
+		do_increment = 1;
+		if (e->builder_id == rts_ai.main_base_id) {
+			index = lookup_by_id(rts_ai.main_base_id);
+			if (index >= 0) {
+				struct snis_entity *mb = &go[index];
+				float cost = rts_unit_type(e->unittype)->cost_to_build;
+				if (mb->tsd.planet.time_left_to_build != 0)
+					break; /* The main base is busy */
+				if (cost > rts_ai.wallet)
+					break; /* Costs too much */
+				/* Lets build it */
+				mb->tsd.planet.time_left_to_build = rts_unit_type(e->unittype)->cost_to_build;
+				mb->tsd.planet.build_unit_type = e->unittype;
+				rts_ai.wallet -= cost;
+				rts_ai_build_queue_remove_entry(i); /* Delete this work item */
+				do_increment = 0;
+			}
+		} else {
+			for (j = 0; j < nstarbases; j++) {
+				if (go[starbase_index[j]].id == e->builder_id) {
+					struct snis_entity *sb = &go[starbase_index[j]];
+					float cost = rts_unit_type(e->unittype)->cost_to_build;
+					if (sb->tsd.starbase.time_left_to_build != 0)
+						break; /* This starbase is busy */
+					if (cost > rts_ai.wallet)
+						break; /* Costs too much */
+					/* Lets build it */
+					sb->tsd.starbase.time_left_to_build = rts_unit_type(e->unittype)->cost_to_build;
+					sb->tsd.starbase.build_unit_type = e->unittype;
+					rts_ai.wallet -= cost;
+					rts_ai_build_queue_remove_entry(i); /* Delete this work item */
+					do_increment = 0; /* Do not advance, since we deleted one */
+				}
+			}
+		}
+		if (do_increment) /* Advance to next work item if this one was not deleted */
+			i++;
+	}
+}
+
+static void rts_ai_assign_orders_to_units(int starbase_count, int unit_count)
+{
+	uint8_t orders;
+	int i;
+
+	/* TODO: something much better here */
+
+	if (starbase_count < 7 || unit_count < 40)
+		orders = 5; /* Occupy nearest base */
+	else
+		orders = 6; /* Attack main base */
+
+	for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		if (o->alive && o->type == OBJTYPE_SHIP2 && o->sdata.faction == rts_ai.faction) {
+			if (o->tsd.ship.ai[0].ai_mode != orders + AI_MODE_RTS_FIRST_COMMAND &&
+				rts_ai.wallet > rts_order_type(orders)->cost_to_order) {
+				o->tsd.ship.ai[0].ai_mode = orders + AI_MODE_RTS_FIRST_COMMAND;
+				rts_ai.wallet -= rts_order_type(orders)->cost_to_order;
+				switch (orders + AI_MODE_RTS_FIRST_COMMAND) {
+				case AI_MODE_RTS_ATK_MAIN_BASE:
+					o->tsd.ship.ai[0].u.atk_main_base.base_id = (uint32_t) -1;
+					break;
+				case AI_MODE_RTS_OCCUPY_NEAR_BASE:
+					o->tsd.ship.ai[0].u.occupy_base.base_id = (uint32_t) -1;
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+}
+
+static void rts_ai_run(void)
+{
+	int i;
+	int starbase_count = 0;
+	int unit_count = 0;
+	int starbase_index[NUM_RTS_BASES];
+
+	if (!rts_ai.active)
+		return;
+
+	/* Find all the starbases we own */
+	for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		if (o->alive && o->type == OBJTYPE_STARBASE && o->sdata.faction == rts_ai.faction) {
+			starbase_index[starbase_count] = i;
+			starbase_count++;
+		}
+		if (o->alive && o->type == OBJTYPE_SHIP2 && o->sdata.faction == rts_ai.faction)
+			unit_count++;
+	};
+
+	/* Each tick of the clock figure out what we would like to build at a different starbase */
+	if (starbase_count != 0)
+		rts_ai_figure_what_to_build(&go[starbase_index[universe_timestamp % starbase_count]]);
+	if (starbase_count == 0 || (universe_timestamp % starbase_count) == 0) {
+		/* Also figure out what we want to build at our main base sometimes */
+		i = lookup_by_id(rts_ai.main_base_id);
+		if (i > 0)
+			rts_ai_figure_what_to_build(&go[i]);
+	}
+	rts_ai_process_build_queue(starbase_index, starbase_count); /* Build stuff */
+	rts_ai_assign_orders_to_units(starbase_count, unit_count);
+	/* Adjust wallet money */
+	rts_ai.wallet += starbase_count * RTS_WALLET_REFRESH_PER_BASE_PER_TICK +
+				RTS_WALLET_REFRESH_MINIMUM;
+}
+
 static void override_asset_dir(void)
 {
 	char *d;
@@ -22348,6 +22566,7 @@ int main(int argc, char *argv[])
 		if (currentTime >= nextTime) {
 			move_objects(nextTime, discontinuity);
 			process_lua_commands();
+			rts_ai_run();
 
 			discontinuity = 0;
 			nextTime += delta;
