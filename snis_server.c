@@ -14355,6 +14355,8 @@ static void setup_rtsmode_battlefield(void)
 static void enable_rts_mode(void)
 {
 	initialize_rts_ai();
+	send_packet_to_all_clients(snis_opcode_pkt("bb",
+			OPCODE_DEMON_RTSMODE, OPCODE_RTSMODE_SUBCMD_ENABLE), ROLE_ALL);
 	setup_rtsmode_battlefield();
 	pthread_mutex_lock(&universe_mutex);
 	rts_mode = 1;
@@ -14364,6 +14366,8 @@ static void enable_rts_mode(void)
 
 static void disable_rts_mode(void)
 {
+	send_packet_to_all_clients(snis_opcode_pkt("bb",
+			OPCODE_DEMON_RTSMODE, OPCODE_RTSMODE_SUBCMD_DISABLE), ROLE_ALL);
 	process_demon_clear_all(); /* Clear the universe */
 	pthread_mutex_lock(&universe_mutex);
 	rts_mode = 0;

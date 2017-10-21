@@ -5430,6 +5430,32 @@ static int process_rts_func(void)
 	return 0;
 }
 
+static int process_demon_rtsmode(void)
+{
+	int i, rc;
+	uint8_t subcode;
+	unsigned char buffer[64];
+
+	rc = read_and_unpack_buffer(buffer, "b", &subcode);
+	if (rc)
+		return rc;
+	switch (subcode) {
+	case OPCODE_RTSMODE_SUBCMD_ENABLE:
+	case OPCODE_RTSMODE_SUBCMD_DISABLE:
+		my_home_planet_oid = UNKNOWN_ID; /* Clear this cached value */
+		/* Clear the rts_planet array */
+		for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+			rts_planet[i].health = 0;
+			rts_planet[i].id = 0;
+			rts_planet[i].faction = 255;
+		}
+		break;
+	default:
+		return -1;
+	}
+	return 0;
+}
+
 static void do_text_to_speech(char *text)
 {
 	char command[PATH_MAX];
@@ -6368,6 +6394,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_RTS_FUNC:
 			rc = process_rts_func();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_DEMON_RTSMODE:
+			rc = process_demon_rtsmode();
 			if (rc)
 				goto protocol_error;
 			break;
