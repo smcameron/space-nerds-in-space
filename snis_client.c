@@ -13470,8 +13470,8 @@ static void demon_button_press(int button, gdouble x, gdouble y)
 {
 	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
 	if (demon_ui.use_3d) {
-		demon_ui.press_mousex = x;
-		demon_ui.press_mousey = y;
+		demon_ui.press_mousex = sng_pixelx_to_screenx(x);
+		demon_ui.press_mousey = sng_pixely_to_screeny(y);
 		switch (button) {
 		case 2:
 			demon_ui.button2_pressed = 1;
@@ -13669,10 +13669,12 @@ static void demon_button_release(int button, gdouble x, gdouble y)
 	if (demon_ui.use_3d) {
 		switch (button) {
 		case 2:
-			demon_button2_release_3d(button, x, y);
+			demon_button2_release_3d(button,
+				sng_pixelx_to_screenx(x), sng_pixely_to_screeny(y));
 			break;
 		case 3:
-			demon_button3_release_3d(button, x, y);
+			demon_button3_release_3d(button,
+				sng_pixelx_to_screenx(x), sng_pixely_to_screeny(y));
 			break;
 		default:
 			break;
@@ -16609,9 +16611,7 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 {
 	switch (displaymode) {
 		case DISPLAYMODE_DEMON:
-			demon_button_press(event->button,
-					SCREEN_WIDTH * event->x / real_screen_width,
-					SCREEN_HEIGHT * event->y / real_screen_height);
+			demon_button_press(event->button, event->x, event->y);
 			break;
 		default:
 			break;
