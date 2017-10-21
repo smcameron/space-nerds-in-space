@@ -14937,6 +14937,8 @@ static void show_demon_3d(GtkWidget *w)
 				break;
 			if (o->type != OBJTYPE_SHIP1)
 				m = entity_get_mesh(o->entity);
+			else
+				m = NULL;
 			if (!m) {
 				if (o->type == OBJTYPE_SHIP1)
 					m = ship_mesh_map[o->tsd.ship.shiptype];
