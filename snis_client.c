@@ -9523,6 +9523,28 @@ static void show_death_screen(GtkWidget *w)
 	}
 }
 
+static void show_rts_loss_screen(GtkWidget *w)
+{
+	char buf[100];
+
+	sng_set_foreground(UI_COLOR(death_text));
+	sprintf(buf, "YOU HAVE");
+	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
+	sprintf(buf, "BEEN DEFEATED...");
+	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
+}
+
+static void show_rts_win_screen(GtkWidget *w)
+{
+	char buf[100];
+
+	sng_set_foreground(UI_COLOR(death_text));
+	sprintf(buf, "YOU HAVE DEFEATED");
+	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
+	sprintf(buf, "THE ENEMY...");
+	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
+}
+
 static void show_manual_weapons(GtkWidget *w)
 {
 	show_weapons_camera_view(w);
@@ -15900,6 +15922,9 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	static int frame_index = 0;
 	static float frame_rates[FRAME_INDEX_MAX];
 	static float frame_times[FRAME_INDEX_MAX];
+	int player_lost_rts;
+	int player_won_rts;
+	int i;
 
 	double start_time = time_now_double();
 
@@ -15953,6 +15978,27 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 			if (in_the_process_of_quitting)
 				draw_quit_screen(w);
 			goto end_of_drawing;
+		}
+		if (global_rts_mode) {
+			player_lost_rts = 0;
+			player_won_rts = 0;
+			for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+				if (rts_planet[i].health == 0) {
+					if (rts_planet[i].faction == o->sdata.faction)
+						player_lost_rts = 1;
+					else
+						player_won_rts = 1;
+				}
+			}
+			if (player_lost_rts)
+				player_won_rts = 0;
+			if (player_lost_rts) {
+				show_rts_loss_screen(w);
+				goto end_of_drawing;
+			} else if (player_won_rts) {
+				show_rts_win_screen(w);
+				goto end_of_drawing;
+			}
 		}
 	}
 	switch (displaymode) {

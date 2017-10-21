@@ -411,6 +411,7 @@ struct lua_comms_transmission {
 static struct lua_comms_transmission *lua_comms_transmission_queue = NULL;
 
 static uint8_t rts_mode = 0;
+static int rts_finish_timer = -1;
 
 static union vec3 rts_main_planet_pos[] = { /* Positions of main RTS planets */
 	{ { 120000, -XKNOWN_DIM / 2 + 120000, 120000 } },
@@ -2029,11 +2030,27 @@ static void inflict_rts_main_base_damage(struct snis_entity *o, struct snis_enti
 		if (go[rts_planet[i].index].id == target->id) {
 			int health = rts_planet[i].health;
 			health = health - damage_fn(o, target);
-			if (health < 0)
+			if (health < 0) {
 				health = 0;
+			}
+			if (health == 0)
+				rts_finish_timer = 100; /* 10 seconds */
 			rts_planet[i].health = health;
 			break;
 		}
+	}
+}
+
+static void disable_rts_mode(void);
+static void check_rts_finish_condition(void)
+{
+	if (!rts_mode)
+		return;
+	if (rts_finish_timer >= 0)
+		rts_finish_timer--;
+	if (rts_finish_timer == 0) {
+		disable_rts_mode();
+		rts_finish_timer = -1;
 	}
 }
 
@@ -14247,6 +14264,25 @@ static void setup_rtsmode_battlefield(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static void enable_rts_mode(void)
+{
+	setup_rtsmode_battlefield();
+	pthread_mutex_lock(&universe_mutex);
+	rts_mode = 1;
+	pthread_mutex_unlock(&universe_mutex);
+	snis_queue_add_global_text_to_speech("Real time strategy mode is now enabled.");
+}
+
+static void disable_rts_mode(void)
+{
+	process_demon_clear_all(); /* Clear the universe */
+	pthread_mutex_lock(&universe_mutex);
+	rts_mode = 0;
+	rts_finish_timer = -1;
+	snis_queue_add_global_text_to_speech("Real time strategy mode has been disabled.");
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 static int process_demon_rtsmode(struct game_client *c)
 {
 	int rc;
@@ -14258,18 +14294,10 @@ static int process_demon_rtsmode(struct game_client *c)
 		return rc;
 	switch (subcode) {
 	case OPCODE_RTSMODE_SUBCMD_ENABLE:
-		setup_rtsmode_battlefield();
-		pthread_mutex_lock(&universe_mutex);
-		rts_mode = 1;
-		pthread_mutex_unlock(&universe_mutex);
-		snis_queue_add_global_text_to_speech("Real time strategy mode is now enabled.");
+		enable_rts_mode();
 		break;
 	case OPCODE_RTSMODE_SUBCMD_DISABLE:
-		process_demon_clear_all(); /* Clear the universe */
-		pthread_mutex_lock(&universe_mutex);
-		rts_mode = 0;
-		snis_queue_add_global_text_to_speech("Real time strategy mode has been disabled.");
-		pthread_mutex_unlock(&universe_mutex);
+		disable_rts_mode();
 		break;
 	default:
 		return -1;
@@ -22329,6 +22357,7 @@ int main(int argc, char *argv[])
 				sleep_double(timeToSleep);
 		}
 		simulate_slow_server(0);
+		check_rts_finish_condition();
 	}
 	space_partition_free(space_partition);
 	lua_teardown();
