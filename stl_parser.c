@@ -679,12 +679,12 @@ static int obj_add_face(struct mesh *m, char *line, int *tris_alloced,
 		tvalid = 1;
 		goto process_it;
 	}
-	rc = sscanf(line, "f %d %d %d %d", &v[0], &v[1], &v[3], &tmp);
+	rc = sscanf(line, "f %d %d %d %d", &v[0], &v[1], &v[2], &tmp);
 	if (rc == 4) {
 		fprintf(stderr, "Faces with more than 3 vertices not supported.\n");
 		return -1;
 	}
-	rc = sscanf(line, "f %d %d %d", &v[0], &v[1], &v[3]);
+	rc = sscanf(line, "f %d %d %d", &v[0], &v[1], &v[2]);
 	if (rc == 3) {
 		vvalid = 1;
 		goto process_it;
