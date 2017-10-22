@@ -18551,7 +18551,7 @@ static void rts_ai_run(void)
 	if (starbase_count == 0 || (universe_timestamp % starbase_count) == 0) {
 		/* Also figure out what we want to build at our main base sometimes */
 		i = lookup_by_id(rts_ai.main_base_id);
-		if (i > 0)
+		if (i >= 0)
 			rts_ai_figure_what_to_build(&go[i]);
 	}
 	rts_ai_process_build_queue(starbase_index, starbase_count); /* Build stuff */
