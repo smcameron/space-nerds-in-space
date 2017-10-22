@@ -18461,7 +18461,7 @@ static void rts_ai_process_build_queue(int starbase_index[], int nstarbases)
 				if (cost > rts_ai.wallet)
 					break; /* Costs too much */
 				/* Lets build it */
-				mb->tsd.planet.time_left_to_build = rts_unit_type(e->unittype)->cost_to_build;
+				mb->tsd.planet.time_left_to_build = rts_unit_type(e->unittype)->time_to_build;
 				mb->tsd.planet.build_unit_type = e->unittype;
 				rts_ai.wallet -= cost;
 				rts_ai_build_queue_remove_entry(i); /* Delete this work item */
@@ -18477,7 +18477,7 @@ static void rts_ai_process_build_queue(int starbase_index[], int nstarbases)
 					if (cost > rts_ai.wallet)
 						break; /* Costs too much */
 					/* Lets build it */
-					sb->tsd.starbase.time_left_to_build = rts_unit_type(e->unittype)->cost_to_build;
+					sb->tsd.starbase.time_left_to_build = rts_unit_type(e->unittype)->time_to_build;
 					sb->tsd.starbase.build_unit_type = e->unittype;
 					rts_ai.wallet -= cost;
 					rts_ai_build_queue_remove_entry(i); /* Delete this work item */
