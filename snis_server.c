@@ -14366,6 +14366,8 @@ static void enable_rts_mode(void)
 
 static void disable_rts_mode(void)
 {
+	initialize_rts_ai();
+	rts_ai.active = 0;
 	send_packet_to_all_clients(snis_opcode_pkt("bb",
 			OPCODE_DEMON_RTSMODE, OPCODE_RTSMODE_SUBCMD_DISABLE), ROLE_ALL);
 	process_demon_clear_all(); /* Clear the universe */
@@ -18529,7 +18531,7 @@ static void rts_ai_run(void)
 	int unit_count = 0;
 	int starbase_index[NUM_RTS_BASES];
 
-	if (!rts_ai.active)
+	if (!rts_ai.active || !rts_mode)
 		return;
 
 	/* Find all the starbases we own */
