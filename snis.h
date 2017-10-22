@@ -264,6 +264,12 @@ struct ai_rts_occupy_base_data {
 	uint32_t base_id;
 };
 
+struct ai_rts_goto_waypoint_data {
+	int waypoint;
+	uint32_t bridge_ship_id; /* If all bridge clients disconnect, this will break (set orders to standby). */
+#define WAYPOINT_CLOSE_ENOUGH 1000
+};
+
 struct ai_rts_atk_main_base_data {
 	uint32_t base_id;
 };
@@ -280,6 +286,7 @@ union ai_data {
 	struct ai_rts_standby_data standby;
 	struct ai_rts_occupy_base_data occupy_base;
 	struct ai_rts_atk_main_base_data atk_main_base;
+	struct ai_rts_goto_waypoint_data goto_waypoint;
 };
 
 struct ai_stack_entry {

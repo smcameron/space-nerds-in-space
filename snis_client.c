@@ -12435,6 +12435,14 @@ static void comms_activate_rts_buttons(struct snis_entity *player_ship)
 			for (j = 0; j < FLEET_BUTTON_ROWS; j++)
 				ui_hide_widget(comms_ui.fleet_unit_button[i][j]);
 	}
+	if (curr_science_waypoint == (uint32_t) -1) { /* no waypoint selected */
+		/* FIXME: this "4" is too fragile */
+		snis_button_set_label(comms_ui.rts_order_command_button[4], "NO WAYPOINT");
+		snis_button_set_color(comms_ui.rts_order_command_button[4], UI_COLOR(comms_neutral));
+	} else {
+		snis_button_set_label(comms_ui.rts_order_command_button[4], "GOTO WAYPOINT");
+		snis_button_set_color(comms_ui.rts_order_command_button[4], UI_COLOR(comms_good_status));
+	}
 }
 
 static void comms_deactivate_rts_buttons(void)

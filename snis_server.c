@@ -4721,6 +4721,33 @@ static void ai_atk_main_base_mode_brain(struct snis_entity *o)
 		ai_maybe_fire_weapon(o, main_base, 0, sqrt(dist2), main_base->tsd.planet.radius);
 }
 
+static void ai_move_to_waypoint_mode_brain(struct snis_entity *o)
+{
+	int b, w;
+	union vec3 to_waypoint;
+	float dist;
+
+	b = lookup_bridge_by_shipid(o->tsd.ship.ai[0].u.goto_waypoint.bridge_ship_id);
+	if (b < 0)
+		goto bail;
+	w = o->tsd.ship.ai[0].u.goto_waypoint.waypoint;
+	if (w < 0 || w >= bridgelist[b].nwaypoints)
+		goto bail;
+	to_waypoint.v.x = bridgelist[b].waypoint[w].x - o->x;
+	to_waypoint.v.y = bridgelist[b].waypoint[w].y - o->y;
+	to_waypoint.v.z = bridgelist[b].waypoint[w].z - o->z;
+	dist = vec3_magnitude(&to_waypoint);
+	if (dist < WAYPOINT_CLOSE_ENOUGH)
+		goto bail;
+	o->tsd.ship.desired_velocity = ship_type[o->tsd.ship.shiptype].max_speed;
+	(void) ai_ship_travel_towards(o, o->x + to_waypoint.v.x, o->y + to_waypoint.v.y, o->z + to_waypoint.v.z);
+	return;
+bail:
+	o->tsd.ship.nai_entries = 1;
+	o->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_STANDBY;
+	return;
+}
+
 static void ai_brain(struct snis_entity *o)
 {
 	int n;
@@ -4784,6 +4811,9 @@ static void ai_brain(struct snis_entity *o)
 		break;
 	case AI_MODE_RTS_ATK_MAIN_BASE:
 		ai_atk_main_base_mode_brain(o);
+		break;
+	case AI_MODE_RTS_MOVE_TO_WAYPOINT:
+		ai_move_to_waypoint_mode_brain(o);
 		break;
 	default:
 		break;
@@ -13219,6 +13249,7 @@ static int process_set_waypoint(struct game_client *c)
 		return rc;
 	switch (subcode) {
 	case OPCODE_SET_WAYPOINT_CLEAR:
+		/* TODO: fixup all RTS ship waypoints */
 		rc = read_and_unpack_buffer(c, buffer, "b", &row);
 		if (rc)
 			return rc;
@@ -14496,7 +14527,7 @@ static int process_rts_func_command_unit(struct game_client *c)
 	uint32_t ship_id, direct_object;
 	uint8_t command;
 	struct snis_entity *ship;
-	int rc, index;
+	int b, rc, index;
 	float cost;
 
 	rc = read_and_unpack_buffer(c, buffer, "wbw", &ship_id, &command, &direct_object);
@@ -14524,6 +14555,14 @@ static int process_rts_func_command_unit(struct game_client *c)
 	case AI_MODE_RTS_ATK_NEAR_ENEMY:
 		goto common;
 	case AI_MODE_RTS_MOVE_TO_WAYPOINT:
+		b = c->bridge;
+		if (b < 0 && b >= nclients)
+			return 0;
+		if (bridgelist[b].selected_waypoint < 0 ||
+			bridgelist[b].selected_waypoint >= bridgelist[b].nwaypoints)
+			return 0;
+		ship->tsd.ship.ai[0].u.goto_waypoint.waypoint = bridgelist[b].selected_waypoint;
+		ship->tsd.ship.ai[0].u.goto_waypoint.bridge_ship_id = bridgelist[b].shipid;
 		goto common;
 	case AI_MODE_RTS_OCCUPY_NEAR_BASE:
 		ship->tsd.ship.ai[0].u.occupy_base.base_id = (uint32_t) -1;
