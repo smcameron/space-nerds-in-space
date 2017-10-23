@@ -13238,24 +13238,49 @@ static int process_check_opcode_format(struct game_client *c)
 
 static int process_set_waypoint(struct game_client *c)
 {
-	int rc;
+	int i, rc;
 	uint8_t subcode, row;
 	double value[3];
 	unsigned char buffer[20];
 	int b;
+	struct snis_entity *o;
 
 	rc = read_and_unpack_buffer(c, buffer, "b", &subcode);
 	if (rc)
 		return rc;
 	switch (subcode) {
 	case OPCODE_SET_WAYPOINT_CLEAR:
-		/* TODO: fixup all RTS ship waypoints */
 		rc = read_and_unpack_buffer(c, buffer, "b", &row);
 		if (rc)
 			return rc;
+		pthread_mutex_lock(&universe_mutex);
 		b = lookup_bridge_by_shipid(c->shipid);
-		if (b < 0)
+		rc = lookup_by_id(c->shipid);
+		if (rc < 0) {
+			pthread_mutex_unlock(&universe_mutex);
 			return 0;
+		}
+		o = &go[rc]; /* our ship */
+		if (b < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			return 0;
+		}
+		/* If any RTS ships were headed to this waypoint, it is gone now. */
+		if (rts_mode) {
+			for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+				struct snis_entity *s = &go[i];
+				if (s->alive && s->type == OBJTYPE_SHIP2 &&
+					s->sdata.faction == o->sdata.faction &&
+					o->tsd.ship.ai[0].ai_mode == AI_MODE_RTS_MOVE_TO_WAYPOINT &&
+					o->tsd.ship.ai[0].u.goto_waypoint.bridge_ship_id == c->shipid) {
+					if (o->tsd.ship.ai[0].u.goto_waypoint.waypoint == row)
+						o->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_STANDBY;
+					else if (o->tsd.ship.ai[0].u.goto_waypoint.waypoint > row)
+						o->tsd.ship.ai[0].u.goto_waypoint.waypoint--;
+				}
+			}
+		}
+
 		if (row >= 0 && row < bridgelist[b].nwaypoints) {
 			for (int i = row; i < bridgelist[b].nwaypoints - 1; i++)
 				bridgelist[b].waypoint[i] = bridgelist[b].waypoint[i + 1];
@@ -13270,6 +13295,7 @@ static int process_set_waypoint(struct game_client *c)
 			}
 			set_waypoints_dirty_all_clients_on_bridge(c->shipid, 1);
 		}
+		pthread_mutex_unlock(&universe_mutex);
 		return 0;
 	case OPCODE_SET_WAYPOINT_ADD_ROW:
 		rc = read_and_unpack_buffer(c, buffer, "SSS",
@@ -13278,9 +13304,12 @@ static int process_set_waypoint(struct game_client *c)
 					&value[2], (int32_t) UNIVERSE_DIM);
 		if (rc)
 			return rc;
+		pthread_mutex_lock(&universe_mutex);
 		b = lookup_bridge_by_shipid(c->shipid);
-		if (b < 0)
+		if (b < 0) {
+			pthread_mutex_unlock(&universe_mutex);
 			return 0;
+		}
 		if (bridgelist[b].nwaypoints < MAXWAYPOINTS) {
 			bridgelist[b].waypoint[bridgelist[b].nwaypoints].x = value[0];
 			bridgelist[b].waypoint[bridgelist[b].nwaypoints].y = value[1];
@@ -13288,6 +13317,7 @@ static int process_set_waypoint(struct game_client *c)
 			bridgelist[b].nwaypoints++;
 			set_waypoints_dirty_all_clients_on_bridge(c->shipid, 1);
 		}
+		pthread_mutex_unlock(&universe_mutex);
 		return 0;
 	default:
 		fprintf(stderr, "%s: bad subcode for OPCODE_SET_WAYPOINT: %hhu\n",
