@@ -4748,6 +4748,106 @@ bail:
 	return;
 }
 
+static void ai_rts_guard_base(struct snis_entity *o)
+{
+	int i, k, n, j;
+	int found = -1;
+	double dist2, closest = -1;
+
+	n = o->tsd.ship.nai_entries - 1;
+	if (n < 0 || o->tsd.ship.ai[n].ai_mode != AI_MODE_RTS_GUARD_BASE) { /* shouldn't happen */
+		o->tsd.ship.nai_entries = 1;
+		o->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_STANDBY;
+		return;
+	}
+	if (o->tsd.ship.ai[n].u.guard_base.base_id == -1) {
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			struct snis_entity *b = &go[i];
+			if (!b->alive)
+				continue;
+			if (b->type == OBJTYPE_STARBASE) {
+				if (b->sdata.faction != o->sdata.faction)
+					continue;
+				dist2 = dist3dsqrd(o->x - b->x, o->y - b->y, o->z - b->z);
+				if (closest < 0 || dist2 < closest) {
+					closest = dist2;
+					found = i;
+				}
+			} else if (b->type == OBJTYPE_PLANET) {
+				int found_planet = 0;
+
+				if (b->sdata.faction != o->sdata.faction)
+					continue;
+				for (j = 0; j < ARRAYSIZE(rts_planet); j++) {
+					if (go[rts_planet[j].index].id == b->id) {
+						found_planet = 1;
+						break;
+					}
+				}
+				if (!found_planet)
+					continue;
+				dist2 = dist3dsqrd(o->x - b->x, o->y - b->y, o->z - b->z);
+				if (closest < 0 || dist2 < closest) {
+					closest = dist2;
+					found = i;
+				}
+			}
+		}
+		if (found < 0) { /* This shouldn't happen. */
+			fprintf(stderr, "snis_server: Didn't find home planet at %s:%d\n", __FILE__, __LINE__);
+			return;
+		} else {
+			o->tsd.ship.ai[n].u.guard_base.base_id = go[found].id;
+		}
+	}
+	/* Find the closest enemy headed for this base, and if he is close enough, attack him */
+	/* FIXME: Can we use the space partitioning here? */
+	closest = -1;
+	dist2 = -1;
+	found = -1;
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *s = &go[i];
+		if (!s->alive)
+			continue;
+		if (s->type != OBJTYPE_SHIP2) /* What about human controlled ships here? */
+			continue;
+		if (s->sdata.faction == o->sdata.faction) /* Don't guard against friendlies */
+			continue;
+		k = s->tsd.ship.nai_entries - 1;
+		if (k < 0)
+			continue; /* Shouldn't happen, barring locking bugs */
+		if (s->tsd.ship.ai[0].ai_mode == AI_MODE_RTS_OCCUPY_NEAR_BASE &&
+			s->tsd.ship.ai[0].u.occupy_base.base_id == o->tsd.ship.ai[n].u.guard_base.base_id) {
+			/* We found a ship that is attempting to occupy the base that we are guarding */
+			dist2 = dist3dsqrd(o->x - s->x, o->y - s->y, o->z - s->z);
+			if (closest < 0 || dist2 < closest) {
+				closest = dist2;
+				found = i;
+			}
+		} else if (s->tsd.ship.ai[0].ai_mode == AI_MODE_RTS_ATK_MAIN_BASE &&
+			s->tsd.ship.ai[0].u.atk_main_base.base_id == o->tsd.ship.ai[n].u.guard_base.base_id) {
+			/* We found a ship that is attacking the base that we are guarding */
+			dist2 = dist3dsqrd(o->x - s->x, o->y - s->y, o->z - s->z);
+			if (closest < 0 || dist2 < closest) {
+				closest = dist2;
+				found = i;
+			}
+		} else { /* TODO: do we care about other enemy brain modes here? */
+			continue;
+		}
+	}
+	if (found < 0) /* Didn't find any enemies attacking the base we are guarding base */
+		return; /* TODO: put some code to make us patrol around the base or something here. */
+	if (closest > (XKNOWN_DIM / 20.0) * (XKNOWN_DIM / 20.0))
+		return; /* Too far away to worry about yet. */
+		/* FIXME: the above check is probably not suitable if guarding the home planet */
+
+	/* We found an enemy that is attacking the base we are guarding, and he is close enough
+	 * that we want to do something about it. So, go attack him.
+	 */
+	push_attack_mode(o, go[found].id, 0);
+}
+
 static void ai_brain(struct snis_entity *o)
 {
 	int n;
@@ -4814,6 +4914,9 @@ static void ai_brain(struct snis_entity *o)
 		break;
 	case AI_MODE_RTS_MOVE_TO_WAYPOINT:
 		ai_move_to_waypoint_mode_brain(o);
+		break;
+	case AI_MODE_RTS_GUARD_BASE:
+		ai_rts_guard_base(o);
 		break;
 	default:
 		break;
@@ -14578,7 +14681,8 @@ static int process_rts_func_command_unit(struct game_client *c)
 	switch ((int) command) {
 	case AI_MODE_RTS_STANDBY:
 		goto common;
-	case AI_MODE_RTS_PATROL:
+	case AI_MODE_RTS_GUARD_BASE:
+		ship->tsd.ship.ai[0].u.guard_base.base_id = (uint32_t) -1;
 		goto common;
 	case AI_MODE_RTS_ESCORT:
 		goto common;

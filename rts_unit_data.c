@@ -35,7 +35,7 @@ static struct rts_unit_data unit_data[] = {
 
 static struct rts_order_data order_data[] = {
 	{ "STAND BY", "S", "ORDER UNIT TO STAND BY", 10.0, },
-	{ "PATROL", "P", "ORDER UNIT TO PATROL AREA", 400.0, },
+	{ "GUARD BASE", "G", "ORDER UNIT TO GUARD BASE", 400.0, },
 	{ "ESCORT", "E", "ORDER UNIT TO ESCORT FRIENDLY UNITS", 500.0, },
 	{ "ATK NEAR ENEMY", "AN", "$500 ORDER UNIT TO ATTACK NEAREST ENEMY UNITS", 500.0, },
 	{ "MOVE TO WAYPOINT", "MTW", "$200 ORDER UNIT TO MOVE TO THE SPECIFIED WAYPOINT", 200.0, },

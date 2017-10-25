@@ -186,7 +186,7 @@ struct damcon_data;
 /* NOTE: These RTS modes must be contiguous and match the order in rts_unit_data.c order_data[] */
 #define AI_MODE_RTS_FIRST_COMMAND 11
 #define AI_MODE_RTS_STANDBY 11
-#define AI_MODE_RTS_PATROL 12
+#define AI_MODE_RTS_GUARD_BASE 12
 #define AI_MODE_RTS_ESCORT 13
 #define AI_MODE_RTS_ATK_NEAR_ENEMY 14
 #define AI_MODE_RTS_MOVE_TO_WAYPOINT 15
@@ -274,6 +274,10 @@ struct ai_rts_atk_main_base_data {
 	uint32_t base_id;
 };
 
+struct ai_rts_guard_base {
+	uint32_t base_id;
+};
+
 union ai_data {
 	struct ai_attack_data attack;
 	struct ai_patrol_data patrol;
@@ -287,6 +291,7 @@ union ai_data {
 	struct ai_rts_occupy_base_data occupy_base;
 	struct ai_rts_atk_main_base_data atk_main_base;
 	struct ai_rts_goto_waypoint_data goto_waypoint;
+	struct ai_rts_guard_base guard_base;
 };
 
 struct ai_stack_entry {
