@@ -14840,6 +14840,7 @@ static void show_demon_3d(GtkWidget *w)
 	union vec3 camera_pos_delta;
 	int color;
 	float camera_movement_rate = 0.05;
+	const int faction_color[] = { CYAN, YELLOW, ORANGERED, AMBER, };
 
 	/* If in captain mode, then set desired camera position/orientation accordingly */
 	if (demon_ui.captain_of >= 0) {
@@ -14915,7 +14916,7 @@ static void show_demon_3d(GtkWidget *w)
 			draw_label = 1;
 			break;
 		case OBJTYPE_SHIP2:
-			color = CYAN;
+			color = faction_color[o->sdata.faction % ARRAYSIZE(faction_color)];
 			strcpy(label, o->sdata.name);
 			draw_label = 1;
 			break;
