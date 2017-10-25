@@ -4006,8 +4006,40 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 			o->tsd.ship.doz = destz;
 		}
 		/* sometimes just warp if it's too far... */
-		if (snis_randn(warproll) < ship_type[o->tsd.ship.shiptype].warpchance)
+		if (snis_randn(warproll) < ship_type[o->tsd.ship.shiptype].warpchance) {
+			if (rts_mode) {
+				/* RTS mode has constraints on warping, because warping without
+				 * connstraints means that spatial proximity doesn't matter wrt
+				 * e.g., the order and speed in which bases may be captured, and
+				 * spatial proximity *needs* to matter for the sake of the game.
+				 * So we have to nerf warping of troop ships a bit, for example.
+				 */
+				union vec3 warpvec;
+				double warpmag;
+				warpvec.v.x = destx - o->x;
+				warpvec.v.y = desty - o->y;
+				warpvec.v.z = destz - o->z;
+				warpmag = vec3_magnitude(&warpvec);
+				if (warpmag < (XKNOWN_DIM / 15.0)) {
+					/* If already pretty close, do not warp. This prevents warping
+					 * right up to a starbase and entering, giving defenders a chance.
+					 */
+					o->tsd.ship.dox = destx;
+					o->tsd.ship.doy = desty;
+					o->tsd.ship.doz = destz;
+					return dist2;
+				}
+				/* Limit max warp distance to a reasonably short distance. */
+				if (warpmag > (XKNOWN_DIM / 20.0)) {
+					vec3_normalize_self(&warpvec);
+					vec3_mul_self(&warpvec, (XKNOWN_DIM / 20.0));
+					destx = o->x + warpvec.v.x;
+					desty = o->y + warpvec.v.y;
+					destz = o->z + warpvec.v.z;
+				}
+			}
 			ai_ship_warp_to(o, destx, desty, destz);
+		}
 	} else {
 		o->tsd.ship.dox = destx;
 		o->tsd.ship.doy = desty;
