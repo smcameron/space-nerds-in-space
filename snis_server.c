@@ -12398,6 +12398,14 @@ static void npc_menu_item_request_dock(struct npc_menu_item *item,
 	if (i < 0)
 		return;
 	sb = &go[i];
+	if (rts_mode) {
+		/* Do not grant permission to dock to enemy faction in RTS mode */
+		if (sb->sdata.faction != 255 && sb->sdata.faction != o->sdata.faction) {
+			snprintf(msg, sizeof(msg), "%s, PERMISSION DENIED, ENEMY SCUM!\n", b->shipname);
+			send_comms_packet(npcname, ch, msg);
+			return;
+		}
+	}
 	dist = dist3d(sb->x - o->x, sb->y - o->y, sb->z - o->z);
 	if (dist > STARBASE_DOCKING_PERM_DIST) {
 		snprintf(msg, sizeof(msg), "%s, YOU ARE TOO FAR AWAY (%lf).\n", b->shipname, dist);
