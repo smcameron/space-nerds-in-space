@@ -153,6 +153,10 @@ NICE TO HAVE:
   The sunspots, corona, etc are overkill, but the lens flare, the way
   it comes around the edge of a planet, etc, all look really good.
 
+* Allow for self-shadowing in the renderer (i.e. ships to cast shadows
+  on themselves.) This may be relevant:
+  http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-16-shadow-mapping/
+
 * Add a Real Time Strategy game into SNIS.
 
   This will give COMMS station some things to do. I envision it to work
