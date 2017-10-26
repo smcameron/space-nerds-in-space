@@ -7701,6 +7701,19 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
 		case OBJTYPE_SHIP2:
+			sng_set_foreground(UI_COLOR(sci_ball_ship));
+			if (global_rts_mode) {
+				int unit_type;
+				char *unit_type_name;
+				unit_type = ship_type[o->sdata.subclass].rts_unit_type;
+				unit_type_name = unit_type < 0 ? "UNKNOWN" :
+						rts_unit_type(unit_type)->name;
+				sprintf(buffer, "%s %s\n", o->sdata.name, unit_type_name);
+			} else {
+				sprintf(buffer, "%s %s\n", o->sdata.name,
+					ship_type[o->sdata.subclass].class);
+			}
+			break;
 		case OBJTYPE_SHIP1:
 			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			sprintf(buffer, "%s %s\n", o->sdata.name,
@@ -12821,7 +12834,17 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	if (o) {
 		switch (o->type) {
 		case OBJTYPE_SHIP2:
-			sprintf(buffer, "TYPE: %s", ship_type[o->sdata.subclass].class); 
+			if (global_rts_mode) {
+				int unit_type;
+				char *unit_type_name;
+				unit_type = ship_type[o->sdata.subclass].rts_unit_type;
+				unit_type_name = unit_type < 0 ? "UNKNOWN" :
+						rts_unit_type(unit_type)->name,
+				sprintf(buffer, "TYPE: %s (%s)", ship_type[o->sdata.subclass].class,
+					unit_type_name);
+			} else {
+				sprintf(buffer, "TYPE: %s", ship_type[o->sdata.subclass].class);
+			}
 			break;
 		case OBJTYPE_STARBASE:
 			sprintf(buffer, "TYPE: %s", "STARBASE");
@@ -18137,6 +18160,7 @@ int main(int argc, char *argv[])
 	if (read_factions())
 		return -1;
 	setup_ship_mesh_maps();
+	setup_rts_unit_type_to_ship_type_map(ship_type, nshiptypes);
 	init_vects();
 	initialize_random_orientations_and_spins(COMMON_MTWIST_SEED);
 	init_planetary_atmospheres();

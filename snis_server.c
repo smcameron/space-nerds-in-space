@@ -1115,18 +1115,17 @@ static void add_new_rts_unit(struct snis_entity *builder)
 	unit_number = rts_allocate_unit_number(unit_type, builder->sdata.faction);
 	sprintf(unit->sdata.name, "%s%d", rts_unit_type(unit_type)->short_name_prefix, unit_number);
 
-	for (i = 0; i < nshiptypes; i++) { /* Figure out what model this ship is */
-		if (strcmp(ship_type[i].class, rts_unit_type(unit_type)->class) == 0) {
-			unit->sdata.subclass = i;
-			unit->tsd.ship.shiptype = i;
-			unit->sdata.shield_strength = ship_type[i].max_shield_strength;
-			unit->tsd.ship.lifeform_count = ship_type[i].crew_max;
-			unit->tsd.ship.ncargo_bays = ship_type[i].ncargo_bays;
-			fprintf(stderr, "Added ship successfully\n");
-			return;
-		}
+	i = rts_unit_type_to_ship_type(unit_type);
+	if (i < 0) {
+		fprintf(stderr, "Did not figure out what model of ship to use.\n");
+		return;
 	}
-	fprintf(stderr, "Did not figure out what model of ship to use.\n");
+	unit->sdata.subclass = i;
+	unit->tsd.ship.shiptype = i;
+	unit->sdata.shield_strength = ship_type[i].max_shield_strength;
+	unit->tsd.ship.lifeform_count = ship_type[i].crew_max;
+	unit->tsd.ship.ncargo_bays = ship_type[i].ncargo_bays;
+	fprintf(stderr, "Added ship successfully\n");
 }
 
 static void planet_move(struct snis_entity *o)
@@ -22709,6 +22708,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s: unable to read ship types\n", argv[0]);
 		return -1;
 	}
+	setup_rts_unit_type_to_ship_type_map(ship_type, nshiptypes);
 
 	if (read_factions())
 		return -1;

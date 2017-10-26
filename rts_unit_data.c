@@ -59,8 +59,14 @@ struct rts_order_data *rts_order_type(int n)
 	return &order_data[n];
 }
 
-/* assume no more than 10 faction (really, should be no more than 2 for RTS) */
+/* assume no more than 10 faction (really, should be no more than 2 for RTS)
+ * unit_numbers is just some monotonically increasing counters used in generating
+ * names for ships, eg. "TS10", for troop ship 10. They are per faction, so there
+ * can be for example, multiple "TS10" ships, one per faction.
+ */
 static int unit_numbers[NUM_RTS_UNIT_TYPES][10];
+
+static int unit_type_to_ship_type[NUM_RTS_UNIT_TYPES];
 
 /* Note, this is not thread safe */
 int rts_allocate_unit_number(int unit_type, int faction)
@@ -69,4 +75,18 @@ int rts_allocate_unit_number(int unit_type, int faction)
 	faction = faction % 10;
 	unit_numbers[unit_type][faction]++;
 	return unit_numbers[unit_type][faction];
+}
+
+int rts_unit_type_to_ship_type(int unit_type)
+{
+	if (unit_type < 0 || unit_type >= ARRAYSIZE(unit_type_to_ship_type))
+		return -1;
+	return unit_type_to_ship_type[unit_type];
+}
+
+void set_rts_unit_type_to_ship_type(int unit_type, int ship_type)
+{
+	if (unit_type < 0 || unit_type >= ARRAYSIZE(unit_type_to_ship_type))
+		return;
+	unit_type_to_ship_type[unit_type] = ship_type;
 }

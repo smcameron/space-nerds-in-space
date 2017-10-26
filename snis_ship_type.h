@@ -42,9 +42,11 @@ struct ship_type_entry {
 	float angle[3];
 	int has_lasers;
 	int has_torpedoes;
+	int rts_unit_type;
 };
 
 struct ship_type_entry *snis_read_ship_types(char *filename, int *count);
 void snis_free_ship_type(struct ship_type_entry *st, int count);
+void setup_rts_unit_type_to_ship_type_map(struct ship_type_entry *st, int count);
 
 #endif

@@ -8,6 +8,7 @@
 
 #include "snis_ship_type.h"
 #include "string-utils.h"
+#include "rts_unit_data.h"
 
 struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 {
@@ -151,6 +152,7 @@ done_scanfing_line:
 		}
 		st[n].thrust_attachment_file = strdup(thrust_attach);
 		st[n].class = strdup(class);
+		st[n].rts_unit_type = -1; /* unknown */
 		if (!st[n].class) {
 			fprintf(stderr, "out of memory at %s:%d\n", __FILE__, __LINE__);
 			*count = n;
@@ -190,5 +192,18 @@ void snis_free_ship_type(struct ship_type_entry *st, int count)
 	for (i = 0; i < count; i++)
 		free(st[i].class);
 	free(st);
+}
+
+void setup_rts_unit_type_to_ship_type_map(struct ship_type_entry *st, int count)
+{
+	int i, j;
+
+	for (i = 0; i < NUM_RTS_UNIT_TYPES; i++)
+		for (j = 0; j < count; j++)
+			if (strcmp(st[j].class, rts_unit_type(i)->class) == 0) {
+				set_rts_unit_type_to_ship_type(i, j);
+				st[j].rts_unit_type = i;
+				break;
+			}
 }
 

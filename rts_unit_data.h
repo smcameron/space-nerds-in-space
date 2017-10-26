@@ -46,6 +46,8 @@ struct rts_order_data {
 struct rts_unit_data *rts_unit_type(int n);
 struct rts_order_data *rts_order_type(int n);
 int rts_allocate_unit_number(int unit_type, int faction);
+int rts_unit_type_to_ship_type(int unit_type);
+void set_rts_unit_type_to_ship_type(int unit_type, int ship_type);
 
 #endif
 
