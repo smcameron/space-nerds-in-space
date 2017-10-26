@@ -207,3 +207,16 @@ NICE TO HAVE:
 
   It may be that COMMS POWER restricts range of communication?
 
+* Improve ship movement.  Currently ship movement can be a bit crappy.
+  For example, sometimes ships will come to a complete stop on their
+  way somewhere for a period of time for no real reason before continuing
+  on their way.  Also, the way the orientation of ships is figured is based
+  on which way they are moving, where it should probably be the reverse, which
+  way they move should be determined by orientation, and to change direction,
+  they should first change their orientation.  Also, they could fly a little
+  more "cinematically", that is, like fighter planes, (maybe similar to Elite)
+  with more pitching and rolling and less yawing. Particularly,
+  ai_ship_travel_towards() and ai_ship_add_movement_variety() in snis_server.c
+  could be improved (or replaced) with something better. Those alone do not
+  touch the orientation problem though, so there's more to it than that.
+
