@@ -46,7 +46,8 @@ static struct rts_order_data order_data[] = {
 	{ "MOVE TO WAYPOINT", "MTW", "$200 ORDER UNIT TO MOVE TO THE SPECIFIED WAYPOINT", 200.0, 1, },
 	{ "OCCUPY NEAR BASE", "OB", "$200 ORDER UNIT TO MOVE TO AND OCCUPY THE NEAREST UNOCCUPIED STARBASE", 200.0, },
 	{ "ATK MAIN BASE", "AMB", "$300 ORDER UNIT TO ATTACK THE ENEMY HOME PLANET", 300.0, 1, },
-	{ "OUT OF FUEL", "E", "OUT OF FUEL", 0, 0, },
+	{ "RESUPPLY", "R", "$300 ORDER UNIT TO RESUPPLY DEPLETED UNITS", 300.0, 1, },
+	{ "OUT OF FUEL", "E", "OUT OF FUEL", 0, 0, }, /* OUT OF FUEL is not counted in RTS_ORDER_TYPES */
 };
 
 struct rts_unit_data *rts_unit_type(int n)

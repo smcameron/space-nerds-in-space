@@ -4880,6 +4880,66 @@ static void ai_rts_guard_base(struct snis_entity *o)
 	push_attack_mode(o, go[found].id, 0);
 }
 
+static void ai_rts_resupply(struct snis_entity *o)
+{
+	int i, n, sn;
+	struct snis_entity *u;
+	double dist;
+
+	n = o->tsd.ship.nai_entries - 1;
+	if (n < 0 || o->tsd.ship.ai[n].ai_mode != AI_MODE_RTS_RESUPPLY) {
+		o->tsd.ship.nai_entries = 1;
+		o->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_STANDBY;
+		return;
+	}
+	/* Every 1.7 seconds or so */
+	if (((o->id + universe_timestamp) % 17) == 0) {
+		/* Find the closest guy needing resupply. This simple minded algorithm
+		 * can result in some bad behaviors. TODO: something better.
+		 */
+		double closest_dist = -1.0;
+		int closest = -1;
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			struct snis_entity *s = &go[i];
+			if (!s->alive)
+				continue;
+			if (s->type != OBJTYPE_SHIP2)
+				continue;
+			if (o->sdata.faction != s->sdata.faction)
+				continue;
+			if (o->id == s->id) /* Cannot self-refuel */
+				continue;
+			sn = s->tsd.ship.nai_entries - 1;
+			if (sn < 0)
+				continue;
+			if (s->tsd.ship.ai[sn].ai_mode == AI_MODE_RTS_OUT_OF_FUEL) {
+				double dist = dist3dsqrd(o->x - s->x, o->y - s->y, o->z - s->z);
+				if (closest == -1 || dist < closest_dist) {
+					closest_dist = dist;
+					closest = i;
+				}
+			}
+		}
+		if (closest >= 0)
+			o->tsd.ship.ai[n].u.resupply.unit_to_resupply = go[closest].id;
+	}
+	if (o->tsd.ship.ai[n].u.resupply.unit_to_resupply == (uint32_t) -1)
+		return;
+	i = lookup_by_id(o->tsd.ship.ai[n].u.resupply.unit_to_resupply);
+	if (i < 0) {
+		o->tsd.ship.ai[n].u.resupply.unit_to_resupply = (uint32_t) -1;
+		return;
+	}
+	u = &go[i];
+	dist = ai_ship_travel_towards(o, u->x, u->y, u->z);
+	if (dist < 300.0 * 300.0) { /* Refuel the ship */
+		int unit_type = ship_type[o->tsd.ship.shiptype].rts_unit_type;
+		u->tsd.ship.fuel = rts_unit_type(unit_type)->fuel_capacity;
+		u->tsd.ship.nai_entries--; /* restore the previous ai mode */
+		o->tsd.ship.ai[n].u.resupply.unit_to_resupply = (uint32_t) -1;
+	}
+}
+
 static void ai_brain(struct snis_entity *o)
 {
 	int n;
@@ -4892,9 +4952,12 @@ static void ai_brain(struct snis_entity *o)
 
 	if (rts_mode) {
 		/* Check fuel */
-		if (o->tsd.ship.fuel == 0) {
-			o->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_OUT_OF_FUEL;
-			o->tsd.ship.nai_entries = 1;
+		if (o->tsd.ship.fuel == 0 && o->tsd.ship.ai[n].ai_mode != AI_MODE_RTS_OUT_OF_FUEL) {
+			if (n < MAX_AI_STACK_ENTRIES) {
+				n++;
+				o->tsd.ship.nai_entries++;
+			}
+			o->tsd.ship.ai[n].ai_mode = AI_MODE_RTS_OUT_OF_FUEL;
 		}
 	}
 		
@@ -4941,6 +5004,7 @@ static void ai_brain(struct snis_entity *o)
 	case AI_MODE_TOW_SHIP:
 		ai_tow_ship_mode_brain(o);
 		break;
+	case AI_MODE_RTS_OUT_OF_FUEL:
 	case AI_MODE_RTS_STANDBY: /* Just sit there not doing anything. */
 		o->vx = 0;
 		o->vy = 0;
@@ -4958,6 +5022,8 @@ static void ai_brain(struct snis_entity *o)
 	case AI_MODE_RTS_GUARD_BASE:
 		ai_rts_guard_base(o);
 		break;
+	case AI_MODE_RTS_RESUPPLY:
+		ai_rts_resupply(o);
 	default:
 		break;
 	}
@@ -5110,11 +5176,13 @@ static void ship_move(struct snis_entity *o)
 
 	/* Consume fuel */
 	if (rts_mode) {
-		int unit_type = ship_type[o->tsd.ship.shiptype].rts_unit_type;
-		if (rts_unit_type(unit_type)->fuel_consumption_unit > o->tsd.ship.fuel)
-			o->tsd.ship.fuel = 0;
-		else
-			o->tsd.ship.fuel -= rts_unit_type(unit_type)->fuel_consumption_unit;
+		if (o->tsd.ship.ai[0].ai_mode != AI_MODE_RTS_RESUPPLY) { /* Prevent resupply ships from running out */
+			int unit_type = ship_type[o->tsd.ship.shiptype].rts_unit_type;
+			if (rts_unit_type(unit_type)->fuel_consumption_unit > o->tsd.ship.fuel)
+				o->tsd.ship.fuel = 0;
+			else
+				o->tsd.ship.fuel -= rts_unit_type(unit_type)->fuel_consumption_unit;
+		}
 	}
 
 	/* Adjust velocity towards desired velocity */
@@ -14747,6 +14815,9 @@ static int process_rts_func_command_unit(struct game_client *c)
 		goto common;
 	case AI_MODE_RTS_ATK_NEAR_ENEMY:
 		goto common;
+	case AI_MODE_RTS_RESUPPLY:
+		ship->tsd.ship.ai[0].u.resupply.unit_to_resupply = (uint32_t) -1;
+		goto common;
 	case AI_MODE_RTS_MOVE_TO_WAYPOINT:
 		b = c->bridge;
 		if (b < 0 && b >= nclients)
@@ -17281,7 +17352,7 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	victim_id = -1;
 	if (n >= 0) {
 		if (rts_mode && go[c->ship_index].sdata.faction == o->sdata.faction)
-			rts_order = o->tsd.ship.ai[0].ai_mode;
+			rts_order = o->tsd.ship.ai[n].ai_mode;
 		if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
 			victim_id = o->tsd.ship.ai[n].u.attack.victim_id;
 	}

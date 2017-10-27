@@ -24,7 +24,7 @@
 #include <stdlib.h>
 
 #define NUM_RTS_UNIT_TYPES 6
-#define NUM_RTS_ORDER_TYPES 7
+#define NUM_RTS_ORDER_TYPES 8
 
 struct rts_unit_data {
 	char *name;

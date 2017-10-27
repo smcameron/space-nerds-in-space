@@ -192,7 +192,8 @@ struct damcon_data;
 #define AI_MODE_RTS_MOVE_TO_WAYPOINT 15
 #define AI_MODE_RTS_OCCUPY_NEAR_BASE 16
 #define AI_MODE_RTS_ATK_MAIN_BASE 17
-#define AI_MODE_RTS_OUT_OF_FUEL 18
+#define AI_MODE_RTS_RESUPPLY 18
+#define AI_MODE_RTS_OUT_OF_FUEL 19
 
 /* distance more than which fleet ships will warp back to position rather than simply flying */
 #define FLEET_WARP_DISTANCE 5000.0
@@ -279,6 +280,10 @@ struct ai_rts_guard_base {
 	uint32_t base_id;
 };
 
+struct ai_rts_resupply {
+	uint32_t unit_to_resupply;
+};
+
 union ai_data {
 	struct ai_attack_data attack;
 	struct ai_patrol_data patrol;
@@ -293,6 +298,7 @@ union ai_data {
 	struct ai_rts_atk_main_base_data atk_main_base;
 	struct ai_rts_goto_waypoint_data goto_waypoint;
 	struct ai_rts_guard_base guard_base;
+	struct ai_rts_resupply resupply;
 };
 
 struct ai_stack_entry {
