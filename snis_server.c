@@ -14807,6 +14807,10 @@ static int process_rts_func_command_unit(struct game_client *c)
 	if (ship->sdata.faction != go[c->ship_index].sdata.faction)
 		goto out;
 
+	if (!orders_valid_for_unit_type((int) command - AI_MODE_RTS_FIRST_COMMAND,
+					ship_type[ship->tsd.ship.shiptype].rts_unit_type))
+		goto out;
+
 	switch ((int) command) {
 	case AI_MODE_RTS_STANDBY:
 		goto common;

@@ -12353,6 +12353,8 @@ static void init_comms_ui(void)
 									comms_fleet_ship_button_pressed, NULL);
 			ui_add_button(comms_ui.fleet_unit_button[i][j], DISPLAYMODE_COMMS, "ASSIGN ORDERS TO UNIT");
 			ui_hide_widget(comms_ui.fleet_unit_button[i][j]);
+			snis_button_set_color(comms_ui.fleet_unit_button[i][j], UI_COLOR(comms_good_status));
+			snis_button_set_disabled_color(comms_ui.fleet_unit_button[i][j], UI_COLOR(comms_neutral));
 		}
 	}
 
@@ -12483,6 +12485,7 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 	int us, them;
 	const char *spinner = "|/-\\";
 	int set_planet_spinner = 0;
+	int checked_command = -1;
 
 	if (!activate) {
 		comms_deactivate_rts_buttons();
@@ -12543,6 +12546,12 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 		}
 	}
 
+	checked_command = -1;
+	for (i = 0; i < NUM_RTS_ORDER_TYPES; i++)
+		if (comms_ui.fleet_order_checkbox[i]) {
+			checked_command = i;
+			break;
+		}
 
 	/* Modify the fleet unit buttons labels */
 	if (player_ship->tsd.ship.rts_active_button == RTS_FLEET_BUTTON) {
@@ -12581,6 +12590,12 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 				ui_set_widget_tooltip(comms_ui.fleet_unit_button[col][row], tooltip);
 				snis_button_set_cookie(comms_ui.fleet_unit_button[col][row],
 							(void *) (intptr_t) ship->id);
+				if (checked_command == -1 ||
+					!orders_valid_for_unit_type(checked_command,
+								ship_type[ship->tsd.ship.shiptype].rts_unit_type))
+					snis_button_disable(comms_ui.fleet_unit_button[col][row]);
+				else
+					snis_button_enable(comms_ui.fleet_unit_button[col][row]);
 				fleet_unit_button++;
 			}
 		}

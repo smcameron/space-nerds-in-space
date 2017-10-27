@@ -50,6 +50,18 @@ static struct rts_order_data order_data[] = {
 	{ "OUT OF FUEL", "E", "OUT OF FUEL", 0, 0, }, /* OUT OF FUEL is not counted in RTS_ORDER_TYPES */
 };
 
+static int orders_ok_for_unit_type[ARRAYSIZE(order_data)][ARRAYSIZE(unit_data)] = {
+	{ 1, 1, 1, 1, 1, 1 }, /* STAND BY */
+	{ 1, 1, 1, 1, 1, 0 }, /* GUARD BASE */
+	{ 1, 1, 1, 1, 1, 0 }, /* ESCORT */
+	{ 1, 1, 1, 1, 1, 0 }, /* ATK NEAR ENEMY */
+	{ 1, 1, 1, 1, 1, 1 }, /* MOVE TO WAYPOINT */
+	{ 0, 0, 0, 1, 0, 0 }, /* OCCUPY NEAR BASE */
+	{ 1, 1, 1, 1, 1, 1 }, /* ATK MAIN BASE */
+	{ 0, 0, 0, 0, 0, 1 }, /* RESUPPLY */
+	{ 1, 1, 1, 1, 1, 0 }, /* OUT OF FUEL */
+};
+
 struct rts_unit_data *rts_unit_type(int n)
 {
 	BUILD_ASSERT(ARRAYSIZE(unit_data) == NUM_RTS_UNIT_TYPES);
@@ -96,4 +108,13 @@ void set_rts_unit_type_to_ship_type(int unit_type, int ship_type)
 	if (unit_type < 0 || unit_type >= ARRAYSIZE(unit_type_to_ship_type))
 		return;
 	unit_type_to_ship_type[unit_type] = ship_type;
+}
+
+int orders_valid_for_unit_type(int orders, int unit_type)
+{
+	if (unit_type < 0 || unit_type >= NUM_RTS_UNIT_TYPES)
+		return 0;
+	if (orders < 0 || orders >= ARRAYSIZE(order_data))
+		return 0;
+	return orders_ok_for_unit_type[orders][unit_type];
 }
