@@ -35,7 +35,7 @@ static struct rts_unit_data unit_data[] = {
 	{ "GUN SHIP", "DREADKNIGHT", "G", 3499.0, 350, 0.4, 0.9, NOMINAL_FUEL_CAPACITY, FUEL_UNIT(1.5) },
 	{ "TROOP SHIP", "TRANSPORT", "TS", 499.0, 100, 0.1, 0.2, NOMINAL_FUEL_CAPACITY, FUEL_UNIT(1.0) },
 	{ "TURRET", "VANQUISHER", "T", 4399.0, 400, 0.5, 0.9, NOMINAL_FUEL_CAPACITY, FUEL_UNIT(0.3)  },
-	{ "RESUPPLY SHIP", "RESEARCH", "R", 1599.0, 150, 0.3, 0.1, NOMINAL_FUEL_CAPACITY, FUEL_UNIT(0.1) },
+	{ "RESUPPLY SHIP", "TANKER", "R", 1599.0, 150, 0.3, 0.1, NOMINAL_FUEL_CAPACITY, FUEL_UNIT(0.1) },
 };
 
 static struct rts_order_data order_data[] = {
