@@ -18743,7 +18743,7 @@ static void rts_ai_figure_what_to_build(struct snis_entity *base)
 {
 	/* TODO: something much better here */
 	/* For now, the answer is always "build a troop ship!" */
-	rts_ai_add_to_build_queue(0, 3 /* troop ship */, base->id);
+	rts_ai_add_to_build_queue(0, RTS_UNIT_TROOP_SHIP, base->id);
 }
 
 /* starbase_index is array of indices into go[], nstarbases is how many
@@ -18804,9 +18804,9 @@ static void rts_ai_assign_orders_to_units(int starbase_count, int unit_count)
 	/* TODO: something much better here */
 
 	if (starbase_count < 7 || unit_count < 40)
-		orders = 5; /* Occupy nearest base */
+		orders = RTS_ORDERS_OCCUPY_NEAR_BASE;
 	else
-		orders = 6; /* Attack main base */
+		orders = RTS_ORDERS_ATK_MAIN_BASE;
 
 	for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];

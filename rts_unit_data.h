@@ -26,6 +26,13 @@
 #define NUM_RTS_UNIT_TYPES 6
 #define NUM_RTS_ORDER_TYPES 8
 
+#define RTS_UNIT_SCOUT_SHIP 0
+#define RTS_UNIT_HEAVY_BOMBER 1
+#define RTS_UNIT_GUN_SHIP 2
+#define RTS_UNIT_TROOP_SHIP 3
+#define RTS_UNIT_TURRET 4
+#define RTS_UNIT_RESUPPLY_SHIP 5
+
 struct rts_unit_data {
 	char *name;
 	char *class; /* Name of ship model to use, matches snis_ship_type.h ->class */
@@ -37,6 +44,16 @@ struct rts_unit_data {
 	float fuel_capacity;
 	float fuel_consumption_unit;
 };
+
+#define RTS_ORDERS_STAND_BY 0
+#define RTS_ORDERS_GUARD_BASE 1
+#define RTS_ORDERS_ESCORT 2
+#define RTS_ORDERS_ATK_NEAR_ENEMY 3
+#define RTS_ORDERS_MOVE_TO_WAYPOINT 4
+#define RTS_ORDERS_OCCUPY_NEAR_BASE 5
+#define RTS_ORDERS_ATK_MAIN_BASE 6
+#define RTS_ORDERS_RESUPPLY 7
+#define RTS_ORDERS_OUT_OF_FUEL 8
 
 struct rts_order_data {
 	char *name;
