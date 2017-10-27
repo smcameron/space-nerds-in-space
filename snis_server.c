@@ -432,6 +432,7 @@ static struct rts_ai_state {
 
 static struct rts_ai_build_queue_entry {
 	int priority; /* lower number means more important */
+	int age;
 	int unittype;
 	uint32_t builder_id;
 #define MAX_RTS_BUILD_QUEUE_SIZE 200
@@ -448,13 +449,14 @@ static void rts_ai_add_to_build_queue(int priority, int unittype, uint32_t build
 	for (i = 0; i < rts_ai_build_queue_size; i++) {
 		if (rts_ai_build_queue[i].unittype == unittype &&
 			rts_ai_build_queue[i].builder_id == builder_id) {
-			rts_ai_build_queue[i].priority = priority; /* Already in queue, just adjust priority */
+			// rts_ai_build_queue[i].priority = priority; /* Already in queue, just adjust priority */
 			return;
 		}
 	}
 	rts_ai_build_queue[rts_ai_build_queue_size].priority = priority;
 	rts_ai_build_queue[rts_ai_build_queue_size].unittype = unittype;
 	rts_ai_build_queue[rts_ai_build_queue_size].builder_id = builder_id;
+	rts_ai_build_queue[rts_ai_build_queue_size].age = 0;
 	rts_ai_build_queue_size++;
 }
 
@@ -18741,9 +18743,14 @@ static void lua_teardown(void)
 /* Figure out what we want to build at the given starbase and add it to the build queue */
 static void rts_ai_figure_what_to_build(struct snis_entity *base)
 {
-	/* TODO: something much better here */
-	/* For now, the answer is always "build a troop ship!" */
-	rts_ai_add_to_build_queue(0, RTS_UNIT_TROOP_SHIP, base->id);
+	/* TODO: something much better here
+	 * For now, the answer is always "build a troop ship!", except sometimes
+	 * build a resupply ship.
+	 */
+	if (snis_randn(5000) < 1000)
+		rts_ai_add_to_build_queue(100, RTS_UNIT_RESUPPLY_SHIP, base->id);
+	else
+		rts_ai_add_to_build_queue(100, RTS_UNIT_TROOP_SHIP, base->id);
 }
 
 /* starbase_index is array of indices into go[], nstarbases is how many
@@ -18794,11 +18801,18 @@ static void rts_ai_process_build_queue(int starbase_index[], int nstarbases)
 		if (do_increment) /* Advance to next work item if this one was not deleted */
 			i++;
 	}
+	for (i = 0; i < rts_ai_build_queue_size; i++) {
+		struct rts_ai_build_queue_entry *e = &rts_ai_build_queue[i];
+		printf("Incrementing age, age = %d\n", e->age);
+		e->age++;
+		if ((e->age % 50) == 0 && e->priority > 0) /* boost priority based on age in queue */
+			e->priority--;
+	}
 }
 
 static void rts_ai_assign_orders_to_units(int starbase_count, int unit_count)
 {
-	uint8_t orders;
+	uint8_t orders, per_unit_orders;
 	int i;
 
 	/* TODO: something much better here */
@@ -18811,11 +18825,16 @@ static void rts_ai_assign_orders_to_units(int starbase_count, int unit_count)
 	for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 		if (o->alive && o->type == OBJTYPE_SHIP2 && o->sdata.faction == rts_ai.faction) {
-			if (o->tsd.ship.ai[0].ai_mode != orders + AI_MODE_RTS_FIRST_COMMAND &&
-				rts_ai.wallet > rts_order_type(orders)->cost_to_order) {
-				o->tsd.ship.ai[0].ai_mode = orders + AI_MODE_RTS_FIRST_COMMAND;
-				rts_ai.wallet -= rts_order_type(orders)->cost_to_order;
-				switch (orders + AI_MODE_RTS_FIRST_COMMAND) {
+			int unit_type = ship_type[o->tsd.ship.shiptype].rts_unit_type;
+			if (unit_type == RTS_UNIT_RESUPPLY_SHIP)
+				per_unit_orders = RTS_ORDERS_RESUPPLY;
+			else
+				per_unit_orders = orders;
+			if (o->tsd.ship.ai[0].ai_mode != per_unit_orders + AI_MODE_RTS_FIRST_COMMAND &&
+				rts_ai.wallet > rts_order_type(per_unit_orders)->cost_to_order) {
+				o->tsd.ship.ai[0].ai_mode = per_unit_orders + AI_MODE_RTS_FIRST_COMMAND;
+				rts_ai.wallet -= rts_order_type(per_unit_orders)->cost_to_order;
+				switch (per_unit_orders + AI_MODE_RTS_FIRST_COMMAND) {
 				case AI_MODE_RTS_ATK_MAIN_BASE:
 					o->tsd.ship.ai[0].u.atk_main_base.base_id = (uint32_t) -1;
 					break;
