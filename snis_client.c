@@ -12561,10 +12561,12 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 				if (ship->tsd.ship.nai_entries > 0 &&
 					ship->tsd.ship.ai[0].ai_mode >= AI_MODE_RTS_FIRST_COMMAND &&
 					ship->tsd.ship.ai[0].ai_mode <=
-						AI_MODE_RTS_FIRST_COMMAND + NUM_RTS_ORDER_TYPES - 1) {
+						AI_MODE_RTS_FIRST_COMMAND + NUM_RTS_ORDER_TYPES + 0) {
+						/* Special case above for OUT OF FUEL */
 					int order_type = ship->tsd.ship.ai[0].ai_mode - AI_MODE_RTS_STANDBY;
-					/* Make standby orders blink to draw attention to idle units. */
-					if (ship->tsd.ship.ai[0].ai_mode == AI_MODE_RTS_STANDBY && (timer & 0x8) == 0)
+					/* Make standby orders and out-of-fuel blink to draw attention to idle units. */
+					if ((ship->tsd.ship.ai[0].ai_mode == AI_MODE_RTS_STANDBY ||
+						ship->tsd.ship.ai[0].ai_mode == AI_MODE_RTS_OUT_OF_FUEL) && (timer & 0x8) == 0)
 						short_name = "";
 					else
 						short_name = rts_order_type(order_type)->short_name;

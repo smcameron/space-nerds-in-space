@@ -1125,6 +1125,7 @@ static void add_new_rts_unit(struct snis_entity *builder)
 	unit->sdata.shield_strength = ship_type[i].max_shield_strength;
 	unit->tsd.ship.lifeform_count = ship_type[i].crew_max;
 	unit->tsd.ship.ncargo_bays = ship_type[i].ncargo_bays;
+	unit->tsd.ship.fuel = rts_unit_type(unit_type)->fuel_capacity;
 	fprintf(stderr, "Added ship successfully\n");
 }
 
@@ -4888,6 +4889,14 @@ static void ai_brain(struct snis_entity *o)
 		ship_figure_out_what_to_do(o);
 		n = o->tsd.ship.nai_entries - 1;
 	}
+
+	if (rts_mode) {
+		/* Check fuel */
+		if (o->tsd.ship.fuel == 0) {
+			o->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_OUT_OF_FUEL;
+			o->tsd.ship.nai_entries = 1;
+		}
+	}
 		
 	/* main AI brain code is here... */
 	switch (o->tsd.ship.ai[n].ai_mode) {
@@ -5097,6 +5106,15 @@ static void ship_move(struct snis_entity *o)
 		respawn_object(o);
 		delete_from_clients_and_server(o);
 		return;
+	}
+
+	/* Consume fuel */
+	if (rts_mode) {
+		int unit_type = ship_type[o->tsd.ship.shiptype].rts_unit_type;
+		if (rts_unit_type(unit_type)->fuel_consumption_unit > o->tsd.ship.fuel)
+			o->tsd.ship.fuel = 0;
+		else
+			o->tsd.ship.fuel -= rts_unit_type(unit_type)->fuel_consumption_unit;
 	}
 
 	/* Adjust velocity towards desired velocity */
@@ -6835,7 +6853,8 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	/* FIXME: some kind of collision detection needed here... */
 
-	if (mode == AI_MODE_HANGOUT) {
+	if (mode == AI_MODE_HANGOUT ||
+		(rts_mode && o->tsd.ship.fuel == 0)) {
 		o->vx *= 0.8;
 		o->vy *= 0.8;
 		o->vz *= 0.8;
@@ -8315,6 +8334,7 @@ static int add_ship(int faction, int auto_respawn)
 		faction = 0;
 	ship_name(mt, go[i].sdata.name, sizeof(go[i].sdata.name));
 	uppercase(go[i].sdata.name);
+	go[i].tsd.ship.fuel = 0; /* TODO: maybe sandbox mode should consume fuel too? */
 	return i;
 }
 
@@ -17300,6 +17320,9 @@ static void send_econ_update_ship_packet(struct game_client *c,
 				break;
 			case AI_MODE_RTS_OCCUPY_NEAR_BASE:
 				ai[i] = 'O';
+				break;
+			case AI_MODE_RTS_OUT_OF_FUEL:
+				ai[i] = 'E';
 				break;
 			default:
 				ai[i] = '?';

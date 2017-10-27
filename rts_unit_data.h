@@ -34,6 +34,8 @@ struct rts_unit_data {
 	int time_to_build; /* in 10ths of secs */
 	float toughness;
 	float damage_factor;
+	float fuel_capacity;
+	float fuel_consumption_unit;
 };
 
 struct rts_order_data {
@@ -41,6 +43,7 @@ struct rts_order_data {
 	char *short_name;
 	char *help_text;
 	float cost_to_order;
+	int user_selectable;
 };
 
 struct rts_unit_data *rts_unit_type(int n);

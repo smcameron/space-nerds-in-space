@@ -192,6 +192,7 @@ struct damcon_data;
 #define AI_MODE_RTS_MOVE_TO_WAYPOINT 15
 #define AI_MODE_RTS_OCCUPY_NEAR_BASE 16
 #define AI_MODE_RTS_ATK_MAIN_BASE 17
+#define AI_MODE_RTS_OUT_OF_FUEL 18
 
 /* distance more than which fleet ships will warp back to position rather than simply flying */
 #define FLEET_WARP_DISTANCE 5000.0
@@ -411,6 +412,7 @@ struct ship_data {
 	uint8_t torpedoes_loading;
 	uint16_t torpedo_load_time;
 	uint8_t phaser_bank_charge;
+/* These values are for the player ship, RTS units are different see rts_unit_data.h */
 #define FUEL_DURATION (10.0) /* minutes */
 #define FUEL_UNITS (FUEL_DURATION * 60.0 * 30.0)
 #define FUEL_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / FUEL_UNITS))
