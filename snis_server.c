@@ -3588,7 +3588,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		return;
 	}
 
-	if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -2) {
+	if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -2) { /* victim was removed */
 		pop_ai_attack_mode(o);
 		return;
 	}
@@ -3622,7 +3622,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	dz = destz - o->z;
 	vdist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
 	if (vdist > ATTACK_MODE_GIVE_UP_DISTANCE &&
-		v->type != OBJTYPE_PLANET && v->type != OBJTYPE_STARBASE) {
+		v->type != OBJTYPE_PLANET && v->type != OBJTYPE_STARBASE && !rts_mode) {
 		pop_ai_attack_mode(o);
 		return;
 	}
@@ -4658,6 +4658,48 @@ out:
 
 }
 
+static void ai_atk_near_enemy_mode_brain(struct snis_entity *o)
+{
+	int i, n;
+	int closest = -1;
+	double dist, min_dist = 0;
+	struct snis_entity *e = NULL;
+
+	/* Find the closest enemy ship to engage */
+	n = o->tsd.ship.nai_entries - 1;
+	if (o->tsd.ship.ai[n].u.atk_near_enemy.enemy_id == (uint32_t) -1 ||
+		((o->id + universe_timestamp) % 17) == 0) {
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			e = &go[i];
+			if (!e->alive)
+				continue;
+			if (e->type != OBJTYPE_SHIP2)
+				continue;
+			if (e->sdata.faction == o->sdata.faction)
+				continue;
+			dist = dist3d(e->x - o->x, e->y - o->y, e->z - o->z);
+			if (closest == -1 || dist < min_dist) {
+				closest = i;
+				min_dist = dist;
+			}
+		}
+		if (closest == -1) { /* There are no enemies */
+			return;
+		} else {
+			o->tsd.ship.ai[n].u.atk_near_enemy.enemy_id = go[closest].id;
+		}
+	}
+	i = lookup_by_id(o->tsd.ship.ai[n].u.atk_near_enemy.enemy_id);
+	if (i < 0)
+		return;
+	e = &go[i];
+	if (!e->alive || e->type != OBJTYPE_SHIP2 || e->sdata.faction == o->sdata.faction) {
+		o->tsd.ship.ai[n].u.atk_near_enemy.enemy_id = (uint32_t) -1;
+		return;
+	}
+	push_attack_mode(o, e->id, 0);
+}
+
 static void ai_occupy_enemy_base_mode_brain(struct snis_entity *o)
 {
 	int i, n;
@@ -5011,6 +5053,9 @@ static void ai_brain(struct snis_entity *o)
 		o->vx = 0;
 		o->vy = 0;
 		o->vz = 0;
+		break;
+	case AI_MODE_RTS_ATK_NEAR_ENEMY:
+		ai_atk_near_enemy_mode_brain(o);
 		break;
 	case AI_MODE_RTS_OCCUPY_NEAR_BASE:
 		ai_occupy_enemy_base_mode_brain(o);
@@ -14820,6 +14865,7 @@ static int process_rts_func_command_unit(struct game_client *c)
 	case AI_MODE_RTS_ESCORT:
 		goto common;
 	case AI_MODE_RTS_ATK_NEAR_ENEMY:
+		ship->tsd.ship.ai[0].u.atk_near_enemy.enemy_id = (uint32_t) -1;
 		goto common;
 	case AI_MODE_RTS_RESUPPLY:
 		ship->tsd.ship.ai[0].u.resupply.unit_to_resupply = (uint32_t) -1;
@@ -17357,10 +17403,15 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	rts_order = 255;
 	victim_id = -1;
 	if (n >= 0) {
-		if (rts_mode && go[c->ship_index].sdata.faction == o->sdata.faction)
-			rts_order = o->tsd.ship.ai[n].ai_mode;
-		if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
+		if (rts_mode && go[c->ship_index].sdata.faction == o->sdata.faction) {
+			int index = n;
+			while (index > 0 && o->tsd.ship.ai[index].ai_mode < AI_MODE_RTS_FIRST_COMMAND)
+				index--;
+			rts_order = o->tsd.ship.ai[index].ai_mode;
+		}
+		if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK) {
 			victim_id = o->tsd.ship.ai[n].u.attack.victim_id;
+		}
 	}
 
 	if (c->debug_ai) {

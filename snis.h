@@ -262,6 +262,10 @@ struct ai_rts_standby_data {
 	uint8_t not_used;
 };
 
+struct ai_rts_atk_near_enemy_data {
+	uint32_t enemy_id;
+};
+
 struct ai_rts_occupy_base_data {
 	uint32_t base_id;
 };
@@ -294,6 +298,7 @@ union ai_data {
 	struct ai_mining_bot_data mining_bot;
 	struct ai_tow_ship_data tow_ship;
 	struct ai_rts_standby_data standby;
+	struct ai_rts_atk_near_enemy_data atk_near_enemy;
 	struct ai_rts_occupy_base_data occupy_base;
 	struct ai_rts_atk_main_base_data atk_main_base;
 	struct ai_rts_goto_waypoint_data goto_waypoint;
