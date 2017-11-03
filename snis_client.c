@@ -3272,6 +3272,14 @@ static void deal_with_joystick()
 			request_navigation_pitch_packet(PITCH_BACK + 2);
 		else if (jse.stick_y > YJOYSTICK_THRESHOLD_FINE)
 			request_navigation_pitch_packet(PITCH_FORWARD + 2);
+		if (jse.stick2_x < -XJOYSTICK_THRESHOLD)
+			request_navigation_roll_packet(ROLL_RIGHT);
+		else if (jse.stick2_x > XJOYSTICK_THRESHOLD)
+			request_navigation_roll_packet(ROLL_LEFT);
+		else if (jse.stick2_x < -XJOYSTICK_THRESHOLD_FINE)
+			request_navigation_roll_packet(ROLL_RIGHT + 2);
+		else if (jse.stick2_x > XJOYSTICK_THRESHOLD_FINE)
+			request_navigation_roll_packet(ROLL_LEFT + 2);
 		break;
 	default:
 		break;
