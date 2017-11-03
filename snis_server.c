@@ -16594,13 +16594,6 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
-#if 0
-		case OPCODE_REQUEST_THRUST:
-			rc = process_request_thrust(c);
-			if (rc)
-				goto protocol_error;
-			break;
-#endif
 		case OPCODE_DEMON_THRUST:
 			rc = process_demon_thrust(c);
 			if (rc)

@@ -2663,11 +2663,6 @@ static void request_navigation_yaw_packet(uint8_t yaw)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_YAW, yaw));
 }
 
-static void request_navigation_thrust_packet(uint8_t thrust)
-{
-	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_THRUST, thrust));
-}
-
 static void request_navigation_pitch_packet(uint8_t pitch)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_PITCH, pitch));
@@ -3260,31 +3255,15 @@ static void deal_with_joystick()
 		}
 		break;
 	case DISPLAYMODE_NAVIGATION:
-		if (jse.stick_x < -XJOYSTICK_THRESHOLD) {
+		if (jse.stick_x < -XJOYSTICK_THRESHOLD)
 			request_navigation_yaw_packet(YAW_LEFT);
-			goto nav_check_y_stick;
-		}
-		if (jse.stick_x > XJOYSTICK_THRESHOLD) {
+		else if (jse.stick_x > XJOYSTICK_THRESHOLD)
 			request_navigation_yaw_packet(YAW_RIGHT);
-			goto nav_check_y_stick;
-		}
-		if (jse.stick_x < -XJOYSTICK_THRESHOLD_FINE) {
+		else if (jse.stick_x < -XJOYSTICK_THRESHOLD_FINE)
 			request_navigation_yaw_packet(YAW_LEFT + 2);
-			goto nav_check_y_stick;
-		}
-		if (jse.stick_x > XJOYSTICK_THRESHOLD_FINE) {
+		else if (jse.stick_x > XJOYSTICK_THRESHOLD_FINE)
 			request_navigation_yaw_packet(YAW_RIGHT + 2);
-			goto nav_check_y_stick;
-		}
-nav_check_y_stick:
-		if (jse.stick2_y > YJOYSTICK_THRESHOLD) {
-			request_navigation_thrust_packet(THRUST_FORWARDS);
-			break;
-		}
-		if (jse.stick2_y < -YJOYSTICK_THRESHOLD) {
-			request_navigation_thrust_packet(THRUST_BACKWARDS);
-			break;
-		}
+		/* FIXME: make pitch and roll and throttle work */
 		break;
 	default:
 		break;
