@@ -3198,6 +3198,7 @@ static void deal_with_joystick()
 #define XJOYSTICK_THRESHOLD 23000
 #define YJOYSTICK_THRESHOLD 23000
 #define XJOYSTICK_THRESHOLD_FINE 6000
+#define YJOYSTICK_THRESHOLD_FINE 6000
 
 	/* Read events even if we don't use them just to consume them. */
 	memset(&jse.button, 0, sizeof(jse.button));
@@ -3263,7 +3264,14 @@ static void deal_with_joystick()
 			request_navigation_yaw_packet(YAW_LEFT + 2);
 		else if (jse.stick_x > XJOYSTICK_THRESHOLD_FINE)
 			request_navigation_yaw_packet(YAW_RIGHT + 2);
-		/* FIXME: make pitch and roll and throttle work */
+		if (jse.stick_y < -YJOYSTICK_THRESHOLD)
+			request_navigation_pitch_packet(PITCH_BACK);
+		else if (jse.stick_y > YJOYSTICK_THRESHOLD)
+			request_navigation_pitch_packet(PITCH_FORWARD);
+		else if (jse.stick_y < -YJOYSTICK_THRESHOLD_FINE)
+			request_navigation_pitch_packet(PITCH_BACK + 2);
+		else if (jse.stick_y > YJOYSTICK_THRESHOLD_FINE)
+			request_navigation_pitch_packet(PITCH_FORWARD + 2);
 		break;
 	default:
 		break;
